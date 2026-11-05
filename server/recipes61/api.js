@@ -14,7 +14,6 @@ import { vote61 } from './engine61.js';
 import { learnedCount61 } from './learn.js';
 import { TOOL45 } from '../glimt45/tools.js';
 import { INTENTS47, INTENT_TOOLS47 } from '../glimt45/plan47.js';
-import { todayOslo45, nowMinOslo45 } from '../glimt45/dates.js';
 
 export const recipesApi61 = new Hono();
 recipesApi61.use('*', authOrToken);
@@ -175,7 +174,9 @@ recipesApi61.post('/:id/test', async (c) => {
     const { recallFacts47 } = await import('../glimt45/memory47.js');
     const { facts60 } = await import('../convo60/engine60.js');
     const { convo60 } = await import('../convo60/settings.js');
-    const today = todayOslo45(), nowMin = nowMinOslo45();
+    // Samme klokke som motoren (også testklokka), ikke den ekte – ellers ser «test» andre avtaler enn resten av Glimt.
+    const { clockNow45 } = await import('../glimt45/engine.js');
+    const { today, nowMin } = clockNow45();
     let facts = await recallFacts47(u, text, { embed: false }).catch(() => []);
     facts = facts60(u, { set: convo60(u), execText: text, entities: [] }, facts);
     const slots = slotsOf61(text, { facts, today });

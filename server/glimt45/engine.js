@@ -46,6 +46,8 @@ let clock = null;
 export const _setClock45 = (c) => { clock = c ?? null; };
 const todayNow = () => clock?.today ?? todayOslo45();
 const minNow = () => clock?.nowMin ?? nowMinOslo45();
+/** Motorens klokke (dagens dato og minutt i Europe/Oslo, eller testklokka) – for moduler som kjører verktøy utenom motoren. */
+export const clockNow45 = () => ({ today: todayNow(), nowMin: minNow() });
 
 /* ---------------- Eksisterende svar (vær, avganger, pakker …) ---------------- */
 

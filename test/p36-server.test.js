@@ -87,16 +87,20 @@ test('Matplan er felles: begge ser samme plan, updatedBy/updatedAt/sharedNote, o
 test('Sammenslåing av gamle private planer: dedup på navn, konflikt → historikk, lenker følger med, originalen beholdes', async () => {
   const s = kv.get(OWNER, 'mat');
   const taco = s.dishes.find((d) => d.name === 'Taco');
-  const date = '2026-11-03';
+  // Uke i framtiden (mandag om 2–3 uker): planen for dager som er passert, behandles annerledes, så faste datoer ble feil med tiden.
+  const iso = (d) => d.toISOString().slice(0, 10);
+  const mon = new Date(); mon.setUTCHours(12, 0, 0, 0); mon.setUTCDate(mon.getUTCDate() + 14 + ((8 - mon.getUTCDay()) % 7));
+  const MON = iso(mon), day = (n) => iso(new Date(mon.getTime() + n * 86400_000));
+  const date = day(1);
   s.plan[date] = { dish: taco.id, cook: 'Sebastian', by: 'user', at: 1000 };
   kv.set(OWNER, 'mat', s);
   // En privat plan fra før prompt 36 (Nina), med en lik rett (taco), en ny rett, en lenke og en konflikt samme dag.
   const priv = { v: 2, dishes: [{ id: 'ninataco', name: 'TACO', src: 'own', ing: ['Lefser'], steps: ['Stek'], cost: 0 }, { id: 'ninalaks', name: 'Ninas laks', src: 'own', ing: [], steps: [], cost: 150 }],
-    cooks: [{ name: 'Nina', best: ['ninalaks'] }], plan: { [date]: { dish: 'ninalaks', cook: 'Nina', by: 'user', at: 2000 }, '2026-11-04': { dish: 'ninataco', cook: 'Nina', by: 'user' } },
+    cooks: [{ name: 'Nina', best: ['ninalaks'] }], plan: { [date]: { dish: 'ninalaks', cook: 'Nina', by: 'user', at: 2000 }, [day(2)]: { dish: 'ninataco', cook: 'Nina', by: 'user' } },
     fixed: {}, fixedDb: true, foldersInit: true, auto: false, lastAuto: '', shop: {}, calKey: 'ninas-gamle-kalender-nokkel-1' };
   kv.set(ninaId, 'mat', priv);
   db.prepare("INSERT INTO dish_link(id, dish_id, title, url, kind, created, user_id) VALUES('lnk36', 'ninataco', 'Tacooppskrift', 'https://example.no/taco', 'link', 1, ?)").run(ninaId);
-  const w = await A('/api/matplan/week?start=2026-11-02');
+  const w = await A(`/api/matplan/week?start=${MON}`);
   assert.equal(w.status, 200);
   const names = w.body.dishes.map((d) => d.name);
   assert.equal(names.filter((x) => x.toLowerCase() === 'taco').length, 1, 'taco deduplisert');
