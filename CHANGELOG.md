@@ -2,6 +2,22 @@
 
 Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. Versjonene med APK og IPA ligger under [Releases](https://github.com/SebastianKristo/torskenes-verden/releases).
 
+## [4.63.0] – 05.11.2026 · Velg kort i briefen, lagre artikler og endre logo
+- **Now Brief:**
+  - Velg selv hvilke kort som er med og i hvilken rekkefølge, under Innstillinger → Glimt → «Innhold i briefen».
+  - Alle kortene vises med en gang. Har kortet ikke hentet nytt ennå, vises innholdet fra forrige gang eller en grå plassholder. Et kort som ikke svarer, viser «Klarte ikke hente» med «Prøv igjen».
+- **Lagre nyhetsartikler:** hele artikkelen og bildene lagres, ikke bare sammendraget. Du finner dem i fanen «Lagret», der de kan leses uten nett på mobil. Glimt og søket finner dem også.
+- **Endre butikklogo i Finans:** trykk på logoen for å søke i hele logobiblioteket, laste opp et eget bilde eller bruke initialer. Valget gjelder alle kjøp fra samme butikk, på web, iPhone og Android.
+- **Media på web:** flere serier og filmer har fått cover, og like kort er slått sammen. ✕ øverst til høyre lukker Media.
+- **Vær:**
+  - Boksen rundt stedet øverst er fjernet.
+  - Alle ark har samme ✕.
+  - Trykk på en dag i lista åpner dagen, også på Android.
+  - Streken over den valgte pillen på Android er borte.
+- **Android:**
+  - Meldingen «StandaloneCoroutine was cancelled» vises ikke lenger når appen åpnes.
+  - Kortene på Hjem er like store som på iPhone.
+
 ## [4.62.0] – 28.10.2026 · Test av nye modeller for kvitteringer
 - **LFM-modeller for kvitteringer (test, av som standard):** admin kan prøve LFM3-VL-2B og LFM2.5-VL-3B fra Liquid AI under AI → Kvitteringer → «LFM-motorer (test)».
   - De kan brukes når ingen OCR er tilgjengelig, som ekstra kontroll av totalen, eller til å ordne linjene fra Mac-OCR i kolonner før varelinjene leses.
