@@ -3,6 +3,7 @@
 // kvitteringsbanneret, Finn «På vei» og arket «Ny sending» i Sporing. Valgene lagres per bruker i /api/me/layout.
 import * as P30B from './mobile-p30b.js';
 import { rcCard52, slip52 } from './rccard52.js'; // prompt 52: felles kvitteringskort (Finans og Boliger)
+import { logoBtn73 } from './logo73.js'; // prompt 73: trykk på logoen → «Endre logo»
 import { glimtOrb } from './mobile-orb43.js'; // prompt 43
 import { S, api, esc, n0, ini, hlApi, dd, cats, uploadReceipt } from './core.js';
 import { m, draw, flash, domOk } from './mobile.js';
@@ -401,7 +402,7 @@ export function paperTx(id) {
       ${b ? `<div class="pp-card pp-tight">${[['Tekst', b.description], ['KID / melding', b.message], ['Beløp', b.amount != null ? `${kr2(b.amount)} kr` : null], ['Bokført', b.bookingDate ? dd(b.bookingDate) + '.' + String(b.bookingDate).slice(0, 4) : null], ['Rentedato', b.valueDate ? dd(b.valueDate) + '.' + String(b.valueDate).slice(0, 4) : null], ['Konto', b.account], ['Arkivreferanse', b.archiveReference]].filter(([, v]) => v != null && v !== '').map(([k, v]) => `<div class="pp-kv"><span class="pp-mut">${k}</span><span class="pp-mono" style="color:var(--pp-ink);font-size:13px">${esc(v)}</span></div>`).join('')}</div>`
         : '<div class="pp-mut">Ingen bankrad er lagret. Transaksjonen er lagt inn manuelt eller fra en kvittering.</div>'}</div>` : '';
   const full = TX.full ? `<div class="pp-full" role="dialog" aria-label="Original kvittering"><button type="button" class="p30-sb pp-fullx" data-pptx="fullx">Lukk</button><div class="pp-fullsc">${pdf ? `<iframe src="${esc(TX.full)}" title="Kvittering"></iframe>` : `<img src="${esc(TX.full)}" alt="Original kvittering">`}</div></div>` : '';
-  return `${rcCard52({ name, color: t.color ?? '#6b665c', meta: [t.category, dtxt, t.account].filter(Boolean).join(' · '), amount: amt, ai: t.aiSummary || r?.aiSummary || '', status: st, statusWarn: st !== 'Vedlagt',
+  return `${rcCard52({ name, color: t.color ?? '#6b665c', logo: logoBtn73({ ...t, merchant: t.merchant || name }, ppTi({ ...t, merchant: t.merchant || name }, ini(name), t.color).replace('class="pp-ti', 'class="pp-ti big'), 'pen-on'), meta: [t.category, dtxt, t.account].filter(Boolean).join(' · '), amount: amt, ai: t.aiSummary || r?.aiSummary || '', status: st, statusWarn: st !== 'Vedlagt',
       slip: `${P30B.hlBanner(id, t)}${P30B.hlImage(id, t)}${slip}` })}
     <div class="pp-two"><button class="pp-btn" data-pptx="cat">Endre kategori</button><button class="pp-btn" data-pptx="bank">Bankutskrift</button></div>
     ${globalThis.P40?.txTools?.(id, t) ?? '' /* prompt 40: Les på nytt, Rediger alt, lagt til */}

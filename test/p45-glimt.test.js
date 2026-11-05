@@ -487,7 +487,7 @@ test('/api/assist (Hjem): kvitteringssøk er ikke lenger «Åpner Kvitteringer»
   assert.equal(f.status, 200, f.text);
   assert.equal(f.body.intent, 'finance.search');
   assert.notEqual(f.body.intent, 'nav');
-  assert.equal(f.body.agent.actions[0].result.count, 1);
+  assert.equal(f.body.agent.actions[0].result.count, 1, JSON.stringify([f.body.agent.actions[0].args, f.body.agent.actions[0].result]).slice(0, 600));
   const c = await O('/api/assist', 'POST', { q: 'Legg til kino i kalenderen fredag klokka åtte.' });
   assert.equal(c.body.intent, 'appointment.create');
   assert.ok(c.body.created?.event, JSON.stringify(c.body).slice(0, 600));

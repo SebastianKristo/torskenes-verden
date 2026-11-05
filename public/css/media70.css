@@ -58,6 +58,12 @@
 .m70-ali .m70-dot{margin-top:6px}
 .m70-alx{padding:10px 12px;font-size:14px;line-height:1.45}
 .m70-ib{width:44px;height:44px;flex:none;display:flex;align-items:center;justify-content:center;border-radius:50%;border:1px solid var(--p-ln);background:var(--p-card);color:var(--p-k);cursor:pointer;padding:0;text-decoration:none}
+/* Prompt 73 (claude-code-media-lukk.md): rund lukkeknapp i stedet for innstillinger-ikonet (Innstillinger → Media har valgene) */
+.m70-x{width:48px;height:48px;flex:none;display:flex;align-items:center;justify-content:center;border-radius:50%;border:1px solid var(--p-ln);background:var(--p-card);color:var(--p-k);cursor:pointer;padding:0}
+.m70-x:hover{background:var(--p-sel)}
+.m70-x:focus-visible{outline:2px solid var(--p-k);outline-offset:2px}
+/* Prompt 73 (claude-code-media-covers.md): plassholderteksten vises bare når ingen plakatkilde ga et bilde */
+.m70 .m73-im~.m70-pa,.m70 .m73-im~.m70-lpk,.m70 .m73-im~.m70-lpt{display:none}
 .m70-ib.ghost{width:40px;height:40px;border:0;background:transparent;color:var(--p-mt)}
 .m70-ib.ghost:hover{background:var(--p-sel);color:var(--p-k)}
 .m70-ib.ghost.red:hover{color:var(--p-red)}
@@ -290,8 +296,8 @@ button.m70-rt:hover{text-decoration:underline;text-underline-offset:3px}
   .m70-tl{gap:10px}
   .m70-back{order:1;height:40px}
   .m70-h{order:2;flex:1 1 auto;font-size:30px}
-  .m70-tl>[data-m43="set"]{order:3;width:40px;height:40px}
-  .m70-alw{order:4}
+  .m70-tl>.m70-x{order:4}
+  .m70-alw{order:3}
   .m70 .m44-srv{order:5}
   .m70-gl{order:6;flex:1 1 100%;min-height:46px}
   .m70-kbd{display:none}

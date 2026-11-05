@@ -51,6 +51,7 @@ import { trialCompact } from './trial-widgets.js'; // prompt 35: prøveperioder 
 import { todosForBrief } from './tasks-glimt37.js'; // prompt 37: Gjøremål-kortet
 import { bibleForBrief } from './bible37.js'; // prompt 37: dagens bibelvers (bare med modulen)
 import { profileName } from './profiles37.js'; // prompt 37: profilnavnet i hilsenen
+import { applyBriefCards73, guideFilter73 } from './brief73.js'; // prompt 73: bare kortene som er på (Innhold i briefen)
 
 const MOCK = process.env.MOCK_DATA === '1';
 const WX_EMOJI = { clear: '☀️', partly: '⛅', cloudy: '☁️', fog: '🌫️', drizzle: '🌦️', rain: '🌧️', sleet: '🌨️', snow: '❄️', thunder: '⛈️' };
@@ -231,7 +232,7 @@ function figureOf(b, hour) {
 
 const cacheKey = (kind, date) => `brief_${date}_${kind}`;
 /** Bygger briefen. llm:true venter på Glimt-oppsummeringen (bakgrunnsjobben); ellers brukes cachet tekst eller malen. */
-export async function buildBrief(u, { kind = null, t = Date.now(), llm = false } = {}) {
+export async function buildBrief(u, { kind = null, t = Date.now(), llm = false, raw = false } = {}) {
   const now = osloParts(t);
   const k = TITLES[kind] ? kind : kindFor(u, t);
   const gs = glimtSettingsOf(u);
@@ -246,8 +247,11 @@ export async function buildBrief(u, { kind = null, t = Date.now(), llm = false }
   if (b.weather) b.weather.open = { route: 'vaer', overlay: true };
   b.todos = todosForBrief(u) ?? { count: 0, overdue: 0, items: [], text: 'Ingen gjøremål i dag.' };
   b.bible = bibleForBrief(u, k, t);
+  // Prompt 73: kort som er av i «Innhold i briefen» tas ut før oppsummering, chips og guide (raw:true = alt, for /api/brief52).
+  if (!raw) applyBriefCards73(u, b);
   b.showKicker = false; // etiketten «GLIMT · KVELDSBRIEF» er fjernet i klientene (kicker beholdes for eldre klienter)
-  b.chips = [weather ? `${weather.now.temp}° ${lc(weather.cond)}` : null, b.next ? `${b.next.title} ${b.next.time}` : null, news.length ? `${news.length} nyheter` : null,
+  // Prompt 73: b.weather/b.news (ikke de lokale) – kort som er av, er allerede tatt ut.
+  b.chips = [b.weather ? `${b.weather.now.temp}° ${lc(b.weather.cond)}` : null, b.next ? `${b.next.title} ${b.next.time}` : null, b.news.length ? `${b.news.length} nyheter` : null,
     b.trials[0] ? `${b.trials[0].service}-prøve ${b.trials[0].daysLabel}` : null].filter(Boolean);
   const cached = kv.get(u, cacheKey(k, now.date), null);
   let summary = cached?.summary ?? null, model = cached?.model ?? null;
@@ -257,7 +261,7 @@ export async function buildBrief(u, { kind = null, t = Date.now(), llm = false }
   b.model = summary ? model : null;
   b.figure = figureOf(b, now.h);
   b.host = hostOf(u, t, gs);
-  b.guide = guideOf(b, { host: b.host, friends: gs.friends });
+  b.guide = raw ? guideOf(b, { host: b.host, friends: gs.friends }) : guideFilter73(u, guideOf(b, { host: b.host, friends: gs.friends }));
   b.enabled = gs.brief;
   b.readAloud = gs.readAloud;
   // Prompt 39: «Glimt i briefen» av → ingen figur, ingen snakkebobler og ingen guide-runde (innholdet og Les opp er uendret).

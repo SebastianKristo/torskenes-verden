@@ -472,7 +472,7 @@ internal fun CmpSheet(vm: AppViewModel, w: WeatherFull, close: () -> Unit) {
                 Text("Yr mot Storm", fontSize = 30.sp, lineHeight = 33.sp, fontWeight = FontWeight.Bold)
                 Text(w.place, fontSize = 14.sp, color = mut2)
             }
-            SheetButton30("Ferdig", dark = true, onClick = close)
+            VaerCloseButton(onClick = close) // prompt 73: felles ✕ (ikke «Ferdig»)
         }
         if (vm.wxCmp22Busy) Text("Henter Storm-data …", fontSize = 13.sp, color = mut2)
         if (!v.ready && vm.wxCmp22Failed) Text("Storm svarte ikke. Prøv igjen senere.", fontSize = 13.sp, color = mut2)

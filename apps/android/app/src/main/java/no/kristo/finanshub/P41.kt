@@ -334,7 +334,7 @@ fun AppViewModel.approveAppAuth41() {
                 else -> "Serverfeil ${e.status}. Prøv igjen."
             }
             Haptics.error()
-        } catch (e: Exception) { s.appAuthErr = e.message ?: "Fikk ikke kontakt med serveren"; Haptics.error() } finally { s.appAuthBusy = false }
+        } catch (e: Exception) { s.appAuthErr = uiErr73(e, "Fikk ikke kontakt med serveren"); Haptics.error() } finally { s.appAuthBusy = false }
     }
 }
 
@@ -546,7 +546,7 @@ fun AppViewModel.sendNotice41(kind: String, place: String?, leaveMin: Int?, to: 
         } catch (e: CancellationException) { throw e } catch (e: ApiException) {
             s.sfErr = if (e.status == 404 || e.status == 405) "Serveren har ikke «Si fra» ennå. Oppdater Homelab-serveren." else (e.message ?: "Fikk ikke sendt")
             Haptics.error()
-        } catch (e: Exception) { s.sfErr = e.message ?: "Fikk ikke sendt"; Haptics.error() } finally { s.sfBusy = false }
+        } catch (e: Exception) { s.sfErr = uiErr73(e, "Fikk ikke sendt"); Haptics.error() } finally { s.sfBusy = false }
     }
 }
 
@@ -751,7 +751,7 @@ fun AppViewModel.bdPhoto41(b: Bd24, uri: Uri) {
             loadBirthdays24(quiet = true)
         } catch (e: CancellationException) { throw e } catch (e: ApiException) {
             message = if (e.status == 404 || e.status == 405) "Serveren har ikke bilder i Bursdager ennå. Oppdater Homelab-serveren." else (e.message ?: "Fikk ikke lastet opp bildet")
-        } catch (e: Exception) { message = e.message ?: "Fikk ikke lastet opp bildet" }
+        } catch (e: Exception) { message = uiErr73(e, "Fikk ikke lastet opp bildet") }
     }
 }
 
@@ -1045,7 +1045,7 @@ fun AppViewModel.addZone41(name: String, lat: Double, lon: Double, radius: Int) 
             api41 { hlPost("/ruter/school-zones", JSONObject().put("name", name.ifBlank { "Skole" }).put("lat", lat).put("lon", lon).put("radius_m", radius)) }
             s.zoneAdd = false; s.zoneErr = null
             loadZones41()
-        } catch (e: Exception) { s.zoneErr = e.message ?: "Fikk ikke lagret sonen" }
+        } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { s.zoneErr = uiErr73(e, "Fikk ikke lagret sonen") }
     }
 }
 

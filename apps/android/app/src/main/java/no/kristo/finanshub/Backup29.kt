@@ -181,8 +181,8 @@ fun AppViewModel.loadBk29() {
             if (s.runPct != null) pollBk29()
         } catch (e: ApiException) {
             if (e.status == 404 || e.status == 405) { s.missing = true; s.error = "" } else s.error = bkErr29(e)
-        } catch (e: Exception) {
-            s.error = e.message ?: "Feil"
+        } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) {
+            s.error = uiErr73(e, "Feil")
         } finally { s.loading = false }
     }
 }

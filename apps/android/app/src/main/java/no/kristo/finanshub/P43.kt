@@ -238,7 +238,7 @@ private fun AppViewModel.run43(block: suspend () -> Unit) = launch43 {
     try { block() } catch (e: CancellationException) { throw e } catch (e: ApiException) {
         // Prompt 44: «Utlogget fra Homelab» / «Svarer ikke» / ingen tilgang skilles (før ble TOKEN_REFUSED vist som «ikke tilgang»).
         p43.error = mediaErr44(e)
-    } catch (e: Exception) { p43.error = e.message ?: "Fikk ikke kontakt med Media" }
+    } catch (e: Exception) { p43.error = uiErr73(e, "Fikk ikke kontakt med Media") }
 }
 
 fun AppViewModel.openMedia43() {
@@ -556,7 +556,7 @@ fun AppViewModel.testIndexer43(id: Int) {
             val o = runCatching { JSONObject(raw) }.getOrNull()
             val ok = o?.b43(true, "ok") ?: true
             s.testRes = s.testRes + (id to if (ok) "OK" + (o?.i43("ms")?.let { " · $it ms" } ?: "") else (o?.s43("message", "error") ?: "Feilet"))
-        } catch (e: CancellationException) { throw e } catch (e: Exception) { s.testRes = s.testRes + (id to (e.message ?: "Feilet")) }
+        } catch (e: CancellationException) { throw e } catch (e: Exception) { s.testRes = s.testRes + (id to (uiErr73(e, "Feilet"))) }
         finally { s.testing = s.testing - id }
     }
 }
@@ -604,7 +604,7 @@ fun AppViewModel.addIndexer43(sc: MSchema43, fields: Map<String, String>, priori
             s.toast = o?.s43("message") ?: ("${sc.name} lagt til" + (ms?.let { " · svarte på $it ms" } ?: "") + when { sonarr && radarr -> " · synket til Sonarr og Radarr"; sonarr -> " · synket til Sonarr"; radarr -> " · synket til Radarr"; else -> "" })
             s.idxAdd = false; s.schemaPick = null; s.schema = null
             loadIndexers43()
-        } catch (e: CancellationException) { throw e } catch (e: Exception) { s.idxErr = e.message ?: "Fikk ikke lagt til indekseren" }
+        } catch (e: CancellationException) { throw e } catch (e: Exception) { s.idxErr = uiErr73(e, "Fikk ikke lagt til indekseren") }
         finally { s.idxBusy = false }
     }
 }
@@ -624,7 +624,7 @@ fun AppViewModel.mediaGlimt43(q: String) {
             if (o.optJSONArray("actions")?.length() ?: 0 > 0 || q.contains("pause", true) || q.contains("fortsett", true)) { loadTorrents43() }
         } catch (e: CancellationException) { throw e } catch (e: ApiException) {
             s.glimt = MGlimt43(q, if (e.status == 404) "Glimt i Media er ikke på serveren ennå." else (e.message ?: "Glimt svarte ikke"), emptyList(), emptyList(), emptyList())
-        } catch (e: Exception) { s.glimt = MGlimt43(q, e.message ?: "Glimt svarte ikke", emptyList(), emptyList(), emptyList()) }
+        } catch (e: Exception) { s.glimt = MGlimt43(q, uiErr73(e, "Glimt svarte ikke"), emptyList(), emptyList(), emptyList()) }
         finally { s.glimtBusy = false }
     }
 }
@@ -727,7 +727,7 @@ fun AppViewModel.claudePreview43(name: String, mime: String, data: ByteArray?, m
             s.impMemPick = (0 until (mem?.length() ?: 0)).filter { i -> mem?.optJSONObject(i)?.let { m -> m.b43(!m.b43(false, "exists"), "selected") } ?: true }.toSet()
         } catch (e: CancellationException) { throw e } catch (e: ApiException) {
             s.impErr = if (e.status == 404) "Serveren har ikke Claude-import ennå. Oppdater Homelab." else e.message
-        } catch (e: Exception) { s.impErr = e.message ?: "Fikk ikke lest fila" }
+        } catch (e: Exception) { s.impErr = uiErr73(e, "Fikk ikke lest fila") }
         finally { s.impBusy = false }
     }
 }
@@ -751,7 +751,7 @@ fun AppViewModel.claudeCommit43(withConvs: Boolean, withMem: Boolean) {
             s.impLastId = id
             s.impPreview = null
             Haptics.tap()
-        } catch (e: CancellationException) { throw e } catch (e: Exception) { s.impErr = e.message ?: "Importen feilet" }
+        } catch (e: CancellationException) { throw e } catch (e: Exception) { s.impErr = uiErr73(e, "Importen feilet") }
         finally { s.impBusy = false }
     }
 }
@@ -765,7 +765,7 @@ fun AppViewModel.claudeUndo43() {
             s.impDone = "Importen er angret."
             s.impLastId = null
             Haptics.select()
-        } catch (e: CancellationException) { throw e } catch (e: Exception) { s.impErr = e.message ?: "Fikk ikke angret" }
+        } catch (e: CancellationException) { throw e } catch (e: Exception) { s.impErr = uiErr73(e, "Fikk ikke angret") }
     }
 }
 
@@ -797,7 +797,7 @@ fun AppViewModel.claudeSample43() {
             s.impPreview = o
             s.impPick = objs34(o.optJSONArray("items")).filter { !it.b43(false, "imported") }.mapNotNull { it.s43("id", "uuid") }.toSet()
             s.impMemPick = (0 until (o.optJSONArray("memory")?.length() ?: 0)).toSet()
-        } catch (e: CancellationException) { throw e } catch (e: Exception) { s.impErr = e.message ?: "Fikk ikke laget eksempelet" }
+        } catch (e: CancellationException) { throw e } catch (e: Exception) { s.impErr = uiErr73(e, "Fikk ikke laget eksempelet") }
         finally { s.impBusy = false }
     }
 }

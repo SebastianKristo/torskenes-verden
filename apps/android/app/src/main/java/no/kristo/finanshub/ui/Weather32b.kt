@@ -53,15 +53,9 @@ private val WIND32B = Color(0xFF3FD0E0)
 private const val DROP32B = "M12 3c3 4 6 7.5 6 11a6 6 0 0 1-12 0c0-3.5 3-7 6-11z"
 private const val WINDP32B = "M3 8h11a3 3 0 1 0-3-3M3 12h16a3 3 0 1 1-3 3M3 16h8"
 
-/** ✕ Lukk: rund 42 dp glass (hvit 22 %), kryss 17 dp. */
+/** ✕ Lukk – prompt 73: ingen egen variant lenger, bare den felles VaerCloseButton (ui/Ui40.kt). */
 @Composable
-internal fun WxClose32b(onClick: () -> Unit) {
-    Box(
-        Modifier.size(42.dp).clip(CircleShape).background(Color.White.copy(alpha = .22f))
-            .clickable(role = Role.Button, onClickLabel = "Lukk Vær") { Haptics.dismiss(); onClick() }.semantics { contentDescription = "Lukk" },
-        contentAlignment = Alignment.Center,
-    ) { WxIcon("M6 6l12 12M18 6L6 18", Color.White, 17.dp, stroke = 2.6f) }
-}
+internal fun WxClose32b(onClick: () -> Unit) = VaerCloseButton(onClick = onClick)
 
 private fun mm32b(v: Double?): String = when {
     v == null || v < 0.05 -> ""
@@ -162,8 +156,10 @@ internal fun DaysCard32b(vm: AppViewModel, w: WeatherFull, temp: @Composable () 
             if (k > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(Color.White.copy(alpha = .18f)))
             val date = wxLd(d.date)
             val hs = if (date != null) dayHours32b(w, date) else emptyList()
-            Row(Modifier.fillMaxWidth().clickable { open(k) }.padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text(if (k == 0) "I dag" else date?.let(::wxWd) ?: "", fontSize = 17.sp, fontWeight = FontWeight.Bold, modifier = Modifier.width(52.dp), maxLines = 1)
+            // Prompt 73: hele raden er én trykkflate (min. 44 dp) med haptikk (wxDayTap73, ui/Vaer73.kt).
+            val lbl = if (k == 0) "I dag" else date?.let(::wxWd) ?: ""
+            Row(Modifier.fillMaxWidth().heightIn(min = 44.dp).wxDayTap73(lbl) { open(k) }.padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(lbl, fontSize = 17.sp, fontWeight = FontWeight.Bold, modifier = Modifier.width(52.dp), maxLines = 1)
                 if (mode == "rain") {
                     val bars = (0 until 12).map { b -> hs.filter { it.first / 2 == b }.sumOf { it.second.precip ?: 0.0 } }
                     val nowBar = if (k == 0) now.hour / 2 else -1

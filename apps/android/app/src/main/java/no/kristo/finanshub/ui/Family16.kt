@@ -1,5 +1,7 @@
 package no.kristo.finanshub.ui
 
+import no.kristo.finanshub.uiErr73
+
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
@@ -93,7 +95,7 @@ private fun PrivacySheet(vm: AppViewModel, startSharing: () -> Unit) {
                     PButton("Lagre helsedeling", Modifier.fillMaxWidth()) {
                         val perms = HealthSync.permissionsFor(health)
                         if (perms.isEmpty()) vm.famSetHealth(health)
-                        else try { vm.healthAskedNow(); hcPerm.launch(perms) } catch (e: Exception) { vm.message = "Fikk ikke åpnet Health Connect: ${e.message ?: "ukjent feil"}" }
+                        else try { vm.healthAskedNow(); hcPerm.launch(perms) } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { vm.message = "Fikk ikke åpnet Health Connect: ${uiErr73(e, "ukjent feil")}" }
                     }
                     Text("Bare det du velger, sendes til serveren, som et sammendrag hvert 15. minutt.", color = p.mut, fontSize = 12.sp)
                 }

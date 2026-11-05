@@ -4,7 +4,6 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import no.kristo.finanshub.hasBriefTodo52
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
@@ -148,30 +147,10 @@ internal fun BriefPage35(vm: AppViewModel) {
                 Text(b?.summary ?: if (s.briefBusy) "Glimt lager briefen …" else "Fikk ikke laget briefen.", color = if (dark) p.ink else Color(0xFF3D3A33),
                     fontFamily = PaperFonts.serif, fontSize = 17.sp, lineHeight = 24.5.sp)
             }
+            // Prompt 73: kortene i rekkefølgen fra Innstillinger → Glimt → Innhold i briefen (ui/Brief73Ui.kt, P73Brief.kt).
+            // Alle kort som er på har plassen sin fra første bilde: cache, ellers skjelett i full høyde; tomt → kort tomtekst.
+            BriefStack73(vm, b, kind, trials, pos, ring)
             if (b == null) return@Column
-            // Prompt 37: hele Vær-kortet er trykkbart og åpner Vær over briefen (✕ går tilbake hit, på samme sted). Talen stoppes.
-            b.wx?.let { w ->
-                val src = remember { MutableInteractionSource() }
-                val down by src.collectIsPressedAsState()
-                Box(Modifier.fillMaxWidth().onGloballyPositioned { pos["vaer"] = it.positionInParent().y }
-                    .graphicsLayer { val k = if (down) .985f else 1f; scaleX = k; scaleY = k }
-                    .clickable(src, null, role = Role.Button, onClickLabel = "Åpne Vær") { vm.stopSay35(); Haptics.tap(); vm.openWeather() }) { BriefWx35(w, ring("vaer")) }
-            }
-            // Prompt 37: dagens bibelvers i morgen- og kveldsbriefen (bare med modulen), øverst til det er lest eller sveipet bort på Hjem.
-            val bibleTop = vm.bibleAllowed37() && !vm.bibleAtBottom37() && when (kind) { "morning" -> vm.p37.bibleSet.morning || vm.p37.bibleMissing; "evening", "night" -> vm.p37.bibleSet.evening || vm.p37.bibleMissing; else -> false }
-            if (bibleTop) BriefBible37(vm, if (kind == "morning") "morning" else "evening")
-            Box(Modifier.fillMaxWidth().onGloballyPositioned { pos["kal"] = it.positionInParent().y }) { BriefKal35(vm, b, ring("kal")) }
-            // Prompt 37: Gjøremål · 3 gjøremål i dag (forfalt + i dag), avkrysning i briefen.
-            // Prompt 52 (AND52B): Huskeliste kommer som 4a i brief-kortene når serveren har dem.
-            if (!vm.hasBriefTodo52()) BriefTodos37(vm)
-            BriefCards52(vm) // prompt 52: de ni kortene for den som er logget inn (GET /api/brief52, ui/Ui52B.kt)
-            if (trials.isNotEmpty()) Box(Modifier.fillMaxWidth().onGloballyPositioned { pos["abo"] = it.positionInParent().y }) { BriefTrials35(vm, trials, ring("abo")) }
-            // Prompt 41: Skiføre · NORDMARKA i briefen når skikortet er relevant (og «Skiføre» ikke er slått av i Rediger Vær).
-            if (b?.skiText != null && vm.vaerLay41().ski) BriefSki41(b.skiText, b.skiItems)
-            // Prompt 38: Pakker, Familie, Skole og jobb, Bursdager og Nordlys i natt (etter Abonnementer, før Nyheter).
-            BriefCards38(vm, kind)
-            Box(Modifier.fillMaxWidth().onGloballyPositioned { pos["nyh"] = it.positionInParent().y }) { BriefNews35(vm, b, ring("nyh")) }
-            if (vm.bibleAllowed37() && vm.bibleAtBottom37()) BriefBible37(vm, biblePeriod37())
             Text("Laget av Glimt ${b.generatedAt ?: ""} · Vær: MET / Open-Meteo · Nyheter: ${b.news.map { it.src }.distinct().filter { it.isNotBlank() }.ifEmpty { listOf("NRK", "VG", "E24") }.take(4).joinToString(", ")}",
                 color = p.mut, fontSize = 12.sp, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
             b.note?.let { Text(it, color = p.mut, fontSize = 11.5.sp, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) }
@@ -209,6 +188,54 @@ internal fun BriefPage35(vm: AppViewModel) {
         }
     }
     if (g.cfgSheet) GlimtSheet35(vm)
+}
+
+/** Prompt 73: kortene som er på, i lagret rekkefølge. Kort fra /api/brief (Vær, Kalender, Nyheter …) vises med siste brief
+ *  (cache) eller skjelett; kortene fra /api/brief52 hentes hvert for seg (Card52Slot73). */
+@Composable
+private fun BriefStack73(vm: AppViewModel, b: Brief34?, kind: String, trials: List<BriefTrial35>, pos: MutableMap<String, Float>, ring: (String) -> Boolean) {
+    LaunchedEffect(vm.account?.id) { vm.loadBriefCards73(); vm.fetchBriefCards73(force = true) }
+    B73.onKeys.forEach { k ->
+        key(k) {
+            when {
+                B73.B52.containsKey(k) -> Card52Slot73(vm, k)
+                b == null -> Skeleton73(k)
+                else -> BriefCard34Slot73(vm, b, k, kind, trials, pos, ring)
+            }
+        }
+    }
+}
+
+@Composable
+private fun BriefCard34Slot73(vm: AppViewModel, b: Brief34, k: String, kind: String, trials: List<BriefTrial35>, pos: MutableMap<String, Float>, ring: (String) -> Boolean) {
+    when (k) {
+        // Prompt 37: hele Vær-kortet er trykkbart og åpner Vær over briefen (✕ går tilbake hit, på samme sted). Talen stoppes.
+        "vaer" -> {
+            val w = b.wx
+            if (w == null) Empty73("Vær", "Ingen værdata akkurat nå") else {
+                val src = remember { MutableInteractionSource() }
+                val down by src.collectIsPressedAsState()
+                Box(Modifier.fillMaxWidth().onGloballyPositioned { pos["vaer"] = it.positionInParent().y }
+                    .graphicsLayer { val sc = if (down) .985f else 1f; scaleX = sc; scaleY = sc }
+                    .clickable(src, null, role = Role.Button, onClickLabel = "Åpne Vær") { vm.stopSay35(); Haptics.tap(); vm.openWeather() }) { BriefWx35(w, ring("vaer")) }
+            }
+            // Prompt 41: Skiføre · NORDMARKA i briefen når skikortet er relevant (og «Skiføre» ikke er slått av i Rediger Vær).
+            if (b.skiText != null && vm.vaerLay41().ski) BriefSki41(b.skiText, b.skiItems)
+        }
+        "kal" -> Box(Modifier.fillMaxWidth().onGloballyPositioned { pos["kal"] = it.positionInParent().y }) { BriefKal35(vm, b, ring("kal")) }
+        "nyheter" -> Box(Modifier.fillMaxWidth().onGloballyPositioned { pos["nyh"] = it.positionInParent().y }) { BriefNews35(vm, b, ring("nyh")) }
+        "abo" -> if (trials.isNotEmpty()) Box(Modifier.fillMaxWidth().onGloballyPositioned { pos["abo"] = it.positionInParent().y }) { BriefTrials35(vm, trials, ring("abo")) }
+            else Empty73("Prøveperioder", "Ingen prøveperioder slutter snart")
+        // Prompt 37: dagens bibelvers (bare med modulen).
+        "bibel" -> if (vm.bibleAllowed37()) BriefBible37(vm, if (vm.bibleAtBottom37()) biblePeriod37() else if (kind == "morning") "morning" else "evening")
+            else Empty73("Bibelvers", "Ingen bibelvers akkurat nå")
+        "pakker", "familie", "skole", "bursdager", "nordlys" -> {
+            val id = mapOf("pakker" to "packages", "familie" to "family", "skole" to "school", "bursdager" to "birthdays", "nordlys" to "aurora").getValue(k)
+            if (hasBriefCard38(vm, id, kind)) BriefCard38One(vm, id, kind)
+            else Empty73(B73.title(k), mapOf("pakker" to "Ingen pakker på vei", "familie" to "Ingen deler posisjon nå", "skole" to "Ingen prøver eller frister neste 7 dager",
+                "bursdager" to "Ingen bursdager den nærmeste tiden", "nordlys" to "Ikke nordlys i natt").getValue(k))
+        }
+    }
 }
 
 private fun actionLabel35(a: String, en: Boolean): String = if (!en) a else when {
@@ -597,6 +624,8 @@ internal fun GlimtSettings35(vm: AppViewModel, figures: Boolean) {
             }
         }
         Text("Bare valgte briefer lages og varsles. Widgets og Hjem-kortet viser siste valgte brief.", color = p.mut, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 4.dp))
+        // Prompt 73: INNHOLD I BRIEFEN – hvilke kort og rekkefølgen (ui/Brief73Ui.kt). Både på siden og i ⚙-arket.
+        Brief73Settings(vm)
         // Prompt 37: Bibelvers (bare for brukere med modulen).
         if (figures) BibleSettings37(vm)
         Lab35("STEMMEMOTOR")

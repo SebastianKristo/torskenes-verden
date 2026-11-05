@@ -108,7 +108,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var selectedBudget by mutableStateOf<Int?>(null)
     var selectedReceipt by mutableStateOf<String?>(null)
     var busy by mutableStateOf(false)
-    var message by mutableStateOf<String?>(null)
+    private var message73 by mutableStateOf<String?>(null)
+    /** Prompt 73 (ANDFIX73): meldingen i UI – avbrudd («StandaloneCoroutine was cancelled») droppes, rå exception-tekst byttes ut (AndFix73.kt). */
+    var message: String?
+        get() = message73
+        set(v) { message73 = cleanErr73(v) }
     var jobs by mutableStateOf<List<Job>>(emptyList())
     var uploading by mutableStateOf(0)
     var offline by mutableStateOf<List<Uri>>(emptyList())
@@ -328,10 +332,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private fun startPref(k: String) = when (k) { "fin-hjem" -> "home"; "fin-liste" -> "list"; "fin-budsjett" -> "budget"; else -> "homelab" }
 
     private fun launch(block: suspend () -> Unit) = viewModelScope.launch {
-        try { block() } catch (e: ApiException) {
+        // Prompt 73: avbrudd er ikke en feil – kastes videre (ingen melding, ingen feil-haptikk).
+        try { block() } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: ApiException) {
             if (e.status == 403 && e.message?.startsWith(Api.TOKEN_REFUSED) == true) return@launch
             if (e.status == 401 && loggedIn && !e.needsTotp) expired() else { message = e.message; Haptics.error() }
-        } catch (e: Exception) { message = e.message ?: "Noe gikk galt"; Haptics.error() }
+        } catch (e: Exception) { message = uiErr73(e, "Noe gikk galt. Prøv igjen."); Haptics.error() }
     }
 
     /** Kort melding med haptikk: feil gir REJECT, ellers CONFIRM. */
@@ -500,7 +505,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /* ---------- Data ---------- */
 
-    fun refresh() = launch {
+    /** Prompt 73: én oppdatering om gangen – en ny (nettbytte, kontobytte, «Synk nå») avbryter den forrige stille. */
+    private var refreshJob73: kotlinx.coroutines.Job? = null
+    fun refresh(): kotlinx.coroutines.Job { refreshJob73?.cancel(); return launch { refreshNow73() }.also { refreshJob73 = it } }
+    private suspend fun refreshNow73() {
         resolveBase()
         boot = parseBoot(api.get("/bootstrap"))
         summary = runCatching { parseSummary(api.get("/summary")) }.getOrNull() ?: summary
@@ -928,7 +936,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                         if (e.status == 401) throw e
                         why = e.message
                         null
-                    } catch (e: AiCancelled25) { why = AI_CANCELLED25; null } catch (e: Exception) { why = e.message; null }
+                    } catch (e: AiCancelled25) { why = AI_CANCELLED25; null } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { why = uiErr73(e, "fikk ikke kontakt"); null }
                     if (a == null || a.aiUnavailable) {
                         aiNote = if (why == AI_CANCELLED25) "✦ AI-søket ble avbrutt. Viser vanlig søk."
                             else (why?.let { "✦ AI svarte ikke: $it" } ?: "AI-søket er ikke tilgjengelig nå.") + " Viser vanlig søk."
@@ -2721,8 +2729,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 Haptics.success()
             } catch (e: ApiException) {
                 message = if (e.status == 404) "Synk med Home Assistant trenger en nyere Homelab-server." else e.message
+            } catch (e: kotlinx.coroutines.CancellationException) { throw e
             } catch (e: Exception) {
-                message = e.message ?: "Home Assistant svarte ikke"
+                message = uiErr73(e, "Home Assistant svarte ikke")
             } finally {
                 tasksHa = runCatching { parseTasksHa(api.hlGet("/tasks/ha")) }.getOrNull() ?: tasksHa
                 runCatching { loadTasksNow() }
@@ -3218,7 +3227,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 else -> e.message ?: "Kunne ikke dele listen"
             }
         } catch (e: kotlinx.coroutines.CancellationException) { throw e
-        } catch (e: Exception) { message = e.message ?: "Kunne ikke dele listen"
+        } catch (e: Exception) { message = uiErr73(e, "Kunne ikke dele listen")
         } finally { shareBusy = false }
     }
 
@@ -3328,7 +3337,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             try { wxCompare = parseWxCompare(api.hlGet("/weather/compare?place=" + URLEncoder.encode(place, "UTF-8"), timeout = 15_000)) }
             catch (e: ApiException) { wxCompareError = if (e.status == 404) "Sammenligning trenger en nyere Homelab-server." else e.message }
-            catch (e: Exception) { wxCompareError = e.message ?: "Fikk ikke hentet sammenligningen" }
+            catch (e: kotlinx.coroutines.CancellationException) { throw e }
+            catch (e: Exception) { wxCompareError = uiErr73(e, "Fikk ikke hentet sammenligningen") }
         }
     }
 
@@ -3738,7 +3748,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         reroute47Job = viewModelScope.launch {
             delay(1500)
             val before = base
-            runCatching { resolveBase() }
+            // Prompt 73: avbrudd (nytt nettbytte) kastes videre, så en avbrutt jobb ikke starter refresh() likevel.
+            try { resolveBase() } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) {}
             if (base != before && loggedIn) refresh()
         }
     }

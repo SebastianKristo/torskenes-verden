@@ -1,0 +1,28 @@
+/* Prompt 73 (BRIEF73): Innhold i briefen (Innstillinger → Glimt og ⚙-arket) og kort som har plassen sin fra første bilde.
+   Fasit: Glimt Brief.dc.html (mode settings: INNHOLD I BRIEFEN, BK0) og claude-code-brief-kort-lastes-straks.md (skjelett #e6dfd1 på #fffdf8). */
+.b73-sh{display:flex;justify-content:space-between;align-items:baseline;padding-top:4px}
+.b73-sh .gs-h{padding-top:0}
+.b73-cnt{font:600 11px 'IBM Plex Mono',ui-monospace,monospace;color:var(--gs-mute,#8a8478)}
+.b73-note{margin-top:-6px}
+.b73-list{display:flex;flex-direction:column;border-top:1px solid var(--gs-line,#e6dfd1)}
+.b73-row{display:flex;align-items:center;gap:10px;min-height:52px;padding:6px 0;border-bottom:1px solid var(--gs-line,#e6dfd1);box-sizing:border-box}
+.b73-mv{flex:none;display:flex;flex-direction:column;gap:2px}
+.b73-mv button{width:28px;height:22px;border:0;border-radius:6px;background:var(--gs-chip,#efe9dc);color:var(--gs-ink,#1b1a17);cursor:pointer;display:grid;place-items:center;padding:0}
+.b73-mv button:disabled{opacity:.35;cursor:default}
+.b73-t{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;border:0;background:transparent;cursor:pointer;font-family:inherit;color:inherit;text-align:left;padding:0}
+.b73-t b{font-size:14.5px}
+.b73-t span{font-size:12px;color:var(--gs-mute,#6b665c)}
+.b73-row.off .b73-t{opacity:.45}
+.b73-reset{align-self:flex-start;height:34px;padding:0 14px;border-radius:17px;border:1px solid var(--gs-off,#ddd5c5);background:transparent;color:var(--gs-ink,#1b1a17);cursor:pointer;font:700 12.5px Manrope,system-ui,sans-serif}
+.b73-set{display:flex;flex-direction:column;gap:12px}
+
+/* Kortene i briefen: skjelett i full høyde, tomtekst og «Oppdatert kl. …». Ingen innfading når data kommer. */
+.b73-sk,.b73-em{flex:none;border-radius:24px;background:#fffdf8;color:#1b1a17;padding:18px;display:flex;flex-direction:column;gap:10px;box-sizing:border-box;font-family:var(--gb-sans,Manrope,system-ui,sans-serif)}
+.b73-sk b,.b73-em b{font:500 20px/1.2 Newsreader,Georgia,serif}
+.b73-sk span{display:block;height:12px;border-radius:6px;background:#e6dfd1}
+.b73-em span{font-size:13.5px;color:#6b665c}
+.b73-em .gs-pill{align-self:flex-start}
+.b73-w{display:flex;flex-direction:column;gap:6px}
+.b73-up{font-size:12px;color:#8a8478;padding:0 4px}
+.b73-up button{border:0;background:transparent;padding:0;font:700 12px Manrope,system-ui,sans-serif;color:#b23a2a;cursor:pointer;text-decoration:underline}
+.b73-sum{color:#8a8478}

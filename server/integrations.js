@@ -490,12 +490,15 @@ async function plexNow() {
 
 async function plexRecent() {
   const { url, token } = plexCfg();
-  const list = (await mediaGet(`${url}/library/recentlyAdded?X-Plex-Container-Start=0&X-Plex-Container-Size=12`, plexH(token))).MediaContainer?.Metadata ?? [];
+  const list = (await mediaGet(`${url}/library/recentlyAdded?X-Plex-Container-Start=0&X-Plex-Container-Size=12&includeGuids=1`, plexH(token))).MediaContainer?.Metadata ?? [];
   return list.slice(0, 12).map((m) => {
     const tv = m.type === 'episode' || m.type === 'season' || m.type === 'show';
     const title = m.type === 'episode' ? m.grandparentTitle : m.type === 'season' ? m.parentTitle : m.title;
     const sub = m.type === 'episode' ? `Serie · ${se(m.parentIndex, m.index)}` : m.type === 'season' ? `Serie · ${m.title}` : tv ? 'Serie' : `Film${m.year ? ` · ${m.year}` : ''}`;
-    return { src: 'plex', kind: tv ? 'tv' : 'movie', title: title || m.title, sub, added: m.addedAt ? new Date(m.addedAt * 1000).toISOString() : null,
+    // Prompt 73 (MEDIA73): ID-er og episodedata så Media kan slå sammen Plex og nedlastingen til ett kort.
+    const gid = (k) => { const g = (m.Guid ?? []).map((x) => String(x?.id ?? '')).find((x) => x.startsWith(`${k}://`)); const n = g ? +g.slice(k.length + 3) : NaN; return Number.isInteger(n) && n > 0 ? n : null; };
+    const ids = m.type === 'movie' ? { tmdbId: gid('tmdb'), year: m.year ?? null } : m.type === 'episode' ? { season: Number.isInteger(+m.parentIndex) ? +m.parentIndex : null, episode: Number.isInteger(+m.index) ? +m.index : null, episodeTitle: m.title ?? '', year: m.grandparentYear ?? null } : {};
+    return { src: 'plex', kind: tv ? 'tv' : 'movie', type: m.type ?? null, ...ids, title: title || m.title, sub, added: m.addedAt ? new Date(m.addedAt * 1000).toISOString() : null,
       poster: plexPoster(m.type === 'episode' ? m.grandparentThumb || m.parentThumb || m.thumb : m.type === 'season' ? m.parentThumb || m.thumb : m.thumb), url: `${url}/web/index.html` };
   });
 }

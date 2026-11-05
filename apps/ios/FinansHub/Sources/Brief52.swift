@@ -27,32 +27,115 @@ final class Brief52Model {
     /// Tjenester som startes nå (id → «Starter …»), og siste svar per tjeneste.
     var starting: Set<String> = []
     var startNote: [String: String] = [:]
+    /// Prompt 73: status per kort – "loading", "ok", "stale" (tidsavbrudd, cache vises) eller "fail" (ingen cache).
+    var state: [String: String] = [:]
+    /// Prompt 73: når kortets innhold sist ble hentet (for «Oppdatert kl. HH:MM»).
+    var fetchedAt: [String: Date] = [:]
     @ObservationIgnored private var loadedFor: String = ""
     @ObservationIgnored private var at: Date = .distantPast
+    @ObservationIgnored private var raw: [String: [String: Any]] = [:]
 
-    func load(_ store: Store, force: Bool = false) async {
+    /// Ett kort etter id (nil = ikke hentet ennå).
+    func card(_ id: String) -> Brief52Card? { cards.first { (c: Brief52Card) -> Bool in c.id == id } }
+
+    private static func cacheKey(_ who: String) -> String { "brief73_c52_" + who }
+
+    /// Prompt 73: siste svar per kort fra disk (per bruker), så kortene vises med en gang.
+    func hydrate(_ store: Store) {
         let who: String = store.account?.id ?? ""
-        if !force && loaded && who == loadedFor && Date().timeIntervalSince(at) < 60 { return }
-        guard let d = try? await store.api.callAt("/api", "GET", "/brief52", timeout: 15) else {
-            // Eldre server uten /api/brief52: ingen nye kort (briefen ellers er som før).
-            if who != loadedFor { cards = [] }
-            loaded = true
-            loadedFor = who
-            return
-        }
+        if who == loadedFor && (loaded || !raw.isEmpty) { return }
+        loadedFor = who
+        raw = [:]
+        fetchedAt = [:]
+        state = [:]
+        cards = []
+        guard let d = UserDefaults.standard.data(forKey: Brief52Model.cacheKey(who)) else { return }
         let o: [String: Any] = JS.obj(d)
-        var out: [Brief52Card] = []
         for c in JS.list(o, "cards") {
             guard let id = JS.str(c, "id") else { continue }
+            raw[id] = c
+            if let t = JS.num(c, "_at") { fetchedAt[id] = Date(timeIntervalSince1970: t) }
+        }
+        rebuild()
+    }
+
+    private func rebuild() {
+        var out: [Brief52Card] = []
+        for (id, c) in raw {
             out.append(Brief52Card(id: id, title: JS.str(c, "title") ?? id, variant: JS.str(c, "variant") ?? "",
                                    data: c["data"] as? [String: Any], error: JS.str(c, "error") ?? ""))
         }
         cards = out
-        greeting = JS.str(o, "greeting") ?? ""
-        first = JS.str(JS.dict(o, "user"), "first") ?? JS.str(JS.dict(o, "user"), "name") ?? ""
-        loaded = true
-        loadedFor = who
+    }
+
+    private func persist() {
+        let list: [[String: Any]] = raw.map { (pair: (key: String, value: [String: Any])) -> [String: Any] in
+            var c: [String: Any] = pair.value
+            c["_at"] = (fetchedAt[pair.key] ?? Date()).timeIntervalSince1970
+            return c
+        }
+        if let d = try? JSONSerialization.data(withJSONObject: ["cards": list]) {
+            UserDefaults.standard.set(d, forKey: Brief52Model.cacheKey(loadedFor))
+        }
+    }
+
+    /// Henter kortene som er på i «Innhold i briefen», hvert for seg og alle samtidig (6 s hver).
+    func load(_ store: Store, force: Bool = false) async {
+        hydrate(store)
+        if !force && loaded && Date().timeIntervalSince(at) < 60 { return }
+        fetchAll(store)
+    }
+
+    /// Prompt 73: forhåndshenting (appen i forgrunnen, Hjem vises) – høyst hvert 5. minutt.
+    func prefetch(_ store: Store) async {
+        hydrate(store)
+        if loaded && Date().timeIntervalSince(at) < 300 { return }
+        await Brief73Model.shared.load(store)
+        fetchAll(store)
+    }
+
+    func fetchAll(_ store: Store) {
         at = Date()
+        loaded = true
+        let ids: [String] = Brief73Model.shared.onKeys.compactMap { (k: String) -> String? in Brief73Model.b52[k] }
+        for id in ids {
+            Task { @MainActor in await self.fetchOne(store, id) }
+        }
+    }
+
+    private func fetchOne(_ store: Store, _ id: String) async {
+        if state[id] == "loading" { return }
+        state[id] = "loading"
+        let enc: String = id.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? id
+        do {
+            let d: Data = try await store.api.callAt("/api", "GET", "/brief52?only=" + enc, timeout: 6)
+            let o: [String: Any] = JS.obj(d)
+            let hit: [String: Any]? = JS.list(o, "cards").first { (c: [String: Any]) -> Bool in JS.str(c, "id") == id }
+            greeting = JS.str(o, "greeting") ?? greeting
+            first = JS.str(JS.dict(o, "user"), "first") ?? JS.str(JS.dict(o, "user"), "name") ?? first
+            guard let c = hit else { raw[id] = nil; state[id] = "ok"; rebuild(); persist(); return }
+            let bad: Bool = c["data"] as? [String: Any] == nil && JS.str(c, "error") != nil && JS.bool(c, "empty") != true
+            if bad {
+                state[id] = raw[id]?["data"] as? [String: Any] != nil ? "stale" : "fail"
+                return
+            }
+            raw[id] = c
+            fetchedAt[id] = Date()
+            state[id] = "ok"
+            rebuild()
+            persist()
+        } catch let e as APIError {
+            // Eldre server uten /api/brief52: ingen kort.
+            state[id] = e.status == 404 ? "ok" : (raw[id] != nil ? "stale" : "fail")
+        } catch {
+            state[id] = raw[id] != nil ? "stale" : "fail"
+        }
+    }
+
+    func retry(_ id: String, _ store: Store) {
+        Haptic34.light()
+        state[id] = nil
+        Task { @MainActor in await self.fetchOne(store, id) }
     }
 
     func start(_ id: String, _ store: Store) async {
@@ -67,7 +150,7 @@ final class Brief52Model {
             let act: String = JS.str(o, "action") ?? "start"
             startNote[id] = act == "restart" ? "Startet på nytt" : "Startet"
             Haptics.shared.success()
-            await load(store, force: true)
+            await fetchOne(store, "homelab")
         } catch let e as APIError {
             startNote[id] = e.status == 403 ? "Bare admin kan starte tjenester" : "Fikk ikke startet: " + e.message
         } catch {
@@ -76,25 +159,19 @@ final class Brief52Model {
     }
 }
 
-/// Alle kortene i fast rekkefølge (serverens). Legges i briefen (Brief35Content).
-struct Brief52Stack: View {
-    @Environment(Store.self) private var store
-    @MainActor private var m: Brief52Model { Brief52Model.shared }
+/// Prompt 73: ett kort fra /api/brief52 etter id (rekkefølgen kommer fra «Innhold i briefen», Brief73.swift).
+struct Brief52One: View {
+    let c: Brief52Card
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            ForEach(m.cards) { (c: Brief52Card) in card(c) }
-        }
-        .task(id: store.account?.id ?? "") { await m.load(store) }
-    }
-
-    @ViewBuilder private func card(_ c: Brief52Card) -> some View {
         switch c.id {
         case "focus": Brief52Focus(c: c)
-        case "trip": if Brief52Data.has(c.data, "items") { Brief52Trip(c: c) }
+        case "trip":
+            if Brief52Data.has(c.data, "items") { Brief52Trip(c: c) } else { Brief52Paper(title: c.title, kick: "") { Brief52Empty(c: c) } }
         case "todo": Brief52Todo(c: c)
         case "bills": Brief52Bills(c: c)
-        case "clothes": if c.data != nil { Brief52Clothes(c: c) }
+        case "clothes":
+            if c.data != nil { Brief52Clothes(c: c) } else { Brief52Paper(title: c.title, kick: "") { Brief52Empty(c: c) } }
         case "tonight": Brief52Tonight(c: c)
         case "homelab": Brief52Homelab(c: c)
         case "domains": Brief52Domains(c: c)

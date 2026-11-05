@@ -180,7 +180,7 @@ fun AppViewModel.loadHa42(force: Boolean = false) {
             if (e.status == 404) s.haMissing = true
             else s.haError = if (e.status == 401 || e.status == 403) "Koble til Home Assistant på nytt (Innstillinger → Integrasjoner)." else e.message
         } catch (e: Exception) {
-            s.haError = e.message ?: "Fikk ikke kontakt med Home Assistant"
+            s.haError = uiErr73(e, "Fikk ikke kontakt med Home Assistant")
         } finally { s.haBusy = false }
     }
 }
@@ -199,7 +199,7 @@ fun AppViewModel.saveHa42(d: HaDevice42, personId: String?, sensors: Set<String>
             flash(if (personId == null) "${d.name} er koblet fra" else "Lagret · første synk henter 30 dager")
         } catch (e: CancellationException) { throw e } catch (e: ApiException) {
             message = if (e.status == 404) "Serveren har ikke helse fra Home Assistant ennå. Oppdater Homelab." else e.message
-        } catch (e: Exception) { message = e.message ?: "Fikk ikke lagret" }
+        } catch (e: Exception) { message = uiErr73(e, "Fikk ikke lagret") }
     }
 }
 

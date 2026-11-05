@@ -18,11 +18,16 @@ const body = async (c) => { const b = await c.req.json().catch(() => ({})); retu
 
 
 const LOGO_DIR52 = join(config.dataDir, 'logos');
+// Prompt 73 (LOGO73): brukerens manuelle logovalg («Endre logo») går foran alt. Settes av finans/logo73.js (unngår importsirkel).
+let override52 = null;
+export const setLogoOverride52 = (fn) => { override52 = typeof fn === 'function' ? fn : null; };
 /** Logo for et butikknavn uten nettkall: logobiblioteket, så brukerens lagrede merchant_logos (fil på disk). */
 export function localLogo52(u, name) {
   const n = clean(name, 120);
   const initial = (n.replace(BANK_PREFIX52, '').match(/[\p{L}\p{N}]/u)?.[0] ?? '?').toUpperCase();
   if (!n) return { id: null, url: null, initial, color: null };
+  const ov = override52?.(u, n);
+  if (ov) return { id: null, url: ov.url ?? null, initial, color: null, source: 'manual' };
   let m = null; try { m = matchMerchant(n); } catch { /* */ }
   if (m?.id && libraryFile(m.id)) return { id: m.id, url: `/finans/api/logos/file/${m.id}`, initial, color: m.farge ?? null, source: 'library' };
   try {

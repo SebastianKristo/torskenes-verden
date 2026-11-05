@@ -193,8 +193,8 @@ fun AppViewModel.loadBirthdays24(quiet: Boolean = false) {
                 s.items = bdSort(loadLocal24())
                 pushWidgets24(s.items ?: emptyList())
             } else if (!quiet) s.error = e.message
-        } catch (e: Exception) {
-            if (!quiet) s.error = e.message ?: "Fikk ikke hentet bursdagene"
+        } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) {
+            if (!quiet) s.error = uiErr73(e, "Fikk ikke hentet bursdagene")
         }
     }
 }

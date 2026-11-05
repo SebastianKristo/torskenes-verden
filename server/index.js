@@ -24,6 +24,7 @@ import backgroundApi, { hasBackgroundTest, testBackgrounds } from './background.
 import mobileApi, { meOut, removeAvatar, shortcutsFor, layoutOf, authOrToken, designOf } from './mobile.js';
 import rssApi, { startRssWorker } from './rss.js';
 import { faviconHandler46 } from './news46.js'; // prompt 46 (SERVER46)
+import { news73Api } from './news73.js'; // prompt 73 (NEWS73)
 import iconsApi from './icons.js';
 import familyApi from './family.js';
 import tilesApi, { hasMapTest, testMap } from './tiles.js';
@@ -771,6 +772,7 @@ app.all('/api/velfremme/*', async (c) => { const u = new URL(c.req.url); u.pathn
 app.use('/api/hjemlys', hjemlysGet41); // prompt 41: GET /api/hjemlys får notices
 app.route('/api/hjemlys', hjemlys41Api); // prompt 41: Si fra (notice/status), tur med valgfritt mål (før prompt 40)
 app.route('/api/hjemlys', hjemlys40Api); // prompt 40: Hjemlys (start, status, posisjon, ok/hjemme/avslutt, tokens, forslag)
+app.route('/api/news/saved', news73Api); // prompt 73 (NEWS73): lagrede artikler (offline, SSRF-vern)
 app.route('/api/news', news40Api); // prompt 40: Nyheter · Glimt-siden
 app.route('/api/app/pages', pages40Api); // prompt 40: alle sider i Mer (fanelinja), før /api/app
 app.route('/api/app/android', appUpdateApi); // prompt 32: /latest og /apk/:version, sesjon eller app-token, alle brukere

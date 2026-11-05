@@ -6,6 +6,8 @@ import { ICON_LIBS, iconHtml, searchIcons, suggestIcon, keywordFor, preloadIcons
 import { clearBtn, bindSearchFields } from './searchfield.js';
 import { glimt } from './glimt.js';
 import { speak57, stop57, aiTag57 } from './voices57.js'; // prompt 57: «Les opp» med valgt stemme (POST /api/tts), nettleseren som reserve
+// Prompt 73 (NEWS73): fanen «Lagret», bokmerke på kort og i artikkelvisningen, lagret artikkel offline (news73.js).
+import { TAB73, TAB_ICON73, bind73, load73, label73, listHtml73, cardBtn73, artBtn73, artBanner73, readerHtml73, toastHtml73, click73, input73, key73, openSaved73 } from './news73.js';
 
 const CSS_ID = 'news-css';
 const ensureCss = () => {
@@ -74,9 +76,10 @@ function reader(opts = {}) {
   ensureCss();
   const theme = opts.theme ?? themeNow();
   const SO = !!opts.settingsOnly;
-  const st = { cat: opts.cat ?? 'siste', data: null, error: '', set: false, nf: '', busy: false, adding: false, addError: '', ip: null, icAll: false, icErr: '', art: null, gl: opts.glimt ? { open: true, cfg: false, busy: true, out: null, err: '' } : null };
+  const st = { cat: opts.saved ? 'lagret' : opts.cat ?? 'siste', data: null, error: '', set: false, nf: '', busy: false, adding: false, addError: '', ip: null, icAll: false, icErr: '', art: null, gl: opts.glimt ? { open: true, cfg: false, busy: true, out: null, err: '' } : null };
   const artCache = new Map();
   bindSearchFields();
+  if (!SO) { bind73(() => { if (el.isConnected) render(); }); load73(); if (opts.saved) openSaved73(String(opts.saved)); }
 
   const el = SO ? opts.host : document.createElement('div');
   if (SO) { el.className = `nw46-set nw-${theme}`; }
@@ -101,7 +104,7 @@ function reader(opts = {}) {
   const onKey = (e) => {
     if (e.key !== 'Escape' || e.defaultPrevented) return;
     if (SO) { if (st.ip) { e.preventDefault(); e.stopPropagation(); st.ip = null; render(); } return; }
-    if (st.more) { st.more = false; render(); } else if (st.ip) { st.ip = null; render(); } else if (st.art) { st.art = null; render(); } else if (st.gl?.cfg) { st.gl.cfg = false; render(); } else if (st.gl?.open) { glClose(); } else close();
+    if (st.more) { st.more = false; render(); } else if (st.ip) { st.ip = null; render(); } else if (key73()) { /* prompt 73: lukket lagret artikkel */ } else if (st.art) { st.art = null; render(); } else if (st.gl?.cfg) { st.gl.cfg = false; render(); } else if (st.gl?.open) { glClose(); } else close();
   };
   if (SO) el.addEventListener('keydown', onKey, true); else document.addEventListener('keydown', onKey);
   // Prompt 46: innstillinger endret i Innstillinger → Nyheter gjelder med en gang (samme fane, eller annen fane via storage).
@@ -112,16 +115,19 @@ function reader(opts = {}) {
   async function load() {
     const n = ++seq;
     let data = null, error = '';
+    // Prompt 73: «Lagret» henter fra /api/news/saved (news73.js); RSS-dataene (faner, kilder) hentes bare hvis de mangler.
+    if (st.cat === 'lagret') { load73(); if (st.data) { render(); return; } }
+    const catQ = st.cat === 'lagret' ? 'siste' : st.cat;
     // Prompt 46: «For deg» og egne kategorier. Kjenner ikke serveren dem (eldre versjon), filtreres «Siste» her.
     const own = isFd46(st.cat) || isCC46(st.cat), srvKnows = [...(st.data?.categories ?? []), ...(st.data?.tabs ?? [])].some((c) => String(c.id) === st.cat);
     const local = async () => { const d = await api('/rss?cat=siste&limit=200'); d.items = filter46(d, st.cat); d.local46 = true; return d; };
-    try { data = own && st.data && !srvKnows ? await local() : await api(`/rss?cat=${encodeURIComponent(st.cat)}&limit=60`); }
+    try { data = own && st.data && !srvKnows ? await local() : await api(`/rss?cat=${encodeURIComponent(catQ)}&limit=60`); }
     catch (e) { if (own && e.status === 400) { try { data = await local(); } catch (e2) { error = e2.message; } } else error = e.message || 'Kunne ikke hente nyheter'; }
     if (n !== seq || !el.isConnected) return;
     st.error = error;
     if (data) { if (own && !data.local46 && !Array.isArray(data.items)) data.items = []; st.data = data; preloadIcons(icIds(data)); }
     render();
-    if (data && !SO) catSum46();
+    if (data && !SO && st.cat !== 'lagret') catSum46();
     // Glimt foreslår interesser ut fra det du leser (GET /api/rss/interests → suggestions).
     if (data && SO && !st.sug46) { st.sug46 = true; api('/rss/interests').then((r) => { if (Array.isArray(r?.suggestions) && st.data) { st.data.suggestions46 = r.suggestions; render(); } }).catch(() => {}); }
     if (data && st.gl?.open && !st.gl.out && !st.gl.started) { st.gl.started = true; glRun(); }
@@ -233,7 +239,8 @@ function reader(opts = {}) {
   const icOf = (id) => { const x = icState(); return id in x.ic ? x.ic[id] : (st.data?.iconDefaults ?? IC_DEF)[id] ?? IC_DEF[id] ?? (st.data?.tabs ?? []).find((t) => String(t.id) === id)?.icon ?? (isFd46(id) ? IC_DEF.fordeg : null) ?? (isCC46(id) ? ccList().find((c) => c.id === id)?.icon ?? 'lucide:tag' : ''); };
   const cats0 = () => st.data?.categories ?? Object.keys(CAT_NAME).slice(1).map((id) => ({ id, name: CAT_NAME[id] }));
   // Prompt 46: Siste · ✦ For deg · standard · egne kategorier (serveren kan sende dem selv i categories).
-  const cats = () => {
+  const cats = () => (SO ? catsBase() : [...catsBase(), TAB73]); // prompt 73: «Lagret» bakerst
+  const catsBase = () => {
     // SERVER46: GET /api/rss → tabs [{id, name, icon, kind:'std'|'for-deg'|'custom'}] i riktig rekkefølge.
     if (Array.isArray(st.data?.tabs) && st.data.tabs.length) return st.data.tabs.map((t) => ({ id: String(t.id), name: t.name, icon: t.icon, custom: t.kind === 'custom', fd: t.kind === 'for-deg' }));
     const base = cats0(), out = [...base]; if (!out.some((c) => c.id === 'fordeg')) out.splice(1, 0, { id: 'fordeg', name: 'For deg' }); for (const c of ccList()) if (!out.some((x) => x.id === c.id)) out.push({ id: c.id, name: c.name, custom: true }); return out; };
@@ -277,9 +284,10 @@ function reader(opts = {}) {
   const imgTag = (u) => (u && /^(https?:\/\/|\/)/.test(u) ? `<img src="${esc(u)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" data-nw-img>` : '');
   const thumb = (x, cls = 'nw-th') => `<span class="${cls}" style="background-color:${esc(x.color || '#5c5850')}" aria-hidden="true">${esc(ini(x))}${imgTag(x.image)}</span>`;
   const findItem = (id) => (st.data?.items ?? []).find((x) => String(x.id) === String(id)) ?? st.art?.rel?.find((x) => String(x.id ?? x.url) === String(id));
-  const item = (x, showCat) => `<button type="button" class="nw-it" data-art="${esc(x.id ?? x.url)}">
+  // Prompt 73: bokmerket (lagre) vises ved hover på kortet (news73.js cardBtn73).
+  const item = (x, showCat) => `<div class="nw73-w"><button type="button" class="nw-it" data-art="${esc(x.id ?? x.url)}">
       <span class="nw-tx">${showCat ? `<span class="nw-cat">${esc((CAT_NAME[x.category] ?? x.category).toUpperCase())}</span>` : ''}<span class="nw-t" data-no-i18n>${esc(x.title)}</span><span class="nw-m"><span data-no-i18n>${esc(x.feed)}</span> · ${esc(when(x.published))}${x.ai ? ' · ✦ AI' : ''}</span></span>
-      ${thumb(x)}</button>`;
+      ${thumb(x)}</button>${cardBtn73(x)}</div>`;
 
   async function openArt(x) {
     st.art = { x, d: artCache.get(x.url) ?? null, busy: !artCache.has(x.url), err: '', shared: false };
@@ -302,12 +310,13 @@ function reader(opts = {}) {
     const rel = (Array.isArray(d.related) && d.related.length ? d.related : (st.data?.items ?? []).filter((y) => y.category === x.category && y.url !== x.url)).slice(0, 5);
     a.rel = rel;
     return `<div class="nw-art" role="document">
-      <div class="nw-art-h"><button class="nw-back" data-act="art-close">‹ Siste nytt</button><span class="nw-sp"></span><button class="nw-back" data-act="art-share">${a.shared ? 'Lenke kopiert' : 'Del'}</button></div>
+      <div class="nw-art-h"><button class="nw-back" data-act="art-close">‹ Siste nytt</button><span class="nw-sp"></span>${artBtn73(x)}<button class="nw-back" data-act="art-share">${a.shared ? 'Lenke kopiert' : 'Del'}</button></div>
       <div class="nw-art-body"><div class="nw-art-in">
         <div class="nw-hero" style="background-color:${esc(x.color || '#5c5850')}">${esc(ini(x))}${imgTag(img)}</div>
         <span class="nw-lab">${esc(cat)}${cat ? ' · ' : ''}<span data-no-i18n>${esc(src.toUpperCase())}</span></span>
         <h1 class="nw-art-t" data-no-i18n>${esc(d.title || x.title)}</h1>
         <span class="nw-m">${esc(dayWord(d.published || x.published))}${rm ? ` · ca. ${rm} min å lese` : ''}</span>
+        ${artBanner73(x)}
         <div class="nw-sum"><span class="nw-lab">✦ AI-SAMMENDRAG</span>
           ${a.busy ? '<span class="nw-m nw-busy">Leser saken …</span>' : a.err ? `<span class="nw-m">${esc(a.err)}</span>`
     : `<span class="nw-sumt" data-no-i18n>${esc(d.summary || 'Ingen sammendrag for denne saken.')}</span>${pts.length ? `<div class="nw-pts">${pts.map((p, i) => `<div><b>${i + 1}</b><span data-no-i18n>${esc(p)}</span></div>`).join('')}</div>` : ''}`}
@@ -454,6 +463,7 @@ function reader(opts = {}) {
 
   function body() {
     const d = st.data;
+    if (st.cat === 'lagret') return listHtml73(); // prompt 73
     if (st.error) return `<div class="nw-empty">${esc(st.error)} <button class="nw-pill" data-act="retry">Prøv igjen</button></div>`;
     if (!d) return '<div class="nw-empty">Henter nyheter …</div>';
     const items = d.items ?? [];
@@ -546,15 +556,16 @@ function reader(opts = {}) {
     }
     const keepArt = el.querySelector('.nw-art-body')?.scrollTop ?? 0, keepScroll = el.querySelector('.nw-body')?.scrollTop ?? 0, keepSheet = el.querySelector('.nw-sheet')?.scrollTop ?? 0, keepIp = el.querySelector('.nw-ipg')?.scrollTop ?? 0;
     const focus = document.activeElement?.name === 'ipq' ? document.activeElement.selectionStart : null;
+    const focus73 = document.activeElement?.name === 'nw73q' ? document.activeElement.selectionStart : null, keep73 = el.querySelector('.nw73-rd-b')?.scrollTop ?? 0;
     const keepGl = el.querySelector('.nw40-gb')?.scrollTop ?? 0;
     el.innerHTML = `<div class="nw-card">
       <div class="nw-head"><div class="nw-hl">
         <button class="nw-back" data-act="close">${opts.backLabel ?? '‹ Tilbake'}</button>
-        <div><div class="nw-lab">NYHETSLESER · ${d?.feeds?.length ?? 0} KILDER${d?.updatedAt ? ` · OPPDATERT ${hm(d.updatedAt)}` : ''}</div><h2 class="nw-title">Siste nytt</h2></div></div>
+        <div>${st.cat === 'lagret' ? `<div class="nw-lab">${label73()}</div><h2 class="nw-title">Lagret</h2>` : `<div class="nw-lab">NYHETSLESER · ${d?.feeds?.length ?? 0} KILDER${d?.updatedAt ? ` · OPPDATERT ${hm(d.updatedAt)}` : ''}</div><h2 class="nw-title">Siste nytt</h2>`}</div></div>
         <div class="nw-hr"><button class="nw-ic" data-act="refresh" aria-label="Oppdater" title="Oppdater" ${st.busy ? 'disabled' : ''}>↻</button><span class="nw46-mw"><button class="nw-ic" data-act="nw46-more" aria-label="Mer" title="Mer" aria-haspopup="menu" aria-expanded="${!!st.more}">⋯</button>${st.more ? '<div class="nw46-menu" role="menu"><button type="button" role="menuitem" data-act="nw46-set">⚙ Nyhetsinnstillinger</button></div>' : ''}</span></div></div>
-      <nav class="nw-tabs">${cats().map((c) => `<button data-cat="${c.id}" class="${c.id === st.cat ? 'on' : ''}">${icState().icOn ? iconHtml(icOf(c.id), 16) : ''}${esc(c.name)}</button>`).join('')}</nav>
+      <nav class="nw-tabs">${cats().map((c) => `<button data-cat="${c.id}" class="${c.id === st.cat ? 'on' : ''}">${c.saved73 ? TAB_ICON73 : icState().icOn ? iconHtml(icOf(c.id), 16) : ''}${esc(c.name)}</button>`).join('')}</nav>
       <div class="nw-body">${body()}</div>
-      ${glView()}${artView()}${picker()}</div>`;
+      ${glView()}${artView()}${readerHtml73()}${picker()}${toastHtml73()}</div>`;
     const gb = el.querySelector('.nw40-gb'); if (gb) gb.scrollTop = keepGl;
     const b = el.querySelector('.nw-body');
     if (b) b.scrollTop = keepScroll;
@@ -562,9 +573,12 @@ function reader(opts = {}) {
     const ab = el.querySelector('.nw-art-body'); if (ab) ab.scrollTop = keepArt;
     const g = el.querySelector('.nw-ipg'); if (g) g.scrollTop = keepIp;
     if (focus != null) { const q = el.querySelector('[name=ipq]'); q?.focus(); q?.setSelectionRange(focus, focus); }
+    const rb = el.querySelector('.nw73-rd-b'); if (rb) rb.scrollTop = keep73;
+    if (focus73 != null) { const q = el.querySelector('[name=nw73q]'); q?.focus({ preventScroll: true }); try { q?.setSelectionRange(focus73, focus73); } catch { /* */ } }
   }
 
   el.addEventListener('click', async (e) => {
+    if (!SO && click73(e, { findItem, art: st.art?.x ?? null })) return; // prompt 73: lagre/fjern/åpne lagret
     if (await glClick(e)) return;
     // Prompt 46: ⋯-menyen, «Nyhetsinnstillinger» (dyp lenke til Innstillinger → Nyheter), kategorier og interesser.
     if (st.more && !e.target.closest('.nw46-mw')) { st.more = false; render(); }
@@ -624,7 +638,7 @@ function reader(opts = {}) {
       render(); document.dispatchEvent(new Event('hl:news-settings')); return load();
     }
   });
-  el.addEventListener('input', (e) => { if (e.target.name === 'url') st.nf = e.target.value; if (e.target.name === 'ipq' && st.ip) st.ip.q = e.target.value; if (e.target.name === 'nw46int') st.intN = e.target.value; if (e.target.name === 'nw46ccn') st.ccN = e.target.value; if (e.target.name === 'nw46cck') st.ccK = e.target.value; });
+  el.addEventListener('input', (e) => { if (!SO && input73(e)) return; if (e.target.name === 'url') st.nf = e.target.value; if (e.target.name === 'ipq' && st.ip) st.ip.q = e.target.value; if (e.target.name === 'nw46int') st.intN = e.target.value; if (e.target.name === 'nw46ccn') st.ccN = e.target.value; if (e.target.name === 'nw46cck') st.ccK = e.target.value; });
   // Prompt 46: kategori per kilde som ekte nedtrekksmeny. Lagres med en gang; egen kategori lagres lokalt hvis serveren ikke kjenner den.
   el.addEventListener('change', async (e) => {
     const sel = e.target.closest?.('[data-nw46-cat]'); if (!sel) return;

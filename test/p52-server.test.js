@@ -308,6 +308,9 @@ test('lex52: rettede ord læres per bruker og brukes av regelparseren', async ()
 /* ---------------- 5. Brief-kort per bruker ---------------- */
 
 test('brief52: admin får alle kortene (unntatt reise uten ruter), vanlig bruker uten Homelab/Domener/Aksjer/Media', async () => {
+  // Prompt 73: Homelab, Domener og Aksjer er av som standard i «Innhold i briefen» – slå alt på for disse testene.
+  const ALL73 = (await import('../server/brief73.js')).KEYS73.map((key) => ({ key, on: true }));
+  for (const X of [A, I, P]) assert.equal((await X('/api/brief-cards', 'PUT', { cards: ALL73 })).status, 200);
   const a = await A('/api/brief52');
   assert.equal(a.status, 200, a.text);
   assert.match(a.body.greeting, /Sebastian$/);

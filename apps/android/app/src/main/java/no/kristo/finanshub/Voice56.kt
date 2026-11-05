@@ -280,7 +280,7 @@ fun AppViewModel.stopMic56(cancel: Boolean) {
                 if (e.status == 422) voice56Refresh(force = true)
             }
         } catch (e: Exception) {
-            msg = "Tale til tekst: ${e.message ?: "feil"}"
+            msg = "Tale til tekst: ${uiErr73(e, "feil")}"
         } finally {
             f.delete()
         }

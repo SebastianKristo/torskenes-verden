@@ -229,8 +229,48 @@ export function logoMatch(t) {
   }
   return null;
 }
+// Prompt 73 (LOGO73): brukerens egne logovalg («Endre logo») per butikk. GET /finans/api/merchants/logo-overrides gir
+// {names: {«rått navn i små bokstaver»: url | ""}} ("" = initialer). Vinner over alt annet i logo(), overalt i Finans.
+const OV73_KEY = 'fh_logo_ov';
+const OV73 = { names: {}, t: 0, busy: null };
+try { const c = JSON.parse(localStorage.getItem(OV73_KEY) || 'null'); if (c?.names && typeof c.names === 'object') OV73.names = c.names; } catch { /* privat modus */ }
+/** Henter overstyringene (høyst hvert minutt, eller med force). Tegner på nytt når noe endret seg. */
+export function loadLogoOv73(force = false) {
+  if (OV73.busy) return OV73.busy;
+  if (!force && Date.now() - OV73.t < 60_000) return Promise.resolve(false);
+  OV73.t = Date.now();
+  OV73.busy = fetch('/finans/api/merchants/logo-overrides').then((r) => (r.ok && r.headers.get('content-type')?.includes('json') ? r.json() : null)).then((j) => {
+    if (!j?.names || typeof j.names !== 'object') return false;
+    const changed = JSON.stringify(j.names) !== JSON.stringify(OV73.names);
+    OV73.names = j.names;
+    try { localStorage.setItem(OV73_KEY, JSON.stringify({ names: j.names })); } catch { /* */ }
+    if (changed) render();
+    return changed;
+  }).catch(() => false).finally(() => { OV73.busy = null; });
+  return OV73.busy;
+}
+/** Setter én overstyring lokalt med en gang (etter PUT), før kartet er hentet på nytt. url: string, "" (initialer) eller null (fjern). */
+export function setLogoOv73(names, url) {
+  for (const n of names) { const k = String(n ?? '').trim().toLowerCase(); if (!k) continue; if (url === null) delete OV73.names[k]; else OV73.names[k] = url; }
+  try { localStorage.setItem(OV73_KEY, JSON.stringify({ names: OV73.names })); } catch { /* */ }
+}
+/** Overstyrt logo for en transaksjon/butikk: url, "" (initialer) eller undefined (ingen overstyring). */
+export function logoOv73(t) {
+  for (const raw of [t?.merchant, t?.description, t?.name]) {
+    const k = String(raw ?? '').trim().toLowerCase();
+    if (k && Object.prototype.hasOwnProperty.call(OV73.names, k)) { const v = OV73.names[k]; return typeof v === 'string' && (v === '' || /^\/finans\/api\//.test(v)) ? v : undefined; }
+  }
+  return undefined;
+}
 const DEF_COLOR = '#A0A0AA';
 export function logo(t, size = 40, radius = 12) {
+  const ov73 = logoOv73(t);
+  if (ov73 !== undefined) {
+    const nm = t?.description ?? t?.merchant ?? t?.name ?? '', col = t?.color && t.color !== DEF_COLOR ? t.color : DEF_COLOR;
+    const bx = `width:${size}px;height:${size}px;border-radius:${radius}px;flex:none`;
+    if (ov73) return `<span class="m-logo" style="${bx}"><img src="${esc(ov73)}" alt="" loading="lazy" width="${size - 8}" height="${size - 8}"><i style="color:${esc(col)}">${esc(ini(nm))}</i></span>`;
+    return `<span class="m-ini" style="${bx};background:${rgba(col, 0.18)};color:${esc(col)};font-size:${Math.round(size * 0.4)}px">${esc(ini(nm))}</span>`;
+  }
   const it = logoMatch(t);
   const name = t?.description ?? t?.merchant ?? t?.name ?? it?.navn ?? '';
   const color = (t?.color && t.color !== DEF_COLOR ? t.color : it?.farge) || t?.color || DEF_COLOR;

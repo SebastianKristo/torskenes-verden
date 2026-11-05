@@ -157,7 +157,7 @@ fun AppViewModel.runDiag50(body: JSONObject = JSONObject()) {
             if (Med50.diag?.ok == true) Haptics.success() else Haptics.error()
         } catch (e: CancellationException) { throw e } catch (e: ApiException) {
             Med50.diagErr = when (e.status) { 403 -> "Bare administrator kan kjøre diagnostikken."; 404 -> "Serveren har ikke diagnostikk ennå. Oppdater Homelab."; else -> e.message ?: "Diagnostikken svarte ikke" }
-        } catch (e: Exception) { Med50.diagErr = e.message ?: "Diagnostikken svarte ikke" }
+        } catch (e: Exception) { Med50.diagErr = uiErr73(e, "Diagnostikken svarte ikke") }
         finally { Med50.diagBusy = false }
     }
 }

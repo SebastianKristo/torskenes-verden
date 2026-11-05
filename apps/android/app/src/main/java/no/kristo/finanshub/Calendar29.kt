@@ -314,8 +314,8 @@ fun AppViewModel.submitQuick29(text: String = q29.text) {
             } catch (e: ApiException) {
                 if (e.status == 404 || e.status == 405) q.queueMissing = true
                 else { q.jobs = q.jobs.filter { it.id != tmp }; quickFailed29(t, parseQuick29(t), e.message ?: "Fikk ikke lagt til timen."); return@launch29 }
-            } catch (e: Exception) {
-                q.jobs = q.jobs.filter { it.id != tmp }; quickFailed29(t, parseQuickLocal29(t), e.message ?: "Fikk ikke kontakt med serveren."); return@launch29
+            } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) {
+                q.jobs = q.jobs.filter { it.id != tmp }; quickFailed29(t, parseQuickLocal29(t), uiErr73(e, "Fikk ikke kontakt med serveren.")); return@launch29
             }
         }
         if (jobId != null) {

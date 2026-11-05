@@ -71,6 +71,7 @@ extension View {
 
 struct Brief34HomeCard: View {
     @Environment(Store.self) private var store
+    @Environment(\.scenePhase) private var phase
     @MainActor private var m: Brief34Model { Brief34Model.shared }
 
     var body: some View {
@@ -104,6 +105,12 @@ struct Brief34HomeCard: View {
             await m.load(store)
             Glimt35Model.shared.refreshExtra()
             await Glimt35Model.shared.load(store)
+            // Prompt 73: kortene hentes når Hjem vises, så de er klare før briefen åpnes (høyst hvert 5. min).
+            await Brief52Model.shared.prefetch(store)
+        }
+        // Prompt 73: og når appen kommer i forgrunnen.
+        .onChange(of: phase) { (_: ScenePhase, p: ScenePhase) in
+            if p == .active { Task { await Brief52Model.shared.prefetch(store) } }
         }
         .accessibilityLabel(b.kick + ". " + b.summary)
     }

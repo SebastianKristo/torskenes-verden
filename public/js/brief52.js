@@ -85,6 +85,10 @@ function stocks() {
   return `<a data-gb="aks" class="b52 b52-tap" href="/finans/"><span class="b52-k grey">STØRST I GÅR</span><span class="b52-st"><b>${esc(top?.name ?? 'Porteføljen')}</b><b class="v" style="color:${col(top?.change_pct ?? d.change_pct)}">${esc(pct(top?.change_pct ?? d.change_pct))}</b></span><span class="b52-s">${esc(`Porteføljen ${d.value_text || kr(d.value)} · ${pct(d.change_pct)}`)}</span></a>`;
 }
 
+/** Prompt 73: ett kort etter id (briefen tegnes i rekkefølgen fra «Innhold i briefen», brief73.js). */
+const ONE52 = { focus, trip, todo, bills, clothes, tonight, homelab, domains, stocks };
+export function brief52One(id) { return ONE52[id]?.() ?? ''; }
+
 /** Kortene øverst i briefen (rett etter oppsummeringen) og nederst (før bunnteksten). */
 export function brief52Top() { return B.data ? focus() + trip() + todo() + bills() + clothes() : ''; }
 export function brief52Bottom() { return B.data ? tonight() + homelab() + domains() + stocks() : ''; }
@@ -100,7 +104,7 @@ export function brief52Click(e, { close, redraw } = {}) {
     fetch(`/api/brief52/homelab/${encodeURIComponent(id)}/start`, { method: 'POST', credentials: 'same-origin' })
       .then(async (r) => { const j = await r.json().catch(() => ({})); if (!r.ok) throw new Error(j.error || `Feil ${r.status}`); B.busy[id] = j.action === 'restart' ? 'Startet på nytt' : 'Startet'; try { navigator.vibrate?.(10); } catch { /* */ } })
       .catch((er) => { B.busy[id] = er.message.slice(0, 40); })
-      .finally(() => { redraw?.(); setTimeout(() => { delete B.busy[id]; loadBrief52(redraw, true); }, 2500); });
+      .finally(() => { redraw?.(); setTimeout(() => { delete B.busy[id]; import('./brief73.js').then((m) => m.fetchCards73({ force: true })).catch(() => loadBrief52(redraw, true)); }, 2500); });
     return true;
   }
   const go = e.target.closest('[data-b52-go]');

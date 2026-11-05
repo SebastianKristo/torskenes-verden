@@ -9,7 +9,7 @@
 // linje), lett haptikk når et ark/popup lukkes (sentralt i paintLayer), Yr mot Storm i fullskjerm med Ferdig-pille,
 // «Pent» heter Storm overalt, logoer fra /assets/brands/ (yr.png, storm.png), og hele «Yr og Storm»-kortet er trykkbart.
 import { clearBtn } from '/assets/js/searchfield.js';
-import { api, esc, sheetBtn, haptic } from './util.js';
+import { api, esc, haptic } from './util.js';
 import { createWxFx, sunFrac } from './weather-fx.js';
 import { cmp39Html, bindCmp39, cmp39Reset } from './weather-cmp39.js'; // prompt 39: Yr mot Storm 2a + wiggle
 import { fig } from './glimt-figs.js'; // prompt 39: Glimt · ukas vær
@@ -498,8 +498,12 @@ const cmpRow = (x) => `<div class="wxp-cg wxp-cgr"><b>${esc(x.d)}</b><span class
 
 /* ---------------- Ark ---------------- */
 const sheet = (inner, kind) => `<div class="wxp-scrim" data-wx-close="${kind}"><div class="wxp-sheet" role="dialog" aria-modal="true">${inner}</div></div>`;
-const xBtn = (kind) => `<button class="wxp-x" data-wx-close="${kind}" aria-label="Lukk">×</button>`;
-const doneBtn = (kind) => sheetBtn('Ferdig', `data-wx-close="${kind}"`, 'pri');
+// Prompt 73 (claude-code-vaer-lukk-x.md): ÉN lukkeknapp i Vær – samme ✕ som hovedsiden (42 px glass, 17 px kryss, strek 2,8),
+// også i Forhold-/detaljarkene (var liten mørk «×»), Steder og Yr mot Storm (var «Ferdig») og kartet (mørk glass over kartet).
+const X_SVG = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+export const vaerCloseButton = (attrs, dark = false) => `<button type="button" class="wxp-close${dark ? ' dk' : ''}" ${attrs} aria-label="Lukk" title="Lukk">${X_SVG}</button>`;
+const xBtn = (kind, dark = false) => vaerCloseButton(`data-wx-close="${kind}"`, dark);
+const doneBtn = xBtn;
 // Logoer (SERVER30 legger dem i /assets/brands/, beskåret til sirkelen). Hentes aldri fra nettet.
 const LOGO = (k, sz) => `<img class="wxp-logo" src="/assets/brands/${k}.png" alt="${k === 'yr' ? 'Yr' : 'Storm'}" width="${sz}" height="${sz}" style="width:${sz}px;height:${sz}px">`;
 
@@ -610,7 +614,7 @@ const LAYERS = [['rain', 'Nedbør'], ['temp', 'Temperatur'], ['wind', 'Vind'], [
 function mapOverlay() {
   const P = place(), src = mapSrc(P);
   return `<div class="wxp-map" role="dialog" aria-label="Værkart"><iframe src="${esc(src)}" title="Værkart for ${esc(P.name)}" loading="lazy" referrerpolicy="no-referrer"></iframe>
-    <div class="wxp-maptop"><button class="wxp-glass" data-wx-close="mp">Ferdig</button><b>${esc(P.name)}</b><span style="width:72px"></span></div>
+    <div class="wxp-maptop"><span style="width:42px" aria-hidden="true"></span><b>${esc(P.name)}</b>${xBtn('mp', true)}</div>
     <div class="wxp-mapbot"><div class="wxp-layers" role="tablist">${LAYERS.map(([k, n]) => `<button role="tab" aria-selected="${S.mpL === k}" class="${S.mpL === k ? 'on' : ''}" data-wx-layer="${k}">${n}</button>`).join('')}</div></div></div>`;
 }
 
@@ -863,7 +867,7 @@ export function render() {
   return `<div id="wxp" class="wxp sb-dark${isDk() ? ' dk' : ''}" aria-label="Vær">
     <div class="wxp-sky"></div><canvas class="wxp-fx" aria-hidden="true"></canvas>
     <aside class="wxp-side" aria-label="Steder"></aside>
-    <div class="wxp-top"><span class="wxp-tsp"></span><div class="wxp-tc" aria-hidden="true"></div><button class="wxp-close" data-wx="close" aria-label="Lukk" title="Lukk"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+    <div class="wxp-top"><span class="wxp-tsp"></span><div class="wxp-tc" aria-hidden="true"></div>${vaerCloseButton('data-wx="close"')}</div>
     <div class="wxp-scroll"><div class="wxp-inner"></div></div>
     <nav class="wxp-bnav wxp-fab" aria-label="Vær"><button class="wxp-bb" data-wx="map" aria-label="Værkart" title="Værkart"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4L3 6.5v13.5l6-2.5 6 2.5 6-2.5V4l-6 2.5zM9 4v13.5M15 6.5V20"/></svg></button><span></span><button class="wxp-bb" data-wx="places" aria-label="Steder" title="Steder og søk"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button></nav>
     <div class="wxp-layer"></div></div>`;

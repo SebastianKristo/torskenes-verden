@@ -80,7 +80,7 @@ fun AppViewModel.loadMem33(force: Boolean = false) {
         } catch (e: ApiException) {
             s.missing = e.status == 404
             if (e.status != 404) s.msg = e.message ?: "Fikk ikke hentet listen"
-        } catch (e: Exception) { s.msg = e.message ?: "Fikk ikke hentet listen" }
+        } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { s.msg = uiErr73(e, "Fikk ikke hentet listen") }
         s.loaded = true
     }
 }
@@ -103,7 +103,7 @@ fun AppViewModel.deleteMem33(it: Mem33Item) {
     s.items = s.items.filter { x -> x.id != it.id }
     launch33 {
         try { api33 { hlDelete("/glimt/memory/${it.id}") }; s.msg = "Slettet ✓"; Haptics.success() }
-        catch (e: Exception) { s.msg = "Kunne ikke slette"; loadMem33(force = true) }
+        catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { s.msg = "Kunne ikke slette"; loadMem33(force = true) }
     }
 }
 
@@ -117,7 +117,7 @@ fun AppViewModel.saveMemForm33(match: String, type: String, title: String) {
             s.adding = false; s.msg = "Lagret ✓"
             s.ask = if (c > 0 && it != null) Mem33Ask(it.id, c, it.title.ifBlank { mem33TypeName(type) + " · " + n }) else null
             Haptics.success()
-        } catch (e: ApiException) { s.msg = e.message ?: "Kunne ikke lagre" } catch (e: Exception) { s.msg = e.message ?: "Kunne ikke lagre" }
+        } catch (e: ApiException) { s.msg = e.message ?: "Kunne ikke lagre" } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { s.msg = uiErr73(e, "Kunne ikke lagre") }
     }
 }
 
@@ -167,7 +167,7 @@ fun AppViewModel.saveLearn33() {
             s.learn = s.learn?.copy(busy = false, asked = true, memId = it?.id, count = c, title = it?.title?.ifBlank { null } ?: title, name = name)
             Haptics.success()
         } catch (e: ApiException) { s.learn = s.learn?.copy(busy = false, err = e.message ?: "Kunne ikke lagre") }
-        catch (e: Exception) { s.learn = s.learn?.copy(busy = false, err = e.message ?: "Kunne ikke lagre") }
+        catch (e: kotlinx.coroutines.CancellationException) { s.learn = s.learn?.copy(busy = false); throw e } catch (e: Exception) { s.learn = s.learn?.copy(busy = false, err = uiErr73(e, "Kunne ikke lagre")) }
     }
 }
 
@@ -182,7 +182,7 @@ fun AppViewModel.applyLearn33() {
             s.learn = null
             flash(if (n == 0) "Ingen avtaler å endre" else "$n ${if (n == 1) "avtale" else "avtaler"} fikk nytt navn")
             reloadKal27()
-        } catch (e: Exception) { s.learn = s.learn?.copy(busy = false, err = "Kunne ikke endre avtalene.") }
+        } catch (e: kotlinx.coroutines.CancellationException) { s.learn = s.learn?.copy(busy = false); throw e } catch (e: Exception) { s.learn = s.learn?.copy(busy = false, err = "Kunne ikke endre avtalene.") }
     }
 }
 

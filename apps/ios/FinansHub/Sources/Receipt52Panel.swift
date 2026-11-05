@@ -28,11 +28,13 @@ struct Rc52Head<Extra: View>: View {
     let amount: Double
     let ai: String
     @ViewBuilder var extra: () -> Extra
+    /// Prompt 73 (LOGO73): trykk på logoen → «Endre logo».
+    @State private var logoSheet73: Bool = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 12) {
-                logoView
+                logoButton73
                 VStack(alignment: .leading, spacing: 2) {
                     Text(merchant).font(PF.serif(22, medium: true)).foregroundStyle(p.ink).lineLimit(2)
                     Text(sub).font(PF.ui(12.5)).foregroundStyle(p.mut).lineLimit(2)
@@ -50,7 +52,34 @@ struct Rc52Head<Extra: View>: View {
         .shadow(color: .black.opacity(0.12), radius: 15, y: 10)
     }
 
+    private var logoButton73: some View {
+        Button { logoSheet73 = true } label: {
+            logoView
+                .overlay(alignment: .bottomTrailing) { penBadge73 }
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Endre logo for \(merchant)")
+        .sheet(isPresented: $logoSheet73) { LogoSheet73(name: merchant) }
+    }
+
+    private var penBadge73: some View {
+        Image(systemName: "pencil").font(.system(size: 9, weight: .bold)).foregroundStyle(Color(hex: "#f3efe6"))
+            .frame(width: 20, height: 20)
+            .background(Circle().fill(Color(hex: "#1b1a17")))
+            .overlay(Circle().stroke(p.card, lineWidth: 2))
+            .offset(x: 5, y: 5)
+    }
+
     @ViewBuilder private var logoView: some View {
+        if LogoOv73.shared.value(for: merchant) != nil {
+            // Prompt 73: overstyrt logo (eller initialer) vinner også over serverens logo-sti.
+            PaperLogo(domain: nil, name: merchant, color: "#6b665c", size: 46, radius: 13)
+        } else {
+            logoAuto
+        }
+    }
+
+    @ViewBuilder private var logoAuto: some View {
         switch logo {
         case .domain(let d, let color):
             PaperLogo(domain: d, name: merchant, color: color, size: 46, radius: 13)

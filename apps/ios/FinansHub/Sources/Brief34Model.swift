@@ -48,7 +48,8 @@ final class Brief34Model {
         defer { loading = false }
         let kind: String = Brief34.kindFor()
         do {
-            let d: Data = try await store.api.callAt("/api", "GET", "/brief?kind=" + kind, timeout: 25)
+            // Prompt 73: 6 s; svarer ikke serveren, vises den bufrede briefen med «Oppdatert kl. HH:MM».
+            let d: Data = try await store.api.callAt("/api", "GET", "/brief?kind=" + kind, timeout: 6)
             // Prompt 38: de nye kortene (pakker, familie, skole, bursdager, nordlys) – Brief38.swift.
             Brief38Cards.shared.parse(d)
             if let b = Brief34.parse(d) {
@@ -63,6 +64,11 @@ final class Brief34Model {
             error = e.status == 404 ? "" : e.message
         } catch {
             self.error = error.localizedDescription
+        }
+        // Prompt 73: bufret brief finnes → den blir stående (kortene skal ikke forsvinne), bare med tidspunktet.
+        if let old = brief, !error.isEmpty {
+            error = old.generatedAt.map { (d: Date) -> String in "Oppdatert kl. " + JS.fmt(d, "HH:mm") + " · klarte ikke hente ny" } ?? "Klarte ikke hente ny brief"
+            return
         }
         // Eldre server: en enkel brief fra appens egne data.
         if let b = fallback(store) {

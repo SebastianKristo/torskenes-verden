@@ -696,7 +696,7 @@ fun AppViewModel.explain44(l: Log44) {
             val steps = o.strs44("steps")
             p44.explain = listOfNotNull(o.s43("title"), o.s43("text", "explanation", "answer"), steps.takeIf { it.isNotEmpty() }?.joinToString("\n") { "→ $it" })
                 .joinToString("\n\n").ifBlank { "Glimt fant ingen forklaring." }
-        } catch (e: CancellationException) { throw e } catch (e: Exception) { p44.explain = "Glimt kunne ikke forklare linjen nå (${e.message ?: "feil"})." } finally { p44.explainBusy = false }
+        } catch (e: CancellationException) { throw e } catch (e: Exception) { p44.explain = "Glimt kunne ikke forklare linjen nå (${uiErr73(e, "feil")})." } finally { p44.explainBusy = false }
     }
 }
 
@@ -763,7 +763,7 @@ fun AppViewModel.askDoc44(d: SDoc44, q: String) = launch44 {
     if (q.isBlank()) return@launch44
     p44.docAnswer = "Glimt leser dokumentet …"
     p44.docAnswer = try { JSONObject(api44 { hlPost("/study/documents/" + enc44(d.id) + "/ask", JSONObject().put("q", q)) }).s43("answer", "text") ?: "Fant ikke noe svar." }
-        catch (e: CancellationException) { throw e } catch (e: Exception) { "Glimt svarte ikke (${e.message ?: "feil"})." }
+        catch (e: CancellationException) { throw e } catch (e: Exception) { "Glimt svarte ikke (${uiErr73(e, "feil")})." }
 }
 
 fun AppViewModel.applyDoc44(d: SDoc44) = launch44 {

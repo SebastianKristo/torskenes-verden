@@ -114,8 +114,8 @@ fun AppViewModel.load51(key: String, force: Boolean = false) {
             F51.data[key] = o
         } catch (e: ApiException) {
             F51.err[key] = e.message ?: "Kunne ikke hente"
-        } catch (e: Exception) {
-            F51.err[key] = e.message ?: "Kunne ikke hente"
+        } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) {
+            F51.err[key] = uiErr73(e, "Kunne ikke hente")
         } finally { F51.busy[key] = false }
     }
 }
@@ -139,8 +139,8 @@ fun AppViewModel.act51(
             reload.forEach { load51(it, force = true) }
         } catch (e: ApiException) {
             F51.toast = e.message ?: "Noe gikk galt"; Haptics.error()
-        } catch (e: Exception) {
-            F51.toast = e.message ?: "Noe gikk galt"; Haptics.error()
+        } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) {
+            F51.toast = uiErr73(e, "Noe gikk galt"); Haptics.error()
         } finally { F51.acting = null }
     }
 }
@@ -177,8 +177,8 @@ fun AppViewModel.goalImage51(goalId: String, uri: Uri) {
             putBytes51("/fin51/goals/$goalId/image", bytes, type)
             F51.toast = "Bildet er lagret"
             load51("goals", force = true)
-        } catch (e: Exception) {
-            F51.toast = e.message ?: "Kunne ikke laste opp bildet"
+        } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) {
+            F51.toast = uiErr73(e, "Kunne ikke laste opp bildet")
         } finally { F51.acting = null }
     }
 }
@@ -199,8 +199,8 @@ fun AppViewModel.shareExport51(path: String, name: String, mime: String) {
             val send = android.content.Intent(android.content.Intent.ACTION_SEND).setType(mime).putExtra(android.content.Intent.EXTRA_STREAM, uri)
                 .addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
             ctx.startActivity(android.content.Intent.createChooser(send, name).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
-        } catch (e: Exception) {
-            F51.toast = e.message ?: "Kunne ikke laste ned"
+        } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) {
+            F51.toast = uiErr73(e, "Kunne ikke laste ned")
         } finally { F51.acting = null }
     }
 }

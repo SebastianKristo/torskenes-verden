@@ -122,7 +122,7 @@ private suspend fun AppViewModel.fetch39(url: String): Pair<Int, ByteArray?> = w
             Log.i(AV_TAG, "GET $full → $code ${c.contentType ?: ""}")
             if (code in 200..299) code to c.inputStream.use { it.readBytes() } else code to null
         } finally { c.disconnect() }
-    } catch (e: Exception) {
+    } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) {
         Log.w(AV_TAG, "GET $full feilet: ${e.message}")
         code to null
     }

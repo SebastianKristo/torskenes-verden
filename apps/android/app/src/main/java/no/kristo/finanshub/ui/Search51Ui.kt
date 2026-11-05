@@ -1,5 +1,7 @@
 package no.kristo.finanshub.ui
 
+import no.kristo.finanshub.uiErr73
+
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -70,7 +72,7 @@ internal fun Search51Page(vm: AppViewModel) {
         S51.busy = true
         try { S51.res = vm.search51(S51.q, 30); S51.err = null } catch (e: ApiException) {
             S51.err = if (e.status == 404) "Serveren har ikke felles søk ennå. Oppdater Homelab." else e.message
-        } catch (e: Exception) { S51.err = e.message ?: "Kunne ikke søke" } finally { S51.busy = false }
+        } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { S51.err = uiErr73(e, "Kunne ikke søke") } finally { S51.busy = false }
     }
     Page51("Søk i alt", "Homelab") {
         Row(

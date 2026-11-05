@@ -572,6 +572,33 @@ private fun famDot38(state: String): Color {
     return when { "hjemme" in l -> GREEN38; "vei" in l -> Color(0xFFD9A400); "skole" in l || "jobb" in l -> BLUE38; else -> Color(0xFF8F897C) }
 }
 
+/** Prompt 73: har kortet noe å vise? (pakker, familie, skole, bursdager, nordlys). Ellers viser briefen en kort tomtekst. */
+internal fun hasBriefCard38(vm: AppViewModel, id: String, kind: String): Boolean {
+    val x = vm.p38.bx
+    return when (id) {
+        "packages" -> !x?.packages.isNullOrEmpty()
+        "family" -> !x?.family.isNullOrEmpty()
+        "school" -> !x?.school.isNullOrEmpty()
+        "birthdays" -> (x?.birthdays ?: vm.localBirthdays38()).isNotEmpty()
+        "aurora" -> x?.aurora?.let { a -> val h = LocalTime.now(OSLO38).hour; a.show && (kind == "evening" || kind == "night" || h >= 15 || h < 4) && (a.kp ?: 0.0) >= 3.0 } == true
+        else -> false
+    }
+}
+
+/** Prompt 73: ett av kortene over (rekkefølgen kommer fra «Innhold i briefen», ui/Brief35.kt BriefStack73). */
+@Composable
+internal fun BriefCard38One(vm: AppViewModel, id: String, kind: String) {
+    val x = vm.p38.bx
+    if (!hasBriefCard38(vm, id, kind)) return
+    when (id) {
+        "packages" -> x?.packages?.let { BxPackages38(vm, it, x.pkLabel) }
+        "family" -> x?.family?.let { BxFamily38(it, x.famLabel) }
+        "school" -> x?.school?.let { BxSchool38(vm, it) }
+        "birthdays" -> BxBirthdays38(vm, x?.birthdays ?: vm.localBirthdays38())
+        "aurora" -> x?.aurora?.let { BxAurora38(it) }
+    }
+}
+
 /** De nye kortene (etter Abonnementer, før Nyheter), i rekkefølgen fra Innstillinger → Glimt → Brief. */
 @Composable
 internal fun BriefCards38(vm: AppViewModel, kind: String) {

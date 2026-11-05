@@ -237,8 +237,8 @@ fun AppViewModel.saveKalForm27() {
             reloadKal27()
         } catch (e: ApiException) {
             s.form = s.form?.copy(err = kalErr27(e)); Haptics.error()
-        } catch (e: Exception) {
-            s.form = s.form?.copy(err = e.message ?: "Fikk ikke lagret"); Haptics.error()
+        } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) {
+            s.form = s.form?.copy(err = uiErr73(e, "Fikk ikke lagret")); Haptics.error()
         } finally { s.saving = false }
     }
 }

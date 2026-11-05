@@ -1,5 +1,7 @@
 package no.kristo.finanshub.ui
 
+import no.kristo.finanshub.uiErr73
+
 import android.Manifest
 import android.content.Context
 import android.content.Intent
@@ -75,7 +77,7 @@ internal fun HealthPosPage(vm: AppViewModel) {
         if (hc != 0) { vm.message = if (hc == 1) "Health Connect må installeres eller oppdateres fra Play Butikk." else "Health Connect finnes ikke på denne telefonen."; return }
         pending = want
         vm.healthAskedNow()
-        try { hcPerm.launch(perms) } catch (e: Exception) { pending = null; vm.message = "Fikk ikke åpnet Health Connect: ${e.message ?: "ukjent feil"}" }
+        try { hcPerm.launch(perms) } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { pending = null; vm.message = "Fikk ikke åpnet Health Connect: ${uiErr73(e, "ukjent feil")}" }
     }
 
     val bgPerm = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { ok ->

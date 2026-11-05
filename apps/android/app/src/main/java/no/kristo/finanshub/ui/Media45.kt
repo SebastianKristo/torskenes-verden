@@ -1,5 +1,7 @@
 package no.kristo.finanshub.ui
 
+import no.kristo.finanshub.uiErr73
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -143,7 +145,7 @@ private fun AppViewModel.deleteUnmon45() {
     launch45 {
         val body = JSONObject().put("service", svc).put("fileIds", JSONArray(ids.map { it.toIntOrNull() ?: it })).put("confirm", true).put("delaySec", 8)
         val raw = try { api45 { hlPost(mediaQ45("/media/unmonitored/delete?x=1"), body) } } catch (e: CancellationException) { throw e } catch (e: Exception) {
-            u.busy = false; u.error = e.message ?: "Kunne ikke slette"; Haptics.error(); null
+            u.busy = false; u.error = uiErr73(e, "Kunne ikke slette"); Haptics.error(); null
         } ?: return@launch45
         val o = runCatching { JSONObject(raw) }.getOrNull()
         u.busy = false

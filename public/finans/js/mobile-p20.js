@@ -1,7 +1,7 @@
 // Prompt 20 (mobil-PWA): Posisjon · Familie på Hjem (/api/family/positions, reserve /api/family), kartfliser via
 // /tiles (/api/config/map, reserve CARTO), fargede Finans-fliser som kan flyttes (hold inne ~0,45 s), og logoer fra
 // logoregisteret (/finans/api/logos/registry). Alt tåler en eldre server: et endepunkt som svarer 404 gir reserven.
-import { esc, hlApi, logo as coreLogo } from './core.js';
+import { esc, hlApi, logo as coreLogo, logoOv73 } from './core.js'; // logoOv73: prompt 73, brukerens egne logovalg
 import { m, draw } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
 import { FM, famLoad } from './mobile-p16.js';
@@ -238,6 +238,7 @@ export function regMatch(t) {
 const fileUrl = (it) => `/finans/api/logos/file/${encodeURIComponent(it.id)}`;
 /** Som core.logo(), men med logo og farge fra registeret. Mangler filen (404), vises bokstaven. */
 export function logo(t, size = 40, radius = 12) {
+  if (logoOv73(t) !== undefined) return coreLogo(t, size, radius); // prompt 73: overstyrt logo (eller initialer) vinner
   const it = regMatch(t);
   if (!it) return coreLogo(t, size, radius);
   const c = t?.color && t.color !== '#A0A0AA' ? t.color : it.farge || t?.color;
@@ -247,6 +248,8 @@ export function logo(t, size = 40, radius = 12) {
 }
 /** Papir-radene (.pp-ti): bokstav i butikkens farge, med logo over når registeret har en fil. */
 export function ppTi(t, letter, color) {
+  const ov = logoOv73(t); // prompt 73: overstyrt logo, "" = bare bokstaven
+  if (ov !== undefined) return `<span class="pp-ti${ov ? ' p20-lg' : ''}" style="background:${esc(color || '#6b665c')}">${esc(letter)}${ov ? `<img src="${esc(ov)}" alt="" loading="lazy">` : ''}</span>`;
   const it = regMatch(t), bg = it?.farge || color || '#6b665c';
   const src = it ? (it.hasFile !== false ? fileUrl(it) : it.domene ? `/finans/api/logo/${encodeURIComponent(it.domene)}` : null) : t?.domain ? `/finans/api/logo/${encodeURIComponent(t.domain)}` : null;
   return `<span class="pp-ti${src ? ' p20-lg' : ''}" style="background:${esc(color && color !== '#6b665c' && !it ? color : bg)}">${esc(letter)}${src ? `<img src="${esc(src)}" alt="" loading="lazy">` : ''}</span>`;

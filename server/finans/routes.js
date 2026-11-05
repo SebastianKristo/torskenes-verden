@@ -33,6 +33,7 @@ import { answer as aiAnswer, plainSearch, suggestionGroups, AiUnavailable, isSim
 import * as backup from './backup.js';
 import * as subsOs from './subs.js';
 import { mountP27, mountP27Public } from './p27-routes.js';
+import { mountLogo73 } from './logo73.js'; // prompt 73: «Endre logo» (søk i logobiblioteket, overstyr per butikk)
 import { mountTrials, trialsFor } from './trials.js'; // prompt 31: gratis prøveperioder
 import { mountSubsLog46, trialsVisible46 } from '../subs-log46.js'; // prompt 46 (SERVER46)
 import { mountShared37, visibleSubs, decorateSub, asShare, editableSub } from './shared37.js'; // prompt 37: delte abonnementer
@@ -536,6 +537,7 @@ function mockDemo(u) {
 const R = need('finance:read'), W = need('finance:write');
 mountSubsAsk(api, { R, W }); // prompt 32: /subscriptions/knowledge (før /subscriptions/:id)
 mountSubsLog46(api, { R, W }); // prompt 46: /subscriptions/log (+ .csv) – fakturaer og prøveperioder (server/subs-log46.js)
+mountLogo73(api, { R, W }); // prompt 73 (LOGO73): /logos?q=, /merchants/:id/logo, /merchants/logo/upload, /merchants/logo-overrides
 mountP27(api, { R, W }); // prompt 27: /forslag, /ai-audit, /merchants/logo, /receipts/:id/logo/ai, /subscriptions/from-screenshot
 // Prompt 31: /subscriptions/trials (før /subscriptions/:id). «Behold» gjør prøven om til et vanlig abonnement.
 mountShared37(api, { W, subOut }); // prompt 37: /subscriptions/:id/members og /leave

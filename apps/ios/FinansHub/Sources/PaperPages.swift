@@ -1086,10 +1086,20 @@ struct PaperLogo: View {
         }
         .frame(width: size, height: size)
         .clipShape(RoundedRectangle(cornerRadius: radius, style: .continuous))
-        .task(id: (logoUrl ?? "") + "|" + (domain ?? "")) { await load() }
+        .task(id: taskKey73) { await load() }
     }
 
+    /// Prompt 73: lastes på nytt når brukerens logovalg endres (LogoOv73.version).
+    private var taskKey73: String { (logoUrl ?? "") + "|" + (domain ?? "") + "|" + String(LogoOv73.shared.version) }
+
     private func load() async {
+        // Prompt 73 (LOGO73): brukerens eget valg («Endre logo») vinner overalt i Finans. "" = initialer.
+        let ov: LogoOv73 = LogoOv73.shared
+        await ov.ensure(store)
+        if let o = ov.value(for: name) {
+            if o.isEmpty { img = nil; return }
+            if let i = await store.image(o) { img = i; return }
+        }
         if let u = logoUrl, !u.isEmpty, let i = await store.image(u) { img = i; return }
         // Prompt 52: uten domene slås navnet opp i serverens lokale logo-cache (bolker, aldri eksterne oppslag), Logos52.swift.
         if domain == nil || domain?.isEmpty == true {

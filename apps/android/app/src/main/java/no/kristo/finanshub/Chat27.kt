@@ -388,7 +388,7 @@ fun AppViewModel.loadChatModels27() {
             s.pending?.let { p -> s.pending = null; if (s.input.trim() == p) sendChat27(p) }
         } catch (e: ApiException) {
             if (e.status == 404) s.unavailable = true else s.error = e.message
-        } catch (e: Exception) { s.error = e.message ?: "Fikk ikke hentet modellene" }
+        } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { s.error = uiErr73(e, "Fikk ikke hentet modellene") }
     }
 }
 
@@ -818,7 +818,7 @@ fun AppViewModel.sendChat27(text: String, confirm: Boolean = false, noData: Bool
             }
             err = if (e.code == 404) "Serveren har ikke Chat ennå. Oppdater Homelab-serveren." else e.message
         } catch (e: Exception) {
-            if (!s.stopped) err = e.message ?: "Fikk ikke kontakt med serveren"
+            if (!s.stopped) err = uiErr73(e, "Fikk ikke kontakt med serveren")
         }
         s.conn = null
         val full = s.stream

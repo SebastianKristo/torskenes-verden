@@ -9,8 +9,9 @@ import { api, esc, p2 } from './util.js';
 import { fig, hostFor, WHO, NAME_COLOR } from './glimt-figs.js';
 import { gs, loadGlimt, saveGlimt, say, stopSpeak, onSpeak, tts, replayAfterTap, voiceName, glimtSettingsHtml, glimtClick, glimtChange, glimtSubmit } from './glimt35.js';
 import { outfit } from './glimt-outfits36.js'; // prompt 38: Glimt i prestedrakt ved bibelvers
-import { brief52Top, brief52Bottom, brief52Click, loadBrief52 } from './brief52.js'; // prompt 52: kort per innlogget bruker
-import { briefCards38, cardOrder38, giftAdd38 } from './brief38.js'; // prompt 38: Pakker, Familie, Skole og jobb, Bursdager, Nordlys
+import { brief52Click, brief52One } from './brief52.js'; // prompt 52: kort per innlogget bruker
+import { onKeys73, B52_73, card52Html73, skeleton73, empty73, fetchCards73, prefetch73, onBrief73, brief73Click, loadCards73 } from './brief73.js'; // prompt 73: Innhold i briefen, cache og skjelett
+import { briefCards38, giftAdd38 } from './brief38.js'; // prompt 38: Pakker, Familie, Skole og jobb, Bursdager, Nordlys
 
 const FONTS = 'https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap';
 /** Papir-fontene (Newsreader, Manrope, IBM Plex Mono) lastes også i det mørke temaet, for kortet og panelet. */
@@ -30,12 +31,20 @@ export function briefKind(d = new Date()) {
   return h < 11 ? 'morning' : h < 17 ? 'day' : 'evening';
 }
 
+// Prompt 73: siste brief caches per bruker (localStorage) og vises med en gang; ny henting har 6 s og bytter innholdet stille.
+const uid73 = () => { try { return localStorage.getItem('hl_uid') || ''; } catch { return ''; } };
+function hydrate73() {
+  if (B.data) return;
+  try { const c = JSON.parse(localStorage.getItem('brief73_b34') || 'null'); if (c?.d && c.uid === uid73() && Date.now() - c.at < 36 * 3600_000) { B.data = c.d; B.kind = c.kind; B.at = 0; B.cachedAt = c.at; } } catch { /* */ }
+}
+const t6 = (p) => { let tm; return Promise.race([p, new Promise((_, rej) => { tm = setTimeout(() => rej(Object.assign(new Error('Klarte ikke hente'), { timeout: true })), 6000); })]).finally(() => clearTimeout(tm)); };
 function loadBrief(force = false) {
   const kind = briefKind();
+  hydrate73();
   if (B.loading) return B.loading;
   if (!force && B.data && B.kind === kind && Date.now() - B.at < 10 * 60_000) return Promise.resolve(B.data);
-  B.loading = api(`/brief?kind=${kind}`).catch((e) => (kind === 'night' && e.status === 400 ? api('/brief?kind=evening') : Promise.reject(e)))
-    .then((d) => { B.data = d; B.kind = kind; B.at = Date.now(); B.err = ''; return d; })
+  B.loading = t6(api(`/brief?kind=${kind}`).catch((e) => (kind === 'night' && e.status === 400 ? api('/brief?kind=evening') : Promise.reject(e))))
+    .then((d) => { B.data = d; B.kind = kind; B.at = Date.now(); B.cachedAt = 0; B.err = ''; try { localStorage.setItem('brief73_b34', JSON.stringify({ d, kind, at: Date.now(), uid: uid73() })); } catch { /* */ } return d; })
     .catch((e) => { B.err = e.message; return B.data; })
     .finally(() => { B.loading = null; paintCards(); if (P.open) paintPanel(); });
   // Nyheter med bilder: /api/rss når briefen ikke har egne.
@@ -116,7 +125,7 @@ export function briefCardSlot() {
   loadGlimt();
   if (!gs().brief) return '';
   ensureFonts();
-  queueMicrotask(() => { loadBrief(); paintCards(); });
+  queueMicrotask(() => { loadBrief(); paintCards(); prefetch73(); }); // prompt 73: kortene hentes før briefen åpnes
   return `<div class="gb-slot" data-gb-card>${cardHtml()}</div>`;
 }
 /** Prompt 39 (claude-code-brief-glimt-av.md): «Glimt i briefen» av = ingen figur, bobler eller automatisk guide-runde. */
@@ -136,7 +145,7 @@ export function briefGlassSlot() {
   loadGlimt();
   if (!gs().brief) return '';
   ensureFonts();
-  queueMicrotask(() => { loadBrief(); paintCards(); });
+  queueMicrotask(() => { loadBrief(); paintCards(); prefetch73(); }); // prompt 73: kortene hentes før briefen åpnes
   return `<div class="gb38-gslot" data-gb-card="glass">${glassHtml()}</div>`;
 }
 function glassHtml() {
@@ -165,9 +174,11 @@ export function openBrief({ tapped = true } = {}) {
   document.body.classList.add('gb-open');
   P.el = el;
   bindPanel(el);
+  hydrate73();
   paintPanel();
-  loadBrief52(() => paintPanel(), true);
-  loadBrief().then(() => {
+  fetchCards73({ force: true }); // prompt 73: alle kortene samtidig, 6 s hver, cache vises straks
+  loadCards73(true); // lista kan være endret på en annen enhet
+  loadBrief(true).then(() => {
     // Guide-runden starter automatisk første gang denne briefen åpnes i dag (kan slås av).
     const key = `gb_tour_${new Date().toLocaleDateString('sv-SE')}_${B.kind}`;
     let seen = false; try { seen = !!localStorage.getItem(key); } catch { /* */ }
@@ -196,10 +207,22 @@ function paintPanel() {
   scrollToTarget();
 }
 
+/* Prompt 73: kortene tegnes fra «Innhold i briefen» (onKeys73) – ikke fra data. Uten data: skjelett i full høyde; tomt: kort tomtekst. */
+const EMPTY73 = { vaer: 'Ingen værdata akkurat nå', kal: 'Ingen avtaler i dag eller i morgen', nyheter: 'Ingen nyheter akkurat nå', abo: 'Ingen prøveperioder slutter snart',
+  pakker: 'Ingen pakker på vei', familie: 'Ingen deler posisjon nå', skole: 'Ingen prøver eller frister neste 7 dager', bursdager: 'Ingen bursdager den nærmeste tiden',
+  nordlys: 'Ikke nordlys i natt', bibel: 'Ingen bibelvers akkurat nå' };
+function cards73Html(map) {
+  return onKeys73().map((k) => {
+    if (B52_73[k]) return card52Html73(k, brief52One);
+    if (!B.data) return B.err ? `<section class="b73-em" data-gb73="${k}"><b>${esc(({ vaer: 'Vær', kal: 'Kalender', nyheter: 'Nyheter' })[k] ?? k)}</b><span>Klarte ikke hente</span><button type="button" class="gs-pill" data-gb-retry>Prøv igjen</button></section>` : skeleton73(k);
+    const h = map?.[k] ?? '';
+    return h || empty73(k, EMPTY73[k] ?? 'Ingenting å vise nå');
+  }).join('');
+}
 function panelHtml() {
   const s = gs();
   if (!B.data) {
-    return `${headHtml('Brief')}<div class="gb-sc"><div class="gb-pad">${B.err ? `<div class="gb-err">Fikk ikke hentet briefen: ${esc(B.err)} <button type="button" class="gs-pill" data-gb-retry>Prøv igjen</button></div>` : '<div class="gb-skelp"><span></span><span></span><span></span></div>'}</div></div>`;
+    return `${headHtml('Brief')}<div class="gb-sc"><div class="gb-pad"><div class="gb-title gb38-sum"><span class="b73-sum">${B.err ? 'Fikk ikke hentet briefen.' : 'Glimt lager briefen din …'}</span></div>${cards73Html(null)}</div></div>`;
   }
   const v = view(), G = guide(v), bubble = P.step > 0 && P.step < 99, st = bubble ? Math.min(P.step, G.length) - 1 : 0, cur = G[st], tgt = bubble ? cur[0] : null;
   const ch = bubble ? (s.friends ? cur[3] : null) || v.host : v.host;
@@ -231,9 +254,8 @@ function panelHtml() {
     <div class="gb-sc"><div class="gb-pad">
       <div class="gb-spkw">${spkHtml()}</div>
       <div class="gb-title gb38-sum"><span>${esc(v.summary)}</span></div>
-      ${brief52Top()}
-      ${cardOrder38({ cards: gs().cards ?? B.data?.cards }, { vaer, bibel: bibleHtml('top'), huske: todosHtml(v), kal, abo, ...briefCards38(B.data), nyh })}${bibleHtml('bottom')}
-      ${brief52Bottom()}
+      ${cards73Html({ vaer, kal, abo, nyheter: nyh, bibel: bibleHtml('top') || bibleHtml('bottom'), ...briefCards38(B.data) })}
+      ${B.cachedAt && B.err ? `<span class="b73-up">Oppdatert kl. ${esc(`${p2(new Date(B.cachedAt).getHours())}:${p2(new Date(B.cachedAt).getMinutes())}`)} · <button type="button" data-gb-retry>Prøv igjen</button></span>` : ''}
       <span class="gb-foot">${esc(foot)}</span>
     </div></div>
     ${figOn() ? `<div class="gb-guide">${bub}<button type="button" class="gb-figbtn" data-gb-fig aria-label="${bubble ? 'Avslutt guide-runden' : 'Start guide-runden med Glimt'}">${pop ? `<span class="gf-pop">${fig(ch, 82, mood)}</span>` : fig(ch, 82, mood)}</button></div>` : ''}
@@ -267,6 +289,7 @@ function bindPanel(el) {
   el.addEventListener('click', (e) => {
     const t = e.target;
     if (P.cfg && t.closest('.gb-sheet') && glimtClick(e, () => { P.sheetTop = el.querySelector('.gb-sheet')?.scrollTop ?? 0; paintPanel(); paintCards(); })) return;
+    if (brief73Click(e)) return; // prompt 73: «Prøv igjen» i et kort
     if (brief52Click(e, { close: closeBrief, redraw: paintPanel })) return; // prompt 52
     if (t.closest('[data-gb-close]')) { try { navigator.vibrate?.(8); } catch { /* */ } closeBrief(); return; }
     // Prompt 40: «✦ Glimt-sammendrag ›» lukker briefen og åpner Nyhetsleseren rett på Glimt-siden.
@@ -396,6 +419,9 @@ async function tickTodo(id) {
 /* ---------- Globale bindinger ---------- */
 
 onSpeak(() => { const w = P.el?.querySelector('.gb-spkw'); if (w) w.innerHTML = spkHtml(); });
+// Prompt 73: ny kortdata eller endret liste → innholdet byttes stille (ingen innfading, samme plass).
+onBrief73(() => { if (P.open) paintPanel(); });
+document.addEventListener('hl:brief73', () => { loadBrief(true); });
 document.addEventListener('keydown', (e) => {
   if (!P.open || e.key !== 'Escape') return;
   e.preventDefault(); e.stopPropagation();

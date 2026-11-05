@@ -37,6 +37,7 @@ import { ensureIndex42, norm42, fold42, synonymsOf42 } from './finans/search42.j
 import { settings as fhSettings } from './finans/db.js';
 import { gateEmbed } from './ai-gate.js';
 import { sunTime } from './weather.js';
+import { savedDocs73, savedSig73 } from './news73.js'; // prompt 73 (NEWS73): lagrede artikler i felles søk
 
 const q = (sql) => db.prepare(sql);
 const MIN = 60_000, HOUR = 3_600_000, DAY = 86_400_000;
@@ -78,9 +79,10 @@ export const TYPES51 = {
   action: ['Handlinger', 'bolt'], page: ['Sider', 'gear'], task: ['Gjøremål', 'check'], shopping: ['Handleliste', 'cart'], list: ['Lister', 'list'],
   event: ['Familiekalender', 'calendar'], receipt: ['Kvitteringer', 'receipt'], line: ['Varelinjer', 'receipt'], transaction: ['Transaksjoner', 'card'],
   place: ['Steder', 'pin'], person: ['Folk', 'person'], package: ['Pakker', 'box'], study: ['Studie', 'book'], chat: ['Chat', 'chat'], birthday: ['Bursdager', 'cake'],
+  article: ['Lagrede artikler', 'book'], // prompt 73
 };
 // Vekt per type (rekkefølgen når treffene er like gode): handlinger og ting du jobber med først, historikk sist.
-const WEIGHT = { action: 0.9, page: 0.85, task: 1, shopping: 1, list: 0.9, event: 0.95, person: 0.95, place: 0.9, package: 0.9, receipt: 0.85, transaction: 0.8, line: 0.75, study: 0.8, chat: 0.75, birthday: 0.85 };
+const WEIGHT = { action: 0.9, page: 0.85, task: 1, shopping: 1, list: 0.9, event: 0.95, person: 0.95, place: 0.9, package: 0.9, receipt: 0.85, transaction: 0.8, line: 0.75, study: 0.8, chat: 0.75, birthday: 0.85, article: 0.8 };
 const SHOP_RE = /^(handel|handleliste|handlelista|handle|innkjøp|dagligvarer)\b/i;
 const appLink = (type, id) => `papir://open?type=${encodeURIComponent(type)}&id=${encodeURIComponent(String(id))}`;
 
@@ -141,7 +143,11 @@ function birthdayDocs(u) {
   if (!hasTable('birthdays')) return [];
   return q('SELECT * FROM birthdays WHERE user_id=? LIMIT 1000').all(u).map((b) => ({ type: 'birthday', ref: String(b.id), title: b.name, body: b.relation ?? '', meta: { month: b.month, day: b.day, year: b.year ?? null } }));
 }
-const SOURCES = [tasksDocs, (u) => famcalDocs(u), placeDocs, personDocs, packageDocs, studyDocs, chatDocs, birthdayDocs];
+// Prompt 73 (NEWS73): lagrede nyhetsartikler (tittel, ingress, kilde og brødtekst).
+function articleDocs(u) {
+  return savedDocs73(u).map((a) => ({ type: 'article', ref: a.id, title: a.title, body: a.body, meta: { source: a.source, status: a.status, savedAt: a.savedAt } }));
+}
+const SOURCES = [tasksDocs, (u) => famcalDocs(u), placeDocs, personDocs, packageDocs, studyDocs, chatDocs, birthdayDocs, articleDocs];
 
 const sigQ = (sql, ...a) => { try { return q(sql).pluck().get(...a) ?? ''; } catch { return ''; } };
 function signature(u) {
@@ -155,6 +161,7 @@ function signature(u) {
     sigQ("SELECT count(*)||':'||ifnull(max(updated),0) FROM study44_docs WHERE user_id=?", u),
     sigQ("SELECT count(*)||':'||ifnull(max(updated),0) FROM hl_chats WHERE user_id=?", u),
     sigQ("SELECT count(*)||':'||ifnull(max(updated),0) FROM birthdays WHERE user_id=?", u),
+    (() => { try { return savedSig73(u); } catch { return ''; } })(), // prompt 73
   ].join('|');
 }
 const built = new Map(); // bruker → {sig, at}
@@ -312,6 +319,8 @@ function resultOf(h, u, qtext) {
       link: { web: `/#/sporing?id=${h.ref}`, app: appLink('package', h.ref), route: 'sporing', ref: h.ref }, actions: [open(), { id: 'copy', label: 'Kopier sporingsnummer', kind: 'copy', value: m.trackingNo }] };
     case 'study': return { ...base, subtitle: [m.kind, m.institution].filter(Boolean).join(' · '), link: { web: `/#/studie?doc=${h.ref}`, app: appLink('study', h.ref), route: 'studie', ref: h.ref }, actions: [open()] };
     case 'chat': return { ...base, subtitle: m.updated ? `Chat · ${dayLabel(ymdOslo(m.updated))}` : 'Chat', link: { web: `/#/chat?c=${encodeURIComponent(h.ref)}`, app: appLink('chat', h.ref), route: 'chat', ref: h.ref }, actions: [open('Fortsett samtalen')] };
+    case 'article': return { ...base, subtitle: [m.source, m.status === 'summary' ? 'kun sammendrag' : 'lagret', m.savedAt ? dayLabel(ymdOslo(m.savedAt)) : null].filter(Boolean).join(' · '),
+      link: { web: `/#/nyheter?saved=${encodeURIComponent(h.ref)}`, app: appLink('article', h.ref), route: 'nyheter', ref: h.ref }, actions: [open('Les artikkelen')] }; // prompt 73
     case 'birthday': {
       const M = ['januar', 'februar', 'mars', 'april', 'mai', 'juni', 'juli', 'august', 'september', 'oktober', 'november', 'desember'];
       return { ...base, subtitle: `${m.day}. ${M[(m.month ?? 1) - 1]}${m.year ? ` · født ${m.year}` : ''}`, link: { web: `/#/bursdager?id=${h.ref}`, app: appLink('birthday', h.ref), route: 'bursdager', ref: h.ref }, actions: [open()] };

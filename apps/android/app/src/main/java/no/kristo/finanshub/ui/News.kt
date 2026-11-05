@@ -6,6 +6,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
@@ -45,6 +46,7 @@ import no.kristo.finanshub.*
 private fun catName(id: String, cats: List<NewsCategory>): String =
     if (id == "auto") "Auto" else cats.firstOrNull { it.id == id }?.name ?: id.replaceFirstChar { it.uppercase() }
 
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 internal fun NewsReader(vm: AppViewModel) {
     val p = PaperPal.current
@@ -59,6 +61,8 @@ internal fun NewsReader(vm: AppViewModel) {
     // Prompt 46: gamle lenker til «Kilder og AI» går til Innstillinger → Nyheter (ingen innstillinger på Nyheter-siden).
     LaunchedEffect(vm.newsSettings) { if (vm.newsSettings) vm.openNewsSettings46() }
     val tabs = vm.newsTabs46(cats)
+    // Prompt 73 (NEWS73): lagrede artikler (News73.kt) – lista og offline-kopiene hentes når leseren åpnes.
+    LaunchedEffect(Unit) { News73.load(vm) }
     Box(Modifier.fillMaxSize().background(p.bg).clickable(remember { MutableInteractionSource() }, null) {}.statusBarsPadding()) {
         Column(Modifier.fillMaxSize()) {
             Row(Modifier.fillMaxWidth().padding(18.dp, 14.dp, 18.dp, 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -68,8 +72,8 @@ internal fun NewsReader(vm: AppViewModel) {
                 ) { Text("‹ Tilbake", color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 13.sp) }
                 Column(Modifier.weight(1f)) {
                     val upd = d?.feeds?.size ?: 0
-                    PLabel("Nyhetsleser · $upd kilder", p.lab)
-                    PSerif("Siste nytt", 30.sp, p.ink, maxLines = 1)
+                    PLabel(if (News73.showTab) "Nyhetsleser · ${News73.items.size} lagret" else "Nyhetsleser · $upd kilder", p.lab)
+                    PSerif(if (News73.showTab) "Lagret" else "Siste nytt", 30.sp, p.ink, maxLines = 1)
                 }
                 // Prompt 46: «…» med «Nyhetsinnstillinger» (dyp lenke til Innstillinger → Nyheter) i stedet for ⚙.
                 var menu by remember { mutableStateOf(false) }
@@ -86,10 +90,12 @@ internal fun NewsReader(vm: AppViewModel) {
             }
             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 18.dp), horizontalArrangement = Arrangement.spacedBy(18.dp)) {
                 // Prompt 23: ikon ved hver fane (følger tekstfargen).
-                tabs.forEach { c -> NewsTab23(vm, c, vm.newsCat == c.id, p) { vm.loadNews(c.id) } }
+                tabs.forEach { c -> NewsTab23(vm, c, vm.newsCat == c.id && !News73.showTab, p) { News73.showTab = false; vm.loadNews(c.id) } }
+                News73Tab(vm, p) // prompt 73: «Lagret» bakerst
             }
             Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
-            LazyColumn(Modifier.weight(1f).fillMaxWidth(), contentPadding = PaddingValues(18.dp, 16.dp, 18.dp, 40.dp)) {
+            if (News73.showTab) News73List(vm, p, Modifier.weight(1f).fillMaxWidth())
+            else LazyColumn(Modifier.weight(1f).fillMaxWidth(), contentPadding = PaddingValues(18.dp, 16.dp, 18.dp, 40.dp)) {
                 vm.newsError?.let { e -> item { Text(e, color = p.lab, fontSize = 13.sp, modifier = Modifier.padding(bottom = 10.dp)) } }
                 if (d == null && vm.newsError == null) item { Box(Modifier.fillMaxWidth().padding(40.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = p.ink) } }
                 if (d != null) {
@@ -102,10 +108,17 @@ internal fun NewsReader(vm: AppViewModel) {
                     if (d.items.isEmpty()) item { Text("Ingen saker i denne kategorien.", color = p.mut, fontSize = 14.sp, modifier = Modifier.padding(vertical = 12.dp)) }
                     items(d.items.size) { i ->
                         val x = d.items[i]
+                        // Prompt 73: langt trykk gir hold-menyen med «Lagre» / «Fjern fra lagret» og «Åpne original».
+                        var menu73 by remember { mutableStateOf(false) }
                         Column {
+                            androidx.compose.material3.DropdownMenu(menu73, { menu73 = false }, containerColor = p.card) {
+                                val saved73 = News73.isSaved(x.url)
+                                androidx.compose.material3.DropdownMenuItem({ Text(if (saved73) "Fjern fra lagret" else "Lagre", color = p.ink) }, { menu73 = false; News73.toggle(vm, x) })
+                                androidx.compose.material3.DropdownMenuItem({ Text("Åpne original", color = p.ink) }, { menu73 = false; openLink(ctx, x.url) })
+                            }
                             // Prompt 27: trykk åpner saken i appen (NewsArticle27), bilde 76 × 76 til høyre.
                             Row(
-                                Modifier.fillMaxWidth().clickable { vm.openArticle27(x) }.padding(vertical = 12.dp),
+                                Modifier.fillMaxWidth().combinedClickable(onLongClickLabel = "Lagre", onLongClick = { Haptics.tap(); menu73 = true }) { vm.openArticle27(x) }.padding(vertical = 12.dp),
                                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp),
                             ) {
                                 if (vm.newsCat == "siste") PLabel(catName(x.category ?: "norge", cats), p.lab, modifier = Modifier.width(74.dp).padding(top = 3.dp))
@@ -123,6 +136,7 @@ internal fun NewsReader(vm: AppViewModel) {
             }
         }
         if (vm.b27.articleFor != null) NewsArticle27(vm, p, cats)
+        if (News73.open != null) News73Reader(vm, p) // prompt 73: lagret artikkel (lokal kopi)
         if (vm.m23.icPickFor != null) IconPicker23(vm, p, cats)
     }
 }

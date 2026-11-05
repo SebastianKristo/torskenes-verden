@@ -520,7 +520,7 @@ internal fun BriefCards52(vm: AppViewModel) {
 }
 
 @Composable
-private fun BriefCard52(vm: AppViewModel, c: Card52) {
+internal fun BriefCard52(vm: AppViewModel, c: Card52) { // prompt 73: brukes per kort av Card52Slot73 (ui/Brief73Ui.kt)
     val p = PaperPal.current
     val d = c.data
     val dark = c.id == "homelab" || c.id == "focus"
@@ -671,9 +671,13 @@ internal fun StoreLogo52(vm: AppViewModel, name: String, size: Dp = 36.dp) {
     val p = PaperPal.current
     val n = name.trim()
     LaunchedEffect(n) { if (n.isNotEmpty()) vm.logos52(listOf(n)) }
+    LaunchedEffect(Unit) { LogoOv73.ensure(vm) }
     val lg = vm.p52b.logos[n]
     val shape = RoundedCornerShape(size / 4)
-    ServerImage(vm, lg?.url, Modifier.size(size).clip(shape).background(lg?.color?.let { Color(it) } ?: p.surf2)) {
+    // Prompt 73 (LOGO73): brukerens eget valg vinner ("" = forbokstaven).
+    val ov73 = LogoOv73.value(n)
+    val url73 = if (ov73 != null) ov73.takeIf { it.startsWith("/") } else lg?.url
+    ServerImage(vm, url73, Modifier.size(size).clip(shape).background(lg?.color?.let { Color(it) } ?: p.surf2)) {
         Text((lg?.initial ?: n.take(1)).uppercase(), color = if (lg?.color != null) Color.White else p.ink, fontWeight = FontWeight.ExtraBold, fontSize = (size.value * .4f).sp,
             modifier = Modifier.align(Alignment.Center))
     }

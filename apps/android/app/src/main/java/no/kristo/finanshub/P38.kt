@@ -261,7 +261,7 @@ fun AppViewModel.logoutAll38() {
                 e is ApiException && (e.status == 404 || e.status == 405) -> "Serveren støtter ikke dette ennå. Oppdater Homelab-serveren."
                 e is ApiException && (e.status == 401 || e.status == 403) -> "Feil passord"
                 e is ApiException && e.status == 429 -> "For mange forsøk. Vent litt."
-                else -> e.message ?: "Fikk ikke kontakt med serveren"
+                else -> uiErr73(e, "Fikk ikke kontakt med serveren")
             }
             Haptics.error()
         } finally { s.allBusy = false }

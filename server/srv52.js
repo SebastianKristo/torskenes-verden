@@ -20,6 +20,7 @@ import { runAsUser } from './settings.js';
 import { parseQuick, osloTodayISO } from '../public/js/quick-time.js';
 import { CHARS, glimtSettingsOf, cleanGlimtPatch, saveGlimtSettings, charDefaultOf52, setCharDefault52, CHAR_META52 } from './glimt35.js';
 import { matchMerchant, filePath as libraryFile } from './logos/match.js';
+import { brief73Api, rawCards73, B52_OF73, KEY_OF_B52 } from './brief73.js'; // prompt 73: Innhold i briefen (rekkefølge og av/på)
 
 const q = (sql) => db.prepare(sql);
 const DAY = 86_400_000;
@@ -482,14 +483,30 @@ async function tripOf52(u) {
   const now = Date.now();
   return { label: t.label, from: t.from, to: t.to, items: t.options.slice(0, 3).map((o) => { const l = o.legs?.find((x) => x.mode !== 'foot') ?? o.legs?.[0] ?? {}; return { line: l.line ?? null, mode: l.mode ?? null, from: l.from ?? null, dest: o.via ?? l.to ?? null, dep: l.dep ?? null, arr: o.arr ?? null, in_min: l.dep ? Math.max(0, Math.round((Date.parse(l.dep) - now) / 60000)) : null, badges: o.badges ?? [] }; }), alert: t.alert ?? null, source: t.source ?? null };
 }
-export async function brief52(u, { t = Date.now() } = {}) {
+// Prompt 73: grunnlaget (buildBrief) deles av Dagens fokus, Huskeliste og Klær – også når kortene hentes hver for seg (?only=).
+const base73 = new Map(); // bruker → {at, p}
+function briefBase73(u, t) {
+  const hit = base73.get(u);
+  if (hit && Date.now() - hit.at < 20_000) return hit.p;
+  const p = (async () => { try { const { buildBrief } = await import('./brief34.js'); return await withTimeout(runAsUser(u, () => buildBrief(u, { t, llm: false, raw: true })), 6000, null); } catch { return null; } })();
+  base73.set(u, { at: Date.now(), p });
+  p.then((v) => { if (!v) base73.delete(u); });
+  return p;
+}
+/** Prompt 73: bare kortene som er på i «Innhold i briefen», i den rekkefølgen. only:['focus', …] gir bare de kortene (henting per kort).
+ *  Hvert kort har 6 s; svarer det ikke, kommer det med error:'Klarte ikke hente' (kortet blir stående). order: alle nøkler som er på. */
+export async function brief52(u, { t = Date.now(), only = null } = {}) {
   const today = osloTodayISO(new Date(t));
   const { allowed, hidden, admin, child } = await briefCardsFor52(u);
   const kind = kindNow52(t);
   const name = firstName(u);
-  let b = null;
-  try { const { buildBrief } = await import('./brief34.js'); b = await withTimeout(runAsUser(u, () => buildBrief(u, { t, llm: false })), 6000, null); } catch { b = null; }
-  const safe = async (fn) => { try { return await fn(); } catch (e) { return { __error: e?.message ?? String(e) }; } };
+  const list73 = rawCards73(u);
+  const blocked = new Set(hidden.map((h) => KEY_OF_B52[h.id]).filter(Boolean));
+  const order = list73.filter((x) => x.on && !blocked.has(x.key)).map((x) => x.key);
+  const want = new Set(order.map((k) => B52_OF73[k]).filter(Boolean).filter((id) => allowed.has(id) && (!only || only.includes(id))));
+  const needB = ['focus', 'todo', 'clothes'].some((id) => want.has(id));
+  const b = needB ? await briefBase73(u, t) : null;
+  const safe = async (fn) => { try { const v = await withTimeout(fn(), 6000, { __timeout: true }); return v; } catch (e) { return { __error: e?.message ?? String(e) }; } };
   const tasks = {
     focus: async () => {
       if (!b) return null;
@@ -509,19 +526,22 @@ export async function brief52(u, { t = Date.now() } = {}) {
     domains: () => domainsOf52(),
     stocks: () => stocksOf52(u),
   };
-  const ids = CARDS52.filter(([id]) => allowed.has(id));
+  // Rekkefølgen er brukerens (Innhold i briefen); alle kortene hentes samtidig.
+  const ids = order.map((k) => CARDS52.find(([id]) => id === B52_OF73[k])).filter((x) => x && want.has(x[0]));
   const datas = await Promise.all(ids.map(([id]) => safe(tasks[id])));
   const cards = [];
+  const EMPTY = { trip: 'Ingen reise satt opp i dag', bills: 'Ingen regninger denne uka', tonight: 'Ingenting nytt i kveld', todo: 'Ingenting på lista' };
   ids.forEach(([id, variant, title], i) => {
     let data = datas[i];
     let error = null;
+    if (data && data.__timeout) { error = 'Klarte ikke hente'; data = null; }
     if (data && data.__error) { error = 'Ingen data akkurat nå'; data = null; }
     if (data?.error && !error) error = data.error;
-    if (id === 'trip' && !data && !error) { hidden.push({ id, reason: 'none' }); return; }
-    cards.push({ id, variant, title, data: data ?? null, ...(error || !data ? { error: error ?? 'Ingen data akkurat nå' } : {}) });
+    // Prompt 73: kortet skjules aldri etter at det er vist – uten innhold får det en kort tomtekst (empty:true).
+    cards.push({ id, key: KEY_OF_B52[id], variant, title, data: data ?? null, ...(error ? { error } : !data ? { error: EMPTY[id] ?? 'Ingen data akkurat nå', empty: true } : {}) });
   });
   const gs = glimtSettingsOf(u);
-  return { user: { id: u, name: firstName(u), first: name, admin, child }, greeting: `${GREET52[kind]}${name ? `, ${name}` : ''}`, kind, date: today, date_label: longDate(today), glimt_char: gs.char, cards, hidden };
+  return { user: { id: u, name: firstName(u), first: name, admin, child }, greeting: `${GREET52[kind]}${name ? `, ${name}` : ''}`, kind, date: today, date_label: longDate(today), glimt_char: gs.char, cards, hidden, order, fetched_at: new Date().toISOString() };
 }
 
 /* 5. Butikklogoer for lister: se logos52.js (egen modul uten tunge avhengigheter, montert i finans/routes.js). */
@@ -561,7 +581,7 @@ srv52Api.delete('/glimt/lex52/:from', A, (c) => {
   return c.json({ ok: true, words: lexOf52(u) });
 });
 
-srv52Api.get('/brief52', A, async (c) => c.json(await brief52(c.get('user')), 200, NO_STORE));
+srv52Api.get('/brief52', A, async (c) => { const o = String(c.req.query('only') ?? '').split(',').map((x) => x.trim()).filter(Boolean); return c.json(await brief52(c.get('user'), { only: o.length ? o : null }), 200, NO_STORE); });
 srv52Api.post('/brief52/homelab/:id/start', A, adminOnly, async (c) => {
   const id = String(c.req.param('id') ?? '').slice(0, 80);
   const [{ containers51 }, { docker51, docker52 }] = await Promise.all([import('./obs51/health.js'), import('./logs44.js')]);
@@ -614,4 +634,5 @@ srv52Api.put('/admin/glimt-char52/:userId', A, adminOnly, async (c) => {
 export function mountSrv52(app) {
   app.post('/api/glimt/agent', authOrToken, glimtAgentMw52);
   app.route('/api', srv52Api);
+  app.route('/api', brief73Api); // prompt 73: GET/PUT /api/brief-cards, POST /api/brief-cards/reset
 }

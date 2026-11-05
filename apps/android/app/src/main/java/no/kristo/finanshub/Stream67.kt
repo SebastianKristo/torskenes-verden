@@ -384,7 +384,7 @@ fun AppViewModel.vote67(traceId: String, vote: String) {
             Glimt67.voteMsg[traceId] = when (next) { "up" -> if (st == "active") "Takk! Glimt bruker dette igjen" else "Takk!"; "down" -> "Takk – Glimt lærer av det"; else -> "" }
         } catch (e: CancellationException) { throw e } catch (e: Exception) {
             if (prev == null) Glimt67.votes.remove(traceId) else Glimt67.votes[traceId] = prev
-            Glimt67.voteMsg[traceId] = if ((e as? ApiException)?.status == 404) "Svaret er for gammelt til å stemme på" else "Kunne ikke lagre: ${e.message ?: "ukjent feil"}"
+            Glimt67.voteMsg[traceId] = if ((e as? ApiException)?.status == 404) "Svaret er for gammelt til å stemme på" else "Kunne ikke lagre: ${uiErr73(e, "ukjent feil")}"
         }
     }
 }

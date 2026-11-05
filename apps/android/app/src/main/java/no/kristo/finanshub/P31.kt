@@ -225,7 +225,7 @@ internal suspend fun AppViewModel.assist31(q: String, source: String, chatId: St
         if (e.status == 404 || e.status == 405) s.assistMissing = true
         noteAiErr34(null, e.message)
         return null
-    } catch (e: Exception) { noteAiErr34(null, e.message ?: "fikk ikke kontakt med serveren"); return null }
+    } catch (e: Exception) { noteAiErr34(null, uiErr73(e, "fikk ikke kontakt med serveren")); return null }
     val o = runCatching { JSONObject(raw) }.getOrNull() ?: run { noteAiErr34(null, "uventet svar fra serveren"); return null }
     // {ok:false, error, model} fra ai.run: tydelig feil i stedet for tomt svar.
     if (o.optBoolean("ok", true) == false || (o.s31("text") == null && o.s31("error") != null && o.s31("jobId") == null)) {
@@ -413,7 +413,7 @@ fun AppViewModel.confirmChat67(i: Int, yes: Boolean) {
             ChatMsg27("assistant", a.text.ifBlank { "Ferdig." }, model = "Glimt", tool = a.tool, card = a.card?.toString(), trace67 = a.traceId, choices67 = a.choices, confirm67 = a.confirm, conv67 = m.conv67)
         } catch (e: CancellationException) { Glimt67.chatLive = false; c.busy = false; throw e } catch (e: Exception) {
             Haptics.error()
-            ChatMsg27("assistant", e.message ?: "Fikk ikke utført handlingen.", model = "Glimt", tool = "Glimt")
+            ChatMsg27("assistant", uiErr73(e, "Fikk ikke utført handlingen."), model = "Glimt", tool = "Glimt")
         }
         Glimt67.chatLive = false; Glimt67.chatStatus = null
         c.msgs = c.msgs + msg
@@ -628,7 +628,7 @@ fun AppViewModel.saveBioPw31(pw: String) {
         } catch (e: ApiException) {
             s.bioErr = if (e.status == 404) "Serveren støtter ikke dette ennå." else if (e.status == 401 || e.status == 403) "Feil passord" else (e.message ?: "Noe gikk galt")
             Haptics.error()
-        } catch (e: Exception) { s.bioErr = e.message ?: "Fikk ikke kontakt med serveren" }
+        } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { s.bioErr = uiErr73(e, "Fikk ikke kontakt med serveren") }
         finally { s.bioBusy = false }
     }
 }
@@ -676,7 +676,7 @@ private fun AppViewModel.postUpd31(action: String, pw: String?) {
             // Eldre server eller passord kreves likevel: passord-arket.
             if (e.status == 400 || e.status == 401 || e.status == 403) askUpd30(action)
             else flash(if (e.status == 404 || e.status == 405) "Serveren støtter ikke oppdatering fra appen." else "Kunne ikke starte: ${e.message}")
-        } catch (e: Exception) { flash("Kunne ikke starte: ${e.message}") }
+        } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { flash("Kunne ikke starte: ${e.message}") }
         finally { s.startBusy = false }
     }
 }
@@ -824,7 +824,7 @@ fun AppViewModel.saveTrial31(done: () -> Unit) {
         } catch (e: ApiException) {
             s.trialErr = if (e.status == 404) "Serveren har ikke prøveperioder ennå. Oppdater Nordlys OS." else (e.message ?: "Kunne ikke lagre")
             Haptics.error()
-        } catch (e: Exception) { s.trialErr = e.message ?: "Fikk ikke kontakt med serveren" }
+        } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { s.trialErr = uiErr73(e, "Fikk ikke kontakt med serveren") }
         finally { s.trialBusy = false }
     }
 }

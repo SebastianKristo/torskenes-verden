@@ -91,6 +91,7 @@ internal fun NewsArticle27(vm: AppViewModel, p: PaperPal, cats: List<NewsCategor
                 Box(Modifier.height(40.dp).clip(CircleShape).border(1.dp, p.line, CircleShape).clickable(onClickLabel = "Tilbake") { Haptics.back(); vm.closeArticle27() }.padding(start = 12.dp, end = 16.dp),
                     contentAlignment = Alignment.Center) { Text("‹ Siste nytt", color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 13.5.sp) }
                 Spacer(Modifier.weight(1f))
+                News73Bookmark(vm, x, p) // prompt 73: lagre hele artikkelen for lesing uten nett
                 Box(Modifier.height(40.dp).clip(CircleShape).border(1.dp, p.line, CircleShape).clickable(onClickLabel = "Del") {
                     val send = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_SUBJECT, a?.title ?: x.title).putExtra(Intent.EXTRA_TEXT, (a?.title ?: x.title) + "\n" + (a?.url ?: x.url))
                     runCatching { ctx.startActivity(Intent.createChooser(send, "Del saken").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
@@ -104,6 +105,7 @@ internal fun NewsArticle27(vm: AppViewModel, p: PaperPal, cats: List<NewsCategor
                 PLabel("$cat · $src", p.lab)
                 PSerif(a?.title ?: x.title, 28.sp, p.ink)
                 articleMeta27(a?.published ?: x.published, a?.readMin ?: x.readMin).takeIf { it.isNotBlank() }?.let { Text(it, color = p.mut, fontSize = 13.sp) }
+                News73.itemFor(x.url)?.let { sv -> News73Banner(vm, sv, p) } // prompt 73: «Lagret 28. okt.»
                 Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(p.card).padding(18.dp, 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     PLabel("✦ AI-sammendrag", p.lab)
                     val sum = a?.summary

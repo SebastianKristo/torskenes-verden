@@ -160,7 +160,14 @@ private fun DrawScope.drawGlimt34(S: Float, mood: String, spin: Float, blink: Fl
 @Composable
 internal fun HomeBrief34(vm: AppViewModel, modifier: Modifier = Modifier) { // prompt 43: modifier (Fold: min. 148 dp høy)
     val b = vm.p34.brief
-    LaunchedEffect(vm.base, vm.account?.id) { vm.loadGlimt35(); vm.loadBrief34() }
+    LaunchedEffect(vm.base, vm.account?.id) { vm.loadGlimt35(); vm.loadBrief34(); vm.prefetchBrief73() } // prompt 73: kortene hentes når Hjem vises
+    // Prompt 73: og når appen kommer i forgrunnen (maks hvert 5. min), så briefen er klar før den åpnes.
+    val life73 = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    DisposableEffect(life73) {
+        val o = androidx.lifecycle.LifecycleEventObserver { _, e -> if (e == androidx.lifecycle.Lifecycle.Event.ON_RESUME) vm.prefetchBrief73() }
+        life73.lifecycle.addObserver(o)
+        onDispose { life73.lifecycle.removeObserver(o) }
+    }
     val kind = b?.kind ?: briefKind34()
     Row(
         modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(Brush.linearGradient(listOf(BLUE34, Color(0xFF2E5A7F))))

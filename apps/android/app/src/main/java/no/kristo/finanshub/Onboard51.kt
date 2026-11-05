@@ -75,7 +75,7 @@ private fun errText51(e: Exception): String = when {
     e is ApiException && e.code == "revoked" -> "Invitasjonen er trukket tilbake."
     e is ApiException && (e.status == 404 || e.code == "invalid") -> "Fant ikke invitasjonen. Sjekk lenken, eller be om en ny."
     e is ApiException && e.status == 409 -> "Brukernavnet er tatt. Velg et annet."
-    else -> e.message ?: "Noe gikk galt"
+    else -> uiErr73(e, "Noe gikk galt. Prøv igjen.")
 }
 
 /** Steg 1: sjekk invitasjonen (uinnlogget). */
@@ -93,7 +93,7 @@ fun AppViewModel.previewJoin51(raw: String) {
                 Join51.shareLocation = s.optBoolean("location", true); Join51.shareHealth = s.optBoolean("health", false); Join51.shareCalendar = s.optBoolean("calendar", true)
             }
             Join51.step = "about"
-        } catch (e: Exception) { Join51.err = errText51(e) } finally { Join51.busy = false }
+        } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { Join51.err = errText51(e) } finally { Join51.busy = false }
     }
 }
 
@@ -117,6 +117,6 @@ fun AppViewModel.acceptJoin51() {
             j.password = ""; j.password2 = ""
             j.open = false
             addAccount51(j.server, LoginResult(token, u?.optString("username")?.ifBlank { null } ?: user, u?.optString("name")?.ifBlank { null } ?: j.name.trim(), u?.optString("role")?.ifBlank { null } ?: "bruker"))
-        } catch (e: Exception) { j.err = errText51(e) } finally { j.busy = false }
+        } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { j.err = errText51(e) } finally { j.busy = false }
     }
 }

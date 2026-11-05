@@ -263,13 +263,13 @@ private fun WeatherBody(vm: AppViewModel, wide: Boolean) {
                     // Prompt 41 (claude-code-vaer-rediger-ski-julfigur.md): kortene i brukerens rekkefølge (vaer_layout), skjulte tas ut,
                     // Skiføre bare med snø ≥ 15 cm og «Skiføre» på. Hold inne 0,6 s eller «Rediger kort» → vugging og arket «Rediger Vær».
                     val lay = vm.vaerLay41()
-                    // Prompt 46: med «Min posisjon» valgt er hovedværet allerede der telefonen er, så det ekstra kortet trengs ikke.
-                    if (!vm.wxGps46()) item(key = "here45") { HereCard45(vm, w) } // prompt 45: Min posisjon (ui/Vaer45.kt)
+                    // Prompt 73 (claude-code-vaer-fjern-posisjonskort-dagtrykk.md): ingen «MIN POSISJON»-boks over heroen (HereCard45 er
+                    // fjernet herfra). Min posisjon velges i Steder (☰) og vises da i heroen.
                     lay.ord.filter { it !in lay.hid && (it != "ski" || vm.skiShow41()) }.forEachIndexed { i, k ->
                         item(key = "vo41-$k") {
                             VaerWrap41(vm, i) {
                                 when (k) {
-                                    "hero" -> Header(w, Modifier.alpha((1f - sc / 220f).coerceIn(0f, 1f)))
+                                    "hero" -> Header(w, vm.wxGps46(), Modifier.alpha((1f - sc / 220f).coerceIn(0f, 1f)))
                                     "ski" -> SkiCard41(vm)
                                     // Prompt 32: Forhold-modusene bytter både timeraden og dagslisten (ui/Weather32b.kt).
                                     "hour" -> HourCard32b(vm, w) { vm.weatherSheetDay = 0 }
@@ -331,10 +331,11 @@ private fun TopBar(vm: AppViewModel, w: WeatherFull?, compact: Boolean) {
 }
 
 @Composable
-private fun Header(w: WeatherFull, modifier: Modifier) {
+private fun Header(w: WeatherFull, mine: Boolean, modifier: Modifier) {
     val sh = LocalTextStyle.current.copy(shadow = Shadow(Color(0x2E000000), Offset(0f, with(LocalDensity.current) { 2.dp.toPx() }), with(LocalDensity.current) { 20.dp.toPx() }))
     Column(modifier.fillMaxWidth().padding(top = 6.dp, bottom = 26.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        Text("MIN POSISJON", fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = .16.em, style = sh, modifier = Modifier.alpha(.85f))
+        // Prompt 73: «MIN POSISJON» bare når Min posisjon er valgt (som iOS), ellers «VÆRET I».
+        Text(if (mine || w.placeId == "pos" || w.placeId == "__gps") "MIN POSISJON" else "VÆRET I", fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = .16.em, style = sh, modifier = Modifier.alpha(.85f))
         Text(w.place, fontSize = 36.sp, fontWeight = FontWeight.Medium, lineHeight = 40.sp, style = sh, maxLines = 1, overflow = TextOverflow.Ellipsis)
         Text(wxR(w.current.temp), fontSize = 112.sp, fontWeight = FontWeight.ExtraLight, lineHeight = 112.sp, letterSpacing = (-.04).em, style = sh,
             modifier = Modifier.padding(start = 22.dp, top = 2.dp))
@@ -403,8 +404,10 @@ private fun DaysCard(w: WeatherFull, open: (Int) -> Unit) {
     Column(Modifier.fillMaxWidth().glass().padding(horizontal = 16.dp, vertical = 4.dp)) {
         days.forEachIndexed { k, d ->
             if (k > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(Color.White.copy(alpha = .18f)))
-            Row(Modifier.fillMaxWidth().clickable { open(k) }.padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(if (k == 0) "I dag" else wxLd(d.date)?.let(::wxWd) ?: "", fontSize = 17.sp, fontWeight = FontWeight.Bold, modifier = Modifier.width(52.dp), maxLines = 1)
+            // Prompt 73: hele raden er én trykkflate (min. 44 dp), med haptikk; robust mot scroll/hold-inne (wxDayTap73, ui/Vaer73.kt).
+            val lbl = if (k == 0) "I dag" else wxLd(d.date)?.let(::wxWd) ?: ""
+            Row(Modifier.fillMaxWidth().heightIn(min = 44.dp).wxDayTap73(lbl) { open(k) }.padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(lbl, fontSize = 17.sp, fontWeight = FontWeight.Bold, modifier = Modifier.width(52.dp), maxLines = 1)
                 Column(Modifier.width(40.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(1.dp)) {
                     WxCodeIcon(wxKey(d.code, false), 24.dp)
                     val pp = d.precipProb?.roundToInt() ?: 0
@@ -847,7 +850,7 @@ private fun WideWeather25(
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
                 Column(Modifier.weight(5f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Header(w, Modifier)
+                    Header(w, vm.wxGps46(), Modifier)
                     HourCard32b(vm, w) { vm.weatherSheetDay = 0 }
                     DaysCard32b(vm, w, { DaysCard(w) { vm.weatherSheetDay = it } }) { vm.weatherSheetDay = it }
                     // Prompt 46 (claude-code-vaer-glimt-uka-ipad-fold.md): «Glimt · Ukas vær» nederst i venstre kolonne (tomrommet ved detaljkortene).

@@ -611,6 +611,7 @@ const H = { group, row, note };
 const glimtView = () => ({ html: glimtSettingsHtml({ figs: true }), search: [group('Glimt', [
   row({ t: 'Glimt-figur', s: 'Velg vert: Glimt, Halo, Boble, Antenne, Bane, Pastell, Natt, Sky, Dråpe, Ugle, Stjerne, Spire, Gris eller Blekksprut', go: 'glimt', btn: 'Åpne', k: 'glimt figur karakter maskot gris ugle sky blekksprut' }),
   row({ t: 'Glimt-brief', s: 'Morgen-, dags-, kvelds- og nattbrief med klokkeslett', go: 'glimt', btn: 'Åpne', k: 'brief morgenbrief kveldsbrief varsel guide venner' }),
+  row({ t: 'Innhold i briefen', s: 'Velg hvilke kort Now Brief viser og rekkefølgen (vær, kalender, regninger, reise …)', go: 'glimt', btn: 'Åpne', k: 'innhold i briefen kort now brief rekkefølge skjul vis regninger reise homelab domener pakker' }), // prompt 73
   row({ t: 'Stemme og opplesning', s: 'Les opp, stemmemotor (OpenAI, ElevenLabs, Azure, VoxCPM2 lokalt), stemme, språk og tempo', go: 'glimt', btn: 'Åpne', k: 'stemme opplesning les opp tts tale engelsk tempo openai elevenlabs azure voxcpm' }),
   row({ t: 'Stemmer', s: 'Lag stemme fra beskrivelse, klon en stemme, egen stemme for nyhetsleseren (VoxCPM2 på Mac mini-en)', go: 'glimt', btn: 'Åpne', k: 'stemmer klone klon stemmekloning voxcpm nyhetsleser nyhetsoppleser egen stemme beskrivelse' }), // prompt 57
 ])] });

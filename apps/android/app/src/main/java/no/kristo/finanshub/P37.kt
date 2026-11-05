@@ -377,7 +377,7 @@ fun AppViewModel.linkProfile37() {
             if (e.status == 409) { s.obStep = 1; runCatching { s.profiles = parseProfiles37(api37 { hlGet("/profiles") }).first } }
             Haptics.error()
         } catch (e: CancellationException) { throw e } catch (e: Exception) {
-            s.obErr = e.message ?: "Fikk ikke koblet profilen"
+            s.obErr = uiErr73(e, "Fikk ikke koblet profilen")
         } finally { s.obBusy = false }
     }
 }
@@ -430,7 +430,7 @@ fun AppViewModel.patchTask37(id: String, f: (TaskItem) -> TaskItem) {
                 flash("Uten nett – sendes når du er på nett igjen")
                 return@launch37
             }
-            flash("Fikk ikke lagret: ${e.message ?: "ukjent feil"}")
+            flash("Fikk ikke lagret: ${uiErr73(e, "ukjent feil")}")
             refreshTasks37()
         }
     }
@@ -641,7 +641,7 @@ fun AppViewModel.glimt37(q0: String) {
             Haptics.success()
             armUndo37()
         } catch (e: CancellationException) { throw e } catch (e: Exception) {
-            s.glimt = TaskGlimt37("question", "Glimt fikk ikke svar: ${e.message ?: "ukjent feil"}. Prøv igjen, eller spør meg i Chat.", emptyList(), null)
+            s.glimt = TaskGlimt37("question", "Glimt fikk ikke svar: ${uiErr73(e, "ukjent feil")}. Prøv igjen, eller spør meg i Chat.", emptyList(), null)
             Haptics.error()
         } finally { s.glimtBusy = false }
     }

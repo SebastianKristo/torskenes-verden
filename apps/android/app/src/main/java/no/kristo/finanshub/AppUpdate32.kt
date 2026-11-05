@@ -169,7 +169,7 @@ object AppUpd32 {
             installSession(app, f)
         } catch (e: Exception) {
             // Noen telefoner (eller arbeidsprofiler) stopper PackageInstaller-økter fra apper: prøv systemets installasjonsdialog.
-            try { installView(app, f) } catch (e2: Exception) { fail("Kunne ikke starte installasjonen: ${e2.message ?: e.message ?: "ukjent feil"}") }
+            try { installView(app, f) } catch (e2: Exception) { fail("Kunne ikke starte installasjonen: ${e2.message ?: uiErr73(e, "ukjent feil")}") }
         }
     }
 

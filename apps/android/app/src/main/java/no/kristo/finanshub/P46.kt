@@ -339,7 +339,7 @@ fun AppViewModel.retryUpd46(ctx: Context) {
             p30.upd.phase = "run"; pollUpd30()
         } catch (e: ApiException) {
             if (e.status == 404 || e.status == 405) { s.updStuck = false; startUpd31(ctx, p30.upd.action) } else flash(e.message ?: "Fikk ikke startet på nytt")
-        } catch (e: Exception) { flash(e.message ?: "Fikk ikke startet på nytt") } finally { s.updBusy = false }
+        } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { flash(uiErr73(e, "Fikk ikke startet på nytt")) } finally { s.updBusy = false }
     }
 }
 
@@ -355,7 +355,7 @@ fun AppViewModel.abortUpd46(ctx: Context) {
             p30.upd.action = "rollback"; p30.upd.phase = "run"; pollUpd30()
         } catch (e: ApiException) {
             if (e.status == 404 || e.status == 405) { s.updStuck = false; startUpd31(ctx, "rollback") } else flash(e.message ?: "Fikk ikke avbrutt")
-        } catch (e: Exception) { flash(e.message ?: "Fikk ikke avbrutt") } finally { s.updBusy = false }
+        } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { flash(uiErr73(e, "Fikk ikke avbrutt")) } finally { s.updBusy = false }
     }
 }
 

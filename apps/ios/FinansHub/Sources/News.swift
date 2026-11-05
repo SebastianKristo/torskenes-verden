@@ -18,27 +18,41 @@ struct NewsReaderView: View {
         VStack(spacing: 0) {
             header(data)
             tabs(data)
-            ScrollView {
-                VStack(alignment: .leading, spacing: 0) {
-                    // Prompt 46: Siste har det felles sammendraget; de andre kategoriene sitt eget (News46SummaryCard).
-                    if store.newsCat == "siste" {
-                        lead(data)
-                    } else {
-                        News46SummaryCard(cat: store.newsCat, name: News46.shared.tabs(data.categories).first { $0.id == store.newsCat }?.name ?? "",
-                                          items: data.items) { (x: NewsItem) in article27 = x }
+            // Prompt 73 (NEWS73): fanen «Lagret» (News73Saved.swift) – lagrede artikler fra den lokale kopien.
+            if News73Model.shared.showTab {
+                News73SavedList()
+            } else {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 0) {
+                        // Prompt 46: Siste har det felles sammendraget; de andre kategoriene sitt eget (News46SummaryCard).
+                        if store.newsCat == "siste" {
+                            lead(data)
+                        } else {
+                            News46SummaryCard(cat: store.newsCat, name: News46.shared.tabs(data.categories).first { $0.id == store.newsCat }?.name ?? "",
+                                              items: data.items) { (x: NewsItem) in article27 = x }
+                        }
+                        if store.news == nil || (store.newsBusy && data.items.isEmpty) {
+                            ProgressView().frame(maxWidth: .infinity).padding(30)
+                        } else if data.items.isEmpty {
+                            Text("Ingen saker i denne kategorien.").font(PF.ui(14)).foregroundStyle(p.mut).padding(.vertical, 20)
+                        }
+                        ForEach(data.items) { x in row(x, data) }
                     }
-                    if store.news == nil || (store.newsBusy && data.items.isEmpty) {
-                        ProgressView().frame(maxWidth: .infinity).padding(30)
-                    } else if data.items.isEmpty {
-                        Text("Ingen saker i denne kategorien.").font(PF.ui(14)).foregroundStyle(p.mut).padding(.vertical, 20)
-                    }
-                    ForEach(data.items) { x in row(x, data) }
+                    .padding(.horizontal, 18).padding(.top, 16).padding(.bottom, 40)
                 }
-                .padding(.horizontal, 18).padding(.top, 16).padding(.bottom, 40)
+                .refreshable { await store.loadNews() }
             }
-            .refreshable { await store.loadNews() }
         }
         .background(p.bg.ignoresSafeArea())
+        .overlay(alignment: .bottom) { News73Toast() }
+        .fullScreenCover(item: Binding<News73Item?>(get: { News73Model.shared.open }, set: { (v: News73Item?) in News73Model.shared.open = v })) { it in
+            News73Reader(it: it, close: { News73Model.shared.open = nil })
+                .environment(\.paper, p)
+                .environment(store)
+                .overlay(alignment: .bottom) { News73Toast() }
+                .edgeSwipeClose30 { Haptic34.back(); News73Model.shared.open = nil }
+        }
+        .task { News73Model.shared.start(store) }
         .sheet(isPresented: $sources) {
             NewsSourcesSheet().environment(\.paper, p)
                 .presentationDetents([.fraction(0.86), .large])
@@ -71,8 +85,8 @@ struct NewsReaderView: View {
             }
             .buttonStyle(.plain)
             VStack(alignment: .leading, spacing: 1) {
-                PLabel(text: "Nyhetsleser · \(d.feeds.count) kilder\(updated(d))", size: 10)
-                Text("Siste nytt").font(PF.serif(30, medium: true)).foregroundStyle(p.ink).lineLimit(1)
+                PLabel(text: headLabel(d), size: 10)
+                Text(News73Model.shared.showTab ? "Lagret" : "Siste nytt").font(PF.serif(30, medium: true)).foregroundStyle(p.ink).lineLimit(1)
             }
             Spacer(minLength: 4)
             // Prompt 46: innstillingene ligger i Innstillinger → Nyheter. «…» har bare snarveien dit (og Hent nyheter nå).
@@ -89,6 +103,16 @@ struct NewsReaderView: View {
         .padding(.horizontal, 18).padding(.top, 14).padding(.bottom, 12)
     }
 
+    /// Prompt 73: «Nyhetsleser · 5 lagret» når fanen Lagret er valgt.
+    private func headLabel(_ d: NewsData) -> String {
+        if News73Model.shared.showTab {
+            let n: Int = News73Model.shared.items.count
+            return "Nyhetsleser · \(n) lagret"
+        }
+        let k: Int = d.feeds.count
+        return "Nyhetsleser · \(k) kilder" + updated(d)
+    }
+
     private func updated(_ d: NewsData) -> String {
         guard let at = d.digestAt ?? d.items.compactMap(\.published).max() else { return "" }
         let f = DateFormatter(); f.dateFormat = "HH:mm"
@@ -100,8 +124,8 @@ struct NewsReaderView: View {
             HStack(spacing: 18) {
                 // Prompt 46: «For deg» etter Siste og egne kategorier bakerst (News46.swift).
                 ForEach(News46.shared.tabs(d.categories)) { c in
-                    let on = store.newsCat == c.id
-                    Button { store.setNewsCat(c.id) } label: {
+                    let on = store.newsCat == c.id && !News73Model.shared.showTab
+                    Button { News73Model.shared.showTab = false; store.setNewsCat(c.id) } label: {
                         // Prompt 23: ikon ved navnet (følger tekstfargen), se News23.swift.
                         NewsTabLabel23(cat: c, color: on ? p.ink : p.mut)
                             .padding(.top, 6).padding(.bottom, 10)
@@ -110,10 +134,27 @@ struct NewsReaderView: View {
                     .buttonStyle(.plain)
                     .accessibilityAddTraits(on ? .isSelected : [])
                 }
+                savedTab
             }
             .padding(.horizontal, 18)
         }
         .overlay(alignment: .bottom) { Rectangle().fill(p.line).frame(height: 1) }
+    }
+
+    /// Prompt 73: «Lagret» bakerst i fanelinja (bokmerke + navn).
+    private var savedTab: some View {
+        let on: Bool = News73Model.shared.showTab
+        return Button { Haptics.shared.tap(); News73Model.shared.showTab = true; Task { await News73Model.shared.load(store) } } label: {
+            HStack(spacing: 6) {
+                Image(systemName: "bookmark.fill").font(.system(size: 12, weight: .semibold))
+                Text("Lagret").font(PF.ui(14, .semibold))
+            }
+            .foregroundStyle(on ? p.ink : p.mut)
+            .padding(.top, 6).padding(.bottom, 10)
+            .overlay(alignment: .bottom) { Rectangle().fill(on ? p.ink : Color.clear).frame(height: 2) }
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(on ? .isSelected : [])
     }
 
     @ViewBuilder private func lead(_ d: NewsData) -> some View {
@@ -136,6 +177,14 @@ struct NewsReaderView: View {
         NewsRow27(item: x, category: store.newsCat == "siste" ? d.name(of: x.category) : nil) {
             Haptics.shared.tap()
             article27 = x
+        }
+        // Prompt 73: «Lagre» i hold-menyen på artikkelkortet.
+        .contextMenu {
+            let saved: Bool = News73Model.shared.isSaved(x.url)
+            Button { News73Model.shared.toggle(x, store) } label: {
+                Label(saved ? "Fjern fra lagret" : "Lagre", systemImage: saved ? "bookmark.slash" : "bookmark")
+            }
+            Button { store.openLink(x.url) } label: { Label("Åpne original", systemImage: "safari") }
         }
     }
 

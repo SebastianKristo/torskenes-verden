@@ -2,6 +2,7 @@
 // og fullskjermvisning av original kvittering og original banktransaksjon (som den kom fra banken, før navnevasking).
 import { S, api, esc, n2, sgn, dd, dWeek, today, cap, cats, accs, icon, parseAmount, loadTx, loadSummary } from './core.js';
 import { logo } from './mobile-p20.js'; // logoregisteret (prompt 20), ellers core.logo
+import { logoBtn73 } from './logo73.js'; // prompt 73: trykk på logoen → «Endre logo»
 import { m, draw, flash, two, amtC, backBtn, openSheet } from './mobile.js';
 import { c3 } from './mobile-theme.js';
 
@@ -20,7 +21,7 @@ export function txDetail(th, t) {
   const lines = t.lines ?? [];
   const rcTxt = t.receipt === 'booked' ? 'Vedlagt' : t.receipt ? 'Til gjennomgang' : '–';
   return `${two() ? '' : `<div class="m-row">${backBtn(th, '#', 'Tilbake', 'txback')}${isI(th) ? '' : `<b class="ptitle">${t.amount > 0 ? 'Inntekt' : 'Utgift'}</b>`}</div>`}
-    <div class="m-row" style="gap:14px">${logo(t, 60, isI(th) ? 30 : 18)}<div class="m-grow"><b style="font-size:20px;font-weight:700">${esc(t.description)}</b><div style="opacity:.7;font-size:14px">${cap(dWeek(t.date))}</div></div></div>
+    <div class="m-row" style="gap:14px">${logoBtn73(t, logo(t, 60, isI(th) ? 30 : 18), 'pen-on')}<div class="m-grow"><b style="font-size:20px;font-weight:700">${esc(t.description)}</b><div style="opacity:.7;font-size:14px">${cap(dWeek(t.date))}</div></div></div>
     <div class="m-mono" style="font-size:40px;font-weight:600;letter-spacing:-.03em;color:${amtC(t.amount, th)}">${sgn(t.amount)} <span style="font-size:18px;opacity:.6">kr</span></div>
     ${t.aiLong || t.aiShort ? `<div class="aicard ${isI(th) ? 'glass2' : ''}"><b>✦ AI-beskrivelse</b><p>${esc(t.aiLong || t.aiShort)}</p></div>` : ''}
     ${lines.length ? `<div class="sec">Varelinjer</div><div class="list ${isI(th) ? 'glass2' : ''}">${lines.map((l) => `<div class="opt-row" style="justify-content:space-between"><span class="m-ell">${esc(l.description ?? '–')}</span><span class="m-mono">${n2(l.amount)}</span></div>`).join('')}</div>` : ''}

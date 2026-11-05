@@ -254,8 +254,8 @@ fun AppViewModel.runUpd30(password: String) {
                 else -> e.message ?: "Noe gikk galt"
             }
             Haptics.error()
-        } catch (e: Exception) {
-            u.pwErr = e.message ?: "Noe gikk galt"
+        } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) {
+            u.pwErr = uiErr73(e, "Noe gikk galt")
         } finally { u.pwBusy = false }
     }
 }

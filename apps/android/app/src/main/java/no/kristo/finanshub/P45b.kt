@@ -114,7 +114,7 @@ fun AppViewModel.confirmAgent45() {
     Haptics.tap()
     launch45 {
         val raw = try { api45 { hlPost("/glimt/agent/confirm", JSONObject().put("token", token)) } } catch (e: CancellationException) { throw e } catch (e: Exception) {
-            flash("Glimt fikk ikke gjort det: ${e.message ?: "ukjent feil"}"); Haptics.error(); return@launch45
+            flash("Glimt fikk ikke gjort det: ${uiErr73(e, "ukjent feil")}"); Haptics.error(); return@launch45
         }
         val o = runCatching { JSONObject(raw) }.getOrNull()
         val reply = o?.s45("reply") ?: o?.s45("text") ?: "Gjort."

@@ -72,9 +72,11 @@ class Api(private val baseUrl: String, private val token: String?) {
     } catch (e: SocketTimeoutException) {
         throw ApiException("Serveren svarte ikke i tide.")
     } catch (e: SSLException) {
-        throw ApiException("HTTPS-feil (${e.message}). Bruk http:// på lokalt nett, eller installer sertifikatet på telefonen.")
+        android.util.Log.w("Api", "HTTPS-feil", e) // prompt 73: ingen rå exception-tekst i UI
+        throw ApiException("HTTPS-feil. Bruk http:// på lokalt nett, eller installer sertifikatet på telefonen.")
     } catch (e: IOException) {
-        throw ApiException(e.message ?: "Nettverksfeil")
+        android.util.Log.w("Api", "Nettverksfeil", e)
+        throw ApiException("Nettverksfeil. Sjekk forbindelsen og prøv igjen.")
     }
 
     private fun read(conn: HttpURLConnection): String {

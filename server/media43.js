@@ -236,6 +236,18 @@ const artOf = (svc, id) => { const a = MOCK() && svcConf43(svc).mock ? mockArt43
 const COLORS = ['#2e3b4a', '#3f5a4a', '#6b3b2e', '#7a5a2a', '#4a6b3a', '#5a4a6b', '#3c4a5c', '#2f2f36', '#6b4a3a', '#3a5a6b', '#5c3c4a', '#4a4a2e'];
 const colorFor = (s) => { let h = 0; for (const ch of String(s)) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return COLORS[h % COLORS.length]; };
 
+/* Prompt 73 (MEDIA73, claude-code-media-covers.md): reserveplakat fra TMDB/TVDB (remoteUrl) går via serveren (/api/media/ekstern),
+   aldri rett fra nettleseren. Bare https på image.tmdb.org og artworks.thetvdb.com med bildefil-sti. */
+const EXT_RE73 = [/^https:\/\/image\.tmdb\.org\/t\/p\/\w+\/[\w.-]+\.(jpe?g|png|webp)$/i, /^https:\/\/artworks\.thetvdb\.com\/banners\/[\w/.-]+\.(jpe?g|png|webp)$/i];
+export const extOk73 = (u) => typeof u === 'string' && !u.includes('..') && EXT_RE73.some((re) => re.test(u));
+/** Reserveplakat (TMDB/TVDB via proxy) når den skiller seg fra hovedplakaten. */
+function posterAltOf73(images, main = null) {
+  const u = (images ?? []).find((i) => i.coverType === 'poster')?.remoteUrl;
+  if (!extOk73(u)) return null;
+  const alt = `/api/media/ekstern?u=${encodeURIComponent(u)}`;
+  return main === u || main === alt ? null : alt;
+}
+
 /* ---------------- Profiler og mapper ---------------- */
 
 const resOfProfile = (name) => (/ultra|2160|4k|uhd/i.test(name ?? '') ? 2160 : /720p\/1080p/i.test(name ?? '') ? 1080 : /720/.test(name ?? '') ? 720 : /sd/i.test(name ?? '') && !/hd/i.test(name ?? '') ? 480 : 1080);
@@ -285,6 +297,59 @@ async function queues() {
     return { ep, mv, link };
   });
 }
+/* Prompt 73 (MEDIA73, claude-code-media-covers.md): ferdige nedlastinger er ikke lenger i køen, så koblingen torrent → serie/film
+   tas fra historikken i Sonarr/Radarr (downloadId = torrent-hash), med serie/episode/film tatt med (includeSeries/includeEpisode/
+   includeMovie). Cache 5 min. Gir hash → {svc, seriesId, episodeIds, eps:[{season, episode, title}]} | {svc, movieId}. */
+async function histLinks73() {
+  return cached('hist:links73', 5 * 60_000, async () => {
+    const get = async (id, q) => (svcConf43(id).on ? arr(id, 'GET', '/history', { query: { page: 1, pageSize: 250, sortKey: 'date', sortDirection: 'descending', ...q }, timeout: 8000 }).catch(() => null) : null);
+    const [s, r] = await Promise.all([get('sonarr', { includeSeries: true, includeEpisode: true }), get('radarr', { includeMovie: true })]);
+    const recs = (x) => (Array.isArray(x) ? x : Array.isArray(x?.records) ? x.records : []);
+    const link = new Map();
+    for (const h of recs(s)) {
+      const id = String(h.downloadId ?? '').toLowerCase();
+      if (!id || !h.seriesId) continue;
+      const cur = link.get(id) ?? { svc: 'sonarr', seriesId: h.seriesId, episodeIds: [], eps: [], series: h.series ?? null };
+      if (h.episodeId && !cur.episodeIds.includes(h.episodeId)) {
+        cur.episodeIds.push(h.episodeId);
+        const e = h.episode;
+        if (e && Number.isInteger(e.seasonNumber) && Number.isInteger(e.episodeNumber)) cur.eps.push({ season: e.seasonNumber, episode: e.episodeNumber, title: e.title ?? '' });
+      }
+      cur.series ??= h.series ?? null;
+      link.set(id, cur);
+    }
+    for (const h of recs(r)) {
+      const id = String(h.downloadId ?? '').toLowerCase();
+      if (id && h.movieId && !link.has(id)) link.set(id, { svc: 'radarr', movieId: h.movieId, movie: h.movie ?? null });
+    }
+    return link;
+  });
+}
+/** Metadata per ID (tittel, år, plakater) huskes i 24 t, så plakaten finnes selv om Sonarr/Radarr svarer tregt en stund. */
+const META73 = new Map();
+const META73_TTL = 24 * 3600_000;
+function meta73(svc, x) {
+  const key = `${siteKey()}|${svc}:${x?.id}`;
+  if (x?.images) {
+    const poster = posterOf(svc, x.images, x.id);
+    const v = { title: x.title, year: x.year ?? null, tvdbId: x.tvdbId ?? null, tmdbId: x.tmdbId ?? null, poster, posterAlt: posterAltOf73(x.images, poster), color: artOf(svc, x.id), exp: Date.now() + META73_TTL };
+    META73.set(key, v);
+    if (META73.size > 2000) META73.delete(META73.keys().next().value);
+    return v;
+  }
+  const hit = META73.get(key);
+  return hit && hit.exp > Date.now() ? hit : null;
+}
+/** Siste utvei når verken kø eller historikk kjenner hashen: lik normalisert tittel (uten årstall) mot biblioteket, bare ved ett treff. */
+const bareTitle73 = (s) => normTitle43(String(s ?? '').replace(/\s*\((?:19|20)\d{2}\)\s*$/, ''));
+function titleLink73(p, series, movies) {
+  const n = bareTitle73(p.title);
+  if (!n) return null;
+  if (p.code === 'Film') { const L = movies.filter((m) => bareTitle73(m.title) === n); return L.length === 1 ? { svc: 'radarr', movieId: L[0].id, by: 'title' } : null; }
+  if (!p.code) return null;
+  const L = series.filter((s) => bareTitle73(s.title) === n || bareTitle73(s.cleanTitle) === n);
+  return L.length === 1 ? { svc: 'sonarr', seriesId: L[0].id, by: 'title' } : null;
+}
 function epState(e, q, now = Date.now()) {
   if (e.hasFile) return stOut('ok');
   const x = q?.ep.get(e.id);
@@ -322,7 +387,7 @@ async function seriesOut(s) {
   const st = s.statistics ?? {};
   const have = st.episodeFileCount ?? 0, total = st.episodeCount ?? st.totalEpisodeCount ?? 0;
   return { id: s.id, kind: 'series', title: s.title, year: s.year ?? null, network: s.network ?? '', status: s.status === 'ended' ? 'ended' : 'continuing', statusLabel: s.status === 'ended' ? 'Avsluttet' : 'Fortsetter', overview: s.overview ?? '',
-    poster: posterOf('sonarr', s.images, s.id), fanart: fanartOf('sonarr', s.images, s.id), color: artOf('sonarr', s.id), tvdbId: s.tvdbId ?? null, profileId: s.qualityProfileId ?? null, profile: await profName('sonarr', s.qualityProfileId),
+    poster: posterOf('sonarr', s.images, s.id), posterAlt: posterAltOf73(s.images, posterOf('sonarr', s.images, s.id)), fanart: fanartOf('sonarr', s.images, s.id), color: artOf('sonarr', s.id), tvdbId: s.tvdbId ?? null, profileId: s.qualityProfileId ?? null, profile: await profName('sonarr', s.qualityProfileId),
     monitored: s.monitored !== false, monitor: s._monitor ?? null, seriesType: s.seriesType ?? 'standard', seriesTypeLabel: SERIES_TYPES43.find((x) => x[0] === s.seriesType)?.[1] ?? 'Standard', path: s.path ?? null, rootFolder: s.rootFolderPath ?? null,
     episodes: { have, total, missing: Math.max(0, total - have) }, episodesText: `${have} av ${total} episoder${total - have > 0 ? ` · ${total - have} mangler` : ''}`, sizeOnDisk: st.sizeOnDisk ?? 0, sizeText: st.sizeOnDisk ? sizeText43(st.sizeOnDisk) : '0 GB', seasonCount: st.seasonCount ?? s.seasons?.length ?? 0,
     nextAiring: s.nextAiring ?? null, added: s.added ?? null }; // prompt 70: sortering «Neste episode» / «Sist lagt til» i Media → Bibliotek
@@ -410,7 +475,7 @@ async function updateSeries(id, b) {
 async function movieOut(m, q = null) {
   const f = m.movieFile;
   const d = m.digitalRelease?.slice(0, 10) ?? null;
-  return { id: m.id, kind: 'movie', title: m.title, year: m.year ?? null, overview: m.overview ?? '', poster: posterOf('radarr', m.images, m.id), fanart: fanartOf('radarr', m.images, m.id), color: artOf('radarr', m.id), tmdbId: m.tmdbId ?? null,
+  return { id: m.id, kind: 'movie', title: m.title, year: m.year ?? null, overview: m.overview ?? '', poster: posterOf('radarr', m.images, m.id), posterAlt: posterAltOf73(m.images, posterOf('radarr', m.images, m.id)), fanart: fanartOf('radarr', m.images, m.id), color: artOf('radarr', m.id), tmdbId: m.tmdbId ?? null,
     movieFileId: f?.id ?? null, canRedownload: !!m.hasFile, canDeleteFile: !!m.hasFile, added: m.added ?? null, // prompt 44 · prompt 70: added
     profileId: m.qualityProfileId ?? null, profile: await profName('radarr', m.qualityProfileId), monitored: m.monitored !== false, minimumAvailability: m.minimumAvailability ?? 'released',
     availabilityLabel: AVAILABILITY43.find((x) => x[0] === m.minimumAvailability)?.[1] ?? 'Utgitt digitalt', hasFile: !!m.hasFile, path: m.path ?? null, rootFolder: m.rootFolderPath ?? null,
@@ -575,13 +640,13 @@ export async function upcoming43(days = 7, fromQ = null) {
     if (!d || d < today || d > last) continue;
     const s = e.series ?? {};
     items.push({ kind: 'episode', id: `ep-${e.id}`, episodeId: e.id, seriesId: e.seriesId, title: s.title ?? '', code: epCode(e.seasonNumber, e.episodeNumber), episodeTitle: e.title ?? '', date: d, time: e.airDateUtc ? osloHm(Date.parse(e.airDateUtc)) : '',
-      airUtc: e.airDateUtc ?? null, network: s.network ?? '', poster: posterOf('sonarr', s.images, e.seriesId), fanart: fanartOf('sonarr', s.images), color: artOf('sonarr', e.seriesId), monitored: !!e.monitored, ...epState(e, q), open: { tab: 'sonarr', id: e.seriesId } });
+      airUtc: e.airDateUtc ?? null, network: s.network ?? '', tvdbId: s.tvdbId ?? null, poster: posterOf('sonarr', s.images, e.seriesId), posterAlt: posterAltOf73(s.images, posterOf('sonarr', s.images, e.seriesId)), fanart: fanartOf('sonarr', s.images), color: artOf('sonarr', e.seriesId), monitored: !!e.monitored, ...epState(e, q), open: { tab: 'sonarr', id: e.seriesId } });
   }
   for (const m of Array.isArray(mv) ? mv : []) {
     const cand = [['digitalRelease', 'Digital utgivelse'], ['inCinemas', 'På kino'], ['physicalRelease', 'Fysisk utgivelse']].map(([k, l]) => [m[k]?.slice(0, 10), l]).filter(([d]) => d && d >= today && d <= last);
     if (!cand.length) continue;
     const [d, label] = cand[0];
-    items.push({ kind: 'movie', id: `mv-${m.id}`, movieId: m.id, title: m.title, code: 'Film', episodeTitle: label, date: d, time: '', airUtc: null, network: '', poster: posterOf('radarr', m.images, m.id), fanart: fanartOf('radarr', m.images), color: artOf('radarr', m.id), monitored: m.monitored !== false,
+    items.push({ kind: 'movie', id: `mv-${m.id}`, movieId: m.id, tmdbId: m.tmdbId ?? null, year: m.year ?? null, title: m.title, code: 'Film', episodeTitle: label, date: d, time: '', airUtc: null, network: '', poster: posterOf('radarr', m.images, m.id), posterAlt: posterAltOf73(m.images, posterOf('radarr', m.images, m.id)), fanart: fanartOf('radarr', m.images), color: artOf('radarr', m.id), monitored: m.monitored !== false,
       ...movieState(m, q), open: { tab: 'radarr', id: m.id } });
   }
   items.sort((a, b) => a.date.localeCompare(b.date) || (a.time || '99').localeCompare(b.time || '99') || a.title.localeCompare(b.title, 'nb'));
@@ -604,19 +669,35 @@ const parseName = (n) => { const m = String(n).match(/^(.+?)[. _-]S(\d{1,2})(?:E
 async function torrentsOut(filter = 'all') {
   const raw = await torrentsRaw();
   if (!raw) return null;
-  const [q, series, movies, alt, prefs] = await Promise.all([queues().catch(() => null), svcConf43('sonarr').on ? seriesList().catch(() => []) : [], svcConf43('radarr').on ? movieList().catch(() => []) : [],
-    cached('qbit:alt', 2000, () => qb('GET', '/transfer/speedLimitsMode')).catch(() => '0'), cached('qbit:prefs', 60_000, () => qb('GET', '/app/preferences')).catch(() => ({}))]);
+  const [q, series, movies, alt, prefs, hl] = await Promise.all([queues().catch(() => null), svcConf43('sonarr').on ? seriesList().catch(() => []) : [], svcConf43('radarr').on ? movieList().catch(() => []) : [],
+    cached('qbit:alt', 2000, () => qb('GET', '/transfer/speedLimitsMode')).catch(() => '0'), cached('qbit:prefs', 60_000, () => qb('GET', '/app/preferences')).catch(() => ({})),
+    raw.some((t) => t.progress >= 1) ? histLinks73().catch(() => null) : null]);
   const queueOrder = raw.filter((t) => t.priority > 0).sort((a, b) => a.priority - b.priority).map((t) => t.hash);
   const items = raw.map((t) => {
     const status = TSTATE[t.state] ?? 'dl', progress = Math.round((t.progress ?? 0) * 1000) / 10;
-    const ln = q?.link.get(String(t.hash).toLowerCase());
+    const h = String(t.hash).toLowerCase();
     const p = parseName(t.name);
-    let title = p.title, code = p.code, poster = null, color = colorFor(t.name), kind = ln?.svc === 'radarr' || code === 'Film' ? 'movie' : 'episode', open = null;
-    if (ln?.svc === 'sonarr') { const s = series.find((x) => x.id === ln.seriesId); if (s) { title = s.title; poster = posterOf('sonarr', s.images, s.id); color = artOf('sonarr', s.id); open = { tab: 'sonarr', id: s.id }; } }
-    if (ln?.svc === 'radarr') { const m = movies.find((x) => x.id === ln.movieId); if (m) { title = m.title; code = 'Film'; poster = posterOf('radarr', m.images, m.id); color = artOf('radarr', m.id); open = { tab: 'radarr', id: m.id }; } }
+    // Prompt 73: kø → historikk (ID) → entydig tittel; tittel og plakat fra metadata, aldri fra filnavnet når koblingen finnes.
+    const ln = q?.link.get(h) ?? hl?.get(h) ?? titleLink73(p, Array.isArray(series) ? series : [], Array.isArray(movies) ? movies : []);
+    let title = p.title, code = p.code, poster = null, posterAlt = null, color = colorFor(t.name), kind = ln?.svc === 'radarr' || code === 'Film' ? 'movie' : 'episode', open = null;
+    let link = null, year = null, episodeTitle = '';
+    if (ln?.svc === 'sonarr') {
+      const s = series.find((x) => x.id === ln.seriesId), md = meta73('sonarr', s ?? ln.series ?? { id: ln.seriesId });
+      if (md) { title = md.title; year = md.year; poster = md.poster; posterAlt = md.posterAlt; color = md.color; open = { tab: 'sonarr', id: ln.seriesId }; }
+      const hep = ln.eps?.length === 1 ? ln.eps[0] : null;
+      if (hep) { code = epCode(hep.season, hep.episode); episodeTitle = hep.title; }
+      link = { svc: 'sonarr', by: ln.by ?? (q?.link.has(h) ? 'queue' : 'history'), seriesId: ln.seriesId, tvdbId: md?.tvdbId ?? null, episodeIds: ln.episodeIds ?? [] };
+    }
+    if (ln?.svc === 'radarr') {
+      const m = movies.find((x) => x.id === ln.movieId), md = meta73('radarr', m ?? ln.movie ?? { id: ln.movieId });
+      if (md) { title = md.title; year = md.year; code = 'Film'; poster = md.poster; posterAlt = md.posterAlt; color = md.color; open = { tab: 'radarr', id: ln.movieId }; }
+      link = { svc: 'radarr', by: ln.by ?? (q?.link.has(h) ? 'queue' : 'history'), movieId: ln.movieId, tmdbId: md?.tmdbId ?? null };
+    }
     const size = t.size || t.total_size || 0;
     const res = String(t.name).match(/(2160|1080|720|480)p/)?.[1];
-    return { hash: t.hash, name: t.name, title, code, quality: res ? `${res}p` : '', kind, poster, color, open, size, sizeText: status === 'meta' || !size ? 'størrelse ukjent' : sizeText43(size), progress, progressText: `${Math.floor(progress)} %`,
+    return { hash: t.hash, name: t.name, title, code, quality: res ? `${res}p` : '', kind, poster, posterAlt, color, open, size,
+      year, episodeTitle, seriesId: link?.seriesId ?? null, movieId: link?.movieId ?? null, tvdbId: link?.tvdbId ?? null, tmdbId: link?.tmdbId ?? null, linkedBy: link?.by ?? null, /* prompt 73 */
+      sizeText: status === 'meta' || !size ? 'størrelse ukjent' : sizeText43(size), progress, progressText: `${Math.floor(progress)} %`,
       state: t.state, status, statusText: tStatusText(status, t), dlSpeed: t.dlspeed ?? 0, upSpeed: t.upspeed ?? 0, speedText: speedText43(t.dlspeed ?? 0), eta: t.eta ?? null, etaText: etaText43(t.eta), category: t.category ?? '', savePath: t.save_path ?? '',
       queue: queueOrder.indexOf(t.hash) + 1 || null, ratio: Number.isFinite(+t.ratio) ? Math.round(+t.ratio * 100) / 100 : null, seeds: t.num_seeds ?? 0, peers: t.num_leechs ?? 0, addedAt: t.added_on ? new Date(t.added_on * 1000).toISOString() : null, completedAt: t.completion_on > 0 ? new Date(t.completion_on * 1000).toISOString() : null,
       forceStart: !!t.force_start, sequential: !!t.seq_dl, firstLast: !!t.f_l_piece_prio, paused: status === 'pause', done: status === 'seed', canToggle: status !== 'seed' };
@@ -1301,6 +1382,23 @@ media43Api.get('/cover', ...G, async (c) => {
   if (!conf.on || conf.mock) return c.body(null, 404);
   try { const r = await rawFetch(`${conf.url}${path}`, { headers: { 'X-Api-Key': conf.key } }); if (!r.ok) return c.body(null, 404); return new Response(r.body, { status: 200, headers: { 'Content-Type': r.headers.get('content-type') ?? 'image/jpeg', 'Cache-Control': 'private, max-age=86400' } }); }
   catch { return c.body(null, 502); }
+});
+
+// Prompt 73 (MEDIA73): reserveplakat fra TMDB/TVDB via serveren. GET /api/media/ekstern?u=<https://image.tmdb.org/…|https://artworks.thetvdb.com/banners/…>
+// Bare de to vertene og bildefil-stier (extOk73), ingen videresending, maks 5 MB, bare JPEG/PNG/WebP. Nettleseren cacher i 24 t.
+const EXT_MAX73 = 5 * MB;
+media43Api.get('/ekstern', ...G, async (c) => {
+  const u = String(c.req.query('u') ?? '');
+  if (!extOk73(u)) return c.json({ error: 'Ugyldig plakat' }, 400);
+  try {
+    const r = await rawFetch(u, { headers: { Accept: 'image/*' }, redirect: 'error', timeout: 10_000 });
+    const type = String(r.headers.get('content-type') ?? '').split(';')[0].trim().toLowerCase();
+    if (!r.ok || !/^image\/(jpeg|png|webp)$/.test(type)) return c.body(null, 404);
+    if (+(r.headers.get('content-length') ?? 0) > EXT_MAX73) return c.body(null, 413);
+    const buf = Buffer.from(await r.arrayBuffer());
+    if (buf.length > EXT_MAX73) return c.body(null, 413);
+    return c.body(buf, 200, { 'Content-Type': type, 'Cache-Control': 'private, max-age=86400', 'X-Content-Type-Options': 'nosniff' });
+  } catch { return c.body(null, 502); }
 });
 
 // Prompt 44 (SERVER44): byggeklosser for media44.js (servere per sted, søk som jobb, slett fil, felles status).

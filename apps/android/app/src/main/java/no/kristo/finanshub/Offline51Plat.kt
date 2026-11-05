@@ -134,7 +134,7 @@ object Offline51 {
                         else -> { remove(ctx, it.id); notify(ctx, "Ble ikke lagret", "«${it.label}»: ${e.message ?: "avvist av serveren"}") }
                     }
                     if (!allOk && isOffline(e)) return false
-                } catch (e: Exception) { mark(ctx, it, e.message ?: "Feil"); allOk = false }
+                } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { mark(ctx, it, uiErr73(e, "Feil")); allOk = false }
             }
         }
         return allOk

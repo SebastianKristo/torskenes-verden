@@ -18,6 +18,12 @@ body[data-route=vaer] .bottomnav{display:none}
 /* Prompt 32: ✕ Lukk oppe til høyre (rund 42 px glass, kryss 17 px); kilden står under H/L i toppen. */
 .wxp-close{flex:none;width:42px;height:42px;padding:0;border-radius:21px;border:0;background:rgba(255,255,255,.22);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);color:#fff;cursor:pointer;display:grid;place-items:center}
 .wxp-close:hover{background:rgba(255,255,255,.3)}
+/* Prompt 73 (claude-code-vaer-lukk-x.md): samme ✕ i alle ark og over kartet. Trykkflate 44 px, mørk glass over kartet. */
+.wxp-close{position:relative}
+.wxp-close::after{content:'';position:absolute;inset:-1px;border-radius:50%}
+.wxp-close.dk{background:rgba(10,20,35,.62)}
+.wxp-close.dk:hover{background:rgba(10,20,35,.75)}
+.wxp-sh3 .wxp-close,.c39-top .wxp-close{justify-self:end}
 .wxp-hsrc{font-size:11.5px;font-weight:500;opacity:.7;margin-top:6px}
 .wxp-scroll{position:relative;height:100%;overflow-y:auto;scrollbar-width:none;padding:96px 16px calc(84px + env(safe-area-inset-bottom,0px));-webkit-mask-image:linear-gradient(to bottom,transparent 0,transparent 52px,#000 104px);mask-image:linear-gradient(to bottom,transparent 0,transparent 52px,#000 104px)}
 .wxp-scroll::-webkit-scrollbar{display:none}

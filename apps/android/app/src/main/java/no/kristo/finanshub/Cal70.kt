@@ -67,11 +67,11 @@ suspend fun AppViewModel.move70(c: Cal70, calendarId: String): Pair<Cal70?, Stri
     val raw = api45 { request("PATCH", c.movePath, JSONObject().put("calendarId", calendarId), prefix = Api.HOMELAB) }
     reloadKal27()
     (Cal70.parse(JSONObject(raw).optJSONObject("card70")) ?: c) to null
-} catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { null to (e.message ?: "Fikk ikke flyttet avtalen") }
+} catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { null to (uiErr73(e, "Fikk ikke flyttet avtalen")) }
 
 /** Angre (10 s). → null når det gikk, ellers feiltekst. */
 suspend fun AppViewModel.undo70(c: Cal70): String? = try {
     api45 { request(c.undoMethod, c.undoPath, JSONObject(), prefix = Api.HOMELAB) }
     reloadKal27()
     null
-} catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { e.message ?: "Fikk ikke angret" }
+} catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { uiErr73(e, "Fikk ikke angret") }

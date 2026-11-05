@@ -250,8 +250,7 @@ export function wxView() {
   return `<div class="vx${W41?.wxEditing?.() ? ' p41-wxed' : ''}" style="background:${sky}">${W41?.wxStyle?.() ?? ''}<div class="w22-fx" id="w22-fx" aria-hidden="true"></div><div class="vx-glow" style="background:${glow}"></div>
     <div class="vx-bar">${back}<div class="vx-compact"><b>${esc(city)}</b><span>${deg(c.temp)} | ${esc(desc)}</span></div>${close}</div>
     <div class="vx-in${fold ? ' p25-fold' : ''}"><div class="p25-c1">
-      ${WX.place === GPS_ID ? '' : globalThis.P45?.hereCard?.(D.place) ?? '' /* prompt 45: været der enheten er; prompt 46: ikke når Min posisjon er valgt */}
-      <div class="vx-head" data-wxk="na"><span class="vx-pos">${WX.place === GPS_ID ? (GPS.pos ? 'MIN POSISJON' : `MIN POSISJON · ${GPS.st === 'denied' ? 'AV' : GPS.st === 'err' ? 'IKKE FUNNET' : 'FINNER …'}`) : globalThis.P45?.hereLabel?.(D.place) ?? 'VALGT STED'}</span><span class="vx-city">${esc(city)}</span><span class="vx-temp">${deg(c.temp)}</span><span class="vx-desc">${esc(desc)}</span><span class="vx-hl">H:${deg(td.hi ?? days[0]?.hi)}  L:${deg(td.lo ?? days[0]?.lo)}${c.feels != null ? ` · Føles som ${deg(c.feels)}` : ''}</span><span class="w32-src">${esc(srcLine(D))}</span></div>
+      <div class="vx-head" data-wxk="na"><span class="vx-pos">${WX.place === GPS_ID ? (GPS.pos ? 'MIN POSISJON' : `MIN POSISJON · ${GPS.st === 'denied' ? 'AV' : GPS.st === 'err' ? 'IKKE FUNNET' : 'FINNER …'}`) : 'VALGT STED' /* prompt 73: ingen «MIN POSISJON»-boks over heroen (P45.hereCard er tatt ut); Min posisjon velges i Steder */}</span><span class="vx-city">${esc(city)}</span><span class="vx-temp">${deg(c.temp)}</span><span class="vx-desc">${esc(desc)}</span><span class="vx-hl">H:${deg(td.hi ?? days[0]?.hi)}  L:${deg(td.lo ?? days[0]?.lo)}${c.feels != null ? ` · Føles som ${deg(c.feels)}` : ''}</span><span class="w32-src">${esc(srcLine(D))}</span></div>
       ${W41?.skiCard?.(D) ?? ''}
       ${hours.length ? `<div class="vx-card vx-hours w32-${M}" data-wxk="timer"><div class="vx-hrow"><button class="vx-forh w32-fh" data-wx="day" data-i="0"><b>Forhold ›</b><span>${esc(hrTitle2)}</span></button><div class="vx-modes">${modes.map(([k, n, p]) => `<button data-wx="mode" data-k="${k}" aria-label="${n}" aria-pressed="${WX.mode === k}">${tIco(p, k === 'rain', 18)}</button>`).join('')}</div></div><div class="vx-hs">${hrs}</div></div>` : ''}
       ${days.length ? `<div class="vx-card vx-days w32-${M}" data-wxk="dager">${dayRows}</div>` : ''}${fold ? `<div class="p41-wb" data-wxk="uke">${P39.wkCard(D, WX.place)}</div>` /* prompt 46: brett – nederst i venstre kolonne */ : ''}</div><div class="p25-c2">${fold ? P25.wxMapCard(P0, WX2.layer) : ''}
@@ -404,7 +403,7 @@ export async function wxBind(e, t) {
     const id = x.dataset.k; if (plist().length <= 1) return true;
     try { await hlApi(`/weather/places/${encodeURIComponent(id)}`, { method: 'DELETE' }); WX.places = plist().filter(([q]) => q !== id); if (WX.place === id) { WX.place = WX.places[0][0]; await wxLoad(); } } catch (err) { flash(err.message); }
   } else if (k === 'mode') WX.mode = x.dataset.k;
-  else if (k === 'day') WX.sh = +x.dataset.i;
+  else if (k === 'day') { WX.sh = +x.dataset.i; haptic('tap'); } // prompt 73: haptikk når en dag åpnes
   else if (k === 'shx') WX.sh = null;
   else if (k === 'feel') WX.feel = x.dataset.k === '1';
   draw(); return true;

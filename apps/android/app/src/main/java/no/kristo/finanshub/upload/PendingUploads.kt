@@ -1,5 +1,7 @@
 package no.kristo.finanshub.upload
 
+import no.kristo.finanshub.uiErr73
+
 import android.content.Context
 import androidx.work.BackoffPolicy
 import androidx.work.Constraints
@@ -97,8 +99,8 @@ object PendingUploads {
             } catch (e: ApiException) {
                 mark(ctx, u, e.message ?: "Feil")
                 if (e.status == 0) break // fortsatt uten nett: resten venter også
-            } catch (e: Exception) {
-                mark(ctx, u, e.message ?: "Feil")
+            } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) {
+                mark(ctx, u, uiErr73(e, "Feil"))
             }
         }
         return ok

@@ -6,7 +6,7 @@
 //   Nytt på serveren (små lesefelt): GET /api/media/upcoming?days=7&from=YYYY-MM-DD (bla i uker), torrent.ratio, serie.nextAiring/added, film.added.
 // Fartsgrafen (siste 2 t, 48 søyler à 2,5 min) bygges i nettleseren av målingene siden får (qBittorrent har ingen historikk).
 import { esc } from './util.js';
-import { bg50, img50 } from './media50.js';
+import { bg50 } from './media50.js';
 
 let C = null; // fra media43.js: { M, mapi, paint, paintMain, paintTop, toast, cmd, openDet, nav, tor, loadTor, loadUp, loadSer, loadMov, loadIdx, isAdm, tone, errBox, emptySvc, skel, confOff, norm44, prefetch50, narrow, ic }
 const lsg = (k, d) => { try { return localStorage.getItem(k) ?? d; } catch { return d; } };
@@ -14,10 +14,24 @@ const lss = (k, v) => { try { localStorage.setItem(k, v); } catch { /* privat vi
 const S = {
   wk: 0, calDay: null, cal: null, calKey: '', calBusy: false,
   nF: 'all', nSort: lsg('media70_nsort', 'new') === 'big' ? 'big' : 'new', sel: {}, showAll: false,
-  menu: null, alerts: false, pb: null, now: null, hist: null, pbAt: 0,
+  menu: null, alerts: false, pb: null, now: null, hist: null, rec: null, pbAt: 0,
   bibSort: { s: lsg('media70_bsort_s', 'next'), m: lsg('media70_bsort_m', 'title') },
 };
-export function init70(ctx) { C = ctx; }
+export function init70(ctx) {
+  C = ctx;
+  if (typeof document === 'undefined' || document.documentElement.dataset.m73) return;
+  document.documentElement.dataset.m73 = '1';
+  // Prompt 73: plakat som feiler → neste kilde i rekkefølgen (Plex → Sonarr/Radarr → TMDB/TVDB via proxy); tom → plassholderen vises.
+  document.addEventListener('error', (e) => {
+    const t = e.target;
+    if (!t?.classList?.contains('m73-im')) return;
+    BAD73.add(t.getAttribute('src'));
+    let L = [];
+    try { L = JSON.parse(t.dataset.fb || '[]'); } catch { L = []; }
+    const n = L.find((u) => !BAD73.has(u));
+    if (n) { t.removeAttribute('srcset'); t.dataset.fb = JSON.stringify(L.slice(L.indexOf(n) + 1)); t.src = n; } else t.remove();
+  }, true);
+}
 export const state70 = S;
 
 /* ---------------- Hjelpere ---------------- */
@@ -54,10 +68,25 @@ const openAttr = (x) => {
   const o = x?.open; if (o?.id == null) return '';
   return ` data-m43-open="${o.tab === 'radarr' ? 'm' : 's'}:${+o.id}"`;
 };
-/** Plakatflate: ThumbHash/farge med én gang, <img srcset> når serveren har bildet, tittelen på flaten når det ikke finnes noe bilde. */
+/* Prompt 73 (MEDIA73, claude-code-media-covers.md): én plakatkjede overalt (Oversikt, Kalender, Bibliotek, Nedlastinger).
+   Rekkefølge: Plex (plexPoster) → Sonarr/Radarr (posterImg/poster) → TMDB/TVDB via proxy (posterAlt) → farget plassholder med tittel.
+   Adresser som har feilet i denne økten (BAD73) hoppes over ved neste tegning, så kortene ikke blinker når siden tegnes på nytt. */
+const BAD73 = new Set();
+export function posters73(x) {
+  const L = [x?.plexPoster, x?.posterImg?.url || x?.poster, x?.posterAlt].filter((u) => typeof u === 'string' && u && !BAD73.has(u));
+  return [...new Set(L)];
+}
+function img73(x, { sizes = '120px', high = false } = {}) {
+  const L = posters73(x);
+  if (!L.length) return '';
+  const set = x?.posterImg?.srcset && L[0] === x.posterImg.url ? ` srcset="${esc(x.posterImg.srcset)}" sizes="${esc(sizes)}"` : '';
+  return `<img class="m73-im" src="${esc(L[0])}"${set}${L.length > 1 ? ` data-fb="${esc(JSON.stringify(L.slice(1)))}"` : ''} alt="" decoding="async" loading="${high ? 'eager' : 'lazy'}"${high ? ' fetchpriority="high"' : ''} draggable="false">`;
+}
+/** Bakgrunn mens bildet lastes: ThumbHash når serveren har den, ellers bare fargen (aldri en adresse som kan feile). */
+const bg73 = (x) => bg50({ color: x?.color, posterImg: x?.posterImg?.hash ? x.posterImg : null });
+/** Plakatflate: ThumbHash/farge med én gang, plakatkjeden over, tittelen på flaten når ingen kilde gir bilde (CSS skjuler den bak et bilde). */
 function art70(x, cls, sizes, label = '', sub = '') {
-  const has = !!(x?.posterImg?.url || x?.poster);
-  return `<span class="${cls} m50-ph" style="${bg50(x)}" aria-hidden="true">${img50(x, { sizes })}${!has && (label || sub) ? `<span class="m70-pa">${sub ? `<i>${esc(sub)}</i>` : ''}${label ? `<b>${esc(label)}</b>` : ''}</span>` : ''}</span>`;
+  return `<span class="${cls} m50-ph" style="${bg73(x)}" aria-hidden="true">${img73(x, { sizes })}${label || sub ? `<span class="m70-pa">${sub ? `<i>${esc(sub)}</i>` : ''}${label ? `<b>${esc(label)}</b>` : ''}</span>` : ''}</span>`;
 }
 function play70(title) {
   const p = C?.M.status?.play;
@@ -84,6 +113,7 @@ async function loadPb() {
 }
 async function loadNow() { try { S.now = await C.mapi('/now'); } catch { S.now = null; } C?.paintMain(); }
 async function loadHist() { try { S.hist = await C.mapi('/history'); } catch { S.hist = null; } C?.paintMain(); }
+async function loadRec() { try { S.rec = await C.mapi('/recent'); } catch { S.rec = null; } C?.paintMain(); } // prompt 73: Plex «nylig lagt til» i Klar til å se
 export async function loadCal(force = false) {
   const from = ymd(monday(S.wk)), key = `${C.M.site ?? ''}|${from}`;
   if (!force && S.cal && S.calKey === key && !S.cal.error) return;
@@ -98,11 +128,11 @@ export function enter70(tab, tick = false) {
   if (!C) return;
   if (tab === 'ov') {
     if (!tick || Date.now() - S.pbAt > 25_000) loadPb();
-    if (!tick) { loadNow(); loadHist(); }
+    if (!tick) { loadNow(); loadHist(); loadRec(); }
   }
   if (tab === 'kal') loadCal(tick);
 }
-export function resetSite70() { S.cal = null; S.calKey = ''; S.sel = {}; S.menu = null; }
+export function resetSite70() { S.cal = null; S.calKey = ''; S.sel = {}; S.menu = null; S.rec = null; }
 
 /* ---------------- Fartsgraf (siste 2 t) ---------------- */
 
@@ -164,7 +194,7 @@ export function top70(srvHtml, orb) {
     <nav class="m70-tabs" aria-label="Media">${tabs}</nav>
     <form class="m70-gl" data-m43-glf role="search"><span class="m70-glo">${orb}</span><input name="gq" value="${esc(M.gq)}" placeholder="${esc(PH[M.tab] ?? PH.ov)}" aria-label="Spør Glimt" autocomplete="off"><span class="m70-kbd" aria-hidden="true">⌘K</span></form>
     ${srvHtml}${al}
-    <button type="button" class="m70-ib" data-m43="set" aria-label="Innstillinger for Media" title="Innstillinger for Media">${C.ic.set}</button>
+    <button type="button" class="m70-x" data-m43="close" aria-label="Lukk Media" title="Lukk"><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
   </div></header>`;
 }
 
@@ -230,20 +260,77 @@ function statsRow() {
   ];
   return `<div class="m70-stats">${T.map(([l, v, s]) => `<div class="m70-stat"><div class="m70-mut m70-13">${esc(l)}</div><div class="m70-sv">${esc(v)}</div><div class="m70-mut m70-13">${esc(s)}</div></div>`).join('')}</div>`;
 }
+/* Prompt 73 (MEDIA73): «Klar til å se» slår sammen samme episode/film fra Plex, Kalender (Sonarr/Radarr) og qBittorrent til ett kort.
+   Nøkler: serie-ID/TVDB-ID + SxxEyy, film-ID/TMDB-ID, og som siste utvei normalisert metadata-tittel (uten «(2026)») + kode.
+   Plex vinner på tittel, episodenavn og plakat; nedlastingen gir kvalitet og størrelse; Sonarr/Radarr gir plakat og «Åpne serien». */
+const bare73 = (s) => String(s ?? '').replace(/\s*\((?:19|20)\d{2}\)\s*$/, '').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/&/g, 'and').replace(/[^a-z0-9æøå]+/g, '');
+const pad2 = (n) => String(n).padStart(2, '0');
+const isMovie73 = (x) => x.kind === 'movie' || x.code === 'Film';
+export function keys73(x) {
+  const K = [], n = bare73(x.title);
+  if (isMovie73(x)) {
+    if (x.movieId != null) K.push(`m:${x.movieId}`);
+    if (x.tmdbId != null) K.push(`tm:${x.tmdbId}`);
+    if (n) K.push(`mt:${n}`);
+    return K;
+  }
+  const c = /^S\d{2}E\d{2,3}$/.test(x.code ?? '') ? x.code : null;
+  if (!c) return x.hash ? [`h:${x.hash}`] : [];
+  if (x.seriesId != null) K.push(`s:${x.seriesId}:${c}`);
+  if (x.tvdbId != null) K.push(`tv:${x.tvdbId}:${c}`);
+  if (n) K.push(`st:${n}:${c}`);
+  return K;
+}
+/** Plex «nylig lagt til» → samme form som de andre kildene. */
+function fromPlex73(r) {
+  if (r.src !== 'plex' || !['episode', 'movie'].includes(r.type)) return null;
+  const mv = r.type === 'movie';
+  return { src: 'plex', kind: mv ? 'movie' : 'episode', title: mv && r.year && !/\(\d{4}\)$/.test(r.title) ? `${r.title} (${r.year})` : r.title, code: mv ? 'Film' : r.season != null && r.episode != null ? `S${pad2(r.season)}E${pad2(r.episode)}` : '',
+    episodeTitle: r.episodeTitle ?? '', tmdbId: r.tmdbId ?? null, plexPoster: r.poster ?? null, at: r.added ?? '' };
+}
+/** Slår sammen kildene (prioritet: Plex, Kalender, nedlasting). Eksportert for testen. */
+export function merge73(lists) {
+  const groups = [], byKey = new Map();
+  for (const [src, L] of lists) {
+    for (const x of L) {
+      const K = keys73(x);
+      let g = K.map((k) => byKey.get(k)).find(Boolean);
+      if (!g) { g = { parts: {}, keys: new Set() }; groups.push(g); }
+      if (!g.parts[src]) g.parts[src] = x;
+      for (const k of K) { g.keys.add(k); byKey.set(k, g); }
+    }
+  }
+  return groups.map(({ parts: { plex: P, cal: U, tor: T } }) => {
+    const meta = U ?? (T?.linkedBy ? T : null), any = P ?? U ?? T;
+    return {
+      title: P?.title || meta?.title || T?.title || '', code: P?.code || U?.code || T?.code || '', kind: any.kind,
+      episodeTitle: P?.episodeTitle || (U && U.kind !== 'movie' ? U.episodeTitle : '') || T?.episodeTitle || '',
+      quality: T?.quality || '', sizeText: T?.sizeText || '',
+      plexPoster: P?.plexPoster ?? null, poster: U?.poster ?? T?.poster ?? null, posterImg: U?.posterImg ?? T?.posterImg ?? null, posterAlt: U?.posterAlt ?? T?.posterAlt ?? null,
+      color: U?.color ?? T?.color ?? '#3C4A5C', open: U?.open ?? T?.open ?? null,
+      at: [P?.at, T?.completedAt, U ? `${U.date}T${U.time || '00:00'}` : ''].filter(Boolean).sort().pop() ?? '',
+    };
+  }).sort((a, b) => String(b.at).localeCompare(String(a.at)));
+}
 function readyList() {
-  const M = C.M;
-  const done = (M.tor?.items ?? []).filter((t) => t.done && t.completedAt).sort((a, b) => String(b.completedAt).localeCompare(String(a.completedAt)));
-  let L = done.filter((t) => ageDays(t.completedAt) <= 0), label = 'Lastet ned i dag';
-  const seen = new Set(L.map((t) => `${t.title}|${t.code}`));
-  for (const x of M.up?.items ?? []) if (x.status === 'ok' && x.date <= ymd(new Date()) && !seen.has(`${x.title}|${x.code}`)) { L.push({ ...x, fromCal: true }); seen.add(`${x.title}|${x.code}`); }
-  if (!L.length) { L = done.filter((t) => ageDays(t.completedAt) <= 6); label = 'Lastet ned denne uka'; }
+  const M = C.M, today = ymd(new Date());
+  const done = (M.tor?.items ?? []).filter((t) => t.done && t.completedAt);
+  const plex = (S.rec?.items ?? []).map(fromPlex73).filter(Boolean);
+  const pick = (days) => merge73([
+    ['plex', plex.filter((x) => x.at && ageDays(x.at) <= days)],
+    ['cal', (M.up?.items ?? []).filter((x) => x.status === 'ok' && x.date <= today)],
+    ['tor', done.filter((t) => ageDays(t.completedAt) <= days)],
+  ]);
+  let L = pick(0), label = 'Lastet ned i dag';
+  if (!L.length) { L = pick(6); label = 'Lastet ned denne uka'; }
   return { L: L.slice(0, 6), label };
 }
 function readyHtml() {
   const { L, label } = readyList();
   if (!C.M.tor && !C.M.up) return loading(150);
   const card = (x) => {
-    const p = play70(x.title), meta = x.fromCal ? [x.code, x.episodeTitle].filter(Boolean).join(' · ') : [x.code && x.code !== 'Film' ? x.code : 'Film', x.quality, x.sizeText].filter(Boolean).join(' · ');
+    const p = play70(x.title.replace(/\s*\((?:19|20)\d{2}\)$/, ''));
+    const meta = [isMovie73(x) ? 'Film' : x.code, x.episodeTitle, x.quality, x.sizeText].filter(Boolean).join(' · ');
     const t = openAttr(x) ? `<button type="button" class="m70-rt"${openAttr(x)}>${esc(x.title)}</button>` : `<span class="m70-rt">${esc(x.title)}</span>`;
     return `<div class="m70-rc">${art70(x, 'm70-rpa', '84px', x.title)}<div class="m70-rb">${t}<span class="m70-mut m70-13">${esc(meta)}</span>${p ? `<a class="m70-btn ink sm" href="${esc(p.url)}" target="_blank" rel="noopener">${icPlay()}Spill på ${esc(p.name)}</a>` : ''}</div></div>`;
   };
@@ -361,8 +448,7 @@ export function bib70() {
     else { pct = x.hasFile ? 100 : x.progress ?? 0; note = x.hasFile ? [x.file?.quality?.replace(/^WEBDL-|^Bluray-/i, ''), x.file?.sizeText].filter(Boolean).join(' · ') || 'Lastet ned' : x.status === 'ann' ? x.note || 'Annonsert' : x.statusText || 'Mangler'; bad = !x.hasFile && x.status !== 'ann'; }
     const st = k === 's' ? x.statusLabel ?? (x.status === 'ended' ? 'Avsluttet' : 'Fortsetter') : x.profile ?? '';
     const nx = k === 's' ? nextBadge(x) : '';
-    const has = !!(x.posterImg?.url || x.poster);
-    return `<button type="button" class="m70-lc" data-m43-open="${k}:${x.id}"><span class="m70-lp m50-ph" style="${bg50(x)}">${img50(x, { sizes: '(max-width: 600px) 46vw, 200px', high: i < 12 })}${has ? '' : `<span class="m70-lpk">${esc(k === 's' ? x.network ?? '' : x.year ?? '')}</span><span class="m70-lpt">${esc(x.title)}</span>`}${nx ? `<span class="m70-nx">${esc(nx)}</span>` : ''}</span>
+    return `<button type="button" class="m70-lc" data-m43-open="${k}:${x.id}"><span class="m70-lp m50-ph" style="${bg73(x)}">${img73(x, { sizes: '(max-width: 600px) 46vw, 200px', high: i < 12 })}<span class="m70-lpk">${esc(k === 's' ? x.network ?? '' : x.year ?? '')}</span><span class="m70-lpt">${esc(x.title)}</span>${nx ? `<span class="m70-nx">${esc(nx)}</span>` : ''}</span>
       <span class="m70-lt">${esc(x.title)}</span><span class="m70-13 m70-mut">${esc([x.year, st].filter(Boolean).join(' · '))}</span>
       <span class="m70-lb"><span class="m70-bar thin"><i class="${bad ? 'warn' : 'ok'}" style="width:${Math.max(0, Math.min(100, pct))}%"></i></span><span class="m70-12 ${bad ? 'm70-wt' : 'm70-mut'}">${esc(note)}</span></span></button>`;
   };

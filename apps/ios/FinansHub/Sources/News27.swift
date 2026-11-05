@@ -139,6 +139,7 @@ struct NewsArticleView27: View {
                         Text("\(catName(category).uppercased()) · \(source.uppercased())").font(PF.mono(10.5)).tracking(1.2).foregroundStyle(p.lab).lineLimit(1)
                         Text(title).font(PF.serif(28, medium: true)).foregroundStyle(p.ink).lineSpacing(1).fixedSize(horizontal: false, vertical: true)
                         Text(meta).font(PF.ui(13)).foregroundStyle(p.mut)
+                        if let it = News73Model.shared.item(for: cur.url) { News73Banner(it: it) }
                         summaryCard
                         readButton
                         related
@@ -151,6 +152,7 @@ struct NewsArticleView27: View {
             }
         }
         .background(p.bg.ignoresSafeArea())
+        .overlay(alignment: .bottom) { News73Toast() }
         .environment(\.colorScheme, p.dark ? .dark : .light)
         .task(id: cur.url) { await load() }
     }
@@ -188,6 +190,8 @@ struct NewsArticleView27: View {
             }
             .buttonStyle(.plain)
             Spacer()
+            // Prompt 73 (NEWS73): bokmerket lagrer hele artikkelen for lesing uten nett.
+            News73BookmarkButton(item: cur)
             if let u = URL(string: url) {
                 ShareLink(item: u, subject: Text(title)) {
                     Text("Del").font(PF.ui(13.5, .semibold)).foregroundStyle(p.ink).padding(.horizontal, 16).frame(height: 40)

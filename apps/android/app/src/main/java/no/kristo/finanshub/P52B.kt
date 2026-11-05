@@ -398,6 +398,7 @@ fun AppViewModel.startService52(id: String) {
             flash("Starter tjenesten …")
             delay(2_500)
             loadBrief52(force = true)
+            retryBriefCard73("homelab") // prompt 73: kortet i briefen hentes per kort
         } catch (e: ApiException) {
             flash(if (e.status == 403) "Bare admin kan starte tjenester" else e.message ?: "Fikk ikke startet tjenesten")
         } catch (e: Exception) {

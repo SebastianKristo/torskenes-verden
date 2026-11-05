@@ -250,15 +250,12 @@ internal fun LiquidSeg46(keys: List<Pair<String, String>>, labels: List<String>,
                 }
             },
     ) {
-        // Dråpen: lys gradient (34 % → 16 % hvit), høylys øverst, tynn lys kant og myk skygge.
+        // Dråpen: lys gradient (34 % → 16 % hvit), tynn lys kant og glans INNI pillen (VaerPillGlass73, ui/Vaer73.kt).
+        // Prompt 73 (claude-code-vaer-pille-strek-android.md): ingen egen strek over toppkanten og ingen elevation/shadow.
         Box(
             Modifier.offset { androidx.compose.ui.unit.IntOffset((pos.value * stepPx).roundToInt(), 0) }.size(cell, 30.dp)
                 .graphicsLayer { scaleX = 1f + .18f * st; scaleY = 1f - .12f * st }
-                .shadow(6.dp, CircleShape, ambientColor = Color.Black.copy(alpha = .3f), spotColor = Color.Black.copy(alpha = .3f))
-                .clip(CircleShape)
-                .background(Brush.verticalGradient(listOf(Color.White.copy(alpha = .34f), Color.White.copy(alpha = .16f))))
-                .border(1.dp, Color.White.copy(alpha = .45f), CircleShape)
-                .drawBehind { drawLine(Color.White.copy(alpha = .55f), Offset(size.width * .25f, 2.dp.toPx()), Offset(size.width * .75f, 2.dp.toPx()), 1.2.dp.toPx(), cap = StrokeCap.Round) },
+                .vaerPillGlass73(),
         )
         Row(horizontalArrangement = Arrangement.spacedBy(gap)) {
             keys.forEachIndexed { i, (k, ic) ->

@@ -177,6 +177,8 @@ async function run(i, j) {
   if (P.q.length >= 2) fetch('/api/search51/recent', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ q: P.q }) }).catch(() => {});
   if (a?.id === 'theme') { themePanel(); return; }
   if (a?.id === 'invite') { invitePanel(); return; }
+  // Prompt 73 (NEWS73): lagret artikkel åpnes i nyhetsleserens leservisning (lokal kopi).
+  if (r.type === 'article' && (!a || a.kind === 'open')) { close(); import('./news.js').then((m) => m.openNews({ saved: r.link?.ref })).catch(() => go(r.link?.web)); return; }
   if (!a || a.kind === 'open') { go(a?.url ?? r.link?.web); return; }
   if (a.kind === 'copy') { try { await navigator.clipboard.writeText(String(a.value ?? '')); toast('Kopiert'); } catch { toast('Kunne ikke kopiere'); } return; }
   if (a.kind === 'http') {

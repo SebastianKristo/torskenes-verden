@@ -564,13 +564,14 @@ const TOOL_OF = { 'sun.daylight': 'Vær', 'calendar.free_slots': 'Kalender', 'ca
 // Prompt 47: når Glimt-planleggeren (modellen) har valgt et av de eksisterende svarene (app.answer {topic}), brukes det svaret –
 // regex-kjeden under (detectIntent) bestemmer bare når planen er lokal eller emnet er «other».
 const TOPIC_INTENT47 = { departures: 'departures', packages: 'packages', sun: 'sun.daylight', family: 'family.where', trial: 'trial.create', memory: 'memory.add', school: 'calendar.school', nav: 'nav', weather: 'weather' };
-export async function answer(user, text, { today = osloTodayISO(), onStep = () => {}, ctx = null, skipAgent = false, module = 'home', jobId = null, noWeb = false, topic = null } = {}) {
+export async function answer(user, text, { today: today0 = null, onStep = () => {}, ctx = null, skipAgent = false, module = 'home', jobId = null, noWeb = false, topic = null } = {}) {
+  const today = today0 ?? osloTodayISO();
   const t0 = Date.now();
   // Prompt 45: handlinger og data-søk (kalender, gjøremål, finans) går gjennom Glimt-motoren: modellen forstår, koden validerer og
   // utfører, datakilden bekrefter. Vær, avganger, pakker, sol, familie, prøveperioder og prat går videre til svarene under.
   if (!skipAgent) {
     try {
-      const g = await agent45(user, text, { module, today, requestId: jobId ? `assist-${jobId}` : null, legacyOk: false });
+      const g = await agent45(user, text, { module, today: today0 ?? undefined, requestId: jobId ? `assist-${jobId}` : null, legacyOk: false });
       if (!g.legacy) { const a = toAssist45(g, text, today); onStep(1, a.intent); onStep(2, a.intent); return { ...a, ms: Date.now() - t0 }; }
       if (g.plan?.engine && g.plan.engine !== 'lokal') topic = g.plan.calls?.find((c) => c.tool === 'app.answer')?.args?.topic ?? topic;
     } catch (e) { console.warn('[glimt45] assist:', String(e?.message ?? e).slice(0, 160)); }

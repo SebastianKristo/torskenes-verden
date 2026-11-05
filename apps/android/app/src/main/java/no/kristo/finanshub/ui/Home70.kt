@@ -33,8 +33,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -72,10 +74,14 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import kotlinx.coroutines.launch
@@ -104,6 +110,37 @@ import no.kristo.finanshub.wiggleEnd37
 
 private const val PAGE70 = "hjem"
 private val GAP70 = 12.dp
+
+/*
+ * Prompt 73 (ANDFIX73) – claude-code-hjem-kort-storrelse-android.md: iPhone er fasiten (Home70Grid.swift, Home50Tiles.swift).
+ *  - Små kort har fast høyde fra en tabell, aldri fra innholdet eller nabokortet: liten flis 150 dp (Home50TileFrame minHeight 150),
+ *    Avgang 212 dp (minHeight 212) – eller to små + mellomrom når to halve står stablet ved siden av (tallRow på iOS).
+ *    Kort som ikke er fliser (f.eks. Siste nytt gjort halv) beholder innholdets høyde, minst 150 dp ved siden av en flis.
+ *  - Teksten i Hjem-kortene: skriftskalering tak 1,15, ingen fontpadding og eksplisitt linjehøyde (Manrope 1,35 em som hhea på iOS).
+ */
+private val SMALL73 = 150.dp
+private val TALL73 = 212.dp
+private const val FONT_MAX73 = 1.15f
+
+/** Fast høyde for raden når alle kortene er fliser (HALF52), ellers Dp.Unspecified (innholdets høyde). */
+internal fun fixedH73(keys: List<String>, h: Dp): Dp = if (keys.isNotEmpty() && keys.all { it in HALF52 }) h else Dp.Unspecified
+
+/** Avgang-raden: 212 dp, eller to små fliser + mellomrom når to halve står stablet ved siden av. */
+internal fun avH73(nx: Int): Dp = if (nx >= 2) SMALL73 * 2 + GAP70 else TALL73
+
+/** Tekst i Hjem-kortene som på iPhone: fontScale maks 1,15, uten fontpadding, eksplisitt linjehøyde. */
+@Composable
+private fun HomeText73(content: @Composable () -> Unit) {
+    val d = LocalDensity.current
+    val style = LocalTextStyle.current.merge(
+        TextStyle(
+            fontFamily = PaperFonts.sans, lineHeight = 1.35.em,
+            platformStyle = TAB_TEXT24.platformStyle, // = PlatformTextStyle(includeFontPadding = false) (Mer24.kt; samme objekt, én stubbe-feil mindre)
+            lineHeightStyle = LineHeightStyle(LineHeightStyle.Alignment.Center, LineHeightStyle.Trim.None),
+        ),
+    )
+    CompositionLocalProvider(LocalDensity provides Density(d.density, d.fontScale.coerceAtMost(FONT_MAX73)), LocalTextStyle provides style, content = content)
+}
 private const val RESIZE70 = "M4 12h16M8 8l-4 4 4 4M16 8l4 4-4 4"
 
 /** Søkefeltet og Glimt-svaret på Hjem (for trykk utenfor og pillen). */
@@ -175,9 +212,10 @@ internal fun rows70(vis: List<String>, sz: Map<String, String>): List<Row70> {
 /**
  * To kolonner der begge får høyden til den høyeste (innholdets høyde, minst [minH]). Kort som ikke kan måles på forhånd
  * (f.eks. med BoxWithConstraints/LazyRow inni) får sin egen høyde i stedet for å krasje.
+ * Prompt 73: med [fixed] (fliser) er høyden fast som på iPhone – innholdet måles ikke.
  */
 @Composable
-private fun PairRow70(modifier: Modifier, minH: Dp, zl: Float, zr: Float, left: @Composable () -> Unit, right: @Composable () -> Unit) {
+private fun PairRow70(modifier: Modifier, minH: Dp, zl: Float, zr: Float, left: @Composable () -> Unit, right: @Composable () -> Unit, fixed: Dp = Dp.Unspecified) {
     Layout(
         content = {
             Box(Modifier.zIndex(zl)) { left() }
@@ -189,6 +227,14 @@ private fun PairRow70(modifier: Modifier, minH: Dp, zl: Float, zr: Float, left: 
         val w = c.maxWidth
         val cw = ((w - g) / 2).coerceAtLeast(0)
         val mh = minH.roundToPx()
+        if (fixed != Dp.Unspecified) {
+            val fh = fixed.roundToPx()
+            val fp = ms.map { it.measure(Constraints.fixed(cw, fh)) }
+            return@Layout layout(w, fh) {
+                fp[0].placeRelative(0, 0)
+                fp[1].placeRelative(cw + g, 0)
+            }
+        }
         val ih = ms.map { m -> try { m.minIntrinsicHeight(cw) } catch (e: Exception) { -1 } }
         val pl = if (ih.all { it >= 0 }) {
             val h = maxOf(mh, ih.maxOrNull() ?: 0)
@@ -249,16 +295,18 @@ internal fun HomeColumn70(
                     val z = if (st.dragKey != null && st.dragKey in r.keys) 5f else 0f
                     when (r) {
                         is Row70.One -> Box(Modifier.fillMaxWidth().zIndex(z)) { Tile70(vm, st, r.k, labels[r.k] ?: r.k, vis.indexOf(r.k), count, true, body) }
-                        is Row70.Two -> PairRow70(Modifier.fillMaxWidth().zIndex(z), 0.dp, zOf70(st, r.a), r.b?.let { zOf70(st, it) } ?: 0f,
+                        is Row70.Two -> PairRow70(Modifier.fillMaxWidth().zIndex(z), if (r.keys.any { it in HALF52 }) SMALL73 else 0.dp, zOf70(st, r.a), r.b?.let { zOf70(st, it) } ?: 0f,
                             { Tile70(vm, st, r.a, labels[r.a] ?: r.a, vis.indexOf(r.a), count, false, body) },
-                            { r.b?.let { b -> Tile70(vm, st, b, labels[b] ?: b, vis.indexOf(b), count, false, body) } })
+                            { r.b?.let { b -> Tile70(vm, st, b, labels[b] ?: b, vis.indexOf(b), count, false, body) } },
+                            fixed = fixedH73(r.keys, SMALL73))
                         is Row70.Av -> PairRow70(Modifier.fillMaxWidth().zIndex(z), 212.dp, zOf70(st, r.k), if (r.nx.any { it == st.dragKey }) 5f else 0f,
                             { Tile70(vm, st, r.k, labels[r.k] ?: r.k, vis.indexOf(r.k), count, false, body) },
                             {
                                 if (r.nx.isNotEmpty()) Column(Modifier.fillMaxWidth().fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(GAP70)) {
                                     r.nx.forEach { x -> Box(Modifier.fillMaxWidth().weight(1f).zIndex(zOf70(st, x))) { Tile70(vm, st, x, labels[x] ?: x, vis.indexOf(x), count, false, body) } }
                                 }
-                            })
+                            },
+                            fixed = fixedH73(r.keys, avH73(r.nx.size)))
                     }
                 }
             }
@@ -317,7 +365,7 @@ private fun Tile70(vm: AppViewModel, st: Home70State, k: String, label: String, 
                 } else rotationZ = angle.value
             },
     ) {
-        if (k in TILE_KEYS52 || k in HALF52 || k == "h5") Tile52(vm, k, Dp.Unspecified, body) else body(k)
+        HomeText73 { if (k in TILE_KEYS52 || k in HALF52 || k == "h5") Tile52(vm, k, Dp.Unspecified, body) else body(k) }
         if (edit) {
             // Trykk inni kortet er av i wiggle (flytting og knappene styres av beholderen).
             Box(Modifier.matchParentSize().clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {})

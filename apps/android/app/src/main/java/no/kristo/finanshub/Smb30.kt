@@ -114,7 +114,7 @@ fun smbHints30(kind: String): List<String> = when (kind) {
 private fun smbErr30(e: Exception): Smb30Err = when {
     e is ApiException && e.status == 404 -> Smb30Err("Serveren har ikke veiviseren ennå. Oppdater Homelab.", "")
     e is ApiException && e.status == 403 -> Smb30Err("Bare administrator kan sette opp nettverksdisk.", "")
-    else -> (e.message ?: "Noe gikk galt").let { Smb30Err(it, smbKind30(it)) }
+    else -> (e.message ?: "Noe gikk galt").let { Smb30Err(uiErr73(e, "Noe gikk galt. Prøv igjen."), smbKind30(it)) } // prompt 73: rå tekst bare til smbKind30
 }
 
 private fun AppViewModel.smbCred30(): JSONObject {
@@ -156,7 +156,7 @@ fun AppViewModel.smbScan30() {
                 val h = o.optString("host").takeIf { it.isNotBlank() } ?: return@mapNotNull null
                 Smb30Server(h, o.optString("ip"), o.optString("name").takeIf { it != "null" } ?: "")
             }
-        } catch (e: Exception) { s.error = smbErr30(e) } finally { s.scanning = false }
+        } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { s.error = smbErr30(e) } finally { s.scanning = false }
     }
 }
 
@@ -182,7 +182,7 @@ fun AppViewModel.smbManual30(force: Boolean) {
             val o = JSONObject(smbPost30("/probe", JSONObject().put("host", host)))
             if (o.optBoolean("ok")) smbPick30(Smb30Server(o.optString("host", host), o.optString("ip").takeIf { it != "null" } ?: "", ""))
             else { s.probeFail = o.optString("host", host); s.error = Smb30Err(o.optString("message", "Fant ikke serveren."), "host") }
-        } catch (e: Exception) { s.error = smbErr30(e) } finally { s.busy = false }
+        } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { s.error = smbErr30(e) } finally { s.busy = false }
     }
 }
 
@@ -200,7 +200,7 @@ fun AppViewModel.smbLogin30(guest: Boolean) {
             s.proto = if (o.optString("protocol") == "SMB2") "SMB2" else "SMB3"
             Haptics.select()
             s.step = 2
-        } catch (e: Exception) { s.error = smbErr30(e) } finally { s.busy = false }
+        } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { s.error = smbErr30(e) } finally { s.busy = false }
     }
 }
 
@@ -236,7 +236,7 @@ fun AppViewModel.smbOpenDir30(path: List<String>) {
                 s.locked = emptyMap(); s.listHint = ""
             }
             s.path = path
-        } catch (e: Exception) { s.error = smbErr30(e) } finally { s.busy = false }
+        } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { s.error = smbErr30(e) } finally { s.busy = false }
     }
 }
 
@@ -252,7 +252,7 @@ fun AppViewModel.smbMkdir30() {
             s.newDir = ""
             s.busy = false
             smbOpenDir30(s.path + n)
-        } catch (e: Exception) { s.error = smbErr30(e); s.busy = false }
+        } catch (e: kotlinx.coroutines.CancellationException) { s.busy = false; throw e } catch (e: Exception) { s.error = smbErr30(e); s.busy = false }
     }
 }
 
@@ -314,7 +314,7 @@ fun AppViewModel.smbSave30() {
             s.password = ""
             Haptics.success()
             loadBk29()
-        } catch (e: Exception) { s.error = smbErr30(e) } finally { s.busy = false }
+        } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { s.error = smbErr30(e) } finally { s.busy = false }
     }
 }
 
@@ -328,7 +328,7 @@ fun AppViewModel.setBkSmb30(on: Boolean) {
         try {
             hlPutSmb30(JSONObject().put("target", JSONObject().put("smb", JSONObject().put("enabled", on))))
             loadBk29()
-        } catch (e: Exception) { b.settings = old; flash("Fikk ikke lagret: " + (e.message ?: "feil")) }
+        } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { b.settings = old; flash("Fikk ikke lagret: " + (uiErr73(e, "feil"))) }
     }
 }
 

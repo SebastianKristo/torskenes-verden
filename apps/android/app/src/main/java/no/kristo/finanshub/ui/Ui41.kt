@@ -1,5 +1,7 @@
 package no.kristo.finanshub.ui
 
+import no.kristo.finanshub.uiErr73
+
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
 import android.content.Context
@@ -582,7 +584,7 @@ internal fun BookedEditor41(vm: AppViewModel, r: Receipt, cats: List<Category>) 
                             vm.refreshFinance40()
                         } else vm.message = "Ingen endringer"
                         vm.loadBooked23()
-                    } catch (e: Exception) { vm.message = e.message ?: "Fikk ikke lagret" } finally { busy = false }
+                    } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { vm.message = uiErr73(e, "Fikk ikke lagret") } finally { busy = false }
                 }
             }
             PButton("↺ Til gjennomgang", Modifier, kind = "line", height = 42.dp) { vm.undo23(r) }

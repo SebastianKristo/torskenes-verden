@@ -105,7 +105,7 @@ fun aliases67(v: String): List<String> {
 private fun msg67(e: Throwable, what: String): String = when {
     e is ApiException && e.status == 403 && e.message?.startsWith(Api.TOKEN_REFUSED) == true -> "Serveren godtar ikke app-tokenet her. Logg inn på nytt."
     e is ApiException && e.status == 403 -> e.message ?: "Bare administrator kan endre dette for alle"
-    else -> "$what: ${e.message ?: "ukjent feil"}"
+    else -> uiErr73(e, what).let { m -> if (m == what) "$what." else "$what: $m" } // prompt 73: ingen rå exception-tekst
 }
 
 private fun missing67(e: Throwable) = e is ApiException && (e.status == 404 || e.status == 405)
@@ -245,7 +245,7 @@ fun AppViewModel.loadRec67() {
             runCatching { JSONObject(api33 { hlGet("/glimt/recipes/settings") }) }.getOrNull()?.let { st ->
                 s.sws = sws67(st, REC67_KEYS, REC67_LAB, REC67_HELP); s.swAdmin = st.optBoolean("admin") && userIsAdmin
             }
-        } catch (e: Exception) { if (missing67(e)) s.missing = true else s.err = msg67(e, "Serveren svarte") }
+        } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { if (missing67(e)) s.missing = true else s.err = msg67(e, "Serveren svarte") }
         s.loaded = true
     }
 }
@@ -266,7 +266,7 @@ fun AppViewModel.toggleRec67(id: String) {
             val negs = o.optJSONArray("negatives").objs67().map { n -> G67RecNeg(n.s67("query") ?: "", n.s67("readableWrong") ?: "", n.s67("readableRight") ?: "") }
             s.det[id] = G67RecDet(runs, negs)
             o.optJSONObject("item")?.let(::recipe67)?.let { r -> s.items = s.items.map { x -> if (x.id == r.id) r else x } }
-        } catch (e: Exception) { s.det[id] = G67RecDet(err = msg67(e, "Kunne ikke hente kjøringene")) }
+        } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { s.det[id] = G67RecDet(err = msg67(e, "Kunne ikke hente kjøringene")) }
     }
 }
 
@@ -278,7 +278,7 @@ fun AppViewModel.setRecStatus67(id: String, status: String) {
             api33 { request("PATCH", "/glimt/recipes/" + enc67(id), JSONObject().put("status", status), prefix = Api.HOMELAB) }
             s.msg = if (status == "disabled") "Oppskriften er slått av ✓" else "Oppskriften er slått på ✓"
             Haptics.success(); loadRec67()
-        } catch (e: Exception) { s.msg = msg67(e, "Kunne ikke endre") }
+        } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { s.msg = msg67(e, "Kunne ikke endre") }
         s.busy = false
     }
 }
@@ -290,7 +290,7 @@ fun AppViewModel.deleteRec67(id: String) {
         try {
             api33 { hlDelete("/glimt/recipes/" + enc67(id)) }
             s.msg = "Slettet ✓"; s.open = null; s.arm = null; s.det.remove(id); Haptics.success(); loadRec67()
-        } catch (e: Exception) { s.msg = msg67(e, "Kunne ikke slette"); s.arm = null }
+        } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { s.msg = msg67(e, "Kunne ikke slette"); s.arm = null }
     }
 }
 
@@ -309,7 +309,7 @@ fun AppViewModel.testRec67(id: String, text: String) {
             )
             val steps = r.optJSONArray("steps").objs67().map { st -> (st.optString("tool") + " " + (st.s67("summary") ?: st.s67("error") ?: st.s67("status") ?: "")) to (st.b67("ok") != false) }
             G67RecTest(ok = r.optBoolean("ok"), head = (if (r.optBoolean("ok")) "Planen virker" else "Planen kunne ikke fylles ut") + (r.i67("ms")?.let { " · $it ms" } ?: ""), lines = lines, steps = steps)
-        } catch (e: Exception) { G67RecTest(err = msg67(e, "Testen feilet")) }
+        } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { G67RecTest(err = msg67(e, "Testen feilet")) }
     }
 }
 
@@ -323,7 +323,7 @@ fun AppViewModel.saveRec67(it: G67Recipe, tpl: String, plan: String, fastWrite: 
         try {
             api33 { request("PATCH", "/glimt/recipes/" + enc67(it.id), body, prefix = Api.HOMELAB) }
             s.edit = null; s.msg = "Lagret ✓"; s.test.remove(it.id); Haptics.success(); loadRec67()
-        } catch (e: Exception) { s.msg = msg67(e, "Kunne ikke lagre") }
+        } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { s.msg = msg67(e, "Kunne ikke lagre") }
         s.busy = false
     }
 }
@@ -462,7 +462,7 @@ fun AppViewModel.loadSch67() {
             s.enabled = o.optBoolean("enabled", true)
             s.missing = false; s.err = ""
             runCatching { JSONObject(api33 { hlGet("/glimt/schedules/settings") }) }.getOrNull()?.let(::schSettings67)
-        } catch (e: Exception) { if (missing67(e)) s.missing = true else s.err = msg67(e, "Serveren svarte") }
+        } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { if (missing67(e)) s.missing = true else s.err = msg67(e, "Serveren svarte") }
         s.loaded = true
     }
 }
@@ -540,7 +540,7 @@ fun AppViewModel.previewWhen67(it: G67Sched, text: String) {
     s.prev = G67Prev(busy = true)
     launch33 {
         s.prev = try { prev67(JSONObject(api33 { hlPost("/glimt/schedules/parse", JSONObject().put("when", t).apply { if (it.what.isNotBlank()) put("what", it.what) }) })) }
-        catch (e: Exception) { G67Prev(err = e.message ?: "Forstod ikke tidspunktet") }
+        catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { G67Prev(err = uiErr73(e, "Forstod ikke tidspunktet")) }
     }
 }
 
@@ -587,7 +587,7 @@ fun AppViewModel.previewNew67() {
     s.newPrev = G67Prev(busy = true)
     launch33 {
         s.newPrev = try { prev67(JSONObject(api33 { hlPost("/glimt/schedules/parse", body) })) }
-        catch (e: Exception) { G67Prev(err = msg67(e, "Forstod ikke")) }
+        catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { G67Prev(err = msg67(e, "Forstod ikke")) }
     }
 }
 
@@ -603,7 +603,7 @@ fun AppViewModel.createNew67() {
             s.newOpen = false; s.newWhat = ""; s.newWhen = ""; s.newCond = ""; s.newPrev = null
             s.msg = "Lagret ✓" + (it?.let { " · ${it.title} · ${it.whenLabel}" } ?: "")
             Haptics.success(); loadSch67()
-        } catch (e: Exception) { s.newPrev = G67Prev(err = msg67(e, "Kunne ikke lagre")) }
+        } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { s.newPrev = G67Prev(err = msg67(e, "Kunne ikke lagre")) }
         s.newBusy = false
     }
 }
@@ -669,7 +669,7 @@ fun AppViewModel.loadEnt67() {
             s.items = o.optJSONArray("items").objs67().mapNotNull(::ent67)
             o.optJSONObject("labels")?.let { l -> s.labels = ENT67_TYPES.associateWith { t -> l.s67(t) ?: ENT67_LABELS[t] ?: t } }
             s.enabled = o.optBoolean("enabled", true); s.missing = false; s.err = ""
-        } catch (e: Exception) { if (missing67(e)) s.missing = true else s.err = msg67(e, "Serveren svarte") }
+        } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { if (missing67(e)) s.missing = true else s.err = msg67(e, "Serveren svarte") }
         s.loaded = true
     }
 }
@@ -693,7 +693,7 @@ fun AppViewModel.saveEnt67(it: G67Ent?, type: String, name: String, value: Strin
             if (it == null) api33 { hlPost("/glimt/entities", body) } else api33 { request("PATCH", "/glimt/entities/" + enc67(it.id), body, prefix = Api.HOMELAB) }
             s.msg = if (it == null) "Lagt til ✓" else "Lagret ✓"; s.edit = null; s.add = false; s.arm = null
             Haptics.success(); loadEnt67(); loadMem33(force = true)
-        } catch (e: Exception) { s.msg = msg67(e, "Kunne ikke lagre") }
+        } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { s.msg = msg67(e, "Kunne ikke lagre") }
         s.busy = false
     }
 }
@@ -706,7 +706,7 @@ fun AppViewModel.deleteEnt67(it: G67Ent) {
             api33 { hlDelete("/glimt/entities/" + enc67(it.id)) }
             s.msg = if (it.derived) "Egne aliaser fjernet ✓" else "Slettet ✓"; s.edit = null; s.arm = null
             Haptics.success(); loadEnt67(); loadMem33(force = true)
-        } catch (e: Exception) { s.msg = msg67(e, "Kunne ikke slette"); s.arm = null }
+        } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { s.msg = msg67(e, "Kunne ikke slette"); s.arm = null }
     }
 }
 
@@ -849,8 +849,8 @@ private fun AppViewModel.memAct67(key: String, path: String, body: JSONObject, o
         try {
             api33 { hlPost(path, body) }
             s.msg = ok; after?.invoke(); Haptics.success(); loadMem67(); loadMem33(force = true)
-        } catch (e: Exception) {
-            s.msg = if (e is ApiException && e.status == 409) (e.message ?: "Motsier noe Glimt allerede vet – velg under Motstrid først.") else msg67(e, "Kunne ikke lagre")
+        } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) {
+            s.msg = if (e is ApiException && e.status == 409) (uiErr73(e, "Motsier noe Glimt allerede vet – velg under Motstrid først.")) else msg67(e, "Kunne ikke lagre")
         }
         s.busy.remove(key)
     }
@@ -889,7 +889,7 @@ fun AppViewModel.deleteStale67(it: G67Stale) {
     s.busy["s${it.id}"] = true
     launch33 {
         try { api33 { hlDelete("/glimt/memory/${it.id}") }; s.msg = "Slettet ✓"; s.arm = null; Haptics.success(); loadMem67(); loadMem33(force = true) }
-        catch (e: Exception) { s.msg = msg67(e, "Kunne ikke slette"); s.arm = null }
+        catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { s.msg = msg67(e, "Kunne ikke slette"); s.arm = null }
         s.busy.remove("s${it.id}")
     }
 }
@@ -901,7 +901,7 @@ fun AppViewModel.runMem67() {
         try {
             val o = JSONObject(api33 { request("POST", "/glimt/memory/hygiene/run-now", JSONObject(), prefix = Api.HOMELAB, read = 180_000) })
             s.msg = memRunLine67(o.optJSONObject("run")); Haptics.success(); loadMem67()
-        } catch (e: Exception) { s.msg = msg67(e, "Kunne ikke kjøre") }
+        } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { s.msg = msg67(e, "Kunne ikke kjøre") }
         s.busy.remove("run")
     }
 }
@@ -1031,7 +1031,7 @@ fun AppViewModel.saveQCfg68() {
             s.draft = s.cfg
             s.cfgMsg = "Lagret ✓"; s.cfgErr = false
             Haptics.success(); loadQ67()
-        } catch (e: Exception) { s.cfgMsg = msg67(e, "Kunne ikke lagre"); s.cfgErr = true }
+        } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { s.cfgMsg = msg67(e, "Kunne ikke lagre"); s.cfgErr = true }
         s.cfgBusy = false
     }
 }
@@ -1124,7 +1124,7 @@ fun AppViewModel.loadWeek67(week: String? = g67.q.week) {
     s.week = week
     launch33 {
         try { s.wk = week67(JSONObject(api33 { hlGet("/glimt/quality/weekly" + (week?.let { "?week=" + enc67(it) } ?: "")) })); s.wkErr = "" }
-        catch (e: Exception) { s.wkErr = msg67(e, "Serveren svarte") }
+        catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { s.wkErr = msg67(e, "Serveren svarte") }
     }
 }
 
@@ -1138,7 +1138,7 @@ fun AppViewModel.loadQRuns67() {
             s.keepDays = o.i67("keepDays") ?: s.keepDays
             if (o.b67("enabled") == false) s.evalOn = false
             s.runsErr = ""
-        } catch (e: Exception) {
+        } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) {
             if (e is ApiException && e.status == 403 && e.message?.startsWith(Api.TOKEN_REFUSED) != true) s.admin = false else s.runsErr = msg67(e, "Serveren svarte")
         }
         s.runsLoaded = true
@@ -1162,7 +1162,7 @@ fun AppViewModel.toggleQRun67(id: String) {
             val meta = listOfNotNull(o.s67("backend"), o.s67("url"), o.s67("commit")?.let { "commit $it" }, o.i67("runsPerCase")?.let { "$it kjøringer per case" },
                 o.s67("baselineRunId")?.let { "sammenlignet med $it" } ?: "ingen tidligere kjøring å sammenligne med").joinToString(" · ")
             G67QDet(cases, meta)
-        } catch (e: Exception) { G67QDet(err = msg67(e, "Kunne ikke hente casene")) }
+        } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { G67QDet(err = msg67(e, "Kunne ikke hente casene")) }
     }
 }
 
@@ -1172,7 +1172,7 @@ fun AppViewModel.loadQMd67(id: String) {
     s.md[id] = "Henter rapporten …"
     launch33 {
         s.md[id] = try { api33 { request("GET", "/glimt/quality/runs/" + enc67(id) + "?format=md", prefix = Api.HOMELAB) } }
-        catch (e: Exception) { "Kunne ikke hente rapporten: ${e.message}" }
+        catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { "Kunne ikke hente rapporten: ${e.message}" }
     }
 }
 
@@ -1186,7 +1186,7 @@ fun AppViewModel.runQ67() {
             val r = o.optJSONObject("run")?.let(::qRun67)
             s.msg = if (o.optBoolean("ok", true)) "Eval startet" else "Ikke kjørt: ${r?.reason ?: r?.line ?: ""}"
             Haptics.success(); loadQRuns67()
-        } catch (e: Exception) { s.msg = msg67(e, "Kunne ikke starte"); loadQRuns67() }
+        } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { s.msg = msg67(e, "Kunne ikke starte"); loadQRuns67() }
         s.busy = false
     }
 }
@@ -1197,7 +1197,7 @@ fun AppViewModel.abortQ67() {
     s.busy = true
     launch33 {
         try { api33 { hlPost("/glimt/quality/abort", JSONObject()) }; s.msg = "Avbrutt"; loadQRuns67() }
-        catch (e: Exception) { s.msg = msg67(e, "Kunne ikke avbryte") }
+        catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { s.msg = msg67(e, "Kunne ikke avbryte") }
         s.busy = false
     }
 }

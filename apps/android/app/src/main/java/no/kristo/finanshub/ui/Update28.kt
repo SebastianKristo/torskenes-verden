@@ -1,5 +1,7 @@
 package no.kristo.finanshub.ui
 
+import no.kristo.finanshub.uiErr73
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -69,8 +71,8 @@ fun AppViewModel.loadUpd28() {
             s.loaded = true
         } catch (e: ApiException) {
             if (e.status == 404 || e.status == 405) { s.missing = true; s.error = "" } else s.error = e.message ?: "Feil"
-        } catch (e: Exception) {
-            s.error = e.message ?: "Feil"
+        } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) {
+            s.error = uiErr73(e, "Feil")
         } finally {
             s.loading = false
         }

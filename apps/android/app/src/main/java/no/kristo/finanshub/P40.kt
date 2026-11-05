@@ -299,7 +299,7 @@ fun AppViewModel.setupTf40(password: String? = null) {
                 e.status == 401 || e.status == 403 || (e.message ?: "").contains("passord", true) -> { s.tfNeedPw = true; s.tfErr = if (password != null) "Feil passord. Prøv igjen." else null }
                 else -> s.tfErr = e.message
             }
-        } catch (e: Exception) { s.tfErr = e.message ?: "Fikk ikke kontakt med serveren" } finally { s.tfBusy = false }
+        } catch (e: Exception) { s.tfErr = uiErr73(e, "Fikk ikke kontakt med serveren") } finally { s.tfBusy = false }
     }
 }
 
@@ -480,7 +480,7 @@ fun AppViewModel.reread40(txId: Int, receiptId: String, engine: String = "gemini
             Haptics.success()
         } catch (e: CancellationException) { throw e } catch (e: ApiException) {
             fail(glimtErr50(e, "reread40"))
-        } catch (e: Exception) { fail(e.message ?: "Glimt fikk ikke lest kvitteringen") }
+        } catch (e: Exception) { fail(uiErr73(e, "Glimt fikk ikke lest kvitteringen")) }
     }
 }
 
@@ -665,7 +665,7 @@ fun AppViewModel.runNewsGlimt40(force: Boolean = false) {
             s.ng = o?.let { parseNg40(it) } ?: localNg40(sel)
         } catch (e: CancellationException) { throw e } catch (e: Exception) {
             s.ng = localNg40(sel)
-            if (s.ng == null) s.ngErr = e.message ?: "Glimt fikk ikke laget sammendraget"
+            if (s.ng == null) s.ngErr = uiErr73(e, "Glimt fikk ikke laget sammendraget")
         } finally { s.ngBusy = false }
     }
 }

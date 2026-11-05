@@ -486,9 +486,12 @@ internal fun ReceiptHead52(
     PCard(shadow = true) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                if (logoUrl != null && logoUrl.startsWith("/")) ServerImage(vm, logoUrl, Modifier.size(46.dp).clip(RoundedCornerShape(13.dp)).background(p.surf2)) {
-                    Text(merchant.trim().take(1).uppercase(), color = p.ink, fontWeight = FontWeight.Bold, fontSize = 18.sp, modifier = Modifier.align(Alignment.Center))
-                } else Logo(vm, domain, merchant, color, 46, RoundedCornerShape(13.dp))
+                // Prompt 73 (LOGO73): trykk på logoen → «Endre logo». Overstyrt logo vinner over serverens logo-sti.
+                LogoTap73(vm, merchant) {
+                    if (logoUrl != null && logoUrl.startsWith("/") && LogoOv73.value(merchant) == null) ServerImage(vm, logoUrl, Modifier.size(46.dp).clip(RoundedCornerShape(13.dp)).background(p.surf2)) {
+                        Text(merchant.trim().take(1).uppercase(), color = p.ink, fontWeight = FontWeight.Bold, fontSize = 18.sp, modifier = Modifier.align(Alignment.Center))
+                    } else Logo(vm, domain, merchant, color, 46, RoundedCornerShape(13.dp))
+                }
                 Column(Modifier.weight(1f)) {
                     PSerif(merchant, 22.sp, maxLines = 2)
                     Text(sub, color = p.mut, fontSize = 12.5.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)

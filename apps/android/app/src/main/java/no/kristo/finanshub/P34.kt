@@ -480,15 +480,19 @@ fun AppViewModel.loadBrief34(force: Boolean = false) {
     if (!force && s.briefFor == acct && s.brief?.kind == kind && System.currentTimeMillis() - s.briefAt < 10 * 60_000L) return
     if (s.briefFor != acct) { s.brief = null; s.tour = 0 }
     s.briefFor = acct
+    // Prompt 73: siste brief (og kortene fra prompt 38) fra disk, så briefen vises med en gang.
+    if (s.brief == null) cachedBrief73(kind)?.let { (cb, bx) -> s.brief = cb; if (bx != null) p38.bx = bx }
     s.briefBusy = true
     launch34 {
         try {
             loadGlimt35()
-            val raw = runCatching { api34 { hlGet("/brief?kind=$kind", timeout = 8_000) } }.getOrNull()
+            // Prompt 73: 6 s. Svarer ikke serveren, blir den bufrede briefen stående (kortene forsvinner ikke).
+            val raw = runCatching { api34 { hlGet("/brief?kind=$kind", timeout = 6_000) } }.getOrNull()
             val b = raw?.let { runCatching { parseBrief34(it, kind) }.getOrNull() }
-            s.brief = b ?: localBrief34(kind)
+            s.brief = b ?: s.brief ?: localBrief34(kind)
             // Prompt 38: pakker, familie, skole/jobb, bursdager og nordlys fra samme svar.
-            p38.bx = raw?.let { runCatching { parseBx38(it) }.getOrNull() }
+            raw?.let { r -> runCatching { parseBx38(r) }.getOrNull()?.let { p38.bx = it } }
+            if (b != null && raw != null) saveBrief73(raw, kind)
             s.briefAt = System.currentTimeMillis()
             // Widgetene (Glance) får samme brief.
             runCatching { no.kristo.finanshub.widget.Brief34Store.save(appCtx34, s.brief!!, acct) }

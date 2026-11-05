@@ -481,8 +481,8 @@ fun AppViewModel.loadKal26(quiet: Boolean = false, from: LocalDate? = null, to: 
         } catch (e: ApiException) {
             if (e.status == 404) { s.unavailable = true; if (s.events == null) s.events = emptyList() }
             else { if (!quiet) s.error = e.message; if (s.events == null) s.events = emptyList() }
-        } catch (e: Exception) {
-            if (!quiet) s.error = e.message ?: "Fikk ikke hentet kalenderen"
+        } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) {
+            if (!quiet) s.error = uiErr73(e, "Fikk ikke hentet kalenderen")
             if (s.events == null) s.events = emptyList()
         } finally { s.loading = false }
     }

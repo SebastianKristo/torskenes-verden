@@ -83,9 +83,14 @@ internal fun Initial(text: String, color: Long, size: Int = 40, shape: RoundedCo
 @Composable
 internal fun Logo(vm: AppViewModel, domain: String?, name: String, color: Long, size: Int = 40, shape: RoundedCornerShape = RoundedCornerShape((size / 4).dp)) {
     // Logoregisteret først (prompt 20): treff på domene eller butikktekst, fil fra /finans/api/logos/file/:id, bokstav i merkefargen.
-    var bmp by remember(domain, name) { mutableStateOf<Bitmap?>(null) }
+    // Prompt 73 (LOGO73): brukerens eget valg («Endre logo», LogoOv73) vinner overalt i Finans. "" = initialer.
+    val ver73 = LogoOv73.version
+    var bmp by remember(domain, name, ver73) { mutableStateOf<Bitmap?>(null) }
     var regColor by remember(domain, name) { mutableStateOf<Long?>(null) }
-    LaunchedEffect(domain, name) {
+    LaunchedEffect(domain, name, ver73) {
+        LogoOv73.ensure(vm)
+        val ov = LogoOv73.value(name)
+        if (ov != null) { bmp = if (ov.startsWith("/")) vm.image(ov) else null; return@LaunchedEffect }
         regColor = vm.logoItem(domain, name)?.color
         bmp = vm.logoFor(domain, name)
     }

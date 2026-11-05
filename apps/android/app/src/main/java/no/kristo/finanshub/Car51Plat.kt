@@ -65,7 +65,7 @@ abstract class Car51Base(ctx: CarContext) : Screen(ctx) {
         scope.launch {
             try { withContext(Dispatchers.IO) { block(api) }; error = null } catch (e: ApiException) {
                 error = if (Offline51.isOffline(e)) "Ingen kontakt med serveren." else e.message ?: "Noe gikk galt"
-            } catch (e: Exception) { error = e.message ?: "Noe gikk galt" }
+            } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { error = uiErr73(e, "Noe gikk galt") }
             loading = false
             invalidate()
         }

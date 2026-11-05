@@ -264,7 +264,7 @@ fun AppViewModel.installVision28() {
                     }
                 } finally { conn.disconnect() }
             }
-        } catch (e: Exception) { err = e.message ?: "Nettverksfeil" }
+        } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { err = uiErr73(e, "Nettverksfeil") }
         t.installing = false
         if (ok && err == null) {
             t.installText = null; t.installPct = null

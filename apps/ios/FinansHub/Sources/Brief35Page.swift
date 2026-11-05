@@ -217,24 +217,10 @@ struct Brief35Content: View {
             }
             // Prompt 40: julemodus – nedtelling til julaften og «Dagens luke» (Glimt40Settings.swift).
             Brief40JulCard()
-            // Prompt 36: ringen følger kortets hjørner nøyaktig (Brief36Ring) og settes på selve kortet.
-            // Prompt 37: hele Vær-kortet åpner Vær over briefen (Brief37.swift); ✕ går tilbake hit.
-            Brief37WeatherButton(b: b).brief36Ring(target == "vaer").id("gb35-vaer")
-            // Prompt 37: dagens bibelvers etter Vær (morgen og kveld), eller nederst når det er lest/sveipet bort på Hjem.
-            if Bible37Model.shared.briefPlace == "top" { Bible37BriefCard() }
-            Brief34Calendar(b: b).brief36Ring(target == "kal").id("gb35-kal")
-            // Prompt 37: Gjøremål i dag (forfalt + i dag) med avkrysning (Brief37.swift).
-            Brief37TodosCard()
-            // Prompt 52: kortene for brukeren som er logget inn (Dagens fokus, Min reise, Huskeliste, Regninger, Klær,
-            // Nytt i kveld, Homelab, Domener, Aksjer – filtrert på tilgang av serveren), Brief52.swift.
-            Brief52Stack()
-            if !g.extra.trials.isEmpty {
-                Brief35TrialsCard(trials: g.extra.trials).brief36Ring(target == "abo").id("gb35-abo")
-            }
-            // Prompt 38: Pakker, Familie, Skole og jobb, Bursdager og Nordlys i natt (Brief38.swift).
-            Brief38CardsStack()
-            Brief35NewsCard(b: b, extra: g.extra).brief36Ring(target == "nyh").id("gb35-nyh")
-            if Bible37Model.shared.briefPlace == "bottom" { Bible37BriefCard() }
+            // Prompt 73: kortene i rekkefølgen fra Innstillinger → Glimt → Innhold i briefen (Brief73.swift). Vær, Kalender,
+            // Dagens fokus, Huskeliste, Min reise, Regninger, Nytt i kveld, Nyheter, Pakker, Homelab, Domener m.fl. har plassen
+            // sin fra første bilde: cache, ellers skjelett. Ringen (Brief36Ring) og Vær-knappen (Brief37) er som før.
+            Brief73Stack(b: b, has34: m.brief != nil, target: target)
             Text(footer).font(PF.ui(12)).foregroundStyle(Brief34C.rgb(0x8a8478))
                 .frame(maxWidth: .infinity).multilineTextAlignment(.center)
         }
