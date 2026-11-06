@@ -2,6 +2,11 @@
 
 Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. Versjonene med APK og IPA ligger under [Releases](https://github.com/SebastianKristo/torskenes-verden/releases).
 
+## [4.64.0] – 06.11.2026 · Glimt på Hjem: markér tekst og scroll fritt
+- **Markér tekst:** hold inne i Glimt-søkefeltet, i svaret fra Glimt eller på mikrofonkortet for å markere tekst. Det starter ikke lenger redigering av Hjem. Redigering starter bare når du holder inne på en flis.
+- **Scroll lukker ikke Glimt:** svaret lukkes bare av et rent trykk utenfor, og bare når svaret er ferdig. Et trykk som stopper en scroll, en liten scroll eller et trykk som bare legger bort tastaturet, lukker ikke svaret. Sveip opp for å lukke virker bare fra grepet nederst, og bare når du sveiper tydelig.
+- Gjelder Android, iPhone og web.
+
 ## [4.63.0] – 05.11.2026 · Velg kort i briefen, lagre artikler og endre logo
 - **Now Brief:**
   - Velg selv hvilke kort som er med og i hvilken rekkefølge, under Innstillinger → Glimt → «Innhold i briefen».
