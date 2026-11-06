@@ -521,7 +521,8 @@ test('Subscription: logg over fakturaer og prøveperioder (gruppert per måned, 
   assert.match(l.summary.text, /^\d+ fakturaer? · 2 prøveperioder · .+ kr betalt siste 12 mnd$/);
   assert.ok(l.months.length >= 1 && l.months.length <= 3);
   const all = l.months.flatMap((m) => m.items);
-  const ch = all.find((x) => x.type === 'charge' && x.service === sub.name);
+  // Belastningen vi la inn (d2): demodataene kan ha egne belastninger for samme tjeneste med annen pris, avhengig av datoen.
+  const ch = all.find((x) => x.type === 'charge' && x.service === sub.name && x.date === d2) ?? all.find((x) => x.type === 'charge' && x.service === sub.name);
   assert.match(ch.desc, /^Faktura · \d+\. /);
   assert.equal(ch.amountText, '−149 kr');
   const saved = all.find((x) => x.type === 'trial_cancelled');
