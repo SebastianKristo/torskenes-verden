@@ -347,7 +347,8 @@ struct PaperCardStack: View {
 
     /// Bred skjerm utenfor redigering: hold inne et kort for å starte redigering.
     private func held(_ k: String, _ vis: [String], _ keys: [String]) -> some View {
-        cardView(k, vis, keys).wiggle43Hold(editing: false) { if !(page == "finans" && Sal52.shared.blocksWiggle) { store.enterPaperEdit(page) } }
+        // Prompt 74: ingen hold på søkekortet (Wiggle43.noHold) – der skal tekstfeltet få holdet.
+        cardView(k, vis, keys).wiggle43Hold(editing: !Wiggle43.holds(k)) { if !(page == "finans" && Sal52.shared.blocksWiggle) { store.enterPaperEdit(page) } }
     }
 
     private func pairs(_ keys: [String]) -> [[String]] {

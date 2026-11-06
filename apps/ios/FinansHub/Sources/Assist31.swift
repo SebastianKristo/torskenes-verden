@@ -366,6 +366,8 @@ struct Assist31Bubble: View {
                 } else {
                     Assist31BoldText(text: a.text, size: 17, color: Color(hex: "#f6f2ea"), bold: Color.white)
                         .fixedSize(horizontal: false, vertical: true)
+                        // Prompt 74: hold inne i svaret gir systemets tekstmeny (Kopier/Del), ikke wiggle.
+                        .textSelection(.enabled)
                 }
                 if let q = Cal70Model.shared.ask, Cal70Model.shared.showsAsk(a.text) { Assist31Cal70Ask(ask: q) }
                 // Prompt 67: «Stoppet» / cache-merknad, valgknapper og tommel opp/ned (Convo67.swift).

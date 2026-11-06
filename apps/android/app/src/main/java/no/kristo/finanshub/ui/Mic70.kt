@@ -125,13 +125,13 @@ internal fun MicCard70(vm: AppViewModel) {
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Row(Modifier.fillMaxWidth().heightIn(min = 24.dp).padding(end = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(
+            // Prompt 74: teksten i opptakskortet kan markeres (hold inne), som i søkefeltet.
+            androidx.compose.foundation.text.selection.SelectionContainer(Modifier.weight(1f, fill = false)) { Text(
                 buildAnnotatedString {
                     if (live != null) append(live) else withStyle(SpanStyle(color = p.mut)) { append(hint ?: "") }
                 },
                 color = p.ink, fontFamily = PaperFonts.sans, fontWeight = FontWeight.Medium, fontSize = 17.sp, lineHeight = 24.sp,
-                modifier = Modifier.weight(1f, fill = false),
-            )
+            ) }
             Caret70(p.ink, rec)
         }
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {

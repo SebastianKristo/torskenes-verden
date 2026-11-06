@@ -148,6 +148,10 @@ internal object Ans70 {
     /** Søkefeltets ramme på skjermen (ikke klippet). */
     var searchRect: Rect? = null
     var pill by mutableStateOf(false)
+    /** Prompt 74: Hjem-scrollen (for «trykk utenfor»: ingen lukking hvis siden scroller eller scrollet mellom ned og opp). */
+    var scroll: ScrollState? = null
+    fun scrollY(): Int = scroll?.value ?: 0
+    fun scrolling(): Boolean = scroll?.isScrollInProgress == true
 }
 
 /** Tilstanden under flytting og størrelsesendring (én per Hjem). */
@@ -269,6 +273,7 @@ internal fun HomeColumn70(
     val st = remember { Home70State() }
     st.vis = vis; st.keys = keys; st.sz = sz
     val scroll = rememberScrollState()
+    DisposableEffect(scroll) { Ans70.scroll = scroll; onDispose { if (Ans70.scroll === scroll) Ans70.scroll = null } } // prompt 74
     val dens = LocalDensity.current
     val scope = rememberCoroutineScope()
     AutoScroll70(st, scroll, vm)
@@ -420,9 +425,10 @@ private fun Modifier.homeGesture70(vm: AppViewModel, st: Home70State, holdOk: Se
                 return@awaitEachGesture // − og ✎: vanlige knapper
             }
             val key = st.bounds.entries.firstOrNull { it.key in st.vis && it.value.contains(pt) }?.key ?: return@awaitEachGesture
-            if (!edit && key !in hold) return@awaitEachGesture
             // Utenfor wiggle: langt trykk i søkefeltet (tekst, hold inne mikrofonen) eller på Glimt-svaret starter ikke wiggle.
-            if (!edit && (Ans70.searchRect?.contains(pt) == true || vm.p38.ansRect?.contains(pt) == true)) return@awaitEachGesture
+            // Prompt 74: hele Søk-widgeten (h1: felt, opptakskort, svar, forslag og mellomrom) har hold = false, og rammene sjekkes i
+            // tillegg. Berøringen konsumeres ikke, så BasicTextField/SelectionContainer får det lange trykket (tekstmarkering + systemmeny).
+            if (!wiggleHold74(edit, key in hold, Ans70.searchRect?.contains(pt) == true || vm.p38.ansRect?.contains(pt) == true)) return@awaitEachGesture
             val slop = 8.dp.toPx()
             var bail = false
             val waited = withTimeoutOrNull(if (edit) 300L else 500L) {
@@ -547,8 +553,12 @@ private fun GlimtDone70(vm: AppViewModel, st: Home70State) {
 private fun ansVisible70(vm: AppViewModel): Boolean = (vm.p38.ansRect?.height ?: 0f) > 24f
 
 /**
- * Trykk utenfor Glimt-svaret lukker det – uten lag over Hjem, så scroll virker hele tiden. Bare et trykk (< 8 dp), utenfor kortet og
- * søkefeltet, når svaret er ferdig og ingen fullskjermside ligger over. Trykket går videre til det som ligger under.
+ * Trykk utenfor Glimt-svaret lukker det – uten lag over Hjem, så scroll virker hele tiden. Trykket går videre til det som ligger under.
+ * Prompt 74 (scroll lukket svaret): før målte vi bare avstanden fra ned-punktet (< 8 dp) i Initial-passet. Et trykk som stoppet en
+ * pågående fling, en scroll som snudde, eller en scroll som flyttet siden uten at fingeren gikk 8 dp, ble da regnet som «trykk» og
+ * lukket kortet. Nå lukker bare et ekte trykk ([tapOk74]): total bevegelse (hele veien) under touchSlop, kort berøring (< 500 ms),
+ * én finger, ingen scroll i gang ved ned, scrollposisjonen uendret mellom ned og opp og ingen bevegelse konsumert av scroll
+ * (Final-passet). I tillegg: svaret ferdig, ingen fullskjermside over, og trykket utenfor kortet og søkefeltet.
  */
 internal fun Modifier.ansTapOutside70(vm: AppViewModel): Modifier = composed {
     var coords by remember { mutableStateOf<LayoutCoordinates?>(null) }
@@ -556,16 +566,24 @@ internal fun Modifier.ansTapOutside70(vm: AppViewModel): Modifier = composed {
         awaitEachGesture {
             val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
             if (vm.p31.ans == null || vm.p31.ans?.busy == true) return@awaitEachGesture
-            val slop = 8.dp.toPx()
-            var far = false
-            var up = false
+            val fling = Ans70.scrolling()
+            val y0 = Ans70.scrollY()
+            var path = 0f
+            var many = false
+            var scrolled = false
+            var upAt = -1L
             while (true) {
-                val ev = awaitPointerEvent(PointerEventPass.Initial)
+                // Final-passet: scroll (Main) har allerede tatt bevegelsen, så isConsumed viser om siden scrollet.
+                val ev = awaitPointerEvent(PointerEventPass.Final)
                 val ch = ev.changes.firstOrNull { it.id == down.id } ?: break
-                if ((ch.position - down.position).getDistance() > slop || ev.changes.size > 1) far = true
-                if (!ch.pressed) { up = true; break }
+                if (ev.changes.count { it.pressed } > 1) many = true
+                path += ch.positionChangeIgnoreConsumed().getDistance()
+                if (ch.pressed && ch.isConsumed && ch.positionChangeIgnoreConsumed() != Offset.Zero) scrolled = true
+                if (!ch.pressed) { upAt = ch.uptimeMillis; break }
             }
-            if (!up || far) return@awaitEachGesture
+            if (upAt < 0L) return@awaitEachGesture
+            val moved = scrolled || Ans70.scrolling() || Ans70.scrollY() != y0
+            if (!tapOk74(path, viewConfiguration.touchSlop, upAt - down.uptimeMillis, many, fling, moved)) return@awaitEachGesture
             val a = vm.p31.ans ?: return@awaitEachGesture
             if (a.busy || overlays52(vm) > 0) return@awaitEachGesture
             val pt = coords?.takeIf { it.isAttached }?.localToRoot(down.position) ?: down.position
@@ -574,6 +592,15 @@ internal fun Modifier.ansTapOutside70(vm: AppViewModel): Modifier = composed {
         }
     }
 }
+
+/** Prompt 74: et ekte trykk – total bevegelse under slop, under 500 ms, én finger, ingen fling ved ned og ingen scroll mellom ned og opp. */
+internal fun tapOk74(path: Float, slop: Float, ms: Long, many: Boolean, fling: Boolean, scrolled: Boolean): Boolean =
+    path < slop && ms in 0L until TAP_MS74 && !many && !fling && !scrolled
+
+internal const val TAP_MS74 = 500L
+
+/** Prompt 74: wiggle startes (utenfor redigering) bare fra et kort med hold = true og aldri i søkefeltet eller på Glimt-svaret. */
+internal fun wiggleHold74(edit: Boolean, hold: Boolean, inSearch: Boolean): Boolean = edit || (hold && !inSearch)
 
 /** Grepet nederst på svarkortet (30 dp): bare her starter sveip opp/dra ned (med mus fra hele kortet). */
 internal fun gripHit70(type: PointerType, y: Float, height: Int, gripPx: Float): Boolean = type == PointerType.Mouse || y >= height - gripPx

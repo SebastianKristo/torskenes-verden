@@ -19,6 +19,11 @@ final class Assist38 {
     /// Boblens ramme i globale koordinater. Prompt 70: endres for hvert scroll-bilde, så den observeres ikke (ingen ny tegning).
     @ObservationIgnored var rect: CGRect = .zero
 
+    /// Prompt 74: sveip opp fra grepet lukker bare over 60 pt og raskt (fortsatt fart oppover når fingeren slippes).
+    nonisolated static func swipeCloses(_ t: CGFloat, _ predicted: CGFloat) -> Bool {
+        t < -60 && predicted - t < -40
+    }
+
     static func close() {
         Haptic34.light()
         withAnimation(.easeOut(duration: 0.18)) { Assist31.shared.closeHome() }
@@ -115,7 +120,8 @@ struct Assist38Swipe: ViewModifier {
                             return
                         }
                         if Pull41.shared.pull > 0 { Pull41.shared.cancel() }
-                        if v.translation.height < -40 {
+                        // Prompt 74: tydelig terskel – mer enn 60 pt opp og raskt (fart beregnet ut fra predictedEndTranslation).
+                        if Assist38.swipeCloses(v.translation.height, v.predictedEndTranslation.height) {
                             withAnimation(.easeOut(duration: 0.18)) { dy = -140 }
                             Task { @MainActor in
                                 try? await Task.sleep(nanoseconds: 160_000_000)

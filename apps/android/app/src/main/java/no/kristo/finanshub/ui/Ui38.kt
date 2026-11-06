@@ -224,11 +224,11 @@ internal fun AnsBox38(vm: AppViewModel, onPull41: (() -> Unit)? = null, content:
                 // Prompt 70 (claude-code-hjem-scroll-mens-ai.md): sveip opp / dra ned bare fra grepet nederst (30 dp), med mus fra hele
                 // kortet. Ellers får siden sveipet, så Hjem kan scrolles med fingeren på kortet (før tok detectVerticalDragGestures alt).
                 val gripPx = 30.dp.toPx()
-                val onEnd70: () -> Unit = {
+                val onEnd70: (Float) -> Unit = { vy ->
                         scope.launch {
                             if (onPull41 != null && drag > 0f && (if (drag <= open41) drag else open41 + (drag - open41) * .4f) >= open41) {
                                 Haptics.select(); armed41 = false; drag = 0f; onPull41()
-                            } else if (-drag > limit) {
+                            } else if (swipeClose74(-drag, -vy, 60.dp.toPx(), 600.dp.toPx())) { // prompt 74: > 60 dp og raskt
                                 animate(drag, -size.height.toFloat() * .6f, animationSpec = tween(170)) { v, _ -> drag = v }
                                 close()
                                 drag = 0f
@@ -246,8 +246,11 @@ internal fun AnsBox38(vm: AppViewModel, onPull41: (() -> Unit)? = null, content:
                     var over = 0f
                     val first = awaitVerticalTouchSlopOrCancellation(down.id) { ch, o -> ch.consume(); over = o } ?: return@awaitEachGesture
                     onDrag70(over)
-                    val ok = verticalDrag(first.id) { ch -> onDrag70(ch.positionChange().y); ch.consume() }
-                    if (ok) onEnd70() else scope.launch { animate(drag, 0f, animationSpec = spring()) { v, _ -> drag = v } }
+                    // Prompt 74: farten måles på dra-verdien (kortet flytter seg med fingeren, så lokale posisjoner er ikke stødige).
+                    val vt = androidx.compose.ui.input.pointer.util.VelocityTracker()
+                    vt.addPosition(first.uptimeMillis, Offset(0f, drag))
+                    val ok = verticalDrag(first.id) { ch -> onDrag70(ch.positionChange().y); ch.consume(); vt.addPosition(ch.uptimeMillis, Offset(0f, drag)) }
+                    if (ok) onEnd70(vt.calculateVelocity().y) else scope.launch { animate(drag, 0f, animationSpec = spring()) { v, _ -> drag = v } }
                 }
             },
     ) {
@@ -825,3 +828,6 @@ internal fun AiFinRouting38(vm: AppViewModel, T: AcT34) {
         }
     }
 }
+
+/** Prompt 74: sveip opp lukker bare fra grepet, og bare når det er tydelig: mer enn [minPx] opp og raskere enn [minV] px/s. */
+internal fun swipeClose74(up: Float, speed: Float, minPx: Float, minV: Float): Boolean = up > minPx && speed > minV

@@ -395,12 +395,13 @@ internal fun HomeAnswer31(vm: AppViewModel) {
             // Prompt 70: kort A erstatter svarteksten når Glimt har lagt inn en avtale (ui/Cal70Card.kt).
             val c70 = no.kristo.finanshub.Glimt67.homeCard70?.takeIf { it.first == a.text }?.second
             if (c70 != null) Cal70Card(vm, c70, inBubble = true)
-            else Text(
+            // Prompt 74: hold inne i svaret = systemets tekstmarkering (Kopier/Del …), ikke wiggle.
+            else androidx.compose.foundation.text.selection.SelectionContainer { Text(
                 buildAnnotatedString {
                     boldParts31(a.text).forEach { (t, b) -> if (b) withStyle(SpanStyle(fontWeight = FontWeight.ExtraBold, color = Color.White)) { append(t) } else append(t) }
                 },
                 color = light, fontFamily = PaperFonts.sans, fontWeight = FontWeight.Medium, fontSize = 17.sp, lineHeight = 24.sp,
-            )
+            ) }
             // Prompt 33: «Endre N avtaler ›» etter «husk at Påhåret er frisøren min».
             if (a.applyId > 0 && a.applyCount > 0) Box(
                 Modifier.height(32.dp).clip(CircleShape).background(Color.White.copy(alpha = .14f))

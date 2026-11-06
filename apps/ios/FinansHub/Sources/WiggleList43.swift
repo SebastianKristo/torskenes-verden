@@ -33,6 +33,13 @@ enum Wiggle43 {
     /// Hold for å starte redigering.
     static let hold: Double = 0.5
 
+    /// Prompt 74: kort uten hold-gest. Søk (h1) omslutter Glimt-søkefeltet, svarkortet og opptakskortet – et hold der
+    /// skal gi tekstmarkering og systemmenyen, aldri wiggle. Holdet var en samtidig gest på hele kortet, så det fyrte
+    /// sammen med tekstfeltets eget hold. Wiggle startes fra de andre flisene og widgetene.
+    static let noHold: Set<String> = ["h1"]
+
+    static func holds(_ key: String) -> Bool { !noHold.contains(key) }
+
     static func sign(_ i: Int) -> Double { i % 2 == 0 ? 1 : -1 }
 
     /// Rekkefølgen `live` tilpasset de nåværende nøklene (nye legges bakerst, borte tas ut).
@@ -253,7 +260,8 @@ struct WiggleReorderList<Content: View, Accessory: View>: View {
             editCell(k, i)
         } else {
             // Som Subscription OS utenfor redigering: bare kortet og holdet (samtidig gest, så ScrollView scroller).
-            content(k).wiggle43Hold(editing: false) { enter() }
+            // Prompt 74: ikke på søkekortet (Wiggle43.noHold).
+            content(k).wiggle43Hold(editing: !Wiggle43.holds(k)) { enter() }
         }
     }
 

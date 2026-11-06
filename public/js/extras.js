@@ -358,16 +358,52 @@ function placeAns() {
   set('top', px(r.bottom + window.scrollY + 10));
 }
 /* Prompt 70 (claude-code-hjem-scroll-mens-ai.md): ingen fullskjerm-lag lenger – Hjem scroller fritt mens Glimt tenker og etter
-   svaret. Kortet ligger i siden og scroller med den. Trykk utenfor (flyttet < 8 px, utenfor kortet og søkefeltet) lukker når
-   svaret er ferdig; mens Glimt tenker lukkes det bare med ✕. Trykket som lukker, når ikke det som ligger under. */
-let outDown = null, eatClick = 0;
+   svaret. Kortet ligger i siden og scroller med den. Mens Glimt tenker lukkes det bare med ✕. Trykket som lukker, når ikke det
+   som ligger under.
+   Prompt 74: scroll skal ALDRI lukke svaret. Før så vi bare på avstanden mellom ned og opp (< 8 px per akse): en liten scroll som
+   endte nær startpunktet, et trykk som stoppet en fart-scroll (iOS), eller et trykk som bare la bort tastaturet lukket kortet.
+   Nå lukker et trykk utenfor bare når ALT gjelder: én finger, kort berøring (< 500 ms), under 10 px total bevegelse i hele
+   berøringen (største avstand, ikke bare sluttpunktet), ingen scroll eller endret scrollposisjon mellom ned og opp, ingen scroll
+   rett før (fart-scroll som stoppes), ikke pointercancel, tastaturet var ikke oppe, svaret er ferdig, og trykket var utenfor
+   kortet og søkefeltet (både målet og punktet). */
+let outDown = null, eatClick = 0, lastScroll74 = 0;
+const TAP_PX74 = 10, TAP_MS74 = 500, FLING_MS74 = 150;
+const OUTSIDE_SKIP74 = '[data-gl-ans], #gl-layer, [data-search], [data-v54-card], .gl70-pill, #sq-eng-menu';
+const isField74 = (el) => !!el?.matches?.('input, textarea, select, [contenteditable=""], [contenteditable="true"]');
+const scrollPos74 = () => `${window.scrollX},${window.scrollY},${document.scrollingElement?.scrollTop ?? 0}`;
+function inGlimt74(x, y) {
+  for (const el of document.querySelectorAll('#gl-layer .gl-ans, form[data-search], [data-v54-card]')) {
+    const r = el.getBoundingClientRect();
+    if (r.width && r.height && x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) return true;
+  }
+  return false;
+}
 function bindOutside70() {
-  document.addEventListener('pointerdown', (e) => { outDown = GL.q ? { x: e.clientX, y: e.clientY } : null; }, true);
+  const now = () => performance.now();
+  const moved = () => { lastScroll74 = now(); if (outDown) outDown.bad = true; };
+  document.addEventListener('scroll', moved, { capture: true, passive: true });
+  window.addEventListener('resize', () => { if (outDown) outDown.bad = true; }); // tastaturet åpnes/lukkes
+  window.visualViewport?.addEventListener('resize', () => { if (outDown) outDown.bad = true; });
+  document.addEventListener('pointerdown', (e) => {
+    if (outDown && outDown.id !== e.pointerId && now() - outDown.t < 1500) { outDown.bad = true; return; } // finger nummer to
+    outDown = GL.q ? { id: e.pointerId, x: e.clientX, y: e.clientY, t: now(), max: 0, pos: scrollPos74(),
+      bad: !e.isPrimary || now() - lastScroll74 < FLING_MS74 || isField74(document.activeElement) } : null;
+  }, true);
+  document.addEventListener('pointermove', (e) => {
+    const d = outDown;
+    if (!d || d.id !== e.pointerId) return;
+    d.max = Math.max(d.max, Math.hypot(e.clientX - d.x, e.clientY - d.y));
+    if (d.max >= TAP_PX74) d.bad = true;
+  }, { capture: true, passive: true });
+  document.addEventListener('pointercancel', (e) => { if (outDown?.id === e.pointerId) outDown = null; }, true);
   document.addEventListener('pointerup', (e) => {
-    const d = outDown; outDown = null;
-    if (!d || !GL.q || GL.busy || GL.slow) return;
-    if (Math.abs(e.clientX - d.x) >= 8 || Math.abs(e.clientY - d.y) >= 8) return;
-    if (e.target.closest?.('[data-gl-ans], [data-search], [data-v54-card], .gl70-pill, #sq-eng-menu')) return;
+    const d = outDown;
+    if (!d || d.id !== e.pointerId) return;
+    outDown = null;
+    if (!GL.q || GL.busy || GL.slow || d.bad) return;
+    if (Math.max(d.max, Math.hypot(e.clientX - d.x, e.clientY - d.y)) >= TAP_PX74) return;
+    if (now() - d.t > TAP_MS74 || scrollPos74() !== d.pos) return;
+    if (e.target.closest?.(OUTSIDE_SKIP74) || inGlimt74(e.clientX, e.clientY) || inGlimt74(d.x, d.y)) return;
     haptic(6); closeAns();
     eatClick = Date.now();
   }, true);
@@ -392,8 +428,9 @@ function ansInView70() {
   return r.height === 0 || (r.bottom > 40 && r.top < innerHeight - 60);
 }
 function pillScroll70() { if (ansInView70()) pill70(false); }
-/** Sveip opp for å lukke / dra ned for å åpne i Chat: med finger bare fra grepet nederst (30 px, touch-action:none),
-    med mus fra hele kortet som før. Vertikal sveip ellers på kortet scroller siden (touch-action:pan-y). */
+/** Sveip opp for å lukke / dra ned for å åpne i Chat: bare fra grepet nederst (30 px, touch-action:none) – med finger og mus.
+    Vertikal sveip ellers på kortet scroller siden (touch-action:pan-y), og hold inne / dra med mus markerer tekst.
+    Prompt 74: lukker bare ved tydelig sveip opp – mer enn 60 px og raskt (minst 0,3 px/ms, eller under 300 ms). */
 function bindSwipe(el) {
   if (el.dataset.glSw) return;
   el.dataset.glSw = '1';
@@ -402,11 +439,9 @@ function bindSwipe(el) {
   el.addEventListener('pointerdown', (e) => {
     st = null;
     if (e.button) return;
-    const grab = !!e.target.closest('.gl-grab');
-    if (e.pointerType !== 'mouse' && !grab) return;
-    if (!grab && (e.target.closest('button, a, input, textarea, select') || getSelection()?.toString())) return;
-    st = { y: e.clientY, x: e.clientX, id: e.pointerId, dy: 0 };
-    if (grab) { try { e.target.setPointerCapture(e.pointerId); } catch { /* */ } }
+    if (!e.target.closest('.gl-grab')) return; // prompt 74: bare grepet (finger og mus) – resten av kortet er tekst
+    st = { y: e.clientY, x: e.clientX, id: e.pointerId, dy: 0, t: performance.now() };
+    try { e.target.setPointerCapture(e.pointerId); } catch { /* */ }
   });
   el.addEventListener('pointermove', (e) => {
     if (!st || e.pointerId !== st.id) return;
@@ -420,14 +455,15 @@ function bindSwipe(el) {
   });
   const end = () => {
     if (!st) return;
-    const dy = st.dy, a = card(); st = null;
+    const dy = st.dy, dt = Math.max(1, performance.now() - st.t), a = card(); st = null;
     if (!a) return;
-    if (dy < -40) { a.style.transition = 'transform .2s ease, opacity .2s ease'; a.style.transform = 'translateY(-60px)'; a.style.opacity = '0'; haptic(6); setTimeout(closeAns, 190); return; }
+    if (dy < -60 && (-dy / dt >= 0.3 || dt < 300)) { a.style.transition = 'transform .2s ease, opacity .2s ease'; a.style.transform = 'translateY(-60px)'; a.style.opacity = '0'; haptic(6); setTimeout(closeAns, 190); return; }
     if (dy > 60 && GL.q) { haptic(6); const q = GL.q, jobId = GL.busy ? GL.jobId : null; closeAns(); handoff(q, jobId); return; }
     a.style.transition = 'transform .22s cubic-bezier(.2,.8,.2,1), opacity .2s'; a.style.transform = ''; a.style.opacity = '';
   };
   el.addEventListener('pointerup', end);
-  el.addEventListener('pointercancel', end);
+  // Prompt 74: avbrutt berøring (nettleseren tok over, f.eks. scroll) lukker aldri – kortet legger seg tilbake.
+  el.addEventListener('pointercancel', () => { if (!st) return; st = null; const a = card(); if (a) { a.style.transition = 'transform .22s cubic-bezier(.2,.8,.2,1), opacity .2s'; a.style.transform = ''; a.style.opacity = ''; } });
 }
 let wasBusy70 = false;
 function paintAns() {

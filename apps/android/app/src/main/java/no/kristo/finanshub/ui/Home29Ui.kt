@@ -15,6 +15,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -88,6 +89,7 @@ internal fun PaperSearch29(vm: AppViewModel, above45: Boolean = false) {
     var seen70 by remember { mutableIntStateOf(tick70) }
     LaunchedEffect(tick70) { if (tick70 != seen70) { seen70 = tick70; if (vm.q29.homeQ.isNotBlank()) go() } }
     val mic70 = Voice56.on(Voice56.SEARCH)
+    DisposableEffect(Unit) { onDispose { Ans70.searchRect = null } } // prompt 74: ingen gammel ramme når feltet er borte
     LaunchedEffect(mic70) { if (mic70) fm.clearFocus() } // tastaturet lukkes når opptaket starter
     Column(Modifier.animateContentSize(tween(250)), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         if (above45) extras45()

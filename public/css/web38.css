@@ -197,7 +197,9 @@ html:not([data-hl="2c"]) .k38-tiles{filter:invert(1) hue-rotate(180deg) brightne
 /* ================= Hjem: AI-svarboblen lukkes med ✕, sveip opp eller trykk utenfor ================= */
 /* Prompt 70 (claude-code-hjem-scroll-mens-ai.md): ikke noe fullskjerm-lag (gl-scrim) – Hjem scroller mens Glimt svarer.
    Vertikal sveip på kortet scroller siden; sveip opp / dra ned med fingeren bare fra grepet nederst (30 px). */
-.gl-layer .gl-ans{position:relative;padding-right:52px;touch-action:pan-y;user-select:text;cursor:auto}
+.gl-layer .gl-ans{position:relative;padding-right:52px;touch-action:pan-y;-webkit-user-select:text;user-select:text;-webkit-touch-callout:default;cursor:auto}
+/* Prompt 74: hold inne i svaret gir vanlig tekstmarkering og systemmeny (Safari trenger -webkit-); bare grepet er gest. */
+.gl-layer .gl-ans .gl-grab{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 .gl-x{position:absolute;top:10px;right:10px;width:30px;height:30px;padding:0;border-radius:15px;border:0;background:rgba(255,255,255,.14);color:#fff;display:grid;place-items:center;cursor:pointer;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
 .gl-x:hover{background:rgba(255,255,255,.24)}
 #gl-layer button.gl-x{width:30px;height:30px;margin:0;box-shadow:none}

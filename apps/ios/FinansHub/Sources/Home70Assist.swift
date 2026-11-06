@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import UIKit.UIGestureRecognizerSubclass
 
 /* ---------------- Prompt 70 (IOSHOME70): scrolle på Hjem mens Glimt svarer ----------------
  Spesifikasjon: prompt-51b-pakke/claude-code-hjem-scroll-mens-ai.md. Fasit: Homelab.dc.html (svarkortet under søkefeltet).
@@ -9,7 +10,11 @@ import UIKit
    svaret er ferdig. Mens Glimt tenker lukkes kortet bare med ✕.
  – Sveip opp / dra ned gjøres fra grepet nederst i kortet (Assist38Swipe).
  – Svaret strømmer videre selv om kortet er scrollet ut av syne. Blir det ferdig da: lett haptikk og pillen «Glimt svarte ↑»
-   nederst over fanelinjen, som scroller opp til søkefeltet (Drag37.scrollTick → PaperPage). */
+   nederst over fanelinjen, som scroller opp til søkefeltet (Drag37.scrollTick → PaperPage).
+ Prompt 74: SpatialTapGesture alene fyrte også etter en liten scroll (og når et trykk stoppet en scroll som gled), så kortet
+   lukket seg. Nå avgjør Touch74 (en UIKit-observatør på vinduet som aldri tar berøringen) om det var et ekte trykk:
+   én finger, under 10 pt total bevegelse, kort berøring, og søkefeltet sto stille fra ned til opp (og like før ned).
+   Trykket fra SpatialTapGesture brukes bare til stedet, og avgjøres etter at hele berøringen er behandlet. */
 
 @MainActor
 @Observable
@@ -24,9 +29,22 @@ final class Assist70 {
     /// Den synlige flaten (globalt), satt av pillens lag over PaperShell.
     @ObservationIgnored var viewport: CGRect = .zero
     @ObservationIgnored private var hideTask: Task<Void, Never>? = nil
+    /// Prompt 74: sist søkefeltet flyttet seg (scroll), i systemtid.
+    @ObservationIgnored var movedAt: TimeInterval = 0
 
-    /// Trykk et sted på Hjem (globale koordinater).
+    /// Søkefeltets ramme endret seg. Flytter den seg loddrett, scroller siden.
+    func track(_ r: CGRect) {
+        if abs(r.minY - searchRect.minY) > 0.5 { movedAt = ProcessInfo.processInfo.systemUptime }
+        searchRect = r
+    }
+
+    /// Trykk et sted på Hjem (globale koordinater). Prompt 74: avgjøres når hele berøringen er ferdig (Touch74).
     func tapped(_ pt: CGPoint) {
+        Task { @MainActor in Assist70.shared.decide(pt) }
+    }
+
+    private func decide(_ pt: CGPoint) {
+        guard Touch74.shared.cleanTap() else { return }
         let a: Assist31 = Assist31.shared
         guard a.homeAnswer != nil, !a.homeBusy else { return }
         if searchRect.insetBy(dx: -4, dy: -4).contains(pt) { return }
@@ -76,6 +94,8 @@ final class Assist70 {
 struct Assist70Tap: ViewModifier {
     func body(content: Content) -> some View {
         content
+            // Prompt 74: observatøren som avgjør om berøringen var et ekte trykk (Touch74, på vinduet).
+            .background(Touch74Host().allowsHitTesting(false))
             .contentShape(Rectangle())
             .simultaneousGesture(
                 SpatialTapGesture(count: 1, coordinateSpace: .global)
@@ -94,7 +114,7 @@ struct Assist70Track: ViewModifier {
                 GeometryReader { (g: GeometryProxy) in
                     Color.clear
                         .onAppear { Assist70.shared.searchRect = g.frame(in: .global) }
-                        .onChange(of: g.frame(in: .global)) { (_: CGRect, r: CGRect) in Assist70.shared.searchRect = r }
+                        .onChange(of: g.frame(in: .global)) { (_: CGRect, r: CGRect) in Assist70.shared.track(r) }
                 }
             }
             .onChange(of: a.homeBusy) { (was: Bool, now: Bool) in
@@ -103,6 +123,128 @@ struct Assist70Track: ViewModifier {
             .onChange(of: a.homeOpen) { (_: Bool, open: Bool) in
                 if !open { Assist70.shared.hide() }
             }
+    }
+}
+
+/* ---------- Prompt 74: ekte trykk eller scroll? ---------- */
+
+/// Hva siste berøring i vinduet var. Skrives av Touch74Recognizer, leses av Assist70.decide.
+@MainActor
+final class Touch74 {
+    static let shared = Touch74()
+
+    /// Mer bevegelse enn dette (pt, totalt fra ned) er ikke et trykk.
+    static let slop: CGFloat = 10
+    /// Lengre berøring enn dette (s) er ikke et trykk.
+    static let maxTime: TimeInterval = 0.5
+
+    private var start: CGPoint = .zero
+    private var t0: TimeInterval = 0
+    private var y0: CGFloat = 0
+    private var far: Bool = false
+    private var scrolled: Bool = false
+    private var kb: Bool = false
+    private var clean: Bool = false
+    private var upAt: TimeInterval = 0
+
+    func down(_ pt: CGPoint, _ t: TimeInterval) {
+        start = pt
+        t0 = t
+        far = false
+        clean = false
+        let a: Assist70 = Assist70.shared
+        y0 = a.searchRect.minY
+        // Siden gled fortsatt (trykket stopper en scroll): ikke et trykk.
+        scrolled = ProcessInfo.processInfo.systemUptime - a.movedAt < 0.12
+        // Tastaturet var oppe: trykket lukker bare tastaturet, ikke Glimt (punkt 3).
+        kb = Kb32b.shared.frame.height > 0
+    }
+
+    func moved(_ pt: CGPoint) {
+        let dx: CGFloat = pt.x - start.x
+        let dy: CGFloat = pt.y - start.y
+        if dx * dx + dy * dy > Touch74.slop * Touch74.slop { far = true }
+    }
+
+    func multi() {
+        far = true
+    }
+
+    func up(_ pt: CGPoint, _ t: TimeInterval) {
+        moved(pt)
+        let still: Bool = abs(Assist70.shared.searchRect.minY - y0) < 1
+        clean = !far && !scrolled && !kb && still && t - t0 < Touch74.maxTime
+        upAt = ProcessInfo.processInfo.systemUptime
+    }
+
+    func cancelled() {
+        clean = false
+        upAt = ProcessInfo.processInfo.systemUptime
+    }
+
+    /// Siste berøring var et ekte trykk, og den sluttet nettopp.
+    func cleanTap() -> Bool {
+        clean && ProcessInfo.processInfo.systemUptime - upAt < 0.4
+    }
+}
+
+/// Ser alle berøringer i vinduet uten å ta dem: blir aldri gjenkjent (feiler når fingeren slippes), forsinker ingenting
+/// og kansellerer ingenting. Navnet har verken «Pan» eller «Drag», så kantgesten venter ikke på den (Nav50Edge.waits).
+final class Touch74Recognizer: UIGestureRecognizer {
+    override init(target: Any?, action: Selector?) {
+        super.init(target: target, action: action)
+        cancelsTouchesInView = false
+        delaysTouchesBegan = false
+        delaysTouchesEnded = false
+    }
+
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
+        super.touchesBegan(touches, with: event)
+        guard let t = touches.first else { return }
+        if (event.allTouches?.count ?? 1) > 1 {
+            Touch74.shared.multi()
+            return
+        }
+        Touch74.shared.down(t.location(in: nil), t.timestamp)
+    }
+
+    override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent) {
+        super.touchesMoved(touches, with: event)
+        if let t = touches.first { Touch74.shared.moved(t.location(in: nil)) }
+    }
+
+    override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent) {
+        super.touchesEnded(touches, with: event)
+        if let t = touches.first { Touch74.shared.up(t.location(in: nil), t.timestamp) }
+        state = .failed
+    }
+
+    override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent) {
+        super.touchesCancelled(touches, with: event)
+        Touch74.shared.cancelled()
+        state = .failed
+    }
+}
+
+/// Legger Touch74Recognizer på vinduet (én gang per vindu), som EdgePanHost i Nav23Swipe.swift.
+struct Touch74Host: UIViewRepresentable {
+    func makeUIView(context: Context) -> Touch74HostView {
+        let v: Touch74HostView = Touch74HostView()
+        v.isUserInteractionEnabled = false
+        v.backgroundColor = .clear
+        return v
+    }
+
+    func updateUIView(_ v: Touch74HostView, context: Context) {}
+}
+
+final class Touch74HostView: UIView {
+    override func didMoveToWindow() {
+        super.didMoveToWindow()
+        guard let w = window else { return }
+        Kb32b.shared.start()
+        if w.gestureRecognizers?.contains(where: { (g: UIGestureRecognizer) -> Bool in g is Touch74Recognizer }) == true { return }
+        w.addGestureRecognizer(Touch74Recognizer(target: nil, action: nil))
     }
 }
 

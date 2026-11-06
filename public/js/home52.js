@@ -235,22 +235,54 @@ function flip71(els, p0) {
   }
 }
 
+/* Prompt 74: hold inne i Glimt-søkefeltet (tomt eller med fokus), i Glimt-svarkortet eller i opptakskortet skal gi vanlig
+   tekstmarkering og systemmeny – aldri redigering av Hjem. Sjekker både målet og punktet (kortet ligger over flisene), og at
+   ingen tekstfelt har fokus (tastaturet er oppe) eller tekst er markert. */
+const GLZ74 = 'form[data-search], [data-search], #gl-layer, [data-gl-ans], [data-v54-card], .sq-drop, .gl70-pill';
+const isField74 = (el) => !!el?.matches?.('input, textarea, select, [contenteditable=""], [contenteditable="true"]');
+function noWiggle74(e) {
+  const t = e.target;
+  if (t?.closest?.(`${GLZ74}, input, textarea, select, [contenteditable]`)) return true;
+  if (isField74(document.activeElement)) return true;
+  if (String(getSelection?.() ?? '')) return true;
+  const x = e.clientX, y = e.clientY;
+  if (typeof x !== 'number') return false;
+  for (const el of document.querySelectorAll(GLZ74)) {
+    const r = el.getBoundingClientRect();
+    if (r.width && r.height && x >= r.left - 8 && x <= r.right + 8 && y >= r.top - 8 && y <= r.bottom + 8) return true;
+  }
+  return false;
+}
+
 let bound = false;
 export function bindHome52() {
   if (bound) return;
   bound = true;
   let hold = 0, start = null;
   const root = () => document.querySelector('[data-h52-root]');
+  const stopHold = () => { clearTimeout(hold); hold = 0; if (!H.edit) start = null; };
   document.addEventListener('pointerdown', (e) => {
     if (e.target.closest?.('.h52-x,.h52-bar,.h52-add,.h52-rz')) H.suppress = false;
     const it = e.target.closest?.('[data-h52]');
     if (!it || !root()?.contains(it) || e.target.closest('.h52-x,[data-edc]')) return;
     if (e.target.closest('[data-h52-rz]')) return;
+    if (!H.edit && noWiggle74(e)) return; // prompt 74: aldri fra søkefeltet, Glimt-svaret eller opptakskortet
     start = { x: e.clientX, y: e.clientY, id: it.dataset.h52, pid: e.pointerId };
     if (H.edit) { H.drag = { id: it.dataset.h52, moved: false, el: it }; return; }
     clearTimeout(hold);
-    hold = setTimeout(() => { start = null; H.edit = true; H.suppress = true; haptic?.(20); enterEdit(); }, 560);
+    const sy = window.scrollY;
+    hold = setTimeout(() => {
+      hold = 0;
+      // Prompt 74: sjekk på nytt når tiden er ute – siden kan ha scrollet (iOS sender ikke alltid pointercancel med en gang),
+      // et tekstfelt kan ha fått fokus (tastaturet), eller brukeren markerer tekst.
+      if (!start || Math.abs(window.scrollY - sy) > 4 || noWiggle74({ target: it, clientX: start.x, clientY: start.y })) { start = null; return; }
+      start = null; H.edit = true; H.suppress = true; haptic?.(20); enterEdit();
+    }, 560);
   });
+  // Prompt 74: scroll, tekstmarkering eller fokus i et felt avbryter «hold inne».
+  document.addEventListener('scroll', () => { if (hold) stopHold(); }, { capture: true, passive: true });
+  document.addEventListener('selectionchange', () => { if (hold && String(getSelection?.() ?? '')) stopHold(); });
+  document.addEventListener('focusin', (e) => { if (hold && isField74(e.target)) stopHold(); });
   // Prompt 70: håndtaket ↔ (pointer-lyttere på window under draget, touch-action:none på håndtaket).
   document.addEventListener('pointerdown', (e) => {
     const b = e.target.closest?.('[data-h52-rz]');
@@ -302,7 +334,7 @@ export function bindHome52() {
     }
   }, { passive: false });
   const up = () => {
-    clearTimeout(hold);
+    clearTimeout(hold); hold = 0;
     if (H.drag?.moved) { H.drag.el.classList.remove('lift'); H.drag.el.style.translate = ''; H.suppress = true; }
     H.drag = null; start = null;
   };

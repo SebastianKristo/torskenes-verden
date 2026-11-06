@@ -747,7 +747,7 @@ private fun ScanQueue(vm: AppViewModel) {
 
 private val HOME_SECS = listOf(
     PSec("h12", "Glimt-brief", full = true), // Prompt 34: øverst, over widgetene (kan flyttes og skjules i wiggle-modus)
-    PSec("h1", "Søk", full = true), PSec("h2", "Pakker"), PSec("h43", "Media", full = true), PSec("h3", "Avganger"), PSec("h11", "Prøveperioder"), PSec("h10", "Kalender"), PSec("h9", "Bursdager"), PSec("hm", "Fliser", full = true),
+    PSec("h1", "Søk", full = true, hold = false) /* prompt 74: hold inne i søkefeltet/svaret = tekstmarkering, aldri wiggle */, PSec("h2", "Pakker"), PSec("h43", "Media", full = true), PSec("h3", "Avganger"), PSec("h11", "Prøveperioder"), PSec("h10", "Kalender"), PSec("h9", "Bursdager"), PSec("hm", "Fliser", full = true),
     PSec("h8", "Gjøremål"), PSec("h6", "Posisjon"), PSec("h40", "Vel fremme"), PSec("h7", "Bolig"), // prompt 40: Hjemlys
     PSec("h5", "Siste nytt", full = true), PSec("h4", "Snarveier", full = true), PSec("hs", "Server"),
 )

@@ -40,7 +40,8 @@ form[data-search].sbar.v54-away{display:none!important}
 .v54-card{box-sizing:border-box;width:100%;margin:0 auto;display:flex;flex-direction:column;gap:12px;padding:16px 10px 10px 18px;border-radius:26px;
   background:var(--v54-card,#fff);color:var(--v54-ink,#1b1a17);box-shadow:0 10px 30px -14px rgba(0,0,0,.35);text-align:left;
   --v54-btn:color-mix(in srgb,currentColor 9%,transparent);--v54-mut:color-mix(in srgb,currentColor 55%,transparent);
-  transform-origin:50% 0;animation:v54in .25s cubic-bezier(.2,.8,.2,1)}
+  transform-origin:50% 0;animation:v54in .25s cubic-bezier(.2,.8,.2,1);-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
+/* Prompt 74: hold inne i opptakskortet gir tekstmarkering/systemmeny, aldri redigering av Hjem (home52.js noWiggle74). */
 html[data-hl="2c"] .v54-card{--v54-btn:var(--pp)}
 @keyframes v54in{from{opacity:0;transform:scaleY(.5)}to{opacity:1;transform:none}}
 .v54-card .v54-txt{min-height:24px;padding-right:8px;font:500 17px/1.4 Manrope,Outfit,system-ui,sans-serif;text-wrap:pretty;overflow-wrap:anywhere}

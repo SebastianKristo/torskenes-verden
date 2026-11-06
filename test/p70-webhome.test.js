@@ -32,10 +32,11 @@ test('hjem-scroll-mens-ai: ingen fullskjerm-lag, trykk utenfor < 8 px, sveip fra
   assert.doesNotMatch(x, /function scrim\(/, 'gl-scrim er fjernet');
   assert.doesNotMatch(x, /scrim\(!!h\)/);
   assert.match(x, /function bindOutside70\(\)/);
-  assert.match(x, />= 8 \|\| Math\.abs\(e\.clientY - d\.y\) >= 8/);
-  assert.match(x, /if \(!d \|\| !GL\.q \|\| GL\.busy \|\| GL\.slow\) return;/, 'mens Glimt tenker lukkes kortet bare med ✕');
-  assert.match(x, /closest\?\.\('\[data-gl-ans\], \[data-search\]/, 'utenfor kortet og søkefeltet');
-  assert.match(x, /e\.pointerType !== 'mouse' && !grab/, 'finger: bare fra grepet');
+  // Prompt 74: ekte trykk (< 10 px total bevegelse, ingen scroll) i stedet for < 8 px per akse; sveip bare fra grepet (også mus).
+  assert.match(x, /const TAP_PX74 = 10/);
+  assert.match(x, /if \(!GL\.q \|\| GL\.busy \|\| GL\.slow \|\| d\.bad\) return;/, 'mens Glimt tenker lukkes kortet bare med ✕');
+  assert.match(x, /OUTSIDE_SKIP74 = '\[data-gl-ans\], #gl-layer, \[data-search\]/, 'utenfor kortet og søkefeltet');
+  assert.match(x, /if \(!e\.target\.closest\('\.gl-grab'\)\) return;/, 'bare fra grepet');
   assert.match(x, /dy > 60 && GL\.q/, 'dra ned åpner i Chat');
   assert.match(x, /Glimt svarte/);
   const css = read('public/css/web38.css');

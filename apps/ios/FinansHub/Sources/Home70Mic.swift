@@ -144,6 +144,8 @@ struct Home70RecText: View {
                 .foregroundStyle(t.isEmpty ? p.mut : p.ink)
                 .lineSpacing(3)
                 .fixedSize(horizontal: false, vertical: true)
+                // Prompt 74: hold inne gir systemets tekstmeny (Kopier), ikke wiggle (h1 har ingen hold, Wiggle43.noHold).
+                .textSelection(.enabled)
             if busy {
                 ProgressView().controlSize(.small).tint(p.mut)
             } else {
