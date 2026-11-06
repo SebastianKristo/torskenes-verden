@@ -2,6 +2,9 @@
 
 Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. Versjonene med APK og IPA ligger under [Releases](https://github.com/SebastianKristo/torskenes-verden/releases).
 
+## [4.64.1] – 06.11.2026 · Interaktivt søk i Media
+- **Media på web:** interaktivt søk i Sonarr og Radarr viser nå alltid treffene. Før kunne siden bli stående på «søker» når forbindelsen til serveren ble brutt underveis, selv om søket i Prowlarr var ferdig. Nå henter siden resultatet direkte fra serveren.
+
 ## [4.64.0] – 06.11.2026 · Glimt på Hjem: markér tekst og scroll fritt
 - **Markér tekst:** hold inne i Glimt-søkefeltet, i svaret fra Glimt eller på mikrofonkortet for å markere tekst. Det starter ikke lenger redigering av Hjem. Redigering starter bare når du holder inne på en flis.
 - **Scroll lukker ikke Glimt:** svaret lukkes bare av et rent trykk utenfor, og bare når svaret er ferdig. Et trykk som stopper en scroll, en liten scroll eller et trykk som bare legger bort tastaturet, lukker ikke svaret. Sveip opp for å lukke virker bare fra grepet nederst, og bare når du sveiper tydelig.
