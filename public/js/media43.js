@@ -133,16 +133,21 @@ async function loadRel(force = false) {
   const poll = async () => { while (M.job === job) { await new Promise((ok) => setTimeout(ok, 1500)); if (M.job !== job) return; try { apply(await mapi(`/release/search/${encodeURIComponent(jobId)}`)); } catch (e) { if (e.status === 404) { M.job = null; return legacy(); } } } };
   try {
     const es = new EventSource(`/api/media/release/search/${encodeURIComponent(jobId)}/events${M.site ? `?server=${encodeURIComponent(M.site)}` : ''}`, { withCredentials: true });
-    job.es = es; let got = false;
-    const on = (ev) => { got = true; let j; try { j = JSON.parse(ev.data); } catch { return; } const t = ev.type;
+    job.es = es;
+    const on = (ev) => { job.lastEv = Date.now(); let j; try { j = JSON.parse(ev.data); } catch { return; } const t = ev.type;
       if (t === 'indexer.start' || t === 'indexer.done' || t === 'indexer.fail') { const L = job.indexers.filter((x) => x.name !== j.name); job.indexers = [...L, { ...j, state: t === 'indexer.start' ? 'run' : t === 'indexer.done' ? 'ok' : 'fail' }]; if (Array.isArray(j.items)) job.items = [...job.items, ...j.items]; paintMain(); return; }
       if (t === 'done') { es.close(); return done(j.result ? { ...j.result, indexers: job.indexers } : { ...j, items: j.items ?? j.releases }); }
       if (t === 'failed') { es.close(); if (M.job !== job) return; M.job = null; M.rel = { error: j.error || 'Søket feilet.', allFailed: !!j.allFailed }; return paint(); }
       if (t === 'partial') { if (Array.isArray(j.items)) job.items = j.items; job.partialCount = j.count; paintMain(); return; }
       apply(j); };
     ['message', 'snapshot', 'status', 'partial', 'failed', 'indexer.start', 'indexer.done', 'indexer.fail', 'done'].forEach((t) => es.addEventListener(t, on));
-    es.onerror = () => { es.close(); if (!got && M.job === job) poll(); };
-  } catch { poll(); }
+    // Prompt 75: brytes strømmen (proxy/Cloudflare, nett, eller «done» som ikke kom fram), hentes jobben med GET til den er
+    // ferdig – også når noen hendelser alt er mottatt. Før ble siden stående på «søker» for alltid når strømmen brøt etter start.
+    es.onerror = () => { es.close(); if (M.job === job && !job.polling) { job.polling = true; poll(); } };
+    // Vakt: ingen hendelse på 25 s (ping kommer hvert 15. s) → spør serveren direkte.
+    const watch = setInterval(() => { if (M.job !== job) return clearInterval(watch); if (Date.now() - (job.lastEv ?? job.t0) > 25_000 && !job.polling) { job.polling = true; es.close(); poll(); } }, 5000);
+    es.addEventListener('ping', () => { job.lastEv = Date.now(); });
+  } catch { job.polling = true; poll(); }
   function done(j) {
     const d = { ...j, items: j.items ?? j.releases ?? [], indexers: (j.indexers ?? job?.indexers ?? []).map((x) => ({ ...x, state: x.state === 'done' ? 'ok' : x.state === 'failed' ? 'fail' : x.state })) };
     const fails = d.indexers.filter((x) => x.state === 'fail' || x.error), all = d.indexers.length && fails.length === d.indexers.length && !d.items.length;

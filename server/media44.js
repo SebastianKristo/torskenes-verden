@@ -402,8 +402,12 @@ const sseJob = (c) => {
     await s.writeSSE({ event: 'snapshot', data: JSON.stringify(jobOut(j)) });
     if (j.state !== 'running') { await s.writeSSE({ event: j.state === 'done' ? 'done' : 'failed', data: JSON.stringify(j.state === 'done' ? { releases: j.result?.items ?? [], result: j.result } : { error: j.error }) }); return; }
     await new Promise((resolve) => {
-      const ping = setInterval(() => s.writeSSE({ event: 'ping', data: JSON.stringify({ elapsedMs: Date.now() - j.startedAt }) }).catch(() => {}), 15_000);
-      const fn = (event, data) => { if (event === 'end') { clearInterval(ping); j.subs.delete(fn); resolve(); return; } s.writeSSE({ event, data: JSON.stringify(data) }).catch(() => {}); };
+      // Prompt 75: skrivingene går i kø, og strømmen lukkes først når alt er sendt – før kunne «done» gå tapt når «end»
+      // lukket strømmen mens den siste skrivingen ennå ikke var ferdig (siden ble stående på «søker»).
+      let q = Promise.resolve();
+      const write = (event, data) => { q = q.then(() => s.writeSSE({ event, data: JSON.stringify(data) })).catch(() => {}); return q; };
+      const ping = setInterval(() => write('ping', { elapsedMs: Date.now() - j.startedAt }), 15_000);
+      const fn = (event, data) => { if (event === 'end') { clearInterval(ping); j.subs.delete(fn); q.then(resolve, resolve); return; } write(event, data); };
       j.subs.add(fn);
       s.onAbort(() => { clearInterval(ping); j.subs.delete(fn); resolve(); }); // søket fortsetter og caches
     });
