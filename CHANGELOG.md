@@ -2,6 +2,25 @@
 
 Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. Versjonene med APK og IPA ligger under [Releases](https://github.com/SebastianKristo/torskenes-verden/releases).
 
+## [4.68.0] – 09.11.2026 · Skjold Lab: hele hylla som sorteringsskap (3D-print)
+- **Hele hylla blir ett sorteringsskap:** 143 skuffer (11 × 13) med LED over hver rad, 429 LED-er og 20 veggmoduler. Det fyller hylla på 56 × 76 × 32 cm uten Raaco-skapet. Varianten rundt Raaco finnes fortsatt.
+- **Mye mindre plast:**
+  - Hyllene er byttet ut med skinner.
+  - Ryggen er åpen med avstivning, og sidene er rammer med utsparinger.
+  - Skuffene er 16 cm lange.
+  - En veggmodul veier nå ca. 140 g mot ca. 1 kg før, og hele hylla bruker ca. 6 kg PETG.
+  - Alle deler printes uten support.
+- **Ferdige filer, sortert i den rekkefølgen du printer dem:** `skjoldlab3d-hele-hylla.zip` på releasen «Skjold Lab 3D-print». Den har egne mapper for STL og 3MF:
+  - 1 prøvedeler
+  - 2 veggmoduler M01–M20
+  - 3 skuffer
+  - 4 LED
+  - 5 beslag
+  - 6 elektronikk
+
+  I tillegg et diagram (`oversikt.svg`) som viser hvor hver modul står, og en LES-MEG med antall, vekt og montering.
+- Filene lages automatisk på GitHub når modellen endres. Hver del kontrolleres for mål, byggeplate og vekt.
+
 ## [4.67.0] – 09.11.2026 · Skjold Lab: LED over hver skuff
 - **💡 Vis i skapet:** med en LED-stripe over hver skuffrad tennes LED-en over skuffen der delen ligger. Den lyser i 30 sekunder, så går stripa tilbake til det den viste før. «Vis alle i skapet» tenner opptil 10 treff samtidig.
 - **Lys av seg selv** når du åpner et treff, eller når Glimt svarer på «hvor er …». Begge er av som standard og slås på i oppsettet.
