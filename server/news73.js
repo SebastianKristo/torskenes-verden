@@ -132,12 +132,12 @@ export async function checkUrl73(input) {
 }
 
 /** GET med SSRF-sjekk per hopp, maks 5 redirecter, maks 5 MB og streng Content-Type. → {buf, type, finalUrl} */
-export async function guardedGet73(url, { kind = 'html', maxBytes = MAX_BYTES73 } = {}) {
+export async function guardedGet73(url, { kind = 'html', maxBytes = MAX_BYTES73, headers = null } = {}) { // prompt 77: headers (f.eks. User-Agent for Commons)
   let cur = await checkUrl73(url);
   for (let hop = 0; hop <= MAX_REDIRECTS73; hop++) {
     if (hop) cur = await checkUrl73(cur.href);
     const accept = kind === 'html' ? 'text/html,application/xhtml+xml;q=0.9' : 'image/avif,image/webp,image/png,image/jpeg,image/gif;q=0.8';
-    const res = await F(cur.href, { redirect: 'manual', headers: { Accept: accept, 'Accept-Language': 'nb-NO,nb;q=0.9,no;q=0.8,en;q=0.5', 'User-Agent': 'Mozilla/5.0 (homelab-nyhetsleser; lagret artikkel)' }, signal: AbortSignal.timeout(TIMEOUT) });
+    const res = await F(cur.href, { redirect: 'manual', headers: { Accept: accept, 'Accept-Language': 'nb-NO,nb;q=0.9,no;q=0.8,en;q=0.5', 'User-Agent': 'Mozilla/5.0 (homelab-nyhetsleser; lagret artikkel)', ...(headers ?? {}) }, signal: AbortSignal.timeout(TIMEOUT) });
     if ([301, 302, 303, 307, 308].includes(res.status)) {
       const loc = res.headers.get('location');
       try { await res.body?.cancel?.(); } catch { /* */ }

@@ -97,6 +97,7 @@ const LOCAL = [
   ['faste-oppgaver', 'Faste oppgaver', 'Glimt → Faste oppgaver', 'faste-oppgaver', 'faste oppgaver planlagte planlagt påminnelse minn meg strømpris varsel betinget hver morgen kjør nå pause prisområde'], // prompt 62
   ['kvalitet', 'Kvalitet', 'Glimt → Kvalitet', 'kvalitet', 'kvalitet ukerapport uke statistikk første forsøk rettelser hurtigvei svartid nattlig eval regresjon test rapport kjør nå'], // prompt 64
   ['sporing70', 'Sporing: kilder og transportører', 'Moduler → Sporing', 'sporing', 'sporing pakke pakker pakkesporing transportør transportører postnord bring posten dhl ups 17track proton e-post finn arkiv arkivering'], // prompt 70
+  ['skjold77', 'Skjold Lab: bilder og forslag fra Glimt', 'Moduler → Skjold Lab', 'skjold', 'skjold lab deler komponenter glimt forslag foreslå navn kategori bilde bilder nett automatisk kamera rydd'], // prompt 77
 ].map(([id, title, path, web, kw, anchor]) => ({ id, title, path, keywords: kw.split(' '), description: '', route: { web }, ...(anchor ? { anchor } : {}) }));
 
 /** Mål-id → velger når elementet ikke har data-hl selv (eller fanen i AI-kontroll som må åpnes først). */
@@ -155,7 +156,7 @@ export function loadIndex(redraw) {
 }
 const index = () => X.index ?? LOCAL;
 /** Prompt 65: oppføringer serverens indeks ikke har ennå (nye plasser etter samlingen); tas med selv uten mål-id. */
-const NEW65 = new Set(['ntfy', 'sonevarsler', 'ai-dal53', 'familie', 'brief-figur', 'passkeys', 'staging65', 'helse65', 'ytelse65', 'heal65', 'flags65', 'backup-db65', 'chat-regler', 'sporing70']);
+const NEW65 = new Set(['ntfy', 'sonevarsler', 'ai-dal53', 'familie', 'brief-figur', 'passkeys', 'staging65', 'helse65', 'ytelse65', 'heal65', 'flags65', 'backup-db65', 'skjold77', 'chat-regler', 'sporing70']);
 
 /** «#/innstillinger/look/bg», «/innstillinger/utseende» eller «look|bg» → { tab, sub }. */
 export function routeOf(item) {

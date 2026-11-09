@@ -133,6 +133,7 @@ object Skjold76 {
         stack = listOf("list"); q = ""; suggest = emptyList(); items = null; part = null; draft = null; drawer = null; pick = null
         cat = null; low = false; filterCab = null; cabinets = emptyList(); maps = emptyMap(); cabId = null; undo = null; occupied = emptyList()
         corners = null; cabDeleteAsk = null; err = null; missing = false; offline = false
+        Skjold77.reset() // prompt 77
     }
 }
 
@@ -378,7 +379,13 @@ fun AppViewModel.openSkjold76(q: String? = null, partId: String? = null, cabId: 
 /** Tilbake: lukker ark/valg først, så én side i stakken, og til slutt Skjold Lab. */
 fun AppViewModel.closeSkjold76() {
     val s = Skjold76
+    val a = Skjold77 // prompt 77: ark og valg i forslagene lukkes først
     when {
+        a.settingsOpen -> a.settingsOpen = false
+        a.menuOpen -> a.menuOpen = false
+        a.imgPick != null -> a.imgPick = null
+        a.imgOpen -> a.imgOpen = false
+        s.screen == "tidy" -> closeTidy77()
         s.cabDeleteAsk != null -> s.cabDeleteAsk = null
         s.pick != null -> s.pick = null
         s.drawer != null && s.screen == "cab" -> s.drawer = null
@@ -418,6 +425,7 @@ fun AppViewModel.loadSkjold76() = launch46 {
         if (s.cabId == null || s.cabinets.none { it.id == s.cabId }) s.cabId = s.cabinets.firstOrNull()?.id
         s.cabId?.let { loadMap76(it) }
         runCatching { s.cats = parseCats76(get76("/categories")) }
+        loadAiSettings77() // prompt 77
         searchSkjold76(now = true)
         saveCabs76(arr)
     } catch (e: CancellationException) { throw e } catch (e: ApiException) {
@@ -602,6 +610,8 @@ fun AppViewModel.saveDraft76() {
             var p = runCatching { JSONObject(raw).let { it.optJSONObject("part") ?: it } }.getOrNull()?.let { parsePart76(it) }
             val id = p?.id ?: d.id
             if (id != null) for (u in d.newPhotos) { uploadPartPhotoNow76(id, u)?.let { p = it } }
+            if (id != null && d.id == null && Skjold77.pendingImgs.isNotEmpty()) savePending77(id)?.let { p = it } // prompt 77: bilder fra «Finn bilde»
+            Skjold77.resetDraft()
             s.draft = null
             s.stack = s.stack.dropLast(1)
             Haptics.success()
@@ -614,6 +624,7 @@ fun AppViewModel.saveDraft76() {
 
 fun AppViewModel.newPart76(prefill: SkjPart76? = null) {
     val s = Skjold76
+    Skjold77.resetDraft()
     s.draft = SkjDraft76(prefill).also { d ->
         d.id = null
         if (prefill == null) {
@@ -628,6 +639,7 @@ fun AppViewModel.newPart76(prefill: SkjPart76? = null) {
 }
 
 fun AppViewModel.editPart76(p: SkjPart76) {
+    Skjold77.resetDraft()
     Skjold76.draft = SkjDraft76(p)
     push76("edit")
 }
@@ -695,13 +707,14 @@ private suspend fun AppViewModel.uploadPartPhotoNow76(id: String, uri: Uri): Skj
 fun AppViewModel.addPartPhoto76(uri: Uri) {
     val s = Skjold76
     val d = s.draft
-    if (d != null && d.id == null) { d.newPhotos = d.newPhotos + uri; return }
+    if (d != null && d.id == null) { d.newPhotos = d.newPhotos + uri; photoAdded77(d, uri, null); return }
     val id = d?.id ?: s.part?.id ?: return
     act76 {
         s.busy = true
         try {
             val p = uploadPartPhotoNow76(id, uri)
             Haptics.success()
+            if (d != null) photoAdded77(d, null, p) // prompt 77: auto-forslag fra bildet
             afterChange76(p ?: runCatching { parsePart76(JSONObject(get76("/parts/$id"))) }.getOrNull())
         } finally { s.busy = false }
     }

@@ -11,6 +11,7 @@ import { api, esc, isMobile, haptic } from './util.js';
 import { toast } from './toast.js';
 import { drawCabinet76, overlayGrid76, layoutPhoto76, cornersOk76, long76, short76, ownLabel76 } from './skjold76-draw.js';
 import { editHtml, setupHtml, editClick, setupClick, editMount, setupMount, editInput, setupInput, startEdit, startSetup } from './skjold76-edit.js';
+import { headBtns77, gearHtml77, click77, key77, tidyHtml77, tidyRoute77, startTidy77, stopTidy77 } from './skjold77-ai.js'; // prompt 77: Glimt-forslag, Rydd opp, ⚙
 
 if (typeof document !== 'undefined' && !document.querySelector('link[data-sk76-css]')) {
   const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = '/assets/css/skjold76.css'; l.dataset.sk76Css = ''; document.head.appendChild(l);
@@ -161,6 +162,7 @@ function parseHash() {
   if (seg[1] === 'ny') return { v: 'edit', id: null, cab: q.get('skap'), at: q.get('at') };
   if (seg[1] === 'endre' && seg[2]) return { v: 'edit', id: seg[2] };
   if (seg[1] === 'oppsett') return { v: 'setup', id: seg[2] ?? null };
+  if (tidyRoute77(seg)) return tidyRoute77(seg); // prompt 77: #/skjold/rydd[/<jobId>]
   if (seg[1] === 'skap' && seg[2]) {
     const m = /^(\d+)-(\d+)$/.exec(seg[3] ?? '');
     return m ? { v: 'drawer', cab: seg[2], row: +m[1], col: +m[2] } : { v: 'list', cab: seg[2] };
@@ -294,8 +296,10 @@ function shellHtml() {
         <a class="sk76-btn pri" href="#/skjold/ny">+ Ny del</a>
         <a class="sk76-btn" href="#/skjold/oppsett">Skap</a>
         <button type="button" class="sk76-btn" data-sk76="labels">Etiketter</button>
+        <span data-sk77-head>${headBtns77()}</span>
       </div>
     </header>
+    <div data-sk77-gearbox>${gearHtml77()}</div>
     <form class="sk76-search" role="search" data-sk76-search autocomplete="off">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
       <input type="search" name="q" placeholder="Søk etter deler: M3, 10k, ESP32 …" aria-label="Søk etter deler" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="sk76-sug" value="${esc(S.q)}" enterkeyhint="search">
@@ -309,7 +313,7 @@ export function paintMain() {
   const el = root()?.querySelector('[data-sk76-main]');
   if (!el) return;
   const v = S.route.v;
-  el.innerHTML = v === 'part' ? partHtml() : v === 'drawer' ? drawerHtml() : v === 'edit' ? editHtml() : v === 'setup' ? setupHtml() : listHtml();
+  el.innerHTML = v === 'part' ? partHtml() : v === 'drawer' ? drawerHtml() : v === 'edit' ? editHtml() : v === 'setup' ? setupHtml() : v === 'tidy' ? tidyHtml77() : listHtml();
   root().dataset.v = v;
   if (v === 'edit') editMount(el);
   if (v === 'setup') setupMount(el);
@@ -317,7 +321,7 @@ export function paintMain() {
 export function paintSide() {
   const el = root()?.querySelector('[data-sk76-side]');
   if (!el) return;
-  el.hidden = S.route.v === 'setup';
+  el.hidden = S.route.v === 'setup' || S.route.v === 'tidy';
   if (el.hidden) return;
   el.innerHTML = sideHtml();
   mountPhoto(el);
@@ -351,6 +355,7 @@ async function onHash() {
   if (S.pick && !(r.v === 'part' && S.pick.kind === 'move' && prev.id === r.id) && r.v !== 'edit') S.pick = null;
   if (r.v !== 'edit') S.form = null;
   if (r.v !== 'setup') S.setup = null;
+  if (r.v !== 'tidy') stopTidy77();
   if (r.v === 'list' && r.q != null && r.q !== S.q) { S.q = r.q; const i = el.querySelector('[data-sk76-search] input'); if (i) i.value = S.q; loadList(); }
   if (r.cab && cabById(r.cab)) S.cabId = cabById(r.cab).id;
   if (r.v === 'drawer') S.drawerParts = null;
@@ -368,6 +373,8 @@ async function onHash() {
     if (r.id) await loadPart(r.id);
     if (S.route !== r) return;
     startEdit(r); paint();
+  } else if (r.v === 'tidy') {
+    startTidy77(r);
   } else if (r.v === 'setup') {
     startSetup(r); paint();
     await loadCabs(true); if (S.route !== r) return;
@@ -495,6 +502,7 @@ function bind() {
     const t = e.target;
     if (S.suggOpen && !t.closest('[data-sk76-search]')) closeSugg();
     const sug = t.closest('[data-sk76-sug]'); if (sug) { e.preventDefault(); pickSugg(el.querySelector('[data-sk76-search]'), +sug.dataset.sk76Sug); return; }
+    if (click77(t)) return; // prompt 77: ⋯-meny, ⚙ og Rydd opp
     if (S.route.v === 'edit' && editClick(t, e)) return;
     if (S.route.v === 'setup' && setupClick(t, e)) return;
     const dr = t.closest('[data-sk76-dr]'); if (dr) { onDrawer(dr.dataset.sk76Dr); return; }
@@ -520,6 +528,7 @@ function bind() {
   });
   document.addEventListener('keydown', (e) => {
     const el = root(); if (!el || !el.contains(e.target)) return;
+    if (key77(e)) return; // prompt 77: Esc lukker ⋯ og ⚙
     const dr = e.target.closest?.('[data-sk76-dr]');
     if (dr && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onDrawer(dr.dataset.sk76Dr); return; }
     const form = e.target.closest?.('[data-sk76-search]');

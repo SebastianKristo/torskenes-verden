@@ -96,12 +96,15 @@ internal fun SkjoldPage76(vm: AppViewModel) {
                     "edit" -> EditScreen76(vm)
                     "cab" -> CabScreen76(vm)
                     "setup" -> SetupScreen76(vm)
+                    "tidy" -> TidyScreen77(vm) // prompt 77
                     else -> ListScreen76(vm)
                 }
             }
         }
         UndoBar76(vm, Modifier.align(Alignment.BottomCenter))
         s.cabDeleteAsk?.let { CabDeleteAsk76(vm, it) }
+        Menu77(vm) // prompt 77: ⋯ → Rydd opp med Glimt / innstillinger
+        Settings77(vm)
     }
 }
 
@@ -112,12 +115,14 @@ private fun Header76(vm: AppViewModel) {
     val ctx = LocalContext.current
     Row(Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Pill76(if (s.stack.size > 1) "‹ Tilbake" else "‹ Mer", on = true) { vm.closeSkjold76() }
-        PSerif(when (s.screen) { "part" -> "Del"; "edit" -> if (s.draft?.id == null) "Ny del" else "Endre del"; "cab" -> "Skap"; "setup" -> "Skap-oppsett"; else -> "Skjold Lab" },
+        PSerif(when (s.screen) { "part" -> "Del"; "edit" -> if (s.draft?.id == null) "Ny del" else "Endre del"; "cab" -> "Skap"; "setup" -> "Skap-oppsett"; "tidy" -> "Rydd opp"; else -> "Skjold Lab" },
             22.sp, maxLines = 1, modifier = Modifier.weight(1f))
         if (s.screen == "list" || s.screen == "cab") {
             Pill76("Etiketter", on = false) { vm.printLabels76(ctx, if (s.screen == "cab") s.cabId else null) }
             Pill76("+ Ny del", on = false) { vm.newPart76() }
         }
+        if (s.screen == "list") Pill76("⋯", on = false, Modifier.semantics { contentDescription = "Flere valg" }) { Skjold77.menuOpen = true }
+        if (s.screen == "edit") Pill76("⚙", on = false, Modifier.semantics { contentDescription = "Innstillinger for Glimt i Skjold Lab" }) { Skjold77.settingsOpen = true; vm.loadAiSettings77() }
     }
     if (s.offline) Text("Uten nett · viser lagret liste" + (s.cachedAt?.let { " fra " + java.text.SimpleDateFormat("d.M. HH:mm", java.util.Locale("nb", "NO")).format(java.util.Date(it)) } ?: "") + ". Endringer krever nett.",
         color = p.ink, fontSize = 12.5.sp, modifier = Modifier.padding(horizontal = 16.dp).fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(p.tertiary).padding(10.dp, 6.dp))
@@ -243,7 +248,7 @@ private fun LowBadge76() {
 
 /** Bilde fra serveren (Img50: diskcache og token bare til egen server). Plassholder med skuff-ikon. */
 @Composable
-private fun Img76(vm: AppViewModel, url: String?, maxPx: Int, modifier: Modifier, crop: Boolean = true, onBmp: ((Bitmap) -> Unit)? = null) {
+internal fun Img76(vm: AppViewModel, url: String?, maxPx: Int, modifier: Modifier, crop: Boolean = true, onBmp: ((Bitmap) -> Unit)? = null) {
     val ctx = LocalContext.current
     val p = PaperPal.current
     var bmp by remember(url) { mutableStateOf(Img50.cached(vm.base, url)) }
@@ -733,6 +738,7 @@ private fun EditScreen76(vm: AppViewModel) {
         PCard(shadow = true) {
             Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 PField("Navn", d.name, { d.name = it }, placeholder = "M3 × 10 skruer")
+                SuggestBar77(vm, d) // prompt 77: ✦ Foreslå + kortet
                 PField("Kategori", d.category, { d.category = it }, placeholder = "Skruer, motstander, LED …")
                 if (s.cats.isNotEmpty()) FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     s.cats.take(14).forEach { c -> PChip(c.name, d.category == c.name) { d.category = c.name } }
@@ -794,7 +800,9 @@ private fun EditScreen76(vm: AppViewModel) {
                 shot = u; cam.launch(u)
             }
             PButton("Velg bilde", Modifier.weight(1f), kind = "line") { pick.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }
+            FindImage77(vm, d, Modifier.weight(1f)) // prompt 77
         }
+        ImagePicker77(vm, d)
         PHead("Kjøp")
         PField("URL (datablad/kjøp)", d.url, { d.url = it }, keyboard = KeyboardOptions(keyboardType = KeyboardType.Uri))
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {

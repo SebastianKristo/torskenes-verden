@@ -976,6 +976,8 @@ struct PaperModulesSettings: View {
                 PaperLinkRow(name: "Avganger", sub: "Stopp fra Ruter og Entur", value: "Åpne ›", icon: "tram") { store.paperGo("avg") },
                 PaperLinkRow(name: "Sporing", sub: "Kilder, transportører og pakkevarsler", value: "Åpne ›", icon: "shippingbox") { store.paperGo("sporing") },
                 PaperLinkRow(name: "Domener", sub: "Cloudflare-statistikk", value: "Åpne ›", icon: "globe") { store.paperOpenDomains(from: "mer") },
+                // Prompt 77 (SKJAIIOS): «Finn bilder på nett» og «Foreslå automatisk når jeg tar bilde» (Skjold77*.swift).
+                PaperLinkRow(name: "Skjold Lab", sub: "Glimt: finn bilder på nett og foreslå automatisk", value: "Åpne ›", icon: "cabinet") { Skjold77.shared.openSettings() },
             ])
         }
     }

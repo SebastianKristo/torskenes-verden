@@ -117,7 +117,10 @@ struct Skj76Top: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             Top50Bar(kicker: "Skjold Lab · deler", title: "Skjold Lab", back: { m.open = false }) {
-                menu
+                HStack(spacing: 8) {
+                    gear
+                    menu
+                }
             }
             Text(sub).font(PF.ui(14)).foregroundStyle(p.mut).fixedSize(horizontal: false, vertical: true)
         }
@@ -135,10 +138,27 @@ struct Skj76Top: View {
             Button { m.sheet = .setup("ny") } label: { Label("Legg til skap", systemImage: "plus.rectangle.on.rectangle") }
             Button { m.sheet = .labels(m.cabinet?.id ?? "") } label: { Label("Etiketter", systemImage: "printer") }
             Button { Task { await m.load(store) } } label: { Label("Oppdater", systemImage: "arrow.clockwise") }
+            // Prompt 77: Glimt går gjennom delene og foreslår bedre navn, kategori og specs (Skjold77*.swift).
+            Divider()
+            Button { m.sheet = .tidy([]) } label: { Label("Rydd opp med Glimt", systemImage: "sparkles") }
+            if filtered && !m.items.isEmpty {
+                Button { m.sheet = .tidy(m.items.map { $0.id }) } label: { Label("Rydd opp i treffene (\(m.items.count))", systemImage: "sparkles.rectangle.stack") }
+            }
         } label: {
             Image(systemName: "ellipsis").font(.dyn51(size: 16, weight: .bold)).foregroundStyle(p.ink).round50()
         }
         .accessibilityLabel("Mer for Skjold Lab")
+    }
+
+    private var filtered: Bool { !m.query.isEmpty || !m.category.isEmpty || m.lowOnly }
+
+    /// ⚙: «Finn bilder på nett» og «Foreslå automatisk når jeg tar bilde».
+    private var gear: some View {
+        Button { m.sheet = .ai } label: {
+            Image(systemName: "gearshape").font(.dyn51(size: 16, weight: .bold)).foregroundStyle(p.ink).round50()
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Glimt-innstillinger for Skjold Lab")
     }
 }
 
@@ -366,6 +386,8 @@ struct Skj76SheetView: View {
         case .setup(let id): Skj76Setup(startId: id)
         case .drawer(let c, let r, let k): Skj76DrawerSheet(cabinetId: c, row: r, col: k)
         case .labels(let c): Skj76Labels(cabinetId: c)
+        case .tidy(let ids): Skj77Tidy(ids: ids)
+        case .ai: Skj77Settings()
         }
     }
 }

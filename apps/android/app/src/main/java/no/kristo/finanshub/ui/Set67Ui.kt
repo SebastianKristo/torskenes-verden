@@ -71,6 +71,7 @@ internal fun menu67(vm: AppViewModel): List<Menu67Group> {
             Menu67Row("modules", "Moduler", "Familie, Gjøremål, Avganger, Vær", Icons.Filled.Dashboard, go = page("modules")),
             Menu67Row("fin67", "Finans", "Kategorier, regler, bankimport, aksjer, fanelinje og abonnementer", Icons.Filled.AccountBalance, go = page("fin67")),
             Menu67Row("media", "Media", "Sonarr, Radarr, qBittorrent, Prowlarr · status", Icons.Filled.Movie, go = page("media")),
+            Menu67Row("skjold", "Skjold Lab", "Glimt-forslag, bilder på nett og auto-forslag", Icons.Filled.Inventory2) { vm.openSkjoldSettings77() }, // prompt 77
             Menu67Row("nyheter", "Nyheter", "Kilder, kategorier, For deg og Glimt-sammendrag", Icons.Filled.Newspaper) { vm.settingsPage = "nyheter"; if (vm.news == null) vm.loadNews() },
         )),
         Menu67Group("Server", if (!admin) emptyList() else listOf(

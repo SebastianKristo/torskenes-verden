@@ -18,12 +18,15 @@ struct Skj76Edit: View {
     @State private var busy: Bool = false
     @State private var picks: [PhotosPickerItem] = []
     @State private var camera: Bool = false
+    /// Prompt 77: «Finn bilde» (Skj77ImageFinder) og Glimt-forslag (Skjold77).
+    @State private var finder: Bool = false
+    @MainActor private var ai: Skjold77 { Skjold77.shared }
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
                 Skj76SheetTop(kicker: id.isEmpty ? "Ny del" : "Endre del", title: f.name.isEmpty ? "Uten navn" : f.name)
-                Skj76FormFields(f: $f)
+                Skj76FormFields(f: $f, onSuggest: { suggestAI(nil) })
                 Skj76SpecFields(specs: $f.specs)
                 photos
                 place
@@ -35,15 +38,23 @@ struct Skj76Edit: View {
         .scrollDismissesKeyboard(.interactively)
         .background(p.bg.ignoresSafeArea())
         .onAppear { boot() }
+        .onDisappear { ai.clearSuggestion() }
+        .task { if !ai.settingsLoaded { await ai.loadSettings(store) } }
         .onChange(of: picks) { (_: [PhotosPickerItem], v: [PhotosPickerItem]) in take(v) }
         .fullScreenCover(isPresented: $camera) {
             CameraView { (img: UIImage?) in if let img { add(img) } }.ignoresSafeArea()
+        }
+        .sheet(isPresented: $finder) {
+            Skj77ImageFinder(query: f.name, partId: id) { (c: Skj77Candidate) in found(c) }
+                .environment(\.paper, p)
+                .environment(store)
         }
     }
 
     private func boot() {
         if loaded { return }
         loaded = true
+        ai.clearSuggestion()
         if let x = m.part(id), !id.isEmpty {
             f = Skj76Form.from(x)
         } else {
@@ -69,6 +80,10 @@ struct Skj76Edit: View {
                                 .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                                 .overlay(alignment: .topTrailing) { remove { f.newPhotos.remove(at: i) } }
                         }
+                        // Prompt 77: bilder valgt i «Finn bilde» for en ny del (lagres når delen lagres).
+                        ForEach(Array(f.found.enumerated()), id: \.offset) { (i: Int, c: Skj77Candidate) in
+                            Skj76Thumb(path: c.thumb, size: 72).overlay(alignment: .topTrailing) { remove { f.found.remove(at: i) } }
+                        }
                     }
                 }
                 HStack(spacing: 8) {
@@ -79,6 +94,7 @@ struct Skj76Edit: View {
                             .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(p.line, lineWidth: 1))
                     }
                 }
+                Skj76Button(title: "Finn bilde", icon: "photo.badge.magnifyingglass") { openFinder() }
             }
         }
     }
@@ -102,7 +118,39 @@ struct Skj76Edit: View {
         }
     }
 
-    private func add(_ img: UIImage) { f.newPhotos.append(img) }
+    /// Nytt bilde. Med «Foreslå automatisk når jeg tar bilde» på starter Glimt av seg selv (én gang per valg).
+    private func add(_ img: UIImage) {
+        f.newPhotos.append(img)
+        if ai.settingsLoaded && ai.autoSuggest && !ai.thinking { suggestAI(img) }
+    }
+
+    /* ---------- Glimt (prompt 77) ---------- */
+
+    /// «✦ Foreslå»: nyeste nye bilde hvis det finnes, ellers delens lagrede bilde og teksten.
+    private func suggestAI(_ img: UIImage?) {
+        Haptics.shared.tap()
+        ai.suggest(partId: id, form: f, image: img ?? f.newPhotos.last, store)
+    }
+
+    private func openFinder() {
+        if ai.settingsLoaded && !ai.webImages {
+            m.flash(Skjold77.webOffText)
+            return
+        }
+        finder = true
+    }
+
+    /// Valgt i «Finn bilde»: lagret allerede for en eksisterende del, ellers holdes det til delen lagres.
+    private func found(_ c: Skj77Candidate) {
+        if id.isEmpty {
+            f.found.append(c)
+            return
+        }
+        if let x = m.part(id) {
+            f.oldPhotos = x.photos
+            f.dropped = []
+        }
+    }
 
     private func dropOld(_ i: Int) {
         f.oldPhotos.remove(at: i)
@@ -148,6 +196,7 @@ struct Skj76Edit: View {
             // Bilder som er fjernet (høyeste nummer først, så de andre ikke flytter seg).
             for n in form.dropped.sorted(by: >) { await m.deletePartPhoto(pid, n, store) }
             for img in form.newPhotos { await m.uploadPartPhoto(pid, img, store) }
+            for c in form.found { _ = await ai.useImage(c, partId: pid, store) }
             if !id.isEmpty, form.loc != old, let x = m.part(pid) {
                 if let l = form.loc { await m.move(x, to: l, store) } else { await m.unplace(x, store) }
             }
@@ -175,6 +224,8 @@ struct Skj76Form {
     var oldPhotos: [Skj76Photo] = []
     var newPhotos: [UIImage] = []
     var dropped: [Int] = []
+    /// Prompt 77: bilder fra «Finn bilde» som lagres sammen med en ny del.
+    var found: [Skj77Candidate] = []
 
     static func from(_ x: Skj76Part) -> Skj76Form {
         var f: Skj76Form = Skj76Form()
@@ -237,12 +288,19 @@ struct Skj76FormFields: View {
     @Environment(\.paper) private var p
     @MainActor private var m: Skjold76 { Skjold76.shared }
     @Binding var f: Skj76Form
+    /// Prompt 77: «✦ Foreslå» ved navnet (nil = skjult).
+    var onSuggest: (() -> Void)? = nil
+    @MainActor private var ai: Skjold77 { Skjold77.shared }
 
     private static let units: [String] = ["stk", "m", "cm", "g", "kg", "ml", "pk"]
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Skj76Field(label: "Navn", text: $f.name)
+            HStack(alignment: .bottom, spacing: 8) {
+                Skj76Field(label: "Navn", text: $f.name)
+                if let onSuggest { suggestButton(onSuggest) }
+            }
+            if onSuggest != nil { Skj77SuggestCard(f: $f) }
             HStack(alignment: .bottom, spacing: 8) {
                 Skj76Field(label: "Kategori", text: $f.category)
                 categoryMenu
@@ -262,9 +320,24 @@ struct Skj76FormFields: View {
         }
     }
 
+    private func suggestButton(_ act: @escaping () -> Void) -> some View {
+        Button(action: act) {
+            Text("✦ Foreslå").font(PF.ui(14, .bold)).foregroundStyle(p.onLab)
+                .padding(.horizontal, 12).frame(height: 44)
+                .background(p.lab, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .disabled(ai.thinking)
+        .accessibilityLabel("Foreslå navn, kategori og specs med Glimt")
+    }
+
     private var categoryMenu: some View {
         Menu {
             ForEach(m.categories) { (c: Skj76Cat) in Button(c.id) { f.category = c.id } }
+            // Prompt 77: standardlisten når brukeren ikke har kategorier ennå.
+            if m.categories.isEmpty {
+                ForEach(Skjold77.defaultCategories, id: \.self) { (c: String) in Button(c) { f.category = c } }
+            }
         } label: {
             Image(systemName: "list.bullet").font(.system(size: 15, weight: .semibold)).foregroundStyle(p.ink)
                 .frame(width: 44, height: 44).overlay(RoundedRectangle(cornerRadius: 12).stroke(p.line, lineWidth: 1))

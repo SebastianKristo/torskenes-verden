@@ -17,7 +17,7 @@
 //      fallbackFrom?:'modell-id', warnings:['Modellen «x» finnes ikke på Ollama-serveren · bruker «y»'], notice?}
 //   kaster AiRunError {message:'Glimt fikk ikke svar fra {modell}: {feil}', code, model, task, fix:'model'|'api'|'valg'|'nett'|null,
 //                      errors:[{model, provider, error}], jobId}
-//   task: chat | sok | glimt | brief | rc | kat | fsok | bar | dom | kb, eller et alias (assist, calendar, receipts, categorize …).
+//   task: chat | sok | glimt | brief | rc | kat | fsok | bar | dom | kb | skj, eller et alias (assist, calendar, receipts, categorize …).
 //
 // Ruting (kv(OWNER,'ai_routing') = serverstandard av admin, kv(bruker,'ai_routing_user') = egne valg for chat/sok/glimt/brief):
 //   {tasks:{<id>:{model:'qwen3:8b'|''(auto), fallback:''}}, rules:{localFirst, finLocal, think},
@@ -58,11 +58,12 @@ export const AI_TASKS = [
   { id: 'bar', name: 'Strekkoder og pakkelapper', desc: 'Bildefelt fra kamera', kind: 'vision', fin: true, personal: false },
   { id: 'dom', name: 'Domener · oppsummering', desc: 'Daglig sammendrag', kind: 'text', fin: false, personal: false },
   { id: 'kb', name: 'Kunnskapsbase', desc: 'Embeddings for dokumenter', kind: 'embed', fin: false, personal: false },
+  { id: 'skj', name: 'Skjold Lab · gjenkjenning', desc: 'Kjenner igjen deler fra bilde og foreslår navn og kategori', kind: 'vision', fin: false, personal: false }, // prompt 77
 ];
 const TASK = Object.fromEntries(AI_TASKS.map((t) => [t.id, t]));
 export const TASK_ALIAS = { assist: 'sok', search: 'sok', text: 'sok', 'settings-ask': 'sok', settings: 'sok', test: 'sok', calendar: 'glimt', kalender: 'glimt',
   'calendar-quick': 'glimt', 'calendar-glimt': 'glimt', receipts: 'rc', receipt: 'rc', screenshot: 'rc', logo: 'rc', categorize: 'kat', 'finance-search': 'fsok',
-  finans: 'fsok', barcode: 'bar', label: 'bar', domains: 'dom', domener: 'dom', embed: 'kb', embeddings: 'kb' };
+  finans: 'fsok', barcode: 'bar', label: 'bar', domains: 'dom', domener: 'dom', embed: 'kb', embeddings: 'kb', skjold: 'skj' };
 // Prompt 35: oppgaver som ikke går gjennom run() (ingen ruting), men logges i jobbloggen og forbruket.
 export const EXTRA_TASKS = { tts: 'Glimt · stemme (TTS)' };
 export const taskId = (t) => (TASK[t] || EXTRA_TASKS[t] ? t : TASK_ALIAS[t] ?? 'sok');

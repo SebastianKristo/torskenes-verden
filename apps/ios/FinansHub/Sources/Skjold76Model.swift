@@ -130,6 +130,9 @@ enum Skj76Sheet: Identifiable, Hashable {
     case setup(String)
     case drawer(String, Int, Int)
     case labels(String)
+    /// Prompt 77: «Rydd opp med Glimt» (tom = alle delene) og Glimt-innstillingene (⚙).
+    case tidy([String])
+    case ai
 
     var id: String {
         switch self {
@@ -139,6 +142,8 @@ enum Skj76Sheet: Identifiable, Hashable {
         case .setup(let i): return "s" + i
         case .drawer(let c, let r, let k): return "d\(c)-\(r)-\(k)"
         case .labels(let c): return "l" + c
+        case .tidy(let ids): return "t\(ids.count)-" + (ids.first ?? "")
+        case .ai: return "ai"
         }
     }
 }

@@ -14,7 +14,7 @@ export const MENU65 = [
   ['Husstand', ['users']],
   ['Glimt og AI', ['glimt', 'ai']],
   ['Tilkoblinger', ['int', 'kal']],
-  ['Moduler', ['dom', 'finans', 'media', 'nyheter', 'ruter', 'sporing', 'studie', 'vaer']], // prompt 70: Sporing mellom Ruter og Studie
+  ['Moduler', ['dom', 'finans', 'media', 'nyheter', 'ruter', 'sporing', 'studie', 'vaer', 'skjold']], // prompt 70: Sporing mellom Ruter og Studie · prompt 77: Skjold Lab sist
   ['Server', ['system', 'backup', 'logger']],
 ];
 /** Side som vises under en annen i menyen (menyen markerer forelderen, tilbakeknappen går dit). */

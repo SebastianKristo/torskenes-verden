@@ -14,6 +14,8 @@ import {
 import { saveImage76, removeImage76, readImage76, signedUrl76, signedUser76, MAX_IN76 } from './images.js';
 import { exportCsv76, importCsv76 } from './csv.js';
 import { labelsHtml76 } from './labels.js';
+import { mountAi77, undoEdit77 } from './ai77.js'; // prompt 77 (SKJAISRV): forslag, bildesøk, Rydd opp
+import { thumbUser77 } from './images77.js';
 
 setFileUrl76((name, user) => signedUrl76(name, user));
 const q = (sql) => db.prepare(sql);
@@ -37,6 +39,9 @@ skjoldApi76.use('*', async (c, next) => {
     const u = signedUser76(m[1], c.req.query('u'), c.req.query('exp'), c.req.query('sig'));
     if (u && userInfo(u)) { c.set('user', u); return next(); }
   }
+  // Prompt 77: miniatyrer fra bildesøket – id-en er kryptert, signert og bundet til brukeren (virker i bildelastere uten header).
+  const t77 = /\/ai\/thumb\/([^/]+)$/.exec(c.req.path);
+  if (t77 && c.req.method === 'GET') { const u = thumbUser77(t77[1]); if (u && userInfo(u)) { c.set('user', u); return next(); } }
   return authOrToken(c, async () => { ensureUser76(c.get('user')); await next(); });
 });
 
@@ -397,6 +402,7 @@ skjoldApi76.post('/history/:id{[0-9]+}/undo', (c) => {
     addHistory76(u, cur.id, 'antall', { qty: cur.qty }, { qty: from.qty });
     return c.json({ ok: true, part: out(row, u) });
   }
+  if (h.action === 'endret') { const row = undoEdit77(u, h); if (row) return c.json({ ok: true, part: out(row, u) }); } // prompt 77: navn/kategori/specs/tags
   return c.json({ error: 'Denne hendelsen kan ikke angres' }, 409);
 });
 
@@ -471,3 +477,6 @@ skjoldApi76.get('/', (c) => {
   const unplaced = q('SELECT count(*) FROM skj_parts WHERE user_id=? AND deleted_at IS NULL AND cabinet_id IS NULL').pluck().get(u);
   return c.json({ parts, low, unplaced, cabinets: cabinetRows76(u).map((x) => cabinetOut(x, u)), units: UNITS76, kinds: KINDS76 }, 200, NS);
 });
+
+// Prompt 77 (SKJAISRV): /ai/* (forslag, bildesøk, Rydd opp, innstillinger) og /parts/:id/photos/from-search.
+mountAi77(skjoldApi76, { fileOf, uploadLimit });

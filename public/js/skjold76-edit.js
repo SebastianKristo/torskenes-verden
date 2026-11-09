@@ -8,6 +8,7 @@ import { esc, isMobile, haptic } from './util.js';
 import { toast } from './toast.js';
 import { S, sk, write, upload, go, paintMain, paintSide, locOf, locText, photoUrls, cabById, loadCabs, loadMap, refreshAll, loadPart } from './skjold76.js';
 import { overlayGrid76, layoutPhoto76, cornersOk76, long76 } from './skjold76-draw.js';
+import { suggestBtn77, suggestCard77, findBtn77, finderHtml77, webPending77, onNewPhotos77, aiClick77, mountEdit77, saveWeb77 } from './skjold77-ai.js'; // prompt 77
 
 const UNITS = ['stk', 'm', 'cm', 'g', 'kg', 'ml', 'pk', 'par', 'rull', 'sett'];
 const SPEC_KEYS = ['verdi', 'toleranse', 'pakke', 'spenning', 'strøm', 'effekt', 'lengde', 'diameter', 'gjenge', 'materiale', 'farge', 'type'];
@@ -51,7 +52,7 @@ function compsAt(loc) {
 function photosHtml(F) {
   const old = F.photos.map((ph, i) => `<span class="sk76-pph${F.rm.has(i) ? ' rm' : ''}"><img src="${esc(ph.thumb)}" alt="" loading="lazy"><button type="button" data-sk76e="rm-photo" data-i="${i}" aria-label="${F.rm.has(i) ? 'Behold bildet' : 'Fjern bildet'}">${F.rm.has(i) ? '↺' : '×'}</button></span>`).join('');
   const neu = F.files.map((f, i) => `<span class="sk76-pph new"><img src="${esc(f.url)}" alt=""><button type="button" data-sk76e="rm-new" data-i="${i}" aria-label="Fjern bildet">×</button></span>`).join('');
-  return old + neu;
+  return old + neu + webPending77(F);
 }
 export function editHtml() {
   const F = S.form;
@@ -62,7 +63,8 @@ export function editHtml() {
     <a class="sk76-back" href="${F.id ? `#/skjold/del/${encodeURIComponent(F.id)}` : '#/skjold'}">‹ ${F.id ? 'Tilbake til delen' : 'Alle deler'}</a>
     <h2 class="sk76-pname">${F.id ? 'Endre del' : 'Ny del'}</h2>
     ${F.err ? `<p class="sk76-warn" role="alert">${esc(F.err)}</p>` : ''}
-    <label class="sk76-f wide">Navn<input name="name" required maxlength="120" value="${esc(F.name)}" placeholder="F.eks. M3 × 10 skruer"></label>
+    <div class="sk76-f wide"><label for="sk76-name">Navn</label><span class="sk77-nin"><input id="sk76-name" name="name" required maxlength="120" value="${esc(F.name)}" placeholder="F.eks. M3 × 10 skruer">${suggestBtn77(F)}</span></div>
+    ${suggestCard77(F)}
     <label class="sk76-f">Kategori<input name="category" list="sk76-cats" maxlength="60" value="${esc(F.category)}" placeholder="Velg eller skriv ny"><datalist id="sk76-cats">${cats}</datalist></label>
     <div class="sk76-f sk76-qrow">
       <label>Antall<input name="qty" type="number" inputmode="decimal" min="0" step="any" value="${esc(F.qty)}"></label>
@@ -85,8 +87,9 @@ export function editHtml() {
     <fieldset class="sk76-f wide"><legend>Bilder</legend>
       <div class="sk76-drop" data-sk76-drop><div class="sk76-pphs">${photosHtml(F)}</div>
         <span class="sk76-mut">Dra bilder hit, eller</span>
-        <span class="sk76-row"><label class="sk76-btn sk76-file">Velg bilder<input type="file" accept="image/*,.heic,.heif" multiple data-sk76-files></label>${isMobile() ? '<label class="sk76-btn sk76-file">Ta bilde<input type="file" accept="image/*" capture="environment" data-sk76-files></label>' : ''}</span>
+        <span class="sk76-row"><label class="sk76-btn sk76-file">Velg bilder<input type="file" accept="image/*,.heic,.heif" multiple data-sk76-files></label>${isMobile() ? '<label class="sk76-btn sk76-file">Ta bilde<input type="file" accept="image/*" capture="environment" data-sk76-files></label>' : ''}${F.img?.open ? '' : findBtn77()}</span>
       </div>
+      ${finderHtml77(F)}
     </fieldset>
     <label class="sk76-f">Leverandør<input name="supplier" maxlength="80" value="${esc(F.supplier)}"></label>
     <label class="sk76-f">Pris (kr)<input name="price" type="number" inputmode="decimal" min="0" step="any" value="${esc(F.price ?? '')}"></label>
@@ -97,12 +100,14 @@ export function editHtml() {
 function addFiles(list) {
   const F = S.form; if (!F) return;
   readForm();
+  const added = [];
   for (const f of list) {
     if (!/^image\//.test(f.type) && !/\.(heic|heif)$/i.test(f.name)) { toast(`${f.name}: ikke et bilde`); continue; }
     if (f.size > MAX_MB * 1024 * 1024) { toast(`${f.name} er større enn ${MAX_MB} MB`); continue; }
-    F.files.push({ file: f, url: URL.createObjectURL(f) });
+    F.files.push({ file: f, url: URL.createObjectURL(f) }); added.push(f);
   }
   paintMain();
+  onNewPhotos77(F, added); // prompt 77: «Foreslå automatisk når jeg tar bilde»
 }
 function bindDrop(el, onFiles) {
   if (!el) return;
@@ -116,7 +121,8 @@ export function editMount(el) {
   f.querySelectorAll('[data-sk76-files]').forEach((i) => i.addEventListener('change', () => { addFiles([...i.files]); i.value = ''; }));
   bindDrop(f.querySelector('[data-sk76-drop]'), addFiles);
   f.addEventListener('submit', (e) => { e.preventDefault(); savePart(); });
-  if (!S.form.id && !S.form.name) setTimeout(() => f.elements.name?.focus({ preventScroll: true }), 0);
+  if (!S.form.id && !S.form.name && !S.form.ai && !S.form.img) setTimeout(() => f.elements.name?.focus({ preventScroll: true }), 0);
+  mountEdit77(f, S.form);
 }
 /** Fra skjold76.js: felt endret ({target}) eller skuff valgt i tegningen ({pick}). */
 export function editInput({ target, pick }) {
@@ -157,7 +163,7 @@ export function editClick(t) {
     case 'rm-new': URL.revokeObjectURL(F.files[i]?.url); F.files.splice(i, 1); paintMain(); return true;
     case 'free': suggestFree(); return true;
     case 'noloc': F.loc = null; paintMain(); paintSide(); return true;
-    default: return false;
+    default: return aiClick77(a, F); // prompt 77: ✦ Foreslå, Finn bilde
   }
 }
 const num = (v) => (v === '' || v == null || !Number.isFinite(+v) ? null : +v);
@@ -188,6 +194,7 @@ async function savePart() {
       for (const n of [...F.rm].map((i) => F.photos[i]?.n ?? i).sort((a, b) => b - a)) await sk(`/parts/${encodeURIComponent(id)}/photos/${n}`, { method: 'DELETE' });
     }
     for (const f of F.files) await upload(`/parts/${encodeURIComponent(id)}/photos`, f.file);
+    if (F.web?.length) await saveWeb77(F, id); // prompt 77: bilder valgt fra nettet før delen fantes
   } catch (e) {
     F.busy = false; F.err = e instanceof TypeError ? 'Endringer krever nett. Prøv igjen når du er tilkoblet.' : (e.message || 'Kunne ikke lagre');
     if (id && !F.id) { F.id = id; F.key = id; F.loc0 = locKey; F.files = []; } // delen ble laget, men noe etterpå feilet
