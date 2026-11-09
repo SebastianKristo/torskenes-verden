@@ -336,18 +336,18 @@ Konsollen skriver én linje per del (`SKJOLDLAB-DEL: navn=… del=… antall=…
 | Del | Hele hylla | Rundt Raaco | `del=` |
 | --- | --- | --- | --- |
 | Rammemoduler | 20 (4 × 5) | 10 side + 2 topp | `modul` med `modul_x`/`modul_y`, og `topp_modul` |
-| Skuffer | 143 (36 plater à 4 + 1 prøveskuff) | 80 | `skuff` / `skuffplate` |
-| Masker + diffusorer | 1 per rad per modulkolonne: 4 × 13 | side 2 × 13, topp 2 × 3 | `maske` / `diffusor` med `seksjon` (`hele`/`side`/`topp`) og `modul_x` |
+| Skuffer | 90: 57 vanlige (14 plater à 4 + 1 prøveskuff), 10 brede (5 plater à 2), 13 høye smale (3 plater à 4 + 1), 10 store (5 plater à 2). Uten store/brede: 143 | 80 | `skuff` / `skuffplate`, og `skuffplate_2x1`, `skuffplate_1x2`, `skuff_1x2`, `skuffplate_2x2` |
+| Masker + diffusorer | 1 per LED-rad per modulkolonne: 4 × 10 | side 2 × 13, topp 2 × 3 | `maske` / `diffusor` med `seksjon` (`hele`/`side`/`topp`) og `modul_x` |
 | Lasker bak | 8 `lask` + 12 `lask4` | 8 `lask` + 4 `lask4` | `lask` / `lask4` |
 | Raaco-skinner og klips | – | 12 + 24 | `raaco_skinne` / `raaco_klipsplate` |
 | Elektronikkboks | 1 + lokk | 1 + lokk | `elboks` / `elboks_lokk` |
 
 **Innkjøp til hele hylla:**
 
-- M3 × 10 bolt med mutter og skive: én per rad i hver sideskjøt, altså 3 × 13 = 39 stk. Rundt Raaco: 13 + 3 = 16 stk.
+- M3 × 10 bolt med mutter og skive: én per rad i hver sideskjøt, altså 3 × 10 = 30 stk (39 uten store/brede skuffer). Rundt Raaco: 13 + 3 = 16 stk.
 - M3 × 10 selvgjengende skrue til laskene: 2 per `lask` og 4 per `lask4`, altså 64 stk. Rundt Raaco: 32 stk.
 
-**LED-er:** hele hylla har 13 × 33 = **429 LED-er**, ca. 7,2 m stripe. Rundt Raaco: Raaco 216, toppvegg 45 og sidevegg 195, til sammen 456. Se innkjøpslisten i `../skjoldlab-led/README.md`.
+**LED-er:** hele hylla har 10 × 33 = **330 LED-er**, ca. 5,5 m stripe (13 × 33 = 429 uten store/brede skuffer). Rundt Raaco: Raaco 216, toppvegg 45 og sidevegg 195, til sammen 456. Se innkjøpslisten i `../skjoldlab-led/README.md`.
 
 **Grovt anslag for forbruk** (PETG, 0,2 mm lag, Creality K2 med 0,4 mm dyse). Massivt anslag = volum × 1,27 g/cm³, som CI regner ut per STL. Slicet med 2 vegger og 15 % infill blir det ca. **80 %** av dette, fordi delene nesten bare er 1,2–2 mm gods. **Sliceren gir fasit.**
 
@@ -355,9 +355,10 @@ Konsollen skriver én linje per del (`SKJOLDLAB-DEL: navn=… del=… antall=…
 | --- | --- | --- | --- |
 | Modul 3 × 3 (150 × 174 × 165) | ca. 145 g | ca. 115 g | ca. 4–6 t |
 | Modul 2 × 3 / 3 × 2 / 2 × 2 | ca. 80–110 g | ca. 65–90 g | ca. 3–4 t |
-| Skuff (46 × 156 × 40) | ca. 36 g | ca. 29 g | ca. 1–1,5 t (skuffplate med 4: ca. 5 t) |
+| Skuff (46 × 156 × 40) | ca. 37 g | ca. 30 g | ca. 1–1,5 t (skuffplate med 4: ca. 5 t) |
+| Bred skuff 2 × 1 / høy smal 1 × 2 / stor 2 × 2 | ca. 55 / 70 / 93 g | ca. 44 / 56 / 75 g | ca. 2 / 2,5 / 3,5 t |
 | Maske / diffusor | ca. 3 g / 2 g | | ca. 15 min |
-| **Hele hylla** (20 moduler, 143 skuffer, masker, lasker, boks) | **ca. 7,8 kg** (moduler ca. 2,4 kg, skuffer ca. 5,1 kg) | **ca. 6,2 kg** | **ca. 270 t** |
+| **Hele hylla** (20 moduler, 90 skuffer med 20 store og brede, masker, lasker, boks) | **ca. 6,8 kg** (moduler ca. 2,0 kg, skuffer ca. 4,5 kg) | **ca. 5,4 kg** | **ca. 230 t** |
 | **Rundt Raaco** (12 moduler, 80 skuffer, Raaco-deler, boks) | ca. 4,5 kg | ca. 3,6 kg | ca. 160 t |
 
 Den gamle modulen (150 × 232 × 240 mm) var 1041 g massivt og 842 g slicet. En modul er nå 6–8 ganger lettere. Det meste av filamentet går nå til skuffene. Med `dybde_maks = 0` (240 mm) blir både moduler og skuffer ca. 1,5 ganger tyngre, og 3 × 4-moduler (`modul_rader_maks = 4`) havner på ca. 190 g massivt.
