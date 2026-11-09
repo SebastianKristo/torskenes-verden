@@ -30,7 +30,7 @@
   }
   function mark() {
     var key = r;
-    if (mobile && ['chat', 'rom', 'nettverk', 'hjem', 'matplan', 'sporing', 'familie', 'huskeliste', 'gjoremal', 'domener', 'bursdager', 'kalender', 'media', 'kart', 'familiekalender', 'mediakveld'].indexOf(r) >= 0) key = 'mer';
+    if (mobile && ['chat', 'rom', 'nettverk', 'hjem', 'matplan', 'sporing', 'familie', 'huskeliste', 'gjoremal', 'domener', 'bursdager', 'kalender', 'media', 'kart', 'familiekalender', 'mediakveld', 'skjold'].indexOf(r) >= 0) key = 'mer';
     if (r === 'gjoremal') key = mobile ? 'mer' : 'huskeliste';
     Array.prototype.forEach.call(document.querySelectorAll('.pillnav [data-r], .bottomnav [data-r]'), function (a) {
       if (a.getAttribute('data-r') === key) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');

@@ -40,6 +40,8 @@ enum More44Rows {
             out.append(More28Row(id: "domener", name: "Domener", sub: domainSub(store), icon: "globe") { store.paperOpenDomains(from: "mer") })
         }
         out.append(More28Row(id: "studie", name: "Studie", sub: Study44.shared.merSub, icon: "graduationcap") { Study44.shared.show() })
+        // Prompt 76 (SKJIOS): Skjold Lab – sorteringssystem for deler (Skjold76*.swift).
+        out.append(More28Row(id: "skjold", name: "Skjold Lab", sub: Skjold76.shared.merSub, icon: "cabinet") { Skjold76.shared.show() })
         out.append(More28Row(id: "finans", name: "Finans", sub: "Oversikt, liste, Finn og mer", icon: "creditcard") { store.paperMainTab("finans") })
         out.append(More28Row(id: "abo", name: "Subscription OS", sub: subsSub(store), icon: "arrow.triangle.2.circlepath") { store.paperGo("abo") })
         if Bible37Model.shared.enabled {
@@ -61,6 +63,7 @@ enum More44Rows {
         if !BirthdayModel24.shared.loaded { await BirthdayModel24.shared.load(store) }
         if FamilyModel.shared.members.isEmpty { await FamilyModel.shared.load(store) }
         if Study44.shared.docs.isEmpty { await Study44.shared.load(store) }
+        if Skjold76.shared.cabinets.isEmpty { await Skjold76.shared.loadCabinets(store) }
     }
 
     /* ---------- Undertekster ---------- */

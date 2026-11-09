@@ -166,7 +166,7 @@ internal fun PgIn52(content: @Composable () -> Unit) {
 /** Antall fullskjermsider som ligger over innholdet (tilbake = tallet går ned). */
 internal fun overlays52(vm: AppViewModel): Int = listOf(
     vm.weatherOpen, vm.ruterOpen, vm.familyOpen, vm.tasksOpen, vm.bd24.open, vm.kal26.open, vm.chat27.open, vm.p43.mediaOpen,
-    vm.p46.kart.open, vm.p31.nordOpen, vm.p34.briefOpen, vm.p35.glimtOpen, vm.p34.aiOpen, vm.newsOpen,
+    vm.p46.kart.open, vm.p31.nordOpen, vm.p34.briefOpen, vm.p35.glimtOpen, vm.p34.aiOpen, vm.newsOpen, no.kristo.finanshub.Skjold76.open,
 ).count { it }
 
 /** Innholdet under: ny side (fanebytte) inn fra høyre; når en side lukkes, glir siden under inn 12 dp fra venstre (220 ms). */

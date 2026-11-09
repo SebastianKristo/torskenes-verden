@@ -123,6 +123,7 @@ internal fun PaperMore24(vm: AppViewModel, navBottom: Dp, barSpace: Dp) {
         if ("familie" !in inBar) row("kart", "Familie og kart", "Posisjon, soner og helse") { vm.openFamily() }
         // Prompt 46 (claude-code-kart-side.md): Mer → Kart (side-nøkkel tkart), fullskjerm som Media/Kalender.
         row("tkart", "Kart", "Holdeplasser, sanntid og soner") { vm.openKart46() }
+        row("skjold", "Skjold Lab", "Deler, skuffer og skap") { vm.openSkjold76() } // prompt 76
         if ("media" !in inBar) row("media", "Media", "Sonarr, Radarr, qBittorrent og Prowlarr") { vm.openMedia43() } // prompt 43
         if ("finans" !in inBar) row("finans", "Finans", "Oversikt, liste, Finn og mer") { vm.paperTab("fin") }
         row("abo", "Subscription OS", "Abonnementer og faste trekk") { vm.openSubFromMer38() }

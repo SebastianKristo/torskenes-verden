@@ -14,7 +14,7 @@ import { STEP47, fitParts47, estTokens47 } from './params47.js';
 import { contextBlock47 } from './context.js';
 
 // Prompt 62 (del 2): schedule_create|list|update|delete – planlagte oppgaver (server/sched62/tools.js).
-export const INTENTS47 = ['calendar_query', 'calendar_create', 'calendar_change', 'weather', 'finance_query', 'todo', 'web_search', 'media', 'memory_save', 'schedule_create', 'schedule_list', 'schedule_update', 'schedule_delete', 'chat', 'app'];
+export const INTENTS47 = ['calendar_query', 'calendar_create', 'calendar_change', 'weather', 'finance_query', 'todo', 'web_search', 'media', 'memory_save', 'schedule_create', 'schedule_list', 'schedule_update', 'schedule_delete', 'parts_find', 'chat', 'app'];
 /** Hvilke verktøy hver intent får utføre (verktøyutvalg per intent i utførelsen). */
 export const INTENT_TOOLS47 = {
   calendar_query: ['calendar.search', 'calendar.next', 'calendar.list'],
@@ -30,8 +30,9 @@ export const INTENT_TOOLS47 = {
   schedule_list: ['schedule.list'],
   schedule_update: ['schedule.update', 'schedule.delete'],
   schedule_delete: ['schedule.delete', 'schedule.update'],
+  parts_find: ['skjold.find'], // prompt 76: Skjold Lab
   chat: ['chat.answer'],
-  app: ['app.answer', 'nav.open'],
+  app: ['app.answer', 'nav.open', 'skjold.find'],
 };
 const INTENT_OF_TOOL47 = Object.fromEntries(Object.entries(INTENT_TOOLS47).flatMap(([i, ts]) => ts.map((t) => [t, i])));
 export const intentOfTool47 = (t) => INTENT_OF_TOOL47[t] ?? null;
@@ -61,6 +62,7 @@ const TOOL_LINES47 = {
   'schedule.list': '{} list the user\'s scheduled tasks ("faste oppgaver") and briefs.',
   'schedule.update': '{target, when, action:"move"|"pause"|"resume"} move or pause a scheduled task or a brief ("flytt morgenbriefen til 06:30"). when = raw words.',
   'schedule.delete': '{target} stop or delete a scheduled task or alert ("stopp strømprisvarselet").',
+  'skjold.find': '{query} where a physical part/component is stored in the user\'s sorting cabinet (Skjold Lab): cabinet, row, drawer and quantity ("hvor er M3-skruene?", "hvilken skuff har 10k-motstandene?"). query = the part in the user\'s words.',
   'nav.open': '{target} open a page in the app (only when asked to open/go to a page).',
   'app.answer': '{topic:"departures"|"packages"|"sun"|"family"|"trial"|"school"|"other"} public transport departures, package tracking, sunrise/daylight, where family members are, registering a free trial, school tests.',
   'chat.answer': '{} general knowledge, explanations or small talk that need no app data and no fresh facts.',
@@ -94,6 +96,8 @@ const FEWSHOTS47 = [
   ex('Hvilke faste oppgaver har jeg?', 'schedule_list', [{ tool: 'schedule.list', args: {} }]),
   ex('Flytt morgenbriefen til 06:30', 'schedule_update', [{ tool: 'schedule.update', args: { target: 'morgenbriefen', when: '06:30', action: 'move' } }]),
   ex('Stopp strømprisvarselet', 'schedule_delete', [{ tool: 'schedule.delete', args: { target: 'strømprisvarselet' } }]),
+  // Prompt 76: Skjold Lab – hvor en del ligger i sorteringsskapet.
+  ex('Hvor er M3-skruene?', 'parts_find', [{ tool: 'skjold.find', args: { query: 'M3-skruer' } }]),
 ];
 const buildSystem47 = () => `You are the planner for Glimt, a personal assistant in a Norwegian app. Turn the user's message into tool calls. You never answer the user yourself.
 Reply with ONLY JSON: {"intent": one of ${INTENTS47.join('|')}, "calls": [{"tool": "...", "args": {...}}], "needs_clarification": bool, "clarification_question": string or null}.

@@ -61,8 +61,8 @@ targets:
         INFOPLIST_KEY_UIUserInterfaceStyle: Dark
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: UIInterfaceOrientationPortrait
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
-        INFOPLIST_KEY_NSCameraUsageDescription: "Kameraet brukes til å ta bilde av kvitteringer og skanne QR-koder for å logge inn på en ny enhet."
-        INFOPLIST_KEY_NSPhotoLibraryUsageDescription: "Velg kvitteringsbilder fra biblioteket."
+        INFOPLIST_KEY_NSCameraUsageDescription: "Kameraet brukes til å ta bilde av kvitteringer, deler og sorteringsskap i Skjold Lab, og til å skanne QR-koder for å logge inn på en ny enhet."
+        INFOPLIST_KEY_NSPhotoLibraryUsageDescription: "Velg bilder av kvitteringer, deler og sorteringsskap fra biblioteket."
         INFOPLIST_KEY_NSFaceIDUsageDescription: "Face ID brukes til å låse opp Homelab."
         INFOPLIST_KEY_NSLocalNetworkUsageDescription: "Homelab kobler til homelab-serveren din på lokalt nett."
         INFOPLIST_KEY_NSLocationWhenInUseUsageDescription: "Posisjonen din deles med familien i Familie og kart når du har slått på deling."

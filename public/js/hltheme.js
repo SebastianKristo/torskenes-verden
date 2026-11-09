@@ -181,6 +181,7 @@ const HEAD = {
   mer: () => ['Alle sider', 'Mer'],
   familiekalender: () => ['Hvem kjører? · henting og bringing', 'Familiekalender'], // prompt 51 (MEDFAM51)
   mediakveld: () => ['Eget bibliotek · hvem er hjemme', 'I kveld'], // prompt 51 (MEDFAM51)
+  skjold: () => ['Deler · skuffer · skap', 'Skjold Lab'], // prompt 76 (SKJWEB)
 };
 
 /** Det lave fotovinduet øverst på alle sider unntatt Dashboard. */

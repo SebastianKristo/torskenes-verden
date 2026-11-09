@@ -705,6 +705,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             "familie", "family" -> familyLink50(uri) // prompt 50: …/sjekk?id=&act=call, /steder, /helse
             // Prompt 46: Kart (finanshub://kart[/<soneId>][?live=1]) – f.eks. fra Glimt «vis bussene rundt hjemme».
             "kart", "map" -> kartLink46(uri)
+            // Prompt 76: Skjold Lab (finanshub://skjold[/del/<id>|/skap/<id>/4-2][?q=…]) – Glimt, felles søk og etikett-QR.
+            "skjold", "deler" -> skjoldLink76(uri)
             // Prompt 40: Hjemlys (varselet «Ja, start», Hjem-widgeten «Start for meg»): finanshub://hjemlys[/start?eta=…|/home]
             "hjemlys" -> hjemlysLink40(uri)
             "finn" -> go(Screen.Finn)

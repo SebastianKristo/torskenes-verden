@@ -231,6 +231,9 @@ enum Feat51Links {
             FamCal51.shared.show(task: sub.isEmpty ? nil : sub)
         case "ikveld", "mediakveld", "kveld":
             Kveld51.shared.show(sub.isEmpty ? nil : sub)
+        case "skjold", "skjoldlab", "deler":
+            // Prompt 76 (SKJIOS): finanshub://skjold[/del/<id> | /skap/<id>/4-2] åpner Skjold Lab (Skjold76.link).
+            Skjold76.shared.link(url)
         case "sok", "search", "sok51":
             let q: String = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.first(where: { $0.name == "q" })?.value ?? ""
             Search51.shared.show(q)
@@ -255,6 +258,7 @@ enum Feat51Links {
         case "place", "person": store.paperGo("familie")
         case "package": store.paperGo("sporing")
         case "study": Study44.shared.show()
+        case "part", "skjold", "deler": Skjold76.shared.show(part: ref.isEmpty ? nil : ref)
         case "chat": Notify31.open(go: "chat", chatId: ref, store)
         case "birthday": store.paperGo("bursdag")
         default: page(key(r), store)
@@ -286,6 +290,7 @@ enum Feat51Links {
         case "sporing": store.paperGo("sporing")
         case "chat": store.paperGo("chat")
         case "studie": Study44.shared.show()
+        case "skjold", "skjoldlab": Skjold76.shared.show()
         case "bursdager": store.paperGo("bursdag")
         case "matplan": store.paperGo("mat")
         case "kart": Kart46.shared.show(store)

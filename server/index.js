@@ -49,6 +49,7 @@ import { agentApi45 } from './glimt45/api.js'; // prompt 45: Glimt-motoren
 import { entitiesApi60 } from './convo60/api.js'; // prompt 60 (prompt 49 del 3): entitetsregisteret
 import { recipesApi61 } from './recipes61/api.js'; // prompt 61 (prompt 49 del 1): Glimt lærer (oppskrifter)
 import { schedulesApi62 } from './sched62/api.js'; // prompt 62 (prompt 49 del 2): planlagte oppgaver («Faste oppgaver»)
+import { skjoldApi76 } from './skjold76/api.js'; // prompt 76 (SKJSRV): Skjold Lab – sorteringsskapet (deler, skuffer, bilder, søk)
 import { startScheduler62 } from './sched62/scheduler.js'; // prompt 62: scheduler (tikk hvert minutt, ikke i test)
 import { memoryApi63 } from './mem63/api.js'; // prompt 63 (prompt 49 del 5): minnet holder seg ryddig (forslag, motstrid, ubrukte fakta)
 import { startMem63 } from './mem63/nightly.js'; // prompt 63: systemoppgaven kl. 03 og morgenvarselet (ikke i test)
@@ -876,6 +877,7 @@ app.route('/api/glimt/agent', agentApi45); // prompt 45: Glimt-motoren (én inng
 app.route('/api/glimt/entities', entitiesApi60); // prompt 60: entitetsregisteret (per bruker)
 app.route('/api/glimt/recipes', recipesApi61); // prompt 61: oppskrifter som lærer av bruk (per bruker)
 app.route('/api/glimt/schedules', schedulesApi62); // prompt 62: planlagte oppgaver (per bruker)
+app.route('/api/skjold', skjoldApi76); // prompt 76 (SKJSRV): Skjold Lab (per bruker, sesjon eller app-token)
 startScheduler62();
 startMem63();
 startQuality64();

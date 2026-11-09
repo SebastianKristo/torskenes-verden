@@ -43,8 +43,10 @@ import { initWeb45, after45 } from './web45.js'; // prompt 45
 import { initWeb46, after46, renderKart46 } from './web46.js'; // prompt 46: Kart, nyheter, bakgrunn m.m.
 import { renderFam51, renderMedia51, afterMedfam51 } from './medfam51.js'; // prompt 51 (MEDFAM51): Familiekalender og «I kveld»
 import { initWeb52, after52 } from './web52.js'; // prompt 52 (WEB52H): oppstart, sideanimasjon, Ruter-buffer m.m.
+// Prompt 76 (SKJWEB): Skjold Lab (#/skjold) – skallet tegnes her, selve modulen (skjold76.js) lastes ved behov.
+const renderSkjold76 = () => '<section class="sk76" id="sk76" aria-label="Skjold Lab" aria-busy="true"></section>';
 
-const ROUTES = { dash: dash.render, studie: study44.render, rom: space.render, hjem: home.render, matplan: mat.render, sporing: tracking.render, familie: family.render, huskeliste: tasks.render, gjoremal: tasks.render, vaer: weatherPage.render, bursdager: birthdays.render, kalender: kalender.render, chat: chat.render, media: media43.render, kart: renderKart46, familiekalender: renderFam51, mediakveld: renderMedia51, domener: domains.render, nettverk: net.render, mer: net.renderMore };
+const ROUTES = { dash: dash.render, studie: study44.render, rom: space.render, hjem: home.render, matplan: mat.render, sporing: tracking.render, familie: family.render, huskeliste: tasks.render, gjoremal: tasks.render, vaer: weatherPage.render, bursdager: birthdays.render, kalender: kalender.render, chat: chat.render, media: media43.render, kart: renderKart46, familiekalender: renderFam51, mediakveld: renderMedia51, skjold: renderSkjold76, domener: domains.render, nettverk: net.render, mer: net.renderMore };
 const view = document.getElementById('view');
 const KAL_APP = !!document.documentElement.dataset.kalApp;
 const scrollMem = scrollMemory();
@@ -89,8 +91,9 @@ function renderRoute() {
   after46(route, view); // prompt 46
   afterMedfam51(route, view); // prompt 51 (MEDFAM51)
   after52(route, view); // prompt 52 (WEB52H)
+  if (route === 'skjold') import('./skjold76.js').then((m) => m.mount(view)).catch((e) => console.warn('skjold76', e)); // prompt 76
   // Rom er en underside av «Mer» på mobil.
-  const navKey = isMobile() && ['chat', 'rom', 'nettverk', 'hjem', 'matplan', 'sporing', 'familie', 'huskeliste', 'gjoremal', 'domener', 'bursdager', 'kalender', 'media', 'kart', 'familiekalender', 'mediakveld'].includes(route) ? 'mer' : route;
+  const navKey = isMobile() && ['chat', 'rom', 'nettverk', 'hjem', 'matplan', 'sporing', 'familie', 'huskeliste', 'gjoremal', 'domener', 'bursdager', 'kalender', 'media', 'kart', 'familiekalender', 'mediakveld', 'skjold'].includes(route) ? 'mer' : route;
   document.querySelectorAll('[data-r]').forEach((a) => { if (a.dataset.r === navKey) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
   setTitle();
   // Prompt 23: tilbake gir samme scrollposisjon som før, nye sider åpner øverst.
@@ -98,7 +101,7 @@ function renderRoute() {
 }
 
 // Fanetittelen: «Side · Appnavn» (appnavnet fra Innstillinger → App, standard «Homelab»).
-const TITLES = { chat: 'Chat', vaer: 'Vær', studie: 'Studie', rom: 'Rom', hjem: 'Hjem', matplan: 'Mat', sporing: 'Sporing', familie: 'Familie', huskeliste: 'Gjøremål', gjoremal: 'Gjøremål', bursdager: 'Bursdager', kalender: 'Kalender', media: 'Media', kart: 'Kart', familiekalender: 'Familiekalender', mediakveld: 'I kveld', domener: 'Domener', nettverk: 'Nettverk', mer: 'Mer' };
+const TITLES = { chat: 'Chat', vaer: 'Vær', studie: 'Studie', rom: 'Rom', hjem: 'Hjem', matplan: 'Mat', sporing: 'Sporing', familie: 'Familie', huskeliste: 'Gjøremål', gjoremal: 'Gjøremål', bursdager: 'Bursdager', kalender: 'Kalender', media: 'Media', kart: 'Kart', familiekalender: 'Familiekalender', mediakveld: 'I kveld', skjold: 'Skjold Lab', domener: 'Domener', nettverk: 'Nettverk', mer: 'Mer' };
 function setTitle() { document.title = KAL_APP ? 'Kalender' : TITLES[route] ? `${TITLES[route]} · ${appName()}` : appName(); }
 
 // Nyhetsbaren ligger under topplinjen, men i Vindu og papir under søkefeltet på papiret.
@@ -160,7 +163,7 @@ function bindShell() {
   });
   // Innstillinger legger #/innstillinger/<fane> i adressen (og fjerner den igjen) uten at siden under skal tegnes på nytt.
   // Prompt 44: Media styrer sin egen adresse (#/media/sonarr/s/12 …, frem/tilbake), så siden tegnes ikke på nytt for den.
-  window.addEventListener('hashchange', () => { if (!settingsOwnsHash() && !(route === 'media' && current() === 'media' && media43.ownsHash?.()) && !(route === 'familie' && current() === 'familie' && family.ownsHash?.())) renderRoute(); });
+  window.addEventListener('hashchange', () => { if (!settingsOwnsHash() && !(route === 'media' && current() === 'media' && media43.ownsHash?.()) && !(route === 'familie' && current() === 'familie' && family.ownsHash?.()) && !(route === 'skjold' && current() === 'skjold')) renderRoute(); }); // prompt 76: Skjold Lab styrer sine egne undersider
   document.addEventListener('hl:theme', () => { route = null; renderRoute(); weatherPill(); });
   // Nytt språk: tegn visningen på nytt (tekster fra t() og Intl-datoer).
   document.addEventListener('hl:lang', () => { route = null; renderRoute(); weatherPill(); langLabel(); renderTicker(); });

@@ -349,6 +349,8 @@ struct PaperShell: View {
         .hosts44(p)
         // Prompt 51 (IOSFEAT51): Planlegging, Familiekalender, «I kveld», felles søk, onboarding og tema (Feat51Kit.swift).
         .feat51Host(p)
+        // Prompt 76 (SKJIOS): Skjold Lab – deler, skuffer og skap i fullskjerm (Skjold76*.swift).
+        .skjold76Host(p)
         // Prompt 52 (IOS52B): Ruter-avgangene forhåndshentes for alle stopp og bufres i App Group (Ruter52.swift).
         .ruter52Prefetch(store)
         .task(id: store.account?.id) {

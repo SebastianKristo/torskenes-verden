@@ -38,6 +38,7 @@ import { settings as fhSettings } from './finans/db.js';
 import { gateEmbed } from './ai-gate.js';
 import { sunTime } from './weather.js';
 import { savedDocs73, savedSig73 } from './news73.js'; // prompt 73 (NEWS73): lagrede artikler i felles søk
+import { partDocs76, partSig76, partResult76 } from './skjold76/glimt.js'; // prompt 76 (SKJSRV): Skjold Lab-deler i felles søk
 
 const q = (sql) => db.prepare(sql);
 const MIN = 60_000, HOUR = 3_600_000, DAY = 86_400_000;
@@ -80,9 +81,10 @@ export const TYPES51 = {
   event: ['Familiekalender', 'calendar'], receipt: ['Kvitteringer', 'receipt'], line: ['Varelinjer', 'receipt'], transaction: ['Transaksjoner', 'card'],
   place: ['Steder', 'pin'], person: ['Folk', 'person'], package: ['Pakker', 'box'], study: ['Studie', 'book'], chat: ['Chat', 'chat'], birthday: ['Bursdager', 'cake'],
   article: ['Lagrede artikler', 'book'], // prompt 73
+  part: ['Deler', 'tool'], // prompt 76: Skjold Lab
 };
 // Vekt per type (rekkefølgen når treffene er like gode): handlinger og ting du jobber med først, historikk sist.
-const WEIGHT = { action: 0.9, page: 0.85, task: 1, shopping: 1, list: 0.9, event: 0.95, person: 0.95, place: 0.9, package: 0.9, receipt: 0.85, transaction: 0.8, line: 0.75, study: 0.8, chat: 0.75, birthday: 0.85, article: 0.8 };
+const WEIGHT = { action: 0.9, page: 0.85, task: 1, shopping: 1, list: 0.9, event: 0.95, person: 0.95, place: 0.9, package: 0.9, receipt: 0.85, transaction: 0.8, line: 0.75, study: 0.8, chat: 0.75, birthday: 0.85, article: 0.8, part: 0.9 };
 const SHOP_RE = /^(handel|handleliste|handlelista|handle|innkjøp|dagligvarer)\b/i;
 const appLink = (type, id) => `papir://open?type=${encodeURIComponent(type)}&id=${encodeURIComponent(String(id))}`;
 
@@ -147,7 +149,7 @@ function birthdayDocs(u) {
 function articleDocs(u) {
   return savedDocs73(u).map((a) => ({ type: 'article', ref: a.id, title: a.title, body: a.body, meta: { source: a.source, status: a.status, savedAt: a.savedAt } }));
 }
-const SOURCES = [tasksDocs, (u) => famcalDocs(u), placeDocs, personDocs, packageDocs, studyDocs, chatDocs, birthdayDocs, articleDocs];
+const SOURCES = [tasksDocs, (u) => famcalDocs(u), placeDocs, personDocs, packageDocs, studyDocs, chatDocs, birthdayDocs, articleDocs, partDocs76]; // prompt 76: partDocs76
 
 const sigQ = (sql, ...a) => { try { return q(sql).pluck().get(...a) ?? ''; } catch { return ''; } };
 function signature(u) {
@@ -162,6 +164,7 @@ function signature(u) {
     sigQ("SELECT count(*)||':'||ifnull(max(updated),0) FROM hl_chats WHERE user_id=?", u),
     sigQ("SELECT count(*)||':'||ifnull(max(updated),0) FROM birthdays WHERE user_id=?", u),
     (() => { try { return savedSig73(u); } catch { return ''; } })(), // prompt 73
+    (() => { try { return partSig76(u); } catch { return ''; } })(), // prompt 76
   ].join('|');
 }
 const built = new Map(); // bruker → {sig, at}
@@ -337,6 +340,7 @@ function resultOf(h, u, qtext) {
       return { ...base, id: `${h.type}:${ref}`, title, subtitle: sub, date: r.date ?? null, amount: r.amount ?? null, amountText: kr(r.amount),
         link: { web, app: appLink(isTx ? 'transaction' : 'receipt', isTx ? r.tx_id : rcId), route: isTx ? 'tx' : 'kv', ref: isTx ? String(r.tx_id) : rcId }, actions: [open(isTx ? 'Åpne transaksjonen' : 'Åpne kvitteringen')] };
     }
+    case 'part': return partResult76(base, h); // prompt 76: Skjold Lab
     default: return { ...base, link: { web: '/', app: appLink(h.type, h.ref), route: null, ref: h.ref }, actions: [open()] };
   }
 }
@@ -349,7 +353,7 @@ const PAGES51 = [
   ['sjekk', 'Sjekk inn', 'innsjekk hent meg trygg fremme', '/#/familie/sjekk'], ['media', 'Media', 'film serier plex jellyfin', '/#/media'], ['mediakveld', 'Hva skal vi se i kveld?', 'film kveld anbefaling', '/#/mediakveld'],
   ['vaer', 'Vær', 'yr regn temperatur', '/#/vaer'], ['sporing', 'Sporing', 'pakker post bring', '/#/sporing'], ['chat', 'Chat', 'glimt ai samtale', '/#/chat'],
   ['studie', 'Studie', 'karakterer vitnemål', '/#/studie'], ['bursdager', 'Bursdager', 'fødselsdag gratulerer', '/#/bursdager'], ['matplan', 'Matplan', 'middag oppskrifter', '/#/matplan'],
-  ['kart', 'Kart', 'steder', '/#/kart'], ['finans', 'Finans', 'penger budsjett økonomi', '/finans/'], ['kvitteringer', 'Kvitteringer', 'kvittering skann', '/finans/#/kv'],
+  ['kart', 'Kart', 'steder', '/#/kart'], ['skjold', 'Skjold Lab', 'deler sorteringsskap skuffer komponenter', '/#/skjold'], ['finans', 'Finans', 'penger budsjett økonomi', '/finans/'], ['kvitteringer', 'Kvitteringer', 'kvittering skann', '/finans/#/kv'],
   ['planlegging', 'Planlegging', 'sparemål faste utgifter skatt abonnement', '/finans/plan51'], ['innstillinger', 'Innstillinger', 'konto oppsett', '/#/innstillinger/konto'],
   ['utseende', 'Utseende og tema', 'tema mørk lys modus farger', '/#/innstillinger/look'], ['sikkerhet', 'Sikkerhet', 'passkey enheter passord', '/#/innstillinger/sikkerhet'],
 ];

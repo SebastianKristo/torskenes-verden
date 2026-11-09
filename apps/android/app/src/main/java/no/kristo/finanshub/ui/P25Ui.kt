@@ -55,6 +55,7 @@ private val MER_PATHS25: Map<String, String> = mapOf(
     "hjem" to P25_HOUSE,
     // Prompt 46: Kart (holdeplasser, sanntid og soner) og «Logg inn på annen enhet» (QR).
     "tkart" to "M9 4L3 6v14l6-2 6 2 6-2V4l-6 2-6-2zM9 4v14M15 6v14",
+    "skjold" to "M4 3h16v18H4zM4 9h16M4 15h16M12 3v18M7 6h2M15 6h2M7 12h2M15 12h2M7 18h2M15 18h2", // prompt 76: Skjold Lab (skuffeskap)
     "qrlogin" to "M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h2v2h-2zM18 14h2M14 18h2M18 18h2v2M17 17h.01",
     "brief" to "M12 3l1.9 5.6L19.5 10l-5.6 1.9L12 17.5l-1.9-5.6L4.5 10l5.6-1.4zM19 3v3M20.5 4.5h-3", // prompt 36: ✦ Now Brief
     "domener" to "M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18",

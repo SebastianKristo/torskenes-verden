@@ -217,6 +217,7 @@ private val NAV32B: List<Triple<Regex, String, String>> = listOf(
     Triple(Regex("finans|økonomi|saldo|konto"), "finans", "Finans"),
     Triple(Regex("abonnement|prøveperiode"), "abo", "Abonnement"),
     Triple(Regex("domene"), "domener", "Domener"),
+    Triple(Regex("skjold|sorteringsskap|skuffeskap"), "skjold", "Skjold Lab"), // prompt 76
     Triple(Regex("familie|posisjon|hvor er"), "kart", "Familie"),
     Triple(Regex("middag|matplan|oppskrift|\\bmat\\b"), "mat", "Mat"),
     Triple(Regex("gjøremål|to-do|todo|huskeliste|handleliste"), "huske", "Gjøremål"),
@@ -250,6 +251,7 @@ fun AppViewModel.openShortcut32b(page: String) {
         "domener" -> deepLink(Uri.parse("finanshub://domains"))
         "kart" -> openFamily()
         "tkart" -> openKart46() // prompt 46: Kart (holdeplasser, sanntid og soner)
+        "skjold" -> openSkjold76() // prompt 76: Skjold Lab
         "mat" -> deepLink(Uri.parse("finanshub://mat"))
         "huske" -> openTasks()
         "bursdag" -> deepLink(Uri.parse("finanshub://bursdager"))
@@ -268,7 +270,8 @@ fun AppViewModel.askHome32b(q: String) {
     logSearch32b(t, "glimt")
     // Prompt 37: «hvor er Ingrid» svarer med posisjonen (før snarveien «hvor er → Familie»).
     if (askWhere37(t)) return
-    navShortcut32b(t)?.let { (label, page) ->
+    // Prompt 76: «hvor er M3-skruene?» er en del i Skjold Lab → Glimt (skjold.find), ikke Familie.
+    navShortcut32b(t)?.takeIf { it.second != "kart" || !skjoldKnows76(t) }?.let { (label, page) ->
         val seq = ++s.ansSeq
         s.ans = HomeAns31(t, busy = false, text = "Åpner **$label**.", source = "Snarvei")
         Haptics.tap()
@@ -307,6 +310,7 @@ fun AppViewModel.askHome32b(q: String) {
             p31.toastMsg = "✓ " + plain31(r.text).lineSequence().firstOrNull().orEmpty().take(80); p31.toastSeq++
         } else s.ans = HomeAns31(t, false, r.text, r.source, r.jobId, r.apply?.optInt("memoryId", 0) ?: 0, r.apply?.optInt("count", 0) ?: 0, r.apply?.optStr("title") ?: "",
             wxGeo = geoOfOpen35(r.open) ?: r.open?.takeIf { it.optString("route") == "vaer" }?.let { mobileHome?.weather?.let { w -> if (w.lat != null && w.lon != null) "geo:${w.lat},${w.lon},${w.place}" else null } })
+        glimtAnswered76(t, r.open, r.card, r.tool, r.intent, r.results) // prompt 76: «Åpne i Skjold Lab ›»
         if (r.intent.startsWith("trial")) loadTrials31()
         if (r.intent.startsWith("appointment") || r.intent.startsWith("calendar.create")) reloadKal27()
         answered31(r, t, "hjem", null)

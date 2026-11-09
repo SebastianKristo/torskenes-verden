@@ -432,6 +432,8 @@ internal fun HomeAnswer31(vm: AppViewModel) {
             if (a.err) AiErrActions34(vm, Color.White, Color.White.copy(alpha = .14f)) { vm.retryHome34() }
             // Prompt 35: «været i New York» → trykk åpner Vær for stedet.
             a.wxGeo?.let { geo -> WxOpen35(geo) { vm.openWeatherGeo35(geo) } }
+            // Prompt 76: «hvor er M3-skruene?» → Åpne i Skjold Lab ›.
+            no.kristo.finanshub.glimtSkj76?.takeIf { it.first == a.q }?.let { (_, u) -> GlimtSkjold76(vm, u) }
             // Prompt 37: «hvor er Ingrid» → Vis på kart ›.
             a.famPerson37?.let { who -> WhereOpen37(vm, who) }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {

@@ -18,12 +18,12 @@ import { ruterColorA11y } from './dash.js'; // linjemerket med minst 4,5:1 kontr
 const T = { // id → [navn, bredde ('h' halv | 'f' full), høy]
   p_school: ['I dag på skolen', 'f'], d_cal: ['Skolekalender', 'f'],
   w52av: ['Avgang', 'h', 1], w52fin: ['Finans', 'h'], w52mat: ['Middag', 'h'], w52fam: ['Familie', 'h'], w52dom: ['Domener', 'h'],
-  w52news: ['Siste nytt', 'f'], w52kal: ['Kalender', 'h'], w52bd: ['Bursdag', 'h'], w52bol: ['Bolig', 'h'], w52pr: ['Prøve', 'h'], w52hus: ['Huskeliste', 'h'],
+  w52news: ['Siste nytt', 'f'], w52kal: ['Kalender', 'h'], w52bd: ['Bursdag', 'h'], w52bol: ['Bolig', 'h'], w52pr: ['Prøve', 'h'], w52hus: ['Huskeliste', 'h'], w52skj: ['Skjold Lab', 'h'], // prompt 76 (SKJWEB)
   d_media: ['Media', 'f'], p_play: ['Spilles nå', 'f'], p_wx: ['Vær', 'f'], p_energy: ['Energi', 'f'], p_pk: ['Pakker', 'f'],
   p_money: ['Penger', 'f'], p_links: ['Snarveier', 'f'], d_upcoming: ['Kommer ut', 'f'], d_media_hist: ['Mediehistorikk', 'f'],
 };
 export const TILES52 = ['w52av', 'w52fin', 'w52mat', 'w52fam', 'w52dom'];
-const DEF_ORDER = ['p_school', 'd_cal', ...TILES52, 'w52news', 'w52kal', 'w52bd', 'w52bol', 'w52pr', 'w52hus', 'd_media', 'p_play', 'p_wx', 'p_energy', 'p_pk', 'p_money', 'p_links', 'd_upcoming', 'd_media_hist'];
+const DEF_ORDER = ['p_school', 'd_cal', ...TILES52, 'w52news', 'w52kal', 'w52bd', 'w52bol', 'w52pr', 'w52hus', 'w52skj', 'd_media', 'p_play', 'p_wx', 'p_energy', 'p_pk', 'p_money', 'p_links', 'd_upcoming', 'd_media_hist'];
 // Widgets som var skjult i profilen fra før → tilsvarende kort skjult.
 const OLD_HID = { d_cal: ['d_cal'], w52kal: ['d_kal'], w52bd: ['d_bday'], w52fam: ['d_pos'], p_energy: ['d_energy'], p_links: ['d_links'], d_media: ['d_media'], d_upcoming: ['d_upcoming'], d_media_hist: ['d_media_hist'], p_money: ['d_trading', 'd_eco'] };
 const LS = 'hl_home52';
@@ -87,6 +87,8 @@ export function loadHome52(redraw) {
     json('/finans/api/subscriptions/trials').then((d) => { H.data.tr = d?.items ?? null; }),
     allowed('w52dom') ? json('/domains/api/domains').then((d) => { H.data.dom = Array.isArray(d) ? d : d?.items ?? null; }) : null,
     json('/api/tasks').then((d) => { H.data.tasks = d; }),
+    json('/api/skjold/cabinets').then((d) => { H.data.skj = Array.isArray(d) ? d : d?.items ?? null; }), // prompt 76
+    json('/api/skjold/parts?low=1&limit=1').then((d) => { H.data.skjLow = d?.total ?? null; }),
   ]).finally(() => { H.loading = false; H.at = Date.now(); redraw?.(); });
 }
 export function store52Meta() {
@@ -154,7 +156,11 @@ function huske() {
   const L = t?.items ?? [];
   return tile('w52hus', 't52-fam', '#/gjoremal', `${lab('HUSKELISTE', ' fam')}${t ? `<span class="t52-mn"><b>${esc(t.count ?? L.length)}</b><span class="fam">åpne</span></span>${L.slice(0, 2).map((x) => `<span class="t52-hl${x.overdue ? ' over' : ''}">${esc(x.title)}</span>`).join('')}` : `<b class="t52-mid">Henter …</b>`}`);
 }
-const RENDER = { w52av: avgang, w52fin: finans, w52mat: middag, w52fam: familie, w52dom: domener, w52news: news, w52kal: kalender, w52bd: bursdag, w52bol: bolig, w52pr: prove, w52hus: huske };
+function skjold() { // prompt 76 (SKJWEB): Skjold Lab – antall deler og lavt lager
+  const L = H.data.skj, n = L ? L.reduce((a, c) => a + (+c.counts?.parts || 0), 0) : null, low = H.data.skjLow;
+  return tile('w52skj', 't52-card', '#/skjold', `${lab('SKJOLD LAB')}<b class="t52-v">${n ?? '–'}</b><span class="t52-s${low ? '' : ' ok'}">${L ? (low ? `● ${low} lavt lager` : `● ${n === 1 ? '1 del' : `${n} deler`} · ${L.length} skap`) : (H.at ? 'Søk etter deler' : 'Henter …')}</span>`);
+}
+const RENDER = { w52skj: skjold, w52av: avgang, w52fin: finans, w52mat: middag, w52fam: familie, w52dom: domener, w52news: news, w52kal: kalender, w52bd: bursdag, w52bol: bolig, w52pr: prove, w52hus: huske };
 
 /* Prompt 70 (claude-code-widget-storrelse-mobil.md): størrelse per kort i redigering – håndtaket ↔ nede til høyre.
    Halv → full: dra mer enn 40 px (uansett retning). Full → halv: dra mer enn 40 px mot venstre. Trykk bytter.

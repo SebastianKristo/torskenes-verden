@@ -426,6 +426,7 @@ private fun PaperApp45(
             if (vm.chat27.open) PgIn52 { ChatScreen27(vm) }
             if (vm.p43.mediaOpen) PgIn52 { MediaScreen43(vm) } // Prompt 43: Media (ui/Media43.kt)
             if (vm.p46.kart.open) PgIn52 { KartPage46(vm) } // Prompt 46: Kart (ui/Kart46Ui.kt)
+            if (Skjold76.open) PgIn52 { SkjoldPage76(vm) } // Prompt 76: Skjold Lab (ui/Skjold76Ui.kt)
             if (vm.p46.gpSheet) GphotoSheet46(vm) // Prompt 46: Google Photos-album som bakgrunn (ui/Ui46b.kt)
             if (vm.p43.galleryOpen) WidgetGallery43(vm) // Prompt 43: Widgets-galleri (ui/WidgetGallery43.kt)
             if (vm.compareOpen) CompareScreen(vm)

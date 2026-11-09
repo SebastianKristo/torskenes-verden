@@ -222,6 +222,7 @@ private fun open51r(vm: AppViewModel, r: JSONObject, a: JSONObject?) {
         "package" -> dl("finanshub://tracking")
         "chat" -> dl("finanshub://chat/$ref")
         "birthday" -> dl("finanshub://bursdager")
+        "part", "skjold", "deler" -> dl("finanshub://skjold/del/$ref") // prompt 76: typen «Deler» i felles søk
         "bolig" -> dl("finanshub://boliger")
         "study" -> vm.openStudy44()
         else -> link.s43("web")?.let { w -> openLink(vm.appCtx51, if (w.startsWith("/")) vm.base.trimEnd('/') + w else w) }
@@ -249,6 +250,7 @@ private fun openKey51(vm: AppViewModel, key: String): Boolean {
         "bursdager" -> dl("finanshub://bursdager")
         "matplan" -> dl("finanshub://mat")
         "kart" -> dl("finanshub://kart")
+        "skjold" -> vm.openSkjold76() // prompt 76
         "finans" -> dl("finanshub://finance")
         "kvitteringer" -> dl("finanshub://review")
         "scan" -> dl("finanshub://scan/camera")
