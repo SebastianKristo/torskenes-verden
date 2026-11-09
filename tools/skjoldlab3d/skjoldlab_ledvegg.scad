@@ -722,8 +722,10 @@ module lv_modul(k, n, bunn, topp, vs, hs, rf = [], mg = []) {
                 // Frontlist (gulvet foran). I nederste rad i en modul griper ribbene ned i kanalen i modulen under og låser fronten.
                 translate([0, 0, z0 + hylle_t - list_t]) cube([W, fl_d, list_t]);
                 if (!(bunn && r == 0)) langs_x(W) for (ya = [0, spor_bak]) ribbe_ned2d(ya, z0 + hylle_t - list_t);
-                // Bakstopp (tynn tverrstang)
-                translate([vegg_t - e, ys, z0 + hylle_t - flens_t]) cube([W - 2 * vegg_t + 2 * e, flens_t, flens_t + bakstopp_h]);
+                // Bakstopp: kile med loddrett stoppflate foran og skrå bakside helt ned til ryggen (57°),
+                // så den står på printplata i stedet for å være en bro mellom skinnene
+                translate([vegg_t - e, 0, 0]) langs_x(W - 2 * vegg_t + 2 * e)
+                    polygon([[ys, z0 + hylle_t - flens_t], [ys, z0 + hylle_t + bakstopp_h], [D, z0 + hylle_t - flens_t]]);
                 // Tak over skuffåpningen foran, stoppkant (45° foran og bak) og ribber for masken
                 translate([0, 0, zc]) cube([W, td, tak_t]);
                 langs_x(W) {
@@ -737,9 +739,10 @@ module lv_modul(k, n, bunn, topp, vs, hs, rf = [], mg = []) {
                 // Skråstag 45° foran mellom kolonnene, fra T-skinna opp til bakkanten av taket
                 if (k > 1) for (c = [1 : k - 1]) if (!har(mgx[r], c)) translate([c * P - stolpe_t / 2, 0, 0]) langs_x(stolpe_t)
                     polygon([[td - 1, zt], [td + 2, zt], [td + 2 + Ls, zr - e], [td - 1 + Ls, zr - e]]);
-                // Over en dobbel skuff: finne oppå taket, helt bak til ryggen (står på printplata og bærer taket i printen)
+                // Over en dobbel skuff: finne fra undersiden av taket og opp, helt bak til ryggen. Den står på printplata
+                // og bærer takkanten midt på (ellers en bro på 100 mm). Skuffen med leppe går 1 mm under.
                 zf = sist ? zT : z0 + f * Pr + hylle_t - flens_t + e;
-                for (c = mgx[r]) translate([c * P - stolpe_t / 2, td - 1, zt - e]) cube([stolpe_t, D - td + 1, zf - zt + e]);
+                for (c = mgx[r]) translate([c * P - stolpe_t / 2, td - 1, zc]) cube([stolpe_t, D - td + 1, zf - zc]);
             }
             // Lokk på øverste modul: frontlist med ribber ned (bæres av skråstaget i printen)
             if (topp) {

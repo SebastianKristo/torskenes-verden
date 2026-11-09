@@ -196,7 +196,11 @@ Nå er rammen bygd slik:
 - Vinduene i siderammene har 45° spiss foran, der taket på vinduet havner i printen.
 - LED-veggen i øverste rad bæres av et 45° skråstag bak.
 - Liggende hull er dråpeformede.
-- Det eneste som bygges som bro, er korte spenn mellom skinner og skråstag: taket og frontlista spenner maks ca. 48 mm, og bakstoppen ca. 38 mm.
+- Bakstoppen er en kile med skrå bakside helt ned til ryggen, så den står på platen.
+- Over doble skuffer bærer en finne takkanten midt på, så spennet ikke blir lengre enn ca. 48 mm.
+- Det eneste som bygges som bro, er korte spenn: LED-veggen spenner 12,6 mm mellom taket og frontlista, og taket og frontlista spenner maks ca. 48 mm mellom skinner og skråstag.
+
+**Slicer (Creality Print, Orca, Bambu Studio):** modulene skal printes **uten support**. Slå av «Enable support», eller la support stå på og slå på «Don't support bridges» (Ikke støtt broer). Med automatisk tre-support og broer som støttes, legger sliceren ca. 80 g support i hver modul under LED-veggene. Det trengs ikke; K2 bygger 12–50 mm broer fint. Skuffene har ingen overheng.
 
 ### Skuffavstanden er låst til LED-ene
 
