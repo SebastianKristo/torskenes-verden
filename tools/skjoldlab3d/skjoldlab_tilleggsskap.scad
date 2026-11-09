@@ -4,15 +4,16 @@
 // Parametrisk OpenSCAD-modell som fyller hylla rundt hovedskapet
 // (Raaco 150-01-typen, 12 rader x 5 kolonner, ca. 300 x 150 x 552 mm).
 //
-// Tolkning (2026-11-09): Raaco-skapet står nederst i en hylle på ca.
-// 570 mm bredde x 700 mm høyde x 300 mm dybde, med fronten fremst.
+// Tolkning (2026-11-09): Raaco-skapet står nederst i en hylle på
+// 560 mm bredde x 760 mm høyde x 320 mm dybde (målt, prompt 78; før:
+// 570 x 700 x 300), med fronten fremst.
 // Ledig plass som fylles:
-//   (a) SIDETÅRN ved siden av Raaco: (hylle_bredde – raaco_bredde) ≈ 270 mm
+//   (a) SIDETÅRN ved siden av Raaco: (hylle_bredde – raaco_bredde) ≈ 260 mm
 //       bred, full høyde. Nederst 12 rader små skuffer på linje med
 //       Raaco-radene (fronten i flukt med Raaco-fronten), over dem en
 //       seksjon med STORE skuffer opp til hyllekanten.
 //   (b) TOPPHYLLE over Raaco: raaco_bredde x (hylle_hoyde – raaco_hoyde)
-//       ≈ 300 x 148 mm, med store skuffer.
+//       ≈ 300 x 208 mm, med store skuffer.
 //   (c) BAKKASSER (valgfritt) i de ca. 150 mm bak Raaco.
 //   (d) LØSE KASSER S/M/L (åpen front, stablebare) for større ting.
 //
@@ -32,6 +33,9 @@
 //   openscad -o modul_0_1.stl -D 'del="modul"' -D modul_x=0 -D modul_y=1 skjoldlab_tilleggsskap.scad
 //   openscad -o oversikt.png -D 'del="oversikt"' skjoldlab_tilleggsskap.scad
 // Alle printdeler legges ut ferdig orientert for print (ingen support).
+//
+// Alternativ med LED over hver skuff: skjoldlab_ledvegg.scad (samme hylle,
+// skuffavstand låst til LED-avstanden, egen LED-skinne for Raaco).
 // =====================================================================
 
 /* [Del som skal lages] */
@@ -46,11 +50,11 @@ vis_skuffer = true;
 
 /* [Målekladd – hylla og Raaco (se README)] */
 // Hyllas innvendige bredde (mm)
-hylle_bredde = 570;
+hylle_bredde = 560;
 // Hyllas innvendige høyde, fra hyllegulv til underkant av hylla over (mm)
-hylle_hoyde = 700;
+hylle_hoyde = 760;
 // Hyllas innvendige dybde (mm)
-hylle_dybde = 300;
+hylle_dybde = 320;
 // Raaco-skapets bredde, utvendig (mm)
 raaco_bredde = 300;
 // Raaco-skapets høyde, utvendig (mm)
@@ -122,7 +126,7 @@ tarn_store_rader = 0;
 // Sidetårn store: tving kolonner (0 = auto, rundes opp til hele moduler)
 tarn_store_kolonner = 0;
 // Topphylle: rader
-topp_rader = 1;
+topp_rader = 2;
 // Topphylle: tving kolonner (0 = auto, rundes opp til hele moduler)
 topp_kolonner = 0;
 // Topphylle: bredde (0 = raaco_bredde – klaring)
@@ -227,7 +231,7 @@ e = 0.01;
 // ---------------------------------------------------------------------
 plass = byggeplate - plate_margin;
 dmaks = dybde_maks > 0 ? dybde_maks : byggehoyde - 10;
-ledig_side = hylle_bredde - raaco_bredde;                     // ≈ 270
+ledig_side = hylle_bredde - raaco_bredde;                     // ≈ 260
 rx0 = raaco_side == "venstre" ? 0 : hylle_bredde - raaco_bredde; // Raaco, venstre kant
 tx0 = raaco_side == "venstre" ? raaco_bredde + klaring : klaring; // sidetårn, venstre kant
 px0 = raaco_side == "venstre" ? klaring : rx0;                   // topphylle, venstre kant
@@ -235,7 +239,7 @@ px0 = raaco_side == "venstre" ? klaring : rx0;                   // topphylle, v
 // ---------------------------------------------------------------------
 // Avledede mål – sidetårnet, små skuffer (som før)
 // ---------------------------------------------------------------------
-tarn_b = skap_bredde > 0 ? skap_bredde : ledig_side - 2 * klaring;   // 264
+tarn_b = skap_bredde > 0 ? skap_bredde : ledig_side - 2 * klaring;   // 254
 tarn_h = skap_hoyde > 0 ? skap_hoyde : raaco_hoyde;                  // 552
 tarn_d = skap_dybde > 0 ? skap_dybde : min(hylle_dybde - klaring, dmaks); // 240
 

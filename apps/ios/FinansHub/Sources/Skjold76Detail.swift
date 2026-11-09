@@ -70,7 +70,11 @@ struct Skj76Detail: View {
             }
         }
         .background(p.bg.ignoresSafeArea())
-        .task { await m.loadPart(id, store) }
+        .task {
+            await m.loadPart(id, store)
+            // Prompt 78: «Lys opp automatisk når jeg åpner et treff».
+            if let x = m.part(id) { await Skjold78.shared.autoOnOpen(x, store) }
+        }
     }
 
     private func content(_ x: Skj76Part) -> some View {
@@ -78,6 +82,7 @@ struct Skj76Detail: View {
             Skj76SheetTop(kicker: x.category.isEmpty ? "Del" : x.category, title: x.name)
             Skj76Gallery(photos: x.photos)
             Skj76Where(part: x)
+            Skj78LocateButton(part: x)
             Skj76Qty(part: x)
             actions(x)
             Skj76Facts(part: x)

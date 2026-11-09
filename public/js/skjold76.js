@@ -12,6 +12,7 @@ import { toast } from './toast.js';
 import { drawCabinet76, overlayGrid76, layoutPhoto76, cornersOk76, long76, short76, ownLabel76 } from './skjold76-draw.js';
 import { editHtml, setupHtml, editClick, setupClick, editMount, setupMount, editInput, setupInput, startEdit, startSetup } from './skjold76-edit.js';
 import { headBtns77, gearHtml77, click77, key77, tidyHtml77, tidyRoute77, startTidy77, stopTidy77 } from './skjold77-ai.js'; // prompt 77: Glimt-forslag, Rydd opp, ⚙
+import { locateBtn78, listBtn78, listAllBtn78, litBarHtml78, afterPart78, onCabs78, click78, input78, submit78, route78 } from './skjold78-leds.js'; // prompt 78: LED over skuffene
 
 if (typeof document !== 'undefined' && !document.querySelector('link[data-sk76-css]')) {
   const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = '/assets/css/skjold76.css'; l.dataset.sk76Css = ''; document.head.appendChild(l);
@@ -104,6 +105,7 @@ export async function loadCabs(force) {
     const c = readCache(); S.cabs = c?.cabs ?? []; if (isNet(e)) S.offline = true; else S.err = e.message;
   }
   if (!cabById(S.cabId)) S.cabId = S.cabs[0]?.id ?? null;
+  onCabs78(S.cabs); // prompt 78
   return S.cabs;
 }
 export async function loadMap(id, force) {
@@ -225,10 +227,10 @@ function listHtml() {
     const any = S.q || S.cat || S.low;
     return `<div class="sk76-card sk76-empty"><b>${any ? 'Ingen treff' : 'Ingen deler ennå'}</b><span>${any ? 'Prøv et annet ord, eller fjern filteret.' : 'Legg til den første delen, så finner du den igjen her.'}</span>${any ? '' : '<a class="sk76-btn pri" href="#/skjold/ny">+ Ny del</a>'}</div>`;
   }
-  const head = `<div class="sk76-count">${esc(S.total === 1 ? '1 del' : `${S.total} deler`)}${S.q ? ` for «${esc(S.q)}»` : ''}${S.offline ? ' · lagret liste' : ''}</div>`;
+  const head = `<div class="sk76-count">${esc(S.total === 1 ? '1 del' : `${S.total} deler`)}${S.q ? ` for «${esc(S.q)}»` : ''}${S.offline ? ' · lagret liste' : ''}${listAllBtn78(S.items)}</div>`;
   return `${head}<ul class="sk76-list" role="list">${S.items.map((p) => {
-    const l = locOf(p), sp = specsText(p);
-    return `<li><a class="sk76-item" href="#/skjold/del/${encodeURIComponent(p.id)}">${thumbHtml(p)}<span class="sk76-it"><b>${esc(p.name)}</b>${sp ? `<span class="sk76-sp">${esc(sp)}</span>` : ''}<span class="sk76-loc">${l ? `<i class="sk76-code">${esc(short76(l.row, l.col))}</i>` : ''}${esc(l ? locText(p.location?.text ? p.location : l) : 'Uten plass')}</span></span><span class="sk76-q${isLow(p) ? ' low' : ''}">${esc(qtyText(p))}${isLow(p) ? '<em>Lavt</em>' : ''}</span></a></li>`;
+    const l = locOf(p), sp = specsText(p), lb = listBtn78(p); // prompt 78: 💡 ved treffet
+    return `<li${lb ? ' class="sk78-li"' : ''}><a class="sk76-item" href="#/skjold/del/${encodeURIComponent(p.id)}">${thumbHtml(p)}<span class="sk76-it"><b>${esc(p.name)}</b>${sp ? `<span class="sk76-sp">${esc(sp)}</span>` : ''}<span class="sk76-loc">${l ? `<i class="sk76-code">${esc(short76(l.row, l.col))}</i>` : ''}${esc(l ? locText(p.location?.text ? p.location : l) : 'Uten plass')}</span></span><span class="sk76-q${isLow(p) ? ' low' : ''}">${esc(qtyText(p))}${isLow(p) ? '<em>Lavt</em>' : ''}</span></a>${lb}</li>`;
   }).join('')}</ul>`;
 }
 function partHtml() {
@@ -249,6 +251,7 @@ function partHtml() {
       <h2 class="sk76-pname">${esc(p.name)}</h2>
       ${p.description ? `<p class="sk76-desc">${esc(p.description)}</p>` : ''}
       <div class="sk76-locbox${l ? '' : ' none'}"><span class="sk76-bigcode">${l ? esc(short76(l.row, l.col)) : '–'}</span><span><span class="sk76-kick">PLASSERING</span><b>${esc(l ? locText(p.location?.text ? p.location : l) : 'Uten plass')}</b></span></div>
+      ${locateBtn78(p)}
       <div class="sk76-qty" role="group" aria-label="Antall">
         <button type="button" class="sk76-qb" data-sk76-qty="-1" aria-label="Én mindre">−</button>
         <span class="sk76-qv${isLow(p) ? ' low' : ''}"><b>${esc(p.qty ?? 0)}</b> ${esc(p.unit || 'stk')}${minOf(p) != null ? `<small>min ${esc(minOf(p))}</small>` : ''}</span>
@@ -307,6 +310,7 @@ function shellHtml() {
     </form>
     <div class="sk76-filters" data-sk76-filters></div>
     <div class="sk76-off" data-sk76-off hidden></div>
+    ${litBarHtml78()}
     <div class="sk76-cols"><div class="sk76-main" data-sk76-main></div><aside class="sk76-side" data-sk76-side></aside></div>`;
 }
 export function paintMain() {
@@ -356,6 +360,7 @@ async function onHash() {
   if (r.v !== 'edit') S.form = null;
   if (r.v !== 'setup') S.setup = null;
   if (r.v !== 'tidy') stopTidy77();
+  route78(r); // prompt 78
   if (r.v === 'list' && r.q != null && r.q !== S.q) { S.q = r.q; const i = el.querySelector('[data-sk76-search] input'); if (i) i.value = S.q; loadList(); }
   if (r.cab && cabById(r.cab)) S.cabId = cabById(r.cab).id;
   if (r.v === 'drawer') S.drawerParts = null;
@@ -365,7 +370,8 @@ async function onHash() {
     const p = await loadPart(r.id), l = locOf(p);
     if (S.route !== r) return;
     if (l && cabById(l.cabinetId)) S.cabId = cabById(l.cabinetId).id;
-    paintMain(); await loadMap(S.cabId); if (S.route === r) paintSide();
+    paintMain(); if (p) afterPart78(p); // prompt 78: lys opp automatisk når det er slått på
+    await loadMap(S.cabId); if (S.route === r) paintSide();
   } else if (r.v === 'drawer') {
     await loadMap(r.cab); if (S.route !== r) return; paint();
     try { const d = await sk(`/parts?cabinet=${encodeURIComponent(r.cab)}&row=${r.row}&col=${r.col}&limit=100`); if (S.route === r) { S.drawerParts = d?.items ?? []; paintMain(); } } catch { /* kartet holder */ }
@@ -503,6 +509,7 @@ function bind() {
     if (S.suggOpen && !t.closest('[data-sk76-search]')) closeSugg();
     const sug = t.closest('[data-sk76-sug]'); if (sug) { e.preventDefault(); pickSugg(el.querySelector('[data-sk76-search]'), +sug.dataset.sk76Sug); return; }
     if (click77(t)) return; // prompt 77: ⋯-meny, ⚙ og Rydd opp
+    if (click78(t)) return; // prompt 78: 💡 Vis i skapet, LED-oppsett og kalibrering
     if (S.route.v === 'edit' && editClick(t, e)) return;
     if (S.route.v === 'setup' && setupClick(t, e)) return;
     const dr = t.closest('[data-sk76-dr]'); if (dr) { onDrawer(dr.dataset.sk76Dr); return; }
@@ -543,6 +550,7 @@ function bind() {
   document.addEventListener('input', (e) => {
     const el = root(); if (!el || !el.contains(e.target)) return;
     const form = e.target.closest('[data-sk76-search]'); if (form) { onSearchInput(form); return; }
+    if (input78(e.target)) return; // prompt 78
     if (S.route.v === 'edit') editInput({ target: e.target });
     else if (S.route.v === 'setup') setupInput(e.target);
   });
@@ -551,6 +559,7 @@ function bind() {
   document.addEventListener('focusin', (e) => { const form = e.target.closest?.('#sk76 [data-sk76-search]'); if (form && S.sugg.length) { S.suggOpen = true; paintSugg(form); } });
   document.addEventListener('submit', (e) => {
     const el = root(); if (!el || !el.contains(e.target)) return;
+    if (submit78(e)) return; // prompt 78: lysoppsettet
     if (e.target.matches('[data-sk76-search]')) { e.preventDefault(); clearTimeout(listT); S.suggOpen = false; paintSugg(e.target); S.q = e.target.querySelector('input').value.trim(); if (S.route.v !== 'list') go('#/skjold'); loadList(); return; }
     if (e.target.matches('[data-sk76-dform]')) { e.preventDefault(); saveDrawer(e.target); }
   });

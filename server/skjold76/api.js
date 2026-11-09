@@ -16,6 +16,7 @@ import { exportCsv76, importCsv76 } from './csv.js';
 import { labelsHtml76 } from './labels.js';
 import { mountAi77, undoEdit77 } from './ai77.js'; // prompt 77 (SKJAISRV): forslag, bildesøk, Rydd opp
 import { thumbUser77 } from './images77.js';
+import { mountLeds78, ledsBrief78 } from './leds78.js'; // prompt 78 (LEDSRV): LED over hver skuff (WLED)
 
 setFileUrl76((name, user) => signedUrl76(name, user));
 const q = (sql) => db.prepare(sql);
@@ -52,7 +53,7 @@ function cabinetOut(cab, user) {
   const used = q('SELECT count(*) FROM (SELECT DISTINCT row, col FROM skj_parts WHERE user_id=? AND cabinet_id=? AND deleted_at IS NULL)').pluck().get(user, cab.id);
   return { id: cab.id, name: cab.name, rows: cab.rows, cols: cab.cols, kind: cab.kind, sort: cab.sort, notes: cab.notes ?? null,
     photoUrl: cab.photo ? signedUrl76(cab.photo, user) : null, thumbUrl: cab.photo ? signedUrl76(thumbOf76(cab.photo), user) : null,
-    corners: J(cab.photo_corners, null), counts: { parts, usedDrawers: used, drawers: cab.rows * cab.cols }, created: iso(cab.created), updated: iso(cab.updated) };
+    corners: J(cab.photo_corners, null), counts: { parts, usedDrawers: used, drawers: cab.rows * cab.cols }, created: iso(cab.created), updated: iso(cab.updated), leds: ledsBrief78(cab) };
 }
 function cabinetFields(b, { partial = false } = {}) {
   const f = {};
@@ -480,3 +481,5 @@ skjoldApi76.get('/', (c) => {
 
 // Prompt 77 (SKJAISRV): /ai/* (forslag, bildesøk, Rydd opp, innstillinger) og /parts/:id/photos/from-search.
 mountAi77(skjoldApi76, { fileOf, uploadLimit });
+// Prompt 78 (LEDSRV): /cabinets/:id/leds*, /locate, /locate/off, /leds/status, /leds/settings.
+mountLeds78(skjoldApi76);

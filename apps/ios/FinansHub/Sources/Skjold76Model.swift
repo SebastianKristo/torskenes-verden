@@ -133,6 +133,9 @@ enum Skj76Sheet: Identifiable, Hashable {
     /// Prompt 77: «Rydd opp med Glimt» (tom = alle delene) og Glimt-innstillingene (⚙).
     case tidy([String])
     case ai
+    /// Prompt 78: LED-oppsett for et skap og kalibreringsveiviseren (Skjold78*.swift).
+    case leds(String)
+    case calibrate(String)
 
     var id: String {
         switch self {
@@ -144,6 +147,8 @@ enum Skj76Sheet: Identifiable, Hashable {
         case .labels(let c): return "l" + c
         case .tidy(let ids): return "t\(ids.count)-" + (ids.first ?? "")
         case .ai: return "ai"
+        case .leds(let c): return "led" + c
+        case .calibrate(let c): return "kal" + c
         }
     }
 }

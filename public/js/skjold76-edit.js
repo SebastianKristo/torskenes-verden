@@ -9,6 +9,7 @@ import { toast } from './toast.js';
 import { S, sk, write, upload, go, paintMain, paintSide, locOf, locText, photoUrls, cabById, loadCabs, loadMap, refreshAll, loadPart } from './skjold76.js';
 import { overlayGrid76, layoutPhoto76, cornersOk76, long76 } from './skjold76-draw.js';
 import { suggestBtn77, suggestCard77, findBtn77, finderHtml77, webPending77, onNewPhotos77, aiClick77, mountEdit77, saveWeb77 } from './skjold77-ai.js'; // prompt 77
+import { ledSetupHtml78 } from './skjold78-leds.js'; // prompt 78: lys over skuffene
 
 const UNITS = ['stk', 'm', 'cm', 'g', 'kg', 'ml', 'pk', 'par', 'rull', 'sett'];
 const SPEC_KEYS = ['verdi', 'toleranse', 'pakke', 'spenning', 'strøm', 'effekt', 'lengde', 'diameter', 'gjenge', 'materiale', 'farge', 'type'];
@@ -269,6 +270,7 @@ export function setupHtml() {
     <a class="sk76-back" href="#/skjold">‹ Deler</a>
     <div class="sk76-card"><span class="sk76-kick">SKAP</span>${cabListHtml()}</div>
     ${edit}
+    ${c ? ledSetupHtml78(c) : ''}
     <div class="sk76-card sk76-csv"><span class="sk76-kick">IMPORT OG EKSPORT</span>
       <div class="sk76-row"><a class="sk76-btn" href="/api/skjold/export.csv" download>Last ned CSV</a><label class="sk76-btn sk76-file">Importer CSV<input type="file" accept=".csv,text/csv" data-sk76-csv></label></div>
       ${imp ? `<div class="sk76-imp" role="status">${esc(imp.text)}${imp.ready ? ' <button type="button" class="sk76-btn pri" data-sk76c="import">Importer</button> <button type="button" class="sk76-link" data-sk76c="import-cancel">Avbryt</button>' : ''}</div>` : ''}

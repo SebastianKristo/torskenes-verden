@@ -285,6 +285,7 @@ internal fun Settings77(vm: AppViewModel) {
             PSerif("Skjold Lab · Glimt", 22.sp)
             Toggle77("Finn bilder på nett", "Søk etter bilder av delen via SearXNG (Wikimedia Commons som reserve). Bildene hentes av serveren.", s.webImages) { vm.putAiSettings77(webImages = it) }
             Toggle77("Foreslå automatisk når jeg tar bilde", "Glimt foreslår navn, kategori og specs når delen får et bilde. Du godtar selv hva som brukes.", s.autoSuggest) { vm.putAiSettings77(autoSuggest = it) }
+            LedSettings78(vm) // prompt 78: lys opp skuffen
             Text("Gjenkjenningen kjører med den lokale modellen (AI-kontroll → Oppgaver → «Skjold Lab · gjenkjenning»).", color = p.mut, fontSize = 12.sp)
             PButton("Ferdig", Modifier.fillMaxWidth()) { s.settingsOpen = false }
         }

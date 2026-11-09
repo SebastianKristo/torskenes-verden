@@ -34,6 +34,7 @@ struct Skj76Setup: View {
                     .disabled(busy || name.trimmingCharacters(in: .whitespaces).isEmpty)
                 if let c = m.cabinets.first(where: { $0.id == cabId }) {
                     Skj76PhotoSetup(cab: c)
+                    Skj76Button(title: "LED over skuffene", icon: "lightbulb") { m.sheet = .leds(c.id) }
                     Skj76Button(title: "Slett skapet", icon: "trash", danger: true) { confirm = true }
                 }
             }

@@ -59,7 +59,10 @@ struct Skjold76Page: View {
                 .environment(store)
                 .presentationDetents([.large])
         }
-        .task { await m.load(store) }
+        .task {
+            await m.load(store)
+            await Skjold78.shared.load(store)
+        }
     }
 }
 
@@ -70,6 +73,7 @@ struct Skj76Bottom: View {
 
     var body: some View {
         VStack(spacing: 8) {
+            Skj78LitBar()
             if !m.undoText.isEmpty {
                 HStack(spacing: 12) {
                     Text(m.undoText).font(PF.ui(13.5, .semibold)).foregroundStyle(p.bg).lineLimit(2)
@@ -137,6 +141,8 @@ struct Skj76Top: View {
             Button { m.sheet = .setup(m.cabinet?.id ?? "") } label: { Label("Skap-oppsett", systemImage: "cabinet") }
             Button { m.sheet = .setup("ny") } label: { Label("Legg til skap", systemImage: "plus.rectangle.on.rectangle") }
             Button { m.sheet = .labels(m.cabinet?.id ?? "") } label: { Label("Etiketter", systemImage: "printer") }
+            // Prompt 78: LED over hver skuff (WLED), test og kalibrering.
+            Button { m.sheet = .leds(m.cabinet?.id ?? "") } label: { Label("LED-oppsett", systemImage: "lightbulb") }
             Button { Task { await m.load(store) } } label: { Label("Oppdater", systemImage: "arrow.clockwise") }
             // Prompt 77: Glimt går gjennom delene og foreslår bedre navn, kategori og specs (Skjold77*.swift).
             Divider()
@@ -316,7 +322,11 @@ struct Skj76Results: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            PLabel(text: m.query.isEmpty ? "Deler" : "Treff").padding(.leading, 4)
+            HStack(spacing: 8) {
+                PLabel(text: m.query.isEmpty ? "Deler" : "Treff").padding(.leading, 4)
+                Spacer(minLength: 4)
+                if !m.query.isEmpty { Skj78AllButton(parts: m.items) }
+            }
             if m.loading && m.items.isEmpty { ProgressView().frame(maxWidth: .infinity).padding(24) }
             if !m.loading && m.items.isEmpty {
                 PCard { Text(m.query.isEmpty ? "Ingen deler ennå. Trykk + for å legge til den første." : "Fant ingen deler for «" + m.query + "».").font(PF.ui(13.5)).foregroundStyle(p.mut) }
@@ -340,6 +350,13 @@ struct Skj76Row: View {
     let part: Skj76Part
 
     var body: some View {
+        HStack(spacing: 0) {
+            main
+            Skj78RowButton(part: part).padding(.trailing, 4)
+        }
+    }
+
+    private var main: some View {
         Button { m.pick(part) } label: {
             HStack(spacing: 12) {
                 Skj76Thumb(path: part.thumbUrl, size: 52)
@@ -388,6 +405,8 @@ struct Skj76SheetView: View {
         case .labels(let c): Skj76Labels(cabinetId: c)
         case .tidy(let ids): Skj77Tidy(ids: ids)
         case .ai: Skj77Settings()
+        case .leds(let c): Skj78Setup(startId: c)
+        case .calibrate(let c): Skj78Calibrate(cabinetId: c)
         }
     }
 }

@@ -134,6 +134,7 @@ object Skjold76 {
         cat = null; low = false; filterCab = null; cabinets = emptyList(); maps = emptyMap(); cabId = null; undo = null; occupied = emptyList()
         corners = null; cabDeleteAsk = null; err = null; missing = false; offline = false
         Skjold77.reset() // prompt 77
+        Skjold78.reset() // prompt 78
     }
 }
 
@@ -381,6 +382,7 @@ fun AppViewModel.closeSkjold76() {
     val s = Skjold76
     val a = Skjold77 // prompt 77: ark og valg i forslagene lukkes først
     when {
+        Skjold78.calOn -> stopCal78() // prompt 78: kalibreringen avsluttes (lyset slukkes)
         a.settingsOpen -> a.settingsOpen = false
         a.menuOpen -> a.menuOpen = false
         a.imgPick != null -> a.imgPick = null
@@ -426,6 +428,7 @@ fun AppViewModel.loadSkjold76() = launch46 {
         s.cabId?.let { loadMap76(it) }
         runCatching { s.cats = parseCats76(get76("/categories")) }
         loadAiSettings77() // prompt 77
+        loadAllLeds78() // prompt 78: LED-oppsett per skap + innstillingene
         searchSkjold76(now = true)
         saveCabs76(arr)
     } catch (e: CancellationException) { throw e } catch (e: ApiException) {
@@ -508,6 +511,7 @@ fun AppViewModel.openPart76(id: String) {
         p.loc.cabinetId?.let { c -> s.cabId = c; if (s.maps[c] == null) loadMap76(c) }
     }
     s.part?.loc?.cabinetId?.let { c -> s.cabId = c; if (s.maps[c] == null) loadMap76(c) }
+    partOpened78(id) // prompt 78: lys opp automatisk når innstillingen er på
 }
 
 fun AppViewModel.loadMap76(cabId: String) = launch46 {
