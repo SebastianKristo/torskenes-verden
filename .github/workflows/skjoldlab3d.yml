@@ -34,6 +34,14 @@ jobs:
           OUT="$RUNNER_TEMP/skjoldlab3d"
           # shellcheck disable=SC2086
           tools/skjoldlab3d/eksporter.sh "$OUT" --alle $PARAMS 2>&1 | tee "$RUNNER_TEMP/eksport.log"
+      - name: Hele hylla – pakket i printrekkefølge
+        env:
+          PARAMS: ${{ github.event.inputs.parametre }}
+        run: |
+          H="$RUNNER_TEMP/hele"
+          # shellcheck disable=SC2086
+          tools/skjoldlab3d/eksporter.sh "$H" --led --variant hele_hylla $PARAMS 2>&1 | tee "$RUNNER_TEMP/hele.log"
+          python3 tools/skjoldlab3d/pakk.py "$H" "$RUNNER_TEMP/hele.log" "$RUNNER_TEMP/pakke/skjoldlab3d-hele-hylla"
       - name: Forhåndsvisninger
         if: always()
         env:
@@ -59,13 +67,15 @@ jobs:
             grep -h 'SKJOLDLAB' "$RUNNER_TEMP/eksport.log" | sort -u | sed 's/^/    /' || true
             grep -h 'FEILET\|ERROR\|WARNING' "$RUNNER_TEMP/eksport.log" | sort -u | sed 's/^/    /' || true
           } >> "$GITHUB_STEP_SUMMARY"
-      - name: Kontroll (ikke tom, innenfor byggeplaten)
+      - name: Kontroll (ikke tom, innenfor byggeplaten, maks 300 g per modul)
         id: sjekk
         if: always()
         run: |
           OUT="$RUNNER_TEMP/skjoldlab3d"
           { echo; echo "### Kontroll"; echo; } >> "$GITHUB_STEP_SUMMARY"
-          python3 tools/skjoldlab3d/sjekk_stl.py "$OUT" 256 | tee -a "$GITHUB_STEP_SUMMARY"
+          python3 tools/skjoldlab3d/sjekk_stl.py "$OUT" 256 300 | tee -a "$GITHUB_STEP_SUMMARY"
+          { echo; echo "### Hele hylla"; echo; } >> "$GITHUB_STEP_SUMMARY"
+          python3 tools/skjoldlab3d/sjekk_stl.py "$RUNNER_TEMP/hele" 256 300 | tee -a "$GITHUB_STEP_SUMMARY"
       - name: Zip og release «skjoldlab3d»
         if: success() && github.ref == 'refs/heads/main'
         env:
@@ -73,13 +83,15 @@ jobs:
         run: |
           cd "$RUNNER_TEMP"
           zip -qr skjoldlab3d-stl-3mf.zip skjoldlab3d
-          NOTES="Ferdige STL- og 3MF-filer for Skjold Lab (sortering rundt Raaco og LED-veggen), laget fra tools/skjoldlab3d på commit ${GITHUB_SHA::7}. Standardmål: hylla 560 × 760 × 320 mm. Mål ditt eget skap først (se tools/skjoldlab3d/README.md); andre mål → kjør workflowen «Skjold Lab 3D» med egne parametre."
+          cp skjoldlab3d/forhandsvisning/skjoldlab_ledvegg_oversikt.png pakke/skjoldlab3d-hele-hylla/oversikt-3d.png 2>/dev/null || true
+          (cd pakke && zip -qr ../skjoldlab3d-hele-hylla.zip skjoldlab3d-hele-hylla)
+          NOTES="Start med skjoldlab3d-hele-hylla.zip: hele hylla som sorteringsskap med LED, ordnet i printrekkefølge (1-prove, 2-veggmoduler M01…, 3-skuffer …) med egne stl/- og 3mf/-mapper, oversikt.svg og LES-MEG.md. skjoldlab3d-stl-3mf.zip har alle deler for begge modellene. Ferdige STL- og 3MF-filer for Skjold Lab, laget fra tools/skjoldlab3d på commit ${GITHUB_SHA::7}. Standardmål: hylla 560 × 760 × 320 mm. Mål ditt eget skap først (se tools/skjoldlab3d/README.md); andre mål → kjør workflowen «Skjold Lab 3D» med egne parametre."
           if gh release view skjoldlab3d -R "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             gh release edit skjoldlab3d -R "$GITHUB_REPOSITORY" --notes "$NOTES"
           else
             gh release create skjoldlab3d -R "$GITHUB_REPOSITORY" --title "Skjold Lab 3D-print" --notes "$NOTES" --latest=false --target "$GITHUB_SHA"
           fi
-          gh release upload skjoldlab3d -R "$GITHUB_REPOSITORY" skjoldlab3d-stl-3mf.zip --clobber
+          gh release upload skjoldlab3d -R "$GITHUB_REPOSITORY" skjoldlab3d-hele-hylla.zip skjoldlab3d-stl-3mf.zip --clobber
       - uses: actions/upload-artifact@v4
         if: always()
         with:

@@ -2,7 +2,8 @@
 """Skjold Lab: kontroll av eksporterte STL-filer – ikke tom, mål innenfor byggevolumet, og volum/vekt.
 
 Bruk: python3 sjekk_stl.py <mappe> [byggevolum_mm=256] [maks_gram_per_modul=0]  → tabell i markdown; exit 1 hvis noe feiler.
-Vekt = volum × 1,27 g/cm³ (PETG, massivt) – et øvre anslag; slicer med 2 vegger og 15 % infill gir typisk 35–60 % av dette.
+Vekt = volum × 1,27 g/cm³ (PETG, massivt) – et øvre anslag; slicer med 2 vegger og 15 % infill gir ca. 80 % for
+tynnveggede deler som rammene og skuffene (1041 g massivt -> 842 g slicet), og nærmere 50 % for tykke deler.
 Med maks_gram_per_modul > 0 feiler filer som heter *modul* og er tyngre enn grensen (massivt anslag).
 """
 import sys

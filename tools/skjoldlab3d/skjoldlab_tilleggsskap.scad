@@ -17,9 +17,16 @@
 //   (c) BAKKASSER (valgfritt) i de ca. 150 mm bak Raaco.
 //   (d) LØSE KASSER S/M/L (åpen front, stablebare) for større ting.
 //
-// Skuffer og rammer er begrenset i dybde av printeren: rammene printes
-// liggende på ryggen, så rammedybden er maks byggehoyde – 10 mm
-// (dybde_maks). Resten av hylledybden blir ledig bak (echo viser hvor mye).
+// LETT KONSTRUKSJON: ingen hele hyller eller vegger. Hver rad har smale
+// skinner langs dybden (L ytterst, T mellom kolonnene, midtskinner under
+// brede skuffer), en frontlist med 45° fas foran og en tynn bakstopp.
+// Sidene er rammer med store vinduer, ryggen er åpen med kryss, og
+// stolpene bak er bare klosser der pinner, lasker og bolter sitter.
+// Rammene printes liggende på ryggen UTEN support (45° eller korte broer).
+//
+// Standard rammedybde er 165 mm (dybde_maks), som gir skuffer på 153 mm
+// (159 med håndtak, omtrent som Raaco). dybde_maks = 0 gir byggehoyde – 10
+// (240 mm) og ca. 1,5 x filament. Resten av hylledybden blir ledig bak.
 //
 // VIKTIG: Standardmålene er TYPISKE mål. Mål hylla, Raaco-skapet og én
 // skuff (se målekladden i README.md) før du printer noe stort.
@@ -83,8 +90,8 @@ skap_bredde = 0;
 skap_hoyde = 0;
 // Rammedybde (0 = min(hylle_dybde – klaring, dybde_maks))
 skap_dybde = 0;
-// Maks ramme-/skuffdybde (0 = byggehoyde – 10, fordi rammene printes liggende på ryggen)
-dybde_maks = 0;
+// Maks ramme-/skuffdybde. 165 gir skuff 153 mm (159 med håndtak). 0 = byggehoyde – 10 (240 mm, ca. 1,5 x filament)
+dybde_maks = 165;
 
 /* [Små skuffer] */
 // Ønsket skuffbredde – antall kolonner regnes ut fra bredden (mm)
@@ -96,9 +103,9 @@ skuff_dybde_tvunget = 0;
 // Skuffens sidevegger og bakvegg (mm)
 skuff_vegg = 1.2;
 // Skuffens front (tykkere pga. etikettfelt) (mm)
-skuff_front = 2.0;
+skuff_front = 1.6;
 // Skuffens bunn (mm)
-skuff_bunn = 1.2;
+skuff_bunn = 1.0;
 // Håndtak: hvor langt det stikker ut (mm)
 grep_ut = 6;
 // Håndtak: tykkelse ved roten (mm)
@@ -125,8 +132,8 @@ stor_bredde_onsket = 120;
 tarn_store_rader = 0;
 // Sidetårn store: tving kolonner (0 = auto, rundes opp til hele moduler)
 tarn_store_kolonner = 0;
-// Topphylle: rader
-topp_rader = 2;
+// Topphylle: rader (3 gir lavere og lettere skuffer enn 2)
+topp_rader = 3;
 // Topphylle: tving kolonner (0 = auto, rundes opp til hele moduler)
 topp_kolonner = 0;
 // Topphylle: bredde (0 = raaco_bredde – klaring)
@@ -136,11 +143,11 @@ topp_dybde = 0;
 // Luft over store skuffer (mm)
 stor_luft = 3;
 // Store skuffer: vegger (mm)
-stor_vegg = 1.6;
+stor_vegg = 1.2;
 // Store skuffer: bunn (mm)
-stor_bunn = 1.6;
+stor_bunn = 1.2;
 // Store skuffer: front (mm)
-stor_front = 2.4;
+stor_front = 1.6;
 // Store skuffer: maks håndtaksbredde (mm)
 stor_grep_maks = 60;
 // del="skuff_stor": egne mål (0 = som topphylla)
@@ -177,11 +184,13 @@ kasse_flens_b = 8;
 kasse_flens_t = 3;
 
 /* [Ramme] */
-// Sidevegger i rammen (mm)
+// Plass til sideveggen i skuffmålene (mm). Selve sideramma er ramme_t; resten er en styrekant på skinna.
 veggtykkelse = 2.4;
-// Bakvegg (mm)
+// Sideramme (mm)
+ramme_t = 1.6;
+// Ryggrammen (lister og kryss bak) (mm)
 bakvegg = 2.0;
-// Hyller (gulv under hver rad) (mm)
+// Gulvnivå: overkant skinner og frontlist ligger hylle_t over raden (mm)
 hylle_t = 2.0;
 // Styreskinner mellom kolonnene på hver hylle: bredde (mm)
 skinne_b = 1.6;
@@ -191,8 +200,22 @@ skinne_h = 2.0;
 bak_rom = 10;
 // Hjørnestolpe bak: bredde i X (mm)
 stolpe_b = 6;
-// Frontlist foran sokkel og topp (mm)
-frontlist_t = 1.6;
+/* [Lett ramme] */
+// Skinne: flensbredde per side (bærer skuffen) og tykkelse (mm)
+flens_b = 4.5;
+flens_t = 1.6;
+// Midtskinne under brede skuffer, legges inn når broen i printen ville blitt lengre enn bro_maks (mm)
+midt_b = 6;
+bro_maks = 55;
+// Frontlist (gulvet foran): dybde og 45° fas under (mm)
+list_d = 14;
+fas = 3;
+// Bakstopp: høyde over skinna (mm)
+bakstopp_h = 4;
+// Ryggkryss og lister: bredde (mm)
+stag_b = 6;
+// Minste materiale foran vinduene i siderammene (mm)
+vindu_kant = 4;
 // Tunge under hver modul som låser fronten mot modulen under: høyde (mm)
 tunge_h_maks = 3;
 // Tunge: bredde (mm)
@@ -366,6 +389,9 @@ assert(sokkel_h >= hylle_t, "nederste_skuff_z er for liten i forhold til hylle_t
 assert(topp_h >= hylle_t, str("Toppen blir for tynn (", topp_h, " mm). Sjekk raaco_hoyde/skap_hoyde, rad_avstand og nederste_skuff_z."));
 assert(maks_rader >= 1, "rad_avstand er større enn byggeplaten.");
 assert(bak_rom >= 7, "bak_rom må være minst 7 mm (plass til stolper og bolter).");
+assert(ramme_t <= veggtykkelse, "ramme_t kan ikke være tykkere enn veggtykkelse.");
+assert(flens_t <= hylle_t, "flens_t kan ikke være tykkere enn hylle_t.");
+assert(tarn_d - bakvegg - stolpe_d - 1 > 60, "Rammen er for grunn til vinduene i siderammene. Øk dybde_maks/skap_dybde.");
 assert(skuff_bredde >= 20, "Skuffene blir for smale – sett kolonner_tvunget lavere.");
 assert(tarn_d <= byggehoyde, str("Rammene printes liggende på ryggen, så dybden (", tarn_d, " mm) må være <= byggehoyde (", byggehoyde, " mm). Sett dybde_maks/skap_dybde lavere."));
 assert(skuff_dybde + grep_ut <= plass, str("Skuffen (", skuff_dybde, " mm dyp) får ikke plass på byggeplaten. Sett dybde_maks lavere."));
@@ -500,59 +526,125 @@ module skillevegg() { skillevegg_g(skuff_bredde - 2 * skuff_vegg - toleranse, sk
 module skillevegg_stor_g(w, h) { skillevegg_g(w - 2 * stor_vegg - toleranse, h - stor_bunn - 1); }
 
 // ---------------------------------------------------------------------
-// Rammemodul for små skuffer (i = kolonne av moduler, j = etasje)
+// Lett ramme: felles byggeklosser
 // ---------------------------------------------------------------------
-module kasse_ramme(z0, h, med_bunn, med_tak) {
-    mb = modul_bredde; D = tarn_d;
-    if (h < 2 * hylle_t + 2) {
-        translate([0, 0, z0]) cube([mb, D, h]);
-    } else {
-        if (med_bunn) translate([0, 0, z0]) cube([mb, D, hylle_t]);
-        if (med_tak) translate([0, 0, z0 + h - hylle_t]) cube([mb, D, hylle_t]);
-        translate([0, 0, z0]) cube([mb, frontlist_t, h]);
+// 2D-profil i YZ ([y, z]) ekstrudert langs X fra x = 0 til W
+module langs_x(W) { rotate([90, 0, 90]) linear_extrude(W) children(); }
+// Vindu i en sideramme (YZ): spiss 45° foran (taket når rammen ligger på ryggen), flat bak
+module vindu2d(y0, y1, za, zb) {
+    hm = (zb - za) / 2;
+    if (zb - za >= 4 && y1 - y0 > hm + 2)
+        polygon([[y0, za + hm], [y0 + hm, za], [y1, za], [y1, zb], [y0 + hm, zb]]);
+}
+function n_midt(s) = max(0, ceil((s - 2 * flens_b) / bro_maks) - 1);
+
+// Skinner, frontlist og bakstopp for én rad. z = gulvnivå (overkant = z + hylle_t).
+// mb = modulbredde, D = dybde, k = kolonner, sl = slotbredde, sd = skuffdybde (0 = ingen bakstopp), fs = fas under frontlista
+module rad_skinner(mb, D, z, k, sl, sd, fs) {
+    zf = z + hylle_t - flens_t;
+    gb = veggtykkelse - ramme_t;          // styrekant inntil sideramma
+    // Kantskinner (L) – går helt bak til ryggen (står på printplaten)
+    translate([ramme_t - e, 0, zf]) cube([gb + flens_b + e, D, flens_t]);
+    translate([mb - veggtykkelse - flens_b, 0, zf]) cube([gb + flens_b + e, D, flens_t]);
+    if (gb > 0.2) {
+        translate([ramme_t - e, 0, zf]) cube([gb + e, D, flens_t + skinne_h]);
+        translate([mb - veggtykkelse, 0, zf]) cube([gb + e, D, flens_t + skinne_h]);
     }
+    // T-skinner mellom kolonnene (styrekanten er den gamle styreskinna, skinne_b x skinne_h)
+    if (k > 1) for (c = [1 : k - 1]) {
+        xg = veggtykkelse + c * (sl + skinne_b) - skinne_b;
+        translate([xg - flens_b, 0, zf]) cube([skinne_b + 2 * flens_b, D, flens_t]);
+        translate([xg, 0, zf]) cube([skinne_b, D, flens_t + skinne_h]);
+    }
+    // Midtskinner under brede skuffer (korte broer i printen)
+    nm = n_midt(sl);
+    if (nm > 0) for (c = [0 : k - 1], i = [1 : nm])
+        translate([veggtykkelse + c * (sl + skinne_b) + flens_b + i * (sl - 2 * flens_b) / (nm + 1) - midt_b / 2, 0, zf])
+            cube([midt_b, D, flens_t]);
+    // Frontlist (gulvet foran) med 45° fas under for stivhet
+    translate([0, 0, zf]) cube([mb, list_d, flens_t]);
+    if (fs > 0.5) langs_x(mb) polygon([[0, zf + e], [0, zf - fs], [fs, zf + e]]);
+    // Bakstopp (tynn tverrstang): skuffen stopper med fronten i flukt med rammen
+    if (sd > 0) translate([ramme_t - e, sd + 0.3, zf]) cube([mb - 2 * ramme_t + 2 * e, flens_t, flens_t + bakstopp_h]);
 }
 
+// Siderammer med ett vindu per felt. vinduer = [[za, zb], ...], sdp = stolpedybde bak
+module ramme_sider(mb, D, H, vinduer, sdp) {
+    y1 = D - bakvegg - sdp - 1;
+    for (x = [0, mb - ramme_t]) translate([x, 0, 0]) difference() {
+        cube([ramme_t, D, H]);
+        translate([-e, 0, 0]) langs_x(ramme_t + 2 * e) for (v = vinduer) vindu2d(vindu_kant, y1, v[0], v[1]);
+    }
+}
+// Åpen rygg: lister oppe og nede + kryss
+module ramme_rygg(mb, D, H) {
+    b = stag_b;
+    translate([0, D - bakvegg, 0]) {
+        cube([mb, bakvegg, b]);
+        translate([0, 0, H - b]) cube([mb, bakvegg, b]);
+        for (s = [0, 1]) hull() {
+            translate([s == 0 ? 0 : mb - b, 0, 0]) cube([b, bakvegg, b]);
+            translate([s == 0 ? mb - b : 0, 0, H - b]) cube([b, bakvegg, b]);
+        }
+    }
+}
+// Stolpekloss bak (pinner, lasker, bolter). side 0 = venstre, 1 = høyre. Går helt ut til ryggen.
+module stolpe_kloss(mb, D, side, z0, h, sdp) {
+    bx = veggtykkelse + stolpe_b - ramme_t + e;
+    translate([side == 0 ? ramme_t - e : mb - veggtykkelse - stolpe_b, D - bakvegg - sdp, z0]) cube([bx, sdp + bakvegg, h]);
+}
+kloss_h = max(pinne_dybde, lask_z + 5) + 2;
+
+// ---------------------------------------------------------------------
+// Rammemodul for små skuffer (i = kolonne av moduler, j = etasje)
+// ---------------------------------------------------------------------
 module ramme_modul(i, j) {
     mb = modul_bredde; D = tarn_d; H = modul_h(j); n = rader_i(j); zb = rad_base(j);
     venstre_skjot = i > 0;
     hoyre_skjot = i < moduler_x - 1;
+    er_topp = j == moduler_y - 1;
     // Pinnehull på toppen også i øverste etasje når store skuffer står oppå
     pinner_opp = j < moduler_y - 1 || lag_tarn_store;
+    nivaa = [for (k = [0 : n - 1]) zb + k * rad_avstand];
+    ztopp = er_topp ? H - hylle_t : H;
+    vinduer = concat(zb >= 8 ? [[3, zb - 1.5]] : [],
+        [for (k = [0 : n - 1]) [nivaa[k] + hylle_t + skinne_h + 1, k < n - 1 ? nivaa[k + 1] - 1.5 : ztopp - 2]]);
+    fs = min(fas, luft_over - 1.5);
     difference() {
         union() {
-            // Sidevegger og bakvegg
-            cube([veggtykkelse, D, H]);
-            translate([mb - veggtykkelse, 0, 0]) cube([veggtykkelse, D, H]);
-            translate([0, D - bakvegg, 0]) cube([mb, bakvegg, H]);
-            // Hylle (gulv) under hver rad, med styreskinner og bakstopp
-            for (k = [0 : n - 1]) translate([0, 0, zb + k * rad_avstand]) {
-                cube([mb, D, hylle_t]);
-                if (kpm > 1) for (c = [1 : kpm - 1])
-                    translate([slot_x(c) - skinne_b, 0, hylle_t - e]) cube([skinne_b, D - bakvegg, skinne_h + e]);
-                // Bakstopp: skuffen stopper med fronten i flukt med rammen
-                translate([veggtykkelse, skuff_dybde + 0.3, hylle_t - e]) cube([indre_b, D - bakvegg - skuff_dybde - 0.3 + e, skinne_h + e]);
+            ramme_sider(mb, D, H, vinduer, stolpe_d);
+            ramme_rygg(mb, D, H);
+            for (k = [0 : n - 1]) rad_skinner(mb, D, nivaa[k], kpm, slot, skuff_dybde, fs);
+            // Øverste etasje: skinner og frontlist på toppen som avstiving (store skuffer står oppå)
+            if (er_topp) rad_skinner(mb, D, H - hylle_t, kpm, slot, 0, 0);
+            // Stolpeklosser bak, nederst og øverst (pinner og lasker)
+            for (s = [0, 1]) {
+                stolpe_kloss(mb, D, s, 0, kloss_h, stolpe_d);
+                stolpe_kloss(mb, D, s, H - kloss_h, kloss_h, stolpe_d);
             }
-            // Sokkel (nederste etasje) og topp (øverste etasje)
-            if (j == 0) kasse_ramme(0, sokkel_h, true, false);
-            if (j == moduler_y - 1) kasse_ramme(zb + n * rad_avstand, topp_h, true, true);
-            // Hjørnestolper bak (bak skuffene), full høyde
-            for (x = stolpe_xs()) translate([x - stolpe_b / 2, D - bakvegg - stolpe_d, 0]) cube([stolpe_b, stolpe_d + e, H]);
-            // Tunger under gulvet som griper innenfor sideveggene på modulen under
-            if (j > 0) for (x = [veggtykkelse + toleranse / 2, mb - veggtykkelse - toleranse / 2 - tunge_b])
-                translate([x, 5, -tunge_h]) cube([tunge_b, skuff_dybde - 5, tunge_h + e]);
+            // Klosser rundt boltene i sideskjøtene, én per rad
+            for (k = [0 : n - 1]) {
+                z = nivaa[k] + hylle_t + (rad_avstand - hylle_t) / 2;
+                if (venstre_skjot) stolpe_kloss(mb, D, 0, z - 6, 12, stolpe_d);
+                if (hoyre_skjot) stolpe_kloss(mb, D, 1, z - 6, 12, stolpe_d);
+            }
+            // Tunger under kantskinnene som griper innenfor siderammene på modulen under (45° bakkant)
+            if (j > 0) for (x = [ramme_t + toleranse / 2, mb - ramme_t - toleranse / 2 - tunge_b])
+                translate([x, 0, 0]) langs_x(tunge_b)
+                    polygon([[5, hylle_t - flens_t + e], [skuff_dybde, hylle_t - flens_t + e],
+                             [skuff_dybde - tunge_h - (hylle_t - flens_t), -tunge_h], [5, -tunge_h]]);
         }
-        // Pinnehull i stolpene (opp og ned)
+        // Pinnehull i stolpeklossene (opp og ned)
         for (x = stolpe_xs()) {
             if (j > 0) translate([x, stolpe_yc, -e]) draape_z(pinne_d + toleranse, pinne_dybde + e);
             if (pinner_opp) translate([x, stolpe_yc, H - pinne_dybde]) draape_z(pinne_d + toleranse, pinne_dybde + e);
-            // Kjernehull for lasker (gjennom bakveggen inn i stolpen)
+            // Kjernehull for lasker (gjennom ryggen inn i klossen)
             for (z = [lask_z, H - lask_z])
                 translate([x, D + e, z]) rotate([90, 0, 0]) cylinder(d = skrue_kjerne, h = bakvegg + stolpe_d - 1);
         }
-        // Boltehull mellom moduler side om side: ett per rad, midt i raden, gjennom vegg + stolpe
+        // Boltehull mellom moduler side om side: ett per rad, midt i raden, gjennom ramme + kloss
         for (k = [0 : n - 1]) {
-            z = zb + k * rad_avstand + hylle_t + (rad_avstand - hylle_t) / 2;
+            z = nivaa[k] + hylle_t + (rad_avstand - hylle_t) / 2;
             if (venstre_skjot) translate([-e, stolpe_yc, z]) draape_x(bolt_hull, veggtykkelse + stolpe_b + 2 * e);
             if (hoyre_skjot) translate([mb - veggtykkelse - stolpe_b - e, stolpe_yc, z]) draape_x(bolt_hull, veggtykkelse + stolpe_b + 2 * e);
         }
@@ -565,27 +657,29 @@ module ramme_modul(i, j) {
 // ---------------------------------------------------------------------
 module stor_ramme(mb, H, D, R, k, venstre_skjot, hoyre_skjot, pinner_under) {
     p = sek_pitch(H, R);
-    ib = mb - 2 * veggtykkelse;
     sl = sek_slot(mb, k);
     sd = sek_sd(D);
     sdp = D - bakvegg - sd - 1;            // stolpedybde
     syc = D - bakvegg - sdp / 2;
     xs = [veggtykkelse + stolpe_b / 2, mb - veggtykkelse - stolpe_b / 2];
+    vinduer = [for (r = [0 : R - 1]) [r * p + hylle_t + skinne_h + 1, (r + 1) * p - 1.5]];
+    fs = min(fas, stor_luft - 1.5);
     difference() {
         union() {
-            cube([veggtykkelse, D, H]);
-            translate([mb - veggtykkelse, 0, 0]) cube([veggtykkelse, D, H]);
-            translate([0, D - bakvegg, 0]) cube([mb, bakvegg, H]);
-            for (r = [0 : R - 1]) translate([0, 0, r * p]) {
-                cube([mb, D, hylle_t]);
-                if (k > 1) for (c = [1 : k - 1])
-                    translate([veggtykkelse + c * (sl + skinne_b) - skinne_b, 0, hylle_t - e]) cube([skinne_b, D - bakvegg, skinne_h + e]);
-                translate([veggtykkelse, sd + 0.3, hylle_t - e]) cube([ib, D - bakvegg - sd - 0.3 + e, skinne_h + e]);
+            ramme_sider(mb, D, H, vinduer, sdp);
+            ramme_rygg(mb, D, H);
+            for (r = [0 : R - 1]) rad_skinner(mb, D, r * p, k, sl, sd, fs);
+            // Toppen: skinner og frontlist i stedet for et helt tak
+            rad_skinner(mb, D, H - hylle_t, k, sl, 0, 0);
+            for (s = [0, 1]) {
+                stolpe_kloss(mb, D, s, 0, kloss_h, sdp);
+                stolpe_kloss(mb, D, s, H - kloss_h, kloss_h, sdp);
             }
-            // Tak
-            translate([0, 0, H - hylle_t]) cube([mb, D, hylle_t]);
-            // Hjørnestolper bak
-            for (x = xs) translate([x - stolpe_b / 2, D - bakvegg - sdp, 0]) cube([stolpe_b, sdp + e, H]);
+            for (r = [0 : R - 1], f = sek_bolt_z(p)) {
+                z = r * p + hylle_t + (p - hylle_t) * f;
+                if (venstre_skjot) stolpe_kloss(mb, D, 0, z - 6, 12, sdp);
+                if (hoyre_skjot) stolpe_kloss(mb, D, 1, z - 6, 12, sdp);
+            }
         }
         for (x = xs) {
             if (pinner_under) translate([x, syc, -e]) draape_z(pinne_d + toleranse, pinne_dybde + e);
