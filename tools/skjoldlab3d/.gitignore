@@ -1,0 +1,6 @@
+# Eksporterte filer og forhåndsvisninger hører ikke hjemme i git
+stl/
+*.stl
+*.3mf
+*.gcode
+*.png
