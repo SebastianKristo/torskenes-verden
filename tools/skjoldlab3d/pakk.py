@@ -104,18 +104,23 @@ def svg(moduler, nett, ut, rader_info=(), hylle=(560, 760)):
         out.append(f'<rect x="{m + x * s:.1f}" y="{Y(y, h):.1f}" width="{b * s:.1f}" height="{h * s:.1f}" fill="{f}" stroke="#1b1a17" stroke-width="1.5"/>')
     # Skuffer og LED-kanal: fra SKJOLDLAB-RAD (doble skuffer og rader med ulik høyde), ellers et jevnt nett
     if rader_info:
+        sett_rad, hoyre = set(), 0.0
+        x_min = min(float(ri['x0']) for ri in rader_info)
         for ri in rader_info:
             x0, y, h, ly, P = (float(ri[k]) for k in ('x0', 'y', 'h', 'led_y', 'skuffavstand'))
-            out.append(f'<line x1="{m + x0 * s:.1f}" y1="{Y(ly, 0):.1f}" x2="{m + (x0 + sum(int(b) for b in ri['skuffer'].split(',')) * P) * s:.1f}" y2="{Y(ly, 0):.1f}" stroke="#2F6BFF" stroke-width="2" opacity=".55"/>')
-            out.append(f'<text x="{m - 8}" y="{Y(y + h / 2, 0) + 4:.1f}" font-size="11" text-anchor="end" fill="#8f897c">{ri["rad"]}</text>')
+            bredder = [int(b) for b in ri['skuffer'].split(',')]
+            hoyre = max(hoyre, x0 + sum(bredder) * P)
+            out.append(f'<line x1="{m + x0 * s:.1f}" y1="{Y(ly, 0):.1f}" x2="{m + (x0 + sum(bredder) * P) * s:.1f}" y2="{Y(ly, 0):.1f}" stroke="#2F6BFF" stroke-width="2" opacity=".55"/>')
+            if ri['rad'] not in sett_rad and h < 60:
+                sett_rad.add(ri['rad'])
+                out.append(f'<text x="{m - 8}" y="{Y(y + h / 2, 0) + 4:.1f}" font-size="11" text-anchor="end" fill="#8f897c">{ri["rad"]}</text>')
             c = 0
-            for b in (int(b) for b in ri['skuffer'].split(',')):
+            for b in bredder:
                 out.append(f'<rect x="{m + (x0 + c * P + 4) * s:.1f}" y="{Y(y, h):.1f}" width="{(b * P - 8) * s:.1f}" height="{h * s:.1f}" rx="4" fill="#2a2a2a" opacity=".18"/>')
                 c += b
-        r0 = rader_info[0]
-        x0, P = float(r0['x0']), float(r0['skuffavstand'])
-        for c in range(sum(int(b) for b in r0['skuffer'].split(','))):
-            out.append(f'<text x="{m + (x0 + (c + 0.5) * P) * s:.1f}" y="{m - 6}" font-size="11" text-anchor="middle" fill="#8f897c">{c + 1}</text>')
+        P = float(rader_info[0]['skuffavstand'])
+        for c in range(round((hoyre - x_min) / P)):
+            out.append(f'<text x="{m + (x_min + (c + 0.5) * P) * s:.1f}" y="{m - 6}" font-size="11" text-anchor="middle" fill="#8f897c">{c + 1}</text>')
         rader_info = None
     try:
         if rader_info is None:
@@ -239,9 +244,9 @@ def main():
     L += ['## Montering', '',
           '1. Print prøvedelene og sjekk passform. Juster `toleranse` i modellen hvis skuffen går tregt.',
           '2. Bygg veggen nedenfra: modulene i nummerrekkefølge, skru/pinn sammen med lasker og pinner.',
-          '3. Lim LED-stripa i kanalen over hver rad (serpentine: annenhver rad motsatt vei), sett på maske og diffusor.',
+          '3. Lim LED-stripa i kanalen over hver rad, og sett på maske og diffusor. Med store skuffer til venstre: alle rader fra venstre mot høyre med en tynn dataledning tilbake, og 12 blinde LED-er skjult på høyre side før radene uten kanal til venstre (se tools/skjoldlab3d/README.md). Ellers serpentine: annenhver rad motsatt vei.',
           '4. Koble til ESP32 i elektronikkboksen (se tools/skjoldlab-led/README.md), installer WLED.',
-          '5. Skjold Lab → Skap-oppsett: «Sorteringsskap (LED)» med rader × kolonner over, LED-oppsett, kalibrer.', '']
+          '5. Skjold Lab → Skap-oppsett: «Sorteringsskap (LED)» med rader × kolonner over (13 × 11), LED-oppsett («Samme retning» med store skuffer til venstre), kalibrer. En stor skuff bruker øverste venstre celle.', '']
     if mangler:
         L += ['## Mangler', '', 'Disse delene var i planen, men fantes ikke som fil: ' + ', '.join(mangler), '']
     (ut / 'LES-MEG.md').write_text('\n'.join(L), encoding='utf-8')

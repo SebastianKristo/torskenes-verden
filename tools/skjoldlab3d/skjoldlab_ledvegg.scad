@@ -89,9 +89,11 @@ rader_hele = 0;
 // Rundt Raaco: lag sideveggen ved siden av Raaco og toppveggen over Raaco
 lag_side = true;
 lag_topp = true;
-// Hele hylla: skuffer som er 2 brede og 2 høye (nederst). Fylles rad for rad fra venstre, 0 = ingen
+// Hele hylla: en egen modulkolonne helt til venstre med store skuffer (antall skuffkolonner, partall). 0 = ingen
+venstre_kolonner = 4;
+// Hele hylla: skuffer som er 2 brede og 2 høye, i venstre kolonne nedenfra. 0 = ingen
 store_skuffer = 10;
-// Hele hylla: skuffer som er 2 brede og 1 høy (over de store). 0 = ingen
+// Hele hylla: skuffer som er 2 brede og 1 høy. Først i venstre kolonne over de store, så i radene øverst til høyre. 0 = ingen
 brede_skuffer = 10;
 // Radhøyde uten LED-kanal: gulv + skuffåpning (ca. 45)
 rad_hoyde = 45;
@@ -274,33 +276,46 @@ h_Hav = hylle_hoyde - klaring;                            // 757
 h_K = kolonner_hele > 0 ? kolonner_hele : floor(h_Wav / P);          // 11
 // Høyden i enkeltrader (rader_hele teller enkeltrader; en dobbel rad er 2)
 h_U = rader_hele > 0 ? rader_hele : floor((h_Hav - hylle_t) / Pr);   // 13
-h_nx = max(1, ceil(h_K / kpm_maks));                      // 4 (3/3/3/2)
 h_W = h_K * P;                                            // 550
 h_H = h_U * Pr + hylle_t;                                 // 756
 h_x0 = (hylle_bredde - h_W) / 2;                          // 5
-// Doble skuffer: hver modulkolonne med k skuffer får floor(k / 2) doble per rad (3/3/3/2 -> 4 per rad).
-// Nederst nd doble rader (2 x 2), så nw rader med brede (2 x 1), så vanlige rader. Rad nr. rb teller nedenfra.
-kw = [for (i = [0 : h_nx - 1]) deling(h_K, h_nx, i)];
-par_rad = sum_liste([for (k = kw) floor(k / 2)]);
-n_st = hel && par_rad > 0 ? max(0, floor(store_skuffer)) : 0;
-n_br = hel && par_rad > 0 ? max(0, floor(brede_skuffer)) : 0;
-nd = ceil(n_st / max(1, par_rad));                        // 3 doble rader
-nw = ceil(n_br / max(1, par_rad));                        // 3 rader med brede skuffer
-h_R = h_U - nd;                                           // 10 LED-rader
-function rf_h(rb) = rb < nd ? 2 : 1;
-function zrad_h(rb) = (rb + min(rb, nd)) * Pr;
-function par_for(i) = i <= 0 ? 0 : par_for(i - 1) + floor(kw[i - 1] / 2);
-// Antall doble skuffer i modulkolonne i, rad rb (fra venstre i hver modul)
-function fletting(rb, i) = let(n = rb < nd ? n_st - rb * par_rad : rb < nd + nw ? n_br - (rb - nd) * par_rad : 0)
-    max(0, min(floor(kw[i] / 2), n - par_for(i)));
-// Etasjer av moduler [første rad, antall rader], maks rpm_maks enkeltrader høye. Uten doble rader: jevn deling som før.
-function etasjer(rb = 0, start = 0, u = 0) =
-    rb >= h_R ? [[start, rb - start]] :
-    (u + rf_h(rb) > rpm_maks && rb > start) ? concat([[start, rb - start]], etasjer(rb + 1, rb, rf_h(rb))) :
-    etasjer(rb + 1, start, u + rf_h(rb));
-h_ny0 = max(1, ceil(h_R / rpm_maks));
-h_et = nd == 0 ? [for (j = [0 : h_ny0 - 1]) [sum_deling(h_R, h_ny0, j), deling(h_R, h_ny0, j)]] : etasjer();
-h_ny = len(h_et);                                         // 5
+h_ny = max(1, ceil(h_U / rpm_maks));                      // 5 etasjer (3/3/3/2/2 rader nedenfra)
+// Store skuffer: egen modulkolonne til venstre (vk skuffkolonner, vk/2 doble skuffer side om side).
+// I hver etasje står de store (2 rader høye) nederst og brede/vanlige over. Resten av hylla er vanlige skuffer.
+vk_on = hel && venstre_kolonner >= 2 && store_skuffer + brede_skuffer > 0;
+vk = vk_on ? 2 * floor(venstre_kolonner / 2) : 0;          // 4
+halv = max(1, vk / 2);                                    // 2 doble skuffer side om side
+nxr = max(1, ceil((h_K - vk) / kpm_maks));                // 3 (3/2/2)
+kw = vk_on ? concat([vk], [for (i = [0 : nxr - 1]) deling(h_K - vk, nxr, i)]) : [for (i = [0 : max(1, ceil(h_K / kpm_maks)) - 1]) deling(h_K, max(1, ceil(h_K / kpm_maks)), i)];
+h_nx = len(kw);                                           // 4 (4/3/2/2)
+function kw_for(i) = i <= 0 ? 0 : kw_for(i - 1) + kw[i - 1];
+function et_u(j) = deling(h_U, h_ny, j);
+function et_s(j) = sum_deling(h_U, h_ny, j);
+// Venstre kolonne: store rader (2 høye) fylles nedenfra, så brede rader, så vanlige
+function cap_b(j) = floor(et_u(j) / 2);
+function cap_b_for(j) = j <= 0 ? 0 : cap_b_for(j - 1) + cap_b(j - 1);
+NB = vk_on ? min(cap_b_for(h_ny), ceil(max(0, store_skuffer) / halv)) : 0;   // 5 store rader
+function nb(j) = max(0, min(cap_b(j), NB - cap_b_for(j)));
+function f1_for(j) = j <= 0 ? 0 : f1_for(j - 1) + et_u(j - 1) - 2 * nb(j - 1);
+NWL = vk_on ? min(f1_for(h_ny), ceil(max(0, brede_skuffer) / halv)) : 0;       // 3 brede rader
+mg_full = [for (p = [0 : 1 : halv - 1]) 2 * p + 1];
+function venstre_rader(j) = concat(
+    [for (b = [0 : 1 : nb(j) - 1]) [2 * b, 2, mg_full]],
+    [for (t = [0 : 1 : et_u(j) - 2 * nb(j) - 1]) [2 * nb(j) + t, 1, f1_for(j) + t < NWL ? mg_full : []]]);
+// Brede skuffer som ikke fikk plass til venstre: rader øverst i resten av hylla, fylt fra venstre
+i0r = vk_on ? 1 : 0;
+par_r = sum_liste([for (i = [i0r : h_nx - 1]) floor(kw[i] / 2)]);
+n_br_r = hel ? min(par_r * h_U, max(0, brede_skuffer - NWL * halv)) : 0;
+function par_for_r(i) = i <= i0r ? 0 : par_for_r(i - 1) + floor(kw[i - 1] / 2);
+function brede_h(u, i) = let(q = h_U - 1 - u, n = n_br_r - q * par_r) max(0, min(floor(kw[i] / 2), n - par_for_r(i)));
+// Radene i modul (i, j) nedenfra: [enhet fra bunnen av modulen, høyde i rader, lokale skjøter uten T-skinne]
+function h_rader(i, j) = vk_on && i == 0 ? venstre_rader(j) :
+    [for (t = [0 : et_u(j) - 1]) [t, 1, [for (p = [0 : 1 : brede_h(et_s(j) + t, i) - 1]) 2 * p + 1]]];
+n22 = NB * halv;
+n21 = NWL * halv + n_br_r;
+n12 = 0;
+// Rader (nedenfra) der venstre kolonne ikke har LED-kanal (midt i en stor skuff)
+blinde = vk_on ? [for (j = [0 : h_ny - 1]) for (b = [0 : 1 : nb(j) - 1]) et_s(j) + 2 * b] : [];
 
 // Rundt Raaco: plassering
 rx0 = raaco_side == "venstre" ? 0 : hylle_bredde - raaco_bredde;
@@ -328,22 +343,17 @@ lag_t = !hel && lag_topp;
 
 // Hovedveggen: hele hylla, eller sideveggen ved Raaco
 m_K = hel ? h_K : s_K;
-m_R = hel ? h_R : s_R;
+m_R = hel ? h_U : s_R;
 m_nx = hel ? h_nx : s_nx;
 m_ny = hel ? h_ny : s_ny;
 // Felles oppslag for hovedveggen (top = false) og toppveggen over Raaco (top = true)
-function mod_k(top, i) = top ? deling(t_K, t_nx, i) : deling(m_K, m_nx, i);
-function mod_x(top, i) = (top ? sum_deling(t_K, t_nx, i) : sum_deling(m_K, m_nx, i)) * P;
-function mod_rows(top, j) = top ? [sum_deling(t_R, t_ny, j), deling(t_R, t_ny, j)] :
-    hel ? h_et[j] : [sum_deling(m_R, m_ny, j), deling(m_R, m_ny, j)];
-function rad_f(top, rb) = !top && hel ? rf_h(rb) : 1;
-function rad_z(top, rb) = !top && hel ? zrad_h(rb) : rb * Pr;
-// Lokale skjøter uten T-skinne (b = skuff b-1 og b er én skuff)
-function rad_mg(top, i, rb) = !top && hel ? [for (p = [0 : 1 : fletting(rb, i) - 1]) 2 * p + 1] : [];
+function mod_k(top, i) = top ? deling(t_K, t_nx, i) : hel ? kw[i] : deling(m_K, m_nx, i);
+function mod_x(top, i) = (top ? sum_deling(t_K, t_nx, i) : hel ? kw_for(i) : sum_deling(m_K, m_nx, i)) * P;
+// Etasje j: [første rad nedenfra, antall rader] (i enkeltrader)
+function mod_rows(top, j) = top ? [sum_deling(t_R, t_ny, j), deling(t_R, t_ny, j)] : [sum_deling(m_R, m_ny, j), deling(m_R, m_ny, j)];
+function mod_rader(top, i, j) = !top && hel ? h_rader(i, j) : [for (t = [0 : mod_rows(top, j)[1] - 1]) [t, 1, []]];
 function har(v, x) = len([for (a = v) if (a == x) 1]) > 0;
-// Skuffbredder (i kolonner) langs en hel rad, fra venstre
-function rad_bredder(top, rb) = [for (i = [0 : (top ? t_nx : m_nx) - 1]) let(k = mod_k(top, i), mg = rad_mg(top, i, rb))
-    for (c = [0 : k - 1]) if (!har(mg, c)) (har(mg, c + 1) ? 2 : 1)];
+function bredder(k, mg) = [for (c = [0 : k - 1]) if (!har(mg, c)) (har(mg, c + 1) ? 2 : 1)];
 function join(v, i = 0) = i >= len(v) ? "" : str(i > 0 ? "," : "", v[i], join(v, i + 1));
 m_x0 = hel ? h_x0 : s_x0;
 m_navn = hel ? "hele" : "side";
@@ -380,10 +390,10 @@ assert(D - bakvegg - bak_rom - 1 > tak_d_topp + 2 + 30, "Rammen er for grunn til
 assert(rpm_maks >= 1, "Radavstanden er større enn byggeplaten.");
 assert(rpm_maks * Pr + hylle_t <= plass && kpm_maks * P <= plass, "Modulene blir større enn byggeplaten. Sett modul_kolonner_maks/modul_rader_maks lavere.");
 assert(!hel || h_K >= 1, str("For lite plass i hylla (", h_Wav, " mm) til én skuff på ", P, " mm."));
-assert(!hel || h_R >= 1, "Hylla er for lav til én rad.");
-assert(!hel || 2 * nd + nw <= h_U, str("For mange store/brede skuffer: ", nd, " doble rader og ", nw, " rader med brede skuffer får ikke plass i ",
-                                         h_U, " rader. Sett store_skuffer/brede_skuffer lavere."));
-assert(nd == 0 || rpm_maks >= 2, "En dobbel rad er høyere enn modul_rader_maks tillater.");
+assert(!hel || h_U >= 1, "Hylla er for lav til én rad.");
+assert(!vk_on || vk * P <= plass, str("Venstre kolonne (", vk * P, " mm) er bredere enn byggeplaten. Sett venstre_kolonner lavere."));
+assert(!vk_on || vk < h_K, "venstre_kolonner må være mindre enn antall kolonner.");
+assert(!vk_on || rpm_maks >= 2 || NB == 0, "Store skuffer er høyere enn modul_rader_maks tillater.");
 assert(!akryl || skuff_h >= ak_zw + 8, "Skuffene er for lave til akrylvindu over grepet. Sett akryl = false eller øk rad_hoyde.");
 assert(!hel || h_W <= h_Wav, str("Veggen (", h_W, " mm) er bredere enn hylla (", h_Wav, " mm). Sett kolonner_hele lavere."));
 assert(!hel || h_H <= h_Hav, str("Veggen (", h_H, " mm) er høyere enn hylla (", h_Hav, " mm). Sett rader_hele lavere."));
@@ -409,8 +419,9 @@ echo(str("SKJOLDLAB-LED: LED ", led_per_m, "/m = ", pled, " mm, ", led_per_skuff
 echo(str("SKJOLDLAB-LED: skuff ", skuff_b, " x ", skuff_d, " x ", skuff_h, " mm (B x D x H), ", skuff_d + grep_ut, " mm med grep, ",
          skuff_h + stopp_h, " mm med leppe bak, rammedybde ", D, " mm (printhøyde, liggende på ryggen)"));
 if (hel) {
-    echo(str("SKJOLDLAB-LED: hele hylla ", h_R, " LED-rader x ", h_K, " kolonner (", nd, " doble rader nederst), ", h_W, " x ", D, " x ", h_H, " mm, x = ", h_x0));
-    echo(str("SKJOLDLAB-LED: hele moduler ", h_nx, " x ", h_ny, " kolonner ", kw, " rader per etasje ", [for (e2 = h_et) e2[1]]));
+    echo(str("SKJOLDLAB-LED: hele hylla ", h_U, " rader x ", h_K, " kolonner", vk_on ? str(", store skuffer i de ", vk, " kolonnene til venstre") : "",
+             ", ", h_W, " x ", D, " x ", h_H, " mm, x = ", h_x0));
+    echo(str("SKJOLDLAB-LED: hele moduler ", h_nx, " x ", h_ny, " kolonner ", kw, " rader per etasje ", [for (j = [0 : h_ny - 1]) et_u(j)]));
 }
 if (!hel && lag_side) {
     echo(str("SKJOLDLAB-LED: sidevegg ", s_R, " rader x ", s_K, " kolonner = ", s_R * s_K, " skuffer, ", s_W, " x ", D, " x ", s_H, " mm, x = ", s_x0));
@@ -424,11 +435,16 @@ if (lag_t) {
 n_side = !hel && lag_side ? s_R * led_antall(s_K) : 0;
 n_topp = lag_t ? t_R * led_antall(t_K) : 0;
 n_raaco = hel ? 0 : raaco_rader * r_leds;
-n_hele = hel ? h_R * led_antall(h_K) : 0;
+n_hele = hel ? h_U * led_antall(h_K) : 0;
 n_led = n_raaco + n_side + n_topp + n_hele;
 if (hel) {
-    echo(str("SKJOLDLAB-LED: LED-er: ", n_hele, " (", h_R, " rader x ", led_antall(h_K), ", ca. ", ceil(n_hele * pled / 100) / 10, " m stripe)"));
-    echo(str("SKJOLDLAB-LED: Skjold Lab: «Sorteringsskap (LED)» ", h_R, " x ", h_K, " start 0, drawerPitchMm ", P, ", firstDrawerXmm ", P / 2, ", ",
+    echo(str("SKJOLDLAB-LED: LED-er: ", n_hele, " (", h_U, " rader x ", led_antall(h_K), ", ca. ", ceil(n_hele * pled / 100) / 10, " m stripe)",
+             len(blinde) > 0 ? str(", av dem ", len(blinde) * led_antall(vk), " blinde") : ""));
+    if (len(blinde) > 0)
+        echo(str("SKJOLDLAB-LED: blinde rader (ingen kanal i venstre kolonne, midt i en stor skuff): rad ", join([for (u = blinde) h_U - u]),
+                 ". Alle rader går fra venstre mot høyre (layout «samme retning»). I disse radene starter stripa ved kolonne ", vk + 1,
+                 ", og ", led_antall(vk), " blinde LED-er legges skjult før den (se README)."));
+    echo(str("SKJOLDLAB-LED: Skjold Lab: «Sorteringsskap (LED)» ", h_U, " x ", h_K, len(blinde) > 0 ? " layout samme retning" : "", " start 0, drawerPitchMm ", P, ", firstDrawerXmm ", P / 2, ", ",
              led_antall(h_K), " per rad, offsetMm ", led_offset));
 } else {
     echo(str("SKJOLDLAB-LED: Raaco-skinne ", rs_l, " x ", rs_b, " x ", rs_h, " mm, ", raaco_rader, " stk + ", 2 * raaco_rader,
@@ -456,28 +472,26 @@ seksjoner = concat(
 function qs(v) = len(v) <= 1 ? v : let(p = v[floor(len(v) / 2)][0])
     concat(qs([for (a = v) if (a[0] < p) a]), [for (a = v) if (a[0] == p) a], qs([for (a = v) if (a[0] > p) a]));
 plan = qs([for (s = seksjoner) for (j = [0 : s[5] - 1]) for (i = [0 : s[4] - 1])
-    let(top = s[0] == "topp", et = mod_rows(top, j), k = mod_k(top, i), n = et[1],
-        x = s[6] + mod_x(top, i), y = s[7] + rad_z(top, et[0]))
+    let(top = s[0] == "topp", et = mod_rows(top, j), k = mod_k(top, i), n = len(mod_rader(top, i, j)),
+        x = s[6] + mod_x(top, i), y = s[7] + et[0] * Pr)
     [round(y * 10) * 100000 + round(x * 10), s[1], i, j, x, y, k * P,
-     rad_z(top, et[0] + n) - rad_z(top, et[0]) + (j == s[5] - 1 ? hylle_t : 0), n, k, s[0]]]);
+     et[1] * Pr + (j == s[5] - 1 ? hylle_t : 0), n, k, s[0]]]);
 if (len(plan) > 0) for (q = [0 : len(plan) - 1]) let(m = plan[q])
     echo(str("SKJOLDLAB-MODUL: nr=", q + 1, " del=", m[1], " modul_x=", m[2], " modul_y=", m[3], " x=", m[4], " y=", m[5],
              " b=", m[6], " h=", m[7], " rader=", m[8], " kolonner=", m[9], " seksjon=", m[10]));
 for (s = seksjoner) let(top = s[0] == "topp") {
     echo(str("SKJOLDLAB-NETT: kolonner=", s[2], " rader=", s[3], " skuffavstand=", P, " radavstand=", Pr,
-             " x0=", s[6] + P / 2, " y0=", s[7] + rad_z(top, s[3] - 1) + hylle_t + skuff_h / 2,
+             " x0=", s[6] + P / 2, " y0=", s[7] + (s[3] - 1) * Pr + hylle_t + skuff_h / 2,
              " led_per_rad=", led_antall(s[2]), " leds=", s[3] * led_antall(s[2]), " seksjon=", s[0]));
-    // Én linje per LED-rad (rad 1 øverst, som i Skjold Lab): underkant skuff, skuffhøyde, LED-høyde og skuffbredder fra venstre
-    for (rb = [s[3] - 1 : -1 : 0]) let(f = rad_f(top, rb), z = s[7] + rad_z(top, rb))
-        echo(str("SKJOLDLAB-RAD: seksjon=", s[0], " rad=", s[3] - rb, " x0=", s[6], " y=", z + hylle_t, " h=", skuff_hoyde(f),
-                 " led_y=", z + f * Pr - kh / 2, " skuffavstand=", P, " skuffer=", join(rad_bredder(top, rb))));
+    // Én linje per skuffrad i hver modul: rad i Skjold Lab (øverste rad skuffen dekker, 1 = øverst), underkant, høyde, LED-høyde og bredder
+    for (j = [0 : s[5] - 1], i = [0 : s[4] - 1]) let(et = mod_rows(top, j), k = mod_k(top, i)) for (rr = mod_rader(top, i, j))
+        echo(str("SKJOLDLAB-RAD: seksjon=", s[0], " rad=", s[3] - (et[0] + rr[0] + rr[1] - 1), " x0=", s[6] + mod_x(top, i),
+                 " y=", s[7] + (et[0] + rr[0]) * Pr + hylle_t, " h=", skuff_hoyde(rr[1]), " led_y=", s[7] + (et[0] + rr[0] + rr[1]) * Pr - kh / 2,
+                 " skuffavstand=", P, " skuffer=", join(bredder(k, rr[2]))));
 }
 // Skuffer per type: 1 x 1, 2 x 1 (brede), 1 x 2 (høye smale i de doble radene) og 2 x 2
 n_celler = sum_liste([for (s = seksjoner) s[2] * s[3]]);
-n22 = n_st;
-n21 = n_br;
-n12 = hel ? nd * h_K - 2 * n_st : 0;
-n11 = n_celler - (hel ? nd * h_K : 0) - 2 * n21;
+n11 = n_celler - 4 * n22 - 2 * n21 - 2 * n12;
 n_skuffer = n11 + n21 + n12 + n22;
 echo(str("SKJOLDLAB-SKUFFER: 1x1=", n11, " 2x1=", n21, " 1x2=", n12, " 2x2=", n22, " sum=", n_skuffer));
 function sum_liste(v, i = 0) = i >= len(v) ? 0 : v[i] + sum_liste(v, i + 1);
@@ -775,7 +789,7 @@ module modul_ij(top, i, j) {
     ny = top ? t_ny : m_ny;
     et = mod_rows(top, j);
     lv_modul(mod_k(top, i), et[1], j == 0, j == ny - 1, i > 0, i < nx - 1,
-             [for (r = [0 : et[1] - 1]) rad_f(top, et[0] + r)], [for (r = [0 : et[1] - 1]) rad_mg(top, i, et[0] + r)]);
+             [for (rr = mod_rader(top, i, j)) rr[1]], [for (rr = mod_rader(top, i, j)) rr[2]]);
 }
 module hoved_modul(i, j) { modul_ij(false, i, j); }
 module topp_modul(i, j) { modul_ij(true, i, j); }
@@ -978,13 +992,12 @@ module lv_seksjon(top) {
     for (i = [0 : nx - 1], j = [0 : ny - 1]) {
         k = mod_k(top, i);
         et = mod_rows(top, j);
-        translate([mod_x(top, i), 0, rad_z(top, et[0])]) {
+        translate([mod_x(top, i), 0, et[0] * Pr]) {
             color(farge_ramme) modul_ij(top, i, j);
-            for (r = [0 : et[1] - 1]) {
-                rb = et[0] + r;
-                f = rad_f(top, rb);
-                mg = rad_mg(top, i, rb);
-                z = rad_z(top, rb) - rad_z(top, et[0]);
+            for (rr = mod_rader(top, i, j)) {
+                f = rr[1];
+                mg = rr[2];
+                z = rr[0] * Pr;
                 zc = z + f * Pr - kh;
                 // Lysstripe bak masken, og ett vindu som lyser (som på bildet)
                 translate([0, kanal_d - led_tykk, zc + tak_t + (kh - tak_t - led_bredde) / 2])
@@ -995,9 +1008,9 @@ module lv_seksjon(top) {
             }
         }
     }
-    // Én skuff som «lyser»
-    rl = R > 1 ? 1 : 0;
-    if (vis_skuffer) translate([(K > 1 ? 1.5 : 0.5) * P - vb / 2, spor_foran - 0.5, rad_z(top, rl) + rad_f(top, rl) * Pr - kh + tak_t + ribbe_h + 0.5])
+    // Én skuff som «lyser» (i rad 2 nedenfra, kolonne 2 i resten av hylla)
+    xl = top || !vk_on ? 0 : vk * P;
+    if (vis_skuffer) translate([xl + (K > 1 ? 1.5 : 0.5) * P - vb / 2, spor_foran - 0.5, (R > 1 ? 2 : 1) * Pr - kh + tak_t + ribbe_h + 0.5])
         color(farge_led) cube([vb, 1, innsats_h - 2 * ribbe_h - 1]);
 }
 

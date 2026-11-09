@@ -8,7 +8,7 @@ små og store skuffer, en topphylle over Raaco, valgfrie bakkasser og løse kass
 | Fil | Innhold |
 | --- | --- |
 | `skjoldlab_tilleggsskap.scad` | Sorteringen uten LED: sidetårn, topphylle, bakkasser og kasser. Alle mål er parametre øverst i filen og kan også endres i Customizer. |
-| `skjoldlab_ledvegg.scad` | **LED-skap** (prompt 78): skuffer i rader med en LED-kanal over hver rad. Standard er **hele hylla som ett sorteringsskap med LED** (`variant = "hele_hylla"`, uten Raaco: 90 skuffer, av dem 10 store 2 × 2 og 10 brede 2 × 1, alle med akrylfront; 143 like skuffer med `store_skuffer = 0` og `brede_skuffer = 0`). `variant = "rundt_raaco"` gir LED-vegg rundt Raaco med LED-skinne og klips for Raaco. Elektronikkboks i begge. Se [LED-vegg](#led-vegg-lys-over-skuffen). |
+| `skjoldlab_ledvegg.scad` | **LED-skap** (prompt 78): skuffer i rader med en LED-kanal over hver rad. Standard er **hele hylla som ett sorteringsskap med LED** (`variant = "hele_hylla"`, uten Raaco: 103 skuffer, av dem 10 store 2 × 2 i en egen kolonne til venstre og 10 brede 2 × 1, alle med akrylfront; 143 like skuffer med `venstre_kolonner = 0`). `variant = "rundt_raaco"` gir LED-vegg rundt Raaco med LED-skinne og klips for Raaco. Elektronikkboks i begge. Se [LED-vegg](#led-vegg-lys-over-skuffen). |
 | `eksporter.sh` | Eksporterer alle printdeler fra begge modellene til STL med OpenSCAD CLI. |
 | `../skjoldlab-led/README.md` | Innkjøp, kobling, WLED og oppsett i Skjold Lab for LED-ene. |
 | `.gitignore` | Holder STL/3MF/G-code/PNG utenfor git. Repoet skal ikke ha binærfiler. |
@@ -169,7 +169,7 @@ Modellen har to varianter (`variant`):
 
 | Variant | Hva | Skuffer | LED-er |
 | --- | --- | --- | --- |
-| **`"hele_hylla"`** (standard) | Hele hylla (560 × 760 × 320) er **ett sorteringsskap med LED**, uten Raaco. | 10 LED-rader × 11 kolonner, **90 skuffer** (143 uten store/brede) | 330 (ca. 5,5 m); 429 uten store/brede |
+| **`"hele_hylla"`** (standard) | Hele hylla (560 × 760 × 320) er **ett sorteringsskap med LED**, uten Raaco. | 13 rader × 11 kolonner, **103 skuffer** (143 uten store/brede) | 429 (ca. 7,2 m), av dem 60 blinde |
 | `"rundt_raaco"` | Raaco står nederst inntil én side. LED-veggen fyller resten: en sidevegg i full høyde og en toppvegg over Raaco. Raaco får en egen LED-skinne over hver rad. | 65 + 15 = 80 (+ 60 i Raaco) | 456 (ca. 7,6 m) |
 
 Alt printes i **sort PETG**. Det eneste unntaket er diffusoren, som bør være natur eller hvit PETG. Du kan også bruke bakepapir eller en opal plaststrimmel i sporet.
@@ -214,24 +214,39 @@ Det er et siktemerke over midten av hver skuff: et hakk i den fremre ribba og en
 
 ### Store og brede skuffer, og akrylfront (fra 2026-11-09)
 
-- **`store_skuffer = 10`** gir skuffer som er 2 brede og 2 høye (96 × 156 × 98 mm). De ligger i doble rader nederst. En dobbel rad er like høy som to vanlige (116 mm) og har én LED-stripe på toppen.
-- **`brede_skuffer = 10`** gir skuffer som er 2 brede og 1 høy (96 × 156 × 40 mm), i radene over de store.
-- Hver modulkolonne med 3 skuffer får én dobbel skuff og én enkel per rad (3/3/3/2 gir 4 doble per rad). De fylles rad for rad fra venstre. 10 store gir derfor 3 doble rader: 4 + 4 + 2. Plassene som blir igjen i de doble radene, blir høye smale skuffer (1 × 2, 46 × 156 × 98 mm).
+- **`venstre_kolonner = 4`** gir en egen modulkolonne helt til venstre (200 mm bred) med de store skuffene. Resten av hylla (7 kolonner) er vanlige skuffer.
+- **`store_skuffer = 10`** gir skuffer som er 2 brede og 2 høye (96 × 156 × 98 mm), to side om side. De står nederst i hver etasje i venstre kolonne.
+- **`brede_skuffer = 10`** gir skuffer som er 2 brede og 1 høy (96 × 156 × 40 mm). Først fylles plassen over de store i venstre kolonne (6 stk). Resten (4) havner i de øverste radene til høyre.
 - Under en dobbel skuff er det ingen T-skinne, bare en midtskinne. Skråstaget som bærer taket i printen, er byttet ut med en finne oppå taket. Den går helt bak til ryggen og står på printplata.
-- I Skjold Lab blir skapet **10 rader × 11 kolonner** (LED-radene). En bred skuff dekker to kolonner. Bruk den venstre kolonnen; LED-en over den lyser over skuffen.
-- **`akryl = true`** (standard) gir alle skuffene et vindu i fronten over grepet og et spor bak til en akrylplate på `akryl_t = 2` mm (f.eks. Clas Ohlson 34-1359, 300 × 200 × 2 mm). Platen skyves ned ovenfra, og vinduet er åpent oppover, så det trengs ingen bro i printen. Du kan legge en papiretikett bak platen eller la den være klar. Konsollen viser platemålene på linjene `SKJOLDLAB-AKRYL`, og `LES-MEG.md` i pakken har kutteliste. Med standardmålene er platene 43 × 24 mm (1 × 1), 93 × 24 (2 × 1), 43 × 82 (1 × 2) og 93 × 82 (2 × 2), til sammen ca. 2 000 cm², altså 4–6 ark. `akryl = false` gir etikettfeltet som før.
+- **`akryl = true`** (standard) gir alle skuffene et vindu i fronten over grepet og et spor bak til en akrylplate på `akryl_t = 2` mm (f.eks. Clas Ohlson 34-1359, 300 × 200 × 2 mm). Platen skyves ned ovenfra, og vinduet er åpent oppover, så det trengs ingen bro i printen. Du kan legge en papiretikett bak platen eller la den være klar. `LES-MEG.md` i pakken har kutteliste (linjene `SKJOLDLAB-AKRYL`). Platene er 43 × 24 mm (1 × 1), 93 × 24 (2 × 1) og 93 × 82 (2 × 2), til sammen ca. 1 850 cm², altså 4–5 ark. `akryl = false` gir etikettfeltet som før.
 
-Med standardverdiene blir det **90 skuffer**: 57 vanlige, 10 brede, 13 høye smale og 10 store. LED-er: 10 rader × 33 = 330.
+Med standardverdiene blir det **103 skuffer**: 83 vanlige, 10 brede og 10 store. Modulene blir 4 × 5 = 20 (200/150/100/100 mm brede, etasjene 174/174/174/116/118 mm nedenfra).
 
-| Rad i Skjold Lab | Skuffer fra venstre (2 = dobbel) |
-| --- | --- |
-| 1–4 | 11 vanlige |
-| 5 | 2 1 · 2 1 · 1 1 1 · 1 1 (2 brede) |
-| 6–7 | 2 1 · 2 1 · 2 1 · 2 (4 brede) |
-| 8 (dobbel høyde) | 2 1 · 2 1 · 1 1 1 · 1 1 (2 store, resten høye smale) |
-| 9–10 (dobbel høyde) | 2 1 · 2 1 · 2 1 · 2 (4 store) |
+```
+ rad  kol 1–4 (venstre kolonne)   kol 5–11
+  1   +-----------+-----------+   [ 2 ][1][ 2 ][ 2 ]   brede øverst til høyre
+  2   |  stor     |  stor     |   [ 2 ][1][1][1][1][1]
+  3   +-----------+-----------+   vanlige
+  4   |  stor     |  stor     |   vanlige
+  5   [ bred    ][ bred      ]    vanlige
+  6   +-----------+-----------+   vanlige
+  7   |  stor     |  stor     |   vanlige
+  8   [ bred    ][ bred      ]    vanlige
+  9   +-----------+-----------+   vanlige
+ 10   |  stor     |  stor     |   vanlige
+ 11   [ bred    ][ bred      ]    vanlige
+ 12   +-----------+-----------+   vanlige
+ 13   |  stor     |  stor     |   vanlige
+```
 
-Modulene blir 4 × 5 = 20 som før, med etasjene 116/116/174/174/176 mm (nedenfra). Sett `store_skuffer = 0` og `brede_skuffer = 0` for 143 like skuffer som før.
+**LED med store skuffer til venstre.** I radene 2, 4, 7, 10 og 13 har venstre kolonne ingen LED-kanal, fordi de går midt gjennom en stor skuff. Appen trenger likevel ingen endring:
+
+- I Skjold Lab: skapet er **13 rader × 11 kolonner**, layout **«Samme retning»**, 33 LED-er per rad (auto), og WLED **Length 429**.
+- Alle rader limes fra **venstre mot høyre**. Fra høyre ende av en rad går en tynn ledning (data) tilbake i kanalen til starten av neste rad. Strøm (5 V og GND) kan gå langs siden.
+- I de fem radene uten kanal til venstre starter stripa ved kolonne 5. Rett før den, i kjeden, kommer **12 blinde LED-er**: en stripebit på 12 LED-er som du legger skjult langs hylleveggen på høyre side, med lysene inn mot veggen eller teipet over. Da stemmer nummereringen, og appen kan bruke vanlig oppsett.
+- En stor skuff dekker to rader og to kolonner. Legg delene i **øverste venstre celle** (for eksempel 1-1 eller 1-3). LED-en over den lyser over skuffen. En bred skuff: bruk venstre celle.
+
+Sett `venstre_kolonner = 0`, `store_skuffer = 0` og `brede_skuffer = 0` for 143 like skuffer som før.
 
 ### Oppsett, hele hylla (sett forfra, uten store skuffer)
 
@@ -336,18 +351,18 @@ Konsollen skriver én linje per del (`SKJOLDLAB-DEL: navn=… del=… antall=…
 | Del | Hele hylla | Rundt Raaco | `del=` |
 | --- | --- | --- | --- |
 | Rammemoduler | 20 (4 × 5) | 10 side + 2 topp | `modul` med `modul_x`/`modul_y`, og `topp_modul` |
-| Skuffer | 90: 57 vanlige (14 plater à 4 + 1 prøveskuff), 10 brede (5 plater à 2), 13 høye smale (3 plater à 4 + 1), 10 store (5 plater à 2). Uten store/brede: 143 | 80 | `skuff` / `skuffplate`, og `skuffplate_2x1`, `skuffplate_1x2`, `skuff_1x2`, `skuffplate_2x2` |
-| Masker + diffusorer | 1 per LED-rad per modulkolonne: 4 × 10 | side 2 × 13, topp 2 × 3 | `maske` / `diffusor` med `seksjon` (`hele`/`side`/`topp`) og `modul_x` |
+| Skuffer | 103: 83 vanlige (21 plater à 4; den første kan være prøveskuffen), 10 brede (5 plater à 2), 10 store (5 plater à 2). Uten store/brede: 143 | 80 | `skuff` / `skuffplate`, og `skuffplate_2x1`, `skuffplate_2x2` |
+| Masker + diffusorer | 1 per LED-rad per modulkolonne (venstre kolonne har bare 8) | side 2 × 13, topp 2 × 3 | `maske` / `diffusor` med `seksjon` (`hele`/`side`/`topp`) og `modul_x` |
 | Lasker bak | 8 `lask` + 12 `lask4` | 8 `lask` + 4 `lask4` | `lask` / `lask4` |
 | Raaco-skinner og klips | – | 12 + 24 | `raaco_skinne` / `raaco_klipsplate` |
 | Elektronikkboks | 1 + lokk | 1 + lokk | `elboks` / `elboks_lokk` |
 
 **Innkjøp til hele hylla:**
 
-- M3 × 10 bolt med mutter og skive: én per rad i hver sideskjøt, altså 3 × 10 = 30 stk (39 uten store/brede skuffer). Rundt Raaco: 13 + 3 = 16 stk.
+- M3 × 10 bolt med mutter og skive: én per rad i hver sideskjøt, altså 3 × 13 = 39 stk. Rundt Raaco: 13 + 3 = 16 stk.
 - M3 × 10 selvgjengende skrue til laskene: 2 per `lask` og 4 per `lask4`, altså 64 stk. Rundt Raaco: 32 stk.
 
-**LED-er:** hele hylla har 10 × 33 = **330 LED-er**, ca. 5,5 m stripe (13 × 33 = 429 uten store/brede skuffer). Rundt Raaco: Raaco 216, toppvegg 45 og sidevegg 195, til sammen 456. Se innkjøpslisten i `../skjoldlab-led/README.md`.
+**LED-er:** hele hylla har 13 × 33 = **429 LED-er**, ca. 7,2 m stripe, av dem 60 blinde bak store skuffer. Rundt Raaco: Raaco 216, toppvegg 45 og sidevegg 195, til sammen 456. Se innkjøpslisten i `../skjoldlab-led/README.md`.
 
 **Grovt anslag for forbruk** (PETG, 0,2 mm lag, Creality K2 med 0,4 mm dyse). Massivt anslag = volum × 1,27 g/cm³, som CI regner ut per STL. Slicet med 2 vegger og 15 % infill blir det ca. **80 %** av dette, fordi delene nesten bare er 1,2–2 mm gods. **Sliceren gir fasit.**
 
@@ -356,9 +371,9 @@ Konsollen skriver én linje per del (`SKJOLDLAB-DEL: navn=… del=… antall=…
 | Modul 3 × 3 (150 × 174 × 165) | ca. 145 g | ca. 115 g | ca. 4–6 t |
 | Modul 2 × 3 / 3 × 2 / 2 × 2 | ca. 80–110 g | ca. 65–90 g | ca. 3–4 t |
 | Skuff (46 × 156 × 40) | ca. 37 g | ca. 30 g | ca. 1–1,5 t (skuffplate med 4: ca. 5 t) |
-| Bred skuff 2 × 1 / høy smal 1 × 2 / stor 2 × 2 | ca. 55 / 70 / 93 g | ca. 44 / 56 / 75 g | ca. 2 / 2,5 / 3,5 t |
+| Bred skuff 2 × 1 / stor 2 × 2 | ca. 55 / 93 g | ca. 44 / 75 g | ca. 2 / 3,5 t |
 | Maske / diffusor | ca. 3 g / 2 g | | ca. 15 min |
-| **Hele hylla** (20 moduler, 90 skuffer med 20 store og brede, masker, lasker, boks) | **ca. 6,8 kg** (moduler ca. 2,0 kg, skuffer ca. 4,5 kg) | **ca. 5,4 kg** | **ca. 230 t** |
+| **Hele hylla** (20 moduler, 103 skuffer med 20 store og brede, masker, lasker, boks) | **ca. 7,4 kg** (moduler ca. 2,3 kg, skuffer ca. 4,9 kg) | **ca. 5,9 kg** | **ca. 250 t** |
 | **Rundt Raaco** (12 moduler, 80 skuffer, Raaco-deler, boks) | ca. 4,5 kg | ca. 3,6 kg | ca. 160 t |
 
 Den gamle modulen (150 × 232 × 240 mm) var 1041 g massivt og 842 g slicet. En modul er nå 6–8 ganger lettere. Det meste av filamentet går nå til skuffene. Med `dybde_maks = 0` (240 mm) blir både moduler og skuffer ca. 1,5 ganger tyngre, og 3 × 4-moduler (`modul_rader_maks = 4`) havner på ca. 190 g massivt.
