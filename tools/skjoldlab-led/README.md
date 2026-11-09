@@ -74,7 +74,7 @@ En rull på 5 m har 300 LED-er. **Kjøp 2 ruller (10 m)** i begge variantene. Da
 
 - **Sikring:** T3,15 A (treg) på 5 V-siden, rett etter inntaket i boksen. Den beskytter ledningene hvis noe kortslutter.
 - **Hvilestrøm:** stripene trekker ca. 2–3 W hele døgnet også når de er av. Vil du unngå det, kan du styre et relé fra WLED (*Config → LED Preferences → Relay GPIO*), som kutter 5 V til stripene når alt er av. Det tar et halvt sekund ekstra før første LED lyser.
-- **Innmating:** med så lav strøm holder det å mate inn 5 V/GND i begge ender av hver kjede. Hele hylla: i rad 1 (øverst) og rad 13 (nederst). Rundt Raaco: Raaco i rad 1 og rad 12, og veggen øverst i toppveggen og nederst i sideveggen. Skal du kjøre effekter med mye lys, mater du i tillegg inn i midten (rad 7).
+- **Innmating:** med så lav strøm holder det å mate inn 5 V/GND i begge ender av hver kjede. Hele hylla: i rad 1 (øverst) og rad 13 (nederst). Med store skuffer til venstre: høyre ende av hver rad til en 5 V/GND-ledning i spalten på høyre side (se [kablingen](#kabling-med-store-skuffer-til-venstre)). Rundt Raaco: Raaco i rad 1 og rad 12, og veggen øverst i toppveggen og nederst i sideveggen. Skal du kjøre effekter med mye lys, mater du i tillegg inn i midten (rad 7).
 
 ## Koblingsskjema
 
@@ -94,7 +94,8 @@ En rull på 5 m har 300 LED-er. **Kjøp 2 ruller (10 m)** i begge variantene. Da
 5. **Data, utgang B (bare rundt Raaco):** **GPIO17** går til pinne 5 (2A). Pinne 6 (2Y) går gjennom **330 Ω** til DIN på første LED i toppveggen (rad 1, venstre ende). I hele-hylla-varianten brukes ikke utgang B; da kobles pinne 4 (2OE) til 5 V og pinne 5 (2A) til GND.
 6. **Ved starten av hver kjede:** 1000 µF mellom 5 V og GND, med riktig polaritet. Den lange beina er +.
 7. **Felles jord:** GND fra forsyningen, ESP32, 74AHCT125 og alle stripene skal henge sammen. Data uten felles GND virker ikke, eller flimrer.
-8. **Rekkefølgen på stripene er serpentine.** Rad 1 går fra venstre mot høyre, rad 2 fra høyre mot venstre, og så videre. DOUT i enden av én rad kobles til DIN i neste rad med en kort 3-leder (5 V, data, GND). Pilene på stripa viser retningen.
+8. **Hele hylla med store skuffer til venstre (standard fra 2026-11-09):** se [Kabling med store skuffer til venstre](#kabling-med-store-skuffer-til-venstre). Den bruker «samme retning» i stedet for serpentine.
+9. **Ellers er rekkefølgen serpentine.** Rad 1 går fra venstre mot høyre, rad 2 fra høyre mot venstre, og så videre. DOUT i enden av én rad kobles til DIN i neste rad med en kort 3-leder (5 V, data, GND). Pilene på stripa viser retningen.
    - **Hele hylla:** rad 1 til rad 13, 33 LED-er per rad, 429 til sammen. Rad 13 slutter til høyre (13 er oddetall).
    - **Raaco:** rad 1 til rad 12, 216 LED-er. Raden slutter til venstre (12 er partall).
    - **Veggen:** toppveggen rad 1–3 (45 LED-er, slutter til høyre), så sideveggen rad 1–13 (195 LED-er). Toppveggen slutter rett ved siden av sideveggens rad 1, så hoppet blir kort.
@@ -142,6 +143,35 @@ En rull på 5 m har 300 LED-er. **Kjøp 2 ruller (10 m)** i begge variantene. Da
   Rundt Raaco: LED-veggen, utgang B, start 216:
      toppvegg  rad 1: 216 -> 230,  rad 2: 245 <- 231,  rad 3: 246 -> 260 -+
      sidevegg  rad 1: 261 -> 275,  rad 2: 290 <- 276,  ... rad 13: 441 -> 455
+```
+
+### Kabling med store skuffer til venstre
+
+Standardhylla har de store skuffene i en egen kolonne til venstre (kolonne 1–4). Midt i en stor skuff er det ingen LED-kanal i de fire venstre kolonnene. Det gjelder radene **2, 4, 7, 10 og 13**. Slik kobler du så Skjold Lab fortsatt kan bruke vanlig oppsett (13 × 11, 33 per rad):
+
+**Alle rader går fra venstre mot høyre** (layout «Samme retning»). Alle rader kobles likt:
+
+1. **Stripa i raden** limes i kanalen med pilene mot høyre. I vanlige rader starter den helt til venstre og har 33 LED-er. I radene 2, 4, 7, 10 og 13 starter den ved kolonne 5 (x ≈ 200 mm) og har 21 LED-er.
+2. **Høyre ende:** DOUT (data ut) går ut gjennom åpningen i sideramma til spalten mellom hylla og hylleveggen på høyre side (ca. 5 mm).
+3. **Data tilbake til neste rad:** fra DOUT går én tynn ledning (AWG 26–30) ned til raden under. Derfra går den **tilbake mot venstre i kanalen**, langs overkanten av stripa bak masken; det er 2,6 mm ledig over en 10 mm stripe. Den loddes til DIN i starten av raden. Den går helt til venstre i vanlige rader og til kolonne 5 i radene med store skuffer.
+4. **12 blinde LED-er:** i radene 2, 4, 7, 10 og 13 kommer et stykke stripe med 12 LED-er inn i kjeden **før** returledningen. Det legges i spalten på høyre side med lysene inn mot veggen, eller teipes over. De lyser aldri ved vanlig bruk; de skal bare få nummereringen til å stemme. Kjeden blir altså: DOUT rad 1 → 12 blinde → returledning i kanalen til kolonne 5 → DIN rad 2.
+5. **Strøm:** legg en 5 V- og en GND-ledning (0,5 mm²) loddrett i spalten på høyre side, fra øverst til nederst. Lodd 5 V og GND fra høyre ende av hver rad og fra hvert blindstykke til disse to. Venstre ende får strøm gjennom stripa selv; med strømgrensen i WLED holder det.
+6. **Start:** 3-lederen fra boksen (5 V, data, GND, med 1000 µF) går til DIN i venstre ende av rad 1. Den kan gå i spalten på venstre side eller langs kanalen i rad 1.
+
+Du trenger 8 stykker à 33 LED-er, 5 à 21 og 5 blinde à 12, altså 429 til sammen. To ruller à 5 m holder (600 LED-er).
+
+```
+  Hele hylla, store skuffer til venstre (sett forfra), utgang A, «samme retning»:
+        kol 1–4           kol 5–11
+  DIN ->[  0 .............................. 32 ]-->+     rad 1
+                                                   |  i spalten til høyre:
+        +<~~~~~~~~~~~~~~~ retur i kanalen ~~~~~~~~~ [33..44 blinde]
+        |  (stor skuff) ->[ 45 ............ 65 ]-->+     rad 2
+        +<~~~~~~~~~~~~~~~ retur i kanalen ~~~~~~~~~~+
+        +->[ 66 ............................ 98 ]-->+     rad 3
+                    ...
+  Skjold Lab: «Sorteringsskap (LED)» 13 × 11, layout «Samme retning», 33 per rad, start 0. WLED: length 429.
+  En stor skuff: legg delene i øverste venstre celle (f.eks. 1-1). En bred skuff: venstre celle.
 ```
 
 ## Installere WLED
