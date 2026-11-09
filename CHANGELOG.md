@@ -2,6 +2,17 @@
 
 Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. Versjonene med APK og IPA ligger under [Releases](https://github.com/SebastianKristo/torskenes-verden/releases).
 
+## [4.65.0] – 09.11.2026 · Skjold Lab
+- **Skjold Lab** er et nytt, personlig sorteringssystem for deler på web, iPhone og Android. Du finner det under Mer og på Hjem.
+  - **Søk** etter navn, kategori, verdi eller tag. Svaret viser hvor delen ligger, for eksempel «Hovedskap · Rad 4 · Skuff 2». «10k» finner «10 kΩ», og «M3x10» finner «M3 × 10».
+  - **Tegningen av skapet** markerer skuffen. Trykk på en skuff for å se hva som ligger i den.
+  - **Bilde av skapet:** last opp et bilde og dra fire hjørner på plass, så markeres skuffen også på bildet.
+  - **Deler** kan ha bilder (kamera på mobil), antall, varsel om lavt lager, specs, tags, pris og lenke. Du kan legge til, endre, flytte og slette, og angre.
+  - **«Foreslå ledig»** finner en tom skuff. Etiketter med QR-kode kan skrives ut for hver skuff, og CSV-import og -eksport er med.
+  - **Glimt** svarer på «hvor er M3-skruene?», og delene finnes i søket (⌘K).
+  - **Hovedskapet** er satt opp med 12 rader × 5 skuffer. **Tilleggsskap (3D-print)** foreslår 12 × 4 for de 27 cm ved siden av.
+- **3D-print:** `tools/skjoldlab3d` har en parametrisk OpenSCAD-modell av tilleggsskapet, med skuffer, skillevegger og rammemoduler som passer en byggeplate på 256 mm. Mål ditt eget skap først (se README).
+
 ## [4.64.1] – 06.11.2026 · Interaktivt søk i Media
 - **Media på web:** interaktivt søk i Sonarr og Radarr viser nå alltid treffene. Før kunne siden bli stående på «søker» når forbindelsen til serveren ble brutt underveis, selv om søket i Prowlarr var ferdig. Nå henter siden resultatet direkte fra serveren.
 
