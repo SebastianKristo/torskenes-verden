@@ -528,8 +528,11 @@ for (t = TYPER) if (t[3] > 0) let(pp = skp_n(t[1]), hele = floor(t[3] / pp), res
     del_linje(str("skilleplate_", t[0]), str("skilleplate_", t[0]), ceil(t[3] / skl_n(t[1], t[2])), "skuffer", str(" per_plate=", skl_n(t[1], t[2])));
 }
 for (s = seksjoner) for (i = [0 : s[4] - 1]) {
-    del_linje(str("maske_", s[0], "_x", i), "maske", s[3], "led", str(" modul_x=", i, " seksjon=", s[0]));
-    del_linje(str("diffusor_", s[0], "_x", i), "diffusor", s[3], "led", str(" modul_x=", i, " seksjon=", s[0]));
+    // Én maske og diffusor per skuffrad i modulkolonnen (venstre kolonne med store skuffer har færre)
+    let(top = s[0] == "topp", nr = sum_liste([for (j = [0 : s[5] - 1]) len(mod_rader(top, i, j))])) {
+        del_linje(str("maske_", s[0], "_x", i), "maske", nr, "led", str(" modul_x=", i, " seksjon=", s[0]));
+        del_linje(str("diffusor_", s[0], "_x", i), "diffusor", nr, "led", str(" modul_x=", i, " seksjon=", s[0]));
+    }
 }
 if (!hel) {
     del_linje("raaco_skinne", "raaco_skinne", raaco_rader, "led");
@@ -807,7 +810,7 @@ module lv_maske(k) {
 }
 module lv_diffusor(k) { cube([k * P - 0.5, innsats_h, diffusor_t]); }
 // "topp" = toppveggen over Raaco, ellers hovedveggen (hele hylla eller sideveggen)
-function sek_k(i) = seksjon == "topp" ? deling(t_K, t_nx, min(i, t_nx - 1)) : deling(m_K, m_nx, min(i, m_nx - 1));
+function sek_k(i) = seksjon == "topp" ? mod_k(true, min(i, t_nx - 1)) : mod_k(false, min(i, m_nx - 1));
 
 // ---------------------------------------------------------------------
 // Lask bak over skjøtene: 2 hull (16 mm) eller 4 hull (16 x 16 mm)

@@ -373,7 +373,7 @@ Konsollen skriver én linje per del (`SKJOLDLAB-DEL: navn=… del=… antall=…
 | Skuff (46 × 156 × 40) | ca. 37 g | ca. 30 g | ca. 1–1,5 t (skuffplate med 4: ca. 5 t) |
 | Bred skuff 2 × 1 / stor 2 × 2 | ca. 55 / 93 g | ca. 44 / 75 g | ca. 2 / 3,5 t |
 | Maske / diffusor | ca. 3 g / 2 g | | ca. 15 min |
-| **Hele hylla** (20 moduler, 103 skuffer med 20 store og brede, masker, lasker, boks) | **ca. 7,4 kg** (moduler ca. 2,3 kg, skuffer ca. 4,9 kg) | **ca. 5,9 kg** | **ca. 250 t** |
+| **Hele hylla** (20 moduler, 103 skuffer med 20 store og brede, masker, lasker, boks) | **ca. 7,0 kg** (moduler ca. 2,1 kg, skuffer ca. 4,6 kg) | **ca. 5,6 kg** | **ca. 250 t** |
 | **Rundt Raaco** (12 moduler, 80 skuffer, Raaco-deler, boks) | ca. 4,5 kg | ca. 3,6 kg | ca. 160 t |
 
 Den gamle modulen (150 × 232 × 240 mm) var 1041 g massivt og 842 g slicet. En modul er nå 6–8 ganger lettere. Det meste av filamentet går nå til skuffene. Med `dybde_maks = 0` (240 mm) blir både moduler og skuffer ca. 1,5 ganger tyngre, og 3 × 4-moduler (`modul_rader_maks = 4`) havner på ca. 190 g massivt.
