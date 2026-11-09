@@ -2,6 +2,18 @@
 
 Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. Versjonene med APK og IPA ligger under [Releases](https://github.com/SebastianKristo/torskenes-verden/releases).
 
+## [4.67.0] – 09.11.2026 · Skjold Lab: LED over hver skuff
+- **💡 Vis i skapet:** med en LED-stripe over hver skuffrad tennes LED-en over skuffen der delen ligger. Den lyser i 30 sekunder, så går stripa tilbake til det den viste før. «Vis alle i skapet» tenner opptil 10 treff samtidig.
+- **Lys av seg selv** når du åpner et treff, eller når Glimt svarer på «hvor er …». Begge er av som standard og slås på i oppsettet.
+- **LED-oppsett per skap:** adressen til WLED-kontrolleren, farge, lysstyrke, varighet og blink, og hvordan stripa går gjennom radene. Med kalibreringsveiviseren tennes én LED, og du trykker på skuffen den lyser over.
+- Fungerer med ESP32 og WLED (adresserbar WS2812B-stripe). Serveren snakker bare med enheter i hjemmenettet.
+- **3D-print i sort PETG:**
+  - En LED-vegg med skuffer i samme stil som bildet ditt, med skuffavstanden tilpasset LED-stripa, så hver skuff har en LED rett over seg.
+  - En LED-skinne som festes over radene på Raaco-skapet.
+  - En boks til elektronikken.
+  - Målene er oppdatert til hylla på 56 × 76 × 32 cm.
+- Innkjøpsliste, koblingsskjema, strømberegning og oppsett av WLED står i `tools/skjoldlab-led/README.md`.
+
 ## [4.66.0] – 09.11.2026 · Skjold Lab: smarte forslag
 - **✦ Foreslå:** Glimt kjenner igjen delen fra bildet eller teksten og foreslår navn, kategori, verdi og tags. Fargekodene på motstander leses fra bildet, og SMD- og kondensatorkoder dekodes. Navnene gjøres ryddige, slik at «10k motstand» blir «Motstand 10 kΩ». Glimt velger blant kategoriene du allerede har, og foreslår bare en ny når ingen passer. Du godtar hvert forslag selv.
 - **Finn bilde:** søker etter bilde av komponenten via SearXNG, med Wikimedia Commons som reserve, og lagrer bildet du velger.
