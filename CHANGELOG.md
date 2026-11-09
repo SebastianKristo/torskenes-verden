@@ -2,6 +2,14 @@
 
 Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. Versjonene med APK og IPA ligger under [Releases](https://github.com/SebastianKristo/torskenes-verden/releases).
 
+## [4.66.0] – 09.11.2026 · Skjold Lab: smarte forslag
+- **✦ Foreslå:** Glimt kjenner igjen delen fra bildet eller teksten og foreslår navn, kategori, verdi og tags. Fargekodene på motstander leses fra bildet, og SMD- og kondensatorkoder dekodes. Navnene gjøres ryddige, slik at «10k motstand» blir «Motstand 10 kΩ». Glimt velger blant kategoriene du allerede har, og foreslår bare en ny når ingen passer. Du godtar hvert forslag selv.
+- **Finn bilde:** søker etter bilde av komponenten via SearXNG, med Wikimedia Commons som reserve, og lagrer bildet du velger.
+- **Rydd opp med Glimt:** forslag til navn og kategori for alle delene samtidig, eller for treffene i et søk. Du ser før og etter, godtar dem du vil ha, og kan angre.
+- Når du tar et bilde av en del, kan forslaget komme av seg selv. Det slår du av og på under Innstillinger → Moduler → Skjold Lab, sammen med bildesøket på nett.
+- Gjenkjenningen kjører lokalt på Mac minien. Bildesøket sender bare navnet på delen.
+- **3D-modellen** fyller nå hele hylla rundt Raaco-skapet: et sidetårn med små og store skuffer, en topphylle, kasser bak skapet og løse kasser i S, M og L.
+
 ## [4.65.0] – 09.11.2026 · Skjold Lab
 - **Skjold Lab** er et nytt, personlig sorteringssystem for deler på web, iPhone og Android. Du finner det under Mer og på Hjem.
   - **Søk** etter navn, kategori, verdi eller tag. Svaret viser hvor delen ligger, for eksempel «Hovedskap · Rad 4 · Skuff 2». «10k» finner «10 kΩ», og «M3x10» finner «M3 × 10».
