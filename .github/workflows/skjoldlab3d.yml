@@ -1,0 +1,74 @@
+name: Skjold Lab 3D
+# Rendrer alle printdelene i tools/skjoldlab3d (sortering + LED-vegg) med OpenSCAD til STL og 3MF,
+# lager forhåndsvisninger (PNG) og legger alt ved som nedlastbar pakke (artifact) på kjøringen.
+on:
+  workflow_dispatch:
+    inputs:
+      parametre:
+        description: 'Ekstra OpenSCAD-parametre, f.eks. -D hylle_bredde=565 -D rad_avstand=44.2'
+        required: false
+        default: ''
+  push:
+    branches: [main]
+    paths: ['tools/skjoldlab3d/**', '.github/workflows/skjoldlab3d.yml']
+permissions:
+  contents: read
+concurrency:
+  group: skjoldlab3d
+  cancel-in-progress: true
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: OpenSCAD
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends openscad xvfb xauth
+          openscad --version
+      - name: Eksporter STL og 3MF
+        env:
+          PARAMS: ${{ github.event.inputs.parametre }}
+        run: |
+          OUT="$RUNNER_TEMP/skjoldlab3d"
+          # shellcheck disable=SC2086
+          tools/skjoldlab3d/eksporter.sh "$OUT" --alle $PARAMS 2>&1 | tee "$RUNNER_TEMP/eksport.log"
+      - name: Forhåndsvisninger
+        if: always()
+        env:
+          PARAMS: ${{ github.event.inputs.parametre }}
+        run: |
+          OUT="$RUNNER_TEMP/skjoldlab3d/forhandsvisning"; mkdir -p "$OUT"; cd tools/skjoldlab3d
+          for f in skjoldlab_tilleggsskap skjoldlab_ledvegg; do
+            for d in oversikt skuff; do
+              # shellcheck disable=SC2086
+              xvfb-run -a openscad -o "$OUT/${f}_${d}.png" --imgsize=1600,1200 --viewall --autocenter --colorscheme=Tomorrow -D "del=\"$d\"" $PARAMS "$f.scad" || echo "Ingen forhåndsvisning for $f/$d"
+            done
+          done
+          ls -la "$OUT"
+      - name: Sammendrag
+        if: always()
+        run: |
+          OUT="$RUNNER_TEMP/skjoldlab3d"
+          {
+            echo "## Skjold Lab 3D"
+            echo
+            echo "STL: $(find "$OUT" -name '*.stl' | wc -l) · 3MF: $(find "$OUT" -name '*.3mf' | wc -l)"
+            echo
+            grep -h 'SKJOLDLAB' "$RUNNER_TEMP/eksport.log" | sort -u | sed 's/^/    /' || true
+            grep -h 'FEILET\|ERROR\|WARNING' "$RUNNER_TEMP/eksport.log" | sort -u | sed 's/^/    /' || true
+          } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: skjoldlab-3d-stl-3mf
+          path: ${{ runner.temp }}/skjoldlab3d
+          if-no-files-found: warn
+          retention-days: 90
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: skjoldlab-3d-logg
+          path: ${{ runner.temp }}/eksport.log
+          retention-days: 30

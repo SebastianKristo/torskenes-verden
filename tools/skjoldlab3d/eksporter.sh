@@ -19,6 +19,7 @@ case "${1:-}" in
   --alle) MODUS=alle; shift ;;
 esac
 mkdir -p "$UT"
+FEIL=() # deler som ikke lot seg eksportere (skriptet fortsetter og lister dem til slutt)
 command -v openscad >/dev/null || { echo "Fant ikke openscad i PATH (se README.md)." >&2; exit 1; }
 
 # LED-veggen (skjoldlab_ledvegg.scad) – moduler og masker leses fra ekkoet
@@ -38,7 +39,7 @@ eksporter_led() {
   lagl() { # lagl <filnavn> <del> [ekstra -D ...]
     local navn=$1 d=$2; shift 2
     echo "-> $ut/$navn.stl"
-    openscad -o "$ut/$navn.stl" -D "del=\"$d\"" "$@" "$LEDSCAD"
+    openscad -o "$ut/$navn.stl" -D "del=\"$d\"" "$@" "$LEDSCAD" || FEIL+=("ledvegg/$navn")
   }
   for d in skuff skuffplate skillevegg skilleplate lask lask4 raaco_skinne raaco_klips raaco_klipsplate elboks elboks_lokk; do
     lagl "$d" "$d" "$@"
@@ -60,8 +61,15 @@ eksporter_led() {
   echo "LED-veggen ligger i $ut/ (ikke legg filene i git)."
 }
 
+# Til slutt: 3MF ved siden av hver STL (SKJ_3MF=0 slår det av), og liste over deler som feilet.
+avslutt() {
+  if [[ ${SKJ_3MF:-1} != 0 ]] && command -v python3 >/dev/null; then python3 stl2_3mf.py "$UT" || FEIL+=("3mf"); fi
+  if ((${#FEIL[@]})); then echo "FEILET: ${FEIL[*]}" >&2; exit 1; fi
+}
+
 if [[ $MODUS == led ]]; then
   eksporter_led "$@"
+  avslutt
   exit 0
 fi
 
@@ -79,7 +87,7 @@ mx=${mx:-2}; my=${my:-3}; tsx=${tsx:-0}; tpx=${tpx:-0}
 lag() { # lag <filnavn> <del> [ekstra -D ...]
   local navn=$1 d=$2; shift 2
   echo "-> $UT/$navn.stl"
-  openscad -o "$UT/$navn.stl" -D "del=\"$d\"" "$@" "$SCAD"
+  openscad -o "$UT/$navn.stl" -D "del=\"$d\"" "$@" "$SCAD" || FEIL+=("$navn")
 }
 
 # Sidetårn, små skuffer (som før)
@@ -115,4 +123,5 @@ if echo "$info" | grep -q 'SKJOLDLAB3D: bakkasser: [0-9]'; then lag bakkasse bak
 
 if [[ $MODUS == alle ]]; then eksporter_led "$@"; fi
 
-echo "Ferdig. Filene ligger i $UT/ (ikke legg dem i git)."
+avslutt
+echo "Ferdig. STL og 3MF ligger i $UT/ (ikke legg dem i git)."
