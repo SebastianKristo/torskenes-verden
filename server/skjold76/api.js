@@ -17,6 +17,7 @@ import { labelsHtml76 } from './labels.js';
 import { mountAi77, undoEdit77 } from './ai77.js'; // prompt 77 (SKJAISRV): forslag, bildesøk, Rydd opp
 import { thumbUser77 } from './images77.js';
 import { mountLeds78, ledsBrief78 } from './leds78.js'; // prompt 78 (LEDSRV): LED over hver skuff (WLED)
+import { mountPicklist79 } from './picklist79.js'; // prompt 79 (PICKSRV): plukkliste
 
 setFileUrl76((name, user) => signedUrl76(name, user));
 const q = (sql) => db.prepare(sql);
@@ -483,3 +484,5 @@ skjoldApi76.get('/', (c) => {
 mountAi77(skjoldApi76, { fileOf, uploadLimit });
 // Prompt 78 (LEDSRV): /cabinets/:id/leds*, /locate, /locate/off, /leds/status, /leds/settings.
 mountLeds78(skjoldApi76);
+// Prompt 79 (PICKSRV): GET|PUT /picklist, POST /picklist/take, /picklist/undo.
+mountPicklist79(skjoldApi76);

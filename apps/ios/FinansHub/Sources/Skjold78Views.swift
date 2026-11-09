@@ -57,7 +57,7 @@ struct Skj78RowButton: View {
     }
 }
 
-/// «💡 Vis alle» over trefflista (maks 10 skuffer).
+/// «💡 Vis alle» over trefflista (maks 20 skuffer, Prompt 79).
 struct Skj78AllButton: View {
     @Environment(Store.self) private var store
     @Environment(\.paper) private var p
@@ -65,7 +65,7 @@ struct Skj78AllButton: View {
     let parts: [Skj76Part]
 
     var body: some View {
-        let n: Int = Swift.min(10, parts.filter { l.canLocate($0) }.count)
+        let n: Int = Swift.min(20, parts.filter { l.canLocate($0) }.count)
         if n > 1 {
             Button {
                 Task { @MainActor in await l.locateAll(parts, store) }
@@ -177,6 +177,9 @@ struct Skj78Setup: View {
                         .disabled(busy)
                     Skj76Button(title: "Kalibrer: trykk på skuffen som lyser", icon: "scope") { calibrate() }
                         .disabled(!c.usable || c.rows.isEmpty)
+                    // Prompt 79: «Feilsøk LED» (stegvis test når stripa får tilkobling men ikke lyser).
+                    Skj76Button(title: "Feilsøk LED", icon: "stethoscope") { diagnose() }
+                        .disabled(!c.usable)
                 }
                 Skj78AutoSettings()
                 Text("Homelab-serveren snakker bare med WLED i hjemmenettet (private adresser, .local/.lan). Se tools/skjoldlab-led for koblingsskjema.")
@@ -359,6 +362,17 @@ struct Skj78Setup: View {
                 c = l.config(id) ?? out
                 if c.usable { await l.checkStatus(id, store) }
             }
+        }
+    }
+
+    private func diagnose() {
+        let id: String = cabId
+        let out: Skj78Config = c
+        Task { @MainActor in
+            if out != l.config(id) {
+                if !(await l.saveConfig(id, out, store)) { return }
+            }
+            m.sheet = .diagnose(id)
         }
     }
 

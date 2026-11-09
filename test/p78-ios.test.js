@@ -40,7 +40,7 @@ test('API-kontrakten: leds, test, locate, off, status, calibrate, override og se
     /"PUT", path, json: Skjold78\.body\(c\)/, /"\/cabinets\/\\\(id\)\/leds"/,
     /"\/cabinets\/\\\(id\)\/leds\/test", json: body/, /\["mode": mode\]/, /body\["row"\] = row/, /body\["index"\] = index/,
     /"POST", Skjold76\.root \+ "\/locate", json: body/, /\["partId": Skjold76\.idv\(p\.id\)\]/,
-    /\["cabinetId": Skjold76\.idv\(cabinetId\), "row": row, "col": col\]/, /\["partIds": ids\]/, /\.prefix\(10\)/,
+    /\["cabinetId": Skjold76\.idv\(cabinetId\), "row": row, "col": col\]/, /\["partIds": ids\]/, /\.prefix\(20\)/, // Prompt 79: maks 20 (før 10)
     /"POST", Skjold76\.root \+ "\/locate\/off"/,
     /"\/leds\/status\?cabinet=" \+ Skjold76\.enc\(id\)/,
     /"\/cabinets\/\\\(id\)\/leds\/calibrate"/, /json: \["index": index\]/,

@@ -17,7 +17,7 @@ import java.util.Locale
  * Prompt 78 (LEDAND, CONTRACT78): LED over hver skuff i Skjold Lab – «vis meg hvor delen ligger».
  * En adresserbar stripe (WS2812B/SK6812) over hver skuffrad, styrt av en ESP32 med WLED. Appen snakker aldri med WLED selv:
  * alt går via serveren (/api/skjold, per bruker), som bare når verter i hjemmenettet.
- *  - «💡 Vis i skapet» på detaljsiden og i trefflista (POST /locate {partId} | {partIds:[…]} maks 10), «Slå av» (POST /locate/off).
+ *  - «💡 Vis i skapet» på detaljsiden og i trefflista (POST /locate {partId} | {partIds:[…]} maks 10, fra prompt 79 maks 20), «Slå av» (POST /locate/off).
  *  - «Lys opp automatisk når jeg åpner et treff» (autoLocateOpen) og «Lys opp når Glimt svarer» (autoLocateGlimt):
  *    GET|PUT /leds/settings, med lokal lagring som reserve (404).
  *  - LED-oppsett per skap (GET|PUT /cabinets/:id/leds): vert, farge, varighet, lysstyrke, blink, skuffgeometri og rader
@@ -191,7 +191,7 @@ internal fun ledReady78(l: SkjLeds78?): Boolean = l != null && l.enabled && l.ho
 
 /** Delene som kan lyses opp samtidig (plasserte, i skap med LED), maks 10. */
 internal fun locatable78(parts: List<SkjPart76>, ready: (String) -> Boolean): List<SkjPart76> =
-    parts.filter { it.loc.placed && it.loc.cabinetId?.let(ready) == true }.take(10)
+    parts.filter { it.loc.placed && it.loc.cabinetId?.let(ready) == true }.take(MAX_LIT79)
 
 /* ======================= Parsing ======================= */
 
@@ -240,7 +240,7 @@ internal fun parseLit78(o: JSONObject): List<SkjLit78> = objs34(o.optJSONArray("
     val r = l.d78("row")?.toInt() ?: return@mapNotNull null
     val c = l.d78("col")?.toInt() ?: return@mapNotNull null
     SkjLit78(l.opt("cabinetId")?.takeIf { it != JSONObject.NULL }?.toString(), r, c, l.d78("index")?.toInt())
-}
+}.distinctBy { Triple(it.cabinetId, it.row, it.col) } // prompt 79: serveren gir én oppføring per del; to deler i samme skuff er én skuff
 
 /* ======================= Nettverk ======================= */
 
@@ -362,7 +362,7 @@ fun AppViewModel.testLeds78(cabId: String, mode: String, row: Int? = null, index
 /** Tenner skuffen for delen (eller flere treff, maks 10). [auto]: stille ved feil (åpnet treff / auto-lys). */
 fun AppViewModel.locateParts78(ids: List<String>, auto: Boolean = false) {
     val s = Skjold78
-    val list = ids.distinct().take(10)
+    val list = ids.distinct().take(MAX_LIT79) // prompt 79: maks 20 (eldre server: 10, se under)
     if (list.isEmpty()) return
     val seq = ++s.locSeq
     s.locBusy = true; s.locErr = null
@@ -373,10 +373,15 @@ fun AppViewModel.locateParts78(ids: List<String>, auto: Boolean = false) {
             else try { JSONObject(post78("/locate", JSONObject().put("partIds", JSONArray().apply { list.forEach { put(idJson78(it)) } })))
             } catch (e: ApiException) {
                 if (e.status != 400) throw e
-                // Serveren tar én om gangen: tenn hver for seg, maks 5 kall i sekundet.
-                var last = JSONObject(); val all = mutableListOf<SkjLit78>()
-                for (id in list) { last = JSONObject(post78("/locate", JSONObject().put("partId", idJson78(id)))); all += parseLit78(last); delay(220) }
-                last.put("lit", JSONArray().apply { all.forEach { l -> put(JSONObject().put("cabinetId", l.cabinetId ?: JSONObject.NULL).put("row", l.row).put("col", l.col).put("index", l.index ?: JSONObject.NULL)) } })
+                // prompt 79: eldre server tar maks 10 samtidig.
+                val ten = if (list.size <= 10) null else try { JSONObject(post78("/locate", JSONObject().put("partIds", JSONArray().apply { list.take(10).forEach { put(idJson78(it)) } })))
+                } catch (e2: ApiException) { if (e2.status != 400) throw e2; null }
+                ten ?: run {
+                    // Serveren tar én om gangen: tenn hver for seg, maks 5 kall i sekundet.
+                    var last = JSONObject(); val all = mutableListOf<SkjLit78>()
+                    for (id in list.take(10)) { last = JSONObject(post78("/locate", JSONObject().put("partId", idJson78(id)))); all += parseLit78(last); delay(220) }
+                    last.put("lit", JSONArray().apply { all.forEach { l -> put(JSONObject().put("cabinetId", l.cabinetId ?: JSONObject.NULL).put("row", l.row).put("col", l.col).put("index", l.index ?: JSONObject.NULL)) } })
+                }
             }
             if (seq != s.locSeq) return@launch46
             gotLit78(o)

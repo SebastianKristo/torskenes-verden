@@ -68,7 +68,7 @@ test('modulen: API-kontrakten, tekster og sikkerhet', () => {
   for (const s of ['💡 Vis i skapet', 'Lys opp automatisk når jeg åpner et treff', 'Vis alle i skapet', 'Slå av', 'Trykk på skuffen som lyser', 'Forrige LED', 'Neste LED', 'Test alle', 'Fyll ut', 'Kalibrer', 'WLED-vert', 'Glimt lyser opp skuffen']) assert.ok(js.includes(s), `mangler «${s}»`);
   assert.match(js, /autoLocateOpen: false, autoLocateGlimt: false/, 'begge av som standard');
   assert.match(js, /status === 429/, 'rate limit gir en forståelig melding');
-  assert.match(js, /slice\(0, 10\)/, 'maks 10 treff samtidig');
+  assert.match(js, /slice\(0, 20\)/, 'maks 20 treff samtidig (prompt 79)');
   assert.doesNotMatch(js, /\son(error|load|click|input)="[a-z]/, 'CSP: ingen inline hendelser');
   const css = read('public/css/skjold78.css');
   assert.match(css, /prefers-reduced-motion/);

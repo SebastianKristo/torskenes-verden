@@ -83,6 +83,7 @@ struct Skj76Detail: View {
             Skj76Gallery(photos: x.photos)
             Skj76Where(part: x)
             Skj78LocateButton(part: x)
+            Skj79DetailButton(part: x)
             Skj76Qty(part: x)
             actions(x)
             Skj76Facts(part: x)

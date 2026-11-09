@@ -8,6 +8,7 @@ import UIKit
                                overrides:{"r-c": index}, drawerPitchMm, firstDrawerXmm}
    POST /cabinets/:id/leds/test {mode:'all'|'row'|'index', row?, index?} (lyser i 5 s)
    POST /locate {partId} | {cabinetId,row,col} | {partIds:[…]} → {ok, lit:[{cabinetId,row,col,index}], untilMs} · POST /locate/off
+   (Prompt 79: {partIds, colors:true} → lit med partId og color per del, maks 20; POST /cabinets/:id/leds/diagnose)
    GET /leds/status?cabinet=<id> → {ok, name, ledCount, version}
    POST /cabinets/:id/leds/calibrate {index} (tenner én LED) · PUT /cabinets/:id/leds/override {row,col,index}
    GET|PUT /leds/settings {autoLocateOpen, autoLocateGlimt} (begge av som standard; lokal lagring hvis serveren mangler endepunktet)
@@ -66,6 +67,9 @@ struct Skj78Lit: Hashable {
     var row: Int
     var col: Int
     var index: Int
+    /// Prompt 79: delen som lyser og fargen den lyser i (plukklista, {partIds, colors:true}).
+    var partId: String = ""
+    var color: String = ""
 }
 
 @MainActor
@@ -234,9 +238,9 @@ final class Skjold78 {
         await send(body, store)
     }
 
-    /// «💡 Vis alle treff i skapet»: maks 10 skuffer samtidig.
+    /// «💡 Vis alle treff i skapet»: maks 20 skuffer samtidig (Prompt 79, før 10).
     func locateAll(_ parts: [Skj76Part], _ store: Store) async {
-        let ids: [Any] = parts.filter { canLocate($0) }.prefix(10).map { Skjold76.idv($0.id) }
+        let ids: [Any] = parts.filter { canLocate($0) }.prefix(20).map { Skjold76.idv($0.id) }
         if ids.isEmpty { m.flash("Ingen av treffene ligger i et skap med LED"); return }
         await send(["partIds": ids], store)
     }
@@ -248,7 +252,28 @@ final class Skjold78 {
         await locate(p, store)
     }
 
-    private func send(_ body: [String: Any], _ store: Store) async {
+    /// Prompt 79: plukklista – hver del i sin egen farge ({partIds, colors:true}). Gir hele svaret (med «skipped»).
+    func locateMany(_ ids: [Any], colors: Bool, _ store: Store) async -> [String: Any] {
+        var body: [String: Any] = ["partIds": ids]
+        if colors { body["colors"] = true }
+        let o: [String: Any] = await send(body, store)
+        if !error.isEmpty { m.flash(error) }
+        return o
+    }
+
+    /// Prompt 79: «Feilsøk LED» (POST /cabinets/:id/leds/diagnose, tar opptil ca. 10 s).
+    func diagnose(_ id: String, _ store: Store) async throws -> [String: Any] {
+        let path: String = Skjold76.root + "/cabinets/\(id)/leds/diagnose"
+        do {
+            let d: Data = try await store.api.callAt(Skjold76.prefix, "POST", path, json: [:], timeout: 40)
+            return JS.obj(d)
+        } catch {
+            throw Skjold78.wrap(error)
+        }
+    }
+
+    @discardableResult
+    private func send(_ body: [String: Any], _ store: Store) async -> [String: Any] {
         busy = true
         error = ""
         defer { busy = false }
@@ -258,15 +283,17 @@ final class Skjold78 {
             let list: [Skj78Lit] = JS.list(o, "lit").map { Skjold78.lit($0) }
             if list.isEmpty {
                 error = JS.str(o, "error") ?? JS.str(o, "message") ?? "Fant ingen skuff med LED å lyse opp."
-                return
+                return o
             }
             lit = list
             until = Skjold78.until(JS.num(o, "untilMs"))
             Haptics.shared.success()
             scheduleClear()
+            return o
         } catch {
             self.error = Skjold78.message(error)
             Haptics.shared.warning()
+            return [:]
         }
     }
 
@@ -467,7 +494,11 @@ final class Skjold78 {
     }
 
     nonisolated static func lit(_ o: [String: Any]) -> Skj78Lit {
-        Skj78Lit(cabinetId: JS.str(o, "cabinetId") ?? "", row: JS.int(o, "row") ?? 0, col: JS.int(o, "col") ?? 0, index: JS.int(o, "index") ?? 0)
+        var x: Skj78Lit = Skj78Lit(cabinetId: JS.str(o, "cabinetId") ?? "", row: JS.int(o, "row") ?? 0, col: JS.int(o, "col") ?? 0, index: JS.int(o, "index") ?? 0)
+        x.partId = JS.str(o, "partId") ?? ""
+        let c: String = JS.str(o, "color") ?? ""
+        x.color = c.isEmpty ? "" : hex(c)
+        return x
     }
 
     /// untilMs: tidspunkt (epoch-ms) eller varighet i ms.

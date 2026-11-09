@@ -1,6 +1,6 @@
 // Prompt 78 (LEDWEB): LED over skuffene i Skjold Lab på web – «vis meg hvor delen ligger».
 // - «💡 Vis i skapet» på detaljsiden og som 💡 i trefflista (POST /api/skjold/locate {partId}); med et søk kan
-//   «💡 Vis alle i skapet (n)» tenne opptil 10 treff samtidig ({partIds:[…]}). Linja øverst viser hva som lyser og
+//   «💡 Vis alle i skapet (n)» tenne opptil 20 treff samtidig (10 før prompt 79) ({partIds:[…]}). Linja øverst viser hva som lyser og
 //   hvor lenge (untilMs), med «Slå av» (POST /locate/off).
 // - Innstillingen «Lys opp automatisk når jeg åpner et treff» (autoLocateOpen) og «Glimt lyser opp skuffen når den svarer»
 //   (autoLocateGlimt), begge av som standard: GET|PUT /api/skjold/leds/settings, speilet i localStorage «sk78_set»
@@ -15,6 +15,7 @@ import { esc } from './util.js';
 import { toast } from './toast.js';
 import { S, sk, paintMain, cabById, locOf } from './skjold76.js';
 import { short76, long76 } from './skjold76-draw.js';
+import { diagBtn79, diagHtml79 } from './skjold79-pick.js'; // prompt 79: Feilsøk LED
 import { normLeds78, autoRows78, ledIndex78, ledTotal78, hostOk78, ledsBody78, secsLeft78, statusText78, PITCH60 } from './skjold78-logic.js';
 
 if (typeof document !== 'undefined' && !document.querySelector('link[data-sk78-css]')) {
@@ -107,8 +108,10 @@ function paintLit() {
   el.hidden = !M.lit;
   if (!M.lit) { el.innerHTML = ''; return; }
   const many = (S.cabs ?? []).length > 1, one = M.lit.lit.length === 1;
-  const where = M.lit.lit.slice(0, 4).map((x) => { const c = cabById(x.cabinetId); return one ? [many ? c?.name : '', long76(x.row, x.col)].filter(Boolean).join(' · ') : `${many && c ? `${c.name} ` : ''}${short76(x.row, x.col)}`; }).join(', ');
-  el.innerHTML = `<span class="sk78-dot" aria-hidden="true"></span><span class="sk78-lt"><b>Lyser i skapet</b> ${esc(where)}${M.lit.lit.length > 4 ? ` +${M.lit.lit.length - 4}` : ''} · <span class="sk78-sec">${left} s</span></span><button type="button" class="sk76-btn" data-sk78="off">Slå av</button>`;
+  const dot = (x) => (/^#[0-9a-f]{6}$/i.test(x.color ?? '') ? `<i class="sk79-dot" style="background:${x.color}" aria-hidden="true"></i>` : ''); // prompt 79: farge per del
+  const seen = new Set(), uniq = M.lit.lit.filter((x) => { const k = `${x.cabinetId}:${x.row}-${x.col}`; if (seen.has(k)) return false; seen.add(k); return true; });
+  const where = uniq.slice(0, 4).map((x) => { const c = cabById(x.cabinetId); return dot(x) + esc(one ? [many ? c?.name : '', long76(x.row, x.col)].filter(Boolean).join(' · ') : `${many && c ? `${c.name} ` : ''}${short76(x.row, x.col)}`); }).join(', ');
+  el.innerHTML = `<span class="sk78-dot" aria-hidden="true"></span><span class="sk78-lt"><b>Lyser i skapet</b> ${where}${uniq.length > 4 ? ` +${uniq.length - 4}` : ''} · <span class="sk78-sec">${left} s</span></span><button type="button" class="sk76-btn" data-sk78="off">Slå av</button>`;
 }
 /** Linja som viser hva som lyser (settes inn i skallet). */
 export const litBarHtml78 = () => '<div class="sk78-lit" data-sk78-lit role="status" aria-live="polite" hidden></div>';
@@ -129,7 +132,7 @@ export async function locate78(body, { quiet = false } = {}) {
     M.busy = false; document.querySelectorAll('#sk76 [aria-busy="true"][data-sk78-loc],#sk76 [aria-busy="true"][data-sk78="locate"]').forEach((b) => b.removeAttribute('aria-busy'));
   }
 }
-async function off78() {
+export async function off78() {
   M.lit = null; clearInterval(tick); paintLit();
   try { await sk('/locate/off', { method: 'POST', json: {} }); } catch (e) { toast(errText(e)); }
 }
@@ -152,10 +155,10 @@ export function listBtn78(p) {
 /** «Vis alle i skapet» over trefflista når det er søkt. */
 export function listAllBtn78(items) {
   if (!S.q && !S.cat && !S.low) return '';
-  const ids = (items ?? []).filter((p) => { const l = locOf(p); return l && ready(l.cabinetId); }).map((p) => p.id).slice(0, 10);
+  const ids = (items ?? []).filter((p) => { const l = locOf(p); return l && ready(l.cabinetId); }).map((p) => p.id).slice(0, 20);
   return ids.length > 1 ? `<button type="button" class="sk76-link sk78-all" data-sk78="locate-all">💡 Vis alle i skapet (${ids.length})</button>` : '';
 }
-const listIds = () => (S.items ?? []).filter((p) => { const l = locOf(p); return l && ready(l.cabinetId); }).map((p) => p.id).slice(0, 10);
+const listIds = () => (S.items ?? []).filter((p) => { const l = locOf(p); return l && ready(l.cabinetId); }).map((p) => p.id).slice(0, 20);
 
 let autoKey = '';
 /** Kalles når detaljsiden for en del er åpnet (fra onHash). Lyser opp av seg selv når innstillingen er på. */
@@ -229,9 +232,11 @@ export function ledSetupHtml78(c) {
         <button type="button" class="sk76-btn" data-sk78-test="all">Test alle</button>
         <span class="sk78-ti"><input type="number" inputmode="numeric" min="0" aria-label="LED-nummer" data-sk78-fill="testIdx" value="${esc(E.testIdx)}"><button type="button" class="sk76-btn" data-sk78-test="index">Test LED</button></span>
         <button type="button" class="sk76-btn" data-sk78="wiz"${M.wiz ? ' aria-pressed="true"' : ''}>Kalibrer …</button>
+        ${diagBtn79(c)}
       </div>
     </form>
     ${M.wiz?.cabId === c.id ? wizHtml(c, L) : ''}
+    ${diagHtml79(c)}
     ${ovs.length ? `<details class="sk78-ovs"><summary>Overstyrte skuffer (${ovs.length})</summary><ul>${ovs.map(([k, v]) => { const [r, co] = k.split('-').map(Number); return `<li><span><b>${esc(short76(r, co))}</b> ${esc(long76(r, co))}</span><span>LED ${esc(v)}</span><button type="button" class="sk76-link" data-sk78-rmov="${esc(k)}">Fjern</button></li>`; }).join('')}</ul></details>` : ''}
     <div class="sk78-set"><span class="sk76-kick">FOR ALLE SKAP</span>
       ${autoSw('autoLocateOpen', 'Lys opp automatisk når jeg åpner et treff', 'Skuffen lyser når du åpner en del i Skjold Lab')}

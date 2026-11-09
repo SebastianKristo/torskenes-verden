@@ -136,6 +136,9 @@ enum Skj76Sheet: Identifiable, Hashable {
     /// Prompt 78: LED-oppsett for et skap og kalibreringsveiviseren (Skjold78*.swift).
     case leds(String)
     case calibrate(String)
+    /// Prompt 79: plukklista og «Feilsøk LED» (Skjold79*.swift).
+    case pick
+    case diagnose(String)
 
     var id: String {
         switch self {
@@ -149,6 +152,8 @@ enum Skj76Sheet: Identifiable, Hashable {
         case .ai: return "ai"
         case .leds(let c): return "led" + c
         case .calibrate(let c): return "kal" + c
+        case .pick: return "pick"
+        case .diagnose(let c): return "diag" + c
         }
     }
 }

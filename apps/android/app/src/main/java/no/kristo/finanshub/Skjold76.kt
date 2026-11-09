@@ -135,6 +135,7 @@ object Skjold76 {
         corners = null; cabDeleteAsk = null; err = null; missing = false; offline = false
         Skjold77.reset() // prompt 77
         Skjold78.reset() // prompt 78
+        Skjold79.reset() // prompt 79
     }
 }
 
@@ -371,6 +372,7 @@ fun AppViewModel.openSkjold76(q: String? = null, partId: String? = null, cabId: 
     Haptics.tap()
     if (q != null) s.q = q
     loadSkjold76()
+    loadPick79() // prompt 79: plukklista (lokalt + /picklist)
     when {
         partId != null -> openPart76(partId)
         cabId != null -> { s.cabId = cabId; s.drawer = drawer; s.pulse++; s.stack = listOf("list", "cab"); loadMap76(cabId) }
@@ -383,6 +385,7 @@ fun AppViewModel.closeSkjold76() {
     val a = Skjold77 // prompt 77: ark og valg i forslagene lukkes først
     when {
         Skjold78.calOn -> stopCal78() // prompt 78: kalibreringen avsluttes (lyset slukkes)
+        Skjold79.diagOn -> stopDiag79() // prompt 79: feilsøkingen lukkes
         a.settingsOpen -> a.settingsOpen = false
         a.menuOpen -> a.menuOpen = false
         a.imgPick != null -> a.imgPick = null

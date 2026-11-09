@@ -72,7 +72,7 @@ internal fun RowLed78(vm: AppViewModel, pt: SkjPart76) {
     val p = PaperPal.current
     if (!pt.loc.placed || !ledReady78(pt.loc.cabinetId?.let { s.leds[it] })) return
     val on = s.litUntil > 0 && s.lit.any { it.cabinetId == pt.loc.cabinetId && it.row == pt.loc.row && it.col == pt.loc.col }
-    Box(Modifier.size(40.dp).clip(CircleShape).background(if (on) hexColor78(s.leds[pt.loc.cabinetId]?.color ?: LED_COLOR78).copy(alpha = .25f) else Color.Transparent)
+    Box(Modifier.size(40.dp).clip(CircleShape).background(if (on) hexColor78(drawerColor79(pt.loc.cabinetId, pt.loc.row!!, pt.loc.col!!) ?: s.leds[pt.loc.cabinetId]?.color ?: LED_COLOR78).copy(alpha = .25f) else Color.Transparent)
         .clickable(role = Role.Button) { if (on) vm.locateOff78() else vm.locateParts78(listOf(pt.id)) }
         .semantics { contentDescription = if (on) "Slå av lyset" else "Vis ${pt.name} i skapet" }, contentAlignment = Alignment.Center) {
         Text("💡", fontSize = 17.sp, color = p.ink)
@@ -96,6 +96,7 @@ internal fun LitBar78(vm: AppViewModel, modifier: Modifier) {
     val s = Skjold78
     val p = PaperPal.current
     if (s.litUntil <= 0 || s.lit.isEmpty()) return
+    if (pickBarOn79()) return // prompt 79: plukklistelinja viser nedtellingen og «Slå av»
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
     LaunchedEffect(s.litUntil) {
         while (true) {
@@ -108,7 +109,7 @@ internal fun LitBar78(vm: AppViewModel, modifier: Modifier) {
     val col = hexColor78(s.lit.firstNotNullOfOrNull { l -> l.cabinetId?.let { s.leds[it]?.color } } ?: LED_COLOR78)
     Row(modifier.navigationBarsPadding().padding(16.dp).fillMaxWidth().widthIn(max = 560.dp).shadow(10.dp, RoundedCornerShape(18.dp)).clip(RoundedCornerShape(18.dp))
         .background(p.ink).padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        Box(Modifier.size(12.dp).clip(CircleShape).background(col))
+        LitDots79(col) // prompt 79: én prikk per farge
         Column(Modifier.weight(1f)) {
             Text(litText78(s.lit.size, secs), color = p.bg, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
             Text(s.lit.take(3).joinToString(" · ") { short76(it.row, it.col) + (it.index?.let { i -> " (LED $i)" } ?: "") }, color = p.bg.copy(alpha = .7f), fontSize = 12.sp,
@@ -209,6 +210,7 @@ internal fun LedScreen78(vm: AppViewModel) {
         Text(cab.name + " · ${cab.rows} rader × ${cab.cols} skuffer", color = p.mut, fontSize = 13.sp)
         StatusBadge78(vm, cab.id)
         if (s.calOn) { Calibrate78(vm, cab, cur); return@Column }
+        if (Skjold79.diagOn && Skjold79.diagCab == cab.id) { Diagnose79(vm); return@Column } // prompt 79: Feilsøk LED
         PCard(shadow = true) {
             Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Toggle78("LED i dette skapet", "Adresserbar stripe over hver rad, styrt av WLED (ESP32).", d.enabled) { d.enabled = it }
@@ -253,6 +255,8 @@ internal fun LedScreen78(vm: AppViewModel) {
             PField("LED nr.", s.testIndex, { s.testIndex = it.filter(Char::isDigit).take(4) }, Modifier.weight(.7f), keyboard = int)
             PButton("Test LED", Modifier.weight(1f), kind = "line", height = 44.dp) { saved { vm.testLeds78(cab.id, "index", index = s.testIndex.toIntOrNull() ?: 0) } }
         }
+        // prompt 79: får tilkobling men lyser ikke? Veiviseren tester vanlig farge mot enkelt-LED og gir et hint.
+        PButton("🔧 Feilsøk LED", Modifier.fillMaxWidth().semantics { contentDescription = "Feilsøk LED: finn ut hvorfor stripa ikke lyser" }, kind = "line", height = 44.dp) { saved { vm.startDiag79(cab.id) } }
         PHead("Kalibrering", if (d.overrides.isEmpty()) null else "${d.overrides.size} skuffer")
         Text("Én LED lyser om gangen. Trykk på skuffen som lyser, så husker Skjold Lab det. Bruk «Neste» for LED-er mellom skuffene.", color = p.mut, fontSize = 12.5.sp)
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {

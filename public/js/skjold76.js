@@ -13,6 +13,7 @@ import { drawCabinet76, overlayGrid76, layoutPhoto76, cornersOk76, long76, short
 import { editHtml, setupHtml, editClick, setupClick, editMount, setupMount, editInput, setupInput, startEdit, startSetup } from './skjold76-edit.js';
 import { headBtns77, gearHtml77, click77, key77, tidyHtml77, tidyRoute77, startTidy77, stopTidy77 } from './skjold77-ai.js'; // prompt 77: Glimt-forslag, Rydd opp, ⚙
 import { locateBtn78, listBtn78, listAllBtn78, litBarHtml78, afterPart78, onCabs78, click78, input78, submit78, route78 } from './skjold78-leds.js'; // prompt 78: LED over skuffene
+import { pickBtn79, pickShellHtml79, click79, key79, route79, loadPick79 } from './skjold79-pick.js'; // prompt 79: plukkliste
 
 if (typeof document !== 'undefined' && !document.querySelector('link[data-sk76-css]')) {
   const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = '/assets/css/skjold76.css'; l.dataset.sk76Css = ''; document.head.appendChild(l);
@@ -230,7 +231,7 @@ function listHtml() {
   const head = `<div class="sk76-count">${esc(S.total === 1 ? '1 del' : `${S.total} deler`)}${S.q ? ` for «${esc(S.q)}»` : ''}${S.offline ? ' · lagret liste' : ''}${listAllBtn78(S.items)}</div>`;
   return `${head}<ul class="sk76-list" role="list">${S.items.map((p) => {
     const l = locOf(p), sp = specsText(p), lb = listBtn78(p); // prompt 78: 💡 ved treffet
-    return `<li${lb ? ' class="sk78-li"' : ''}><a class="sk76-item" href="#/skjold/del/${encodeURIComponent(p.id)}">${thumbHtml(p)}<span class="sk76-it"><b>${esc(p.name)}</b>${sp ? `<span class="sk76-sp">${esc(sp)}</span>` : ''}<span class="sk76-loc">${l ? `<i class="sk76-code">${esc(short76(l.row, l.col))}</i>` : ''}${esc(l ? locText(p.location?.text ? p.location : l) : 'Uten plass')}</span></span><span class="sk76-q${isLow(p) ? ' low' : ''}">${esc(qtyText(p))}${isLow(p) ? '<em>Lavt</em>' : ''}</span></a>${lb}</li>`;
+    return `<li class="sk78-li"><a class="sk76-item" href="#/skjold/del/${encodeURIComponent(p.id)}">${thumbHtml(p)}<span class="sk76-it"><b>${esc(p.name)}</b>${sp ? `<span class="sk76-sp">${esc(sp)}</span>` : ''}<span class="sk76-loc">${l ? `<i class="sk76-code">${esc(short76(l.row, l.col))}</i>` : ''}${esc(l ? locText(p.location?.text ? p.location : l) : 'Uten plass')}</span></span><span class="sk76-q${isLow(p) ? ' low' : ''}">${esc(qtyText(p))}${isLow(p) ? '<em>Lavt</em>' : ''}</span></a>${lb}${pickBtn79(p)}</li>`;
   }).join('')}</ul>`;
 }
 function partHtml() {
@@ -252,6 +253,7 @@ function partHtml() {
       ${p.description ? `<p class="sk76-desc">${esc(p.description)}</p>` : ''}
       <div class="sk76-locbox${l ? '' : ' none'}"><span class="sk76-bigcode">${l ? esc(short76(l.row, l.col)) : '–'}</span><span><span class="sk76-kick">PLASSERING</span><b>${esc(l ? locText(p.location?.text ? p.location : l) : 'Uten plass')}</b></span></div>
       ${locateBtn78(p)}
+      <div class="sk79-prow">${pickBtn79(p, true)}</div>
       <div class="sk76-qty" role="group" aria-label="Antall">
         <button type="button" class="sk76-qb" data-sk76-qty="-1" aria-label="Én mindre">−</button>
         <span class="sk76-qv${isLow(p) ? ' low' : ''}"><b>${esc(p.qty ?? 0)}</b> ${esc(p.unit || 'stk')}${minOf(p) != null ? `<small>min ${esc(minOf(p))}</small>` : ''}</span>
@@ -311,7 +313,8 @@ function shellHtml() {
     <div class="sk76-filters" data-sk76-filters></div>
     <div class="sk76-off" data-sk76-off hidden></div>
     ${litBarHtml78()}
-    <div class="sk76-cols"><div class="sk76-main" data-sk76-main></div><aside class="sk76-side" data-sk76-side></aside></div>`;
+    <div class="sk76-cols"><div class="sk76-main" data-sk76-main></div><aside class="sk76-side" data-sk76-side></aside></div>
+    ${pickShellHtml79()}`;
 }
 export function paintMain() {
   const el = root()?.querySelector('[data-sk76-main]');
@@ -361,6 +364,7 @@ async function onHash() {
   if (r.v !== 'setup') S.setup = null;
   if (r.v !== 'tidy') stopTidy77();
   route78(r); // prompt 78
+  route79(r); // prompt 79: plukkliste
   if (r.v === 'list' && r.q != null && r.q !== S.q) { S.q = r.q; const i = el.querySelector('[data-sk76-search] input'); if (i) i.value = S.q; loadList(); }
   if (r.cab && cabById(r.cab)) S.cabId = cabById(r.cab).id;
   if (r.v === 'drawer') S.drawerParts = null;
@@ -509,6 +513,7 @@ function bind() {
     if (S.suggOpen && !t.closest('[data-sk76-search]')) closeSugg();
     const sug = t.closest('[data-sk76-sug]'); if (sug) { e.preventDefault(); pickSugg(el.querySelector('[data-sk76-search]'), +sug.dataset.sk76Sug); return; }
     if (click77(t)) return; // prompt 77: ⋯-meny, ⚙ og Rydd opp
+    if (click79(t)) return; // prompt 79: plukkliste og Feilsøk LED
     if (click78(t)) return; // prompt 78: 💡 Vis i skapet, LED-oppsett og kalibrering
     if (S.route.v === 'edit' && editClick(t, e)) return;
     if (S.route.v === 'setup' && setupClick(t, e)) return;
@@ -535,6 +540,7 @@ function bind() {
   });
   document.addEventListener('keydown', (e) => {
     const el = root(); if (!el || !el.contains(e.target)) return;
+    if (key79(e)) return; // prompt 79: Esc lukker plukklista
     if (key77(e)) return; // prompt 77: Esc lukker ⋯ og ⚙
     const dr = e.target.closest?.('[data-sk76-dr]');
     if (dr && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onDrawer(dr.dataset.sk76Dr); return; }
@@ -578,6 +584,7 @@ export async function mount(view) {
   S.route = parseHash();
   paint();
   await loadCabs();
+  loadPick79(); // prompt 79
   loadCats();
   if (S.route.v === 'list' && S.route.q != null) S.q = S.route.q;
   const i = el.querySelector('[data-sk76-search] input'); if (i) i.value = S.q;

@@ -201,13 +201,14 @@ test('locate tenner skuffen og gjenoppretter forrige tilstand', async () => {
   assert.deepEqual(L._activeHosts78(), []);
 });
 
-test('locate: flere treff (maks 10), off, feil og test/kalibrering', async () => {
+test('locate: flere treff (maks 20), off, feil og test/kalibrering', async () => {
   await calm();
   await A(`/cabinets/${cabId}/leds`, 'PUT', { durationS: 30 });
-  const drawers = Array.from({ length: 12 }, (_, i) => ({ cabinetId: cabId, row: i + 1, col: 1 }));
+  // Prompt 79: maks økt fra 10 til 20 skuffer.
+  const drawers = Array.from({ length: 22 }, (_, i) => ({ cabinetId: cabId, row: (i % 12) + 1, col: i < 12 ? 1 : 3 }));
   const r = await A('/locate', 'POST', { drawers });
   assert.equal(r.status, 200);
-  assert.equal(r.body.lit.length, 10);
+  assert.equal(r.body.lit.length, 20);
   assert.equal(r.body.skipped.length, 2);
   const off = await A('/locate/off', 'POST', {});
   assert.deepEqual(off.body, { ok: true, off: 1 });

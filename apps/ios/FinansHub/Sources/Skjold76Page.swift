@@ -43,7 +43,7 @@ struct Skjold76Page: View {
                     Skj76CabinetCard()
                     Skj76Results()
                 }
-                .padding(.horizontal, 16).padding(.top, 6).padding(.bottom, 90)
+                .padding(.horizontal, 16).padding(.top, 6).padding(.bottom, Skjold79.shared.count > 0 ? 150 : 90)
                 .frame(maxWidth: 760).frame(maxWidth: .infinity)
             }
             .scrollDismissesKeyboard(.interactively)
@@ -62,6 +62,7 @@ struct Skjold76Page: View {
         .task {
             await m.load(store)
             await Skjold78.shared.load(store)
+            await Skjold79.shared.load(store)
         }
     }
 }
@@ -74,6 +75,7 @@ struct Skj76Bottom: View {
     var body: some View {
         VStack(spacing: 8) {
             Skj78LitBar()
+            Skj79Bar()
             if !m.undoText.isEmpty {
                 HStack(spacing: 12) {
                     Text(m.undoText).font(PF.ui(13.5, .semibold)).foregroundStyle(p.bg).lineLimit(2)
@@ -107,8 +109,16 @@ struct Skj76AddButton: View {
                 .shadow(color: Color.black.opacity(0.18), radius: 8, y: 3)
         }
         .buttonStyle(.plain)
-        .padding(.trailing, 20).padding(.bottom, m.undoText.isEmpty && m.toast.isEmpty ? 24 : 78)
+        .padding(.trailing, 20).padding(.bottom, lift)
         .accessibilityLabel("Ny del")
+    }
+
+    /// Løftes over toast/angre, LED-linja og plukklistelinja (Prompt 79).
+    @MainActor private var lift: CGFloat {
+        var h: CGFloat = m.undoText.isEmpty && m.toast.isEmpty ? 24 : 78
+        if Skjold79.shared.count > 0 { h += 58 }
+        if !Skjold78.shared.lit.isEmpty { h += 58 }
+        return h
     }
 }
 
@@ -352,7 +362,8 @@ struct Skj76Row: View {
     var body: some View {
         HStack(spacing: 0) {
             main
-            Skj78RowButton(part: part).padding(.trailing, 4)
+            Skj78RowButton(part: part)
+            Skj79AddButton(part: part).padding(.trailing, 4)
         }
     }
 
@@ -407,6 +418,8 @@ struct Skj76SheetView: View {
         case .ai: Skj77Settings()
         case .leds(let c): Skj78Setup(startId: c)
         case .calibrate(let c): Skj78Calibrate(cabinetId: c)
+        case .pick: Skj79Sheet()
+        case .diagnose(let c): Skj79Diagnose(cabinetId: c)
         }
     }
 }

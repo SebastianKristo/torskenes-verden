@@ -37,7 +37,10 @@ const num = (v) => (typeof v === 'number' ? v : typeof v === 'string' && v.trim(
 const intIn = (v, lo, hi) => { const n = num(v); return Number.isInteger(n) && n >= lo && n <= hi ? n : null; };
 const numIn = (v, lo, hi) => { const n = num(v); return Number.isFinite(n) && n >= lo && n <= hi ? Math.round(n * 1000) / 1000 : null; };
 
-export const MAX_LIT78 = 10;
+export const MAX_LIT78 = 20; // prompt 79: økt fra 10 (plukklista)
+// Prompt 79: tydelig skillbare farger for «Vis alle med LED» (del nr. 1 får skapets egen farge, så disse i rekkefølge).
+export const PALETTE79 = ['#2F6BFF', '#FFD000', '#00C853', '#FF1744', '#AA00FF', '#FF6D00', '#00E5FF', '#FF4081', '#FFFFFF', '#C6FF00'];
+export const MIN_BRI79 = 16; // WLED-lysstyrke 0/1 = av/usynlig
 export const TIMEOUT78 = 3000;
 export const MAX_BYTES78 = 64 * 1024;
 export const RATE78 = 5; // kall per sekund per bruker
@@ -49,12 +52,15 @@ const DEF78 = { host: null, enabled: false, color: '#2F6BFF', durationS: 30, bli
 let allowLoopback = false;
 let resolver = async (name) => (await dnsLookup(name, { all: true, family: 4 })).map((a) => a.address);
 let testMs = 5000;
+let diagMs = 3000;
 /** Bare for tester: tillat 127.0.0.0/8 (mocket WLED på localhost). */
 export const _allowLoopback78 = (on) => { allowLoopback = !!on; };
 /** Bare for tester: DNS-oppslag (navn → [IPv4]). null = vanlig. */
 export const _setResolver78 = (fn) => { resolver = fn ?? (async (name) => (await dnsLookup(name, { all: true, family: 4 })).map((a) => a.address)); };
 /** Bare for tester: hvor lenge «test» lyser (ms). */
 export const _setTestMs78 = (ms) => { testMs = ms ?? 5000; };
+/** Bare for tester: hvor lenge hvert diagnosesteg lyser (ms). */
+export const _setDiagMs79 = (ms) => { diagMs = ms ?? 3000; };
 
 /* ---------------- Vertssjekken (hjemmenettet) ---------------- */
 
@@ -230,19 +236,30 @@ const saveLeds = (cab, cfg) => { q('UPDATE skj_cabinets SET leds=? WHERE id=?').
 const hostsActive = new Map(); // host → {snapshot, segLen, segment, byUser: Map(user → {leds:[{index,color}], until, timer, bri, blink}), blinkTimer, phase}
 const hex = (c) => String(c || '#2F6BFF').replace('#', '').toUpperCase();
 
+// Prompt 79 (PICKSRV): rettet payload. Verifisert mot WLED-kildekoden (wled00/json.cpp deserializeSegment, v0.13.3, v0.14.4, v0.15.0 og main):
+// rekkefølgen i ett segmentobjekt er bri/on → frz → col → fx → … → i. «i» setter selv freeze=true (og fyller svart første gang), så `frz:false`
+// i samme objekt ble overstyrt av «i» – men den ga ingenting. Det som faktisk gjorde stripa mørk:
+//   • segmentets egen tilstand ble aldri satt: `seg.on:false` eller lav segment-lysstyrke (opacity) skalerer alle piksler fra «i» ned til svart;
+//   • en kjørende spilleliste/effekt ble ikke stoppet (fx:0 avlaster også spillelisten, som ellers bytter preset og tiner segmentet);
+//   • LED-er med indeks ≥ segmentlengden ble stille droppet (WLED leveres med 30 LED-er satt opp – skapets autorader trenger ofte > 200),
+//     mens API-et svarte «lit» som om alt var i orden;
+//   • sanntidsdata (E1.31/DDP/Hyperion, info.live) overstyrer JSON-endringer uten `lor`.
+// Nå: {on:true, bri≥16, [lor:1 ved live], seg:[{id, on:true, bri:255, fx:0, i:[…]}]} uten frz:false (i fryser), og utenfor-rekkevidde rapporteres.
 function frame(h, on = true) {
   const lit = [];
-  let bri = 1;
+  let bri = MIN_BRI79;
   for (const e of h.byUser.values()) { bri = Math.max(bri, e.bri); for (const l of e.leds) lit.push({ ...l, off: !on && e.blink }); }
   const seen = new Set(), arr = [0, h.segLen, '000000'];
   for (const l of lit) { if (seen.has(l.index) || l.index >= h.segLen) continue; seen.add(l.index); arr.push(l.index, l.off ? '000000' : l.color); }
-  return { on: true, bri, seg: [{ id: h.segment, frz: false, i: arr }] };
+  return { on: true, bri: Math.min(255, bri), ...(h.live ? { lor: 1 } : {}), seg: [{ id: h.segment, on: true, bri: 255, fx: 0, i: arr }] };
 }
-function restorePayload(snap) {
+function restorePayload(snap, { live = false } = {}) {
   const out = { on: !!snap?.on, bri: snap?.bri ?? 128 };
-  if (Number.isInteger(snap?.ps) && snap.ps > 0) out.ps = snap.ps;
+  if (Number.isInteger(snap?.pl) && snap.pl > 0) out.ps = snap.pl; // spillelisten startes igjen (fx:0 avlastet den)
+  else if (Number.isInteger(snap?.ps) && snap.ps > 0) out.ps = snap.ps;
   if (Array.isArray(snap?.seg)) out.seg = snap.seg.map((s) => ({ ...s, frz: false }));
   if (snap?.transition != null) out.transition = snap.transition;
+  if (live) out.lor = Number.isInteger(snap?.lor) ? snap.lor : 0;
   return out;
 }
 async function restoreHost(host) {
@@ -251,7 +268,7 @@ async function restoreHost(host) {
   hostsActive.delete(host);
   clearInterval(h.blinkTimer);
   for (const e of h.byUser.values()) clearTimeout(e.timer);
-  try { await wled78(host, 'POST', '/json/state', restorePayload(h.snapshot)); } catch (e) { console.warn(`[leds78] gjenoppretting feilet (${host}):`, e.code || e.message); }
+  try { await wled78(host, 'POST', '/json/state', restorePayload(h.snapshot, { live: h.live })); } catch (e) { console.warn(`[leds78] gjenoppretting feilet (${host}):`, e.code || e.message); }
 }
 function setBlink(host, h) {
   const any = [...h.byUser.values()].some((e) => e.blink);
@@ -275,16 +292,22 @@ async function endUser(host, user) {
   setBlink(host, h);
   await wled78(host, 'POST', '/json/state', frame(h)).catch(() => {});
 }
+/** Lengden på WLED-segmentet (i er relativ til segmentets start). */
+function segLenOf79(snapshot, segment, fallback) {
+  const seg = Array.isArray(snapshot?.seg) ? snapshot.seg.find((s) => s.id === segment) ?? snapshot.seg[0] : null;
+  const len = Number.isInteger(seg?.len) ? seg.len : Number.isInteger(seg?.stop) ? seg.stop - (seg.start ?? 0) : fallback;
+  return Math.max(1, len || fallback || 1);
+}
 /** Tenner LED-er på én vert for brukeren i durationMs og gjenoppretter etterpå. Kaster ved feil (før noe er endret på verten). */
 async function lightHost(user, host, { leds, segment, segLen, bri, blink, durationMs }) {
+  if (diagActive.has(host)) await diagRestore(host).catch(() => {}); // en diagnose holder på – gjenopprett først, så snapshot blir riktig
   let h = hostsActive.get(host);
   if (!h) {
     const snapshot = await wled78(host, 'GET', '/json/state');
+    const info = await wled78(host, 'GET', '/json/info').catch(() => null);
     if (hostsActive.get(host)) h = hostsActive.get(host); // en annen økt rakk å starte mens vi ventet
     else {
-      const seg = Array.isArray(snapshot?.seg) ? snapshot.seg.find((s) => s.id === segment) ?? snapshot.seg[0] : null;
-      const len = Number.isInteger(seg?.len) ? seg.len : Number.isInteger(seg?.stop) ? seg.stop - (seg.start ?? 0) : segLen;
-      h = { snapshot, segment, segLen: Math.max(1, len || segLen), byUser: new Map(), blinkTimer: null, phase: true };
+      h = { snapshot, segment, segLen: segLenOf79(snapshot, segment, segLen), live: info?.live === true, byUser: new Map(), blinkTimer: null, phase: true };
       hostsActive.set(host, h);
     }
   }
@@ -305,11 +328,14 @@ export async function locateOff78(user) {
   return hosts.length;
 }
 /** Bare for tester: slukk alt uten å vente på tidtakerne. */
-export async function _resetLeds78() { for (const host of [...hostsActive.keys()]) await restoreHost(host); }
+export async function _resetLeds78() {
+  for (const host of [...hostsActive.keys()]) await restoreHost(host);
+  for (const host of [...diagActive.keys()]) await diagRestore(host).catch(() => {});
+}
 export const _activeHosts78 = () => [...hostsActive.keys()];
 
 /**
- * Tenner skuffer: targets = [{cabinetId,row,col}] (maks 10). Grupperes per vert (flere skap kan dele én kontroller).
+ * Tenner skuffer: targets = [{cabinetId,row,col,color?}] (maks 20; color '#RRGGBB' overstyrer skapets farge). Grupperes per vert (flere skap kan dele én kontroller).
  * → {ok, lit, skipped, untilMs, durationMs} | {error, code, status}
  */
 export async function locate78(user, targets, { durationS = null, requireEnabled = true } = {}) {
@@ -327,8 +353,9 @@ export async function locate78(user, targets, { durationS = null, requireEnabled
     const g = groups.get(key);
     g.segLen = Math.max(g.segLen, ledCount78(cfg, cab));
     g.bri = Math.max(g.bri, cfg.brightness); g.blink ||= cfg.blink; g.dur = Math.max(g.dur, durationS ?? cfg.durationS);
-    g.leds.push({ index: ix.index, color: hex(cfg.color) });
-    g.items.push({ cabinetId: cab.id, row: t.row, col: t.col, index: ix.index, source: ix.source });
+    const color = /^#?[0-9a-f]{6}$/i.test(String(t.color ?? '')) ? t.color : cfg.color;
+    g.leds.push({ index: ix.index, color: hex(color) });
+    g.items.push({ cabinetId: cab.id, row: t.row, col: t.col, index: ix.index, source: ix.source, color: `#${hex(color)}` });
   }
   if (!groups.size) {
     const nc = skipped.find((s) => s.code === 'not_configured');
@@ -340,11 +367,134 @@ export async function locate78(user, targets, { durationS = null, requireEnabled
   let until = 0, durationMs = 0, firstErr = null;
   for (const g of groups.values()) {
     const ms = g.dur * 1000;
-    try { until = Math.max(until, await lightHost(user, g.host, { leds: g.leds, segment: g.segment, segLen: g.segLen, bri: g.bri, blink: g.blink, durationMs: ms })); durationMs = Math.max(durationMs, ms); lit.push(...g.items); }
-    catch (e) { firstErr ??= e; for (const it of g.items) skipped.push({ ...it, reason: e.message, code: e.code }); }
+    try {
+      until = Math.max(until, await lightHost(user, g.host, { leds: g.leds, segment: g.segment, segLen: g.segLen, bri: g.bri, blink: g.blink, durationMs: ms }));
+      durationMs = Math.max(durationMs, ms);
+      // Prompt 79: indekser utenfor WLED-segmentet kan ikke lyse – si det i stedet for å late som.
+      const len = hostsActive.get(g.host)?.segLen ?? Infinity;
+      let n = 0;
+      for (const it of g.items) {
+        if (it.index < len) { lit.push(it); n++; }
+        else skipped.push({ ...it, reason: `LED nr. ${it.index} finnes ikke – WLED-segmentet har bare ${len} LED-er. Sjekk LED-antallet i WLED (LED Preferences) eller LED-oppsettet.`, code: 'out_of_range' });
+      }
+      if (!n) await endUser(g.host, user).catch(() => {}); // ingenting synlig – ikke la stripa stå svart i hele perioden
+    } catch (e) { firstErr ??= e; for (const it of g.items) skipped.push({ ...it, reason: e.message, code: e.code }); }
+  }
+  if (!lit.length && !firstErr && skipped.some((x) => x.code === 'out_of_range')) {
+    const o = skipped.find((x) => x.code === 'out_of_range');
+    return { error: o.reason, code: 'out_of_range', status: 409, skipped };
   }
   if (!lit.length) return { error: firstErr?.message ?? 'Fikk ikke kontakt med WLED', code: firstErr?.code === 'host' ? 'host' : 'unreachable', status: firstErr?.code === 'host' ? 400 : 502, skipped };
   return { ok: true, lit, untilMs: until, durationMs, ...(skipped.length ? { skipped } : {}) };
+}
+
+/* ---------------- Prompt 79: diagnose («Feilsøk LED») ---------------- */
+
+// Egen økt per vert for diagnosen: forrige tilstand tas én gang og skrives tilbake etter diagMs (eller med step 'restore').
+const diagActive = new Map(); // host → {snapshot, live, timer}
+async function diagBegin(host, live, holdMs = diagMs) {
+  if (hostsActive.has(host)) await restoreHost(host); // en locate lyser – gjenopprett den først, så snapshot er den ekte tilstanden
+  let d = diagActive.get(host);
+  if (!d) {
+    const snapshot = await wled78(host, 'GET', '/json/state');
+    d = diagActive.get(host) ?? { snapshot, live, timer: null };
+    diagActive.set(host, d);
+  }
+  clearTimeout(d.timer);
+  d.timer = setTimeout(() => { diagRestore(host).catch(() => {}); }, holdMs); // sikkerhetsnett: gjenopprettes uansett
+  d.timer.unref?.();
+  return d;
+}
+async function diagRestore(host) {
+  const d = diagActive.get(host);
+  if (!d) return false;
+  diagActive.delete(host);
+  clearTimeout(d.timer);
+  await wled78(host, 'POST', '/json/state', restorePayload(d.snapshot, { live: d.live }));
+  return true;
+}
+const sleep79 = (ms) => new Promise((r) => { const t = setTimeout(r, ms); t.unref?.(); });
+const ASK79 = { red: 'Lyste hele stripa rødt?', blue: 'Lyste én LED blått?' };
+export const HINTS79 = {
+  none: 'Ingen av dem lyste: feilen er i maskinvaren eller WLED-oppsettet. Sjekk i WLED under «LED Preferences»: riktig GPIO-pinne (data), LED-type (WS2812B, fargerekkefølge GRB) og antall LED-er. '
+    + 'Sjekk også felles jord mellom ESP32 og strømforsyningen, nivåskifter (3,3 V → 5 V) eller en kort ledning til første LED, at stripa får strøm (5 V nok ampere), og at data går inn i pilens retning (DI, ikke DO).',
+  red: 'Stripa lyste rødt, men én LED via «i» lyste ikke: WLED og stripa virker, men metoden vår gjorde det ikke. Dette er en feil hos oss – rapporter den (ta med WLED-versjonen og stegene over).',
+  both: 'Begge lyste: WLED og metoden virker. Lyser feil skuff (eller ingen), er det kalibrering eller indeks: kjør «Kalibrer» i LED-oppsettet, og sjekk startindeks, retning (serpentine/samme) og LED-er per meter.',
+  blue: 'Bare den blå LED-en lyste, ikke hele stripa rødt: sjekk fargerekkefølgen (RGB/GRB) og LED-typen i WLED «LED Preferences», og at strømforsyningen klarer hele stripa (prøv lavere lysstyrke eller strømgrense).',
+};
+export function hint79(red, blue, warnings = []) {
+  let h;
+  if (typeof red !== 'boolean' || typeof blue !== 'boolean') h = 'Svar på om hele stripa lyste rødt og om én LED lyste blått, så får du et konkret råd.';
+  else h = red && blue ? HINTS79.both : red ? HINTS79.red : blue ? HINTS79.blue : HINTS79.none;
+  return warnings.length ? `${h} Funnet i WLED: ${warnings.join(' ')}` : h;
+}
+/** Steg 1–2: /json/info og /json/state. → {steps, warnings, info, state, seg, segLen, live, fatal} */
+async function diagCheck(cfg, cab) {
+  const steps = [], warnings = [];
+  let info = null, state = null;
+  try {
+    info = await wled78(cfg.host, 'GET', '/json/info');
+    const count = Number.isInteger(info?.leds?.count) ? info.leds.count : null, need = ledCount78(cfg, cab);
+    const maxpwr = Number.isInteger(info?.leds?.maxpwr) ? info.leds.maxpwr : null;
+    const segs = Array.isArray(info?.leds?.seglc) ? info.leds.seglc.length : null;
+    if (count != null && count < need) warnings.push(`WLED har ${count} LED-er satt opp, men LED-oppsettet for skapet bruker ${need} – øk antallet i WLED (LED Preferences), ellers lyser ikke skuffene bakerst.`);
+    if (info?.live === true) warnings.push('WLED tar imot sanntidsdata (live: E1.31/DDP/Hyperion e.l.) – det overstyrer oss. Vi ber om overstyring (lor), men slå helst av sanntidskilden.');
+    if (maxpwr != null && maxpwr > 0 && maxpwr < 300) warnings.push(`Strømgrensen i WLED er lav (${maxpwr} mA) – lysene kan bli svært svake.`);
+    steps.push({ key: 'info', name: 'Kontakt med WLED (/json/info)', ok: true,
+      detail: [`${String(info?.name ?? 'WLED').slice(0, 60)}`, info?.ver ? `versjon ${String(info.ver).slice(0, 30)}` : null, count != null ? `${count} LED-er` : null,
+        maxpwr != null ? (maxpwr ? `strømgrense ${maxpwr} mA` : 'ingen strømgrense') : null, segs != null ? `${segs} segment${segs === 1 ? '' : 'er'}` : null, info?.live ? 'LIVE (sanntid)' : null].filter(Boolean).join(' · '),
+      ledCount: count, version: info?.ver ?? null, live: info?.live === true });
+  } catch (e) {
+    steps.push({ key: 'info', name: 'Kontakt med WLED (/json/info)', ok: false, detail: `${e.message}. Sjekk at ESP32-en er på samme nett, og adressen (${cfg.host}).`, code: e.code === 'host' ? 'host' : 'unreachable' });
+    return { steps, warnings, fatal: true };
+  }
+  try {
+    state = await wled78(cfg.host, 'GET', '/json/state');
+    const seg = Array.isArray(state?.seg) ? state.seg.find((x) => x.id === cfg.segment) : null;
+    if (!seg) {
+      steps.push({ key: 'state', name: 'Tilstand og segment (/json/state)', ok: false, detail: `Segment ${cfg.segment} finnes ikke i WLED (har ${(state?.seg ?? []).map((x) => x.id).join(', ') || 'ingen'}). Rett «segment» i LED-oppsettet.` });
+      return { steps, warnings, info, state, fatal: false, seg: null, segLen: segLenOf79(state, cfg.segment, ledCount78(cfg, cab)), live: info?.live === true };
+    }
+    const segLen = segLenOf79(state, cfg.segment, ledCount78(cfg, cab));
+    if (state.on === false) warnings.push('WLED var slått av (vi slår den på mens vi lyser).');
+    if (Number.isInteger(state.bri) && state.bri <= 10) warnings.push(`Hovedlysstyrken i WLED var svært lav (${state.bri}).`);
+    if (seg.on === false) warnings.push(`Segment ${seg.id} var slått av – da blir alle LED-er i det svarte (vi slår det på mens vi lyser).`);
+    if (Number.isInteger(seg.bri) && seg.bri < 32) warnings.push(`Segment ${seg.id} har lav egen lysstyrke (${seg.bri}) – vi setter den til 255 mens vi lyser.`);
+    if (Number.isInteger(seg.fx) && seg.fx !== 0) warnings.push(`En effekt kjører i segmentet (fx ${seg.fx}) – vi stopper den mens vi lyser og setter den tilbake etterpå.`);
+    if (Number.isInteger(state.pl) && state.pl > 0) warnings.push(`En spilleliste kjører (${state.pl}) – den stoppes mens vi lyser og startes igjen etterpå.`);
+    if (seg.rev || seg.mi || (seg.grp ?? 1) > 1 || (seg.spc ?? 0) > 0) warnings.push('Segmentet er satt til baklengs/speilet/gruppert – da flytter WLED indeksene. Slå det av eller kalibrer på nytt.');
+    steps.push({ key: 'state', name: 'Tilstand og segment (/json/state)', ok: true,
+      detail: `WLED ${state.on === false ? 'av' : 'på'} (lysstyrke ${state.bri ?? '?'}) · segment ${seg.id}: LED ${seg.start ?? 0}–${(seg.stop ?? segLen) - 1} (${segLen} LED-er), ${seg.on === false ? 'av' : 'på'}, segmentlysstyrke ${seg.bri ?? '?'}, effekt ${seg.fx ?? '?'}${seg.frz ? ', fryst' : ''}`,
+      segment: seg.id, segLen });
+    return { steps, warnings, info, state, seg, segLen, live: info?.live === true, fatal: false };
+  } catch (e) {
+    steps.push({ key: 'state', name: 'Tilstand og segment (/json/state)', ok: false, detail: e.message });
+    return { steps, warnings, info, fatal: true };
+  }
+}
+const briOf79 = (cfg) => Math.min(255, Math.max(MIN_BRI79, cfg.brightness | 0, 64));
+/** Steg 3: hele stripa (segmentet) rød med vanlig farge – ingen «i». frz:false trengs: et fryst segment tegner ikke ny farge. */
+async function diagRed(cfg, chk, holdMs) {
+  try {
+    await diagBegin(cfg.host, chk.live, holdMs);
+    await wled78(cfg.host, 'POST', '/json/state', { on: true, bri: briOf79(cfg), ...(chk.live ? { lor: 1 } : {}), seg: [{ id: cfg.segment, on: true, bri: 255, fx: 0, frz: false, col: [[255, 0, 0]] }] });
+    return { key: 'red', name: 'Hele stripa rød i 3 s (vanlig farge)', ok: true, detail: `Sendt: segment ${cfg.segment} rødt med vanlig farge (fx 0).`, ask: ASK79.red };
+  } catch (e) { return { key: 'red', name: 'Hele stripa rød i 3 s (vanlig farge)', ok: false, detail: e.message, ask: ASK79.red }; }
+}
+/** Steg 4: én LED blå via «i» (samme metode som locate). */
+async function diagBlue(cfg, cab, chk, wanted, holdMs) {
+  const segLen = chk.segLen ?? ledCount78(cfg, cab);
+  let idx = Number.isInteger(wanted) ? wanted : indexFor78(cfg, cab, 1, 1)?.index ?? 0, note = '';
+  if (idx >= segLen) { note = ` LED nr. ${idx} er utenfor segmentet (${segLen} LED-er) – brukte LED 0 i stedet.`; idx = 0; }
+  try {
+    await diagBegin(cfg.host, chk.live, holdMs);
+    await wled78(cfg.host, 'POST', '/json/state', { on: true, bri: briOf79(cfg), ...(chk.live ? { lor: 1 } : {}), seg: [{ id: cfg.segment, on: true, bri: 255, fx: 0, i: [0, segLen, '000000', idx, '0000FF'] }] });
+    return { key: 'blue', name: 'Én LED blå i 3 s (via «i», vår metode)', ok: true, detail: `Sendt: LED ${idx} blå, resten av segmentet svart.${note}`, index: idx, ask: ASK79.blue };
+  } catch (e) { return { key: 'blue', name: 'Én LED blå i 3 s (via «i», vår metode)', ok: false, detail: e.message, index: idx, ask: ASK79.blue }; }
+}
+async function diagRestoreStep(host) {
+  try { const did = await diagRestore(host); return { key: 'restore', name: 'Gjenopprett', ok: true, detail: did ? 'Forrige tilstand (effekt, farger, av/på) er satt tilbake.' : 'Ingenting å gjenopprette.' }; }
+  catch (e) { return { key: 'restore', name: 'Gjenopprett', ok: false, detail: e.message }; }
 }
 
 /* ---------------- Rate limit (5 kall i sekundet per bruker) ---------------- */
@@ -453,31 +603,82 @@ export function mountLeds78(app) {
     } catch (e) { return c.json({ error: e.message, code: e.code === 'host' ? 'host' : 'unreachable' }, e.code === 'host' ? 400 : 502); }
   });
 
+  // Prompt 79: «Feilsøk LED». step: 'all' (standard, ca. 7 s) | 'check' | 'red' | 'blue' | 'restore'. red/blue = brukerens svar (Ja/Nei).
+  app.post('/cabinets/:id{[0-9]+}/leds/diagnose', async (c) => {
+    const u = c.get('user'), cab = cabOr404(c), b = (await body(c)) ?? {};
+    if (!cab) return c.json(NOCAB, 404);
+    const cfg = ledsOf78(cab);
+    if (!cfg.host) return c.json({ ok: false, error: 'Sett verten (WLED-kontrolleren) først', code: 'not_configured', steps: [], hint: 'Skriv inn IP-adressen eller navnet til WLED-kontrolleren i LED-oppsettet først.', hints: HINTS79 }, 409);
+    const step = b.step ?? 'all';
+    if (!['all', 'check', 'red', 'blue', 'restore'].includes(step)) return c.json({ error: "step må være 'all', 'check', 'red', 'blue' eller 'restore'" }, 400);
+    const wanted = b.index == null ? null : intIn(b.index, 0, 4095);
+    if (b.index != null && wanted == null) return c.json({ error: 'index må være 0–4095' }, 400);
+    if (!rateOk78(u)) return limited(c);
+    const answers = { red: typeof b.red === 'boolean' ? b.red : undefined, blue: typeof b.blue === 'boolean' ? b.blue : undefined };
+    const done = (steps, warnings = [], extra = {}) => c.json({ ok: steps.every((x) => x.ok), host: cfg.host, steps, warnings, hint: hint79(answers.red, answers.blue, warnings), hints: HINTS79, ...extra }, 200, NS);
+    if (step === 'restore') return done([await diagRestoreStep(cfg.host)]);
+    const chk = await diagCheck(cfg, cab);
+    if (chk.fatal) return done(chk.steps, chk.warnings, { hint: 'Fikk ikke kontakt med WLED. Sjekk at ESP32-en har strøm og er på samme nett, og at adressen i LED-oppsettet er riktig.' });
+    if (step === 'check') return done(chk.steps, chk.warnings);
+    if (step === 'red') { const r = await diagRed(cfg, chk); return done([r], chk.warnings, { untilMs: Date.now() + diagMs, durationMs: diagMs }); }
+    if (step === 'blue') { const r = await diagBlue(cfg, cab, chk, wanted); return done([r], chk.warnings, { untilMs: Date.now() + diagMs, durationMs: diagMs }); }
+    const steps = [...chk.steps];
+    const hold = diagMs * 3 + 5000; // 'all' gjenoppretter selv i siste steg; tidtakeren er bare et sikkerhetsnett
+    const red = await diagRed(cfg, chk, hold); steps.push(red);
+    if (red.ok) await sleep79(diagMs);
+    const blue = await diagBlue(cfg, cab, chk, wanted, hold); steps.push(blue);
+    if (blue.ok) await sleep79(diagMs);
+    steps.push(await diagRestoreStep(cfg.host));
+    return done(steps, chk.warnings);
+  });
+
+  // Prompt 79: {partIds, colors:true} gir hver del sin farge; lit har én oppføring per del (to deler i samme skuff deler LED – første farge vinner). Maks 20 skuffer.
   app.post('/locate', async (c) => {
     const u = c.get('user'), b = await body(c);
     if (!b) return c.json({ error: 'Forventet {partId} eller {cabinetId, row, col}' }, 400);
-    const targets = [];
     const pids = Array.isArray(b.partIds) ? b.partIds : b.partId != null ? [b.partId] : [];
     if (pids.length > MAX_LIT78 * 5) return c.json({ error: `Maks ${MAX_LIT78} skuffer om gangen` }, 400);
-    const noLoc = [];
+    const entries = [], pre = [];
+    const seenPart = new Set();
     for (const id of pids) {
       const p = partRow76(u, id);
-      if (!p) { if (pids.length === 1) return c.json({ error: 'Fant ikke delen', code: 'not_found' }, 404); continue; }
-      if (!p.cabinet_id || !p.row || !p.col) { noLoc.push({ partId: p.id, reason: 'Delen har ingen plass' }); continue; }
-      targets.push({ cabinetId: p.cabinet_id, row: p.row, col: p.col, partId: p.id });
+      if (!p) { if (pids.length === 1) return c.json({ error: 'Fant ikke delen', code: 'not_found' }, 404); pre.push({ partId: Number(id) || id, reason: 'Fant ikke delen', code: 'not_found' }); continue; }
+      if (seenPart.has(p.id)) continue;
+      seenPart.add(p.id);
+      if (!p.cabinet_id || !p.row || !p.col) { pre.push({ partId: p.id, reason: 'Delen har ingen plass', code: 'no_location' }); continue; }
+      entries.push({ cabinetId: p.cabinet_id, row: p.row, col: p.col, partId: p.id, order: entries.length + pre.length });
     }
-    if (Array.isArray(b.drawers)) for (const d of b.drawers.slice(0, MAX_LIT78 * 5)) targets.push(drawerOf(d));
-    if (b.cabinetId != null || b.cabinet_id != null) targets.push(drawerOf(b));
-    // Samme skuff bare én gang; maks 10.
-    const seen = new Set(), uniq = [];
-    for (const t of targets) { const k = `${t.cabinetId}:${t.row}:${t.col}`; if (!seen.has(k)) { seen.add(k); uniq.push(t); } }
-    if (!uniq.length) return c.json({ error: noLoc.length ? 'Delen har ingen plass i et skap' : 'Forventet {partId} eller {cabinetId, row, col}', code: noLoc.length ? 'no_location' : 'bad_request', skipped: noLoc }, noLoc.length ? 409 : 400);
+    if (Array.isArray(b.drawers)) for (const d of b.drawers.slice(0, MAX_LIT78 * 5)) entries.push({ ...drawerOf(d), order: entries.length + pre.length });
+    if (b.cabinetId != null || b.cabinet_id != null) entries.push({ ...drawerOf(b), order: entries.length + pre.length });
+    // Farger: i rekkefølgen delene ble lagt til (også deler uten plass teller, så fargen er stabil når klienten regner selv).
+    let palette = null;
+    if (b.colors === true && entries.length) {
+      const own = ledsOf78(cabinetRow76(u, entries[0].cabinetId)).color.toUpperCase();
+      palette = [own, ...PALETTE79.filter((x) => x !== own)];
+      for (const e of entries) e.color = palette[e.order % palette.length];
+    }
+    // Samme skuff bare én gang (første vinner); maks 20.
+    const key = (t) => `${t.cabinetId}:${t.row}:${t.col}`;
+    const first = new Map(), uniq = [];
+    for (const t of entries) if (!first.has(key(t))) { first.set(key(t), t); uniq.push(t); }
+    const noLoc = pre.filter((x) => x.code === 'no_location');
+    if (!uniq.length) return c.json({ error: noLoc.length ? 'Delen har ingen plass i et skap' : pre.length ? 'Fant ikke delene' : 'Forventet {partId} eller {cabinetId, row, col}', code: noLoc.length ? 'no_location' : pre.length ? 'not_found' : 'bad_request', skipped: pre }, noLoc.length ? 409 : pre.length ? 404 : 400);
     if (!rateOk78(u)) return limited(c);
-    const r = await locate78(u, uniq.slice(0, MAX_LIT78));
-    const extra = [...noLoc, ...(uniq.length > MAX_LIT78 ? uniq.slice(MAX_LIT78).map((t) => ({ ...t, reason: `Maks ${MAX_LIT78} skuffer om gangen` })) : [])];
-    if (r.error) return c.json({ error: r.error, code: r.code, skipped: [...(r.skipped ?? []), ...extra] }, r.status);
-    const skipped = [...(r.skipped ?? []), ...extra];
-    return c.json({ ok: true, lit: r.lit, untilMs: r.untilMs, durationMs: r.durationMs, ...(skipped.length ? { skipped } : {}) });
+    const send = uniq.slice(0, MAX_LIT78);
+    const r = await locate78(u, send.map(({ cabinetId, row, col, color }) => ({ cabinetId, row, col, ...(color ? { color } : {}) })));
+    // Ut igjen per del/mål.
+    const litBy = new Map((r.lit ?? []).map((x) => [key(x), x])), skipBy = new Map((r.skipped ?? []).map((x) => [key(x), x]));
+    const sent = new Set(send.map(key));
+    const lit = [], skipped = [...pre];
+    for (const t of entries) {
+      const k = key(t), f = first.get(k), shared = f !== t && f.partId != null ? { sharedWith: f.partId } : {};
+      const pid = t.partId != null ? { partId: t.partId } : {};
+      if (litBy.has(k)) lit.push({ ...pid, ...litBy.get(k), ...shared });
+      else if (skipBy.has(k)) { const { partId: _x, ...sk } = skipBy.get(k); skipped.push({ ...pid, ...sk, ...shared }); }
+      else if (!sent.has(k)) skipped.push({ ...pid, cabinetId: t.cabinetId, row: t.row, col: t.col, reason: `Maks ${MAX_LIT78} skuffer om gangen`, code: 'max' });
+    }
+    if (r.error) return c.json({ error: r.error, code: r.code, skipped }, r.status);
+    return c.json({ ok: true, lit, untilMs: r.untilMs, durationMs: r.durationMs, ...(palette ? { palette } : {}), ...(skipped.length ? { skipped } : {}) });
   });
   app.post('/locate/off', async (c) => {
     const u = c.get('user');
