@@ -12,7 +12,7 @@ on:
     branches: [main]
     paths: ['tools/skjoldlab3d/**', '.github/workflows/skjoldlab3d.yml']
 permissions:
-  contents: read
+  contents: write # zip-en legges på releasen «skjoldlab3d» (fast nedlasting)
 concurrency:
   group: skjoldlab3d
   cancel-in-progress: true
@@ -59,6 +59,27 @@ jobs:
             grep -h 'SKJOLDLAB' "$RUNNER_TEMP/eksport.log" | sort -u | sed 's/^/    /' || true
             grep -h 'FEILET\|ERROR\|WARNING' "$RUNNER_TEMP/eksport.log" | sort -u | sed 's/^/    /' || true
           } >> "$GITHUB_STEP_SUMMARY"
+      - name: Kontroll (ikke tom, innenfor byggeplaten)
+        id: sjekk
+        if: always()
+        run: |
+          OUT="$RUNNER_TEMP/skjoldlab3d"
+          { echo; echo "### Kontroll"; echo; } >> "$GITHUB_STEP_SUMMARY"
+          python3 tools/skjoldlab3d/sjekk_stl.py "$OUT" 256 | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Zip og release «skjoldlab3d»
+        if: success() && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cd "$RUNNER_TEMP"
+          zip -qr skjoldlab3d-stl-3mf.zip skjoldlab3d
+          NOTES="Ferdige STL- og 3MF-filer for Skjold Lab (sortering rundt Raaco og LED-veggen), laget fra tools/skjoldlab3d på commit ${GITHUB_SHA::7}. Standardmål: hylla 560 × 760 × 320 mm. Mål ditt eget skap først (se tools/skjoldlab3d/README.md); andre mål → kjør workflowen «Skjold Lab 3D» med egne parametre."
+          if gh release view skjoldlab3d -R "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release edit skjoldlab3d -R "$GITHUB_REPOSITORY" --notes "$NOTES"
+          else
+            gh release create skjoldlab3d -R "$GITHUB_REPOSITORY" --title "Skjold Lab 3D-print" --notes "$NOTES" --latest=false --target "$GITHUB_SHA"
+          fi
+          gh release upload skjoldlab3d -R "$GITHUB_REPOSITORY" skjoldlab3d-stl-3mf.zip --clobber
       - uses: actions/upload-artifact@v4
         if: always()
         with:
