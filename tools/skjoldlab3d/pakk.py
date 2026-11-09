@@ -34,7 +34,15 @@ def kv(line):
 def les_plan(logg):
     moduler, deler, nett = [], [], {}
     sett = set()
+    ekstra = {'rader': [], 'skuffer': {}, 'akryl': []}
     for line in logg.splitlines():
+        for tag, felt in (('SKJOLDLAB-RAD:', 'rader'), ('SKJOLDLAB-AKRYL:', 'akryl')):
+            if tag in line:
+                d = kv(line.split(tag, 1)[1].rstrip('"'))
+                if d not in ekstra[felt]:
+                    ekstra[felt].append(d)
+        if 'SKJOLDLAB-SKUFFER:' in line and not ekstra['skuffer']:
+            ekstra['skuffer'] = kv(line.split('SKJOLDLAB-SKUFFER:', 1)[1].rstrip('"'))
         if 'SKJOLDLAB-MODUL:' in line:
             d = kv(line.split('SKJOLDLAB-MODUL:', 1)[1].rstrip('"'))
             k = (d.get('del'), d.get('modul_x'), d.get('modul_y'), d.get('nr'))
@@ -50,7 +58,7 @@ def les_plan(logg):
         elif 'SKJOLDLAB-NETT:' in line and not nett:
             nett = kv(line.split('SKJOLDLAB-NETT:', 1)[1].rstrip('"'))
     moduler.sort(key=lambda m: int(m.get('nr', 0)))
-    return moduler, deler, nett
+    return moduler, deler, nett, ekstra
 
 
 def finn(src, navn_liste):
@@ -78,7 +86,7 @@ def kopier(stl, ut, gruppe, nytt):
             shutil.copy2(s, d / f'{nytt}{ext}')
 
 
-def svg(moduler, nett, ut, hylle=(560, 760)):
+def svg(moduler, nett, ut, rader_info=(), hylle=(560, 760)):
     W, H = hylle
     m, s = 40, 1.0  # marg og skala (1 mm = 1 px)
     farger = ['#E8D9B5', '#CFE3D0', '#D6DDF0', '#F0D6D6', '#E6D6F0', '#D6F0EE', '#F0E6D6']
@@ -94,8 +102,24 @@ def svg(moduler, nett, ut, hylle=(560, 760)):
         x, y, b, h = (float(mo.get(k, 0)) for k in ('x', 'y', 'b', 'h'))
         f = farger[rader[mo.get('y', '0')] % len(farger)]
         out.append(f'<rect x="{m + x * s:.1f}" y="{Y(y, h):.1f}" width="{b * s:.1f}" height="{h * s:.1f}" fill="{f}" stroke="#1b1a17" stroke-width="1.5"/>')
-    # Skuffer og LED-kanal
+    # Skuffer og LED-kanal: fra SKJOLDLAB-RAD (doble skuffer og rader med ulik høyde), ellers et jevnt nett
+    if rader_info:
+        for ri in rader_info:
+            x0, y, h, ly, P = (float(ri[k]) for k in ('x0', 'y', 'h', 'led_y', 'skuffavstand'))
+            out.append(f'<line x1="{m + x0 * s:.1f}" y1="{Y(ly, 0):.1f}" x2="{m + (x0 + sum(int(b) for b in ri['skuffer'].split(',')) * P) * s:.1f}" y2="{Y(ly, 0):.1f}" stroke="#2F6BFF" stroke-width="2" opacity=".55"/>')
+            out.append(f'<text x="{m - 8}" y="{Y(y + h / 2, 0) + 4:.1f}" font-size="11" text-anchor="end" fill="#8f897c">{ri["rad"]}</text>')
+            c = 0
+            for b in (int(b) for b in ri['skuffer'].split(',')):
+                out.append(f'<rect x="{m + (x0 + c * P + 4) * s:.1f}" y="{Y(y, h):.1f}" width="{(b * P - 8) * s:.1f}" height="{h * s:.1f}" rx="4" fill="#2a2a2a" opacity=".18"/>')
+                c += b
+        r0 = rader_info[0]
+        x0, P = float(r0['x0']), float(r0['skuffavstand'])
+        for c in range(sum(int(b) for b in r0['skuffer'].split(','))):
+            out.append(f'<text x="{m + (x0 + (c + 0.5) * P) * s:.1f}" y="{m - 6}" font-size="11" text-anchor="middle" fill="#8f897c">{c + 1}</text>')
+        rader_info = None
     try:
+        if rader_info is None:
+            raise KeyError('rader tegnet')
         K, R = int(nett['kolonner']), int(nett['rader'])
         P, RP = float(nett['skuffavstand']), float(nett['radavstand'])
         x0, y0 = float(nett['x0']), float(nett['y0'])
@@ -115,14 +139,14 @@ def svg(moduler, nett, ut, hylle=(560, 760)):
         nr = int(mo.get('nr', 0))
         cx, cy = m + (x + b / 2) * s, Y(y, h) + h * s / 2
         out.append(f'<circle cx="{cx:.1f}" cy="{cy:.1f}" r="20" fill="#1b1a17"/><text x="{cx:.1f}" y="{cy + 6:.1f}" font-size="16" font-weight="700" text-anchor="middle" fill="#fff">M{nr:02d}</text>')
-    out.append(f'<text x="{m}" y="{H + 2 * m + 20}" font-size="13" fill="#1b1a17">Tall = printrekkefølge (M01 først). Blå linje = LED-stripe over hver rad. Rad 1 er øverst, skuff 1 til venstre (som i Skjold Lab).</text>')
+    out.append(f'<text x="{m}" y="{H + 2 * m + 20}" font-size="13" fill="#1b1a17">Tall = printrekkefølge (M01 først). Blå linje = LED-stripe over hver rad. Rad 1 er øverst, kolonne 1 til venstre (som i Skjold Lab). Brede skuffer dekker to kolonner.</text>')
     out.append('</svg>')
     (ut / 'oversikt.svg').write_text('\n'.join(out), encoding='utf-8')
 
 
 def main():
     src, logg, ut = Path(sys.argv[1]), Path(sys.argv[2]).read_text(encoding='utf-8', errors='replace'), Path(sys.argv[3])
-    moduler, deler, nett = les_plan(logg)
+    moduler, deler, nett, ekstra = les_plan(logg)
     if not moduler:
         print('Fant ingen SKJOLDLAB-MODUL-linjer i loggen', file=sys.stderr)
         return 1
@@ -179,14 +203,30 @@ def main():
         prove.append((mk, '3_maske'))
     for stl, navn in prove:
         kopier(stl, ut, '1-prove', navn)
-    svg(moduler, nett, ut)
+    svg(moduler, nett, ut, [r for r in ekstra['rader'] if r.get('seksjon') == nett.get('seksjon')])
     # LES-MEG
     L = ['# Skjold Lab – hele hylla som sorteringsskap', '',
          'Print i mappe-rekkefølge. Samme filer finnes som **stl/** og **3mf/** (3MF anbefales for Creality Print).', '',
          f'**Anslag filament (alt): ca. {total / 1000:.1f} kg PETG** (massivt × {FAKTOR}, sliceren gir fasit) · ca. {total / 1000 * 25:.0f} timer på K2.', '',
          '![Oversikt](oversikt.svg)', '']
-    if nett:
+    sk = ekstra['skuffer']
+    if sk:
+        typer = [('1x1', 'vanlige 1 × 1'), ('2x1', 'brede 2 × 1'), ('1x2', 'høye 1 × 2'), ('2x2', 'store 2 × 2')]
+        L += [f'Skuffer: {sk.get("sum")} – ' + ', '.join(f'{sk[t]} {navn}' for t, navn in typer if int(sk.get(t, 0)) > 0)
+              + f'. LED-rader: {nett.get("rader", "?")} × {nett.get("kolonner", "?")} kolonner · LED-er: {nett.get("leds", "?")}.', '']
+    elif nett:
         L += [f'Skuffer: {nett.get("kolonner")} kolonner × {nett.get("rader")} rader = {int(nett.get("kolonner", 0)) * int(nett.get("rader", 0))} skuffer · LED-er: {nett.get("leds", "?")}.', '']
+    ak = [a for a in ekstra['akryl'] if 'type' in a]
+    if ak:
+        tykk = next((a.get('tykkelse') for a in ekstra['akryl'] if 'tykkelse' in a), '2')
+        areal = next((a.get('areal_cm2') for a in ekstra['akryl'] if 'areal_cm2' in a), '?')
+        L += ['## Akrylfront', '',
+              f'Alle skuffene har et spor bak fronten til en akrylplate på {tykk} mm (f.eks. Clas Ohlson 34-1359, 300 × 200 × 2 mm). '
+              'Platen skyves ned ovenfra. Du kan legge en papiretikett bak den, eller la den være klar så du ser innholdet. '
+              'Rip 2 mm akryl med kniv eller ripekniv langs en linjal og knekk den over en bordkant.', '',
+              '| Skuff | Antall | Plate (B × H mm) | Per ark 300 × 200 | Ark |', '|---|---:|---|---:|---:|']
+        L += [f'| {a["type"].replace("x", " × ")} | {a["antall"]} | {a["mm"].replace("x", " × ")} | {a["per_ark"]} | {a["ark"]} |' for a in ak]
+        L += ['', f'Sum ca. {areal} cm² ({int(areal) / 600:.1f} ark på 300 × 200 mm uten svinn; arkene i tabellen er hvis du kutter hver størrelse for seg).' if str(areal).isdigit() else '', '']
     for mappe, tittel, tekst in GRUPPER:
         r = [x for x in rader if x[0] == mappe]
         if mappe == '1-prove':

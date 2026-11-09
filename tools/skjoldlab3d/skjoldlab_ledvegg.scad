@@ -49,7 +49,7 @@
 // Hele hylla som ett skap med LED, eller LED-vegg rundt Raaco
 variant = "hele_hylla"; // [hele_hylla, rundt_raaco]
 // Hvilken del som vises/eksporteres
-del = "oversikt"; // [oversikt, vegg, modul, topp_modul, skuff, skuffplate, skillevegg, skilleplate, maske, diffusor, lask, lask4, raaco_skinne, raaco_klips, raaco_klipsplate, elboks, elboks_lokk]
+del = "oversikt"; // [oversikt, vegg, modul, topp_modul, skuff, skuffplate, skillevegg, skilleplate, skuff_2x1, skuff_1x2, skuff_2x2, skuffplate_2x1, skuffplate_1x2, skuffplate_2x2, skilleplate_2x1, skilleplate_1x2, skilleplate_2x2, maske, diffusor, lask, lask4, raaco_skinne, raaco_klips, raaco_klipsplate, elboks, elboks_lokk]
 // Kolonne av moduler (0 = venstre) – modul, topp_modul, maske, diffusor
 modul_x = 0;
 // Etasje av moduler (0 = nederst) – modul, topp_modul
@@ -89,6 +89,10 @@ rader_hele = 0;
 // Rundt Raaco: lag sideveggen ved siden av Raaco og toppveggen over Raaco
 lag_side = true;
 lag_topp = true;
+// Hele hylla: skuffer som er 2 brede og 2 høye (nederst). Fylles rad for rad fra venstre, 0 = ingen
+store_skuffer = 10;
+// Hele hylla: skuffer som er 2 brede og 1 høy (over de store). 0 = ingen
+brede_skuffer = 10;
 // Radhøyde uten LED-kanal: gulv + skuffåpning (ca. 45)
 rad_hoyde = 45;
 // Høyde på LED-kanalen over hver rad (0 = auto: led_bredde + 3)
@@ -148,6 +152,12 @@ etikett_h = 10;
 etikett_dybde = 0.6;
 spor_posisjoner = [1/3, 1/2, 2/3];
 skillevegg_t = 1.2;
+// Akrylfront: spor bak fronten til en plate (plexiglass) og et vindu over grepet, åpent oppover
+akryl = true;
+// Platetykkelse (Clas Ohlson 34-1359: 2 mm)
+akryl_t = 2.0;
+// Hvor langt platen går inn bak vinduskanten på hver side og nede
+akryl_kant = 2.5;
 // Stoppleppe bak (Raaco: 40 mm skuff, 42 mm med leppe)
 stopp_h = 2;
 // Luft over leppa
@@ -225,6 +235,16 @@ D = lv_dybde > 0 ? lv_dybde : min(hylle_dybde - klaring, dmaks); // 165
 skuff_d = min(D - bakvegg - bak_rom, plass - grep_ut);    // 156
 S = P - 2 * vegg_t;                                       // 46,8 (åpning)
 skuff_b = S - 2 * toleranse;                              // 46,0
+// Skuff nk kolonner bred og nf rader høy (1 x 1 = 46 x 40, 2 x 2 = 96 x 98)
+function skuff_bredde(nk) = nk * P - 2 * vegg_t - 2 * toleranse;
+function skuff_hoyde(nf) = nf * Pr - kh - hylle_t - stopp_h - luft_over;
+// Akryl: spor (platetykkelse + toleranse) bak fronten, holdekant bak sporet, vindu fra over grepet og opp
+ak_spor = akryl_t + toleranse;                            // 2,4
+ak_hold = 1.2;
+ak_zw = grep_h + 2;                                       // 18 underkant vindu
+ak_zs = ak_zw - akryl_kant;                               // 15,5 bunnen i sporet
+function akryl_b(nk) = skuff_bredde(nk) - 2 * skuff_vegg - 0.6;
+function akryl_h(nf) = skuff_hoyde(nf) - ak_zs - 0.5;
 // Kanalen (snitt): ribber med 45° bakside, sporet mellom dem, LED-veggen bak
 spor_foran = ribbe_t + ribbe_h;                           // 2,5 forkant av sporet (ved roten)
 spor_bak = spor_foran + spor_b;                           // 4,9 bakkant av sporet
@@ -252,12 +272,35 @@ function sum_deling(n, m, i) = i <= 0 ? 0 : deling(n, m, i - 1) + sum_deling(n, 
 h_Wav = hylle_bredde - 2 * klaring;                       // 554
 h_Hav = hylle_hoyde - klaring;                            // 757
 h_K = kolonner_hele > 0 ? kolonner_hele : floor(h_Wav / P);          // 11
-h_R = rader_hele > 0 ? rader_hele : floor((h_Hav - hylle_t) / Pr);   // 13
+// Høyden i enkeltrader (rader_hele teller enkeltrader; en dobbel rad er 2)
+h_U = rader_hele > 0 ? rader_hele : floor((h_Hav - hylle_t) / Pr);   // 13
 h_nx = max(1, ceil(h_K / kpm_maks));                      // 4 (3/3/3/2)
-h_ny = max(1, ceil(h_R / rpm_maks));                      // 5 (3/3/3/2/2)
 h_W = h_K * P;                                            // 550
-h_H = h_R * Pr + hylle_t;                                 // 756
+h_H = h_U * Pr + hylle_t;                                 // 756
 h_x0 = (hylle_bredde - h_W) / 2;                          // 5
+// Doble skuffer: hver modulkolonne med k skuffer får floor(k / 2) doble per rad (3/3/3/2 -> 4 per rad).
+// Nederst nd doble rader (2 x 2), så nw rader med brede (2 x 1), så vanlige rader. Rad nr. rb teller nedenfra.
+kw = [for (i = [0 : h_nx - 1]) deling(h_K, h_nx, i)];
+par_rad = sum_liste([for (k = kw) floor(k / 2)]);
+n_st = hel && par_rad > 0 ? max(0, floor(store_skuffer)) : 0;
+n_br = hel && par_rad > 0 ? max(0, floor(brede_skuffer)) : 0;
+nd = ceil(n_st / max(1, par_rad));                        // 3 doble rader
+nw = ceil(n_br / max(1, par_rad));                        // 3 rader med brede skuffer
+h_R = h_U - nd;                                           // 10 LED-rader
+function rf_h(rb) = rb < nd ? 2 : 1;
+function zrad_h(rb) = (rb + min(rb, nd)) * Pr;
+function par_for(i) = i <= 0 ? 0 : par_for(i - 1) + floor(kw[i - 1] / 2);
+// Antall doble skuffer i modulkolonne i, rad rb (fra venstre i hver modul)
+function fletting(rb, i) = let(n = rb < nd ? n_st - rb * par_rad : rb < nd + nw ? n_br - (rb - nd) * par_rad : 0)
+    max(0, min(floor(kw[i] / 2), n - par_for(i)));
+// Etasjer av moduler [første rad, antall rader], maks rpm_maks enkeltrader høye. Uten doble rader: jevn deling som før.
+function etasjer(rb = 0, start = 0, u = 0) =
+    rb >= h_R ? [[start, rb - start]] :
+    (u + rf_h(rb) > rpm_maks && rb > start) ? concat([[start, rb - start]], etasjer(rb + 1, rb, rf_h(rb))) :
+    etasjer(rb + 1, start, u + rf_h(rb));
+h_ny0 = max(1, ceil(h_R / rpm_maks));
+h_et = nd == 0 ? [for (j = [0 : h_ny0 - 1]) [sum_deling(h_R, h_ny0, j), deling(h_R, h_ny0, j)]] : etasjer();
+h_ny = len(h_et);                                         // 5
 
 // Rundt Raaco: plassering
 rx0 = raaco_side == "venstre" ? 0 : hylle_bredde - raaco_bredde;
@@ -288,6 +331,20 @@ m_K = hel ? h_K : s_K;
 m_R = hel ? h_R : s_R;
 m_nx = hel ? h_nx : s_nx;
 m_ny = hel ? h_ny : s_ny;
+// Felles oppslag for hovedveggen (top = false) og toppveggen over Raaco (top = true)
+function mod_k(top, i) = top ? deling(t_K, t_nx, i) : deling(m_K, m_nx, i);
+function mod_x(top, i) = (top ? sum_deling(t_K, t_nx, i) : sum_deling(m_K, m_nx, i)) * P;
+function mod_rows(top, j) = top ? [sum_deling(t_R, t_ny, j), deling(t_R, t_ny, j)] :
+    hel ? h_et[j] : [sum_deling(m_R, m_ny, j), deling(m_R, m_ny, j)];
+function rad_f(top, rb) = !top && hel ? rf_h(rb) : 1;
+function rad_z(top, rb) = !top && hel ? zrad_h(rb) : rb * Pr;
+// Lokale skjøter uten T-skinne (b = skuff b-1 og b er én skuff)
+function rad_mg(top, i, rb) = !top && hel ? [for (p = [0 : 1 : fletting(rb, i) - 1]) 2 * p + 1] : [];
+function har(v, x) = len([for (a = v) if (a == x) 1]) > 0;
+// Skuffbredder (i kolonner) langs en hel rad, fra venstre
+function rad_bredder(top, rb) = [for (i = [0 : (top ? t_nx : m_nx) - 1]) let(k = mod_k(top, i), mg = rad_mg(top, i, rb))
+    for (c = [0 : k - 1]) if (!har(mg, c)) (har(mg, c + 1) ? 2 : 1)];
+function join(v, i = 0) = i >= len(v) ? "" : str(i > 0 ? "," : "", v[i], join(v, i + 1));
 m_x0 = hel ? h_x0 : s_x0;
 m_navn = hel ? "hele" : "side";
 lag_m = hel || lag_side;
@@ -324,6 +381,10 @@ assert(rpm_maks >= 1, "Radavstanden er større enn byggeplaten.");
 assert(rpm_maks * Pr + hylle_t <= plass && kpm_maks * P <= plass, "Modulene blir større enn byggeplaten. Sett modul_kolonner_maks/modul_rader_maks lavere.");
 assert(!hel || h_K >= 1, str("For lite plass i hylla (", h_Wav, " mm) til én skuff på ", P, " mm."));
 assert(!hel || h_R >= 1, "Hylla er for lav til én rad.");
+assert(!hel || 2 * nd + nw <= h_U, str("For mange store/brede skuffer: ", nd, " doble rader og ", nw, " rader med brede skuffer får ikke plass i ",
+                                         h_U, " rader. Sett store_skuffer/brede_skuffer lavere."));
+assert(nd == 0 || rpm_maks >= 2, "En dobbel rad er høyere enn modul_rader_maks tillater.");
+assert(!akryl || skuff_h >= ak_zw + 8, "Skuffene er for lave til akrylvindu over grepet. Sett akryl = false eller øk rad_hoyde.");
 assert(!hel || h_W <= h_Wav, str("Veggen (", h_W, " mm) er bredere enn hylla (", h_Wav, " mm). Sett kolonner_hele lavere."));
 assert(!hel || h_H <= h_Hav, str("Veggen (", h_H, " mm) er høyere enn hylla (", h_Hav, " mm). Sett rader_hele lavere."));
 assert(hel || raaco_hoyde + klaring <= hylle_hoyde, "Raaco-skapet er høyere enn hylla.");
@@ -348,9 +409,8 @@ echo(str("SKJOLDLAB-LED: LED ", led_per_m, "/m = ", pled, " mm, ", led_per_skuff
 echo(str("SKJOLDLAB-LED: skuff ", skuff_b, " x ", skuff_d, " x ", skuff_h, " mm (B x D x H), ", skuff_d + grep_ut, " mm med grep, ",
          skuff_h + stopp_h, " mm med leppe bak, rammedybde ", D, " mm (printhøyde, liggende på ryggen)"));
 if (hel) {
-    echo(str("SKJOLDLAB-LED: hele hylla ", h_R, " rader x ", h_K, " kolonner = ", h_R * h_K, " skuffer, ", h_W, " x ", D, " x ", h_H, " mm, x = ", h_x0));
-    echo(str("SKJOLDLAB-LED: hele moduler ", h_nx, " x ", h_ny, " kolonner ", [for (i = [0 : h_nx - 1]) deling(h_K, h_nx, i)],
-             " rader ", [for (j = [0 : h_ny - 1]) deling(h_R, h_ny, j)]));
+    echo(str("SKJOLDLAB-LED: hele hylla ", h_R, " LED-rader x ", h_K, " kolonner (", nd, " doble rader nederst), ", h_W, " x ", D, " x ", h_H, " mm, x = ", h_x0));
+    echo(str("SKJOLDLAB-LED: hele moduler ", h_nx, " x ", h_ny, " kolonner ", kw, " rader per etasje ", [for (e2 = h_et) e2[1]]));
 }
 if (!hel && lag_side) {
     echo(str("SKJOLDLAB-LED: sidevegg ", s_R, " rader x ", s_K, " kolonner = ", s_R * s_K, " skuffer, ", s_W, " x ", D, " x ", s_H, " mm, x = ", s_x0));
@@ -396,23 +456,48 @@ seksjoner = concat(
 function qs(v) = len(v) <= 1 ? v : let(p = v[floor(len(v) / 2)][0])
     concat(qs([for (a = v) if (a[0] < p) a]), [for (a = v) if (a[0] == p) a], qs([for (a = v) if (a[0] > p) a]));
 plan = qs([for (s = seksjoner) for (j = [0 : s[5] - 1]) for (i = [0 : s[4] - 1])
-    let(k = deling(s[2], s[4], i), n = deling(s[3], s[5], j),
-        x = s[6] + sum_deling(s[2], s[4], i) * P, y = s[7] + sum_deling(s[3], s[5], j) * Pr)
-    [round(y * 10) * 100000 + round(x * 10), s[1], i, j, x, y, k * P, n * Pr + (j == s[5] - 1 ? hylle_t : 0), n, k, s[0]]]);
+    let(top = s[0] == "topp", et = mod_rows(top, j), k = mod_k(top, i), n = et[1],
+        x = s[6] + mod_x(top, i), y = s[7] + rad_z(top, et[0]))
+    [round(y * 10) * 100000 + round(x * 10), s[1], i, j, x, y, k * P,
+     rad_z(top, et[0] + n) - rad_z(top, et[0]) + (j == s[5] - 1 ? hylle_t : 0), n, k, s[0]]]);
 if (len(plan) > 0) for (q = [0 : len(plan) - 1]) let(m = plan[q])
     echo(str("SKJOLDLAB-MODUL: nr=", q + 1, " del=", m[1], " modul_x=", m[2], " modul_y=", m[3], " x=", m[4], " y=", m[5],
              " b=", m[6], " h=", m[7], " rader=", m[8], " kolonner=", m[9], " seksjon=", m[10]));
-for (s = seksjoner)
+for (s = seksjoner) let(top = s[0] == "topp") {
     echo(str("SKJOLDLAB-NETT: kolonner=", s[2], " rader=", s[3], " skuffavstand=", P, " radavstand=", Pr,
-             " x0=", s[6] + P / 2, " y0=", s[7] + (s[3] - 1) * Pr + hylle_t + skuff_h / 2,
+             " x0=", s[6] + P / 2, " y0=", s[7] + rad_z(top, s[3] - 1) + hylle_t + skuff_h / 2,
              " led_per_rad=", led_antall(s[2]), " leds=", s[3] * led_antall(s[2]), " seksjon=", s[0]));
-// Øvrige deler
-n_skuffer = sum_liste([for (s = seksjoner) s[2] * s[3]]);
+    // Én linje per LED-rad (rad 1 øverst, som i Skjold Lab): underkant skuff, skuffhøyde, LED-høyde og skuffbredder fra venstre
+    for (rb = [s[3] - 1 : -1 : 0]) let(f = rad_f(top, rb), z = s[7] + rad_z(top, rb))
+        echo(str("SKJOLDLAB-RAD: seksjon=", s[0], " rad=", s[3] - rb, " x0=", s[6], " y=", z + hylle_t, " h=", skuff_hoyde(f),
+                 " led_y=", z + f * Pr - kh / 2, " skuffavstand=", P, " skuffer=", join(rad_bredder(top, rb))));
+}
+// Skuffer per type: 1 x 1, 2 x 1 (brede), 1 x 2 (høye smale i de doble radene) og 2 x 2
+n_celler = sum_liste([for (s = seksjoner) s[2] * s[3]]);
+n22 = n_st;
+n21 = n_br;
+n12 = hel ? nd * h_K - 2 * n_st : 0;
+n11 = n_celler - (hel ? nd * h_K : 0) - 2 * n21;
+n_skuffer = n11 + n21 + n12 + n22;
+echo(str("SKJOLDLAB-SKUFFER: 1x1=", n11, " 2x1=", n21, " 1x2=", n12, " 2x2=", n22, " sum=", n_skuffer));
 function sum_liste(v, i = 0) = i >= len(v) ? 0 : v[i] + sum_liste(v, i + 1);
-skp_n = max(1, floor((plass + 5) / (skuff_b + 5))) * max(1, floor((plass + 5) / (skuff_d + grep_ut + 5)));
-skv_b = skuff_b - 2 * skuff_vegg - toleranse;
-skv_h = skuff_h - skuff_bunn - 1;
-skl_n = max(1, floor((plass + 4) / (skv_b + 4))) * max(1, floor((plass + 4) / (skv_h + 4)));
+function skp_n(nk) = max(1, floor((plass + 5) / (skuff_bredde(nk) + 5))) * max(1, floor((plass + 5) / (skuff_d + grep_ut + 5)));
+function skv_b(nk) = skuff_bredde(nk) - 2 * skuff_vegg - toleranse;
+function skv_h(nf) = skuff_hoyde(nf) - skuff_bunn - 1;
+function skl_n(nk, nf) = max(1, floor((plass + 4) / (skv_b(nk) + 4))) * max(1, floor((plass + 4) / (skv_h(nf) + 4)));
+skp_n = skp_n(1);
+skl_n = skl_n(1, 1);
+// Akryl: plater per skufftype (B x H), og hvor mange som går på en plate på 300 x 200 mm med 1 mm sagsnitt
+TYPER = [["2x1", 2, 1, n21], ["1x2", 1, 2, n12], ["2x2", 2, 2, n22]];
+function ak_per_ark(nk, nf) = max(floor(300 / (akryl_b(nk) + 1)) * floor(200 / (akryl_h(nf) + 1)),
+                                  floor(200 / (akryl_b(nk) + 1)) * floor(300 / (akryl_h(nf) + 1)));
+if (akryl) {
+    for (t = concat([["1x1", 1, 1, n11]], TYPER)) if (t[3] > 0)
+        echo(str("SKJOLDLAB-AKRYL: type=", t[0], " antall=", t[3], " mm=", akryl_b(t[1]), "x", akryl_h(t[2]),
+                 " per_ark=", ak_per_ark(t[1], t[2]), " ark=", ceil(t[3] / ak_per_ark(t[1], t[2]))));
+    echo(str("SKJOLDLAB-AKRYL: tykkelse=", akryl_t, " areal_cm2=",
+             round(sum_liste([for (t = concat([["1x1", 1, 1, n11]], TYPER)) t[3] * akryl_b(t[1]) * akryl_h(t[2])]) / 100)));
+}
 n_lask = sum_liste([for (s = seksjoner) 2 * (s[5] - 1)]);
 n_lask4 = sum_liste([for (s = seksjoner) (s[4] - 1) * (s[5] - 1)]);
 module del_linje(navn, d, antall, gruppe, ekstra = "") {
@@ -420,8 +505,14 @@ module del_linje(navn, d, antall, gruppe, ekstra = "") {
 }
 del_linje("skuff", "skuff", 1, "prove");
 del_linje("skillevegg", "skillevegg", 1, "prove");
-del_linje("skuffplate", "skuffplate", ceil(max(0, n_skuffer - 1) / skp_n), "skuffer", str(" per_plate=", skp_n));
-del_linje("skilleplate", "skilleplate", ceil(n_skuffer / skl_n), "skuffer", str(" per_plate=", skl_n));
+del_linje("skuffplate", "skuffplate", ceil(max(0, n11 - 1) / skp_n), "skuffer", str(" per_plate=", skp_n));
+del_linje("skilleplate", "skilleplate", ceil(n11 / skl_n), "skuffer", str(" per_plate=", skl_n));
+// Store, brede og høye skuffer: hele plater + resten enkeltvis
+for (t = TYPER) if (t[3] > 0) let(pp = skp_n(t[1]), hele = floor(t[3] / pp), rest = t[3] - hele * pp) {
+    if (hele > 0) del_linje(str("skuffplate_", t[0]), str("skuffplate_", t[0]), hele, "skuffer", str(" per_plate=", pp));
+    if (rest > 0) del_linje(str("skuff_", t[0]), str("skuff_", t[0]), rest, "skuffer");
+    del_linje(str("skilleplate_", t[0]), str("skilleplate_", t[0]), ceil(t[3] / skl_n(t[1], t[2])), "skuffer", str(" per_plate=", skl_n(t[1], t[2])));
+}
 for (s = seksjoner) for (i = [0 : s[4] - 1]) {
     del_linje(str("maske_", s[0], "_x", i), "maske", s[3], "led", str(" modul_x=", i, " seksjon=", s[0]));
     del_linje(str("diffusor_", s[0], "_x", i), "diffusor", s[3], "led", str(" modul_x=", i, " seksjon=", s[0]));
@@ -479,11 +570,12 @@ module grep_form(gb, r, ut, gh) {
         translate([0, -e, gh - e]) cube([gb, e, e]);
     }
 }
-module lv_skuff() {
-    w = skuff_b; d = skuff_d; h = skuff_h; t = skuff_vegg; s = stopp_h;
+module lv_skuff(nk = 1, nf = 1) {
+    w = skuff_bredde(nk); d = skuff_d; h = skuff_hoyde(nf); t = skuff_vegg; s = stopp_h;
     ribbe = 1.0;
     gap = skillevegg_t + toleranse;
-    L = d - skuff_front - t;
+    yi = akryl ? skuff_front + ak_spor + ak_hold : skuff_front;   // forkant av rommet
+    L = d - yi - t;
     gb = min(grep_b, w - 6);
     r = min(grep_ut, gb / 2);
     eh = min(etikett_h, h - grep_h - 4);
@@ -501,17 +593,23 @@ module lv_skuff() {
                     }
                 }
             }
-            // Innvendig rom
-            translate([t, skuff_front, skuff_bunn]) cube([w - 2 * t, L, h]);
-            // Etikettfelt øverst på fronten
-            translate([(w - eb) / 2, -e, h - 2 - eh]) cube([eb, etikett_dybde + e, eh]);
+            // Innvendig rom (med akryl er de første ak_spor mm sporet til platen)
+            translate([t, skuff_front, skuff_bunn]) cube([w - 2 * t, d - skuff_front - t, h]);
+            // Akryl: vindu i fronten fra over grepet og helt opp (ingen bro i printen), ellers etikettfelt øverst
+            if (akryl) translate([t + akryl_kant, -e, ak_zw]) cube([w - 2 * t - 2 * akryl_kant, skuff_front + 2 * e, h]);
+            else translate([(w - eb) / 2, -e, h - 2 - eh]) cube([eb, etikett_dybde + e, eh]);
+        }
+        // Akryl: sokkel under sporet og holdekanter bak platen på begge sider. Platen skyves ned ovenfra.
+        if (akryl) {
+            translate([t - e, skuff_front - e, skuff_bunn - e]) cube([w - 2 * t + 2 * e, ak_spor + ak_hold + e, ak_zs - skuff_bunn + e]);
+            for (x = [t - e, w - t - akryl_kant]) translate([x, skuff_front + ak_spor, ak_zs - e]) cube([akryl_kant + e, ak_hold, h - ak_zs + e]);
         }
         // Stoppleppe bak med 45° forside (og 45° underside innover): hekter seg under stoppkanten i rammen
         translate([t - e, 0, 0]) langs_x(w - 2 * t + 2 * e)
             polygon([[d - t + e, h - s], [d - t - s, h], [d - t, h + s], [d, h + s], [d, h - s]]);
         // Spor for skillevegger: ribbepar på begge sidevegger
         for (p = spor_posisjoner) {
-            yc = skuff_front + p * L;
+            yc = yi + p * L;
             for (dy = [-(gap / 2 + ribbe), gap / 2]) {
                 translate([t - e, yc + dy, skuff_bunn - e]) cube([ribbe + e, ribbe, h - skuff_bunn - 1.5]);
                 translate([w - t - ribbe, yc + dy, skuff_bunn - e]) cube([ribbe + e, ribbe, h - skuff_bunn - 1.5]);
@@ -521,10 +619,11 @@ module lv_skuff() {
 }
 
 // Skillevegg, liggende for print
-module lv_skillevegg() {
+module lv_skillevegg(nk = 1, nf = 1) {
+    b = skv_b(nk); hh = skv_h(nf);
     difference() {
-        cube([skv_b, skv_h, skillevegg_t]);
-        translate([skv_b / 2, skv_h + 2, -e]) cylinder(r = 5, h = skillevegg_t + 2 * e);
+        cube([b, hh, skillevegg_t]);
+        translate([b / 2, hh + 2, -e]) cylinder(r = 5, h = skillevegg_t + 2 * e);
     }
 }
 
@@ -542,20 +641,23 @@ module lv_skillevegg() {
 // Øverste rad: skråstag bak LED-veggen (45°), så overkanten ikke henger fritt.
 // Rygg: lister oppe og nede + kryss. Sider: rammer med vinduer (45° spiss foran).
 // ---------------------------------------------------------------------
-module lv_skinner(W, k, z0) {
+module lv_skinner(W, k, z0, mg = []) {
     zf = z0 + hylle_t - flens_t;
     // Kantskinner (L): sideramma er styrekanten
     translate([vegg_t - e, 0, zf]) cube([flens_b + e, D, flens_t]);
     translate([W - vegg_t - flens_b, 0, zf]) cube([flens_b + e, D, flens_t]);
-    // T-skinner mellom kolonnene: styrekanten er 2 x vegg_t, som en modulskjøt
-    if (k > 1) for (c = [1 : k - 1]) {
+    // T-skinner mellom kolonnene: styrekanten er 2 x vegg_t, som en modulskjøt (ikke under en dobbel skuff)
+    if (k > 1) for (c = [1 : k - 1]) if (!har(mg, c)) {
         translate([c * P - vegg_t - flens_b, 0, zf]) cube([2 * (vegg_t + flens_b), D, flens_t]);
         translate([c * P - vegg_t, 0, zf]) cube([2 * vegg_t, D, flens_t + skinne_h]);
     }
-    // Midtskinner under brede skuffer
-    nm = n_midt(S);
-    if (nm > 0) for (c = [0 : k - 1], i = [1 : nm])
-        translate([c * P + vegg_t + flens_b + i * (S - 2 * flens_b) / (nm + 1) - midt_b / 2, 0, zf]) cube([midt_b, D, flens_t]);
+    // Midtskinner under brede skuffer (en dobbel skuff får én midt under, der T-skinna ellers sto)
+    for (c = [0 : k - 1]) if (!har(mg, c)) {
+        Sx = (har(mg, c + 1) ? 2 : 1) * P - 2 * vegg_t;
+        nm = n_midt(Sx);
+        if (nm > 0) for (i = [1 : nm])
+            translate([c * P + vegg_t + flens_b + i * (Sx - 2 * flens_b) / (nm + 1) - midt_b / 2, 0, zf]) cube([midt_b, D, flens_t]);
+    }
 }
 
 module lv_rygg(W, Hm, bx, bz) {
@@ -572,28 +674,34 @@ module lv_rygg(W, Hm, bx, bz) {
     }
 }
 
-module lv_modul(k, n, bunn, topp, vs, hs) {
+// rf = høyde per rad (1 = vanlig, 2 = dobbel), mg = lokale skjøter uten T-skinne per rad
+function zsum(rf, r) = r <= 0 ? 0 : zsum(rf, r - 1) + rf[r - 1] * Pr;
+module lv_modul(k, n, bunn, topp, vs, hs, rf = [], mg = []) {
+    rfx = [for (r = [0 : n - 1]) len(rf) > r ? rf[r] : 1];
+    mgx = [for (r = [0 : n - 1]) len(mg) > r ? mg[r] : []];
     W = k * P;
-    Hm = n * Pr + (topp ? hylle_t : 0);
+    Hr = zsum(rfx, n);
+    Hm = Hr + (topp ? hylle_t : 0);
     bx = [8, W - 8];
-    bz = [8, n * Pr - 8];
+    bz = [8, Hr - 8];
     ys = skuff_d + 0.3;                    // bakstopp
     y1 = D - bakvegg - bak_rom - 1;        // bakkant av vinduene
-    zlokk = n * Pr + hylle_t - list_t;
+    zlokk = Hr + hylle_t - list_t;
     difference() {
         union() {
             // Siderammer
             for (x = [0, W - vegg_t]) translate([x, 0, 0]) cube([vegg_t, D, Hm]);
             for (r = [0 : n - 1]) {
-                z0 = r * Pr;
-                zc = z0 + rad_hoyde;           // underkant tak = overkant skuffåpning
+                f = rfx[r];
+                z0 = zsum(rfx, r);
+                zc = z0 + f * Pr - kh;         // underkant tak = overkant skuffåpning
                 zt = zc + tak_t;               // overkant tak
                 sist = r == n - 1;
-                zT = sist && !topp ? z0 + Pr : z0 + zT_rel;   // overkant LED-veggen
+                zT = sist && !topp ? z0 + f * Pr : z0 + f * Pr + hylle_t - list_t;   // overkant LED-veggen
                 td = sist ? tak_d_topp : tak_d;
                 zr = z0 + hylle_t;
                 Ls = zt - zr;
-                lv_skinner(W, k, z0);
+                lv_skinner(W, k, z0, mgx[r]);
                 // Frontlist (gulvet foran). I nederste rad i en modul griper ribbene ned i kanalen i modulen under og låser fronten.
                 translate([0, 0, z0 + hylle_t - list_t]) cube([W, fl_d, list_t]);
                 if (!(bunn && r == 0)) langs_x(W) for (ya = [0, spor_bak]) ribbe_ned2d(ya, z0 + hylle_t - list_t);
@@ -610,8 +718,11 @@ module lv_modul(k, n, bunn, topp, vs, hs) {
                 // Øverste rad: skråstag 45° bak LED-veggen ned til det forlengede taket
                 if (sist) langs_x(W) polygon([[led_bak - e, zT], [led_bak + 1.7, zT], [led_bak + 1.7 + (zT - zt), zt - e], [led_bak - e + (zT - zt), zt - e]]);
                 // Skråstag 45° foran mellom kolonnene, fra T-skinna opp til bakkanten av taket
-                if (k > 1) for (c = [1 : k - 1]) translate([c * P - stolpe_t / 2, 0, 0]) langs_x(stolpe_t)
+                if (k > 1) for (c = [1 : k - 1]) if (!har(mgx[r], c)) translate([c * P - stolpe_t / 2, 0, 0]) langs_x(stolpe_t)
                     polygon([[td - 1, zt], [td + 2, zt], [td + 2 + Ls, zr - e], [td - 1 + Ls, zr - e]]);
+                // Over en dobbel skuff: finne oppå taket, helt bak til ryggen (står på printplata og bærer taket i printen)
+                zf = sist ? zT : z0 + f * Pr + hylle_t - flens_t + e;
+                for (c = mgx[r]) translate([c * P - stolpe_t / 2, td - 1, zt - e]) cube([stolpe_t, D - td + 1, zf - zt + e]);
             }
             // Lokk på øverste modul: frontlist med ribber ned (bæres av skråstaget i printen)
             if (topp) {
@@ -624,18 +735,22 @@ module lv_modul(k, n, bunn, topp, vs, hs) {
             for (x = bx, z = bz) translate([x, D - bakvegg + e, z]) rotate([90, 0, 0]) cylinder(d = 7, h = bak_rom - 1);
         }
         for (r = [0 : n - 1]) {
-            z0 = r * Pr;
-            zc = z0 + rad_hoyde;
+            f = rfx[r];
+            z0 = zsum(rfx, r);
+            zc = z0 + f * Pr - kh;
             zt = zc + tak_t;
             sist = r == n - 1;
-            zT = sist && !topp ? z0 + Pr : z0 + zT_rel;
+            zT = sist && !topp ? z0 + f * Pr : z0 + f * Pr + hylle_t - list_t;
             td = sist ? tak_d_topp : tak_d;
             za = z0 + hylle_t + skinne_h + 1;
-            // Vinduer i siderammene: ett stort bak frontlista og taket, og ett i skuffhøyden helt fram
-            for (x = [-e, W - vegg_t - e]) translate([x, 0, 0]) langs_x(vegg_t + 2 * e) {
-                vindu2d(td + 2, y1, za, z0 + Pr - 2);
-                vindu2d(vindu_kant, y1, za, zc - 2);
-            }
+            zm = z0 + hylle_t + (zc - z0 - hylle_t) / 2;
+            // Vinduer i siderammene: ett stort bak frontlista og taket, og ett i skuffhøyden helt fram.
+            // I en dobbel rad deles de i to med en tverrligger midt på.
+            for (x = [-e, W - vegg_t - e]) translate([x, 0, 0]) langs_x(vegg_t + 2 * e)
+                for (v = [[td + 2, z0 + f * Pr - 2], [vindu_kant, zc - 2]]) {
+                    if (f == 1) vindu2d(v[0], y1, za, v[1]);
+                    else { vindu2d(v[0], y1, za, zm - 1.5); vindu2d(v[0], y1, zm + 1.5, v[1]); }
+                }
             // Kanalen går gjennom siderammene: stripa, masken og ledningene går videre til neste modul
             for (x = [-e, W - vegg_t - e]) translate([x, -e, zt]) cube([vegg_t + 2 * e, kanal_d + e, zT - zt + e]);
             for (c = [0 : k - 1]) {
@@ -645,7 +760,7 @@ module lv_modul(k, n, bunn, topp, vs, hs) {
                 translate([xc - 0.3, kanal_d - e, zt + 0.5]) cube([0.6, 0.4 + e, zT - zt - 1]);
             }
             // Bolter mellom moduler side om side, ett per rad bak skuffene
-            zb = z0 + hylle_t + aapning / 2;
+            zb = zm;
             yb = D - bakvegg - bak_rom / 2;
             if (vs) translate([-e, yb, zb]) draape_x(bolt_hull, vegg_t + 2 * e);
             if (hs) translate([W - vegg_t - e, yb, zb]) draape_x(bolt_hull, vegg_t + 2 * e);
@@ -655,12 +770,15 @@ module lv_modul(k, n, bunn, topp, vs, hs) {
     }
 }
 
-module hoved_modul(i, j) {
-    lv_modul(deling(m_K, m_nx, i), deling(m_R, m_ny, j), j == 0, j == m_ny - 1, i > 0, i < m_nx - 1);
+module modul_ij(top, i, j) {
+    nx = top ? t_nx : m_nx;
+    ny = top ? t_ny : m_ny;
+    et = mod_rows(top, j);
+    lv_modul(mod_k(top, i), et[1], j == 0, j == ny - 1, i > 0, i < nx - 1,
+             [for (r = [0 : et[1] - 1]) rad_f(top, et[0] + r)], [for (r = [0 : et[1] - 1]) rad_mg(top, i, et[0] + r)]);
 }
-module topp_modul(i, j) {
-    lv_modul(deling(t_K, t_nx, i), deling(t_R, t_ny, j), j == 0, j == t_ny - 1, i > 0, i < t_nx - 1);
-}
+module hoved_modul(i, j) { modul_ij(false, i, j); }
+module topp_modul(i, j) { modul_ij(true, i, j); }
 // Print: liggende på ryggen (ryggen ned, fronten opp). Skinner, sider og stag står da loddrett,
 // og alle flater som vender ned er 45° eller korte broer mellom skinnene/stagene.
 module modul_print() { translate([0, 0, D]) rotate([-90, 0, 0]) children(); }
@@ -829,18 +947,20 @@ module elboks_lokk_print() { elboks_lokk(); }
 // ---------------------------------------------------------------------
 // Utlegg for print
 // ---------------------------------------------------------------------
-module skuff_print() { translate([0, grep_ut, 0]) lv_skuff(); }
-module skuffplate() {
-    nx = max(1, floor((plass + 5) / (skuff_b + 5)));
+module skuff_print(nk = 1, nf = 1) { translate([0, grep_ut, 0]) lv_skuff(nk, nf); }
+module skuffplate(nk = 1, nf = 1) {
+    w = skuff_bredde(nk);
+    nx = max(1, floor((plass + 5) / (w + 5)));
     ny = max(1, floor((plass + 5) / (skuff_d + grep_ut + 5)));
-    for (a = [0 : nx - 1], b = [0 : ny - 1]) translate([a * (skuff_b + 5), b * (skuff_d + grep_ut + 5), 0]) skuff_print();
-    echo(str("SKJOLDLAB-LED: skuffplate = ", nx * ny, " skuffer per plate"));
+    for (a = [0 : nx - 1], b = [0 : ny - 1]) translate([a * (w + 5), b * (skuff_d + grep_ut + 5), 0]) skuff_print(nk, nf);
+    echo(str("SKJOLDLAB-LED: skuffplate ", nk, "x", nf, " = ", nx * ny, " skuffer per plate"));
 }
-module skilleplate() {
-    nx = max(1, floor((plass + 4) / (skv_b + 4)));
-    ny = max(1, floor((plass + 4) / (skv_h + 4)));
-    for (a = [0 : nx - 1], b = [0 : ny - 1]) translate([a * (skv_b + 4), b * (skv_h + 4), 0]) lv_skillevegg();
-    echo(str("SKJOLDLAB-LED: skilleplate = ", nx * ny, " skillevegger per plate"));
+module skilleplate(nk = 1, nf = 1) {
+    b = skv_b(nk); hh = skv_h(nf);
+    nx = max(1, floor((plass + 4) / (b + 4)));
+    ny = max(1, floor((plass + 4) / (hh + 4)));
+    for (a = [0 : nx - 1], c = [0 : ny - 1]) translate([a * (b + 4), c * (hh + 4), 0]) lv_skillevegg(nk, nf);
+    echo(str("SKJOLDLAB-LED: skilleplate ", nk, "x", nf, " = ", nx * ny, " skillevegger per plate"));
 }
 
 // ---------------------------------------------------------------------
@@ -850,24 +970,34 @@ farge_ramme = [0.1, 0.1, 0.11];
 farge_skuff = [0.16, 0.16, 0.18];
 farge_led = [0.2, 0.45, 1.0];
 
-module lv_seksjon(K, R, nx, ny, er_topp) {
+module lv_seksjon(top) {
+    nx = top ? t_nx : m_nx;
+    ny = top ? t_ny : m_ny;
+    R = top ? t_R : m_R;
+    K = top ? t_K : m_K;
     for (i = [0 : nx - 1], j = [0 : ny - 1]) {
-        k = deling(K, nx, i);
-        n = deling(R, ny, j);
-        translate([sum_deling(K, nx, i) * P, 0, sum_deling(R, ny, j) * Pr]) {
-            color(farge_ramme) if (er_topp) topp_modul(i, j); else hoved_modul(i, j);
-            for (r = [0 : n - 1]) {
+        k = mod_k(top, i);
+        et = mod_rows(top, j);
+        translate([mod_x(top, i), 0, rad_z(top, et[0])]) {
+            color(farge_ramme) modul_ij(top, i, j);
+            for (r = [0 : et[1] - 1]) {
+                rb = et[0] + r;
+                f = rad_f(top, rb);
+                mg = rad_mg(top, i, rb);
+                z = rad_z(top, rb) - rad_z(top, et[0]);
+                zc = z + f * Pr - kh;
                 // Lysstripe bak masken, og ett vindu som lyser (som på bildet)
-                translate([0, kanal_d - led_tykk, r * Pr + rad_hoyde + tak_t + (kh - tak_t - led_bredde) / 2])
+                translate([0, kanal_d - led_tykk, zc + tak_t + (kh - tak_t - led_bredde) / 2])
                     color([0.25, 0.25, 0.28]) cube([k * P, led_tykk, led_bredde]);
-                translate([0, spor_foran, r * Pr + rad_hoyde + tak_t]) rotate([90, 0, 0]) mirror([0, 0, 1]) color([0.05, 0.05, 0.05]) lv_maske(k);
-                if (vis_skuffer) for (c = [0 : k - 1])
-                    translate([c * P + vegg_t + toleranse, 0, r * Pr + hylle_t]) color(farge_skuff) lv_skuff();
+                translate([0, spor_foran, zc + tak_t]) rotate([90, 0, 0]) mirror([0, 0, 1]) color([0.05, 0.05, 0.05]) lv_maske(k);
+                if (vis_skuffer) for (c = [0 : k - 1]) if (!har(mg, c))
+                    translate([c * P + vegg_t + toleranse, 0, z + hylle_t]) color(farge_skuff) lv_skuff(har(mg, c + 1) ? 2 : 1, f);
             }
         }
     }
     // Én skuff som «lyser»
-    if (vis_skuffer) translate([(K > 1 ? 1.5 : 0.5) * P - vb / 2, spor_foran - 0.5, (R > 1 ? 1 : 0) * Pr + rad_hoyde + tak_t + ribbe_h + 0.5])
+    rl = R > 1 ? 1 : 0;
+    if (vis_skuffer) translate([(K > 1 ? 1.5 : 0.5) * P - vb / 2, spor_foran - 0.5, rad_z(top, rl) + rad_f(top, rl) * Pr - kh + tak_t + ribbe_h + 0.5])
         color(farge_led) cube([vb, 1, innsats_h - 2 * ribbe_h - 1]);
 }
 
@@ -895,14 +1025,14 @@ module raaco_med_skinner() {
 module oversikt() {
     hylla();
     if (!hel) translate([rx0, 0, 0]) raaco_med_skinner();
-    if (lag_m) translate([m_x0, 0, 0]) lv_seksjon(m_K, m_R, m_nx, m_ny, false);
-    if (lag_t) translate([t_x0, 0, raaco_hoyde]) lv_seksjon(t_K, t_R, t_nx, t_ny, true);
+    if (lag_m) translate([m_x0, 0, 0]) lv_seksjon(false);
+    if (lag_t) translate([t_x0, 0, raaco_hoyde]) lv_seksjon(true);
     // Elektronikkboksen ved siden av hylla
     translate([hylle_bredde + 60, 0, 0]) color([0.15, 0.15, 0.16]) elboks();
 }
 
 // Hele LED-veggen uten hylle (hele hylla eller sideveggen)
-module vegg() { lv_seksjon(m_K, m_R, m_nx, m_ny, false); }
+module vegg() { lv_seksjon(false); }
 
 // ---------------------------------------------------------------------
 // Valg av del
@@ -915,6 +1045,15 @@ else if (del == "skuff") skuff_print();
 else if (del == "skuffplate") skuffplate();
 else if (del == "skillevegg") lv_skillevegg();
 else if (del == "skilleplate") skilleplate();
+else if (del == "skuff_2x1") skuff_print(2, 1);
+else if (del == "skuff_1x2") skuff_print(1, 2);
+else if (del == "skuff_2x2") skuff_print(2, 2);
+else if (del == "skuffplate_2x1") skuffplate(2, 1);
+else if (del == "skuffplate_1x2") skuffplate(1, 2);
+else if (del == "skuffplate_2x2") skuffplate(2, 2);
+else if (del == "skilleplate_2x1") skilleplate(2, 1);
+else if (del == "skilleplate_1x2") skilleplate(1, 2);
+else if (del == "skilleplate_2x2") skilleplate(2, 2);
 else if (del == "maske") lv_maske(sek_k(modul_x));
 else if (del == "diffusor") lv_diffusor(sek_k(modul_x));
 else if (del == "lask") lv_lask(false);
