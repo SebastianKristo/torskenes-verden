@@ -788,7 +788,7 @@ module modul_ij(top, i, j) {
     nx = top ? t_nx : m_nx;
     ny = top ? t_ny : m_ny;
     et = mod_rows(top, j);
-    lv_modul(mod_k(top, i), et[1], j == 0, j == ny - 1, i > 0, i < nx - 1,
+    lv_modul(mod_k(top, i), len(mod_rader(top, i, j)), j == 0, j == ny - 1, i > 0, i < nx - 1,
              [for (rr = mod_rader(top, i, j)) rr[1]], [for (rr = mod_rader(top, i, j)) rr[2]]);
 }
 module hoved_modul(i, j) { modul_ij(false, i, j); }
