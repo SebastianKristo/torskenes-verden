@@ -15,6 +15,8 @@ Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. 
   - Ny oppskrift på LED-kablingen.
 - **Sjekk ut komponenter til et produkt:** «Sjekk ut» på en del trekker fra lageret og husker hvilket produkt delen gikk til. Du kan angre. Delsiden viser «Brukt i», og under **Produkter** ligger stykklista for hvert produkt med «Sjekk inn», «Marker som ferdig» og CSV på web. Plukklista kan sjekke ut alt til et produkt på en gang. Glimt svarer på «hvor er ESP32-ene brukt?».
 - **Media:** interaktivt søk blir ikke lenger stående på «Søker i 3 indeksere …». Treffene vises så snart indekserne er ferdige. Svarer ikke Sonarr eller Radarr, lastes det ned via Prowlarr.
+- **Økonomi på web** blinker ikke lenger og lastes ikke inn på nytt et par sekunder etter at du har åpnet den fra Homelab.
+- **Skjold Lab på web:** når du trykker på en skuff i skapet, blir du stående der du er i stedet for å havne øverst på siden.
 - **Android Hjem:** ingen firkantet skygge bak søkefeltet. Kortene har fast høyde: små 101 dp og Avgang 212 dp.
 - **iPhone Vær:** bryteren for Temperatur, Nedbør og Vind virker ved trykk og dra, og valget huskes.
 
