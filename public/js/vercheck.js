@@ -19,6 +19,16 @@ function loadedBuild() {
   return null;
 }
 
+/**
+ * Prompt 83 (FINRELOAD83): controllerchange betyr ny versjon bare når det er den samme service workeren (samme skript-sti)
+ * som er oppdatert. Første installasjon (ingen kontroller før) og overtakelse fra en annen service worker (f.eks. /sw.js →
+ * /finans/sw.js når Økonomi åpnes fra Homelab) skal ikke laste siden på nytt – det ga et blink ~2 s etter innlasting.
+ */
+export function isSwUpdate(prev, next) {
+  if (!prev || !next) return false;
+  try { return new URL(prev).pathname === new URL(next).pathname; } catch { return prev === next; }
+}
+
 const V = { base: null, latest: null, info: null, banner: false, pending: false, dead: false, started: false, reg: null, dismissed: null };
 const RELOAD_KEY = 'hl_sw_reload';
 
@@ -103,10 +113,12 @@ export function startVersionCheck({ sw = '/sw.js', scope } = {}) {
   });
 
   if (!sw || !('serviceWorker' in navigator)) return;
-  let hadCtl = !!navigator.serviceWorker.controller;
+  let ctlUrl = navigator.serviceWorker.controller?.scriptURL ?? null;
   navigator.serviceWorker.addEventListener('controllerchange', () => {
-    // Første installasjon (clients.claim) gir også controllerchange; da er det ingenting nytt å laste.
-    if (!hadCtl) { hadCtl = true; return; }
+    // Første installasjon (clients.claim) gir også controllerchange; da er det ingenting nytt å laste. Det gjelder også
+    // når siden ble styrt av en annen service worker (Homelabs /sw.js med scope /) og /finans/sw.js tar over (prompt 83).
+    const prev = ctlUrl; ctlUrl = navigator.serviceWorker.controller?.scriptURL ?? null;
+    if (!isSwUpdate(prev, ctlUrl)) return;
     let last = 0; try { last = +sessionStorage.getItem(RELOAD_KEY) || 0; } catch { /* */ }
     if (Date.now() - last < 30_000) return; // nettopp lastet på nytt: ingen løkke
     if (hasUnsaved()) { V.latest ??= 'sw'; showBanner(); return; }

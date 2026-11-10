@@ -9,6 +9,7 @@ import { esc, hlApi, api } from './core.js';
 import { m, draw, flash } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
 import * as P25 from './mobile-p25.js';
+import { isSwUpdate } from '../../js/vercheck.js'; // prompt 83: bare oppdatering av samme service worker laster på nytt
 
 const lsGet = (k, d = null) => { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch { return d; } };
 const lsSet = (k, v) => { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, JSON.stringify(v)); } catch {} };
@@ -209,13 +210,15 @@ function pillsStuck() {
    ===================================================================== */
 function swBoot() {
   const sw = navigator.serviceWorker; if (!sw) return;
-  const had = !!sw.controller; // første installasjon (clients.claim) skal ikke laste siden på nytt
+  // Første installasjon (clients.claim) og overtakelse fra Homelabs /sw.js (scope /) skal ikke laste siden på nytt (prompt 83).
+  let ctl = sw.controller?.scriptURL ?? null;
   const up = () => sw.getRegistration('/finans/').then((r) => r?.update()).catch(() => {});
   up();
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') up(); });
   setInterval(up, 10 * 60000);
   sw.addEventListener('controllerchange', () => {
-    if (!had) return;
+    const prev = ctl; ctl = sw.controller?.scriptURL ?? null;
+    if (!isSwUpdate(prev, ctl)) return;
     let last = 0; try { last = +sessionStorage.getItem('p32_swr') || 0; } catch {}
     if (Date.now() - last < 15000) return; // beskytt mot løkke
     try { sessionStorage.setItem('p32_swr', String(Date.now())); } catch {}
