@@ -1,0 +1,65 @@
+/* Prompt 82 (CHKWEB): Produkter i Skjold Lab – «Sjekk ut»-arket, «Brukt i», produktlista og stykklista.
+   Bruker fargene fra .sk76 (lys/mørk følger dem). Arket gjenbruker .sk79-sheet/.sk79-scrim fra plukklista. */
+.sk76[data-v="projects"] .sk76-cols,.sk76[data-v="project"] .sk76-cols{grid-template-columns:minmax(0,1fr)}
+html.sk82-lock{overflow:hidden}
+.sk82-card{display:flex;flex-direction:column;gap:12px}
+.sk82-lh{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.sk82-lead{margin:4px 0 0;text-wrap:pretty}
+.sk82-small{font-size:12.5px;margin:0}
+.sk82-st{display:inline-block;margin-left:8px;padding:2px 8px;border-radius:10px;font:600 11px var(--s-mono);letter-spacing:.04em;vertical-align:3px;background:color-mix(in srgb,var(--s-ok) 16%,transparent);color:var(--s-ok)}
+.sk82-st.done{background:var(--s-line2);color:var(--s-mut)}
+.sk82-h{overflow-wrap:anywhere}
+
+/* Lista over produkter */
+.sk82-plist,.sk82-lines,.sk82-used ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column}
+.sk82-pr{display:flex;flex-direction:column;gap:2px;padding:12px 6px;border-bottom:1px solid var(--s-line2);color:inherit;text-decoration:none;border-radius:12px;min-width:0}
+.sk82-plist li:last-child .sk82-pr{border-bottom:0}
+.sk82-pr:hover b{text-decoration:underline;text-underline-offset:3px}
+.sk82-pn{display:flex;align-items:baseline;flex-wrap:wrap;min-width:0}
+.sk82-pn b{font:500 19px/1.25 var(--s-serif);overflow-wrap:anywhere}
+.sk82-new{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;padding:12px;border:1px dashed var(--s-line);border-radius:16px}
+.sk82-new[hidden]{display:none}
+.sk82-new .sk76-row{grid-column:1/-1}
+
+/* Stykklista */
+.sk82-line{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 4px;border-bottom:1px solid var(--s-line2);min-width:0}
+.sk82-line:last-child{border-bottom:0}
+.sk82-line.gone{opacity:.65}
+.sk82-li{flex:1 1 220px;display:flex;align-items:center;gap:10px;min-width:0;color:inherit;text-decoration:none;border-radius:12px}
+.sk82-lt{display:flex;flex-direction:column;min-width:0}
+.sk82-lt b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sk82-loc,.sk82-note{font-size:12.5px;color:var(--s-mut);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sk82-note{font-style:italic}
+.sk82-ret{display:flex;align-items:center;gap:6px;margin-left:auto}
+.sk82-ret input{width:76px;min-height:44px;padding:0 10px;border-radius:14px;border:1px solid var(--s-line);background:var(--s-fld);color:var(--s-ink);font:600 14px var(--s-mono)}
+.sk82-vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.sk82-done summary{cursor:pointer;font-weight:700;min-height:36px;display:flex;align-items:center}
+
+/* «Brukt i» på delsiden */
+.sk82-used{display:flex;flex-direction:column;gap:6px;padding:12px 14px;border-radius:16px;border:1px solid var(--s-line);background:var(--s-bg)}
+.sk82-used a{display:flex;align-items:baseline;gap:8px;min-height:36px;padding:4px 0;color:inherit;text-decoration:none}
+.sk82-used a b{flex:1;min-width:0;overflow-wrap:anywhere}
+.sk82-used a:hover b{text-decoration:underline;text-underline-offset:3px}
+.sk82-used a>span{font:600 13px var(--s-mono);color:var(--s-mut)}
+
+/* Arket */
+.sk82-sheet{bottom:auto;max-height:calc(100vh - 24px)}
+.sk82-form{display:flex;flex-direction:column;gap:14px;padding:14px 18px 18px;overflow:auto}
+.sk82-lbl{display:flex;flex-direction:column;gap:6px;font-weight:700;min-width:0}
+.sk82-lbl[hidden]{display:none}
+.sk82-lbl input,.sk82-lbl select{min-height:44px;padding:0 12px;border-radius:14px;border:1px solid var(--s-line);background:var(--s-fld);color:var(--s-ink);font:500 15px var(--s-sans);min-width:0;width:100%}
+.sk82-qty{align-self:flex-start}
+.sk82-qty input{width:84px;height:40px;border:0;border-left:1px solid var(--s-line);border-right:1px solid var(--s-line);background:none;color:var(--s-ink);text-align:center;font:600 15px var(--s-mono);-moz-appearance:textfield}
+.sk82-qty input::-webkit-outer-spin-button,.sk82-qty input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.sk82-form .pri{min-height:48px}
+.sk82-sheet button:focus-visible,.sk82-sheet input:focus-visible,.sk82-sheet select:focus-visible,.sk82-ret input:focus-visible,.sk82-pr:focus-visible,.sk82-li:focus-visible,.sk82-used a:focus-visible{outline:2px solid var(--s-acc);outline-offset:2px}
+
+/* Plukklista: «Til produkt» */
+.sk82-pickto{flex:1 1 100%;display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px}
+.sk82-pickto select,.sk82-pickto input{min-height:40px}
+
+@media (max-width:767px){
+  .sk82-sheet{bottom:0;top:auto;max-height:92vh}
+  .sk82-ret{margin-left:44px}
+  .sk82-pn b{font-size:18px}
+}

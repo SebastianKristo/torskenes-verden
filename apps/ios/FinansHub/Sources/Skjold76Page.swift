@@ -41,6 +41,7 @@ struct Skjold76Page: View {
                     Skj76Search()
                     Skj76Filters()
                     Skj76CabinetCard()
+                    Skj82Entry()
                     Skj76Results()
                 }
                 .padding(.horizontal, 16).padding(.top, 6).padding(.bottom, Skjold79.shared.count > 0 ? 150 : 90)
@@ -63,6 +64,7 @@ struct Skjold76Page: View {
             await m.load(store)
             await Skjold78.shared.load(store)
             await Skjold79.shared.load(store)
+            await Skjold82.shared.load(store)
         }
     }
 }
@@ -151,6 +153,8 @@ struct Skj76Top: View {
             Button { m.sheet = .setup(m.cabinet?.id ?? "") } label: { Label("Skap-oppsett", systemImage: "cabinet") }
             Button { m.sheet = .setup("ny") } label: { Label("Legg til skap", systemImage: "plus.rectangle.on.rectangle") }
             Button { m.sheet = .labels(m.cabinet?.id ?? "") } label: { Label("Etiketter", systemImage: "printer") }
+            // Prompt 82: produktene delene er sjekket ut til (Skjold82*.swift).
+            Button { m.sheet = .projects } label: { Label("Produkter", systemImage: "shippingbox") }
             // Prompt 78: LED over hver skuff (WLED), test og kalibrering.
             Button { m.sheet = .leds(m.cabinet?.id ?? "") } label: { Label("LED-oppsett", systemImage: "lightbulb") }
             Button { Task { await m.load(store) } } label: { Label("Oppdater", systemImage: "arrow.clockwise") }
@@ -420,6 +424,9 @@ struct Skj76SheetView: View {
         case .calibrate(let c): Skj78Calibrate(cabinetId: c)
         case .pick: Skj79Sheet()
         case .diagnose(let c): Skj79Diagnose(cabinetId: c)
+        case .checkout(let id): Skj82Checkout(partId: id)
+        case .projects: Skj82ProjectsSheet()
+        case .project(let id): Skj82ProjectSheet(id: id)
         }
     }
 }

@@ -19,6 +19,7 @@ import { mountAi77, undoEdit77 } from './ai77.js'; // prompt 77 (SKJAISRV): fors
 import { thumbUser77 } from './images77.js';
 import { mountLeds78, ledsBrief78 } from './leds78.js'; // prompt 78 (LEDSRV): LED over hver skuff (WLED)
 import { mountPicklist79 } from './picklist79.js'; // prompt 79 (PICKSRV): plukkliste
+import { mountProjects82, usedIn82 } from './projects82.js'; // prompt 82 (CHKSRV): produkter – sjekk ut/inn deler
 
 setFileUrl76((name, user) => signedUrl76(name, user));
 const q = (sql) => db.prepare(sql);
@@ -298,7 +299,7 @@ skjoldApi76.get('/parts', (c) => {
 skjoldApi76.get('/parts/:id{[0-9]+}', (c) => {
   const u = c.get('user'), r = partRow76(u, c.req.param('id'), { withDeleted: true });
   if (!r) return c.json(NOPART, 404);
-  return c.json({ ...out(r, u), occupied: occupiedBy(u, r), history: historyOf76(u, r.id, 20) }, 200, NS);
+  return c.json({ ...out(r, u), occupied: occupiedBy(u, r), history: historyOf76(u, r.id, 20), usedIn: usedIn82(u, r.id) }, 200, NS);
 });
 skjoldApi76.get('/parts/:id{[0-9]+}/history', (c) => {
   const u = c.get('user'), r = partRow76(u, c.req.param('id'), { withDeleted: true });
@@ -505,3 +506,5 @@ mountAi77(skjoldApi76, { fileOf, uploadLimit });
 mountLeds78(skjoldApi76);
 // Prompt 79 (PICKSRV): GET|PUT /picklist, POST /picklist/take, /picklist/undo.
 mountPicklist79(skjoldApi76);
+// Prompt 82 (CHKSRV): /projects*, /checkout, /checkout/undo, /usage/:id/return.
+mountProjects82(skjoldApi76);

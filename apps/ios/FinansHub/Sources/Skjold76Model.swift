@@ -144,6 +144,10 @@ enum Skj76Sheet: Identifiable, Hashable {
     /// Prompt 79: plukklista og «Feilsøk LED» (Skjold79*.swift).
     case pick
     case diagnose(String)
+    /// Prompt 82: sjekk ut en del til et produkt, produktlista og produktsiden (Skjold82*.swift).
+    case checkout(String)
+    case projects
+    case project(String)
 
     var id: String {
         switch self {
@@ -159,6 +163,9 @@ enum Skj76Sheet: Identifiable, Hashable {
         case .calibrate(let c): return "kal" + c
         case .pick: return "pick"
         case .diagnose(let c): return "diag" + c
+        case .checkout(let i): return "co" + i
+        case .projects: return "projects"
+        case .project(let i): return "prj" + i
         }
     }
 }
@@ -388,6 +395,8 @@ final class Skjold76 {
         let x: Skj76Part = Skjold76.part(JS.dict(o, "part") ?? JS.dict(o, "item") ?? o)
         details[id] = x
         history[id] = JS.list(o, "history").map { Skjold76.hist($0) }
+        // Prompt 82: «Brukt i» (usedIn) for delsiden.
+        Skjold82.shared.takeUsed(id, o)
         replace(x)
     }
 

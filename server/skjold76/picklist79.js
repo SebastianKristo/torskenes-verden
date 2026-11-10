@@ -7,8 +7,11 @@
 //   POST /picklist/take {items?:[{partId, qty}]} → {ok, parts:[{partId, name, before, after, low}], undo:[{partId, set}], skipped?}
 //        uten items: hele den lagrede lista. Trekker fra (aldri under 0) med historikk. Tømmer ikke lista.
 //   POST /picklist/undo {undo:[{partId, set}]} → {ok, parts:[…]}
+//   Prompt 82: take med {projectId|projectName} sjekker ut til et produkt (projects82.js) → også {project, usages, undoToken};
+//        undo med {undoToken} angrer utsjekkingen (legger tilbake og sletter usage-radene).
 import { kv } from '../db.js';
 import { partRow76, updatePart76, addHistory76 } from './store.js';
+import { checkout82, undoCheckout82, rateOk82 } from './projects82.js'; // prompt 82: «Ta ut av lager» til et produkt
 
 const NS = { 'Cache-Control': 'no-store' };
 const KEY = 'skjold79_picklist';
@@ -61,6 +64,13 @@ export function mountPicklist79(app) {
     const p = b.items == null ? { items: raw(u).items } : parseItems(b.items);
     if (p.error) return c.json({ error: p.error }, 400);
     if (!p.items.length) return c.json({ error: 'Plukklista er tom' }, 400);
+    // Prompt 82: {projectId|projectName} → samme utsjekking som POST /checkout (alt eller ingenting, 409 ved for lite, undoToken).
+    if ((b.projectId != null && b.projectId !== '') || (typeof b.projectName === 'string' && b.projectName.trim())) {
+      if (!rateOk82(u)) return c.json({ error: 'For mange endringer – vent litt og prøv igjen', code: 'rate' }, 429, { 'Retry-After': '10' });
+      const r = checkout82(u, { projectId: b.projectId, projectName: b.projectName, note: b.note, items: p.items });
+      if (r.status !== 200) return c.json(r.body, r.status);
+      return c.json({ ...r.body, undo: r.body.parts.map((x) => ({ partId: x.partId, set: x.before })) });
+    }
     const parts = [], undo = [], skipped = [];
     for (const it of p.items) {
       const cur = partRow76(u, it.partId);
@@ -75,6 +85,7 @@ export function mountPicklist79(app) {
   });
   app.post('/picklist/undo', async (c) => {
     const u = c.get('user'), b = await body(c);
+    if (b && typeof b.undoToken === 'string') { const r = undoCheckout82(u, b.undoToken); return c.json(r.body, r.status); } // prompt 82
     if (!b || !Array.isArray(b.undo) || b.undo.length > MAX_PICK79) return c.json({ error: 'Forventet {undo:[{partId, set}]}' }, 400);
     const parts = [];
     for (const x of b.undo) {

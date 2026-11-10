@@ -156,7 +156,7 @@ struct Skj79Sheet: View {
             Button("Ta ut \(k.count) deler") { Task { @MainActor in await k.takeOut(store) } }
             Button("Avbryt", role: .cancel) {}
         } message: {
-            Text("Antallet trekkes fra for alle delene i lista. Du kan angre i 10 sekunder.")
+            Text(Skjold82.shared.pickTarget == nil ? "Antallet trekkes fra for alle delene i lista. Du kan angre i 10 sekunder." : "Delene sjekkes ut til produktet – alle eller ingen. Du kan angre i 10 sekunder.")
         }
     }
 
@@ -198,6 +198,8 @@ struct Skj79Sheet: View {
 
     private var actions: some View {
         VStack(spacing: 8) {
+            // Prompt 82: «Til produkt: [velg/ingen]» – med produkt sjekkes delene ut (alt eller ingenting).
+            Skj82PickTarget()
             Skj76Button(title: k.taking ? "Tar ut …" : "Ta ut av lager", icon: "tray.and.arrow.up", filled: true) { confirm = true }
                 .disabled(k.taking)
             Skj76Button(title: "Tøm plukklista", icon: "trash", danger: true) { k.clear(store) }

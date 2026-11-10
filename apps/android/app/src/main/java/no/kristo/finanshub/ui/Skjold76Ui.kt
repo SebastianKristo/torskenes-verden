@@ -99,6 +99,8 @@ internal fun SkjoldPage76(vm: AppViewModel) {
                     "tidy" -> TidyScreen77(vm) // prompt 77
                     "leds" -> LedScreen78(vm) // prompt 78
                     "pick" -> PickScreen79(vm) // prompt 79: plukklista
+                    "projects" -> ProjectsScreen82(vm) // prompt 82: produkter
+                    "project" -> ProjectScreen82(vm) // prompt 82: stykkliste
                     else -> ListScreen76(vm)
                 }
             }
@@ -108,6 +110,7 @@ internal fun SkjoldPage76(vm: AppViewModel) {
         if (s.undo == null) PickBar79(vm, Modifier.align(Alignment.BottomCenter)) // prompt 79: plukklistelinja (tar over for LitBar78)
         s.cabDeleteAsk?.let { CabDeleteAsk76(vm, it) }
         if (Skjold81.newAsk) NewPresetAsk81(vm) // prompt 81
+        CheckoutSheet82(vm) // prompt 82: «Sjekk ut»
         Menu77(vm) // prompt 77: ⋯ → Rydd opp med Glimt / innstillinger
         Settings77(vm)
     }
@@ -120,7 +123,7 @@ private fun Header76(vm: AppViewModel) {
     val ctx = LocalContext.current
     Row(Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Pill76(if (s.stack.size > 1) "‹ Tilbake" else "‹ Mer", on = true) { vm.closeSkjold76() }
-        PSerif(when (s.screen) { "part" -> "Del"; "edit" -> if (s.draft?.id == null) "Ny del" else "Endre del"; "cab" -> "Skap"; "setup" -> "Skap-oppsett"; "tidy" -> "Rydd opp"; "leds" -> "LED-oppsett"; "pick" -> "Plukkliste"; else -> "Skjold Lab" },
+        PSerif(when (s.screen) { "part" -> "Del"; "edit" -> if (s.draft?.id == null) "Ny del" else "Endre del"; "cab" -> "Skap"; "setup" -> "Skap-oppsett"; "tidy" -> "Rydd opp"; "leds" -> "LED-oppsett"; "pick" -> "Plukkliste"; "projects" -> "Produkter"; "project" -> "Produkt"; else -> "Skjold Lab" },
             22.sp, maxLines = 1, modifier = Modifier.weight(1f))
         if (s.screen == "list" || s.screen == "cab") {
             Pill76("Etiketter", on = false) { vm.printLabels76(ctx, if (s.screen == "cab") s.cabId else null) }
@@ -179,6 +182,7 @@ private fun ListScreen76(vm: AppViewModel) {
                 }
             }
         }
+        if (s.q.isBlank()) item(key = "projects") { ProjectsEntry82(vm) } // prompt 82: produkter
         s.err?.let { e -> item(key = "err") { Text(e, color = p.lab, fontSize = 13.sp) } }
         val l = s.items
         if (l == null) item(key = "load") { Box(Modifier.fillMaxWidth().padding(30.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = p.ink) } }
@@ -334,6 +338,8 @@ private fun PartScreen76(vm: AppViewModel) {
         }
         if (s.pick != "move") LocateButton78(vm, pt) // prompt 78: 💡 Vis i skapet
         if (s.pick != "move") PickBtn79(vm, pt, big = true) // prompt 79: legg i plukklista
+        if (s.pick != "move") CheckoutBtn82(vm, pt) // prompt 82: sjekk ut til produkt
+        UsedIn82(vm, pt) // prompt 82: «Brukt i»
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             PButton(if (s.pick == "move") "Avbryt" else "Flytt", Modifier.weight(1f), kind = if (s.pick == "move") "line" else "ink") {
                 if (s.pick == "move") { s.pick = null; target = null } else { s.pick = "move"; target = null }

@@ -13,6 +13,7 @@ import { S, sk, write, locOf, locText, cabById, thumbHtml, thumbOf, paintMain, l
 import { short76 } from './skjold76-draw.js';
 import { M as M78, locate78, off78, cfgOf78, ledSetupHtml78 } from './skjold78-leds.js';
 import { secsLeft78 } from './skjold78-logic.js';
+import { pickTargetHtml82, pickTarget82, afterPickTake82 } from './skjold82-projects.js'; // prompt 82: «Til produkt» ved «Ta ut av lager»
 import { MAX_LIT79, normPick79, has79, toggle79, setQty79, snap79, pickBody79, locateBody79, colorsOf79, skippedOf79, hint79, steps79, report79 } from './skjold79-logic.js';
 
 if (typeof document !== 'undefined' && !document.querySelector('link[data-sk79-css]')) {
@@ -194,6 +195,7 @@ function sheetHtml() {
     ${n ? `<ul class="sk79-list" role="list">${P.items.map(rowHtml).join('')}</ul>` : '<div class="sk79-empty"><b>Plukklista er tom</b><span>Trykk + ved en del i lista eller på detaljsiden, så samles de her. Da kan du tenne alle skuffene på én gang.</span></div>'}
     ${n ? `<div class="sk79-acts">
       ${litNow() ? '<button type="button" class="sk76-btn" data-sk79="off">Slå av lyset</button>' : `<button type="button" class="sk76-btn pri" data-sk79="show"${anyLed() ? '' : ' disabled'}>💡 Vis alle med LED</button>`}
+      ${pickTargetHtml82()}
       <button type="button" class="sk76-btn" data-sk79="take">Ta ut av lager</button>
       <button type="button" class="sk76-btn danger" data-sk79="clear">Tøm</button>
     </div>
@@ -268,14 +270,17 @@ async function takeOut() {
   const list = P.items.slice();
   if (!list.length) return;
   if (!navigator.onLine) { toast('Endringer krever nett. Prøv igjen når du er tilkoblet.'); return; }
-  let undo = [], fail = [], bulk = true;
+  const to = pickTarget82(); // prompt 82: {} | {projectId} | {projectName} – alt eller ingenting, 409 ved for lite
+  if (to.error) { toast(to.error); return; }
+  let undo = [], fail = [], bulk = true, token = null, proj = null;
   try {
-    const r = await sk('/picklist/take', { method: 'POST', json: pickBody79(list) });
+    const r = await sk('/picklist/take', { method: 'POST', json: { ...pickBody79(list), ...to } });
+    if (r?.undoToken) { token = r.undoToken; proj = r.project?.name ?? null; afterPickTake82(r); }
     for (const x of Array.isArray(r?.parts) ? r.parts : []) { const id = String(x.partId); if (S.parts[id]) S.parts[id] = { ...S.parts[id], qty: x.after }; }
     undo = (Array.isArray(r?.undo) ? r.undo : []).map((u) => ({ id: String(u.partId), set: u.set }));
     fail = (Array.isArray(r?.skipped) ? r.skipped : []).map((x) => S.parts[x.partId]?.name ?? x.partId);
   } catch (e) {
-    if (e?.status !== 404) { toast(isNet(e) ? 'Endringer krever nett. Prøv igjen når du er tilkoblet.' : e?.message || 'Fikk ikke trukket fra lageret.'); return; }
+    if (e?.status !== 404 || to.projectId || to.projectName) { toast(isNet(e) ? 'Endringer krever nett. Prøv igjen når du er tilkoblet.' : e?.message || 'Fikk ikke trukket fra lageret.'); return; }
     bulk = false;
     for (const x of list) {
       try { const r = await sk(`/parts/${enc(x.id)}/qty`, { method: 'POST', json: { delta: -x.qty } }); undo.push({ id: x.id, set: r?.undo?.set ?? null, qty: x.qty }); if (r?.part) S.parts[x.id] = { ...(S.parts[x.id] ?? {}), ...r.part }; } catch (e2) { fail.push(S.parts[x.id]?.name ?? x.name ?? x.id); if (isNet(e2)) break; }
@@ -285,14 +290,16 @@ async function takeOut() {
   const taken = list.filter((x) => undo.some((u) => u.id === x.id));
   changed(list.filter((x) => !undo.some((u) => u.id === x.id)));
   if (P.open && !P.items.length) closeSheet();
-  toast(`Tok ut ${taken.length === 1 ? '1 del' : `${taken.length} deler`} av lageret${fail.length ? ` · feilet for ${fail.slice(0, 2).join(', ')}` : ''}`, {
+  haptic(12);
+  toast(`Tok ut ${taken.length === 1 ? '1 del' : `${taken.length} deler`} av lageret${proj ? ` til «${proj}»` : ''}${fail.length ? ` · feilet for ${fail.slice(0, 2).join(', ')}` : ''}`, {
     action: 'Angre', ms: 10_000, onAction: async () => {
       const ok = await write(async () => {
+        if (token) return sk('/checkout/undo', { method: 'POST', json: { undoToken: token } }); // prompt 82: legger tilbake og sletter utsjekkingen
         if (bulk) return sk('/picklist/undo', { method: 'POST', json: { undo: undo.map((u) => ({ partId: /^\d+$/.test(u.id) ? Number(u.id) : u.id, set: u.set })) } });
         for (const u of undo) await sk(`/parts/${enc(u.id)}/qty`, { method: 'POST', json: u.set != null ? { set: u.set } : { delta: u.qty } });
         return {};
       }, 'Lageret er satt tilbake');
-      if (ok) { changed(normPick79([...taken, ...P.items])); for (const u of undo) delete S.parts[u.id]; enrich(); paintMain(); }
+      if (ok) { if (token) afterPickTake82(null); changed(normPick79([...taken, ...P.items])); for (const u of undo) delete S.parts[u.id]; enrich(); paintMain(); }
     },
   });
   paintMain();

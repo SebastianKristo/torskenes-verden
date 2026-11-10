@@ -276,6 +276,9 @@ private fun AppViewModel.changed79() {
     syncPick79()
 }
 
+/** Prompt 82: lagrer plukklista etter utsjekking til et produkt. */
+internal fun AppViewModel.pickChanged79() = changed79()
+
 private fun AppViewModel.syncPick79() {
     val s = Skjold79
     if (!s.serverSync) return
@@ -419,6 +422,7 @@ fun AppViewModel.takeOut79() {
     val s = Skjold79
     val list = s.items
     if (list.isEmpty() || s.busy) return
+    if (takeOutTo82()) return // prompt 82: «Til produkt» → POST /checkout (alt eller ingenting, angre)
     s.busy = true
     launch46 {
         val done = mutableListOf<SkjPick79>()

@@ -155,6 +155,11 @@ final class Skjold79 {
         if list.isEmpty || taking { return }
         taking = true
         defer { taking = false }
+        // Prompt 82: «Til produkt» valgt → samme utsjekking som på delsiden (alt eller ingenting, angre legger lista tilbake).
+        if let t = Skjold82.shared.pickTarget, t.valid {
+            await takeToProject(list, t, store)
+            return
+        }
         var done: [Skj79Item] = []
         var failed: Int = 0
         for x in list {
@@ -176,6 +181,32 @@ final class Skjold79 {
             guard let self else { return }
             Task { @MainActor in await self.putBack(done, store) }
         }
+    }
+
+    private func takeToProject(_ list: [Skj79Item], _ t: Skj82Target, _ store: Store) async {
+        let takes: [Skj82Take] = list.map { (x: Skj79Item) -> Skj82Take in Skj82Take(partId: x.partId, qty: Double(x.take), name: x.name, unit: x.unit) }
+        let ok: Bool = await Skjold82.shared.checkout(takes, to: t, note: "Fra plukklista", store) { [weak self] in
+            guard let self else { return }
+            Task { @MainActor in self.restoreTaken(list, store) }
+        }
+        if !ok {
+            let e: String = Skjold82.shared.error
+            m.flash(e.isEmpty ? Skjold76.netMsg : e)
+            return
+        }
+        let ids: Set<String> = Set(list.map { $0.partId })
+        items.removeAll { ids.contains($0.partId) }
+        changed(store)
+        refreshFromParts()
+        let made: String = Skjold82.shared.lastProjectId
+        if t.projectId.isEmpty && !made.isEmpty { Skjold82.shared.pickTarget = Skj82Target(projectId: made, newName: "") }
+    }
+
+    /// Angret utsjekking: delene kommer tilbake i plukklista.
+    private func restoreTaken(_ list: [Skj79Item], _ store: Store) {
+        for x in list where !has(x.partId) { items.append(x) }
+        changed(store)
+        refreshFromParts()
     }
 
     private func putBack(_ done: [Skj79Item], _ store: Store) async {

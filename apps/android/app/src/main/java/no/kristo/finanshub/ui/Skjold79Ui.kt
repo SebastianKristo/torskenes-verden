@@ -158,8 +158,10 @@ internal fun PickScreen79(vm: AppViewModel) {
         s.items.forEach { it -> PickRow79(vm, it) }
         PHead("Ferdig med å plukke")
         Text("«Ta ut av lager» trekker fra antallet du tar for alle delene og tømmer lista. Du kan angre i 10 s.", color = p.mut, fontSize = 12.5.sp)
+        PickProject82() // prompt 82: «Til produkt: [velg/ingen]»
+        val busy = s.busy || Skjold82.busy
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            PButton(if (s.busy) "Trekker fra …" else "Ta ut av lager", Modifier.weight(1.4f)) { if (!s.busy) vm.takeOut79() }
+            PButton(if (busy) "Trekker fra …" else "Ta ut av lager", Modifier.weight(1.4f)) { if (!busy) vm.takeOut79() }
             PButton("Tøm", Modifier.weight(1f), kind = "line") { vm.clearPick79() }
         }
     }

@@ -7,6 +7,7 @@
 // - Offline: siste fulle liste caches i localStorage (sk76_cache, tømmes ved kontobytte), så søk virker uten nett.
 //   Endringer krever nett og sier tydelig fra.
 // Adresser: #/skjold · #/skjold/del/<id> · #/skjold/ny · #/skjold/skap/<id>[/<rad>-<skuff>] · #/skjold/oppsett[/<id>]
+//           prompt 82: #/skjold/produkter · #/skjold/produkt/<id> (skjold82-projects.js)
 import { api, esc, isMobile, haptic } from './util.js';
 import { toast } from './toast.js';
 import { drawCabinet76, overlayGrid76, layoutPhoto76, cornersOk76, long76, short76, ownLabel76 } from './skjold76-draw.js';
@@ -15,6 +16,8 @@ import { headBtns77, gearHtml77, click77, key77, tidyHtml77, tidyRoute77, startT
 import { locateBtn78, listBtn78, listAllBtn78, litBarHtml78, afterPart78, onCabs78, click78, input78, submit78, route78 } from './skjold78-leds.js'; // prompt 78: LED over skuffene
 import { pickBtn79, pickShellHtml79, click79, key79, route79, loadPick79 } from './skjold79-pick.js'; // prompt 79: plukkliste
 import { anchor81, longAt81, normSel81, spanFieldsHtml81 } from './skjold81-span.js'; // prompt 81: store/brede skuffer
+import { route82, isView82, start82, html82, headBtn82, partBtn82, usedInHtml82, click82, submit82 } from './skjold82-projects.js'; // prompt 82: produkter – sjekk ut/inn
+import { historyText82 } from './skjold82-logic.js';
 
 if (typeof document !== 'undefined' && !document.querySelector('link[data-sk76-css]')) {
   const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = '/assets/css/skjold76.css'; l.dataset.sk76Css = ''; document.head.appendChild(l);
@@ -167,6 +170,7 @@ function parseHash() {
   if (seg[1] === 'endre' && seg[2]) return { v: 'edit', id: seg[2] };
   if (seg[1] === 'oppsett') return { v: 'setup', id: seg[2] ?? null };
   if (tidyRoute77(seg)) return tidyRoute77(seg); // prompt 77: #/skjold/rydd[/<jobId>]
+  if (route82(seg)) return route82(seg); // prompt 82: #/skjold/produkter · #/skjold/produkt/<id>
   if (seg[1] === 'skap' && seg[2]) {
     const m = /^(\d+)-(\d+)$/.exec(seg[3] ?? '');
     return m ? { v: 'drawer', cab: seg[2], row: +m[1], col: +m[2] } : { v: 'list', cab: seg[2] };
@@ -254,7 +258,7 @@ function partHtml() {
       ${p.description ? `<p class="sk76-desc">${esc(p.description)}</p>` : ''}
       <div class="sk76-locbox${l ? '' : ' none'}"><span class="sk76-bigcode">${l ? esc(short76(l.row, l.col)) : '–'}</span><span><span class="sk76-kick">PLASSERING</span><b>${esc(l ? locText(p.location?.text ? p.location : l) : 'Uten plass')}</b></span></div>
       ${locateBtn78(p)}
-      <div class="sk79-prow">${pickBtn79(p, true)}</div>
+      <div class="sk79-prow">${pickBtn79(p, true)}${partBtn82(p)}</div>
       <div class="sk76-qty" role="group" aria-label="Antall">
         <button type="button" class="sk76-qb" data-sk76-qty="-1" aria-label="Én mindre">−</button>
         <span class="sk76-qv${isLow(p) ? ' low' : ''}"><b>${esc(p.qty ?? 0)}</b> ${esc(p.unit || 'stk')}${minOf(p) != null ? `<small>min ${esc(minOf(p))}</small>` : ''}</span>
@@ -266,10 +270,11 @@ function partHtml() {
         <a class="sk76-btn" href="#/skjold/endre/${encodeURIComponent(p.id)}">Endre</a>
         <button type="button" class="sk76-btn danger" data-sk76="delete">Slett</button>
       </div>
+      ${usedInHtml82(p)}
       ${sp.length ? `<dl class="sk76-specs">${sp.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl>` : ''}
       ${tags.length ? `<div class="sk76-tags">${tags.map((t) => `<button type="button" class="sk76-tag" data-sk76-tag="${esc(t)}">#${esc(t)}</button>`).join('')}</div>` : ''}
       ${p.url || p.price != null || p.supplier ? `<p class="sk76-meta">${[p.supplier ? esc(p.supplier) : '', p.price != null && p.price !== '' ? `${esc(Number(p.price).toLocaleString('nb-NO', { maximumFractionDigits: 2 }))} kr` : '', p.url && /^https?:\/\//.test(p.url) ? `<a href="${esc(p.url)}" target="_blank" rel="noopener noreferrer">Datablad / kjøp ↗</a>` : ''].filter(Boolean).join(' · ')}</p>` : ''}
-      ${hist.length ? `<details class="sk76-hist"><summary>Historikk</summary><ul>${hist.map((h) => `<li><time>${esc(new Date(h.at).toLocaleString('nb-NO', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }))}</time> ${esc(h.action)}${h.from != null || h.to != null ? ` <span class="sk76-mut">${esc([h.from, h.to].filter((x) => x != null && x !== '').join(' → '))}</span>` : ''}</li>`).join('')}</ul></details>` : ''}
+      ${hist.length ? `<details class="sk76-hist"><summary>Historikk</summary><ul>${hist.map((h) => `<li><time>${esc(new Date(h.at).toLocaleString('nb-NO', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }))}</time> ${esc(historyText82(h))}</li>`).join('')}</ul></details>` : ''}
     </div>
   </article>`;
 }
@@ -302,6 +307,7 @@ function shellHtml() {
       <div class="sk76-acts">
         <a class="sk76-btn pri" href="#/skjold/ny">+ Ny del</a>
         <a class="sk76-btn" href="#/skjold/oppsett">Skap</a>
+        ${headBtn82()}
         <button type="button" class="sk76-btn" data-sk76="labels">Etiketter</button>
         <span data-sk77-head>${headBtns77()}</span>
       </div>
@@ -322,7 +328,7 @@ export function paintMain() {
   const el = root()?.querySelector('[data-sk76-main]');
   if (!el) return;
   const v = S.route.v;
-  el.innerHTML = v === 'part' ? partHtml() : v === 'drawer' ? drawerHtml() : v === 'edit' ? editHtml() : v === 'setup' ? setupHtml() : v === 'tidy' ? tidyHtml77() : listHtml();
+  el.innerHTML = v === 'part' ? partHtml() : v === 'drawer' ? drawerHtml() : v === 'edit' ? editHtml() : v === 'setup' ? setupHtml() : v === 'tidy' ? tidyHtml77() : isView82(v) ? html82() : listHtml();
   root().dataset.v = v;
   if (v === 'edit') editMount(el);
   if (v === 'setup') setupMount(el);
@@ -330,7 +336,7 @@ export function paintMain() {
 export function paintSide() {
   const el = root()?.querySelector('[data-sk76-side]');
   if (!el) return;
-  el.hidden = S.route.v === 'setup' || S.route.v === 'tidy';
+  el.hidden = S.route.v === 'setup' || S.route.v === 'tidy' || isView82(S.route.v);
   if (el.hidden) return;
   el.innerHTML = sideHtml();
   mountPhoto(el);
@@ -389,6 +395,8 @@ async function onHash() {
     startEdit(r); paint();
   } else if (r.v === 'tidy') {
     startTidy77(r);
+  } else if (isView82(r.v)) {
+    start82(r); // prompt 82
   } else if (r.v === 'setup') {
     startSetup(r); paint();
     await loadCabs(true); if (S.route !== r) return;
@@ -523,6 +531,7 @@ function bind() {
     const sug = t.closest('[data-sk76-sug]'); if (sug) { e.preventDefault(); pickSugg(el.querySelector('[data-sk76-search]'), +sug.dataset.sk76Sug); return; }
     if (click77(t)) return; // prompt 77: ⋯-meny, ⚙ og Rydd opp
     if (click79(t)) return; // prompt 79: plukkliste og Feilsøk LED
+    if (click82(t)) return; // prompt 82: Sjekk ut og produktsiden
     if (click78(t)) return; // prompt 78: 💡 Vis i skapet, LED-oppsett og kalibrering
     if (S.route.v === 'edit' && editClick(t, e)) return;
     if (S.route.v === 'setup' && setupClick(t, e)) return;
@@ -575,6 +584,7 @@ function bind() {
   document.addEventListener('submit', (e) => {
     const el = root(); if (!el || !el.contains(e.target)) return;
     if (submit78(e)) return; // prompt 78: lysoppsettet
+    if (submit82(e)) return; // prompt 82: sjekk inn, nytt produkt
     if (e.target.matches('[data-sk76-search]')) { e.preventDefault(); clearTimeout(listT); S.suggOpen = false; paintSugg(e.target); S.q = e.target.querySelector('input').value.trim(); if (S.route.v !== 'list') go('#/skjold'); loadList(); return; }
     if (e.target.matches('[data-sk76-dform]')) { e.preventDefault(); saveDrawer(e.target); }
   });

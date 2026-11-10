@@ -13,6 +13,7 @@ Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. 
   - Egen pakke for 4 etasjer: `skjoldlab3d-4-etasjer.zip`.
   - Bakstoppen og takene printes uten support.
   - Ny oppskrift på LED-kablingen.
+- **Sjekk ut komponenter til et produkt:** «Sjekk ut» på en del trekker fra lageret og husker hvilket produkt delen gikk til. Du kan angre. Delsiden viser «Brukt i», og under **Produkter** ligger stykklista for hvert produkt med «Sjekk inn», «Marker som ferdig» og CSV på web. Plukklista kan sjekke ut alt til et produkt på en gang. Glimt svarer på «hvor er ESP32-ene brukt?».
 - **Media:** interaktivt søk blir ikke lenger stående på «Søker i 3 indeksere …». Treffene vises så snart indekserne er ferdige. Svarer ikke Sonarr eller Radarr, lastes det ned via Prowlarr.
 - **Android Hjem:** ingen firkantet skygge bak søkefeltet. Kortene har fast høyde: små 101 dp og Avgang 212 dp.
 - **iPhone Vær:** bryteren for Temperatur, Nedbør og Vind virker ved trykk og dra, og valget huskes.

@@ -141,6 +141,7 @@ object Skjold76 {
         Skjold78.reset() // prompt 78
         Skjold79.reset() // prompt 79
         Skjold81.reset() // prompt 81
+        Skjold82.reset() // prompt 82
     }
 }
 
@@ -380,6 +381,7 @@ fun AppViewModel.openSkjold76(q: String? = null, partId: String? = null, cabId: 
     loadSkjold76()
     loadPick79() // prompt 79: plukklista (lokalt + /picklist)
     loadPresets81() // prompt 81: forhåndsoppsett (Skjold Lab-hylla)
+    loadProjects82(quiet = true) // prompt 82: produktene (Sjekk ut, plukklista)
     when {
         partId != null -> openPart76(partId)
         cabId != null -> { s.cabId = cabId; s.drawer = drawer; s.pulse++; s.stack = listOf("list", "cab"); loadMap76(cabId) }
@@ -394,6 +396,7 @@ fun AppViewModel.closeSkjold76() {
         Skjold78.calOn -> stopCal78() // prompt 78: kalibreringen avsluttes (lyset slukkes)
         Skjold79.diagOn -> stopDiag79() // prompt 79: feilsøkingen lukkes
         Skjold81.newAsk -> Skjold81.newAsk = false // prompt 81: «Ny Skjold Lab-hylla»
+        Skjold82.modal -> Skjold82.closeModal() // prompt 82: «Sjekk ut»-arket, gi nytt navn, slett, sjekk inn
         a.settingsOpen -> a.settingsOpen = false
         a.menuOpen -> a.menuOpen = false
         a.imgPick != null -> a.imgPick = null
@@ -424,6 +427,7 @@ fun AppViewModel.skjoldLink76(uri: Uri) {
             val d = seg.getOrNull(2)?.split('-')?.mapNotNull { it.toIntOrNull() }?.takeIf { it.size == 2 }?.let { it[0] to it[1] }
             openSkjold76(q, cabId = seg.getOrNull(1), drawer = d)
         }
+        "produkt", "produkter", "project", "projects" -> { openSkjold76(q); seg.getOrNull(1)?.let { openProject82(it) } ?: openProjects82() } // prompt 82
         else -> openSkjold76(q)
     }
 }
