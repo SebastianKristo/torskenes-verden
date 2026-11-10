@@ -22,7 +22,7 @@ import http from 'node:http';
 import net from 'node:net';
 import { lookup as dnsLookup } from 'node:dns/promises';
 import { db, kv } from '../db.js';
-import { cabinetRow76, cabinetRows76, partRow76 } from './store.js';
+import { cabinetRow76, cabinetRows76, partRow76, anchorOf81 } from './store.js';
 import { findTool76 } from './glimt.js';
 import { SENTENCES46 } from '../glimt45/tools46.js';
 
@@ -340,12 +340,13 @@ export const _activeHosts78 = () => [...hostsActive.keys()];
  */
 export async function locate78(user, targets, { durationS = null, requireEnabled = true } = {}) {
   const groups = new Map(), lit = [], skipped = [];
-  for (const t of targets.slice(0, MAX_LIT78)) {
+  for (let t of targets.slice(0, MAX_LIT78)) {
     const cab = cabinetRow76(user, t.cabinetId);
     if (!cab) { skipped.push({ ...t, reason: 'Fant ikke skapet', code: 'not_found' }); continue; }
     const cfg = ledsOf78(cab);
     if (!cfg.host || (requireEnabled && !cfg.enabled)) { skipped.push({ cabinetId: cab.id, row: t.row, col: t.col, reason: 'LED er ikke satt opp for dette skapet', code: 'not_configured' }); continue; }
     if (!(t.row >= 1 && t.row <= cab.rows && t.col >= 1 && t.col <= cab.cols)) { skipped.push({ cabinetId: cab.id, row: t.row, col: t.col, reason: 'Skuffen finnes ikke' }); continue; }
+    t = { ...t, ...anchorOf81(cab.id, t.row, t.col) }; // prompt 81: dekket rute → ankeret (LED over øverste venstre rute)
     const ix = indexFor78(cfg, cab, t.row, t.col);
     if (!ix) { skipped.push({ cabinetId: cab.id, row: t.row, col: t.col, reason: 'Raden har ingen LED-er', code: 'no_led' }); continue; }
     const key = `${cfg.host}#${cfg.segment}`;
@@ -657,6 +658,8 @@ export function mountLeds78(app) {
       palette = [own, ...PALETTE79.filter((x) => x !== own)];
       for (const e of entries) e.color = palette[e.order % palette.length];
     }
+    // Prompt 81: dekket rute → ankeret, så samme sammenslåtte skuff bare tennes én gang.
+    for (const e of entries) if (e.cabinetId && Number.isInteger(e.row) && Number.isInteger(e.col)) { const cab = cabinetRow76(u, e.cabinetId); if (cab) Object.assign(e, anchorOf81(cab.id, e.row, e.col)); }
     // Samme skuff bare én gang (første vinner); maks 20.
     const key = (t) => `${t.cabinetId}:${t.row}:${t.col}`;
     const first = new Map(), uniq = [];

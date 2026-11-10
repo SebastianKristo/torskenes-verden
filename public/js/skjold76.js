@@ -14,6 +14,7 @@ import { editHtml, setupHtml, editClick, setupClick, editMount, setupMount, edit
 import { headBtns77, gearHtml77, click77, key77, tidyHtml77, tidyRoute77, startTidy77, stopTidy77 } from './skjold77-ai.js'; // prompt 77: Glimt-forslag, Rydd opp, ⚙
 import { locateBtn78, listBtn78, listAllBtn78, litBarHtml78, afterPart78, onCabs78, click78, input78, submit78, route78 } from './skjold78-leds.js'; // prompt 78: LED over skuffene
 import { pickBtn79, pickShellHtml79, click79, key79, route79, loadPick79 } from './skjold79-pick.js'; // prompt 79: plukkliste
+import { anchor81, longAt81, normSel81, spanFieldsHtml81 } from './skjold81-span.js'; // prompt 81: store/brede skuffer
 
 if (typeof document !== 'undefined' && !document.querySelector('link[data-sk76-css]')) {
   const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = '/assets/css/skjold76.css'; l.dataset.sk76Css = ''; document.head.appendChild(l);
@@ -70,7 +71,7 @@ export function locText(l) {
   if (!l) return 'Uten plass';
   if (l.text) return l.text;
   const c = cabById(l.cabinetId);
-  return [c?.name ?? l.cabinet ?? 'Skap', long76(l.row, l.col), l.compartment ? `Rom ${l.compartment}` : ''].filter(Boolean).join(' · ');
+  return [c?.name ?? l.cabinet ?? 'Skap', longAt81(S.maps[l.cabinetId], l.row, l.col), l.compartment ? `Rom ${l.compartment}` : ''].filter(Boolean).join(' · ');
 }
 const specsText = (p) => {
   const s = p?.specs && typeof p.specs === 'object' ? p.specs : {};
@@ -187,7 +188,7 @@ function currentSel() {
 function sideHtml() {
   const cab = cabById(S.cabId);
   if (!cab) return `<div class="sk76-card sk76-cab"><p class="sk76-mut">${S.cabs ? 'Ingen skap ennå.' : 'Henter skapet …'}</p></div>`;
-  const map = S.maps[cab.id], sel = currentSel(), key = sel ? `${cab.id}:${sel.row}-${sel.col}-${sel.compartment ?? ''}` : '';
+  const map = S.maps[cab.id], sel = normSel81(map, currentSel()), key = sel ? `${cab.id}:${sel.row}-${sel.col}-${sel.compartment ?? ''}` : '';
   const pulse = key && key !== S.pulseKey; if (pulse) S.pulseKey = key;
   const hasPhoto = !!(cab.photoUrl && cornersOk76(cab.corners));
   const photo = hasPhoto && S.mode === 'bilde';
@@ -199,14 +200,14 @@ function sideHtml() {
   if (S.pick) {
     const st = S.pick.stage;
     const comps = st ? Math.max(1, +(map?.drawers?.find((d) => d.row === st.row && d.col === st.col)?.compartments) || 1) : 1;
-    pick = `<div class="sk76-pick" role="status">${st && comps > 1 ? `<span>${esc(long76(st.row, st.col))}: velg rom</span><span class="sk76-roms">${Array.from({ length: comps }, (_, i) => `<button type="button" data-sk76-rom="${i + 1}">Rom ${i + 1}</button>`).join('')}<button type="button" data-sk76-rom="0">Hele</button></span>` : `<span>${S.pick.kind === 'move' ? 'Trykk på skuffen delen skal flyttes til' : 'Trykk på skuffen delen skal ligge i'}</span>`}<button type="button" class="sk76-link" data-sk76="pick-cancel">Avbryt</button></div>`;
+    pick = `<div class="sk76-pick" role="status">${st && comps > 1 ? `<span>${esc(longAt81(map, st.row, st.col))}: velg rom</span><span class="sk76-roms">${Array.from({ length: comps }, (_, i) => `<button type="button" data-sk76-rom="${i + 1}">Rom ${i + 1}</button>`).join('')}<button type="button" data-sk76-rom="0">Hele</button></span>` : `<span>${S.pick.kind === 'move' ? 'Trykk på skuffen delen skal flyttes til' : 'Trykk på skuffen delen skal ligge i'}</span>`}<button type="button" class="sk76-link" data-sk76="pick-cancel">Avbryt</button></div>`;
   }
   const body = photo
-    ? `<div class="sk76-photo" data-sk76-photo><img src="${esc(cab.photoUrl)}" alt="${esc(`Bilde av ${cab.name}`)}" decoding="async">${overlayGrid76(cab, sel)}</div>`
+    ? `<div class="sk76-photo" data-sk76-photo><img src="${esc(cab.photoUrl)}" alt="${esc(`Bilde av ${cab.name}`)}" decoding="async">${overlayGrid76(cab, sel, { map })}</div>`
     : `<div class="sk76-draw${pulse ? '' : ' nopulse'}">${drawCabinet76(cab, map, { sel, pick: !!S.pick, pulse })}</div>`;
   return `<section class="sk76-card sk76-cab" aria-label="Skapet">
     <div class="sk76-cabhead">${tabs}${seg}</div>${pick}${body}
-    <p class="sk76-legend">${sel ? `<b>${esc(short76(sel.row, sel.col))}</b> ${esc(long76(sel.row, sel.col))}${sel.compartment ? ` · Rom ${esc(sel.compartment)}` : ''} · ` : ''}${esc(`${cab.rows} × ${cab.cols} skuffer · ${parts} ${parts === 1 ? 'del' : 'deler'} i ${used} skuffer`)}</p>
+    <p class="sk76-legend">${sel ? `<b>${esc(short76(sel.row, sel.col))}</b> ${esc(longAt81(map, sel.row, sel.col))}${sel.compartment ? ` · Rom ${esc(sel.compartment)}` : ''} · ` : ''}${esc(`${cab.rows} × ${cab.cols}${cab.counts?.drawers && cab.counts.drawers !== cab.rows * cab.cols ? ` (${cab.counts.drawers} skuffer)` : ' skuffer'} · ${parts} ${parts === 1 ? 'del' : 'deler'} i ${used} skuffer`)}</p>
   </section>`;
 }
 let ro = null;
@@ -275,10 +276,10 @@ function partHtml() {
 function drawerHtml() {
   const r = S.route, cab = cabById(r.cab), map = S.maps[r.cab], d = map?.drawers?.find((x) => x.row === r.row && x.col === r.col);
   const L = S.drawerParts ?? d?.parts ?? [];
-  const comps = Math.max(1, +d?.compartments || 1);
-  return `<section class="sk76-card sk76-drawer" aria-label="${esc(long76(r.row, r.col))}">
+  const comps = Math.max(1, +d?.compartments || 1), long = longAt81(map, r.row, r.col);
+  return `<section class="sk76-card sk76-drawer" aria-label="${esc(long)}">
     <a class="sk76-back" href="#/skjold">‹ Alle deler</a>
-    <div class="sk76-locbox"><span class="sk76-bigcode">${esc(short76(r.row, r.col))}</span><span><span class="sk76-kick">${esc(String(cab?.name ?? 'Skap').toUpperCase())}</span><b>${esc(long76(r.row, r.col))}${ownLabel76(d) ? ` · ${esc(ownLabel76(d))}` : ''}</b></span></div>
+    <div class="sk76-locbox"><span class="sk76-bigcode">${esc(short76(r.row, r.col))}</span><span><span class="sk76-kick">${esc(String(cab?.name ?? 'Skap').toUpperCase())}</span><b>${esc(long)}${ownLabel76(d) ? ` · ${esc(ownLabel76(d))}` : ''}</b></span></div>
     ${L.length ? `<ul class="sk76-list" role="list">${L.map((p) => { const l = locOf(p); return `<li><a class="sk76-item" href="#/skjold/del/${encodeURIComponent(p.id)}">${thumbHtml(p)}<span class="sk76-it"><b>${esc(p.name)}</b>${specsText(p) ? `<span class="sk76-sp">${esc(specsText(p))}</span>` : ''}${l?.compartment ? `<span class="sk76-loc">Rom ${esc(l.compartment)}</span>` : ''}</span><span class="sk76-q${isLow(p) ? ' low' : ''}">${esc(qtyText(p))}</span></a></li>`; }).join('')}</ul>` : '<p class="sk76-mut sk76-pad">Skuffen er tom.</p>'}
     <div class="sk76-pacts"><a class="sk76-btn pri" href="#/skjold/ny?skap=${encodeURIComponent(r.cab)}&at=${r.row}-${r.col}">+ Ny del her</a></div>
     <form class="sk76-dform" data-sk76-dform>
@@ -286,6 +287,7 @@ function drawerHtml() {
       <label>Etikett<input name="label" maxlength="40" value="${esc(ownLabel76(d))}" placeholder="${esc(`R${r.row}·S${r.col}`)}"></label>
       <label>Rom (skillevegger)<select name="compartments">${[1, 2, 3, 4].map((n) => `<option value="${n}"${n === comps ? ' selected' : ''}>${n}</option>`).join('')}</select></label>
       <label>Farge<input name="color" type="color" value="${esc(/^#[0-9a-f]{6}$/i.test(d?.color ?? '') ? d.color : '#e8ecef')}"></label>
+      ${spanFieldsHtml81(d)}
       <button type="submit" class="sk76-btn">Lagre skuffen</button>
     </form>
   </section>`;
@@ -377,7 +379,9 @@ async function onHash() {
     paintMain(); if (p) afterPart78(p); // prompt 78: lys opp automatisk når det er slått på
     await loadMap(S.cabId); if (S.route === r) paintSide();
   } else if (r.v === 'drawer') {
-    await loadMap(r.cab); if (S.route !== r) return; paint();
+    await loadMap(r.cab); if (S.route !== r) return;
+    { const a = anchor81(S.maps[r.cab], r.row, r.col); if (a.row !== r.row || a.col !== r.col) { r.row = a.row; r.col = a.col; history.replaceState(null, '', `#/skjold/skap/${encodeURIComponent(r.cab)}/${a.row}-${a.col}`); } } // prompt 81: dekket rute = ankeret
+    paint();
     try { const d = await sk(`/parts?cabinet=${encodeURIComponent(r.cab)}&row=${r.row}&col=${r.col}&limit=100`); if (S.route === r) { S.drawerParts = d?.items ?? []; paintMain(); } } catch { /* kartet holder */ }
   } else if (r.v === 'edit') {
     if (r.id) await loadPart(r.id);
@@ -438,8 +442,9 @@ async function restore(id) {
   go(`#/skjold/del/${encodeURIComponent(id)}`);
 }
 async function onDrawer(key) {
-  const [row, col] = key.split('-').map(Number), cab = cabById(S.cabId);
+  const [r0, c0] = key.split('-').map(Number), cab = cabById(S.cabId);
   if (!cab) return;
+  const { row, col } = anchor81(S.maps[cab.id], r0, c0); // prompt 81: dekket rute = ankeret
   haptic(6);
   if (S.pick) {
     const comps = Math.max(1, +(S.maps[cab.id]?.drawers?.find((d) => d.row === row && d.col === col)?.compartments) || 1);
@@ -458,8 +463,12 @@ async function onRom(n) {
 async function saveDrawer(f) {
   const r = S.route, fd = new FormData(f);
   const body = { label: String(fd.get('label') ?? '').trim(), compartments: +fd.get('compartments') || 1, color: fd.get('color') === '#e8ecef' ? null : fd.get('color') };
+  // Prompt 81: Bredde/Høyde (1–2) bare når de er endret (409 ved overlapp vises som melding).
+  const d = S.maps[r.cab]?.drawers?.find((x) => x.row === r.row && x.col === r.col);
+  const sc = +fd.get('spanC') || 1, sr = +fd.get('spanR') || 1;
+  if (fd.has('spanC') && (sc !== (+d?.spanC || 1) || sr !== (+d?.spanR || 1))) { body.spanC = sc; body.spanR = sr; }
   const ok = await write(() => sk(`/cabinets/${encodeURIComponent(r.cab)}/drawers/${r.row}/${r.col}`, { method: 'PUT', json: body }), 'Skuffen er lagret');
-  if (ok) { delete S.maps[r.cab]; await loadMap(r.cab, true); paint(); }
+  if (ok) { if (ok.moved) toast(`${ok.moved} ${ok.moved === 1 ? 'del er flyttet' : 'deler er flyttet'} inn i skuffen`); delete S.maps[r.cab]; await loadMap(r.cab, true); S.drawerParts = null; paint(); if (ok.moved || body.spanC) loadCabs(true).then(() => paintSide()); }
 }
 
 /* ---------------- Søkefelt med forslag ---------------- */

@@ -27,13 +27,18 @@ struct Skj76Drawing: View {
     var pick: ((Int, Int) -> Void)? = nil
 
     var body: some View {
-        VStack(spacing: 0) {
-            header
-            ForEach(1...Swift.max(1, rows), id: \.self) { (r: Int) in
-                row(r)
+        // Prompt 81: store og brede skuffer tegnes som ett felt (Skjold81Span.swift).
+        if let map, map.hasSpans81 {
+            Skj81Drawing(rows: rows, cols: cols, map: map, mark: mark, pulse: pulse, pick: pick)
+        } else {
+            VStack(spacing: 0) {
+                header
+                ForEach(1...Swift.max(1, rows), id: \.self) { (r: Int) in
+                    row(r)
+                }
             }
+            .accessibilityElement(children: .contain)
         }
-        .accessibilityElement(children: .contain)
     }
 
     private var header: some View {
@@ -86,6 +91,8 @@ struct Skj76Cell: View {
     let d: Skj76Drawer
     let on: Bool
     let pulse: Int
+    /// Prompt 81: nil for sammenslåtte skuffer (feltet får størrelsen fra Skj81GridLayout).
+    var ratio: CGFloat? = Skj76Look.aspect
     @State private var ring: Bool = false
 
     var body: some View {
@@ -105,8 +112,7 @@ struct Skj76Cell: View {
                     .opacity(ring ? 0 : 0.9)
             }
         }
-        .aspectRatio(Skj76Look.aspect, contentMode: .fit)
-        .frame(maxWidth: .infinity)
+        .modifier(Skj81Ratio(ratio: ratio))
         .onAppear { start() }
         .onChange(of: pulse) { (_: Int, _: Int) in start() }
     }
@@ -142,6 +148,8 @@ struct Skj76PhotoView: View {
     let mark: Skj76Loc?
     let pulse: Int
     var pick: ((Int, Int) -> Void)? = nil
+    /// Prompt 81: kartet med store/brede skuffer (utheving og trykk bruker ankeret).
+    var map: Skj76Map? = nil
     @State private var img: UIImage? = nil
 
     var body: some View {
@@ -165,7 +173,7 @@ struct Skj76PhotoView: View {
             let s: CGSize = g.size
             ZStack(alignment: .topLeading) {
                 Image(uiImage: img).resizable().frame(width: s.width, height: s.height)
-                Skj76GridOverlay(rows: cab.rows, cols: cab.cols, mark: mark, pulse: pulse)
+                Skj76GridOverlay(rows: cab.rows, cols: cab.cols, mark: mark, pulse: pulse, map: map)
                     .frame(width: s.width, height: s.height)
                     .projectionEffect(projection(s))
                     .allowsHitTesting(false)
@@ -192,7 +200,8 @@ struct Skj76PhotoView: View {
         guard uv.x >= 0, uv.x < 1, uv.y >= 0, uv.y < 1 else { return }
         let r: Int = Int(uv.y * CGFloat(cab.rows)) + 1
         let c: Int = Int(uv.x * CGFloat(cab.cols)) + 1
-        pick(r, c)
+        let a: Skj81RC = map?.anchor81(r, c) ?? Skj81RC(r: r, c: c)
+        pick(a.r, a.c)
     }
 }
 
@@ -203,6 +212,8 @@ struct Skj76GridOverlay: View {
     let cols: Int
     let mark: Skj76Loc?
     let pulse: Int
+    /// Prompt 81: med kart dekker uthevingen hele den sammenslåtte skuffen, og strekene følger skuffene.
+    var map: Skj76Map? = nil
     @State private var ring: Bool = false
 
     var body: some View {
@@ -211,8 +222,7 @@ struct Skj76GridOverlay: View {
             let rh: CGFloat = g.size.height / CGFloat(Swift.max(1, rows))
             ZStack(alignment: .topLeading) {
                 lines(g.size, cw, rh)
-                if let m = mark, m.row >= 1, m.row <= rows, m.col >= 1, m.col <= cols {
-                    let rect: CGRect = CGRect(x: CGFloat(m.col - 1) * cw, y: CGFloat(m.row - 1) * rh, width: cw, height: rh)
+                if let m = mark, let rect = Skjold81.markRect(m, map, rows, cols, cw, rh) {
                     Rectangle().fill(p.lab.opacity(0.55)).frame(width: rect.width, height: rect.height).offset(x: rect.minX, y: rect.minY)
                     Rectangle().stroke(p.lab, lineWidth: 3).frame(width: rect.width, height: rect.height)
                         .scaleEffect(ring ? 1.3 : 1).opacity(ring ? 0 : 1)
@@ -226,6 +236,10 @@ struct Skj76GridOverlay: View {
 
     private func lines(_ s: CGSize, _ cw: CGFloat, _ rh: CGFloat) -> some View {
         Path { (path: inout Path) in
+            if let map, map.hasSpans81 {
+                path.addPath(Skjold81.outline(map, cw, rh))
+                return
+            }
             for c in 0...Swift.max(1, cols) {
                 path.move(to: CGPoint(x: CGFloat(c) * cw, y: 0))
                 path.addLine(to: CGPoint(x: CGFloat(c) * cw, y: s.height))
@@ -265,12 +279,22 @@ struct Skj76CabinetView: View {
                 .pickerStyle(.segmented)
             }
             if canPhoto && photoMode {
-                Skj76PhotoView(cab: cab, mark: mark, pulse: pulse, pick: pick)
+                Skj76PhotoView(cab: cab, mark: mark, pulse: pulse, pick: anchored, map: map)
             } else {
-                Skj76Drawing(rows: map?.rows ?? cab.rows, cols: map?.cols ?? cab.cols, map: map, mark: mark, pulse: pulse, pick: pick)
+                Skj76Drawing(rows: map?.rows ?? cab.rows, cols: map?.cols ?? cab.cols, map: map, mark: mark, pulse: pulse, pick: anchored)
                     .frame(maxWidth: CGFloat(cab.cols) * 78 + 40)
                     .frame(maxWidth: .infinity)
             }
+        }
+    }
+
+    /// Prompt 81: trykk på en dekket rute gir ankeret (den store/brede skuffen).
+    private var anchored: ((Int, Int) -> Void)? {
+        guard let pick else { return nil }
+        let m: Skj76Map? = map
+        return { (r: Int, c: Int) in
+            let a: Skj81RC = m?.anchor81(r, c) ?? Skj81RC(r: r, c: c)
+            pick(a.r, a.c)
         }
     }
 }

@@ -383,7 +383,8 @@ struct Skj76LocPicker: View {
     private func choose(_ c: Skj76Cabinet, _ r: Int, _ k: Int) {
         Haptics.shared.tick()
         let comp: Int? = loc?.cabinetId == c.id && loc?.row == r && loc?.col == k ? loc?.comp : nil
-        loc = Skj76Loc(cabinetId: c.id, cabinet: c.name, row: r, col: k, comp: comp, text: Skj76LocPicker.text(c.name, r, k, comp))
+        // Prompt 81: store/brede skuffer er ett valg («Rad 4–5 · Skuff 1–2»).
+        loc = Skj76Loc(cabinetId: c.id, cabinet: c.name, row: r, col: k, comp: comp, text: Skjold81.text(c.name, m.maps[c.id], r, k, comp))
         m.pulse += 1
     }
 
@@ -404,7 +405,7 @@ struct Skj76LocPicker: View {
     private func setComp(_ c: Skj76Cabinet, _ v: Int) {
         guard var l = loc else { return }
         l.comp = v == 0 ? nil : v
-        l.text = Skj76LocPicker.text(c.name, l.row, l.col, l.comp)
+        l.text = Skjold81.text(c.name, m.maps[c.id], l.row, l.col, l.comp)
         loc = l
     }
 

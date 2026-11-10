@@ -2,7 +2,7 @@
 // Ren HTML + CSS (ingen skript, så den globale CSP-en holder). Brukeren skriver ut med Ctrl/⌘+P.
 import { db } from '../db.js';
 import { qrSvg } from '../totp.js';
-import { drawerRows76, defaultLabel76 } from './store.js';
+import { drawerRows76, defaultLabel76, coverMap81 } from './store.js';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
@@ -13,8 +13,9 @@ export function labelsHtml76(user, cabs, origin, { empty = true } = {}) {
   for (const p of parts) { const k = `${p.cabinet_id}:${p.row}:${p.col}`; if (!by.has(k)) by.set(k, []); by.get(k).push(p); }
   const sheets = cabs.map((cab) => {
     const dr = new Map(drawerRows76(cab.id).map((d) => [`${d.row}:${d.col}`, d]));
-    const cells = [];
+    const cells = [], cover = coverMap81(cab.id); // prompt 81: sammenslåtte skuffer får én etikett (ankeret)
     for (let r = 1; r <= cab.rows; r++) for (let c = 1; c <= cab.cols; c++) {
+      if (cover.has(`${r}:${c}`)) continue;
       const d = dr.get(`${r}:${c}`), ps = by.get(`${cab.id}:${r}:${c}`) ?? [];
       if (!empty && !ps.length && !d?.label) continue;
       const url = `${origin}/#/skjold/skap/${cab.id}/${r}-${c}`;

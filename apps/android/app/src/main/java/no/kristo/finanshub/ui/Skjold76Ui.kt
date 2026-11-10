@@ -107,6 +107,7 @@ internal fun SkjoldPage76(vm: AppViewModel) {
         if (s.undo == null) LitBar78(vm, Modifier.align(Alignment.BottomCenter)) // prompt 78: «Lyser i skapet» + Slå av
         if (s.undo == null) PickBar79(vm, Modifier.align(Alignment.BottomCenter)) // prompt 79: plukklistelinja (tar over for LitBar78)
         s.cabDeleteAsk?.let { CabDeleteAsk76(vm, it) }
+        if (Skjold81.newAsk) NewPresetAsk81(vm) // prompt 81
         Menu77(vm) // prompt 77: ⋯ → Rydd opp med Glimt / innstillinger
         Settings77(vm)
     }
@@ -168,6 +169,7 @@ private fun ListScreen76(vm: AppViewModel) {
                         Text("${c.rows} × ${c.cols} · ${c.parts} deler", color = p.mut, fontSize = 12.sp, modifier = Modifier.padding(start = 10.dp, end = 10.dp, bottom = 10.dp))
                     }
                 }
+                NewPresetCard81() // prompt 81: «Skjold Lab-hylla (3D)»
                 PCard(Modifier.width(150.dp), onClick = { newCab76(vm, threeD = true) }) {
                     Column(Modifier.height(186.dp).fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
                         Text("+", color = p.lab, fontSize = 28.sp)
@@ -326,7 +328,7 @@ private fun PartScreen76(vm: AppViewModel) {
                     val comps = s.maps[t.first]?.at(t.second, t.third)?.compartments ?: 1
                     var comp by remember(t) { mutableStateOf<Int?>(null) }
                     if (comps > 1) Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { (1..comps).forEach { n -> PChip("Rom $n", comp == n) { comp = if (comp == n) null else n } } }
-                    PButton("Flytt til ${drawerText76(t.second, t.third, comp)}", Modifier.fillMaxWidth()) { vm.moveSkjold76(pt, t.first, t.second, t.third, comp); target = null }
+                    PButton("Flytt til ${drawerText81(t.first, t.second, t.third, comp)}", Modifier.fillMaxWidth()) { vm.moveSkjold76(pt, t.first, t.second, t.third, comp); target = null }
                 }
             }
         }
@@ -398,13 +400,16 @@ private fun DrawScope.drawCab76(rows: Int, cols: Int, m: SkjMap76?, frame: Float
     val cw = (size.width - 2 * frame) / cols
     val ch = (size.height - 2 * frame) / rows
     val gap = (minOf(cw, ch) * .07f).coerceAtLeast(1f)
-    for (r in 1..rows) for (c in 1..cols) {
+    // Prompt 81: ett felt per skuff (store/brede skuffer dekker flere ruter; dekkede ruter tegnes ikke).
+    for (cell in cells81(rows, cols, m)) {
+        val r = cell.row; val c = cell.col
         val x = frame + (c - 1) * cw + gap / 2; val y = frame + (r - 1) * ch + gap / 2
-        val used = (m?.at(r, c)?.count ?: 0) > 0
-        drawRoundRect(if (used) DRAWER_USED76 else DRAWER76, Offset(x, y), Size(cw - gap, ch - gap), CornerRadius(gap))
-        // Håndtak nederst på midten.
-        val hw = (cw - gap) * .36f; val hh = ((ch - gap) * .14f).coerceAtLeast(1.5f)
-        drawRoundRect(HANDLE76, Offset(x + (cw - gap - hw) / 2, y + (ch - gap) * .74f), Size(hw, hh), CornerRadius(hh / 2))
+        val fw = cw * cell.spanC - gap; val fh = ch * cell.spanR - gap
+        val used = cellCount81(m, cell) > 0
+        drawRoundRect(if (used) DRAWER_USED76 else DRAWER76, Offset(x, y), Size(fw, fh), CornerRadius(gap))
+        // Håndtak nederst på midten (samme størrelse som på en vanlig skuff).
+        val hw = (cw - gap) * .36f * (if (cell.spanC > 1) 1.4f else 1f); val hh = ((ch - gap) * .14f).coerceAtLeast(1.5f)
+        drawRoundRect(HANDLE76, Offset(x + (fw - hw) / 2, y + fh - (ch - gap) * .26f), Size(hw, hh), CornerRadius(hh / 2))
         if (used) drawCircle(Color(0xFF2B6FB3), radius = (minOf(cw, ch) * .07f).coerceAtLeast(1.5f), center = Offset(x + (cw - gap) * .14f, y + (ch - gap) * .2f))
     }
 }
@@ -428,14 +433,18 @@ internal fun CabView76(vm: AppViewModel, cab: SkjCab76, hl: Pair<Int, Int>?, max
     val p = PaperPal.current
     val canPhoto = cab.photoUrl != null && cab.corners != null
     LaunchedEffect(cab.id) { if (s.maps[cab.id] == null) vm.loadMap76(cab.id) }
+    // Prompt 81: trykk på en dekket rute = ankeret; uthevingen gjelder ankeret (hele feltet).
+    val m81 = s.maps[cab.id]
+    val hlA = hl?.let { anchor81(m81, it.first, it.second) }
+    val tapA: (Int, Int) -> Unit = { r, c -> anchor81(s.maps[cab.id], r, c).let { a -> onTap(a.first, a.second) } }
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         if (canPhoto) Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             PChip("Tegning", s.view != "photo") { s.view = "draw" }
             PChip("Bilde", s.view == "photo") { s.view = "photo" }
         }
-        if (canPhoto && s.view == "photo") CabPhoto76(vm, cab, cab.corners!!, hl, maxH, onTap)
-        else CabDrawing76(cab, s.maps[cab.id], hl, maxH, onTap)
-        if (hl != null) Text(drawerText76(hl.first, hl.second) + "  (" + short76(hl.first, hl.second) + ")" + (s.maps[cab.id]?.at(hl.first, hl.second)?.label?.let { " · $it" } ?: ""),
+        if (canPhoto && s.view == "photo") CabPhoto76(vm, cab, cab.corners!!, hlA, maxH, tapA)
+        else CabDrawing76(cab, s.maps[cab.id], hlA, maxH, tapA)
+        if (hlA != null) Text(drawerText81(cab.id, hlA.first, hlA.second) + "  (" + short76(hlA.first, hlA.second) + ")" + (s.maps[cab.id]?.at(hlA.first, hlA.second)?.label?.let { " · $it" } ?: ""),
             color = p.lab, fontFamily = PaperFonts.mono, fontWeight = FontWeight.Bold, fontSize = 13.sp)
     }
 }
@@ -448,6 +457,7 @@ private fun CabDrawing76(cab: SkjCab76, m: SkjMap76?, hl: Pair<Int, Int>?, maxH:
     val ar = cabAspect76(rows, cols)
     val pa = pulse76(hl)
     val frameDp = 6.dp
+    val hc = hl?.let { cellOf81(m, rows, cols, it.first, it.second) } // prompt 81: feltet som uthevet skuff dekker
     BoxWithConstraints(Modifier.fillMaxWidth()) {
         val labelW = 22.dp
         val w = minOf(maxWidth - labelW, maxH * ar)
@@ -455,14 +465,14 @@ private fun CabDrawing76(cab: SkjCab76, m: SkjMap76?, hl: Pair<Int, Int>?, maxH:
         Column(Modifier.align(Alignment.Center)) {
             // Skuffnummer (kolonner) over tegningen.
             Row(Modifier.padding(start = labelW + frameDp, end = frameDp).width(w - frameDp * 2)) {
-                for (c in 1..cols) Text("$c", Modifier.weight(1f), color = if (hl?.second == c) p.lab else p.mut, fontWeight = if (hl?.second == c) FontWeight.Bold else FontWeight.Normal,
+                for (c in 1..cols) Text("$c", Modifier.weight(1f), color = if (hc != null && c in hc.col until hc.col + hc.spanC) p.lab else p.mut, fontWeight = if (hc != null && c in hc.col until hc.col + hc.spanC) FontWeight.Bold else FontWeight.Normal,
                     fontFamily = PaperFonts.mono, fontSize = 11.sp, textAlign = TextAlign.Center)
             }
             Row {
                 // Radnummer til venstre.
                 Column(Modifier.width(labelW).height(h).padding(vertical = frameDp)) {
                     for (r in 1..rows) Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                        Text("$r", color = if (hl?.first == r) p.lab else p.mut, fontWeight = if (hl?.first == r) FontWeight.Bold else FontWeight.Normal, fontFamily = PaperFonts.mono, fontSize = 10.5.sp)
+                        Text("$r", color = if (hc != null && r in hc.row until hc.row + hc.spanR) p.lab else p.mut, fontWeight = if (hc != null && r in hc.row until hc.row + hc.spanR) FontWeight.Bold else FontWeight.Normal, fontFamily = PaperFonts.mono, fontSize = 10.5.sp)
                     }
                 }
                 Box(Modifier.size(w, h).pointerInput(rows, cols) {
@@ -472,19 +482,19 @@ private fun CabDrawing76(cab: SkjCab76, m: SkjMap76?, hl: Pair<Int, Int>?, maxH:
                     }
                 }.semantics { contentDescription = "Tegning av ${cab.name}, $rows rader og $cols skuffer" }) {
                     Canvas(Modifier.matchParentSize()) { drawCab76(rows, cols, m, frameDp.toPx()) }
-                    if (hl != null) {
+                    if (hc != null) {
                         val lab = p.lab
-                        // Rad- og kolonnebånd (fast) + skuffen (pulserer, bare opacity).
+                        // Rad- og kolonnebånd (fast) + skuffen (pulserer, bare opacity). Prompt 81: hele det sammenslåtte feltet.
                         Canvas(Modifier.matchParentSize()) {
                             val f = frameDp.toPx(); val cw = (size.width - 2 * f) / cols; val ch = (size.height - 2 * f) / rows
-                            drawRect(lab.copy(alpha = .12f), Offset(f, f + (hl.first - 1) * ch), Size(size.width - 2 * f, ch))
-                            drawRect(lab.copy(alpha = .12f), Offset(f + (hl.second - 1) * cw, f), Size(cw, size.height - 2 * f))
+                            drawRect(lab.copy(alpha = .12f), Offset(f, f + (hc.row - 1) * ch), Size(size.width - 2 * f, ch * hc.spanR))
+                            drawRect(lab.copy(alpha = .12f), Offset(f + (hc.col - 1) * cw, f), Size(cw * hc.spanC, size.height - 2 * f))
                         }
                         Canvas(Modifier.matchParentSize().graphicsLayer { alpha = pa }) {
                             val f = frameDp.toPx(); val cw = (size.width - 2 * f) / cols; val ch = (size.height - 2 * f) / rows
-                            val o = Offset(f + (hl.second - 1) * cw, f + (hl.first - 1) * ch)
-                            drawRoundRect(lab.copy(alpha = .55f), o, Size(cw, ch), CornerRadius(4.dp.toPx()))
-                            drawRoundRect(lab, o, Size(cw, ch), CornerRadius(4.dp.toPx()), style = Stroke(2.5.dp.toPx()))
+                            val o = Offset(f + (hc.col - 1) * cw, f + (hc.row - 1) * ch)
+                            drawRoundRect(lab.copy(alpha = .55f), o, Size(cw * hc.spanC, ch * hc.spanR), CornerRadius(4.dp.toPx()))
+                            drawRoundRect(lab, o, Size(cw * hc.spanC, ch * hc.spanR), CornerRadius(4.dp.toPx()), style = Stroke(2.5.dp.toPx()))
                         }
                     }
                 }
@@ -504,8 +514,9 @@ internal fun persp76(corners: List<Offset>, rows: Int, cols: Int): android.graph
 
 private fun android.graphics.Matrix.pt76(x: Float, y: Float): Offset { val a = floatArrayOf(x, y); mapPoints(a); return Offset(a[0], a[1]) }
 
-private fun quad76(m: android.graphics.Matrix, r: Int, c: Int): Path = Path().apply {
-    val a = m.pt76(c - 1f, r - 1f); val b = m.pt76(c.toFloat(), r - 1f); val d = m.pt76(c.toFloat(), r.toFloat()); val e = m.pt76(c - 1f, r.toFloat())
+private fun quad76(m: android.graphics.Matrix, r: Int, c: Int, sr: Int = 1, sc: Int = 1): Path = Path().apply {
+    val r2 = (r + sr - 1).toFloat(); val c2 = (c + sc - 1).toFloat() // prompt 81: felt over sr × sc ruter
+    val a = m.pt76(c - 1f, r - 1f); val b = m.pt76(c2, r - 1f); val d = m.pt76(c2, r2); val e = m.pt76(c - 1f, r2)
     moveTo(a.x, a.y); lineTo(b.x, b.y); lineTo(d.x, d.y); lineTo(e.x, e.y); close()
 }
 
@@ -520,6 +531,7 @@ private fun CabPhoto76(vm: AppViewModel, cab: SkjCab76, corners: List<Pair<Float
     var ar by remember(cab.photoUrl) { mutableStateOf(.6f) }
     val pa = pulse76(hl)
     val rows = cab.rows; val cols = cab.cols
+    val m81 = Skjold76.maps[cab.id]?.takeIf { it.rows == rows && it.cols == cols } // prompt 81: felt fra kartet
     BoxWithConstraints(Modifier.fillMaxWidth()) {
         val w = minOf(maxWidth, maxH * ar)
         Box(Modifier.align(Alignment.Center).size(w, w / ar).clip(RoundedCornerShape(12.dp)).pointerInput(corners, rows, cols) {
@@ -532,13 +544,15 @@ private fun CabPhoto76(vm: AppViewModel, cab: SkjCab76, corners: List<Pair<Float
             Img76(vm, cab.photoUrl, 1600, Modifier.matchParentSize(), crop = false) { b -> if (b.height > 0) ar = b.width.toFloat() / b.height }
             Canvas(Modifier.matchParentSize()) {
                 val m = persp76(corners.map { Offset(it.first * size.width, it.second * size.height) }, rows, cols)
-                drawGrid76(m, rows, cols, Color.White.copy(alpha = .55f), 1.dp.toPx())
+                if (m81 == null) drawGrid76(m, rows, cols, Color.White.copy(alpha = .55f), 1.dp.toPx())
+                else cells81(rows, cols, m81).forEach { cl -> drawPath(quad76(m, cl.row, cl.col, cl.spanR, cl.spanC), Color.White.copy(alpha = .55f), style = Stroke(1.dp.toPx())) }
             }
             if (hl != null) {
                 val lab = p.lab
                 Canvas(Modifier.matchParentSize().graphicsLayer { alpha = pa }) {
                     val m = persp76(corners.map { Offset(it.first * size.width, it.second * size.height) }, rows, cols)
-                    val q = quad76(m, hl.first, hl.second)
+                    val hc = cellOf81(m81, rows, cols, hl.first, hl.second)
+                    val q = quad76(m, hc.row, hc.col, hc.spanR, hc.spanC)
                     drawPath(q, lab.copy(alpha = .5f))
                     drawPath(q, lab, style = Stroke(3.dp.toPx()))
                 }
@@ -585,7 +599,7 @@ private fun DrawerCard76(vm: AppViewModel, cab: SkjCab76, d: SkjDrawer76?, r: In
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    PLabel(drawerText76(r, c) + " · " + short76(r, c))
+                    PLabel(drawerText81(cab.id, r, c) + " · " + short76(r, c))
                     PSerif(d?.label ?: defLabel76(r, c), 20.sp, maxLines = 1)
                 }
                 Text("${d?.count ?: 0} deler", color = p.mut, fontSize = 13.sp)
@@ -606,11 +620,12 @@ private fun DrawerCard76(vm: AppViewModel, cab: SkjCab76, d: SkjDrawer76?, r: In
                 (1..4).forEach { n -> PChip("$n", comps == n) { comps = n } }
             }
             if (label != (d?.label ?: "") || comps != (d?.compartments ?: 1)) PButton("Lagre skuffen", Modifier.fillMaxWidth()) { vm.putDrawer76(cab.id, r, c, label, comps) }
+            SpanRow81(vm, cab, d, r, c) // prompt 81: Bredde 1/2 · Høyde 1/2
         }
     }
 }
 
-private fun newCab76(vm: AppViewModel, threeD: Boolean) {
+internal fun newCab76(vm: AppViewModel, threeD: Boolean) { // prompt 81: også fra NewPresetAsk81
     val s = Skjold76
     // Tilleggsskap til ~27 cm bredde: samme radavstand (12 rader), 4 skuffer à ~60 mm.
     vm.saveCab76(null, if (threeD) "Tilleggsskap (3D-print)" else "Nytt skap", 12, if (threeD) suggestCols76(270) else 5, if (threeD) "3d" else "kjøpt") { id ->
@@ -650,6 +665,7 @@ private fun SetupScreen76(vm: AppViewModel) {
                 }
             }
         }
+        PresetCard81(vm, cab) // prompt 81: «Bruk Skjold Lab-hylla (3D-print)»
         PHead("Bilde av skapet")
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             PButton("Ta bilde", Modifier.weight(1f)) {
@@ -780,7 +796,7 @@ private fun EditScreen76(vm: AppViewModel) {
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { UNITS76.forEach { u -> PChip(u, d.unit == u) { d.unit = u } } }
         PField("Tags (komma mellom)", d.tags, { d.tags = it }, placeholder = "rustfritt, DIN 912")
         PHead("Plassering")
-        Text(locText76(s.cabinets.firstOrNull { it.id == d.cabinetId }?.name ?: "Skap", d.row, d.col, d.compartment), color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+        Text(locText81(d.cabinetId, s.cabinets.firstOrNull { it.id == d.cabinetId }?.name ?: "Skap", d.row, d.col, d.compartment), color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             PButton("Foreslå ledig", Modifier.weight(1f)) { vm.suggestFree76(d) }
             PButton("Uten plass", Modifier.weight(1f), kind = "line") { d.cabinetId = null; d.row = null; d.col = null; d.compartment = null }

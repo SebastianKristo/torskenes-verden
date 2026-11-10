@@ -88,6 +88,9 @@ extension Skjold76 {
                 Skj76Mini(id: JS.str(p, "id") ?? UUID().uuidString, name: JS.str(p, "name") ?? "", thumbUrl: path(JS.str(p, "thumbUrl")), qty: JS.num(p, "qty") ?? 0)
             }
             x.count = JS.int(d, "count") ?? x.parts.count
+            x.spanR = Swift.min(4, Swift.max(1, JS.int(d, "spanR") ?? JS.int(d, "span_r") ?? 1))
+            x.spanC = Swift.min(4, Swift.max(1, JS.int(d, "spanC") ?? JS.int(d, "span_c") ?? 1))
+            x.coveredBy = JS.str(d, "coveredBy") ?? JS.str(d, "covered_by") ?? ""
             m.drawers["\(r)-\(c)"] = x
         }
         return m

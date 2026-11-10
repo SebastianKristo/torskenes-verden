@@ -22,6 +22,9 @@ CREATE INDEX IF NOT EXISTS skj_history_part ON skj_history(user_id, part_id, at)
 CREATE TABLE IF NOT EXISTS skj_files (name TEXT PRIMARY KEY, user_id TEXT NOT NULL, created INTEGER NOT NULL);
 CREATE VIRTUAL TABLE IF NOT EXISTS skj_parts_fts USING fts5(name, body, part_id UNINDEXED, user_id UNINDEXED, tokenize = 'unicode61 remove_diacritics 2');`);
 
+// Prompt 81 (SPANSRV): sammenslåtte skuffer. Ankeret (øverste venstre rute) dekker span_r × span_c ruter. Se layout81.js.
+for (const c of ['span_r', 'span_c']) if (!q('PRAGMA table_info(skj_drawers)').all().some((x) => x.name === c)) db.exec(`ALTER TABLE skj_drawers ADD COLUMN ${c} INTEGER NOT NULL DEFAULT 1`);
+
 export const KINDS76 = ['kjøpt', '3d'];
 export const UNITS76 = ['stk', 'm', 'cm', 'mm', 'g', 'kg', 'ml', 'l', 'pk', 'sett', 'rull', 'par'];
 export const TRASH_MS76 = 30 * 86400_000;
@@ -92,16 +95,41 @@ export const shortLoc76 = (row, col) => `${row}-${col}`;
 export const defaultLabel76 = (row, col) => `R${row}·S${col}`;
 export const drawerRow76 = (cabId, row, col) => q('SELECT * FROM skj_drawers WHERE cabinet_id=? AND row=? AND col=?').get(cabId, row, col) ?? null;
 export const drawerRows76 = (cabId) => q('SELECT * FROM skj_drawers WHERE cabinet_id=?').all(cabId);
-export function drawerOut76(cab, row, col, d = undefined) {
-  const r = d === undefined ? drawerRow76(cab.id, row, col) : d;
-  return { row, col, short: shortLoc76(row, col), label: r?.label || defaultLabel76(row, col), customLabel: r?.label || null, compartments: r?.compartments ?? 1, color: r?.color ?? null };
+/** Prompt 81: ankeret som dekker ruta (en annen rute), eller null. */
+export const coverOf81 = (cabId, row, col) => q('SELECT * FROM skj_drawers WHERE cabinet_id=? AND row<=? AND row+span_r>? AND col<=? AND col+span_c>? AND (span_r>1 OR span_c>1) AND NOT (row=? AND col=?) LIMIT 1')
+  .get(cabId, row, row, col, col, row, col) ?? null;
+/** Prompt 81: rute → ankerets {row, col} (samme rute når den ikke er dekket). */
+export function anchorOf81(cabId, row, col) { const a = coverOf81(cabId, row, col); return a ? { row: a.row, col: a.col } : { row, col }; }
+/** Prompt 81: Map «r:c» → ankerraden for alle dekkede ruter i skapet. */
+export function coverMap81(cabId) {
+  const m = new Map();
+  for (const a of q('SELECT * FROM skj_drawers WHERE cabinet_id=? AND (span_r>1 OR span_c>1)').all(cabId)) {
+    for (let r = a.row; r < a.row + a.span_r; r++) for (let c = a.col; c < a.col + a.span_c; c++) if (r !== a.row || c !== a.col) m.set(`${r}:${c}`, a);
+  }
+  return m;
 }
-export function setDrawer76(cabId, row, col, { label, compartments, color }) {
-  const cur = drawerRow76(cabId, row, col) ?? { label: null, compartments: 1, color: null };
-  const next = { label: label === undefined ? cur.label : label || null, compartments: compartments === undefined ? cur.compartments : compartments, color: color === undefined ? cur.color : color || null };
-  if (!next.label && next.compartments === 1 && !next.color) q('DELETE FROM skj_drawers WHERE cabinet_id=? AND row=? AND col=?').run(cabId, row, col);
-  else q('INSERT INTO skj_drawers(cabinet_id, row, col, label, compartments, color) VALUES(?,?,?,?,?,?) ON CONFLICT(cabinet_id, row, col) DO UPDATE SET label=excluded.label, compartments=excluded.compartments, color=excluded.color')
-    .run(cabId, row, col, next.label, next.compartments, next.color);
+/** Prompt 81: «Rad 4–5 · Skuff 1–2» (stor), «Rad 3 · Skuff 1–2» (bred), ellers «Rad 4 · Skuff 2». */
+export const spanText81 = (row, col, sr = 1, sc = 1) => `Rad ${sr > 1 ? `${row}–${row + sr - 1}` : row} · Skuff ${sc > 1 ? `${col}–${col + sc - 1}` : col}`;
+export function drawerOut76(cab, row, col, d = undefined, cover = undefined) {
+  const r = d === undefined ? drawerRow76(cab.id, row, col) : d;
+  const cv = cover === undefined ? coverOf81(cab.id, row, col) : cover?.get?.(`${row}:${col}`) ?? null;
+  return { row, col, short: shortLoc76(row, col), label: r?.label || defaultLabel76(row, col), customLabel: r?.label || null, compartments: r?.compartments ?? 1, color: r?.color ?? null,
+    spanR: cv ? 1 : r?.span_r ?? 1, spanC: cv ? 1 : r?.span_c ?? 1, coveredBy: cv ? shortLoc76(cv.row, cv.col) : null };
+}
+export function setDrawer76(cabId, row, col, { label, compartments, color, spanR, spanC }) {
+  const cur = drawerRow76(cabId, row, col) ?? { label: null, compartments: 1, color: null, span_r: 1, span_c: 1 };
+  const next = { label: label === undefined ? cur.label : label || null, compartments: compartments === undefined ? cur.compartments : compartments, color: color === undefined ? cur.color : color || null,
+    span_r: spanR === undefined ? cur.span_r ?? 1 : spanR, span_c: spanC === undefined ? cur.span_c ?? 1 : spanC };
+  if (!next.label && next.compartments === 1 && !next.color && next.span_r === 1 && next.span_c === 1) q('DELETE FROM skj_drawers WHERE cabinet_id=? AND row=? AND col=?').run(cabId, row, col);
+  else q('INSERT INTO skj_drawers(cabinet_id, row, col, label, compartments, color, span_r, span_c) VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(cabinet_id, row, col) DO UPDATE SET label=excluded.label, compartments=excluded.compartments, color=excluded.color, span_r=excluded.span_r, span_c=excluded.span_c')
+    .run(cabId, row, col, next.label, next.compartments, next.color, next.span_r, next.span_c);
+}
+/** Prompt 81: plassering i en dekket rute → ankeret (eldre data eller klienter som sender ruta). Endrer f på stedet. */
+export function normLoc81(f) {
+  if (!f?.cabinet_id || !f.row || !f.col) return f;
+  const a = coverOf81(f.cabinet_id, f.row, f.col);
+  if (a) { f.row = a.row; f.col = a.col; if (f.compartment && f.compartment > (a.compartments ?? 1)) f.compartment = null; }
+  return f;
 }
 
 /* ---------------- Deler ---------------- */
@@ -115,7 +143,7 @@ export function locationOf76(row, cabCache = null) {
   const cab = cabCache?.get?.(row.cabinet_id) ?? q('SELECT id, name FROM skj_cabinets WHERE id=?').get(row.cabinet_id);
   if (!cab) return { cabinetId: null, cabinet: null, row: null, col: null, compartment: null, short: null, label: null, text: 'Uten plass' };
   const d = drawerRow76(cab.id, row.row, row.col);
-  const text = `${cab.name} · Rad ${row.row} · Skuff ${row.col}${row.compartment ? ` · Rom ${row.compartment}` : ''}`;
+  const text = `${cab.name} · ${spanText81(row.row, row.col, d?.span_r ?? 1, d?.span_c ?? 1)}${row.compartment ? ` · Rom ${row.compartment}` : ''}`;
   return { cabinetId: cab.id, cabinet: cab.name, row: row.row, col: row.col, compartment: row.compartment ?? null, short: shortLoc76(row.row, row.col), label: d?.label ?? null, text };
 }
 
@@ -164,7 +192,7 @@ const COLS = ['name', 'category', 'description', 'specs', 'qty', 'unit', 'min_qt
 /** Ny del (felt allerede validert). */
 export function insertPart76(user, f, { history = true } = {}) {
   const t = now76();
-  const v = { specs: '{}', tags: '[]', photos: '[]', qty: 0, unit: 'stk', ...f };
+  const v = normLoc81({ specs: '{}', tags: '[]', photos: '[]', qty: 0, unit: 'stk', ...f });
   for (const k of ['specs', 'tags', 'photos']) if (typeof v[k] !== 'string') v[k] = JSON.stringify(v[k]);
   const cols = COLS.filter((c) => v[c] !== undefined);
   const id = q(`INSERT INTO skj_parts(user_id, ${cols.join(', ')}, created, updated) VALUES(@user, ${cols.map((c) => `@${c}`).join(', ')}, @t, @t)`).run({ ...Object.fromEntries(cols.map((c) => [c, v[c]])), user, t }).lastInsertRowid;
@@ -174,6 +202,11 @@ export function insertPart76(user, f, { history = true } = {}) {
 }
 export function updatePart76(user, id, f) {
   const v = { ...f };
+  if (v.row !== undefined || v.col !== undefined || v.cabinet_id !== undefined) {
+    const cur = q('SELECT cabinet_id, row, col, compartment FROM skj_parts WHERE id=?').get(Number(id)) ?? {};
+    const loc = normLoc81({ cabinet_id: v.cabinet_id !== undefined ? v.cabinet_id : cur.cabinet_id, row: v.row !== undefined ? v.row : cur.row, col: v.col !== undefined ? v.col : cur.col, compartment: v.compartment !== undefined ? v.compartment : cur.compartment });
+    if (loc.cabinet_id) Object.assign(v, { row: loc.row, col: loc.col, compartment: loc.compartment ?? null });
+  }
   for (const k of ['specs', 'tags', 'photos']) if (v[k] !== undefined && typeof v[k] !== 'string') v[k] = JSON.stringify(v[k]);
   const cols = COLS.filter((c) => v[c] !== undefined);
   if (cols.length) q(`UPDATE skj_parts SET ${cols.map((c) => `${c}=@${c}`).join(', ')}, updated=@t WHERE id=@id AND user_id=@user`).run({ ...Object.fromEntries(cols.map((c) => [c, v[c]])), t: now76(), id: Number(id), user });

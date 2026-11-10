@@ -109,6 +109,11 @@ struct Skj76Drawer: Hashable {
     var color: String = ""
     var count: Int = 0
     var parts: [Skj76Mini] = []
+    /// Prompt 81: store (2 × 2) og brede (2 × 1) skuffer. Ankeret ligger øverst til venstre og dekker spanR × spanC ruter;
+    /// en dekket rute har coveredBy = ankerets «r-c» (tom ellers). Se Skjold81Span.swift.
+    var spanR: Int = 1
+    var spanC: Int = 1
+    var coveredBy: String = ""
 
     /// Etiketten, ellers standard «R4·S2».
     var title: String { label.isEmpty ? "R\(row)·S\(col)" : label }
@@ -220,7 +225,9 @@ final class Skjold76 {
         if kind == "skap", parts.count > 1 {
             show()
             cabinetId = parts[1]
-            let rc: [Int] = (parts.count > 2 ? parts[2] : "").split(separator: "-").compactMap { Int($0) }
+            var rc: [Int] = (parts.count > 2 ? parts[2] : "").split(separator: "-").compactMap { Int($0) }
+            // Prompt 81: en dekket rute åpner den store/brede skuffen (ankeret).
+            if rc.count == 2, let a = maps[parts[1]]?.anchor81(rc[0], rc[1]) { rc = [a.r, a.c] }
             if rc.count == 2 { sheet = .drawer(parts[1], rc[0], rc[1]) }
             return
         }

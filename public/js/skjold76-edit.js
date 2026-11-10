@@ -10,6 +10,7 @@ import { S, sk, write, upload, go, paintMain, paintSide, locOf, locText, photoUr
 import { overlayGrid76, layoutPhoto76, cornersOk76, long76 } from './skjold76-draw.js';
 import { suggestBtn77, suggestCard77, findBtn77, finderHtml77, webPending77, onNewPhotos77, aiClick77, mountEdit77, saveWeb77 } from './skjold77-ai.js'; // prompt 77
 import { ledSetupHtml78 } from './skjold78-leds.js'; // prompt 78: lys over skuffene
+import { longAt81, presetBoxHtml81, presetConfirm81, PRESET81, PRESET_SIZES81 } from './skjold81-span.js'; // prompt 81: Skjold Lab-hylla (3D-print)
 
 const UNITS = ['stk', 'm', 'cm', 'g', 'kg', 'ml', 'pk', 'par', 'rull', 'sett'];
 const SPEC_KEYS = ['verdi', 'toleranse', 'pakke', 'spenning', 'strøm', 'effekt', 'lengde', 'diameter', 'gjenge', 'materiale', 'farge', 'type'];
@@ -143,13 +144,13 @@ async function suggestFree() {
   // Serveren foreslår selv første ledige (first), helst i skapet som vises nå.
   const cur = (r?.cabinets ?? []).find((c) => String(c.id) === String(S.cabId) && c.free?.length);
   const f0 = cur ? { cabinetId: cur.id, row: cur.free[0].row, col: cur.free[0].col } : r?.first;
-  if (f0?.row) { const c = cabById(f0.cabinetId); editInput({ pick: { cabinetId: c?.id ?? f0.cabinetId, row: +f0.row, col: +f0.col, compartment: null } }); if (c) S.cabId = c.id; toast(`Ledig: ${c?.name ? `${c.name} · ` : ''}${long76(+f0.row, +f0.col)}`); return; }
+  if (f0?.row) { const c = cabById(f0.cabinetId); editInput({ pick: { cabinetId: c?.id ?? f0.cabinetId, row: +f0.row, col: +f0.col, compartment: null } }); if (c) S.cabId = c.id; toast(`Ledig: ${c?.name ? `${c.name} · ` : ''}${longAt81(S.maps[c?.id ?? f0.cabinetId], +f0.row, +f0.col)}`); return; }
   const cabs = Array.isArray(r) ? r : r?.cabinets ?? r?.items ?? [];
   const norm = (d) => (Array.isArray(d) ? { row: +d[0], col: +d[1] } : typeof d === 'string' ? (([a, b]) => ({ row: +a, col: +b }))(d.split(/[-·:]/)) : { row: +d.row, col: +d.col });
   const order = [...cabs].sort((a, b) => (String(a.cabinetId ?? a.id) === String(S.cabId) ? -1 : String(b.cabinetId ?? b.id) === String(S.cabId) ? 1 : 0));
   for (const c of order) {
     const L = (c.drawers ?? c.free ?? []).map(norm).filter((d) => d.row && d.col);
-    if (L.length) { const cid = c.cabinetId ?? c.id; editInput({ pick: { cabinetId: cabById(cid)?.id ?? cid, row: L[0].row, col: L[0].col, compartment: null } }); S.cabId = cabById(cid)?.id ?? S.cabId; toast(`Ledig: ${long76(L[0].row, L[0].col)}`); return; }
+    if (L.length) { const cid = c.cabinetId ?? c.id; editInput({ pick: { cabinetId: cabById(cid)?.id ?? cid, row: L[0].row, col: L[0].col, compartment: null } }); S.cabId = cabById(cid)?.id ?? S.cabId; toast(`Ledig: ${longAt81(S.maps[cid], L[0].row, L[0].col)}`); return; }
   }
   toast('Ingen ledige skuffer');
 }
@@ -220,6 +221,7 @@ export function startSetup(r) {
     id, kind: c?.kind ?? (id === 'ny3d' ? '3d' : 'kjøpt'), name: c?.name ?? (id === 'ny3d' ? 'Tilleggsskap (3D-print)' : id === 'ny' ? 'Nytt skap' : ''),
     rows: c?.rows ?? 12, cols: c?.cols ?? (id === 'ny3d' ? colsFromWidth76(270) : 5), width: 270,
     corners: c && cornersOk76(c.corners) ? JSON.parse(JSON.stringify(c.corners)) : null, busy: false, imp: null,
+    etasjer: c?.rows === 13 ? 5 : 4, // prompt 81: valget for Skjold Lab-hylla
   };
   if (c) { S.cabId = c.id; loadMap(c.id); }
 }
@@ -233,7 +235,7 @@ function cabListHtml() {
   return `<ul class="sk76-cabs" role="list">${(S.cabs ?? []).map((c) => `<li><a class="sk76-cabit${String(S.setup?.id) === String(c.id) ? ' on' : ''}" href="#/skjold/oppsett/${encodeURIComponent(c.id)}">
       <span class="sk76-th">${c.thumbUrl ? `<img src="${esc(c.thumbUrl)}" alt="" loading="lazy" data-sk76-img>` : `<b>${esc(c.rows)}×${esc(c.cols)}</b>`}</span>
       <span class="sk76-it"><b>${esc(c.name)}</b><span class="sk76-sp">${esc(`${c.rows} rader × ${c.cols} skuffer · ${c.kind === '3d' ? '3D-print' : 'kjøpt'}`)}</span><span class="sk76-loc">${esc(`${c.counts?.parts ?? 0} deler · ${c.counts?.usedDrawers ?? 0} skuffer i bruk${c.photoUrl ? (cornersOk76(c.corners) ? ' · bilde med hjørner' : ' · bilde uten hjørner') : ''}`)}</span></span></a></li>`).join('')}</ul>
-    <div class="sk76-row"><a class="sk76-btn" href="#/skjold/oppsett/ny">+ Nytt skap</a><a class="sk76-btn" href="#/skjold/oppsett/ny3d">+ Tilleggsskap (3D-print)</a></div>`;
+    <div class="sk76-row"><a class="sk76-btn" href="#/skjold/oppsett/ny">+ Nytt skap</a><a class="sk76-btn" href="#/skjold/oppsett/ny3d">+ Tilleggsskap (3D-print)</a><a class="sk76-btn" href="#/skjold/oppsett/ny3d">+ ${esc(PRESET81.short)}</a></div>`;
 }
 function cornerEditorHtml(c) {
   const U = S.setup;
@@ -261,6 +263,7 @@ export function setupHtml() {
       <label class="sk76-f">Type<select name="kind"><option value="kjøpt"${U.kind !== '3d' ? ' selected' : ''}>Kjøpt</option><option value="3d"${U.kind === '3d' ? ' selected' : ''}>3D-printet</option></select></label>
       ${U.kind === '3d' ? `<label class="sk76-f">Bredde i hylla (mm)<input name="width" type="number" inputmode="numeric" min="60" max="2000" value="${esc(U.width)}"><small class="sk76-mut">Forslag: ${colsFromWidth76(U.width)} skuffer à ~60 mm (<button type="button" class="sk76-link" data-sk76c="use-width">bruk</button>)</small></label>` : ''}
       <div class="sk76-f sk76-qrow"><label>Rader<input name="rows" type="number" inputmode="numeric" min="1" max="40" value="${esc(U.rows)}"></label><label>Kolonner<input name="cols" type="number" inputmode="numeric" min="1" max="20" value="${esc(U.cols)}"></label></div>
+      ${presetBoxHtml81(U.etasjer, { isNew })}
       <div class="sk76-pacts wide"><button type="submit" class="sk76-btn pri"${U.busy ? ' disabled' : ''}>${isNew ? 'Legg til skap' : 'Lagre'}</button>${c ? `<button type="button" class="sk76-btn" data-sk76c="labels">Etiketter</button><button type="button" class="sk76-btn danger" data-sk76c="delete">Slett skap</button>` : ''}</div>
       ${c ? cornerEditorHtml(c) : ''}
     </form>`;
@@ -359,6 +362,31 @@ async function saveCab() {
   if (!r) return;
   await loadCabs(true); delete S.maps[c.id]; loadMap(c.id); paintMain();
 }
+/** Prompt 81: «Bruk Skjold Lab-hylla (3D-print)» (eksisterende skap) eller nytt skap med forhåndsvalget. */
+async function applyPreset() {
+  readSetup();
+  const U = S.setup, e = PRESET_SIZES81[U.etasjer] ? U.etasjer : 4;
+  const isNew = String(U.id).startsWith('ny');
+  if (!confirm(`${presetConfirm81(e)}.${isNew ? '' : ' Egne spenn erstattes, deler i sammenslåtte ruter flyttes til skuffen, og LED-avstanden settes til 50 mm.'} Fortsette?`)) return;
+  if (!navigator.onLine) { toast('Endringer krever nett. Prøv igjen når du er tilkoblet.'); return; }
+  try {
+    if (isNew) {
+      const name = U.name.trim() && U.name !== 'Nytt skap' && U.name !== 'Tilleggsskap (3D-print)' ? U.name.trim() : 'Skjold Lab-hylla';
+      const r = await sk('/cabinets', { method: 'POST', json: { name, preset: { id: PRESET81.id, etasjer: e } } });
+      toast('Skjold Lab-hylla er lagt til');
+      await loadCabs(true); S.setup = null; S.cabId = r.id ?? S.cabId;
+      go(`#/skjold/oppsett/${encodeURIComponent(r.id)}`);
+      return;
+    }
+    const c = cabById(U.id);
+    const r = await sk(`/cabinets/${encodeURIComponent(c.id)}/preset`, { method: 'POST', json: { id: PRESET81.id, etasjer: e } });
+    toast(`Skapet er ${r.rows} × ${r.cols}${r.moved ? ` · ${r.moved} ${r.moved === 1 ? 'del' : 'deler'} flyttet inn i store skuffer` : ''}`);
+    U.rows = r.rows; U.cols = r.cols; U.kind = '3d';
+    await loadCabs(true); delete S.maps[c.id]; await loadMap(c.id, true); paintMain(); paintSide();
+  } catch (err) {
+    toast(err instanceof TypeError ? 'Endringer krever nett. Prøv igjen når du er tilkoblet.' : err.message || 'Noe gikk galt', { ms: 6000 });
+  }
+}
 async function deleteCab() {
   const c = cabById(S.setup?.id); if (!c) return;
   if (!confirm(`Slette «${c.name}»?`)) return;
@@ -394,6 +422,8 @@ async function importCsv(file, dry) {
   paintMain();
 }
 export function setupClick(t) {
+  const et = t.closest('[data-sk81-et]'); if (et && S.setup) { readSetup(); S.setup.etasjer = +et.dataset.sk81Et; paintMain(); return true; }
+  if (t.closest('[data-sk81="preset"]') && S.setup) { applyPreset(); return true; }
   const a = t.closest('[data-sk76c]'); if (!a) return false;
   const U = S.setup, c = cabById(U?.id);
   switch (a.dataset.sk76c) {

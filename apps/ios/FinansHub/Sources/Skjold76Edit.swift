@@ -399,13 +399,16 @@ struct Skj76DrawerSheet: View {
     @State private var label: String = ""
     @State private var comps: Int = 1
     @State private var loaded: Bool = false
+    /// Prompt 81: «Bredde 1/2 · Høyde 1/2» (Skj81SpanPicker).
+    @State private var spanR: Int = 1
+    @State private var spanC: Int = 1
 
     var body: some View {
         let d: Skj76Drawer = m.maps[cabinetId]?.drawer(row, col) ?? Skj76Drawer(row: row, col: col)
         let cab: String = m.cabinets.first { $0.id == cabinetId }?.name ?? "Skap"
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
-                Skj76SheetTop(kicker: cab + " · \(row)-\(col)", title: "Rad \(row) · Skuff \(col)")
+                Skj76SheetTop(kicker: cab + " · \(row)-\(col)", title: Skjold81.place(row, col, d.spanR, d.spanC))
                 contents(d)
                 Skj76Button(title: "Ny del i denne skuffen", icon: "plus", filled: true) { newHere(cab) }
                 settings
@@ -418,7 +421,9 @@ struct Skj76DrawerSheet: View {
             loaded = true
             label = d.label
             comps = d.comps
-            m.highlight(Skj76Loc(cabinetId: cabinetId, cabinet: cab, row: row, col: col, comp: nil, text: Skj76LocPicker.text(cab, row, col, nil)))
+            spanR = d.spanR
+            spanC = d.spanC
+            m.highlight(Skj76Loc(cabinetId: cabinetId, cabinet: cab, row: row, col: col, comp: nil, text: Skjold81.text(cab, m.maps[cabinetId], row, col, nil)))
         }
     }
 
@@ -451,24 +456,27 @@ struct Skj76DrawerSheet: View {
                 PLabel(text: "Skuffen")
                 Skj76Field(label: "Etikett (tom = R\(row)·S\(col))", text: $label)
                 Stepper("Rom: \(comps)", value: $comps, in: 1...4).font(PF.ui(14.5)).foregroundStyle(p.ink)
+                Skj81SpanPicker(spanR: $spanR, spanC: $spanC)
                 Skj76Button(title: "Lagre skuffen", icon: "checkmark") { save() }
             }
         }
     }
 
     private func newHere(_ cab: String) {
-        m.preset = Skj76Loc(cabinetId: cabinetId, cabinet: cab, row: row, col: col, comp: nil, text: Skj76LocPicker.text(cab, row, col, nil))
+        m.preset = Skj76Loc(cabinetId: cabinetId, cabinet: cab, row: row, col: col, comp: nil, text: Skjold81.text(cab, m.maps[cabinetId], row, col, nil))
         m.sheet = .edit("")
     }
 
     private func save() {
-        let body: [String: Any] = ["label": label.trimmingCharacters(in: .whitespaces), "compartments": comps]
+        let body: [String: Any] = ["label": label.trimmingCharacters(in: .whitespaces), "compartments": comps, "spanR": spanR, "spanC": spanC]
         Task { @MainActor in
             do {
                 _ = try await store.api.callAt(Skjold76.prefix, "PUT", Skjold76.root + "/cabinets/\(cabinetId)/drawers/\(row)/\(col)", json: body, timeout: 15)
                 Haptics.shared.success()
                 m.flash("Skuffen er lagret")
                 await m.loadMap(cabinetId, store)
+                // Prompt 81: deler i ruter som ble dekket er flyttet til ankeret (ny plasseringstekst).
+                if spanR > 1 || spanC > 1 { await m.search(store) }
             } catch { m.fail(error) }
         }
     }

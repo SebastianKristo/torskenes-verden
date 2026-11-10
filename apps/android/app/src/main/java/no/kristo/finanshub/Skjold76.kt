@@ -54,7 +54,11 @@ data class SkjCab76(
     val corners: List<Pair<Float, Float>>?, val parts: Int, val used: Int, val notes: String? = null,
 )
 data class SkjMapPart76(val id: String, val name: String, val thumbUrl: String?, val qty: Double)
-data class SkjDrawer76(val row: Int, val col: Int, val label: String?, val compartments: Int, val count: Int, val parts: List<SkjMapPart76>, val color: String?)
+data class SkjDrawer76(
+    val row: Int, val col: Int, val label: String?, val compartments: Int, val count: Int, val parts: List<SkjMapPart76>, val color: String?,
+    /** Prompt 81: spenn (ankeret dekker spanR × spanC ruter) og coveredBy = ankerets «r-c» for dekkede ruter (Skjold81.kt). */
+    val spanR: Int = 1, val spanC: Int = 1, val coveredBy: String? = null,
+)
 data class SkjMap76(val cabinetId: String, val rows: Int, val cols: Int, val drawers: List<SkjDrawer76>) {
     fun at(r: Int, c: Int): SkjDrawer76? = drawers.firstOrNull { it.row == r && it.col == c }
 }
@@ -136,6 +140,7 @@ object Skjold76 {
         Skjold77.reset() // prompt 77
         Skjold78.reset() // prompt 78
         Skjold79.reset() // prompt 79
+        Skjold81.reset() // prompt 81
     }
 }
 
@@ -271,7 +276,8 @@ internal fun parseMap76(id: String, o: JSONObject): SkjMap76 = SkjMap76(
         val r = d.i76("row") ?: return@mapNotNull null; val c = d.i76("col") ?: return@mapNotNull null
         val ps = objs34(d.optJSONArray("parts")).mapNotNull { p -> p.id76("id")?.let { SkjMapPart76(it, p.s43("name") ?: "?", fileUrl76(p.s43("thumbUrl")), p.d76("qty") ?: 0.0) } }
         // customLabel = egen etikett (null = standard «R4·S2»); eldre svar har bare label.
-        SkjDrawer76(r, c, if (d.has("customLabel")) d.s43("customLabel") else d.s43("label"), (d.i76("compartments") ?: 1).coerceIn(1, 4), d.i76("count") ?: ps.size, ps, d.s43("color"))
+        SkjDrawer76(r, c, if (d.has("customLabel")) d.s43("customLabel") else d.s43("label"), (d.i76("compartments") ?: 1).coerceIn(1, 4), d.i76("count") ?: ps.size, ps, d.s43("color"),
+            (d.i76("spanR") ?: 1).coerceIn(1, 4), (d.i76("spanC") ?: 1).coerceIn(1, 4), d.s43("coveredBy")) // prompt 81
     },
 )
 
@@ -373,6 +379,7 @@ fun AppViewModel.openSkjold76(q: String? = null, partId: String? = null, cabId: 
     if (q != null) s.q = q
     loadSkjold76()
     loadPick79() // prompt 79: plukklista (lokalt + /picklist)
+    loadPresets81() // prompt 81: forhåndsoppsett (Skjold Lab-hylla)
     when {
         partId != null -> openPart76(partId)
         cabId != null -> { s.cabId = cabId; s.drawer = drawer; s.pulse++; s.stack = listOf("list", "cab"); loadMap76(cabId) }
@@ -386,6 +393,7 @@ fun AppViewModel.closeSkjold76() {
     when {
         Skjold78.calOn -> stopCal78() // prompt 78: kalibreringen avsluttes (lyset slukkes)
         Skjold79.diagOn -> stopDiag79() // prompt 79: feilsøkingen lukkes
+        Skjold81.newAsk -> Skjold81.newAsk = false // prompt 81: «Ny Skjold Lab-hylla»
         a.settingsOpen -> a.settingsOpen = false
         a.menuOpen -> a.menuOpen = false
         a.imgPick != null -> a.imgPick = null
@@ -563,7 +571,7 @@ fun AppViewModel.moveSkjold76(p: SkjPart76, cabId: String?, row: Int?, col: Int?
     s.pulse++
     Haptics.success()
     afterChange76(np)
-    val text = "Flyttet til " + locText76(s.cabinets.firstOrNull { it.id == cabId }?.name ?: "skap", row, col, comp)
+    val text = "Flyttet til " + locText81(cabId, s.cabinets.firstOrNull { it.id == cabId }?.name ?: "skap", row, col, comp) // prompt 81: spenn
     offerUndo76(text) { moveBack76(p.id, from) }
 }
 
@@ -669,7 +677,7 @@ fun AppViewModel.suggestFree76(d: SkjDraft76) = launch46 {
     } catch (e: CancellationException) { throw e } catch (_: Exception) { null }
     val pick = hit ?: prefer?.let { cid ->
         val m = s.maps[cid] ?: return@let null
-        (1..m.rows).asSequence().flatMap { r -> (1..m.cols).asSequence().map { c -> r to c } }.firstOrNull { (r, c) -> (m.at(r, c)?.count ?: 0) == 0 }?.let { Triple(cid, it.first, it.second) }
+        (1..m.rows).asSequence().flatMap { r -> (1..m.cols).asSequence().map { c -> r to c } }.firstOrNull { (r, c) -> cellOf81(m, m.rows, m.cols, r, c).let { it.row == r && it.col == c && cellCount81(m, it) == 0 } } // prompt 81: bare ankre?.let { Triple(cid, it.first, it.second) }
     }
     if (pick == null) { flash("Fant ingen ledig skuff"); return@launch46 }
     d.cabinetId = pick.first; d.row = pick.second; d.col = pick.third; d.compartment = null

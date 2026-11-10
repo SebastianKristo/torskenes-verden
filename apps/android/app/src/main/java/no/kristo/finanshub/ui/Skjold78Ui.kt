@@ -57,7 +57,7 @@ internal fun LocateButton78(vm: AppViewModel, pt: SkjPart76) {
             PButton(if (s.locBusy) "Tenner …" else if (on) "💡 Lyser – slå av" else "💡 Vis i skapet", Modifier.fillMaxWidth().semantics { contentDescription = "Vis i skapet: lys opp skuffen" },
                 kind = if (on) "line" else "ink") { if (on) vm.locateOff78() else if (!s.locBusy) vm.locateParts78(listOf(pt.id)) }
             l?.let { ledIndex78(it, pt.loc.row!!, pt.loc.col!!) }?.let {
-                Text("LED $it over ${drawerText76(pt.loc.row!!, pt.loc.col!!)}", color = p.mut, fontSize = 12.sp, fontFamily = PaperFonts.mono)
+                Text("LED $it over ${drawerText81(pt.loc.cabinetId, pt.loc.row!!, pt.loc.col!!)}", color = p.mut, fontSize = 12.sp, fontFamily = PaperFonts.mono)
             }
         } else Text("💡 Sett opp LED for skapet, så lyser skuffen når du søker ›", color = p.sub, fontSize = 13.sp,
             modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).clickable(role = Role.Button) { vm.openLeds78(cabId) }.padding(vertical = 8.dp))

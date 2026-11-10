@@ -21,6 +21,8 @@ struct Skj76Setup: View {
     @State private var busy: Bool = false
     @State private var confirm: Bool = false
     @State private var blocked: Bool = false
+    /// Prompt 81: forhåndsoppsett ved oppretting (nil = egne rader × kolonner, ellers 4 eller 5 etasjer).
+    @State private var preset81: Int? = nil
 
     private var isNew: Bool { cabId == "ny" || cabId.isEmpty }
 
@@ -33,6 +35,7 @@ struct Skj76Setup: View {
                 Skj76Button(title: busy ? "Lagrer …" : (isNew ? "Opprett skapet" : "Lagre"), icon: "checkmark", filled: true) { save() }
                     .disabled(busy || name.trimmingCharacters(in: .whitespaces).isEmpty)
                 if let c = m.cabinets.first(where: { $0.id == cabId }) {
+                    Skj81PresetApply(cab: c) { (id: String) in pick(id) }
                     Skj76PhotoSetup(cab: c)
                     Skj76Button(title: "LED over skuffene", icon: "lightbulb") { m.sheet = .leds(c.id) }
                     Skj76Button(title: "Slett skapet", icon: "trash", danger: true) { confirm = true }
@@ -81,8 +84,13 @@ struct Skj76Setup: View {
         PCard {
             VStack(alignment: .leading, spacing: 10) {
                 Skj76Field(label: "Navn", text: $name)
+                if isNew {
+                    Skj81PresetNew(etasjer: $preset81, name: $name, rows: $rows, cols: $cols, kind: $kind)
+                }
                 Stepper("Rader: \(rows)", value: $rows, in: 1...40).font(PF.ui(14.5)).foregroundStyle(p.ink)
+                    .disabled(isNew && preset81 != nil)
                 Stepper("Skuffer per rad: \(cols)", value: $cols, in: 1...20).font(PF.ui(14.5)).foregroundStyle(p.ink)
+                    .disabled(isNew && preset81 != nil)
                 Picker("Type", selection: $kind) {
                     Text("Kjøpt").tag("kjøpt")
                     Text("3D-print").tag("3d")
@@ -99,6 +107,7 @@ struct Skj76Setup: View {
 
     /// Forslag fra 3D-delen (tools/skjoldlab3d): 270 mm bredde → 4 kolonner, samme radavstand som hovedskapet (12 rader).
     private func extra() {
+        preset81 = nil
         name = "Tilleggsskap (3D-print)"
         kind = "3d"
         rows = m.cabinets.first { $0.kind != "3d" }?.rows ?? 12
@@ -109,6 +118,7 @@ struct Skj76Setup: View {
     static func colsFor(widthMm: Double) -> Int { Swift.max(1, Int((widthMm - 6) / 64)) }
 
     private func pick(_ id: String) {
+        preset81 = nil
         if let c = m.cabinets.first(where: { $0.id == id }) ?? (id.isEmpty ? m.cabinet : nil) {
             cabId = c.id
             name = c.name
@@ -126,7 +136,9 @@ struct Skj76Setup: View {
 
     private func save() {
         busy = true
-        let body: [String: Any] = ["name": name.trimmingCharacters(in: .whitespaces), "rows": rows, "cols": cols, "kind": kind]
+        var b: [String: Any] = ["name": name.trimmingCharacters(in: .whitespaces), "rows": rows, "cols": cols, "kind": kind]
+        if isNew, let e = preset81 { b["preset"] = Skjold81.presetBody(e) }
+        let body: [String: Any] = b
         let new: Bool = isNew
         let path: String = Skjold76.root + "/cabinets" + (new ? "" : "/\(cabId)")
         Task { @MainActor in

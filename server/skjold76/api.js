@@ -9,8 +9,9 @@ import { originOf46 } from '../public-url46.js';
 import {
   KINDS76, UNITS76, ensureUser76, cabinetRow76, cabinetRows76, insertCabinet76, updateCabinet76, drawerRows76, drawerOut76, setDrawer76, reindexDrawer76,
   partRow76, partOut76, cabCache76, insertPart76, updatePart76, softDelete76, restore76, purge76, addHistory76, historyOf76, historyAll76, locSnap76,
-  searchParts76, setFileUrl76, thumbOf76, shortLoc76, defaultLabel76, indexPart76, now76, words76,
+  searchParts76, setFileUrl76, thumbOf76, shortLoc76, defaultLabel76, indexPart76, now76, words76, coverMap81, coverOf81, spanText81,
 } from './store.js';
+import { presetsMount81, presetLayout81, applyPreset81, setSpan81, clampSpans81, drawerCount81 } from './layout81.js'; // prompt 81 (SPANSRV): sammenslåtte skuffer
 import { saveImage76, removeImage76, readImage76, signedUrl76, signedUser76, MAX_IN76 } from './images.js';
 import { exportCsv76, importCsv76 } from './csv.js';
 import { labelsHtml76 } from './labels.js';
@@ -54,7 +55,7 @@ function cabinetOut(cab, user) {
   const used = q('SELECT count(*) FROM (SELECT DISTINCT row, col FROM skj_parts WHERE user_id=? AND cabinet_id=? AND deleted_at IS NULL)').pluck().get(user, cab.id);
   return { id: cab.id, name: cab.name, rows: cab.rows, cols: cab.cols, kind: cab.kind, sort: cab.sort, notes: cab.notes ?? null,
     photoUrl: cab.photo ? signedUrl76(cab.photo, user) : null, thumbUrl: cab.photo ? signedUrl76(thumbOf76(cab.photo), user) : null,
-    corners: J(cab.photo_corners, null), counts: { parts, usedDrawers: used, drawers: cab.rows * cab.cols }, created: iso(cab.created), updated: iso(cab.updated), leds: ledsBrief78(cab) };
+    corners: J(cab.photo_corners, null), counts: { parts, usedDrawers: used, drawers: drawerCount81(cab) }, created: iso(cab.created), updated: iso(cab.updated), leds: ledsBrief78(cab) };
 }
 function cabinetFields(b, { partial = false } = {}) {
   const f = {};
@@ -76,7 +77,10 @@ skjoldApi76.post('/cabinets', async (c) => {
   const r = cabinetFields(b);
   if (r.error) return c.json({ error: r.error }, 400);
   if (cabinetRows76(u).length >= 50) return c.json({ error: 'Maks 50 skap' }, 409);
-  const cab = insertCabinet76(u, r.f);
+  // Prompt 81: {name, preset:{id, etasjer}} – skapet får forhåndsoppsettet med en gang.
+  if (b.preset != null) { const pl = typeof b.preset === 'object' ? presetLayout81(b.preset.id, b.preset.etasjer) : { error: 'preset må være {id, etasjer}' }; if (pl.error) return c.json({ error: pl.error }, 400); }
+  let cab = insertCabinet76(u, r.f);
+  if (b.preset != null) cab = applyPreset81(u, cab, b.preset).cab ?? cab;
   return c.json(cabinetOut(cab, u), 201);
 });
 skjoldApi76.patch('/cabinets/:id', async (c) => {
@@ -90,6 +94,7 @@ skjoldApi76.patch('/cabinets/:id', async (c) => {
     const out = q('SELECT count(*) FROM skj_parts WHERE user_id=? AND cabinet_id=? AND deleted_at IS NULL AND (row>? OR col>?)').pluck().get(u, cab.id, rows, cols);
     if (out) return c.json({ error: `${out} ${out === 1 ? 'del ligger' : 'deler ligger'} i skuffer som forsvinner – flytt dem først`, parts: out }, 409);
     q('DELETE FROM skj_drawers WHERE cabinet_id=? AND (row>? OR col>?)').run(cab.id, rows, cols);
+    clampSpans81(cab.id, rows, cols);
   }
   const nameChanged = r.f.name && r.f.name !== cab.name;
   const nx = updateCabinet76(u, cab.id, r.f);
@@ -179,12 +184,13 @@ skjoldApi76.get('/cabinets/:id/map', (c) => {
   if (!cab) return c.json(NOCAB, 404);
   const dr = new Map(drawerRows76(cab.id).map((d) => [`${d.row}:${d.col}`, d]));
   const ps = q('SELECT * FROM skj_parts WHERE user_id=? AND cabinet_id=? AND deleted_at IS NULL ORDER BY compartment, name').all(u, cab.id);
-  const by = new Map();
-  for (const p of ps) { const k = `${p.row}:${p.col}`; if (!by.has(k)) by.set(k, []); by.get(k).push(p); }
+  const by = new Map(), cover = coverMap81(cab.id);
+  // Prompt 81: deler i en dekket rute (eldre data) telles på ankeret; dekkede ruter har coveredBy og ingen deler.
+  for (const p of ps) { const a = cover.get(`${p.row}:${p.col}`), k = a ? `${a.row}:${a.col}` : `${p.row}:${p.col}`; if (!by.has(k)) by.set(k, []); by.get(k).push(p); }
   const drawers = [];
   for (let r = 1; r <= cab.rows; r++) for (let col = 1; col <= cab.cols; col++) {
-    const list = by.get(`${r}:${col}`) ?? [];
-    drawers.push({ ...drawerOut76(cab, r, col, dr.get(`${r}:${col}`) ?? null), count: list.length, low: list.some((p) => p.min_qty != null && p.qty <= p.min_qty),
+    const list = cover.has(`${r}:${col}`) ? [] : by.get(`${r}:${col}`) ?? [];
+    drawers.push({ ...drawerOut76(cab, r, col, dr.get(`${r}:${col}`) ?? null, cover), count: list.length, low: list.some((p) => p.min_qty != null && p.qty <= p.min_qty),
       parts: list.slice(0, 30).map((p) => { const ph = J(p.photos, []); return { id: p.id, name: p.name, qty: p.qty, unit: p.unit, compartment: p.compartment ?? null, thumbUrl: ph.length ? signedUrl76(thumbOf76(ph[0]), u) : null }; }) });
   }
   const co = cabinetOut(cab, u);
@@ -193,9 +199,19 @@ skjoldApi76.get('/cabinets/:id/map', (c) => {
 skjoldApi76.put('/cabinets/:id/drawers/:row/:col', async (c) => {
   const u = c.get('user'), cab = cabOr404(c), b = await body(c);
   if (!cab) return c.json(NOCAB, 404);
-  const row = intIn(c.req.param('row'), 1, cab.rows), col = intIn(c.req.param('col'), 1, cab.cols);
+  let row = intIn(c.req.param('row'), 1, cab.rows), col = intIn(c.req.param('col'), 1, cab.cols);
   if (row == null || col == null) return c.json({ error: `Skuffen finnes ikke (rad 1–${cab.rows}, skuff 1–${cab.cols})` }, 404);
-  if (!b) return c.json({ error: 'Forventet {label, compartments, color}' }, 400);
+  if (!b) return c.json({ error: 'Forventet {label, compartments, color, spanR, spanC}' }, 400);
+  // Prompt 81: spenn (slå sammen / del). En dekket rute uten spenn i body = ankeret.
+  let moved = 0;
+  if (has(b, 'spanR') || has(b, 'spanC')) {
+    const cur = q('SELECT span_r, span_c FROM skj_drawers WHERE cabinet_id=? AND row=? AND col=?').get(cab.id, row, col) ?? { span_r: 1, span_c: 1 };
+    const sr = has(b, 'spanR') ? intIn(b.spanR, 1, 4) : cur.span_r, sc = has(b, 'spanC') ? intIn(b.spanC, 1, 4) : cur.span_c;
+    if (sr == null || sc == null) return c.json({ error: 'spanR og spanC må være 1–4' }, 400);
+    const sp = setSpan81(u, cab, row, col, sr, sc);
+    if (sp.error) return c.json({ error: sp.error, ...(sp.conflict ? { conflict: sp.conflict } : {}) }, sp.status);
+    moved = sp.moved;
+  } else { const a = coverOf81(cab.id, row, col); if (a) { row = a.row; col = a.col; } }
   const f = {};
   if (has(b, 'label')) { const l = str(b.label ?? '', 40); f.label = l && l !== defaultLabel76(row, col) ? l : null; }
   if (has(b, 'compartments')) { const n = intIn(b.compartments ?? 1, 1, 4); if (n == null) return c.json({ error: 'compartments må være 1–4' }, 400); f.compartments = n; }
@@ -203,7 +219,7 @@ skjoldApi76.put('/cabinets/:id/drawers/:row/:col', async (c) => {
   setDrawer76(cab.id, row, col, f);
   if (f.compartments) q('UPDATE skj_parts SET compartment=NULL WHERE user_id=? AND cabinet_id=? AND row=? AND col=? AND compartment>?').run(u, cab.id, row, col, f.compartments);
   reindexDrawer76(u, cab.id, row, col);
-  return c.json({ ok: true, drawer: drawerOut76(cab, row, col) });
+  return c.json({ ok: true, drawer: drawerOut76(cab, row, col), ...(moved ? { moved } : {}) });
 });
 
 /* ---------------- Deler ---------------- */
@@ -434,13 +450,14 @@ export function freeOf76(u, onlyCab = null) {
   let first = null;
   const list = cabs.map((cab) => {
     const dr = new Map(drawerRows76(cab.id).map((d) => [`${d.row}:${d.col}`, d]));
+    const cover = coverMap81(cab.id);
     const free = [];
     for (let r = 1; r <= cab.rows; r++) for (let col = 1; col <= cab.cols; col++) {
-      if (used.has(`${cab.id}:${r}:${col}`)) continue;
+      if (used.has(`${cab.id}:${r}:${col}`) || cover.has(`${r}:${col}`)) continue;
       const d = dr.get(`${r}:${col}`);
-      free.push({ row: r, col, short: shortLoc76(r, col), label: d?.label || defaultLabel76(r, col) });
+      free.push({ row: r, col, short: shortLoc76(r, col), label: d?.label || defaultLabel76(r, col), spanR: d?.span_r ?? 1, spanC: d?.span_c ?? 1 });
     }
-    if (!first && free.length) first = { cabinetId: cab.id, cabinet: cab.name, row: free[0].row, col: free[0].col, short: free[0].short, text: `${cab.name} · Rad ${free[0].row} · Skuff ${free[0].col}` };
+    if (!first && free.length) first = { cabinetId: cab.id, cabinet: cab.name, row: free[0].row, col: free[0].col, short: free[0].short, text: `${cab.name} · ${spanText81(free[0].row, free[0].col, free[0].spanR, free[0].spanC)}` };
     return { id: cab.id, name: cab.name, rows: cab.rows, cols: cab.cols, freeCount: free.length, free };
   });
   return { cabinets: list, first };
@@ -480,6 +497,8 @@ skjoldApi76.get('/', (c) => {
   return c.json({ parts, low, unplaced, cabinets: cabinetRows76(u).map((x) => cabinetOut(x, u)), units: UNITS76, kinds: KINDS76 }, 200, NS);
 });
 
+// Prompt 81 (SPANSRV): GET /presets, POST /cabinets/:id/preset.
+presetsMount81(skjoldApi76, { cabinetOut, NOCAB, body });
 // Prompt 77 (SKJAISRV): /ai/* (forslag, bildesøk, Rydd opp, innstillinger) og /parts/:id/photos/from-search.
 mountAi77(skjoldApi76, { fileOf, uploadLimit });
 // Prompt 78 (LEDSRV): /cabinets/:id/leds*, /locate, /locate/off, /leds/status, /leds/settings.
