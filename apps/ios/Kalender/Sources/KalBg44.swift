@@ -10,7 +10,10 @@ enum KalBg44 {
     static let id: String = "no.kristo.kalender.refresh44"
 
     /// Kalles i KalApp.init (før appen er ferdig startet, som iOS krever).
+    /// Prompt 84: ikke i Homelab-appen (KAL_EMBED) – identifikatoren står ikke i Homelabs BGTaskSchedulerPermittedIdentifiers,
+    /// og iOS avslutter appen ved registrering av en ukjent identifikator.
     static func register() {
+        #if !KAL_EMBED
         _ = BGTaskScheduler.shared.register(forTaskWithIdentifier: id, using: nil) { (task: BGTask) in
             guard let t = task as? BGAppRefreshTask else {
                 task.setTaskCompleted(success: false)
@@ -18,13 +21,16 @@ enum KalBg44 {
             }
             handle(t)
         }
+        #endif
     }
 
     /// Neste vekking om ~30 min (når appen går i bakgrunnen og etter hver bakgrunnshenting).
     static func schedule() {
+        #if !KAL_EMBED
         let r: BGAppRefreshTaskRequest = BGAppRefreshTaskRequest(identifier: id)
         r.earliestBeginDate = Date(timeIntervalSinceNow: 30 * 60)
         try? BGTaskScheduler.shared.submit(r)
+        #endif
     }
 
     private static func handle(_ t: BGAppRefreshTask) {

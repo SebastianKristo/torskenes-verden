@@ -85,6 +85,7 @@ final class Set24Model {
         add("haptikk", "Haptikk", "Vibrasjon og styrke", "Varsler og haptikk", "innst-haptikk")
         add("trk", "Pakkevarsler", "Sporing og kvitteringer", "Varsler og haptikk", "innst-trk")
         add("kal", "Kalendere", "Google Kalender, Home Assistant, Skole-iCal og Canvas", "App", "innst-kal")
+        add("kal84", "Kalender i appen", "Hele Kalender-appen inni Homelab (sideloading)", "Innstillinger", "innst") // prompt 84
         add("integ", "Integrasjoner", "Home Assistant, Google, Entur, Bring og flere", "App", "innst-integ")
         add("helse", "Helse og posisjon", "Apple Health, posisjon og bakgrunn", Users68.name, "innst-helse")
         add("fam", "Familie og helse", "Deling i Familie", Users68.name, "innst-fam")

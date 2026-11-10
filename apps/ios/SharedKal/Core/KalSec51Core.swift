@@ -560,6 +560,10 @@ final class KalSec51Model: ObservableObject {
 
     /// Lokalt varsel én gang per ventende enhet.
     private func notifyNew(_ list: [KalPendingDev51]) {
+        #if KAL_EMBED
+        // Prompt 84: innebygd i Homelab varsler Homelab selv om nye enheter (FHSec51) – ikke to varsler for det samme.
+        _ = list
+        #else
         let k: String = "kal51.notified"
         var seen: [String] = UserDefaults.standard.stringArray(forKey: k) ?? []
         var changed: Bool = false
@@ -580,6 +584,7 @@ final class KalSec51Model: ObservableObject {
             if seen.count > 50 { seen = Array(seen.suffix(50)) }
             UserDefaults.standard.set(seen, forKey: k)
         }
+        #endif
     }
 
     /// Godkjenn (Face ID / Touch ID / enhetskode først) eller avvis.

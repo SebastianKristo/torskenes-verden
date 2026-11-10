@@ -92,6 +92,8 @@ struct Settings50Sidebar: View {
                 ForEach(filtered) { (g: Settings50Group) in
                     Settings50GroupView(group: g, first: g.id == filtered.first?.id)
                 }
+                // Prompt 84: «Kalender i appen».
+                if query.isEmpty { Kal84Settings() }
                 if Update28Model.isAdmin(store) && query.isEmpty { Settings50Software() }
             }
             .padding(.top, 14).padding(.bottom, 28)

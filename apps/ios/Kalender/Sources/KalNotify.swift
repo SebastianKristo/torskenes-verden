@@ -15,11 +15,14 @@ enum KalNotify {
     @MainActor private static var lastSignature: String = ""
     @MainActor private static var asked: Bool = false
 
+    /// Prompt 84: ikke i Homelab-appen (KAL_EMBED) – setNotificationCategories erstatter Homelabs egne kategorier.
     static func setup() {
+        #if !KAL_EMBED
         let snooze: UNNotificationAction = UNNotificationAction(identifier: snoozeAction, title: "Utsett 10 min", options: [])
         let route: UNNotificationAction = UNNotificationAction(identifier: routeAction, title: "Vis vei", options: [.foreground])
         let cat: UNNotificationCategory = UNNotificationCategory(identifier: category, actions: [snooze, route], intentIdentifiers: [], options: [])
         UNUserNotificationCenter.current().setNotificationCategories([cat])
+        #endif
     }
 
     @MainActor static func requestIfNeeded() {
@@ -91,6 +94,11 @@ enum KalNotify {
     }
 
     @MainActor static func reschedule(_ events: [KalEvent]) {
+        #if KAL_EMBED
+        // Prompt 84: innebygd i Homelab planlegges påminnelsene bare når den frittstående Kalender-appen ikke er installert
+        // (den planlegger dem selv). Trykk på varselet går via Homelabs egen varsel-delegat (Notify31 → Kalender).
+        if !KalEmbed84.shared.notify { return }
+        #endif
         let list: [Plan] = plans(events, now: Date())
         let sig: String = list.map { (p: Plan) -> String in p.id + "@" + String(Int(p.at.timeIntervalSince1970)) + p.body }.joined(separator: "|")
         if sig == lastSignature { return }

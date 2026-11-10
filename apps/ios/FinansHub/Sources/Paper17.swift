@@ -643,6 +643,8 @@ struct PaperSettings17: View {
             ForEach(PaperSettings17.groups50(store, p)) { (g: Settings50Group) in
                 group(g.title, g.offset, g.rows)
             }
+            // Prompt 84: «Kalender i appen» (hele Kalender-appen inni Homelab, Kal84Embed.swift).
+            Kal84Settings()
             if Update28Model.isAdmin(store) {
                 // Prompt 30: PROGRAMVARE (Oppdater ›, automatiske oppdateringer, varsle om nye versjoner). Update30.swift.
                 Update30Software()

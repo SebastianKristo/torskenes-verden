@@ -7,6 +7,9 @@ import WidgetKit
 // Fasit: design/Kalender App.dc.html (platform ios), Kalender App Oversikt.dc.html, Kalender iPhone.dc.html.
 // Én skjerm: toppfelt, visning og skrivefelt. Sidemeny, ark, Glimt-panel og bakteppe dekker hele skjermen (også statuslinjen).
 
+// Prompt 84: @main bare i den frittstående appen. I Homelab-appen (FinansHub-målet, KAL_EMBED) er Kalender en fullskjerm
+// inni Homelab (Kal84Embed.swift): ingen egen App, BGTask, varsel-delegat, krasjfanger eller URL-skjema der.
+#if !KAL_EMBED
 @main
 struct KalApp: App {
     @Environment(\.scenePhase) private var phase
@@ -24,17 +27,7 @@ struct KalApp: App {
 
     var body: some Scene {
         WindowGroup {
-            KalThemed()
-                .onOpenURL { (url: URL) in KalLinks.handle(url) }
-                .onContinueUserActivity(NSUserActivityTypeBrowsingWeb) { (a: NSUserActivity) in
-                    if let u = a.webpageURL { KalLinks.handle(u) }
-                }
-                .task {
-                    KalStore.shared.bootstrap()
-                    // Prompt 51: krasjrapporter, flagg, ventende enheter og «Nytt i denne versjonen».
-                    KalSec51Model.shared.active()
-                    await KalStore.shared.load(force: true)
-                }
+            KalAppRoot()
         }
         .onChange(of: phase) { (_: ScenePhase, p: ScenePhase) in
             let s: KalStore = KalStore.shared
@@ -56,6 +49,35 @@ struct KalApp: App {
         }
     }
 }
+#endif
+
+/// Prompt 84: rotvisningen til Kalender-appen – brukt av KalApp (egen app) og av Homelab-appen (Kal84Root, innebygd).
+/// Innebygd tar Homelab seg av lenker (kalender:// er ikke registrert i Homelab) og aktivering/bakgrunn (Kal84Host).
+struct KalAppRoot: View {
+    #if KAL_EMBED
+    var body: some View {
+        KalThemed()
+            .task { await KalAppRoot.start() }
+    }
+    #else
+    var body: some View {
+        KalThemed()
+            .onOpenURL { (url: URL) in KalLinks.handle(url) }
+            .onContinueUserActivity(NSUserActivityTypeBrowsingWeb) { (a: NSUserActivity) in
+                if let u = a.webpageURL { KalLinks.handle(u) }
+            }
+            .task { await KalAppRoot.start() }
+    }
+    #endif
+
+    /// Første visning: innlogging fra Homelab (App Group), krasjrapporter/flagg og første henting.
+    @MainActor static func start() async {
+        KalStore.shared.bootstrap()
+        // Prompt 51: krasjrapporter, flagg, ventende enheter og «Nytt i denne versjonen».
+        KalSec51Model.shared.active()
+        await KalStore.shared.load(force: true)
+    }
+}
 
 /// Velger tema (System / Lys / Mørk) og legger tokens i miljøet.
 struct KalThemed: View {
@@ -67,27 +89,48 @@ struct KalThemed: View {
         return nil
     }
 
+    #if KAL_EMBED
+    // Prompt 84: innebygd i Homelab settes temaet bare på Kalender-fullskjermen (KalEmbed84), aldri på Homelabs vinduer.
+    var body: some View {
+        KalSchemeReader()
+            .onAppear { KalThemed.apply(s.theme) }
+            .onChange(of: s.theme) { (_: String, v: String) in KalThemed.apply(v) }
+    }
+    #else
     var body: some View {
         KalSchemeReader()
             .preferredColorScheme(scheme)
             .onAppear { KalThemed.apply(s.theme) }
             .onChange(of: s.theme) { (_: String, v: String) in KalThemed.apply(v) }
     }
+    #endif
 
     /// overrideUserInterfaceStyle på vinduene (preferredColorScheme(nil) går ikke alltid tilbake til System).
-    static func apply(_ theme: String) {
+    @MainActor static func apply(_ theme: String) {
         let style: UIUserInterfaceStyle = theme == "light" ? .light : (theme == "dark" ? .dark : .unspecified)
+        #if KAL_EMBED
+        KalEmbed84.shared.apply(style)
+        #else
         for scene in UIApplication.shared.connectedScenes {
             guard let ws = scene as? UIWindowScene else { continue }
             // Prompt 47: også tastaturvinduene får stilen (tastaturet følger temaet), men aldri bakgrunnsfarge (se KalKeyboard37.windowBg).
             for w in ws.windows { w.overrideUserInterfaceStyle = style }
         }
+        #endif
     }
 }
 
 struct KalSchemeReader: View {
     @Environment(\.colorScheme) private var cs
 
+    #if KAL_EMBED
+    // Prompt 84: innebygd i Homelab – ingen «Nytt i denne versjonen» for Kalender-appen og ingen «Kalender på hjemskjermen»
+    // (widgetene hører til den frittstående appen).
+    var body: some View {
+        KalRoot()
+            .environment(\.kal, cs == .dark ? KalTheme.darkTheme : KalTheme.light)
+    }
+    #else
     var body: some View {
         // Prompt 51: «Nytt i denne versjonen» over alt annet (tegner ingenting når det ikke er noe nytt).
         KalRoot()
@@ -96,6 +139,7 @@ struct KalSchemeReader: View {
             .overlay { KalWIntro70Host() }
             .environment(\.kal, cs == .dark ? KalTheme.darkTheme : KalTheme.light)
     }
+    #endif
 }
 
 struct KalRoot: View {

@@ -84,7 +84,7 @@ final class KalStore {
     var weekStart: String = KalWeek35.raw {
         didSet {
             KalWeek35.set(weekStart)
-            WidgetCenter.shared.reloadAllTimelines()
+            KalW70.reload()
         }
     }
     /// mnd | uke | 3d | dag | liste
@@ -232,7 +232,7 @@ final class KalStore {
         loggedIn = false
         events = []
         rebuild()
-        WidgetCenter.shared.reloadAllTimelines()
+        KalW70.reload()
         // Prompt 43: oppsettsteget (iPad) vises igjen etter neste innlogging.
         KalWide43.shared.reset()
     }
@@ -246,7 +246,7 @@ final class KalStore {
         loggedIn = false
         events = []
         rebuild()
-        WidgetCenter.shared.reloadAllTimelines()
+        KalW70.reload()
         KalLogin41Model.shared.phase = "start"
         showToast("Du er logget ut i Homelab. Logg inn igjen.", undo: "")
     }
@@ -739,7 +739,7 @@ final class KalStore {
         s.wx = wx.values.sorted { (a: KalWxDay, b: KalWxDay) -> Bool in a.day < b.day }
         s.updated = Date().timeIntervalSince1970
         KalNet.saveSnapshot(s)
-        WidgetCenter.shared.reloadAllTimelines()
+        KalW70.reload()
     }
 
     func savePending() {

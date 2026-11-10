@@ -40,8 +40,11 @@ struct KalSettings35View: View {
                     KalLabel(text: "VISNING").padding(.top, 6)
                     display
                     // Prompt 70: Widgets – kalendere som tas med, «Skjul fullførte i dag» og «Legg til widget».
-                    KalLabel(text: "WIDGETS").padding(.top, 6)
-                    KalWSettings70()
+                    // Prompt 84: ikke innebygd i Homelab (widgetene hører til den frittstående Kalender-appen).
+                    if !KalEmbed84.on {
+                        KalLabel(text: "WIDGETS").padding(.top, 6)
+                        KalWSettings70()
+                    }
                     // Prompt 37: Kalendere → Studie → Fag (egen farge per fag; trykk gir fargevelger).
                     KalLabel(text: "STUDIE · FAG").padding(.top, 6)
                     KalFagSettings37()
@@ -74,7 +77,7 @@ struct KalSettings35View: View {
                     // Prompt 46: skann QR-koden som Kalender på Mac/Android eller en annen enhet viser.
                     KalQRScan46Row()
                     // Prompt 43: iPhone og iPad oppdateres via TestFlight/IPA (bare info).
-                    KalUpdateInfo43()
+                    if !KalEmbed84.on { KalUpdateInfo43() }
                     // Prompt 41: Server (lesbar) og Logg ut ligger nå øverst i GLIMT OG KONTO (fasitens linkRows).
                     account
                     Text(footer).font(KalFont.ui(12)).foregroundStyle(t.mut2)

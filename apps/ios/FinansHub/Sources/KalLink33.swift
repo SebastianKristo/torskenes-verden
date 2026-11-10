@@ -22,6 +22,12 @@ enum KalLink33 {
     @discardableResult
     static func open(_ link: String) -> Bool {
         if stayInHomelab { return false }
+        // Prompt 84: «Kalender i appen» (Innstillinger, standard på) – den innebygde Kalender-appen i fullskjerm (Kal84Embed.swift).
+        if Kal84.on, let e = URL(string: link) {
+            Haptics.shared.select()
+            Kal84Host.shared.show(e)
+            return true
+        }
         guard let u = URL(string: link), installed else { return false }
         Haptics.shared.select()
         UIApplication.shared.open(u)
@@ -49,7 +55,8 @@ enum KalLink33 {
 
     /// finanshub://kalender[/<id>][?date=…] fra widgetene → tilsvarende kalender://. ?quick= blir i Homelab (skjemaet).
     static func forward(_ url: URL) -> Bool {
-        if !installed { return false }
+        // Prompt 84: med «Kalender i appen» på går lenkene til den innebygde Kalenderen.
+        if !installed && !Kal84.on { return false }
         let items: [URLQueryItem] = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
         if items.contains(where: { (i: URLQueryItem) -> Bool in i.name == "quick" }) { return false }
         let parts: [String] = url.pathComponents.filter { (p: String) -> Bool in p != "/" }
@@ -70,7 +77,8 @@ enum KalCompanion33 {
 
     /// Kalles fra syncWidgets(): lager et nytt Kalender-token når kontoen er ny eller tokenet mangler.
     static func sync(_ store: Store, force: Bool = false) {
-        guard KalGroup.linked, let a = store.account, !busy else { return }
+        // Prompt 84: uten App Group (sideloading) ligger kal.hl.* i Homelabs egne innstillinger – nok for den innebygde Kalenderen.
+        guard KalGroup.linked || Kal84.on, let a = store.account, !busy else { return }
         let fp: String = KalGroup.fingerprint(a.token)
         if !force && KalGroup.homelabToken != nil && KalGroup.homelabFor == fp { return }
         // Ikke prøv igjen hvert sekund når serveren sier nei.
@@ -111,6 +119,15 @@ enum KalCompanion33 {
 
     static func clear() {
         KalGroup.clearHomelab()
+    }
+
+    /// Prompt 84: den innebygde Kalenderen mangler innlogging – lag companion-tokenet nå (samme regel som sync) og vent på svaret.
+    static func ensure84(_ store: Store) async {
+        guard let a = store.account, !busy else { return }
+        if KalGroup.homelabToken != nil && KalGroup.homelabFor == KalGroup.fingerprint(a.token) { return }
+        busy = true
+        defer { busy = false }
+        await create(store, a)
     }
 
     /// finanshub://kalender-login fra Kalender-appen: lag tokenet og send brukeren tilbake.

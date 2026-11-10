@@ -9,8 +9,11 @@ import WidgetKit
 // - KalWIntro70Host: vises én gang etter oppdateringen («Legg til widget» · «Senere»), aldri samtidig med «Nytt i denne versjonen».
 
 enum KalW70 {
+    /// Prompt 84: ikke i Homelab-appen (KAL_EMBED) – der ville det tegne Homelabs egne widgets på nytt, ikke Kalenders.
     static func reload() {
+        #if !KAL_EMBED
         WidgetCenter.shared.reloadAllTimelines()
+        #endif
     }
 }
 

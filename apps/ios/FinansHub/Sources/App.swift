@@ -32,15 +32,13 @@ struct FinansHubApp: App {
                 // Prompt 51 (IOSPLAT51): offline-køen, Live Activities og Apple Watch-innloggingen (Plat51Host.swift).
                 .plat51Host()
                 .environment(store)
+                // Prompt 84: den innebygde Kalender-appen (Kal84Embed.swift) får Homelab-kontoen.
+                .kal84Host(store)
                 // Prompt 38: homelab://login?c=… (QR-innlogging på ny enhet, QrLogin38.swift) før de vanlige dyplenkene.
                 .onOpenURL { (u: URL) in
-                    if AppAuth41.shared.handle(u, store) { return }
-                    // Prompt 51 (IOSFEAT51): papir://join?i=…&c=…&srv=… – invitasjon for nye familiemedlemmer (Onboard51.swift).
-                    if Onboard51.shared.handleURL(u, store) { return }
-                    if Qr38Model.shared.handle(u, store) { return }
-                    // Prompt 43: magnet:-lenker og homelab://magnet?url=… åpner «Legg til magnet-lenke» i Media.
-                    if Media43.shared.handleURL(u, store) { return }
-                    store.openDeepLink(u)
+                    // Prompt 84: lenker til Homelab mens den innebygde Kalenderen er åpen (f.eks. «Bursdager ›») lukker den først.
+                    if Kal84Host.shared.closeFirst(u, { openLink84(u) }) { return }
+                    openLink84(u)
                 }
                 // Universal link https://<server>/l/<kode> (krever Associated Domains når det er satt opp).
                 .onContinueUserActivity(NSUserActivityTypeBrowsingWeb) { (a: NSUserActivity) in
@@ -65,6 +63,17 @@ struct FinansHubApp: App {
         .onChange(of: phase) { _, p in
             if p == .active && store.loggedIn { Task { await familyWake(); await store.dom38Preload() } }
         }
+    }
+
+    /// Dyplenkene (homelab://, finanshub://, papir://, magnet:).
+    @MainActor private func openLink84(_ u: URL) {
+        if AppAuth41.shared.handle(u, store) { return }
+        // Prompt 51 (IOSFEAT51): papir://join?i=…&c=…&srv=… – invitasjon for nye familiemedlemmer (Onboard51.swift).
+        if Onboard51.shared.handleURL(u, store) { return }
+        if Qr38Model.shared.handle(u, store) { return }
+        // Prompt 43: magnet:-lenker og homelab://magnet?url=… åpner «Legg til magnet-lenke» i Media.
+        if Media43.shared.handleURL(u, store) { return }
+        store.openDeepLink(u)
     }
 
     /// Familie: fortsett delingen (hvis den er på), send helsesammendraget og hent nye sonevarsler.

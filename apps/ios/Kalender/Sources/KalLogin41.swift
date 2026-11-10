@@ -79,6 +79,11 @@ final class KalLogin41Model {
     /* ---------- Logg inn med Homelab-appen (PKCE) ---------- */
 
     func viaApp() {
+        // Prompt 84: innebygd i Homelab logger Homelab inn med sin egen konto (ikke homelab://app-auth til seg selv).
+        if let h = KalEmbed84.shared.login {
+            h()
+            return
+        }
         KalHaptic.tap()
         error = ""
         webOffer = false

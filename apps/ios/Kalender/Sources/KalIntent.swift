@@ -1,6 +1,10 @@
 import Foundation
 import AppIntents
 
+// Prompt 84: bare i den frittstående Kalender-appen. Homelab-appen har sin egen AppShortcutsProvider (Quick29Shortcuts),
+// og iOS tillater én per app.
+#if !KAL_EMBED
+
 /* ---------------- Prompt 33: App Intent «Legg til i Kalender …» (Siri, Snarveier) ---------------- */
 // Tolker teksten lokalt (samme regler som Glimt-feltet) og sender hendelsen til serveren uten å åpne appen.
 
@@ -39,3 +43,4 @@ struct KalShortcuts: AppShortcutsProvider {
         )
     }
 }
+#endif

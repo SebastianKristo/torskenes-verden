@@ -117,7 +117,8 @@ extension Store {
         // Prompt 46: Kart (Mer → Kart, Glimt «vis bussene rundt hjemme» → tkart / tkart:<sone>) i fullskjerm.
         if t == "tkart" || t.hasPrefix("tkart:") { Kart46.shared.show(self, zone: t.hasPrefix("tkart:") ? String(t.dropFirst(6)) : nil); return }
         // Prompt 33: kalenderfanen, Mer → Kalender, varsler og Glimt åpner Kalender-appen når den er installert (KalLink33.swift).
-        if t == "kalender" && paperTab != "kalender" && KalLink33.today() { return }
+        // Prompt 84: med «Kalender i appen» åpner Kalender også når Homelabs egen kalenderfane står åpen.
+        if t == "kalender" && (paperTab != "kalender" || Kal84.on) && KalLink33.today() { return }
         // Prompt 34: en tilbake-handling har allerede gitt én lett impuls (Haptic34) – ikke et valg-tikk i tillegg.
         if !Haptic34.recent { Haptics.shared.select() }
         // Prompt 38: husk hvor Abonnement ble åpnet fra, så ‹ går tilbake dit (Nav38.swift).

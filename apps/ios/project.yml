@@ -21,6 +21,10 @@ targets:
       - Shared
       # Prompt 33: App Group-nøklene som Kalender-appen leser (companion-token).
       - SharedKal/Group
+      # Prompt 84: «Kalender i appen» – hele Kalender-appen (samme kode) inni Homelab, bak flagget KAL_EMBED (under).
+      # Ikke Kalender/Resources (bare AppIcon/AccentColor) og ikke SharedKal/Fonts: de samme fontene ligger i FinansHub/Resources/Fonts.
+      - Kalender/Sources
+      - SharedKal/Core
     dependencies:
       # Widgetene (WidgetKit) bygges som utvidelse og legges i FinansHub.app/PlugIns.
       - target: FinansHubWidgets
@@ -43,6 +47,9 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: no.kristo.finanshub
         TARGETED_DEVICE_FAMILY: "1,2"
+        # Prompt 84: den innebygde Kalenderen – #if !KAL_EMBED rundt det som hører til den frittstående appen (@main, App Intents,
+        # BGTask, varsel-delegat/-kategorier, krasjfanger, kalender://, widget-reload). Kal84Embed.swift / KalEmbed84.swift.
+        SWIFT_ACTIVE_COMPILATION_CONDITIONS: "$(inherited) KAL_EMBED"
         # Prompt 47: FoundationModels (iOS 26) lenkes svakt, så appen starter på iOS 17/18. Bare med iOS 26-SDK (Xcode 26);
         # Xcode 16 har ikke rammeverket, og koden er bak #if canImport(FoundationModels) (Receipt47Engine.swift).
         "OTHER_LDFLAGS[sdk=iphoneos26*]": "$(inherited) -weak_framework FoundationModels"
@@ -127,7 +134,8 @@ targets:
           - CFBundleURLName: no.kristo.finanshub.magnet
             CFBundleURLSchemes: [magnet]
         # Prompt 33: canOpenURL(kalender://) – åpne Kalender-appen når den er installert, ellers Homelabs egen kalender.
-        LSApplicationQueriesSchemes: [kalender]
+        # Prompt 84: finanshub/homelab – den innebygde Kalenderen sjekker canOpenURL før lenker til Homelab (Bursdager ›, Glimt …).
+        LSApplicationQueriesSchemes: [kalender, finanshub, homelab]
         # Prompt 45: sonevarsler som Communication Notifications (soneikonet stort, app-ikonet som merke), Zone45.swift.
         # Selve rettigheten (com.apple.developer.usernotifications.communication) legges til når appen signeres med egen Team ID.
         NSUserActivityTypes: [INSendMessageIntent]

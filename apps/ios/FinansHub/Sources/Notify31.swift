@@ -232,6 +232,8 @@ enum Notify31 {
 
     /// Åpner siden varselet gjelder.
     @MainActor static func open(go: String, chatId: String, _ store: Store) {
+        // Prompt 84: et varsel om noe annet enn kalenderen lukker den innebygde Kalenderen, så siden vises.
+        if go != "kalender" { Kal84Host.shared.close() }
         switch go {
         case "chat":
             store.paperGo("chat")
