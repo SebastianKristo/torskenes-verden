@@ -575,12 +575,15 @@ module ribbe_ned2d(ya, zs) { polygon([[ya, zs + e], [ya + ribbe_t + ribbe_h, zs 
 // Vindu i en sideramme (YZ): spiss 45° foran (taket når rammen ligger på ryggen), flat bak
 // Dybdene til stagene i siderammene og tverrstagene (jevnt fordelt mellom vindu_kant og bakkant av vinduene)
 function stag_y(y1) = [for (k = [1 : 1 : vindu_stag_n]) vindu_kant + (y1 - vindu_kant) * k / (vindu_stag_n + 1)];
-// Vindu delt av stagene: hvert stykke har spiss 45° foran og flat bakkant (bunnen i printen)
-module vinduer2d(y0, y1, za, zb) {
-    cuts = [for (y = stag_y(y1)) if (y - vindu_stag_b / 2 > y0) y];
-    starts = concat([y0], [for (y = cuts) y + vindu_stag_b / 2]);
-    ends = concat([for (y = cuts) y - vindu_stag_b / 2], [y1]);
-    for (i = [0 : len(starts) - 1]) vindu2d(starts[i], ends[i], za, zb);
+// Vinduene i en sideramme for én rad, delt av stagene. Hvert stykke har spiss 45° foran og flat bakkant (bunnen i printen).
+// Foran stag 1: et lavt vindu helt fram (yf, opp til zbf) og et høyt bak taket (yd, opp til zbd), som før – spissen på det høye
+// ligger inni det lave. Bak hvert stag: bare det høye vinduet, så det aldri blir løse trekanter mellom to spisser.
+module vinduer2d(yf, yd, y1, za, zbf, zbd) {
+    cuts = stag_y(y1);
+    e1 = len(cuts) > 0 ? cuts[0] - vindu_stag_b / 2 : y1;
+    vindu2d(yf, e1, za, zbf);
+    if (yd < e1 - 2) vindu2d(yd, e1, za, zbd);
+    for (i = [0 : 1 : len(cuts) - 1]) vindu2d(cuts[i] + vindu_stag_b / 2, i + 1 < len(cuts) ? cuts[i + 1] - vindu_stag_b / 2 : y1, za, zbd);
 }
 module vindu2d(y0, y1, za, zb) {
     hm = (zb - za) / 2;
@@ -783,10 +786,8 @@ module lv_modul(k, n, bunn, topp, vs, hs, rf = [], mg = []) {
             // Vinduer i siderammene: ett stort bak frontlista og taket, og ett i skuffhøyden helt fram.
             // I en dobbel rad deles de i to med en tverrligger midt på.
             for (x = [-e, W - vegg_t - e]) translate([x, 0, 0]) langs_x(vegg_t + 2 * e)
-                for (v = [[td + 2, z0 + f * Pr - 2], [vindu_kant, zc - 2]]) {
-                    if (f == 1) vinduer2d(v[0], y1, za, v[1]);
-                    else { vinduer2d(v[0], y1, za, zm - 1.5); vinduer2d(v[0], y1, zm + 1.5, v[1]); }
-                }
+                for (b = (f == 1 ? [[za, z0 + f * Pr - 2, zc - 2]] : [[za, zm - 1.5, zm - 1.5], [zm + 1.5, z0 + f * Pr - 2, zc - 2]]))
+                    vinduer2d(vindu_kant, td + 2, y1, b[0], b[2], b[1]);
             // Kanalen går gjennom siderammene: stripa, masken og ledningene går videre til neste modul
             for (x = [-e, W - vegg_t - e]) translate([x, -e, zt]) cube([vegg_t + 2 * e, kanal_d + e, zT - zt + e]);
             for (c = [0 : k - 1]) {
