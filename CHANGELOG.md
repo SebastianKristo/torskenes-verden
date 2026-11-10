@@ -2,6 +2,13 @@
 
 Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. Versjonene med APK og IPA ligger under [Releases](https://github.com/SebastianKristo/torskenes-verden/releases).
 
+## [4.70.0] – 10.11.2026 · Kalender inni Homelab-appen
+- **Kalender i appen (iPhone):** Homelab-appen har nå hele Kalender-appen inni seg. Det er nyttig når du sideloader og bare har plass til én app. Slå det av og på under Innstillinger → «Kalender i appen», som er på fra start.
+  - Lenkene til Kalender åpner Kalender i full skjerm. Det gjelder Hjem-kortet, kalenderfanen, Mer → Kalender, Glimt og widgetene. «‹ Homelab» øverst tar deg tilbake.
+  - Kalender bruker samme innlogging som Homelab.
+  - Siri-snarveier og oppdatering i bakgrunnen finnes bare i den vanlige Kalender-appen. Den kan fortsatt installeres ved siden av.
+- **Skjold Lab 3D:** veggmodulene er stivere. Siderammene har fått stag, skinnene er bundet sammen med tverrstag, og skinnene og skråstagene er tykkere. Ingenting starter lenger i lufta. Modulene passer sammen med dem du allerede har printet.
+
 ## [4.69.0] – 10.11.2026 · Skjold Lab: plukkliste, store skuffer og LED som lyser
 - **Plukkliste:** trykk **+** på en del (f.eks. gul diode, ESP32, transistor) og så **💡 Vis alle med LED**. Hver del lyser i sin egen farge, og opptil 20 skuffer kan lyse samtidig. I plukklista justerer du antall, og **Ta ut av lager** trekker fra alt på en gang, med angre. Lista følger deg på alle enhetene.
 - **WLED lyste ikke:** tenningen låste opp segmentet igjen, så effekten tegnet over LED-ene. Nå tennes segmentet med full lysstyrke og uten effekt, og alt settes tilbake etterpå. Du får beskjed hvis en skuff ligger utenfor stripa.
