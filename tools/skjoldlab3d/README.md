@@ -252,6 +252,8 @@ Med standardverdiene blir det **103 skuffer**: 83 vanlige, 10 brede og 10 store.
 
 Sett `venstre_kolonner = 0`, `store_skuffer = 0` og `brede_skuffer = 0` for 143 like skuffer som før.
 
+**4 etasjer i stedet for 5:** `rader_hele = 11` gir 11 rader (4 etasjer, 640 mm høyt) med lokk på 4. etasje, 8 store og 10 brede skuffer. Det er en egen pakke på releasen: `skjoldlab3d-4-etasjer.zip`. Ikke bruk de nederste fire etasjene fra 5-etasjerspakken, for der mangler lokket øverst. Skjold Lab har forhåndsoppsettet «Skjold Lab-hylla (3D-print)» med valget 4 eller 5 etasjer, så tegningen og LED-ene stemmer.
+
 ### Oppsett, hele hylla (sett forfra, uten store skuffer)
 
 ```
