@@ -123,23 +123,28 @@ bak_rom = 7;
 
 /* [Lett ramme] */
 // Skinne: flensbredde per side (bærer skuffen), tykkelse og styrekant over flensen
-flens_b = 4.5;
-flens_t = 1.6;
+flens_b = 6;
+flens_t = 2.0;
 skinne_h = 3;
 // Midtskinne under brede skuffer (legges inn når broen i printen ville blitt lengre enn bro_maks)
-midt_b = 6;
+midt_b = 8;
 bro_maks = 55;
 // Frontlist (gulvet foran, lukker LED-kanalen under) og LED-veggen i kanalen
 list_t = 1.2;
 led_vegg_t = 1.2;
 // Bakstopp: høyde over skinna
 bakstopp_h = 4;
-// Skråstag foran mellom kolonnene (fra skinna opp til taket)
-stolpe_t = 2.0;
+// Skråstag foran mellom kolonnene (fra skinna opp til taket): tykkelse (= styrekanten, 2 x vegg_t) og bredde i eget plan
+stolpe_t = 3.2;
+stolpe_b = 6;
 // Ryggkryss og lister: bredde
-stag_b = 6;
+stag_b = 9;
 // Minste materiale foran vinduene i siderammene
-vindu_kant = 4;
+vindu_kant = 6;
+// Stivere ramme: vinduene i siderammene deles av stag langs dybden, og tverrstag binder skinnene sammen på samme dybder
+vindu_stag_n = 2;
+vindu_stag_b = 8;
+tverrstag_b = 3;
 
 /* [Skuff] */
 skuff_vegg = 1.2;
@@ -568,6 +573,15 @@ module langs_x(W) { rotate([90, 0, 90]) linear_extrude(W) children(); }
 module ribbe_opp2d(ya, zs) { polygon([[ya, zs - e], [ya + ribbe_t + ribbe_h, zs - e], [ya + ribbe_t, zs + ribbe_h], [ya, zs + ribbe_h]]); }
 module ribbe_ned2d(ya, zs) { polygon([[ya, zs + e], [ya + ribbe_t + ribbe_h, zs + e], [ya + ribbe_t, zs - ribbe_h], [ya, zs - ribbe_h]]); }
 // Vindu i en sideramme (YZ): spiss 45° foran (taket når rammen ligger på ryggen), flat bak
+// Dybdene til stagene i siderammene og tverrstagene (jevnt fordelt mellom vindu_kant og bakkant av vinduene)
+function stag_y(y1) = [for (k = [1 : 1 : vindu_stag_n]) vindu_kant + (y1 - vindu_kant) * k / (vindu_stag_n + 1)];
+// Vindu delt av stagene: hvert stykke har spiss 45° foran og flat bakkant (bunnen i printen)
+module vinduer2d(y0, y1, za, zb) {
+    cuts = [for (y = stag_y(y1)) if (y - vindu_stag_b / 2 > y0) y];
+    starts = concat([y0], [for (y = cuts) y + vindu_stag_b / 2]);
+    ends = concat([for (y = cuts) y - vindu_stag_b / 2], [y1]);
+    for (i = [0 : len(starts) - 1]) vindu2d(starts[i], ends[i], za, zb);
+}
 module vindu2d(y0, y1, za, zb) {
     hm = (zb - za) / 2;
     if (zb - za >= 4 && y1 - y0 > hm + 2)
@@ -719,6 +733,8 @@ module lv_modul(k, n, bunn, topp, vs, hs, rf = [], mg = []) {
                 zr = z0 + hylle_t;
                 Ls = zt - zr;
                 lv_skinner(W, k, z0, mgx[r]);
+                // Tverrstag i gulvet på samme dybder som stagene i siderammene: binder skinnene sammen (i flukt med flensen)
+                for (y = stag_y(y1)) translate([vegg_t - e, y - tverrstag_b / 2, z0 + hylle_t - flens_t]) cube([W - 2 * vegg_t + 2 * e, tverrstag_b, flens_t]);
                 // Frontlist (gulvet foran). I nederste rad i en modul griper ribbene ned i kanalen i modulen under og låser fronten.
                 translate([0, 0, z0 + hylle_t - list_t]) cube([W, fl_d, list_t]);
                 if (!(bunn && r == 0)) langs_x(W) for (ya = [0, spor_bak]) ribbe_ned2d(ya, z0 + hylle_t - list_t);
@@ -738,7 +754,7 @@ module lv_modul(k, n, bunn, topp, vs, hs, rf = [], mg = []) {
                 if (sist) langs_x(W) polygon([[led_bak - e, zT], [led_bak + 1.7, zT], [led_bak + 1.7 + (zT - zt), zt - e], [led_bak - e + (zT - zt), zt - e]]);
                 // Skråstag 45° foran mellom kolonnene, fra T-skinna opp til bakkanten av taket
                 if (k > 1) for (c = [1 : k - 1]) if (!har(mgx[r], c)) translate([c * P - stolpe_t / 2, 0, 0]) langs_x(stolpe_t)
-                    polygon([[td - 1, zt], [td + 2, zt], [td + 2 + Ls, zr - e], [td - 1 + Ls, zr - e]]);
+                    polygon([[td - 1, zt], [td - 1 + stolpe_b, zt], [td - 1 + stolpe_b + Ls, zr - e], [td - 1 + Ls, zr - e]]);
                 // Over en dobbel skuff: finne fra undersiden av taket og opp, helt bak til ryggen. Den står på printplata
                 // og bærer takkanten midt på (ellers en bro på 100 mm). Skuffen med leppe går 1 mm under.
                 zf = sist ? zT : z0 + f * Pr + hylle_t - flens_t + e;
@@ -768,8 +784,8 @@ module lv_modul(k, n, bunn, topp, vs, hs, rf = [], mg = []) {
             // I en dobbel rad deles de i to med en tverrligger midt på.
             for (x = [-e, W - vegg_t - e]) translate([x, 0, 0]) langs_x(vegg_t + 2 * e)
                 for (v = [[td + 2, z0 + f * Pr - 2], [vindu_kant, zc - 2]]) {
-                    if (f == 1) vindu2d(v[0], y1, za, v[1]);
-                    else { vindu2d(v[0], y1, za, zm - 1.5); vindu2d(v[0], y1, zm + 1.5, v[1]); }
+                    if (f == 1) vinduer2d(v[0], y1, za, v[1]);
+                    else { vinduer2d(v[0], y1, za, zm - 1.5); vinduer2d(v[0], y1, zm + 1.5, v[1]); }
                 }
             // Kanalen går gjennom siderammene: stripa, masken og ledningene går videre til neste modul
             for (x = [-e, W - vegg_t - e]) translate([x, -e, zt]) cube([vegg_t + 2 * e, kanal_d + e, zT - zt + e]);

@@ -196,6 +196,7 @@ Nå er rammen bygd slik:
 - Vinduene i siderammene har 45° spiss foran, der taket på vinduet havner i printen.
 - LED-veggen i øverste rad bæres av et 45° skråstag bak.
 - Liggende hull er dråpeformede.
+- **Stivere fra 2026-11-10:** modulene printes stående på ryggen og er 165 mm høye. Over bakstoppen bestod de nesten bare av tynne plater, så de ble skjøre høyt oppe. Nå er det to stag i hver sideramme, som deler vinduene i tre med 45° spiss. Tverrstag i gulvet binder skinnene sammen på de samme dybdene. Skinnene er 6 × 2 mm (før 4,5 × 1,6), midtskinnene 8 mm, skråstagene 3,2 × 6 mm (før 2 × 3), ryggkrysset 9 mm og kanten foran vinduene 6 mm.
 - Bakstoppen er en kile med skrå bakside helt ned til ryggen, så den står på platen.
 - Over doble skuffer bærer en finne takkanten midt på, så spennet ikke blir lengre enn ca. 48 mm.
 - Det eneste som bygges som bro, er korte spenn: LED-veggen spenner 12,6 mm mellom taket og frontlista, og taket og frontlista spenner maks ca. 48 mm mellom skinner og skråstag.
