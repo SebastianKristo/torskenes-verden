@@ -377,7 +377,9 @@ async function onHash() {
   if (r.cab && cabById(r.cab)) S.cabId = cabById(r.cab).id;
   if (r.v === 'drawer') S.drawerParts = null;
   paint();
-  window.scrollTo?.({ top: 0 });
+  // Bytte skuff (eller tilbake til lista) i samme skap er ikke en ny side: behold rulleposisjonen.
+  const sameCab = (r.v === 'drawer' || r.v === 'list') && (prev.v === 'drawer' || prev.v === 'list') && String(r.cab ?? S.cabId) === String(prev.cab ?? S.cabId) && !(r.v === 'list' && r.q != null && prev.q !== r.q);
+  if (!sameCab) window.scrollTo?.({ top: 0 });
   if (r.v === 'part') {
     const p = await loadPart(r.id), l = locOf(p);
     if (S.route !== r) return;
