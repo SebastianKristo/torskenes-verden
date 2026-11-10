@@ -19,7 +19,7 @@ test('flishøyde: Hjem på telefon er et eget rutenett uten fast høyde', () => 
   assert.doesNotMatch(h, /LazyVerticalGrid|aspectRatio/);
   assert.match(h, /verticalScroll\(scroll, enabled = st\.dragKey == null\)/, 'scroll av mens et kort er løftet');
   assert.match(h, /Arrangement\.spacedBy\(GAP70\)/);
-  assert.match(h, /private val GAP70 = 12\.dp/);
+  assert.match(h, /private val GAP70 = 10\.dp/); // prompt 80: 10 dp som iPhone (var 12)
   assert.match(h, /minIntrinsicHeight\(cw\)/, 'raden får høyden til det høyeste kortet');
   assert.match(h, /Constraints\.fixed\(cw, h\)/);
   assert.match(h, /PairRow70\([^\n]*212\.dp/, 'Avgang minst 212 dp');

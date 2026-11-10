@@ -296,7 +296,8 @@ struct WxSheetRef22: Identifiable {
 
 struct PaperWeatherView: View {
     @Environment(Store.self) private var store
-    @State private var mode: String = "temp"
+    /// Prompt 80: valgt modus (temp / rain / wind) huskes, likt med Android. Både bryteren og timeradene leser denne.
+    @AppStorage("vaer_mode") private var mode: String = "temp"
     @State private var scroll: CGFloat = 0
     @State private var sheet: WxSheetRef22?
     @State private var comparing: Bool = false

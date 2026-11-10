@@ -109,16 +109,22 @@ import no.kristo.finanshub.wiggleEnd37
  */
 
 private const val PAGE70 = "hjem"
-private val GAP70 = 12.dp
+/* Prompt 80 (AND80 B): 10 dp mellom kolonnene og radene som på iPhone og i designet (var 12). */
+private val GAP70 = 10.dp
 
 /*
  * Prompt 73 (ANDFIX73) – claude-code-hjem-kort-storrelse-android.md: iPhone er fasiten (Home70Grid.swift, Home50Tiles.swift).
  *  - Små kort har fast høyde fra en tabell, aldri fra innholdet eller nabokortet: liten flis 150 dp (Home50TileFrame minHeight 150),
  *    Avgang 212 dp (minHeight 212) – eller to små + mellomrom når to halve står stablet ved siden av (tallRow på iOS).
- *    Kort som ikke er fliser (f.eks. Siste nytt gjort halv) beholder innholdets høyde, minst 150 dp ved siden av en flis.
+ *    Kort som ikke er fliser (f.eks. Siste nytt gjort halv) beholder innholdets høyde, minst 150 dp ved siden av en flis (prompt 80: 101 dp, og flisen selv strekkes ikke).
  *  - Teksten i Hjem-kortene: skriftskalering tak 1,15, ingen fontpadding og eksplisitt linjehøyde (Manrope 1,35 em som hhea på iOS).
  */
-private val SMALL73 = 150.dp
+/*
+ * Prompt 80 (AND80 B, pakke 56): målt på 393 dp var Avgang ~330, Middag/Finans ~157 – tabellen var 150 og Avgang 2 × 150 + mellomrom.
+ * Fasit (iPhone og designet): liten 101 dp, høy (Avgang, 2 rader) 2 × 101 + 10 = 212 dp. Høyden er fast per kort og kommer aldri
+ * fra nabokortet, skjermhøyden eller weight: også ved siden av et kort som ikke er en flis, og i kolonnen ved siden av Avgang.
+ */
+private val SMALL73 = 101.dp
 private val TALL73 = 212.dp
 private const val FONT_MAX73 = 1.15f
 
@@ -127,6 +133,9 @@ internal fun fixedH73(keys: List<String>, h: Dp): Dp = if (keys.isNotEmpty() && 
 
 /** Avgang-raden: 212 dp, eller to små fliser + mellomrom når to halve står stablet ved siden av. */
 internal fun avH73(nx: Int): Dp = if (nx >= 2) SMALL73 * 2 + GAP70 else TALL73
+
+/** Prompt 80: fast høyde for én flis (HALF52), ellers Dp.Unspecified (kort som ikke er fliser får innholdets høyde). */
+internal fun tileH80(k: String, h: Dp): Dp = if (k in HALF52) h else Dp.Unspecified
 
 /** Tekst i Hjem-kortene som på iPhone: fontScale maks 1,15, uten fontpadding, eksplisitt linjehøyde. */
 @Composable
@@ -219,7 +228,7 @@ internal fun rows70(vis: List<String>, sz: Map<String, String>): List<Row70> {
  * Prompt 73: med [fixed] (fliser) er høyden fast som på iPhone – innholdet måles ikke.
  */
 @Composable
-private fun PairRow70(modifier: Modifier, minH: Dp, zl: Float, zr: Float, left: @Composable () -> Unit, right: @Composable () -> Unit, fixed: Dp = Dp.Unspecified) {
+private fun PairRow70(modifier: Modifier, minH: Dp, zl: Float, zr: Float, left: @Composable () -> Unit, right: @Composable () -> Unit, fixed: Dp = Dp.Unspecified, fl: Dp = Dp.Unspecified, fr: Dp = Dp.Unspecified) {
     Layout(
         content = {
             Box(Modifier.zIndex(zl)) { left() }
@@ -239,11 +248,13 @@ private fun PairRow70(modifier: Modifier, minH: Dp, zl: Float, zr: Float, left: 
                 fp[1].placeRelative(cw + g, 0)
             }
         }
-        val ih = ms.map { m -> try { m.minIntrinsicHeight(cw) } catch (e: Exception) { -1 } }
+        // Prompt 80: en flis ved siden av et kort som ikke er en flis har likevel sin faste høyde ([fl]/[fr]); bare det andre kortet strekkes.
+        val fx = listOf(fl, fr).map { if (it != Dp.Unspecified) it.roundToPx() else -1 }
+        val ih = ms.mapIndexed { i, m -> if (fx[i] >= 0) fx[i] else try { m.minIntrinsicHeight(cw) } catch (e: Exception) { -1 } }
         val pl = if (ih.all { it >= 0 }) {
             val h = maxOf(mh, ih.maxOrNull() ?: 0)
-            ms.map { it.measure(Constraints.fixed(cw, h)) }
-        } else ms.map { it.measure(Constraints(cw, cw, mh, Constraints.Infinity)) }
+            ms.mapIndexed { i, m -> m.measure(if (fx[i] >= 0) Constraints.fixed(cw, fx[i]) else Constraints.fixed(cw, h)) }
+        } else ms.mapIndexed { i, m -> m.measure(if (fx[i] >= 0) Constraints.fixed(cw, fx[i]) else Constraints(cw, cw, mh, Constraints.Infinity)) }
         val h = pl.maxOf { it.height }
         layout(w, h) {
             pl[0].placeRelative(0, 0)
@@ -303,15 +314,16 @@ internal fun HomeColumn70(
                         is Row70.Two -> PairRow70(Modifier.fillMaxWidth().zIndex(z), if (r.keys.any { it in HALF52 }) SMALL73 else 0.dp, zOf70(st, r.a), r.b?.let { zOf70(st, it) } ?: 0f,
                             { Tile70(vm, st, r.a, labels[r.a] ?: r.a, vis.indexOf(r.a), count, false, body) },
                             { r.b?.let { b -> Tile70(vm, st, b, labels[b] ?: b, vis.indexOf(b), count, false, body) } },
-                            fixed = fixedH73(r.keys, SMALL73))
+                            fixed = fixedH73(r.keys, SMALL73), fl = tileH80(r.a, SMALL73), fr = r.b?.let { tileH80(it, SMALL73) } ?: Dp.Unspecified)
                         is Row70.Av -> PairRow70(Modifier.fillMaxWidth().zIndex(z), 212.dp, zOf70(st, r.k), if (r.nx.any { it == st.dragKey }) 5f else 0f,
                             { Tile70(vm, st, r.k, labels[r.k] ?: r.k, vis.indexOf(r.k), count, false, body) },
                             {
+                                // Prompt 80: flisene ved siden av Avgang er 101 dp hver (øverst), aldri strukket med weight til Avgangs høyde.
                                 if (r.nx.isNotEmpty()) Column(Modifier.fillMaxWidth().fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(GAP70)) {
-                                    r.nx.forEach { x -> Box(Modifier.fillMaxWidth().weight(1f).zIndex(zOf70(st, x))) { Tile70(vm, st, x, labels[x] ?: x, vis.indexOf(x), count, false, body) } }
+                                    r.nx.forEach { x -> Box((if (x in HALF52) Modifier.fillMaxWidth().height(SMALL73) else Modifier.fillMaxWidth().weight(1f)).zIndex(zOf70(st, x))) { Tile70(vm, st, x, labels[x] ?: x, vis.indexOf(x), count, false, body) } }
                                 }
                             },
-                            fixed = fixedH73(r.keys, avH73(r.nx.size)))
+                            fixed = fixedH73(r.keys, avH73(r.nx.size)), fl = TALL73)
                     }
                 }
             }
@@ -362,11 +374,13 @@ private fun Tile70(vm: AppViewModel, st: Home70State, k: String, label: String, 
             // Plassen kortet ble løftet fra (dempet), tegnet utenfor laget så den blir stående.
             .drawBehind { if (dragging) drawRoundRect(ghost, cornerRadius = CornerRadius(24.dp.toPx())) }
             .graphicsLayer {
+                // Prompt 80 (AND80 A): wiggle-boksen tegner aldri skygge eller bakgrunn (søkepillen har sin egen i pilleform); bare løftet har skygge.
+                shadowElevation = 0f; shape = CircleShape; clip = false
                 if (st.dragKey == k) {
                     val t = st.finger - st.grab - st.dragTop
                     translationX = t.x; translationY = t.y
                     scaleX = 1.03f; scaleY = 1.03f
-                    shadowElevation = 18.dp.toPx(); shape = RoundedCornerShape(24.dp); clip = false
+                    shadowElevation = 18.dp.toPx(); shape = if (k == "h1") CircleShape else RoundedCornerShape(24.dp); clip = false
                 } else rotationZ = angle.value
             },
     ) {

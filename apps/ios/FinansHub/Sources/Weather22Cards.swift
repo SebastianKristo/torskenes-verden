@@ -110,10 +110,12 @@ struct WxHourCard22: View {
                         Text("Forhold ›").font(.dyn51(size: 16, weight: .bold)).frame(height: 20)
                         Text(title).font(.dyn51(size: 12.5)).foregroundStyle(Color(hex: "#9fe0ff")).lineLimit(1).truncationMode(.tail).frame(height: 17)
                     }
+                    // Prompt 80: trykkflaten for «Forhold ›» er bare tittelen til venstre – aldri bryteren.
+                    .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                Spacer()
-                // Prompt 46: Liquid Glass-dråpe som glir og kan sveipes (WxSeg46.swift – ScrollView med snapping, ingen egne dra-gester).
+                Spacer(minLength: 8)
+                // Prompt 80: glass-pillen med én DragGesture som highPriorityGesture (WxSeg46.swift) – trykk og dra virker over timelisten.
                 WxSeg46(mode: $mode, items: WxHourCard22.modes46)
             }
             .padding(.horizontal, 16)

@@ -26,6 +26,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -133,7 +134,7 @@ private fun Tile50(bg: Color, label: String, modifier: Modifier, onClick: () -> 
     Column(
         modifier.clip(TILE_SHAPE50).background(bg).then(t.edge?.takeIf { edge || Tone.glass }?.let { if (Tone.glass) glassEdge50(TILE_SHAPE50) else Modifier.border(1.dp, it, TILE_SHAPE50) } ?: Modifier)
             .clickable(role = Role.Button, onClickLabel = "Åpne $label", onClick = onClick).padding(16.dp, if (pad) 16.dp else 14.dp), // prompt 70: 16 dp sider, 14 dp topp/bunn
-        verticalArrangement = Arrangement.spacedBy(if (pad) 6.dp else 2.dp),
+        verticalArrangement = Arrangement.spacedBy(if (pad) 4.dp else 2.dp), // prompt 80: 4 dp i Avgang så alt får plass i 212 dp
         content = content,
     )
 }
@@ -155,7 +156,8 @@ internal fun AvgangTile50(vm: AppViewModel, deps: List<TileDep50>, modifier: Mod
         Text(r?.to ?: "Henter avganger …", color = t.avInk, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, fontFamily = PaperFonts.sans, maxLines = 1, overflow = TextOverflow.Ellipsis)
         Spacer(Modifier.weight(1f))
         Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            PSerif(r?.num ?: "", 64.sp, t.avInk, weight = FontWeight.Normal, maxLines = 1)
+            // Prompt 80: Avgang er fast 212 dp – det store tallet følger ikke skriftstørrelsen (som minimumScaleFactor på iOS), så «Så …» får plass.
+            PSerif(r?.num ?: "", with(LocalDensity.current) { 64.dp.toSp() }, t.avInk, weight = FontWeight.Normal, maxLines = 1)
             if (r != null && r.unit.isNotEmpty()) Text(r.unit, color = Color(0xFFA9A397), fontWeight = FontWeight.SemiBold, fontSize = 14.sp, fontFamily = PaperFonts.sans, modifier = Modifier.padding(bottom = 10.dp))
         }
         if (r2 != null) Text("Så ${r2.line} ${r2.to} · ${r2.num}${if (r2.unit.isNotEmpty()) " ${r2.unit}" else ""}", color = Color(0xFFA9A397), fontWeight = FontWeight.SemiBold,
@@ -211,7 +213,6 @@ internal fun FamTile50(vm: AppViewModel, modifier: Modifier) {
     val list = vm.famPositions
     Tile50(t.fam, "Familie", modifier, { vm.openFamily() }) {
         TileLabel50("Familie", t.famLab)
-        Spacer(Modifier.height(6.dp))
         val ppl = (list ?: emptyList()).take(5)
         if (ppl.isNotEmpty()) Box(Modifier.height(32.dp)) {
             ppl.forEachIndexed { i, c ->
@@ -222,7 +223,7 @@ internal fun FamTile50(vm: AppViewModel, modifier: Modifier) {
                 }
             }
         }
-        Spacer(Modifier.height(6.dp))
+        Spacer(Modifier.weight(1f)) // prompt 80: fast 101 dp – teksten nederst, ingen faste mellomrom som sprenger høyden
         Text(famLine50(list), color = t.famLab, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, fontFamily = PaperFonts.sans, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }

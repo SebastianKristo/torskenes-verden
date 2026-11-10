@@ -116,7 +116,7 @@ async function loadRel(force = false) {
   if (s.re) body.redownload = true;
   if (force) body.force = true;
   let jobId = null;
-  try { const r = await mapi('/release/search', { method: 'POST', json: body }); jobId = r.jobId ?? r.id ?? null; if (!jobId && r.items) { done(r); return; } if (jobId && r.cached) { try { const j0 = await mapi(`/release/search/${encodeURIComponent(jobId)}`); if (j0?.state === 'done' && j0.result) { done({ ...j0.result, indexers: j0.indexers }); return; } } catch { /* vanlig flyt */ } } }
+  try { const r = await mapi('/release/search', { method: 'POST', json: body }); jobId = r.jobId ?? r.id ?? null; if (!jobId && r.items) { done(r); return; } if (jobId && r.cached) { try { const j0 = await mapi(`/release/search/${encodeURIComponent(jobId)}`); if (j0?.state === 'done' && j0.result) { done({ ...j0.result, indexers: j0.indexers, cachedAt: Date.parse(j0.cachedAt) || Date.now() }); return; } } catch { /* vanlig flyt */ } } }
   catch (e) { if (e.status !== 404 && e.status !== 405) { M.job = null; M.rel = { error: e.message }; return paint(); } }
   if (!jobId) return legacy();
   const job = M.job; job.id = jobId;
@@ -126,33 +126,51 @@ async function loadRel(force = false) {
     if (Array.isArray(j.partial) && j.partial.length) job.items = j.partial; else if (Array.isArray(j.items) || Array.isArray(j.releases)) job.items = j.items ?? j.releases;
     if (j.context) job.context = j.context;
     if (j.state === 'done' || j.done) return done(j.result ? { ...j.result, indexers: j.indexers } : j);
+    if (j.state === 'running' && j.indexersAllDone) return showPartial({ items: j.partial, text: j.partialText, stage: j.stage, context: j.context });
     if (j.state === 'failed' || j.state === 'error') { M.job = null; M.rel = { error: j.error || 'Søket feilet.', allFailed: true }; return paint(); }
     paintMain();
   };
+  // Prompt 80 (MEDIA80): listen vises når siste indekser er ferdig – ikke først når Sonarr/Radarr-steget (done) kommer. Steget får
+  // egen rad («⟳ Sjekker kvalitet og avvisninger i Sonarr …»), og done oppdaterer score/avvisninger stille.
+  const fl80 = (items) => [['all', 'Alle', () => true], ['1080p', '1080p', (r) => r.resolution === 1080], ['2160p', '2160p', (r) => r.resolution === 2160], ['no', 'Norsk tekst', (r) => r.norwegian], ['seeders', 'Flest seedere', () => true]].map(([id, label, f]) => ({ id, label, count: items.filter(f).length }));
+  const showPartial = (d = {}) => {
+    if (M.job !== job) return;
+    job.allDoneAt = job.allDoneAt ?? Date.now();
+    const items = Array.isArray(d.items) && d.items.length ? d.items : job.items ?? [], ok = job.indexers.filter((x) => x.state === 'ok').length;
+    M.rel = { context: d.context ?? job.context ?? null, items, filters: fl80(items), indexers: job.indexers, partial: true, stage: d.stage ?? M.rel?.stage ?? { state: 'run', text: `⟳ Sjekker kvalitet og avvisninger i ${s.k === 'm' ? 'Radarr' : 'Sonarr'} …` },
+      text: d.text ?? `${items.length} treff fra ${ok} indeksere · ${String(Math.round((job.allDoneAt - job.t0) / 100) / 10).replace('.', ',')} s` };
+    paintMain();
+  };
+  const allIdx80 = () => job.indexers.length > 0 && job.indexers.every((x) => x.state === 'ok' || x.state === 'fail');
   const ixN = (x) => ({ ...x, state: x.state === 'done' ? 'ok' : x.state === 'failed' ? 'fail' : x.state === 'running' || x.state === 'pending' || x.state === 'start' ? 'run' : x.state });
   const poll = async () => { while (M.job === job) { await new Promise((ok) => setTimeout(ok, 1500)); if (M.job !== job) return; try { apply(await mapi(`/release/search/${encodeURIComponent(jobId)}`)); } catch (e) { if (e.status === 404) { M.job = null; return legacy(); } } } };
   try {
     const es = new EventSource(`/api/media/release/search/${encodeURIComponent(jobId)}/events${M.site ? `?server=${encodeURIComponent(M.site)}` : ''}`, { withCredentials: true });
     job.es = es;
-    const on = (ev) => { job.lastEv = Date.now(); let j; try { j = JSON.parse(ev.data); } catch { return; } const t = ev.type;
-      if (t === 'indexer.start' || t === 'indexer.done' || t === 'indexer.fail') { const L = job.indexers.filter((x) => x.name !== j.name); job.indexers = [...L, { ...j, state: t === 'indexer.start' ? 'run' : t === 'indexer.done' ? 'ok' : 'fail' }]; if (Array.isArray(j.items)) job.items = [...job.items, ...j.items]; paintMain(); return; }
+    const on = (ev) => { job.lastEv = job.lastReal = Date.now(); let j; try { j = JSON.parse(ev.data); } catch { return; } const t = ev.type;
+      if (t === 'indexer.start' || t === 'indexer.done' || t === 'indexer.fail') { const L = job.indexers.filter((x) => x.name !== j.name); job.indexers = [...L, { ...j, state: t === 'indexer.start' ? 'run' : t === 'indexer.done' ? 'ok' : 'fail' }]; if (Array.isArray(j.items)) job.items = [...job.items, ...j.items]; if (allIdx80() && job.items.length) return showPartial(); paintMain(); return; }
+      if (t === 'indexers.done') return showPartial(j);
       if (t === 'done') { es.close(); return done(j.result ? { ...j.result, indexers: job.indexers } : { ...j, items: j.items ?? j.releases }); }
       if (t === 'failed') { es.close(); if (M.job !== job) return; M.job = null; M.rel = { error: j.error || 'Søket feilet.', allFailed: !!j.allFailed }; return paint(); }
-      if (t === 'partial') { if (Array.isArray(j.items)) job.items = j.items; job.partialCount = j.count; paintMain(); return; }
+      if (t === 'partial') { if (Array.isArray(j.items)) job.items = j.items; job.partialCount = j.count; if (!M.rel) paintMain(); return; }
       apply(j); };
-    ['message', 'snapshot', 'status', 'partial', 'failed', 'indexer.start', 'indexer.done', 'indexer.fail', 'done'].forEach((t) => es.addEventListener(t, on));
+    ['message', 'snapshot', 'status', 'partial', 'failed', 'indexer.start', 'indexer.done', 'indexer.fail', 'indexers.done', 'done'].forEach((t) => es.addEventListener(t, on));
     // Prompt 75: brytes strømmen (proxy/Cloudflare, nett, eller «done» som ikke kom fram), hentes jobben med GET til den er
     // ferdig – også når noen hendelser alt er mottatt. Før ble siden stående på «søker» for alltid når strømmen brøt etter start.
     es.onerror = () => { es.close(); if (M.job === job && !job.polling) { job.polling = true; poll(); } };
-    // Vakt: ingen hendelse på 25 s (ping kommer hvert 15. s) → spør serveren direkte.
-    const watch = setInterval(() => { if (M.job !== job) return clearInterval(watch); if (Date.now() - (job.lastEv ?? job.t0) > 25_000 && !job.polling) { job.polling = true; es.close(); poll(); } }, 5000);
+    // Vakt: ingen hendelse på 25 s (ping kommer hvert 10. s) → spør serveren direkte. Prompt 80: alle indekserne ferdige og ingen
+    // ekte hendelse (ping teller ikke) på 15 s → GET-polling med en gang.
+    const watch = setInterval(() => { if (M.job !== job) return clearInterval(watch); if (job.polling) return;
+      const quiet80 = job.allDoneAt && Date.now() - Math.max(job.lastReal ?? 0, job.allDoneAt) > 15_000;
+      if (quiet80 || Date.now() - (job.lastEv ?? job.t0) > 25_000) { job.polling = true; es.close(); poll(); } }, 2500);
     es.addEventListener('ping', () => { job.lastEv = Date.now(); });
   } catch { job.polling = true; poll(); }
+  const tick = setInterval(() => { if (M.job !== job) return clearInterval(tick); if (M.rel) return; const el = root?.querySelector('[data-m80-sec]'); if (el) el.textContent = String(Math.round((Date.now() - job.t0) / 1000)); }, 1000);
   function done(j) {
     const d = { ...j, items: j.items ?? j.releases ?? [], indexers: (j.indexers ?? job?.indexers ?? []).map((x) => ({ ...x, state: x.state === 'done' ? 'ok' : x.state === 'failed' ? 'fail' : x.state })) };
     const fails = d.indexers.filter((x) => x.state === 'fail' || x.error), all = d.indexers.length && fails.length === d.indexers.length && !d.items.length;
     if (all) { M.job = null; M.rel = { error: 'Ingen indeksere svarte. Sjekk Prowlarr → Helse.', allFailed: true }; return paint(); }
-    relCache.set(key, { at: Date.now(), data: d }); M.job = null; M.rel = d; paint();
+    relCache.set(key, { at: d.cachedAt ?? Date.now(), data: d }); M.job = null; M.rel = d; paint();
   }
   async function legacy() {
     M.job = { t0: Date.now(), state: 'legacy', indexers: [], items: [] }; paintMain();
@@ -372,6 +390,7 @@ function srchHtml() {
     ? `<div class="m43-col">${rows.map((r) => `<div class="m43-rr"><div class="m43-col grow g7"><span class="m43-rel">${esc(r.shortTitle ?? r.title)}</span><div class="m43-row xwrap g5x"><span class="m43-q">${esc(r.quality)}</span><b>${esc(r.sizeText)}</b><b class="${seedC(r)}">▲ ${esc(r.peersText ?? `${nb(r.seeders)} / ${nb(r.leechers)}`)}</b><span class="t-mut">${esc(r.indexer)}</span></div><span class="m43-sm t-mut">${esc(r.langText ?? '')}</span>${r.best ? '<b class="m43-sm t-ok">Best treff for profilen</b>' : ''}${rej(r)}</div>${gb(r)}</div>`).join('')}</div>`
     : `<div class="m43-tbl"><div class="m43-tr th"><span>UTGIVELSE</span><span>KVALITET</span><span>STØRRELSE</span><span>SEEDERE / PEERS</span><span>INDEKSER</span><span>SPRÅK</span><span></span></div>${rows.map((r) => `<div class="m43-tr"><div class="m43-col g3"><span class="m43-rel">${esc(r.title)}</span>${r.best ? '<b class="m43-sm t-ok">Best treff for profilen</b>' : ''}${rej(r)}</div><span><span class="m43-q">${esc(r.quality)}</span></span><b>${esc(r.sizeText)}</b><b class="${seedC(r)}">▲ ${esc(r.peersText ?? `${nb(r.seeders)} / ${nb(r.leechers)}`)}</b><span class="t-mut">${esc(r.indexer)}</span><span class="t-mut m43-sm">${esc(r.langText ?? '')}</span>${gb(r)}</div>`).join('')}</div>`;
   return `${back}<div class="m43-dh2">${art(c, 'm43-art sp')}<div class="m43-col grow g4"><span class="m43-lab acc">INTERAKTIVT SØK</span><b class="m43-srt">${esc(c.header ?? c.title ?? '')}</b><span class="t-mut">${esc([c.sub, R.text].filter(Boolean).join(' · '))}</span></div></div>
+    ${R.stage && R.stage.state !== 'ok' ? `<div class="m43-sm ${R.stage.state === 'run' ? 't-mut' : 't-warn b7'}" data-m80-stage="${esc(R.stage.state)}" role="status">${esc(R.stage.text ?? '')}</div>` : ''}
     ${R.cachedAt ? `<div class="m43-row g8 m43-sm t-mut">Hentet for ${Math.max(1, Math.round((Date.now() - R.cachedAt) / 60000))} min siden · <button type="button" class="m44-lk" data-m44="relagain">Søk igjen</button></div>` : ''}
     ${(R.indexers ?? []).some((x) => x.state === 'fail' || x.error) ? `<div class="m43-sm t-warn b7">${esc(R.indexers.filter((x) => x.state === 'fail' || x.error).map((x) => `${x.name} svarte ikke`).join(' · '))}</div>` : ''}
     <div class="m43-chips">${(R.filters ?? []).map((f) => chip(f.id === 'all' ? `${f.label} ${f.count}` : f.label, M.fq === f.id, `data-m43-fq="${esc(f.id)}"`)).join('')}</div>
@@ -385,7 +404,7 @@ function jobHtml() {
   const n = I.length;
   const ir = I.map((x) => `<div class="m44-ir"><span class="${x.state === 'ok' ? 't-ok' : x.state === 'fail' ? 't-bad' : 't-mut'}">${x.state === 'ok' ? '✓' : x.state === 'fail' ? '✕' : '⟳'}</span><b>${esc(x.name ?? '')}</b><span class="m43-sm t-mut">${x.state === 'ok' ? `${nb(x.count ?? 0)} treff · ${((+x.ms || 0) / 1000).toFixed(1).replace('.', ',')} s` : x.state === 'fail' ? esc(x.error || 'tidsavbrudd') : 'søker …'}</span></div>`).join('');
   const part = (J.items ?? []).slice(0, 8).map((r) => `<div class="m44-pr"><span class="m43-rel ell">${esc(r.title ?? '')}</span><span class="m43-q">${esc(r.quality ?? '')}</span><b>${esc(r.sizeText ?? '')}</b></div>`).join('');
-  return `<div class="m43-card m43-col g8 m44-job" role="status"><div class="m43-row sb"><b>${J.state === 'legacy' ? 'Søker i indekserne via Sonarr/Radarr' : n ? `Søker i ${n} indeksere` : 'Starter søket'} … ${sec} s</b><button type="button" class="m43-btn sm line" data-m44="relstop">Avbryt</button></div>${ir}${part ? `<span class="m43-lab">TREFF SÅ LANGT · ${J.partialCount ?? (J.items ?? []).length}</span>${part}` : ''}${J.state === 'legacy' ? '<span class="m43-sm t-mut">Det kan ta opptil 3 minutter når mange indeksere svarer sakte.</span>' : ''}</div>`;
+  return `<div class="m43-card m43-col g8 m44-job" role="status"><div class="m43-row sb"><b>${J.state === 'legacy' ? 'Søker i indekserne via Sonarr/Radarr' : n ? `Søker i ${n} indeksere` : 'Starter søket'} … <span data-m80-sec>${sec}</span> s</b><button type="button" class="m43-btn sm line" data-m44="relstop">Avbryt</button></div>${ir}${part ? `<span class="m43-lab">TREFF SÅ LANGT · ${J.partialCount ?? (J.items ?? []).length}</span>${part}` : ''}${J.state === 'legacy' ? '<span class="m43-sm t-mut">Det kan ta opptil 3 minutter når mange indeksere svarer sakte.</span>' : ''}</div>`;
 }
 
 /* ---------------- Ark ---------------- */

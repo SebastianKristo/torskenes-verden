@@ -91,12 +91,15 @@ internal fun PaperSearch29(vm: AppViewModel, above45: Boolean = false) {
     val mic70 = Voice56.on(Voice56.SEARCH)
     DisposableEffect(Unit) { onDispose { Ans70.searchRect = null } } // prompt 74: ingen gammel ramme når feltet er borte
     LaunchedEffect(mic70) { if (mic70) fm.clearFocus() } // tastaturet lukkes når opptaket starter
-    Column(Modifier.animateContentSize(tween(250)), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        if (above45) extras45()
+    // Prompt 80 (AND80 A): animateContentSize klipper til rammen (clipToBounds). Den lå på hele kolonnen, så pillens skygge ble
+    // skåret av med rette kanter – en firkantet grå flate bak og under den runde pillen. Nå animerer bare svaret/forslagene høyden,
+    // og kolonnen med pillen klipper ingenting.
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        if (above45) Box(Modifier.animateContentSize(tween(250))) { extras45() }
         // Prompt 70: opptak → feltet blir et kort i samme farge (ui/Mic70.kt); ingen egen «Lytter …»-rad under lenger.
         if (mic70) Box(Modifier.searchRect70()) { MicCard70(vm) } else
         Row(
-            Modifier.fillMaxWidth().searchRect70().height(46.dp).shadow(12.dp, CircleShape).clip(CircleShape).background(p.card).padding(start = 8.dp, end = 6.dp),
+            Modifier.fillMaxWidth().searchRect70().height(46.dp).pillShadow80().clip(CircleShape).background(p.card).padding(start = 8.dp, end = 6.dp),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Box {
@@ -133,9 +136,16 @@ internal fun PaperSearch29(vm: AppViewModel, above45: Boolean = false) {
         }
         // Prompt 56: bare beskjedene (motor · språk, «For kort opptak» …) – selve opptaket vises i kortet over (prompt 70).
         if (!mic70) VoiceBar56(vm, Voice56.SEARCH, p.ink, p.mut, PaperFonts.sans, Modifier.clip(RoundedCornerShape(16.dp)).background(p.card))
-        if (!above45) extras45()
+        if (!above45) Box(Modifier.animateContentSize(tween(250))) { extras45() }
     }
 }
+
+/**
+ * Prompt 80 (AND80 A): skyggen bare under pillen og i pillens form (CSS 0 10px 30px -14px rgba(0,0,0,.35)):
+ * shape = CircleShape før clip/background, clip = false, ingen skygge/bakgrunn på wrapperen.
+ */
+internal fun Modifier.pillShadow80(): Modifier =
+    this.shadow(elevation = 6.dp, shape = CircleShape, clip = false, ambientColor = Color.Black.copy(alpha = .18f), spotColor = Color.Black.copy(alpha = .30f))
 
 /** Prompt 70: søkefeltets ramme (uklippet) for «trykk utenfor» og pillen «Glimt svarte ↑» (ui/Home70.kt). */
 private fun Modifier.searchRect70(): Modifier = this.onGloballyPositioned { c ->

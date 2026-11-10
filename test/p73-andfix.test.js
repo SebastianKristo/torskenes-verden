@@ -78,7 +78,7 @@ test('ingen dobbel oppstart: refresh() er én jobb, og avbrutt nettbytte starter
   assert.doesNotMatch(vm, /GlobalScope/);
 });
 
-test('Hjem: faste høyder fra tabell som på iPhone (150 / 212 / 2 × 150 + mellomrom)', () => {
+test('Hjem: faste høyder fra tabell (prompt 80: 101 / 212 = 2 × 101 + 10)', () => {
   // Fasit: iOS-flisene.
   const ios50 = readFileSync(join(IOS, 'Home50Tiles.swift'), 'utf8');
   const ios52 = readFileSync(join(IOS, 'Home52Grid.swift'), 'utf8');
@@ -89,19 +89,19 @@ test('Hjem: faste høyder fra tabell som på iPhone (150 / 212 / 2 × 150 + mell
   const small = num(/private val SMALL73 = (\d+)\.dp/);
   const tall = num(/private val TALL73 = (\d+)\.dp/);
   const gap = num(/private val GAP70 = (\d+)\.dp/);
-  assert.equal(small, 150);
+  assert.equal(small, 101); // prompt 80 (pakke 56): liten 101 dp (var 150)
   assert.equal(tall, 212);
   assert.match(h, /internal fun avH73\(nx: Int\): Dp = if \(nx >= 2\) SMALL73 \* 2 \+ GAP70 else TALL73/);
   assert.match(h, /internal fun fixedH73\(keys: List<String>, h: Dp\): Dp = if \(keys\.isNotEmpty\(\) && keys\.all \{ it in HALF52 \}\) h else Dp\.Unspecified/);
-  assert.match(h, /is Row70\.Two -> PairRow70\([\s\S]*?fixed = fixedH73\(r\.keys, SMALL73\)\)/);
-  assert.match(h, /is Row70\.Av -> PairRow70\([\s\S]*?fixed = fixedH73\(r\.keys, avH73\(r\.nx\.size\)\)\)/);
+  assert.match(h, /is Row70\.Two -> PairRow70\([\s\S]*?fixed = fixedH73\(r\.keys, SMALL73\)[,)]/); // prompt 80: + fl/fr
+  assert.match(h, /is Row70\.Av -> PairRow70\([\s\S]*?fixed = fixedH73\(r\.keys, avH73\(r\.nx\.size\)\)[,)]/); // prompt 80: + fl
   assert.match(h, /if \(fixed != Dp\.Unspecified\) \{\s*val fh = fixed\.roundToPx\(\)\s*val fp = ms\.map \{ it\.measure\(Constraints\.fixed\(cw, fh\)\) \}/, 'fast høyde måler ikke innholdet');
-  // Avgang og Bursdag på samme rad blir like høye (Avgang + én halv: begge 212), to halve stablet: 2 × 150 + 12 = 312.
+  // Prompt 80: Avgang er 212 både med én og to halve ved siden av (2 × 101 + 10 = 212).
   const avH = (nx) => (nx >= 2 ? small * 2 + gap : tall);
   assert.equal(avH(1), 212);
-  assert.equal(avH(2), 312);
-  // iOS tallRow: høyden = max(212, sum av de stablede + mellomrom) – samme tall når flisene er 150.
-  assert.equal(Math.max(212, 150 + 150 + gap), avH(2));
+  assert.equal(avH(2), 212);
+  // tallRow: høyden = max(212, sum av de stablede + mellomrom) – samme tall når flisene er 101.
+  assert.equal(Math.max(212, small + small + gap), avH(2));
 });
 
 test('Hjem: tekst med tak 1,15, uten fontpadding og med eksplisitt linjehøyde; fontene er med', () => {

@@ -247,7 +247,7 @@ internal fun LazyGridScope.homeGridSecs52(vm: AppViewModel, g52: Boolean, secs0:
     if (!edit) item(key = "hint-$page", span = { GridItemSpan(maxLineSpan) }) { EditHint() }
 }
 
-private val TILE_H52 = 150.dp
+private val TILE_H52 = 101.dp // prompt 80: liten flis 101 dp (som SMALL73 i Home70.kt)
 private val SHAPE52 = RoundedCornerShape(24.dp)
 
 /** Én flis i 3a. Prompt 70 (ANDHOME70): h = Dp.Unspecified → innholdets høyde (raden i Home70.kt strekker begge likt). */
@@ -309,7 +309,7 @@ private fun KalTile52(vm: AppViewModel, m: Modifier) {
         Spacer(Modifier.weight(1f))
         if (s.events == null) Text("Henter …", color = p.mut, fontSize = 13.sp)
         else {
-            PSerif(w.title, 20.sp, p.ink, maxLines = 2)
+            PSerif(w.title, 20.sp, p.ink, maxLines = 1) // prompt 80: én linje i 101 dp
             Text(listOf(w.big, w.whenText).filter { it.isNotBlank() }.joinToString(" · "), color = p.mut, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
@@ -321,9 +321,13 @@ private fun BdTile52(vm: AppViewModel, m: Modifier) {
     LaunchedEffect(vm.base) { if (vm.bd24.items == null) vm.loadBirthdays24(quiet = true) }
     val l = (vm.bd24.items ?: emptyList()).take(3)
     TileBox52(c.bg, "Bursdager", m, { Haptics.tap(); vm.openBirthdays24() }) {
-        TLabel52("Bursdag", c.lab)
-        if (l.isNotEmpty()) Box(Modifier.padding(top = 6.dp).height(32.dp)) {
-            l.forEachIndexed { i, b -> Box(Modifier.padding(start = (i * 24).dp).size(32.dp).clip(CircleShape).background(c.bg).padding(2.dp)) { BdAvatar(vm, b, 28) } }
+        // Prompt 80: fast 101 dp – avatarene (24 dp) står på linje med etiketten i stedet for på egen rad.
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            TLabel52("Bursdag", c.lab)
+            Spacer(Modifier.weight(1f))
+            if (l.isNotEmpty()) Box(Modifier.height(24.dp)) {
+                l.forEachIndexed { i, b -> Box(Modifier.padding(start = (i * 16).dp).size(24.dp).clip(CircleShape).background(c.bg).padding(2.dp)) { BdAvatar(vm, b, 20) } }
+            }
         }
         Spacer(Modifier.weight(1f))
         val f = l.firstOrNull()
@@ -341,14 +345,15 @@ private fun BoligTile52(vm: AppViewModel, m: Modifier) {
         Spacer(Modifier.weight(1f))
         if (b == null) Text("Utgifter og kvitteringer for boligen", color = p.mut, fontSize = 12.5.sp, maxLines = 3)
         else {
-            PSerif("${n0(b.spent)} kr", 26.sp, p.ink, maxLines = 1)
-            Text(b.budget?.let { "av ${n0(it)} kr" } ?: "brukt denne måneden", color = p.mut, fontSize = 12.sp, maxLines = 1)
+            // Prompt 80: fast 101 dp – beløp, én linje (budsjett · kvitteringer) og stripen.
+            PSerif("${n0(b.spent)} kr", 22.sp, p.ink, maxLines = 1)
+            Text((b.budget?.let { "av ${n0(it)} kr" } ?: "brukt denne måneden") + if (b.review > 0) " · ${b.review} kvittering${if (b.review == 1) "" else "er"}" else "",
+                color = p.mut, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             b.budget?.takeIf { it > 0 }?.let { bud ->
-                Box(Modifier.padding(top = 8.dp).fillMaxWidth().height(5.dp).clip(CircleShape).background(p.line)) {
+                Box(Modifier.padding(top = 4.dp).fillMaxWidth().height(5.dp).clip(CircleShape).background(p.line)) {
                     Box(Modifier.height(5.dp).fillMaxWidth((b.spent / bud).toFloat().coerceIn(.02f, 1f)).clip(CircleShape).background(if (b.spent > bud) p.lab else p.ink))
                 }
             }
-            if (b.review > 0) Text("${b.review} kvittering${if (b.review == 1) "" else "er"}", color = p.lab, fontSize = 12.sp, maxLines = 1, modifier = Modifier.padding(top = 6.dp))
         }
     }
 }
@@ -368,11 +373,11 @@ private fun TrialTile52(vm: AppViewModel, m: Modifier) {
         } else {
             val d = trialDays32b(top.endsAt, today)
             Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                PSerif(if (d == 0) "I dag" else "$d", if (d == 0) 30.sp else 48.sp, c.ink, weight = FontWeight.Normal, maxLines = 1)
-                if (d > 0) Text(if (d == 1) "dag" else "dager", color = c.lab, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, modifier = Modifier.padding(bottom = 8.dp))
+                // Prompt 80: fast 101 dp – tallet 30 sp og tjeneste + pris på én linje (kortes med «…»).
+                PSerif(if (d == 0) "I dag" else "$d", 30.sp, c.ink, weight = FontWeight.Normal, maxLines = 1)
+                if (d > 0) Text(if (d == 1) "dag" else "dager", color = c.lab, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, modifier = Modifier.padding(bottom = 4.dp))
             }
-            Text(top.service, color = c.ink, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            if (top.priceAfter.isNotBlank()) Text("${top.priceAfter} etterpå", color = c.lab, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(top.service + if (top.priceAfter.isNotBlank()) " · ${top.priceAfter} etterpå" else "", color = c.ink, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
 }

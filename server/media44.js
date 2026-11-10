@@ -27,6 +27,8 @@
 //   GET    /api/media/release/search/:jobId → jobb (se jobOut)  ·  GET …/:jobId/events (SSE)  ·  DELETE …/:jobId (avbryt)
 //          SSE-hendelser: snapshot, indexer.start {id,name}, indexer.done {id,name,count,ms}, indexer.fail {id,name,error},
 //          partial {count}, done {releases, result}, failed {error}
+//          prompt 80: indexer.done har også {items}; indexers.done {count, text, items, stage} når siste indekser er ferdig;
+//          done {releases, result, partial:true, warn:'sonarr_timeout'|'radarr_timeout'|'…_error'} når Sonarr/Radarr ikke svarte (20 s)
 //   DELETE /api/media/episodes/:id/file (admin) → {ok, episodeId, episodeFileId, monitored:false, undo:{method,path,body}, message}
 //   DELETE /api/media/movies/:id/file   (admin) → {ok, movieId, movieFileId, monitored:false, undo, message}
 //   GET    /api/media/series?q= · /api/media/movies?q= → samme svar, items filtrert på tittel/nettverk/år (counts uten søk), q, matches
@@ -144,15 +146,26 @@ function prune() {
 function jobOut(j) {
   const now = Date.now(), elapsed = (j.finishedAt ?? now) - j.startedAt;
   const done = j.indexers.filter((x) => x.state === 'done' || x.state === 'failed').length;
-  const partial = M.rankReleases43(j.partial, j.profileRes ?? 1080).map((r) => ({ ...r, partial: true, canGrab: false }));
-  const running = j.state === 'running';
+  const partial = M.rankReleases43(j.partial, j.profileRes ?? 1080).map((r) => ({ ...r, partial: true, canGrab: true, viaProwlarr: true }));
+  const running = j.state === 'running', allDone = !!j.idxDoneAt;
   return { jobId: j.id, state: j.state, service: j.svc, query: j.query, site: j.site ?? DEFAULT_SITE, startedAt: new Date(j.startedAt).toISOString(), finishedAt: j.finishedAt ? new Date(j.finishedAt).toISOString() : null,
     elapsedMs: elapsed, elapsedText: secText(elapsed), indexers: j.indexers.map(({ id, name, state, count, ms, error }) => ({ id, name, state, count, ms, error: error ?? null, line: state === 'done' ? `✓ ${count} treff · ${secText(ms)}` : state === 'failed' ? `✕ ${error ?? 'feilet'}` : '⟳' })),
-    indexersTotal: j.indexers.length, indexersDone: done, partial: running ? partial : [], partialCount: j.partial.length, result: j.result, error: j.error,
+    indexersTotal: j.indexers.length, indexersDone: done, indexersAllDone: allDone, partial: running ? partial : [], partialCount: j.partial.length, partialText: allDone ? partText80(j) : null, stage: j.stage ?? null, context: j.result?.context ?? j.ctxLite ?? null, result: j.result, error: j.error,
     cached: !running && !!j.finishedAt, cachedAt: j.finishedAt ? new Date(j.finishedAt).toISOString() : null, ageText: j.finishedAt ? ageText(now - j.finishedAt) : null,
-    text: running ? `Søker i ${j.indexers.length || 'alle'} indeksere … ${Math.round(elapsed / 1000)} s` : j.state === 'done' ? (j.result?.text ?? `${j.partial.length} treff`) : j.error ?? 'Avbrutt',
+    text: running ? (allDone ? partText80(j) : `Søker i ${j.indexers.length || 'alle'} indeksere … ${Math.round(elapsed / 1000)} s`) : j.state === 'done' ? (j.result?.text ?? `${j.partial.length} treff`) : j.error ?? 'Avbrutt',
     ...(j.state === 'failed' && j.allFailed ? { allFailed: true, actions: [{ id: 'retry', label: 'Prøv igjen' }, { id: 'prowlarr', label: 'Åpne Prowlarr', open: { tab: 'prowlarr' } }] } : {}) };
 }
+// Prompt 80 (MEDIA80): treffene fra Prowlarr vises når siste indekser er ferdig; Sonarr/Radarr-steget (GET /release, som spør alle
+// indekserne på nytt og kan bruke minutter) er en egen rad. Svarer det ikke innen 20 s etter at indekserne er ferdige, avsluttes jobben
+// med treffene fra Prowlarr (done {partial:true, warn:'sonarr_timeout'}), og «Last ned» går via Prowlarr.
+let SONARR_STAGE_MS = 20_000;
+export const _setSonarrStageMs80 = (ms) => { SONARR_STAGE_MS = ms ?? 20_000; };
+const pGrab = new Map(); // guid → {guid, indexerId, svc, site, link, at} – bare på serveren (lenken kan inneholde Prowlarr-nøkkelen)
+export const _prowlarrGrab80 = pGrab;
+const idxOk80 = (j) => j.indexers.filter((x) => x.state === 'done').length;
+function partText80(j) { const ms = (j.idxDoneAt ?? Date.now()) - j.startedAt; return `${j.partial.length} treff fra ${idxOk80(j)} indeksere · ${secText(ms)}`; }
+const stageOut80 = (svc, state) => { const n = M.SERVICES43[svc]?.name ?? 'Sonarr'; return { service: svc, state, text: state === 'run' ? `⟳ Sjekker kvalitet og avvisninger i ${n} …` : state === 'ok' ? `${n}: kvalitet og avvisninger er sjekket` : `${n} svarte ikke, viser treff fra Prowlarr` }; };
+const prowlarrItems80 = (j) => M.rankReleases43(j.partial, j.profileRes ?? 1080).map((r) => ({ ...r, partial: true, canGrab: true, viaProwlarr: true }));
 function emit(j, event, data) { for (const fn of j.subs) { try { fn(event, data); } catch { /* lytteren er borte */ } } }
 function queryOf(b) {
   const int = (v) => (v === undefined || v === null || v === '' ? null : Number.isInteger(+v) && +v >= 0 ? +v : NaN);
@@ -173,6 +186,8 @@ async function searchTerm(svc, query) {
   const code = e ? M.epCode43(e.seasonNumber, e.episodeNumber) : `S${String(query.seasonNumber).padStart(2, '0')}`;
   return { term: `${s.title} ${code}`, cats: [5000] };
 }
+const filters80 = (items) => [['all', 'Alle', () => true], ['1080p', '1080p', (r) => r.resolution === 1080], ['2160p', '2160p', (r) => r.resolution === 2160], ['no', 'Norsk tekst', (r) => r.norwegian], ['seeders', 'Flest seedere', () => true]]
+  .map(([id, label, f]) => ({ id, label, count: items.filter(f).length, ...(id === 'seeders' ? { sort: true } : {}) }));
 async function runJob(j) {
   const ctx = { svc: j.svc };
   const pOn = M.svcConf43('prowlarr').on;
@@ -184,6 +199,7 @@ async function runJob(j) {
     if (!idx.length) return;
     let term;
     try { term = await searchTerm(j.svc, j.query); } catch { return; }
+    j.ctxLite = { kind: j.svc === 'radarr' ? 'movie' : j.query.episodeId ? 'episode' : 'season', title: term.term, header: term.term, ...j.query };
     await Promise.all(j.indexers.map(async (x) => {
       if (j.ctrl.signal.aborted) return;
       x.state = 'running'; const t0 = Date.now();
@@ -191,11 +207,14 @@ async function runJob(j) {
       try {
         const rows = await M.arr43('prowlarr', 'GET', '/search', { query: { query: term.term, indexerIds: x.id, categories: term.cats[0], type: 'search' }, timeout: 90_000 });
         if (j.state !== 'running') return;
-        const list = (Array.isArray(rows) ? rows : []).map((r) => ({ ...M.releaseOut43({ ...r, indexer: r.indexer ?? x.name, indexerId: r.indexerId ?? x.id }, j.svc, ctx), viaProwlarr: true }));
+        const raw = Array.isArray(rows) ? rows : [];
+        const list = raw.map((r) => ({ ...M.releaseOut43({ ...r, indexer: r.indexer ?? x.name, indexerId: r.indexerId ?? x.id }, j.svc, ctx), viaProwlarr: true, canGrab: true }));
+        for (const r of raw) if (r?.guid && !pGrab.has(r.guid)) pGrab.set(r.guid, { guid: r.guid, indexerId: r.indexerId ?? x.id, svc: j.svc, site: j.site ?? null, link: r.magnetUrl || r.downloadUrl || null, at: Date.now() });
+        if (pGrab.size > 3000) for (const [k, v] of pGrab) if (Date.now() - v.at > 30 * 60_000) pGrab.delete(k);
         x.state = 'done'; x.count = list.length; x.ms = Date.now() - t0;
-        const seen = new Set(j.partial.map((r) => r.title));
-        for (const r of list) if (!seen.has(r.title)) j.partial.push(r);
-        emit(j, 'indexer.done', { id: x.id, name: x.name, count: x.count, ms: x.ms });
+        const seen = new Set(j.partial.map((r) => r.title)), fresh = [];
+        for (const r of list) if (!seen.has(r.title)) { j.partial.push(r); fresh.push(r); }
+        emit(j, 'indexer.done', { id: x.id, name: x.name, count: x.count, ms: x.ms, items: fresh });
         emit(j, 'partial', { count: j.partial.length });
       } catch (e) {
         x.state = 'failed'; x.ms = Date.now() - t0; x.error = /i tide|timeout/i.test(e.message) ? 'tidsavbrudd' : String(e.message).replace(/^Prowlarr svarte \d+:?\s*/, '').slice(0, 120) || 'feilet';
@@ -203,26 +222,63 @@ async function runJob(j) {
       }
     }));
   })();
+  // Prompt 80: når siste indekser er ferdig, sendes listen med en gang (indexers.done), og Sonarr/Radarr-steget får egen rad.
+  const perDone = per.then(() => {
+    if (j.state !== 'running' || !j.indexers.length) return;
+    j.idxDoneAt = Date.now(); j.stage = stageOut80(j.svc, 'run');
+    emit(j, 'indexers.done', { count: j.partial.length, indexers: idxOk80(j), indexersTotal: j.indexers.length, ms: j.idxDoneAt - j.startedAt, text: partText80(j), items: prowlarrItems80(j), stage: j.stage, context: j.ctxLite ?? null });
+  });
+  const tS = Date.now();
+  const sonarr = M.interactive(j.svc, j.query, { signal: j.ctrl.signal }).then((result) => ({ result }), (error) => ({ error }));
+  let timer = null;
+  const stageTimeout = perDone.then(() => (j.idxDoneAt && j.partial.length ? new Promise((r) => { timer = setTimeout(() => r({ timeout: true }), SONARR_STAGE_MS); }) : new Promise(() => {})));
+  const stageLog = (result) => console.log(`media.search jobId=${j.id} stage=${j.svc} ms=${Date.now() - tS} result=${result}`);
   try {
-    const result = await M.interactive(j.svc, j.query, { signal: j.ctrl.signal });
+    const first = await Promise.race([sonarr, stageTimeout]);
+    clearTimeout(timer);
+    if (first.error) throw first.error;
+    if (first.timeout) {
+      if (j.state !== 'running') return;
+      stageLog('timeout');
+      j.finishedAt = Date.now(); j.state = 'done'; j.stage = stageOut80(j.svc, 'timeout');
+      const items = prowlarrItems80(j);
+      j.result = { context: j.ctxLite ?? null, items, best: items.find((r) => r.best)?.guid ?? null, tookMs: j.idxDoneAt - j.startedAt, indexers: idxOk80(j), indexersTotal: j.indexers.length, filters: filters80(items),
+        text: partText80(j), partial: true, warn: `${j.svc}_timeout`, warning: j.stage.text, stage: j.stage };
+      emit(j, 'done', { releases: items, result: j.result, partial: true, warn: `${j.svc}_timeout` });
+      // Svarer Sonarr/Radarr senere, oppdateres det lagrede resultatet stille (score og avvisninger ved neste visning fra cache).
+      sonarr.then(({ result }) => {
+        if (!result || jobs.get(j.id) !== j || j.state !== 'done' || !j.result?.partial) return;
+        for (const r of result.items) pGrab.delete(r.guid);
+        j.profileRes = result.context?.profileRes; j.stage = stageOut80(j.svc, 'ok');
+        j.result = { ...result, stage: j.stage, late: true };
+        stageLog('ok-late');
+      });
+      return;
+    }
+    const result = first.result;
+    stageLog('ok');
     await Promise.race([per, new Promise((r) => setTimeout(r, 1500))]); // la de siste indekserne rapportere
     if (j.state !== 'running') return;
     // Indeksere uten Prowlarr-svar: les dem fra resultatet.
     if (!j.indexers.length) j.indexers = [...new Set(result.items.map((r) => r.indexer).filter(Boolean))].map((name, i) => ({ id: -(i + 1), name, state: 'done', count: result.items.filter((r) => r.indexer === name).length, ms: result.tookMs, error: null }));
     for (const x of j.indexers) if (x.state === 'pending' || x.state === 'running') { const n = result.items.filter((r) => r.indexer === x.name).length; Object.assign(x, { state: 'done', count: n, ms: result.tookMs }); }
-    j.profileRes = result.context?.profileRes;
-    j.result = result; j.state = 'done'; j.finishedAt = Date.now();
-    emit(j, 'done', { releases: result.items, result });
+    for (const r of result.items) pGrab.delete(r.guid); // Sonarr/Radarr kjenner utgivelsen: «Last ned» går via dem som før
+    j.profileRes = result.context?.profileRes; j.stage = j.idxDoneAt ? stageOut80(j.svc, 'ok') : null;
+    j.result = j.stage ? { ...result, stage: j.stage } : result; j.state = 'done'; j.finishedAt = Date.now();
+    emit(j, 'done', { releases: result.items, result: j.result });
   } catch (e) {
+    clearTimeout(timer);
+    if (j.state === 'running') stageLog('error');
     await per.catch(() => {});
     if (j.state !== 'running') return;
     j.finishedAt = Date.now();
     if (j.partial.length) {
-      // Sonarr/Radarr ga opp, men noen indeksere svarte: vis treffene (kan ikke sendes direkte – søk igjen for å laste ned).
-      j.state = 'done';
-      j.result = { context: null, items: M.rankReleases43(j.partial, 1080).map((r) => ({ ...r, partial: true, canGrab: false })), best: null, tookMs: j.finishedAt - j.startedAt, indexers: j.indexers.filter((x) => x.state === 'done').length,
-        indexersTotal: j.indexers.length, filters: [], text: `${j.partial.length} treff fra ${j.indexers.filter((x) => x.state === 'done').length} indeksere · ${M.SERVICES43[j.svc].name}: ${e.message}`, warning: e.message };
-      emit(j, 'done', { releases: j.result.items, result: j.result });
+      // Sonarr/Radarr feilet, men indekserne svarte: vis treffene, «Last ned» går via Prowlarr.
+      j.state = 'done'; j.stage = { ...stageOut80(j.svc, 'error'), error: e.message };
+      const items = prowlarrItems80(j);
+      j.result = { context: j.ctxLite ?? null, items, best: items.find((r) => r.best)?.guid ?? null, tookMs: (j.idxDoneAt ?? j.finishedAt) - j.startedAt, indexers: idxOk80(j),
+        indexersTotal: j.indexers.length, filters: filters80(items), text: partText80(j), partial: true, warn: `${j.svc}_error`, warning: j.stage.text, stage: j.stage };
+      emit(j, 'done', { releases: items, result: j.result, partial: true, warn: `${j.svc}_error` });
     } else {
       j.state = 'failed'; j.allFailed = true;
       j.error = j.indexers.length && j.indexers.every((x) => x.state === 'failed') ? 'Ingen indeksere svarte. Sjekk Prowlarr → Helse' : e.message;
@@ -385,6 +441,33 @@ media44Api.post('/servers/:id/test', ...A, H(async (c) => {
   return { id, results };
 }));
 
+// Prompt 80: «Last ned» på et treff Sonarr/Radarr ikke har sett (steget svarte ikke eller feilet) går via Prowlarr (grab), som sender
+// til nedlastingsklienten med kategorien for TV (5000) eller film (2000). Feiler Prowlarr-grab og qBittorrent er satt opp, legges
+// lenken rett i qBittorrent med kategorien Sonarr/Radarr importerer fra (tv-sonarr / radarr) og taggen homelab. Ellers som før.
+export const QBIT_CATEGORY80 = { sonarr: 'tv-sonarr', radarr: 'radarr' };
+export async function grabViaProwlarr80(p) {
+  return M.runMediaSite43(p.site ?? null, async () => {
+    try {
+      await M.arr43('prowlarr', 'POST', '/search', { body: { guid: p.guid, indexerId: p.indexerId } });
+      console.log(`media.grab via=prowlarr service=${p.svc} indexerId=${p.indexerId}`);
+      return { ok: true, guid: p.guid, via: 'prowlarr', message: 'Sendt via Prowlarr til qBittorrent' };
+    } catch (e) {
+      if (!p.link || !M.svcConf43('qbit').on) throw e;
+      const form = new FormData();
+      form.set('urls', p.link); form.set('category', QBIT_CATEGORY80[p.svc] ?? 'tv-sonarr'); form.set('tags', 'homelab');
+      await M.qb43('POST', '/torrents/add', { form });
+      M.clearMedia43('qbit:');
+      console.log(`media.grab via=qbit service=${p.svc} indexerId=${p.indexerId} category=${QBIT_CATEGORY80[p.svc] ?? 'tv-sonarr'}`);
+      return { ok: true, guid: p.guid, via: 'qbit', category: QBIT_CATEGORY80[p.svc] ?? 'tv-sonarr', message: `Sendt til qBittorrent (${QBIT_CATEGORY80[p.svc] ?? 'tv-sonarr'})` };
+    }
+  });
+}
+media44Api.post('/release', ...G, async (c, next) => {
+  const b = await M.mediaBody43(c), p = pGrab.get(String(b.guid ?? ''));
+  if (!p || b.via === 'sonarr' || b.via === 'radarr') return next(); // Sonarr/Radarr kjenner treffet: som før (media43)
+  try { return c.json(await grabViaProwlarr80(p)); } catch (e) { return M.mediaFail43(c, e instanceof M.MediaError ? e : new M.MediaError(e.message, 502)); }
+});
+
 // Interaktivt søk som jobb
 const startRoute = H(async (c) => {
   const b = await M.mediaBody43(c);
@@ -398,6 +481,7 @@ const getJob = (c) => { const j = ownJob(c); return j ? c.json(jobOut(j)) : c.js
 const sseJob = (c) => {
   const j = ownJob(c);
   if (!j) return c.json({ error: 'Fant ikke søket (utløpt etter 10 min)' }, 404);
+  c.header('Cache-Control', 'no-cache'); c.header('X-Accel-Buffering', 'no'); // prompt 80: ingen bufring i Nginx/proxy
   return streamSSE(c, async (s) => {
     await s.writeSSE({ event: 'snapshot', data: JSON.stringify(jobOut(j)) });
     if (j.state !== 'running') { await s.writeSSE({ event: j.state === 'done' ? 'done' : 'failed', data: JSON.stringify(j.state === 'done' ? { releases: j.result?.items ?? [], result: j.result } : { error: j.error }) }); return; }
@@ -406,7 +490,9 @@ const sseJob = (c) => {
       // lukket strømmen mens den siste skrivingen ennå ikke var ferdig (siden ble stående på «søker»).
       let q = Promise.resolve();
       const write = (event, data) => { q = q.then(() => s.writeSSE({ event, data: JSON.stringify(data) })).catch(() => {}); return q; };
-      const ping = setInterval(() => write('ping', { elapsedMs: Date.now() - j.startedAt }), 15_000);
+      // Prompt 80: hjerteslag «: ping» hvert 10. s (holder proxyen åpen) og en ping-hendelse for vakten i nettleseren.
+      const ping = setInterval(() => { q = q.then(() => s.write(': ping\n\n')).catch(() => {}); write('ping', { elapsedMs: Date.now() - j.startedAt }); }, 10_000);
+      ping.unref?.();
       const fn = (event, data) => { if (event === 'end') { clearInterval(ping); j.subs.delete(fn); q.then(resolve, resolve); return; } write(event, data); };
       j.subs.add(fn);
       s.onAbort(() => { clearInterval(ping); j.subs.delete(fn); resolve(); }); // søket fortsetter og caches
