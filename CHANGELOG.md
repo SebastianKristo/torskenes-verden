@@ -2,6 +2,21 @@
 
 Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. Versjonene med APK og IPA ligger under [Releases](https://github.com/SebastianKristo/torskenes-verden/releases).
 
+## [4.69.0] – 10.11.2026 · Skjold Lab: plukkliste, store skuffer og LED som lyser
+- **Plukkliste:** trykk **+** på en del (f.eks. gul diode, ESP32, transistor) og så **💡 Vis alle med LED**. Hver del lyser i sin egen farge, og opptil 20 skuffer kan lyse samtidig. I plukklista justerer du antall, og **Ta ut av lager** trekker fra alt på en gang, med angre. Lista følger deg på alle enhetene.
+- **WLED lyste ikke:** tenningen låste opp segmentet igjen, så effekten tegnet over LED-ene. Nå tennes segmentet med full lysstyrke og uten effekt, og alt settes tilbake etterpå. Du får beskjed hvis en skuff ligger utenfor stripa.
+- **Feilsøk LED:** en veiviser i LED-oppsettet som tenner hele stripa rødt og så én LED blått. Ut fra svarene dine sier den om feilen ligger i oppsettet, hos oss eller i kalibreringen.
+- **Hylla med store skuffer:** store (2 × 2) og brede (2 × 1) skuffer tegnes som én skuff i Skjold Lab. **Bruk Skjold Lab-hylla (3D-print)** i skapoppsettet setter opp rutenett, skuffer og LED med 4 eller 5 etasjer. Du kan også slå sammen og dele en skuff selv.
+- **3D-print:**
+  - En egen kolonne til venstre med 10 store skuffer.
+  - Akrylspor foran i alle skuffene, med kutteliste for 2 mm akryl.
+  - Egen pakke for 4 etasjer: `skjoldlab3d-4-etasjer.zip`.
+  - Bakstoppen og takene printes uten support.
+  - Ny oppskrift på LED-kablingen.
+- **Media:** interaktivt søk blir ikke lenger stående på «Søker i 3 indeksere …». Treffene vises så snart indekserne er ferdige. Svarer ikke Sonarr eller Radarr, lastes det ned via Prowlarr.
+- **Android Hjem:** ingen firkantet skygge bak søkefeltet. Kortene har fast høyde: små 101 dp og Avgang 212 dp.
+- **iPhone Vær:** bryteren for Temperatur, Nedbør og Vind virker ved trykk og dra, og valget huskes.
+
 ## [4.68.0] – 09.11.2026 · Skjold Lab: hele hylla som sorteringsskap (3D-print)
 - **Hele hylla blir ett sorteringsskap:** 143 skuffer (11 × 13) med LED over hver rad, 429 LED-er og 20 veggmoduler. Det fyller hylla på 56 × 76 × 32 cm uten Raaco-skapet. Varianten rundt Raaco finnes fortsatt.
 - **Mye mindre plast:**
