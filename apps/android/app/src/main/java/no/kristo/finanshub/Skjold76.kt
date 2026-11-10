@@ -681,7 +681,7 @@ fun AppViewModel.suggestFree76(d: SkjDraft76) = launch46 {
     } catch (e: CancellationException) { throw e } catch (_: Exception) { null }
     val pick = hit ?: prefer?.let { cid ->
         val m = s.maps[cid] ?: return@let null
-        (1..m.rows).asSequence().flatMap { r -> (1..m.cols).asSequence().map { c -> r to c } }.firstOrNull { (r, c) -> cellOf81(m, m.rows, m.cols, r, c).let { it.row == r && it.col == c && cellCount81(m, it) == 0 } } // prompt 81: bare ankre?.let { Triple(cid, it.first, it.second) }
+        (1..m.rows).asSequence().flatMap { r -> (1..m.cols).asSequence().map { c -> r to c } }.firstOrNull { (r, c) -> cellOf81(m, m.rows, m.cols, r, c).let { it.row == r && it.col == c && cellCount81(m, it) == 0 } }?.let { Triple(cid, it.first, it.second) } // prompt 81: bare ankre
     }
     if (pick == null) { flash("Fant ingen ledig skuff"); return@launch46 }
     d.cabinetId = pick.first; d.row = pick.second; d.col = pick.third; d.compartment = null
