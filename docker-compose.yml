@@ -79,7 +79,7 @@ services:
     restart: unless-stopped
     command: tunnel --no-autoupdate run
     environment:
-      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN}
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:-}   # «:-» så compose ikke varsler om manglende variabel når profilen ikke er i bruk
     depends_on: [os]
 
   # Proton Mail Bridge: kvitteringer fra e-post inn i FinansHub (Innstillinger → Integrasjoner → Proton Mail).

@@ -529,7 +529,7 @@ api.put('/me/layout', authOrToken, async (c) => {
   }
   const custom = ['startRoute', 'homeNav', 'finNav'].some((k) => b[k] !== undefined && !(k === 'finNav' && !Array.isArray(b[k]) && b[k] !== null));
   for (const [k, v] of Object.entries(b)) {
-    if (!LAYOUT[k] && !SCALAR[k]) return c.json({ error: `Ukjent nøkkel ${k}` }, 400);
+    if (!Object.hasOwn(LAYOUT, k) && !Object.hasOwn(SCALAR, k)) return c.json({ error: `Ukjent nøkkel ${k}` }, 400); // prompt 85: ikke arvede navn («constructor», «__proto__»)
     if (k === 'finNav' && (Array.isArray(v) || v === null)) {
       if (v === null) { delete next.finNavList; delete next.finNavMeta; continue; }
       const items = finNavParse(v);

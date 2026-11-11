@@ -3,6 +3,8 @@
 .ch{--cb:#f3efe6;--cc:#fff;--ci:#1b1a17;--cm:#6b665c;--cl:#d8d1c2;--ca:#b23a2a;--cs:#ebe6da;--cub:#1b1a17;--cuI:#f3efe6;--hf:Newsreader,Georgia,serif;--ff:Manrope,system-ui,sans-serif;
   position:relative;display:flex;overflow:hidden;height:max(560px,calc(100vh - 210px));height:max(560px,calc(100dvh - 210px));border-radius:24px;border:1px solid #d8d1c2;box-shadow:0 10px 30px -14px rgba(0,0,0,.3);
   background:var(--cb);color:var(--ci);font-family:var(--ff)}
+/* Prompt 85: mørk modus i «Vindu og papir» manglet --cs, så sidepanelet ble lyst med lys tekst (uleselig). */
+:where(html[data-mode="dark"][data-hl="2c"]) .ch{--cs:#1b1913}
 html:not([data-hl="2c"]) .ch.papir{--cb:#11141b;--cc:#1a1f2b;--ci:#ece9e2;--cm:#9aa0ab;--cl:rgba(255,255,255,.12);--ca:#f59a8f;--cs:#0d1016;--cub:#ece9e2;--cuI:#11141b;border-color:rgba(255,255,255,.12)}
 html:not([data-hl="2c"]) .ch{height:max(560px,calc(100dvh - 150px))}
 .ch.noytral{--cb:#212121;--cc:#2f2f2f;--ci:#ececec;--cm:#a3a3a3;--cl:#3a3a3a;--ca:#ececec;--cs:#171717;--cub:#303030;--cuI:#ececec;--hf:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;--ff:var(--hf);border-color:#3a3a3a}

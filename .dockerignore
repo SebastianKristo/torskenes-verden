@@ -15,5 +15,9 @@ apps
 test
 docs
 .github
+# Prompt 85: heller ikke i imaget – tests/receipts/real kan inneholde egne kvitteringer (finansdata) og skal ikke sendes med i byggkonteksten.
+tests
+tools
+deploy
 # Prompt 47: eval/ er med i imaget (npm run eval i containeren), men ikke lokale resultater.
 eval/results

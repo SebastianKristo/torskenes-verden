@@ -18,8 +18,8 @@ Homelab OS er én Node-tjeneste med en SQLite-database i `data/`. Du kan kjøre 
 
 | | Minimum | Anbefalt |
 |---|---|---|
-| CPU / RAM | 1 kjerne, 512 MB | 2 kjerner, 1 GB |
-| Disk | 2 GB | 8 GB eller mer (kvitteringsbilder) |
+| CPU / RAM | 1 kjerne, 1 GB | 2 kjerner, 2 GB |
+| Disk | 8 GB | 16 GB eller mer (imaget er rundt 2 GB, og oppdatering fra appen trenger 3 GB ledig) |
 | Node | 22 | 22 LTS |
 | AI (valgfritt) | Gemini-nøkkel | Ollama med `qwen2.5vl:7b` på en maskin med GPU |
 
@@ -59,7 +59,7 @@ Valgene kan overstyres med miljøvariabler foran kommandoen:
 | `CT_HOSTNAME` | `homelab-os` | Navn på containeren (oppdateringsskriptet leter etter dette) |
 | `STORAGE` | finnes automatisk | Lagring for rotdisken, f.eks. `local-zfs` |
 | `TEMPLATE_STORAGE` | finnes automatisk | Lagring for malen |
-| `DISK` / `RAM` / `CORES` | `8` / `1024` / `2` | Diskstørrelse (GB), minne (MB) og kjerner |
+| `DISK` / `RAM` / `CORES` | `16` / `2048` / `2` | Diskstørrelse (GB), minne (MB) og kjerner |
 | `IP` / `GW` | `dhcp` / – | Fast adresse, f.eks. `IP=192.168.1.60/24 GW=192.168.1.1` |
 | `BRIDGE` | `vmbr0` | Nettverksbro |
 | `PORT` | `3000` | Port på LAN |

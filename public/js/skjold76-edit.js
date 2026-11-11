@@ -234,7 +234,7 @@ function readSetup() {
 function cabListHtml() {
   return `<ul class="sk76-cabs" role="list">${(S.cabs ?? []).map((c) => `<li><a class="sk76-cabit${String(S.setup?.id) === String(c.id) ? ' on' : ''}" href="#/skjold/oppsett/${encodeURIComponent(c.id)}">
       <span class="sk76-th">${c.thumbUrl ? `<img src="${esc(c.thumbUrl)}" alt="" loading="lazy" data-sk76-img>` : `<b>${esc(c.rows)}×${esc(c.cols)}</b>`}</span>
-      <span class="sk76-it"><b>${esc(c.name)}</b><span class="sk76-sp">${esc(`${c.rows} rader × ${c.cols} skuffer · ${c.kind === '3d' ? '3D-print' : 'kjøpt'}`)}</span><span class="sk76-loc">${esc(`${c.counts?.parts ?? 0} deler · ${c.counts?.usedDrawers ?? 0} skuffer i bruk${c.photoUrl ? (cornersOk76(c.corners) ? ' · bilde med hjørner' : ' · bilde uten hjørner') : ''}`)}</span></span></a></li>`).join('')}</ul>
+      <span class="sk76-it"><b>${esc(c.name)}</b><span class="sk76-sp">${esc(`${c.rows} rader × ${c.cols} skuffer · ${c.kind === '3d' ? '3D-print' : 'kjøpt'}`)}</span><span class="sk76-loc">${esc(`${c.counts?.parts === 1 ? '1 del' : `${c.counts?.parts ?? 0} deler`} · ${c.counts?.usedDrawers === 1 ? '1 skuff' : `${c.counts?.usedDrawers ?? 0} skuffer`} i bruk${c.photoUrl ? (cornersOk76(c.corners) ? ' · bilde med hjørner' : ' · bilde uten hjørner') : ''}`)}</span></span></a></li>`).join('')}</ul>
     <div class="sk76-row"><a class="sk76-btn" href="#/skjold/oppsett/ny">+ Nytt skap</a><a class="sk76-btn" href="#/skjold/oppsett/ny3d">+ Tilleggsskap (3D-print)</a><a class="sk76-btn" href="#/skjold/oppsett/ny3d">+ ${esc(PRESET81.short)}</a></div>`;
 }
 function cornerEditorHtml(c) {

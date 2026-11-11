@@ -9,8 +9,8 @@ Homelab OS er én Node-tjeneste med en SQLite-database i `data/`. Den anbefalte 
 
 | | Minimum | Anbefalt |
 |---|---|---|
-| CPU / RAM | 1 kjerne, 512 MB | 2 kjerner, 1 GB |
-| Disk | 2 GB | 8 GB eller mer (kvitteringsbilder) |
+| CPU / RAM | 1 kjerne, 1 GB | 2 kjerner, 2 GB |
+| Disk | 8 GB | 16 GB eller mer (imaget er rundt 2 GB, og oppdatering fra appen trenger 3 GB ledig) |
 | Programvare | Docker med Compose v2 | Docker 24+ |
 | AI (valgfritt) | En Gemini-nøkkel | Ollama på en maskin med GPU eller Apple Silicon, se [AI og tidsgrenser](AI-og-tidsgrenser) |
 

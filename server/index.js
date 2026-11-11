@@ -84,6 +84,8 @@ import { mountSec51 } from './sec51.js'; // prompt 51 (SEC51): sikkerhet
 import { mountFamily50 } from './family50.js'; // prompt 50 (SRVFAM50): Steder med områder, Folk, Helse, I dag, Sjekk inn
 import { traceObs51, mountObs51, startObs51 } from './obs51/index.js'; // prompt 51 (OBS51): helsedashbord, selvreparasjon, spor, ntfy
 import { mountQa51, startQa51, reportServerError51 } from './qa51.js'; // prompt 51 (QA51): feature flags, krasjrapporter (GlitchTip), «Nytt i denne versjonen»
+import { badInput85 } from './badinput85.js'; // prompt 85 (SRVSEC85): feil i kroppen fra klienten → 400, ikke 500
+import { anonBodyCap85 } from './anonbody85.js'; // prompt 85 (SRVSEC85): store kropper bare fra innloggede klienter
 import { mountMedfam51, startMedfam51 } from './medfam51/index.js'; // prompt 51 (MEDFAM51): familiekalender med «hvem kjører?», «I kveld», undertekster, lagring, lydbøker
 import { mountMedctl51 } from './medctl51.js'; // prompt 51 (MEDCTL51): mediekontroll for Plex/Jellyfin, Audiobookshelf-fremdrift
 import { mountWebx51 } from './webx51.js'; // prompt 51 (WEBX51): felles søk, onboarding, tema per bruker, offline-konfliktvarsel
@@ -164,6 +166,8 @@ app.use('*', secureHeaders({
 installCacheBust(app);
 // Prompt 44: «Logg inn som» – X-tokenet (eller hl_imp fra nettleseren) fornyes, sperrer og logg (før alle ruter).
 app.use('*', impersonation44(app));
+// Prompt 85 (SRVSEC85): kropper over 1 MB tas bare imot med gyldig økt eller app-token (flere ruter leser kroppen før innloggingen sjekkes).
+app.use('*', anonBodyCap85);
 // Prompt 51 (SEC51): revisjonslogg, godkjenning av nye enheter, nytt land, passkeys, sperrer for QR/app-token, hemmeligheter og logg-skanner
 // (mellomvare rundt innloggingsrutene – må stå før dem). /api/security51/* og /api/auth/passkey/*.
 mountSec51(app);
@@ -237,7 +241,20 @@ app.post('/finans/share', async (c) => {
 });
 
 // Statiske filer revalideres alltid (304 når de er uendret), så en oppdatering slår inn med en gang.
-app.use('/assets/*', async (c, next) => { await next(); if (c.res.ok) c.header('Cache-Control', 'no-cache'); });
+app.use('/assets/*', async (c, next) => {
+  await next();
+  if (!c.res.ok) return;
+  c.header('Cache-Control', 'no-cache');
+  // Prompt 85: bilder, ikoner, lyder og annet som serveStatic sender, har bare Last-Modified, og If-Modified-Since ble oversett –
+  // alt ble lastet ned på nytt ved hver sidevisning. Uendret fil svarer nå 304 uten innhold (JS har egen ETag i cache-bust.js).
+  const lm = Date.parse(c.res.headers.get('Last-Modified') ?? ''), ims = Date.parse(c.req.header('if-modified-since') ?? '');
+  if (c.req.method !== 'GET' || c.res.status !== 200 || c.req.header('if-none-match') || Number.isNaN(lm) || Number.isNaN(ims) || lm > ims) return;
+  const headers = new Headers(c.res.headers);
+  headers.delete('Content-Length'); headers.delete('Content-Type');
+  try { await c.res.body?.cancel(); } catch { /* strømmen er allerede lukket */ }
+  c.res = undefined;
+  c.res = new Response(null, { status: 304, headers });
+});
 // Prompt 30: Yr- og Storm-logoene ligger i public/assets/brands/ (samme sti som URL-en, /assets/brands/yr.png).
 app.use('/assets/brands/*', serveStatic({ root: './public' }));
 // Prompt 39: filer som ligger i public/assets/ (glimt-varsel.png, glimt-badge.png …) først, så resten av public/ som før.
@@ -928,7 +945,10 @@ if (BG51) startMedfam51(); // prompt 51 (MEDFAM51): påminnelser «hvem kjører?
 if (BG51) import('./ai39.js').then((m) => m.startBest59()).catch((e) => console.warn('[ai39] beste modeller:', e?.message)); // prompt 59: de beste modellene (fra eval) settes én gang
 if (BG51) import('./fast59/warm.js').then((m) => m.startWarm59()).catch((e) => console.warn('[fast59] varm modell:', e?.message)); // prompt 59 (del 4): hovedmodellen varm ved oppstart
 
-app.onError((err, c) => {
+app.onError(async (err, c) => {
+  // Prompt 85 (SRVSEC85): ugyldig JSON eller en kropp som ikke er et objekt er klientens feil → 400 uten feillogg og krasjrapport.
+  const bad = await badInput85(err, c);
+  if (bad) return bad;
   console.error(err);
   reportServerError51(err, c); // prompt 51 (QA51): lagres lokalt og videresendes til GlitchTip når den finnes
   return c.json({ error: 'Intern feil' }, 500);
@@ -950,6 +970,24 @@ if (process.env.NODE_ENV !== 'test') {
     });
   server.setTimeout(HTTP_TIMEOUTS.socketTimeout);
   attachRealtime(server, wsUser);
+  // Prompt 85: ryddig nedstenging. I containeren er Node PID 1, og uten egen behandler overser PID 1 SIGTERM: «docker stop»,
+  // omstart og hver oppdatering ventet da 10 s og drepte prosessen med SIGKILL midt i det den holdt på med. Nå tas det ikke imot
+  // nye forespørsler, de som pågår får inntil 5 s, og databasen lukkes (WAL skrives inn) før prosessen avslutter.
+  let stopping85 = false;
+  const shutdown85 = (sig) => {
+    if (stopping85) return;
+    stopping85 = true;
+    console.log(`[stopp] ${sig} – stenger ned.`);
+    const done = () => {
+      try { db.pragma('wal_checkpoint(TRUNCATE)'); db.close(); } catch (e) { console.warn('[stopp] databasen:', e?.message); }
+      process.exit(0);
+    };
+    setTimeout(done, 5000).unref();
+    server.close(done);
+    server.closeIdleConnections?.();
+  };
+  process.on('SIGTERM', () => shutdown85('SIGTERM'));
+  process.on('SIGINT', () => shutdown85('SIGINT'));
 }
 
 // Innlogging for /api/ws: sesjonscookien eller ?token= sjekkes med den vanlige regelen (sesjon eller app-token) via en intern rute.

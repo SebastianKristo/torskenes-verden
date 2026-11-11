@@ -26,7 +26,9 @@ function injectCss() {
   document.head.appendChild(s);
 }
 
-export const clearBtn = () => `<button type="button" class="sf-x" data-sf-clear aria-label="Tøm søket"><span>${XSVG}</span></button>`;
+// Prompt 85: sider som bare bruker clearBtn() (Bursdager, Mat, Vær, Innstillinger) fikk verken stilark eller lyttere når de ble
+// åpnet direkte (uten at Hjem var tegnet først): ✕ sto synlig i tomt felt og virket ikke. clearBtn() sørger nå for begge.
+export const clearBtn = () => (bindSearchFields(), `<button type="button" class="sf-x" data-sf-clear aria-label="Tøm søket"><span>${XSVG}</span></button>`);
 export const glassIcon = () => `<span class="sf-ic" aria-hidden="true">${GLASS}</span>`;
 
 /** HTML for et søkefelt. attrs = ekstra attributter på <input> (ferdig escapet tekst). icon:false = bare ✕ (eget ikon). */

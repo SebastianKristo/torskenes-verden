@@ -211,7 +211,7 @@ function sideHtml() {
     : `<div class="sk76-draw${pulse ? '' : ' nopulse'}">${drawCabinet76(cab, map, { sel, pick: !!S.pick, pulse })}</div>`;
   return `<section class="sk76-card sk76-cab" aria-label="Skapet">
     <div class="sk76-cabhead">${tabs}${seg}</div>${pick}${body}
-    <p class="sk76-legend">${sel ? `<b>${esc(short76(sel.row, sel.col))}</b> ${esc(longAt81(map, sel.row, sel.col))}${sel.compartment ? ` · Rom ${esc(sel.compartment)}` : ''} · ` : ''}${esc(`${cab.rows} × ${cab.cols}${cab.counts?.drawers && cab.counts.drawers !== cab.rows * cab.cols ? ` (${cab.counts.drawers} skuffer)` : ' skuffer'} · ${parts} ${parts === 1 ? 'del' : 'deler'} i ${used} skuffer`)}</p>
+    <p class="sk76-legend">${sel ? `<b>${esc(short76(sel.row, sel.col))}</b> ${esc(longAt81(map, sel.row, sel.col))}${sel.compartment ? ` · Rom ${esc(sel.compartment)}` : ''} · ` : ''}${esc(`${cab.rows} × ${cab.cols}${cab.counts?.drawers && cab.counts.drawers !== cab.rows * cab.cols ? ` (${cab.counts.drawers} skuffer)` : ' skuffer'} · ${parts} ${parts === 1 ? 'del' : 'deler'} i ${used} ${used === 1 ? 'skuff' : 'skuffer'}`)}</p>
   </section>`;
 }
 let ro = null;

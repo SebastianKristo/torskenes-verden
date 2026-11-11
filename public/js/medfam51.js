@@ -256,7 +256,10 @@ function jump(view, href, label) {
   css();
   const a = document.createElement('a');
   a.className = 'mf51-jump'; a.href = href; a.textContent = label;
-  view.prepend(a);
+  // Prompt 85: i «Vindu og papir» starter siden med fotovinduet (.pw) som ligger bak toppmenyen. Lenken sto foran det
+  // og dekket logoen og menyen. Den settes rett etter fotovinduet når det finnes.
+  const pw = view.querySelector(':scope > section.pw');
+  if (pw) pw.after(a); else view.prepend(a);
 }
 /** Kalles etter at siden er tegnet (app.js). */
 export function afterMedfam51(route, view) {

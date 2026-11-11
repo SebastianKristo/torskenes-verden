@@ -118,6 +118,10 @@
 .f50 .f50-mtop.static { position: relative; left: 0; right: 0; padding: 12px 14px; top: 0; }
 .f50 .leaflet-top.leaflet-right { top: 60px; }
 .f50 .leaflet-container { font-family: Manrope, sans-serif; background: var(--f-map); }
+/* Prompt 85: zoomknappene arvet tekstfargen fra siden (paper.css: a{color:inherit}) og ble lys tekst på hvit knapp i mørk modus. */
+html[data-mode="dark"] .f50 .leaflet-bar a { background-color: #211e18; color: #f3efe6; border-bottom-color: #3a352c; }
+html[data-mode="dark"] .f50 .leaflet-bar a:hover { background-color: #2a261f; }
+html[data-mode="dark"] .f50 .leaflet-bar a.leaflet-disabled { background-color: #211e18; color: #6b665c; }
 .f50 .f50-pinw { background: none; border: 0; }
 .f50 .f50-pin { position: relative; display: grid; place-items: center; width: var(--s); height: var(--s); border-radius: 50%; border: var(--b) solid #fff; background: var(--pc); color: #fff; font: 700 calc(var(--s) * .34) / 1 Manrope, sans-serif; box-shadow: 0 4px 10px rgba(0, 0, 0, .3); overflow: hidden; }
 .f50 .f50-pin img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }

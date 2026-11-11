@@ -77,6 +77,12 @@ const CSS52 = `
 @media (max-width:600px){.wn52-veil{align-items:flex-end;padding:0}.wn52{width:100%;max-width:none;border-radius:24px 24px 0 0;border-bottom:0;max-height:calc(100vh - 56px)}.wn52-foot{padding-bottom:calc(20px + env(safe-area-inset-bottom,0px))}}
 @keyframes wn52In{from{opacity:0;transform:translate3d(0,14px,0)}to{opacity:1;transform:none}}
 .wn52{animation:wn52In .28s cubic-bezier(.22,.9,.28,1) both}
+/* Prompt 85: mørk modus – kortet sto lyst (faste farger) midt på mørk side. */
+html[data-mode="dark"][data-hl="2c"] .wn52{background:#211e18;color:#f3efe6;border-color:#3a352c}
+html[data-mode="dark"][data-hl="2c"] .wn52-head,html[data-mode="dark"][data-hl="2c"] .wn52-foot{border-color:#3a352c}html[data-mode="dark"][data-hl="2c"] .wn52-list li{border-color:#3a352c}
+html[data-mode="dark"][data-hl="2c"] .wn52 h2,html[data-mode="dark"][data-hl="2c"] .wn52-list h3{color:#f3efe6}html[data-mode="dark"][data-hl="2c"] .wn52-list p{color:#d9d3c6}html[data-mode="dark"][data-hl="2c"] .wn52-date{color:#a39d90}
+html[data-mode="dark"][data-hl="2c"] .wn52-lbl,html[data-mode="dark"][data-hl="2c"] .wn52-more{color:#ec7a64}html[data-mode="dark"][data-hl="2c"] .wn52-ok{background:#f3efe6;color:#16140f}
+html[data-mode="dark"][data-hl="2c"] .wn52-fade{background:linear-gradient(rgba(33,30,24,0),#211e18)}html[data-mode="dark"][data-hl="2c"] .wn52-ok:focus-visible,html[data-mode="dark"][data-hl="2c"] .wn52-more:focus-visible{outline-color:#ec7a64}
 @media (prefers-reduced-motion:reduce){.wn52{animation:none}}
 `;
 function css52() { if (!document.getElementById('wn52-css')) { const s = document.createElement('style'); s.id = 'wn52-css'; s.textContent = CSS52; document.head.appendChild(s); } }

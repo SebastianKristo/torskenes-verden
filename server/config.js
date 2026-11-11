@@ -47,4 +47,7 @@ export const config = {
 };
 
 if (!config.passwordHash) console.warn('[config] APP_PASSWORD_HASH er ikke satt – en tom server viser førstegangsoppsettet på /login.');
-if (!config.sessionSecret || config.sessionSecret.length < 32) console.warn('[config] SESSION_SECRET bør være minst 32 tegn.');
+// Prompt 85: mangler SESSION_SECRET helt, brukes faste reservenøkler i koden (økter, app-tokens og krypterte innstillinger).
+// Oppførselen er uendret (å bytte nøkkel logger ut alle og gjør lagrede nøkler uleselige) – men det skal stå tydelig i loggen.
+if (!config.sessionSecret) console.warn('[config] ADVARSEL: SESSION_SECRET er ikke satt. Økter, app-tokens og lagrede nøkler beskyttes da med en fast reservenøkkel som står i kildekoden. Sett SESSION_SECRET (openssl rand -hex 32) i .env. NB: lagrede integrasjonsnøkler må da legges inn på nytt, og alle må logge inn igjen.');
+else if (config.sessionSecret.length < 32) console.warn('[config] SESSION_SECRET bør være minst 32 tegn.');

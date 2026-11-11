@@ -174,6 +174,7 @@ const HEAD = {
   familie: () => ['Posisjon, soner og helse', 'Familie'],
   kart: () => ['Holdeplasser · sanntid · soner', 'Kart'], // prompt 46
   huskeliste: () => ['To-do for hele familien', 'Gjøremål'],
+  gjoremal: () => ['To-do for hele familien', 'Gjøremål'], // prompt 85: #/gjoremal manglet fotovinduet på mobil, så toppmenyen lå oppå listen
   bursdager: () => ['Familie og venner', 'Bursdager'],
   kalender: () => [`Skole · ${new Date().getMonth() >= 6 ? 'høst' : 'vår'} ${new Date().getFullYear()}`, 'Kalender'],
   domener: () => ['Trafikk, oppetid og sikkerhet', 'Domener'],

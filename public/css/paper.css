@@ -574,6 +574,11 @@ html[data-hl="2c"] .trk-step.cur i{background:var(--acc);box-shadow:0 0 0 4px rg
 html[data-hl="2c"] .trk-step.fin i,html[data-hl="2c"] .trk-step.fin.ln em{background:var(--pos)}
 html[data-hl="2c"] .trk-step em{background:#e3ddcf}
 html[data-hl="2c"] .trk-step.ln em{background:var(--ink)}
+/* Prompt 85: i mørk modus vant web44-dark.css (.trk-step i/em, samme spesifisitet, lastet senere) over reglene over,
+   så fullførte steg, gjeldende steg og «levert» så ut som steg som ikke er nådd. */
+html[data-mode="dark"][data-hl="2c"] .trk-step.dn i,html[data-mode="dark"][data-hl="2c"] .trk-step.ln em{background:var(--ink)}
+html[data-mode="dark"][data-hl="2c"] .trk-step.cur i{background:var(--acc)}
+html[data-mode="dark"][data-hl="2c"] .trk-step.fin i,html[data-mode="dark"][data-hl="2c"] .trk-step.fin.ln em{background:var(--pos)}
 html[data-hl="2c"] .trk-more{border-top-color:var(--rule2)}
 html[data-hl="2c"] .trk-btn{background:transparent;border:1px solid var(--ink);color:var(--ink)}
 html[data-hl="2c"] .trk-btn.del{color:var(--acc);border-color:var(--acc)}

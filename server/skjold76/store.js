@@ -228,7 +228,9 @@ export function restore76(user, id) {
   const r = partRow76(user, id, { withDeleted: true });
   if (!r || !r.deleted_at) return null;
   // Skapet kan være slettet i mellomtiden: da blir delen «Uten plass».
-  const cabOk = !r.cabinet_id || cabinetRow76(user, r.cabinet_id);
+  // Prompt 85: … eller krympet, så skuffen ikke finnes lenger.
+  const cab = r.cabinet_id ? cabinetRow76(user, r.cabinet_id) : null;
+  const cabOk = !r.cabinet_id || (cab && !(r.row > cab.rows || r.col > cab.cols));
   q(`UPDATE skj_parts SET deleted_at=NULL, updated=? ${cabOk ? '' : ', cabinet_id=NULL, row=NULL, col=NULL, compartment=NULL'} WHERE id=?`).run(now76(), r.id);
   indexPart76(r.id);
   addHistory76(user, r.id, 'endret', { deleted: true }, { deleted: false, ...locSnap76(partRow76(user, id)) });

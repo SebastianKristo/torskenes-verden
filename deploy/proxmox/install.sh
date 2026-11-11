@@ -12,8 +12,10 @@ CTID="${CTID:-$(pvesh get /cluster/nextid)}"
 HOSTNAME="${CT_HOSTNAME:-homelab-os}"
 STORAGE="${STORAGE:-}"            # tom = finn automatisk
 TEMPLATE_STORAGE="${TEMPLATE_STORAGE:-}"
-DISK="${DISK:-8}"
-RAM="${RAM:-1024}"
+# Prompt 85: imaget er rundt 2 GB (talemodeller, ffmpeg, OCR), og updateren krever 3 GB ledig disk og 1 GB ledig minne før den
+# bygger (MIN_DISK_MB/MIN_RAM_MB, staging 1,5 GB). Med 8 GB disk og 1 GB minne ble «Oppdater nå» avvist på en fersk installasjon.
+DISK="${DISK:-16}"
+RAM="${RAM:-2048}"
 CORES="${CORES:-2}"
 BRIDGE="${BRIDGE:-vmbr0}"
 IP="${IP:-dhcp}"            # eller f.eks. 192.168.1.60/24

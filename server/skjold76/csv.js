@@ -70,7 +70,9 @@ export function importCsv76(user, text, { dry = false, maxRows = 5000 } = {}) {
     const err = (e) => { out.errors.push({ line, error: e }); out.skipped++; };
     const name = txt(o.name, 120);
     if (!name) return err('Mangler navn');
-    const f = { name, category: txt(o.category, 60), description: txt(o.description, 2000), supplier: txt(o.supplier, 80) };
+    // Prompt 85: bare kolonner som finnes i fila tas med – ellers nullstilte en delvis CSV (id, name, qty) kategori, beskrivelse og leverandør.
+    const f = { name };
+    for (const [k2, n] of [['category', 60], ['description', 2000], ['supplier', 80]]) if (o[k2] !== undefined) f[k2] = txt(o[k2], n);
     if (o.specs !== undefined) {
       const sp = String(o.specs ?? '').trim();
       if (!sp) f.specs = {};

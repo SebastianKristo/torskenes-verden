@@ -364,8 +364,8 @@ skjoldApi76.post('/parts/:id{[0-9]+}/qty', async (c) => {
   if (!cur) return c.json(NOPART, 404);
   if (!b || (b.delta == null && b.set == null)) return c.json({ error: 'Forventet {delta} eller {set}' }, 400);
   let next;
-  if (b.set != null) { if (!numOk(b.set) || toNum(b.set) < 0) return c.json({ error: 'set må være et tall ≥ 0' }, 400); next = toNum(b.set); }
-  else { if (!numOk(b.delta)) return c.json({ error: 'delta må være et tall' }, 400); next = Math.max(0, cur.qty + toNum(b.delta)); }
+  if (b.set != null) { if (!numOk(b.set) || toNum(b.set) < 0 || toNum(b.set) > 1e9) return c.json({ error: 'set må være et tall ≥ 0' }, 400); next = toNum(b.set); }
+  else { if (!numOk(b.delta)) return c.json({ error: 'delta må være et tall' }, 400); next = Math.min(1e9, Math.max(0, cur.qty + toNum(b.delta))); }
   next = Math.round(next * 1000) / 1000;
   const row = updatePart76(u, cur.id, { qty: next });
   if (next !== cur.qty) addHistory76(u, cur.id, 'antall', { qty: cur.qty }, { qty: next });
@@ -400,7 +400,7 @@ skjoldApi76.get('/files/:name', (c) => {
 
 /* ---------------- Historikk og angre ---------------- */
 
-skjoldApi76.get('/history', (c) => c.json({ items: historyAll76(c.get('user'), Math.min(500, Number(c.req.query('limit')) || 100)) }, 200, NS));
+skjoldApi76.get('/history', (c) => c.json({ items: historyAll76(c.get('user'), Math.min(500, Math.max(1, Math.trunc(Number(c.req.query('limit')) || 100)))) }, 200, NS));
 skjoldApi76.post('/history/:id{[0-9]+}/undo', (c) => {
   const u = c.get('user');
   const h = q('SELECT * FROM skj_history WHERE id=? AND user_id=?').get(Number(c.req.param('id')), u);
@@ -410,7 +410,8 @@ skjoldApi76.post('/history/:id{[0-9]+}/undo', (c) => {
   const cur = partRow76(u, h.part_id);
   if (!cur) return c.json(NOPART, 404);
   if (h.action === 'flyttet' && from) {
-    const cabOk = from.cabinetId && cabinetRow76(u, from.cabinetId);
+    const fc = from.cabinetId ? cabinetRow76(u, from.cabinetId) : null;
+    const cabOk = fc && from.row >= 1 && from.row <= fc.rows && from.col >= 1 && from.col <= fc.cols; // prompt 85: skapet kan ha krympet siden
     const f = cabOk ? { cabinet_id: from.cabinetId, row: from.row, col: from.col, compartment: from.compartment } : { cabinet_id: null, row: null, col: null, compartment: null };
     const before = locSnap76(cur), row = updatePart76(u, cur.id, f);
     addHistory76(u, cur.id, 'flyttet', before, locSnap76(row));

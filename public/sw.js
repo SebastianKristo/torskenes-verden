@@ -16,15 +16,17 @@
 // Prompt 51 (MEDCTL51): v37 – fjernkontroll i Media › Avspilling › Spilles nå (medctl51.js).
 // Prompt 51 (A11Y51): v38 – kontrast, berøringsflater og fokusmarkering (temavariabler i lys/mørk, web46.css).
 // Prompt 52 (WEB52H): v39 – oppstart med faneoppsett fra cache (boot52.js), sideanimasjon, Ruter-buffer, «Nytt i versjon» som papirkort.
-const CACHE = 'os-v39';
+// Prompt 85: v40 – /api/state og /api/ui er med i lese-API-ene over. Uten dem stoppet oppstarten uten nett på «Kunne ikke starte:
+// Failed to fetch», så verken skallet eller de lagrede gjøremålene kom fram når appen ble åpnet eller lastet på nytt frakoblet.
+const CACHE = 'os-v40';
 const API51 = 'api51-les';
-const API51_RE = /^\/api\/(tasks(\/lists)?|famcal51\/events|me|me\/layout|me\/theme51|me\/share51|family\/checkin|search51\/types)$/;
+const API51_RE = /^\/api\/(state|ui|tasks(\/lists)?|famcal51\/events|me|me\/layout|me\/theme51|me\/share51|family\/checkin|search51\/types)$/;
 const BILDER = 'mb50-bilder';
 const BILDER_MAX = 800;
 const SHELL = ['/assets/icons/icon-192.png'];
 self.addEventListener('install', (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).catch(() => {})); self.skipWaiting(); });
 self.addEventListener('activate', (e) => e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== CACHE && k.startsWith('os-')).map((k) => caches.delete(k)))).then(() => self.clients.claim())));
-self.addEventListener('message', (e) => { if (e.data === 'skipWaiting') self.skipWaiting(); });
+self.addEventListener('message', (e) => { if (e.data === 'skipWaiting' || e.data?.type === 'SKIP_WAITING') self.skipWaiting(); });
 const put = (req, res) => { if (res && res.ok && res.type === 'basic' && !res.redirected) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {}); } return res; };
 self.addEventListener('fetch', (e) => {
   const req = e.request, url = new URL(req.url);

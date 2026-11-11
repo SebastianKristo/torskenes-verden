@@ -262,7 +262,7 @@ calendarsApi.put('/prefs', async (c) => {
     if (k === 'defaultCalendar') { if (!validCalendar(user, v)) return bad(c, 'Ukjent kalender'); p[k] = v; }
     else if (k === 'defaultReminder') { if (!['none', '10m', '30m', '1h', '1d'].includes(v)) return bad(c, 'defaultReminder må være none, 10m, 30m, 1h eller 1d'); p[k] = v; }
     else if (['weekNumbers', 'weather', 'notifyBirthdays', 'notifyDeadlines', 'notifyBrief', 'travelTime'].includes(k)) { if (typeof v !== 'boolean') return bad(c, `${k} må være true eller false`); p[k] = v; }
-    else if (PREF_ENUM[k]) { if (!PREF_ENUM[k].includes(v)) return bad(c, `${k} må være ${PREF_ENUM[k].join(', ')}`); p[k] = v; }
+    else if (Object.hasOwn(PREF_ENUM, k)) { if (!PREF_ENUM[k].includes(v)) return bad(c, `${k} må være ${PREF_ENUM[k].join(', ')}`); p[k] = v; }
     else if (k === 'defaultDuration') { if (![30, 60, 90, 120].includes(v)) return bad(c, 'defaultDuration må være 30, 60, 90 eller 120'); p[k] = v; }
     else if (k === 'theme') { if (!['system', 'light', 'dark'].includes(v)) return bad(c, 'theme må være system, light eller dark'); p[k] = v; }
     else return bad(c, `Ukjent nøkkel ${k}`);

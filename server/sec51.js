@@ -374,7 +374,7 @@ const ENV_SECRET = /(KEY|TOKEN|SECRET|PASSWORD|PASSWD|PASSPHRASE|_PASS|CREDENTIA
 const registered = new Map(); // id → {label, group, get, set?, howTo?}
 /** Andre moduler (backup, ntfy, Proxmox …) kan melde inn egne hemmeligheter: get() → verdi, set?(verdi). */
 export function registerSecret51(id, def) { if (/^[a-z0-9:._-]{3,60}$/i.test(id) && typeof def?.get === 'function') registered.set(id, def); }
-const ENV_HELP = 'Lag en ny verdi, sett den i .env på serveren og start på nytt: docker compose up -d homelab';
+const ENV_HELP = 'Lag en ny verdi, sett den i .env på serveren og start på nytt: docker compose up -d os';
 /** Inventaret med verdiene (bare internt – sendes aldri ut). */
 function secretsRaw(user = OWNER, { admin = true } = {}) {
   const out = [];
@@ -383,7 +383,7 @@ function secretsRaw(user = OWNER, { admin = true } = {}) {
     for (const [k, v] of Object.entries(process.env)) {
       if (!v || v.length < 8 || ENV_SKIP.test(k) || !ENV_SECRET.test(k)) continue;
       add({ id: `env:${k}`, label: k, group: 'Miljøvariabler (.env)', source: 'env', value: v, rotate: 'manual',
-        howTo: k === 'SESSION_SECRET' ? 'openssl rand -hex 32 → SESSION_SECRET i .env → docker compose up -d homelab' : ENV_HELP,
+        howTo: k === 'SESSION_SECRET' ? 'openssl rand -hex 32 → SESSION_SECRET i .env → docker compose up -d os' : ENV_HELP,
         warning: k === 'SESSION_SECRET' ? 'Alle blir logget ut, og lagrede nøkler i Innstillinger (kryptert med SESSION_SECRET) må legges inn på nytt – med mindre SECRET_KEY er satt.' : k === 'SECRET_KEY' ? 'FinansHub-hemmelighetene er kryptert med denne – legg dem inn på nytt etterpå.' : null });
     }
     for (const k of Object.keys(FH_LABELS)) {

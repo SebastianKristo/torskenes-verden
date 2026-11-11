@@ -10,10 +10,11 @@ const KW = { siste: 'news', nyheter: 'news', norge: 'mountain', verden: 'globe',
 export const keywordFor = (label) => KW[String(label).toLowerCase()] ?? String(label).toLowerCase();
 
 let direct = null; // true når /api/icons mangler på serveren
-async function useDirect() {
-  if (direct !== null) return direct;
-  try { await api('/icons/sets'); direct = false; } catch (e) { direct = e.status === 404; }
-  return direct;
+let directP = null; // prompt 85: ett felles oppslag – før ble /api/icons/sets hentet én gang per ikon som ble tegnet før svaret kom (9 kall ved oppstart)
+function useDirect() {
+  if (direct !== null) return Promise.resolve(direct);
+  directP ??= api('/icons/sets').then(() => { direct = false; return direct; }, (e) => { direct = e.status === 404; return direct; });
+  return directP;
 }
 useDirect();
 

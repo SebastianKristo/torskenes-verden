@@ -40,7 +40,7 @@ api.put('/', async (c) => {
   if (!body || typeof body !== 'object') return c.json({ error: 'Ugyldig' }, 400);
   const next = uiPrefs(c.get('user'));
   for (const [k, v] of Object.entries(body)) {
-    if (!VALID[k]?.(v)) return c.json({ error: `Ugyldig verdi for ${k}` }, 400);
+    if (!Object.hasOwn(VALID, k) || !VALID[k](v)) return c.json({ error: `Ugyldig verdi for ${k}` }, 400);
     next[k] = v;
   }
   // Slås «samme høyde» på igjen, nullstilles y på alle delene.

@@ -13,8 +13,10 @@
   background:var(--mp-bg);color:var(--mp-t);border-radius:28px;padding:clamp(20px,3vw,36px);
   display:flex;flex-direction:column;gap:30px;color-scheme:light;min-width:0;box-sizing:border-box;text-align:left
 }
-/* Mørkt tema (Nåværende): samme tokens som Kalender-appens THM.dark, ikke den gamle Mat-paletten. */
-html[data-hl-theme="cur"] .mat{
+/* Mørkt tema (Nåværende): samme tokens som Kalender-appens THM.dark, ikke den gamle Mat-paletten.
+   Prompt 85: gjelder også «Vindu og papir» i mørk modus. mat.css lastes etter web44-dark.css, så de lyse
+   standardverdiene over vant og Mat ble stående lys på mørk side. */
+html[data-hl-theme="cur"] .mat,html[data-mode="dark"][data-hl="2c"] .mat{
   --mp-bg:var(--mat-bg,#161513);--mp-card:var(--mat-card,#211f1b);--mp-in:var(--mat-in,#1b1a17);--mp-pop:#211f1b;
   --mp-line:var(--mat-line,#3b3731);--mp-line2:#3b3731;--mp-line3:#3b3731;--mp-hov:#4a453d;
   --mp-t:var(--mat-t,#efe9de);--mp-2:#c9c1b1;--mp-mute:#a49d91;--mp-faint:#a49d91;--mp-dim:#8a8478;

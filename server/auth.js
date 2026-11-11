@@ -46,7 +46,7 @@ export const needsSetup = () => !db.prepare('SELECT 1 FROM users LIMIT 1').get()
 /** Servernavnet fra førstegangsoppsettet (vises i menyen og mobilappen). */
 export const serverName = () => kv.get(OWNER, 'server_name', 'Homelab');
 export function setServerName(name) {
-  const n = String(name ?? '').trim().slice(0, 40);
+  const n = typeof name === 'string' ? name.trim().slice(0, 40) : ''; // prompt 85: et objekt ble lagret som «[object Object]»
   if (!n) throw httpError('Skriv inn et navn på serveren', 400);
   kv.set(OWNER, 'server_name', n);
   return n;
