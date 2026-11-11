@@ -15,6 +15,8 @@
 - [Kalender og Bursdager](Kalender-og-Bursdager)
 - [Sporing](Sporing)
 - [Familie og kart](Familie-og-kart)
+- [Media](Integrasjoner#media-sonarr-radarr-prowlarr-og-qbittorrent)
+- [Skjold Lab og LED](Integrasjoner#wled-til-skjold-lab)
 
 **Referanse**
 - [API](API)

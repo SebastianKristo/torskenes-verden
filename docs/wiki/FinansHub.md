@@ -50,11 +50,11 @@ Uten nett legges kvitteringene i **«Venter på opplasting»** og sendes når ne
 
 ### Flyten
 
-1. **Kø:** hver fil får en jobb. Køen viser status, for eksempel «Gemini leser … 60 %», eller «Gemini svarte ikke innen 20 s · prøver Groq».
-2. **AI eller OCR:** motoren du har valgt under «Hvem gjør hva» leser butikk, dato, sum, MVA og varelinjer. Feiler AI, kan **lokal OCR (Tesseract)** lese kvitteringen i stedet. Kjente kjeder gjenkjennes, og butikknavnet slås opp i Enhetsregisteret ut fra org.nr.
+1. **Kø:** hver fil får en jobb. Køen viser status, for eksempel «Glimt leser lokalt …».
+2. **OCR og lokal modell:** kvitteringer leses bare i huset. Teksten hentes med OCR på telefonen, Apple Vision på en Mac eller Tesseract på serveren, og en lokal modell finner butikk, dato, sum, MVA og varelinjer. Sky-tjenester som Gemini brukes ikke til kvitteringer. Butikknavnet hentes fra org.nr. i en lokal kopi av Enhetsregisteret. Se [AI og tidsgrenser](AI-og-tidsgrenser#kvitteringer-leses-bare-lokalt).
 3. **Kategori:** regler går foran AI-forslaget.
 4. **Bankmatch:** samme beløp ±1 kr og dato ±3 dager. Like fire siste siffer på kortet gir forrang.
-5. **Til gjennomgang:** her kan du redigere, **godkjenne**, **analysere på nytt** (også «✦ Analyser på nytt med Gemini» eller «Les med lokal OCR», med resultatene side om side) eller slette.
+5. **Til gjennomgang:** her kan du redigere, **godkjenne**, **analysere på nytt** (også «Les med lokal OCR») eller slette. Usikre felt er markert, og «Rådata» viser OCR-radene.
 6. **Bokfør:** ingenting bokføres før du trykker Bokfør.
 7. **Angre:** under «Bokført» har hver kvittering **↺** for å angre bokføringen.
 
@@ -89,11 +89,15 @@ Kjøp og salg via Finn (Trygg betaling, Fiks ferdig, Tillit).
 - **Steg:** Betalt → Sendt → Mottatt → Godkjent ved kjøp, og Solgt → Sendt → Levert → Utbetalt ved salg.
 - Sporingsnumre fra Fiks ferdig går rett til [Sporing](Sporing).
 
+## Butikklogoer
+
+Transaksjoner og kvitteringer får logo fra et logobibliotek med norske kjeder. Trykk på en logo for å søke i hele biblioteket, laste opp et eget bilde eller bruke initialer. Valget gjelder alle kjøp fra samme butikk, på web, iPhone og Android. For butikker som ikke er i biblioteket, kan serveren slå opp logoen på nett. Da sendes bare butikknavnet, og med «Finansdata forlater aldri huset» på sendes ingenting ut.
+
 ## Boliger
 
 <img src="https://raw.githubusercontent.com/SebastianKristo/torskenes-verden/main/docs/images/finanshub-boliger.webp" alt="Boliger" width="100%">
 
-En bolig er et felles regnskap for et hus, en hytte eller en husholdning, og er **det eneste som deles mellom brukere**.
+En bolig er et felles regnskap for et hus, en hytte eller en husholdning, og er **det eneste i FinansHub som deles mellom brukere**.
 
 **Eksempel: hytte delt med søsken**
 
@@ -117,6 +121,8 @@ Trykk **✦ AI** i søkefeltet og spør på vanlig norsk:
 - «abonnementer over 200 kr»
 
 **Slik virker det:** treffene hentes fra transaksjoner, kvitteringer og varelinjer (fulltekstsøk, og vektorsøk hvis du har embeddings). Språkmodellen svarer bare ut fra treffene, og et svar med tall som ikke finnes i dataene, blir forkastet. Hvert treff viser hvorfor det traff.
+
+Du kan også spørre Glimt i søkefeltet på Hjem eller i Chat, for eksempel «sist jeg var på Jem & Fix» eller «hva er det dyreste abonnementet mitt?». Med «Finansdata forlater aldri huset» på brukes bare lokale modeller til finanssøk.
 
 Lange søk kjøres som jobb, med «✦ Ollama tenker … 34 s av 60 s», fremdriftslinje og **Avbryt**. Søket venter så lenge tidsgrensen du har satt for motoren. Korte søk på 1–2 ord bruker vanlig søk først, med «✦ Spør AI likevel». Se [AI og tidsgrenser](AI-og-tidsgrenser).
 

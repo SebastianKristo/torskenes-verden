@@ -9,14 +9,16 @@ Alle integrasjoner settes opp under **Innstillinger → Integrasjoner**, på web
 | Type | Integrasjoner | Hvem |
 |---|---|---|
 | **Dine integrasjoner** | Plex, Jellyfin, Sonarr, Radarr, Kalendere (skole-iCal, Canvas), Trading 212, Bank og import, IMAP, Finn, Mybring, PostNord, ParcelsApp | Hver bruker for seg. Ingen ser andres verdier. |
-| **Server (administrator)** | Home Assistant, Google Kalender-klienten, AI, Entur, Cloudflare, MET/Yr, Kart, Ikoner, Bilder | Bare admin endrer. Alle kan bruke dem. |
+| **Server (administrator)** | Home Assistant, Google Kalender-klienten, AI, qBittorrent, Prowlarr, Entur, Cloudflare, MET/Yr, Kart, Ikoner, Bilder | Bare admin endrer. Alle kan bruke dem. |
+
+**Media-siden** bruker serverens oppsett for Sonarr, Radarr, Plex og Jellyfin, se [Media](#media-sonarr-radarr-prowlarr-og-qbittorrent). AI-tjenestene settes opp under **Innstillinger → AI → Tjenester**, og kalenderne under **Innstillinger → Kalender og gjøremål**. Integrasjoner viser status og lenke dit.
 
 - Hemmelige verdier lagres kryptert på serveren og vises bare som «lagret». De sendes aldri tilbake til nettleseren eller appen.
 - Verdier fra `.env` brukes som standard. Det du skriver i Integrasjoner, overstyrer dem. **Fjern** tar deg tilbake til `.env`-verdien.
 - Adresser som `http://192.168.1.20:8123` må kunne nås **fra serveren** (containeren), ikke fra telefonen din.
 
 **Innhold:**
-[Home Assistant](#home-assistant) · [Google Kalender](#google-kalender) · [Skole-iCal og Canvas](#skole-ical-og-canvas) · [Plex og Jellyfin](#plex-og-jellyfin) · [Sonarr og Radarr](#sonarr-og-radarr) · [Trading 212](#trading-212) · [IMAP og Proton Mail Bridge](#imap-og-proton-mail-bridge) · [Mybring](#mybring-posten-og-bring) · [PostNord](#postnord) · [ParcelsApp](#parcelsapp) · [Andre transportører](#dhl-ups-og-17track) · [Cloudflare](#cloudflare) · [Entur](#entur-ruter) · [MET/Yr](#metyr) · [AI](#ai-gemini-groq-ollama-og-roboflow) · [Unsplash og Pexels](#unsplash-og-pexels) · [MapTiler og Stadia](#maptiler-og-stadia)
+[Home Assistant](#home-assistant) · [Google Kalender](#google-kalender) · [Skole-iCal og Canvas](#skole-ical-og-canvas) · [Plex og Jellyfin](#plex-og-jellyfin) · [Sonarr og Radarr](#sonarr-og-radarr) · [Media](#media-sonarr-radarr-prowlarr-og-qbittorrent) · [WLED til Skjold Lab](#wled-til-skjold-lab) · [Trading 212](#trading-212) · [IMAP og Proton Mail Bridge](#imap-og-proton-mail-bridge) · [Mybring](#mybring-posten-og-bring) · [PostNord](#postnord) · [ParcelsApp](#parcelsapp) · [Andre transportører](#dhl-ups-og-17track) · [Cloudflare](#cloudflare) · [Entur](#entur-ruter) · [MET/Yr](#metyr) · [AI](#ai-ollama-gemini-groq-og-roboflow) · [Unsplash og Pexels](#unsplash-og-pexels) · [MapTiler og Stadia](#maptiler-og-stadia)
 
 ---
 
@@ -125,7 +127,7 @@ Kalenderen hentes på nytt hver time. Se [Kalender og Bursdager](Kalender-og-Bur
 
 ## Plex og Jellyfin
 
-Gir kortet **Media** med «Spilles nå» og «Nylig lagt til». Per bruker.
+Gir kortet **Media** med «Spilles nå» og «Nylig lagt til», og styring av avspillinger (spill av, pause, stopp, neste, forrige, spoling og volum) fra web, apper, klokke og Android Auto. Per bruker.
 
 **Plex:**
 1. **Adresse:** IP-en til Plex-serveren med port 32400, for eksempel `http://192.168.1.20:32400`.
@@ -145,6 +147,8 @@ Gir kortet **Media** med «Spilles nå» og «Nylig lagt til». Per bruker.
 3. **Brukernavn:** brukeren «Nylig lagt til» hentes for. Tomt felt bruker den første brukeren.
 4. Trykk **Test**.
 
+**Hvem kan styre avspillinger:** du styrer bare dine egne. Admin kobler hver Homelab-bruker til brukernavnet i Plex og Jellyfin under **Media → Avspilling → «Hvem kan styre avspillinger»**, og kan selv styre alle. Uten kobling kan en vanlig bruker bare se. Kommandoene går fra serveren, så tokenet og nøkkelen blir der. Plex-avspilleren må tillate fjernkontroll. **Stopp** virker likevel, fordi serveren avslutter strømmen.
+
 ---
 
 ## Sonarr og Radarr
@@ -157,6 +161,54 @@ Gir «Kommer ut» med serier og filmer de neste 14 dagene. Per bruker.
 4. Trykk **Test** på hver.
 
 Antall dager kan endres med `SONARR_DAYS` og `RADARR_DAYS` i `.env`.
+
+---
+
+## Media: Sonarr, Radarr, Prowlarr og qBittorrent
+
+**Media** samler Sonarr, Radarr, Prowlarr og qBittorrent på én side, på web og i appene: Oversikt, Kalender, Bibliotek og Nedlastinger.
+
+- **Legg til** serier og filmer med kvalitet og overvåking.
+- **Interaktivt søk** viser treffene fra indekserne, med seedere, størrelse og kvalitet, så du velger utgivelsen selv. Svarer ikke Sonarr eller Radarr, lastes det ned via Prowlarr.
+- **Nedlastinger** fra qBittorrent med pause, kø, filer og slett.
+- **Glimt** forstår for eksempel «legg til Severance i 4K».
+- **Varsler** når noe er ferdig eller står fast.
+
+**Oppsett, under Innstillinger → Integrasjoner → Media:**
+
+| Tjeneste | Adresse (eksempel) | Du trenger |
+|---|---|---|
+| Sonarr | `http://192.168.1.20:8989` | API-nøkkel (Settings → General → Security) |
+| Radarr | `http://192.168.1.20:7878` | API-nøkkel |
+| Prowlarr | `http://192.168.1.20:9696` | API-nøkkel |
+| qBittorrent | `http://192.168.1.20:8080` | Brukernavn og passord til Web UI |
+
+Trykk **Test** på hver. qBittorrent og Prowlarr er serveroppsett som bare admin endrer.
+
+- **Nøklene blir på serveren.** Serveren er mellomledd for alle kall, og nøkler og passord sendes aldri til nettleseren eller appene.
+- **Hvilket oppsett brukes:** Media bruker eierens verdier for Sonarr, Radarr, Plex og Jellyfin. Mangler de, brukes verdiene til den første administratoren som har lagt inn både adresse og nøkkel.
+- **Tilgang:** admin har alltid tilgang. Andre brukere ser Media når admin har gitt dem tilgang. Bare admin kan slette, endre profiler og overvåking og legge til indeksere.
+- **Starter ikke nedlastingen?** Innstillinger → Media → Diagnostikk viser hvilket ledd som feiler: kommandoen, indekserne, nedlastingsklienten eller qBittorrent. Se [docs/media-nedlasting-50.md](https://github.com/SebastianKristo/torskenes-verden/blob/main/docs/media-nedlasting-50.md).
+
+---
+
+## WLED til Skjold Lab
+
+**Skjold Lab** er sorteringsdatabasen for deler: skap med rader og skuffer, deler med bilder, antall og tags, søk som svarer «Hovedskap · Rad 4 · Skuff 2», plukkliste og produkter med stykkliste. Selve Skjold Lab trenger ingen integrasjon. Den er per bruker, og du finner den under Mer og på Hjem.
+
+Med en adresserbar LED-stripe over hver skuffrad kan Skjold Lab tenne LED-en over skuffen der delen ligger (**💡 Vis i skapet**). Det styres av en ESP32 med [WLED](https://kno.wled.ge/). Du trenger ikke skrive egen kode.
+
+1. **Bygg og koble:** innkjøpsliste, koblingsskjema og strømberegning står i [tools/skjoldlab-led/README.md](https://github.com/SebastianKristo/torskenes-verden/blob/main/tools/skjoldlab-led/README.md).
+2. **Installer WLED** på ESP32 fra install.wled.me, koble den til hjemmenettet og gi den en fast adresse, for eksempel `192.168.1.50`.
+3. **Slå på strømgrensen i WLED** (2000 mA). Den skal alltid være på.
+4. I Skjold Lab: **Skap → velg skapet → 💡 Sett opp lys over skuffene**. Skriv inn WLED-verten og trykk **Sjekk**.
+5. Fyll ut radene, trykk **Test alle**, og bruk **Kalibrer …** hvis en LED står over feil skuff. **Feilsøk LED** tenner hele stripa rødt og så én LED blått, og sier hvor feilen ligger.
+
+- Standard er 30 sekunder lys, og så går stripa tilbake til det den viste før. I plukklista kan opptil 20 skuffer lyse samtidig, hver del i sin farge.
+- **Serveren snakker bare med enheter i hjemmenettet:** en privat IP-adresse, et `.local`- eller `.lan`-navn, eller et lokalt navn uten punktum. Offentlige adresser blir avvist med vilje.
+- **Ikke åpne WLED mot internett.** WLED har ingen innlogging som standard.
+- **3D-print:** skapet, LED-kanalene og elektronikkboksen ligger som ferdige STL- og 3MF-filer på releasen [«skjoldlab3d»](https://github.com/SebastianKristo/torskenes-verden/releases/tag/skjoldlab3d). Modellen og målene er forklart i [tools/skjoldlab3d/README.md](https://github.com/SebastianKristo/torskenes-verden/blob/main/tools/skjoldlab3d/README.md). Mål hylla di før du printer noe stort.
+- **✦ Foreslå** og **Finn bilde** slås av og på under Innstillinger → Moduler → Skjold Lab. Gjenkjenningen kjører på den lokale modellen. Bildesøket sender bare navnet på delen.
 
 ---
 
@@ -312,11 +364,14 @@ Værsiden i appene bruker i tillegg Open-Meteo via serveren. Hver bruker kan leg
 
 ---
 
-## AI: Gemini, Groq, Ollama og Roboflow
+## AI: Ollama, Gemini, Groq og Roboflow
 
-AI leser kvitteringer, svarer på AI-søk, lager sammendrag og velger kategorier. Serveroppsett. Det enkle oppsettet ligger i **Integrasjoner → AI**, og alt finnes i **FinansHub → Innstillinger → AI og tolkning**. Se også [AI og tidsgrenser](AI-og-tidsgrenser).
+AI driver Glimt, leser kvitteringer, svarer på AI-søk, lager sammendrag og velger kategorier. Serveroppsett. Tjenestene settes opp under **Innstillinger → AI → Tjenester**, med adresse, nøkkel og test i én rad. FinansHub har sin egen AI-side under Innstillinger. Se også [AI og tidsgrenser](AI-og-tidsgrenser).
 
-### Gemini (enklest)
+> [!IMPORTANT]
+> **Kvitteringer leses bare lokalt.** Gemini, Groq og Roboflow får aldri kvitteringsbilder. Start derfor med [Ollama](#ollama-lokalt-ingenting-forlater-huset). Gemini og Groq er valgfrie tillegg til annet enn kvitteringer, og med «Finansdata forlater aldri huset» på sendes ingen finansdata til dem.
+
+### Gemini (valgfritt)
 
 1. Gå til [aistudio.google.com](https://aistudio.google.com) → **Get API key → Create API key**. Gratisnivået holder for vanlig bruk.
 2. Lim nøkkelen inn under **Gemini API-nøkkel** og trykk **Test**.
@@ -331,43 +386,47 @@ AI leser kvitteringer, svarer på AI-søk, lager sammendrag og velger kategorier
 1. [console.groq.com](https://console.groq.com) → **API Keys → Create API Key**.
 2. Lim inn under **Groq API-nøkkel** og trykk **Test**.
 
-Groq er standard for AI-søk og kategorisering, og kan også lese bilder.
+Groq er en valgfri sky-motor for tekstsvar. Den brukes ikke til kvitteringer.
 
 ### Ollama (lokalt, ingenting forlater huset)
 
 **På en Mac mini M4 med 16 GB:**
 
+> [!WARNING]
+> **Ollama skal aldri eksponeres mot internett.** Ollama har ingen innlogging. La den bare lytte på hjemmenettet, og lag aldri portviderekobling, tunnel eller Cloudflare-rute til port 11434. Bare Homelab-serveren skal snakke med den.
+
 1. Installer Ollama fra [ollama.com](https://ollama.com/download).
-2. La Ollama lytte på nettverket, og start den på nytt:
+2. La Ollama lytte på hjemmenettet, og start den på nytt:
    ```bash
    launchctl setenv OLLAMA_HOST 0.0.0.0
    # Avslutt Ollama fra menylinjen og åpne den igjen
    ```
 3. Sjekk fra serveren: `curl http://192.168.1.30:11434/api/tags`
-4. **Integrasjoner → AI → Ollama-adresse:** `http://192.168.1.30:11434`
-5. **FinansHub → Innstillinger → AI og tolkning → Ollama-modeller:** trykk **Installer** på modellene du vil ha. Fremdriften vises.
+4. **Innstillinger → AI → Tjenester → Ollama:** adressen `http://192.168.1.30:11434`, og trykk **Test**.
+5. **Innstillinger → AI → Modeller:** trykk **Installer** på modellene du vil ha. Fremdriften vises.
 
 **Anbefalte modeller for 16 GB** (modellen må få plass sammen med macOS, og rundt 10–11 GB er trygt):
 
 | Oppgave | Modell | Størrelse | Merknad |
 |---|---|---|---|
-| Kvitteringer (bilder) | `qwen2.5vl:7b` | 6,0 GB | Best på 16 GB. Leser norsk tekst og tall godt. |
+| Tekst, Glimt og tolkning av kvitteringer | `qwen3:8b` | 5,2 GB | Standard for all tekst |
+| Bilder | `qwen2.5vl:7b` | 6,0 GB | Standard for bilder. Leser kvitteringer når ingen OCR er tilgjengelig. |
 | Kvitteringer og tekst | `gemma3:12b` | 8,1 GB | Leser bilder og skriver godt norsk. Litt tregere. |
-| Tekst (AI-søk, sammendrag) | `qwen3:8b` | 5,2 GB | God til søk og kategorisering |
 | Vektorsøk (embeddings) | `nomic-embed-text` | 0,3 GB | Til AI-søk med vektorer |
 | Lite og raskt | `gemma3:4b` | 3,3 GB | Mindre nøyaktig på kvitteringer |
 
 `qwen2.5vl:32b` og `gemma3:27b` er merket «for stor for 16 GB». Andre modeller fra ollama.com/library kan installeres ved navn.
 
-Du kan velge egen modell for kvitteringer, for tekst og for embeddings. Ollama holder modellen lastet i 10 minutter mellom søkene.
+Du kan velge egen modell per oppgave under AI → Oppgaver.
+
+**Flere lokale tjenester (valgfritt, på en Mac i huset):** Mac-OCR med Apple Vision for kvitteringer, NB-Whisper for tale til tekst på norsk, VoxCPM for egne stemmer og oMLX som alternativ motor til Ollama. Hver av dem har et installasjonsskript under `tools/` i repoet, og adresse og nøkkel legges inn under AI → Tjenester. Se [AI og tidsgrenser](AI-og-tidsgrenser#lokale-tjenester-på-en-mac).
 
 ### Roboflow (valgfritt)
 
-Roboflow beskjærer kvitteringen før den leses, og kan lese strekkoder.
+Roboflow kan lese strekkoder. Beskjæring av kvitteringer med Roboflow er fjernet, fordi kvitteringsbilder aldri sendes til en sky-tjeneste.
 
 1. Lag en konto på [roboflow.com](https://roboflow.com) og kopier API-nøkkelen under **Settings → API Keys**.
-2. Finn en modell som finner kvitteringer i Roboflow Universe, og noter `prosjekt/versjon`, for eksempel `receipt-detection/3`.
-3. **FinansHub → Innstillinger → AI og tolkning → Roboflow:** lim inn nøkkelen og modellen, og trykk **Test**.
+2. Lim inn nøkkelen under AI-oppsettet og trykk **Test**.
 
 ---
 

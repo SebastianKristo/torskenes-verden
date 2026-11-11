@@ -4,11 +4,13 @@
 
 Kalenderen viser **skoletimeplanen** sammen med prøver, frister, bursdager og Google Kalender. På web er det fanen **Kalender**, og i appene ligger den under **Mer → Kalender**.
 
+Kalender finnes også som **egen app** for iPhone, Android og Mac (`Kalender-<versjon>…` under [Releases](https://github.com/SebastianKristo/torskenes-verden/releases)). På iPhone er den bygget inn i Homelab-appen bak bryteren «Kalender i appen», se [Mobilapper](Mobilapper#kalender-i-appen-iphone).
+
 <img src="https://raw.githubusercontent.com/SebastianKristo/torskenes-verden/main/docs/images/homelab-kalender.webp" alt="Kalender på web" width="100%">
 
 ### Oppsett
 
-1. **Innstillinger → Kalendere.** Her ligger alle kalenderkildene samlet:
+1. **Innstillinger → Kalender og gjøremål.** Her ligger alle kalenderkildene samlet:
    - **Skole-iCal:** timeplan og prøver
    - **Canvas-iCal:** innleveringer og frister
    - **Google Kalender:** logg inn med Google
@@ -43,6 +45,10 @@ Kalenderne hentes på nytt hver time. **Oppdater** henter dine kalendere på nyt
 
 **Påminnelser:** standard er dagen før for prøver og frister, og ingen for vanlige timer. Påminnelsene er lokale varsler på telefonen.
 
+### Glimt og kalenderen
+
+Skriv eller si det i søkefeltet: «legg til i kalender at jeg og pappa skal se Dune på Colosseum 17. desember kl 17:30». Avtalen legges i standardkalenderen, og du får et kort der du kan bytte kalender, åpne avtalen eller angre. Oppfølgere som «flytt den til 11» virker også. Se [AI og tidsgrenser](AI-og-tidsgrenser#glimt).
+
 ### Widgets
 
 | | Liten | Medium | Stor |
@@ -53,6 +59,8 @@ Kalenderne hentes på nytt hver time. **Oppdater** henter dine kalendere på nyt
 | **Samsung (One UI)** | 2 × 2 | 4 × 2 | 4 × 4 |
 
 Widgetene oppdateres når hver time starter og slutter. På Android kan oppdateringen komme et minutt for sent. Etter siste time viser de neste skoledag. Det finnes også en Kalender-widget på **Hjem** i appen og på dashboardet.
+
+Kalender-appene har egne widgets for iPhone og låseskjermen, Android (Material You) og Samsung (One UI, med en måned du kan bla i). Under Innstillinger → Widgets i Kalender-appen velger du hvilke kalendere som vises.
 
 ---
 
@@ -71,12 +79,12 @@ Bursdager viser **neste bursdag**, søk, og en liste per måned med alder og dag
 ### Google Kalender
 
 1. Admin setter opp OAuth-klienten, se [Integrasjoner → Google Kalender](Integrasjoner#google-kalender).
-2. Hver bruker går til **Innstillinger → Kalendere → Google Kalender → Logg inn med Google** og velger kalender.
+2. Hver bruker går til **Innstillinger → Kalender og gjøremål → Google Kalender → Logg inn med Google** og velger kalender.
 3. Bursdager fra Google-kontaktene dine (kalenderen «Bursdager») hentes også inn.
 
 ### Home Assistant
 
-Under **Innstillinger → Kalendere → Home Assistant** velger admin en kalender-entitet og trykker **Importer**. Synken går begge veier.
+Under **Innstillinger → Kalender og gjøremål → Home Assistant** velger admin en kalender-entitet og trykker **Importer**. Synken går begge veier.
 
 ### Påminnelser og widgets
 

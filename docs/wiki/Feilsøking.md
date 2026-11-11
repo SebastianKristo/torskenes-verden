@@ -8,10 +8,10 @@ docker compose logs --tail 100 os             # feilmeldinger fra serveren
 docker compose ps                             # kjører containerne?
 ```
 
-Integrasjoner har **Test**-knapper i Innstillinger → Integrasjoner, som viser nøyaktig hva som er galt. AI-feil står i FinansHub → Innstillinger → AI og tolkning → AI-logg.
+Integrasjoner har **Test**-knapper i Innstillinger → Integrasjoner, som viser nøyaktig hva som er galt. AI-feil står under Innstillinger → AI → Jobber, og i AI-loggen i FinansHub.
 
 **Innhold:**
-[Google: private IP](#google-device_id-and-device_name-are-required-for-private-ip) · [Apple Health](#apple-health-dukker-ikke-opp) · [AI-søk stopper etter 30 s](#ai-søket-stopper-etter-30-s) · [Android krasjer](#android-appen-krasjer-ved-oppstart) · [Kart 403](#kartet-er-grått-eller-viser-403) · [Familie-deling av](#familie-viser-ingen-etter-oppdateringen) · [Ukjent integrasjon](#ukjent-integrasjon) · [PostNord](#postnord-uten-organisasjonsnummer) · [Andre feil](#andre-vanlige-feil)
+[Google: private IP](#google-device_id-and-device_name-are-required-for-private-ip) · [Apple Health](#apple-health-dukker-ikke-opp) · [AI-søk stopper etter 30 s](#ai-søket-stopper-etter-30-s) · [Android krasjer](#android-appen-krasjer-ved-oppstart) · [Kart 403](#kartet-er-grått-eller-viser-403) · [Familie-deling av](#familie-viser-ingen-etter-oppdateringen) · [Ukjent integrasjon](#ukjent-integrasjon) · [Media](#media-ingenting-lastes-ned) · [Skjold Lab-LED](#skjold-lab-led-en-lyser-ikke) · [Tale til tekst](#mikrofonen-virker-ikke) · [PostNord](#postnord-uten-organisasjonsnummer) · [Andre feil](#andre-vanlige-feil)
 
 ---
 
@@ -59,7 +59,7 @@ Får du «Access blocked: … has not completed the Google verification process�
 **Løsning:**
 1. Oppdater serveren til 4.18.0 eller nyere, se [Oppdatering og backup](Oppdatering-og-backup).
 2. Oppdater Android- og iOS-appen fra [Releases](https://github.com/SebastianKristo/torskenes-verden/releases).
-3. Sett tidsgrensen for motoren under FinansHub → Innstillinger → AI og tolkning → Tidsgrenser.
+3. Sett tidsgrensen for motoren under Tidsgrenser i FinansHubs AI-innstillinger.
 4. Har du egen reverse proxy, sett tidsgrensen der til minst 5 minutter, se [Installasjon](Installasjon#egen-reverse-proxy-caddy-eller-nginx).
 
 Nå kjøres lange søk som jobb med fremdrift og Avbryt. Se [AI og tidsgrenser](AI-og-tidsgrenser).
@@ -126,6 +126,45 @@ Får du «Bare administratorer kan se og endre serveroppsettet» (403), er integ
 
 ---
 
+## Media: ingenting lastes ned
+
+**Hva skjer:** du trykker last ned eller søk i Media, men qBittorrent starter ikke, eller det interaktive søket viser ingen treff.
+
+**Løsning:**
+1. Åpne **Innstillinger → Media → Diagnostikk** (bare admin). Den viser grønt eller rødt for hvert ledd: kommandoen i Sonarr eller Radarr, indekserne, nedlastingsklienten og qBittorrent, med hva du kan gjøre.
+2. Trykk **Test** på Sonarr, Radarr, Prowlarr og qBittorrent under Innstillinger → Integrasjoner → Media. Adressene må kunne nås fra serveren, ikke fra telefonen.
+3. Ser en annen bruker «Ikke satt opp»? Media bruker serverens oppsett, og andre brukere må få tilgang av admin. Se [Integrasjoner → Media](Integrasjoner#media-sonarr-radarr-prowlarr-og-qbittorrent).
+
+Detaljene står i [docs/media-nedlasting-50.md](https://github.com/SebastianKristo/torskenes-verden/blob/main/docs/media-nedlasting-50.md).
+
+**Kan ikke styre en avspilling:** admin må koble brukeren din til brukernavnet i Plex eller Jellyfin under Media → Avspilling → «Hvem kan styre avspillinger». Plex-avspilleren må tillate fjernkontroll.
+
+---
+
+## Skjold Lab: LED-en lyser ikke
+
+1. Åpne **Skjold Lab → Skap → velg skapet → 💡 Sett opp lys over skuffene**, og trykk **Sjekk** ved WLED-verten.
+2. Kjør **Feilsøk LED**. Veiviseren tenner hele stripa rødt og så én LED blått, og sier om feilen ligger i oppsettet eller i kalibreringen.
+
+| Symptom | Årsak og løsning |
+|---|---|
+| «Verten må være i hjemmenettet» | Bruk en privat IP-adresse, et `.local`- eller `.lan`-navn eller et navn uten punktum. Offentlige adresser avvises med vilje. |
+| Feil skuff lyser | Feil startindeks eller retning i raden. Bruk **Kalibrer …**. |
+| Du får beskjed om at en LED er utenfor segmentet | Skuffens LED-nummer er høyere enn antall LED-er i WLED-segmentet. Sjekk antallet i WLED og startindeksene i radene. |
+| Ingenting lyser | Kabling, GPIO eller strøm. Se [tools/skjoldlab-led/README.md](https://github.com/SebastianKristo/torskenes-verden/blob/main/tools/skjoldlab-led/README.md#feilsøking). |
+
+---
+
+## Mikrofonen virker ikke
+
+- **På web:** mikrofonen virker bare over **https** eller localhost. Over http på hjemmenettet sier knappen fra i stedet for å feile.
+- **Norsk gir feil:** norsk krever NB-Whisper. Sjekk status og trykk Test under Innstillinger → AI → Tjenester.
+- **I appene:** svarer ikke serveren, brukes telefonens egen talegjenkjenning.
+
+Se [AI og tidsgrenser](AI-og-tidsgrenser#tale-til-tekst-og-opplesning).
+
+---
+
 ## PostNord uten organisasjonsnummer
 
 PostNords offisielle API krever organisasjonsnummer. **Du trenger det ikke.** La feltet API-nøkkel under Integrasjoner → PostNord stå tomt:
@@ -146,8 +185,11 @@ PostNords offisielle API krever organisasjonsnummer. **Du trenger det ikke.** La
 | Appen får ikke kontakt | Skriv `http://` foran lokal adresse, sjekk porten, og at telefonen er på samme nett. Bak Cloudflare Access: slipp `/finans/api/*`, `/api/*` og `/tiles/*` forbi. |
 | <a id="ios-widgeten-viser-logg-inn"></a>iOS-widgeten viser «Logg inn» | Åpne appen → Innstillinger → Widgets → «Oppdater widgetene nå». Installer IPA-en på nytt hvis widgetene ikke er koblet til appen. |
 | Ser ingen endringer etter oppdatering | Hard reload (Ctrl+Shift+R). Lukk og åpne PWA-en. |
-| «Ollama kan ikke nås på http://…:11434» | Ollama lytter bare på localhost. Sett `OLLAMA_HOST=0.0.0.0` og start Ollama på nytt, se [Integrasjoner → Ollama](Integrasjoner#ollama-lokalt-ingenting-forlater-huset). |
-| «Gemini svarte ikke innen 20 s» | Øk grensen under Tidsgrenser, eller legg til reservenøkler eller Groq. |
+| «Ollama kan ikke nås på http://…:11434» | Ollama lytter bare på localhost. Sett `OLLAMA_HOST=0.0.0.0` og start Ollama på nytt. Åpne den bare på hjemmenettet, aldri mot internett. Se [Integrasjoner → Ollama](Integrasjoner#ollama-lokalt-ingenting-forlater-huset). |
+| Ollama er tilkoblet, men Glimt svarer ikke | Modellen du har valgt, finnes kanskje ikke på Ollama-serveren. Sjekk under AI → Modeller at den er installert, og se feilen under AI → Jobber. |
+| Kvitteringer leses dårlig | Åpne «Rådata» på kvitteringen. Er OCR-radene feil, ligger feilen i OCR (sett opp Mac-OCR). Er radene riktige, ligger feilen i modellen. |
+| Lurer du på om kvitteringer sendes til Gemini? | Nei. Kvitteringer leses bare lokalt, også når Gemini-nøkkelen er lagt inn. |
+| «Gemini svarte ikke innen 20 s» | Gjelder bare oppgaver du selv har satt til Gemini. Øk grensen under Tidsgrenser, eller bruk en lokal modell. |
 | Gemini 429 hele tiden | Dagskvoten er brukt opp. Legg til flere nøkler fra ulike Google-prosjekter. |
 | IMAP: AUTHENTICATIONFAILED | Du har brukt Proton-passordet. Bruk **Bridge-passordet** fra `info`. |
 | Trading 212: 401 | Nøkkelen hører til det andre miljøet (live/demo), eller secret mangler. |

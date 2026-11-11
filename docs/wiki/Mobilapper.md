@@ -8,7 +8,17 @@ Det finnes tre måter å bruke Homelab OS på telefonen:
 | **iOS-app** | Native (SwiftUI), IPA for sideloading | iPhone og iPad |
 | **PWA** | Nettsiden `/finans/` lagt på hjemskjermen | Alle telefoner, ingen installasjon |
 
-Alle tre har samme Papir-design og snakker med det samme API-et.
+Alle tre har samme Papir-design og snakker med det samme API-et. På hjemskjermen heter appen **Homelab**. Filene under Releases heter fortsatt `FinansHub-…`.
+
+I tillegg finnes:
+
+| | Fil | Hva |
+|---|---|---|
+| **Kalender-appen** | `Kalender-<versjon>.apk`, `Kalender-<versjon>-unsigned.ipa`, `Kalender-<versjon>.dmg` | Egen kalenderapp for Android, iPhone og Mac, med egne widgets. På iPhone er den også bygget inn i Homelab-appen, se [Kalender i appen](#kalender-i-appen-iphone). |
+| **Wear OS** | `HomelabWear-<versjon>.apk` | Klokkeapp, se [Apple Watch, Wear OS og Android Auto](#apple-watch-wear-os-og-android-auto) |
+| **Apple Watch** | – | Bygges og kjøres fra Xcode |
+
+Siste versjon av alle filene ligger under [Releases](https://github.com/SebastianKristo/torskenes-verden/releases).
 
 <p>
 <img src="https://raw.githubusercontent.com/SebastianKristo/torskenes-verden/main/docs/images/mobil-hjem.webp" width="180" alt="Hjem">
@@ -24,7 +34,7 @@ Alle tre har samme Papir-design og snakker med det samme API-et.
 2. Åpne filen. Android spør om du vil tillate **«Installer ukjente apper»** for nettleseren eller filbehandleren. Slå det på for den appen.
 3. Trykk **Installer**.
 
-**Oppdatering:** last ned den nye APK-en og installer over den gamle. Dataene beholdes. Har du 4.6.0 eller eldre, må du avinstallere én gang først, fordi APK-en etter det signeres med en fast nøkkel.
+**Oppdatering:** når det finnes en ny versjon, viser appen et banner på Hjem og en rad under Innstillinger. Trykk «Last ned og installer». APK-en hentes via serveren din og sjekkes mot SHA-256 før den installeres. Du kan også laste ned den nye APK-en selv og installere over den gamle. Dataene beholdes. Har du 4.6.0 eller eldre, må du avinstallere én gang først, fordi APK-en etter det signeres med en fast nøkkel.
 
 ## Installere på iPhone og iPad (IPA)
 
@@ -51,6 +61,26 @@ Appen er ikke i App Store, så den må sideloades. Last ned `FinansHub-<versjon>
 > - Appen virker da som vanlig, men **Apple Health dukker ikke opp**. Under Innstillinger → App forklarer appen hvorfor den ikke får spørre om tilgang.
 > - Med betalt utviklerkonto (99 USD/år) beholdes HealthKit.
 
+## Kalender i appen (iPhone)
+
+Homelab-appen på iPhone har hele Kalender-appen inni seg. Det er nyttig når du sideloader med SideStore og gratis Apple-ID, som bare har plass til tre apper.
+
+- Bryteren ligger under **Innstillinger → «Kalender i appen»** og er på fra start.
+- Når den er på, åpner alle lenker til Kalender den innebygde kalenderen i full skjerm. Det gjelder Hjem-kortet, kalenderfanen, Mer → Kalender, Glimt og widgetene. **«‹ Homelab»** øverst tar deg tilbake.
+- Kalender bruker samme innlogging som Homelab.
+- Siri-snarveier og oppdatering i bakgrunnen finnes bare i den frittstående Kalender-appen. Den kan fortsatt installeres ved siden av.
+- Når bryteren er av, åpnes Kalender-appen hvis den er installert, og ellers kalendersiden i Homelab.
+
+## Apple Watch, Wear OS og Android Auto
+
+| | Hva du får | Slik får du den |
+|---|---|---|
+| **Wear OS** | Sjekk inn, Hent meg, avganger, handleliste, Glimt med tale og mediekontroll | Installer `HomelabWear-<versjon>.apk` fra [Releases](https://github.com/SebastianKristo/torskenes-verden/releases) på klokka |
+| **Apple Watch** | Det samme som Wear OS | Klokkeappen er ikke med i IPA-en. Bygg og kjør den fra Xcode, se [apps/README.md](https://github.com/SebastianKristo/torskenes-verden/blob/main/apps/README.md). |
+| **Android Auto** | Avganger, «På vei hjem» og mediekontroll | Følger med Android-appen |
+
+Mediekontrollen styrer avspillinger i Plex og Jellyfin. Du styrer bare dine egne avspillinger, og admin kobler brukerne under Media → Avspilling → «Hvem kan styre avspillinger».
+
 ## Logg inn med app-token
 
 1. Åpne appen og skriv inn **serveradressen**:
@@ -75,6 +105,8 @@ Widgetene henter data fra serveren hvert 15. minutt. Kalender-widgeten oppdatere
 | **iPhone (WidgetKit)** | Kalender, Bursdager, Huskeliste, Vær, Pakker, Budsjett, Finans, Neste trekk, Aksjer, Domener, Matplan, Finn, Boliger og Skann, i liten, medium og stor. Bursdager finnes også på låseskjermen. |
 | **Android (Material You)** | Glance-widgets med dynamiske farger, blant annet Kalender, Bursdager, Huskeliste, Sporing, Avganger og Saldo |
 | **Samsung (One UI)** | Egne widgets i samme størrelse som Samsungs Vær-widget (2 × 2 = 134 × 155 dp): Skann, Huskeliste, Bursdager, Sporing, Avganger, Saldo og Kalender |
+
+Det finnes også widgets for Media og Sjekk inn, og Live Activities på iPhone. Kalender-appene har egne widgets for iPhone og låseskjermen, Android og Samsung. Under Innstillinger → Widgets i Kalender-appen velger du hvilke kalendere som vises.
 
 **Legge til:**
 - **iPhone:** hold inne på hjemskjermen → **+** → søk etter appen → velg størrelse.
@@ -136,7 +168,7 @@ PWA-en har ikke widgets eller Apple Health, men har ellers de samme sidene. Kvit
 
 | | Hvordan |
 |---|---|
-| Android | Installer ny APK over den gamle |
+| Android | «Last ned og installer» i appen, eller installer ny APK over den gamle |
 | iOS (AltStore/SideStore) | Åpne den nye IPA-en i AltStore/SideStore. Den erstatter den gamle. |
 | iOS (Sideloadly) | Installer den nye IPA-en med samme Apple-ID |
 | PWA | Oppdaterer seg selv. Lukk og åpne appen. |
