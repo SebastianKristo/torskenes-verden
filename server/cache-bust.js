@@ -10,6 +10,7 @@
 //     ETag/304). ?v=<build> → public, max-age=31536000, immutable. Uten ?v (eller gammel v) → no-cache.
 //   /assets/**.css uten/feil v → no-cache; med riktig v → immutable. sw.js og manifest → no-cache, must-revalidate.
 //   /api/*, /finans/api/*, /home/api, /mat/api, /domains/api: no-store, med mindre ruten selv har satt Cache-Control (tiles, logoer, bilder).
+import { compress } from 'hono/compress';
 import { readFileSync, statSync, readdirSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { join, resolve, sep } from 'node:path';
@@ -107,6 +108,10 @@ function assetFile(pathname) {
 export function installCacheBust(app) {
   app.get('/version.json', (c) => c.json(buildInfo(), 200, { 'Cache-Control': REVALIDATE }));
 
+  // Prompt 85: gzip for tekstfiler under /assets (JS, CSS, JSON, SVG). Første lasting er 3–4 MB ukomprimert, og på lokalt nett
+  // er det ingen Cloudflare foran som komprimerer. Bare /assets – aldri /api (hendelsesstrømmer) eller HTML-omskrivingen.
+  app.use('/assets/*', compress());
+
   // JS under /assets: omskrevet og cachet i minnet.
   app.get('/assets/*', async (c, next) => {
     const p = c.req.path;
@@ -126,7 +131,7 @@ export function installCacheBust(app) {
     }
     const cc = c.req.query('v') === build ? IMMUTABLE : 'no-cache';
     const h = { 'Content-Type': 'text/javascript; charset=utf-8', 'Cache-Control': cc, ETag: hit.etag };
-    if (c.req.header('if-none-match') === hit.etag) return c.body(null, 304, h);
+    if ((c.req.header('if-none-match') || '').replace(/^W\//, '') === hit.etag) return c.body(null, 304, h); // komprimert svar har svak ETag (W/)
     return c.body(hit.body, 200, h);
   });
 
