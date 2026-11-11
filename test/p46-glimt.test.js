@@ -2,6 +2,7 @@
 // Abonnementer og faste utgifter, avslutningsfrist i Subscription OS + påminnelse, sammensatte værspørsmål, standardkalender,
 // rask time («Kino: Dune» + Colosseum Kino), Gjøremål uten omskriving av norsken, og Chat uten nett når Nettsøk er av.
 // Mock av Ollama/værtjeneste/stedssøk/film for determinisme. Testene sjekker lagrede/hentede data, ikke bare svartekst.
+import './lib/day-clock.mjs'; // værsvarene regner stedets egen dato fra klokka: mellom 00 og 06 er New York en dag bak Oslo, og «i morgen»-datoene i testen stemmer ikke
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtempSync } from 'node:fs';

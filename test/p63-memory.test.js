@@ -253,7 +253,9 @@ test('ubrukt faktum markeres (> 90 dager), slettes aldri automatisk; «behold» 
   await A('/api/glimt/memory', 'POST', { kind: 'alias', match: 'Fersk', type: 'tannlege' });
   const [g, f] = memory();
   db.prepare('UPDATE glimt_memory SET created=?, used_at=? WHERE id=?').run(NOW - 200 * DAY, NOW - 120 * DAY, g.id);
-  db.prepare('UPDATE glimt_memory SET created=?, used_at=? WHERE id=?').run(NOW - 200 * DAY, NOW - 10 * DAY, f.id);
+  // «Fersk» er brukt for 10 dager siden etter den EKTE klokka: lista (GET /api/glimt/memory) merker ubrukte fakta ut fra Date.now(),
+  // ikke testklokka, så en fast dato her ville gjort «Fersk» foreldet fra januar 2027.
+  db.prepare('UPDATE glimt_memory SET created=?, used_at=? WHERE id=?').run(NOW - 200 * DAY, Math.max(NOW, Date.now()) - 10 * DAY, f.id);
   const s = await A('/api/glimt/memory/stale');
   assert.equal(s.status, 200);
   assert.equal(s.body.staleDays, 90);

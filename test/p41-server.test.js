@@ -222,7 +222,10 @@ test('Hjemlys «Si fra»: sjekket inn / drar snart (+15) / drar nå med mål (an
 
 /* ---------------- Min reise ---------------- */
 
-test('Min reise: forhåndsruter for eieren (ikke andre), skolesoner, my-trip med 45 foretrukket og gange ved forsinket trikk', async () => {
+test('Min reise: forhåndsruter for eieren (ikke andre), skolesoner, my-trip med 45 foretrukket og gange ved forsinket trikk', async (t) => {
+  // Mock-rutetabellen går i 30-minutters syklus, og i 7 av de 30 minuttene (:27–:03) er 46 over 3 min raskere og står (riktig) først.
+  // Klokka låses derfor til minutt 10 i syklusen, så «45 først» ikke avhenger av når testen kjøres.
+  t.mock.timers.enable({ apis: ['Date'], now: Math.ceil(Date.now() / 1_800_000) * 1_800_000 + 600_000 });
   const mr = await A('/api/ruter/my-routes');
   assert.equal(mr.body.preset, true);
   assert.ok(mr.body.routes.some((r) => r.via === 'Holbergs plass') && mr.body.routes.some((r) => r.via === 'Frydenlund'));

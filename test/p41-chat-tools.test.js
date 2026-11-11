@@ -88,7 +88,9 @@ test('klokka i Tokyo og solnedgang i Tromsø i dag', async () => {
   assert.equal(tk.values.time, T.localNow('Asia/Tokyo').hm);
   assert.equal(tk.values.utcOffset, 'UTC+9');
   assert.equal(tr.tool, 'sun'); assert.equal(tr.place, 'Tromsø');
-  assert.match(tr.values.sunset, /^\d{2}:\d{2}$/);
+  // Tromsø har mørketid (ca. 27. nov–15. jan) og midnattssol (ca. 20. mai–22. juli): da finnes ingen solnedgang, og svaret sier det.
+  if (tr.values.polar) { assert.match(tr.values.polar, /^(mørketid|midnattssol)$/); assert.equal(tr.values.sunset, undefined); assert.match(tr.text, /sola (står ikke opp|går ikke ned)/); }
+  else assert.match(tr.values.sunset, /^\d{2}:\d{2}$/);
   assert.equal(tr.values.sunrise, undefined); // bare det som ble spurt om
   assert.deepEqual(r.used, ['Tid · Tokyo', 'Sol · Tromsø']);
 });

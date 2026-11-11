@@ -173,7 +173,9 @@ test('Google-velgeren «Hvilken kalender er hva?»: GET/PUT /api/kalender/google
 /* ---------------- Glimt: oppfølging og fag ---------------- */
 
 test('Glimt følger opp: «hva slags timer har jeg i dag» → fagene, «hva slags fag er det» → faget + forklaring, ukjent tittel, «hva er fysikk»', async () => {
-  const at = (hm) => new Date(`${TODAY}T${hm}:00+02:00`).toISOString();
+  // Oslo-forskyvningen for dagen (sommer +02:00, vinter +01:00) – en fast +02:00 ga 07.15 om vinteren.
+  const off = (d) => new Intl.DateTimeFormat('en-US', { timeZone: 'Europe/Oslo', timeZoneName: 'longOffset' }).formatToParts(new Date(`${d}T12:00:00Z`)).find((x) => x.type === 'timeZoneName').value.replace('GMT', '') || '+00:00';
+  const at = (hm) => new Date(`${TODAY}T${hm}:00${off(TODAY)}`).toISOString();
   const evs = [{ id: 'l1', title: 'Fysikk 1', date: TODAY, start: at('08:15'), end: at('10:00'), type: 'time', calendar: 'timeplan', allDay: false },
     { id: 'l2', title: 'Matematikk R2', date: TODAY, start: at('10:15'), end: at('12:00'), type: 'time', calendar: 'timeplan', allDay: false }];
   const load = async () => evs;
@@ -189,7 +191,7 @@ test('Glimt følger opp: «hva slags timer har jeg i dag» → fagene, «hva sla
   assert.match((await fag.fagAnswer('u1', 'Hva slags fag er det?', { today: TODAY, load })).text, /^I dag har du fysikk kl\. 08\.15 og matematikk kl\. 10\.15\. Fysikk er/);
   fag.rememberCtx('u1', 'x', [{ ...evs[0], title: 'test' }]);
   assert.equal((await fag.fagAnswer('u1', 'hva slags fag er det', { today: TODAY, load })).text, 'Jeg vet ikke hvilket fag «test» er. Gi hendelsen et fagnavn, så kan jeg forklare.');
-  const d = await fag.fagAnswer('u2', 'hva er fysikk', { today: TODAY, load: async () => [{ ...evs[0], date: addDays(TODAY, 1), start: new Date(`${addDays(TODAY, 1)}T08:15:00+02:00`).toISOString(), end: new Date(`${addDays(TODAY, 1)}T10:00:00+02:00`).toISOString() }] });
+  const d = await fag.fagAnswer('u2', 'hva er fysikk', { today: TODAY, load: async () => [{ ...evs[0], date: addDays(TODAY, 1), start: new Date(`${addDays(TODAY, 1)}T08:15:00${off(addDays(TODAY, 1))}`).toISOString(), end: new Date(`${addDays(TODAY, 1)}T10:00:00${off(addDays(TODAY, 1))}`).toISOString() }] });
   assert.match(d.text, /^Fysikk er naturvitenskapen .* Neste gang du har det er i morgen kl\. 08\.15\.$/);
   assert.equal(await fag.fagAnswer('u2', 'hva er klokka', { today: TODAY, load }), null);
   // Uten ctx i Homelab-søket: ingen kapring av «hva er det».

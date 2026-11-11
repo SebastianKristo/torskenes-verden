@@ -258,7 +258,7 @@ function view(r0) {
   const c = CARRIER[r.carrier] ?? CARRIER.other;
   const events = q('SELECT ts, status, location, raw FROM hl_shipment_events WHERE shipment_id=? ORDER BY ts DESC, id DESC LIMIT 40').all(r.id);
   const out = r.direction === 'out';
-  const late = !!r.eta && /^\d{4}-\d{2}-\d{2}/.test(r.eta) && r.eta.slice(0, 10) < new Date().toLocaleDateString('sv-SE') && !['delivered', 'ready_for_pickup'].includes(r.status);
+  const late = !!r.eta && /^\d{4}-\d{2}-\d{2}/.test(r.eta) && r.eta.slice(0, 10) < new Date().toLocaleDateString('sv-SE') && !['delivered', 'ready_for_pickup', 'returned'].includes(r.status);
   const status = late && r.status !== 'delivered' ? 'delayed' : r.status;
   let statusText = STATUS_TEXT[status] ?? STATUS_TEXT.unknown;
   if (status === 'delivered' && out) statusText = 'Levert til mottaker';

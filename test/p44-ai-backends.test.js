@@ -60,7 +60,8 @@ test.after(() => { globalThis.fetch = realFetch; });
 sim.answer = (body) => {
   const sys = String(body.messages?.[0]?.role === 'system' ? body.messages[0].content : '');
   // Prompt 55: planleggeren får en gyldig plan (en ugyldig plan gir nå et oppfølgingsspørsmål, ikke den gamle veien).
-  if (/^You are the planner for Glimt/.test(sys)) return JSON.stringify(/statsminister/i.test(JSON.stringify(body.messages)) ? { intent: 'web_search', calls: [{ tool: 'web.search', args: { query: 'hvem er statsminister i England' } }], needs_clarification: false, clarification_question: null } : { intent: 'chat', calls: [{ tool: 'chat.answer', args: {} }], needs_clarification: false, clarification_question: null });
+  // Bare brukerens melding avgjør: planleggerens systemprompt har selv et «statsminister»-eksempel, så alt ble nettsøk.
+  if (/^You are the planner for Glimt/.test(sys)) return JSON.stringify(/statsminister/i.test(JSON.stringify(body.messages.filter((m) => m.role !== 'system'))) ? { intent: 'web_search', calls: [{ tool: 'web.search', args: { query: 'hvem er statsminister i England' } }], needs_clarification: false, clarification_question: null } : { intent: 'chat', calls: [{ tool: 'chat.answer', args: {} }], needs_clarification: false, clarification_question: null });
   if (/# Search results for/.test(sys) && /Andy Burnham/.test(sys)) return 'Statsministeren i Storbritannia er **Andy Burnham** (BBC).'; // Glimt-motorens svarsteg
   if (/Søkeresultater \(hentet nå\)/.test(sys)) { const h = sys.match(/\[1\] ([^–\n]+)–\s*([^–\n]+)–/); return /Andy Burnham/.test(sys) ? `Statsministeren i Storbritannia er Andy Burnham (${h?.[2]?.trim() ?? 'kilde'}).` : 'Søket var uklart.'; }
   const p = sys.match(/Strømpris \(hentet nå[^)]*\) for (NO\d)[^:]*: snitt (\d+(?:,\d+)?), min (\d+(?:,\d+)?), maks (\d+(?:,\d+)?)/);

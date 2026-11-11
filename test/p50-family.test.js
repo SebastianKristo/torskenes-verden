@@ -136,8 +136,10 @@ test('skole med 3 områder: fra Skolen til Idrettshallen gir ingen «forlot»; u
   await I('/api/family/me', 'PUT', { sharing: 'on' });
   const t0 = Date.now() - 20 * 60_000;
   const post = (p, ts) => I('/api/family/location', 'POST', { ...p, ts });
-  await post(off(SKOLEN, 0.02), t0); // langt unna først
-  const inn = await post(SKOLEN, t0 + 60_000);
+  // Ankomsten ligger 14 min før hun går: «Forlot skolen» teller ikke innen 10 min etter ankomst (leftSchool41),
+  // så med 3 min ble det aldri noen reise på hverdager 07–18, og testen gikk bare gjennom utenom skoletid.
+  await post(off(SKOLEN, 0.02), t0 - 660_000); // langt unna først
+  const inn = await post(SKOLEN, t0 - 600_000);
   assert.deepEqual(inn.body.events.filter((e) => e.zoneId === skole.id).map((e) => e.kind), ['enter']);
   // Mellom områdene (ute i 1 min) og inn i Idrettshallen: ingen hendelse.
   assert.equal((await post(off(SKOLEN, 0.0025), t0 + 120_000)).body.events.length, 0);
@@ -154,7 +156,7 @@ test('skole med 3 områder: fra Skolen til Idrettshallen gir ingen «forlot»; u
   const inHours = !['Sat', 'Sun'].includes(p.weekday) && +p.hour >= 7 && +p.hour < 18;
   assert.equal(j.active, inHours);
   if (inHours) assert.equal(Date.parse(j.leftSchoolAt), t0 + 240_000);
-  assert.ok(kv.get(ingridId, 'ruter41_arrived', null) >= t0 + 60_000, 'ankomst registrert');
+  assert.ok(kv.get(ingridId, 'ruter41_arrived', null) >= t0 - 600_000, 'ankomst registrert');
 });
 
 test('sweep: «forlot» uten nye punkter etter 2 min', async () => {

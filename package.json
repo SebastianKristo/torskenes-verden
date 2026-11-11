@@ -8,7 +8,7 @@
     "start": "node server/index.js",
     "dev": "node --watch server/index.js",
     "hash-password": "node scripts/hash-password.js",
-    "test": "node --test \"test/**/*.test.js\"",
+    "test": "node --import ./test/lib/no-net.mjs --test \"test/**/*.test.js\"",
     "eval": "node eval/run.mjs",
     "eval:receipts": "node tests/receipts/run.mjs",
     "eval:receipts72": "node eval/receipts72.mjs",

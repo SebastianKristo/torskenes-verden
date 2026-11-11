@@ -129,15 +129,17 @@ test('manuell logo: kontrollert fil i files/manuell brukes; files/posten.png (fa
 test('Bring i transport og hentested: siste hendelse, forventet levering, pickup {name, deadline}', async () => {
   trk.upsertShipment({ trackingNo: '70712345678901111', carrier: 'bring', source: 'manual' });
   trk.upsertShipment({ trackingNo: '70712345678902222', carrier: 'bring', source: 'manual' });
+  // Forventet levering må ligge fram i tid: en passert dato gir (riktig) «Forsinket», og testen skal ikke avhenge av dagens dato.
+  const eta = new Date(Date.now() + 3 * 86400_000).toLocaleDateString('sv-SE');
   const restore = mockFetch((url) => {
-    if (url.includes('q=70712345678901111')) return bringResp([{ status: 'IN_TRANSIT', description: 'Ankommet terminal', dateIso: '2026-10-18T06:12:00+02:00', city: 'Oslo' }], { dateOfEstimatedDelivery: '2026-10-21' });
+    if (url.includes('q=70712345678901111')) return bringResp([{ status: 'IN_TRANSIT', description: 'Ankommet terminal', dateIso: '2026-10-18T06:12:00+02:00', city: 'Oslo' }], { dateOfEstimatedDelivery: eta });
     if (url.includes('q=70712345678902222')) return bringResp([{ status: 'READY_FOR_PICKUP', description: 'Klar for henting', dateIso: '2026-10-18T09:00:00+02:00', city: 'Oslo', unitInformation: { name: 'Kiwi Bislett' } }], { dateOfReturn: '2026-10-30' });
   });
   try { await A('/api/tracking/refresh', 'POST'); } finally { restore(); }
   const items = (await A('/api/tracking')).body.items;
   const t = items.find((x) => x.trackingNo === '70712345678901111');
   assert.equal(t.status, 'in_transit');
-  assert.equal(t.estimatedDelivery, '2026-10-21');
+  assert.equal(t.estimatedDelivery, eta);
   assert.equal(t.lastEvent.line, 'Ankommet terminal · Oslo · 18.10 06:12');
   assert.ok(t.nextCheckAt);
   const p = items.find((x) => x.trackingNo === '70712345678902222');

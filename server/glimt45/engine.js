@@ -14,6 +14,7 @@ import { touchFacts63 } from '../mem63/store.js'; // prompt 63: «sist brukt» p
 import { startTrace47 } from './trace47.js';
 import { STEP47 } from './params47.js';
 import { answer47 } from './answer47.js';
+import { isPowerQuestion } from '../power-price.js';
 import { SENTENCES47, FAIL_TEXT47 } from './tools47.js';
 import { parseEpisodeAsk43 } from './media47.js';
 import { parsePeriod45, todayOslo45, nowMinOslo45, longDate45, relDate45, addDays45, WD45, MON45 } from './dates.js';
@@ -298,6 +299,11 @@ async function pipeline(user, text, opts) {
     if (!per || per.day) plan = { ...plan, calls: [{ tool: 'app.answer', args: { topic: 'other' } }] };
   }
   const own = opts.own ?? null;
+  // Strømpris: planla modellen bare prat eller nettsøk («priser → nettsøk») for et strømprisspørsmål, svarer strømprisverktøyet
+  // (de eksisterende svarene, power-price.js) med faktiske tall – som i Chat. Planlagte oppgaver og andre verktøy røres ikke.
+  if (modelPlan && !own && !plan.ask && plan.calls.length && plan.calls.every((c) => c.tool === 'chat.answer' || c.tool === 'web.search') && isPowerQuestion(text)) {
+    plan = { ...plan, calls: [{ tool: 'app.answer', args: { topic: 'other' } }] };
+  }
   // Prompt 47: med modellens plan svarer motoren selv på prat og nettsøk (svarsteget, answer47.js). Den lokale planen bruker de
   // eksisterende svarene som før. Kallere med eget verktøyutvalg (own, f.eks. Kalender) får prat tilbake som legacy.
   // (Tester med falsk planlegger uten falskt svarsteg beholder de gamle prat-svarene.)

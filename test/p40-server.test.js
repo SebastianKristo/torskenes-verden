@@ -363,7 +363,10 @@ test('julemodus: Auto (1. des–13. jan, fire faser), Av, På med fase; /api/gli
   const p = await A('/api/glimt/settings', 'PUT', { jul: 'pa', julPhase: 'nyttar', snow: false, julSound: 'bjelle' });
   assert.equal(p.status, 200, p.text);
   assert.deepEqual([p.body.julActive.on, p.body.julActive.phase, p.body.julActive.label, p.body.julActive.outfit], [true, 'nyttar', 'På · Nyttår', 'nyttar']);
-  assert.equal((await I('/api/glimt/settings')).body.julActive.on, false, 'per bruker');
+  // Per bruker: Ingrid står fortsatt på Auto (ikke Sebastians «På · Nyttår»). Auto er selv på 1. des–13. jan, så «av» kan ikke kreves da.
+  const ing = (await I('/api/glimt/settings')).body;
+  assert.deepEqual([ing.jul, ing.julPhase], ['auto', null], 'per bruker');
+  assert.deepEqual([ing.julActive.on, ing.julActive.phase], [jul.julActive({}).on, jul.julActive({}).phase], 'per bruker: Auto følger datoen');
   const b = await A('/api/brief');
   assert.equal(b.status, 200);
   assert.equal(b.body.jul.phase, 'nyttar');

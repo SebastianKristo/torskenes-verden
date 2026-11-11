@@ -46,7 +46,7 @@ const st = (id) => {
 /* ---------------- Testsømmer ---------------- */
 const loaders = new Map(); // id → async () => instans (mock)
 /** Bare for tester: erstatt lasteren for en modell (null fjerner). */
-export const _setLoader53 = (id, fn) => { if (fn) loaders.set(id, fn); else loaders.delete(id); const s = st(id); Object.assign(s, { status: 'idle', inst: null, error: null, failedAt: 0, promise: null }); };
+export const _setLoader53 = (id, fn) => { if (fn) loaders.set(id, fn); else loaders.delete(id); const s = st(id); Object.assign(s, { status: 'idle', inst: null, error: null, failedAt: 0, promise: null, run: (s.run ?? 0) + 1 }); };
 /** Bare for tester: nullstill all tilstand. */
 export const _reset53 = () => { state.clear(); loaders.clear(); };
 /** Autolasting: av i tester (ingen nedlasting fra nettet) med mindre en mock-laster er satt eller DAL53_AUTOLOAD=1. */
@@ -99,18 +99,22 @@ export function load53(id, { force = false } = {}) {
   if (!force && s.status === 'error' && Date.now() - s.failedAt < RETRY_MS) return Promise.resolve(null);
   s.status = 'loading'; s.error = null; s.startedAt = Date.now();
   const fn = loaders.get(id) ?? (() => realLoad(id));
+  // En lasting som ble startet før testsømmen byttet laster (s.run endret), skal ikke skrive over den nye tilstanden når den blir ferdig.
+  const run = s.run ?? 0;
   s.promise = (async () => {
     try {
       const inst = await fn();
+      if ((s.run ?? 0) !== run) return null;
       Object.assign(s, { status: 'ready', inst, loadedAt: Date.now(), loadMs: Date.now() - s.startedAt, error: null });
       console.info(`[dal53] ${m.name} er klar (${s.loadMs} ms)`);
       return inst;
     } catch (e) {
       const msg = String(e?.message ?? e).replace(/(token|key|authorization)=\S+/gi, '$1=***').slice(0, 300);
+      if ((s.run ?? 0) !== run) return null;
       Object.assign(s, { status: 'error', inst: null, error: msg, failedAt: Date.now() });
       console.warn(`[dal53] ${m.name} kunne ikke lastes: ${msg}`);
       return null;
-    } finally { s.promise = null; }
+    } finally { if ((s.run ?? 0) === run) s.promise = null; }
   })();
   return s.promise;
 }

@@ -2,6 +2,38 @@
 
 Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. Versjonene med APK og IPA ligger under [Releases](https://github.com/SebastianKristo/torskenes-verden/releases).
 
+## [4.71.0] – 11.11.2026 · Full gjennomgang: feilretting fra Docker til mobil
+- **Serveren:**
+  - Stenger ryddig ved stopp og oppdatering. Før ble den drept etter 10 sekunder.
+  - Tar ikke lenger imot store forespørsler fra klienter som ikke er logget inn.
+  - Ugyldige data gir en ryddig feilmelding i stedet for serverfeil.
+  - JS og CSS komprimeres, så første lasting går raskere på lokalt nett.
+- **Web:**
+  - Chat og Mat er leselige i mørk modus.
+  - Appen starter uten nett fra lagret kopi.
+  - Søkefeltene, Familie-siden, Sporing og Varsler-innstillingene er rettet.
+- **Økonomi på web:**
+  - Avanserte Glimt-oppgaver virker.
+  - Kompakt sidemeny skjuler ikke ikonene.
+  - Negative beløp beholder minustegnet.
+  - Bare visningen du bruker lastes, og kontrasten er bedre.
+- **Skjold Lab:**
+  - CSV-import nullstiller ikke lenger felt som mangler i fila.
+  - Deler som gjenopprettes etter at skapet er krympet, havner i «Uten plass».
+- **Android:**
+  - Delte filer og varsel-lenker kjøres ikke to ganger.
+  - Alarmer overlever omstart av telefonen.
+  - Forrige brukers alarmer fjernes ved utlogging.
+  - Taleopptak stopper når appen legges bort.
+- **iPhone og Apple Watch:**
+  - En serveradresse med skrivefeil krasjer ikke lenger appen.
+  - «Arkiver bilde» fra delingsarket virker.
+  - Den innebygde Kalenderen og offline-køen følger kontoen ved kontobytte.
+  - Klokka finner serveren også utenfor hjemmenettet.
+- **Glimt:** «hva er strømprisen i dag» svarer med strømprisen også når planleggeren velger nettsøk.
+- **Sporing:** returnerte pakker vises ikke lenger som «Forsinket».
+- **Installasjon:** nye Proxmox-installasjoner får 16 GB disk og 2 GB minne som standard.
+
 ## [4.70.0] – 10.11.2026 · Kalender inni Homelab-appen
 - **Kalender i appen (iPhone):** Homelab-appen har nå hele Kalender-appen inni seg. Det er nyttig når du sideloader og bare har plass til én app. Slå det av og på under Innstillinger → «Kalender i appen», som er på fra start.
   - Lenkene til Kalender åpner Kalender i full skjerm. Det gjelder Hjem-kortet, kalenderfanen, Mer → Kalender, Glimt og widgetene. «‹ Homelab» øverst tar deg tilbake.
