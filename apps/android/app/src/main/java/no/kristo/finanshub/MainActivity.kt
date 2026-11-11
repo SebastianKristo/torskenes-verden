@@ -57,6 +57,7 @@ class MainActivity : FragmentActivity() {
         // Familie: deling i bakgrunnen og helsesammendraget fortsetter etter omstart av appen.
         runCatching { no.kristo.finanshub.family.FamilyService.sync(this) }
         if (no.kristo.finanshub.family.FamilyPrefs.health(this).isNotEmpty()) runCatching { no.kristo.finanshub.family.HealthSync.schedule(this) }
+        from86 = intent
         if (fresh85) intent?.data?.let(::openData43)
         // Prompt 51 (ANDPLAT51): dynamisk snarvei (siste vare) og offline-køen sendes når nettet er tilbake.
         runCatching { Shortcuts51.publish(this) }
@@ -64,7 +65,9 @@ class MainActivity : FragmentActivity() {
     }
 
     /** Prompt 43: magnet:-lenker går til Media; alt annet som før. */
-    private fun openData43(u: Uri) { if (u.scheme == "magnet") vm.openMagnet43(u.toString()) else vm.deepLink(u) }
+    /** Prompt 86: intentet lenken kom med. Uten appens egen markør (Link86) kom den utenfra – da må lenker som utfører en handling, bekreftes først. */
+    private var from86: Intent? = null
+    private fun openData43(u: Uri) { if (u.scheme == "magnet") vm.openMagnet43(u.toString()) else vm.deepLink(u, outside86 = !Link86.internal(this, from86)) }
 
     override fun onResume() {
         super.onResume()
@@ -89,6 +92,7 @@ class MainActivity : FragmentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         handleShare(intent)
+        from86 = intent
         intent.data?.let(::openData43)
     }
 

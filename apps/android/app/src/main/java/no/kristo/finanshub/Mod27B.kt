@@ -278,7 +278,7 @@ suspend fun AppViewModel.img27(url: String?): Bitmap? {
     s.imgMiss[url]?.let { if (System.currentTimeMillis() - it < 5 * 60_000) return null }
     val b = if (url.startsWith("/")) image(url) else runCatching {
         withContext(Dispatchers.IO) {
-            val c = URL(url).openConnection() as HttpURLConnection
+            val c = URL(url).open86()
             c.connectTimeout = 6000; c.readTimeout = 8000
             c.setRequestProperty("User-Agent", "FinansHub-Android")
             try {

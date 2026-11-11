@@ -34,7 +34,7 @@ class KalApiException(message: String, val status: Int = 0, val needsTotp: Boole
 class KalApi(private val base: String, private val token: String?) {
 
     suspend fun request(method: String, path: String, json: JSONObject? = null, timeout: Int = 10_000, read: Int = 30_000): String = withContext(Dispatchers.IO) {
-        val conn = URL(base.trimEnd('/') + path).openConnection() as HttpURLConnection
+        val conn = URL(base.trimEnd('/') + path).open86()
         try {
             net {
                 conn.requestMethod = method
@@ -160,11 +160,19 @@ object KalAuth {
     fun homelabInstalled(ctx: Context): Boolean = runCatching { ctx.packageManager.getPackageInfo(HOMELAB_PKG, 0); true }.getOrDefault(false)
 
     /**
+     * Prompt 86 (AND86): true når Homelab-appen på telefonen er signert med samme sertifikat som Kalender. Pakkenavnet alene
+     * er ikke nok – en annen app kan hete no.kristo.finanshub. Sjekkes før Kalender tar imot server og token derfra.
+     */
+    fun homelabSameKey86(ctx: Context): Boolean =
+        runCatching { ctx.packageManager.checkSignatures(ctx.packageName, HOMELAB_PKG) == android.content.pm.PackageManager.SIGNATURE_MATCH }.getOrDefault(false)
+
+    /**
      * Spør Homelab-appen (ContentProvider.call «companion») om server-adresse og et nytt token for Kalender.
      * Kjøres utenfor hovedtråden: Homelab lager tokenet på serveren før den svarer. null + feilmelding når det ikke gikk.
      */
     suspend fun fromHomelab(ctx: Context): Pair<KalSession?, String?> = withContext(Dispatchers.IO) {
         if (!homelabInstalled(ctx)) return@withContext null to "Homelab-appen er ikke installert på telefonen."
+        if (!homelabSameKey86(ctx)) return@withContext null to "Homelab-appen er signert med en annen nøkkel. Logg inn med brukernavn og passord."
         val b: Bundle? = try {
             ctx.contentResolver.call(Uri.parse("content://$HOMELAB_AUTH"), "companion", "Kalender (Android · ${KalApi.device})", Bundle().apply { putString("app", "kalender") })
         } catch (e: SecurityException) {

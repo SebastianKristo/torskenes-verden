@@ -229,7 +229,7 @@ fun AppViewModel.saveAiTimeouts23(t: AiTimeouts23) {
 
 private suspend fun plainGet(url: String): String? = withContext(Dispatchers.IO) {
     runCatching {
-        val c = URL(url).openConnection() as HttpURLConnection
+        val c = URL(url).open86()
         try {
             c.connectTimeout = 8000; c.readTimeout = 12000
             if (c.responseCode >= 400) null else c.inputStream.bufferedReader().use { it.readText() }

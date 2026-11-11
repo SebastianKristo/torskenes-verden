@@ -78,6 +78,7 @@ internal fun Global41(vm: AppViewModel) {
     LaunchedEffect(Unit) { while (true) { delay(60_000); vm.osloTick41(); if (s.journey != null) vm.loadJourney41() } }
     LaunchedEffect(s.journey?.leftAt) { while (s.journey != null) { vm.loadTrip41(); delay(30_000) } }
     s.appAuth?.let { AppAuthSheet41(vm, it) }
+    Link86Dialog(vm) // prompt 86: bekreftelse før en lenke utenfra utfører en handling
     s.srvSheet?.let { ServerSheet41(vm, it) }
     s.sfKind?.let { SiFraSheet41(vm, it) }
     TripToast41(vm)

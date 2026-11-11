@@ -122,6 +122,8 @@ fun KalRoot(vm: KalVm, onBackToHomelab: () -> Unit) {
             if (vm.session != null) News51Host(vm)
             // Prompt 70: «Kalender på hjemskjermen» én gang etter oppdateringen.
             if (vm.session != null) Intro70Host(vm)
+            // Prompt 86: bekreftelse før en lenke utenfra (kalender://ny?text=…) får lage en hendelse.
+            if (vm.session != null) Link86Host(vm)
         }
     }
 }

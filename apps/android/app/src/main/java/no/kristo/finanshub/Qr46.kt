@@ -256,7 +256,7 @@ private fun AppViewModel.startQrLogin46(srv: String) {
 }
 
 private suspend fun qrGet46(srv: String, path: String, key: String?): String = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-    val c = java.net.URL(srv.trimEnd('/') + "/api" + path).openConnection() as java.net.HttpURLConnection
+    val c = java.net.URL(srv.trimEnd('/') + "/api" + path).open86()
     try {
         c.connectTimeout = 8_000; c.readTimeout = 8_000
         c.setRequestProperty("Accept", "application/json")

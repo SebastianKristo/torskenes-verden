@@ -683,7 +683,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** «camera» eller «files»: FinansApp åpner kameraet eller filvelgeren når denne settes. */
     var pendingScan by mutableStateOf<String?>(null)
 
-    fun deepLink(uri: Uri) {
+    /** Prompt 86: lenken som venter på «Utfør» (kom utenfra og endrer noe) – ui/Link86Ui.kt. */
+    var link86 by mutableStateOf<Pair<Uri, Ask86>?>(null)
+
+    /** [outside86] = lenken kom utenfra (nettside/annen app), ikke fra appens egne varsler, widgeter eller knapper (Link86.kt). */
+    fun deepLink(uri: Uri, outside86: Boolean = false) {
         // Prompt 38: homelab://login?c=… / https://<vert>/l/… (QR-innlogging på ny enhet).
         if (qrLink38(uri)) return
         // Prompt 51 (ANDFEAT51): invitasjon for nytt familiemedlem (papir://join?…, https://…/join/…) – Onboard51.kt.
@@ -691,6 +695,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         // Prompt 41: homelab://app-auth / https://<vert>/app-auth (Kalender ber Homelab om å godkjenne innloggingen).
         if (appAuthLink41(uri)) return
         if (uri.scheme != "finanshub" || !loggedIn) return
+        // Prompt 86: en lenke utenfra som utfører en handling, spør først («Vil du … ?» · Avbryt / Utfør).
+        if (outside86) Link86.ask(uri)?.let { link86 = uri to it; return }
         menuOpen = false
         when (uri.host ?: "") {
             "homelab" -> go(Screen.Homelab)
@@ -1287,7 +1293,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (logos.containsKey(key)) return logos[key]
         val b = runCatching {
             withContext(Dispatchers.IO) {
-                val c = java.net.URL("https://www.google.com/s2/favicons?sz=64&domain=" + URLEncoder.encode(host, "UTF-8")).openConnection() as java.net.HttpURLConnection
+                val c = java.net.URL("https://www.google.com/s2/favicons?sz=64&domain=" + URLEncoder.encode(host, "UTF-8")).open86()
                 c.connectTimeout = 4000; c.readTimeout = 4000
                 try { c.inputStream.use { it.readBytes() } } finally { c.disconnect() }
             }.let { BitmapFactory.decodeByteArray(it, 0, it.size) }
@@ -1718,7 +1724,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Bilde fra en annen tjeneste (f.eks. Wikimedia). Tokenet sendes ikke dit. */
     private suspend fun externalImage(url: String): Bitmap? = runCatching {
         withContext(Dispatchers.IO) {
-            val c = java.net.URL(url).openConnection() as java.net.HttpURLConnection
+            val c = java.net.URL(url).open86()
             c.connectTimeout = 6000; c.readTimeout = 10000
             c.setRequestProperty("User-Agent", "FinansHub-Android")
             try { c.inputStream.use { it.readBytes() } } finally { c.disconnect() }
@@ -2091,7 +2097,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 url.startsWith("/") -> api.bytes(url)
                 b.isNotEmpty() && url.startsWith(b) -> api.bytes(url.removePrefix(b))
                 else -> withContext(Dispatchers.IO) {
-                    val c = java.net.URL(url).openConnection() as java.net.HttpURLConnection
+                    val c = java.net.URL(url).open86()
                     c.connectTimeout = 6000; c.readTimeout = 10000
                     c.setRequestProperty("User-Agent", "FinansHub-Android")
                     try { if (c.responseCode >= 400) null else c.inputStream.use { it.readBytes() } } finally { c.disconnect() }

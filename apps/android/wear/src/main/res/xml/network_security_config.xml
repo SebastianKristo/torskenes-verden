@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Prompt 86 (AND86): klartekst-HTTP er tillatt her, men håndheves i koden (Lokal86.kt): http:// godtas bare til lokalt nett
+  (loopback, private IPv4-områder, link-local, 100.64/10, IPv6 ULA, navn uten punktum og .local/.lan/.home.arpa/.internal).
+  Android kan ikke uttrykke IP-områder i denne fila, og en fast adresse virket bare for én husstand. Alt annet må gå over https.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>

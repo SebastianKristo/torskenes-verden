@@ -672,7 +672,7 @@ fun AppViewModel.uploadKb27(uris: List<Uri>) {
 /** Leser en SSE-strøm fra serveren (POST med JSON). onEvent får hendelsesnavn («message» uten navn) og data som JSON. */
 internal suspend fun AppViewModel.chatSse27(path: String, body: JSONObject, conn: ((HttpURLConnection) -> Unit)? = null, onEvent: (String, JSONObject) -> Unit): Unit =
     withContext(Dispatchers.IO) {
-        val c = URL(base.trimEnd('/') + Api.HOMELAB + path).openConnection() as HttpURLConnection
+        val c = URL(base.trimEnd('/') + Api.HOMELAB + path).open86()
         conn?.invoke(c)
         try {
             c.requestMethod = "POST"

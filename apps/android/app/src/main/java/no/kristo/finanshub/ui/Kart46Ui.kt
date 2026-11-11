@@ -70,7 +70,7 @@ import kotlin.math.sin
 /** Fliser fra en {z}/{y}/{x}-mal (Kartverket WMTS). */
 private class KTiles46(private val tpl: String) : OnlineTileSourceBase("kart46-" + tpl.hashCode(), 3, 18, 256, ".png", arrayOf(tpl)) {
     override fun getTileURLString(i: Long): String =
-        tpl.replace("{z}", MapTileIndex.getZoom(i).toString()).replace("{x}", MapTileIndex.getX(i).toString()).replace("{y}", MapTileIndex.getY(i).toString())
+        tpl.replace("{z}", MapTileIndex.getZoom(i).toString()).replace("{x}", MapTileIndex.getX(i).toString()).replace("{y}", MapTileIndex.getY(i).toString()).let(::https86) // prompt 86
 }
 
 /** Ett lag for alt: soner, holdeplasser, personer og kjøretøy (glir mellom posisjonene over pollintervallet). */

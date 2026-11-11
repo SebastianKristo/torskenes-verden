@@ -145,7 +145,7 @@ object Kal41 {
     /** Svarer serveren i det hele tatt (alle HTTP-svar teller)? */
     suspend fun reachable(base: String, timeoutMs: Int): Boolean = withContext(Dispatchers.IO) {
         runCatching {
-            val c = URL(base.trimEnd('/') + "/api/discovery").openConnection() as HttpURLConnection
+            val c = URL(base.trimEnd('/') + "/api/discovery").open86()
             c.connectTimeout = timeoutMs; c.readTimeout = timeoutMs
             try { c.responseCode > 0 } finally { c.disconnect() }
         }.getOrDefault(false)
@@ -195,13 +195,14 @@ object Kal41 {
 
     /** «Fortsett som»: hvem er innlogget i Homelab (uten å lage token). null = ikke innlogget / gammel Homelab. */
     suspend fun who(ctx: Context): Bundle? = withContext(Dispatchers.IO) {
-        if (!KalAuth.homelabInstalled(ctx)) return@withContext null
+        if (!KalAuth.homelabInstalled(ctx) || !KalAuth.homelabSameKey86(ctx)) return@withContext null // prompt 86: samme signeringsnøkkel
         val b = runCatching { ctx.contentResolver.call(Uri.parse("content://${KalAuth.HOMELAB_AUTH}"), "continue41", null, Bundle()) }.getOrNull()
         if (b == null || b.getString("error") != null) null else b
     }
 
     /** «Fortsett som»: Homelab bytter enhets-tokenet mot et eget Kalender-token (exchange41); reserve: companion. */
     suspend fun continueAs(ctx: Context): Pair<KalSession?, String?> = withContext(Dispatchers.IO) {
+        if (KalAuth.homelabInstalled(ctx) && !KalAuth.homelabSameKey86(ctx)) return@withContext null to "Homelab-appen er signert med en annen nøkkel. Logg inn med brukernavn og passord."
         val b = try {
             ctx.contentResolver.call(Uri.parse("content://${KalAuth.HOMELAB_AUTH}"), "exchange41", "Kalender (Android · ${KalApi.device})", Bundle().apply { putString("app", CLIENT) })
         } catch (e: SecurityException) {
@@ -330,7 +331,7 @@ object Kal41 {
     suspend fun bytes(s: KalSession, url: String): ByteArray? = withContext(Dispatchers.IO) {
         runCatching {
             val full = if (url.startsWith("/")) s.server.trimEnd('/') + url else url
-            val c = URL(full).openConnection() as HttpURLConnection
+            val c = URL(full).open86()
             c.connectTimeout = 10_000; c.readTimeout = 15_000
             if (url.startsWith("/") || full.startsWith(s.server)) c.setRequestProperty("Authorization", "Bearer " + s.token)
             try { if (c.responseCode in 200..299) c.inputStream.use { it.readBytes() } else null } finally { c.disconnect() }

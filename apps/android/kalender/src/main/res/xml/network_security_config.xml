@@ -1,17 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Prompt 47 (claude-code-standard-serveradresser.md): klartekst-HTTP bare til den lokale serveren http://10.69.1.39:3000.
-  Alt annet må gå over https (ekstern adresse https://os.smarthjemexperten.no). Brukerinstallerte CA-er tillates fortsatt,
-  slik at et selvsignert sertifikat for homelab kan installeres på telefonen.
+  Prompt 86 (AND86): klartekst-HTTP er tillatt her, men håndheves i koden (Lokal86.kt): http:// godtas bare til lokalt nett
+  (loopback, private IPv4-områder, link-local, 100.64/10, IPv6 ULA, navn uten punktum og .local/.lan/.home.arpa/.internal).
+  Android kan ikke uttrykke IP-områder i denne fila, og en fast adresse virket bare for én husstand. Alt annet må gå over https.
+  Brukerinstallerte CA-er tillates fortsatt, slik at et selvsignert sertifikat for homelab kan installeres på telefonen.
 -->
 <network-security-config>
-    <base-config cleartextTrafficPermitted="false">
+    <base-config cleartextTrafficPermitted="true">
         <trust-anchors>
             <certificates src="system" />
             <certificates src="user" />
         </trust-anchors>
     </base-config>
-    <domain-config cleartextTrafficPermitted="true">
-        <domain includeSubdomains="false">10.69.1.39</domain>
-    </domain-config>
 </network-security-config>

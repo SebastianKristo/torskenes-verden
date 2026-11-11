@@ -72,7 +72,7 @@ class WearApi51(private val server: String, private val token: String?) {
 
     suspend fun call(method: String, path: String, body: JSONObject? = null, headers: Map<String, String> = emptyMap(), read: Int = 20_000): JSONObject =
         withContext(Dispatchers.IO) {
-            val c = URL(server.trimEnd('/') + "/api" + path).openConnection() as HttpURLConnection
+            val c = URL(server.trimEnd('/') + "/api" + path).open86()
             try {
                 c.requestMethod = method
                 c.connectTimeout = 10_000
@@ -91,6 +91,8 @@ class WearApi51(private val server: String, private val token: String?) {
                 val o = runCatching { if (txt.trimStart().startsWith("[")) JSONObject().put("items", JSONArray(txt)) else JSONObject(txt.ifBlank { "{}" }) }.getOrNull()
                 if (code >= 400) throw WearApiError51(o?.optString("error")?.takeIf { it.isNotBlank() } ?: "Feil $code", code)
                 o ?: throw WearApiError51("Uventet svar fra serveren", code)
+            } catch (e: UsikretHttp86) {
+                throw WearApiError51(Lokal86.MSG) // prompt 86: http:// bare på lokalt nett (Lokal86.kt)
             } catch (e: IOException) {
                 throw WearApiError51("Ingen kontakt med serveren")
             } finally { c.disconnect() }

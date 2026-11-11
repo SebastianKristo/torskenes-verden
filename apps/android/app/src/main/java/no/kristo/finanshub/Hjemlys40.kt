@@ -428,7 +428,7 @@ object Hjemlys40Notify {
         val who = s.recipients.map { firstName37(it) }.let { l -> if (l.isEmpty()) "familien" else if (l.size == 1) l[0] else l.dropLast(1).joinToString(", ") + " og " + l.last() }
         val text = s.text ?: ((s.reason?.let { "$it. " } ?: "") + "Skal jeg si fra til $who når du er hjemme?")
         val yes = PendingIntent.getActivity(ctx, 7397, Intent(Intent.ACTION_VIEW, Uri.parse("finanshub://hjemlys/start" + (s.eta?.let { "?eta=" + Uri.encode(it) } ?: "")), ctx, MainActivity::class.java)
-            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP).intern86(ctx), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
         val n = Notification.Builder(ctx, CH_FOLLOW)
         n.setSmallIcon(icon(ctx))
         n.setContentTitle("✦ Glimt").setContentText(text).setStyle(Notification.BigTextStyle().bigText(text)).setColor(GOLD).setAutoCancel(true)

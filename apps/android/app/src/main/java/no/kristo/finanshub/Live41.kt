@@ -66,7 +66,7 @@ object Live41 {
     private fun canPost(ctx: Context) = Build.VERSION.SDK_INT < 33 || ctx.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
 
     private fun open(ctx: Context, link: String, code: Int): PendingIntent = PendingIntent.getActivity(ctx, code,
-        Intent(Intent.ACTION_VIEW, Uri.parse(link), ctx, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP),
+        Intent(Intent.ACTION_VIEW, Uri.parse(link), ctx, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP).intern86(ctx),
         PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
 
     internal fun act(ctx: Context, act: String, code: Int, extra: Bundle? = null): PendingIntent = PendingIntent.getBroadcast(ctx, code,

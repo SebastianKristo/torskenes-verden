@@ -9,6 +9,9 @@ permissions:
 jobs:
   android:
     runs-on: ubuntu-latest
+    env:
+      # 'true' når signeringsnøkkelen er lagt inn som hemmelighet (docs/android-signering.md). Selve verdien eksponeres ikke her.
+      HAR_ANDROID_NOKKEL: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
     defaults:
       run:
         working-directory: apps/android
@@ -19,7 +22,22 @@ jobs:
           distribution: temurin
           java-version: '17'
       - uses: gradle/actions/setup-gradle@v4
+      - name: Signeringsnøkkel fra hemmeligheter (valgfri)
+        # Kjører bare når ANDROID_KEYSTORE_BASE64 finnes (env-verdi, ikke secrets direkte i if). Nøkkelen dekodes til en fil
+        # utenfor repoet, og Gradle leser ANDROID_KEYSTORE_* fra miljøet (apps/android/build.gradle.kts). Ingenting skrives til logg.
+        if: env.HAR_ANDROID_NOKKEL == 'true'
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          umask 077
+          printf '%s' "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/android-signering.jks"
+          echo "ANDROID_KEYSTORE_FILE=$RUNNER_TEMP/android-signering.jks" >> "$GITHUB_ENV"
       - name: Bygg APK
+        env:
+          # Tomme uten hemmeligheter – da bruker Gradle nøkkelen i repoet som før (og advarer).
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: ./gradlew --no-daemon assembleDebug
       - uses: actions/upload-artifact@v4
         with:

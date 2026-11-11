@@ -240,7 +240,7 @@ fun AppViewModel.setNtfy51(on: Boolean) = launch51 {
             val sub = tt?.optString("subscribeUrl")?.takeIf { it.startsWith("http") }
                 ?: st.optString("publicUrl").takeIf { it.startsWith("http") }?.let { pu -> tt?.optString("topic")?.takeIf { it.isNotBlank() }?.let { pu.trimEnd('/') + "/" + it } }
             if (tt == null || sub == null) { ntfy51.error = "Serveren mangler den offentlige ntfy-adressen (NTFY_PUBLIC_URL i .env)."; return@launch51 }
-            if (cleartextBlocked47(sub)) { ntfy51.error = "ntfy-adressen ($sub) må være https eller ligge på hjemmeserveren (${DEFAULT_LOCAL47.substringAfter("://").substringBefore(':')})."; return@launch51 }
+            if (cleartextBlocked47(sub)) { ntfy51.error = "ntfy-adressen ($sub) må være https eller ligge på lokalt nett."; return@launch51 }
             Ntfy51.save(ctx, true, sub.trimEnd('/'), tt.optString("id"), activeId)
             Ntfy51.sync(ctx)
             ntfy51.on = true
@@ -373,7 +373,7 @@ class Ntfy51Service : Service() {
 
     /** Henter det som har kommet (strømsparing). */
     private fun poll(url: String) {
-        val c = URL(url.trimEnd('/') + "/json" + q(Ntfy51.since(this), true)).openConnection() as HttpURLConnection
+        val c = URL(url.trimEnd('/') + "/json" + q(Ntfy51.since(this), true)).open86()
         try {
             c.connectTimeout = 15_000; c.readTimeout = 30_000
             c.setRequestProperty("Accept", "application/x-ndjson")
@@ -384,7 +384,7 @@ class Ntfy51Service : Service() {
 
     /** Holder strømmen åpen til den brytes. true = var tilkoblet (rask ny tilkobling). */
     private fun stream(url: String, onOpen: () -> Unit): Boolean {
-        val c = URL(url.trimEnd('/') + "/json" + q(Ntfy51.since(this), false)).openConnection() as HttpURLConnection
+        val c = URL(url.trimEnd('/') + "/json" + q(Ntfy51.since(this), false)).open86()
         conn = c
         try {
             c.connectTimeout = 15_000

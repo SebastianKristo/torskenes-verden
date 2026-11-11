@@ -260,7 +260,7 @@ internal suspend fun AppViewModel.stream67(
     val url = base.trimEnd('/') + Api.HOMELAB + "/glimt/agent/stream"
     val job = currentCoroutineContext()[Job]
     return withContext(Dispatchers.IO) {
-        val c = URL(url).openConnection() as HttpURLConnection
+        val c = URL(url).open86()
         onConn(c)
         val h = job?.invokeOnCompletion { if (it != null) runCatching { c.disconnect() } }
         val txt = StringBuilder()

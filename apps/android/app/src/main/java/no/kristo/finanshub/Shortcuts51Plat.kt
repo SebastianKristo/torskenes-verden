@@ -28,7 +28,7 @@ object Shortcuts51 {
     const val DEFAULT_ITEM = "melk"
 
     private fun link(ctx: Context, path: String) = Intent(Intent.ACTION_VIEW, Uri.parse("finanshub://act51/$path"), ctx, MainActivity::class.java)
-        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP).intern86(ctx) // prompt 86: appens egen (dynamiske) snarvei
 
     fun lastItem(ctx: Context): String = ctx.getSharedPreferences(SP, Context.MODE_PRIVATE).getString("last", null)?.takeIf { it.isNotBlank() } ?: DEFAULT_ITEM
 

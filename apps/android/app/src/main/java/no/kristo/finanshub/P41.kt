@@ -412,7 +412,7 @@ private suspend fun commonsCredit41(file: String): Credit41 {
     val c = runCatching {
         withContext(Dispatchers.IO) {
             val url = "https://commons.wikimedia.org/w/api.php?action=query&format=json&prop=imageinfo&iiprop=extmetadata&titles=" + URLEncoder.encode("File:$file", "UTF-8")
-            val conn = java.net.URL(url).openConnection() as java.net.HttpURLConnection
+            val conn = java.net.URL(url).open86()
             conn.connectTimeout = 5000; conn.readTimeout = 8000
             conn.setRequestProperty("User-Agent", "FinansHub-Android (home.kristo.no)")
             val body = try { conn.inputStream.bufferedReader().use { it.readText() } } finally { conn.disconnect() }
@@ -886,7 +886,7 @@ fun AppViewModel.loadSki41() {
     launch41 {
         runCatching {
             val body = withContext(Dispatchers.IO) {
-                val c = java.net.URL("https://api.open-meteo.com/v1/forecast?latitude=59.99&longitude=10.67&current=temperature_2m,relative_humidity_2m,snow_depth&daily=snowfall_sum,temperature_2m_max,temperature_2m_min&past_days=3&forecast_days=1&timezone=auto").openConnection() as java.net.HttpURLConnection
+                val c = java.net.URL("https://api.open-meteo.com/v1/forecast?latitude=59.99&longitude=10.67&current=temperature_2m,relative_humidity_2m,snow_depth&daily=snowfall_sum,temperature_2m_max,temperature_2m_min&past_days=3&forecast_days=1&timezone=auto").open86()
                 c.connectTimeout = 6000; c.readTimeout = 8000
                 try { c.inputStream.bufferedReader().use { it.readText() } } finally { c.disconnect() }
             }

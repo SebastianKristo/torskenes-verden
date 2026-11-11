@@ -71,7 +71,7 @@ internal fun ServerPage47(vm: AppViewModel) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             PButton("Tilbakestill til standard", Modifier.weight(1f), kind = "line") { ext = s.defExternal; loc = s.defLocal; vm.resetServer47() }
             PButton(if (dirty) "Lagre" else "Lagret", Modifier.weight(1f)) {
-                if (cleartextBlocked47(ext) || cleartextBlocked47(loc)) vm.message = "Android tillater bare http:// til ${hostOf47(DEFAULT_LOCAL47)}. Bruk https://."
+                if (cleartextBlocked47(ext) || cleartextBlocked47(loc)) vm.message = Lokal86.MSG
                 else if (dirty) vm.saveServer41(loc, ext, srv.auto)
             }
         }

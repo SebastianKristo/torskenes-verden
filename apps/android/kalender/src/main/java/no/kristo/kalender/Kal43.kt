@@ -199,7 +199,7 @@ object Kal43Upd {
         f.delete()
         val t0 = System.currentTimeMillis()
         try {
-            val conn = URL(r.url).openConnection() as HttpURLConnection
+            val conn = URL(r.url).open86()
             conn.connectTimeout = Kal46Srv.TIMEOUT
             conn.readTimeout = Kal46Srv.TIMEOUT
             conn.instanceFollowRedirects = true

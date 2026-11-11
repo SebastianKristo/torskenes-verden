@@ -10,7 +10,7 @@ import org.json.JSONObject
  * Standard: ekstern https://os.smarthjemexperten.no, lokal http://10.69.1.39:3000 (Kal41.DEFAULT_BASE / DEFAULT_LOCAL). Serveren kan
  * overstyre via PUBLIC_URL/LOCAL_URL («defaults» i GET /api/me/server). Lagres på enheten (k41_external / k41_local, som Kal41 leser)
  * og synkes til kontoen med PUT /api/me/server {external, local, device}; 404/405 (eldre server) → bare på denne enheten.
- * Klartekst-HTTP er bare tillatt til 10.69.1.39 (res/xml/network_security_config.xml).
+ * Klartekst-HTTP er bare tillatt på lokalt nett (prompt 86: Lokal86.kt håndhever, res/xml/network_security_config.xml tillater).
  */
 object Kal47Srv {
     fun stdExternal(ctx: Context): String = Kal41.plain(ctx).getString("k47_def_ext", "")?.takeIf { it.startsWith("http") } ?: Kal41.DEFAULT_BASE

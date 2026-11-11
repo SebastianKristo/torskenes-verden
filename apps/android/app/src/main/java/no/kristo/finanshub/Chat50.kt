@@ -94,7 +94,7 @@ private suspend fun AppViewModel.upload50(name: String, mime: String, bytes: Byt
     val safe = name.replace("\"", "").replace("\r", "").replace("\n", "")
     val head = "--$boundary\r\nContent-Disposition: form-data; name=\"file\"; filename=\"$safe\"\r\nContent-Type: $mime\r\n\r\n".toByteArray()
     val tail = "\r\n--$boundary--\r\n".toByteArray()
-    val c = URL(base.trimEnd('/') + Api.HOMELAB + "/chat/files").openConnection() as HttpURLConnection
+    val c = URL(base.trimEnd('/') + Api.HOMELAB + "/chat/files").open86()
     try {
         c.requestMethod = "POST"; c.doOutput = true; c.connectTimeout = 15_000; c.readTimeout = 120_000
         c.setRequestProperty("Content-Type", "multipart/form-data; boundary=$boundary")

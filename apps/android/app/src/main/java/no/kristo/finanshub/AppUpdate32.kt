@@ -354,7 +354,7 @@ fun AppViewModel.startAppUpd32() {
 
 /** Laster ned til [out] og returnerer SHA-256 (hex), eller null ved feil. */
 private fun download32(url: String, token: String?, out: File, size: Long?, onPct: (Int) -> Unit): String? {
-    val conn = URL(url).openConnection() as HttpURLConnection
+    val conn = URL(url).open86()
     return try {
         conn.connectTimeout = 15_000
         conn.readTimeout = 60_000

@@ -147,7 +147,7 @@ fun AppViewModel.act51(
 
 /** Rå bytes ut (bilde til sparemål): PUT med Content-Type, samme token som resten. */
 internal suspend fun AppViewModel.putBytes51(path: String, bytes: ByteArray, type: String): String = withContext(Dispatchers.IO) {
-    val conn = URL(base.trimEnd('/') + Api.FINANS + path).openConnection() as HttpURLConnection
+    val conn = URL(base.trimEnd('/') + Api.FINANS + path).open86()
     try {
         conn.requestMethod = "PUT"
         conn.connectTimeout = 10_000

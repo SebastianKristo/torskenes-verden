@@ -13,6 +13,7 @@ import no.kristo.finanshub.MainActivity
 import no.kristo.finanshub.R
 import no.kristo.finanshub.hlClock40
 import no.kristo.finanshub.hlMinutes40
+import no.kristo.finanshub.intern86
 
 /*
  * Prompt 40 (ANDROID40): Hjemlys «Felles» – Hjem-widgeten «Start for meg» (fasit Hjemme trygt Varianter.dc.html).
@@ -22,7 +23,7 @@ import no.kristo.finanshub.hlMinutes40
 object HjemlysWidget40 {
     private fun link(ctx: Context, path: String, code: Int): PendingIntent = PendingIntent.getActivity(ctx, code,
         Intent(Intent.ACTION_VIEW, Uri.parse("finanshub://hjemlys$path"), ctx, MainActivity::class.java)
-            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP).intern86(ctx), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
 
     fun views(ctx: Context): RemoteViews {
         val s = Hjemlys40Prefs.session(ctx)

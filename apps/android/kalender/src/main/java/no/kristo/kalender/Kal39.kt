@@ -303,7 +303,7 @@ object Kal39Repo {
         var u = raw.trim()
         if (u.lowercase().startsWith("webcal://")) u = "https://" + u.substring(9)
         try {
-            val c = (URL(u).openConnection() as HttpURLConnection).apply { connectTimeout = 10_000; readTimeout = 20_000 }
+            val c = (URL(u).open86()).apply { connectTimeout = 10_000; readTimeout = 20_000 }
             val code = c.responseCode
             val text = if (code < 400) c.inputStream.bufferedReader().use { it.readText() } else ""
             c.disconnect()

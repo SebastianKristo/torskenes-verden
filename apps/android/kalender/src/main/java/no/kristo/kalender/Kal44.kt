@@ -222,7 +222,7 @@ object Kal44 {
 
     private suspend fun kartverket(v: String): List<KAddr44> = withContext(Dispatchers.IO) {
         runCatching {
-            val c = URL("https://ws.geonorge.no/adresser/v1/sok?sok=" + URLEncoder.encode(v, "UTF-8") + "&fuzzy=true&treffPerSide=6&utkoordsys=4258").openConnection() as HttpURLConnection
+            val c = URL("https://ws.geonorge.no/adresser/v1/sok?sok=" + URLEncoder.encode(v, "UTF-8") + "&fuzzy=true&treffPerSide=6&utkoordsys=4258").open86()
             c.connectTimeout = 6_000; c.readTimeout = 6_000
             c.setRequestProperty("User-Agent", "Kalender (Homelab)")
             try {

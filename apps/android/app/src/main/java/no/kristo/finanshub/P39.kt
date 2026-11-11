@@ -111,7 +111,7 @@ private suspend fun AppViewModel.fetch39(url: String): Pair<Int, ByteArray?> = w
     val own = !abs || runCatching { URL(full).host.equals(URL(root).host, ignoreCase = true) }.getOrDefault(false)
     var code = -1
     try {
-        val c = URL(full).openConnection() as HttpURLConnection
+        val c = URL(full).open86()
         try {
             c.connectTimeout = 10_000; c.readTimeout = 15_000
             c.useCaches = false

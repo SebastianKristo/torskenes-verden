@@ -348,7 +348,7 @@ object Ify42 {
     }
 
     private fun get(url: String): String {
-        val c = java.net.URL(url).openConnection() as java.net.HttpURLConnection
+        val c = java.net.URL(url).open86()
         c.connectTimeout = 6_000; c.readTimeout = 8_000
         return try { c.inputStream.bufferedReader().use { it.readText() } } finally { c.disconnect() }
     }

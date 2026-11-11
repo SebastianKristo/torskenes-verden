@@ -627,8 +627,19 @@ class KalVm(app: Application) : AndroidViewModel(app) {
     /** Lenker og deling: kalender://ny?text=… eller Del → Kalender. */
     fun incomingText(t: String) {
         if (t.isBlank()) { focusComposer++; return }
-        if (looksPasted(t) && parseQuick(t, drem, defDur = dd).s == null) quick(t) else { ct = t; focusComposer++ }
+        if (autoQuick86(t)) quick(t) else { ct = t; focusComposer++ }
     }
+
+    /** true når teksten ville blitt sendt rett til Glimt, som lager hendelsen (innlimt melding uten tydelig tid). */
+    private fun autoQuick86(t: String) = t.isNotBlank() && looksPasted(t) && parseQuick(t, drem, defDur = dd).s == null
+
+    /**
+     * Prompt 86 (AND86): kalender://ny?text=… kan startes av en nettside eller en annen app. Ville teksten laget en hendelse
+     * uten flere trykk, spør vi først («Vil du … ?» · Avbryt / Utfør, ui/Kal86Ui.kt). Del → Kalender er brukerens eget valg og
+     * går som før, og lenker som bare åpner en side eller fyller skrivefeltet, åpnes som før.
+     */
+    var ask86 by mutableStateOf<String?>(null)
+    fun confirmLink86() { val t = ask86 ?: return; ask86 = null; quick(t) }
 
     /* ---------- Glimt-panelet ---------- */
 
@@ -1028,7 +1039,7 @@ class KalVm(app: Application) : AndroidViewModel(app) {
             // Prompt 51: varselet «Ny enhet vil logge inn» → Innstillinger (SIKKERHET).
             host == "sikkerhet" || host == "innstillinger" -> { if (session != null) { setOn = true; k51.loadPending() } }
             host == "maned" || host == "mnd" -> { v = "mnd"; a = date(path.firstOrNull()) ?: T }
-            host == "ny" -> incomingText(uri.getQueryParameter("text").orEmpty())
+            host == "ny" -> { val t = uri.getQueryParameter("text").orEmpty(); if (session != null && autoQuick86(t)) ask86 = t else incomingText(t) }
             host == "hendelse" -> {
                 val id = uri.getQueryParameter("id") ?: path.firstOrNull()
                 val d = date(uri.getQueryParameter("date"))

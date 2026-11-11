@@ -821,7 +821,7 @@ fun AppViewModel.printLabels76(ctx: Context, cabId: String?) = act76 {
     }
     val wv = android.webkit.WebView(ctx)
     Skjold76.printView = wv // holdes til utskriften er sendt
-    wv.webViewClient = object : android.webkit.WebViewClient() {
+    wv.webViewClient = object : WebKlient86() { // prompt 86: http:// bare på lokalt nett
         override fun onPageFinished(view: android.webkit.WebView, url: String?) {
             val pm = ctx.getSystemService(Context.PRINT_SERVICE) as? android.print.PrintManager ?: return
             runCatching { pm.print("Skjold Lab etiketter", view.createPrintDocumentAdapter("Skjold Lab etiketter"), android.print.PrintAttributes.Builder().build()) }

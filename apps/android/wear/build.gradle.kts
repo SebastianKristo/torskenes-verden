@@ -11,8 +11,11 @@ plugins {
 val appVersionName = providers.gradleProperty("versionName").orNull?.takeIf { it.isNotBlank() } ?: "4.0"
 val appVersionCode = providers.gradleProperty("versionCode").orNull?.toIntOrNull() ?: 4
 
-// Egen release-nøkkel bare når CI sender inn android.injected.signing.* (samme som :app). Ellers den faste sideload-nøkkelen.
-val signStore = providers.gradleProperty("android.injected.signing.store.file").orNull?.takeIf { it.isNotBlank() }
+// Prompt 86 (AND86): signering fra miljøet (ANDROID_KEYSTORE_*), regnet ut én gang i ../build.gradle.kts. Tomt kart = nøkkelen
+// i repoet (signing/sideload.jks) som før. Samme nøkkel for :app, :kalender og :wear. Se docs/android-signering.md.
+@Suppress("UNCHECKED_CAST")
+val sign86 = rootProject.extra["sign86"] as Map<String, String>
+val signName86 = if (sign86.isNotEmpty()) "release" else "sideload"
 
 android {
     namespace = "no.kristo.finanshub.wear"
@@ -34,23 +37,23 @@ android {
             keyAlias = "finanshub"
             keyPassword = "finanshub-sideload"
         }
-        if (signStore != null) {
+        if (sign86.isNotEmpty()) {
             create("release") {
-                storeFile = file(signStore)
-                storePassword = providers.gradleProperty("android.injected.signing.store.password").orNull
-                keyAlias = providers.gradleProperty("android.injected.signing.key.alias").orNull
-                keyPassword = providers.gradleProperty("android.injected.signing.key.password").orNull
+                storeFile = file(sign86.getValue("file"))
+                storePassword = sign86["storePassword"]
+                keyAlias = sign86["keyAlias"]
+                keyPassword = sign86["keyPassword"]
             }
         }
     }
 
     buildTypes {
         debug {
-            signingConfig = signingConfigs.getByName("sideload")
+            signingConfig = signingConfigs.getByName(signName86)
         }
         release {
             isMinifyEnabled = false
-            signingConfig = signingConfigs.getByName(if (signStore != null) "release" else "sideload")
+            signingConfig = signingConfigs.getByName(signName86)
         }
     }
     compileOptions {

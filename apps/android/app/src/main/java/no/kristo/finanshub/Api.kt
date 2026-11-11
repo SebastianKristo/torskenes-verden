@@ -37,7 +37,7 @@ class Api(private val baseUrl: String, private val token: String?) {
     }
 
     suspend fun request(method: String, path: String, json: JSONObject? = null, prefix: String = FINANS, timeout: Int = 10_000, read: Int = 30_000): String = withContext(Dispatchers.IO) {
-        val conn = url(path, prefix).openConnection() as HttpURLConnection
+        val conn = url(path, prefix).open86()
         val t46 = System.currentTimeMillis()
         try { net {
             conn.requestMethod = method
@@ -74,6 +74,8 @@ class Api(private val baseUrl: String, private val token: String?) {
     } catch (e: SSLException) {
         android.util.Log.w("Api", "HTTPS-feil", e) // prompt 73: ingen rå exception-tekst i UI
         throw ApiException("HTTPS-feil. Bruk http:// på lokalt nett, eller installer sertifikatet på telefonen.")
+    } catch (e: UsikretHttp86) {
+        throw ApiException(Lokal86.MSG) // prompt 86: http:// utenfor lokalt nett kobles aldri til (Lokal86.kt)
     } catch (e: IOException) {
         android.util.Log.w("Api", "Nettverksfeil", e)
         throw ApiException("Nettverksfeil. Sjekk forbindelsen og prøv igjen.")
@@ -115,7 +117,7 @@ class Api(private val baseUrl: String, private val token: String?) {
     suspend fun hlDelete(path: String) = request("DELETE", path, prefix = HOMELAB)
 
     suspend fun bytes(path: String): ByteArray = withContext(Dispatchers.IO) {
-        val conn = URL(baseUrl.trimEnd('/') + path).openConnection() as HttpURLConnection
+        val conn = URL(baseUrl.trimEnd('/') + path).open86()
         try { net {
             // Prompt 85: uten tidsgrenser ble bilder og filer hengende for alltid på et dødt nett (og holdt en IO-tråd hver).
             conn.connectTimeout = 10_000
@@ -129,7 +131,7 @@ class Api(private val baseUrl: String, private val token: String?) {
     /** Multipart-opplasting: filer (f.eks. original + nedskalert JPEG + miniatyr) og tekstfelt (Part uten filnavn). */
     suspend fun upload(path: String, parts: List<Part>, prefix: String = FINANS, read: Int = 60_000): String = withContext(Dispatchers.IO) {
         val boundary = "----FinansHub" + UUID.randomUUID().toString().replace("-", "")
-        val conn = url(path, prefix).openConnection() as HttpURLConnection
+        val conn = url(path, prefix).open86()
         var sent48 = false
         try { net {
             conn.requestMethod = "POST"

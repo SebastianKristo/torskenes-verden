@@ -392,7 +392,7 @@ fun sunText36(date: LocalDate, place: String, s: Sun36): String {
 
 private suspend fun geocode36(place: String): Triple<Double, Double, String>? = withContext(Dispatchers.IO) {
     runCatching {
-        val c = URL("https://geocoding-api.open-meteo.com/v1/search?count=1&language=nb&name=" + URLEncoder.encode(place, "UTF-8")).openConnection() as HttpURLConnection
+        val c = URL("https://geocoding-api.open-meteo.com/v1/search?count=1&language=nb&name=" + URLEncoder.encode(place, "UTF-8")).open86()
         c.connectTimeout = 6000; c.readTimeout = 8000
         val raw = try { c.inputStream.bufferedReader().use { it.readText() } } finally { c.disconnect() }
         val g = JSONObject(raw).optJSONArray("results")?.optJSONObject(0) ?: return@runCatching null

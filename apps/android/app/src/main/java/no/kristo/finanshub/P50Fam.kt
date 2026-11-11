@@ -690,7 +690,7 @@ object Checkin50Notify {
 
     private fun link(ctx: Context, q: String, code: Int): PendingIntent {
         val i = Intent(Intent.ACTION_VIEW, Uri.parse("finanshub://familie/sjekk$q")).setPackage(ctx.packageName)
-            .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
+            .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK).intern86(ctx) // prompt 86: appens eget varsel
         return PendingIntent.getActivity(ctx, code, i, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
     }
 

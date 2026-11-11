@@ -24,6 +24,7 @@
         android:roundIcon="@drawable/ic_wear51"
         android:allowBackup="false"
         android:supportsRtl="true"
+        android:networkSecurityConfig="@xml/network_security_config"
         android:theme="@android:style/Theme.DeviceDefault">
 
         <!-- Fungerer uten telefonappen i nærheten. -->

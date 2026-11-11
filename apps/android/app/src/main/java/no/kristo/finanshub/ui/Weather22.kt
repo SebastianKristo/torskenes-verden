@@ -707,7 +707,7 @@ internal fun WxMap(w: WeatherFull?, close: () -> Unit) {
     val src = windySrc25(w, layer)
     Box(Modifier.fillMaxSize().zIndex(23f).background(Color(0xFF0D1520)).clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {}) {
         AndroidView(
-            factory = { c: android.content.Context -> WebView(c).apply { settings.javaScriptEnabled = true; settings.domStorageEnabled = true; webViewClient = WebViewClient(); setBackgroundColor(0xFF0D1520.toInt()); loadUrl(src) } },
+            factory = { c: android.content.Context -> WebView(c).apply { settings.javaScriptEnabled = true; settings.domStorageEnabled = true; webViewClient = WebKlient86(); setBackgroundColor(0xFF0D1520.toInt()); loadUrl(src) } },
             update = { v: WebView -> if (v.url != src && v.tag != src) { v.tag = src; v.loadUrl(src) } },
             modifier = Modifier.fillMaxSize(),
         )
@@ -739,7 +739,7 @@ internal fun WxMapInline25(w: WeatherFull?, modifier: Modifier, onFull: () -> Un
     val src = windySrc25(w, layer)
     Box(modifier.background(Color(0xFF0D1520))) {
         AndroidView(
-            factory = { c: android.content.Context -> WebView(c).apply { settings.javaScriptEnabled = true; settings.domStorageEnabled = true; webViewClient = WebViewClient(); setBackgroundColor(0xFF0D1520.toInt()); tag = src; loadUrl(src) } },
+            factory = { c: android.content.Context -> WebView(c).apply { settings.javaScriptEnabled = true; settings.domStorageEnabled = true; webViewClient = WebKlient86(); setBackgroundColor(0xFF0D1520.toInt()); tag = src; loadUrl(src) } },
             update = { v: WebView -> if (v.tag != src) { v.tag = src; v.loadUrl(src) } },
             modifier = Modifier.fillMaxSize(),
         )

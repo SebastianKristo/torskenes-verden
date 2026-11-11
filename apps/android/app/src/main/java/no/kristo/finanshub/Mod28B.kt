@@ -221,7 +221,7 @@ fun AppViewModel.installVision28() {
         var err: String? = null
         try {
             withContext(Dispatchers.IO) {
-                val conn = URL(url).openConnection() as HttpURLConnection
+                val conn = URL(url).open86()
                 try {
                     conn.requestMethod = "POST"
                     conn.connectTimeout = 10_000

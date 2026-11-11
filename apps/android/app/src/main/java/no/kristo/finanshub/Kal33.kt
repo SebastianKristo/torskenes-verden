@@ -100,6 +100,10 @@ class KalenderLoginProvider33 : ContentProvider() {
 
     override fun onCreate(): Boolean = true
 
+    /** Prompt 86: true når appen bak [uid] er signert med samme sertifikat som denne appen. */
+    private fun sameSigner86(ctx: Context, uid: Int): Boolean =
+        runCatching { ctx.packageManager.checkSignatures(uid, android.os.Process.myUid()) == PackageManager.SIGNATURE_MATCH }.getOrDefault(false)
+
     override fun call(method: String, arg: String?, extras: Bundle?): Bundle? {
         if (method != "companion" && method != "continue41" && method != "exchange41") return null
         val ctx = context ?: return null
@@ -107,6 +111,9 @@ class KalenderLoginProvider33 : ContentProvider() {
         if (ctx.checkCallingPermission(PERM) != PackageManager.PERMISSION_GRANTED) throw SecurityException("Mangler $PERM")
         val caller =runCatching { ctx.packageManager.getPackagesForUid(Binder.getCallingUid())?.toList() }.getOrNull().orEmpty()
         if (KalenderApp33.PKG !in caller) return Bundle().apply { putString("error", "Bare Kalender-appen kan logge inn her.") }
+        // Prompt 86 (AND86): pakkenavnet kan hvem som helst bruke. Kallerens signeringssertifikat må være det samme som Homelab-appens
+        // eget (samme nøkkel) – sjekkes direkte her, i tillegg til signature-tillatelsen over.
+        if (!sameSigner86(ctx, Binder.getCallingUid())) return Bundle().apply { putString("error", "Kalender-appen er signert med en annen nøkkel enn Homelab-appen.") }
         val store = runCatching { AccountStore(ctx) }.getOrNull() ?: return Bundle().apply { putString("error", "Fikk ikke lest kontoen i Homelab-appen.") }
         val list = runCatching { store.load() }.getOrDefault(emptyList())
         val acc = list.firstOrNull { it.id == store.active() } ?: list.firstOrNull()

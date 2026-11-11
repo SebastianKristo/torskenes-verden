@@ -100,7 +100,7 @@ private class TemplateTileSource(private val spec: MapTiles) :
         val y = MapTileIndex.getY(pMapTileIndex)
         val sub = "abcd"[Math.floorMod(x + y, 4)].toString()
         return spec.template.replace("{s}", sub).replace("{z}", z.toString()).replace("{x}", x.toString()).replace("{y}", y.toString())
-            .replace("{r}", if (spec.retina) "@2x" else "")
+            .replace("{r}", if (spec.retina) "@2x" else "").let(::https86) // prompt 86: http:// bare på lokalt nett
     }
 }
 

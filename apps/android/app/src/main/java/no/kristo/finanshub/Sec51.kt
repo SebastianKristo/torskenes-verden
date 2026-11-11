@@ -139,7 +139,7 @@ private class Http51(val status: Int, val body: JSONObject?)
 private suspend fun http51(base: String, method: String, path: String, pollKey: String, json: JSONObject? = null): Http51 = withContext(Dispatchers.IO) {
     // Bare stier på samme server (aldri en vilkårlig adresse fra svaret).
     require(path.startsWith("/api/security51/approvals/")) { "Ugyldig adresse" }
-    val conn = URL(base.trimEnd('/') + path).openConnection() as HttpURLConnection
+    val conn = URL(base.trimEnd('/') + path).open86()
     try {
         conn.requestMethod = method
         conn.connectTimeout = 10_000

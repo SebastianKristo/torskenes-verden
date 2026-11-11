@@ -312,7 +312,7 @@ object Kal46Qr {
 
     private suspend fun http(method: String, url: String, body: org.json.JSONObject?, key: String?, token: String?): Pair<Int, String> =
         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-            val c = java.net.URL(url).openConnection() as java.net.HttpURLConnection
+            val c = java.net.URL(url).open86()
             try {
                 c.requestMethod = method
                 c.connectTimeout = Kal46Srv.TIMEOUT; c.readTimeout = Kal46Srv.TIMEOUT

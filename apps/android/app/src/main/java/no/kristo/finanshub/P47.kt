@@ -43,12 +43,8 @@ class P47State {
 
 internal fun hostOf47(u: String?): String? = u?.trim()?.takeIf { it.isNotEmpty() }?.let { runCatching { java.net.URI(Api.normalizeServer(it)).host?.lowercase() }.getOrNull() }
 
-/** http:// er bare tillatt til den lokale standardadressen (network_security_config). */
-fun cleartextBlocked47(u: String): Boolean {
-    val t = u.trim()
-    if (!t.startsWith("http://", true)) return false
-    return hostOf47(t) != hostOf47(DEFAULT_LOCAL47)
-}
+/** Prompt 86: http:// er bare tillatt på lokalt nett (Lokal86.kt) – ikke lenger bare til én fast adresse. */
+fun cleartextBlocked47(u: String): Boolean = !Lokal86.ok(u)
 
 /** Offentlig konfig fra en adresse, uten token: (publicUrl, localUrl). null = svarer ikke. Kaster ikke. */
 internal suspend fun probeConfig47(url: String, timeout: Int): Pair<String?, String?>? {
@@ -112,7 +108,7 @@ fun AppViewModel.probe47(which: String, url: String) {
     val s = p47
     val u = url.trim()
     if (!validUrl41(u)) { s.status[which] = SrvStatus47(false, note = "Adressen må starte med http:// eller https://"); return }
-    if (cleartextBlocked47(u)) { s.status[which] = SrvStatus47(false, note = "Android tillater bare http:// til ${hostOf47(DEFAULT_LOCAL47)}. Bruk https://."); return }
+    if (cleartextBlocked47(u)) { s.status[which] = SrvStatus47(false, note = Lokal86.MSG); return }
     s.status[which] = SrvStatus47(null)
     launch47 {
         val t0 = System.currentTimeMillis()
