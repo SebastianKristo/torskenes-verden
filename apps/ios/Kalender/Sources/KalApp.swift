@@ -60,11 +60,23 @@ struct KalAppRoot: View {
             .task { await KalAppRoot.start() }
     }
     #else
+    @MainActor private var ask86: KalLinkAsk86 { KalLinkAsk86.shared }
+
     var body: some View {
-        KalThemed()
+        // Prompt 86: lenker utenfra som vil utføre noe (kalender://glimt?q=…) må bekreftes først (KalLinks.swift).
+        let shown86: Bool = ask86.shown
+        let text86: String = ask86.text
+        let on86: Binding<Bool> = Binding<Bool>(get: { shown86 }, set: { (v: Bool) in if !v { KalLinkAsk86.shared.shown = false } })
+        return KalThemed()
             .onOpenURL { (url: URL) in KalLinks.handle(url) }
             .onContinueUserActivity(NSUserActivityTypeBrowsingWeb) { (a: NSUserActivity) in
                 if let u = a.webpageURL { KalLinks.handle(u) }
+            }
+            .alert("Vil du sende dette til Glimt?", isPresented: on86) {
+                Button("Avbryt", role: .cancel) { KalLinkAsk86.shared.cancel() }
+                Button("Utfør") { KalLinkAsk86.shared.run() }
+            } message: {
+                Text(text86)
             }
             .task { await KalAppRoot.start() }
     }

@@ -40,10 +40,10 @@ final class Kal84Host {
     func show(_ url: URL?) {
         prepare()
         if vc != nil {
-            if let url { KalLinks.handle(url) }
+            if let url { KalLinks.handle(url, trusted: true) }
             return
         }
-        if let url { KalLinks.handle(url) }
+        if let url { KalLinks.handle(url, trusted: true) }
         present(0)
     }
 

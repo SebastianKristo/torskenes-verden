@@ -62,11 +62,38 @@ enum MacLinks45 {
         Task { @MainActor in MacLinks45.flush() }
     }
 
+    /// Prompt 86: (spørsmål, tekst) når lenken vil utføre en handling, ellers nil. Samme «tom»-regel som MacLinks.handle.
+    static func action86(_ url: URL) -> (String, String)? {
+        let host: String = (url.host ?? "").lowercased()
+        let items: [URLQueryItem] = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
+        func q(_ k: String) -> String {
+            items.first(where: { (i: URLQueryItem) -> Bool in i.name == k })?.value ?? ""
+        }
+        let text: String = q("text")
+        let ask: String = q("q")
+        if (host == "ny" || host == "new") && !text.isEmpty { return ("Vil du legge til denne hendelsen?", text) }
+        if (host == "glimt" || host == "spor") && !ask.isEmpty { return ("Vil du sende dette til Glimt?", ask) }
+        return nil
+    }
+
+    /// Avbryt er standardknappen (Enter), så en lenke aldri utføres ved et uhell.
+    static func confirm86(_ title: String, _ text: String) -> Bool {
+        let a: NSAlert = NSAlert()
+        a.messageText = title
+        a.informativeText = String(text.prefix(300))
+        a.addButton(withTitle: "Avbryt")
+        a.addButton(withTitle: "Utfør")
+        return a.runModal() == .alertSecondButtonReturn
+    }
+
     private static func flush() {
         guard let url = queued else { return }
         queued = nil
         let t0: Date = receivedAt
         MacApp.showMain { (w: MacWin) in
+            // Prompt 86: lenker som utfører noe (ny?text=… legger til, glimt?q=… sender) kan komme fra nettsider og andre
+            // apper – spør først. Widgetene har bare lenker som åpner en side.
+            if let a = MacLinks45.action86(url), !MacLinks45.confirm86(a.0, a.1) { return }
             MacLinks.handle(url, win: w, animated: false)
             let ms: Int = Int(Date().timeIntervalSince(t0) * 1000)
             let h: String = url.host ?? ""

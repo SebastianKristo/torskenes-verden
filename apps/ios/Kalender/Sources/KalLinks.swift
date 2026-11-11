@@ -13,10 +13,20 @@ import SwiftUI
 // kalender://login                 Homelab-appen har skrevet innloggingen til App Group
 // kalender://auth?code=…&state=…   Prompt 41: svaret fra Homelab etter «Logg inn med Homelab-appen»
 // https://kalender.kristo.no/d/2026-10-21 (Universal Link, krever associated domains) → samme som dag/
+//
+// Prompt 86: kalender://glimt?q=… UTFØRER noe (spørsmålet sendes til Glimt, som kan opprette avtaler). Kommer lenken utenfra
+// (onOpenURL / universell lenke – nettsider og andre apper kan åpne kalender://), spør appen først: «Vil du sende dette til
+// Glimt?» Avbryt / Utfør (KalLinkAsk86, varselet ligger i KalAppRoot). Appens egne kall (varsler via UNNotificationResponse,
+// Homelab-appen innebygd) sender trusted: true og virker som før. Widgetene har bare lenker som åpner en side.
 
 @MainActor
 enum KalLinks {
-    static func handle(_ url: URL) {
+    /// trusted: false (standard) = lenken kan komme utenfra; handlinger må bekreftes først.
+    static func handle(_ url: URL, trusted: Bool = false) {
+        if !trusted, let text = actionText86(url) {
+            KalLinkAsk86.shared.ask(url, text)
+            return
+        }
         let s: KalStore = KalStore.shared
         let scheme: String = (url.scheme ?? "").lowercased()
         var host: String = (url.host ?? "").lowercased()
@@ -71,6 +81,15 @@ enum KalLinks {
             s.anchor = KalD.todayKey()
             if let d = q("date"), KalD.valid(d) { s.anchor = d; s.view = "dag" }
         }
+    }
+
+    /// Prompt 86: teksten en lenke vil sende til Glimt (kalender://glimt?q=…). nil = lenken åpner bare en side.
+    static func actionText86(_ url: URL) -> String? {
+        let host: String = (url.host ?? "").lowercased()
+        guard host == "glimt" || host == "spor" else { return nil }
+        let items: [URLQueryItem] = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
+        let v: String = items.first(where: { (i: URLQueryItem) -> Bool in i.name == "q" })?.value ?? ""
+        return v.isEmpty ? nil : v
     }
 
     static func minutes(_ v: String?) -> Int? {
@@ -129,5 +148,34 @@ enum KalLinks {
             if let start { return e.s == start }
             return true
         }
+    }
+}
+
+/// Prompt 86: en lenke utenfra som vil utføre en handling venter her til brukeren har svart (Avbryt / Utfør).
+@MainActor
+@Observable
+final class KalLinkAsk86 {
+    static let shared: KalLinkAsk86 = KalLinkAsk86()
+    var shown: Bool = false
+    var text: String = ""
+    private var url: URL? = nil
+
+    func ask(_ u: URL, _ t: String) {
+        url = u
+        text = String(t.prefix(300))
+        shown = true
+    }
+
+    /// «Utfør»: lenken kjøres én gang, nå som bekreftet.
+    func run() {
+        shown = false
+        guard let u = url else { return }
+        url = nil
+        KalLinks.handle(u, trusted: true)
+    }
+
+    func cancel() {
+        shown = false
+        url = nil
     }
 }

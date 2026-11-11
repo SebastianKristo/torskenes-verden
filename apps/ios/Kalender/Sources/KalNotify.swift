@@ -173,7 +173,8 @@ final class KalNotifyDelegate: NSObject, UNUserNotificationCenterDelegate {
             return
         }
         if let s = info["url"] as? String, let url = URL(string: s) {
-            Task { @MainActor in KalLinks.handle(url) }
+            // Prompt 86: appens eget varsel (ikke en lenke utenfra).
+            Task { @MainActor in KalLinks.handle(url, trusted: true) }
         }
         completionHandler()
     }
