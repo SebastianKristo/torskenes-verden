@@ -31,6 +31,7 @@ import { createCipheriv, createDecipheriv, createHash, createSign, randomBytes, 
 import { db, kv } from './db.js';
 import { cfg } from './settings.js';
 import { config } from './config.js';
+import { sessionSecret86 } from './secret86.js'; // prompt 86
 import { sessionUser, userInfo, isAdmin, listUsers } from './auth.js';
 import { bearerOk } from './finans/routes.js';
 import { settings as fhSettings } from './finans/db.js';
@@ -196,7 +197,7 @@ const mockGsc = () => MOCK && !gscFetch && !googleClient().id;
 const fetchG = (url, init = {}) => (gscFetch ?? (mockGsc() ? fakeGoogle : fetch))(url, { ...init, signal: init.signal ?? AbortSignal.timeout(20_000) });
 
 // Refresh-tokenet krypteres med en nøkkel avledet PER BRUKER (HKDF fra SECRET_KEY/SESSION_SECRET + bruker-id).
-const userKey = (user) => Buffer.from(hkdfSync('sha256', process.env.SECRET_KEY || config.sessionSecret || 'dev', `gsc:${user}`, 'nordlys-gsc-token-v1', 32));
+const userKey = (user) => Buffer.from(hkdfSync('sha256', process.env.SECRET_KEY || sessionSecret86('dev'), `gsc:${user}`, 'nordlys-gsc-token-v1', 32));
 function sealFor(user, text) {
   const iv = randomBytes(12), c = createCipheriv('aes-256-gcm', userKey(user), iv);
   const ct = Buffer.concat([c.update(String(text), 'utf8'), c.final()]);

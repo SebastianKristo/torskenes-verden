@@ -23,6 +23,7 @@ import uiApi from './ui.js';
 import backgroundApi, { hasBackgroundTest, testBackgrounds } from './background.js';
 import mobileApi, { meOut, removeAvatar, shortcutsFor, layoutOf, authOrToken, designOf } from './mobile.js';
 import rssApi, { startRssWorker } from './rss.js';
+import { mountLocalFetch86, migrateLocalHosts86 } from './localfetch86.js'; // prompt 86: godkjente lokale verter for RSS/iCal (admin: /api/admin/local-fetch-hosts)
 import { faviconHandler46 } from './news46.js'; // prompt 46 (SERVER46)
 import { news73Api } from './news73.js'; // prompt 73 (NEWS73)
 import iconsApi from './icons.js';
@@ -184,6 +185,7 @@ mountFermion53(app); // prompt 53 (FERMION53): /api/admin/fermion53/{health,conf
 mountDal53(app); // prompt 53 (DAL53): /api/admin/dal53/{health,preload}, /api/emo53/suggest, /api/voice53/*; Moderator foran /api/chat/files og /api/img
 mountWhisper54(app); // prompt 54 (WHISPER54): /api/admin/whisper54/{health,config,test} (bare admin)
 mountVoxcpm57(app); // prompt 57 (VOX57): /api/voices57*, /api/admin/voxcpm57/{health,config,test}
+mountLocalFetch86(app, authOrToken); // prompt 86: GET|PUT /api/admin/local-fetch-hosts (bare admin)
 mountOmlx58(app); // prompt 58 (OMLX58): /api/admin/omlx58/{health,config,test} (bare admin)
 app.route('/api', auth44Api); // prompt 44: POST /api/auth/refresh og POST /api/apps/kalender/log
 app.get('/hl/:token', hlPage41); // prompt 41: Hjemlys-statusside for kontakter uten Papir (24 t)
@@ -935,6 +937,7 @@ app.get('/mat/calendar.ics', matCalendar);
 // Prompt 51 (OPS51): OPS51_SANDBOX=1 = testet gjenoppretting / staging-kopi mot en kopi av databasen: ingen bakgrunnsjobber
 // (ingen varsler, e-post, backup, oppdateringer eller selvreparasjon). Bare HTTP-serveren og migreringene kjører.
 const BG51 = process.env.NODE_ENV !== 'test' && process.env.OPS51_SANDBOX !== '1';
+migrateLocalHosts86().catch((e) => console.warn('[localfetch]', e.message)); // prompt 86: én gang – lokale verter i administratorenes abonnementer godkjennes
 if (BG51) { startMatScheduler(); startTrackingWorker(); startRssWorker(); startBirthdayWorker(); startSystemBackupScheduler(); startUpdateScheduler(); startTrialScheduler(); startDomainGlimtScheduler(); startSpaceScheduler(); startApi38(); startApi40(); startHealth42(); startMediaWatch43(); startMedia50(); startLogs44(); startPlayback44(); }
 if (BG51) { startAccounts46(); startGphoto46(); } // prompt 46 (DATA46)
 if (process.env.NODE_ENV !== 'test') startOps51(); // prompt 51 (OPS51): planlegger (backup, testet gjenoppretting, vedlikehold) og migrasjonslogg

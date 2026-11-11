@@ -1,6 +1,7 @@
 // Tofaktor (TOTP, RFC 6238) uten eksterne pakker: base32, koder, kryptering av hemmeligheten og QR-kode som SVG.
 import { createHmac, createCipheriv, createDecipheriv, createHash, hkdfSync, randomBytes, timingSafeEqual } from 'node:crypto';
 import { config } from './config.js';
+import { sessionSecret86 } from './secret86.js'; // prompt 86
 
 /* ---------------- Base32 (RFC 4648, uten padding) ---------------- */
 
@@ -70,7 +71,7 @@ export const otpauthUrl = (username, secretB32, issuer = 'Homelab') =>
 function encKey() {
   const k = process.env.TOTP_ENC_KEY;
   if (k) return /^[0-9a-f]{64}$/i.test(k) ? Buffer.from(k, 'hex') : createHash('sha256').update(k).digest();
-  return Buffer.from(hkdfSync('sha256', config.sessionSecret || 'dev', 'homelab-totp', 'totp-secret-v1', 32));
+  return Buffer.from(hkdfSync('sha256', sessionSecret86('dev'), 'homelab-totp', 'totp-secret-v1', 32));
 }
 
 export function encryptSecret(buf) {
@@ -91,7 +92,7 @@ export function decryptSecret(s) {
 /* ---------------- Gjenopprettingskoder ---------------- */
 
 // 10 engangskoder à 10 base32-tegn (50 bit). Lagres som HMAC, aldri i klartekst.
-export const recoveryHash = (code) => createHmac('sha256', config.sessionSecret || 'dev').update('recovery:' + String(code).toUpperCase().replace(/[^A-Z2-7]/g, '')).digest('hex');
+export const recoveryHash = (code) => createHmac('sha256', sessionSecret86('dev')).update('recovery:' + String(code).toUpperCase().replace(/[^A-Z2-7]/g, '')).digest('hex');
 
 export function newRecoveryCodes(n = 10) {
   return Array.from({ length: n }, () => { const s = base32Encode(randomBytes(7)).slice(0, 10); return `${s.slice(0, 5)}-${s.slice(5)}`; });

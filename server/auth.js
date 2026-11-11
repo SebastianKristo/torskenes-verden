@@ -2,6 +2,7 @@ import { randomBytes, createHmac } from 'node:crypto';
 import { getCookie, setCookie, deleteCookie } from 'hono/cookie';
 import { db, kv, OWNER } from './db.js';
 import { config } from './config.js';
+import { sessionSecret86 } from './secret86.js'; // prompt 86
 import { hashPassword, verifyPassword } from './password.js';
 import { passwordHash as legacyPasswordHash, setPasswordHash as setLegacyPasswordHash } from './settings.js';
 import { blocked51, fail51, clear51 } from './ratelimit51.js'; // prompt 51 (SEC51)
@@ -11,7 +12,7 @@ const COOKIE = 'hl_sid';
 const MAX_AGE = 60 * 60 * 24 * 30; // 30 dager
 
 // Sesjons-ID lagres hashet med SESSION_SECRET, så en lekket database ikke gir gyldige cookies.
-const sidKey = (sid) => createHmac('sha256', config.sessionSecret || 'dev').update(sid).digest('hex');
+const sidKey = (sid) => createHmac('sha256', sessionSecret86('dev')).update(sid).digest('hex');
 
 /* ---------------- Brukere ---------------- */
 

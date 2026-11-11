@@ -25,7 +25,7 @@ import { cfg, runAsUser } from './settings.js';
 import { cached } from './cache.js';
 import { addEventSource, typeOf } from './calendar.js';
 import { parseIcs, expandIcs } from './ical-expand.js';
-import { safeUrl } from './glimt35.js';
+import { guardedFetch86, approveIfAdmin86 } from './localfetch86.js'; // prompt 86: SSRF-vern, lokale verter må være godkjent av admin
 
 const MOCK = () => process.env.MOCK_DATA === '1';
 export const PALETTE = ['#b23a2a', '#e8794a', '#a8661a', '#c9a227', '#2f7a4f', '#3d7f8a', '#2b5d8a', '#5b4fc4', '#8a3fa0', '#c2477a', '#6b665c', '#1b1a17'];
@@ -35,7 +35,7 @@ const MAX_EXT = 30;
 const pad = (n) => String(n).padStart(2, '0');
 const hashOf = (s) => createHash('sha1').update(String(s)).digest('hex');
 
-let F = (u, i) => fetch(u, i), injected = false;
+let F = (u, i) => fetch(u, i), injected = false; // Home Assistant (serveroppsett) og tester; iCal-lenker går via guardedFetch86
 /** Bare for tester. */
 export const _setKal35Fetch = (fn) => { F = fn ?? ((u, i) => fetch(u, i)); injected = !!fn; };
 
@@ -81,12 +81,12 @@ function mockIcs(url) {
 /** Henter lenken (ETag/If-Modified-Since). → {text|null (304), etag, lastModified} */
 async function fetchIcs(url, meta = {}, admin = true) {
   if (MOCK() && !injected) return { text: mockIcs(url), etag: null, lastModified: null };
-  if (!injected && !admin && !(await safeUrl(url))) throw new Error('Lenken peker til en privat adresse');
   const headers = { 'User-Agent': 'homelab-os kalender', Accept: 'text/calendar, */*' };
   if (meta.etag) headers['If-None-Match'] = meta.etag;
   if (meta.lastModified) headers['If-Modified-Since'] = meta.lastModified;
   let r;
-  try { r = await F(url, { headers, signal: AbortSignal.timeout(15_000) }); } catch (e) { throw new Error(`Fikk ikke kontakt (${e.cause?.code ?? e.name})`); }
+  // Prompt 86: lokale adresser hentes bare når verten er godkjent av en administrator (før: alltid for admin, aldri for andre).
+  try { r = await (injected ? F : guardedFetch86)(url, { headers, signal: AbortSignal.timeout(15_000) }); } catch (e) { if (e.code === 'ELOCAL86') throw e; throw new Error(`Fikk ikke kontakt (${e.cause?.code ?? e.name})`); }
   if (r.status === 304) return { text: null, etag: meta.etag, lastModified: meta.lastModified };
   if (!r.ok) throw new Error(`Serveren svarte ${r.status}`);
   const text = await r.text();
@@ -123,6 +123,7 @@ export async function addIcal(u, b) {
   const s = store(u);
   if (s.ical.length + s.ha.length >= MAX_EXT) return { error: `Du kan ha maks ${MAX_EXT} abonnementer` };
   if (s.ical.some((c) => c.url === url)) return { error: 'Du abonnerer allerede på denne kalenderen', status: 409 };
+  if (!injected) await approveIfAdmin86(u, url).catch(() => {}); // prompt 86: en admin som selv legger inn en lokal adresse, godkjenner verten
   let r;
   try { r = await fetchIcs(url, {}, isAdmin(u)); } catch (e) { return { error: `Fikk ikke hentet kalenderen: ${e.message}` }; }
   const id = `ical-${randomBytes(5).toString('hex')}`;

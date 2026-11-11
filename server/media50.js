@@ -18,6 +18,7 @@ import { spawn } from 'node:child_process';
 import { mkdir, readFile, writeFile, rename, readdir, unlink, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { config } from './config.js';
+import { sessionSecret86 } from './secret86.js'; // prompt 86
 import { authOrToken } from './mobile.js';
 import { isAdmin, userInfo } from './auth.js';
 import * as M from './media43.js';
@@ -280,7 +281,7 @@ export async function precomputeAll50() {
 export async function _drain50() { await drain(); while (preRunning || pre.size) { await new Promise((r) => setTimeout(r, 20)); await drain(); } }
 
 /* ---- Signerte adresser (bilder uten header i AsyncImage/Coil/<img>) og plakat-objektet i listene ---- */
-const SECRET = config.sessionSecret && config.sessionSecret.length >= 16 ? `bilde50:${config.sessionSecret}` : randomBytes(32).toString('hex');
+const SECRET = sessionSecret86().length >= 16 ? `bilde50:${sessionSecret86()}` : randomBytes(32).toString('hex');
 const sig = (type, id, variant, v, uid) => createHmac('sha256', SECRET).update(`b50|${type}|${id}|${variant}|${v}|${uid}`).digest('base64url').slice(0, 22);
 const BILDE_RE = /^\/api\/media\/bilde\/(serie|film)\/(\d+)\/(poster|fanart|banner)\?(.*)$/;
 function withW(url, w) { return url.replace(/([?&])w=\d+/, `$1w=${w}`); }

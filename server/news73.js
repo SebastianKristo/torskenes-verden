@@ -109,6 +109,8 @@ function safeLookup(host, opts, cb) {
 const agent = new Agent({ connect: { lookup: safeLookup, timeout: TIMEOUT } });
 let F = (u, i) => undiciFetch(u, { ...i, dispatcher: agent });
 let injected = false;
+/** Prompt 86 (localfetch86.js): hent via den vernede agenten (private adresser avvises ved tilkoblingen, feilkode ESSRF). */
+export const safeFetch73 = (u, i) => F(u, i);
 /** Bare for tester: {fetch(url, init) → Response, resolve(host) → [ip]}. null tilbakestiller. */
 export function _setNet73(o) {
   F = o?.fetch ?? ((u, i) => undiciFetch(u, { ...i, dispatcher: agent }));

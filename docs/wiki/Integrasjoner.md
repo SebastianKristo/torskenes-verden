@@ -123,6 +123,9 @@ Gir timeplanen, prøver og frister i **Kalender**. Settes opp per bruker under *
 
 Kalenderen hentes på nytt hver time. Se [Kalender og Bursdager](Kalender-og-Bursdager) for hvordan hendelsene tolkes.
 
+> [!NOTE]
+> **iCal og RSS fra hjemmenettet** (for eksempel Nextcloud eller Home Assistant på `192.168.x.x` eller `navn.local`): serveren henter bare lokale adresser når verten er godkjent av en administrator under **Innstillinger → Sikkerhet → Lokale adresser (RSS og iCal)**. Legger en administrator selv til adressen, godkjennes verten automatisk. Andre brukere får beskjeden «Lokale adresser må godkjennes av en administrator (Innstillinger → Sikkerhet).»
+
 ---
 
 ## Plex og Jellyfin
@@ -402,7 +405,7 @@ Groq er en valgfri sky-motor for tekstsvar. Den brukes ikke til kvitteringer.
    # Avslutt Ollama fra menylinjen og åpne den igjen
    ```
 3. Sjekk fra serveren: `curl http://192.168.1.30:11434/api/tags`
-4. **Innstillinger → AI → Tjenester → Ollama:** adressen `http://192.168.1.30:11434`, og trykk **Test**.
+4. **Innstillinger → AI → Tjenester → Ollama:** skriv adressen til maskinen din, for eksempel `http://192.168.1.30:11434`, og trykk **Test**. Det finnes ingen standardadresse: uten adresse her (eller `OLLAMA_URL` i `.env`) er Ollama «ikke satt opp».
 5. **Innstillinger → AI → Modeller:** trykk **Installer** på modellene du vil ha. Fremdriften vises.
 
 **Anbefalte modeller for 16 GB** (modellen må få plass sammen med macOS, og rundt 10–11 GB er trygt):

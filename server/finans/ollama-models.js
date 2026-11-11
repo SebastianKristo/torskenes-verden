@@ -20,11 +20,15 @@ export const CATALOG = [
   { name: 'gemma3:27b', size: 17, vision: true, use: ['receipts', 'text'], note: 'For stor for 16 GB.', tooBig: true },
 ];
 
-const base = () => settings().ollamaUrl.replace(/\/$/, '');
+const base = () => String(settings().ollamaUrl ?? '').replace(/\/$/, '');
+// Prompt 86: uten adresse (ingen OLLAMA_URL, ingenting lagret) er Ollama ikke satt opp – si det, i stedet for å prøve en tom adresse.
+const NOT_SET = 'Ollama er ikke satt opp (adresse mangler). Legg inn adressen under Innstillinger → AI.';
+const needBase = () => { if (!base()) throw Object.assign(new Error(NOT_SET), { status: 501, code: 'ollama_not_configured' }); };
 const same = (a, b) => a === b || a === `${b}:latest` || `${a}:latest` === b;
 
 /** Installerte modeller og katalogen med «installert»-merke. Kaster med norsk melding når Ollama ikke svarer. */
 export async function ollamaModels() {
+  needBase();
   let r;
   try { r = await fetch(`${base()}/api/tags`, { signal: AbortSignal.timeout(5000) }); }
   catch (e) { throw Object.assign(new Error(`Ollama kan ikke nås på ${base()} (${e.cause?.code || e.name})`), { status: 502 }); }
@@ -53,6 +57,7 @@ export const pullStatus = () => pullsOut();
 
 /** Starter `ollama pull` for modellen. Fremdriften leses fra Ollamas strøm og kan hentes med pullStatus(). */
 export function startPull(name) {
+  needBase();
   const model = String(name ?? '').trim();
   if (!/^[a-z0-9][a-z0-9._\-/]*(?::[a-z0-9._\-]+)?$/i.test(model) || model.length > 80) throw Object.assign(new Error('Ugyldig modellnavn'), { status: 400 });
   const cur = pulls.get(model);

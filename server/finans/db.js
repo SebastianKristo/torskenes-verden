@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'node:crypto';
 import { db, OWNER, kv } from '../db.js';
 import { config } from '../config.js';
+import { sessionSecret86 } from '../secret86.js'; // prompt 86
 import { currentUser, userCfg, userCfgSet, setUserCfg } from '../settings.js';
 
 // ISO2: regnskapet er per bruker. me() = brukeren i denne forespørselen/jobben (routes.js kjører hver forespørsel i
@@ -334,7 +335,8 @@ const DEFAULT_RULES = [['REMA*', 'Mat og dagligvarer'], ['KIWI*', 'Mat og daglig
 export const DEFAULT_SETTINGS = {
   name: '', currency: 'NOK', monthStart: 1, yearGoal: 120000,
   provider: process.env.AI_PROVIDER === 'gemini' ? 'gemini' : 'ollama', fallback: (process.env.AI_FALLBACK ?? 'gemini') !== 'none',
-  ollamaUrl: process.env.OLLAMA_URL ?? 'http://192.168.1.30:11434', ollamaModel: process.env.OLLAMA_MODEL ?? 'qwen2.5vl:7b', ollamaTextModel: process.env.OLLAMA_TEXT_MODEL ?? '',
+  // Prompt 86: ingen standardadresse. Uten OLLAMA_URL eller lagret adresse (AI-kontroll) er Ollama «ikke satt opp».
+  ollamaUrl: process.env.OLLAMA_URL ?? '', ollamaModel: process.env.OLLAMA_MODEL ?? 'qwen2.5vl:7b', ollamaTextModel: process.env.OLLAMA_TEXT_MODEL ?? '',
   geminiModel: process.env.GEMINI_MODEL ?? 'gemini-flash-latest', groqModel: process.env.GROQ_MODEL ?? '', groqVisionModel: process.env.GROQ_VISION_MODEL ?? '', roboflowWorkflow: process.env.ROBOFLOW_WORKFLOW ?? '', minConf: Math.round(Number(process.env.AI_MIN_CONFIDENCE ?? 0.85) * 100),
   autoCat: true, n80: true, n100: true, nRc: true, nFast: true, csvProfile: 'DNB', aiSummaries: true,
   // Kvitteringer fra e-post (Proton Mail via Bridge, eller vanlig IMAP). Passordet ligger i hemmelighetene (imapPass).
@@ -409,7 +411,7 @@ export function saveSettings(patch, u = me()) {
 // Hemmeligheter for FinansHub (Gemini, Trading 212, SMB, IMAP) lagres separat, kryptert med AES-256-GCM, og sendes aldri ut.
 // Nøkkelen avledes fra SECRET_KEY (eller SESSION_SECRET). Byttes den, må hemmelighetene legges inn på nytt.
 const SECRET_ENV = { openaiKey: 'OPENAI_API_KEY', elevenlabsKey: 'ELEVENLABS_API_KEY', azureSpeechKey: 'AZURE_SPEECH_KEY', geminiKey: 'GEMINI_API_KEY', groqKey: 'GROQ_API_KEY', roboflowKey: 'ROBOFLOW_API_KEY', imapPass: ['IMAP_PASSWORD', 'FINN_IMAP_PASSWORD'], t212Key: 'TRADING212_API_KEY', t212Secret: 'TRADING212_API_SECRET', smbPass: 'SMB_PASSWORD', backupPhrase: 'BACKUP_PASSPHRASE', macOcrKey: 'MAC_OCR_KEY' };
-const sealKey = () => createHash('sha256').update('fh-secret:' + (process.env.SECRET_KEY || config.sessionSecret || 'dev')).digest();
+const sealKey = () => createHash('sha256').update('fh-secret:' + (process.env.SECRET_KEY || sessionSecret86('dev'))).digest();
 export function seal(text) {
   const iv = randomBytes(12), c = createCipheriv('aes-256-gcm', sealKey(), iv);
   const enc = Buffer.concat([c.update(String(text), 'utf8'), c.final()]);

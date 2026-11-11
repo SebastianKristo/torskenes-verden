@@ -72,7 +72,7 @@ async function embed(texts, m, signal = null, priority = 'interactive') {
   if (m.kind === 'ollama') {
     // Prompt 43: via Ollama-gaten (kø, keep_alive per modell). Grensen er motorens grense fra Tidsgrenser (kald modell: loadTimeout).
     try {
-      const out = await gateEmbed({ model: m.model, input: texts, base: settings().ollamaUrl.replace(/\/$/, ''), signal, priority, timeoutMs: aiTimeoutsOf().ollama * 1000, label: 'Finans · søkeindeks' });
+      const out = await gateEmbed({ model: m.model, input: texts, base: String(settings().ollamaUrl ?? '').replace(/\/$/, ''), signal, priority, timeoutMs: aiTimeoutsOf().ollama * 1000, label: 'Finans · søkeindeks' });
       return out.embeddings;
     } catch (e) {
       if (e?.kind === 'cancelled') throw e;

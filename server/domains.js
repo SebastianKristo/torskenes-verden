@@ -6,6 +6,7 @@ import { readFile } from 'node:fs/promises';
 import { connect } from 'node:tls';
 import { promises as dnsp } from 'node:dns';
 import { db } from './db.js';
+import { sessionSecret86 } from './secret86.js'; // prompt 86
 import { cfg } from './settings.js';
 import { cached, peek } from './cache.js';
 import * as auth from './auth.js';
@@ -28,7 +29,7 @@ CREATE TABLE IF NOT EXISTS hl_uptime (domain TEXT NOT NULL, day TEXT NOT NULL, o
 `);
 
 // AES-256-GCM med nøkkel avledet fra SESSION_SECRET.
-const KEY = scryptSync(process.env.SESSION_SECRET || 'homelab-os', 'hl-domains-v1', 32);
+const KEY = scryptSync(sessionSecret86('homelab-os', true), 'hl-domains-v1', 32);
 function enc(text) {
   if (!text) return null;
   const iv = randomBytes(12), c = createCipheriv('aes-256-gcm', KEY, iv);

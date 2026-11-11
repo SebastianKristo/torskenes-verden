@@ -11,6 +11,7 @@
 import { Hono } from 'hono';
 import { db, kv } from './db.js';
 import { config } from './config.js';
+import { guardedFetch86, approveIfAdmin86 } from './localfetch86.js'; // prompt 86: SSRF-vern, lokale verter må være godkjent av admin
 import { aiJson } from './homeos-common.js';
 import { authOrToken, languageOf } from './mobile.js';
 import { ICON_DEFAULTS, validId as validIconId } from './icons.js';
@@ -192,7 +193,7 @@ function mockFeed(url) {
 
 async function fetchFeed(url) {
   if (MOCK) return mockFeed(url);
-  const res = await fetch(url, { headers: { 'User-Agent': config.metUserAgent, Accept: 'application/rss+xml, application/atom+xml, application/xml, text/xml;q=0.9, */*;q=0.5' }, redirect: 'follow', signal: AbortSignal.timeout(10_000) });
+  const res = await guardedFetch86(url, { headers: { 'User-Agent': config.metUserAgent, Accept: 'application/rss+xml, application/atom+xml, application/xml, text/xml;q=0.9, */*;q=0.5' }, redirect: 'follow', signal: AbortSignal.timeout(10_000) });
   if (!res.ok) throw new Error(`Kilden svarte ${res.status}`);
   const len = +(res.headers.get('content-length') ?? 0);
   if (len > 5 * 1024 * 1024) throw new Error('Feeden er for stor');
@@ -247,7 +248,7 @@ let pageFetch = null;
 /** Testene kan bytte ut hentingen av artikkelsider: fn(url) → Response eller HTML-tekst. */
 export const _setArticleFetch = (fn) => { pageFetch = fn; };
 async function fetchPage(url) {
-  const r = pageFetch ? await pageFetch(url) : await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 (homelab-nyhetsleser)', Accept: 'text/html,application/xhtml+xml' }, redirect: 'follow', signal: AbortSignal.timeout(8000) });
+  const r = pageFetch ? await pageFetch(url) : await guardedFetch86(url, { headers: { 'User-Agent': 'Mozilla/5.0 (homelab-nyhetsleser)', Accept: 'text/html,application/xhtml+xml' }, redirect: 'follow', signal: AbortSignal.timeout(8000) });
   if (typeof r === 'string') return r;
   if (!r.ok) throw new Error(`Siden svarte ${r.status}`);
   if (!/html|xml|text/i.test(r.headers.get('content-type') ?? 'text/html')) throw new Error('Ikke en nettside');
@@ -463,6 +464,7 @@ api.post('/feeds', async (c) => {
   if (db.prepare('SELECT 1 FROM rss_feed WHERE user=? AND url=?').get(user, url)) return c.json({ error: 'Kilden finnes allerede' }, 409);
   const category = b.category ?? 'auto';
   if (!validCat(category, user)) return c.json({ error: 'Ukjent kategori' }, 400);
+  await approveIfAdmin86(user, url).catch(() => {}); // prompt 86: en admin som selv legger inn en lokal adresse, godkjenner verten
   let parsed;
   try { parsed = await fetchFeed(url); } catch (e) { return c.json({ error: `Kunne ikke lese feeden: ${e.message}` }, 422); }
   const host = (() => { try { return new URL(url).hostname.replace(/^www\./, '').split('.')[0]; } catch { return 'Kilde'; } })();

@@ -2,6 +2,7 @@ import Database from 'better-sqlite3';
 import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { config } from './config.js';
+import './secret86.js'; // prompt 86: må lastes før databasen åpnes (avgjør «ny installasjon» ut fra om homelab.db finnes)
 import { bootStep } from './boot36.js'; // prompt 36: oppstartsstatus
 
 mkdirSync(join(config.dataDir, 'uploads'), { recursive: true });

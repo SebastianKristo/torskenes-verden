@@ -9,6 +9,7 @@ process.env.DATA_DIR = mkdtempSync(join(tmpdir(), 'hl-rss-'));
 process.env.SESSION_SECRET = 'test-secret-test-secret-test-secret-12';
 process.env.USER_NAME = 'Sebastian';
 delete process.env.MOCK_DATA;
+process.env.OLLAMA_URL = 'http://ollama.test:11434'; // prompt 86: ingen standardadresse lenger – testen har en Ollama (svarene kommer fra fakeFetch)
 const { hashPassword } = await import('../server/password.js');
 process.env.APP_PASSWORD_HASH = hashPassword('testpassord1');
 const { default: fin } = await import('../server/finans/routes.js');

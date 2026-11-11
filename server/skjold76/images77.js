@@ -7,6 +7,7 @@
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'node:crypto';
 import { deflateSync } from 'node:zlib';
 import { config } from '../config.js';
+import { sessionSecret86 } from '../secret86.js'; // prompt 86
 import { cfg } from '../settings.js';
 import { guardedGet73 } from '../news73.js';
 import { sniffImage50, magick50, toJpeg50 } from '../img50.js';
@@ -29,7 +30,7 @@ const gget = (u, o) => (_img77.guarded ?? guardedGet73)(u, o);
 
 /* ---------------- Signerte id-er ---------------- */
 
-const KEY = () => createHash('sha256').update(`skjold77-img|${process.env.SESSION_SECRET || config.sessionSecret || 'skjold77'}`).digest();
+const KEY = () => createHash('sha256').update(`skjold77-img|${process.env.SESSION_SECRET || sessionSecret86('skjold77')}`).digest();
 /** Kryptert og signert referanse {u, url, thumb, title, src, w, h, exp}. */
 export function sealId77(user, o, ttlS = TTL_S) {
   const iv = randomBytes(12);

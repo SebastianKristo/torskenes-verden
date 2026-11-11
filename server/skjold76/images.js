@@ -5,6 +5,7 @@ import { mkdirSync, writeFileSync, readFileSync, existsSync, unlinkSync } from '
 import { join, resolve } from 'node:path';
 import { randomBytes, createHmac, timingSafeEqual } from 'node:crypto';
 import { config } from '../config.js';
+import { sessionSecret86 } from '../secret86.js'; // prompt 86
 import { db } from '../db.js';
 import { toJpeg50, sniffImage50, magick50 } from '../img50.js';
 import { now76, thumbOf76 } from './store.js';
@@ -67,7 +68,7 @@ export function readImage76(user, name) {
 
 /* ---------------- Signerte bilde-URL-er (appenes bildelastere sender ikke alltid header) ---------------- */
 
-const SECRET = () => process.env.SESSION_SECRET || config.sessionSecret || 'skjold76';
+const SECRET = () => process.env.SESSION_SECRET || sessionSecret86('skjold76');
 const WEEK = 7 * 86400;
 const mac = (s) => createHmac('sha256', `skjold76|${SECRET()}`).update(s).digest('base64url').slice(0, 32);
 /** URL for en fil: gyldig 7–14 dager (utløp rundet til uka, så URL-en er stabil og kan caches). */

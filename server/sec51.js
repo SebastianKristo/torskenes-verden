@@ -16,6 +16,7 @@ import { join, resolve } from 'node:path';
 import { getCookie, setCookie } from 'hono/cookie';
 import { db, kv, OWNER } from './db.js';
 import { config } from './config.js';
+import { sessionSecret86, secretStatus86 } from './secret86.js'; // prompt 86
 import { sessionUser, createSession, rememberDevice, currentDeviceId, currentSessionId, userInfo, listUsers, isAdmin, isLan, trustIp, viaCloudflare,
   clientIp, checkPassword, cookieSecure, setAuthHook51 } from './auth.js';
 import { blocked51, fail51, clear51, list51, unlock51, onLock51, POLICY51 } from './ratelimit51.js';
@@ -53,9 +54,9 @@ CREATE INDEX IF NOT EXISTS sec51_passkeys_user ON sec51_passkeys(user);
 `);
 
 const MOCK = () => process.env.MOCK_DATA === '1';
-const hk = (v) => createHmac('sha256', config.sessionSecret || 'dev').update(`kd51:${v}`).digest('hex');
-const sidKey = (sid) => createHmac('sha256', config.sessionSecret || 'dev').update(sid).digest('hex'); // samme som auth.js
-const fhTokenKey = (t) => createHmac('sha256', config.sessionSecret || 'dev').update('fh:' + t).digest('hex'); // samme som finans/routes.js
+const hk = (v) => createHmac('sha256', sessionSecret86('dev')).update(`kd51:${v}`).digest('hex');
+const sidKey = (sid) => createHmac('sha256', sessionSecret86('dev')).update(sid).digest('hex'); // samme som auth.js
+const fhTokenKey = (t) => createHmac('sha256', sessionSecret86('dev')).update('fh:' + t).digest('hex'); // samme som finans/routes.js
 const sha = (v) => createHash('sha256').update(String(v)).digest('hex');
 const rid = (p) => `${p}${randomBytes(12).toString('base64url')}`;
 const iso = (t) => (t ? new Date(t).toISOString() : null);
@@ -414,7 +415,7 @@ function secretsRaw(user = OWNER, { admin = true } = {}) {
   const seenV = new Set(), seenId = new Set();
   return out.filter((x) => { if (seenId.has(x.id) || seenV.has(x.value)) return false; seenId.add(x.id); seenV.add(x.value); return true; });
 }
-const fpOf = (id, v) => createHmac('sha256', config.sessionSecret || 'dev').update(`sec51fp:${id}:${v}`).digest('hex').slice(0, 24);
+const fpOf = (id, v) => createHmac('sha256', sessionSecret86('dev')).update(`sec51fp:${id}:${v}`).digest('hex').slice(0, 24);
 /** Alder per nøkkel uten å lagre verdien: et fingeravtrykk (HMAC) per id; endres det, er nøkkelen rotert. */
 export function secrets51(user = OWNER, { admin = true, now = Date.now() } = {}) {
   const pol = policy51();
@@ -676,7 +677,7 @@ authed.get('/overview', (c) => {
   const rp = rp51(c);
   return c.json({ me: { passkeys: passkeysOf51(u), devices: mine, countries: kv.get(u, 'sec51_countries', []) ?? [], audit: auditList51({ user: u, limit: 20 }).items },
     pending: pend, passkeys: { available: !!rp, rpId: rp?.rpId ?? null, reason: rp ? null : 'Sett PUBLIC_URL (https) i .env for å bruke passkeys.' },
-    policy: policy51(), admin: adm, limits: adm ? list51(now) : undefined, lastScan: adm ? kv.get(OWNER, 'sec51_logscan', null) : undefined }, 200, { 'Cache-Control': 'no-store' });
+    policy: policy51(), admin: adm, secretWarning: adm ? secretStatus86().warning ?? undefined : undefined, limits: adm ? list51(now) : undefined, lastScan: adm ? kv.get(OWNER, 'sec51_logscan', null) : undefined }, 200, { 'Cache-Control': 'no-store' });
 });
 authed.get('/audit', (c) => {
   const u = c.get('user'), adm = isAdmin(u) && !c.get('impersonation')?.target;

@@ -85,6 +85,10 @@ ser og endrer dette. API: `/api/backup` (se `server/system-backup.js`).
 - **Innhold:** `db/homelab.db` (konsistent øyeblikksbilde med `db.backup()`; ved modul-utvalg bare modulenes tabeller og
   innstillinger), filmappene til modulene under `files/` og `manifest.json` (versjon, moduler, tabeller, sha256 per fil).
   Øktene tas aldri med.
+- **Hemmeligheten følger ikke med i arkivet:** `SESSION_SECRET` (i `.env`) eller fila `data/session-secret` (lages automatisk på en ny
+  installasjon uten `SESSION_SECRET`) må tas vare på ved siden av backupen. Uten den kan lagrede integrasjonsnøkler og 2FA i en
+  gjenopprettet database ikke leses. Restic-backupen (hele `data/`) tar med `session-secret`; for arkivene her må du kopiere den selv,
+  eller sette samme verdi som `SESSION_SECRET` i `.env` på den nye serveren.
 - **Format:** `.tar.zst` når `zstd` finnes på serveren, ellers `.tar.gz`. Kryptert: `.enc` (AES-256-GCM).
 - **Lagring:** `BACKUP_DIR` (standard `data/system-backups`). I Docker/Proxmox: bind-mount `/srv/backup:/srv/backup` og sett
   `BACKUP_DIR=/srv/backup` i `.env` (se `docker-compose.yml`). Eldre backuper slettes etter «Behold».

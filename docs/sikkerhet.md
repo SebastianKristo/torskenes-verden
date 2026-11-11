@@ -75,6 +75,15 @@ IP-en leses fra tilkoblingen, eller fra `CF-Connecting-IP` bak Cloudflare. Den l
 - **API-nøkler** i Integrasjoner og FinansHub (Gemini, Trading 212, SMB, IMAP, Cloudflare) lagres kryptert på serveren, og vises bare som «lagret».
 - **Nøkler i nettleseren:** ingen nøkler sendes til nettleseren. Alle eksterne kall går fra serveren.
 - **Tredjeparts-JS:** CSP-en (`script-src 'self'`) blokkerer inline-skript og tredjeparts-JS.
+- **Serverens hemmelighet:** `SESSION_SECRET` i `.env`. Er den ikke satt på en ny installasjon, lager serveren 48 tilfeldige byte og lagrer dem i `data/session-secret` (0600). En eldre installasjon uten `SESSION_SECRET` bruker fortsatt en fast reservenøkkel fra kildekoden og gir et varsel til administrator under **Innstillinger → Sikkerhet**: sett `SESSION_SECRET` i `.env` (`openssl rand -hex 32`) og start på nytt. Da blir alle logget ut, og lagrede integrasjonsnøkler må legges inn på nytt.
+
+## Lokale adresser i RSS og iCal
+
+RSS-kilder, artikkelsider og iCal-abonnementer hentes av serveren. For at en bruker ikke skal kunne bruke dem til å lese tjenester på hjemmenettet, hentes bare offentlige adresser: private, loopback-, link-local- og metadata-adresser (også når et navn peker dit via DNS, og etter omdirigering) avvises med «Lokale adresser må godkjennes av en administrator (Innstillinger → Sikkerhet).»
+
+- **Godkjente lokale verter:** en administrator kan godkjenne vertsnavn eller IP-adresser (maks 50) under **Innstillinger → Sikkerhet → Lokale adresser (RSS og iCal)**. API: `GET`/`PUT /api/admin/local-fetch-hosts` (`{hosts: [...]}`, bare admin). Godkjente verter kan brukes av alle brukere.
+- **Automatisk:** når en administrator selv legger til en RSS-kilde eller et iCal-abonnement med lokal adresse (for eksempel Nextcloud eller Home Assistant på hjemmenettet), legges verten på lista.
+- **Ved oppgradering:** lokale verter i abonnementene til administratorer godkjennes én gang. Andre brukeres lokale abonnementer slutter å hentes til en administrator godkjenner verten.
 
 ## Anbefalt drift
 

@@ -23,6 +23,7 @@ import { join, resolve } from 'node:path';
 import { createHash, randomBytes, randomInt, timingSafeEqual } from 'node:crypto';
 import { db, kv, OWNER } from './db.js';
 import { config } from './config.js';
+import { sessionSecret86 } from './secret86.js'; // prompt 86
 import { authOrToken } from './mobile.js';
 import { userInfo, listUsers, isAdmin, createUser, createSession, trustIp, serverName, rememberDevice } from './auth.js';
 import { broadcast } from './realtime.js';
@@ -571,7 +572,7 @@ export function setShare51(u, b) {
 const CODE_ABC = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // uten 0/O/1/I
 const newCode = () => { let s = ''; for (let i = 0; i < 8; i++) s += CODE_ABC[randomInt(CODE_ABC.length)]; return `${s.slice(0, 4)}-${s.slice(4)}`; };
 const normCode = (c) => String(c ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '');
-const codeHash = (id, code) => createHash('sha256').update(`onboard51:${config.sessionSecret || 'dev'}:${id}:${normCode(code)}`).digest('hex');
+const codeHash = (id, code) => createHash('sha256').update(`onboard51:${sessionSecret86('dev')}:${id}:${normCode(code)}`).digest('hex');
 const ID_RE = /^inv51_[A-Za-z0-9_-]{8,40}$/;
 const USERNAME_RE = /^[a-z0-9._-]{2,32}$/;
 const shareIn = (s, d = { location: false, health: false, calendar: true }) => ({

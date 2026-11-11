@@ -242,11 +242,12 @@ const RANK = [/^qwen2\.5vl:7b$/i, /^qwen2\.5vl/i, /^qwen3-?vl/i, /^gemma3/i, /^g
 const NAME_VISION = /vl\b|vl:|vision|llava|minicpm-v|gemma3|gemma4|moondream|bakllava/i;
 const rankOf = (n) => { const i = RANK.findIndex((re) => re.test(n)); return i < 0 ? RANK.length : i; };
 const visionCache = new Map(); // base → {at, model}
-const base = () => settings().ollamaUrl.replace(/\/$/, '');
+const base = () => String(settings().ollamaUrl ?? '').replace(/\/$/, '');
 const scaleMs = (ms) => Math.max(1, Math.round(ms * _aiTest.scale));
 export const OLLAMA_TIMEOUT_S = 120;
 
 async function ollamaJson(path, { method = 'GET', body, timeout = 5000 } = {}) {
+  if (!base()) throw shotError('ollama_down', 'Ollama er ikke satt opp (adresse mangler)'); // prompt 86
   let res;
   try { res = await F(`${base()}${path}`, { method, headers: { 'content-type': 'application/json' }, ...(body ? { body: JSON.stringify(body) } : {}), signal: AbortSignal.timeout(scaleMs(timeout)) }); }
   catch (e) { throw shotError('ollama_down', `${e.cause?.code || e.name}`); }

@@ -25,6 +25,7 @@ import { Hono } from 'hono';
 import { createHash, randomBytes } from 'node:crypto';
 import { db, kv } from './db.js';
 import { authOrToken, layoutOf } from './mobile.js';
+import { guardedFetch86, approveIfAdmin86 } from './localfetch86.js'; // prompt 86: SSRF-vern, lokale verter må være godkjent av admin
 import { broadcast } from './realtime.js';
 import { runAsUser, userCfg } from './settings.js';
 import { googleConnected, googleConfSet, googleCalendarList, calendarLinks } from './birthdays.js';
@@ -232,6 +233,7 @@ cals39Api.post('/migration', async (c) => {
 });
 cals39Api.post('/url/preview', async (c) => {
   const b = await c.req.json().catch(() => ({}));
+  await approveIfAdmin86(c.get('user'), normalizeIcalUrl(b?.url)).catch(() => {}); // prompt 86
   const r = await previewUrl(b?.url);
   return r.error ? bad(c, r.error) : c.json(r);
 });
@@ -318,10 +320,10 @@ async function previewUrl(raw) {
   if (process.env.MOCK_DATA === '1') return { ok: true, url, name: guessName(url), count: 42, subjects: ['FYS1000', 'MAT1100', 'IN2010'], mock: true };
   let text;
   try {
-    const r = await fetch(url, { headers: { 'User-Agent': 'homelab-os kalender', Accept: 'text/calendar, */*' }, signal: AbortSignal.timeout(15_000) });
+    const r = await guardedFetch86(url, { headers: { 'User-Agent': 'homelab-os kalender', Accept: 'text/calendar, */*' }, signal: AbortSignal.timeout(15_000) });
     if (!r.ok) return { error: `Serveren svarte ${r.status}` };
     text = await r.text();
-  } catch (e) { return { error: `Fikk ikke kontakt (${e.cause?.code ?? e.name})` }; }
+  } catch (e) { return { error: e.code === 'ELOCAL86' ? e.message : `Fikk ikke kontakt (${e.cause?.code ?? e.name})` }; }
   if (!/BEGIN:VCALENDAR/i.test(text)) return { error: 'Lenken ga ikke en iCal-kalender (.ics)' };
   const cal = parseIcs(text), now = Date.now();
   const items = expandIcs(cal, now, now + 120 * 86400_000);

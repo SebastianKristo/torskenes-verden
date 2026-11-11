@@ -2,6 +2,8 @@
 // Alle: passkeys (legg til / gi nytt navn / fjern), nye enheter som venter på godkjenning (Godkjenn / Avvis), kjente enheter,
 // egen innloggingslogg og egne nøkler (alder + «Roter»). Admin i tillegg: sperrer (innlogging, QR, app-token – «Lås opp»),
 // revisjonslogg for alle, serverens nøkler og hemmeligheter med alder og påminnelse, logg-skanner og regler.
+// Prompt 86: admin ser varsel når SESSION_SECRET mangler (gammel reservenøkkel) og kan godkjenne lokale verter for RSS/iCal
+// (GET|PUT /api/admin/local-fetch-hosts).
 // Data: /api/security51/* (SERVER51-API.md, SEC51). Monteres i settings.js som egen side (data-mount-host).
 import { esc } from './util.js';
 import { decodeOptions51, encodeCredential51, passkeySupported51 } from './sec51-login.js';
@@ -11,13 +13,20 @@ export const P51 = 'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6zM9 12l2 2 4-4';
 export const TABS51 = [['sikkerhet', 'Sikkerhet', 'Passkeys, nye enheter, innloggingslogg, sperrer og nøkler.', 'Sikkerhet', P51]];
 export const ALIAS51 = { security: 'sikkerhet', passkey: 'sikkerhet', passkeys: 'sikkerhet', revisjonslogg: 'sikkerhet', revisjon: 'sikkerhet', sperrer: 'sikkerhet', enheter51: 'sikkerhet', nokler: 'sikkerhet', hemmeligheter: 'sikkerhet' };
 
-const S = { d: null, err: '', msg: '', auditAll: false, audit: null, secrets: null, pw: null, rot: null, busy: false, scan: null, host: null };
+const S = { d: null, err: '', msg: '', auditAll: false, audit: null, secrets: null, pw: null, rot: null, busy: false, scan: null, host: null, lh: null };
 const when = (t) => (t ? new Date(t).toLocaleString('nb-NO', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '–');
 const ago = (d) => (d == null ? '' : d === 0 ? 'i dag' : d === 1 ? '1 dag' : `${d} dager`);
 const json = async (path, opts = {}) => {
   const r = await fetch(`/api/security51${path}`, { credentials: 'same-origin', cache: 'no-store', ...opts, headers: { ...(opts.body ? { 'Content-Type': 'application/json' } : {}), ...(opts.headers ?? {}) } });
   const j = await r.json().catch(() => ({}));
   if (!r.ok) throw Object.assign(new Error(j.error || `Feil ${r.status}`), { status: r.status, data: j });
+  return j;
+};
+// Prompt 86: godkjente lokale verter (RSS og iCal). hosts utelatt = les, ellers erstatt lista.
+const lhReq = async (hosts) => {
+  const r = await fetch('/api/admin/local-fetch-hosts', { credentials: 'same-origin', cache: 'no-store', ...(hosts ? { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ hosts }) } : {}) });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || `Feil ${r.status}`);
   return j;
 };
 const post = (path, body, method = 'POST') => json(path, { method, body: JSON.stringify(body ?? {}) });
@@ -42,16 +51,19 @@ async function load() {
   try { S.d = await json('/overview'); S.err = ''; } catch (e) { S.err = e.message; }
   try { S.secrets = (await json('/secrets')).secrets; } catch { S.secrets = null; }
   try { S.audit = (await json(`/audit?limit=60${S.auditAll ? '&all=1' : ''}`)).items; } catch { S.audit = null; }
+  if (S.d?.admin) { try { S.lh = await lhReq(); } catch { S.lh = null; } }
   rerender();
 }
 const sec = (title, inner, note = '') => `<section class="sg s51"><h3 class="sg-t">${esc(title)}</h3><div class="sg-box">${inner}</div>${note ? `<div class="sg-note">${note}</div>` : ''}</section>`;
 const row = (t, s, right = '') => `<div class="sg-row"><span class="sg-txt"><b>${t}</b>${s ? `<span>${s}</span>` : ''}</span>${right ? `<span class="s51-act">${right}</span>` : ''}</div>`;
-const btn = (label, attrs, pri = false) => `<button type="button" class="sbtn${pri ? ' pri' : ''}" ${attrs}${S.busy ? ' disabled' : ''}>${esc(label)}</button>`;
+// Prompt 86: type="submit" i attrs ble før overstyrt av type="button" foran (første attributt vinner), så «Lagre»/«Fortsett»/«Legg til» sendte ikke skjemaet.
+const btn = (label, attrs, pri = false) => `<button ${/\btype=/.test(attrs) ? '' : 'type="button" '}class="sbtn${pri ? ' pri' : ''}" ${attrs}${S.busy ? ' disabled' : ''}>${esc(label)}</button>`;
 
 function html() {
   if (!S.d) return S.err ? `<div class="s51-msg err">${esc(S.err)}</div>` : '<div class="sg-note">Laster …</div>';
   const d = S.d, out = [];
   if (S.msg) out.push(`<div class="s51-msg${S.msg.startsWith('!') ? ' err' : ''}">${esc(S.msg.replace(/^!/, ''))}</div>`);
+  if (d.admin && d.secretWarning) out.push(`<div class="s51-msg err" role="alert">⚠ ${esc(d.secretWarning)}</div>`);
   // Venter på godkjenning.
   if (d.pending?.length) {
     out.push(sec('Nye enheter som venter', d.pending.map((p) => row(`${esc(p.device)}${d.admin && p.user ? ` <span class="s51-tag">${esc(p.userName ?? '')}</span>` : ''}`,
@@ -95,6 +107,12 @@ function html() {
       `<span class="s51-mono">${esc(x.kind === 'acct' ? x.subject : x.subject)}</span> · ${x.fails} feil${x.locked ? ` · ${Math.ceil(x.secondsLeft / 60)} min igjen` : ''} · sist ${when(x.lastFail)}`,
       btn('Lås opp', `data-s51-unlock="${esc(x.key)}"`))).join('') : row('Ingen sperrer', 'Ingen feil innlogginger det siste døgnet.'),
     'Innlogging: sperre etter 5 feil fra samme IP (1 min, så 2, 4, 8 … maks 6 t) og 10 feil på samme konto (maks 1 t, gjelder ikke fra hjemmenettet). Det samme for QR-koder og app-token-utveksling.'));
+    if (S.lh) {
+      const H = S.lh.hosts ?? [];
+      out.push(sec('Lokale adresser (RSS og iCal)', (H.length ? H.map((h) => row(`<span class="s51-mono">${esc(h)}</span>`, '', btn('Fjern', `data-s51-lhdel="${esc(h)}"`))).join('') : row('Ingen godkjente', 'RSS-kilder og iCal-abonnementer hentes bare fra internett.'))
+        + (H.length < (S.lh.max ?? 50) ? `<form class="sg-row" data-s51-lhform><span class="sg-txt"><b>Legg til</b><span>Vertsnavn eller IP-adresse på hjemmenettet.</span></span><span class="s51-act"><input class="s51-in" type="text" name="host" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="nas.local eller 192.168.1.20" aria-label="Vertsnavn eller IP-adresse" data-glimt="off">${btn('Legg til', 'type="submit"', true)}</span></form>` : ''),
+      'RSS-kilder og iCal-abonnementer kan bare hentes fra adresser på hjemmenettet når verten står her. Legger du selv til en lokal adresse, havner verten her automatisk. Andre brukere får beskjed om at adressen må godkjennes.'));
+    }
     const sc = S.scan ?? d.lastScan;
     out.push(sec('Logg-skanner', (sc?.at ? row(sc.findings?.length ? `<span class="s51-tag red">${sc.findings.length} funn</span>` : '<span class="s51-tag green">Ingen nøkler i loggene</span>', `Sist ${when(sc.at)} · ${sc.sources?.length ?? 0} kilder · Docker: ${esc({ ok: 'skannet', unavailable: 'ikke satt opp', error: 'feil', skipped: 'hoppet over' }[sc.docker] ?? sc.docker ?? '–')}`)
       + (sc.findings ?? []).slice(0, 20).map((f) => row(esc(f.rule), `${esc(f.source)} · ${f.count} treff<br><span class="s51-mono">${esc(f.example ?? '')}</span>`)).join('') : row('Ikke skannet ennå', 'Skanner serverens egen logg, logg-tabeller i databasene, loggfiler og Docker-loggene.'))
@@ -130,7 +148,7 @@ async function addPasskey(password) {
 
 function bind(host) {
   host.addEventListener('click', (e) => {
-    const t = e.target.closest('[data-s51-approve],[data-s51-deny],[data-s51-pkadd],[data-s51-pkdel],[data-s51-pkname],[data-s51-devdel],[data-s51-auditall],[data-s51-rot],[data-s51-rotcancel],[data-s51-unlock],[data-s51-scan],[data-s51-pol]');
+    const t = e.target.closest('[data-s51-approve],[data-s51-deny],[data-s51-pkadd],[data-s51-pkdel],[data-s51-pkname],[data-s51-devdel],[data-s51-auditall],[data-s51-rot],[data-s51-rotcancel],[data-s51-unlock],[data-s51-scan],[data-s51-pol],[data-s51-lhdel]');
     if (!t) return;
     const ds = t.dataset;
     if (ds.s51Approve) return act(() => post(`/approvals/${encodeURIComponent(ds.s51Approve)}`, { approve: true }), 'Godkjent. Enheten kan fullføre innloggingen nå.');
@@ -142,6 +160,7 @@ function bind(host) {
     if (t.hasAttribute('data-s51-auditall')) { S.auditAll = !S.auditAll; return load(); }
     if (ds.s51Rot) { S.rot = ds.s51Rot; S.msg = ''; rerender(); host.querySelector('[data-s51-rotform] input')?.focus(); return; }
     if (t.hasAttribute('data-s51-rotcancel')) { S.rot = null; rerender(); return; }
+    if (ds.s51Lhdel) return act(() => lhReq((S.lh?.hosts ?? []).filter((h) => h !== ds.s51Lhdel)), 'Fjernet.');
     if (ds.s51Unlock) return act(() => json(`/limits?key=${encodeURIComponent(ds.s51Unlock)}`, { method: 'DELETE' }), 'Låst opp.');
     if (t.hasAttribute('data-s51-scan')) return act(async () => { S.scan = await post('/logscan', {}); return S.scan; }, (r) => (r.findings?.length ? `!Fant ${r.findings.length} mulige nøkler i loggene.` : 'Ingen nøkler funnet ✓'));
     if (ds.s51Pol) return act(() => json('/policy', { method: 'PUT', body: JSON.stringify({ [ds.s51Pol]: !(S.d?.policy?.[ds.s51Pol]) }) }), 'Lagret.');
@@ -151,6 +170,11 @@ function bind(host) {
     if (!f) return;
     e.preventDefault();
     if (f.dataset.s51Pwform === 'passkey') { const pw = f.elements.pw.value; return act(() => addPasskey(pw), (r) => (r ? 'Passkey lagt til ✓' : '')); }
+    if (f.hasAttribute('data-s51-lhform')) {
+      const h = f.elements.host.value.trim();
+      if (!h) { S.msg = '!Skriv et vertsnavn eller en IP-adresse.'; rerender(); return; }
+      return act(() => lhReq([...(S.lh?.hosts ?? []), h]), 'Lagt til.');
+    }
     if (f.dataset.s51Rotform) {
       const id = f.dataset.s51Rotform, value = f.elements.value.value.trim(), pw = f.elements.pw.value;
       if (!value || !pw) { S.msg = '!Skriv inn ny nøkkel og passordet ditt.'; rerender(); return; }
@@ -172,6 +196,7 @@ export function sikkerhetView51(H) {
       srow({ t: 'Passkeys', s: 'Logg inn med Face ID, Touch ID eller Windows Hello', go: 'sikkerhet', btn: 'Åpne', k: 'passkey webauthn face id touch id windows hello sikkerhetsnøkkel innlogging' }),
       srow({ t: 'Nye enheter og godkjenning', s: 'Godkjenn innlogging fra en ny enhet', go: 'sikkerhet', btn: 'Åpne', k: 'enhet godkjenn ny enhet innlogging land' }),
       srow({ t: 'Innloggingslogg', s: 'Tid, IP, land og enhet', go: 'sikkerhet', btn: 'Åpne', k: 'revisjonslogg logg innlogging ip land audit' }),
+      srow({ t: 'Lokale adresser (RSS og iCal)', s: 'Godkjenn verter på hjemmenettet', go: 'sikkerhet', btn: 'Åpne', k: 'lokal adresse rss ical kalender hjemmenett nas home assistant nextcloud godkjenn vert' }),
       srow({ t: 'Nøkler og hemmeligheter', s: 'Alder, påminnelse og rotering', go: 'sikkerhet', btn: 'Åpne', k: 'nøkkel api-nøkkel hemmelighet roter rotering secret' }),
       srow({ t: 'Sperrer', s: 'Midlertidig sperre etter feil passord, QR og app-token', go: 'sikkerhet', btn: 'Åpne', k: 'sperre rate limit blokkert lås opp' }),
     ])],

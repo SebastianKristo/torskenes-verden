@@ -27,6 +27,7 @@ import { mountFinn, mountFinnImport, linkMail, attachParsed, codesIn } from './f
 import { sessionUser, clientIp, verifyLogin, userInfo, listUsers } from '../auth.js';
 import * as auth from '../auth.js';
 import { config } from '../config.js';
+import { sessionSecret86 } from '../secret86.js'; // prompt 86
 import { kv } from '../db.js';
 import { stocks, resetStocks, t212Configured, t212Base, cleanCred, testT212 } from './stocks.js';
 import { answer as aiAnswer, plainSearch, suggestionGroups, AiUnavailable, isSimpleQuery } from './search.js';
@@ -76,7 +77,7 @@ const hex = (v) => /^#[0-9a-f]{6}$/i.test(v) ? v : null;
 export const SCOPES = ['finance:read', 'finance:write', 'receipts:write', 'read:transactions', 'read:summary', 'read:budget', 'write:transactions'];
 const IMPLIED = { 'read:transactions': 'finance:read', 'read:summary': 'finance:read', 'read:budget': 'finance:read', 'write:transactions': 'finance:write' };
 const EXPIRY = { '30d': 30, '90d': 90, '1y': 365, never: null };
-const tokenKey = (t) => createHmac('sha256', config.sessionSecret || 'dev').update('fh:' + t).digest('hex');
+const tokenKey = (t) => createHmac('sha256', sessionSecret86('dev')).update('fh:' + t).digest('hex');
 const newToken = () => 'fh_pat_' + randomBytes(24).toString('base64url'); // 32 tegn etter prefikset
 const TOKEN_RE = /^Bearer\s+(fh_[A-Za-z0-9_-]{20,})$/;
 

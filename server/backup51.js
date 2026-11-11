@@ -23,6 +23,7 @@ import { dirname, isAbsolute, join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import Database from 'better-sqlite3';
 import { config } from './config.js';
+import { sessionSecret86 } from './secret86.js'; // prompt 86
 import { db, kv, OWNER } from './db.js';
 import { seal, unseal } from './finans/db.js';
 import { dbFiles51, integrityOf51 } from './dbmaint51.js';
@@ -422,6 +423,7 @@ async function runRestoreTest(id, src) {
     await step('start', `Starter serveren mot kopien (port ${port})`, async () => {
       const env = { ...process.env, DATA_DIR: root, PORT: String(port), OPS51_SANDBOX: '1', NODE_ENV: 'production', BACKUP_DIR: join(root, 'system-backups') };
       delete env.MOCK_DATA;
+      { const s86 = sessionSecret86(); if (s86 && !env.SESSION_SECRET) env.SESSION_SECRET = s86; } // prompt 86: lagret hemmelighet (DATA_DIR/session-secret) gjelder også for kopien
       // Sandkassen skal aldri nå Docker-proxyen (selvreparasjon/omstart) eller sende push via ntfy.
       Object.assign(env, { DOCKER_HOST: 'tcp://127.0.0.1:9', NTFY_URL: '', NTFY_TOKEN: '' });
       child = spawn(process.execPath, [join(APP_ROOT, 'server', 'index.js')], { cwd: APP_ROOT, env, stdio: ['ignore', 'pipe', 'pipe'] });

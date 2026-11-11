@@ -36,6 +36,7 @@ import { OWNER, kv } from './db.js';
 import { userCfg, userCfgSet } from './settings.js';
 import { cached } from './cache.js';
 import { authOrToken, layoutOf } from './mobile.js';
+import { guardedFetch86 } from './localfetch86.js'; // prompt 86: SSRF-vern for iCal-adresser
 import { listFor as birthdaysOf, googleCalendarEvents, googleConnected, googleCalendarIds, googleEventWrite, googleCanWrite, googleConfOf } from './birthdays.js';
 /** Prompt 36b: ekstra Google-kalendere som vises som egne kalendere ({id:'g-…', calId, name, color, visible, hidMenu, writable}). */
 export const googleExtraOf = (user) => { const v = googleConfOf(user).extraCalendars; return Array.isArray(v) ? v : []; };
@@ -147,7 +148,7 @@ let mockIcs = null;
 const mockText = async (kind) => { mockIcs ??= await import('./mock.js'); return kind === 'canvas' ? mockIcs.mockCanvasIcs() : mockIcs.mockSchoolIcs(); };
 
 async function fetchText(url) {
-  const r = fetchImpl ? await fetchImpl(url) : await fetch(url, { signal: AbortSignal.timeout(15_000), headers: { 'user-agent': 'homelab-kalender/1.0', accept: 'text/calendar, */*' } });
+  const r = fetchImpl ? await fetchImpl(url) : await guardedFetch86(url, { signal: AbortSignal.timeout(15_000), headers: { 'user-agent': 'homelab-kalender/1.0', accept: 'text/calendar, */*' } });
   if (typeof r === 'string') return r;
   if (!r.ok) throw new Error(`Kalenderen svarte ${r.status}`);
   return r.text();

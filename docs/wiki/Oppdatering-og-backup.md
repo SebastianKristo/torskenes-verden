@@ -12,6 +12,7 @@
 |---|---|---|
 | `data/` | `/opt/homelab-os/data` (Docker), `/mnt/user/appdata/homelab-os` (Unraid) | Databasen `homelab.db`, kvitteringsbilder, opplastinger, logo- og kartcache |
 | `.env` | `/opt/homelab-os/.env` | `SESSION_SECRET`, og eventuelt `TOTP_ENC_KEY` og `SECRET_KEY`. Uten dem kan krypterte nøkler og 2FA ikke leses. |
+| `data/session-secret` | i `data/` | Finnes bare når `SESSION_SECRET` ikke er satt i `.env`: serveren laget da hemmeligheten selv ved første oppstart. Den ligger i `data/` og følger med når du kopierer hele mappen, men **ikke** i backupfilene fra appen. Uten den kan krypterte nøkler og 2FA ikke leses. |
 | `proton/` | `/opt/homelab-os/proton` | Bare hvis du bruker Proton Mail Bridge |
 | Passfrasen for SMB-backup | Passordbehandleren din | En kryptert backup kan ikke åpnes uten den |
 
@@ -182,7 +183,7 @@ Gjenopprettingen beholder ID-ene og gir samme resultat om den kjøres to ganger.
 
 ### Ny server fra backup
 
-1. Installer som vanlig, se [Installasjon](Installasjon). Bruk **samme `SESSION_SECRET`, `TOTP_ENC_KEY` og `SECRET_KEY`** som før.
+1. Installer som vanlig, se [Installasjon](Installasjon). Bruk **samme `SESSION_SECRET`, `TOTP_ENC_KEY` og `SECRET_KEY`** som før. Hadde den gamle serveren ikke `SESSION_SECRET` i `.env`, kopierer du `data/session-secret` til den nye `data/`-mappen **før første oppstart** (eller legger innholdet inn som `SESSION_SECRET` i `.env`).
 2. Åpne `/finans/` og velg **Hent fra SMB-share** eller **Last opp backupfil**.
 
 ### Hele `data/`

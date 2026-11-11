@@ -296,7 +296,8 @@ export const OLLAMA_KEEP_ALIVE = '10m';
 // har egen reserve), men «modellen ble lastet ut», 5xx og ECONNRESET prøves på nytt (maks 2).
 async function ollamaChat(st, messages, schema, { timeout, temperature, model, signal = null, priority = null }) {
   const useModel = model || st.ollamaModel;
-  const base = st.ollamaUrl.replace(/\/$/, '');
+  const base = String(st.ollamaUrl ?? '').replace(/\/$/, '');
+  if (!base) throw Object.assign(new Error('Ollama er ikke satt opp (adresse mangler)'), { noRetry: true, net: true }); // prompt 86
   const probe = await ollamaReachable(base);
   if (!probe.ok) throw Object.assign(new Error(probe.err ?? `Ollama kan ikke nås på ${base}`), { noRetry: true, net: true });
   if (signal?.aborted) throw cancelled();
@@ -649,7 +650,8 @@ export async function health() {
     tasks: Object.entries(TASKS).map(([id, t]) => ({ id, name: t.name, engine: taskEngines(st)[id], default: t.engine })),
     groqModels: GROQ_MODELS, ocr: null };
   { const tl = await ocrTools(); out.ocr = { enabled: ocrEnabled(st), lowConf: !!st.ocrLowConf, tesseract: tl.tesseract, imagemagick: !!tl.magick, zbar: !!tl.zbar }; }
-  try {
+  if (!st.ollamaUrl) out.ollama = { ok: false, configured: false, error: 'Ollama er ikke satt opp (adresse mangler)' }; // prompt 86
+  else try {
     const r = await fetch(`${st.ollamaUrl.replace(/\/$/, '')}/api/tags`, { signal: AbortSignal.timeout(4000) });
     const models = r.ok ? (await r.json()).models?.map((m) => m.name) ?? [] : [];
     out.ollama = { ok: r.ok, models, hasModel: models.some((m) => m === st.ollamaModel || m.startsWith(st.ollamaModel + ':')) };

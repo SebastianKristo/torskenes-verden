@@ -20,6 +20,7 @@
 import { Hono } from 'hono';
 import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import { config } from './config.js';
+import { sessionSecret86 } from './secret86.js'; // prompt 86
 import { sessionUser, userInfo, isAdmin } from './auth.js';
 import { tokenAccessOf, tokensById } from './finans/routes.js';
 
@@ -71,7 +72,7 @@ export const homelabAuthCode46 = async (c, next) => {
 
 /* ---------------- Signerte bilde-URL-er ---------------- */
 
-const SECRET = config.sessionSecret && config.sessionSecret.length >= 16 ? `img46:${config.sessionSecret}` : randomBytes(32).toString('hex');
+const SECRET = sessionSecret86().length >= 16 ? `img46:${sessionSecret86()}` : randomBytes(32).toString('hex');
 const IMG_PATH = /^\/api\/media\/(cover|poster)$/;
 const SIG_TTL_S = 24 * 3600;
 const mac = (s) => createHmac('sha256', SECRET).update(s).digest('base64url').slice(0, 32);

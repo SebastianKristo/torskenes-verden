@@ -83,6 +83,7 @@ export function installTrace51(db) {
         (e) => { span(st, kind, performance.now() - t0, `${host}${path}`, 'feil'); throw e; });
     };
     f.__obs51 = true;
+    f.__orig51 = origFetch; // prompt 86 (localfetch86.js): hvilken fetch som ligger under målingen
     globalThis.fetch = f;
   }
   return true;

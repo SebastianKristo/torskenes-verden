@@ -33,6 +33,12 @@ Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. 
 - **Glimt:** «hva er strømprisen i dag» svarer med strømprisen også når planleggeren velger nettsøk.
 - **Sporing:** returnerte pakker vises ikke lenger som «Forsinket».
 - **Installasjon:** nye Proxmox-installasjoner får 16 GB disk og 2 GB minne som standard.
+- **Sikkerhet:**
+  - **Hemmelig nøkkel:** nye installasjoner uten `SESSION_SECRET` får en tilfeldig nøkkel som lagres i `data/session-secret`. Eksisterende installasjoner uten nøkkel virker som før, og admin får et varsel under Innstillinger → Sikkerhet.
+  - **RSS og iCal fra hjemmenettet:** lokale adresser hentes bare når en admin har godkjent verten, under Innstillinger → Sikkerhet → «Lokale adresser». Det en admin selv har lagt inn, er godkjent automatisk.
+  - **Ollama** har ikke lenger en privat adresse som standard. Uten adresse er den «ikke satt opp».
+  - **Android:** `http://` tillates bare på lokalt nett. Lenker utenfra som starter Hjemlys, svarer på Sjekk inn eller legger til varer, spør først. Signeringsnøkkelen kan nå ligge som hemmelighet i GitHub, se `docs/android-signering.md`.
+  - **Kalender (iPhone og Mac):** lenker utenfra som sender til Glimt eller oppretter en hendelse, spør først.
 
 ## [4.70.0] – 10.11.2026 · Kalender inni Homelab-appen
 - **Kalender i appen (iPhone):** Homelab-appen har nå hele Kalender-appen inni seg. Det er nyttig når du sideloader og bare har plass til én app. Slå det av og på under Innstillinger → «Kalender i appen», som er på fra start.

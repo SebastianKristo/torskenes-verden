@@ -29,6 +29,7 @@ import { isIP } from 'node:net';
 import { deflateSync, crc32 } from 'node:zlib';
 import { kv, OWNER } from './db.js';
 import { config } from './config.js';
+import { sessionSecret86 } from './secret86.js'; // prompt 86
 import { authOrToken } from './mobile.js';
 import { isAdmin } from './auth.js';
 import { secret } from './finans/db.js';
@@ -408,7 +409,7 @@ ttsApi.post('/', async (c) => {
 const IMG_DIR = () => join(config.dataDir, 'img-cache');
 const IMG_MS = 7 * 86400_000;
 const IMG_MAX = 5 * 1024 * 1024;
-const sigKey = () => `img35:${process.env.SECRET_KEY || config.sessionSecret || 'dev'}`;
+const sigKey = () => `img35:${process.env.SECRET_KEY || sessionSecret86('dev')}`;
 export const imgSig = (u) => createHmac('sha256', sigKey()).update(String(u)).digest('hex').slice(0, 20);
 /** Proxy-adressen for et bilde (relativ, signert), eller null. */
 export const proxied = (u) => (/^https?:\/\//i.test(String(u ?? '')) ? `/api/img?u=${encodeURIComponent(u)}&s=${imgSig(u)}` : null);

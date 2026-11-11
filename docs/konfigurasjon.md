@@ -15,7 +15,7 @@ Konfigurasjonen kommer fra to steder:
 | Variabel | Påkrevd | Standard | Beskrivelse |
 |---|:-:|---|---|
 | `APP_PASSWORD_HASH` | ✅ første gang | – | Passord til eier-kontoen. Lages med `npm run hash-password -- 'passord'`. Etter første oppstart ligger passordet i brukertabellen og byttes i Innstillinger. |
-| `SESSION_SECRET` | ✅ | – | Minst 32 tilfeldige tegn (`openssl rand -hex 32`). Brukes til sesjoner og tokens, og som grunnlag for krypteringsnøkler hvis de under mangler. |
+| `SESSION_SECRET` | anbefalt | – | Minst 32 tilfeldige tegn (`openssl rand -hex 32`). Brukes til sesjoner og tokens, og som grunnlag for krypteringsnøkler hvis de under mangler. Mangler den på en **ny** installasjon (ingen `data/homelab.db` ennå), lager serveren en tilfeldig hemmelighet og lagrer den i `data/session-secret` (rettigheter 0600) – ta fila med i backupen. En eksisterende installasjon uten `SESSION_SECRET` fortsetter med den gamle faste reservenøkkelen og viser et varsel til administrator under Innstillinger → Sikkerhet. `SESSION_SECRET` i `.env` vinner alltid over fila. |
 | `USER_NAME` | | `Sebastian` | Visningsnavn for eieren. Brukernavnet blir det samme med små bokstaver. |
 | `COOKIE_SECURE` | | `true` | Sett `false` bare når du bruker `http://` uten TLS. |
 | `PORT` | | `3000` | Port i containeren / prosessen. |
@@ -63,7 +63,7 @@ Kan også settes i **FinansHub → Innstillinger**.
 | `AI_PROVIDER` | `ollama` | `ollama` eller `gemini`. |
 | `AI_FALLBACK` | `gemini` | `gemini` eller `none`. Med `none` og Ollama forlater ingen kvitteringer hjemmenettet. |
 | `AI_MIN_CONFIDENCE` | `0.85` | Under dette markeres kvitteringen for kontroll. |
-| `OLLAMA_URL` / `OLLAMA_MODEL` | – / `qwen2.5vl:7b` | Lokal visjonsmodell. |
+| `OLLAMA_URL` / `OLLAMA_MODEL` | – / `qwen2.5vl:7b` | Lokal visjonsmodell. Ingen standardadresse: uten `OLLAMA_URL` (og uten adresse lagret under Innstillinger → AI) er Ollama «ikke satt opp». |
 | `OLLAMA_TIMEOUT` | `120` | Sekunder per kall. |
 | `OLLAMA_EMBED_MODEL` | – | Valgfri modell for vektorsøk i ✦ AI-søk. |
 | `GEMINI_API_KEY` / `GEMINI_MODEL` | – / `gemini-2.5-flash` | Skybasert reserve eller hovedmotor. |

@@ -340,6 +340,7 @@ async function visionJson(buf, mime, prompt, schema) {
       }
       const lowerSchema = (s) => (Array.isArray(s) ? s.map(lowerSchema) : s && typeof s === 'object' ? Object.fromEntries(Object.entries(s).filter(([, v]) => v !== undefined).map(([k, v]) => [k, k === 'type' ? String(v).toLowerCase() : lowerSchema(v)])) : s);
       // Prompt 43: via Ollama-gaten (kø, keep_alive per modell, strømming; grensen er en total grense som før).
+      if (!st.ollamaUrl) throw new Error('er ikke satt opp (adresse mangler)'); // prompt 86
       const res = await gatePost((u, i) => fetch(u, i), `${st.ollamaUrl.replace(/\/$/, '')}/api/chat`,
         shortBody({ model: st.ollamaModel, format: lowerSchema(schema), options: { temperature: 0.1 }, messages: [{ role: 'user', content: prompt, images: [buf.toString('base64')] }] }),
         {}, { priority: 'interactive', image: true, deadlineMs: Number(process.env.OLLAMA_TIMEOUT ?? 120) * 1000, label: 'Mat · oppskrift fra bilde' });

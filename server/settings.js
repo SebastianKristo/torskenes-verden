@@ -3,13 +3,14 @@
 import { createCipheriv, createDecipheriv, createHash, randomBytes, scryptSync } from 'node:crypto';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { config } from './config.js';
+import { sessionSecret86 } from './secret86.js'; // prompt 86
 import { kv, OWNER } from './db.js';
 import { clearCache } from './cache.js';
 
 // Hemmelige felt lagres kryptert (AES-256-GCM, nøkkel avledet fra SESSION_SECRET) med prefikset «enc1:».
 // Eldre verdier i klartekst leses som før og krypteres neste gang de lagres.
 let SECRET_KEY = null;
-const secretKey = () => (SECRET_KEY ??= scryptSync(process.env.SESSION_SECRET || 'homelab-os', 'hl-settings-v1', 32));
+const secretKey = () => (SECRET_KEY ??= scryptSync(sessionSecret86('homelab-os', true), 'hl-settings-v1', 32));
 function sealSecret(text) {
   if (!text) return text;
   const iv = randomBytes(12), c = createCipheriv('aes-256-gcm', secretKey(), iv);
@@ -241,7 +242,7 @@ const defFor = (user, f) => (user === OWNER ? f.def ?? '' : SAFE_DEF[f.key] ?? '
 
 // FinansHub krypterer sine hemmeligheter med «enc:» (finans/db.js). Kopierte verdier derfra åpnes her med samme nøkkel.
 let FH_KEY = null;
-const fhKey = () => (FH_KEY ??= createHash('sha256').update('fh-secret:' + (process.env.SECRET_KEY || config.sessionSecret || 'dev')).digest());
+const fhKey = () => (FH_KEY ??= createHash('sha256').update('fh-secret:' + (process.env.SECRET_KEY || sessionSecret86('dev'))).digest());
 function openAny(v) {
   if (typeof v === 'string' && v.startsWith('enc:')) {
     try {
@@ -292,6 +293,9 @@ export const userBool = (user, key) => /^(1|true|on|ja|yes)$/i.test(String(userC
 export const userCfgSet = (user, key) => { const v = userCfgOverride(user, key); return v !== undefined && v !== ''; };
 
 /** Lagrer personlige verdier for user. null fjerner, tomt hemmelig felt beholdes. */
+let icsHook86 = null;
+/** Prompt 86 (localfetch86.js): kalles når en bruker lagrer en iCal-adresse (cal_ics/canvas_ics). */
+export const _onIcsSet86 = (fn) => { icsHook86 = fn; };
 export function setUserCfg(user, changes) {
   if (!user) throw Object.assign(new Error('Ikke innlogget'), { status: 401 });
   const over = { ...personal(user) };
@@ -312,6 +316,7 @@ export function setUserCfg(user, changes) {
     if (v && VALID[key] && !VALID[key](v)) throw new Error(`${f.label}: ugyldig verdi`);
     if (f.type === 'bool') v = boolText(v);
     if (key === 'chat_theme') v = v.toLowerCase().replace('ø', 'o');
+    if (v && /_ics$/.test(key)) { try { icsHook86?.(user, v); } catch { /* bare godkjenning av lokal vert */ } }
     over[key] = f.secret ? sealSecret(v) : v;
   }
   kv.set(user, 'cfg_personal', over);
