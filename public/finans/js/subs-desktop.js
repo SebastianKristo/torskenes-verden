@@ -92,7 +92,7 @@ function trialsCard(d) {
 }
 const SO37_CSS = `.so37-trials{display:flex;flex-direction:column;gap:10px}
 .so37-trh{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
-.so37-trh span{white-space:nowrap;font:700 12px var(--mono,'IBM Plex Mono',monospace);letter-spacing:.12em;color:#FF8A3D}
+.so37-trh span{white-space:nowrap;font:700 12px var(--mono,'IBM Plex Mono',monospace);letter-spacing:.12em;color:var(--acc-l,#FF8A3D)}
 .so37-trh button{white-space:nowrap;border:0;background:transparent;color:var(--text);cursor:pointer;font-size:13px;font-weight:700;font-family:inherit;padding:0}
 .so37-tr{display:flex;flex-direction:column;gap:8px;padding:12px;border-radius:18px;background:var(--inner,rgba(127,127,140,.1))}
 .so37-tr1{display:flex;align-items:center;gap:12px;min-width:0}
@@ -110,10 +110,10 @@ const SO37_CSS = `.so37-trials{display:flex;flex-direction:column;gap:10px}
 .so37-traf{display:flex;flex-direction:column;gap:8px;padding:12px;border-radius:16px;background:var(--inner,rgba(127,127,140,.1));margin:0}
 .so37-trr{display:flex;gap:8px}.so37-trr input:first-child{flex:1;min-width:0;color-scheme:light dark}.so37-trr input:last-child{width:120px}
 .so-tr.so37-trow{border:1.5px dashed rgba(255,138,61,.55);border-radius:14px;margin:4px 0}
-.so37-tg{font:700 11px var(--mono,'IBM Plex Mono',monospace);letter-spacing:.12em;color:#FF8A3D;padding:12px 0 4px}
+.so37-tg{font:700 11px var(--mono,'IBM Plex Mono',monospace);letter-spacing:.12em;color:var(--acc-l,#FF8A3D);padding:12px 0 4px}
 .so37-sh{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:12px;font-weight:700;color:#3aa36b;margin-top:2px}
 .so-name .so37-nm{display:flex;flex-direction:column;min-width:0}
-.so37-plus{font-size:12.5px;color:#FF8A3D;font-weight:700}
+.so37-plus{font-size:12.5px;color:var(--acc-l,#FF8A3D);font-weight:700}
 .se-f .so37-mem{display:flex;gap:6px;flex-wrap:wrap}
 .so37-mem button{display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 12px 0 4px;border-radius:17px;border:1px solid var(--line2,rgba(127,127,140,.3));background:transparent;color:var(--text);cursor:pointer;font-size:13px;font-weight:700;font-family:inherit}
 .so37-mem button[aria-pressed=true]{background:var(--text);color:var(--bg,#fff);border-color:var(--text)}

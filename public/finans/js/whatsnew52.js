@@ -47,6 +47,8 @@ export function point52(x) {
   if (m) return { title: m[1].replace(/[.]$/, ''), text: m[2], more: '' };
   return { title: s, text: '', more: '' };
 }
+/** Teksten i ett punkt. Serverens «more» er HELE teksten (den korte + resten), så den vises alene – ikke etter den korte (prompt 85). */
+export const body52 = (x) => (!x.more ? x.text : x.more.startsWith(x.text.replace(/\s*…$/, '')) ? x.more : `${x.text} ${x.more}`);
 const dateNo = (w) => {
   if (w.date_label) return w.date_label;
   const d = String(w.date ?? ''), m = d.match(/^(\d{4})-(\d{2})-(\d{2})/), n = d.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})/);
@@ -70,7 +72,7 @@ export function showWhatsNew52(w, { manual = false } = {}) {
   const date = dateNo(w);
   veil.innerHTML = `<section class="wn52f" role="dialog" aria-modal="true" aria-labelledby="wn52f-t">
     <header class="wn52f-head"><div class="wn52f-lbl">${esc(clean52(w.label || 'Nytt i Homelab'))}</div><h2 id="wn52f-t">${esc(clean52(w.heading || `Versjon ${w.version ?? ''}`))}</h2>${date ? `<div class="wn52f-date">${esc(date)}</div>` : ''}</header>
-    <div class="wn52f-body"><ul class="wn52f-list" tabindex="0" aria-label="Endringer">${pts.map((x) => { const long = x.text.length > 220 || x.more; return `<li>${x.title ? `<h3>${esc(x.title)}</h3>` : ''}${x.text ? `<p${long ? ' class="clamp"' : ''}>${esc(x.text)}${x.more ? ` ${esc(x.more)}` : ''}</p>${long ? '<button type="button" class="wn52f-more" aria-expanded="false">Les mer</button>' : ''}` : ''}</li>`; }).join('') || '<li><p>Feilrettinger og forbedringer.</p></li>'}</ul><span class="wn52f-fade" aria-hidden="true"></span></div>
+    <div class="wn52f-body"><ul class="wn52f-list" tabindex="0" aria-label="Endringer">${pts.map((x) => { const long = x.text.length > 220 || x.more; return `<li>${x.title ? `<h3>${esc(x.title)}</h3>` : ''}${x.text ? `<p${long ? ' class="clamp"' : ''}>${esc(body52(x))}</p>${long ? '<button type="button" class="wn52f-more" aria-expanded="false">Les mer</button>' : ''}` : ''}</li>`; }).join('') || '<li><p>Feilrettinger og forbedringer.</p></li>'}</ul><span class="wn52f-fade" aria-hidden="true"></span></div>
     <footer class="wn52f-foot"><button type="button" class="wn52f-ok">Ok</button></footer></section>`;
   document.body.appendChild(veil);
   const prev = document.activeElement, card = veil.firstElementChild, ok = veil.querySelector('.wn52f-ok');

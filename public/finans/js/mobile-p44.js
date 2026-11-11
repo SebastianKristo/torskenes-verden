@@ -439,7 +439,14 @@ function fetchWrap() {
     return realFetch(input, init);
   };
 }
-async function usersLoad(force = false) {
+// Prompt 85: én henting om gangen (Kontoer tegnes flere ganger mens den første er underveis, og hver tegning startet før en ny).
+let usersBusy = null;
+function usersLoad(force = false) {
+  if (!force && usersBusy) return usersBusy;
+  const p = usersLoad1(force).finally(() => { if (usersBusy === p) usersBusy = null; });
+  return (usersBusy = p);
+}
+async function usersLoad1(force) {
   if (!force && AS.users && Date.now() - AS.uT < 60000) return;
   AS.uT = Date.now();
   let L = null;
@@ -580,7 +587,8 @@ async function verLoad(force = false) {
   catch (e) { RV.miss = e.status === 404; RV.err = RV.miss ? '' : e.message; RV.d ??= []; }
   if (m.screen === 'nordlys') draw();
 }
-const vDate = (v) => { const d = new Date(v ?? ''); if (isNaN(d)) return String(v ?? ''); const t = isoD(d) === dayIso(0); return t ? `i dag ${hm(d)}` : d.toLocaleDateString('nb-NO', { day: 'numeric', month: 'short' }).replace('.', ''); };
+// Prompt 85: endringsloggen har norske datoer («10.11.2026»). new Date() leste dem som måned.dag («11. okt») i Chrome og som ugyldig i Safari.
+const vDate = (v) => { const n = String(v ?? '').match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/); const d = n ? new Date(+n[3], +n[2] - 1, +n[1]) : new Date(v ?? ''); if (isNaN(d)) return String(v ?? ''); const t = isoD(d) === dayIso(0); return t ? (n ? 'i dag' : `i dag ${hm(d)}`) : d.toLocaleDateString('nb-NO', { day: 'numeric', month: 'short' }).replace('.', ''); };
 export function versionsSection() {
   if (!isAdmin()) return '';
   verLoad();

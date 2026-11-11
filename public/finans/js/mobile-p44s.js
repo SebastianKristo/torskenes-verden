@@ -18,7 +18,14 @@ const nDoc = (d) => ({
   st: d.status ?? null, stT: d.statusText ?? '', how: d.how ?? '', fields: d.fields ?? null, err45: d.error ?? '', file: d.file ?? null, retry: d.retry ?? null,
   found: d.found ?? d.insights ?? [], snitt: d.snitt ?? d.average ?? null, snittVgs: d.snittVgs ?? null, sp: d.sp ?? d.credits ?? null, src: d.source ?? d.src ?? '', applied: !!(d.applied ?? d.appliedAt),
 });
-export async function studieLoad(force = false) {
+// Prompt 85: én henting om gangen. Skjermen tegnes flere ganger mens den første er underveis, og hver tegning startet før en ny.
+let studieBusy = null;
+export function studieLoad(force = false) {
+  if (!force && studieBusy) return studieBusy;
+  const p = studieLoad1(force).finally(() => { if (studieBusy === p) studieBusy = null; });
+  return (studieBusy = p);
+}
+async function studieLoad1(force) {
   if (!force && ST.docs && Date.now() - ST.t < 60000) return;
   ST.t = Date.now();
   try { const r = await hlApi('/study/documents'); ST.docs = (Array.isArray(r) ? r : r?.items ?? r?.documents ?? []).map(nDoc); ST.ov = r?.kpi ?? r?.stats ?? null; ST.miss = false; ST.err = ''; if (!ST.sel && ST.docs[0]) ST.sel = ST.docs[0].id; }

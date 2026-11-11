@@ -390,6 +390,9 @@ function navModel() {
 /* ---------- Tegning ---------- */
 
 export function draw() {
+  // Prompt 85: etter bytte til desktop (nettbrett snudd til liggende, vindu gjort bredere) tegnet mobilens egne tidtakere og
+  // hentinger mobilskjermen tilbake over desktop-siden. main.js setter data-ui før den aktive visningen tegnes.
+  if (document.documentElement.dataset.ui === 'desktop') return;
   // Prompt 39: ingen ny tegning midt i et sveip (kortet styres direkte i DOM); tegnes når gesten er ferdig.
   if (P39.holdDraw()) return;
   const pp = paper(), th = theme(), wide = two() && !pp, scr = m.screen;

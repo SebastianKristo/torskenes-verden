@@ -60,7 +60,8 @@
 .p51-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
 .p51-list li{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-top:1px solid var(--sep);align-items:center}
 .p51-list li:first-child{border-top:0}
-.p51-list li span{display:flex;flex-direction:column;min-width:0}
+.p51-list li span{display:flex;flex-direction:column;min-width:0;overflow-wrap:anywhere} /* prompt 85: et langt butikknavn uten mellomrom ga vannrett scroll på hele siden */
+.p51-list li b{flex:none}
 .p51-list li small{color:var(--muted);font-size:12px}
 .p51-list.sm li{padding:6px 0;font-size:13px}
 .pos{color:var(--pos)}.neg{color:var(--neg)}

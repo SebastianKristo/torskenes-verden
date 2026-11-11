@@ -3,7 +3,7 @@
 // pillefanelinje nederst med Hjem, Finans, Mat, Sporing, Mer og +Skann. Ingen Liquid Glass og ingen Material You.
 // Alle eksisterende sider tegnes i Papir ved at Android-fargerollene (--m3-*) får papirfarger (se mobile-theme.js).
 // Her ligger skallet (fotovindu og fanelinje), Papir-forsiden, Finans-oversikten, Mer, Media og nyhetsleseren.
-import { S, esc, n0, hlApi, ini, today, greet } from './core.js';
+import { S, esc, n0, neg0, hlApi, ini, today, greet } from './core.js';
 import { m, draw, flash, pref, setPref, meName, avInner, avatarUrl, openSheet, upload, ACTIVE_JOBS, startScr, domOk } from './mobile.js';
 import { hlData, hlDom, ruterUrl, yrUrl } from './mobile-hl.js';
 import { TR, active, badge, carName } from './mobile-track.js';
@@ -369,7 +369,7 @@ export function homeBlocks() {
   const s = S.summary, rv = (s?.review ?? []).filter((r) => r.status === 'needs_review').length, mt = matToday();
   const dm = hlDom(), dom = dm ? { visitors: dm.visitors, total: dm.n, down: dm.up === false ? 1 : 0 } : null;
   const minis = [
-    ['FINANS', s ? n0(s.left) : '–', rv ? `${rv} kvittering${rv > 1 ? 'er' : ''}` : 'igjen å bruke', rv ? 'lab' : 'mut', '#/hjem', '20px'],
+    ['FINANS', s ? neg0(s.left) /* prompt 85: over budsjett sto som et positivt beløp «igjen å bruke» */ : '–', rv ? `${rv} kvittering${rv > 1 ? 'er' : ''}` : 'igjen å bruke', rv ? 'lab' : 'mut', '#/hjem', '20px'],
     ['MAT', mt?.name || 'Ingen rett', mt?.cook ? `${mt.cook} lager` : '', 'mut', '#/mat', '16px'],
     fourth() === 'spor' && domOk() ? ['DOMENER', dom?.visitors != null ? n0(dom.visitors) : dom?.total != null ? String(dom.total) : '–', dom ? (dom.down ? `${dom.down} nede` : 'alle oppe') : '', dom?.down ? 'lab' : 'pos', '#/dom', '20px']
       : ['SPORING', String(onWay() || active(TR.data?.items ?? []).length || 0), onWay() ? 'på vei' : 'ingen på vei', onWay() ? 'lab' : 'mut', '#/spor', '20px'],

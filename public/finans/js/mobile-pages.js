@@ -14,6 +14,8 @@ const PG = { rec: null, stocks: null, rep: null, repMode: 'month', sub: null, di
 const isI = () => theme() === 'ios';
 const gl = (c = 'glass2') => (isI() ? c : '');
 const kr = (v) => `${n0(v)} kr`, kr2 = (v) => `${n2(v)} kr`;
+// Prompt 85: n0() er alltid uten fortegn. Total saldo og «Spart» kan være negative og sto da som positive tall.
+export const krS = (v) => `${v < 0 ? '−' : ''}${n0(v)} kr`;
 const curM = () => S.summary?.month ?? today().slice(0, 7);
 
 /* ---------- Mal ---------- */
@@ -137,7 +139,7 @@ function fast() {
 function konto() {
   const a = accs(), tot = a.reduce((x, y) => x + (y.balance ?? 0), 0), goals = S.boot?.goals ?? [];
   const TYPE = { checking: 'Brukskonto', savings: 'Sparekonto', credit: 'Kreditt', cash: 'Kontanter' };
-  return page({ back: ['#/mer', 'Tilbake til Mer'], title: 'Kontoer', hero: { l: 'Total saldo', v: kr(tot), s: `${a.length} kontoer` },
+  return page({ back: ['#/mer', 'Tilbake til Mer'], title: 'Kontoer', hero: { l: 'Total saldo', v: krS(tot), s: `${a.length} kontoer` },
     groups: [G('Kontoer', a.map((x) => R.item({ ini: x.name.slice(0, 2), iniStyle: 'font-size:13px', t: x.name, s: [x.bank, x.last4 ? `•••• ${x.last4}` : '', TYPE[x.type] ?? ''].filter(Boolean).join(' · '), v: `${x.balance < 0 ? '−' : ''}${n2(x.balance)}`, vc: x.balance < 0 ? '#FFB08A' : 'inherit', attrs: `data-pd="konto" data-id="${x.id}"` }))),
       goals.length ? G('Sparemål', goals.map((g) => R.bar(g.name, `${n0(g.saved)} / ${n0(g.target)} kr`, g.target ? (g.saved / g.target) * 100 : 0, g.saved >= g.target ? '#9FE3C6' : 'var(--m-acc)', g.saved >= g.target ? 'Nådd ✓' : `${Math.round(g.target ? (g.saved / g.target) * 100 : 0)} % · ${n0(g.target - g.saved)} kr igjen`))) : ''] });
 }
@@ -149,7 +151,7 @@ function rap() {
   const inn = yr ? ms.reduce((a, x) => a + x.inn, 0) : cur.inn, ut = yr ? ms.reduce((a, x) => a + x.ut, 0) : cur.ut;
   const mx = Math.max(1, ...(r.byCategory ?? []).map((c) => c.amount));
   const lbl = yr ? curM().slice(0, 4) : cap(monthName(curM()));
-  return page({ back, title: 'Rapporter', kpis: [{ l: 'Inn', v: kr(inn), s: lbl, c: '#9FE3C6' }, { l: 'Ut', v: kr(ut), s: lbl }, { l: 'Spart', v: kr(inn - ut), s: 'Inn − ut' }, { l: 'Sparerate', v: `${inn ? Math.round(((inn - ut) / inn) * 100) : 0} %`, s: 'Av inntekt' }],
+  return page({ back, title: 'Rapporter', kpis: [{ l: 'Inn', v: kr(inn), s: lbl, c: '#9FE3C6' }, { l: 'Ut', v: kr(ut), s: lbl }, { l: 'Spart', v: krS(inn - ut), s: 'Inn − ut' }, { l: 'Sparerate', v: `${inn ? Math.round(((inn - ut) / inn) * 100) : 0} %`, s: 'Av inntekt' }],
     groups: [G('', [R.chips('Periode', [{ n: 'Denne måneden', on: !yr, attrs: 'data-pa="rapm" data-v="month"' }, { n: 'Hittil i år', on: yr, attrs: 'data-pa="rapm" data-v="year"' }])]),
       G('Per kategori', (r.byCategory ?? []).map((c) => R.bar(c.category, kr(c.amount), (c.amount / mx) * 100, c.color))),
       (r.merchants ?? []).length ? G('Topp butikker', r.merchants.map((x) => R.item({ logo: { description: x.name }, t: x.name, s: `${x.count} kjøp`, v: `−${n0(x.amount)} kr`, attrs: `data-pd="merch" data-name="${esc(x.name)}"` }))) : '',

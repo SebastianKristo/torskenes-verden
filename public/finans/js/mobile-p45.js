@@ -209,7 +209,7 @@ function finRows() {
   const banks = [...new Set(acc.map((a) => a.bank ?? a.institution ?? a.name).filter(Boolean))].slice(0, 2).join(' · ');
   const nxD = nx ? Math.round((nx.d - Date.now()) / 864e5) : null;
   const live = {
-    saldo: { k: 'Disponibelt', v: acc.length ? `${bal < 0 ? '−' : ''}${n0(bal)} kr` : '–', s: banks || (acc.length ? `${acc.length} kontoer` : 'Ingen kontoer ennå'), row: acc.length ? `${n0(bal)} kr disponibelt` : 'Ingen kontoer ennå' },
+    saldo: { k: 'Disponibelt', v: acc.length ? `${bal < 0 ? '−' : ''}${n0(bal)} kr` : '–', s: banks || (acc.length ? `${acc.length} kontoer` : 'Ingen kontoer ennå'), row: acc.length ? `${bal < 0 ? '−' : ''}${n0(bal)} kr disponibelt` : 'Ingen kontoer ennå' },
     budsjett: pctB != null ? { k: mon, v: `${pctB} %`, s: `brukt · ${dLeft} dager igjen`, row: `${pctB} % brukt i ${mon.toLowerCase()}` } : { k: '', v: '', s: 'Ikke satt opp', row: 'Ikke satt opp' },
     kv: { k: '', v: String(rv ?? 0), s: rv ? 'til gjennomgang' : 'Ingen til gjennomgang', row: rv ? `${rv} til gjennomgang` : 'Ingen til gjennomgang', big: true },
     fast: nx ? { k: 'Neste', v: String(nx.r.name ?? nx.r.merchant ?? nx.r.description ?? 'Trekk'), s: `${nxD <= 0 ? 'i dag' : nxD === 1 ? 'i morgen' : `om ${nxD} dager`}${nx.r.amount != null ? ` · ${n0(nx.r.amount)} kr` : ''}`, row: `${nx.r.name ?? nx.r.merchant ?? 'Neste trekk'} ${nxD <= 0 ? 'i dag' : nxD === 1 ? 'i morgen' : `om ${nxD} d`}` } : { k: '', v: '', s: D.rec ? 'Ingen trekk de neste dagene' : 'Neste 30 dager', row: 'Neste 30 dager' },

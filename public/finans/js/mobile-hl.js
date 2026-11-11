@@ -1,7 +1,7 @@
 // Homelab som forside i mobilappen: hilsen, klokke og vær, Google-søk (forslag og historikk), snarveier,
 // «Andre OS» og valgfrie widgets (Serverstatus, Ruter). «Rediger forsiden» fungerer som hjemskjermen på iPhone/Android:
 // widgetene vugger, «−» skjuler, ▲▼ eller dra flytter, «+» åpner galleriet. Oppsettet lagres per bruker (/api/me/layout).
-import { S, esc, n0, ini, icon, ICONS, hlApi, matApi, domApi, loadSummary, greet } from './core.js';
+import { S, esc, n0, neg0, ini, icon, ICONS, hlApi, matApi, domApi, loadSummary, greet } from './core.js';
 import { TR, trkLoad, trkWatch, topPackages, pkgCard } from './mobile-track.js';
 import { m, draw, flash, avInner, avatarUrl, meName, HLTABS, FINTABS, FIXED_HL, FIXED_FIN, domOk } from './mobile.js';
 import { c3 } from './mobile-theme.js';
@@ -204,7 +204,7 @@ function wLinks(th) {
 
 function wOs(th) {
   const s = S.summary, rv = (s?.review ?? []).filter((r) => r.status === 'needs_review').length;
-  const fin = [`Finans · igjen å bruke${s ? ` i ${new Date(s.month + '-15').toLocaleDateString('nb-NO', { month: 'long' })}` : ''}`, s ? `${n0(s.left)} kr` : '–', rv ? `${rv} kvittering${rv > 1 ? 'er' : ''} til gjennomgang` : 'Alt er gjennomgått'];
+  const fin = [`Finans · igjen å bruke${s ? ` i ${new Date(s.month + '-15').toLocaleDateString('nb-NO', { month: 'long' })}` : ''}`, s ? `${neg0(s.left)} kr` : '–', rv ? `${rv} kvittering${rv > 1 ? 'er' : ''} til gjennomgang` : 'Alt er gjennomgått'];
   const dm = H.dom, mt = H.mat;
   return `<div class="sec">Andre OS</div><div class="hos">
     <a class="hos-fin ${isI(th) ? 'glass2' : ''}" href="#/hjem"><span class="m-grow"><span class="dim">${esc(fin[0])}</span><b>${esc(fin[1])}</b>${fin[2] ? `<span class="acc">${esc(fin[2])}</span>` : ''}</span><span style="font-size:24px;opacity:.6">›</span></a>

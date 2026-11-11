@@ -241,7 +241,7 @@ function aksPage() {
     <span class="mono r">${n2(p.quantity).replace(/,00$/, '')}</span><span class="mono r sub">${n2(p.avg)}</span><span class="mono r">${n2(p.price)}</span><b class="mono r">${n2(p.value)}</b>
     <span class="mono r" style="color:${p.pl >= 0 ? 'var(--pos)' : 'var(--neg)'}">${p.pl >= 0 ? '+' : '−'}${n2(Math.abs(p.pl))}<span style="display:block;font-size:12px">${pctTxt(p.plPct)}</span></span><span class="mono r" style="color:${(p.dayPct ?? 0) >= 0 ? 'var(--pos)' : 'var(--neg)'}">${pctTxt(p.dayPct)}</span></div>`; }).join('');
   const divs = (d.dividends ?? []).slice(0, 8).map((x) => `<div class="kv-line"><span>${esc(x.symbol)} <span class="muted" style="font-size:12.5px">· ${dd(x.date)}</span></span><span class="mono pos">${cur$(x.amount, c)}</span></div>`).join('') || '<div class="note">Ingen utbytte ennå.</div>';
-  const orders = (d.orders ?? []).slice(0, 8).map((o) => `<div class="kv-line" style="align-items:center"><span style="display:flex;align-items:center;gap:10px"><span class="mtag" style="background:${o.side === 'Kjøp' ? 'color-mix(in srgb,var(--blue) 15%,transparent)' : 'var(--pos-line)'};color:${o.side === 'Kjøp' ? '#A9C3FF' : 'var(--pos)'}">${o.side}</span>${esc(o.symbol)} <span class="muted" style="font-size:12.5px">· ${n2(o.quantity).replace(/,00$/, '')} stk · ${dd(o.date)}</span></span><span class="mono">${cur$(o.value, c)}</span></div>`).join('') || '<div class="note">Ingen ordre.</div>';
+  const orders = (d.orders ?? []).slice(0, 8).map((o) => `<div class="kv-line" style="align-items:center"><span style="display:flex;align-items:center;gap:10px"><span class="mtag" style="background:${o.side === 'Kjøp' ? 'color-mix(in srgb,var(--blue) 15%,transparent)' : 'var(--pos-line)'};color:${o.side === 'Kjøp' ? 'var(--blue)' /* prompt 85: #A9C3FF ga 1,7:1 i lyst tema */ : 'var(--pos)'}">${o.side}</span>${esc(o.symbol)} <span class="muted" style="font-size:12.5px">· ${n2(o.quantity).replace(/,00$/, '')} stk · ${dd(o.date)}</span></span><span class="mono">${cur$(o.value, c)}</span></div>`).join('') || '<div class="note">Ingen ordre.</div>';
   return `<div class="mod">${head}${d.error ? `<div class="err-msg">${esc(d.error)} · viser siste kjente data</div>` : ''}
     <div class="mod-kpis">${kpis}</div>
     <div class="row-flex">${card(`<div class="card-h"><div><h2>Porteføljeverdi</h2><div style="font-size:13px;color:${perC}">${perTxt}</div></div><div class="seg">${PERIODS.map(([k2, l]) => `<button data-maks-per="${k2}" aria-pressed="${per[0] === k2}">${l}</button>`).join('')}</div></div>${chart}`, 'flex:2 1 520px;padding:22px;gap:14px')}
@@ -343,7 +343,7 @@ export const MODULE_FN = { aks: aksPage, sub: subPage, dir: bolPage, finn: finnD
 const loadFinn = async () => { S.finn = await api('/finn'); };
 const loadStocks = async (force) => { S.stocks = await api(`/stocks${force === true ? '?force=1' : ''}`); };
 export async function loadBackup() { S.backup = await api('/backup'); }
-export const MODULE_LOADERS = { aks: [loadStocks], sub: [loadSubs], dir: [loadB42], finn: [loadFinnDesk], imp: [loadImpTpl] };
+export const MODULE_LOADERS = { aks: [loadStocks], sub: [loadSubs], dir: [loadB42], finn: [loadFinnDesk], imp: [loadImpTpl], plan: [] }; // prompt 85: plan manglet → «Cannot read properties of undefined (reading 'map')» som toast hver gang Planlegging ble åpnet (siden henter sine egne data)
 
 /* ===================== Hendelser ===================== */
 

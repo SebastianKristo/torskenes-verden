@@ -937,6 +937,7 @@ const PAGE_FN = { ov: overview, tx: transactions, ai: aiPage, filter: filterPage
 
 let mailPaneEl = null, aiCtlEl = null, aiCtlTab;
 export function draw() {
+  if (document.documentElement.dataset.ui === 'mobile') return; // prompt 85: mobilvisningen eier skjermen (se mobile.js draw)
   const el = root();
   const scroll = window.scrollY;
   const focus = document.activeElement?.closest('[data-form] input, [data-tx-field], [data-rc-field], [data-r48f]') ? { sel: focusSel(document.activeElement), pos: document.activeElement.selectionStart } : null;

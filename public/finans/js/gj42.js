@@ -14,6 +14,8 @@ export const TASKS = [
   ['compare_year', 'Sammenlign med i fjor', 'Samme måned i fjor, kategori for kategori'],
   ['tidy_cats', 'Rydd kategorier', 'Finner ukategoriserte og feilplasserte kjøp'],
 ];
+// Prompt 85: serveren kaller to av oppgavene noe annet (glimt-tasks42.js KINDS42). Uten oversettelsen svarte den «Velg en oppgave (kind)».
+export const SERVER_KIND = { subs_cut: 'cut_subs', tidy_cats: 'clean_categories' };
 const STEPS = ['Leser transaksjoner', 'Leser kvitteringer og varelinjer', 'Grupperer etter kategori', 'Skriver rapporten'];
 const MN = ['januar', 'februar', 'mars', 'april', 'mai', 'juni', 'juli', 'august', 'september', 'oktober', 'november', 'desember'];
 const kr = (v) => `${n0(v)} kr`;
@@ -24,7 +26,17 @@ export async function loadTasks() {
   catch { G.jobs = []; G.server = false; }
   poll();
 }
-const norm = (j) => ({ id: j.id ?? j.jobId, kind: j.kind ?? j.type, title: j.title ?? TASKS.find((t) => t[0] === (j.kind ?? j.type))?.[1] ?? 'Glimt-oppgave', status: j.status ?? 'running', pct: j.pct ?? j.progress ?? 0, step: j.step ?? j.stepLabel ?? null, created: j.createdAt ?? j.created ?? Date.now(), finished: j.finishedAt ?? j.finished ?? null, result: j.result ?? null, pdf: j.pdfUrl ?? (j.status === 'done' && (j.kind ?? j.type) === 'report' ? `/finans/api/glimt/tasks/${encodeURIComponent(j.id ?? j.jobId)}/report.pdf` : null), error: j.error ?? null, local: !!j.local });
+// Prompt 85: serveren (glimt-tasks42.js jobOut42) sender state ('failed'), stepLabel (step er et tall), endedAt og ISO-tider, og resultatet
+// har categories/items/advice. Uten oversettelsen sto ferdige oppgaver som «3 … 100 %» for alltid, og etter to kunne ingen nye startes.
+const ms85 = (t) => (typeof t === 'number' ? t : t ? Date.parse(t) || null : null);
+export function res85(R) {
+  if (!R || R.rows || R.kpis) return R;
+  const L = R.items ?? R.categories ?? [], val = (x) => +(x.monthly ?? x.sum ?? x.now ?? 0) || 0, mx = Math.max(1, ...L.map(val));
+  const rows = L.slice(0, 8).map((x) => ({ n: x.name, v: x.before != null ? `${kr(x.now)} · i fjor ${kr(x.before)}` : kr(val(x)), w: `${Math.round((val(x) / mx) * 100)}%` }));
+  const kpis = R.spent != null && R.count != null ? [['Brukt totalt', kr(R.spent)], ['Antall kjøp', String(R.count)], ['Snitt per kjøp', kr(R.avg ?? 0)], ['Største kategori', R.top?.name ?? '–']] : [];
+  return { ...R, rows, kpis, tips: (R.advice ?? []).map((a) => [a.title, a.text]) };
+}
+export const norm = (j) => ({ id: j.id ?? j.jobId, kind: j.kind ?? j.type, title: j.title ?? TASKS.find((t) => t[0] === (j.kind ?? j.type))?.[1] ?? 'Glimt-oppgave', status: { failed: 'error' }[j.status ?? j.state] ?? j.status ?? j.state ?? 'running', pct: j.pct ?? j.progress ?? 0, step: (typeof j.step === 'string' ? j.step : null) ?? j.stepLabel ?? null, created: ms85(j.createdAt ?? j.created) ?? Date.now(), finished: ms85(j.finishedAt ?? j.finished ?? j.endedAt), result: res85(j.result ?? null), pdf: j.pdfUrl ?? (j.status === 'done' && (j.kind ?? j.type) === 'report' ? `/finans/api/glimt/tasks/${encodeURIComponent(j.id ?? j.jobId)}/report.pdf` : null), error: j.error ?? null, local: !!j.local });
 const all = () => [...G.local, ...(G.jobs ?? [])].sort((a, b) => b.created - a.created);
 function poll() {
   clearTimeout(G.timer);
@@ -44,7 +56,7 @@ export async function startTask(kind, params = {}) {
   if (all().filter((j) => j.status === 'running' || j.status === 'queued').length >= 2) return toast('Glimt kjører allerede to oppgaver. Vent til én er ferdig.');
   const period = params.period ?? new Date().toLocaleDateString('sv-SE').slice(0, 7);
   try {
-    const r = await api('/glimt/tasks', { method: 'POST', json: { kind, params: { period, ...params } } });
+    const r = await api('/glimt/tasks', { method: 'POST', json: { kind: SERVER_KIND[kind] ?? kind, params: { period, ...params } } });
     const id = r.jobId ?? r.id;
     (G.jobs ??= []).unshift(norm({ id, kind, status: 'running', pct: 2, createdAt: Date.now(), title: params.title ? `${TASKS.find((t) => t[0] === kind)?.[1]} · ${params.title}` : undefined }));
     G.server = true;

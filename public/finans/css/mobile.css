@@ -301,6 +301,9 @@ a.mini{text-decoration:none}
 .kpi.hi{background:rgba(255,122,61,.14);border-color:rgba(255,122,61,.3)}.and .kpi.hi{background:var(--m3-763300,#763300);color:var(--m3-FFDBC8,#FFDBC8)}
 .stchip{font-size:12px;font-weight:600;padding:4px 10px;border-radius:8px;cursor:pointer}
 .stchip.ok{background:#1F3A2F;color:#9FE3C6}.stchip.warn{background:rgba(255,122,61,.18);color:#FFB08A}.stchip.off{background:rgba(255,255,255,.08);opacity:.7}
+/* Prompt 85: .m button{padding:0} (høyere spesifisitet) nullet ut luften i statusbrikken, så «Aktiv» sto klemt mot kanten. Papir: «Si opp» var lys oransje på hvitt (ca. 1,9:1). */
+.m .stchip{padding:4px 10px}
+.m.papir .stchip.warn{color:var(--pp-onLabC)}
 .sub-row.dim{opacity:.55}
 .fold{display:flex;align-items:center;gap:14px;padding:16px;border-radius:24px;color:inherit;text-decoration:none}
 .and .fold{background:var(--m3-261E19,#261E19);border-radius:28px 28px 28px 10px}
@@ -1784,6 +1787,8 @@ a.wx-r{color:inherit;text-decoration:none}
 
 /* Aksjer i Papir: verdikortet delvis oppe i toppbildet, og nøkkeltallene i hel lengde */
 .m.papir .aks .ak-over{background:var(--pp-card)!important;color:var(--pp-ink);border-radius:20px;padding:16px 18px;box-shadow:0 10px 30px -14px rgba(0,0,0,.35)}
+/* Prompt 85: søkefeltet i Aksjer → Transaksjoner. Desktop-regelen html[data-v3] .search (flex-basis 280px) og .pp-card (kolonne) ga et 280 × 280 px felt på mobil. */
+.m.papir .aks form.ak-search{flex:none;flex-direction:row;align-items:center;gap:10px;width:auto;height:52px;padding:0 18px}
 .m.papir .aks .ak-hrow{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .m.papir .aks .ak-hrow .ak-pill{flex:none;white-space:nowrap}
 .m.papir .aks .ak-stat b,.m.papir .aks .ak-stat span{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere}
@@ -7439,3 +7444,10 @@ html.h40-ov,html.h40-ov body{overflow:hidden}
 .m .p48-r48 .r48s{margin:0}
 .m .p48-r48 .r48s-card{background:var(--pp-card);border-color:var(--pp-line)}
 .m .p48-r48 .r48s-btn.pri{background:var(--pp-lab)}
+/* Prompt 85: fargene #9FE3C6 (inn/positivt) og #FFB08A (minus/advarsel) er satt inline i mange maler fra det mørke designet.
+   På lyst papir ga de 1,5–1,8:1 («0 kr» i Rapporter, negativ saldo i Kontoer, «Klar · trykk for å bekrefte» i Kø). */
+.m.papir [style*="color:#9FE3C6"]:not([style*="background"]){color:var(--pp-pos)!important}
+.m.papir [style*="color:#FFB08A"]:not([style*="background"]){color:var(--pp-lab)!important}
+/* Prompt 85: mørkt papir har lys aksent (--pp-lab #f08a76). Hvit tekst på den ga 2,4:1 i «N kvitteringer til gjennomgang» og Glimt-pillen;
+   --pp-onLab er hvit i lyst og mørk i mørkt papir (samme som Kontoer-kortet bruker). */
+.m.papir .pp-cta,.m.papir .pp-cta a,.m.papir .pp-cta button,.m.papir .p43-gpill{color:var(--pp-onLab,#fff)!important}

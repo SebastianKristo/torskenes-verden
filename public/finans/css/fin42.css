@@ -24,6 +24,8 @@ html[data-theme=mork] .n42-tile.g,html[data-theme=glod] .n42-tile.g{background:l
 html[data-ui=desktop] .nav a[aria-current=page] .n42-tile svg{stroke:#fff!important}
 html[data-ui=desktop] .nav a .n42-tile svg{stroke:currentColor}
 html[data-ui=desktop][data-compact] .nav a{justify-content:center}
+/* Prompt 85: «Kompakt sidemeny» skjuler navnet (finans.css: .nav a>span:not(.badge)), men ikonet ligger også i en span (.n42-tile) – hele menyen ble tom. */
+html[data-ui=desktop][data-compact] .nav a>span.n42-tile{display:grid}
 .ai-box.a42{cursor:pointer;text-align:left;width:100%;font:inherit;color:inherit;transition:border-color .15s}
 .ai-box.a42:hover{border-color:var(--text)}
 
@@ -168,7 +170,9 @@ html[data-theme=mork] .b42 .green,html[data-theme=glod] .b42 .green{color:#8fd0a
 .b42-btn:hover{background:var(--b-chip)}
 .b42-btn:disabled{border-color:var(--b-line);color:#a39d90;cursor:default;background:transparent}
 .b42-btn.dark{border:0;background:var(--b-btn);color:var(--b-btn-ink)}.b42-btn.dark:hover{background:var(--b-btn-h)}
-.b42-btn.green{border:0;background:var(--b-green);color:#fff}.b42-btn.green:hover{background:var(--b-green-h)}
+.b42-btn.green{border:0;background:var(--b-green);color:#fff}
+/* Prompt 85: html[data-theme=mork|glod] .b42 .green (grønn tekst) slo knappens hvite tekst → lys grønn på grønn (2,3:1). */
+html[data-theme="mork"] .b42 .b42-btn.green,html[data-theme="glod"] .b42 .b42-btn.green{color:#fff}.b42-btn.green:hover{background:var(--b-green-h)}
 .b42-btn.link{border:0;text-decoration:underline;text-underline-offset:4px;padding:0 14px}
 .b42-btn.red,.b42-btn.danger{color:var(--b-red)}.b42-btn.danger{border-color:var(--b-red)}
 .b42-btn.lg{height:56px;border-radius:28px;font-size:18px}
