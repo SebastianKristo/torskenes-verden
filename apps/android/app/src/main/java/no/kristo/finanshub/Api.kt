@@ -117,6 +117,9 @@ class Api(private val baseUrl: String, private val token: String?) {
     suspend fun bytes(path: String): ByteArray = withContext(Dispatchers.IO) {
         val conn = URL(baseUrl.trimEnd('/') + path).openConnection() as HttpURLConnection
         try { net {
+            // Prompt 85: uten tidsgrenser ble bilder og filer hengende for alltid på et dødt nett (og holdt en IO-tråd hver).
+            conn.connectTimeout = 10_000
+            conn.readTimeout = 30_000
             token?.let { conn.setRequestProperty("Authorization", "Bearer $it") }
             if (conn.responseCode >= 400) throw ApiException("Feil ${conn.responseCode}", conn.responseCode)
             conn.inputStream.use { it.readBytes() }

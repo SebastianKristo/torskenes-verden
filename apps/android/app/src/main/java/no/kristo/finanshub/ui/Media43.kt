@@ -611,8 +611,10 @@ private fun Releases43(vm: AppViewModel, pad: PaddingValues, wide: Boolean) {
         }
         if (s.relBusy && list.isEmpty()) item { Box(Modifier.fillMaxWidth().padding(30.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = p.ink) } }
         else if (list.isEmpty() && !vm.p44.relFailAll) item { Text("Ingen utgivelser funnet.", color = p.mut, fontSize = 13.sp, modifier = Modifier.padding(top = 12.dp)) }
-        list.forEach { r ->
-            item(key = "r-" + r.guid + r.indexer) {
+        // Prompt 85: to treff med samme guid fra samme indekser (eller uten guid) ga like nøkler, og LazyColumn krasjer på det.
+        relKeys85(list.map { it.guid + it.indexer }).forEachIndexed { i85, k85 ->
+            val r = list[i85]
+            item(key = k85) {
                 // Seedere: grønn ≥ 50 % av høyeste i søket, rød < 10 % (og alltid ved 0).
                 val seedC = when { r.seeders == 0 -> RED43; max > 0 && r.seeders >= max * .5 -> OK43; max > 0 && r.seeders < max * .1 -> RED43; else -> p.ink }
                 val got = r.guid in s.grabbed
@@ -1033,5 +1035,15 @@ internal fun HomeMedia43(vm: AppViewModel) {
                 }
             }
         }
+    }
+}
+
+/** Prompt 85: unike listenøkler for utgivelser – første forekomst beholder nøkkelen sin, like får «#n» bak. */
+internal fun relKeys85(ids: List<String>): List<String> {
+    val seen = HashMap<String, Int>()
+    return ids.map { id ->
+        val n = seen.getOrDefault(id, 0)
+        seen[id] = n + 1
+        if (n == 0) "r-$id" else "r-$id#$n"
     }
 }

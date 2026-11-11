@@ -99,7 +99,16 @@ final class W51Locator: NSObject, CLLocationManagerDelegate {
 
     /// Fersk posisjon (maks ca. 6 s), ellers nil. Spør om tillatelse første gang.
     func fix() async -> CLLocation? {
-        if m.authorizationStatus == .notDetermined { m.requestWhenInUseAuthorization() }
+        if m.authorizationStatus == .notDetermined {
+            m.requestWhenInUseAuthorization()
+            // Prompt 85: vent på svaret (maks 20 s). Før gikk requestLocation() rett videre og feilet mens spørsmålet sto
+            // på skjermen, så den første «Hent meg» ble sendt uten posisjon.
+            for _ in 0..<40 {
+                if m.authorizationStatus != .notDetermined { break }
+                try? await Task.sleep(nanoseconds: 500_000_000)
+            }
+        }
+        if m.authorizationStatus == .notDetermined { return nil }
         if m.authorizationStatus == .denied || m.authorizationStatus == .restricted { return nil }
         if let l = m.location, Date().timeIntervalSince(l.timestamp) < 120 { return l }
         let task: Task<CLLocation?, Never> = Task { @MainActor in
@@ -479,40 +488,54 @@ final class W51Store {
         glimtBusy = true
         glimtAnswer = ""
         defer { glimtBusy = false }
-        let list: [String] = bases.isEmpty ? W51Store.defaultBases : bases
-        guard let tok = token, let b = list.first, let url = URL(string: b.trimmingCharacters(in: CharacterSet(charactersIn: "/")) + "/api/chat/send") else { return }
+        var list: [String] = bases.isEmpty ? W51Store.defaultBases : bases
+        guard let tok = token, !list.isEmpty else { return }
         var body: [String: Any] = ["model": "auto", "messages": [["role": "user", "content": t]], "myData": true]
         if let chatId { body["chatId"] = chatId }
-        var r: URLRequest = URLRequest(url: url)
-        r.httpMethod = "POST"
-        r.timeoutInterval = 120
-        r.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        r.setValue("text/event-stream", forHTTPHeaderField: "Accept")
-        r.setValue("Bearer " + tok, forHTTPHeaderField: "Authorization")
-        r.setValue(W51Store.deviceKey, forHTTPHeaderField: "X-Device-Key")
-        r.httpBody = try? JSONSerialization.data(withJSONObject: body)
-        do {
-            let (bytes, res) = try await URLSession.shared.bytes(for: r)
-            let code: Int = (res as? HTTPURLResponse)?.statusCode ?? 0
-            if code >= 400 {
-                glimtAnswer = code == 404 ? "Serveren har ikke Glimt-chat." : "Glimt svarte ikke (feil \(code))."
-                return
-            }
-            var event: String = "message"
-            for try await line in bytes.lines {
-                if line.hasPrefix("event:") {
-                    event = String(line.dropFirst(6)).trimmingCharacters(in: .whitespaces)
-                    continue
-                }
-                guard line.hasPrefix("data:") else { continue }
-                let payload: String = String(line.dropFirst(5)).trimmingCharacters(in: .whitespaces)
-                handle(event, payload)
-                event = "message"
-            }
-            if glimtAnswer.isEmpty { glimtAnswer = "Glimt hadde ikke noe svar." }
-        } catch {
-            glimtAnswer = "Fikk ikke kontakt med Glimt."
+        // Prompt 85: som call() – neste adresse når den første ikke svarer (før: bare den første, så Glimt virket ikke
+        // utenfor huset når klokka ble koblet til på den lokale adressen). Aldri på nytt etter at svaret har begynt.
+        // Adressen som svarer (uansett statuskode) prøves først, så en død adresse ikke bruker opp de 120 sekundene.
+        if list.count > 1 {
+            let probe: Reply = await call("GET", "/api/health", bases: list, auth: false, timeout: 4)
+            if !probe.base.isEmpty { list = [probe.base] + list.filter { $0 != probe.base } }
         }
+        for b in list {
+            guard let url = URL(string: b.trimmingCharacters(in: CharacterSet(charactersIn: "/")) + "/api/chat/send") else { continue }
+            var r: URLRequest = URLRequest(url: url)
+            r.httpMethod = "POST"
+            r.timeoutInterval = 120
+            r.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            r.setValue("text/event-stream", forHTTPHeaderField: "Accept")
+            r.setValue("Bearer " + tok, forHTTPHeaderField: "Authorization")
+            r.setValue(W51Store.deviceKey, forHTTPHeaderField: "X-Device-Key")
+            r.httpBody = try? JSONSerialization.data(withJSONObject: body)
+            var started: Bool = false
+            do {
+                let (bytes, res) = try await URLSession.shared.bytes(for: r)
+                started = true
+                let code: Int = (res as? HTTPURLResponse)?.statusCode ?? 0
+                if code >= 400 {
+                    glimtAnswer = code == 404 ? "Serveren har ikke Glimt-chat." : "Glimt svarte ikke (feil \(code))."
+                    return
+                }
+                var event: String = "message"
+                for try await line in bytes.lines {
+                    if line.hasPrefix("event:") {
+                        event = String(line.dropFirst(6)).trimmingCharacters(in: .whitespaces)
+                        continue
+                    }
+                    guard line.hasPrefix("data:") else { continue }
+                    let payload: String = String(line.dropFirst(5)).trimmingCharacters(in: .whitespaces)
+                    handle(event, payload)
+                    event = "message"
+                }
+                if glimtAnswer.isEmpty { glimtAnswer = "Glimt hadde ikke noe svar." }
+                return
+            } catch {
+                if started { break }
+            }
+        }
+        if glimtAnswer.isEmpty { glimtAnswer = "Fikk ikke kontakt med Glimt." }
     }
 
     private func handle(_ event: String, _ payload: String) {

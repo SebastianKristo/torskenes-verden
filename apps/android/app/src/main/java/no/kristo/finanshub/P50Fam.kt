@@ -595,6 +595,24 @@ object Geofence50 {
         for (r in list) runCatching { lm.addProximityAlert(r.lat, r.lon, r.radius.toFloat(), -1, pi(ctx, r.id)) }
     }
 
+    /**
+     * Prompt 85: nærhetsvarslene (LocationManager) forsvinner når telefonen startes på nytt, så «kom/forlot» sluttet å virke til
+     * Familie ble åpnet i appen. De lagrede områdene registreres på nytt. Kalles fra Ntfy51Boot.
+     */
+    @SuppressLint("MissingPermission")
+    fun restore85(ctx: Context) {
+        if (ctx.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) return
+        val lm = ctx.getSystemService(Context.LOCATION_SERVICE) as? LocationManager ?: return
+        val a = runCatching { JSONArray(ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE).getString("regions", "[]")) }.getOrNull() ?: return
+        for (i in 0 until a.length()) {
+            val r = a.optJSONObject(i) ?: continue
+            val id = r.optString("id").takeIf { it.isNotEmpty() } ?: continue
+            val lat = r.optDouble("lat"); val lon = r.optDouble("lon"); val rad = r.optDouble("r")
+            if (lat.isNaN() || lon.isNaN() || rad.isNaN() || rad <= 0) continue
+            runCatching { lm.addProximityAlert(lat, lon, rad.toFloat(), -1, pi(ctx, id)) }
+        }
+    }
+
     internal fun region(ctx: Context, id: String): JSONObject? {
         val a = runCatching { JSONArray(ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE).getString("regions", "[]")) }.getOrNull() ?: return null
         return (0 until a.length()).mapNotNull { a.optJSONObject(it) }.firstOrNull { it.optString("id") == id }

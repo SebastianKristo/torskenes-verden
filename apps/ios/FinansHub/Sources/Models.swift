@@ -263,7 +263,7 @@ struct FlexDate: Decodable, Hashable {
         else { date = nil }
     }
 }
-private func parseIsoDay(_ s: String) -> Date? { let f = DateFormatter(); f.dateFormat = "yyyy-MM-dd"; return f.date(from: String(s.prefix(10))) }
+private func parseIsoDay(_ s: String) -> Date? { let f = DateFormatter(); f.locale = Locale(identifier: "en_US_POSIX"); f.dateFormat = "yyyy-MM-dd"; return f.date(from: String(s.prefix(10))) }
 
 /* ---------- Bruker og moduler ---------- */
 

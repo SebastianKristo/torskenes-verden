@@ -110,6 +110,16 @@ extension Store {
         let sel: TrackSelect = TrackSelect.shared
         sel.ids = []; sel.active = false; sel.archived = []; sel.archivedLoaded = false
         UserDefaults.standard.removeObject(forKey: "fh_subs_done")
+        // Prompt 85: modeller som kom til etter prompt 21 og holder personlige data i minnet (sparemål/skatt, det Glimt husker,
+        // Skjold Lab). Uten dette så den neste kontoen forrige kontos data til første vellykkede henting.
+        let plan: Plan51 = Plan51.shared
+        plan.goals = nil; plan.cal = nil; plan.tax = nil; plan.prices = nil; plan.hunter = nil
+        plan.errors = [:]; plan.pricePoints = [:]; plan.draft = nil; plan.acc = nil; plan.editing = nil; plan.depositFor = nil; plan.export = nil
+        let mem: G67Mem = G67Mem.shared
+        mem.pending = []; mem.conflicts = []; mem.stale = []; mem.hygiene = nil; mem.loaded = false; mem.editing = nil; mem.arm = nil
+        Skjold76.shared.resetForAccount85()
+        let sk: Skjold82 = Skjold82.shared
+        sk.projects = []; sk.details = [:]; sk.lines = [:]; sk.usedIn = [:]; sk.error = ""; sk.pickTarget = nil
     }
 
     /// Kvitteringene i køen som hører til kontoen som er i bruk. Eldre elementer uten konto vises bare når

@@ -164,7 +164,10 @@ final class Kal84Host {
     /// fra Homelab som byttes mot Kalenders eget («Fortsett som», uten trykk). force = knappen «Logg inn med Homelab-appen».
     func login(force: Bool) {
         let s: KalStore = KalStore.shared
+        // Prompt 85: et companion-token (kal.hl.*) laget for en annen Homelab-konto fjernes før bootstrap() kan ta det i bruk.
+        if let a = store?.account, KalGroup.homelabToken != nil, KalGroup.homelabFor != KalGroup.fingerprint(a.token) { KalCompanion33.clear() }
         s.bootstrap()
+        dropForeign85(s)
         if s.loggedIn { return }
         if !force && UserDefaults.standard.bool(forKey: "kal.noAuto") { return }
         guard let st = store, st.loggedIn, !loginBusy else { return }
@@ -179,6 +182,43 @@ final class Kal84Host {
             if KalStore.shared.adoptHomelab() { return }
             if force { KalLogin41Model.shared.quick() }
         }
+    }
+
+    /* ---------- Prompt 85: Kalender-økten følger Homelab-kontoen ---------- */
+
+    /// Hvilken Homelab-konto den innebygde Kalender-økten ble laget for (brukernavn + server).
+    static let acctDef85: String = "kal84.acct"
+
+    static func acctKey85(_ a: LoginAccount) -> String {
+        a.username.trimmingCharacters(in: .whitespaces).lowercased() + "|" + API.normalize(a.server).lowercased()
+    }
+
+    /// Hører økten til en annen konto? saved = kontoen økten ble laget for (tom = ukjent, f.eks. fra før oppdateringen):
+    /// da sammenlignes navnet på økten med navnene på Homelab-kontoen.
+    nonisolated static func foreign85(saved: String, key: String, kalUser: String, names: [String]) -> Bool {
+        if !saved.isEmpty { return saved != key }
+        let u: String = kalUser.trimmingCharacters(in: .whitespaces).lowercased()
+        if u.isEmpty { return false }
+        let known: [String] = names.map { (n: String) -> String in n.trimmingCharacters(in: .whitespaces).lowercased() }
+        return !known.contains(u)
+    }
+
+    /// Før: økten (kal.token) ble liggende når Homelab byttet konto eller logget inn som en annen, og den innebygde Kalenderen
+    /// viste (og skrev til) den forrige brukerens kalender. Nå glemmes en økt som hører til en annen konto, og Homelab logger
+    /// inn med kontoen som er i bruk.
+    private func dropForeign85(_ s: KalStore) {
+        guard let st = store, st.loggedIn, let a = st.account else { return }
+        let d: UserDefaults = UserDefaults.standard
+        let key: String = Kal84Host.acctKey85(a)
+        if s.loggedIn {
+            let saved: String = d.string(forKey: Kal84Host.acctDef85) ?? ""
+            let names: [String] = [a.username, a.name, a.label, st.displayName]
+            if Kal84Host.foreign85(saved: saved, key: key, kalUser: KalGroup.user, names: names) {
+                s.dropSession85()
+                d.set(false, forKey: "kal.noAuto")
+            }
+        }
+        if d.string(forKey: Kal84Host.acctDef85) != key { d.set(key, forKey: Kal84Host.acctDef85) }
     }
 
     /// Samme som AppAuth41.shareDevice, men nå (ikke høyst hvert 2. min) og med svar: kortlivet enhets-token i KalShared41.

@@ -17,6 +17,8 @@ extension Store {
         AppAuth41.shareDevice(self)
         // Prompt 33: eget app-token for Kalender-appen i App Group-en (KalLink33.swift).
         KalCompanion33.sync(self)
+        // Prompt 85: offline-køen følger kontoen, ikke enheten (Offline51.bind i Plat51Shared.swift).
+        Offline51.bind(a.username.trimmingCharacters(in: .whitespaces).lowercased() + "|" + API.normalize(a.server).lowercased())
         let changed = WidgetShared.token != a.token || WidgetShared.bases.first != (base.isEmpty ? a.server : base)
         WidgetShared.save(server: base.isEmpty ? a.server : base, external: a.external, local: a.local, token: a.token)
         if changed || force { WidgetCenter.shared.reloadAllTimelines() }

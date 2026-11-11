@@ -69,7 +69,10 @@ enum WidgetShared {
     /// Bufrede svar for alle widgetene (finans, huskeliste og familie).
     static func clearCaches() {
         let d = defaults
-        for k in ["w.cache", "w.tasks", "w.family", "w.birthdays", "w.calendar", "w.ruter27", "w.ruter27.home", "w.trials32", "w.brief34"] { d.removeObject(forKey: k) }
+        // Prompt 85: også bufrene som kom til senere (plan/økonomi, Sjekk inn, Media og Hjemlys) – de ble liggende ved
+        // kontobytte, og widgetene viste forrige brukers tall når serveren ikke svarte.
+        for k in ["w.cache", "w.tasks", "w.family", "w.birthdays", "w.calendar", "w.ruter27", "w.ruter27.home", "w.trials32", "w.brief34",
+                  "w.plan51", "w.checkin51", "w.media43", "w.hjemlys40"] { d.removeObject(forKey: k) }
     }
 
     static var token: String? { defaults.string(forKey: "w.token") }

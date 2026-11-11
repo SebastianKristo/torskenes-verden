@@ -32,7 +32,11 @@ class MainActivity : FragmentActivity() {
         preferHighRefresh39() // prompt 39: myke sveip på 90/120 Hz-skjermer
         runCatching { Sound39.migrate(this) } // prompt 39: gamle, høye varselkanaler byttes med de myke
         applySwitcherPrivacy()
-        handleShare(intent)
+        // Prompt 85: delingen/lenken som startet aktiviteten behandles bare én gang. Uten dette ble samme intent kjørt på nytt
+        // når aktiviteten ble laget på nytt (lyst/mørkt, skriftstørrelse, prosessdød) eller hentet fra Nylige: kvitteringen
+        // ble lastet opp to ganger, og varsel-lenker som «Ja, start» (Hjemlys) og «Hent» (Sjekk inn) ble sendt en gang til.
+        val fresh85 = freshLaunch85(savedInstanceState != null, intent?.flags ?: 0)
+        if (fresh85) handleShare(intent)
         prompt = BiometricPrompt(this, ContextCompat.getMainExecutor(this), object : BiometricPrompt.AuthenticationCallback() {
             override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) { prompting = false; vm.locked = false }
             override fun onAuthenticationError(errorCode: Int, errString: CharSequence) { prompting = false }
@@ -53,7 +57,7 @@ class MainActivity : FragmentActivity() {
         // Familie: deling i bakgrunnen og helsesammendraget fortsetter etter omstart av appen.
         runCatching { no.kristo.finanshub.family.FamilyService.sync(this) }
         if (no.kristo.finanshub.family.FamilyPrefs.health(this).isNotEmpty()) runCatching { no.kristo.finanshub.family.HealthSync.schedule(this) }
-        intent?.data?.let(::openData43)
+        if (fresh85) intent?.data?.let(::openData43)
         // Prompt 51 (ANDPLAT51): dynamisk snarvei (siste vare) og offline-køen sendes når nettet er tilbake.
         runCatching { Shortcuts51.publish(this) }
         if (Offline51.count(this) > 0) Offline51.schedule(this)
@@ -130,3 +134,7 @@ class MainActivity : FragmentActivity() {
         }
     }
 }
+
+/** Prompt 85: true når intentet er nytt – ikke en gjenskapt aktivitet (lagret tilstand) og ikke hentet fra Nylige. */
+internal fun freshLaunch85(restored: Boolean, flags: Int): Boolean =
+    !restored && (flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY) == 0

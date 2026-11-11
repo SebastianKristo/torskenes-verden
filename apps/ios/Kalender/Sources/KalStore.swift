@@ -251,6 +251,23 @@ final class KalStore {
         showToast("Du er logget ut i Homelab. Logg inn igjen.", undo: "")
     }
 
+    /// Prompt 85 (innebygd i Homelab, Kal84Host): økten på enheten hører til en annen Homelab-konto enn den som er i bruk.
+    /// Glemmes uten melding og uten å sperre automatisk innlogging – Homelab logger straks inn med kontoen som er i bruk.
+    func dropSession85() {
+        if let tok = KalGroup.token {
+            let bases: [String] = KalGroup.bases
+            Task.detached { _ = try? await KalNet.send("POST", "/finans/api/logout", json: [:], timeout: 8, bases: bases, token: tok) }
+        }
+        KalKeychain41.delete("refresh")
+        KalGroup.clearSession()
+        KalCache44.clear()
+        loggedIn = false
+        userName = ""
+        events = []
+        rebuild()
+        KalW70.reload()
+    }
+
     /* ---------- Henting ---------- */
 
     /// Henter perioden rundt det man ser på (−6 uker … +16 uker), kalenderne og været.

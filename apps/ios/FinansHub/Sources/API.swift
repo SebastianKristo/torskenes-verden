@@ -21,7 +21,14 @@ struct API {
     let base: String
     let token: String?
 
-    private func url(_ path: String, prefix: String = "/finans/api") -> URL { URL(string: base.trimmingCharacters(in: CharacterSet(charactersIn: "/")) + prefix + path)! }
+    /// Prompt 85: en adresse iOS ikke kan tolke (skrivefeil i porten, «http://10.0.0.5:30 00», «http://[::1») ga nil og krasj
+    /// ved tvungen utpakking – også ved hver oppstart når adressen var lagret som lokal adresse. Nå: en adresse URLSession
+    /// avviser (unsupportedURL) → vanlig feilmelding «Ugyldig serveradresse».
+    static let badURL85: URL = URL(string: "ugyldig://adresse") ?? URL(fileURLWithPath: "/ugyldig-adresse")
+
+    private func url(_ path: String, prefix: String = "/finans/api") -> URL {
+        URL(string: base.trimmingCharacters(in: CharacterSet(charactersIn: "/")) + prefix + path) ?? API.badURL85
+    }
 
     private func send(_ req: URLRequest, timeout: TimeInterval = 30) async throws -> Data {
         var r = req
@@ -40,6 +47,7 @@ struct API {
                 throw APIError(message: Plat51Queue.message, status: 0, code: Plat51Queue.queuedCode)
             }
             switch e.code {
+            case .unsupportedURL, .badURL: throw APIError(message: "Ugyldig serveradresse. Sjekk adressen.", status: 0)
             case .cannotFindHost, .dnsLookupFailed: throw APIError(message: "Fant ikke serveren \(host). Sjekk adressen.", status: 0)
             case .cannotConnectToHost, .networkConnectionLost, .notConnectedToInternet:
                 throw APIError(message: "Fikk ikke kontakt med \(host). Er du på samme nett, og stemmer http/https og port?", status: 0)
@@ -143,7 +151,7 @@ struct API {
     }
 
     func bytes(_ path: String) async throws -> Data {
-        let full = URL(string: base.trimmingCharacters(in: CharacterSet(charactersIn: "/")) + path)!
+        let full: URL = URL(string: base.trimmingCharacters(in: CharacterSet(charactersIn: "/")) + path) ?? API.badURL85
         return try await send(URLRequest(url: full))
     }
 

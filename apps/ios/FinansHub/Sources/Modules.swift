@@ -40,7 +40,7 @@ struct SubView: View {
         ScrollView {
             VStack(spacing: 12) {
                 ModuleHeader(title: "Subscription OS", trailing: {
-                    Button { adding.toggle() } label: { Image(systemName: adding ? "xmark" : "plus").frame(width: 40, height: 40) }.buttonStyle(.plain).glass(20)
+                    Button { adding.toggle() } label: { Image(systemName: adding ? "xmark" : "plus").frame(width: 40, height: 40) }.buttonStyle(.plain).glass(20).accessibilityLabel(adding ? "Lukk" : "Legg til")
                 })
                 if let e = store.moduleError { Empty(text: e) }
                 if let s = store.subs {
@@ -166,7 +166,7 @@ struct FolderDetailView: View {
         ScrollView {
             VStack(spacing: 12) {
                 ModuleHeader(title: f.name, back: { store.folder = nil }, trailing: {
-                    if !f.readOnly { Button { adding.toggle() } label: { Image(systemName: adding ? "xmark" : "plus").frame(width: 40, height: 40) }.buttonStyle(.plain).glass(20) }
+                    if !f.readOnly { Button { adding.toggle() } label: { Image(systemName: adding ? "xmark" : "plus").frame(width: 40, height: 40) }.buttonStyle(.plain).glass(20).accessibilityLabel(adding ? "Lukk" : "Legg til") }
                 })
                 Text([f.type, f.address, f.access.map { roleLabel[$0] ?? $0 }].compactMap { $0 }.joined(separator: " · ")).font(.footnote).foregroundStyle(Color.skinFg.opacity(0.6)).frame(maxWidth: .infinity, alignment: .leading)
                 if f.readOnly {

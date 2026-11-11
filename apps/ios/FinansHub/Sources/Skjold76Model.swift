@@ -241,6 +241,15 @@ final class Skjold76 {
         show(part: kind.isEmpty ? nil : parts.first)
     }
 
+    /// Prompt 85: kontobytte – delene, skapene og historikken til forrige konto skal ikke bli stående i minnet
+    /// (de ble vist for den neste kontoen til første vellykkede henting, og ble stående når hentingen feilet).
+    func resetForAccount85() {
+        searchTask?.cancel()
+        cabinets = []; cabinetId = ""; maps = [:]; query = ""; suggestions = []; items = []; total = 0
+        category = ""; lowOnly = false; categories = []; offline = false; missing = false
+        sheet = nil; focus = nil; details = [:]; history = [:]; preset = nil; all = []
+    }
+
     /* ---------- Lasting ---------- */
 
     func load(_ store: Store) async {

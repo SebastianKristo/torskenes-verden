@@ -602,8 +602,9 @@ struct ConfirmView: View {
     }
 }
 
-private func iso(_ d: Date) -> String { let f = DateFormatter(); f.dateFormat = "yyyy-MM-dd"; return f.string(from: d) }
-private func parseIso(_ s: String) -> Date? { let f = DateFormatter(); f.dateFormat = "yyyy-MM-dd"; return f.date(from: s) }
+// Prompt 85: fast locale – ellers skrives f.eks. år 2569 (buddhistisk kalender på telefonen) til serveren.
+private func iso(_ d: Date) -> String { let f = DateFormatter(); f.locale = Locale(identifier: "en_US_POSIX"); f.dateFormat = "yyyy-MM-dd"; return f.string(from: d) }
+private func parseIso(_ s: String) -> Date? { let f = DateFormatter(); f.locale = Locale(identifier: "en_US_POSIX"); f.dateFormat = "yyyy-MM-dd"; return f.date(from: s) }
 
 /// Kategorivalg som brytes over flere linjer.
 struct FlowChips: View {
@@ -829,4 +830,4 @@ struct ShoppingList: View {
     }
 }
 
-private func isoToday() -> String { let f = DateFormatter(); f.dateFormat = "yyyy-MM-dd"; return f.string(from: Date()) }
+private func isoToday() -> String { let f = DateFormatter(); f.locale = Locale(identifier: "en_US_POSIX"); f.dateFormat = "yyyy-MM-dd"; return f.string(from: Date()) }

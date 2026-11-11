@@ -5,6 +5,8 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.ui.Modifier
@@ -18,7 +20,9 @@ class HealthRationaleActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            Column(Modifier.fillMaxSize().background(Color(0xFFF3EFE6)).padding(24.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            // Prompt 85: kant-til-kant er påtvunget fra Android 15 – hold innholdet unna systemfeltene, og la siden rulle så
+            // «Lukk» kan nås med stor skrift.
+            Column(Modifier.fillMaxSize().background(Color(0xFFF3EFE6)).systemBarsPadding().verticalScroll(rememberScrollState()).padding(24.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 Spacer(Modifier.height(40.dp))
                 Text("Helse i Homelab", color = Color(0xFF1B1A17), fontSize = 28.sp, fontWeight = FontWeight.Medium)
                 Text(

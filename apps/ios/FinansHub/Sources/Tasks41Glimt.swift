@@ -419,8 +419,11 @@ struct Tasks41MadeView: View {
                             Text(String(i + 1)).font(PF.mono(12)).foregroundStyle(p.lab).frame(width: 16)
                             Button { m.toggle(t, store) } label: {
                                 Image(systemName: t.done ? "checkmark.circle.fill" : "circle").font(.dyn51(size: 18)).foregroundStyle(t.done ? p.pos : p.mut)
+                                    // Prompt 85: trykkflate 44 pt uten å flytte noe (før ca. 22 pt), og tekst for VoiceOver.
+                                    .padding(11).contentShape(Rectangle()).padding(-11)
                             }
                             .buttonStyle(.plain)
+                            .accessibilityLabel(t.done ? "Ferdig" : "Ikke ferdig")
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(t.title).font(PF.ui(14.5, .semibold)).foregroundStyle(p.ink).strikethrough(t.done)
                                     .fixedSize(horizontal: false, vertical: true)

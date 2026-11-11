@@ -38,6 +38,7 @@ struct SearchClear27: View {
             .frame(width: 44, height: 44)
             .contentShape(Rectangle())
         }
+        .accessibilityLabel("Tøm søket")
         .buttonStyle(.plain)
         // 44 pt trykkflate, men tar bare plassen til ikonet i raden (som margin:0 -6px 0 -8px i fasiten).
         .padding(.leading, -10)

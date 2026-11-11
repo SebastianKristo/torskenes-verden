@@ -420,5 +420,10 @@ class Ntfy51Service : Service() {
 class Ntfy51Boot : BroadcastReceiver() {
     override fun onReceive(ctx: Context, intent: Intent) {
         if (intent.action == Intent.ACTION_BOOT_COMPLETED || intent.action == Intent.ACTION_MY_PACKAGE_REPLACED) runCatching { Ntfy51.sync(ctx) }
+        // Prompt 85: alarmer (gjøremål, bibelvers) og nærhetsvarsler (Familie-steder) overlever ikke en omstart av telefonen – sett dem opp igjen.
+        if (intent.action == Intent.ACTION_BOOT_COMPLETED) {
+            runCatching { Alarms37.restore85(ctx) }
+            runCatching { Geofence50.restore85(ctx) }
+        }
     }
 }

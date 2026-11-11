@@ -45,6 +45,7 @@ object Alarms37 {
         val p = sp(ctx)
         (p.getString("codes", "") ?: "").split(',').mapNotNull { it.toIntOrNull() }.forEach { c -> runCatching { am.cancel(pi(ctx, c, Intent(ctx, Task37Receiver::class.java).setAction(ACT_TASK))) } }
         val codes = ArrayList<Int>()
+        val plan85 = org.json.JSONArray()
         val now = System.currentTimeMillis()
         val zone = OSLO37
         for (t in data?.items ?: emptyList()) {
@@ -56,18 +57,36 @@ object Alarms37 {
             fun put(whenMs: Long, alarm: Boolean, body: String) {
                 if (whenMs <= now || whenMs - now > 40L * 86_400_000) return
                 val code = (t.id + "@" + whenMs).hashCode()
-                val i = Intent(ctx, Task37Receiver::class.java).setAction(ACT_TASK).putExtra("id", t.id).putExtra("title", t.title).putExtra("body", body).putExtra("alarm", alarm)
-                runCatching {
-                    if (alarm && exactOk(am)) am.setAlarmClock(AlarmManager.AlarmClockInfo(whenMs, openPi(ctx, "finanshub://huske", code)), pi(ctx, code, i))
-                    else am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, whenMs, pi(ctx, code, i))
-                }
+                arm85(ctx, am, code, whenMs, alarm, t.id, t.title, body)
                 codes += code
+                plan85.put(org.json.JSONObject().put("code", code).put("at", whenMs).put("alarm", alarm).put("id", t.id).put("title", t.title).put("body", body))
             }
             val hm = "%02d:%02d".format(tm.hour, tm.minute)
             if (t.urgent) put(at, true, "Viktig · kl. $hm" + (list?.let { " · $it" } ?: ""))
             earlyMin37(t.early)?.let { m -> put(at - m * 60_000, false, "Kl. $hm" + (list?.let { " · $it" } ?: "")) }
         }
-        p.edit().putString("codes", codes.joinToString(",")).apply()
+        p.edit().putString("codes", codes.joinToString(",")).putString("plan85", plan85.toString()).apply()
+    }
+
+    private fun arm85(ctx: Context, am: AlarmManager, code: Int, whenMs: Long, alarm: Boolean, id: String, title: String, body: String) {
+        val i = Intent(ctx, Task37Receiver::class.java).setAction(ACT_TASK).putExtra("id", id).putExtra("title", title).putExtra("body", body).putExtra("alarm", alarm)
+        runCatching {
+            if (alarm && exactOk(am)) am.setAlarmClock(AlarmManager.AlarmClockInfo(whenMs, openPi(ctx, "finanshub://huske", code)), pi(ctx, code, i))
+            else am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, whenMs, pi(ctx, code, i))
+        }
+    }
+
+    /**
+     * Prompt 85: AlarmManager glemmer alle alarmer når telefonen startes på nytt. Før kom de først tilbake når appen ble åpnet
+     * og gjøremålene hentet, så et «Viktig»-gjøremål ringte ikke etter en omstart om natten. Planen fra forrige schedule()
+     * (lagret på telefonen) settes opp igjen uten nett, og bibelvers-påminnelsen med. Kalles fra Ntfy51Boot.
+     */
+    fun restore85(ctx: Context) {
+        val am = ctx.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return
+        for (x in duePlan85(sp(ctx).getString("plan85", null), System.currentTimeMillis())) {
+            arm85(ctx, am, x.optInt("code"), x.optLong("at"), x.optBoolean("alarm"), x.optString("id"), x.optString("title"), x.optString("body"))
+        }
+        if (bibleOn(ctx)) bible(ctx, true)
     }
 
     /** Daglig påminnelse kl. 07:00 («Dagens vers er klart»). */
@@ -135,4 +154,10 @@ class Task37Receiver : BroadcastReceiver() {
             }
         }
     }
+}
+
+/** Prompt 85: radene i den lagrede planen som fortsatt ligger frem i tid (ugyldig eller tom plan → ingen). */
+internal fun duePlan85(raw: String?, now: Long): List<org.json.JSONObject> {
+    val a = runCatching { org.json.JSONArray(raw ?: "[]") }.getOrNull() ?: return emptyList()
+    return (0 until a.length()).mapNotNull { a.optJSONObject(it) }.filter { it.optLong("at") > now && it.optString("id").isNotEmpty() }
 }

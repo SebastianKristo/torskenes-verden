@@ -292,8 +292,12 @@ struct Task37DetailSheet: View {
                 Image(systemName: s.done ? "checkmark.circle.fill" : "circle").font(.dyn51(size: 20, weight: .semibold))
                     .foregroundStyle(s.done ? p.pos : p.line)
                     .frame(width: 30)
+                    // Prompt 85: trykkflate 44 pt uten å flytte noe (før 30 × ca. 24 pt), og tekst for VoiceOver.
+                    .padding(.vertical, 10).padding(.horizontal, 7).contentShape(Rectangle()).padding(.vertical, -10).padding(.horizontal, -7)
             }
             .buttonStyle(.plain)
+            .accessibilityLabel(s.done ? "Ferdig" : "Ikke ferdig")
+            .accessibilityHint("Deloppgave")
             Text(s.n).font(PF.ui(14.5)).foregroundStyle(p.ink).strikethrough(s.done)
             Spacer(minLength: 4)
             Button {

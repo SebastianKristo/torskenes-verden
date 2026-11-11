@@ -595,7 +595,7 @@ struct SubAddSheet: View {
             VStack(alignment: .leading, spacing: 14) {
                 HStack {
                     if mode != nil {
-                        Button { mode = nil } label: { Image(systemName: "chevron.left").font(.dyn51(size: 16, weight: .semibold)).frame(width: 40, height: 40) }.buttonStyle(.plain).glass(20)
+                        Button { mode = nil } label: { Image(systemName: "chevron.left").font(.dyn51(size: 16, weight: .semibold)).frame(width: 40, height: 40) }.buttonStyle(.plain).glass(20).accessibilityLabel("Tilbake")
                     }
                     Text(mode == "manual" ? "Skriv inn selv" : mode == "receipt" ? "Fra kvittering" : mode == "tx" ? "Fra transaksjoner" : "Legg til abonnement").font(.title3.weight(.bold))
                     Spacer()

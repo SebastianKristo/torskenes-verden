@@ -228,7 +228,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var locked by mutableStateOf(loggedIn && prefs.bool(AppPrefs.LOCK))
     private var backgroundAt: Long? = null
 
-    fun onBackground() { backgroundAt = System.currentTimeMillis(); stopTrackingPoll(); onBackground31() }
+    fun onBackground() {
+        backgroundAt = System.currentTimeMillis(); stopTrackingPoll(); onBackground31()
+        // Prompt 85: et opptak (trykk-modus) fortsatte i opptil 2 minutter etter at appen var lagt i bakgrunnen. Stopp og send det som er sagt.
+        if (Voice56.phase == "rec") runCatching { stopMic56(false) }
+    }
     fun onForeground() {
         if (loggedIn) { startTrackingPoll(); viewModelScope.launch { loadReviewCount() } }
         if (loggedIn) { onForeground31(); refreshMe39(); loadAiIn39() } // prompt 39: nytt profilbilde fra web vises uten å logge ut
@@ -445,6 +449,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         photoThumbs = emptyMap(); photoFailed = emptySet(); bgInfo = null; depOpen = null; shareListId = null; taskUsers = emptyList()
         kal26.open = false; kal26.events = null; kal26.loadedFor = null; kal26.layoutFor = null
         chat27.open = false; chat27.loadedFor = null
+        // Prompt 85 (brukerskille): forrige brukers alarmer for gjøremål og prøveperiode-varsler ble stående i AlarmManager og ringte
+        // (med tittel) etter utlogging eller kontobytte. Gjøremål-alarmene fjernes her og planlegges på nytt når den nye brukerens
+        // gjøremål hentes. Prøve-varslene byttes av Notify31Worker ved kontobytte; uten noen konto igjen fjernes de her.
+        runCatching { Alarms37.schedule(getApplication(), null) }
+        if (accounts.none { it.id == activeId }) runCatching { Notify31.scheduleTrials(getApplication(), emptyList()) }
         scopeToAccount()
     }
 
@@ -1179,7 +1188,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             launch {
                 try {
                     for (u in uris) {
+                        // Prompt 85: en fil som ikke lar seg lese (tilgangen borte, ødelagt bilde) stoppet resten av køen, og telleren
+                        // «laster opp» ble stående for alltid. Nå hoppes den over med en melding, og de neste lastes opp.
                         try { uploadOne(u, "/folders/$bolig/receipts") } catch (e: ApiException) { message = e.message }
+                        catch (e: kotlinx.coroutines.CancellationException) { throw e }
+                        catch (e: Exception) { android.util.Log.w("Opplasting85", "Fikk ikke lest filen", e); message = UNREADABLE85 }
                         finally { uploading = maxOf(0, uploading - 1) }
                     }
                 } finally { folder?.let { runCatching { folder = parseFolderDetail(api.get("/folders/${it.folder.id}")) } } }
@@ -1201,6 +1214,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 for (u in uris) {
                     try { uploadOne(u) } catch (e: ApiException) {
                         message = e.message
+                    } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) {
+                        android.util.Log.w("Opplasting85", "Fikk ikke lest filen", e); message = UNREADABLE85 // prompt 85: se over – resten av køen lastes opp
                     } finally { uploading = maxOf(0, uploading - 1) }
                 }
             } finally { loadReceipts(); loadJobs() }
@@ -3817,3 +3832,6 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
 }
+
+/** Prompt 85: meldingen når en delt/valgt fil ikke kan leses fra telefonen. */
+internal const val UNREADABLE85 = "Fikk ikke lest filen. Prøv å dele den på nytt."

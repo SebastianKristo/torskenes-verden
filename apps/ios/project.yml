@@ -70,6 +70,8 @@ targets:
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
         INFOPLIST_KEY_NSCameraUsageDescription: "Kameraet brukes til å ta bilde av kvitteringer, deler og sorteringsskap i Skjold Lab, og til å skanne QR-koder for å logge inn på en ny enhet."
         INFOPLIST_KEY_NSPhotoLibraryUsageDescription: "Velg bilder av kvitteringer, deler og sorteringsskap fra biblioteket."
+        # Prompt 85: «Arkiver bilde» i delingsarket (bilder fra Chat, filer på en rett). Uten teksten avslutter iOS appen.
+        INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription: "Homelab lagrer bilder i Bilder når du velger «Arkiver bilde» i delingsarket."
         INFOPLIST_KEY_NSFaceIDUsageDescription: "Face ID brukes til å låse opp Homelab."
         INFOPLIST_KEY_NSLocalNetworkUsageDescription: "Homelab kobler til homelab-serveren din på lokalt nett."
         INFOPLIST_KEY_NSLocationWhenInUseUsageDescription: "Posisjonen din deles med familien i Familie og kart når du har slått på deling."
@@ -94,6 +96,9 @@ targets:
         NSMotionUsageDescription: "Aktivitet (går, sykler, kjører) vises for familien sammen med posisjonen din."
         NSHealthShareUsageDescription: "Appen leser skritt, puls, søvn og aktivitet for å vise dem i Familie."
         NSHealthUpdateUsageDescription: "Appen skriver ikke til Apple Health. Den leser bare det du velger å dele i Familie."
+        # Prompt 85: delingsarket tilbyr «Arkiver bilde» for bildefiler (Chat50Attach.shareImage, ShareSheet). Uten denne
+        # teksten avslutter iOS appen i det brukeren trykker på valget.
+        NSPhotoLibraryAddUsageDescription: "Homelab lagrer bilder i Bilder når du velger «Arkiver bilde» i delingsarket."
         # Prompt 56: mikrofonen (tale til tekst via serveren) og talegjenkjenningen på enheten (reserven).
         NSMicrophoneUsageDescription: "Homelab bruker mikrofonen til tale til tekst. Lyden sendes bare til serveren i huset og lagres ikke."
         NSSpeechRecognitionUsageDescription: "Talen din gjøres om til tekst på norsk i Chat."

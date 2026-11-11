@@ -34,7 +34,10 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         Hap.attach(window.decorView)
         setContent { KalRoot(vm, onBackToHomelab = ::backToHomelab) }
-        handle(intent)
+        // Prompt 85: delt tekst og lenker behandles bare én gang – ikke på nytt når aktiviteten gjenskapes (skriftstørrelse,
+        // prosessdød) eller hentes fra Nylige. «◀ Homelab» beholdes.
+        if (savedInstanceState == null && ((intent?.flags ?: 0) and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY) == 0) handle(intent)
+        else if (fromHomelab()) vm.back = true
         // Første gang: «Logg inn med Homelab-appen» automatisk hvis Homelab er installert og innlogget.
         if (vm.session == null) vm.loginHomelab(auto = true)
         KalSync.schedule(this)

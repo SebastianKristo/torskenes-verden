@@ -150,6 +150,29 @@ enum Offline51 {
 
     static var count: Int { items.count }
 
+    /// Prompt 85: køen hører til kontoen som la skrivingene i den (brukernavn + server). Før fulgte køen bare enheten, så
+    /// gjøremål og Sjekk inn som ventet på nett ble sendt med den neste kontoens token etter kontobytte eller «Logg inn som».
+    /// Nå legges den forrige kontoens kø til side (og hentes fram igjen når den kontoen er tilbake). Kalles av appen rett
+    /// før widget-tokenet byttes (Store.syncWidgets).
+    static let ownerKey: String = "w.offline51.owner"
+
+    static func bind(_ owner: String) {
+        let d: UserDefaults = WidgetShared.defaults
+        let old: String = d.string(forKey: ownerKey) ?? ""
+        if old == owner || owner.isEmpty { return }
+        d.set(owner, forKey: ownerKey)
+        if old.isEmpty { return }
+        if let q = d.data(forKey: key) { d.set(q, forKey: key + "." + old) }
+        if let mine = d.data(forKey: key + "." + owner) {
+            d.set(mine, forKey: key)
+            d.removeObject(forKey: key + "." + owner)
+        } else {
+            d.removeObject(forKey: key)
+        }
+        d.removeObject(forKey: noticeKey)
+        NotificationCenter.default.post(name: changed, object: nil)
+    }
+
     /// Modulen for en skriving som tåler å vente, ellers nil (sendes ikke offline).
     static func module(_ method: String, _ path: String) -> String? {
         let m: String = method.uppercased()

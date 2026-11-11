@@ -45,6 +45,8 @@ final class Hjemlys40Glimt {
 
     nonisolated static func today() -> String {
         let f: DateFormatter = DateFormatter()
+        // Prompt 85: fast locale (gregoriansk år også når telefonen bruker en annen kalender).
+        f.locale = Locale(identifier: "en_US_POSIX")
         f.dateFormat = "yyyy-MM-dd"
         return f.string(from: Date())
     }
