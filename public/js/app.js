@@ -79,7 +79,7 @@ function renderRoute() {
   // Prompt 40: Gjøremål er fullskjerm på web (som Chat), uten fotovindu og toppmeny.
   const fsTasks = (route === 'huskeliste' || route === 'gjoremal') && !isMobile();
   document.body.classList.toggle('tk-fs40', fsTasks);
-  view.innerHTML = (is2c() && route !== 'vaer' && route !== 'rom' && route !== 'chat' && route !== 'media' && !fsTasks ? pwHeader(route) : '') + ROUTES[route](); // Vær, Rom (prompt 32) og Chat (prompt 33) er fullskjerm
+  swapView((is2c() && route !== 'vaer' && route !== 'rom' && route !== 'chat' && route !== 'media' && !fsTasks ? pwHeader(route) : '') + ROUTES[route]()); // Vær, Rom (prompt 32) og Chat (prompt 33) er fullskjerm
   placeTicker();
   paintPhoto();
   mountAll(view);
@@ -98,6 +98,31 @@ function renderRoute() {
   setTitle();
   // Prompt 23: tilbake gir samme scrollposisjon som før, nye sider åpner øverst.
   scrollMem.enter(route);
+}
+
+// Prompt 87 (claude-code-web-navigasjon-uten-reload.md): fotovinduet øverst hører til skallet og skal ikke tegnes på nytt ved fanebytte.
+// Før ble hele visningen (også fotovinduet) byttet med innerHTML, så bildet startet tomt og ble tonet inn igjen for hvert trykk.
+//  - Lavt vindu → lavt vindu (Studie → Hjem): samme element blir stående; bare kicker og tittel byttes, og innholdet under.
+//  - Ellers (Dashboard ↔ andre sider): det nye vinduet overtar bildelaget som allerede er malt, så bildet aldri er borte.
+function swapView(html) {
+  const oldPw = view.querySelector('.pw'), oldImg = oldPw?.querySelector(':scope > .pw-img');
+  if (oldPw?.classList.contains('pw-low') && oldPw === view.firstElementChild && oldImg) {
+    const tpl = document.createElement('template');
+    tpl.innerHTML = html;
+    const nextPw = tpl.content.firstElementChild;
+    const nextBottom = nextPw?.classList.contains('pw-low') ? nextPw.querySelector(':scope > .pw-bottom') : null;
+    const oldBottom = oldPw.querySelector(':scope > .pw-bottom');
+    if (nextBottom && oldBottom) {
+      if (oldBottom.innerHTML !== nextBottom.innerHTML) oldBottom.replaceWith(nextBottom);
+      nextPw.remove();
+      while (oldPw.nextSibling) oldPw.nextSibling.remove();
+      view.appendChild(tpl.content);
+      return;
+    }
+  }
+  view.innerHTML = html;
+  const img = view.querySelector('.pw > .pw-img');
+  if (oldImg && img && oldImg.style.backgroundImage) img.replaceWith(oldImg);
 }
 
 // Fanetittelen: «Side · Appnavn» (appnavnet fra Innstillinger → App, standard «Homelab»).

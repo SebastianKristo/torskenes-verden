@@ -935,6 +935,56 @@ function modalHtml() {
 
 const PAGE_FN = { ov: overview, tx: transactions, ai: aiPage, filter: filterPage, kv: receipts, bud: budget, fast: recurring, konto: accounts, rap: reports, inn: settingsPage, ...MODULE_FN };
 
+/* Prompt 87 (claude-code-web-navigasjon-uten-reload.md): skallet blir stående når siden tegnes.
+   Før ble hele #app byttet med innerHTML ved hvert trykk i sidemenyen (og én gang til når dataene kom): sidemenyen, toppen og
+   merket ble fjernet og laget på nytt, og siden hoppet til toppen. Nå flettes sidemenyen og toppen inn i elementene som står
+   (bare det som faktisk er endret – f.eks. aria-current på valgt side), og bare innholdet under toppen byttes. */
+function morph87(a, b) {
+  if (a.nodeType !== b.nodeType || a.nodeName !== b.nodeName) { a.replaceWith(b); return; }
+  if (a.nodeType !== 1) { if (a.data !== b.data) a.data = b.data; return; }
+  // Skjemafelt får alltid verdien fra tegningen (som da alt ble laget på nytt), så et sendt søk ikke blir stående i feltet.
+  const field = a.nodeName === 'INPUT' || a.nodeName === 'TEXTAREA' || a.nodeName === 'SELECT';
+  if (!field && a.isEqualNode(b) && !a.querySelector('input,textarea,select')) return;
+  for (const at of [...a.attributes]) if (!b.hasAttribute(at.name)) a.removeAttribute(at.name);
+  for (const at of [...b.attributes]) if (a.getAttribute(at.name) !== at.value) a.setAttribute(at.name, at.value);
+  if (field && a.nodeName !== 'SELECT') { if (a.value !== b.value) a.value = b.value; if (a.checked !== b.checked) a.checked = b.checked; }
+  // Barn pares forfra og bakfra (samme slags node); det som er lagt til eller fjernet i midten byttes. Slik beholdes f.eks.
+  // søkefeltet selv om «Boliger»-merket kommer inn foran det.
+  const ac = [...a.childNodes], bc = [...b.childNodes], same = (x, y) => x.nodeType === y.nodeType && x.nodeName === y.nodeName;
+  let i = 0, ea = ac.length, eb = bc.length;
+  while (i < ea && i < eb && same(ac[i], bc[i])) i++;
+  while (ea > i && eb > i && same(ac[ea - 1], bc[eb - 1])) { ea--; eb--; }
+  const tail = ac[ea] ?? null;
+  for (let k = i; k < ea; k++) ac[k].remove();
+  for (let k = i; k < eb; k++) a.insertBefore(bc[k], tail);
+  for (let k = 0; k < i; k++) morph87(ac[k], bc[k]);
+  for (let k = 0; k < ac.length - ea; k++) morph87(ac[ea + k], bc[eb + k]);
+  if (a.nodeName === 'SELECT' && a.value !== b.value) a.value = b.value;
+}
+export function paintShell87(el, html) {
+  const app = el.firstElementChild?.classList.contains('app') ? el.firstElementChild : null;
+  const tpl = document.createElement('template');
+  if (app) tpl.innerHTML = html;
+  const nApp = tpl.content.firstElementChild;
+  const q = (r, sel) => r?.querySelector(`:scope > ${sel}`);
+  const side = q(app, '.side'), nSide = q(nApp, '.side'), main = q(app, '.main'), nMain = q(nApp, '.main');
+  const wrap = q(main, '.wrap'), nWrap = q(nMain, '.wrap'), head = q(wrap, 'header.head'), nHead = q(nWrap, 'header.head');
+  if (!side || !nSide || !wrap || !nWrap || !head || !nHead || wrap.firstElementChild !== head || nWrap.firstElementChild !== nHead) { el.innerHTML = html; return; }
+  morph87(side, nSide);
+  morph87(head, nHead);
+  while (head.nextSibling) head.nextSibling.remove();
+  nHead.remove();
+  wrap.append(...nWrap.childNodes);
+  while (app.nextSibling) app.nextSibling.remove();
+  nApp.remove();
+  el.append(tpl.content);
+}
+/** Starten av innholdsområdet (under toppen med tittel og søk), målt fra toppen av siden. */
+function contentTop87() {
+  const first = root()?.querySelector('.app > .main > .wrap > header.head')?.nextElementSibling;
+  return first ? Math.max(0, Math.round(first.getBoundingClientRect().top + window.scrollY) - 20) : 0;
+}
+
 let mailPaneEl = null, aiCtlEl = null, aiCtlTab;
 export function draw() {
   if (document.documentElement.dataset.ui === 'mobile') return; // prompt 85: mobilvisningen eier skjermen (se mobile.js draw)
@@ -943,7 +993,7 @@ export function draw() {
   const focus = document.activeElement?.closest('[data-form] input, [data-tx-field], [data-rc-field], [data-r48f]') ? { sel: focusSel(document.activeElement), pos: document.activeElement.selectionStart } : null;
   applyTheme();
   rcpBefore52(el); // prompt 52: kvitteringspanelet beholder sin egen scroll mellom tegningene
-  el.innerHTML = shell(PAGE_FN[u.page]());
+  paintShell87(el, shell(PAGE_FN[u.page]()));
   // E-postimporten (felles med Homelab-innstillingene) monteres i Innstillinger → Import.
   const mp = el.querySelector('[data-mailpane]');
   if (mp) { if (mailPaneEl) mp.replaceWith(mailPaneEl); else { mailPaneEl = mp; import('/assets/js/settings-mail.js').then((m) => m.mailPane(mp)).catch(() => { mp.innerHTML = '<div class="note">Kunne ikke laste e-postoppsettet.</div>'; }); } }
@@ -1018,9 +1068,15 @@ export function route() {
   if (entered) { u.page = next; u.msg = {}; u.bolScopeOff = false; }
   if (next === 'filter' && (entered || location.hash.includes('?'))) enterFilter();
   if (next !== 'inn') { try { sessionStorage.removeItem('fh_jump'); } catch {} } // hoppet gjelder bare rett etter byttet
+  const y87 = window.scrollY;
   draw();
-  // Prompt 23: tilbake (popstate/hash) gir samme scrollposisjon som før, nye sider åpner øverst.
-  (scrollMem ??= scrollMemory()).enter(next);
+  // Prompt 23: tilbake (popstate/hash) gir samme scrollposisjon som før.
+  // Prompt 87: en ny side i FinansHub (Oversikt → Boliger) hopper ikke til toppen av hele siden – innholdet starter øverst i
+  // innholdsområdet (min(nåværende, høyden på toppen)), og sidemenyen står der den er.
+  // En kort side (eller en som ennå laster) får plass til å stå på samme sted, så toppen ikke hopper inn igjen.
+  const wrap87 = root()?.querySelector('.app > .main > .wrap'), top87 = Math.min(y87, contentTop87());
+  if (wrap87) wrap87.style.minHeight = entered && top87 > 0 ? `calc(100vh + ${top87}px)` : entered ? '' : wrap87.style.minHeight;
+  (scrollMem ??= scrollMemory()).enter(next, { top: top87 });
   if (entered && next === 'ai') document.querySelector('[data-ai-page-input]')?.focus();
   load();
 }

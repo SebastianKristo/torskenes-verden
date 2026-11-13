@@ -2,6 +2,18 @@
 
 Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. Versjonene med APK og IPA ligger under [Releases](https://github.com/SebastianKristo/torskenes-verden/releases).
 
+## [4.72.0] – 13.11.2026 · NRK i Media, og fanebytte uten at siden bygges opp på nytt
+- **Media → NRK** (web, iPhone og Android):
+  - Lim inn en lenke fra NRK, velg type og kvalitet, og følg serier.
+  - Køen viser fremdrift, og fanen viser om VPN-en er norsk.
+  - Du kan velge komprimering til H.265.
+  - Biblioteket viser serier, sesonger og episoder, med «Last ned de som mangler».
+  - På web bruker fanen hele bredden.
+  - På Android kan du dele en lenke fra NRK-appen til Homelab.
+  - Biblioteket og komprimeringsvalget krever en nyere versjon av nrk-dl.
+- **Fanebytte på web:** skallet står i ro når du bytter fane. Fotovinduet, toppmenyen og bakgrunnen bygges ikke opp på nytt, og bare innholdet tones inn.
+- **Økonomi på web:** sidemenyen og toppen står stille når du bytter side, og du havner ved starten av innholdet i stedet for øverst. Tilbake-knappen gir samme posisjon som før.
+
 ## [4.71.0] – 11.11.2026 · Full gjennomgang: feilretting fra Docker til mobil
 - **Serveren:**
   - Stenger ryddig ved stopp og oppdatering. Før ble den drept etter 10 sekunder.

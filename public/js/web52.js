@@ -39,17 +39,29 @@ function pageEnter(route, view) {
   const changed = route !== lastRoute;
   lastRoute = route;
   if (!changed) return;
-  // Prompt 71 (ANIWEB71): Web Animations i stedet for klasse + tvungen layout (offsetWidth) for å starte på nytt. Samme bevegelse
-  // (pgIn: 10 px nedenfra, 280 ms); uten fill, så ingen transform blir igjen etterpå (position:fixed inni siden).
-  // «Reduser bevegelse»: kort inntoning (150 ms) uten bevegelse.
+  // Prompt 71 (ANIWEB71): Web Animations i stedet for klasse + tvungen layout for å starte på nytt; uten fill, så ingen transform blir
+  // igjen etterpå (position:fixed inni siden).
+  // Prompt 87 (claude-code-web-navigasjon-uten-reload.md): bare innholdet tones og skyves inn – fotovinduet (.pw) hører til skallet og
+  // står i ro. Før ble hele visningen animert fra opacity 0, så bildet øverst blinket ved hvert fanebytte. Maks 220 ms, og helt av
+  // ved «Reduser bevegelse».
+  if (reduced()) return;
   try {
-    view.getAnimations?.().forEach((a) => { if (a.id === 'pg71') a.cancel(); });
-    const a = reduced()
-      ? view.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 150, easing: 'ease-out' })
-      : view.animate([{ opacity: 0, transform: 'translate3d(0,10px,0)' }, { opacity: 1, transform: 'none' }], { duration: 280, easing: 'cubic-bezier(.22,.9,.28,1)' });
-    a.id = 'pg71';
+    for (const el of pageParts87(view)) {
+      el.getAnimations?.().forEach((a) => { if (a.id === 'pg71') a.cancel(); });
+      const a = el.animate([{ opacity: 0, transform: 'translate3d(0,10px,0)' }, { opacity: 1, transform: 'none' }], { duration: PAGE_MS87, easing: 'cubic-bezier(.22,.9,.28,1)' });
+      a.id = 'pg71';
+    }
   } catch { /* eldre nettleser: ingen animasjon */ }
 }
+/** Delene av visningen som er innhold: alt unntatt fotovinduet (på Dashboard ligger det ett nivå ned, i .p-dash). */
+function pageParts87(root, out = []) {
+  for (const el of root.children) {
+    if (el.classList.contains('pw')) continue;
+    if (el.querySelector(':scope > .pw')) pageParts87(el, out); else out.push(el);
+  }
+  return out;
+}
+export const PAGE_MS87 = 220;
 
 /* ---------------- Ruter: buffer ---------------- */
 

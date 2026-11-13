@@ -103,7 +103,7 @@ export async function paintPhoto(force) {
 export function renderBgMenu() {
   const host = document.getElementById('hl-bgdd');
   if (!host) return;
-  if (!is2c()) { host.innerHTML = ''; return; }
+  if (!is2c()) { host.innerHTML = ''; host.__html87 = ''; return; }
   const cur = bgState().type;
   const custom = store.me?.layout?.photoCustom || cachedBg('custom')?.url || cur === 'custom';
   // Prompt 46: Google Photos-album vises når et album er lagt til (ellers «+ Google Photos-album …» som åpner Innstillinger).
@@ -111,7 +111,7 @@ export function renderBgMenu() {
   if (!gphotoAlbum()) loadGphoto().then(() => { if (bgOpen) renderBgMenu(); });
   const rows = BG_TYPES.filter(([k]) => (k !== 'custom' || custom) && (k !== 'gphoto' || gp));
   const thumb = (k) => { const e = cachedBg(k); return k !== 'none' && e?.url ? `url('${e.url.replace(/['"()\s]/g, (c) => '%' + c.charCodeAt(0).toString(16).padStart(2, '0'))}')` : FALLBACK_GRAD; };
-  host.innerHTML = `<button type="button" class="hl-bgdd-btn" data-bgdd aria-haspopup="menu" aria-expanded="${bgOpen}">${esc(photoName(cur))} ▾</button>
+  const html87 = `<button type="button" class="hl-bgdd-btn" data-bgdd aria-haspopup="menu" aria-expanded="${bgOpen}">${esc(photoName(cur))} ▾</button>
     <div class="hl-bgdd-menu${bgOpen ? ' open' : ''}" role="menu">${rows.map(([k, n, s]) => {
       const fail = cachedBg(k)?.failed && k !== 'none';
       return `<button type="button" role="menuitemradio" aria-checked="${cur === k}" data-photo="${k}"><span class="th" style="background-image:${thumb(k)}"></span><span class="tx"><span>${esc(n)}</span><small>${esc(fail ? 'Fikk ikke lastet bildet' : s)}</small></span><b>${cur === k ? '✓' : ''}</b></button>`;
@@ -119,6 +119,8 @@ export function renderBgMenu() {
       <label class="hl-bgdd-up">+ Eget bilde<input type="file" accept="image/*" hidden data-photo-up></label>
       ${gp ? '' : '<a class="hl-bgdd-up" href="#/innstillinger/look/bg" data-bg-more>+ Google Photos-album …</a>'}
       <a class="hl-bgdd-more" href="#/innstillinger/look/bg" data-bg-more>Flere valg …</a></div>`;
+  // Prompt 87: paintPhoto() kalles ved hvert fanebytte; menyen i topplinjen tegnes bare på nytt når noe faktisk er endret.
+  if (host.__html87 !== html87) { host.innerHTML = html87; host.__html87 = html87; }
   // Miniatyrene lastes i bakgrunnen første gang menyen åpnes.
   if (bgOpen) for (const [k] of rows) if (k !== 'none' && !cachedBg(k)) resolveBg(k).then(() => bgOpen && renderBgMenu());
 }

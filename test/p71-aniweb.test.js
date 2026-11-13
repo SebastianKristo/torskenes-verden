@@ -124,7 +124,7 @@ test('mikrofon-bølgeformen, Hjem-flisene og fanebyttet bruker animasjonsbilder 
   const w = ALL.find((x) => x.rel === 'js/web52.js').text;
   const pe = w.slice(w.indexOf('function pageEnter'), w.indexOf('/* ---------------- Ruter: buffer')).replace(/\/\/.*$/gm, '');
   assert.doesNotMatch(pe, /offsetWidth/);
-  assert.match(pe, /view\.animate\(/);
+  assert.match(pe, /\.animate\(/); // prompt 87: innholdet animeres, ikke hele visningen (fotovinduet står i ro)
   assert.match(ALL.find((x) => x.rel === 'css/web52.css').text, /\.h52\.edit \.h52-i\{[^}]*will-change:rotate,translate/);
 });
 

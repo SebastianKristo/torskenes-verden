@@ -123,9 +123,12 @@ function bindMai17() {
 }
 
 export function initWeb41() {
+  // Prompt 87: nøkkelen huskes fra start (før været har gitt soloppgang/solnedgang), og sjekkes straks været kommer. Før ble et
+  // endret tidsrom først oppdaget ved neste fanebytte, så bakgrunnen ble hentet og byttet midt i byttet.
+  lastKey = bgState().type === 'oslo' ? osloKey41() : null;
   setInterval(osloTick, 60_000);
   setTimeout(osloTick, 4000);
-  on?.('weather', sunFromWeather);
+  on?.('weather', () => { sunFromWeather(); osloTick(); });
   bindMai17();
   document.addEventListener('hl:mai17', () => { const v = document.getElementById('view'); if (v && document.body.dataset.route === 'dash') mountMai17(v); });
 }
