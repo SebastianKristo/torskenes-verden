@@ -44,7 +44,7 @@ import org.json.JSONObject
 
 internal val MEDIA_COLORS45: Map<String, Long> = mapOf(
     "sonarr" to 0xFF35C5F4, "radarr" to 0xFFFFC230, "qbit" to 0xFF3D7DD6, "prowlarr" to 0xFFE66001, "plex" to 0xFFE5A00D, "jellyfin" to 0xFFAA5CC3,
-    "spill" to 0xFFE5A00D, "snart" to 0xFFB23A2A,
+    "spill" to 0xFFE5A00D, "snart" to 0xFFB23A2A, "nrk" to 0xFF2B5D8A, // prompt 87
 )
 
 /** Systemets tilbakeknapp: rund 40 dp glass-knapp med ‹ (treffflate 44 dp). */

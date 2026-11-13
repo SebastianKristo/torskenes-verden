@@ -32,7 +32,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -57,7 +59,7 @@ import org.json.JSONObject
 internal val OK43 = Color(0xFF2F6B4A)
 internal val WARN43 = Color(0xFFA0671A)
 internal val RED43 = Color(0xFFB23A2A)
-private val MEDIA_TABS43 = listOf("snart" to "Kommer snart", "sonarr" to "Sonarr", "radarr" to "Radarr", "qbit" to "qBittorrent", "prowlarr" to "Prowlarr", "spill" to "Avspilling") // prompt 44: Avspilling etter Prowlarr
+private val MEDIA_TABS43 = listOf("snart" to "Kommer snart", "sonarr" to "Sonarr", "radarr" to "Radarr", "qbit" to "qBittorrent", "prowlarr" to "Prowlarr", "nrk" to "NRK", "spill" to "Avspilling") // prompt 44: Avspilling etter Prowlarr · prompt 87: NRK mellom Prowlarr og Avspilling
 
 @Composable
 // Prompt 45 (claude-code-media-mer-farger.md): Lastes ned blå, Venter gul, Ferdig grønn, Mangler rød, Uovervåket grå.
@@ -83,11 +85,28 @@ internal fun MediaScreen43(vm: AppViewModel) {
                 RoundBtn50("✦", "Glimt", s.glimtOpen) { s.glimtOpen = !s.glimtOpen }
                 MediaMenu45(vm)
             }
-            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                MEDIA_TABS43.forEach { (k, n) -> MediaTab45(k, n, s.tab == k) { s.tab = k; s.detail = null; s.relFor = null } } // prompt 45: tjenestefarger
+            // Prompt 87: fanelinja ruller den valgte fanen inn i midten (også når fanen velges utenfra: delt NRK-lenke, widget, lenke).
+            val tabScroll = rememberScrollState()
+            val tabW = remember { IntArray(MEDIA_TABS43.size) }
+            var tabView by remember { mutableStateOf(0) }
+            var tabMalt by remember { mutableStateOf(0) }
+            val tabPad = with(LocalDensity.current) { 16.dp.roundToPx() }
+            val tabGap = with(LocalDensity.current) { 6.dp.roundToPx() }
+            LaunchedEffect(s.tab, tabView, tabMalt) {
+                val i = MEDIA_TABS43.indexOfFirst { it.first == s.tab }
+                if (i >= 0 && tabView > 0 && tabW.all { it > 0 }) tabScroll.animateScrollTo(tabScroll87(tabW.toList(), i, tabPad, tabGap, tabView, tabScroll.maxValue))
             }
-            ServerRow44(vm) // prompt 44: felles servervalg
-            MediaEntry51(vm) // prompt 51 (ANDFEAT51): I kveld · Fortsett · Undertekster · Lagring (ui/Media51Ui.kt)
+            Row(Modifier.fillMaxWidth().onSizeChanged { tabView = it.width }.horizontalScroll(tabScroll).padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                MEDIA_TABS43.forEachIndexed { i, (k, n) ->
+                    Box(Modifier.onSizeChanged { if (tabW[i] != it.width) { tabW[i] = it.width; tabMalt++ } }) {
+                        MediaTab45(k, n, s.tab == k) { s.tab = k; s.detail = null; s.relFor = null } // prompt 45: tjenestefarger
+                    }
+                }
+            }
+            if (s.tab != "nrk") { // prompt 87: NRK-fanen har ikke noe med Sonarr/Radarr-serverne å gjøre, og skjemaet trenger plassen
+                ServerRow44(vm) // prompt 44: felles servervalg
+                MediaEntry51(vm) // prompt 51 (ANDFEAT51): I kveld · Fortsett · Undertekster · Lagring (ui/Media51Ui.kt)
+            }
             if (s.glimtOpen) MediaGlimt43(vm)
             if (s.missing) Note43("Media er ikke satt opp på serveren ennå. Oppdater Homelab og legg inn Sonarr, Radarr, qBittorrent og Prowlarr under Integrasjoner.")
             s.error?.let { e -> Note43(e, red = true) { s.error = null; vm.p44.errKind = null } }
@@ -101,6 +120,7 @@ internal fun MediaScreen43(vm: AppViewModel) {
                     "radarr" -> Library43(vm, "film", pad, wide)
                     "qbit" -> Torrents43(vm, pad)
                     "spill" -> Playback44(vm, pad) // prompt 44
+                    "nrk" -> Nrk87(vm, pad) // prompt 87: NRK-nedlaster (ui/Nrk87Ui.kt)
                     else -> Prowlarr43(vm, pad)
                 }
                 // Detalj: fullskjerm på telefon, panel fra høyre (360) på stor skjerm.

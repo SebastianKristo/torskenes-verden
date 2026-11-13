@@ -123,7 +123,11 @@ class MainActivity : FragmentActivity() {
             Intent.ACTION_SEND -> if (intent.type?.startsWith("text/") == true && intent.getStringExtra(Intent.EXTRA_TEXT) != null) {
                 val sub = intent.getStringExtra(Intent.EXTRA_SUBJECT)?.takeIf { it.isNotBlank() }
                 val txt = intent.getStringExtra(Intent.EXTRA_TEXT).orEmpty()
-                vm.shareText29(if (sub != null && !txt.contains(sub)) "$sub\n$txt" else txt)
+                // Prompt 87: en NRK-lenke (Del → Homelab fra NRK-appen eller nettleseren) åpner Media → NRK med lenken i feltet.
+                // Bare utfylling: ingenting lastes ned før brukeren selv trykker «Last ned» (regelen fra prompt 86).
+                val nrk = nrkDelt87(txt)
+                if (nrk != null) vm.shareNrk87(nrk)
+                else vm.shareText29(if (sub != null && !txt.contains(sub)) "$sub\n$txt" else txt)
             } else {
                 val uri: Uri? = if (Build.VERSION.SDK_INT >= 33) intent.getParcelableExtra(Intent.EXTRA_STREAM, Uri::class.java)
                 else @Suppress("DEPRECATION") intent.getParcelableExtra(Intent.EXTRA_STREAM)

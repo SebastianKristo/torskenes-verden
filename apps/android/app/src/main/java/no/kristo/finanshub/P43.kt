@@ -251,6 +251,7 @@ fun AppViewModel.openMedia43() {
 fun AppViewModel.closeMedia43() {
     val s = p43
     when {
+        s.tab == "nrk" && nrk87.valgt != null -> nrk87.valgt = null // prompt 87: tilbake fra en serie i NRK-biblioteket
         s.relFor != null -> { s.relFor = null; s.rel = null }
         s.detail != null -> { s.detail = null; s.seasons = null }
         else -> s.mediaOpen = false
@@ -267,6 +268,7 @@ fun AppViewModel.loadMedia43() {
         "qbit" -> { loadTorrents43(); loadRoots43("sonarr"); loadRoots43("radarr") }
         "prowlarr" -> loadIndexers43()
         "spill" -> loadPlayback44() // prompt 44: Avspilling
+        "nrk" -> loadNrk87() // prompt 87: NRK-nedlaster
     }
 }
 

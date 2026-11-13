@@ -449,6 +449,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         photoThumbs = emptyMap(); photoFailed = emptySet(); bgInfo = null; depOpen = null; shareListId = null; taskUsers = emptyList()
         kal26.open = false; kal26.events = null; kal26.loadedFor = null; kal26.layoutFor = null
         chat27.open = false; chat27.loadedFor = null
+        nrk87.reset() // prompt 87: køen, biblioteket og lenken i feltet følger ikke med til neste bruker
         // Prompt 85 (brukerskille): forrige brukers alarmer for gjøremål og prøveperiode-varsler ble stående i AlarmManager og ringte
         // (med tittel) etter utlogging eller kontobytte. Gjøremål-alarmene fjernes her og planlegges på nytt når den nye brukerens
         // gjøremål hentes. Prøve-varslene byttes av Notify31Worker ved kontobytte; uten noen konto igjen fjernes de her.
@@ -734,7 +735,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             // Prompt 34: Glimt-brief-widgetene (finanshub://brief) og «Åpne AI-kontroll» (finanshub://ai/<fane>).
             "brief" -> { go(Screen.Homelab); openBrief34() }
             // Prompt 43: Media-widgetene (finanshub://media/qbit|snart) og Widgets-galleriet (finanshub://widgets).
-            "media" -> { p43.tab = uri.path?.trim('/')?.takeIf { it in setOf("snart", "sonarr", "radarr", "qbit", "prowlarr") } ?: "snart"; openMedia43() }
+            "media" -> { p43.tab = uri.path?.trim('/')?.takeIf { it in setOf("snart", "sonarr", "radarr", "qbit", "prowlarr", "nrk") } ?: "snart"; openMedia43() }
             "widgets" -> p43.galleryOpen = true
             // Prompt 37: bibelvers-widgetene og påminnelsen åpner Bibel-siden (bare med modulen).
             "bibel", "bible" -> { go(Screen.Homelab); loadBible37(); p37.biblePage = true }
@@ -3718,6 +3719,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /* ---------- Prompt 43 (ANDROID43): Media (Sonarr/Radarr/qBittorrent/Prowlarr), Claude-import, widget-galleri (P43.kt og ui-filene med 43) ---------- */
     val p43 = P43State()
+    /** Prompt 87 (NRKAND): NRK-fanen i Media (Nrk87.kt, ui/Nrk87Ui.kt). */
+    val nrk87 = Nrk87State()
     internal suspend fun <T> api43(f: suspend Api.() -> T): T = api.f()
     internal fun launch43(block: suspend () -> Unit) = launch(block)
     internal val appCtx43: Context get() = appCtx
