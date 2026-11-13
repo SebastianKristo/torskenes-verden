@@ -1,33 +1,130 @@
-/* NRK-nedlaster i Media (media-nrk.js). Bruker fargene fra media70.css (--p-*), så Papir og mørkt tema følger med. */
-.nrk75{display:flex;flex-direction:column;gap:24px;max-width:1100px}
-.nrk75 a{text-decoration:none}.nrk75 a:hover{text-decoration:underline}
-.nrk75 .nrk-in{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
-.nrk75 .nrk-in input{flex:1 1 320px;min-width:0;min-height:48px;padding:0 18px;border-radius:999px;border:1px solid var(--p-ln);background:var(--p-bg);color:var(--p-k);font:400 15px Inter,system-ui,sans-serif}
-.nrk75 .nrk-in input:focus{outline:2px solid var(--p-acc);outline-offset:1px}
-.nrk75 .nrk-in .m70-btn{min-height:48px;padding:0 24px}
-.nrk75 .nrk-valg{display:flex;flex-wrap:wrap;gap:10px 20px;align-items:center;margin-top:14px;color:var(--p-mt)}
-.nrk75 .nrk-valg label{display:inline-flex;align-items:center;gap:8px}
-.nrk75 .nrk-valg select{min-height:36px;padding:0 10px;border-radius:10px;border:1px solid var(--p-ln);background:var(--p-card);color:var(--p-k);font:500 14px Inter,system-ui,sans-serif}
-.nrk75 .nrk-valg input[type=checkbox]{width:18px;height:18px;accent-color:var(--p-acc)}
-.nrk75 .nrk-hint{margin:14px 0 0;line-height:1.5}
-.nrk75 .nrk-err{margin-top:14px;padding:10px 14px;border-radius:14px;background:var(--p-redbg);color:var(--p-redt);font-size:14px}
-.nrk75 .nrk-vpn{display:inline-flex;align-items:center;gap:8px;padding:6px 12px;border-radius:999px;font-size:13px;font-weight:600;white-space:nowrap}
-.nrk75 .nrk-vpn i{width:8px;height:8px;border-radius:50%;background:currentColor}
-.nrk75 .nrk-vpn.ok{background:var(--p-okbg);color:var(--p-okt)}
-.nrk75 .nrk-vpn.bad{background:var(--p-redbg);color:var(--p-redt);white-space:normal}
-.nrk75 .nrk-list{display:flex;flex-direction:column}
-.nrk75 .nrk-job{display:flex;flex-direction:column;gap:8px;padding:16px 0;border-top:1px solid var(--p-ln2)}
-.nrk75 .nrk-job:first-child{border-top:0;padding-top:0}
-.nrk75 .nrk-t{overflow-wrap:anywhere}
-.nrk75 .nrk-msg{color:var(--p-mt);overflow-wrap:anywhere}
-.nrk75 .nrk-job.feil .nrk-msg{color:var(--p-redt)}
-.nrk75 .nrk-bar{flex:none;width:100%}
-.nrk75 .m70-chip.c-err{background:var(--p-redbg);color:var(--p-redt)}
-.nrk75 details summary{cursor:pointer}
-.nrk75 .nrk-files{margin-top:6px;padding:10px 12px;border-radius:12px;background:var(--p-bg);font-size:12px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere;max-height:220px;overflow:auto;color:var(--p-mt)}
-.nrk75 .nrk-folg{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:14px 0;border-top:1px solid var(--p-ln2)}
-.nrk75 .nrk-folg:first-child{border-top:0;padding-top:0}
-.nrk75 .nrk-fot{padding:0 4px}
-@media (max-width:640px){.nrk75 .nrk-in .m70-btn{width:100%}.nrk75 .m70-card{padding:18px;border-radius:20px}}
+/* NRK-nedlaster i Media (media-nrk.js). Fasit: «Media NRK.dc.html» (pakke 57). Bruker fargene fra media70.css (--p-*),
+   så Papir og mørkt tema følger med. Blå = laster ned, grønn = ferdig/VPN ok, rød = feil/VPN stoppet, dempet = i kø/avbrutt. */
+.nrk87{--n-bl:#2b5d8a;--n-ok:#2f7a4f;--n-rd:var(--p-red);--n-mt:var(--p-mt);
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,max(460px,34%)),1fr));align-items:start;gap:18px;width:100%}
+.m43.m70.dk .nrk87{--n-bl:var(--p-blue);--n-ok:var(--p-ok)}
+.nrk87 a{text-decoration:none}.nrk87 a:hover{text-decoration:underline}
+.nrk87 .nrk-card{min-width:0;background:var(--p-card);border:1px solid var(--p-ln);border-radius:20px;padding:20px;display:flex;flex-direction:column;gap:4px}
+.nrk87 .nrk-card.form,.nrk87 .nrk-card.lib{gap:16px}
+/* To kolonner (fra ca. 1020 px): Køen til høyre over to rader; første rad er så høy som «Last ned», resten går til rad to. */
+@media (min-width:1020px){.nrk87{grid-template-rows:auto 1fr}.nrk87 .nrk-card.ko{grid-row:span 2}}
+.nrk87 .nrk-card.full{grid-column:1 / -1}
+.nrk87 .nrk-card.tomt{padding:28px 22px;gap:12px;align-items:flex-start}
+.nrk87 .nrk-card.tomt p{margin:0;font-size:15px;line-height:1.5;color:var(--p-mt);max-width:52ch;text-wrap:pretty}
+.nrk87 .nrk-h{margin:0;font:500 26px/1.1 Newsreader,Georgia,serif;letter-spacing:-.005em}
+.nrk87 .nrk-h.stor{font-size:28px}
+.nrk87 .nrk-h.mb{margin-bottom:8px}
+.nrk87 .nrk-hd{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.nrk87 .nrk-hd.base{align-items:baseline;flex-wrap:nowrap;margin-bottom:8px}
+.nrk87 .nrk-lh{display:flex;flex-direction:column;gap:4px}
+.nrk87 .nrk-lh span{font-size:14px;color:var(--p-mt)}
+
+/* VPN-merke */
+.nrk87 .nrk-vpn{display:inline-flex;align-items:center;gap:7px;height:30px;padding:0 12px;border-radius:999px;border:1px solid color-mix(in srgb,var(--c) 35%,transparent);background:color-mix(in srgb,var(--c) 10%,transparent);color:var(--c);font:600 12px 'JetBrains Mono',ui-monospace,monospace;white-space:nowrap;flex:none}
+.nrk87 .nrk-vpn i{width:7px;height:7px;border-radius:50%;background:currentColor}
+.nrk87 .ok{--c:var(--n-ok)}.nrk87 .rd{--c:var(--n-rd)}.nrk87 .bl{--c:var(--n-bl)}.nrk87 .mt{--c:var(--n-mt)}
+
+/* Lenkefelt */
+.nrk87 .nrk-in{display:flex;gap:8px;flex-wrap:wrap}
+.nrk87 .nrk-in input{flex:1 1 240px;min-width:0;height:46px;padding:0 16px;border-radius:14px;border:1px solid var(--p-ln);background:var(--p-bg);color:var(--p-k);font:500 15px Inter,system-ui,sans-serif;box-sizing:border-box}
+.nrk87 .nrk-in input:focus-visible{outline:2px solid var(--p-acc);outline-offset:1px}
+.nrk87 .nrk-in.bad input{border-color:var(--n-rd)}
+.nrk87 .nrk-go{flex:none;height:46px;padding:0 20px;border-radius:14px;border:0;background:color-mix(in srgb,var(--p-k) 40%,transparent);color:var(--p-bg);font:700 15px Inter,system-ui,sans-serif;cursor:pointer}
+.nrk87 .nrk-go.klar{background:var(--p-k)}
+.nrk87 .nrk-go:disabled{opacity:.6;cursor:default}
+.nrk87 .nrk-ferr{font-size:14px;color:var(--n-rd);margin-top:-6px}
+.nrk87 .nrk-di .nrk-ferr,.nrk87 .nrk-card.lib>.nrk-ferr{margin-top:0}
+
+/* Piller, bryter og avkrysning */
+.nrk87 .nrk-valg{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+.nrk87 .nrk-grp{display:flex;flex-direction:column;gap:6px;min-width:0}
+.nrk87 .nrk-lbl{font:600 11px 'JetBrains Mono',ui-monospace,monospace;letter-spacing:.08em;color:var(--p-mt)}
+.nrk87 .nrk-ps,.nrk87 .nrk-ss,.nrk87 .nrk-acts{display:flex;flex-wrap:wrap;gap:6px}
+.nrk87 .nrk-p,.nrk87 .nrk-b{display:inline-flex;align-items:center;justify-content:center;height:34px;padding:0 12px;border-radius:999px;border:1px solid var(--p-ln);background:transparent;color:var(--p-k);font:600 13px Inter,system-ui,sans-serif;cursor:pointer;white-space:nowrap;flex:none;box-sizing:border-box}
+.nrk87 .nrk-p:hover,.nrk87 .nrk-b:hover{border-color:var(--p-dim);text-decoration:none}
+.nrk87 .nrk-p.on,.nrk87 .nrk-b.ink{background:var(--p-k);border-color:var(--p-k);color:var(--p-bg)}
+.nrk87 .nrk-b.ink{font-weight:700;height:36px;padding:0 14px}
+.nrk87 a.nrk-b{height:36px;padding:0 14px}
+.nrk87 .nrk-b.stor{height:42px;padding:0 18px;font-size:14px}
+.nrk87 .nrk-b.rd{color:var(--n-rd)}.nrk87 .nrk-b.mt{color:var(--p-mt)}
+.nrk87 .nrk-b:disabled{opacity:.55;cursor:default}
+.nrk87 :is(.nrk-p,.nrk-b,.nrk-chk,.nrk-fl,.nrk-it,.nrk-go):focus-visible{outline:2px solid var(--p-acc);outline-offset:2px}
+.nrk87 .nrk-chk{display:flex;align-items:center;gap:12px;padding:0;border:0;background:transparent;color:var(--p-k);cursor:pointer;text-align:left;font:inherit;align-self:flex-start;border-radius:8px}
+.nrk87 .nrk-chk+.nrk-chk{margin-top:-4px}
+.nrk87 .nrk-tx{display:flex;flex-direction:column;gap:2px}
+.nrk87 .nrk-tx b{font-size:15px;font-weight:700}
+.nrk87 .nrk-tx span{font-size:13px;color:var(--p-mt)}
+.nrk87 .nrk-sw{flex:none;width:42px;height:24px;border-radius:999px;background:var(--p-dim);position:relative;transition:background .2s}
+.nrk87 .nrk-sw.on{background:var(--n-ok)}
+.nrk87 .nrk-sw i{position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:transform .2s}
+.nrk87 .nrk-sw.on i{transform:translateX(18px)}
+.nrk87 .nrk-box{flex:none;width:22px;height:22px;margin:0 10px;border-radius:6px;border:1.5px solid var(--p-dim);background:transparent;color:var(--p-bg);display:grid;place-items:center;font:700 14px/1 Inter,system-ui,sans-serif;box-sizing:border-box}
+.nrk87 .nrk-box.on{background:var(--p-k);border-color:var(--p-k)}
+.nrk87 .nrk-mapper{border-top:1px solid var(--p-ln);padding-top:12px;display:flex;flex-direction:column;gap:4px;font:500 12px/1.6 'JetBrains Mono',ui-monospace,monospace;color:var(--p-mt);overflow-wrap:anywhere}
+
+/* Køen */
+.nrk87 .nrk-ban{padding:12px 14px;border-radius:12px;background:color-mix(in srgb,var(--n-rd) 10%,transparent);color:var(--n-rd);font-size:14px;font-weight:600;margin-bottom:8px}
+.nrk87 .nrk-tom{margin:0;padding:10px 0;color:var(--p-mt);font-size:15px}
+.nrk87 .nrk-tom.sm{font-size:13px;padding:4px 0 0}
+.nrk87 .nrk-job{display:flex;flex-direction:column;gap:8px;padding:14px 0;border-top:1px solid var(--p-ln)}
+.nrk87 .nrk-hd+.nrk-job,.nrk87 .nrk-h+.nrk-folg{border-top:0}
+.nrk87 .nrk-jt{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.nrk87 .nrk-jt a{font-size:16px;font-weight:700;color:var(--p-k);min-width:0;overflow-wrap:anywhere}
+.nrk87 .nrk-chip{flex:none;height:24px;padding:0 10px;border-radius:999px;background:color-mix(in srgb,var(--c) 13%,transparent);color:var(--c);font:600 11px/24px 'JetBrains Mono',ui-monospace,monospace;letter-spacing:.04em;white-space:nowrap}
+.nrk87 .nrk-msg{font-size:14px;color:var(--p-mt);overflow-wrap:anywhere}
+.nrk87 .nrk-msg.rd{color:var(--n-rd)}
+.nrk87 .nrk-bar{height:6px;border-radius:999px;background:var(--p-ln);overflow:hidden}
+.nrk87 .nrk-bar i{display:block;height:100%;background:var(--c);border-radius:999px;transition:width .6s}
+.nrk87 .nrk-tall{display:flex;gap:4px 14px;flex-wrap:wrap;font:500 12px 'JetBrains Mono',ui-monospace,monospace;color:var(--p-mt)}
+.nrk87 .nrk-tall span{white-space:nowrap}
+.nrk87 .nrk-spart{font:600 12px 'JetBrains Mono',ui-monospace,monospace;color:var(--n-ok)}
+.nrk87 .nrk-fl{align-self:flex-start;padding:0;border:0;background:transparent;color:var(--p-k);font:600 13px Inter,system-ui,sans-serif;cursor:pointer;white-space:nowrap;border-radius:4px}
+.nrk87 .nrk-fl:hover{text-decoration:underline}
+.nrk87 .nrk-files{display:flex;flex-direction:column;gap:3px;font:500 12px/1.5 'JetBrains Mono',ui-monospace,monospace;color:var(--p-mt);overflow-wrap:anywhere;max-height:260px;overflow:auto}
+
+/* Serier du følger */
+.nrk87 .nrk-folg{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 0;border-top:1px solid var(--p-ln)}
+.nrk87 .nrk-ft{display:flex;flex-direction:column;gap:3px;min-width:0}
+.nrk87 .nrk-ft b{font-size:16px;font-weight:700;overflow-wrap:anywhere}
+.nrk87 .nrk-ft span{font-size:13px;color:var(--p-mt)}
+
+/* Bibliotek */
+.nrk87 .nrk-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:16px}
+.nrk87 .nrk-it{display:flex;flex-direction:column;gap:8px;padding:0;border:0;background:transparent;color:var(--p-k);text-align:left;cursor:pointer;font:inherit;min-width:0;border-radius:12px}
+.nrk87 .nrk-pl{position:relative;width:100%;aspect-ratio:2 / 3;border-radius:12px;overflow:hidden;display:flex;align-items:flex-end;padding:12px;box-sizing:border-box}
+.nrk87 .nrk-pl b{position:relative;z-index:1;font:500 20px/1.1 Newsreader,Georgia,serif;color:#f3efe6;text-wrap:balance;overflow-wrap:anywhere;text-shadow:0 1px 10px rgba(14,13,11,.7)}
+.nrk87 .nrk-pl img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.nrk87 .nrk-pl:has(img)::after{content:'';position:absolute;inset:40% 0 0;background:linear-gradient(transparent,rgba(14,13,11,.72))}
+.nrk87 .nrk-bdg{position:absolute;z-index:1;top:8px;right:8px;height:22px;padding:0 8px;border-radius:999px;background:rgba(14,13,11,.55);color:#f3efe6;font:600 11px/22px 'JetBrains Mono',ui-monospace,monospace;white-space:nowrap}
+.nrk87 .nrk-itt{display:flex;flex-direction:column;gap:2px}
+.nrk87 .nrk-itt b{font-size:14px;font-weight:700;overflow-wrap:anywhere}
+.nrk87 .nrk-itt span{font-size:12px;color:var(--p-mt)}
+.nrk87 .nrk-pb{display:block;height:4px;border-radius:999px;background:var(--p-ln);overflow:hidden}
+.nrk87 .nrk-pb i{display:block;height:100%;background:var(--n-bl)}
+.nrk87 .nrk-pb.ok i{background:var(--n-ok)}
+.nrk87 .nrk-det{display:flex;gap:20px;flex-wrap:wrap;align-items:flex-start}
+.nrk87 .nrk-pl.stor{flex:none;width:140px}
+.nrk87 .nrk-di{flex:1 1 280px;min-width:0;display:flex;flex-direction:column;gap:10px;align-items:flex-start}
+.nrk87 .nrk-dh{margin:0;font:500 34px/1.05 Newsreader,Georgia,serif;overflow-wrap:anywhere}
+.nrk87 .nrk-dm{font-size:14px;color:var(--p-mt)}
+.nrk87 .nrk-dd{margin:0;font-size:15px;line-height:1.5;max-width:60ch;text-wrap:pretty}
+.nrk87 .nrk-ss{border-top:1px solid var(--p-ln);padding-top:14px}
+.nrk87 .nrk-eps{display:flex;flex-direction:column}
+.nrk87 .nrk-ep{display:flex;align-items:center;gap:14px;padding:12px 0;border-top:1px solid var(--p-ln)}
+.nrk87 .nrk-ep:first-child{border-top:0}
+.nrk87 .nrk-epn{flex:none;width:64px;font:600 12px 'JetBrains Mono',ui-monospace,monospace;color:var(--p-mt)}
+.nrk87 .nrk-ept{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.nrk87 .nrk-ept b{font-size:15px;font-weight:700;overflow-wrap:anywhere}
+.nrk87 .nrk-ept span{font-size:12px;color:var(--p-mt)}
+
+@media (max-width:640px){
+  .nrk87 .nrk-card{padding:18px}
+  .nrk87 .nrk-p,.nrk87 .nrk-b{height:38px}
+  .nrk87 .nrk-ep{flex-wrap:wrap;gap:8px 12px}
+  .nrk87 .nrk-epn{width:auto;min-width:52px}
+  .nrk87 .nrk-ept{flex:1 1 120px}
+  .nrk87 .nrk-dh{font-size:30px}
+}
+@media (prefers-reduced-motion:reduce){.nrk87 .nrk-sw,.nrk87 .nrk-sw i,.nrk87 .nrk-bar i{transition:none}}
 /* Fem faner i Media: litt mindre luft på smale telefoner, så alle får plass oftere. */
 @media (max-width:420px){.m43.m70 .m70-tab{padding:9px 9px}}

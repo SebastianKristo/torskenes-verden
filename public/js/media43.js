@@ -530,7 +530,14 @@ function paintMain() {
   if (ns) { if (!nrkHost) nrkHost = document.createElement('div'); ns.replaceWith(nrkHost); mountNrk(nrkHost); }
   c.scrollTop = y;
 }
-function paintTop() { const t = root?.querySelector('[data-m43-top]'); if (t) keepFocus(t, () => { t.innerHTML = topHtml(); }); }
+function paintTop() { const t = root?.querySelector('[data-m43-top]'); if (t) { keepFocus(t, () => { t.innerHTML = topHtml(); }); centerTab87(t); } }
+/** Prompt 87: på mobil ruller fanelinja sidelengs – hold den valgte fanen midt i linja (topplinja tegnes på nytt hver gang). */
+function centerTab87(t) {
+  const tab = t.querySelector('.m70-tab.on'), bar = tab?.parentElement;
+  if (!bar || bar.scrollWidth <= bar.clientWidth + 1) return;
+  const a = tab.getBoundingClientRect(), b = bar.getBoundingClientRect();
+  bar.scrollLeft += a.left - b.left - (b.width - a.width) / 2;
+}
 function paintGl() { const g = root?.querySelector('[data-m43-gl]'); if (g) g.innerHTML = glHtml(); }
 function paintSheet() {
   const s = root?.querySelector('[data-m43-sh]'); if (!s) return;

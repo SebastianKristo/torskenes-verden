@@ -73,7 +73,7 @@ Skriv eller snakk i søkefeltet på Hjem eller i Chat: «legg inn tannlege freda
 <td valign="top">
 
 ### 🎬 Media
-Sonarr, Radarr, Prowlarr og qBittorrent på én side, med Oversikt, Kalender, Bibliotek og Nedlastinger. Legg til serier og filmer, bruk interaktivt søk i indekserne, og følg nedlastingene med pause og kø. Avspillinger i Plex og Jellyfin styres fra web, apper, klokke og Android Auto: spill av, pause, spoling, neste og volum. Admin setter opp tjenestene, og nøklene blir på serveren.
+Sonarr, Radarr, Prowlarr og qBittorrent på én side, med Oversikt, Kalender, Bibliotek og Nedlastinger. Legg til serier og filmer, bruk interaktivt søk i indekserne, og følg nedlastingene med pause og kø. Avspillinger i Plex og Jellyfin styres fra web, apper, klokke og Android Auto: spill av, pause, spoling, neste og volum. Admin setter opp tjenestene, og nøklene blir på serveren. Fanen **NRK** er en NRK-nedlaster: lim inn en lenke fra tv.nrk.no eller radio.nrk.no, følg serier, komprimer til H.265 og bla i biblioteket med sesonger og episoder. Se [NRK-nedlaster](docs/nrk-nedlaster.md).
 
 </td>
 </tr>

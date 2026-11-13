@@ -176,7 +176,7 @@ export const INTEGRATIONS = [
   ] },
   // NRK-nedlaster: nrk-dl bak en egen Gluetun-tunnel til Norge. Brukes av Media → NRK.
   { id: 'nrk', name: 'NRK-nedlaster', group: 'Media', scope: S, test: () => testNrk(), fields: [
-    F('nrk_url', 'Adresse', 'url', cfgStore('nrk_url'), { required: true, help: 'For eksempel http://10.69.1.106:8020' }),
+    F('nrk_url', 'Adresse', 'url', cfgStore('nrk_url'), { required: true, help: 'For eksempel http://10.69.1.244:8020' }),
     F('nrk_token', 'API-token', 'secret', cfgStore('nrk_token', true), { help: 'NRK_API_TOKEN i /opt/arr/.env i arr-containeren' }),
   ] },
   { id: 'ha', name: 'Home Assistant', group: 'Hjem', scope: S, test: viaGroup('Home Assistant'), fields: [
@@ -299,7 +299,7 @@ const OWN_GUIDE = {
   ],
   nrk: [
     ['Sett opp nedlasteren', 'Kjør scripts/ct/nrk.sh fra skjold-proxmox-media på Proxmox-verten. Den lager en egen VPN-tunnel til en norsk Proton-server (gluetun-nrk) og starter nrk-dl på port 8020.', 'bash scripts/ct/nrk.sh'],
-    ['Adresse', 'IP-en til arr-containeren med port 8020.', 'http://10.69.1.106:8020'],
+    ['Adresse', 'IP-en til arr-containeren med port 8020.', 'http://10.69.1.244:8020'],
     ['Token', 'Skriptet skriver ut tokenet. Du finner det også i arr-containeren.', "grep NRK_API_TOKEN /opt/arr/.env"],
     ['Test', 'Testen sjekker at nedlasteren svarer og at VPN-en går ut i Norge. Uten norsk IP lastes ingenting ned.'],
   ],

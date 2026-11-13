@@ -391,11 +391,12 @@ final class Nrk87 {
         }
     }
 
-    /// «42 min» som tekst, eller et tall (sekunder når det er over 300, ellers minutter).
+    /// Serveren sender `varighetTekst` («42 min») og `varighet` i hele sekunder. Teksten brukes når den finnes.
     nonisolated static func duration(_ r: [String: Any]) -> String {
+        if let t = JS.str(r, "varighetTekst"), !t.isEmpty { return t }
         if let s = r["varighet"] as? String { return s }
         guard let n = JS.num(r, "varighet"), n > 0 else { return "" }
-        let min: Int = n > 300 ? Int((n / 60).rounded()) : Int(n)
+        let min: Int = Int((n / 60).rounded())
         if min >= 60 { return "\(min / 60) t \(min % 60) min" }
         return "\(Swift.max(1, min)) min"
     }
