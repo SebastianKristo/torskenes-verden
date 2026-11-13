@@ -126,5 +126,6 @@
   .nrk87 .nrk-dh{font-size:30px}
 }
 @media (prefers-reduced-motion:reduce){.nrk87 .nrk-sw,.nrk87 .nrk-sw i,.nrk87 .nrk-bar i{transition:none}}
-/* Fem faner i Media: litt mindre luft på smale telefoner, så alle får plass oftere. */
-@media (max-width:420px){.m43.m70 .m70-tab{padding:9px 9px}}
+/* Seks faner i Media (prompt 88): på smale telefoner får de ikke plass uansett, så fanelinja ruller og valgt fane sentreres (centerTab87).
+   Litt tettere enn 12 px, men nok luft til å treffe med tommelen. */
+@media (max-width:420px){.m43.m70 .m70-tab{padding:9px 11px}}

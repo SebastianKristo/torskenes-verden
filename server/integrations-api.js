@@ -33,6 +33,7 @@ import { iconSvg } from './icons.js';
 import { clearCache } from './cache.js';
 import { testOpenWebui } from './chat.js';
 import { testNrk } from './nrkdl.js'; // NRK-nedlaster
+import { testYubal } from './yubal.js'; // Musikk (yubal)
 import { mediaTest43, mediaHookPath43 } from './media43.js'; // prompt 43: Test tilkobling og webhook-token for MEDIA
 
 const MOCK = process.env.MOCK_DATA === '1';
@@ -179,6 +180,10 @@ export const INTEGRATIONS = [
     F('nrk_url', 'Adresse', 'url', cfgStore('nrk_url'), { required: true, help: 'For eksempel http://10.69.1.244:8020' }),
     F('nrk_token', 'API-token', 'secret', cfgStore('nrk_token', true), { help: 'NRK_API_TOKEN i /opt/arr/.env i arr-containeren' }),
   ] },
+  // Musikk: yubal (YouTube Music → musikkbiblioteket) i arr-containeren. Ingen innlogging i yubal, så adressen blir på serveren.
+  { id: 'yubal', name: 'Musikk (yubal)', group: 'Media', scope: S, test: () => testYubal(), fields: [
+    F('yubal_url', 'Adresse', 'url', cfgStore('yubal_url'), { required: true, help: 'For eksempel http://10.69.1.244:8010' }),
+  ] },
   { id: 'ha', name: 'Home Assistant', group: 'Hjem', scope: S, test: viaGroup('Home Assistant'), fields: [
     F('ha_url', 'Adresse', 'url', cfgStore('ha_url'), { required: true, help: 'For eksempel http://192.168.1.20:8123' }),
     F('ha_token', 'Long-lived token', 'secret', cfgStore('ha_token', true), { required: true, help: 'Home Assistant → Profil → Sikkerhet → Long-lived access tokens' }),
@@ -254,6 +259,7 @@ const META = {
   qbittorrent: ['Annet', 'qB', '#2f67ba', 'Nedlastinger', 'qbittorrent'],
   prowlarr: ['Annet', 'P', '#e66000', 'Indeksere', 'prowlarr'],
   nrk: ['Annet', 'N', '#b23a2a', 'Programmer og serier fra NRK bak norsk VPN', 'nrk'],
+  yubal: ['Annet', '♪', '#c4302b', 'Album og spillelister fra YouTube Music til musikkbiblioteket', 'yubal'],
   smtp: ['Annet', '@', '#2b5d8a', 'Invitasjoner fra din egen e-post', 'smtp'],
   icons: ['Annet', '✦', '#5b6478', 'Iconify via Homelab-cache', null],
   photos: ['Annet', 'U', '#3a3a3a', 'Bakgrunner fra Unsplash og Pexels', 'backgrounds'],
@@ -303,6 +309,12 @@ const OWN_GUIDE = {
     ['Token', 'Skriptet skriver ut tokenet. Du finner det også i arr-containeren.', "grep NRK_API_TOKEN /opt/arr/.env"],
     ['Test', 'Testen sjekker at nedlasteren svarer og at VPN-en går ut i Norge. Uten norsk IP lastes ingenting ned.'],
   ],
+  yubal: [
+    ['Adresse', 'yubal kjører i arr-containeren bak VPN-en, på port 8010. yubal har ingen innlogging, så ikke åpne porten mot internett: Homelab-serveren er eneste vei inn.', 'http://10.69.1.244:8010'],
+    ['Format og kvalitet', 'Gjelder alle nedlastinger og settes under yubal i /opt/arr/docker-compose.yml: YUBAL_AUDIO_FORMAT (m4a, mp3 eller opus) og YUBAL_AUDIO_QUALITY (0 = best … 10). m4a er YouTube sin AAC uten omkoding (anbefalt), mp3 omkodes (litt dårligere), opus gir minst filer.', 'YUBAL_AUDIO_FORMAT=m4a\nYUBAL_AUDIO_QUALITY=0'],
+    ['Ta i bruk endringen', 'Start yubal på nytt i arr-containeren etter at du har endret compose-filen.', 'cd /opt/arr && docker compose up -d --force-recreate'],
+    ['Test', 'Testen sjekker at yubal svarer, og viser når neste automatiske synk av spillelistene du følger kjører.'],
+  ],
   prowlarr: [
     ['Finn API-nøkkelen', 'I Prowlarr: Settings → General → Security → API Key.'],
     ['Koble til Sonarr og Radarr', 'Settings → Apps → + → Sonarr og Radarr med Full Sync.', 'Prowlarr: http://prowlarr:9696\nSonarr:   http://sonarr:8989\nRadarr:   http://radarr:7878'],
@@ -334,7 +346,7 @@ function mediaTestOf(id, keys) {
     return mediaTest43(id, vals);
   };
 }
-const MEDIA43 = new Set(['sonarr', 'radarr', 'qbittorrent', 'prowlarr', 'jellyfin', 'plex', 'nrk']);
+const MEDIA43 = new Set(['sonarr', 'radarr', 'qbittorrent', 'prowlarr', 'jellyfin', 'plex', 'nrk', 'yubal']);
 const GROUPS = new Map(SCHEMA.map(([name, meta]) => [meta.id, { name, ...meta }]));
 const stepsOf = (list) => list.map(([title, text, code], i) => ({ n: i + 1, title, text, ...(code ? { code } : {}) }));
 function guideOf(x) {

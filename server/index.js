@@ -81,6 +81,7 @@ import { auth44Api } from './auth44.js';
 import { playback44Api, startPlayback44 } from './playback44.js';
 import { mountApi45 } from './api45.js'; // prompt 45 (SERVER45)
 import { nrkApi } from './nrkdl.js'; // NRK-nedlaster: /api/media/nrk/* (nrk-dl bak norsk VPN)
+import { yubalApi } from './yubal.js'; // Musikk: /api/media/yubal/* (yubal, YouTube Music → musikkbiblioteket)
 import { mountMedia50, startMedia50 } from './media50.js'; // prompt 50 (SRVMEDIA50): bilder med diskcache, sporing etter søk, diagnostikk
 import { mountSec51 } from './sec51.js'; // prompt 51 (SEC51): sikkerhet
 import { mountFamily50 } from './family50.js'; // prompt 50 (SRVFAM50): Steder med områder, Folk, Helse, I dag, Sjekk inn
@@ -737,6 +738,7 @@ app.use('/api/media/*', mediaSiteMw44);
 app.use('/api/media/series', librarySearchMw44);
 app.use('/api/media/movies', librarySearchMw44);
 app.route('/api/media/nrk', nrkApi); // NRK-nedlaster (før media50/43, som eier resten av /api/media)
+app.route('/api/media/yubal', yubalApi); // Musikk (yubal), også før media50/43
 mountMedia50(app); // prompt 50 (SRVMEDIA50): /bilde, /track, /diagnostics, /torrents/:hash/start + posterImg/track i svarene (før mountApi45 og media43/44)
 mountApi45(app); // prompt 45 (SERVER45): Docker-oppsett, Search Console, AI-import, Media/Avspilling, sonevarsler, HA-helse, Vær, Gjøremål, Innstillinger (etter mediaSiteMw44, før de eldre rutene)
 app.get('/api/media/now', authOrToken, legacyMedia44(personal('media', proxy(api.getMediaNow))));

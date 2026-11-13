@@ -1,0 +1,109 @@
+/* Musikk i Media (media-musikk.js). Fasit: «Media Musikk.dc.html» (pakke 58). Fargene fra media70.css (--p-*), så Papir og
+   mørkt tema følger med. Blå = henter/laster ned, lilla = importerer, grønn = ferdig/lastet ned, rød = feil, dempet = venter. */
+.mu88{--u-bl:#2b5d8a;--u-ok:#2f7a4f;--u-pu:#7a4fa0;--u-rd:var(--p-red);--u-mt:var(--p-mt);
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,max(420px,34%)),1fr));align-items:start;gap:18px;width:100%;color:var(--p-k)}
+.m43.m70.dk .mu88{--u-bl:var(--p-blue);--u-ok:var(--p-ok);--u-pu:#b896d8}
+.mu88 .ok{--c:var(--u-ok)}.mu88 .rd{--c:var(--u-rd)}.mu88 .bl{--c:var(--u-bl)}.mu88 .mt{--c:var(--u-mt)}.mu88 .pu{--c:var(--u-pu)}
+.mu88 .mu-card{min-width:0;background:var(--p-card);border:1px solid var(--p-ln);border-radius:20px;padding:20px;display:flex;flex-direction:column;gap:4px;box-sizing:border-box}
+.mu88 .mu-card.full{grid-column:1 / -1}
+.mu88 .mu-card.form{gap:16px}
+.mu88 .mu-card.tomt{padding:28px 22px;gap:12px;align-items:flex-start}
+.mu88 .mu-card.tomt p{margin:0;font-size:15px;line-height:1.5;color:var(--p-mt);max-width:52ch;text-wrap:pretty}
+.mu88 .mu-h{margin:0;font:500 26px/1.1 Newsreader,Georgia,serif;letter-spacing:-.005em}
+.mu88 .mu-card.form .mu-h,.mu88 .mu-h.stor{font-size:28px}
+.mu88 .mu-hd{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:8px}
+.mu88 .mu-hd.wrap{flex-wrap:wrap;margin-bottom:0}
+.mu88 .mu-plan{margin:2px 0 8px}
+.mu88 .mu-dim{font-size:13px;color:var(--p-mt)}
+.mu88 .mu-mono{font:500 12px 'JetBrains Mono',ui-monospace,monospace;color:var(--p-mt)}
+.mu88 .mu-lbl{font:600 11px 'JetBrains Mono',ui-monospace,monospace;letter-spacing:.08em;color:var(--p-mt)}
+.mu88 .mu-tom{margin:0;padding:18px 0;color:var(--p-mt);font-size:15px}
+.mu88 .mu-tom.sm{padding:4px 0;font-size:14px}
+.mu88 .mu-ban{padding:12px 14px;border-radius:12px;background:color-mix(in srgb,var(--u-rd) 10%,transparent);color:var(--u-rd);font-size:14px;font-weight:600;margin-bottom:8px}
+
+/* Knapper, segmenter og brytere */
+.mu88 .mu-b{display:inline-flex;align-items:center;justify-content:center;height:32px;padding:0 12px;border-radius:999px;border:1px solid var(--p-ln);background:transparent;color:var(--p-k);font:600 13px Inter,system-ui,sans-serif;cursor:pointer;white-space:nowrap;flex:none;box-sizing:border-box}
+.mu88 .mu-b:hover{border-color:var(--p-dim)}
+.mu88 .mu-b.rd{color:var(--u-rd)}.mu88 .mu-b.mt{color:var(--p-mt)}
+.mu88 .mu-b.ink{height:44px;padding:0 20px;border:0;background:var(--p-k);color:var(--p-bg);font-weight:700;font-size:14px}
+.mu88 .mu-b.stor{height:42px;padding:0 18px}
+.mu88 .mu-b:disabled{opacity:.55;cursor:default}
+.mu88 .mu-acts{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.mu88 :is(.mu-b,.mu-seg,.mu-chk,.mu-tog,.mu-so,.mu-hent):focus-visible{outline:2px solid var(--p-acc);outline-offset:2px}
+.mu88 .mu-segs{display:flex;gap:2px;padding:3px;border-radius:999px;background:var(--p-bg);border:1px solid var(--p-ln)}
+.mu88 .mu-seg{height:32px;padding:0 14px;border-radius:999px;border:0;background:transparent;color:var(--p-k);font:600 13px Inter,system-ui,sans-serif;cursor:pointer;white-space:nowrap}
+.mu88 .mu-seg.on{background:var(--p-k);color:var(--p-bg)}
+.mu88 .mu-typ{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.mu88 .mu-typ input{width:84px;height:38px;padding:0 12px;border-radius:999px;border:1px solid var(--p-ln);background:var(--p-bg);color:var(--p-k);font:600 14px Inter,system-ui,sans-serif;box-sizing:border-box}
+.mu88 .mu-chk{display:flex;align-items:center;gap:12px;padding:0;border:0;background:transparent;color:var(--p-k);cursor:pointer;text-align:left;font:inherit;min-height:44px;align-self:flex-start;border-radius:8px}
+.mu88 .mu-chk b{font-size:14px}
+.mu88 .mu-sw,.mu88 .mu-tog{flex:none;position:relative;width:42px;height:24px;border-radius:999px;background:var(--p-dim);transition:background .2s}
+.mu88 .mu-tog{border:0;padding:0;cursor:pointer}
+.mu88 .mu-sw.on,.mu88 .mu-tog.on{background:var(--u-ok)}
+.mu88 .mu-sw i,.mu88 .mu-tog i{position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:transform .2s}
+.mu88 .mu-sw.on i,.mu88 .mu-tog.on i{transform:translateX(18px)}
+
+/* Lenkefelt og forhåndsvisning */
+.mu88 .mu-in{display:flex;gap:8px;flex-wrap:wrap}
+.mu88 .mu-in input{flex:1 1 260px;min-width:0;height:48px;padding:0 18px;border-radius:999px;border:1px solid var(--p-ln);background:var(--p-bg);color:var(--p-k);font:500 15px Inter,system-ui,sans-serif;box-sizing:border-box}
+.mu88 .mu-in input:focus-visible{outline:2px solid var(--p-acc);outline-offset:1px}
+.mu88 .mu-in.bad input{border-color:var(--u-rd)}
+.mu88 .mu-hent{flex:none;height:48px;padding:0 20px;border-radius:999px;border:0;background:color-mix(in srgb,var(--p-k) 35%,transparent);color:var(--p-bg);font:700 14px Inter,system-ui,sans-serif;cursor:pointer}
+.mu88 .mu-hent.klar{background:var(--p-k)}
+.mu88 .mu-hent:disabled{opacity:.6;cursor:default}
+.mu88 .mu-ferr{font-size:14px;color:var(--u-rd);margin-top:-6px}
+.mu88 .mu-pv{display:flex;gap:20px;flex-wrap:wrap;align-items:flex-start;border-top:1px solid var(--p-ln);padding-top:16px}
+.mu88 .mu-pvi{flex:1 1 280px;min-width:0;display:flex;flex-direction:column;gap:12px}
+.mu88 .mu-pvt{display:flex;flex-direction:column;gap:4px}
+.mu88 .mu-pvh{font:500 30px/1.05 Newsreader,Georgia,serif;overflow-wrap:anywhere}
+.mu88 .mu-pvm{font-size:15px}
+.mu88 .mu-go{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+
+/* Omslag */
+.mu88 .mu-cv{flex:none;position:relative;display:block;overflow:hidden;border-radius:8px}
+.mu88 .mu-cv img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.mu88 .mu-cv.stor{width:160px;aspect-ratio:1;border-radius:12px}
+.mu88 .mu-cv.sm{width:56px;height:56px}
+.mu88 .mu-cv.sub{width:48px;height:48px}
+
+/* Køen */
+.mu88 .mu-job{display:flex;gap:14px;padding:14px 0;border-top:1px solid var(--p-ln)}
+.mu88 .mu-hd+.mu-job{border-top:0}
+.mu88 .mu-jb{flex:1;min-width:0;display:flex;flex-direction:column;gap:7px}
+.mu88 .mu-jt{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.mu88 .mu-jt b{font-size:15px;min-width:0;overflow-wrap:anywhere}
+.mu88 .mu-chip{flex:none;height:24px;padding:0 10px;border-radius:999px;background:color-mix(in srgb,var(--c) 13%,transparent);color:var(--c);font:600 11px/24px 'JetBrains Mono',ui-monospace,monospace;letter-spacing:.04em;white-space:nowrap}
+.mu88 .mu-chip.sm{height:22px;padding:0 8px;font-size:10.5px;line-height:22px;letter-spacing:0}
+.mu88 .mu-bar{height:6px;border-radius:999px;background:var(--p-ln);overflow:hidden}
+.mu88 .mu-bar i{display:block;height:100%;background:var(--c);border-radius:999px;transition:width .6s}
+.mu88 .mu-row{display:flex;gap:4px 12px;flex-wrap:wrap}
+
+/* Spillelister du følger */
+.mu88 .mu-sub{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:12px 0;border-top:1px solid var(--p-ln)}
+.mu88 .mu-plan+.mu-sub,.mu88 .mu-hd+.mu-sub{border-top:0}
+.mu88 .mu-so{flex:1 1 200px;display:flex;align-items:center;gap:14px;min-width:0;min-height:48px;padding:0;border:0;background:transparent;color:var(--p-k);text-align:left;font:inherit;cursor:pointer;border-radius:8px}
+.mu88 .mu-st{flex:1;display:flex;flex-direction:column;gap:3px;min-width:0}
+.mu88 .mu-st b{font-size:15px;overflow-wrap:anywhere}
+.mu88 .mu-st span{font-size:13px;color:var(--p-mt)}
+.mu88 .mu-sub.av .mu-cv,.mu88 .mu-sub.av .mu-st{opacity:.5}
+.mu88 .mu-pil{flex:none;font-size:14px;color:var(--p-mt);transition:transform .2s}
+.mu88 .mu-pil.on{transform:rotate(90deg)}
+.mu88 .mu-spor{flex:1 0 100%;min-width:0;display:flex;flex-direction:column;gap:8px;padding:4px 0 2px}
+.mu88 .mu-trs{display:flex;flex-direction:column;max-height:420px;overflow-y:auto;border:1px solid var(--p-ln);border-radius:12px}
+.mu88 .mu-tr{display:flex;align-items:center;gap:12px;padding:10px 14px;border-top:1px solid var(--p-ln)}
+.mu88 .mu-tr:first-child{border-top:0}
+.mu88 .mu-trn{flex:none;width:28px;font:500 12px 'JetBrains Mono',ui-monospace,monospace;color:var(--p-mt);text-align:right}
+.mu88 .mu-trt{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.mu88 .mu-trt b,.mu88 .mu-trt span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mu88 .mu-trt b{font-size:14px}
+.mu88 .mu-trt span{font-size:12px;color:var(--p-mt)}
+.mu88 .mu-trd{flex:none;font:500 12px 'JetBrains Mono',ui-monospace,monospace;color:var(--p-mt)}
+
+@media (max-width:640px){
+  .mu88 .mu-card{padding:18px}
+  .mu88 .mu-cv.stor{width:120px}
+  .mu88 .mu-pvh{font-size:26px}
+  .mu88 .mu-tr{gap:8px;padding:10px 12px}
+  .mu88 .mu-trn{width:20px}
+}
+@media (prefers-reduced-motion:reduce){.mu88 .mu-sw,.mu88 .mu-sw i,.mu88 .mu-tog,.mu88 .mu-tog i,.mu88 .mu-bar i,.mu88 .mu-pil{transition:none}}

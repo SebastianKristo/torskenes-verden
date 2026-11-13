@@ -123,6 +123,10 @@ export const SCHEMA = [
     ['nrk_url', 'Adresse', e('NRK_DL_URL')],
     ['nrk_token', 'API-token', e('NRK_DL_TOKEN'), true],
   ]],
+  // Musikk (yubal, github.com/guillevc/yubal): YouTube Music → musikkbiblioteket. yubal har ingen innlogging; adressen blir på serveren.
+  ['Musikk (yubal)', { id: 'yubal', domain: 'music.youtube.com', category: 'Media', help: 'Adressen til yubal (port 8010 i arr-containeren). Format og kvalitet settes i /opt/arr/docker-compose.yml.' }, [
+    ['yubal_url', 'Adresse', e('YUBAL_URL')],
+  ]],
   ['Trading 212', { id: 't212', scope: 'personal', domain: 'trading212.com', category: 'Økonomi', help: 'Lag nøkkelen på app.trading212.com under Innstillinger → API, i samme konto og miljø (Live eller Demo). Gi bare lesetilgang.' }, [
     ['t212_key', 'API-nøkkel (Key ID)', e('TRADING212_API_KEY'), true],
     ['t212_secret', 'Secret', e('TRADING212_API_SECRET'), true],

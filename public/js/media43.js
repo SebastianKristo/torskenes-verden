@@ -13,6 +13,7 @@ import { bg50, img50, prefetch50, setup50, onToast50, startTrack50, trackGrab50,
 // Prompt 70 (MEDIA70): nytt design – Oversikt, Kalender, Bibliotek og Nedlastinger som egne adresser (media70.js).
 import { init70, top70, ov70, kal70, bib70, ned70, act70, enter70, outside70, esc70, setBibSort70, resetSite70, state70 } from './media70.js';
 import { mountNrk } from './media-nrk.js'; // NRK-nedlaster (#/media/nrk)
+import { mountMusikk } from './media-musikk.js'; // Musikk/yubal (#/media/musikk)
 // Prompt 44 (claude-code-media-arr.md, -interaktivt-sok-504.md, -avspilling-plex-jellyfin.md, web):
 // søk i biblioteket, plakater i 2:3 (Kommer snart som liggende rader), Kommer snart Uke · Liste, banner med fanart i serie/film,
 // last ned på nytt / slett fil, felles servervalg («Hjemme/Hytta», ?server= på alle kall), frem/tilbake i nettleseren
@@ -511,10 +512,11 @@ function mainHtml() {
   if (M.tab === 'bib') return bib70();
   if (M.tab === 'ned') return ned70();
   if (M.tab === 'nrk') return '<div data-nrk-slot></div>'; // NRK-nedlaster (media-nrk.js eier innholdet)
+  if (M.tab === 'musikk') return '<div data-musikk-slot></div>'; // Musikk/yubal (media-musikk.js eier innholdet)
   if (M.tab === 'av') return `${backBtn45('avback', 'Oversikt')}<div data-pb44-slot></div>`; // Avspilling (Plex/Jellyfin): fra «Spilles nå»
   return ov70();
 }
-let pbHost = null, nrkHost = null;
+let pbHost = null, nrkHost = null, musikkHost = null;
 const keepFocus = (el, fn) => {
   const a = document.activeElement, n = el.contains(a) ? a.getAttribute('name') : null, pos = n ? a.selectionStart : 0;
   fn();
@@ -528,6 +530,8 @@ function paintMain() {
   if (slot) { if (!pbHost) pbHost = document.createElement('div'); slot.replaceWith(pbHost); mountPlayback(pbHost); }
   const ns = c.querySelector('[data-nrk-slot]');
   if (ns) { if (!nrkHost) nrkHost = document.createElement('div'); ns.replaceWith(nrkHost); mountNrk(nrkHost); }
+  const ms = c.querySelector('[data-musikk-slot]');
+  if (ms) { if (!musikkHost) musikkHost = document.createElement('div'); ms.replaceWith(musikkHost); mountMusikk(musikkHost); }
   c.scrollTop = y;
 }
 function paintTop() { const t = root?.querySelector('[data-m43-top]'); if (t) { keepFocus(t, () => { t.innerHTML = topHtml(); }); centerTab87(t); } }
@@ -565,8 +569,8 @@ function openDet(k, id, fromHist) { M.tab = 'bib'; M.bibK = k === 'm' ? 'm' : 's
    (musens sideknapper, ⌘[ ⌘], Alt+←/→, nettleserknappene) går mellom stegene. Ark og menyer lukkes. */
 // Prompt 70: #/media (Oversikt), #/media/kalender, #/media/bibliotek[/filmer], #/media/nedlastinger, #/media/avspilling.
 // De gamle adressene (#/media/kommer|sonarr|radarr|qbittorrent|prowlarr …) virker fortsatt.
-const TAB_SLUG = { ov: '', kal: 'kalender', bib: 'bibliotek', ned: 'nedlastinger', nrk: 'nrk', av: 'avspilling' };
-const SLUG_TAB = { oversikt: 'ov', ov: 'ov', kalender: 'kal', kal: 'kal', kommer: 'kal', kom: 'kal', bibliotek: 'bib', bib: 'bib', sonarr: 'bib', son: 'bib', radarr: 'bib', rad: 'bib', nedlastinger: 'ned', ned: 'ned', qbittorrent: 'ned', qb: 'ned', prowlarr: 'ned', pro: 'ned', avspilling: 'av', av: 'av', nrk: 'nrk' };
+const TAB_SLUG = { ov: '', kal: 'kalender', bib: 'bibliotek', ned: 'nedlastinger', nrk: 'nrk', musikk: 'musikk', av: 'avspilling' };
+const SLUG_TAB = { oversikt: 'ov', ov: 'ov', kalender: 'kal', kal: 'kal', kommer: 'kal', kom: 'kal', bibliotek: 'bib', bib: 'bib', sonarr: 'bib', son: 'bib', radarr: 'bib', rad: 'bib', nedlastinger: 'ned', ned: 'ned', qbittorrent: 'ned', qb: 'ned', prowlarr: 'ned', pro: 'ned', avspilling: 'av', av: 'av', nrk: 'nrk', musikk: 'musikk', yubal: 'musikk' };
 const SLUG_BIB = { radarr: 'm', rad: 'm', sonarr: 's', son: 's' };
 function hashNow() {
   const sl = TAB_SLUG[M.tab] ?? '';

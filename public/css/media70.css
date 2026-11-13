@@ -34,20 +34,26 @@
 /* Topplinja */
 .m70 [data-m43-top]{flex:none}
 .m70-top{padding:28px 32px 24px}
-.m70-tl{max-width:1360px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:16px 18px}
+.m70-tl{max-width:1360px;margin:0 auto;display:flex;flex-wrap:nowrap;align-items:center;gap:16px;min-width:0}
+/* Prompt 88 (claude-code-media-header-lukk.md): én linje uansett antall faner – fanelinja scroller, Glimt-søket krymper, X helt til høyre. */
+.m70-tl>.m70-back,.m70-tl>.m70-h,.m70-tl>.m70-alw,.m70-tl>.m44-srv{flex:none;white-space:nowrap}
+.m70-tl>.m70-x{margin-left:auto}
 .m70-back{display:flex;align-items:center;gap:6px;height:40px;padding:0 16px 0 12px;border-radius:999px;border:1px solid var(--p-ln);background:transparent;font:600 14px Inter,system-ui,sans-serif;color:var(--p-k);cursor:pointer}
 .m70-back:hover{background:var(--p-card)}
 .m70-h{font:400 34px/1 Newsreader,Georgia,serif;letter-spacing:-.01em}
-.m70-tabs{display:flex;flex-wrap:wrap;gap:2px;padding:4px;background:var(--p-seg);border-radius:999px}
-.m70-tab{padding:10px 18px;border-radius:999px;border:0;background:transparent;color:var(--p-k);font:500 15px Inter,system-ui,sans-serif;cursor:pointer;white-space:nowrap}
+.m70-tabs{display:flex;flex:0 1 auto;min-width:0;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;gap:2px;padding:4px;background:var(--p-seg);border-radius:999px}
+.m70-tabs::-webkit-scrollbar{display:none}
+.m70-tab{flex:none;padding:10px 18px;border-radius:999px;border:0;background:transparent;color:var(--p-k);font:500 15px Inter,system-ui,sans-serif;cursor:pointer;white-space:nowrap}
 .m70-tab:hover{background:color-mix(in srgb,var(--p-card) 60%,transparent)}
 .m70-tab.on{background:var(--p-k);color:var(--p-card)}
-.m70-gl{flex:1 1 240px;display:flex;align-items:center;gap:10px;min-height:48px;padding:0 8px 0 14px;background:var(--p-card);border:1px solid var(--p-ln);border-radius:999px;margin:0}
+.m70-gl{flex:1 1 200px;min-width:140px;display:flex;align-items:center;gap:10px;min-height:48px;padding:0 8px 0 14px;background:var(--p-card);border:1px solid var(--p-ln);border-radius:999px;margin:0}
 .m70-gl:focus-within{border-color:var(--p-k)}
 .m70-gl input{flex:1;min-width:0;border:0;background:transparent;font:400 15px Inter,system-ui,sans-serif;color:var(--p-k);outline:none;height:44px}
 .m70-gl input::placeholder{color:var(--p-mt)}
 .m70-glo{display:flex;flex:none}
 .m70-kbd{font:12px 'JetBrains Mono',ui-monospace,monospace;color:var(--p-mt);border:1px solid var(--p-ln);border-radius:6px;padding:3px 7px;flex:none}
+/* Prompt 88: trang plass på PC (901–1180 px) – litt tettere faner og uten ⌘K, så fanelinja får mer plass før den må scrolle. */
+@media (min-width:901px) and (max-width:1180px){.m70-tl{gap:12px}.m70-tab{padding:10px 13px}.m70-kbd{display:none}}
 .m70 .m44-srv{flex:none}
 .m70 .m44-sb{min-height:48px;padding:0 16px;border-radius:999px;border:1px solid var(--p-ln);background:var(--p-card);color:var(--p-k);font:500 15px Inter,system-ui,sans-serif}
 .m70-alw{position:relative;flex:none}
@@ -293,16 +299,18 @@ button.m70-rt:hover{text-decoration:underline;text-underline-offset:3px}
 /* Smal skjerm: én kolonne */
 @media (max-width:900px){
   .m70-top{padding:14px 16px 12px}
-  .m70-tl{gap:10px}
-  .m70-back{order:1;height:40px}
-  .m70-h{order:2;flex:1 1 auto;font-size:30px}
-  .m70-tl>.m70-x{order:4}
-  .m70-alw{order:3}
-  .m70 .m44-srv{order:5}
-  .m70-gl{order:6;flex:1 1 100%;min-height:46px}
+  /* Prompt 88: rutenett på smal skjerm – Tilbake · Media · varsler · X alltid på første linje, resten under i full bredde. */
+  /* Tittel og knapper krymper aldri (flex:none-ekvivalent: auto-spor); bare varselknappen kan kappes på svært smale skjermer. */
+  .m70-tl{display:grid;grid-template-columns:auto auto minmax(0,1fr) minmax(0,max-content) auto;gap:10px}
+  .m70-back{grid-area:1/1;height:40px}
+  .m70-h{grid-area:1/2;font-size:30px;white-space:nowrap}
+  .m70-alw{grid-area:1/4;min-width:0;max-width:100%}
+  .m70-alw>.m70-alb{max-width:100%;overflow:hidden}
+  .m70-tl>.m70-x{grid-area:1/5;margin-left:0}
+  .m70-tl>.m44-srv{order:5;grid-column:1/-1;justify-self:start;max-width:100%}
+  .m70-gl{order:6;grid-column:1/-1;min-width:0;min-height:46px}
   .m70-kbd{display:none}
-  .m70-tabs{order:7;flex:1 1 100%;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;justify-content:space-between}
-  .m70-tabs::-webkit-scrollbar{display:none}
+  .m70-tabs{order:7;grid-column:1/-1;justify-content:space-between}
   .m70-tab{padding:9px 12px;font-size:14px;flex:1 0 auto}
   .m70-alb,.m70 .m44-sb{min-height:40px;padding:0 12px;font-size:14px}
   .m70 .m43-main{padding:4px 16px 40px}
