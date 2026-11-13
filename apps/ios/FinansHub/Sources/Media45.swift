@@ -26,6 +26,8 @@ enum Media45 {
         case "jellyfin": return Color(hex: "#aa5cc3")
         case "avspilling": return Color(hex: "#e5a00d")
         case "kommer": return Color(hex: "#b23a2a")
+        // Prompt 87: NRK-fanen (blå som «laster ned» i designet).
+        case "nrk": return Color(hex: "#2b5d8a")
         default: return Color(hex: "#6b665c")
         }
     }

@@ -3,7 +3,7 @@ import UIKit
 
 /* ---------------- Prompt 43: Media (2a) – siden, fanene, Kommer snart, Sonarr/Radarr og serie-/filmsiden ----------------
  Fasit: design/Media.dc.html (mobil) og claude-code-media-arr.md. Mer → Media åpner fullskjerm med «‹ Tilbake».
- Pille-faner (1b): Kommer snart · Sonarr · Radarr · qBittorrent · Prowlarr. Følger Papir-temaet (ink/bg/card/line/lab/mut),
+ Pille-faner (1b): Kommer snart · Sonarr · Radarr · qBittorrent · Prowlarr · NRK (prompt 87) · Avspilling. Følger Papir-temaet (ink/bg/card/line/lab/mut),
  bare statusfargene er egne (grønn #2f6b4a, gul #a0671a/#c48a1a, rød lab). Stor skjerm (≥ 600, 1b): plakatvegg med
  6 kolonner og valgt serie/film i høyre kolonne (360). */
 
@@ -144,7 +144,10 @@ struct Media43Page: View {
                         }
                         .padding(.horizontal, wide ? 24 : 16).padding(.top, 6).padding(.bottom, 40)
                     }
-                    .refreshable { await m.loadAll(store) }
+                    .refreshable {
+                        // Prompt 87: NRK-fanen har egne data (Nrk87Model.swift).
+                        if m.tab == "nrk" { await Nrk87.shared.load(store, full: true) } else { await m.loadAll(store) }
+                    }
                     if wide, let s = m.selected {
                         Rectangle().fill(p.line).frame(width: 1)
                         ScrollView { Media43Detail(t: s, column: true).padding(16) }
@@ -201,17 +204,25 @@ struct Media43Page: View {
         .padding(.horizontal, 16).padding(.top, 8)
     }
 
+    /// Prompt 87: fanelinja ruller den valgte fanen inn i midten (også når Media åpnes rett på en fane, f.eks. NRK).
     private var tabs: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 6) {
-                ForEach(Media43.tabs, id: \.0) { (t: (String, String)) in
-                    Media43Chip(text: t.1, on: m.tab == t.0, count: count(t.0), tint: t.0) {
-                        Haptics.shared.select()
-                        m.tab = t.0
+        ScrollViewReader { (proxy: ScrollViewProxy) in
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 6) {
+                    ForEach(Media43.tabs, id: \.0) { (t: (String, String)) in
+                        Media43Chip(text: t.1, on: m.tab == t.0, count: count(t.0), tint: t.0) {
+                            Haptics.shared.select()
+                            m.tab = t.0
+                        }
+                        .id(t.0)
                     }
                 }
+                .padding(.horizontal, 16)
             }
-            .padding(.horizontal, 16)
+            .onAppear { proxy.scrollTo(m.tab, anchor: .center) }
+            .onChange(of: m.tab) { (_: String, now: String) in
+                withAnimation(.easeOut(duration: 0.2)) { proxy.scrollTo(now, anchor: .center) }
+            }
         }
         .padding(.vertical, 6)
     }
@@ -232,6 +243,8 @@ struct Media43Page: View {
         case "radarr": Media43Library(kind: "movie", wide: wide)
         case "qbit": Media43Qbit()
         case "prowlarr": Media43Prowlarr()
+        // Prompt 87: NRK-nedlasteren (Nrk87Views.swift).
+        case "nrk": Nrk87View(wide: wide)
         default: Media43Upcoming(wide: wide)
         }
     }

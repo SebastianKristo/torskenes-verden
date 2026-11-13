@@ -238,8 +238,8 @@ final class Media43 {
     @ObservationIgnored private var pollTask: Task<Void, Never>? = nil
     @ObservationIgnored private var toastTask: Task<Void, Never>? = nil
 
-    /// Prompt 44: «Avspilling» (Plex/Jellyfin, Playback44.swift) etter Prowlarr.
-    static let tabs: [(String, String)] = [("kommer", "Kommer snart"), ("sonarr", "Sonarr"), ("radarr", "Radarr"), ("qbit", "qBittorrent"), ("prowlarr", "Prowlarr"), ("avspilling", "Avspilling")]
+    /// Prompt 44: «Avspilling» (Plex/Jellyfin, Playback44.swift) etter Prowlarr. Prompt 87: «NRK» (Nrk87Views.swift) mellom Prowlarr og Avspilling.
+    static let tabs: [(String, String)] = [("kommer", "Kommer snart"), ("sonarr", "Sonarr"), ("radarr", "Radarr"), ("qbit", "qBittorrent"), ("prowlarr", "Prowlarr"), ("nrk", "NRK"), ("avspilling", "Avspilling")]
 
     /// Modulen «media»: false når serveren svarer 403 (ingen tilgang) eller ikke har Media (404). Lagres lokalt.
     var allowed: Bool = UserDefaults.standard.object(forKey: "media43_allowed") as? Bool ?? true {
@@ -278,6 +278,13 @@ final class Media43 {
             magnetPrefill = q.first(where: { $0.name == "url" || $0.name == "u" })?.value ?? ""
         } else if (u.scheme == "homelab" || u.scheme == "finanshub") && u.host == "media" {
             let t: String = u.pathComponents.dropFirst().first ?? "kommer"
+            // Prompt 87: homelab://media/nrk?url=https://tv.nrk.no/… åpner NRK-fanen med lenken utfylt. Bare utfylling –
+            // ingenting lastes ned før brukeren trykker «Last ned» (regelen fra prompt 86 om lenker utenfra).
+            if t == "nrk" {
+                let q: [URLQueryItem] = URLComponents(url: u, resolvingAgainstBaseURL: false)?.queryItems ?? []
+                let link: String = q.first(where: { $0.name == "url" || $0.name == "u" })?.value ?? ""
+                if !link.isEmpty { Nrk87.shared.prefill(link) }
+            }
             show(t)
             return true
         } else {
