@@ -38,6 +38,9 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -59,12 +62,23 @@ import no.kristo.finanshub.*
  * Kort som i designet: kortflate, 1 dp linje og 20 dp runding. Farger: blå = laster ned, grønn = ferdig/VPN i orden,
  * rød (lab) = feil/VPN stoppet, dempet = i kø/avbrutt. Tilstanden ligger i vm.nrk87 (Nrk87.kt), så lenkefeltet beholder teksten.
  * Biblioteket legges ut rad for rad i den samme lazy-lista (store bibliotek tegnes ikke på én gang).
+ *
+ * Prompt 88 (AND88): kortet «NRK» med søk og serieside ligger øverst (ui/Nrk88Ui.kt). Lenkefeltet er sekundært
+ * («Har du en lenke?»), Kvalitet og Komprimer står i NRK-kortet og gjelder både søk, serieside og lenke.
+ * «Serier du følger» har plakat, og en serie i Bibliotek åpner seriesiden.
  */
 
 private val NRK_FLATER87 = listOf(0xFF3B2F28, 0xFF2B3D52, 0xFF7A2E22, 0xFF3C4A3E, 0xFF4A4036, 0xFF2F3A46, 0xFF2E5A5E, 0xFF6A4A1E)
 
 /** Reservefarge for plakaten når NRK-bildet mangler (fast per tittel). */
-private fun flate87(tittel: String): Color = Color(NRK_FLATER87[((tittel.hashCode() % NRK_FLATER87.size) + NRK_FLATER87.size) % NRK_FLATER87.size])
+internal fun flate87(tittel: String): Color = Color(NRK_FLATER87[((tittel.hashCode() % NRK_FLATER87.size) + NRK_FLATER87.size) % NRK_FLATER87.size])
+
+/** Prompt 88: tonene for de andre kortene (NRK-søket og Musikk). «pu» = lilla (import i yubal). */
+@Composable
+internal fun tone88(t: String): Color {
+    val dark = PaperPal.current.card.luminance() < .5f
+    return if (t == "pu") (if (dark) Color(0xFFB59BE0) else Color(0xFF6E4A9E)) else tone87(t)
+}
 
 @Composable
 private fun tone87(t: String): Color {
@@ -82,7 +96,7 @@ private fun tone87(t: String): Color {
  * Kortflate med linje og 20 dp runding. Et kort kan deles i flere biter i lista (topp/bunn av): flaten tegnes da ut over
  * kanten og klippes, så bitene henger sammen som ett kort.
  */
-private fun Modifier.kort87(card: Color, line: Color, topp: Boolean = true, bunn: Boolean = true): Modifier = this.clipToBounds().drawBehind {
+internal fun Modifier.kort87(card: Color, line: Color, topp: Boolean = true, bunn: Boolean = true): Modifier = this.clipToBounds().drawBehind {
     val r = 20.dp.toPx()
     val ekstra = r * 2f
     val y = if (topp) 0f else -ekstra
@@ -93,22 +107,22 @@ private fun Modifier.kort87(card: Color, line: Color, topp: Boolean = true, bunn
 }
 
 @Composable
-private fun Kort87(content: @Composable ColumnScope.() -> Unit) {
+internal fun Kort87(content: @Composable ColumnScope.() -> Unit) {
     val p = PaperPal.current
     Column(Modifier.fillMaxWidth().padding(bottom = 14.dp).kort87(p.card, p.line).padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp), content = content)
 }
 
 @Composable
-private fun Chip87(text: String, c: Color) {
+internal fun Chip87(text: String, c: Color) {
     Text(text, color = c, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = 11.sp, letterSpacing = .4.sp, maxLines = 1,
         modifier = Modifier.clip(CircleShape).background(c.copy(alpha = .13f)).padding(horizontal = 10.dp, vertical = 4.dp))
 }
 
-/** Liten pilleknapp som i designet (34 dp), med trykkflate på minst 44 dp. */
+/** Liten pilleknapp som i designet (34 dp), med trykkflate på minst 48 dp (prompt 88: 44 → 48). */
 @Composable
-private fun Knapp87(text: String, color: Color? = null, fylt: Boolean = false, enabled: Boolean = true, onClick: () -> Unit) {
+internal fun Knapp87(text: String, color: Color? = null, fylt: Boolean = false, enabled: Boolean = true, onClick: () -> Unit) {
     val p = PaperPal.current
-    Box(Modifier.heightIn(min = 44.dp).alpha(if (enabled) 1f else .5f).clickable(enabled = enabled, role = Role.Button, onClickLabel = text, onClick = onClick), contentAlignment = Alignment.Center) {
+    Box(Modifier.heightIn(min = 48.dp).alpha(if (enabled) 1f else .5f).clickable(enabled = enabled, role = Role.Button, onClickLabel = text, onClick = onClick), contentAlignment = Alignment.Center) {
         Box(Modifier.height(34.dp).clip(CircleShape).background(if (fylt) p.ink else Color.Transparent).border(1.dp, if (fylt) p.ink else p.line, CircleShape).padding(horizontal = 13.dp), contentAlignment = Alignment.Center) {
             Text(text, color = if (fylt) p.bg else color ?: p.ink, fontWeight = if (fylt) FontWeight.Bold else FontWeight.SemiBold, fontSize = 13.sp, maxLines = 1)
         }
@@ -116,15 +130,15 @@ private fun Knapp87(text: String, color: Color? = null, fylt: Boolean = false, e
 }
 
 @Composable
-private fun Mut87(text: String, size: Float = 14f) = Text(text, color = PaperPal.current.mut, fontSize = size.sp, lineHeight = (size * 1.45f).sp)
+internal fun Mut87(text: String, size: Float = 14f) = Text(text, color = PaperPal.current.mut, fontSize = size.sp, lineHeight = (size * 1.45f).sp)
 
 @Composable
-private fun Skille87() = Box(Modifier.fillMaxWidth().height(1.dp).background(PaperPal.current.line))
+internal fun Skille87() = Box(Modifier.fillMaxWidth().height(1.dp).background(PaperPal.current.line))
 
 @Composable
-private fun Valg87(options: List<Pair<String, String>>, cur: String, onPick: (String) -> Unit) {
+internal fun Valg87(options: List<Pair<String, String>>, cur: String, onPick: (String) -> Unit) {
     Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        options.forEach { (k, n) -> Pill43(n, cur == k) { onPick(k) } }
+        options.forEach { (k, n) -> Pille88(n, cur == k) { onPick(k) } } // prompt 88: 48 dp og «valgt» for skjermleser
     }
 }
 
@@ -152,8 +166,11 @@ internal fun Nrk87(vm: AppViewModel, pad: PaddingValues) {
     LaunchedEffect(synlig, pause, s.mediaOpen) {
         if (synlig && s.mediaOpen) while (true) { delay(pause); vm.tickNrk87() }
     }
-    // Åpnet detalj: rull til toppen av Bibliotek-kortet (kortet er element 3 i lista).
-    LaunchedEffect(n.valgt?.id) { if (n.valgt != null) runCatching { liste.animateScrollToItem(3) } }
+    // Åpnet detalj: rull til toppen av Bibliotek-kortet.
+    LaunchedEffect(n.valgt?.id) { if (n.valgt != null) runCatching { liste.animateScrollToItem(liste.layoutInfo.visibleItemsInfo.firstOrNull { it.key == "lib-enkel" || it.key == "det-topp" }?.index ?: 3) } }
+    // Prompt 88: søk 350 ms etter siste tastetrykk, og seriesiden åpnes øverst.
+    LaunchedEffect(n.sok.q) { if (n.sok.q.trim() != n.sok.sokQ) { delay(350); vm.nrkSok88() } }
+    LaunchedEffect(n.sok.ser) { if (n.sok.ser != null) runCatching { liste.animateScrollToItem(0) } }
 
     BoxWithConstraints(Modifier.fillMaxSize()) {
         // Plakat-rutenett som i designet (minst 150 bred), men aldri færre enn to i bredden på telefon.
@@ -165,13 +182,16 @@ internal fun Nrk87(vm: AppViewModel, pad: PaddingValues) {
                 n.configured == false -> item("tom") { Tom87(vm) }
                 n.configured == null && n.jobber == null -> item("henter") { Kort87 { PSerif("NRK-nedlaster", 26.sp); Mut87("Henter …", 15f) } }
                 else -> {
+                    nrkKort88(vm, ((inne + 12.dp) / (150.dp + 12.dp)).toInt().coerceIn(1, 6)) // prompt 88: søk / serieside
                     item("ny") { LastNed87(vm) }
                     item("ko") { Ko87(vm) }
                     item("folg") { Folger87(vm) }
                     bibliotek87(vm, cols)
+                    if (n.sok.ser != null) item("ser-luft") { Spacer(Modifier.height(200.dp)) } // plass til bunnlinja
                 }
             }
         }
+        if (n.sok.ser != null && n.configured != false && !n.gammel) SerieBunn88(vm, Modifier.align(Alignment.BottomCenter)) // prompt 88
     }
 }
 
@@ -187,72 +207,93 @@ private fun Tom87(vm: AppViewModel) {
     }
 }
 
-/* ---------------- Kort 1: Last ned fra NRK ---------------- */
+/* ---------------- Kort 1: VPN, Kvalitet og Komprimer (står i NRK-kortet, ui/Nrk88Ui.kt) ---------------- */
+
+/** VPN-merket: grønt «VPN · NO · ip», rødt «VPN stoppet · køen venter». */
+@Composable
+internal fun Vpn87(st: NrkStatus87) {
+    val c = tone87(if (st.vpnOk) "ok" else "err")
+    Row(Modifier.clip(CircleShape).background(c.copy(alpha = .10f)).border(1.dp, c.copy(alpha = .35f), CircleShape).padding(horizontal = 12.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+        Box(Modifier.size(7.dp).clip(CircleShape).background(c))
+        Text(if (st.vpnOk) listOfNotNull("VPN", st.land ?: "NO", st.ip).joinToString(" · ") else "VPN stoppet · køen venter",
+            color = c, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+}
+
+/** Kvalitet (Beste/1080p/720p/540p) og «Komprimer» – gjelder alt som legges i køen fra NRK-fanen. */
+@Composable
+internal fun KvalKomp87(vm: AppViewModel) {
+    val p = PaperPal.current
+    val n = vm.nrk87
+    val st = n.status
+    PLabel("Kvalitet", color = p.mut)
+    Valg87(listOf("best" to "Beste", "1080" to "1080p", "720" to "720p", "540" to "540p"), n.kval) { n.kval = it }
+    // Komprimering vises bare når serveren (nrk-dl) melder at den støtter det. Starter på serverens standard.
+    st?.komp?.let { k ->
+        val on = n.komp ?: k.standard
+        Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).clickable(role = Role.Checkbox, onClickLabel = "Komprimer") { n.komp = !on; Haptics.select() }
+            .semantics(mergeDescendants = true) { stateDescription = if (on) "På" else "Av" },
+            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Box(Modifier.size(22.dp).clip(RoundedCornerShape(6.dp)).background(if (on) p.ink else Color.Transparent).border(1.5.dp, if (on) p.ink else p.line, RoundedCornerShape(6.dp)), contentAlignment = Alignment.Center) {
+                if (on) Text("✓", color = p.bg, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+            }
+            Column(Modifier.weight(1f)) {
+                Text("Komprimer (H.265, ca. halv størrelse)", color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 14.5.sp)
+                Text(nrkKompSub87(k.standard, k.crf, k.preset), color = p.mut, fontSize = 12.sp)
+            }
+        }
+    }
+}
+
+/* ---------------- «Har du en lenke?» (sekundært valg under NRK-kortet) ---------------- */
 
 @Composable
 private fun LastNed87(vm: AppViewModel) {
     val p = PaperPal.current
     val n = vm.nrk87
     val ctx = LocalContext.current
-    val st = n.status
+    // Uten søk (eldre nrk-dl) er lenkefeltet eneste vei, så da står det alltid åpent.
+    val apen = n.sok.lenkeApen || !n.sokMulig88()
     Kort87 {
-        PSerif("Last ned fra NRK", 26.sp)
-        if (st != null) {
-            val c = tone87(if (st.vpnOk) "ok" else "err")
-            Row(Modifier.clip(CircleShape).background(c.copy(alpha = .10f)).border(1.dp, c.copy(alpha = .35f), CircleShape).padding(horizontal = 12.dp, vertical = 6.dp),
-                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                Box(Modifier.size(7.dp).clip(CircleShape).background(c))
-                Text(if (st.vpnOk) listOfNotNull("VPN", st.land ?: "NO", st.ip).joinToString(" · ") else "VPN stoppet · køen venter",
-                    color = c, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            }
+        Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).clickable(role = Role.Button, onClickLabel = if (apen) "Skjul lenkefeltet" else "Last ned fra NRK med en lenke") {
+            n.sok.lenkeApen = !apen; Haptics.select()
+        }, verticalAlignment = Alignment.CenterVertically) {
+            Text("Har du en lenke?", color = p.ink, fontWeight = FontWeight.Bold, fontSize = 17.sp, modifier = Modifier.weight(1f))
+            Text(if (apen) "▾" else "▸", color = p.mut, fontSize = 16.sp)
         }
-        // Lenkefeltet med «Lim inn». Rød ramme når lenken ikke er fra NRK.
-        val ramme = if (n.err != null) p.lab else p.line
-        Row(Modifier.fillMaxWidth().heightIn(min = 50.dp).clip(RoundedCornerShape(14.dp)).background(p.bg).border(1.dp, ramme, RoundedCornerShape(14.dp)).padding(start = 14.dp, end = 4.dp),
-            verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
-                if (n.url.isEmpty()) Text("https://tv.nrk.no/serie/…", color = p.mut, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                BasicTextField(n.url, { n.url = it.take(2000); n.err = null }, singleLine = true,
-                    textStyle = TextStyle(color = p.ink, fontSize = 15.sp, fontFamily = PaperFonts.sans), cursorBrush = SolidColor(p.lab),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, capitalization = KeyboardCapitalization.None, imeAction = ImeAction.Go),
-                    keyboardActions = KeyboardActions(onGo = { vm.addNrk87() }), modifier = Modifier.fillMaxWidth())
-            }
-            Box(Modifier.heightIn(min = 44.dp).clip(RoundedCornerShape(10.dp)).clickable(role = Role.Button, onClickLabel = "Lim inn lenke") {
-                // Bare innliming i feltet – ingenting lastes ned før «Last ned».
-                val tekst = runCatching { (ctx.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager)?.primaryClip?.getItemAt(0)?.coerceToText(ctx)?.toString() }.getOrNull()?.trim()
-                if (tekst.isNullOrEmpty()) vm.p43.toast = "Utklippstavlen er tom"
-                else { n.url = nrkDelt87(tekst) ?: tekst.take(2000); n.err = null; Haptics.select() }
-            }.padding(horizontal = 10.dp), contentAlignment = Alignment.Center) {
-                Text("Lim inn", color = p.ink, fontWeight = FontWeight.Bold, fontSize = 13.sp, maxLines = 1)
-            }
-        }
-        n.err?.let { Text(it, color = p.lab, fontSize = 14.sp) }
-        Btn43(if (n.busy) "Legger i køen …" else "Last ned", dark = true, modifier = Modifier.fillMaxWidth().alpha(if (nrkLenke87(n.url) != null && !n.busy) 1f else .4f), enabled = !n.busy) { vm.addNrk87() }
-
-        PLabel("Type", color = p.mut)
-        Valg87(listOf("auto" to "Finn ut selv", "tv" to "Serie", "film" to "Film", "radio" to "Radio"), n.type) { n.type = it }
-        PLabel("Kvalitet", color = p.mut)
-        Valg87(listOf("best" to "Beste", "1080" to "1080p", "720" to "720p", "540" to "540p"), n.kval) { n.kval = it }
-
-        Toggle43("Følg serien", "Laster ned nye episoder automatisk", n.folg) { n.folg = it }
-        // Komprimering vises bare når serveren (nrk-dl) melder at den støtter det.
-        st?.komp?.let { k ->
-            val on = n.komp ?: k.standard
-            Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).clickable(role = Role.Checkbox, onClickLabel = "Komprimer") { n.komp = !on; Haptics.select() },
-                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Box(Modifier.size(22.dp).clip(RoundedCornerShape(6.dp)).background(if (on) p.ink else Color.Transparent).border(1.5.dp, if (on) p.ink else p.line, RoundedCornerShape(6.dp)), contentAlignment = Alignment.Center) {
-                    if (on) Text("✓", color = p.bg, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+        if (apen) {
+            // Lenkefeltet med «Lim inn». Rød ramme når lenken ikke er fra NRK.
+            val ramme = if (n.err != null) p.lab else p.line
+            Row(Modifier.fillMaxWidth().heightIn(min = 50.dp).clip(RoundedCornerShape(14.dp)).background(p.bg).border(1.dp, ramme, RoundedCornerShape(14.dp)).padding(start = 14.dp, end = 4.dp),
+                verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
+                    if (n.url.isEmpty()) Text("https://tv.nrk.no/serie/…", color = p.mut, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    BasicTextField(n.url, { n.url = it.take(2000); n.err = null }, singleLine = true,
+                        textStyle = TextStyle(color = p.ink, fontSize = 15.sp, fontFamily = PaperFonts.sans), cursorBrush = SolidColor(p.lab),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, capitalization = KeyboardCapitalization.None, imeAction = ImeAction.Go),
+                        keyboardActions = KeyboardActions(onGo = { vm.addNrk87() }), modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Lenke fra NRK" })
                 }
-                Column(Modifier.weight(1f)) {
-                    Text("Komprimer (H.265, ca. halv størrelse)", color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 14.5.sp)
-                    Text(nrkKompSub87(k.standard, k.crf, k.preset), color = p.mut, fontSize = 12.sp)
+                Box(Modifier.heightIn(min = 48.dp).clip(RoundedCornerShape(10.dp)).clickable(role = Role.Button, onClickLabel = "Lim inn lenke") {
+                    // Bare innliming i feltet – ingenting lastes ned før «Last ned».
+                    val tekst = runCatching { (ctx.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager)?.primaryClip?.getItemAt(0)?.coerceToText(ctx)?.toString() }.getOrNull()?.trim()
+                    if (tekst.isNullOrEmpty()) vm.p43.toast = "Utklippstavlen er tom"
+                    else { n.url = nrkDelt87(tekst) ?: tekst.take(2000); n.err = null; Haptics.select() }
+                }.padding(horizontal = 10.dp), contentAlignment = Alignment.Center) {
+                    Text("Lim inn", color = p.ink, fontWeight = FontWeight.Bold, fontSize = 13.sp, maxLines = 1)
                 }
             }
-        }
-        Skille87()
-        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-            for (l in listOf("tv/Serie/Season 01/Serie - S01E02 - Tittel.mkv", "movies/Tittel/Tittel.mkv", "podcast/Serie/2026-11-13 - Tittel.m4a"))
-                Text(l, color = p.mut, fontFamily = PaperFonts.mono, fontSize = 11.5.sp, lineHeight = 17.sp)
+            n.err?.let { Text(it, color = p.lab, fontSize = 14.sp) }
+            Btn43(if (n.busy) "Legger i køen …" else "Last ned", dark = true, modifier = Modifier.fillMaxWidth().alpha(if (nrkLenke87(n.url) != null && !n.busy) 1f else .4f), enabled = !n.busy) { vm.addNrk87() }
+
+            PLabel("Type", color = p.mut)
+            Valg87(listOf("auto" to "Finn ut selv", "tv" to "Serie", "film" to "Film", "radio" to "Radio"), n.type) { n.type = it }
+            Toggle43("Følg serien", "Laster ned nye episoder automatisk", n.folg) { n.folg = it }
+            Skille87()
+            Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                for (l in listOf("tv/Serie/Season 01/Serie - S01E02 - Tittel.mkv", "movies/Tittel/Tittel.mkv", "podcast/Serie/2026-11-13 - Tittel.m4a"))
+                    Text(l, color = p.mut, fontFamily = PaperFonts.mono, fontSize = 11.5.sp, lineHeight = 17.sp)
+            }
         }
     }
 }
@@ -345,12 +386,16 @@ private fun Folger87(vm: AppViewModel) {
         else n.folger.forEachIndexed { i, f ->
             key(f.id) {
                 if (i > 0) Skille87()
-                Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                    Text(f.tittel, color = p.ink, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                    Mut87(nrkFolgSub87(f.sjekket, f.siste, f.kvalitet, now), 13f)
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Knapp87(if (n.sjekker == f.id) "Sjekker …" else "Sjekk nå", enabled = n.sjekker == null) { vm.nrkSjekk87(f.id) }
-                        Knapp87("Slutt å følge", color = p.lab) { vm.nrkSluttFolg87(f.id) }
+                // Prompt 88: plakat 48×72 (radio/podkast 72×72) til venstre, navn, linja og knappene til høyre.
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Top) {
+                    FolgPlakat88(vm, f)
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                        Text(f.tittel, color = p.ink, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        Mut87(nrkFolgSub87(f.sjekket, f.siste, f.kvalitet, now), 13f)
+                        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Knapp87(if (n.sjekker == f.id) "Sjekker …" else "Sjekk nå", enabled = n.sjekker == null) { vm.nrkSjekk87(f.id) }
+                            Knapp87("Slutt å følge", color = p.lab) { vm.nrkSluttFolg87(f.id) }
+                        }
                     }
                 }
             }
@@ -385,7 +430,9 @@ private fun Rute87(vm: AppViewModel, e: NrkElem87, modifier: Modifier) {
     val total = if (film) 1 else e.antall
     val har = if (film) (if (filmStatus87(e) == "lastet") 1 else 0) else e.lastet
     val sub = if (film) when (filmStatus87(e)) { "lastet" -> "Lastet ned"; "laster" -> "Laster ned"; "ko" -> "I kø"; else -> "Mangler" } else "$har av $total episoder"
-    Column(modifier.clip(RoundedCornerShape(12.dp)).clickable(role = Role.Button, onClickLabel = "Åpne ${e.tittel}") { vm.openNrkElem87(e) }, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    // Prompt 88: en serie fra tv.nrk.no åpner seriesiden (søk-kortet) når nrk-dl har katalogen; ellers detaljen her.
+    val sid = if (e.type == "tv" && vm.nrk87.sokMulig88()) nrkSerieId88(e.url) else null
+    Column(modifier.clip(RoundedCornerShape(12.dp)).clickable(role = Role.Button, onClickLabel = "Åpne ${e.tittel}") { if (sid != null) vm.apneSerie88(sid, e.tittel) else vm.openNrkElem87(e) }, verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Plakat87(vm, e, Modifier.fillMaxWidth(), merke = when (e.type) { "film" -> "FILM"; "radio" -> "RADIO"; else -> "${e.sesonger.size} S" })
         Text(e.tittel, color = p.ink, fontWeight = FontWeight.Bold, fontSize = 14.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
         Text(sub, color = p.mut, fontSize = 12.sp, maxLines = 1)

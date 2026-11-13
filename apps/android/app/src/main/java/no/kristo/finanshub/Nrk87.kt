@@ -27,8 +27,14 @@ data class NrkStatus87(val vpnOk: Boolean, val ip: String?, val land: String?, v
 data class NrkJobb87(
     val id: String, val url: String, val type: String, val kvalitet: String?, val status: String, val tittel: String, val melding: String?,
     val prosent: Double?, val fart: Double?, val eta: Long?, val nr: Int?, val av: Int?, val filer: List<String>, val spart: Long?,
+    /** Prompt 88: episodelenkene i en jobb med valgte episoder (søketreff og seriesiden merkes «I KØ»). */
+    val urls: List<String> = emptyList(),
 )
-data class NrkFolg87(val id: String, val url: String, val type: String?, val kvalitet: String?, val tittel: String, val sjekket: Long?, val siste: String?)
+data class NrkFolg87(
+    val id: String, val url: String, val type: String?, val kvalitet: String?, val tittel: String, val sjekket: Long?, val siste: String?,
+    /** Prompt 88: plakat fra serverens bildeproxy (relativ sti) og kvadratisk bilde for radio/podkast. */
+    val bilde: String? = null, val radio: Boolean = false,
+)
 data class NrkEp87(val nr: Int, val tittel: String, val varighet: String?, val url: String?, val fil: String?, val status: String)
 data class NrkSesong87(val nr: Int, val episoder: List<NrkEp87>)
 data class NrkElem87(
@@ -71,6 +77,9 @@ class Nrk87State {
     var sesong by mutableStateOf<Map<String, Int>>(emptyMap())
     var detBusy by mutableStateOf(false)
 
+    /** Prompt 88: søk og serieside (Nrk88.kt). */
+    val sok = Nrk88State()
+
     internal var henter = false
     internal var statusAt = 0L
     internal var ferdige: Set<String> = emptySet()
@@ -81,6 +90,7 @@ class Nrk87State {
         url = ""; type = "auto"; kval = "best"; folg = false; komp = null; err = null; busy = false
         filerOpen = emptySet(); sjekker = null; lib = null; libOk = null; libFilter = "alle"; valgt = null; sesong = emptyMap(); detBusy = false
         henter = false; statusAt = 0L; ferdige = emptySet()
+        sok.reset() // prompt 88: søket, seriesiden og valgte episoder
     }
 }
 
@@ -112,14 +122,15 @@ internal fun parseNrkJobb87(o: JSONObject): NrkJobb87? {
     return NrkJobb87(
         id, url, o.txt87("type") ?: "auto", o.txt87("kvalitet"), o.txt87("status") ?: "ko", o.txt87("tittel") ?: url.ifBlank { "NRK" }, o.txt87("melding"),
         o.num87("prosent")?.coerceIn(0.0, 100.0), o.num87("fart"), o.num87("eta")?.toLong(), o.num87("nr")?.toInt(), o.num87("av")?.toInt()?.takeIf { it > 0 },
-        strs87(o.optJSONArray("filer")), o.num87("spart")?.toLong(),
+        strs87(o.optJSONArray("filer")), o.num87("spart")?.toLong(), strs87(o.optJSONArray("urls")).mapNotNull(::nrkLenke87),
     )
 }
 
 internal fun parseNrkFolg87(o: JSONObject): NrkFolg87? {
     val id = o.txt87("id") ?: return null
     val url = o.txt87("url").orEmpty()
-    return NrkFolg87(id, url, o.txt87("type"), o.txt87("kvalitet"), o.txt87("tittel") ?: url.ifBlank { "NRK" }, o.num87("sjekket")?.toLong(), o.txt87("siste"))
+    return NrkFolg87(id, url, o.txt87("type"), o.txt87("kvalitet"), o.txt87("tittel") ?: url.ifBlank { "NRK" }, o.num87("sjekket")?.toLong(), o.txt87("siste"),
+        egetBilde88(o.txt87("bilde")), o.bool87("radio") == true) // prompt 88
 }
 
 /** Varighet: serveren sender `varighetTekst` («42 min») ved siden av sekundene. Uten den tåles både tekst og sekunder i `varighet`. */
@@ -152,7 +163,7 @@ internal fun parseNrkElem87(o: JSONObject): NrkElem87? {
  * Feiltekst: serveren svarer med norsk tekst også ved 502 («NRK-nedlasteren avviste tokenet …», «Får ikke kontakt med NRK-nedlasteren»),
  * så den vises som den er. Bare innlogging/tilgang (401/403) går gjennom Media sin felles sjekk.
  */
-private fun AppViewModel.err87(e: ApiException): String {
+internal fun AppViewModel.err87(e: ApiException): String { // prompt 88: brukes også av Nrk88.kt
     val m = e.message.orEmpty().trim()
     return when {
         m.startsWith(Api.TOKEN_REFUSED) || e.status == 401 || e.status == 403 -> mediaErr44(e)
@@ -214,7 +225,7 @@ fun AppViewModel.loadNrkKo87() {
             val nye = !n.ferdige.containsAll(ferdige)
             val forste = n.ferdige.isEmpty() && n.lib == null
             n.ferdige = ferdige
-            if (nye && !forste) loadNrkLib87()
+            if (nye && !forste) { loadNrkLib87(); nrkSerieOppdater88() } // prompt 88: seriesiden viser «Lastet ned»
         } catch (e: CancellationException) { throw e } catch (e: ApiException) { p43.error = err87(e) } catch (e: Exception) {
             p43.error = uiErr73(e, "Fikk ikke kontakt med NRK-nedlasteren")
         } finally { n.henter = false }
@@ -354,6 +365,7 @@ fun AppViewModel.shareNrk87(url: String) {
     n.url = url
     n.err = null
     n.valgt = null
+    n.sok.lenkeApen = true; n.sok.ser = null // prompt 88: lenkefeltet er sekundært («Har du en lenke?»), men åpent for en deling
     p43.tab = "nrk"
     p43.detail = null; p43.relFor = null
     openMedia43()

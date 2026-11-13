@@ -171,11 +171,12 @@ fun main() {
 
 test('fanen «NRK» ligger mellom Prowlarr og Avspilling, og viser NRK-skjermen', () => {
   const m = code('ui/Media43.kt');
-  assert.match(m, /"prowlarr" to "Prowlarr", "nrk" to "NRK", "spill" to "Avspilling"\)/);
+  // Prompt 88: Musikk står mellom NRK og Avspilling (test/p88-and.test.js).
+  assert.match(m, /"prowlarr" to "Prowlarr", "nrk" to "NRK", (?:"musikk" to "Musikk", )?"spill" to "Avspilling"\)/);
   assert.match(m, /"nrk" -> Nrk87\(vm, pad\)/);
   assert.match(code('P43.kt'), /"nrk" -> loadNrk87\(\)/, 'fanen laster status, kø og bibliotek');
   assert.match(code('ui/Media45.kt'), /"nrk" to 0xFF2B5D8A/, 'egen fanefarge');
-  assert.match(code('AppViewModel.kt'), /setOf\("snart", "sonarr", "radarr", "qbit", "prowlarr", "nrk"\)/, 'finanshub://media/nrk åpner fanen');
+  assert.match(code('AppViewModel.kt'), /setOf\("snart", "sonarr", "radarr", "qbit", "prowlarr", "nrk"(?:, "musikk")?\)/, 'finanshub://media/nrk åpner fanen');
 });
 
 test('fanelinja ruller den valgte fanen inn i midten', () => {

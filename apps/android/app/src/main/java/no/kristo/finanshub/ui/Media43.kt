@@ -59,7 +59,7 @@ import org.json.JSONObject
 internal val OK43 = Color(0xFF2F6B4A)
 internal val WARN43 = Color(0xFFA0671A)
 internal val RED43 = Color(0xFFB23A2A)
-private val MEDIA_TABS43 = listOf("snart" to "Kommer snart", "sonarr" to "Sonarr", "radarr" to "Radarr", "qbit" to "qBittorrent", "prowlarr" to "Prowlarr", "nrk" to "NRK", "spill" to "Avspilling") // prompt 44: Avspilling etter Prowlarr · prompt 87: NRK mellom Prowlarr og Avspilling
+private val MEDIA_TABS43 = listOf("snart" to "Kommer snart", "sonarr" to "Sonarr", "radarr" to "Radarr", "qbit" to "qBittorrent", "prowlarr" to "Prowlarr", "nrk" to "NRK", "musikk" to "Musikk", "spill" to "Avspilling") // prompt 44: Avspilling etter Prowlarr · prompt 87: NRK mellom Prowlarr og Avspilling · prompt 88: Musikk etter NRK
 
 @Composable
 // Prompt 45 (claude-code-media-mer-farger.md): Lastes ned blå, Venter gul, Ferdig grønn, Mangler rød, Uovervåket grå.
@@ -103,7 +103,7 @@ internal fun MediaScreen43(vm: AppViewModel) {
                     }
                 }
             }
-            if (s.tab != "nrk") { // prompt 87: NRK-fanen har ikke noe med Sonarr/Radarr-serverne å gjøre, og skjemaet trenger plassen
+            if (s.tab != "nrk" && s.tab != "musikk") { // prompt 87/88: NRK og Musikk har ikke noe med Sonarr/Radarr-serverne å gjøre, og skjemaet trenger plassen
                 ServerRow44(vm) // prompt 44: felles servervalg
                 MediaEntry51(vm) // prompt 51 (ANDFEAT51): I kveld · Fortsett · Undertekster · Lagring (ui/Media51Ui.kt)
             }
@@ -121,6 +121,7 @@ internal fun MediaScreen43(vm: AppViewModel) {
                     "qbit" -> Torrents43(vm, pad)
                     "spill" -> Playback44(vm, pad) // prompt 44
                     "nrk" -> Nrk87(vm, pad) // prompt 87: NRK-nedlaster (ui/Nrk87Ui.kt)
+                    "musikk" -> Musikk88(vm, pad) // prompt 88: Musikk / yubal (ui/Musikk88Ui.kt)
                     else -> Prowlarr43(vm, pad)
                 }
                 // Detalj: fullskjerm på telefon, panel fra høyre (360) på stor skjerm.
