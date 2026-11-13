@@ -41,7 +41,24 @@ På web brukes hele bredden: «Last ned fra NRK» og «Serier du følger» til v
 
 Køen oppdateres hvert 2. sekund mens noe lastes ned, ellers hvert 10. sekund, og stopper når fanen ikke vises.
 
-Biblioteket og nedlasting av enkeltepisoder krever at nrk-dl har endepunktene `/api/bibliotek` og `/api/serie`. Mangler de, viser kortet «Biblioteket krever en nyere versjon av nrk-dl.», og resten av fanen virker som før.
+### Bibliotek og episodevalg: Homelab oversetter til katalogen i nrk-dl
+
+Appene og nettsiden snakker bare med Homelab (`/bibliotek`, `/serie?url=` og `episoder` i `POST /jobber`). Homelab oversetter dette til katalog-API-et i nrk-dl:
+
+| Homelab | nrk-dl |
+|---|---|
+| `GET /api/media/nrk/bibliotek` | `GET /api/jobber`, så `GET /api/serie/{sid}` og `GET /api/serie/{sid}/sesong/{navn}` for hver serie |
+| `GET /api/media/nrk/serie?url=…` | `GET /api/serie/{sid}` og sesongene |
+| `POST /api/media/nrk/jobber` med `episoder` | `POST /api/episoder {serie, episoder: [PRF-id-er], kvalitet, folg, komprimer?, tittel?}` |
+| `GET /api/media/nrk/sok?q=…` | `GET /api/sok?q=…` |
+
+- **Hvilke serier:** de du følger først, så seriene i jobbene (nyeste først), høyst 25. Serie-id-en leses fra `tv.nrk.no/serie/{sid}` i lenkene. Ferdige film- og radiojobber kommer i tillegg som egne elementer med én rad.
+- **Sesonger og episoder:** bare sesonger NRK har tilgjengelige, høyst de 15 nyeste per serie. `lastetNed` blir `lastet`, `iKo` blir `ko`, og episoder som kan lastes ned blir `mangler`. Episoder som verken er lastet ned, i kø eller tilgjengelige hos NRK, vises ikke.
+- **Mellomlagring:** serien i 10 minutter, sesongene i 60 sekunder (sesongene til en serie hentes på nytt når du har lagt episoder i køen). Høyst 6 kall mot nrk-dl samtidig.
+- **Episodelenker:** hver lenke må inneholde en PRF-id (som `https://tv.nrk.no/program/MSUI22000123`), og serielenken må være `tv.nrk.no/serie/…`. Ellers svarer Homelab 400.
+- **VPN:** katalogen i nrk-dl svarer bare med norsk VPN. Er VPN-en nede, viser biblioteket ferdige filmer og radioprogrammer og har feltet `feil` med forklaringen; detaljen og søket svarer med feilen.
+
+Dette krever at nrk-dl kjører koden fra grenen `nrk-nedlaster` i skjold-proxmox-media (eller main etter at den er flettet inn). Homelab sjekker det med `GET /api/sok?q=`: svarer nrk-dl 404 uten `{feil}`, er den for gammel, og kortet viser «Biblioteket krever en nyere versjon av nrk-dl.». Resten av fanen virker som før, og episodevalg stoppes med 409 i stedet for å laste ned hele serien.
 
 I appene fyller dyplenken `homelab://media/nrk?url=<nrk-lenke>` ut lenkefeltet i NRK-fanen. Ingenting lastes ned før du trykker «Last ned».
 
@@ -51,14 +68,15 @@ Alt krever innlogging og tilgang til Media. Feil kommer som `{error: "norsk teks
 
 | Kall | Hva |
 |---|---|
-| `GET /api/media/nrk/status` | `{configured, vpn: {ok, ip, land}, komprimer: {standard, crf, preset} \| null, mapper, tall, ledig, bibliotek}`. `bibliotek` er `false` når nrk-dl mangler bibliotek-endepunktene |
+| `GET /api/media/nrk/status` | `{configured, vpn: {ok, ip, land}, komprimer: {standard, crf, preset} \| null, mapper, tall, ledig, bibliotek}`. `bibliotek` er `false` når nrk-dl mangler katalogen |
 | `GET /api/media/nrk/jobber` | køen og seriene du følger. Ferdige jobber kan ha `spart` (bytes) |
-| `POST /api/media/nrk/jobber` | `{url, type: auto\|tv\|film\|radio, kvalitet: best\|1080\|720\|540, folg, komprimer?, episoder?}`. `komprimer` (boolean) sendes bare når valget avviker fra standarden. `episoder` er høyst 200 NRK-lenker. 409 betyr at lenken alt ligger i køen |
+| `POST /api/media/nrk/jobber` | `{url, type: auto\|tv\|film\|radio, kvalitet: best\|1080\|720\|540, folg, komprimer?, episoder?}`. `komprimer` (boolean) sendes bare når valget avviker fra standarden. `episoder` er høyst 200 lenker til enkeltprogrammer på tv.nrk.no (med PRF-id), og `url` må da være serien; `tittel?` kan følge med. 409 betyr at lenken alt ligger i køen, eller at nrk-dl er for gammel til episodevalg |
 | `POST /api/media/nrk/jobber/:id/avbryt` · `/igjen` · `DELETE …/jobber/:id` | avbryt, prøv igjen, fjern |
 | `POST /api/media/nrk/rydd` | fjern ferdige fra lista |
 | `POST /api/media/nrk/folger` · `POST …/folger/:id/sjekk` · `DELETE …/folger/:id` | følg (`{url, type, kvalitet, tittel?, komprimer?}`), sjekk nå, slutt å følge |
-| `GET /api/media/nrk/bibliotek` | `{configured, tilgjengelig, elementer}` |
-| `GET /api/media/nrk/serie?url=…` | `{configured, tilgjengelig, element}` for én serie, også episoder som ikke er lastet ned. Elementet ligger i tillegg flatt på toppnivå |
+| `GET /api/media/nrk/bibliotek` | `{configured, tilgjengelig, elementer, feil?}` |
+| `GET /api/media/nrk/serie?url=…` | `{configured, tilgjengelig, element}` for én serie på tv.nrk.no (også fra en episodelenke), også episoder som ikke er lastet ned. Elementet ligger i tillegg flatt på toppnivå. Andre lenker gir 404 |
+| `GET /api/media/nrk/sok?q=…` | `{configured, tilgjengelig, treff: [{art: serie\|film\|episode\|radio, id, tittel, beskrivelse, bilde, url, tilgjengelig}]}`. Høyst 100 tegn i `q` |
 | `GET /api/media/nrk/bilde?u=…` | plakaten. Bare `https` fra nrk.no og nrksuper.no, bare bilder, mellomlagres i 24 timer |
 
 Et element i biblioteket:
@@ -71,7 +89,8 @@ Et element i biblioteket:
 - `bilde` er en ferdig adresse til bildeproxyen, eller `null`.
 - `varighet` er hele sekunder (heltall) eller `null`. `varighetTekst` er den samme varigheten som tekst, for eksempel «42 min».
 - `status` er `lastet`, `laster`, `ko` eller `mangler`.
-- `beskrivelse` er tom når nrk-dl ikke har en.
+- `beskrivelse` er tom når NRK ikke har en. `meta` er «kategori · N sesonger».
+- Episoder fra katalogen har `url` `https://tv.nrk.no/program/{PRF}` og `fil: null`.
 - For podkaster er `nr` på sesongen året. En film har alltid én sesong med én episode.
 
 Bare lenker til `nrk.no` og `nrksuper.no` godtas, både her og i nrk-dl. Id-er er 12 hex-tegn.

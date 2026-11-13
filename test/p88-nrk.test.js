@@ -58,6 +58,18 @@ test('401 fra nrk-dl blir en forklaring om tokenet, ikke «utlogget»', async ()
   await assert.rejects(nrk.nrkKall('/api/status'), (e) => e.status === 502 && /avviste tokenet/.test(e.message));
 });
 
+test('katalogen i nrk-dl (grenen nrk-nedlaster): VPN-feil 503 {feil} blir 502 med norsk tekst, og lenker oversettes til id-er', async () => {
+  const kall = [];
+  nrk._setFetchNrk(async (url) => { kall.push(new URL(url)); return json({ feil: 'VPN er ikke klar: Ingen forbindelse ut' }, 503); });
+  await assert.rejects(nrk.nrkKall('/api/serie/exit'), (e) => e.status === 502 && e.nrkStatus === 503 && e.fraNrk === true && /VPN er ikke klar/.test(e.message));
+  assert.equal(kall[0].pathname, '/api/serie/exit');
+  assert.equal(nrk.serieId('https://tv.nrk.no/serie/exit'), 'exit');
+  assert.equal(nrk.serieId('https://tv.nrk.no/serie/exit/sesong/3/episode/4'), 'exit');
+  for (const u of ['https://tv.nrk.no/program/MSUI22000123', 'https://radio.nrk.no/serie/exit', 'https://tv.nrk.no.evil.com/serie/exit', 'https://tv.nrk.no/serie/_x', null]) assert.equal(nrk.serieId(u), null, String(u));
+  assert.equal(nrk.prfId('https://tv.nrk.no/program/msui22000123'), 'MSUI22000123');
+  assert.equal(nrk.prfId('https://tv.nrk.no/serie/exit/sesong/3/episode/4'), null);
+});
+
 test('integrasjonen finnes i Media med adresse og token (hemmelig)', () => {
   const x = INTEGRATIONS.find((i) => i.id === 'nrk');
   assert.ok(x);

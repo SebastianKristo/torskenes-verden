@@ -6,19 +6,30 @@
 //
 //   GET    /api/media/nrk/status              → {configured, vpn:{ok,ip,land,feil}, komprimer:{standard,crf,preset}|null, mapper, tall, ledig, bibliotek}
 //   GET    /api/media/nrk/jobber              → {configured, jobber:[…], folger:[…]}
-//   POST   /api/media/nrk/jobber              {url, type, kvalitet, folg, komprimer?, episoder?:[url…]}
+//   POST   /api/media/nrk/jobber              {url, type, kvalitet, folg, komprimer?, episoder?:[url…], tittel?}
 //   POST   /api/media/nrk/jobber/:id/avbryt | /igjen
 //   DELETE /api/media/nrk/jobber/:id
 //   POST   /api/media/nrk/rydd
 //   POST   /api/media/nrk/folger              {url, type, kvalitet, tittel?, komprimer?}
 //   POST   /api/media/nrk/folger/:id/sjekk
 //   DELETE /api/media/nrk/folger/:id
-//   GET    /api/media/nrk/bibliotek           → {configured, tilgjengelig, elementer:[{id,tittel,type,url,bilde,meta,sesonger:[{nr,episoder:[…]}]}]}
+//   GET    /api/media/nrk/bibliotek           → {configured, tilgjengelig, elementer:[{id,tittel,type,url,bilde,meta,sesonger:[{nr,episoder:[…]}]}], feil?}
 //   GET    /api/media/nrk/serie?url=…         → {configured, tilgjengelig, element} (elementet ligger også flatt på toppnivå)
+//   GET    /api/media/nrk/sok?q=…             → {configured, tilgjengelig, treff:[{art,id,tittel,beskrivelse,bilde,url,tilgjengelig}]}
 //   GET    /api/media/nrk/bilde?u=…           → plakat fra NRK sine bildeverter (SSRF-vern, cache)
 //
-// Prompt 87: bibliotek-endepunktene i nrk-dl (/api/bibliotek, /api/serie, «episoder» i POST) finnes kanskje ikke ennå.
-// 404/405 uten {feil} fra nrk-dl på disse betyr «for gammel nrk-dl» → tilgjengelig:false (ikke en feil).
+// Prompt 88: klientene (web, iOS, Android) bruker fortsatt /bibliotek, /serie?url= og «episoder» (lenker) i POST /jobber.
+// nrk-dl (grenen «nrk-nedlaster» i skjold-proxmox-media, eller main etter fletting) har i stedet et katalog-API, og her
+// oversettes det:
+//   - /bibliotek  = seriene du følger og seriene i jobbene (nyeste først, høyst 25), hver bygd fra GET /api/serie/{sid}
+//                   (cache 10 min) og GET /api/serie/{sid}/sesong/{navn} (cache 60 s, høyst 15 sesonger, høyst 6 kall
+//                   samtidig), pluss ferdige film- og radiojobber. Status: lastetNed → lastet, iKo → ko, kan → mangler;
+//                   episoder som ikke kan lastes ned (og ikke er lastet ned eller i kø) tas ikke med.
+//   - /serie?url= = samme bygging for serie-id-en i lenken (også …/serie/x/sesong/3/episode/4).
+//   - POST /jobber med episoder → POST /api/episoder {serie, episoder:[PRF-id-er], kvalitet, folg, komprimer?, tittel?}.
+//   - /sok        = GET /api/sok?q=.
+// Katalog-kallene krever norsk VPN i nrk-dl (ellers 503 {feil:"VPN er ikke klar: …"}). Om nrk-dl har katalogen, sjekkes
+// med GET /api/sok?q=: 404/405 uten {feil} betyr «for gammel nrk-dl» → tilgjengelig:false (ikke en feil).
 import { Hono } from 'hono';
 import { authOrToken } from './mobile.js';
 import { mediaAllowed43 } from './media43.js';
@@ -62,7 +73,7 @@ export async function nrkKall(sti, { method = 'GET', json, timeout = 10_000 } = 
   }
   const d = await r.json().catch(() => null);
   if (r.status === 401) throw new NrkFeil('NRK-nedlasteren avviste tokenet. Sjekk tokenet under Innstillinger → Integrasjoner → NRK-nedlaster.', 502);
-  if (!r.ok) throw Object.assign(new NrkFeil(tekstFeil(d?.feil) ?? `NRK-nedlasteren svarte ${r.status}`, r.status >= 400 && r.status < 500 ? r.status : 502), { fraNrk: tekstFeil(d?.feil) != null });
+  if (!r.ok) throw Object.assign(new NrkFeil(tekstFeil(d?.feil) ?? `NRK-nedlasteren svarte ${r.status}`, r.status >= 400 && r.status < 500 ? r.status : 502), { fraNrk: tekstFeil(d?.feil) != null, nrkStatus: r.status });
   return d ?? {};
 }
 
@@ -118,21 +129,124 @@ function valg(b, { tittel = false, episoder = false } = {}) {
   return ut;
 }
 
+const SERIE_ID = /^[a-z0-9][a-z0-9_-]{0,100}$/;
+const PRF = /^[A-Za-z]{4}\d{8}$/;
+const SESONG_NAVN = /^[A-Za-z0-9_-]{1,60}$/;
+const EPISODELENKER = 'Episodene må være lenker til enkeltprogrammer på tv.nrk.no';
+/** Serie-id fra en tv.nrk.no-lenke (…/serie/{sid}, også …/serie/{sid}/sesong/3/episode/4), ellers null. */
+export function serieId(v) {
+  let u;
+  try { u = new URL(String(v ?? '')); } catch { return null; }
+  if (u.hostname.toLowerCase() !== 'tv.nrk.no') return null;
+  const d = u.pathname.split('/').filter(Boolean);
+  const sid = d[0] === 'serie' ? String(d[1] ?? '').toLowerCase() : '';
+  return SERIE_ID.test(sid) ? sid : null;
+}
+/** PRF-id (f.eks. MSUI12345678) fra en episodelenke: siste stisegment som ser ut som en PRF-id, med store bokstaver. */
+export function prfId(v) {
+  let u;
+  try { u = new URL(String(v ?? '')); } catch { return null; }
+  const d = u.pathname.split('/').filter(Boolean).reverse().find((x) => PRF.test(x));
+  return d ? d.toUpperCase() : null;
+}
+
 /* ---------------- Bibliotek ---------------- */
 
-// Har nrk-dl bibliotek-endepunktene? Svaret huskes (ja: 10 min, nei: 1 min), så status ikke spør på nytt hvert 10. sekund.
+// Har nrk-dl katalogen? Svaret huskes i 1 min, så status ikke spør på nytt hvert 10. sekund (og en nyere eller eldre
+// nrk-dl oppdages innen et minutt; katalogsvarene i cachen brukes ikke når nrk-dl er for gammel).
 let bib = { v: null, at: 0, url: '' };
 const gammel = (e) => (e?.status === 404 || e?.status === 405) && !e.fraNrk;
 function husk(v) { bib = { v, at: Date.now(), url: nrkConf().url }; return v; }
 async function harBibliotek() {
-  if (bib.v != null && bib.url === nrkConf().url && Date.now() - bib.at < (bib.v ? 600_000 : 60_000)) return bib.v;
-  try { await nrkKall('/api/bibliotek', { timeout: 4000 }); return husk(true); } catch (e) {
+  if (bib.v != null && bib.url === nrkConf().url && Date.now() - bib.at < 60_000) return bib.v;
+  // Uten søkeord svarer nrk-dl {treff:[]} (eller 503 {feil} når VPN-en ikke er klar). Begge betyr at katalogen finnes.
+  try { await nrkKall('/api/sok?q=', { timeout: 4000 }); return husk(true); } catch (e) {
     if (gammel(e)) return husk(false);
+    if (e?.fraNrk) return husk(true); // f.eks. 503 {feil:"VPN er ikke klar: …"}: katalogen finnes
     return true; // treg eller annen feil: endepunktet finnes trolig; ikke husk svaret
   }
 }
 /** Bare for tester. */
-export function _resetNrk() { bib = { v: null, at: 0, url: '' }; bilder.clear(); }
+export function _resetNrk() { bib = { v: null, at: 0, url: '' }; bilder.clear(); katalogCache.clear(); }
+
+/* ---------------- Katalogen i nrk-dl ---------------- */
+
+// Høyst 6 katalog-kall mot nrk-dl samtidig (alle forespørsler til sammen). En ledig plass gis rett videre til neste i køen.
+const SAMTIDIG = 6;
+let aktive = 0;
+const venter = [];
+async function begrenset(fn) {
+  if (aktive < SAMTIDIG) aktive++; else await new Promise((r) => venter.push(r));
+  try { return await fn(); } finally { const neste = venter.shift(); if (neste) neste(); else aktive--; }
+}
+// Svar fra katalogen: serien i 10 min, sesongene i 60 s (de har lastetNed/iKo, som endrer seg). Løpende kall deles.
+const SERIE_TTL = 600_000, SESONG_TTL = 60_000, CACHE_ANTALL = 500;
+const katalogCache = new Map(); // nrk-url|sti → {at, ttl, p}
+function katalog(sti, ttl, frist) {
+  const k = `${nrkConf().url}|${sti}`, c = katalogCache.get(k);
+  if (c && Date.now() - c.at < c.ttl) return c.p;
+  const p = begrenset(() => {
+    if (Date.now() > frist) throw new NrkFeil('NRK-katalogen svarte ikke i tide', 504);
+    return nrkKall(sti, { timeout: 15_000 });
+  });
+  katalogCache.set(k, { at: Date.now(), ttl, p });
+  // «Fant ikke» fra nrk-dl huskes like lenge som et svar (en serie som er borte hos NRK); andre feil prøves på nytt.
+  p.catch((e) => { if (!(e?.fraNrk && e.nrkStatus === 404) && katalogCache.get(k)?.p === p) katalogCache.delete(k); });
+  while (katalogCache.size > CACHE_ANTALL) katalogCache.delete(katalogCache.keys().next().value);
+  return p;
+}
+/** Etter at episoder er lagt i køen: sesongene til serien hentes på nytt (iKo/lastetNed). */
+function glemSesonger(sid) {
+  for (const k of katalogCache.keys()) if (k.includes(`|/api/serie/${sid}/sesong/`)) katalogCache.delete(k);
+}
+
+const EP_FRA_KATALOG = (e) => (e.lastetNed === true ? 'lastet' : e.iKo === true ? 'ko' : e.kan === true ? 'mangler' : null);
+/** Én serie fra katalogen → bibliotek-elementet klientene kjenner (via element()). */
+async function byggSerie(sid, frist) {
+  const s = await katalog(`/api/serie/${sid}`, SERIE_TTL, frist);
+  const alle = (Array.isArray(s?.sesonger) ? s.sesonger : []).filter((x) => x && typeof x === 'object');
+  const valgte = alle.map((x, i) => ({ navn: String(x.navn ?? ''), i, ok: x.tilgjengelig !== false }))
+    .filter((x) => x.ok && SESONG_NAVN.test(x.navn)).slice(-15); // de nyeste 15
+  let forste = null;
+  const hentet = await Promise.all(valgte.map(async (x) => {
+    try { return { x, d: await katalog(`/api/serie/${sid}/sesong/${x.navn}`, SESONG_TTL, frist) }; } catch (e) {
+      if (gammel(e)) throw e;
+      forste ??= e;
+      return null;
+    }
+  }));
+  if (valgte.length && hentet.every((h) => !h)) throw forste; // ingen sesonger kom: serien feiler
+  const brukt = new Set(), sesonger = [];
+  for (const h of hentet) {
+    if (!h) continue;
+    const m = h.x.navn.match(/\d+/);
+    let nr = m ? +m[0] : h.x.i + 1;
+    if (brukt.has(nr)) { nr = h.x.i + 1; while (brukt.has(nr)) nr++; }
+    brukt.add(nr);
+    const episoder = (Array.isArray(h.d?.episoder) ? h.d.episoder : []).slice(0, 2000).map((e, j) => {
+      if (!e || typeof e !== 'object' || !PRF.test(String(e.id ?? ''))) return null;
+      const status = EP_FRA_KATALOG(e);
+      if (!status) return null; // verken lastet ned, i kø eller tilgjengelig hos NRK
+      const id = String(e.id).toUpperCase();
+      return { nr: j + 1, tittel: tekst(e.tittel) || id, varighet: e.varighet, url: `https://tv.nrk.no/program/${id}`, status };
+    }).filter(Boolean);
+    sesonger.push({ nr, episoder });
+  }
+  const n = alle.length;
+  const meta = [tekst(s?.kategori, 80), n ? `${n} ${n === 1 ? 'sesong' : 'sesonger'}` : ''].filter(Boolean).join(' · ');
+  return element({ id: sid, tittel: tekst(s?.tittel) || sid, type: 'tv', url: `https://tv.nrk.no/serie/${sid}`, bilde: s?.plakat || s?.bilde, meta, beskrivelse: s?.beskrivelse, sesonger });
+}
+/** Ferdig film- eller radiojobb uten serie-id → enkeltelement med én rad. */
+function jobbElement(j) {
+  const url = nrkLenke(j.url), tittel = tekst(j.tittel) || url;
+  if (!url || !tittel) return null;
+  const fil = Array.isArray(j.filer) && typeof j.filer[0] === 'string' ? j.filer[0] : null;
+  const rad = { nr: 1, tittel, url, fil, status: 'lastet' };
+  return j.type === 'film'
+    ? element({ id: url, tittel, type: 'film', url, meta: 'Film', fil, status: 'lastet' })
+    : element({ id: url, tittel, type: 'radio', url, meta: 'Radio', sesonger: [{ nr: 1, episoder: [rad] }] });
+}
+const BYGG_FRIST = 20_000; // klientene venter 30–40 s på biblioteket
 
 const tekst = (v, n = 300) => (typeof v === 'string' || typeof v === 'number' ? String(v).trim().slice(0, n) : '');
 /** Varighet fra nrk-dl (sekunder som tall, eller tekst som «42 min» / «1 t 32 min» / «1:32:00») → hele sekunder, ellers null. */
@@ -227,10 +341,21 @@ nrkApi.get('/jobber', ...G, H(async () => {
 }));
 nrkApi.post('/jobber', ...G, H(async (c) => {
   const b = await jb(c);
-  const json = { url: lenke(b.url), ...valg(b, { episoder: true }), folg: b.folg === true };
-  // En eldre nrk-dl kjenner ikke «episoder» og ville lastet ned hele serien. Stopp her i stedet.
-  if (json.episoder && !(await harBibliotek())) throw new NrkFeil(GAMMEL, 409);
-  return nrkKall('/api/jobber', { method: 'POST', json });
+  const { tittel, ...v } = valg(b, { episoder: true, tittel: true });
+  const json = { url: lenke(b.url), ...v, folg: b.folg === true };
+  if (!json.episoder) return nrkKall('/api/jobber', { method: 'POST', json });
+  // Episoder valgt i biblioteket → POST /api/episoder {serie, episoder:[PRF-id-er]} i nrk-dl (én jobb).
+  const serie = serieId(json.url), ider = [...new Set(json.episoder.map(prfId))];
+  if (!serie || ider.some((x) => !x)) throw new NrkFeil(EPISODELENKER, 400);
+  // En eldre nrk-dl kjenner ikke /api/episoder, og /api/jobber ville lastet ned hele serien. Stopp her i stedet.
+  if (!(await harBibliotek())) throw new NrkFeil(GAMMEL, 409);
+  let svar;
+  try { svar = await nrkKall('/api/episoder', { method: 'POST', json: { serie, ...(tittel ? { tittel } : {}), episoder: ider, kvalitet: json.kvalitet, ...('komprimer' in json ? { komprimer: json.komprimer } : {}), folg: json.folg } }); } catch (e) {
+    if (gammel(e)) { husk(false); throw new NrkFeil(GAMMEL, 409); }
+    throw e;
+  }
+  glemSesonger(serie);
+  return svar;
 }));
 nrkApi.post('/jobber/:id/:handling{avbryt|igjen}', ...G, H(async (c) => nrkKall(`/api/jobber/${idOf(c)}/${c.req.param('handling')}`, { method: 'POST' })));
 nrkApi.delete('/jobber/:id', ...G, H(async (c) => nrkKall(`/api/jobber/${idOf(c)}`, { method: 'DELETE' })));
@@ -244,26 +369,65 @@ nrkApi.delete('/folger/:id', ...G, H(async (c) => nrkKall(`/api/folger/${idOf(c)
 
 nrkApi.get('/bibliotek', ...G, H(async () => {
   if (!nrkConf().on) return { configured: false, message: IKKE_SATT, tilgjengelig: false, elementer: [] };
-  let d;
-  try { d = await nrkKall('/api/bibliotek', { timeout: 30_000 }); } catch (e) {
-    if (gammel(e)) { husk(false); return { configured: true, tilgjengelig: false, elementer: [] }; }
-    throw e;
-  }
+  const TOM = { configured: true, tilgjengelig: false, elementer: [] };
+  if (!(await harBibliotek())) return TOM;
+  const d = await nrkKall('/api/jobber');
+  const jobber = (Array.isArray(d.jobber) ? d.jobber : []).filter((j) => j && typeof j === 'object')
+    .map((j, i) => ({ j, i })).sort((a, b) => (+b.j.opprettet || 0) - (+a.j.opprettet || 0) || a.i - b.i).map((x) => x.j);
+  // Seriene: først de du følger, så de i jobbene (nyeste først).
+  const lenker = [
+    ...(Array.isArray(d.folger) ? d.folger : []).map((f) => f?.url),
+    ...jobber.flatMap((j) => [j.url, ...(Array.isArray(j.urls) ? j.urls : [])]),
+  ];
+  const ider = [...new Set(lenker.map(serieId).filter(Boolean))].slice(0, 25);
+  const frist = Date.now() + BYGG_FRIST;
+  const res = await Promise.allSettled(ider.map((sid) => byggSerie(sid, frist)));
+  if (res.some((r) => r.status === 'rejected' && gammel(r.reason))) { husk(false); return TOM; }
   husk(true);
-  const L = Array.isArray(d) ? d : Array.isArray(d?.elementer) ? d.elementer : Array.isArray(d?.bibliotek) ? d.bibliotek : [];
-  return { configured: true, tilgjengelig: true, elementer: L.slice(0, 2000).map(element).filter(Boolean) };
+  const elementer = res.filter((r) => r.status === 'fulfilled' && r.value).map((r) => r.value);
+  // Ferdige filmer og radioprogrammer (uten serie-id) som enkeltelementer.
+  const sett = new Set();
+  for (const j of jobber) {
+    if (j.status !== 'ferdig' || (j.type !== 'film' && j.type !== 'radio') || serieId(j.url)) continue;
+    const el = jobbElement(j);
+    if (el && !sett.has(el.id)) { sett.add(el.id); elementer.push(el); }
+  }
+  const ut = { configured: true, tilgjengelig: true, elementer: elementer.slice(0, 2000) };
+  const feilet = res.filter((r) => r.status === 'rejected').map((r) => r.reason);
+  if (ider.length && feilet.length === ider.length && feilet.every((e) => e?.nrkStatus === 503)) {
+    ut.feil = `Fikk ikke hentet seriene fra NRK. ${feilet[0].message}`.slice(0, 500);
+  }
+  return ut;
 }));
 nrkApi.get('/serie', ...G, H(async (c) => {
   const url = lenke(c.req.query('url'));
   if (!nrkConf().on) return { configured: false, message: IKKE_SATT, tilgjengelig: false };
-  let d;
-  try { d = await nrkKall(`/api/serie?url=${encodeURIComponent(url)}`, { timeout: 30_000 }); } catch (e) {
+  const sid = serieId(url);
+  if (!sid) throw new NrkFeil('Bare serier fra tv.nrk.no kan vises', 404);
+  if (!(await harBibliotek())) return { configured: true, tilgjengelig: false };
+  let el;
+  try { el = await byggSerie(sid, Date.now() + BYGG_FRIST); } catch (e) {
     if (gammel(e)) { husk(false); return { configured: true, tilgjengelig: false }; }
     throw e;
   }
-  const el = element(Array.isArray(d) ? d[0] : d?.element ?? d);
   if (!el) throw new NrkFeil('Fant ikke serien hos NRK', 404);
   return { ...el, configured: true, tilgjengelig: true, element: el };
+}));
+const ART = new Set(['serie', 'film', 'episode', 'radio']);
+nrkApi.get('/sok', ...G, H(async (c) => {
+  const q = String(c.req.query('q') ?? '').trim().slice(0, 100);
+  if (!nrkConf().on) return { configured: false, message: IKKE_SATT, tilgjengelig: false, treff: [] };
+  let d;
+  try { d = await nrkKall(`/api/sok?q=${encodeURIComponent(q)}`, { timeout: 15_000 }); } catch (e) {
+    if (gammel(e)) { husk(false); return { configured: true, tilgjengelig: false, treff: [] }; }
+    throw e;
+  }
+  const treff = (Array.isArray(d?.treff) ? d.treff : []).slice(0, 100).map((t) => {
+    if (!t || typeof t !== 'object' || !ART.has(t.art)) return null;
+    const tittel = tekst(t.tittel), url = nrkLenke(t.url);
+    return tittel && url ? { art: t.art, id: tekst(t.id, 200), tittel, beskrivelse: tekst(t.beskrivelse, 500), bilde: bildeUrl(t.bilde), url, tilgjengelig: t.tilgjengelig !== false } : null;
+  }).filter(Boolean);
+  return { configured: true, tilgjengelig: true, treff };
 }));
 nrkApi.get('/bilde', ...G, async (c) => {
   try {
