@@ -6,9 +6,11 @@
 .nrk87 a{text-decoration:none}.nrk87 a:hover{text-decoration:underline}
 .nrk87 .nrk-card{min-width:0;background:var(--p-card);border:1px solid var(--p-ln);border-radius:20px;padding:20px;display:flex;flex-direction:column;gap:4px}
 .nrk87 .nrk-card.form,.nrk87 .nrk-card.lib{gap:16px}
-/* To kolonner (fra ca. 1020 px): Køen til høyre over to rader; første rad er så høy som «Last ned», resten går til rad to. */
-@media (min-width:1020px){.nrk87{grid-template-rows:auto 1fr}.nrk87 .nrk-card.ko{grid-row:span 2}}
+/* Pakke 58: «NRK» (søk/serieside) i full bredde øverst, så Køen og Serier du følger side om side, Bibliotek og bunnlinja under. */
 .nrk87 .nrk-card.full{grid-column:1 / -1}
+.nrk87 .nrk-del{display:contents}
+.nrk87 .nrk-card.bunn{background:transparent;border:0;padding:0 4px;flex-direction:row;flex-wrap:wrap;gap:6px 20px;font:500 12px 'JetBrains Mono',ui-monospace,monospace;color:var(--p-mt)}
+.nrk87 .nrk-card.bunn:empty{display:none}
 .nrk87 .nrk-card.tomt{padding:28px 22px;gap:12px;align-items:flex-start}
 .nrk87 .nrk-card.tomt p{margin:0;font-size:15px;line-height:1.5;color:var(--p-mt);max-width:52ch;text-wrap:pretty}
 .nrk87 .nrk-h{margin:0;font:500 26px/1.1 Newsreader,Georgia,serif;letter-spacing:-.005em}
@@ -36,7 +38,6 @@
 .nrk87 .nrk-di .nrk-ferr,.nrk87 .nrk-card.lib>.nrk-ferr{margin-top:0}
 
 /* Piller, bryter og avkrysning */
-.nrk87 .nrk-valg{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
 .nrk87 .nrk-grp{display:flex;flex-direction:column;gap:6px;min-width:0}
 .nrk87 .nrk-lbl{font:600 11px 'JetBrains Mono',ui-monospace,monospace;letter-spacing:.08em;color:var(--p-mt)}
 .nrk87 .nrk-ps,.nrk87 .nrk-ss,.nrk87 .nrk-acts{display:flex;flex-wrap:wrap;gap:6px}
@@ -50,17 +51,11 @@
 .nrk87 .nrk-b:disabled{opacity:.55;cursor:default}
 .nrk87 :is(.nrk-p,.nrk-b,.nrk-chk,.nrk-fl,.nrk-it,.nrk-go):focus-visible{outline:2px solid var(--p-acc);outline-offset:2px}
 .nrk87 .nrk-chk{display:flex;align-items:center;gap:12px;padding:0;border:0;background:transparent;color:var(--p-k);cursor:pointer;text-align:left;font:inherit;align-self:flex-start;border-radius:8px}
-.nrk87 .nrk-chk+.nrk-chk{margin-top:-4px}
 .nrk87 .nrk-tx{display:flex;flex-direction:column;gap:2px}
 .nrk87 .nrk-tx b{font-size:15px;font-weight:700}
 .nrk87 .nrk-tx span{font-size:13px;color:var(--p-mt)}
-.nrk87 .nrk-sw{flex:none;width:42px;height:24px;border-radius:999px;background:var(--p-dim);position:relative;transition:background .2s}
-.nrk87 .nrk-sw.on{background:var(--n-ok)}
-.nrk87 .nrk-sw i{position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:transform .2s}
-.nrk87 .nrk-sw.on i{transform:translateX(18px)}
 .nrk87 .nrk-box{flex:none;width:22px;height:22px;margin:0 10px;border-radius:6px;border:1.5px solid var(--p-dim);background:transparent;color:var(--p-bg);display:grid;place-items:center;font:700 14px/1 Inter,system-ui,sans-serif;box-sizing:border-box}
 .nrk87 .nrk-box.on{background:var(--p-k);border-color:var(--p-k)}
-.nrk87 .nrk-mapper{border-top:1px solid var(--p-ln);padding-top:12px;display:flex;flex-direction:column;gap:4px;font:500 12px/1.6 'JetBrains Mono',ui-monospace,monospace;color:var(--p-mt);overflow-wrap:anywhere}
 
 /* Køen */
 .nrk87 .nrk-ban{padding:12px 14px;border-radius:12px;background:color-mix(in srgb,var(--n-rd) 10%,transparent);color:var(--n-rd);font-size:14px;font-weight:600;margin-bottom:8px}
@@ -84,6 +79,11 @@
 
 /* Serier du følger */
 .nrk87 .nrk-folg{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 0;border-top:1px solid var(--p-ln)}
+.nrk87 .nrk-fv{flex:1 1 220px;display:flex;align-items:center;gap:14px;min-width:0}
+.nrk87 .nrk-fp{position:relative;flex:none;width:48px;height:72px;border-radius:8px;overflow:hidden;display:flex;align-items:flex-end;padding:6px;box-sizing:border-box}
+.nrk87 .nrk-fp.sq{width:72px}
+.nrk87 .nrk-fp b{font:500 12px/1.05 Newsreader,Georgia,serif;color:#f3efe6;text-wrap:balance;hyphens:auto;overflow-wrap:anywhere;overflow:hidden;max-height:100%}
+.nrk87 .nrk-fp img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .nrk87 .nrk-ft{display:flex;flex-direction:column;gap:3px;min-width:0}
 .nrk87 .nrk-ft b{font-size:16px;font-weight:700;overflow-wrap:anywhere}
 .nrk87 .nrk-ft span{font-size:13px;color:var(--p-mt)}
@@ -117,6 +117,90 @@
 .nrk87 .nrk-ept b{font-size:15px;font-weight:700;overflow-wrap:anywhere}
 .nrk87 .nrk-ept span{font-size:12px;color:var(--p-mt)}
 
+/* Søk, treff og serieside (kort 1 «NRK») */
+.nrk87 .nrk-sok{display:flex;align-items:center;gap:10px;height:50px;padding:0 6px 0 16px;border-radius:999px;border:1px solid var(--p-ln);background:var(--p-bg);box-sizing:border-box;color:var(--p-mt)}
+.nrk87 .nrk-sok:focus-within{outline:2px solid var(--p-acc);outline-offset:1px}
+.nrk87 .nrk-sok svg{flex:none}
+.nrk87 .nrk-sok input{flex:1;min-width:0;height:44px;border:0;background:transparent;color:var(--p-k);font:500 16px Inter,system-ui,sans-serif;outline:none;-webkit-appearance:none;appearance:none}
+.nrk87 .nrk-sok input::-webkit-search-cancel-button{display:none}
+.nrk87 .nrk-sok input::placeholder,.nrk87 .nrk-in input::placeholder{color:var(--p-mt);opacity:.8}
+.nrk87 .nrk-x{flex:none;width:38px;height:38px;border-radius:50%;border:0;background:transparent;color:var(--p-mt);font:500 18px Inter,system-ui,sans-serif;cursor:pointer}
+.nrk87 .nrk-x[hidden]{display:none}
+.nrk87 .nrk-valg{display:flex;gap:12px 24px;flex-wrap:wrap;align-items:center}
+.nrk87 .nrk-valg .nrk-grp{flex-direction:row;align-items:center;gap:8px;flex-wrap:wrap}
+.nrk87 .nrk-seg{display:flex;gap:2px;padding:3px;border-radius:999px;background:var(--p-bg);border:1px solid var(--p-ln)}
+.nrk87 .nrk-seg .nrk-p{height:30px;border:0;font-size:13px}
+.nrk87 .nrk-valg .nrk-chk{min-height:44px;align-self:center;gap:10px}
+.nrk87 .nrk-valg .nrk-box{margin:0}
+.nrk87 .nrk-res,.nrk87 .nrk-ser{display:flex;flex-direction:column;gap:12px;border-top:1px solid var(--p-ln);padding-top:16px;min-width:0}
+.nrk87 .nrk-ser{gap:0}
+.nrk87 .nrk-sum{font-size:14px;color:var(--p-mt)}
+.nrk87 .nrk-res>.nrk-ferr{margin-top:0}
+.nrk87 .nrk-treff{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,210px),1fr));gap:18px 16px}
+.nrk87 .nrk-tr{display:flex;flex-direction:column;gap:8px;padding:0;border:0;background:transparent;color:var(--p-k);text-align:left;cursor:pointer;font:inherit;min-width:0;border-radius:12px}
+.nrk87 .nrk-tr.av{opacity:.6}
+.nrk87 .nrk-tile{position:relative;width:100%;aspect-ratio:16 / 9;border-radius:12px;overflow:hidden;display:flex;align-items:flex-end;padding:12px;box-sizing:border-box}
+.nrk87 .nrk-tile>b{font:500 22px/1.05 Newsreader,Georgia,serif;color:#f3efe6;text-wrap:balance;overflow-wrap:anywhere}
+.nrk87 .nrk-tile:has(img)>b{display:none}
+.nrk87 .nrk-tile img,.nrk87 .nrk-th img,.nrk87 .nrk-hero>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.nrk87 .nrk-tr:hover .nrk-tile img{filter:brightness(1.06)}
+.nrk87 .nrk-bdg.l{left:8px;right:auto;background:rgba(14,13,11,.6);letter-spacing:.04em}
+.nrk87 .nrk-bdg.r{right:8px}
+.nrk87 .nrk-bdg.ok{background:var(--n-ok);color:#fff}
+.nrk87 .nrk-trt{display:flex;flex-direction:column;gap:2px;min-width:0}
+.nrk87 .nrk-trt b{font-size:15px;font-weight:700;overflow-wrap:anywhere}
+.nrk87 .nrk-trt span{font-size:13px;line-height:1.4;color:var(--p-mt);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.nrk87 .nrk-lenke{border-top:1px solid var(--p-ln);padding-top:12px}
+.nrk87 .nrk-lenke summary{cursor:pointer;font-size:14px;font-weight:600;min-height:32px;display:flex;align-items:center;gap:6px;list-style:none;border-radius:6px}
+.nrk87 .nrk-lenke summary::-webkit-details-marker{display:none}
+.nrk87 .nrk-lenke summary::before{content:'›';display:inline-block;width:10px;color:var(--p-mt);transition:transform .15s}
+.nrk87 .nrk-lenke[open] summary::before{transform:rotate(90deg)}
+.nrk87 .nrk-lenke summary:focus-visible{outline:2px solid var(--p-acc);outline-offset:2px}
+.nrk87 .nrk-lenke .nrk-in{margin-top:10px}
+.nrk87 .nrk-lenke .nrk-in input,.nrk87 .nrk-lenke .nrk-go{height:44px;border-radius:12px}
+.nrk87 .nrk-lenke .nrk-go{font-size:14px;padding:0 18px}
+.nrk87 .nrk-lenke .nrk-ferr{margin-top:6px}
+.nrk87 .nrk-hero{position:relative;border-radius:16px;overflow:hidden;min-height:220px;display:flex;flex-direction:column;justify-content:space-between;align-items:flex-start;padding:16px 20px 20px;box-sizing:border-box;color:#f3efe6}
+.nrk87 .nrk-grad{position:absolute;inset:0;background:linear-gradient(180deg,rgba(14,13,11,0) 30%,rgba(14,13,11,.7))}
+.nrk87 .nrk-hero:has(img) .nrk-grad{background:linear-gradient(180deg,rgba(14,13,11,.15) 10%,rgba(14,13,11,.82))}
+.nrk87 .nrk-back{position:relative;height:34px;padding:0 14px;border-radius:999px;border:0;background:rgba(14,13,11,.5);color:#f3efe6;font:600 13px Inter,system-ui,sans-serif;cursor:pointer;white-space:nowrap}
+.nrk87 .nrk-back:focus-visible{outline:2px solid #f3efe6;outline-offset:2px}
+.nrk87 .nrk-ht{position:relative;display:flex;flex-direction:column;gap:6px;max-width:64ch;margin-top:40px}
+.nrk87 .nrk-kat{font:600 11px 'JetBrains Mono',ui-monospace,monospace;letter-spacing:.08em}
+.nrk87 .nrk-ht h3{margin:0;font:500 40px/1 Newsreader,Georgia,serif;overflow-wrap:anywhere}
+.nrk87 .nrk-ht p{margin:0;font-size:15px;line-height:1.5;text-wrap:pretty}
+.nrk87 .nrk-tabs{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:14px 0 4px}
+.nrk87 .nrk-tabs::-webkit-scrollbar{display:none}
+.nrk87 .nrk-tabs .nrk-p{height:36px;padding:0 14px}
+.nrk87 .nrk-tabs .nrk-p:disabled{opacity:.4;cursor:default}
+.nrk87 .nrk-ser>.nrk-tom{padding:14px 0}
+.nrk87 .nrk-eliste{display:flex;flex-direction:column}
+.nrk87 .nrk-er{display:flex;align-items:center;gap:14px;padding:12px 0;border:0;border-top:1px solid var(--p-ln);background:transparent;color:var(--p-k);text-align:left;font:inherit;cursor:pointer;width:100%}
+.nrk87 .nrk-er:first-child{border-top:0}
+.nrk87 .nrk-er:focus-visible{outline:2px solid var(--p-acc);outline-offset:-2px;border-radius:8px}
+.nrk87 .nrk-er.av{cursor:default}
+.nrk87 .nrk-er.av>:not(.nrk-chip){opacity:.55}
+.nrk87 .nrk-er .nrk-box{margin:0;border-color:var(--p-ln)}
+.nrk87 .nrk-er .nrk-box.on{border-color:var(--p-k)}
+.nrk87 .nrk-er .nrk-box.har{background:var(--p-ln);border-color:var(--p-ln)}
+.nrk87 .nrk-th{position:relative;flex:none;width:112px;aspect-ratio:16 / 9;border-radius:8px;overflow:hidden}
+.nrk87 .nrk-ett{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.nrk87 .nrk-ett b{font-size:15px;font-weight:700;overflow-wrap:anywhere}
+.nrk87 .nrk-ett span{font-size:13px;color:var(--p-mt)}
+.nrk87 .nrk-er .nrk-chip{letter-spacing:0}
+.nrk87 .nrk-bunnlinje{position:sticky;bottom:0;z-index:2;margin:8px -20px -20px;padding:14px 20px;background:var(--p-card);border-top:1px solid var(--p-ln);border-radius:0 0 20px 20px;display:flex;flex-direction:column;gap:10px}
+/* Media ruller i .m43-main, som har luft i bunnen (72 px, 40 px under 900 px i media70.css). Uten dette ville linja
+   stoppe så høyt over kanten, og episodene synes under den. */
+.m43.m70 .nrk87 .nrk-bunnlinje{bottom:-72px}
+@media (max-width:900px){.m43.m70 .nrk87 .nrk-bunnlinje{bottom:-40px}}
+.nrk87 .nrk-bl{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.nrk87 .nrk-bl .nrk-b{height:40px;padding:0 14px;font-size:14px}
+.nrk87 .nrk-bl .nrk-b.folger{background:color-mix(in srgb,var(--n-ok) 13%,transparent);border-color:transparent;color:var(--n-ok)}
+.nrk87 .nrk-bl .nrk-hent{margin-left:auto;padding:0 18px}
+.nrk87 .nrk-bl .nrk-hent:disabled{opacity:1;background:color-mix(in srgb,var(--p-k) 35%,transparent);border-color:transparent}
+.nrk87 .nrk-bunnlinje .nrk-ferr{margin-top:0}
+.nrk87 .nrk-hjelp{font-size:12px;line-height:1.5;color:var(--p-mt);text-wrap:pretty}
+
 @media (max-width:640px){
   .nrk87 .nrk-card{padding:18px}
   .nrk87 .nrk-p,.nrk87 .nrk-b{height:38px}
@@ -124,8 +208,18 @@
   .nrk87 .nrk-epn{width:auto;min-width:52px}
   .nrk87 .nrk-ept{flex:1 1 120px}
   .nrk87 .nrk-dh{font-size:30px}
+  .nrk87 .nrk-bunnlinje{margin:8px -18px -18px;padding:12px 18px}
+  .nrk87 .nrk-ht h3{font-size:32px}
+  .nrk87 .nrk-er{gap:10px}
+  .nrk87 .nrk-th{width:72px}
+  .nrk87 .nrk-bl .nrk-hent{margin-left:0;flex:1 1 100%}
+  .nrk87 .nrk-bunnlinje{gap:8px}
+  .nrk87 .nrk-bl{gap:6px}
+  .nrk87 .nrk-bl .nrk-b{height:38px;padding:0 10px;font-size:13px}
+  .nrk87 .nrk-bl .nrk-hent{height:42px;font-size:14px}
+  .nrk87 .nrk-seg .nrk-p{height:30px}
 }
-@media (prefers-reduced-motion:reduce){.nrk87 .nrk-sw,.nrk87 .nrk-sw i,.nrk87 .nrk-bar i{transition:none}}
+@media (prefers-reduced-motion:reduce){.nrk87 .nrk-bar i,.nrk87 .nrk-lenke summary::before{transition:none}}
 /* Seks faner i Media (prompt 88): på smale telefoner får de ikke plass uansett, så fanelinja ruller og valgt fane sentreres (centerTab87).
    Litt tettere enn 12 px, men nok luft til å treffe med tommelen. */
 @media (max-width:420px){.m43.m70 .m70-tab{padding:9px 11px}}

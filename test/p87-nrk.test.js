@@ -453,21 +453,20 @@ const web = readFileSync(new URL('../public/js/media-nrk.js', import.meta.url), 
 const css = readFileSync(new URL('../public/css/media-nrk.css', import.meta.url), 'utf8');
 const m43 = readFileSync(new URL('../public/js/media43.js', import.meta.url), 'utf8');
 
-test('web: hele bredden – rutenettet fra designet, Køen over to rader, Bibliotek i full bredde', () => {
+test('web: hele bredden – rutenettet fra designet, NRK øverst og Bibliotek i full bredde (pakke 58)', () => {
   assert.match(css, /\.nrk87\{[^}]*display:grid;grid-template-columns:repeat\(auto-fit,minmax\(min\(100%,max\(460px,34%\)\),1fr\)\)/);
-  assert.match(css, /\.nrk87 \.nrk-card\.ko\{grid-row:span 2\}/);
   assert.match(css, /\.nrk87 \.nrk-card\.full\{grid-column:1 \/ -1\}/);
   assert.doesNotMatch(css, /\.nrk87\{[^}]*max-width/, 'ingen smal maksbredde (NRK fylte bare venstre halvdel)');
   assert.match(css, /\.nrk87 \.nrk-grid\{display:grid;grid-template-columns:repeat\(auto-fill,minmax\(150px,1fr\)\)/);
   assert.match(css, /\.nrk87 \.nrk-pl\{[^}]*aspect-ratio:2 \/ 3/);
   assert.match(css, /--n-bl:#2b5d8a;--n-ok:#2f7a4f/);
   assert.match(css, /\.m43\.m70\.dk \.nrk87\{/);
-  // rekkefølgen i DOM = rekkefølgen på mobil: Last ned → Køen → Serier → Bibliotek
-  assert.match(web, /\[\['form', 'form', formHtml\(\)\], \['ko', 'ko', koHtml\(\)\], \['folg', 'folg', folgerHtml\(\)\], \['lib', 'full lib', libHtml\(\)\]\]/);
+  // rekkefølgen i DOM = rekkefølgen på mobil: NRK (søk) → Køen → Serier → Bibliotek → bunnlinja (prompt 88)
+  assert.match(web, /\[\['form', 'full form', \[toppHtml\(\), kroppHtml\(\)\]\], \['ko', 'ko', koHtml\(\)\], \['folg', 'folg', folgerHtml\(\)\], \['lib', 'full lib', libHtml\(\)\], \['bunn', 'full bunn', bunnHtml\(\)\]\]/);
 });
 
 test('web: tekstene fra designet', () => {
-  for (const t of ['Bare lenker fra nrk.no og nrksuper.no.', 'Lenken ligger allerede i køen.', 'VPN stoppet · køen venter', 'Venter på VPN: tunnelen er ikke i Norge. Køen står stille.', 'Følg serien', 'Laster ned nye episoder automatisk', 'Komprimer (H.265, ca. halv størrelse)', 'Standard på serveren', 'Av som standard på serveren', 'Fjern ferdige', 'Slutt å følge', 'Sjekker …', 'NRK-nedlasteren er ikke satt opp', 'Åpne Integrasjoner', 'Biblioteket krever en nyere versjon av nrk-dl.', 'Åpne på NRK', '‹ Bibliotek', 'som mangler', 'Se etter nye', 'LASTET NED', 'MANGLER', 'VENTER', 'med komprimering', 'tv/Serie/Season 01/Serie - S01E02 - Tittel.mkv']) {
+  for (const t of ['Bare lenker fra nrk.no og nrksuper.no.', 'Lenken ligger allerede i køen.', 'VPN nede – stoppet', 'VPN nede: tunnelen er ikke i Norge. Køen står stille.', 'Følg serien', 'Komprimer (H.265, ca. halv størrelse)', 'som standard på serveren', 'Fjern ferdige', 'Slutt å følge', 'Sjekker …', 'NRK-nedlasteren er ikke satt opp', 'Åpne Integrasjoner', 'Biblioteket krever en nyere versjon av nrk-dl.', 'Åpne på NRK', '‹ Bibliotek', 'som mangler', 'Se etter nye', 'LASTET NED', 'MANGLER', 'VENTER', 'med komprimering']) {
     assert.ok(web.includes(t), t);
   }
   assert.match(web, /e\.status === 409 \? I_KO/);
@@ -476,6 +475,7 @@ test('web: tekstene fra designet', () => {
 
 test('web: komprimer sendes bare når valget er endret fra serverens standard; episoder fra biblioteket', () => {
   assert.match(web, /S\.st\?\.komprimer && kompNa\(\) !== kompStd\(\) \? \{ komprimer: kompNa\(\) \} : \{\}/);
+  assert.match(web, /folg: false, \.\.\.kompValg\(\)/);
   assert.match(web, /const k = S\.st\?\.komprimer;\n\s*const komp = k \? /, 'ingen avkrysningsboks når status mangler komprimer');
   assert.match(web, /episoder: episoder\.map\(\(e\) => e\.url\)/);
   assert.match(web, /\.slice\(0, 200\)/);
@@ -486,7 +486,8 @@ test('web: oppdatering 2 s / 10 s, stopper når fanen ikke vises, og lenkefeltet
   assert.match(web, /if \(!S\.host\?\.isConnected\) return; \/\/ fanen vises ikke lenger: stopp/);
   assert.match(web, /aktiv \? 2000 : 10000/);
   assert.match(web, /if \(el\.nrkHtml === html\) return;/);
-  assert.match(web, /ny\.value = S\.url;/);
+  assert.match(web, /u\.value = S\.url;/);
+  assert.match(web, /q\.value = S\.q;/);
   assert.doesNotMatch(web, /nrk_token|Authorization|10\.69\./);
   assert.doesNotMatch(web, /confirm\(/);
 });

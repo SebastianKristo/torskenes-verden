@@ -30,11 +30,22 @@
 //   - /sok        = GET /api/sok?q=.
 // Katalog-kallene krever norsk VPN i nrk-dl (ellers 503 {feil:"VPN er ikke klar: …"}). Om nrk-dl har katalogen, sjekkes
 // med GET /api/sok?q=: 404/405 uten {feil} betyr «for gammel nrk-dl» → tilgjengelig:false (ikke en feil).
+//
+// Prompt 88 (NRKUI, fasit «Media NRK.dc.html» i pakke 58): søk og serieside på web.
+//   GET /api/media/nrk/serie/:sid               → {configured, tilgjengelig, id, tittel, beskrivelse, kategori, bilde, plakat, url,
+//                                                   sesonger:[{navn, tittel, tilgjengelig}], folger}
+//   GET /api/media/nrk/serie/:sid/sesong/:navn  → {configured, tilgjengelig, serie, navn, episoder:[{id, tittel, undertittel, dato,
+//                                                   varighet, varighetTekst, bilde, kan, label, lastetNed, iKo, url}]}
+//   Rett fra nrk-dl (samme cache som biblioteket), bilder alltid via bildeproxyen. Id-ene valideres før kallet.
+//   GET /jobber legger «bilde» (bildeproxyen eller null) og «radio» (kvadratisk bilde) på hvert følg-objekt. Bildet tas fra
+//   seriens katalogsvar (plakat, ellers bilde) eller fra søketreffet da serien ble fulgt, og huskes per følg-id i kv
+//   (OWNER, «nrk_folg_bilder»), så det ikke hentes på nytt hver gang.
 import { Hono } from 'hono';
 import { authOrToken } from './mobile.js';
 import { mediaAllowed43 } from './media43.js';
 import { cfg } from './settings.js';
 import { guardedGet46 } from './gphoto46.js';
+import { kv, OWNER } from './db.js';
 
 const ID = /^[a-f0-9]{12}$/;
 const NRK_HOST = /(^|\.)(nrk\.no|nrksuper\.no)$/i;
@@ -167,7 +178,7 @@ async function harBibliotek() {
   }
 }
 /** Bare for tester. */
-export function _resetNrk() { bib = { v: null, at: 0, url: '' }; bilder.clear(); katalogCache.clear(); }
+export function _resetNrk() { bib = { v: null, at: 0, url: '' }; bilder.clear(); katalogCache.clear(); sokBilder.clear(); forsokt.clear(); }
 
 /* ---------------- Katalogen i nrk-dl ---------------- */
 
@@ -190,6 +201,7 @@ function katalog(sti, ttl, frist) {
     return nrkKall(sti, { timeout: 15_000 });
   });
   katalogCache.set(k, { at: Date.now(), ttl, p });
+  p.then((v) => { const e = katalogCache.get(k); if (e?.p === p) e.v = v; }, () => {});
   // «Fant ikke» fra nrk-dl huskes like lenge som et svar (en serie som er borte hos NRK); andre feil prøves på nytt.
   p.catch((e) => { if (!(e?.fraNrk && e.nrkStatus === 404) && katalogCache.get(k)?.p === p) katalogCache.delete(k); });
   while (katalogCache.size > CACHE_ANTALL) katalogCache.delete(katalogCache.keys().next().value);
@@ -319,6 +331,64 @@ async function bilde(v) {
   return ny;
 }
 
+/* ---------------- Bilde på «Serier du følger» ---------------- */
+
+// Bildet fra søketreffene (lenke → NRK-bildeadresse), så en serie eller podkast som følges fra søket har bilde med en gang.
+const sokBilder = new Map();
+function huskSokBilde(url, b) {
+  const u = nrkLenke(url), bilde = nrkBilde(b);
+  if (!u || !bilde) return;
+  sokBilder.delete(u); sokBilder.set(u, bilde);
+  while (sokBilder.size > 500) sokBilder.delete(sokBilder.keys().next().value);
+}
+// Serier vi har prøvd å hente bildet til (sid → tidspunkt), så en serie uten bilde ikke spørres på hvert kall.
+const forsokt = new Map();
+const FORSOK_PAUSE = 10 * 60_000, FOLG_KEY = 'nrk_folg_bilder';
+const erRadio = (f) => String(f?.type ?? '').toLowerCase() === 'radio' || /(^|\.)radio\.nrk\.no$/i.test((() => { try { return new URL(f?.url).hostname; } catch { return ''; } })()) || /\/(podkast|podcast)\//i.test(String(f?.url ?? ''));
+const lesBilder = () => { try { const v = kv.get(OWNER, FOLG_KEY, {}); return v && typeof v === 'object' ? v : {}; } catch { return {}; } };
+const lagreBilder = (v) => { try { kv.set(OWNER, FOLG_KEY, v); } catch { /* bare en cache */ } };
+/** Bildet til en serie i et katalogsvar som allerede er kommet (plakat foran bilde), ellers null. Venter aldri. */
+function katalogBilde(sid) {
+  const s = katalogCache.get(`${nrkConf().url}|/api/serie/${sid}`)?.v;
+  return s ? nrkBilde(s.plakat) ?? nrkBilde(s.bilde) : null;
+}
+/** Følg-objektene fra nrk-dl + {bilde, radio}. Ukjente bilder hentes i bakgrunnen (neste kall har dem). */
+async function folgMedBilde(folger) {
+  const lagret = lesBilder(), ny = {};
+  let endret = false;
+  const ut = [];
+  for (const f of folger) {
+    if (!f || typeof f !== 'object') continue;
+    const id = String(f.id ?? ''), radio = erRadio(f), url = nrkLenke(f.url);
+    let b = ID.test(id) && lagret[id] ? nrkBilde(lagret[id].u) : null;
+    if (!b) {
+      const sid = serieId(url);
+      b = (sid && katalogBilde(sid)) || (url && sokBilder.get(url)) || null;
+      if (!b && sid && !(Date.now() - (forsokt.get(sid) ?? 0) < FORSOK_PAUSE)) {
+        forsokt.set(sid, Date.now());
+        while (forsokt.size > 500) forsokt.delete(forsokt.keys().next().value);
+        katalog(`/api/serie/${sid}`, SERIE_TTL, Date.now() + BYGG_FRIST).then((s) => {
+          const x = nrkBilde(s?.plakat) ?? nrkBilde(s?.bilde);
+          if (x && ID.test(id)) { const v = lesBilder(); v[id] = { u: x, radio }; lagreBilder(v); }
+        }).catch(() => {});
+      }
+      if (b && ID.test(id)) endret = true;
+    }
+    if (ID.test(id) && b) ny[id] = { u: b, radio };
+    ut.push({ ...f, bilde: bildeUrl(b), radio });
+  }
+  // Bilder til serier du ikke lenger følger, ryddes bort.
+  if (endret || Object.keys(lagret).some((k) => !(k in ny))) lagreBilder({ ...ny });
+  return ut;
+}
+/** Etter «Følg serien»: husk bildet fra katalogen eller søket med en gang (svaret fra nrk-dl har følg-id-en). */
+async function huskFolgBilde(svar, url) {
+  const id = String(svar?.id ?? ''), u = nrkLenke(url);
+  if (!ID.test(id) || !u) return;
+  const sid = serieId(u), b = (sid && katalogBilde(sid)) || sokBilder.get(u);
+  if (b) { const v = lesBilder(); v[id] = { u: b, radio: erRadio({ url: u, type: svar?.type }) }; lagreBilder(v); }
+}
+
 /* ---------------- Ruter ---------------- */
 
 const pick = (o, keys) => Object.fromEntries(keys.filter((k) => o?.[k] !== undefined).map((k) => [k, o[k]]));
@@ -337,7 +407,7 @@ nrkApi.get('/status', ...G, H(async () => {
 nrkApi.get('/jobber', ...G, H(async () => {
   if (!nrkConf().on) return { configured: false, message: IKKE_SATT, jobber: [], folger: [] };
   const d = await nrkKall('/api/jobber');
-  return { configured: true, jobber: Array.isArray(d.jobber) ? d.jobber : [], folger: Array.isArray(d.folger) ? d.folger : [] };
+  return { configured: true, jobber: Array.isArray(d.jobber) ? d.jobber : [], folger: await folgMedBilde(Array.isArray(d.folger) ? d.folger : []) };
 }));
 nrkApi.post('/jobber', ...G, H(async (c) => {
   const b = await jb(c);
@@ -362,10 +432,16 @@ nrkApi.delete('/jobber/:id', ...G, H(async (c) => nrkKall(`/api/jobber/${idOf(c)
 nrkApi.post('/rydd', ...G, H(async () => nrkKall('/api/rydd', { method: 'POST' })));
 nrkApi.post('/folger', ...G, H(async (c) => {
   const b = await jb(c);
-  return nrkKall('/api/folger', { method: 'POST', json: { url: lenke(b.url), ...valg(b, { tittel: true }) } });
+  const url = lenke(b.url), svar = await nrkKall('/api/folger', { method: 'POST', json: { url, ...valg(b, { tittel: true }) } });
+  huskFolgBilde(svar, url);
+  return svar;
 }));
 nrkApi.post('/folger/:id/sjekk', ...G, H(async (c) => nrkKall(`/api/folger/${idOf(c)}/sjekk`, { method: 'POST' })));
-nrkApi.delete('/folger/:id', ...G, H(async (c) => nrkKall(`/api/folger/${idOf(c)}`, { method: 'DELETE' })));
+nrkApi.delete('/folger/:id', ...G, H(async (c) => {
+  const id = idOf(c), svar = await nrkKall(`/api/folger/${id}`, { method: 'DELETE' });
+  const v = lesBilder(); if (id in v) { delete v[id]; lagreBilder(v); }
+  return svar;
+}));
 
 nrkApi.get('/bibliotek', ...G, H(async () => {
   if (!nrkConf().on) return { configured: false, message: IKKE_SATT, tilgjengelig: false, elementer: [] };
@@ -413,6 +489,40 @@ nrkApi.get('/serie', ...G, H(async (c) => {
   if (!el) throw new NrkFeil('Fant ikke serien hos NRK', 404);
   return { ...el, configured: true, tilgjengelig: true, element: el };
 }));
+/** Katalogkall for serieside-rutene: «for gammel nrk-dl» blir tilgjengelig:false, andre feil sendes videre. */
+async function katalogSvar(sti, ttl) {
+  if (!(await harBibliotek())) return null;
+  try { return await katalog(sti, ttl, Date.now() + BYGG_FRIST); } catch (e) {
+    if (gammel(e)) { husk(false); return null; }
+    throw e;
+  }
+}
+const ja = (v) => v === true;
+nrkApi.get('/serie/:sid', ...G, H(async (c) => {
+  const sid = c.req.param('sid');
+  if (!SERIE_ID.test(sid)) throw new NrkFeil('Ugyldig serie-id', 400);
+  if (!nrkConf().on) return { configured: false, message: IKKE_SATT, tilgjengelig: false };
+  const s = await katalogSvar(`/api/serie/${sid}`, SERIE_TTL);
+  if (!s) return { configured: true, tilgjengelig: false };
+  const sesonger = (Array.isArray(s.sesonger) ? s.sesonger : []).slice(0, 200).filter((x) => x && typeof x === 'object' && SESONG_NAVN.test(String(x.navn ?? '')))
+    .map((x) => ({ navn: String(x.navn), tittel: tekst(x.tittel, 120), tilgjengelig: x.tilgjengelig !== false }));
+  return { configured: true, tilgjengelig: true, id: sid, tittel: tekst(s.tittel) || sid, beskrivelse: tekst(s.beskrivelse, 1000), kategori: tekst(s.kategori, 80),
+    bilde: bildeUrl(s.bilde) ?? bildeUrl(s.plakat), plakat: bildeUrl(s.plakat) ?? bildeUrl(s.bilde), url: `https://tv.nrk.no/serie/${sid}`, sesonger, folger: ja(s.folger) };
+}));
+nrkApi.get('/serie/:sid/sesong/:navn', ...G, H(async (c) => {
+  const sid = c.req.param('sid'), navn = c.req.param('navn');
+  if (!SERIE_ID.test(sid) || !SESONG_NAVN.test(navn)) throw new NrkFeil('Ugyldig serie eller sesong', 400);
+  if (!nrkConf().on) return { configured: false, message: IKKE_SATT, tilgjengelig: false, episoder: [] };
+  const d = await katalogSvar(`/api/serie/${sid}/sesong/${navn}`, SESONG_TTL);
+  if (!d) return { configured: true, tilgjengelig: false, episoder: [] };
+  const episoder = (Array.isArray(d.episoder) ? d.episoder : []).slice(0, 2000).map((e) => {
+    if (!e || typeof e !== 'object' || !PRF.test(String(e.id ?? ''))) return null;
+    const id = String(e.id).toUpperCase();
+    return { id, tittel: tekst(e.tittel) || id, undertittel: tekst(e.undertittel), dato: tekst(e.dato, 40), ...varighet(e.varighet), bilde: bildeUrl(e.bilde),
+      kan: ja(e.kan), label: tekst(e.label, 80), lastetNed: ja(e.lastetNed), iKo: ja(e.iKo), url: `https://tv.nrk.no/program/${id}` };
+  }).filter(Boolean);
+  return { configured: true, tilgjengelig: true, serie: sid, navn, tittel: tekst(d.tittel, 120), episoder };
+}));
 const ART = new Set(['serie', 'film', 'episode', 'radio']);
 nrkApi.get('/sok', ...G, H(async (c) => {
   const q = String(c.req.query('q') ?? '').trim().slice(0, 100);
@@ -425,6 +535,7 @@ nrkApi.get('/sok', ...G, H(async (c) => {
   const treff = (Array.isArray(d?.treff) ? d.treff : []).slice(0, 100).map((t) => {
     if (!t || typeof t !== 'object' || !ART.has(t.art)) return null;
     const tittel = tekst(t.tittel), url = nrkLenke(t.url);
+    if (tittel && url && (t.art === 'serie' || t.art === 'radio')) huskSokBilde(url, t.bilde);
     return tittel && url ? { art: t.art, id: tekst(t.id, 200), tittel, beskrivelse: tekst(t.beskrivelse, 500), bilde: bildeUrl(t.bilde), url, tilgjengelig: t.tilgjengelig !== false } : null;
   }).filter(Boolean);
   return { configured: true, tilgjengelig: true, treff };
