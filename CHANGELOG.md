@@ -2,15 +2,19 @@
 
 Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. Versjonene med APK og IPA ligger under [Releases](https://github.com/SebastianKristo/torskenes-verden/releases).
 
-## [4.72.0] – 13.11.2026 · NRK i Media, og fanebytte uten at siden bygges opp på nytt
+## [4.72.0] – 13.11.2026 · NRK og Musikk i Media, og fanebytte uten at siden bygges opp på nytt
 - **Media → NRK** (web, iPhone og Android):
-  - Lim inn en lenke fra NRK, velg type og kvalitet, og følg serier.
+  - Søk i NRK. Serier åpner en serieside med sesonger og episoder du krysser av og laster ned.
+  - Film, enkeltepisoder og radio legges rett i køen. Du kan også lime inn en lenke.
   - Køen viser fremdrift, og fanen viser om VPN-en er norsk.
-  - Du kan velge komprimering til H.265.
+  - Du kan velge kvalitet og komprimering til H.265.
+  - «Serier du følger» viser plakaten til serien.
   - Biblioteket viser serier, sesonger og episoder, med «Last ned de som mangler».
-  - På web bruker fanen hele bredden.
   - På Android kan du dele en lenke fra NRK-appen til Homelab.
-  - Biblioteket og komprimeringsvalget krever en nyere versjon av nrk-dl.
+  - Søk, serieside og bibliotek krever nrk-dl fra grenen `nrk-nedlaster`.
+- **Media → Musikk** (web, iPhone og Android): last ned album, spillelister og sanger fra YouTube Music til musikkbiblioteket via yubal. Forhåndsvisning, kø, og spillelister du følger som synkes automatisk.
+- **Mørk modus på Dashboard:** Vær-knappen, ✦ AI-knappen og Kveldsbrief-arket er leselige.
+- **Media-headeren på web:** lukkeknappen står alltid på samme linje.
 - **Fanebytte på web:** skallet står i ro når du bytter fane. Fotovinduet, toppmenyen og bakgrunnen bygges ikke opp på nytt, og bare innholdet tones inn.
 - **Økonomi på web:** sidemenyen og toppen står stille når du bytter side, og du havner ved starten av innholdet i stedet for øverst. Tilbake-knappen gir samme posisjon som før.
 
