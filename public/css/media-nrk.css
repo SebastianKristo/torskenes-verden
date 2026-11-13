@@ -1,0 +1,33 @@
+/* NRK-nedlaster i Media (media-nrk.js). Bruker fargene fra media70.css (--p-*), så Papir og mørkt tema følger med. */
+.nrk75{display:flex;flex-direction:column;gap:24px;max-width:1100px}
+.nrk75 a{text-decoration:none}.nrk75 a:hover{text-decoration:underline}
+.nrk75 .nrk-in{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
+.nrk75 .nrk-in input{flex:1 1 320px;min-width:0;min-height:48px;padding:0 18px;border-radius:999px;border:1px solid var(--p-ln);background:var(--p-bg);color:var(--p-k);font:400 15px Inter,system-ui,sans-serif}
+.nrk75 .nrk-in input:focus{outline:2px solid var(--p-acc);outline-offset:1px}
+.nrk75 .nrk-in .m70-btn{min-height:48px;padding:0 24px}
+.nrk75 .nrk-valg{display:flex;flex-wrap:wrap;gap:10px 20px;align-items:center;margin-top:14px;color:var(--p-mt)}
+.nrk75 .nrk-valg label{display:inline-flex;align-items:center;gap:8px}
+.nrk75 .nrk-valg select{min-height:36px;padding:0 10px;border-radius:10px;border:1px solid var(--p-ln);background:var(--p-card);color:var(--p-k);font:500 14px Inter,system-ui,sans-serif}
+.nrk75 .nrk-valg input[type=checkbox]{width:18px;height:18px;accent-color:var(--p-acc)}
+.nrk75 .nrk-hint{margin:14px 0 0;line-height:1.5}
+.nrk75 .nrk-err{margin-top:14px;padding:10px 14px;border-radius:14px;background:var(--p-redbg);color:var(--p-redt);font-size:14px}
+.nrk75 .nrk-vpn{display:inline-flex;align-items:center;gap:8px;padding:6px 12px;border-radius:999px;font-size:13px;font-weight:600;white-space:nowrap}
+.nrk75 .nrk-vpn i{width:8px;height:8px;border-radius:50%;background:currentColor}
+.nrk75 .nrk-vpn.ok{background:var(--p-okbg);color:var(--p-okt)}
+.nrk75 .nrk-vpn.bad{background:var(--p-redbg);color:var(--p-redt);white-space:normal}
+.nrk75 .nrk-list{display:flex;flex-direction:column}
+.nrk75 .nrk-job{display:flex;flex-direction:column;gap:8px;padding:16px 0;border-top:1px solid var(--p-ln2)}
+.nrk75 .nrk-job:first-child{border-top:0;padding-top:0}
+.nrk75 .nrk-t{overflow-wrap:anywhere}
+.nrk75 .nrk-msg{color:var(--p-mt);overflow-wrap:anywhere}
+.nrk75 .nrk-job.feil .nrk-msg{color:var(--p-redt)}
+.nrk75 .nrk-bar{flex:none;width:100%}
+.nrk75 .m70-chip.c-err{background:var(--p-redbg);color:var(--p-redt)}
+.nrk75 details summary{cursor:pointer}
+.nrk75 .nrk-files{margin-top:6px;padding:10px 12px;border-radius:12px;background:var(--p-bg);font-size:12px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere;max-height:220px;overflow:auto;color:var(--p-mt)}
+.nrk75 .nrk-folg{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:14px 0;border-top:1px solid var(--p-ln2)}
+.nrk75 .nrk-folg:first-child{border-top:0;padding-top:0}
+.nrk75 .nrk-fot{padding:0 4px}
+@media (max-width:640px){.nrk75 .nrk-in .m70-btn{width:100%}.nrk75 .m70-card{padding:18px;border-radius:20px}}
+/* Fem faner i Media: litt mindre luft på smale telefoner, så alle får plass oftere. */
+@media (max-width:420px){.m43.m70 .m70-tab{padding:9px 9px}}

@@ -483,7 +483,7 @@ test('media: ekte tjenester – normalisering og feilmeldinger (fetch byttet ut)
 test('integrasjoner: MEDIA-gruppen med felt, «Mangler …», steg og tilgang', async () => {
   const list = (await A('/api/integrations')).body;
   const media = list.filter((x) => x.section === 'MEDIA');
-  assert.deepEqual(media.map((x) => x.id).sort(), ['jellyfin', 'plex', 'prowlarr', 'qbittorrent', 'radarr', 'sonarr']);
+  assert.deepEqual(media.map((x) => x.id).sort(), ['jellyfin', 'nrk', 'plex', 'prowlarr', 'qbittorrent', 'radarr', 'sonarr']); // + NRK-nedlaster (p88)
   const by = Object.fromEntries(media.map((x) => [x.id, x]));
   assert.deepEqual(by.sonarr.fields.map((f) => f.key), ['sonarr_url', 'sonarr_key', 'sonarr_root', 'sonarr_profile']);
   assert.equal(by.sonarr.statusText, 'Mangler api-nøkkel');

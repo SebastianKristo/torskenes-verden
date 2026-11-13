@@ -171,8 +171,8 @@ const speed = (b) => (b >= 1048576 ? `${nb(b / 1048576, 1)} MB/s` : b > 0 ? `${n
 
 /* ---------------- Topplinja ---------------- */
 
-const TABS70 = [['ov', 'Oversikt'], ['kal', 'Kalender'], ['bib', 'Bibliotek'], ['ned', 'Nedlastinger']];
-const PH = { ov: 'Spør Glimt: «legg til Severance i 4K»', kal: 'Spør Glimt: «hva kommer på fredag?»', bib: 'Spør Glimt: «legg til Severance i 4K»', ned: 'Spør Glimt: «slett ferdige over 30 dager»', av: 'Spør Glimt: «hvem ser på noe nå?»' };
+const TABS70 = [['ov', 'Oversikt'], ['kal', 'Kalender'], ['bib', 'Bibliotek'], ['ned', 'Nedlastinger'], ['nrk', 'NRK']];
+const PH = { ov: 'Spør Glimt: «legg til Severance i 4K»', kal: 'Spør Glimt: «hva kommer på fredag?»', bib: 'Spør Glimt: «legg til Severance i 4K»', ned: 'Spør Glimt: «slett ferdige over 30 dager»', av: 'Spør Glimt: «hvem ser på noe nå?»', nrk: 'Spør Glimt om filmer og serier' };
 /** Varsler: tjenester som svarer ikke, helsemeldinger fra Prowlarr, nedlastinger som står fast og lite diskplass. */
 function alerts70() {
   const M = C.M, L = [];

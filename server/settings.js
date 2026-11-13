@@ -118,6 +118,11 @@ export const SCHEMA = [
     ['prowlarr_key', 'API-nøkkel', e('PROWLARR_API_KEY'), true],
     ['flaresolverr_url', 'FlareSolverr (valgfri)', e('FLARESOLVERR_URL')],
   ]],
+  // NRK-nedlaster (skjold-proxmox-media/apps/nrk-dl): egen norsk VPN-tunnel, lagrer i /data/media. Tokenet blir på serveren.
+  ['NRK-nedlaster', { id: 'nrk', domain: 'nrk.no', category: 'Media', help: 'Adressen til nrk-dl (port 8020 i arr-containeren) og NRK_API_TOKEN fra /opt/arr/.env.' }, [
+    ['nrk_url', 'Adresse', e('NRK_DL_URL')],
+    ['nrk_token', 'API-token', e('NRK_DL_TOKEN'), true],
+  ]],
   ['Trading 212', { id: 't212', scope: 'personal', domain: 'trading212.com', category: 'Økonomi', help: 'Lag nøkkelen på app.trading212.com under Innstillinger → API, i samme konto og miljø (Live eller Demo). Gi bare lesetilgang.' }, [
     ['t212_key', 'API-nøkkel (Key ID)', e('TRADING212_API_KEY'), true],
     ['t212_secret', 'Secret', e('TRADING212_API_SECRET'), true],

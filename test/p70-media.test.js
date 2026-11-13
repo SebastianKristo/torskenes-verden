@@ -76,11 +76,11 @@ test('web: fire faner som egne adresser, gamle adresser virker, funksjonene er k
   const m70 = readFileSync(new URL('../public/js/media70.js', import.meta.url), 'utf8');
   const css = readFileSync(new URL('../public/css/media70.css', import.meta.url), 'utf8');
   // Ruter
-  assert.match(m43, /TAB_SLUG = \{ ov: '', kal: 'kalender', bib: 'bibliotek', ned: 'nedlastinger', av: 'avspilling' \}/);
+  assert.match(m43, /TAB_SLUG = \{ ov: '', kal: 'kalender', bib: 'bibliotek', ned: 'nedlastinger', nrk: 'nrk', av: 'avspilling' \}/); // + NRK (p88)
   for (const old of ['kommer', 'sonarr', 'radarr', 'qbittorrent', 'prowlarr', 'avspilling']) assert.match(m43, new RegExp(`${old}: '(kal|bib|ned|av)'`), old);
   assert.match(m43, /'\/filmer'/);
   // Topplinja: Tilbake, fanene i rekkefølge, Glimt med ⌘K, servervelger og varsler
-  assert.match(m70, /\[\['ov', 'Oversikt'\], \['kal', 'Kalender'\], \['bib', 'Bibliotek'\], \['ned', 'Nedlastinger'\]\]/);
+  assert.match(m70, /\[\['ov', 'Oversikt'\], \['kal', 'Kalender'\], \['bib', 'Bibliotek'\], \['ned', 'Nedlastinger'\], \['nrk', 'NRK'\]\]/); // + NRK (p88)
   assert.match(m70, /‹ Tilbake/);
   assert.match(m70, /⌘K/);
   assert.match(m43, /e\.key\?\.toLowerCase\(\) === 'k'/);
