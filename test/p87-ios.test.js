@@ -60,7 +60,8 @@ function lex(src) {
 
 test('NRK-fanen finnes i Media, mellom Prowlarr og Avspilling, og fanelinja ruller valgt fane inn i midten', () => {
   const model = code('Media43Model.swift');
-  assert.match(model, /\("prowlarr", "Prowlarr"\), \("nrk", "NRK"\), \("avspilling", "Avspilling"\)\]/);
+  // Prompt 88: «Musikk» (yubal) står mellom NRK og Avspilling (test/p88-ios.test.js).
+  assert.match(model, /\("prowlarr", "Prowlarr"\), \("nrk", "NRK"\), \("musikk", "Musikk"\), \("avspilling", "Avspilling"\)\]/);
   const views = code('Media43Views.swift');
   assert.match(views, /case "nrk": Nrk87View\(wide: wide\)/);
   assert.match(views, /ScrollViewReader \{ \(proxy: ScrollViewProxy\) in/);
@@ -158,7 +159,8 @@ test('tåler at felt mangler: uten komprimer ingen avkrysningsboks, uten bibliot
   assert.match(m, /if JS\.bool\(o, "tilgjengelig"\) == false \{\n\s+libState = "gammel"/);
   assert.match(m, /catch let e as APIError where e\.status == 404 \|\| e\.status == 405 \{[\s\S]*?libState = "gammel"/);
   assert.match(m, /if libState == "gammel" \{ return \}/);
-  const v = code('Nrk87Views.swift');
+  // Prompt 88: kvalitet, komprimering og VPN-merket står øverst i kort 1 «NRK» (Nrk88Views.swift).
+  const v = code('Nrk87Views.swift') + code('Nrk88Views.swift');
   assert.match(v, /if m\.hasKomp \{ compress \}/);
   assert.match(v, /if m\.libState == "gammel" \{[\s\S]*?Text\("Biblioteket krever en nyere versjon av nrk-dl\."\)/);
   assert.match(v, /if m\.hasVpn \{/);
@@ -166,15 +168,16 @@ test('tåler at felt mangler: uten komprimer ingen avkrysningsboks, uten bibliot
 });
 
 test('tekstene og knappene fra designet', () => {
-  const v = code('Nrk87Views.swift');
+  // Prompt 88: kort 1 heter «NRK» (søk, kvalitet, komprimering, VPN) i Nrk88Views.swift; lenkeskjemaet under «Har du en lenke?».
+  const v = code('Nrk87Views.swift') + code('Nrk88Views.swift');
   const m = code('Nrk87Model.swift');
   for (const t of [
-    'Last ned fra NRK', 'Lim inn', 'Last ned', 'TYPE', 'KVALITET', 'Følg serien', 'Laster ned nye episoder automatisk',
-    'Komprimer (H.265, ca. halv størrelse)', 'Standard på serveren', 'Av som standard på serveren',
-    'VPN stoppet · køen venter', 'Køen', 'Fjern ferdige', 'Venter på VPN: tunnelen er ikke i Norge. Køen står stille.',
+    'Har du en lenke?', 'Lim inn', 'Last ned', 'TYPE', 'KVALITET', 'Følg serien', 'Laster ned nye episoder automatisk',
+    'Komprimer (H.265, ca. halv størrelse)', 'På som standard på serveren', 'Av som standard på serveren',
+    'VPN nede – stoppet', 'Køen', 'Fjern ferdige', 'Venter på VPN: tunnelen er ikke i Norge. Køen står stille.',
     'Ingenting i køen. Lim inn en lenke fra tv.nrk.no eller radio.nrk.no.', 'VENTER', 'Venter på VPN …',
     'Avbryt', 'Prøv igjen', 'Se etter nye', 'Fjern', 'Serier du følger', 'Sjekk nå', 'Sjekker …', 'Slutt å følge',
-    'Du følger ingen serier. Slå på «Følg serien» når du legger inn en lenke.',
+    'Du følger ingen serier. Åpne en serie og trykk «Følg serien».',
     'NRK-nedlasteren er ikke satt opp', 'Åpne Integrasjoner', 'Bibliotek', '‹ Bibliotek', 'Åpne på NRK', 'Last ned på nytt',
     '/Serie/Season 01/Serie - S01E02 - Tittel.mkv', '/Tittel/Tittel.mkv', '/Serie/2026-11-13 - Tittel.m4a', 'H.265 · crf ',
   ]) assert.ok(v.includes(`"${t}`) || v.includes(`${t}"`), t);
@@ -192,7 +195,7 @@ test('tekstene og knappene fra designet', () => {
   assert.match(v, /if j\.compressing \{\n\s+parts\.append\(m\.kompCrf\.isEmpty \? "H\.265" : "H\.265 · crf " \+ m\.kompCrf\)\n\s+\} else if j\.speed > 0 \{/);
   assert.match(v, /if j\.status == "ferdig" && j\.saved > 0 \{\n\s+Text\(Nrk87\.savedText\(j\.saved\)\)[^\n]*foregroundStyle\(p\.pos\)/);
   // Rekkefølge på telefon: Last ned → Køen → Serier du følger → Bibliotek.
-  assert.match(v, /\} else \{\n\s+Nrk87Form\(\)\n\s+Nrk87Queue\(\)\n\s+Nrk87Follows\(\)\n\s+\}\n\s+Nrk87Library\(\)/);
+  assert.match(v, /\} else \{\n\s+Nrk88Top\(\)\n\s+Nrk87Queue\(\)\n\s+Nrk87Follows\(\)\n\s+\}\n\s+Nrk87Library\(\)/);
   // Plakat-rutenett 2:3 med minst 150 pt per plakat.
   assert.match(v, /GridItem\(\.adaptive\(minimum: 150\)/);
   assert.match(v, /\.aspectRatio\(2\.0 \/ 3\.0, contentMode: \.fit\)/);

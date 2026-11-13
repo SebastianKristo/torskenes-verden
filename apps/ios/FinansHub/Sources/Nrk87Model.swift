@@ -28,6 +28,8 @@ struct Nrk87Job: Identifiable, Hashable {
     var nr: Int = 0
     var av: Int = 0
     var files: [String] = []
+    /// Prompt 88: episodelenkene i jobben (valgte episoder fra seriesiden).
+    var urls: [String] = []
     /// Bytes spart med komprimering (ferdige jobber).
     var saved: Double = 0
 
@@ -43,6 +45,9 @@ struct Nrk87Follow: Identifiable, Hashable {
     var quality: String = "best"
     var checked: Double = 0
     var last: String = ""
+    /// Prompt 88: plakaten via serverens bildeproxy (tom = fargeflate med tittel), og kvadratisk bilde for radio.
+    var image: String = ""
+    var radio: Bool = false
 }
 
 struct Nrk87Ep: Identifiable, Hashable {
@@ -184,6 +189,8 @@ final class Nrk87 {
         if l.isEmpty { return }
         url = String(l.prefix(2000))
         formErr = ""
+        // Prompt 88: lenkefeltet ligger under «Har du en lenke?» – åpne det så brukeren ser lenken.
+        Nrk88.shared.showLink()
     }
 
     func paste() {
@@ -218,6 +225,7 @@ final class Nrk87 {
         let first: Bool = scope == "-"
         scope = acct
         if first { return }
+        Nrk88.shared.reset()
         loaded = false
         configured = true
         message = ""
@@ -366,6 +374,7 @@ final class Nrk87 {
         j.nr = JS.int(r, "nr") ?? 0
         j.av = JS.int(r, "av") ?? 0
         j.files = JS.strings(r, "filer")
+        j.urls = JS.strings(r, "urls")
         j.saved = JS.num(r, "spart") ?? 0
         return j
     }
@@ -378,6 +387,8 @@ final class Nrk87 {
         f.quality = JS.str(r, "kvalitet") ?? "best"
         f.checked = JS.num(r, "sjekket") ?? 0
         f.last = JS.str(r, "siste") ?? ""
+        f.image = Nrk88.img(JS.str(r, "bilde"))
+        f.radio = JS.bool(r, "radio") ?? false
         return f
     }
 

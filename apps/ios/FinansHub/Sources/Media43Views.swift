@@ -3,7 +3,7 @@ import UIKit
 
 /* ---------------- Prompt 43: Media (2a) – siden, fanene, Kommer snart, Sonarr/Radarr og serie-/filmsiden ----------------
  Fasit: design/Media.dc.html (mobil) og claude-code-media-arr.md. Mer → Media åpner fullskjerm med «‹ Tilbake».
- Pille-faner (1b): Kommer snart · Sonarr · Radarr · qBittorrent · Prowlarr · NRK (prompt 87) · Avspilling. Følger Papir-temaet (ink/bg/card/line/lab/mut),
+ Pille-faner (1b): Kommer snart · Sonarr · Radarr · qBittorrent · Prowlarr · NRK (prompt 87) · Musikk (prompt 88) · Avspilling. Følger Papir-temaet (ink/bg/card/line/lab/mut),
  bare statusfargene er egne (grønn #2f6b4a, gul #a0671a/#c48a1a, rød lab). Stor skjerm (≥ 600, 1b): plakatvegg med
  6 kolonner og valgt serie/film i høyre kolonne (360). */
 
@@ -146,6 +146,8 @@ struct Media43Page: View {
                     }
                     .refreshable {
                         // Prompt 87: NRK-fanen har egne data (Nrk87Model.swift).
+                        // Prompt 88: Musikk har også egne data (Musikk88Model.swift).
+                        if m.tab == "musikk" { await Musikk88.shared.load(store, full: true); return }
                         if m.tab == "nrk" { await Nrk87.shared.load(store, full: true) } else { await m.loadAll(store) }
                     }
                     if wide, let s = m.selected {
@@ -245,6 +247,8 @@ struct Media43Page: View {
         case "prowlarr": Media43Prowlarr()
         // Prompt 87: NRK-nedlasteren (Nrk87Views.swift).
         case "nrk": Nrk87View(wide: wide)
+        // Prompt 88: Musikk (yubal, Musikk88Views.swift) – én kolonne, også på stor skjerm.
+        case "musikk": Musikk88View().frame(maxWidth: 720, alignment: .leading)
         default: Media43Upcoming(wide: wide)
         }
     }

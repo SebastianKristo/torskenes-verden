@@ -28,6 +28,8 @@ enum Media45 {
         case "kommer": return Color(hex: "#b23a2a")
         // Prompt 87: NRK-fanen (blå som «laster ned» i designet).
         case "nrk": return Color(hex: "#2b5d8a")
+        // Prompt 88: Musikk (yubal).
+        case "musikk": return Color(hex: "#7a4fa0")
         default: return Color(hex: "#6b665c")
         }
     }

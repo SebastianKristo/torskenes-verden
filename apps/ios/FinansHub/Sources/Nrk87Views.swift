@@ -2,6 +2,7 @@ import SwiftUI
 import UIKit
 
 /* ---------------- Prompt 87: Media → NRK (visning) ----------------
+ Prompt 88: kort 1 er nå «NRK» med søk og serieside (Nrk88Views.swift); lenkeskjemaet under ligger under «Har du en lenke?».
  Fasit: design/Media NRK.dc.html. Én kolonne på telefon: Last ned → Køen → Serier du følger → Bibliotek (med detalj).
  På stor skjerm: «Last ned fra NRK» og «Serier du følger» til venstre, «Køen» til høyre, Bibliotek i full bredde under.
  Farger: blå = laster ned, grønn (pos) = ferdig / VPN ok, rød (lab) = feil / VPN stoppet, dempet = i kø / avbrutt.
@@ -99,13 +100,13 @@ struct Nrk87View: View {
         if wide {
             HStack(alignment: .top, spacing: 12) {
                 VStack(alignment: .leading, spacing: 12) {
-                    Nrk87Form()
+                    Nrk88Top()
                     Nrk87Follows()
                 }
                 Nrk87Queue()
             }
         } else {
-            Nrk87Form()
+            Nrk88Top()
             Nrk87Queue()
             Nrk87Follows()
         }
@@ -143,7 +144,8 @@ struct Nrk87View: View {
     }
 }
 
-/* ---------- Kort 1: Last ned fra NRK ---------- */
+/* ---------- «Har du en lenke?» (lenkeskjemaet fra prompt 87, inni kort 1 «NRK») ----------
+ Kvalitet, komprimering og VPN-merket står øverst i kortet (Nrk88Top) og gjelder også her. */
 
 struct Nrk87Form: View {
     @Environment(Store.self) private var store
@@ -154,11 +156,6 @@ struct Nrk87Form: View {
         let bad: Bool = !m.formErr.isEmpty
         let ok: Bool = Nrk87.valid(Nrk87.link(in: m.url))
         VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .center, spacing: 8) {
-                Text("Last ned fra NRK").font(PF.serif(22, medium: true)).foregroundStyle(p.ink)
-                Spacer(minLength: 4)
-                vpn
-            }
             HStack(spacing: 8) {
                 TextField("https://tv.nrk.no/serie/…", text: Binding<String>(get: { m.url }, set: { (v: String) in m.url = v; m.formErr = "" }))
                     .font(PF.ui(14.5)).foregroundStyle(p.ink)
@@ -189,7 +186,6 @@ struct Nrk87Form: View {
                 Text(m.formErr).font(PF.ui(13, .semibold)).foregroundStyle(p.lab).fixedSize(horizontal: false, vertical: true)
             }
             pick("TYPE", Nrk87.types, m.type) { (v: String) in m.type = v }
-            pick("KVALITET", Nrk87.quals, m.qual) { (v: String) in m.qual = v }
             Toggle(isOn: Binding<Bool>(get: { m.follow }, set: { (v: Bool) in m.follow = v })) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Følg serien").font(PF.ui(14, .bold)).foregroundStyle(p.ink)
@@ -197,25 +193,7 @@ struct Nrk87Form: View {
                 }
             }
             .tint(p.pos)
-            if m.hasKomp { compress }
             folders
-        }
-        .modifier(Nrk87Card())
-    }
-
-    @ViewBuilder private var vpn: some View {
-        if m.hasVpn {
-            let c: Color = m.vpnOk ? p.pos : p.lab
-            let parts: [String] = ["VPN", m.vpnLand, m.vpnIp].filter { !$0.isEmpty }
-            let t: String = m.vpnOk ? parts.joined(separator: " · ") : "VPN stoppet · køen venter"
-            HStack(spacing: 6) {
-                Circle().fill(c).frame(width: 7, height: 7)
-                Text(t).font(PF.mono(10, bold: false)).foregroundStyle(c).lineLimit(1).minimumScaleFactor(0.8)
-            }
-            .padding(.horizontal, 9).frame(height: 26)
-            .background(c.opacity(0.10), in: Capsule())
-            .overlay(Capsule().stroke(c.opacity(0.35), lineWidth: 1))
-            .accessibilityElement(children: .combine)
         }
     }
 
@@ -233,36 +211,6 @@ struct Nrk87Form: View {
                 }
             }
         }
-    }
-
-    private var compress: some View {
-        var sub: String = m.kompStd ? "Standard på serveren" : "Av som standard på serveren"
-        if !m.kompCrf.isEmpty { sub += " · crf " + m.kompCrf }
-        if !m.kompPreset.isEmpty { sub += " · preset " + m.kompPreset }
-        let on: Bool = m.komp
-        return Button {
-            Haptics.shared.select()
-            m.setKomp(!on)
-        } label: {
-            HStack(alignment: .top, spacing: 10) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 6, style: .continuous).fill(on ? p.ink : Color.clear)
-                    RoundedRectangle(cornerRadius: 6, style: .continuous).stroke(on ? p.ink : p.line, lineWidth: 1.5)
-                    if on { Image(systemName: "checkmark").font(.system(size: 11, weight: .bold)).foregroundStyle(p.bg) }
-                }
-                .frame(width: 22, height: 22)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Komprimer (H.265, ca. halv størrelse)").font(PF.ui(14, .bold)).foregroundStyle(p.ink)
-                        .multilineTextAlignment(.leading)
-                    Text(sub).font(PF.ui(12)).foregroundStyle(p.mut).multilineTextAlignment(.leading)
-                }
-                Spacer(minLength: 0)
-            }
-            .frame(minHeight: 44)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .accessibilityAddTraits(on ? .isSelected : [])
     }
 
     private var folders: some View {
@@ -432,7 +380,7 @@ struct Nrk87Follows: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Serier du følger").font(PF.serif(22, medium: true)).foregroundStyle(p.ink)
             if m.follows.isEmpty {
-                Text("Du følger ingen serier. Slå på «Følg serien» når du legger inn en lenke.")
+                Text("Du følger ingen serier. Åpne en serie og trykk «Følg serien».")
                     .font(PF.ui(13.5)).foregroundStyle(p.mut).fixedSize(horizontal: false, vertical: true).padding(.vertical, 8)
             }
             VStack(alignment: .leading, spacing: 0) {
@@ -445,11 +393,21 @@ struct Nrk87Follows: View {
         .modifier(Nrk87Card())
     }
 
+    /// Prompt 88: plakat 48×72 (radio/podkast 72×72) til venstre, reserveflate med tittelen nederst. Knappene under.
     private func row(_ f: Nrk87Follow) -> some View {
         let busy: Bool = m.checking.contains(f.id)
         return VStack(alignment: .leading, spacing: 4) {
-            Text(f.title).font(PF.ui(14.5, .bold)).foregroundStyle(p.ink).lineLimit(2)
-            Text(Nrk87.followSub(f)).font(PF.ui(12.5)).foregroundStyle(p.mut).fixedSize(horizontal: false, vertical: true)
+            HStack(alignment: .top, spacing: 12) {
+                Nrk88Image(url: f.image, title: f.title, font: 12, bottom: true)
+                    .frame(width: f.radio ? 72 : 48, height: 72)
+                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(f.title).font(PF.ui(14.5, .bold)).foregroundStyle(p.ink).lineLimit(2)
+                    Text(Nrk87.followSub(f)).font(PF.ui(12.5)).foregroundStyle(p.mut).fixedSize(horizontal: false, vertical: true)
+                }
+                .accessibilityElement(children: .combine)
+                Spacer(minLength: 0)
+            }
             HStack(spacing: 8) {
                 Nrk87Small(text: busy ? "Sjekker …" : "Sjekk nå", color: p.ink) { m.check(f, store) }
                 Nrk87Small(text: "Slutt å følge", color: p.lab) { m.unfollow(f, store) }
@@ -496,6 +454,9 @@ struct Nrk87Library: View {
                 Text("Bibliotek").font(PF.serif(22, medium: true)).foregroundStyle(p.ink)
                 Text("Biblioteket krever en nyere versjon av nrk-dl.")
                     .font(PF.ui(13.5)).foregroundStyle(p.mut).fixedSize(horizontal: false, vertical: true)
+            } else if Nrk88.shared.ser != nil && Nrk88.shared.from == "lib" {
+                // Prompt 88: en serie i Bibliotek åpner den nye seriesiden (her, så du slipper å rulle til toppen).
+                Nrk88SeriesPage(back: "‹ Bibliotek")
             } else if let s = m.sel {
                 Nrk87Detail(it: s)
             } else {
@@ -534,9 +495,19 @@ struct Nrk87Library: View {
         }
         LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 12, alignment: .top)], alignment: .leading, spacing: 14) {
             ForEach(items) { (it: Nrk87Item) in
-                Button { m.open(it, store) } label: { tile(it) }
+                Button { openItem(it) } label: { tile(it) }
                     .buttonStyle(.plain)
             }
+        }
+    }
+
+    /// Prompt 88: serier fra tv.nrk.no åpner seriesiden (sesonger + avkrysning); film og radio den gamle detaljen.
+    private func openItem(_ it: Nrk87Item) {
+        if it.type == "tv", let sid = Nrk88.sid(it.url) {
+            m.sel = nil
+            Nrk88.shared.open(sid, title: it.title, from: "lib", store)
+        } else {
+            m.open(it, store)
         }
     }
 
