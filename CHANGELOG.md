@@ -2,6 +2,14 @@
 
 Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. Versjonene med APK og IPA ligger under [Releases](https://github.com/SebastianKristo/torskenes-verden/releases).
 
+## [4.73.0] – 14.11.2026 · Live Activities, animert innlogging og riktig domene
+- **Live Activities (iPhone) og Live Updates (Android):** nedlastinger, backup, spilles nå (Plex/Jellyfin), neste avtale og pakkesporing på låseskjermen, i Dynamic Island og StandBy, og som varsel med fremdrift på Android. Knappene (pause, fortsett, stopp, utsett) virker uten å åpne appen. Slå av og på hver type under Innstillinger → Varsler.
+  - Push fra serveren krever en APNs-nøkkel under Integrasjoner → Apple Push; uten den oppdateres aktivitetene når appen henter data.
+- **Innlogging på web:** bakgrunnen er animert (himmel, nordlys, sol, vinduslys og vann), og står stille ved redusert bevegelse.
+- **Innlogging i appene:** tannhjul øverst til høyre for å endre serveradressen før innlogging.
+- **Riktig domene:** standardadressen er nå `os.smarthjemeksperten.no`. Lagrede adresser med den gamle stavemåten rettes automatisk.
+- **Media på web:** varsler-pillen er fjernet, så Glimt-feltet får mer plass.
+
 ## [4.72.0] – 13.11.2026 · NRK og Musikk i Media, og fanebytte uten at siden bygges opp på nytt
 - **Media → NRK** (web, iPhone og Android):
   - Søk i NRK. Serier åpner en serieside med sesonger og episoder du krysser av og laster ned.

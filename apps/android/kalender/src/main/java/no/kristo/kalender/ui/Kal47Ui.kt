@@ -48,7 +48,9 @@ import no.kristo.kalender.Red
 /* Prompt 47: Innstillinger → Server (ekstern og lokal adresse, standardverdier, Test, Tilbakestill til standard). Logikk: Kal47.kt. */
 
 @Composable
-fun ServerDialog47(onClose: () -> Unit) {
+fun ServerDialog47(onClose: () -> Unit, login: Boolean = false) {
+    // Prompt 89: login = åpnet fra tannhjulet på innloggingsskjermen («Test tilkobling» mot /api/health, Lagre lukker, Avbryt).
+    var health by remember { mutableStateOf<Pair<Boolean, String>?>(null) }
     val k = LocalK.current
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -81,6 +83,10 @@ fun ServerDialog47(onClose: () -> Unit) {
             Tx("Hjemme (lokal adresse svarer innen 1,5 s) brukes lokal, ellers ekstern. Endringer synkes til dine andre enheter.",
                 man(12.sp, FontWeight.Medium, k.mut), maxLines = 4)
             if (msg.isNotBlank()) Tx(msg, man(12.5.sp, FontWeight.SemiBold, k.ink2), maxLines = 3)
+            if (login) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                LinePill("Test tilkobling", { Hap.tick(); health = null; scope.launch { health = no.kristo.kalender.Kal89.health(Kal47Srv.normalize(ext)) } })
+                health?.let { (ok, t) -> Tx(t, man(12.5.sp, FontWeight.SemiBold, if (ok) Green else Red), Modifier.weight(1f), maxLines = 2) }
+            }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 LinePill("Tilbakestill til standard", {
                     Hap.tick(); busy = true
@@ -99,12 +105,12 @@ fun ServerDialog47(onClose: () -> Unit) {
                         l == null -> msg = "Lokal adresse må være en gyldig adresse (http://…)"
                         else -> {
                             ext = e; loc = l; busy = true
-                            scope.launch { msg = Kal47Srv.save(ctx, e, l); busy = false; test(true); test(false) }
+                            scope.launch { msg = Kal47Srv.save(ctx, e, l); busy = false; if (login) onClose() else { test(true); test(false) } }
                         }
                     }
                 }, enabled = !busy)
             }
-            Row { Spacer(Modifier.weight(1f)); LinePill("Ferdig", onClose) }
+            Row { Spacer(Modifier.weight(1f)); LinePill(if (login) "Avbryt" else "Ferdig", onClose) }
         }
     }
 }

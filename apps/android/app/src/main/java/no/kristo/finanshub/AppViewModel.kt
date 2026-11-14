@@ -237,6 +237,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (loggedIn) { startTrackingPoll(); viewModelScope.launch { loadReviewCount() } }
         if (loggedIn) { onForeground31(); refreshMe39(); loadAiIn39() } // prompt 39: nytt profilbilde fra web vises uten å logge ut
         if (loggedIn && backgroundAt != null) runCatching { refresh51() } // prompt 51: flagg, «Nytt», ventende enheter
+        if (loggedIn) runCatching { Live89.kick(getApplication()) } // prompt 89: Live Updates (poller mens noe er aktivt)
         val at = backgroundAt ?: return
         backgroundAt = null
         if (loggedIn && prefs.bool(AppPrefs.LOCK) && System.currentTimeMillis() - at >= prefs.int(AppPrefs.LOCK_AFTER, 0) * 60_000L) locked = true
@@ -377,7 +378,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             store.rememberServer(srv)
             // Samme server og bruker erstatter den gamle innloggingen.
             val same = accounts.firstOrNull { it.server == srv && it.username.equals(r.username, true) }
-            val acc = UserAccount(same?.id ?: UUID.randomUUID().toString(), srv, r.username, r.name, r.role, r.token, same?.local ?: "", same?.external ?: "")
+            // Prompt 89: lokal adresse valgt med tannhjulet før innlogging blir kontoens lokale adresse.
+            val local89 = same?.local?.takeIf { it.isNotBlank() } ?: store.lastLocal()
+            val acc = UserAccount(same?.id ?: UUID.randomUUID().toString(), srv, r.username, r.name, r.role, r.token, local89, same?.external ?: "")
             accounts = accounts.filter { it.id != acc.id } + acc
             addingAccount = false
             switchTo(acc.id)
@@ -397,6 +400,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         backTo = null
         layout = localLayout()
         refresh()
+        if (account != null) runCatching { Live89.kick(getApplication()) } // prompt 89
     }
 
     /** Logger ut én konto (trekker tilbake tokenet på serveren). */
@@ -455,6 +459,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         // (med tittel) etter utlogging eller kontobytte. Gjøremål-alarmene fjernes her og planlegges på nytt når den nye brukerens
         // gjøremål hentes. Prøve-varslene byttes av Notify31Worker ved kontobytte; uten noen konto igjen fjernes de her.
         runCatching { Alarms37.schedule(getApplication(), null) }
+        runCatching { Live89.stopAll(getApplication()) } // prompt 89: forrige brukers Live Updates bort (startes igjen for den nye kontoen)
         if (accounts.none { it.id == activeId }) runCatching { Notify31.scheduleTrials(getApplication(), emptyList()) }
         scopeToAccount()
     }
@@ -491,6 +496,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val n = a.copy(local = local.trim().let { if (it.isBlank()) "" else Api.normalizeServer(it) }, external = external.trim().let { if (it.isBlank()) "" else Api.normalizeServer(it) })
         accounts = accounts.map { if (it.id == n.id) n else it }
         store.save(accounts, activeId)
+        // Prompt 89: samme verdier i tannhjul-arket på innloggingsskjermen (én felles lagring).
+        runCatching { store.rememberServer(n.external.ifBlank { n.server }); store.rememberLocal(n.local) }
         refresh()
     }
 

@@ -37,7 +37,13 @@ class AccountStore(ctx: Context) {
 
     fun load(): List<UserAccount> {
         val raw = prefs.getString("accounts", null)
-        if (raw != null) return runCatching { JSONArray(raw).let { a -> (0 until a.length()).map { UserAccount.from(a.getJSONObject(it)) } } }.getOrDefault(emptyList())
+        if (raw != null) {
+            val list = runCatching { JSONArray(raw).let { a -> (0 until a.length()).map { UserAccount.from(a.getJSONObject(it)) } } }.getOrDefault(emptyList())
+            // Prompt 89: den gamle, feilstavede standardadressen skrives om til os.smarthjemeksperten.no (egendefinerte røres ikke).
+            val fixed = list.map { a -> if (Regel89.isOld(a.server) || Regel89.isOld(a.external)) a.copy(server = Regel89.migrate(a.server) ?: a.server, external = Regel89.migrate(a.external) ?: a.external) else a }
+            if (fixed != list) save(fixed, active())
+            return fixed
+        }
         // Eldre versjon: én server og ett token.
         val server = prefs.getString("server", null)
         val token = prefs.getString("token", null)
@@ -53,8 +59,15 @@ class AccountStore(ctx: Context) {
     }
 
     fun active(): String? = prefs.getString("active", null)
-    fun lastServer(): String = prefs.getString("server", null) ?: ""
+    fun lastServer(): String {
+        val s = prefs.getString("server", null) ?: return ""
+        if (Regel89.isOld(s)) { rememberServer(Regel89.EXTERNAL); return Regel89.EXTERNAL } // prompt 89: migrering
+        return s
+    }
     fun rememberServer(s: String) { prefs.edit().putString("server", s).apply() }
+    /** Prompt 89: lokal adresse valgt med tannhjulet før innlogging (blir kontoens lokale adresse ved innlogging). */
+    fun lastLocal(): String = prefs.getString("local89", null) ?: ""
+    fun rememberLocal(s: String) { prefs.edit().putString("local89", s).apply() }
 }
 
 /** Valg som ikke er hemmelige (lås, utseende, skanning, varsler). */

@@ -38,7 +38,10 @@ data class WItem51(val id: String, val title: String, val done: Boolean)
 data class WPlay51(val id: String, val title: String, val sub: String, val paused: Boolean, val controls: List<String>, val note: String?)
 data class WQr51(val sessionId: String, val payload: String, val key: String, val expires: Long)
 
-const val DEFAULT_SERVER51 = "https://os.smarthjemexperten.no"
+const val DEFAULT_SERVER51 = "https://os.smarthjemeksperten.no"
+/** Prompt 89: den gamle, feilstavede standarden (delt i to) – lagret nøyaktig slik skrives den om til DEFAULT_SERVER51. */
+private const val OLD_SERVER89 = "https://os.smarthjem" + "experten.no"
+internal fun migrate89(s: String?): String? = if (s != null && s.trim().trimEnd('/').equals(OLD_SERVER89, true)) DEFAULT_SERVER51 else s
 
 object WearStore51 {
     private fun prefs(ctx: Context): SharedPreferences = runCatching {
@@ -46,16 +49,25 @@ object WearStore51 {
             EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV, EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM)
     }.getOrElse { ctx.applicationContext.getSharedPreferences("wear51_plain", Context.MODE_PRIVATE) }
 
+    /** Prompt 89: gammel standardadresse → ny (egendefinerte røres ikke). */
+    private fun stored89(ctx: Context): String? {
+        val p = prefs(ctx)
+        val raw = p.getString("server", null) ?: return null
+        val m = migrate89(raw) ?: raw
+        if (m != raw) p.edit().putString("server", m).apply()
+        return m
+    }
+
     fun account(ctx: Context): WAcct51? {
         val p = prefs(ctx)
-        val s = p.getString("server", null) ?: return null
+        val s = stored89(ctx) ?: return null
         val t = p.getString("token", null) ?: return null
         return WAcct51(s, t, p.getString("name", null) ?: "")
     }
 
     fun save(ctx: Context, a: WAcct51) { prefs(ctx).edit().putString("server", a.server).putString("token", a.token).putString("name", a.name).apply() }
     fun logout(ctx: Context) { prefs(ctx).edit().remove("token").remove("name").apply() }
-    fun server(ctx: Context): String = prefs(ctx).getString("server", null) ?: DEFAULT_SERVER51
+    fun server(ctx: Context): String = stored89(ctx) ?: DEFAULT_SERVER51
     fun setServer(ctx: Context, s: String) { prefs(ctx).edit().putString("server", normalize51(s)).apply() }
 }
 

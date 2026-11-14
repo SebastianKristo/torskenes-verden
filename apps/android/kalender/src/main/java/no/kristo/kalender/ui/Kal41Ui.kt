@@ -37,6 +37,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -64,6 +65,7 @@ import androidx.compose.ui.unit.sp
 import no.kristo.kalender.Hap
 import no.kristo.kalender.KEv
 import no.kristo.kalender.Kal41
+import no.kristo.kalender.Kal89
 import no.kristo.kalender.KalVm
 import no.kristo.kalender.LocalK
 import no.kristo.kalender.Red
@@ -88,6 +90,11 @@ fun LoginScreen41(vm: KalVm) {
         "err", "qr" -> ""
         else -> "Bruk samme konto som i Homelab. Kalendere, bursdager og frister synkes med en gang."
     }
+    // Prompt 89: tannhjul øverst til høyre → Server-arket (samme lagring som Innstillinger → Server), valgt server under knappene.
+    val ctx89 = androidx.compose.ui.platform.LocalContext.current
+    var srv89 by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    var tick89 by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(0) }
+    Box(Modifier.fillMaxSize()) {
     Column(
         Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.systemBars).imePadding().verticalScroll(rememberScrollState()).padding(horizontal = 28.dp, vertical = 40.dp),
         horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(18.dp, Alignment.CenterVertically),
@@ -114,7 +121,28 @@ fun LoginScreen41(vm: KalVm) {
                 "approve51" -> Approve51(vm)
                 else -> Start41(vm)
             }
+            if (s.phase == "start" || s.phase == "pw" || s.phase == "err") {
+                val host = androidx.compose.runtime.remember(tick89) { Kal89.hostLabel(Kal41.external(ctx89)) }
+                Tx("Server: $host", man(12.sp, FontWeight.Medium, k.mut), Modifier.semantics { contentDescription = "Server: $host" })
+            }
         }
+    }
+    Box(Modifier.align(Alignment.TopEnd).windowInsetsPadding(WindowInsets.statusBars).padding(6.dp).size(48.dp).clip(CircleShape)
+        .tap("Server") { Hap.tick(); srv89 = true }, contentAlignment = Alignment.Center) { Gear89(22.dp, k.mut) }
+    }
+    if (srv89) ServerDialog47(onClose = { srv89 = false; tick89++ }, login = true)
+}
+
+/** Tannhjul (Material «settings»-formen) tegnet selv – Kalender har ikke ikonbiblioteket. */
+@Composable
+private fun Gear89(size: androidx.compose.ui.unit.Dp, color: Color) {
+    Canvas(Modifier.size(size).semantics { contentDescription = "Server" }) {
+        val c = Offset(this.size.width / 2, this.size.height / 2)
+        val r = this.size.minDimension / 2
+        for (i in 0 until 8) rotateDraw(i * 45f, c) {
+            drawRoundRect(color, Offset(c.x - r * .17f, c.y - r), androidx.compose.ui.geometry.Size(r * .34f, r * .5f), androidx.compose.ui.geometry.CornerRadius(r * .08f))
+        }
+        drawCircle(color, r * .5f, c, style = Stroke(width = r * .42f))
     }
 }
 

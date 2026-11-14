@@ -18,6 +18,8 @@
     <!-- Prompt 51: «Varsler via ntfy (hjemmeserver)» – forgrunnstjeneste som holder strømmen mot ntfy (Ntfy51.kt), startes igjen etter omstart. -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_REMOTE_MESSAGING" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!-- Prompt 89: Live Updates – forgrunnstjeneste som poller /api/live/aktiviteter mens noe er aktivt (ingen Firebase). -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <!-- Prompt 40: Hjemlys som Live Update (Android 16, «promoted ongoing»). -->
     <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS" />
     <uses-feature android:name="android.hardware.location.gps" android:required="false" />
@@ -430,6 +432,19 @@
             android:name=".Ntfy51Service"
             android:exported="false"
             android:foregroundServiceType="remoteMessaging" />
+        <!-- Prompt 89: Live Updates (Live89.kt): polling, knappene i varselet (uten å åpne appen) og «Vis rute». -->
+        <service
+            android:name=".Live89Service"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+        <receiver android:name=".Live89Receiver" android:exported="false" />
+        <activity
+            android:name=".Live89Route"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:taskAffinity=""
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
         <receiver android:name=".Ntfy51Boot" android:exported="false">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />

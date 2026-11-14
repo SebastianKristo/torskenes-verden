@@ -45,14 +45,14 @@ import kotlin.math.sin
  *     • «Logg inn med Homelab-appen» (PKCE): state + code_verifier lagres kryptert FØR app-byttet, så åpnes
  *       https://<server>/app-auth?client=kalender&redirect=kalender://auth&state=…&cc=… (App Link, bare ikke-nettleser),
  *       ellers homelab://app-auth?… . Svaret kommer som kalender://auth?code=…&state=…(&server=…) → POST /api/auth/token.
- *     • Brukernavn og passord: adressen finnes selv (Homelab, forrige økt, /api/me/server, https://os.smarthjemexperten.no – prompt 47).
+ *     • Brukernavn og passord: adressen finnes selv (Homelab, forrige økt, /api/me/server, https://os.smarthjemeksperten.no – prompt 47).
  *  2. Bursdagskort i hendelsesarket (claude-code-kalender-bursdag-hendelse.md).
  *  3. Søk med Glimt (Ollama) og testvarsel (claude-code-kalender-glimt-sok-testvarsel.md).
  */
 
 object Kal41 {
     /** Prompt 47 (claude-code-standard-serveradresser.md): standard ekstern og lokal adresse. */
-    const val DEFAULT_BASE = "https://os.smarthjemexperten.no"
+    const val DEFAULT_BASE = "https://os.smarthjemeksperten.no"
     const val DEFAULT_LOCAL = "http://10.69.1.39:3000"
     const val CLIENT = "kalender"
     const val REDIRECT = "kalender://auth"
@@ -261,7 +261,7 @@ object Kal41 {
         return n
     }
 
-    /** «Lokal: 10.69.1.39:3000 · ekstern: os.smarthjemexperten.no · nå: Lokal · hentes fra Homelab» */
+    /** «Lokal: 10.69.1.39:3000 · ekstern: os.smarthjemeksperten.no · nå: Lokal · hentes fra Homelab» */
     fun summary(ctx: Context): String {
         val parts = ArrayList<String>()
         local(ctx).firstOrNull()?.let { parts += "Lokal: " + it.substringAfter("://") }

@@ -9,7 +9,7 @@ import org.json.JSONObject
 
 /*
  * Prompt 47 (ANDROID47) – design_handoff_homelab/prompts/prompt-47-pakke/:
- *  - Standard serveradresser (claude-code-standard-serveradresser.md): ekstern https://os.smarthjemexperten.no, lokal
+ *  - Standard serveradresser (claude-code-standard-serveradresser.md): ekstern https://os.smarthjemeksperten.no, lokal
  *    http://10.69.1.39:3000. Serveren kan overstyre dem (PUBLIC_URL/LOCAL_URL → GET /api/config/servers: publicUrl offentlig, localUrl etter
  *    innlogging). Innstillinger → Server: to felt med status («Svarer · 34 ms» / «Svarer ikke»), Test og «Tilbakestill til standard»
  *    (ui/Ui47.kt). Lagres på kontoen (PUT /api/me/server, synkes til andre enheter) som før (P41.kt).
@@ -21,7 +21,7 @@ import org.json.JSONObject
  * Nye endepunkter tåler 404 (eldre server): da brukes standardverdiene og /api/discovery.
  */
 
-const val DEFAULT_EXTERNAL47 = "https://os.smarthjemexperten.no"
+const val DEFAULT_EXTERNAL47 = "https://os.smarthjemeksperten.no" // prompt 89: riktig stavemåte (Regel89.EXTERNAL)
 const val DEFAULT_LOCAL47 = "http://10.69.1.39:3000"
 /** Grense for «lokal svarer» (spesifikasjonen: 1,5 s). */
 const val LOCAL_TIMEOUT47 = 1_500

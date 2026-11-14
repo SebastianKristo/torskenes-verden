@@ -732,6 +732,7 @@ internal fun PaperLogin(vm: AppViewModel) {
                     PField("Passord", pw, { pw = it }, password = true, keyboard = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Go),
                         onDone = { if (server.isNotBlank() && pw.isNotBlank()) vm.login(server, user, pw) })
                     PButton(if (vm.busy) "Logger inn …" else "Logg inn", Modifier.fillMaxWidth(), height = 54.dp) { if (server.isNotBlank() && pw.isNotBlank() && !vm.busy) vm.login(server, user, pw) }
+                    LoginServerLine89(server) // prompt 89: «Server: os.smarthjemeksperten.no»
                     // Prompt 46 (claude-code-qr-innlogging-finans-kalender.md): logg inn ved å skanne QR-en med en innlogget mobil.
                     QrLoginButton46 { vm.openQrLogin46(server) }
                     Join51Button() // prompt 51 (ANDFEAT51): ny i familien med invitasjon (ui/Onboard51Ui.kt)
@@ -749,6 +750,8 @@ internal fun PaperLogin(vm: AppViewModel) {
                 }
             }
         }
+        // Prompt 89: tannhjul øverst til høyre → arket «Server» (ekstern/lokal adresse, Test tilkobling, Tilbakestill, Lagre/Avbryt).
+        if (pend == null) LoginGear89(Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(6.dp)) { server = it; vm.p41.loginNoContact = false }
         if (vm.p46.qrShowOpen) QrLoginScreen46(vm) // prompt 46
         if (vm.sec51.wait != null) ApprovalWait51(vm) // prompt 51: ny enhet venter på godkjenning
         Join51Screen(vm) // prompt 51 (ANDFEAT51): onboarding-veiviseren

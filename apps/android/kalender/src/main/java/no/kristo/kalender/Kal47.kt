@@ -7,7 +7,7 @@ import org.json.JSONObject
 
 /*
  * Prompt 47: Innstillinger → Server (claude-code-standard-serveradresser.md).
- * Standard: ekstern https://os.smarthjemexperten.no, lokal http://10.69.1.39:3000 (Kal41.DEFAULT_BASE / DEFAULT_LOCAL). Serveren kan
+ * Standard: ekstern https://os.smarthjemeksperten.no, lokal http://10.69.1.39:3000 (Kal41.DEFAULT_BASE / DEFAULT_LOCAL). Serveren kan
  * overstyre via PUBLIC_URL/LOCAL_URL («defaults» i GET /api/me/server). Lagres på enheten (k41_external / k41_local, som Kal41 leser)
  * og synkes til kontoen med PUT /api/me/server {external, local, device}; 404/405 (eldre server) → bare på denne enheten.
  * Klartekst-HTTP er bare tillatt på lokalt nett (prompt 86: Lokal86.kt håndhever, res/xml/network_security_config.xml tillater).
