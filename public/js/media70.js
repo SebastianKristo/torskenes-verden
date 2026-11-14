@@ -14,7 +14,7 @@ const lss = (k, v) => { try { localStorage.setItem(k, v); } catch { /* privat vi
 const S = {
   wk: 0, calDay: null, cal: null, calKey: '', calBusy: false,
   nF: 'all', nSort: lsg('media70_nsort', 'new') === 'big' ? 'big' : 'new', sel: {}, showAll: false,
-  menu: null, alerts: false, pb: null, now: null, hist: null, rec: null, pbAt: 0,
+  menu: null, pb: null, now: null, hist: null, rec: null, pbAt: 0,
   bibSort: { s: lsg('media70_bsort_s', 'next'), m: lsg('media70_bsort_m', 'title') },
 };
 export function init70(ctx) {
@@ -173,27 +173,17 @@ const speed = (b) => (b >= 1048576 ? `${nb(b / 1048576, 1)} MB/s` : b > 0 ? `${n
 
 const TABS70 = [['ov', 'Oversikt'], ['kal', 'Kalender'], ['bib', 'Bibliotek'], ['ned', 'Nedlastinger'], ['nrk', 'NRK'], ['musikk', 'Musikk']];
 const PH = { ov: 'Spør Glimt: «legg til Severance i 4K»', kal: 'Spør Glimt: «hva kommer på fredag?»', bib: 'Spør Glimt: «legg til Severance i 4K»', ned: 'Spør Glimt: «slett ferdige over 30 dager»', av: 'Spør Glimt: «hvem ser på noe nå?»', nrk: 'Spør Glimt om filmer og serier', musikk: 'Spør Glimt om filmer og serier' };
-/** Varsler: tjenester som svarer ikke, helsemeldinger fra Prowlarr, nedlastinger som står fast og lite diskplass. */
-function alerts70() {
-  const M = C.M, L = [];
-  for (const s of M.status?.services ?? []) if (s.configured && s.ok === false) L.push({ t: `${s.name} svarer ikke${s.error ? `: ${s.error}` : ''}`, go: ['sonarr', 'radarr'].includes(s.id) ? 'bib' : 'ned' });
-  for (const h of M.idx?.health ?? []) L.push({ t: `Prowlarr: ${h.message}`, go: 'ned' });
-  const st = (M.tor?.items ?? []).filter((t) => t.status === 'stall' || t.status === 'error');
-  if (st.length) L.push({ t: `${plural(st.length, 'nedlasting står', 'nedlastinger står')} fast`, go: 'ned', f: 'stuck' });
-  if (M.disk?.low) L.push({ t: M.disk.lowText || 'Lite diskplass igjen', go: 'ned' });
-  return L;
-}
+// Prompt 89 (claude-code-media-fjern-varsler.md): varsler-pillen (grønn/rød prikk + antall) er fjernet fra Media-headeren –
+// Glimt-søket får plassen. Varsler vises fortsatt i hoveddashboardet.
 export function top70(srvHtml, orb) {
   const M = C.M, cur = M.tab === 'av' ? 'ov' : M.tab;
   const tabs = TABS70.map(([k, n]) => `<button type="button" class="m70-tab${cur === k ? ' on' : ''}" data-m43-tab="${k}" aria-current="${cur === k ? 'page' : 'false'}">${n}</button>`).join('');
-  const A = alerts70();
-  const al = `<div class="m70-alw"><button type="button" class="m70-alb" data-m70="alerts" aria-expanded="${S.alerts}" aria-haspopup="true"><span class="m70-dot ${A.length ? 'warn' : 'ok'}" aria-hidden="true"></span>${A.length ? plural(A.length, 'varsel', 'varsler') : 'Ingen varsler'}</button>${S.alerts ? `<div class="m70-alm" role="menu">${A.length ? A.map((a, i) => `<button type="button" role="menuitem" class="m70-ali" data-m70-al="${i}"><span class="m70-dot warn" aria-hidden="true"></span><span>${esc(a.t)}</span></button>`).join('') : '<span class="m70-mut m70-alx">Alt ser bra ut. Sonarr, Radarr, qBittorrent og Prowlarr svarer.</span>'}</div>` : ''}</div>`;
   return `<header class="m70-top"><div class="m70-tl">
     <button type="button" class="m70-back" data-m43="close" title="Lukk Media (Esc)">‹ Tilbake</button>
     <b class="m70-h">Media</b>
     <nav class="m70-tabs" aria-label="Media">${tabs}</nav>
     <form class="m70-gl" data-m43-glf role="search"><span class="m70-glo">${orb}</span><input name="gq" value="${esc(M.gq)}" placeholder="${esc(PH[M.tab] ?? PH.ov)}" aria-label="Spør Glimt" autocomplete="off"><span class="m70-kbd" aria-hidden="true">⌘K</span></form>
-    ${srvHtml}${al}
+    ${srvHtml}
     <button type="button" class="m70-x" data-m43="close" aria-label="Lukk Media" title="Lukk"><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
   </div></header>`;
 }
@@ -578,7 +568,6 @@ export async function act70(b, d) {
   if (d.m70Ns) { S.nSort = d.m70Ns; lss('media70_nsort', S.nSort); C.paintMain(); return true; }
   if (d.m70Sel) { if (S.sel[d.m70Sel]) delete S.sel[d.m70Sel]; else S.sel[d.m70Sel] = 1; C.paintMain(); return true; }
   if (d.m70Menu) { S.menu = S.menu === d.m70Menu ? null : d.m70Menu; C.paintMain(); return true; }
-  if (d.m70Al != null) { const a = alerts70()[+d.m70Al]; S.alerts = false; if (a) { if (a.f) S.nF = a.f; C.go(a.go); } else C.paintTop(); return true; }
   if (d.m70Cal) {
     const [op, ...rest] = d.m70Cal.split(':'), x = calItem(rest.join(':')); S.menu = null;
     if (!x) { C.paintMain(); return true; }
@@ -602,7 +591,6 @@ export async function act70(b, d) {
   const a = d.m70;
   if (!a) return false;
   if (a === 'wkprev' || a === 'wknext' || a === 'wknow') { S.wk = a === 'wknow' ? 0 : S.wk + (a === 'wkprev' ? -1 : 1); S.calDay = null; S.menu = null; loadCal(); C.nav(true); return true; }
-  if (a === 'alerts') { S.alerts = !S.alerts; C.paintTop(); return true; }
   if (a === 'showall') { S.showAll = true; C.paintMain(); return true; }
   if (a === 'selclr') { S.sel = {}; C.paintMain(); return true; }
   if (a === 'selstop') {
@@ -627,11 +615,10 @@ export async function act70(b, d) {
   if (a === 'pxupd') { const u = svcOf('prowlarr')?.url; if (u) open(`${u.replace(/\/+$/, '')}/system/updates`, '_blank', 'noopener'); return true; }
   return false;
 }
-/** Klikk utenfor lukker ⋯-menyen og varsel-lista. */
+/** Klikk utenfor lukker ⋯-menyen. */
 export function outside70(t) {
   let hit = false;
   if (S.menu && !t.closest?.('.m70-menu,[data-m70-menu]')) { S.menu = null; hit = true; C.paintMain(); }
-  if (S.alerts && !t.closest?.('.m70-alw')) { S.alerts = false; C.paintTop(); }
   return hit;
 }
-export function esc70() { if (S.menu) { S.menu = null; C.paintMain(); return true; } if (S.alerts) { S.alerts = false; C.paintTop(); return true; } if (S.calDay != null && C.M.tab === 'kal') { S.calDay = null; C.paintMain(); return true; } return false; }
+export function esc70() { if (S.menu) { S.menu = null; C.paintMain(); return true; } if (S.calDay != null && C.M.tab === 'kal') { S.calDay = null; C.paintMain(); return true; } return false; }

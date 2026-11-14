@@ -99,3 +99,50 @@ body{font-family:var(--g-sans);color:var(--g-ink);-webkit-font-smoothing:antiali
 @media (max-width:380px){.gate-otp span{width:36px;height:46px;font-size:19px}.gate-otp{gap:6px}}
 @media (prefers-reduced-motion: reduce){.gate-qr,.gq-av,.gq-ok,.gq-no,.gate-otp.shake{animation:none}}
 .gq-otp .gate-code::placeholder{letter-spacing:.04em;font:500 15px var(--g-sans)}
+
+/* Prompt 89 (WEB89): animert Oslo-scene i toppbildet (fasit «Logg inn Animert.dc.html»), se js/login-scene89.js.
+   Løkkene animerer bare transform/opacity på egne lag. Pauses når fanen er skjult. Redusert bevegelse = stille bilde. */
+.gate-hero.sc89-on{background-color:#141834;background-image:none!important;overflow:hidden;isolation:isolate}
+.gate-hero.sc89-on>:not(.sc89){position:relative;z-index:1}
+.sc89{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:0}
+.sc89-l{position:absolute;inset:0}
+.sc89-l>svg{position:absolute;inset:0;width:100%;height:100%;display:block}
+.sc89-aur{animation:sc89-glow 10s ease-in-out infinite}
+.sc89-au{position:absolute;border-radius:50%;filter:blur(46px);will-change:transform;animation:sc89-aa 26s ease-in-out infinite alternate}
+.sc89-aub{animation-name:sc89-ab}
+.sc89-st{bottom:auto;height:42%}
+.sc89-st i{position:absolute;border-radius:50%;background:#fff}
+.sc89-st1{animation:sc89-tw 4.2s ease-in-out infinite}
+.sc89-st2{animation:sc89-tw 6.6s 1.7s ease-in-out infinite}
+.sc89-glow{animation:sc89-rise 3.4s .3s cubic-bezier(.2,.7,.2,1) both,sc89-pulse 7s 3.7s ease-in-out infinite}
+.sc89-hills{animation:sc89-fade 1.6s .2s both}
+.sc89-sun{animation:sc89-rise 3.4s .3s cubic-bezier(.2,.7,.2,1) both}
+.sc89-w0{animation:sc89-won .9s 1.1s both}
+.sc89-w1{animation:sc89-won .9s 1.9s both}
+.sc89-w2{animation:sc89-won .9s 2.8s both}
+.sc89-fl{animation:sc89-won .9s 2.4s both,sc89-fl 9s 6s infinite}
+.sc89-wat{top:auto;height:var(--sc89-water,32%)}
+.sc89-sh svg{opacity:.5}
+.sc89-sh0{animation:sc89-sh 5s ease-in-out infinite alternate}
+.sc89-sh1{animation:sc89-sh 7s -3s ease-in-out infinite alternate-reverse}
+.sc89-refl{transform-origin:50% 0;animation:sc89-rf 6s ease-in-out infinite}
+.sc89-shade{position:absolute;left:0;right:0;bottom:0;height:58%;background:linear-gradient(180deg,rgba(14,17,40,0),rgba(14,17,40,.72))}
+.sc89-curtain{position:absolute;inset:0;background:#0b0e22;animation:sc89-cur 2s .1s ease forwards}
+.sc89-on .gate-hero-t{animation:sc89-in 1.1s 1.2s cubic-bezier(.2,.7,.2,1) both}
+.sc89-paused,.sc89-paused *{animation-play-state:paused!important}
+.sc89-still,.sc89-still *{animation:none!important}
+.sc89-still .sc89-curtain{display:none}
+@media (prefers-reduced-motion:reduce){.sc89,.sc89 *,.sc89-on .gate-hero-t{animation:none!important}.sc89-curtain{display:none}}
+@keyframes sc89-aa{0%{transform:translate(-6%,0) scale(1) rotate(-8deg)}100%{transform:translate(9%,5%) scale(1.18) rotate(5deg)}}
+@keyframes sc89-ab{0%{transform:translate(7%,2%) scale(1.1) rotate(10deg)}100%{transform:translate(-9%,-4%) scale(.94) rotate(-3deg)}}
+@keyframes sc89-glow{0%,100%{opacity:.6}50%{opacity:1}}
+@keyframes sc89-tw{0%,100%{opacity:.3}50%{opacity:1}}
+@keyframes sc89-rise{from{transform:translateY(6%)}to{transform:none}}
+@keyframes sc89-pulse{0%,100%{opacity:1}50%{opacity:.7}}
+@keyframes sc89-fade{from{opacity:0}to{opacity:1}}
+@keyframes sc89-won{0%{opacity:0}55%{opacity:1}65%{opacity:.35}100%{opacity:1}}
+@keyframes sc89-fl{0%,91%,100%{opacity:1}93%{opacity:.2}95%{opacity:.9}97%{opacity:.25}}
+@keyframes sc89-sh{0%{transform:translateX(-1.6%);opacity:.35}50%{opacity:1}100%{transform:translateX(1.6%);opacity:.35}}
+@keyframes sc89-rf{0%,100%{transform:scaleY(1) skewX(0deg)}50%{transform:scaleY(.93) skewX(2deg)}}
+@keyframes sc89-cur{from{opacity:1}to{opacity:0}}
+@keyframes sc89-in{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}

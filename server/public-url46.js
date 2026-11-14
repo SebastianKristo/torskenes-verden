@@ -12,6 +12,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { networkInterfaces } from 'node:os';
 import { kv, OWNER } from './db.js';
 import { config } from './config.js';
+import { kvServer89 } from './domain89.js'; // prompt 89: gammel standarddomene migreres ved lesing
 
 const URL_RE = /^https?:\/\/[^\s/?#@]+(?::\d+)?(\/[^\s]*)?$/i;
 export const cleanUrl46 = (v) => { const s = String(v ?? '').trim().replace(/\/+$/, ''); return URL_RE.test(s) ? s : null; };
@@ -51,13 +52,13 @@ export function inContainer46() {
 export function publicUrl46() {
   const env = cleanUrl46(process.env.PUBLIC_URL);
   if (env) return env;
-  const s = kv.get(OWNER, 'server41', {}) ?? {};
+  const s = kvServer89(OWNER, 'server41');
   const ext = cleanUrl46(s.external);
   return ext && !isInternalIp46(hostOfUrl(ext)) ? ext : null;
 }
 /** Vertsnavn vi stoler på i X-Forwarded-Host. */
 export function knownHosts46() {
-  const s = kv.get(OWNER, 'server41', {}) ?? {};
+  const s = kvServer89(OWNER, 'server41');
   const list = [process.env.PUBLIC_URL, process.env.LOCAL_URL, s.external, ...(Array.isArray(s.local) ? s.local : [])].map(cleanUrl46).filter(Boolean).map(hostOfUrl);
   for (const d of String(process.env.APP_DOMAINS ?? '').split(',')) { const x = d.trim().toLowerCase(); if (/^[a-z0-9.-]{1,253}(:\d{1,5})?$/.test(x)) list.push(x); }
   const out = new Set();

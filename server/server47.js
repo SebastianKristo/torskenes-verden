@@ -3,7 +3,7 @@
 //   GET /api/config/servers  (uten innlogging)  → {publicUrl, defaults:{external}, app:'homelab', api:47}
 //                            (økt eller app-token) → {publicUrl, localUrl, defaults:{external, local}, source:{publicUrl, localUrl}, app, api:47}
 //   (GET /api/config er fortsatt integrasjonslista i Innstillinger – uendret.)
-//     publicUrl = PUBLIC_URL (.env), ellers https://os.smarthjemexperten.no
+//     publicUrl = PUBLIC_URL (.env), ellers https://os.smarthjemeksperten.no
 //     localUrl  = første gyldige LOCAL_URL (.env, kommaliste), ellers http://10.69.1.39:3000 – BARE etter innlogging
 //     (den interne IP-en vises aldri til den som ikke er logget inn).
 //   Aliasene fra instruksene (samme tilgang som /finans/api):
@@ -16,7 +16,7 @@ import { cleanUrl46, isInternalIp46 } from './public-url46.js';
 import { sessionUser, userInfo } from './auth.js';
 import { tokenAccessOf } from './finans/routes.js';
 
-export const DEFAULT_PUBLIC_URL47 = 'https://os.smarthjemexperten.no';
+export const DEFAULT_PUBLIC_URL47 = 'https://os.smarthjemeksperten.no';
 export const DEFAULT_LOCAL_URL47 = 'http://10.69.1.39:3000';
 
 const hostOf = (u) => { try { return new URL(u).host; } catch { return ''; } };

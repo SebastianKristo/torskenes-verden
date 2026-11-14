@@ -9,6 +9,7 @@ import { initI18n, setLang, lang } from './i18n.js';
 import { noteUser } from './usercache.js';
 import { initQr, showQr } from './login-qr38.js'; // prompt 38: QR-innlogging fra mobilen
 import { initPasskey51, waitApproval51 } from './sec51-login.js'; // prompt 51: passkey og godkjenning av ny enhet
+import { scene89 } from './login-scene89.js'; // prompt 89: animert Oslo-scene i toppbildet
 
 const $ = (id) => document.getElementById(id);
 const form = $('gate');
@@ -77,7 +78,8 @@ function render(focus = true) {
   $('g-kick').textContent = onb ? `Oppsett · ${S + 1} av 4` : host(form.srv.value || location.origin);
   $('g-title').textContent = onb ? (S === 0 ? 'Hei' + (name ? ',\n' + name : '') : S === 1 ? 'Trygg\ninnlogging' : S === 2 ? 'Gjør det\ntil ditt' : 'Velkommen\nhjem')
     : st.mode === '2fa' ? 'Ett steg\ntil' : `${greet()},\nvelkommen hjem`;
-  $('g-hero').style.backgroundImage = bgCss(st.bg, true);
+  // Prompt 89: «Oslo» er en animert scene (stille bilde ved redusert bevegelse); de andre bakgrunnene er bilder som før.
+  $('g-hero').style.backgroundImage = scene89($('g-hero'), st.bg === 'oslo') ? 'none' : bgCss(st.bg, true);
 
   if (show.s1) $('g-langs').querySelectorAll('[data-lang]').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.lang === lang())));
   if (show.s3) $('g-bgs').innerHTML = BGO.map(([k, n, s]) => `<button type="button" class="gate-bg" data-bg="${k}" aria-pressed="${st.bg === k}"><i style="background-image:${bgCss(k)}"></i><b>${n}</b><span>${s}</span></button>`).join('');

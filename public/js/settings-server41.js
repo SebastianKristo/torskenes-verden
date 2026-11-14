@@ -19,7 +19,7 @@ export async function loadServer41(r) {
   if (S.loaded) return;
   S.loaded = true;
   const [me, def] = await Promise.allSettled([api('/me/server'), defaults47()]);
-  S.def = def.status === 'fulfilled' ? def.value : { external: 'https://os.smarthjemexperten.no', local: 'http://10.69.1.39:3000' };
+  S.def = def.status === 'fulfilled' ? def.value : { external: 'https://os.smarthjemeksperten.no', local: 'http://10.69.1.39:3000' };
   useDef(me.status === 'fulfilled' ? me.value : null);
   // Prompt 47: tomme felt fylles med standardadressene (ikke lenger den oppdagede/Docker-adressen).
   if (me.status === 'fulfilled') S.d = { local: me.value.local || S.def.local, external: me.value.external || S.def.external, auto: me.value.auto !== false };
@@ -72,7 +72,7 @@ function sheetHtml() {
   const t = S.test;
   return `<div class="srv41-ov" data-srv41-close><div class="srv41-sh" role="dialog" aria-modal="true" aria-labelledby="srv41-t">
     <div class="srv41-h"><b id="srv41-t">${k === 'local' ? 'Lokal adresse' : 'Ekstern adresse'}</b>${sheetBtn('Lukk', 'data-srv41-close', 'ghost')}</div>
-    <label class="srv41-f"><span>Adresse</span><input type="url" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off" data-srv41-in value="${esc(v)}" placeholder="${esc((S.def ?? {})[k] ?? (k === 'local' ? 'http://10.69.1.39:3000' : 'https://os.smarthjemexperten.no'))}"></label>
+    <label class="srv41-f"><span>Adresse</span><input type="url" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off" data-srv41-in value="${esc(v)}" placeholder="${esc((S.def ?? {})[k] ?? (k === 'local' ? 'http://10.69.1.39:3000' : 'https://os.smarthjemeksperten.no'))}"></label>
     <span class="srv41-hint">${k === 'local' ? 'Brukes når du er hjemme på Wi-Fi.' : 'Brukes når den lokale adressen ikke svarer.'} Må starte med http:// eller https://.</span>
     ${t ? `<span class="srv41-res ${t.ok ? 'ok' : t.run ? '' : 'err'}" role="status">${esc(t.text)}</span>` : ''}
     ${S.msg ? `<span class="srv41-res err" role="status">${esc(S.msg)}</span>` : ''}

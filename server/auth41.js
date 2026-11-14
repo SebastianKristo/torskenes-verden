@@ -31,7 +31,9 @@ import { companionsOf, deviceName } from './kalender33.js';
 import { buildInfo } from './cache-bust.js';
 import { issueRefresh44 } from './auth44.js'; // prompt 44: refresh-token (90 d glidende, 60 s grace)
 import { lanUrls46, dropInternal46, publicUrl46, originOf46 } from './public-url46.js'; // prompt 46: aldri container-IP (172.18.0.3) som serveradresse
-import { serverUrls47 } from './server47.js'; // prompt 47: standardadresser (os.smarthjemexperten.no / 10.69.1.39:3000) og «Tilbakestill til standard»
+import { serverUrls47 } from './server47.js';
+// prompt 47: standardadresser (os.smarthjemeksperten.no / 10.69.1.39:3000) og «Tilbakestill til standard»
+import { kvServer89 } from './domain89.js'; // prompt 89: lagret gammel standard (…experten.no) → os.smarthjemeksperten.no
 
 fhDb.exec(`CREATE TABLE IF NOT EXISTS fh_app_codes (code_hash TEXT PRIMARY KEY, kind TEXT NOT NULL, user_id TEXT NOT NULL, client TEXT NOT NULL, redirect TEXT, challenge TEXT, scopes TEXT NOT NULL,
   expires_tok INTEGER, parent TEXT, created INTEGER NOT NULL, exp INTEGER NOT NULL, used INTEGER NOT NULL DEFAULT 0);`);
@@ -53,7 +55,7 @@ const lanUrls = () => lanUrls46();
 void networkInterfaces; void config;
 /** Serverens egne adresser (admin kan sette dem i kv(OWNER,'server41')). Interne adresser fjernes alltid. */
 export function serverAddresses41() {
-  const s = kv.get(OWNER, 'server41', {}) ?? {};
+  const s = kvServer89(OWNER, 'server41');
   const saved = dropInternal46(s.local);
   const local = saved.length ? saved : lanUrls();
   const ext = dropInternal46([s.external])[0] ?? null;
@@ -66,10 +68,10 @@ export function discovery41() {
   return { name: serverName(), version, local: a.local, external: a.external, app: 'homelab', api: 41 };
 }
 export function meServer41(u) {
-  const s = kv.get(u, 'server41_me', {}) ?? {};
+  const s = kvServer89(u, 'server41_me');
   const d = serverAddresses41();
   // Prompt 46: en lagret intern adresse (172.18.0.3 fra eldre versjoner) erstattes av den oppdagede/offentlige.
-  // Prompt 47: uten lagret eller oppdaget adresse gjelder standardverdiene (PUBLIC_URL/LOCAL_URL, ellers os.smarthjemexperten.no / 10.69.1.39:3000).
+  // Prompt 47: uten lagret eller oppdaget adresse gjelder standardverdiene (PUBLIC_URL/LOCAL_URL, ellers os.smarthjemeksperten.no / 10.69.1.39:3000).
   // Lokal: lagret per bruker → admin-satt (Innstillinger → Server) → LOCAL_URL/standarden. Oppdagede grensesnitt-adresser bare som
   // siste reserve, og aldri Docker-bridge (dropInternal46).
   const def = serverUrls47();
@@ -79,7 +81,7 @@ export function meServer41(u) {
     isDefault: local === def.localUrl && external === def.publicUrl, updatedAt: s.updatedAt ?? null, updatedBy: s.updatedBy ?? null };
 }
 export function setMeServer41(u, b = {}) {
-  const cur = kv.get(u, 'server41_me', {}) ?? {};
+  const cur = kvServer89(u, 'server41_me');
   const next = { ...cur };
   // Prompt 47: {reset:true} = «Tilbakestill til standard» (begge feltene får standardverdiene; local/external i samme kall ignoreres).
   if (b.reset === true) { const def = serverUrls47(); b = { ...b, local: def.localUrl, external: def.publicUrl }; }

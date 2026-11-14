@@ -83,16 +83,16 @@ async function settled(C, id) {
 
 /* ---------------- Standard serveradresser ---------------- */
 
-test('GET /api/config/servers: publicUrl uten innlogging (standard os.smarthjemexperten.no), localUrl bare etter innlogging', async () => {
+test('GET /api/config/servers: publicUrl uten innlogging (standard os.smarthjemeksperten.no), localUrl bare etter innlogging', async () => {
   const pub = await req('/api/config/servers');
   assert.equal(pub.status, 200);
-  assert.deepEqual(pub.body, { publicUrl: 'https://os.smarthjemexperten.no', defaults: { external: 'https://os.smarthjemexperten.no' }, app: 'homelab', api: 47 });
+  assert.deepEqual(pub.body, { publicUrl: 'https://os.smarthjemeksperten.no', defaults: { external: 'https://os.smarthjemeksperten.no' }, app: 'homelab', api: 47 });
   assert.ok(!pub.text.includes('10.69.1.39'), 'den lokale IP-en vises aldri uten innlogging');
   assert.equal(pub.headers.get('cache-control'), 'no-store');
   const me = await A('/api/config/servers');
-  assert.equal(me.body.publicUrl, 'https://os.smarthjemexperten.no');
+  assert.equal(me.body.publicUrl, 'https://os.smarthjemeksperten.no');
   assert.equal(me.body.localUrl, 'http://10.69.1.39:3000');
-  assert.deepEqual(me.body.defaults, { external: 'https://os.smarthjemexperten.no', local: 'http://10.69.1.39:3000' });
+  assert.deepEqual(me.body.defaults, { external: 'https://os.smarthjemeksperten.no', local: 'http://10.69.1.39:3000' });
   assert.deepEqual(me.body.source, { publicUrl: 'default', localUrl: 'default' });
   assert.equal((await T('/api/config/servers')).body.localUrl, 'http://10.69.1.39:3000', 'også med app-token');
   assert.equal((await req('/api/config/servers', { headers: { authorization: 'Bearer fh_ugyldig' } })).body.localUrl, undefined, 'ugyldig token = uten innlogging');
@@ -123,8 +123,8 @@ test('GET /api/config/servers: PUBLIC_URL/LOCAL_URL fra env overstyrer; Docker-i
 test('/api/me/server: standardverdier, synk mellom enheter (samme konto), «Tilbakestill til standard», per bruker', async () => {
   const g = (await A('/api/me/server')).body;
   assert.equal(g.local, 'http://10.69.1.39:3000');
-  assert.equal(g.external, 'https://os.smarthjemexperten.no');
-  assert.deepEqual(g.defaults, { local: 'http://10.69.1.39:3000', external: 'https://os.smarthjemexperten.no' });
+  assert.equal(g.external, 'https://os.smarthjemeksperten.no');
+  assert.deepEqual(g.defaults, { local: 'http://10.69.1.39:3000', external: 'https://os.smarthjemeksperten.no' });
   assert.equal(g.isDefault, true);
   const p = await A('/api/me/server', 'PUT', { local: 'http://10.69.1.50:3000', external: 'https://annen.example.no', device: 'iPhone 16\u0007' });
   assert.equal(p.status, 200, p.text);
@@ -135,7 +135,7 @@ test('/api/me/server: standardverdier, synk mellom enheter (samme konto), «Tilb
   assert.deepEqual([t.local, t.external, t.updatedBy], ['http://10.69.1.50:3000', 'https://annen.example.no', 'iPhone 16']);
   assert.equal((await K('/api/me/server')).body.local, 'http://10.69.1.39:3000', 'Kari har sine egne (standard)');
   const r = await T('/api/me/server', 'PUT', { reset: true, local: 'http://10.0.0.9:1', device: 'Pixel' });
-  assert.deepEqual([r.body.local, r.body.external, r.body.isDefault, r.body.updatedBy], ['http://10.69.1.39:3000', 'https://os.smarthjemexperten.no', true, 'Pixel']);
+  assert.deepEqual([r.body.local, r.body.external, r.body.isDefault, r.body.updatedBy], ['http://10.69.1.39:3000', 'https://os.smarthjemeksperten.no', true, 'Pixel']);
   assert.equal((await A('/api/me/server')).body.isDefault, true);
   assert.equal((await A('/api/me/server', 'PUT', { local: 'http://172.18.0.3:3000' })).status, 400, 'fortsatt ingen Docker-IP');
 });

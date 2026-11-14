@@ -1,14 +1,14 @@
 // Prompt 47 (claude-code-standard-serveradresser.md): standard serveradresser og «Svarer · 34 ms»-test for Innstillinger → Server.
 // Brukes av web (settings-server41.js) og PWA (finans/js/mobile-p41.js). Ingen imports, så begge kan laste den.
 //
-// Standardverdier: ekstern https://os.smarthjemexperten.no, lokal http://10.69.1.39:3000. Serveren kan overstyre dem via env
+// Standardverdier: ekstern https://os.smarthjemeksperten.no, lokal http://10.69.1.39:3000. Serveren kan overstyre dem via env
 // (PUBLIC_URL / LOCAL_URL) i GET /api/config/servers ({publicUrl, localUrl?}; localUrl bare etter innlogging). Mangler ruten (404) eller
 // feltene, gjelder standardverdiene.
 //
 // Sikkerhet: en side lastet over https prøver aldri en http-adresse (blandet innhold) – da brukes den eksterne. CSP tillater
 // bare fetch til eget opphav, så andre https-adresser testes ved å laste appikonet som bilde (img-src https:).
 
-export const DEF47 = Object.freeze({ external: 'https://os.smarthjemexperten.no', local: 'http://10.69.1.39:3000' });
+export const DEF47 = Object.freeze({ external: 'https://os.smarthjemeksperten.no', local: 'http://10.69.1.39:3000' });
 
 const clean = (u) => String(u ?? '').trim().replace(/\/+$/, '');
 const okUrl = (u) => /^https?:\/\/[^\s/?#@]+(:\d+)?(\/\S*)?$/i.test(clean(u));
