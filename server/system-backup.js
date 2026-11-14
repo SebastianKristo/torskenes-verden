@@ -18,7 +18,7 @@
 //   GET  /status    → {last, running, next, summary}
 //   GET  /list      → [{id, at, size, scope, modules, ok, error?, encrypted, cloud?, smb?:{ok, at, path, error?}, kind}]
 //   (prompt 30) PUT /settings {target:{smb:{enabled, share, path}}}; oppsettet gjøres med veiviseren under /api/smb.
-//   POST /restore   {id, modules[], password, key?} → {ok, safetyId, modules, reload:true}
+//   POST /restore   {id, modules[], password, key?, disable2fa?} → {ok, safetyId, modules, messages, secret, reload:true}
 //   GET  /:id/download → fila (attachment)
 //   (prompt 90) POST /upload  kropp = fila (application/octet-stream), bare økt i nettleseren. Se «Opplasting» under.
 //
@@ -26,7 +26,12 @@
 //   db/homelab.db   konsistent øyeblikksbilde (db.backup()); ved modul-utvalg bare modulenes tabeller og kv-rader.
 //                   Øktene (sessions) tømmes alltid i kopien.
 //   files/<mappe>/… filmappene i DATA_DIR som hører til modulene
-//   manifest.json   {format, version (CHANGELOG), created, scope, modules, tables, kv, dirs, files:{navn: sha256}, counts}
+//   manifest.json   {format, version (CHANGELOG), created, scope, modules, tables, kv, dirs, files:{navn: sha256}, counts,
+//                    secret:{source:'env'|'file'|'legacy', fp:{totp, seal, settings, domains, hmac}}}
+//                   Prompt 91: secret er kilden og fingeravtrykk (HMAC) av nøklene serverhemmeligheten gir – aldri hemmeligheten
+//                   selv. Ved gjenoppretting sammenlignes de: er den gamle nøkkelen kjent (f.eks. reservenøkkelen i koden), krypteres
+//                   2FA-hemmeligheter og forseglede verdier på nytt i samme transaksjon; ellers advarer dialogen (secretMismatch) og
+//                   2FA kan slås av for brukere med uleselig hemmelighet (disable2fa, standard på). Se secret91.js.
 // Kryptering: AES-256-GCM (samme format som FinansHub-backupen, nøkkel avledet med scrypt fra gjenopprettingsnøkkelen).
 // Nøkkelen lagres kryptert med serverhemmeligheten (seal(), som secret()) + sha256-hash, så automatisk backup kan kryptere.
 //
@@ -65,6 +70,7 @@ import { tarHeader, untar, encryptStream, decryptFile, ENC_MAGIC, ENC_HEAD, encK
 import { settings as fhSettings, secret as fhSecret } from './finans/db.js';
 import { broadcast } from './realtime.js';
 import { parseChangelog } from './system-update.js';
+import { manifestSecret91, compareSecret91, cleanSecret91, rekeyDb91, rekeyMessages91 } from './secret91.js'; // prompt 91
 
 const DATA = resolve(config.dataDir);
 export const BACKUP_DIR = resolve(process.env.BACKUP_DIR || join(DATA, 'system-backups'));
@@ -274,7 +280,14 @@ export function jobOut(r) {
     if (r.kind === 'upload') Object.assign(o, { uploaded: true, created: rep.created ?? null, version: rep.version ?? null });
   }
   if (r.kind === 'upload') { o.uploaded = true; o.needKey = !!r.encrypted && !(r.key_id && keyById(r.key_id)); }
+  Object.assign(o, secretFlags91(r.report ? JSON.parse(r.report).secret : null));
   return o;
+}
+/** Prompt 91: {secretMismatch?, secretRekey?} for dialogen – bare flagg, aldri nøkler. */
+function secretFlags91(sec) {
+  const c = compareSecret91(sec);
+  if (!c || c.same) return {};
+  return { ...(c.secretMismatch ? { secretMismatch: true } : {}), ...(c.secretRekey ? { secretRekey: true } : {}), ...(c.hmacChanged ? { secretHmac: true } : {}) };
 }
 const SCOPE_SLUG = { all: 'hele', finans: 'finans', custom: 'egendefinert' };
 /** Synlig filnavn (prompt 36): homelab-2026-10-19_2130-hele.tar.zst (+ .enc). Oslo-tid. */
@@ -429,8 +442,9 @@ export function startBackup({ scope = 'all', modules = null, kind = 'manual', by
       let total = 0; for (const e of entries) { try { total += statSync(e.path).size; } catch { /* */ } }
       let sent = 0;
       const hashes = {};
+      const secret91 = manifestSecret91(); // prompt 91: kilde + fingeravtrykk, aldri hemmeligheten
       const manifest = () => ({ format: 'homelab-system-backup', formatVersion: 1, version: version(), created: new Date(t0).toISOString(), id, scope, modules: mods,
-        tables: info.tables, kv: info.kv, counts: info.counts, dirs, files: hashes, encrypted: !!key, keyId: encKeyId, compression: FORMAT });
+        tables: info.tables, kv: info.kv, counts: info.counts, dirs, files: hashes, encrypted: !!key, keyId: encKeyId, compression: FORMAT, secret: secret91 });
       const fileHash = createHash('sha256');
       const tap = new Transform({ transform(ch, _e, cb) { fileHash.update(ch); cb(null, ch); } });
       const ws = createWriteStream(part, { mode: 0o600 });
@@ -450,7 +464,7 @@ export function startBackup({ scope = 'all', modules = null, kind = 'manual', by
       writeFileSync(join(BACKUP_DIR, `${id}.json`), JSON.stringify(man, null, 1), { mode: 0o600 });
       setJob(id, { state: 'verifying', pct: 96, size, file, encrypted: key ? 1 : 0, key_id: encKeyId, sha256, tables: JSON.stringify(info.tables) });
       broadcast('system-backup', { action: 'progress', id, pct: 96, step: 'verifying' });
-      let rep = { target: 'local', fullPath: join(BACKUP_DIR, file), url: null, method: 'local', bytes: size, sha256, verified: true, retention: [], name, log: [] };
+      let rep = { target: 'local', fullPath: join(BACKUP_DIR, file), url: null, method: 'local', bytes: size, sha256, verified: true, retention: [], name, log: [], secret: secret91 };
       if (st.smb.enabled && kind !== 'safety') {
         const sm = await smbUpload(id, { name, manifestPath: join(BACKUP_DIR, `${id}.json`) });
         if (!sm.ok) throw Object.assign(new Error(`Kopien til nettverksdisken feilet: ${sm.error}. Backupen ligger bare lokalt (${join(BACKUP_DIR, file)}).`), { report: { ...rep, ...sm, target: 'smb', verified: false } });
@@ -771,12 +785,16 @@ const fillOf = (type) => (/INT|REAL|NUM|FLOA|DOUB|BOOL/i.test(type ?? '') ? '0' 
  * (eldre backup) hoppes over med en melding; kolonnene tas fra snittet, og NOT NULL-kolonner uten standardverdi som mangler i
  * backupen fylles med 0 / ''. Kolonner som bare finnes i backupen tas ikke med.
  */
-function applyRestore(dest, manifest, mods) {
+function applyRestore(dest, manifest, mods, { disable2fa = true } = {}) {
   const file = join(dest, 'db', 'homelab.db');
   const now = tableMap();
   const mainTables = new Set(plainTables());
   db.prepare('ATTACH DATABASE ? AS bk').run(file);
   const restored = {}, skipped = [], notes = [];
+  // Prompt 91: samme nøkler (fingeravtrykkene er like) → ingenting å gjøre. Ellers (også eldre backup uten fingeravtrykk) prøves hver
+  // kryptert verdi med dagens nøkkel og de gamle nøklene serveren kjenner, i samme transaksjon som tabellene.
+  const cmp = compareSecret91(manifest.secret);
+  let rk = null;
   try {
     const bkTables = new Set(plainTables(db, 'bk'));
     const bkMap = tableMap([...bkTables]);
@@ -814,6 +832,11 @@ function applyRestore(dest, manifest, mods) {
           const ins = db.prepare('INSERT OR REPLACE INTO main.kv(user, key, value) VALUES(?,?,?)');
           for (const r of db.prepare('SELECT user, key, value FROM bk.kv').all()) { const m = kvModule(r.key); if (m && mods.includes(m)) ins.run(r.user, r.key, r.value); }
         }
+        if (!cmp?.same && mods.some((m) => m !== 'filer')) {
+          const tset = new Set(Object.values(restored).flat());
+          if (bkTables.has('kv')) tset.add('kv');
+          rk = rekeyDb91(db, { tables: tset, kvFilter: (k) => { const m = kvModule(k); return !!m && mods.includes(m); }, disable2fa });
+        }
       })();
     } finally { db.pragma('foreign_keys = ON'); }
   } finally { db.exec('DETACH DATABASE bk'); }
@@ -831,15 +854,20 @@ function applyRestore(dest, manifest, mods) {
       dirsDone.push(d);
     }
   }
+  const secretMsgs = rk ? rekeyMessages91(rk, cmp, { disable2fa }) : [];
+  if (rk && (rk.totp.rekeyed || rk.values.rekeyed || rk.domains.rekeyed || rk.totp.unreadable.length || rk.values.unreadable)) console.warn(`[system-backup] serverhemmelighet: ${rk.totp.rekeyed} 2FA og ${rk.values.rekeyed + rk.domains.rekeyed} verdier kryptert på nytt, ${rk.totp.unreadable.length} 2FA og ${rk.values.unreadable + rk.domains.unreadable} verdier uleselige, 2FA slått av for ${rk.totp.disabled.length}`);
   const messages = [
+    ...secretMsgs,
     ...skipped.map((x) => `Hoppet over ${x.table}: ${x.reason}.`),
     ...notes.map((x) => `${x.table}: ${[x.missing.length ? `${x.missing.length} kolonne${x.missing.length > 1 ? 'r' : ''} mangler i backupen (${x.missing.join(', ')})` : '', x.extra.length ? `${x.extra.length} kolonne${x.extra.length > 1 ? 'r' : ''} fra backupen finnes ikke her (${x.extra.join(', ')})` : ''].filter(Boolean).join('; ')}.`),
   ];
-  return { tables: restored, dirs: dirsDone, skipped, notes, messages };
+  const secret = rk ? { rekeyed: { totp: rk.totp.rekeyed, values: rk.values.rekeyed + rk.domains.rekeyed + rk.pending.rekeyed }, unreadable: { totp: rk.totp.unreadable, values: rk.values.unreadable + rk.domains.unreadable }, disabled2fa: rk.totp.disabled,
+    recoveryUsers: rk.recoveryUsers, ...(cmp ? { mismatch: !cmp.same, oldKeyKnown: !cmp.secretMismatch } : {}) } : { same: true };
+  return { tables: restored, dirs: dirsDone, skipped, notes, messages, secret };
 }
 
 /** Gjenoppretter modulene fra backupen id. Tar en full sikkerhetskopi først. → {ok, safetyId, modules, tables, dirs, skipped, messages} */
-export async function restoreBackup({ id, modules, by = null, key = null }) {
+export async function restoreBackup({ id, modules, by = null, key = null, disable2fa = true }) {
   const r = getJob(id);
   if (!r || r.state !== 'done') throw Object.assign(new Error('Fant ikke backupen'), { status: 404 });
   const inBackup = JSON.parse(r.modules);
@@ -865,7 +893,7 @@ export async function restoreBackup({ id, modules, by = null, key = null }) {
     if (!sj?.ok) throw Object.assign(new Error(`Sikkerhetskopien feilet, ingenting er gjenopprettet: ${sj?.error ?? ''}`), { status: 500 });
     running = { id: `restore-${id}`, promise: null };
     try {
-      const res = applyRestore(dest, manifest, mods);
+      const res = applyRestore(dest, manifest, mods, { disable2fa: disable2fa !== false });
       console.warn(`[system-backup] gjenopprettet ${mods.join(', ')} fra ${id} (av ${by}), sikkerhetskopi ${safety.id}${res.skipped.length ? `, hoppet over ${res.skipped.map((x) => x.table).join(', ')}` : ''}`);
       broadcast('system-backup', { action: 'restored', id, modules: mods, safetyId: safety.id });
       return { ok: true, safetyId: safety.id, modules: mods, ...res };
@@ -994,7 +1022,7 @@ function checkManifest({ manifest, files, dbHead }) {
   }
   const created = typeof m.created === 'string' && !Number.isNaN(Date.parse(m.created)) ? new Date(m.created).toISOString() : null;
   return { created, version: typeof m.version === 'string' ? m.version.slice(0, 40) : null, scope: SCOPES.includes(m.scope) ? m.scope : 'custom',
-    modules, tables: m.tables && typeof m.tables === 'object' ? m.tables : null, ignored };
+    modules, tables: m.tables && typeof m.tables === 'object' ? m.tables : null, ignored, secret: cleanSecret91(m.secret) };
 }
 
 /** Hode og haletag i en kryptert fil. Kaster når fila ikke er i krypteringsformatet. */
@@ -1053,14 +1081,15 @@ async function finishUpload(u, by) {
 function insertUpload(u, { id, t, file, out, info, keyId, by }) {
   const size = statSync(out).size, sha256 = u.hash.digest('hex'), needKey = u.enc && !info;
   const rep = { target: 'upload', method: 'upload', name: u.name, fullPath: out, bytes: size, sha256, verified: !!info, created: info?.created ?? null, version: info?.version ?? null,
-    retention: [], ms: t - u.t0, receipt: `✓ Lastet opp ${gb(size)}${info ? ' · sjekket' : ' · kryptert, nøkkelen trengs'}`, ...(info?.ignored?.length ? { ignored: info.ignored } : {}) };
+    retention: [], ms: t - u.t0, receipt: `✓ Lastet opp ${gb(size)}${info ? ' · sjekket' : ' · kryptert, nøkkelen trengs'}`, ...(info?.ignored?.length ? { ignored: info.ignored } : {}),
+    ...(info?.secret ? { secret: info.secret } : {}) };
   q('INSERT INTO backup_jobs(id, kind, state, pct, started, finished, size, scope, modules, tables, file, encrypted, key_id, sha256, by_user, report) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)')
     .run(id, 'upload', 'done', 100, t, t, size, info?.scope ?? 'all', JSON.stringify(info?.modules ?? []), info ? JSON.stringify(info.tables) : null, file, u.enc ? 1 : 0, keyId, sha256, by, JSON.stringify(rep));
   rotateUploads(id);
   console.info(`[system-backup] opplastet ${id} (${size} byte, sha256=${sha256}, kryptert=${u.enc}, nøkkel ${keyId ? 'kjent' : u.enc ? 'ukjent' : '–'}) av ${by}`);
   broadcast('system-backup', { action: 'uploaded', id });
   return { id, created: info?.created ?? null, version: info?.version ?? null, scope: info?.scope ?? null, modules: info?.modules ?? [], encrypted: !!u.enc, needKey, size,
-    ...(info?.ignored?.length ? { ignored: info.ignored } : {}) };
+    ...(info?.ignored?.length ? { ignored: info.ignored } : {}), ...secretFlags91(info?.secret) };
 }
 
 const uploads = new Map(); // uploadId → {user, part, ext, enc, name, total, received, hash, t0, at, busy}
@@ -1154,9 +1183,10 @@ api.post('/restore', async (c) => {
   if (!ID.test(String(b.id ?? ''))) return c.json({ error: 'Ugyldig id' }, 400);
   if (b.modules !== undefined && (!Array.isArray(b.modules) || !b.modules.every((m) => MODULE_IDS.includes(m)))) return c.json({ error: 'Ukjent modul' }, 400);
   if (b.key !== undefined && b.key !== null && (typeof b.key !== 'string' || b.key.length > 200)) return c.json({ error: 'Ugyldig nøkkel' }, 400);
+  if (b.disable2fa !== undefined && typeof b.disable2fa !== 'boolean') return c.json({ error: 'disable2fa må være true eller false' }, 400);
   const bad = passwordOk(c, b.password);
   if (bad) return bad;
-  try { return c.json({ ...(await restoreBackup({ id: b.id, modules: b.modules, by: c.get('user'), key: b.key || null })), reload: true }); }
+  try { return c.json({ ...(await restoreBackup({ id: b.id, modules: b.modules, by: c.get('user'), key: b.key || null, disable2fa: b.disable2fa !== false })), reload: true }); }
   catch (e) { return c.json({ error: String(e.message).slice(0, 500), ...(e.needKey ? { needKey: true } : {}) }, e.status ?? 500); }
 });
 api.post('/upload', async (c) => {

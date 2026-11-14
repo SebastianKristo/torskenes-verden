@@ -6,7 +6,7 @@ import { sessionSecret86 } from './secret86.js'; // prompt 86
 import { hashPassword, verifyPassword } from './password.js';
 import { passwordHash as legacyPasswordHash, setPasswordHash as setLegacyPasswordHash } from './settings.js';
 import { blocked51, fail51, clear51 } from './ratelimit51.js'; // prompt 51 (SEC51)
-import { verifyTotp, newSecret, base32Encode, otpauthUrl, qrSvg, encryptSecret, decryptSecret, newRecoveryCodes, recoveryHash } from './totp.js';
+import { verifyTotp, newSecret, base32Encode, otpauthUrl, qrSvg, encryptSecret, decryptSecret, newRecoveryCodes, recoveryHash, tfaUnreadable, TFA_UNREADABLE_LOGIN_MSG } from './totp.js';
 
 const COOKIE = 'hl_sid';
 const MAX_AGE = 60 * 60 * 24 * 30; // 30 dager
@@ -171,6 +171,8 @@ function httpError(message, status) { const e = new Error(message); e.status = s
 /* ---------------- Tofaktor ---------------- */
 
 // Sjekker TOTP-kode (avviser gjenbruk av samme tidsvindu) eller en gjenopprettingskode (brukes én gang).
+// Prompt 91: kan hemmeligheten ikke dekrypteres (serverhemmeligheten er byttet), kastes en feil med code 'TOTP_UNREADABLE' og en
+// norsk melding – aldri den rå kryptofeilen, og aldri «true». Gjenopprettingskoder sjekkes som før (de kan fortsatt virke).
 export function checkSecondFactor(id, code) {
   const u = userRow(id);
   if (!u?.totp_enabled || !u.totp_secret_enc) return false;
@@ -201,7 +203,13 @@ export function startTotpSetup(id, { issuer } = {}) { // prompt 40: issuer ('Nor
 export function confirmTotpSetup(id, code) {
   const p = kv.get(id, 'totp_pending');
   if (!p || p.exp < Date.now()) throw httpError('Oppsettet er utløpt. Start på nytt.', 400);
-  const step = verifyTotp(decryptSecret(p.enc), code);
+  let secret;
+  try { secret = decryptSecret(p.enc); } catch (e) {
+    if (e.code !== 'TOTP_UNREADABLE') throw e;
+    kv.del(id, 'totp_pending');
+    throw httpError('Oppsettet kan ikke leses fordi serverhemmeligheten er endret (for eksempel etter gjenoppretting av backup). Start oppsettet på nytt.', 409);
+  }
+  const step = verifyTotp(secret, code);
   if (step < 0) throw httpError('Koden stemmer ikke. Sjekk klokka på telefonen.', 400);
   const codes = newRecoveryCodes();
   db.prepare('UPDATE users SET totp_secret_enc=?, totp_enabled=1, totp_last_step=?, recovery_hashes=? WHERE id=?')
@@ -211,10 +219,27 @@ export function confirmTotpSetup(id, code) {
 }
 
 // Å slå av krever passord eller en gyldig kode.
-export function disableTotp(id, { password, code }) {
+// Prompt 91: med en uleselig hemmelighet gir en 6-sifret kode en klar melding (409, code 'TOTP_UNREADABLE'); passordet virker som før.
+export function disableTotp(id, { password, code } = {}) {
   if (!(password && checkPassword(id, password)) && !(code && checkSecondFactor(id, code))) throw httpError('Feil passord eller kode', 403);
   updateUser(id, { resetTotp: true });
 }
+
+/** Prompt 91: kan brukerens lagrede TOTP-hemmelighet leses med dagens serverhemmelighet? (null = 2FA er av) */
+export function totpReadable(id) {
+  const u = userRow(id);
+  if (!u?.totp_enabled || !u.totp_secret_enc) return null;
+  try { decryptSecret(u.totp_secret_enc); return true; } catch { return false; }
+}
+
+/** checkSecondFactor ved innlogging: uleselig hemmelighet → {unreadable:true} (ingen innlogging), ellers {ok}. */
+function loginSecondFactor(id, code) {
+  try { return { ok: checkSecondFactor(id, code) }; } catch (e) {
+    if (e.code === 'TOTP_UNREADABLE') { console.warn(`[auth] 2FA-hemmeligheten for ${id} kan ikke leses (serverhemmeligheten er endret)`); return { ok: false, unreadable: true }; }
+    throw e;
+  }
+}
+export { tfaUnreadable };
 
 /* ---------------- Rate limiting ---------------- */
 
@@ -264,7 +289,9 @@ export function verifyLogin(username, password, code, ip = 'ukjent') {
   }
   if (u.totp_enabled) {
     if (code === undefined || code === null || code === '') return { ok: false, needsTotp: true, status: 401, error: 'Tofaktor-kode kreves', user: { id: u.id, username: u.username } };
-    if (!checkSecondFactor(u.id, code)) { fail(ip); fail(ukey); return { ok: false, needsTotp: true, status: 401, error: 'Feil kode. Prøv igjen.' }; }
+    const sf = loginSecondFactor(u.id, code);
+    if (sf.unreadable) return { ok: false, needsTotp: true, unreadable: true, status: 409, error: TFA_UNREADABLE_LOGIN_MSG };
+    if (!sf.ok) { fail(ip); fail(ukey); return { ok: false, needsTotp: true, status: 401, error: 'Feil kode. Prøv igjen.' }; }
   }
   loginSucceeded(ip); clearKey(ukey);
   return { ok: true, user: userInfo(u.id) };
@@ -282,7 +309,9 @@ export function redeemTicket(ticket, code, ip) {
   if (!t || t.exp < Date.now()) { tickets.delete(ticket); return { ok: false, status: 401, error: 'Innloggingen er utløpt. Start på nytt.', expired: true }; }
   const wait = Math.max(loginBlocked(ip), blockedFor('u:' + t.userId, MAX_USER_FAILS));
   if (wait) return { ok: false, status: 429, error: `For mange forsøk. Prøv igjen om ${Math.ceil(wait / 60)} min.` };
-  if (!checkSecondFactor(t.userId, code)) {
+  const sf = loginSecondFactor(t.userId, code);
+  if (sf.unreadable) return { ok: false, status: 409, error: TFA_UNREADABLE_LOGIN_MSG, unreadable: true };
+  if (!sf.ok) {
     fail(ip); fail('u:' + t.userId);
     if (++t.tries >= 5) { tickets.delete(ticket); return { ok: false, status: 401, error: 'For mange feil koder. Start på nytt.', expired: true }; }
     return { ok: false, status: 401, error: 'Feil kode. Prøv igjen.' };

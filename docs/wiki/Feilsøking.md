@@ -182,6 +182,7 @@ PostNords offisielle API krever organisasjonsnummer. **Du trenger det ikke.** La
 |---|---|
 | Innloggingen «virker», men du kastes ut igjen | Du bruker `http://` med `COOKIE_SECURE=true`. Sett `COOKIE_SECURE=false` i `.env` (bare uten https), og start på nytt. |
 | Glemt passord eller mistet 2FA | `docker compose exec -u 1000 os npm run reset-password -- brukernavn` (bruk din PUID) |
+| «Tofaktor-nøkkelen kan ikke leses fordi serverhemmeligheten er endret» (etter gjenoppretting av backup) | Kjør `docker compose exec -u 1000 os npm run rekey-secrets` og start på nytt. Hjelper ikke det: slå av 2FA med passordet, eller `npm run reset-2fa -- brukernavn`, og sett det opp på nytt. Se [docs/backup.md](https://github.com/SebastianKristo/torskenes-verden/blob/main/docs/backup.md#serverhemmeligheten-og-gjenoppretting). |
 | Appen får ikke kontakt | Skriv `http://` foran lokal adresse, sjekk porten, og at telefonen er på samme nett. Bak Cloudflare Access: slipp `/finans/api/*`, `/api/*` og `/tiles/*` forbi. |
 | <a id="ios-widgeten-viser-logg-inn"></a>iOS-widgeten viser «Logg inn» | Åpne appen → Innstillinger → Widgets → «Oppdater widgetene nå». Installer IPA-en på nytt hvis widgetene ikke er koblet til appen. |
 | Ser ingen endringer etter oppdatering | Hard reload (Ctrl+Shift+R). Lukk og åpne PWA-en. |

@@ -29,10 +29,17 @@ if (!document.getElementById('settings-login-css')) {
 .pill-field:focus{border-color:var(--blue)}
 .pill-field.sm{flex:0 0 auto;padding:7px 12px;font-size:13px}
 .pill-field.code{font-size:16px;letter-spacing:4px}
-.tfa-box{display:flex;flex-direction:column;gap:12px;background:#121722;border:1px solid #3a4560;border-radius:16px;padding:16px}
+.tfa-box{display:flex;flex-direction:column;gap:12px;background:var(--s65-card,var(--row));border:1px solid var(--s65-line,var(--line));border-radius:16px;padding:16px;color:var(--s65-ink,var(--text))}
+.tfa-box .muted{color:var(--s65-mut,var(--muted))}
+.tfa-box .red{color:var(--s65-bad,var(--red))}
+.tfa-box .pill-btn{color:var(--s65-ink,var(--text));border-color:var(--s65-mut,#3a4560)}
+.tfa-box .pill-btn.primary{background:var(--s65-pri,var(--blue));color:var(--s65-prifg,#07080b)}
+.tfa-box .pill-btn.danger{color:var(--s65-bad,var(--red));border-color:var(--s65-bad,var(--red))}
+.tfa-box .pill-field{background:var(--s65-fld,var(--field));border-color:var(--s65-line,var(--line));color:var(--s65-ink,var(--text))}
+.tfa-box .pill-field::placeholder{color:var(--s65-mut,var(--muted));opacity:1}
 .tfa-qr{flex:0 0 auto;width:132px;height:132px;border-radius:12px;background:#eef0f4;padding:4px;display:grid;place-items:center}
 .tfa-qr svg{width:124px;height:124px;display:block}
-.tfa-codes{columns:2;font-size:14px;line-height:1.8;background:var(--field);border-radius:12px;padding:10px 14px;user-select:all}
+.tfa-codes{columns:2;font-size:14px;line-height:1.8;background:var(--s65-fld,var(--field));color:var(--s65-ink,var(--text));border-radius:12px;padding:10px 14px;user-select:all}
 .user-add{display:flex;flex-direction:column;gap:10px;background:var(--row);border:1px dashed #3a4560;border-radius:16px;padding:14px}
 .user-add-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr));gap:8px}`;
   document.head.append(st);
@@ -80,7 +87,7 @@ function tfaBox() {
 function offBox() {
   if (!off) return '';
   return `<form class="tfa-box" data-tfa-off><b>Slå av 2FA for ${esc(data.me.username)}</b>
-    <div class="muted" style="font-size:13px">Bekreft med passordet ditt eller en kode fra appen.</div>
+    <div class="muted" style="font-size:13px">${data.me.totpUnreadable ? 'Tofaktor-nøkkelen kan ikke leses fordi serverhemmeligheten er endret (for eksempel etter gjenoppretting av backup). Slå av med passordet ditt og sett det opp på nytt.' : 'Bekreft med passordet ditt eller en kode fra appen.'}</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       <input class="pill-field" type="password" name="secret" placeholder="Passord eller kode" autocomplete="current-password" required>
       <button class="pill-btn danger" type="submit">Slå av</button><button class="pill-btn" type="button" data-tfa-cancel>Avbryt</button>

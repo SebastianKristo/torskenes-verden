@@ -28,6 +28,8 @@ docker compose exec -u 1000 os npm run reset-password -- emma
 ```
 
 Bruk din `PUID` i stedet for `1000` hvis den er en annen. Kommandoen setter nytt passord og slår av 2FA.
+Bare 2FA (passordet beholdes), f.eks. når 2FA-nøkkelen ikke kan leses etter gjenoppretting av en backup:
+`docker compose exec -u 1000 os npm run reset-2fa -- emma`. En admin kan også trykke **Nullstill** ved tofaktor under brukeren.
 
 ## Hva er mitt, og hva deles?
 

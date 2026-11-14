@@ -74,19 +74,32 @@ function encKey() {
   return Buffer.from(hkdfSync('sha256', sessionSecret86('dev'), 'homelab-totp', 'totp-secret-v1', 32));
 }
 
-export function encryptSecret(buf) {
+export const encryptSecret = (buf) => encryptSecretWith(buf, encKey());
+
+// Prompt 91 (TFA91): en hemmelighet som ikke kan dekrypteres (serverhemmeligheten er byttet, f.eks. etter gjenoppretting av en
+// backup fra en annen server) gir aldri den rå kryptofeilen («Unsupported state or unable to authenticate data») videre, men en
+// feil med code 'TOTP_UNREADABLE' og en norsk melding. Den gir aldri innlogging uten 2FA (se checkSecondFactor i auth.js).
+export const TFA_UNREADABLE_MSG = 'Tofaktor-nøkkelen kan ikke leses fordi serverhemmeligheten er endret (for eksempel etter gjenoppretting av backup). Slå av tofaktor med passordet ditt og sett det opp på nytt.';
+export const TFA_UNREADABLE_LOGIN_MSG = 'Tofaktor-nøkkelen for kontoen kan ikke leses fordi serverhemmeligheten er endret (for eksempel etter gjenoppretting av backup). Bruk en gjenopprettingskode hvis du har en som virker, be en administrator nullstille tofaktor for kontoen, eller kjør npm run reset-2fa -- <brukernavn> på serveren.';
+export const tfaUnreadable = (msg = TFA_UNREADABLE_MSG) => Object.assign(new Error(msg), { status: 409, code: 'TOTP_UNREADABLE' });
+
+/** Dekrypterer med en gitt nøkkel (brukes også av re-krypteringen etter gjenoppretting, secret91.js). Kaster ved feil nøkkel. */
+export function decryptSecretWith(s, key) {
+  const [v, iv, tag, ct] = String(s ?? '').split(':');
+  if (v !== 'v1' || !ct) throw new Error('Ukjent format på 2FA-hemmelighet');
+  const d = createDecipheriv('aes-256-gcm', key, Buffer.from(iv, 'base64url'));
+  d.setAuthTag(Buffer.from(tag, 'base64url'));
+  return Buffer.concat([d.update(Buffer.from(ct, 'base64url')), d.final()]);
+}
+export function encryptSecretWith(buf, key) {
   const iv = randomBytes(12);
-  const c = createCipheriv('aes-256-gcm', encKey(), iv);
+  const c = createCipheriv('aes-256-gcm', key, iv);
   const ct = Buffer.concat([c.update(buf), c.final()]);
   return ['v1', iv.toString('base64url'), c.getAuthTag().toString('base64url'), ct.toString('base64url')].join(':');
 }
 
 export function decryptSecret(s) {
-  const [v, iv, tag, ct] = String(s ?? '').split(':');
-  if (v !== 'v1' || !ct) throw new Error('Ukjent format på 2FA-hemmelighet');
-  const d = createDecipheriv('aes-256-gcm', encKey(), Buffer.from(iv, 'base64url'));
-  d.setAuthTag(Buffer.from(tag, 'base64url'));
-  return Buffer.concat([d.update(Buffer.from(ct, 'base64url')), d.final()]);
+  try { return decryptSecretWith(s, encKey()); } catch { throw tfaUnreadable(); }
 }
 
 /* ---------------- Gjenopprettingskoder ---------------- */

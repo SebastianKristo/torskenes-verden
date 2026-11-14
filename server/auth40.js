@@ -14,7 +14,7 @@
 import { Hono } from 'hono';
 import { db, kv } from './db.js';
 import { authOrToken } from './mobile.js';
-import { userInfo, checkPassword, checkSecondFactor, startTotpSetup, confirmTotpSetup, disableTotp, clientIp, loginBlocked, loginFailed, loginSucceeded, currentSessionId } from './auth.js';
+import { userInfo, checkPassword, checkSecondFactor, startTotpSetup, confirmTotpSetup, disableTotp, totpReadable, clientIp, loginBlocked, loginFailed, loginSucceeded, currentSessionId } from './auth.js';
 import { newRecoveryCodes, recoveryHash, STEP } from './totp.js';
 import { consumeReauth } from './reauth.js';
 
@@ -28,7 +28,7 @@ export function status40(u) {
   const r = row(u);
   const p = kv.get(u, 'totp_pending', null);
   return { enabled: !!r?.totp_enabled, method: 'totp', backupLeft: r?.totp_enabled ? backupLeft(r) : 0, enabledAt: r?.totp_enabled ? kv.get(u, 'totp_enabled_at40', null) : null,
-    pending: !!(p && p.exp > Date.now()) };
+    pending: !!(p && p.exp > Date.now()), ...(r?.totp_enabled && totpReadable(u) === false ? { unreadable: true } : {}) }; // prompt 91
 }
 /** Er økta fersk (innlogget for under 10 min)? App-token regnes ikke som fersk. */
 function freshSession(c) {
@@ -41,7 +41,7 @@ function freshSession(c) {
 function reauthOk(c, u, b, { allowCode = true, allowFresh = true } = {}) {
   if (b?.password && checkPassword(u, b.password)) return true;
   if (b?.reauthToken && consumeReauth(b.reauthToken, u)) return true;
-  if (allowCode && b?.code && row(u)?.totp_enabled && checkSecondFactor(u, b.code)) return true;
+  if (allowCode && b?.code && row(u)?.totp_enabled) { try { if (checkSecondFactor(u, b.code)) return true; } catch (e) { if (e.code !== 'TOTP_UNREADABLE') throw e; } } // prompt 91
   if (allowFresh && !b?.password && !b?.reauthToken && freshSession(c)) return true;
   return false;
 }
@@ -98,7 +98,10 @@ const disable = async (c) => {
   const lim = limited(c); if (lim) return lim;
   const b = await body(c);
   if (!status40(u).enabled) return c.json({ ok: true, enabled: false });
-  try { disableTotp(u, { password: b.password, code: b.code }); } catch (e) { loginFailed(clientIp(c)); return c.json({ error: 'Feil passord eller kode' }, e.status ?? 403); }
+  try { disableTotp(u, { password: b.password, code: b.code }); } catch (e) {
+    if (e.code === 'TOTP_UNREADABLE') return c.json({ error: e.message, unreadable: true }, 409); // prompt 91: klar melding, passordet virker
+    loginFailed(clientIp(c)); return c.json({ error: 'Feil passord eller kode' }, e.status ?? 403);
+  }
   kv.del(u, 'totp_enabled_at40');
   loginSucceeded(clientIp(c));
   return c.json({ ok: true, enabled: false });

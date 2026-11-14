@@ -88,7 +88,7 @@ ser og endrer dette. API: `/api/backup` (se `server/system-backup.js`).
 - **Hemmeligheten følger ikke med i arkivet:** `SESSION_SECRET` (i `.env`) eller fila `data/session-secret` (lages automatisk på en ny
   installasjon uten `SESSION_SECRET`) må tas vare på ved siden av backupen. Uten den kan lagrede integrasjonsnøkler og 2FA i en
   gjenopprettet database ikke leses. Restic-backupen (hele `data/`) tar med `session-secret`; for arkivene her må du kopiere den selv,
-  eller sette samme verdi som `SESSION_SECRET` i `.env` på den nye serveren.
+  eller sette samme verdi som `SESSION_SECRET` i `.env` på den nye serveren. Se [Serverhemmeligheten og gjenoppretting](#serverhemmeligheten-og-gjenoppretting).
 - **Format:** `.tar.zst` når `zstd` finnes på serveren, ellers `.tar.gz`. Kryptert: `.enc` (AES-256-GCM).
 - **Lagring:** `BACKUP_DIR` (standard `data/system-backups`). I Docker/Proxmox: bind-mount `/srv/backup:/srv/backup` og sett
   `BACKUP_DIR=/srv/backup` i `.env` (se `docker-compose.yml`). Eldre backuper slettes etter «Behold».
@@ -98,6 +98,38 @@ ser og endrer dette. API: `/api/backup` (se `server/system-backup.js`).
 - **Sky:** Backblaze B2 (S3-API, signert med AWS SigV4). Bare krypterte backuper lastes opp. Google Drive kommer senere.
 - **Gjenoppretting:** krever passordet, tar alltid en full sikkerhetskopi først, og erstatter de valgte modulenes tabeller i én
   transaksjon og filmappene med rename. Databasefilen byttes ikke, så serveren trenger ingen omstart; last appen på nytt etterpå.
+
+### Serverhemmeligheten og gjenoppretting
+
+Serverhemmeligheten (`SESSION_SECRET` → `data/session-secret` → på en eldre installasjon uten noen av dem: en fast *reservenøkkel*
+i koden, «legacy») brukes til å kryptere eller HMAC-e lagrede data. Kartlegging (se `server/secret91.js`):
+
+| Data | Hvordan | Etter bytte av hemmelighet |
+|---|---|---|
+| 2FA-hemmeligheter (`users.totp_secret_enc`) | AES-256-GCM (`TOTP_ENC_KEY` eller avledet) | Krypteres på nytt hvis den gamle nøkkelen er kjent |
+| Integrasjonsnøkler og hemmelige innstillinger (`enc:` / `enc1:` i kv og tabeller, domene-tokens, Search Console-token) | AES-256-GCM (`SECRET_KEY` eller avledet) | Krypteres på nytt hvis den gamle nøkkelen er kjent |
+| Gjenopprettingskoder for 2FA, app-tokens (FinansHub/mobilapper), enhetsnøkler, invitasjonskoder | HMAC (enveis) | Kan ikke regnes om – lag nye |
+| Studiedokumenter (study44) | AES-256-GCM i egne filer | Må lastes opp på nytt |
+| Økter | HMAC | Tas aldri med i backupen |
+
+- **Fingeravtrykk i manifestet:** `manifest.json` har `secret: {source: 'env'|'file'|'legacy', fp: {totp, seal, settings, domains, hmac}}`
+  – HMAC av hver avledede nøkkel over en fast tekst. Hemmeligheten og nøklene står aldri i arkivet, logges aldri og sendes aldri
+  til nettleseren.
+- **Kjent gammel nøkkel** (vanligst: backupen er laget på en installasjon uten `SESSION_SECRET`, med reservenøkkelen, og serveren
+  bruker nå `session-secret` eller `SESSION_SECRET`): gjenopprettingen dekrypterer 2FA-hemmeligheter og forseglede verdier med den
+  gamle nøkkelen og krypterer dem med den nye, i samme transaksjon som tabellene. Svaret (`messages`, `secret`) sier hva som ble
+  kryptert på nytt. Gjenopprettingskoder og app-tokens nullstilles ikke stille: meldingen sier hvilke brukere som bør lage nye.
+- **Ukjent gammel nøkkel** (en annen server med egen `session-secret`): lista og opplastingssvaret har `secretMismatch: true`, og
+  gjenopprettingsdialogen viser en advarsel før du trykker Gjenopprett. Kopier helst `session-secret` (eller `SESSION_SECRET`) fra
+  den gamle serveren først. Valget **Slå av tofaktor for brukerne i backupen der nøkkelen ikke kan leses** (`disable2fa`, standard
+  på) gjør at ingen låses ute; det er trygt fordi gjenoppretting krever innlogget admin og passordet på nytt. Uten valget har de
+  berørte 2FA på, men får en klar melding ved innlogging (ingen innlogging uten 2FA).
+- **Allerede gjenopprettet, og 2FA virker ikke** («Tofaktor-nøkkelen kan ikke leses …»): kjør på serveren
+  `docker compose exec -u 1000 os npm run rekey-secrets` (krypterer på nytt det som kan leses med reservenøkkelen, `session-secret`
+  eller `SESSION_SECRET`; `--dry-run` viser først hva som skjer). Har du `session-secret` fra den gamle serveren, kopier den inn i
+  containeren og legg til `--old-secret-file <sti>`. Start serveren på nytt etterpå. Det som fortsatt ikke kan leses: slå av 2FA med
+  passordet (Innstillinger → Innlogging → Slå av 2FA), la en admin trykke **Nullstill** under brukeren, eller kjør
+  `npm run reset-2fa -- <brukernavn>` på serveren (eneste admin). Lag så nye gjenopprettingskoder og logg inn på nytt i appene.
 
 ## Gjenopprett fra en fil på PC-en
 

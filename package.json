@@ -15,7 +15,9 @@
     "test:e2e": "node --test --test-concurrency=1 \"test/e2e51/*.e2e.mjs\"",
     "a11y": "node test/ui51/a11y.mjs",
     "test:visual": "node test/ui51/visual.mjs",
-    "reset-password": "node scripts/reset-password.js"
+    "reset-password": "node scripts/reset-password.js",
+    "reset-2fa": "node scripts/reset-2fa.js",
+    "rekey-secrets": "node scripts/rekey-secrets.js"
   },
   "engines": {
     "node": ">=22"

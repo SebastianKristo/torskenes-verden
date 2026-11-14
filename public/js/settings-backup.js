@@ -7,6 +7,8 @@
 // Prompt 90 (BKUP90): «Gjenopprett fra fil …» velger en backupfil fra PC-en (.tar.gz/.tar.zst, + .enc), laster den opp i biter på
 // 64 MB (POST /api/backup/upload, X-Backup-Filename/X-Upload-Size/X-Upload-Id/X-Upload-Offset) med fremdrift, og åpner så samme
 // gjenopprettingsark som for backupene i lista (nøkkelfelt når serveren ikke har nøkkelen: needKey). Opplastede vises som «Lastet opp».
+// Prompt 91 (TFA91): secretMismatch/secretRekey fra lista/opplastingen → advarsel om serverhemmeligheten i arket før Gjenopprett,
+// og valget disable2fa (standard på). Svaret (messages) forteller hva som ble kryptert på nytt eller ikke kunne leses.
 import { esc } from './util.js';
 import { store } from './store.js';
 import { fmtDate, fmtTime } from './i18n.js';
@@ -317,13 +319,27 @@ function restoreSheet() {
     ${known ? `<div class="kal-seg bk-seg" role="group"><button type="button" class="kal-seg-b" data-bk-rall="1" aria-pressed="${R.all}">Hele backupen</button><button type="button" class="kal-seg-b" data-bk-rall="0" aria-pressed="${!R.all}">Velg moduler</button></div>` : '<p>Fila er kryptert, og serveren har ikke nøkkelen. Lim inn gjenopprettingsnøkkelen, så gjenopprettes alt som er i backupen.</p>'}
     ${R.all ? '' : `<div class="bk-chips">${mods.map((m) => `<button type="button" class="bk-chip${R.mods.includes(m) ? ' on' : ''}" data-bk-rmod="${m}" aria-pressed="${R.mods.includes(m)}">${esc(MODULES.find((y) => y[0] === m)?.[1] ?? m)}</button>`).join('')}</div>`}
     <div class="bk-warn"><b>Nåværende data overskrives.</b> Det tas automatisk en sikkerhetskopi først, så du kan angre ved å gjenopprette den.</div>
+    ${secretBox91(x, R)}
     <label class="sg-field"><span>Passord</span><input type="password" name="bkpw" value="${esc(R.pw)}" autocomplete="current-password" placeholder="Ditt passord" data-bk-pw required></label>
     ${needKey || x.encrypted ? `<label class="sg-field"><span>Gjenopprettingsnøkkel</span><input type="password" name="bkkey" value="${esc(R.key ?? '')}" autocomplete="off" placeholder="${needKey ? 'xxxxxxxx-xxxxxxxx-xxxxxxxx-xxxxxxxx' : 'Bare hvis nøkkelen er byttet'}" data-bk-key${needKey ? ' required' : ''}></label>` : ''}
     ${R.err ? `<div class="upd-err" role="alert">${esc(R.err)}</div>` : ''}
     ${R.done ? `<div class="bk-msg2" role="status">${esc(R.done)}</div>` : ''}
-    ${R.notes?.length ? `<details class="bk-notes" data-no-i18n><summary>${R.notes.length} merknad${R.notes.length > 1 ? 'er' : ''} (backup fra en annen versjon)</summary><ul>${R.notes.map((n) => `<li>${esc(n)}</li>`).join('')}</ul></details>` : ''}
+    ${R.notes?.length ? `<details class="bk-notes" data-no-i18n${R.secretNotes ? ' open' : ''}><summary>${R.notes.length} merknad${R.notes.length > 1 ? 'er' : ''}</summary><ul>${R.notes.map((n) => `<li>${esc(n)}</li>`).join('')}</ul></details>` : ''}
     <div class="upd-btns"><button type="button" class="sg-btn" data-bk="rclose">${R.done ? 'Lukk' : 'Avbryt'}</button>${R.done ? (R.reload ? '<button type="button" class="sg-btn pri" data-bk="reloadpage">Last siden på nytt</button>' : '') : `<button type="submit" class="sg-btn pri red"${R.busy ? ' disabled' : ''}>${R.busy ? 'Gjenoppretter …' : 'Gjenopprett'}</button>`}</div>
   </form>`;
+}
+
+/**
+ * Prompt 91: backupen er laget med en annen serverhemmelighet. Ukjent gammel nøkkel → tydelig advarsel og valget om å slå av 2FA for
+ * brukere med uleselig nøkkel (standard på, så ingen låses ute). Kjent gammel nøkkel → info om at alt krypteres på nytt.
+ */
+function secretBox91(x, R) {
+  if (R.done) return '';
+  if (x.secretMismatch) return `<div class="bk-warn" role="alert" data-bk-secret><b>Backupen er laget med en annen serverhemmelighet.</b> Tofaktor, lagrede integrasjonsnøkler og app-innlogginger vil ikke virke etterpå. Kopier fila session-secret (eller SESSION_SECRET) fra den gamle serveren først, eller sett dem opp på nytt etterpå.</div>
+    <label class="sg-field" style="display:flex;align-items:flex-start;gap:10px;cursor:pointer"><input type="checkbox" data-bk-d2fa${R.d2fa !== false ? ' checked' : ''} style="margin-top:3px;flex:none"><span>Slå av tofaktor for brukerne i backupen der nøkkelen ikke kan leses, så ingen låses ute. De logger inn med passord og setter det opp på nytt.</span></label>`;
+  if (x.secretHmac && !x.secretRekey) return '<p data-bk-secret>Backupen er laget med en annen serverhemmelighet. Gjenopprettingskoder for tofaktor og app-innlogginger fra backupen virker ikke etterpå: lag nye.</p>';
+  if (x.secretRekey) return `<p data-bk-secret>Backupen er laget med en annen serverhemmelighet, men serveren kjenner den gamle nøkkelen. Tofaktor og lagrede nøkler krypteres på nytt under gjenopprettingen.${x.secretHmac ? ' Gjenopprettingskoder for tofaktor og app-innlogginger kan ikke krypteres på nytt: lag nye etterpå.' : ''}</p>`;
+  return '';
 }
 
 export async function backupClick(e) {
@@ -399,6 +415,7 @@ export function backupChange(e) {
     save({ cloud: { [k]: v, ...(on ? { enabled: true } : {}) } }, 'where').then(() => { if (B.s.cloud.enabled) B.cloudOpen = false; });
     return true;
   }
+  if (t.matches?.('[data-bk-d2fa]') && B.restore) { B.restore.d2fa = !!t.checked; return true; } // prompt 91
   if (!t.matches?.('[data-bk-sel]')) return false;
   save({ [t.dataset.bkSel]: t.value }, 'auto');
   return true;
@@ -430,9 +447,10 @@ export async function backupSubmit(e) {
   const modules = R.all ? (Array.isArray(x.modules) && x.modules.length ? x.modules : undefined) : R.mods;
   R.busy = true; R.err = ''; rerender();
   try {
-    const r = await req('/restore', { method: 'POST', json: { id: R.id, modules, password: R.pw, ...(R.key ? { key: R.key } : {}) } });
+    const r = await req('/restore', { method: 'POST', json: { id: R.id, modules, password: R.pw, ...(R.key ? { key: R.key } : {}), disable2fa: R.d2fa !== false } });
     R.done = `✓ Gjenopprettet${r?.safetyId ? ' · sikkerhetskopi tatt først' : ''}.${(r?.modules ?? modules ?? []).includes('innstillinger') ? ' Brukere og passord er nå de fra backupen.' : ''}`; R.reload = true; R.pw = ''; R.key = '';
     R.notes = Array.isArray(r?.messages) ? r.messages.slice(0, 30) : [];
+    R.secretNotes = !!(r?.secret && !r.secret.same); // prompt 91: meldingene om serverhemmeligheten vises åpne
     B.list = listOf(await req('/list').catch(() => B.list));
   } catch (err) { R.needKey = !!err.data?.needKey || R.needKey; R.err = err.status === 403 && /passord/i.test(err.message) ? 'Feil passord.' : err.message; }
   R.busy = false; rerender();

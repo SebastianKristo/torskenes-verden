@@ -9,7 +9,7 @@ import { randomBytes } from 'node:crypto';
 import { join, resolve } from 'node:path';
 import { config } from './config.js';
 import { db, kv, OWNER } from './db.js';
-import { createSession, destroySession, sessionUser, rememberDevice, pauseDevice, forgetDevice, currentDeviceId, currentSessionId, trustIp, isLan, requireAuth, requireAdmin, clientIp, verifyLogin, createTicket, redeemTicket, userInfo, listUsers, listUsersFor, createUser, deleteUser, updateUser, setPassword, checkPassword, isAdmin, needsSetup, setupServer, serverName, setServerName, startTotpSetup, confirmTotpSetup, disableTotp, loginBlocked, loginFailed, loginSucceeded } from './auth.js';
+import { createSession, destroySession, sessionUser, rememberDevice, pauseDevice, forgetDevice, currentDeviceId, currentSessionId, trustIp, isLan, requireAuth, requireAdmin, clientIp, verifyLogin, createTicket, redeemTicket, userInfo, listUsers, listUsersFor, createUser, deleteUser, updateUser, setPassword, checkPassword, isAdmin, needsSetup, setupServer, serverName, setServerName, startTotpSetup, confirmTotpSetup, disableTotp, totpReadable, loginBlocked, loginFailed, loginSucceeded } from './auth.js';
 import * as integrations from './integrations.js';
 import { cfg, publicConfig, updateConfig, runRequest, userCfgSet, runAsUser } from './settings.js';
 import finansApi from './finans/routes.js';
@@ -468,7 +468,9 @@ authed.put('/password', async (c) => {
 const fail = (c, e) => c.json({ error: e.message }, e.status ?? 400);
 // Alle innloggede ser listen (brukes til deling av boliger og huskelister); bare admin kan endre den.
 // Vanlige brukere ser bare id, navn og profilbilde om de andre (prompt 21), ikke rolle, brukernavn eller 2FA.
-authed.get('/users', (c) => c.json({ me: userInfo(c.get('user')), users: listUsersFor(c.get('user')) }));
+// Prompt 91: totpUnreadable = 2FA er på, men hemmeligheten kan ikke leses med dagens serverhemmelighet (bare et flagg, aldri nøkkelen).
+const tfaFlag91 = (u) => (u && totpReadable(u.id) === false ? { ...u, totpUnreadable: true } : u);
+authed.get('/users', (c) => c.json({ me: tfaFlag91(userInfo(c.get('user'))), users: listUsersFor(c.get('user')).map(tfaFlag91) }));
 authed.post('/users', requireAdmin, async (c) => {
   try { return c.json(createUser(await c.req.json().catch(() => ({})))); } catch (e) { return fail(c, e); }
 });
@@ -500,7 +502,7 @@ authed.post('/auth/totp/disable', async (c) => {
   const ip = clientIp(c), wait = loginBlocked(ip);
   if (wait) return c.json({ error: `For mange forsøk. Prøv igjen om ${Math.ceil(wait / 60)} min.` }, 429);
   const b = await c.req.json().catch(() => ({}));
-  try { disableTotp(c.get('user'), b); loginSucceeded(ip); return c.json({ ok: true }); } catch (e) { loginFailed(ip); return fail(c, e); }
+  try { disableTotp(c.get('user'), b); loginSucceeded(ip); return c.json({ ok: true }); } catch (e) { if (e.code === 'TOTP_UNREADABLE') return c.json({ error: e.message, unreadable: true }, 409); loginFailed(ip); return fail(c, e); } // prompt 91
 });
 // Fritt innhold per bruker (layout, topplinje, nyhetsbar, rekkefølge i sidemenyen, mobilvalg). PUT fletter toppnivånøkler.
 authed.get('/prefs', (c) => c.json(kv.get(c.get('user'), 'prefs', {})));

@@ -43,9 +43,10 @@
 | Algoritme | RFC 6238, SHA-1, 6 siffer, 30 s |
 | Klokkeavvik | ±1 tidsvindu, og samme kode kan ikke brukes to ganger |
 | Lagring | Hemmeligheten krypteres med AES-256-GCM (`TOTP_ENC_KEY` eller avledet fra `SESSION_SECRET`). Gjenopprettingskodene lagres som HMAC. |
+| Uleselig nøkkel | Er serverhemmeligheten byttet (f.eks. etter gjenoppretting av en backup fra en annen server), gir en kode meldingen «Tofaktor-nøkkelen kan ikke leses fordi serverhemmeligheten er endret …» i stedet for en kryptofeil. Innlogging uten 2FA gis aldri. Slå av med passordet og sett opp på nytt; se [backup](backup.md#serverhemmeligheten-og-gjenoppretting). |
 | Innloggingssteg | «Tofaktor er på for X …». Billetten varer 5 min, med maks 5 forsøk. |
 | Slå av | Krever passord eller en gyldig kode |
-| Nødvei | `npm run reset-password -- <bruker>` på serveren |
+| Nødvei | En admin trykker **Nullstill** ved tofaktor under brukeren. Eneste admin: `npm run reset-2fa -- <bruker>` (slår bare av 2FA) eller `npm run reset-password -- <bruker>` (nytt passord + 2FA av) på serveren – aldri over nett. `npm run rekey-secrets` krypterer 2FA-nøkler på nytt når den gamle hemmeligheten er kjent. |
 
 ## Pålitelig enhet på lokalt nett
 
