@@ -1,0 +1,43 @@
+{
+  "beskrivelse": "Fasit for neste trekkdato for abonnementer og faste trekk (F-logikk L2). Serveren er eneste kilde. Klientene skal ikke regne ut eller sende nextDate (Fase 2).",
+  "felt": {
+    "syklus": "monthly (månedlig), quarterly (kvartalsvis), halfyearly (halvårlig), yearly (årlig), biennial (annethvert år), weekly (ukentlig), biweekly (hver 2. uke).",
+    "anker": "En kjent trekkdato: første trekk eller forrige trekk. Den bestemmer trekkdagen (dag i måneden, eller ukedag for ukesykluser) og fasen i syklusen.",
+    "idag": "«I dag» i Oslo (YYYY-MM-DD).",
+    "neste": "Forventet neste trekkdato (YYYY-MM-DD)."
+  },
+  "regler": {
+    "serie": "Trekkene er anker + k × syklus (k = 0, 1, 2 …). Neste trekk er det første i serien som er lik eller senere enn i dag. Et trekk i dag er neste trekk.",
+    "maanedsdag": "For månedssykluser er dagen alltid ankerdagen, men aldri etter siste dag i måneden: 31. januar gir 28. februar (29. i skuddår), og deretter 31. mars. Dagen glir ikke.",
+    "uke": "weekly = +7 dager, biweekly = +14 dager fra ankeret.",
+    "bankdag": "Datoen er avtaledatoen. Flytting til neste virkedag (helg) er en egen visning (subs-cal42 bankDay42) og er ikke med her."
+  },
+  "vektorer": [
+    { "id": "a01", "syklus": "monthly", "anker": "2026-01-15", "idag": "2026-11-14", "neste": "2026-11-15" },
+    { "id": "a02", "syklus": "monthly", "anker": "2026-01-15", "idag": "2026-11-15", "neste": "2026-11-15", "merknad": "trekk i dag" },
+    { "id": "a03", "syklus": "monthly", "anker": "2026-01-15", "idag": "2026-11-16", "neste": "2026-12-15" },
+    { "id": "a04", "syklus": "monthly", "anker": "2026-01-31", "idag": "2026-02-01", "neste": "2026-02-28", "merknad": "31. januar → februar" },
+    { "id": "a05", "syklus": "monthly", "anker": "2028-01-31", "idag": "2028-02-01", "neste": "2028-02-29", "merknad": "skuddår" },
+    { "id": "a06", "syklus": "monthly", "anker": "2026-01-31", "idag": "2026-03-01", "neste": "2026-03-31", "merknad": "dagen glir ikke etter februar" },
+    { "id": "a07", "syklus": "monthly", "anker": "2026-01-31", "idag": "2026-04-05", "neste": "2026-04-30" },
+    { "id": "a08", "syklus": "monthly", "anker": "2026-01-20", "idag": "2026-12-21", "neste": "2027-01-20", "merknad": "over nyttår" },
+    { "id": "a09", "syklus": "monthly", "anker": "2026-12-05", "idag": "2026-11-14", "neste": "2026-12-05", "merknad": "første trekk er ikke kommet ennå" },
+    { "id": "a10", "syklus": "quarterly", "anker": "2026-01-31", "idag": "2026-02-01", "neste": "2026-04-30" },
+    { "id": "a11", "syklus": "quarterly", "anker": "2026-02-15", "idag": "2026-11-14", "neste": "2026-11-15" },
+    { "id": "a12", "syklus": "quarterly", "anker": "2026-03-10", "idag": "2026-11-14", "neste": "2026-12-10" },
+    { "id": "a13", "syklus": "halfyearly", "anker": "2026-03-31", "idag": "2026-04-01", "neste": "2026-09-30" },
+    { "id": "a14", "syklus": "halfyearly", "anker": "2026-08-31", "idag": "2026-09-01", "neste": "2027-02-28" },
+    { "id": "a15", "syklus": "yearly", "anker": "2025-03-01", "idag": "2026-11-14", "neste": "2027-03-01" },
+    { "id": "a16", "syklus": "yearly", "anker": "2025-12-01", "idag": "2026-11-14", "neste": "2026-12-01" },
+    { "id": "a17", "syklus": "yearly", "anker": "2025-11-14", "idag": "2026-11-14", "neste": "2026-11-14", "merknad": "trekk i dag" },
+    { "id": "a18", "syklus": "yearly", "anker": "2024-02-29", "idag": "2025-01-10", "neste": "2025-02-28", "merknad": "29. februar i et vanlig år" },
+    { "id": "a19", "syklus": "yearly", "anker": "2024-02-29", "idag": "2027-03-01", "neste": "2028-02-29", "merknad": "tilbake til 29. i skuddår" },
+    { "id": "a20", "syklus": "biennial", "anker": "2025-06-10", "idag": "2026-11-14", "neste": "2027-06-10" },
+    { "id": "a21", "syklus": "biennial", "anker": "2025-12-01", "idag": "2026-11-14", "neste": "2027-12-01", "merknad": "ikke neste 1. desember, men om to år fra ankeret" },
+    { "id": "a22", "syklus": "weekly", "anker": "2026-11-02", "idag": "2026-11-14", "neste": "2026-11-16" },
+    { "id": "a23", "syklus": "weekly", "anker": "2026-11-02", "idag": "2026-11-16", "neste": "2026-11-16", "merknad": "trekk i dag" },
+    { "id": "a24", "syklus": "biweekly", "anker": "2026-11-02", "idag": "2026-11-14", "neste": "2026-11-16" },
+    { "id": "a25", "syklus": "biweekly", "anker": "2026-11-09", "idag": "2026-11-14", "neste": "2026-11-23" },
+    { "id": "a26", "syklus": "biweekly", "anker": "2026-12-21", "idag": "2026-12-30", "neste": "2027-01-04", "merknad": "over nyttår" }
+  ]
+}

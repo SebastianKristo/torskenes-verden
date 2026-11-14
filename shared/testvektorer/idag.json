@@ -1,0 +1,27 @@
+{
+  "beskrivelse": "Fasit for «i dag» (F-logikk L3): Oslo-datoen for et tidspunkt i UTC, rundt midnatt og ved bytte til og fra sommertid. Husstandsdata regnes i Oslo-tid (BESLUTNINGER.md Q20). toISOString().slice(0, 10) gir UTC-datoen og er feil mellom 00 og 01 (vinter) eller 02 (sommer).",
+  "felt": { "utc": "Tidspunkt i UTC.", "oslo": "Forventet dato i Europe/Oslo (YYYY-MM-DD).", "merknad": "Lokal Oslo-tid for tidspunktet." },
+  "vektorer": [
+    { "id": "i01", "utc": "2026-11-16T11:00:00Z", "oslo": "2026-11-16", "merknad": "12:00 vintertid" },
+    { "id": "i02", "utc": "2026-11-15T22:59:59Z", "oslo": "2026-11-15", "merknad": "23:59:59 vintertid" },
+    { "id": "i03", "utc": "2026-11-15T23:00:00Z", "oslo": "2026-11-16", "merknad": "00:00 vintertid" },
+    { "id": "i04", "utc": "2026-11-15T23:30:00Z", "oslo": "2026-11-16", "merknad": "00:30 vintertid" },
+    { "id": "i05", "utc": "2026-06-30T21:59:59Z", "oslo": "2026-06-30", "merknad": "23:59:59 sommertid" },
+    { "id": "i06", "utc": "2026-06-30T22:00:00Z", "oslo": "2026-07-01", "merknad": "00:00 sommertid" },
+    { "id": "i07", "utc": "2026-06-30T23:45:00Z", "oslo": "2026-07-01", "merknad": "01:45 sommertid" },
+    { "id": "i08", "utc": "2026-12-31T23:00:00Z", "oslo": "2027-01-01", "merknad": "nyttår 00:00" },
+    { "id": "i09", "utc": "2026-03-28T22:59:59Z", "oslo": "2026-03-28", "merknad": "lørdag 23:59:59, natten før sommertid" },
+    { "id": "i10", "utc": "2026-03-28T23:00:00Z", "oslo": "2026-03-29", "merknad": "søndag 00:00 vintertid" },
+    { "id": "i11", "utc": "2026-03-29T00:59:59Z", "oslo": "2026-03-29", "merknad": "01:59:59 rett før klokka stilles fram" },
+    { "id": "i12", "utc": "2026-03-29T01:00:00Z", "oslo": "2026-03-29", "merknad": "03:00 sommertid" },
+    { "id": "i13", "utc": "2026-03-29T21:59:59Z", "oslo": "2026-03-29", "merknad": "23:59:59 første sommertidsdøgn" },
+    { "id": "i14", "utc": "2026-03-29T22:00:00Z", "oslo": "2026-03-30", "merknad": "mandag 00:00 sommertid" },
+    { "id": "i15", "utc": "2026-10-24T21:59:59Z", "oslo": "2026-10-24", "merknad": "lørdag 23:59:59, natten før vintertid" },
+    { "id": "i16", "utc": "2026-10-24T22:00:00Z", "oslo": "2026-10-25", "merknad": "søndag 00:00 sommertid" },
+    { "id": "i17", "utc": "2026-10-25T00:30:00Z", "oslo": "2026-10-25", "merknad": "02:30 sommertid (første gang)" },
+    { "id": "i18", "utc": "2026-10-25T01:30:00Z", "oslo": "2026-10-25", "merknad": "02:30 vintertid (andre gang)" },
+    { "id": "i19", "utc": "2026-10-25T22:59:59Z", "oslo": "2026-10-25", "merknad": "23:59:59 første vintertidsdøgn" },
+    { "id": "i20", "utc": "2026-10-25T23:00:00Z", "oslo": "2026-10-26", "merknad": "mandag 00:00 vintertid" },
+    { "id": "i21", "utc": "2028-02-28T23:30:00Z", "oslo": "2028-02-29", "merknad": "skuddag 00:30" }
+  ]
+}

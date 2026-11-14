@@ -66,3 +66,14 @@ Grunnregler for beslutningene:
 | Q33 | Fanelinje som kan tilpasses per seksjon (iOS) | **Tilpasningen beholdes**, men bygges på systemets `TabView` (maks 5 faner, resten under «Mer»). Fanelinja skifter ikke innhold per seksjon |
 | Q34 | Automatisk rydding av kalendere | **Ikke uten handling.** Vises som forslag («Slå sammen 6 → 4?») med Angre |
 | Q35 | Onboarding som blokkerer dype lenker | **Nei.** Dype lenker åpnes direkte, og onboardingen vises som et kort som kan fullføres senere |
+
+## Tillegg fra Fase 1 (testvektorer)
+
+| # | Spørsmål | Beslutning |
+|---|---|---|
+| Q36 | «fredag om to uker» | Fredag i uka to uker frem (fra mandag 16.11 = 04.12) |
+| Q37 | Klokkeslett uten dato som har passert | I morgen (som Glimt i dag) |
+| Q38 | «halv tre» | 14:30 på dagtid (som i dag) |
+| Q39 | Lokal adresse for serveradresse-valg | 10/8, 172.16/12, 192.168/16, 100.64/10 (Tailscale), 169.254/16, `localhost`, `.local`, `.lan`, `.home.arpa`, `.internal` og navn uten punktum. **«Pålitelig enhet» (passord hoppes over) bruker fortsatt den strengere regelen** fra tilkoblingen (`auth.js isLan`), uendret |
+| Q40 | Abonnementssykluser | Kvartalsvis, halvårlig, ukentlig og hver 2. uke legges til på serveren i Fase 2 (i tillegg til månedlig, årlig og annethvert år). Trekkdagen glir ikke (31.1 → 28.2 → 31.3) |
+| Q41 | Prompt-arkivet | `design_handoff_homelab/prompts/prompt-NN.md` er et dokumentarkiv og får beholde nummer i navnet. Navneregelen gjelder kode |

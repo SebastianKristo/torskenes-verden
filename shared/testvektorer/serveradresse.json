@@ -1,0 +1,47 @@
+{
+  "beskrivelse": "Fasit for serveradressen i appene (F-logikk L8): normalisering av det brukeren skriver, og om adressen er på lokalt nett. Dette må skje på enheten før appen har kontakt med serveren, så alle fem implementasjonene (Android-appen, Android Kalender, Wear, iOS, iOS Kalender) skal kjøre denne fila. Serverens egne hjelpere kjøres i test/testvektorer.test.js.",
+  "felt": {
+    "inn": "Det brukeren skriver eller har lagret.",
+    "normalisert": "Adressen appen skal bruke (skjema + vert + ev. port, uten sti og uten / til slutt), eller null når den er tom.",
+    "lokal": "Verten er på lokalt nett (da er http tillatt).",
+    "tillatt": "false når adressen bruker http mot en vert som ikke er lokal (klartekst bare på lokalt nett, Lokal86).",
+    "paaliteligEnhet": "Bare for IP-adresser: om en klient med denne adressen regnes som lokal for «Pålitelig enhet» (docs/sikkerhet.md). Det er strengere enn «lokal»: bare 10.0.0.0/8, 172.16.0.0/12 og 192.168.0.0/16, aldri 100.64/10 eller 169.254/16."
+  },
+  "regler": {
+    "rydding": "Mellomrom foran og bak fjernes, og / til slutt fjernes. Sti fjernes (appen legger selv til /finans/api). Porten beholdes.",
+    "skjema": "Uten skjema: http:// for lokale verter, ellers https://. Et skjema brukeren har skrevet, beholdes.",
+    "lokal": "Lokalt nett = localhost, loopback (127/8, ::1), privat IPv4 (10/8, 172.16/12, 192.168/16), link-local (169.254/16, fe80::/10), CGNAT 100.64/10 (Tailscale), IPv6 ULA (fc00::/7), navn uten punktum, og navn som slutter på .local, .lan, .home.arpa eller .internal. Avgjøres uten DNS-oppslag.",
+    "gammel-standard": "Den gamle, feilstavede standardadressen (nøyaktig den, med eller uten / til slutt, uansett store og små bokstaver) blir https://os.smarthjemeksperten.no. Andre adresser røres ikke. Den gamle stavemåten står med \\u0065 i fila, så et søk etter den bare treffer migreringen."
+  },
+  "vektorer": [
+    { "id": "s01", "inn": "os.smarthjemeksperten.no", "normalisert": "https://os.smarthjemeksperten.no", "lokal": false, "tillatt": true },
+    { "id": "s02", "inn": "https://os.smarthjemeksperten.no/", "normalisert": "https://os.smarthjemeksperten.no", "lokal": false, "tillatt": true },
+    { "id": "s03", "inn": "  https://homelab.example.no  ", "normalisert": "https://homelab.example.no", "lokal": false, "tillatt": true },
+    { "id": "s04", "inn": "https://homelab.example.no/finans/", "normalisert": "https://homelab.example.no", "lokal": false, "tillatt": true },
+    { "id": "s05", "inn": "homelab.example.no:8443", "normalisert": "https://homelab.example.no:8443", "lokal": false, "tillatt": true },
+    { "id": "s06", "inn": "http://homelab.example.no", "normalisert": "http://homelab.example.no", "lokal": false, "tillatt": false },
+    { "id": "s07", "inn": "10.69.1.39:3000", "normalisert": "http://10.69.1.39:3000", "lokal": true, "tillatt": true, "paaliteligEnhet": true },
+    { "id": "s08", "inn": "https://10.69.1.39:3000/", "normalisert": "https://10.69.1.39:3000", "lokal": true, "tillatt": true, "paaliteligEnhet": true },
+    { "id": "s09", "inn": "192.168.1.20", "normalisert": "http://192.168.1.20", "lokal": true, "tillatt": true, "paaliteligEnhet": true },
+    { "id": "s10", "inn": "http://192.168.1.20:3000/finans/api", "normalisert": "http://192.168.1.20:3000", "lokal": true, "tillatt": true, "paaliteligEnhet": true },
+    { "id": "s11", "inn": "172.16.0.5:3000", "normalisert": "http://172.16.0.5:3000", "lokal": true, "tillatt": true, "paaliteligEnhet": true },
+    { "id": "s12", "inn": "172.31.255.1", "normalisert": "http://172.31.255.1", "lokal": true, "tillatt": true, "paaliteligEnhet": true },
+    { "id": "s13", "inn": "172.32.0.1", "normalisert": "https://172.32.0.1", "lokal": false, "tillatt": true, "paaliteligEnhet": false },
+    { "id": "s14", "inn": "192.169.1.1", "normalisert": "https://192.169.1.1", "lokal": false, "tillatt": true, "paaliteligEnhet": false },
+    { "id": "s15", "inn": "11.0.0.1", "normalisert": "https://11.0.0.1", "lokal": false, "tillatt": true, "paaliteligEnhet": false },
+    { "id": "s16", "inn": "8.8.8.8", "normalisert": "https://8.8.8.8", "lokal": false, "tillatt": true, "paaliteligEnhet": false },
+    { "id": "s17", "inn": "100.100.1.2:3000", "normalisert": "http://100.100.1.2:3000", "lokal": true, "tillatt": true, "paaliteligEnhet": false },
+    { "id": "s18", "inn": "100.128.0.1", "normalisert": "https://100.128.0.1", "lokal": false, "tillatt": true, "paaliteligEnhet": false },
+    { "id": "s19", "inn": "169.254.10.1", "normalisert": "http://169.254.10.1", "lokal": true, "tillatt": true, "paaliteligEnhet": false },
+    { "id": "s20", "inn": "nas.local:3000", "normalisert": "http://nas.local:3000", "lokal": true, "tillatt": true },
+    { "id": "s21", "inn": "homelab.lan", "normalisert": "http://homelab.lan", "lokal": true, "tillatt": true },
+    { "id": "s22", "inn": "homelab.home.arpa", "normalisert": "http://homelab.home.arpa", "lokal": true, "tillatt": true },
+    { "id": "s23", "inn": "homelab.internal", "normalisert": "http://homelab.internal", "lokal": true, "tillatt": true },
+    { "id": "s24", "inn": "localhost:3000", "normalisert": "http://localhost:3000", "lokal": true, "tillatt": true },
+    { "id": "s25", "inn": "nas", "normalisert": "http://nas", "lokal": true, "tillatt": true },
+    { "id": "s26", "inn": "", "normalisert": null, "lokal": false, "tillatt": false },
+    { "id": "s27", "inn": "https://os.smarthjem\u0065xperten.no", "normalisert": "https://os.smarthjemeksperten.no", "lokal": false, "tillatt": true, "gammelStandard": true },
+    { "id": "s28", "inn": "https://os.smarthjem\u0065xperten.no/", "normalisert": "https://os.smarthjemeksperten.no", "lokal": false, "tillatt": true, "gammelStandard": true },
+    { "id": "s29", "inn": "HTTPS://OS.SMARTHJEMEXPERTEN.NO", "normalisert": "https://os.smarthjemeksperten.no", "lokal": false, "tillatt": true, "gammelStandard": true }
+  ]
+}
