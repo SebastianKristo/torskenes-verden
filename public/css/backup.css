@@ -44,3 +44,9 @@ html[data-hl="2c"] .kal-seg-b{border-radius:0;font-family:var(--sans)}
 .bk-rerr{color:var(--bk-neg,#b23a2a)}
 .bk-racts{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
 .bk-rlog{margin:4px 0 0;padding:10px 12px;border-radius:10px;background:rgba(127,127,127,.1);font:12px/1.5 ui-monospace,'IBM Plex Mono',monospace;white-space:pre-wrap;word-break:break-all;max-height:220px;overflow:auto}
+
+/* Prompt 90: «Gjenopprett fra fil …» (fremdrift for opplastingen) og merknader etter gjenoppretting fra en annen versjon. */
+.sg-row.bk-up .sg-btn{flex:none;align-self:center}
+.bk-notes{font-size:13px;line-height:1.5;color:var(--upd-mute,#8a93a6)}
+.bk-notes summary{cursor:pointer;font-weight:600}
+.bk-notes ul{margin:6px 0 0;padding-left:18px;max-height:160px;overflow:auto;word-break:break-word}

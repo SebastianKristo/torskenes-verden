@@ -36,6 +36,7 @@ const st = {
   app: 'Homelab',
   qr: false, // prompt 38: serveren har QR-innlogging
   passkey: false, // prompt 51: serveren og nettleseren kan passkeys
+  restore: false, // prompt 90: gå til Innstillinger → Backup etter oppsettet (gjenopprett fra fil)
 };
 
 // Brukernavn foreslås fra navnet: små bokstaver, æ→ae, ø→o, å→a, bare a–z og 0–9.
@@ -87,6 +88,11 @@ function render(focus = true) {
     const rows = [['Admin', name || '–'], ['Server', form.serverName.value.trim() || 'Homelab'], ['Brukernavn', form.newUsername.value.trim().toLowerCase() || '–'], ['Bakgrunn', bgOf(st.bg)[1]], ['Tema', 'Papir · lys']];
     const box = $('g-sum'); box.replaceChildren();
     for (const [a, b] of rows) { const d = document.createElement('div'), x = document.createElement('span'), y = document.createElement('b'); x.textContent = a; y.textContent = b; d.append(x, y); box.append(d); }
+  }
+  if (show.s4) {
+    const r = $('g-restore');
+    r.setAttribute('aria-pressed', String(st.restore));
+    r.textContent = st.restore ? '✓ Etter oppsettet åpnes Innstillinger → Backup, der du velger «Gjenopprett fra fil …»' : 'Har du en backup? Gjenopprett fra fil etter oppsettet';
   }
   if (show['2fa']) {
     const c = form.code;
@@ -187,6 +193,8 @@ async function onboard() {
   if (!(await put({ hlTheme: '2c', design: 'lys', mobileDesign: 'papir', bgType: st.bg, photo }))) await put({ hlTheme: '2c', design: 'lys', photo });
   // Språket fra steg 1 lagres hos brukeren (prompt 27).
   await fetch('/api/me', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ language: lang() }) }).catch(() => {});
+  // Prompt 90: «Har du en backup?» → rett til Innstillinger → Backup (admin er nå innlogget; gjenopprettingen krever passordet).
+  if (st.restore) { noteUser(data.user?.id); location.href = '/#/innstillinger/backup'; return; }
   done(data.user);
 }
 
@@ -212,6 +220,7 @@ $('g-langs').addEventListener('click', async (e) => {
   await setLang(b.dataset.lang, { save: false });
   render(false);
 });
+$('g-restore').addEventListener('click', () => { st.restore = !st.restore; render(false); });
 $('g-recovery').addEventListener('click', () => { form.code.value = ''; go({ recovery: !st.recovery }); });
 $('g-bgs').addEventListener('click', (e) => {
   const b = e.target.closest('[data-bg]');

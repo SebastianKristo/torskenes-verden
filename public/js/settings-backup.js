@@ -4,6 +4,9 @@
 // GET /api/backup/list, POST /api/backup/key, POST /api/backup/restore {id, modules, password}, GET /api/backup/:id/download.
 // Prompt 30: HVOR → «SMB / nettverksdisk» åpner veiviseren (smb-wizard.js, /api/smb/*); av/på via PUT target.smb.enabled.
 // 404 (eldre server) → «ikke tilgjengelig». Under en kjøring hentes status hvert 1,5 s.
+// Prompt 90 (BKUP90): «Gjenopprett fra fil …» velger en backupfil fra PC-en (.tar.gz/.tar.zst, + .enc), laster den opp i biter på
+// 64 MB (POST /api/backup/upload, X-Backup-Filename/X-Upload-Size/X-Upload-Id/X-Upload-Offset) med fremdrift, og åpner så samme
+// gjenopprettingsark som for backupene i lista (nøkkelfelt når serveren ikke har nøkkelen: needKey). Opplastede vises som «Lastet opp».
 import { esc } from './util.js';
 import { store } from './store.js';
 import { fmtDate, fmtTime } from './i18n.js';
@@ -23,7 +26,8 @@ const SCOPES = [['all', 'Hele systemet'], ['finans', 'Bare Finans'], ['custom', 
 const DEF = { auto: true, schedule: 'nightly', keep: '30', notifyFail: true, scope: 'all', modules: MOD_IDS, target: { local: true, path: '/srv/backup' }, cloud: { enabled: false, provider: 'b2' }, encrypt: true, keySet: false };
 
 /** st: idle | loading | ok | missing | forbidden | error */
-const B = { st: 'idle', s: null, list: [], status: null, err: '', msg: '', saving: false, key: null, copied: false, restore: null, keySheet: null, poll: 0, wasRunning: false };
+const B = { st: 'idle', s: null, list: [], status: null, err: '', msg: '', saving: false, key: null, copied: false, restore: null, keySheet: null, poll: 0, wasRunning: false, up: null };
+const CHUNK = 64 * 1024 * 1024; // under grensen for én forespørsel gjennom Cloudflare-tunnelen
 let rerender = () => {};
 const admin = () => store.me?.me?.role === 'admin';
 
@@ -46,7 +50,7 @@ const norm = (s) => {
 const listOf = (d) => (Array.isArray(d) ? d : d?.items ?? d?.backups ?? []);
 /** Pågående jobb fra /status, uansett form ({running:{pct}} | {current} | {job}). */
 const runningJob = () => { const s = B.status; const j = s?.running ?? s?.current ?? s?.job ?? null; return j && (j.state == null || j.state === 'running' || j.state === 'queued') && !j.finishedAt ? j : null; };
-const lastJob = () => B.status?.last ?? B.status?.latest ?? B.list[0] ?? null;
+const lastJob = () => B.status?.last ?? B.status?.latest ?? B.list.find((x) => !x.uploaded && x.kind !== 'upload') ?? null; // prompt 90: en opplastet fil er ikke «siste backup»
 
 export function loadBackup(onChange) {
   if (onChange) rerender = onChange;
@@ -102,7 +106,7 @@ const when = (t) => {
   return `${fmtDate(d, { day: '2-digit', month: '2-digit' })} ${tm}`;
 };
 const nextTxt = (t) => { const d = new Date(t); if (Number.isNaN(+d)) return ''; const days = Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate()) - new Date(new Date().setHours(0, 0, 0, 0))) / 864e5); return `${days === 0 ? 'i dag' : days === 1 ? 'i morgen' : fmtDate(d, { weekday: 'short', day: 'numeric', month: 'short' })} ${fmtTime(d)}`; };
-const scopeName = (x) => { const sc = x?.scope ?? 'all'; if (sc === 'custom' && Array.isArray(x?.modules)) return x.modules.length === MOD_IDS.length ? 'Hele systemet' : x.modules.map((m) => MODULES.find((y) => y[0] === m)?.[1] ?? m).slice(0, 3).join(', ') + (x.modules.length > 3 ? ` +${x.modules.length - 3}` : ''); return SCOPES.find((s) => s[0] === sc)?.[1] ?? 'Hele systemet'; };
+const scopeName = (x) => { if (x?.needKey && Array.isArray(x.modules) && !x.modules.length) return 'Innhold ukjent til nøkkelen er limt inn'; const sc = x?.scope ?? 'all'; if (sc === 'custom' && Array.isArray(x?.modules)) return x.modules.length === MOD_IDS.length ? 'Hele systemet' : x.modules.map((m) => MODULES.find((y) => y[0] === m)?.[1] ?? m).slice(0, 3).join(', ') + (x.modules.length > 3 ? ` +${x.modules.length - 3}` : ''); return SCOPES.find((s) => s[0] === sc)?.[1] ?? 'Hele systemet'; };
 const atOf = (x) => x?.at ?? x?.finishedAt ?? x?.finished ?? x?.startedAt ?? x?.started;
 export const backupSummary = () => (!B.s ? '' : B.s.auto ? `${FREQ.find((f) => f[0] === B.s.schedule)?.[1] ?? ''} · ${scopeName(B.s)}` : 'Automatisk av');
 
@@ -133,6 +137,8 @@ export function backupView(h) {
     run ? `<div class="sg-row bk-run" role="status" aria-live="polite"><span class="sg-txt"><b>Tar backup … ${pct} %</b><span>Du kan lukke appen, den fortsetter i bakgrunnen.</span><span class="bk-bar"><i style="width:${pct}%"></i></span></span></div>`
       : h.row({ t: 'Ta backup nå', s: scopeName(S), btn: 'Start', act: 'data-bk="run"' }),
     B.msg ? `<div class="sg-row bk-msg" role="status">${esc(B.msg)}</div>` : '',
+    // Prompt 90: ny installasjon (ingen backuper her ennå) → gjenopprett fra fil står øverst.
+    ...(!B.list.length ? uploadRow(h, run, true) : []),
   ];
   const auto = [
     tog(h, { t: 'Automatisk backup', k: 'automatisk', s: 'Kjører i bakgrunnen på hjemmeserveren.', key: 'auto', on: S.auto }),
@@ -161,10 +167,14 @@ export function backupView(h) {
     b2 ? fld('keyId', 'Nøkkel-ID', '', cloud.keySet ? '•••••••• lagret' : 'keyID fra Backblaze', true) : '',
     b2 ? fld('appKey', 'Applikasjonsnøkkel', '', cloud.keySet ? '•••••••• lagret' : 'applicationKey', true) : '',
   ];
-  const ok = B.list.filter((x) => x.ok !== false);
+  const ok = B.list.filter((x) => x.ok !== false && !(x.uploaded || x.kind === 'upload'));
+  const upl = (x) => x.uploaded || x.kind === 'upload';
   const restore = [
-    ...(B.list.length ? B.list.filter((x) => x.kind !== 'safety' || B.list.length < 4).slice(0, 8).map((x) => h.row({ t: when(atOf(x)) || String(x.id), s: [size(x.size), scopeName(x), x.encrypted ? 'kryptert' : '', x.cloud ? 'i sky' : '', x.ok === false ? 'feilet' : ''].filter(Boolean).join(' · '), btn: 'Gjenopprett', act: `data-bk-restore="${esc(x.id)}"`, disabled: x.ok === false || !!run }))
-      : [h.row({ t: 'Ingen backuper ennå', s: 'Ta en backup nå, eller vent på den automatiske.' })]),
+    ...(B.list.length ? uploadRow(h, run) : []),
+    ...(B.list.length ? B.list.filter((x) => x.kind !== 'safety' || B.list.length < 4).slice(0, 8).map((x) => h.row({ t: when(atOf(x)) || String(x.id),
+      s: [upl(x) && x.created ? `laget ${fmtDate(new Date(x.created), { day: '2-digit', month: '2-digit', year: 'numeric' })}` : '', size(x.size), scopeName(x), x.encrypted ? 'kryptert' : '', x.cloud ? 'i sky' : '', x.ok === false ? 'feilet' : ''].filter(Boolean).join(' · '),
+      ...(upl(x) ? { v: 'Lastet opp', vc: 'var(--bk-pos)' } : {}), btn: 'Gjenopprett', act: `data-bk-restore="${esc(x.id)}"`, disabled: x.ok === false || !!run }))
+      : [h.row({ t: 'Ingen backuper ennå', s: 'Ta en backup nå, eller gjenopprett fra en fil du har lastet ned.' })]),
     ok[0] ? `<a class="sg-row bk-dl" href="${BASE}/${encodeURIComponent(ok[0].id)}/download" download><span class="sg-txt"><b>Last ned siste backup</b><span>${esc([`.${ok[0].format || 'tar.gz'}`, ok[0].encrypted ? 'kryptert' : '', size(ok[0].size)].filter(Boolean).join(' · '))}</span></span><span class="sg-btn2">Last ned</span></a>` : '',
   ];
   const groups = [
@@ -176,6 +186,65 @@ export function backupView(h) {
   ];
   if (B.err) { const gi = { auto: 1, what: 2, where: 3 }[B.errAt] ?? 0; groups[gi].rows.unshift({ html: `<div class="sg-row bk-err" role="alert">${esc(B.err)}</div>`, q: '' }); }
   return { groups, extra: restoreSheet() + keySheet() };
+}
+
+/** Prompt 90: «Gjenopprett fra fil …» med fremdrift for opplastingen. */
+function uploadRow(h, run, first = false) {
+  const U = B.up;
+  if (U?.busy) {
+    const pct = U.total ? Math.min(100, Math.floor((U.sent / U.total) * 100)) : 0;
+    return [`<div class="sg-row bk-run bk-up" role="status" aria-live="polite" data-no-i18n><span class="sg-txt"><b>${U.checking ? 'Sjekker backupfila …' : `Laster opp … ${pct} %`}</b><span>${esc(U.name)} · ${esc(size(U.sent))} av ${esc(size(U.total))}</span><span class="bk-bar"><i style="width:${U.checking ? 100 : pct}%"></i></span></span>${U.checking ? '' : '<button type="button" class="sg-btn" data-bk="upcancel">Avbryt</button>'}</div>`];
+  }
+  return [
+    h.row({ t: first ? 'Har du en backup? Gjenopprett fra fil …' : 'Gjenopprett fra fil …', k: 'gjenopprett fra fil last opp backupfil pc ny installasjon tar.gz tar.zst enc', s: 'En backupfil du har lastet ned (.tar.gz, .tar.zst, eventuelt .enc).', btn: 'Velg fil …', act: 'data-bk="upload"', disabled: !!run }),
+    U?.err ? `<div class="sg-row bk-err" role="alert" data-no-i18n>${esc(U.err)}</div>` : '',
+  ];
+}
+let upXhr = null;
+/** Én bit med XMLHttpRequest (fetch har ikke fremdrift for opplasting). → {status, data} */
+function sendChunk(blob, headers, onProgress) {
+  return new Promise((res, rej) => {
+    const x = new XMLHttpRequest();
+    upXhr = x;
+    x.open('POST', `${BASE}/upload`);
+    x.withCredentials = true;
+    x.setRequestHeader('Content-Type', 'application/octet-stream');
+    for (const [k, v] of Object.entries(headers)) x.setRequestHeader(k, v);
+    x.upload.onprogress = (e) => onProgress(e.loaded);
+    x.onload = () => { let data = null; try { data = JSON.parse(x.responseText); } catch { /* */ } res({ status: x.status, data }); };
+    x.onerror = () => rej(new Error('Opplastingen ble avbrutt. Sjekk nettet og prøv igjen.'));
+    x.onabort = () => rej(Object.assign(new Error('Avbrutt.'), { aborted: true }));
+    x.send(blob);
+  });
+}
+async function uploadFile(file) {
+  if (!file) return;
+  if (!/\.tar\.(gz|zst)(\.enc)?$/i.test(file.name)) { B.up = { err: 'Velg en backupfil fra Homelab (.tar.gz eller .tar.zst, eventuelt .enc).' }; rerender(); return; }
+  const U = B.up = { name: file.name, total: file.size, sent: 0, busy: true, checking: false, err: '' };
+  rerender();
+  let id = null, off = 0, last = 0, res = null;
+  try {
+    while (off < file.size || !res) {
+      const end = Math.min(file.size, off + CHUNK);
+      const head = id ? { 'X-Upload-Id': id, 'X-Upload-Offset': String(off) } : { 'X-Backup-Filename': encodeURIComponent(file.name), 'X-Upload-Size': String(file.size) };
+      const r = await sendChunk(file.slice(off, end), head, (n) => {
+        U.sent = off + n; U.checking = end >= file.size && n >= end - off;
+        if (Date.now() - last > 200 || U.checking) { last = Date.now(); rerender(); }
+      });
+      if (r.status === 202) { id = r.data?.uploadId; off = r.data?.received ?? end; U.sent = off; continue; }
+      if (r.status < 200 || r.status >= 300) throw new Error(r.data?.error || `Serveren svarte ${r.status}`);
+      res = r.data; break;
+    }
+  } catch (err) {
+    B.up = { err: err.aborted ? '' : err.message }; upXhr = null; rerender(); return;
+  }
+  upXhr = null;
+  B.up = null;
+  B.list = listOf(await req('/list').catch(() => B.list));
+  if (!B.list.some((x) => x.id === res.id)) B.list.unshift({ id: res.id, ok: true, kind: 'upload', uploaded: true, at: new Date().toISOString(), ...res });
+  B.restore = { id: res.id, all: true, mods: [], pw: '', key: '', err: '', busy: false, needKey: !!res.needKey, uploaded: true };
+  rerender();
+  setTimeout(() => document.querySelector('[data-bk-pw]')?.focus(), 30);
 }
 
 /** Prompt 30: HVOR → SMB / nettverksdisk (veiviseren i smb-wizard.js). */
@@ -237,18 +306,22 @@ async function makeKey(password) {
 function restoreSheet() {
   const R = B.restore;
   if (!R) return '';
-  const x = B.list.find((y) => String(y.id) === String(R.id)) ?? {}, mods = Array.isArray(x.modules) && x.modules.length ? x.modules.filter((m) => MOD_IDS.includes(m)) : MOD_IDS;
+  const x = B.list.find((y) => String(y.id) === String(R.id)) ?? {}, known = Array.isArray(x.modules) && x.modules.length, mods = known ? x.modules.filter((m) => MOD_IDS.includes(m)) : MOD_IDS;
+  const upl = x.uploaded || x.kind === 'upload', needKey = R.needKey || !!x.needKey;
+  const info = upl ? [`Lastet opp${x.name ? ` · ${x.name}` : ''}`, x.created ? `laget ${fmtDate(new Date(x.created), { day: '2-digit', month: '2-digit', year: 'numeric' })} ${fmtTime(new Date(x.created))}` : '', x.version ? `versjon ${x.version}` : '', size(x.size), scopeName(x)]
+    : [when(atOf(x)), size(x.size), scopeName(x)];
   return `<div class="upd-sheet-bg" data-bk="rclose"></div>
   <form class="upd-sheet bk-sheet" role="dialog" aria-modal="true" aria-labelledby="bk-sh-t" data-bk-form>
-    <h3 id="bk-sh-t">Gjenopprett backup</h3>
-    <p>${esc([when(atOf(x)), size(x.size), scopeName(x)].filter(Boolean).join(' · '))}</p>
-    <div class="kal-seg bk-seg" role="group"><button type="button" class="kal-seg-b" data-bk-rall="1" aria-pressed="${R.all}">Hele backupen</button><button type="button" class="kal-seg-b" data-bk-rall="0" aria-pressed="${!R.all}">Velg moduler</button></div>
+    <h3 id="bk-sh-t">${upl ? 'Gjenopprett fra fil' : 'Gjenopprett backup'}</h3>
+    <p data-no-i18n>${esc(info.filter(Boolean).join(' · '))}</p>
+    ${known ? `<div class="kal-seg bk-seg" role="group"><button type="button" class="kal-seg-b" data-bk-rall="1" aria-pressed="${R.all}">Hele backupen</button><button type="button" class="kal-seg-b" data-bk-rall="0" aria-pressed="${!R.all}">Velg moduler</button></div>` : '<p>Fila er kryptert, og serveren har ikke nøkkelen. Lim inn gjenopprettingsnøkkelen, så gjenopprettes alt som er i backupen.</p>'}
     ${R.all ? '' : `<div class="bk-chips">${mods.map((m) => `<button type="button" class="bk-chip${R.mods.includes(m) ? ' on' : ''}" data-bk-rmod="${m}" aria-pressed="${R.mods.includes(m)}">${esc(MODULES.find((y) => y[0] === m)?.[1] ?? m)}</button>`).join('')}</div>`}
     <div class="bk-warn"><b>Nåværende data overskrives.</b> Det tas automatisk en sikkerhetskopi først, så du kan angre ved å gjenopprette den.</div>
     <label class="sg-field"><span>Passord</span><input type="password" name="bkpw" value="${esc(R.pw)}" autocomplete="current-password" placeholder="Ditt passord" data-bk-pw required></label>
-    ${R.needKey || x.encrypted ? `<label class="sg-field"><span>Nøkkel</span><input type="password" name="bkkey" value="${esc(R.key ?? '')}" autocomplete="off" placeholder="${R.needKey ? 'Gjenopprettingsnøkkelen' : 'Bare hvis nøkkelen er byttet'}" data-bk-key${R.needKey ? ' required' : ''}></label>` : ''}
+    ${needKey || x.encrypted ? `<label class="sg-field"><span>Gjenopprettingsnøkkel</span><input type="password" name="bkkey" value="${esc(R.key ?? '')}" autocomplete="off" placeholder="${needKey ? 'xxxxxxxx-xxxxxxxx-xxxxxxxx-xxxxxxxx' : 'Bare hvis nøkkelen er byttet'}" data-bk-key${needKey ? ' required' : ''}></label>` : ''}
     ${R.err ? `<div class="upd-err" role="alert">${esc(R.err)}</div>` : ''}
     ${R.done ? `<div class="bk-msg2" role="status">${esc(R.done)}</div>` : ''}
+    ${R.notes?.length ? `<details class="bk-notes" data-no-i18n><summary>${R.notes.length} merknad${R.notes.length > 1 ? 'er' : ''} (backup fra en annen versjon)</summary><ul>${R.notes.map((n) => `<li>${esc(n)}</li>`).join('')}</ul></details>` : ''}
     <div class="upd-btns"><button type="button" class="sg-btn" data-bk="rclose">${R.done ? 'Lukk' : 'Avbryt'}</button>${R.done ? (R.reload ? '<button type="button" class="sg-btn pri" data-bk="reloadpage">Last siden på nytt</button>' : '') : `<button type="submit" class="sg-btn pri red"${R.busy ? ' disabled' : ''}>${R.busy ? 'Gjenoppretter …' : 'Gjenopprett'}</button>`}</div>
   </form>`;
 }
@@ -291,6 +364,14 @@ export async function backupClick(e) {
   if (d.bkRmod && B.restore) { const m = new Set(B.restore.mods); m.has(d.bkRmod) ? m.delete(d.bkRmod) : m.add(d.bkRmod); B.restore.mods = [...m]; rerender(); return true; }
   const a = d.bk;
   if (a === 'reload') { B.st = 'loading'; rerender(); loadBackup(); }
+  else if (a === 'upload') {
+    // Filvelgeren lages her (ikke i HTML-en som tegnes på nytt), så valget ikke mistes om siden oppdateres mens den er åpen.
+    const f = document.createElement('input');
+    f.type = 'file'; f.accept = '.gz,.zst,.enc';
+    f.addEventListener('change', () => uploadFile(f.files?.[0]), { once: true });
+    f.click();
+  }
+  else if (a === 'upcancel') { upXhr?.abort(); }
   else if (a === 'smb') smbWizard();
   else if (a === 'rlog') { B.logOpen = !B.logOpen; rerender(); }
   else if (a === 'opendir') { const L = lastJob(), tg = L?.target ?? {}; openSmbWizard({ use: ['system'], encrypted: !!B.s?.encrypt, at: { host: tg.host, share: tg.share, path: tg.path ?? '' }, onDone: () => { req('/settings').then((x) => { B.s = norm(x); rerender(); }).catch(() => {}); } }); }
@@ -345,11 +426,13 @@ export async function backupSubmit(e) {
   if (!R.pw) { R.err = 'Skriv inn passordet ditt.'; rerender(); return true; }
   if (!R.all && !R.mods.length) { R.err = 'Velg minst én modul.'; rerender(); return true; }
   const x = B.list.find((y) => String(y.id) === String(R.id)) ?? {};
-  const modules = R.all ? (Array.isArray(x.modules) && x.modules.length ? x.modules : MOD_IDS) : R.mods;
+  // Ukjent innhold (kryptert opplasting uten nøkkel på serveren): uten modules gjenoppretter serveren alt som står i manifestet.
+  const modules = R.all ? (Array.isArray(x.modules) && x.modules.length ? x.modules : undefined) : R.mods;
   R.busy = true; R.err = ''; rerender();
   try {
     const r = await req('/restore', { method: 'POST', json: { id: R.id, modules, password: R.pw, ...(R.key ? { key: R.key } : {}) } });
-    R.done = `✓ Gjenopprettet${r?.safetyId ? ' · sikkerhetskopi tatt først' : ''}.`; R.reload = true; R.pw = '';
+    R.done = `✓ Gjenopprettet${r?.safetyId ? ' · sikkerhetskopi tatt først' : ''}.${(r?.modules ?? modules ?? []).includes('innstillinger') ? ' Brukere og passord er nå de fra backupen.' : ''}`; R.reload = true; R.pw = ''; R.key = '';
+    R.notes = Array.isArray(r?.messages) ? r.messages.slice(0, 30) : [];
     B.list = listOf(await req('/list').catch(() => B.list));
   } catch (err) { R.needKey = !!err.data?.needKey || R.needKey; R.err = err.status === 403 && /passord/i.test(err.message) ? 'Feil passord.' : err.message; }
   R.busy = false; rerender();

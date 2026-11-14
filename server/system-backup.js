@@ -20,6 +20,7 @@
 //   (prompt 30) PUT /settings {target:{smb:{enabled, share, path}}}; oppsettet gjøres med veiviseren under /api/smb.
 //   POST /restore   {id, modules[], password, key?} → {ok, safetyId, modules, reload:true}
 //   GET  /:id/download → fila (attachment)
+//   (prompt 90) POST /upload  kropp = fila (application/octet-stream), bare økt i nettleseren. Se «Opplasting» under.
 //
 // Innhold i arkivet (<id>.tar.gz eller .tar.zst, + .enc når kryptert):
 //   db/homelab.db   konsistent øyeblikksbilde (db.backup()); ved modul-utvalg bare modulenes tabeller og kv-rader.
@@ -34,12 +35,24 @@
 // Da trengs ingen omstart, selv for «hele systemet»; svaret har reload:true så klientene laster på nytt (cacher i minnet
 // kan ellers vise gamle verdier en stund). Systembackupens egne innstillinger og nøkler (kv sys_backup*), øktene og
 // backup_jobs røres aldri.
+//
+// Opplasting (prompt 90, BKUP90): en backupfil fra PC-en (lastet ned med /:id/download) kan lastes opp og så gjenopprettes med
+// den vanlige POST /restore (passord på nytt, sikkerhetskopi først). Fila strømmes til en midlertidig .part-fil i BACKUP_DIR
+// (aldri i minnet), i én forespørsel eller i biter (Cloudflare-tunnelen slipper ikke gjennom store kropper):
+//   POST /upload  X-Backup-Filename: <filnavn>  X-Upload-Size: <totalt antall byte>  [X-Upload-Id, X-Upload-Offset for neste bit]
+//     → 202 {uploadId, received, total} mens det mangler biter, og når alt er mottatt og sjekket:
+//     → 200 {id, created, version, scope, modules, encrypted, needKey, size}
+// Filnavnet brukes bare til formatet (.tar.gz | .tar.zst, + .enc), aldri som sti. Grense: BACKUP_UPLOAD_MAX (standard 20 GB) og
+// ledig plass. Innholdet sjekkes uten å pakkes ut: tar-hodene (ingen «..», absolutte stier eller lenker, bare db/, files/ og
+// manifest.json), manifest.json (format, moduler) og sha256 for hver fil mot manifestet. Krypterte filer prøves med nøklene
+// serveren har; ukjent nøkkel → lagres likevel med needKey, og innholdet sjekkes ved gjenoppretting med nøkkelen brukeren limer inn.
+// Fila får en ny id (bk-<nå>-…) og en rad i backup_jobs med kind 'upload' (roteres ikke med «Behold»; de 5 siste beholdes).
 import { Hono } from 'hono';
 import { spawn, spawnSync } from 'node:child_process';
-import { createHash, createHmac, randomBytes } from 'node:crypto';
-import { createReadStream, createWriteStream, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, statSync, lstatSync, statfsSync, writeFileSync } from 'node:fs';
+import { createDecipheriv, createHash, createHmac, randomBytes } from 'node:crypto';
+import { createReadStream, createWriteStream, existsSync, mkdirSync, openSync, readSync, closeSync, readdirSync, readFileSync, renameSync, rmSync, statSync, lstatSync, statfsSync, writeFileSync } from 'node:fs';
 import { join, resolve, sep } from 'node:path';
-import { Readable, Transform } from 'node:stream';
+import { Readable, Transform, Writable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { createGzip, createGunzip } from 'node:zlib';
 import Database from 'better-sqlite3';
@@ -48,7 +61,7 @@ import { db, kv, OWNER } from './db.js';
 import { sessionUser, isAdmin, checkPassword, clientIp, loginBlocked, loginFailed, loginSucceeded } from './auth.js';
 import { bearerOk } from './finans/routes.js';
 import { seal, unseal } from './finans/db.js';
-import { tarHeader, untar, encryptStream, decryptFile, smbRun, cdDirOf, parseSmbLs, localArg, normShare, splitShare, SMB_SEG, smbPutError, smbErrorText } from './finans/backup.js';
+import { tarHeader, untar, encryptStream, decryptFile, ENC_MAGIC, ENC_HEAD, encKeyOf, smbRun, cdDirOf, parseSmbLs, localArg, normShare, splitShare, SMB_SEG, smbPutError, smbErrorText } from './finans/backup.js';
 import { settings as fhSettings, secret as fhSecret } from './finans/db.js';
 import { broadcast } from './realtime.js';
 import { parseChangelog } from './system-update.js';
@@ -257,7 +270,10 @@ export function jobOut(r) {
     Object.assign(o, { name: rep.name ?? null, target: rep.target ?? null, fullPath: rep.fullPath ?? null, url: rep.url ?? null, method: rep.method ?? null, bytes: rep.bytes ?? r.size ?? null,
       sha256: rep.sha256 ?? r.sha256 ?? null, verified: !!rep.verified, retention: rep.retention ?? [], ms: rep.ms ?? null, folder: rep.folder ?? null, receipt: rep.receipt ?? null, log: rep.log ?? [] });
     if (rep.error && !o.error) o.error = rep.error;
+    // Prompt 90: opplastet fil (filnavnet fra PC-en, når backupen ble laget og av hvilken versjon).
+    if (r.kind === 'upload') Object.assign(o, { uploaded: true, created: rep.created ?? null, version: rep.version ?? null });
   }
+  if (r.kind === 'upload') { o.uploaded = true; o.needKey = !!r.encrypted && !(r.key_id && keyById(r.key_id)); }
   return o;
 }
 const SCOPE_SLUG = { all: 'hele', finans: 'finans', custom: 'egendefinert' };
@@ -480,7 +496,7 @@ function removeJob(r) {
 let lastRotated = [];
 // Prompt 36: except (id) slettes aldri, selv om sortering/tidssone skulle være feil. Gir lista over slettede filer.
 export function rotate(keep = backupSettings().keep, now = Date.now(), except = null) {
-  const ok = q("SELECT * FROM backup_jobs WHERE state='done' AND kind<>'safety' ORDER BY started DESC").all();
+  const ok = q("SELECT * FROM backup_jobs WHERE state='done' AND kind NOT IN ('safety','upload') ORDER BY started DESC").all();
   let gone = [];
   if (keep === '7' || keep === '30') gone = ok.slice(Number(keep));
   else { const days = keep === '1y' ? 365 : 90; gone = ok.slice(1).filter((r) => now - r.started > days * 86_400_000); }
@@ -492,6 +508,8 @@ export function rotate(keep = backupSettings().keep, now = Date.now(), except = 
   return gone.length;
 }
 function rotateSafety() { for (const r of q("SELECT * FROM backup_jobs WHERE state='done' AND kind='safety' ORDER BY started DESC").all().slice(5)) removeJob(r); }
+// Prompt 90: opplastede filer telles ikke med i «Behold» (de skal ikke presse ut ekte backuper); de 5 siste beholdes.
+function rotateUploads(except) { for (const r of q("SELECT * FROM backup_jobs WHERE kind='upload' ORDER BY started DESC").all().slice(5)) if (r.id !== except) removeJob(r); }
 
 /* ---------------- Tidsplan ---------------- */
 
@@ -727,6 +745,8 @@ async function extract(r, keyOverride) {
       try { await decryptFile(src, key, tmp); } catch { throw Object.assign(new Error('Feil gjenopprettingsnøkkel, eller fila er skadet'), { status: 400, needKey: true }); }
       plain = tmp;
     }
+    // Prompt 90: en opplastet fil som ikke kunne sjekkes ved opplasting (ukjent nøkkel), sjekkes strengt nå, før noe pakkes ut.
+    if (r.kind === 'upload' && !uploadVerified(r)) checkManifest(await scanArchive(createReadStream(plain), /\.tar\.zst/.test(r.file) ? 'zst' : 'gz'));
     await pipeline(createReadStream(plain), decompressor(r.file), untar(dest));
     if (tmp) rmSync(tmp, { force: true });
     const manifest = JSON.parse(readFileSync(join(dest, 'manifest.json'), 'utf8'));
@@ -743,26 +763,48 @@ async function extract(r, keyOverride) {
   } catch (e) { rmSync(dest, { recursive: true, force: true }); throw e; }
 }
 
-/** Erstatter de valgte modulene fra en utpakket backup. */
+/** SQL-verdi for en NOT NULL-kolonne uten standardverdi som mangler i en eldre backup. */
+const fillOf = (type) => (/INT|REAL|NUM|FLOA|DOUB|BOOL/i.test(type ?? '') ? '0' : "''");
+/**
+ * Erstatter de valgte modulene fra en utpakket backup.
+ * Prompt 90: backupen kan være laget av en annen versjon. Tabeller som bare finnes i backupen (nyere versjon) eller bare her
+ * (eldre backup) hoppes over med en melding; kolonnene tas fra snittet, og NOT NULL-kolonner uten standardverdi som mangler i
+ * backupen fylles med 0 / ''. Kolonner som bare finnes i backupen tas ikke med.
+ */
 function applyRestore(dest, manifest, mods) {
   const file = join(dest, 'db', 'homelab.db');
   const now = tableMap();
   const mainTables = new Set(plainTables());
   db.prepare('ATTACH DATABASE ? AS bk').run(file);
-  const restored = {};
+  const restored = {}, skipped = [], notes = [];
   try {
     const bkTables = new Set(plainTables(db, 'bk'));
+    const bkMap = tableMap([...bkTables]);
     db.pragma('foreign_keys = OFF');
     try {
       db.transaction(() => {
         for (const m of mods) {
-          const tables = [...new Set([...(now[m] ?? []), ...(manifest.tables?.[m] ?? [])])].filter((t) => t !== 'kv' && mainTables.has(t) && bkTables.has(t));
-          for (const t of tables) {
-            const mc = db.prepare(`PRAGMA main.table_info(${qi(t)})`).all().map((c) => c.name);
+          const cand = [...new Set([...(now[m] ?? []), ...(manifest.tables?.[m] ?? []), ...(bkMap[m] ?? [])])].filter((t) => t !== 'kv');
+          const inBk = new Set([...(manifest.tables?.[m] ?? []), ...(bkMap[m] ?? [])]);
+          const tables = [];
+          for (const t of cand) {
+            if (!mainTables.has(t)) { if (bkTables.has(t)) skipped.push({ module: m, table: t, reason: 'finnes ikke i denne versjonen' }); continue; }
+            if (!bkTables.has(t)) { if (!inBk.has(t)) skipped.push({ module: m, table: t, reason: 'ikke i backupen (nyere tabell), beholdt som nå' }); continue; }
+            const mc = db.prepare(`PRAGMA main.table_info(${qi(t)})`).all();
             const bc = new Set(db.prepare(`PRAGMA bk.table_info(${qi(t)})`).all().map((c) => c.name));
-            const cols = mc.filter((c) => bc.has(c)).map(qi).join(', ');
-            db.exec(`DELETE FROM main.${qi(t)}`);
-            if (cols) db.exec(`INSERT INTO main.${qi(t)} (${cols}) SELECT ${cols} FROM bk.${qi(t)}`);
+            const common = mc.filter((c) => bc.has(c.name));
+            if (!common.length) { skipped.push({ module: m, table: t, reason: 'ingen felles kolonner' }); continue; }
+            const fill = mc.filter((c) => !bc.has(c.name) && c.notnull && c.dflt_value == null && !c.pk);
+            const missing = mc.filter((c) => !bc.has(c.name)).map((c) => c.name);
+            const extra = [...bc].filter((n) => !mc.some((c) => c.name === n));
+            if (missing.length || extra.length) notes.push({ module: m, table: t, missing, extra });
+            const cols = [...common, ...fill].map((c) => qi(c.name)).join(', ');
+            const sel = [...common.map((c) => qi(c.name)), ...fill.map((c) => fillOf(c.type))].join(', ');
+            try {
+              db.exec(`DELETE FROM main.${qi(t)}`);
+              db.exec(`INSERT INTO main.${qi(t)} (${cols}) SELECT ${sel} FROM bk.${qi(t)}`);
+            } catch (e) { throw Object.assign(new Error(`Kunne ikke gjenopprette tabellen ${t}: ${e.message}. Ingenting er endret.`), { status: 500 }); }
+            tables.push(t);
           }
           restored[m] = tables;
         }
@@ -789,33 +831,259 @@ function applyRestore(dest, manifest, mods) {
       dirsDone.push(d);
     }
   }
-  return { tables: restored, dirs: dirsDone };
+  const messages = [
+    ...skipped.map((x) => `Hoppet over ${x.table}: ${x.reason}.`),
+    ...notes.map((x) => `${x.table}: ${[x.missing.length ? `${x.missing.length} kolonne${x.missing.length > 1 ? 'r' : ''} mangler i backupen (${x.missing.join(', ')})` : '', x.extra.length ? `${x.extra.length} kolonne${x.extra.length > 1 ? 'r' : ''} fra backupen finnes ikke her (${x.extra.join(', ')})` : ''].filter(Boolean).join('; ')}.`),
+  ];
+  return { tables: restored, dirs: dirsDone, skipped, notes, messages };
 }
 
-/** Gjenoppretter modulene fra backupen id. Tar en full sikkerhetskopi først. → {ok, safetyId, modules, tables, dirs} */
+/** Gjenoppretter modulene fra backupen id. Tar en full sikkerhetskopi først. → {ok, safetyId, modules, tables, dirs, skipped, messages} */
 export async function restoreBackup({ id, modules, by = null, key = null }) {
   const r = getJob(id);
   if (!r || r.state !== 'done') throw Object.assign(new Error('Fant ikke backupen'), { status: 404 });
   const inBackup = JSON.parse(r.modules);
-  const mods = Array.isArray(modules) && modules.length ? modules : inBackup;
+  // Prompt 90: en kryptert fil som ble lastet opp uten kjent nøkkel har ukjent innhold til den er dekryptert.
+  const unknown = r.kind === 'upload' && !inBackup.length;
+  let mods = Array.isArray(modules) && modules.length ? modules : inBackup;
   if (!mods.every((m) => MODULE_IDS.includes(m))) throw Object.assign(new Error('Ukjent modul'), { status: 400 });
-  const missing = mods.filter((m) => !inBackup.includes(m));
-  if (missing.length) throw Object.assign(new Error(`Backupen inneholder ikke ${missing.join(', ')}`), { status: 400 });
+  const notIn = (list) => { const missing = mods.filter((m) => !list.includes(m)); if (missing.length) throw Object.assign(new Error(`Backupen inneholder ikke ${missing.join(', ')}`), { status: 400 }); };
+  if (!unknown) notIn(inBackup);
   if (running) throw Object.assign(new Error('En backup eller gjenoppretting pågår allerede'), { status: 409 });
   // Pakk ut og sjekk før noe endres (feil nøkkel stopper her).
   const { dest, manifest } = await extract(r, key);
   try {
+    if (unknown) {
+      const info = checkManifest({ manifest, files: null });
+      setJob(id, { modules: JSON.stringify(info.modules), scope: info.scope, tables: JSON.stringify(info.tables ?? null),
+        report: JSON.stringify({ ...(r.report ? JSON.parse(r.report) : {}), created: info.created, version: info.version }) });
+      if (!mods.length) mods = info.modules;
+      notIn(info.modules);
+    }
     const safety = startBackup({ scope: 'all', kind: 'safety', by });
     const sj = await safety.done;
     if (!sj?.ok) throw Object.assign(new Error(`Sikkerhetskopien feilet, ingenting er gjenopprettet: ${sj?.error ?? ''}`), { status: 500 });
     running = { id: `restore-${id}`, promise: null };
     try {
       const res = applyRestore(dest, manifest, mods);
-      console.warn(`[system-backup] gjenopprettet ${mods.join(', ')} fra ${id} (av ${by}), sikkerhetskopi ${safety.id}`);
+      console.warn(`[system-backup] gjenopprettet ${mods.join(', ')} fra ${id} (av ${by}), sikkerhetskopi ${safety.id}${res.skipped.length ? `, hoppet over ${res.skipped.map((x) => x.table).join(', ')}` : ''}`);
       broadcast('system-backup', { action: 'restored', id, modules: mods, safetyId: safety.id });
       return { ok: true, safetyId: safety.id, modules: mods, ...res };
     } finally { running = null; }
   } finally { rmSync(dest, { recursive: true, force: true }); }
+}
+
+/* ---------------- Opplasting av en backupfil (prompt 90) ---------------- */
+
+const badUpload = (msg, status = 400, extra = {}) => Object.assign(new Error(msg), { status, ...extra });
+/** Bytes fra BACKUP_UPLOAD_MAX: tall (byte) eller med K/M/G/T (desimal). Standard 20 GB. Leses ved hver forespørsel. */
+export function uploadMax() {
+  const m = String(process.env.BACKUP_UPLOAD_MAX ?? '').trim().match(/^(\d+(?:\.\d+)?)\s*([kmgt]?)b?$/i);
+  if (!m) return 20e9;
+  return Math.floor(Number(m[1]) * { '': 1, k: 1e3, m: 1e6, g: 1e9, t: 1e12 }[m[2].toLowerCase()]);
+}
+const UPLOAD_EXT = /\.tar\.(gz|zst)(\.enc)?$/i;
+const uploadVerified = (r) => { try { return !!JSON.parse(r.report ?? '{}').verified; } catch { return false; } };
+let zstdHave = null;
+const zstdThere = () => (zstdHave ??= (() => { try { return spawnSync('zstd', ['--version'], { timeout: 3000 }).status === 0; } catch { return false; } })());
+const magicOk = (b, ext) => (ext === 'zst' ? b.length >= 4 && b.readUInt32LE(0) === 0xfd2fb528 : b.length >= 2 && b[0] === 0x1f && b[1] === 0x8b);
+
+/**
+ * Leser et tar-arkiv som strøm uten å skrive noe til disk. Avviser alt som ikke er en vanlig fil eller mappe (lenker, enheter,
+ * GNU/pax-utvidelser), stier med «..», absolutte stier og navn utenfor db/, files/ og manifest.json. → Writable med .result()
+ */
+function tarScanner() {
+  let buf = Buffer.alloc(0), cur = null, left = 0, pad = 0, entries = 0;
+  const files = {}, seen = new Set();
+  let manifest = null, dbHead = null;
+  const done = (e) => {
+    files[e.name] = e.h.digest('hex');
+    if (e.name === 'manifest.json') manifest = Buffer.concat(e.parts).toString('utf8');
+    if (e.name === 'db/homelab.db') dbHead = e.first;
+  };
+  const w = new Writable({
+    write(chunk, _e, cb) {
+      try {
+        buf = buf.length ? Buffer.concat([buf, chunk]) : chunk;
+        for (;;) {
+          if (cur) {
+            if (!buf.length) break;
+            const n = Math.min(left, buf.length), part = buf.subarray(0, n);
+            cur.h.update(part);
+            if (cur.keep) cur.parts.push(Buffer.from(part));
+            if (cur.first.length < 16) cur.first = Buffer.concat([cur.first, part.subarray(0, 16 - cur.first.length)]);
+            buf = buf.subarray(n); left -= n;
+            if (left > 0) break;
+            done(cur); cur = null;
+          }
+          if (pad > 0) { const n = Math.min(pad, buf.length); buf = buf.subarray(n); pad -= n; if (pad > 0) break; }
+          if (buf.length < 512) break;
+          const h = buf.subarray(0, 512); buf = buf.subarray(512);
+          if (h.every((b) => b === 0)) continue;
+          const cstr = (a, b) => h.toString('utf8', a, b).replace(/\0.*$/s, '');
+          let sum = 0; for (let i = 0; i < 512; i++) sum += i >= 148 && i < 156 ? 32 : h[i];
+          if (parseInt(cstr(148, 156).trim(), 8) !== sum) throw badUpload('Fila er ikke en gyldig backup (ikke et tar-arkiv, eller skadet)');
+          const ustar = h.toString('latin1', 257, 262) === 'ustar';
+          let name = [ustar ? cstr(345, 500) : '', cstr(0, 100)].filter(Boolean).join('/');
+          const type = String.fromCharCode(h[156] || 0x30);
+          if (type === '1' || type === '2') throw badUpload(`Backupen inneholder en lenke (${name.slice(0, 120)}). Lenker er ikke tillatt.`);
+          if (type !== '0' && type !== '5' && type !== '7') throw badUpload(`Ukjent oppføring i arkivet (type ${JSON.stringify(type)}). Bruk en backupfil lastet ned fra Homelab.`);
+          if (!name || name.startsWith('/') || /^[a-z]:/i.test(name) || name.includes('\\') || name.split('/').includes('..')) throw badUpload(`Ugyldig sti i backupen: ${name.slice(0, 120)}`);
+          name = name.replace(/^(\.\/)+/, '').replace(/\/+$/, '');
+          const size = h[124] & 0x80 ? Number(h.subarray(125, 136).readBigUInt64BE(3) ?? 0) : parseInt(cstr(124, 136).trim() || '0', 8) || 0;
+          if (++entries > 2_000_000) throw badUpload('For mange filer i backupen');
+          if (type === '5') {
+            if (!/^(db|files(\/.+)?)$/.test(name)) throw badUpload(`Uventet mappe i backupen: ${name.slice(0, 120)}`);
+            pad = size + ((512 - (size % 512)) % 512);
+            continue;
+          }
+          if (!/^(manifest\.json|db\/homelab\.db|files\/.+)$/.test(name) || name.split('/').some((x) => x === '.' || x === '')) throw badUpload(`Uventet fil i backupen: ${name.slice(0, 120)}`);
+          if (seen.has(name)) throw badUpload(`${name.slice(0, 120)} står to ganger i backupen`);
+          seen.add(name);
+          if (name === 'manifest.json' && size > 16 * 1024 * 1024) throw badUpload('manifest.json er for stor');
+          cur = { name, h: createHash('sha256'), keep: name === 'manifest.json', parts: [], first: Buffer.alloc(0) };
+          left = size; pad = (512 - (size % 512)) % 512;
+          if (!size) { done(cur); cur = null; }
+        }
+        cb();
+      } catch (e) { cb(e); }
+    },
+    final(cb) { cb(cur ? badUpload('Backupfila er avkortet (slutter midt i en fil)') : null); },
+  });
+  w.result = () => ({ files, manifest, dbHead });
+  return w;
+}
+
+/** Pakker ut (bare i strøm) og sjekker arkivet. → {files, manifest, dbHead} */
+async function scanArchive(readable, ext, decipher = null) {
+  if (ext === 'zst' && !zstdThere()) throw badUpload('Serveren mangler zstd og kan ikke lese .tar.zst. Installer zstd, eller bruk en .tar.gz-backup.', 422);
+  const sc = tarScanner();
+  const stages = [readable, ...(decipher ? [decipher] : []), ext === 'zst' ? zstdStream(['-q', '-d', '-c']) : createGunzip(), sc];
+  try { await pipeline(...stages); }
+  catch (e) {
+    if (e?.status) throw e;
+    if (decipher && /auth|unable to authenticate/i.test(String(e?.message))) throw badUpload('Feil gjenopprettingsnøkkel, eller fila er skadet', 400, { needKey: true });
+    throw badUpload(`Fila kunne ikke pakkes ut som ${ext === 'zst' ? '.tar.zst' : '.tar.gz'}. Er den skadet, eller ikke en backup fra Homelab?`);
+  }
+  return sc.result();
+}
+
+/**
+ * Sjekker manifest.json (og, når files er gitt, sha256 for hver fil mot manifestet).
+ * → {created, version, scope, modules, tables, ignored}
+ */
+function checkManifest({ manifest, files, dbHead }) {
+  let m = manifest;
+  if (typeof m === 'string') { try { m = JSON.parse(m); } catch { throw badUpload('manifest.json i backupen er ikke gyldig JSON'); } }
+  if (m == null) throw badUpload('Fant ikke manifest.json. Dette er ikke en systembackup fra Homelab.');
+  if (!m || typeof m !== 'object' || m.format !== 'homelab-system-backup') throw badUpload('Ukjent backupformat. Bruk en fil fra Innstillinger → Backup → Last ned.');
+  if (m.formatVersion != null && !(Number(m.formatVersion) >= 1 && Number(m.formatVersion) <= 1)) throw badUpload(`Backupformat ${m.formatVersion} er laget av en nyere versjon. Oppdater serveren først.`);
+  const listed = Array.isArray(m.modules) ? m.modules.map(String) : [];
+  const modules = MODULE_IDS.filter((x) => listed.includes(x));
+  const ignored = listed.filter((x) => !MODULE_IDS.includes(x));
+  if (!modules.length) throw badUpload('Backupen inneholder ingen moduler denne versjonen kjenner');
+  if (files) {
+    const mf = m.files && typeof m.files === 'object' ? m.files : {};
+    if (!files['db/homelab.db'] || !mf['db/homelab.db']) throw badUpload('Backupen mangler databasen (db/homelab.db)');
+    if (dbHead && dbHead.toString('latin1') !== 'SQLite format 3\0') throw badUpload('db/homelab.db i backupen er ikke en SQLite-database');
+    for (const [name, hash] of Object.entries(mf)) {
+      if (!(name in files)) throw badUpload(`Mangler ${String(name).slice(0, 120)} i backupen`);
+      if (files[name] !== hash) throw badUpload(`Sjekksummen stemmer ikke for ${String(name).slice(0, 120)}. Fila er skadet.`);
+    }
+    for (const name of Object.keys(files)) if (name !== 'manifest.json' && !(name in mf)) throw badUpload(`${name.slice(0, 120)} står ikke i manifestet`);
+  }
+  const created = typeof m.created === 'string' && !Number.isNaN(Date.parse(m.created)) ? new Date(m.created).toISOString() : null;
+  return { created, version: typeof m.version === 'string' ? m.version.slice(0, 40) : null, scope: SCOPES.includes(m.scope) ? m.scope : 'custom',
+    modules, tables: m.tables && typeof m.tables === 'object' ? m.tables : null, ignored };
+}
+
+/** Hode og haletag i en kryptert fil. Kaster når fila ikke er i krypteringsformatet. */
+function encParts(path) {
+  const size = statSync(path).size;
+  if (size < ENC_HEAD + 16 + 16) throw badUpload('Fila er for liten til å være en kryptert backup');
+  const fd = openSync(path, 'r');
+  try {
+    const head = Buffer.alloc(ENC_HEAD + 16), tag = Buffer.alloc(16);
+    readSync(fd, head, 0, head.length, 0); readSync(fd, tag, 0, 16, size - 16);
+    if (!head.subarray(0, ENC_MAGIC.length).equals(ENC_MAGIC)) throw badUpload('Fila heter .enc, men er ikke kryptert i backupformatet til Homelab');
+    const o = ENC_MAGIC.length;
+    return { size, salt: head.subarray(o, o + 16), iv: head.subarray(o + 16, o + 28), first: head.subarray(ENC_HEAD), tag };
+  } finally { closeSync(fd); }
+}
+/** Nøkkelen (av dem serveren kjenner) som passer: de første bytene må dekrypteres til gzip/zstd-hodet. → {key, keyId} | null */
+function knownKeyFor(p, ext) {
+  const ids = [...new Set([currentKeyId(), ...Object.keys(keys())].filter(Boolean))];
+  for (const keyId of ids) {
+    const key = keyById(keyId);
+    if (!key) continue;
+    const d = createDecipheriv('aes-256-gcm', encKeyOf(key, p.salt), p.iv);
+    if (magicOk(d.update(p.first), ext)) return { key, keyId };
+  }
+  return null;
+}
+const decipherOf = (path, p, key) => {
+  const d = createDecipheriv('aes-256-gcm', encKeyOf(key, p.salt), p.iv); d.setAuthTag(p.tag);
+  return { src: createReadStream(path, { start: ENC_HEAD, end: p.size - 17 }), d };
+};
+
+/** Sjekker en ferdig mottatt fil og legger den inn i backup_jobs. */
+async function finishUpload(u, by) {
+  const ext = u.ext, path = u.part;
+  let info = null, keyId = null;
+  if (u.enc) {
+    const p = encParts(path);
+    const k = knownKeyFor(p, ext);
+    if (k) {
+      keyId = k.keyId;
+      const { src, d } = decipherOf(path, p, k.key);
+      try { info = checkManifest(await scanArchive(src, ext, d)); }
+      catch (e) { throw e?.needKey ? badUpload('Fila er skadet: krypteringen stemmer ikke (autentiseringen feilet)') : e; }
+    }
+  } else {
+    const fd = openSync(path, 'r'); const b = Buffer.alloc(4);
+    try { readSync(fd, b, 0, 4, 0); } finally { closeSync(fd); }
+    if (!magicOk(b, ext)) throw badUpload(`Fila er ikke ${ext === 'zst' ? 'zstd' : 'gzip'}-komprimert. Er den kryptert (.enc) eller ikke en backup?`);
+    info = checkManifest(await scanArchive(createReadStream(path), ext));
+  }
+  const t = Date.now(), id = newId(t), file = `${id}.tar.${ext}${u.enc ? '.enc' : ''}`;
+  const out = join(BACKUP_DIR, file);
+  renameSync(path, out);
+  try { return insertUpload(u, { id, t, file, out, info, keyId, by }); } catch (e) { rmSync(out, { force: true }); throw e; }
+}
+function insertUpload(u, { id, t, file, out, info, keyId, by }) {
+  const size = statSync(out).size, sha256 = u.hash.digest('hex'), needKey = u.enc && !info;
+  const rep = { target: 'upload', method: 'upload', name: u.name, fullPath: out, bytes: size, sha256, verified: !!info, created: info?.created ?? null, version: info?.version ?? null,
+    retention: [], ms: t - u.t0, receipt: `✓ Lastet opp ${gb(size)}${info ? ' · sjekket' : ' · kryptert, nøkkelen trengs'}`, ...(info?.ignored?.length ? { ignored: info.ignored } : {}) };
+  q('INSERT INTO backup_jobs(id, kind, state, pct, started, finished, size, scope, modules, tables, file, encrypted, key_id, sha256, by_user, report) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)')
+    .run(id, 'upload', 'done', 100, t, t, size, info?.scope ?? 'all', JSON.stringify(info?.modules ?? []), info ? JSON.stringify(info.tables) : null, file, u.enc ? 1 : 0, keyId, sha256, by, JSON.stringify(rep));
+  rotateUploads(id);
+  console.info(`[system-backup] opplastet ${id} (${size} byte, sha256=${sha256}, kryptert=${u.enc}, nøkkel ${keyId ? 'kjent' : u.enc ? 'ukjent' : '–'}) av ${by}`);
+  broadcast('system-backup', { action: 'uploaded', id });
+  return { id, created: info?.created ?? null, version: info?.version ?? null, scope: info?.scope ?? null, modules: info?.modules ?? [], encrypted: !!u.enc, needKey, size,
+    ...(info?.ignored?.length ? { ignored: info.ignored } : {}) };
+}
+
+const uploads = new Map(); // uploadId → {user, part, ext, enc, name, total, received, hash, t0, at, busy}
+const UPLOAD_IDLE = 60 * 60_000;
+const uploadStarts = new Map(); // bruker → [tidspunkt] (rate-begrensning)
+function dropUpload(id) { const u = uploads.get(id); if (!u) return; uploads.delete(id); rmSync(u.part, { force: true }); }
+function sweepUploads(now = Date.now()) { for (const [id, u] of uploads) if (!u.busy && now - u.at > UPLOAD_IDLE) dropUpload(id); }
+/** Bare for tester. */
+export const _uploads = { list: () => [...uploads.values()], reset: () => { for (const id of [...uploads.keys()]) dropUpload(id); uploadStarts.clear(); } };
+
+/** Skriver kroppen til slutten av .part-fila (strøm, aldri hele i minnet). */
+async function receiveChunk(c, u) {
+  const body = c.req.raw.body;
+  if (!body) throw badUpload('Tom forespørsel: fila mangler');
+  let n = 0;
+  const gate = new Transform({ transform(ch, _e, cb) {
+    n += ch.length;
+    if (u.received + n > u.total) return cb(badUpload(`Fila er større enn oppgitt (${u.total} byte)`, 413));
+    u.hash.update(ch); cb(null, ch);
+  } });
+  try { await pipeline(Readable.fromWeb(body), gate, createWriteStream(u.part, { flags: 'a', mode: 0o600 })); }
+  catch (e) { throw e?.status ? e : badUpload('Opplastingen ble avbrutt', 400); }
+  u.received += n; u.at = Date.now();
 }
 
 /* ---------------- Ruter ---------------- */
@@ -830,7 +1098,10 @@ api.use('*', async (c, next) => {
   if (!user && bearerOk(c, write ? 'finance:write' : 'finance:read')) user = c.get('user');
   if (!user) return c.json({ error: 'Ikke innlogget' }, 401);
   if (!isAdmin(user)) return c.json({ error: 'Bare administratorer kan se og endre systembackup' }, 403);
-  if (write && session && !/^application\/json\b/i.test(c.req.header('content-type') ?? '')) return c.json({ error: 'Forventet JSON' }, 415);
+  // Prompt 90: opplastingen sender fila rått (octet-stream); ruten krever i stedet en egen header (X-Backup-Filename), som et annet
+  // nettsted ikke kan sette uten CORS-godkjenning.
+  const upload = c.req.method === 'POST' && /\/upload$/.test(c.req.path) && /^application\/octet-stream\b/i.test(c.req.header('content-type') ?? '');
+  if (write && session && !upload && !/^application\/json\b/i.test(c.req.header('content-type') ?? '')) return c.json({ error: 'Forventet JSON' }, 415);
   c.set('user', user);
   c.set('access', { user, session, admin: true });
   await next();
@@ -872,7 +1143,7 @@ api.post('/run', async (c) => {
 });
 api.get('/status', (c) => {
   const st = backupSettings();
-  const last = q("SELECT * FROM backup_jobs WHERE state IN ('done','failed') AND kind<>'safety' ORDER BY started DESC LIMIT 1").get();
+  const last = q("SELECT * FROM backup_jobs WHERE state IN ('done','failed') AND kind NOT IN ('safety','upload') ORDER BY started DESC LIMIT 1").get();
   const run = running?.id && ID.test(running.id) ? getJob(running.id) : q("SELECT * FROM backup_jobs WHERE state='running' ORDER BY started DESC LIMIT 1").get();
   return c.json({ last: jobOut(last), running: jobOut(run), restoring: !!running && !ID.test(running.id), next: st.auto ? nextRun(st.schedule) : null,
     summary: st.auto ? `${SCHED_TEXT[st.schedule]} · ${SCOPE_TEXT[st.scope]}` : 'Automatisk av' });
@@ -887,6 +1158,56 @@ api.post('/restore', async (c) => {
   if (bad) return bad;
   try { return c.json({ ...(await restoreBackup({ id: b.id, modules: b.modules, by: c.get('user'), key: b.key || null })), reload: true }); }
   catch (e) { return c.json({ error: String(e.message).slice(0, 500), ...(e.needKey ? { needKey: true } : {}) }, e.status ?? 500); }
+});
+api.post('/upload', async (c) => {
+  if (!c.get('access').session) return c.json({ error: 'Opplasting må gjøres i nettleseren' }, 403);
+  const site = c.req.header('sec-fetch-site');
+  if (site && !['same-origin', 'none'].includes(site)) return c.json({ error: 'Opplasting fra et annet nettsted er ikke tillatt' }, 403);
+  if (!/^application\/octet-stream\b/i.test(c.req.header('content-type') ?? '')) return c.json({ error: 'Send fila som application/octet-stream' }, 415);
+  const user = c.get('user');
+  sweepUploads();
+  let u;
+  const uid = c.req.header('x-upload-id');
+  try {
+    if (uid) {
+      u = /^[0-9a-f]{24}$/.test(uid) ? uploads.get(uid) : null;
+      if (!u || u.user !== user) return c.json({ error: 'Fant ikke opplastingen. Start på nytt.' }, 404);
+      if (u.busy) return c.json({ error: 'En bit av denne fila lastes opp allerede' }, 409);
+      if (Number(c.req.header('x-upload-offset')) !== u.received) return c.json({ error: 'Feil posisjon i fila', received: u.received }, 409);
+    } else {
+      let name = '';
+      try { name = decodeURIComponent(c.req.header('x-backup-filename') ?? ''); } catch { /* ugyldig */ }
+      name = name.split(/[\\/]/).pop().replace(/[\0-\x1f]/g, '').slice(-200);
+      const fm = name.match(UPLOAD_EXT);
+      if (!fm) return c.json({ error: 'Velg en backupfil fra Homelab (.tar.gz eller .tar.zst, eventuelt .enc)' }, 400);
+      const total = Number(c.req.header('x-upload-size') ?? c.req.header('content-length'));
+      if (!Number.isSafeInteger(total) || total <= 0) return c.json({ error: 'Oppgi filstørrelsen (X-Upload-Size)' }, 411);
+      const max = uploadMax();
+      if (total > max) return c.json({ error: `Fila er for stor (${gb(total)}). Grensen er ${gb(max)} (BACKUP_UPLOAD_MAX).` }, 413);
+      let free = Infinity;
+      try { const f = statfsSync(BACKUP_DIR); free = f.bavail * f.bsize; } catch { /* ukjent */ }
+      if (free < total + 64e6) return c.json({ error: `Ikke nok ledig plass i ${BACKUP_DIR}: ${gb(free)} ledig, fila er ${gb(total)}.` }, 507);
+      const now = Date.now(), hits = (uploadStarts.get(user) ?? []).filter((x) => now - x < 15 * 60_000);
+      if (hits.length >= (Number(process.env.BACKUP_UPLOAD_RATE) || 10)) return c.json({ error: 'For mange opplastinger. Vent litt og prøv igjen.' }, 429);
+      if ([...uploads.values()].length >= 2) return c.json({ error: 'To opplastinger pågår allerede. Vent til de er ferdige.' }, 429);
+      uploadStarts.set(user, [...hits, now]);
+      const id = randomBytes(12).toString('hex');
+      u = { id, user, part: join(BACKUP_DIR, `.upload-${id}.part`), ext: fm[1].toLowerCase(), enc: !!fm[2], name, total, received: 0, hash: createHash('sha256'), t0: now, at: now, busy: false };
+      writeFileSync(u.part, '', { mode: 0o600 });
+      uploads.set(id, u);
+    }
+    u.busy = true;
+    await receiveChunk(c, u);
+    if (u.received < u.total) { u.busy = false; return c.json({ uploadId: u.id, received: u.received, total: u.total }, 202); }
+    const res = await finishUpload(u, user);
+    uploads.delete(u.id);
+    return c.json(res);
+  } catch (e) {
+    if (u) dropUpload(u.id);
+    const st = e?.status ?? 500;
+    if (st >= 500) console.error(`[system-backup] opplasting feilet: ${e?.message}`);
+    return c.json({ error: String(e?.message ?? e).slice(0, 500), ...(e?.needKey ? { needKey: true } : {}) }, st);
+  }
 });
 api.get('/:id/download', (c) => {
   if (!c.get('access').session) return c.json({ error: 'Nedlasting må gjøres i nettleseren' }, 403);

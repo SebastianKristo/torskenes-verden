@@ -255,6 +255,10 @@ export function untar(dest) {
   });
 }
 const keyOf = (phrase, salt) => scryptSync(String(phrase), salt, 32, { N: 1 << 15, r: 8, p: 1, maxmem: 64 * 1024 * 1024 });
+// Prompt 90 (BKUP90): opplasting av systembackup sjekker hodet og prøver nøkler uten å skrive klartekst til disk.
+export const ENC_MAGIC = MAGIC;
+export const ENC_HEAD = MAGIC.length + 28; // magic · salt (16) · iv (12); haletaggen (16) står sist
+export const encKeyOf = keyOf;
 export function encryptStream(phrase, out) {
   const salt = randomBytes(16), iv = randomBytes(12);
   const c = createCipheriv('aes-256-gcm', keyOf(phrase, salt), iv);
