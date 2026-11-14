@@ -2,6 +2,13 @@
 
 Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. Versjonene med APK og IPA ligger under [Releases](https://github.com/SebastianKristo/torskenes-verden/releases).
 
+## [4.73.1] – 14.11.2026 · Gjenopprett fra fil og tofaktor etter gjenoppretting
+- **Gjenopprett fra fil:** Innstillinger → Backup → «Gjenopprett fra fil …» laster opp en systembackup fra PC-en (`.tar.gz`, `.tar.zst` eller `.enc`) og gjenoppretter hele systemet eller valgte moduler. Virker også på en ny installasjon (lenke i førstegangsoppsettet).
+- **Tofaktor etter gjenoppretting:** en 2FA-nøkkel som ikke kan leses gir en forklaring på norsk i stedet for en teknisk feil. Backupen husker hvilken serverhemmelighet den ble laget med, og nøkler krypteres om ved gjenoppretting når det er mulig; ellers varsles det før du gjenoppretter, med valg om å slå av 2FA for de berørte.
+- **Nye kommandoer på serveren:** `npm run reset-2fa -- <bruker>` og `npm run rekey-secrets`.
+- **Kontrast:** 2FA-boksen under Innstillinger → Innlogging er leselig i alle tema.
+- **Passkeys:** hjelpeteksten viser at ekstern adresse kan settes under Innstillinger → Server.
+
 ## [4.73.0] – 14.11.2026 · Live Activities, animert innlogging og riktig domene
 - **Live Activities (iPhone) og Live Updates (Android):** nedlastinger, backup, spilles nå (Plex/Jellyfin), neste avtale og pakkesporing på låseskjermen, i Dynamic Island og StandBy, og som varsel med fremdrift på Android. Knappene (pause, fortsett, stopp, utsett) virker uten å åpne appen. Slå av og på hver type under Innstillinger → Varsler.
   - Push fra serveren krever en APNs-nøkkel under Integrasjoner → Apple Push; uten den oppdateres aktivitetene når appen henter data.
