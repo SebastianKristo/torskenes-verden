@@ -676,7 +676,7 @@ authed.get('/overview', (c) => {
   const pend = db.prepare(`SELECT * FROM sec51_approvals WHERE state='pending' AND exp>? ${adm ? '' : 'AND user=?'} ORDER BY created DESC LIMIT 50`).all(...(adm ? [now] : [now, u])).map((a) => approvalOut(a, now));
   const rp = rp51(c);
   return c.json({ me: { passkeys: passkeysOf51(u), devices: mine, countries: kv.get(u, 'sec51_countries', []) ?? [], audit: auditList51({ user: u, limit: 20 }).items },
-    pending: pend, passkeys: { available: !!rp, rpId: rp?.rpId ?? null, reason: rp ? null : 'Sett PUBLIC_URL (https) i .env for å bruke passkeys.' },
+    pending: pend, passkeys: { available: !!rp, rpId: rp?.rpId ?? null, reason: rp ? null : 'Sett ekstern adresse (https) under Innstillinger → Server, eller PUBLIC_URL i .env, for å bruke passkeys.' },
     policy: policy51(), admin: adm, secretWarning: adm ? secretStatus86().warning ?? undefined : undefined, limits: adm ? list51(now) : undefined, lastScan: adm ? kv.get(OWNER, 'sec51_logscan', null) : undefined }, 200, { 'Cache-Control': 'no-store' });
 });
 authed.get('/audit', (c) => {
