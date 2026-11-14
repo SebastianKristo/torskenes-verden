@@ -1,0 +1,221 @@
+/* GENERERT av scripts/design-tokens.mjs fra shared/design/tokens.json – ikke rediger. */
+/* Designtokens for web (--ds-*). Se docs/designsystem.md. Stil = data-hl (2c = papir, cur = glass), modus = data-mode. */
+
+:root {
+  --ds-on-category: #ffffff;
+  --ds-category-blue: #2b5d8a;
+  --ds-category-red: #d4231b;
+  --ds-category-purple: #6b4fa0;
+  --ds-category-green: #2f7a4f;
+  --ds-category-teal: #1f7a6e;
+  --ds-category-pink: #c2477a;
+  --ds-category-amber: #a8661a;
+  --ds-category-brown: #8a6a3a;
+  --ds-category-neutral: #55524d;
+  --ds-weight-regular: 400;
+  --ds-weight-medium: 500;
+  --ds-weight-semibold: 600;
+  --ds-weight-bold: 700;
+  --ds-text-caption-size: 11px;
+  --ds-text-caption-line: 14px;
+  --ds-text-caption-weight: 500;
+  --ds-text-footnote-size: 12px;
+  --ds-text-footnote-line: 16px;
+  --ds-text-footnote-weight: 400;
+  --ds-text-subheadline-size: 13px;
+  --ds-text-subheadline-line: 18px;
+  --ds-text-subheadline-weight: 400;
+  --ds-text-callout-size: 14px;
+  --ds-text-callout-line: 20px;
+  --ds-text-callout-weight: 400;
+  --ds-text-body-size: 16px;
+  --ds-text-body-line: 24px;
+  --ds-text-body-weight: 400;
+  --ds-text-headline-size: 18px;
+  --ds-text-headline-line: 24px;
+  --ds-text-headline-weight: 600;
+  --ds-text-title3-size: 22px;
+  --ds-text-title3-line: 28px;
+  --ds-text-title3-weight: 600;
+  --ds-text-title2-size: 28px;
+  --ds-text-title2-line: 34px;
+  --ds-text-title2-weight: 700;
+  --ds-text-large-title-size: 44px;
+  --ds-text-large-title-line: 52px;
+  --ds-text-large-title-weight: 700;
+  --ds-space-xs: 4px;
+  --ds-space-sm: 8px;
+  --ds-space-md: 12px;
+  --ds-space-lg: 16px;
+  --ds-space-xl: 24px;
+  --ds-space-xxl: 32px;
+  --ds-radius-sm: 8px;
+  --ds-radius-md: 12px;
+  --ds-radius-lg: 16px;
+  --ds-radius-xl: 20px;
+  --ds-radius-full: 999px;
+  --ds-shadow-low: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --ds-shadow-mid: 0 4px 12px rgba(0, 0, 0, 0.12);
+  --ds-shadow-high: 0 12px 32px rgba(0, 0, 0, 0.2);
+  --ds-z-base: 0;
+  --ds-z-raised: 10;
+  --ds-z-sticky: 100;
+  --ds-z-nav: 200;
+  --ds-z-sheet: 300;
+  --ds-z-toast: 400;
+  --ds-motion-fast: 150ms;
+  --ds-motion-normal: 250ms;
+  --ds-motion-slow: 400ms;
+  --ds-ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ds-ease-enter: cubic-bezier(0, 0, 0.2, 1);
+  --ds-ease-exit: cubic-bezier(0.4, 0, 1, 1);
+}
+
+/* Papir lys (standard) */
+:root,
+:root[data-hl="2c"],
+:root[data-theme="lys"] {
+  --ds-color-scheme: light;
+  --ds-surface: #f3efe6;
+  --ds-surface-raised: #fffdf8;
+  --ds-surface-sunken: #ebe5d8;
+  --ds-line: #d8d1c2;
+  --ds-text-primary: #1b1a17;
+  --ds-text-secondary: #5c5850;
+  --ds-text-tertiary: #8f897c;
+  --ds-accent: #b23a2a;
+  --ds-on-accent: #ffffff;
+  --ds-success: #2f7a4f;
+  --ds-on-success: #ffffff;
+  --ds-warning: #a8661a;
+  --ds-on-warning: #ffffff;
+  --ds-danger: #b23a2a;
+  --ds-on-danger: #ffffff;
+  --ds-focus: #1b1a17;
+  --ds-scrim: rgba(0, 0, 0, 0.35);
+  --ds-font-sans: Manrope, system-ui, sans-serif;
+  --ds-font-serif: Newsreader, Georgia, serif;
+  --ds-font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  --ds-blur-raised: 0px;
+}
+
+/* Glass mørk («cur»). Glass har ingen lys modus (Q13), så data-mode ignoreres her. */
+:root[data-hl="cur"],
+:root[data-theme="glod"] {
+  --ds-color-scheme: dark;
+  --ds-surface: #07080b;
+  --ds-surface-raised: rgba(40, 44, 52, 0.55);
+  --ds-surface-sunken: rgba(255, 255, 255, 0.06);
+  --ds-line: rgba(255, 255, 255, 0.12);
+  --ds-text-primary: #eef0f4;
+  --ds-text-secondary: #8a93a6;
+  --ds-text-tertiary: #6e6e78;
+  --ds-accent: #ff7a3d;
+  --ds-on-accent: #1b1a17;
+  --ds-success: #6fbf8f;
+  --ds-on-success: #1b1a17;
+  --ds-warning: #e0a24a;
+  --ds-on-warning: #1b1a17;
+  --ds-danger: #f59a8f;
+  --ds-on-danger: #1b1a17;
+  --ds-focus: #a8d4fb;
+  --ds-scrim: rgba(0, 0, 0, 0.5);
+  --ds-font-sans: Outfit, system-ui, sans-serif;
+  --ds-font-serif: Newsreader, Georgia, serif;
+  --ds-font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --ds-blur-raised: 12px;
+}
+
+/* Papir mørk */
+:root[data-hl="2c"][data-mode="dark"],
+:root[data-theme="mork"] {
+  --ds-color-scheme: dark;
+  --ds-surface: #16140f;
+  --ds-surface-raised: #211e18;
+  --ds-surface-sunken: #1b1a17;
+  --ds-line: #3a352c;
+  --ds-text-primary: #f3efe6;
+  --ds-text-secondary: #a39d90;
+  --ds-text-tertiary: #8a8478;
+  --ds-accent: #ec7a64;
+  --ds-on-accent: #1b1a17;
+  --ds-success: #6fbf8f;
+  --ds-on-success: #1b1a17;
+  --ds-warning: #e0a24a;
+  --ds-on-warning: #1b1a17;
+  --ds-danger: #f59a8f;
+  --ds-on-danger: #1b1a17;
+  --ds-focus: #ec7a64;
+  --ds-scrim: rgba(0, 0, 0, 0.5);
+  --ds-font-sans: Manrope, system-ui, sans-serif;
+  --ds-font-serif: Newsreader, Georgia, serif;
+  --ds-font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  --ds-blur-raised: 0px;
+}
+
+/* Kalender.app (data-kal-app) setter ikke data-mode, men følger systemet. */
+@media (prefers-color-scheme: dark) {
+  :root[data-kal-app] {
+    --ds-color-scheme: dark;
+    --ds-surface: #16140f;
+    --ds-surface-raised: #211e18;
+    --ds-surface-sunken: #1b1a17;
+    --ds-line: #3a352c;
+    --ds-text-primary: #f3efe6;
+    --ds-text-secondary: #a39d90;
+    --ds-text-tertiary: #8a8478;
+    --ds-accent: #ec7a64;
+    --ds-on-accent: #1b1a17;
+    --ds-success: #6fbf8f;
+    --ds-on-success: #1b1a17;
+    --ds-warning: #e0a24a;
+    --ds-on-warning: #1b1a17;
+    --ds-danger: #f59a8f;
+    --ds-on-danger: #1b1a17;
+    --ds-focus: #ec7a64;
+    --ds-scrim: rgba(0, 0, 0, 0.5);
+    --ds-font-sans: Manrope, system-ui, sans-serif;
+    --ds-font-serif: Newsreader, Georgia, serif;
+    --ds-font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+    --ds-blur-raised: 0px;
+  }
+}
+
+/* Økt kontrast */
+@media (prefers-contrast: more) {
+  :root,
+  :root[data-hl="2c"],
+  :root[data-theme="lys"] {
+    --ds-text-secondary: #3f3b35;
+    --ds-text-tertiary: #5c5850;
+    --ds-line: #8f897c;
+  }
+  :root[data-hl="cur"],
+  :root[data-theme="glod"] {
+    --ds-text-secondary: #c4cad6;
+    --ds-text-tertiary: #8a93a6;
+    --ds-line: rgba(255, 255, 255, 0.3);
+  }
+  :root[data-hl="2c"][data-mode="dark"],
+  :root[data-theme="mork"] {
+    --ds-text-secondary: #d6d0c4;
+    --ds-text-tertiary: #a39d90;
+    --ds-line: #6b665c;
+  }
+}
+@media (prefers-contrast: more) and (prefers-color-scheme: dark) {
+  :root[data-kal-app] {
+    --ds-text-secondary: #d6d0c4;
+    --ds-text-tertiary: #a39d90;
+    --ds-line: #6b665c;
+  }
+}
+
+/* Reduser bevegelse: alle varigheter blir 0. */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --ds-motion-fast: 0ms;
+    --ds-motion-normal: 0ms;
+    --ds-motion-slow: 0ms;
+  }
+}

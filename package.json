@@ -17,7 +17,9 @@
     "test:visual": "node test/ui51/visual.mjs",
     "reset-password": "node scripts/reset-password.js",
     "reset-2fa": "node scripts/reset-2fa.js",
-    "rekey-secrets": "node scripts/rekey-secrets.js"
+    "rekey-secrets": "node scripts/rekey-secrets.js",
+    "tokens": "node scripts/design-tokens.mjs",
+    "tokens:check": "node scripts/design-tokens.mjs --check"
   },
   "engines": {
     "node": ">=22"
