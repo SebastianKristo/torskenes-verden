@@ -130,6 +130,9 @@ final class MacStore: ObservableObject {
     private var lastDay: String = KalD.todayKey()
 
     init() {
+        // Prompt 89: den gamle feilstavede standardadressen → os.smarthjemeksperten.no (KalSrv89Core.swift, MacLogin89.swift).
+        KalSrv89.migrate()
+        MacLogin89.migrate()
         // Prompt 37: fagfargene synkes med profilen (PUT/GET /api/me/layout subjectColors).
         KalFag37.pushEnabled = true
         if let d = UserDefaults.standard.data(forKey: "mac.snapshot"), let snap = try? JSONDecoder().decode(KalSnapshot.self, from: d) {

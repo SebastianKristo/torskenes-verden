@@ -17,36 +17,81 @@ import ActivityKit
 struct Plat51LiveWidget: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: Plat51Attributes.self) { (ctx: ActivityViewContext<Plat51Attributes>) in
-            Plat51LiveLock(attr: ctx.attributes, st: ctx.state)
-                .activityBackgroundTint(Color(red: 0.08, green: 0.09, blue: 0.11).opacity(0.85))
-                .activitySystemActionForegroundColor(Color.white)
+            // Prompt 89: de fem aktivitetene fra serveren har egne visninger (Live89Live.swift).
+            Group {
+                if Live89.isNew(ctx.attributes.kind) {
+                    Live89Lock(attr: ctx.attributes, st: ctx.state)
+                        .activityBackgroundTint(Live89Look.background)
+                        .activitySystemActionForegroundColor(Color.white)
+                } else {
+                    Plat51LiveLock(attr: ctx.attributes, st: ctx.state)
+                        .activityBackgroundTint(Color(red: 0.08, green: 0.09, blue: 0.11).opacity(0.85))
+                        .activitySystemActionForegroundColor(Color.white)
+                }
+            }
         } dynamicIsland: { (ctx: ActivityViewContext<Plat51Attributes>) in
             DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
-                    Plat51LiveIcon(attr: ctx.attributes, size: 34).padding(.leading, 4)
+                    if Live89.isNew(ctx.attributes.kind) {
+                        Live89Tile(kind: ctx.attributes.kind, st: ctx.state, size: 44).padding(.leading, 2)
+                    } else {
+                        Plat51LiveIcon(attr: ctx.attributes, size: 34).padding(.leading, 4)
+                    }
                 }
                 DynamicIslandExpandedRegion(.trailing) {
-                    Plat51LiveValue(attr: ctx.attributes, st: ctx.state).font(.system(size: 22, weight: .semibold)).monospacedDigit().padding(.trailing, 4)
+                    if Live89.isNew(ctx.attributes.kind) {
+                        Live89Value(kind: ctx.attributes.kind, st: ctx.state)
+                            .font(.system(size: 26, weight: .semibold)).monospacedDigit()
+                            .foregroundStyle(Live89Look.accent(ctx.attributes.kind))
+                            .frame(maxWidth: 110, alignment: .trailing).padding(.trailing, 2)
+                    } else {
+                        Plat51LiveValue(attr: ctx.attributes, st: ctx.state).font(.system(size: 22, weight: .semibold)).monospacedDigit().padding(.trailing, 4)
+                    }
                 }
                 DynamicIslandExpandedRegion(.center) {
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(ctx.state.title).font(.system(size: 15, weight: .semibold)).lineLimit(1)
-                        Text(ctx.state.sub).font(.system(size: 12)).foregroundStyle(Color.white.opacity(0.7)).lineLimit(1)
+                    if Live89.isNew(ctx.attributes.kind) {
+                        Live89ExpandedCenter(st: ctx.state)
+                    } else {
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(ctx.state.title).font(.system(size: 15, weight: .semibold)).lineLimit(1)
+                            Text(ctx.state.sub).font(.system(size: 12)).foregroundStyle(Color.white.opacity(0.7)).lineLimit(1)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 DynamicIslandExpandedRegion(.bottom) {
-                    Plat51LiveBottom(attr: ctx.attributes, st: ctx.state)
+                    if Live89.isNew(ctx.attributes.kind) {
+                        Live89ExpandedBottom(attr: ctx.attributes, st: ctx.state)
+                    } else {
+                        Plat51LiveBottom(attr: ctx.attributes, st: ctx.state)
+                    }
                 }
             } compactLeading: {
-                Plat51LiveIcon(attr: ctx.attributes, size: 20)
+                if Live89.isNew(ctx.attributes.kind) {
+                    Image(systemName: Live89.symbol(ctx.attributes.kind, paused: Live89Look.paused(ctx.state)))
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(Live89Look.accent(ctx.attributes.kind))
+                } else {
+                    Plat51LiveIcon(attr: ctx.attributes, size: 20)
+                }
             } compactTrailing: {
-                Plat51LiveValue(attr: ctx.attributes, st: ctx.state).font(.system(size: 13, weight: .semibold)).monospacedDigit().frame(maxWidth: 56)
+                if Live89.isNew(ctx.attributes.kind) {
+                    Live89Value(kind: ctx.attributes.kind, st: ctx.state)
+                        .font(.system(size: 14, weight: .semibold)).monospacedDigit()
+                        .foregroundStyle(Live89Look.accent(ctx.attributes.kind))
+                        .frame(maxWidth: 56)
+                } else {
+                    Plat51LiveValue(attr: ctx.attributes, st: ctx.state).font(.system(size: 13, weight: .semibold)).monospacedDigit().frame(maxWidth: 56)
+                }
             } minimal: {
-                Plat51LiveIcon(attr: ctx.attributes, size: 20)
+                if Live89.isNew(ctx.attributes.kind) {
+                    Live89Ring(kind: ctx.attributes.kind, st: ctx.state)
+                } else {
+                    Plat51LiveIcon(attr: ctx.attributes, size: 20)
+                }
             }
             .keylineTint(Plat51LiveLook.tint(ctx.attributes))
-            .widgetURL(Plat51LiveLook.link(ctx.attributes))
+            .widgetURL(Live89.isNew(ctx.attributes.kind) ? Live89.link(ctx.state.url, kind: ctx.attributes.kind) : Plat51LiveLook.link(ctx.attributes))
         }
     }
 }
@@ -64,6 +109,7 @@ enum Plat51LiveLook {
                                               "fedex": "#4D148C", "gls": "#3C5AA8", "helthjem": "#5A54B0", "budbee": "#2BCE96", "instabox": "#FF4E00"]
 
     static func tint(_ a: Plat51Attributes) -> Color {
+        if Live89.isNew(a.kind) { return Plat51W.hex(Live89.accent(a.kind)) }
         switch a.kind {
         case "bus": return Plat51W.hex(a.color.isEmpty ? "#E60000" : a.color)
         case "package": return Plat51W.hex(carrierHex[a.color] ?? "#FF7A3D")

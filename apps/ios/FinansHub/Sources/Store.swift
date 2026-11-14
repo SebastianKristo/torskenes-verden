@@ -463,7 +463,13 @@ final class Store {
     }
 
     nonisolated private static func loadAccounts() -> [LoginAccount] {
-        if let raw = Keychain.get("accounts"), let d = raw.data(using: .utf8), let list = try? JSONDecoder().decode([LoginAccount].self, from: d) { return list }
+        // Prompt 89: den gamle feilstavede standardadressen skrives om til os.smarthjemeksperten.no (Login89.swift).
+        Server89.migrate()
+        if let raw = Keychain.get("accounts"), let d = raw.data(using: .utf8), let list = try? JSONDecoder().decode([LoginAccount].self, from: d) {
+            let fixed: [LoginAccount] = Server89.migrateAccounts(list)
+            if fixed != list, let e = try? JSONEncoder().encode(fixed) { Keychain.set("accounts", String(data: e, encoding: .utf8)) }
+            return fixed
+        }
         // Eldre versjon: én server og ett token.
         guard let server = Keychain.get("server"), let token = Keychain.get("token") else { return [] }
         let a = LoginAccount(id: UUID().uuidString, server: server, username: "", name: "", role: "admin", token: token, local: "", external: "")
@@ -542,7 +548,9 @@ final class Store {
             if firstEver && !UserDefaults.standard.bool(forKey: "fh_onboarded") { self.onboarding = 0 }
             Keychain.set("server", srv)
             let same = self.accounts.first { $0.server == srv && $0.username.lowercased() == r.username.lowercased() }
-            let acc = LoginAccount(id: same?.id ?? UUID().uuidString, server: srv, username: r.username, name: r.name, role: r.role, token: r.token, local: same?.local ?? "", external: same?.external ?? "")
+            // Prompt 89: ny konto på adressen fra tannhjulet → adressene derfra (samme lagring som Innstillinger → Server).
+            let seed: (local: String, external: String) = Store.seed89(srv)
+            let acc = LoginAccount(id: same?.id ?? UUID().uuidString, server: srv, username: r.username, name: r.name, role: r.role, token: r.token, local: same?.local ?? seed.local, external: same?.external ?? seed.external)
             self.accounts = self.accounts.filter { $0.id != acc.id } + [acc]
             self.addingAccount = false
             self.switchTo(acc.id)
@@ -554,6 +562,16 @@ final class Store {
     }
 
     func cancelTotp() { pending = nil }
+
+    /// Prompt 89: lokal/ekstern adresse fra arket «Server» når kontoen logger inn på en av dem, ellers tomt (lært fra serveren).
+    nonisolated static func seed89(_ srv: String) -> (local: String, external: String) {
+        let e: String = Server89.external
+        let l: String = Server89.savedLocal
+        if Server47.same(srv, e) || (!l.isEmpty && Server47.same(srv, l)) {
+            return (l.isEmpty ? "" : API.normalize(l), API.normalize(e))
+        }
+        return ("", "")
+    }
 
     /// Prompt 46: QR-innlogging (Qr46Login.swift) – serveren har gitt denne enheten et eget token etter godkjenning på en annen
     /// mobil. Samme konto-oppsett som login(server:…), men uten passord.
@@ -657,6 +675,8 @@ final class Store {
         a.external = external.trimmingCharacters(in: .whitespaces).isEmpty ? "" : API.normalize(external)
         accounts = accounts.map { $0.id == a.id ? a : $0 }
         saveAccounts()
+        // Prompt 89: én felles lagring med tannhjulet på innloggingen (Login89.swift).
+        Server89.remember(local: a.local, external: a.external.isEmpty ? a.server : a.external)
         refresh()
     }
 

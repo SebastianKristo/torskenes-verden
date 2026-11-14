@@ -48,6 +48,8 @@ enum Notify31 {
                     await Notify31.fetchPending(api)
                     await Trial31Model.shared.load(api)
                     await Hjemlys40Glimt.backgroundCheck(api)
+                    // Prompt 89: Live Activities (start/oppdater/avslutt) også ved bakgrunnshenting (Live89Host.swift).
+                    await Live89Model.background()
                 }
                 task.setTaskCompleted(success: true)
             }

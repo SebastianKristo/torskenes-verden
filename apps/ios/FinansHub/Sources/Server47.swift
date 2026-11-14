@@ -2,14 +2,14 @@ import SwiftUI
 
 // ---------------- Prompt 47: standard serveradresser + Innstillinger → Konto → Server ----------------
 // Spesifikasjon: prompts/prompt-47-pakke/claude-code-standard-serveradresser.md.
-// – Standard: ekstern https://os.smarthjemexperten.no, lokal http://10.69.1.39:3000 (Info.plist «HomelabServer» og
+// – Standard: ekstern https://os.smarthjemeksperten.no, lokal http://10.69.1.39:3000 (Info.plist «HomelabServer» og
 //   «HomelabLocal47» kan overstyre). Serveren kan overstyre med PUBLIC_URL / LOCAL_URL; appen leser dem fra GET /api/config/servers
 //   etter innlogging (publicUrl, localUrl). Tåler 404 (eldre server): da fylles standardverdiene inn når kontoen er på en av dem.
 // – Innstillinger → Server: Ekstern og Lokal adresse med status under hvert felt («Svarer · 34 ms» / «Svarer ikke») og «Test»,
 //   og «Tilbakestill til standard». Endringer lagres på serveren (PUT /api/me/server) og synkes til andre enheter på kontoen.
 // – Valg av adresse: lokal når den svarer innen 1,5 s, ellers ekstern. Nytt valg ved nettverksendring (Store.reroute47).
 // – Klartekst-HTTP bare til lokalt nett: NSAllowsLocalNetworking (ikke global ATS-av) + NSLocalNetworkUsageDescription.
-// – Meldinger viser domenet (os.smarthjemexperten.no), aldri den interne IP-en. Den lokale adressen vises bare her.
+// – Meldinger viser domenet (os.smarthjemeksperten.no), aldri den interne IP-en. Den lokale adressen vises bare her.
 
 enum Server47 {
     /// Ekstern standardadresse.
@@ -39,7 +39,7 @@ enum Server47 {
         let ext: String = a.map { $0.external.isEmpty ? $0.server : $0.external } ?? ""
         let h: String = URL(string: API.normalize(ext))?.host ?? ""
         if !h.isEmpty && !API.isLocal(h) { return h }
-        return URL(string: defaultExternal)?.host ?? "os.smarthjemexperten.no"
+        return URL(string: defaultExternal)?.host ?? "os.smarthjemeksperten.no"
     }
 
     /// Fyller tomme adresser fra /api/config/servers (publicUrl, localUrl) og ellers fra standardverdiene. Tåler 404.

@@ -19,6 +19,9 @@ final class KalLogin41Model {
     var offerServer: Bool = false
     var serverOpen: Bool = false
     var serverText: String = UserDefaults.standard.string(forKey: "kal41.manual") ?? ""
+    /// Prompt 89: arket «Server» fra tannhjulet (KalLogin89.swift) og domenet som vises under innloggingsknappene.
+    var gear89: Bool = false
+    var server89: String = KalSrv89.displayHost
     /// 0 Åpner Homelab · 1 Godkjenn · 2 Sender tilbake · 3 Henter kalenderne
     var step: Int = 0
     var busy: Bool = false
@@ -290,6 +293,15 @@ final class KalLogin41Model {
         error = ""
     }
 
+    /// Prompt 89: arket «Server» er lagret – ny visning og nye adresser ved neste forsøk.
+    func saved89() {
+        serverText = UserDefaults.standard.string(forKey: "kal41.manual") ?? ""
+        server89 = KalSrv89.displayHost
+        offerServer = false
+        error = ""
+        if phase == "err" { phase = "start" }
+    }
+
     /* ---------- Ferdig ---------- */
 
     private func finish(_ s: KalSession41, via: String) {
@@ -384,6 +396,15 @@ struct KalLogin41View: View {
         .sheet(isPresented: Binding(get: { m.serverOpen }, set: { (v: Bool) in if m.serverOpen != v { m.serverOpen = v } })) {
             KalServer41Sheet().environment(\.kal, t)
         }
+        // Prompt 89: tannhjulet øverst til høyre åpner arket «Server» (KalLogin89.swift).
+        .overlay(alignment: .topTrailing) {
+            if m.phase == "start" || m.phase == "pw" || m.phase == "err" {
+                KalLogin89Gear().padding(.trailing, 8)
+            }
+        }
+        .sheet(isPresented: Binding(get: { m.gear89 }, set: { (v: Bool) in if m.gear89 != v { m.gear89 = v } })) {
+            KalLogin89Sheet().environment(\.kal, t)
+        }
     }
 
     private var title: String {
@@ -436,6 +457,8 @@ struct KalLogin41Start: View {
                     .frame(maxWidth: .infinity).frame(height: 44)
             }
             .buttonStyle(.plain)
+            // Prompt 89: valgt server i liten grå tekst.
+            KalLogin89Line()
         }
     }
 
@@ -569,6 +592,8 @@ struct KalLogin41Pw: View {
             }
             .buttonStyle(.plain)
             .disabled(m.busy)
+            // Prompt 89: valgt server i liten grå tekst under innloggingsknappen.
+            KalLogin89Line()
             if m.offerServer { KalServer41Link() }
             Button(action: {
                 KalHaptic.tap()
@@ -616,7 +641,8 @@ struct KalServer41Link: View {
     var body: some View {
         Button(action: {
             KalHaptic.tap()
-            m.serverOpen = true
+            // Prompt 89: samme ark som tannhjulet (ekstern og lokal adresse, Test tilkobling).
+            m.gear89 = true
         }) {
             Text("Endre serveradresse").font(KalFont.ui(13, .semibold)).foregroundStyle(t.acc).frame(height: 36)
         }

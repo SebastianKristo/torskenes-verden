@@ -5,7 +5,10 @@ import SwiftUI
 
 struct MacLoginView: View {
     @Environment(\.mk) private var t
-    @State private var server: String = UserDefaults.standard.string(forKey: "mac.lastServer") ?? ""
+    // Prompt 89: uten sist brukte adresse fylles den eksterne standardadressen inn (MacLogin89.swift).
+    @State private var server: String = MacLogin89.initialServer
+    /// Prompt 89: arket «Server» fra tannhjulet øverst til høyre.
+    @State private var serverSheet: Bool = false
     @State private var user: String = UserDefaults.standard.string(forKey: "mac.lastUser") ?? ""
     @State private var pass: String = ""
     @State private var code: String = ""
@@ -23,7 +26,7 @@ struct MacLoginView: View {
             Text("Kalender").font(MacFont.serif(42)).foregroundColor(t.ink)
             Text("Logg inn med Homelab-kontoen din. Kalender for Mac deler kalendere, hendelser, bursdager og frister med Homelab på web og iPhone.")
                 .font(MacFont.ui(14)).foregroundColor(t.mut).fixedSize(horizontal: false, vertical: true)
-            MacLoginField(title: "Serveradresse (f.eks. os.smarthjemexperten.no eller 10.69.1.39:3000)", text: $server, secure: false)
+            MacLoginField(title: "Serveradresse (f.eks. os.smarthjemeksperten.no eller 10.69.1.39:3000)", text: $server, secure: false)
             if qrMode {
                 MacQR38Panel(base: MacAuth.normalize(server), onPassword: { qrMode = false })
             } else {
@@ -34,6 +37,12 @@ struct MacLoginView: View {
         .padding(40)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(t.bg)
+        .overlay(alignment: .topTrailing) {
+            MacLogin89Gear { serverSheet = true }.padding(10)
+        }
+        .sheet(isPresented: $serverSheet) {
+            MacLogin89Sheet(onSave: { (e: String) in server = e }, onClose: { serverSheet = false }).environment(\.mk, t)
+        }
     }
 
     private var hasServer: Bool { !server.trimmingCharacters(in: .whitespaces).isEmpty }
@@ -57,6 +66,9 @@ struct MacLoginView: View {
         .buttonStyle(.plain)
         .keyboardShortcut(.defaultAction)
         .disabled(!canSubmit)
+        // Prompt 89: valgt server i liten grå tekst under knappen.
+        Text("Server: " + KalSrv89.host(server.isEmpty ? KalSrv89.external : MacAuth.normalize(server)))
+            .font(MacFont.ui(11.5)).foregroundColor(t.mut2).lineLimit(1)
         Button(action: { qrMode = true }) {
             Text("Logg inn med QR fra mobilen").font(MacFont.ui(13, .semibold)).foregroundColor(hasServer ? t.acc : t.mut2)
         }

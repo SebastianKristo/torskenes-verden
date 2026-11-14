@@ -34,7 +34,7 @@ struct MacSettingsView: View {
             scroll {
                 section("KONTOER") { accounts43 }
                 section("HOMELAB") { account }
-                // Prompt 47: ekstern og lokal adresse med standardverdier (os.smarthjemexperten.no / 10.69.1.39:3000).
+                // Prompt 47: ekstern og lokal adresse med standardverdier (os.smarthjemeksperten.no / 10.69.1.39:3000).
                 if store.loggedIn { section("SERVER") { MacSrv47Section() } }
                 // Prompt 51: nye enheter som venter på godkjenning (Godkjenn med Touch ID/passord · Avvis).
                 if store.loggedIn { section("SIKKERHET") { MacSec51Section() } }

@@ -30,14 +30,26 @@ struct Plat51Attributes: ActivityAttributes {
     public struct ContentState: Codable, Hashable {
         var title: String
         var sub: String
-        /// Unix-sekunder (bus: avgangstid). 0 = ingen nedtelling.
+        /// Unix-sekunder (bus: avgangstid; prompt 89: «slutt» – spiller: slutten av episoden, avtale: starttiden). 0 = ingen.
         var endAt: Double
         /// 0…1, -1 = ingen fremdrift.
         var progress: Double
-        /// active | soon | done | stalled
+        /// active | soon | done | stalled | paused (prompt 89)
         var state: String
         /// «64 %», «Klar», «I dag»
         var value: String
+        /* Prompt 89 (Live89.swift): de fem aktivitetene fra GET /api/live/aktiviteter. */
+        /// Teksten under linja («17,4 MB/s · 2 min igjen»).
+        var meta: String = ""
+        /// Unix-sekunder («start» – spiller: når posisjon 0 var). 0 = ingen.
+        var startAt: Double = 0
+        /// Pakke: antall steg og ferdige steg (segmentene). 0 = ingen segmenter.
+        var segTotal: Int = 0
+        var segDone: Int = 0
+        /// Knappene (App Intents): pause | fortsett | stopp | rute | utsett.
+        var actions: [Live89Btn] = []
+        /// Dyplenke i appen («homelab://media/ned»).
+        var url: String = ""
 
         init(title: String, sub: String, endAt: Double = 0, progress: Double = -1, state: String = "active", value: String = "") {
             self.title = title
@@ -49,14 +61,95 @@ struct Plat51Attributes: ActivityAttributes {
         }
 
         var endDate: Date { Date(timeIntervalSince1970: endAt) }
+        var startDate: Date { Date(timeIntervalSince1970: startAt) }
+
+        /// Egne nøkler + feltene fra API-et (Akt), så serveren kan sende aktiviteten slik den er i APNs «content-state».
+        enum CodingKeys: String, CodingKey {
+            case title, sub, endAt, progress, state, value, meta, startAt, segTotal, segDone, actions, url
+            case tittel, undertittel, verdi, status, start, slutt, segmenter, handlinger
+        }
+
+        init(from decoder: Decoder) throws {
+            let c: KeyedDecodingContainer<CodingKeys> = try decoder.container(keyedBy: CodingKeys.self)
+            let t1: String? = try? c.decode(String.self, forKey: .title)
+            let t2: String? = try? c.decode(String.self, forKey: .tittel)
+            title = t1 ?? t2 ?? ""
+            let s1: String? = try? c.decode(String.self, forKey: .sub)
+            let s2: String? = try? c.decode(String.self, forKey: .undertittel)
+            sub = s1 ?? s2 ?? ""
+            let v1: String? = try? c.decode(String.self, forKey: .value)
+            let v2: String? = try? c.decode(String.self, forKey: .verdi)
+            value = v1 ?? v2 ?? ""
+            let p: Double? = try? c.decode(Double.self, forKey: .progress)
+            progress = p.map { (x: Double) -> Double in x < 0 ? -1 : Swift.min(1, x) } ?? -1
+            let st1: String? = try? c.decode(String.self, forKey: .state)
+            let st2: String? = try? c.decode(String.self, forKey: .status)
+            state = st1 ?? Live89.state(st2 ?? "")
+            let e1: Double? = try? c.decode(Double.self, forKey: .endAt)
+            let e2: String? = try? c.decode(String.self, forKey: .slutt)
+            endAt = e1 ?? Live89.unix(e2 ?? "")
+            let a1: Double? = try? c.decode(Double.self, forKey: .startAt)
+            let a2: String? = try? c.decode(String.self, forKey: .start)
+            startAt = a1 ?? Live89.unix(a2 ?? "")
+            meta = (try? c.decode(String.self, forKey: .meta)) ?? ""
+            url = (try? c.decode(String.self, forKey: .url)) ?? ""
+            let seg: Live89Seg? = try? c.decode(Live89Seg.self, forKey: .segmenter)
+            let n1: Int? = try? c.decode(Int.self, forKey: .segTotal)
+            let n2: Int? = try? c.decode(Int.self, forKey: .segDone)
+            segTotal = n1 ?? seg?.antall ?? 0
+            segDone = n2 ?? seg?.ferdig ?? 0
+            let b1: [Live89Btn]? = try? c.decode([Live89Btn].self, forKey: .actions)
+            let b2: [Live89Btn]? = try? c.decode([Live89Btn].self, forKey: .handlinger)
+            actions = (b1 ?? b2 ?? []).filter { (b: Live89Btn) -> Bool in Live89.actionIds.contains(b.id) }
+        }
+
+        func encode(to encoder: Encoder) throws {
+            var c: KeyedEncodingContainer<CodingKeys> = encoder.container(keyedBy: CodingKeys.self)
+            try c.encode(title, forKey: .title)
+            try c.encode(sub, forKey: .sub)
+            try c.encode(endAt, forKey: .endAt)
+            try c.encode(progress, forKey: .progress)
+            try c.encode(state, forKey: .state)
+            try c.encode(value, forKey: .value)
+            try c.encode(meta, forKey: .meta)
+            try c.encode(startAt, forKey: .startAt)
+            try c.encode(segTotal, forKey: .segTotal)
+            try c.encode(segDone, forKey: .segDone)
+            try c.encode(actions, forKey: .actions)
+            try c.encode(url, forKey: .url)
+        }
     }
 
-    /// bus | package | download
+    /// bus | package | download · prompt 89: nedlasting | backup | spiller | avtale | pakke
     var kind: String
-    /// Unik nøkkel: «bus:<stopp>:<linje>:<tid>», «pkg:<id>», «downloads».
+    /// Unik nøkkel: «bus:<stopp>:<linje>:<tid>», «pkg:<id>», «downloads» · prompt 89: aktivitetens id fra serveren.
     var key: String
     /// Farge (hex) – linjefarge eller transportørens farge.
     var color: String
+}
+
+/// Prompt 89: push-to-start fra serveren kan sende «attributes» som {type, id} (som i API-et) eller {kind, key, color}.
+extension Plat51Attributes {
+    enum CodingKeys: String, CodingKey {
+        case kind, key, color, type, id
+    }
+
+    init(from decoder: Decoder) throws {
+        let c: KeyedDecodingContainer<CodingKeys> = try decoder.container(keyedBy: CodingKeys.self)
+        let k1: String? = try? c.decode(String.self, forKey: .kind)
+        let k2: String? = try? c.decode(String.self, forKey: .type)
+        let y1: String? = try? c.decode(String.self, forKey: .key)
+        let y2: String? = try? c.decode(String.self, forKey: .id)
+        let kd: String = k1 ?? k2 ?? ""
+        self.init(kind: kd, key: y1 ?? y2 ?? "", color: (try? c.decode(String.self, forKey: .color)) ?? Live89.accent(kd))
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c: KeyedEncodingContainer<CodingKeys> = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(kind, forKey: .kind)
+        try c.encode(key, forKey: .key)
+        try c.encode(color, forKey: .color)
+    }
 }
 
 enum Plat51Activity {
@@ -118,6 +211,8 @@ enum Plat51Activity {
 
     /// Pakker fra /api/mobile/widgets (packages.items): ute for levering eller klar for henting → Live Activity.
     static func syncPackages(_ widgetsJSON: Data?) async {
+        // Prompt 89: med /api/live/aktiviteter (Live89Sync) er pakkene en egen aktivitet («pakke») – ikke dobbelt.
+        if Live89Sync.serverHasLive { return }
         guard autoPackages, let widgetsJSON else { return }
         let o: [String: Any] = Plat51Net.obj(widgetsJSON)
         let items: [[String: Any]] = Plat51Net.list(o["packages"] as? [String: Any], "items")
@@ -149,6 +244,8 @@ enum Plat51Activity {
 
     /// Nedlastinger i Media → én Live Activity med samlet fremdrift.
     static func syncDownloads(_ v: Media43WData) async {
+        // Prompt 89: med /api/live/aktiviteter (Live89Sync) er nedlastingene en egen aktivitet («nedlasting»).
+        if Live89Sync.serverHasLive { return }
         guard autoDownloads else { return }
         let active: [Media43WDownload] = v.downloads.filter { $0.progress < 0.999 }
         if active.isEmpty || v.paused {

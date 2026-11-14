@@ -5,7 +5,7 @@ import UIKit
 // Spesifikasjon: prompts/prompt-41-pakke/claude-code-innlogging-uten-server.md. Fasit: Mobil Papir App.dc.html (innlogging uten
 // SERVER-felt, Innstillinger → Konto → SERVER).
 // – Innloggingen spør aldri om adresse. Appen prøver (i rekkefølge) sist brukte adresse, adressene den har lært (lokal/ekstern)
-//   og standardadressen https://home.kristo.no (Info.plist «HomelabServer» kan overstyre). Svarer ingen: «Får ikke kontakt med
+//   og standardadressen (Info.plist «HomelabServer» kan overstyre; prompt 89: https://os.smarthjemeksperten.no). Svarer ingen: «Får ikke kontakt med
 //   Homelab» + «Prøv igjen» og lenken «Endre serveradresse» (samme ark som i Innstillinger).
 // – Etter innlogging: GET /api/discovery (uinnlogget, {name, version, local:[url], external}) og GET /api/me/server
 //   ({local, external, auto}) fyller lokal og ekstern adresse. Klientene tåler 404 (eldre server).
@@ -33,7 +33,7 @@ final class Server41 {
     nonisolated static var defaultServer: String {
         if let s = Bundle.main.object(forInfoDictionaryKey: "HomelabServer") as? String, !s.isEmpty { return s }
         // Prompt 47: ny standard (Server47.swift). Lokal standard: Server47.defaultLocal.
-        return "https://os.smarthjemexperten.no"
+        return "https://os.smarthjemeksperten.no"
     }
 
     /// Adressene som prøves ved innlogging, i rekkefølge, uten duplikater.
@@ -45,6 +45,8 @@ final class Server41 {
             let n: String = API.normalize(t)
             if !n.isEmpty && !out.contains(n) { out.append(n) }
         }
+        // Prompt 89: lokal adresse fra tannhjulet (kort tidsavbrudd) og ekstern derfra før kjente kontoer.
+        add(Server89.savedLocal)
         add(manual)
         for a in store.accounts {
             add(a.local)
@@ -184,7 +186,8 @@ struct Server41LoginError: View {
                         .padding(.horizontal, 16).frame(height: 38).background(p.ink, in: Capsule())
                 }
                 .buttonStyle(.plain)
-                Button { s.editKind = "login" } label: {
+                // Prompt 89: samme ark som tannhjulet på innloggingen (Login89.swift).
+                Button { Login89Model.shared.open = true } label: {
                     Text("Endre serveradresse").font(PF.ui(13.5, .semibold)).foregroundStyle(p.lab).underline()
                 }
                 .buttonStyle(.plain)

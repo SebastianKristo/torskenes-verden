@@ -164,6 +164,8 @@ final class KalStore {
     var syncing44: Bool = false
 
     init() {
+        // Prompt 89: den gamle feilstavede standardadressen → os.smarthjemeksperten.no (KalSrv89Core.swift).
+        KalSrv89.migrate()
         KalQuick.defDur44 = (UserDefaults.standard.object(forKey: "kal.defDur") as? Int) ?? 60
         // Prompt 44: den store bufferen (−3 … +12 mnd) først, ellers widget-bufferen.
         if let f = KalCache44.load(user: KalGroup.user), !f.events.isEmpty {

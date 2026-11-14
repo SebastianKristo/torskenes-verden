@@ -386,6 +386,8 @@ struct PaperNotifySettings: View {
                     }
                 }
             }
+            // Prompt 89: Innstillinger → Varsler → Live Activities – én bryter per aktivitet (Live89Host.swift).
+            Live89Settings()
             PaperLinkList(rows: [
                 PaperLinkRow(name: "Pakkevarsler", sub: "Nytt sporingsnummer, ute for levering, klar for henting, levert og forsinket", icon: "shippingbox") { store.paperGo("innst-trk") },
                 PaperLinkRow(name: "Haptikk", sub: "Styrke og når appen skal vibrere", icon: "hand.tap", colorOffset: 1) { store.paperGo("innst-haptikk") },

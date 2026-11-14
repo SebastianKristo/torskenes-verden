@@ -77,8 +77,15 @@ struct PaperLoginView: View {
         .background(p.bg.ignoresSafeArea())
         .environment(\.paper, p)
         .environment(\.colorScheme, p.dark ? .dark : .light)
+        // Prompt 89: tannhjulet øverst til høyre åpner arket «Server» (Login89.swift).
+        .overlay(alignment: .topTrailing) {
+            if store.pending == nil && Sec51Model.shared.wait == nil {
+                Login89Gear().padding(.trailing, 12).padding(.top, 4)
+            }
+        }
         .onAppear { if !store.addingAccount { server = store.server } }
         .server41Host(p)
+        .login89Host(p)
         .qr46Host(p, store)
         .onboard51Host(p)
     }
@@ -102,14 +109,10 @@ struct PaperLoginView: View {
         PInkButton(title: store.busy || Server41.shared.probing ? "Logger inn …" : "Logg inn", height: 54, full: true, act: submit)
             .disabled(username.isEmpty || password.isEmpty || store.busy || Server41.shared.probing)
             .opacity(username.isEmpty || password.isEmpty ? 0.5 : 1)
+        // Prompt 89: valgt server i liten grå tekst under knappen (trykk = arket «Server», som tannhjulet).
+        Login89ServerLine()
         if store.addingAccount {
             PLineButton(title: "Avbryt", height: 48, full: true) { store.addingAccount = false }
-            // Prompt 41: en annen server kan velges her (ellers brukes standard/kjente adresser).
-            Button { Server41.shared.editKind = "login" } label: {
-                Text(Server41.shared.manual.isEmpty ? "Annen server …" : "Server: " + Server41.shared.manual.replacingOccurrences(of: "https://", with: "").replacingOccurrences(of: "http://", with: ""))
-                    .font(PF.ui(13, .semibold)).foregroundStyle(p.mut).underline()
-            }
-            .buttonStyle(.plain)
         }
         // Prompt 46: QR-innlogging – en innlogget mobil skanner koden og godkjenner med Face ID (Qr46Login.swift).
         Qr46LoginButton()

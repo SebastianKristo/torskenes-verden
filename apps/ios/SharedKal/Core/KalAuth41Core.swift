@@ -13,7 +13,7 @@ import CryptoKit
 //    https://home.kristo.no/app-auth?client=kalender&redirect=kalender://auth&state=…&cc=… (universal link) eller
 //    homelab://app-auth?… (fungerer uten entitlements). Homelab godkjenner (Face ID), kaller POST /api/auth/app-code og åpner
 //    kalender://auth?code=…&state=…(&server=…). Kalender sjekker state og bytter code + verifier: POST /api/auth/token.
-// 3. Ingen adresse ved innlogging: https://os.smarthjemexperten.no (prompt 47) som standard, adressene fra Homelab (App Group) og /api/discovery.
+// 3. Ingen adresse ved innlogging: https://os.smarthjemeksperten.no (prompt 47) som standard, adressene fra Homelab (App Group) og /api/discovery.
 
 struct KalSession41 {
     let token: String
@@ -38,7 +38,7 @@ struct KalPending41: Codable {
 
 enum KalAuth41 {
     /// Prompt 47: standardadressene (claude-code-standard-serveradresser.md). Info.plist kan overstyre.
-    static let standardExternal47: String = "https://os.smarthjemexperten.no"
+    static let standardExternal47: String = "https://os.smarthjemeksperten.no"
     static let standardLocal47: String = "http://10.69.1.39:3000"
 
     /// Standardadressen appen leveres med (Info.plist KalDefaultServer41 kan overstyre).
@@ -372,7 +372,7 @@ enum KalServer41 {
         return ordered()
     }
 
-    /// «Lokal: 10.69.1.39:3000 · ekstern: os.smarthjemexperten.no · hentes fra Homelab»
+    /// «Lokal: 10.69.1.39:3000 · ekstern: os.smarthjemeksperten.no · hentes fra Homelab»
     static func summary() -> String {
         func host(_ s: String) -> String {
             var x: String = s

@@ -149,7 +149,7 @@ targets:
         # Prompt 41: standardadressen appen leveres med (innlogging uten serverfelt, Server41.swift).
         # Prompt 47: ny standard ekstern og lokal adresse (Server47.swift). Klartekst-HTTP til den lokale adressen dekkes av
         # NSAllowsLocalNetworking over (ATS er ikke slått av globalt).
-        HomelabServer: https://os.smarthjemexperten.no
+        HomelabServer: https://os.smarthjemeksperten.no
         HomelabLocal47: http://10.69.1.39:3000
 
   FinansHubWidgets:
@@ -248,7 +248,7 @@ targets:
         # Prompt 41: standardadressen (ingen serverfelt ved innlogging) og den delte Nøkkelring-gruppen for «Fortsett som».
         # Prompt 47: standard ekstern og lokal adresse (claude-code-standard-serveradresser.md). Klartekst-HTTP bare til lokalt
         # nett via NSAllowsLocalNetworking over (ATS er ikke slått av globalt).
-        KalDefaultServer41: "https://os.smarthjemexperten.no"
+        KalDefaultServer41: "https://os.smarthjemeksperten.no"
         KalDefaultLocal47: "http://10.69.1.39:3000"
         KalKeychainGroup41: "$(AppIdentifierPrefix)no.kristo.shared"
         # Prompt 44: forhåndslasting av kalenderen i bakgrunnen (BGAppRefreshTask, KalBg44.swift).
@@ -402,7 +402,7 @@ targets:
         KalTeam41: "$(DEVELOPMENT_TEAM)"
         # Prompt 47: standard ekstern og lokal adresse (claude-code-standard-serveradresser.md). Klartekst-HTTP bare til lokalt
         # nett via NSAllowsLocalNetworking over (ATS er ikke slått av globalt).
-        KalDefaultServer41: "https://os.smarthjemexperten.no"
+        KalDefaultServer41: "https://os.smarthjemeksperten.no"
         KalDefaultLocal47: "http://10.69.1.39:3000"
         KalKeychainGroup41: "$(AppIdentifierPrefix)no.kristo.shared"
 
@@ -485,5 +485,5 @@ targets:
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true
         # Samme standardadresser som FinansHub (Server47.swift) – brukes bare når iPhone ikke svarer.
-        HomelabServer: https://os.smarthjemexperten.no
+        HomelabServer: https://os.smarthjemeksperten.no
         HomelabLocal47: http://10.69.1.39:3000

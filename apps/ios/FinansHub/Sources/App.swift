@@ -31,6 +31,8 @@ struct FinansHubApp: App {
                 .fh51Host()
                 // Prompt 51 (IOSPLAT51): offline-køen, Live Activities og Apple Watch-innloggingen (Plat51Host.swift).
                 .plat51Host()
+                // Prompt 89 (IOS89): Live Activities fra /api/live (polling mens appen er aktiv, push-tokens), Live89Host.swift.
+                .live89Host()
                 .environment(store)
                 // Prompt 84: den innebygde Kalender-appen (Kal84Embed.swift) får Homelab-kontoen.
                 .kal84Host(store)
@@ -73,6 +75,8 @@ struct FinansHubApp: App {
         if Qr38Model.shared.handle(u, store) { return }
         // Prompt 43: magnet:-lenker og homelab://magnet?url=… åpner «Legg til magnet-lenke» i Media.
         if Media43.shared.handleURL(u, store) { return }
+        // Prompt 89: «Vis rute» fra Live Activity (homelab://live89/rute?id=…), Live89Host.swift.
+        if Live89Link.handle(u, store) { return }
         store.openDeepLink(u)
     }
 

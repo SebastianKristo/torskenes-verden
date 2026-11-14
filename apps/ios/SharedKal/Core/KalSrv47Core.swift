@@ -2,7 +2,7 @@ import Foundation
 import Combine
 
 /* ---------------- Prompt 47: Innstillinger → Server (ekstern og lokal adresse med standardverdier) ---------------- */
-// Spesifikasjon: claude-code-standard-serveradresser.md. Standard: ekstern https://os.smarthjemexperten.no, lokal http://10.69.1.39:3000
+// Spesifikasjon: claude-code-standard-serveradresser.md. Standard: ekstern https://os.smarthjemeksperten.no, lokal http://10.69.1.39:3000
 // (KalAuth41.defaultBase / defaultLocal47, Info.plist kan overstyre; serveren kan overstyre via PUBLIC_URL/LOCAL_URL → /api/me/server
 // «defaults»). Lagres per enhet (App Group: kal41.external / kal41.local, samme som KalServer41 leser) og synkes til kontoen med
 // PUT /api/me/server {external, local, device} – svarer serveren 404/405 (eldre versjon), gjelder adressene bare på denne enheten.
