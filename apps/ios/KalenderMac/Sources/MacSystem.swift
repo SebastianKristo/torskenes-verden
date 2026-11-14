@@ -5,7 +5,7 @@ import ServiceManagement
 
 /* ---------------- Prompt 34: Kalender for Mac – sanntid, Dock, varsler, tastatur og innlogging ved start ---------------- */
 
-/// Sanntid: samme WebSocket som Homelab-appene (/api/ws?token=…). {type:'kalender'} → last på nytt (endring på iPhone vises innen få sekunder).
+/// Sanntid: samme WebSocket som Homelab-appene (/api/ws, tokenet i Authorization-headeren). {type:'kalender'} → last på nytt (endring på iPhone vises innen få sekunder).
 @MainActor
 final class MacLive {
     static let shared: MacLive = MacLive()
@@ -24,8 +24,11 @@ final class MacLive {
         } else if s.hasPrefix("http://") {
             s = "ws://" + String(s.dropFirst(7))
         }
-        guard let url = URL(string: s + "/api/ws?token=" + KalNet.enc(token)) else { return }
-        let t: URLSessionWebSocketTask = URLSession.shared.webSocketTask(with: url)
+        // Opprydding H2 (S2): tokenet i Authorization-headeren, ikke i URL-en (havnet i server- og proxylogger).
+        guard let url = URL(string: s + "/api/ws") else { return }
+        var req: URLRequest = URLRequest(url: url)
+        req.setValue("Bearer " + token, forHTTPHeaderField: "Authorization")
+        let t: URLSessionWebSocketTask = URLSession.shared.webSocketTask(with: req)
         task = t
         t.resume()
         receive(t)

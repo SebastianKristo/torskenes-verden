@@ -10,6 +10,10 @@ struct FinansHubApp: App {
     init() {
         // Prompt 51 (QA51): krasjrapporter – håndtererne først, forrige krasj legges i køen (FHCrash51.swift).
         Crash51.install()
+        // Opprydding H2: tokenene som lå i klartekst i App Group-UserDefaults (w.token, kal.hl.token, hl41.device, og
+        // kal.token fra den innebygde Kalenderen) flyttes til Nøkkelringen og slettes fra UserDefaults (Nokkelring.swift).
+        WidgetShared.migrateSecrets()
+        KalGroup.migrateSecrets()
         // Bakgrunnsoppgavene (helse og familie) må registreres før appen er ferdig startet.
         HealthSync.registerBackground()
         // Prompt 20: HealthKit vekker appen ved nye skritt og puls (enableBackgroundDelivery, hver time).

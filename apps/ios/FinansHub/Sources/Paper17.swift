@@ -516,12 +516,15 @@ final class Realtime: NSObject {
         guard let token = store.account?.token, !store.api.base.isEmpty else { return }
         let base = store.api.base.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
         let ws = base.replacingOccurrences(of: "https://", with: "wss://").replacingOccurrences(of: "http://", with: "ws://")
-        let enc = token.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? token
-        guard let url = URL(string: ws + "/api/ws?token=" + enc) else { return }
-        if key == url.absoluteString, task != nil { return }
+        // Opprydding H2 (S2): tokenet i Authorization-headeren, ikke i URL-en (havnet i server- og proxylogger).
+        guard let url = URL(string: ws + "/api/ws") else { return }
+        let k = url.absoluteString + "#" + KalGroup.fingerprint(token)
+        if key == k, task != nil { return }
         disconnect()
-        key = url.absoluteString
-        let t = URLSession.shared.webSocketTask(with: url)
+        key = k
+        var req = URLRequest(url: url)
+        req.setValue("Bearer " + token, forHTTPHeaderField: "Authorization")
+        let t = URLSession.shared.webSocketTask(with: req)
         task = t
         t.resume()
         receive(t)

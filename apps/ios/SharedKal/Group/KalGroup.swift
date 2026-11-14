@@ -15,6 +15,9 @@ import Security
 //       Kalender-appens egen innlogging (fra innloggingsskjermen eller kopiert fra kal.hl.*). Widgetene bruker denne.
 //   kal.snapshot
 //       Siste hendelser, kalendere og vær (JSON, KalSnapshot) som widgetene viser uten nett.
+// Opprydding H2: tokenene (kal.hl.token, kal.token og hl41.device i KalShared41) ligger IKKE i UserDefaults på iOS, men i
+// Nøkkelringen (Nokkelring, service no.kristo.shared.group, tilgangsgruppe = App Group-en). Gamle verdier flyttes ved
+// oppstart og ved lesing (migrateSecrets) og slettes fra UserDefaults når skrivingen lyktes.
 
 enum KalGroup {
     static let baseGroup: String = "group.no.kristo.finanshub"
@@ -94,7 +97,7 @@ enum KalGroup {
     /* ---------- Fra Homelab-appen (companion-token) ---------- */
 
     static var homelabToken: String? {
-        let t: String = defaults.string(forKey: "kal.hl.token") ?? ""
+        let t: String = secretString("kal.hl.token") ?? ""
         return t.isEmpty ? nil : t
     }
 
@@ -107,7 +110,7 @@ enum KalGroup {
         let d: UserDefaults = defaults
         d.set(clean(bases), forKey: "kal.hl.bases")
         d.set(clean(bases).first ?? "", forKey: "kal.hl.server")
-        d.set(token, forKey: "kal.hl.token")
+        setSecretString("kal.hl.token", token)
         d.set(user, forKey: "kal.hl.user")
         d.set(fingerprint(accountToken), forKey: "kal.hl.for")
         d.set(Date().timeIntervalSince1970, forKey: "kal.hl.at")
@@ -116,12 +119,13 @@ enum KalGroup {
     static func clearHomelab() {
         let d: UserDefaults = defaults
         for k in ["kal.hl.server", "kal.hl.bases", "kal.hl.token", "kal.hl.user", "kal.hl.for", "kal.hl.at"] { d.removeObject(forKey: k) }
+        setSecretString("kal.hl.token", nil)
     }
 
     /* ---------- Kalender-appens egen innlogging (leses av widgetene) ---------- */
 
     static var token: String? {
-        let t: String = defaults.string(forKey: "kal.token") ?? ""
+        let t: String = secretString("kal.token") ?? ""
         return t.isEmpty ? nil : t
     }
 
@@ -132,7 +136,7 @@ enum KalGroup {
 
     static func saveSession(bases: [String], token: String, user: String, via: String) {
         let d: UserDefaults = defaults
-        let old: String = d.string(forKey: "kal.token") ?? ""
+        let old: String = secretString("kal.token") ?? ""
         // Prompt 44: bufferen tømmes bare når det er en annen konto. Før ble den tømt ved hvert nytt token (også samme konto),
         // og kalenderen var tom til første synk var ferdig.
         let oldUser: String = (d.string(forKey: "kal.user") ?? "").lowercased()
@@ -143,7 +147,7 @@ enum KalGroup {
         }
         d.set(clean(bases), forKey: "kal.bases")
         d.set(clean(bases).first ?? "", forKey: "kal.server")
-        d.set(token, forKey: "kal.token")
+        setSecretString("kal.token", token)
         d.set(user, forKey: "kal.user")
         d.set(via, forKey: "kal.via")
     }
@@ -151,6 +155,72 @@ enum KalGroup {
     static func clearSession() {
         let d: UserDefaults = defaults
         for k in ["kal.server", "kal.bases", "kal.token", "kal.user", "kal.via", "kal.snapshot"] { d.removeObject(forKey: k) }
+        setSecretString("kal.token", nil)
+    }
+
+    /* ---------- Opprydding H2: tokenene i Nøkkelringen ---------- */
+
+    /// Nøklene som før lå i klartekst i App Group-UserDefaults.
+    static let secretKeys: [String] = ["kal.token", "kal.hl.token", "hl41.device"]
+
+    /// iOS: flytter gamle verdier fra App Group-UserDefaults til Nøkkelringen (slettes fra UserDefaults når skrivingen lyktes),
+    /// og skriver Kalenders egne Nøkkelring-elementer på nytt med ThisDeviceOnly (S3). Kalles ved oppstart (Homelab og Kalender).
+    static func migrateSecrets() {
+        #if os(iOS)
+        for k in secretKeys { migrateSecret(k) }
+        Nokkelring.migrateAccessible(service: KalKeychain41.service)
+        if KalKeychain41.sharedGroup != nil { Nokkelring.migrateAccessible(service: KalKeychain41.sharedService) }
+        #endif
+    }
+
+    #if os(iOS)
+    private static func migrateSecret(_ key: String) {
+        Nokkelring.migrate(defaultsKey: key, from: defaults, service: Nokkelring.groupService, group: group)
+    }
+    #endif
+
+    static func secretData(_ key: String) -> Data? {
+        #if os(macOS)
+        // macOS: som før (gruppen finnes bare med Team ID og er ikke med i iPhone-sikkerhetskopier). Mac-widgetene kan ikke
+        // lese appens Nøkkelring uten dialog.
+        return defaults.data(forKey: key)
+        #else
+        migrateSecret(key)
+        return Nokkelring.read(key, service: Nokkelring.groupService, group: group)
+        #endif
+    }
+
+    /// nil eller tom verdi sletter.
+    static func setSecretData(_ key: String, _ value: Data?) {
+        #if os(macOS)
+        if let value, !value.isEmpty { defaults.set(value, forKey: key) } else { defaults.removeObject(forKey: key) }
+        #else
+        if let value, !value.isEmpty {
+            // Den gamle UserDefaults-kopien slettes bare når Nøkkelringen tok imot verdien.
+            if Nokkelring.write(key, value, service: Nokkelring.groupService, group: group) { defaults.removeObject(forKey: key) }
+        } else {
+            Nokkelring.delete(key, service: Nokkelring.groupService, group: group)
+            defaults.removeObject(forKey: key)
+        }
+        #endif
+    }
+
+    static func secretString(_ key: String) -> String? {
+        #if os(macOS)
+        let t: String = defaults.string(forKey: key) ?? ""
+        return t.isEmpty ? nil : t
+        #else
+        guard let d = secretData(key), let t = String(data: d, encoding: .utf8), !t.isEmpty else { return nil }
+        return t
+        #endif
+    }
+
+    static func setSecretString(_ key: String, _ value: String?) {
+        #if os(macOS)
+        if let value, !value.isEmpty { defaults.set(value, forKey: key) } else { defaults.removeObject(forKey: key) }
+        #else
+        setSecretData(key, value.map { Data($0.utf8) })
+        #endif
     }
 
     /* ---------- Buffer for widgetene ---------- */

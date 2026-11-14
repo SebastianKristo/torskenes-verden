@@ -14,44 +14,27 @@ enum MacLog43 {
 enum MacKeychain {
     static let service: String = "no.kristo.kalender.mac"
 
+    // Opprydding H2/S3: via den delte hjelperen (SharedKeychain/Nokkelring.swift) – nye elementer skrives med
+    // kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly (før: kSecAttrAccessibleAfterFirstUnlock uten ThisDeviceOnly).
     static func read(_ account: String) -> String? {
-        let q: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: account,
-            kSecReturnData as String: true,
-            kSecMatchLimit as String: kSecMatchLimitOne,
-        ]
-        var out: CFTypeRef? = nil
-        let st: OSStatus = SecItemCopyMatching(q as CFDictionary, &out)
-        guard st == errSecSuccess, let d = out as? Data else { return nil }
-        return String(data: d, encoding: .utf8)
+        Nokkelring.readString(account, service: service)
     }
 
     @discardableResult
     static func write(_ account: String, _ value: String) -> Bool {
-        let data: Data = Data(value.utf8)
-        let base: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: account,
-        ]
-        let upd: [String: Any] = [kSecValueData as String: data]
-        let st: OSStatus = SecItemUpdate(base as CFDictionary, upd as CFDictionary)
-        if st == errSecSuccess { return true }
-        var add: [String: Any] = base
-        add[kSecValueData as String] = data
-        add[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
-        return SecItemAdd(add as CFDictionary, nil) == errSecSuccess
+        Nokkelring.write(account, Data(value.utf8), service: service)
     }
 
     static func delete(_ account: String) {
-        let q: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: account,
-        ]
-        SecItemDelete(q as CFDictionary)
+        Nokkelring.delete(account, service: service)
+    }
+
+    /// S3-migrering: elementet fra før (AfterFirstUnlock) leses, slettes og skrives på nytt med ThisDeviceOnly. Én gang,
+    /// og bare fra en bakgrunnstråd som likevel har lest Nøkkelringen (en eventuell dialog er allerede vist).
+    static func migrateAccessible(_ account: String) {
+        let flag: String = "mac.kc.tdo"
+        if UserDefaults.standard.bool(forKey: flag) { return }
+        if Nokkelring.rewrite(account, service: service) { UserDefaults.standard.set(true, forKey: flag) }
     }
 }
 
@@ -111,7 +94,10 @@ enum MacSession {
         var t: String? = MacTokenFile44.read()
         if t == nil {
             t = MacKeychain.read("token")
-            if let k = t { MacTokenFile44.write(k) }
+            if let k = t {
+                MacTokenFile44.write(k)
+                MacKeychain.migrateAccessible("token")
+            }
         }
         lock.lock()
         if !loaded {

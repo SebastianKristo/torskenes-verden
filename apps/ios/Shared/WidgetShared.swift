@@ -52,18 +52,29 @@ enum WidgetShared {
         let d = defaults
         // Prompt 21: ny konto (eller ny innlogging) → tøm svarene fra forrige konto, så widgeten aldri viser
         // en annen brukers data mens den venter på første henting.
-        let old: String? = d.string(forKey: "w.token")
+        let old: String? = self.token
         if old != token { clearCaches() }
         d.set(server, forKey: "w.server")
         d.set(external, forKey: "w.external")
         d.set(local, forKey: "w.local")
-        d.set(token, forKey: "w.token")
+        // Opprydding H2: kontotokenet ligger i Nøkkelringen (App Group-tilgangsgruppen), aldri i UserDefaults.
+        if Nokkelring.writeString(tokenKey, token, service: Nokkelring.groupService, group: group) { d.removeObject(forKey: tokenKey) }
     }
 
     static func clear() {
         let d = defaults
         for k in ["w.server", "w.external", "w.local", "w.token"] { d.removeObject(forKey: k) }
+        Nokkelring.delete(tokenKey, service: Nokkelring.groupService, group: group)
         clearCaches()
+    }
+
+    /// Opprydding H2: Homelabs kontotoken. Før i klartekst i App Group-UserDefaults («w.token»), nå i Nøkkelringen.
+    static let tokenKey: String = "w.token"
+
+    /// Flytter et gammelt «w.token» fra App Group-UserDefaults til Nøkkelringen og sletter det fra UserDefaults når
+    /// skrivingen lyktes. Kalles ved oppstart av appen og ved hver lesing (widgetene).
+    static func migrateSecrets() {
+        Nokkelring.migrate(defaultsKey: tokenKey, from: defaults, service: Nokkelring.groupService, group: group)
     }
 
     /// Bufrede svar for alle widgetene (finans, huskeliste og familie).
@@ -75,7 +86,10 @@ enum WidgetShared {
                   "w.plan51", "w.checkin51", "w.media43", "w.hjemlys40"] { d.removeObject(forKey: k) }
     }
 
-    static var token: String? { defaults.string(forKey: "w.token") }
+    static var token: String? {
+        migrateSecrets()
+        return Nokkelring.readString(tokenKey, service: Nokkelring.groupService, group: group)
+    }
 
     static var bases: [String] {
         let d = defaults

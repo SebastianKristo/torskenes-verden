@@ -19,6 +19,8 @@ targets:
       - FinansHub/Sources
       - FinansHub/Resources
       - Shared
+      # Opprydding H2: den delte Nøkkelring-hjelperen (Nokkelring.swift) – med i alle mål.
+      - SharedKeychain
       # Prompt 33: App Group-nøklene som Kalender-appen leser (companion-token).
       - SharedKal/Group
       # Prompt 84: «Kalender i appen» – hele Kalender-appen (samme kode) inni Homelab, bak flagget KAL_EMBED (under).
@@ -32,6 +34,10 @@ targets:
     entitlements:
       path: FinansHub/FinansHub.entitlements
       properties:
+        # Opprydding H2: App Group-en er også tilgangsgruppen i Nøkkelringen for tokenene som appen, widgetene og Kalender
+        # deler (w.token, kal.hl.token, kal.token, hl41.device – SharedKeychain/Nokkelring.swift). På iOS gjelder en App Group
+        # som keychain-tilgangsgruppe uten keychain-access-groups, så det virker også usignert/sideloadet (AltStore/SideStore
+        # gir gruppen nytt navn – koden bruker navnet som faktisk virker). Avvises gruppen, brukes appens egen Nøkkelring.
         com.apple.security.application-groups:
           - group.no.kristo.finanshub
         # Familie: helsesammendrag fra Apple Helse (bare det brukeren velger å dele).
@@ -159,6 +165,7 @@ targets:
       - FinansHubWidgets/Sources
       - FinansHubWidgets/Resources
       - Shared
+      - SharedKeychain
     entitlements:
       path: FinansHubWidgets/FinansHubWidgets.entitlements
       properties:
@@ -188,6 +195,7 @@ targets:
     sources:
       - Kalender/Sources
       - Kalender/Resources
+      - SharedKeychain
       # Delt med KalenderWidgets (og Group med Homelab-appen). Fonts: Newsreader, Manrope og IBM Plex Mono (kopi av Papir-fontene, OFL).
       - SharedKal/Group
       - SharedKal/Core
@@ -279,6 +287,7 @@ targets:
     platform: iOS
     sources:
       - KalenderWidgets/Sources
+      - SharedKeychain
       - SharedKal/Group
       - SharedKal/Core
       - SharedKal/Fonts
@@ -325,6 +334,7 @@ targets:
     sources:
       - KalenderMac/Sources
       - KalenderMac/Resources
+      - SharedKeychain
       - SharedKal/Core
       - SharedKal/Group
       # Fontene kopieres til Contents/Resources og lastes via ATSApplicationFontsPath.
@@ -415,6 +425,7 @@ targets:
     deploymentTarget: "14.0"
     sources:
       - KalenderWidgets/Sources
+      - SharedKeychain
       - SharedKal/Group
       - SharedKal/Core
       # Fontene kopieres til Contents/Resources og lastes via ATSApplicationFontsPath.
@@ -464,6 +475,8 @@ targets:
     deploymentTarget: "10.0"
     sources:
       - Watch51/Sources
+      # Opprydding H2: samme Nøkkelring-hjelper (bare Foundation/Security). Klokka bruker fortsatt W51Keychain (ThisDeviceOnly).
+      - SharedKeychain
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: no.kristo.finanshub.watchkitapp
