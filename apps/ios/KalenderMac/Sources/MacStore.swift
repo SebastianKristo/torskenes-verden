@@ -174,7 +174,7 @@ final class MacStore: ObservableObject {
     func logout() {
         if let t = MacSession.token {
             // Trekk tilbake app-tokenet på serveren (best effort).
-            Task { _ = try? await KalNet.send("POST", "/finans/api/logout", json: [:], timeout: 8, bases: MacSession.bases, token: t) }
+            Task { _ = try? await KalNet.send("POST", "/finans/api/auth/logout", json: [:], timeout: 8, bases: MacSession.bases, token: t) }
         }
         MacLive.shared.stop()
         // Prompt 38: glem økt-cookien i web-visningen.

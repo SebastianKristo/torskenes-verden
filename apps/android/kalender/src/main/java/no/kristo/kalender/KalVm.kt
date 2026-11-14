@@ -242,7 +242,7 @@ class KalVm(app: Application) : AndroidViewModel(app) {
         session = null
         cs = false
         // Tokenet fra Homelab trekkes tilbake på serveren (vises ellers i Innstillinger → Enheter til det slettes der).
-        if (s != null) viewModelScope.launch { runCatching { s.api.post("/finans/api/logout") } }
+        if (s != null) viewModelScope.launch { runCatching { s.api.post("/finans/api/auth/logout") } }
         viewModelScope.launch { KalSync.redraw(ctx); runCatching { KalNotify.reschedule(ctx) } }
     }
 

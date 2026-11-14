@@ -225,7 +225,7 @@ final class KalStore {
         // Prompt 41: trekk tilbake app-tokenet på serveren (best effort) og glem refresh-tokenet.
         if let tok = KalGroup.token {
             let bases: [String] = KalGroup.bases
-            Task.detached { _ = try? await KalNet.send("POST", "/finans/api/logout", json: [:], timeout: 8, bases: bases, token: tok) }
+            Task.detached { _ = try? await KalNet.send("POST", "/finans/api/auth/logout", json: [:], timeout: 8, bases: bases, token: tok) }
         }
         KalKeychain41.delete("refresh")
         KalGroup.clearSession()
@@ -258,7 +258,7 @@ final class KalStore {
     func dropSession85() {
         if let tok = KalGroup.token {
             let bases: [String] = KalGroup.bases
-            Task.detached { _ = try? await KalNet.send("POST", "/finans/api/logout", json: [:], timeout: 8, bases: bases, token: tok) }
+            Task.detached { _ = try? await KalNet.send("POST", "/finans/api/auth/logout", json: [:], timeout: 8, bases: bases, token: tok) }
         }
         KalKeychain41.delete("refresh")
         KalGroup.clearSession()

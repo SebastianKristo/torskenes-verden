@@ -512,11 +512,15 @@ api.get('/logo/:domain', async (c) => {
 mountLogoRoutes(api);
 mountP27Public(api); // prompt 27: lagrede butikklogoer (/merchants/logo/file/:file), offentlig som /logo/:domain
 // Appen logger ut ved å trekke tilbake sitt eget token.
-api.post('/auth/logout', async (c) => {
+const logoutToken = (c) => {
   const m = c.req.header('authorization')?.match(TOKEN_RE);
   if (m) q('DELETE FROM fh_tokens WHERE id=?').run(tokenKey(m[1]));
   return ok(c);
-});
+};
+api.post('/auth/logout', logoutToken);
+// Kalender-appene (iOS, Mac, Android) før opprydding fase 0b kalte /logout, som ga 404 – tokenet levde videre. Beholdes for
+// installerte apper; nye versjoner bruker /auth/logout.
+api.post('/logout', logoutToken);
 
 api.use('*', async (c, next) => {
   const a = access(c);
