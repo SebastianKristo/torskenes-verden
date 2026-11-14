@@ -91,6 +91,7 @@ import { badInput85 } from './badinput85.js'; // prompt 85 (SRVSEC85): feil i kr
 import { anonBodyCap85 } from './anonbody85.js'; // prompt 85 (SRVSEC85): store kropper bare fra innloggede klienter
 import { mountMedfam51, startMedfam51 } from './medfam51/index.js'; // prompt 51 (MEDFAM51): familiekalender med «hvem kjører?», «I kveld», undertekster, lagring, lydbøker
 import { mountMedctl51 } from './medctl51.js'; // prompt 51 (MEDCTL51): mediekontroll for Plex/Jellyfin, Audiobookshelf-fremdrift
+import { mountLive89, startLive89 } from './live89.js'; // prompt 89 (SRV89): Live Activities / Live Updates (/api/live/*) og APNs-push
 import { mountWebx51 } from './webx51.js'; // prompt 51 (WEBX51): felles søk, onboarding, tema per bruker, offline-konfliktvarsel
 import { mountSrv52 } from './srv52.js'; // prompt 52 (SRV52): Glimt «sist jeg var på», kalenderkontekst, brief-kort, Glimt-figur per bruker
 import { mountFermion53 } from './fermion53/index.js'; // prompt 53 (FERMION53): Neutrino-1 8B og Phonon på Mac mini-en (admin: /api/admin/fermion53/*)
@@ -779,6 +780,7 @@ app.route('/api/icons', iconsApi); // Ikoner (prompt 23): Iconify-søk, SVG cach
 app.route('/', tilesApi);
 mountMedfam51(app); // prompt 51 (MEDFAM51): /api/famcal51/* og /api/media51/*
 mountMedctl51(app); // prompt 51 (MEDCTL51): /api/medctl51/now og /api/medctl51/sessions/:id/:action
+mountLive89(app); // prompt 89 (SRV89): /api/live/aktiviteter, /handling, /innstillinger, /tokens
 mountFamily50(app); // prompt 50 (SRVFAM50): /api/family/places…, /people50, /today50, /health50…, /checkin… (før de eldre /api/family-rutene)
 app.route('/api/family/health/ha', health42Api); // prompt 42: helse fra Home Assistant
 app.use('/api/family/*', familyHealthMw42); // prompt 42: health.source/sourceDevice/limited/stale
@@ -942,7 +944,7 @@ app.get('/mat/calendar.ics', matCalendar);
 // (ingen varsler, e-post, backup, oppdateringer eller selvreparasjon). Bare HTTP-serveren og migreringene kjører.
 const BG51 = process.env.NODE_ENV !== 'test' && process.env.OPS51_SANDBOX !== '1';
 migrateLocalHosts86().catch((e) => console.warn('[localfetch]', e.message)); // prompt 86: én gang – lokale verter i administratorenes abonnementer godkjennes
-if (BG51) { startMatScheduler(); startTrackingWorker(); startRssWorker(); startBirthdayWorker(); startSystemBackupScheduler(); startUpdateScheduler(); startTrialScheduler(); startDomainGlimtScheduler(); startSpaceScheduler(); startApi38(); startApi40(); startHealth42(); startMediaWatch43(); startMedia50(); startLogs44(); startPlayback44(); }
+if (BG51) { startMatScheduler(); startTrackingWorker(); startRssWorker(); startBirthdayWorker(); startSystemBackupScheduler(); startUpdateScheduler(); startTrialScheduler(); startDomainGlimtScheduler(); startSpaceScheduler(); startApi38(); startApi40(); startHealth42(); startMediaWatch43(); startMedia50(); startLogs44(); startPlayback44(); startLive89(); }
 if (BG51) { startAccounts46(); startGphoto46(); } // prompt 46 (DATA46)
 if (process.env.NODE_ENV !== 'test') startOps51(); // prompt 51 (OPS51): planlegger (backup, testet gjenoppretting, vedlikehold) og migrasjonslogg
 if (process.env.OPS51_SANDBOX !== '1') startObs51(); // prompt 51 (OBS51): samples, driftsvarsler og selvreparasjon (ikke i test)

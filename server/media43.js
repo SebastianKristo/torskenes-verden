@@ -1406,3 +1406,4 @@ export { normTitle43, parseEpisodeAsk43 };
 export { arr as arr43, qb as qb43, cached as cached43, indexersRaw as indexersRaw43, posterOf as posterOf43, fanartOf as fanartOf43, epCode as epCode43,
   rawFetch as rawFetch43, qbVerb as qbVerb43, queues as queues43, torrentsRaw as torrentsRaw43, seriesList as seriesList43, movieList as movieList43, TSTATE as TSTATE43, bildeVer43, // prompt 50
   releaseOut as releaseOut43, statusOut as mediaStatusOut43, fail as mediaFail43, guard as mediaGuard43, admin as mediaAdmin43, jb as mediaBody43, nb1 as nb143 };
+export { torrentsOut as torrentsOut43, torrentAction as torrentAction43 }; // prompt 89 (SRV89): Live Activities (server/live89.js)

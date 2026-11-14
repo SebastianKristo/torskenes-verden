@@ -16,12 +16,17 @@ const PKG = [['found', 'Ny pakke funnet', 'Fra Finn eller e-post'], ['pickup', '
   ['delayed', 'Forsinket', 'Når ETA passeres eller transportøren melder avvik'], ['delivered', 'Levert', '']];
 const DEF = { on: true, ai_bg_notify: true, quietFrom: '22:00', quietTo: '07:00', quietOn: true, sound: 'pling', volume: 70, groups: { pakker: true, finans: true, familie: true, reise: true, birthdays: true, haptikk: true }, customSound: null };
 
-const S = { n: null, pkg: null, err: null, msg: '', busy: false, push: null, pushBusy: false };
+const S = { n: null, pkg: null, err: null, msg: '', busy: false, push: null, pushBusy: false, live: null };
+// Prompt 89 (SRV89): Live Activities (iPhone) / Live Updates (Android) – bryter per aktivitet (/api/live/innstillinger, per bruker).
+const LIVE = [['nedlasting', 'Nedlastinger', 'NRK, Sonarr og Radarr med fremdrift'], ['backup', 'Backup', 'Fremdrift for backupen (bare administratorer)'],
+  ['spiller', 'Spilles nå', 'Plex og Jellyfin med pause og stopp'], ['avtale', 'Neste avtale', 'Fra kalenderen, når den starter innen en time'], ['pakke', 'Pakkesporing', 'Når pakken er ute for levering']];
 let rerender = () => {};
 
 export async function loadNotify(onChange) {
   if (onChange) rerender = onChange;
-  const [n, t] = await Promise.all([api('/me/notify').catch((e) => ({ __err: e })), api('/tracking').catch(() => null)]);
+  const [n, t, live, me] = await Promise.all([api('/me/notify').catch((e) => ({ __err: e })), api('/tracking').catch(() => null), api('/live/innstillinger').catch(() => null), api('/me').catch(() => null)]);
+  S.live = live && typeof live === 'object' ? live : null;
+  S.admin = (me?.me ?? me)?.role === 'admin';
   if (n?.__err) { S.n = { ...DEF, groups: { ...DEF.groups } }; S.err = /404|finnes ikke|Not Found/i.test(n.__err.message) ? 'Serveren lagrer ikke varselinnstillinger ennå. Valgene gjelder bare denne nettleseren til Homelab er oppdatert.' : n.__err.message; }
   else { S.n = { ...DEF, ...n, groups: { ...DEF.groups, ...(n.groups ?? {}) } }; S.err = null; }
   S.pkg = t?.prefs ?? null;
@@ -117,13 +122,15 @@ export function notifyView(h) {
   if (S.pkg && n.groups.pakker !== false) {
     groups.push(h.group('Pakker', PKG.map(([k, t, s]) => h.row({ t, s, tog: !!S.pkg[k], act: `data-nf-pkg="${k}"` })), 'Kilder (e-post, Finn og automatisk arkivering) velges på Sporing-siden.'));
   }
+  if (S.live) groups.push(h.group('Live Activities', LIVE.filter(([k]) => k !== 'backup' || S.admin).map(([k, t, s]) => h.row({ t, k: 'live activities live updates dynamic island låseskjerm', s, tog: !!S.live[k], act: `data-nf-live="${k}"` })),
+    'Vises på låseskjermen og i Dynamic Island på iPhone, og som Live Update på Android.'));
   const nt51 = ntfyGroup51(h); // prompt 51
   if (nt51) groups.push(nt51);
   return { groups };
 }
 
 export async function notifyClick(e) {
-  const b = e.target.closest('[data-nf-tog],[data-nf-act],[data-nf-sound],[data-nf-grp],[data-nf-pkg]');
+  const b = e.target.closest('[data-nf-tog],[data-nf-act],[data-nf-sound],[data-nf-grp],[data-nf-pkg],[data-nf-live]');
   if (!b || !S.n) return false;
   if (b.dataset.nfTog) { const k = b.dataset.nfTog; if (b.disabled) return true; await save({ [k]: k === 'quietOn' ? S.n.quietOn === false : k === 'ai_bg_notify' || k === 'n_ai_in' ? S.n[k] === false : !S.n[k] }); return true; }
   if (b.dataset.nfSound) {
@@ -132,6 +139,12 @@ export async function notifyClick(e) {
     await save({ sound: id }); playSound(id); return true;
   }
   if (b.dataset.nfGrp) { const k = b.dataset.nfGrp; await save({ groups: { ...S.n.groups, [k]: S.n.groups[k] === false } }); return true; }
+  if (b.dataset.nfLive && S.live) {
+    const k = b.dataset.nfLive;
+    S.live = { ...S.live, [k]: !S.live[k] }; rerender();
+    try { S.live = await api('/live/innstillinger', { method: 'PUT', json: { [k]: S.live[k] } }); } catch (er) { S.msg = er.message; }
+    rerender(); return true;
+  }
   if (b.dataset.nfPkg) {
     const k = b.dataset.nfPkg;
     try { S.pkg = (await api('/tracking/prefs', { method: 'PUT', json: { [k]: !S.pkg[k] } })).prefs; } catch (er) { S.msg = er.message; }

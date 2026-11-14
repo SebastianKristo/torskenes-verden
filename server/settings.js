@@ -127,6 +127,14 @@ export const SCHEMA = [
   ['Musikk (yubal)', { id: 'yubal', domain: 'music.youtube.com', category: 'Media', help: 'Adressen til yubal (port 8010 i arr-containeren). Format og kvalitet settes i /opt/arr/docker-compose.yml.' }, [
     ['yubal_url', 'Adresse', e('YUBAL_URL')],
   ]],
+  // Prompt 89 (SRV89): Apple Push for Live Activities (server/apns.js). Serveroppsett (bare admin); .p8-nøkkelen er hemmelig og sendes aldri ut.
+  ['Apple Push (Live Activities)', { id: 'apns', domain: 'developer.apple.com', category: 'Varsler', help: 'Lag en nøkkel for Apple Push Notifications service (APNs) på developer.apple.com → Certificates, Identifiers & Profiles → Keys. Last ned .p8-filen og lim inn innholdet.' }, [
+    ['apns_team', 'Team-ID', e('APNS_TEAM_ID')],
+    ['apns_key_id', 'Nøkkel-ID', e('APNS_KEY_ID')],
+    ['apns_p8', '.p8-nøkkel', e('APNS_P8'), true, 'textarea'],
+    ['apns_bundle', 'Bundle-ID', e('APNS_BUNDLE_ID', 'no.kristo.finanshub')],
+    ['apns_env', 'Miljø (sandbox eller produksjon)', e('APNS_ENV', 'produksjon')],
+  ]],
   ['Trading 212', { id: 't212', scope: 'personal', domain: 'trading212.com', category: 'Økonomi', help: 'Lag nøkkelen på app.trading212.com under Innstillinger → API, i samme konto og miljø (Live eller Demo). Gi bare lesetilgang.' }, [
     ['t212_key', 'API-nøkkel (Key ID)', e('TRADING212_API_KEY'), true],
     ['t212_secret', 'Secret', e('TRADING212_API_SECRET'), true],
@@ -398,6 +406,10 @@ const VALID = {
   ai_backend: (v) => /^(openwebui|ollama|auto)$/i.test(v), // prompt 44
   ai_think_direct: (v) => /^[01]$/.test(v),
   web_order: (v) => String(v).split(',').map((x) => x.trim()).filter(Boolean).every((x) => /^(openwebui|searxng|brave|ddg)$/.test(x)),
+  // Prompt 89 (SRV89): APNs-oppsettet.
+  apns_team: (v) => /^[A-Z0-9]{10}$/.test(v), apns_key_id: (v) => /^[A-Z0-9]{10}$/.test(v),
+  apns_bundle: (v) => /^[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)+$/.test(v) && v.length <= 155, apns_env: (v) => /^(sandbox|produksjon|production)$/i.test(v),
+  apns_p8: (v) => v.length <= 2000 && /^[\sA-Za-z0-9+/=-]+$/.test(v) && v.replace(/-----(BEGIN|END)[A-Z ]*-----/g, '').replace(/\s+/g, '').length >= 40,
 };
 // Prompt 27: av/på-felt (type 'bool') godtar 1/0, true/false, on/off og lagres som '1' eller '0'.
 for (const f of FIELDS.values()) if (f.type === 'bool') VALID[f.key] = (v) => /^(0|1|true|false|on|off|ja|nei|yes|no)$/i.test(v);

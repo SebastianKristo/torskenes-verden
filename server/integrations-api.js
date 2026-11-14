@@ -34,6 +34,7 @@ import { clearCache } from './cache.js';
 import { testOpenWebui } from './chat.js';
 import { testNrk } from './nrkdl.js'; // NRK-nedlaster
 import { testYubal } from './yubal.js'; // Musikk (yubal)
+import { testApns89 } from './apns.js'; // prompt 89 (SRV89): Apple Push for Live Activities
 import { mediaTest43, mediaHookPath43 } from './media43.js'; // prompt 43: Test tilkobling og webhook-token for MEDIA
 
 const MOCK = process.env.MOCK_DATA === '1';
@@ -184,6 +185,14 @@ export const INTEGRATIONS = [
   { id: 'yubal', name: 'Musikk (yubal)', group: 'Media', scope: S, test: () => testYubal(), fields: [
     F('yubal_url', 'Adresse', 'url', cfgStore('yubal_url'), { required: true, help: 'For eksempel http://10.69.1.244:8010' }),
   ] },
+  // Prompt 89 (SRV89): Apple Push (APNs) for Live Activities. Uten oppsett sendes ingen push – appene poller /api/live/aktiviteter.
+  { id: 'apns', name: 'Apple Push (Live Activities)', group: 'Varsler', scope: S, test: () => testApns89(), fields: [
+    F('apns_team', 'Team-ID', 'text', cfgStore('apns_team'), { required: true, help: '10 tegn, øverst til høyre på developer.apple.com → Membership' }),
+    F('apns_key_id', 'Nøkkel-ID', 'text', cfgStore('apns_key_id'), { required: true, help: '10 tegn, fra Keys (APNs-nøkkelen)' }),
+    F('apns_p8', '.p8-nøkkel', 'secret', cfgStore('apns_p8', true), { required: true, help: 'Innholdet i AuthKey_XXXXXXXXXX.p8 (-----BEGIN PRIVATE KEY----- …). Lagres kryptert og vises aldri igjen.' }),
+    F('apns_bundle', 'Bundle-ID', 'text', cfgStore('apns_bundle'), { help: 'Appen som eier Live Activity-en, standard no.kristo.finanshub' }),
+    F('apns_env', 'Miljø', 'text', cfgStore('apns_env'), { help: 'produksjon (TestFlight og App Store) eller sandbox (bygg fra Xcode)' }),
+  ] },
   { id: 'ha', name: 'Home Assistant', group: 'Hjem', scope: S, test: viaGroup('Home Assistant'), fields: [
     F('ha_url', 'Adresse', 'url', cfgStore('ha_url'), { required: true, help: 'For eksempel http://192.168.1.20:8123' }),
     F('ha_token', 'Long-lived token', 'secret', cfgStore('ha_token', true), { required: true, help: 'Home Assistant → Profil → Sikkerhet → Long-lived access tokens' }),
@@ -259,6 +268,7 @@ const META = {
   qbittorrent: ['Annet', 'qB', '#2f67ba', 'Nedlastinger', 'qbittorrent'],
   prowlarr: ['Annet', 'P', '#e66000', 'Indeksere', 'prowlarr'],
   nrk: ['Annet', 'N', '#b23a2a', 'Programmer og serier fra NRK bak norsk VPN', 'nrk'],
+  apns: ['Annet', 'A', '#1d1d1f', 'Push til Live Activities på iPhone', 'apns'],
   yubal: ['Annet', '♪', '#c4302b', 'Album og spillelister fra YouTube Music til musikkbiblioteket', 'yubal'],
   smtp: ['Annet', '@', '#2b5d8a', 'Invitasjoner fra din egen e-post', 'smtp'],
   icons: ['Annet', '✦', '#5b6478', 'Iconify via Homelab-cache', null],
@@ -308,6 +318,12 @@ const OWN_GUIDE = {
     ['Adresse', 'IP-en til arr-containeren med port 8020.', 'http://10.69.1.244:8020'],
     ['Token', 'Skriptet skriver ut tokenet. Du finner det også i arr-containeren.', "grep NRK_API_TOKEN /opt/arr/.env"],
     ['Test', 'Testen sjekker at nedlasteren svarer og at VPN-en går ut i Norge. Uten norsk IP lastes ingenting ned.'],
+  ],
+  apns: [
+    ['Lag en APNs-nøkkel', 'developer.apple.com → Certificates, Identifiers & Profiles → Keys → + → kryss av Apple Push Notifications service (APNs). Last ned .p8-filen (den kan bare lastes ned én gang).'],
+    ['Fyll inn', 'Team-ID står under Membership, nøkkel-ID ved nøkkelen. Lim inn hele innholdet i .p8-filen. Bundle-ID er appen (no.kristo.finanshub).'],
+    ['Miljø', 'produksjon for TestFlight og App Store, sandbox for bygg rett fra Xcode.'],
+    ['Test', 'Testen sender til et ugyldig token. Svarer Apple «BadDeviceToken», er nøkkelen godtatt. Uten oppsett poller appene i stedet.'],
   ],
   yubal: [
     ['Adresse', 'yubal kjører i arr-containeren bak VPN-en, på port 8010. yubal har ingen innlogging, så ikke åpne porten mot internett: Homelab-serveren er eneste vei inn.', 'http://10.69.1.244:8010'],
