@@ -363,7 +363,7 @@ fun SettingsPage35(vm: KalVm) {
     val k = LocalK.current
     // Prompt 47: Innstillinger → Server (ekstern/lokal med standardverdier).
     var srv47 by remember { androidx.compose.runtime.mutableStateOf(false) }
-    if (srv47) ServerDialog47 { srv47 = false }
+    if (srv47) ServerDialog47(onClose = { srv47 = false })
     Column(Modifier.fillMaxSize().background(k.bg).tap(null) {}) {
         Spacer(Modifier.windowInsetsTopHeight(WindowInsets.statusBars))
         Row(Modifier.fillMaxWidth().padding(start = 18.dp, end = 18.dp, top = 8.dp, bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
