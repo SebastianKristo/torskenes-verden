@@ -245,12 +245,12 @@ fun main() {
 
 /* ======================= A. Signering ======================= */
 
-test('A: Gradle leser signeringen fra miljøet, og faller tilbake til nøkkelen i repoet med advarsel', () => {
+test('A: Gradle leser signeringen fra miljøet – uten nøkkel: debug-nøkkel med advarsel, og release stopper', () => {
   const root = raw(join(AND, 'build.gradle.kts'));
   for (const n of ['ANDROID_KEYSTORE_FILE', 'ANDROID_KEYSTORE_BASE64', 'ANDROID_KEYSTORE_PASSWORD', 'ANDROID_KEY_ALIAS', 'ANDROID_KEY_PASSWORD']) assert.ok(strip(root).includes(`"${n}"`), n);
   assert.match(root, /System\.getenv\(n\)\?\.takeIf \{ it\.isNotBlank\(\) \}/, 'tomme verdier (hemmelighet mangler i CI) regnes som ikke satt');
   assert.match(root, /createTempFile\("android-keystore", "\.jks"\)[\s\S]*?getMimeDecoder\(\)\.decode/, 'base64 dekodes til en fil utenfor repoet');
-  assert.match(root, /if \(sign86\.isEmpty\(\)\) \{\s*logger\.warn\("ADVARSEL \(signering\)/, 'tydelig advarsel når nøkkelen i repoet brukes');
+  assert.match(root, /if \(sign86\.isEmpty\(\)\) \{\s*logger\.warn\("ADVARSEL \(signering\)/, 'tydelig advarsel uten egen nøkkel');
   assert.match(root, /throw GradleException\("Signering: nøkkelfil er satt i miljøet, men "/, 'halvt oppsett stopper bygget i stedet for å signere med feil nøkkel');
   assert.match(root, /extra\["sign86"\] = sign86/);
   // Passord og alias skrives aldri ut.
@@ -259,12 +259,11 @@ test('A: Gradle leser signeringen fra miljøet, og faller tilbake til nøkkelen 
   for (const m of ['app', 'kalender', 'wear']) {
     const g = raw(join(AND, m, 'build.gradle.kts'));
     assert.match(g, /val sign86 = rootProject\.extra\["sign86"\] as Map<String, String>/, m);
-    assert.match(g, /val signName86 = if \(sign86\.isNotEmpty\(\)\) "release" else "sideload"/, m);
     assert.match(g, /if \(sign86\.isNotEmpty\(\)\) \{\s*create\("release"\) \{\s*storeFile = file\(sign86\.getValue\("file"\)\)\s*storePassword = sign86\["storePassword"\]\s*keyAlias = sign86\["keyAlias"\]\s*keyPassword = sign86\["keyPassword"\]/, m);
-    assert.equal((g.match(/signingConfig = signingConfigs\.getByName\(signName86\)/g) ?? []).length, 2, `${m}: debug og release bruker samme valg`);
-    assert.match(g, /create\("sideload"\) \{\s*storeFile = rootProject\.file\("signing\/sideload\.jks"\)/, `${m}: nøkkelen i repoet er fortsatt reserve`);
+    assert.equal((g.match(/if \(sign86\.isNotEmpty\(\)\) signingConfig = signingConfigs\.getByName\("release"\)/g) ?? []).length, 2, `${m}: debug og release bruker egen nøkkel når den finnes`);
+    assert.doesNotMatch(g, /sideload\.jks|create\("sideload"\)|getByName\("sideload"\)/, `${m}: ingen nøkkel i repoet å falle tilbake på`);
   }
-  assert.ok(existsSync(join(AND, 'signing/sideload.jks')), 'nøkkelfila er ikke slettet ennå (se docs/android-signering.md)');
+  assert.ok(!existsSync(join(AND, 'signing/sideload.jks')), 'nøkkelfila er slettet (docs/android-signering.md)');
 });
 
 test('A: arbeidsflytene dekoder nøkkelen utenfor repoet, bare når hemmeligheten finnes, og logger den ikke', () => {

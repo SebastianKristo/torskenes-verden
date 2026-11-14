@@ -24,7 +24,7 @@ Alle tre har samme Papir-design og snakker med det samme API-et.
 2. Åpne filen. Android spør om du vil tillate **«Installer ukjente apper»** for nettleseren eller filbehandleren. Slå det på for den appen.
 3. Trykk **Installer**.
 
-**Oppdatering:** last ned den nye APK-en og installer over den gamle. Dataene beholdes. Har du 4.6.0 eller eldre, må du avinstallere én gang først, fordi APK-en etter det signeres med en fast nøkkel.
+**Oppdatering:** last ned den nye APK-en og installer over den gamle. Dataene beholdes. Er appene signert med den gamle nøkkelen fra repoet (før nøkkelbyttet), må du avinstallere Homelab, Kalender og Wear én gang først, fordi APK-ene nå signeres med en egen nøkkel som ikke ligger i repoet.
 
 ## Installere på iPhone og iPad (IPA)
 

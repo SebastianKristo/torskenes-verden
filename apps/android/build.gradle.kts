@@ -4,11 +4,12 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose") version "2.1.0" apply false
 }
 
-// Prompt 86 (AND86): signeringsnøkkelen leses fra miljøet (se docs/android-signering.md):
+// Signeringsnøkkelen leses fra miljøet (se docs/android-signering.md):
 //   ANDROID_KEYSTORE_FILE (sti) eller ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD.
-// Er de satt, signeres ALLE bygg (debug og release) i :app, :kalender og :wear med den nøkkelen. Mangler de, brukes
-// nøkkelen i repoet (signing/sideload.jks) som før, og bygget advarer: den nøkkelen er offentlig og gir ingen beskyttelse.
-// Modulene leser resultatet fra rootProject.extra["sign86"] (tomt kart = nøkkelen i repoet). Verdiene skrives aldri ut.
+// Er de satt, signeres ALLE bygg (debug og release) i :app, :kalender og :wear med den nøkkelen. Mangler de, ligger det ingen
+// nøkkel i repoet å falle tilbake på: debug-bygg signeres med Androids standard debug-nøkkel (~/.android/debug.keystore på
+// maskinen som bygger), og release-bygg stopper med en feilmelding (under).
+// Modulene leser resultatet fra rootProject.extra["sign86"] (tomt kart = ingen egen nøkkel). Verdiene skrives aldri ut.
 val sign86: Map<String, String> = run {
     fun env(n: String): String? = System.getenv(n)?.takeIf { it.isNotBlank() }
     val b64 = env("ANDROID_KEYSTORE_BASE64")
@@ -33,9 +34,20 @@ val sign86: Map<String, String> = run {
         else -> emptyMap()
     }
 }
+// Samme tekst står i .github/workflows/release.yml, som stopper før byggene starter.
+val utenNokkel = "Release-bygg krever egen signeringsnøkkel, og ANDROID_KEYSTORE_* er ikke satt. " +
+    "Lag nøkkelen med scripts/android-nokkel.sh og legg inn de fire hemmelighetene, se docs/android-signering.md."
 if (sign86.isEmpty()) {
-    logger.warn("ADVARSEL (signering): ANDROID_KEYSTORE_* er ikke satt. Appene signeres med nøkkelen i repoet (apps/android/signing/sideload.jks). " +
-        "Den er offentlig – alle med repoet kan signere en «oppdatering». Bytt til egen nøkkel: docs/android-signering.md.")
+    logger.warn("ADVARSEL (signering): ANDROID_KEYSTORE_* er ikke satt. Debug-bygg signeres med Androids standard debug-nøkkel. " +
+        "APK-en kan ikke installeres over en tidligere installert versjon som er signert med en annen nøkkel – avinstaller den først. " +
+        "Release-bygg stopper. Se docs/android-signering.md.")
+    // Stopp før noe bygges når en release-oppgave (assembleRelease, bundleRelease, installRelease …) er med i bygget.
+    gradle.taskGraph.whenReady {
+        val release = allTasks.filter { t ->
+            t.name.endsWith("Release") && listOf("assemble", "bundle", "package", "install").any { t.name.startsWith(it) }
+        }
+        if (release.isNotEmpty()) throw GradleException(utenNokkel)
+    }
 } else {
     logger.lifecycle("Signering: egen nøkkel fra miljøet brukes for :app, :kalender og :wear.")
 }

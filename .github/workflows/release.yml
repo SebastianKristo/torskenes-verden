@@ -1,8 +1,9 @@
 # Bygger mobilappene og legger APK og IPA i en GitHub Release.
 # Start: push en tag (git tag v1.4.0 && git push origin v1.4.0), eller kjør manuelt under Actions → Release.
 #
-# Valgfrie secrets (uten dem lages likevel installerbare filer, se release-teksten):
+# Påkrevde secrets (uten dem stopper releasen i første jobb, før noe bygges):
 #   ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD (docs/android-signering.md)
+# Valgfrie secrets (uten dem lages bare usignert IPA):
 #   IOS_CERT_P12_BASE64, IOS_CERT_PASSWORD, IOS_PROFILE_BASE64, IOS_TEAM_ID
 name: Release
 
@@ -22,7 +23,23 @@ env:
   TAG: ${{ github.event.inputs.version || github.ref_name }}
 
 jobs:
+  # Stopper releasen tidlig (før Android- og iOS-byggene) når Android-nøkkelen mangler. Samme tekst som i
+  # apps/android/build.gradle.kts, som også stopper assembleRelease uten nøkkel.
+  signeringsnokkel:
+    runs-on: ubuntu-latest
+    env:
+      HAR_ANDROID_NOKKEL: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+    steps:
+      - name: Sjekk Android-signeringsnøkkel
+        run: |
+          if [ "$HAR_ANDROID_NOKKEL" != "true" ]; then
+            echo "::error title=Android-signering::Release-bygg krever egen signeringsnøkkel, og ANDROID_KEYSTORE_* er ikke satt. Lag nøkkelen med scripts/android-nokkel.sh og legg inn de fire hemmelighetene, se docs/android-signering.md."
+            exit 1
+          fi
+          echo "Android-signeringsnøkkel funnet."
+
   android:
+    needs: signeringsnokkel
     runs-on: ubuntu-latest
     env:
       # 'true' når signeringsnøkkelen er lagt inn som hemmelighet (docs/android-signering.md). Selve verdien eksponeres ikke her.
@@ -37,7 +54,7 @@ jobs:
           distribution: temurin
           java-version: '17'
       - uses: gradle/actions/setup-gradle@v4
-      - name: Signeringsnøkkel fra hemmeligheter (valgfri)
+      - name: Signeringsnøkkel fra hemmeligheter
         # Kjører bare når ANDROID_KEYSTORE_BASE64 finnes (env-verdi, ikke secrets direkte i if). Nøkkelen dekodes til en fil
         # utenfor repoet, og Gradle leser ANDROID_KEYSTORE_* fra miljøet (apps/android/build.gradle.kts). Ingenting skrives til logg.
         if: env.HAR_ANDROID_NOKKEL == 'true'
@@ -49,15 +66,14 @@ jobs:
           echo "ANDROID_KEYSTORE_FILE=$RUNNER_TEMP/android-signering.jks" >> "$GITHUB_ENV"
       - name: Bygg APK
         env:
-          # Tomme uten hemmeligheter – da bruker Gradle nøkkelen i repoet som før (og advarer).
+          # Mangler en av dem, stopper Gradle med en feilmelding (ingen nøkkel å falle tilbake på).
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           V="${TAG#v}"
           mkdir -p ../../dist
-          # Med ANDROID_KEYSTORE_* i miljøet signeres alle tre appene med egen nøkkel. Uten: den faste nøkkelen i repoet,
-          # så nye versjoner fortsatt kan installeres rett over den forrige.
+          # Alle tre appene signeres med nøkkelen fra hemmelighetene, så nye versjoner installeres rett over den forrige.
           ./gradlew --no-daemon assembleRelease -PversionName="$V" -PversionCode=$((1000 + ${{ github.run_number }}))
           cp app/build/outputs/apk/release/app-release.apk "../../dist/FinansHub-$V.apk"
           cp kalender/build/outputs/apk/release/kalender-release.apk "../../dist/Kalender-$V.apk" || echo "Advarsel: fant ikke Kalender-APK"
@@ -69,6 +85,7 @@ jobs:
           path: dist/*
 
   ios:
+    needs: signeringsnokkel
     runs-on: macos-26
     defaults:
       run:
@@ -186,7 +203,7 @@ jobs:
             echo "## Installer"
             echo ""
             echo "**Android:** last ned \`FinansHub-*.apk\`, tillat «Installer ukjente apper» for nettleseren eller filbehandleren, og åpne filen."
-            echo "> Fra 4.6.1 er APK-en signert med en fast nøkkel, så senere versjoner installeres rett over. Kommer du fra 4.6.0 eller eldre, må du avinstallere én siste gang."
+            echo "> APK-ene er signert med en egen nøkkel som ikke ligger i repoet, så senere versjoner installeres rett over. Er appene installert fra en versjon signert med den gamle nøkkelen (fra repoet), må du avinstallere Homelab, Kalender og Wear-appen én gang først."
             echo ""
             echo "**iPhone:** åpne \`FinansHub-*-unsigned.ipa\` i [AltStore](https://altstore.io), [SideStore](https://sidestore.io) eller [Sideloadly](https://sideloadly.io). En signert \`FinansHub-*.ipa\` (hvis den finnes) kan installeres direkte på registrerte enheter."
             echo ""

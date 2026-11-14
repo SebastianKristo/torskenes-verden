@@ -36,7 +36,7 @@ import java.util.UUID
  *      brukeren kommer tilbake (ON_RESUME → resumeAppUpd32).
  *   4. PackageInstaller-økt; STATUS_PENDING_USER_ACTION → bekreftelsesdialogen fra systemet. Feiler økten, faller vi
  *      tilbake til ACTION_VIEW via FileProvider (${applicationId}.files, cache/updates).
- * APK-ene er alltid signert med samme nøkkel (sideload-nøkkelen eller release-nøkkelen), så de installeres rett over.
+ * Release-APK-ene er alltid signert med release-nøkkelen (docs/android-signering.md), så de installeres rett over.
  *
  * Tilstanden ligger i et eget objekt (AppUpd32.s) i stedet for i AppViewModel, så delte filer bare trenger små kall.
  */

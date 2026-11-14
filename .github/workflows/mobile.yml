@@ -32,9 +32,14 @@ jobs:
           umask 077
           printf '%s' "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/android-signering.jks"
           echo "ANDROID_KEYSTORE_FILE=$RUNNER_TEMP/android-signering.jks" >> "$GITHUB_ENV"
+      - name: Uten signeringsnøkkel
+        # Bygget går videre (assembleDebug), men APK-ene signeres med runnerens debug-nøkkel og kan ikke installeres over en
+        # tidligere installert versjon.
+        if: env.HAR_ANDROID_NOKKEL != 'true'
+        run: echo "::warning title=Android-signering::ANDROID_KEYSTORE_* er ikke satt. APK-ene er signert med Androids standard debug-nøkkel og kan ikke installeres over en tidligere installert versjon. Se docs/android-signering.md."
       - name: Bygg APK
         env:
-          # Tomme uten hemmeligheter – da bruker Gradle nøkkelen i repoet som før (og advarer).
+          # Tomme uten hemmeligheter – da signerer Gradle debug-byggene med standard debug-nøkkel (og advarer).
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}

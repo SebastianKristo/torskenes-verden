@@ -72,7 +72,7 @@ Nå kjøres lange søk som jobb med fremdrift og Avbryt. Se [AI og tidsgrenser](
 
 **Årsak:** oppstartskoden brukte deler av appen som ikke var klare ennå. Det er **rettet i 4.13.0**.
 
-**Løsning:** installer siste APK fra [Releases](https://github.com/SebastianKristo/torskenes-verden/releases) over den gamle. Kommer du fra 4.6.0 eller eldre, avinstaller først (signaturnøkkelen ble byttet i 4.6.1).
+**Løsning:** installer siste APK fra [Releases](https://github.com/SebastianKristo/torskenes-verden/releases) over den gamle. Har du en versjon signert med den gamle nøkkelen fra repoet (før nøkkelbyttet i Fase 0b), avinstaller Homelab, Kalender og Wear først (se `docs/android-signering.md`).
 
 Krasjer den fortsatt? Hent loggen med en PC:
 

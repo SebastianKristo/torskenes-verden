@@ -1,36 +1,49 @@
-# Android: egen signeringsnøkkel
+# Android: signeringsnøkkel
 
-Android-appene (Homelab/FinansHub, Kalender og Wear) signeres i dag med en nøkkel som ligger i repoet
-(`apps/android/signing/sideload.jks`, passordet står i byggefilene). Alle som har repoet kan dermed signere en
-APK som telefonen godtar som en oppdatering av appen. Denne siden viser hvordan du bytter til din egen nøkkel.
+Android-appene (Homelab/FinansHub, Kalender og Wear) ble tidligere signert med en nøkkel som lå i repoet
+(`apps/android/signing/sideload.jks`, med passordet i byggefilene). **Den nøkkelen er fjernet.** Alle som hadde repoet,
+kunne signere en APK som telefonen godtok som en oppdatering av appene.
 
-Byggene leser nøkkelen fra miljøet. Når hemmelighetene under er lagt inn, bruker både «Mobilapper» og «Release»
-dem automatisk. Uten dem brukes nøkkelen i repoet som før, og bygget skriver en advarsel.
+Nå finnes det ingen nøkkel i repoet. Byggene leser nøkkelen fra miljøet (`ANDROID_KEYSTORE_*`):
+
+| Bygg | Med hemmelighetene | Uten |
+|---|---|---|
+| **Release** (tag `v*` / Actions → Release, `assembleRelease`) | Alle tre appene signeres med din nøkkel | **Ingen release.** Arbeidsflyten stopper i første jobb, før Android og iOS bygges, og `assembleRelease` stopper med en feilmelding som peker hit |
+| **Mobilapper** (push til `main`, `assembleDebug`) | Signeres med din nøkkel | Signeres med Androids standard debug-nøkkel. Bygget er grønt, men loggen advarer: APK-en kan ikke installeres over en tidligere installert versjon |
+| **Lokalt** (`./gradlew assembleDebug`) | Signeres med din nøkkel | Standard debug-nøkkel på maskinen (`~/.android/debug.keystore`), med samme advarsel |
+
+## Det du må gjøre før neste release
+
+1. Lag en ny nøkkel (steg 1).
+2. Legg inn de fire hemmelighetene i GitHub (steg 2).
+3. Lag releasen, og avinstaller appene én gang på hver enhet før du installerer de nye (steg 4).
 
 ## 1. Lag en ny nøkkel
 
-Kjør dette på din egen maskin (krever Java, `keytool` følger med). Kommandoen spør om et passord – velg et langt
-og tilfeldig, og lagre det i passordhvelvet ditt:
+Enklest med skriptet (krever Java, `keytool` følger med). Kjør det på din egen maskin:
+
+```bash
+scripts/android-nokkel.sh            # lager ~/homelab-android-nokkel/homelab-release.jks
+```
+
+Skriptet spør om et passord (vises ikke, minst 12 tegn), lager en PKCS12-nøkkel med RSA 4096, base64-koder den og skriver
+ut de fire hemmelighetene du skal legge inn. Passordet skrives aldri til logg eller fil, og skriptet nekter å legge
+nøkkelen inne i repoet.
+
+Vil du gjøre det for hånd, er det det samme som:
 
 ```bash
 keytool -genkeypair -keystore homelab-release.jks -storetype PKCS12 \
   -alias homelab -keyalg RSA -keysize 4096 -validity 10000 -dname "CN=Homelab"
-```
-
-- Fila `homelab-release.jks` er nøkkelen. Ta en sikkerhetskopi (passordhvelv eller kryptert disk).
-  **Mister du fila eller passordet, kan du aldri mer oppdatere appene uten å avinstallere dem.**
-- Legg aldri fila i repoet.
-
-## 2. Base64-kod nøkkelen
-
-```bash
 base64 -w0 homelab-release.jks > homelab-release.jks.b64     # Linux
 base64 -i homelab-release.jks -o homelab-release.jks.b64     # macOS
 ```
 
-Innholdet i `homelab-release.jks.b64` er én lang linje. Slett fila når steg 3 er gjort.
+- Fila `homelab-release.jks` er nøkkelen. Ta en sikkerhetskopi av den og passordet (passordhvelv eller kryptert disk).
+  **Mister du fila eller passordet, kan du aldri mer oppdatere appene uten å avinstallere dem.**
+- Legg aldri fila i repoet. Slett `homelab-release.jks.b64` når steg 2 er gjort.
 
-## 3. Legg inn de fire hemmelighetene i GitHub
+## 2. Legg inn de fire hemmelighetene i GitHub
 
 GitHub → repoet → **Settings → Secrets and variables → Actions → New repository secret**:
 
@@ -41,18 +54,28 @@ GitHub → repoet → **Settings → Secrets and variables → Actions → New r
 | `ANDROID_KEY_ALIAS` | `homelab` |
 | `ANDROID_KEY_PASSWORD` | samme passord som over (PKCS12 bruker ett passord) |
 
+Eller med GitHub CLI (`gh secret set` spør etter verdien, så passordet havner ikke i kommandohistorikken):
+
+```bash
+gh secret set ANDROID_KEYSTORE_BASE64 < ~/homelab-android-nokkel/homelab-release.jks.b64
+gh secret set ANDROID_KEYSTORE_PASSWORD
+gh secret set ANDROID_KEY_ALIAS --body homelab
+gh secret set ANDROID_KEY_PASSWORD
+```
+
 Alle fire må være satt. Mangler passord eller alias, stopper bygget med en tydelig feilmelding i stedet for å
 signere med feil nøkkel.
 
-## 4. Bygg og sjekk
+## 3. Bygg og sjekk
 
 Kjør **Actions → Mobilapper** (eller lag en ny utgivelse). I loggen for «Bygg APK» skal det stå
 `Signering: egen nøkkel fra miljøet brukes for :app, :kalender og :wear.` Står det
 `ADVARSEL (signering)`, er hemmelighetene ikke funnet.
 
-## 5. Installer på nytt – én gang
+## 4. Avinstaller og installer på nytt – én gang
 
-Android nekter å installere en app over en annen som er signert med en annen nøkkel. Derfor, én gang etter byttet:
+Signaturen endres, og Android nekter å installere en app over en annen som er signert med en annen nøkkel. Derfor,
+én gang etter byttet:
 
 1. Avinstaller **Homelab**, **Kalender** og **Wear-appen** (klokka).
 2. Installer de nye APK-ene og logg inn igjen.
@@ -64,23 +87,25 @@ innlogging, lokale innstillinger (tema, widgeter på hjemskjermen, varselvalg) o
 signert med samme nøkkel – appene sammenligner signeringssertifikatene. En gammel Kalender sammen med en ny Homelab
 (eller omvendt) må logge inn med brukernavn og passord.
 
-Bruker du App Links (`ANDROID_CERT_SHA256` på serveren), må verdien oppdateres med det nye fingeravtrykket:
+Bruker du App Links (`ANDROID_CERT_SHA256` på serveren), må verdien oppdateres med det nye fingeravtrykket (skriptet
+skriver det ut, eller):
 
 ```bash
 keytool -list -v -keystore homelab-release.jks -alias homelab | grep SHA256
 ```
 
-## 6. Slett den gamle nøkkelen fra repoet
-
-Når alle enhetene kjører apper signert med den nye nøkkelen, kan `apps/android/signing/sideload.jks` og
-`sideload`-oppsettet i `apps/android/*/build.gradle.kts` fjernes. Bygg uten hemmeligheter (for eksempel lokalt) må da
-få nøkkelen fra miljøet, se under.
+## Den gamle nøkkelen i git-historikken
 
 Den gamle nøkkelen finnes fortsatt i git-historikken. Det er **byttet** til en ny nøkkel som gir sikkerheten –
 ikke slettingen. Så lenge en enhet kjører en app signert med den gamle nøkkelen, kan den appen fortsatt
-«oppdateres» av alle som har repoet.
+«oppdateres» av alle som har repoet. Når alle enhetene har fått de nye appene (steg 4), er den gamle nøkkelen verdiløs.
 
-## Bygge lokalt med egen nøkkel
+## Bygge lokalt
+
+Uten nøkkel: `./gradlew assembleDebug` virker og signerer med standard debug-nøkkel på maskinen. En slik APK kan ikke
+installeres over en app signert med release-nøkkelen (avinstaller først). `assembleRelease` stopper.
+
+Med egen nøkkel:
 
 ```bash
 export ANDROID_KEYSTORE_FILE=/sti/til/homelab-release.jks

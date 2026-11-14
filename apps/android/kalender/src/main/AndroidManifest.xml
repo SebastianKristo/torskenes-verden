@@ -18,7 +18,7 @@
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <!-- «Logg inn med Homelab-appen»: Homelab gir server-adresse og et eget token via en ContentProvider som bare apper
-         signert med samme nøkkel (signing/sideload.jks) får lov til å spørre. Tillatelsen defineres i begge appene,
+         signert med samme nøkkel (release-nøkkelen, se docs/android-signering.md) får lov til å spørre. Tillatelsen defineres i begge appene,
          så rekkefølgen de installeres i ikke betyr noe. -->
     <permission
         android:name="no.kristo.finanshub.permission.KALENDER_LOGIN"

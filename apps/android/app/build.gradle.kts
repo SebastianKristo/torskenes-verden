@@ -8,11 +8,10 @@ plugins {
 val appVersionName = providers.gradleProperty("versionName").orNull?.takeIf { it.isNotBlank() } ?: "4.0"
 val appVersionCode = providers.gradleProperty("versionCode").orNull?.toIntOrNull() ?: 4
 
-// Prompt 86 (AND86): signering fra miljøet (ANDROID_KEYSTORE_*), regnet ut én gang i ../build.gradle.kts. Tomt kart = nøkkelen
-// i repoet (signing/sideload.jks) som før. Samme nøkkel for :app, :kalender og :wear. Se docs/android-signering.md.
+// Signering fra miljøet (ANDROID_KEYSTORE_*), regnet ut én gang i ../build.gradle.kts. Samme nøkkel for :app, :kalender og :wear.
+// Uten egen nøkkel (tomt kart) brukes Androids standard debug-nøkkel for debug, og release-bygg stopper. Se docs/android-signering.md.
 @Suppress("UNCHECKED_CAST")
 val sign86 = rootProject.extra["sign86"] as Map<String, String>
-val signName86 = if (sign86.isNotEmpty()) "release" else "sideload"
 
 android {
     namespace = "no.kristo.finanshub"
@@ -27,14 +26,6 @@ android {
     }
 
     signingConfigs {
-        // Fast nøkkel for sideloading (apps/android/signing/sideload.jks). Alle bygg uten egen release-nøkkel signeres
-        // med den, så en ny APK kan installeres over den forrige uten å avinstallere først.
-        create("sideload") {
-            storeFile = rootProject.file("signing/sideload.jks")
-            storePassword = "finanshub-sideload"
-            keyAlias = "finanshub"
-            keyPassword = "finanshub-sideload"
-        }
         if (sign86.isNotEmpty()) {
             create("release") {
                 storeFile = file(sign86.getValue("file"))
@@ -47,12 +38,13 @@ android {
 
     buildTypes {
         debug {
-            signingConfig = signingConfigs.getByName(signName86)
+            // Uten egen nøkkel: AGPs standard debug-signering.
+            if (sign86.isNotEmpty()) signingConfig = signingConfigs.getByName("release")
         }
         release {
             isMinifyEnabled = false
-            // Egen nøkkel når den sendes inn, ellers den faste sideload-nøkkelen.
-            signingConfig = signingConfigs.getByName(signName86)
+            // Uten egen nøkkel stopper ../build.gradle.kts release-bygget før det starter.
+            if (sign86.isNotEmpty()) signingConfig = signingConfigs.getByName("release")
         }
     }
     compileOptions {
