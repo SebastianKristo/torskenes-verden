@@ -62,7 +62,7 @@ import { pipeline } from 'node:stream/promises';
 import { createGzip, createGunzip } from 'node:zlib';
 import Database from 'better-sqlite3';
 import { config } from './config.js';
-import { db, q, kv, OWNER } from './db.js';
+import { db, q, kv, OWNER, kvMemoReset } from './db.js';
 import { sessionUser, isAdmin, checkPassword, clientIp, loginBlocked, loginFailed, loginSucceeded } from './auth.js';
 import { bearerOk } from './finans/routes.js';
 import { seal, unseal } from './finans/db.js';
@@ -838,7 +838,7 @@ function applyRestore(dest, manifest, mods, { disable2fa = true } = {}) {
         }
       })();
     } finally { db.pragma('foreign_keys = ON'); }
-  } finally { db.exec('DETACH DATABASE bk'); }
+  } finally { db.exec('DETACH DATABASE bk'); kvMemoReset(); } // kv er skrevet direkte: tøm kv-minnet i forespørslene
   // Filmapper: hver mappe byttes med rename (gammel → .old-*, ny → plass, gammel slettes).
   const dirsDone = [];
   for (const m of mods) {

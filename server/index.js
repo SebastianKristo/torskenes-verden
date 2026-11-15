@@ -8,7 +8,7 @@ import { readFile, writeFile, unlink } from 'node:fs/promises';
 import { randomBytes } from 'node:crypto';
 import { join, resolve } from 'node:path';
 import { config } from './config.js';
-import { db, kv, OWNER } from './db.js';
+import { db, kv, OWNER, withKvMemo } from './db.js';
 import { createSession, destroySession, sessionUser, rememberDevice, pauseDevice, forgetDevice, currentDeviceId, currentSessionId, trustIp, isLan, requireAuth, requireAdmin, clientIp, verifyLogin, createTicket, redeemTicket, userInfo, listUsers, listUsersFor, createUser, deleteUser, updateUser, setPassword, checkPassword, isAdmin, needsSetup, setupServer, serverName, setServerName, startTotpSetup, confirmTotpSetup, disableTotp, totpReadable, loginBlocked, loginFailed, loginSucceeded } from './auth.js';
 import * as integrations from './integrations.js';
 import { cfg, publicConfig, updateConfig, runRequest, userCfgSet, runAsUser } from './settings.js';
@@ -124,6 +124,8 @@ if (api !== integrations) console.warn('[mock] MOCK_DATA=1 – viser eksempeldat
 const app = new Hono();
 // ISO2: hver forespørsel kjører med sin egen brukerkontekst, så cfg() gir den innloggedes personlige integrasjoner.
 app.use('*', (c, next) => runRequest(c, next));
+// kv leses én gang per (bruker, nøkkel) i hver API-forespørsel (server/db.js, withKvMemo); skriving tømmer minnet.
+for (const p of ['/api/*', '/finans/api/*']) app.use(p, (c, next) => withKvMemo(next));
 traceObs51(app); // prompt 51 (OBS51): spor for trege forespørsler (DB, AI, eksterne kall) – før alle ruter
 // Prompt 36: «Starter opp»-siden. Registrert før secureHeaders: siden er én fil med innebygd skript/stil, så den får sin
 // egen strenge CSP (ingen eksterne skript, bare fonten fra Google Fonts, fetch bare til samme opphav).

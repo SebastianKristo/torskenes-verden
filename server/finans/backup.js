@@ -12,6 +12,7 @@ import { pipeline } from 'node:stream/promises';
 import { createGzip, createGunzip } from 'node:zlib';
 import { createCipheriv, createDecipheriv, randomBytes, scryptSync, randomUUID } from 'node:crypto';
 import { db, q, kv, OWNER, settings, saveSettings, secret, me, SERVER_KEYS } from './db.js';
+import { kvMemoReset } from '../db.js';
 import { config } from '../config.js';
 import { writeXlsx, readXlsxSheets, fromSerial } from './xlsx.js';
 import { cachedStocks } from './stocks.js';
@@ -622,6 +623,7 @@ export async function restore(stageId, u = me(), { mainAdmin = u === OWNER } = {
       }
     }
     result.receipt_files = files;
+    kvMemoReset(); // kv kan være skrevet direkte (settings.json, hele databasen)
     kv.set(OWNER, 'fh_firstrun', { done: true, at: Date.now(), via: 'restore' });
   }
   if (s.dir) rmSync(s.dir, { recursive: true, force: true });
