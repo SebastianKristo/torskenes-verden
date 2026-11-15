@@ -87,7 +87,7 @@ let bound = false;
 export function bind51(find) {
   if (find) finder = find;
   if (bound) return; bound = true;
-  if (!document.getElementById('r51-css')) { const l = document.createElement('link'); l.id = 'r51-css'; l.rel = 'stylesheet'; l.href = `/assets/css/receipts51.css${new URL(import.meta.url).search}`; document.head.appendChild(l); }
+  if (!document.getElementById('kvittering-css')) { const l = document.createElement('link'); l.id = 'kvittering-css'; l.rel = 'stylesheet'; l.href = `/assets/css/pages/kvitteringer.css${new URL(import.meta.url).search}`; document.head.appendChild(l); }
   document.addEventListener('click', onClick, true);
 }
 

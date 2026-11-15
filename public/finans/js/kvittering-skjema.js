@@ -135,7 +135,7 @@ function onClick(e) {
 let bound = false;
 export function bind48() {
   if (bound) return; bound = true;
-  if (!document.getElementById('r48-css')) { const l = document.createElement('link'); l.id = 'r48-css'; l.rel = 'stylesheet'; l.href = `/assets/css/receipts48.css${new URL(import.meta.url).search}`; document.head.appendChild(l); }
+  if (!document.getElementById('kvittering-css')) { const l = document.createElement('link'); l.id = 'kvittering-css'; l.rel = 'stylesheet'; l.href = `/assets/css/pages/kvitteringer.css${new URL(import.meta.url).search}`; document.head.appendChild(l); }
   document.addEventListener('input', onInput, true);
   document.addEventListener('click', onClick, true);
 }

@@ -24,10 +24,10 @@ async function fin(path, opts = {}) {
 }
 
 function css() {
-  if (document.getElementById('r48-css')) return;
+  if (document.getElementById('kvittering-css')) return;
   const l = document.createElement('link');
-  l.id = 'r48-css'; l.rel = 'stylesheet';
-  l.href = `/assets/css/receipts48.css${new URL(import.meta.url).search}`;
+  l.id = 'kvittering-css'; l.rel = 'stylesheet';
+  l.href = `/assets/css/pages/kvitteringer.css${new URL(import.meta.url).search}`;
   document.head.appendChild(l);
 }
 
