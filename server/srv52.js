@@ -13,7 +13,7 @@
 // i Docker-proxyen (start/restart). AI-kall går via ai-run/ai-gate (lokal modell, localOnly). Logoer kommer bare fra logobiblioteket
 // og logoer serveren allerede har lagret – aldri eksterne oppslag.
 import { Hono } from 'hono';
-import { db, kv, OWNER } from './db.js';
+import { db, q, kv, OWNER } from './db.js';
 import { authOrToken } from './mobile.js';
 import { userInfo, listUsers, isAdmin } from './auth.js';
 import { runAsUser } from './settings.js';
@@ -22,7 +22,6 @@ import { CHARS, glimtSettingsOf, cleanGlimtPatch, saveGlimtSettings, charDefault
 import { matchMerchant, filePath as libraryFile } from './logos/match.js';
 import { brief73Api, rawCards73, B52_OF73, KEY_OF_B52 } from './brief73.js'; // prompt 73: Innhold i briefen (rekkefølge og av/på)
 
-const q = (sql) => db.prepare(sql);
 const DAY = 86_400_000;
 const NO_STORE = { 'Cache-Control': 'no-store' };
 const body = async (c) => { const b = await c.req.json().catch(() => ({})); return b && typeof b === 'object' && !Array.isArray(b) ? b : {}; };

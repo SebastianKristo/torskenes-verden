@@ -32,7 +32,7 @@ import { isIP } from 'node:net';
 import { createHash, randomUUID } from 'node:crypto';
 import { mkdirSync, writeFileSync, readFileSync, rmSync, existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { db } from './db.js';
+import { db, q } from './db.js';
 import { config } from './config.js';
 import { authOrToken } from './mobile.js';
 
@@ -576,7 +576,6 @@ export function sanitize73(html) {
    Lagring
    ===================================================================================================================== */
 
-const q = (sql) => db.prepare(sql);
 const userDir = (user) => join(DIR(), createHash('sha256').update(String(user)).digest('hex').slice(0, 16));
 const artDir = (user, id) => join(userDir(user), String(id).replace(/[^\w-]/g, ''));
 const STATUS_TEXT = { pending: 'Laster ned…', ok: 'Lagret · uten nett', summary: 'Kun sammendrag', error: 'Kun sammendrag' };

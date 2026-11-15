@@ -23,12 +23,11 @@
 // Brief: bibleForBrief(user, kind) → {…verset, placement:'top'|'bottom'} eller null (modulen av, eller dagsbrief uten lest vers).
 import { Hono } from 'hono';
 import { readFileSync } from 'node:fs';
-import { db } from './db.js';
+import { db, q } from './db.js';
 import { userInfo, listUsers, isAdmin } from './auth.js';
 import { authOrToken } from './mobile.js';
 
 const MOCK = process.env.MOCK_DATA === '1';
-const q = (sql) => db.prepare(sql);
 const load = (f) => JSON.parse(readFileSync(new URL(`./data/${f}`, import.meta.url), 'utf8'));
 export const VERSES = { morning: load('bible1930-morgen.json').verses, evening: load('bible1930-kveld.json').verses };
 

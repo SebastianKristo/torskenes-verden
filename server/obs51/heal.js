@@ -5,7 +5,7 @@
 //   «Unhealthy» = Docker-helsesjekken (Status «(unhealthy)») sett i to påfølgende runder (≥ 1 min), eller tilstanden «dead».
 //   Homelab selv (os-containeren) startes aldri på nytt herfra, og containere admin har unntatt hoppes over.
 import { randomUUID } from 'node:crypto';
-import { db, kv, OWNER } from '../db.js';
+import { db, q, kv, OWNER } from '../db.js';
 import { listUsers } from '../auth.js';
 import { notifyUser } from '../notify.js';
 import { docker51, dockerAvailable44, maskLog44 } from '../logs44.js';
@@ -19,7 +19,6 @@ db.exec(`CREATE TABLE IF NOT EXISTS obs51_issue_drafts (
   id TEXT PRIMARY KEY, created INTEGER NOT NULL, updated INTEGER NOT NULL, container TEXT NOT NULL, title TEXT NOT NULL, body TEXT NOT NULL, count INTEGER NOT NULL DEFAULT 1, dismissed INTEGER NOT NULL DEFAULT 0
 )`);
 
-const q = (s) => db.prepare(s);
 const HOUR = 3_600_000, DAY = 86_400_000;
 const KEY = 'obs51_heal';
 export const HEAL51_DEFAULTS = Object.freeze({ on: true, maxPerHour: 3, exclude: [] });

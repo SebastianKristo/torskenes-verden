@@ -1,9 +1,8 @@
 // Subscription OS: kategorier, månedsgraf, abonnementshelse, AI-sparing, kommende trekk,
 // «Pris økt» fra banktransaksjonene og kandidater (faste trekk som ikke er registrert ennå).
 // Alt regnes ut fra fh_subscriptions og fh_transactions; ingenting her endrer data unntatt priceCheck().
-import { db, me } from './db.js';
+import { db, q, me } from './db.js';
 
-const q = (sql) => db.prepare(sql);
 export const CYCLE_MONTHS = { monthly: 1, yearly: 12, biennial: 24 };
 
 // Kategorier i grafen og kalenderen. Rekkefølgen er fargerekkefølgen i grensesnittet.

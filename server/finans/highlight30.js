@@ -5,13 +5,12 @@
 //   Match er uavhengig av store/små bokstaver og aksenter («tomat» → «TOMATER CHERRY»).
 // - GET /finans/api/transactions/:id?hl=tomat → receipt.highlight {query, lineIndex[], matchedText, hasBoxes}.
 // - POST /finans/api/receipts/:id/reread → les kvitteringen på nytt (samme kø som «Les på nytt») for å få posisjoner.
-import { db } from './db.js';
+import { db, q } from './db.js';
 import { fold, stem } from './search.js';
 import { cleanBbox } from './bbox30.js';
 
 export { cleanBbox };
 
-const q = (sql) => db.prepare(sql);
 if (!q('PRAGMA table_info(fh_receipts)').all().some((c) => c.name === 'line_boxes')) db.exec('ALTER TABLE fh_receipts ADD COLUMN line_boxes TEXT');
 
 /** Linjene som [{text, price, bbox}] fra line_boxes, ellers fra extraction (eldre kvitteringer: bbox null). */

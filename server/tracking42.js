@@ -9,7 +9,7 @@
 //   POST /api/tracking/aliexpress/mail {raw|text, subject?, from?, uid?} → legg inn én AliExpress-e-post (test/import) → {found, shipments}
 import { Hono } from 'hono';
 import { simpleParser } from 'mailparser';
-import { db, kv } from './db.js';
+import { db, q, kv } from './db.js';
 import { isAdmin, sessionUser } from './auth.js';
 import { userGuard } from './homeos-common.js';
 import { runAsUser } from './settings.js';
@@ -17,7 +17,6 @@ import { upsertShipment, setAliHook42, trk42 } from './tracking.js';
 import { normNo, detect, pnDebugOf42, pnVariants42, postnordHealth41, POSTNORD_WEB_URL, PN_HEADERS42, _clearPostnordWebCache, _clearCainiaoCache } from './tracking-carriers.js';
 import { mailCfg42, mailConnect42, resolveFolder, mailText } from './finans/mail.js';
 
-const q = (sql) => db.prepare(sql);
 db.exec('CREATE TABLE IF NOT EXISTS track_mail_seen (user_id TEXT NOT NULL, folder TEXT NOT NULL, uid TEXT NOT NULL, at INTEGER NOT NULL, PRIMARY KEY (user_id, folder, uid))');
 
 /* ---------------- Gjenkjenning ---------------- */

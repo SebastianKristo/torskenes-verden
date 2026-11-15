@@ -10,13 +10,12 @@
 // POST /api/widgets/trials/:id {action?:'done'|'kept'} eller {status:'cancelled'|'kept'}  (standard 'done' = «Avsluttet»: status cancelled, påminnelsene stopper;
 //      'kept' = «Behold» via PATCH-logikken i FinansHub) → samme svar som GET (oppdatert widget). 404 for andres/ukjente prøver.
 import { Hono } from 'hono';
-import { db } from './db.js';
+import { db, q } from './db.js';
 import { authOrToken } from './mobile.js';
 import { osloTodayISO } from '../public/js/quick-time.js';
 import { domainFor } from './finans/enrich.js';
 import { cancelUrlFor, daysBetween, addDaysISO } from '../public/js/trial-parse.js';
 
-const q = (sql) => db.prepare(sql);
 const WDS = ['søn', 'man', 'tir', 'ons', 'tor', 'fre', 'lør'];
 const MNS = ['jan', 'feb', 'mar', 'apr', 'mai', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'des'];
 const shortDate = (iso) => { const d = new Date(iso + 'T12:00:00Z'); return `${WDS[d.getUTCDay()]} ${d.getUTCDate()}. ${MNS[d.getUTCMonth()]}`; };

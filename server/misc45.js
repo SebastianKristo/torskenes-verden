@@ -4,13 +4,12 @@
 //   GET /api/tasks/ha/summary → {enabled, linked, lists, syncedAt, syncedText, text, settings, canEdit}  (alle innloggede; endring fortsatt bare admin)
 //   GET /api/settings/sections → {sections:[{id, title, icon, color, route, items, api}]}  (én seksjon per modul, admin-sider skjult for andre)
 import { Hono } from 'hono';
-import { db, kv, OWNER } from './db.js';
+import { db, q, kv, OWNER } from './db.js';
 import { authOrToken } from './mobile.js';
 import { isAdmin } from './auth.js';
 import { weatherFull, iconOf, wmoText } from './weather-full.js';
 import { indexFor } from './settings-ask30.js';
 
-const q = (sql) => db.prepare(sql);
 const MOCK = () => process.env.MOCK_DATA === '1';
 
 /* ---------------- Vær: Min posisjon ---------------- */

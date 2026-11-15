@@ -5,13 +5,12 @@
 //   2. motstrid-sjekk av nye forslag og av minnet (review.js) → glimt_memory_conflicts med spørsmål,
 //   3. markering av fakta som ikke er brukt på lenge (telles; slettes aldri).
 // Ingen push kl. 03: finnes det nye forslag/motstrid, sendes «Glimt har 3 forslag til minnet» om morgenen (kl. 07, morningPush63).
-import { db, kv } from '../db.js';
+import { db, q, kv } from '../db.js';
 import { mem63, staleDays63 } from './settings.js';
 import { propose63 } from './extract.js';
 import { insertPending63, pendingCounts63, conflictCounts63, staleOf63, MAX_PENDING63, iso63 } from './store.js';
 import { checkPending63, scanMemory63, tidy63 } from './review.js';
 
-const q = (sql) => db.prepare(sql);
 export const SYSTEM_TITLE63 = 'Nattlig oppsummering av minnet';
 export const SYSTEM_WHAT63 = 'oppsummer dagens samtaler og foreslå nye ting å huske';
 export const PUSH_URL63 = '/#/innstillinger/glimt-husker';

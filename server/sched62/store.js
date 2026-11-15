@@ -1,10 +1,9 @@
 // Prompt 62 (prompt 49 del 2, D2SRV): lagring av planlagte oppgaver (`glimt_schedules`) og kjøringer (`glimt_schedule_runs`).
 // Additiv migrering: tabellene opprettes hvis de mangler, og kolonner som mangler legges til (aldri endret/slettet). Per bruker, lokalt.
 import { randomBytes } from 'node:crypto';
-import { db } from '../db.js';
+import { db, q } from '../db.js';
 import { ruleOfWhen62, nextRun62, nextRuns62, afterQuiet62, quiet62, labelOf62, ruleToRRule62, icalOf62, osloParts62 } from '../glimt45/dates.js';
 
-const q = (sql) => db.prepare(sql);
 db.exec(`CREATE TABLE IF NOT EXISTS glimt_schedules (id TEXT PRIMARY KEY, user_id TEXT NOT NULL, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL,
   title TEXT NOT NULL, what TEXT NOT NULL, kind TEXT NOT NULL DEFAULT 'query', when_text TEXT, rrule TEXT, dtstart TEXT NOT NULL, tz TEXT NOT NULL DEFAULT 'Europe/Oslo',
   until TEXT, explicit_time INTEGER NOT NULL DEFAULT 0, condition TEXT, params TEXT NOT NULL DEFAULT '{}', channel TEXT NOT NULL DEFAULT 'push',

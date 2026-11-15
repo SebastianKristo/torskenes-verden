@@ -2,7 +2,7 @@
 // Hvert verktøy: {name, module, description, destructive, parameters (JSON-skjema), validate(args, ctx) → {args}|{ask}|{error},
 // run(args, ctx) → {status:'done'|'failed', result, cards, facts}, verify?(result, ctx) → bool}.
 // Verktøyene ser bare den innloggede brukerens data (runAsUser + user_id i alle spørringer). Boliger/Matplan røres ikke her.
-import { db, kv } from '../db.js';
+import { db, q, kv } from '../db.js';
 import { runAsUser } from '../settings.js';
 import { broadcast } from '../realtime.js';
 import { eventsFor, createEvent, updateEvent, deleteEvent, findEvent, eventInput, normText } from '../calendar.js';
@@ -12,7 +12,6 @@ import { ensureLedger, settings as fhSettings } from '../finans/db.js';
 import { inOriginal46 } from './tasks46.js';
 import { whenOf45, parsePeriod45, parseAmount45, parseDate45, parseTime45, isIsoDate45, isHm45, addDays45, addMin45, todayOslo45, longDate45, relDate45, mondayOf45, MON45 } from './dates.js';
 
-const q = (sql) => db.prepare(sql);
 const pad = (n) => String(n).padStart(2, '0');
 const cap = (s) => String(s ?? '').replace(/^\s*(.)/, (m, c) => c.toUpperCase());
 const str = (v, n = 200) => (typeof v === 'string' ? v.replace(/[\u0000-\u001f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, n) : '');

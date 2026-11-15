@@ -3,13 +3,12 @@
 // Kildene: sporene (glimt47_trace – lever bare 3 dager, så de samles hver time i quality64_requests), oppskriftene (recipes, del 1),
 // tommel ned (recipe_runs.vote), rettelsene (sporets recipe.correction, del 1), svar-cachen (sporets cache.hit, del 4).
 // Søndag kl. 20 (systemoppgave «Ukerapport», sched62): én kort push; full rapport i appen (GET /api/glimt/quality/weekly).
-import { db, kv, OWNER } from '../db.js';
+import { db, q, kv, OWNER } from '../db.js';
 import { insertRequest64, requestsBetween64, runsBetween64, publicRun64 } from './store.js';
 import { quality64 } from './settings.js';
 import { push64, PUSH_URL64 } from './notify64.js';
 import { osloParts62, osloToUtc62 } from '../glimt45/dates.js';
 
-const q = (sql) => db.prepare(sql);
 const DAY = 86400_000;
 const INGEST_KEY = 'quality64_ingest', SENT_KEY = 'quality64_weekly_sent';
 const MON = ['jan', 'feb', 'mar', 'apr', 'mai', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'des'];

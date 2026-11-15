@@ -6,11 +6,10 @@
 //   kalender, gjøremål, finans, minne, media og alt som endrer data: ALDRI (ingen cache – «til data endres» trengs da ikke).
 // Tabell fast59_cache (user_id, key, kind, created, expires, response). Ryddes ved oppstart og ved hver lagring (utløpte rader).
 import { createHash } from 'node:crypto';
-import { db } from '../db.js';
+import { db, q } from '../db.js';
 
 db.exec(`CREATE TABLE IF NOT EXISTS fast59_cache (user_id TEXT NOT NULL, key TEXT NOT NULL, kind TEXT NOT NULL, created INTEGER NOT NULL, expires INTEGER NOT NULL, response TEXT NOT NULL, PRIMARY KEY (user_id, key));
 CREATE INDEX IF NOT EXISTS fast59_cache_exp ON fast59_cache(expires);`);
-const q = (sql) => db.prepare(sql);
 
 export const TTL59 = { weather: 15 * 60_000, web: 30 * 60_000, news: 30 * 60_000 };
 /** Til neste hele time (strømprisen endres hver time). Oslo har hele timers forskyvning fra UTC, så timegrensen er den samme. */

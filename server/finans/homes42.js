@@ -21,14 +21,13 @@
 // GET    /homes/:id/search?q= · /boliger/search?q= → {text, cards, hits, searched, homeName} (søk avgrenset til bolig)
 // GET/PUT /import/home-rules · POST /import/home-rules/run {days} · POST /import?home=<id>&commit=1 (mellomvare)
 import { Hono } from 'hono';
-import { db, me, settings } from './db.js';
+import { db, q, me, settings } from './db.js';
 import { catTree, catPair, catById, entryCat, assignCategory, linkLegacy, aiCat, aiNewAllowed } from './boliger.js';
 import { matchMerchant, hasFile } from '../logos/match.js';
 import { domainFor } from './enrich.js';
 import { fold42, stem42, synonymsOf42, parsePeriod42 } from './search42.js';
 import { kv, OWNER } from '../db.js';
 
-const q = (sql) => db.prepare(sql);
 // Prompt 52 (SRV52): kvitteringen i samme form som Transaksjoner/Kvitteringer (receiptOut) – samme panel/komponent i Boliger.
 let receiptOut52 = null;
 import('./routes.js').then((m) => { receiptOut52 = m.receiptOut52 ?? null; }).catch(() => {});

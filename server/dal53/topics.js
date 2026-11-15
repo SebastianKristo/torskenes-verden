@@ -1,10 +1,9 @@
 // Prompt 53 (DAL53): emnene fra Gist per nyhetssak – bare databasen (ingen modell), så rss.js og news46.js kan importere uten sykler.
-import { db } from '../db.js';
+import { db, q } from '../db.js';
 
 db.exec(`CREATE TABLE IF NOT EXISTS news_topics53 (
   item_id INTEGER PRIMARY KEY, topics TEXT NOT NULL, top TEXT, category TEXT, model TEXT NOT NULL DEFAULT 'gist', at INTEGER NOT NULL
 )`);
-const q = (sql) => db.prepare(sql);
 
 /** Gist-emne (slug) → standardkategori i Nyheter, eller null. Slugene matches løst, så nye/endrede navn i modellen tåles. */
 export function categoryOfTopic53(slug) {

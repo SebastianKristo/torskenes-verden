@@ -18,13 +18,12 @@ import { bodyLimit } from 'hono/body-limit';
 import { randomUUID } from 'node:crypto';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
-import { db } from './db.js';
+import { db, q } from './db.js';
 import { config } from '../config.js';
 import { scanLog } from './scan.js';
 import { validate } from './ai.js';
 
 const DIR = resolve(config.dataDir, 'receipts');
-const q = (sql) => db.prepare(sql);
 // Additiv migrasjon: OCR-teksten fra enheten når originalbildet også er lastet opp (file = bildet, teksten her).
 if (!q('PRAGMA table_info(fh_receipts)').all().some((c) => c.name === 'ocr_text47')) db.exec('ALTER TABLE fh_receipts ADD COLUMN ocr_text47 TEXT');
 const bad = (c, error, status = 400, extra = {}) => c.json({ error, ...extra }, status);

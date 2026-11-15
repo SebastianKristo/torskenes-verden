@@ -6,7 +6,7 @@ import { createHmac, randomBytes, randomUUID } from 'node:crypto';
 import { readFile, writeFile, unlink, mkdir } from 'node:fs/promises';
 import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { db, OWNER, settings, saveSettings, secret, setSecret, secretSource, DEFAULT_SETTINGS, me, ensureLedger, SERVER_KEYS, PERSONAL_CFG, serverSettings } from './db.js';
+import { db, q, OWNER, settings, saveSettings, secret, setSecret, secretSource, DEFAULT_SETTINGS, me, ensureLedger, SERVER_KEYS, PERSONAL_CFG, serverSettings } from './db.js';
 import { runAsUser, userCfg, setUserCfg } from '../settings.js';
 import { loadDemo } from './demo.js';
 import { extract, extractText, extractOcr, health, providerName, testEngine, testRoboflow, ENGINES, TASKS, aiLog, barcode, aiTimeoutsOf, cleanAiTimeouts, AI_TIMEOUT_DEFAULTS, TIMEOUT_STEPS, ON_TIMEOUT, _aiTest, aiLimits } from './ai.js';
@@ -58,7 +58,6 @@ import { warnCloudReceipt52, RECEIPT_SOURCE_LABEL52, RECEIPT_ENGINE_NOTE52 } fro
 import { bolApi, catTree, catOptions, entryCat, linkLegacy, assignCategory, catById as bolCat, catPair, colorOf, noticesFor, layoutFor, upcomingOf, backgroundOf, validBackground } from './boliger.js';
 
 const DIR = resolve(config.dataDir, 'receipts');
-const q = (sql) => db.prepare(sql);
 // Prompt 23: tidsavbrudd i kvitteringskøen. timeout_engine = motoren som ikke svarte, retry_at = når jobben prøves igjen (onTimeout=queue).
 for (const [col, def] of [['timeout_engine', 'TEXT'], ['retry_at', 'INTEGER'], ['retry_n', 'INTEGER NOT NULL DEFAULT 0']]) {
   if (!db.prepare('PRAGMA table_info(fh_receipts)').all().some((c) => c.name === col)) db.exec(`ALTER TABLE fh_receipts ADD COLUMN ${col} ${def}`);

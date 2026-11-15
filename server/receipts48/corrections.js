@@ -3,10 +3,9 @@
 //   - automatisk når en kvittering fra /receipts/scan bokføres med andre verdier enn modellen ga (butikk, dato, total, kategori)
 //   - eksplisitt med POST /finans/api/receipts/:id/corrections {receipt:<felles format>} fra redigeringsskjemaet
 import { createHash } from 'node:crypto';
-import { db } from '../finans/db.js';
+import { db, q } from '../finans/db.js';
 import { fromLegacy48 } from './normalize.js';
 
-const q = (sql) => db.prepare(sql);
 db.exec(`CREATE TABLE IF NOT EXISTS receipt_corrections48 (
   id INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT NOT NULL, receipt_id TEXT, created INTEGER NOT NULL, kind TEXT NOT NULL DEFAULT 'edit',
   source TEXT, used_step TEXT, engine TEXT, model TEXT, fields TEXT, model_json TEXT, corrected_json TEXT, ocr_json TEXT, pipeline_json TEXT);

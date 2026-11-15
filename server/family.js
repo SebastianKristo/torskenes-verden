@@ -7,7 +7,7 @@ import { readFile, writeFile, mkdir, unlink } from 'node:fs/promises';
 import { join } from 'node:path';
 import { bodyLimit } from 'hono/body-limit';
 import { config } from './config.js';
-import { db, kv, OWNER } from './db.js';
+import { db, q, kv, OWNER } from './db.js';
 import { userInfo, listUsers, sessionUser } from './auth.js';
 import { bearerOk } from './finans/routes.js';
 import { broadcast } from './realtime.js';
@@ -52,7 +52,6 @@ if (!db.prepare('PRAGMA table_info(family_zone)').all().some((c) => c.name === '
   db.exec('ALTER TABLE family_zone ADD COLUMN icon TEXT');
 }
 
-const q = (sql) => db.prepare(sql);
 const HEALTH_KEYS = ['steps', 'restingHr', 'hr', 'sleep', 'activeKcal', 'week'];
 const ACTIVITIES = ['still', 'walking', 'running', 'cycling', 'driving'];
 const COLOR = /^#[0-9a-f]{6}$/i;

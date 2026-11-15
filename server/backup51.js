@@ -24,7 +24,7 @@ import { fileURLToPath } from 'node:url';
 import Database from 'better-sqlite3';
 import { config } from './config.js';
 import { sessionSecret86 } from './secret86.js'; // prompt 86
-import { db, kv, OWNER } from './db.js';
+import { db, q, kv, OWNER } from './db.js';
 import { seal, unseal } from './finans/db.js';
 import { dbFiles51, integrityOf51 } from './dbmaint51.js';
 
@@ -32,7 +32,6 @@ const DATA = resolve(config.dataDir);
 const APP_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 export const STAGE = join(DATA, '.ops51-stage');
 const CACHE = join(DATA, '.ops51-cache');
-const q = (sql) => db.prepare(sql);
 const TAG = 'nordlys51', HOST = 'nordlys';
 const TIMEOUT = () => Math.max(5_000, Number(process.env.OPS51_RESTIC_TIMEOUT_MS) || 6 * 3600_000);
 

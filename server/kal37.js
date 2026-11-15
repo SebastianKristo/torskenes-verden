@@ -13,13 +13,12 @@
 // PUT  /api/kalender/subjects/:key {color|null} → lagrer i layout.subjectColors (samme felt som appene)
 // GET  /api/kalender/geo?q=Hoffsveien 4 → {found, address, label, lat, lon, map} (cache permanent, bom prøves igjen etter 1 t)
 import { Hono } from 'hono';
-import { db, kv } from './db.js';
+import { db, q, kv } from './db.js';
 import { authOrToken, layoutOf } from './mobile.js';
 import { addEventDecorator } from './calendar.js';
 import { NOMINATIM_UA } from './family.js';
 
 const MOCK = process.env.MOCK_DATA === '1';
-const q = (sql) => db.prepare(sql);
 db.exec(`CREATE TABLE IF NOT EXISTS study_subject_colors (user_id TEXT NOT NULL, key TEXT NOT NULL, color TEXT NOT NULL, created INTEGER NOT NULL, PRIMARY KEY (user_id, key));
 CREATE TABLE IF NOT EXISTS geo37_cache (q TEXT PRIMARY KEY, result TEXT, fail INTEGER, ts INTEGER NOT NULL);`);
 

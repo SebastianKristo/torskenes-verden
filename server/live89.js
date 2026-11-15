@@ -19,7 +19,7 @@
 // (+15 min, pakke +30 min etter levert, avtale ved starttid). Android: ingen Firebase – appen poller /api/live/aktiviteter.
 import { Hono } from 'hono';
 import { createHash } from 'node:crypto';
-import { db, kv } from './db.js';
+import { db, q, kv } from './db.js';
 import { isAdmin } from './auth.js';
 import { authOrToken } from './mobile.js';
 import { runAsUser } from './settings.js';
@@ -37,7 +37,6 @@ db.exec(`CREATE TABLE IF NOT EXISTS live89_tokens (user_id TEXT NOT NULL, platfo
 CREATE INDEX IF NOT EXISTS live89_tokens_tok ON live89_tokens(token);
 CREATE TABLE IF NOT EXISTS live89_push (user_id TEXT NOT NULL, akt_id TEXT NOT NULL, type TEXT NOT NULL, hash TEXT NOT NULL, sent_at INTEGER NOT NULL,
   ended INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (user_id, akt_id));`);
-const q = (s) => db.prepare(s);
 
 export const TYPES89 = ['nedlasting', 'backup', 'spiller', 'avtale', 'pakke'];
 export const ID_RE89 = /^[a-z0-9:_-]{1,80}$/;

@@ -3,12 +3,11 @@
 // første 5 radene og svarer med kolonnene; svaret lagres som en mal med kolonnesignatur, så neste fil med
 // samme kolonner bruker malen uten AI.
 import { createHash } from 'node:crypto';
-import { db, me, perUserUnique } from './db.js';
+import { db, q, me, perUserUnique } from './db.js';
 import { askJson } from './ai.js';
 import { bankRow } from './csv.js';
 import { cleanDescription, splitRows } from './importer.js';
 
-const q = (sql) => db.prepare(sql);
 
 db.exec(`CREATE TABLE IF NOT EXISTS fh_import_template (
   id INTEGER PRIMARY KEY AUTOINCREMENT,

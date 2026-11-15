@@ -2,12 +2,11 @@
 // GET /finans/api/forslag?q=bloms&limit=6 → [{type:'butikk'|'kategori'|'vare', navn, antall, sum (øre, negativ for utgift), ikon, farge, logoUrl?}]
 // Kilder: butikker (merchant/bankteksten i transaksjonene), kategorier og varelinjer fra kvitteringer. Listen bygges én gang per
 // bruker og holdes i minnet; den bygges på nytt når transaksjoner, kvitteringer eller kategorier endrer seg (signaturen under).
-import { db, me } from './db.js';
+import { db, q, me } from './db.js';
 import { norm, matchScore } from './search.js';
 import { domainFor } from './enrich.js';
 import { cachedLogoUrl } from './logo-lookup.js';
 
-const q = (sql) => db.prepare(sql);
 const TYPE_ORDER = { butikk: 0, kategori: 1, vare: 2 };
 const PALETTE = ['#2b5d8a', '#b23a2a', '#3f7a6e', '#a8743a', '#6d4aff', '#13a37f', '#d0605a', '#4b6cf0', '#7b4fd6', '#e0a325'];
 const hashColor = (s) => { let h = 0; for (const ch of String(s)) h = (h * 31 + ch.codePointAt(0)) >>> 0; return PALETTE[h % PALETTE.length]; };

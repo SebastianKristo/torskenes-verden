@@ -13,13 +13,12 @@
 // GET  /api/profiles/me → {profile|null, consents}
 // Glimt, Hilsen, Now Brief og Bibelvers bruker profilnavnet (profileName(userId)), ikke brukernavnet.
 import { Hono } from 'hono';
-import { db, kv, OWNER } from './db.js';
+import { db, q, kv, OWNER } from './db.js';
 import { userInfo, listUsers, isAdmin } from './auth.js';
 import { authOrToken } from './mobile.js';
 import { colorOf, prefsOf, PALETTE } from './family.js';
 
 const MOCK = process.env.MOCK_DATA === '1';
-const q = (sql) => db.prepare(sql);
 db.exec(`CREATE TABLE IF NOT EXISTS profiles37 (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL,

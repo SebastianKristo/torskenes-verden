@@ -3,7 +3,7 @@
 import { copyFileSync, mkdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'node:crypto';
-import { db, OWNER, kv } from '../db.js';
+import { db, q, OWNER, kv } from '../db.js';
 import { config } from '../config.js';
 import { sessionSecret86 } from '../secret86.js'; // prompt 86
 import { currentUser, userCfg, userCfgSet, setUserCfg } from '../settings.js';
@@ -358,7 +358,7 @@ export const DEFAULT_SETTINGS = {
 
 // Visningsnavnet følger hovedadmin (fra førstegangsoppsettet) til det overstyres under Generelt.
 function mainAdminName() {
-  try { const u = db.prepare("SELECT name, username FROM users ORDER BY is_main_admin DESC, role='admin' DESC, created LIMIT 1").get(); return u ? (u.name || u.username) : null; } catch { return null; }
+  try { const u = q("SELECT name, username FROM users ORDER BY is_main_admin DESC, role='admin' DESC, created LIMIT 1").get(); return u ? (u.name || u.username) : null; } catch { return null; }
 }
 // ISO2: innstillingene er delt i to.
 // - SERVER_KEYS: serveroppsett (AI-motorer, modeller, URL-er, aiTasks, tidsgrenser, embeddings, SMB-backup, Boliger-AI). Ligger hos OWNER,
@@ -375,7 +375,7 @@ export const isServerKey = (k) => SERVER_KEYS.has(k);
 const rawSettings = (u) => kv.get(u, 'fh_settings', {}) ?? {};
 function userName(u) {
   if (u === OWNER) return mainAdminName();
-  try { const r = db.prepare('SELECT name, username FROM users WHERE id=?').get(u); return r ? (r.name || r.username) : null; } catch { return null; }
+  try { const r = q('SELECT name, username FROM users WHERE id=?').get(u); return r ? (r.name || r.username) : null; } catch { return null; }
 }
 const pcfg = (u, k, own) => {
   const ck = PERSONAL_CFG[k];
@@ -507,7 +507,7 @@ function migrateOldReceipts() {
   console.log(`[finans] Flyttet ${old.length} kvitteringer fra den gamle Økonomi-fanen.`);
 }
 
-export { db, OWNER, kv };
+export { db, q, OWNER, kv };
 
 // Eier av en rad: true når raden finnes og tilhører u (brukes før oppdatering/sletting).
 export const owns = (table, id, u = me()) => !!db.prepare(`SELECT 1 FROM ${table} WHERE id=? AND user_id=?`).get(id, u);

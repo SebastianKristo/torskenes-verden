@@ -1,6 +1,6 @@
 import { randomBytes, createHmac } from 'node:crypto';
 import { getCookie, setCookie, deleteCookie } from 'hono/cookie';
-import { db, kv, OWNER } from './db.js';
+import { db, q, kv, OWNER } from './db.js';
 import { config } from './config.js';
 import { sessionSecret86 } from './secret86.js'; // prompt 86
 import { hashPassword, verifyPassword } from './password.js';
@@ -75,8 +75,8 @@ export function setupServer({ adminName, serverName: srv, username, password }) 
   return userInfo(OWNER);
 }
 
-const userRow = (id) => db.prepare('SELECT * FROM users WHERE id=?').get(id);
-const userByName = (username) => db.prepare('SELECT * FROM users WHERE username=?').get(String(username ?? '').trim().toLowerCase());
+const userRow = (id) => q('SELECT * FROM users WHERE id=?').get(id);
+const userByName = (username) => q('SELECT * FROM users WHERE username=?').get(String(username ?? '').trim().toLowerCase());
 // Eieren kan mangle hash hvis APP_PASSWORD_HASH ble satt etter første oppstart; da brukes den.
 const hashOf = (u) => u.pw_hash || (u.id === OWNER ? legacyPasswordHash() : '');
 

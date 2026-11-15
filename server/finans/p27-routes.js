@@ -5,7 +5,7 @@ import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { bodyLimit } from 'hono/body-limit';
 import { userBool, setUserCfg } from '../settings.js';
-import { db } from './db.js';
+import { db, q } from './db.js';
 import { forslag } from './forslag.js';
 import { auditList } from './ai-audit.js';
 import { findLogo, setManualLogo, clearLogo, isLogoFile, LOGO_DIR } from './logo-lookup.js';
@@ -14,7 +14,6 @@ import { readScreenshot, decodeImageField, imageKind, errorBody, shotError, pick
 import { startPull, pullStatus } from './ollama-models.js';
 import { annotateForslag } from './highlight30.js';
 
-const q = (sql) => db.prepare(sql);
 const bad = (c, msg, code = 400) => c.json({ error: msg }, code);
 const str = (v, max = 200) => String(v ?? '').trim().slice(0, max);
 const TYPES = { png: 'image/png', jpg: 'image/jpeg', webp: 'image/webp', gif: 'image/gif', ico: 'image/x-icon', svg: 'image/svg+xml' };

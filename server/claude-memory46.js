@@ -12,9 +12,8 @@
 // (hash per punkt). Samme fil importert på nytt OPPDATERER området: nye punkter legges til, borte punkter fjernes, like beholdes –
 // ingen kopier. Embeddings (nomic-embed-text via ai-run.js embed) lagres i ai_memory45_vec. Alt per bruker.
 import { createHash } from 'node:crypto';
-import { db } from './db.js';
+import { db, q } from './db.js';
 
-const q = (sql) => db.prepare(sql);
 db.exec(`CREATE TABLE IF NOT EXISTS ai_memory46_areas (
   id INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT NOT NULL, area_key TEXT NOT NULL, title TEXT NOT NULL, category TEXT, file TEXT,
   source TEXT NOT NULL DEFAULT 'claude-memory', src_date TEXT, points INTEGER NOT NULL DEFAULT 0, created INTEGER NOT NULL, updated INTEGER NOT NULL,

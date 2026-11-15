@@ -17,7 +17,7 @@ import { connect as netConnect } from 'node:net';
 import { connect as tlsConnect } from 'node:tls';
 import { randomBytes, createHash } from 'node:crypto';
 import { parseQuick, osloTodayISO } from '../public/js/quick-time.js';
-import { db, kv } from './db.js';
+import { db, q, kv } from './db.js';
 import { userInfo, listUsers } from './auth.js';
 import { authOrToken } from './mobile.js';
 import { userCfg } from './settings.js';
@@ -31,7 +31,6 @@ db.exec(`CREATE TABLE IF NOT EXISTS geo44_cache (q TEXT PRIMARY KEY, result TEXT
 CREATE TABLE IF NOT EXISTS kal44_invites (id INTEGER PRIMARY KEY AUTOINCREMENT, organizer TEXT NOT NULL, event_id TEXT NOT NULL, attendee TEXT NOT NULL, snapshot TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'invited', created INTEGER NOT NULL, updated INTEGER NOT NULL, UNIQUE(organizer, event_id, attendee));
 CREATE TABLE IF NOT EXISTS mail44_outbox (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT NOT NULL, to_addr TEXT NOT NULL, subject TEXT NOT NULL, via TEXT NOT NULL, status TEXT NOT NULL, error TEXT, ics TEXT, created INTEGER NOT NULL);`);
-const q = (sql) => db.prepare(sql);
 const baseId = (id) => String(id ?? '').split('~')[0].replace(/-\d{8}(T\d{4})?$/, '');
 const EMAIL = /^[^\s@<>()",;]{1,64}@[^\s@<>()",;]{1,190}\.[a-z]{2,24}$/i;
 const STATUSES = ['invited', 'accepted', 'declined', 'tentative', 'pending'];

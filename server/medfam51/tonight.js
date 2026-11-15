@@ -2,14 +2,13 @@
 // plays44 i playback44.js), tilpasset hvem som er hjemme (Familie › Steder, stedet med type hjem) og ønsket sjanger/lengde.
 // Rangeringen er regler i koden (forklaringen per forslag bygges herfra); den lokale modellen brukes BARE til å formulere teksten
 // (ai-run med localOnly – aldri skyen), og forslagene virker likt uten modell.
-import { db, kv } from '../db.js';
+import { db, q, kv } from '../db.js';
 import { userInfo } from '../auth.js';
 import { family50 as F } from '../family.js';
 import * as M from '../media43.js';
 import { run as aiRun } from '../ai-run.js';
 import { HOUR, DAY, clean, minText } from './common.js';
 
-const q = (sql) => db.prepare(sql);
 const SEEN_PCT = 85;
 export const GENRES51 = { Action: 'Action', Adventure: 'Eventyr', Animation: 'Animasjon', Comedy: 'Komedie', Crime: 'Krim', Documentary: 'Dokumentar', Drama: 'Drama', Family: 'Familie',
   Fantasy: 'Fantasy', History: 'Historie', Horror: 'Skrekk', Music: 'Musikk', Mystery: 'Mysterium', Romance: 'Romantikk', 'Science Fiction': 'Sci-fi', 'Sci-Fi': 'Sci-fi', Thriller: 'Thriller',

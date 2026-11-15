@@ -62,7 +62,7 @@ import { pipeline } from 'node:stream/promises';
 import { createGzip, createGunzip } from 'node:zlib';
 import Database from 'better-sqlite3';
 import { config } from './config.js';
-import { db, kv, OWNER } from './db.js';
+import { db, q, kv, OWNER } from './db.js';
 import { sessionUser, isAdmin, checkPassword, clientIp, loginBlocked, loginFailed, loginSucceeded } from './auth.js';
 import { bearerOk } from './finans/routes.js';
 import { seal, unseal } from './finans/db.js';
@@ -78,7 +78,6 @@ mkdirSync(BACKUP_DIR, { recursive: true });
 const TZ = 'Europe/Oslo';
 const ID = /^bk-\d{8}-\d{6}-[0-9a-f]{6}$/;
 const FILE = /^bk-\d{8}-\d{6}-[0-9a-f]{6}\.tar\.(gz|zst)(\.enc)?$/;
-const q = (sql) => db.prepare(sql);
 
 db.exec(`CREATE TABLE IF NOT EXISTS backup_jobs (
   id TEXT PRIMARY KEY,

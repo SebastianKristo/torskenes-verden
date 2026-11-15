@@ -3,7 +3,7 @@
 // tildeles et familiemedlem; den som får oppgaven varsles, uten sjåfør varsles alle når det nærmer seg, og sjåføren får en
 // påminnelse før avreise. Ruter-forslaget kommer fra ruter41.js (Entur) mellom hjemmet i Familie › Steder og stedet på hendelsen.
 // Hendelsene vises også i Kalender (egen kilde «Familiekalender»). API-formene står i SERVER51-API.md (seksjon MEDFAM51).
-import { db, kv } from '../db.js';
+import { db, q, kv } from '../db.js';
 import { isAdmin } from '../auth.js';
 import { notifyUser } from '../notify.js';
 import { family50 as F } from '../family.js';
@@ -20,7 +20,6 @@ CREATE TABLE IF NOT EXISTS famcal51_task (id INTEGER PRIMARY KEY AUTOINCREMENT, 
 CREATE INDEX IF NOT EXISTS famcal51_task_event ON famcal51_task(event_id);
 CREATE INDEX IF NOT EXISTS famcal51_task_at ON famcal51_task(at);`);
 
-const q = (sql) => db.prepare(sql);
 export const KINDS51 = { henting: 'Henting', bringing: 'Bringing' };
 const COLOR = /^#[0-9a-f]{6}$/i;
 export const FAMCAL51_COLOR = '#7a3b6b';

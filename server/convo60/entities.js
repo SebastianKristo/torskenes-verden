@@ -8,13 +8,12 @@
 //   - avledede entiteter leses fra kildene sine hver gang: Familie → Steder (family_zone), Subscription OS (fh_subscriptions),
 //     Vær (kv wx_places) og profilens hjemsted. Bare egne aliaser til dem lagres (kv «entities60_alias», {ref: [alias]}).
 // Personvern: alt er lokalt og per bruker; registeret sendes bare til lokal modell (planleggeren) som resten av minnet.
-import { db, kv } from '../db.js';
+import { db, q, kv } from '../db.js';
 import { ensureMemory47, TYPE_SYNONYMS47 } from '../glimt45/memory47.js';
 import { addMemory, MEMORY_TYPES } from '../glimt-memory.js';
 import { niceCase, normName } from '../../public/js/quick-time.js';
 import { hasWord47 } from '../glimt45/words47.js';
 
-const q = (sql) => db.prepare(sql);
 export const ETYPES60 = ['person', 'place', 'store', 'subscription', 'event'];
 export const ELABELS60 = { person: 'Personer', place: 'Steder', store: 'Butikker', subscription: 'Abonnementer', event: 'Faste hendelser' };
 /** Faste ord som peker på et sted (Familie-stedets type eller navn, ellers profilens hjemsted for «hjemme»). */

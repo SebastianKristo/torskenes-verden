@@ -9,11 +9,10 @@
 //
 // parseQuery42(text) → {intent, item, itemStem, terms[], category, merchant, merchantDisplay, period:{from, to, label}|null, min, max, last, words}
 // ask42(u, text, {scope, onStep}) → {text, cards, hits, steps:[{label, detail, ms, done}], ms, engine:'lokalt'|'ollama', path:'fast'|'llm', parsed, intent, …}
-import { db, me } from './db.js';
+import { db, q, me } from './db.js';
 import { matchMerchant, normalize as logoNorm } from '../logos/match.js';
 import { kv } from '../db.js';
 
-const q = (sql) => db.prepare(sql);
 
 /* ---------------- Tabeller ---------------- */
 

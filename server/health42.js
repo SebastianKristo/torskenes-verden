@@ -8,12 +8,11 @@
 //   POST /api/family/health/ha/consent {allow:true|false} (personen selv) → {consent}
 //   Familie-svar (mellomvare): health får source:'ha:<enhet>', sourceDevice, sourceText:'Fra Home Assistant · OnePlus 12 · oppdatert 2 min siden', limited, stale, staleText.
 import { Hono } from 'hono';
-import { db, kv, OWNER } from './db.js';
+import { db, q, kv, OWNER } from './db.js';
 import { userInfo, listUsers, isAdmin, sessionUser } from './auth.js';
 import { cfg, runAsUser } from './settings.js';
 import { bearerOk } from './finans/routes.js';
 
-const q = (sql) => db.prepare(sql);
 db.exec(`CREATE TABLE IF NOT EXISTS health_daily (person_id TEXT NOT NULL, date TEXT NOT NULL, metric TEXT NOT NULL, value REAL, source TEXT NOT NULL, updated INTEGER NOT NULL,
   PRIMARY KEY (person_id, date, metric, source))`);
 

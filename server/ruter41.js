@@ -23,7 +23,7 @@
 // POST /api/ruter/journey/home · POST /api/ruter/journey/hide · DELETE /api/ruter/journey/hide (Angre) → {journey}
 // GET/PUT /api/ruter/settings {homeCard:'over'|'instead'|'off', push:false} → samme
 import { Hono } from 'hono';
-import { db, kv, OWNER } from './db.js';
+import { db, q, kv, OWNER } from './db.js';
 import { authOrToken as authOrToken0 } from './mobile.js';
 import { family50 as F50, placesChanged50, areaOut50 } from './family.js'; // prompt 50 (SRVFAM50): skolen kommer fra Familie › Steder
 const authOrToken = (c, next) => authOrToken0(c, next); // sen binding (mobile.js kan være midt i lastingen)
@@ -31,7 +31,6 @@ const authOrToken = (c, next) => authOrToken0(c, next); // sen binding (mobile.j
 db.exec(`CREATE TABLE IF NOT EXISTS school_zones (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT NOT NULL, name TEXT NOT NULL, lat REAL NOT NULL, lon REAL NOT NULL, radius_m INTEGER NOT NULL, created INTEGER NOT NULL);
 CREATE INDEX IF NOT EXISTS school_zones_u ON school_zones(user_id);`);
 
-const q = (s) => db.prepare(s);
 const MOCK = () => process.env.MOCK_DATA === '1';
 export const ENTUR_CLIENT41 = () => process.env.ENTUR_CLIENT_NAME_41 || 'kristo-homelab';
 const JOURNEY_MS = 90 * 60_000, MIN = 60_000;

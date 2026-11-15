@@ -8,7 +8,7 @@
 //   transportørnøkler (cfg i brukerens kontekst) og e-postskanning er brukerens egne. Sanntid sendes bare til eieren.
 //   Ekte push er ikke bygget: appene og nettsiden viser varslene lokalt når de henter /api/tracking.
 import { Hono } from 'hono';
-import { db, kv, OWNER } from './db.js';
+import { db, q, kv, OWNER } from './db.js';
 import { runAsUser } from './settings.js';
 import { config } from './config.js'; // prompt 41: fast forskyvning per installasjon
 import { sessionUser } from './auth.js';
@@ -92,7 +92,6 @@ for (const [col, type] of [['source_date', 'INTEGER'], ['ok_at', 'INTEGER'], ['p
   db.exec('CREATE INDEX IF NOT EXISTS hl_shipments_user ON hl_shipments(user_id, archived, updated_at)');
 }
 
-const q = (sql) => db.prepare(sql);
 const now = () => Date.now();
 
 /* ---------------- Overstyrt transportør (prompt 26) ---------------- */

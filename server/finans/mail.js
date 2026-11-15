@@ -9,12 +9,11 @@ import tls from 'node:tls';
 import { createHash } from 'node:crypto';
 import { ImapFlow } from 'imapflow';
 import { simpleParser } from 'mailparser';
-import { db, kv, OWNER, settings, saveSettings, secret, me } from './db.js';
+import { db, q, kv, OWNER, settings, saveSettings, secret, me } from './db.js';
 import { runAsUser } from '../settings.js';
 // ISO2: e-postimporten er per bruker. Hver bruker har sin egen IMAP (userCfg hos ISO-INT, lest via settings()/secret()),
 // egen status, egne duplikatsjekker (fh_mail_imports.user_id) og egne kvitteringer. Bakgrunnsjobben kjører hver bruker for seg.
 
-const q = (sql) => db.prepare(sql);
 const MOCK = process.env.MOCK_DATA === '1';
 const sha256 = (b) => createHash('sha256').update(b).digest('hex');
 const RECEIPT_MIME = { 'application/pdf': 'pdf', 'image/jpeg': 'jpg', 'image/jpg': 'jpg', 'image/png': 'png', 'image/heic': 'heic', 'image/heif': 'heif' };

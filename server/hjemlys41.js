@@ -21,7 +21,7 @@
 import { Hono } from 'hono';
 import { originOf46 } from './public-url46.js'; // prompt 46 (SERVER46)
 import { randomBytes } from 'node:crypto';
-import { db, kv } from './db.js';
+import { db, q, kv } from './db.js';
 import { authOrToken as authOrToken0 } from './mobile.js';
 const authOrToken = (c, next) => authOrToken0(c, next); // sen binding (mobile.js kan være midt i lastingen)
 import { userInfo, listUsers } from './auth.js';
@@ -38,7 +38,6 @@ CREATE TABLE IF NOT EXISTS hjemlys_links (token TEXT PRIMARY KEY, status_id TEXT
 export const KINDS41 = ['checkin', 'leaving_soon', 'leaving_now', 'arrived'];
 const ALIAS = { checked_in: 'checkin', checkedin: 'checkin', sjekket_inn: 'checkin', leavingsoon: 'leaving_soon', drar_snart: 'leaving_soon', leavingnow: 'leaving_now', drar_naa: 'leaving_now', fremme: 'arrived' };
 const LINK_MS = 24 * 3600_000, NOTICE_MS = 24 * 3600_000, CHECKIN_LIVE_MS = 15 * 60_000;
-const q = (s) => db.prepare(s);
 const parse = (s, d) => { try { return s ? JSON.parse(s) : d; } catch { return d; } };
 const first = (id) => String(userInfo(id)?.displayName || userInfo(id)?.name || userInfo(id)?.username || 'Ukjent').split(/\s+/)[0];
 const hhmm = (ms) => new Date(ms).toLocaleTimeString('nb-NO', { timeZone: 'Europe/Oslo', hour: '2-digit', minute: '2-digit' });

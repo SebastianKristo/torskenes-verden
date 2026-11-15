@@ -2,10 +2,9 @@
 // Utgiftene i fh_folder_entries peker på kategorien med category_id (underkategorien hvis den har en);
 // kolonnen category beholder navnet på hovedkategorien, så faste regninger og eldre klienter virker som før.
 import { Hono } from 'hono';
-import { db, kv, OWNER, settings, saveSettings } from './db.js';
+import { db, q, kv, OWNER, settings, saveSettings } from './db.js';
 import { askJson } from './ai.js';
 
-const q = (sql) => db.prepare(sql);
 const bad = (c, msg, code = 400) => c.json({ error: msg }, code);
 const clean = (v, max = 40) => String(v ?? '').replace(/\s+/g, ' ').trim().slice(0, max);
 

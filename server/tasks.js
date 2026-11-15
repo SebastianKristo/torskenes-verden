@@ -21,7 +21,7 @@
 import { extraOut40 } from './tasks-glimt40.js'; // prompt 40
 import { Hono } from 'hono';
 import { randomBytes } from 'node:crypto';
-import { db, kv, OWNER } from './db.js';
+import { db, q, kv, OWNER } from './db.js';
 import { userInfo, listUsers, sessionUser, isAdmin } from './auth.js';
 import { bearerOk } from './finans/routes.js';
 import { broadcast } from './realtime.js';
@@ -51,7 +51,6 @@ CREATE TABLE IF NOT EXISTS hl_task_list_members (list_id TEXT NOT NULL, user_id 
 CREATE INDEX IF NOT EXISTS hl_task_list_members_user ON hl_task_list_members(user_id);
 `);
 
-const q = (sql) => db.prepare(sql);
 const hasCol = (t, col) => q(`PRAGMA table_info(${t})`).all().some((c) => c.name === col);
 // Prompt 21: eier per liste. Listene fantes før det fantes eiere, og hadde ingen created_by: de blir hovedadmins
 // («husholdningen»). En kolonne created_by på listen (om den finnes fra en eldre variant) brukes hvis den er satt.

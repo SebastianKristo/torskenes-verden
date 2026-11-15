@@ -19,7 +19,7 @@
 // så den lokale tolkeren splitLocal41 (forstår «før vi skal», «hvor vi må», «og så», «siden/fordi» → note). Korte enkeltoppgaver
 // går lokalt med en gang. Data: huske_glimt_src (id, user_id, text, created_at, engine, item_ids, …), hl_tasks.src_id. Siste 60 per bruker.
 import { randomBytes } from 'node:crypto';
-import { db } from './db.js';
+import { db, q } from './db.js';
 import { userInfo, listUsers } from './auth.js';
 import { broadcast } from './realtime.js';
 import { notifyUser } from './notify.js';
@@ -31,7 +31,6 @@ db.exec(`CREATE TABLE IF NOT EXISTS huske_glimt_src (
   list TEXT, origin TEXT NOT NULL DEFAULT 'huske', state TEXT NOT NULL DEFAULT 'queued', error TEXT, ended_at INTEGER, deleted INTEGER NOT NULL DEFAULT 0, forgotten INTEGER NOT NULL DEFAULT 0);
 CREATE INDEX IF NOT EXISTS huske_glimt_src_u ON huske_glimt_src(user_id, created_at);`);
 
-const q = (s) => db.prepare(s);
 const parseJ = (s, d) => { try { return s ? JSON.parse(s) : d; } catch { return d; } };
 const cap = (s) => String(s ?? '').replace(/^\s*./, (c) => c.toUpperCase());
 const KEEP = 60;

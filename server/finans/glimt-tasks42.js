@@ -14,13 +14,12 @@ import { randomBytes } from 'node:crypto';
 import { mkdirSync } from 'node:fs';
 import { writeFile, readFile, unlink } from 'node:fs/promises';
 import { join } from 'node:path';
-import { db, settings } from './db.js';
+import { db, q, settings } from './db.js';
 import { config } from '../config.js';
 import { subscriptionSources } from './subs-ask32.js';
 import { Pdf42, A4 } from './pdf42.js';
 import { parsePeriod42 } from './search42.js';
 
-const q = (sql) => db.prepare(sql);
 db.exec(`CREATE TABLE IF NOT EXISTS glimt_jobs (
   id TEXT PRIMARY KEY, user_id TEXT NOT NULL, kind TEXT NOT NULL, title TEXT NOT NULL, params TEXT NOT NULL DEFAULT '{}',
   state TEXT NOT NULL DEFAULT 'queued', step INTEGER NOT NULL DEFAULT 0, pct INTEGER NOT NULL DEFAULT 0, result TEXT, pdf TEXT, error TEXT,

@@ -14,7 +14,7 @@
 //   model, input} i tillegg til de gamle feltene, og sendes også underveis (action 'progress'). Ferdig → notifyUser (kø/Web Push).
 import { Hono } from 'hono';
 import { randomBytes } from 'node:crypto';
-import { db } from './db.js';
+import { db, q } from './db.js';
 import { authOrToken } from './mobile.js';
 import { runAsUser } from './settings.js';
 import { broadcast } from './realtime.js';
@@ -51,7 +51,6 @@ db.exec(`CREATE TABLE IF NOT EXISTS cal_quick_jobs (
 CREATE INDEX IF NOT EXISTS cal_quick_jobs_user ON cal_quick_jobs(user_id, created);`);
 // Prompt 31: avbryt (Avbryt-knappen i AI-boblen).
 if (!db.prepare('PRAGMA table_info(cal_quick_jobs)').all().some((c) => c.name === 'cancelled')) db.exec('ALTER TABLE cal_quick_jobs ADD COLUMN cancelled INTEGER NOT NULL DEFAULT 0');
-const q = (sql) => db.prepare(sql);
 export const CANCELLED = 'Avbrutt · ingenting ble lagt til';
 
 /* ---------------- Ollama ---------------- */

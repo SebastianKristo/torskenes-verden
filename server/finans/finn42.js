@@ -3,9 +3,8 @@
 import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { db, kv, OWNER } from './db.js';
+import { db, q, kv, OWNER } from './db.js';
 
-const q = (sql) => db.prepare(sql);
 db.exec(`CREATE TABLE IF NOT EXISTS fh_finn_img_hash (sha1 TEXT NOT NULL, finn_id INTEGER NOT NULL, code TEXT, rel TEXT NOT NULL, PRIMARY KEY (sha1, finn_id, rel));
 CREATE INDEX IF NOT EXISTS fh_finn_img_hash_s ON fh_finn_img_hash(sha1);`);
 

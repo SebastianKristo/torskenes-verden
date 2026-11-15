@@ -19,7 +19,7 @@
 //
 // Personvern: aliasene sendes bare til lokal Ollama (rask time og Glimt-reserven), aldri til sky.
 import { Hono } from 'hono';
-import { db, kv } from './db.js';
+import { db, q, kv } from './db.js';
 import { authOrToken } from './mobile.js';
 import { runAsUser } from './settings.js';
 import { senderOf, niceCase, normName, aliasTitle, kindOfName, isNoiseLine, osloTodayISO, TYPE_LABEL, TYPES } from '../public/js/quick-time.js';
@@ -36,7 +36,6 @@ db.exec(`CREATE TABLE IF NOT EXISTS glimt_memory (
   used_at INTEGER
 );
 CREATE INDEX IF NOT EXISTS glimt_memory_user ON glimt_memory(user_id, kind);`);
-const q = (sql) => db.prepare(sql);
 const MAX_ITEMS = 200;
 export const MEMORY_TYPES = ['frisør', 'lege', 'tannlege', 'fysio', 'optiker', 'psykolog', 'annet'];
 const ORIGIN_QUICK = 'AI · rask time';

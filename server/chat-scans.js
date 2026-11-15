@@ -12,12 +12,11 @@
 //   Samme (kind, ref) oppdaterer samtalen. Melding 1 (bruker/system): kilden + vedlegget. Melding 2 (modell): svaret, verktøy-chips
 //   (meta.tools) og status (meta.status), modellnavnet i meta.model.
 import { randomUUID } from 'node:crypto';
-import { db } from './db.js';
+import { db, q } from './db.js';
 import { broadcast } from './realtime.js';
 
 export const SCAN_FOLDER = 'Kvitteringer og skanninger';
 export const SCAN_KINDS = ['receipt', 'label', 'categorize', 'finn'];
-const q = (sql) => db.prepare(sql);
 const has = (t, c) => db.prepare(`PRAGMA table_info(${t})`).all().some((x) => x.name === c);
 // Tabellene lages i chat.js; her legges bare kolonnene til (aldri slett).
 db.exec(`CREATE TABLE IF NOT EXISTS hl_chat_folders (id TEXT PRIMARY KEY, user_id TEXT NOT NULL, name TEXT NOT NULL, open INTEGER NOT NULL DEFAULT 1, created INTEGER NOT NULL);

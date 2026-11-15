@@ -11,12 +11,11 @@ import { Readable, Writable, Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { createGzip, createGunzip } from 'node:zlib';
 import { createCipheriv, createDecipheriv, randomBytes, scryptSync, randomUUID } from 'node:crypto';
-import { db, kv, OWNER, settings, saveSettings, secret, me, SERVER_KEYS } from './db.js';
+import { db, q, kv, OWNER, settings, saveSettings, secret, me, SERVER_KEYS } from './db.js';
 import { config } from '../config.js';
 import { writeXlsx, readXlsxSheets, fromSerial } from './xlsx.js';
 import { cachedStocks } from './stocks.js';
 
-const q = (sql) => db.prepare(sql);
 const DATA = resolve(config.dataDir);
 const WORK = join(DATA, 'backups');
 mkdirSync(WORK, { recursive: true });

@@ -12,9 +12,8 @@
 //   source:'ai', confirmed:false. Maks 3 nye per uke uten godkjenning, deretter bare forslag (suggestNew) og «Annet».
 //   Bokføring (godkjenning) gjør den permanent (confirmed). 2 like godkjenninger (butikk → ny kategori) gir regelen «AKADEMIKA* → Skole og studier» (source 'ai').
 //   Ubekreftede AI-kategorier som ingen kvitteringer/transaksjoner bruker, slettes etter 24 t.
-import { db, me } from './db.js';
+import { db, q, me } from './db.js';
 
-const q = (sql) => db.prepare(sql);
 const addCol = (t, col, def) => { if (!q(`PRAGMA table_info(${t})`).all().some((c) => c.name === col)) db.exec(`ALTER TABLE ${t} ADD COLUMN ${col} ${def}`); };
 addCol('fh_categories', 'source', "TEXT NOT NULL DEFAULT 'user'");
 addCol('fh_categories', 'confirmed', 'INTEGER NOT NULL DEFAULT 1');

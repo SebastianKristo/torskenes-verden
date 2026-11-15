@@ -9,11 +9,10 @@
 //   POST   /usage/:id/return {qty} → sjekker inn (≤ qty − returnedQty)
 // Brukt fra andre moduler: usedIn82 (GET /parts/:id), checkout82 (POST /picklist/take med prosjekt), undoCheckout82.
 import { randomBytes } from 'node:crypto';
-import { db } from '../db.js';
+import { db, q } from '../db.js';
 import { partRow76, updatePart76, addHistory76, locationOf76, thumbOf76, now76 } from './store.js';
 import { signedUrl76 } from './images.js';
 
-const q = (sql) => db.prepare(sql);
 db.exec(`CREATE TABLE IF NOT EXISTS skj_projects (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT NOT NULL, name TEXT NOT NULL, notes TEXT,
   status TEXT NOT NULL DEFAULT 'aktiv', created INTEGER NOT NULL, updated INTEGER NOT NULL, deleted_at INTEGER);
 CREATE INDEX IF NOT EXISTS skj_projects_user ON skj_projects(user_id, deleted_at);

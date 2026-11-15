@@ -7,7 +7,7 @@
 // Svar: {tjeneste, plan, pris (øre NOK), valuta, prisOriginal?, syklus:'mnd'|'år', neste_trekk, kategori, logoUrl?, domain?,
 //        sikkerhet:{felt:0–1}, check:[felt…], existingId?, approx?, engine, model}
 import { spawn } from 'node:child_process';
-import { db, me, settings } from './db.js';
+import { db, q, me, settings } from './db.js';
 import { _aiTest, logAi, aiTimeoutsOf } from './ai.js';
 import { hasGemini, geminiFetch } from './gemini-keys.js';
 import { audit } from './ai-audit.js';
@@ -20,7 +20,6 @@ import { SUB_CATEGORIES, categoryFor } from './subs.js';
 import { domainFor } from './enrich.js';
 import { externalBlocked48 } from '../receipts48/settings.js'; // prompt 48: «Finansdata forlater aldri huset»
 
-const q = (sql) => db.prepare(sql);
 let fx = null;
 export const _setScreenshotFetch = (fn) => { fx = fn; visionCache.clear(); };
 const F = (url, init) => (fx ?? globalThis.fetch)(url, init);

@@ -12,10 +12,9 @@ import { join, resolve } from 'node:path';
 import { createHash } from 'node:crypto';
 import Database from 'better-sqlite3';
 import { config } from './config.js';
-import { db, kv, OWNER } from './db.js';
+import { db, q, kv, OWNER } from './db.js';
 
 const DATA = resolve(config.dataDir);
-const q = (sql) => db.prepare(sql);
 
 db.exec(`CREATE TABLE IF NOT EXISTS ops51_maint (
   id INTEGER PRIMARY KEY AUTOINCREMENT,

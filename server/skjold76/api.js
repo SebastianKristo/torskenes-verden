@@ -4,7 +4,7 @@ import { Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import { authOrToken } from '../mobile.js';
 import { userInfo } from '../auth.js';
-import { db } from '../db.js';
+import { db, q } from '../db.js';
 import { originOf46 } from '../public-url46.js';
 import {
   KINDS76, UNITS76, ensureUser76, cabinetRow76, cabinetRows76, insertCabinet76, updateCabinet76, drawerRows76, drawerOut76, setDrawer76, reindexDrawer76,
@@ -22,7 +22,6 @@ import { mountPicklist79 } from './picklist79.js'; // prompt 79 (PICKSRV): plukk
 import { mountProjects82, usedIn82 } from './projects82.js'; // prompt 82 (CHKSRV): produkter – sjekk ut/inn deler
 
 setFileUrl76((name, user) => signedUrl76(name, user));
-const q = (sql) => db.prepare(sql);
 const NS = { 'Cache-Control': 'no-store' };
 const J = (s, d) => { if (s == null) return d; try { return JSON.parse(s) ?? d; } catch { return d; } };
 const iso = (ms) => (ms == null ? null : new Date(ms).toISOString());

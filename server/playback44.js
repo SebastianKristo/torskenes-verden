@@ -14,7 +14,7 @@
 //   Jobb: hvert minutt leses sesjonene og lagres i tabellen plays44 (historikken forsvinner ikke når Plex/Jellyfin glemmer den).
 import { Hono } from 'hono';
 import { randomUUID } from 'node:crypto';
-import { db, kv, OWNER } from './db.js';
+import { db, q, kv, OWNER } from './db.js';
 import { isAdmin } from './auth.js';
 import { authOrToken } from './mobile.js';
 import { userCfg, setUserCfg } from './settings.js';
@@ -25,7 +25,6 @@ db.exec(`CREATE TABLE IF NOT EXISTS plays44 (id INTEGER PRIMARY KEY AUTOINCREMEN
   title TEXT NOT NULL DEFAULT '', subtitle TEXT, kind TEXT, started INTEGER NOT NULL, stopped INTEGER, seen INTEGER NOT NULL, duration INTEGER NOT NULL DEFAULT 0, position INTEGER NOT NULL DEFAULT 0,
   percent INTEGER NOT NULL DEFAULT 0, device TEXT, platform TEXT, transcode INTEGER NOT NULL DEFAULT 0, poster TEXT, UNIQUE(server, skey));
 CREATE INDEX IF NOT EXISTS plays44_started ON plays44(started);`);
-const q = (sql) => db.prepare(sql);
 
 /* ---------------- Oppsett ---------------- */
 

@@ -4,7 +4,7 @@
 //   alias  – samme egne alias på to ulike, eller et alias som er et annet navn i minnet (typesynonymene «frisør», «klipp» telles ikke)
 //   entity – mot entitetsregisteret: navnet er et sted/en butikk/et abonnement fra en annen kilde (Familie, Vær …), og faktaet
 //            sier noe annet («hytta» = Familie-stedet Sjusjøen, forslaget sier «hytta er på Toten»)
-import { db } from '../db.js';
+import { db, q } from '../db.js';
 import { saveFact47, TYPE_SYNONYMS47 } from '../glimt45/memory47.js';
 import { deleteMemory, getMemory } from '../glimt-memory.js';
 import { niceCase, normName, aliasTitle } from '../../public/js/quick-time.js';
@@ -13,7 +13,6 @@ import {
   finishConflict63, SOURCE_LABEL63, J63,
 } from './store.js';
 
-const q = (sql) => db.prepare(sql);
 const clean = (v, n) => (typeof v === 'string' ? v.replace(/[\u0000-\u001f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, n) : '');
 
 /* ---------------- Sidene i en motstrid ---------------- */

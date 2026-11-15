@@ -16,7 +16,7 @@
 // api.posten.no). Innlimt redirect-URL leses bare for code/state.
 import { Hono } from 'hono';
 import { createHash, randomBytes } from 'node:crypto';
-import { db, kv } from './db.js';
+import { db, q, kv } from './db.js';
 import { seal, unseal } from './finans/db.js';
 import { runAsUser, activeUser } from './settings.js';
 import { userGuard, readJson, bad, MOCK } from './homeos-common.js';
@@ -380,7 +380,6 @@ const cache46 = new Map(); // bruker → { postnord: Map(nr → result), posten:
 const cacheFor = (u, src) => { if (!cache46.has(u)) cache46.set(u, {}); const c = cache46.get(u); c[src] ??= { at: 0, map: new Map() }; return c[src]; };
 const SRC_NAME = { posten: 'Posten', postnord: 'PostNord' };
 const hhmm = (t) => new Intl.DateTimeFormat('nb-NO', { timeZone: 'Europe/Oslo', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(t));
-const q = (sql) => db.prepare(sql);
 
 const MOCK_POSTEN = () => [{ parcelNumber: 'CV900000001NO', status: 'underway', direction: 'receive', sender: { name: 'Demo-butikk' }, events: [{ type: 'pre_notified', date: new Date(Date.now() - 86400_000).toISOString(), description: 'Sendingen er registrert' }] }];
 const MOCK_PN = () => [{ shipmentId: '00370000000000000046', status: 'EN_ROUTE', consignor: { name: 'Demo-butikk' }, statusText: { header: 'Underveis' }, items: [{ events: [{ status: 'EN_ROUTE', eventCode: '20', eventTime: new Date(Date.now() - 3600_000).toISOString(), eventDescription: 'Ankommet terminal' }] }] }];

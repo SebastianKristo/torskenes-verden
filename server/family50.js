@@ -6,7 +6,7 @@
 // Personvern: samme regler som family.js (posisjon og helse bare når personen deler med deg). Sjekk inn deler posisjonen BARE i selve
 // innsjekken, og bare med mottakerne (og avsenderen). Ingen kontinuerlig deling. Eldre /api/family-endepunkter er urørt.
 import { Hono } from 'hono';
-import { db, kv } from './db.js';
+import { db, q, kv } from './db.js';
 import { userInfo, sessionUser } from './auth.js';
 import { bearerOk } from './finans/routes.js';
 import { broadcast } from './realtime.js';
@@ -14,7 +14,6 @@ import { notifyUser } from './notify.js';
 import { family50 as F, placesChanged50, deletePlace50, placesVersion50, areaOut50, setPlaceEventHook50 } from './family.js';
 import { schoolPlaceOf50, ruterPlaceEvents50 } from './ruter41.js';
 
-const q = (sql) => db.prepare(sql);
 const MIN = 60_000, HOUR = 3_600_000, DAY = 86_400_000;
 const FRESH = 15 * MIN;
 

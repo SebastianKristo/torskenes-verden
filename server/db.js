@@ -80,17 +80,35 @@ if (!db.prepare("SELECT 1 FROM pragma_table_info('users') WHERE name='is_main_ad
 // CV er offentlig og har én eier.
 export const OWNER = 'owner';
 
+// Statement-cache: db.prepare() koster rundt 8 µs per kall og ble gjort på nytt for hver spørring (tusenvis per
+// kalender- eller økonomiforespørsel). q(sql) kompilerer hver SQL-tekst én gang og gjenbruker setningen.
+// Modusene pluck/raw/expand nullstilles ved hver utlevering, så q(sql).pluck() ett sted ikke smitter over på neste
+// bruker av samme SQL. Bygges SQL-en dynamisk (f.eks. «IN (?,?,?)»), holder grensen cachen liten (eldste ut først).
+const STMTS = new Map();
+const MAX_STMTS = 2000;
+export function q(sql) {
+  let s = STMTS.get(sql);
+  if (s) {
+    if (s.reader) { s.pluck(false); s.raw(false); s.expand(false); }
+    return s;
+  }
+  s = db.prepare(sql);
+  if (STMTS.size >= MAX_STMTS) STMTS.delete(STMTS.keys().next().value);
+  STMTS.set(sql, s);
+  return s;
+}
+
 export const kv = {
   get(user, key, fallback = null) {
-    const row = db.prepare('SELECT value FROM kv WHERE user=? AND key=?').get(user, key);
-    return row ? JSON.parse(row.value) : fallback;
+    const raw = q('SELECT value FROM kv WHERE user=? AND key=?').pluck().get(user, key);
+    return raw != null ? JSON.parse(raw) : fallback;
   },
   set(user, key, value) {
-    db.prepare('INSERT INTO kv(user,key,value) VALUES(?,?,?) ON CONFLICT(user,key) DO UPDATE SET value=excluded.value')
+    q('INSERT INTO kv(user,key,value) VALUES(?,?,?) ON CONFLICT(user,key) DO UPDATE SET value=excluded.value')
       .run(user, key, JSON.stringify(value));
   },
-  del(user, key) { db.prepare('DELETE FROM kv WHERE user=? AND key=?').run(user, key); },
-  delPrefix(user, prefix) { db.prepare("DELETE FROM kv WHERE user=? AND key LIKE ? ESCAPE '\\'").run(user, prefix.replace(/[%_\\]/g, '\\$&') + '%'); },
+  del(user, key) { q('DELETE FROM kv WHERE user=? AND key=?').run(user, key); },
+  delPrefix(user, prefix) { q("DELETE FROM kv WHERE user=? AND key LIKE ? ESCAPE '\\'").run(user, prefix.replace(/[%_\\]/g, '\\$&') + '%'); },
 };
 
 // Startdata første gang, så dashboardet ikke er tomt.

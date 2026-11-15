@@ -16,7 +16,7 @@
 import { lastVisitSpecial52 } from '../srv52.js'; // prompt 52
 import { Hono } from 'hono';
 import { streamSSE } from 'hono/streaming';
-import { db, settings, ensureLedger } from './db.js';
+import { db, q, settings, ensureLedger } from './db.js';
 import { runAsUser } from '../settings.js';
 import { tokenAccessOf, txOut42, TX_SELECT42 } from './routes.js';
 import { financeAsk40 } from './p40.js';
@@ -30,7 +30,6 @@ import { readFile } from 'node:fs/promises';
 import { gateLoad } from '../ai-gate.js'; // prompt 43
 import { modelFor } from '../ai-run.js';
 
-const q = (sql) => db.prepare(sql);
 const bad = (c, msg, code = 400) => c.json({ error: msg }, code);
 const str = (v, n = 300) => (typeof v === 'string' ? v.replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, n) : '');
 const IMPLIED = { 'read:transactions': 'finance:read', 'read:summary': 'finance:read', 'write:transactions': 'finance:write' };

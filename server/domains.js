@@ -5,7 +5,7 @@ import { createCipheriv, createDecipheriv, randomBytes, scryptSync } from 'node:
 import { readFile } from 'node:fs/promises';
 import { connect } from 'node:tls';
 import { promises as dnsp } from 'node:dns';
-import { db } from './db.js';
+import { db, q } from './db.js';
 import { sessionSecret86 } from './secret86.js'; // prompt 86
 import { cfg } from './settings.js';
 import { cached, peek } from './cache.js';
@@ -45,7 +45,6 @@ function dec(b64) {
   } catch { return ''; }
 }
 
-const q = (sql) => db.prepare(sql);
 const listRows = () => q('SELECT * FROM hl_domains ORDER BY id').all();
 const pub = (r) => ({ id: r.id, name: r.name, source: r.source, url: r.url || undefined, hasToken: !!r.token_enc, mock: MOCK && !r.token_enc && r.source !== 'uptime' && r.source !== 'gsc' && !cfg('cf_token'), ...(r.source === 'gsc' ? { sourceLabel: 'Google Search Console', needsCloudflare: ['trafikk', 'dns', 'sikkerhet'] } : {}) });
 // Cloudflare-domener uten eget token bruker standard-tokenet fra Integrasjoner → Cloudflare.
