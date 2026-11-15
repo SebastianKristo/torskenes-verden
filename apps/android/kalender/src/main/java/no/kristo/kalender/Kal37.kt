@@ -1,5 +1,7 @@
 package no.kristo.kalender
 
+import no.kristo.felles.nett.openSikker
+
 import android.content.Context
 import android.content.SharedPreferences
 import android.graphics.Bitmap
@@ -362,7 +364,7 @@ object Geo37 {
 
     private fun nominatim(q: String, orig: String): Geo37Hit? = runCatching {
         val u = URL("https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&addressdetails=1&countrycodes=no&accept-language=nb&q=" + URLEncoder.encode(q, "UTF-8"))
-        val c = (u.open86()).apply { connectTimeout = 8000; readTimeout = 10000; setRequestProperty("User-Agent", "Kalender-Android/4 (Homelab; kristo.no)") }
+        val c = (u.openSikker()).apply { connectTimeout = 8000; readTimeout = 10000; setRequestProperty("User-Agent", "Kalender-Android/4 (Homelab; kristo.no)") }
         val body = c.inputStream.bufferedReader().use { it.readText() }
         val x = org.json.JSONArray(body).optJSONObject(0) ?: return null
         val ad = x.optJSONObject("address") ?: JSONObject()
@@ -409,7 +411,7 @@ object Geo37 {
         val k = "$z/$x/$y"
         synchronized(this) { tiles[k]?.let { return it } }
         val b = runCatching {
-            val c = (URL("https://tile.openstreetmap.org/$k.png").open86()).apply {
+            val c = (URL("https://tile.openstreetmap.org/$k.png").openSikker()).apply {
                 connectTimeout = 8000; readTimeout = 10000; setRequestProperty("User-Agent", "Kalender-Android/4 (Homelab; kristo.no)")
             }
             c.inputStream.use { BitmapFactory.decodeStream(it) }

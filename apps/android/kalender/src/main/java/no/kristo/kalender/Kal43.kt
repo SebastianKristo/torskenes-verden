@@ -1,5 +1,7 @@
 package no.kristo.kalender
 
+import no.kristo.felles.nett.openSikker
+
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -199,7 +201,7 @@ object Kal43Upd {
         f.delete()
         val t0 = System.currentTimeMillis()
         try {
-            val conn = URL(r.url).open86()
+            val conn = URL(r.url).openSikker()
             conn.connectTimeout = Kal46Srv.TIMEOUT
             conn.readTimeout = Kal46Srv.TIMEOUT
             conn.instanceFollowRedirects = true

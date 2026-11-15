@@ -1,6 +1,6 @@
 // Prompt 87 (NRKAND): NRK-fanen i Media i Homelab-appen for Android (pakke 57, claude-code-media-nrk-nedlaster.md).
 //  - Fanen «NRK» mellom Prowlarr og Avspilling, fanelinja ruller valgt fane inn i midten.
-//  - Kortene Last ned fra NRK (med «Lim inn»), Køen, Serier du følger og Bibliotek – alt via /api/media/nrk/* (Api → open86()).
+//  - Kortene Last ned fra NRK (med «Lim inn»), Køen, Serier du følger og Bibliotek – alt via /api/media/nrk/* (Api → openSikker()).
 //  - Del → Homelab med en NRK-lenke fyller bare ut feltet. Ingenting lastes ned før brukeren trykker «Last ned».
 // Kildesjekker + fasit for de rene reglene (NrkRegel87.kt). Lenkeregelen er speilet i JS her, og den ekte Kotlin-fila kompileres
 // og kjøres mot samme fasit når Gradles Kotlin-kompilator finnes på maskinen (ellers hoppes den testen over).
@@ -261,7 +261,7 @@ test('en lenke blir bare til en jobb når brukeren trykker (Last ned / knappene 
 
 /* ======================= API og sikkerhet ======================= */
 
-test('alle kall går via Api til /api/media/nrk (http-regelen open86 gjelder), og ingen adresse eller nøkkel til nrk-dl i appen', () => {
+test('alle kall går via Api til /api/media/nrk (http-regelen openSikker gjelder), og ingen adresse eller nøkkel til nrk-dl i appen', () => {
   const n = code('Nrk87.kt');
   const u = code('ui/Nrk87Ui.kt');
   for (const src of [n, u, code('NrkRegel87.kt')]) {
@@ -274,7 +274,7 @@ test('alle kall går via Api til /api/media/nrk (http-regelen open86 gjelder), o
     'Post /media/nrk/folger/$id/sjekk', 'Post /media/nrk/jobber', 'Post /media/nrk/jobber/$id/avbryt', 'Post /media/nrk/jobber/$id/igjen', 'Post /media/nrk/rydd',
   ].sort());
   for (const p of ['get87("/status")', 'get87("/jobber")', 'get87("/bibliotek"', 'get87("/serie?url=" + URLEncoder.encode(e.url, "UTF-8")']) assert.ok(n.includes(p), p);
-  assert.match(code('Api.kt'), /private fun url\(|\.open86\(\)/, 'Api bruker open86()');
+  assert.match(code('Api.kt'), /private fun url\(|\.openSikker\(\)/, 'Api bruker openSikker()');
   // Plakater: bare vår egen bildeproxy (relativ sti).
   assert.match(raw('Nrk87.kt'), /o\.txt87\("bilde"\)\?\.takeIf \{ it\.startsWith\("\/"\) && !it\.startsWith\("\/\/"\) \}/);
   // Lenker som åpnes i nettleseren, er alltid validerte NRK-lenker.

@@ -1,6 +1,7 @@
 // Prompt 86 (AND86): tre sikkerhetsfunn i Android-appene.
 //  A. Signeringsnøkkelen leses fra miljøet (ANDROID_KEYSTORE_*), og Homelab ↔ Kalender sammenligner signeringssertifikater.
-//  B. Klartekst-http bare på lokalt nett (Lokal86.kt) – håndhevet i koden for alle HTTP-klienter i :app, :kalender og :wear.
+//  B. Klartekst-http bare på lokalt nett (Fase 5: én kopi i :felles, LokaltNett.kt) – håndhevet i koden for alle HTTP-klienter
+//     i :app, :kalender og :wear. JUnit-testene i :felles (ServerAdresseTest) kjører samme fasit på CI.
 //  C. Lenker som utfører handlinger må bekreftes når de kommer utenfra (Link86.kt).
 // Kildesjekker + fasit for adresse-sjekken. Regelen er speilet i JS her, og den ekte Kotlin-fila kompileres og kjøres mot
 // samme fasit når Gradles Kotlin-kompilator finnes på maskinen (ellers hoppes den testen over).
@@ -17,6 +18,7 @@ const AND = join(ROOT, 'apps/android');
 const SRC = join(AND, 'app/src/main/java/no/kristo/finanshub');
 const KAL = join(AND, 'kalender/src/main/java/no/kristo/kalender');
 const WEAR = join(AND, 'wear/src/main/java/no/kristo/finanshub/wear');
+const FELLES = join(AND, 'felles/src/main/kotlin/no/kristo/felles/nett');
 const raw = (p) => readFileSync(p, 'utf8');
 /** Kode uten kommentarer. */
 const strip = (s) => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
@@ -126,62 +128,68 @@ test('B: fasit for adresse-sjekken (regelen speilet i JS)', () => {
   for (const h of ['172.32.0.1', 'example.com', '8.8.8.8']) assert.equal(lokalVert(h), false, h);
 });
 
-test('B: Lokal86.kt har regelen, er lik i :app, :kalender og :wear, og kaster riktig tekst', () => {
-  const app = raw(join(SRC, 'Lokal86.kt'));
-  const utenPakke = (s) => s.replace(/^package .*$/m, '');
-  assert.equal(utenPakke(raw(join(KAL, 'Lokal86.kt'))), utenPakke(app), ':kalender har samme regel');
-  assert.equal(utenPakke(raw(join(WEAR, 'Lokal86.kt'))), utenPakke(app), ':wear har samme regel');
-  assert.match(raw(join(KAL, 'Lokal86.kt')), /^package no\.kristo\.kalender$/m);
-  assert.match(raw(join(WEAR, 'Lokal86.kt')), /^package no\.kristo\.finanshub\.wear$/m);
-  const c = strip(app);
+test('B: regelen ligger én gang i :felles (LokaltNett.kt), ingen kopier i modulene, og kaster riktig tekst', () => {
+  for (const dir of [SRC, KAL, WEAR]) assert.ok(!existsSync(join(dir, 'Lokal86.kt')), `${dir}: kopien er slettet`);
+  for (const dir of [SRC, KAL, WEAR]) for (const f of ktFiles(dir)) assert.ok(!/object Lokal(86|tNett)\b|fun lokalVert\(/.test(strip(raw(f))), `${f}: egen kopi av regelen`);
+  for (const m of ['app', 'kalender', 'wear']) assert.match(raw(join(AND, m, 'build.gradle.kts')), /implementation\(project\(":felles"\)\)/, m);
+  assert.match(raw(join(AND, 'settings.gradle.kts')), /include\(":felles"\)/);
+  const c = strip(raw(join(FELLES, 'LokaltNett.kt')));
+  assert.match(c, /^package no\.kristo\.felles\.nett$/m);
   assert.ok(c.includes(`const val MSG = "${MSG}"`), 'teksten brukeren ser');
   assert.match(c, /"http", "ws" -> lokalVert\(vert\)/, 'bare klartekst sjekkes; https er alltid i orden');
   assert.match(c, /a == 10 \|\| a == 127 \|\| \(a == 172 && b in 16\.\.31\) \|\| \(a == 192 && b == 168\) \|\| \(a == 169 && b == 254\) \|\| \(a == 100 && b in 64\.\.127\)/);
   assert.match(c, /\(g\[0\] and 0xfe00\) == 0xfc00 \|\| \(g\[0\] and 0xffc0\) == 0xfe80/, 'IPv6 ULA og link-local');
   for (const e of ['.local', '.lan', '.home.arpa', '.internal']) assert.ok(c.includes(`"${e}"`), e);
-  assert.ok(!/InetAddress/.test(c), 'slår aldri opp i DNS');
-  // Sperret forbindelse: kobler aldri til, kaster der en vanlig forbindelse ville feilet.
-  assert.match(c, /fun URL\.open86\(\): HttpURLConnection = if \(Lokal86\.ok\(this\)\) openConnection\(\) as HttpURLConnection else Sperret86\(this\)/);
-  assert.match(c, /class UsikretHttp86 : IOException\(Lokal86\.MSG\)/);
-  for (const m of ['connect', 'getInputStream', 'getOutputStream', 'getResponseCode']) assert.match(c, new RegExp(`override fun ${m}\\(\\)[^\\n]*throw UsikretHttp86\\(\\)`), m);
+  assert.ok(!/InetAddress/.test(c), 'selve regelen slår aldri opp i DNS');
+  // Sperret forbindelse: kobler aldri til, kaster der en vanlig forbindelse ville feilet. Et lokalt navn må i tillegg peke lokalt (S3).
+  assert.match(c, /fun URL\.openSikker\(\): HttpURLConnection = when \{\s*!LokaltNett\.ok\(this\) -> Sperret\(this\)\s*!Klartekstvakt\.tillatt\(protocol, host\) -> Sperret\(this\)\s*else -> openConnection\(\) as HttpURLConnection/);
+  assert.match(c, /class UsikretHttp : IOException\(LokaltNett\.MSG\)/);
+  for (const m of ['connect', 'getInputStream', 'getOutputStream', 'getResponseCode']) assert.match(c, new RegExp(`override fun ${m}\\(\\)[^\\n]*throw UsikretHttp\\(\\)`), m);
+  // S3: et lokalt navn over klartekst må peke til lokale adresser (alle), ukjent feil ved oppslaget gir ingen klartekst.
+  const v = strip(raw(join(FELLES, 'Klartekstvakt.kt')));
+  assert.match(v, /if \(!LokaltNett\.lokalVert\(vert\)\) return false/);
+  assert.match(v, /if \(LokaltNett\.erIpAdresse\(vert\)\) return true/);
+  assert.match(v, /catch \(e: Exception\) \{\s*return false/);
+  assert.match(v, /adresser\.isNotEmpty\(\) && adresser\.all \{ LokaltNett\.lokalIp\(it\) \}/);
 });
 
 test('B: ingen HTTP-klient går utenom regelen (alle modulene)', () => {
   for (const dir of [SRC, KAL, WEAR]) {
     for (const f of ktFiles(dir)) {
-      if (f.endsWith('Lokal86.kt')) continue;
       const c = strip(raw(f));
-      assert.ok(!/\.openConnection\(/.test(c), `${f}: bruk open86() i stedet for openConnection()`);
+      assert.ok(!/\.openConnection\(/.test(c), `${f}: bruk openSikker() i stedet for openConnection()`);
       // openStream() er bare lov på faste https-adresser.
       for (const m of c.matchAll(/URL\(([^)]*)\)\.openStream\(\)/g)) assert.equal(m[1], 'WORLD_ATLAS', `${f}: openStream på ${m[1]}`);
       // Hver OkHttp-klient har interceptoren (før tilkobling og ved omdirigering).
       for (const m of c.matchAll(/OkHttpClient\.Builder\(\)[\s\S]*?\.build\(\)/g)) {
-        assert.match(m[0], /\.addInterceptor\(LokalOkHttp86\)\.addNetworkInterceptor\(LokalOkHttp86\)/, `${f}: OkHttp uten LokalOkHttp86`);
+        assert.match(m[0], /\.addInterceptor\(LokalOkHttp\)\.addNetworkInterceptor\(LokalOkHttp\)/, `${f}: OkHttp uten LokalOkHttp`);
       }
       // WebView: bare klienten som stopper http utenfor lokalt nett.
-      assert.ok(!/WebViewClient\(\)/.test(c.replace(/open class WebKlient86 : android\.webkit\.WebViewClient\(\)/, '')), `${f}: bruk WebKlient86`);
+      assert.ok(!/WebViewClient\(\)/.test(c.replace(/open class LokalWebKlient : android\.webkit\.WebViewClient\(\)/, '')), `${f}: bruk LokalWebKlient`);
     }
   }
   assert.match(code('Geo.kt'), /const val WORLD_ATLAS = "https:\/\//);
-  assert.ok(ktFiles(SRC).filter((f) => /open86\(\)/.test(raw(f))).length >= 15, 'kallene i :app går via open86()');
-  assert.match(code('KalApi.kt', KAL), /URL\(base\.trimEnd\('\/'\) \+ path\)\.open86\(\)/);
-  assert.match(code('WearApi51.kt', WEAR), /\.open86\(\)/);
+  assert.ok(ktFiles(SRC).filter((f) => /openSikker\(\)/.test(raw(f))).length >= 15, 'kallene i :app går via openSikker()');
+  assert.match(code('KalApi.kt', KAL), /URL\(base\.trimEnd\('\/'\) \+ path\)\.openSikker\(\)/);
+  assert.match(code('WearApi51.kt', WEAR), /\.openSikker\(\)/);
 
-  const okh = code('LokalOkHttp86.kt');
-  assert.match(okh, /if \(!u\.isHttps && !Lokal86\.lokalVert\(u\.host\)\) throw UsikretHttp86\(\)/);
-  assert.match(okh, /override fun shouldInterceptRequest[\s\S]*?!Lokal86\.ok\(u\.scheme, u\.host\)[\s\S]*?WebResourceResponse\(/, 'WebView omgår ikke regelen');
-  assert.match(okh, /fun https86\(url: String\): String = if \(Lokal86\.ok\(url\)\) url else "https"/);
-  assert.match(code('ui/Map20.kt'), /\.let\(::https86\)/, 'kartfliser (Familie)');
-  assert.match(code('ui/Kart46Ui.kt'), /\.let\(::https86\)/, 'kartfliser (Kart)');
-  assert.equal((code('ui/Weather22.kt').match(/webViewClient = WebKlient86\(\)/g) ?? []).length, 2);
-  assert.match(code('Skjold76.kt'), /object : WebKlient86\(\)/);
+  const okh = code('LokalOkHttp.kt');
+  assert.match(okh, /if \(!u\.isHttps && !LokaltNett\.lokalVert\(u\.host\)\) throw UsikretHttp\(\)/);
+  // S3: som nettverksinterceptor sjekkes adressen forbindelsen faktisk gikk til.
+  assert.match(okh, /!Klartekstvakt\.tillattAdresse\(u\.isHttps, c\.route\(\)\.socketAddress\.address\)\) throw UsikretHttp\(\)/);
+  assert.match(okh, /override fun shouldInterceptRequest[\s\S]*?!LokaltNett\.ok\(u\.scheme, u\.host\)[\s\S]*?WebResourceResponse\(/, 'WebView omgår ikke regelen');
+  assert.match(okh, /fun httpsUtenforHjemmet\(url: String\): String = if \(LokaltNett\.ok\(url\)\) url else "https"/);
+  assert.match(code('ui/Map20.kt'), /\.let\(::httpsUtenforHjemmet\)/, 'kartfliser (Familie)');
+  assert.match(code('ui/Kart46Ui.kt'), /\.let\(::httpsUtenforHjemmet\)/, 'kartfliser (Kart)');
+  assert.equal((code('ui/Weather22.kt').match(/webViewClient = LokalWebKlient\(\)/g) ?? []).length, 2);
+  assert.match(code('Skjold76.kt'), /object : LokalWebKlient\(\)/);
 });
 
 test('B: brukeren får teksten, og konfigurasjonen har ingen hardkodet adresse', () => {
-  assert.match(code('Api.kt'), /catch \(e: UsikretHttp86\) \{\s*throw ApiException\(Lokal86\.MSG\)[\s\S]*?catch \(e: IOException\)/, 'Api: før den generelle nettverksfeilen');
-  assert.match(code('WearApi51.kt', WEAR), /catch \(e: UsikretHttp86\) \{\s*throw WearApiError51\(Lokal86\.MSG\)[\s\S]*?catch \(e: IOException\)/);
+  assert.match(code('Api.kt'), /catch \(e: UsikretHttp\) \{\s*throw ApiException\(LokaltNett\.MSG\)[\s\S]*?catch \(e: IOException\)/, 'Api: før den generelle nettverksfeilen');
+  assert.match(code('WearApi51.kt', WEAR), /catch \(e: UsikretHttp\) \{\s*throw WearApiError51\(LokaltNett\.MSG\)[\s\S]*?catch \(e: IOException\)/);
   assert.match(code('KalApi.kt', KAL), /catch \(e: IOException\) \{\s*throw KalApiException\(e\.message \?: "Nettverksfeil"\)/, 'Kalender viser meldingen fra unntaket');
-  assert.match(code('P47.kt'), /fun cleartextBlocked47\(u: String\): Boolean = !Lokal86\.ok\(u\)/, 'innstillingene bruker samme regel');
+  assert.match(code('P47.kt'), /fun cleartextBlocked47\(u: String\): Boolean = !LokaltNett\.ok\(u\)/, 'innstillingene bruker samme regel');
   for (const f of ['P47.kt', 'ui/Ui47.kt', 'Ntfy51.kt']) assert.ok(!/tillater bare http/.test(code(f)), `${f}: gammel tekst om én fast adresse`);
 
   for (const m of ['app', 'kalender', 'wear']) {
@@ -193,7 +201,7 @@ test('B: brukeren får teksten, og konfigurasjonen har ingen hardkodet adresse',
   }
 });
 
-test('B: den ekte Lokal86.kt kjørt mot fasiten (kotlinc fra Gradle)', (t) => {
+test('B: den ekte LokaltNett.kt (:felles) kjørt mot fasiten (kotlinc fra Gradle)', (t) => {
   // Finn Gradles lib-mappe (kotlin-compiler-embeddable følger med Gradle). Finnes den ikke: hopp over.
   let lib = null;
   try {
@@ -210,32 +218,32 @@ test('B: den ekte Lokal86.kt kjørt mot fasiten (kotlinc fra Gradle)', (t) => {
   const dir = mkdtempSync(join(tmpdir(), 'p86-and-'));
   try {
     const kt = (a) => 'listOf(' + a.map((u) => JSON.stringify(u).replace(/\$/g, '\\$')).join(', ') + ')';
-    writeFileSync(join(dir, 'Fasit.kt'), `import no.kristo.finanshub.*
+    writeFileSync(join(dir, 'Fasit.kt'), `import no.kristo.felles.nett.*
 import java.net.URL
 fun main() {
     var feil = 0
-    for (u in ${kt(GODTAS)}) if (!Lokal86.ok(u)) { println("SKULLE GODTAS: " + u); feil++ }
-    for (u in ${kt(AVVISES)}) if (Lokal86.ok(u)) { println("SKULLE AVVISES: " + u); feil++ }
+    for (u in ${kt(GODTAS)}) if (!LokaltNett.ok(u)) { println("SKULLE GODTAS: " + u); feil++ }
+    for (u in ${kt(AVVISES)}) if (LokaltNett.ok(u)) { println("SKULLE AVVISES: " + u); feil++ }
     // Sperret forbindelse: ingen tilkobling, riktig tekst – og oppsettet rundt (metode, tidsgrenser, hoder) tåles.
-    val c = URL("http://example.com/x").open86()
+    val c = URL("http://example.com/x").openSikker()
     c.requestMethod = "PATCH"; c.connectTimeout = 5; c.doOutput = true; c.setRequestProperty("A", "b")
     for (f in listOf<() -> Any?>({ c.responseCode }, { c.inputStream }, { c.outputStream }, { c.connect() })) {
-        try { f(); println("KASTET IKKE"); feil++ } catch (e: UsikretHttp86) { if (e.message != Lokal86.MSG) { println("FEIL TEKST"); feil++ } }
+        try { f(); println("KASTET IKKE"); feil++ } catch (e: UsikretHttp) { if (e.message != LokaltNett.MSG) { println("FEIL TEKST"); feil++ } }
     }
     c.disconnect()
-    if (URL("http://127.0.0.1:1/").open86().javaClass.name.contains("Sperret")) { println("lokal adresse ble sperret"); feil++ }
-    if (URL("https://example.com/").open86().javaClass.name.contains("Sperret")) { println("https ble sperret"); feil++ }
+    if (URL("http://127.0.0.1:1/").openSikker().javaClass.name.contains("Sperret")) { println("lokal adresse ble sperret"); feil++ }
+    if (URL("https://example.com/").openSikker().javaClass.name.contains("Sperret")) { println("https ble sperret"); feil++ }
     println(if (feil == 0) "FASIT OK" else "FASIT FEIL: " + feil)
 }
 `);
     const env = { ...process.env };
     delete env.JAVA_TOOL_OPTIONS;
     const opt = { encoding: 'utf8', env, timeout: 180_000, stdio: ['ignore', 'pipe', 'pipe'] };
-    const kc = spawnSync('java', ['-cp', cp, 'org.jetbrains.kotlin.cli.jvm.K2JVMCompiler', '-no-stdlib', '-nowarn', '-cp', stdlib, '-d', join(dir, 'out'), join(SRC, 'Lokal86.kt'), join(dir, 'Fasit.kt')], opt);
+    const kc = spawnSync('java', ['-cp', cp, 'org.jetbrains.kotlin.cli.jvm.K2JVMCompiler', '-no-stdlib', '-nowarn', '-cp', stdlib, '-d', join(dir, 'out'), join(FELLES, 'LokaltNett.kt'), join(FELLES, 'Klartekstvakt.kt'), join(dir, 'Fasit.kt')], opt);
     if (kc.status !== 0) {
       const log = String(kc.stdout ?? '') + String(kc.stderr ?? '');
       // Feil i kilden skal felle testen; en kompilator som ikke lar seg starte på denne maskinen, skal ikke.
-      if (/(Lokal86|Fasit)\.kt:\d+:\d+: error:/.test(log)) assert.fail(log.slice(0, 3000));
+      if (/(LokaltNett|Klartekstvakt|Fasit)\.kt:\d+:\d+: error:/.test(log)) assert.fail(log.slice(0, 3000));
       return t.skip('Kotlin-kompilatoren fra Gradle lot seg ikke kjøre her');
     }
     const out = execFileSync('java', ['-cp', [join(dir, 'out'), stdlib].join(':'), 'FasitKt'], opt);

@@ -11,7 +11,7 @@ import java.net.URLEncoder
 /*
  * Prompt 87 (NRKAND), CONTRACT87.md og prompt-54-pakke/claude-code-media-nrk-nedlaster.md (fasit Media NRK.dc.html):
  * NRK-fanen i Media. All trafikk går til Homelab-serveren (`/api/media/nrk/…`), som er proxy for nrk-dl.
- * Appen får aldri adressen eller tokenet til nrk-dl. Alle kall går via Api (og dermed http-regelen open86()).
+ * Appen får aldri adressen eller tokenet til nrk-dl. Alle kall går via Api (og dermed http-regelen openSikker()).
  *
  *  - Last ned fra NRK (lenkefelt med «Lim inn», Type, Kvalitet, Følg serien, Komprimer, VPN-merke)
  *  - Køen (2 s mens noe er i kø eller lastes ned, ellers 10 s – styres fra ui/Nrk87Ui.kt og stopper når fanen ikke vises)

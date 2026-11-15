@@ -1,5 +1,10 @@
 package no.kristo.finanshub.wear
 
+import no.kristo.felles.nett.LokaltNett
+import no.kristo.felles.nett.UsikretHttp
+import no.kristo.felles.nett.openSikker
+import no.kristo.felles.nett.ServerAdresse
+
 import android.content.Context
 import android.content.SharedPreferences
 import android.os.Build
@@ -38,10 +43,9 @@ data class WItem51(val id: String, val title: String, val done: Boolean)
 data class WPlay51(val id: String, val title: String, val sub: String, val paused: Boolean, val controls: List<String>, val note: String?)
 data class WQr51(val sessionId: String, val payload: String, val key: String, val expires: Long)
 
-const val DEFAULT_SERVER51 = "https://os.smarthjemeksperten.no"
-/** Prompt 89: den gamle, feilstavede standarden (delt i to) – lagret nøyaktig slik skrives den om til DEFAULT_SERVER51. */
-private const val OLD_SERVER89 = "https://os.smarthjem" + "experten.no"
-internal fun migrate89(s: String?): String? = if (s != null && s.trim().trimEnd('/').equals(OLD_SERVER89, true)) DEFAULT_SERVER51 else s
+const val DEFAULT_SERVER51 = ServerAdresse.STANDARD
+/** Prompt 89: den gamle, feilstavede standarden – lagret nøyaktig slik skrives den om til DEFAULT_SERVER51 (:felles, ServerAdresse). */
+internal fun migrate89(s: String?): String? = ServerAdresse.migrer(s)
 
 object WearStore51 {
     private fun prefs(ctx: Context): SharedPreferences = runCatching {
@@ -71,20 +75,14 @@ object WearStore51 {
     fun setServer(ctx: Context, s: String) { prefs(ctx).edit().putString("server", normalize51(s)).apply() }
 }
 
-fun normalize51(raw: String): String {
-    val s = raw.trim().trimEnd('/')
-    if (s.isBlank()) return DEFAULT_SERVER51
-    val withScheme = if (s.startsWith("http://", true) || s.startsWith("https://", true)) s else "https://$s"
-    val start = withScheme.indexOf("://") + 3
-    val i = withScheme.indexOf('/', start)
-    return if (i >= 0) withScheme.substring(0, i) else withScheme
-}
+/** Samme regel som telefonappene (shared/testvektorer/serveradresse.json): uten skjema blir lokale verter http://. */
+fun normalize51(raw: String): String = ServerAdresse.normaliser(raw) ?: DEFAULT_SERVER51
 
 class WearApi51(private val server: String, private val token: String?) {
 
     suspend fun call(method: String, path: String, body: JSONObject? = null, headers: Map<String, String> = emptyMap(), read: Int = 20_000): JSONObject =
         withContext(Dispatchers.IO) {
-            val c = URL(server.trimEnd('/') + "/api" + path).open86()
+            val c = URL(server.trimEnd('/') + "/api" + path).openSikker()
             try {
                 c.requestMethod = method
                 c.connectTimeout = 10_000
@@ -103,8 +101,8 @@ class WearApi51(private val server: String, private val token: String?) {
                 val o = runCatching { if (txt.trimStart().startsWith("[")) JSONObject().put("items", JSONArray(txt)) else JSONObject(txt.ifBlank { "{}" }) }.getOrNull()
                 if (code >= 400) throw WearApiError51(o?.optString("error")?.takeIf { it.isNotBlank() } ?: "Feil $code", code)
                 o ?: throw WearApiError51("Uventet svar fra serveren", code)
-            } catch (e: UsikretHttp86) {
-                throw WearApiError51(Lokal86.MSG) // prompt 86: http:// bare på lokalt nett (Lokal86.kt)
+            } catch (e: UsikretHttp) {
+                throw WearApiError51(LokaltNett.MSG) // prompt 86: http:// bare på lokalt nett (LokaltNett.kt)
             } catch (e: IOException) {
                 throw WearApiError51("Ingen kontakt med serveren")
             } finally { c.disconnect() }

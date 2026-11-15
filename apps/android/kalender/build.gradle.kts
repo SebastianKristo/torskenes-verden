@@ -60,6 +60,8 @@ android {
 
 // Bare avhengigheter som :app allerede har (ingen nye eksterne biblioteker).
 dependencies {
+    // Delt kode (Fase 5): serveradresse, klartekstregelen, HTTP-klient, feilsvar og «i dag».
+    implementation(project(":felles"))
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.ui)
     implementation(libs.compose.material3)

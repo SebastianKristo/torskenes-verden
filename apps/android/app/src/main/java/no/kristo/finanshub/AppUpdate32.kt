@@ -1,5 +1,7 @@
 package no.kristo.finanshub
 
+import no.kristo.felles.nett.openSikker
+
 import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -354,7 +356,7 @@ fun AppViewModel.startAppUpd32() {
 
 /** Laster ned til [out] og returnerer SHA-256 (hex), eller null ved feil. */
 private fun download32(url: String, token: String?, out: File, size: Long?, onPct: (Int) -> Unit): String? {
-    val conn = URL(url).open86()
+    val conn = URL(url).openSikker()
     return try {
         conn.connectTimeout = 15_000
         conn.readTimeout = 60_000

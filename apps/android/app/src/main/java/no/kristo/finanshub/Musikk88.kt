@@ -16,7 +16,7 @@ import java.net.URLEncoder
  *  - Køen (GET /jobs): omslag, tittel – artist, statuschip, fremdrift, tall fra download_stats, Manuell/Automatisk, Avbryt/Fjern, «Fjern ferdige».
  *  - Spillelister du følger (GET /subscriptions): av/på (PATCH), «Synk nå», «Slutt å følge», «Synk alle», neste automatiske sjekk;
  *    trykk på raden åpner sangene (GET /subscriptions/:id/tracks, én om gangen, huskes i 60 s).
- * Alt via Api (open86()) til Homelab-serveren under /api/media/yubal. Appen kjenner aldri adressen til yubal. Omslag via serverens
+ * Alt via Api (openSikker()) til Homelab-serveren under /api/media/yubal. Appen kjenner aldri adressen til yubal. Omslag via serverens
  * bildeproxy (/api/media/yubal/bilde?u=…) med samme innlogging som andre Media-bilder.
  */
 
@@ -230,7 +230,7 @@ fun AppViewModel.muHandling88(handling: String, id: String? = null) {
                 "tog" -> {
                     val x = m.subs.orEmpty().firstOrNull { it.id == i } ?: return@launch43
                     m.tog = i
-                    // PATCH {enabled} (Api.request støtter PATCH; samme Homelab-prefiks og open86() som resten).
+                    // PATCH {enabled} (Api.request støtter PATCH; samme Homelab-prefiks og openSikker() som resten).
                     api43 { request("PATCH", "/media/yubal/subscriptions/$i", JSONObject().put("enabled", !x.enabled), prefix = Api.HOMELAB) }
                     m.spor = m.spor - i
                 }

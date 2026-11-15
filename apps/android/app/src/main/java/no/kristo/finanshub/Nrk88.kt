@@ -15,7 +15,7 @@ import java.net.URLEncoder
  *  - Seriesiden: sesongvelger, episoder med avkrysning, «Velg alle tilgjengelige (N)», «Følg serien» og «Last ned N episoder»
  *    (POST /jobber med episoder = lenkene, én jobb i nrk-dl).
  *  - «Serier du følger» får plakat (bilde fra GET /jobber, alltid vår egen bildeproxy).
- * All trafikk via Api (open86()) til Homelab-serveren. Ingen adresse eller token til nrk-dl i appen.
+ * All trafikk via Api (openSikker()) til Homelab-serveren. Ingen adresse eller token til nrk-dl i appen.
  */
 
 data class NrkTreff88(val art: String, val id: String?, val tittel: String, val beskrivelse: String?, val bilde: String?, val url: String, val tilgjengelig: Boolean)

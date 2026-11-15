@@ -1,5 +1,7 @@
 package no.kristo.finanshub.ui
 
+import no.kristo.felles.nett.LokaltNett
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -71,7 +73,7 @@ internal fun ServerPage47(vm: AppViewModel) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             PButton("Tilbakestill til standard", Modifier.weight(1f), kind = "line") { ext = s.defExternal; loc = s.defLocal; vm.resetServer47() }
             PButton(if (dirty) "Lagre" else "Lagret", Modifier.weight(1f)) {
-                if (cleartextBlocked47(ext) || cleartextBlocked47(loc)) vm.message = Lokal86.MSG
+                if (cleartextBlocked47(ext) || cleartextBlocked47(loc)) vm.message = LokaltNett.MSG
                 else if (dirty) vm.saveServer41(loc, ext, srv.auto)
             }
         }

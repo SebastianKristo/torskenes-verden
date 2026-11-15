@@ -1,5 +1,7 @@
 package no.kristo.finanshub
 
+import no.kristo.felles.nett.openSikker
+
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -348,7 +350,7 @@ object Ify42 {
     }
 
     private fun get(url: String): String {
-        val c = java.net.URL(url).open86()
+        val c = java.net.URL(url).openSikker()
         c.connectTimeout = 6_000; c.readTimeout = 8_000
         return try { c.inputStream.bufferedReader().use { it.readText() } } finally { c.disconnect() }
     }

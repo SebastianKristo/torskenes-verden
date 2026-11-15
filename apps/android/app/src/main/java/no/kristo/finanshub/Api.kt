@@ -1,5 +1,10 @@
 package no.kristo.finanshub
 
+import no.kristo.felles.nett.LokaltNett
+import no.kristo.felles.nett.UsikretHttp
+import no.kristo.felles.nett.openSikker
+import no.kristo.felles.nett.ServerAdresse
+
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -37,7 +42,7 @@ class Api(private val baseUrl: String, private val token: String?) {
     }
 
     suspend fun request(method: String, path: String, json: JSONObject? = null, prefix: String = FINANS, timeout: Int = 10_000, read: Int = 30_000): String = withContext(Dispatchers.IO) {
-        val conn = url(path, prefix).open86()
+        val conn = url(path, prefix).openSikker()
         val t46 = System.currentTimeMillis()
         try { net {
             conn.requestMethod = method
@@ -74,8 +79,8 @@ class Api(private val baseUrl: String, private val token: String?) {
     } catch (e: SSLException) {
         android.util.Log.w("Api", "HTTPS-feil", e) // prompt 73: ingen rå exception-tekst i UI
         throw ApiException("HTTPS-feil. Bruk http:// på lokalt nett, eller installer sertifikatet på telefonen.")
-    } catch (e: UsikretHttp86) {
-        throw ApiException(Lokal86.MSG) // prompt 86: http:// utenfor lokalt nett kobles aldri til (Lokal86.kt)
+    } catch (e: UsikretHttp) {
+        throw ApiException(LokaltNett.MSG) // prompt 86: http:// utenfor lokalt nett kobles aldri til (LokaltNett.kt)
     } catch (e: IOException) {
         android.util.Log.w("Api", "Nettverksfeil", e)
         throw ApiException("Nettverksfeil. Sjekk forbindelsen og prøv igjen.")
@@ -117,7 +122,7 @@ class Api(private val baseUrl: String, private val token: String?) {
     suspend fun hlDelete(path: String) = request("DELETE", path, prefix = HOMELAB)
 
     suspend fun bytes(path: String): ByteArray = withContext(Dispatchers.IO) {
-        val conn = URL(baseUrl.trimEnd('/') + path).open86()
+        val conn = URL(baseUrl.trimEnd('/') + path).openSikker()
         try { net {
             // Prompt 85: uten tidsgrenser ble bilder og filer hengende for alltid på et dødt nett (og holdt en IO-tråd hver).
             conn.connectTimeout = 10_000
@@ -131,7 +136,7 @@ class Api(private val baseUrl: String, private val token: String?) {
     /** Multipart-opplasting: filer (f.eks. original + nedskalert JPEG + miniatyr) og tekstfelt (Part uten filnavn). */
     suspend fun upload(path: String, parts: List<Part>, prefix: String = FINANS, read: Int = 60_000): String = withContext(Dispatchers.IO) {
         val boundary = "----FinansHub" + UUID.randomUUID().toString().replace("-", "")
-        val conn = url(path, prefix).open86()
+        val conn = url(path, prefix).openSikker()
         var sent48 = false
         try { net {
             conn.requestMethod = "POST"
@@ -209,27 +214,13 @@ class Api(private val baseUrl: String, private val token: String?) {
             return LoginResult(token, uname, name.ifBlank { "FinansHub" }, u?.optString("role")?.takeIf { it.isNotBlank() } ?: "admin")
         }
 
-        /** Fjerner sti som «/finans» – appen legger selv til /finans/api. */
-        private fun stripPath(s: String): String {
-            val start = s.indexOf("://").let { if (it >= 0) it + 3 else 0 }
-            val i = s.indexOf('/', start)
-            return if (i >= 0) s.substring(0, i) else s
-        }
+        /**
+         * Det brukeren skrev → skjema + vert (+ port), uten sti: http:// for lokale adresser, ellers https://. "" når tom.
+         * Regelen og fasiten ligger i :felles (ServerAdresse, shared/testvektorer/serveradresse.json).
+         */
+        fun normalizeServer(raw: String): String = ServerAdresse.normaliser(raw) ?: ""
 
-        /** Legger til skjema når det mangler: http:// for lokale adresser, ellers https://. */
-        fun normalizeServer(raw: String): String {
-            val s = stripPath(raw.trim().trimEnd('/'))
-            if (s.isBlank()) return s
-            if (s.startsWith("http://", true) || s.startsWith("https://", true)) return s
-            val host = s.substringBefore('/').substringBefore(':').lowercase()
-            return (if (isLocalHost(host)) "http://" else "https://") + s
-        }
-
-        fun isLocalHost(host: String): Boolean = host == "localhost" || host.endsWith(".local") || host.endsWith(".lan") || host.endsWith(".home.arpa") ||
-            Regex("""^(10|127)\.\d+\.\d+\.\d+$""").matches(host) ||
-            Regex("""^192\.168\.\d+\.\d+$""").matches(host) ||
-            Regex("""^172\.(1[6-9]|2\d|3[01])\.\d+\.\d+$""").matches(host) ||
-            Regex("""^100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\.\d+\.\d+$""").matches(host) ||
-            !host.contains('.')
+        /** Verten er på lokalt nett (samme regel som klartekstregelen, uten DNS-oppslag). */
+        fun isLocalHost(host: String): Boolean = ServerAdresse.lokal(host)
     }
 }

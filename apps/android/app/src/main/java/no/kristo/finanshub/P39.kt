@@ -1,5 +1,7 @@
 package no.kristo.finanshub
 
+import no.kristo.felles.nett.openSikker
+
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.os.Build
@@ -111,7 +113,7 @@ private suspend fun AppViewModel.fetch39(url: String): Pair<Int, ByteArray?> = w
     val own = !abs || runCatching { URL(full).host.equals(URL(root).host, ignoreCase = true) }.getOrDefault(false)
     var code = -1
     try {
-        val c = URL(full).open86()
+        val c = URL(full).openSikker()
         try {
             c.connectTimeout = 10_000; c.readTimeout = 15_000
             c.useCaches = false

@@ -14,9 +14,9 @@ import java.util.concurrent.TimeUnit
  * Kobler til på nytt med økende pause (2–60 s) når forbindelsen faller, og stoppes når appen går i bakgrunnen.
  */
 class Realtime(private val onMessage: (String, JSONObject) -> Unit) {
-    // Prompt 86: ws:// (klartekst) bare på lokalt nett – samme regel som for http:// (Lokal86.kt).
+    // Prompt 86: ws:// (klartekst) bare på lokalt nett – samme regel som for http:// (LokaltNett.kt).
     private val client = OkHttpClient.Builder().pingInterval(25, TimeUnit.SECONDS).readTimeout(0, TimeUnit.MILLISECONDS)
-        .addInterceptor(LokalOkHttp86).addNetworkInterceptor(LokalOkHttp86).build()
+        .addInterceptor(LokalOkHttp).addNetworkInterceptor(LokalOkHttp).build()
     private var ws: WebSocket? = null
     private var url: String? = null
     private var wanted = false

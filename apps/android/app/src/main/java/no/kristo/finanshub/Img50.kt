@@ -52,7 +52,7 @@ object Img50 {
             .cache(Cache(File(ctx.applicationContext.cacheDir, "img50"), 320L * 1024 * 1024))
             .connectTimeout(6, TimeUnit.SECONDS).readTimeout(20, TimeUnit.SECONDS)
             // Prompt 86: http:// bare på lokalt nett – sjekkes før tilkobling og på hvert hopp ved omdirigering.
-            .addInterceptor(LokalOkHttp86).addNetworkInterceptor(LokalOkHttp86)
+            .addInterceptor(LokalOkHttp).addNetworkInterceptor(LokalOkHttp)
             .build().also { http = it }
     }
 

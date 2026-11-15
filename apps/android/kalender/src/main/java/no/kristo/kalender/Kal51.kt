@@ -1,5 +1,7 @@
 package no.kristo.kalender
 
+import no.kristo.felles.nett.openSikker
+
 import android.app.Application
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -162,7 +164,7 @@ object Kal51Approve {
     /** Ett kall mot godkjenningsendepunktene (uten Authorization). → (HTTP-kode, JSON). 0 = fikk ikke kontakt. */
     private suspend fun call(method: String, ap: Kal51Approval, path: String): Pair<Int, JSONObject> = withContext(Dispatchers.IO) {
         runCatching {
-            val conn = URL(ap.base + path).open86()
+            val conn = URL(ap.base + path).openSikker()
             try {
                 conn.requestMethod = method
                 conn.connectTimeout = 10_000

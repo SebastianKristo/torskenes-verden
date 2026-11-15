@@ -1,5 +1,7 @@
 package no.kristo.finanshub
 
+import no.kristo.felles.nett.openSikker
+
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
@@ -260,7 +262,7 @@ internal suspend fun AppViewModel.stream67(
     val url = base.trimEnd('/') + Api.HOMELAB + "/glimt/agent/stream"
     val job = currentCoroutineContext()[Job]
     return withContext(Dispatchers.IO) {
-        val c = URL(url).open86()
+        val c = URL(url).openSikker()
         onConn(c)
         val h = job?.invokeOnCompletion { if (it != null) runCatching { c.disconnect() } }
         val txt = StringBuilder()

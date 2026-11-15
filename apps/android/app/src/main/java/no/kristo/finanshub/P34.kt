@@ -1,5 +1,7 @@
 package no.kristo.finanshub
 
+import no.kristo.felles.nett.openSikker
+
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -415,7 +417,7 @@ const val SCAN_F34 = "Kvitteringer og skanninger"
 internal suspend fun AppViewModel.stream34(method: String, path: String, body: JSONObject?, read: Int = 120_000, accept: String = "text/event-stream, application/x-ndjson, application/json",
     onEvent: (String, JSONObject) -> Boolean): Unit =
     withContext(Dispatchers.IO) {
-        val c = URL(base.trimEnd('/') + path).open86()
+        val c = URL(base.trimEnd('/') + path).openSikker()
         try {
             c.requestMethod = method
             c.connectTimeout = 10_000

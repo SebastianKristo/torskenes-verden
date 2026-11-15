@@ -61,6 +61,8 @@ android {
 
 dependencies {
     // Samme Compose-BOM og AndroidX-versjoner som :app (ingen nye utenom de godkjente Wear-bibliotekene under).
+    // Delt kode (Fase 5): serveradresse, klartekstregelen, HTTP-klient, feilsvar og «i dag».
+    implementation(project(":felles"))
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.ui)
     implementation(libs.compose.foundation)

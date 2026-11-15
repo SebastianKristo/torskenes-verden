@@ -1,5 +1,7 @@
 package no.kristo.finanshub
 
+import no.kristo.felles.nett.openSikker
+
 import android.content.Context
 import android.media.AudioManager
 import android.media.MediaPlayer
@@ -485,7 +487,7 @@ private suspend fun AppViewModel.fetchTts35(text: String, char: String): File? =
     if (f.exists() && f.length() > 0 && System.currentTimeMillis() - f.lastModified() < 30L * 86_400_000L) return@withContext f
     // Rydd gamle filer.
     runCatching { dir.listFiles()?.filter { System.currentTimeMillis() - it.lastModified() > 30L * 86_400_000L }?.forEach { it.delete() } }
-    val c = URL(base.trimEnd('/') + "/api/tts").open86()
+    val c = URL(base.trimEnd('/') + "/api/tts").openSikker()
     try {
         c.requestMethod = "POST"
         c.connectTimeout = 8_000
@@ -561,7 +563,7 @@ suspend fun AppViewModel.weatherPlace35(q: String, place: String): WxPlaceAns35 
 }
 
 private suspend fun openMeteo35(place: String, tomorrow: Boolean): WxPlaceAns35 = withContext(Dispatchers.IO) {
-    fun get(u: String): String = (URL(u).open86()).run {
+    fun get(u: String): String = (URL(u).openSikker()).run {
         connectTimeout = 8000; readTimeout = 12000
         try { inputStream.bufferedReader().use { it.readText() } } finally { disconnect() }
     }

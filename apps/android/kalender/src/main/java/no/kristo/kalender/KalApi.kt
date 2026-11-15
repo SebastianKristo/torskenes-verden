@@ -1,5 +1,8 @@
 package no.kristo.kalender
 
+import no.kristo.felles.nett.openSikker
+import no.kristo.felles.nett.ServerAdresse
+
 import android.content.Context
 import android.content.SharedPreferences
 import android.net.Uri
@@ -34,7 +37,7 @@ class KalApiException(message: String, val status: Int = 0, val needsTotp: Boole
 class KalApi(private val base: String, private val token: String?) {
 
     suspend fun request(method: String, path: String, json: JSONObject? = null, timeout: Int = 10_000, read: Int = 30_000): String = withContext(Dispatchers.IO) {
-        val conn = URL(base.trimEnd('/') + path).open86()
+        val conn = URL(base.trimEnd('/') + path).openSikker()
         try {
             net {
                 conn.requestMethod = method
@@ -101,18 +104,8 @@ class KalApi(private val base: String, private val token: String?) {
             return KalSession(baseUrl, token, uname, u?.optString("name")?.takeIf { it.isNotBlank() } ?: uname, "login")
         }
 
-        /** Fjerner sti og legger til skjema: http:// for lokale adresser, ellers https:// (som Api.normalizeServer i :app). */
-        fun normalizeServer(raw: String): String {
-            var s = raw.trim().trimEnd('/')
-            val start = s.indexOf("://").let { if (it >= 0) it + 3 else 0 }
-            s.indexOf('/', start).let { if (it >= 0) s = s.substring(0, it) }
-            if (s.isBlank() || s.startsWith("http://", true) || s.startsWith("https://", true)) return s
-            val host = s.substringBefore('/').substringBefore(':').lowercase()
-            val local = host == "localhost" || host.endsWith(".local") || host.endsWith(".lan") || !host.contains('.') ||
-                Regex("""^(10|127)\.\d+\.\d+\.\d+$""").matches(host) || Regex("""^192\.168\.\d+\.\d+$""").matches(host) ||
-                Regex("""^172\.(1[6-9]|2\d|3[01])\.\d+\.\d+$""").matches(host) || Regex("""^100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\.\d+\.\d+$""").matches(host)
-            return (if (local) "http://" else "https://") + s
-        }
+        /** Fjerner sti og legger til skjema: http:// for lokale adresser, ellers https:// (:felles, ServerAdresse – samme regel som :app). */
+        fun normalizeServer(raw: String): String = ServerAdresse.normaliser(raw) ?: ""
     }
 }
 

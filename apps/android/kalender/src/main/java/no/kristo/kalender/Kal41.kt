@@ -1,5 +1,7 @@
 package no.kristo.kalender
 
+import no.kristo.felles.nett.openSikker
+
 import android.app.Application
 import android.app.NotificationManager
 import android.content.ActivityNotFoundException
@@ -145,7 +147,7 @@ object Kal41 {
     /** Svarer serveren i det hele tatt (alle HTTP-svar teller)? */
     suspend fun reachable(base: String, timeoutMs: Int): Boolean = withContext(Dispatchers.IO) {
         runCatching {
-            val c = URL(base.trimEnd('/') + "/api/discovery").open86()
+            val c = URL(base.trimEnd('/') + "/api/discovery").openSikker()
             c.connectTimeout = timeoutMs; c.readTimeout = timeoutMs
             try { c.responseCode > 0 } finally { c.disconnect() }
         }.getOrDefault(false)
@@ -331,7 +333,7 @@ object Kal41 {
     suspend fun bytes(s: KalSession, url: String): ByteArray? = withContext(Dispatchers.IO) {
         runCatching {
             val full = if (url.startsWith("/")) s.server.trimEnd('/') + url else url
-            val c = URL(full).open86()
+            val c = URL(full).openSikker()
             c.connectTimeout = 10_000; c.readTimeout = 15_000
             if (url.startsWith("/") || full.startsWith(s.server)) c.setRequestProperty("Authorization", "Bearer " + s.token)
             try { if (c.responseCode in 200..299) c.inputStream.use { it.readBytes() } else null } finally { c.disconnect() }

@@ -1,5 +1,10 @@
 package no.kristo.kalender
 
+import no.kristo.felles.nett.LokaltNett
+import no.kristo.felles.nett.UsikretHttp
+import no.kristo.felles.nett.openSikker
+import no.kristo.felles.nett.ServerAdresse
+
 import android.content.Context
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -12,10 +17,8 @@ import java.net.URL
  * Tannhjulet på innloggingsskjermen åpner samme Server-ark som Innstillinger → Server (ui/Kal47Ui.kt ServerDialog47, samme lagring).
  */
 object Kal89 {
-    /** Den gamle standarden (delt i to så et søk etter den gamle stavingen bare treffer migreringen). */
-    private const val OLD = "https://os.smarthjem" + "experten.no"
-
-    fun isOld(s: String?): Boolean = s != null && s.trim().trimEnd('/').equals(OLD, ignoreCase = true)
+    /** Nøyaktig den gamle, feilstavede standarden (:felles, ServerAdresse). */
+    fun isOld(s: String?): Boolean = ServerAdresse.erGammelStandard(s)
 
     fun migrate(ctx: Context) {
         runCatching {
@@ -39,12 +42,12 @@ object Kal89 {
         if (base == null) return@withContext false to "Adressen må starte med http:// eller https://"
         val host = base.substringAfter("://").substringBefore('/')
         try {
-            val c = URL(base.trimEnd('/') + "/api/health").open86()
+            val c = URL(base.trimEnd('/') + "/api/health").openSikker()
             c.connectTimeout = 5000; c.readTimeout = 5000
             try {
                 val code = c.responseCode
                 if (code in 200..299) (true to "Tilkoblet · $host") else (false to "Svarer ikke som Homelab (HTTP $code)")
             } finally { c.disconnect() }
-        } catch (e: UsikretHttp86) { false to Lokal86.MSG } catch (_: Exception) { false to "Fikk ikke kontakt med $host" }
+        } catch (e: UsikretHttp) { false to LokaltNett.MSG } catch (_: Exception) { false to "Fikk ikke kontakt med $host" }
     }
 }

@@ -1,5 +1,7 @@
 package no.kristo.finanshub
 
+import no.kristo.felles.nett.openSikker
+
 import android.net.Uri
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
@@ -147,7 +149,7 @@ fun AppViewModel.act51(
 
 /** Rå bytes ut (bilde til sparemål): PUT med Content-Type, samme token som resten. */
 internal suspend fun AppViewModel.putBytes51(path: String, bytes: ByteArray, type: String): String = withContext(Dispatchers.IO) {
-    val conn = URL(base.trimEnd('/') + Api.FINANS + path).open86()
+    val conn = URL(base.trimEnd('/') + Api.FINANS + path).openSikker()
     try {
         conn.requestMethod = "PUT"
         conn.connectTimeout = 10_000

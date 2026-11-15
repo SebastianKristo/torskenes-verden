@@ -1,5 +1,7 @@
 package no.kristo.finanshub
 
+import no.kristo.felles.nett.openSikker
+
 import android.os.Build
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
@@ -256,7 +258,7 @@ private fun AppViewModel.startQrLogin46(srv: String) {
 }
 
 private suspend fun qrGet46(srv: String, path: String, key: String?): String = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-    val c = java.net.URL(srv.trimEnd('/') + "/api" + path).open86()
+    val c = java.net.URL(srv.trimEnd('/') + "/api" + path).openSikker()
     try {
         c.connectTimeout = 8_000; c.readTimeout = 8_000
         c.setRequestProperty("Accept", "application/json")

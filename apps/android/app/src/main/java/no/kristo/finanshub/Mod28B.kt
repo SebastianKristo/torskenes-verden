@@ -1,5 +1,7 @@
 package no.kristo.finanshub
 
+import no.kristo.felles.nett.openSikker
+
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -221,7 +223,7 @@ fun AppViewModel.installVision28() {
         var err: String? = null
         try {
             withContext(Dispatchers.IO) {
-                val conn = URL(url).open86()
+                val conn = URL(url).openSikker()
                 try {
                     conn.requestMethod = "POST"
                     conn.connectTimeout = 10_000

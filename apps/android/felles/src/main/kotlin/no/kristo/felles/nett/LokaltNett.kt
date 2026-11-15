@@ -1,4 +1,4 @@
-package no.kristo.finanshub.wear
+package no.kristo.felles.nett
 
 import java.io.IOException
 import java.io.InputStream
@@ -7,18 +7,19 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 /**
- * Prompt 86 (AND86): klartekst (http://, ws://) er bare tillatt på lokalt nett.
+ * Klartekst (http://, ws://) er bare tillatt på lokalt nett.
  *
  * Android kan ikke uttrykke private IP-områder i network_security_config, så konfigurasjonen tillater klartekst, og regelen
- * håndheves her – før noe kobles til. Alle HTTP-kall i modulen går gjennom [open86] (HttpURLConnection), [Lokal86.ok]
- * (OkHttp, WebView, kartfliser) eller har en fast https-adresse. Samme fil ligger i :app, :kalender og :wear (bare pakkenavnet
- * er ulikt); test/p86-and.test.js sjekker at de er like og kjører fasiten.
+ * håndheves her – før noe kobles til. Alle HTTP-kall i :app, :kalender og :wear går gjennom [openSikker] (HttpURLConnection),
+ * LokaltNett.ok (OkHttp, WebView, kartfliser) eller har en fast https-adresse. Én kopi for alle tre appene (tidligere
+ * Lokal86.kt i hver modul). Fasit: shared/testvektorer/serveradresse.json og test/p86-and.test.js, kjørt av ServerAdresseTest.
  *
  * Lokalt nett = loopback, privat IPv4 (10/8, 172.16/12, 192.168/16), link-local (169.254/16, fe80::/10), CGNAT 100.64/10
  * (Tailscale), IPv6 ULA (fc00::/7), eller et navn uten punktum eller som slutter på .local/.lan/.home.arpa/.internal.
  * Tallformer som ikke er vanlig a.b.c.d (heltall, heksadesimalt, oktalt, korte former) avvises – de kan peke hvor som helst.
+ * Selve regelen slår aldri opp i DNS. For navn sjekker [openSikker] i tillegg hvor navnet peker ([Klartekstvakt]).
  */
-object Lokal86 {
+object LokaltNett {
     const val MSG = "Usikret tilkobling (http) er bare tillatt på lokalt nett. Bruk https."
 
     private val ENDELSER = listOf(".local", ".lan", ".home.arpa", ".internal")
@@ -63,11 +64,33 @@ object Lokal86 {
         return deler.size == 1 || ENDELSER.any { h.endsWith(it) }
     }
 
+    /** true når [vert] er en IP-adresse (IPv4 a.b.c.d eller IPv6, med eller uten klammer) og ikke et navn. */
+    fun erIpAdresse(vert: String?): Boolean {
+        var h = (vert ?: "").trim().lowercase()
+        if (h.startsWith("[") && h.endsWith("]")) h = h.substring(1, h.length - 1)
+        h = h.substringBefore('%')
+        return if (h.contains(':')) v6(h) != null else v4(h) != null
+    }
+
+    /** Lokal IPv4 som fire byte (0–255), brukt av [Klartekstvakt] på adressen et navn peker til. */
+    internal fun lokalIp(b: ByteArray): Boolean = when (b.size) {
+        4 -> lokalV4(b[0].toInt() and 0xff, b[1].toInt() and 0xff)
+        16 -> {
+            val g = (0 until 8).map { ((b[2 * it].toInt() and 0xff) shl 8) or (b[2 * it + 1].toInt() and 0xff) }
+            when {
+                g.take(5).all { it == 0 } && g[5] == 0xffff -> lokalV4(g[6] shr 8, g[6] and 0xff)
+                g.take(7).all { it == 0 } && g[7] == 1 -> true
+                else -> (g[0] and 0xfe00) == 0xfc00 || (g[0] and 0xffc0) == 0xfe80
+            }
+        }
+        else -> false
+    }
+
     private fun lokalV4(a: Int, b: Int): Boolean =
         a == 10 || a == 127 || (a == 172 && b in 16..31) || (a == 192 && b == 168) || (a == 169 && b == 254) || (a == 100 && b in 64..127)
 
     /** Streng a.b.c.d (desimalt, uten ledende nuller) → fire tall, ellers null. */
-    private fun v4(s: String): List<Int>? {
+    internal fun v4(s: String): List<Int>? {
         val p = s.split('.')
         if (p.size != 4) return null
         val out = ArrayList<Int>(4)
@@ -109,21 +132,28 @@ object Lokal86 {
 }
 
 /** Kastes i stedet for å koble til når adressen er http:// utenfor lokalt nett. */
-class UsikretHttp86 : IOException(Lokal86.MSG)
+class UsikretHttp : IOException(LokaltNett.MSG)
 
 /**
  * Erstatter `openConnection() as HttpURLConnection`. For http:// utenfor lokalt nett returneres en forbindelse som aldri
- * kobler til og kaster [UsikretHttp86] der en vanlig forbindelse ville feilet (connect/les/skriv), så eksisterende
+ * kobler til og kaster [UsikretHttp] der en vanlig forbindelse ville feilet (connect/les/skriv), så eksisterende
  * feilhåndtering rundt kallene gjelder uendret.
+ *
+ * Et lokalt *navn* over http (nas.lan, homelab) må i tillegg peke til en lokal adresse ([Klartekstvakt], S3): ellers kunne
+ * en falsk DNS på et offentlig nett få tokenet i klartekst. Kalles fra en bakgrunnstråd, som resten av tilkoblingen.
  */
-fun URL.open86(): HttpURLConnection = if (Lokal86.ok(this)) openConnection() as HttpURLConnection else Sperret86(this)
+fun URL.openSikker(): HttpURLConnection = when {
+    !LokaltNett.ok(this) -> Sperret(this)
+    !Klartekstvakt.tillatt(protocol, host) -> Sperret(this)
+    else -> openConnection() as HttpURLConnection
+}
 
-private class Sperret86(u: URL) : HttpURLConnection(u) {
-    override fun connect() { throw UsikretHttp86() }
+private class Sperret(u: URL) : HttpURLConnection(u) {
+    override fun connect() { throw UsikretHttp() }
     override fun disconnect() {}
     override fun usingProxy(): Boolean = false
     override fun setRequestMethod(method: String?) {}
-    override fun getInputStream(): InputStream = throw UsikretHttp86()
-    override fun getOutputStream(): OutputStream = throw UsikretHttp86()
-    override fun getResponseCode(): Int = throw UsikretHttp86()
+    override fun getInputStream(): InputStream = throw UsikretHttp()
+    override fun getOutputStream(): OutputStream = throw UsikretHttp()
+    override fun getResponseCode(): Int = throw UsikretHttp()
 }

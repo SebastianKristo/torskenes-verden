@@ -1,5 +1,8 @@
 package no.kristo.finanshub
 
+import no.kristo.felles.nett.openSikker
+import no.kristo.felles.nett.ServerAdresse
+
 import android.app.Application
 import android.content.Context
 import android.content.Intent
@@ -507,7 +510,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         // Prompt 47: lokal bare når den svarer innen 1,5 s og er samme server (sjekkes uten token, se P47.kt).
         if (prefs.bool(AppPrefs.USE_LOCAL, true) && a.local.isNotBlank() && localIsOurs47(a.local, a.external, a.server)) { base = a.local; route = "Lokal"; return }
         base = a.external.ifBlank { a.server }
-        route = if (Api.isLocalHost(base.substringAfter("://").substringBefore('/').substringBefore(':'))) "Lokal" else "Ekstern"
+        route = if (ServerAdresse.erLokalAdresse(base)) "Lokal" else "Ekstern"
     }
 
     private suspend fun reachable(url: String, token: String?): Boolean = try {
@@ -1302,7 +1305,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (logos.containsKey(key)) return logos[key]
         val b = runCatching {
             withContext(Dispatchers.IO) {
-                val c = java.net.URL("https://www.google.com/s2/favicons?sz=64&domain=" + URLEncoder.encode(host, "UTF-8")).open86()
+                val c = java.net.URL("https://www.google.com/s2/favicons?sz=64&domain=" + URLEncoder.encode(host, "UTF-8")).openSikker()
                 c.connectTimeout = 4000; c.readTimeout = 4000
                 try { c.inputStream.use { it.readBytes() } } finally { c.disconnect() }
             }.let { BitmapFactory.decodeByteArray(it, 0, it.size) }
@@ -1733,7 +1736,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Bilde fra en annen tjeneste (f.eks. Wikimedia). Tokenet sendes ikke dit. */
     private suspend fun externalImage(url: String): Bitmap? = runCatching {
         withContext(Dispatchers.IO) {
-            val c = java.net.URL(url).open86()
+            val c = java.net.URL(url).openSikker()
             c.connectTimeout = 6000; c.readTimeout = 10000
             c.setRequestProperty("User-Agent", "FinansHub-Android")
             try { c.inputStream.use { it.readBytes() } } finally { c.disconnect() }
@@ -2106,7 +2109,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 url.startsWith("/") -> api.bytes(url)
                 b.isNotEmpty() && url.startsWith(b) -> api.bytes(url.removePrefix(b))
                 else -> withContext(Dispatchers.IO) {
-                    val c = java.net.URL(url).open86()
+                    val c = java.net.URL(url).openSikker()
                     c.connectTimeout = 6000; c.readTimeout = 10000
                     c.setRequestProperty("User-Agent", "FinansHub-Android")
                     try { if (c.responseCode >= 400) null else c.inputStream.use { it.readBytes() } } finally { c.disconnect() }

@@ -1,5 +1,7 @@
 package no.kristo.finanshub
 
+import no.kristo.felles.nett.openSikker
+
 import android.app.Application
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
@@ -229,7 +231,7 @@ fun AppViewModel.saveAiTimeouts23(t: AiTimeouts23) {
 
 private suspend fun plainGet(url: String): String? = withContext(Dispatchers.IO) {
     runCatching {
-        val c = URL(url).open86()
+        val c = URL(url).openSikker()
         try {
             c.connectTimeout = 8000; c.readTimeout = 12000
             if (c.responseCode >= 400) null else c.inputStream.bufferedReader().use { it.readText() }

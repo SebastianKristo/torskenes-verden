@@ -1,5 +1,7 @@
 package no.kristo.finanshub
 
+import no.kristo.felles.nett.ServerAdresse
+
 /*
  * Prompt 89 (AND89): rene regler uten Android-avhengigheter (kompilert og kjørt med kotlinc, speilet i test/p89-and.test.js).
  *  - Serveradresse: riktig domene os.smarthjemeksperten.no, migrering av den gamle feilstavede standarden, validering i tannhjul-arket.
@@ -7,16 +9,16 @@ package no.kristo.finanshub
  *    pollingintervall, utløp og dyplenker for de fem typene fra GET /api/live/aktiviteter.
  */
 object Regel89 {
-    const val EXTERNAL = "https://os.smarthjemeksperten.no"
+    const val EXTERNAL = ServerAdresse.STANDARD
     const val LOCAL = "http://10.69.1.39:3000"
-    /** Den gamle, feilstavede standarden (delt i to så et søk etter den gamle stavingen bare treffer migreringen). */
-    const val OLD_EXTERNAL = "https://os.smarthjem" + "experten.no"
+    /** Den gamle, feilstavede standarden (:felles, ServerAdresse). */
+    const val OLD_EXTERNAL = ServerAdresse.GAMMEL_STANDARD
 
     /** Er [s] nøyaktig den gamle standarden (med eller uten avsluttende / og mellomrom)? Egendefinerte adresser røres ikke. */
-    fun isOld(s: String?): Boolean = s != null && s.trim().trimEnd('/').equals(OLD_EXTERNAL, ignoreCase = true)
+    fun isOld(s: String?): Boolean = ServerAdresse.erGammelStandard(s)
 
     /** Gammel standard → ny standard, ellers uendret. */
-    fun migrate(s: String?): String? = if (isOld(s)) EXTERNAL else s
+    fun migrate(s: String?): String? = ServerAdresse.migrer(s)
 
     /** Tannhjul-arket: må starte med http:// eller https://, mellomrom og avsluttende / fjernes. null = ugyldig. */
     fun clean(raw: String): String? {

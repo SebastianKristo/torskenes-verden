@@ -1,5 +1,7 @@
 package no.kristo.finanshub
 
+import no.kristo.felles.nett.openSikker
+
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -373,7 +375,7 @@ class Ntfy51Service : Service() {
 
     /** Henter det som har kommet (strømsparing). */
     private fun poll(url: String) {
-        val c = URL(url.trimEnd('/') + "/json" + q(Ntfy51.since(this), true)).open86()
+        val c = URL(url.trimEnd('/') + "/json" + q(Ntfy51.since(this), true)).openSikker()
         try {
             c.connectTimeout = 15_000; c.readTimeout = 30_000
             c.setRequestProperty("Accept", "application/x-ndjson")
@@ -384,7 +386,7 @@ class Ntfy51Service : Service() {
 
     /** Holder strømmen åpen til den brytes. true = var tilkoblet (rask ny tilkobling). */
     private fun stream(url: String, onOpen: () -> Unit): Boolean {
-        val c = URL(url.trimEnd('/') + "/json" + q(Ntfy51.since(this), false)).open86()
+        val c = URL(url.trimEnd('/') + "/json" + q(Ntfy51.since(this), false)).openSikker()
         conn = c
         try {
             c.connectTimeout = 15_000

@@ -1,5 +1,7 @@
 package no.kristo.finanshub.ui
 
+import no.kristo.felles.nett.LokaltNett
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -107,7 +109,7 @@ private fun ServerSheet89(onClose: () -> Unit, onSaved: (String) -> Unit) {
 /** GET /api/health uten token → (true, «Tilkoblet») / (false, feilmelding). */
 private suspend fun health89(url: String): Pair<Boolean, String> {
     val host = Regel89.hostLabel(url)
-    if (cleartextBlocked47(url)) return false to Lokal86.MSG
+    if (cleartextBlocked47(url)) return false to LokaltNett.MSG
     return try {
         Api(url, null).request("GET", "/health", prefix = Api.HOMELAB, timeout = 5_000, read = 5_000)
         true to "Tilkoblet · $host"

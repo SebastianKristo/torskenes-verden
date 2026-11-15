@@ -13,6 +13,8 @@ const AND = join(ROOT, 'apps/android');
 const APP = join(AND, 'app/src/main/java/no/kristo/finanshub');
 const KAL = join(AND, 'kalender/src/main/java/no/kristo/kalender');
 const WEAR = join(AND, 'wear/src/main/java/no/kristo/finanshub/wear');
+// Fase 5: regelen for serveradressen (standard, gammel standard, migrering) ligger én gang i :felles.
+const FELLES = join(AND, 'felles/src/main/kotlin/no/kristo/felles/nett');
 const strip = (s) => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
 const rd = (p) => readFileSync(p, 'utf8');
 const code = (dir, f) => strip(rd(join(dir, f)));
@@ -43,18 +45,23 @@ function block(src, start) {
 test('domenet: ingen gammel stavemåte noe sted i apps/android (bare den oppdelte migreringskonstanten)', () => {
   const hits = walk(AND).filter((p) => /\.(kt|kts|xml|json|pro|properties)$/.test(p)).filter((p) => rd(p).includes(OLD));
   assert.deepEqual(hits.map((p) => p.slice(ROOT.length + 1)), []);
-  // Migreringen bygger den gamle verdien av to deler.
-  for (const [dir, f] of [[APP, 'Regel89.kt'], [KAL, 'Kal89.kt'], [WEAR, 'WearApi51.kt']]) assert.match(rd(join(dir, f)), /"https:\/\/os\.smarthjem" \+ "experten\.no"/, f);
+  // Migreringen bygger den gamle verdien av to deler, én gang (:felles), og alle tre appene bruker den.
+  assert.match(rd(join(FELLES, 'ServerAdresse.kt')), /const val GAMMEL_STANDARD: String = "https:\/\/os\.smarthjem" \+ "experten\.no"/);
+  assert.match(code(APP, 'Regel89.kt'), /fun isOld\(s: String\?\): Boolean = ServerAdresse\.erGammelStandard\(s\)/);
+  assert.match(code(APP, 'Regel89.kt'), /fun migrate\(s: String\?\): String\? = ServerAdresse\.migrer\(s\)/);
+  assert.match(code(KAL, 'Kal89.kt'), /fun isOld\(s: String\?\): Boolean = ServerAdresse\.erGammelStandard\(s\)/);
+  assert.match(code(WEAR, 'WearApi51.kt'), /internal fun migrate89\(s: String\?\): String\? = ServerAdresse\.migrer\(s\)/);
 });
 
 test('domenet: standardverdiene er os.smarthjemeksperten.no, lokal uendret http://10.69.1.39:3000', () => {
   assert.match(code(APP, 'P47.kt'), /const val DEFAULT_EXTERNAL47 = "https:\/\/os\.smarthjemeksperten\.no"/);
   assert.match(code(APP, 'P47.kt'), /const val DEFAULT_LOCAL47 = "http:\/\/10\.69\.1\.39:3000"/);
   assert.match(code(APP, 'P41.kt'), /const val DEFAULT_SERVER41 = DEFAULT_EXTERNAL47/);
-  assert.match(code(APP, 'Regel89.kt'), /const val EXTERNAL = "https:\/\/os\.smarthjemeksperten\.no"/);
+  assert.match(code(FELLES, 'ServerAdresse.kt'), /const val STANDARD: String = "https:\/\/os\.smarthjemeksperten\.no"/);
+  assert.match(code(APP, 'Regel89.kt'), /const val EXTERNAL = ServerAdresse\.STANDARD/);
   assert.match(code(KAL, 'Kal41.kt'), /const val DEFAULT_BASE = "https:\/\/os\.smarthjemeksperten\.no"/);
   assert.match(code(KAL, 'Kal41.kt'), /const val DEFAULT_LOCAL = "http:\/\/10\.69\.1\.39:3000"/);
-  assert.match(code(WEAR, 'WearApi51.kt'), /const val DEFAULT_SERVER51 = "https:\/\/os\.smarthjemeksperten\.no"/);
+  assert.match(code(WEAR, 'WearApi51.kt'), /const val DEFAULT_SERVER51 = ServerAdresse\.STANDARD/);
   // Klartekst er fortsatt bare for lokalt nett (prompt 86) – ingen ny vert i nettverkskonfigen.
   const nsc = rd(join(AND, 'app/src/main/res/xml/network_security_config.xml'));
   assert.ok(!/smarthjem/.test(nsc));
@@ -113,7 +120,7 @@ test('tannhjul på innloggingen (Kalender): samme Server-ark som Innstillinger �
   assert.match(dlg, /fun ServerDialog47\(onClose: \(\) -> Unit, login: Boolean = false\)/);
   assert.match(dlg, /LinePill\("Test tilkobling"/);
   assert.match(dlg, /LinePill\(if \(login\) "Avbryt" else "Ferdig", onClose\)/);
-  assert.match(code(KAL, 'Kal89.kt'), /"\/api\/health"\)\.open86\(\)/);
+  assert.match(code(KAL, 'Kal89.kt'), /"\/api\/health"\)\.openSikker\(\)/);
 });
 
 /* ---------------- 3. Live Updates ---------------- */
