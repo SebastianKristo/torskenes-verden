@@ -226,6 +226,16 @@ for (const r of db.prepare("SELECT id, target FROM fh_receipts WHERE uploaded_by
 // Prompt 05: tokens per bruker med utløp, abonnement hvert 2. år, boligmapper med roller, prosjekter og regninger.
 addCol('fh_tokens', 'user_id', 'TEXT');
 addCol('fh_tokens', 'expires', 'INTEGER');      // ms, null = aldri
+// Q23 (Fase 2): app-tokens utløper etter 180 dager uten bruk. sliding=1 → expires flyttes fram ved hver bruk (routes.js access()).
+// Tokens med fast utløp (valgt i Innstillinger, «Logg inn som») har sliding=0. expires=null etter migreringen betyr et
+// bevisst «aldri» (personlige API-nøkler valgt med «Aldri», Glimt-API-nøkler).
+export const TOKEN_SLIDE_MS = 180 * 86400_000;
+addCol('fh_tokens', 'sliding', 'INTEGER NOT NULL DEFAULT 0');
+// Én gang: tokens som fram til nå aldri utløp (mobil-innlogging, Kalender, QR, invitasjon) får glidende utløp fra nå + 180 d.
+// Glimt-API-nøklene (navn «Glimt-API: …») er nøkler brukeren selv styrer, og beholder «aldri».
+/** → antall tokens som fikk glidende utløp. Eksportert for testen; kjøres selv bare én gang (kv-flagget). */
+export const migrateTokenExpiry = (now = Date.now()) => db.prepare("UPDATE fh_tokens SET expires=?, sliding=1 WHERE expires IS NULL AND name NOT LIKE 'Glimt-API: %'").run(now + TOKEN_SLIDE_MS).changes;
+if (!kv.get(OWNER, 'fh_tokens_sliding_v1', false)) { migrateTokenExpiry(); kv.set(OWNER, 'fh_tokens_sliding_v1', Date.now()); }
 addCol('fh_folders', 'type', "TEXT NOT NULL DEFAULT 'Annet'");   // Enebolig | Leilighet | Hytte | Utleie | Annet
 addCol('fh_folders', 'address', "TEXT NOT NULL DEFAULT ''");
 addCol('fh_folders', 'owner_id', 'TEXT');

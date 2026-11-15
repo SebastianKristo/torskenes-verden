@@ -38,3 +38,52 @@ test('/api/version gir version og minClient (Q19) uten innlogging', async () => 
   assert.equal(typeof r.body.contract, 'number');
   assert.ok(Array.isArray(r.body.features)); // eldre felt er der fortsatt
 });
+
+const { db: fhDb, migrateTokenExpiry, TOKEN_SLIDE_MS } = await import('../server/finans/db.js');
+const { _tokenKeyForTest: tokenKeyOf } = await import('../server/finans/routes.js');
+const login = async (deviceName = 'Testtelefon') => (await req('/finans/api/login', { method: 'POST', body: { username: 'sebastian', password: 'testpassord1', deviceName } })).body;
+const bearer = (t) => ({ authorization: `Bearer ${t}` });
+
+test('Q23: app-token fra mobil-innlogging har 180 dager glidende utløp', async () => {
+  const before = Date.now();
+  const l = await login();
+  assert.ok(l.token?.startsWith('fh_pat_'));
+  assert.equal(l.sliding, true);
+  assert.ok(l.expires >= before + TOKEN_SLIDE_MS - 1000 && l.expires <= Date.now() + TOKEN_SLIDE_MS + 1000);
+  assert.equal(new Date(l.expiresAt).getTime(), l.expires);
+  // Bruk flytter utløpet fram.
+  fhDb.prepare('UPDATE fh_tokens SET expires=? WHERE id=?').run(Date.now() + 1000, tokenKeyOf(l.token));
+  assert.equal((await req('/api/me', { headers: bearer(l.token) })).status, 200);
+  const row = fhDb.prepare('SELECT expires, sliding FROM fh_tokens WHERE id=?').get(tokenKeyOf(l.token));
+  assert.equal(row.sliding, 1);
+  assert.ok(row.expires > Date.now() + TOKEN_SLIDE_MS - 5000);
+});
+
+test('Q23: utløpt app-token gir 401 TOKEN_EXPIRED på /api og /finans/api', async () => {
+  const l = await login('Gammel telefon');
+  fhDb.prepare('UPDATE fh_tokens SET expires=? WHERE id=?').run(Date.now() - 1000, tokenKeyOf(l.token));
+  for (const p of ['/api/me', '/finans/api/summary', '/api/kalender/calendars', '/api/finnesikke']) {
+    const r = await req(p, { headers: bearer(l.token) });
+    assert.equal(r.status, 401, p);
+    assert.equal(r.body.code, 'TOKEN_EXPIRED', p);
+    assert.equal(typeof r.body.error, 'string');
+  }
+  // Ukjent token er fortsatt HOMELAB_AUTH.
+  const u = await req('/api/me', { headers: bearer('fh_pat_' + 'x'.repeat(32)) });
+  assert.deepEqual(u.body, { error: 'Ikke innlogget', code: 'HOMELAB_AUTH', reason: 'invalid' });
+});
+
+test('Q23: fast utløp forlenges ikke, og migreringen gir eldre tokens uten utløp nå + 180 d', async () => {
+  const l = await login('Fast');
+  const fixed = Date.now() + 3600_000;
+  fhDb.prepare('UPDATE fh_tokens SET expires=?, sliding=0 WHERE id=?').run(fixed, tokenKeyOf(l.token));
+  await req('/api/me', { headers: bearer(l.token) });
+  assert.equal(fhDb.prepare('SELECT expires FROM fh_tokens WHERE id=?').pluck().get(tokenKeyOf(l.token)), fixed);
+  // Et token fra før Fase 2 (expires NULL) og en Glimt-API-nøkkel.
+  fhDb.prepare('INSERT INTO fh_tokens(id,name,scopes,created,user_id) VALUES(?,?,?,?,?)').run('gammel-app', 'iPhone', 'finance:read', 1, 'owner');
+  fhDb.prepare('INSERT INTO fh_tokens(id,name,scopes,created,user_id) VALUES(?,?,?,?,?)').run('glimt-api', 'Glimt-API: HA', 'finance:read', 1, 'owner');
+  const now = Date.now();
+  assert.ok(migrateTokenExpiry(now) >= 1);
+  assert.deepEqual({ ...fhDb.prepare('SELECT expires, sliding FROM fh_tokens WHERE id=?').get('gammel-app') }, { expires: now + TOKEN_SLIDE_MS, sliding: 1 });
+  assert.deepEqual({ ...fhDb.prepare('SELECT expires, sliding FROM fh_tokens WHERE id=?').get('glimt-api') }, { expires: null, sliding: 0 });
+});

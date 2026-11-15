@@ -498,7 +498,7 @@ api.post('/tokens', async (c) => {
   const a = fh.tokenAccessOf(c);
   const scopes = ['finance:read', 'finance:write'].filter((s) => a?.session || a?.scopes?.has(s));
   if (!scopes.length) return bad(c, 'Krever innlogging', 403);
-  const t = fh.issueToken(c.get('user'), { name: PREFIX + name, scopes, expires: null });
+  const t = fh.issueToken(c.get('user'), { name: PREFIX + name, scopes, expires: null, never: true }); // Q23: API-nøkkel brukeren styrer selv – utløper ikke
   return c.json({ id: t.id, name, token: t.token, tail: t.token.slice(-4), display: `fh_pat_••••${t.token.slice(-4)}`, created: t.created }, 201);
 });
 api.delete('/tokens/:id', (c) => {
