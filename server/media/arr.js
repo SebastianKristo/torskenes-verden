@@ -18,6 +18,7 @@ import { notifyUser } from '../notify.js';
 import { addEventSource } from '../calendar.js';
 import { mockFetch43, mockArt43 } from './mock.js';
 import { dtf } from '../intl-format.js'; // gjenbrukte Intl.DateTimeFormat
+import { registerJob } from '../jobs/index.js'; // varsler-jobben
 
 const MOCK = () => process.env.MOCK_DATA === '1';
 const TZ = 'Europe/Oslo';
@@ -1150,13 +1151,9 @@ export async function mediaWatch43({ now = Date.now() } = {}) {
   kv.set(OWNER, WATCH, w);
   return sent;
 }
-let watchTimer = null;
-export function startMediaWatch43() {
-  if (watchTimer) return;
-  watchTimer = setInterval(() => { mediaWatch43().catch((e) => console.warn('[media] varsler:', e.message)); }, 2 * 60_000);
-  watchTimer.unref?.();
-  setTimeout(() => mediaWatch43().catch(() => {}), 15_000).unref?.();
-}
+// Felles planlegger (server/jobs/): kjører bare når bakgrunnsjobber er lov (ikke i test/sandkasse). Første runde 15 s etter
+// oppstart står i startMedia (media/index.js).
+registerJob('media.varsler', 2 * 60_000, () => mediaWatch43(), { note: 'Media: varsler om nedlastinger, indeksere og diskplass' });
 
 /* ---------------- Widget ---------------- */
 

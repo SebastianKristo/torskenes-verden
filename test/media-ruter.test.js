@@ -160,6 +160,13 @@ test('media-ruter: skriving og tilgangskrav (ugyldige kall endrer ingenting)', a
   assert.equal(typeof (await A('/api/media/unmonitored/delete', 'POST', {})).json.needsConfirm, 'boolean');
 });
 
+test('media-jobber: varsler og avspillingslogg går via den felles planleggeren (ikke aktive i test)', async () => {
+  const { listJobs } = await import('../server/jobs/index.js');
+  const jobs = listJobs().filter((j) => j.name.startsWith('media.'));
+  assert.deepEqual(jobs.map((j) => [j.name, j.everyMs]).sort(), [['media.avspillinger', 60_000], ['media.varsler', 120_000]]);
+  assert.ok(jobs.every((j) => !j.active));
+});
+
 test('media-ruter: start av stoppet torrent svarer med samme felt', async () => {
   const r = await I(`/api/media/torrents/${'b'.repeat(40)}/start`, 'POST', {});
   assert.equal(r.status, 200);

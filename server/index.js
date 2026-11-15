@@ -73,8 +73,8 @@ import { finans42Api, abCalendarsMw42, abApi42, calendarsEvents42, abIcs42, trac
 import fin51Api from './finans/fin51.js'; // prompt 51 (FIN51): sparemål, faste utgifter-kalender, skattehjelp, prishistorikk, abonnementsjeger
 import { startTax51 } from './finans/fin51-tax.js'; // prompt 51 (FIN51): påminnelse før skattemeldingen
 import { widgets43Api, claudeImport43Api, aiMemory43Api, gscDomains43Api, gsc43Api, gscViewMw43, gscOverviewMw43, kalUpdate43Api, finans43Api, summaryMw43, transactionsMw43, tasks43Api, tasksOrderMw43 } from './api43.js'; // prompt 43 (SERVER43)
-import { mountMedia } from './media/index.js'; // Media: alle /api/media-, /api/playback- og /api/medctl51-ruter
-import { mediaCalendarsMw43, startMediaWatch43 } from './media/arr.js'; // kalenderkilden «Media» og varsler
+import { mountMedia, startMedia } from './media/index.js'; // Media: alle /api/media-, /api/playback- og /api/medctl51-ruter
+import { mediaCalendarsMw43 } from './media/arr.js'; // kalenderkilden «Media»
 // Prompt 44 (SERVER44): Logger (Docker), Media (servere, søk som jobb, felles status), Avspilling, Studie-dokumenter, Kalender-deltakere,
 // Logg inn som / andres oppsett / overfør eier.
 import { integrationsStatusApi44 } from './media/servers.js'; // felles status for Integrasjoner og Media
@@ -83,9 +83,7 @@ import { impersonation44, admin44Api, layoutLockMw44, setMobileApi44 } from './a
 import { kal44Api, kalEventsMw44, assistLocalMw44 } from './kal44.js';
 import { study44Api } from './study44.js';
 import { auth44Api } from './auth44.js';
-import { startPlayback44 } from './media/playback.js';
 import { mountApi45 } from './api45.js'; // prompt 45 (SERVER45)
-import { startMedia50 } from './media/images.js'; // forhåndsgenererte plakater
 import { mountSec51 } from './sec51.js'; // prompt 51 (SEC51): sikkerhet
 import { mountFamily50 } from './family50.js'; // prompt 50 (SRVFAM50): Steder med områder, Folk, Helse, I dag, Sjekk inn
 import { traceObs51, mountObs51, startObs51 } from './obs51/index.js'; // prompt 51 (OBS51): helsedashbord, selvreparasjon, spor, ntfy
@@ -945,7 +943,7 @@ app.get('/mat/calendar.ics', matCalendar);
 // (ingen varsler, e-post, backup, oppdateringer eller selvreparasjon). Bare HTTP-serveren og migreringene kjører.
 const BG51 = process.env.NODE_ENV !== 'test' && process.env.OPS51_SANDBOX !== '1';
 migrateLocalHosts86().catch((e) => console.warn('[localfetch]', e.message)); // prompt 86: én gang – lokale verter i administratorenes abonnementer godkjennes
-if (BG51) { startMatScheduler(); startTrackingWorker(); startRssWorker(); startBirthdayWorker(); startSystemBackupScheduler(); startUpdateScheduler(); startTrialScheduler(); startDomainGlimtScheduler(); startSpaceScheduler(); startApi38(); startApi40(); startHealth42(); startMediaWatch43(); startMedia50(); startLogs44(); startPlayback44(); startLive89(); }
+if (BG51) { startMatScheduler(); startTrackingWorker(); startRssWorker(); startBirthdayWorker(); startSystemBackupScheduler(); startUpdateScheduler(); startTrialScheduler(); startDomainGlimtScheduler(); startSpaceScheduler(); startApi38(); startApi40(); startHealth42(); startMedia(); startLogs44(); startLive89(); }
 if (BG51) { startAccounts46(); startGphoto46(); } // prompt 46 (DATA46)
 if (BG51) startJobs(); // felles planlegger (server/jobs/): backup, brief, iCal, skolekalendere, Sjekk inn, «forlot»
 if (process.env.NODE_ENV !== 'test') startOps51(); // prompt 51 (OPS51): planlegger (backup, testet gjenoppretting, vedlikehold) og migrasjonslogg

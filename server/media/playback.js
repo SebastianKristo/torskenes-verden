@@ -21,6 +21,7 @@ import { authOrToken } from '../mobile.js';
 import { userCfg, setUserCfg } from '../settings.js';
 import { mediaAllowed43, mediaSource43 } from './arr.js';
 import { dtf } from '../intl-format.js'; // gjenbrukte Intl.DateTimeFormat
+import { registerJob } from '../jobs/index.js'; // logging av avspillinger
 
 const MOCK = () => process.env.MOCK_DATA === '1';
 db.exec(`CREATE TABLE IF NOT EXISTS plays44 (id INTEGER PRIMARY KEY AUTOINCREMENT, server TEXT NOT NULL, skey TEXT NOT NULL, user TEXT NOT NULL DEFAULT '', item TEXT NOT NULL DEFAULT '',
@@ -177,13 +178,8 @@ export async function logPlays44(now = Date.now()) {
   for (const r of q('SELECT id, server, skey, seen FROM plays44 WHERE stopped IS NULL AND seen>?').all(now - 3 * 3600_000)) if (!active.has(`${r.server}|${r.skey}`)) q('UPDATE plays44 SET stopped=? WHERE id=?').run(r.seen, r.id);
   return list.length;
 }
-let timer = null;
-export function startPlayback44() {
-  if (timer || process.env.NODE_ENV === 'test') return;
-  timer = setInterval(() => logPlays44().catch((e) => console.warn('[playback]', e.message)), 60_000);
-  timer.unref?.();
-  setTimeout(() => logPlays44().catch(() => {}), 15_000).unref?.();
-}
+// Felles planlegger (server/jobs/): ikke i test/sandkasse. Første runde 15 s etter oppstart står i startMedia (media/index.js).
+registerJob('media.avspillinger', 60_000, () => logPlays44(), { note: 'Avspilling: aktive Plex/Jellyfin-økter lagres i historikken' });
 
 /* ---------------- Historikk, statistikk og biblioteker ---------------- */
 

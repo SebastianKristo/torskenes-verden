@@ -15,15 +15,18 @@
 // index.js kaller mountMedia(app, …) én gang, på stedet der Media-rutene alltid har stått (etter /api/upcoming og /api/news,
 // før resten av domenene). Plex/Jellyfin-rutene /now, /recent og /history bruker integrasjonsklienten i index.js (ekte eller
 // mock), så den sendes inn.
+//
+// Bakgrunnsjobbene (varsler hvert 2. min, logging av avspillinger hvert minutt) registreres i arr.js og playback.js via
+// server/jobs/. startMedia() tar de første rundene rett etter oppstart; index.js kaller den bare når bakgrunnsjobber er lov.
 import { authOrToken } from '../mobile.js';
 import { homelabAuthCode46, signImages46, mediaDiag46, mediaDiagOut46 } from './middleware.js';
 import { media44Api, mediaSiteMw44, librarySearchMw44, legacyMedia44 } from './servers.js';
 import { nrkApi } from './nrk.js';
 import { yubalApi } from './yubal.js';
-import { mountMedia50 } from './images.js';
+import { mountMedia50, startMedia50 } from './images.js';
 import { media45Api } from './unmonitored.js';
-import { playback44Api } from './playback.js';
-import { media43Api } from './arr.js';
+import { playback44Api, logPlays44 } from './playback.js';
+import { media43Api, mediaWatch43 } from './arr.js';
 import { mountMedctl51 } from './control.js';
 
 /**
@@ -59,4 +62,11 @@ export function mountMedia(app, plex) {
   app.route('/api/playback', playback44Api); // Avspilling (Plex/Jellyfin, PIN-flyt, historikk, statistikk)
   app.route('/api/media', media43Api); // Sonarr, Radarr, qBittorrent, Prowlarr, Glimt, webhooks – etter /now, /recent, /history og /poster
   mountMedctl51(app); // /api/medctl51/now og /api/medctl51/sessions/:id/:action (egen prefiks, rekkefølgen er fri)
+}
+
+/** Første runde av jobbene 15 s etter oppstart (ellers først etter ett intervall), og plakatene forhåndsgenereres etter 45 s. */
+export function startMedia() {
+  setTimeout(() => mediaWatch43().catch(() => {}), 15_000).unref?.();
+  setTimeout(() => logPlays44().catch(() => {}), 15_000).unref?.();
+  startMedia50();
 }
