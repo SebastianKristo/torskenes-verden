@@ -60,17 +60,6 @@ function settStil(t) {
   fetch('/api/me/layout', { method: 'PUT', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ hlTheme: t }) }).catch(() => {});
 }
 
-/** Flytter brukerens lagrede FinansHub-valg til Homelab én gang per nettleser (Q15): «mork» blir Papir mørk, «glod» blir Glass.
- *  Bare når Homelab står på Papir med lys modus (ellers følger Økonomi allerede et mørkt valg). → true når noe ble flyttet. */
-export function flyttFinansValg(layout) {
-  if (!layout || ls('fh_design_flyttet')) return false;
-  lsSet('fh_design_flyttet', '1');
-  const old = layout.design;
-  if ((old !== 'mork' && old !== 'glod') || homelabStil(layout) !== 'papir' || homelabModus(layout) !== 'lys') return false;
-  if (old === 'glod') { layout.hlTheme = 'cur'; settStil('cur'); } else { layout.web_theme = 'dark'; settHomelabTema({ modus: 'mork' }); }
-  return true;
-}
-
 /** Kaller fn når Homelab-temaet endres (i denne fanen via theme51, eller i en annen fane). */
 export function nårTemaEndres(fn) {
   new MutationObserver(fn).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme51', 'data-theme51-eff'] });

@@ -47,20 +47,10 @@ test('ukjent Homelab-modus: det gamle FinansHub-valget gjelder', () => {
   assert.equal(T.homelabMorkt({ hlTheme: '2c' }), null);
 });
 
-test('FinansHub-valget flyttes til Homelab én gang (mork → Papir mørk, glod → Glass)', () => {
-  reset();
-  const l = { hlTheme: '2c', web_theme: 'light', design: 'mork' };
-  assert.equal(T.flyttFinansValg(l), true);
-  assert.equal(store.get('papir_web_mode'), 'dark');
-  assert.equal(events.at(-1)?.type, 'papir-web-mode', 'webx51.js lagrer modusen i /api/me/theme51');
-  assert.equal(T.flyttFinansValg({ hlTheme: '2c', web_theme: 'light', design: 'mork' }), false, 'bare én gang');
-  reset();
-  assert.equal(T.flyttFinansValg({ hlTheme: '2c', web_theme: 'light', design: 'glod' }), true);
-  assert.equal(store.get('hl_theme'), 'cur');
-  assert.deepEqual(puts.at(-1), { url: '/api/me/layout', body: { hlTheme: 'cur' } });
-  reset();
-  assert.equal(T.flyttFinansValg({ hlTheme: 'cur', web_theme: 'light', design: 'mork' }), false, 'Glass er alt mørkt');
-  assert.equal(store.get('fh_design_flyttet'), '1');
+test('Homelab-temaet endres aldri av det gamle FinansHub-valget', () => {
+  const src = readFileSync(new URL('../public/finans/js/desktop.js', import.meta.url), 'utf8');
+  assert.ok(!/flyttFinansValg/.test(src));
+  assert.equal(typeof T.flyttFinansValg, 'undefined');
 });
 
 test('loader.js velger samme tema som tema.js før første tegning', () => {

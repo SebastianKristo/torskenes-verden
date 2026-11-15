@@ -8,7 +8,7 @@ import {
   smooth, spark, conic, icon, logo, aiLine, ICONS, loadLogoRegistry, sheetBtn,
 } from './core.js';
 import { reanalyzeBtn, bindReanalyze } from './reanalyze.js';
-import { fhDesign, flyttFinansValg, settHomelabTema, nårTemaEndres } from './tema.js';
+import { fhDesign, settHomelabTema, nårTemaEndres } from './tema.js';
 import { clearBtn, bindSearchFields } from '/assets/js/searchfield.js';
 import { bindSuggest } from './fsuggest.js';
 import { linesOf, matchLines, markText, hlBanner, hlList, hlImage, hlFocus } from './rc-hl.js';
@@ -168,7 +168,6 @@ const compactNav = () => (typeof S.layout?.compactNav === 'boolean' ? S.layout.c
 // Setter tema-attributtene på <html>. Mobil har egne design, så temaene gjelder bare desktop (CSS er avgrenset med data-ui).
 export function applyTheme() {
   if (!temaBundet) { temaBundet = true; nårTemaEndres(() => { if (document.documentElement.dataset.ui === 'desktop') { applyTheme(); render(); } }); }
-  if (S.layout) flyttFinansValg(S.layout);
   const h = document.documentElement, d = design();
   if (h.dataset.theme !== d) h.dataset.theme = d;
   h.setAttribute('data-v3', '');

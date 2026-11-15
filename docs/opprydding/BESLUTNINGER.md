@@ -30,7 +30,7 @@ Grunnregler for beslutningene:
 |---|---|---|---|
 | Q13 | Mørkt glass («cur») | **Beholdes som egen stil.** Tokens får **stil** (Papir, Glass) × **modus** (lys, mørk). Glass har bare mørk modus i dag og får ikke lys ennå | Det er en funksjon. Å fjerne den ville bryte regelen |
 | Q14 | Lyse Familie-, Kalender- og Media-sider i glass | **Feil.** Alle sider følger valgt stil og modus | Målt som fargefeil (B-F2) |
-| Q15 | FinansHubs egne temaer | Økonomi **følger Homelab-modusen**. `mork` blir Papir mørk og `glod` blir Glass. Brukerens lagrede valg flyttes én gang | Mørk modus skal ikke måtte velges to steder (B-F1) |
+| Q15 | FinansHubs egne temaer | Økonomi **følger Homelab-modusen og -stilen** (`mork` = Papir mørk, `glod` = Glass). Homelab-valget vinner alltid; det gamle FinansHub-valget brukes bare når Homelab-modusen er ukjent, og det endrer aldri Homelab-temaet | Mørk modus skal ikke måtte velges to steder (B-F1) |
 | Q16 | Dynamic color og iOS-stil | Android: **dynamic color forblir av** (fast designspråk). iOS: tvunget mørk systemstil **fjernes**, og systemstilen følger appens modus. Kun stående iPhone **beholdes** (iPad og Mac roterer fritt) | Lyse temaer skal ikke få mørke systemflater |
 
 ## Logikk (Fase 2)
