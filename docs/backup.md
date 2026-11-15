@@ -102,7 +102,7 @@ ser og endrer dette. API: `/api/backup` (se `server/system-backup.js`).
 ### Serverhemmeligheten og gjenoppretting
 
 Serverhemmeligheten (`SESSION_SECRET` → `data/session-secret` → på en eldre installasjon uten noen av dem: en fast *reservenøkkel*
-i koden, «legacy») brukes til å kryptere eller HMAC-e lagrede data. Kartlegging (se `server/secret91.js`):
+i koden, «legacy») brukes til å kryptere eller HMAC-e lagrede data. Kartlegging (se `server/auth/secret-rekey.js`):
 
 | Data | Hvordan | Etter bytte av hemmelighet |
 |---|---|---|

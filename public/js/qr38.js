@@ -1,4 +1,4 @@
-// Prompt 38 (WEB38): QR-koder i nettleseren uten avhengigheter (samme koder som server/totp.js: byte-modus, feilretting M,
+// Prompt 38 (WEB38): QR-koder i nettleseren uten avhengigheter (samme koder som server/auth/totp.js: byte-modus, feilretting M,
 // versjon 1–10). Brukes av QR-innloggingen på innloggingssiden (login.js).
 /* ---------------- QR-kode (byte-modus, feilretting M, versjon 1–10) ---------------- */
 

@@ -52,7 +52,7 @@ const macUrl = String(process.env.EVAL_MAC_OCR_URL ?? '').replace(/\/+$/, ''), m
 const passHosts = new Set(macUrl ? [(() => { try { return new URL(macUrl).host; } catch { return null; } })()].filter(Boolean) : []);
 const net = installNet({ modelHosts, passHosts, fakeModel: cfg.backend === 'mock' ? makeFakeModel() : null });
 
-const { hashPassword } = await import(pathToFileURL(join(REPO, 'server/password.js')).href);
+const { hashPassword } = await import(pathToFileURL(join(REPO, 'server/auth/password.js')).href);
 process.env.APP_PASSWORD_HASH = hashPassword('evalpassord47');
 const imp = (p) => import(pathToFileURL(join(REPO, p)).href);
 const { default: app } = await imp('server/index.js');
