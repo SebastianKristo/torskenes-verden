@@ -11,7 +11,7 @@
 @media (max-width:767px){.inv-row{grid-template-columns:36px minmax(0,1fr) auto;gap:10px;padding:10px 14px}.inv-row>:nth-child(3),.inv-row>:nth-child(4),.inv-row .x{display:none}}
 
 /* ---------- Hjem (Home OS): papirfarger i stedet for mørke paneler ---------- */
-html[data-hl="2c"] .fx{--f-bg:#f3efe6;--f-card:#fff;--f-line:#e3ddcf;--f-in:#d8d1c2;--f-sub:#f3efe6;--f-t:#1b1a17;--f-2:#6b665c;--f-3:#6f6a5f;--f-acc:#b23a2a;--f-acc-t:#fff;--f-acc-l:#b23a2a;--f-pos:#2f7a4f;--f-pos-bg:#dfe9e1;--f-mono:var(--pmono);font-family:var(--sans);color:var(--ink)}
+html[data-hl="2c"] .fx{--f-bg:#f3efe6;--f-card:#fff;--f-line:#e3ddcf;--f-in:#d8d1c2;--f-sub:#f3efe6;--f-t:#1b1a17;--f-2:#6b665c;--f-3:#6f6a5f;--f-acc:#b23a2a;--f-acc-t:var(--ds-on-category);--f-acc-l:#b23a2a;--f-pos:var(--ds-category-green);--f-pos-bg:#dfe9e1;--f-mono:var(--pmono);font-family:var(--sans);color:var(--ink)}
 html[data-hl="2c"] .fx .kpi,html[data-hl="2c"] .fx .fcard,html[data-hl="2c"] .fx .list,html[data-hl="2c"] body.not-dash .fx .card{background:#fff;border:0;border-radius:20px}
 html[data-hl="2c"] .fx .kpi b{font:400 30px var(--serif)}
 html[data-hl="2c"] .fx .chip{border-color:var(--ink);color:var(--ink)}

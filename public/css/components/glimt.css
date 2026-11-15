@@ -62,7 +62,7 @@
 
 /* ---------- Glimt-agenten: treff, oppfølgingsspørsmål og bekreftelse (glimt-agent45.js) ---------- */
 .ga45{display:flex;flex-direction:column;gap:10px;margin-top:10px;font-family:Manrope,system-ui,sans-serif;--ga-ink:#1b1a17;--ga-mut:#6b665c;--ga-card:#fffdf8;--ga-line:#e3ddcf;--ga-chip:#efe9dc}
-.ga45.dark{--ga-ink:#fff;--ga-mut:rgba(255,255,255,.66);--ga-card:rgba(255,255,255,.08);--ga-line:rgba(255,255,255,.16);--ga-chip:rgba(255,255,255,.12)}
+.ga45.dark{--ga-ink:var(--ds-on-category);--ga-mut:rgba(255,255,255,.66);--ga-card:rgba(255,255,255,.08);--ga-line:rgba(255,255,255,.16);--ga-chip:rgba(255,255,255,.12)}
 html[data-mode="dark"] .ga45:not(.dark){--ga-ink:#f3efe6;--ga-mut:#a39d90;--ga-card:#211e18;--ga-line:#3a352c;--ga-chip:#2b2720}
 .ga45-res{display:flex;flex-direction:column;border:1px solid var(--ga-line);border-radius:14px;overflow:hidden;background:var(--ga-card)}
 .ga45-r{display:flex;align-items:center;gap:10px;padding:9px 12px;border:0;border-top:1px solid var(--ga-line);background:transparent;color:var(--ga-ink);text-align:left;cursor:pointer;font:inherit;min-width:0}
@@ -80,6 +80,6 @@ html[data-mode="dark"] .ga45:not(.dark){--ga-ink:#f3efe6;--ga-mut:#a39d90;--ga-c
 .ga45-opts{display:flex;flex-wrap:wrap;gap:6px}
 .ga45-o{min-height:34px;padding:0 14px;border-radius:999px;border:1px solid var(--ga-line);background:var(--ga-card);color:var(--ga-ink);font:600 13px Manrope,system-ui,sans-serif;cursor:pointer}
 .ga45-o:hover{background:var(--ga-chip)}
-.ga45-o.danger{background:#b23a2a;border-color:#b23a2a;color:#fff}
+.ga45-o.danger{background:#b23a2a;border-color:#b23a2a;color:var(--ds-on-category)}
 .ga45-o:disabled{opacity:.6;cursor:default}
 .ga45-err{font-size:13px;color:#e0705e}
