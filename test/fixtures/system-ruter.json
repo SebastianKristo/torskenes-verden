@@ -1,0 +1,2565 @@
+{
+ "GET /api/health": {
+  "status": "200 200 200 200",
+  "A": {
+   "checked": "",
+   "phase": "",
+   "progress": "",
+   "ready": "",
+   "restarting": "",
+   "services": [
+    {
+     "error": "",
+     "host": "",
+     "ms": "",
+     "name": "",
+     "up": "",
+     "url": ""
+    }
+   ],
+   "startedAt": "",
+   "state": "",
+   "steps": [
+    {
+     "id": "",
+     "label": "",
+     "ms": "",
+     "status": ""
+    }
+   ],
+   "updating": "",
+   "uptimeMs": "",
+   "version": ""
+  },
+  "I": {
+   "checked": "",
+   "phase": "",
+   "progress": "",
+   "ready": "",
+   "restarting": "",
+   "services": [
+    {
+     "error": "",
+     "ms": "",
+     "name": "",
+     "up": ""
+    }
+   ],
+   "startedAt": "",
+   "state": "",
+   "steps": [
+    {
+     "id": "",
+     "label": "",
+     "ms": "",
+     "status": ""
+    }
+   ],
+   "updating": "",
+   "uptimeMs": "",
+   "version": ""
+  },
+  "TI": {
+   "phase": "",
+   "progress": "",
+   "ready": "",
+   "restarting": "",
+   "startedAt": "",
+   "state": "",
+   "steps": [
+    {
+     "id": "",
+     "label": "",
+     "ms": "",
+     "status": ""
+    }
+   ],
+   "updating": "",
+   "uptimeMs": "",
+   "version": ""
+  }
+ },
+ "GET /api/health?boot=1": {
+  "status": "200 200 200 200",
+  "A": {
+   "ready": "",
+   "startedAt": "",
+   "steps": [
+    {
+     "id": "",
+     "label": "",
+     "ms": "",
+     "status": ""
+    }
+   ],
+   "uptimeMs": "",
+   "version": ""
+  },
+  "I": {
+   "ready": "",
+   "startedAt": "",
+   "steps": [
+    {
+     "id": "",
+     "label": "",
+     "ms": "",
+     "status": ""
+    }
+   ],
+   "uptimeMs": "",
+   "version": ""
+  },
+  "TI": {
+   "ready": "",
+   "startedAt": "",
+   "steps": [
+    {
+     "id": "",
+     "label": "",
+     "ms": "",
+     "status": ""
+    }
+   ],
+   "uptimeMs": "",
+   "version": ""
+  }
+ },
+ "GET /api/version": {
+  "status": "200 200 200 200",
+  "A": {
+   "api": "",
+   "codename": "",
+   "contract": "",
+   "dbSchema": "",
+   "features": [
+    ""
+   ],
+   "minClient": "",
+   "name": "",
+   "shortName": "",
+   "version": ""
+  },
+  "I": {
+   "api": "",
+   "codename": "",
+   "contract": "",
+   "dbSchema": "",
+   "features": [
+    ""
+   ],
+   "minClient": "",
+   "name": "",
+   "shortName": "",
+   "version": ""
+  },
+  "TI": {
+   "api": "",
+   "codename": "",
+   "contract": "",
+   "dbSchema": "",
+   "features": [
+    ""
+   ],
+   "minClient": "",
+   "name": "",
+   "shortName": "",
+   "version": ""
+  }
+ },
+ "GET /api/config/servers": {
+  "status": "200 200 200 200",
+  "A": {
+   "api": "",
+   "app": "",
+   "defaults": {
+    "external": "",
+    "local": ""
+   },
+   "localUrl": "",
+   "publicUrl": "",
+   "source": {
+    "localUrl": "",
+    "publicUrl": ""
+   }
+  },
+  "I": {
+   "api": "",
+   "app": "",
+   "defaults": {
+    "external": "",
+    "local": ""
+   },
+   "localUrl": "",
+   "publicUrl": "",
+   "source": {
+    "localUrl": "",
+    "publicUrl": ""
+   }
+  },
+  "TI": {
+   "api": "",
+   "app": "",
+   "defaults": {
+    "external": "",
+    "local": ""
+   },
+   "localUrl": "",
+   "publicUrl": "",
+   "source": {
+    "localUrl": "",
+    "publicUrl": ""
+   }
+  }
+ },
+ "GET /api/flags": {
+  "status": "200 200 200 401",
+  "A": {
+   "device": "",
+   "flags": {
+    "crash_breadcrumbs51": "",
+    "dal_emo53": "",
+    "dal_eye53": "",
+    "dal_gist53": "",
+    "dal_moderator53": "",
+    "dal_redact53": "",
+    "dal_tongue53": "",
+    "dal_voice53": "",
+    "fermion_neutrino53": "",
+    "fermion_phonon53": "",
+    "glimt_proactive51": "",
+    "whisper_nb54": ""
+   },
+   "user": ""
+  },
+  "I": {
+   "device": "",
+   "flags": {
+    "crash_breadcrumbs51": "",
+    "dal_emo53": "",
+    "dal_eye53": "",
+    "dal_gist53": "",
+    "dal_moderator53": "",
+    "dal_redact53": "",
+    "dal_tongue53": "",
+    "dal_voice53": "",
+    "fermion_neutrino53": "",
+    "fermion_phonon53": "",
+    "glimt_proactive51": "",
+    "whisper_nb54": ""
+   },
+   "user": ""
+  },
+  "TI": {
+   "device": "",
+   "flags": {
+    "crash_breadcrumbs51": "",
+    "dal_emo53": "",
+    "dal_eye53": "",
+    "dal_gist53": "",
+    "dal_moderator53": "",
+    "dal_redact53": "",
+    "dal_tongue53": "",
+    "dal_voice53": "",
+    "fermion_neutrino53": "",
+    "fermion_phonon53": "",
+    "glimt_proactive51": "",
+    "whisper_nb54": ""
+   },
+   "user": ""
+  }
+ },
+ "GET /api/whatsnew": {
+  "status": "200 200 200 401",
+  "A": {
+   "current": "",
+   "date": "",
+   "date_label": "",
+   "heading": "",
+   "items": [
+    ""
+   ],
+   "label": "",
+   "markdown": "",
+   "points": [
+    {
+     "more": "",
+     "text": "",
+     "title": ""
+    }
+   ],
+   "seen": "",
+   "seenVersion": "",
+   "show": "",
+   "title": "",
+   "title_raw": "",
+   "version": ""
+  },
+  "I": {
+   "current": "",
+   "date": "",
+   "date_label": "",
+   "heading": "",
+   "items": [
+    ""
+   ],
+   "label": "",
+   "markdown": "",
+   "points": [
+    {
+     "more": "",
+     "text": "",
+     "title": ""
+    }
+   ],
+   "seen": "",
+   "seenVersion": "",
+   "show": "",
+   "title": "",
+   "title_raw": "",
+   "version": ""
+  },
+  "TI": {
+   "current": "",
+   "date": "",
+   "date_label": "",
+   "heading": "",
+   "items": [
+    ""
+   ],
+   "label": "",
+   "markdown": "",
+   "points": [
+    {
+     "more": "",
+     "text": "",
+     "title": ""
+    }
+   ],
+   "seen": "",
+   "seenVersion": "",
+   "show": "",
+   "title": "",
+   "title_raw": "",
+   "version": ""
+  }
+ },
+ "GET /api/app/pages": {
+  "status": "200 200 200 401",
+  "A": {
+   "maxTabs": "",
+   "more": {
+    "icon": "",
+    "id": "",
+    "key": "",
+    "material": "",
+    "name": "",
+    "sf": ""
+   },
+   "pages": [
+    {
+     "icon": "",
+     "id": "",
+     "key": "",
+     "kind": "",
+     "material": "",
+     "module": "",
+     "name": "",
+     "route": "",
+     "sf": ""
+    }
+   ]
+  },
+  "I": {
+   "maxTabs": "",
+   "more": {
+    "icon": "",
+    "id": "",
+    "key": "",
+    "material": "",
+    "name": "",
+    "sf": ""
+   },
+   "pages": [
+    {
+     "icon": "",
+     "id": "",
+     "key": "",
+     "kind": "",
+     "material": "",
+     "name": "",
+     "route": "",
+     "sf": ""
+    }
+   ]
+  },
+  "TI": {
+   "maxTabs": "",
+   "more": {
+    "icon": "",
+    "id": "",
+    "key": "",
+    "material": "",
+    "name": "",
+    "sf": ""
+   },
+   "pages": [
+    {
+     "icon": "",
+     "id": "",
+     "key": "",
+     "kind": "",
+     "material": "",
+     "name": "",
+     "route": "",
+     "sf": ""
+    }
+   ]
+  }
+ },
+ "GET /api/settings/index": {
+  "status": "200 200 200 401",
+  "A": [
+   {
+    "anchor": "",
+    "color": "",
+    "description": "",
+    "icon": "",
+    "id": "",
+    "keywords": [
+     "…"
+    ],
+    "path": "",
+    "route": {
+     "mobile": "",
+     "web": ""
+    },
+    "tip": "",
+    "title": ""
+   }
+  ],
+  "I": [
+   {
+    "anchor": "",
+    "color": "",
+    "description": "",
+    "icon": "",
+    "id": "",
+    "keywords": [
+     "…"
+    ],
+    "path": "",
+    "route": {
+     "mobile": "",
+     "web": ""
+    },
+    "title": ""
+   }
+  ],
+  "TI": [
+   {
+    "anchor": "",
+    "color": "",
+    "description": "",
+    "icon": "",
+    "id": "",
+    "keywords": [
+     "…"
+    ],
+    "path": "",
+    "route": {
+     "mobile": "",
+     "web": ""
+    },
+    "title": ""
+   }
+  ]
+ },
+ "GET /api/settings/sections": {
+  "status": "200 200 200 401",
+  "A": {
+   "sections": [
+    {
+     "admin": "",
+     "api": "[]",
+     "color": "",
+     "icon": "",
+     "id": "",
+     "items": "[]",
+     "route": "{}",
+     "title": ""
+    }
+   ]
+  },
+  "I": {
+   "sections": [
+    {
+     "api": "[]",
+     "color": "",
+     "icon": "",
+     "id": "",
+     "items": "[]",
+     "route": "{}",
+     "title": ""
+    }
+   ]
+  },
+  "TI": {
+   "sections": [
+    {
+     "api": "[]",
+     "color": "",
+     "icon": "",
+     "id": "",
+     "items": "[]",
+     "route": "{}",
+     "title": ""
+    }
+   ]
+  }
+ },
+ "GET /api/dashboard/layout": {
+  "status": "200 200 200 401",
+  "A": {
+   "at": "",
+   "cols": "",
+   "device": "",
+   "empty": "",
+   "gap": "",
+   "items": [],
+   "snap": "",
+   "v": ""
+  },
+  "I": {
+   "at": "",
+   "cols": "",
+   "device": "",
+   "empty": "",
+   "gap": "",
+   "items": [],
+   "snap": "",
+   "v": ""
+  },
+  "TI": {
+   "at": "",
+   "cols": "",
+   "device": "",
+   "empty": "",
+   "gap": "",
+   "items": [],
+   "snap": "",
+   "v": ""
+  }
+ },
+ "GET /api/dashboard/layout?device=mobile": {
+  "status": "200 200 200 401",
+  "A": {
+   "at": "",
+   "cols": "",
+   "device": "",
+   "empty": "",
+   "gap": "",
+   "items": [],
+   "snap": "",
+   "v": ""
+  },
+  "I": {
+   "at": "",
+   "cols": "",
+   "device": "",
+   "empty": "",
+   "gap": "",
+   "items": [],
+   "snap": "",
+   "v": ""
+  },
+  "TI": {
+   "at": "",
+   "cols": "",
+   "device": "",
+   "empty": "",
+   "gap": "",
+   "items": [],
+   "snap": "",
+   "v": ""
+  }
+ },
+ "GET /api/admin/impersonate": {
+  "status": "200 200 200 401",
+  "A": {
+   "active": ""
+  },
+  "I": {
+   "active": ""
+  },
+  "TI": {
+   "active": ""
+  }
+ },
+ "GET /api/admin/impersonate/notice": {
+  "status": "200 200 200 401",
+  "A": {
+   "notice": ""
+  },
+  "I": {
+   "notice": ""
+  },
+  "TI": {
+   "notice": ""
+  }
+ },
+ "GET /api/server/owner": {
+  "status": "200 200 200 401",
+  "A": {
+   "candidates": [
+    {
+     "avatarUrl": "",
+     "eligible": "",
+     "id": "",
+     "name": "",
+     "reason": "",
+     "role": "",
+     "totp": ""
+    }
+   ],
+   "me": {
+    "canTransfer": "",
+    "id": "",
+    "isOwner": "",
+    "needsApproval": ""
+   },
+   "owner": {
+    "avatarUrl": "",
+    "id": "",
+    "name": "",
+    "since": ""
+   },
+   "pending": []
+  },
+  "I": {
+   "candidates": [],
+   "me": {
+    "canTransfer": "",
+    "id": "",
+    "isOwner": "",
+    "needsApproval": ""
+   },
+   "owner": {
+    "avatarUrl": "",
+    "id": "",
+    "name": "",
+    "since": ""
+   },
+   "pending": []
+  },
+  "TI": {
+   "candidates": [],
+   "me": {
+    "canTransfer": "",
+    "id": "",
+    "isOwner": "",
+    "needsApproval": ""
+   },
+   "owner": {
+    "avatarUrl": "",
+    "id": "",
+    "name": "",
+    "since": ""
+   },
+   "pending": []
+  }
+ },
+ "GET /api/users/2/layout": {
+  "status": "404 403 403 401",
+  "A": {
+   "code": "",
+   "error": ""
+  },
+  "I": {
+   "code": "",
+   "error": "",
+   "restricted": ""
+  },
+  "TI": {
+   "code": "",
+   "error": "",
+   "restricted": ""
+  }
+ },
+ "GET /api/admin/jobs": {
+  "status": "200 403 403 401",
+  "A": {
+   "jobs": [
+    {
+     "active": "",
+     "everyMs": "",
+     "lastError": "",
+     "lastRun": "",
+     "lastRunAt": "",
+     "name": "",
+     "note": "",
+     "runs": ""
+    }
+   ],
+   "started": ""
+  },
+  "I": {
+   "code": "",
+   "error": "",
+   "restricted": ""
+  },
+  "TI": {
+   "code": "",
+   "error": "",
+   "restricted": ""
+  }
+ },
+ "GET /api/admin/aliases": {
+  "status": "200 403 403 401",
+  "A": {
+   "aliases": [
+    {
+     "alias": "",
+     "count": "",
+     "daysSinceUse": "",
+     "firstUsedAt": "",
+     "lastUsedAt": "",
+     "method": "",
+     "note": "",
+     "target": ""
+    }
+   ]
+  },
+  "I": {
+   "code": "",
+   "error": "",
+   "restricted": ""
+  },
+  "TI": {
+   "code": "",
+   "error": "",
+   "restricted": ""
+  }
+ },
+ "GET /api/admin/local-fetch-hosts": {
+  "status": "200 403 403 401",
+  "A": {
+   "hosts": [],
+   "max": ""
+  },
+  "I": {
+   "code": "",
+   "error": ""
+  },
+  "TI": {
+   "code": "",
+   "error": ""
+  }
+ },
+ "GET /api/admin/flags51": {
+  "status": "200 403 403 401",
+  "A": {
+   "devices": [],
+   "flags": [
+    {
+     "builtin": "",
+     "created": "",
+     "default": "",
+     "description": "",
+     "key": "",
+     "overrides": "[]",
+     "updated": ""
+    }
+   ],
+   "users": [
+    {
+     "id": "",
+     "name": "",
+     "role": ""
+    }
+   ]
+  },
+  "I": {
+   "code": "",
+   "error": ""
+  },
+  "TI": {
+   "code": "",
+   "error": ""
+  }
+ },
+ "GET /api/admin/crashes51": {
+  "status": "200 403 403 401",
+  "A": {
+   "crashes": []
+  },
+  "I": {
+   "code": "",
+   "error": ""
+  },
+  "TI": {
+   "code": "",
+   "error": ""
+  }
+ },
+ "GET /api/admin/crashes51/status": {
+  "status": "200 403 403 401",
+  "A": {
+   "glitchtip": {
+    "active": "",
+    "configured": "",
+    "host": "",
+    "lastAt": "",
+    "lastError": "",
+    "local": "",
+    "note": "",
+    "reachable": ""
+   },
+   "last24h": "",
+   "maxBytes": "",
+   "pending": "",
+   "total": ""
+  },
+  "I": {
+   "code": "",
+   "error": ""
+  },
+  "TI": {
+   "code": "",
+   "error": ""
+  }
+ },
+ "GET /api/system/docker/setup": {
+  "status": "200 403 403 401",
+  "A": {
+   "at": "",
+   "available": "",
+   "canRun": "",
+   "error": "",
+   "host": "",
+   "proxy": "",
+   "source": "",
+   "state": "",
+   "updater": ""
+  },
+  "I": {
+   "code": "",
+   "error": "",
+   "restricted": ""
+  },
+  "TI": {
+   "code": "",
+   "error": "",
+   "restricted": ""
+  }
+ },
+ "GET /api/system/containers": {
+  "status": "200 403 403 401",
+  "A": {
+   "available": "",
+   "containers": [
+    {
+     "color": "",
+     "errors1h": "",
+     "exitCode": "",
+     "health": "",
+     "id": "",
+     "image": "",
+     "name": "",
+     "oomKilled": "",
+     "restarts": "",
+     "self": "",
+     "startedAt": "",
+     "state": "",
+     "status": "",
+     "tag": "",
+     "uptime": "",
+     "warnings1h": ""
+    }
+   ],
+   "summary": {
+    "disk": {
+     "path": "",
+     "text": "",
+     "used": ""
+    },
+    "errors1h": "",
+    "restarts": "",
+    "total": "",
+    "up": "",
+    "warnings1h": "",
+    "worst": {
+     "name": "",
+     "restarts": ""
+    }
+   }
+  },
+  "I": {
+   "code": "",
+   "error": "",
+   "restricted": ""
+  },
+  "TI": {
+   "code": "",
+   "error": "",
+   "restricted": ""
+  }
+ },
+ "GET /api/system/logs": {
+  "status": "200 403 403 401",
+  "A": {
+   "available": "",
+   "containers": [
+    ""
+   ],
+   "filter": {
+    "ct": "",
+    "level": "",
+    "limit": "",
+    "q": "",
+    "since": ""
+   },
+   "lines": [
+    {
+     "ct": "",
+     "ctId": "",
+     "id": "",
+     "level": "",
+     "msg": "",
+     "stream": "",
+     "t": "",
+     "ts": ""
+    }
+   ],
+   "total": "",
+   "truncated": ""
+  },
+  "I": {
+   "code": "",
+   "error": "",
+   "restricted": ""
+  },
+  "TI": {
+   "code": "",
+   "error": "",
+   "restricted": ""
+  }
+ },
+ "GET /api/system/logs/groups": {
+  "status": "200 403 403 401",
+  "A": {
+   "groups": [
+    {
+     "count": "",
+     "countText": "",
+     "ct": "",
+     "explain": "{}",
+     "firstSeen": "",
+     "key": "",
+     "lastSeen": "",
+     "level": "",
+     "message": "",
+     "pattern": ""
+    }
+   ],
+   "hours": "",
+   "total": ""
+  },
+  "I": {
+   "code": "",
+   "error": "",
+   "restricted": ""
+  },
+  "TI": {
+   "code": "",
+   "error": "",
+   "restricted": ""
+  }
+ },
+ "GET /api/system/obs51/traces": {
+  "status": "200 403 403 401",
+  "A": {
+   "items": [],
+   "routes": [
+    {
+     "errors": "",
+     "max": "",
+     "method": "",
+     "n": "",
+     "p50": "",
+     "p95": "",
+     "route": "",
+     "slow": ""
+    }
+   ],
+   "slowMs": "",
+   "total": ""
+  },
+  "I": {
+   "code": "",
+   "error": "",
+   "restricted": ""
+  },
+  "TI": {
+   "code": "",
+   "error": "",
+   "restricted": ""
+  }
+ },
+ "GET /api/system/obs51/heal": {
+  "status": "200 403 403 401",
+  "A": {
+   "drafts": [],
+   "events": [],
+   "lastHour": "",
+   "settings": {
+    "exclude": [],
+    "maxPerHour": "",
+    "on": ""
+   },
+   "watching": []
+  },
+  "I": {
+   "code": "",
+   "error": "",
+   "restricted": ""
+  },
+  "TI": {
+   "code": "",
+   "error": "",
+   "restricted": ""
+  }
+ },
+ "GET /api/system/obs51/proxmox": {
+  "status": "200 403 403 401",
+  "A": {
+   "caSet": "",
+   "configured": "",
+   "secretSet": "",
+   "tokenId": "",
+   "url": ""
+  },
+  "I": {
+   "code": "",
+   "error": "",
+   "restricted": ""
+  },
+  "TI": {
+   "code": "",
+   "error": "",
+   "restricted": ""
+  }
+ },
+ "GET /api/me/ntfy51": {
+  "status": "200 200 200 401",
+  "A": {
+   "enabled": "",
+   "help": "",
+   "publicUrl": "",
+   "tokenSet": "",
+   "topics": [],
+   "upstream": {
+    "enabled": "",
+    "text": ""
+   }
+  },
+  "I": {
+   "enabled": "",
+   "help": "",
+   "publicUrl": "",
+   "tokenSet": "",
+   "topics": [],
+   "upstream": {
+    "enabled": "",
+    "text": ""
+   }
+  },
+  "TI": {
+   "enabled": "",
+   "help": "",
+   "publicUrl": "",
+   "tokenSet": "",
+   "topics": [],
+   "upstream": {
+    "enabled": "",
+    "text": ""
+   }
+  }
+ },
+ "GET /api/ops51/summary": {
+  "status": "200 403 403 401",
+  "A": {
+   "backup": {
+    "copies": "",
+    "enabled": "",
+    "issues": [
+     "…"
+    ],
+    "lastOkAt": "",
+    "lastRun": "",
+    "legacyNas": "",
+    "restic": {
+     "available": "",
+     "error": "",
+     "version": ""
+    },
+    "restoreTest": "",
+    "rule321": {
+     "copies": "",
+     "media": "",
+     "offsite": ""
+    },
+    "running": "",
+    "status": "",
+    "targets": [
+     "…"
+    ],
+    "title": ""
+   },
+   "db": {
+    "freePct": "",
+    "lastIntegrity": "",
+    "lastVacuum": "",
+    "sizeMb": "",
+    "status": "",
+    "title": "",
+    "walMb": "",
+    "walWarn": ""
+   },
+   "sandbox": "",
+   "updates": {
+    "channel": "",
+    "job": "",
+    "previous": "",
+    "staging": "",
+    "status": "",
+    "title": "",
+    "updaterAvailable": "",
+    "updating": ""
+   }
+  },
+  "I": {
+   "code": "",
+   "error": ""
+  },
+  "TI": {
+   "code": "",
+   "error": ""
+  }
+ },
+ "GET /api/ops51/updates": {
+  "status": "200 403 403 401",
+  "A": {
+   "channel": "",
+   "job": "",
+   "previous": "",
+   "staging": "",
+   "status": "",
+   "title": "",
+   "updaterAvailable": "",
+   "updating": ""
+  },
+  "I": {
+   "code": "",
+   "error": ""
+  },
+  "TI": {
+   "code": "",
+   "error": ""
+  }
+ },
+ "GET /api/ops51/db": {
+  "status": "200 403 403 401",
+  "A": {
+   "health": {
+    "files": [
+     "…"
+    ],
+    "freePages": "",
+    "freePct": "",
+    "last": "",
+    "lastIntegrity": "",
+    "lastVacuum": "",
+    "pageSize": "",
+    "pages": "",
+    "sizeBytes": "",
+    "sizeMb": "",
+    "status": "",
+    "wal": {
+     "checkpoint": "{}",
+     "mode": "",
+     "ok": "",
+     "walBytes": "",
+     "walMb": "",
+     "warn": ""
+    }
+   },
+   "maintenance": [],
+   "migrations": [],
+   "running": "",
+   "tables": {
+    "count": "",
+    "tables": [
+     "…"
+    ],
+    "via": ""
+   }
+  },
+  "I": {
+   "code": "",
+   "error": ""
+  },
+  "TI": {
+   "code": "",
+   "error": ""
+  }
+ },
+ "GET /api/ops51/backup/settings": {
+  "status": "200 403 403 401",
+  "A": {
+   "defaults": {
+    "localRepo": ""
+   },
+   "enabled": "",
+   "keep": {
+    "daily": "",
+    "monthly": "",
+    "weekly": ""
+   },
+   "keyCreatedAt": "",
+   "keySet": "",
+   "keyShown": "",
+   "restic": {
+    "available": "",
+    "error": "",
+    "version": ""
+   },
+   "restoreTest": "",
+   "targets": {
+    "local": {
+     "enabled": "",
+     "repo": ""
+    },
+    "nas": {
+     "enabled": "",
+     "passSet": "",
+     "repo": "",
+     "userSet": ""
+    },
+    "offsite": {
+     "accountIdSet": "",
+     "accountKeySet": "",
+     "enabled": "",
+     "provider": "",
+     "repo": ""
+    }
+   },
+   "time": ""
+  },
+  "I": {
+   "code": "",
+   "error": ""
+  },
+  "TI": {
+   "code": "",
+   "error": ""
+  }
+ },
+ "GET /api/ops51/backup/runs": {
+  "status": "200 403 403 401",
+  "A": {
+   "items": [],
+   "running": ""
+  },
+  "I": {
+   "code": "",
+   "error": ""
+  },
+  "TI": {
+   "code": "",
+   "error": ""
+  }
+ },
+ "GET /api/ops51/backup/restore-tests": {
+  "status": "200 403 403 401",
+  "A": {
+   "items": [],
+   "running": ""
+  },
+  "I": {
+   "code": "",
+   "error": ""
+  },
+  "TI": {
+   "code": "",
+   "error": ""
+  }
+ },
+ "GET /api/ops51/smoke": {
+  "status": "404 404 404 404",
+  "A": {
+   "code": "",
+   "error": ""
+  },
+  "I": {
+   "code": "",
+   "error": ""
+  },
+  "TI": {
+   "code": "",
+   "error": ""
+  }
+ },
+ "GET /api/system/update": {
+  "status": "200 403 403 401",
+  "A": {
+   "available": "",
+   "branch": "",
+   "canStart": "",
+   "changes": [],
+   "checkedAt": "",
+   "codename": "",
+   "installed": {
+    "at": "",
+    "sha": "",
+    "version": ""
+   },
+   "latest": "",
+   "latestError": "",
+   "name": "",
+   "needsPassword": "",
+   "notes": [],
+   "pause": "",
+   "reason": "",
+   "repo": "",
+   "rollback": {
+    "available": "",
+    "version": ""
+   },
+   "running": "",
+   "settings": {
+    "auto_update": "",
+    "notify_updates": "",
+    "require_password": ""
+   },
+   "settingsLog": [],
+   "status": {
+    "abortLabel": "",
+    "actions": [],
+    "cause": "",
+    "from": "",
+    "glimt": "",
+    "logs": {
+     "container": "",
+     "ct": "",
+     "url": ""
+    },
+    "pct": "",
+    "phase": "",
+    "progress": "",
+    "prune": "",
+    "running": "",
+    "state": "",
+    "steps": [
+     "…"
+    ],
+    "stuck": "",
+    "stuckForSec": "",
+    "stuckMessage": "",
+    "stuckReason": "",
+    "stuckSince": "",
+    "stuckStep": "",
+    "to": "",
+    "updaterAlive": ""
+   },
+   "tagline": "",
+   "updateAvailable": "",
+   "versionsUrl": ""
+  },
+  "I": {
+   "code": "",
+   "error": ""
+  },
+  "TI": {
+   "code": "",
+   "error": ""
+  }
+ },
+ "GET /api/system/update/status": {
+  "status": "200 403 403 401",
+  "A": {
+   "abortLabel": "",
+   "actions": [],
+   "cause": "",
+   "current": "",
+   "from": "",
+   "glimt": "",
+   "logs": {
+    "container": "",
+    "ct": "",
+    "url": ""
+   },
+   "pct": "",
+   "phase": "",
+   "progress": "",
+   "prune": "",
+   "running": "",
+   "state": "",
+   "steps": [
+    {
+     "key": "",
+     "label": "",
+     "state": ""
+    }
+   ],
+   "stuck": "",
+   "stuckForSec": "",
+   "stuckMessage": "",
+   "stuckReason": "",
+   "stuckSince": "",
+   "stuckStep": "",
+   "to": "",
+   "updaterAlive": ""
+  },
+  "I": {
+   "code": "",
+   "error": ""
+  },
+  "TI": {
+   "code": "",
+   "error": ""
+  }
+ },
+ "GET /api/system/update/settings": {
+  "status": "200 403 403 401",
+  "A": {
+   "auto_update": "",
+   "notify_updates": "",
+   "require_password": ""
+  },
+  "I": {
+   "code": "",
+   "error": ""
+  },
+  "TI": {
+   "code": "",
+   "error": ""
+  }
+ },
+ "GET /api/update/versions": {
+  "status": "200 403 403 401",
+  "A": [
+   {
+    "allNotes": [
+     "…"
+    ],
+    "backupAt": "",
+    "compatible": "",
+    "current": "",
+    "date": "",
+    "dbSchema": "",
+    "hasBackup": "",
+    "installed": "",
+    "name": "",
+    "notes": "",
+    "previous": "",
+    "source": "",
+    "version": ""
+   }
+  ],
+  "I": {
+   "code": "",
+   "error": ""
+  },
+  "TI": {
+   "code": "",
+   "error": ""
+  }
+ },
+ "GET /api/system/version": {
+  "status": "200 403 403 401",
+  "A": {
+   "codename": "",
+   "current": "",
+   "latest": "",
+   "name": "",
+   "notes": [],
+   "notesDate": "",
+   "notesLabel": "",
+   "notesSource": "",
+   "notesVersion": "",
+   "publishedAt": "",
+   "sha": "",
+   "shortName": "",
+   "sizeBytes": "",
+   "tagline": "",
+   "updateAvailable": ""
+  },
+  "I": {
+   "code": "",
+   "error": ""
+  },
+  "TI": {
+   "code": "",
+   "error": ""
+  }
+ },
+ "GET /api/backup/settings": {
+  "status": "200 403 403 401",
+  "A": {
+   "auto": "",
+   "cloud": {
+    "bucket": "",
+    "enabled": "",
+    "endpoint": "",
+    "keySet": "",
+    "lastError": "",
+    "lastUpload": "",
+    "prefix": "",
+    "provider": "",
+    "providers": [
+     "…"
+    ],
+    "region": ""
+   },
+   "encrypt": "",
+   "format": "",
+   "keep": "",
+   "keyId": "",
+   "keySet": "",
+   "moduleList": [
+    {
+     "desc": "",
+     "id": "",
+     "name": ""
+    }
+   ],
+   "modules": [
+    ""
+   ],
+   "notifyFail": "",
+   "schedule": "",
+   "scope": "",
+   "target": {
+    "docker": "",
+    "free": "",
+    "local": "",
+    "path": "",
+    "smb": {
+     "enabled": "",
+     "folder": "",
+     "host": "",
+     "label": "",
+     "lastError": "",
+     "lastUpload": "",
+     "path": "",
+     "share": "",
+     "shareName": "",
+     "unencrypted": "",
+     "url": ""
+    }
+   }
+  },
+  "I": {
+   "code": "",
+   "error": ""
+  },
+  "TI": {
+   "code": "",
+   "error": ""
+  }
+ },
+ "GET /api/backup/status": {
+  "status": "200 403 403 401",
+  "A": {
+   "last": "",
+   "next": "",
+   "restoring": "",
+   "running": "",
+   "summary": ""
+  },
+  "I": {
+   "code": "",
+   "error": ""
+  },
+  "TI": {
+   "code": "",
+   "error": ""
+  }
+ },
+ "GET /api/backup/list": {
+  "status": "200 403 403 401",
+  "A": [],
+  "I": {
+   "code": "",
+   "error": ""
+  },
+  "TI": {
+   "code": "",
+   "error": ""
+  }
+ },
+ "GET /api/glimt/quality/runs": {
+  "status": "200 403 403 401",
+  "A": {
+   "enabled": "",
+   "items": [],
+   "keepDays": "",
+   "running": ""
+  },
+  "I": {
+   "code": "",
+   "error": ""
+  },
+  "TI": {
+   "code": "",
+   "error": ""
+  }
+ },
+ "GET /api/glimt/quality/settings": {
+  "status": "200 200 200 401",
+  "A": {
+   "admin": "",
+   "help": {
+    "nightly": "",
+    "weekly": ""
+   },
+   "labels": {
+    "nightly": "",
+    "weekly": ""
+   },
+   "running": "",
+   "schedules": {
+    "nightly": {
+     "id": "",
+     "nextRunAt": "",
+     "status": ""
+    },
+    "weekly": {
+     "id": "",
+     "nextRunAt": "",
+     "status": ""
+    }
+   },
+   "server": {
+    "interactiveWaitSec": "",
+    "keepDays": "",
+    "maxMinutes": "",
+    "nightly": "",
+    "runs": "",
+    "weekly": ""
+   },
+   "settings": {
+    "nightly": "",
+    "weekly": ""
+   },
+   "user": {
+    "weekly": ""
+   }
+  },
+  "I": {
+   "admin": "",
+   "help": {
+    "nightly": "",
+    "weekly": ""
+   },
+   "labels": {
+    "nightly": "",
+    "weekly": ""
+   },
+   "schedules": {
+    "nightly": "",
+    "weekly": {
+     "id": "",
+     "nextRunAt": "",
+     "status": ""
+    }
+   },
+   "server": {
+    "interactiveWaitSec": "",
+    "keepDays": "",
+    "maxMinutes": "",
+    "nightly": "",
+    "runs": "",
+    "weekly": ""
+   },
+   "settings": {
+    "nightly": "",
+    "weekly": ""
+   },
+   "user": {
+    "weekly": ""
+   }
+  },
+  "TI": {
+   "admin": "",
+   "help": {
+    "nightly": "",
+    "weekly": ""
+   },
+   "labels": {
+    "nightly": "",
+    "weekly": ""
+   },
+   "schedules": {
+    "nightly": "",
+    "weekly": {
+     "id": "",
+     "nextRunAt": "",
+     "status": ""
+    }
+   },
+   "server": {
+    "interactiveWaitSec": "",
+    "keepDays": "",
+    "maxMinutes": "",
+    "nightly": "",
+    "runs": "",
+    "weekly": ""
+   },
+   "settings": {
+    "nightly": "",
+    "weekly": ""
+   },
+   "user": {
+    "weekly": ""
+   }
+  }
+ },
+ "GET /api/glimt/agent/fast": {
+  "status": "200 200 200 401",
+  "A": {
+   "admin": "",
+   "cacheEntries": "",
+   "help": {
+    "cache": "",
+    "parallel": "",
+    "stream": "",
+    "warm": ""
+   },
+   "labels": {
+    "cache": "",
+    "parallel": "",
+    "stream": "",
+    "warm": ""
+   },
+   "server": {
+    "cache": "",
+    "parallel": "",
+    "stream": "",
+    "warm": ""
+   },
+   "settings": {
+    "cache": "",
+    "parallel": "",
+    "stream": "",
+    "warm": ""
+   },
+   "ttl": {
+    "news": "",
+    "power": "",
+    "weather": "",
+    "web": ""
+   },
+   "user": {
+    "cache": "",
+    "parallel": "",
+    "stream": ""
+   },
+   "warmState": ""
+  },
+  "I": {
+   "admin": "",
+   "cacheEntries": "",
+   "help": {
+    "cache": "",
+    "parallel": "",
+    "stream": "",
+    "warm": ""
+   },
+   "labels": {
+    "cache": "",
+    "parallel": "",
+    "stream": "",
+    "warm": ""
+   },
+   "server": {
+    "cache": "",
+    "parallel": "",
+    "stream": "",
+    "warm": ""
+   },
+   "settings": {
+    "cache": "",
+    "parallel": "",
+    "stream": "",
+    "warm": ""
+   },
+   "ttl": {
+    "news": "",
+    "power": "",
+    "weather": "",
+    "web": ""
+   },
+   "user": {
+    "cache": "",
+    "parallel": "",
+    "stream": ""
+   },
+   "warmState": ""
+  },
+  "TI": {
+   "admin": "",
+   "cacheEntries": "",
+   "help": {
+    "cache": "",
+    "parallel": "",
+    "stream": "",
+    "warm": ""
+   },
+   "labels": {
+    "cache": "",
+    "parallel": "",
+    "stream": "",
+    "warm": ""
+   },
+   "server": {
+    "cache": "",
+    "parallel": "",
+    "stream": "",
+    "warm": ""
+   },
+   "settings": {
+    "cache": "",
+    "parallel": "",
+    "stream": "",
+    "warm": ""
+   },
+   "ttl": {
+    "news": "",
+    "power": "",
+    "weather": "",
+    "web": ""
+   },
+   "user": {
+    "cache": "",
+    "parallel": "",
+    "stream": ""
+   },
+   "warmState": ""
+  }
+ },
+ "GET /api/glimt/lex52": {
+  "status": "200 200 200 401",
+  "A": {
+   "words": []
+  },
+  "I": {
+   "words": []
+  },
+  "TI": {
+   "words": []
+  }
+ },
+ "GET /api/brief52": {
+  "status": "200 200 200 401",
+  "A": {
+   "cards": [
+    {
+     "data": "{}",
+     "id": "",
+     "key": "",
+     "title": "",
+     "variant": ""
+    }
+   ],
+   "date": "",
+   "date_label": "",
+   "fetched_at": "",
+   "glimt_char": "",
+   "greeting": "",
+   "hidden": [],
+   "kind": "",
+   "order": [
+    ""
+   ],
+   "user": {
+    "admin": "",
+    "child": "",
+    "first": "",
+    "id": "",
+    "name": ""
+   }
+  },
+  "I": {
+   "cards": [
+    {
+     "data": "{}",
+     "empty": "",
+     "error": "",
+     "id": "",
+     "key": "",
+     "title": "",
+     "variant": ""
+    }
+   ],
+   "date": "",
+   "date_label": "",
+   "fetched_at": "",
+   "glimt_char": "",
+   "greeting": "",
+   "hidden": [
+    {
+     "id": "",
+     "reason": ""
+    }
+   ],
+   "kind": "",
+   "order": [
+    ""
+   ],
+   "user": {
+    "admin": "",
+    "child": "",
+    "first": "",
+    "id": "",
+    "name": ""
+   }
+  },
+  "TI": {
+   "cards": [
+    {
+     "data": "{}",
+     "empty": "",
+     "error": "",
+     "id": "",
+     "key": "",
+     "title": "",
+     "variant": ""
+    }
+   ],
+   "date": "",
+   "date_label": "",
+   "fetched_at": "",
+   "glimt_char": "",
+   "greeting": "",
+   "hidden": [
+    {
+     "id": "",
+     "reason": ""
+    }
+   ],
+   "kind": "",
+   "order": [
+    ""
+   ],
+   "user": {
+    "admin": "",
+    "child": "",
+    "first": "",
+    "id": "",
+    "name": ""
+   }
+  }
+ },
+ "GET /api/admin/brief52/access": {
+  "status": "200 403 403 401",
+  "A": {
+   "children": [],
+   "domains": [],
+   "homelab": [],
+   "stocks": [],
+   "users": [
+    {
+     "id": "",
+     "name": "",
+     "role": ""
+    }
+   ]
+  },
+  "I": {
+   "code": "",
+   "error": ""
+  },
+  "TI": {
+   "code": "",
+   "error": ""
+  }
+ },
+ "GET /api/me/glimt-char52": {
+  "status": "200 200 200 401",
+  "A": {
+   "char": "",
+   "chars": [
+    {
+     "color": "",
+     "family": "",
+     "greeting": "",
+     "id": "",
+     "name": "",
+     "tag": ""
+    }
+   ],
+   "default": "",
+   "source": ""
+  },
+  "I": {
+   "char": "",
+   "chars": [
+    {
+     "color": "",
+     "family": "",
+     "greeting": "",
+     "id": "",
+     "name": "",
+     "tag": ""
+    }
+   ],
+   "default": "",
+   "source": ""
+  },
+  "TI": {
+   "char": "",
+   "chars": [
+    {
+     "color": "",
+     "family": "",
+     "greeting": "",
+     "id": "",
+     "name": "",
+     "tag": ""
+    }
+   ],
+   "default": "",
+   "source": ""
+  }
+ },
+ "GET /api/admin/glimt-char52": {
+  "status": "200 403 403 401",
+  "A": {
+   "chars": [
+    {
+     "color": "",
+     "family": "",
+     "greeting": "",
+     "id": "",
+     "name": "",
+     "tag": ""
+    }
+   ],
+   "users": [
+    {
+     "char": "",
+     "default": "",
+     "id": "",
+     "name": "",
+     "source": ""
+    }
+   ]
+  },
+  "I": {
+   "code": "",
+   "error": ""
+  },
+  "TI": {
+   "code": "",
+   "error": ""
+  }
+ },
+ "GET /api/search51/types": {
+  "status": "200 200 200 401",
+  "A": {
+   "types": [
+    {
+     "icon": "",
+     "label": "",
+     "type": ""
+    }
+   ]
+  },
+  "I": {
+   "types": [
+    {
+     "icon": "",
+     "label": "",
+     "type": ""
+    }
+   ]
+  },
+  "TI": {
+   "types": [
+    {
+     "icon": "",
+     "label": "",
+     "type": ""
+    }
+   ]
+  }
+ },
+ "GET /api/search51?q=melk": {
+  "status": "200 200 200 401",
+  "A": {
+   "engine": "",
+   "groups": [
+    {
+     "count": "",
+     "label": "",
+     "type": ""
+    }
+   ],
+   "ms": "",
+   "q": "",
+   "results": [
+    {
+     "actions": "[]",
+     "amount": "",
+     "date": "",
+     "done": "",
+     "icon": "",
+     "id": "",
+     "link": "{}",
+     "match": "[]",
+     "score": "",
+     "subtitle": "",
+     "title": "",
+     "type": "",
+     "typeLabel": ""
+    }
+   ]
+  },
+  "I": {
+   "engine": "",
+   "groups": [
+    {
+     "count": "",
+     "label": "",
+     "type": ""
+    }
+   ],
+   "ms": "",
+   "q": "",
+   "results": [
+    {
+     "actions": "[]",
+     "amount": "",
+     "date": "",
+     "icon": "",
+     "id": "",
+     "link": "{}",
+     "match": "[]",
+     "score": "",
+     "subtitle": "",
+     "title": "",
+     "type": "",
+     "typeLabel": ""
+    }
+   ]
+  },
+  "TI": {
+   "engine": "",
+   "groups": [
+    {
+     "count": "",
+     "label": "",
+     "type": ""
+    }
+   ],
+   "ms": "",
+   "q": "",
+   "results": [
+    {
+     "actions": "[]",
+     "amount": "",
+     "date": "",
+     "icon": "",
+     "id": "",
+     "link": "{}",
+     "match": "[]",
+     "score": "",
+     "subtitle": "",
+     "title": "",
+     "type": "",
+     "typeLabel": ""
+    }
+   ]
+  }
+ },
+ "GET /api/me/share51": {
+  "status": "200 200 200 401",
+  "A": {
+   "calendar": "",
+   "health": "",
+   "location": ""
+  },
+  "I": {
+   "calendar": "",
+   "health": "",
+   "location": ""
+  },
+  "TI": {
+   "calendar": "",
+   "health": "",
+   "location": ""
+  }
+ },
+ "GET /api/me/theme51": {
+  "status": "200 200 200 401",
+  "A": {
+   "auto": {
+    "by": "",
+    "darkAt": "",
+    "lightAt": "",
+    "place": ""
+   },
+   "effective": "",
+   "mode": "",
+   "next": "",
+   "palette": "",
+   "sun": "",
+   "updatedAt": ""
+  },
+  "I": {
+   "auto": {
+    "by": "",
+    "darkAt": "",
+    "lightAt": "",
+    "place": ""
+   },
+   "effective": "",
+   "mode": "",
+   "next": "",
+   "palette": "",
+   "sun": "",
+   "updatedAt": ""
+  },
+  "TI": {
+   "auto": {
+    "by": "",
+    "darkAt": "",
+    "lightAt": "",
+    "place": ""
+   },
+   "effective": "",
+   "mode": "",
+   "next": "",
+   "palette": "",
+   "sun": "",
+   "updatedAt": ""
+  }
+ },
+ "GET /api/offline51/versions?tasks=1&events=1": {
+  "status": "200 200 200 401",
+  "A": {
+   "events": {
+    "1": ""
+   },
+   "tasks": {
+    "1": ""
+   }
+  },
+  "I": {
+   "events": {
+    "1": ""
+   },
+   "tasks": {}
+  },
+  "TI": {
+   "events": {
+    "1": ""
+   },
+   "tasks": {}
+  }
+ },
+ "GET /api/finnes-ikke": {
+  "status": "404 404 404 401",
+  "A": {
+   "code": "",
+   "error": ""
+  },
+  "I": {
+   "code": "",
+   "error": ""
+  },
+  "TI": {
+   "code": "",
+   "error": ""
+  }
+ },
+ "PUT /api/dashboard/layout": {
+  "status": "200",
+  "A": {
+   "at": "",
+   "cols": "",
+   "device": "",
+   "gap": "",
+   "items": [
+    {
+     "h": "",
+     "hidden": "",
+     "id": "",
+     "w": "",
+     "x": "",
+     "y": ""
+    }
+   ],
+   "snap": "",
+   "v": ""
+  }
+ },
+ "PUT /api/dashboard/layout (ugyldig)": {
+  "status": "400",
+  "A": {
+   "code": "",
+   "error": ""
+  }
+ },
+ "PUT /api/me/theme51": {
+  "status": "200",
+  "A": {
+   "auto": {
+    "by": "",
+    "darkAt": "",
+    "lightAt": "",
+    "place": ""
+   },
+   "effective": "",
+   "mode": "",
+   "next": "",
+   "palette": "",
+   "sun": "",
+   "updatedAt": ""
+  }
+ },
+ "PUT /api/me/share51": {
+  "status": "200",
+  "A": {
+   "calendar": "",
+   "health": "",
+   "location": ""
+  }
+ },
+ "POST /api/search51/recent": {
+  "status": "200",
+  "A": {
+   "ok": ""
+  }
+ },
+ "POST /api/settings/ask": {
+  "status": "200",
+  "A": {
+   "anchor": "",
+   "answer": "",
+   "goMs": "",
+   "ids": [
+    ""
+   ],
+   "mode": "",
+   "provider": "",
+   "target": {
+    "anchor": "",
+    "id": "",
+    "path": "",
+    "route": {
+     "mobile": "",
+     "web": ""
+    },
+    "title": ""
+   },
+   "targetId": ""
+  }
+ },
+ "POST /api/glimt/quickparse52": {
+  "status": "200",
+  "A": {
+   "ai": "",
+   "ai_error": "",
+   "ai_ms": "",
+   "model": "",
+   "ms": "",
+   "result": {
+    "allDay": "",
+    "date": "",
+    "date_label": "",
+    "end": "",
+    "location": "",
+    "people": [],
+    "start": "",
+    "time_label": "",
+    "title": "",
+    "type": ""
+   },
+   "rule": {
+    "allDay": "",
+    "date": "",
+    "end": "",
+    "fixes": [],
+    "location": "",
+    "people": [],
+    "start": "",
+    "title": "",
+    "type": ""
+   },
+   "source": "",
+   "text": "",
+   "timed_out": ""
+  }
+ },
+ "POST /api/glimt/lex52": {
+  "status": "200",
+  "A": {
+   "ok": "",
+   "words": [
+    {
+     "at": "",
+     "from": "",
+     "kind": "",
+     "n": "",
+     "to": ""
+    }
+   ]
+  }
+ },
+ "POST /api/crash": {
+  "status": "202",
+  "A": {
+   "forwarding": "",
+   "id": "",
+   "ids": [
+    ""
+   ],
+   "ok": ""
+  }
+ },
+ "POST /api/admin/flags51": {
+  "status": "201",
+  "A": {
+   "flag": {
+    "builtin": "",
+    "created": "",
+    "default": "",
+    "description": "",
+    "key": "",
+    "overrides": [],
+    "updated": ""
+   }
+  }
+ },
+ "POST /api/admin/flags51 (bruker)": {
+  "status": "403",
+  "A": {
+   "code": "",
+   "error": ""
+  }
+ },
+ "POST /api/whatsnew/seen": {
+  "status": "400",
+  "A": {
+   "code": "",
+   "error": ""
+  }
+ },
+ "PUT /api/admin/local-fetch-hosts": {
+  "status": "200",
+  "A": {
+   "hosts": [
+    ""
+   ],
+   "max": ""
+  }
+ },
+ "POST /api/admin/impersonate (bruker)": {
+  "status": "403",
+  "A": {
+   "code": "",
+   "error": "",
+   "restricted": ""
+  }
+ },
+ "PUT /api/glimt/agent/fast": {
+  "status": "200",
+  "A": {
+   "admin": "",
+   "cacheEntries": "",
+   "help": {
+    "cache": "",
+    "parallel": "",
+    "stream": "",
+    "warm": ""
+   },
+   "labels": {
+    "cache": "",
+    "parallel": "",
+    "stream": "",
+    "warm": ""
+   },
+   "server": {
+    "cache": "",
+    "parallel": "",
+    "stream": "",
+    "warm": ""
+   },
+   "settings": {
+    "cache": "",
+    "parallel": "",
+    "stream": "",
+    "warm": ""
+   },
+   "ttl": {
+    "news": "",
+    "power": "",
+    "weather": "",
+    "web": ""
+   },
+   "user": {
+    "cache": "",
+    "parallel": "",
+    "stream": ""
+   },
+   "warmState": ""
+  }
+ },
+ "PUT /api/glimt/quality/settings": {
+  "status": "200",
+  "A": {
+   "admin": "",
+   "help": {
+    "nightly": "",
+    "weekly": ""
+   },
+   "labels": {
+    "nightly": "",
+    "weekly": ""
+   },
+   "schedules": {
+    "nightly": "",
+    "weekly": {
+     "id": "",
+     "nextRunAt": "",
+     "status": ""
+    }
+   },
+   "server": {
+    "interactiveWaitSec": "",
+    "keepDays": "",
+    "maxMinutes": "",
+    "nightly": "",
+    "runs": "",
+    "weekly": ""
+   },
+   "settings": {
+    "nightly": "",
+    "weekly": ""
+   },
+   "user": {
+    "weekly": ""
+   }
+  }
+ },
+ "POST /api/system/docker/setup (bruker)": {
+  "status": "403",
+  "A": {
+   "code": "",
+   "error": "",
+   "restricted": ""
+  }
+ }
+}
