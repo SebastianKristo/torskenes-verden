@@ -1,5 +1,5 @@
 // Prompt 41 (SERVER41): innlogging uten serveradresse og «Logg inn med Homelab-appen» for Kalender
-// (claude-code-innlogging-uten-server.md, claude-code-kalender-logg-inn-homelab.md). Montert i index.js via api41.js.
+// (claude-code-innlogging-uten-server.md, claude-code-kalender-logg-inn-homelab.md). Montert fra auth/index.js (mountAppAuth).
 //
 // Uten innlogging (ingen hemmeligheter):
 //   GET  /api/discovery → {name, version, local:[url], external:url|null, app:'homelab', api:41}
@@ -113,7 +113,7 @@ function validateAppCode(c, b) {
 
 /* ---------------- Rutene ---------------- */
 
-export function mountAuth41(app) {
+export function mountAppLogin(app) {
   app.get('/api/discovery', (c) => c.json(discovery41(), 200, { 'Cache-Control': 'no-store', 'Access-Control-Allow-Origin': '*' }));
 
   app.get('/api/me/server', (c) => { const r = requester(c); return r.error ? bad(c, r.error, r.status) : c.json(meServer41(r.user)); });

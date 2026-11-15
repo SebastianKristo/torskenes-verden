@@ -11,7 +11,7 @@ import { config } from './config.js';
 import { db, kv, OWNER, withKvMemo } from './db.js';
 import { ensureIndexes } from './db-indexes.js';
 import { compressJson } from './http/compress.js';
-import { createSession, destroySession, sessionUser, rememberDevice, pauseDevice, forgetDevice, currentDeviceId, currentSessionId, trustIp, isLan, requireAuth, requireAdmin, clientIp, verifyLogin, createTicket, redeemTicket, userInfo, listUsers, listUsersFor, createUser, deleteUser, updateUser, setPassword, checkPassword, isAdmin, needsSetup, setupServer, serverName, setServerName, startTotpSetup, confirmTotpSetup, disableTotp, totpReadable, loginBlocked, loginFailed, loginSucceeded } from './auth/session.js';
+import { sessionUser, rememberDevice, forgetDevice, currentDeviceId, currentSessionId, trustIp, isLan, requireAuth, requireAdmin, clientIp, userInfo, listUsersFor, createUser, deleteUser, updateUser, setPassword, checkPassword, isAdmin, needsSetup, serverName, setServerName, startTotpSetup, confirmTotpSetup, disableTotp, totpReadable, loginBlocked, loginFailed, loginSucceeded } from './auth/session.js';
 import * as integrations from './integrations.js';
 import { cfg, publicConfig, updateConfig, runRequest, userCfgSet, runAsUser } from './settings.js';
 import finansApi from './finans/routes.js';
@@ -47,7 +47,6 @@ import systemBackupApi, { startSystemBackupScheduler } from './system-backup.js'
 import ops51Api, { startOps51 } from './ops51.js'; // prompt 51 (OPS51): restic-backup 3-2-1, testet gjenoppretting, staging/tilbakerulling, DB-vedlikehold
 import smbBrowseApi from './smb-browse.js'; // prompt 30: SMB-veiviser (finn server, shares, mapper, test, lagre) – bare admin
 import calendarQuickApi from './calendar-quick.js'; // prompt 29: Kalender → rask time (AI-jobbkø)
-import { reauthHandler } from './auth/reauth.js'; // prompt 31: POST /api/auth/reauth
 import glimtMemoryApi from './glimt-memory.js'; // prompt 33: «Glimt husker» (alias per bruker)
 import { agentApi45 } from './glimt45/api.js'; // prompt 45: Glimt-motoren
 import { entitiesApi60 } from './convo60/api.js'; // prompt 60 (prompt 49 del 3): entitetsregisteret
@@ -64,11 +63,11 @@ import aiApi, { glimtApi } from './ai-api.js';
 import api36 from './api36.js'; // prompt 36 (SERVER36)
 import { profilesApi, bibleApi, trackingKeysApi, kal37Api } from './api37.js'; // prompt 37 (SERVER37)
 import { bearerFallthrough46, homelabAuthCode46, signImages46, mediaDiag46, mediaDiagOut46 } from './api-auth46.js'; // prompt 46 (SERVER46)
-import { qrAuthApi, meSessionsApi, qrLinkHandler, preAuthTicket, qrAfter2fa, assetLinksHandler, appleAssociationHandler, brief38Api, startApi38 } from './api38.js'; // prompt 38 (SERVER38)
+import { brief38Api, startApi38 } from './api38.js'; // prompt 38 (SERVER38)
 import { cals39Api, googleMap39Api, rec39Api, week39Api } from './api39.js'; // prompt 39 (SERVER39)
-import { twofa40Api, finans40Api, news40Api, newsDigestApi, hjemlys40Api, pages40Api, briefJul40, tasksAfter40, tasksCreate40, startApi40 } from './api40.js'; // prompt 40 (SERVER40)
+import { finans40Api, news40Api, newsDigestApi, hjemlys40Api, pages40Api, briefJul40, tasksAfter40, tasksCreate40, startApi40 } from './api40.js'; // prompt 40 (SERVER40)
 import { mountServer47 } from './server47.js'; // prompt 47 (SERVER47)
-import { hjemlys41Api, hjemlysGet41, hlPage41, ruter41Api, birthdays41Api, mai17Api, kalender41Api, mountAuth41, huske41Api, tracking41Api, weather41Api, brief41, weatherFull41 } from './api41.js'; // prompt 41 (SERVER41)
+import { hjemlys41Api, hjemlysGet41, hlPage41, ruter41Api, birthdays41Api, mai17Api, kalender41Api, huske41Api, tracking41Api, weather41Api, brief41, weatherFull41 } from './api41.js'; // prompt 41 (SERVER41)
 import { finans42Api, abCalendarsMw42, abApi42, calendarsEvents42, abIcs42, tracking42Api, health42Api, familyHealthMw42, startHealth42, hjemlys42Api, tasks42Api } from './api42.js'; // prompt 42 (SERVER42)
 import fin51Api from './finans/fin51.js'; // prompt 51 (FIN51): sparemål, faste utgifter-kalender, skattehjelp, prishistorikk, abonnementsjeger
 import { startTax51 } from './finans/fin51-tax.js'; // prompt 51 (FIN51): påminnelse før skattemeldingen
@@ -80,13 +79,12 @@ import { logs44Api, startLogs44 } from './logs44.js';
 import { impersonation44, admin44Api, layoutLockMw44, setMobileApi44 } from './admin44.js';
 import { kal44Api, kalEventsMw44, assistLocalMw44 } from './kal44.js';
 import { study44Api } from './study44.js';
-import { auth44Api } from './auth/refresh.js';
+import { mountAuthSecurity, mountAppAuth, mountAuthRefresh, mountAuth } from './auth/index.js'; // innlogging og sikkerhet
 import { playback44Api, startPlayback44 } from './playback44.js';
 import { mountApi45 } from './api45.js'; // prompt 45 (SERVER45)
 import { nrkApi } from './nrkdl.js'; // NRK-nedlaster: /api/media/nrk/* (nrk-dl bak norsk VPN)
 import { yubalApi } from './yubal.js'; // Musikk: /api/media/yubal/* (yubal, YouTube Music → musikkbiblioteket)
 import { mountMedia50, startMedia50 } from './media50.js'; // prompt 50 (SRVMEDIA50): bilder med diskcache, sporing etter søk, diagnostikk
-import { mountSec51 } from './auth/security.js'; // prompt 51 (SEC51): sikkerhet
 import { mountFamily50 } from './family50.js'; // prompt 50 (SRVFAM50): Steder med områder, Folk, Helse, I dag, Sjekk inn
 import { traceObs51, mountObs51, startObs51 } from './obs51/index.js'; // prompt 51 (OBS51): helsedashbord, selvreparasjon, spor, ntfy
 import { mountQa51, startQa51, reportServerError51 } from './qa51.js'; // prompt 51 (QA51): feature flags, krasjrapporter (GlitchTip), «Nytt i denne versjonen»
@@ -193,11 +191,11 @@ app.use('*', impersonation44(app));
 app.use('*', anonBodyCap85);
 // Prompt 51 (SEC51): revisjonslogg, godkjenning av nye enheter, nytt land, passkeys, sperrer for QR/app-token, hemmeligheter og logg-skanner
 // (mellomvare rundt innloggingsrutene – må stå før dem). /api/security51/* og /api/auth/passkey/*.
-mountSec51(app);
+mountAuthSecurity(app);
 app.route('/api/version', versionApi44); // prompt 44: {version, features} uten innlogging
 // Prompt 41: /api/discovery, /api/me/server, Kalender-innlogging (device-token/-exchange, app-code, token, /app-auth) og utlogging som
 // tilbakekaller Kalender-tokenene (må stå før /api/logout og /finans/api).
-mountAuth41(app);
+mountAppAuth(app);
 mountServer47(app); // prompt 47 (SERVER47): GET /api/config/servers {publicUrl, localUrl etter innlogging} + /api/finans/kvitteringer-aliasene
 mountObs51(app); // prompt 51 (OBS51): /api/system/obs51/* (admin) og /api/me/ntfy51 (alle)
 mountQa51(app); // prompt 51 (QA51): /api/flags, /api/crash, /api/whatsnew, /api/admin/flags51, /api/admin/crashes51
@@ -210,7 +208,7 @@ mountVoxcpm57(app); // prompt 57 (VOX57): /api/voices57*, /api/admin/voxcpm57/{h
 mountLocalFetch86(app, authOrToken); // prompt 86: GET|PUT /api/admin/local-fetch-hosts (bare admin)
 mountDates(app, authOrToken); // POST /api/dates/parse: den felles datotolkeren for klientene (Q17)
 mountOmlx58(app); // prompt 58 (OMLX58): /api/admin/omlx58/{health,config,test} (bare admin)
-app.route('/api', auth44Api); // prompt 44: POST /api/auth/refresh og POST /api/apps/kalender/log
+mountAuthRefresh(app); // prompt 44: POST /api/auth/refresh og POST /api/apps/kalender/log
 app.get('/hl/:token', hlPage41); // prompt 41: Hjemlys-statusside for kontakter uten Papir (24 t)
 
 /* ---------------- Sider ---------------- */
@@ -307,66 +305,8 @@ app.get('/api/health', async (c, next) => {
 
 /* ---------------- Innlogging ---------------- */
 
-// Steg 1: brukernavn + passord. Har brukeren 2FA, svarer vi med en kortlivet billett til steg 2.
-// Uten brukernavn logges eieren inn (gamle innloggingssider og skript).
-async function passwordLogin(c) {
-  const ip = clientIp(c);
-  const { username, password, remember } = await c.req.json().catch(() => ({}));
-  const r = verifyLogin(username, password, undefined, ip);
-  if (r.needsTotp) return c.json({ needsTotp: true, ticket: createTicket(r.user.id, remember), username: r.user?.username });
-  if (!r.ok) { if (r.status === 401) await sleep(400); return c.json({ error: r.error }, r.status); }
-  finishLogin(c, r.user.id, remember);
-  return c.json({ ok: true, user: r.user });
-}
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-function finishLogin(c, userId, remember) {
-  createSession(c, userId);
-  if (remember) rememberDevice(c, userId); else forgetDevice(c);
-}
-app.post('/api/auth/login', passwordLogin);
-app.post('/api/login', passwordLogin);
-// Steg 2: 6-sifret kode fra autentiseringsappen eller en gjenopprettingskode.
-const totpStep = async (c) => {
-  const b = await c.req.json().catch(() => ({})) ?? {};
-  const { code, remember } = b;
-  const ticket = b.ticket || preAuthTicket(c); // prompt 38: QR-innloggingens pre-auth-cookie (hl_pre)
-  const r = redeemTicket(ticket, code, clientIp(c));
-  if (!r.ok) { await sleep(400); return c.json({ error: r.error, expired: !!r.expired }, r.status); }
-  finishLogin(c, r.user.id, remember ?? r.remember);
-  qrAfter2fa(c, ticket, r.user.id); // prompt 38: enheten fra QR-innloggingen → Pålitelige enheter + varsel
-  return c.json({ ok: true, user: r.user });
-};
-app.post('/api/auth/totp', totpStep);
-app.post('/api/auth/2fa', totpStep); // prompt 25: samme steg under navnet i designet
-app.route('/api/auth/2fa', twofa40Api); // prompt 40: 2FA-oppsett i appen (status, setup, enable, disable, backup/regenerate)
-// Prompt 31: bekreft passordet på nytt → kortlivet engangstoken (5 min, bundet til brukeren) for biometri-flyten i appene.
-app.post('/api/auth/reauth', authOrToken, reauthHandler);
-// Prompt 38: QR-innlogging (/api/auth/qr*), app-økt for Kalender på Mac, logg ut av alle enheter, GET /api/me/sessions og /l/:code.
-app.route('/api/auth', qrAuthApi);
-app.route('/api', meSessionsApi);
-app.get('/l/:code', qrLinkHandler);
-app.get('/.well-known/assetlinks.json', assetLinksHandler); // prompt 38: Android App Links for /l/*
-app.get('/.well-known/apple-app-site-association', appleAssociationHandler); // prompt 38: iOS universal links for /l/*
-
-/* ---------------- Førstegangsoppsett ---------------- */
-
-app.get('/api/setup/status', (c) => c.json({ needsSetup: needsSetup() }));
-app.post('/api/setup', async (c) => {
-  if (!needsSetup()) return c.json({ error: 'Serveren er allerede satt opp' }, 409);
-  const ip = clientIp(c), wait = loginBlocked(ip);
-  if (wait) return c.json({ error: `For mange forsøk. Prøv igjen om ${Math.ceil(wait / 60)} min.` }, 429);
-  const b = await c.req.json().catch(() => ({}));
-  try {
-    const u = setupServer(b);
-    // Prompt 25: Papir · lys er standard etter oppsettet, og bakgrunnen fra steg 3 (Oslo / Vær / Planeter / Ingen) lagres med en gang.
-    const bg = { oslo: 'oslo', vaer: 'weather', 'vær': 'weather', weather: 'weather', planeter: 'planets', planets: 'planets', ingen: 'none', none: 'none' }[String(b.background ?? b.bgType ?? '').toLowerCase()];
-    kv.set(u.id, 'layout', { ...layoutOf(u.id), mobileDesign: 'papir', paperMode: 'lys', ...(bg ? { bgType: bg, photo: bg === 'none' ? 'cur' : bg } : {}) });
-    finishLogin(c, u.id, b.remember !== false);
-    return c.json({ ok: true, user: meOut(u.id) });
-  } catch (e) { loginFailed(ip); return c.json({ error: e.message }, e.status ?? 400); }
-});
-
-app.post('/api/logout', (c) => { pauseDevice(c); destroySession(c); return c.json({ ok: true }); });
+// Passord, 2FA-steg og 2FA-oppsett i appen, reauth, QR-innlogging, /l/:code, /.well-known, førstegangsoppsett og utlogging (server/auth/login.js).
+mountAuth(app);
 
 /* ---------------- CV (offentlig lesing) ---------------- */
 

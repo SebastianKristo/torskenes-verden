@@ -2,7 +2,7 @@
 //   AI-selvtester (to tidsgrenser, oppvarming, én modell om gangen, minnesjekk, helsesjekk, vakthund), Jobber-gruppering  → ai-run.js, ai-api.js, ai39.js
 //   SMB: validering etter SMB-reglene, feiltype per kind, POST /api/smb/shares {host, user, pass}                       → finans/backup.js, smb-browse.js
 //   «Starter opp» bare ved ekte omstart: /api/health {restarting, updating, state} + X-Homelab-State                      → index.js, system-update.js
-//   2FA i appen: /api/auth/2fa/*                                                                                       → auth40.js (+ auth.js issuer)
+//   2FA i appen: /api/auth/2fa/*                                                                                       → auth/two-factor.js (montert fra auth/login.js)
 //   Finans: added, PATCH alt + historikk, Les på nytt, POST /finans/api/search/ask                                    → finans/added40.js, finans/p40.js (+ routes.js txOut/receiptOut)
 //   Gjøremål-Glimt: flere punkter med rekkefølge, sted og person                                                      → tasks-glimt40.js (+ tasks-glimt37.js, tasks.js itemOut)
 //   Nyheter Glimt-side: /api/news/glimt, /api/news/glimt/sources, /api/glimt/news-digest                               → news40.js
@@ -20,7 +20,6 @@ import { startHjemlys40 } from './hjemlys40.js';
 import { startHungSweeper } from './ai-run.js';
 import { sessionUser } from './auth/session.js';
 
-export { twofa40Api } from './auth/two-factor.js';
 export { finans40Api } from './finans/p40.js';
 export { news40Api, newsDigestApi } from './news40.js';
 export { hjemlys40Api } from './hjemlys40.js';

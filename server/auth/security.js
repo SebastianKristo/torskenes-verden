@@ -1,5 +1,5 @@
 // Prompt 51 (SEC51): sikkerhet – revisjonslogg, godkjenning av nye enheter, varsel ved nytt land, passkeys (WebAuthn),
-// rotering av hemmeligheter med påminnelse, logg-skanner og visning/opplåsing av sperrer. Montert i index.js med mountSec51(app)
+// rotering av hemmeligheter med påminnelse, logg-skanner og visning/opplåsing av sperrer. Montert fra auth/index.js (mountAuthSecurity)
 // rett etter «Logg inn som» (før innloggingsrutene, så mellomvaren rundt dem kjører først). API-former: SERVER51-API.md (SEC51).
 //
 // Passordregelen er uendret: passordet hoppes bare over med gyldig enhetscookie OG lokal adresse fra tilkoblingen/Cloudflare
@@ -876,7 +876,7 @@ const bootstrapKnown = async (c, next) => {
   appendCookie(c, kdCookie(c, key));
 };
 
-export function mountSec51(app) {
+export function mountSecurity(app) {
   // Passord og 2FA (web), og passord-innlogging fra appene (token).
   for (const p of ['/api/auth/login', '/api/login']) app.use(p, loginWatch('web', 'password'));
   for (const p of ['/api/auth/totp', '/api/auth/2fa']) app.use(p, loginWatch('web', 'totp'));
