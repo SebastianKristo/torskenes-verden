@@ -52,7 +52,10 @@ const sameList = (a, b) => Array.isArray(a) && a.length === b.length && a.every(
 // Prompt 24: profilene (Finans + Boliger) har fem Finans-faner; ellers fire.
 export const finKeys = () => { const v = [...new Set((!L.finTabs || sameList(L.finTabs, OLD_DEF) ? FT_DEF : L.finTabs).filter((k) => FT[k]))]; return (v.length ? v : FT_DEF).slice(0, 5); }; // Prompt 26: maks 5 faner (Mer kommer alltid sist)
 /** Setter Finans-fanene (profilvalg). push = lagre i /api/me/layout også. */
-export function setFinTabs(list, push = true) { L.finTabs = list.filter((k) => FT[k]); keep(); if (push) hlApi('/me/layout', { method: 'PUT', json: { finTabs: L.finTabs } }).catch(() => {}); }
+// Fase 6: serveren sender de nye nøklene for Transaksjoner og Faste betalinger (server/mobile.js FIN_NAV_ALIAS); web bruker de eldre.
+export const FT_ALIAS = Object.freeze({ transaksjoner: 'liste', faste: 'abonnementer' });
+export const ftKey = (k) => FT_ALIAS[k] ?? k;
+export function setFinTabs(list, push = true) { L.finTabs = [...new Set(list.map(ftKey))].filter((k) => FT[k]); keep(); if (push) hlApi('/me/layout', { method: 'PUT', json: { finTabs: L.finTabs } }).catch(() => {}); }
 export const finScreens = () => finKeys().map((k) => FT[k][0]);
 export const fabStyle = () => (L.fab === 'inline' ? 'inline' : 'float');
 export const fourthPref = () => L.fourthTab ?? 'auto';

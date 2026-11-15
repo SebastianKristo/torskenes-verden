@@ -8,7 +8,7 @@ import { haptic } from './mobile-haptics.js';
 import { IG, integLoad24, BD, bdLoad, calCard, markCustom } from './mobile-p24.js';
 import { haSection } from './mobile-p22.js';
 import { carOf, normNo, detectLocal } from './mobile-track.js';
-import { FT, FT_DEF, finKeys, setFinTabs } from './mobile-paper3.js';
+import { FT, FT_DEF, finKeys, setFinTabs, ftKey } from './mobile-paper3.js';
 import * as P25 from './mobile-p25.js';
 import { ctxOf } from './mobile-paper.js';
 import * as KAL from './mobile-kal.js';
@@ -251,7 +251,7 @@ export function take26(r) {
   KAL.takeKal(r);
   const FN = Array.isArray(r.finNavItems) && r.finNavItems.length ? r.finNavItems : r.finNav;
   if (Array.isArray(FN) && FN.length) {
-    const it = FN.map((x) => (typeof x === 'string' ? { key: x } : x)).filter((x) => x && FT[x.key] && x.key !== 'mer').slice(0, 5);
+    const it = FN.map((x) => (typeof x === 'string' ? { key: ftKey(x) } : x && { ...x, key: ftKey(x.key) })).filter((x) => x && FT[x.key] && x.key !== 'mer').slice(0, 5);
     if (it.length) {
       setFinTabs(it.map((x) => x.key), false);
       if (FN.some((x) => typeof x === 'object')) { L.fin = Object.fromEntries(it.filter((x) => x.label || x.icon).map((x) => [x.key, { ...(x.label ? { label: x.label } : {}), ...(x.icon ? { icon: x.icon } : {}) }])); keep(); }
