@@ -10,15 +10,21 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const read = (p) => readFileSync(join(ROOT, 'public', p), 'utf8');
 const DARK = 'html[data-mode="dark"][data-hl="2c"]';
 
-test('Mat: mørk papirmodus har egne tokens som vinner over de lyse standardverdiene', () => {
+test('Mat: fargene er designtokens, så mørk modus og Glass følger resten av Homelab', () => {
   const css = read('css/pages/mat.css');
-  const i = css.indexOf(`${DARK} .mat{`);
-  assert.ok(i > 0, 'mørk regel for .mat mangler i mat.css');
-  const rule = css.slice(i, css.indexOf('}', i));
-  assert.match(rule, /--mp-bg:var\(--mat-bg,#16/);
-  assert.match(rule, /color-scheme:dark/);
+  const base = css.slice(css.indexOf('.mat{'), css.indexOf('}', css.indexOf('.mat{')));
+  assert.match(base, /--mp-bg:var\(--ds-surface\)/);
+  assert.match(base, /--mp-t:var\(--ds-text-primary\)/);
+  assert.match(base, /color-scheme:var\(--ds-color-scheme\)/);
+  // Ingen faste farger i paletten (B-F4: dagens kort var lyst på mørk side).
+  assert.doesNotMatch(base, /#[0-9a-f]{3,8}\b/i);
+  const i = css.indexOf(`${DARK} .mat`);
+  assert.ok(i > 0, 'mørk regel for dagens kort mangler i mat.css');
+  assert.match(css.slice(i, css.indexOf('}', i)), /--mp-today:color-mix\(in srgb,var\(--ds-accent\)/);
   // Regelen må ha høyere spesifisitet enn «.mat», ikke :where(), siden mat.css lastes sist.
-  assert.ok(!/:where\([^)]*\)\s*\.mat\{[^}]*--mp-bg/.test(css));
+  assert.ok(!/:where\([^)]*\)\s*\.mat\{[^}]*--mp-/.test(css));
+  // B-F11: «Fast» er liten tekst og bruker textSecondary.
+  assert.match(css, /\.mat \.mp-fast\{[^}]*color:var\(--mp-mute\)/);
 });
 
 test('Chat: sidepanelet (--cs) er mørkt i mørk papirmodus, og Nøytral-temaet beholder sitt', () => {
