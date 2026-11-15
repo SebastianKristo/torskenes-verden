@@ -63,6 +63,7 @@ import java.util.Locale
 import no.kristo.finanshub.ui.designsystem.HomelabTheme
 import no.kristo.finanshub.ui.designsystem.HomelabType
 import no.kristo.finanshub.ui.designsystem.DsPalette
+import no.kristo.felles.tid.OsloDato
 
 /* ---------------- Felles ---------------- */
 
@@ -544,7 +545,7 @@ private val NB43 = Locale("nb", "NO")
 internal fun MonthHead43(ym: String, cat: String, count: Int, net: Double, top: androidx.compose.ui.unit.Dp) {
     val p = HomelabTheme.colors
     val m = runCatching { java.time.YearMonth.parse(ym) }.getOrNull()
-    val now = java.time.YearMonth.now()
+    val now = java.time.YearMonth.from(OsloDato.iDag())
     val full = m?.month?.getDisplayName(JTextStyle.FULL_STANDALONE, NB43)?.uppercase(NB43) ?: ym
     val short = m?.month?.getDisplayName(JTextStyle.SHORT_STANDALONE, NB43)?.uppercase(NB43)?.trimEnd('.') ?: ym
     val yr = if (m != null && m.year != now.year) " ${m.year}" else ""

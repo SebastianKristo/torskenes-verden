@@ -99,6 +99,9 @@ import no.kristo.finanshub.ui.designsystem.HomelabType
 import no.kristo.finanshub.ui.designsystem.DsPalette
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.minimumInteractiveComponentSize
+import no.kristo.felles.tid.OsloDato
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /*
  * Prompt 24: Boliger nøyaktig etter Boliger.dc.html (variant mobile, tema papir, hide-title) og claude-code-boliger-lik.md.
@@ -224,7 +227,7 @@ internal fun PaperBoliger24(vm: AppViewModel, navBottom: Dp, takePhoto: () -> Un
     val d = cur?.let { s.details[it.id] }
     val list = homes ?: emptyList()
     val curIdx = cur?.let { list.indexOf(it) } ?: 0
-    val ym = YearMonth.now()
+    val ym = java.time.YearMonth.from(OsloDato.iDag())
     fun spentOf(id: Int, m: YearMonth = ym): Double = s.details[id]?.entries?.filter { it.status != "ai" && it.date.startsWith(m.toString()) }?.sumOf { kotlin.math.abs(it.amount) } ?: 0.0
 
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(0.dp, 0.dp, 0.dp, PAPER_BAR + 24.dp + navBottom), verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -902,7 +905,9 @@ private fun EntrySheet24(vm: AppViewModel, d: HomeDetail24, e: HomeEntry24) {
             }
             // Prompt 52 (claude-code-kvittering-lokal-lik-overalt.md, mobil): samme kvitteringsvisning som Finans → transaksjon –
             // kortet (ReceiptHead52: logo, butikk, «kategori · dato · bolig», beløp, ✦ Glimt) og så «ORIGINAL KVITTERING».
-            val rc52 by produceState<BoligRc52?>(null, id, e.id) { value = runCatching { parseBoligRc52(JSONObject(vm.api50 { get("/homes/$id/expenses/${e.id}") })) }.getOrNull() }
+            val rc52 by produceState<BoligRc52?>(null, id, e.id) {
+                value = runCatching { val raw = vm.api50 { get("/homes/$id/expenses/${e.id}") }; withContext(Dispatchers.Default) { parseBoligRc52(JSONObject(raw)) } }.getOrNull()
+            }
             ReceiptHead52(
                 vm, null, e.description.substringBefore(" · "), e.color?.let { runCatching { color(it) }.getOrNull() } ?: DsPalette.Category.neutral.argbLong(),
                 listOfNotNull(rc52?.category ?: e.category, ddmm24(e.date), d.home.name).joinToString(" · "),
@@ -1134,7 +1139,7 @@ internal fun EntryAmountDate30(vm: AppViewModel, homeId: Int, e: HomeEntry24) {
             Box(
                 Modifier.weight(1f).heightIn(min = 34.dp).clip(RoundedCornerShape(10.dp)).background(p.surfaceRaised).border(1.dp, p.line, RoundedCornerShape(10.dp))
                     .clickable(role = Role.Button, onClickLabel = "Velg dato") {
-                        val d0 = runCatching { LocalDate.parse(date) }.getOrDefault(LocalDate.now())
+                        val d0 = runCatching { LocalDate.parse(date) }.getOrDefault(OsloDato.iDag())
                         android.app.DatePickerDialog(ctx, { _, y, m, dd ->
                             val nd = LocalDate.of(y, m + 1, dd).toString()
                             if (nd != date) { date = nd; Haptics.select(); vm.patchEntry30(homeId, e.id, null, null, nd) }

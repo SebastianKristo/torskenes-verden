@@ -36,6 +36,7 @@ import org.json.JSONObject
 import no.kristo.finanshub.ui.designsystem.HomelabTheme
 import no.kristo.finanshub.ui.designsystem.HomelabType
 import no.kristo.finanshub.ui.designsystem.DsPalette
+import no.kristo.felles.tid.OsloDato
 
 /*
  * Prompt 51 (ANDFEAT51): «Planlegging» i FinansHub Android – FIN51 ($S/SERVER51-API.md), fasit public/finans/js/plan51.js.
@@ -327,8 +328,8 @@ private fun srcLabel51(s: String) = when (s) { "transaksjoner" -> "Fra transaksj
 @Composable
 private fun Tax51(vm: AppViewModel, d: JSONObject) {
     val p = HomelabTheme.colors
-    val year = d.i43("year") ?: java.time.LocalDate.now().year - 1
-    val y0 = java.time.LocalDate.now().year
+    val year = d.i43("year") ?: OsloDato.iDag().year - 1
+    val y0 = OsloDato.iDag().year
     Cols51(
         left = {
             d.obj51("reminder")?.takeIf { it.optBoolean("show") }?.let { r ->

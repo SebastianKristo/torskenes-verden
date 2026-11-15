@@ -61,6 +61,8 @@ import no.kristo.finanshub.ui.designsystem.DsPalette
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.ui.semantics.Role
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /*
  * Prompt 23: Kvitteringer i Papir, nøyaktig etter «Mobil Papir App» → kvitt:
@@ -83,12 +85,16 @@ data class Rc23Draft(val name: String, val amount: String, val categoryId: Int?)
 private fun amountText(v: Double?): String = if (v == null) "" else String.format(java.util.Locale("nb", "NO"), "%.2f", v)
 
 internal fun AppViewModel.loadBooked23() = launchNav {
-    rc23.booked = parseReceipts(apiNav { get("/receipts?status=booked") }).take(20)
+    val raw = apiNav { get("/receipts?status=booked") }
+    rc23.booked = withContext(Dispatchers.Default) { parseReceipts(raw).take(20) }
 }
 
 private suspend fun AppViewModel.refreshReceipts23() {
     loadReceipts(); loadJobs()
-    rc23.booked = runCatching { parseReceipts(apiNav { get("/receipts?status=booked") }).take(20) }.getOrDefault(rc23.booked)
+    rc23.booked = runCatching {
+        val raw = apiNav { get("/receipts?status=booked") }
+        withContext(Dispatchers.Default) { parseReceipts(raw).take(20) }
+    }.getOrDefault(rc23.booked)
 }
 
 /** ✓ Godkjenn og bokfør: lagrer navn, beløp og kategori, så bokføres kvitteringen. */

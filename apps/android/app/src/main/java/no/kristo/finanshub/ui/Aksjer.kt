@@ -69,6 +69,7 @@ import java.time.ZoneId
 import no.kristo.finanshub.ui.designsystem.HomelabTheme
 import no.kristo.finanshub.ui.designsystem.HomelabType
 import no.kristo.finanshub.ui.designsystem.DsPalette
+import no.kristo.felles.tid.OsloDato
 
 /*
  * Prompt 23: Aksjer i Papir, nøyaktig etter «Aksjer Mobil» (theme=papir, hide-head) slik «Mobil Papir App» viser siden:
@@ -256,7 +257,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.stocksBody(
     // Utbytte
     val divs = x.txns.filter { it.kind == "Utbytte" }.take(5)
     if (divs.isNotEmpty()) {
-        item { StTitle("Utbytte", "${nf2(x.txns.filter { it.kind == "Utbytte" && it.date.startsWith(java.time.LocalDate.now().year.toString()) }.sumOf { it.amount })} kr i år") }
+        item { StTitle("Utbytte", "${nf2(x.txns.filter { it.kind == "Utbytte" && it.date.startsWith(OsloDato.iDag().year.toString()) }.sumOf { it.amount })} kr i år") }
         item {
             val p = HomelabTheme.colors
             StCard(Modifier.padding(horizontal = 16.dp)) {
@@ -759,7 +760,7 @@ private fun StockDetail(vm: AppViewModel, x: StocksX, i: Int, range: String, onR
 
 private fun dayName(d: String): String {
     val date = runCatching { LocalDate.parse(d) }.getOrNull() ?: return d.ifBlank { "Uten dato" }
-    return when (date) { LocalDate.now() -> "I dag"; LocalDate.now().minusDays(1) -> "I går"; else -> ddmmyyyy(d) }
+    return when (date) { OsloDato.iDag() -> "I dag"; OsloDato.iDag().minusDays(1) -> "I går"; else -> ddmmyyyy(d) }
 }
 
 @Composable

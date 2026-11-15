@@ -178,7 +178,7 @@ private val mono = PaperFonts.mono
 
 private fun whenText23(date: String): String {
     val d = runCatching { LocalDate.parse(date.take(10)) }.getOrNull() ?: return date
-    return when (ChronoUnit.DAYS.between(LocalDate.now(), d)) { 0L -> "I dag"; 1L -> "I morgen"; else -> "${d.dayOfMonth}. ${MON_L[d.monthValue - 1]}" }
+    return when (ChronoUnit.DAYS.between(OsloDato.iDag(), d)) { 0L -> "I dag"; 1L -> "I morgen"; else -> "${d.dayOfMonth}. ${MON_L[d.monthValue - 1]}" }
 }
 
 /** Abonnementer i Papir. lift: løft innholdet opp når det ligger i en ramme med egen toppmarg (overlapp mot toppbildet). */
@@ -210,7 +210,7 @@ internal fun PaperSubs23(vm: AppViewModel, navBottom: Dp, lift: Dp = 0.dp) {
             "hist" -> {
                 item { AgentCard23(vm, x, t) }
                 item { Text("Denne måneden", color = t.fg, fontFamily = sans, fontWeight = FontWeight.SemiBold, style = HomelabType.body, modifier = Modifier.padding(horizontal = 4.dp)) }
-                val today = LocalDate.now().toString()
+                val today = OsloDato.iDag().toString()
                 val paid = x.thisMonth.filter { it.date.take(10) <= today }.sortedByDescending { it.date }
                 if (paid.isEmpty()) item { Text("Ingen trekk ennå denne måneden.", color = t.mut, style = HomelabType.subheadline, fontFamily = sans, modifier = Modifier.padding(horizontal = 4.dp)) }
                 items(paid.size) { i ->
@@ -420,7 +420,7 @@ private fun day37(d: LocalDate) = "${WD37S[d.dayOfWeek.value - 1]} ${d.dayOfMont
 @Composable
 private fun TrialsOS37(vm: AppViewModel, t: SubTok) {
     val ctx = androidx.compose.ui.platform.LocalContext.current
-    val today = LocalDate.now()
+    val today = OsloDato.iDag()
     val l = vm.p31.trials.filter { it.status == "active" && !it.endsAt.isBefore(today) }.sortedBy { it.endsAt }
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(t.card).padding(16.dp, 14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -500,7 +500,7 @@ private fun AiCard23(vm: AppViewModel, x: SubsX) {
 
 @Composable
 private fun WeekCard23(x: SubsX, t: SubTok) {
-    val today = LocalDate.now()
+    val today = OsloDato.iDag()
     val days = (1..7).map { today.plusDays(it.toLong()).toString() }
     val list = x.upcoming.filter { it.date.take(10) in days }
     val per = days.map { d -> list.filter { it.date.startsWith(d) }.sumOf { it.amount } }
@@ -590,7 +590,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.stripes(c: Color, c
 
 @Composable
 private fun MonthCard23(x: SubsX, t: SubTok) {
-    val cur = LocalDate.now().monthValue - 1
+    val cur = OsloDato.iDag().monthValue - 1
     val months = if (x.byMonth.size == 12) x.byMonth.subList((cur - 5).coerceAtLeast(0), cur + 1) else x.byMonth.takeLast(6)
     var sel by remember(months.size) { mutableStateOf(months.size - 1) }
     val mx = (months.maxOfOrNull { it.total } ?: 0.0).coerceAtLeast(1.0)
@@ -802,8 +802,8 @@ private fun SubForm23(vm: AppViewModel, s: SubItem?, t: SubTok, close: () -> Uni
     var plan by remember(s?.id) { mutableStateOf(pre?.plan?.takeIf { it.isNotBlank() } ?: s?.plan?.takeIf { it != "–" } ?: "") }
     var category by remember(s?.id) { mutableStateOf(s?.category ?: pre?.category ?: "Annet") }
     var cycle by remember(s?.id) { mutableStateOf(pre?.cycle ?: s?.cycle ?: "monthly") }
-    var day by remember(s?.id) { mutableStateOf(preDay?.first ?: (s?.billDay ?: s?.chargeDay) ?: LocalDate.now().dayOfMonth) }
-    var month by remember(s?.id) { mutableStateOf(preDay?.second ?: s?.billMonth ?: s?.nextDate?.takeIf { it.length >= 7 }?.substring(5, 7)?.toIntOrNull() ?: LocalDate.now().plusMonths(1).monthValue) }
+    var day by remember(s?.id) { mutableStateOf(preDay?.first ?: (s?.billDay ?: s?.chargeDay) ?: OsloDato.iDag().dayOfMonth) }
+    var month by remember(s?.id) { mutableStateOf(preDay?.second ?: s?.billMonth ?: s?.nextDate?.takeIf { it.length >= 7 }?.substring(5, 7)?.toIntOrNull() ?: OsloDato.iDag().plusMonths(1).monthValue) }
     var status by remember(s?.id) { mutableStateOf(if (s != null && !s.active) "cancelled" else "active") }
     var pending by remember { mutableStateOf<android.net.Uri?>(null) }
     val pick = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri -> if (uri != null) { if (s != null) vm.subLogoUpload(s.id, uri) else pending = uri } }

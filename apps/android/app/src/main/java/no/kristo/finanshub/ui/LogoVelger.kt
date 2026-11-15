@@ -73,6 +73,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.Icon
 import androidx.compose.material3.minimumInteractiveComponentSize
+import no.kristo.felles.tid.OsloDato
 
 /* ---------------- Prompt 73 (LOGO73): «Endre logo» for en butikk i Finans ----------------
  * Fasit: «Lagre og logo.dc.html» 1a (mobil-ark fra transaksjon). Papir-design: bakgrunn #f3efe6, kort #fff, kant #d8d1c2,
@@ -119,9 +120,10 @@ object LogoOv73 {
         loadedAt = now
         try {
             val raw = vm.api52b { request("GET", "/merchants/logo-overrides", timeout = 6_000, read = 10_000) }
-            val o = JSONObject(raw).optJSONObject("names") ?: return
-            val next = HashMap<String, String>()
-            o.keys().forEach { k -> next[key(k)] = o.optString(k, "") }
+            val next = withContext(Dispatchers.Default) {
+                val o = JSONObject(raw).optJSONObject("names") ?: return@withContext null
+                HashMap<String, String>().also { m -> o.keys().forEach { k -> m[key(k)] = o.optString(k, "") } }
+            } ?: return
             if (next != names) { names = next; version++ }
         } catch (e: CancellationException) {
             throw e
@@ -225,7 +227,8 @@ internal fun LogoSheet73(vm: AppViewModel, name: String, names: List<String> = e
         searching = true
         delay(250)
         hits = try {
-            parseHits73(vm.api52b { request("GET", "/logos?q=" + enc73(q) + "&limit=60", timeout = 6_000, read = 10_000) })
+            val raw = vm.api52b { request("GET", "/logos?q=" + enc73(q) + "&limit=60", timeout = 6_000, read = 10_000) }
+            withContext(Dispatchers.Default) { parseHits73(raw) }
         } catch (e: CancellationException) { throw e } catch (e: Exception) { emptyList() }
         searching = false
     }
@@ -366,7 +369,7 @@ private fun Line73Button(text: String, modifier: Modifier, onClick: () -> Unit) 
 private val AUDIT_FMT = DateTimeFormatter.ofPattern("d. MMM HH:mm", Locale("nb", "NO"))
 
 private fun auditTime27(ts: String?): String = ts?.let { t ->
-    runCatching { java.time.OffsetDateTime.parse(t).atZoneSameInstant(java.time.ZoneId.systemDefault()).format(AUDIT_FMT) }.getOrNull()
+    runCatching { java.time.OffsetDateTime.parse(t).atZoneSameInstant(OsloDato.SONE).format(AUDIT_FMT) }.getOrNull()
         ?: runCatching { java.time.LocalDateTime.parse(t.replace(' ', 'T').take(19)).format(AUDIT_FMT) }.getOrNull()
         ?: t.take(16)
 } ?: ""

@@ -47,6 +47,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.ui.semantics.Role
+import no.kristo.felles.tid.OsloDato
 
 /*
  * Prompt 23: Finn-annonsen i appen (Mobil Papir App.dc.html → Finans → Finn → trykk på et kort). Fullskjerm over alt:
@@ -60,8 +61,8 @@ private val SCRIM = DsPalette.PapirLys.textPrimary.copy(alpha = .6f)
 
 private fun mailTime(iso: String?): String {
     if (iso.isNullOrBlank()) return ""
-    val t = runCatching { java.time.OffsetDateTime.parse(iso).atZoneSameInstant(java.time.ZoneId.systemDefault()).toLocalDateTime() }.getOrNull()
-        ?: runCatching { java.time.Instant.parse(iso).atZone(java.time.ZoneId.systemDefault()).toLocalDateTime() }.getOrNull()
+    val t = runCatching { java.time.OffsetDateTime.parse(iso).atZoneSameInstant(OsloDato.SONE).toLocalDateTime() }.getOrNull()
+        ?: runCatching { java.time.Instant.parse(iso).atZone(OsloDato.SONE).toLocalDateTime() }.getOrNull()
         ?: runCatching { java.time.LocalDateTime.parse(iso.take(19)) }.getOrNull()
         ?: return if (iso.length >= 10) ddmm(iso) else iso
     return "%02d.%02d %02d:%02d".format(t.dayOfMonth, t.monthValue, t.hour, t.minute)
