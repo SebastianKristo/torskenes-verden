@@ -1,10 +1,10 @@
 // Prompt 37 (SERVER37): Kalender – fagfarger, prøveperiode ≠ skoleprøve, adresse + kart på hendelser Glimt legger til.
 //
-// Hendelser (alle kilder, via addEventDecorator i calendar.js) får:
+// Hendelser (alle kilder, via addEventDecorator i events.js) får:
 //   kind:'trial' (prøveperioder fra Abonnementer, source 'trials') | 'eksamen' | 'prove' (skoleprøver) | 'frist'
 //   subjectKey:'MEK1300'|'Fysikk', subjectColor:'#2f7a4f', subjectTextColor, subjectLightColor  (Studie-hendelser: timeplan, prøver, frister)
 //     Nøkkel: emnekode i tittelen (/[A-ZÆØÅ]{2,5}\s?\d{3,4}/, «TRE 1400» → TRE1400), ellers første ord etter
-//     «Frist: / Prøve · / Prøve i / Eksamen / Forelesning / Øving / Lab / Seminar», ellers faget calendar.js fant.
+//     «Frist: / Prøve · / Prøve i / Eksamen / Forelesning / Øving / Lab / Seminar», ellers faget events.js fant.
 //     Farge: brukerens valg i /api/me/layout {subjectColors:{key:'#hex'}} (appene synker dette), ellers fast tildelt fra paletten
 //     (8 farger, nye fag får neste ledige, lagret i study_subject_colors per bruker så den aldri endrer seg).
 //   address, map:{lat, lon, url, appleUrl, googleUrl, label} når hendelsen har et geokodet sted (Glimt-lagte hendelser geokodes
@@ -13,11 +13,11 @@
 // PUT  /api/kalender/subjects/:key {color|null} → lagrer i layout.subjectColors (samme felt som appene)
 // GET  /api/kalender/geo?q=Hoffsveien 4 → {found, address, label, lat, lon, map} (cache permanent, bom prøves igjen etter 1 t)
 import { Hono } from 'hono';
-import { db, q, kv } from './db.js';
-import { authOrToken, layoutOf } from './mobile.js';
-import { addEventDecorator } from './calendar.js';
-import { NOMINATIM_UA } from './family.js';
-import { dtf } from './intl-format.js'; // gjenbrukte Intl.DateTimeFormat
+import { db, q, kv } from '../db.js';
+import { authOrToken, layoutOf } from '../mobile.js';
+import { addEventDecorator } from './events.js';
+import { NOMINATIM_UA } from '../family.js';
+import { dtf } from '../intl-format.js'; // gjenbrukte Intl.DateTimeFormat
 
 const MOCK = process.env.MOCK_DATA === '1';
 db.exec(`CREATE TABLE IF NOT EXISTS study_subject_colors (user_id TEXT NOT NULL, key TEXT NOT NULL, color TEXT NOT NULL, created INTEGER NOT NULL, PRIMARY KEY (user_id, key));

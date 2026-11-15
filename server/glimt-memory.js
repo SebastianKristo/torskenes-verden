@@ -127,7 +127,7 @@ export const eventHitsAlias = (e, m) => hits(`${e.title ?? ''} \n ${e.note ?? ''
 const addDaysISO = (d, n) => new Date(Date.parse(d + 'T00:00:00Z') + n * 864e5).toISOString().slice(0, 10);
 /** Egne hendelser i Privat (lokale eller Google) som treffer aliaset og har en annen tittel. */
 export async function applyTargets(user, m) {
-  const { eventsFor } = await import('./calendar.js');
+  const { eventsFor } = await import('./kalender/events.js');
   const today = osloTodayISO();
   const { events } = await runAsUser(user, () => eventsFor(user, addDaysISO(today, -365), addDaysISO(today, 365)));
   const title = aliasTitle(m);
@@ -146,7 +146,7 @@ export async function applyMemory(user, m, { dryRun = false } = {}) {
   const list = await applyTargets(user, m);
   const title = aliasTitle(m);
   if (dryRun) return { count: list.length, title, events: list.slice(0, 50).map((e) => ({ id: e.id, title, from: e.title, date: e.date })) };
-  const { updateEvent } = await import('./calendar.js');
+  const { updateEvent } = await import('./kalender/events.js');
   const done = [];
   for (const e of list) {
     try { await runAsUser(user, () => updateEvent(user, e.id, { title }, e)); done.push({ id: e.id, title, from: e.title, date: e.date }); } catch (err) { console.warn('[glimt husker] apply:', err?.message ?? err); }

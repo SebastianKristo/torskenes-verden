@@ -26,9 +26,9 @@ globalThis.fetch = async () => { throw Object.assign(new TypeError('fetch failed
 test.after(() => { globalThis.fetch = realFetch; });
 
 const { default: app } = await import('../server/index.js');
-const cal = await import('../server/calendar.js');
-const ix = await import('../server/ical-expand.js');
-const bd = await import('../server/birthdays.js');
+const cal = await import('../server/kalender/events.js');
+const ix = await import('../server/kalender/ical.js');
+const bd = await import('../server/kalender/birthdays.js');
 const { kv, OWNER } = await import('../server/db.js');
 const { seal } = await import('../server/finans/db.js');
 const ical = (await import('node-ical')).default;

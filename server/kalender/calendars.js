@@ -15,7 +15,7 @@
 // POST   /api/kalender/calendars {name, color:'#rrggbb', visible?} → 201 {calendar}
 // PATCH  /api/kalender/calendars/:id {name?, color?, visible?, hidMenu?} → {calendar}   (innebygde: farge, navn og synlighet)
 //   Prompt 35: hver kalender har også hidMenu (skjult fra menyen), source:'builtin'|'own'|'ical'|'ha' og badge:null|'Abonnement'|'HA';
-//   iCal/HA-kalendere (writable:false) kommer fra kalender35.js. prefs har også weekStart:'mon'|'sun', openView:'mnd'|'uke'|'3d'|'dag'|'liste',
+//   iCal/HA-kalendere (writable:false) kommer fra external.js. prefs har også weekStart:'mon'|'sun', openView:'mnd'|'uke'|'3d'|'dag'|'liste',
 //   defaultDuration:30|60|90|120, timelineStart:'now'|'06'|'08', notifyBirthdays, notifyDeadlines, notifyBrief, travelTime (bool).
 // DELETE /api/kalender/calendars/:id → {ok}  (bare egne; 403 for innebygde). Hendelsene slettes IKKE, de får standardkalenderen.
 // PUT    /api/kalender/calendars/prefs {defaultCalendar?, defaultReminder?:'none'|'10m'|'30m'|'1h'|'1d', weekNumbers?:bool,
@@ -70,27 +70,27 @@
 //   Ord for ord: når klienten fikk 202, sendes «assist» {jobId, state:'running', partial:'tekst så langt', done:false} i biter før
 //   svaret; ellers animerer klienten text selv. Opprettelse (calendar.create) skjer med en gang og kan angres med undo.
 import { Hono } from 'hono';
-import { agent45, registerLegacy45, toAssist45 } from './glimt45/engine.js'; // prompt 45: felles Glimt-motor
+import { agent45, registerLegacy45, toAssist45 } from '../glimt45/engine.js'; // prompt 45: felles Glimt-motor
 import { randomBytes } from 'node:crypto';
-import { kv } from './db.js';
-import { db as fhDb } from './finans/db.js';
-import { authOrToken } from './mobile.js';
-import { sessionUser, userInfo } from './auth/session.js';
-import { broadcast } from './realtime.js';
-import { runAsUser } from './settings.js';
-import { cached } from './cache.js';
-import { eventsFor, eventInput, createEvent, normText, setEventDecorator, osloAt } from './calendar.js';
-import { askCalendar } from './calendar-glimt.js';
-import { weatherFull, wmoText, iconOf, PLACES } from './weather-full.js';
-import { aliasesOf, typeOfWord, eventHitsAlias } from './glimt-memory.js';
-import { parseQuick, osloTodayISO } from './dates/quick.js'; // dato og tid fra den felles tolkeren
-import { parseDay, normDayText } from './parse-day35.js'; // prompt 35: felles dag-tolkning
-import { attachGeo, parseIntent37, schoolTestAnswer } from './kal37.js'; // prompt 37
-import { extCalendarsOf, mountExt, patchExt, removeExt, isExtId, shades } from './kalender35.js'; // prompt 35: iCal og Home Assistant
-import { googleKalApi, googleCalendarsOf, isGoogleCalId, patchGoogleCal, removeGoogleCal } from './kalender36g.js'; // prompt 36b: Google-kalendere
-import { extractPlace, placeWeather } from './weather35.js'; // prompt 35: været for et sted
-import { tokenAccessOf, issueToken, tokensById, revokeTokenOf, TOKEN_SCOPES } from './finans/routes.js';
-import { fagAnswer, rememberCtx } from './glimt39-fag.js'; // prompt 39: oppfølging og fag
+import { kv } from '../db.js';
+import { db as fhDb } from '../finans/db.js';
+import { authOrToken } from '../mobile.js';
+import { sessionUser, userInfo } from '../auth/session.js';
+import { broadcast } from '../realtime.js';
+import { runAsUser } from '../settings.js';
+import { cached } from '../cache.js';
+import { eventsFor, eventInput, createEvent, normText, setEventDecorator, osloAt, widgetOut } from './events.js';
+import { askCalendar } from './glimt.js';
+import { weatherFull, wmoText, iconOf, PLACES } from '../weather-full.js';
+import { aliasesOf, typeOfWord, eventHitsAlias } from '../glimt-memory.js';
+import { parseQuick, osloTodayISO } from '../dates/quick.js'; // dato og tid fra den felles tolkeren
+import { parseDay, normDayText } from '../parse-day35.js'; // prompt 35: felles dag-tolkning
+import { attachGeo, parseIntent37, schoolTestAnswer } from './subjects.js'; // prompt 37
+import { extCalendarsOf, mountExt, patchExt, removeExt, isExtId, shades } from './external.js'; // prompt 35: iCal og Home Assistant
+import { googleKalApi, googleCalendarsOf, isGoogleCalId, patchGoogleCal, removeGoogleCal } from './google.js'; // prompt 36b: Google-kalendere
+import { extractPlace, placeWeather } from '../weather35.js'; // prompt 35: været for et sted
+import { tokenAccessOf, issueToken, tokensById, revokeTokenOf, TOKEN_SCOPES } from '../finans/routes.js';
+import { fagAnswer, rememberCtx } from '../glimt39-fag.js'; // prompt 39: oppfølging og fag
 
 const MOCK = process.env.MOCK_DATA === '1';
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -125,7 +125,7 @@ export function relDay(date, today) {
 /* ═══════════════════════ Kalendere ═══════════════════════ */
 
 // Prompt 39: standard er bare fire kalendere (Personlig · Bursdager · Skole · Helligdager). De seks fra prompt 33 (LEGACY_CALENDARS)
-// gjelder bare etter «Angre» på oppryddingen (kal39.js). Gamle id-er (jobb/familie/helse → personlig, studie → skole) godtas fortsatt.
+// gjelder bare etter «Angre» på oppryddingen (four-calendars.js). Gamle id-er (jobb/familie/helse → personlig, studie → skole) godtas fortsatt.
 export const LEGACY_CALENDARS = [
   { id: 'personlig', key: 'p', name: 'Personlig', color: '#b23a2a', textColor: '#8a2a1d', lightColor: '#f29a8a', backend: 'privat', sources: ['privat', 'trials'] },
   { id: 'jobb', key: 'j', name: 'Jobb', color: '#2b5d8a', textColor: '#1f4568', lightColor: '#9cc2ee', backend: 'privat', sources: [] },
@@ -141,7 +141,7 @@ export const APP_CALENDARS = [
   { id: 'helligdager', key: 'h', name: 'Helligdager', color: '#a39d90', textColor: '#757065', lightColor: '#cfcac0', backend: 'privat', sources: ['helligdager'], readOnly: true },
 ];
 export const LEGACY_ALIAS = { jobb: 'personlig', familie: 'personlig', helse: 'personlig', studie: 'skole' };
-// Prompt 39: kal39.js setter krokene (modus, sammenslåtte kalendere, ny form på radene). Standard: fire kalendere uten kroker.
+// Prompt 39: four-calendars.js setter krokene (modus, sammenslåtte kalendere, ny form på radene). Standard: fire kalendere uten kroker.
 let H39 = { mode: () => 'four', merged: () => null, shape: (u, c) => c, ensure: () => {}, extra: () => ({}) };
 export const _setKal39 = (h) => { H39 = { ...H39, ...h }; };
 const isFour = (user) => H39.mode(user) !== 'legacy';
@@ -201,7 +201,7 @@ function defaultCalendar(e, four = false) {
   if (e.source === 'trials') return 'personlig';
   return guessCalendar(`${e.title ?? ''} ${e.room ?? ''}`) ?? 'personlig';
 }
-/** Setter appCalendar/appColor på hendelsene (registrert i calendar.js eventsFor). */
+/** Setter appCalendar/appColor på hendelsene (registrert i events.js eventsFor). */
 function decorate(user, events) {
   if (!events.length) return events;
   const cals = new Map(appCalendarsOf(user).map((c) => [c.id, c]));
@@ -253,7 +253,7 @@ const cleanName = (v) => String(v ?? '').replace(/[\u0000-\u001f]/g, ' ').replac
 
 export const calendarsApi = new Hono();
 calendarsApi.use('*', authOrToken);
-calendarsApi.get('/', async (c) => c.json(await calendarsOut(c.get('user'))));
+// GET / svares av four-calendars.js (cals39Api, montert foran), som bruker calendarsOut herfra og legger på fagfargene.
 calendarsApi.put('/prefs', async (c) => {
   const user = c.get('user'), b = await c.req.json().catch(() => null);
   if (!b || typeof b !== 'object' || Array.isArray(b)) return bad(c, 'Forventet et objekt');
@@ -340,7 +340,7 @@ export async function eventsMiddleware(c, next) {
         else {
           const cal = appCalendarsOf(user).find((x) => x.id === resolveCalendar(user, b.calendar));
           if (cal) { c.res = c.json({ error: `Kan ikke legge til i «${cal.name}», den er skrivebeskyttet. Velg Personlig i stedet.`, readOnly: true, calendar: cal.id, suggest: 'personlig' }, 400); return; }
-          // ukjent id: som før (calendar.js svarer 400)
+          // ukjent id: som før (events.js svarer 400)
         }
       }
       if (b && typeof b === 'object' && b.appCalendar !== undefined) {
@@ -350,7 +350,7 @@ export async function eventsMiddleware(c, next) {
         delete rest.appCalendar;
         // Bare flytting i appen: ingen skriving til Google eller lokal lagring.
         if (m === 'PATCH' && !Object.keys(rest).length) {
-          const { findEvent } = await import('./calendar.js');
+          const { findEvent } = await import('./events.js');
           const ev = await findEvent(user, id);
           if (!ev) { c.res = c.json({ error: 'Fant ikke hendelsen' }, 404); return; }
           setEventCalendar(user, ev.id, want);
@@ -361,7 +361,7 @@ export async function eventsMiddleware(c, next) {
         }
         if (rest.calendar === undefined || !['privat', 'familie'].includes(rest.calendar)) rest.calendar = backendOf(user, want); // prompt 46: «calendar» = app-id → lagring
         if (m === 'PATCH') setEventCalendar(user, id, want);
-        c.req.bodyCache = { text: Promise.resolve(JSON.stringify(rest)) }; // handleren i calendar.js leser den nye kroppen
+        c.req.bodyCache = { text: Promise.resolve(JSON.stringify(rest)) }; // handleren i events.js leser den nye kroppen
       }
     }
     await next();
@@ -571,15 +571,17 @@ export async function widgetExtra(user, now = Date.now()) {
   return { next3, month: { year: y, month: m, label: `${MON[m - 1]} ${y}`, today, deepLink: `kalender://dag/${today}`, weeks }, weather,
     deepLink: 'kalender://', links: { today: `kalender://dag/${today}`, list: 'kalender://liste', new: 'kalender://ny' } };
 }
-/** Mellomvare foran /api/widgets/calendar: legger widgetExtra til svaret fra calendar.js. */
-export async function widgetMiddleware(c, next) {
-  await next();
-  if (c.req.method !== 'GET' || !c.res || c.res.status !== 200 || !c.get('user')) return;
-  const j = await c.res.clone().json().catch(() => null);
-  if (!j) return;
-  const v = c.req.query('now'), t = v ? Date.parse(v) : NaN;
-  try { c.res = c.json({ ...j, ...(await widgetExtra(c.get('user'), Number.isFinite(t) ? t : Date.now())) }); } catch (e) { console.warn('[kalender33] widget:', e.message); }
-}
+/** GET /api/widgets/calendar[?now=ISO]: grunnsvaret fra events.js (NÅ, NESTE, dagens timer, prøver, neste skoledag) og
+ *  Kalender-appens tillegg (neste tre, måned, vær, lenker). Feiler tillegget, sendes grunnsvaret alene (som før). */
+export const widgetApi = new Hono();
+widgetApi.get('/', authOrToken, async (c) => {
+  const v = c.req.query('now'), t = v ? Date.parse(v) : NaN, now = Number.isFinite(t) ? t : Date.now();
+  const user = c.get('user');
+  const base = await widgetOut(user, now);
+  let extra = {};
+  try { extra = await widgetExtra(user, now); } catch (e) { console.warn('[kalender] widget:', e.message); }
+  return c.json({ ...base, ...extra });
+});
 
 /* ═══════════════════════ Glimt i Kalender (/api/assist source:'calendar') ═══════════════════════ */
 

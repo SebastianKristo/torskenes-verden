@@ -35,7 +35,7 @@ const imp43 = await import('../server/claude-import43.js');
 const gsc43 = await import('../server/gsc43.js');
 const domG = await import('../server/domains-glimt.js');
 const appUpd = await import('../server/app-update.js');
-const kal43 = await import('../server/kal-update43.js');
+const kal43 = await import('../server/kalender/app-update.js');
 const fin43 = await import('../server/finans/finans43.js');
 
 let ipN = 30;

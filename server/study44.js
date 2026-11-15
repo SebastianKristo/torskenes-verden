@@ -349,7 +349,7 @@ const hmOf = (iso) => { const p = OSLO(Date.parse(iso)); return `${p.hour}:${p.m
 const minOf = (iso) => { const p = OSLO(Date.parse(iso)); return +p.hour * 60 + +p.minute; };
 export async function overview44(u, now = Date.now()) {
   const p = OSLO(now), today = `${p.year}-${p.month}-${p.day}`;
-  const { eventsFor, lessonNowOf } = await import('./calendar.js');
+  const { eventsFor, lessonNowOf } = await import('./kalender/events.js');
   const end = new Date(Date.parse(`${today}T12:00:00Z`) + 21 * 86400_000).toISOString().slice(0, 10);
   let events = [];
   try { events = (await eventsFor(u, today, end)).events; } catch { events = []; }

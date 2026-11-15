@@ -24,7 +24,7 @@ import { resolve } from 'node:path';
 import { db as fhDb } from '../finans/db.js';
 import { sessionUser, userInfo, currentSessionId } from './session.js';
 import { tokenAccessOf, issueToken, tokensById, revokeTokenOf, TOKEN_SCOPES } from '../finans/routes.js';
-import { companionsOf, deviceName } from '../kalender33.js';
+import { companionsOf, deviceName } from '../kalender/calendars.js';
 import { issueRefresh44 } from './refresh.js'; // prompt 44: refresh-token (90 d glidende, 60 s grace)
 import { originOf46, serverAddresses41, discovery41, meServer41, setMeServer41 } from './server-address.js'; // serverens adresser (aldri container-IP)
 

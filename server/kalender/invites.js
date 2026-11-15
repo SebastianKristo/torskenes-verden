@@ -16,15 +16,15 @@ import { Hono } from 'hono';
 import { connect as netConnect } from 'node:net';
 import { connect as tlsConnect } from 'node:tls';
 import { randomBytes, createHash } from 'node:crypto';
-import { parseQuick, osloTodayISO } from './dates/quick.js'; // dato og tid fra den felles tolkeren
-import { db, q, kv } from './db.js';
-import { userInfo, listUsers } from './auth/session.js';
-import { authOrToken } from './mobile.js';
-import { userCfg } from './settings.js';
-import { notifyUser } from './notify.js';
-import { addEventDecorator, addEventSource, findEvent } from './calendar.js';
-import { NOMINATIM_UA } from './family.js';
-import { dtf } from './intl-format.js'; // gjenbrukte Intl.DateTimeFormat
+import { parseQuick, osloTodayISO } from '../dates/quick.js'; // dato og tid fra den felles tolkeren
+import { db, q, kv } from '../db.js';
+import { userInfo, listUsers } from '../auth/session.js';
+import { authOrToken } from '../mobile.js';
+import { userCfg } from '../settings.js';
+import { notifyUser } from '../notify.js';
+import { addEventDecorator, addEventSource, findEvent } from './events.js';
+import { NOMINATIM_UA } from '../family.js';
+import { dtf } from '../intl-format.js'; // gjenbrukte Intl.DateTimeFormat
 
 const MOCK = () => process.env.MOCK_DATA === '1';
 const TZ = 'Europe/Oslo';

@@ -26,7 +26,7 @@ const { db, kv, OWNER } = await import('../server/db.js');
 const assist = await import('../server/assist.js');
 const glimt = await import('../server/tasks-glimt37.js');
 const bible = await import('../server/bible37.js');
-const kal = await import('../server/kal37.js');
+const kal = await import('../server/kalender/subjects.js');
 const where = await import('../server/where37.js');
 const { osloTodayISO } = await import('../public/js/quick-time.js');
 const TODAY = osloTodayISO();
@@ -418,7 +418,7 @@ test('kalender: skoleprøve ≠ prøveperiode, «i morgen?», fagfarger, kind tr
   assert.ok(sj.body.subjects.some((x) => x.key === 'MEK1300' && x.color === '#c2477a' && x.own) && sj.body.palette.length === 8);
   const tr = await A('/finans/api/subscriptions/trials', 'POST', { service: 'Viaplay', endsAt: addDays(TODAY, 3), priceAfter: 149 });
   assert.equal(tr.status, 201);
-  const { eventsFor } = await import('../server/calendar.js');
+  const { eventsFor } = await import('../server/kalender/events.js');
   const { runAsUser } = await import('../server/settings.js');
   const { events } = await runAsUser(sebId, () => eventsFor(sebId, TODAY, addDays(TODAY, 60)));
   const te = events.find((e) => e.source === 'trials');

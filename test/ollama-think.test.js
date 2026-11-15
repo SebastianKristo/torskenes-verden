@@ -59,7 +59,7 @@ const opts = await import('../server/ollama-opts.js');
 const { default: app } = await import('../server/index.js');
 const chat = await import('../server/chat.js');
 chat._setChatFetch(fakeFetch);
-const { describe } = await import('../server/calendar-glimt.js');
+const { describe } = await import('../server/kalender/glimt.js');
 const { setUserCfg } = await import('../server/settings.js');
 const { OWNER } = await import('../server/db.js');
 const { saveSettings } = await import('../server/finans/db.js');

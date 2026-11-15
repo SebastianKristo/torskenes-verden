@@ -28,7 +28,7 @@ const E = await import('../server/glimt45/engine.js');
 const P = await import('../server/glimt45/plan.js');
 const TL = await import('../server/glimt45/tools.js');
 const { runAsUser } = await import('../server/settings.js');
-const { eventsFor } = await import('../server/calendar.js');
+const { eventsFor } = await import('../server/kalender/events.js');
 
 const TODAY = '2026-10-23'; // fredag
 E._setClock45({ today: TODAY, nowMin: 600 });

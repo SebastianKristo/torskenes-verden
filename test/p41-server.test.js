@@ -35,8 +35,8 @@ const chat41 = await import('../server/chat41.js');
 const wx41 = await import('../server/weather41.js');
 const ai41 = await import('../server/ai41.js');
 const mai = await import('../server/mai17-41.js');
-const kal41 = await import('../server/kalender41.js');
-const bd41 = await import('../server/birthdays41.js');
+const kal41 = await import('../server/kalender/glimt-search.js');
+const bd41 = await import('../server/kalender/birthday-photos.js');
 
 let ipN = 10;
 async function req(path, { method = 'GET', headers = {}, body, raw } = {}) {

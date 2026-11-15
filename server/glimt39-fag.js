@@ -1,6 +1,6 @@
 // Prompt 39 (SERVER39): Glimt følger opp og forklarer fag (claude-code-glimt-oppfolging-fag.md).
-// Brukes av Kalender-Glimt (kalender33.js calendarAnswer, POST /api/assist source:'calendar'), ✦ Spør i kalendersøket
-// (calendar-glimt.js askCalendar) og Homelab-Glimt (assist.js answer).
+// Brukes av Kalender-Glimt (kalender/calendars.js calendarAnswer, POST /api/assist source:'calendar'), ✦ Spør i kalendersøket
+// (kalender/glimt.js askCalendar) og Homelab-Glimt (assist.js answer).
 //
 // Samtalehukommelse: hendelsene fra forrige svar huskes per bruker i 10 min (ctx). Oppfølging som «hva slags fag er det»,
 // «hva er det», «forklar», «fortell mer» bruker ctx (Studie/Skole-hendelser); mangler ctx, brukes dagens skoletimer.
@@ -12,7 +12,7 @@
 //   ukjent tittel («test»)          → «Jeg vet ikke hvilket fag «test» er. Gi hendelsen et fagnavn, så kan jeg forklare.»
 // Lokal fagordbok er alltid tilgjengelig. Server-LLM (ruten «Glimt · kalender», 45 s) brukes bare for emnekoder ordboka ikke kjenner;
 // tidsavbrudd gir lokalt svar uten feilmelding.
-import { eventsFor } from './calendar.js';
+import { eventsFor } from './kalender/events.js';
 import { runAsUser } from './settings.js';
 import { run as aiRun } from './ai-run.js';
 import { parseDay } from './parse-day35.js';

@@ -320,7 +320,7 @@ let _events50 = null; // bare for tester: (user, fromDate, toDate) → {events}
 export const _setCalendar50 = (fn) => { _events50 = fn; };
 async function calendarNow(v, now) {
   try {
-    const fn = _events50 ?? (await import('./calendar.js')).eventsFor;
+    const fn = _events50 ?? (await import('./kalender/events.js')).eventsFor;
     const d = ymdOslo(now);
     const r = await Promise.race([fn(v, d, d), new Promise((res) => setTimeout(() => res(null), 2500))]);
     return (r?.events ?? []).filter((e) => {

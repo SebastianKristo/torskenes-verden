@@ -14,20 +14,20 @@
 // Home Assistant: GET /api/calendars, GET /api/calendars/<id>?start&end, calendar.create_event med rrule (reserve: årets og
 // neste års hendelse), og WebSocket calendar/event/delete og calendar/event/update for sletting og endring.
 // Prompt 27 (Kalender v2): scope calendar.events lagres fra token-svaret (gconf.scope); googleCanWrite, googleCalendarIds
-// (Privat = valgt kalender, Familie = familyCalendarId eller en skrivbar «Famil…»-kalender) og googleEventWrite brukes av calendar.js.
+// (Privat = valgt kalender, Familie = familyCalendarId eller en skrivbar «Famil…»-kalender) og googleEventWrite brukes av events.js.
 // MOCK_DATA=1 uten Google-klient eller HA-token: innebygd Google og HA i minnet (per bruker), så klientene kan utvikles.
 import { Hono } from 'hono';
 import { createHash, randomBytes } from 'node:crypto';
 import WebSocket from 'ws';
-import { db, q, kv } from './db.js';
-import { cfg } from './settings.js';
-import { sessionUser, userInfo, listUsers, isAdmin } from './auth/session.js';
-import { bearerOk } from './finans/routes.js';
-import { seal, unseal } from './finans/db.js';
-import { broadcast } from './realtime.js';
-import { notifyOf } from './notify.js';
-import { photoUrl41 } from './birthdays41.js'; // prompt 41: bilder av personer
-import { osloDate } from './dates/oslo.js';
+import { db, q, kv } from '../db.js';
+import { cfg } from '../settings.js';
+import { sessionUser, userInfo, listUsers, isAdmin } from '../auth/session.js';
+import { bearerOk } from '../finans/routes.js';
+import { seal, unseal } from '../finans/db.js';
+import { broadcast } from '../realtime.js';
+import { notifyOf } from '../notify.js';
+import { photoUrl41 } from './birthday-photos.js'; // prompt 41: bilder av personer
+import { osloDate } from '../dates/oslo.js';
 
 const MOCK = process.env.MOCK_DATA === '1';
 const DAY = 86_400_000;
@@ -333,7 +333,7 @@ export function syncGoogle(user, { full = false } = {}) {
   return p;
 }
 
-/* ---------------- Prompt 26: Kalender (calendar.js) leser Google og koblingene ---------------- */
+/* ---------------- Prompt 26: Kalender (events.js) leser Google og koblingene ---------------- */
 
 /** Kalender-koblingene til user (Innstillinger → Kalendere): Google og Home Assistant. */
 export function calendarLinks(user) {

@@ -8,7 +8,7 @@ import { isAdmin } from '../auth/session.js';
 import { notifyUser } from '../notify.js';
 import { family50 as F } from '../family.js';
 import { tripBetween51 } from '../ruter41.js';
-import { addEventSource } from '../calendar.js';
+import { addEventSource } from '../kalender/events.js';
 import { MIN, HOUR, DAY, clean, num, iso, hm, ymd, dayText, parseTime, osloAt } from './common.js';
 
 db.exec(`CREATE TABLE IF NOT EXISTS famcal51_event (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL, start INTEGER NOT NULL, end INTEGER NOT NULL, all_day INTEGER NOT NULL DEFAULT 0,

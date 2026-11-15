@@ -1,7 +1,7 @@
 // Prompt 39 (SERVER39): Kalender – bare fire kalendere (Personlig · Bursdager · Skole · Helligdager), opprydding 12 → 4 som kan
 // angres, innebygde norske helligdager og Google-velgeren «Hvilken kalender er hva?». Per bruker, sesjon eller app-token.
 //
-// GET   /api/kalender/calendars → som før (kalender33.js), men standard er bare de fire + brukerens egne. Hver rad:
+// GET   /api/kalender/calendars → som før (calendars.js), men standard er bare de fire + brukerens egne. Hver rad:
 //   {id, key, name, color, source:'google'|'url'|'builtin'|'own', sourceLabel:'sebastian@…'|'tp.uio.no · hver time'|'Norge',
 //    badge:'GOOGLE'|'URL'|'INNEBYGD'|'EGEN'|'HA', count, visible, notify, notifyLabel, showInBrief, kind:<gammel source>,
 //    subjectColors?:[{key, color}] (Skole), url?, interval?:'15m'|'1h'|'6h'|'1d', lastFetched?, status?:'ok'|'Feil · sjekk URL'|'Ikke satt'|'Ikke koblet',
@@ -23,20 +23,20 @@
 //   Nye hendelser fra appen lagres i primær Google-kalender (Personlig).
 import { Hono } from 'hono';
 import { createHash, randomBytes } from 'node:crypto';
-import { db, kv } from './db.js';
-import { authOrToken, layoutOf } from './mobile.js';
-import { guardedFetch86, approveIfAdmin86 } from './localfetch86.js'; // prompt 86: SSRF-vern, lokale verter må være godkjent av admin
-import { broadcast } from './realtime.js';
-import { runAsUser, userCfg } from './settings.js';
+import { db, kv } from '../db.js';
+import { authOrToken, layoutOf } from '../mobile.js';
+import { guardedFetch86, approveIfAdmin86 } from '../localfetch86.js'; // prompt 86: SSRF-vern, lokale verter må være godkjent av admin
+import { broadcast } from '../realtime.js';
+import { runAsUser, userCfg } from '../settings.js';
 import { googleConnected, googleConfSet, googleCalendarList, calendarLinks } from './birthdays.js';
-import { clearCalendarCache, googleExtraOf, addEventSource, eventsFor } from './calendar.js';
-import { extCalendarsOf, addIcal, refreshIcal, removeExt, normalizeIcalUrl, guessName } from './kalender35.js';
-import { calendarsOut, appCalendarsOf, eventKey, LEGACY_ALIAS, _setKal39 } from './kalender33.js';
-import { fagKey } from './kal37.js';
-import { parseIcs, expandIcs } from './ical-expand.js';
-import { osloTodayISO } from '../public/js/quick-time.js';
-import { registerJob } from './jobs/index.js';
-import { holidaysBetween } from './dates/holidays.js';
+import { clearCalendarCache, googleExtraOf, addEventSource, eventsFor } from './events.js';
+import { extCalendarsOf, addIcal, refreshIcal, removeExt, normalizeIcalUrl, guessName } from './external.js';
+import { calendarsOut, appCalendarsOf, eventKey, LEGACY_ALIAS, _setKal39 } from './calendars.js';
+import { fagKey } from './subjects.js';
+import { parseIcs, expandIcs } from './ical.js';
+import { osloTodayISO } from '../../public/js/quick-time.js';
+import { registerJob } from '../jobs/index.js';
+import { holidaysBetween } from '../dates/holidays.js';
 
 const pad = (n) => String(n).padStart(2, '0');
 const addDays = (s, n) => { const [y, m, d] = s.split('-').map(Number); return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10); };
@@ -127,7 +127,7 @@ export function redoMigration(u) {
 /* ---------------- Helligdager og merkedager (innebygd, ingen nett) ---------------- */
 
 // Lista ligger i dates/holidays.js (Q18). easter og holidaysNO (bare fridagene) beholdes som navn for eksisterende brukere.
-export { easter, publicHolidaysOfYear as holidaysNO } from './dates/holidays.js';
+export { easter, publicHolidaysOfYear as holidaysNO } from '../dates/holidays.js';
 function holidayEvents(u, fromDate, toDate) {
   const color = appCalendarsOf(u).find((c) => c.id === 'helligdager')?.color ?? '#a39d90';
   // type: 'helligdag' (offentlig høytidsdag, fri) eller 'merkedag' (Palmesøndag, Julaften, Nyttårsaften: ikke fri).
@@ -194,7 +194,7 @@ async function withSubjects(u, out) {
   return out;
 }
 
-/* ---------------- Ruter: /api/kalender/calendars (monteres før kalender33) ---------------- */
+/* ---------------- Ruter: /api/kalender/calendars (monteres før calendars.js) ---------------- */
 
 const bad = (c, error, status = 400) => c.json({ error }, status);
 const changed = (u, action = 'calendars', extra = {}) => { try { broadcast('kalender', { action, ...extra }, [u]); } catch { /* */ } };
@@ -239,7 +239,7 @@ async function refreshSchool(c) {
   changed(u);
   return c.json({ calendar: (await calendarsOut(u)).calendars.find((x) => x.id === 'skole') });
 }
-/** PATCH med de nye feltene (notify, showInBrief, url, interval, country); resten (navn, farge, synlighet) går videre til kalender33. */
+/** PATCH med de nye feltene (notify, showInBrief, url, interval, country); resten (navn, farge, synlighet) går videre til calendars.js. */
 cals39Api.patch('/:id', async (c, next) => {
   const u = c.get('user'), id = c.req.param('id');
   const b = await c.req.json().catch(() => null);

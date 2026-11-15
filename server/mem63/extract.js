@@ -61,7 +61,7 @@ export async function calendarSnippets63(user, now, { mark = true } = {}) {
   let events = [];
   try {
     if (calImpl) events = await calImpl(user, day(now - DAY), day(now + 60 * DAY));
-    else { const { eventsFor } = await import('../calendar.js'); events = (await eventsFor(user, day(now - DAY), day(now + 60 * DAY)))?.events ?? []; }
+    else { const { eventsFor } = await import('../kalender/events.js'); events = (await eventsFor(user, day(now - DAY), day(now + 60 * DAY)))?.events ?? []; }
   } catch { return []; }
   let seen = null;
   try { seen = kv.get(user, SEEN_KEY, null); } catch { /* */ }

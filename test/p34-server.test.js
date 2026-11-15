@@ -65,7 +65,7 @@ const ai = await import('../server/ai-run.js');
 const assist = await import('../server/assist.js');
 const { saveSettings, setSecret } = await import('../server/finans/db.js');
 const { OWNER, kv } = await import('../server/db.js');
-const cg = await import('../server/calendar-glimt.js');
+const cg = await import('../server/kalender/glimt.js');
 ai._aiRunTest.attemptMs = 400; ai._aiRunTest.lastMs = 800; ai._aiRunTest.statusMs = 600;
 assist._setDirectMs(5000);
 

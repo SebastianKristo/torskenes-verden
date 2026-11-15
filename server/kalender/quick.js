@@ -14,17 +14,17 @@
 //   model, input} i tillegg til de gamle feltene, og sendes også underveis (action 'progress'). Ferdig → notifyUser (kø/Web Push).
 import { Hono } from 'hono';
 import { randomBytes } from 'node:crypto';
-import { db, q } from './db.js';
-import { authOrToken } from './mobile.js';
-import { runAsUser } from './settings.js';
-import { broadcast } from './realtime.js';
-import { notifyOf, notifyUser } from './notify.js';
-import { eventInput, createEvent, deleteEvent } from './calendar.js';
-import { settings } from './finans/db.js';
-import { aiTimeoutsOf, _aiTest, logAi } from './finans/ai.js';
-import { parseQuick, quickLabel, osloTodayISO, TYPES, DURATION, NO_DATE, memoryMatch, aliasTitle, isNoiseLine, senderOf } from './dates/quick.js'; // dato og tid fra den felles tolkeren
-import { aliasesOf, aliasPrompt, setContext, touchMemory } from './glimt-memory.js'; // prompt 33: «Glimt husker»
-import { run as aiRun } from './ai-run.js';
+import { db, q } from '../db.js';
+import { authOrToken } from '../mobile.js';
+import { runAsUser } from '../settings.js';
+import { broadcast } from '../realtime.js';
+import { notifyOf, notifyUser } from '../notify.js';
+import { eventInput, createEvent, deleteEvent } from './events.js';
+import { settings } from '../finans/db.js';
+import { aiTimeoutsOf, _aiTest, logAi } from '../finans/ai.js';
+import { parseQuick, quickLabel, osloTodayISO, TYPES, DURATION, NO_DATE, memoryMatch, aliasTitle, isNoiseLine, senderOf } from '../dates/quick.js'; // dato og tid fra den felles tolkeren
+import { aliasesOf, aliasPrompt, setContext, touchMemory } from '../glimt-memory.js'; // prompt 33: «Glimt husker»
+import { run as aiRun } from '../ai-run.js';
 
 const MOCK = process.env.MOCK_DATA === '1';
 const ORIGIN = 'AI · rask time';
@@ -114,8 +114,8 @@ export function fromOllama(o) {
 const NO_GUESS = { timeWithoutDate: 'none' };
 
 async function guardQuick47(r, text, today, local) {
-  const { whenOf45, addMin45 } = await import('./glimt45/dates.js');
-  const { wordsFromText46 } = await import('./glimt45/tools.js');
+  const { whenOf45, addMin45 } = await import('../glimt45/dates.js');
+  const { wordsFromText46 } = await import('../glimt45/tools.js');
   const w = whenOf45(text, today, { prefer: 'future', timeWithoutDate: 'none' });
   const out = { ...r };
   if (!w.errors.length) {
@@ -235,7 +235,7 @@ async function runJob(id) {
   try {
     const ev = await runAsUser(user, () => createEvent(user, { ...v.value, origin: ORIGIN }));
     // Prompt 37: adresse og kart når Glimt legger til (fra Homelab-appen).
-    try { const { attachGeo } = await import('./kal37.js'); if (ev) await attachGeo(user, ev, { place: v.value.location || null, text }); } catch { /* geokoding er best effort */ }
+    try { const { attachGeo } = await import('./subjects.js'); if (ev) await attachGeo(user, ev, { place: v.value.location || null, text }); } catch { /* geokoding er best effort */ }
     const result = { eventId: ev?.id ?? null, title: v.value.title, date: v.value.date, start: v.value.start, end: v.value.end, place: v.value.location || null, label: quickLabel({ date: v.value.date, start: v.value.start }),
       ...(ev?.address ? { address: ev.address, map: ev.map } : {}) };
     setJob(id, { state: 'done', result: JSON.stringify(result), error: null, found: null, engine });

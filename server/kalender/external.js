@@ -1,5 +1,5 @@
 // Prompt 35 (SERVER35): egne kalendere fra iCal-abonnement og Home Assistant i Kalender-appen (og Homelab/web/widgets).
-// Per bruker (kv 'kal35_ext'). Hendelsene kommer med i alle hendelseslister (calendar.js eventsFor, via addEventSource) med
+// Per bruker (kv 'kal35_ext'). Hendelsene kommer med i alle hendelseslister (events.js eventsFor, via addEventSource) med
 // appCalendar = kalenderens id og appColor = fargen. Kalendrene står i GET /api/kalender/calendars med source/badge.
 //
 // POST   /api/kalender/calendars/ical {url:'webcal://…'|'https://…ics', name?, color?} → 201 {calendar}
@@ -10,28 +10,28 @@
 // POST   /api/kalender/calendars/ha {entities:['calendar.familie', …], colors?:{entity_id:'#rrggbb'}} → {calendars:[…]}
 //        Farger fordeles automatisk når de mangler. Home Assistant er serveroppsett: bare administratorer (403 ellers).
 // PATCH  /api/kalender/calendars/:id {name?, color?, visible?, hidMenu?} og DELETE /api/kalender/calendars/:id virker også
-//        for 'ical-…' og 'ha-…' (kalender33.js sender dem hit).
+//        for 'ical-…' og 'ha-…' (calendars.js sender dem hit).
 // calendar = {id:'ical-…'|'ha-…', key, name, color, textColor, lightColor, visible, hidMenu, builtin:false, writable:false,
 //             source:'ical'|'ha', badge:'Abonnement'|'HA', url?, entity?, fetchedAt, error, count}
 import { Hono } from 'hono';
 import { randomBytes, createHash } from 'node:crypto';
 import { mkdirSync, readFileSync, writeFileSync, existsSync, unlinkSync } from 'node:fs';
 import { join } from 'node:path';
-import { db, kv } from './db.js';
-import { config } from './config.js';
-import { authOrToken } from './mobile.js';
-import { isAdmin } from './auth/session.js';
-import { cfg, runAsUser } from './settings.js';
-import { cached } from './cache.js';
-import { addEventSource, typeOf } from './calendar.js';
-import { parseIcs, expandIcs } from './ical-expand.js';
-import { guardedFetch86, approveIfAdmin86 } from './localfetch86.js'; // prompt 86: SSRF-vern, lokale verter må være godkjent av admin
+import { db, kv } from '../db.js';
+import { config } from '../config.js';
+import { authOrToken } from '../mobile.js';
+import { isAdmin } from '../auth/session.js';
+import { cfg, runAsUser } from '../settings.js';
+import { cached } from '../cache.js';
+import { addEventSource, typeOf } from './events.js';
+import { parseIcs, expandIcs } from './ical.js';
+import { guardedFetch86, approveIfAdmin86 } from '../localfetch86.js'; // prompt 86: SSRF-vern, lokale verter må være godkjent av admin
 
 const MOCK = () => process.env.MOCK_DATA === '1';
-import { registerJob } from './jobs/index.js';
+import { registerJob } from '../jobs/index.js';
 export const PALETTE = ['#b23a2a', '#e8794a', '#a8661a', '#c9a227', '#2f7a4f', '#3d7f8a', '#2b5d8a', '#5b4fc4', '#8a3fa0', '#c2477a', '#6b665c', '#1b1a17'];
 const COLOR = /^#[0-9a-f]{6}$/i;
-const BUILTIN_COLORS = ['#b23a2a', '#2b5d8a', '#2f7a4f', '#a8661a', '#3d7f8a', '#8a3fa0']; // innebygde i kalender33.js
+const BUILTIN_COLORS = ['#b23a2a', '#2b5d8a', '#2f7a4f', '#a8661a', '#3d7f8a', '#8a3fa0']; // innebygde i calendars.js
 const MAX_EXT = 30;
 const pad = (n) => String(n).padStart(2, '0');
 const hashOf = (s) => createHash('sha1').update(String(s)).digest('hex');
@@ -279,7 +279,7 @@ haApi.get('/calendars', async (c) => {
     return c.json({ connected: r.connected, allowed: true, ...(r.mock ? { mock: true } : {}), entities: r.list.map((x) => ({ ...x, added: have.has(x.entity_id) })) });
   } catch (e) { return c.json({ connected: false, allowed: true, entities: [], error: e.message }); }
 });
-/** Monteres på calendarsApi i kalender33.js (før /:id). */
+/** Monteres på calendarsApi i calendars.js (før /:id). */
 export function mountExt(api) {
   api.post('/ical', async (c) => {
     const r = await addIcal(c.get('user'), await c.req.json().catch(() => ({})));

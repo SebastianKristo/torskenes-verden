@@ -301,7 +301,7 @@ export function mountGlimt37(api, T) {
   /* ---- pakkeliste fra kalenderen (punkt 10) ---- */
   async function nextTripEvent(u, t0, eventId = null) {
     try {
-      const { eventsFor } = await import('./calendar.js');
+      const { eventsFor } = await import('./kalender/events.js');
       const { runAsUser } = await import('./settings.js');
       const { events } = await runAsUser(u, () => eventsFor(u, t0, addDays(t0, 30)));
       const list = events.filter((e) => (eventId ? e.id === eventId : packEligible39(e, t0) && ['hytte', 'reise'].includes(kindOfEvent(e) ?? 'reise')) && e.date >= t0).sort((a, b) => a.date.localeCompare(b.date));

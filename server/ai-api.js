@@ -529,7 +529,7 @@ glimtApi.post('/', async (c) => {
   if (!prompt) return bad(c, 'Skriv et spørsmål');
   const u = c.get('user');
   if (b.tool === 'calendar') {
-    const { askCalendar } = await import('./calendar-glimt.js');
+    const { askCalendar } = await import('./kalender/glimt.js');
     const a = await askCalendar(u, prompt);
     return c.json({ text: a.text, kind: a.kind, items: a.items ?? [], free: a.free ?? [], engine: a.engine, ...(a.error ? { error: a.error, fix: a.fix ?? null } : {}) });
   }

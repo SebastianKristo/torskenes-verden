@@ -36,17 +36,16 @@ import tasksApi from './tasks.js';
 import notifyApi, { appMeta } from './notify.js';
 import { attachRealtime } from './realtime.js';
 import { revokeUserTokens } from './finans/routes.js';
-import birthdaysApi, { startBirthdayWorker, widgetOut as birthdaysWidget } from './birthdays.js';
+import { startBirthdayWorker } from './kalender/birthdays.js';
+import { mountBirthdays, mountKalenderFront, mountKalender } from './kalender/index.js'; // Kalender og Bursdager (server/kalender/)
 import integrationsApi, { settingsSearchApi, testByIdOrName, integrationScope } from './integrations-api.js';
 import settingsAsk30Api from './settings-ask30.js';
-import calendarApi, { widgetApi as calendarWidgetApi } from './calendar.js';
 import chatApi from './chat.js'; // prompt 27 (SERVER-B): Chat
 import appUpdateApi from './app-update.js'; // prompt 32: Android-appen oppdaterer seg selv (GitHub-release via serveren)
 import systemUpdateApi, { startUpdateScheduler, updateNow, versionApi44 } from './system-update.js'; // Oppdater fra appen: data/update/ ↔ updater-containeren
 import systemBackupApi, { startSystemBackupScheduler } from './system-backup.js'; // prompt 29: systembackup (bare admin)
 import ops51Api, { startOps51 } from './ops51.js'; // prompt 51 (OPS51): restic-backup 3-2-1, testet gjenoppretting, staging/tilbakerulling, DB-vedlikehold
 import smbBrowseApi from './smb-browse.js'; // prompt 30: SMB-veiviser (finn server, shares, mapper, test, lagre) – bare admin
-import calendarQuickApi from './calendar-quick.js'; // prompt 29: Kalender → rask time (AI-jobbkø)
 import glimtMemoryApi from './glimt-memory.js'; // prompt 33: «Glimt husker» (alias per bruker)
 import { agentApi45 } from './glimt45/api.js'; // prompt 45: Glimt-motoren
 import { entitiesApi60 } from './convo60/api.js'; // prompt 60 (prompt 49 del 3): entitetsregisteret
@@ -61,23 +60,23 @@ import { startQuality64 } from './quality64/system.js'; // prompt 64: systemoppg
 import assistApi from './assist.js'; // prompt 31: Glimt – POST /api/assist (vær, kalender, … før LLM), serverjobb
 import aiApi, { glimtApi } from './ai-api.js';
 import api36 from './api36.js'; // prompt 36 (SERVER36)
-import { profilesApi, bibleApi, trackingKeysApi, kal37Api } from './api37.js'; // prompt 37 (SERVER37)
+import { profilesApi, bibleApi, trackingKeysApi } from './api37.js'; // prompt 37 (SERVER37)
 import { bearerFallthrough46, homelabAuthCode46, signImages46, mediaDiag46, mediaDiagOut46 } from './api-auth46.js'; // prompt 46 (SERVER46)
 import { brief38Api, startApi38 } from './api38.js'; // prompt 38 (SERVER38)
-import { cals39Api, googleMap39Api, rec39Api, week39Api } from './api39.js'; // prompt 39 (SERVER39)
+import { rec39Api, week39Api } from './api39.js'; // prompt 39 (SERVER39)
 import { finans40Api, news40Api, newsDigestApi, hjemlys40Api, pages40Api, briefJul40, tasksAfter40, tasksCreate40, startApi40 } from './api40.js'; // prompt 40 (SERVER40)
 import { mountServer47 } from './server47.js'; // prompt 47 (SERVER47)
-import { hjemlys41Api, hjemlysGet41, hlPage41, ruter41Api, birthdays41Api, mai17Api, kalender41Api, huske41Api, tracking41Api, weather41Api, brief41, weatherFull41 } from './api41.js'; // prompt 41 (SERVER41)
+import { hjemlys41Api, hjemlysGet41, hlPage41, ruter41Api, mai17Api, huske41Api, tracking41Api, weather41Api, brief41, weatherFull41 } from './api41.js'; // prompt 41 (SERVER41)
 import { finans42Api, abCalendarsMw42, abApi42, calendarsEvents42, abIcs42, tracking42Api, health42Api, familyHealthMw42, startHealth42, hjemlys42Api, tasks42Api } from './api42.js'; // prompt 42 (SERVER42)
 import fin51Api from './finans/fin51.js'; // prompt 51 (FIN51): sparemål, faste utgifter-kalender, skattehjelp, prishistorikk, abonnementsjeger
 import { startTax51 } from './finans/fin51-tax.js'; // prompt 51 (FIN51): påminnelse før skattemeldingen
-import { media43Api, mediaCalendarsMw43, startMediaWatch43, widgets43Api, claudeImport43Api, aiMemory43Api, gscDomains43Api, gsc43Api, gscViewMw43, gscOverviewMw43, kalUpdate43Api, finans43Api, summaryMw43, transactionsMw43, tasks43Api, tasksOrderMw43 } from './api43.js'; // prompt 43 (SERVER43)
+import { media43Api, mediaCalendarsMw43, startMediaWatch43, widgets43Api, claudeImport43Api, aiMemory43Api, gscDomains43Api, gsc43Api, gscViewMw43, gscOverviewMw43, finans43Api, summaryMw43, transactionsMw43, tasks43Api, tasksOrderMw43 } from './api43.js'; // prompt 43 (SERVER43)
 // Prompt 44 (SERVER44): Logger (Docker), Media (servere, søk som jobb, felles status), Avspilling, Studie-dokumenter, Kalender-deltakere,
 // Logg inn som / andres oppsett / overfør eier.
 import { media44Api, mediaSiteMw44, librarySearchMw44, legacyMedia44, integrationsStatusApi44 } from './media44.js';
 import { logs44Api, startLogs44 } from './logs44.js';
 import { impersonation44, admin44Api, layoutLockMw44, setMobileApi44 } from './admin44.js';
-import { kal44Api, kalEventsMw44, assistLocalMw44 } from './kal44.js';
+import { assistLocalMw44 } from './kalender/invites.js';
 import { study44Api } from './study44.js';
 import { mountAuthSecurity, mountAppAuth, mountAuthInvites, mountAuthRefresh, mountAuth, registerAccountRoutes } from './auth/index.js'; // innlogging og sikkerhet
 import { playback44Api, startPlayback44 } from './playback44.js';
@@ -109,7 +108,6 @@ import { gphoto46Api, startGphoto46 } from './gphoto46.js'; // prompt 46 (DATA46
 import { kart46Api } from './kart46.js'; // prompt 46 (DATA46): Kart-API
 import { settingsApi as glimtSettingsApi, ttsApi, imgApi } from './glimt35.js'; // prompt 35: /api/glimt/settings, /api/tts, /api/img
 import weather35Api from './weather35.js'; // prompt 35: /api/weather/place?q=
-import { haApi as kal35HaApi } from './kalender35.js'; // prompt 35: /api/kalender/ha/calendars
 import briefApi from './brief34.js'; // prompt 34: Glimt-brief /api/brief (+ /widget, /settings) og daglig generering // prompt 34: AI-kontroll /api/ai/* (status, modeller, ruting, jobber, forbruk, nøkler, selvtest)
 import { startTrialScheduler } from './trials-notify.js'; // prompt 31: varsler for gratis prøveperioder
 import { installCacheBust } from './cache-bust.js'; // prompt 32 (SERVER32)
@@ -117,8 +115,7 @@ import searchHistoryApi from './search-history.js'; // prompt 32: søkehistorikk
 import trialWidgetsApi from './trial-widgets.js'; // prompt 32
 import romApi, { startSpaceScheduler, spaceApi } from './space32.js'; // prompt 32
 import { domainGlimtApi, gscApi, startDomainGlimtScheduler } from './domains-glimt.js'; // prompt 32
-import { describeApi as calendarDescribeApi, searchAiMiddleware as calendarSearchAi } from './calendar-glimt.js'; // prompt 32
-import { calendarsApi as kalCalendarsApi, weatherApi as kalWeatherApi, eventsMiddleware as kalEventsMw, widgetMiddleware as kalWidgetMw, companionApi, companionsOf } from './kalender33.js'; // prompt 33 (SERVER33)
+import { companionsOf } from './kalender/calendars.js'; // companion-tokens (Kalender) i /api/me/devices
 import { osloDate } from './dates/oslo.js';
 if (process.env.MOCK_DATA === '1' && !fhDb.prepare('SELECT 1 FROM fh_transactions LIMIT 1').get()) (await import('./finans/demo.js')).loadDemo();
 
@@ -726,29 +723,19 @@ app.post('/api/homes/:id{[0-9]+}/expenses', (c) => toFinans(c, (c.req.header('co
 app.route('/api/background', backgroundApi); // Bakgrunner (prompt 19): Vær, Planeter, Oslo, eget bilde
 // Prompt 24: Bursdager (per bruker, Google Kalender og Home Assistant), widget-svaret, alle integrasjoner (bare admin),
 // ✦ AI-søk i innstillingene og domene-pillen på Boliger (bare admin, cache 5 min). Sesjon eller app-token.
-app.route('/api/birthdays', birthdays41Api); // prompt 41: bilder av personer
-app.route('/api/birthdays', birthdaysApi);
-app.get('/api/widgets/birthdays', authOrToken, (c) => c.json(birthdaysWidget(c.get('user'))));
+mountBirthdays(app); // server/kalender/: /api/birthdays (bilder først), /api/widgets/birthdays, /api/apps/kalender
 app.route('/api/space', spaceApi); // prompt 32: /tle?group=, /apod?days=7, /mars (før authed sine /space-ruter)
 app.route('/api/rom', romApi); // prompt 32: Rom – APOD (7 dager), Mars-rovere, satellitter (SGP4), NASA-nøkkel på serveren
 app.route('/api/widgets', widgets43Api); // prompt 43: /media og /catalog
-app.route('/api/apps/kalender', kalUpdate43Api); // prompt 43: /latest?platform=mac|android&channel=stabil|beta (uinnlogget) og /:versjon/:fil
 app.route('/api/widgets/trials', trialWidgetsApi); // prompt 32: prøveperiode-widgets (GET kompakt, POST /:id «Avsluttet»)
 app.route('/api/integrations', integrationsStatusApi44); // prompt 44: GET /status (samme kilde som Media), før /:id
 app.route('/api/integrasjoner', integrationsStatusApi44);
 app.route('/api/integrations', integrationsApi);
 app.route('/api/integrasjoner', integrationsApi); // prompt 26: samme liste under norsk navn
 // Prompt 26: Kalender (skolens iCal, Canvas, Bursdager og Google) og kompakt widget-svar. Sesjon eller app-token, per bruker.
-app.route('/api', kal44Api); // prompt 44: /kalender/events/:id/invite, /kalender/invites, /users/directory, /geo/address
-app.route('/api', kalender41Api); // prompt 41: /kalender/glimt/search, /calendar/ask, /kalender/notify/test, /push/test
+mountKalenderFront(app); // server/kalender/: invitasjoner, Glimt-søk, beskriv, rask time, HA, fag (før /api/kalender og de innebygde kalenderne)
 app.route('/api/ruter', ruter41Api); // prompt 41: Min reise, skolesoner, «forlot skolen»
 app.route('/api/huske', huske41Api); // prompt 41: POST /glimt-jobs
-app.route('/api/kalender/describe', calendarDescribeApi); // prompt 32: «Beskriv med Glimt» (før /api/kalender)
-app.use('/api/kalender/search', calendarSearchAi); // prompt 32: ?ai=1 → Glimt-svar, ellers det vanlige søket
-app.route('/api/kalender/quick', calendarQuickApi); // prompt 29: før /api/kalender
-// Prompt 33 (SERVER33): Kalender-appen – kalendere (visning, farger, egne), vær 16 dager, appCalendar på hendelser, widgets.
-app.route('/api/kalender/ha', kal35HaApi); // prompt 35
-app.route('/api/kalender', kal37Api); // prompt 37: /subjects (fagfarger) og /geo (adresse + kart)
 app.use('/api/kalender/calendars', mediaCalendarsMw43); // prompt 43: innebygd kalender «Media» (Sonarr/Radarr)
 app.use('/api/kalender/calendars/*', mediaCalendarsMw43);
 app.use('/api/kalender/calendars', abCalendarsMw42); // prompt 42: innebygd kalender «Abonnementer» (trekkdatoer)
@@ -756,19 +743,7 @@ app.use('/api/kalender/calendars/*', abCalendarsMw42);
 app.route('/api/kalender/abonnementer', abApi42);
 app.get('/api/kalender/abonnementer.ics', authOrToken, abIcs42);
 app.route('/api/calendars', calendarsEvents42); // GET /api/calendars/events?cal=ab
-app.route('/api/kalender/calendars', cals39Api); // prompt 39: fire kalendere, opprydding/angre, nye felt (før kalender33)
-app.route('/api/kalender/google', googleMap39Api); // prompt 39: GET/PUT /mapping
-app.route('/api/kalender/calendars', kalCalendarsApi);
-app.route('/api/kalender/weather', kalWeatherApi);
-app.use('/api/kalender/events', kalEventsMw44); // prompt 44: attendees og geo, avlysning ved sletting
-app.use('/api/kalender/events/*', kalEventsMw44);
-app.use('/api/kalender/events', kalEventsMw);
-app.use('/api/kalender/events/*', kalEventsMw);
-app.use('/api/widgets/calendar', kalWidgetMw);
-app.route('/api/tokens/companion', companionApi); // «Logg inn med Homelab-appen»: eget token for Kalender (økt eller token med finance:write)
-app.route('/api/calendar/quick', calendarQuickApi);
-app.route('/api/kalender', calendarApi);
-app.route('/api/widgets/calendar', calendarWidgetApi);
+mountKalender(app); // server/kalender/: kalenderlista, hendelser, vær, widget, companion-token og /api/kalender
 app.route('/api/settings', settingsSearchApi);
 app.route('/api/settings', settingsAsk30Api); // prompt 30: GET /index og POST /ask (✦ AI-søk med indeks fra serveren)
 app.route('/api/smb', smbBrowseApi); // prompt 30: bare admin; økt (JSON) eller admin-token med finance:write

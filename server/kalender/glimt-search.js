@@ -9,10 +9,10 @@
 // POST /api/kalender/notify/test {delaySec?:0–30} → {ok, at, pushed, queued, skipped?, ms}  (varsel «Kalender · test» via samme kanal som påminnelser)
 // POST /api/push/test {app:'kalender'|'homelab'} → samme (lang-trykk på «Send testvarsel»: «Push sendt · kom fram på 1,2 s»)
 import { Hono } from 'hono';
-import { authOrToken as authOrToken0 } from './mobile.js';
-import { notifyUser } from './notify.js';
-import { runAsUser } from './settings.js';
-import { osloDate } from './dates/oslo.js';
+import { authOrToken as authOrToken0 } from '../mobile.js';
+import { notifyUser } from '../notify.js';
+import { runAsUser } from '../settings.js';
+import { osloDate } from '../dates/oslo.js';
 
 const authOrToken = (c, next) => authOrToken0(c, next); // sen binding
 export const SEARCH_MS41 = 20_000;
@@ -32,7 +32,7 @@ const longDate = (iso) => `${WD[wdOf(iso)]} ${+iso.slice(8, 10)}. ${MON[+iso.sli
 
 async function eventsOf(u, from, to) {
   if (evImpl) return evImpl(u, from, to);
-  const { eventsFor } = await import('./calendar.js');
+  const { eventsFor } = await import('./events.js');
   const r = await runAsUser(u, () => eventsFor(u, from, to));
   return r.events ?? [];
 }
@@ -78,7 +78,7 @@ export async function glimtSearch41(u, q, now = Date.now()) {
   const prompt = `I dag er ${longDate(d)} ${d}.\nHendelser (id | dato | ukedag | tid | tittel | sted | kalender):\n${compact41(evs.slice(0, 600))}\n\nSpørsmål: ${q}`;
   try {
     const ask = llm ? Promise.resolve(llm({ prompt, system: SYSTEM })) : (async () => {
-      const { run } = await import('./ai-run.js');
+      const { run } = await import('../ai-run.js');
       const r = await run('glimt', { user: u, prompt, system: SYSTEM, json: true, localOnly: true, numPredict: 260, temperature: 0.1, timeoutMs: SEARCH_MS41, title: 'Kalender · søk med Glimt' });
       return { ...(r.data ?? JSON.parse(String(r.text).match(/\{[\s\S]*\}/)?.[0] ?? '{}')), _model: r.model };
     })();

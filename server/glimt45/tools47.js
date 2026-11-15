@@ -7,7 +7,7 @@
 //   web.search       {query} – nettsøk; svaret formuleres av svarsteget (answer47.js) ut fra treffene.
 //   media.episode    {title, pick:'latest'|'next', season?, episode?} – Sonarr (bare serier): siste/neste episode → EpisodeSearch.
 import { TOOLS45, TOOL45, eventCard45 } from './tools.js';
-import { eventsFor, normText } from '../calendar.js';
+import { eventsFor, normText } from '../kalender/events.js';
 import { runAsUser } from '../settings.js';
 import { addDays45, longDate45 } from './dates.js';
 import { anyWord47, hasWord47, words47 } from './words47.js';

@@ -173,7 +173,7 @@ test('B: iCal for vanlig bruker – lokale adresser og omdirigering til metadata
   assert.ok(!(await hosts()).includes('192.168.1.88'));
   // Skole-iCal (cal_ics) hentes av calendar.js: feilen står på kilden.
   const { setUserCfg } = await import('../server/settings.js');
-  const cal = await import('../server/calendar.js');
+  const cal = await import('../server/kalender/events.js');
   setUserCfg(perId, { cal_ics: 'http://192.168.1.88/skole.ics' });
   await new Promise((r) => setTimeout(r, 50));
   assert.ok(!(await hosts()).includes('192.168.1.88'), 'en vanlig bruker godkjenner ikke verten ved å lagre adressen');

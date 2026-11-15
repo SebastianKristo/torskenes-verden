@@ -8,10 +8,8 @@
 //   Vær-uke via Glimt (Ollama + 7 dager), skiføre i brief/Vær                                                          → weather41.js (+ assist.js, chat.js), under
 //   AI-jobber: createdAt/startedAt/endedAt + timeLabel                                                                 → ai41.js (+ ai-run.js)
 //   Finans: Les på nytt for alle statuser, receipt_reads, /receipts/:id/reread, /receipts/:id/review                    → finans/routes.js
-//   Bursdager: /api/birthdays/:id/photos                                                                               → birthdays41.js (+ birthdays.js)
 //   17. mai: /api/glimt/settings mai17/mai17Active, /api/glimt/mai17, brief.mai17                                       → mai17-41.js (+ glimt35.js)
 //   Innlogging uten adresse + Kalender-innlogging: /api/discovery, /api/me/server, /api/auth/device-*, app-code, token, /app-auth → auth/app-login.js (montert fra auth/index.js)
-//   Kalender: POST /api/kalender/glimt/search, /api/kalender/notify/test, /api/push/test                                 → kalender41.js
 import { Hono } from 'hono';
 import { kv } from './db.js';
 import { authOrToken as authOrToken0 } from './mobile.js';
@@ -26,9 +24,7 @@ import { journeyOf41 } from './ruter41.js';
 const authOrToken = (c, next) => authOrToken0(c, next); // sen binding
 export { hjemlys41Api, hjemlysGet41, hlPage41 } from './hjemlys41.js';
 export { ruter41Api } from './ruter41.js';
-export { birthdays41Api } from './birthdays41.js';
 export { mai17Api } from './mai17-41.js';
-export { kalender41Api } from './kalender41.js';
 
 /* ---------------- Huskeliste-alias ---------------- */
 // POST /api/huske/glimt-jobs {text, list?, origin?:'huske'|'home_search'} → 202 {job_id, jobId, placeholder}

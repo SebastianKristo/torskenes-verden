@@ -7,7 +7,7 @@
 import { db } from '../db.js';
 import { removeAvatar } from '../mobile.js';
 import { revokeUserTokens } from '../finans/routes.js';
-import { companionsOf } from '../kalender33.js';
+import { companionsOf } from '../kalender/calendars.js';
 import { rememberDevice, forgetDevice, currentDeviceId, currentSessionId, trustIp, isLan, requireAdmin, clientIp, userInfo, listUsersFor, createUser, deleteUser,
   updateUser, setPassword, checkPassword, setServerName, startTotpSetup, confirmTotpSetup, disableTotp, totpReadable, loginBlocked, loginFailed, loginSucceeded } from './session.js';
 

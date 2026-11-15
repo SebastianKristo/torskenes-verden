@@ -49,7 +49,7 @@ export const CITY_PROGRAM41 = {
 };
 async function calendarToday(u, iso) {
   try {
-    const { eventsFor } = await import('./calendar.js');
+    const { eventsFor } = await import('./kalender/events.js');
     const { runAsUser } = await import('./settings.js');
     const { events } = await runAsUser(u, () => eventsFor(u, iso, iso));
     return (events ?? []).filter((e) => !e.allDay).map((e) => ({ time: new Date(Date.parse(e.start)).toLocaleTimeString('nb-NO', { timeZone: 'Europe/Oslo', hour: '2-digit', minute: '2-digit' }), title: e.title, kind: 'calendar' }));
