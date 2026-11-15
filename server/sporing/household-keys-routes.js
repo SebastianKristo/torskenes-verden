@@ -1,10 +1,10 @@
-// Prompt 37 (SERVER37): ruter for husstandens sporingsnøkler, montert under /api/tracking/keys (se tracking37.js for svarformen).
+// Prompt 37 (SERVER37): ruter for husstandens sporingsnøkler, montert under /api/tracking/keys (se household-keys.js for svarformen).
 import { Hono } from 'hono';
-import { isAdmin } from './auth/session.js';
-import { authOrToken } from './mobile.js';
-import { sealSecret } from './settings.js';
-import { kv, OWNER } from './db.js';
-import { PROVIDERS37, keysOut, usage37, quotaCfg, householdStore, householdSave, providerOut, parcelsLimit37 } from './tracking37.js';
+import { isAdmin } from '../auth/session.js';
+import { authOrToken } from '../mobile.js';
+import { sealSecret } from '../settings.js';
+import { kv, OWNER } from '../db.js';
+import { PROVIDERS37, keysOut, usage37, quotaCfg, householdStore, householdSave, providerOut, parcelsLimit37 } from './household-keys.js';
 
 const api = new Hono();
 api.use('*', authOrToken);

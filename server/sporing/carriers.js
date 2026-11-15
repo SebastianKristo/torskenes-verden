@@ -3,11 +3,11 @@
 //
 // NB: endepunktene, headerne og lenkemønstrene under er satt opp etter transportørenes offentlige dokumentasjon,
 // men er ikke testet mot ekte kontoer herfra. Sjekk dem med «Test tilkobling» før du stoler på dem.
-import { cfg, activeUser } from './settings.js';
-import { householdValue, quotaBlock37, _setParcelsLimit } from './tracking37.js'; // prompt 37: nøklene deles i husstanden
+import { cfg, activeUser } from '../settings.js';
+import { householdValue, quotaBlock37, _setParcelsLimit } from './household-keys.js'; // prompt 37: nøklene deles i husstanden
 // Husstandens nøkkel først (prompt 37), ellers brukerens egen (eldre oppsett).
 const trkCfg = (k) => householdValue(k) || cfg(k);
-import { kv, OWNER } from './db.js';
+import { kv, OWNER } from '../db.js';
 
 // [id, navn, initialer, farge, tekstfarge, formater, sporingslenke (nummeret legges til på slutten)]
 // Formatene er et utgangspunkt og må verifiseres. Rekkefølgen betyr noe: mest spesifikke først.
@@ -213,7 +213,7 @@ async function postnord(no) {
 // Kopiert fra ha-postnord (custom_components/postnord/const.py + tracking/api.py): URL, query id + locale=en, header X-Bap-Key.
 //   Tom shipments-liste = ikke skannet ennå (vanlig, ingen feil) → status unknown, notScanned:true, «Ikke skannet ennå».
 //   401/403/429 = blokkert/nøkkelen trukket tilbake → vi venter dobbelt så lenge (15 → 30 → 60 min … maks 6 t) og viser «PostNord svarer ikke akkurat nå».
-//   Maks ett oppslag per sending hvert 15. minutt (hurtigbuffer), aldri om leverte pakker (tracking.js), ingen bakgrunnskall 00–06 (tracking.js).
+//   Maks ett oppslag per sending hvert 15. minutt (hurtigbuffer), aldri om leverte pakker (shipments.js), ingen bakgrunnskall 00–06 (shipments.js).
 // Helsesjekk (postnordHealth41): uventet svarform (mangler TrackingInformationResponse) logges og admin varsles én gang per døgn.
 export const POSTNORD_WEB_URL = 'https://api2.postnord.com/rest/shipment/v5/trackandtrace/recipientview';
 export const POSTNORD_BAP_KEY = 'web-ncp';
@@ -249,7 +249,7 @@ function shapeChanged(why) {
   if (Date.now() - pnHealth.notifiedAt > 86400_000) {
     pnHealth.notifiedAt = Date.now();
     const text = `PostNord-sporingen uten nøkkel fikk et uventet svar (${why}). Endepunktet er udokumentert og kan ha endret seg.`;
-    (pnAdminNotify ? Promise.resolve(pnAdminNotify(text)) : import('./notify.js').then(({ notifyUser }) => notifyUser(OWNER, { title: 'Sporing · PostNord', body: text, category: 'pakker', tag: 'postnord-health', url: '/#/innstillinger/integrasjoner' }))).catch(() => {});
+    (pnAdminNotify ? Promise.resolve(pnAdminNotify(text)) : import('../notify.js').then(({ notifyUser }) => notifyUser(OWNER, { title: 'Sporing · PostNord', body: text, category: 'pakker', tag: 'postnord-health', url: '/#/innstillinger/integrasjoner' }))).catch(() => {});
   }
 }
 /** Helsesjekk for det offentlige endepunktet. */
@@ -508,7 +508,7 @@ export function missingKeyText(carrier) {
   return null;
 }
 
-// Prompt 46: kontoene (tracking46.js) kan svare for et nummer de allerede har i innboksen: (carrier, nummer) → resultat | null.
+// Prompt 46: kontoene (accounts.js) kan svare for et nummer de allerede har i innboksen: (carrier, nummer) → resultat | null.
 let accountLookup46 = null;
 export const setAccountLookup46 = (fn) => { accountLookup46 = fn; };
 const NORDIC46 = ['posten', 'bring', 'postnord'];

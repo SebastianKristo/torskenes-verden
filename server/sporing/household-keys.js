@@ -1,6 +1,6 @@
 // Prompt 37 (SERVER37): API-nøkler for Sporing deles i husstanden; pakker og sporingsnumre er alltid private
 // (claude-code-sporing-delte-nokler.md). Nøklene ligger kryptert (AES-256-GCM, samme nøkkel som Innstillinger) i
-// kv(OWNER,'trk_household') og vises bare maskert (••••a91f). Bare admin endrer. tracking-carriers.js leser trkCfg(nøkkel):
+// kv(OWNER,'trk_household') og vises bare maskert (••••a91f). Bare admin endrer. carriers.js leser trkCfg(nøkkel):
 // husstandens verdi først, så brukerens egen (eldre oppsett).
 //
 // GET /api/tracking/keys → {providers:[{id, name, set, tail, masked, status:'ok'|'missing'|'error'|'quota', fields:[{key, label, set, tail}],
@@ -11,9 +11,9 @@
 // DELETE /api/tracking/keys/:id (bare admin) → {provider}
 // Kvote (ParcelsApp): felles teller per måned for husstanden + per bruker; med flere brukere kan én bruker bruke maks
 // perUserPct (standard 50 %) av kvoten.
-import { kv, OWNER, db } from './db.js';
-import { userInfo, listUsers, isAdmin } from './auth/session.js';
-import { sealSecret, openSecret, userCfgOverride, activeUser } from './settings.js';
+import { kv, OWNER, db } from '../db.js';
+import { userInfo, listUsers, isAdmin } from '../auth/session.js';
+import { sealSecret, openSecret, userCfgOverride, activeUser } from '../settings.js';
 
 export const PROVIDERS37 = [
   { id: 'parcelsapp', name: 'ParcelsApp', fields: [['trk_parcelsapp_key', 'API-nøkkel']] },
@@ -82,7 +82,7 @@ export function quotaBlock37(defaultLimit = 3) {
   return null;
 }
 
-/* ---------------- Utdata (rutene ligger i tracking-keys37.js) ---------------- */
+/* ---------------- Utdata (rutene ligger i household-keys-routes.js) ---------------- */
 
 function providerOut(p, viewerAdmin, parcelsLimit) {
   const s = store()[p.id];

@@ -1,7 +1,7 @@
 // Prompt 41 (SERVER41): kobler sammen modulene for prompt 41 (montert i index.js).
 //   Hjemlys «Si fra» + tur til valgfritt mål: /api/hjemlys/notice|status|notices|recipients, start {destination}            → hjemlys41.js (+ hjemlys40.js dest_*)
 //   Min reise: /api/ruter/my-routes|my-trip|school-zones|left-school|journey|settings                                     → ruter41.js
-//   PostNord uten nøkkel (recipientview), dynamisk polling, push ved endring, helsesjekk GET /api/tracking/postnord/health → tracking-carriers.js, tracking.js
+//   PostNord uten nøkkel (recipientview), dynamisk polling, push ved endring, helsesjekk GET /api/tracking/postnord/health → sporing/carriers.js, sporing/shipments.js
 //   Gjøremål-Glimt i bakgrunnen + «Laget med Glimt»: /api/tasks/glimt {async:true}, /glimt/jobs, /glimt/sources           → tasks-glimt41.js (+ tasks.js)
 //     alias POST /api/huske/glimt-jobs; /api/assist gjenkjenner huskebeskjeder                                           → under, assist.js
 //   Chat: «Mine data» på som standard, «✦ Auto»                                                                        → settings.js, chat41.js (+ chat.js)
@@ -18,7 +18,7 @@ import { startJob41 } from './tasks-glimt41.js';
 import { ski41 } from './weather41.js';
 import { glimtSettingsOf } from './glimt35.js';
 import { mai17Active, mai17Day41 } from './mai17-41.js';
-import { postnordHealth41 } from './tracking-carriers.js';
+import { postnordHealth41 } from './sporing/carriers.js';
 import { journeyOf41 } from './ruter41.js';
 
 const authOrToken = (c, next) => authOrToken0(c, next); // sen binding

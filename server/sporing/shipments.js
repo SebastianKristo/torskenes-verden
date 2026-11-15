@@ -1,6 +1,6 @@
 // Sporing: pakker på vei fra Finn-handler, e-post (Proton Mail via Bridge) og manuelt innlagte sporingsnumre.
 // - Tabellene hl_shipments og hl_shipment_events (én rad per sporingsnummer; duplikater slås sammen).
-// - Status hentes fra transportøren (se tracking-carriers.js) straks pakken er funnet, deretter hvert 30. minutt for
+// - Status hentes fra transportøren (se carriers.js) straks pakken er funnet, deretter hvert 30. minutt for
 //   aktive pakker og hver 6. time når den har stått som «Registrert» i mer enn 3 dager (prompt 22). Levert og
 //   Returnert sjekkes ikke mer. Gamle e-postpakker som er levert (eller ikke funnet etter 30 dager) går rett i Arkiv.
 // - Nye sporingsnumre i e-post og Finn plukkes opp av samme jobb, og varsler («notices») lages etter brukerens valg.
@@ -8,19 +8,19 @@
 //   transportørnøkler (cfg i brukerens kontekst) og e-postskanning er brukerens egne. Sanntid sendes bare til eieren.
 //   Ekte push er ikke bygget: appene og nettsiden viser varslene lokalt når de henter /api/tracking.
 import { Hono } from 'hono';
-import { db, q, kv, OWNER } from './db.js';
-import { runAsUser } from './settings.js';
-import { config } from './config.js'; // prompt 41: fast forskyvning per installasjon
-import { sessionUser } from './auth/session.js';
-import { userGuard, readJson, bad, str, MOCK, aiJson } from './homeos-common.js';
-import * as mailMod from './finans/mail.js';
-import { scanShippingMails, mailConfig, mailText } from './finans/mail.js';
-import { stageOf } from './finans/finn-routes.js';
-import { CARRIERS, CARRIER, detect, normNo, trackUrl, findTrackingNumbers, normStatus, STATUS_TEXT, STEPS_IN, STEPS_OUT, stepOf, fetchStatus, isConfigured, testCarriers, parcelsappUsage, FINAL, missingKeyText, canonical41, carrierId42 } from './tracking-carriers.js';
-import { broadcast } from './realtime.js';
-import { matchMerchant, itemForDomain, filePath as logoFile, isManual } from './logos/match.js';
-import { osloDate } from './dates/oslo.js';
-import { dtf } from './intl-format.js'; // gjenbrukte Intl.DateTimeFormat
+import { db, q, kv, OWNER } from '../db.js';
+import { runAsUser } from '../settings.js';
+import { config } from '../config.js'; // prompt 41: fast forskyvning per installasjon
+import { sessionUser } from '../auth/session.js';
+import { userGuard, readJson, bad, str, MOCK, aiJson } from '../homeos-common.js';
+import * as mailMod from '../finans/mail.js';
+import { scanShippingMails, mailConfig, mailText } from '../finans/mail.js';
+import { stageOf } from '../finans/finn-routes.js';
+import { CARRIERS, CARRIER, detect, normNo, trackUrl, findTrackingNumbers, normStatus, STATUS_TEXT, STEPS_IN, STEPS_OUT, stepOf, fetchStatus, isConfigured, testCarriers, parcelsappUsage, FINAL, missingKeyText, canonical41, carrierId42 } from './carriers.js';
+import { broadcast } from '../realtime.js';
+import { matchMerchant, itemForDomain, filePath as logoFile, isManual } from '../logos/match.js';
+import { osloDate } from '../dates/oslo.js';
+import { dtf } from '../intl-format.js'; // gjenbrukte Intl.DateTimeFormat
 
 db.exec(`
 CREATE TABLE IF NOT EXISTS hl_shipments (
@@ -312,7 +312,7 @@ function pushChange41(r, status, res) {
     : status !== r.status && status === 'ready_for_pickup' && p.pickup ? `Klar for henting${res.pickupPoint || r.pickup_point ? ` hos ${res.pickupPoint || r.pickup_point}` : ''}: ${name}`
       : status !== r.status && status === 'out_for_delivery' && p.out ? `Ute for levering: ${name}`
         : evs.some((e) => e.kind === 'delivery_time_changed') && p.out ? `Ny leveringstid for ${name}: ${String(res.eta).slice(0, 10).split('-').reverse().slice(0, 2).join('.')}` : null;
-  if (msg) import('./notify.js').then(({ notifyUser }) => notifyUser(r.user_id, { title: 'Sporing', body: msg, url: '/#/sporing', tag: `pakke-${r.id}`, category: 'pakker', data: { kind: `tracking.${evs.at(-1).kind}`, shipmentId: r.id } })).catch(() => {});
+  if (msg) import('../notify.js').then(({ notifyUser }) => notifyUser(r.user_id, { title: 'Sporing', body: msg, url: '/#/sporing', tag: `pakke-${r.id}`, category: 'pakker', data: { kind: `tracking.${evs.at(-1).kind}`, shipmentId: r.id } })).catch(() => {});
 }
 // Brukerens egen sending (andres gir undefined, som en ukjent id).
 const mineById = (u, id) => q('SELECT * FROM hl_shipments WHERE id=? AND user_id=?').get(id, u);
@@ -493,10 +493,10 @@ async function scanMailFor(u) {
 // Én runde for én bruker: nye numre fra Finn og e-post, deretter status for aktive pakker som er «på tur».
 // Kjøres i brukerens kontekst, så transportørnøklene (cfg) er brukerens egne.
 let aliHook42 = null;
-/** Prompt 42: AliExpress-mappen skannes i samme runde (tracking42.js). */
+/** Prompt 42: AliExpress-mappen skannes i samme runde (aliexpress-debug.js). */
 export const setAliHook42 = (fn) => { aliHook42 = fn; };
 export const trk42 = { refresh: (r, o) => refresh(r, o), byId: (id) => byId(id), view: (r) => view(r), addEvent: (...a) => addEvent(...a) };
-/** Prompt 46 (tracking46.js): kontoene lagrer status med samme regler (hendelser, varsler, push) som nummersporingen. */
+/** Prompt 46 (accounts.js): kontoene lagrer status med samme regler (hendelser, varsler, push) som nummersporingen. */
 export const trk46 = { applyResult: (r, res, o) => applyResult(r, res, o), byId: (id) => byId(id), view: (r) => view(r), changed: (u, action, extra) => broadcast('tracking', { action, ...extra }, [u]) };
 const running = new Map();
 function checkUser(u, { force = false } = {}) {

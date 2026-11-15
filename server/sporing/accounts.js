@@ -16,13 +16,13 @@
 // api.posten.no). Innlimt redirect-URL leses bare for code/state.
 import { Hono } from 'hono';
 import { createHash, randomBytes } from 'node:crypto';
-import { db, q, kv } from './db.js';
-import { seal, unseal } from './finans/db.js';
-import { runAsUser, activeUser } from './settings.js';
-import { userGuard, readJson, bad, MOCK } from './homeos-common.js';
-import { upsertShipment, trk46, stagger41 } from './tracking.js';
-import { detect, normNo, configured, setAccountLookup46, canonical41 } from './tracking-carriers.js';
-import { dtf } from './intl-format.js'; // gjenbrukte Intl.DateTimeFormat
+import { db, q, kv } from '../db.js';
+import { seal, unseal } from '../finans/db.js';
+import { runAsUser, activeUser } from '../settings.js';
+import { userGuard, readJson, bad, MOCK } from '../homeos-common.js';
+import { upsertShipment, trk46, stagger41 } from './shipments.js';
+import { detect, normNo, configured, setAccountLookup46, canonical41 } from './carriers.js';
+import { dtf } from '../intl-format.js'; // gjenbrukte Intl.DateTimeFormat
 
 /* ---------------- Konstanter (fra const.py i integrasjonene) ---------------- */
 
@@ -57,7 +57,7 @@ const mockMode = () => MOCK && !injected;
 /* ---------------- Felles datamodell (contract) ---------------- */
 
 export const TEXT46 = { registered: 'Registrert', in_transit: 'Underveis', out_for_delivery: 'Ute for levering', at_pickup_point: 'Klar for henting', delivered: 'Levert', returning: 'Returneres', problem: 'Problem', unknown: 'Ukjent' };
-// Vår interne status (tracking.js) fra contract-statusen.
+// Vår interne status (shipments.js) fra contract-statusen.
 const INTERNAL = { registered: 'registered', in_transit: 'in_transit', out_for_delivery: 'out_for_delivery', at_pickup_point: 'ready_for_pickup', delivered: 'delivered', returning: 'returned', problem: 'delayed', unknown: 'unknown' };
 const warned = new Set();
 function warnOnce(carrier, raw) {
@@ -171,7 +171,7 @@ export function normalizePosten46(raw) {
   };
 }
 
-/** Contract-modellen → resultatet tracking.js lagrer (status, hendelser nyeste først, ETA, hentested). */
+/** Contract-modellen → resultatet shipments.js lagrer (status, hendelser nyeste først, ETA, hentested). */
 export function toResult46(p, via) {
   const status = INTERNAL[p.status] ?? 'unknown';
   const events = [...(p.history ?? [])].reverse().filter((h) => h.raw_status && h.type !== 'added_by_user')
@@ -431,7 +431,7 @@ export async function syncAccount46(u, src) {
   }
 }
 
-// Nummersporingen spør kontoene først (tracking-carriers.js): et nummer som finnes i en innlogget innboks bruker den statusen.
+// Nummersporingen spør kontoene først (carriers.js): et nummer som finnes i en innlogget innboks bruker den statusen.
 setAccountLookup46(async (carrier, no) => {
   const u = activeUser();
   if (!u) return null;

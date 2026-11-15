@@ -33,7 +33,7 @@ test.after(() => { globalThis.fetch = realFetch; });
 
 const { default: app } = await import('../server/index.js');
 const cal = await import('../server/kalender/events.js');
-const { upsertShipment } = await import('../server/tracking.js');
+const { upsertShipment } = await import('../server/sporing/shipments.js');
 
 /* ---------------- iCal-testdata ---------------- */
 const VTZ = 'BEGIN:VTIMEZONE\r\nTZID:Europe/Oslo\r\nBEGIN:DAYLIGHT\r\nTZOFFSETFROM:+0100\r\nTZOFFSETTO:+0200\r\nDTSTART:19700329T020000\r\nRRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=-1SU\r\nEND:DAYLIGHT\r\n'

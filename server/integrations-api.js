@@ -26,7 +26,7 @@ import { geminiKeys, addKey, removeKey } from './finans/gemini-keys.js';
 import { testEngine } from './finans/ai.js';
 import { testMail } from './finans/mail.js';
 import * as integ from './integrations.js';
-import { testTracking } from './tracking.js';
+import { testTracking } from './sporing/shipments.js';
 import { testMap } from './tiles.js';
 import { testBackgrounds } from './background.js';
 import { iconSvg } from './icons.js';

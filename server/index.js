@@ -20,7 +20,7 @@ import { db as fhDb } from './finans/db.js';
 import homeApi from './home.js';
 import { matApi, matCalendar, startMatScheduler } from './mat.js';
 import domainsApi, { domainSummary } from './domains.js';
-import trackingApi, { startTrackingWorker, hasTrackingTest, testTracking } from './tracking.js';
+import trackingApi, { startTrackingWorker, hasTrackingTest, testTracking } from './sporing/shipments.js';
 import uiApi from './ui.js';
 import backgroundApi, { hasBackgroundTest, testBackgrounds } from './background.js';
 import mobileApi, { meOut, removeAvatar, shortcutsFor, layoutOf, authOrToken, designOf } from './mobile.js';
@@ -100,7 +100,7 @@ import { mountDal53 } from './dal53/index.js'; // prompt 53 (DAL53): Desert Ant 
 import { mountWhisper54 } from './whisper54/index.js'; // prompt 54 (WHISPER54): NB-Whisper på Mac mini-en (admin: /api/admin/whisper54/*), norsk tale til tekst i /api/voice53/*
 import { mountVoxcpm57 } from './voxcpm57/index.js'; // prompt 57 (VOX57): VoxCPM2 på Mac mini-en – /api/voices57 (stemmer per bruker) og /api/admin/voxcpm57/*
 import { mountOmlx58 } from './omlx58/index.js'; // prompt 58 (OMLX58): oMLX på Mac mini-en som motor bak AI-gaten (admin: /api/admin/omlx58/*)
-import { tracking46Api, startAccounts46 } from './tracking46.js'; // prompt 46 (DATA46): Posten/Bring- og PostNord-konto
+import { tracking46Api, startAccounts46 } from './sporing/accounts.js'; // prompt 46 (DATA46): Posten/Bring- og PostNord-konto
 import { gphoto46Api, startGphoto46 } from './gphoto46.js'; // prompt 46 (DATA46): Google Photos-album som bakgrunn
 import { kart46Api } from './kart46.js'; // prompt 46 (DATA46): Kart-API
 import { settingsApi as glimtSettingsApi, ttsApi, imgApi } from './glimt35.js'; // prompt 35: /api/glimt/settings, /api/tts, /api/img

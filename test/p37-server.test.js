@@ -317,10 +317,10 @@ test('sporing: nøkler deles i husstanden, maskert, bare admin endrer; kvote per
   assert.deepEqual(Object.keys(k.body.quota).filter((x) => ['used', 'mine', 'limit', 'perUserPct'].includes(x)).sort(), ['limit', 'mine', 'perUserPct', 'used']);
   assert.equal(k.body.quota.perUserPct, 50);
   assert.equal(k.body.admin, false);
-  const { householdValue, quotaBlock37 } = await import('../server/tracking37.js');
+  const { householdValue, quotaBlock37 } = await import('../server/sporing/household-keys.js');
   assert.equal(householdValue('trk_parcelsapp_key'), 'pa-secret-key-a91f');
   const { runAsUser } = await import('../server/settings.js');
-  const C = await import('../server/tracking-carriers.js');
+  const C = await import('../server/sporing/carriers.js');
   assert.equal(runAsUser(ingridId, () => C.parcelsappUsage().configured), true, 'Ingrid kan spore uten egen nøkkel');
   kv.set(ingridId, 'parcelsapp_usage', { month: new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Oslo' }).slice(0, 7), used: 1 });
   assert.match(runAsUser(ingridId, () => quotaBlock37(3)), /din del av husstandens kvote/);

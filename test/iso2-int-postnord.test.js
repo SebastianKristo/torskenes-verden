@@ -11,7 +11,7 @@ process.env.SESSION_SECRET = 'test-secret-test-secret-test-secret-12';
 process.env.NODE_ENV = 'test';
 delete process.env.MOCK_DATA;
 delete process.env.POSTNORD_API_KEY;
-const C = await import('../server/tracking-carriers.js');
+const C = await import('../server/sporing/carriers.js');
 const { updateConfig } = await import('../server/settings.js');
 const { kv, OWNER } = await import('../server/db.js');
 

@@ -63,7 +63,7 @@ import { broadcast } from './realtime.js';
 import { notifyOf, notifyUser } from './notify.js';
 import { eventsFor, normText, findEvent } from './kalender/events.js';
 import { weatherFull, wmoText, iconOf, PLACES } from './weather-full.js';
-import { packagesFor } from './tracking.js';
+import { packagesFor } from './sporing/shipments.js';
 import { nextTasks } from './tasks.js';
 import { settings as fhSettings, ensureLedger } from './finans/db.js';
 import { createTrial, trialOut } from './finans/trials.js';

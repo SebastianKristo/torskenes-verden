@@ -14,7 +14,7 @@ import { kv, OWNER, db as hlDb } from './db.js';
 import { broadcast as rtBroadcast } from './realtime.js';
 import { aiJson } from './homeos-common.js';
 import { sessionUser, userInfo, serverName, isAdmin, installKind } from './auth/session.js';
-import { packagesFor } from './tracking.js';
+import { packagesFor } from './sporing/shipments.js';
 import { newsFor } from './rss.js';
 import finansApi, { bearerOk } from './finans/routes.js';
 import { signedImageUser46 } from './media/middleware.js'; // signerte bilde-URL-er i Media

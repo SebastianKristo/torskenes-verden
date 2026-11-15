@@ -1,4 +1,4 @@
-// Prompt 42 (SERVER42): Sporing – AliExpress fra e-postmappen «AliExpress» + Cainiao (tracking-carriers.js), og PostNord-feilsøking.
+// Prompt 42 (SERVER42): Sporing – AliExpress fra e-postmappen «AliExpress» + Cainiao (carriers.js), og PostNord-feilsøking.
 // claude-code-sporing-aliexpress.md, claude-code-postnord-fortsatt-feil.md.
 //
 //   GET  /api/tracking/debug/:id        (bare admin) → {shipment, trackingNo, carrier, variants:[…], calls:[{at, layer, url, headers, status, body, variant, ms, error}], health, curl}
@@ -9,13 +9,13 @@
 //   POST /api/tracking/aliexpress/mail {raw|text, subject?, from?, uid?} → legg inn én AliExpress-e-post (test/import) → {found, shipments}
 import { Hono } from 'hono';
 import { simpleParser } from 'mailparser';
-import { db, q, kv } from './db.js';
-import { isAdmin, sessionUser } from './auth/session.js';
-import { userGuard } from './homeos-common.js';
-import { runAsUser } from './settings.js';
-import { upsertShipment, setAliHook42, trk42 } from './tracking.js';
-import { normNo, detect, pnDebugOf42, pnVariants42, postnordHealth41, POSTNORD_WEB_URL, PN_HEADERS42, _clearPostnordWebCache, _clearCainiaoCache } from './tracking-carriers.js';
-import { mailCfg42, mailConnect42, resolveFolder, mailText } from './finans/mail.js';
+import { db, q, kv } from '../db.js';
+import { isAdmin, sessionUser } from '../auth/session.js';
+import { userGuard } from '../homeos-common.js';
+import { runAsUser } from '../settings.js';
+import { upsertShipment, setAliHook42, trk42 } from './shipments.js';
+import { normNo, detect, pnDebugOf42, pnVariants42, postnordHealth41, POSTNORD_WEB_URL, PN_HEADERS42, _clearPostnordWebCache, _clearCainiaoCache } from './carriers.js';
+import { mailCfg42, mailConnect42, resolveFolder, mailText } from '../finans/mail.js';
 
 db.exec('CREATE TABLE IF NOT EXISTS track_mail_seen (user_id TEXT NOT NULL, folder TEXT NOT NULL, uid TEXT NOT NULL, at INTEGER NOT NULL, PRIMARY KEY (user_id, folder, uid))');
 

@@ -32,8 +32,8 @@ const h42 = await import('../server/finans/homes42.js');
 const f42 = await import('../server/finans/finans42.js');
 const finn42 = await import('../server/finans/finn42.js');
 const pdf42 = await import('../server/finans/pdf42.js');
-const carriers = await import('../server/tracking-carriers.js');
-const trk42 = await import('../server/tracking42.js');
+const carriers = await import('../server/sporing/carriers.js');
+const trk42 = await import('../server/sporing/aliexpress-debug.js');
 const tk42 = await import('../server/tasks-glimt42.js');
 const tg41 = await import('../server/tasks-glimt41.js');
 const hl42 = await import('../server/health42.js');
@@ -539,7 +539,7 @@ test('PostNord: varianter (uten 00, locale, itemId), feilsøkingslogg per kall, 
     assert.equal(t.status, 200);
     assert.equal(typeof t.body.result.ok, 'boolean');
   } finally { globalThis.fetch = orig; carriers._clearPostnordWebCache(); }
-  const trk = await import('../server/tracking.js');
+  const trk = await import('../server/sporing/shipments.js');
   assert.equal(trk.pnErrorText42('Fant ikke nummeret hos PostNord'), 'Fant ikke nummeret hos PostNord. Sjekk nummeret eller velg en annen transportør.');
   assert.equal(trk.pnErrorText42('PostNord svarer ikke akkurat nå', '20:45'), 'PostNord svarer ikke akkurat nå. Prøver igjen 20:45.');
   assert.match(trk.pnErrorText42('Nøkkelen ble avvist (401)'), /^PostNord krever nøkkel/);
@@ -567,7 +567,7 @@ test('PostNord: etter 2 mislykkede forsøk prøves ParcelsApp automatisk (også 
 });
 
 test('PostNord-logo: kontrollert fil i logobiblioteket, carrierLogo.url finnes', async () => {
-  const { packageLogo } = await import('../server/tracking.js');
+  const { packageLogo } = await import('../server/sporing/shipments.js');
   const l = packageLogo({ carrier: 'postnord', shop: '', shop_domain: '' });
   assert.equal(l.kind, 'carrier');
   assert.equal(l.url, '/finans/api/logos/file/postnord');

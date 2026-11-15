@@ -42,7 +42,7 @@ import { authOrToken } from './mobile.js';
 import { eventsFor } from './kalender/events.js';
 import { weatherFull, wmoText, iconOf } from './weather-full.js';
 import { newsFor } from './rss.js';
-import { packagesFor } from './tracking.js';
+import { packagesFor } from './sporing/shipments.js';
 import { notifyUser } from './notify.js';
 import { run as aiRun } from './ai-run.js';
 import { once, inFlight } from './ai-gate.js'; // prompt 43: én LLM-oppsummering per bruker/brief/dato om gangen
