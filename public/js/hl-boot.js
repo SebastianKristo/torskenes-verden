@@ -28,7 +28,7 @@
   // Prompt 40: Kalender på web lys/mørk/auto (kal-theme40.js) – leses før første render så det ikke blinker.
   try { var kt = localStorage.getItem('kal_theme'); if (kt !== 'lys' && kt !== 'mork') kt = localStorage.getItem('kal_hl_mode'); /* prompt 43: «følger» = Homelab-temaet */ if ((kt === 'lys' || kt === 'mork') && !document.documentElement.hasAttribute('data-kal-app')) document.documentElement.setAttribute('data-kal-theme', kt); } catch (e) { /* privat modus */ }
   // Prompt 44 (claude-code-web-lys-mork-modus.md): Lys (standard) · Mørk · Følg systemet. Settes før første tegning,
-  // så siden ikke blinker hvit. web44.js henter valget fra brukeren (web_theme) og lytter på systemet etterpå.
+  // så siden ikke blinker hvit. mode44.js henter valget fra brukeren (web_theme) og lytter på systemet etterpå.
   try {
     var wm = sm || localStorage.getItem('papir_web_mode'); if (wm !== 'dark' && wm !== 'system') wm = 'light';
     var dm = wm === 'dark' || (wm === 'system' && matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';

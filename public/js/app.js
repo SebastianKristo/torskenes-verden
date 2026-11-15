@@ -23,9 +23,7 @@ import { initWeb38 } from './web38.js';
 import { initWeb40 } from './web40.js';
 import { initWeb41, after41 } from './web41.js';
 import { loadHlTheme, applyHlTheme, is2c, setHlTheme, pwHeader, paintPhoto, bindPhoto } from './hltheme.js';
-import { initWeb44, after44 } from './web44.js'; // prompt 44: lys/mørk, GlimtInput, logg inn som, sidetillegg
-import { initWeb45, after45 } from './web45.js'; // prompt 45
-import { initWeb46, after46, renderKart46 } from './web46.js'; // prompt 46: Kart, nyheter, bakgrunn m.m.
+import { initPageAddons, afterPageAddons, renderKart } from './page-addons.js'; // lys/mørk, GlimtInput, logg inn som, Glimt-agent og tillegg per side
 import { renderFam51, renderMedia51, afterMedfam51 } from './medfam51.js'; // prompt 51 (MEDFAM51): Familiekalender og «I kveld»
 import { initWeb52, after52 } from './web52.js'; // prompt 52 (WEB52H): oppstart, sideanimasjon, Ruter-buffer m.m.
 import { initNavOverflow } from './nav-overflow.js'; // «Mer ▾» når fanene ikke får plass (B-B1/B2)
@@ -55,7 +53,7 @@ const MODS = {
 // Modulene som kobler lyttere til visningen (#view) gjør det én gang, når de lastes.
 const BIND = { rom: (m) => m.bind(view), hjem: (m) => m.bind(view), matplan: (m) => m.bind(view), sporing: (m) => m.bind(view), domener: (m) => m.bind(view) };
 const r0 = (m) => m.render();
-const ROUTES = { dash: ['dash', r0], studie: ['studie', r0], rom: ['rom', r0], hjem: ['hjem', r0], matplan: ['matplan', r0], sporing: ['sporing', r0], familie: ['familie', r0], huskeliste: ['tasks', r0], gjoremal: ['tasks', r0], vaer: ['vaer', r0], bursdager: ['bursdager', r0], kalender: ['kalender', r0], chat: ['chat', r0], media: ['media', r0], kart: [null, renderKart46], familiekalender: [null, renderFam51], mediakveld: [null, renderMedia51], skjold: [null, renderSkjold76], domener: ['domener', r0], nettverk: ['net', r0], mer: ['net', (m) => m.renderMore()] };
+const ROUTES = { dash: ['dash', r0], studie: ['studie', r0], rom: ['rom', r0], hjem: ['hjem', r0], matplan: ['matplan', r0], sporing: ['sporing', r0], familie: ['familie', r0], huskeliste: ['tasks', r0], gjoremal: ['tasks', r0], vaer: ['vaer', r0], bursdager: ['bursdager', r0], kalender: ['kalender', r0], chat: ['chat', r0], media: ['media', r0], kart: [null, renderKart], familiekalender: [null, renderFam51], mediakveld: [null, renderMedia51], skjold: [null, renderSkjold76], domener: ['domener', r0], nettverk: ['net', r0], mer: ['net', (m) => m.renderMore()] };
 const mods = {}, loading = {};
 function loadMod(k) {
   if (!k || mods[k]) return Promise.resolve(mods[k]);
@@ -116,9 +114,7 @@ function renderRoute() {
   setupDnd(view);
   if (route === 'dash') { mods.dash.mountDash(view); if (isEditingPending) { isEditingPending = false; requestAnimationFrame(() => mods.dash.startEdit()); } }
   after41(route, view); // prompt 41: 17. mai på Hjem
-  after44(route, view); // prompt 44
-  after45(route, view); // prompt 45
-  after46(route, view); // prompt 46
+  afterPageAddons(route, view);
   afterMedfam51(route, view); // prompt 51 (MEDFAM51)
   after52(route, view); // prompt 52 (WEB52H)
   if (route === 'skjold') import('./skjold76.js').then((m) => m.mount(view)).catch((e) => console.warn('skjold76', e)); // prompt 76
@@ -259,9 +255,7 @@ async function main() {
   initWeb38();
   initWeb40();
   initWeb41();
-  initWeb44(lay44);
-  initWeb45();
-  initWeb46();
+  initPageAddons(lay44);
   initWeb52();
   bindSearch();
   setupDnd(document.querySelector('header'));
