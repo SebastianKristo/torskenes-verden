@@ -3,6 +3,7 @@
 // side for PWA/mobil (/finans/plan51). Selvstendig: egen tilstand og egne hendelser (data-p51*), ingen avhengighet til
 // desktop.js. Desktop tegner hele siden på nytt ofte, så modulen monterer seg selv i hvert nytt [data-p51-host] (MutationObserver)
 // og bruker data den allerede har hentet. API: /finans/api/fin51/* ($S/SERVER51-API.md, seksjon FIN51).
+import { fhDesign, nårTemaEndres } from './tema.js';
 
 const BASE = '/finans/api';
 const TABS = [['spar', 'Sparemål'], ['kal', 'Kalender'], ['skatt', 'Skatt'], ['pris', 'Priser'], ['jakt', 'Abonnementsjeger']];
@@ -315,12 +316,10 @@ function scan() { for (const h of document.querySelectorAll('[data-p51-host]')) 
 const mo = new MutationObserver(() => scan());
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => { scan(); mo.observe(document.body, { childList: true, subtree: true }); });
 else { scan(); mo.observe(document.body, { childList: true, subtree: true }); }
-// Egen side (/finans/plan51): tema som i FinansHub (lys / mørk / glød), ellers systemets.
+// Egen side (/finans/plan51): samme tema som resten av Økonomi, som følger Homelab (tema.js). Ukjent modus: systemets.
 if (document.body?.dataset.p51Page || document.documentElement.dataset.p51Page) {
   const h = document.documentElement;
-  let d = null;
-  try { d = localStorage.getItem('fh_design'); } catch { /* */ }
-  if (!['lys', 'mork', 'glod'].includes(d)) d = matchMedia('(prefers-color-scheme: dark)').matches ? 'mork' : 'lys';
-  h.setAttribute('data-theme', d);
+  const sett = () => h.setAttribute('data-theme', fhDesign(null, matchMedia('(prefers-color-scheme: dark)').matches ? 'mork' : 'lys'));
+  sett(); nårTemaEndres(sett);
   window.addEventListener('hashchange', () => { const t = location.hash.replace(/^#\/?/, ''); if (TABS.some(([k]) => k === t) && t !== P.tab) { P.tab = t; paint(); load(); } });
 }

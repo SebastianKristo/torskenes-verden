@@ -28,6 +28,7 @@ import { setTitle } from './mobile-set.js';
 import { appName, huskeWidget, bolWidget, scanCtx, homeUpload, FT } from './mobile-p17.js';
 import { posCard, ppTi } from './mobile-p20.js';
 import { bgFetch, bgLayers, bgControls, saveBg, takeBg, bgSet } from './mobile-bg.js';
+import { homelabStil, homelabMorkt, homelabModus } from './tema.js';
 import * as P34 from './mobile-p34.js'; // prompt 34: Glimt-brief på Hjem (h12)
 import * as P35 from './mobile-p35.js'; // prompt 35: Hjem-kortet med vertsfiguren
 import * as P37 from './mobile-p37.js'; // prompt 37: Gjøremål-widgeten
@@ -38,7 +39,11 @@ import * as P36 from './mobile-p36.js'; // prompt 36: sveip bort brief-kortet, N
 
 // Prompt 42 (claude-code-slett-gamle-design.md): Klassisk (Liquid Glass / Material You) er slettet – appen er alltid Papir.
 export const paper = () => true;
-export const paperDark = () => { const v = pref('paperMode'); return v === 'mork' || (v === 'auto' && !!matchMedia('(prefers-color-scheme: dark)').matches); };
+// Økonomi følger Homelab-temaet (Q15, tema.js): Glass og mørk modus gir Papir mørk. paperMode (appenes valg) gjelder bare
+// når Homelab-modusen er ukjent i denne nettleseren.
+export const paperDark = () => { if (homelabStil() === 'glass') return true; const h = homelabMorkt(); if (h != null) return h; const v = pref('paperMode'); return v === 'mork' || (v === 'auto' && !!matchMedia('(prefers-color-scheme: dark)').matches); };
+/** Valgt modus i temavelgeren: Homelab-modusen, ellers paperMode. */
+export const paperModeValgt = () => homelabModus() ?? pref('paperMode');
 const PHOTOS = [['weather', 'Vær'], ['planets', 'Planeter'], ['oslo', 'Oslo'], ['cur', 'Ingen']];
 const PHOTO_SUB = { cur: 'Bare mørk gradient', oslo: 'Oslo fra lufta · skifter gjennom dagen', weather: 'Følger været der du er (MET)', planets: 'Jorda, Månen, Jupiter, Mars og Saturn (NASA)', custom: 'Ditt eget bilde' };
 const WX_NB = { clear: 'klart', klart: 'klart', cloudy: 'skyet', sky: 'skyet', rain: 'regn', regn: 'regn', snow: 'snø', fog: 'tåke', night: 'natt' };

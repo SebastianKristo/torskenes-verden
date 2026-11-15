@@ -8,6 +8,7 @@ import {
   smooth, spark, conic, icon, logo, aiLine, ICONS, loadLogoRegistry, sheetBtn,
 } from './core.js';
 import { reanalyzeBtn, bindReanalyze } from './reanalyze.js';
+import { fhDesign, flyttFinansValg, settHomelabTema, nårTemaEndres } from './tema.js';
 import { clearBtn, bindSearchFields } from '/assets/js/searchfield.js';
 import { bindSuggest } from './fsuggest.js';
 import { linesOf, matchLines, markText, hlBanner, hlList, hlImage, hlFocus } from './rc-hl.js';
@@ -150,35 +151,26 @@ const suggList = (r) => (Array.isArray(r) ? r : r?.items ?? []);
 
 /* ===================== Tema og kompakt sidemeny (prompt 13) ===================== */
 
-// Temaene fra «FinansHub v3 Temaer». Valget lagres per bruker i /api/me/layout (design, compactNav), med localStorage
-// som reserve når serveren ikke kjenner feltene ennå. Prompt 42: det gamle mørke/oransje FinansHub v2-designet er slettet;
-// står design på 'v2' (lokalt eller i profilen), flyttes brukeren til Papir (lys) ved neste innlasting.
+// Temaene fra «FinansHub v3 Temaer». Økonomi følger Homelab-temaet (Q15, B-F1, tema.js): Papir lys → «lys», Papir mørk → «mork»
+// og Glass → «glod». Velgeren under Innstillinger → Utseende endrer Homelab-valget, så mørk modus bare velges ett sted.
+// Det gamle FinansHub-valget (layout.design / fh_design) brukes bare når Homelab-modusen er ukjent, og flyttes til Homelab én gang.
 export const THEMES = {
-  lys: { name: 'Lys hovedbok · standard', desc: 'Papirtone, grønn aksent, serif-tall', bg: '#f4f1ea', side: '#ece7dc', surf: '#faf8f3', line: '#e2ddd2', ink: '#1c1b19', faint: '#8a8478', acc: '#1f4d3a', warn: '#c8553d', d: "'Instrument Serif',serif", dw: 400, rs: '6px', meta: '#f4f1ea' },
-  mork: { name: 'Mørk hovedbok', desc: 'Samme oppsett i mørkt, mintgrønn aksent', bg: '#121210', side: '#0d0d0c', surf: '#1a1a17', line: '#2a2925', ink: '#ece8df', faint: '#8a8478', acc: '#6fbf8e', warn: '#e07a5f', d: "'Instrument Serif',serif", dw: 400, rs: '6px', meta: '#121210' },
-  glod: { name: 'Glød', desc: 'Varm mørk, ravgul aksent, myke kort', bg: '#16110e', side: '#120e0b', surf: '#221a15', line: '#2c221c', ink: '#f3ebe3', faint: '#9c8f84', acc: '#ffb547', warn: '#ff7a59', d: "'Bricolage Grotesque',sans-serif", dw: 600, rs: '8px', meta: '#16110e' },
+  lys: { name: 'Papir · lys', desc: 'Papirtone, grønn aksent, serif-tall', bg: '#f4f1ea', side: '#ece7dc', surf: '#faf8f3', line: '#e2ddd2', ink: '#1c1b19', faint: '#8a8478', acc: '#1f4d3a', warn: '#c8553d', d: "'Instrument Serif',serif", dw: 400, rs: '6px', meta: '#f4f1ea' },
+  mork: { name: 'Papir · mørk', desc: 'Samme oppsett i mørkt, mintgrønn aksent', bg: '#121210', side: '#0d0d0c', surf: '#1a1a17', line: '#2a2925', ink: '#ece8df', faint: '#8a8478', acc: '#6fbf8e', warn: '#e07a5f', d: "'Instrument Serif',serif", dw: 400, rs: '6px', meta: '#121210' },
+  glod: { name: 'Glass', desc: 'Varm mørk, ravgul aksent, myke kort', bg: '#16110e', side: '#120e0b', surf: '#221a15', line: '#2c221c', ink: '#f3ebe3', faint: '#9c8f84', acc: '#ffb547', warn: '#ff7a59', d: "'Bricolage Grotesque',sans-serif", dw: 600, rs: '8px', meta: '#16110e' },
 };
 const lsGet = (k) => { try { return localStorage.getItem(k); } catch { return null; } };
 const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch {} };
-// Rekkefølge (prompt 22): brukerens lagrede valg fra serveren, så lokal cache fh_design, så «lys» (Lys hovedbok) som standard.
-export const design = () => [S.layout?.design, lsGet('fh_design')].find((v) => THEMES[v]) ?? 'lys';
-let v2Moved = false;
-function migrateV2() {
-  if (v2Moved) return;
-  const old = S.layout?.design === 'v2' || lsGet('fh_design') === 'v2';
-  if (!old) return;
-  v2Moved = true;
-  lsSet('fh_design', 'lys');
-  if (S.layout?.design === 'v2') { S.layout.design = 'lys'; fetch('/api/me/layout', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ design: 'lys' }) }).catch(() => {}); }
-}
+const legacyDesign = () => [S.layout?.design, lsGet('fh_design')].find((v) => THEMES[v]);
+export const design = () => fhDesign(S.layout, legacyDesign());
+let temaBundet = false;
 const compactNav = () => (typeof S.layout?.compactNav === 'boolean' ? S.layout.compactNav : lsGet('fh_compact') === '1');
 // Setter tema-attributtene på <html>. Mobil har egne design, så temaene gjelder bare desktop (CSS er avgrenset med data-ui).
 export function applyTheme() {
-  migrateV2();
+  if (!temaBundet) { temaBundet = true; nårTemaEndres(() => { if (document.documentElement.dataset.ui === 'desktop') { applyTheme(); render(); } }); }
+  if (S.layout) flyttFinansValg(S.layout);
   const h = document.documentElement, d = design();
   if (h.dataset.theme !== d) h.dataset.theme = d;
-  // Serverens valg caches lokalt, så neste lasting starter i riktig tema uten å blinke.
-  if (THEMES[S.layout?.design] && lsGet('fh_design') !== d) lsSet('fh_design', d);
   h.setAttribute('data-v3', '');
   h.toggleAttribute('data-compact', compactNav());
   const m = document.querySelector('meta[name=theme-color]');
@@ -186,7 +178,6 @@ export function applyTheme() {
 }
 async function saveLayout(patch) {
   S.layout = { ...(S.layout ?? {}), ...patch };
-  if ('design' in patch) { lsSet('fh_design', patch.design); try { sessionStorage.setItem('fh_jump', '1'); } catch {} }
   if ('compactNav' in patch) lsSet('fh_compact', patch.compactNav ? '1' : '0');
   applyTheme();
   render();
@@ -203,7 +194,7 @@ function lookTab() {
       <span class="th-meta"><span><b>${esc(t.name)}</b><small>${esc(t.desc)}</small></span>${cur === k ? '<span class="th-ok" aria-hidden="true">✓</span>' : ''}</span></button>`).join('')}</div>
     <div class="box" style="justify-content:space-between;gap:20px"><div><b style="font-weight:600;font-size:15px">Kompakt sidemeny</b><div class="note" style="font-size:13px;margin-top:2px">Vis bare ikoner i sidemenyen</div></div>
       <button class="toggle" role="switch" aria-checked="${comp}" data-act="compact-nav" aria-label="Kompakt sidemeny"></button></div>
-    <div class="note" style="font-size:13px">Velg hvordan FinansHub ser ut. Endringen gjelder med en gang og følger brukeren din på alle nettlesere. Mobilappen og PWA-en har egne design under Innstillinger → Utseende der.</div>`;
+    <div class="note" style="font-size:13px">Økonomi følger temaet i Homelab. Valget her endrer også Homelab, med en gang og på alle nettlesere. Mobilappene har egne valg under Innstillinger → Utseende der.</div>`;
 }
 
 function shell(content) {
@@ -1313,7 +1304,7 @@ export function bind() {
     if ((x = d('[data-rc-cat]'))) return patchRc(u.selRc, { categoryId: +x.dataset.rcCat });
     if ((x = d('[data-test-engine]'))) { const k = x.dataset.testEngine; u.msg.ai = 'Tester …'; render(); const r = await api('/ai/test', { method: 'POST', json: { provider: k } }).catch((e) => ({ ok: false, message: e.message })); u.msg.aiOk = r.ok; u.msg.ai = r.message; return render(); }
     if ((x = d('[data-settab]'))) { u.setTab = x.dataset.settab; u.msg = {}; if (u.setTab === 'ai') loadAi().then(render); return load(); }
-    if ((x = d('[data-theme-pick]'))) return saveLayout({ design: x.dataset.themePick });
+    if ((x = d('[data-theme-pick]'))) { settHomelabTema({ design: x.dataset.themePick }); if (S.layout) { S.layout.hlTheme = x.dataset.themePick === 'glod' ? 'cur' : '2c'; if (x.dataset.themePick !== 'glod') S.layout.web_theme = x.dataset.themePick === 'mork' ? 'dark' : 'light'; } try { sessionStorage.setItem('fh_jump', '1'); } catch {} applyTheme(); return render(); }
     if ((x = d('[data-provider]'))) return saveSet({ provider: x.dataset.provider });
     if ((x = d('[data-tog]'))) return saveSet({ [x.dataset.tog]: !S.boot.settings[x.dataset.tog] });
     if ((x = d('[data-txtype]'))) { u.add.kind = x.dataset.txtype; return render(); }
