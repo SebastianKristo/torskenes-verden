@@ -69,7 +69,7 @@ test('modulen: API-kontrakten, matrix3d, offline-cache, angre', () => {
 
 test('ruting, meny, Mer og flis på Hjem', () => {
   const app = read('public/js/app.js');
-  assert.match(app, /skjold: renderSkjold76/);
+  assert.match(app, /skjold: \[null, renderSkjold76\]/); // Fase 3: ROUTES har [modul, tegnefunksjon]; Skjold lastes selv (under)
   assert.match(app, /import\('\.\/skjold76\.js'\)\.then\(\(m\) => m\.mount\(view\)\)/);
   assert.match(app, /!\(route === 'skjold' && current\(\) === 'skjold'\)/);
   assert.match(read('public/app.html'), /<a href="#\/skjold" data-r="skjold">Skjold Lab<\/a>/);

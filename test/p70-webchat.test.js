@@ -13,7 +13,7 @@ const C70 = read('public/js/chat70.js');
 const CSS = read('public/css/chat70.css');
 const APP = read('public/app.html');
 const TRK = read('public/js/tracking.js');
-const SET = read('public/js/settings.js');
+const SET = read('public/js/settings-view.js');
 const SP = read('public/js/settings-track70.js');
 const SS = read('public/js/settings-search.js');
 

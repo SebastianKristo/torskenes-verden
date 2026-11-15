@@ -9,7 +9,7 @@ const rd = (p) => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8');
 const M = rd('public/js/memory63.js');
 const SA = rd('public/js/settings-ai.js');
 const A = rd('public/js/ai-control.js');
-const ST = rd('public/js/settings.js');
+const ST = rd('public/js/settings-view.js');
 const R = rd('public/js/sched62.js');
 const m = await import('../public/js/memory63.js');
 
