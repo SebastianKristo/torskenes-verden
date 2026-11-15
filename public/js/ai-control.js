@@ -45,20 +45,20 @@ const MKEEP = [[null, 'Standard'], [0, '0'], ['5m', '5 min'], ['15m', '15 min'],
 const LOADT = [[30, '30 s'], [60, '60 s'], [90, '90 s'], [180, '180 s']], FIRSTT = [[15, '15 s'], [30, '30 s'], [60, '60 s']];
 const IDLET = [[15, '15 s'], [30, '30 s'], [60, '60 s'], [120, '120 s']], IDLEI = [[30, '30 s'], [60, '60 s'], [120, '120 s']];
 
-// Prompt 58 (OMLX58): oMLX på Mac mini-en – «Motor per oppgave» (Valg) og admin-kortet (Modeller) fylles av omlx58.js.
-if (typeof document !== 'undefined') import('./omlx58.js').catch(() => {});
-// Prompt 59 (prompt 49 del 4): «Raskere svar» (Svar-cache, Varm modell, Strømming, Parallelle verktøy) i fanen Valg fylles av fast59.js.
-if (typeof document !== 'undefined') import('./fast59.js').catch(() => {});
-// Prompt 60 (prompt 49 del 3): «Forstår samtaler» (Samtaletilstand, Entitetsregister, Valgknapper) under «Raskere svar» fylles av understand60.js.
-if (typeof document !== 'undefined') import('./understand60.js').catch(() => {});
-// Prompt 61 (prompt 49 del 1): «Glimt lærer» (Lagre oppskrifter, Bruk som eksempler, Hurtigvei, Lær av rettelser) under «Forstår samtaler» fylles av recipes61.js.
-if (typeof document !== 'undefined') import('./recipes61.js').catch(() => {});
-// Prompt 62 (prompt 49 del 2): «Faste oppgaver» (Planlagte oppgaver, Betingede varsler, Stille timer, prisområde) under «Glimt lærer» fylles av sched62.js.
-if (typeof document !== 'undefined') import('./sched62.js').catch(() => {});
-// Prompt 63 (prompt 49 del 5): «Minnet holder seg ryddig» (Nattlig oppsummering, Motstrid-sjekk, Marker ubrukte fakta) under «Faste oppgaver» fylles av memory63.js.
-if (typeof document !== 'undefined') import('./memory63.js').catch(() => {});
-// Prompt 64 (prompt 49 del 7): «Kvalitet over tid» (Ukerapport, Nattlig eval og admin-grensene) under «Minnet holder seg ryddig» fylles av quality64.js.
-if (typeof document !== 'undefined') import('./quality64.js').catch(() => {});
+// Prompt 58 (OMLX58): oMLX på Mac mini-en – «Motor per oppgave» (Valg) og admin-kortet (Modeller) fylles av omlx.js.
+if (typeof document !== 'undefined') import('./omlx.js').catch(() => {});
+// Prompt 59 (prompt 49 del 4): «Raskere svar» (Svar-cache, Varm modell, Strømming, Parallelle verktøy) i fanen Valg fylles av glimt-raskere-svar.js.
+if (typeof document !== 'undefined') import('./glimt-raskere-svar.js').catch(() => {});
+// Prompt 60 (prompt 49 del 3): «Forstår samtaler» (Samtaletilstand, Entitetsregister, Valgknapper) under «Raskere svar» fylles av glimt-forstaar.js.
+if (typeof document !== 'undefined') import('./glimt-forstaar.js').catch(() => {});
+// Prompt 61 (prompt 49 del 1): «Glimt lærer» (Lagre oppskrifter, Bruk som eksempler, Hurtigvei, Lær av rettelser) under «Forstår samtaler» fylles av glimt-oppskrifter.js.
+if (typeof document !== 'undefined') import('./glimt-oppskrifter.js').catch(() => {});
+// Prompt 62 (prompt 49 del 2): «Faste oppgaver» (Planlagte oppgaver, Betingede varsler, Stille timer, prisområde) under «Glimt lærer» fylles av glimt-faste-oppgaver.js.
+if (typeof document !== 'undefined') import('./glimt-faste-oppgaver.js').catch(() => {});
+// Prompt 63 (prompt 49 del 5): «Minnet holder seg ryddig» (Nattlig oppsummering, Motstrid-sjekk, Marker ubrukte fakta) under «Faste oppgaver» fylles av glimt-minne.js.
+if (typeof document !== 'undefined') import('./glimt-minne.js').catch(() => {});
+// Prompt 64 (prompt 49 del 7): «Kvalitet over tid» (Ukerapport, Nattlig eval og admin-grensene) under «Minnet holder seg ryddig» fylles av glimt-kvalitet.js.
+if (typeof document !== 'undefined') import('./glimt-kvalitet.js').catch(() => {});
 const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ESC[c]);
 const nb = (n, d = 0) => Number(n || 0).toLocaleString('nb-NO', { minimumFractionDigits: d, maximumFractionDigits: d });
@@ -624,13 +624,13 @@ function mountImp43(p) {
   host.dataset.done = '1';
   const o = { variant: p.o.variant === 'mobile' ? 'mobile' : 'web', onOpenChat: p.o.onOpenChat ?? (() => { p.o.onClose?.(); location.hash = '#/chat'; }) };
   if (CI43) { CI43.mountClaudeImport(host, o); return; }
-  import('/assets/js/claude-import43.js').then((m) => { CI43 = m; if (host.isConnected) m.mountClaudeImport(host, o); }).catch((e) => { host.textContent = `Fikk ikke lastet importen: ${e.message}`; });
+  import('/assets/js/claude-import.js').then((m) => { CI43 = m; if (host.isConnected) m.mountClaudeImport(host, o); }).catch((e) => { host.textContent = `Fikk ikke lastet importen: ${e.message}`; });
 }
 
 /* ---------------- Moduler som tegnes inni AI-siden (lastes ved behov) ---------------- */
 
 const MOD = {};
-const MOD_SRC = { g65: './ai-glimt65.js', r48: './receipts48-set.js', o58: './omlx58.js', v54: './voice54.js', v57: './voices57.js' };
+const MOD_SRC = { g65: './ai-glimt.js', r48: './receipts-settings.js', o58: './omlx.js', v54: './tale.js', v57: './stemmer.js' };
 function need(k) {
   if (MOD[k] !== undefined) return MOD[k];
   MOD[k] = null;
@@ -1253,7 +1253,7 @@ function bind(el) {
     if (d.acMdel) return modelAct(d.acMdel, 'del');
     if (d.acMdef) { try { const r = await call('/models/default', { method: 'PUT', json: { model: d.acMdef } }); if (r?.tasks) G.routing = normRouting(r); toast(`${d.acMdef} er standard i Chat`); vibe(); } catch (err) { if (err.status === 404) return saveRouting({ tasks: { chat: { model: d.acMdef } } }, `${d.acMdef} er standard i Chat`); toast(err.message); } loadRouting(); loadModels(); return; }
     if (d.acDal != null) { try { const r = await fetch('/api/admin/dal53/preload', { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: JSON.stringify(d.acDal ? { models: [d.acDal] } : {}) }).then((x) => x.json()); G.dalMsg = r.started?.length ? `Laster ${r.started.join(', ')} i bakgrunnen …` : 'Ingenting å laste.'; } catch (err) { G.dalMsg = err.message; } G.dal = undefined; loadDal(); return; }
-    if ('acDalmore' in d) { import('./dal53.js').then((m) => m.openModels53()).catch((err) => toast(err.message)); return; }
+    if ('acDalmore' in d) { import('./lokale-modeller.js').then((m) => m.openModels53()).catch((err) => toast(err.message)); return; }
     if (d.acCloud) {
       const c = cloud().find((x) => x.id === d.acCloud), on = !c?.on; vibe();
       try { await call('/cloud', { method: 'PUT', json: { id: d.acCloud, on } }); } catch (err) { if (err.status !== 404) { toast(err.message); return; } return saveRouting({ cloudOn: { [d.acCloud]: on } }); }
@@ -1283,7 +1283,7 @@ function bind(el) {
     if (d.acWdel) { if (!confirm('Fjerne nøkkelen?')) return; return saveBackend({ web: { [d.acWdel]: '' } }, 'Nøkkelen er fjernet'); }
     if (d.acWord) { const o2 = [...(G.backend?.web?.order ?? [])], i = o2.indexOf(d.acWord), k = i + +d.d; if (i < 0 || k < 0 || k >= o2.length) return; [o2[i], o2[k]] = [o2[k], o2[i]]; return saveBackend({ web: { order: o2 } }, 'Rekkefølgen er lagret'); }
     if ('acWddg' in d) return saveBackend({ web: { ddg: !G.backend?.web?.ddg?.on } });
-    // Prompt 65: Kvitteringer (stegene) og Mac-OCR (Tjenester) bruker receipts48-set.js sin tilstand og handlinger
+    // Prompt 65: Kvitteringer (stegene) og Mac-OCR (Tjenester) bruker receipts-settings.js sin tilstand og handlinger
     if (d.acR48tog) return MOD.r48?.r48Act.toggle(d.acR48tog);
     if (d.acR48set72) return MOD.r48?.r48Act.set72?.(d.acR48set72, !MOD.r48?._r48State?.health?.lfm72?.layoutStep); // prompt 72
     if (d.acR48) { const box = b.closest('.ac-xp'); MOD.r48?.r48Act.setUrl(box?.querySelector('[data-ac-r48in="url"]')?.value ?? null); if (d.acR48 === 'test') return MOD.r48?.r48Act.test(); if (d.acR48 === 'clearkey') { if (!confirm('Fjerne nøkkelen til Mac-OCR?')) return; return MOD.r48?.r48Act.save(true); } return; }

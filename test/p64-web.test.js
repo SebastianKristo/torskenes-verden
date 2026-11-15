@@ -6,12 +6,12 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 const rd = (p) => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8');
-const Q = rd('public/js/quality64.js');
+const Q = rd('public/js/glimt-kvalitet.js');
 const S64 = rd('public/js/settings-kvalitet.js');
 const ST = rd('public/js/settings-view.js');
 const A = rd('public/js/ai-control.js');
 const SS = rd('public/js/settings-search.js');
-const q = await import('../public/js/quality64.js');
+const q = await import('../public/js/glimt-kvalitet.js');
 
 test('lenkene fra pushene (SERVER64-API.md §4) tolkes og skrives om til #/innstillinger/kvalitet', () => {
   assert.equal(q.ROUTE64, '/#/innstillinger/kvalitet');
@@ -101,6 +101,6 @@ test('plassering: egen fane Innstillinger → Kvalitet (selvstendig modul) og br
   assert.match(ST, /kvalitet: \(\) => kvalitetView64\(H\)/);
   assert.match(SS, /\['kvalitet', 'Kvalitet', 'Glimt → Kvalitet', 'kvalitet', '[^']*ukerapport[^']*'\]/);
   assert.match(A, /<div data-mem63set><\/div><div data-q64set><\/div>/);
-  assert.match(A, /import\('\.\/quality64\.js'\)/);
+  assert.match(A, /import\('\.\/glimt-kvalitet\.js'\)/);
   for (const s of ['data-q64-user="weekly"', 'data-q64-server="${k}"', "seg('runs'", "seg('maxMinutes'", "seg('interactiveWaitSec'", "seg('keepDays'", 'data-q64-go']) assert.ok(Q.includes(s), s);
 });

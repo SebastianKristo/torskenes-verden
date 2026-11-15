@@ -1,5 +1,5 @@
 // Prompt 37 (web): små ting i skallet.
-// - Vær åpnet fra briefen (brief35.js → openVaer): ✕ øverst til høyre på Vær-siden går tilbake til briefen på samme scroll-posisjon.
+// - Vær åpnet fra briefen (brief.js → openVaer): ✕ øverst til høyre på Vær-siden går tilbake til briefen på samme scroll-posisjon.
 // - Onboarding med profil (onboarding.js) når den innloggede brukeren ikke er koblet til en profil.
 const BACK = 'gb37_back';
 
@@ -25,7 +25,7 @@ async function goBack() {
   try { sessionStorage.removeItem(BACK); } catch { /* */ }
   document.getElementById('gb37-vback')?.remove();
   location.hash = '#/dash';
-  const m = await import('./brief35.js');
+  const m = await import('./brief.js');
   setTimeout(() => m.reopenBrief?.(info?.sc ?? 0), 60);
 }
 

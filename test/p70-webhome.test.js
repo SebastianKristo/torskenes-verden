@@ -7,7 +7,7 @@ import { readFileSync } from 'node:fs';
 const read = (p) => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8');
 
 test('mikrofon-sokefelt: nytt ikon, kort i søkefeltets farge, motoren er fortsatt serveren', () => {
-  const v = read('public/js/voice54.js');
+  const v = read('public/js/tale.js');
   assert.match(v, /<rect x="9" y="3" width="6" height="11\.5" rx="3"\/>/, 'kapsel 6×11,5 radius 3');
   assert.match(v, /stroke-width="1\.9"/);
   assert.match(v, /f\.querySelector\('\[data-sq-ai\]'\)/, 'mellom tekstfeltet og ✦ AI');

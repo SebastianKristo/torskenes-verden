@@ -13,16 +13,16 @@ globalThis.location ??= { href: '' };
 const rd = (p) => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8');
 const C = rd('public/js/chat.js');
 const X = rd('public/js/extras.js');
-const G = rd('public/js/glimt-agent45.js');
-const ST = rd('public/js/stream59.js');
+const G = rd('public/js/glimt-agent.js');
+const ST = rd('public/js/glimt-strom.js');
 const A = rd('public/js/ai-control.js');
 const SA = rd('public/js/settings-ai.js');
-const U = rd('public/js/understand60.js');
-const E = rd('public/js/entities60.js');
+const U = rd('public/js/glimt-forstaar.js');
+const E = rd('public/js/glimt-entiteter.js');
 
-const cv = await import('../public/js/convo60.js');
-const ga = await import('../public/js/glimt-agent45.js');
-const en = await import('../public/js/entities60.js');
+const cv = await import('../public/js/glimt-samtale.js');
+const ga = await import('../public/js/glimt-agent.js');
+const en = await import('../public/js/glimt-entiteter.js');
 
 const CH = { setId: 'ch3f9a1c2b7d', question: 'Mener du «Frisør Nina» eller «Middag med Nina»?', items: [{ id: '1', label: 'Frisør Nina · fre 30. okt 14:00', text: 'Frisør Nina · fre 30. okt 14:00' }, { id: '2', label: 'Middag med Nina · fre 30. okt 18:00', text: 'Middag med Nina · fre 30. okt 18:00' }], expiresAt: '2099-01-01T00:00:00.000Z' };
 
@@ -105,7 +105,7 @@ test('agent() og strømmen sender conversationId, conversationKind og choice', (
 });
 
 test('Glimt-søket på Hjem: samme samtale for spørsmål og valg, ny når feltet tømmes', () => {
-  assert.match(X, /import \{ homeConv60, resetHomeConv60 \} from '\.\/convo60\.js'/);
+  assert.match(X, /import \{ homeConv60, resetHomeConv60 \} from '\.\/glimt-samtale\.js'/);
   assert.match(X, /ag = await agentLive59\(q, 'home', \{\}, \{ signal: ctl\.signal, conversationId: homeConv60\(\), conversationKind: 'search'/);
   assert.match(X, /agent\(t, 'home', ctx, \{ conversationId: homeConv60\(\), conversationKind: 'search', choice: o60\?\.choice \?\? null \}\)/);
   assert.match(X, /resend: \(t, ctx, o60\) => \{ const f = ansForm; agentFollow\(t, ctx, f, o60\); \}/);
@@ -113,7 +113,7 @@ test('Glimt-søket på Hjem: samme samtale for spørsmål og valg, ny når felte
 });
 
 test('Chat: samtale-id, oppfølgere, valgknapper og bekreftelse', () => {
-  assert.match(C, /from '\.\/convo60\.js'/);
+  assert.match(C, /from '\.\/glimt-samtale\.js'/);
   assert.match(C, /conv60 = chatConv60\(C\.cur\);\n    s59 = await agentStream59\(t, 'chat', \{\}, \{ signal: ctl\.signal, conversationId: conv60, conversationKind: 'chat', choice: o60\.choice \?\? null,/);
   assert.match(C, /\(opt\.choice60 \|\| looksLikeTool\(t\) \|\| followsGlimt60\(C\.chat\?\.messages, t\)\) && await sendTool\(t, \{ choice: opt\.choice60\?\.setId \? opt\.choice60 : null \}\)/);
   assert.match(C, /bindConv60\(C\.cur, conv60\)/);
@@ -130,7 +130,7 @@ test('Chat: samtale-id, oppfølgere, valgknapper og bekreftelse', () => {
 });
 
 test('AI-kontroll: «Forstår samtaler» med tre brytere (bruker + admin)', () => {
-  assert.match(A, /import\('\.\/understand60\.js'\)/);
+  assert.match(A, /import\('\.\/glimt-forstaar\.js'\)/);
   assert.match(A, /<div data-fast59><\/div><div data-understand60><\/div>/);
   assert.match(U, /fetch\('\/api\/glimt\/agent\/understand', \{ credentials: 'same-origin'/);
   assert.match(U, /method: 'PUT'/);
@@ -143,8 +143,8 @@ test('AI-kontroll: «Forstår samtaler» med tre brytere (bruker + admin)', () =
 
 test('Entitetsregisteret i Innstillinger → AI: liste, filter, rediger, legg til, slett og oppslag', () => {
   // Prompt 65: flyttet fra Innstillinger → AI til Innstillinger → Glimt (ai-control only:'glimt'), rett under «Glimt husker».
-  const G65 = rd('public/js/ai-glimt65.js');
-  assert.match(G65, /import '\.\/entities60\.js';/);
+  const G65 = rd('public/js/ai-glimt.js');
+  assert.match(G65, /import '\.\/glimt-entiteter\.js';/);
   assert.match(A, /data-hl="ai-ent60"><div class="ac-lab"><span>ENTITETSREGISTER<\/span><\/div><div class="ac-slotc set-e60" data-ent60><\/div>/);
   assert.ok(A.indexOf('const mem = g ? g.memorySec65') < A.indexOf('data-ent60'), 'under Glimt husker');
   assert.match(E, /fetch\('\/api\/glimt\/entities', \{ credentials: 'same-origin'/);

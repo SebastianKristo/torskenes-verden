@@ -38,7 +38,7 @@
 /* ---------- Glimt-figurene: Glimt-innstillingen for 17. mai ---------- */
 .gs41-m17 .gs40-seg button{white-space:nowrap}
 
-/* ---------- Glimt-orben (orb43.js) ---------- */
+/* ---------- Glimt-orben (glimt-orb.js) ---------- */
 .w43-orb{--o:20px;position:relative;flex:none;display:inline-grid;place-items:center;width:var(--o);height:var(--o);border-radius:50%;
   background:conic-gradient(from 0deg,#b23a2a,#e8794a,#f2c14e,#3fbf9a,#7a5ad6,#b23a2a);animation:w43spin 4s linear infinite}
 .w43-orbi{display:grid;place-items:center;width:calc(var(--o) - max(4px,var(--o) * .22));height:calc(var(--o) - max(4px,var(--o) * .22));border-radius:50%;background:#fbf6ea;animation:w43spin 4s linear infinite reverse}
@@ -60,7 +60,7 @@
 .gi44-foot{padding:6px 12px 4px;font:600 10px 'IBM Plex Mono',ui-monospace,monospace;letter-spacing:.08em;color:var(--c44-mut)}
 .gi44-list[hidden],.gi44-tab[hidden],.gi44-ghost[hidden]{display:none}
 
-/* ---------- Glimt-agenten: treff, oppfølgingsspørsmål og bekreftelse (glimt-agent45.js) ---------- */
+/* ---------- Glimt-agenten: treff, oppfølgingsspørsmål og bekreftelse (glimt-agent.js) ---------- */
 .ga45{display:flex;flex-direction:column;gap:10px;margin-top:10px;font-family:Manrope,system-ui,sans-serif;--ga-ink:#1b1a17;--ga-mut:#6b665c;--ga-card:#fffdf8;--ga-line:#e3ddcf;--ga-chip:#efe9dc}
 .ga45.dark{--ga-ink:#fff;--ga-mut:rgba(255,255,255,.66);--ga-card:rgba(255,255,255,.08);--ga-line:rgba(255,255,255,.16);--ga-chip:rgba(255,255,255,.12)}
 html[data-mode="dark"] .ga45:not(.dark){--ga-ink:#f3efe6;--ga-mut:#a39d90;--ga-card:#211e18;--ga-line:#3a352c;--ga-chip:#2b2720}

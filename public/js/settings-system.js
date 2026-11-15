@@ -13,7 +13,7 @@ import { esc } from './util.js';
 import { store } from './store.js';
 import { U, UPD_CMD, onUpdate, loadUpdate, checkUpdate, openSheet, startUpdate, toggleLog, copyCmd, running, state, verTxt, ms, shortSha, stuck46, control46 } from './sysupdate.js';
 import { progress, ackDone, doneRecent } from './upd-banner.js';
-import { carpOnBar, sherlockFly, setSherlockText } from './glimt-outfits36.js'; // prompt 36: Sherlock- og snekker-Glimt
+import { carpOnBar, sherlockFly, setSherlockText } from './glimt-drakter.js'; // prompt 36: Sherlock- og snekker-Glimt
 import { versionsHtml44 } from './settings-utseende-logger.js'; // prompt 44: TIDLIGERE VERSJONER (tilbakerulling)
 import { obs51PartHtml } from './drift.js'; // prompt 65: én del per System-fane
 import { ops51PartHtml } from './backup-oppdatering.js'; // prompt 51 (OPS51): staging/tilbakerulling (Oppdateringer); backup og database er egen side (prompt 65)

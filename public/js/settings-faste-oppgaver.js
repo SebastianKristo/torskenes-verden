@@ -1,7 +1,7 @@
 // Prompt 62 (prompt 49 del 2, D2WEB): Innstillinger → Faste oppgaver (/#/innstillinger/faste-oppgaver, se SERVER62-API.md §3).
-// Siden tegnes av sched62.js (mountSched62) i en [data-mount-host]-plass som beholdes mellom omtegninger.
+// Siden tegnes av glimt-faste-oppgaver.js (mountSched62) i en [data-mount-host]-plass som beholdes mellom omtegninger.
 import { TAB_IC } from './settings-search.js';
-import { mountSched62 } from './sched62.js';
+import { mountSched62 } from './glimt-faste-oppgaver.js';
 
 const P62 = 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 7v5l3 2';
 Object.assign(TAB_IC, { 'faste-oppgaver': ['#7a3b6b', P62] });

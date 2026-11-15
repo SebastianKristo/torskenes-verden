@@ -8,15 +8,15 @@ import { readFileSync } from 'node:fs';
 const rd = (p) => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8');
 const C = rd('public/js/chat.js');
 const X = rd('public/js/extras.js');
-const G = rd('public/js/glimt-agent45.js');
+const G = rd('public/js/glimt-agent.js');
 const A = rd('public/js/ai-control.js');
 const ST = rd('public/js/settings-view.js');
 const S62 = rd('public/js/settings-faste-oppgaver.js');
 const AS = rd('public/js/assist.js');
-const R = rd('public/js/sched62.js');
+const R = rd('public/js/glimt-faste-oppgaver.js');
 
-const s = await import('../public/js/sched62.js');
-const ga = await import('../public/js/glimt-agent45.js');
+const s = await import('../public/js/glimt-faste-oppgaver.js');
+const ga = await import('../public/js/glimt-agent.js');
 
 const NOW = new Date('2026-10-26T10:00:00Z'); // mandag 11:00 i Oslo (vintertid)
 const PREVIEW = { title: 'Strømpriser', what: 'strømprisene for i dag', kind: 'power', when: { text: 'hver morgen kl. 7', label: 'Hver dag kl. 07:00', explicitTime: true, until: null, once: false },
@@ -66,7 +66,7 @@ test('gjenkjenner faste oppgaver i søket og i Chat (eksemplene fra oppdraget)',
   for (const q of ['Tannlege fredag kl 10', 'Minn meg på å kjøpe melk i morgen', 'Hvordan er været i morgen?', 'Skriv et dikt om høsten']) assert.ok(!s.isSched62(q), q);
   assert.match(AS, /schedule: \/\\bhver\\s\+\(dag\|morgen/); // looksLikeTool → Chat sender dem til Glimt
   assert.match(C, /trial\|appointment\|schedule\)\/\.test\(a\.intent/);
-  assert.match(X, /import \{ isSched62 \} from '\.\/sched62\.js'/);
+  assert.match(X, /import \{ isSched62 \} from '\.\/glimt-faste-oppgaver\.js'/);
   assert.match(X, /if \(!it && ag && isSched62\(q\)\) \{ if \(aiOn\(\)\) askAi\(e\.target, q\); else runSearch\(q\); return; \}/);
   assert.match(X, /isSched62\(v\)\) \{ ap = null; hu = null; \}/);
   assert.ok(X.indexOf('isSched62(q)') < X.indexOf('waitParse52(q)'), 'før AI-tolkningen av avtaler/huskebeskjeder');
@@ -115,12 +115,12 @@ test('kvitteringen etter «Ja» med lenke til Faste oppgaver', () => {
 });
 
 test('Glimt-søket og Chat bruker kortet med de vanlige Ja/Avbryt-knappene fra del 3', () => {
-  assert.match(G, /import \{ preview62, schedCard62Html, yesLabel62, done62, schedDone62Html \} from '\.\/sched62\.js'/);
+  assert.match(G, /import \{ preview62, schedCard62Html, yesLabel62, done62, schedDone62Html \} from '\.\/glimt-faste-oppgaver\.js'/);
   assert.match(G, /schedule62: d\.schedule62 && typeof d\.schedule62 === 'object' \? d\.schedule62 : null/);
   assert.match(G, /\$\{p62 \? schedCard62Html\(p62, \{ dark: opts\.dark \}\) : ''\}<div class="ga45-opts">/);
   assert.match(G, /data-ga45-c="yes">\$\{esc\(yesLabel62\(p62\)\)\}/);
   assert.match(G, /schedule: \['Fast oppgave', '#7a3b6b'\]/);
-  assert.match(C, /import \{ preview62, schedCard62Html, yesLabel62, done62, schedDone62Html \} from '\.\/sched62\.js'/);
+  assert.match(C, /import \{ preview62, schedCard62Html, yesLabel62, done62, schedDone62Html \} from '\.\/glimt-faste-oppgaver\.js'/);
   assert.match(C, /data-ch-cf60="yes:\$\{i\}">\$\{esc\(yesLabel62\(p62\)\)\}/);
   assert.match(C, /data-ch-cf60="yes:\$\{i\}">Ja, gjør det</); // andre bekreftelser som før
   assert.equal((C.match(/s62: g\.confirm \? preview62\(g\) : null/g) ?? []).length, 2);
@@ -152,7 +152,7 @@ test('Innstillinger → Faste oppgaver (/#/innstillinger/faste-oppgaver) under G
 });
 
 test('AI-kontroll → Valg: «Faste oppgaver» med tre brytere, prisområde og admin', () => {
-  assert.match(A, /import\('\.\/sched62\.js'\)/);
+  assert.match(A, /import\('\.\/glimt-faste-oppgaver\.js'\)/);
   assert.match(A, /<div data-recipes61><\/div><div data-sched62><\/div>/);
   assert.deepEqual(s.KEYS62, ['enabled', 'conditions', 'quiet']);
   assert.match(R, /fetch\('\/api\/glimt\/schedules\/settings'/);

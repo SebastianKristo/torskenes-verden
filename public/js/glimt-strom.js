@@ -6,8 +6,8 @@
 // Stopp: AbortController.abort() på fetch-en (serveren avbryter modellkallet og lagrer ingenting i svar-cachen).
 // Reserve: 404/405 (eldre server) → null, så kalleren bruker POST /api/glimt/agent eller /api/assist som før.
 // stream:false (Strømming av i innstillingene) → bare status og done; svaret i done brukes som før.
-import { agent, normAgent } from './glimt-agent45.js';
-import { convBody60 } from './convo60.js'; // prompt 60: conversationId / conversationKind / choice (SERVER60-API.md §1)
+import { agent, normAgent } from './glimt-agent.js';
+import { convBody60 } from './glimt-samtale.js'; // prompt 60: conversationId / conversationKind / choice (SERVER60-API.md §1)
 
 const OFF_MS = 10 * 60_000;
 let offUntil = 0;

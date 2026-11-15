@@ -22,7 +22,7 @@ import java.io.File
 import java.util.Locale
 
 /*
- * Prompt 56 (AND56): tale til tekst via serveren, som web/PWA (public/js/voice54.js).
+ * Prompt 56 (AND56): tale til tekst via serveren, som web/PWA (public/js/tale.js).
  *  - GET /api/voice53/backends: mikrofonen bruker serveren bare når minst én motor er «available» og innstillingen er «Serveren».
  *  - Opptak med MediaRecorder (AAC i MPEG-4, 16 kHz mono) til en temp-fil i cacheDir → POST /api/voice53/transcribe (multipart: file,
  *    language=auto, hint=nb|en) med appens vanlige API-klient (Api.upload, samme token). Fila slettes alltid etter sending eller avbrudd.

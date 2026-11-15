@@ -1,7 +1,7 @@
 // FinansHub desktop. Alle sider tegnes fra S (core.js); hendelser fanges med delegering på roten.
 import { scrollMemory } from '/assets/js/scrollmem.js';
 import { appendChunks } from '/assets/js/lib/chunks.js';
-import { agent, agentFull, isPlain } from '/assets/js/glimt-agent45.js'; // prompt 45: felles Glimt-agent
+import { agent, agentFull, isPlain } from '/assets/js/glimt-agent.js'; // prompt 45: felles Glimt-agent
 import {
   S, api, esc, n0, n2, sgn, neg, neg0, k, dd, dLong, today, monthName, cap, shiftMonth, ini, rgba, greet, pctChange, parseAmount,
   render, toast, loadBoot, loadSummary, loadTx, loadReceipts, loadRecurring, loadReport, loadAi, catById, cats, accs, uploadReceipt,
@@ -1011,7 +1011,7 @@ export function draw() {
   }
   // Prompt 48: Innstillinger → AI → Kvitteringer (Mac-OCR og stegene i kjeden).
   const r48 = el.querySelector('[data-r48-mount]');
-  if (r48) import('/assets/js/receipts48-set.js').then((m) => m.mountReceipts48(r48)).catch(() => { r48.innerHTML = '<div class="note">Kunne ikke laste kvitteringsoppsettet.</div>'; });
+  if (r48) import('/assets/js/receipts-settings.js').then((m) => m.mountReceipts48(r48)).catch(() => { r48.innerHTML = '<div class="note">Kunne ikke laste kvitteringsoppsettet.</div>'; });
   if (u.page === 'dir') afterB42(el);
   if (u.page === 'tx') moreTx(el);
   window.scrollTo(0, scroll);

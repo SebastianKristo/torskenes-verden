@@ -21,7 +21,7 @@ import { fmtDate } from './i18n.js';
 import { addQuick, preview, previewAsync, quickLabel, setQuickHooks } from './kal-quick.js';
 import { glimt } from './glimt.js';
 import { LEARN_TYPES, typeName, addMemory, applyMemory, nameOfEvent, loadMemory, dinOf } from './glimt-memory.js'; // prompt 33
-import { agent, agentOn, agentFull } from './glimt-agent45.js'; // prompt 45
+import { agent, agentOn, agentFull } from './glimt-agent.js'; // prompt 45
 import * as k38 from './kalender-mac.js'; // prompt 38: zoom, Glimt-assistenten, kart, ark/tastatur, app-modus (Mac)
 import * as k42 from './kalender-abonnementer.js'; // prompt 42: Abonnementer (trekkdatoer fra Finans)
 import * as k39 from './kalender-oppsett.js'; // prompt 39: hele oppsettet er en kopi av Kalender.app for Mac (fire kalendere)

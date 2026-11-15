@@ -14,7 +14,7 @@ import { api, esc, isMobile } from './util.js';
 import { onLive, liveOn } from './realtime.js';
 import { store } from './store.js';
 import { mountHa } from './tasks-ha.js';
-import { agent, agentOn, agentExtras, agentText } from './glimt-agent45.js'; // prompt 45
+import { agent, agentOn, agentExtras, agentText } from './glimt-agent.js'; // prompt 45
 import { needsAi41, splitLocal41, startJob41, trackJob41, jobsHtml41, madeWithHtml41, originCard41, glimtSources41, srcItems41, clearDone41 } from './tasks41.js'; // prompt 41: Glimt deler opp i bakgrunnen
 import { parse as gParse, pasteLines, isAsk, ask as gAsk, splitSugg, guess, dupes, PACK, MAT_FALLBACK, isoDay } from './tasks37-glimt.js';
 import { colorFor } from './house37.js';

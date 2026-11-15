@@ -3,7 +3,7 @@ import UIKit
 import AVFoundation
 import Speech
 
-// Prompt 56 (IOS56): tale til tekst via serveren i Glimt-chatten og Glimt-søket på Hjem. Fasit: public/js/voice54.js.
+// Prompt 56 (IOS56): tale til tekst via serveren i Glimt-chatten og Glimt-søket på Hjem. Fasit: public/js/tale.js.
 // – Når serveren har en klar motor (GET /api/voice53/backends → minst én backend med available): AVAudioRecorder tar opp
 //   AAC (.m4a, 16 kHz mono) til en temp-fil, som sendes til POST /api/voice53/transcribe (multipart: file, language=auto,
 //   hint=nb). Teksten settes inn i skrivefeltet (sendes ikke), og «NB-Whisper (Mac mini) · norsk» vises kort etterpå.

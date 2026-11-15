@@ -11,13 +11,13 @@ globalThis.localStorage ??= { getItem: (k) => (mem.has(k) ? mem.get(k) : null), 
 const rd = (p) => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8');
 const C = rd('public/js/chat.js');
 const X = rd('public/js/extras.js');
-const G = rd('public/js/glimt-agent45.js');
+const G = rd('public/js/glimt-agent.js');
 const A = rd('public/js/ai-control.js');
 const SA = rd('public/js/settings-ai.js');
-const R = rd('public/js/recipes61.js');
+const R = rd('public/js/glimt-oppskrifter.js');
 
-const r = await import('../public/js/recipes61.js');
-const ga = await import('../public/js/glimt-agent45.js');
+const r = await import('../public/js/glimt-oppskrifter.js');
+const ga = await import('../public/js/glimt-agent.js');
 
 const IT = { id: 'r1', status: 'active', queryTemplate: 'når er neste gang jeg skal til {person}', plan: { calls: [{ tool: 'calendar.search', args: { terms: '{person.aliases}', direction: 'next' } }] }, writes: false, allowFastWrite: false,
   useCount: 7, successCount: 6, failCount: 1, last10: { success: 6, fail: 0, pending: 1 }, readable: 'Søk i kalenderen etter {person}', readableSteps: ['Søk i kalenderen etter {person}'] };
@@ -85,17 +85,17 @@ test('Glimt-svaret: traceId og recipe tas vare på', () => {
 });
 
 test('Chat og Glimt-søket på Hjem viser tommel opp/ned', () => {
-  assert.match(C, /import \{ thumbs61Html \} from '\.\/recipes61\.js'/);
+  assert.match(C, /import \{ thumbs61Html \} from '\.\/glimt-oppskrifter\.js'/);
   assert.match(C, /\$\{meta\.glimt && meta\.traceId && !meta\.stopped \? thumbs61Html\(meta\.traceId\) : ''\}/);
   assert.match(C, /\.\.\.\(a\.traceId \? \{ traceId: a\.traceId \} : \{\}\)/);
   assert.equal((C.match(/traceId: g\.traceId \?\? raw\.traceId \?\? null/g) ?? []).length, 2);
   assert.match(C, /if \(a\.traceId\) meta\.traceId = a\.traceId;/);
-  assert.match(X, /import \{ thumbs61Html \} from '\.\/recipes61\.js'/);
+  assert.match(X, /import \{ thumbs61Html \} from '\.\/glimt-oppskrifter\.js'/);
   assert.match(X, /GL\.ans\.agent\?\.traceId && !GL\.ans\.stopped \? thumbs61Html\(GL\.ans\.agent\.traceId, \{ dark: true \}\)/);
 });
 
 test('AI-kontroll → Valg: «Glimt lærer» med fire brytere (bruker + admin)', () => {
-  assert.match(A, /import\('\.\/recipes61\.js'\)/);
+  assert.match(A, /import\('\.\/glimt-oppskrifter\.js'\)/);
   assert.match(A, /<div data-understand60><\/div><div data-recipes61><\/div>/);
   assert.match(R, /fetch\('\/api\/glimt\/recipes\/settings'/);
   assert.match(R, /putSettings\(\{ scope: 'user', \[k\]: next === srv \? null : next \}\)/);
@@ -106,8 +106,8 @@ test('AI-kontroll → Valg: «Glimt lærer» med fire brytere (bruker + admin)',
 
 test('Innstillinger → AI: siden «Glimt lærer» med liste, test, rediger, slå av og slett', () => {
   // Prompt 65: flyttet fra Innstillinger → AI til Innstillinger → Glimt (ai-control only:'glimt').
-  const G65 = rd('public/js/ai-glimt65.js');
-  assert.match(G65, /import '\.\/recipes61\.js';/);
+  const G65 = rd('public/js/ai-glimt.js');
+  assert.match(G65, /import '\.\/glimt-oppskrifter\.js';/);
   assert.match(A, /<span>GLIMT LÆRER<\/span><\/div><div class="ac-slotc set-r61" data-learn61><\/div>/);
   assert.ok(A.indexOf('data-ent60') < A.indexOf('data-learn61'), 'rett under entitetsregisteret');
   for (const m of ["'/stats'", "/test`, 'POST'", "'PATCH', { status: ds.r61St }", "'DELETE'", 'Trykk igjen for å slette', 'Rediger mal', 'Slå av', 'Slå på', 'Negative eksempler', 'Siste kjøringer', 'Hurtigvei også for endringer']) assert.ok(R.includes(m), m);

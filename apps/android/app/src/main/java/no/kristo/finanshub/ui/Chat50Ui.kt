@@ -52,7 +52,7 @@ import androidx.compose.ui.window.DialogProperties
 import no.kristo.finanshub.*
 
 /*
- * Prompt 50 (MEDAND50, claude-code-chat-slipp-filer-og-miniatyr.md, fasit public/js/chat50.js):
+ * Prompt 50 (MEDAND50, claude-code-chat-slipp-filer-og-miniatyr.md, fasit public/js/chat-vedlegg.js):
  *  - ChatAttRow50: miniatyrer 64×64 (radius 12, beskåret) med rund ×-knapp (22) og tynn fremdriftslinje mens filen lastes opp;
  *    PDF/andre filer som kort med filtypen i mono og navnet under.
  *  - ChatBubbleImgs50: bildene over teksten i brukerens boble – ett bilde maks 240×240 (radius 16), flere i rutenett 2 × 120 med 4 mellomrom.

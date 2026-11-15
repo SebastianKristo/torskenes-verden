@@ -112,7 +112,7 @@ test('logo_wikidata er på som standard og vises sammen med logo_gemini', async 
   assert.equal((await S('/finans/api/ai-privacy', 'PATCH', { logo_wikidata: true })).body.logo_wikidata, true);
   const ui = readFileSync(new URL('../public/finans/js/mobile-p27.js', import.meta.url), 'utf8');
   assert.ok(ui.includes("'logo_wikidata'") && ui.indexOf('logo_wikidata') < ui.indexOf("tgRow('privacy', 'logo_gemini'"));
-  assert.ok(readFileSync(new URL('../public/js/ai-glimt65.js', import.meta.url), 'utf8').includes('data-g65-ptog="logo_wikidata"'));
+  assert.ok(readFileSync(new URL('../public/js/ai-glimt.js', import.meta.url), 'utf8').includes('data-g65-ptog="logo_wikidata"'));
 });
 
 test('Wikidata gir logo: P154 hentes som PNG fra Commons (width=256), kilde wikidata, logget i ai_audit', async () => {

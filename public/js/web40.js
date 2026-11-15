@@ -2,7 +2,7 @@
 // - Julemodus: Glimt-innstillingene (jul, julPhase, julActive) hentes ved oppstart og ved sanntid «glimt:settings», så
 //   figurbiblioteket (glimt-figs.js → julOn) vet om lua skal på. Endring → «glimt-jul» → app.js tegner siden på nytt.
 // - Gjøremål: /gjoremal (og #/gjoremal) åpner Gjøremål i fullskjerm.
-import { loadGlimt } from './glimt35.js';
+import { loadGlimt } from './glimt-settings.js';
 import { onLive } from './realtime.js';
 
 export function initWeb40() {

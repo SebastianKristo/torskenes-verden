@@ -3,7 +3,7 @@
 // - Versjonerte filer (/assets/…?v=<build>, serveren skriver dem inn i HTML og importer): cache først (immutable).
 // - Uversjonerte /assets/: nettverket først med revalidering. API-kall går aldri via cachen.
 // - skipWaiting i install, clients.claim i activate, og alle gamle cacher (andre navn) slettes.
-// Prompt 48: v33 – Innstillinger → AI → Kvitteringer (receipts48-set.js, receipts48.css), advarsler fra /api/ai/routing i AI-kontroll.
+// Prompt 48: v33 – Innstillinger → AI → Kvitteringer (receipts-settings.js, receipts48.css), advarsler fra /api/ai/routing i AI-kontroll.
 // Prompt 50: v34 – Media-plakater fra /api/media/bilde/… (WebP med ?v=<versjon>) svares cache-først fra en egen cache
 // (BILDER, beholdes mellom versjoner, maks ~800 bilder), så andre gang Media åpnes kommer alle synlige plakater uten nettverkskall,
 // også uten nett. Andre API-kall går fortsatt aldri via cachen.

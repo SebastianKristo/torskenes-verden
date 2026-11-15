@@ -1,6 +1,6 @@
 // Prompt 70 (WEBCHAT70, claude-code-chat-laster-web.md, fasit «Chat Laster Web.dc.html»): lasteside for Chat på web.
 // Vanlig (ikke-modul) skript som kjøres synkront rett etter <main id="view">, før JS-bunten (app.js) er lastet:
-//   - window.HL70.html(st) bygger lastesiden (skjelett av hele Chat + Glimt-orb + steg). chat70.js bruker samme bygger,
+//   - window.HL70.html(st) bygger lastesiden (skjelett av hele Chat + Glimt-orb + steg). chat-laster.js bruker samme bygger,
 //     så det statiske skjelettet og lastesiden fra modulen er like (ingen hopp når app.js tar over).
 //   - Er adressen #/chat, tegnes skjelettet i #view med en gang. Samtalelista vises fra cache (hl_chat70, per bruker) hvis den finnes.
 // Animasjonene (orb, skimmer, pust) får negativ forsinkelse ut fra performance.now(), så de fortsetter i samme fase når siden tegnes på nytt.
@@ -99,5 +99,5 @@
   v.innerHTML = '<div id="chat" class="ch ch-fs ' + theme + '">' + html({ mode: 'laster', steps: firstSteps(), t0: 0, wide: !mobile, cache: cacheRead() }) + '</div>';
   v.setAttribute('aria-busy', 'true');
   document.body.classList.add('chat-fs');
-  W.HL70.staticAt = 0; // chat70.js fortsetter fra navigasjonsstart, så midten ikke tones inn på nytt
+  W.HL70.staticAt = 0; // chat-laster.js fortsetter fra navigasjonsstart, så midten ikke tones inn på nytt
 })();

@@ -6,7 +6,7 @@
 //   caches (localStorage, per bruker) og vises straks; nytt innhold byttes inn stille. Uten cache: skjelett i full høyde.
 // - Forhåndshenting når fanen kommer i forgrunnen og når Hjem vises (maks hvert 5. min).
 import { api, esc } from './util.js';
-import { brief52State } from './brief52.js';
+import { brief52State } from './brief-kort-bruker.js';
 
 /** [key, tittel, kilde, på som standard] – reserve når serveren ikke svarer (samme som server/glimt/brief-content.js CATALOG73). */
 export const CAT73 = [
@@ -114,7 +114,7 @@ function hydrate() {
   if (c?.cards) { S.cards = c.cards; brief52State.data = { cards: Object.values(c.cards).map((x) => x.card) }; brief52State.at = 0; }
 }
 function publish() {
-  // brief52.js tegner fra brief52State.data.cards; rekkefølgen kommer fra lista.
+  // brief-kort-bruker.js tegner fra brief52State.data.cards; rekkefølgen kommer fra lista.
   brief52State.data = { ...(brief52State.data ?? {}), cards: Object.values(S.cards).map((x) => x.card) };
   lsSet('brief73_c52', { cards: S.cards });
   notify();
@@ -165,7 +165,7 @@ export function skeleton73(key) {
 export function empty73(key, text) {
   return `<section class="b73-em" data-gb73="${esc(key)}"><b>${esc(title73(key))}</b><span>${esc(text)}</span></section>`;
 }
-/** Et /api/brief52-kort med cache/skjelett/status. render(id) gir html fra brief52.js. */
+/** Et /api/brief52-kort med cache/skjelett/status. render(id) gir html fra brief-kort-bruker.js. */
 export function card52Html73(key, render) {
   const id = B52_73[key];
   hydrate();

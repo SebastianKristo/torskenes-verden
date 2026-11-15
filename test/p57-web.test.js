@@ -5,12 +5,12 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 const rd = (p) => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8');
-const V = rd('public/js/voices57.js');
-const G = rd('public/js/glimt35.js');
+const V = rd('public/js/stemmer.js');
+const G = rd('public/js/glimt-settings.js');
 const N = rd('public/js/news.js');
 const C = rd('public/js/chat.js');
 
-test('voices57.js bruker stemme-API-et fra SERVER57 (per bruker, preview, sletting, klon med samtykke)', () => {
+test('stemmer.js bruker stemme-API-et fra SERVER57 (per bruker, preview, sletting, klon med samtykke)', () => {
   for (const s of ["api('/voices57')", "fetch('/api/voices57', { method: 'POST', body: fd", '/api/voices57/${encodeURIComponent(id)}/preview', "/voices57/${encodeURIComponent(id)}`, { method: 'DELETE' }"]) assert.ok(V.includes(s), s);
   assert.match(V, /fd\.append\('kind', 'clone'\); fd\.append\('consent', 'true'\)/);
   assert.match(V, /kind: 'design', prompt/);

@@ -6,7 +6,7 @@
 // Dokumenter: GET/POST /api/study/documents, POST …/:id/ask {q}, POST …/:id/apply, DELETE …/:id. Snitt kommer fra serveren.
 import { esc, api } from './util.js';
 import { store, on } from './store.js';
-import { agent, agentOn, agentText, agentFull } from './glimt-agent45.js'; // prompt 45
+import { agent, agentOn, agentText, agentFull } from './glimt-agent.js'; // prompt 45
 
 
 const TABS = [['ov', 'Oversikt'], ['uke', 'Uke'], ['kar', 'Karakterer'], ['dok', 'Dokumenter']];

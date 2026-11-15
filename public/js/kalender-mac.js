@@ -10,7 +10,7 @@
 import { esc, isMobile, haptic } from './util.js';
 import { glimt } from './glimt.js';
 import { preview, previewAsync, quickLabel, addQuick } from './kal-quick.js';
-import { agent, agentOn, agentExtras, agentText } from './glimt-agent45.js'; // prompt 45
+import { agent, agentOn, agentExtras, agentText } from './glimt-agent.js'; // prompt 45
 
 let C = null;
 /** kalender.js: { K, evOn, col, short, key, add, d0, mm, hmM, fromKey, curD, calById, paint, openDay, setView, openForm,

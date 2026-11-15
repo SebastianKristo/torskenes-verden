@@ -5,7 +5,7 @@
 // Gamle Jobb/Familie/Helse/Privat-hendelser vises i Personlig, Timeplan/Prøver/Studie i Skole (til serveren har migrert).
 // Data, ark (detaljer, ny/rediger, søk, ✦ Skriv time) og Glimt-panelet ligger fortsatt i kalender.js / kalender-mac.js.
 import { themeBtn } from './kalender-tema.js';
-import { orb43 } from './orb43.js'; // prompt 43: Glimt-orben på «Skriv time» og «Dagen din»
+import { orb43 } from './glimt-orb.js'; // prompt 43: Glimt-orben på «Skriv time» og «Dagen din»
 import { esc, isMobile } from './util.js';
 import { AB_CAL, groupSubs, chipInner, bindLogos, krTxt, badge as abBadge, logo as abLogo } from './kalender-abonnementer.js'; // prompt 42: Abonnementer
 import { todayIcon } from './kalender-deltakere.js'; // prompt 44: nytt I dag-ikon

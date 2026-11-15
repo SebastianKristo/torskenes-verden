@@ -10,7 +10,7 @@
 // med status, bestått, svartid p50/p90, regresjoner, rapporten og «Kjør nå»/«Avbryt». (2) Brytere i AI-kontroll → Valg som fyller
 // [data-q64set]. (3) Lenkene fra pushene (#/innstillinger/kvalitet/run/<id> og …/uke/<uke>) åpner siden på riktig kjøring/uke.
 // Eldre server (404): siden sier «Oppdater serveren», og ingenting vises i AI-kontroll.
-import { when62 } from './sched62.js';
+import { when62 } from './glimt-faste-oppgaver.js';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 export const ROUTE64 = '/#/innstillinger/kvalitet';

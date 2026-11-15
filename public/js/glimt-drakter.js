@@ -3,7 +3,7 @@
 //   verktøybelte, hammer + spon). Figuren er brukerens valgte (Innstillinger → Glimt), ellers Glimt.
 //   sherlockFly(heroEl, text) flyr Glimt inn i et kort, leter, viser snakkeboblen og flyr ut igjen (3,6 s).
 import { fig, liftAnim, hostFor } from './glimt-figs.js';
-import { gs } from './glimt35.js';
+import { gs } from './glimt-settings.js';
 
 const who = () => { try { return hostFor(gs().char); } catch { return 'glimt'; } };
 const CHK = '<defs><pattern id="sh36Chk" width="8" height="8" patternUnits="userSpaceOnUse"><rect width="8" height="8" fill="#8a6a45"/><rect width="4" height="8" fill="#a5825a" opacity=".8"/><rect width="8" height="4" fill="#6f5333" opacity=".55"/></pattern></defs>';

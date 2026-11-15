@@ -6,12 +6,12 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 const rd = (p) => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8');
-const M = rd('public/js/memory63.js');
+const M = rd('public/js/glimt-minne.js');
 const SA = rd('public/js/settings-ai.js');
 const A = rd('public/js/ai-control.js');
 const ST = rd('public/js/settings-view.js');
-const R = rd('public/js/sched62.js');
-const m = await import('../public/js/memory63.js');
+const R = rd('public/js/glimt-faste-oppgaver.js');
+const m = await import('../public/js/glimt-minne.js');
 
 const NOW = new Date('2026-10-26T10:00:00Z');
 
@@ -69,9 +69,9 @@ test('lenken fra pushen (url i SERVER63-API.md §3) åpner Innstillinger → Gli
 });
 
 test('«Glimt husker»: plassen for forslag/motstrid/ubrukte, merket på minneradene og ny lasting etter endringer', () => {
-  // Prompt 65: «Glimt husker» er flyttet fra settings-ai.js til ai-glimt65.js (Innstillinger → Glimt, samme rad-komponent som AI-siden).
-  const G65 = rd('public/js/ai-glimt65.js');
-  assert.match(G65, /import '\.\/memory63\.js';/);
+  // Prompt 65: «Glimt husker» er flyttet fra settings-ai.js til ai-glimt.js (Innstillinger → Glimt, samme rad-komponent som AI-siden).
+  const G65 = rd('public/js/ai-glimt.js');
+  assert.match(G65, /import '\.\/glimt-minne\.js';/);
   assert.match(G65, /const head = '<div class="ac-slot" data-mem63 data-hl="ai-mem63"><\/div>';/);
   assert.match(G65, /tag: m\.stale \? 'IKKE BRUKT PÅ LENGE' : ''/);
   assert.match(G65, /document\.addEventListener\('mem63:changed'/);
@@ -109,7 +109,7 @@ test('HTML: forslag, motstrid og ubrukte tegnes fra serverens former', async () 
 test('AI-kontroll → Valg: tre brytere (nattlig oppsummering, motstrid, ubrukte) + dager, og admin', () => {
   assert.deepEqual(m.KEYS63, ['nightly', 'conflicts', 'stale']);
   assert.deepEqual(m.STALE_DAYS63, [30, 60, 90, 180, 365]);
-  assert.match(A, /import\('\.\/memory63\.js'\)/);
+  assert.match(A, /import\('\.\/glimt-minne\.js'\)/);
   assert.match(A, /<div data-sched62><\/div><div data-mem63set><\/div>/);
   assert.match(M, /putHyg\(\{ scope: 'user', \[k\]: next === srv \? null : next \}\)/);
   assert.match(M, /putHyg\(\{ scope: 'server', \[k\]: next \}\)/);

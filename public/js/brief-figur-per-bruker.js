@@ -1,7 +1,7 @@
 // Brief og Glimt-figur per bruker (admin). Innstillinger → Brukere og familie → «Brief og Glimt-figur» (prompt 65; var System → Mer).
 // Bruker API-et fra prompt 52: GET/PUT /api/admin/brief52/access og GET /api/admin/glimt-char52, PUT /api/admin/glimt-char52/:userId.
 // Admin får alltid alle kortene; barn mister Regninger, Nytt i kveld, Homelab, Domener og Aksjer.
-import { esc, api, overlay } from './dal53.js';
+import { esc, api, overlay } from './lokale-modeller.js';
 
 const COLS = [['children', 'Barn', 'Uten Regninger, Nytt i kveld, Homelab, Domener og Aksjer'], ['homelab', 'Homelab', 'Kortet med tjenestene og Start-knappen'],
   ['domains', 'Domener', 'Kortet med domener som går ut'], ['stocks', 'Aksjer', 'Kortet med aksjer']];

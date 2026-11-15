@@ -12,7 +12,7 @@
 import { esc, sheetBtn, haptic } from './util.js';
 import { store } from './store.js';
 import { U, onUpdate, loadUpdate, startUpdate, state, stepIndex, running, verTxt, watch, ms } from './sysupdate.js';
-import { carpOnBar } from './glimt-outfits36.js'; // prompt 36: snekker-Glimt på fremdriftslinja
+import { carpOnBar } from './glimt-drakter.js'; // prompt 36: snekker-Glimt på fremdriftslinja
 
 const HIDE_KEY = 'hl_upd_hide', ACK_KEY = 'hl_upd_ack';
 const B = { notes: null, notesOpen: false, sheet: null, pw: '', busy: false, err: '', slots: new Set(), rolling: false };

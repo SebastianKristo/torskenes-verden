@@ -3,7 +3,7 @@ import UIKit
 import UniformTypeIdentifiers
 
 /* ---------------- Prompt 50: Chat – slipp filer i chatten + miniatyrbilde i meldingen ----------------
- Fasit: claude-code-chat-slipp-filer-og-miniatyr.md og web-implementasjonen public/js/chat50.js. Server-API: SRVCHAT50.
+ Fasit: claude-code-chat-slipp-filer-og-miniatyr.md og web-implementasjonen public/js/chat-vedlegg.js. Server-API: SRVCHAT50.
  – Vedlegg lastes opp med en gang (POST /api/chat/files, fremdrift) → {id, kind, thumb, url, w, h}. Meldingen sender bare id-er
    (`attachments`), aldri base64. Eldre server (404): bildet sendes som før (base64 i `images`).
  – Miniatyrrad over feltet: 64×64, radius 12, rund × (22), tynn fremdriftslinje nederst; PDF/andre filer som kort med filtype + navn.

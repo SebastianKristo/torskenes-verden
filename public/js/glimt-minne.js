@@ -15,8 +15,8 @@
 // [data-mem63set]. (3) Lenken fra morgen-pushen («Glimt har 3 forslag til minnet», url ROUTE63) åpner Innstillinger → AI og
 // blar ned til forslagene. Ingenting kommer inn i minnet uten at brukeren trykker. Eldre server (404): ingenting vises.
 import { loadMemory, deleteMemory } from './glimt-memory.js';
-import { parseAliases60 } from './entities60.js';
-import { when62 } from './sched62.js';
+import { parseAliases60 } from './glimt-entiteter.js';
+import { when62 } from './glimt-faste-oppgaver.js';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 export const ROUTE63 = '/#/innstillinger/glimt-husker';

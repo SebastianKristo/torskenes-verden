@@ -13,7 +13,7 @@ import { pkgLogo, pkgTitle, moreText } from './pkglogo.js';
 import { carousel, restoreCarousel, startPackages } from './weather-card.js';
 import { is2c, pwImg } from './hltheme.js'; // prompt 36: ingen kreditlinje over bildet (vises bare i Innstillinger → Bakgrunn)
 import { updBanner } from './upd-banner.js';
-import { briefCardSlot, briefGlassSlot } from './brief35.js';
+import { briefCardSlot, briefGlassSlot } from './brief.js';
 import { gridHtml } from './dash-edit36.js'; // prompt 36: rutenett med wiggle-redigering // prompt 35: Glimt-brief-kortet under søkefeltet
 // Prompt 31: URL-er i stedsteksten vises ikke (lenken brukes som kart-lenke i stedet).
 const noUrl = (t) => String(t ?? '').replace(/\s*https?:\/\/\S+/g, '').trim();

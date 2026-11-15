@@ -7,13 +7,13 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 const rd = (p) => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8');
-const ST = rd('public/js/stream59.js');
-const F = rd('public/js/fast59.js');
+const ST = rd('public/js/glimt-strom.js');
+const F = rd('public/js/glimt-raskere-svar.js');
 const X = rd('public/js/extras.js');
 const C = rd('public/js/chat.js');
 const A = rd('public/js/ai-control.js');
 
-test('stream59.js bruker SSE-endepunktet og hendelsene fra SERVER59', () => {
+test('glimt-strom.js bruker SSE-endepunktet og hendelsene fra SERVER59', () => {
   assert.match(ST, /fetch\('\/api\/glimt\/agent\/stream', \{ method: 'POST'/);
   assert.match(ST, /Accept: 'text\/event-stream'/);
   for (const ev of ["ev === 'start'", "ev === 'status'", "ev === 'token'", "ev === 'done'", "ev === 'error'"]) assert.ok(ST.includes(ev), ev);
@@ -31,7 +31,7 @@ test('stream59.js bruker SSE-endepunktet og hendelsene fra SERVER59', () => {
 
 test('SSE-leseren tåler biter delt midt i linjer, ping-kommentarer og CRLF', async () => {
   globalThis.location ??= { href: '' };
-  const { readEvents59, tidy59 } = await import('../public/js/stream59.js');
+  const { readEvents59, tidy59 } = await import('../public/js/glimt-strom.js');
   const raw = 'event: start\r\ndata: {"requestId":"w59-x","stream":true}\r\n\r\n: ping\n\nevent: status\ndata: {"stage":"tool","tool":"weather.get","text":"Henter været …"}\n\nevent: token\ndata: {"t":"Det","source":"mal"}\n\nevent: token\ndata: {"t":" blir **6","source":"mal"}\n\nevent: done\ndata: {"reply":"Det blir **6 grader**.","intent":"weather.get","actions":[]}\n\n';
   const enc = new TextEncoder().encode(raw);
   const parts = [];
@@ -50,7 +50,7 @@ test('SSE-leseren tåler biter delt midt i linjer, ping-kommentarer og CRLF', as
 });
 
 test('Glimt-søket strømmer: ord, statuslinje, Stopp og reserve', () => {
-  assert.match(X, /import \{ agentLive59, cacheNote59 \} from '\.\/stream59\.js'/);
+  assert.match(X, /import \{ agentLive59, cacheNote59 \} from '\.\/glimt-strom\.js'/);
   assert.match(X, /ag = await agentLive59\(q, 'home', \{\}, \{ signal: ctl\.signal,/);
   assert.match(X, /onStatus: \(st\) => \{ if \(my !== GL\.seq\) return; GL\.status = st\.text;/);
   assert.match(X, /onToken: \(all\) => \{ if \(my !== GL\.seq\) return; GL\.live = all;/);
@@ -67,7 +67,7 @@ test('Glimt-søket strømmer: ord, statuslinje, Stopp og reserve', () => {
 });
 
 test('Glimt i Chat strømmer verktøysvarene, beholder kortene og faller tilbake til /api/assist', () => {
-  assert.match(C, /import \{ agentStream59, cacheNote59 \} from '\.\/stream59\.js'/);
+  assert.match(C, /import \{ agentStream59, cacheNote59 \} from '\.\/glimt-strom\.js'/);
   assert.match(C, /s59 = await agentStream59\(t, 'chat', \{\}, \{ signal: ctl\.signal,/);
   assert.match(C, /C\.busy\.status59 = st\.text/);
   assert.match(C, /data-ch-status59/);
@@ -87,7 +87,7 @@ test('Glimt i Chat strømmer verktøysvarene, beholder kortene og faller tilbake
 });
 
 test('AI-kontroll har «Raskere svar» med de fire bryterne (bruker + admin)', () => {
-  assert.match(A, /import\('\.\/fast59\.js'\)/);
+  assert.match(A, /import\('\.\/glimt-raskere-svar\.js'\)/);
   // Prompt 65: «Motor per oppgave» (omlx58) er slått sammen inn i oppgavetabellen (engine58), så plassen står nå rett etter tabellen.
   assert.match(A, /<div class="ac-slots"><div data-fast59><\/div>/);
   assert.match(F, /fetch\('\/api\/glimt\/agent\/fast', \{ credentials: 'same-origin'/);

@@ -6,10 +6,10 @@
 //   - «Open WebUI · serveroppsett» → AI → Tjenester → Open WebUI (samme lagring: openwebui_url/openwebui_key)
 //   - «Glimt i søkefeltet», «Glimt husker» (+ forslag/motstrid), Entitetsregister og «Glimt lærer» → Innstillinger → Glimt
 //     (glimtAiView: ai-control med only:'glimt', sammen med Personlighet og nettsøk-rekkefølgen)
-// Tilstanden og hendelsene for disse ligger i ai-glimt65.js (samme API-er og lagrede felt som før).
+// Tilstanden og hendelsene for disse ligger i ai-glimt.js (samme API-er og lagrede felt som før).
 import { store } from './store.js';
 import { mountAiControl, aiTabKey65 } from './ai-control.js';
-import { load65 } from './ai-glimt65.js';
+import { load65 } from './ai-glimt.js';
 
 const isAdmin = () => store.me?.me?.role === 'admin';
 // Prompt 66: AI-siden følger temaet og lys/mørk modus selv (ai-control themeKey66: papir · mork · cur) og bytter farger uten ny montering.
@@ -42,7 +42,7 @@ export function glimtAiView() {
 }
 export const aiGlimtView = glimtAiView;
 
-// Hendelsene ligger nå i ai-control.js og ai-glimt65.js (document-lyttere). Beholdt så settings.js kan kalle dem som før.
+// Hendelsene ligger nå i ai-control.js og ai-glimt.js (document-lyttere). Beholdt så settings.js kan kalle dem som før.
 export async function aiClick() { return false; }
 export async function aiChange() { return false; }
 export async function aiSubmit() { return false; }

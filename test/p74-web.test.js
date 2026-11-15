@@ -20,7 +20,7 @@ test('hold inne: aldri wiggle fra søkefeltet, Glimt-svaret eller opptakskortet'
   assert.match(h, /addEventListener\('selectionchange'/, 'tekstmarkering avbryter hold inne');
   const css = read('public/css/pages/oversikt.css');
   assert.match(css, /\.gl-layer \.gl-ans\{[^}]*-webkit-user-select:text;user-select:text;-webkit-touch-callout:default/, 'svaret kan markeres (Safari)');
-  assert.match(read('public/js/voice54.js'), /\.v54-card\{[^}]*-webkit-user-select:text;user-select:text;-webkit-touch-callout:default\}/, 'opptakskortet kan markeres');
+  assert.match(read('public/js/tale.js'), /\.v54-card\{[^}]*-webkit-user-select:text;user-select:text;-webkit-touch-callout:default\}/, 'opptakskortet kan markeres');
 });
 
 test('trykk utenfor: bare ekte trykk lukker, scroll aldri', () => {

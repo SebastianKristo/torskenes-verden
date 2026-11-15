@@ -11,18 +11,18 @@ import { searchField } from './searchfield.js';
 import { lang, locale } from './i18n.js';
 import { glimt, glimtDots } from './glimt.js';
 import { assist, looksLikeTool, normAnswer } from './assist.js';
-import { agentStream59, cacheNote59 } from './stream59.js'; // prompt 59: Glimt-svar strømmes (ord for ord, statuslinje, Stopp)
-import { agentText, isPlain, agentConfirm } from './glimt-agent45.js';
+import { agentStream59, cacheNote59 } from './glimt-strom.js'; // prompt 59: Glimt-svar strømmes (ord for ord, statuslinje, Stopp)
+import { agentText, isPlain, agentConfirm } from './glimt-agent.js';
 import { cal70Of } from './glimt-kalenderkort.js'; // prompt 70
-import { chatConv60, bindConv60, rekeyConv60, newChatConv60, forgetConv60, choicePick60, followsGlimt60 } from './convo60.js'; // prompt 60: samtale-id, valgknapper
-import { thumbs61Html } from './recipes61.js'; // prompt 61: tommel opp/ned på Glimt-svar
-import { preview62, schedCard62Html, yesLabel62, done62, schedDone62Html } from './sched62.js'; // prompt 62: kortet for en fast oppgave + kvittering
+import { chatConv60, bindConv60, rekeyConv60, newChatConv60, forgetConv60, choicePick60, followsGlimt60 } from './glimt-samtale.js'; // prompt 60: samtale-id, valgknapper
+import { thumbs61Html } from './glimt-oppskrifter.js'; // prompt 61: tommel opp/ned på Glimt-svar
+import { preview62, schedCard62Html, yesLabel62, done62, schedDone62Html } from './glimt-faste-oppgaver.js'; // prompt 62: kortet for en fast oppgave + kvittering
 import { cardHtml, bindCards } from './chat-cards.js';
-import { factsHtml41, usedWithoutFacts41 } from './chat-facts41.js'; // prompt 41: faktakort
-import { css50, rejectReason50, isImg50, upload50, attRow50, bubbleImgs50, otherFiles50, filePills50, imagesOf50, bindDrop50, pastedFiles50, lightbox50, readWith50, finansBtn50, MAX_FILES50 } from './chat50.js'; // prompt 50: vedlegg, miniatyr, lysboks
-import { speak57, stop57, aiTag57 } from './voices57.js'; // prompt 57: «Les høyt» med valgt stemme (POST /api/tts), nettleseren som reserve
-import { css52, thinkOf52, thinkHtml52, thumbDataUrl52 } from './chat52.js'; // prompt 52: tankegang, miniatyr (attTh), modellark som scroller
-import { L70, start70, step70, fail70, finish70, loaderHtml70, update70, cacheRead70, cacheWrite70, listCount70, skelRows70 } from './chat70.js'; // prompt 70: lasteside
+import { factsHtml41, usedWithoutFacts41 } from './chat-fakta.js'; // prompt 41: faktakort
+import { css50, rejectReason50, isImg50, upload50, attRow50, bubbleImgs50, otherFiles50, filePills50, imagesOf50, bindDrop50, pastedFiles50, lightbox50, readWith50, finansBtn50, MAX_FILES50 } from './chat-vedlegg.js'; // prompt 50: vedlegg, miniatyr, lysboks
+import { speak57, stop57, aiTag57 } from './stemmer.js'; // prompt 57: «Les høyt» med valgt stemme (POST /api/tts), nettleseren som reserve
+import { css52, thinkOf52, thinkHtml52, thumbDataUrl52 } from './chat-tankegang.js'; // prompt 52: tankegang, miniatyr (attTh), modellark som scroller
+import { L70, start70, step70, fail70, finish70, loaderHtml70, update70, cacheRead70, cacheWrite70, listCount70, skelRows70 } from './chat-laster.js'; // prompt 70: lasteside
 
 /* Prompt 31: Glimt i Chat (claude-code-chat-kort-vaer-kalender.md, claude-code-glimt-ai.md).
    - Avsender er Glimt-merket (22 px) + modellnavnet; mens svaret kommer: merket animert og tre prikker (ikke «Tenker …»).
@@ -1123,7 +1123,7 @@ export function render() {
     void locale;
   });
   document.body.classList.add('chat-fs');
-  // Prompt 70: lastesiden (skjelett + Glimt-orb + steg) til modellene er klare; samme markup som det statiske skjelettet i chat70-boot.js.
+  // Prompt 70: lastesiden (skjelett + Glimt-orb + steg) til modellene er klare; samme markup som det statiske skjelettet i chat-laster-boot.js.
   return `<div id="chat" class="ch ch-fs ${C.theme === 'noytral' ? 'noytral' : 'papir'}"${C.ready70 ? '' : ' aria-busy="true"'}>${C.ready70 ? body() : loaderHtml70({ wide: !isMobile(), cache: cacheRead70() })}</div>`;
 }
 let wasMob = isMobile();

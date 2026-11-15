@@ -1,5 +1,5 @@
 // Prompt 50b: statiske sjekker for to små web-fikser. (Mikrofonens utseende er erstattet i prompt 70, se p70-webhome.test.js.)
-//  - claude-code-web-mikrofonknapp.md: mikrofonen i søkefeltet på Dashboard (voice54.js) er en 40×40 sirkel med sentrert
+//  - claude-code-web-mikrofonknapp.md: mikrofonen i søkefeltet på Dashboard (tale.js) er en 40×40 sirkel med sentrert
 //    18 px strek-ikon, gjennomsiktig i hvile, rød under opptak, 0,18 s overgang – og ligger mellom «✦ AI» og «Søk».
 //    Funksjonen er den samme som før: opptak til /api/voice53/transcribe (NB-Whisper/Voz/Phonon), ikke Web Speech i søket.
 //  - claude-code-vaer-dra-piller-mobil.md: dra-pillene i Vær (wx52.js) virker med finger: touch-action:none på containerne,
@@ -13,7 +13,7 @@ const read = (p) => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8');
 test('mikrofonknappen i søket følger md-en (utseende) og beholder tale til tekst via serveren', () => {
   // Prompt 70 (claude-code-mikrofon-sokefelt.md) erstatter utseendet fra prompt 50b: ikon uten ring/bakgrunn, 36 px trykkflate,
   // mellom tekstfeltet og «✦ AI», opptak som kort i søkefeltets farge. Motoren er den samme (serveren).
-  const v = read('public/js/voice54.js');
+  const v = read('public/js/tale.js');
   const rule = v.match(/form\[data-search\]\.sbar button\.v54-mic\{([^}]*)\}/)?.[1] ?? '';
   for (const s of ['width:36px', 'height:36px', 'padding:0', 'border-radius:50%', 'display:grid', 'place-items:center', 'border:0', 'background:transparent', 'color:inherit']) {
     assert.ok(rule.includes(s), `mangler ${s}`);

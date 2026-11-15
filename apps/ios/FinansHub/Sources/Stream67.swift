@@ -24,7 +24,7 @@ struct Stream67Done: Sendable {
     let requestId: String
 }
 
-/// Har serveren strømmingen? false i 10 min etter 404/405 (som stream59.js på web).
+/// Har serveren strømmingen? false i 10 min etter 404/405 (som glimt-strom.js på web).
 @MainActor
 enum Stream67Gate {
     static var offUntil: Date = .distantPast

@@ -4,10 +4,10 @@
 // Alt går via serveren (SERVER43, server/media-side.js): /api/media/* er en proxy, tjenestenøklene sendes aldri hit.
 // Svarformene står ved hver rute i server/media-side.js. 404 (eldre server) og «ikke satt opp» gir tomtilstander, ingen feil.
 import { esc } from './util.js';
-import { orb43 } from './orb43.js';
+import { orb43 } from './glimt-orb.js';
 import { mountPlayback } from './media-avspilling.js'; // prompt 44: fanen Avspilling (Plex/Jellyfin)
-import { glimtSource } from './glimt-input44.js'; // prompt 44: forslag i Glimt-feltet (Tab)
-import { agent, agentOn, isPlain, agentFull } from './glimt-agent45.js'; // prompt 45
+import { glimtSource } from './glimt-input.js'; // prompt 44: forslag i Glimt-feltet (Tab)
+import { agent, agentOn, isPlain, agentFull } from './glimt-agent.js'; // prompt 45
 // Prompt 50: plakater med ThumbHash-plassholder + srcset, og sann status etter søk (sporing) i stedet for «Søker».
 import { bg50, img50, prefetch50, setup50, onToast50, startTrack50, trackGrab50, trackHtml50, multiTrackHtml50, click50 } from './media-plakater.js';
 // Prompt 70 (MEDIA70): nytt design – Oversikt, Kalender, Bibliotek og Nedlastinger som egne adresser (media-visninger.js).

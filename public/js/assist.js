@@ -10,7 +10,7 @@
 import { onLive } from './realtime.js';
 import { aiStart, aiUpdate, aiDone } from './ai-jobs.js';
 import { parseTrial, trialSentence } from './trial-parse.js';
-import { isQuestion } from './ask36.js';
+import { isQuestion } from './glimt-sporsmal.js';
 
 const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ESC[c]);

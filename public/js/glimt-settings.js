@@ -6,8 +6,8 @@
 import { api, esc } from './util.js';
 import { store } from './store.js';
 import { fig, FIGS, hostFor, setJul, julOn, julAuto, JUL_PHASES, julPhaseName, setMai17, mai17Auto } from './glimt-figs.js';
-import { settings73Html, settings73Click } from './brief73.js'; // prompt 73: INNHOLD I BRIEFEN (erstatter prompt 38-lista «Kort i briefen»)
-import { voicesHtml57, engineSwitched57, voiceName57, stop57, playBlob57, unlockAudio57 } from './voices57.js'; // prompt 57: VoxCPM2-stemmer (lokal), egen stemme for nyhetsleseren
+import { settings73Html, settings73Click } from './brief-innhold.js'; // prompt 73: INNHOLD I BRIEFEN (erstatter prompt 38-lista «Kort i briefen»)
+import { voicesHtml57, engineSwitched57, voiceName57, stop57, playBlob57, unlockAudio57 } from './stemmer.js'; // prompt 57: VoxCPM2-stemmer (lokal), egen stemme for nyhetsleseren
 
 export const DEF = {
   char: 'glimt', friends: true, brief: true, briefGlimt: true, // prompt 39: «Glimt i briefen» (figuren av/på)

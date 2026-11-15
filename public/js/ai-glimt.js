@@ -11,9 +11,9 @@
 import { api } from './util.js';
 import { LEARN_TYPES, memoryLine, loadMemory, addMemory, deleteMemory, applyMemory } from './glimt-memory.js';
 import { setHsTimeout } from './extras.js';
-import './entities60.js'; // fyller [data-ent60]
-import './recipes61.js'; // fyller [data-learn61]
-import './memory63.js'; // fyller [data-mem63] øverst i Glimt husker
+import './glimt-entiteter.js'; // fyller [data-ent60]
+import './glimt-oppskrifter.js'; // fyller [data-learn61]
+import './glimt-minne.js'; // fyller [data-mem63] øverst i Glimt husker
 
 export const HS65 = [5, 8, 15, 30];
 const A = { loaded: false, loading: null, chat: null, chatErr: '', models: null, auto: null, priv: null, privErr: '', audit: null, auditErr: '', mem: null, memErr: '', memAdd: false, memMsg: '', memApply: null, msg: '', hs: 8 };

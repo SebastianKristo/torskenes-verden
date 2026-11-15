@@ -2,7 +2,7 @@
 //   POST /api/glimt/agent og /agent/stream tar {conversationId, conversationKind?, choice?:{setId, id}}.
 //   Chat sender chat-id-en (ny chat uten id: «c-<tilfeldig>», som beholdes for samtalen også når den får id).
 //   Glimt-søket på Hjem bruker en kortlevd id («home-<tilfeldig>») for alle spørsmål, ny id etter 30 min uten bruk.
-// Valgknappene (choices) og innstillingene ligger i glimt-agent45.js, chat.js, understand60.js og entities60.js.
+// Valgknappene (choices) og innstillingene ligger i glimt-agent.js, chat.js, glimt-forstaar.js og glimt-entiteter.js.
 const RE = /^[A-Za-z0-9_.:-]{1,80}$/;
 export const HOME_TTL60 = 30 * 60_000;
 

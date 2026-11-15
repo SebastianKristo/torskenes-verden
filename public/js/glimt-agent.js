@@ -4,14 +4,14 @@
 //        confirm?:{token, summary}, personality, joke?, engine, model, nav?:{target, web}}
 //   POST /api/glimt/agent/confirm {token} → samme form (handlingen er utført)
 // Eldre server (404/405): agent() gir null, og feltet bruker sin gamle vei (assist, /api/tasks/glimt, /search/ask …).
-// Selvstendig modul (bare convo60.js og sched62.js i samme mappe), så den også kan brukes fra FinansHub (/assets/js/glimt-agent45.js).
+// Selvstendig modul (bare glimt-samtale.js og glimt-faste-oppgaver.js i samme mappe), så den også kan brukes fra FinansHub (/assets/js/glimt-agent.js).
 // Prompt 60 (prompt 49 del 3): conversationId/conversationKind/choice inn (SERVER60-API.md §1), `choices` ut (§2) som valgknapper:
 //   trykk sender item.text + choice {setId, id} i samme samtale (cb.resend(text, ctx, {choice})).
 //
 // Felles visning: agentExtras(a) gir HTML for treff (velg), oppfølgingsspørsmål med valg, og bekreftelse (Slett / Avbryt).
 // Klikkene håndteres her (document-delegert) og sendes tilbake til feltet via callbacks registrert med agentExtras(a, cb).
-import { normChoices60, choicePick60, convBody60 } from './convo60.js';
-import { preview62, schedCard62Html, yesLabel62, done62, schedDone62Html } from './sched62.js'; // prompt 62: bekreftelseskort for faste oppgaver
+import { normChoices60, choicePick60, convBody60 } from './glimt-samtale.js';
+import { preview62, schedCard62Html, yesLabel62, done62, schedDone62Html } from './glimt-faste-oppgaver.js'; // prompt 62: bekreftelseskort for faste oppgaver
 import { cal70Of, cal70Html, datePick70 } from './glimt-kalenderkort.js'; // prompt 70: kort A (lagt i kalenderen, bytt kalender i kortet, Angre)
 
 const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };

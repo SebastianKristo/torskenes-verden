@@ -15,12 +15,12 @@ import java.util.Locale
 
 /*
  * Prompt 67 (ANDSET67): sidene under Innstillinger → Glimt som på web (prompt 49 del 1, 2, 3, 5 og 7).
- *  - Glimt lærer (SERVER61, recipes61.js): /api/glimt/recipes – liste, statistikk, valg, pause/aktiver, slett, test, rediger mal/plan.
- *  - Faste oppgaver (SERVER62, sched62.js): /api/glimt/schedules – liste, «Lag fra tekst» (/parse og så POST), pause/fortsett, slett,
+ *  - Glimt lærer (SERVER61, glimt-oppskrifter.js): /api/glimt/recipes – liste, statistikk, valg, pause/aktiver, slett, test, rediger mal/plan.
+ *  - Faste oppgaver (SERVER62, glimt-faste-oppgaver.js): /api/glimt/schedules – liste, «Lag fra tekst» (/parse og så POST), pause/fortsett, slett,
  *    kjøringer, «Kjør nå», briefene og valgene. Systemoppgaver (system: true) kan bare settes på pause.
- *  - Entitetsregister (SERVER60 §6, entities60.js): /api/glimt/entities – liste per type, legg til, rediger, slett, «Hva betyr …?».
- *  - Glimt husker (SERVER63, memory63.js): /api/glimt/memory/pending|conflicts|stale|hygiene – Forslag, Motstrid og Ikke brukt på lenge.
- *  - Kvalitet (SERVER64, quality64.js): /api/glimt/quality – ukerapport for alle, nattlig eval (kjøringer, rapport, Kjør nå) bare for admin.
+ *  - Entitetsregister (SERVER60 §6, glimt-entiteter.js): /api/glimt/entities – liste per type, legg til, rediger, slett, «Hva betyr …?».
+ *  - Glimt husker (SERVER63, glimt-minne.js): /api/glimt/memory/pending|conflicts|stale|hygiene – Forslag, Motstrid og Ikke brukt på lenge.
+ *  - Kvalitet (SERVER64, glimt-kvalitet.js): /api/glimt/quality – ukerapport for alle, nattlig eval (kjøringer, rapport, Kjør nå) bare for admin.
  * Alt går til Homelab-serveren med appens vanlige token (Api.hlGet/hlPost/…); ingenting logges. Grensesnittet: ui/Glimt67Ui.kt.
  * Tommel opp/ned på svar (/recipes/feedback) er ANDCHAT67 sitt (Stream67.kt).
  */

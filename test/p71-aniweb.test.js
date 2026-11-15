@@ -84,10 +84,10 @@ test('skimmere flytter et ferdig lag med transform', () => {
 
 test('pulser og ringer er ferdige lag (::after) som skaleres/tones – ikke animert box-shadow', () => {
   const t = (rel) => ALL.find((x) => x.rel === rel).text;
-  assert.match(t('js/voice54.js'), /\.v54-mic\.v54-on::after,\.ch-mic\.v54-on::after\{[^}]*animation:v54p/);
+  assert.match(t('js/tale.js'), /\.v54-mic\.v54-on::after,\.ch-mic\.v54-on::after\{[^}]*animation:v54p/);
   assert.match(t('css/pages/oversikt.css'), /\.gb-ring::after\{[^}]*animation:gbRing/);
   assert.match(t('css/pages/innstillinger.css'), /#settings \.hl-ring::after\{[^}]*animation:hlRing/);
-  assert.match(t('js/memory63.js'), /\.m63-flash::after\{[^}]*animation:m63f/);
+  assert.match(t('js/glimt-minne.js'), /\.m63-flash::after\{[^}]*animation:m63f/);
   assert.match(t('css/pages/posisjoner.css'), /\.hl40-glow::after\{[^}]*mix-blend-mode:color-dodge[^}]*animation:hl40g/);
 });
 
@@ -113,7 +113,7 @@ test('ark (Familie-kart og Kart på smal skjerm) glir med transform, ikke animer
 });
 
 test('mikrofon-bølgeformen, Hjem-flisene og fanebyttet bruker animasjonsbilder (ikke setInterval/tvungen layout)', () => {
-  const v = ALL.find((x) => x.rel === 'js/voice54.js').text;
+  const v = ALL.find((x) => x.rel === 'js/tale.js').text;
   const wave = v.slice(v.indexOf('function waveStart'), v.indexOf('function waveStop')).replace(/\/\/.*$/gm, '');
   assert.doesNotMatch(wave, /setInterval/);
   assert.match(wave, /requestAnimationFrame/);

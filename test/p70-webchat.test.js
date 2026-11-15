@@ -7,9 +7,9 @@ import vm from 'node:vm';
 import * as N from '../public/js/settings-meny.js';
 
 const read = (p) => readFileSync(p, 'utf8');
-const BOOT = read('public/js/chat70-boot.js');
+const BOOT = read('public/js/chat-laster-boot.js');
 const CH = read('public/js/chat.js');
-const C70 = read('public/js/chat70.js');
+const C70 = read('public/js/chat-laster.js');
 const CSS = read('public/css/pages/chat.css');
 const APP = read('public/app.html');
 const TRK = read('public/js/tracking.js');
@@ -17,7 +17,7 @@ const SET = read('public/js/settings-view.js');
 const SP = read('public/js/settings-sporing.js');
 const SS = read('public/js/settings-search.js');
 
-/** Kjører chat70-boot.js i en liten falsk nettleser. Returnerer {win, view}. */
+/** Kjører chat-laster-boot.js i en liten falsk nettleser. Returnerer {win, view}. */
 function runBoot({ hash = '#/chat', mobile = false, store = {} } = {}) {
   const view = { firstChild: null, innerHTML: '', attrs: {}, setAttribute(k, v) { this.attrs[k] = v; } };
   const win = {
@@ -33,9 +33,9 @@ function runBoot({ hash = '#/chat', mobile = false, store = {} } = {}) {
 }
 
 test('chat-laster: statisk skjelett i app.html før JS-bunten, egen css', () => {
-  const iBoot = APP.indexOf('/assets/js/chat70-boot.js'), iMain = APP.indexOf('<main id="view">');
+  const iBoot = APP.indexOf('/assets/js/chat-laster-boot.js'), iMain = APP.indexOf('<main id="view">');
   assert.ok(iBoot > iMain, 'skriptet kjøres etter <main id="view">');
-  assert.ok(!/chat70-boot\.js"[^>]*(type="module"|defer|async)/.test(APP), 'vanlig synkront skript');
+  assert.ok(!/chat-laster-boot\.js"[^>]*(type="module"|defer|async)/.test(APP), 'vanlig synkront skript');
   assert.match(APP, /\/assets\/css\/pages\/chat\.css/);
   const { view } = runBoot();
   assert.match(view.innerHTML, /id="chat" class="ch ch-fs papir"/);
@@ -89,8 +89,8 @@ test('chat-laster: midten tones inn etter 300 ms (ingen blink), animasjoner bare
   assert.match(CSS, /prefers-reduced-motion/);
 });
 
-test('chat-laster: tidsgrenser, steg og cache i chat70.js', async () => {
-  const M = await import('../public/js/chat70.js');
+test('chat-laster: tidsgrenser, steg og cache i chat-laster.js', async () => {
+  const M = await import('../public/js/chat-laster.js');
   assert.equal(M.SLOW70, 8000);
   assert.equal(M.FAIL70, 20000);
   let failed = 0;

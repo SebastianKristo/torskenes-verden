@@ -1,7 +1,7 @@
 import SwiftUI
 
 /* ---------------- Prompt 67 (IOSSET67): Glimt lærer, Faste oppgaver og Kvalitet ----------------
- Undersider av Innstillinger → Glimt (innst-glimt:laerer · :faste · :kvalitet), som web (recipes61.js, sched62.js, quality64.js).
+ Undersider av Innstillinger → Glimt (innst-glimt:laerer · :faste · :kvalitet), som web (glimt-oppskrifter.js, glimt-faste-oppgaver.js, glimt-kvalitet.js).
  – Glimt lærer: statistikk, filter og søk, åpne en oppskrift (plan, variabler, kjøringer, negative eksempler), Test, Slå av/på,
    Rediger mal (og plan som JSON), Slett (to trykk). Brytere for meg / for alle (admin).
  – Faste oppgaver: «Lag fra tekst» (Hva + Når + ev. «Bare hvis» → Forhåndsvis via /parse → Lagre via POST), lista med filter,

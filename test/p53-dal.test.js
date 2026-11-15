@@ -343,10 +343,10 @@ test('Tale til tekst: norsk → 422 (Voz/Phonon støtter ikke norsk); engelsk �
 });
 
 test('web: «Om / Lisenser» og lisensfila krediterer Desert Ant Labs og Fermion Research', () => {
-  const js = readFileSync('public/js/dal53.js', 'utf8');
+  const js = readFileSync('public/js/lokale-modeller.js', 'utf8');
   assert.match(js, /Inneholder modeller fra Desert Ant Labs \(license\.desertant\.com\)/);
   assert.match(js, /Fermion Research/);
-  assert.match(readFileSync('public/app.html', 'utf8'), /\/assets\/js\/dal53\.js/);
+  assert.match(readFileSync('public/app.html', 'utf8'), /\/assets\/js\/lokale-modeller\.js/);
   const md = readFileSync('docs/lisenser-tredjepart.md', 'utf8');
   assert.match(md, /Inneholder modeller fra Desert Ant Labs \(license\.desertant\.com\)/);
   assert.match(md, /CC-BY-4\.0/); assert.match(md, /Apache-2\.0/);

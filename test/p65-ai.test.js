@@ -10,11 +10,11 @@ const rd = (p) => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8');
 const A = rd('public/js/ai-control.js');
 const CSS = rd('public/css/pages/ai-kontroll.css');
 const SA = rd('public/js/settings-ai.js');
-const G65 = rd('public/js/ai-glimt65.js');
-const O58 = rd('public/js/omlx58.js');
-const V54 = rd('public/js/voice54.js');
-const V57 = rd('public/js/voices57.js');
-const R48 = rd('public/js/receipts48-set.js');
+const G65 = rd('public/js/ai-glimt.js');
+const O58 = rd('public/js/omlx.js');
+const V54 = rd('public/js/tale.js');
+const V57 = rd('public/js/stemmer.js');
+const R48 = rd('public/js/receipts-settings.js');
 const ai = await import('../public/js/ai-control.js');
 
 test('fanene: Oversikt · Modeller · Oppgaver · Kvitteringer · Tjenester · Jobber · Forbruk – «Glimt og chat» er borte', () => {
@@ -189,7 +189,7 @@ test('Tjenester: alle tjenestekort som én utvidbar rad med adresse/nøkkel/test
 
 test('hver innstilling ett sted: settings-ai.js har ingen kopi av kontrollene', () => {
   for (const k of ['chat_my_data', 'chat_ask_cloud', 'logo_gemini', 'hs_timeout_s', 'memoryGroup', 'data-ent60', 'data-learn61']) assert.ok(!SA.includes(k), k);
-  // Feltene finnes bare i ai-glimt65.js (ikke i ai-control.js)
+  // Feltene finnes bare i ai-glimt.js (ikke i ai-control.js)
   for (const k of ['chat_my_data', 'logo_local_receipts', 'hs_timeout_s']) assert.ok(!A.includes(k), k);
 });
 

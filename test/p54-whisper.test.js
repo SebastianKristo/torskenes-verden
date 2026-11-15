@@ -411,16 +411,16 @@ test('route.js: språk, avgjørelse og rekkefølge', () => {
 });
 
 test('web, lisenser og dokumentasjon', () => {
-  const js = readFileSync('public/js/voice54.js', 'utf8');
+  const js = readFileSync('public/js/tale.js', 'utf8');
   assert.match(js, /MediaRecorder/);
   assert.match(js, /\/api\/voice53\/transcribe/);
   assert.match(js, /isSecureContext/);
   assert.match(js, /data-ch-mic/, 'Glimt-chatten');
   assert.match(js, /data-search/, 'Glimt-søket');
   assert.match(js, /Tale til tekst/);
-  assert.match(readFileSync('public/app.html', 'utf8'), /\/assets\/js\/voice54\.js/);
+  assert.match(readFileSync('public/app.html', 'utf8'), /\/assets\/js\/tale\.js/);
   assert.match(readFileSync('public/js/ai-control.js', 'utf8'), /data-v54-ai/);
-  assert.match(readFileSync('public/js/dal53.js', 'utf8'), /NB-Whisper[\s\S]*Nasjonalbiblioteket[\s\S]*Apache-2\.0/);
+  assert.match(readFileSync('public/js/lokale-modeller.js', 'utf8'), /NB-Whisper[\s\S]*Nasjonalbiblioteket[\s\S]*Apache-2\.0/);
   const md = readFileSync('docs/lisenser-tredjepart.md', 'utf8');
   assert.match(md, /NB-Whisper/); assert.match(md, /Nasjonalbiblioteket/);
   assert.ok(existsSync('docs/nb-whisper-54.md'));

@@ -38,7 +38,7 @@ import { kontoAvatar, avatarRow } from './avatar.js'; // prompt 36: profilbilde 
 import { TAB_IC, icBox, loadIndex, sideResults, wantsAi, ask, resetAsk, byId, routeOf, topHit, SQ, ANCHORS, anchorOf, anchorFor, routeForAnchor, setNormTab65 } from './settings-search.js';
 import { sheetBtn } from './util.js';
 import { loadServer41, serverGroup41 } from './settings-server.js'; // prompt 41: Konto → Server (lokal/ekstern adresse)
-import { glimtSettingsHtml, loadGlimt, glimtClick, glimtChange, glimtSubmit } from './glimt35.js'; // prompt 35: GLIMT → Glimt
+import { glimtSettingsHtml, loadGlimt, glimtClick, glimtChange, glimtSubmit } from './glimt-settings.js'; // prompt 35: GLIMT → Glimt
 import { TABS44, modeGroup44, loggerView44, huskeView44, usersGroups44, click44 } from './settings-utseende-logger.js'; // prompt 44
 import { TABS46, ALIAS46, nyheterView46, gphotoBox46 } from './settings-nyheter.js'; // prompt 46: Innstillinger → Nyheter
 import { TABS51, ALIAS51, sikkerhetView51 } from './sikkerhet.js'; // prompt 51 (SEC51): Innstillinger → Sikkerhet
@@ -127,7 +127,7 @@ function menu65() {
   return out.filter(([, l]) => l.length);
 }
 // Gamle navn på faner (lenker og knapper fra før omleggingen) peker til nye.
-// Prompt 63: «glimt-husker» / «minne» er lenken fra pushen «Glimt har 3 forslag til minnet» (memory63.js blar ned til forslagene).
+// Prompt 63: «glimt-husker» / «minne» er lenken fra pushen «Glimt har 3 forslag til minnet» (glimt-minne.js blar ned til forslagene).
 // Prompt 65: Glimt husker står nå på Glimt-siden (AI-sidens Glimt-del bygd inn med only='glimt'), så lenken går dit.
 const ALIAS = { varsler: 'varsel', notify: 'varsel', ikon: 'app', appnavn: 'app', login: 'konto', layout: 'top', innlogging: 'konto', look: 'look', utseende: 'look', tema: 'look', startside: 'top', domener: 'dom', integrasjoner: 'int', brukere: 'users', kalender: 'kal', kalendere: 'kal', calendars: 'kal', chat: 'ai', personvern: 'ai', logo: 'ai', sys: 'system', oppdatering: 'system', update: 'system', sikkerhetskopi: 'backup', backups: 'backup', brief: 'glimt', stemme: 'glimt', figur: 'glimt', tts: 'glimt', opplesning: 'glimt', helse: 'familie', family: 'familie', fam: 'familie', logg: 'logger', logs: 'logger', docker: 'logger', gjoremal: 'huske', huskeliste: 'huske', tasks: 'huske', 'glimt-husker': 'glimt', minne: 'glimt', ...ALIAS45, ...ALIAS70, ...ALIAS77, ...ALIAS46, ...ALIAS51, ...ALIAS62 };
 Object.assign(ALIAS, ALIAS64); // prompt 64: kvalitet, eval, ukerapport → Kvalitet

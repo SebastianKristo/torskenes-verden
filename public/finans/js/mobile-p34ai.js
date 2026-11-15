@@ -6,7 +6,7 @@
 import { esc, hlApi } from './core.js';
 import { m, draw, flash } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
-import { viewReceipts48, ensureReceipts48 } from '/assets/js/receipts48-set.js'; // prompt 48: Mac-OCR og stegene i kvitteringskjeden
+import { viewReceipts48, ensureReceipts48 } from '/assets/js/receipts-settings.js'; // prompt 48: Mac-OCR og stegene i kvitteringskjeden
 
 export const AC = {
   tab: null, fin: false, from: 'set', st: null, md: null, lib: null, rt: null, jobs: null, use: null, keys: null, toks: null,

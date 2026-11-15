@@ -1,8 +1,8 @@
 // Prompt 64 (prompt 49 del 7, D7WEB): Innstillinger → Kvalitet (/#/innstillinger/kvalitet, lenkene fra pushene i SERVER64-API.md §4:
-// …/kvalitet/run/<id> og …/kvalitet/uke/<uke>). Siden tegnes av quality64.js (mountQuality64) i en [data-mount-host]-plass.
+// …/kvalitet/run/<id> og …/kvalitet/uke/<uke>). Siden tegnes av glimt-kvalitet.js (mountQuality64) i en [data-mount-host]-plass.
 // Selvstendig: flyttes fanen ved omorganiseringen av Innstillinger, er det bare TABS64/ALIAS64/kvalitetView64 som flyttes.
 import { TAB_IC } from './settings-search.js';
-import { mountQuality64 } from './quality64.js';
+import { mountQuality64 } from './glimt-kvalitet.js';
 
 const P64 = 'M4 19h16M6 16V10M10 16V6M14 16v-4M18 16V8';
 Object.assign(TAB_IC, { kvalitet: ['#2f7d6b', P64] });

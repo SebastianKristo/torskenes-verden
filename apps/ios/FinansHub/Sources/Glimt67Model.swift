@@ -1120,7 +1120,7 @@ final class G67Quality {
 /* ---------- Prompt 68: Innstillinger for nattlig eval (bare admin) ----------
  PUT /api/glimt/quality/settings {scope:'server', nightly?, weekly?, runs?, maxMinutes?, interactiveWaitSec?, keepDays?}
  (SERVER64-API.md § 2). Grenser: runs 1–5, maxMinutes 15–360, interactiveWaitSec 5–120, keepDays 7–180. Tekstene fra
- quality64.js (settingsHtml64). Verdiene klemmes til grensene, og «Lagre» sender bare feltene som er endret. */
+ glimt-kvalitet.js (settingsHtml64). Verdiene klemmes til grensene, og «Lagre» sender bare feltene som er endret. */
 
 struct G67EvalLimit: Identifiable {
     var id: String { key }
@@ -1132,7 +1132,7 @@ struct G67EvalLimit: Identifiable {
     let step: Int
     let def: Int
     let unit: String
-    /// Hurtigvalgene på web (RUNS64, MAXMIN64, WAIT64, KEEP64 i quality64.js).
+    /// Hurtigvalgene på web (RUNS64, MAXMIN64, WAIT64, KEEP64 i glimt-kvalitet.js).
     let presets: [Int]
 
     func clamp(_ v: Int) -> Int { min(hi, max(lo, v)) }

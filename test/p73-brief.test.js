@@ -176,7 +176,7 @@ test('brief52: hvert kort har 6 s tidsavbrudd og hentes samtidig (kilde)', () =>
 /* ---------------- Web ---------------- */
 
 test('web: Innstillinger → Glimt og ⚙-arket har INNHOLD I BRIEFEN med piler, bryter, teller og Tilbakestill', () => {
-  const b = src('public/js/brief73.js'), g = src('public/js/glimt35.js');
+  const b = src('public/js/brief-innhold.js'), g = src('public/js/glimt-settings.js');
   assert.match(b, /INNHOLD I BRIEFEN/);
   assert.match(b, /av \$\{L\.length\} på/);
   assert.match(b, /Velg hvilke kort som er med og rekkefølgen de vises i\. Gjelder Now Brief på mobil, web og widgets\./);
@@ -189,7 +189,7 @@ test('web: Innstillinger → Glimt og ⚙-arket har INNHOLD I BRIEFEN med piler,
 });
 
 test('web: briefen tegnes fra lista med cache per kort, skjelett i full høyde, 6 s og forhåndshenting', () => {
-  const b = src('public/js/brief73.js'), p = src('public/js/brief35.js');
+  const b = src('public/js/brief-innhold.js'), p = src('public/js/brief.js');
   assert.match(b, /TIMEOUT = 6000/);
   assert.match(b, /AbortController/);
   assert.match(b, /\/api\/brief52\?only=/);

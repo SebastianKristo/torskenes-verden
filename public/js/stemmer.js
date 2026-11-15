@@ -8,7 +8,7 @@
 //  - AI-kontroll: kortet «VoxCPM2 på Mac mini-en» (adresse/nøkkel/test, bare admin) legges rett etter [data-v54-ai].
 import { api, esc } from './util.js';
 import { store } from './store.js';
-import { gs, saveGlimt, stopSpeak, VOICES } from './glimt35.js';
+import { gs, saveGlimt, stopSpeak, VOICES } from './glimt-settings.js';
 
 export const READ_TEXT57 = 'Det er en klar morgen her hjemme. Sola står lavt over fjorden, og båtene ligger stille ved kaia. Jeg tar en kopp kaffe, ser på været og planlegger dagen. Klokka åtte går bussen, og i kveld blir det fiskesuppe til middag. Etterpå leser jeg litt, før jeg legger meg tidlig.';
 const readText = () => V.sample || READ_TEXT57; // serverens sampleText når den finnes

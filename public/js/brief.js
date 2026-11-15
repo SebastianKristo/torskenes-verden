@@ -7,11 +7,11 @@
 //   Mangler nyheter i briefen, brukes /api/rss. POST /api/brief/trials/:id/done markerer en prøve som avsluttet.
 import { api, esc, p2 } from './util.js';
 import { fig, hostFor, WHO, NAME_COLOR } from './glimt-figs.js';
-import { gs, loadGlimt, saveGlimt, say, stopSpeak, onSpeak, tts, replayAfterTap, voiceName, glimtSettingsHtml, glimtClick, glimtChange, glimtSubmit } from './glimt35.js';
-import { outfit } from './glimt-outfits36.js'; // prompt 38: Glimt i prestedrakt ved bibelvers
-import { brief52Click, brief52One } from './brief52.js'; // prompt 52: kort per innlogget bruker
-import { onKeys73, B52_73, card52Html73, skeleton73, empty73, fetchCards73, prefetch73, onBrief73, brief73Click, loadCards73 } from './brief73.js'; // prompt 73: Innhold i briefen, cache og skjelett
-import { briefCards38, giftAdd38 } from './brief38.js'; // prompt 38: Pakker, Familie, Skole og jobb, Bursdager, Nordlys
+import { gs, loadGlimt, saveGlimt, say, stopSpeak, onSpeak, tts, replayAfterTap, voiceName, glimtSettingsHtml, glimtClick, glimtChange, glimtSubmit } from './glimt-settings.js';
+import { outfit } from './glimt-drakter.js'; // prompt 38: Glimt i prestedrakt ved bibelvers
+import { brief52Click, brief52One } from './brief-kort-bruker.js'; // prompt 52: kort per innlogget bruker
+import { onKeys73, B52_73, card52Html73, skeleton73, empty73, fetchCards73, prefetch73, onBrief73, brief73Click, loadCards73 } from './brief-innhold.js'; // prompt 73: Innhold i briefen, cache og skjelett
+import { briefCards38, giftAdd38 } from './brief-kort.js'; // prompt 38: Pakker, Familie, Skole og jobb, Bursdager, Nordlys
 
 const FONTS = 'https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap';
 /** Papir-fontene (Newsreader, Manrope, IBM Plex Mono) lastes også i det mørke temaet, for kortet og panelet. */

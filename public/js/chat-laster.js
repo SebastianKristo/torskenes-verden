@@ -1,5 +1,5 @@
 // Prompt 70 (WEBCHAT70, claude-code-chat-laster-web.md, fasit «Chat Laster Web.dc.html»): lastesiden for Chat på web.
-// Markupen bygges av window.HL70 (chat70-boot.js, lastes synkront i app.html), så det statiske skjelettet og lastesiden er like.
+// Markupen bygges av window.HL70 (chat-laster-boot.js, lastes synkront i app.html), så det statiske skjelettet og lastesiden er like.
 // Her ligger tilstanden (laster · treg · feil), stegene, tidsgrensene, oppdatering på stedet, cache av samtalelista og overgangen.
 //   - Treg etter 8 s (sekunder teller på steget som henger), feil etter 20 s eller ved nettverksfeil (orben grå og trist, rød «!»).
 //   - Samtalelista og modellista caches per bruker (localStorage hl_chat70) og vises med en gang neste gang.

@@ -5,7 +5,7 @@ import { api, esc, backdropClick } from './util.js';
 import { ICON_LIBS, iconHtml, searchIcons, suggestIcon, keywordFor, preloadIcons } from './icons.js';
 import { clearBtn, bindSearchFields } from './searchfield.js';
 import { glimt } from './glimt.js';
-import { speak57, stop57, aiTag57 } from './voices57.js'; // prompt 57: «Les opp» med valgt stemme (POST /api/tts), nettleseren som reserve
+import { speak57, stop57, aiTag57 } from './stemmer.js'; // prompt 57: «Les opp» med valgt stemme (POST /api/tts), nettleseren som reserve
 // Prompt 73 (NEWS73): fanen «Lagret», bokmerke på kort og i artikkelvisningen, lagret artikkel offline (news73.js).
 import { TAB73, TAB_ICON73, bind73, load73, label73, listHtml73, cardBtn73, artBtn73, artBanner73, readerHtml73, toastHtml73, click73, input73, key73, openSaved73 } from './news73.js';
 import { pageCss } from './lib/page-css.js';

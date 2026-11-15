@@ -23,7 +23,7 @@ import java.net.URL
 import java.util.UUID
 
 /*
- * Prompt 50 (MEDAND50, claude-code-chat-slipp-filer-og-miniatyr.md; API i SERVER50-API.md «SRVCHAT50», fasit public/js/chat50.js):
+ * Prompt 50 (MEDAND50, claude-code-chat-slipp-filer-og-miniatyr.md; API i SERVER50-API.md «SRVCHAT50», fasit public/js/chat-vedlegg.js):
  *  - Alle vedlegg (bilder fra velgeren/kamera, filer, innliming, deling, dra og slipp) lastes opp med en gang til POST /api/chat/files
  *    med fremdrift. Meldingen bærer bare id-ene (`attachments` for bilder, `files` for andre filer) – aldri base64.
  *    Eldre server uten /files for bilder (404): reserve med base64 som før.

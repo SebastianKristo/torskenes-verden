@@ -2,7 +2,7 @@
 //  - [data-omlx58-rt] (fanen Valg): «Motor per oppgave» – Ollama · oMLX per oppgave, MLX-modellen som brukes, og
 //    «Bruk Ollama hvis oMLX ikke svarer» (standard på; gjelder også Open WebUI). Ollama er standard til eval har avgjort.
 //  - [data-omlx58-ai] (fanen Modeller): kortet «oMLX på Mac mini-en» – adresse, nøkkel, tekst-/bildemodell, Test, Sjekk nå, modellene
-//    oMLX har (og hvilke som er lastet, når oMLX oppgir det). Samme stil som NB-Whisper-/Fermion-kortene (voice54.js).
+//    oMLX har (og hvilke som er lastet, når oMLX oppgir det). Samme stil som NB-Whisper-/Fermion-kortene (tale.js).
 // Nøkkelen sendes bare inn (PUT) og vises aldri. Serveren godtar bare adresser i huset.
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 const TASK_NAMES = { glimt: 'Glimt · kalender og planlegger', sok: 'AI-søk', brief: 'Glimt · brief', fsok: 'Finans · spør', dom: 'Domener · oppsummering', rc: 'Dokumenter og bilder (vitnemål, kvitteringsreserve)' };

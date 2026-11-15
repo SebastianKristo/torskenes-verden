@@ -78,7 +78,7 @@ test('System: faner (Oversikt · Oppdateringer · Ytelse · Selvreparasjon · Me
   // Kvalitet/Brief og figur/Lokale modeller hekter seg ikke lenger på System-siden.
   assert.doesNotMatch(read('public/js/qa51.js'), /set-body\[data-key\^="system/);
   assert.doesNotMatch(read('public/js/brief-figur-per-bruker.js'), /set-body\[data-key\^="system/);
-  assert.doesNotMatch(read('public/js/dal53.js'), /set-body\[data-key\^="system/);
+  assert.doesNotMatch(read('public/js/lokale-modeller.js'), /set-body\[data-key\^="system/);
   assert.match(read('public/js/brief-figur-per-bruker.js'), /window\.hlPeople55 = openPeople55;/);
 });
 

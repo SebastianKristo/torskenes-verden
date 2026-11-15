@@ -886,7 +886,7 @@ html:not([data-hl="2c"]) .m17-pr small{color:#8a93a6}
 .dg40 .kal-hw-x .kal-wp{flex:none;padding:3px 10px;border-radius:999px}
 .dg40 .kal-hw-h>span:last-child{white-space:nowrap}
 
-/* Glimt-briefen: nye kort per bruker (brief52.js, fasit Glimt Brief.dc.html nk.*). */
+/* Glimt-briefen: nye kort per bruker (brief-kort-bruker.js, fasit Glimt Brief.dc.html nk.*). */
 .b52{flex:none;border-radius:24px;background:#fffdf8;color:#1b1a17;padding:18px;display:flex;flex-direction:column;gap:8px;text-decoration:none;font-family:var(--gb-sans,Manrope,system-ui,sans-serif);box-sizing:border-box}
 .b52-tap{cursor:pointer}.b52-tap:focus-visible,.b52 .b52-r:focus-visible,.b52-act:focus-visible{outline:2px solid #b23a2a;outline-offset:2px}
 .b52-dark{background:#1b1a17;color:#f3efe6}

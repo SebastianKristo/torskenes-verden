@@ -7,7 +7,7 @@ import { SRC } from './settings-domains.js';
 import { is2c } from './hltheme.js';
 import { glimt } from './glimt.js';
 import { fig, hostFor } from './glimt-figs.js';
-import { gs } from './glimt35.js';
+import { gs } from './glimt-settings.js';
 const figHtml = () => { let w = 'glimt'; try { w = hostFor(gs().char); } catch { /* */ } return fig(w, 26, 'idle'); };
 
 const D = (p, o) => api('/../domains/api' + p, o);

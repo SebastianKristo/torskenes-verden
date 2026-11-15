@@ -3,18 +3,18 @@ import { esc, hm, api, backdropClick, haptic } from './util.js';
 import { store, on, emit } from './store.js';
 import { clearBtn, syncSearch, bindSearchFields } from './searchfield.js';
 import { addQuick, preview, previewAsync, quickLabel } from './kal-quick.js';
-import { aiParse52, waitParse52, apptText52, apptLabel52 } from './glimt52.js'; // prompt 52: kalenderkontekst med AI
+import { aiParse52, waitParse52, apptText52, apptLabel52 } from './glimt-kalender.js'; // prompt 52: kalenderkontekst med AI
 import { glimt, setGlimt } from './glimt.js';
 import { assist, boldHtml, wxRoute } from './assist.js';
 import { toast } from './toast.js';
-import { isQuestion } from './ask36.js';
+import { isQuestion } from './glimt-sporsmal.js';
 import { isHuske41, addFromSearch41 } from './tasks41.js'; // prompt 41: huskebeskjeder fra søket
-import { agent, agentOn, agentExtras, agentText, isPlain, resultHref } from './glimt-agent45.js'; // prompt 45: felles Glimt-agent
+import { agent, agentOn, agentExtras, agentText, isPlain, resultHref } from './glimt-agent.js'; // prompt 45: felles Glimt-agent
 import { cal70Of } from './glimt-kalenderkort.js'; // prompt 70: kort A erstatter svarteksten når Glimt har lagt inn en avtale
-import { thumbs61Html } from './recipes61.js'; // prompt 61: tommel opp/ned på Glimt-svaret
-import { agentLive59, cacheNote59 } from './stream59.js'; // prompt 59: strømming (ord for ord, statuslinje, Stopp)
-import { homeConv60, resetHomeConv60 } from './convo60.js'; // prompt 60: Glimt-søket er en kortlevd samtale («og i Bergen?»)
-import { isSched62 } from './sched62.js'; // prompt 62: faste oppgaver går rett til Glimt (ikke forslag om avtale/huskeliste)
+import { thumbs61Html } from './glimt-oppskrifter.js'; // prompt 61: tommel opp/ned på Glimt-svaret
+import { agentLive59, cacheNote59 } from './glimt-strom.js'; // prompt 59: strømming (ord for ord, statuslinje, Stopp)
+import { homeConv60, resetHomeConv60 } from './glimt-samtale.js'; // prompt 60: Glimt-søket er en kortlevd samtale («og i Bergen?»)
+import { isSched62 } from './glimt-faste-oppgaver.js'; // prompt 62: faste oppgaver går rett til Glimt (ikke forslag om avtale/huskeliste)
 
 /* ---------- Popup ---------- */
 

@@ -21,8 +21,8 @@ import java.util.UUID
 
 /*
  * Prompt 67 (ANDCHAT67): Glimt-chatten og Glimt-søket på Hjem tar igjen web (prompt 49 del 1, 3 og 4). Formene står i
- * $S/SERVER59-API.md (strømming), $S/SERVER60-API.md (samtaler) og $S/SERVER61-API.md (tommel opp/ned). Web: public/js/stream59.js,
- * convo60.js, recipes61.js og chat.js (sendTool).
+ * $S/SERVER59-API.md (strømming), $S/SERVER60-API.md (samtaler) og $S/SERVER61-API.md (tommel opp/ned). Web: public/js/glimt-strom.js,
+ * glimt-samtale.js, glimt-oppskrifter.js og chat.js (sendTool).
  *  - POST /api/glimt/agent/stream (SSE: start · status · token · done · error), lest med plattformens HttpURLConnection og samme
  *    innlogging (Bearer-tokenet til kontoen) som Chat (chatSse27). Tokenet logges aldri.
  *  - Stopp: POST /api/glimt/agent/stream/stop {requestId} + koble fra strømmen. Det som er skrevet beholdes, merket «Stoppet».

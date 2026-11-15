@@ -1,4 +1,4 @@
-/* Prompt 43: Importer fra Claude (claude-import43.js). Bruker AI-kontrollens fargevariabler (--bg, --card, --line, --ink, --mut, --acc),
+/* Prompt 43: Importer fra Claude (claude-import.js). Bruker AI-kontrollens fargevariabler (--bg, --card, --line, --ink, --mut, --acc),
    med Papir-fargene som reserve. Fasit: design/Claude Import.dc.html. */
 .ci43{--k:var(--ink,#1b1a17);--b:var(--bg,#f3efe6);--cd:var(--card,#fffdf8);--ln:var(--line,#d8d1c2);--lb:var(--acc,#b23a2a);--mt:var(--mut,#6b665c);--sf:color-mix(in srgb,var(--ln) 60%,transparent);
   display:flex;flex-direction:column;gap:16px;width:100%;color:var(--k);font-family:Manrope,system-ui,sans-serif;box-sizing:border-box}
@@ -66,7 +66,7 @@
 .ci43.mob .ci43-h{font-size:20px}
 .ci43.mob .ci43-btn.grow1,.ci43.mob .ci43-btn.grow2{height:50px}
 
-/* ---------- AI-import: velg kilde (claude-import43.js, prompt 45) ---------- */
+/* ---------- AI-import: velg kilde (claude-import.js, prompt 45) ---------- */
 .ci45-src{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:12px}
 .ci45-sb{display:flex;align-items:center;justify-content:center;gap:10px;min-height:56px;padding:8px 12px;border-radius:18px;border:1.5px solid var(--ln,rgba(127,127,127,.3));background:var(--cd,transparent);color:inherit;cursor:pointer;font:700 14px Manrope,system-ui,sans-serif}
 .ci45-sb.on{border-color:var(--sc);box-shadow:inset 0 0 0 1px var(--sc);background:color-mix(in srgb,var(--sc) 10%,var(--cd,transparent))}

@@ -10,6 +10,6 @@ test('people55: lastes i app.html, bruker brief52/access og glimt-char52, bare f
   assert.match(js, /\/api\/admin\/glimt-char52/);
   assert.match(js, /role !== 'admin'\) return/);
   for (const k of ['children', 'homelab', 'domains', 'stocks']) assert.ok(js.includes(`'${k}'`), k);
-  const dal = readFileSync('public/js/dal53.js', 'utf8');
+  const dal = readFileSync('public/js/lokale-modeller.js', 'utf8');
   for (const f of ['export const esc', 'export async function api', 'export function overlay']) assert.ok(dal.includes(f), f);
 });
