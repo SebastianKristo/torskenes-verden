@@ -12,6 +12,7 @@ import { simpleParser } from 'mailparser';
 import { db, q, kv } from '../db.js';
 import { isAdmin, sessionUser } from '../auth/session.js';
 import { userGuard } from '../homeos-common.js';
+import { authOrToken as authOrToken0 } from '../mobile.js';
 import { runAsUser } from '../settings.js';
 import { upsertShipment, setAliHook42, trk42 } from './shipments.js';
 import { normNo, detect, pnDebugOf42, pnVariants42, postnordHealth41, POSTNORD_WEB_URL, PN_HEADERS42, _clearPostnordWebCache, _clearCainiaoCache } from './carriers.js';
@@ -103,7 +104,11 @@ setAliHook42((u) => scanAliExpress42(u));
 
 /* ---------------- Ruter ---------------- */
 
+const authOrToken = (c, next) => authOrToken0(c, next); // sen binding (mobile.js importerer sporingen)
 export const tracking42Api = new Hono();
+// GET /api/tracking/postnord/health → {endpoint, unofficial:true, ok, shapeOk, lastOkAt, lastErrorAt, lastError, blockedUntil, calls, text:'OK · offentlig endepunkt'}
+// Sesjon eller app-token. Står før userGuard under, slik den sto i et eget lag foran feilsøkingsrutene.
+tracking42Api.get('/postnord/health', authOrToken, (c) => c.json(postnordHealth41()));
 tracking42Api.use('*', userGuard);
 const adminOnly = async (c, next) => { if (!isAdmin(c.get('user'))) return c.json({ error: 'Bare administratorer ser feilsøkingen', restricted: true }, 403); await next(); };
 const debugOut = (r) => {
