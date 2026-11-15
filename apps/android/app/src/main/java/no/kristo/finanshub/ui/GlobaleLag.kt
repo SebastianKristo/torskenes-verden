@@ -309,8 +309,8 @@ internal fun Global41(vm: AppViewModel) {
         vm.loadZones41() // skolesonene registreres som geofence (Live41.kt)
     }
     // Oslo-bakgrunnen: sjekk hvert minutt om timen/tidsrommet er endret; Min reise: sanntid hvert 30. s mens kortet vises.
-    LaunchedEffect(Unit) { while (true) { delay(60_000); vm.osloTick41(); if (s.journey != null) vm.loadJourney41() } }
-    LaunchedEffect(s.journey?.leftAt) { while (s.journey != null) { vm.loadTrip41(); delay(30_000) } }
+    GjentaMensSynlig { while (true) { delay(60_000); vm.osloTick41(); if (s.journey != null) vm.loadJourney41() } }
+    GjentaMensSynlig(s.journey?.leftAt) { while (s.journey != null) { vm.loadTrip41(); delay(30_000) } }
     s.appAuth?.let { AppAuthSheet41(vm, it) }
     Link86Dialog(vm) // prompt 86: bekreftelse før en lenke utenfra utfører en handling
     s.srvSheet?.let { ServerSheet41(vm, it) }

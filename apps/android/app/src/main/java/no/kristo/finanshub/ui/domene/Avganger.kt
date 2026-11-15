@@ -193,7 +193,7 @@ private fun LegStrip41(legs: List<Leg41>) {
 internal fun MinReise41(vm: AppViewModel, home: Boolean) {
     val s = vm.p41
     LaunchedEffect(home) { vm.initP41(); if (!home) vm.loadTrip41(force = true) }
-    if (!home) LaunchedEffect(Unit) { while (true) { delay(30_000); vm.loadTrip41() } }
+    if (!home) GjentaMensSynlig { while (true) { delay(30_000); vm.loadTrip41() } }
     val t = s.trip ?: return
     if (t.options.isEmpty()) return
     if (home) {

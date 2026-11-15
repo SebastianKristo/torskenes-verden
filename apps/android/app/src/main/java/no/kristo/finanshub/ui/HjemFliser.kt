@@ -120,12 +120,12 @@ internal fun Tile52(vm: AppViewModel, k: String, h: Dp, body: @Composable (Strin
     val m = if (h == Dp.Unspecified) Modifier.fillMaxWidth().fillMaxHeight() else Modifier.fillMaxWidth().height(h)
     when (k) {
         "h52av" -> {
-            LaunchedEffect(Unit) { while (true) { delay(30_000); if (!vm.ruterOpen && vm.b27.homeStops?.isNotEmpty() == true) runCatching { vm.refreshHomeDeps27() } } }
+            GjentaMensSynlig { while (true) { delay(30_000); if (!vm.ruterOpen && vm.b27.homeStops?.isNotEmpty() == true) runCatching { vm.refreshHomeDeps27() } } }
             AvgangTile50(vm, tileDeps50(vm), m)
         }
         "h52fi" -> FinTile50(vm, m)
         "h52ma" -> MatTile50(vm, m)
-        "h52fa" -> { LaunchedEffect(Unit) { while (true) { vm.loadPositions(); delay(60_000) } }; FamTile50(vm, m) }
+        "h52fa" -> { GjentaMensSynlig { while (true) { vm.loadPositions(); delay(60_000) } }; FamTile50(vm, m) }
         "h52do" -> DomTile50(vm, m)
         "h10" -> KalTile52(vm, m)
         "h9" -> BdTile52(vm, m)

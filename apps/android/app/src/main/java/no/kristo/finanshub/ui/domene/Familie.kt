@@ -155,7 +155,7 @@ internal fun VelFremmeTab42(vm: AppViewModel) {
     val p = PaperPal.current
     val s = vm.p40
     LaunchedEffect(vm.account?.id) { vm.loadHjemlys40(force = true) }
-    LaunchedEffect(Unit) { while (true) { kotlinx.coroutines.delay(30_000); vm.loadHjemlys40(force = true) } }
+    GjentaMensSynlig { while (true) { kotlinx.coroutines.delay(30_000); vm.loadHjemlys40(force = true) } }
     val h = s.hl
     val meId = vm.myUserId40()
     val mine = h?.mine?.takeIf { it.state != "home" && it.state != "ended" }

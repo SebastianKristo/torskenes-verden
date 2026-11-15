@@ -534,7 +534,7 @@ private fun CompareChart(h: List<CmpHour>, yr: Color, st: Color, modifier: Modif
 @Composable
 internal fun HomePositionCard(vm: AppViewModel) {
     val p = PaperPal.current
-    LaunchedEffect(Unit) { while (true) { vm.loadPositions(); delay(60_000) } }
+    GjentaMensSynlig { while (true) { vm.loadPositions(); delay(60_000) } }
     val list = vm.famPositions
     PCard(onClick = { vm.openFamily() }) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {

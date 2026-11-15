@@ -19,7 +19,10 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import no.kristo.finanshub.AppViewModel
 import no.kristo.finanshub.loadChar52
@@ -29,6 +32,20 @@ import no.kristo.finanshub.seedRuter52
 import no.kristo.finanshub.vaerKey52
 
 private val EASE52 = CubicBezierEasing(.2f, .8f, .2f, 1f)
+
+/**
+ * Periodisk henting fra en composable (B2): [blokk] kjører bare mens skjermen er startet. Ved ON_STOP avbrytes den,
+ * og ved ON_START begynner den på nytt (første henting tas igjen med en gang hvis blokken henter før den venter).
+ * Bruk denne i stedet for `LaunchedEffect(Unit) { while (true) { … delay(…) } }`, som fortsetter i bakgrunnen.
+ */
+@Composable
+internal fun GjentaMensSynlig(vararg nokler: Any?, blokk: suspend CoroutineScope.() -> Unit) {
+    val eier = LocalLifecycleOwner.current
+    val siste = rememberUpdatedState(blokk)
+    LaunchedEffect(eier, *nokler) {
+        eier.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) { siste.value(this) }
+    }
+}
 
 /* ======================= Effekter (App.kt) ======================= */
 
@@ -57,7 +74,7 @@ internal fun Effects52B(vm: AppViewModel) {
     }
     // Vær nå: nytt bilde når timen gir nytt tidsrom eller værtypen endres (forrige bilde står til det nye er lastet).
     LaunchedEffect(vm.weatherFull?.current?.code) { vaerCheck52(vm) }
-    LaunchedEffect(Unit) { while (true) { delay(60_000); vaerCheck52(vm) } }
+    GjentaMensSynlig { while (true) { delay(60_000); vaerCheck52(vm) } }
 }
 
 private fun vaerCheck52(vm: AppViewModel) {
