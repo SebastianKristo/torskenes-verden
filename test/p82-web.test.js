@@ -1,9 +1,9 @@
 // Prompt 82 (CHKWEB): «Sjekk ut / Sjekk inn» og Produkter i Skjold Lab på web.
-// De rene hjelperne (skjold82-logic.js) testes direkte, resten er kildesjekker.
+// De rene hjelperne (skjold-produkter-regler.js) testes direkte, resten er kildesjekker.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { qtyFmt82, money82, clampQty82, target82, checkoutBody82, normProjects82, activeProjects82, summary82, lines82, hasActive82, usedIn82, historyText82, csv82, csvName82, shortText82, esc82, MAX_NAME82 } from '../public/js/skjold82-logic.js';
+import { qtyFmt82, money82, clampQty82, target82, checkoutBody82, normProjects82, activeProjects82, summary82, lines82, hasActive82, usedIn82, historyText82, csv82, csvName82, shortText82, esc82, MAX_NAME82 } from '../public/js/skjold-produkter-regler.js';
 
 const read = (p) => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8');
 
@@ -63,15 +63,15 @@ test('CSV: semikolon, desimalkomma, sitering og filnavn', () => {
 });
 
 test('kilde: delsiden har «Sjekk ut» og «Brukt i», shell har Produkter, ruter og hendelser er koblet', () => {
-  const s76 = read('public/js/skjold76.js');
+  const s76 = read('public/js/skjold.js');
   for (const k of ['partBtn82(p)', 'usedInHtml82(p)', 'headBtn82()', 'route82(seg)', 'isView82(v) ? html82()', 'click82(t)', 'submit82(e)', 'start82(r)', 'historyText82(h)'])
     assert.ok(s76.includes(k), k);
-  const m = read('public/js/skjold82-projects.js');
+  const m = read('public/js/skjold-produkter.js');
   for (const k of ["'/checkout'", "'/checkout/undo'", '/return`', "'/projects'", "method: 'PATCH'", "method: 'DELETE'", 'Marker som ferdig', 'Gi nytt navn', 'Sjekk inn', 'Nytt produkt …', 'Eksporter CSV', "action: 'Angre'", 'haptic(', 'role="dialog"', 'aria-modal="true"', "e.key === 'Escape'", '#/skjold/produkt/', '#/skjold/produkter', 'Brukt i'.toUpperCase()])
     assert.ok(m.includes(k), k);
   assert.ok(/disabled title="Sjekk inn delene først"/.test(m), 'Slett er av med aktive utsjekkinger');
   assert.ok(!/innerHTML\s*=\s*[^;]*\$\{(?!esc|sheetHtml|html)/.test(m), 'ingen urensket innerHTML');
-  const pick = read('public/js/skjold79-pick.js');
+  const pick = read('public/js/skjold-plukk.js');
   assert.ok(pick.includes('pickTargetHtml82()') && pick.includes('...to') && pick.includes("'/checkout/undo'"), 'plukklista: Til produkt + angre med undoToken');
   const css = read('public/css/pages/skjold.css');
   assert.ok(css.includes('@media (max-width:767px)') && css.includes('.sk82-sheet') && css.includes('focus-visible'));

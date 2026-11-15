@@ -1,6 +1,6 @@
 // Prompt 77 (SKJAIWEB): innstillingene for Glimt i Skjold Lab.
 // - Innstillinger → Moduler → Skjold Lab: «Finn bilder på nett» og «Foreslå automatisk når jeg tar bilde» (begge på som standard).
-// - Samme brytere ligger bak ⚙ i Skjold Lab (skjold77-ai.js bruker loadSet77/saveSet77 herfra).
+// - Samme brytere ligger bak ⚙ i Skjold Lab (skjold-ai.js bruker loadSet77/saveSet77 herfra).
 // Lagres per bruker på serveren: GET|PUT /api/skjold/ai/settings {webImages, autoSuggestOnPhoto}. Speiles i localStorage
 // «sk77_set» = {uid, webImages, autoSuggestOnPhoto}, så bryterne tegnes riktig med en gang.
 import { api, esc } from './util.js';

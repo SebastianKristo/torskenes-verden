@@ -13,10 +13,10 @@
 // Serveren snakker bare med verter i hjemmenettet og begrenser til 5 kall i sekundet; klienten demper raske klikk i veiviseren.
 import { esc } from './util.js';
 import { toast } from './toast.js';
-import { S, sk, paintMain, cabById, locOf } from './skjold76.js';
-import { short76, long76 } from './skjold76-draw.js';
-import { diagBtn79, diagHtml79 } from './skjold79-pick.js'; // prompt 79: Feilsøk LED
-import { normLeds78, autoRows78, ledIndex78, ledTotal78, hostOk78, ledsBody78, secsLeft78, statusText78, PITCH60 } from './skjold78-logic.js';
+import { S, sk, paintMain, cabById, locOf } from './skjold.js';
+import { short76, long76 } from './skjold-tegning.js';
+import { diagBtn79, diagHtml79 } from './skjold-plukk.js'; // prompt 79: Feilsøk LED
+import { normLeds78, autoRows78, ledIndex78, ledTotal78, hostOk78, ledsBody78, secsLeft78, statusText78, PITCH60 } from './skjold-led-regler.js';
 import { pageCss } from './lib/page-css.js';
 
 pageCss('skjold');
@@ -354,7 +354,7 @@ async function setOverride(key, index) {
 
 /* ================= Hendelser ================= */
 
-/** Klikk i Skjold Lab (fra bind i skjold76.js). true = håndtert. */
+/** Klikk i Skjold Lab (fra bind i skjold.js). true = håndtert. */
 export function click78(t) {
   const sw = t.closest('[data-sk78-set]');
   if (sw) { saveSet78({ [sw.dataset.sk78Set]: sw.checked }); document.querySelectorAll(`#sk76 [data-sk78-set="${sw.dataset.sk78Set}"]`).forEach((x) => { x.checked = sw.checked; }); return true; }

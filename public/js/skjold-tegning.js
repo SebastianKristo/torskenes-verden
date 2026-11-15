@@ -3,9 +3,9 @@
 //   Valgt skuff får aksentfarge og puls i 2 s (bare opacity), raden og kolonnen merkes med tall.
 // - homography76/matrix3d76: projektiv avbildning av enhetskvadratet til de 4 hjørnene (tl, tr, br, bl) → CSS matrix3d,
 //   så rutenettet (og uthevingen) legges oppå bildet i riktig perspektiv.
-// Prompt 81: sammenslåtte skuffer (spanR × spanC) tegnes som ett felt; dekkede ruter hoppes over (skjold81-span.js, også ren).
-// Ingen avhengigheter utenom skjold81-span.js: modulen er ren (testes i Node, test/p76-web.test.js og p81-web.test.js).
-import { normSel81, longSpan81 } from './skjold81-span.js';
+// Prompt 81: sammenslåtte skuffer (spanR × spanC) tegnes som ett felt; dekkede ruter hoppes over (skjold-skuffer.js, også ren).
+// Ingen avhengigheter utenom skjold-skuffer.js: modulen er ren (testes i Node, test/p76-web.test.js og p81-web.test.js).
+import { normSel81, longSpan81 } from './skjold-skuffer.js';
 const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ESC[c]);
 

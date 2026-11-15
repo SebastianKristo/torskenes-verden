@@ -1,23 +1,23 @@
 // Prompt 76 (SKJWEB): Skjold Lab på web/PWA – personlig sorteringssystem for deler i skuffeskap.
 // - Søk øverst med forslag mens man skriver (/api/skjold/suggest), treffliste med bilde, navn, specs, antall og plassering.
 // - Detaljside: stort bilde, plassering («Hovedskap · Rad 4 · Skuff 2»), antall ±, Flytt / Endre / Slett (angre).
-// - Tegning av skapet (skjold76-draw.js) med valgt skuff uthevet; trykk på en skuff viser innholdet. Har skapet bilde med
+// - Tegning av skapet (skjold-tegning.js) med valgt skuff uthevet; trykk på en skuff viser innholdet. Har skapet bilde med
 //   4 hjørner, kan man bytte til «Bilde» og se uthevingen lagt over bildet i perspektiv (matrix3d).
-// - Ny/endre del og skap-oppsett ligger i skjold76-edit.js. Etiketter: /api/skjold/labels?cabinet=<id> (utskriftsside).
+// - Ny/endre del og skap-oppsett ligger i skjold-rediger.js. Etiketter: /api/skjold/labels?cabinet=<id> (utskriftsside).
 // - Offline: siste fulle liste caches i localStorage (sk76_cache, tømmes ved kontobytte), så søk virker uten nett.
 //   Endringer krever nett og sier tydelig fra.
 // Adresser: #/skjold · #/skjold/del/<id> · #/skjold/ny · #/skjold/skap/<id>[/<rad>-<skuff>] · #/skjold/oppsett[/<id>]
-//           prompt 82: #/skjold/produkter · #/skjold/produkt/<id> (skjold82-projects.js)
+//           prompt 82: #/skjold/produkter · #/skjold/produkt/<id> (skjold-produkter.js)
 import { api, esc, isMobile, haptic } from './util.js';
 import { toast } from './toast.js';
-import { drawCabinet76, overlayGrid76, layoutPhoto76, cornersOk76, long76, short76, ownLabel76 } from './skjold76-draw.js';
-import { editHtml, setupHtml, editClick, setupClick, editMount, setupMount, editInput, setupInput, startEdit, startSetup } from './skjold76-edit.js';
-import { headBtns77, gearHtml77, click77, key77, tidyHtml77, tidyRoute77, startTidy77, stopTidy77 } from './skjold77-ai.js'; // prompt 77: Glimt-forslag, Rydd opp, ⚙
-import { locateBtn78, listBtn78, listAllBtn78, litBarHtml78, afterPart78, onCabs78, click78, input78, submit78, route78 } from './skjold78-leds.js'; // prompt 78: LED over skuffene
-import { pickBtn79, pickShellHtml79, click79, key79, route79, loadPick79 } from './skjold79-pick.js'; // prompt 79: plukkliste
-import { anchor81, longAt81, normSel81, spanFieldsHtml81 } from './skjold81-span.js'; // prompt 81: store/brede skuffer
-import { route82, isView82, start82, html82, headBtn82, partBtn82, usedInHtml82, click82, submit82 } from './skjold82-projects.js'; // prompt 82: produkter – sjekk ut/inn
-import { historyText82 } from './skjold82-logic.js';
+import { drawCabinet76, overlayGrid76, layoutPhoto76, cornersOk76, long76, short76, ownLabel76 } from './skjold-tegning.js';
+import { editHtml, setupHtml, editClick, setupClick, editMount, setupMount, editInput, setupInput, startEdit, startSetup } from './skjold-rediger.js';
+import { headBtns77, gearHtml77, click77, key77, tidyHtml77, tidyRoute77, startTidy77, stopTidy77 } from './skjold-ai.js'; // prompt 77: Glimt-forslag, Rydd opp, ⚙
+import { locateBtn78, listBtn78, listAllBtn78, litBarHtml78, afterPart78, onCabs78, click78, input78, submit78, route78 } from './skjold-led.js'; // prompt 78: LED over skuffene
+import { pickBtn79, pickShellHtml79, click79, key79, route79, loadPick79 } from './skjold-plukk.js'; // prompt 79: plukkliste
+import { anchor81, longAt81, normSel81, spanFieldsHtml81 } from './skjold-skuffer.js'; // prompt 81: store/brede skuffer
+import { route82, isView82, start82, html82, headBtn82, partBtn82, usedInHtml82, click82, submit82 } from './skjold-produkter.js'; // prompt 82: produkter – sjekk ut/inn
+import { historyText82 } from './skjold-produkter-regler.js';
 import { pageCss } from './lib/page-css.js';
 
 pageCss('skjold');

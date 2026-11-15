@@ -45,7 +45,7 @@ import { TABS51, ALIAS51, sikkerhetView51 } from './sec51.js'; // prompt 51 (SEC
 import { TABS62, ALIAS62, fasteView62 } from './settings62.js'; // prompt 62 (prompt 49 del 2): Innstillinger → Faste oppgaver
 import { TABS64, ALIAS64, kvalitetView64 } from './settings64.js'; // prompt 64 (prompt 49 del 7): Innstillinger → Kvalitet
 import { TABS70, ALIAS70, sporView70, click70 } from './settings-track70.js'; // prompt 70: Moduler → Sporing (kilder og transportører)
-import { TABS77, ALIAS77, skjView77, clickSkj77 } from './settings-skjold77.js'; // prompt 77: Moduler → Skjold Lab (Glimt-forslag og bilder)
+import { TABS77, ALIAS77, skjView77, clickSkj77 } from './settings-skjold.js'; // prompt 77: Moduler → Skjold Lab (Glimt-forslag og bilder)
 import { TABS45, ALIAS45, mediaView45, ruterView45, zoneGroups45, click45, setRender45, huskeTips45, vaerView45, studieView45, finansView45 } from './settings45.js'; // prompt 45: Media, Ruter, sonevarsler
 
 const modal = () => document.getElementById('settings');

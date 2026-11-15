@@ -88,7 +88,7 @@ test('web: plasseringslinja i lista kan forkortes med «…», og skaplista bøy
   const loc = /\.sk76-loc\{([^}]*)\}/.exec(css)[1];
   assert.match(loc, /text-overflow:ellipsis/);
   assert.doesNotMatch(loc, /display:flex/, 'text-overflow virker ikke på teksten i en flex-boks');
-  const js = readFileSync(new URL('../public/js/skjold76-edit.js', import.meta.url), 'utf8');
+  const js = readFileSync(new URL('../public/js/skjold-rediger.js', import.meta.url), 'utf8');
   assert.match(js, /parts === 1 \? '1 del'/);
   assert.match(js, /usedDrawers === 1 \? '1 skuff'/);
 });

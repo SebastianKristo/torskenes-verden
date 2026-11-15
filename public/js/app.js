@@ -27,7 +27,7 @@ import { initPageAddons, afterPageAddons, renderKart } from './page-addons.js'; 
 import { renderFam51, renderMedia51, afterMedfam51 } from './mediakveld-familiekalender.js'; // prompt 51 (MEDFAM51): Familiekalender og «I kveld»
 import { initWeb52, after52 } from './web52.js'; // prompt 52 (WEB52H): oppstart, sideanimasjon, Ruter-buffer m.m.
 import { initNavOverflow } from './nav-overflow.js'; // «Mer ▾» når fanene ikke får plass (B-B1/B2)
-// Prompt 76 (SKJWEB): Skjold Lab (#/skjold) – skallet tegnes her, selve modulen (skjold76.js) lastes ved behov.
+// Prompt 76 (SKJWEB): Skjold Lab (#/skjold) – skallet tegnes her, selve modulen (skjold.js) lastes ved behov.
 const renderSkjold76 = () => '<section class="sk76" id="sk76" aria-label="Skjold Lab" aria-busy="true"></section>';
 
 // Fase 3 (B §3 P1): rutemodulene lastes når ruten åpnes (import()), ikke alle ved oppstart. Før lastet hver rute ca. 180 moduler.
@@ -117,7 +117,7 @@ function renderRoute() {
   afterPageAddons(route, view);
   afterMedfam51(route, view); // prompt 51 (MEDFAM51)
   after52(route, view); // prompt 52 (WEB52H)
-  if (route === 'skjold') import('./skjold76.js').then((m) => m.mount(view)).catch((e) => console.warn('skjold76', e)); // prompt 76
+  if (route === 'skjold') import('./skjold.js').then((m) => m.mount(view)).catch((e) => console.warn('skjold76', e)); // prompt 76
   // Rom er en underside av «Mer» på mobil.
   const navKey = isMobile() && ['chat', 'rom', 'nettverk', 'hjem', 'matplan', 'sporing', 'familie', 'huskeliste', 'gjoremal', 'domener', 'bursdager', 'kalender', 'media', 'kart', 'familiekalender', 'mediakveld', 'skjold'].includes(route) ? 'mer' : route;
   document.querySelectorAll('[data-r]').forEach((a) => { if (a.dataset.r === navKey) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });

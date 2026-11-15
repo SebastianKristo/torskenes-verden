@@ -1,11 +1,11 @@
-// Prompt 78 (LEDWEB): LED over skuffene i Skjold Lab på web. De rene hjelperne (skjold78-logic.js) testes direkte, resten er kildesjekker.
+// Prompt 78 (LEDWEB): LED over skuffene i Skjold Lab på web. De rene hjelperne (skjold-led-regler.js) testes direkte, resten er kildesjekker.
 // Oppførselen er sjekket i Chromium (Playwright, 1440 og 390 px, port 4803): 💡 Vis i skapet på detaljsiden og i trefflista,
 // «Vis alle i skapet», lyslinja med nedtelling og «Slå av», LED-oppsett per skap (vert, rader, Fyll ut, test, lagre),
 // kalibreringsveiviseren (trykk på skuffen som lyser → neste LED) og statusmerket – uten JS-feil og uten vannrett scroll.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { normLeds78, autoRows78, ledIndex78, ledTotal78, hostOk78, ledsBody78, secsLeft78, statusText78, defRow78 } from '../public/js/skjold78-logic.js';
+import { normLeds78, autoRows78, ledIndex78, ledTotal78, hostOk78, ledsBody78, secsLeft78, statusText78, defRow78 } from '../public/js/skjold-led-regler.js';
 
 const read = (p) => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8');
 const cab = { id: 1, rows: 3, cols: 5 };
@@ -63,7 +63,7 @@ test('body til PUT, nedtelling og statusmerke', () => {
 });
 
 test('modulen: API-kontrakten, tekster og sikkerhet', () => {
-  const js = read('public/js/skjold78-leds.js');
+  const js = read('public/js/skjold-led.js');
   for (const s of ["'/locate'", "'/locate/off'", '/leds`', '/leds/test`', '/leds/calibrate`', '/leds/override`', '/leds/status?cabinet=', "'/leds/settings'", 'partIds: ids', 'json: { row, col, index }', 'json: { index: W.index }']) assert.ok(js.includes(s), `mangler ${s}`);
   for (const s of ['💡 Vis i skapet', 'Lys opp automatisk når jeg åpner et treff', 'Vis alle i skapet', 'Slå av', 'Trykk på skuffen som lyser', 'Forrige LED', 'Neste LED', 'Test alle', 'Fyll ut', 'Kalibrer', 'WLED-vert', 'Glimt lyser opp skuffen']) assert.ok(js.includes(s), `mangler «${s}»`);
   assert.match(js, /autoLocateOpen: false, autoLocateGlimt: false/, 'begge av som standard');
@@ -76,8 +76,8 @@ test('modulen: API-kontrakten, tekster og sikkerhet', () => {
 });
 
 test('koblet inn i Skjold Lab og skap-oppsettet', () => {
-  const m = read('public/js/skjold76.js'), ed = read('public/js/skjold76-edit.js');
-  assert.match(m, /from '\.\/skjold78-leds\.js'/);
+  const m = read('public/js/skjold.js'), ed = read('public/js/skjold-rediger.js');
+  assert.match(m, /from '\.\/skjold-led\.js'/);
   assert.match(m, /\$\{locateBtn78\(p\)\}/);
   assert.match(m, /listBtn78\(p\)/);
   assert.match(m, /listAllBtn78\(S\.items\)/);

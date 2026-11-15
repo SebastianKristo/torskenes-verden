@@ -11,9 +11,9 @@
 // Tidsavbrudd i klienten: 75 s med bilde, 40 s med bare tekst (serveren gir opp etter 60/30 s og svarer med norsk feiltekst).
 import { esc } from './util.js';
 import { toast } from './toast.js';
-import { S, sk, paintMain, go, loadPart, refreshAll, photoUrls } from './skjold76.js';
-import { set77, loadSet77, saveSet77 } from './settings-skjold77.js';
-import { specsObj77, mergeSpecs77, mergeTags77, conf77, decodedLines77, suggRows77, tidyChanged77, tidyDefaultOn77, tidyRunning77 } from './skjold77-logic.js';
+import { S, sk, paintMain, go, loadPart, refreshAll, photoUrls } from './skjold.js';
+import { set77, loadSet77, saveSet77 } from './settings-skjold.js';
+import { specsObj77, mergeSpecs77, mergeTags77, conf77, decodedLines77, suggRows77, tidyChanged77, tidyDefaultOn77, tidyRunning77 } from './skjold-ai-regler.js';
 import { pageCss } from './lib/page-css.js';
 
 pageCss('skjold');
@@ -191,7 +191,7 @@ async function imgUse(F) {
   }
   paintMain();
 }
-/** For savePart i skjold76-edit.js: legger bilder fra nettet til en nylig lagret del. Feil gis videre som én melding. */
+/** For savePart i skjold-rediger.js: legger bilder fra nettet til en nylig lagret del. Feil gis videre som én melding. */
 export async function saveWeb77(F, id) {
   const fails = [];
   for (const w of F.web ?? []) {
@@ -250,7 +250,7 @@ const repaintHead = () => {
   const el = document.querySelector('#sk76 [data-sk77-head]'); if (el) el.innerHTML = headBtns77();
   const g = document.querySelector('#sk76 [data-sk77-gearbox]'); if (g) g.innerHTML = gearHtml77();
 };
-/** Klikk hvor som helst i Skjold Lab (fra bind i skjold76.js). true = håndtert. */
+/** Klikk hvor som helst i Skjold Lab (fra bind i skjold.js). true = håndtert. */
 export function click77(t) {
   if (A.menu && !t.closest('.sk77-menu') && !t.closest('[data-sk77="menu"]')) { A.menu = false; repaintHead(); }
   const sw = t.closest('[data-sk77-set]');
@@ -424,5 +424,5 @@ function tidyClick(t) {
   }
   return false;
 }
-/** Ruteobjekt for #/skjold/rydd[/<id>] (fra parseHash i skjold76.js). */
+/** Ruteobjekt for #/skjold/rydd[/<id>] (fra parseHash i skjold.js). */
 export const tidyRoute77 = (seg) => (seg[1] === 'rydd' ? { v: 'tidy', job: seg[2] || null } : null);

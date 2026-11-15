@@ -1,11 +1,11 @@
-// Prompt 79 (PICKWEB): plukkliste og «Feilsøk LED» i Skjold Lab på web. De rene hjelperne (skjold79-logic.js) testes direkte, resten er kildesjekker.
+// Prompt 79 (PICKWEB): plukkliste og «Feilsøk LED» i Skjold Lab på web. De rene hjelperne (skjold-plukk-regler.js) testes direkte, resten er kildesjekker.
 // Oppførselen er sjekket i Chromium (Playwright, 1440 og 390 px, port 4804) mot ekte server og mocket WLED: + / ✓ i lista og på detaljsiden,
 // plukklistelinja over mobilmenyen, «💡 Vis alle med LED» (én farge per del i WLED-payloaden og i lista), arket med ± / Fjern / Tøm,
 // «Ta ut av lager» med angre, lista overlever omlasting (lokalt + GET|PUT /picklist), og Feilsøk LED trinn for trinn – uten JS-feil og uten vannrett scroll.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { MAX_LIT79, PALETTE79, palette79, colorAt79, hex79, normPick79, toggle79, setQty79, has79, pickBody79, locateBody79, colorsOf79, skippedOf79, hint79, steps79, report79 } from '../public/js/skjold79-logic.js';
+import { MAX_LIT79, PALETTE79, palette79, colorAt79, hex79, normPick79, toggle79, setQty79, has79, pickBody79, locateBody79, colorsOf79, skippedOf79, hint79, steps79, report79 } from '../public/js/skjold-plukk-regler.js';
 
 const read = (p) => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8');
 
@@ -64,7 +64,7 @@ test('Feilsøk LED: hint ut fra svarene og rapporten', () => {
 });
 
 test('modulen: API-kontrakten, tekster og sikkerhet', () => {
-  const js = read('public/js/skjold79-pick.js');
+  const js = read('public/js/skjold-plukk.js');
   for (const s of ["'/picklist'", "'/picklist/take'", "'/picklist/undo'", '/leds/diagnose`', "step: 'check'", "step: 'red'", "step: 'blue'", "step: 'restore'", 'locateBody79(P.items)', "localStorage.getItem(LS)", "'sk79_pick'", 'e?.status === 404']) assert.ok(js.includes(s), `mangler ${s}`);
   for (const s of ['Plukkliste (', 'Vis alle med LED', 'Slå av', 'Ta ut av lager', 'Tøm', 'Fjern', 'Angre', 'Feilsøk LED', 'Lyste stripa rødt?', 'Lyste én LED blått?', 'Kopier rapport', '+ Plukkliste', '✓ I plukklista']) assert.ok(js.includes(s), `mangler «${s}»`);
   assert.match(js, /haptic\(/, 'haptikk på + der det finnes');
@@ -77,8 +77,8 @@ test('modulen: API-kontrakten, tekster og sikkerhet', () => {
 });
 
 test('koblet inn i Skjold Lab og LED-oppsettet', () => {
-  const m = read('public/js/skjold76.js'), l = read('public/js/skjold78-leds.js');
-  assert.match(m, /from '\.\/skjold79-pick\.js'/);
+  const m = read('public/js/skjold.js'), l = read('public/js/skjold-led.js');
+  assert.match(m, /from '\.\/skjold-plukk\.js'/);
   assert.match(m, /\$\{lb\}\$\{pickBtn79\(p\)\}/, '+ ved hvert treff');
   assert.match(m, /pickBtn79\(p, true\)/, '+ på detaljsiden');
   assert.match(m, /pickShellHtml79\(\)/);

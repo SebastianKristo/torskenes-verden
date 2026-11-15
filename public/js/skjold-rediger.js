@@ -6,11 +6,11 @@
 //   CSV-eksport og -import (forhåndsvisning med ?dry=1).
 import { esc, isMobile, haptic } from './util.js';
 import { toast } from './toast.js';
-import { S, sk, write, upload, go, paintMain, paintSide, locOf, locText, photoUrls, cabById, loadCabs, loadMap, refreshAll, loadPart } from './skjold76.js';
-import { overlayGrid76, layoutPhoto76, cornersOk76, long76 } from './skjold76-draw.js';
-import { suggestBtn77, suggestCard77, findBtn77, finderHtml77, webPending77, onNewPhotos77, aiClick77, mountEdit77, saveWeb77 } from './skjold77-ai.js'; // prompt 77
-import { ledSetupHtml78 } from './skjold78-leds.js'; // prompt 78: lys over skuffene
-import { longAt81, presetBoxHtml81, presetConfirm81, PRESET81, PRESET_SIZES81 } from './skjold81-span.js'; // prompt 81: Skjold Lab-hylla (3D-print)
+import { S, sk, write, upload, go, paintMain, paintSide, locOf, locText, photoUrls, cabById, loadCabs, loadMap, refreshAll, loadPart } from './skjold.js';
+import { overlayGrid76, layoutPhoto76, cornersOk76, long76 } from './skjold-tegning.js';
+import { suggestBtn77, suggestCard77, findBtn77, finderHtml77, webPending77, onNewPhotos77, aiClick77, mountEdit77, saveWeb77 } from './skjold-ai.js'; // prompt 77
+import { ledSetupHtml78 } from './skjold-led.js'; // prompt 78: lys over skuffene
+import { longAt81, presetBoxHtml81, presetConfirm81, PRESET81, PRESET_SIZES81 } from './skjold-skuffer.js'; // prompt 81: Skjold Lab-hylla (3D-print)
 
 const UNITS = ['stk', 'm', 'cm', 'g', 'kg', 'ml', 'pk', 'par', 'rull', 'sett'];
 const SPEC_KEYS = ['verdi', 'toleranse', 'pakke', 'spenning', 'strøm', 'effekt', 'lengde', 'diameter', 'gjenge', 'materiale', 'farge', 'type'];
@@ -126,7 +126,7 @@ export function editMount(el) {
   if (!S.form.id && !S.form.name && !S.form.ai && !S.form.img) setTimeout(() => f.elements.name?.focus({ preventScroll: true }), 0);
   mountEdit77(f, S.form);
 }
-/** Fra skjold76.js: felt endret ({target}) eller skuff valgt i tegningen ({pick}). */
+/** Fra skjold.js: felt endret ({target}) eller skuff valgt i tegningen ({pick}). */
 export function editInput({ target, pick }) {
   if (!S.form) return;
   if (pick) {

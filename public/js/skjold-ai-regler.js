@@ -1,5 +1,5 @@
 // Prompt 77 (SKJAIWEB): rene hjelpere for Glimt i Skjold Lab (ingen DOM, testes i test/p77-web.test.js).
-// Brukes av skjold77-ai.js: slå sammen specs/tags fra forslaget, sikkerhet, dekodet tekst (fargebånd/SMD/kondensator),
+// Brukes av skjold-ai.js: slå sammen specs/tags fra forslaget, sikkerhet, dekodet tekst (fargebånd/SMD/kondensator),
 // radene i forslagskortet og avkrysning i Rydd opp.
 /** Specs-objekt fra skjemaets rader ([[k, v], …]), uten tomme. */
 export const specsObj77 = (rows) => Object.fromEntries((rows ?? []).map(([k, v]) => [String(k ?? '').trim(), String(v ?? '').trim()]).filter(([k, v]) => k && v));

@@ -9,12 +9,12 @@
 //   «Lyste én LED blått? Ja/Nei», og hint ut fra svarene.
 import { esc, haptic } from './util.js';
 import { toast } from './toast.js';
-import { S, sk, write, locOf, locText, cabById, thumbHtml, thumbOf, paintMain, loadPart } from './skjold76.js';
-import { short76 } from './skjold76-draw.js';
-import { M as M78, locate78, off78, cfgOf78, ledSetupHtml78 } from './skjold78-leds.js';
-import { secsLeft78 } from './skjold78-logic.js';
-import { pickTargetHtml82, pickTarget82, afterPickTake82 } from './skjold82-projects.js'; // prompt 82: «Til produkt» ved «Ta ut av lager»
-import { MAX_LIT79, normPick79, has79, toggle79, setQty79, snap79, pickBody79, locateBody79, colorsOf79, skippedOf79, hint79, steps79, report79 } from './skjold79-logic.js';
+import { S, sk, write, locOf, locText, cabById, thumbHtml, thumbOf, paintMain, loadPart } from './skjold.js';
+import { short76 } from './skjold-tegning.js';
+import { M as M78, locate78, off78, cfgOf78, ledSetupHtml78 } from './skjold-led.js';
+import { secsLeft78 } from './skjold-led-regler.js';
+import { pickTargetHtml82, pickTarget82, afterPickTake82 } from './skjold-produkter.js'; // prompt 82: «Til produkt» ved «Ta ut av lager»
+import { MAX_LIT79, normPick79, has79, toggle79, setQty79, snap79, pickBody79, locateBody79, colorsOf79, skippedOf79, hint79, steps79, report79 } from './skjold-plukk-regler.js';
 import { pageCss } from './lib/page-css.js';
 
 pageCss('skjold');
@@ -418,7 +418,7 @@ async function closeDiag() {
 
 /* ================= Hendelser ================= */
 
-/** Klikk i Skjold Lab (fra bind i skjold76.js). true = håndtert. */
+/** Klikk i Skjold Lab (fra bind i skjold.js). true = håndtert. */
 export function click79(t) {
   const add = t.closest('[data-sk79-add]'); if (add) { toggle(add.dataset.sk79Add); return true; }
   if (t.closest('[data-sk79-scrim]')) { closeSheet(); return true; }

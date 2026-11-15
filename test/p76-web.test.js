@@ -5,7 +5,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { homography76, mapPt76, matrix3d76, cornersOk76, drawCabinet76, overlayGrid76, ownLabel76 } from '../public/js/skjold76-draw.js';
+import { homography76, mapPt76, matrix3d76, cornersOk76, drawCabinet76, overlayGrid76, ownLabel76 } from '../public/js/skjold-tegning.js';
 
 const read = (p) => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8');
 
@@ -51,7 +51,7 @@ test('animasjon: bare opacity/transform, 2 s puls, redusert bevegelse respektere
 });
 
 test('modulen: API-kontrakten, matrix3d, offline-cache, angre', () => {
-  const js = read('public/js/skjold76.js'), ed = read('public/js/skjold76-edit.js');
+  const js = read('public/js/skjold.js'), ed = read('public/js/skjold-rediger.js');
   for (const s of ["'/cabinets'", '/map`', '/parts?', '/suggest?q=', "'/categories'", '/qty`', '/move`', '/restore`', '/drawers/']) assert.ok(js.includes(s), `mangler ${s}`);
   for (const s of ["'/free'", '/corners`', '/photo`', '/photos`', '/import', '/api/skjold/export.csv']) assert.ok(ed.includes(s), `mangler ${s}`);
   assert.match(js, /\/api\/skjold\/labels/);
@@ -59,7 +59,7 @@ test('modulen: API-kontrakten, matrix3d, offline-cache, angre', () => {
   assert.match(js, /const LS = 'sk76_cache'/);
   assert.match(js, /Endringer krever nett/);
   assert.match(js, /data-sk76-mode="tegning">Tegning<\/button>.*data-sk76-mode="bilde">Bilde/);
-  assert.match(read('public/js/skjold76-draw.js'), /return `matrix3d\(/);
+  assert.match(read('public/js/skjold-tegning.js'), /return `matrix3d\(/);
   assert.match(ed, /capture="environment"/, 'kamera på mobil');
   assert.match(ed, /addEventListener\('drop'/, 'dra-og-slipp');
   assert.match(ed, /colsFromWidth76\(270\)/, 'tilleggsskap fra 27 cm');
@@ -70,7 +70,7 @@ test('modulen: API-kontrakten, matrix3d, offline-cache, angre', () => {
 test('ruting, meny, Mer og flis på Hjem', () => {
   const app = read('public/js/app.js');
   assert.match(app, /skjold: \[null, renderSkjold76\]/); // Fase 3: ROUTES har [modul, tegnefunksjon]; Skjold lastes selv (under)
-  assert.match(app, /import\('\.\/skjold76\.js'\)\.then\(\(m\) => m\.mount\(view\)\)/);
+  assert.match(app, /import\('\.\/skjold\.js'\)\.then\(\(m\) => m\.mount\(view\)\)/);
   assert.match(app, /!\(route === 'skjold' && current\(\) === 'skjold'\)/);
   assert.match(read('public/app.html'), /<a href="#\/skjold" data-r="skjold">Skjold Lab<\/a>/);
   assert.match(read('public/js/profile.js'), /\['skjold', 'Skjold Lab'\]\]/);

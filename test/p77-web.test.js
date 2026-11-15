@@ -1,11 +1,11 @@
-// Prompt 77 (SKJAIWEB): Glimt i Skjold Lab på web. De rene hjelperne (skjold77-logic.js) testes direkte, resten er kildesjekker.
+// Prompt 77 (SKJAIWEB): Glimt i Skjold Lab på web. De rene hjelperne (skjold-ai-regler.js) testes direkte, resten er kildesjekker.
 // Oppførselen er sjekket i Chromium (Playwright, 1440 og 390 px, port 4802): ✦ Foreslå med kort og ✓/«Bruk alle», auto-forslag ved
 // nytt bilde («Glimt tenker …»), Finn bilde (rutenett, forhåndsvisning, lagring), ⋯ → Rydd opp med fremdrift og «Godta valgte»,
 // ⚙-panelet og Innstillinger → Moduler → Skjold Lab – uten JS-feil og uten vannrett scroll.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { mergeSpecs77, mergeTags77, conf77, decodedLines77, suggRows77, specsObj77, tidyChanged77, tidyDefaultOn77, tidyRunning77 } from '../public/js/skjold77-logic.js';
+import { mergeSpecs77, mergeTags77, conf77, decodedLines77, suggRows77, specsObj77, tidyChanged77, tidyDefaultOn77, tidyRunning77 } from '../public/js/skjold-ai-regler.js';
 
 const read = (p) => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8');
 
@@ -57,7 +57,7 @@ test('Rydd opp: endret, avkrysset som standard og om jobben kjører', () => {
 });
 
 test('modulen: API-kontrakten, tekster og sikkerhet', () => {
-  const js = read('public/js/skjold77-ai.js');
+  const js = read('public/js/skjold-ai.js');
   for (const s of ["'/ai/suggest'", "'/api/skjold/ai/suggest'", "'/ai/images'", '/photos/from-search`', "'/api/skjold/ai/tidy'", '/ai/tidy/${', '/skip`', '/apply`', '/history/${']) assert.ok(js.includes(s), `mangler ${s}`);
   for (const s of ['✦ Foreslå', 'Glimt tenker …', 'Bruk alle', 'Finn bilde', 'Bruk bildet', 'Rydd opp med Glimt', 'Godta valgte', 'Hopp over', 'class="sk77-new">ny<', 'Finn bilder på nett', 'Foreslå automatisk når jeg tar bilde']) assert.ok(js.includes(s), `mangler «${s}»`);
   assert.match(js, /75_000 : 40_000/, 'tidsavbrudd med og uten bilde');
@@ -65,14 +65,14 @@ test('modulen: API-kontrakten, tekster og sikkerhet', () => {
   assert.match(js, /\/\^\\\/\(\?!\\\/\)\/\.test\(String\(x\?\.thumbUrl/, 'bare miniatyrer via serverens proxy');
   assert.match(js, /autoSuggestOnPhoto === false/);
   assert.doesNotMatch(js, /\son(error|load|click)="[a-z]/, 'CSP: ingen inline hendelser');
-  const set = read('public/js/settings-skjold77.js');
+  const set = read('public/js/settings-skjold.js');
   assert.match(set, /'\/skjold\/ai\/settings'/);
   assert.match(set, /webImages: true, autoSuggestOnPhoto: true/, 'begge på som standard');
 });
 
 test('koblet inn i Skjold Lab, skjemaet og Innstillinger', () => {
-  const m = read('public/js/skjold76.js'), ed = read('public/js/skjold76-edit.js');
-  assert.match(m, /from '\.\/skjold77-ai\.js'/);
+  const m = read('public/js/skjold.js'), ed = read('public/js/skjold-rediger.js');
+  assert.match(m, /from '\.\/skjold-ai\.js'/);
   assert.match(m, /tidyRoute77\(seg\)/);
   assert.match(m, /v === 'tidy' \? tidyHtml77\(\)/);
   assert.match(m, /data-sk77-head/);

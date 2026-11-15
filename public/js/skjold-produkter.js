@@ -6,8 +6,8 @@
 // - Plukklista: «Til produkt: [ingen / produkt / Nytt produkt …]» ved «Ta ut av lager» (pickTarget82 → POST /picklist/take {projectId|projectName}).
 import { esc, haptic } from './util.js';
 import { toast } from './toast.js';
-import { S, sk, write, thumbHtml, paintMain, loadPart, go } from './skjold76.js';
-import { qtyFmt82, money82, clampQty82, target82, checkoutBody82, normProjects82, activeProjects82, summary82, lines82, hasActive82, usedIn82, csv82, csvName82, shortText82, MAX_NAME82 } from './skjold82-logic.js';
+import { S, sk, write, thumbHtml, paintMain, loadPart, go } from './skjold.js';
+import { qtyFmt82, money82, clampQty82, target82, checkoutBody82, normProjects82, activeProjects82, summary82, lines82, hasActive82, usedIn82, csv82, csvName82, shortText82, MAX_NAME82 } from './skjold-produkter-regler.js';
 import { pageCss } from './lib/page-css.js';
 
 pageCss('skjold');
