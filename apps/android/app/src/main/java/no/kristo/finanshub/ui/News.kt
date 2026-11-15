@@ -36,6 +36,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import no.kristo.finanshub.*
+import no.kristo.finanshub.ui.designsystem.HomelabType
+import no.kristo.finanshub.ui.designsystem.DsPalette
 
 /*
  * Nyhetsleser (Nyhetsleser.dc.html, variant mobil): morgenavis med kategorifaner, ✦ AI-sammendrag øverst og
@@ -61,7 +63,7 @@ internal fun NewsReader(vm: AppViewModel) {
     // Prompt 46: gamle lenker til «Kilder og AI» går til Innstillinger → Nyheter (ingen innstillinger på Nyheter-siden).
     LaunchedEffect(vm.newsSettings) { if (vm.newsSettings) vm.openNewsSettings46() }
     val tabs = vm.newsTabs46(cats)
-    // Prompt 73 (NEWS73): lagrede artikler (News73.kt) – lista og offline-kopiene hentes når leseren åpnes.
+    // Prompt 73 (NEWS73): lagrede artikler (NewsSaved.kt) – lista og offline-kopiene hentes når leseren åpnes.
     LaunchedEffect(Unit) { News73.load(vm) }
     Box(Modifier.fillMaxSize().background(p.bg).clickable(remember { MutableInteractionSource() }, null) {}.statusBarsPadding()) {
         Column(Modifier.fillMaxSize()) {
@@ -69,7 +71,7 @@ internal fun NewsReader(vm: AppViewModel) {
                 Box(
                     Modifier.height(36.dp).clip(CircleShape).border(1.dp, p.line, CircleShape).clickable(onClickLabel = "Tilbake") { vm.newsOpen = false }.padding(start = 10.dp, end = 14.dp),
                     contentAlignment = Alignment.Center,
-                ) { Text("‹ Tilbake", color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 13.sp) }
+                ) { Text("‹ Tilbake", color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.subheadline.fontSize) }
                 Column(Modifier.weight(1f)) {
                     val upd = d?.feeds?.size ?: 0
                     PLabel(if (News73.showTab) "Nyhetsleser · ${News73.items.size} lagret" else "Nyhetsleser · $upd kilder", p.lab)
@@ -81,7 +83,7 @@ internal fun NewsReader(vm: AppViewModel) {
                     Box(
                         Modifier.size(40.dp).clip(CircleShape).background(p.card).border(1.dp, p.line, CircleShape).clickable(onClickLabel = "Mer") { menu = true },
                         contentAlignment = Alignment.Center,
-                    ) { Text("⋯", modifier = Modifier.semantics { contentDescription = "Mer" }, color = p.ink, fontSize = 18.sp, fontWeight = FontWeight.Bold) }
+                    ) { Text("⋯", modifier = Modifier.semantics { contentDescription = "Mer" }, color = p.ink, fontSize = HomelabType.headline.fontSize, fontWeight = FontWeight.Bold) }
                     androidx.compose.material3.DropdownMenu(menu, { menu = false }, containerColor = p.card) {
                         androidx.compose.material3.DropdownMenuItem({ Text("Nyhetsinnstillinger", color = p.ink) }, { menu = false; vm.openNewsSettings46() })
                         androidx.compose.material3.DropdownMenuItem({ Text("Hent nye saker nå", color = p.ink) }, { menu = false; vm.refreshNews() })
@@ -96,7 +98,7 @@ internal fun NewsReader(vm: AppViewModel) {
             Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
             if (News73.showTab) News73List(vm, p, Modifier.weight(1f).fillMaxWidth())
             else LazyColumn(Modifier.weight(1f).fillMaxWidth(), contentPadding = PaddingValues(18.dp, 16.dp, 18.dp, 40.dp)) {
-                vm.newsError?.let { e -> item { Text(e, color = p.lab, fontSize = 13.sp, modifier = Modifier.padding(bottom = 10.dp)) } }
+                vm.newsError?.let { e -> item { Text(e, color = p.lab, fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.padding(bottom = 10.dp)) } }
                 if (d == null && vm.newsError == null) item { Box(Modifier.fillMaxWidth().padding(40.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = p.ink) } }
                 if (d != null) {
                     val lead = if (d.aiSummary) d.digest else d.items.firstOrNull()?.title
@@ -105,7 +107,7 @@ internal fun NewsReader(vm: AppViewModel) {
                     // har sitt eget øverst (skjelett mens det lages, skjult ved feil eller færre enn 3 saker).
                     if (vm.newsCat == "siste" || !vm.p46.news.catSummary) { if (d.items.isNotEmpty() || !lead.isNullOrBlank()) item { NewsGlimtEntry40(vm, lead) } }
                     else item(key = "catsum-" + vm.newsCat) { CatSummary46(vm, vm.newsCat, d.items) }
-                    if (d.items.isEmpty()) item { Text("Ingen saker i denne kategorien.", color = p.mut, fontSize = 14.sp, modifier = Modifier.padding(vertical = 12.dp)) }
+                    if (d.items.isEmpty()) item { Text("Ingen saker i denne kategorien.", color = p.mut, fontSize = HomelabType.callout.fontSize, modifier = Modifier.padding(vertical = 12.dp)) }
                     items(d.items.size) { i ->
                         val x = d.items[i]
                         // Prompt 73: langt trykk gir hold-menyen med «Lagre» / «Fjern fra lagret» og «Åpne original».
@@ -123,9 +125,9 @@ internal fun NewsReader(vm: AppViewModel) {
                             ) {
                                 if (vm.newsCat == "siste") PLabel(catName(x.category ?: "norge", cats), p.lab, modifier = Modifier.width(74.dp).padding(top = 3.dp))
                                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                    Text(x.title, color = p.ink, fontSize = 15.sp, lineHeight = 20.sp)
+                                    Text(x.title, color = p.ink, fontSize = HomelabType.callout.fontSize, lineHeight = 20.sp)
                                     Text(listOf(x.feed, newsTime(x.published)).filter(String::isNotBlank).joinToString(" · ") + if (x.ai && d.aiCategorize) " · ✦ AI" else "",
-                                        color = p.mut, fontSize = 12.sp)
+                                        color = p.mut, fontSize = HomelabType.footnote.fontSize)
                                 }
                                 NewsImage27(vm, x.image, x.feed, Modifier.size(76.dp), 12.dp)
                             }
@@ -161,42 +163,42 @@ internal fun NewsSettingsContent46(vm: AppViewModel, p: PaperPal) {
             NewsIconsSection23(vm, p, vm.newsTabs46(cats))
             Row(verticalAlignment = Alignment.Bottom) {
                 PLabel("Adresser · ${d?.feeds?.size ?: 0}", p.lab, modifier = Modifier.weight(1f))
-                Text("Velg kategori per kilde", color = p.mut, fontSize = 12.sp)
+                Text("Velg kategori per kilde", color = p.mut, fontSize = HomelabType.footnote.fontSize)
             }
             Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(p.card)) {
                 val feeds = d?.feeds ?: emptyList()
-                if (feeds.isEmpty()) Text("Ingen kilder ennå.", color = p.mut, fontSize = 13.sp, modifier = Modifier.padding(14.dp))
+                if (feeds.isEmpty()) Text("Ingen kilder ennå.", color = p.mut, fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.padding(14.dp))
                 feeds.forEachIndexed { i, f ->
                     if (i > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
                     Row(Modifier.fillMaxWidth().padding(12.dp, 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         FeedIcon46(vm, f, p)
                         Column(Modifier.weight(1f)) {
-                            Text(f.name, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text(f.lastError ?: f.url, color = if (f.lastError != null) p.lab else p.mut, fontFamily = PaperFonts.mono, fontSize = 11.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(f.name, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(f.lastError ?: f.url, color = if (f.lastError != null) p.lab else p.mut, fontFamily = PaperFonts.mono, fontSize = HomelabType.caption.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
                         FeedCatMenu46(vm, f, p, cats)
                         Box(Modifier.size(28.dp).clip(RoundedCornerShape(8.dp)).clickable(onClickLabel = "Fjern ${f.name}") { vm.removeFeed(f.id) }, contentAlignment = Alignment.Center) {
-                            Text("×", modifier = Modifier.semantics { contentDescription = "Fjern" }, color = p.mut, fontSize = 16.sp)
+                            Text("×", modifier = Modifier.semantics { contentDescription = "Fjern" }, color = p.mut, fontSize = HomelabType.body.fontSize)
                         }
                     }
                 }
             }
             BasicTextField(
                 nf, { nf = it }, singleLine = true,
-                textStyle = TextStyle(color = p.ink, fontSize = 14.sp, fontFamily = PaperFonts.sans),
+                textStyle = TextStyle(color = p.ink, fontSize = HomelabType.callout.fontSize, fontFamily = PaperFonts.sans),
                 cursorBrush = SolidColor(p.lab),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Done),
                 keyboardActions = KeyboardActions(onDone = { if (nf.isNotBlank()) { vm.addFeed(nf); nf = "" } }),
                 modifier = Modifier.fillMaxWidth().height(46.dp).clip(RoundedCornerShape(14.dp)).background(p.card).border(1.dp, p.line, RoundedCornerShape(14.dp)).padding(horizontal = 14.dp),
-                decorationBox = { inner -> Box(contentAlignment = Alignment.CenterStart) { if (nf.isEmpty()) Text("https://www.nrk.no/toppsaker.rss", color = p.mut, fontSize = 14.sp); inner() } },
+                decorationBox = { inner -> Box(contentAlignment = Alignment.CenterStart) { if (nf.isEmpty()) Text("https://www.nrk.no/toppsaker.rss", color = p.mut, fontSize = HomelabType.callout.fontSize); inner() } },
             )
             Box(
                 Modifier.fillMaxWidth().height(46.dp).clip(RoundedCornerShape(14.dp)).background(p.lab).clickable { if (nf.isNotBlank()) { vm.addFeed(nf); nf = "" } },
                 contentAlignment = Alignment.Center,
-            ) { if (vm.newsBusy) CircularProgressIndicator(color = p.onLab, modifier = Modifier.size(20.dp), strokeWidth = 2.dp) else Text("+ Legg til adresse", color = p.onLab, fontWeight = FontWeight.Bold, fontSize = 14.sp) }
-            Text(if (d?.aiCategorize != false) "✦ AI finner navnet på kilden og foreslår kategori. Ikonet hentes fra nettstedet." else "Kategorien settes til Auto.", color = p.mut, fontSize = 12.sp)
+            ) { if (vm.newsBusy) CircularProgressIndicator(color = p.onLab, modifier = Modifier.size(20.dp), strokeWidth = 2.dp) else Text("+ Legg til adresse", color = p.onLab, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize) }
+            Text(if (d?.aiCategorize != false) "✦ AI finner navnet på kilden og foreslår kategori. Ikonet hentes fra nettstedet." else "Kategorien settes til Auto.", color = p.mut, fontSize = HomelabType.footnote.fontSize)
             Box(Modifier.fillMaxWidth().height(44.dp).clip(RoundedCornerShape(14.dp)).border(1.dp, p.line, RoundedCornerShape(14.dp)).clickable { vm.refreshNews() }, contentAlignment = Alignment.Center) {
-                Text("Hent nye saker nå", color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                Text("Hent nye saker nå", color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize)
             }
     }
     // Ikonvelgeren i et eget vindu (Innstillinger er en LazyColumn – et rutenett inni den ville fått uendelig høyde).
@@ -210,10 +212,10 @@ internal fun NewsToggle(title: String, sub: String, on: Boolean, p: PaperPal, to
     if (top) Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
     Row(Modifier.fillMaxWidth().clickable { onChange(!on) }.padding(14.dp, 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         Column(Modifier.weight(1f)) {
-            Text(title, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 14.5.sp)
-            Text(sub, color = p.mut, fontSize = 12.5.sp, lineHeight = 17.sp)
+            Text(title, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize)
+            Text(sub, color = p.mut, fontSize = HomelabType.footnote.fontSize, lineHeight = 17.sp)
         }
-        Box(Modifier.size(46.dp, 28.dp).clip(CircleShape).background(if (on) Color(0xFF2F7A4F) else Color(0xFF9A958A)).padding(3.dp), contentAlignment = if (on) Alignment.CenterEnd else Alignment.CenterStart) {
+        Box(Modifier.size(46.dp, 28.dp).clip(CircleShape).background(if (on) DsPalette.PapirLys.success else Color(0xFF9A958A)).padding(3.dp), contentAlignment = if (on) Alignment.CenterEnd else Alignment.CenterStart) {
             Box(Modifier.size(22.dp).clip(CircleShape).background(Color.White))
         }
     }

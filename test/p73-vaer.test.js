@@ -22,11 +22,11 @@ const web = (f) => code(join(ROOT, 'public', f));
 /* ---------------- 1. Posisjonsboksen er borte ---------------- */
 
 test('Android: HereCard45 brukes ikke lenger på værsiden', () => {
-  assert.doesNotMatch(kt('ui/Weather15.kt'), /HereCard45\(/);
+  assert.doesNotMatch(kt('ui/WeatherPage.kt'), /HereCard45\(/);
 });
 
 test('Android: heroen sier «MIN POSISJON» bare når Min posisjon er valgt', () => {
-  const s = kt('ui/Weather15.kt');
+  const s = kt('ui/WeatherPage.kt');
   assert.match(s, /private fun Header\(w: WeatherFull, mine: Boolean, modifier: Modifier\)/);
   assert.match(s, /if \(mine \|\| w\.placeId == "pos" \|\| w\.placeId == "__gps"\) "MIN POSISJON" else "VÆRET I"/);
   assert.equal((s.match(/Header\(w, vm\.wxGps46\(\)/g) ?? []).length, 2, 'både telefon og Fold sender valget inn');
@@ -46,7 +46,7 @@ test('PWA: hereCard er tatt ut av Vær-hovedsiden, Min posisjon finnes fortsatt 
 /* ---------------- 2. Trykk på en dag ---------------- */
 
 test('Android: dagradene er én trykkflate (min. 44 dp) med terskel, haptikk og skjermleser-klikk', () => {
-  const t = kt('ui/Vaer73.kt');
+  const t = kt('ui/WeatherPage.kt');
   assert.match(t, /internal fun Modifier\.wxDayTap73\(label: String, onTap: \(\) -> Unit\): Modifier/);
   assert.match(t, /awaitFirstDown\(requireUnconsumed = false, pass = PointerEventPass\.Initial\)/, 'ingen forelder kan spise ned-trykket');
   assert.match(t, /10\.dp\.toPx\(\)/, 'terskel 10 dp før det regnes som scroll');
@@ -55,18 +55,18 @@ test('Android: dagradene er én trykkflate (min. 44 dp) med terskel, haptikk og 
   assert.match(t, /Haptics\.select\(\); onTap\(\)/);
   assert.match(t, /onClick\(label = "Åpne \$label"\)/);
   assert.doesNotMatch(t, /\.consume\(\)/, 'trykket konsumerer ikke noe (scroll virker som før)');
-  for (const f of ['ui/Weather15.kt', 'ui/Weather32b.kt']) {
+  for (const f of ['ui/WeatherPage.kt', 'ui/WeatherRainWind.kt']) {
     const s = kt(f);
     assert.match(s, /heightIn\(min = 44\.dp\)\.wxDayTap73\(lbl\) \{ open\(k\) \}/, f);
     assert.doesNotMatch(s, /\.clickable \{ open\(k\) \}/, f);
   }
-  assert.doesNotMatch(kt('ui/Weather15.kt'), /Platform|Build\.VERSION.*weatherSheetDay/, 'ingen plattformsperre');
-  assert.match(kt('ui/Weather15.kt'), /ForholdSheet\(w, d, \{ vm\.weatherSheetDay = it \}\)/);
+  assert.doesNotMatch(kt('ui/WeatherPage.kt'), /Platform|Build\.VERSION.*weatherSheetDay/, 'ingen plattformsperre');
+  assert.match(kt('ui/WeatherPage.kt'), /ForholdSheet\(w, d, \{ vm\.weatherSheetDay = it \}\)/);
 });
 
 test('Android: lista har luft under de flytende knappene, og bunnlinja fanger bare trykk på knappene', () => {
-  assert.match(kt('ui/Weather15.kt'), /bottom \+ WX_BAR28 \+ 16\.dp/);
-  const b = kt('ui/Weather28.kt');
+  assert.match(kt('ui/WeatherPage.kt'), /bottom \+ WX_BAR28 \+ 16\.dp/);
+  const b = kt('ui/WeatherBackground.kt');
   const bar = b.slice(b.indexOf('fun WxBottomBar28'), b.indexOf('private fun WxBarBtn28'));
   assert.doesNotMatch(bar, /clickable|pointerInput/, 'raden rundt knappene tar ikke trykk');
 });
@@ -84,13 +84,14 @@ test('Android: én VaerCloseButton (42 dp, 44 dp trykkflate), ingen egne variant
   assert.match(u, /internal fun VaerCloseButton\(dark: Boolean = false, onClick: \(\) -> Unit\)/);
   assert.match(u, /Modifier\.size\(44\.dp\)/);
   assert.match(u, /size\(42\.dp\)\.clip\(CircleShape\)\.background\(if \(dark\) Color\(0x9E0A1423\) else Color\.White\.copy\(alpha = \.22f\)\)/);
-  assert.match(kt('ui/Weather32b.kt'), /internal fun WxClose32b\(onClick: \(\) -> Unit\) = VaerCloseButton\(onClick = onClick\)/);
-  const w22 = kt('ui/Weather22.kt');
+  // Fase 5: den ubrukte WxClose32b er fjernet; ingen egen lukkeknapp i Forhold-visningen.
+  assert.doesNotMatch(kt('ui/WeatherRainWind.kt'), /fun WxClose32b|Text\("✕"/);
+  const w22 = kt('ui/WeatherSheets.kt');
   assert.doesNotMatch(w22, /SheetButton30\("Ferdig"/);
   assert.match(w22, /VaerCloseButton\(dark = true, onClick = close\)/, 'kartet: mørk glass');
   assert.match(w22, /VaerCloseButton\(onClick = onClose\)/, 'detaljarkene');
-  assert.match(kt('ui/Weather39.kt'), /else VaerCloseButton \{ close\(\) \}/, 'Yr mot Storm: ✕, «Ferdig» bare ved redigering');
-  assert.match(kt('ui/Weather15.kt'), /VaerCloseButton \{ Haptics\.back\(\); vm\.weatherOpen = false \}/);
+  assert.match(kt('ui/WeatherCompare.kt'), /else VaerCloseButton \{ close\(\) \}/, 'Yr mot Storm: ✕, «Ferdig» bare ved redigering');
+  assert.match(kt('ui/WeatherPage.kt'), /VaerCloseButton \{ Haptics\.back\(\); vm\.weatherOpen = false \}/);
 });
 
 test('iOS: én felles VaerCloseButton brukes i hovedsiden, arkene, Steder, kartet og Yr mot Storm', () => {
@@ -136,7 +137,7 @@ test('Android: modus-pillen har glansen inni, hårfin kant og ingen skygge/strek
   assert.match(seg, /\.graphicsLayer \{ scaleX = 1f \+ \.18f \* st; scaleY = 1f - \.12f \* st \}\s*\.vaerPillGlass73\(\)/, 'glansen skalerer med pillen');
   assert.doesNotMatch(seg, /\.shadow\(/, 'ingen elevation/skygge');
   assert.doesNotMatch(seg, /drawLine\(/, 'ingen egen strek');
-  const v = kt('ui/Vaer73.kt');
+  const v = kt('ui/WeatherPage.kt');
   const g = v.slice(v.indexOf('fun Modifier.vaerPillGlass73'));
   assert.match(g, /\.clip\(CircleShape\)/);
   assert.match(g, /Color\.White\.copy\(alpha = \.34f\), Color\.White\.copy\(alpha = \.16f\)/);

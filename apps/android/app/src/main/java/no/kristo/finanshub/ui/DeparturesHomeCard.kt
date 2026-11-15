@@ -1,0 +1,168 @@
+package no.kristo.finanshub.ui
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import kotlinx.coroutines.delay
+import no.kristo.finanshub.*
+import no.kristo.finanshub.ui.designsystem.HomelabType
+import no.kristo.finanshub.ui.designsystem.HomelabTheme
+
+/*
+ * Prompt 27 (ANDROID-B): Ruter-kortet på Hjem (claude-code-ruter-hjem.md, fasit «av.home» i Mobil Papir App.dc.html).
+ *  - «Velg stopp» på kortet åpner arket: kryss av opptil 3 av Mine stopp (rekkefølgen følger Mine stopp), 1–4 avganger per stopp.
+ *  - Én gruppe per stopp (navn over når flere; da høyst 2 avganger per stopp), sanntid hvert 30. s mens Hjem er synlig.
+ *  - «Legg til eller fjern stopp ›» åpner Avganger i redigeringsmodus. Valget lagres per konto og på serveren (home_departures).
+ */
+
+/** true når brukeren har egne stopp (da tegnes RuterHome27, ellers det gamle kortet fra /mobile/home). */
+@Composable
+internal fun homeRuter27(vm: AppViewModel): Boolean {
+    LaunchedEffect(vm.account?.id, vm.base) { vm.loadHomeDep27() }
+    // Tilbake fra Avganger (stopp lagt til, fjernet eller flyttet): hent Mine stopp på nytt.
+    LaunchedEffect(vm.ruterOpen) { if (!vm.ruterOpen && vm.b27.homeStops != null) runCatching { vm.refreshHomeDeps27(stops = true) } }
+    // Prompt 28: arket åpnes fra «✎ Rediger widget» i wiggle-modus, også når kortet ennå ikke har egne stopp.
+    if (vm.b27.homeSheet) VelgStopp27(vm)
+    return !vm.b27.homeStops.isNullOrEmpty()
+}
+
+@Composable
+internal fun RuterHome27(vm: AppViewModel, modifier: Modifier = Modifier) {
+    val p = HomelabTheme.colors
+    val s = vm.b27
+    val life = LocalLifecycleOwner.current.lifecycle
+    // Sanntid: nye tider hvert 30. sekund mens Hjem er synlig (ikke når Avganger ligger over eller appen er i bakgrunnen).
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(30_000)
+            if (!vm.ruterOpen && life.currentState.isAtLeast(Lifecycle.State.RESUMED)) runCatching { vm.refreshHomeDeps27() }
+        }
+    }
+    val shown = vm.homeShown27()
+    val multi = shown.size > 1
+    // Prompt 28 (claude-code-ruter-hjem.md): tittel AVGANGER · STOPP1 · STOPP2, ingen «Velg stopp» (stopp velges via «✎ Rediger widget»),
+    // én flat liste: flere stopp → neste avgang fra hvert stopp; ett stopp → de neste N.
+    val title = (listOf("Avganger") + shown.map { it.name }).joinToString(" · ")
+    PCard(modifier, onClick = { vm.openRuter() }) {
+        Column(Modifier.padding(16.dp, 14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                PLabel(title, modifier = Modifier.weight(1f))
+                Text("sanntid ›", color = p.textTertiary, fontSize = HomelabType.footnote.fontSize)
+            }
+            val rows = if (multi) shown.mapNotNull { st -> (s.homeDeps[st.id]?.departures ?: emptyList()).firstOrNull { !it.cancelled } }
+                else shown.firstOrNull()?.let { st -> (s.homeDeps[st.id]?.departures ?: emptyList()).filter { !it.cancelled }.take(s.homeDep.n) } ?: emptyList()
+            if (rows.isEmpty()) Text(if (shown.any { s.homeDeps.containsKey(it.id) }) "Ingen avganger nå." else "Henter avganger …", color = p.textTertiary, fontSize = HomelabType.subheadline.fontSize)
+            rows.forEach { d -> DepRow27(d) }
+        }
+    }
+}
+
+@Composable
+private fun DepRow27(d: Dep) {
+    val p = HomelabTheme.colors
+    val c = d.color ?: ruterModeColor(d.mode, d.line)
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Box(Modifier.widthIn(min = 30.dp).height(24.dp).clip(RoundedCornerShape(6.dp)).background(Color(c)).padding(horizontal = 5.dp), contentAlignment = Alignment.Center) {
+            // Prompt 28: tekstfarge etter luminans på linjefargen (lys → mørk tekst, mørk → hvit).
+            Text(d.line, color = lineInk28(c), fontSize = HomelabType.footnote.fontSize, fontWeight = FontWeight.ExtraBold, maxLines = 1)
+        }
+        Text(d.to, color = p.textPrimary, fontSize = HomelabType.callout.fontSize, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+        val m = d.minutes
+        PSerif(m?.let { if (it <= 0) "nå" else "$it" } ?: (d.expected ?: d.aimed)?.let(::hm27) ?: "–", 22.sp, maxLines = 1)
+        Text(if (m != null && m > 0) "min" else "", color = p.textTertiary, fontSize = HomelabType.footnote.fontSize, modifier = Modifier.width(26.dp))
+    }
+}
+
+/** «19:04» fra ISO-tid eller klokkeslett. */
+private fun hm27(t: String): String = Regex("""(\d{2}:\d{2})""").find(t)?.value ?: t
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun VelgStopp27(vm: AppViewModel) {
+    val p = HomelabTheme.colors
+    val s = vm.b27
+    val ctx = LocalContext.current
+    val state = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val stops = s.homeStops ?: emptyList()
+    val sel = s.homeDep.stops.filter { id -> stops.any { it.id == id } }.ifEmpty { stops.take(1).map { it.id } }
+    ModalBottomSheet(onDismissRequest = { s.homeSheet = false }, sheetState = state, containerColor = p.surface, contentColor = p.textPrimary,
+        dragHandle = { Box(Modifier.padding(top = 10.dp).size(40.dp, 5.dp).clip(RoundedCornerShape(3.dp)).background(p.line)) }) {
+        Column(
+            Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).navigationBarsPadding().padding(16.dp, 8.dp, 16.dp, 30.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    PLabel("Hjem · Ruter-kortet")
+                    PSerif("Velg stopp", 24.sp)
+                }
+                Box(Modifier.height(36.dp).clip(CircleShape).background(p.textPrimary).clickable { s.homeSheet = false }.padding(horizontal = 16.dp), contentAlignment = Alignment.Center) {
+                    Text("Ferdig", color = p.surface, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize)
+                }
+            }
+            Text("Velg opptil 3 stopp. Rekkefølgen følger Mine stopp.", color = p.textTertiary, fontSize = HomelabType.subheadline.fontSize)
+            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(p.surfaceRaised)) {
+                if (stops.isEmpty()) Text("Ingen egne stopp ennå. Legg til en holdeplass under.", color = p.textTertiary, fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.padding(14.dp))
+                stops.forEachIndexed { i, st ->
+                    val on = st.id in sel
+                    if (i > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
+                    Row(
+                        Modifier.fillMaxWidth().heightIn(min = 56.dp).clickable(role = Role.Checkbox) {
+                            Haptics.select()
+                            val v = if (on) sel.filter { it != st.id } else (sel + st.id).takeLast(3)
+                            if (v.isNotEmpty()) vm.setHomeDep27(s.homeDep.copy(stops = stops.map { it.id }.filter { it in v }), ctx)
+                        }.padding(14.dp, 8.dp),
+                        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        Box(
+                            Modifier.size(24.dp).clip(RoundedCornerShape(8.dp)).background(if (on) p.textPrimary else Color.Transparent).border(1.5.dp, if (on) p.textPrimary else p.line, RoundedCornerShape(8.dp)),
+                            contentAlignment = Alignment.Center,
+                        ) { Text("✓", color = if (on) p.surface else Color.Transparent, fontSize = HomelabType.subheadline.fontSize, fontWeight = FontWeight.ExtraBold) }
+                        Column(Modifier.weight(1f)) {
+                            Text(st.name, color = p.textPrimary, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            val sub = st.locality.ifBlank { s.homeDeps[st.id]?.departures?.firstOrNull()?.let { "${it.line} ${it.to}" } ?: "Holdeplass" }
+                            Text(sub, color = p.textTertiary, fontSize = HomelabType.footnote.fontSize, maxLines = 1)
+                        }
+                    }
+                }
+            }
+            PLabel("Avganger per stopp", modifier = Modifier.padding(top = 4.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                (1..4).forEach { k ->
+                    val on = s.homeDep.n == k
+                    Box(
+                        Modifier.weight(1f).height(42.dp).clip(RoundedCornerShape(14.dp)).background(if (on) p.textPrimary else p.surfaceRaised)
+                            .clickable(role = Role.RadioButton) { Haptics.select(); vm.setHomeDep27(s.homeDep.copy(n = k), ctx) },
+                        contentAlignment = Alignment.Center,
+                    ) { Text("$k", color = if (on) p.surface else p.textPrimary, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize) }
+                }
+            }
+            Box(
+                Modifier.fillMaxWidth().height(46.dp).clip(RoundedCornerShape(23.dp)).border(1.dp, p.line, RoundedCornerShape(23.dp)).clickable { vm.manageStops27() },
+                contentAlignment = Alignment.Center,
+            ) { Text("Legg til eller fjern stopp ›", color = p.textPrimary, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize) }
+        }
+    }
+}

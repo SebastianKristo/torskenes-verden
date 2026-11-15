@@ -37,9 +37,9 @@ function returnPlan(lines, qty) {
 const canDelete = (units) => units <= 1e-9;
 
 test('filene finnes og er koblet inn', () => {
-  assert.ok(existsSync(join(SRC, 'Skjold82.kt')));
-  assert.ok(existsSync(join(SRC, 'ui/Skjold82Ui.kt')));
-  const ui = code('ui/Skjold76Ui.kt');
+  assert.ok(existsSync(join(SRC, 'SkjoldProjects.kt')));
+  assert.ok(existsSync(join(SRC, 'ui/SkjoldProjectsViews.kt')));
+  const ui = code('ui/SkjoldPage.kt');
   assert.match(ui, /"projects" -> ProjectsScreen82\(vm\)/, 'produktlista som egen skjerm');
   assert.match(ui, /"project" -> ProjectScreen82\(vm\)/, 'produktsiden');
   assert.match(ui, /"projects" -> "Produkter"/);
@@ -47,18 +47,18 @@ test('filene finnes og er koblet inn', () => {
   assert.match(ui, /CheckoutBtn82\(vm, pt\)/, '«Sjekk ut» på delsiden');
   assert.match(ui, /UsedIn82\(vm, pt\)/, '«Brukt i» på delsiden');
   assert.match(ui, /CheckoutSheet82\(vm\)/, 'arket');
-  assert.match(code('ui/Skjold79Ui.kt'), /PickProject82\(\)/, '«Til produkt» i plukklista');
-  const m = code('Skjold76.kt');
+  assert.match(code('ui/SkjoldPickViews.kt'), /PickProject82\(\)/, '«Til produkt» i plukklista');
+  const m = code('SkjoldModel.kt');
   assert.match(m, /Skjold82\.reset\(\)/);
   assert.match(m, /Skjold82\.modal -> Skjold82\.closeModal\(\)/, 'tilbake lukker arket først');
   assert.match(m, /loadProjects82\(quiet = true\)/);
   assert.match(m, /"produkt", "produkter"/, 'finanshub://skjold/produkt/<id>');
-  const k79 = code('Skjold79.kt');
+  const k79 = code('SkjoldPick.kt');
   assert.match(k79, /if \(takeOutTo82\(\)\) return/, 'Ta ut av lager med produkt går via utsjekking');
 });
 
 test('API-kallene følger CONTRACT82', () => {
-  const k = code('Skjold82.kt');
+  const k = code('SkjoldProjects.kt');
   assert.match(k, /get82\("\/projects"\)/);
   assert.match(k, /get82\("\/projects\/\$\{enc82\(id\)\}"\)/);
   assert.match(k, /post82\("\/projects", JSONObject\(\)\.put\("name", n\)\)/);
@@ -116,13 +116,13 @@ test('stykkliste, sjekk inn (nyeste først) og sletting', () => {
 });
 
 test('UI-tekstene', () => {
-  const u = code('ui/Skjold82Ui.kt');
+  const u = code('ui/SkjoldProjectsViews.kt');
   for (const t of ['Sjekk ut', 'Nytt produkt …', 'Til produkt', 'Brukt i', 'Produkter', 'Stykkliste', 'Sjekk inn', 'Marker som ferdig', 'Gi nytt navn', 'Slett', 'Ingen', 'Notat (valgfritt)']) {
     assert.ok(u.includes(t), t);
   }
   assert.match(u, /contentDescription = /);
   assert.match(u, /Haptics\./);
-  const k = code('Skjold82.kt');
+  const k = code('SkjoldProjects.kt');
   assert.match(k, /"Sjekket ut \$\{qtyText76\(n\)\} stk til «\$project»"/);
   assert.match(k, /Sjekket inn/);
 });

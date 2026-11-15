@@ -68,7 +68,7 @@ test('Api.bytes har tidsgrenser, og ingen HttpURLConnection i appene mangler dem
 });
 
 test('utgivelseslisten i Media får unike nøkler', () => {
-  const m = code('ui/Media43.kt');
+  const m = code('ui/MediaPage.kt');
   assert.match(m, /relKeys85\(list\.map \{ it\.guid \+ it\.indexer \}\)\.forEachIndexed/);
   assert.doesNotMatch(m, /item\(key = "r-" \+ r\.guid \+ r\.indexer\)/);
   const keys = relKeys(['aX', 'bX', 'aX', '', '', 'aX']);
@@ -90,7 +90,7 @@ test('opptak stoppes når appen legges i bakgrunnen', () => {
 });
 
 test('alarmer og nærhetsvarsler settes opp igjen etter omstart av telefonen', () => {
-  const a = code('Alarms37.kt');
+  const a = code('LocalAlarms.kt');
   const sched = block(a, 'fun schedule(ctx: Context, data: TasksData?)');
   assert.match(sched, /putString\("plan85", plan85\.toString\(\)\)/);
   assert.match(sched, /arm85\(ctx, am, code, whenMs, alarm, t\.id, t\.title, body\)/);
@@ -105,7 +105,7 @@ test('alarmer og nærhetsvarsler settes opp igjen etter omstart av telefonen', (
   const boot = block(code('Ntfy51.kt'), 'class Ntfy51Boot');
   assert.match(boot, /Intent\.ACTION_BOOT_COMPLETED\) \{\s*runCatching \{ Alarms37\.restore85\(ctx\) \}\s*runCatching \{ Geofence50\.restore85\(ctx\) \}/);
   assert.match(boot, /runCatching \{ Ntfy51\.sync\(ctx\) \}/);
-  const geo = block(code('P50Fam.kt'), 'fun restore85(ctx: Context)');
+  const geo = block(code('FamilyModel.kt'), 'fun restore85(ctx: Context)');
   assert.match(geo, /ACCESS_FINE_LOCATION\) != PackageManager\.PERMISSION_GRANTED\) return/);
   assert.match(geo, /lm\.addProximityAlert\(lat, lon, rad\.toFloat\(\), -1, pi\(ctx, id\)\)/);
   const man = readFileSync(join(ROOT, 'apps/android/app/src/main/AndroidManifest.xml'), 'utf8');
@@ -129,7 +129,7 @@ test('forrige brukers alarmer fjernes ved utlogging og kontobytte', () => {
   assert.match(c, /runCatching \{ Alarms37\.schedule\(getApplication\(\), null\) \}/);
   assert.match(c, /if \(accounts\.none \{ it\.id == activeId \}\) runCatching \{ Notify31\.scheduleTrials\(getApplication\(\), emptyList\(\)\) \}/);
   // schedule(null) avlyser de gamle og lagrer en tom plan (ingenting å sette opp igjen etter omstart).
-  const sched = block(code('Alarms37.kt'), 'fun schedule(ctx: Context, data: TasksData?)');
+  const sched = block(code('LocalAlarms.kt'), 'fun schedule(ctx: Context, data: TasksData?)');
   assert.match(sched, /for \(t in data\?\.items \?: emptyList\(\)\)/);
   assert.match(sched, /am\.cancel\(pi\(ctx, c, Intent\(ctx, Task37Receiver::class\.java\)\.setAction\(ACT_TASK\)\)\)/);
 });

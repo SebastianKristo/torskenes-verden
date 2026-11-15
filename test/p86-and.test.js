@@ -179,10 +179,10 @@ test('B: ingen HTTP-klient går utenom regelen (alle modulene)', () => {
   assert.match(okh, /!Klartekstvakt\.tillattAdresse\(u\.isHttps, c\.route\(\)\.socketAddress\.address\)\) throw UsikretHttp\(\)/);
   assert.match(okh, /override fun shouldInterceptRequest[\s\S]*?!LokaltNett\.ok\(u\.scheme, u\.host\)[\s\S]*?WebResourceResponse\(/, 'WebView omgår ikke regelen');
   assert.match(okh, /fun httpsUtenforHjemmet\(url: String\): String = if \(LokaltNett\.ok\(url\)\) url else "https"/);
-  assert.match(code('ui/Map20.kt'), /\.let\(::httpsUtenforHjemmet\)/, 'kartfliser (Familie)');
-  assert.match(code('ui/Kart46Ui.kt'), /\.let\(::httpsUtenforHjemmet\)/, 'kartfliser (Kart)');
-  assert.equal((code('ui/Weather22.kt').match(/webViewClient = LokalWebKlient\(\)/g) ?? []).length, 2);
-  assert.match(code('Skjold76.kt'), /object : LokalWebKlient\(\)/);
+  assert.match(code('ui/FamilyMap.kt'), /\.let\(::httpsUtenforHjemmet\)/, 'kartfliser (Familie)');
+  assert.match(code('ui/KartPage.kt'), /\.let\(::httpsUtenforHjemmet\)/, 'kartfliser (Kart)');
+  assert.equal((code('ui/WeatherSheets.kt').match(/webViewClient = LokalWebKlient\(\)/g) ?? []).length, 2);
+  assert.match(code('SkjoldModel.kt'), /object : LokalWebKlient\(\)/);
 });
 
 test('B: brukeren får teksten, og konfigurasjonen har ingen hardkodet adresse', () => {
@@ -357,10 +357,10 @@ test('C: lenker utenfra som endrer noe, spør først – appens egne varsler og 
   const ask = dl.indexOf('if (outside86) Link86.ask(uri)?.let { link86 = uri to it; return }');
   assert.ok(ask > 0 && ask < dl.indexOf('"hjemlys" -> hjemlysLink40(uri)') && ask < dl.indexOf('familyLink50(uri)') && ask < dl.indexOf('act51Link(uri)') && ask < dl.indexOf('kartLink46(uri)'), 'spør før handlingene');
   // Lenkene som faktisk utfører noe (om en ny kommer til her, må den inn i linkAsk86).
-  assert.match(code('Hjemlys40.kt'), /"start" -> \{[\s\S]*?startHjemlys40\(/);
-  assert.match(code('P50Fam.kt'), /"call", "ok", "pickup" -> if \(id != null\) replyCheckin50\(id, act\)/);
+  assert.match(code('HjemlysModel.kt'), /"start" -> \{[\s\S]*?startHjemlys40\(/);
+  assert.match(code('FamilyModel.kt'), /"call", "ok", "pickup" -> if \(id != null\) replyCheckin50\(id, act\)/);
   assert.match(code('Shortcuts51Plat.kt'), /"add" -> addFromLink51\(/);
-  assert.match(code('Kart46.kt'), /if \(live && !z\.live\) kartLive46\(z\)/);
+  assert.match(code('KartModel.kt'), /if \(live && !z\.live\) kartLive46\(z\)/);
 
   // Dialogen: hva som skjer, Avbryt / Utfør.
   const ui = code('ui/Link86Ui.kt');
@@ -370,9 +370,9 @@ test('C: lenker utenfra som endrer noe, spør først – appens egne varsler og 
   assert.match(code('ui/GlobaleLag.kt'), /Link86Dialog\(vm\)/, 'tegnes globalt');
 
   // Egne varsler, widgeter og den dynamiske snarveien bærer markøren (og PendingIntent oppdateres, så den følger med).
-  assert.match(code('Hjemlys40.kt'), /finanshub:\/\/hjemlys\/start"[\s\S]{0,200}?\.intern86\(ctx\), PendingIntent\.FLAG_IMMUTABLE or PendingIntent\.FLAG_UPDATE_CURRENT\)/, '«Ja, start»');
-  assert.match(code('widget/Hjemlys40Widget.kt'), /finanshub:\/\/hjemlys\$path"[\s\S]{0,200}?\.intern86\(ctx\), PendingIntent\.FLAG_IMMUTABLE or PendingIntent\.FLAG_UPDATE_CURRENT\)/, 'Hjemlys-widgeten');
-  assert.match(code('P50Fam.kt'), /finanshub:\/\/familie\/sjekk\$q"[\s\S]{0,200}?\.intern86\(ctx\)\s*return PendingIntent\.getActivity\(ctx, code, i, PendingIntent\.FLAG_IMMUTABLE or PendingIntent\.FLAG_UPDATE_CURRENT\)/, 'Sjekk inn-varslene');
+  assert.match(code('HjemlysModel.kt'), /finanshub:\/\/hjemlys\/start"[\s\S]{0,200}?\.intern86\(ctx\), PendingIntent\.FLAG_IMMUTABLE or PendingIntent\.FLAG_UPDATE_CURRENT\)/, '«Ja, start»');
+  assert.match(code('widget/HjemlysWidget.kt'), /finanshub:\/\/hjemlys\$path"[\s\S]{0,200}?\.intern86\(ctx\), PendingIntent\.FLAG_IMMUTABLE or PendingIntent\.FLAG_UPDATE_CURRENT\)/, 'Hjemlys-widgeten');
+  assert.match(code('FamilyModel.kt'), /finanshub:\/\/familie\/sjekk\$q"[\s\S]{0,200}?\.intern86\(ctx\)\s*return PendingIntent\.getActivity\(ctx, code, i, PendingIntent\.FLAG_IMMUTABLE or PendingIntent\.FLAG_UPDATE_CURRENT\)/, 'Sjekk inn-varslene');
   assert.match(code('Shortcuts51Plat.kt'), /finanshub:\/\/act51\/\$path"[\s\S]{0,200}?\.intern86\(ctx\)/, 'dynamisk snarvei');
   assert.match(code('Live41.kt'), /Uri\.parse\(link\), ctx, MainActivity::class\.java\)[^\n]*\.intern86\(ctx\)/);
   // ntfy-meldinger kan komme fra andre: de får aldri markøren.

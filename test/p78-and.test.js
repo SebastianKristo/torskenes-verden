@@ -38,9 +38,9 @@ const untilAt = (u, now) => (u <= 0 ? 0 : u > 1e12 ? u : now + u);
 const normColor = (s) => { const t = s?.trim().replace(/^#/, '').toUpperCase(); return t && /^[0-9A-F]{6}$/.test(t) ? `#${t}` : null; };
 
 test('filene finnes og er koblet inn i Skjold Lab', () => {
-  assert.ok(existsSync(join(SRC, 'Skjold78.kt')));
-  assert.ok(existsSync(join(SRC, 'ui/Skjold78Ui.kt')));
-  const ui = code('ui/Skjold76Ui.kt');
+  assert.ok(existsSync(join(SRC, 'SkjoldLED.kt')));
+  assert.ok(existsSync(join(SRC, 'ui/SkjoldLEDViews.kt')));
+  const ui = code('ui/SkjoldPage.kt');
   assert.match(ui, /"leds" -> LedScreen78\(vm\)/, 'LED-oppsett som egen skjerm');
   assert.match(ui, /"leds" -> "LED-oppsett"/);
   assert.match(ui, /LocateButton78\(vm, pt\)/, '💡 Vis i skapet på detaljsiden');
@@ -50,8 +50,8 @@ test('filene finnes og er koblet inn i Skjold Lab', () => {
   assert.match(ui, /LedPill78\(vm, cab\)/, 'LED med statusprikk på skapsiden');
   assert.match(ui, /DrawerLed78\(vm, cab, r, c\)/);
   assert.match(ui, /vm\.openLeds78\(cab\.id\)/, 'LED-oppsett fra skap-oppsettet');
-  assert.match(code('ui/Skjold77Ui.kt'), /LedSettings78\(vm\)/, 'innstillingene i ⚙-arket');
-  const m = code('Skjold76.kt');
+  assert.match(code('ui/SkjoldAIViews.kt'), /LedSettings78\(vm\)/, 'innstillingene i ⚙-arket');
+  const m = code('SkjoldModel.kt');
   assert.match(m, /Skjold78\.reset\(\)/);
   assert.match(m, /Skjold78\.calOn -> stopCal78\(\)/, 'tilbake avslutter kalibreringen');
   assert.match(m, /loadAllLeds78\(\)/);
@@ -59,7 +59,7 @@ test('filene finnes og er koblet inn i Skjold Lab', () => {
 });
 
 test('API-kallene følger CONTRACT78 / LEDSRV', () => {
-  const k = code('Skjold78.kt');
+  const k = code('SkjoldLED.kt');
   assert.match(k, /get78\("\/cabinets\/\$\{enc78\(cabId\)\}\/leds"\)/);
   assert.match(k, /put78\("\/cabinets\/\$\{enc78\(d\.cabId\)\}\/leds", ledsJson78\(l\)\)/);
   assert.match(k, /"\/cabinets\/\$\{enc78\(cabId\)\}\/leds\/test", body/);
@@ -118,7 +118,7 @@ test('verter i hjemmenettet, untilMs, farge', () => {
 });
 
 test('UI-tekstene og tilgjengelighet', () => {
-  const u = code('ui/Skjold78Ui.kt');
+  const u = code('ui/SkjoldLEDViews.kt');
   assert.match(u, /"💡 Vis i skapet"/);
   assert.match(u, /Lys opp automatisk når jeg åpner et treff/);
   assert.match(u, /Trykk på skuffen som lyser/);
@@ -129,7 +129,7 @@ test('UI-tekstene og tilgjengelighet', () => {
   assert.match(u, /"Test alle"/);
   assert.match(u, /vm\.calPick78\(r, c\)/);
   assert.match(u, /contentDescription = /);
-  const k = code('Skjold78.kt');
+  const k = code('SkjoldLED.kt');
   assert.match(k, /"WLED svarer"/);
   assert.match(k, /"WLED svarer ikke"/);
   assert.match(k, /Lyser i skapet/);

@@ -1,0 +1,105 @@
+package no.kristo.finanshub.ui
+
+import android.Manifest
+import android.annotation.SuppressLint
+import android.content.Context
+import android.location.Location
+import android.location.LocationManager
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Text
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import no.kristo.finanshub.*
+import no.kristo.finanshub.family.FamilyService
+import no.kristo.finanshub.ui.designsystem.HomelabType
+import no.kristo.finanshub.ui.designsystem.DsPalette
+
+/*
+ * Prompt 45 (claude-code-vaer-min-posisjon-popup.md, fasit Vaer.dc.html): kortet «MIN POSISJON» øverst i Vær – været der telefonen er
+ * (siste kjente posisjon fra telefonen selv, aldri fra serveren eller en annen enhet). Avslått posisjon: «Slå på posisjon …» + «Tillat».
+ * Er valgt sted = min posisjon (innen 2 km, sameAsSelected fra serveren), vises bare ett kort (dette skjules).
+ * Oppdateres når appen kommer i forgrunnen, maks hvert 10. minutt.
+ */
+
+@SuppressLint("MissingPermission")
+private fun lastLocation45(ctx: Context): Location? {
+    if (!FamilyService.hasLocation(ctx)) return null
+    val lm = ctx.getSystemService(Context.LOCATION_SERVICE) as? LocationManager ?: return null
+    return runCatching {
+        listOf(LocationManager.NETWORK_PROVIDER, LocationManager.GPS_PROVIDER, LocationManager.PASSIVE_PROVIDER)
+            .mapNotNull { p -> runCatching { lm.getLastKnownLocation(p) }.getOrNull() }.maxByOrNull { it.time }
+    }.getOrNull()
+}
+
+@Composable
+internal fun HereCard45(vm: AppViewModel, w: WeatherFull?) {
+    val ctx = LocalContext.current
+    val s = vm.p45
+    var granted by remember { mutableStateOf(FamilyService.hasLocation(ctx)) }
+    fun refresh(force: Boolean) {
+        granted = FamilyService.hasLocation(ctx)
+        if (!granted) { s.hereState = "denied"; return }
+        val l = lastLocation45(ctx) ?: run { if (s.here == null) s.hereState = "error"; return }
+        vm.loadHere45(l.latitude, l.longitude, w?.lat, w?.lon, force)
+    }
+    // Mens Vær er åpent: sjekk på nytt hvert 10. minutt (loadHere45 henter maks hvert 10. min), og raskt etter «Tillat».
+    val life = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
+    LaunchedEffect(w?.placeId) {
+        refresh(false)
+        var n = 0
+        while (true) {
+            kotlinx.coroutines.delay(if (!granted) 1_500L else 600_000L)
+            // B2: ikke hent i bakgrunnen (komposisjonen lever videre etter onStop).
+            if (!life.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED)) continue
+            val was = granted
+            refresh(!was && FamilyService.hasLocation(ctx))
+            if (++n > 400) break
+        }
+    }
+    val h = s.here
+    if (s.hereState == "missing") return // eldre server uten /api/weather/here
+    if (h != null && h.same) return
+    val glass = Color.White.copy(alpha = .14f)
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(glass).padding(16.dp, 14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text("➤", color = Color.White, fontSize = HomelabType.caption.fontSize)
+            Text("MIN POSISJON", color = Color.White.copy(alpha = .85f), fontWeight = FontWeight.Bold, fontSize = HomelabType.caption.fontSize, letterSpacing = 1.2.sp)
+        }
+        when {
+            s.hereState == "denied" || !granted -> {
+                Text("Slå på posisjon for å se været der du er", color = Color.White, fontSize = HomelabType.callout.fontSize)
+                Box(
+                    Modifier.padding(top = 6.dp).height(36.dp).clip(CircleShape).background(Color.White)
+                        .clickable(role = Role.Button) {
+                            Haptics.tap()
+                            (ctx as? android.app.Activity)?.requestPermissions(arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION), 4501)
+                        }
+                        .padding(horizontal = 16.dp),
+                    contentAlignment = Alignment.Center,
+                ) { Text("Tillat", color = DsPalette.PapirLys.textPrimary, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize) }
+            }
+            h == null -> Text(if (s.hereState == "error") "Fant ikke posisjonen din ennå." else "Henter været der du er …", color = Color.White.copy(alpha = .85f), fontSize = HomelabType.callout.fontSize)
+            else -> Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Column(Modifier.weight(1f)) {
+                    Text(h.place, color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.headline.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(listOfNotNull(h.text, h.hi?.let { "H: ${Math.round(it)}°" }, h.lo?.let { "L: ${Math.round(it)}°" }).joinToString("  "),
+                        color = Color.White.copy(alpha = .9f), fontSize = HomelabType.subheadline.fontSize, maxLines = 1)
+                }
+                h.temp?.let { Text("${Math.round(it)}°", color = Color.White, fontWeight = FontWeight.Light, fontSize = HomelabType.largeTitle.fontSize, maxLines = 1) }
+            }
+        }
+    }
+}
