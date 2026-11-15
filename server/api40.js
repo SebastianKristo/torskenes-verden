@@ -14,7 +14,6 @@ import { bibleEnabled } from './bible37.js';
 import { glimtSettingsOf } from './glimt/settings.js';
 import { julBrief } from './jul40.js';
 import { db } from './db.js';
-import { startHungSweeper } from './ai/run.js';
 import { sessionUser } from './auth/session.js';
 
 export { news40Api, newsDigestApi } from './news40.js';
@@ -68,4 +67,3 @@ export async function briefJul40(c, next) {
   } catch { /* briefen står */ }
 }
 
-export function startApi40() { startHungSweeper(); }

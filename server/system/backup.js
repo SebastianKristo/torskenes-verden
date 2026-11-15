@@ -73,6 +73,7 @@ import { parseChangelog } from './update.js';
 import { manifestSecret91, compareSecret91, cleanSecret91, rekeyDb91, rekeyMessages91 } from '../auth/secret-rekey.js'; // prompt 91
 
 const DATA = resolve(config.dataDir);
+import { registerJob } from '../jobs/index.js';
 export const BACKUP_DIR = resolve(process.env.BACKUP_DIR || join(DATA, 'system-backups'));
 mkdirSync(BACKUP_DIR, { recursive: true });
 const TZ = 'Europe/Oslo';
@@ -555,15 +556,12 @@ export function schedulerTick(t = Date.now()) {
   kv.set(OWNER, 'sys_backup_slot', slot);
   try { return startBackup({ scope: st.scope, modules: st.modules, kind: 'auto', by: 'tidsplan' }).id; } catch (e) { console.error('[system-backup] tidsplan:', e.message); return null; }
 }
-let timer = null;
-export function startSystemBackupScheduler() {
-  if (timer) return;
-  // Jobber som ble avbrutt av en omstart.
+// Felles planlegger (ikke i test/sandkasse): jobber som ble avbrutt av en omstart ryddes med en gang, og tidsplanen sjekkes hvert minutt.
+registerJob('backup.avbrutte', null, () => {
   q("UPDATE backup_jobs SET state='failed', error='Avbrutt (serveren startet på nytt)', finished=? WHERE state IN ('queued','running')").run(Date.now());
   for (const f of readdirSync(BACKUP_DIR)) if (/^\.work-|\.part$/.test(f)) rmSync(join(BACKUP_DIR, f), { recursive: true, force: true });
-  timer = setInterval(() => schedulerTick(), 60_000);
-  timer.unref?.();
-}
+}, { firstRunAfterMs: 0, note: 'Systembackup: jobber og filer som ble avbrutt av en omstart' });
+registerJob('backup.tidsplan', 60_000, () => schedulerTick(), { note: 'Systembackup etter tidsplanen' });
 
 /* ---------------- Sky: Backblaze B2 (S3-kompatibelt, AWS Signature V4) ---------------- */
 

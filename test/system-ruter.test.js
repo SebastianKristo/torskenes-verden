@@ -125,3 +125,18 @@ test('System og drift: status og svarform er uendret', async () => {
   assert.deepEqual(Object.keys(snap), Object.keys(want));
   for (const k of Object.keys(want)) assert.deepEqual(snap[k], want[k], k);
 });
+
+test('bakgrunnsjobbene for system, drift, sikkerhet og AI går via den felles planleggeren (ikke aktive i test)', async () => {
+  const { listJobs } = await import('../server/jobs/index.js');
+  const jobs = listJobs().filter((j) => /^(drift|backup|oppdatering|sikkerhet|kvalitet|ai)\./.test(j.name));
+  // Med MOCK_DATA=1 registreres ikke omstartsvarselet og selvreparasjonen (de trenger ekte Docker).
+  assert.deepEqual(jobs.map((j) => [j.name, j.everyMs]).sort(), [
+    ['ai.hengende-jobber', 15_000], ['ai.hovedmodell', null], ['ai.varm-modell', null],
+    ['backup.avbrutte', null], ['backup.tidsplan', 60_000],
+    ['drift.backup-vedlikehold', 60_000], ['drift.krasjrapporter', 600_000], ['drift.malinger', 900_000], ['drift.varsler', 900_000],
+    ['kvalitet.systemoppgaver', 3_600_000],
+    ['oppdatering.auto', 60_000], ['oppdatering.sjekk', 21_600_000],
+    ['sikkerhet.paminnelser', 21_600_000],
+  ]);
+  assert.ok(jobs.every((j) => !j.active));
+});

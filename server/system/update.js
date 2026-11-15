@@ -60,6 +60,7 @@ import { broadcast } from '../realtime.js';
 import { listUsers } from '../auth/session.js';
 import { consumeReauth } from '../auth/reauth.js';
 import { notifyUser } from '../notify.js';
+import { registerJob } from '../jobs/index.js';
 
 // Prompt 44: databaseskjemaet til denne versjonen (updateren leser linjen fra kildekoden og lagrer den i historikken).
 // Migreringene er additive, så eldre kode tåler en nyere database ned til DB_COMPAT_MIN. Øk DB_SCHEMA når en migrering
@@ -690,16 +691,9 @@ export async function autoUpdateTick(t = Date.now()) {
   return r.id ?? null;
 }
 
-let schedTimers = [];
-export function startUpdateScheduler() {
-  if (schedTimers.length) return;
-  const check = () => checkAndNotify().catch((e) => console.warn('[system-update] sjekk:', e.message));
-  const first = setTimeout(check, 60_000);
-  const six = setInterval(check, 6 * 3_600_000);
-  const tick = setInterval(() => autoUpdateTick().catch((e) => console.warn('[system-update] auto:', e.message)), 60_000);
-  schedTimers = [first, six, tick];
-  for (const x of schedTimers) x.unref?.();
-}
+// Felles planlegger (ikke i test/sandkasse): ny versjon sjekkes 1 min etter oppstart og så hver 6. time; automatisk oppdatering hvert minutt.
+registerJob('oppdatering.sjekk', 6 * 3_600_000, () => checkAndNotify().catch((e) => console.warn('[system-update] sjekk:', e.message)), { firstRunAfterMs: 60_000, note: 'Oppdatering: sjekk etter ny versjon og varsel' });
+registerJob('oppdatering.auto', 60_000, () => autoUpdateTick().catch((e) => console.warn('[system-update] auto:', e.message)), { note: 'Oppdatering: automatisk oppdatering i valgt tidsrom' });
 
 /* ---------------- Tidligere versjoner (prompt 44) ---------------- */
 

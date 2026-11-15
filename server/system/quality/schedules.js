@@ -8,6 +8,7 @@ import { quality64, serverQuality64 } from './settings.js';
 import { startEval64 } from './eval-run.js';
 import { weeklyPush64, ingest64 } from './weekly.js';
 import { adminUsers64 } from './notify.js';
+import { registerJob } from '../../jobs/index.js';
 
 export const SYSTEM64 = Object.freeze({
   quality: { title: 'Nattlig eval', what: 'kjør eval-testene mot den lokale modellen og varsle hvis noe grønt har blitt rødt', time: '02:00', freq: 'DAILY', byday: [],
@@ -63,12 +64,5 @@ export async function computeSystem64(row, { now = Date.now() } = {}) {
   return { status: 'failed', error: `Ukjent systemoppgave ${row.kind}`, noDeliver: true };
 }
 
-let timer = null;
-/** index.js: systemoppgavene for alle brukere (nå og hver time) og innsamling fra sporene (hver time). Ikke i NODE_ENV=test. */
-export function startQuality64() {
-  if (timer || process.env.NODE_ENV === 'test') return false;
-  setTimeout(() => { ensureAllUsers64().catch(() => {}); try { ingest64(); } catch { /* */ } }, 30_000).unref?.();
-  timer = setInterval(() => { ensureAllUsers64().catch(() => {}); try { ingest64(); } catch { /* */ } }, 3600_000);
-  timer.unref?.();
-  return true;
-}
+// Felles planlegger (ikke i test/sandkasse): systemoppgavene for alle brukere og innsamlingen fra sporene, 30 s etter oppstart og så hver time.
+registerJob('kvalitet.systemoppgaver', 3600_000, () => { ensureAllUsers64().catch(() => {}); try { ingest64(); } catch { /* */ } }, { firstRunAfterMs: 30_000, note: 'Kvalitet: «Nattlig eval» og «Ukerapport» for alle brukere, innsamling fra sporene' });

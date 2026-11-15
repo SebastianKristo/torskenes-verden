@@ -21,6 +21,7 @@ import { traceMw51, traces51, installTrace51, setAiHosts51 } from './trace.js';
 import { health51, takeSamples51, proxmoxOut51, saveProxmox51 } from './health.js';
 import { healOnce51, healOut51, saveHeal51, draft51, dismissDraft51 } from './heal.js';
 import { ntfyStatus51, addTopic51, removeTopic51, topicsOf51, publish51, ntfyNotify51 } from './ntfy.js';
+import { registerJob } from '../../jobs/index.js';
 
 const MOCK = () => process.env.MOCK_DATA === '1';
 const json = async (c) => { const b = await c.req.json().catch(() => null); return b && typeof b === 'object' && !Array.isArray(b) ? b : null; };
@@ -131,12 +132,10 @@ export async function alertRound51(now = Date.now()) {
   return out;
 }
 
-let timers = [];
-export function startObs51() {
-  if (timers.length || process.env.NODE_ENV === 'test' || process.env.OBS51_BACKGROUND === '0') return;
-  const every = (ms, fn) => { const t = setInterval(() => fn().catch((e) => console.warn(`obs51: ${e.message}`)), ms); t.unref?.(); timers.push(t); };
-  every(15 * 60_000, () => takeSamples51());
-  every(15 * 60_000, () => alertRound51());
-  if (!MOCK()) every(60_000, () => healOnce51());
-  setTimeout(() => takeSamples51().catch(() => {}), 30_000).unref?.();
+// Felles planlegger (ikke i test/sandkasse; OBS51_BACKGROUND=0 slår dem av): målinger (første etter 30 s), driftsvarsler og selvreparasjon.
+if (process.env.OBS51_BACKGROUND !== '0') {
+  const warn = (e) => console.warn(`obs51: ${e.message}`);
+  registerJob('drift.malinger', 15 * 60_000, () => takeSamples51().catch(warn), { firstRunAfterMs: 30_000, note: 'Helse: ledig plass og trend (hvert 15. min)' });
+  registerJob('drift.varsler', 15 * 60_000, () => alertRound51().catch(warn), { note: 'Helse: driftsvarsler til admin' });
+  if (!MOCK()) registerJob('drift.selvreparasjon', 60_000, () => healOnce51().catch(warn), { note: 'Selvreparasjon: omstart av containere som er unhealthy eller døde' });
 }

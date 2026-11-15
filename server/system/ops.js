@@ -31,6 +31,7 @@ import { DB_SCHEMA, parseChangelog, updateNow, updateSettings, updaterAvailable,
 import { dbHealth51, tableSizes51, migrationLog51, maintLog51, runMaintenance51, recordMigrations51, integrityOf51, maintRunning51 } from './db-maintenance.js';
 import { backupCard51, settingsOut51, saveBackupSettings51, revealKey51, startBackup51, startRestoreTest51, backupRuns51, getRun51, restoreTests51, getRestoreTest51,
   backupSettings51, backupRunning51 } from './restic-backup.js';
+import { registerJob } from '../jobs/index.js';
 
 const DATA = resolve(config.dataDir);
 const UPD = join(DATA, 'update');
@@ -142,14 +143,15 @@ function watchRun(r, kind) {
   }).catch(() => {});
 }
 
-let timers = [];
-export function startOps51() {
-  if (timers.length) return;
-  const mig = setTimeout(() => { try { recordMigrations51({ version: ownVersion(), dbSchema: DB_SCHEMA }); } catch (e) { console.warn('[ops51] migrasjonslogg:', e.message); } }, 5_000);
-  if (SANDBOX()) { timers = [mig]; return; } // sandkasse/staging: bare migrasjonsloggen, ingen backup eller vedlikehold
-  const tick = setInterval(() => ops51Tick().catch((e) => console.warn('[ops51] planlegger:', e.message)), 60_000);
-  timers = [mig, tick];
-  for (const x of timers) x.unref?.();
+// Felles planlegger (ikke i test/sandkasse): backup, testet gjenoppretting og vedlikehold, sjekket hvert minutt.
+registerJob('drift.backup-vedlikehold', 60_000, () => ops51Tick().catch((e) => console.warn('[ops51] planlegger:', e.message)), { note: 'Restic-backup, testet gjenoppretting (søndag) og databasevedlikehold (søndag)' });
+
+let migTimer = null;
+/** index.js (ikke i test, men også i sandkassen/staging): migrasjonsloggen skrives 5 s etter oppstart. */
+export function logMigrationsAtStartup() {
+  if (migTimer) return;
+  migTimer = setTimeout(() => { try { recordMigrations51({ version: ownVersion(), dbSchema: DB_SCHEMA }); } catch (e) { console.warn('[ops51] migrasjonslogg:', e.message); } }, 5_000);
+  migTimer.unref?.();
 }
 
 /* ---------------- Ruter ---------------- */

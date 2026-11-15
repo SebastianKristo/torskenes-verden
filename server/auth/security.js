@@ -30,6 +30,7 @@ import { issueToken, SCOPES as FH_SCOPES, tokenAccessOf } from '../finans/routes
 import { db as fhDb, secret as fhSecret, setSecret as fhSetSecret } from '../finans/db.js';
 import { SCHEMA, cfg, updateConfig, userCfg, setUserCfg } from '../settings.js';
 import { publicUrl46 } from './server-address.js';
+import { registerJob } from '../jobs/index.js';
 
 export { registerRing51 };
 installLogGuard51();
@@ -610,18 +611,17 @@ setAuthHook51((c, user, method) => {
   trustedSeen.set(k, Date.now());
   afterLogin51(c, user, method);
 });
-export function startSec51() {
-  const tick = () => {
-    try { remindSecrets51(); } catch (e) { console.warn('[sec51] påminnelse:', e.message); }
-    if (policy51().logScanDaily) {
-      const last = Date.parse(kv.get(OWNER, 'sec51_logscan', null)?.at ?? '') || 0;
-      if (Date.now() - last > 23 * 3600_000) logScan51().catch((e) => console.warn('[sec51] logg-skanning:', e.message));
-    }
-    try { db.prepare("DELETE FROM sec51_approvals WHERE exp<? AND (retry_until IS NULL OR retry_until<?)").run(Date.now() - 7 * 86400_000, Date.now()); } catch { /* */ }
-  };
-  setTimeout(tick, 5 * 60_000).unref();
-  setInterval(tick, 6 * 3600_000).unref();
+/** Påminnelser om hemmeligheter, daglig logg-skanning og opprydding i gamle godkjenninger. */
+export function sec51Tick() {
+  try { remindSecrets51(); } catch (e) { console.warn('[sec51] påminnelse:', e.message); }
+  if (policy51().logScanDaily) {
+    const last = Date.parse(kv.get(OWNER, 'sec51_logscan', null)?.at ?? '') || 0;
+    if (Date.now() - last > 23 * 3600_000) logScan51().catch((e) => console.warn('[sec51] logg-skanning:', e.message));
+  }
+  try { db.prepare("DELETE FROM sec51_approvals WHERE exp<? AND (retry_until IS NULL OR retry_until<?)").run(Date.now() - 7 * 86400_000, Date.now()); } catch { /* */ }
 }
+// Felles planlegger (ikke i test/sandkasse): første gang 5 min etter oppstart, så hver 6. time.
+registerJob('sikkerhet.paminnelser', 6 * 3600_000, sec51Tick, { firstRunAfterMs: 5 * 60_000, note: 'Sikkerhet: påminnelser om hemmeligheter, logg-skanning og gamle godkjenninger' });
 
 /* ---------------- API ---------------- */
 
@@ -893,7 +893,6 @@ export function mountSecurity(app) {
   app.use('/api/*', bootstrapKnown);
   app.route('/api/auth/passkey', passkeyLoginApi);
   app.route('/api/security51', sec51Api);
-  if (process.env.NODE_ENV !== 'test') startSec51();
 }
 
 export const _sec51 = { challenges, gate51, secretsRaw, hk };

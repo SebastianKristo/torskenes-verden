@@ -28,6 +28,7 @@ import { isAdmin, userInfo, listUsers, currentDeviceId, sessionUser, clientIp } 
 import { parseChangelog } from './update.js';
 import { whatsNewExtra52 } from './whatsnew.js'; // prompt 52 (SRV52)
 import { isLocalHost } from '../net/server-url.js';
+import { registerJob } from '../jobs/index.js';
 
 
 /* =====================================================================================================================
@@ -500,12 +501,8 @@ qa51Api.post('/whatsnew/seen', authOrToken, async (c) => {
   return c.json({ ok: true, seenVersion: v });
 });
 
-let flushTimer = null;
-export function startQa51() {
-  if (flushTimer) return;
-  flushTimer = setInterval(() => { flushCrashes51().catch(() => {}); }, 10 * 60_000);
-  flushTimer.unref?.();
-}
+// Felles planlegger (ikke i test/sandkasse): krasjrapporter som ikke kom fram til GlitchTip, sendes på nytt.
+registerJob('drift.krasjrapporter', 10 * 60_000, () => flushCrashes51().catch(() => {}), { note: 'Krasjrapporter som ikke kom fram til GlitchTip, sendes på nytt' });
 
 /** Monteres før /api-rutene med requireAuth (index.js). */
 export function mountQa51(app) {

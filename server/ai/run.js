@@ -60,6 +60,7 @@ export const AI_TASKS = [
   { id: 'kb', name: 'Kunnskapsbase', desc: 'Embeddings for dokumenter', kind: 'embed', fin: false, personal: false },
   { id: 'skj', name: 'Skjold Lab · gjenkjenning', desc: 'Kjenner igjen deler fra bilde og foreslår navn og kategori', kind: 'vision', fin: false, personal: false }, // prompt 77
 ];
+import { registerJob } from '../jobs/index.js';
 const TASK = Object.fromEntries(AI_TASKS.map((t) => [t.id, t]));
 export const TASK_ALIAS = { assist: 'sok', search: 'sok', text: 'sok', 'settings-ask': 'sok', settings: 'sok', test: 'sok', calendar: 'glimt', kalender: 'glimt',
   'calendar-quick': 'glimt', 'calendar-glimt': 'glimt', receipts: 'rc', receipt: 'rc', screenshot: 'rc', logo: 'rc', categorize: 'kat', 'finance-search': 'fsok',
@@ -1204,8 +1205,8 @@ export function sweepHung(now = Date.now()) {
   }
   return out;
 }
-let sweepTimer = null;
-export function startHungSweeper() { if (sweepTimer) return; sweepTimer = setInterval(() => { try { sweepHung(); } catch { /* */ } }, 15_000); sweepTimer.unref?.(); }
+// Felles planlegger (ikke i test/sandkasse): AI-jobber som har hengt for lenge, merkes som feilet.
+registerJob('ai.hengende-jobber', 15_000, () => { try { sweepHung(); } catch { /* */ } }, { note: 'AI: jobber som har hengt for lenge, merkes som feilet' });
 
 /* ---------------- Forbruk ---------------- */
 

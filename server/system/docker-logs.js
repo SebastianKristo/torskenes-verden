@@ -30,6 +30,7 @@ import { sessionUser, isAdmin, listUsers } from '../auth/session.js';
 import { bearerOk } from '../finans/routes.js';
 import { notifyUser } from '../notify.js';
 import { maskSecrets } from '../ai/gate.js';
+import { registerJob } from '../jobs/index.js';
 
 const MOCK = () => process.env.MOCK_DATA === '1';
 
@@ -415,12 +416,8 @@ export async function restartWatch44(now = Date.now()) {
   }
   return sent;
 }
-let watchTimer = null;
-export function startLogs44() {
-  if (watchTimer || process.env.NODE_ENV === 'test' || MOCK()) return;
-  watchTimer = setInterval(() => restartWatch44().catch(() => {}), 60_000);
-  watchTimer.unref?.();
-}
+// Felles planlegger (ikke i test/sandkasse, og ikke med eksempeldata): varsel når en container starter på nytt hele tiden.
+if (!MOCK()) registerJob('drift.omstarter', 60_000, () => restartWatch44().catch(() => {}), { note: 'Logger: varsel når en container starter på nytt hele tiden' });
 
 /* ---------------- Ruter ---------------- */
 

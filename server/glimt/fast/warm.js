@@ -10,6 +10,7 @@
 import { OWNER } from '../../db.js';
 import { fastOn59 } from './settings.js';
 import { onGateJobDone59, gateBusyWith59, setKeepAliveHook59, loadedModels } from '../../ai/gate.js';
+import { registerJob } from '../../jobs/index.js';
 
 export const WARM_KEEP59 = '1h';
 const KEEP_MS = { s: 1000, m: 60_000, h: 3_600_000 };
@@ -96,11 +97,9 @@ function hook() {
 }
 hook();
 
-/** index.js (ikke i test): oppvarming ved oppstart (etter 15 s, når boot-sjekkene er ferdige). */
-export function startWarm59({ delayMs = 15_000 } = {}) {
-  mainModel().catch(() => {}); // keep_alive-gulvet vet hvilken modell som er hovedmodellen
-  const t = setTimeout(() => { warmNow59('oppstart').catch(() => {}); }, delayMs);
-  t.unref?.();
-}
+// Felles planlegger (ikke i test/sandkasse): hovedmodellen slås opp med en gang (keep_alive-gulvet vet da hvilken modell som er
+// hovedmodellen), og oppvarmingen kjøres én gang 15 s etter oppstart, når boot-sjekkene er ferdige.
+registerJob('ai.hovedmodell', null, () => mainModel().catch(() => {}), { firstRunAfterMs: 0, note: 'Varm modell: finn hovedmodellen ved oppstart' });
+registerJob('ai.varm-modell', null, () => warmNow59('oppstart').catch(() => {}), { firstRunAfterMs: 15_000, note: 'Varm modell: oppvarming ved oppstart' });
 /** Bare for tester. */
 export const _warm59 = { state, scheduleAfterVision, reset: () => { if (state.timer) clearTimeout(state.timer); Object.assign(state, { model: null, mainAt: 0, lastAt: null, running: false, timer: null }); } };
