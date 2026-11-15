@@ -136,7 +136,7 @@ const SCALAR = {
     && Object.entries(v).every(([k, o]) => /^[\w.-]{1,40}$/.test(k) && o && typeof o === 'object' && !Array.isArray(o)
       && Object.keys(o).every((f) => f === 'order' || f === 'hidden' || f === 'sz') && (o.order === undefined || cardIds(o.order)) && (o.hidden === undefined || cardIds(o.hidden))
       && (o.sz === undefined || cardSizes70(o.sz))),
-  finTabs: (v) => Array.isArray(v) && v.length >= 1 && v.length <= 4 && new Set(v).size === v.length && v.every((x) => FIN_TABS.includes(x)),
+  finTabs: (v) => Array.isArray(v) && v.length >= 1 && v.length <= 4 && new Set(v.map(finNavCanon)).size === v.length && v.every((x) => FIN_TABS.includes(x)),
   fourthTab: (v) => ['auto', 'domener', 'sporing'].includes(v),
   fab: (v) => ['float', 'inline'].includes(v),
   // Prompt 16: Papir-hovedlinjen (opptil 6 faner med eget navn og ikon) og fargetema for ikonene i Innstillinger.
@@ -219,7 +219,12 @@ const KAL_KEY = /^[\p{L}\p{N} ._&+()\/-]{1,40}$/u;
 const MERGE_MAP = ['kalReminders', 'subjectColors', 'secNav']; // secNav: prompt 32 (flettes per seksjon, null fjerner)
 // finNav som liste (prompt 24): fanene i Finans i profilen. Lagres som finNavList, så sidemenyen på desktop (finNav-objektet
 // {order, hidden, labels}) beholdes uendret. GET /api/me/layout svarer med finNav = listen og finSideNav = objektet.
-const FIN_NAV_IDS = ['oversikt', 'liste', 'finn', 'sok', 'budsjett', 'kvitteringer', 'aksjer', 'abonnementer', 'kontoer', 'boliger', 'chat', 'mer'];
+// Fase 6 (Q3, Q4): Økonomi-fanene heter Oversikt, Transaksjoner, Budsjett og Faste betalinger. De nye nøklene er «transaksjoner»
+// og «faste»; de eldre «liste» og «abonnementer» er fortsatt gyldige som alias (lagrede oppsett og eldre apper), men samme fane
+// kan ikke stå to ganger (liste + transaksjoner).
+export const FIN_NAV_ALIAS = Object.freeze({ liste: 'transaksjoner', abonnementer: 'faste' });
+const finNavCanon = (k) => FIN_NAV_ALIAS[k] ?? k;
+const FIN_NAV_IDS = ['oversikt', 'transaksjoner', 'liste', 'finn', 'sok', 'budsjett', 'faste', 'kvitteringer', 'aksjer', 'abonnementer', 'kontoer', 'boliger', 'chat', 'mer'];
 // Prompt 26: finNav kan også være [{key, label?, icon?}] (egne navn og ikoner fra «Rediger fanelinjen»). Maks 5 faner;
 // Mer ligger alltid sist i appene og lagres ikke (fjernes fra listen). Lagres som finNavList (nøklene) og finNavMeta.
 const FIN_NAV_MAX = 5;
@@ -234,12 +239,12 @@ function finNavParse(v) {
     if (it.key === 'mer') continue;
     items.push({ key: it.key, ...(it.label?.trim() ? { label: it.label.trim().replace(/\s+/g, ' ') } : {}), ...(it.icon ? { icon: it.icon } : {}) });
   }
-  if (!items.length || items.length > FIN_NAV_MAX || new Set(items.map((x) => x.key)).size !== items.length) return null;
+  if (!items.length || items.length > FIN_NAV_MAX || new Set(items.map((x) => finNavCanon(x.key))).size !== items.length) return null;
   return items;
 }
 const finNavList = (v) => !!finNavParse(v);
 export const PROFILES = {
-  standard: { startRoute: 'hjem', homeNav: ['hjem', 'finans', 'mat', 'mer'], finNav: ['oversikt', 'liste', 'finn', 'sok'] },
+  standard: { startRoute: 'hjem', homeNav: ['hjem', 'finans', 'mat', 'mer'], finNav: ['oversikt', 'transaksjoner', 'budsjett', 'faste'] },
   finans_boliger: { startRoute: 'finans/boliger', homeNav: ['finans'], finNav: ['boliger', 'sok', 'liste', 'oversikt', 'kvitteringer'] },
   boliger: { startRoute: 'finans/boliger', homeNav: ['finans', 'domener'], finNav: ['boliger', 'kvitteringer', 'oversikt', 'sok'] },
 };
@@ -266,8 +271,9 @@ const cardIds = (a) => Array.isArray(a) && a.length <= 40 && a.every((x) => type
 // Prompt 70: widgetstørrelse på Hjem (mobil) – pages.<side>.sz = {kort-id: 'full'|'half'} ved siden av order/hidden.
 const cardSizes70 = (o) => o && typeof o === 'object' && !Array.isArray(o) && Object.keys(o).length <= 40
   && Object.entries(o).every(([k, x]) => /^[\w.-]{1,40}$/.test(k) && (x === 'full' || x === 'half'));
-const FIN_TABS = ['oversikt', 'liste', 'finn', 'sok', 'budsjett', 'kvitteringer', 'aksjer', 'abonnementer', 'kontoer', 'boliger', 'chat'];
-const FIN_TABS_DEFAULT = ['oversikt', 'liste', 'finn', 'sok'];
+const FIN_TABS = ['oversikt', 'transaksjoner', 'liste', 'finn', 'sok', 'budsjett', 'faste', 'kvitteringer', 'aksjer', 'abonnementer', 'kontoer', 'boliger', 'chat'];
+// finTabs er reserven for eldre apper (bare de eldre nøklene): de samme fire fanene som standardprofilen.
+const FIN_TABS_DEFAULT = ['oversikt', 'liste', 'budsjett', 'abonnementer'];
 const TRK_CARDS = ['add', 'shipments', 'notify', 'carriers'];
 const PHOTO_KINDS = ['cur', 'oslo', 'weather', 'planets', 'custom', 'gphoto']; // prompt 46: gphoto (Google Photos-album, DATA46)
 export const layoutOf = (id) => kv.get(id, 'layout', {});

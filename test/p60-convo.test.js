@@ -163,7 +163,8 @@ test('abonnement: «si opp det» etter «dyreste abonnement» → bekreftelse me
   assert.equal(activeOf(SUBS['Aftenposten Digital']), 1, 'ingenting er gjort ennå (modellens egen id 999 er ignorert)');
   const c = await A('/api/glimt/agent/confirm', 'POST', { token: b.body.confirm.token });
   assert.equal(c.status, 200, c.text);
-  assert.match(c.body.reply, /Markerte \*\*Aftenposten Digital\*\* som sagt opp i Subscription OS/);
+  assert.match(c.body.reply, /Markerte \*\*Aftenposten Digital\*\* som sagt opp i Abonnementer/);
+  assert.doesNotMatch(c.body.reply, /Subscription OS/, 'Fase 6 (Q4): «Subscription OS» står ikke i svaret');
   assert.equal(activeOf(SUBS['Aftenposten Digital']), 0);
   assert.equal(activeOf(SUBS.Netflix), 1);
   db.prepare('UPDATE fh_subscriptions SET active=1 WHERE id=?').run(SUBS['Aftenposten Digital']);

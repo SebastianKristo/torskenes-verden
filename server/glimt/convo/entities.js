@@ -19,7 +19,7 @@ export const ELABELS60 = { person: 'Personer', place: 'Steder', store: 'Butikker
 /** Faste ord som peker på et sted (Familie-stedets type eller navn, ellers profilens hjemsted for «hjemme»). */
 export const BUILTIN60 = { hjemme: 'place', jobben: 'place', skolen: 'place', hytta: 'place' };
 const BUILTIN_WORDS = { hjem: ['hjemme', 'hjem', 'huset'], jobb: ['jobben', 'jobb', 'kontoret'], skole: ['skolen', 'skole'], hytte: ['hytta', 'hytte', 'hytten'] };
-const SOURCE_LABEL = { memory: 'Glimt husker', family: 'Familie → Steder', subscriptions: 'Subscription OS', weather: 'Vær', profile: 'Profil' };
+const SOURCE_LABEL = { memory: 'Glimt husker', family: 'Familie → Steder', subscriptions: 'Abonnementer', weather: 'Vær', profile: 'Profil' };
 const OVERLAY = 'entities60_alias';
 const parseJson = (s, d) => { try { const v = JSON.parse(s); return v ?? d; } catch { return d; } };
 const clean = (v, n) => String(v ?? '').replace(/[\u0000-\u001f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, n);
@@ -168,7 +168,7 @@ export function createEntity60(user, b) {
   if (b.type === 'person' && asAlias && !old?.title) q('UPDATE glimt_memory SET title=? WHERE id=? AND user_id=?').run(`${niceCase(normName(value))} · ${name}`, id, user);
   return { item: getEntity60(user, `m${id}`), created: !old };
 }
-const DERIVED_ERR = { family: 'Stedet redigeres i Familie → Steder (bare aliaser kan endres her)', subscriptions: 'Abonnementet redigeres i Subscription OS (bare aliaser kan endres her)', weather: 'Værstedet redigeres i Vær (bare aliaser kan endres her)', profile: 'Hjemstedet følger profilen og Vær (bare aliaser kan endres her)' };
+const DERIVED_ERR = { family: 'Stedet redigeres i Familie → Steder (bare aliaser kan endres her)', subscriptions: 'Abonnementet redigeres i Faste betalinger → Abonnementer (bare aliaser kan endres her)', weather: 'Værstedet redigeres i Vær (bare aliaser kan endres her)', profile: 'Hjemstedet følger profilen og Vær (bare aliaser kan endres her)' };
 /** PATCH: {name?, value?, aliases?, type?} → {item} | {error, status} */
 export function patchEntity60(user, id, b) {
   ensureEntities60();

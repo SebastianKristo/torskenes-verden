@@ -107,11 +107,13 @@ test('abonnementer: dyreste (månedspris), månedlig mot årlig, total, prisøkn
 test('abonnementer: tom liste, datakilden nede og samme spørsmål fra Hjem (/api/assist)', async () => {
   const k = await agent(K, 'Hva er det dyreste abonnementet jeg har?');
   assert.match(k.body.reply, /ingen registrerte abonnementer/);
+  assert.doesNotMatch(k.body.reply, /Subscription OS/);
   SB._setSubsFail46(() => { throw new Error('Finans svarer ikke'); });
   try {
     const f = await agent(O, 'Hva er det dyreste abonnementet jeg har?');
     assert.equal(f.body.actions[0].status, 'failed');
-    assert.match(f.body.reply, /Fikk ikke lest abonnementene fra Subscription OS: Finans svarer ikke/);
+    assert.match(f.body.reply, /Fikk ikke lest abonnementene fra Abonnementer: Finans svarer ikke/);
+    assert.doesNotMatch(f.body.reply, /Subscription OS/, 'Fase 6 (Q4): «Subscription OS» står ikke i svaret');
     assert.equal(f.body.joke, null);
   } finally { SB._setSubsFail46(null); }
   const h = await O('/api/assist', 'POST', { q: 'Hva er det dyreste abonnementet mitt?' });

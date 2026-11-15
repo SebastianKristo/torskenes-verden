@@ -440,12 +440,12 @@ test('integrasjoner: alle oppsett, hemmeligheter sendes aldri ut, lagres krypter
 
 test('profiler: ferdige oppsett, egendefinert ved endring, appnavn maks 20 tegn, sidemenyen på desktop beholdes', async () => {
   let r = await A('/api/me/profiles');
-  assert.deepEqual(r.body.standard, { startRoute: 'hjem', homeNav: ['hjem', 'finans', 'mat', 'mer'], finNav: ['oversikt', 'liste', 'finn', 'sok'] });
+  assert.deepEqual(r.body.standard, { startRoute: 'hjem', homeNav: ['hjem', 'finans', 'mat', 'mer'], finNav: ['oversikt', 'transaksjoner', 'budsjett', 'faste'] });
   assert.deepEqual(r.body.finans_boliger, { startRoute: 'finans/boliger', homeNav: ['finans'], finNav: ['boliger', 'sok', 'liste', 'oversikt', 'kvitteringer'] });
   assert.ok(r.body.boliger.finNav[0] === 'boliger');
   r = await A('/api/me/layout');
   assert.equal(r.body.profile, 'standard');
-  assert.deepEqual(r.body.finNav, ['oversikt', 'liste', 'finn', 'sok']);
+  assert.deepEqual(r.body.finNav, ['oversikt', 'transaksjoner', 'budsjett', 'faste']);
 
   // Sidemenyen på desktop (finNav-objekt) virker som før og overskrives ikke av profilen.
   assert.equal((await A('/api/me/layout', 'PUT', { finNav: { order: ['oversikt', 'liste'], hidden: ['budsjett'] } })).status, 200);
@@ -463,7 +463,7 @@ test('profiler: ferdige oppsett, egendefinert ved endring, appnavn maks 20 tegn,
   assert.equal(r.body.profile, 'custom');
   r = await A('/api/me/layout', 'PUT', { profile: 'standard' });
   assert.equal(r.body.profile, 'standard');
-  assert.deepEqual(r.body.finNav, ['oversikt', 'liste', 'finn', 'sok']);
+  assert.deepEqual(r.body.finNav, ['oversikt', 'transaksjoner', 'budsjett', 'faste']);
   for (const bad of [{ profile: 'x' }, { finNav: ['ukjent'] }, { homeNav: ['hjem', 'hjem'] }, { startRoute: 'Hjem side' }, { appName: 'x'.repeat(21) }, { appName: '' }]) assert.equal((await A('/api/me/layout', 'PUT', bad)).status, 400, JSON.stringify(bad));
   r = await A('/api/me/layout', 'PUT', { appName: '  Torskenes  Verden ', appIcon: 'bokstav' });
   assert.equal(r.body.appName, 'Torskenes Verden');

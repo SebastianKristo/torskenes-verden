@@ -54,7 +54,7 @@ const priceLine = (x) => `${krm(x.price)} ${perOf(x)}${x.shared ? ' (din del av 
 
 const subsTool = {
   name: 'finance.subscriptions', module: 'finance', destructive: false,
-  description: 'Abonnementene brukeren har registrert (Subscription OS): dyreste/billigste, sum per måned/år, liste, prisøkninger. Koden normaliserer til måned og år.',
+  description: 'Abonnementene brukeren har registrert (Faste betalinger → Abonnementer): dyreste/billigste, sum per måned/år, liste, prisøkninger. Koden normaliserer til måned og år.',
   parameters: S({ mode: { type: 'string', enum: ['top', 'bottom', 'total', 'list', 'increased'], description: 'top = dyreste, bottom = billigste, total = sum, list = alle, increased = blitt dyrere' },
     basis: { type: 'string', enum: ['monthly', 'yearly'], description: 'Rangering per måned (standard) eller per år – samme rekkefølge' }, sort_by: { type: 'string', enum: ['monthly_cost'] }, order: { type: 'string', enum: ['desc', 'asc'] }, limit: { type: 'integer', description: 'Hvor mange (f.eks. 5)' } }),
   async validate(args, ctx) {
@@ -82,13 +82,13 @@ const subsTool = {
     if (a.mode === 'bottom') list = [...known].reverse();
     if (a.mode === 'increased') list = paid.filter((x) => x.increasePct > 0).sort((x, y) => y.increasePct - x.increasePct);
     return { status: 'done', result: { mode: a.mode, basis: a.basis, count: paid.length, ranked: list.slice(0, Math.max(a.limit, a.mode === 'top' || a.mode === 'bottom' ? 4 : a.limit)).map((x) => ({ id: x.id, name: x.name, price: x.price, cycle: x.cycle, monthly: x.monthly, yearly: x.yearly, shared: x.shared, increasePct: x.increasePct ?? null, prevPrice: x.prevPrice ?? null, priceChanged: x.priceChanged ?? null })),
-      total, uncertain: uncertain.map((x) => ({ id: x.id, name: x.name, reason: x.uncertain })), trials: trials.map((x) => ({ name: x.name, endsAt: x.endsAt, priceAfter: x.priceAfter })), source: 'Subscription OS' },
+      total, uncertain: uncertain.map((x) => ({ id: x.id, name: x.name, reason: x.uncertain })), trials: trials.map((x) => ({ name: x.name, endsAt: x.endsAt, priceAfter: x.priceAfter })), source: 'Abonnementer' },
     cards: (a.mode === 'list' || a.mode === 'total' ? [...known, ...uncertain, ...trials] : list.slice(0, Math.max(a.limit, 5))).map(subCard), items: list };
   },
 };
 function subsSentence(a, r, today) {
   const res = r.result;
-  if (!res.count) return `Du har **ingen registrerte abonnementer** i Subscription OS.${res.trials.length ? ` Bare ${res.trials.length === 1 ? 'en prøveperiode' : `${res.trials.length} prøveperioder`}: ${joinNo(res.trials.map((t) => `${t.name} (gratis til ${longDate45(t.endsAt, today)})`))}.` : ''}`;
+  if (!res.count) return `Du har **ingen registrerte abonnementer** i Abonnementer.${res.trials.length ? ` Bare ${res.trials.length === 1 ? 'en prøveperiode' : `${res.trials.length} prøveperioder`}: ${joinNo(res.trials.map((t) => `${t.name} (gratis til ${longDate45(t.endsAt, today)})`))}.` : ''}`;
   const unc = res.uncertain.length ? ` ${joinNo(res.uncertain.map((x) => `«${x.name}»`))} ${res.uncertain.length === 1 ? 'mangler' : 'mangler'} ${res.uncertain.every((x) => x.reason === 'price') ? 'pris' : res.uncertain.every((x) => x.reason === 'cycle') ? 'betalingsintervall' : 'pris eller betalingsintervall'}, så ${res.uncertain.length === 1 ? 'det' : 'de'} er ikke med i sammenligningen.` : '';
   const [first, ...rest] = res.ranked;
   if (a.mode === 'top' || a.mode === 'bottom') {
@@ -151,7 +151,7 @@ function fixedSentence(a, r, today) {
 export const CANCEL_RE46 = /(?<![a-zæøå])(avslutt\w*|si\s+opp|sier\s+opp|oppsigelse|kansell\w*|avbestill\w*|stopp(?:e)?\s+(?:abonnement\w*|prøve\w*)|unngå\s+å\s+bli\s+belastet)(?![a-zæøå])/i;
 const trialTool = {
   name: 'subscriptions.trial', module: 'finance', destructive: false,
-  description: 'Registrer/oppdater at et abonnement eller en gratis prøveperiode må avsluttes innen en dato (vises i Subscription OS → Prøveperioder). Brukes sammen med tasks.create når brukeren vil bli minnet på det.',
+  description: 'Registrer/oppdater at et abonnement eller en gratis prøveperiode må avsluttes innen en dato (vises i Abonnementer → Prøveperioder). Brukes sammen med tasks.create når brukeren vil bli minnet på det.',
   parameters: S({ service: sTxt('Tjenesten («Spotify»)'), date: sTxt('Datoen brukeren oppga for avslutningen («15.10», «neste fredag»)'), trial_end: sTxt('Når prøveperioden går ut, bare hvis brukeren sa det') }, ['service']),
   async validate(args, ctx) {
     const { serviceOf } = await import('../../public/js/trial-parse.js');
@@ -197,7 +197,7 @@ export const SENTENCES46 = {
   'finance.subscriptions': subsSentence, 'finance.fixed': fixedSentence, 'subscriptions.trial': trialSentence,
   'weather.get': (a, r, today) => weatherSentence46(r.result, today),
 };
-export const FAIL_TEXT46 = { 'weather.get': 'Været', 'finance.subscriptions': 'Fikk ikke lest abonnementene fra Subscription OS', 'finance.fixed': 'Fikk ikke lest de faste utgiftene', 'subscriptions.trial': 'Fikk ikke registrert det i Abonnementer → Prøveperioder' };
+export const FAIL_TEXT46 = { 'weather.get': 'Været', 'finance.subscriptions': 'Fikk ikke lest abonnementene fra Abonnementer', 'finance.fixed': 'Fikk ikke lest de faste utgiftene', 'subscriptions.trial': 'Fikk ikke registrert det i Abonnementer → Prøveperioder' };
 for (const t of [weatherTool, subsTool, fixedTool, trialTool]) {
   if (TOOL45[t.name]) continue;
   // Før app.answer/chat.answer (rekkefølgen i registeret er rekkefølgen modellen ser).

@@ -269,9 +269,26 @@ test('Finans-fanelinjen: finNav med {key, label, icon}, maks 5, Mer lagres ikke,
   assert.equal((await S('/api/me/layout', 'PUT', { finNav: [{ key: 'oversikt', label: '<b>' }] })).status, 400);
   // Profilen setter startverdien og fjerner egne navn.
   r = await S('/api/me/layout', 'PUT', { profile: 'standard' });
-  assert.deepEqual(r.body.finNavItems, [{ key: 'oversikt' }, { key: 'liste' }, { key: 'finn' }, { key: 'sok' }]);
+  assert.deepEqual(r.body.finNavItems, [{ key: 'oversikt' }, { key: 'transaksjoner' }, { key: 'budsjett' }, { key: 'faste' }]);
   assert.equal(r.body.profile, 'standard');
   // Samme nøkler som profilen, men med eget navn: Egendefinert.
   r = await S('/api/me/layout', 'PUT', { finNav: [{ key: 'oversikt', label: 'Hjem' }, 'liste', 'finn', 'sok'] });
   assert.equal(r.body.profile, 'custom');
+});
+
+test('Fase 6: Økonomi-fanene har nøklene transaksjoner og faste, og liste/abonnementer virker fortsatt som alias', async () => {
+  // Standard: Oversikt, Transaksjoner, Budsjett, Faste betalinger (Mer kommer alltid sist i appene).
+  let r = await S('/api/me/layout', 'PUT', { profile: 'standard' });
+  assert.deepEqual(r.body.finNav, ['oversikt', 'transaksjoner', 'budsjett', 'faste']);
+  // Eldre nøkler lagres og leses som før (eldre apper og lagrede oppsett).
+  r = await S('/api/me/layout', 'PUT', { finNav: ['oversikt', 'liste', 'abonnementer'] });
+  assert.equal(r.status, 200, r.text);
+  assert.deepEqual(r.body.finNav, ['oversikt', 'liste', 'abonnementer']);
+  // Samme fane to ganger (ny nøkkel og alias) avvises, både i finNav og i den eldre finTabs.
+  for (const bad of [{ finNav: ['transaksjoner', 'liste'] }, { finNav: ['faste', { key: 'abonnementer' }] }, { finTabs: ['liste', 'transaksjoner'] }]) {
+    assert.equal((await S('/api/me/layout', 'PUT', bad)).status, 400, JSON.stringify(bad));
+  }
+  assert.equal((await S('/api/me/layout', 'PUT', { finTabs: ['oversikt', 'transaksjoner', 'faste'] })).status, 200);
+  r = await S('/api/me/layout', 'PUT', { profile: 'standard' });
+  assert.equal(r.body.profile, 'standard');
 });

@@ -24,7 +24,7 @@ async function subInfo(user, id, today) {
 
 export const cancelTool60 = {
   name: 'subscriptions.cancel', module: 'finance', destructive: true,
-  description: 'Marker et abonnement som sagt opp i Subscription OS (krever bekreftelse). service = tjenesten («Netflix»), tomt/«det» = det fra forrige svar.',
+  description: 'Marker et abonnement som sagt opp i Abonnementer (Faste betalinger, krever bekreftelse). service = tjenesten («Netflix»), tomt/«det» = det fra forrige svar.',
   parameters: S({ service: sTxt('Tjenesten brukeren vil si opp, slik den ble omtalt («Netflix», «det»)'), subscription_id: sTxt('Id hvis kjent') }),
   async validate(args, ctx) {
     // Målet: id fra samtaletilstanden/valget (koden) → navnet i teksten (registrerte abonnementer) → modellens tjenestenavn hvis det står i teksten.
@@ -37,24 +37,24 @@ export const cancelTool60 = {
       else {
         const all = q('SELECT id, name, plan, price, cycle FROM fh_subscriptions WHERE user_id=? AND active=1 ORDER BY name').all(ctx.user);
         const pool = hits.length > 1 ? hits.map((h) => h.row) : all;
-        if (!pool.length) return { error: 'Du har ingen aktive abonnementer i Subscription OS' };
+        if (!pool.length) return { error: 'Du har ingen aktive abonnementer i Abonnementer' };
         return { ask: { question: named && !hits.length ? `Fant ikke «${named}» blant abonnementene dine. Hvilket vil du si opp?` : 'Hvilket abonnement vil du si opp?', options: pool.slice(0, 5).map((s) => ({ id: `sub-${s.id}`, label: `${s.name}${s.plan ? ` (${s.plan})` : ''}` })), field: 'subscription' } };
       }
     }
     const s = await subInfo(ctx.user, id, ctx.today);
     if (!s) return { error: 'Fant ikke abonnementet' };
-    if (!s.active) return { error: `«${s.name}» er allerede markert som sagt opp i Subscription OS` };
-    return { args: { id: s.id, name: s.name, plan: s.plan, monthly: s.monthly }, summary: `Si opp **${s.name}**${s.plan ? ` (${s.plan})` : ''}${s.monthly ? `, ${krm(s.monthly)}/mnd` : ''}? Jeg markerer det som sagt opp i Subscription OS – selve oppsigelsen hos ${s.name} må du gjøre der.` };
+    if (!s.active) return { error: `«${s.name}» er allerede markert som sagt opp i Abonnementer` };
+    return { args: { id: s.id, name: s.name, plan: s.plan, monthly: s.monthly }, summary: `Si opp **${s.name}**${s.plan ? ` (${s.plan})` : ''}${s.monthly ? `, ${krm(s.monthly)}/mnd` : ''}? Jeg markerer det som sagt opp i Abonnementer – selve oppsigelsen hos ${s.name} må du gjøre der.` };
   },
   async run(a, ctx) {
     const n = q('UPDATE fh_subscriptions SET active=0 WHERE id=? AND user_id=? AND active=1').run(a.id, ctx.user).changes;
     if (!n) return { status: 'failed', error: 'Abonnementet var allerede sagt opp eller finnes ikke' };
-    return { status: 'done', result: { subscription: { id: a.id, name: a.name, plan: a.plan }, cancelled: true, open: { web: '/finans/#/abonnement', deepLink: 'finanshub://abonnement' } }, cards: [{ kind: 'subscription', id: String(a.id), title: a.name, subtitle: 'Sagt opp i Subscription OS', open: { web: '/finans/#/abonnement', deepLink: 'finanshub://abonnement' } }] };
+    return { status: 'done', result: { subscription: { id: a.id, name: a.name, plan: a.plan }, cancelled: true, open: { web: '/finans/#/fast/abonnementer', deepLink: 'finanshub://abonnement' } }, cards: [{ kind: 'subscription', id: String(a.id), title: a.name, subtitle: 'Sagt opp i Abonnementer', open: { web: '/finans/#/fast/abonnementer', deepLink: 'finanshub://abonnement' } }] };
   },
   async verify(r, ctx) { const row = q('SELECT active FROM fh_subscriptions WHERE id=? AND user_id=?').get(r.result?.subscription?.id, ctx.user); return !!row && !row.active; },
 };
 
-SENTENCES46['subscriptions.cancel'] = (a, r) => `Markerte **${r.result.subscription.name}** som sagt opp i Subscription OS. Husk å si det opp hos ${r.result.subscription.name} også, ellers fortsetter trekkene.`;
+SENTENCES46['subscriptions.cancel'] = (a, r) => `Markerte **${r.result.subscription.name}** som sagt opp i Abonnementer. Husk å si det opp hos ${r.result.subscription.name} også, ellers fortsetter trekkene.`;
 FAIL_TEXT46['subscriptions.cancel'] = 'Fikk ikke sagt opp abonnementet';
 if (!TOOL45[cancelTool60.name]) {
   const i = TOOLS45.findIndex((x) => x.name === 'app.answer');

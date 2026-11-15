@@ -79,7 +79,8 @@ test('transaksjonsdetalj med kvittering og bankrad, og antall til gjennomgang', 
 
 test('layout: sider, Finans-faner, fjerde fane og skanneknapp', async () => {
   const g = (await M('/me/layout')).body;
-  assert.deepEqual(g.finTabs, ['oversikt', 'liste', 'finn', 'sok']);
+  // Fase 6: reserven for eldre apper har de samme fire fanene som standardprofilen, med de eldre nøklene.
+  assert.deepEqual(g.finTabs, ['oversikt', 'liste', 'budsjett', 'abonnementer']);
   assert.deepEqual([g.fourthTab, g.fab], ['auto', 'float']);
   assert.deepEqual(g.pages, {});
   let r = await M('/me/layout', 'PUT', { pages: { hjem: { order: ['nytt', 'sok'], hidden: ['snarveier'] } }, finTabs: ['oversikt', 'kvitteringer'], fourthTab: 'sporing', fab: 'inline' });
