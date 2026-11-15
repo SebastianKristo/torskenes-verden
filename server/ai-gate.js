@@ -1,6 +1,6 @@
-// Prompt 58: tredje backend «omlx» (server/omlx58/backend.js, registreres av ai-run.js) – backends med conf() får egen kø-instans, ingen
+// Prompt 58: tredje backend «omlx» (server/ai/omlx/backend.js, registreres av ai-run.js) – backends med conf() får egen kø-instans, ingen
 // /api/ps/keep_alive/utlasting mot Ollama. Open WebUI nede (nocontact/502–504) → ett nytt forsøk direkte mot Ollama (OWUI_DOWN_NOTE).
-// Prompt 44: server/ai-gate.js (før server/ollama-gate.js, som nå bare re-eksporterer herfra). Én sentral AI-klient med to
+// Prompt 44: server/ai-gate.js (før server/ollama-gate.js). Én sentral AI-klient med to
 // backends som deler samme kø: «ollama» (direkte, NDJSON) og «openwebui» (Open WebUI 0.12, OpenAI-kompatibel
 // /api/chat/completions med Bearer-nøkkel og SSE). Valget: innstillingen ai_backend ('openwebui' | 'ollama'; tom = Open WebUI
 // når adresse og nøkkel er satt, ellers Ollama). Embeddings, /api/ps, innlasting og utlasting går alltid direkte til Ollama.
@@ -52,8 +52,8 @@
 import { settings as fhSettings } from './finans/db.js';
 import { OWNER, kv } from './db.js';
 import { cfg } from './settings.js';
-import { THINK_UNSUPPORTED, isThinkingModel, rememberNoThink, hasNoThink, stripThink, userWantsThink } from './ollama-opts.js';
-import { omlxConf58 } from './omlx58/config.js'; // prompt 58: «Bruk Ollama hvis … ikke svarer» (felles for oMLX og Open WebUI)
+import { THINK_UNSUPPORTED, isThinkingModel, rememberNoThink, hasNoThink, stripThink, userWantsThink } from './ai/ollama-options.js';
+import { omlxConf58 } from './ai/omlx/config.js'; // prompt 58: «Bruk Ollama hvis … ikke svarer» (felles for oMLX og Open WebUI)
 
 /* ---------------- Innstillinger ---------------- */
 

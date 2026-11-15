@@ -14,8 +14,8 @@
 // Svaret: delta.content (tekst), delta.reasoning_content/reasoning (tenking, telles men vises ikke), delta.tool_calls (samles per index),
 // usage (prompt_tokens/completion_tokens). <think>…</think> fjernes (stripThink). Embeddings: POST /v1/embeddings.
 // Nøkkelen logges aldri og maskeres i feilmeldinger.
-import { registerBackend, GateError, httpGateError, toOpenAiMessage } from '../ai-gate.js';
-import { stripThink } from '../ollama-opts.js';
+import { registerBackend, GateError, httpGateError, toOpenAiMessage } from '../../ai-gate.js';
+import { stripThink } from '../ollama-options.js';
 import { omlxConf58 } from './config.js';
 import { maxContext58, omlxModels58, resolveModel58, omlxState58 } from './health.js';
 

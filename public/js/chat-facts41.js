@@ -1,4 +1,4 @@
-// Prompt 41: små faktakort under Glimt-svaret i Chat (meta.facts fra /api/chat/send, se server/chat-tools41.js).
+// Prompt 41: små faktakort under Glimt-svaret i Chat (meta.facts fra /api/chat/send, se server/ai/chat/tools.js).
 // «Vær · New York · neste time · vind 6 m/s, kast 9 m/s · Open-Meteo». Papir-stil: tynn linje, mono-etikett, kompakt.
 import { esc } from './util.js';
 

@@ -33,8 +33,8 @@ const logged = [];
 for (const k of ['log', 'info', 'warn', 'error']) { const o = console[k]; console[k] = (...a) => { logged.push(a.map(String).join(' ')); o(...a); }; }
 
 const { default: app } = await import('../server/index.js');
-const H = await import('../server/voxcpm57/health.js');
-const V = await import('../server/voxcpm57/voices.js');
+const H = await import('../server/ai/voxcpm/health.js');
+const V = await import('../server/ai/voxcpm/voices.js');
 H._setVxFetch57(realFetch); // bare kallene til «Mac mini-en» (127.0.0.1) får ekte nett
 
 let ipN = 70;

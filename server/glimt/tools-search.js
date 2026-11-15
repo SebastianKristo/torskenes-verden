@@ -144,7 +144,7 @@ const webTool = {
   parameters: S({ query: sTxt('Søkeord') }),
   async validate(args, ctx) {
     if (ctx.webSearch === false) return { error: 'Nettsøk er slått av' };
-    const { webQueryOf } = await import('../tool-router44.js');
+    const { webQueryOf } = await import('../ai/tool-router.js');
     const q0 = str(args.query, 200);
     // Søkeordene må komme fra meldingen (modellen skal ikke «svare» i søket).
     const q = q0 && words47(q0).filter((w) => w.length >= 3).every((w) => hasWord47(ctx.text, w) || w.length <= 3) ? q0 : webQueryOf(ctx.text);

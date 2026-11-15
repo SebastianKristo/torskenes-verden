@@ -1,5 +1,5 @@
 // Prompt 50 (SRVCHAT50): vedlegg i Chat med miniatyr, riktig modell for bilder og kvittering i chat
-// (claude-code-chat-slipp-filer-og-miniatyr.md). Brukes av server/chat.js.
+// (claude-code-chat-slipp-filer-og-miniatyr.md). Brukes av server/ai/chat/routes.js.
 //
 //   POST /api/chat/files (multipart file)  → {id, name, size, mime, readable, kind:'image'|'pdf'|'file', thumb?, url, w?, h?}
 //        Bilder får en miniatyr (maks 480 px, WebP) som lagres sammen med originalen. Mangler ImageMagick, er miniatyren originalen.
@@ -20,10 +20,10 @@
 import { randomUUID } from 'node:crypto';
 import { readFile, writeFile, mkdir, unlink } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
-import { config } from './config.js';
-import { db, q } from './db.js';
-import { db as fdb } from './finans/db.js';
-import { toJpeg50, thumbWebp50, sniffImage50, imageSize50 } from './img50.js';
+import { config } from '../../config.js';
+import { db, q } from '../../db.js';
+import { db as fdb } from '../../finans/db.js';
+import { toJpeg50, thumbWebp50, sniffImage50, imageSize50 } from '../../img50.js';
 
 export const FILES50 = resolve(config.dataDir, 'chat', 'files');
 export const LIMITS50 = { maxBytes: 20 * 1024 * 1024, maxFiles: 10, modelPx: 1600, thumbPx: 480, hydrateMessages: 3 };
@@ -116,7 +116,7 @@ export function mountFiles50(api) {
     let buf; try { buf = await readFile(r.path); } catch { return c.json({ error: 'Originalbildet finnes ikke lenger', kode: 'bilde_mangler' }, 404); }
     const fd = new FormData();
     fd.append('file', new Blob([buf], { type: r.mime }), r.name);
-    const { default: finansApi } = await import('./finans/routes.js');
+    const { default: finansApi } = await import('../../finans/routes.js');
     const res = await finansApi.request('/receipts', { method: 'POST', headers: { cookie: c.req.header('cookie') ?? '', authorization: c.req.header('authorization') ?? '' }, body: fd });
     const j = await res.json().catch(() => ({}));
     if (!res.ok) return c.json({ error: j.error ?? `Finans svarte ${res.status}` }, res.status === 401 || res.status === 403 ? res.status : 502);
@@ -148,7 +148,7 @@ export async function visionCaps50(list, base, F) {
 }
 export const _resetCaps50 = () => q('DELETE FROM chat_model_caps50').run();
 
-/** Beste lokale modell som ser bilder (installert). rank = rankFor41 fra chat41.js. */
+/** Beste lokale modell som ser bilder (installert). rank = rankFor41 fra ai/chat/auto-model.js. */
 export function bestVision50(models, rank) {
   return rank('vision', models, { cloudOk: false }).find((m) => m.kind === 'lokal' && m.vision && m.installed !== false) ?? null;
 }
@@ -215,7 +215,7 @@ export function dropImages50(history) { for (const m of history) if (m.images) d
 
 /** Leser teksten i bildene med Tesseract (lokalt). → {text, ok, error?} */
 export async function ocrImages50(rows) {
-  const { tesseractOcr48 } = await import('./receipts48/engines/tesseract.js');
+  const { tesseractOcr48 } = await import('../../receipts48/engines/tesseract.js');
   const parts = [];
   let err = null;
   for (const r of rows.slice(0, 4)) {
@@ -249,7 +249,7 @@ export function receiptTable50(rc) {
  * → {ok, markdown, meta:{receipt, label, engine, model, confidence, fileId, action}} | {ok:false, error}
  */
 export async function receiptChat50(u, row, { signal = null, text = '' } = {}) {
-  const { runChain48 } = await import('./receipts48/chain.js');
+  const { runChain48 } = await import('../../receipts48/chain.js');
   let buf;
   try { buf = await readFile(row.path); } catch { return { ok: false, error: 'Fant ikke bildet' }; }
   const small = await toJpeg50(buf, 2048).catch(() => null);
@@ -260,7 +260,7 @@ export async function receiptChat50(u, row, { signal = null, text = '' } = {}) {
   const label = `Lest med ${res.label ?? 'kvitteringsleseren'}`;
   return {
     ok: true,
-    markdown: `${(await import('./chat51.js')).formatReceipt51(rc, (await import('./chat51.js')).wantedFormat51(text)) ?? receiptTable50(rc)}\n\n${res.confidence === 'high' ? 'Summen stemmer med varelinjene.' : 'Sjekk beløpene – utlesingen er usikker.'}`,
+    markdown: `${(await import('./images.js')).formatReceipt51(rc, (await import('./images.js')).wantedFormat51(text)) ?? receiptTable50(rc)}\n\n${res.confidence === 'high' ? 'Summen stemmer med varelinjene.' : 'Sjekk beløpene – utlesingen er usikker.'}`,
     meta: {
       receipt: { merchant: rc.merchant ?? null, date: rc.date ?? null, total: rc.total ?? null, currency: rc.currency ?? 'NOK', items: (rc.items ?? []).map((l) => ({ description: l.description, quantity: l.quantity ?? null, amount: l.amount })),
         confidence: res.confidence, label: res.label, engine: res.engine, model: res.model, fileId: row.id,

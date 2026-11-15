@@ -12,8 +12,8 @@
 //   Samme (kind, ref) oppdaterer samtalen. Melding 1 (bruker/system): kilden + vedlegget. Melding 2 (modell): svaret, verktøy-chips
 //   (meta.tools) og status (meta.status), modellnavnet i meta.model.
 import { randomUUID } from 'node:crypto';
-import { db, q } from './db.js';
-import { broadcast } from './realtime.js';
+import { db, q } from '../../db.js';
+import { broadcast } from '../../realtime.js';
 
 export const SCAN_FOLDER = 'Kvitteringer og skanninger';
 export const SCAN_KINDS = ['receipt', 'label', 'categorize', 'finn'];

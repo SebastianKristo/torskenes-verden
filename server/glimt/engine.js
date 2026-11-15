@@ -569,7 +569,7 @@ async function executePlan(user, plan, ctxT, base, t0) {
   if (talk.length && ctxT.c47) {
     let webAct = actions.find((x) => x.tool === 'web.search' && x.status === 'done');
     if (!webAct && ctxT.webSearch !== false && checked.some((c) => c.tool === 'chat.answer')) {
-      const { routeLocal, webQueryOf } = await import('../tool-router44.js');
+      const { routeLocal, webQueryOf } = await import('../ai/tool-router.js');
       const rl = routeLocal(ctxT.text);
       if (rl.tools.includes('web') && /aktuelle fakta/.test(rl.reason)) {
         emit59(ctxT, 'status', toolStatus59({ tool: 'web.search' }));

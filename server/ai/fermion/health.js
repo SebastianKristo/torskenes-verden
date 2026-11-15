@@ -3,7 +3,7 @@
 //   GET {url}/health  med Authorization: Bearer <nøkkel>  (vakten i tools/fermion/guard.py)
 //   → 200 {status:'ok', model, kind, backend?, context?, profile?}  ·  503 {status:'starting'}  ·  401/403 feil nøkkel/IP
 import { neutrinoConf53, phononConf53, fermionConf53 } from './config.js';
-import { flagDefault53 } from '../flags53.js';
+import { flagDefault53 } from '../../flags53.js';
 
 export const FLAG_NEUTRINO53 = 'fermion_neutrino53';
 export const FLAG_PHONON53 = 'fermion_phonon53';

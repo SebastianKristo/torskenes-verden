@@ -74,9 +74,9 @@ globalThis.fetch = fake;
 test.after(() => { globalThis.fetch = realFetch; });
 
 const { default: app } = await import('../server/index.js');
-const chat = await import('../server/chat.js');
+const chat = await import('../server/ai/chat/routes.js');
 chat._setChatFetch(fake);
-const chat50 = await import('../server/chat50.js');
+const chat50 = await import('../server/ai/chat/attachments.js');
 const fdb = await import('../server/finans/db.js');
 const tess = await import('../server/receipts48/engines/tesseract.js');
 const aiRun = await import('../server/ai-run.js');

@@ -114,7 +114,7 @@ test('Ollama = 60 s og et svar som tar 45 s: søket fullføres (stream: true, ke
   const chat = mock.bodies.at(-1);
   assert.equal(chat.stream, true);
   // Prompt 43: keep_alive er per modell (Ollama-gaten); en modell med keep_alive 0 får en kort keep_alive mens den er i bruk.
-  const { keepAliveFor, SHORT_KEEP } = await import('../server/ollama-gate.js');
+  const { keepAliveFor, SHORT_KEEP } = await import('../server/ai-gate.js');
   const k = keepAliveFor(chat.model);
   assert.equal(chat.keep_alive, k === 0 ? SHORT_KEEP : k);
 });

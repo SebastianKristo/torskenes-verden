@@ -2,8 +2,8 @@
 // Lagret i kv(OWNER, 'fermion53'): {neutrinoUrl, neutrinoKey (kryptert), phononUrl, phononKey (kryptert), phononModel}.
 // Miljøvariabler er reserve: FERMION_NEUTRINO_URL, FERMION_NEUTRINO_KEY, FERMION_PHONON_URL, FERMION_PHONON_KEY, FERMION_PHONON_MODEL.
 // Nøklene sendes aldri til klienten og logges aldri. Adressene må peke til en maskin i huset (LAN), aldri ut.
-import { kv, OWNER } from '../db.js';
-import { seal, unseal } from '../finans/db.js';
+import { kv, OWNER } from '../../db.js';
+import { seal, unseal } from '../../finans/db.js';
 
 const KEY = 'fermion53';
 export const PHONON_MODELS53 = ['phonon-2.5', 'phonon-2', 'phonon-2.5-en'];

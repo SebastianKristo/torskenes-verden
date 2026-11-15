@@ -5,12 +5,12 @@
 //   phonon (FERMION53, prioritet 10) · voz (lokal, prioritet 5) · andre registrert med registerAsrBackend53 (f.eks. Whisper senere).
 // Norsk: verken Voz eller Phonon støtter norsk (begge oppgir 25 europeiske språk uten norsk). Prompt 54 (WHISPER54): NB-Whisper på
 // Mac mini-en (server/whisper54, lat import) tar norsk (bokmål/nynorsk), språkdeteksjon (language mangler/auto) og er reserve for
-// engelsk. Rekkefølgen per språk står i ../whisper54/route.js. 422 language_unsupported bare når ingen motor for språket er satt opp.
+// engelsk. Rekkefølgen per språk står i ../ai/whisper/route.js. 422 language_unsupported bare når ingen motor for språket er satt opp.
 import { execFile } from 'node:child_process';
 import { use53, ready53 } from './models.js';
 import { on53 } from './flags.js';
 import { detectLang53 } from './text.js';
-import { splitLang54, nbWire54, decide54, order54, langLabel54, ENGINE_LABELS54 } from '../whisper54/route.js';
+import { splitLang54, nbWire54, decide54, order54, langLabel54, ENGINE_LABELS54 } from '../ai/whisper/route.js';
 
 // Språkene Voz oppgir (25, europeiske). Pakken har ingen språkliste; tallet og lista stemmer med modellfamilien Voz og Phonon-2.5
 // bygger på (parakeet-tdt-0.6b-v3). Modellkortet på Hugging Face kunne ikke leses herfra (blokkert) – se docs/dal-53.md.
@@ -27,7 +27,7 @@ export const _clearAsr53 = () => extra.clear();
 
 let fermion = undefined; // lat import av FERMION53 (finnes kanskje ikke)
 async function phonon() {
-  if (fermion === undefined) fermion = (await import('../fermion53/asr.js').catch(() => null))?.phononAsr53 ?? null;
+  if (fermion === undefined) fermion = (await import('../ai/fermion/asr.js').catch(() => null))?.phononAsr53 ?? null;
   return fermion;
 }
 /** Bare for tester. */
@@ -35,7 +35,7 @@ export const _setPhonon53 = (p) => { fermion = p; };
 
 let nbw = undefined; // lat import av WHISPER54 (NB-Whisper på Mac mini-en)
 async function nbWhisper() {
-  if (nbw === undefined) nbw = (await import('../whisper54/asr.js').catch(() => null))?.nbWhisperAsr54 ?? null;
+  if (nbw === undefined) nbw = (await import('../ai/whisper/asr.js').catch(() => null))?.nbWhisperAsr54 ?? null;
   return nbw;
 }
 /** Bare for tester. */

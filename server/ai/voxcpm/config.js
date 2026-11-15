@@ -1,9 +1,9 @@
 // Prompt 57 (VOX57): oppsettet for VoxCPM2 på Mac mini-en (tools/voxcpm), bare admin.
 // Lagret i kv(OWNER, 'voxcpm57'): {url, key (kryptert med seal)}. Miljøvariabler er reserve: VOXCPM_URL, VOXCPM_KEY.
 // Nøkkelen sendes aldri til klienten og logges aldri. Adressen må være i huset (samme regel som FERMION53/WHISPER54: inHouseUrl53).
-import { kv, OWNER } from '../db.js';
-import { seal, unseal } from '../finans/db.js';
-import { inHouseUrl53 } from '../fermion53/config.js';
+import { kv, OWNER } from '../../db.js';
+import { seal, unseal } from '../../finans/db.js';
+import { inHouseUrl53 } from '../fermion/config.js';
 
 const KEY = 'voxcpm57';
 const raw = () => { try { return kv.get(OWNER, KEY, {}) ?? {}; } catch { return {}; } };

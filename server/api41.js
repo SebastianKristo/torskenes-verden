@@ -4,7 +4,7 @@
 //   PostNord uten nøkkel (recipientview), dynamisk polling, push ved endring, helsesjekk GET /api/tracking/postnord/health → tracking-carriers.js, tracking.js
 //   Gjøremål-Glimt i bakgrunnen + «Laget med Glimt»: /api/tasks/glimt {async:true}, /glimt/jobs, /glimt/sources           → tasks-glimt41.js (+ tasks.js)
 //     alias POST /api/huske/glimt-jobs; /api/assist gjenkjenner huskebeskjeder                                           → under, assist.js
-//   Chat: «Mine data» på som standard, «✦ Auto»                                                                        → settings.js, chat41.js (+ chat.js)
+//   Chat: «Mine data» på som standard, «✦ Auto»                                                                        → settings.js, ai/chat/auto-model.js (+ chat.js)
 //   Vær-uke via Glimt (Ollama + 7 dager), skiføre i brief/Vær                                                          → weather41.js (+ assist.js, chat.js), under
 //   AI-jobber: createdAt/startedAt/endedAt + timeLabel                                                                 → ai41.js (+ ai-run.js)
 //   Finans: Les på nytt for alle statuser, receipt_reads, /receipts/:id/reread, /receipts/:id/review                    → finans/routes.js

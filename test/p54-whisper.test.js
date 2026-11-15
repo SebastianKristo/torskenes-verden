@@ -36,9 +36,9 @@ for (const k of ['log', 'info', 'warn', 'error']) { const o = console[k]; consol
 const { default: app } = await import('../server/index.js');
 const M = await import('../server/dal53/models.js');
 const ASR = await import('../server/dal53/asr.js');
-const H = await import('../server/whisper54/health.js');
-const W = await import('../server/whisper54/asr.js');
-const R = await import('../server/whisper54/route.js');
+const H = await import('../server/ai/whisper/health.js');
+const W = await import('../server/ai/whisper/asr.js');
+const R = await import('../server/ai/whisper/route.js');
 H._setNbFetch54(realFetch); // bare kallene til «Mac mini-en» (127.0.0.1) får ekte nett
 
 let ipN = 60;

@@ -19,13 +19,13 @@ import { closeSync, createReadStream, existsSync, fstatSync, mkdirSync, openSync
 import { join, resolve } from 'node:path';
 import { createInflateRaw } from 'node:zlib';
 import { StringDecoder } from 'node:string_decoder';
-import { config } from './config.js';
-import { db, q, kv } from './db.js';
-import { authOrToken } from './mobile.js';
-import { addMemory43, removeMemory43, splitMemory43 } from './ai-memory43.js';
-import { messageText43, memoryFrom43 } from './claude-import43.js';
-// Prompt 46 (SERVER46): minne-eksporten fra Claude (claude-memory-<dato>/areas/*.md) – se claude-memory46.js.
-import { isMemoryMd46, parseMemoryMd46, areasPreview46, importAreas46, undoAreas46, embedAreas46, LIMITS46 } from './claude-memory46.js';
+import { config } from '../config.js';
+import { db, q, kv } from '../db.js';
+import { authOrToken } from '../mobile.js';
+import { addMemory43, removeMemory43, splitMemory43 } from './memory.js';
+import { messageText43, memoryFrom43 } from './claude-import.js';
+// Prompt 46 (SERVER46): minne-eksporten fra Claude (claude-memory-<dato>/areas/*.md) – se ai/claude-memory.js.
+import { isMemoryMd46, parseMemoryMd46, areasPreview46, importAreas46, undoAreas46, embedAreas46, LIMITS46 } from './claude-memory.js';
 
 export const LIMITS45 = { upload: 1024 ** 3, chunk: 16 * 1024 ** 2, unzipped: 2 * 1024 ** 3, entry: 1024 ** 3, entries: 20_000, smallFile: 64 * 1024 ** 2, conversations: 50_000, msgChars: 200_000 };
 const TTL = 60 * 60_000;
@@ -409,7 +409,7 @@ function folderOf(u, name) {
 async function indexMemory(u, items, src) {
   if (!items.length) return 0;
   try {
-    const { embed } = await import('./ai-run.js');
+    const { embed } = await import('../ai-run.js');
     const r = await embed(items.map((m) => m.text), { user: u, title: `Glimt-minne · import fra ${src}`, background: true });
     const ins = q('INSERT OR REPLACE INTO ai_memory45_vec(memory_id, user_id, model, vec, src, created) VALUES(?,?,?,?,?,?)');
     db.transaction(() => { items.forEach((m, i) => { if (Array.isArray(r.vectors?.[i])) ins.run(m.id, u, r.model, JSON.stringify(r.vectors[i]), src, Date.now()); }); })();

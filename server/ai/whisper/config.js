@@ -1,9 +1,9 @@
 // Prompt 54 (WHISPER54): oppsettet for NB-Whisper på Mac mini-en (tools/nb-whisper), bare admin.
 // Lagret i kv(OWNER, 'whisper54'): {url, key (kryptert med seal)}. Miljøvariabler er reserve: NBWHISPER_URL, NBWHISPER_KEY.
 // Nøkkelen sendes aldri til klienten og logges aldri. Adressen må være i huset (samme regel som FERMION53: inHouseUrl53).
-import { kv, OWNER } from '../db.js';
-import { seal, unseal } from '../finans/db.js';
-import { inHouseUrl53 } from '../fermion53/config.js';
+import { kv, OWNER } from '../../db.js';
+import { seal, unseal } from '../../finans/db.js';
+import { inHouseUrl53 } from '../fermion/config.js';
 
 const KEY = 'whisper54';
 const raw = () => { try { return kv.get(OWNER, KEY, {}) ?? {}; } catch { return {}; } };

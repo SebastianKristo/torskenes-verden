@@ -1,6 +1,6 @@
 // Prompt 46 (SERVER46), claude-code-claude-import-minne-markdown.md – Claude-import av MINNE-eksporten (mappe/ZIP med .md-filer).
 //
-// Årsak: importen (ai-import45.js) godtok bare samtale-eksporten og kastet «Fant ikke conversations.json i eksporten» så fort fila
+// Årsak: importen (ai/import.js) godtok bare samtale-eksporten og kastet «Fant ikke conversations.json i eksporten» så fort fila
 // ikke hadde den – også for minne-eksporten `claude-memory-<dato>/areas/<tema>.md`, som er nettopp det Glimt skal huske.
 // Nå gjenkjennes formatet på innholdet: conversations.json (samtaler), memories.json (minner), mange .md-filer (minneområder),
 // eller begge. Det er bare feil når INGENTING kjennes igjen, og da sier feilen hva som ble funnet.
@@ -12,7 +12,7 @@
 // (hash per punkt). Samme fil importert på nytt OPPDATERER området: nye punkter legges til, borte punkter fjernes, like beholdes –
 // ingen kopier. Embeddings (nomic-embed-text via ai-run.js embed) lagres i ai_memory45_vec. Alt per bruker.
 import { createHash } from 'node:crypto';
-import { db, q } from './db.js';
+import { db, q } from '../db.js';
 
 db.exec(`CREATE TABLE IF NOT EXISTS ai_memory46_areas (
   id INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT NOT NULL, area_key TEXT NOT NULL, title TEXT NOT NULL, category TEXT, file TEXT,
@@ -185,7 +185,7 @@ export const areasOf46 = (u) => q('SELECT * FROM ai_memory46_areas WHERE user_id
 export async function embedAreas46(u, added) {
   if (!added.length) return 0;
   try {
-    const { embed } = await import('./ai-run.js');
+    const { embed } = await import('../ai-run.js');
     const r = await embed(added.map((m) => m.text), { user: u, title: 'Glimt-minne · Claude-minner', background: true });
     const ins = q('INSERT OR REPLACE INTO ai_memory45_vec(memory_id, user_id, model, vec, src, created) VALUES(?,?,?,?,?,?)');
     db.transaction(() => { added.forEach((m, i) => { if (Array.isArray(r.vectors?.[i])) ins.run(m.id, u, r.model, JSON.stringify(r.vectors[i]), MEMORY_SRC46, Date.now()); }); })();

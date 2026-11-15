@@ -1,4 +1,4 @@
-// Prompt 43: Ollama-gaten (server/ollama-gate.js) mot en falsk Ollama som oppfører seg som brukerens Mac mini M4 16 GB:
+// Prompt 43: Ollama-gaten (server/ai-gate.js) mot en falsk Ollama som oppfører seg som brukerens Mac mini M4 16 GB:
 // NUM_PARALLEL=1, bare plass til én av qwen3:8b / qwen2.5vl:7b, innlasting 2–40 s (skalert 1/100), strømmende svar, en forespørsel
 // mot en modell som lastes ut brytes, og qwen3 tenker når think ikke er false. Se test/ollama-sim43.js.
 import { test, beforeEach } from 'node:test';
@@ -27,8 +27,8 @@ test.after(() => { globalThis.fetch = realFetch; });
 
 const { default: app } = await import('../server/index.js');
 const ai = await import('../server/ai-run.js');
-const gate = await import('../server/ollama-gate.js');
-const opts = await import('../server/ollama-opts.js');
+const gate = await import('../server/ai-gate.js');
+const opts = await import('../server/ai/ollama-options.js');
 const brief = await import('../server/glimt/brief.js');
 const { OWNER } = await import('../server/db.js');
 

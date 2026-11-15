@@ -5,8 +5,8 @@ import { createHash, randomBytes } from 'node:crypto';
 import { execFile } from 'node:child_process';
 import { mkdirSync, readFileSync, writeFileSync, existsSync, readdirSync, statSync, unlinkSync, rmSync, renameSync } from 'node:fs';
 import { join } from 'node:path';
-import { config } from '../config.js';
-import * as ai from '../ai-run.js';
+import { config } from '../../config.js';
+import * as ai from '../../ai-run.js';
 import { speech57, putRef57, deleteRef57 } from './client.js';
 import { vxReady57, vxConfigured57 } from './health.js';
 

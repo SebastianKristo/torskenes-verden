@@ -13,52 +13,52 @@
 //   GET/PATCH/DELETE /chats/:id, GET /chats/:id/export (Markdown), POST /chats/:id/share → {url}
 //   POST /folders {name}, PATCH/DELETE /folders/:id
 //   POST   /send                      → SSE meta {chatId} · facts {facts, used}? · delta {text} · done {tokensPerSec, ms, used, facts?} · error {error}; 409 {needsConfirm}
-//                                       (prompt 41: vær/tid/sol hentes før modellen, se server/chat-tools41.js; meta.facts lagres i svaret)
+//                                       (prompt 41: vær/tid/sol hentes før modellen, se server/ai/chat/tools.js; meta.facts lagres i svaret)
 //   POST   /files (multipart file)    → {id,name,size};  GET /knowledge → [{id,name,size,source,type}]
 //   GET    /mydata                    → {finans, kalender, huske};  GET/PATCH /settings
 //   POST   /transcribe (multipart)    → {text} via Open WebUI; 501 uten
 //   GET    /shared/:token             → delt samtale (Markdown, uten innlogging; tokenet er tilfeldig)
 // Samtaleinnstillinger (chat.settings): persona, system, temperature, topP, numCtx, theme, skipCloudAsk og think (av som
-// standard; på → Ollama får think:true, av → think:false, se server/ollama-opts.js).
+// standard; på → Ollama får think:true, av → think:false, se server/ai/ollama-options.js).
 import { Hono } from 'hono';
-import { originOf46 } from './auth/server-address.js'; // prompt 46 (SERVER46)
+import { originOf46 } from '../../auth/server-address.js'; // prompt 46 (SERVER46)
 import { streamSSE } from 'hono/streaming';
 import { bodyLimit } from 'hono/body-limit';
 import { randomUUID, randomBytes } from 'node:crypto';
 import { unlink } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
-import { config } from './config.js';
-import { db, q, kv } from './db.js';
-import { authOrToken, layoutOf } from './mobile.js';
-import { isAdmin } from './auth/session.js';
-import { cfg, userCfg, userBool, setUserCfg } from './settings.js';
-import { settings, secret } from './finans/db.js';
-import { geminiFetch, hasGemini } from './finans/gemini-keys.js';
-import { aiTimeoutsOf, GEMINI_DEFAULT, GROQ_DEFAULT, GROQ_MODELS, GROQ_VISION_DEFAULT, groqModelOf } from './finans/ai.js';
-import { CATALOG } from './finans/ollama-models.js';
-import { audit } from './finans/ai-audit.js';
-import { finansSummary } from './finans/summary.js';
-import { nextTasks } from './tasks.js';
-import { chatBody, isThinkingModel } from './ollama-opts.js';
-import { thinkSplit52, thinkState52, glimtSteps52, stripThink52, cleanAttTh52 } from './chat52.js'; // prompt 52 (SRV52): tankegang
-import { gateChat, GateError } from './ai-gate.js'; // prompt 43: alle Ollama-kall via gaten
-import { chatModels53, neutrinoChatStream53, isNeutrino53, NEUTRINO_NAME53 } from './fermion53/neutrino.js'; // prompt 53 (FERMION53): Neutrino-1 8B på Mac mini-en
-import { ensureScanFolder, scanFolderInfo, isSysFolder, upsertScanChat } from './chat-scans.js';
-import { gatherFacts, factsPrompt, factsAnswer, hasFactWords } from './chat-tools41.js'; // prompt 41: Glimt henter fakta
-import { AUTO_ID, pickAuto41, autoEntry41, recordAuto41, feedbackAuto41, autoSummary41 } from './chat41.js'; // prompt 41: «✦ Auto»
-import { weekFact41, isWeekWeather41 } from './weather41.js'; // prompt 41: ukesvær til modellen
-import { routeTools, routeTextOf, pickData, osloNowLine } from './tool-router44.js'; // prompt 44: ruting før hovedmodellen
-import { webSearch, webPrompt, webMeta, webFact } from './web-search.js'; // prompt 44: eget nettsøk
-import { powerFact, powerPrompt } from './power-price.js'; // prompt 44: strømpris
-import { backendConfig, maskSecrets } from './ai-gate.js';
-import { jobStart, jobUpdate, jobEnd } from './ai-run.js'; // prompt 44: Chat i jobbloggen (backend, verktøy, nettsøk)
-import { memoryPrompt43 } from './ai-memory43.js'; // prompt 43: AI-minne i systemprompten
-import { saveFile50, deleteFile50, desc50, mountFiles50, visionCaps50, bestVision50, prepareHistory50, stored50, dropImages50, ocrImages50, ocrNote50, receiptChat50, attIds50, RECEIPT_RE50, LIMITS50, kindOf50 } from './chat50.js'; // prompt 50 (SRVCHAT50): vedlegg, miniatyr, vision, kvittering i chat
-import { rankFor41 } from './chat41.js';
-import { externalBlocked48, r48Settings } from './receipts48/settings.js';
-import { imageIntent51, looksLikeDocument51, documentNote51, readDocument51, visionModel51, textModel51, isMultimodalError51, markNoVision51, friendlyError51, owuiVision51 } from './chat51.js'; // prompt 51 (RCPTSRV51): bilder i chatten
-import { engine53, webSearch53, eyeIntent53 } from './dal53/index.js'; // prompt 53 (DAL53): Tongue/Redact rundt motoren, Redact på søkeord, Eye for bilder
-import { osloDate } from './dates/oslo.js';
+import { config } from '../../config.js';
+import { db, q, kv } from '../../db.js';
+import { authOrToken, layoutOf } from '../../mobile.js';
+import { isAdmin } from '../../auth/session.js';
+import { cfg, userCfg, userBool, setUserCfg } from '../../settings.js';
+import { settings, secret } from '../../finans/db.js';
+import { geminiFetch, hasGemini } from '../../finans/gemini-keys.js';
+import { aiTimeoutsOf, GEMINI_DEFAULT, GROQ_DEFAULT, GROQ_MODELS, GROQ_VISION_DEFAULT, groqModelOf } from '../../finans/ai.js';
+import { CATALOG } from '../../finans/ollama-models.js';
+import { audit } from '../../finans/ai-audit.js';
+import { finansSummary } from '../../finans/summary.js';
+import { nextTasks } from '../../tasks.js';
+import { chatBody, isThinkingModel } from '../ollama-options.js';
+import { thinkSplit52, thinkState52, glimtSteps52, stripThink52, cleanAttTh52 } from './thinking.js'; // prompt 52 (SRV52): tankegang
+import { gateChat, GateError } from '../../ai-gate.js'; // prompt 43: alle Ollama-kall via gaten
+import { chatModels53, neutrinoChatStream53, isNeutrino53, NEUTRINO_NAME53 } from '../fermion/neutrino.js'; // prompt 53 (FERMION53): Neutrino-1 8B på Mac mini-en
+import { ensureScanFolder, scanFolderInfo, isSysFolder, upsertScanChat } from './scans.js';
+import { gatherFacts, factsPrompt, factsAnswer, hasFactWords } from './tools.js'; // prompt 41: Glimt henter fakta
+import { AUTO_ID, pickAuto41, autoEntry41, recordAuto41, feedbackAuto41, autoSummary41 } from './auto-model.js'; // prompt 41: «✦ Auto»
+import { weekFact41, isWeekWeather41 } from '../../weather41.js'; // prompt 41: ukesvær til modellen
+import { routeTools, routeTextOf, pickData, osloNowLine } from '../tool-router.js'; // prompt 44: ruting før hovedmodellen
+import { webSearch, webPrompt, webMeta, webFact } from '../../web-search.js'; // prompt 44: eget nettsøk
+import { powerFact, powerPrompt } from '../../power-price.js'; // prompt 44: strømpris
+import { backendConfig, maskSecrets } from '../../ai-gate.js';
+import { jobStart, jobUpdate, jobEnd } from '../../ai-run.js'; // prompt 44: Chat i jobbloggen (backend, verktøy, nettsøk)
+import { memoryPrompt43 } from '../memory.js'; // prompt 43: AI-minne i systemprompten
+import { saveFile50, deleteFile50, desc50, mountFiles50, visionCaps50, bestVision50, prepareHistory50, stored50, dropImages50, ocrImages50, ocrNote50, receiptChat50, attIds50, RECEIPT_RE50, LIMITS50, kindOf50 } from './attachments.js'; // prompt 50 (SRVCHAT50): vedlegg, miniatyr, vision, kvittering i chat
+import { rankFor41 } from './auto-model.js';
+import { externalBlocked48, r48Settings } from '../../receipts48/settings.js';
+import { imageIntent51, looksLikeDocument51, documentNote51, readDocument51, visionModel51, textModel51, isMultimodalError51, markNoVision51, friendlyError51, owuiVision51 } from './images.js'; // prompt 51 (RCPTSRV51): bilder i chatten
+import { engine53, webSearch53, eyeIntent53 } from '../../dal53/index.js'; // prompt 53 (DAL53): Tongue/Redact rundt motoren, Redact på søkeord, Eye for bilder
+import { osloDate } from '../../dates/oslo.js';
 
 const isMock = () => process.env.MOCK_DATA === '1' && !fx;
 
@@ -235,7 +235,7 @@ function toMarkdown(r) {
 const withTimeout = (p, ms, d) => Promise.race([p, sleep(ms).then(() => d)]);
 const hm = (isoStr) => (isoStr ? new Date(isoStr).toLocaleTimeString('nb-NO', { timeZone: 'Europe/Oslo', hour: '2-digit', minute: '2-digit' }) : '');
 async function kalenderSummary(u) {
-  const { eventsFor } = await import('./kalender/events.js');
+  const { eventsFor } = await import('../../kalender/events.js');
   const from = osloDate(), to = osloDate(Date.now() + 7 * 86400_000);
   const { events } = await eventsFor(u, from, to);
   const list = events.filter((e) => (e.allDay ? e.end > from : Date.parse(e.end ?? e.start) > Date.now())).slice(0, 15);
@@ -600,7 +600,7 @@ api.delete('/folders/:id', (c) => {
   return c.json({ ok: true });
 });
 
-// Prompt 34: skann-samtaler (se server/chat-scans.js). POST /system {kind, ref?, title, source?, attachment?, model?, text?, tools?, status?}
+// Prompt 34: skann-samtaler (se server/ai/chat/scans.js). POST /system {kind, ref?, title, source?, attachment?, model?, text?, tools?, status?}
 api.post('/system', async (c) => {
   const b = await c.req.json().catch(() => null);
   if (!b || typeof b !== 'object') return bad(c, 'Forventet {kind, title}');

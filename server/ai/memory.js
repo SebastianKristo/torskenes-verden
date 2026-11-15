@@ -6,9 +6,9 @@
 //   PATCH  /api/ai/memory/:id {text}       → {item}
 //   DELETE /api/ai/memory/:id              → {ok}
 import { Hono } from 'hono';
-import { db, q } from './db.js';
-import { authOrToken } from './mobile.js';
-import { areasOf46 } from './claude-memory46.js'; // prompt 46 (SERVER46)
+import { db, q } from '../db.js';
+import { authOrToken } from '../mobile.js';
+import { areasOf46 } from './claude-memory.js'; // prompt 46 (SERVER46)
 
 db.exec(`CREATE TABLE IF NOT EXISTS ai_memory43 (
   id INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT NOT NULL, text TEXT NOT NULL, src TEXT NOT NULL DEFAULT 'Chat',

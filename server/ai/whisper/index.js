@@ -7,8 +7,8 @@
 //   PUT  /api/admin/whisper54/config            {url?, key?}   (adressen må være i huset; nøkkelen lagres kryptert, sendes aldri ut)
 //   POST /api/admin/whisper54/test              → {ok, text, detected, ms, model, error?}
 import { Hono } from 'hono';
-import { authOrToken } from '../mobile.js';
-import { isAdmin } from '../auth/session.js';
+import { authOrToken } from '../../mobile.js';
+import { isAdmin } from '../../auth/session.js';
 import { nbConfOut54, saveNbConf54 } from './config.js';
 import { nbHealthOut54, nbState54, probeNb54, startNbHealth54 } from './health.js';
 import { testNb54 } from './asr.js';
@@ -25,7 +25,7 @@ const adminOnly = async (c, next) => {
 const body = async (c) => { try { const b = await c.req.json(); return b && typeof b === 'object' ? b : {}; } catch { return {}; } };
 
 async function engines54() {
-  const { asrBackends53 } = await import('../dal53/asr.js').catch(() => ({}));
+  const { asrBackends53 } = await import('../../dal53/asr.js').catch(() => ({}));
   if (!asrBackends53) return [];
   return (await asrBackends53().catch(() => [])).map(({ b, ...x }) => ({ ...x, engine_label: ENGINE_LABELS54[x.id] ?? x.label }));
 }

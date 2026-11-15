@@ -8,8 +8,8 @@
 //   DELETE /api/voices57/:id                 → {ok, macDeleted}
 //   GET    /api/admin/voxcpm57/health[?fresh=1] · GET/PUT /api/admin/voxcpm57/config · POST /api/admin/voxcpm57/test   (bare admin)
 import { Hono } from 'hono';
-import { authOrToken } from '../mobile.js';
-import { isAdmin } from '../auth/session.js';
+import { authOrToken } from '../../mobile.js';
+import { isAdmin } from '../../auth/session.js';
 import { vxConfOut57, saveVxConf57 } from './config.js';
 import { vxHealthOut57, vxState57, probeVx57, startVxHealth57, vxReady57, vxConfigured57 } from './health.js';
 import { listVoices57, createDesign57, createClone57, deleteVoice57, vxVoiceOf57, vxSpeakFor57, voiceCounts57, pruneVxCache57,
@@ -32,7 +32,7 @@ const fail = (c, e) => {
 const audioResponse = (r, extra = {}) => new Response(r.audio, { status: 200, headers: { 'Content-Type': r.contentType || 'audio/mpeg', 'Content-Length': String(r.audio.length),
   'Cache-Control': 'private, max-age=2592000', 'X-TTS-Engine': 'voxcpm', 'X-TTS-Cache': r.cache, 'X-TTS-Voice': r.voice, 'X-TTS-Chars': String(r.chars), 'X-TTS-AI': '1', ...extra } });
 
-async function glimt() { return import('../glimt/settings.js'); }
+async function glimt() { return import('../../glimt/settings.js'); }
 
 /* ─────────────── stemmer per bruker ─────────────── */
 

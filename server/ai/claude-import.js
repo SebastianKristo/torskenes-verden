@@ -14,10 +14,10 @@
 import { Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import { randomBytes, randomUUID } from 'node:crypto';
-import { db, q, kv } from './db.js';
-import { authOrToken } from './mobile.js';
-import { unzip } from './finans/xlsx.js';
-import { addMemory43, removeMemory43, splitMemory43 } from './ai-memory43.js';
+import { db, q, kv } from '../db.js';
+import { authOrToken } from '../mobile.js';
+import { unzip } from '../finans/xlsx.js';
+import { addMemory43, removeMemory43, splitMemory43 } from './memory.js';
 
 const MAX_BYTES = 200 * 1024 * 1024;
 const TTL = 60 * 60_000;
@@ -144,7 +144,7 @@ claudeImport43Api.post('/claude', bodyLimit({ maxSize: MAX_BYTES, onError: (c) =
       if (f && typeof f === 'object' && typeof f.arrayBuffer === 'function') {
         if (f.size > MAX_BYTES) return bad(c, 'Fila kan være maks 200 MB', 413);
         // Prompt 45: samme robuste leser som /api/ai/import (ZIP64, strømming, zip-bomb-vern, faktisk feilårsak).
-        parsed = await (await import('./ai-import45.js')).readExport45(Buffer.from(await f.arrayBuffer()), { name: f.name ?? '', source: 'claude' });
+        parsed = await (await import('./import.js')).readExport45(Buffer.from(await f.arrayBuffer()), { name: f.name ?? '', source: 'claude' });
       }
     } else if (ct.includes('json')) {
       const b = await c.req.json().catch(() => null);
@@ -154,7 +154,7 @@ claudeImport43Api.post('/claude', bodyLimit({ maxSize: MAX_BYTES, onError: (c) =
         memText = typeof b.memory === 'string' ? b.memory : Array.isArray(b.memory) ? b.memory.join('\n') : '';
         if (b.conversations != null) parsed = readExport43(Buffer.from(JSON.stringify(b.conversations)), 'conversations.json');
       }
-    } else if (ct.includes('zip') || ct.includes('octet-stream')) parsed = await (await import('./ai-import45.js')).readExport45(Buffer.from(await c.req.arrayBuffer()), { name: 'eksport.zip', source: 'claude' });
+    } else if (ct.includes('zip') || ct.includes('octet-stream')) parsed = await (await import('./import.js')).readExport45(Buffer.from(await c.req.arrayBuffer()), { name: 'eksport.zip', source: 'claude' });
     if (!parsed && !memText.trim()) return bad(c, 'Velg en .zip eller conversations.json, eller lim inn minnet');
     parsed ??= { convs: [], projects: [], memory: [], files: [], steps: [] };
     return c.json(preview(u, parsed, memText));

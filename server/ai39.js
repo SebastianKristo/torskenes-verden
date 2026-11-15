@@ -1,5 +1,5 @@
 // Prompt 39 (SERVER39): «✦ Glimt anbefaler» – hvilke modeller du skal laste ned og hva de brukes til, for AI-maskinen
-// (Mac mini M4 · 16 GB, se aihw38.js). Montert under /api/ai før ai-api.js. Sesjon eller app-token; «Fyll ut» krever admin.
+// (Mac mini M4 · 16 GB, se aihw38.js). Montert under /api/ai før ai/control.js. Sesjon eller app-token; «Fyll ut» krever admin.
 //
 // GET  /api/ai/recommend → [{task, taskName, model, why, alt, fit:'PASSER'|'TRANGT', installed, inUse, sizeGb, pullCmd, current, score, usedFor:[taskName]}]
 //      ?full=1 → {machine:{label, model, memGb, gpuBudgetGb}, title:'✦ GLIMT ANBEFALER · Mac mini M4 · 16 GB', items:[…], missing:[{model, sizeGb}], missingGb,

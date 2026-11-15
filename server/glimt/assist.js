@@ -80,14 +80,14 @@ import { extractPlace, placeWeather, PlaceNotFound } from '../weather35.js'; // 
 import { run as aiRun, routing as aiRouting, AiRunError, isCloud, providerOf, providerLabel } from '../ai-run.js';
 import { aiRun53 } from '../dal53/text.js'; // prompt 53 (DAL53): Redact på brukerteksten når AI-søket kan gå til sky
 import { once } from '../ai-gate.js'; // prompt 43: single-flight
-import { routeTools, osloNowLine } from '../tool-router44.js'; // prompt 44: ruting før modellen (Glimt-søk på Hjem)
+import { routeTools, osloNowLine } from '../ai/tool-router.js'; // prompt 44: ruting før modellen (Glimt-søk på Hjem)
 import { webSearch, webPrompt, webMeta, webFact, PROVIDER_NAME } from '../web-search.js'; // prompt 44: eget nettsøk
 import { powerFact } from '../power-price.js'; // prompt 44: strømpris
 import { isSunQuestion, daylight } from '../sun36.js'; // prompt 36: dagslys lokalt
 import { whereIntent, whereAnswer } from '../where37.js'; // prompt 37: «hvor er Ingrid?»
 import { parseIntent37, schoolTestAnswer } from '../kalender/subjects.js'; // prompt 37: skoleprøve ≠ prøveperiode
 import { bareDay37 } from '../kalender/calendars.js'; // prompt 37: «i morgen?»
-import { needsChatTools } from '../chat-tools41.js'; // prompt 41: sammensatte faktaspørsmål går til chatten
+import { needsChatTools } from '../ai/chat/tools.js'; // prompt 41: sammensatte faktaspørsmål går til chatten
 import { isWeekWeather41, weekAnswer41 } from '../weather41.js'; // prompt 41: ukesvær med Ollama og 7 dager data
 import { isHuskeMessage41, startJob41 } from '../tasks-glimt41.js'; // prompt 41: huskebeskjeder fra søkefeltet → Glimt i bakgrunnen
 import { agent45, registerLegacy45, toAssist45, wantsAgent45 } from './engine.js';
@@ -795,7 +795,7 @@ api.post('/', async (c) => {
   // Chat strømmer vanlige spørsmål selv fra valgt modell; Glimt svarer bare når et verktøy passer (unngår to LLM-kall).
   if (source === 'chat' && detectIntent(text, osloTodayISO()) === 'llm' && !wantsAgent45(text, 'chat')) return c.json({ intent: 'chat', followUp: 'chat', text: '', source: 'Glimt' });
   // Prompt 41: sammensatte faktaspørsmål («været i Oslo i morgen og vinden i New York neste time», klokka i Tokyo) besvares i
-  // chatten, der verktøylaget (server/chat-tools41.js) henter alle delene før modellen svarer.
+  // chatten, der verktøylaget (server/ai/chat/tools.js) henter alle delene før modellen svarer.
   if (source === 'chat' && needsChatTools(text)) return c.json({ intent: 'chat', followUp: 'chat', text: '', source: 'Glimt', tools41: true });
   if (q("SELECT count(*) FROM assist_jobs WHERE user_id=? AND state IN ('queued','running')").pluck().get(user) >= 5) return c.json({ error: 'Glimt jobber allerede med flere spørsmål. Vent litt.' }, 429);
   const id = 'a' + randomBytes(6).toString('hex'), now = Date.now();

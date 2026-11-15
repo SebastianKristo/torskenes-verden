@@ -17,9 +17,9 @@ delete process.env.OPENWEBUI_KEY;
 const { hashPassword } = await import('../server/auth/password.js');
 process.env.APP_PASSWORD_HASH = hashPassword('testpassord1');
 
-const T = await import('../server/chat-tools41.js');
+const T = await import('../server/ai/chat/tools.js');
 const { default: app } = await import('../server/index.js');
-const chat = await import('../server/chat.js');
+const chat = await import('../server/ai/chat/routes.js');
 
 const EXAMPLE = 'hva er været i oslo i morgen og hvordan er vindhastighet i new york neste time.';
 

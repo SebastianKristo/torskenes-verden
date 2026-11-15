@@ -26,7 +26,7 @@ Dette går ikke an å fikse i systemprompten, fordi modellen ikke blir spurt.
 
 ### 1.1 Hvilke modeller brukes til hva, og hvor er det konfigurert?
 
-- **Ruting:** `kv(OWNER,'ai_routing')` holder `tasks:{id:{model,fallback}}`. Den redigeres i Innstillinger → AI-kontroll (`public/js/ai-control.js`) via `GET/PUT /api/ai/routing` (`server/ai-api.js:257/262`). Oppgavene står i `server/ai-run.js:44–55`. Aliasene `calendar`, `kalender`, `calendar-quick` og `calendar-glimt` peker til `glimt` (`ai-run.js:57`).
+- **Ruting:** `kv(OWNER,'ai_routing')` holder `tasks:{id:{model,fallback}}`. Den redigeres i Innstillinger → AI-kontroll (`public/js/ai-control.js`) via `GET/PUT /api/ai/routing` (`server/ai/control.js:257/262`). Oppgavene står i `server/ai-run.js:44–55`. Aliasene `calendar`, `kalender`, `calendar-quick` og `calendar-glimt` peker til `glimt` (`ai-run.js:57`).
 - **Tom modell = «auto»:** `resolveTask` (`ai-run.js:695–760`) velger da ruten, så reserven, så den gamle `ollamaTextModel`, og til slutt den *første installerte tekstmodellen som får plass i VRAM (8 GB)*. Med llama3.2:3b installert havner valget lett der.
 - **Hvilken rute brukes av hvem:**
 
@@ -35,7 +35,7 @@ Dette går ikke an å fikse i systemprompten, fordi modellen ikke blir spurt.
 | Glimt-planleggeren («Glimt · forstår») | `glimt` | `glimt/plan.js:46` |
 | Fritt svar fra Hjem/Chat-søket når regexen ga `llm` (inkl. nettsøk-svar) | `sok` | `assist.js:507–512` |
 | Klassifisering spørsmål/handling (300 ms) | `sok` | `assist.js:220` |
-| Verktøyruter for Chat/Hjem («hos brukeren llama3.2:3b») | `sok` | `tool-router44.js:7` |
+| Verktøyruter for Chat/Hjem («hos brukeren llama3.2:3b») | `sok` | `ai/tool-router.js:7` |
 | Rask time (`/api/kalender/quick`, web `kal-quick.js`) og `appointment.create` | `glimt` | `calendar-quick.js:60–122` |
 | Vitnemål (tekst → JSON) | `glimt` | `study44.js:185` |
 | Vitnemål (bilde/striper) | `rc` (visjon) | `study44.js:182`, `study46.js:276` |
@@ -92,7 +92,7 @@ user:   Når er neste gang jeg skal til Nina?
 
 To lagre som ikke snakker sammen:
 1. **`glimt_memory`** (`glimt-memory.js:27–38`): `kind 'alias'|'fact', match, type, title, note`. «Nina er frisøren min» gjenkjennes av `parseMemoryIntent` (`glimt-memory.js:176`). Den lagres som `{kind:'alias', match:'nina', type:'frisør', title:'Frisør · Nina'}`, og det er verifisert i proben: «Ok, jeg husker at **Nina** er frisøren din.» Det finnes ingen aliasliste, bare *én* type av 7 faste (`MEMORY_TYPES`, linje 41). Det er ingen embedding.
-2. **`ai_memory43`** (fritekst fra Chat og Claude-import) med vektorer i `ai_memory45_vec` (`claude-memory46.js`). Den brukes bare av Chat, der hele minnet (maks 4 000 tegn) legges i systemprompten. Glimt bruker den ikke.
+2. **`ai_memory43`** (fritekst fra Chat og Claude-import) med vektorer i `ai_memory45_vec` (`ai/claude-memory.js`). Den brukes bare av Chat, der hele minnet (maks 4 000 tegn) legges i systemprompten. Glimt bruker den ikke.
 
 **Henting i dag:**
 - `aliasPrompt` går inn i `sok`-systemprompten og i rask time-prompten (`assist.js:490–495`, `calendar-quick.js:71`).
@@ -157,7 +157,7 @@ Gjengitt nøyaktig: «TRE1400 Forelesning er **tirsdag 27. oktober kl. 14.30** (
 - **Kvittering:** visjonsmodellen leser bildet først, og OCR brukes bare som kontroll ved lav sikkerhet (`finans/ai.js:392`, `lowConfCheck` linje 500). Det er motsatt av ønsket rekkefølge. Ingen `num_predict` og `num_ctx` 4096 for bilde + varelinjer.
 
 ### 2.6 Nettsøk ignoreres («hvem er statsminister i England»)
-- Faktaspørsmål uten «jeg/min» går forbi planleggeren (`engine.js:205–208`) til `toolLlm`. Det er `routeTools` (`tool-router44.js`, regel og deretter `sok`/llama3.2:3b på 5 s) som bestemmer om det søkes på nettet.
+- Faktaspørsmål uten «jeg/min» går forbi planleggeren (`engine.js:205–208`) til `toolLlm`. Det er `routeTools` (`ai/tool-router.js`, regel og deretter `sok`/llama3.2:3b på 5 s) som bestemmer om det søkes på nettet.
 - Med treff legges de i **systemprompten etter** «maks to korte setninger». Regelen står på norsk (`web-search.js:204`), med `num_predict` 160. En liten modell veier treningsdataene tyngre enn regelen.
 - Det finnes ingen kontroll av at navnet i svaret finnes i søkeresultatene. Kunne ikke verifiseres her (ingen modell, ingen nett). Må testes med mocket søkeresultat mot ekte modell.
 
@@ -173,7 +173,7 @@ Gjengitt nøyaktig: «TRE1400 Forelesning er **tirsdag 27. oktober kl. 14.30** (
 
 | Steg | Finnes i `server/glimt/` (bygg videre) | Mangler |
 |---|---|---|
-| **A Kontekst** | `nowLineOf` (`engine.js:187`, dato og ukedag, ikke klokke), `osloNowLine` (`tool-router44.js`, med klokke), `ctxOf45` sist viste (30 min), `sanitizeCtx` (valgt/synlig) | Én `buildContext()` brukt i *alle* modellkall, profil (navn/by), relevante fakta, siste 4–6 meldinger |
+| **A Kontekst** | `nowLineOf` (`engine.js:187`, dato og ukedag, ikke klokke), `osloNowLine` (`ai/tool-router.js`, med klokke), `ctxOf45` sist viste (30 min), `sanitizeCtx` (valgt/synlig) | Én `buildContext()` brukt i *alle* modellkall, profil (navn/by), relevante fakta, siste 4–6 meldinger |
 | **B Minne** | `glimt_memory` (alias + fact), `parseMemoryIntent`/`learnFromAssist`, embeddings-infrastruktur (`ai-run.embed`, `ai_memory45_vec`, nomic-embed-text) | Aliaser per fakta, navn til type-utvidelse, henting per forespørsel (eksakt/fuzzy + embedding, maks 10), søketerm-utvidelse til verktøyene, felles bruk av `ai_memory43` |
 | **C Planlegger** | `modelPlan45` med tools eller JSON-skjema, ett nytt forsøk, lokal reserve, `cleanModelPlan45`, `ask`, rå datotekst | Modellen må *alltid* få planlegge (fjerne `LEGACY_FIRST`/`personal`-porten), engelsk prompt med few-shots per intent, verktøyutvalg per intent, think som reserve, `num_ctx` 8192 |
 | **D Normalisering** | `dates.js` (`whenOf45`, `parseDate45`, `parsePeriod45`, `parseAmount45`), riktige for 17.12 17.30, 3/2 kl 0815 → 2027-02-03 08:15, fredag kl 18, kl 1730 | «neste time», «om 2 timer», «etter jul» (verifisert: tolkes ikke). Værets egen parser (`whenOf46`) dupliserer og bør inn i `dates.js`. Tidsvindu per steds tidssone |

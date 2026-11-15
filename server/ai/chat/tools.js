@@ -11,12 +11,12 @@
 //
 // Fakta: {tool, place, country, when:'neste time', window:'kl. 09–10 lokal tid', localTime:'08:20', date, tz, label:'6 m/s fra
 //         sørvest, kast 9 m/s', values:{…}, source:'MET'|'Open-Meteo'|'Tidssone'|'Beregnet lokalt', text, error?, mock?}
-import { cached } from './cache.js';
-import { config } from './config.js';
-import { kv } from './db.js';
-import { wmoText, metToRaw, DEFAULT_PLACES } from './weather-full.js';
-import { geocode, extractPlace } from './weather35.js';
-import { daylight, SUN_RE } from './sun36.js';
+import { cached } from '../../cache.js';
+import { config } from '../../config.js';
+import { kv } from '../../db.js';
+import { wmoText, metToRaw, DEFAULT_PLACES } from '../../weather-full.js';
+import { geocode, extractPlace } from '../../weather35.js';
+import { daylight, SUN_RE } from '../../sun36.js';
 
 const MOCK = () => process.env.MOCK_DATA === '1';
 let F = null, planLlm = null;
@@ -266,7 +266,7 @@ const PLAN_SYSTEM = 'Du deler et spørsmål i deloppgaver for verktøy. Svar KUN
 async function planWithLlm(text, { user, localOnly = true, today }) {
   const call = planLlm ? Promise.resolve().then(() => planLlm(text))
     : (async () => {
-      const { run } = await import('./ai-run.js');
+      const { run } = await import('../../ai-run.js');
       const r = await run('chat', { user, system: PLAN_SYSTEM, prompt: `I dag er ${today}.\nSpørsmål: ${String(text).slice(0, 500)}`, json: true, temperature: 0, numPredict: 300, timeoutMs: PLAN_LLM_MS, localOnly, title: 'Glimt · planlegger fakta', noRetry: true });
       return r.data ?? null;
     })();

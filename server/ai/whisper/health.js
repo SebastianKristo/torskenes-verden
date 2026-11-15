@@ -3,8 +3,8 @@
 //   GET {url}/health  med Authorization: Bearer <nøkkel>  (tools/nb-whisper/nbwhisper.py)
 //   → 200 {status:'ok', model, engine, languages, device, version}  ·  503 {status:'starting'|'error'}  ·  401/403 feil nøkkel/IP
 import { nbConf54, nbConfAll54 } from './config.js';
-import { defineFlagOn53, flagDefault53, flagOn53 } from '../flags53.js';
-import { currentUser } from '../settings.js';
+import { defineFlagOn53, flagDefault53, flagOn53 } from '../../flags53.js';
+import { currentUser } from '../../settings.js';
 
 export const FLAG_NB54 = 'whisper_nb54';
 try { defineFlagOn53(FLAG_NB54, 'NB-Whisper (Nasjonalbiblioteket) på Mac mini-en: tale til tekst på norsk og engelsk, og språkdeteksjon. Stille reserve når den ikke svarer.'); } catch (e) { console.warn('[whisper54] flagg:', e.message); }

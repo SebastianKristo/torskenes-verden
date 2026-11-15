@@ -46,7 +46,7 @@ const chain = await import('../server/receipts48/chain.js');
 const health = await import('../server/receipts48/health.js');
 const gem = await import('../server/receipts48/engines/gemini.js');
 const tess = await import('../server/receipts48/engines/tesseract.js');
-const C52 = await import('../server/chat52.js');
+const C52 = await import('../server/ai/chat/thinking.js');
 const W52 = await import('../server/whatsnew52.js');
 
 const ROWS = ['JEM & FIX STORO', 'Org.nr 911 015 838', 'Dato 20.10.2026 17:42', 'MALING 10L 349,00', 'TOTAL 349,00', 'BANKAXEPT 349,00'];

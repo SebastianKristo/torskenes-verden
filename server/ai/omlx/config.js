@@ -4,9 +4,9 @@
 // OMLX_TASKS=glimt,sok,… (eller all).
 // Nøkkelen sendes aldri til klienten og logges aldri. Adressen må peke til en maskin i huset (LAN eller localhost), aldri ut.
 // Ollama er fortsatt standard for alle oppgaver (engines tom = Ollama); oMLX velges per oppgave i AI-kontroll når eval har avgjort.
-import { kv, OWNER } from '../db.js';
-import { seal, unseal } from '../finans/db.js';
-import { inHouseUrl53 } from '../fermion53/config.js';
+import { kv, OWNER } from '../../db.js';
+import { seal, unseal } from '../../finans/db.js';
+import { inHouseUrl53 } from '../fermion/config.js';
 
 const KEY = 'omlx58';
 export const DEFAULT_TEXT58 = 'mlx-community/Qwen3-8B-4bit';

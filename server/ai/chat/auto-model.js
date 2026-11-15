@@ -8,8 +8,8 @@
 // POST /api/chat/send {model:'auto'} → meta-hendelsen og svaret får auto:{model, modelName, kind, label:'✦ Kode · Qwen3 8B', reason, candidates}.
 // Lærer: chat_auto_stats (modell, oppgavetype, tid til første token, tok/s, «Prøv igjen»/byttet/👍/👎). Modeller med mange omforsøk (≥ 5 svar, > 30 %)
 // flyttes ned i rangeringen for den oppgavetypen. GET /api/chat/auto → {picks, using:'Glimt bruker nå: Qwen3 8B til kode …', stats}.
-import { db } from './db.js';
-import { REC } from './ai39.js';
+import { db } from '../../db.js';
+import { REC } from '../../ai39.js';
 
 db.exec(`CREATE TABLE IF NOT EXISTS chat_auto_stats (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT NOT NULL, ts INTEGER NOT NULL, model TEXT NOT NULL, kind TEXT NOT NULL,
   ttft_ms INTEGER, tps REAL, retry INTEGER NOT NULL DEFAULT 0, switched INTEGER NOT NULL DEFAULT 0, vote INTEGER NOT NULL DEFAULT 0, chat_id TEXT);

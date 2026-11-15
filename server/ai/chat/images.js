@@ -10,8 +10,8 @@
 //   - Avviser modellen bildet likevel («does not support multimodal»), byttes vei automatisk og evnen lagres som «ingen vision».
 //   - Feil fra Ollama vises aldri rått: friendlyError51 gir en norsk tekst.
 import { readFile } from 'node:fs/promises';
-import { db, q } from './db.js';
-import { toJpeg50 } from './img50.js';
+import { db, q } from '../../db.js';
+import { toJpeg50 } from '../../img50.js';
 
 export const VISION_PREFERRED51 = ['qwen2.5vl:7b', 'qwen2.5vl', 'qwen2.5vl:latest'];
 
@@ -42,7 +42,7 @@ export function wantedFormat51(text) {
   return 'table';
 }
 const kr = (v) => (v == null ? '–' : `${Number(v).toLocaleString('nb-NO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kr`);
-/** Kvitteringen i formatet brukeren ba om (tabell er receiptTable50 i chat50.js). → markdown | null (tabell). */
+/** Kvitteringen i formatet brukeren ba om (tabell er receiptTable50 i ai/chat/attachments.js). → markdown | null (tabell). */
 export function formatReceipt51(rc, fmt) {
   const items = rc?.items ?? [];
   if (fmt === 'json') return `\`\`\`json\n${JSON.stringify({ butikk: rc?.merchant ?? null, org_nr: rc?.org_number ?? null, dato: rc?.date ?? null, varer: items.map((l) => ({ vare: l.description, antall: l.quantity ?? null, pris: l.amount })), rabatter: (rc?.discounts ?? []).map((d) => ({ tekst: d.description, belop: d.amount })), total: rc?.total ?? null }, null, 2)}\n\`\`\``;
@@ -61,7 +61,7 @@ export function documentNote51(ocr, engine) {
 
 /** Leser teksten i bildefilene (chat-vedlegg) med OCR-kjeden. → {ok, ocr, engine, error?} */
 export async function readDocument51(rows, { signal = null, log = () => {} } = {}) {
-  const { bestOcr51 } = await import('./receipts48/chain.js');
+  const { bestOcr51 } = await import('../../receipts48/chain.js');
   const all = [];
   let engine = null, err = null, size = null;
   for (const r of rows.slice(0, 4)) {
@@ -98,7 +98,7 @@ export function markNoVision51(model, base = null) {
   try {
     q('INSERT INTO chat_model_caps50(model, base, vision, caps, checked) VALUES(?,?,0,?,?) ON CONFLICT(model) DO UPDATE SET vision=0, checked=excluded.checked')
       .run(String(model), base, JSON.stringify(['completion']), Date.now());
-  } catch { /* tabellen lages av chat50.js */ }
+  } catch { /* tabellen lages av ai/chat/attachments.js */ }
 }
 
 /**

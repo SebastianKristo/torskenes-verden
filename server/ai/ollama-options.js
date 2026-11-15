@@ -11,7 +11,7 @@
 //
 // Personlig innstilling ai_think (av som standard): når den er på, sendes think ikke for korte oppgaver (modellen bestemmer).
 // Chat har sin egen samtaleinnstilling (settings.think) og bruker chatThink().
-import { activeUser, userBool } from './settings.js';
+import { activeUser, userBool } from '../settings.js';
 
 export const SHORT_NUM_CTX = 4096;
 const noThink = new Set(); // modellnavn som har svart «does not support thinking» (aldri tenkemodeller)

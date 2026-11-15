@@ -74,7 +74,7 @@ Nøkkelen lagres kryptert (`seal`), sendes aldri til nettleseren og maskeres i f
 IPv4, localhost, `.local`/`.lan`/`.home.arpa`/`.internal` og enkle vertsnavn. Miljøvariabler er reserve: `OMLX_URL`, `OMLX_API_KEY`,
 `OMLX_MODEL_TEXT`, `OMLX_MODEL_VISION`, `OMLX_FALLBACK=0` og `OMLX_TASKS=glimt,sok` (eller `all`).
 
-## 4. Slik oversetter gaten til oMLX (`server/omlx58/backend.js`)
+## 4. Slik oversetter gaten til oMLX (`server/ai/omlx/backend.js`)
 
 | Ollama | oMLX (`POST /v1/chat/completions`, SSE) |
 |---|---|

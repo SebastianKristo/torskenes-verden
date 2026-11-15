@@ -9,7 +9,7 @@
 // (server/omlx58, bak vakten på Mac mini-en). Aldri sky: et modellnavn som ikke er lokalt, stoppes av cloud-guard52.
 // Strukturerte kall tenker aldri: think:false (Ollama) / chat_template_kwargs.enable_thinking=false (oMLX, via THINKING_RE «lfm3»).
 // <think>-blokker fjernes alltid før JSON leses.
-import { stripThink } from '../ollama-opts.js';
+import { stripThink } from '../ai/ollama-options.js';
 import { modelFormat48 } from './schema.js';
 import { rows48 } from './normalize.js';
 import { totalCandidates48 } from './validate.js';

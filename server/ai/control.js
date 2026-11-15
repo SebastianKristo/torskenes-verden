@@ -36,18 +36,18 @@
 //                             Med Accept: application/json → {ok, failed, total, results}. Bruker ingen brukerdata.
 import { Hono } from 'hono';
 import { streamSSE } from 'hono/streaming';
-import { authOrToken } from './mobile.js';
-import { isAdmin } from './auth/session.js';
-import { db, OWNER } from './db.js';
-import { settings as fhSettings, saveSettings, secret, setSecret, secretSource } from './finans/db.js';
-import { geminiKeys } from './finans/gemini-keys.js';
-import * as ai from './ai-run.js';
-import { gateLoad, gateUnload, loadedModels, gateState, keepAliveFor, GateError, backendConfig, thinkLeaks, clearThinkLeak, testOpenWebuiModels, maskSecrets } from './ai-gate.js'; // prompt 43/44: alle AI-kall via gaten
-import { updateConfig } from './settings.js';
-import { webSearch, webSettings, clearWebCache, PROVIDERS as WEB_PROVIDERS, PROVIDER_NAME as WEB_NAME } from './web-search.js'; // prompt 44
-import { getAzureRegion, setAzureRegion } from './glimt/settings.js'; // prompt 35: Azure-region for TTS
-import { hostHw, envHw, hwOut, fit38, recommendFor, SUGGESTED_MODELS, TIMEOUTS, FIT_LABEL } from './aihw38.js'; // prompt 38: Mac mini M4
-import { externalModels53 } from './fermion53/index.js'; // prompt 53 (FERMION53): Neutrino/Phonon på Mac mini-en i AI-kontroll
+import { authOrToken } from '../mobile.js';
+import { isAdmin } from '../auth/session.js';
+import { db, OWNER } from '../db.js';
+import { settings as fhSettings, saveSettings, secret, setSecret, secretSource } from '../finans/db.js';
+import { geminiKeys } from '../finans/gemini-keys.js';
+import * as ai from '../ai-run.js';
+import { gateLoad, gateUnload, loadedModels, gateState, keepAliveFor, GateError, backendConfig, thinkLeaks, clearThinkLeak, testOpenWebuiModels, maskSecrets } from '../ai-gate.js'; // prompt 43/44: alle AI-kall via gaten
+import { updateConfig } from '../settings.js';
+import { webSearch, webSettings, clearWebCache, PROVIDERS as WEB_PROVIDERS, PROVIDER_NAME as WEB_NAME } from '../web-search.js'; // prompt 44
+import { getAzureRegion, setAzureRegion } from '../glimt/settings.js'; // prompt 35: Azure-region for TTS
+import { hostHw, envHw, hwOut, fit38, recommendFor, SUGGESTED_MODELS, TIMEOUTS, FIT_LABEL } from '../aihw38.js'; // prompt 38: Mac mini M4
+import { externalModels53 } from './fermion/index.js'; // prompt 53 (FERMION53): Neutrino/Phonon på Mac mini-en i AI-kontroll
 
 const api = new Hono();
 api.use('*', authOrToken);
@@ -415,7 +415,7 @@ api.put('/keys/:provider', adminOnly, async (c) => {
 api.post('/keys/:provider/test', async (c) => {
   const p = c.req.param('provider');
   if (['openai', 'elevenlabs', 'azure'].includes(p)) { // prompt 35: ekte kort opplesning med motoren
-    const { speakWith } = await import('./glimt/settings.js');
+    const { speakWith } = await import('../glimt/settings.js');
     const t0 = Date.now();
     try { const r = await speakWith(c.get('user'), p, 'Hei! Jeg er Glimt.'); return c.json({ ok: true, state: 'ok', label: 'Svarer', ms: Date.now() - t0, model: r.model, error: null }); }
     catch (e) { return c.json({ ok: false, state: 'off', label: 'Svarer ikke', ms: Date.now() - t0, model: null, error: e.message }); }
@@ -486,7 +486,7 @@ api.post('/websearch/test', async (c) => {
 /* ---------------- Glimt-API-nøkler (personlige) ---------------- */
 
 const PREFIX = 'Glimt-API: ';
-const fhRoutes = () => import('./finans/routes.js');
+const fhRoutes = () => import('../finans/routes.js');
 api.get('/tokens', (c) => {
   const rows = db.prepare('SELECT * FROM fh_tokens WHERE COALESCE(user_id, ?)=? AND name LIKE ? ORDER BY created DESC').all(OWNER, c.get('user'), `${PREFIX}%`);
   return c.json(rows.map((t) => ({ id: t.id.slice(0, 12), name: t.name.slice(PREFIX.length), tail: null, display: 'fh_pat_••••', created: t.created, lastUsed: t.last_used })));
@@ -529,7 +529,7 @@ glimtApi.post('/', async (c) => {
   if (!prompt) return bad(c, 'Skriv et spørsmål');
   const u = c.get('user');
   if (b.tool === 'calendar') {
-    const { askCalendar } = await import('./kalender/glimt.js');
+    const { askCalendar } = await import('../kalender/glimt.js');
     const a = await askCalendar(u, prompt);
     return c.json({ text: a.text, kind: a.kind, items: a.items ?? [], free: a.free ?? [], engine: a.engine, ...(a.error ? { error: a.error, fix: a.fix ?? null } : {}) });
   }

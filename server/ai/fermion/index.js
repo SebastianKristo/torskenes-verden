@@ -8,9 +8,9 @@
 //
 // Sikkerhet: alt her er serverinfrastruktur → bare admin. Nøklene sendes aldri ut og logges aldri. Adressene må være i huset.
 import { Hono } from 'hono';
-import { authOrToken } from '../mobile.js';
-import { isAdmin } from '../auth/session.js';
-import { defineFlagOn53 } from '../flags53.js';
+import { authOrToken } from '../../mobile.js';
+import { isAdmin } from '../../auth/session.js';
+import { defineFlagOn53 } from '../../flags53.js';
 import { confOut53, saveConf53 } from './config.js';
 import { FLAG_NEUTRINO53, FLAG_PHONON53, healthOut53, probe53, startHealth53, state53, neutrinoReady53, phononReady53 } from './health.js';
 import { NEUTRINO_ID53, chatModels53, testNeutrino53 } from './neutrino.js';
