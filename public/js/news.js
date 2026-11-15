@@ -6,8 +6,8 @@ import { ICON_LIBS, iconHtml, searchIcons, suggestIcon, keywordFor, preloadIcons
 import { clearBtn, bindSearchFields } from './searchfield.js';
 import { glimt } from './glimt.js';
 import { speak57, stop57, aiTag57 } from './stemmer.js'; // prompt 57: «Les opp» med valgt stemme (POST /api/tts), nettleseren som reserve
-// Prompt 73 (NEWS73): fanen «Lagret», bokmerke på kort og i artikkelvisningen, lagret artikkel offline (news73.js).
-import { TAB73, TAB_ICON73, bind73, load73, label73, listHtml73, cardBtn73, artBtn73, artBanner73, readerHtml73, toastHtml73, click73, input73, key73, openSaved73 } from './news73.js';
+// Prompt 73 (NEWS73): fanen «Lagret», bokmerke på kort og i artikkelvisningen, lagret artikkel offline (news-lagret.js).
+import { TAB73, TAB_ICON73, bind73, load73, label73, listHtml73, cardBtn73, artBtn73, artBanner73, readerHtml73, toastHtml73, click73, input73, key73, openSaved73 } from './news-lagret.js';
 import { pageCss } from './lib/page-css.js';
 
 const CSS_ID = 'news-css';
@@ -115,7 +115,7 @@ function reader(opts = {}) {
   async function load() {
     const n = ++seq;
     let data = null, error = '';
-    // Prompt 73: «Lagret» henter fra /api/news/saved (news73.js); RSS-dataene (faner, kilder) hentes bare hvis de mangler.
+    // Prompt 73: «Lagret» henter fra /api/news/saved (news-lagret.js); RSS-dataene (faner, kilder) hentes bare hvis de mangler.
     if (st.cat === 'lagret') { load73(); if (st.data) { render(); return; } }
     const catQ = st.cat === 'lagret' ? 'siste' : st.cat;
     // Prompt 46: «For deg» og egne kategorier. Kjenner ikke serveren dem (eldre versjon), filtreres «Siste» her.
@@ -284,7 +284,7 @@ function reader(opts = {}) {
   const imgTag = (u) => (u && /^(https?:\/\/|\/)/.test(u) ? `<img src="${esc(u)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" data-nw-img>` : '');
   const thumb = (x, cls = 'nw-th') => `<span class="${cls}" style="background-color:${esc(x.color || '#5c5850')}" aria-hidden="true">${esc(ini(x))}${imgTag(x.image)}</span>`;
   const findItem = (id) => (st.data?.items ?? []).find((x) => String(x.id) === String(id)) ?? st.art?.rel?.find((x) => String(x.id ?? x.url) === String(id));
-  // Prompt 73: bokmerket (lagre) vises ved hover på kortet (news73.js cardBtn73).
+  // Prompt 73: bokmerket (lagre) vises ved hover på kortet (news-lagret.js cardBtn73).
   const item = (x, showCat) => `<div class="nw73-w"><button type="button" class="nw-it" data-art="${esc(x.id ?? x.url)}">
       <span class="nw-tx">${showCat ? `<span class="nw-cat">${esc((CAT_NAME[x.category] ?? x.category).toUpperCase())}</span>` : ''}<span class="nw-t" data-no-i18n>${esc(x.title)}</span><span class="nw-m"><span data-no-i18n>${esc(x.feed)}</span> · ${esc(when(x.published))}${x.ai ? ' · ✦ AI' : ''}</span></span>
       ${thumb(x)}</button>${cardBtn73(x)}</div>`;

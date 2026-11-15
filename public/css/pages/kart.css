@@ -217,10 +217,10 @@ html:not([data-hl="2c"]) .k46-stn,html[data-mode="dark"] .k46-stn{color:#f3efe6;
   .k46-vm,.k46-vm.demo{transition:none}
   .k46-pan{transition:none}}
 
-/* Smal (kartet < 900 px bredt, klassen settes i kart46.js): bunnark med tre høyder, chips øverst, kontroller under chipsene. */
+/* Smal (kartet < 900 px bredt, klassen settes i kart.js): bunnark med tre høyder, chips øverst, kontroller under chipsene. */
 .k46.k46-nar .k46-pan{left:0;right:0;top:auto;bottom:0;width:auto;height:228px;border-radius:24px 24px 0 0}
 
-/* Prompt 71 (ANIWEB71): på smal skjerm er arket alltid fullt høyt (86 %) og flyttes ned med transform (kart46.js setter px-verdiene).
+/* Prompt 71 (ANIWEB71): på smal skjerm er arket alltid fullt høyt (86 %) og flyttes ned med transform (kart.js setter px-verdiene).
    Den tomme raden nederst (::after, --k46-hide) tar den skjulte delen, så lista kan scrolles helt ned. Standard = «peek» (228 px). */
 .k46.k46-nar .k46-pan{height:86%;transform:translateY(calc(100% - 228px))}
 

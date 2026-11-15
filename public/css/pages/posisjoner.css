@@ -1,4 +1,4 @@
-/* Posisjonskortet på Oversikt (poscard.js) og sonevarsel-kortet på Familie (family45.js, .fam-card).
+/* Posisjonskortet på Oversikt (poscard.js) og sonevarsel-kortet på Familie (family-soner.js, .fam-card).
    Resten av den gamle Familie-siden (family.js) er erstattet av familie.css og er fjernet. */
 .fam{--f-ink:var(--text);--f-mute:var(--text-2);--f-faint:var(--muted);--f-line:var(--line);--f-acc:#f59a8f;--f-pos:#8fe0b0;--f-chip:rgba(255,255,255,.06);--f-sheet:#121722;--f-on:#eef0f4;--f-onink:#0b0e15;
   --f-card:rgba(255,255,255,.04);--f-bg:var(--bg,#0b0e15);color:var(--f-ink)}
@@ -32,7 +32,7 @@ html[data-hl="2c"] .pos-host{--pos-ring:var(--pp);--pos-lab:var(--acc);--pos-mut
 .pos-empty{font-size:13px;color:var(--pos-mut)}
 html[data-hl="2c"] .p-sec.pos-host{padding-bottom:16px;margin-bottom:6px;border-bottom:1px solid var(--rule)}
 
-/* ═══ Hjemlys på posisjonskortet (Oversikt) og Familie-siden (hjemlys40.js) ═══ */
+/* ═══ Hjemlys på posisjonskortet (Oversikt) og Familie-siden (hjemlys.js) ═══ */
 /* ---------- Hjemlys på Familie-kortet og Familie-siden (claude-code-hjemlys.md) ---------- */
 .hl40{display:flex;flex-direction:column;gap:10px;margin-top:12px;padding-top:12px;border-top:1px solid var(--c40-line,var(--rule,rgba(127,127,127,.25)));--hl-mut:var(--c40-mut,var(--ink2,#8a93a6));--hl-ink:var(--c40-ink,var(--ink,#eef0f4));--hl-chip:var(--c40-chip,rgba(127,127,127,.14))}
 .hl40.page{margin:0 0 18px;padding:16px 18px;border:1px solid var(--rule,rgba(127,127,127,.25));border-radius:20px;background:var(--card,rgba(255,255,255,.03))}

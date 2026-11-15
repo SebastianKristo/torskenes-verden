@@ -7,7 +7,7 @@
 //  - Detaljark per oppgave (dato, tid, viktig, gjenta, tidlig påminnelse, sted, liste, ansvarlig, prioritet, flagg, tagger,
 //    deloppgaver, ✦ Del opp, ✦ Glimt foreslår) som lagrer med en gang.
 //  - Glimt-kortet inline øverst (web): tolker tekst, lim inn, bilde, matplan → Handel, pakkeliste, spørsmål, med Angre i 10 s.
-//    POST /api/tasks/glimt {q, list?, image?} → {kind, text, items, undo:{token}}; 404 → lokal tolker (tasks37-glimt.js).
+//    POST /api/tasks/glimt {q, list?, image?} → {kind, text, items, undo:{token}}; 404 → lokal tolker (tasks-glimt-lokal.js).
 //  - Glimt-kort i listen: like oppgaver (Slå sammen), forfalte (Flytt til i morgen / Arkiver), butikk, hytte fra kalenderen.
 // Data fra /api/tasks; endringer fra andre kommer i sanntid over /api/ws (type 'tasks' / 'todo:changed'), ellers hvert 30. s.
 import { api, esc, isMobile } from './util.js';
@@ -15,10 +15,10 @@ import { onLive, liveOn } from './realtime.js';
 import { store } from './store.js';
 import { mountHa } from './tasks-ha.js';
 import { agent, agentOn, agentExtras, agentText } from './glimt-agent.js'; // prompt 45
-import { needsAi41, splitLocal41, startJob41, trackJob41, jobsHtml41, madeWithHtml41, originCard41, glimtSources41, srcItems41, clearDone41 } from './tasks41.js'; // prompt 41: Glimt deler opp i bakgrunnen
-import { parse as gParse, pasteLines, isAsk, ask as gAsk, splitSugg, guess, dupes, PACK, MAT_FALLBACK, isoDay } from './tasks37-glimt.js';
-import { colorFor } from './house37.js';
-import { setup44, subBtn, subRows, haRow, openPanel, bind44, refresh44 } from './tasks44.js'; // prompt 44: deloppgaver i lista, panel fra høyre, synk-rad
+import { needsAi41, splitLocal41, startJob41, trackJob41, jobsHtml41, madeWithHtml41, originCard41, glimtSources41, srcItems41, clearDone41 } from './tasks-glimt-ai.js'; // prompt 41: Glimt deler opp i bakgrunnen
+import { parse as gParse, pasteLines, isAsk, ask as gAsk, splitSugg, guess, dupes, PACK, MAT_FALLBACK, isoDay } from './tasks-glimt-lokal.js';
+import { colorFor } from './husstand.js';
+import { setup44, subBtn, subRows, haRow, openPanel, bind44, refresh44 } from './tasks-deloppgaver.js'; // prompt 44: deloppgaver i lista, panel fra høyre, synk-rad
 
 const S = { d: null, err: null, cur: 'alle', nv: '', nd: 0, nw: null, busy: false, arch: [], ed: null, lsv: null, g: { q: '', busy: '', ans: null }, tagIn: '', subIn: '' };
 // Prompt 32: Arkivert (archived_at på serveren, ellers lokalt per bruker). Fullførte oppgaver arkiveres automatisk etter 7 dager.
@@ -1046,5 +1046,5 @@ function bindBoard(h) {
   });
 }
 
-// Prompt 44: kontekst for tasks44.js (deloppgaver i lista og panelet fra høyre).
+// Prompt 44: kontekst for tasks-deloppgaver.js (deloppgaver i lista og panelet fra høyre).
 setup44({ S, patchItem, tick, del, paint, createItem, flash, colorOf, listOf, tList, tTitle, tNotes, tWho, nameOf, people, REP, EARLY, PRIO, PLACE, today, openEd: (id) => { S.ed = id; S.tagIn = ''; S.subIn = ''; paintSheets(); } });

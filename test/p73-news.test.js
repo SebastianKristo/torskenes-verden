@@ -276,11 +276,11 @@ test('felles søk (FTS5, search51) finner lagrede artikler – bare egne', async
 });
 
 test('klientene: web, iOS og Android har Lagret, lagre-knapp, Åpne original, fjern og offline-kopi', () => {
-  const web = readFileSync(join(ROOT, 'public/js/news73.js'), 'utf8');
+  const web = readFileSync(join(ROOT, 'public/js/news-lagret.js'), 'utf8');
   for (const s of ['/news/saved', 'Lagret', 'Åpne original', 'Fjern fra lagret', 'Prøv å laste ned på nytt', 'Kun sammendrag', 'Søk i lagrede artikler']) assert.ok(web.includes(s), `web: ${s}`);
   assert.doesNotMatch(web, /innerHTML\s*=\s*[^;]*\.html\b(?![^;]*sanit)/, 'web setter ikke rå HTML');
   const nw = readFileSync(join(ROOT, 'public/js/news.js'), 'utf8');
-  assert.match(nw, /news73/);
+  assert.match(nw, /news-lagret\.js/);
   const ios = readFileSync(join(ROOT, 'apps/ios/FinansHub/Sources/News73Saved.swift'), 'utf8');
   for (const s of ['/news/saved', 'offline=1', 'Åpne original', 'Fjern fra lagret', 'Prøv å laste ned på nytt', 'swipeActions']) assert.ok(ios.includes(s), `iOS: ${s}`);
   const and = readFileSync(join(ROOT, 'apps/android/app/src/main/java/no/kristo/finanshub/ui/News73.kt'), 'utf8');

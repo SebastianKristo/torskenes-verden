@@ -35,12 +35,12 @@ const renderSkjold76 = () => '<section class="sk76" id="sk76" aria-label="Skjold
 // MODS: modulnøkkel → lasting. ROUTES: rute → [modulnøkkel eller null, tegnefunksjon(modul)].
 const MODS = {
   dash: () => Promise.all([import('./dash.js'), import('./dash-edit36.js')]).then(([d, e]) => ({ ...d, mountDash: e.mountDash, startEdit: e.startEdit })),
-  studie: () => import('./study44.js'), // prompt 44: nytt Studie-design
+  studie: () => import('./study-page.js'), // prompt 44: nytt Studie-design
   rom: () => import('./space.js'),
   hjem: () => import('./home.js'),
   matplan: () => import('./mat.js'),
   sporing: () => import('./tracking.js'),
-  familie: () => import('./family50-web.js'), // prompt 50 (FAMWEB50): Familie i nytt design (family50.js)
+  familie: () => import('./family-web.js'), // prompt 50 (FAMWEB50): Familie i nytt design (family.js)
   tasks: () => import('./tasks.js'),
   vaer: () => import('./weather-page.js'),
   bursdager: () => import('./birthdays.js'),

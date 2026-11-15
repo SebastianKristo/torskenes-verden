@@ -104,12 +104,12 @@ test('ark (Familie-kart og Kart på smal skjerm) glir med transform, ikke animer
   const fam = ALL.find((x) => x.rel === 'css/pages/familie.css').text;
   assert.match(fam, /\.f50-sheet:not\(\.tall\) \{[^}]*transition: transform/);
   assert.doesNotMatch(fam.replace(/\/\*[\s\S]*?\*\//g, ''), /\.f50-sheet \{[^}]*transition: height/);
-  const famJs = ALL.find((x) => x.rel === 'js/family50.js').text;
+  const famJs = ALL.find((x) => x.rel === 'js/family.js').text;
   assert.match(famJs, /sh\.style\.transform = `translateY\(/);
   assert.doesNotMatch(famJs, /sh\.style\.height = `/);
   const k46 = ALL.find((x) => x.rel === 'css/pages/kart.css').text;
   assert.doesNotMatch(k46, /\.k46-pan\{[^}]*transition:height/);
-  assert.match(ALL.find((x) => x.rel === 'js/kart46.js').text, /pan\.style\.transform = `translateY\(/);
+  assert.match(ALL.find((x) => x.rel === 'js/kart.js').text, /pan\.style\.transform = `translateY\(/);
 });
 
 test('mikrofon-bølgeformen, Hjem-flisene og fanebyttet bruker animasjonsbilder (ikke setInterval/tvungen layout)', () => {

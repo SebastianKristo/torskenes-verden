@@ -1,12 +1,12 @@
-// Prompt 50 (FAMWEB50): Familie på web i nytt design (family50.js). Ruten #/familie og undersidene #/familie/kart,
-// /person/<id>, /steder(/<id>), /helse(/<id>), /sjekk(/<id>) og /hjem (På vei hjem = dagens Vel fremme, hjemlys41.js).
-// Undersidene håndteres av family50.js (ownsHash), så hele ruten ikke tegnes på nytt ved hver navigering.
-import { mount50, ownsHash50, live50 } from './family50.js';
+// Prompt 50 (FAMWEB50): Familie på web i nytt design (family.js). Ruten #/familie og undersidene #/familie/kart,
+// /person/<id>, /steder(/<id>), /helse(/<id>), /sjekk(/<id>) og /hjem (På vei hjem = dagens Vel fremme, hjemlys-fane.js).
+// Undersidene håndteres av family.js (ownsHash), så hele ruten ikke tegnes på nytt ved hver navigering.
+import { mount50, ownsHash50, live50 } from './family.js';
 import { api } from './util.js';
 import { onLive } from './realtime.js';
-import { bindHjemlys, loadHjemlys } from './hjemlys40.js';
-import { hl41Html, bindHl41 } from './hjemlys41.js';
-import { zoneEvent45 } from './family45.js'; // prompt 45: sonevarsel-banneret mens siden er åpen
+import { bindHjemlys, loadHjemlys } from './hjemlys.js';
+import { hl41Html, bindHl41 } from './hjemlys-fane.js';
+import { zoneEvent45 } from './family-soner.js'; // prompt 45: sonevarsel-banneret mens siden er åpen
 
 let unLive = null;
 const subOfHash = () => location.hash.replace(/^#\/?familie/, '').replace(/^\//, '');

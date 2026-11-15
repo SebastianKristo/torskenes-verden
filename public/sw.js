@@ -7,7 +7,7 @@
 // Prompt 50: v34 – Media-plakater fra /api/media/bilde/… (WebP med ?v=<versjon>) svares cache-først fra en egen cache
 // (BILDER, beholdes mellom versjoner, maks ~800 bilder), så andre gang Media åpnes kommer alle synlige plakater uten nettverkskall,
 // også uten nett. Andre API-kall går fortsatt aldri via cachen.
-// Prompt 50 (FAMWEB50): v35 – Familie i nytt design (family50.js, family50-web.js, family50.css). Sjekk inn-varsler (data.kind
+// Prompt 50 (FAMWEB50): v35 – Familie i nytt design (family.js, family-web.js, family50.css). Sjekk inn-varsler (data.kind
 // 'checkin.*') får handlingene 👍 / Ring / Hent (data.actions) som svarer med POST /api/family/checkin/:id/reply uten å åpne appen;
 // «Hent meg» (data.priority 'high', kanal sjekkinn-hast) blir liggende til den er sett (requireInteraction) og vibrerer.
 // Prompt 51 (WEBX51): v36 – offline-modus. Noen få lese-API-er (gjøremål, familiekalender, profil, tema) svares nettverk-først med

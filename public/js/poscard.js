@@ -3,7 +3,7 @@
 // Data fra /api/family/positions. Eldre server uten endepunktet: bygges fra /api/family.
 import { api, esc, hm } from './util.js';
 import { store, widget, refresh, on, emit } from './store.js';
-import { hjemlysHtml, bindHjemlys } from './hjemlys40.js';
+import { hjemlysHtml, bindHjemlys } from './hjemlys.js';
 import { poll } from './lib/poll.js';
 
 const PALETTE = ['#b23a2a', '#2f5d8a', '#2f7a4f', '#c98a1b', '#6b4fa0', '#a03c8a', '#1f7a7a', '#8a5a2b'];

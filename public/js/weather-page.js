@@ -11,9 +11,9 @@
 import { clearBtn } from '/assets/js/searchfield.js';
 import { api, esc, haptic } from './util.js';
 import { createWxFx, sunFrac } from './weather-fx.js';
-import { cmp39Html, bindCmp39, cmp39Reset } from './weather-cmp39.js'; // prompt 39: Yr mot Storm 2a + wiggle
+import { cmp39Html, bindCmp39, cmp39Reset } from './weather-yr-storm.js'; // prompt 39: Yr mot Storm 2a + wiggle
 import { fig } from './glimt-figs.js'; // prompt 39: Glimt · ukas vær
-import { voAttr, voShown, glimtTop, skiCardHtml41, loadSki41, afterPaint41, editBtn41 } from './wx41.js'; // prompt 41: rediger kort + skiføre
+import { voAttr, voShown, glimtTop, skiCardHtml41, loadSki41, afterPaint41, editBtn41 } from './weather-rediger.js'; // prompt 41: rediger kort + skiføre
 
 /* ---------------- Konstanter fra designet ---------------- */
 const IC = { sun: 'M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10zM12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4', moon: 'M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z', part: 'M8 4v1.5M3.5 9H5M4.8 5.8l1 1M11.2 5.8l-1 1M8 7a3 3 0 0 0-2.8 4M7 19h10a4 4 0 0 0 0-8 5.5 5.5 0 0 0-10.4 1.5A3.3 3.3 0 0 0 7 19z', cloud: 'M7 18h10a4 4 0 0 0 0-8 6 6 0 0 0-11.5 1.5A3.5 3.5 0 0 0 7 18z', rain: 'M7 14h10a4 4 0 0 0 0-8 6 6 0 0 0-11.5 1.5A3.5 3.5 0 0 0 7 14zM8 17l-1 3M12 17l-1 3M16 17l-1 3', snow: 'M7 14h10a4 4 0 0 0 0-8 6 6 0 0 0-11.5 1.5A3.5 3.5 0 0 0 7 14zM8 18h.01M12 20h.01M16 18h.01', fog: 'M4 10h16M6 14h12M4 18h16', storm: 'M7 13h10a4 4 0 0 0 0-8 6 6 0 0 0-11.5 1.5A3.5 3.5 0 0 0 7 13zM12 14l-2 4h3l-2 4' };
@@ -592,7 +592,7 @@ function metricSheet(d) {
     <div class="wxp-chart"><svg viewBox="0 0 336 182">${grid}${bars}${line}${nowM}${xt}</svg>${legend}${ppRow}</div>${scale}${about}`, 'ms');
 }
 
-// Prompt 39: Yr mot Storm 2a (himmel + glasskort, duell, enighet, Glimt forklarer) med wiggle-redigering (weather-cmp39.js).
+// Prompt 39: Yr mot Storm 2a (himmel + glasskort, duell, enighet, Glimt forklarer) med wiggle-redigering (weather-yr-storm.js).
 function cmpSheet(d) {
   const cmp = cmpVals(d, nowIndex(d.hourly)), P = place();
   return cmp39Html(cmp, { P, busy: S.cmpBusy, err: S.cmpErr, LOGO, svgIc, cmpRow, done: doneBtn('cmp'), yrUrl: S.full?.yrUrl, upd: S.full?.updatedAt ?? S.d?.updatedAt ?? null });

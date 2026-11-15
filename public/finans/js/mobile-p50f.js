@@ -1,5 +1,5 @@
 // Prompt 50 (FAMWEB50): Familie i nytt design i PWA-en (Mobil Papir App → Familie, fasit Familie App.dc.html).
-// Selve siden er felles med web: /assets/js/family50.js (Folk · Steder · Helse · Sjekk inn, Kart, Personside, Sted med flere
+// Selve siden er felles med web: /assets/js/family.js (Folk · Steder · Helse · Sjekk inn, Kart, Personside, Sted med flere
 // områder, Helse for personen og Sjekk inn med 6b). Her: kroker fra mobile.js og sanntid fra WebSocket-en i mobile-p17.js.
 //   #/fam            Folk (startside)            #/fam/kart          Kart med ark
 //   #/fam/person/<id>[/kart|/helse/<id>]          Personside (tilbake går dit du kom fra)
@@ -13,7 +13,7 @@ import { m, draw } from './mobile.js';
 let F = null;
 export const on50 = () => !!F;
 export function boot50() {
-  import('/assets/js/family50.js').then((x) => {
+  import('/assets/js/family.js').then((x) => {
     F = x;
     if (m.screen === 'fam') draw();
   }).catch((e) => console.warn('family50', e));

@@ -8,7 +8,7 @@ import { glimt, setGlimt } from './glimt.js';
 import { assist, boldHtml, wxRoute } from './assist.js';
 import { toast } from './toast.js';
 import { isQuestion } from './glimt-sporsmal.js';
-import { isHuske41, addFromSearch41 } from './tasks41.js'; // prompt 41: huskebeskjeder fra søket
+import { isHuske41, addFromSearch41 } from './tasks-glimt-ai.js'; // prompt 41: huskebeskjeder fra søket
 import { agent, agentOn, agentExtras, agentText, isPlain, resultHref } from './glimt-agent.js'; // prompt 45: felles Glimt-agent
 import { cal70Of } from './glimt-kalenderkort.js'; // prompt 70: kort A erstatter svarteksten når Glimt har lagt inn en avtale
 import { thumbs61Html } from './glimt-oppskrifter.js'; // prompt 61: tommel opp/ned på Glimt-svaret

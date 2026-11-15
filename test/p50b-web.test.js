@@ -2,7 +2,7 @@
 //  - claude-code-web-mikrofonknapp.md: mikrofonen i søkefeltet på Dashboard (tale.js) er en 40×40 sirkel med sentrert
 //    18 px strek-ikon, gjennomsiktig i hvile, rød under opptak, 0,18 s overgang – og ligger mellom «✦ AI» og «Søk».
 //    Funksjonen er den samme som før: opptak til /api/voice53/transcribe (NB-Whisper/Voz/Phonon), ikke Web Speech i søket.
-//  - claude-code-vaer-dra-piller-mobil.md: dra-pillene i Vær (wx52.js) virker med finger: touch-action:none på containerne,
+//  - claude-code-vaer-dra-piller-mobil.md: dra-pillene i Vær (weather-pille.js) virker med finger: touch-action:none på containerne,
 //    ikke-passiv touchmove på document mens et drag pågår, tidlig fangst for Temp/Regn/Vind og 5 px-terskel for resten.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -32,7 +32,7 @@ test('dra-pillene i Vær virker med finger', () => {
   const g = css.match(/\.g52\{([^}]*)\}/)?.[1] ?? '';
   for (const s of ['touch-action:none', 'user-select:none', '-webkit-user-select:none', '-webkit-touch-callout:none']) assert.ok(g.includes(s), `.g52 mangler ${s}`);
   assert.doesNotMatch(g, /pan-y/);
-  const js = read('public/js/wx52.js');
+  const js = read('public/js/weather-pille.js');
   assert.match(js, /document\.addEventListener\('touchmove', \(e\) => \{ if \(active\.size && e\.cancelable\) e\.preventDefault\(\); \}, \{ passive: false, capture: true \}\)/);
   assert.match(js, /const early = k === 'modes';/);
   assert.match(js, /down\.cap = early && down\.touch;/);

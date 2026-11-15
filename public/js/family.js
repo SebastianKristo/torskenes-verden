@@ -498,7 +498,7 @@ function sendtView() {
     ${lab(D?.log?.title ?? 'I DAG I FAMILIEN', 'sm')}${D ? todayRows(D.log?.items ?? [], 'Ingen innsjekker i dag ennå.') : loading('ci')}`;
 }
 function velView() {
-  // Web: dagens Vel fremme-tur (hjemlys41.js) – PWA-en åpner sitt eget Vel fremme-ark (data-p40="hjopen").
+  // Web: dagens Vel fremme-tur (hjemlys-fane.js) – PWA-en åpner sitt eget Vel fremme-ark (data-p40="hjopen").
   const html = F.o.velfremme?.(F.d.fam, () => paint());
   return `${head('På vei hjem', 'Si fra når du drar, med ETA og varsel hvis du er sen', F.two ? '' : backBtn('Sjekk inn'))}${html ?? (F.d.fam ? '<div class="f50-card f50-empty">Vel fremme er ikke tilgjengelig her.</div>' : loading('fam'))}`;
 }

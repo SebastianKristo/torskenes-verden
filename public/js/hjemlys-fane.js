@@ -1,7 +1,7 @@
 // Prompt 41 (claude-code-hjemlys.md → «Si fra» og «Lagt inn i appen: Familie → Hjemlys»). Fasit: Familie.dc.html (fanen Hjemlys),
 // Hjemme trygt Varianter.dc.html 3a–3c og 4a–4d. Web: egen fane i Familie med hele flyten:
 //   Start (fire valg + aktive i familien + Glimt-forslag) → Hvem får beskjed? (søk, Husstanden / Siste brukt / Alle, «Husk valget»)
-//   → Klar (mål, rute, «Alt OK?»-ventetid 5/15/30, hva som deles hvis sen) → Aktiv (hjemlys40.js viser økta med knappene).
+//   → Klar (mål, rute, «Alt OK?»-ventetid 5/15/30, hva som deles hvis sen) → Aktiv (hjemlys.js viser økta med knappene).
 //   Sjekket inn / Drar snart / Drar nå uten mål: valgfritt sted → «Sendt»-kort med beskjeden ordrett.
 // API: POST /api/hjemlys/notice {kind:'checkin'|'leaving_soon'|'leaving_now'|'arrived', place?, eta?, to:[userId], note?}
 //      POST /api/hjemlys/start {eta, mode, waitMin, recipients, destination:{name, lat, lon, kind:'home'|'place'}, share}
@@ -14,7 +14,7 @@
 import { api, esc } from './util.js';
 import { store } from './store.js';
 import { stableColor, twoLetters } from './poscard.js';
-import { loadHjemlys, hjemlysState, mineHtml42 } from './hjemlys40.js';
+import { loadHjemlys, hjemlysState, mineHtml42 } from './hjemlys.js';
 
 const KINDS = {
   home: { t: 'På vei hjem', s: 'Tid, fremdrift og varsel hvis du er sen', i: '⌂', dark: true },
@@ -111,7 +111,7 @@ function activeHtml() {
     : `<div class="hl42-none">${st?.missing ? 'Serveren har ikke Vel fremme ennå.' : st?.d ? 'Ingen i familien er på vei eller har sjekket inn nå.' : 'Henter …'}</div>`;
   return `<span class="hl41-k">AKTIVE I FAMILIEN</span><div class="hl42-act">${body}</div>`;
 }
-/** Glimt-forslaget (GET /api/hjemlys/suggest): spørsmål fra kalender og posisjon. Knappene håndteres av hjemlys40.js (data-hl40). */
+/** Glimt-forslaget (GET /api/hjemlys/suggest): spørsmål fra kalender og posisjon. Knappene håndteres av hjemlys.js (data-hl40). */
 function glimtHtml() {
   const st = hjemlysState(), g = st?.sug;
   let off = false; try { off = sessionStorage.getItem('hl40_sug_off') === '1'; } catch { /* */ }

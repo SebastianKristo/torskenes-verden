@@ -5,7 +5,7 @@
 import { api, esc } from './util.js';
 import { clearBtn } from './searchfield.js';
 import { store, emit } from './store.js';
-import { partyHtml41, fanfare41, restartParty41, photoBlock41, photoAct41, loadPhotos41, loadFamily41 } from './birthdays41.js'; // prompt 41
+import { partyHtml41, fanfare41, restartParty41, photoBlock41, photoAct41, loadPhotos41, loadFamily41 } from './birthdays-fest.js'; // prompt 41
 
 export const MN = ['januar', 'februar', 'mars', 'april', 'mai', 'juni', 'juli', 'august', 'september', 'oktober', 'november', 'desember'];
 export const MS = MN.map((m) => m.slice(0, 3));

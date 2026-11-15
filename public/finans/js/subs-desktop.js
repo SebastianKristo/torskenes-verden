@@ -9,7 +9,7 @@ import { toJpeg, readShot, errCardHtml, installVision, SLOW_MS } from './sub-sho
 import { parseTrial, trialPreview, trialBadge, cancelUrlFor, REMIND_OPTIONS, longDay } from '/assets/js/trial-parse.js';
 import { aiStart, aiDone } from '/assets/js/ai-jobs.js';
 import { glimt } from '/assets/js/glimt.js';
-import { household, householdSync, avatars, avatarCss, colorFor } from '/assets/js/house37.js';
+import { household, householdSync, avatars, avatarCss, colorFor } from '/assets/js/husstand.js';
 
 /* Prompt 31 (claude-code-prove-paminnelse.md, fasit «Abonnement Legg til ark.dc.html» → Gratis prøveperiode):
    «+ Legg til abonnement» → Gratis prøveperiode (✦ AI) → arket «Prøveperiode»: «✦ Skriv det med egne ord» + Fyll ut

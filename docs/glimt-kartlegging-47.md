@@ -37,8 +37,8 @@ Dette går ikke an å fikse i systemprompten, fordi modellen ikke blir spurt.
 | Klassifisering spørsmål/handling (300 ms) | `sok` | `assist.js:220` |
 | Verktøyruter for Chat/Hjem («hos brukeren llama3.2:3b») | `sok` | `ai/tool-router.js:7` |
 | Rask time (`/api/kalender/quick`, web `kal-quick.js`) og `appointment.create` | `glimt` | `calendar-quick.js:60–122` |
-| Vitnemål (tekst → JSON) | `glimt` | `study44.js:185` |
-| Vitnemål (bilde/striper) | `rc` (visjon) | `study44.js:182`, `study46.js:276` |
+| Vitnemål (tekst → JSON) | `glimt` | `study-page.js:185` |
+| Vitnemål (bilde/striper) | `rc` (visjon) | `study-page.js:182`, `study46.js:276` |
 | Kvittering (bilde) | `rc` via `finans/ai.js` (gaten direkte) | `finans/ai.js:285` |
 | Kategorisering | `kat`, standard `llama3.2:3b` | `ai-api.js:288`, `aihw38.js:100` |
 | Chat | `chat` | `chat.js:343` |
@@ -78,14 +78,14 @@ user:   Når er neste gang jeg skal til Nina?
 | Planlegger (`glimt`) | **4096** | 320 | 0 | false + `/no_think` | 17 tools, eller `format: <schema>` | `plan.js:46`, `ai-run.js:569`, `ai-gate.js:377–380` |
 | Fritt svar (`sok`) | 4096 (8192 med nettsøk) | 160 | 0,3 | false | – | `assist.js:511–512` |
 | Klassifisering (`sok`) | 4096 | 12 | 0 | false | `format:'json'` | `assist.js:220` |
-| Vitnemål tekst (`glimt`) | **4096** | 900 | rutens (0,7) | false | `format:'json'` | `study44.js:185` |
+| Vitnemål tekst (`glimt`) | **4096** | 900 | rutens (0,7) | false | `format:'json'` | `study-page.js:185` |
 | Vitnemål stripe (`rc`) | 4096 | 700 | rutens | false | schema | `study46.js:276` |
 | Kvittering (`rc`) | 4096 (`shortBody`) | ikke satt | 0,2 | false | schema | `finans/ai.js:285`, `ollama-opts.js:16` |
 | Chat | 8192 (innstilling) | – | 0,7 | innstilling | – | `chat.js:180/343` |
 
 - Alle korte kall får `num_ctx = min(params.numCtx, 4096)` (`ai-run.js:569`, `SHORT_NUM_CTX` i `ollama-opts.js:16`). Det er sendt eksplisitt, så Ollama-standarden brukes ikke, men taket er lavt.
 - **Planleggeren ligger på grensen.** 3 100–3 600 prompt-tokens + 320 i svar mot 4096. Kommer det på few-shot-eksempler eller lengre verktøybeskrivelser, kutter Ollama i stillhet. Ingen kode måler dette før kallet. `tokIn` logges i `ai_runs` etterpå (`ai-run.js:810`), men ingen bruker tallet.
-- **Vitnemål-tekst:** opptil 12 000 tegn OCR-tekst (`study44.js:218`, ca. 3 500–4 000 tokens) + prompt + 900 i svar mot 4096. Dette **kuttes** for lange dokumenter, og det er en sannsynlig årsak til at fag mangler (akseptansepunkt 5).
+- **Vitnemål-tekst:** opptil 12 000 tegn OCR-tekst (`study-page.js:218`, ca. 3 500–4 000 tokens) + prompt + 900 i svar mot 4096. Dette **kuttes** for lange dokumenter, og det er en sannsynlig årsak til at fag mangler (akseptansepunkt 5).
 - think er alltid av på korte kall, og ingen sti slår det på ved ugyldig plan. Temperatur 0,7 (rutens standard) brukes til dokument-JSON.
 
 ### 1.4 Hvordan lagres «minne», og hvordan hentes det?
@@ -150,7 +150,7 @@ Gjengitt nøyaktig: «TRE1400 Forelesning er **tirsdag 27. oktober kl. 14.30** (
 ### 2.5 Vitnemål fra bilde
 - Prompt 46 (`study46.js`) har allerede OCR først (pdftotext-bbox / Tesseract TSV i 300 dpi), tabellrekonstruksjon og visjon i striper (1600 px) som reserve.
 - Det som mangler:
-  - (a) Tekstmodellen `study44.js:185` får 12 000 tegn i `num_ctx` 4096 med `num_predict` 900 og temperatur 0,7. Det **kuttes**.
+  - (a) Tekstmodellen `study-page.js:185` får 12 000 tegn i `num_ctx` 4096 med `num_predict` 900 og temperatur 0,7. Det **kuttes**.
   - (b) Det finnes ingen fullstendighetssjekk av typen «antall OCR-rader som ser ut som fag-rader» mot antall i JSON, og ingen nytt forsøk på manglende rader.
   - (c) Visjon brukes som *alternativ* (bare når OCR ikke ga fag), ikke som korrektur.
   - (d) Apple Vision-OCR finnes ikke, bare Tesseract.
@@ -229,7 +229,7 @@ Prinsipp: motoren beholdes og utvides. De gamle stiene blir verktøy bak motoren
 - Kodemalene beholdes for verktøysvar.
 
 **7. Dokumentpipeline**
-- `study44.js:185/218`: `numCtx` 16384, `numPredict` 4096, temperatur 0, chunking per side/bånd.
+- `study-page.js:185/218`: `numCtx` 16384, `numPredict` 4096, temperatur 0, chunking per side/bånd.
 - `study46.js`: fullstendighetssjekk (regex-rader med karakter mot `emner.length`), nytt forsøk på manglende rader og flagg i svaret. Visjon som korrektur («ikke legg til fag som ikke finnes i OCR-teksten»).
 - Valgfritt: Apple Vision-OCR via et lite Swift-CLI (`ocrmac`) når serveren kjører på macOS. Tesseract som reserve.
 - Kvittering (`finans/ai.js:392`): OCR først, så tekst-JSON, med visjon som kontroll. Samme fullstendighetssjekk på varelinjer mot total.
@@ -245,7 +245,7 @@ Prinsipp: motoren beholdes og utvides. De gamle stiene blir verktøy bak motoren
 
 **10. oMLX** (se 7) – etter at stegene over virker på Ollama, så samme eval kan sammenligne.
 
-Filer som endres (hovedsakelig): `server/glimt/{engine,plan,tools,tools46,weather46,dates,subs46,calendar46}.js`, nye `context.js`, `glimt/memory/recall.js`, `glimt/answer.js`, `glimt/model-params.js`, `glimt/trace.js`, `server/glimt/assist.js` (detectIntent/toolCalendarNext/toolLlm), `server/glimt/memory/remember.js` (migrering), `server/calendar-quick.js`, `server/media/arr.js`, `server/study44.js`, `server/study46.js`, `server/finans/ai.js`, `server/ai-run.js` (steg-params, numCtx), `server/ai-gate.js` (oMLX-backend, keep_alive), `public/js/ai-control.js` (motorvalg), `package.json` (`eval`-script), `docs/glimt-dataflyt.md`.
+Filer som endres (hovedsakelig): `server/glimt/{engine,plan,tools,tools46,weather46,dates,subs46,calendar46}.js`, nye `context.js`, `glimt/memory/recall.js`, `glimt/answer.js`, `glimt/model-params.js`, `glimt/trace.js`, `server/glimt/assist.js` (detectIntent/toolCalendarNext/toolLlm), `server/glimt/memory/remember.js` (migrering), `server/calendar-quick.js`, `server/media/arr.js`, `server/study-page.js`, `server/study46.js`, `server/finans/ai.js`, `server/ai-run.js` (steg-params, numCtx), `server/ai-gate.js` (oMLX-backend, keep_alive), `public/js/ai-control.js` (motorvalg), `package.json` (`eval`-script), `docs/glimt-dataflyt.md`.
 
 ---
 

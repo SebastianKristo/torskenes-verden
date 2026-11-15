@@ -5,7 +5,7 @@
 //  - Ruter (claude-code-ruter-avganger-umiddelbart.md): siste svar lagres (papir_av_cache) og vises straks ved oppstart, før
 //    nettverkskallet. Gamle avganger filtreres bort når de tegnes (dash.js regner minuttene fra klokka). Feil beholder gamle data.
 import { store, on, emit } from './store.js';
-import { wx52, wx52Off } from './wx52.js';
+import { wx52, wx52Off } from './weather-pille.js';
 import { loadHome52, store52Meta, bindHome52, refreshTiles52, leaveHome52 } from './home52.js';
 
 const reduced = () => { try { return matchMedia('(prefers-reduced-motion: reduce)').matches; } catch { return false; } };
