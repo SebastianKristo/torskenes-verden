@@ -355,13 +355,6 @@ html[data-mode="dark"][data-hl="2c"] .wh-steps{color:var(--ink,var(--ds-text-pri
 :where(html[data-mode="dark"][data-hl="2c"]) body{background:var(--ds-surface)}
 :where(html[data-mode="dark"][data-hl="2c"]) .kal{--k-ink:var(--ds-text-primary);--k-mut:var(--ds-text-secondary);--k-card:var(--ds-surface-raised);--k-bg:var(--ds-surface);--k-in:var(--ds-surface);--k-hero:var(--ds-text-primary);--k-herofg:var(--ds-on-accent)}
 :where(html[data-mode="dark"][data-hl="2c"]) .k38-steps>span.ok i{border-color:var(--ds-success)}
-:where(html[data-mode="dark"][data-hl="2c"]) .w38-pw-c{background:var(--ds-surface-raised);color:var(--ds-text-primary)}
-:where(html[data-mode="dark"][data-hl="2c"]) .w38-pw-c>span{color:var(--ds-text-secondary)}
-:where(html[data-mode="dark"][data-hl="2c"]) .w38-pw-c input{border:1px solid var(--ds-line);background:var(--ds-surface-raised);color:var(--ds-text-primary)}
-:where(html[data-mode="dark"][data-hl="2c"]) .w38-pw-c input:focus{border-color:var(--ds-text-primary)}
-:where(html[data-mode="dark"][data-hl="2c"]) .w38-pw-e{color:var(--ds-accent)}
-:where(html[data-mode="dark"][data-hl="2c"]) .w38-pw-b button{border:1px solid var(--ds-line);color:var(--ds-text-primary)}
-:where(html[data-mode="dark"][data-hl="2c"]) .w38-pw-b button[type=submit]{background:var(--ds-text-primary);color:var(--ds-on-accent)}
 :where(html[data-mode="dark"][data-hl="2c"]) .gb38-glass:focus-visible{outline:2px solid var(--ds-surface-raised)}
 :where(html[data-mode="dark"][data-hl="2c"]) .gb38-ht{color:var(--ds-text-primary)}
 :where(html[data-mode="dark"][data-hl="2c"]) .gb38-r{color:var(--ds-text-primary)}

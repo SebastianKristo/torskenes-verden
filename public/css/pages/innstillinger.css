@@ -749,17 +749,6 @@ span.ka36-th{background:var(--ds-category-blue);color:var(--ds-on-category)}
 /* ================= Konto → ØKT ================= */
 .sg-av.sg-ico38{color:var(--ds-on-category);display:grid;place-items:center}
 .sg-av.sg-ico38 svg{width:16px;height:16px}
-.w38-pw{position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.45);display:grid;place-items:center;padding:16px}
-.w38-pw-c{width:min(380px,100%);margin:0;display:flex;flex-direction:column;gap:10px;padding:20px;border-radius:22px;background:#fffdf8;color:#1b1a17;box-shadow:0 30px 70px -20px rgba(0,0,0,.5);font-family:Manrope,system-ui,sans-serif}
-.w38-pw-c b{font:500 22px Newsreader,Georgia,serif}
-.w38-pw-c>span{font-size:14px;line-height:1.45;color:#6b665c}
-.w38-pw-c input{height:46px;padding:0 14px;border-radius:14px;border:1px solid #d8d1c2;background:#fff;color:#1b1a17;font:600 15px Manrope,system-ui,sans-serif;outline:none}
-.w38-pw-c input:focus{border-color:#1b1a17}
-.w38-pw-e{font-size:13px;font-weight:600;color:#b23a2a}
-.w38-pw-b{display:flex;gap:8px;justify-content:flex-end}
-.w38-pw-b button{height:42px;padding:0 18px;border-radius:21px;border:1px solid #d8d1c2;background:transparent;color:#1b1a17;cursor:pointer;font:700 14px Manrope,system-ui,sans-serif}
-.w38-pw-b button[type=submit]{border:0;background:#1b1a17;color:#f3efe6}
-.w38-pw-b button.red{background:#b23a2a}
 
 /* ================= Innstillinger → Domener: Google Search Console ================= */
 .gsc39-t{display:flex;align-items:center;gap:8px}

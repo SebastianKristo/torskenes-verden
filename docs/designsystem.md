@@ -140,6 +140,21 @@ DsTheme(stil = DsStil.Papir) {               // MaterialTheme + LocalDsColors, m
 så ark blir ugjennomsiktige. Dynamic color brukes ikke (Q16). `DsPalette` har alle semantiske farger, også de M3 mangler
 (`success`, `warning`, `category` …). Wear har ikke Material 3 og får `DsWearColors` (Wear Compose Material) i stedet.
 
+## Felles UI-komponenter på web
+
+`public/js/ui/` har én fil per komponent, med stilene i `public/css/components/ui.css` (bare `--ds-*`, ingen hex, ingen `!important`):
+
+| Fil | Gir | Klasse |
+|---|---|---|
+| `card.js` | `cardHtml({ title, sub, body })` | `.ui-card` |
+| `button.js` | `buttonHtml(tekst, { variant: 'primary' \| 'danger' \| 'quiet', type, attrs })` | `.ui-btn` |
+| `sheet.js` | `sheetHtml(…)` og `openSheet({ title, text, body, foot, tag }, onClose)` (Esc, klikk utenfor og `[data-ui-close]` lukker) | `.ui-scrim`, `.ui-sheet` |
+| `empty.js` | `emptyHtml({ title, text, action })` | `.ui-empty` |
+| `loader.js` | `loaderHtml(tekst)` | `.ui-loader` |
+| `toast.js` | `toast(tekst, { tone: 'success' \| 'danger', ms })` | `.ui-toast` |
+
+Nye skjermer bruker disse i stedet for egne klasser. `test/ui-komponenter.test.js` sjekker HTML-en og at `ui.css` bare bruker tokens.
+
 ## Legge til eller endre et token
 
 1. Rediger `shared/design/tokens.json`. En ny farge må finnes i **alle** stiler og moduser (glass.lys arver fra papir.lys).
