@@ -1,5 +1,7 @@
 package no.kristo.finanshub.wear
 
+import no.kristo.felles.android.SikkerLagring
+
 import no.kristo.felles.nett.LokaltNett
 import no.kristo.felles.nett.UsikretHttp
 import no.kristo.felles.nett.openSikker
@@ -8,8 +10,6 @@ import no.kristo.felles.nett.ServerAdresse
 import android.content.Context
 import android.content.SharedPreferences
 import android.os.Build
-import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKeys
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -48,10 +48,8 @@ const val DEFAULT_SERVER51 = ServerAdresse.STANDARD
 internal fun migrate89(s: String?): String? = ServerAdresse.migrer(s)
 
 object WearStore51 {
-    private fun prefs(ctx: Context): SharedPreferences = runCatching {
-        EncryptedSharedPreferences.create("wear51", MasterKeys.getOrCreate(MasterKeys.AES256_GCM_SPEC), ctx.applicationContext,
-            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV, EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM)
-    }.getOrElse { ctx.applicationContext.getSharedPreferences("wear51_plain", Context.MODE_PRIVATE) }
+    /** Kryptert; den gamle ukrypterte reservefila flyttes inn og slettes (SikkerLagring, :felles-android). */
+    private fun prefs(ctx: Context): SharedPreferences = SikkerLagring.prefs(ctx, "wear51", gammelKlartekst = "wear51_plain")
 
     /** Prompt 89: gammel standardadresse → ny (egendefinerte røres ikke). */
     private fun stored89(ctx: Context): String? {

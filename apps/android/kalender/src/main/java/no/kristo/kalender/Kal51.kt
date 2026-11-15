@@ -1,5 +1,7 @@
 package no.kristo.kalender
 
+import no.kristo.felles.android.SikkerLagring
+
 import no.kristo.felles.nett.openSikker
 
 import android.app.Application
@@ -14,8 +16,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
-import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKeys
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -62,12 +62,8 @@ object Kal51 {
         }
     }
 
-    private fun prefs(ctx: Context): SharedPreferences = runCatching {
-        EncryptedSharedPreferences.create(
-            "kalender_sec51", MasterKeys.getOrCreate(MasterKeys.AES256_GCM_SPEC), ctx.applicationContext,
-            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV, EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
-        )
-    }.getOrElse { ctx.applicationContext.getSharedPreferences("kalender_sec51_plain", Context.MODE_PRIVATE) }
+    /** Kryptert; den gamle ukrypterte reservefila flyttes inn og slettes (SikkerLagring, :felles-android). */
+    private fun prefs(ctx: Context): SharedPreferences = SikkerLagring.prefs(ctx, "kalender_sec51", gammelKlartekst = "kalender_sec51_plain")
 
     internal fun plain(ctx: Context): SharedPreferences = ctx.applicationContext.getSharedPreferences("kalender_prefs", Context.MODE_PRIVATE)
 

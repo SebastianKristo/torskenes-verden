@@ -1,5 +1,7 @@
 package no.kristo.kalender
 
+import no.kristo.felles.android.SikkerLagring
+
 import no.kristo.felles.nett.openSikker
 import no.kristo.felles.nett.ServerAdresse
 
@@ -8,8 +10,6 @@ import android.content.SharedPreferences
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKeys
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -116,17 +116,13 @@ data class KalSession(val server: String, val token: String, val username: Strin
     val acct: String get() = "$username@" + server.substringAfter("://")
 }
 
-/** Kontoen lagres kryptert (Android Keystore), som i Homelab-appen. Faller tilbake til vanlige prefs hvis Keystore svikter. */
+/** Kontoen lagres kryptert (Android Keystore), som i Homelab-appen. Svikter Keystore, nullstilles lagringen (aldri ukryptert, B4). */
 object KalAuth {
     private const val FILE = "kalender_auth"
     @Volatile private var cached: KalSession? = null
 
-    private fun prefs(ctx: Context): SharedPreferences = runCatching {
-        EncryptedSharedPreferences.create(
-            FILE, MasterKeys.getOrCreate(MasterKeys.AES256_GCM_SPEC), ctx.applicationContext,
-            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV, EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
-        )
-    }.getOrElse { ctx.applicationContext.getSharedPreferences(FILE + "_plain", Context.MODE_PRIVATE) }
+    /** Kryptert; den gamle ukrypterte reservefila (…_plain) flyttes inn og slettes (SikkerLagring, :felles-android). */
+    private fun prefs(ctx: Context): SharedPreferences = SikkerLagring.prefs(ctx, FILE, gammelKlartekst = FILE + "_plain")
 
     fun session(ctx: Context): KalSession? {
         cached?.let { return it }

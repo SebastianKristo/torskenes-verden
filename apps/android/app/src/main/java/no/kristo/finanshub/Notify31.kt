@@ -1,5 +1,7 @@
 package no.kristo.finanshub
 
+import no.kristo.felles.android.SikkerLagring
+
 import android.Manifest
 import android.app.AlarmManager
 import android.app.Notification
@@ -17,8 +19,6 @@ import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
-import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKeys
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingPeriodicWorkPolicy
@@ -349,10 +349,7 @@ class Trial31Receiver : BroadcastReceiver() {
 
 /** Passordet for «Bruk fingeravtrykk» (System-siden): kryptert med Android Keystore, per konto. */
 object Nordlys31Keys {
-    private fun prefs(ctx: Context): SharedPreferences? = runCatching {
-        EncryptedSharedPreferences.create("nordlys31", MasterKeys.getOrCreate(MasterKeys.AES256_GCM_SPEC), ctx,
-            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV, EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM)
-    }.getOrNull()
+    private fun prefs(ctx: Context): SharedPreferences? = runCatching { SikkerLagring.prefs(ctx, "nordlys31") }.getOrNull()
     fun has(ctx: Context, acct: String?): Boolean = acct != null && prefs(ctx)?.contains("pw_$acct") == true
     fun get(ctx: Context, acct: String?): String? = if (acct == null) null else prefs(ctx)?.getString("pw_$acct", null)
     fun save(ctx: Context, acct: String?, pw: String) { if (acct != null) prefs(ctx)?.edit()?.putString("pw_$acct", pw)?.apply() }

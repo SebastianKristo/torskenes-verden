@@ -1,9 +1,9 @@
 package no.kristo.finanshub
 
+import no.kristo.felles.android.SikkerLagring
+
 import android.content.Context
 import android.content.SharedPreferences
-import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKeys
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.UUID
@@ -28,12 +28,12 @@ data class UserAccount(
     }
 }
 
-/** Kontoene og tokenene lagres kryptert (Android Keystore). */
+/**
+ * Kontoene og tokenene lagres kryptert (Android Keystore). En ødelagt nøkkel eller fil gir ikke lenger krasj ved oppstart (B4):
+ * SikkerLagring (:felles-android) nullstiller lagringen, og brukeren logger inn igjen.
+ */
 class AccountStore(ctx: Context) {
-    private val prefs: SharedPreferences = EncryptedSharedPreferences.create(
-        "finanshub", MasterKeys.getOrCreate(MasterKeys.AES256_GCM_SPEC), ctx,
-        EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV, EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
-    )
+    private val prefs: SharedPreferences = SikkerLagring.prefs(ctx, "finanshub")
 
     fun load(): List<UserAccount> {
         val raw = prefs.getString("accounts", null)

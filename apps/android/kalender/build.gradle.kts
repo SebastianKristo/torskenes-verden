@@ -62,6 +62,8 @@ android {
 dependencies {
     // Delt kode (Fase 5): serveradresse, klartekstregelen, HTTP-klient, feilsvar og «i dag».
     implementation(project(":felles"))
+    // Kryptert lagring av tokens som tåler en ødelagt Keystore-nøkkel (B4).
+    implementation(project(":felles-android"))
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.ui)
     implementation(libs.compose.material3)
@@ -71,7 +73,6 @@ dependencies {
     implementation(libs.core.ktx)
     // Code Scanner drar inn en gammel fragment-versjon; ActivityResult-API-et krever ≥ 1.3 (lintVitalRelease). Samme versjon som Finans-appen.
     implementation(libs.fragment.ktx)
-    implementation(libs.security.crypto)
     implementation(libs.coroutines.android)
     // Hjemskjerm-widgets (Glance) og henting hvert 15. minutt.
     implementation(libs.glance.appwidget)

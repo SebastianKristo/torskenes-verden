@@ -1,5 +1,7 @@
 package no.kristo.finanshub
 
+import no.kristo.felles.android.SikkerLagring
+
 import no.kristo.felles.nett.openSikker
 
 import android.app.Notification
@@ -15,8 +17,6 @@ import android.util.Base64
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKeys
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -55,10 +55,8 @@ object DeviceIds51 {
     /** Krypterte prefs åpnes én gang per prosess (Keystore-oppslaget er tregt). */
     private fun prefs(ctx: Context): SharedPreferences = cached ?: synchronized(this) { cached ?: open(ctx).also { cached = it } }
 
-    private fun open(ctx: Context): SharedPreferences = runCatching {
-        EncryptedSharedPreferences.create("sec51", MasterKeys.getOrCreate(MasterKeys.AES256_GCM_SPEC), ctx.applicationContext,
-            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV, EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM)
-    }.getOrNull() ?: ctx.applicationContext.getSharedPreferences("sec51_plain", Context.MODE_PRIVATE)
+    /** Kryptert; den gamle ukrypterte reservefila (sec51_plain) flyttes inn og slettes (SikkerLagring, :felles-android). */
+    private fun open(ctx: Context): SharedPreferences = SikkerLagring.prefs(ctx, "sec51", gammelKlartekst = "sec51_plain")
 
     internal fun store(ctx: Context): SharedPreferences = prefs(ctx)
 
