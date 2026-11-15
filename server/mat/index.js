@@ -4,7 +4,7 @@
 // Filene:
 //   plan.js    – retter, ukeplan (AI eller tilfeldig), faste retter, kokker, HelloFresh, handleliste, ICS og planleggeren
 //   recipes.js – mapper, oppskrifter fra nettsider og skannede bilder, lenker og filer per rett
-// («Glimt lærer»-oppskriftene i server/recipes61/ er Glimt-planer, ikke matoppskrifter, og hører ikke til her.)
+// («Glimt lærer»-oppskriftene i server/glimt/recipes/ er Glimt-planer, ikke matoppskrifter, og hører ikke til her.)
 import { matApi, matCalendar } from './plan.js';
 
 export function mountMat(app) {

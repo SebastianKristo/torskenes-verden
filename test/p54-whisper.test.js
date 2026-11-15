@@ -34,8 +34,8 @@ const logged = [];
 for (const k of ['log', 'info', 'warn', 'error']) { const o = console[k]; console[k] = (...a) => { logged.push(a.map(String).join(' ')); o(...a); }; }
 
 const { default: app } = await import('../server/index.js');
-const M = await import('../server/dal53/models.js');
-const ASR = await import('../server/dal53/asr.js');
+const M = await import('../server/ai/desertant/models.js');
+const ASR = await import('../server/ai/desertant/asr.js');
 const H = await import('../server/ai/whisper/health.js');
 const W = await import('../server/ai/whisper/asr.js');
 const R = await import('../server/ai/whisper/route.js');

@@ -17,7 +17,7 @@ import { authOrToken, languageOf } from './mobile.js';
 import { ICON_DEFAULTS, validId as validIconId } from './icons.js';
 // Prompt 46 (SERVER46): egne kategorier + «For deg», favicon på kildene, sammendrag per kategori, Innstillinger → Nyheter (news46.js).
 import { mountNews46, customIds46, feedIcon46, itemsForCat46, fetchIcon46, feedDomain46, categoriesOut46 } from './news46.js';
-import { gistCategory53, topicSlugs53 } from './dal53/topics.js'; // prompt 53 (DAL53): emner fra Gist per sak
+import { gistCategory53, topicSlugs53 } from './ai/desertant/topics.js'; // prompt 53 (DAL53): emner fra Gist per sak
 
 const MOCK = process.env.MOCK_DATA === '1';
 const REFRESH_MS = 10 * 60_000;

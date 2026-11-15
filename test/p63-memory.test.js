@@ -29,8 +29,8 @@ const ST = await import('../server/glimt/memory/store.js');
 const EX = await import('../server/glimt/memory/extract.js');
 const NI = await import('../server/glimt/memory/nightly.js');
 const API = await import('../server/glimt/memory/hygiene-api.js');
-const SC = await import('../server/sched62/scheduler.js');
-const RUN = await import('../server/sched62/run.js');
+const SC = await import('../server/glimt/schedules/scheduler.js');
+const RUN = await import('../server/glimt/schedules/run.js');
 
 const NOW = Date.parse('2026-10-26T03:00:00+01:00'); // mandag kl. 03:00 Europe/Oslo
 const H = 3600_000, DAY = 24 * H;

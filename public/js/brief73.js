@@ -8,7 +8,7 @@
 import { api, esc } from './util.js';
 import { brief52State } from './brief52.js';
 
-/** [key, tittel, kilde, på som standard] – reserve når serveren ikke svarer (samme som server/brief73.js CATALOG73). */
+/** [key, tittel, kilde, på som standard] – reserve når serveren ikke svarer (samme som server/glimt/brief-content.js CATALOG73). */
 export const CAT73 = [
   ['vaer', 'Vær', 'Nå, i dag og varsel', 1], ['kal', 'Kalender', 'Første avtale og resten av dagen', 1], ['fokus', 'Dagens fokus', 'Det viktigste i dag, valgt av Glimt', 1],
   ['gjore', 'Huskeliste · 3 viktigste', 'Fra Gjøremål', 1], ['reise', 'Min reise', 'Ruter: neste avgang og når du må gå', 1], ['regn', 'Regninger denne uka', 'Fra Finans', 1],

@@ -57,7 +57,7 @@ import { saveFile50, deleteFile50, desc50, mountFiles50, visionCaps50, bestVisio
 import { rankFor41 } from './auto-model.js';
 import { externalBlocked48, r48Settings } from '../../finans/receipts/settings.js';
 import { imageIntent51, looksLikeDocument51, documentNote51, readDocument51, visionModel51, textModel51, isMultimodalError51, markNoVision51, friendlyError51, owuiVision51 } from './images.js'; // prompt 51 (RCPTSRV51): bilder i chatten
-import { engine53, webSearch53, eyeIntent53 } from '../../dal53/index.js'; // prompt 53 (DAL53): Tongue/Redact rundt motoren, Redact på søkeord, Eye for bilder
+import { engine53, webSearch53, eyeIntent53 } from '../desertant/index.js'; // prompt 53 (DAL53): Tongue/Redact rundt motoren, Redact på søkeord, Eye for bilder
 import { osloDate } from '../../dates/oslo.js';
 
 const isMock = () => process.env.MOCK_DATA === '1' && !fx;

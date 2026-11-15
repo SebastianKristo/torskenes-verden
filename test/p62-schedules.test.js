@@ -27,12 +27,12 @@ const { db, kv, OWNER } = await import('../server/db.js');
 const E = await import('../server/glimt/engine.js');
 const P = await import('../server/glimt/plan.js');
 const D = await import('../server/glimt/dates.js');
-const C = await import('../server/sched62/cond.js');
-const ST = await import('../server/sched62/store.js');
-const RUN = await import('../server/sched62/run.js');
-const SC = await import('../server/sched62/scheduler.js');
-const SET = await import('../server/sched62/settings.js');
-const TK = await import('../server/sched62/task.js');
+const C = await import('../server/glimt/schedules/cond.js');
+const ST = await import('../server/glimt/schedules/store.js');
+const RUN = await import('../server/glimt/schedules/run.js');
+const SC = await import('../server/glimt/schedules/scheduler.js');
+const SET = await import('../server/glimt/schedules/settings.js');
+const TK = await import('../server/glimt/schedules/task.js');
 const G35 = await import('../server/glimt/settings.js');
 
 E._setClock45({ today: '2026-10-24', nowMin: 600 }); // lørdag 24.10.2026 kl. 10:00 (sommertid til natt til søndag)
@@ -511,7 +511,7 @@ test('mål: tvetydig «stopp varselet» med to varsler → valg (aldri en gjetni
   const rule = D.parseRecurrence62('hver dag kl 13:30', { now: NOW }).rule;
   const a = ST.insertSchedule62(ME, { title: 'Strømprisvarsel', what: 'strømprisene', kind: 'power', when: { text: 'x', rule, explicitTime: true }, condition: { ...cond('strømprisen går over 2 kr'), day: 'tomorrow' }, params: { zone: 'NO1' } }, { now: NOW });
   const b = ST.insertSchedule62(ME, { title: 'Værvarsel', what: 'værmeldingen', kind: 'query', when: { text: 'x', rule, explicitTime: true }, condition: { ...cond('temperaturen går under -5'), day: 'tomorrow' } }, { now: NOW });
-  const TT = await import('../server/sched62/tools.js');
+  const TT = await import('../server/glimt/schedules/tools.js');
   const amb = TT.resolveTarget62(ME, 'varselet', 'Stopp varselet', {}, 'stoppe');
   assert.ok(amb.ask);
   assert.equal(amb.ask.options.length, 2);

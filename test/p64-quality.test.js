@@ -34,7 +34,7 @@ const WK = await import('../server/quality64/weekly.js');
 const NT = await import('../server/quality64/notify64.js');
 const SYS = await import('../server/quality64/system.js');
 const API = await import('../server/quality64/api.js');
-const SC = await import('../server/sched62/scheduler.js');
+const SC = await import('../server/glimt/schedules/scheduler.js');
 
 const NIGHT = Date.parse('2026-10-27T02:00:00+01:00'); // tirsdag kl. 02:00 Europe/Oslo (vintertid)
 const SUNDAY = Date.parse('2026-11-01T20:00:00+01:00'); // søndag kl. 20:00, uke 44 (26.10–1.11)

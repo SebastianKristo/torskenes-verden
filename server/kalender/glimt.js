@@ -21,7 +21,7 @@ import { eventsFor, matchScore, normText } from './events.js';
 import { settings as fhSettings } from '../finans/db.js';
 import { parseQuick, osloTodayISO } from '../dates/quick.js'; // dato og tid fra den felles tolkeren
 import { run as aiRun } from '../ai-run.js';
-import { parseDay } from '../parse-day35.js'; // prompt 35
+import { parseDay } from '../dates/day.js'; // prompt 35
 import { fagAnswer, rememberCtx, FAG_LLM_MS } from '../glimt/fag.js'; // prompt 39: oppfølging, fag og 45 s
 
 const MOCK = process.env.MOCK_DATA === '1';

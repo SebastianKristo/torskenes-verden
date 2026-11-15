@@ -13,7 +13,7 @@ import { TOOLS45, TOOL45, ollamaTools45 } from './tools.js';
 import { STEP47, fitParts47, estTokens47 } from './model-params.js';
 import { contextBlock47 } from './context.js';
 
-// Prompt 62 (del 2): schedule_create|list|update|delete – planlagte oppgaver (server/sched62/tools.js).
+// Prompt 62 (del 2): schedule_create|list|update|delete – planlagte oppgaver (server/glimt/schedules/tools.js).
 export const INTENTS47 = ['calendar_query', 'calendar_create', 'calendar_change', 'weather', 'finance_query', 'todo', 'web_search', 'media', 'memory_save', 'schedule_create', 'schedule_list', 'schedule_update', 'schedule_delete', 'parts_find', 'chat', 'app'];
 /** Hvilke verktøy hver intent får utføre (verktøyutvalg per intent i utførelsen). */
 export const INTENT_TOOLS47 = {

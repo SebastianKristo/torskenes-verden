@@ -88,7 +88,7 @@ export async function detectNb54(wav, { signal = null, timeoutMs = 20_000 } = {}
   return { language, probability: Number(j.probability) || languages[0]?.probability || 0, languages, ms: Date.now() - t0 };
 }
 
-/** Grensesnittet voice53 (server/dal53/asr.js) bruker – lat import, samme form som phononAsr53. */
+/** Grensesnittet voice53 (server/ai/desertant/asr.js) bruker – lat import, samme form som phononAsr53. */
 export const nbWhisperAsr54 = {
   name: 'nbwhisper',
   label: NB_LABEL54,

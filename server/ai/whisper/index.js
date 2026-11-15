@@ -1,6 +1,6 @@
 // Prompt 54 (WHISPER54): NB-Whisper (Nasjonalbiblioteket, Apache-2.0) på Mac mini-en – tale til tekst på norsk og engelsk.
 // Mac-delen: tools/nb-whisper/. Brukerveiledning: docs/nb-whisper-54.md. API-formene: SERVER53-API.md (seksjon WHISPER54).
-// Rutingen ligger i POST /api/voice53/transcribe (server/dal53/asr.js + ./route.js); backenden er nbWhisperAsr54 (./asr.js).
+// Rutingen ligger i POST /api/voice53/transcribe (server/ai/desertant/asr.js + ./route.js); backenden er nbWhisperAsr54 (./asr.js).
 //
 //   GET  /api/admin/whisper54/health[?fresh=1]  → {nbwhisper:{configured, flag, ok, status, url, model, engine, …}, engines:[…]}   (bare admin)
 //   GET  /api/admin/whisper54/config            → {url, keySet}
@@ -25,7 +25,7 @@ const adminOnly = async (c, next) => {
 const body = async (c) => { try { const b = await c.req.json(); return b && typeof b === 'object' ? b : {}; } catch { return {}; } };
 
 async function engines54() {
-  const { asrBackends53 } = await import('../../dal53/asr.js').catch(() => ({}));
+  const { asrBackends53 } = await import('../desertant/asr.js').catch(() => ({}));
   if (!asrBackends53) return [];
   return (await asrBackends53().catch(() => [])).map(({ b, ...x }) => ({ ...x, engine_label: ENGINE_LABELS54[x.id] ?? x.label }));
 }

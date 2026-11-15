@@ -29,7 +29,7 @@ final class Brief73Model {
     @ObservationIgnored private var who: String = "-"
     @ObservationIgnored private var at: Date = .distantPast
 
-    /// Samme som server/brief73.js CATALOG73 (reserve når serveren ikke svarer).
+    /// Samme som server/glimt/brief-content.js CATALOG73 (reserve når serveren ikke svarer).
     static let catalog: [(String, String, String, Bool)] = [
         ("vaer", "Vær", "Nå, i dag og varsel", true),
         ("kal", "Kalender", "Første avtale og resten av dagen", true),

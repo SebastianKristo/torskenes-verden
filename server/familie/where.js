@@ -46,7 +46,7 @@ export async function whereAnswer(viewer, text, { now = Date.now() } = {}) {
   if (!p) {
     // Profiler uten bruker (Pål, Mormor) finnes i husstanden, men har ingen posisjon.
     let profiles = [];
-    try { const { profilesFor } = await import('../profiles37.js'); profiles = profilesFor(viewer).profiles; } catch { /* */ }
+    try { const { profilesFor } = await import('./profiles.js'); profiles = profilesFor(viewer).profiles; } catch { /* */ }
     const pr = profiles.find((x) => norm(x.name) === norm(it.name));
     if (pr) return { ...base, text: `**${pr.name}** deler ikke posisjon med deg.`, person: { profileId: pr.id, name: pr.name, color: pr.color }, place: null, open: { route: 'familie', person: null } };
     const sharing = people.filter((x) => !x.self && x.visible && x.last).map((x) => x.name.split(' ')[0]);

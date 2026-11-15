@@ -17,6 +17,8 @@
 //   map.js              Kart: holdeplasser, avganger og kjøretøy (Entur) for valgte soner, soner og personer
 //   famcal.js           familiekalenderen med «hvem kjører?»
 //   hjemlys.js          Vel fremme: økta, posisjon, ok/hjemme/avslutt (også admin), tokens, forslag, «Si fra»-beskjeder i GET /
+//   profiles.js         profiler i husstanden og onboarding (/api/profiles*, /api/onboarding/link, /api/users/:id/profile); montert
+//                       på /api fra api37.js (etter Bibelvers, før mobil-API-et), og profileName() til hilsenen i Glimt og briefen
 //   hjemlys-notices.js  «Si fra» (Sjekket inn · Drar snart · Drar nå · Fremme), tur til et valgfritt mål og den offentlige statussiden
 import { zone45Api } from './zone-alerts.js';
 import { haHealthMw45 } from './health-ha-devices.js';

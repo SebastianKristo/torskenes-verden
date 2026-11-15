@@ -2,7 +2,7 @@
 // /api/glimt/*-rutene (nyheter, kvalitet, 17. mai, oppskrifter, faste oppgaver) og før Chat. Rekkefølgen er bærende (Hono kjører
 // handlere og mellomvare i registreringsrekkefølge):
 //   – /api/glimt/memory: ryddingen (forslag, motstrid, ubrukte fakta) før «Glimt husker», som har /:id
-//   – /api/brief: etter julemodus- og sesongmellomvarene (jul40, brief41) i index.js, som legger til felt i svaret
+//   – /api/brief: etter julemodus- og sesongmellomvarene (briefJul40 i api40.js med glimt/jul.js, brief41) i index.js, som legger til felt i svaret
 //   – /api/glimt (glimtApi, sesjon eller app-token for hele /api/glimt/*) til sist, så de mer spesifikke rutene svarer først
 //   – /api/assist: Kalenderens lokale tolkning (local:{…}, kalender/invites.js) legges rundt Glimt-ruteren
 // Filene:
@@ -14,6 +14,11 @@
 //   calendar.js, calendar-card.js, subscriptions.js, tasks.js, weather.js, document.js, episode-ask.js, fag.js
 //   convo/               – samtaletilstand, entitetsregisteret og «bedre forståelse i samtaler»
 //   memory/              – «Glimt husker» (remember.js), minnehenting (recall.js) og nattlig rydding (store, extract, review, nightly)
+//   recipes/             – «Glimt lærer»: lagrede planer (oppskrifter) som lærer av bruk og rettelser (engine.js er krokene i motoren)
+//   schedules/           – planlagte oppgaver («Faste oppgaver»): tolkning, lagring, verktøyene schedule.*, kjøring og tikket
+//   jul.js               – julemodus (Auto/Av/På, faser, dagens luke) for Glimt-innstillingene og briefen
+//   brief-card-settings.js – rekkefølge og av/på for kortene (Innstillinger → Glimt → Brief) og bryteren for nordlysvarselet
+//   brief-content.js     – «Innhold i briefen» (/api/brief-cards, montert fra srv52.js) og filteret på GET /api/brief
 //   brief.js             – Glimt-brief (morgen/dag/kveld), widget og innstillinger; brief-cards.js – kortene i briefen og nordlysvarselet
 //   settings.js          – Glimt-innstillinger, opplesning (/api/tts) og bildeproxy (/api/img)
 //   assist.js            – /api/assist (Glimt-ruteren fra Hjem-søket og Chat, serverjobb)
@@ -27,9 +32,13 @@ import { glimtApi } from '../ai/control.js';
 import { settingsApi, ttsApi, imgApi } from './settings.js';
 import briefApi from './brief.js';
 import { assistLocalMw44 } from '../kalender/invites.js';
+import { recipesApi61 } from './recipes/api.js';
+import { schedulesApi62 } from './schedules/api.js';
 
-/** Alle Glimt-rutene: minnet, brief, innstillinger, motoren, entitetene, /api/glimt og /api/assist. */
+/** Alle Glimt-rutene: Glimt lærer, planlagte oppgaver, minnet, brief, innstillinger, motoren, entitetene, /api/glimt og /api/assist. */
 export function mountGlimt(app) {
+  app.route('/api/glimt/recipes', recipesApi61); // «Glimt lærer»: oppskrifter som lærer av bruk (per bruker)
+  app.route('/api/glimt/schedules', schedulesApi62); // planlagte oppgaver, «Faste oppgaver» (per bruker); tikket går i server/jobs/
   app.route('/api/glimt/memory', memoryApi63); // /pending, /conflicts, /stale, /hygiene (før «Glimt husker»-rutene)
   app.route('/api/glimt/memory', remember); // GET/POST/DELETE, POST /:id/apply (per bruker)
   app.route('/api/brief', briefApi); // Glimt-brief med kortene (pakker, familie, skole og jobb, bursdager, nordlys) + POST /gift

@@ -15,7 +15,7 @@
 import { eventsFor } from '../kalender/events.js';
 import { runAsUser } from '../settings.js';
 import { run as aiRun } from '../ai-run.js';
-import { parseDay } from '../parse-day35.js';
+import { parseDay } from '../dates/day.js';
 import { osloTodayISO } from '../../public/js/quick-time.js';
 
 const MOCK = process.env.MOCK_DATA === '1';

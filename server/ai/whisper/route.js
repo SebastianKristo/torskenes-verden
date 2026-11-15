@@ -1,4 +1,4 @@
-// Prompt 54 (WHISPER54): rutingen for tale til tekst (rene funksjoner, ingen avhengigheter – trygg å importere fra server/dal53/asr.js).
+// Prompt 54 (WHISPER54): rutingen for tale til tekst (rene funksjoner, ingen avhengigheter – trygg å importere fra server/ai/desertant/asr.js).
 //
 //   norsk (no/nb/nn)  → NB-Whisper (bokmål som standard, nn = nynorsk)
 //   engelsk (en)      → Voz (server) → Phonon (Mac mini) → NB-Whisper (language=en) som reserve

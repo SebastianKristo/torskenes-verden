@@ -21,7 +21,7 @@ const INTENT_OF_TOOL = { 'calendar.create': 'create', 'tasks.create': 'create', 
   'weather.get': 'ask', 'finance.subscriptions': 'summarize', 'finance.fixed': 'summarize', 'subscriptions.trial': 'update',
   'schedule.create': 'create', 'schedule.list': 'summarize', 'schedule.update': 'update', 'schedule.delete': 'delete', // prompt 62
   'skjold.find': 'search' }; // prompt 76
-// Prompt 62 (del 2): lokal plan for planlagte oppgaver (sched62/tools.js registrerer seg; modellen nede / hint til planleggeren).
+// Prompt 62 (del 2): lokal plan for planlagte oppgaver (schedules/tools.js registrerer seg; modellen nede / hint til planleggeren).
 let localHook62 = null;
 export const registerLocalPlan62 = (fn) => { localHook62 = typeof fn === 'function' ? fn : null; };
 // Prompt 76: Skjold Lab («hvor er M3-skruene?») – server/skjold76/glimt.js registrerer seg; får brukeren (sjekker treff i egne deler).

@@ -50,8 +50,8 @@ import { glimtSettingsOf, cleanGlimtPatch, saveGlimtSettings, hostOf, charName, 
 import { trialCompact } from '../finans/trial-widgets.js'; // prompt 35: prøveperioder i briefen
 import { todosForBrief } from '../gjoremal/glimt.js'; // prompt 37: Gjøremål-kortet
 import { bibleForBrief } from '../bible37.js'; // prompt 37: dagens bibelvers (bare med modulen)
-import { profileName } from '../profiles37.js'; // prompt 37: profilnavnet i hilsenen
-import { applyBriefCards73, guideFilter73 } from '../brief73.js'; // prompt 73: bare kortene som er på (Innhold i briefen)
+import { profileName } from '../familie/profiles.js'; // prompt 37: profilnavnet i hilsenen
+import { applyBriefCards73, guideFilter73 } from './brief-content.js'; // prompt 73: bare kortene som er på (Innhold i briefen)
 import { dtf } from '../intl-format.js'; // gjenbrukte Intl.DateTimeFormat
 import { withBriefCards, addGiftTask } from './brief-cards.js'; // prompt 38: de nye kortene og «Gave til …»
 

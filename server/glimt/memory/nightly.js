@@ -1,6 +1,6 @@
 // Prompt 63 (prompt 49 del 5, D5SRV): nattjobben «Nattlig oppsummering av minnet» – en systemoppgave i scheduleren fra del 2
 // (glimt_schedules, kind 'memory', source 'system', hver dag kl. 03:00 Europe/Oslo). Den synes i «Faste oppgaver» og kan pauses.
-// Én kjøring for én bruker (sched62/run.js kaller computeMemory63):
+// Én kjøring for én bruker (glimt/schedules/run.js kaller computeMemory63):
 //   1. forslag fra dagens kilder (extract.js) → glimt_memory_pending (ALDRI rett inn i minnet),
 //   2. motstrid-sjekk av nye forslag og av minnet (review.js) → glimt_memory_conflicts med spørsmål,
 //   3. markering av fakta som ikke er brukt på lenge (telles; slettes aldri).
@@ -25,7 +25,7 @@ export const systemRow63 = (user) => q("SELECT * FROM glimt_schedules WHERE user
 export async function ensureSystem63(user, now = Date.now()) {
   const row = systemRow63(user);
   if (row) return row;
-  const { insertSchedule62 } = await import('../../sched62/store.js');
+  const { insertSchedule62 } = await import('../schedules/store.js');
   const { osloParts62 } = await import('../dates.js');
   const rule = { freq: 'DAILY', interval: 1, byday: [], bymonthday: [], bymonth: [], dtstart: osloParts62(now).date, time: '03:00', until: null };
   try {
@@ -77,7 +77,7 @@ export async function nightly63(user, { now = Date.now(), useModel = true, trigg
   return out;
 }
 
-/** Fra scheduleren (sched62/run.js compute62 for kind 'memory'). Ingen levering kl. 03 – push kommer om morgenen. */
+/** Fra scheduleren (glimt/schedules/run.js compute62 for kind 'memory'). Ingen levering kl. 03 – push kommer om morgenen. */
 export async function computeMemory63(row, { now = Date.now() } = {}) {
   const r = await nightly63(row.user_id, { now });
   if (r.status === 'skipped') return { status: 'skipped', reason: r.reason, noDeliver: true };

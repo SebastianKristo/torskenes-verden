@@ -144,7 +144,7 @@ let caseFiles = readdirSync(caseDir).filter((f) => /^\d.*\.mjs$/.test(f)).sort()
 if (opt.case) { const want = String(opt.case).split(',').map((x) => x.trim().toLowerCase()).filter(Boolean); caseFiles = caseFiles.filter((f) => want.some((w) => f.toLowerCase().startsWith(w) || f.toLowerCase().includes(w))); }
 const metas = [];
 for (const f of caseFiles) { const m = (await import(pathToFileURL(join(caseDir, f)).href)).default; metas.push({ file: f, id: m.id, title: m.title, area: m.area, ...(m.intent ? { intent: m.intent } : {}) }); }
-// Prompt 61: lærte testtilfeller (JSON fra rettelser i Glimt, server/recipes61/learn.js). Data, aldri kode: eval/lib/learned61.mjs lager casen.
+// Prompt 61: lærte testtilfeller (JSON fra rettelser i Glimt, server/glimt/recipes/learn.js). Data, aldri kode: eval/lib/learned61.mjs lager casen.
 const learnedOpt = String(opt.learned ?? 'on');
 if (learnedOpt.toLowerCase() !== 'off') {
   // Prompt 64: flere mapper kommaseparert (nattevalen: repoets eval/learned og $DATA_DIR/eval-learned); samme id telles én gang.

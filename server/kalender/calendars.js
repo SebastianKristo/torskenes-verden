@@ -84,7 +84,7 @@ import { askCalendar } from './glimt.js';
 import { weatherFull, wmoText, iconOf, PLACES } from '../vaer/full.js';
 import { aliasesOf, typeOfWord, eventHitsAlias } from '../glimt/memory/remember.js';
 import { parseQuick, osloTodayISO } from '../dates/quick.js'; // dato og tid fra den felles tolkeren
-import { parseDay, normDayText } from '../parse-day35.js'; // prompt 35: felles dag-tolkning
+import { parseDay, normDayText } from '../dates/day.js'; // prompt 35: felles dag-tolkning
 import { attachGeo, parseIntent37, schoolTestAnswer } from './subjects.js'; // prompt 37
 import { extCalendarsOf, mountExt, patchExt, removeExt, isExtId, shades } from './external.js'; // prompt 35: iCal og Home Assistant
 import { googleKalApi, googleCalendarsOf, isGoogleCalId, patchGoogleCal, removeGoogleCal } from './google.js'; // prompt 36b: Google-kalendere

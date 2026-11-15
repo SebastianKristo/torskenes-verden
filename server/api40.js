@@ -12,7 +12,7 @@ import { Hono } from 'hono';
 import { authOrToken } from './mobile.js';
 import { bibleEnabled } from './bible37.js';
 import { glimtSettingsOf } from './glimt/settings.js';
-import { julBrief } from './jul40.js';
+import { julBrief } from './glimt/jul.js';
 import { db } from './db.js';
 import { startHungSweeper } from './ai-run.js';
 import { sessionUser } from './auth/session.js';

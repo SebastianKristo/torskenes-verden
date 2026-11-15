@@ -28,7 +28,7 @@ import java.net.URLEncoder
 data class Item73(val key: String, val title: String, val sub: String, val on: Boolean)
 
 object B73 {
-    /** [key, tittel, kilde, på] – samme som server/brief73.js CATALOG73 (reserve uten server). */
+    /** [key, tittel, kilde, på] – samme som server/glimt/brief-content.js CATALOG73 (reserve uten server). */
     val CATALOG = listOf(
         Item73("vaer", "Vær", "Nå, i dag og varsel", true), Item73("kal", "Kalender", "Første avtale og resten av dagen", true),
         Item73("fokus", "Dagens fokus", "Det viktigste i dag, valgt av Glimt", true), Item73("gjore", "Huskeliste · 3 viktigste", "Fra Gjøremål", true),

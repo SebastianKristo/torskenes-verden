@@ -82,7 +82,7 @@ if (process.env.EVAL_SCHED62 === 'off') kv.set('owner', 'sched62', { enabled: fa
 // Prompt 63: --mem63 off = nattlig oppsummering, motstrid-sjekk og markering av ubrukte fakta av (før/etter på samme commit).
 if (process.env.EVAL_MEM63 === 'off') kv.set('owner', 'mem63', { nightly: false, conflicts: false, stale: false });
 // Prompt 62: strømprisene er falske data i eval (h.setPower62) – hvakosterstrommen.no er ikke tilgjengelig her.
-const RUN62 = await imp('server/sched62/run.js');
+const RUN62 = await imp('server/glimt/schedules/run.js');
 let power62 = null;
 RUN62._setSchedData62({ power: async ({ zone, when }) => { if (!power62) throw Object.assign(new Error('Prisene er ikke publisert ennå'), { notYet: true }); return { zone, date: when === 'tomorrow' ? '2026-10-25' : TODAY, hours: power62.map((kr, hour) => ({ hour, ore: kr * 100 })), source: 'eval (falske data)', vat: true }; } });
 ai.invalidateInventory();
@@ -233,7 +233,7 @@ const h = {
   feedback: (traceId, vote) => A('/api/glimt/recipes/feedback', 'POST', { traceId, vote }),
   /** Prompt 61: legg inn en lært oppskrift og et negativt eksempel (testtilfellene fra eval/learned/). */
   async seedLearned61(doc) {
-    const S = await imp('server/recipes61/store.js');
+    const S = await imp('server/glimt/recipes/store.js');
     const r = doc.recipe;
     if (r?.plan?.calls?.length) S.insertRecipe61(USER, { exampleQuery: r.exampleQuery ?? doc.query, queryTemplate: r.queryTemplate, intent: r.intent, module: r.module, calls: r.plan.calls, slots: r.slots ?? {}, source: 'correction', status: r.status ?? 'candidate' });
     const n = doc.negative;

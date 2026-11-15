@@ -1,5 +1,5 @@
 // Prompt 41 (SERVER41): Chat «✦ Auto» – Glimt velger beste installerte/skymodell per melding (claude-code-chat-auto-modell.md).
-// Raskt og uten ekstra AI-kall: regler på meldingen + vedlegg, så rangering (prompt 39-kandidatene i ai39.REC) blant installerte modeller.
+// Raskt og uten ekstra AI-kall: regler på meldingen + vedlegg, så rangering (prompt 39-kandidatene i ai/recommend.js REC) blant installerte modeller.
 //   1. Bilde/kvittering → Qwen 2.5 VL (lokalt), ellers Gemma 3 · 2. PDF/Word, sky tillatt og ingen egne data → Gemini 2.5 Flash
 //   3. Kode, Docker, Proxmox, Home Assistant, feilmeldinger → Qwen 3 (eller DeepSeek R1) · 4. «regn ut, hvorfor, forklar, sammenlign, planlegg,
 //   budsjett» eller lang melding → DeepSeek R1 · 5. veldig lang tekst, sky tillatt, ingen egne data → Gemini 2.5 Flash · 6. ellers Llama 3.1 8B.
@@ -9,7 +9,7 @@
 // Lærer: chat_auto_stats (modell, oppgavetype, tid til første token, tok/s, «Prøv igjen»/byttet/👍/👎). Modeller med mange omforsøk (≥ 5 svar, > 30 %)
 // flyttes ned i rangeringen for den oppgavetypen. GET /api/chat/auto → {picks, using:'Glimt bruker nå: Qwen3 8B til kode …', stats}.
 import { db } from '../../db.js';
-import { REC } from '../../ai39.js';
+import { REC } from '../recommend.js';
 
 db.exec(`CREATE TABLE IF NOT EXISTS chat_auto_stats (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT NOT NULL, ts INTEGER NOT NULL, model TEXT NOT NULL, kind TEXT NOT NULL,
   ttft_ms INTEGER, tps REAL, retry INTEGER NOT NULL DEFAULT 0, switched INTEGER NOT NULL DEFAULT 0, vote INTEGER NOT NULL DEFAULT 0, chat_id TEXT);

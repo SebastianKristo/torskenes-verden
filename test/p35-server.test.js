@@ -26,7 +26,7 @@ globalThis.fetch = async () => { throw new TypeError('fetch failed'); };
 test.after(() => { globalThis.fetch = realFetch; });
 
 const { default: app } = await import('../server/index.js');
-const { parseDay } = await import('../server/parse-day35.js');
+const { parseDay } = await import('../server/dates/day.js');
 const w35 = await import('../server/vaer/place.js');
 const g35 = await import('../server/glimt/settings.js');
 const brief = await import('../server/glimt/brief.js');

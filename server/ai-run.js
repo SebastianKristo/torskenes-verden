@@ -36,8 +36,8 @@ import { shortBody, stripThink, SHORT_NUM_CTX, THINKING_RE } from './ai/ollama-o
 import { STEP47, TASK_STEP47, stepOf47, estTokens47, CTX_MARGIN47 } from './glimt/model-params.js'; // prompt 47: parametre per steg
 import { configureGate, gateChat, gateEmbed, gateLoad, gateState, holdGate, setGatePaused, gatePaused, loadedModels, DEFAULT_MODEL_KEEP_ALIVE, GateError, maskSecrets, backendConfig, owuiConf, testOpenWebuiModels } from './ai-gate.js';
 import { broadcast } from './realtime.js';
-import { envHw } from './aihw38.js';
-import { jobTimes41, groupTimes41 } from './ai41.js'; // prompt 41: klokkeslett i Jobber
+import { envHw } from './ai/hardware.js';
+import { jobTimes41, groupTimes41 } from './ai/job-times.js'; // prompt 41: klokkeslett i Jobber
 // Prompt 58 (OMLX58): oMLX som motor per oppgave (registrerer backend «omlx» i gaten). Ollama er fortsatt standard.
 import { OMLX_BACKEND58 } from './ai/omlx/backend.js';
 import { engineFor58, omlxModelFor58, omlxConf58 } from './ai/omlx/config.js';

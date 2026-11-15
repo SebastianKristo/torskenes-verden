@@ -1,4 +1,4 @@
-// Prompt 61 (prompt 49 del 1): testtilfeller fra rettelser i Glimt (eval/learned/*.json, skrevet av server/recipes61/learn.js).
+// Prompt 61 (prompt 49 del 1): testtilfeller fra rettelser i Glimt (eval/learned/*.json, skrevet av server/glimt/recipes/learn.js).
 // Fila er data (teksten kommer fra brukeren), aldri kode. Casen: seed minnet (personen) og – når «Glimt lærer» er på – den lærte
 // oppskriften og det negative eksemplet; still det opprinnelige spørsmålet; sjekk at planen bruker de riktige verktøyene og ikke
 // gjentar den feile planen. Dataene (kalender, finans) til brukeren finnes ikke i eval, så bare planen sjekkes.

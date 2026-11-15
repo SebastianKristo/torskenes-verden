@@ -9,7 +9,7 @@ import { join } from 'node:path';
 process.env.DATA_DIR = mkdtempSync(join(tmpdir(), 'hl-p59rec-'));
 process.env.MOCK_DATA = '1';
 process.env.SESSION_SECRET ||= 'p59rec-secret-p59rec-secret-p59rec-secret';
-const r39 = await import('../server/ai39.js');
+const r39 = await import('../server/ai/recommend.js');
 const HW = { model: 'Mac mini M4', memGb: 16, gpuBudgetGb: 10.67 };
 
 test('16 GB: modellene fra eval vinner, store modeller og llama3.2:3b anbefales ikke', async () => {

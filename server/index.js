@@ -45,10 +45,7 @@ import systemBackupApi, { startSystemBackupScheduler } from './system-backup.js'
 import ops51Api, { startOps51 } from './ops51.js'; // prompt 51 (OPS51): restic-backup 3-2-1, testet gjenoppretting, staging/tilbakerulling, DB-vedlikehold
 import smbBrowseApi from './smb-browse.js'; // prompt 30: SMB-veiviser (finn server, shares, mapper, test, lagre) – bare admin
 import { mountGlimt } from './glimt/index.js'; // Glimt: motoren, minnet, brief, innstillingene og /api/assist (server/glimt/)
-import { recipesApi61 } from './recipes61/api.js'; // prompt 61 (prompt 49 del 1): Glimt lærer (oppskrifter)
-import { schedulesApi62 } from './sched62/api.js'; // prompt 62 (prompt 49 del 2): planlagte oppgaver («Faste oppgaver»)
 import { skjoldApi76 } from './skjold76/api.js'; // prompt 76 (SKJSRV): Skjold Lab – sorteringsskapet (deler, skuffer, bilder, søk)
-import { startScheduler62 } from './sched62/scheduler.js'; // prompt 62: scheduler (tikk hvert minutt, ikke i test)
 import { startMem63 } from './glimt/memory/nightly.js'; // prompt 63: systemoppgaven kl. 03 (ikke i test); morgenvarselet går via server/jobs/
 import { qualityApi64 } from './quality64/api.js'; // prompt 64 (prompt 49 del 7): kvalitet over tid (nattlig eval, ukerapport)
 import { startQuality64 } from './quality64/system.js'; // prompt 64: systemoppgavene kl. 02 / søndag kl. 20 og innsamling fra sporene (ikke i test)
@@ -79,10 +76,9 @@ import { aliasCounter } from './http/aliases.js';
 import { startJobs, listJobs, jobsStarted } from './jobs/index.js'; // én planlegger for bakgrunnsjobber med sideeffekter (ikke i test/sandkasse) // Q29: eldre API-aliaser samlet i én tabell, bruken telles
 import { badInput85 } from './badinput85.js'; // prompt 85 (SRVSEC85): feil i kroppen fra klienten → 400, ikke 500
 import { anonBodyCap85 } from './anonbody85.js'; // prompt 85 (SRVSEC85): store kropper bare fra innloggede klienter
-import { mountLive89, startLive89 } from './live89.js'; // prompt 89 (SRV89): Live Activities / Live Updates (/api/live/*) og APNs-push
+import { mountLive89 } from './live/index.js'; // Live Activities / Live Updates (/api/live/*); APNs-pushen går i server/jobs/ (live.push)
 import { mountWebx51 } from './webx51.js'; // prompt 51 (WEBX51): felles søk, onboarding, tema per bruker, offline-konfliktvarsel
 import { mountSrv52 } from './srv52.js'; // prompt 52 (SRV52): Glimt «sist jeg var på», kalenderkontekst, brief-kort, Glimt-figur per bruker
-import { mountDal53 } from './dal53/index.js'; // prompt 53 (DAL53): Desert Ant Labs-modellene (Eye, Redact, Gist, Tongue, Emo, Moderator, Clear, Voz)
 import { gphoto46Api, startGphoto46 } from './gphoto46.js'; // prompt 46 (DATA46): Google Photos-album som bakgrunn
 import { mountVaer } from './vaer/index.js'; // Vær: /here, /week-summary, /place, /layout og ski i /full
 import { installCacheBust } from './cache-bust.js'; // prompt 32 (SERVER32)
@@ -173,8 +169,7 @@ mountQa51(app); // prompt 51 (QA51): /api/flags, /api/crash, /api/whatsnew, /api
 mountWebx51(app); // prompt 51 (WEBX51): /api/search51, /api/me/theme51, /api/me/share51, /api/offline51
 mountAuthInvites(app); // onboarding for nye familiemedlemmer: /api/onboard51/*, /join/:token (server/auth/invites.js)
 mountSrv52(app); // prompt 52 (SRV52): /api/glimt/quickparse52, /api/glimt/lex52, /api/brief52, /api/me/glimt-char52, admin; mellomvare foran POST /api/glimt/agent
-mountAiEngines(app); // server/ai/: /api/admin/{fermion53,whisper54,voxcpm57,omlx58}/* (bare admin) og /api/voices57*
-mountDal53(app); // prompt 53 (DAL53): /api/admin/dal53/{health,preload}, /api/emo53/suggest, /api/voice53/*; Moderator foran /api/chat/files og /api/img
+mountAiEngines(app); // server/ai/: /api/admin/{fermion53,whisper54,voxcpm57,omlx58}/* (bare admin), /api/voices57*, Desert Ant-modellene (/api/admin/dal53/*, /api/emo53, /api/voice53, Moderator foran /api/chat/files og /api/img)
 mountLocalFetch86(app, authOrToken); // prompt 86: GET|PUT /api/admin/local-fetch-hosts (bare admin)
 mountDates(app, authOrToken); // POST /api/dates/parse: den felles datotolkeren for klientene (Q17)
 mountAuthRefresh(app); // prompt 44: POST /api/auth/refresh og POST /api/apps/kalender/log
@@ -614,13 +609,10 @@ app.use('/api/brief', briefJul40);
 app.use('/api/brief', brief41); // prompt 41: ski, mai17, minReise // prompt 40: brief.jul i julemodus
 app.route('/api/glimt/mai17', mai17Api); // prompt 41: 17. mai (program, design-bryter, hurra)
 mountVaer(app); // server/vaer/: /api/weather/here, /week-summary, /place, ski i /full og /layout (før mobileApi sine værruter)
-app.route('/api/glimt/recipes', recipesApi61); // prompt 61: oppskrifter som lærer av bruk (per bruker)
-app.route('/api/glimt/schedules', schedulesApi62); // prompt 62: planlagte oppgaver (per bruker)
 app.route('/api/skjold', skjoldApi76); // prompt 76 (SKJSRV): Skjold Lab (per bruker, sesjon eller app-token)
-startScheduler62();
 startMem63();
 startQuality64();
-// server/glimt/: /api/glimt/memory, /api/brief, /api/glimt/settings, /api/tts, /api/img, /api/glimt/agent, /api/glimt/entities,
+// server/glimt/: /api/glimt/recipes, /api/glimt/schedules, /api/glimt/memory, /api/brief, /api/glimt/settings, /api/tts, /api/img, /api/glimt/agent, /api/glimt/entities,
 // /api/glimt og /api/assist (etter de andre /api/glimt/*-rutene over, så de spesifikke rutene svarer først)
 mountGlimt(app);
 mountChat(app); // server/ai/: Claude-importen (/api/chat/import) og Chat (/api/chat), sesjon eller app-token
@@ -655,14 +647,14 @@ app.route('/domains/api', domainsApi);
 // (ingen varsler, e-post, backup, oppdateringer eller selvreparasjon). Bare HTTP-serveren og migreringene kjører.
 const BG51 = process.env.NODE_ENV !== 'test' && process.env.OPS51_SANDBOX !== '1';
 migrateLocalHosts86().catch((e) => console.warn('[localfetch]', e.message)); // prompt 86: én gang – lokale verter i administratorenes abonnementer godkjennes
-if (BG51) { startTrackingWorker(); startRssWorker(); startBirthdayWorker(); startSystemBackupScheduler(); startUpdateScheduler(); startDomainGlimtScheduler(); startSpaceScheduler(); startApi40(); startMedia(); startLogs44(); startLive89(); }
+if (BG51) { startTrackingWorker(); startRssWorker(); startBirthdayWorker(); startSystemBackupScheduler(); startUpdateScheduler(); startDomainGlimtScheduler(); startSpaceScheduler(); startApi40(); startMedia(); startLogs44(); }
 if (BG51) { startGphoto46(); } // prompt 46 (DATA46)
 if (BG51) startJobs(); // felles planlegger (server/jobs/): backup, prøveperioder, skattemelding, brief, iCal, skolekalendere, Sjekk inn, «forlot»
 if (process.env.NODE_ENV !== 'test') startOps51(); // prompt 51 (OPS51): planlegger (backup, testet gjenoppretting, vedlikehold) og migrasjonslogg
 if (process.env.OPS51_SANDBOX !== '1') startObs51(); // prompt 51 (OBS51): samples, driftsvarsler og selvreparasjon (ikke i test)
 if (BG51) startQa51(); // prompt 51 (QA51): sender krasjrapporter som ikke kom fram til GlitchTip
 if (BG51) startFamilie(); // server/familie/: første runde av påminnelsene «hvem kjører?» (resten går i server/jobs/)
-if (BG51) import('./ai39.js').then((m) => m.startBest59()).catch((e) => console.warn('[ai39] beste modeller:', e?.message)); // prompt 59: de beste modellene (fra eval) settes én gang
+if (BG51) import('./ai/recommend.js').then((m) => m.startBest59()).catch((e) => console.warn('[ai39] beste modeller:', e?.message)); // prompt 59: de beste modellene (fra eval) settes én gang
 if (BG51) import('./fast59/warm.js').then((m) => m.startWarm59()).catch((e) => console.warn('[fast59] varm modell:', e?.message)); // prompt 59 (del 4): hovedmodellen varm ved oppstart
 
 app.onError(async (err, c) => {

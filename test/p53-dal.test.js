@@ -24,13 +24,13 @@ test.after(() => { globalThis.fetch = realFetch; });
 
 const { default: app } = await import('../server/index.js');
 const { db } = await import('../server/db.js');
-const M = await import('../server/dal53/models.js');
-const T = await import('../server/dal53/text.js');
-const IMG = await import('../server/dal53/image.js');
-const NEWS = await import('../server/dal53/news.js');
-const ASR = await import('../server/dal53/asr.js');
-const MOD = await import('../server/dal53/moderate.js');
-const D = await import('../server/dal53/index.js');
+const M = await import('../server/ai/desertant/models.js');
+const T = await import('../server/ai/desertant/text.js');
+const IMG = await import('../server/ai/desertant/image.js');
+const NEWS = await import('../server/ai/desertant/news.js');
+const ASR = await import('../server/ai/desertant/asr.js');
+const MOD = await import('../server/ai/desertant/moderate.js');
+const D = await import('../server/ai/desertant/index.js');
 const pre = await import('../server/finans/receipts/preprocess.js');
 
 let ipN = 40;

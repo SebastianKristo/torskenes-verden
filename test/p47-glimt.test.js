@@ -215,7 +215,7 @@ test('modellstyring: tolkningsruter under 7B gir advarsel; standardforslag er qw
   assert.equal(ai.smallModel47('qwen3:8b'), null);
   assert.equal(ai.smallModel47('x', { models: [{ name: 'x', params: '3.2B' }] }), '3,2B');
   assert.deepEqual(ai.INTERPRET_TASKS47, ['glimt', 'sok', 'kat', 'fsok']);
-  const { SUGGESTED_MODELS } = await import('../server/aihw38.js');
+  const { SUGGESTED_MODELS } = await import('../server/ai/hardware.js');
   assert.equal(SUGGESTED_MODELS.kat, 'qwen3:8b');
   const { DEFAULT_MODEL_KEEP_ALIVE } = await import('../server/ai-gate.js');
   assert.equal(DEFAULT_MODEL_KEEP_ALIVE['llama3.2:3b'], undefined);

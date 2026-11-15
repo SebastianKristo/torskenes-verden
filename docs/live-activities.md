@@ -2,7 +2,7 @@
 
 Prompt 89 (SRV89). Serveren lager de løpende aktivitetene for låseskjermen, Dynamic Island og Android 16 Live Updates. Appene
 henter dem med `GET /api/live/aktiviteter`, og iPhone kan i tillegg få dem som push fra Apple (APNs). Koden ligger i
-`server/live89.js` (API og push-jobben) og `server/apns.js` (APNs-senderen). Fasiten for utseendet er `Live Activities.dc.html`
+`server/live/index.js` (API og push-jobben `live.push` i den felles planleggeren) og `server/apns.js` (APNs-senderen). Fasiten for utseendet er `Live Activities.dc.html`
 i designpakken.
 
 ## API

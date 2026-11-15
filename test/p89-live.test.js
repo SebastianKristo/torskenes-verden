@@ -25,7 +25,7 @@ test.after(() => { globalThis.fetch = realFetch; });
 const { default: app } = await import('../server/index.js');
 const { db, kv, OWNER } = await import('../server/db.js');
 const { updateConfig } = await import('../server/settings.js');
-const L = await import('../server/live89.js');
+const L = await import('../server/live/index.js');
 const AP = await import('../server/apns.js');
 const { createEvent, eventInput } = await import('../server/kalender/events.js');
 const { upsertShipment } = await import('../server/sporing/shipments.js');

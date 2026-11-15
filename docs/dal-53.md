@@ -23,7 +23,7 @@ og norsk er ikke med. Modellkortet på Hugging Face kunne ikke leses fra utvikli
 
 Derfor: ber brukeren om norsk (`language=no`, standard for norske brukere), svarer serveren **422 `language_unsupported`** med en
 tydelig tekst. Velger brukeren et støttet språk (f.eks. `en` eller `sv`), brukes Phonon først (når Mac mini-en svarer), ellers Voz.
-En Whisper-tjeneste kan legges til senere med `registerAsrBackend53({id:'whisper', languages:null, …})` i `server/dal53/asr.js`.
+En Whisper-tjeneste kan legges til senere med `registerAsrBackend53({id:'whisper', languages:null, …})` i `server/ai/desertant/asr.js`.
 
 ## Hva du må gjøre
 

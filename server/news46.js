@@ -30,7 +30,7 @@ import { db, kv } from './db.js';
 import { config } from './config.js';
 import { aiJson } from './homeos-common.js';
 import { isPrivateIp46 } from './auth/server-address.js';
-import { interestMatchesTopics53 } from './dal53/topics.js'; // prompt 53 (DAL53): interesser treffer også Gist-emner
+import { interestMatchesTopics53 } from './ai/desertant/topics.js'; // prompt 53 (DAL53): interesser treffer også Gist-emner
 
 const MOCK = () => process.env.MOCK_DATA === '1';
 const STD = ['norge', 'verden', 'okonomi', 'sport', 'teknologi', 'kultur'];

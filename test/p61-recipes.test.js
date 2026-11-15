@@ -30,10 +30,10 @@ const P = await import('../server/glimt/plan.js');
 const P47 = await import('../server/glimt/planner.js');
 const W = await import('../server/glimt/weather.js');
 const M47 = await import('../server/glimt/memory/recall.js');
-const T = await import('../server/recipes61/template.js');
-const S61 = await import('../server/recipes61/settings.js');
-const L61 = await import('../server/recipes61/learn.js');
-const ST = await import('../server/recipes61/store.js');
+const T = await import('../server/glimt/recipes/template.js');
+const S61 = await import('../server/glimt/recipes/settings.js');
+const L61 = await import('../server/glimt/recipes/learn.js');
+const ST = await import('../server/glimt/recipes/store.js');
 
 E._setClock45({ today: '2026-10-24', nowMin: 600 });
 let ipN = 10;

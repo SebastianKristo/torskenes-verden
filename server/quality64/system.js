@@ -2,7 +2,7 @@
 //   «Nattlig eval» – kind 'quality', én rad (første admin), hver natt kl. 02:00 Europe/Oslo (før minnejobben kl. 03)
 //   «Ukerapport»   – kind 'weekly', én rad per bruker, søndag kl. 20:00
 // De synes i «Faste oppgaver», kan pauses (ikke slettes/endres), og en pauset oppgave settes aldri på igjen automatisk.
-// sched62/run.js kaller computeSystem64 for kind 'quality'/'weekly'. Nattevalen startes og går i bakgrunnen (scheduleren venter ikke).
+// glimt/schedules/run.js kaller computeSystem64 for kind 'quality'/'weekly'. Nattevalen startes og går i bakgrunnen (scheduleren venter ikke).
 import { db, q } from '../db.js';
 import { quality64, serverQuality64 } from './settings.js';
 import { startEval64 } from './evalrun.js';
@@ -22,7 +22,7 @@ export const qualityRow64 = () => q("SELECT * FROM glimt_schedules WHERE kind='q
 
 async function insert(user, kind, now) {
   const s = SYSTEM64[kind];
-  const [{ insertSchedule62 }, { osloParts62 }] = await Promise.all([import('../sched62/store.js'), import('../glimt/dates.js')]);
+  const [{ insertSchedule62 }, { osloParts62 }] = await Promise.all([import('../glimt/schedules/store.js'), import('../glimt/dates.js')]);
   const rule = { freq: s.freq, interval: 1, byday: s.byday, bymonthday: [], bymonth: [], dtstart: osloParts62(now).date, time: s.time, until: null };
   try {
     return insertSchedule62(user, { title: s.title, what: s.what, kind, when: { text: s.text, rule, explicitTime: true }, condition: null, params: {}, channel: 'push', source: 'system',
@@ -45,7 +45,7 @@ export async function ensureAllUsers64(now = Date.now()) {
   return users.length;
 }
 
-/** Fra scheduleren (sched62/run.js compute62). Ingen levering derfra – push sendes her ved behov. */
+/** Fra scheduleren (glimt/schedules/run.js compute62). Ingen levering derfra – push sendes her ved behov. */
 export async function computeSystem64(row, { now = Date.now() } = {}) {
   if (row.kind === 'quality') {
     if (!serverQuality64().nightly) return { status: 'skipped', reason: 'Nattlig eval er slått av', noDeliver: true };

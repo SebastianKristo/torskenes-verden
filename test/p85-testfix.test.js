@@ -118,7 +118,7 @@ test('Min reise (mock): 45 står først i 23 av 30 minutter, 46 når den er over
 });
 
 test('dal53: en treg lasting som ble startet før lasteren ble byttet, skriver ikke over den nye instansen (p54 «Voz parallelt» under last)', async () => {
-  const M = await import('../server/dal53/models.js');
+  const M = await import('../server/ai/desertant/models.js');
   const slow = { navn: 'gammel' }, mock = { navn: 'ny' };
   M._setLoader53('tongue', () => new Promise((r) => setTimeout(() => r(slow), 60)));
   const old = M.load53('tongue'); // lastes i bakgrunnen, som den ekte Tongue gjør ved første bruk

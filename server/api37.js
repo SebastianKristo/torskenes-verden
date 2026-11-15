@@ -8,7 +8,7 @@
 import { colorOf } from './familie/positions.js';
 import { _setTaskColors } from './gjoremal/routes.js';
 import { _setSubColors, hasSharedSubs } from './finans/shared-subs.js';
-import { _setProfileHas } from './profiles37.js';
+import { _setProfileHas } from './familie/profiles.js';
 import { db } from './db.js';
 
 _setTaskColors((id) => { try { return colorOf(id); } catch { return null; } });
@@ -18,5 +18,5 @@ _setProfileHas({
   subs: (uid) => { try { return hasSharedSubs(uid); } catch { return false; } },
 });
 
-export { default as profilesApi } from './profiles37.js';
+export { default as profilesApi } from './familie/profiles.js';
 export { default as bibleApi } from './bible37.js';

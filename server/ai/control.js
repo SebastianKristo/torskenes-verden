@@ -46,7 +46,7 @@ import { gateLoad, gateUnload, loadedModels, gateState, keepAliveFor, GateError,
 import { updateConfig } from '../settings.js';
 import { webSearch, webSettings, clearWebCache, PROVIDERS as WEB_PROVIDERS, PROVIDER_NAME as WEB_NAME } from '../web-search.js'; // prompt 44
 import { getAzureRegion, setAzureRegion } from '../glimt/settings.js'; // prompt 35: Azure-region for TTS
-import { hostHw, envHw, hwOut, fit38, recommendFor, SUGGESTED_MODELS, TIMEOUTS, FIT_LABEL } from '../aihw38.js'; // prompt 38: Mac mini M4
+import { hostHw, envHw, hwOut, fit38, recommendFor, SUGGESTED_MODELS, TIMEOUTS, FIT_LABEL } from './hardware.js'; // prompt 38: Mac mini M4
 import { externalModels53 } from './fermion/index.js'; // prompt 53 (FERMION53): Neutrino/Phonon på Mac mini-en i AI-kontroll
 
 const api = new Hono();
@@ -60,7 +60,7 @@ const wantsSse = (c) => c.req.query('stream') === '1' || /text\/event-stream/.te
 // Prompt 38: maskinen er Ollama-verten (standard Mac mini M4, 16 GB samlet minne → ca. 10,7 GB til modeller), ikke «RTX 2080».
 // AI_GPU_NAME / AI_GPU_VRAM_GB overstyrer fortsatt (eldre oppsett med eget grafikkort).
 const gpu = () => { const hw = envHw(); return { name: process.env.AI_GPU_NAME || `${hw.chip ?? hw.model} GPU`, vramGb: Number(process.env.AI_GPU_VRAM_GB) > 0 ? Number(process.env.AI_GPU_VRAM_GB) : hw.gpuBudgetGb, unified: !process.env.AI_GPU_NAME && hw.unified }; };
-/** Prompt 38: PASSER ≤ 8 GB, TRANGT ≤ 10,5 GB (bare én om gangen), FOR STOR over (av GPU-budsjettet, se aihw38.js). */
+/** Prompt 38: PASSER ≤ 8 GB, TRANGT ≤ 10,5 GB (bare én om gangen), FOR STOR over (av GPU-budsjettet, se hardware.js). */
 export const fitOf = (sizeGb, vramGb = gpu().vramGb) => fit38(sizeGb, vramGb);
 let F = (u, i) => fetch(u, i);
 export const _setAiApiFetch = (fn) => { F = fn ?? ((u, i) => fetch(u, i)); };

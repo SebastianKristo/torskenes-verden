@@ -50,7 +50,7 @@ async function ping(url) {
 /** Mappene med lærte testtilfeller (repoets eval/learned og DATA_DIR/eval-learned) som finnes og har filer. */
 async function learnedDirs() {
   const dirs = [join(REPO64, 'eval', 'learned'), join(config.dataDir, 'eval-learned')];
-  try { const { learnedDir61 } = await import('../recipes61/learn.js'); dirs.unshift(learnedDir61()); } catch { /* */ }
+  try { const { learnedDir61 } = await import('../glimt/recipes/learn.js'); dirs.unshift(learnedDir61()); } catch { /* */ }
   return [...new Set(dirs.map((d) => resolve(d)))].filter((d) => { try { return readdirSync(d).some((f) => f.endsWith('.json')); } catch { return false; } });
 }
 

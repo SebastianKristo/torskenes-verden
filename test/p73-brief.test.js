@@ -23,8 +23,8 @@ test.after(() => { globalThis.fetch = realFetch; });
 
 const { default: app } = await import('../server/index.js');
 const { kv } = await import('../server/db.js');
-const B73 = await import('../server/brief73.js');
-const C38 = await import('../server/cards38.js');
+const B73 = await import('../server/glimt/brief-content.js');
+const C38 = await import('../server/glimt/brief-card-settings.js');
 const ROOT = new URL('..', import.meta.url).pathname;
 const src = (p) => readFileSync(join(ROOT, p), 'utf8');
 

@@ -1,7 +1,8 @@
 // AI: monterer rutene i domenet. server/index.js kaller funksjonene der de gamle monteringene sto, fordi rekkefølgen er bærende
 // (Hono kjører handlere og mellomvare i registreringsrekkefølge):
-//   mountAiEngines(app) – motorene på Mac mini-en (bare admin): Neutrino/Phonon, NB-Whisper, VoxCPM (+ /api/voices57) og oMLX
-//   mountAi(app)        – /api/ai: AI-minnet, ✦ Glimt anbefaler modeller (ai39.js) og AI-kontrollen, i den rekkefølgen
+//   mountAiEngines(app) – motorene på Mac mini-en (bare admin): Neutrino/Phonon, NB-Whisper, VoxCPM (+ /api/voices57) og oMLX,
+//                         så Desert Ant-modellene (desertant/: /api/admin/dal53/*, /api/emo53, /api/voice53, Moderator-mellomvarene)
+//   mountAi(app)        – /api/ai: AI-minnet, ✦ Glimt anbefaler modeller (recommend.js) og AI-kontrollen, i den rekkefølgen
 //   mountChat(app)      – /api/chat: Claude-importen før Chat
 // Alle AI-kall går fortsatt gjennom server/ai-gate.js og server/ai-run.js (kø, ruting, nøkler); filene her bruker dem.
 // Filene:
@@ -9,6 +10,11 @@
 //   memory.js         – AI-minnet per bruker (/api/ai/memory)
 //   import.js         – import av samtaler og minner fra Claude, ChatGPT og Gemini (/api/ai/import, montert fra api45.js)
 //   claude-import.js  – Claude-importen i Chat (/api/chat/import/claude); claude-memory.js – minne-eksporten (.md-filer)
+//   recommend.js      – ✦ Glimt anbefaler modeller (/api/ai/recommend*) og de beste modellene fra eval ved oppstart
+//   hardware.js       – AI-maskinen (Mac mini M4 · 16 GB): minne, GPU-budsjett, disk, «passer» og tidsavbrudd
+//   job-times.js      – klokkeslett og «… siden» i Jobber (ai-run.js)
+//   desertant/        – de lokale modellene fra Desert Ant Labs (Eye, Redact, Gist, Tongue, Emo, Moderator, Clear, Voz):
+//                       /api/admin/dal53/*, /api/emo53/suggest, /api/voice53/* og Moderator foran /api/chat/files og /api/img
 //   ollama-options.js – felles Ollama-valg for korte oppgaver (think:false, lite kontekstvindu)
 //   tool-router.js    – rutingssteget før hovedmodellen (web, vær, tid, strøm, Mine data)
 //   chat/             – Chat: routes.js (ruter og motorer), auto-model.js (✦ Auto), attachments.js (vedlegg og miniatyr),
@@ -18,20 +24,22 @@
 // Importrekkefølgen følger den gamle rekkefølgen i server/index.js.
 import chatApi from './chat/routes.js';
 import aiApi from './control.js';
-import { rec39Api } from '../ai39.js';
+import { rec39Api } from './recommend.js';
 import { claudeImport43Api } from './claude-import.js';
 import { aiMemory43Api } from './memory.js';
 import { mountFermion53 } from './fermion/index.js';
 import { mountWhisper54 } from './whisper/index.js';
 import { mountVoxcpm57 } from './voxcpm/index.js';
 import { mountOmlx58 } from './omlx/index.js';
+import { mountDal53 } from './desertant/index.js';
 
-/** Motorene på Mac mini-en: /api/admin/{fermion53,whisper54,voxcpm57,omlx58}/* (bare admin) og /api/voices57 (per bruker). */
+/** Motorene på Mac mini-en: /api/admin/{fermion53,whisper54,voxcpm57,omlx58}/* (bare admin) og /api/voices57 (per bruker), så Desert Ant-modellene. */
 export function mountAiEngines(app) {
   mountFermion53(app); // Neutrino-1 8B og Phonon
   mountWhisper54(app); // NB-Whisper (norsk tale til tekst i /api/voice53/*)
   mountVoxcpm57(app); // VoxCPM2: stemmer per bruker og opplesning
   mountOmlx58(app); // oMLX som motor bak AI-gaten
+  mountDal53(app); // Desert Ant Labs: /api/admin/dal53/{health,preload} (bare admin), /api/emo53/suggest, /api/voice53/*; Moderator foran /api/chat/files og /api/img
 }
 
 /** /api/ai: AI-minnet, modellanbefalingene og AI-kontrollen (sesjon eller app-token; serveroppsettet bare admin). */

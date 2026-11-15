@@ -23,7 +23,7 @@ import { fagKey, subjectColor } from '../kalender/subjects.js';
 import { insertTask, mineListOf } from '../gjoremal/routes.js';
 import { notifyUser } from '../notify.js';
 import { cached } from '../cache.js';
-import { cardsOf, cardOn, auroraNotifyOf } from '../cards38.js';
+import { cardsOf, cardOn, auroraNotifyOf } from './brief-card-settings.js';
 import { osloDate } from '../dates/oslo.js';
 import { dtf } from '../intl-format.js'; // gjenbrukte Intl.DateTimeFormat
 import { registerJob } from '../jobs/index.js';

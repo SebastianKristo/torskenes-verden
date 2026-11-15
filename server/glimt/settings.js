@@ -9,7 +9,7 @@
 //      voices:[{id, name, desc}], rates:[{id, name, speed}], host:'glimt'|'natt'|…}
 // PUT /api/glimt/settings {…delvis} → samme. 400 {error, errors[]} ved ugyldige verdier. Synkes til alle klienter
 //      (realtime «glimt-settings»). /api/brief/settings er alias for {notify, guide, home} (eldre klienter).
-//      Prompt 38: + cards:[{id, on, label}] (rekkefølge og av/på i Now Brief, se cards38.js) og auroraNotify:true
+//      Prompt 38: + cards:[{id, on, label}] (rekkefølge og av/på i Now Brief, se brief-card-settings.js) og auroraNotify:true
 //      (push kl. 20 ved Kp ≥ 4 og skydekke < 40 %). PUT {cards:[{id, on}] | ['id', …]} lagrer ny rekkefølge.
 // POST /api/tts {text, character?, voice?, rate?, lang?} → audio/mpeg (X-TTS-Engine: openai|elevenlabs|azure|mock,
 //      X-TTS-Cache: hit|miss, X-TTS-Voice, X-TTS-Chars). Uten klar motor/nøkkel, motor «browser» eller brukt opp sky-budsjett:
@@ -35,8 +35,8 @@ import { isAdmin } from '../auth/session.js';
 import { secret } from '../finans/db.js';
 import { broadcast } from '../realtime.js';
 import * as ai from '../ai-run.js';
-import { cardsOf, cleanCards, saveCards, auroraNotifyOf, setAuroraNotify } from '../cards38.js'; // prompt 38: kortene i Now Brief
-import { julActive, cleanJul, JUL_DEFAULTS } from '../jul40.js'; // prompt 40: julemodus
+import { cardsOf, cleanCards, saveCards, auroraNotifyOf, setAuroraNotify } from './brief-card-settings.js'; // prompt 38: kortene i Now Brief
+import { julActive, cleanJul, JUL_DEFAULTS } from './jul.js'; // prompt 40: julemodus
 import { mai17Active, cleanMai17, MAI17_DEFAULTS } from '../mai17-41.js'; // prompt 41: 17. mai
 import { isVxId57, vxVoiceOf57, classicOf57, vxSpeakFor57, vxEnqueue57, VX_LABEL57 } from '../ai/voxcpm/voices.js'; // prompt 57: VoxCPM2 på Mac mini-en
 import { vxReady57, vxConfigured57 } from '../ai/voxcpm/health.js';

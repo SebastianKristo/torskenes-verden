@@ -30,10 +30,10 @@ import { cacheKindOf59, legacyKindOf59, planKey59, legacyKey59, cacheGet59, cach
 import { toolStatus59, legacyStatus59, PLAN_STATUS59, ANSWER_STATUS59, CACHE_STATUS59 } from '../fast59/status.js';
 // Prompt 60 (prompt 49 del 3): samtaletilstand, entitetsregister og konkrete valg – krokene ligger i glimt/convo/engine.js.
 import { begin60, ctx60, facts60, afterPlan60, adjust60, finish60, confirmed60, convoTrace60 } from './convo/engine.js';
-// Prompt 61 (prompt 49 del 1): oppskrifter som lærer av bruk – krokene ligger i recipes61/engine61.js.
-import { prepare61, finish61, confirmed61 } from '../recipes61/engine61.js';
-// Prompt 62 (prompt 49 del 2): planlagte oppgaver – verktøyene schedule.* i registeret (sched62/tools.js).
-import '../sched62/tools.js';
+// Prompt 61 (prompt 49 del 1): oppskrifter som lærer av bruk – krokene ligger i recipes/engine.js.
+import { prepare61, finish61, confirmed61 } from './recipes/engine.js';
+// Prompt 62 (prompt 49 del 2): planlagte oppgaver – verktøyene schedule.* i registeret (schedules/tools.js).
+import './schedules/tools.js';
 installTaskHooks46(); installPosterDecorator46(); // Gjøremål: plukk ut, ikke skriv om · plakat på kinoavtaler
 
 db.exec(`CREATE TABLE IF NOT EXISTS glimt45_requests (user_id TEXT NOT NULL, key TEXT NOT NULL, state TEXT NOT NULL, response TEXT, created INTEGER NOT NULL, PRIMARY KEY (user_id, key));

@@ -25,7 +25,7 @@
 import { randomBytes } from 'node:crypto';
 import { kv } from '../db.js';
 import { userInfo, listUsers } from '../auth/session.js';
-import { parseDay } from '../parse-day35.js';
+import { parseDay } from '../dates/day.js';
 import { multiAdd40 } from './glimt-sentences.js'; // prompt 40
 /** Bare for tester: bytt ut Glimt-kallet i prompt 40-oppdelingen ((prompt) → {items}). */
 export const _ai40 = { impl: null };

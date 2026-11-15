@@ -28,7 +28,7 @@ const DATOER = vektorer('datoer'), ABONNEMENT = vektorer('abonnement'), SERVERAD
 const { hashPassword } = await import('../server/auth/password.js');
 process.env.APP_PASSWORD_HASH = hashPassword('testpassord1');
 const { whenOf45, todayOslo45 } = await import('../server/glimt/dates.js');
-const { parseDay: serverParseDay } = await import('../server/parse-day35.js');
+const { parseDay: serverParseDay } = await import('../server/dates/day.js');
 const { parseDay: webParseDay } = await import('../public/js/parse-day35.js');
 const { parseQuick, osloTodayISO } = await import('../public/js/quick-time.js');
 const { parseQuick: serverQuick } = await import('../server/dates/quick.js');
@@ -44,7 +44,7 @@ const { normalizeServerUrl, isLocalHost } = await import('../server/net/server-u
 const { isLan } = await import('../server/auth/session.js');
 const { osloDate } = await import('../server/kalender/birthdays.js');
 const { ymd: medfamYmd } = await import('../server/media/helpers.js');
-const { osloYmd } = await import('../server/jul40.js');
+const { osloYmd } = await import('../server/glimt/jul.js');
 const { today51 } = await import('../server/finans/planning-util.js');
 const { osloDate: osloDate2, today: osloToday } = await import('../server/dates/oslo.js');
 
@@ -133,7 +133,7 @@ test('testvektorer: idag-fasiten er Oslo-datoen (Intl)', () => {
 const DATO_IMPL = [
   // [navn, bare dato?, (tekst, idag, naaMin, naa) → {dato, tid?}]
   ['server glimt/dates.js whenOf45', false, (v, idag, naaMin) => { const r = whenOf45(v.tekst, idag, { nowMin: naaMin }); return { dato: r.date, tid: r.start }; }],
-  ['server parse-day35.js parseDay', true, (v, idag) => ({ dato: serverParseDay(v.tekst, idag)?.date ?? null })],
+  ['server dates/day.js parseDay', true, (v, idag) => ({ dato: serverParseDay(v.tekst, idag)?.date ?? null })],
   ['server dates/quick.js parseQuick (Rask-avtaler)', false, (v, idag, naaMin) => { const r = serverQuick(v.tekst, idag, undefined, { nowMin: naaMin }); return { dato: r.date ?? null, tid: r.start ?? null }; }],
   ['server POST /api/dates/parse', false, (v) => { const r = parseDatesRequest({ text: v.tekst, now: v.naa }).body; return { dato: r.date, tid: r.time }; }],
   ['web js/parse-day35.js parseDay', true, (v) => { const r = webParseDay(v.tekst, new RealDate(v.naa)); return { dato: r ? lokalYmd(r.date) : null }; }],
@@ -196,7 +196,7 @@ const IDAG_IMPL = [
   ['server glimt/dates.js todayOslo45', (ms) => todayOslo45(new RealDate(ms))],
   ['server birthdays.js osloDate', (ms) => osloDate(ms)],
   ['server media/helpers.js ymd', (ms) => medfamYmd(ms)],
-  ['server jul40.js osloYmd', (ms) => { const { y, m, d } = osloYmd(ms); return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`; }],
+  ['server glimt/jul.js osloYmd', (ms) => { const { y, m, d } = osloYmd(ms); return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`; }],
   ['server finans/planning-util.js today51', null], // leser klokka selv, kjøres med fast klokke under
   ['web js/quick-time.js osloTodayISO', (ms) => osloTodayISO(new RealDate(ms))],
   // Den ene hjelperen for «i dag» på serveren (erstatter toISOString().slice(0, 10), som ga UTC-datoen). test/dates.test.js
