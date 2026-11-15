@@ -14,7 +14,7 @@ import * as P35 from './mobile-p35.js';
 import { TR } from './mobile-track.js';
 import { BD } from './mobile-p24.js';
 import { logout } from './mobile-p21.js';
-import { glimtOrb } from './mobile-orb43.js'; // prompt 43
+import { glimtOrb } from './mobile-orb.js'; // prompt 43
 
 const svg = (d, s = 16, w = 2.2) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`;
 const QR_IC = 'M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h2v2h-2zM18 18h2v2h-2zM14 18h2M18 14h2';

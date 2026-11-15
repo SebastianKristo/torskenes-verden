@@ -4,8 +4,8 @@
 // (#/filter?shop=…&wk=34-50&min=500), så det kan deles. Serveren filtrerer når den kan (/transactions?merchant[]=…),
 // ellers filtreres lista her. Glimt fyller ut filteret: POST /filter/glimt {q}, ellers lokal tolkning (parseQuery).
 import { S, api, esc, n0, n2, dd, render, toast, logo } from './core.js';
-import { orb, secs } from './fin42.js';
-import { rcPanel52 } from './rcpanel52.js'; // prompt 52 (WEB52F)
+import { orb, secs } from './ui-felles.js';
+import { rcPanel52 } from './kvitteringspanel.js'; // prompt 52 (WEB52F)
 
 const u = S.ui;
 const F = () => (u.f42 ??= fromHash());
@@ -179,7 +179,7 @@ export function filterPage() {
       ${R.length ? '' : '<div class="f42-empty">Ingen transaksjoner passer filteret.</div>'}</div></div>
     ${pane()}</div>`;
 }
-// Prompt 52 (WEB52F): samme kvitteringspanel som Transaksjoner og Boliger (rcpanel52.js).
+// Prompt 52 (WEB52F): samme kvitteringspanel som Transaksjoner og Boliger (kvitteringspanel.js).
 function pane() {
   const t = (S.f42 ?? []).find((x) => x.id === u.f42open);
   if (!t) return '';

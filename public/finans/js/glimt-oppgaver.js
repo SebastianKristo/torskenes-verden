@@ -4,7 +4,7 @@
 // Svarer serveren 404, lages rapporten her fra transaksjonene (tallene regnes uansett fra data, aldri av en språkmodell),
 // og «Last ned som PDF» åpner en A4-utskrift som kan lagres som PDF.
 import { S, api, esc, n0, render, toast, accs } from './core.js';
-import { orb, LOGO42 } from './fin42.js';
+import { orb, LOGO42 } from './ui-felles.js';
 
 const u = S.ui;
 const G = (S.gj42 ??= { jobs: null, local: [], timer: null });

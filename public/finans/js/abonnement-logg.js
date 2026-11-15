@@ -7,7 +7,7 @@
 //   priceAfter?, days?, logoUrl?, domain?, category?}], summary?:{charges, trials, paid12m}}.
 // Eldre server (404): loggen bygges av det som finnes (prøveperioder og prisendringer), med en melding om at fakturaene mangler.
 import { S, api, esc, n0, render } from './core.js';
-import { subLogo } from './fin42.js';
+import { subLogo } from './ui-felles.js';
 
 const L = { d: null, err: null, loading: false, f: 'all', months: 3, at: 0 };
 const MON = ['januar', 'februar', 'mars', 'april', 'mai', 'juni', 'juli', 'august', 'september', 'oktober', 'november', 'desember'];

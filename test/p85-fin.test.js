@@ -19,7 +19,7 @@ function pick(code, start, endLine) {
 }
 
 test('Glimt-oppgaver: alle fire oppgavene sendes med et navn serveren kjenner', () => {
-  const gj = src('public/finans/js/gj42.js'), srv = src('server/finans/glimt-tasks.js');
+  const gj = src('public/finans/js/glimt-oppgaver.js'), srv = src('server/finans/glimt-tasks.js');
   const kinds = [...pick(gj, 'export const TASKS = [', '];').matchAll(/\['([a-z_]+)',/g)].map((m) => m[1]);
   assert.equal(kinds.length, 4);
   const map = Function(`${pick(gj, 'export const SERVER_KIND', '};').replace('export ', '')} return SERVER_KIND;`)();
@@ -30,7 +30,7 @@ test('Glimt-oppgaver: alle fire oppgavene sendes med et navn serveren kjenner', 
 });
 
 test('Glimt-oppgaver: serverens jobb (state/stepLabel/endedAt) blir ferdig, ikke «kjører» for alltid', () => {
-  const gj = src('public/finans/js/gj42.js');
+  const gj = src('public/finans/js/glimt-oppgaver.js');
   const code = pick(gj, 'const ms85 =', "pdf:").replace(/export /g, '').replace(/,\s*pdf:$/, ' });');
   const { norm, res85 } = Function('TASKS', 'kr', `${code}; return { norm, res85 };`)([['report', 'Forbruksrapport nå']], (v) => `${Math.round(v)} kr`);
   const done = norm({ id: 'gt1', kind: 'cut_subs', title: 'Abonnementer jeg kan kutte', state: 'done', step: 3, pct: 100, stepLabel: null, createdAt: '2026-11-11T12:00:00.000Z', endedAt: '2026-11-11T12:00:05.000Z', result: { items: [{ name: 'Viaplay', monthly: 449 }, { name: 'Netflix', monthly: 149 }], text: 'Glimt fant 2' } });
@@ -57,7 +57,7 @@ test('Planlegging (desktop): siden har en (tom) lasteliste, så åpningen ikke g
 });
 
 test('«Nytt i versjon»: lang tekst vises én gang (serverens more er hele teksten)', async () => {
-  const { body52 } = await import('../public/finans/js/whatsnew52.js');
+  const { body52 } = await import('../public/finans/js/nytt-i-versjonen.js');
   const full = 'Første setning. Andre setning. Tredje setning som er lang.';
   assert.equal(body52({ text: 'Første setning. Andre setning.', more: full }), full);
   assert.equal(body52({ text: 'Første setning. Andre …', more: full }), full, 'avkortet med …');
@@ -139,12 +139,12 @@ test('main.js laster bare den visningen som brukes, og visningene tegner ikke ov
 });
 
 test('CSS (desktop): kompakt sidemeny viser ikonene, lange navn i Planlegging brytes, kontrast i mørkt/lyst tema', () => {
-  const fin = src('public/finans/css/finans.css'), f42 = src('public/finans/css/fin42.css');
+  const fin = src('public/finans/css/finans.css'), f42 = src('public/finans/css/felles.css');
   // finans.css skjuler alle span-er i menylenkene i kompakt modus; ikonet (.n42-tile) er også en span og må vises igjen.
   assert.match(fin, /html\[data-compact\][^{]*\.nav a>span:not\(\.badge\)[^{]*\{display:none\}/);
   assert.match(f42, /html\[data-ui=desktop\]\[data-compact\] \.nav a>span\.n42-tile\{display:grid\}/);
-  assert.match(f42, /html\[data-theme="mork"\] \.b42 \.b42-btn\.green,html\[data-theme="glod"\] \.b42 \.b42-btn\.green\{color:#fff\}/);
-  assert.match(src('public/finans/css/plan51.css'), /\.p51-list li span\{[^}]*overflow-wrap:anywhere/);
+  assert.match(src('public/finans/css/boliger.css'), /html\[data-theme="mork"\] \.b42 \.b42-btn\.green,html\[data-theme="glod"\] \.b42 \.b42-btn\.green\{color:#fff\}/);
+  assert.match(src('public/finans/css/planlegging.css'), /\.p51-list li span\{[^}]*overflow-wrap:anywhere/);
   assert.doesNotMatch(src('public/finans/js/modules.js'), /'#A9C3FF'/, 'Kjøp-merket bruker temaets blå');
   assert.doesNotMatch(src('public/finans/js/subs-desktop.js'), /color:#FF8A3D/, 'PRØVEPERIODER-etiketten bruker temaets etikettfarge');
 });

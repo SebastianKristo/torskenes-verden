@@ -1,5 +1,5 @@
 // Prompt 42 (FinansHub web): felles småting – Glimt-orben, ny FinansHub-logo (Økonomi-ikon 3c), fargede menyikoner,
-// abonnement-/aksjelogoer og «Glimt tenker … 1,4 s» med tankesteg. Stilene ligger i css/fin42.css.
+// abonnement-/aksjelogoer og «Glimt tenker … 1,4 s» med tankesteg. Stilene ligger i css/felles.css.
 import { S, api, esc, n0, n2, logoMatch } from './core.js';
 
 /* ---------- Glimt-orben (glOrb i FinansHub v3 Temaer / Boliger Web) ---------- */

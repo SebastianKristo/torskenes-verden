@@ -1,7 +1,7 @@
 // «✦ Les på nytt»: leser originalbildet lokalt på nytt (prompt 52: aldri Gemini) og viser resultatet side om side med det forrige.
 // Brukes av desktop (bekreftelsessiden og køen) og PWA-en. Brukeren velger hvilket resultat som beholdes.
 import { api, esc, n2, dd, uploadReceipt } from './core.js';
-import { reanalyzeJob50, rereadError50 } from './reread50.js'; // prompt 50: jobb + feilmeldinger i stedet for «Feil 502»
+import { reanalyzeJob50, rereadError50 } from './les-pa-nytt.js'; // prompt 50: jobb + feilmeldinger i stedet for «Feil 502»
 
 /** Knappene: «✦ Les på nytt» (lokalt, når det trengs) og «Les med lokal OCR» (Tesseract, uten AI).
  *  «Les på nytt» er deaktivert med årsak fra serveren når den ikke kan brukes. Tom streng når ingen trengs. */

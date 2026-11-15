@@ -2,9 +2,9 @@
 // Finans-fanelinja og Mer-rutenettet, Finans → Søk med ✦ AI, transaksjonsdetaljer med original kvittering,
 // kvitteringsbanneret, Finn «På vei» og arket «Ny sending» i Sporing. Valgene lagres per bruker i /api/me/layout.
 import * as P30B from './mobile-p30b.js';
-import { rcCard52, slip52 } from './rccard52.js'; // prompt 52: felles kvitteringskort (Finans og Boliger)
-import { logoBtn73 } from './logo73.js'; // prompt 73: trykk på logoen → «Endre logo»
-import { glimtOrb } from './mobile-orb43.js'; // prompt 43
+import { rcCard52, slip52 } from './kvitteringskort.js'; // prompt 52: felles kvitteringskort (Finans og Boliger)
+import { logoBtn73 } from './endre-logo.js'; // prompt 73: trykk på logoen → «Endre logo»
+import { glimtOrb } from './mobile-orb.js'; // prompt 43
 import { S, api, esc, n0, ini, hlApi, dd, cats, uploadReceipt } from './core.js';
 import { m, draw, flash, domOk } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
@@ -388,7 +388,7 @@ export function paperTx(id) {
   const hl = P30B.hlInfo(id, t), hix = new Set(hl?.lineIndex ?? []);
   const lines = (r?.lines ?? []).map((l, i) => (l ? { ...l, i } : null)).filter((l) => l && l.name);
   const pdf = /pdf/i.test(r?.mime ?? '') || /\.pdf($|\?)/i.test(r?.fileUrl ?? '');
-  // Prompt 52: samme kvitteringskort og papirlapp som Boliger → utgift (rccard52.js).
+  // Prompt 52: samme kvitteringskort og papirlapp som Boliger → utgift (kvitteringskort.js).
   const slip = r ? slip52({ name, date: t.date ? `${dd(t.date)}.${t.date.slice(0, 4)}` : '', open: 'data-pptx="full"', hasFile: !!r.fileUrl, pdf, total: r.total ?? Math.abs(amt),
       linesHtml: lines.length ? lines.map((l) => (hix.has(l.i) ? `<span class="pp-slipl p30-hl"${l.i === hl.lineIndex[0] ? ' data-p30hl="1"' : ''}><span>${P30B.markWord(l.name, hl.query, hl.matchedText)}</span><span>${l.price != null ? kr2(Math.abs(l.price)) : ''}</span></span>` : `<span class="pp-slipl"><span>${esc(l.name)}</span><span>${l.price != null ? kr2(Math.abs(l.price)) : ''}</span></span>`)).join('') : `<span class="pp-slipl"><span>${r.fileUrl ? 'Trykk for å se originalen' : 'Varelinjene er ikke lest ennå'}</span><span></span></span>` })
     : `<div class="pp-card pp-col" style="gap:8px"><span class="pp-mut">Ingen kvittering er lagt ved denne transaksjonen.</span><div class="pp-two"><label class="pp-btn ink">Kamera<input class="m-file" type="file" accept="image/*" capture="environment" data-pptxfile></label><label class="pp-btn">Filer<input class="m-file" type="file" accept="application/pdf,image/*,.heic,.heif" data-pptxfile></label></div></div>`;

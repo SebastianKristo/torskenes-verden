@@ -3,7 +3,7 @@
 //   logo + × (fast øverst mens panelet scroller), butikk, «dato · bolig · kategori», stort beløp, ✦ Glimt-beskrivelse med
 //   varelinjer, selve kvitteringen (bilde / PDF / papir-gjengivelse), «⇩ Last ned original», og knappene til slutt.
 // Panelet har egen scroll (overscroll-behavior: contain), så scroll over panelet flytter aldri lista bak.
-// Stilene ligger i css/fin52.css. Bredde/plassering styres av klassen: «inline» (sticky ved siden av lista, skuff under
+// Stilene ligger i css/kvitteringspanel.css. Bredde/plassering styres av klassen: «inline» (sticky ved siden av lista, skuff under
 // 1100 px) eller «drawer» (skuff fra høyre, maks 500 px).
 import { esc, n2 } from './core.js';
 

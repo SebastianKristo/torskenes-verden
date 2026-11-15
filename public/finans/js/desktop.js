@@ -13,16 +13,16 @@ import { clearBtn, bindSearchFields } from '/assets/js/searchfield.js';
 import { bindSuggest } from './fsuggest.js';
 import { linesOf, matchLines, markText, hlBanner, hlList, hlImage, hlFocus } from './rc-hl.js';
 import { MODULE_PAGES, MODULE_SUB, MODULE_FN, MODULE_LOADERS, bolSettings, loadBolSettings, bindModules, backupTab, firstRunCard, loadBackup, impPage, finnImportBox, loadImpTpl, aksSettings, loadStocksSettings } from './modules.js';
-import { addedLine, linesEditor, bindEditor, rereadBtn, glimtFrom, glimtCard, isStandardQ, saveLines, editorDirty } from './fin40.js'; // prompt 40
+import { addedLine, linesEditor, bindEditor, rereadBtn, glimtFrom, glimtCard, isStandardQ, saveLines, editorDirty } from './kvittering-detaljer.js'; // prompt 40
 // Prompt 42: Glimt-orben, ny logo og fargede menyikoner, Boliger 2a + 1b, Filter, Glimt-oppgaver og import til Boliger.
-import { orb, brandMark, navTile, thinkHtml, askStream } from './fin42.js';
-import { bolScope, bolSearch, afterB42 } from './bol42.js';
-import { filterPage, loadFilter, bindFilter, enterFilter } from './filter42.js';
-import { tasksCard, loadTasks, bindGj42, startTask, homeRulesBox, loadHomeRules } from './gj42.js';
-import { form48, via48, uncTag48, uncCls48, is48, flush48, bind48, setRedraw48, _e48 } from './scan48.js'; // prompt 48: skjemaet for skannede kvitteringer
-import { srcTag51, raw51, bind51, learn51 } from './rcpt51.js'; // prompt 51: kilden til butikknavnet, «Rådata» og læring av butikknavn
-import { logoBtn73 } from './logo73.js'; // prompt 73: trykk på logoen → «Endre logo»
-import { rcPanel52, rcpBefore52, rcpAfter52, rcpGone52 } from './rcpanel52.js'; // prompt 52 (WEB52F): felles kvitteringspanel
+import { orb, brandMark, navTile, thinkHtml, askStream } from './ui-felles.js';
+import { bolScope, bolSearch, afterB42 } from './boliger.js';
+import { filterPage, loadFilter, bindFilter, enterFilter } from './filter.js';
+import { tasksCard, loadTasks, bindGj42, startTask, homeRulesBox, loadHomeRules } from './glimt-oppgaver.js';
+import { form48, via48, uncTag48, uncCls48, is48, flush48, bind48, setRedraw48, _e48 } from './kvittering-skjema.js'; // prompt 48: skjemaet for skannede kvitteringer
+import { srcTag51, raw51, bind51, learn51 } from './kvittering-kilde.js'; // prompt 51: kilden til butikknavnet, «Rådata» og læring av butikknavn
+import { logoBtn73 } from './endre-logo.js'; // prompt 73: trykk på logoen → «Endre logo»
+import { rcPanel52, rcpBefore52, rcpAfter52, rcpGone52 } from './kvitteringspanel.js'; // prompt 52 (WEB52F): felles kvitteringspanel
 
 ICONS.ai = 'M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9zM19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z';
 ICONS.filter = 'M4 6h16M7 12h10M10 18h4';
@@ -393,7 +393,7 @@ function transactions() {
   if (selIx >= txShown) txShown = selIx + 1;
   const rows = list?.items.slice(0, txShown).map(txTableRow).join('');
   const sel = list?.items.find((t) => t.id === u.sel);
-  // Prompt 52 (WEB52F): felles kvitteringspanel (rcpanel52.js) – sticky med egen scroll, skuff under 1100 px.
+  // Prompt 52 (WEB52F): felles kvitteringspanel (kvitteringspanel.js) – sticky med egen scroll, skuff under 1100 px.
   const detail = sel ? `<div class="rcp52-scrim" data-act="close-sel" aria-hidden="true"></div>${rcPanel52({
     key: `tx:${sel.id}`, cls: 'card detail inline', close: 'data-act="close-sel"', logo: logoBtn73(sel, logo(sel, 46, 14), 'pen-on'), label: sel.description,
     titleHtml: `<input class="inp" data-tx-field="description" value="${esc(sel.description)}" aria-label="Beskrivelse" style="font-size:18px;font-weight:600;background:none;border-color:transparent;padding:0;height:auto">`,

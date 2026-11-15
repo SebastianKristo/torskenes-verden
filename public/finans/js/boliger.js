@@ -3,8 +3,8 @@
 // Erstatter den gamle Boliger-siden i modules.js, som er slettet. Ruter: #/dir → 2a, #/dir/<id>?fane=kat → 1b.
 // Data: /folders (+ /folders/:id), /boliger/categories og (når serveren har det) /boliger/oversikt. Alt tåler 404.
 import { S, api, esc, n2, render, toast, today, logo } from './core.js';
-import { orb, kr, secs, askStream } from './fin42.js';
-import { rcPanel52 } from './rcpanel52.js'; // prompt 52 (WEB52F): samme kvitteringspanel som Transaksjoner
+import { orb, kr, secs, askStream } from './ui-felles.js';
+import { rcPanel52 } from './kvitteringspanel.js'; // prompt 52 (WEB52F): samme kvitteringspanel som Transaksjoner
 
 const u = S.ui;
 const B = (S.b42 ??= { homes: null, det: {}, cats: null, ov: null, users: null, lines: {} });
@@ -400,7 +400,7 @@ function projModal(PJ) {
     <div class="b42-col g8">${btn('Lagre', 'data-b42="p-save"', 'dark lg')}${PJ.id ? btn(PJ.arm ? 'Trykk igjen for å slette prosjektet' : 'Slett prosjektet', 'data-b42="p-del"', 'link red') : ''}</div>`);
 }
 // Prompt 52 (WEB52F, claude-code-kvittering-lokal-lik-overalt.md): kvitteringen i Boliger vises i samme panel som i
-// Transaksjoner (rcpanel52.js): skuff fra høyre (maks 500 px, egen scroll), logo + ×, butikk, «dato · bolig · kategori»,
+// Transaksjoner (kvitteringspanel.js): skuff fra høyre (maks 500 px, egen scroll), logo + ×, butikk, «dato · bolig · kategori»,
 // stort beløp, ✦ Glimt-beskrivelse med varelinjer, selve kvitteringen, «⇩ Last ned original», «Endre» og «Lukk».
 function rcView(V) {
   if (!V) return '';
@@ -520,7 +520,7 @@ async function reAi() {
     X.lines = r?.lines ?? r?.items ?? X.lines; B.lines[X.rid] = X.lines;
     X.ai = r?.aiDescription ?? r?.aiShort ?? e?.aiShort ?? X.ai;
     flash('✦ Glimt leste kvitteringen på nytt');
-  } catch (err) { toast((await import('./reread50.js')).rereadError50(err).text); } finally { if (s.ex === X) X.busy = false; render(); }
+  } catch (err) { toast((await import('./les-pa-nytt.js')).rereadError50(err).text); } finally { if (s.ex === X) X.busy = false; render(); }
 }
 async function saveHome() {
   const s = st(), H = s.hm;

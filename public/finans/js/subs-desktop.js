@@ -3,8 +3,8 @@
 // savings, upcoming, thisMonth). Kvitteringer lastes opp med data-mrc="sub" (modules.js), resten håndteres her.
 import { sykluser, syklus, syklusRang, erUkesyklus, kjentTrekk, osloMåned } from './sykluser.js';
 import { S, api, esc, n0, render, toast, logo, parseAmount, sheetBtn } from './core.js';
-import { subLogo } from './fin42.js';
-import { logView46, logClick46, logCss46, logReset46 } from './subs-log46.js'; // prompt 46: Historikk · Logg
+import { subLogo } from './ui-felles.js';
+import { logView46, logClick46, logCss46, logReset46 } from './abonnement-logg.js'; // prompt 46: Historikk · Logg
 import { toJpeg, readShot, errCardHtml, installVision, SLOW_MS } from './sub-shot.js';
 import { parseTrial, trialPreview, trialBadge, cancelUrlFor, REMIND_OPTIONS, longDay } from '/assets/js/trial-parse.js';
 import { aiStart, aiDone } from '/assets/js/ai-jobs.js';

@@ -6,7 +6,7 @@
 import { esc, hlApi } from './core.js';
 import { m, draw, flash } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
-import { glimtOrb } from './mobile-orb43.js';
+import { glimtOrb } from './mobile-orb.js';
 import { vw } from '/assets/js/lib/viewport.js'; // vindusstørrelsen uten tvungen layout
 
 /* =====================================================================

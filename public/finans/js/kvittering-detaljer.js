@@ -7,7 +7,7 @@
 //   {text, source, cards:[{kind:'sub'|'tx'|'receipt'|'budget'|'stat', …}], items, total?, open?} (tåler også
 //   {summary, kpis, items, action}). 404 → vanlig AI-søk som før.
 import { api, esc, n2 } from './core.js';
-import { thinkHtml as S42think, orb as S42orb } from './fin42.js'; // prompt 42: «Glimt tenkte i 0,12 s» + tankesteg
+import { thinkHtml as S42think, orb as S42orb } from './ui-felles.js'; // prompt 42: «Glimt tenkte i 0,12 s» + tankesteg
 
 /* ---------------- Lagt til ---------------- */
 

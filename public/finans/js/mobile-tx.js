@@ -2,7 +2,7 @@
 // og fullskjermvisning av original kvittering og original banktransaksjon (som den kom fra banken, før navnevasking).
 import { S, api, esc, n2, sgn, dd, dWeek, today, cap, cats, accs, icon, parseAmount, loadTx, loadSummary } from './core.js';
 import { logo } from './mobile-p20.js'; // logoregisteret (prompt 20), ellers core.logo
-import { logoBtn73 } from './logo73.js'; // prompt 73: trykk på logoen → «Endre logo»
+import { logoBtn73 } from './endre-logo.js'; // prompt 73: trykk på logoen → «Endre logo»
 import { m, draw, flash, two, amtC, backBtn, openSheet } from './mobile.js';
 import { c3 } from './mobile-theme.js';
 
