@@ -7,7 +7,7 @@
 // Alle kall tåler 404 (eldre server): da står det hva som mangler, i stedet for feil.
 import { esc, initials } from './util.js';
 import { store } from './store.js';
-import { MODE_CARDS, webMode, setMode } from './mode44.js';
+import { MODE_CARDS, webMode, setMode } from './mode.js';
 import { mountLogger } from './logger44.js';
 import { mountHa } from './tasks-ha.js';
 import { U, watch, loadUpdate } from './sysupdate.js';

@@ -8,7 +8,7 @@ import { readFileSync } from 'node:fs';
 const read = (p) => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8');
 
 test('hold inne: aldri wiggle fra søkefeltet, Glimt-svaret eller opptakskortet', () => {
-  const h = read('public/js/home52.js');
+  const h = read('public/js/oversikt-mobil.js');
   assert.match(h, /function noWiggle74\(e\)/);
   const z = h.match(/const GLZ74 = '([^']+)'/)?.[1] ?? '';
   for (const s of ['form[data-search]', '#gl-layer', '[data-gl-ans]', '[data-v54-card]']) assert.ok(z.includes(s), `GLZ74 mangler ${s}`);

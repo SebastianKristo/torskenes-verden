@@ -1,4 +1,4 @@
-// Ruters egne linjefarger (egen modul fra Fase 3, så home52.js ikke drar med seg hele dashbordet): fra Entur når serveren sender dem (color/textColor), ellers etter transportmiddel og linjenummer.
+// Ruters egne linjefarger (egen modul fra Fase 3, så oversikt-mobil.js ikke drar med seg hele dashbordet): fra Entur når serveren sender dem (color/textColor), ellers etter transportmiddel og linjenummer.
 const RUTER = { metro: '#EC700C', tram: '#0B91EF', bus: '#E60000', regional: '#75A300', water: '#682C88', rail: '#003087' };
 function ruterColor(d) {
   const okHex = (c) => (/^#?[0-9a-f]{6}$/i.test(c ?? '') ? (c[0] === '#' ? c : '#' + c) : null);

@@ -75,8 +75,8 @@ test('ruting, meny, Mer og flis på Hjem', () => {
   assert.match(read('public/app.html'), /<a href="#\/skjold" data-r="skjold">Skjold Lab<\/a>/);
   assert.match(read('public/js/profile.js'), /\['skjold', 'Skjold Lab'\]\]/);
   assert.match(read('public/js/net.js'), /'kart', 'skjold', 'domener'/);
-  assert.match(read('public/js/boot52.js'), /'mediakveld', 'skjold'\]/);
-  const h = read('public/js/home52.js');
+  assert.match(read('public/js/nav-boot.js'), /'mediakveld', 'skjold'\]/);
+  const h = read('public/js/oversikt-mobil.js');
   assert.match(h, /w52skj: \['Skjold Lab', 'h'\]/);
   assert.match(h, /'w52hus', 'w52skj'/);
   assert.match(h, /tile\('w52skj', 't52-card', '#\/skjold'/);

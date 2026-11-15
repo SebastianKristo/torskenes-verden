@@ -1,42 +1,7 @@
-// Prompt 38 (WEB38): små ting i skallet.
-// - Kalender.app for Mac (/kalender?app=mac, html[data-kal-app]): kalender.js/kal38.js gjør kalenderen. Her: fanetittel «Kalender»,
-//   lenker til andre Homelab-sider og eksterne sider åpnes i nettleseren (melding open {url} til appen), og 401 fra API-et
-//   gir meldingen logout (appen viser sin egen innlogging) i stedet for å gå til /login inne i vinduet.
-import { toNative } from './kal38.js';
+// Økt på web: passordark, «Logg ut av alle enheter» (Konto og sikkerhet → Økt) og hurtigtasten som låser skjermen.
+// askPassword og logoutAll brukes av Innstillinger (settings-view.js), bindLockKey av skallet (shell.js).
 import { logout } from './usercache.js';
 import { esc } from './util.js';
-
-function kalAppShell() {
-  document.body.classList.add('kal-app');
-  const t = () => { if (document.title !== 'Kalender') document.title = 'Kalender'; };
-  t(); window.addEventListener('hashchange', () => setTimeout(t, 0));
-  // Bare kalenderen og Innstillinger hører hjemme i vinduet; alt annet åpnes i nettleseren.
-  document.addEventListener('click', (e) => {
-    const a = e.target.closest?.('a[href]');
-    if (!a || e.defaultPrevented) return;
-    const href = a.getAttribute('href') ?? '';
-    if (/^(javascript:|mailto:|tel:)/i.test(href) || href === '#') return;
-    let u; try { u = new URL(href, location.href); } catch { return; }
-    const same = u.origin === location.origin;
-    const inside = same && u.pathname === location.pathname && (/^#\/(kalender|innstillinger)/.test(u.hash) || (!u.hash && u.search === location.search));
-    if (inside && a.target !== '_blank') return;
-    e.preventDefault();
-    if (!toNative({ type: 'open', url: u.href })) window.open(u.href, '_blank', 'noopener');
-  }, true);
-  // Utløpt økt: appen logger inn på nytt (native innlogging + /api/auth/app-session).
-  const f0 = window.fetch.bind(window);
-  let told = false;
-  window.fetch = async (...args) => {
-    const r = await f0(...args);
-    if (r.status === 401 && !told) {
-      const url = String(args[0]?.url ?? args[0] ?? '');
-      if (/\/api\/(state|me|kalender)/.test(url)) { told = true; toNative({ type: 'logout' }); }
-    }
-    return r;
-  };
-}
-
-/* ---------- Konto → ØKT (claude-code-konto-profilbilde.md, 2026-10-20) ---------- */
 
 /** Lite passordark. Løser med passordet, eller null ved Avbryt/Esc. */
 export function askPassword({ title, text, btn = 'Bekreft', danger = false }) {
@@ -75,7 +40,7 @@ export async function logoutAll() {
 }
 
 /** Ctrl+Alt+L (og ⌃⌘Q som på Mac) låser skjermen. */
-function bindLockKey() {
+export function bindLockKey() {
   document.addEventListener('keydown', (e) => {
     const k = e.key.toLowerCase(), code = e.code;
     const lock = (e.ctrlKey && e.altKey && !e.metaKey && (k === 'l' || code === 'KeyL')) || (e.ctrlKey && e.metaKey && (k === 'q' || code === 'KeyQ'));
@@ -83,21 +48,4 @@ function bindLockKey() {
     e.preventDefault();
     logout();
   });
-}
-
-/* ---------- Hjem web 1c: fartknappen på nyhetslinjen ---------- */
-function bindTicker() {
-  document.addEventListener('click', (e) => {
-    if (!e.target.closest?.('[data-tick-sp]')) return;
-    e.preventDefault();
-    import('./extras.js').then((m) => m.cycleTick());
-  });
-  document.addEventListener('keydown', (e) => { if ((e.key === 'Enter' || e.key === ' ') && e.target.matches?.('.ticker-label')) { e.preventDefault(); e.target.click(); } });
-  document.addEventListener('hl:theme', () => import('./extras.js').then((m) => m.renderTicker()));
-}
-
-export function initWeb38() {
-  if (document.documentElement.dataset.kalApp) { kalAppShell(); return; }
-  bindLockKey();
-  bindTicker();
 }

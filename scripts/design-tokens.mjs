@@ -212,7 +212,7 @@ function cssColorBlock(tokens, stil, modus, { hoy = false } = {}) {
 }
 
 /**
- * Selektorer som matcher dagens temaattributter (settes av hl-boot.js, hltheme.js, mode44.js/webx51.js og FinansHub):
+ * Selektorer som matcher dagens temaattributter (settes av hl-boot.js, hltheme.js, mode.js/webx51.js og FinansHub):
  *   papir lys:  :root (standard), html[data-hl="2c"], FinansHub html[data-theme="lys"]
  *   papir mørk: html[data-hl="2c"][data-mode="dark"], FinansHub html[data-theme="mork"] (Q15),
  *               Kalender.app (html[data-kal-app], følger systemet) under prefers-color-scheme: dark

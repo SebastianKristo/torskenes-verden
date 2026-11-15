@@ -1,12 +1,12 @@
-// Prompt 52 (WEB52H): Homelab web og PWA.
+// Oppstart og fanebytte på web og i PWA-en. Kalles fra app.js: initWeb52 ved oppstart, after52 etter hver tegning av en side.
 //  - Oppstart (claude-code-web-oppstart-animasjon.md): faneoppsettet og logo-teksten caches i localStorage (hl_tabs52) hver gang
-//    topplinjen er tegnet, så boot52.js kan vise riktig faneliste fra første frame. Skjelettet fjernes når appen har lest oppsettet.
+//    topplinjen er tegnet, så nav-boot.js kan vise riktig faneliste fra første frame. Skjelettet fjernes når appen har lest oppsettet.
 //    Innholdet glir inn (pgIn, 10 px nedenfra, 280 ms) ved første visning og ved hvert fanebytte; headeren står i ro.
 //  - Ruter (claude-code-ruter-avganger-umiddelbart.md): siste svar lagres (papir_av_cache) og vises straks ved oppstart, før
 //    nettverkskallet. Gamle avganger filtreres bort når de tegnes (dash.js regner minuttene fra klokka). Feil beholder gamle data.
 import { store, on, emit } from './store.js';
 import { wx52, wx52Off } from './wx52.js';
-import { loadHome52, store52Meta, bindHome52, refreshTiles52, leaveHome52 } from './home52.js';
+import { loadHome52, store52Meta, bindHome52, refreshTiles52, leaveHome52 } from './oversikt-mobil.js';
 
 const reduced = () => { try { return matchMedia('(prefers-reduced-motion: reduce)').matches; } catch { return false; } };
 const uid = () => { try { return localStorage.getItem('hl_uid'); } catch { return null; } };

@@ -1006,7 +1006,7 @@ export function bindSettings() {
     if (e.target.closest('[data-setq-clear]')) { q = ''; render(); m.querySelector('[data-setq]')?.focus(); return; }
     if (e.target.closest('[data-set-lock]')) return signOut(false);
     if (e.target.closest('[data-set-logout]')) { if (confirm('Logge ut av Homelab på denne enheten?')) signOut(true); return; }
-    if (e.target.closest('[data-set-logoutall]')) { import('./web38.js').then((m) => m.logoutAll()); return; }
+    if (e.target.closest('[data-set-logoutall]')) { import('./account-session.js').then((m) => m.logoutAll()); return; }
     if (e.target.closest('[data-open-fh-mail]')) { location.href = '/finans/?desktop=1#/inn'; return; }
     if (e.target.closest('[data-hp-edit]')) { closeSettings(); toggleHeadEdit(true); return; }
     if (e.target.closest('[data-gs-ai]')) return go('ai');

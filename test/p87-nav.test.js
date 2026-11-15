@@ -103,7 +103,7 @@ test('Homelab: fotovinduet hører til skallet – visningen byttes med swapView,
 });
 
 test('Homelab: overgangen gjelder bare innholdet, er maks 220 ms og av ved «Reduser bevegelse»', async () => {
-  const w = read('js/web52.js');
+  const w = read('js/startup.js');
   const pe = noComments(w.slice(w.indexOf('function pageEnter'), w.indexOf('/* ---------------- Ruter: buffer')));
   assert.match(pe, /if \(reduced\(\)\) return;/);
   assert.ok(pe.indexOf('if (reduced()) return;') < pe.indexOf('.animate('), 'ingen animasjon når bevegelse er redusert');
@@ -119,7 +119,7 @@ test('Homelab: bakgrunnsmenyen i topplinjen tegnes bare når den er endret, og O
   const m = h.slice(h.indexOf('export function renderBgMenu'), h.indexOf('export async function pickPhoto'));
   assert.match(m, /if \(host\.__html87 !== html87\)/);
   assert.equal((m.match(/host\.innerHTML = /g) ?? []).length, 2);
-  const w41 = noComments(read('js/web41.js'));
+  const w41 = noComments(read('js/shell.js'));
   assert.match(w41, /lastKey = bgState\(\)\.type === 'oslo' \? osloKey41\(\) : null;/);
   assert.match(w41, /on\?\.\('weather', \(\) => \{ sunFromWeather\(\); osloTick\(\); \}\)/);
 });

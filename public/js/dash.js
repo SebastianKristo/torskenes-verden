@@ -1,7 +1,7 @@
 import { esc, kr, nb, signed, p2, cap, isoDay, hm, isMobile, api, logoImg, NOT_SET_UP } from './util.js';
 import { poll } from './lib/poll.js';
 import { ruterColorA11y } from './ruter-color.js'; // linjefargene (egen modul, så Hjem 3a kan bruke dem uten hele dashbordet)
-import { home52Html } from './home52.js'; // prompt 52: Hjem 3a i PWA-en
+import { home52Html } from './oversikt-mobil.js'; // prompt 52: Hjem 3a i PWA-en
 import { store, widget, card, refresh, errBox, on, load } from './store.js';
 import { renderSearch, popHandler } from './extras.js';
 import { hiddenWidgets } from './profile.js';
@@ -14,7 +14,7 @@ import { carousel, restoreCarousel, startPackages } from './weather-card.js';
 import { is2c, pwImg } from './hltheme.js'; // prompt 36: ingen kreditlinje over bildet (vises bare i Innstillinger → Bakgrunn)
 import { updBanner } from './upd-banner.js';
 import { briefCardSlot, briefGlassSlot } from './brief35.js';
-import { gridHtml } from './dash-edit36.js'; // prompt 36: rutenett med wiggle-redigering // prompt 35: Glimt-brief-kortet under søkefeltet
+import { gridHtml } from './dash-edit.js'; // prompt 36: rutenett med wiggle-redigering // prompt 35: Glimt-brief-kortet under søkefeltet
 // Prompt 31: URL-er i stedsteksten vises ikke (lenken brukes som kart-lenke i stedet).
 const noUrl = (t) => String(t ?? '').replace(/\s*https?:\/\/\S+/g, '').trim();
 const urlOf = (t) => String(t ?? '').match(/https?:\/\/\S+/)?.[0] ?? '';
@@ -412,7 +412,7 @@ function photoWindow(n) {
     <button type="button" class="pw-fail" hidden>Fikk ikke lastet bildet · trykk for å prøve igjen</button></section>`;
 }
 
-// Prompt 36: PC/nettbrett: alle widgets i ett rutenett (dash-edit36.js), samme widget-komponenter som før.
+// Prompt 36: PC/nettbrett: alle widgets i ett rutenett (dash-edit.js), samme widget-komponenter som før.
 function grid2c() {
   const ids = ['p_school', 'd_cal', 'p_kal', 'p_energy', 'p_wx', 'p_pk', 'p_pos', 'p_bday', 'p_play', 'p_money', 'p_links', 'd_upcoming', 'd_media', 'd_media_hist', 'd_trading', 'd_eco'];
   const bodies = Object.fromEntries(ids.map((id) => [id, card(id)]));
@@ -430,7 +430,7 @@ function render2c(n, cardH) {
       <div class="p-search p38-search">${store.me.hideSearch ? '' : renderSearch()}</div>
       ${isMobile() ? '<div id="p-ticker-slot" class="p38-tick" hidden></div>' : '<div id="p-ticker-slot" class="p38-tick"></div>'}
       ${updBanner('dash')}
-      ${!isMobile() ? grid2c() : home52Html() /* prompt 52: Hjem 3a – 2-kolonners rutenett med fliser (home52.js); den gamle mobilvisningen (p-cols) brukes ikke lenger */}
+      ${!isMobile() ? grid2c() : home52Html() /* prompt 52: Hjem 3a – 2-kolonners rutenett med fliser (oversikt-mobil.js); den gamle mobilvisningen (p-cols) brukes ikke lenger */}
     </div></div>`;
 }
 

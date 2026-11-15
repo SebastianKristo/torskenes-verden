@@ -929,7 +929,7 @@ div.b52-r{cursor:default}
 :where(html[data-mode="dark"][data-hl="2c"]) .b52 .red{color:#f29a8a!important}
 :where(html[data-mode="dark"][data-hl="2c"]) .b52-act{background:#f3efe6;color:#1b1a17}
 
-/* Hjem 3a i PWA-en (home52.js): 2-kolonners rutenett, flisstil som Homelab.dc.html. */
+/* Hjem 3a i PWA-en (oversikt-mobil.js): 2-kolonners rutenett, flisstil som Homelab.dc.html. */
 .h52{--t52card:#fffdf8;--t52ink:#1b1a17;--t52mut:#6b665c;--t52lab:#6b665c;--t52line:#e6dfd1;--t52pos:#2f7a4f;
   --t52av:#1b1a17;--t52avi:#f3efe6;--t52avs:#b5ae9f;--t52mat:#f4e3cf;--t52mati:#3a2410;--t52matl:#8a4f12;--t52fam:#e1ece4;--t52fami:#1b1a17;--t52faml:#2f6b4a;
   display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-flow:row dense;gap:12px;margin:12px 0 24px}

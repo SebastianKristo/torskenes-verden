@@ -8,7 +8,7 @@
 // API (SERVER50-API.md, SRVFAM50): /api/family/people50(/:id), /today50, /places(/:id/areas…), /health50(/:id, /goal, /:id/request),
 // /checkin(…), /api/ruter/school50. Eldre: /api/family (Min deling), /family/me, /family/zones/:id/notify, /api/velfremme (På vei hjem).
 // Personvern håndheves på serveren; her vises bare det den sender. Posisjonen sendes bare med selve innsjekken.
-import { ZIC42, IFY42 } from './icons42.js';
+import { ZIC42, IFY42 } from './zone-icons.js';
 import { pageCss } from './lib/page-css.js';
 
 const NB = new Intl.NumberFormat('nb-NO');
