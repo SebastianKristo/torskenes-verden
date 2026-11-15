@@ -572,7 +572,7 @@ struct KalLogin41Start: View {
                     Text("Innlogget i Homelab på denne enheten").font(KalFont.ui(12.5)).opacity(0.75).lineLimit(1)
                 }
                 Spacer(minLength: 4)
-                Text("›").font(KalFont.ui(18, .bold))
+                Image(systemName: "chevron.right").font(KalFont.ui(14, .semibold)).accessibilityHidden(true)
             }
             .foregroundStyle(t.bg)
             .padding(.leading, 10).padding(.trailing, 16)

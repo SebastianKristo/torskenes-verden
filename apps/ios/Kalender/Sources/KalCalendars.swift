@@ -87,7 +87,7 @@ struct KalCals39View: View {
                     .buttonStyle(.plain)
                 }
                 Button(action: { s.dismissMigration39() }) {
-                    Text("×").font(KalFont.ui(17, .bold)).foregroundStyle(t.mut).frame(width: 30, height: 36)
+                    Image(systemName: "xmark").font(KalFont.ui(14, .bold)).foregroundStyle(t.mut).frame(width: 44, height: 44).contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Lukk")
@@ -162,7 +162,7 @@ struct KalCalRow39: View {
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     Text(String(c.count)).font(KalFont.mono(12)).foregroundStyle(t.mut2)
-                    Text("›").font(KalFont.ui(18)).foregroundStyle(t.mut2)
+                    Image(systemName: "chevron.right").font(KalFont.ui(14, .semibold)).accessibilityHidden(true).foregroundStyle(t.mut2)
                 }
                 .frame(minHeight: 66)
                 .contentShape(Rectangle())

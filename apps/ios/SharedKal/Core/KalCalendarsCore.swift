@@ -361,13 +361,21 @@ enum KalCals39 {
         return true
     }
 
-    static func isoDate(_ s: String) -> Date? {
+    /// Fase 4: formatterne lages én gang (ISO8601DateFormatter er trådsikker), ikke ved hvert kall.
+    private static let isoFrac: ISO8601DateFormatter = {
         let f: ISO8601DateFormatter = ISO8601DateFormatter()
         f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        if let d = f.date(from: s) { return d }
+        return f
+    }()
+    private static let isoPlain: ISO8601DateFormatter = {
         let g: ISO8601DateFormatter = ISO8601DateFormatter()
         g.formatOptions = [.withInternetDateTime]
-        return g.date(from: s)
+        return g
+    }()
+
+    static func isoDate(_ s: String) -> Date? {
+        if let d = isoFrac.date(from: s) { return d }
+        return isoPlain.date(from: s)
     }
 
     /// «08:10» eller «19. okt 08:10» fra en ISO-tid.

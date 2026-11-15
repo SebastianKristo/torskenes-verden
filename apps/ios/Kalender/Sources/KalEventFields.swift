@@ -297,7 +297,7 @@ struct KalExtRow44: View {
             Spacer(minLength: 4)
             Text(a.statusLabel).font(KalFont.ui(11.5)).foregroundStyle(t.mut)
             Button(action: remove) {
-                Text("✕").font(KalFont.ui(14)).foregroundStyle(t.mut).frame(width: 32, height: 40)
+                Image(systemName: "xmark").font(KalFont.ui(13, .bold)).foregroundStyle(t.mut).frame(width: 44, height: 44).contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Fjern " + mail)

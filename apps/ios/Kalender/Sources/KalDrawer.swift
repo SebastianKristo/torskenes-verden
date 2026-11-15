@@ -143,7 +143,7 @@ struct KalDrawer: View {
                     Text("Visning, utseende, varsler og Glimt").font(KalFont.ui(12)).foregroundStyle(t.mut)
                 }
                 Spacer()
-                Text("›").font(KalFont.ui(16, .bold)).foregroundStyle(t.mut)
+                Image(systemName: "chevron.right").font(KalFont.ui(13, .semibold)).accessibilityHidden(true).foregroundStyle(t.mut)
             }
             .padding(.top, 14).padding(.bottom, 6)
             .overlay(alignment: .top) { Rectangle().fill(t.line2).frame(height: 1) }
@@ -234,7 +234,7 @@ struct KalCalRow35: View {
             .buttonStyle(.plain)
             if c.removable {
                 Button(action: { s.removeCal(c) }) {
-                    Text("×").font(KalFont.ui(17, .bold)).foregroundStyle(t.acc).frame(width: 30, height: 44)
+                    Image(systemName: "xmark").font(KalFont.ui(14, .bold)).foregroundStyle(t.acc).frame(width: 44, height: 44).contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Fjern " + c.name)

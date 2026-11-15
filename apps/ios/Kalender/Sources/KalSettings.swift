@@ -348,7 +348,7 @@ struct KalLinkRow35: View {
                     Text(sub).font(KalFont.ui(12)).foregroundStyle(t.mut)
                 }
                 Spacer()
-                Text("›").font(KalFont.ui(16, .bold)).foregroundStyle(t.mut)
+                Image(systemName: "chevron.right").font(KalFont.ui(13, .semibold)).accessibilityHidden(true).foregroundStyle(t.mut)
             }
             .padding(.vertical, 11)
             .contentShape(Rectangle())

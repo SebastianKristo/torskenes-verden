@@ -73,7 +73,7 @@ struct KalCalAdd39Sheet: View {
                     Text(sub).font(KalFont.ui(13)).foregroundStyle(t.mut).fixedSize(horizontal: false, vertical: true)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                Text("›").font(KalFont.ui(18)).foregroundStyle(t.mut2)
+                Image(systemName: "chevron.right").font(KalFont.ui(14, .semibold)).accessibilityHidden(true).foregroundStyle(t.mut2)
             }
             .padding(16)
             .background(RoundedRectangle(cornerRadius: 20).fill(t.card))

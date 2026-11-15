@@ -248,7 +248,7 @@ struct KalPad42Sidebar: View {
                     .background(RoundedRectangle(cornerRadius: 9).fill(t.chip))
                 Text("Innstillinger").font(KalFont.ui(14, .bold)).foregroundStyle(t.ink)
                 Spacer()
-                Text("›").font(KalFont.ui(15, .bold)).foregroundStyle(t.mut)
+                Image(systemName: "chevron.right").font(KalFont.ui(12, .semibold)).accessibilityHidden(true).foregroundStyle(t.mut)
             }
             .frame(minHeight: 44)
             .contentShape(Rectangle())

@@ -373,7 +373,7 @@ struct MacLogin41View: View {
                             Text("Innlogget i Homelab på denne Mac-en").font(MacFont.ui(12)).opacity(0.75)
                         }
                         Spacer()
-                        Text("›").font(MacFont.ui(16, .bold))
+                        Image(systemName: "chevron.right").font(MacFont.ui(13, .semibold)).accessibilityHidden(true)
                     }
                     .foregroundColor(t.bg)
                     .padding(.horizontal, 12).frame(height: 56)
