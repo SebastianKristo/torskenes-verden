@@ -1330,8 +1330,7 @@ media43Api.get('/release', ...G, H(async (c) => {
   if (q.episodeId || (q.seriesId && q.seasonNumber != null)) return interactive('sonarr', { episodeId: q.episodeId ? +q.episodeId : null, seriesId: q.seriesId ? +q.seriesId : null, seasonNumber: q.seasonNumber != null ? +q.seasonNumber : null });
   throw new MediaError('Bruk episodeId, seriesId+seasonNumber eller movieId', 400);
 }));
-// POST /api/media/release {guid, indexerId, service?} → {ok, guid, message:'Sendt til qBittorrent: 1080p WEB-DL · 2,4 GB', release}
-media43Api.post('/release', ...G, H(async (c) => grabRelease(await jb(c))));
+// POST /api/media/release ligger i servers.js (én handler for treff fra Sonarr/Radarr og fra Prowlarr-søket, se grabRelease43).
 // GET /api/media/qualityprofiles → {sonarr:[{id, name, resolution}], radarr:[…], monitor:[{id, label}], seriesTypes, availability, defaults}
 media43Api.get('/qualityprofiles', ...G, H(async () => {
   const [s, r] = await Promise.all([svcConf43('sonarr').on ? profiles('sonarr').catch(() => []) : [], svcConf43('radarr').on ? profiles('radarr').catch(() => []) : []]);
@@ -1406,5 +1405,5 @@ media43Api.get('/ekstern', ...G, async (c) => {
 export { normTitle43, parseEpisodeAsk43 };
 export { arr as arr43, qb as qb43, cached as cached43, indexersRaw as indexersRaw43, posterOf as posterOf43, fanartOf as fanartOf43, epCode as epCode43,
   rawFetch as rawFetch43, qbVerb as qbVerb43, queues as queues43, torrentsRaw as torrentsRaw43, seriesList as seriesList43, movieList as movieList43, TSTATE as TSTATE43, bildeVer43, // prompt 50
-  releaseOut as releaseOut43, statusOut as mediaStatusOut43, fail as mediaFail43, guard as mediaGuard43, admin as mediaAdmin43, jb as mediaBody43, nb1 as nb143 };
+  releaseOut as releaseOut43, grabRelease as grabRelease43, statusOut as mediaStatusOut43, fail as mediaFail43, guard as mediaGuard43, admin as mediaAdmin43, jb as mediaBody43, nb1 as nb143 };
 export { torrentsOut as torrentsOut43, torrentAction as torrentAction43 }; // prompt 89 (SRV89): Live Activities (server/live89.js)

@@ -158,7 +158,9 @@ test('«Last ned» uten Sonarr: grab via Prowlarr, ellers rett i qBittorrent med
     assert.equal(m44.QBIT_CATEGORY80.radarr, 'radarr');
     assert.ok(!log.join('\n').includes('magnet:') && !log.join('\n').includes('pk'), 'lenke/nøkkel logges ikke');
   } finally { console.log = orig; }
-  assert.match(srv, /media44Api\.post\('\/release', \.\.\.G, async \(c, next\) =>/);
+  // Én handler for POST /release (Prowlarr-treff her, ellers Sonarr/Radarr via grabRelease43), ikke to lag med next().
+  assert.match(srv, /media44Api\.post\('\/release', \.\.\.G, async \(c\) =>[^\n]*\n[^\n]*pGrab[^\n]*\n[^\n]*M\.grabRelease43\(b\)/);
+  assert.doesNotMatch(readFileSync(new URL('../server/media/arr.js', import.meta.url), 'utf8'), /media43Api\.post\('\/release'/);
 });
 
 test('SSE: ingen bufring, hjerteslag «: ping» hvert 10. s', () => {

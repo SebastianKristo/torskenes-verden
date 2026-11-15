@@ -462,9 +462,12 @@ export async function grabViaProwlarr80(p) {
     }
   });
 }
-media44Api.post('/release', ...G, async (c, next) => {
+// POST /api/media/release {guid, indexerId, service?, via?} → {ok, guid, message:'Sendt til qBittorrent: 1080p WEB-DL · 2,4 GB', release}
+// Treff fra Prowlarr-søket (pGrab) sendes rett til qBittorrent; ellers kjenner Sonarr/Radarr treffet (grabRelease43 i arr.js).
+// Var to lag (denne + next() til arr.js) – nå én handler, med samme tilgang (innlogget + Media-tilgang) og samme feilsvar.
+media44Api.post('/release', ...G, async (c) => {
   const b = await M.mediaBody43(c), p = pGrab.get(String(b.guid ?? ''));
-  if (!p || b.via === 'sonarr' || b.via === 'radarr') return next(); // Sonarr/Radarr kjenner treffet: som før (media43)
+  if (!p || b.via === 'sonarr' || b.via === 'radarr') { try { return c.json(await M.grabRelease43(b)); } catch (e) { return M.mediaFail43(c, e); } }
   try { return c.json(await grabViaProwlarr80(p)); } catch (e) { return M.mediaFail43(c, e instanceof M.MediaError ? e : new M.MediaError(e.message, 502)); }
 });
 
