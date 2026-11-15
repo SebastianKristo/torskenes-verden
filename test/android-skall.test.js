@@ -29,8 +29,9 @@ test('blandingsfilene er delt opp: ingen P25–P52B, P73Brief, ui/Ui20–Ui52B, 
   assert.deepEqual(familier, []);
   for (const f of ['ui/Fold.kt', 'ui/Mer.kt', 'ui/Navigasjon.kt', 'ui/Innstillinger.kt', 'Chat.kt', 'ui/Chat.kt', 'ui/ChatArk.kt', 'ui/Glimt.kt',
     'ui/GlimtSvar.kt', 'ui/GlimtFigurer.kt', 'ui/Brief.kt']) assert.ok(existsSync(join(APP, f)), f);
-  // P50Fam og P50Med eies av MODULER og er ikke rørt her.
-  assert.ok(existsSync(join(APP, 'P50Fam.kt')) && existsSync(join(APP, 'P50Med.kt')));
+  // P50Fam og P50Med eies av MODULER, som har gitt dem nye navn (FamilyModel, MediaTracking).
+  assert.ok(!existsSync(join(APP, 'P50Fam.kt')) && !existsSync(join(APP, 'P50Med.kt')));
+  assert.ok(existsSync(join(APP, 'FamilyModel.kt')) && existsSync(join(APP, 'MediaTracking.kt')));
 });
 
 test('kode for andre områder ligger i domene/<Område>.kt med egen JvmName, så fasadene ikke kolliderer', () => {
