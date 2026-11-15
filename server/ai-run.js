@@ -42,7 +42,7 @@ import { jobTimes41, groupTimes41 } from './ai41.js'; // prompt 41: klokkeslett 
 import { OMLX_BACKEND58 } from './ai/omlx/backend.js';
 import { engineFor58, omlxModelFor58, omlxConf58 } from './ai/omlx/config.js';
 import { omlxModels58, resolveModel58, markDown58 } from './ai/omlx/health.js';
-import { tokenSink59 } from './fast59/status.js'; // prompt 59: strømming av svarteksten (Glimt /stream)
+import { tokenSink59 } from './glimt/fast/status.js'; // prompt 59: strømming av svarteksten (Glimt /stream)
 
 /* ---------------- Oppgaver ---------------- */
 

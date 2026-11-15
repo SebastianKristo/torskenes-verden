@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { config } from './config.js';
 import './auth/server-secret.js'; // prompt 86: må lastes før databasen åpnes (avgjør «ny installasjon» ut fra om homelab.db finnes)
-import { bootStep } from './boot36.js'; // prompt 36: oppstartsstatus
+import { bootStep } from './system/boot.js'; // prompt 36: oppstartsstatus
 
 mkdirSync(join(config.dataDir, 'uploads'), { recursive: true });
 

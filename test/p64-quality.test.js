@@ -26,14 +26,14 @@ test.after(() => { globalThis.fetch = realFetch; });
 const { default: app } = await import('../server/index.js');
 const { db } = await import('../server/db.js');
 const { gateState } = await import('../server/ai-gate.js');
-const ST = await import('../server/quality64/store.js');
-const SET = await import('../server/quality64/settings.js');
-const EV = await import('../server/quality64/evalrun.js');
-const CMP = await import('../server/quality64/compare.js');
-const WK = await import('../server/quality64/weekly.js');
-const NT = await import('../server/quality64/notify64.js');
-const SYS = await import('../server/quality64/system.js');
-const API = await import('../server/quality64/api.js');
+const ST = await import('../server/system/quality/store.js');
+const SET = await import('../server/system/quality/settings.js');
+const EV = await import('../server/system/quality/eval-run.js');
+const CMP = await import('../server/system/quality/compare.js');
+const WK = await import('../server/system/quality/weekly.js');
+const NT = await import('../server/system/quality/notify.js');
+const SYS = await import('../server/system/quality/schedules.js');
+const API = await import('../server/system/quality/api.js');
 const SC = await import('../server/sched62/scheduler.js');
 
 const NIGHT = Date.parse('2026-10-27T02:00:00+01:00'); // tirsdag kl. 02:00 Europe/Oslo (vintertid)

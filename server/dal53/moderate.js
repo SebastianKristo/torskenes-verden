@@ -15,7 +15,7 @@ export const HIDDEN_TEXT53 = 'Bildet er skjult fordi det kan være upassende for
 let childOf = null;
 async function isChild(u) {
   if (!u || isAdmin(u)) return false;
-  try { childOf ??= (await import('../srv52.js')).isChild52; return !!childOf(u); } catch { return false; }
+  try { childOf ??= (await import('../glimt/my-brief.js')).isChild52; return !!childOf(u); } catch { return false; }
 }
 /** Bare for tester. */
 export const _setChildCheck53 = (fn) => { childOf = fn; };

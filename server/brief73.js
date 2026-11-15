@@ -65,7 +65,7 @@ export const onKeys73 = (u) => rawCards73(u).filter((x) => x.on).map((x) => x.ke
 /** Nøkler brukeren ikke har tilgang til (fra srv52: Homelab/Domener/Aksjer/Regninger/Nytt i kveld). */
 async function blocked73(u) {
   try {
-    const { briefCardsFor52 } = await import('./srv52.js');
+    const { briefCardsFor52 } = await import('./glimt/my-brief.js');
     const { hidden } = await briefCardsFor52(u);
     return new Set(hidden.filter((h) => h.reason !== 'none').map((h) => KEY_OF_B52[h.id]).filter(Boolean));
   } catch { return new Set(); }

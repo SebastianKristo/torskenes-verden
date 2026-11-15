@@ -38,7 +38,7 @@ test.after(() => { globalThis.fetch = realFetch; });
 
 const { default: app } = await import('../server/index.js');
 const { db, kv, OWNER } = await import('../server/db.js');
-const S52 = await import('../server/srv52.js');
+const S52 = await import('../server/glimt/my-brief.js');
 const guard = await import('../server/finans/receipts/cloud-guard.js');
 const fai = await import('../server/finans/ai.js');
 const r48s = await import('../server/finans/receipts/settings.js');
@@ -47,7 +47,7 @@ const health = await import('../server/finans/receipts/health.js');
 const gem = await import('../server/finans/receipts/engines/gemini.js');
 const tess = await import('../server/finans/receipts/engines/tesseract.js');
 const C52 = await import('../server/ai/chat/thinking.js');
-const W52 = await import('../server/whatsnew52.js');
+const W52 = await import('../server/system/whatsnew.js');
 
 const ROWS = ['JEM & FIX STORO', 'Org.nr 911 015 838', 'Dato 20.10.2026 17:42', 'MALING 10L 349,00', 'TOTAL 349,00', 'BANKAXEPT 349,00'];
 const TSV = ['level\tpage_num\tblock_num\tpar_num\tline_num\tword_num\tleft\ttop\twidth\theight\tconf\ttext', '1\t1\t0\t0\t0\t0\t0\t0\t1000\t2000\t-1\t',

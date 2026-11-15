@@ -68,7 +68,7 @@ test('/api/health: restarting bare når serveren faktisk starter eller oppdatere
   assert.equal(boot.headers.get('x-homelab-state'), 'ready');
   assert.ok(!('restarting' in boot.body), 'starting.html beholder den gamle formen');
   // Mens serveren starter: 503 + X-Homelab-State: starting og restarting:true.
-  const boot36 = await import('../server/boot36.js');
+  const boot36 = await import('../server/system/boot.js');
   boot36._resetBoot();
   const st = await req('/api/health');
   assert.deepEqual([st.status, st.headers.get('x-homelab-state'), st.body.restarting, st.body.state], [503, 'starting', true, 'starting']);

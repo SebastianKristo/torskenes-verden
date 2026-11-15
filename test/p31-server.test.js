@@ -20,7 +20,7 @@ const { hashPassword } = await import('../server/auth/password.js');
 process.env.APP_PASSWORD_HASH = hashPassword('testpassord1');
 
 const { default: app } = await import('../server/index.js');
-const su = await import('../server/system-update.js');
+const su = await import('../server/system/update.js');
 const reauth = await import('../server/auth/reauth.js');
 const assist = await import('../server/glimt/assist.js');
 const quick = await import('../server/kalender/quick.js');

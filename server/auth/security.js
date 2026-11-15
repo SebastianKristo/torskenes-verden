@@ -555,7 +555,7 @@ export async function logScan51({ docker = true, now = Date.now() } = {}) {
   let dockerState = 'skipped';
   if (docker && !MOCK()) {
     try {
-      const L = await import('../logs44.js');
+      const L = await import('../system/docker-logs.js');
       if (L.dockerAvailable44()) {
         const r = await L.queryLogs44({ since: '24h', limit: 5000 }, now);
         const by = new Map();

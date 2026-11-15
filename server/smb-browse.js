@@ -38,7 +38,7 @@ import { bearerOk } from './finans/routes.js';
 import { saveSettings, setSecret, settings as fhSettings } from './finans/db.js';
 import { smbRun, smbCmdError, smbErrorText, smbConfig, parseSmbLs, localArg, SMB_SEG, SMB_SHARE, SMB_HOST, normShare, smbNameError } from './finans/backup.js';
 import { streamSSE } from 'hono/streaming';
-import { setSmbTarget, smbTarget } from './system-backup.js';
+import { setSmbTarget, smbTarget } from './system/backup.js';
 import { MOCK_NAS } from './smb-mock.js';
 
 const MOCK = process.env.MOCK_DATA === '1';

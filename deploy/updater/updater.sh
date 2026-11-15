@@ -450,8 +450,8 @@ run_job() {
   # Prompt 36: «## [4.29.0]», «## 4.29.0» og «## v4.29.0 – dato» (samme regler som parseChangelog i serveren).
   VERSION=$(sed -n -E 's/^## *\[? *[vV]?([0-9]+\.[0-9]+\.[0-9]+).*/\1/p' "$SRC/CHANGELOG.md" 2>/dev/null | head -n 1)
   log "Versjon i arkivet: ${VERSION:-ukjent}"
-  # Prompt 44: databaseskjemaet til versjonen (DB_SCHEMA i server/system-update.js), lagres i historikken.
-  DBSCHEMA=$(sed -n -E 's/^export const DB_SCHEMA = ([0-9]{1,6}).*/\1/p' "$SRC/server/system-update.js" 2>/dev/null | head -n 1)
+  # Prompt 44: databaseskjemaet til versjonen (DB_SCHEMA i server/system/update.js, før Fase 2 server/system-update.js), lagres i historikken.
+  DBSCHEMA=$(sed -n -E 's/^export const DB_SCHEMA = ([0-9]{1,6}).*/\1/p' "$SRC/server/system/update.js" "$SRC/server/system-update.js" 2>/dev/null | head -n 1)
 
   # Prompt 51: staging FØR noe kopieres inn – feiler røyktestene, er prosjektmappen og os urørt.
   set_images

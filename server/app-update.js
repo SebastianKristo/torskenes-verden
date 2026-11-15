@@ -10,7 +10,7 @@
 // release-teksten. Tilgang: sesjon eller app-token (finance:read), alle brukere.
 import { Hono } from 'hono';
 import { authOrToken } from './mobile.js';
-import { parseChangelog, compareVersions } from './system-update.js';
+import { parseChangelog, compareVersions } from './system/update.js';
 
 const REPO = /^[\w.-]+\/[\w.-]+$/.test(process.env.UPDATE_REPO ?? '') ? process.env.UPDATE_REPO : 'SebastianKristo/torskenes-verden';
 const TTL = 30 * 60_000, ERR_TTL = 60_000, MAX_REDIRECTS = 5;

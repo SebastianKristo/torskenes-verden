@@ -46,7 +46,7 @@ globalThis.fetch = async (url, init = {}) => {
 test.after(() => { globalThis.fetch = realFetch; });
 
 const { default: app } = await import('../server/index.js');
-const s47 = await import('../server/server47.js');
+const s47 = await import('../server/system/server-urls.js');
 const r47 = await import('../server/finans/receipts-device.js');
 
 let ipN = 10;

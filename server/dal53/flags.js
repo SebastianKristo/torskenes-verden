@@ -1,5 +1,5 @@
 // Prompt 53 (DAL53): feature flags for modellene (QA51 via flags53.js – PÅ første gang de opprettes, admin kan slå av).
-import { defineFlagOn53, flagOn53, flagDefault53 } from '../flags53.js';
+import { defineFlagOn53, flagOn53, flagDefault53 } from '../system/model-flags.js';
 import { currentUser } from '../settings.js';
 
 export const FLAGS53 = {

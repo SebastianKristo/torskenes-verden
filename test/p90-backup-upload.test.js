@@ -26,7 +26,7 @@ globalThis.fetch = async () => { throw new TypeError('fetch failed'); };
 test.after(() => { globalThis.fetch = realFetch; rmSync(process.env.DATA_DIR, { recursive: true, force: true }); });
 
 const { default: app } = await import('../server/index.js');
-const sb = await import('../server/system-backup.js');
+const sb = await import('../server/system/backup.js');
 const { tarHeader } = await import('../server/finans/backup.js');
 const { db, kv, OWNER } = await import('../server/db.js');
 const { default: Database } = await import('better-sqlite3');

@@ -1,7 +1,7 @@
 // Prompt 45 (SERVER45): alle serverdelene unntatt Glimt-motoren (GLIMT45, server/glimt/) og Media (server/media/: uovervåkede
 // filer og Avspilling-sammendraget monteres i mountMedia). Formene står i SERVER45-API.md.
 // Monteres tidlig i index.js (før de eldre rutene på samme stier), så mellomvarene kan etterbehandle svarene deres.
-import { docker45Api, dockerSetupMw45 } from './docker45.js';
+import { docker45Api, dockerSetupMw45 } from './system/docker-setup.js';
 import { gsc45Api, gscInfoMw45 } from './gsc45.js';
 import { aiImport45Api } from './ai/import.js';
 import { settings45Api } from './misc45.js';

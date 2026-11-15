@@ -33,7 +33,7 @@ function walk(dir, out = []) {
 test('domenet: ingen «…experten» igjen i server/, public/ eller test/ (bare migreringskonstanten)', () => {
   const hits = [...walk('server'), ...walk('public'), ...walk('test')].filter((p) => rd(p).includes(OLD));
   assert.deepEqual(hits, []);
-  assert.match(rd('server/server47.js'), /DEFAULT_PUBLIC_URL47 = 'https:\/\/os\.smarthjemeksperten\.no'/);
+  assert.match(rd('server/system/server-urls.js'), /DEFAULT_PUBLIC_URL47 = 'https:\/\/os\.smarthjemeksperten\.no'/);
   assert.match(rd('public/js/settings-srv47.js'), /external: 'https:\/\/os\.smarthjemeksperten\.no'/);
   assert.match(rd('public/js/settings-server41.js'), /os\.smarthjemeksperten\.no/);
 });
@@ -43,7 +43,7 @@ test('domenet: lagret adresse som er nøyaktig den gamle standarden migreres (pe
   const { migrateUrl89, OLD_PUBLIC_URL89, NEW_PUBLIC_URL89 } = await import('../server/auth/server-address.js');
   const { meServer41, serverAddresses41 } = await import('../server/auth/server-address.js');
   const { publicUrl46 } = await import('../server/auth/server-address.js');
-  const { serverUrls47 } = await import('../server/server47.js');
+  const { serverUrls47 } = await import('../server/system/server-urls.js');
   assert.equal(OLD_PUBLIC_URL89, OLD_URL);
   assert.equal(NEW_PUBLIC_URL89, NEW_URL);
   for (const v of [OLD_URL, `${OLD_URL}/`, OLD_URL.toUpperCase()]) assert.equal(migrateUrl89(v), NEW_URL, v);

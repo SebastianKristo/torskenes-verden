@@ -11,7 +11,7 @@
 import { Hono } from 'hono';
 import { db, kv } from './db.js';
 import { config } from './config.js';
-import { guardedFetch86, approveIfAdmin86 } from './localfetch86.js'; // prompt 86: SSRF-vern, lokale verter må være godkjent av admin
+import { guardedFetch86, approveIfAdmin86 } from './net/local-fetch.js'; // prompt 86: SSRF-vern, lokale verter må være godkjent av admin
 import { aiJson } from './homeos-common.js';
 import { authOrToken, languageOf } from './mobile.js';
 import { ICON_DEFAULTS, validId as validIconId } from './icons.js';

@@ -30,7 +30,7 @@ test.after(() => { globalThis.fetch = realFetch; });
 
 const { default: app } = await import('../server/index.js');
 const { db, kv, OWNER } = await import('../server/db.js');
-const upd = await import('../server/system-update.js');
+const upd = await import('../server/system/update.js');
 const pu = await import('../server/auth/server-address.js');
 const st46 = await import('../server/study46.js');
 const news = await import('../server/news46.js');

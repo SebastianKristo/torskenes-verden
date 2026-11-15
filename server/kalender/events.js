@@ -36,7 +36,7 @@ import { OWNER, kv } from '../db.js';
 import { userCfg, userCfgSet } from '../settings.js';
 import { cached } from '../cache.js';
 import { authOrToken, layoutOf } from '../mobile.js';
-import { guardedFetch86 } from '../localfetch86.js'; // prompt 86: SSRF-vern for iCal-adresser
+import { guardedFetch86 } from '../net/local-fetch.js'; // prompt 86: SSRF-vern for iCal-adresser
 import { listFor as birthdaysOf, googleCalendarEvents, googleConnected, googleCalendarIds, googleEventWrite, googleCanWrite, googleConfOf } from './birthdays.js';
 /** Prompt 36b: ekstra Google-kalendere som vises som egne kalendere ({id:'g-…', calId, name, color, visible, hidMenu, writable}). */
 export const googleExtraOf = (user) => { const v = googleConfOf(user).extraCalendars; return Array.isArray(v) ? v : []; };

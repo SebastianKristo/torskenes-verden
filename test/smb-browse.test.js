@@ -23,7 +23,7 @@ test.after(() => { globalThis.fetch = realFetch; });
 const { default: app } = await import('../server/index.js');
 const fb = await import('../server/finans/backup.js');
 const sbr = await import('../server/smb-browse.js');
-const sb = await import('../server/system-backup.js');
+const sb = await import('../server/system/backup.js');
 const mock = await import('../server/smb-mock.js');
 
 // smbclient-kall logges: argumenter + innholdet og rettighetene til auth-fila mens kallet pågår.

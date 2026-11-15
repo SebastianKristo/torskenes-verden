@@ -25,11 +25,11 @@ globalThis.fetch = async (u) => { extCalls.push(String(u)); throw new TypeError(
 test.after(() => { globalThis.fetch = realFetch; });
 
 const { default: app } = await import('../server/index.js');
-const logs = await import('../server/logs44.js');
-const H = await import('../server/obs51/health.js');
-const HE = await import('../server/obs51/heal.js');
-const T = await import('../server/obs51/trace.js');
-const N = await import('../server/obs51/ntfy.js');
+const logs = await import('../server/system/docker-logs.js');
+const H = await import('../server/system/observability/health.js');
+const HE = await import('../server/system/observability/heal.js');
+const T = await import('../server/system/observability/trace.js');
+const N = await import('../server/system/observability/ntfy.js');
 const { notifyUser } = await import('../server/notify.js');
 const { db } = await import('../server/db.js');
 
@@ -187,11 +187,11 @@ test('selvreparasjon: unhealthy to runder → omstart via proxyen (bare restart)
 });
 
 test('selvreparasjon bruker bare GET og restart (ingen nye Docker-handlinger i obs51)', () => {
-  for (const f of readdirSync('server/obs51')) {
-    const s = readFileSync(join('server/obs51', f), 'utf8');
+  for (const f of readdirSync('server/system/observability')) {
+    const s = readFileSync(join('server/system/observability', f), 'utf8');
     assert.doesNotMatch(s, /dockerJson|dockerRaw|'POST', `\/containers|\/(stop|kill|exec|create|pause|update)\b['`?]/, f);
   }
-  const l = readFileSync('server/logs44.js', 'utf8');
+  const l = readFileSync('server/system/docker-logs.js', 'utf8');
   const blk = l.slice(l.indexOf('export const docker51'));
   assert.match(blk, /restart: \(id\) => action44\(id, 'restart'\)/);
   assert.doesNotMatch(blk, /'stop'|'start'\)|POST/);

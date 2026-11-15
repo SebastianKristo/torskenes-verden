@@ -28,8 +28,8 @@ import { nrkConf, nrkKall } from './media/nrk.js';
 import { now51, control51 } from './media/control.js';
 import { eventsFor } from './kalender/events.js';
 import { trk42 } from './sporing/shipments.js';
-import { jobOut, smbTarget } from './system-backup.js';
-import { backupRunning51, getRun51, backupRuns51, LABEL as RESTIC_LABEL } from './backup51.js';
+import { jobOut, smbTarget } from './system/backup.js';
+import { backupRunning51, getRun51, backupRuns51, LABEL as RESTIC_LABEL } from './system/restic-backup.js';
 import { apnsConf89, sendLive89 } from './apns.js';
 import { osloDate } from './dates/oslo.js';
 

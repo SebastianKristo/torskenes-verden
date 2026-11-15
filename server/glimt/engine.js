@@ -25,9 +25,9 @@ import { weatherCompare46 } from './weather.js';
 import { installTaskHooks46 } from '../gjoremal/glimt-wording.js';
 import { installPosterDecorator46 } from './calendar.js';
 // Prompt 59 (prompt 49 del 4): svar-cache, strømming (status + tekstbiter), parallelle verktøy – hver for seg av/på (fast59/settings.js).
-import { fast59 } from '../fast59/settings.js';
-import { cacheKindOf59, legacyKindOf59, planKey59, legacyKey59, cacheGet59, cachePut59 } from '../fast59/cache.js';
-import { toolStatus59, legacyStatus59, PLAN_STATUS59, ANSWER_STATUS59, CACHE_STATUS59 } from '../fast59/status.js';
+import { fast59 } from './fast/settings.js';
+import { cacheKindOf59, legacyKindOf59, planKey59, legacyKey59, cacheGet59, cachePut59 } from './fast/cache.js';
+import { toolStatus59, legacyStatus59, PLAN_STATUS59, ANSWER_STATUS59, CACHE_STATUS59 } from './fast/status.js';
 // Prompt 60 (prompt 49 del 3): samtaletilstand, entitetsregister og konkrete valg – krokene ligger i glimt/convo/engine.js.
 import { begin60, ctx60, facts60, afterPlan60, adjust60, finish60, confirmed60, convoTrace60 } from './convo/engine.js';
 // Prompt 61 (prompt 49 del 1): oppskrifter som lærer av bruk – krokene ligger i recipes61/engine61.js.

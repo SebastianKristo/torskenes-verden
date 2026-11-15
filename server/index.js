@@ -1,4 +1,4 @@
-import { bootStep, bootState, bootFinish } from './boot36.js'; // prompt 36: oppstartsstatus (først, så db-steget måles)
+import { bootStep, bootState, bootFinish } from './system/boot.js'; // prompt 36: oppstartsstatus (først, så db-steget måles)
 import { Hono } from 'hono';
 import { serve } from '@hono/node-server';
 import { serveStatic } from '@hono/node-server/serve-static';
@@ -25,7 +25,7 @@ import backgroundApi, { hasBackgroundTest, testBackgrounds } from './background.
 import mobileApi, { meOut, removeAvatar, shortcutsFor, layoutOf, authOrToken, designOf } from './mobile.js';
 import { mountDates } from './dates/api.js';
 import rssApi, { startRssWorker } from './rss.js';
-import { mountLocalFetch86, migrateLocalHosts86 } from './localfetch86.js'; // prompt 86: godkjente lokale verter for RSS/iCal (admin: /api/admin/local-fetch-hosts)
+import { mountLocalFetch86, migrateLocalHosts86 } from './net/local-fetch.js'; // prompt 86: godkjente lokale verter for RSS/iCal (admin: /api/admin/local-fetch-hosts)
 import { faviconHandler46 } from './news46.js'; // prompt 46 (SERVER46)
 import { news73Api } from './news73.js'; // prompt 73 (NEWS73)
 import iconsApi from './icons.js';
@@ -37,12 +37,12 @@ import { revokeUserTokens } from './finans/routes.js';
 import { startBirthdayWorker } from './kalender/birthdays.js';
 import { mountBirthdays, mountKalenderFront, mountKalender } from './kalender/index.js'; // Kalender og Bursdager (server/kalender/)
 import integrationsApi, { settingsSearchApi, testByIdOrName, integrationScope } from './integrations-api.js';
-import settingsAsk30Api from './settings-ask30.js';
+import settingsAsk30Api from './system/settings-search.js';
 import { mountAi, mountAiEngines, mountChat } from './ai/index.js'; // AI: /api/ai, Chat og motorene på Mac mini-en (server/ai/)
 import appUpdateApi from './app-update.js'; // prompt 32: Android-appen oppdaterer seg selv (GitHub-release via serveren)
-import systemUpdateApi, { startUpdateScheduler, updateNow, versionApi44 } from './system-update.js'; // Oppdater fra appen: data/update/ ↔ updater-containeren
-import systemBackupApi, { startSystemBackupScheduler } from './system-backup.js'; // prompt 29: systembackup (bare admin)
-import ops51Api, { startOps51 } from './ops51.js'; // prompt 51 (OPS51): restic-backup 3-2-1, testet gjenoppretting, staging/tilbakerulling, DB-vedlikehold
+import systemUpdateApi, { startUpdateScheduler, updateNow, versionApi44 } from './system/update.js'; // Oppdater fra appen: data/update/ ↔ updater-containeren
+import systemBackupApi, { startSystemBackupScheduler } from './system/backup.js'; // prompt 29: systembackup (bare admin)
+import ops51Api, { startOps51 } from './system/ops.js'; // prompt 51 (OPS51): restic-backup 3-2-1, testet gjenoppretting, staging/tilbakerulling, DB-vedlikehold
 import smbBrowseApi from './smb-browse.js'; // prompt 30: SMB-veiviser (finn server, shares, mapper, test, lagre) – bare admin
 import { mountGlimt } from './glimt/index.js'; // Glimt: motoren, minnet, brief, innstillingene og /api/assist (server/glimt/)
 import { recipesApi61 } from './recipes61/api.js'; // prompt 61 (prompt 49 del 1): Glimt lærer (oppskrifter)
@@ -50,13 +50,13 @@ import { schedulesApi62 } from './sched62/api.js'; // prompt 62 (prompt 49 del 2
 import { skjoldApi76 } from './skjold76/api.js'; // prompt 76 (SKJSRV): Skjold Lab – sorteringsskapet (deler, skuffer, bilder, søk)
 import { startScheduler62 } from './sched62/scheduler.js'; // prompt 62: scheduler (tikk hvert minutt, ikke i test)
 import { startMem63 } from './glimt/memory/nightly.js'; // prompt 63: systemoppgaven kl. 03 (ikke i test); morgenvarselet går via server/jobs/
-import { qualityApi64 } from './quality64/api.js'; // prompt 64 (prompt 49 del 7): kvalitet over tid (nattlig eval, ukerapport)
-import { startQuality64 } from './quality64/system.js'; // prompt 64: systemoppgavene kl. 02 / søndag kl. 20 og innsamling fra sporene (ikke i test)
+import { qualityApi64 } from './system/quality/api.js'; // prompt 64 (prompt 49 del 7): kvalitet over tid (nattlig eval, ukerapport)
+import { startQuality64 } from './system/quality/schedules.js'; // prompt 64: systemoppgavene kl. 02 / søndag kl. 20 og innsamling fra sporene (ikke i test)
 import api36 from './api36.js'; // prompt 36 (SERVER36)
 import { profilesApi, bibleApi } from './api37.js'; // prompt 37 (SERVER37)
-import { bearerFallthrough46 } from './api-auth46.js'; // prompt 46 (SERVER46)
+import { bearerFallthrough46 } from './auth/bearer-fallthrough.js'; // prompt 46 (SERVER46)
 import { news40Api, newsDigestApi, pages40Api, briefJul40, startApi40 } from './api40.js'; // prompt 40 (SERVER40)
-import { mountServer47 } from './server47.js'; // prompt 47 (SERVER47)
+import { mountServer47 } from './system/server-urls.js'; // prompt 47 (SERVER47)
 import { ruter41Api, mai17Api, brief41 } from './api41.js'; // prompt 41 (SERVER41)
 import { mountFamilie, startFamilie, hlPage41 } from './familie/index.js'; // Familie: /api/family, /api/kart, /api/famcal51, /api/hjemlys (+ /api/velfremme)
 import { mountFinans, mountFinansAliases, mountTrialWidgets, mountSubsCalendar, registerLegacyReceipts, legacyReceiptOwner } from './finans/index.js'; // Økonomi: /finans/api, Boliger-aliasene, prøveperiode-widgets og kalenderen «Abonnementer»
@@ -66,22 +66,22 @@ import { mediaCalendarsMw43 } from './media/arr.js'; // kalenderkilden «Media»
 // Prompt 44 (SERVER44): Logger (Docker), Media (servere, søk som jobb, felles status), Avspilling, Studie-dokumenter, Kalender-deltakere,
 // Logg inn som / andres oppsett / overfør eier.
 import { integrationsStatusApi44 } from './media/servers.js'; // felles status for Integrasjoner og Media
-import { logs44Api, startLogs44 } from './logs44.js';
-import { impersonation44, admin44Api, layoutLockMw44, setMobileApi44 } from './admin44.js';
+import { logs44Api, startLogs44 } from './system/docker-logs.js';
+import { impersonation44, admin44Api, layoutLockMw44, setMobileApi44 } from './system/admin.js';
 import { study44Api } from './study44.js';
 import { mountAuthSecurity, mountAppAuth, mountAuthInvites, mountAuthRefresh, mountAuth, registerAccountRoutes } from './auth/index.js'; // innlogging og sikkerhet
 import { mountApi45 } from './api45.js'; // prompt 45 (SERVER45)
-import { traceObs51, mountObs51, startObs51 } from './obs51/index.js'; // prompt 51 (OBS51): helsedashbord, selvreparasjon, spor, ntfy
-import { mountQa51, startQa51, reportServerError51 } from './qa51.js'; // prompt 51 (QA51): feature flags, krasjrapporter (GlitchTip), «Nytt i denne versjonen»
+import { traceObs51, mountObs51, startObs51 } from './system/observability/index.js'; // prompt 51 (OBS51): helsedashbord, selvreparasjon, spor, ntfy
+import { mountQa51, startQa51, reportServerError51 } from './system/flags-crashes.js'; // prompt 51 (QA51): feature flags, krasjrapporter (GlitchTip), «Nytt i denne versjonen»
 import { errorShape, API_PREFIXES, serverError } from './http/errors.js'; // felles feilform {error, code} for /api og /finans/api
 import { tokenStateOf } from './finans/routes.js';
 import { aliasCounter } from './http/aliases.js';
 import { startJobs, listJobs, jobsStarted } from './jobs/index.js'; // én planlegger for bakgrunnsjobber med sideeffekter (ikke i test/sandkasse) // Q29: eldre API-aliaser samlet i én tabell, bruken telles
-import { badInput85 } from './badinput85.js'; // prompt 85 (SRVSEC85): feil i kroppen fra klienten → 400, ikke 500
-import { anonBodyCap85 } from './anonbody85.js'; // prompt 85 (SRVSEC85): store kropper bare fra innloggede klienter
+import { badInput85 } from './http/bad-input.js'; // prompt 85 (SRVSEC85): feil i kroppen fra klienten → 400, ikke 500
+import { anonBodyCap85 } from './http/anon-body-limit.js'; // prompt 85 (SRVSEC85): store kropper bare fra innloggede klienter
 import { mountLive89, startLive89 } from './live89.js'; // prompt 89 (SRV89): Live Activities / Live Updates (/api/live/*) og APNs-push
-import { mountWebx51 } from './webx51.js'; // prompt 51 (WEBX51): felles søk, onboarding, tema per bruker, offline-konfliktvarsel
-import { mountSrv52 } from './srv52.js'; // prompt 52 (SRV52): Glimt «sist jeg var på», kalenderkontekst, brief-kort, Glimt-figur per bruker
+import { mountWebx51 } from './system/search.js'; // prompt 51 (WEBX51): felles søk, onboarding, tema per bruker, offline-konfliktvarsel
+import { mountSrv52 } from './glimt/my-brief.js'; // prompt 52 (SRV52): Glimt «sist jeg var på», kalenderkontekst, brief-kort, Glimt-figur per bruker
 import { mountDal53 } from './dal53/index.js'; // prompt 53 (DAL53): Desert Ant Labs-modellene (Eye, Redact, Gist, Tongue, Emo, Moderator, Clear, Voz)
 import { gphoto46Api, startGphoto46 } from './gphoto46.js'; // prompt 46 (DATA46): Google Photos-album som bakgrunn
 import { mountVaer } from './vaer/index.js'; // Vær: /here, /week-summary, /place, /layout og ski i /full
@@ -663,7 +663,7 @@ if (process.env.OPS51_SANDBOX !== '1') startObs51(); // prompt 51 (OBS51): sampl
 if (BG51) startQa51(); // prompt 51 (QA51): sender krasjrapporter som ikke kom fram til GlitchTip
 if (BG51) startFamilie(); // server/familie/: første runde av påminnelsene «hvem kjører?» (resten går i server/jobs/)
 if (BG51) import('./ai39.js').then((m) => m.startBest59()).catch((e) => console.warn('[ai39] beste modeller:', e?.message)); // prompt 59: de beste modellene (fra eval) settes én gang
-if (BG51) import('./fast59/warm.js').then((m) => m.startWarm59()).catch((e) => console.warn('[fast59] varm modell:', e?.message)); // prompt 59 (del 4): hovedmodellen varm ved oppstart
+if (BG51) import('./glimt/fast/warm.js').then((m) => m.startWarm59()).catch((e) => console.warn('[fast59] varm modell:', e?.message)); // prompt 59 (del 4): hovedmodellen varm ved oppstart
 
 app.onError(async (err, c) => {
   // Prompt 85 (SRVSEC85): ugyldig JSON eller en kropp som ikke er et objekt er klientens feil → 400 uten feillogg og krasjrapport.

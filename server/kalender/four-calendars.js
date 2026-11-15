@@ -25,7 +25,7 @@ import { Hono } from 'hono';
 import { createHash, randomBytes } from 'node:crypto';
 import { db, kv } from '../db.js';
 import { authOrToken, layoutOf } from '../mobile.js';
-import { guardedFetch86, approveIfAdmin86 } from '../localfetch86.js'; // prompt 86: SSRF-vern, lokale verter må være godkjent av admin
+import { guardedFetch86, approveIfAdmin86 } from '../net/local-fetch.js'; // prompt 86: SSRF-vern, lokale verter må være godkjent av admin
 import { broadcast } from '../realtime.js';
 import { runAsUser, userCfg } from '../settings.js';
 import { googleConnected, googleConfSet, googleCalendarList, calendarLinks } from './birthdays.js';

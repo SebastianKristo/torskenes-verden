@@ -4,7 +4,7 @@
 import { Hono } from 'hono';
 import { authOrToken } from './mobile.js';
 import { isAdmin } from './auth/session.js';
-import { indexFor } from './settings-ask30.js';
+import { indexFor } from './system/settings-search.js';
 
 /* ---------------- Innstillinger samlet ---------------- */
 

@@ -17,7 +17,7 @@ delete process.env.UPDATE_BRANCH;
 const { hashPassword } = await import('../server/auth/password.js');
 process.env.APP_PASSWORD_HASH = hashPassword('testpassord1');
 const { default: app } = await import('../server/index.js');
-const su = await import('../server/system-update.js');
+const su = await import('../server/system/update.js');
 // Prompt 31: passord kreves bare når «Krev passord for å oppdatere» er på (av som standard). Testene her gjelder bryteren på.
 { const { kv, OWNER } = await import('../server/db.js'); kv.set(OWNER, 'update_settings', { require_password: true }); }
 

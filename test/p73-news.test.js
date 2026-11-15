@@ -263,7 +263,7 @@ test('per bruker: B ser ikke, henter ikke bilder fra og sletter ikke A sine arti
 });
 
 test('felles søk (FTS5, search51) finner lagrede artikler – bare egne', async () => {
-  const S = await import('../server/webx51.js');
+  const S = await import('../server/system/search.js');
   const ME = (await import('../server/db.js')).db.prepare("SELECT id FROM users WHERE username='sebastian'").pluck().get();
   const KARI = (await import('../server/db.js')).db.prepare("SELECT id FROM users WHERE username='kari73'").pluck().get();
   const r = await S.search51(ME, 'AMP-teksten');

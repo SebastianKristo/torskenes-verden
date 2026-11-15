@@ -26,8 +26,8 @@ test.after(() => { globalThis.fetch = realFetch; });
 
 const { default: app } = await import('../server/index.js');
 const { db } = await import('../server/db.js');
-const logs = await import('../server/logs44.js');
-const upd = await import('../server/system-update.js');
+const logs = await import('../server/system/docker-logs.js');
+const upd = await import('../server/system/update.js');
 const dg = await import('../server/domains-glimt.js');
 const gsc45 = await import('../server/gsc45.js');
 const st45 = await import('../server/study45.js');

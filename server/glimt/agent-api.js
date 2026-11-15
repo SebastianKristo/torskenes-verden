@@ -9,7 +9,7 @@ import { modelInfo45, MODULES45 } from './plan.js';
 import { personalityOf, setPersonality, PERSONALITIES, PERSONALITY_LABELS } from './personality.js';
 import { traceOf47, tracesOf47, traceHtml47 } from './trace.js';
 import { isAdmin } from '../auth/session.js';
-import { installFast59 } from '../fast59/api.js';
+import { installFast59 } from './fast/api.js';
 import { installConvo60, bodyConvo60 } from './convo/api.js';
 import { installCal70 } from './calendar-card.js';
 

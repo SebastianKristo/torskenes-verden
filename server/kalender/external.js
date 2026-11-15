@@ -25,7 +25,7 @@ import { cfg, runAsUser } from '../settings.js';
 import { cached } from '../cache.js';
 import { addEventSource, typeOf } from './events.js';
 import { parseIcs, expandIcs } from './ical.js';
-import { guardedFetch86, approveIfAdmin86 } from '../localfetch86.js'; // prompt 86: SSRF-vern, lokale verter må være godkjent av admin
+import { guardedFetch86, approveIfAdmin86 } from '../net/local-fetch.js'; // prompt 86: SSRF-vern, lokale verter må være godkjent av admin
 
 const MOCK = () => process.env.MOCK_DATA === '1';
 import { registerJob } from '../jobs/index.js';
