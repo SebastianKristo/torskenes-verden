@@ -1,5 +1,6 @@
 package no.kristo.finanshub.ui
 
+import no.kristo.finanshub.ui.designsystem.HomelabType
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
 import androidx.activity.compose.BackHandler
@@ -52,6 +53,15 @@ import no.kristo.finanshub.*
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
+import no.kristo.finanshub.ui.designsystem.HomelabTheme
+import no.kristo.finanshub.ui.designsystem.DsPalette
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.Icon
+import androidx.compose.material3.minimumInteractiveComponentSize
+import no.kristo.felles.tid.OsloDato
 
 /*
  * Prompt 27 (ANDROID-A): Kalender v2 (design/Kalender.dc.html, variant «mobile»). Erstatter siden fra prompt 26
@@ -59,13 +69,13 @@ import java.time.LocalTime
  * Åpnes fra Mer → Kalender, Hjem-kortet og widgetene (finanshub://kalender).
  */
 
-private val K27_NOW_LINE = Color(0xFFE0342A)
+private val K27_NOW_LINE = DsPalette.Category.red
 private const val K27_SEARCH = "M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-3.6-3.6"
 private const val K27_CAL = "M4 6h16v14H4zM4 10h16M8 3.5v4M16 3.5v4"
 private const val K27_PLUS = "M12 5v14M5 12h14"
 
 @Composable
-private fun K27Mono(text: String, color: Color, size: TextUnit = 10.5.sp, modifier: Modifier = Modifier, spacing: TextUnit = 1.2.sp) =
+private fun K27Mono(text: String, color: Color, size: TextUnit = HomelabType.caption.fontSize, modifier: Modifier = Modifier, spacing: TextUnit = 1.2.sp) =
     Text(text, color = color, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = size, letterSpacing = spacing, maxLines = 1,
         overflow = TextOverflow.Ellipsis, modifier = modifier)
 
@@ -74,11 +84,11 @@ private fun Modifier.k27Label(label: String): Modifier = this.semantics { conten
 /** Minuttet nå (oppdateres hvert minutt). */
 @Composable
 private fun k27Minute(): LocalDateTime {
-    var now by remember { mutableStateOf(LocalDateTime.now()) }
+    var now by remember { mutableStateOf(OsloDato.klokka()) }
     LaunchedEffect(Unit) {
         while (true) {
-            kotlinx.coroutines.delay(60_000L - (LocalDateTime.now().second * 1000L) + 200L)
-            now = LocalDateTime.now()
+            kotlinx.coroutines.delay(60_000L - (OsloDato.klokka().second * 1000L) + 200L)
+            now = OsloDato.klokka()
         }
     }
     return now
@@ -88,7 +98,7 @@ private fun k27Minute(): LocalDateTime {
 
 @Composable
 internal fun KalenderScreen27(vm: AppViewModel) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val s = vm.kal26
     BackHandler { vm.closeKal26() }
     val now = k27Minute()
@@ -100,15 +110,15 @@ internal fun KalenderScreen27(vm: AppViewModel) {
         vm.loadKal26(quiet = true, from = a, to = b)
     }
     val navB = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 16.dp
-    BoxWithConstraints(Modifier.fillMaxSize().background(p.bg)) {
+    BoxWithConstraints(Modifier.fillMaxSize().background(p.surface)) {
         val wide = maxWidth >= 600.dp
         Column(Modifier.fillMaxSize().statusBarsPadding()) {
             K27Top(vm, cur, today)
             if (s.mini) K27Mini(vm, cur, today)
             // Prompt 29: lyst Nå/Neste-kort (RaskTimeArk.kt) i stedet for den svarte stripa.
             K29NowCard(vm, kalNow29(s, evs, now))
-            s.error?.let { e -> Text(e, color = p.lab, fontSize = 12.5.sp, modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp)) }
-            if (s.unavailable) Text("Serveren har ikke Kalender ennå. Oppdater Homelab-serveren for å se timeplanen.", color = p.mut, fontSize = 12.5.sp,
+            s.error?.let { e -> Text(e, color = p.accent, fontSize = HomelabType.footnote.fontSize, modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp)) }
+            if (s.unavailable) Text("Serveren har ikke Kalender ennå. Oppdater Homelab-serveren for å se timeplanen.", color = p.textSecondary, fontSize = HomelabType.footnote.fontSize,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp))
             Box(Modifier.weight(1f).fillMaxWidth().pointerInput(s.view) {
                 var dx = 0f
@@ -133,8 +143,8 @@ internal fun KalenderScreen27(vm: AppViewModel) {
         vm.mem33.learn?.let { l -> K27Sheet(wide, navB, { vm.mem33.learn = null }) { Mem33LearnBody(vm, l) } }
         vm.message?.let { m ->
             LaunchedEffect(m) { kotlinx.coroutines.delay(2600); if (vm.message == m) vm.message = null }
-            Box(Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 60.dp).shadow(12.dp, CircleShape).clip(CircleShape).background(p.ink).padding(16.dp, 10.dp)) {
-                Text(m, color = p.bg, fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold, maxLines = 2)
+            Box(Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 60.dp).shadow(12.dp, CircleShape).clip(CircleShape).background(p.textPrimary).padding(16.dp, 10.dp)) {
+                Text(m, color = p.surface, fontSize = HomelabType.subheadline.fontSize, fontWeight = FontWeight.SemiBold, maxLines = 2)
             }
         }
     }
@@ -144,7 +154,7 @@ internal fun KalenderScreen27(vm: AppViewModel) {
 
 @Composable
 private fun K27Top(vm: AppViewModel, cur: LocalDate, today: LocalDate) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val s = vm.kal26
     val V = s.view
     val st0 = if (V == "maaned" || V == "liste") cur else kalGridStart27(V, cur)
@@ -152,24 +162,24 @@ private fun K27Top(vm: AppViewModel, cur: LocalDate, today: LocalDate) {
     val title = if (st0.monthValue == endD.monthValue) kalCap(BD_MN[st0.monthValue - 1])
     else kalCap(BD_MS[st0.monthValue - 1]) + "–" + BD_MS[endD.monthValue - 1]
     Row(Modifier.fillMaxWidth().padding(start = 6.dp, top = 6.dp, end = 10.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-        Box(Modifier.size(40.dp, 44.dp).clip(CircleShape).press24 { vm.closeKal26All27() }.k27Label("Tilbake"), contentAlignment = Alignment.Center) {
-            Text("‹", color = p.ink, fontSize = 28.sp)
+        Box(Modifier.size(48.dp).clip(CircleShape).press24 { vm.closeKal26All27() }.k27Label("Tilbake"), contentAlignment = Alignment.Center) {
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = null, tint = p.textPrimary, modifier = Modifier.size(30.dp))
         }
         Row(
             Modifier.weight(1f, fill = false).height(44.dp).clip(RoundedCornerShape(12.dp)).press24 { s.mini = !s.mini; s.miniOff = 0; Haptics.select() }.padding(horizontal = 6.dp),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            PSerif(title, 28.sp, maxLines = 1)
-            Text("${endD.year}", color = p.mut, fontSize = 15.sp, modifier = Modifier.padding(top = 6.dp))
-            Text(if (s.mini) "▲" else "▼", color = p.mut, fontSize = 11.sp, modifier = Modifier.padding(top = 6.dp))
+            PSerif(title, HomelabType.title2.fontSize, maxLines = 1)
+            Text("${endD.year}", color = p.textSecondary, fontSize = HomelabType.callout.fontSize, modifier = Modifier.padding(top = 6.dp))
+            Text(if (s.mini) "▲" else "▼", color = p.textSecondary, fontSize = HomelabType.caption.fontSize, modifier = Modifier.padding(top = 6.dp))
         }
         Spacer(Modifier.weight(1f))
         Box(Modifier.size(44.dp).clip(CircleShape).press24 { s.search = true; s.q = ""; s.results = null; s.mini = false }.k27Label("Søk i kalenderen"), contentAlignment = Alignment.Center) {
-            WxIcon(K27_SEARCH, p.ink, 20.dp, stroke = 2.2f)
+            WxIcon(K27_SEARCH, p.textPrimary, 20.dp, stroke = 2.2f)
         }
         Box(Modifier.size(44.dp).clip(CircleShape).press24 { vm.kalToday27() }.k27Label("I dag"), contentAlignment = Alignment.Center) {
-            WxIcon(K27_CAL, p.ink, 24.dp, stroke = 1.8f)
-            Text("${today.dayOfMonth}", color = p.ink, fontSize = 9.5.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(top = 7.dp))
+            WxIcon(K27_CAL, p.textPrimary, 24.dp, stroke = 1.8f)
+            Text("${today.dayOfMonth}", color = p.textPrimary, fontSize = HomelabType.caption.fontSize, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(top = 7.dp))
         }
     }
 }
@@ -186,7 +196,7 @@ private fun AppViewModel.closeKal26All27() {
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun K27Mini(vm: AppViewModel, cur: LocalDate, today: LocalDate) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val s = vm.kal26
     val evs = s.events ?: emptyList()
     val mBase = cur.withDayOfMonth(1).plusMonths(s.miniOff.toLong())
@@ -195,22 +205,22 @@ private fun K27Mini(vm: AppViewModel, cur: LocalDate, today: LocalDate) {
     val inView: Set<LocalDate> = if (V == "maaned" || V == "liste") setOf(cur) else {
         val st0 = kalGridStart27(V, cur); (0 until kalGridDays27(V)).map { st0.plusDays(it.toLong()) }.toSet()
     }
-    Column(Modifier.padding(start = 12.dp, end = 12.dp, bottom = 8.dp).fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(p.card).padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(Modifier.padding(start = 12.dp, end = 12.dp, bottom = 8.dp).fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(p.surfaceRaised).padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(kalCap(BD_MN[mBase.monthValue - 1]) + " " + mBase.year, color = p.ink, fontWeight = FontWeight.Bold, fontSize = 14.sp, modifier = Modifier.weight(1f).padding(start = 4.dp))
-            Box(Modifier.size(34.dp).clip(CircleShape).press24 { s.miniOff -= 1 }.k27Label("Forrige måned"), contentAlignment = Alignment.Center) { Text("‹", color = p.ink, fontSize = 17.sp) }
-            Box(Modifier.size(34.dp).clip(CircleShape).press24 { s.miniOff += 1 }.k27Label("Neste måned"), contentAlignment = Alignment.Center) { Text("›", color = p.ink, fontSize = 17.sp) }
+            Text(kalCap(BD_MN[mBase.monthValue - 1]) + " " + mBase.year, color = p.textPrimary, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize, modifier = Modifier.weight(1f).padding(start = 4.dp))
+            Box(Modifier.minimumInteractiveComponentSize().size(34.dp).clip(CircleShape).press24 { s.miniOff -= 1 }.k27Label("Forrige måned"), contentAlignment = Alignment.Center) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = null, tint = p.textPrimary, modifier = Modifier.size(22.dp)) }
+            Box(Modifier.minimumInteractiveComponentSize().size(34.dp).clip(CircleShape).press24 { s.miniOff += 1 }.k27Label("Neste måned"), contentAlignment = Alignment.Center) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = p.textPrimary, modifier = Modifier.size(22.dp)) }
         }
         // Prompt 29: ukenummer-kolonne (22 dp, «U»); trykk åpner uken i Uke-visning.
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text("U", color = p.mut, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = 9.5.sp, textAlign = TextAlign.Center, modifier = Modifier.width(22.dp))
-            KAL_WS.forEach { Text(it.take(1), color = p.mut, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = 9.5.sp, textAlign = TextAlign.Center, modifier = Modifier.weight(1f)) }
+            Text("U", color = p.textSecondary, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.caption.fontSize, textAlign = TextAlign.Center, modifier = Modifier.width(22.dp))
+            KAL_WS.forEach { Text(it.take(1), color = p.textSecondary, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.caption.fontSize, textAlign = TextAlign.Center, modifier = Modifier.weight(1f)) }
         }
         for (w in 0 until 6) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
             val wk = mSt.plusDays((w * 7).toLong())
             Box(Modifier.width(22.dp).height(34.dp).clip(RoundedCornerShape(8.dp)).press24 { s.cur = wk; s.mini = false; s.miniOff = 0; vm.setKalView27("uke") }.k27Label("Uke ${kalIsoWeek(wk)}"),
                 contentAlignment = Alignment.Center) {
-                Text("${kalIsoWeek(wk)}", color = p.mut, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = 9.5.sp)
+                Text("${kalIsoWeek(wk)}", color = p.textSecondary, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.caption.fontSize)
             }
             for (i in 0 until 7) {
                 val d = mSt.plusDays((w * 7 + i).toLong())
@@ -219,11 +229,11 @@ private fun K27Mini(vm: AppViewModel, cur: LocalDate, today: LocalDate) {
                 val oth = kalDay27(evs, d, s.hiddenFilters).filter { it.type != "time" }
                 Column(
                     Modifier.weight(1f).height(34.dp).alpha(if (d.monthValue == mBase.monthValue) 1f else .35f).clip(RoundedCornerShape(17.dp))
-                        .background(if (isT) Color(KAL_LAB) else if (inW) p.ink.copy(alpha = .1f) else Color.Transparent)
+                        .background(if (isT) Color(KAL_LAB) else if (inW) p.textPrimary.copy(alpha = .1f) else Color.Transparent)
                         .press24 { s.cur = d; s.mini = false; s.miniOff = 0; Haptics.select(); if (V == "maaned" || V == "liste") vm.setKalView27("dag") }, // Prompt 30: fra Måned/Liste → Dag
                     horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center,
                 ) {
-                    Text("${d.dayOfMonth}", color = if (isT) Color.White else p.ink, fontWeight = FontWeight.SemiBold, fontSize = 12.5.sp)
+                    Text("${d.dayOfMonth}", color = if (isT) Color.White else p.textPrimary, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.footnote.fontSize)
                     Box(Modifier.padding(top = 1.dp).size(4.dp).clip(CircleShape).background(if (oth.isEmpty()) Color.Transparent else if (isT) Color.White else Color(kalColor27(oth[0], s))))
                 }
             }
@@ -237,7 +247,7 @@ private fun K27Mini(vm: AppViewModel, cur: LocalDate, today: LocalDate) {
                     verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
                     Box(Modifier.size(9.dp).clip(CircleShape).background(Color(c.color)))
-                    Text(c.name, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 12.5.sp, maxLines = 1)
+                    Text(c.name, color = p.textPrimary, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.footnote.fontSize, maxLines = 1)
                 }
             }
         }
@@ -278,7 +288,7 @@ private fun k27Layout(l: List<Kal26Ev>): List<K27Lay> {
 
 @Composable
 private fun K27Grid(vm: AppViewModel, evs: List<Kal26Ev>, now: LocalDateTime, cur: LocalDate, pb: Dp) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val s = vm.kal26
     val V = s.view
     val today = now.toLocalDate()
@@ -306,16 +316,16 @@ private fun K27Grid(vm: AppViewModel, evs: List<Kal26Ev>, now: LocalDateTime, cu
     Column(Modifier.fillMaxSize()) {
         // Ukenummer og dagene
         Row(Modifier.fillMaxWidth().padding(end = 8.dp, bottom = 6.dp), verticalAlignment = Alignment.Bottom) {
-            Text("U${kalIsoWeek(st0)}", color = p.mut, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = 10.sp, textAlign = TextAlign.Center,
+            Text("U${kalIsoWeek(st0)}", color = p.textSecondary, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.caption.fontSize, textAlign = TextAlign.Center,
                 modifier = Modifier.width(gutter).padding(bottom = 8.dp))
             days.forEach { d ->
                 val isT = d == today
                 val we = d.dayOfWeek.value >= 6
                 Column(Modifier.weight(1f).press24 { s.cur = d; vm.setKalView27("dag") }, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(3.dp)) {
                     val w = KAL_WS[d.dayOfWeek.value - 1]
-                    K27Mono(if (narrow7) w.take(1) else w, if (isT) p.lab else if (we) p.mut else p.ink, 10.5.sp, spacing = .6.sp)
-                    Box(Modifier.size(32.dp).clip(CircleShape).background(if (isT) p.lab else Color.Transparent), contentAlignment = Alignment.Center) {
-                        Text("${d.dayOfMonth}", color = if (isT) Color.White else if (we) p.mut else p.ink, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    K27Mono(if (narrow7) w.take(1) else w, if (isT) p.accent else if (we) p.textSecondary else p.textPrimary, HomelabType.caption.fontSize, spacing = .6.sp)
+                    Box(Modifier.size(32.dp).clip(CircleShape).background(if (isT) p.accent else Color.Transparent), contentAlignment = Alignment.Center) {
+                        Text("${d.dayOfMonth}", color = if (isT) Color.White else if (we) p.textSecondary else p.textPrimary, fontWeight = FontWeight.Bold, fontSize = HomelabType.body.fontSize)
                     }
                 }
             }
@@ -323,14 +333,14 @@ private fun K27Grid(vm: AppViewModel, evs: List<Kal26Ev>, now: LocalDateTime, cu
         Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
         if (hasAll) {
             Row(Modifier.fillMaxWidth().padding(end = 8.dp, top = 4.dp, bottom = 4.dp)) {
-                Text("HELE", color = p.mut, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = 9.sp, textAlign = TextAlign.Center,
+                Text("HELE", color = p.textSecondary, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.caption.fontSize, textAlign = TextAlign.Center,
                     modifier = Modifier.width(gutter).padding(top = 5.dp))
                 lists.forEach { l ->
                     Column(Modifier.weight(1f).padding(horizontal = 1.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         allOf(l).forEach { e ->
                             Box(Modifier.fillMaxWidth().height(22.dp).clip(RoundedCornerShape(6.dp)).background(Color(kalColor27(e, s))).press24 { s.sel = e; s.mini = false }.padding(horizontal = 6.dp),
                                 contentAlignment = Alignment.CenterStart) {
-                                Text((if (e.type == "innl") "⚑ " else "") + kalShort(e), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text((if (e.type == "innl") "⚑ " else "") + kalShort(e), color = Color.White, fontWeight = FontWeight.Bold, fontSize = HomelabType.caption.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             }
                         }
                     }
@@ -341,7 +351,7 @@ private fun K27Grid(vm: AppViewModel, evs: List<Kal26Ev>, now: LocalDateTime, cu
         Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(scroll)) {
             Row(Modifier.fillMaxWidth().padding(top = 8.dp, end = 8.dp).height(HH * 24)) {
                 Box(Modifier.width(gutter).fillMaxHeight()) {
-                    for (h in 1 until 24) Text("%02d".format(h), color = p.mut, fontFamily = PaperFonts.mono, fontWeight = FontWeight.Medium, fontSize = 10.5.sp, textAlign = TextAlign.End,
+                    for (h in 1 until 24) Text("%02d".format(h), color = p.textSecondary, fontFamily = PaperFonts.mono, fontWeight = FontWeight.Medium, fontSize = HomelabType.caption.fontSize, textAlign = TextAlign.End,
                         modifier = Modifier.fillMaxWidth().offset(y = HH * h - 7.dp).padding(end = 6.dp))
                 }
                 days.forEachIndexed { i, d ->
@@ -374,16 +384,16 @@ private fun K27Grid(vm: AppViewModel, evs: List<Kal26Ev>, now: LocalDateTime, cu
                             val tall = ht >= 40.dp && !(narrow7 && x.n > 1)
                             Row(
                                 Modifier.offset(x = W * (x.c.toFloat() / x.n) + 1.dp, y = HH * (x.a / 60f)).width(W / x.n - 3.dp).height(maxOf(18.dp, ht - 2.dp))
-                                    .clip(RoundedCornerShape(6.dp)).background(if (solid) cc else lerp(p.card, cc, .22f))
-                                    .then(if (sel) Modifier.border(2.dp, p.ink, RoundedCornerShape(6.dp)) else Modifier)
+                                    .clip(RoundedCornerShape(6.dp)).background(if (solid) cc else lerp(p.surfaceRaised, cc, .22f))
+                                    .then(if (sel) Modifier.border(2.dp, p.textPrimary, RoundedCornerShape(6.dp)) else Modifier)
                                     .clickable { s.sel = e; s.mini = false },
                             ) {
                                 Box(Modifier.width(3.dp).fillMaxHeight().background(cc))
                                 Column(Modifier.padding(start = 4.dp, top = 3.dp, end = 4.dp), verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                                    Text(kalShort(e), color = if (solid) Color.White else p.ink, fontWeight = FontWeight.Bold, fontSize = if (narrow7) 10.5.sp else 12.sp,
+                                    Text(kalShort(e), color = if (solid) Color.White else p.textPrimary, fontWeight = FontWeight.Bold, fontSize = if (narrow7) HomelabType.caption.fontSize else 12.sp,
                                         lineHeight = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                     if (tall) Text(e.sText + "–" + e.eText + (noUrl31(e.room).takeIf { it.isNotBlank() }?.let { " · $it" } ?: ""),
-                                        color = (if (solid) Color.White else p.ink).copy(alpha = .8f), fontSize = 11.sp, lineHeight = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                        color = (if (solid) Color.White else p.textPrimary).copy(alpha = .8f), fontSize = HomelabType.caption.fontSize, lineHeight = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                 }
                             }
                         }
@@ -404,15 +414,15 @@ private fun K27Grid(vm: AppViewModel, evs: List<Kal26Ev>, now: LocalDateTime, cu
 
 @Composable
 private fun K27Month(vm: AppViewModel, evs: List<Kal26Ev>, today: LocalDate, cur: LocalDate, pb: Dp) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val s = vm.kal26
     val m0 = cur.withDayOfMonth(1)
     val stM = m0.minusDays((m0.dayOfWeek.value - 1).toLong())
     Column(Modifier.fillMaxSize().padding(start = 6.dp, end = 6.dp, bottom = pb)) {
         // Prompt 29: smal ukenummer-kolonne (24 dp, «U») til venstre; trykk åpner uken.
         Row(Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 6.dp)) {
-            K27Mono("U", p.mut, 10.sp, Modifier.width(24.dp).wrapContentWidth(Alignment.CenterHorizontally), spacing = .8.sp)
-            KAL_WS.forEach { K27Mono(it.take(1), p.mut, 10.sp, Modifier.weight(1f).wrapContentWidth(Alignment.CenterHorizontally), spacing = .8.sp) }
+            K27Mono("U", p.textSecondary, HomelabType.caption.fontSize, Modifier.width(24.dp).wrapContentWidth(Alignment.CenterHorizontally), spacing = .8.sp)
+            KAL_WS.forEach { K27Mono(it.take(1), p.textSecondary, HomelabType.caption.fontSize, Modifier.weight(1f).wrapContentWidth(Alignment.CenterHorizontally), spacing = .8.sp) }
         }
         Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
         for (w in 0 until 6) Row(Modifier.fillMaxWidth().weight(1f)) {
@@ -421,7 +431,7 @@ private fun K27Month(vm: AppViewModel, evs: List<Kal26Ev>, today: LocalDate, cur
                 Modifier.width(24.dp).fillMaxHeight().drawBehind { drawLine(p.line, Offset(0f, size.height), Offset(size.width, size.height), 1.dp.toPx()) }
                     .clickable { s.cur = wk; vm.setKalView27("uke") }.k27Label("Uke ${kalIsoWeek(wk)}").padding(top = 8.dp),
                 contentAlignment = Alignment.TopCenter,
-            ) { Text("${kalIsoWeek(wk)}", color = p.mut, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = 10.sp) }
+            ) { Text("${kalIsoWeek(wk)}", color = p.textSecondary, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.caption.fontSize) }
             for (i in 0 until 7) {
                 val d = stM.plusDays((w * 7 + i).toLong())
                 val l = kalDay27(evs, d, s.hiddenFilters)
@@ -431,26 +441,26 @@ private fun K27Month(vm: AppViewModel, evs: List<Kal26Ev>, today: LocalDate, cur
                 val sh = oth.take(if (les > 0) 2 else 3)
                 Column(
                     Modifier.weight(1f).fillMaxHeight().alpha(if (d.monthValue == m0.monthValue) 1f else .4f)
-                        .background(if (isT) p.lab.copy(alpha = .06f) else Color.Transparent)
+                        .background(if (isT) p.accent.copy(alpha = .06f) else Color.Transparent)
                         .drawBehind { drawLine(p.line, Offset(0f, size.height), Offset(size.width, size.height), 1.dp.toPx()) }
                         .clickable { s.cur = d; Haptics.select(); vm.setKalView27("dag") }.padding(horizontal = 2.dp, vertical = 4.dp),
                     verticalArrangement = Arrangement.spacedBy(2.dp),
                 ) {
-                    Box(Modifier.align(Alignment.CenterHorizontally).size(24.dp).clip(CircleShape).background(if (isT) p.lab else Color.Transparent), contentAlignment = Alignment.Center) {
-                        Text("${d.dayOfMonth}", color = if (isT) Color.White else p.ink, fontWeight = FontWeight.Bold, fontSize = 12.5.sp)
+                    Box(Modifier.align(Alignment.CenterHorizontally).size(24.dp).clip(CircleShape).background(if (isT) p.accent else Color.Transparent), contentAlignment = Alignment.Center) {
+                        Text("${d.dayOfMonth}", color = if (isT) Color.White else p.textPrimary, fontWeight = FontWeight.Bold, fontSize = HomelabType.footnote.fontSize)
                     }
                     sh.forEach { e ->
                         val c = Color(kalColor27(e, s))
                         val solid = e.type == "prove" || e.sMin == null || e.type == "innl"
                         // Prompt 32 (claude-code-kalender-maned-brikker.md): alle hendelser får brikke; avtaler 18 % farge og 78 % fargetekst.
-                        Box(Modifier.fillMaxWidth().height(16.dp).clip(RoundedCornerShape(6.dp)).background(if (solid) c else lerp(p.card, c, .18f)).padding(horizontal = 5.dp), contentAlignment = Alignment.CenterStart) {
-                            Text(kalShort(e), color = if (solid) Color.White else lerp(p.ink, c, .78f), fontWeight = FontWeight.Bold, fontSize = 10.sp, lineHeight = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, softWrap = false)
+                        Box(Modifier.fillMaxWidth().height(16.dp).clip(RoundedCornerShape(6.dp)).background(if (solid) c else lerp(p.surfaceRaised, c, .18f)).padding(horizontal = 5.dp), contentAlignment = Alignment.CenterStart) {
+                            Text(kalShort(e), color = if (solid) Color.White else lerp(p.textPrimary, c, .78f), fontWeight = FontWeight.Bold, fontSize = HomelabType.caption.fontSize, lineHeight = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, softWrap = false)
                         }
                     }
                     if (les > 0) Box(Modifier.fillMaxWidth().height(16.dp).clip(RoundedCornerShape(4.dp)).background(p.line.copy(alpha = .7f)).padding(horizontal = 4.dp), contentAlignment = Alignment.CenterStart) {
-                        Text("$les t", color = p.ink, fontWeight = FontWeight.Bold, fontSize = 10.sp, lineHeight = 16.sp, maxLines = 1, softWrap = false)
+                        Text("$les t", color = p.textPrimary, fontWeight = FontWeight.Bold, fontSize = HomelabType.caption.fontSize, lineHeight = 16.sp, maxLines = 1, softWrap = false)
                     }
-                    if (oth.size > sh.size) Text("+${oth.size - sh.size}", color = p.mut, fontWeight = FontWeight.Bold, fontSize = 10.sp, modifier = Modifier.padding(start = 4.dp))
+                    if (oth.size > sh.size) Text("+${oth.size - sh.size}", color = p.textSecondary, fontWeight = FontWeight.Bold, fontSize = HomelabType.caption.fontSize, modifier = Modifier.padding(start = 4.dp))
                 }
             }
         }
@@ -461,26 +471,26 @@ private fun K27Month(vm: AppViewModel, evs: List<Kal26Ev>, today: LocalDate, cur
 
 @Composable
 private fun K27List(vm: AppViewModel, evs: List<Kal26Ev>, today: LocalDate, cur: LocalDate, pb: Dp) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val s = vm.kal26
     val groups = (0 until 45).map { cur.plusDays(it.toLong()) }.map { it to kalDay27(evs, it, s.hiddenFilters) }.filter { it.second.isNotEmpty() || it.first == today }
     val st = rememberLazyListState()
     LaunchedEffect(cur) { st.scrollToItem(0) }
     LazyColumn(Modifier.fillMaxSize(), state = st, contentPadding = PaddingValues(start = 14.dp, end = 14.dp, bottom = pb)) {
-        if (groups.isEmpty()) item { Text(if (s.events == null) "Henter …" else "Ingenting de neste 45 dagene.", color = p.mut, fontSize = 14.sp, modifier = Modifier.padding(vertical = 16.dp)) }
+        if (groups.isEmpty()) item { Text(if (s.events == null) "Henter …" else "Ingenting de neste 45 dagene.", color = p.textSecondary, fontSize = HomelabType.callout.fontSize, modifier = Modifier.padding(vertical = 16.dp)) }
         items(groups, key = { it.first.toString() }) { (d, l) ->
             val isT = d == today
             Row(Modifier.fillMaxWidth().drawBehind { drawLine(p.line, Offset(0f, size.height), Offset(size.width, size.height), 1.dp.toPx()) }.padding(vertical = 12.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Column(Modifier.width(46.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    K27Mono(KAL_WS[d.dayOfWeek.value - 1], if (isT) p.lab else p.mut, spacing = 0.sp)
-                    Box(Modifier.size(34.dp).clip(CircleShape).background(if (isT) p.lab else Color.Transparent), contentAlignment = Alignment.Center) {
-                        Text("${d.dayOfMonth}", color = if (isT) Color.White else p.ink, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    K27Mono(KAL_WS[d.dayOfWeek.value - 1], if (isT) p.accent else p.textSecondary, spacing = 0.sp)
+                    Box(Modifier.size(34.dp).clip(CircleShape).background(if (isT) p.accent else Color.Transparent), contentAlignment = Alignment.Center) {
+                        Text("${d.dayOfMonth}", color = if (isT) Color.White else p.textPrimary, fontWeight = FontWeight.Bold, fontSize = HomelabType.body.fontSize)
                     }
-                    Text(BD_MS[d.monthValue - 1].uppercase(), color = p.mut, fontFamily = PaperFonts.mono, fontWeight = FontWeight.Medium, fontSize = 10.sp)
+                    Text(BD_MS[d.monthValue - 1].uppercase(), color = p.textSecondary, fontFamily = PaperFonts.mono, fontWeight = FontWeight.Medium, fontSize = HomelabType.caption.fontSize)
                 }
                 Column(Modifier.weight(1f).padding(top = 2.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    if (l.isEmpty()) Text("Ingen hendelser", color = p.mut, fontSize = 14.sp, modifier = Modifier.padding(vertical = 12.dp, horizontal = 2.dp))
+                    if (l.isEmpty()) Text("Ingen hendelser", color = p.textSecondary, fontSize = HomelabType.callout.fontSize, modifier = Modifier.padding(vertical = 12.dp, horizontal = 2.dp))
                     l.forEach { e -> K27ListItem(vm, e) }
                 }
             }
@@ -490,24 +500,24 @@ private fun K27List(vm: AppViewModel, evs: List<Kal26Ev>, today: LocalDate, cur:
 
 @Composable
 private fun K27ListItem(vm: AppViewModel, e: Kal26Ev) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val s = vm.kal26
     val cc = Color(kalColor27(e, s))
     val solid = e.isExam
-    val fg = if (solid) Color.White else p.ink
+    val fg = if (solid) Color.White else p.textPrimary
     val teacher = if (e.type == "time") e.teacher?.takeIf { it.isNotBlank() } else null
     Row(
-        Modifier.fillMaxWidth().heightIn(min = 48.dp).height(IntrinsicSize.Min).clip(RoundedCornerShape(12.dp)).background(if (solid) cc else lerp(p.card, cc, .13f))
+        Modifier.fillMaxWidth().heightIn(min = 48.dp).height(IntrinsicSize.Min).clip(RoundedCornerShape(12.dp)).background(if (solid) cc else lerp(p.surfaceRaised, cc, .13f))
             .press24 { s.sel = e; s.mini = false },
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(Modifier.width(3.dp).fillMaxHeight().background(cc))
         Column(Modifier.weight(1f).padding(start = 9.dp, top = 6.dp, bottom = 6.dp, end = 8.dp), verticalArrangement = Arrangement.spacedBy(1.dp)) {
-            Text(e.title, color = fg, fontWeight = FontWeight.Bold, fontSize = 14.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(listOfNotNull(e.timeText, noUrl31(e.room).takeIf { it.isNotBlank() }, teacher).joinToString(" · "), color = fg.copy(alpha = .85f), fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(e.title, color = fg, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(listOfNotNull(e.timeText, noUrl31(e.room).takeIf { it.isNotBlank() }, teacher).joinToString(" · "), color = fg.copy(alpha = .85f), fontSize = HomelabType.footnote.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         if (solid) Box(Modifier.padding(end = 10.dp).clip(RoundedCornerShape(6.dp)).background(Color.Black.copy(alpha = .18f)).padding(horizontal = 6.dp, vertical = 3.dp)) {
-            Text(if (e.type == "prove") "PRØVE" else "FRIST", color = fg, fontFamily = PaperFonts.mono, fontWeight = FontWeight.Bold, fontSize = 9.5.sp, letterSpacing = .8.sp)
+            Text(if (e.type == "prove") "PRØVE" else "FRIST", color = fg, fontFamily = PaperFonts.mono, fontWeight = FontWeight.Bold, fontSize = HomelabType.caption.fontSize, letterSpacing = .8.sp)
         }
     }
 }
@@ -516,26 +526,26 @@ private fun K27ListItem(vm: AppViewModel, e: Kal26Ev) {
 
 @Composable
 private fun K27Bar(vm: AppViewModel, modifier: Modifier) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val s = vm.kal26
     Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(
-            Modifier.weight(1f).height(62.dp).shadow(14.dp, CircleShape).clip(CircleShape).background(p.ink).padding(horizontal = 6.dp),
+            Modifier.weight(1f).height(62.dp).shadow(14.dp, CircleShape).clip(CircleShape).background(p.textPrimary).padding(horizontal = 6.dp),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp),
         ) {
             KAL27_VIEWS.forEach { (k, n, ic) ->
                 val on = s.view == k
-                val fg = if (on) p.ink else p.bg.copy(alpha = .72f)
+                val fg = if (on) p.textPrimary else p.surface.copy(alpha = .72f)
                 Column(
-                    Modifier.weight(1f).height(50.dp).clip(CircleShape).background(if (on) p.bg else Color.Transparent).press24 { vm.setKalView27(k) }.k27Label(n),
+                    Modifier.weight(1f).height(50.dp).clip(CircleShape).background(if (on) p.surface else Color.Transparent).press24 { vm.setKalView27(k) }.k27Label(n),
                     horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp, Alignment.CenterVertically),
                 ) {
                     WxIcon(ic, fg, 19.dp, stroke = 1.9f)
-                    Text(n, color = fg, fontWeight = FontWeight.Bold, fontSize = 10.5.sp, maxLines = 1, softWrap = false)
+                    Text(n, color = fg, fontWeight = FontWeight.Bold, fontSize = HomelabType.caption.fontSize, maxLines = 1, softWrap = false)
                 }
             }
         }
-        Box(Modifier.size(62.dp).shadow(14.dp, CircleShape).clip(CircleShape).background(p.lab).press24 { vm.openQuick29() }.k27Label("Legg til time"), contentAlignment = Alignment.Center) {
+        Box(Modifier.size(62.dp).shadow(14.dp, CircleShape).clip(CircleShape).background(p.accent).press24 { vm.openQuick29() }.k27Label("Legg til time"), contentAlignment = Alignment.Center) {
             WxIcon(K27_PLUS, Color.White, 24.dp, stroke = 2.4f)
         }
     }
@@ -545,7 +555,7 @@ private fun K27Bar(vm: AppViewModel, modifier: Modifier) {
 
 @Composable
 private fun K27Sheet(wide: Boolean, navB: Dp, onClose: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val shape = if (wide) RoundedCornerShape(24.dp) else RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
     Box(
         Modifier.fillMaxSize().background(Color.Black.copy(alpha = .4f)).clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onClose),
@@ -553,7 +563,7 @@ private fun K27Sheet(wide: Boolean, navB: Dp, onClose: () -> Unit, content: @Com
     ) {
         Column(
             Modifier.then(if (wide) Modifier.widthIn(max = 480.dp).fillMaxWidth() else Modifier.fillMaxWidth()).fillMaxHeight(.92f).wrapContentHeight(if (wide) Alignment.CenterVertically else Alignment.Bottom)
-                .imePadding().clip(shape).background(p.bg)
+                .imePadding().clip(shape).background(p.surface)
                 .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {}
                 .verticalScroll(rememberScrollState()).padding(start = 16.dp, top = 18.dp, end = 16.dp, bottom = if (wide) 22.dp else navB + 8.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -563,21 +573,21 @@ private fun K27Sheet(wide: Boolean, navB: Dp, onClose: () -> Unit, content: @Com
 
 @Composable
 private fun K27Close(onClick: () -> Unit) {
-    val p = PaperPal.current
-    Box(Modifier.size(40.dp).clip(CircleShape).background(p.card).press24(onClick = onClick).k27Label("Lukk"), contentAlignment = Alignment.Center) {
-        Text("✕", color = p.ink, fontSize = 14.sp)
+    val p = HomelabTheme.colors
+    Box(Modifier.minimumInteractiveComponentSize().size(40.dp).clip(CircleShape).background(p.surfaceRaised).press24(onClick = onClick).k27Label("Lukk"), contentAlignment = Alignment.Center) {
+        Icon(Icons.Filled.Close, contentDescription = null, tint = p.textPrimary, modifier = Modifier.size(18.dp))
     }
 }
 
 @Composable
 private fun K27Chip(text: String, on: Boolean, dot: Color? = null, height: Dp = 38.dp, onClick: () -> Unit) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     Row(
-        Modifier.height(height).clip(CircleShape).border(1.dp, if (on) p.ink else p.line, CircleShape).background(if (on) p.ink else Color.Transparent).press24(onClick = onClick).padding(horizontal = 14.dp),
+        Modifier.height(height).clip(CircleShape).border(1.dp, if (on) p.textPrimary else p.line, CircleShape).background(if (on) p.textPrimary else Color.Transparent).press24(onClick = onClick).padding(horizontal = 14.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp),
     ) {
         dot?.let { Box(Modifier.size(9.dp).clip(CircleShape).background(it)) }
-        Text(text, color = if (on) p.bg else p.ink, fontWeight = FontWeight.SemiBold, fontSize = 13.5.sp, maxLines = 1)
+        Text(text, color = if (on) p.surface else p.textPrimary, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.subheadline.fontSize, maxLines = 1)
     }
 }
 
@@ -586,7 +596,7 @@ private fun K27Btn(text: String, bg: Color, fg: Color, modifier: Modifier, borde
     Box(
         modifier.height(46.dp).clip(CircleShape).then(if (border != null) Modifier.border(1.dp, border, CircleShape) else Modifier).background(bg).press24(onClick = onClick).padding(horizontal = 14.dp),
         contentAlignment = Alignment.Center,
-    ) { Text(text, color = fg, fontWeight = FontWeight.Bold, fontSize = 14.sp, maxLines = 1) }
+    ) { Text(text, color = fg, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize, maxLines = 1) }
 }
 
 /* ---------------- Detaljer ---------------- */
@@ -594,7 +604,7 @@ private fun K27Btn(text: String, bg: Color, fg: Color, modifier: Modifier, borde
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun K27Detail(vm: AppViewModel, e: Kal26Ev) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val ctx = LocalContext.current
     val s = vm.kal26
     val c = Color(kalColor27(e, s))
@@ -602,10 +612,10 @@ private fun K27Detail(vm: AppViewModel, e: Kal26Ev) {
     Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         Box(Modifier.width(6.dp).fillMaxHeight().clip(RoundedCornerShape(3.dp)).background(c))
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            K27Mono(calN.uppercase() + when (e.type) { "prove" -> " · PRØVE"; "innl" -> " · INNLEVERING"; else -> "" }, p.lab)
-            PSerif(e.title, 26.sp)
+            K27Mono(calN.uppercase() + when (e.type) { "prove" -> " · PRØVE"; "innl" -> " · INNLEVERING"; else -> "" }, p.accent)
+            PSerif(e.title, HomelabType.title3.fontSize)
             val whenT = kalCap(kalLong(e.date)) + (if (e.allDay && e.endDate != e.date) " – " + kalLong(e.endDate) else "") + " · " + e.timeText
-            Text(whenT, color = p.mut, fontSize = 14.sp)
+            Text(whenT, color = p.textSecondary, fontSize = HomelabType.callout.fontSize)
         }
         K27Close { s.sel = null; s.delArm = false }
     }
@@ -617,21 +627,21 @@ private fun K27Detail(vm: AppViewModel, e: Kal26Ev) {
         e.note?.takeIf { it.isNotBlank() }?.let { "Merknad" to it },
         e.repeat?.let { r -> KAL27_REPEATS.firstOrNull { it.first == r }?.second?.let { "Gjentas" to it } },
     )
-    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(p.card).padding(horizontal = 14.dp)) {
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(p.surfaceRaised).padding(horizontal = 14.dp)) {
         rows.forEachIndexed { i, (a, b) ->
             if (i > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
             Row(Modifier.fillMaxWidth().padding(vertical = 11.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(a, color = p.mut, fontSize = 14.sp)
-                Text(b, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, textAlign = TextAlign.End, modifier = Modifier.weight(1f))
+                Text(a, color = p.textSecondary, fontSize = HomelabType.callout.fontSize)
+                Text(b, color = p.textPrimary, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize, textAlign = TextAlign.End, modifier = Modifier.weight(1f))
             }
         }
     }
-    K27Mono("VARSEL", p.lab)
+    K27Mono("VARSEL", p.accent)
     val rem = e.remind?.takeIf { e.id !in s.reminders } ?: s.reminderFor(e)
     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         KAL_REMS.forEach { (v, n) -> K27Chip(n, rem == v, height = 36.dp) { vm.setKalRemind27(e, v) } }
     }
-    Text(if (e.editable) "Lagret i Google Kalender ($calN)." else "Fra ${kalSrc27(e.cat)}. Endres i kilden.", color = p.mut, fontSize = 12.5.sp)
+    Text(if (e.editable) "Lagret i Google Kalender ($calN)." else "Fra ${kalSrc27(e.cat)}. Endres i kilden.", color = p.textSecondary, fontSize = HomelabType.footnote.fontSize)
     // Prompt 33: «Lær Glimt hva dette er…» og «sist viste hendelse» for Glimt (ui/Memory33Ui.kt)
     Mem33LearnLink(vm, e)
     // Prompt 31: lenken i stedsteksten (f.eks. mazemap) vises som «Åpne kart ↗», teksten uten URL.
@@ -640,14 +650,14 @@ private fun K27Detail(vm: AppViewModel, e: Kal26Ev) {
     val hasMap = e.mazemap != null || roomUrl != null || (room.isNotEmpty() && !room.equals("Canvas", true) && e.cat in setOf("timeplan", "prover", "skole"))
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp), maxItemsInEachRow = 2) {
         if (e.editable) {
-            K27Btn("Rediger", p.ink, p.bg, Modifier.weight(1f)) { vm.editKal27(e) }
+            K27Btn("Rediger", p.textPrimary, p.surface, Modifier.weight(1f)) { vm.editKal27(e) }
             K27Btn(if (s.delArm) "Trykk igjen" else "Slett", Color(KAL_LAB), Color.White, Modifier.weight(1f)) { vm.deleteKal27(e) }
         }
-        if (hasMap) K27Btn(if (roomUrl != null) "Åpne kart ↗" else "Vis rom på kart ↗", Color.Transparent, p.ink, Modifier.weight(1f), border = p.line) { openLink(ctx, e.mazemap ?: roomUrl ?: "https://use.mazemap.com/") }
-        K27Btn("Kopier til Privat", Color.Transparent, p.ink, Modifier.weight(1f), border = p.line) { vm.copyKal27(e) }
+        if (hasMap) K27Btn(if (roomUrl != null) "Åpne kart ↗" else "Vis rom på kart ↗", Color.Transparent, p.textPrimary, Modifier.weight(1f), border = p.line) { openLink(ctx, e.mazemap ?: roomUrl ?: "https://use.mazemap.com/") }
+        K27Btn("Kopier til Privat", Color.Transparent, p.textPrimary, Modifier.weight(1f), border = p.line) { vm.copyKal27(e) }
     }
     e.url?.takeIf { it.startsWith("http") }?.let { u ->
-        Text(if (e.source == "canvas") "Åpne i Canvas ↗" else "Åpne ↗", color = p.lab, fontWeight = FontWeight.Bold, fontSize = 13.sp, modifier = Modifier.press24 { openLink(ctx, u) })
+        Text(if (e.source == "canvas") "Åpne i Canvas ↗" else "Åpne ↗", color = p.accent, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.press24 { openLink(ctx, u) })
     }
 }
 
@@ -655,23 +665,23 @@ private fun K27Detail(vm: AppViewModel, e: Kal26Ev) {
 
 @Composable
 private fun K27Field(value: String, onChange: (String) -> Unit, placeholder: String, height: Dp, size: TextUnit, weight: FontWeight, focus: FocusRequester? = null, single: Boolean = true) {
-    val p = PaperPal.current
-    Box(Modifier.fillMaxWidth().heightIn(min = height).clip(RoundedCornerShape(16.dp)).border(1.dp, p.line, RoundedCornerShape(16.dp)).background(p.card).padding(horizontal = 16.dp, vertical = 12.dp),
+    val p = HomelabTheme.colors
+    Box(Modifier.fillMaxWidth().heightIn(min = height).clip(RoundedCornerShape(16.dp)).border(1.dp, p.line, RoundedCornerShape(16.dp)).background(p.surfaceRaised).padding(horizontal = 16.dp, vertical = 12.dp),
         contentAlignment = Alignment.CenterStart) {
-        if (value.isEmpty()) Text(placeholder, color = p.mut, fontSize = size, fontWeight = weight)
-        BasicTextField(value, onChange, singleLine = single, textStyle = TextStyle(color = p.ink, fontSize = size, fontWeight = weight, fontFamily = PaperFonts.sans),
-            cursorBrush = SolidColor(p.ink), keyboardOptions = KeyboardOptions(imeAction = if (single) ImeAction.Next else ImeAction.Default),
+        if (value.isEmpty()) Text(placeholder, color = p.textSecondary, fontSize = size, fontWeight = weight)
+        BasicTextField(value, onChange, singleLine = single, textStyle = TextStyle(color = p.textPrimary, fontSize = size, fontWeight = weight, fontFamily = PaperFonts.sans),
+            cursorBrush = SolidColor(p.textPrimary), keyboardOptions = KeyboardOptions(imeAction = if (single) ImeAction.Next else ImeAction.Default),
             modifier = Modifier.fillMaxWidth().then(if (focus != null) Modifier.focusRequester(focus) else Modifier))
     }
 }
 
 @Composable
 private fun K27FormRow(label: String, value: String, top: Boolean, onClick: () -> Unit) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     if (top) Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
     Row(Modifier.fillMaxWidth().heightIn(min = 50.dp).press24(onClick = onClick), verticalAlignment = Alignment.CenterVertically) {
-        Text(label, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 14.5.sp, modifier = Modifier.weight(1f))
-        Text(value, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 14.5.sp)
+        Text(label, color = p.textPrimary, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize, modifier = Modifier.weight(1f))
+        Text(value, color = p.textPrimary, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize)
     }
 }
 
@@ -680,25 +690,25 @@ private fun k27Date(d: LocalDate): String = "${d.dayOfMonth}. ${BD_MS[d.monthVal
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun K27Form(vm: AppViewModel, f: Kal27Form) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val ctx = LocalContext.current
     val s = vm.kal26
     fun set(x: Kal27Form) { s.form = x.copy(err = "") }
     val focus = remember { FocusRequester() }
     LaunchedEffect(f.id) { if (f.id == null && f.title.isEmpty()) runCatching { focus.requestFocus() } }
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        PSerif(if (f.id != null) "Rediger hendelse" else "Ny hendelse", 24.sp, modifier = Modifier.weight(1f))
+        PSerif(if (f.id != null) "Rediger hendelse" else "Ny hendelse", HomelabType.title3.fontSize, modifier = Modifier.weight(1f))
         K27Close { s.form = null }
     }
     // Prompt 32: «✦ BESKRIV MED GLIMT» over Tittel (ui/KalenderGlimt.kt).
     LaunchedEffect(f.id, f.date) { if (vm.p32b.kAiNote.isBlank() && vm.p32b.kAi.isBlank()) vm.p32b.kAiErr = "" }
     DisposableEffect(Unit) { onDispose { vm.p32b.kAi = ""; vm.p32b.kAiNote = ""; vm.p32b.kAiErr = "" } }
     KalDescribe32b(vm)
-    K27Field(f.title, { set((s.form ?: f).copy(title = it)) }, "Tittel", 52.dp, 17.sp, FontWeight.SemiBold, focus)
-    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(p.card).padding(horizontal = 14.dp)) {
+    K27Field(f.title, { set((s.form ?: f).copy(title = it)) }, "Tittel", 52.dp, HomelabType.body.fontSize, FontWeight.SemiBold, focus)
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(p.surfaceRaised).padding(horizontal = 14.dp)) {
         Row(Modifier.fillMaxWidth().heightIn(min = 50.dp).press24 { set(f.copy(allDay = !f.allDay)) }, verticalAlignment = Alignment.CenterVertically) {
-            Text("Hele dagen", color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 14.5.sp, modifier = Modifier.weight(1f))
-            Box(Modifier.size(46.dp, 28.dp).clip(CircleShape).background(if (f.allDay) p.ink else p.line).padding(3.dp), contentAlignment = if (f.allDay) Alignment.CenterEnd else Alignment.CenterStart) {
+            Text("Hele dagen", color = p.textPrimary, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize, modifier = Modifier.weight(1f))
+            Box(Modifier.size(46.dp, 28.dp).clip(CircleShape).background(if (f.allDay) p.textPrimary else p.line).padding(3.dp), contentAlignment = if (f.allDay) Alignment.CenterEnd else Alignment.CenterStart) {
                 Box(Modifier.size(22.dp).clip(CircleShape).background(Color.White))
             }
         }
@@ -727,25 +737,25 @@ private fun K27Form(vm: AppViewModel, f: Kal27Form) {
             }
         }
     }
-    K27Field(f.location, { set((s.form ?: f).copy(location = it)) }, "Sted", 48.dp, 15.sp, FontWeight.Medium)
-    K27Mono("KALENDER", p.lab)
+    K27Field(f.location, { set((s.form ?: f).copy(location = it)) }, "Sted", 48.dp, HomelabType.callout.fontSize, FontWeight.Medium)
+    K27Mono("KALENDER", p.accent)
     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         s.calList27().filter { it.id == "privat" || it.id == "familie" }.forEach { c -> K27Chip(c.name, f.calendar == c.id, Color(c.color)) { set(f.copy(calendar = c.id)) } }
     }
-    K27Mono("GJENTA", p.lab)
+    K27Mono("GJENTA", p.accent)
     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         KAL27_REPEATS.forEach { (k, n) -> K27Chip(n, f.repeat == k) { set(f.copy(repeat = k)) } }
     }
-    K27Mono("VARSEL", p.lab)
+    K27Mono("VARSEL", p.accent)
     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         KAL_REMS.forEach { (k, n) -> K27Chip(n, f.reminder == k) { set(f.copy(reminder = k)) } }
     }
-    K27Field(f.note, { set((s.form ?: f).copy(note = it)) }, "Merknad", 48.dp, 15.sp, FontWeight.Medium, single = false)
-    if (f.err.isNotEmpty()) Text(f.err, color = Color(KAL_LAB), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-    Box(Modifier.fillMaxWidth().height(50.dp).clip(CircleShape).background(p.ink).alpha(if (s.saving) .6f else 1f).press24(enabled = !s.saving) { vm.saveKalForm27() }, contentAlignment = Alignment.Center) {
-        Text(if (s.saving) "Lagrer …" else "Lagre", color = p.bg, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+    K27Field(f.note, { set((s.form ?: f).copy(note = it)) }, "Merknad", 48.dp, HomelabType.callout.fontSize, FontWeight.Medium, single = false)
+    if (f.err.isNotEmpty()) Text(f.err, color = Color(KAL_LAB), fontSize = HomelabType.subheadline.fontSize, fontWeight = FontWeight.SemiBold)
+    Box(Modifier.fillMaxWidth().height(50.dp).clip(CircleShape).background(p.textPrimary).alpha(if (s.saving) .6f else 1f).press24(enabled = !s.saving) { vm.saveKalForm27() }, contentAlignment = Alignment.Center) {
+        Text(if (s.saving) "Lagrer …" else "Lagre", color = p.surface, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize)
     }
-    Text("Privat og Familie lagres i Google Kalender.", color = p.mut, fontSize = 12.sp)
+    Text("Privat og Familie lagres i Google Kalender.", color = p.textSecondary, fontSize = HomelabType.footnote.fontSize)
 }
 
 /* ---------------- Søk ---------------- */

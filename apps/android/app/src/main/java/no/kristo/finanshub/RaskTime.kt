@@ -12,6 +12,7 @@ import java.net.URLEncoder
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
+import no.kristo.felles.tid.OsloDato
 
 /*
  * Prompt 29 (ANDROID29): rask time med AI (claude-code-kalender-rask-time.md), nytt Nå/Neste-kort i Kalender
@@ -204,7 +205,7 @@ fun parseQuickLocal29(txt: String, today: LocalDate = no.kristo.felles.tid.OsloD
     if (s != null && e == null) e = hm29(mm29(s!!) + dur)
     val type = kind?.type ?: "annet"
     // Prompt 44 (claude-code-kalender-glimt-klokkeslett.md): bare tid → i dag (i morgen hvis tiden er passert).
-    if (dt == null && s != null) dt = if (today == LocalDate.now() && mm29(s!!) <= java.time.LocalTime.now().let { it.hour * 60 + it.minute }) today.plusDays(1) else today
+    if (dt == null && s != null) dt = if (today == OsloDato.iDag() && mm29(s!!) <= OsloDato.klokka().toLocalTime().let { it.hour * 60 + it.minute }) today.plusDays(1) else today
     if (dt == null) return Quick29Parse(false, QUICK29_NO_DATE, ti, null, s, e, loc, type, false)
     val appt = INTENT29.containsMatchIn(t) || kind != null
     return Quick29Parse(true, if (s == null) "Fant ikke klokkeslett, lagt inn som hele dagen." else "", ti, dt, s, if (s != null) e else null, loc, type, appt)

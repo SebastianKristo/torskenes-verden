@@ -1,5 +1,6 @@
 package no.kristo.finanshub.widget
 
+import no.kristo.finanshub.ui.designsystem.HomelabType
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -61,6 +62,7 @@ import java.time.Duration
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.util.concurrent.TimeUnit
+import no.kristo.felles.tid.OsloDato
 
 /*
  * Prompt 26 (ANDROID-A): Kalender-widgets (fasit: «WIDGETS PÅ TELEFONEN» i Kalender.dc.html, claude-code-kalender.md).
@@ -93,7 +95,7 @@ object Kal26WidgetStore {
     fun save(ctx: Context, raw: String, acct: String?) {
         val app = ctx.applicationContext
         val l = runCatching { parseKalResp26(raw).first }.getOrNull() ?: return
-        val today = LocalDate.now()
+        val today = OsloDato.iDag()
         // Bare de neste tre ukene trengs i widgetene.
         val keep = l.filter { !it.endDate.isBefore(today) && it.date.isBefore(today.plusDays(22)) }
         val arr = org.json.JSONArray().apply { keep.forEach { put(it.toJson()) } }
@@ -115,7 +117,7 @@ object Kal26WidgetStore {
 
 /** Henter de neste tre ukene: /api/kalender, ellers den kompakte /api/widgets/calendar. 404 = eldre server (tomt). */
 internal suspend fun fetchKal26(ctx: Context, api: Api, acct: String?) {
-    val today = LocalDate.now()
+    val today = OsloDato.iDag()
     val raw = runCatching { api.hlGet("/kalender?from=${today.minusDays(1)}&to=${today.plusDays(21)}", timeout = 12_000) }.getOrNull()
         ?: runCatching { api.hlGet("/widgets/calendar", timeout = 8_000) }.getOrNull()
         ?: return
@@ -148,7 +150,7 @@ object Kal26Widgets {
     /** Neste timegrense (WorkManager, ingen eksakte alarmer). */
     fun scheduleTick(ctx: Context) {
         runCatching {
-            val now = LocalDateTime.now()
+            val now = OsloDato.klokka()
             val at = kalNextBoundary(Kal26WidgetStore.current(ctx), now)
             val delay = Duration.between(now, at).seconds.coerceAtLeast(30)
             val req = OneTimeWorkRequestBuilder<Kal26TickWorker>().setInitialDelay(delay, TimeUnit.SECONDS).build()
@@ -171,7 +173,7 @@ abstract class KalW26(private val kind: String, private val m: String = "") : Gl
             val ev by Kal26WidgetStore.events.collectAsState()
             val tick by Kal26WidgetStore.tick.collectAsState()
             val pap by S24.papirFlow.collectAsState()
-            val w = kalWidget(ev ?: e0, LocalDateTime.now().also { tick.hashCode() })
+            val w = kalWidget(ev ?: e0, OsloDato.klokka().also { tick.hashCode() })
             GlanceTheme { KalBody26(kind, m, w, pap[appId] ?: pap0) }
         }
     }
@@ -286,21 +288,21 @@ private fun KalBody26(kind: String, m: String, w: KalW, papir: Boolean) {
 /** Liten: «NÅ», klokkeslett stort, fargestripe med fag og rom · lærer, og «34 min igjen». */
 @Composable
 private fun ColumnScope.KalSmall(w: KalW, u: KPal) {
-    KTx(w.k, 10.sp, u.acc, FontWeight.Bold)
+    KTx(w.k, HomelabType.caption.fontSize, u.acc, FontWeight.Bold)
     Spacer(GlanceModifier.height(6.dp))
-    KTx(w.big, 30.sp, u.fg, FontWeight.Bold)
+    KTx(w.big, HomelabType.title2.fontSize, u.fg, FontWeight.Bold)
     KGrow()
     Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Stripe(w.color, 4.dp, 32.dp)
         Spacer(GlanceModifier.width(7.dp))
         Column(GlanceModifier.defaultWeight()) {
-            KTx(w.title, 14.sp, u.fg, FontWeight.Bold)
-            if (w.sub.isNotBlank()) KTx(w.sub, 11.5.sp, u.mut)
+            KTx(w.title, HomelabType.callout.fontSize, u.fg, FontWeight.Bold)
+            if (w.sub.isNotBlank()) KTx(w.sub, HomelabType.caption.fontSize, u.mut)
         }
     }
     if (w.whenText.isNotBlank()) {
         Spacer(GlanceModifier.height(6.dp))
-        KTx(w.whenText, 11.sp, u.acc, FontWeight.Bold)
+        KTx(w.whenText, HomelabType.caption.fontSize, u.acc, FontWeight.Bold)
     }
 }
 
@@ -310,29 +312,29 @@ private fun ColumnScope.KalMedium(w: KalW, u: KPal) {
     val ctx = LocalContext.current
     Row(GlanceModifier.fillMaxSize()) {
         Column(GlanceModifier.defaultWeight().fillMaxHeight()) {
-            KTx(w.k, 10.sp, u.acc, FontWeight.Bold)
+            KTx(w.k, HomelabType.caption.fontSize, u.acc, FontWeight.Bold)
             Spacer(GlanceModifier.height(6.dp))
-            KTx(w.big, 28.sp, u.fg, FontWeight.Bold)
+            KTx(w.big, HomelabType.title2.fontSize, u.fg, FontWeight.Bold)
             Spacer(GlanceModifier.defaultWeight())
-            KTx(w.title, 14.sp, u.fg, FontWeight.Bold)
-            if (w.sub.isNotBlank()) KTx(w.sub, 11.5.sp, u.mut)
-            if (w.whenText.isNotBlank()) { Spacer(GlanceModifier.height(4.dp)); KTx(w.whenText, 11.sp, u.acc, FontWeight.Bold) }
+            KTx(w.title, HomelabType.callout.fontSize, u.fg, FontWeight.Bold)
+            if (w.sub.isNotBlank()) KTx(w.sub, HomelabType.caption.fontSize, u.mut)
+            if (w.whenText.isNotBlank()) { Spacer(GlanceModifier.height(4.dp)); KTx(w.whenText, HomelabType.caption.fontSize, u.acc, FontWeight.Bold) }
         }
         Spacer(GlanceModifier.width(12.dp))
         Box(GlanceModifier.width(1.dp).fillMaxHeight().background(u.line)) {}
         Spacer(GlanceModifier.width(12.dp))
         Column(GlanceModifier.defaultWeight().fillMaxHeight()) {
-            KTx(w.dayT, 10.5.sp, u.mut, FontWeight.Bold)
-            if (w.n3.isEmpty()) { Spacer(GlanceModifier.height(7.dp)); KTx("Ingen flere timer", 12.sp, u.mut) }
+            KTx(w.dayT, HomelabType.caption.fontSize, u.mut, FontWeight.Bold)
+            if (w.n3.isEmpty()) { Spacer(GlanceModifier.height(7.dp)); KTx("Ingen flere timer", HomelabType.footnote.fontSize, u.mut) }
             w.n3.forEach { e ->
                 Spacer(GlanceModifier.height(7.dp))
                 Row(GlanceModifier.fillMaxWidth().clickable(openKal(ctx, e.id)), verticalAlignment = Alignment.CenterVertically) {
-                    KTx(e.s, 11.sp, u.fg, FontWeight.Bold, GlanceModifier.width(36.dp))
+                    KTx(e.s, HomelabType.caption.fontSize, u.fg, FontWeight.Bold, GlanceModifier.width(36.dp))
                     Stripe(e.color, 3.dp, 24.dp)
                     Spacer(GlanceModifier.width(7.dp))
                     Column(GlanceModifier.defaultWeight()) {
-                        KTx(e.short, 12.5.sp, u.fg, FontWeight.Bold)
-                        if (e.room.isNotBlank()) KTx(e.room, 10.5.sp, u.mut)
+                        KTx(e.short, HomelabType.footnote.fontSize, u.fg, FontWeight.Bold)
+                        if (e.room.isNotBlank()) KTx(e.room, HomelabType.caption.fontSize, u.mut)
                     }
                 }
             }
@@ -345,22 +347,22 @@ private fun ColumnScope.KalMedium(w: KalW, u: KPal) {
 private fun ColumnScope.KalLarge(w: KalW, u: KPal) {
     val ctx = LocalContext.current
     Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        KTx(w.dayL, 16.sp, u.fg, FontWeight.Bold, GlanceModifier.defaultWeight())
-        KTx(w.cnt, 11.sp, u.acc, FontWeight.Bold)
+        KTx(w.dayL, HomelabType.body.fontSize, u.fg, FontWeight.Bold, GlanceModifier.defaultWeight())
+        KTx(w.cnt, HomelabType.caption.fontSize, u.acc, FontWeight.Bold)
     }
     Column(GlanceModifier.fillMaxWidth()) {
-        if (w.all.isEmpty()) { Spacer(GlanceModifier.height(8.dp)); KTx("Ingen timer", 13.sp, u.mut) }
+        if (w.all.isEmpty()) { Spacer(GlanceModifier.height(8.dp)); KTx("Ingen timer", HomelabType.subheadline.fontSize, u.mut) }
         w.all.forEach { e ->
             Spacer(GlanceModifier.height(8.dp))
             // Passerte timer dempes (Glance har ikke opasitet: dempet farge og stripe).
             val fg = if (e.dim) u.mut else u.fg
             Row(GlanceModifier.fillMaxWidth().clickable(openKal(ctx, e.id)), verticalAlignment = Alignment.CenterVertically) {
-                KTx(e.tm, 11.sp, u.mut, FontWeight.Bold, GlanceModifier.width(78.dp))
+                KTx(e.tm, HomelabType.caption.fontSize, u.mut, FontWeight.Bold, GlanceModifier.width(78.dp))
                 Stripe(if (e.dim) (e.color and 0x00FFFFFFL) or 0x73000000L else e.color, 4.dp, 28.dp)
                 Spacer(GlanceModifier.width(9.dp))
                 Column(GlanceModifier.defaultWeight()) {
-                    KTx(e.title, 13.5.sp, fg, FontWeight.Bold)
-                    if (e.sub.isNotBlank()) KTx(e.sub, 11.sp, u.mut)
+                    KTx(e.title, HomelabType.subheadline.fontSize, fg, FontWeight.Bold)
+                    if (e.sub.isNotBlank()) KTx(e.sub, HomelabType.caption.fontSize, u.mut)
                 }
             }
         }
@@ -369,14 +371,14 @@ private fun ColumnScope.KalLarge(w: KalW, u: KPal) {
     Column(GlanceModifier.fillMaxWidth()) {
         Box(GlanceModifier.fillMaxWidth().height(1.dp).background(u.line)) {}
         Spacer(GlanceModifier.height(8.dp))
-        KTx("PRØVER OG FRISTER", 10.sp, u.acc, FontWeight.Bold)
-        if (w.ex.isEmpty()) { Spacer(GlanceModifier.height(6.dp)); KTx("Ingen kommende", 12.sp, u.mut) }
+        KTx("PRØVER OG FRISTER", HomelabType.caption.fontSize, u.acc, FontWeight.Bold)
+        if (w.ex.isEmpty()) { Spacer(GlanceModifier.height(6.dp)); KTx("Ingen kommende", HomelabType.footnote.fontSize, u.mut) }
         w.ex.forEach { x ->
             Spacer(GlanceModifier.height(6.dp))
             Row(GlanceModifier.fillMaxWidth().clickable(openKal(ctx, x.id)), verticalAlignment = Alignment.CenterVertically) {
-                KTx(x.title, 13.sp, u.fg, FontWeight.Bold, GlanceModifier.defaultWeight())
+                KTx(x.title, HomelabType.subheadline.fontSize, u.fg, FontWeight.Bold, GlanceModifier.defaultWeight())
                 Box(GlanceModifier.cornerRadius(10.dp).background(if (x.red) u.red else u.pill).padding(horizontal = 8.dp, vertical = 3.dp)) {
-                    KTx(x.inText, 10.5.sp, if (x.red) u.onRed else u.onPill, FontWeight.Bold)
+                    KTx(x.inText, HomelabType.caption.fontSize, if (x.red) u.onRed else u.onPill, FontWeight.Bold)
                 }
             }
         }

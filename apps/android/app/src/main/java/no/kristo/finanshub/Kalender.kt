@@ -27,6 +27,9 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import java.net.URLEncoder
+import no.kristo.felles.tid.OsloDato
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /*
  * Prompt 26 (ANDROID-A): Kalender med skoletimeplan (design/Kalender.dc.html, variant «mobile», claude-code-kalender.md).
@@ -431,7 +434,7 @@ fun AppViewModel.loadKal26(quiet: Boolean = false, from: LocalDate? = null, to: 
     val acct = account?.id
     if (s.loadedFor != acct) { s.events = null; s.range = null; s.loadedFor = acct; s.unavailable = false; s.layoutFor = null }
     loadKalLayout26()
-    val today = LocalDate.now()
+    val today = OsloDato.iDag()
     val cur = s.range
     var a = from ?: today.withDayOfMonth(1).minusDays(7)
     var b = to ?: today.plusDays(62)
@@ -441,11 +444,14 @@ fun AppViewModel.loadKal26(quiet: Boolean = false, from: LocalDate? = null, to: 
     launch26a {
         try {
             val raw = api26a { hlGet("/kalender?from=$a&to=$b", timeout = 15_000) }
-            val (evs, subj) = parseKalResp26(raw)
+            // Tre måneder med hendelser: tolkes utenfor hovedtråden.
+            val (evs, subj) = withContext(Dispatchers.Default) { parseKalResp26(raw) }
+            val cals = withContext(Dispatchers.Default) { runCatching { parseKalCals27(raw) }.getOrNull() }
             s.events = evs; s.subjects = subj; s.range = a to b
-            runCatching { parseKalCals27(raw) }.getOrNull()?.takeIf { it.isNotEmpty() }?.let { s.cals = it }
+            cals?.takeIf { it.isNotEmpty() }?.let { s.cals = it }
             s.unavailable = false; s.error = null
-            pushKalWidgets26(raw, a, b)
+            // Widgetene tolker og lagrer sin egen kopi (prefs): også utenfor hovedtråden.
+            withContext(Dispatchers.Default) { pushKalWidgets26(raw, a, b) }
             scheduleKalReminders26()
             s.pendingId?.let { id -> s.pendingId = null; evs.firstOrNull { it.id == id }?.let { e -> s.sel = e; s.cur = e.date } }
         } catch (e: ApiException) {
@@ -501,7 +507,7 @@ fun scheduleKalReminder26(ctx: Context, e: Kal26Ev, v: String) {
     val wm = runCatching { WorkManager.getInstance(ctx) }.getOrNull() ?: return
     val name = "kal26-rem-" + e.id
     val at = kalRemindAt(e, v)
-    val now = LocalDateTime.now()
+    val now = OsloDato.klokka()
     if (at == null || !at.isAfter(now)) { wm.cancelUniqueWork(name); return }
     val whenText = (when (kalDaysTo(e.date, at.toLocalDate())) { 0 -> "I dag"; 1 -> "I morgen"; else -> kalCap(kalLong(e.date)) }) + " · " + e.timeText
     val req = OneTimeWorkRequestBuilder<Kal26RemindWorker>()
@@ -515,7 +521,7 @@ fun scheduleKalReminder26(ctx: Context, e: Kal26Ev, v: String) {
 private fun AppViewModel.scheduleKalReminders26() {
     val s = kal26
     val ctx = getApplication<android.app.Application>()
-    val today = LocalDate.now()
+    val today = OsloDato.iDag()
     (s.events ?: emptyList()).filter { !it.date.isBefore(today) && it.date.isBefore(today.plusDays(22)) }.forEach { e ->
         val v = s.reminderFor(e)
         if (v != "none" || e.id in s.reminders) runCatching { scheduleKalReminder26(ctx, e, v) }
@@ -598,7 +604,7 @@ fun kalColor27(e: Kal26Ev, s: Kal26State): Long = when {
 fun kalDay27(evs: List<Kal26Ev>, d: LocalDate, hidden: Set<String>): List<Kal26Ev> = kalDay(evs, d, hidden)
 
 /** Dagen visningen tar utgangspunkt i. */
-fun Kal26State.curDay27(today: LocalDate = LocalDate.now()): LocalDate = cur ?: today
+fun Kal26State.curDay27(today: LocalDate = OsloDato.iDag()): LocalDate = cur ?: today
 
 /** Første dag i rutenettet: mandag i uka (Uke), ellers dagen selv. */
 fun kalGridStart27(view: String, cur: LocalDate): LocalDate = if (view == "uke") cur.minusDays((cur.dayOfWeek.value - 1).toLong()) else cur
@@ -648,7 +654,7 @@ fun AppViewModel.kalToday27() { val s = kal26; s.cur = null; s.mini = false; s.s
 /** Ny hendelse: på en halvtime (trykk i rutenettet) eller neste hele halvtime i dag. */
 fun AppViewModel.openKalForm27(date: LocalDate? = null, startMin: Int? = null) {
     val s = kal26
-    val now = LocalDateTime.now()
+    val now = OsloDato.klokka()
     val st = (startMin ?: ((now.hour * 60 + now.minute + 29) / 30 * 30)).coerceIn(0, 22 * 60 + 30)
     val en = minOf(st + 60, 23 * 60 + 59)
     s.sel = null; s.mini = false; s.delArm = false
@@ -682,7 +688,7 @@ fun AppViewModel.reloadKal27() {
     val s = kal26
     val (a, b) = kalWindow27(s.view, s.curDay27())
     s.range = null
-    loadKal26(quiet = false, from = minOf(a, LocalDate.now().withDayOfMonth(1).minusDays(7)), to = maxOf(b, LocalDate.now().plusDays(62)))
+    loadKal26(quiet = false, from = minOf(a, OsloDato.iDag().withDayOfMonth(1).minusDays(7)), to = maxOf(b, OsloDato.iDag().plusDays(62)))
 }
 
 private fun kalErr27(e: ApiException): String = when (e.status) {

@@ -1,5 +1,6 @@
 package no.kristo.finanshub.ui
 
+import no.kristo.finanshub.ui.designsystem.HomelabType
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -49,6 +50,8 @@ import no.kristo.finanshub.*
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.temporal.ChronoUnit
+import no.kristo.finanshub.ui.designsystem.HomelabTheme
+import no.kristo.felles.tid.OsloDato
 
 /*
  * Prompt 26 (ANDROID-A): Hjem-kortet KALENDER. Selve Kalender-siden er erstattet av Kalender v2 i prompt 27
@@ -56,18 +59,18 @@ import java.time.temporal.ChronoUnit
  */
 
 @Composable
-private fun KMono(text: String, color: Color, size: TextUnit = 10.5.sp, modifier: Modifier = Modifier, spacing: TextUnit = 1.3.sp) =
+private fun KMono(text: String, color: Color, size: TextUnit = HomelabType.caption.fontSize, modifier: Modifier = Modifier, spacing: TextUnit = 1.3.sp) =
     Text(text, color = color, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = size, letterSpacing = spacing, maxLines = 1,
         overflow = TextOverflow.Ellipsis, modifier = modifier)
 
 /** Minuttet nå (oppdateres hvert minutt). */
 @Composable
 private fun rememberMinute(): LocalDateTime {
-    var now by remember { mutableStateOf(LocalDateTime.now()) }
+    var now by remember { mutableStateOf(OsloDato.klokka()) }
     LaunchedEffect(Unit) {
         while (true) {
-            delay(60_000L - (LocalDateTime.now().second * 1000L) + 200L)
-            now = LocalDateTime.now()
+            delay(60_000L - (OsloDato.klokka().second * 1000L) + 200L)
+            now = OsloDato.klokka()
         }
     }
     return now
@@ -78,39 +81,39 @@ private fun rememberMinute(): LocalDateTime {
 /** Hjem: NÅ / NESTE TIME / ukedag, fag i Newsreader med fargestripe, rom og lærer, klokkeslett, tre neste timer og NESTE PRØVE. */
 @Composable
 internal fun HomeKalCard26(vm: AppViewModel) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val s = vm.kal26
     LaunchedEffect(vm.base) { if (s.events == null) vm.loadKal26(quiet = true) }
     val now = rememberMinute()
     val w = kalWidget(s.events ?: emptyList(), now, s.subjectColors)
     Column(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(p.card).press24 { vm.openKal26() }.padding(16.dp, 14.dp),
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(p.surfaceRaised).press24 { vm.openKal26() }.padding(16.dp, 14.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
-            KMono("KALENDER · " + w.k, p.lab, modifier = Modifier.weight(1f))
-            Text(w.dayT + " ›", color = p.mut, fontSize = 12.sp, maxLines = 1)
+            KMono("KALENDER · " + w.k, p.accent, modifier = Modifier.weight(1f))
+            Text(w.dayT + " ›", color = p.textSecondary, fontSize = HomelabType.footnote.fontSize, maxLines = 1)
         }
-        if (s.events == null) { Text("Henter kalenderen …", color = p.mut, fontSize = 13.sp); return@Column }
+        if (s.events == null) { Text("Henter kalenderen …", color = p.textSecondary, fontSize = HomelabType.subheadline.fontSize); return@Column }
         // Prompt 33: trykk på en time/hendelse åpner den i Kalender-appen (kalender://hendelse?…), resten av kortet i dag.
         Row(Modifier.fillMaxWidth().then(if (w.evId != null) Modifier.press24 { vm.openKal26(w.evId) } else Modifier), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Box(Modifier.size(5.dp, 44.dp).clip(RoundedCornerShape(3.dp)).background(Color(w.color)))
             Column(Modifier.weight(1f)) {
-                PSerif(w.title, 22.sp, maxLines = 1)
-                if (w.sub.isNotBlank()) Text(w.sub, color = p.mut, fontSize = 12.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                PSerif(w.title, HomelabType.title3.fontSize, maxLines = 1)
+                if (w.sub.isNotBlank()) Text(w.sub, color = p.textSecondary, fontSize = HomelabType.footnote.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             Column(horizontalAlignment = Alignment.End) {
-                Text(w.big, color = p.ink, fontFamily = PaperFonts.serif, fontWeight = FontWeight.Medium, fontSize = 26.sp, lineHeight = 26.sp, maxLines = 1)
-                if (w.whenText.isNotBlank()) Text(w.whenText, color = p.lab, fontWeight = FontWeight.Bold, fontSize = 11.5.sp, maxLines = 1)
+                Text(w.big, color = p.textPrimary, fontFamily = PaperFonts.serif, fontWeight = FontWeight.Medium, fontSize = HomelabType.title3.fontSize, lineHeight = 26.sp, maxLines = 1)
+                if (w.whenText.isNotBlank()) Text(w.whenText, color = p.accent, fontWeight = FontWeight.Bold, fontSize = HomelabType.caption.fontSize, maxLines = 1)
             }
         }
         if (w.n3.isNotEmpty()) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             w.n3.forEach { e ->
-                Row(Modifier.weight(1f).height(IntrinsicSize.Min).clip(RoundedCornerShape(12.dp)).background(p.bg).press24 { vm.openKal26(e.id) }) {
+                Row(Modifier.weight(1f).height(IntrinsicSize.Min).clip(RoundedCornerShape(12.dp)).background(p.surface).press24 { vm.openKal26(e.id) }) {
                     Box(Modifier.width(3.dp).fillMaxHeight().background(Color(e.color)))
                     Column(Modifier.padding(start = 6.dp, top = 7.dp, end = 9.dp, bottom = 7.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Text(e.s, color = p.mut, fontFamily = PaperFonts.mono, fontWeight = FontWeight.Medium, fontSize = 12.sp, maxLines = 1)
-                        Text(e.short, color = p.ink, fontWeight = FontWeight.Bold, fontSize = 12.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(e.s, color = p.textSecondary, fontFamily = PaperFonts.mono, fontWeight = FontWeight.Medium, fontSize = HomelabType.footnote.fontSize, maxLines = 1)
+                        Text(e.short, color = p.textPrimary, fontWeight = FontWeight.Bold, fontSize = HomelabType.footnote.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                 }
             }
@@ -119,10 +122,10 @@ internal fun HomeKalCard26(vm: AppViewModel) {
             Column {
                 Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
                 Row(Modifier.fillMaxWidth().press24 { vm.openKal26(x.id) }.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    KMono("NESTE PRØVE", p.lab, 10.sp, spacing = .8.sp)
-                    Text(x.title, color = p.ink, fontWeight = FontWeight.Bold, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                    Box(Modifier.clip(CircleShape).background(if (x.red) Color(KAL_LAB) else p.bg).padding(horizontal = 8.dp, vertical = 3.dp)) {
-                        Text(x.inText, color = if (x.red) Color.White else p.ink, fontWeight = FontWeight.ExtraBold, fontSize = 10.5.sp, maxLines = 1)
+                    KMono("NESTE PRØVE", p.accent, HomelabType.caption.fontSize, spacing = .8.sp)
+                    Text(x.title, color = p.textPrimary, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                    Box(Modifier.clip(CircleShape).background(if (x.red) Color(KAL_LAB) else p.surface).padding(horizontal = 8.dp, vertical = 3.dp)) {
+                        Text(x.inText, color = if (x.red) Color.White else p.textPrimary, fontWeight = FontWeight.ExtraBold, fontSize = HomelabType.caption.fontSize, maxLines = 1)
                     }
                 }
             }

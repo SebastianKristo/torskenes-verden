@@ -1,5 +1,6 @@
 package no.kristo.finanshub.ui
 
+import no.kristo.finanshub.ui.designsystem.HomelabType
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -56,6 +57,8 @@ import no.kristo.finanshub.openKal26
 import no.kristo.finanshub.undo70
 import org.json.JSONObject
 import java.time.LocalDate
+import no.kristo.finanshub.ui.designsystem.DsPalette
+import no.kristo.felles.tid.OsloDato
 
 /*
  * Prompt 70 (GLIMTCAL70): kort A – «✓ LAGT I KALENDEREN», datoblokk, «Kino: Dune», «17:30–20:15 · Colosseum Kino», «Med pappa»,
@@ -83,37 +86,37 @@ internal fun Cal70Card(vm: AppViewModel, json: JSONObject, inBubble: Boolean) {
         }
     }
     val scope = rememberCoroutineScope()
-    val ink = Color(0xFFF6F2EA)
+    val ink = DsPalette.PapirMork.textPrimary
     val mut = ink.copy(alpha = .8f)
-    val green = Color(0xFF8FD1A6)
+    val green = DsPalette.PapirMork.success
     val pillBg = Color.White.copy(alpha = .12f)
     val sans = PaperFonts.sans
-    val outer = if (inBubble) Modifier.fillMaxWidth() else Modifier.fillMaxWidth().clip(RoundedCornerShape(26.dp)).background(Color(0xEB161412)).padding(16.dp)
+    val outer = if (inBubble) Modifier.fillMaxWidth() else Modifier.fillMaxWidth().clip(RoundedCornerShape(26.dp)).background(DsPalette.PapirMork.surface.copy(alpha = .92f)).padding(16.dp)
     Column(outer, verticalArrangement = Arrangement.spacedBy(12.dp)) {
         if (undone) {
-            Text("↶ ANGRET", color = mut, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = 10.5.sp, letterSpacing = 1.2.sp)
-            Text("«${c.title}» er fjernet fra kalenderen.", color = mut, fontFamily = sans, fontWeight = FontWeight.Medium, fontSize = 14.sp)
+            Text("↶ ANGRET", color = mut, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.caption.fontSize, letterSpacing = 1.2.sp)
+            Text("«${c.title}» er fjernet fra kalenderen.", color = mut, fontFamily = sans, fontWeight = FontWeight.Medium, fontSize = HomelabType.callout.fontSize)
             return@Column
         }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Box(Modifier.size(18.dp).clip(CircleShape).background(Color(0xFF2F7A4F)), contentAlignment = Alignment.Center) {
-                Text("✓", color = Color.White, fontFamily = sans, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+            Box(Modifier.size(18.dp).clip(CircleShape).background(DsPalette.Category.green), contentAlignment = Alignment.Center) {
+                Text("✓", color = Color.White, fontFamily = sans, fontWeight = FontWeight.Bold, fontSize = HomelabType.caption.fontSize)
             }
-            Text("LAGT I KALENDEREN", color = green, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = 10.5.sp, letterSpacing = 1.2.sp)
+            Text("LAGT I KALENDEREN", color = green, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.caption.fontSize, letterSpacing = 1.2.sp)
         }
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(
-                Modifier.width(52.dp).clip(RoundedCornerShape(14.dp)).background(Color(0xFFFFFDF8)).padding(vertical = 8.dp),
+                Modifier.width(52.dp).clip(RoundedCornerShape(14.dp)).background(DsPalette.PapirLys.surfaceRaised).padding(vertical = 8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Text(c.mon, color = Color(0xFFB23A2A), fontFamily = sans, fontWeight = FontWeight.Bold, fontSize = 10.sp)
-                Text(c.n.toString(), color = Color(0xFF1B1A17), fontFamily = PaperFonts.serif, fontWeight = FontWeight.Medium, fontSize = 26.sp)
-                Text(c.wd, color = Color(0xFF6B6558), fontFamily = sans, fontWeight = FontWeight.SemiBold, fontSize = 10.sp)
+                Text(c.mon, color = DsPalette.PapirLys.accent, fontFamily = sans, fontWeight = FontWeight.Bold, fontSize = HomelabType.caption.fontSize)
+                Text(c.n.toString(), color = DsPalette.PapirLys.textPrimary, fontFamily = PaperFonts.serif, fontWeight = FontWeight.Medium, fontSize = HomelabType.title3.fontSize)
+                Text(c.wd, color = DsPalette.PapirLys.textSecondary, fontFamily = sans, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.caption.fontSize)
             }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                Text(c.title, color = ink, fontFamily = PaperFonts.serif, fontWeight = FontWeight.Medium, fontSize = 21.sp, lineHeight = 24.sp)
-                Text(c.line, color = mut, fontFamily = sans, fontWeight = FontWeight.Medium, fontSize = 13.sp)
-                if (c.withText.isNotBlank()) Text(c.withText, color = mut, fontFamily = sans, fontWeight = FontWeight.Medium, fontSize = 13.sp)
+                Text(c.title, color = ink, fontFamily = PaperFonts.serif, fontWeight = FontWeight.Medium, fontSize = HomelabType.title3.fontSize, lineHeight = 24.sp)
+                Text(c.line, color = mut, fontFamily = sans, fontWeight = FontWeight.Medium, fontSize = HomelabType.subheadline.fontSize)
+                if (c.withText.isNotBlank()) Text(c.withText, color = mut, fontFamily = sans, fontWeight = FontWeight.Medium, fontSize = HomelabType.subheadline.fontSize)
             }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -125,16 +128,16 @@ internal fun Cal70Card(vm: AppViewModel, json: JSONObject, inBubble: Boolean) {
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp),
             ) {
                 Box(Modifier.size(9.dp).clip(CircleShape).background(hex70(c.calColor)))
-                Text(c.calName, color = ink, fontFamily = sans, fontWeight = FontWeight.SemiBold, fontSize = 12.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text("▾", color = ink.copy(alpha = .7f), fontSize = 12.sp, modifier = Modifier.rotate(if (open) 180f else 0f))
+                Text(c.calName, color = ink, fontFamily = sans, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.footnote.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text("▾", color = ink.copy(alpha = .7f), fontSize = HomelabType.footnote.fontSize, modifier = Modifier.rotate(if (open) 180f else 0f))
             }
             Box(Modifier.height(34.dp).clip(CircleShape).background(pillBg).padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
-                Text(c.reminder, color = ink, fontFamily = sans, fontWeight = FontWeight.SemiBold, fontSize = 12.5.sp, maxLines = 1)
+                Text(c.reminder, color = ink, fontFamily = sans, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.footnote.fontSize, maxLines = 1)
             }
         }
         AnimatedVisibility(open, enter = fadeIn() + expandVertically(), exit = fadeOut() + shrinkVertically()) {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text("LEGG I", color = ink.copy(alpha = .55f), fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = 10.sp, letterSpacing = 1.2.sp)
+                Text("LEGG I", color = ink.copy(alpha = .55f), fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.caption.fontSize, letterSpacing = 1.2.sp)
                 c.calendars.forEach { x ->
                     Cal70Row(x, x.id == c.calId, ink, green, pillBg, sans, !busy) {
                         if (x.id == c.calId) { open = false; return@Cal70Row }
@@ -149,14 +152,14 @@ internal fun Cal70Card(vm: AppViewModel, json: JSONObject, inBubble: Boolean) {
                 }
             }
         }
-        if (err.isNotBlank()) Text(err, color = Color(0xFFFFC2B6), fontFamily = sans, fontWeight = FontWeight.SemiBold, fontSize = 12.5.sp)
-        else if (note.isNotBlank()) Text(note, color = green, fontFamily = sans, fontWeight = FontWeight.SemiBold, fontSize = 12.5.sp)
+        if (err.isNotBlank()) Text(err, color = DsPalette.PapirMork.danger, fontFamily = sans, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.footnote.fontSize)
+        else if (note.isNotBlank()) Text(note, color = green, fontFamily = sans, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.footnote.fontSize)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Box(
                 Modifier.weight(1f).height(40.dp).clip(CircleShape).background(ink).press24 { Haptics.tap(); vm.openKal26(c.eventId) }
                     .semantics { role = Role.Button },
                 contentAlignment = Alignment.Center,
-            ) { Text("Åpne i Kalender", color = Color(0xFF1B1A17), fontFamily = sans, fontWeight = FontWeight.Bold, fontSize = 13.5.sp, maxLines = 1) }
+            ) { Text("Åpne i Kalender", color = DsPalette.PapirLys.textPrimary, fontFamily = sans, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize, maxLines = 1) }
             if (left > 0) Row(
                 Modifier.height(40.dp).clip(CircleShape).background(pillBg)
                     .press24(!busy) {
@@ -167,8 +170,8 @@ internal fun Cal70Card(vm: AppViewModel, json: JSONObject, inBubble: Boolean) {
                     .padding(horizontal = 16.dp),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
-                Text("Angre", color = ink, fontFamily = sans, fontWeight = FontWeight.Bold, fontSize = 13.5.sp)
-                Text(left.toString(), color = ink.copy(alpha = .65f), fontFamily = PaperFonts.mono, fontSize = 11.sp)
+                Text("Angre", color = ink, fontFamily = sans, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize)
+                Text(left.toString(), color = ink.copy(alpha = .65f), fontFamily = PaperFonts.mono, fontSize = HomelabType.caption.fontSize)
             }
         }
     }
@@ -183,14 +186,14 @@ private fun Cal70Row(x: Cal70Cal, on: Boolean, ink: Color, green: Color, onBg: C
     ) {
         Box(Modifier.size(11.dp).clip(CircleShape).background(hex70(x.color)))
         Column(Modifier.weight(1f)) {
-            Text(x.name, color = ink, fontFamily = font, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
-            if (x.sub.isNotBlank()) Text(x.sub, color = ink.copy(alpha = .6f), fontFamily = font, fontWeight = FontWeight.Medium, fontSize = 11.5.sp)
+            Text(x.name, color = ink, fontFamily = font, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize)
+            if (x.sub.isNotBlank()) Text(x.sub, color = ink.copy(alpha = .6f), fontFamily = font, fontWeight = FontWeight.Medium, fontSize = HomelabType.caption.fontSize)
         }
-        Text(if (on) "✓" else "", color = green, fontFamily = font, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+        Text(if (on) "✓" else "", color = green, fontFamily = font, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize)
     }
 }
 
-internal fun hex70(s: String): Color = s.removePrefix("#").takeIf { it.length == 6 }?.toLongOrNull(16)?.let { Color(0xFF000000 or it) } ?: Color(0xFF7A7468)
+internal fun hex70(s: String): Color = s.removePrefix("#").takeIf { it.length == 6 }?.toLongOrNull(16)?.let { Color(0xFF000000 or it) } ?: DsPalette.Category.neutral
 
 /**
  * Valgknappene med «Velg dato»: datovelgeren vises i kortet (‹ dag › og ±1 uke), og datoen sendes som ny tekst (uten choice),
@@ -199,7 +202,7 @@ internal fun hex70(s: String): Color = s.removePrefix("#").takeIf { it.length ==
 @Composable
 internal fun Cal70Choices(ch: Choices67, fg: Color, bg: Color, line: Color, font: FontFamily, onPick: (ChoiceItem67) -> Unit, onDate: (String) -> Unit) {
     var dateFor by remember(ch) { mutableStateOf("") }
-    var day by remember(ch) { mutableStateOf(LocalDate.now()) }
+    var day by remember(ch) { mutableStateOf(OsloDato.iDag()) }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Choices67Row(ch, fg, bg, line, font) { if (it.text.contains("{dato}")) dateFor = it.text else onPick(it) }
         if (dateFor.isNotBlank()) Cal70DateRow(day, fg, bg, line, font, { day = it }) { onDate(Cal70.fill(dateFor, day)) }
@@ -208,19 +211,19 @@ internal fun Cal70Choices(ch: Choices67, fg: Color, bg: Color, line: Color, font
 
 @Composable
 private fun Cal70DateRow(day: LocalDate, fg: Color, bg: Color, line: Color, font: FontFamily, set: (LocalDate) -> Unit, done: () -> Unit) {
-    val today = LocalDate.now()
+    val today = OsloDato.iDag()
     val wd = listOf("man", "tir", "ons", "tor", "fre", "lør", "søn")[day.dayOfWeek.value - 1]
     val mn = listOf("jan", "feb", "mar", "apr", "mai", "jun", "jul", "aug", "sep", "okt", "nov", "des")[day.monthValue - 1]
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         listOf("«" to -7L, "‹" to -1L).forEach { (t, d) -> Step70(t, fg, line, font, day.plusDays(d) >= today) { set(day.plusDays(d)) } }
-        Text("$wd ${day.dayOfMonth}. $mn${if (day.year != today.year) " ${day.year}" else ""}", color = fg, fontFamily = font, fontWeight = FontWeight.Bold, fontSize = 13.5.sp,
+        Text("$wd ${day.dayOfMonth}. $mn${if (day.year != today.year) " ${day.year}" else ""}", color = fg, fontFamily = font, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize,
             modifier = Modifier.semantics { contentDescription = "Valgt dato" })
         listOf("›" to 1L, "»" to 7L).forEach { (t, d) -> Step70(t, fg, line, font, true) { set(day.plusDays(d)) } }
         Box(
             Modifier.height(36.dp).clip(CircleShape).background(bg).border(1.dp, line, CircleShape).press24 { Haptics.select(); done() }
                 .semantics { role = Role.Button }.padding(horizontal = 14.dp),
             contentAlignment = Alignment.Center,
-        ) { Text("Legg inn", color = fg, fontFamily = font, fontWeight = FontWeight.Bold, fontSize = 13.sp) }
+        ) { Text("Legg inn", color = fg, fontFamily = font, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize) }
     }
 }
 
@@ -230,5 +233,5 @@ private fun Step70(t: String, fg: Color, line: Color, font: FontFamily, enabled:
         Modifier.size(36.dp).clip(CircleShape).border(1.dp, line, CircleShape).press24(enabled) { Haptics.select(); onClick() }
             .semantics { role = Role.Button; contentDescription = when (t) { "«" -> "En uke tilbake"; "‹" -> "En dag tilbake"; "›" -> "En dag fram"; else -> "En uke fram" } },
         contentAlignment = Alignment.Center,
-    ) { Text(t, color = if (enabled) fg else fg.copy(alpha = .35f), fontFamily = font, fontWeight = FontWeight.Bold, fontSize = 15.sp) }
+    ) { Text(t, color = if (enabled) fg else fg.copy(alpha = .35f), fontFamily = font, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize) }
 }

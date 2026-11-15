@@ -1,5 +1,6 @@
 package no.kristo.finanshub.ui
 
+import no.kristo.finanshub.ui.designsystem.HomelabType
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -40,6 +41,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import no.kristo.finanshub.*
+import no.kristo.finanshub.ui.designsystem.HomelabTheme
+import no.kristo.finanshub.ui.designsystem.DsPalette
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.Icon
+import androidx.compose.material3.minimumInteractiveComponentSize
 
 /*
  * Prompt 29 (ANDROID29): Nå/Neste-kortet i Kalender, arket «Legg til time» (✦ AI · RASK TIME), pillen
@@ -55,12 +62,12 @@ private const val K29_PASTE = "M9 4h6v3H9zM7 5H5v16h14V5h-2"
 /** Lyst Papir-kort: ikonflis i fagets farge, NÅ/NESTE + tid, tittel + rom, stort tall til høyre og fremdriftslinje når det pågår. */
 @Composable
 internal fun K29NowCard(vm: AppViewModel, nx: KalNow29) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val c = Color(nx.color)
     Box(
         Modifier.padding(start = 12.dp, end = 12.dp, bottom = 10.dp).fillMaxWidth()
             .shadow(10.dp, RoundedCornerShape(18.dp), ambientColor = Color.Black.copy(alpha = .3f), spotColor = Color.Black.copy(alpha = .3f))
-            .clip(RoundedCornerShape(18.dp)).background(p.card).border(1.dp, p.line, RoundedCornerShape(18.dp))
+            .clip(RoundedCornerShape(18.dp)).background(p.surfaceRaised).border(1.dp, p.line, RoundedCornerShape(18.dp))
             .press24 { nx.ev?.let { vm.kal26.sel = it; vm.kal26.mini = false } }
             .semantics { contentDescription = listOf(nx.k, nx.title, nx.tm, nx.day, nx.big, nx.small).filter { it.isNotBlank() }.joinToString(", ") },
     ) {
@@ -68,26 +75,26 @@ internal fun K29NowCard(vm: AppViewModel, nx: KalNow29) {
             Modifier.fillMaxWidth().heightIn(min = 60.dp).padding(start = 12.dp, top = 10.dp, end = 18.dp, bottom = 12.dp),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            Box(Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(lerp(p.card, c, .16f)), contentAlignment = Alignment.Center) {
+            Box(Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(lerp(p.surfaceRaised, c, .16f)), contentAlignment = Alignment.Center) {
                 WxIcon(K29_CLOCK, c, 20.dp, stroke = 2f)
             }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    if (nx.k.isNotEmpty()) Text(nx.k, color = p.lab, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = 10.5.sp, letterSpacing = 1.3.sp, maxLines = 1)
-                    Text(listOf(nx.tm, nx.day).filter { it.isNotBlank() }.joinToString(" · "), color = p.mut, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold,
-                        fontSize = 10.5.sp, letterSpacing = .4.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    if (nx.k.isNotEmpty()) Text(nx.k, color = p.accent, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.caption.fontSize, letterSpacing = 1.3.sp, maxLines = 1)
+                    Text(listOf(nx.tm, nx.day).filter { it.isNotBlank() }.joinToString(" · "), color = p.textSecondary, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold,
+                        fontSize = HomelabType.caption.fontSize, letterSpacing = .4.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    PSerif(nx.title, 20.sp, maxLines = 1, modifier = Modifier.weight(1f, fill = false))
+                    PSerif(nx.title, HomelabType.headline.fontSize, maxLines = 1, modifier = Modifier.weight(1f, fill = false))
                     // Prompt 31: stedspillen kan aldri gjøre kortet bredere (maks ~45 %, ellipse; URL-er er fjernet).
-                    if (nx.place.isNotEmpty()) Box(Modifier.weight(.8f, fill = false).clip(CircleShape).background(p.bg).padding(horizontal = 8.dp, vertical = 2.dp)) {
-                        Text(nx.place, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    if (nx.place.isNotEmpty()) Box(Modifier.weight(.8f, fill = false).clip(CircleShape).background(p.surface).padding(horizontal = 8.dp, vertical = 2.dp)) {
+                        Text(nx.place, color = p.textPrimary, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.footnote.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                 }
             }
             if (nx.big.isNotEmpty()) Column(horizontalAlignment = Alignment.End) {
-                PSerif(nx.big, 24.sp, maxLines = 1)
-                Text(nx.small, color = p.mut, fontSize = 11.5.sp, maxLines = 1, modifier = Modifier.padding(top = 3.dp))
+                PSerif(nx.big, HomelabType.title3.fontSize, maxLines = 1)
+                Text(nx.small, color = p.textSecondary, fontSize = HomelabType.caption.fontSize, maxLines = 1, modifier = Modifier.padding(top = 3.dp))
             }
         }
         nx.progress?.let { f ->
@@ -121,22 +128,22 @@ internal fun Quick29Overlay(vm: AppViewModel) {
 
 @Composable
 private fun Quick29Toast(vm: AppViewModel, j: Quick29Job) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     Row(
-        Modifier.widthIn(max = 440.dp).fillMaxWidth().shadow(18.dp, RoundedCornerShape(18.dp)).clip(RoundedCornerShape(18.dp)).background(p.ink)
+        Modifier.widthIn(max = 440.dp).fillMaxWidth().shadow(18.dp, RoundedCornerShape(18.dp)).clip(RoundedCornerShape(18.dp)).background(p.textPrimary)
             .padding(start = 14.dp, top = 10.dp, end = 10.dp, bottom = 10.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
-            Text("✓ " + j.title.ifBlank { "Lagt i kalenderen" }, color = p.bg, fontWeight = FontWeight.Bold, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            if (j.label.isNotBlank()) Text(j.label, color = p.bg.copy(alpha = .8f), fontSize = 12.5.sp, maxLines = 1)
-            if (j.start.isNullOrBlank() && j.date != null) Text("Fant ikke klokkeslett, lagt inn som hele dagen.", color = p.bg.copy(alpha = .8f), fontSize = 12.sp, maxLines = 2)
+            Text("✓ " + j.title.ifBlank { "Lagt i kalenderen" }, color = p.surface, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            if (j.label.isNotBlank()) Text(j.label, color = p.surface.copy(alpha = .8f), fontSize = HomelabType.footnote.fontSize, maxLines = 1)
+            if (j.start.isNullOrBlank() && j.date != null) Text("Fant ikke klokkeslett, lagt inn som hele dagen.", color = p.surface.copy(alpha = .8f), fontSize = HomelabType.footnote.fontSize, maxLines = 2)
         }
         Box(Modifier.height(34.dp).clip(CircleShape).press24 { vm.undoQuick29() }.padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
-            Text("Angre", color = p.bg, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+            Text("Angre", color = p.surface, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize)
         }
-        Box(Modifier.height(34.dp).clip(CircleShape).background(p.bg).press24 { vm.showQuick29() }.padding(horizontal = 14.dp), contentAlignment = Alignment.Center) {
-            Text("Vis", color = p.ink, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+        Box(Modifier.height(34.dp).clip(CircleShape).background(p.surface).press24 { vm.showQuick29() }.padding(horizontal = 14.dp), contentAlignment = Alignment.Center) {
+            Text("Vis", color = p.textPrimary, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize)
         }
     }
 }
@@ -146,7 +153,7 @@ private fun Quick29Toast(vm: AppViewModel, j: Quick29Job) {
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun Quick29Sheet(vm: AppViewModel) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val q = vm.q29
     val clip = LocalClipboardManager.current
     val focus = remember { FocusRequester() }
@@ -163,47 +170,47 @@ private fun Quick29Sheet(vm: AppViewModel) {
         Column(
             Modifier.align(if (wide) Alignment.Center else Alignment.BottomCenter).then(if (wide) Modifier.widthIn(max = 480.dp) else Modifier).fillMaxWidth()
                 .fillMaxHeight(.9f).wrapContentHeight(if (wide) Alignment.CenterVertically else Alignment.Bottom).imePadding()
-                .clip(shape).background(p.bg).clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {}
+                .clip(shape).background(p.surface).clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {}
                 .verticalScroll(rememberScrollState()).padding(start = 16.dp, top = 8.dp, end = 16.dp, bottom = if (wide) 22.dp else navB + 12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Box(Modifier.align(Alignment.CenterHorizontally).size(36.dp, 5.dp).clip(RoundedCornerShape(3.dp)).background(p.line))
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text("✦ AI · RASK TIME", color = p.lab, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = 10.5.sp, letterSpacing = 1.3.sp, maxLines = 1)
-                    PSerif("Legg til time", 24.sp, maxLines = 1)
+                    Text("✦ AI · RASK TIME", color = p.accent, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.caption.fontSize, letterSpacing = 1.3.sp, maxLines = 1)
+                    PSerif("Legg til time", HomelabType.title3.fontSize, maxLines = 1)
                 }
-                Box(Modifier.size(36.dp).clip(CircleShape).background(p.card).press24 { vm.closeQuick29() }.semantics { contentDescription = "Lukk" }, contentAlignment = Alignment.Center) {
-                    Text("✕", color = p.ink, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                Box(Modifier.minimumInteractiveComponentSize().size(36.dp).clip(CircleShape).background(p.surfaceRaised).press24 { vm.closeQuick29() }.semantics { contentDescription = "Lukk" }, contentAlignment = Alignment.Center) {
+                    Icon(Icons.Filled.Close, contentDescription = null, tint = p.textPrimary, modifier = Modifier.size(18.dp))
                 }
             }
             Box(
-                Modifier.fillMaxWidth().heightIn(min = 96.dp).clip(RoundedCornerShape(16.dp)).border(1.dp, p.line, RoundedCornerShape(16.dp)).background(p.card)
+                Modifier.fillMaxWidth().heightIn(min = 96.dp).clip(RoundedCornerShape(16.dp)).border(1.dp, p.line, RoundedCornerShape(16.dp)).background(p.surfaceRaised)
                     .padding(horizontal = 16.dp, vertical = 14.dp),
             ) {
-                if (q.text.isEmpty()) Text("F.eks. «time hos Nina frisør 14.30 25.09» eller lim inn meldingen fra legekontoret", color = p.mut, fontSize = 16.sp, lineHeight = 23.sp)
+                if (q.text.isEmpty()) Text("F.eks. «time hos Nina frisør 14.30 25.09» eller lim inn meldingen fra legekontoret", color = p.textSecondary, fontSize = HomelabType.body.fontSize, lineHeight = 23.sp)
                 BasicTextField(
                     q.text, { vm.setQuickText29(it) }, minLines = 3,
-                    textStyle = TextStyle(color = p.ink, fontSize = 16.sp, lineHeight = 23.sp, fontWeight = FontWeight.Medium, fontFamily = PaperFonts.sans),
-                    cursorBrush = SolidColor(p.ink), keyboardOptions = KeyboardOptions(imeAction = ImeAction.Default),
+                    textStyle = TextStyle(color = p.textPrimary, fontSize = HomelabType.body.fontSize, lineHeight = 23.sp, fontWeight = FontWeight.Medium, fontFamily = PaperFonts.sans),
+                    cursorBrush = SolidColor(p.textPrimary), keyboardOptions = KeyboardOptions(imeAction = ImeAction.Default),
                     modifier = Modifier.fillMaxWidth().focusRequester(focus),
                 )
             }
             FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Row(
-                    Modifier.height(34.dp).clip(CircleShape).background(p.ink).press24 {
+                    Modifier.height(34.dp).clip(CircleShape).background(p.textPrimary).press24 {
                         val v = runCatching { clip.getText()?.text }.getOrNull()
                         if (!v.isNullOrBlank()) vm.setQuickText29(v) else vm.flash("Utklippstavlen er tom")
                     }.padding(horizontal = 12.dp),
                     verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
-                    WxIcon(K29_PASTE, p.bg, 13.dp, stroke = 2.2f)
-                    Text("Lim inn melding", color = p.bg, fontWeight = FontWeight.Bold, fontSize = 12.5.sp, maxLines = 1)
+                    WxIcon(K29_PASTE, p.surface, 13.dp, stroke = 2.2f)
+                    Text("Lim inn melding", color = p.surface, fontWeight = FontWeight.Bold, fontSize = HomelabType.footnote.fontSize, maxLines = 1)
                 }
                 listOf("Frisør", "Lege", "Tannlege", "Fysio").forEach { n ->
                     Box(Modifier.height(34.dp).clip(CircleShape).border(1.dp, p.line, CircleShape).press24 { vm.setQuickText29("Time hos ${n.lowercase()} ") }.padding(horizontal = 12.dp),
                         contentAlignment = Alignment.Center) {
-                        Text(n, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 12.5.sp, maxLines = 1)
+                        Text(n, color = p.textPrimary, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.footnote.fontSize, maxLines = 1)
                     }
                 }
             }
@@ -211,35 +218,35 @@ private fun Quick29Sheet(vm: AppViewModel) {
             if (pv != null && pv.ok) Quick29Preview(pv)
             if (pv != null && !pv.ok) Text(
                 if (pv.why.contains("Skriv")) pv.why else pv.why.ifBlank { "Fant ikke dato." } + " Skriv f.eks. «25.09» eller «tirsdag».",
-                color = p.lab, fontSize = 13.sp, modifier = Modifier.padding(horizontal = 4.dp),
+                color = p.accent, fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.padding(horizontal = 4.dp),
             )
             val can = q.text.isNotBlank()
             Box(
-                Modifier.fillMaxWidth().heightIn(min = 52.dp).clip(RoundedCornerShape(16.dp)).background(p.lab).alpha(if (can) 1f else .45f)
+                Modifier.fillMaxWidth().heightIn(min = 52.dp).clip(RoundedCornerShape(16.dp)).background(p.accent).alpha(if (can) 1f else .45f)
                     .press24(enabled = can) { vm.submitQuick29() },
                 contentAlignment = Alignment.Center,
-            ) { Text("Legg til i kalenderen", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp) }
+            ) { Text("Legg til i kalenderen", color = Color.White, fontWeight = FontWeight.Bold, fontSize = HomelabType.body.fontSize) }
             Box(Modifier.fillMaxWidth().heightIn(min = 44.dp).clip(RoundedCornerShape(14.dp)).press24 { vm.quickManual29() }, contentAlignment = Alignment.Center) {
-                Text("Fyll ut selv", color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                Text("Fyll ut selv", color = p.textPrimary, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize)
             }
-            Text("Du kan lukke appen. Timen legges til i bakgrunnen.", color = p.mut, fontSize = 12.sp, lineHeight = 17.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+            Text("Du kan lukke appen. Timen legges til i bakgrunnen.", color = p.textSecondary, fontSize = HomelabType.footnote.fontSize, lineHeight = 17.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
         }
     }
 }
 
 @Composable
 private fun Quick29Preview(r: Quick29Parse) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     Row(
-        Modifier.fillMaxWidth().height(IntrinsicSize.Min).clip(RoundedCornerShape(16.dp)).background(p.card).padding(horizontal = 14.dp, vertical = 12.dp),
+        Modifier.fillMaxWidth().height(IntrinsicSize.Min).clip(RoundedCornerShape(16.dp)).background(p.surfaceRaised).padding(horizontal = 14.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Box(Modifier.width(4.dp).fillMaxHeight().clip(RoundedCornerShape(2.dp)).background(Color(0xFF6B4FA0)))
+        Box(Modifier.width(4.dp).fillMaxHeight().clip(RoundedCornerShape(2.dp)).background(DsPalette.Category.purple))
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(r.title.ifBlank { "Avtale" }, color = p.ink, fontWeight = FontWeight.Bold, fontSize = 15.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
-            Text(quickPreviewDate29(r), color = p.mut, fontSize = 13.sp, maxLines = 1)
-            if (r.place.isNotBlank()) Text(r.place, color = p.mut, fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
-            Text("Privat · varsel 1 time før", color = p.mut, fontSize = 12.sp)
+            Text(r.title.ifBlank { "Avtale" }, color = p.textPrimary, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Text(quickPreviewDate29(r), color = p.textSecondary, fontSize = HomelabType.subheadline.fontSize, maxLines = 1)
+            if (r.place.isNotBlank()) Text(r.place, color = p.textSecondary, fontSize = HomelabType.subheadline.fontSize, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Text("Privat · varsel 1 time før", color = p.textSecondary, fontSize = HomelabType.footnote.fontSize)
         }
     }
 }
