@@ -100,7 +100,7 @@ test('Vær for sted: extractPlace, GET /api/weather/place (200/404 med forslag) 
   assert.equal((await A('/api/weather/place?q=Bergen')).body.place.label, 'Bergen');
   const nf = await A('/api/weather/place?q=Nwe%20Yrok');
   assert.equal(nf.status, 404);
-  assert.deepEqual(nf.body, { error: 'Fant ikke stedet «Nwe Yrok». Prøv en annen stavemåte.', suggest: 'New York' });
+  assert.deepEqual(nf.body, { error: 'Fant ikke stedet «Nwe Yrok». Prøv en annen stavemåte.', suggest: 'New York', code: 'NOT_FOUND' }); // code: felles feilform (server/http/errors.js)
   assert.equal((await A('/api/weather/place')).status, 400);
   assert.equal((await N('/api/weather/place?q=Oslo')).status, 401);
   const a = await A('/api/assist', 'POST', { q: 'været i new york' });

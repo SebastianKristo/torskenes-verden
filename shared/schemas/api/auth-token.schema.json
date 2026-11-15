@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "api/auth-token.schema.json",
+  "title": "App-innlogging",
+  "description": "POST /finans/api/login og /finans/api/auth/token {username, password, code?, deviceName?}. Tokenet har 180 dager glidende utløp (Q23): hver bruk flytter expires fram. Utløpt → 401 TOKEN_EXPIRED.",
+  "x-endpoint": "POST /finans/api/login",
+  "type": "object",
+  "required": [
+    "token",
+    "scopes",
+    "user",
+    "expires",
+    "expiresAt"
+  ],
+  "properties": {
+    "token": {
+      "type": "string",
+      "pattern": "^fh_[A-Za-z0-9_-]{20,}$"
+    },
+    "scopes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1
+    },
+    "user": {
+      "type": "object",
+      "required": [
+        "id",
+        "username",
+        "role"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "../common/types.schema.json#/$defs/userId"
+        },
+        "username": {
+          "type": "string"
+        },
+        "role": {
+          "type": "string"
+        },
+        "name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "expires": {
+      "$ref": "../common/types.schema.json#/$defs/epochMs"
+    },
+    "expiresAt": {
+      "$ref": "../common/types.schema.json#/$defs/timestamp"
+    },
+    "sliding": {
+      "type": "boolean"
+    }
+  }
+}

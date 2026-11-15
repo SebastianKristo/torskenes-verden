@@ -87,6 +87,10 @@ import { mountSec51 } from './sec51.js'; // prompt 51 (SEC51): sikkerhet
 import { mountFamily50 } from './family50.js'; // prompt 50 (SRVFAM50): Steder med områder, Folk, Helse, I dag, Sjekk inn
 import { traceObs51, mountObs51, startObs51 } from './obs51/index.js'; // prompt 51 (OBS51): helsedashbord, selvreparasjon, spor, ntfy
 import { mountQa51, startQa51, reportServerError51 } from './qa51.js'; // prompt 51 (QA51): feature flags, krasjrapporter (GlitchTip), «Nytt i denne versjonen»
+import { errorShape, API_PREFIXES, serverError } from './http/errors.js'; // felles feilform {error, code} for /api og /finans/api
+import { tokenStateOf } from './finans/routes.js';
+import { aliasCounter } from './http/aliases.js';
+import { startJobs, listJobs, jobsStarted } from './jobs/index.js'; // én planlegger for bakgrunnsjobber med sideeffekter (ikke i test/sandkasse) // Q29: eldre API-aliaser samlet i én tabell, bruken telles
 import { badInput85 } from './badinput85.js'; // prompt 85 (SRVSEC85): feil i kroppen fra klienten → 400, ikke 500
 import { anonBodyCap85 } from './anonbody85.js'; // prompt 85 (SRVSEC85): store kropper bare fra innloggede klienter
 import { mountMedfam51, startMedfam51 } from './medfam51/index.js'; // prompt 51 (MEDFAM51): familiekalender med «hvem kjører?», «I kveld», undertekster, lagring, lydbøker
@@ -125,6 +129,12 @@ const app = new Hono();
 // ISO2: hver forespørsel kjører med sin egen brukerkontekst, så cfg() gir den innloggedes personlige integrasjoner.
 app.use('*', (c, next) => runRequest(c, next));
 traceObs51(app); // prompt 51 (OBS51): spor for trege forespørsler (DB, AI, eksterne kall) – før alle ruter
+// Felles feilform: alle feilsvar fra /api og /finans/api blir JSON {error, code} (også ukjent sti og 500). Før alle ruter,
+// så den ser det endelige svaret. Se server/http/errors.js og shared/schemas/common/error.schema.json.
+for (const p of API_PREFIXES) app.use(p, errorShape({ tokenState: tokenStateOf }));
+// Q29: hver bruk av et eldre alias (tabellen i server/http/aliases.js) telles i kv, admin ser det på GET /api/admin/aliases.
+const aliases = aliasCounter({ kv, owner: OWNER });
+for (const p of ['/api/*', '/finans/api/*', '/mat/api/*', '/home/api/*']) app.use(p, aliases.middleware);
 // Prompt 36: «Starter opp»-siden. Registrert før secureHeaders: siden er én fil med innebygd skript/stil, så den får sin
 // egen strenge CSP (ingen eksterne skript, bare fonten fra Google Fonts, fetch bare til samme opphav).
 app.get('/starting.html', async (c) => c.body(await readFile(join(resolve('public'), 'starting.html'), 'utf8'), 200, {
@@ -933,6 +943,8 @@ app.route('/api', api36); // prompt 36: /dashboard/layout og /weather/places/sum
 app.route('/api/bible', bibleApi); // prompt 37: dagens bibelvers (bare med modulen)
 app.route('/api', profilesApi); // prompt 37: profiler og onboarding
 app.route('/api', study44Api); // prompt 44: /study/documents, /study/overview
+app.get('/api/admin/jobs', authOrToken, (c) => (isAdmin(c.get('user')) ? c.json({ started: jobsStarted(), jobs: listJobs() }) : c.json({ error: 'Bare administratorer har tilgang', restricted: true }, 403))); // bakgrunnsjobbene (server/jobs/)
+app.get('/api/admin/aliases', authOrToken, (c) => (isAdmin(c.get('user')) ? c.json({ aliases: aliases.usage() }) : c.json({ error: 'Bare administratorer har tilgang', restricted: true }, 403))); // Q29
 app.route('/api', admin44Api); // prompt 44: /admin/impersonate, /users/:id/layout, /server/owner
 app.use('/api/me/layout', layoutLockMw44); // prompt 44: låst oppsett
 setMobileApi44(mobileApi);
@@ -948,6 +960,7 @@ const BG51 = process.env.NODE_ENV !== 'test' && process.env.OPS51_SANDBOX !== '1
 migrateLocalHosts86().catch((e) => console.warn('[localfetch]', e.message)); // prompt 86: én gang – lokale verter i administratorenes abonnementer godkjennes
 if (BG51) { startMatScheduler(); startTrackingWorker(); startRssWorker(); startBirthdayWorker(); startSystemBackupScheduler(); startUpdateScheduler(); startTrialScheduler(); startDomainGlimtScheduler(); startSpaceScheduler(); startApi38(); startApi40(); startHealth42(); startMediaWatch43(); startMedia50(); startLogs44(); startPlayback44(); startLive89(); }
 if (BG51) { startAccounts46(); startGphoto46(); } // prompt 46 (DATA46)
+if (BG51) startJobs(); // felles planlegger (server/jobs/): backup, brief, iCal, skolekalendere, Sjekk inn, «forlot»
 if (process.env.NODE_ENV !== 'test') startOps51(); // prompt 51 (OPS51): planlegger (backup, testet gjenoppretting, vedlikehold) og migrasjonslogg
 if (process.env.OPS51_SANDBOX !== '1') startObs51(); // prompt 51 (OBS51): samples, driftsvarsler og selvreparasjon (ikke i test)
 if (BG51) startTax51(); // prompt 51 (FIN51): påminnelse om skattemeldingen (15. mars og 20. april, én gang per år)
@@ -962,7 +975,7 @@ app.onError(async (err, c) => {
   if (bad) return bad;
   console.error(err);
   reportServerError51(err, c); // prompt 51 (QA51): lagres lokalt og videresendes til GlitchTip når den finnes
-  return c.json({ error: 'Intern feil' }, 500);
+  return serverError(c); // {error:'Intern feil', code:'INTERNAL_ERROR'} – aldri stack eller detaljer
 });
 
 // Prompt 25: HTTP-serveren skal aldri kutte et langt AI-kall (Ollama kan bruke 60–120 s, og flere motorer etter hverandre mer).

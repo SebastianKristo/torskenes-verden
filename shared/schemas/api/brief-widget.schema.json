@@ -1,0 +1,98 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "api/brief-widget.schema.json",
+  "title": "Brief-widget",
+  "description": "Den korte briefen til widgetene. refreshAt = når widgeten bør hente på nytt.",
+  "x-endpoint": "GET /api/brief/widget",
+  "type": "object",
+  "required": [
+    "kind",
+    "title",
+    "summary",
+    "generatedAt"
+  ],
+  "properties": {
+    "kind": {
+      "type": "string"
+    },
+    "size": {
+      "type": "string"
+    },
+    "title": {
+      "type": "string"
+    },
+    "summary": {
+      "type": "string"
+    },
+    "temp": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "hi": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "lo": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "next": {
+      "anyOf": [
+        {
+          "type": "object",
+          "required": [
+            "title"
+          ],
+          "properties": {
+            "title": {
+              "type": "string"
+            },
+            "time": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            }
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "deepLink": {
+      "type": "string"
+    },
+    "generatedAt": {
+      "$ref": "../common/types.schema.json#/$defs/timestamp"
+    },
+    "refreshAt": {
+      "anyOf": [
+        {
+          "$ref": "../common/types.schema.json#/$defs/timestamp"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  }
+}

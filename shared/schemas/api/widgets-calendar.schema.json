@@ -1,0 +1,274 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "api/widgets-calendar.schema.json",
+  "title": "Kalender-widget",
+  "description": "Widgetene (iOS, Android, Mac). Serveren lager tekstene; widgeten viser dem. refreshAt er tidspunktene widgeten bør hente på nytt.",
+  "x-endpoint": "GET /api/widgets/calendar",
+  "type": "object",
+  "required": [
+    "kind",
+    "today",
+    "updatedAt"
+  ],
+  "properties": {
+    "kind": {
+      "type": "string"
+    },
+    "today": {
+      "type": "object",
+      "required": [
+        "date",
+        "events"
+      ],
+      "properties": {
+        "date": {
+          "$ref": "../common/types.schema.json#/$defs/date"
+        },
+        "label": {
+          "type": "string"
+        },
+        "count": {
+          "type": "integer"
+        },
+        "events": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "title",
+              "date",
+              "allDay"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "title": {
+                "type": "string"
+              },
+              "date": {
+                "$ref": "../common/types.schema.json#/$defs/date"
+              },
+              "start": {
+                "anyOf": [
+                  {
+                    "anyOf": [
+                      {
+                        "$ref": "../common/types.schema.json#/$defs/timestamp"
+                      },
+                      {
+                        "$ref": "../common/types.schema.json#/$defs/date"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "end": {
+                "anyOf": [
+                  {
+                    "anyOf": [
+                      {
+                        "$ref": "../common/types.schema.json#/$defs/timestamp"
+                      },
+                      {
+                        "$ref": "../common/types.schema.json#/$defs/date"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "allDay": {
+                "type": "boolean"
+              },
+              "time": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "nextSchoolDay": {
+      "anyOf": [
+        {
+          "type": "object",
+          "required": [
+            "date",
+            "events"
+          ],
+          "properties": {
+            "date": {
+              "$ref": "../common/types.schema.json#/$defs/date"
+            },
+            "label": {
+              "type": "string"
+            },
+            "count": {
+              "type": "integer"
+            },
+            "events": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "id",
+                  "title",
+                  "date",
+                  "allDay"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "title": {
+                    "type": "string"
+                  },
+                  "date": {
+                    "$ref": "../common/types.schema.json#/$defs/date"
+                  },
+                  "start": {
+                    "anyOf": [
+                      {
+                        "anyOf": [
+                          {
+                            "$ref": "../common/types.schema.json#/$defs/timestamp"
+                          },
+                          {
+                            "$ref": "../common/types.schema.json#/$defs/date"
+                          }
+                        ]
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "end": {
+                    "anyOf": [
+                      {
+                        "anyOf": [
+                          {
+                            "$ref": "../common/types.schema.json#/$defs/timestamp"
+                          },
+                          {
+                            "$ref": "../common/types.schema.json#/$defs/date"
+                          }
+                        ]
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "allDay": {
+                    "type": "boolean"
+                  },
+                  "time": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "next3": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "date",
+          "allDay"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "date": {
+            "$ref": "../common/types.schema.json#/$defs/date"
+          },
+          "start": {
+            "anyOf": [
+              {
+                "anyOf": [
+                  {
+                    "$ref": "../common/types.schema.json#/$defs/timestamp"
+                  },
+                  {
+                    "$ref": "../common/types.schema.json#/$defs/date"
+                  }
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "end": {
+            "anyOf": [
+              {
+                "anyOf": [
+                  {
+                    "$ref": "../common/types.schema.json#/$defs/timestamp"
+                  },
+                  {
+                    "$ref": "../common/types.schema.json#/$defs/date"
+                  }
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "allDay": {
+            "type": "boolean"
+          },
+          "time": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      }
+    },
+    "configured": {
+      "type": "boolean"
+    },
+    "refreshAt": {
+      "type": "array",
+      "items": {
+        "$ref": "../common/types.schema.json#/$defs/timestamp"
+      }
+    },
+    "updatedAt": {
+      "$ref": "../common/types.schema.json#/$defs/timestamp"
+    },
+    "deepLink": {
+      "type": "string"
+    }
+  }
+}

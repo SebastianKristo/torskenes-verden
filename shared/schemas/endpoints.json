@@ -1,0 +1,97 @@
+{
+  "$comment": "Endepunktene som har skjema. Kontrakttesten (test/kontrakt-schemas.test.js) henter hvert av dem fra testserveren med eksempeldata og validerer svaret. Alle feilsvar følger common/error.schema.json.",
+  "contract": 1,
+  "error": "common/error.schema.json",
+  "endpoints": [
+    {
+      "method": "GET",
+      "path": "/api/version",
+      "schema": "api/version.schema.json",
+      "auth": "none"
+    },
+    {
+      "method": "GET",
+      "path": "/api/me",
+      "schema": "api/me.schema.json",
+      "auth": "session|token"
+    },
+    {
+      "method": "POST",
+      "path": "/finans/api/login",
+      "schema": "api/auth-token.schema.json",
+      "auth": "none"
+    },
+    {
+      "method": "GET",
+      "path": "/finans/api/tokens",
+      "schema": "api/tokens.schema.json",
+      "auth": "session|token"
+    },
+    {
+      "method": "GET",
+      "path": "/api/mobile/home",
+      "schema": "api/mobile-home.schema.json",
+      "auth": "session|token"
+    },
+    {
+      "method": "GET",
+      "path": "/api/brief",
+      "schema": "api/brief.schema.json",
+      "auth": "session|token"
+    },
+    {
+      "method": "GET",
+      "path": "/api/brief/widget",
+      "schema": "api/brief-widget.schema.json",
+      "auth": "session|token"
+    },
+    {
+      "method": "GET",
+      "path": "/api/kalender",
+      "schema": "api/kalender.schema.json",
+      "auth": "session|token"
+    },
+    {
+      "method": "GET",
+      "path": "/api/widgets/calendar",
+      "schema": "api/widgets-calendar.schema.json",
+      "auth": "session|token"
+    },
+    {
+      "method": "GET",
+      "path": "/api/tasks",
+      "schema": "api/tasks.schema.json",
+      "auth": "session|token"
+    },
+    {
+      "method": "GET",
+      "path": "/finans/api/summary",
+      "schema": "api/finans-summary.schema.json",
+      "auth": "session|token"
+    },
+    {
+      "method": "GET",
+      "path": "/finans/api/transactions",
+      "schema": "api/finans-transactions.schema.json",
+      "auth": "session|token"
+    },
+    {
+      "method": "GET",
+      "path": "/finans/api/subscriptions",
+      "schema": "api/finans-subscriptions.schema.json",
+      "auth": "session|token"
+    },
+    {
+      "method": "GET",
+      "path": "/api/media/status",
+      "schema": "api/media-status.schema.json",
+      "auth": "session|token"
+    },
+    {
+      "method": "GET",
+      "path": "/api/live/aktiviteter",
+      "schema": "api/live-aktiviteter.schema.json",
+      "auth": "session|token"
+    }
+  ]
+}

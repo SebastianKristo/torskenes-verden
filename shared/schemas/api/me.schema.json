@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "api/me.schema.json",
+  "title": "Innlogget bruker",
+  "description": "Sesjon eller app-token. Samme form som me i /api/state.",
+  "x-endpoint": "GET /api/me",
+  "type": "object",
+  "required": [
+    "id",
+    "username",
+    "role",
+    "name"
+  ],
+  "properties": {
+    "id": {
+      "$ref": "../common/types.schema.json#/$defs/userId"
+    },
+    "username": {
+      "type": "string"
+    },
+    "role": {
+      "enum": [
+        "admin",
+        "bruker"
+      ]
+    },
+    "name": {
+      "type": "string"
+    },
+    "displayName": {
+      "type": "string"
+    },
+    "totp": {
+      "type": "boolean"
+    },
+    "isMainAdmin": {
+      "type": "boolean"
+    },
+    "avatarUrl": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "serverName": {
+      "type": "string"
+    },
+    "language": {
+      "type": "string"
+    },
+    "media": {
+      "type": "boolean"
+    },
+    "glimt_char": {
+      "type": "string"
+    },
+    "glimt_char_source": {
+      "enum": [
+        "user",
+        "default",
+        "standard"
+      ]
+    }
+  }
+}

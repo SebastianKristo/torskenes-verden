@@ -1,0 +1,153 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "api/finans-subscriptions.schema.json",
+  "title": "Faste betalinger",
+  "description": "Abonnementer og faste betalinger. Serveren eier nextDate og monthly (CLAUDE.md: logikk på serveren). price er kroner per trekk (eldre form), priceOre det samme i øre.",
+  "x-endpoint": "GET /finans/api/subscriptions",
+  "type": "object",
+  "required": [
+    "items",
+    "monthly",
+    "yearly",
+    "today"
+  ],
+  "properties": {
+    "items": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/subscription"
+      }
+    },
+    "monthly": {
+      "$ref": "../common/types.schema.json#/$defs/kroner"
+    },
+    "yearly": {
+      "$ref": "../common/types.schema.json#/$defs/kroner"
+    },
+    "today": {
+      "$ref": "../common/types.schema.json#/$defs/date"
+    },
+    "month": {
+      "$ref": "../common/types.schema.json#/$defs/month"
+    },
+    "upcoming": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "date",
+          "amount"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "date": {
+            "$ref": "../common/types.schema.json#/$defs/date"
+          },
+          "amount": {
+            "$ref": "../common/types.schema.json#/$defs/kroner"
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "subscription": {
+      "type": "object",
+      "required": [
+        "id",
+        "name",
+        "price",
+        "priceOre",
+        "cycle",
+        "nextDate",
+        "monthly",
+        "active"
+      ],
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        },
+        "plan": {
+          "type": "string"
+        },
+        "price": {
+          "$ref": "../common/types.schema.json#/$defs/kroner"
+        },
+        "priceOre": {
+          "$ref": "../common/types.schema.json#/$defs/ore"
+        },
+        "cycle": {
+          "type": "string"
+        },
+        "nextDate": {
+          "anyOf": [
+            {
+              "$ref": "../common/types.schema.json#/$defs/date"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "monthly": {
+          "$ref": "../common/types.schema.json#/$defs/kroner"
+        },
+        "yearly": {
+          "$ref": "../common/types.schema.json#/$defs/kroner"
+        },
+        "active": {
+          "type": "boolean"
+        },
+        "status": {
+          "type": "string"
+        },
+        "category": {
+          "type": "string"
+        },
+        "domain": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "nextCharge": {
+          "anyOf": [
+            {
+              "type": "object",
+              "required": [
+                "date"
+              ],
+              "properties": {
+                "date": {
+                  "$ref": "../common/types.schema.json#/$defs/date"
+                },
+                "label": {
+                  "type": "string"
+                }
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "mine": {
+          "type": "boolean"
+        },
+        "shared": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}

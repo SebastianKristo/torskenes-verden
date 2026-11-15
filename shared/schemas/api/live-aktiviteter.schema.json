@@ -1,0 +1,107 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "api/live-aktiviteter.schema.json",
+  "title": "Live-aktiviteter",
+  "description": "Live Activities (iOS) og Live Updates (Android): pågående nedlastinger, avganger osv. Serveren lager tekstene.",
+  "x-endpoint": "GET /api/live/aktiviteter",
+  "type": "object",
+  "required": [
+    "aktiviteter",
+    "oppdatert"
+  ],
+  "properties": {
+    "aktiviteter": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "type",
+          "tittel",
+          "status"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "tittel": {
+            "type": "string"
+          },
+          "undertittel": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "verdi": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "progress": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 0,
+            "maximum": 1
+          },
+          "start": {
+            "anyOf": [
+              {
+                "$ref": "../common/types.schema.json#/$defs/timestamp"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "slutt": {
+            "anyOf": [
+              {
+                "$ref": "../common/types.schema.json#/$defs/timestamp"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "type": "string"
+          },
+          "handlinger": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "tittel"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "tittel": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "url": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      }
+    },
+    "oppdatert": {
+      "$ref": "../common/types.schema.json#/$defs/timestamp"
+    }
+  }
+}
