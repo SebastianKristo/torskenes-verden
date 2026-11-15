@@ -372,7 +372,7 @@ struct Tfa40Row: View {
         Button { m.begin(store) } label: {
             HStack(spacing: 12) {
                 Image(systemName: on ? "lock.shield.fill" : "lock.shield").font(.dyn51(size: 18, weight: .medium))
-                    .foregroundStyle(on ? Color(hex: "#2f7a4f") : Color.secondary)
+                    .foregroundStyle(on ? Color.ds(.success) : Color.secondary)
                     .frame(width: 28)
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Totrinnsbekreftelse").font(.dyn51(size: 16, weight: .semibold)).foregroundStyle(Color.primary)
@@ -382,7 +382,7 @@ struct Tfa40Row: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 Text(on ? "Endre ›" : "Sett opp ›").font(.dyn51(size: 14, weight: .semibold))
-                    .foregroundStyle(on ? Color.secondary : Color(hex: "#b23a2a"))
+                    .foregroundStyle(on ? Color.secondary : Color.ds(.danger))
             }
             .padding(.vertical, 12).padding(.horizontal, 14)
             .contentShape(Rectangle())
@@ -430,7 +430,7 @@ struct Tfa40Flow: View {
                     Text(m.sub).font(PF.ui(14.5)).foregroundStyle(p.mut).fixedSize(horizontal: false, vertical: true)
                     stepBody.padding(.top, 6)
                     if !m.err.isEmpty {
-                        Text(m.err).font(PF.ui(13.5, .semibold)).foregroundStyle(Color(hex: "#b23a2a"))
+                        Text(m.err).font(PF.ui(13.5, .semibold)).foregroundStyle(Color.ds(.danger))
                             .fixedSize(horizontal: false, vertical: true)
                     }
                 }
@@ -665,7 +665,7 @@ struct Tfa40CodeStep: View {
                 .frame(height: 64)
                 .background(p.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                 .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .strokeBorder(m.err.isEmpty ? p.line : Color(hex: "#b23a2a"), lineWidth: 1.5))
+                    .strokeBorder(m.err.isEmpty ? p.line : Color.ds(.danger), lineWidth: 1.5))
                 .focused($focused)
                 .accessibilityLabel("Sekssifret kode")
             Tfa40Primary(title: "Bekreft", enabled: m.code.count == 6, busy: m.busy) { m.verify(store) }
@@ -706,8 +706,8 @@ struct Tfa40Codes: View {
                 HStack(spacing: 10) {
                     Text(m.saved ? "✓" : "").font(PF.ui(13, .heavy)).foregroundStyle(Color.white)
                         .frame(width: 24, height: 24)
-                        .background(m.saved ? Color(hex: "#2f7a4f") : Color.clear, in: RoundedRectangle(cornerRadius: 7, style: .continuous))
-                        .overlay(RoundedRectangle(cornerRadius: 7, style: .continuous).strokeBorder(m.saved ? Color(hex: "#2f7a4f") : p.line, lineWidth: 1.5))
+                        .background(m.saved ? Color.ds(.success) : Color.clear, in: RoundedRectangle(cornerRadius: 7, style: .continuous))
+                        .overlay(RoundedRectangle(cornerRadius: 7, style: .continuous).strokeBorder(m.saved ? Color.ds(.success) : p.line, lineWidth: 1.5))
                     Text("Jeg har lagret reservekodene").font(PF.ui(14.5, .semibold)).foregroundStyle(p.ink)
                     Spacer(minLength: 0)
                 }
@@ -729,7 +729,7 @@ struct Tfa40Done: View {
         VStack(spacing: 14) {
             Image(systemName: "checkmark").font(.dyn51(size: 34, weight: .heavy)).foregroundStyle(Color.white)
                 .frame(width: 84, height: 84)
-                .background(Color(hex: "#2f7a4f"), in: Circle())
+                .background(Color.ds(.success), in: Circle())
             Text("Denne telefonen er merket som pålitelig enhet.").font(PF.ui(14)).foregroundStyle(p.mut)
                 .multilineTextAlignment(.center)
             Tfa40Primary(title: "Ferdig") { m.close() }
@@ -751,7 +751,7 @@ struct Tfa40Manage: View {
                 row("Nye reservekoder", m.leftText, p.ink, first: true) { m.regenerate(store) }
                 row("Bytt autentiseringsapp", "", p.ink) { m.switchApp(store) }
                 row("Legg til passnøkkel (Face ID)", "", p.ink) { m.passkey(store) }
-                row("Slå av totrinnsbekreftelse", "", Color(hex: "#b23a2a")) { m.askDisable = true; m.password = "" }
+                row("Slå av totrinnsbekreftelse", "", Color.ds(.danger)) { m.askDisable = true; m.password = "" }
             }
             .background(p.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
             if m.askPassword { Tfa40PasswordField(label: "Skriv passordet ditt for å bytte app") { m.switchApp(store) } }

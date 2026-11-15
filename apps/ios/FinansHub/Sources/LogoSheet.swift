@@ -125,7 +125,7 @@ struct LogoSheet73: View {
     private let line = Color(hex: "#d8d1c2")
     private let soft = Color(hex: "#e6e0d3")
     private let mut = Color(hex: "#8f897c")
-    private let acc = Color(hex: "#b23a2a")
+    private let acc = Color.ds(.accent)
 
     var body: some View {
         VStack(spacing: 0) {

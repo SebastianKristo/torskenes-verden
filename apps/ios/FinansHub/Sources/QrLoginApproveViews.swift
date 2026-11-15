@@ -14,8 +14,8 @@ enum Qr38C {
     static let ink: Color = Color(hex: "#1b1a17")
     static let mut: Color = Color(hex: "#6b665c")
     static let line: Color = Color(hex: "#ddd5c5")
-    static let red: Color = Color(hex: "#b23a2a")
-    static let green: Color = Color(hex: "#2f7a4f")
+    static var red: Color { Color.ds(.accent) }
+    static var green: Color { Color.ds(.success) }
     static let scan: Color = Color(hex: "#ff8a5c")
     static let dark: Color = Color(hex: "#0e0e10")
 }
@@ -398,9 +398,9 @@ struct Qr38KontoRow: View {
         Button { Qr38Model.shared.show() } label: {
             HStack(spacing: 12) {
                 Image(systemName: "qrcode.viewfinder").font(.dyn51(size: 15, weight: .semibold))
-                    .foregroundStyle(Color(hex: "#2b5d8a"))
+                    .foregroundStyle(Color.ds(.info))
                     .frame(width: 30, height: 30)
-                    .background(Color(hex: "#2b5d8a").opacity(0.12), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+                    .background(Color.ds(.info).opacity(0.12), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
                 VStack(alignment: .leading, spacing: 1) {
                     Text("Logg inn på annen enhet").font(PF.ui(14.5, .bold)).foregroundStyle(p.ink)
                     Text("Kalender på Mac, iPhone, Android eller Finans – skann QR-koden").font(PF.ui(12)).foregroundStyle(p.mut)

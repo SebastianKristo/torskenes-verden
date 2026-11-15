@@ -10,7 +10,7 @@ import SwiftUI
 
 enum Chat34Scans {
     static let folderName: String = "Kvitteringer og skanninger"
-    static let red: Color = Color(hex: "#b23a2a")
+    static var red: Color { Color.ds(.accent) }
 
     static func isScanFolder(_ f: [String: Any], name: String) -> Bool {
         if JS.bool(f, "sys") == true || JS.bool(f, "system") == true { return true }

@@ -305,7 +305,7 @@ struct PosAvatar20: View {
 
     private var dot: Color {
         switch person.status {
-        case "fresh": return Color(hex: "#2f7a4f")
+        case "fresh": return Color.ds(.success)
         case "stale": return Color(hex: "#d9a400")
         default: return Color(hex: "#8a8578")
         }

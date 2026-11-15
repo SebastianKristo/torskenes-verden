@@ -25,7 +25,7 @@ struct Set36Chip: View {
 
 enum Set36Tint {
     static let ok: Color = Color(hex: "#2f7d4f")
-    static let bad: Color = Color(hex: "#b23a2a")
+    static var bad: Color { Color.ds(.danger) }
 }
 
 /// Toppen av Konto: bildet sentrert, navn og @brukernavn, «Endre bilde».

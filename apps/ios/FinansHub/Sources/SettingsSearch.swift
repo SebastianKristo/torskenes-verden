@@ -547,7 +547,7 @@ struct Hl34Ring: View {
     let radius: CGFloat
     @State private var grow: Bool = false
 
-    private static let red: Color = Color(hex: "#b23a2a")
+    private static var red: Color { Color.ds(.accent) }
 
     var body: some View {
         ZStack {

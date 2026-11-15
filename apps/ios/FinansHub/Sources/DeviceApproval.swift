@@ -309,7 +309,7 @@ struct Sec51ApprovalsCard: View {
                 }
             }
             if !m.err.isEmpty {
-                Text(m.err).font(.dyn51(size: 13, weight: .semibold)).foregroundStyle(Color(hex: "#b23a2a"))
+                Text(m.err).font(.dyn51(size: 13, weight: .semibold)).foregroundStyle(Color.ds(.danger))
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 14).padding(.bottom, 12)
                     .fixedSize(horizontal: false, vertical: true)
@@ -341,7 +341,7 @@ struct Sec51ApprovalRow: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .top, spacing: 12) {
                 Image(systemName: "iphone.and.arrow.forward").font(.dyn51(size: 18, weight: .medium))
-                    .foregroundStyle(Color(hex: "#b23a2a")).frame(width: 28)
+                    .foregroundStyle(Color.ds(.danger)).frame(width: 28)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(a.device).font(.dyn51(size: 16, weight: .semibold)).foregroundStyle(Color.primary)
                     Text(a.detail).font(.dyn51(size: 13)).foregroundStyle(Color.secondary).fixedSize(horizontal: false, vertical: true)
@@ -358,9 +358,9 @@ struct Sec51ApprovalRow: View {
         return HStack(spacing: 10) {
             Spacer(minLength: 40)
             Button { m.decide(a, approve: false, store) } label: {
-                Text("Avvis").font(.dyn51(size: 14, weight: .semibold)).foregroundStyle(Color(hex: "#b23a2a"))
+                Text("Avvis").font(.dyn51(size: 14, weight: .semibold)).foregroundStyle(Color.ds(.danger))
                     .padding(.horizontal, 16).frame(height: 36)
-                    .overlay(Capsule().stroke(Color(hex: "#b23a2a").opacity(0.6), lineWidth: 1))
+                    .overlay(Capsule().stroke(Color.ds(.danger).opacity(0.6), lineWidth: 1))
             }
             .buttonStyle(.plain)
             Button { m.decide(a, approve: true, store) } label: {
@@ -370,7 +370,7 @@ struct Sec51ApprovalRow: View {
                 }
                 .foregroundStyle(Color.white)
                 .padding(.horizontal, 16).frame(height: 36)
-                .background(Color(hex: "#2f7a4f"), in: Capsule())
+                .background(Color.ds(.success), in: Capsule())
             }
             .buttonStyle(.plain)
         }

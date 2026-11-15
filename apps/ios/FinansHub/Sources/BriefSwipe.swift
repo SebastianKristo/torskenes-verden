@@ -41,7 +41,7 @@ struct Brief36Ring: View {
 
     private func ring(_ off: CGFloat, _ alpha: Double) -> some View {
         RoundedRectangle(cornerRadius: radius + off, style: .continuous)
-            .stroke(Color(hex: "#b23a2a").opacity(alpha), lineWidth: 2.5)
+            .stroke(Color.ds(.accent).opacity(alpha), lineWidth: 2.5)
             .padding(-off)
     }
 }

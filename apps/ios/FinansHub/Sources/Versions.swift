@@ -258,7 +258,7 @@ struct Versions44Sheet: View {
         Button { go() } label: {
             Text(busy ? "Starter …" : "Installer " + v.version).font(PF.ui(16, .bold)).foregroundStyle(Color.white)
                 .frame(maxWidth: .infinity, minHeight: 52)
-                .background(Color(hex: "#b23a2a").opacity(canGo ? 1 : 0.35), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .background(Color.ds(.accent).opacity(canGo ? 1 : 0.35), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         }
         .buttonStyle(.plain)
         .disabled(!canGo || busy)
@@ -290,7 +290,7 @@ struct Versions44Choice: View {
     var body: some View {
         Button(action: act) {
             HStack(alignment: .top, spacing: 12) {
-                Image(systemName: on ? "largecircle.fill.circle" : "circle").font(.dyn51(size: 20)).foregroundStyle(on ? Color(hex: "#b23a2a") : p.mut)
+                Image(systemName: on ? "largecircle.fill.circle" : "circle").font(.dyn51(size: 20)).foregroundStyle(on ? Color.ds(.accent) : p.mut)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title).font(PF.ui(15, .bold)).foregroundStyle(p.ink)
                     Text(sub).font(PF.ui(12.5)).foregroundStyle(p.mut).fixedSize(horizontal: false, vertical: true)
@@ -299,7 +299,7 @@ struct Versions44Choice: View {
             }
             .padding(14)
             .background(p.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(on ? Color(hex: "#b23a2a") : Color.clear, lineWidth: 1.5))
+            .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(on ? Color.ds(.accent) : Color.clear, lineWidth: 1.5))
             .opacity(enabled ? 1 : 0.5)
             .contentShape(Rectangle())
         }

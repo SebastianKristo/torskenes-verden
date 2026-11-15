@@ -398,7 +398,7 @@ struct Voice56Mic: View {
                 .font(.dyn51(size: icon, weight: .semibold))
                 .foregroundStyle(on ? Color.white : ink)
                 .frame(width: size, height: size)
-                .background(on ? Color(hex: "#b23a2a") : Color.clear, in: Circle())
+                .background(on ? Color.ds(.accent) : Color.clear, in: Circle())
                 .contentShape(Circle())
         }
         .buttonStyle(.plain)
@@ -444,13 +444,13 @@ struct Voice56Bar: View {
                 ProgressView().controlSize(.small).tint(ink)
                 Text("Skriver ned …").font(font(15, .regular)).foregroundStyle(ink).lineLimit(1)
             } else {
-                Circle().fill(Color(hex: "#b23a2a")).frame(width: 8, height: 8)
+                Circle().fill(Color.ds(.accent)).frame(width: 8, height: 8)
                 Text("Lytter … " + clock).font(font(15, .regular)).foregroundStyle(ink).lineLimit(1).monospacedDigit()
                 Text(v.holdMode ? "slipp for å stoppe" : "trykk igjen for å stoppe").font(font(12, .regular)).foregroundStyle(mut)
                     .lineLimit(1).minimumScaleFactor(0.8)
             }
             Spacer(minLength: 4)
-            if v.phase == "rec" { Voice56Wave(color: Color(hex: "#b23a2a")) }
+            if v.phase == "rec" { Voice56Wave(color: Color.ds(.accent)) }
             Button { v.cancel() } label: {
                 Text("Avbryt").font(font(13, .semibold)).foregroundStyle(mut)
                     .padding(.horizontal, 10).frame(height: 34).contentShape(Rectangle())

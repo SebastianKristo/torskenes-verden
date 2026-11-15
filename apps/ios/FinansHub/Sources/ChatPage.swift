@@ -327,10 +327,10 @@ struct Chat27Composer: View {
                     Voice56Bar(ink: c.ink, mut: c.mut, font: c.ui)
                 } else if voice.recording {
                     HStack(spacing: 10) {
-                        Circle().fill(Color(hex: "#b23a2a")).frame(width: 8, height: 8)
+                        Circle().fill(Color.ds(.accent)).frame(width: 8, height: 8)
                         Text("Lytter … snakk nå").font(c.ui(15)).foregroundStyle(c.ink)
                         Spacer(minLength: 4)
-                        ChatWave27(color: Color(hex: "#b23a2a"))
+                        ChatWave27(color: Color.ds(.accent))
                     }
                     .padding(.horizontal, 8).frame(minHeight: 40)
                 } else {
@@ -466,7 +466,7 @@ struct Chat27Composer: View {
         Button(action: act) {
             Image(systemName: icon).font(.dyn51(size: 17, weight: .semibold)).foregroundStyle(on ? Color.white : c.ink)
                 .frame(width: 38, height: 38)
-                .background(on ? Color(hex: "#b23a2a") : Color.clear, in: Circle())
+                .background(on ? Color.ds(.accent) : Color.clear, in: Circle())
                 .contentShape(Circle())
         }
         .buttonStyle(.plain)

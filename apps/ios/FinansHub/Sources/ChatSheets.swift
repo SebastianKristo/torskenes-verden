@@ -110,7 +110,7 @@ struct Chat27WideButton: View {
             Text(title).font(c.ui(14.5, .bold))
                 .foregroundStyle(danger ? Color.white : (filled ? c.bg : c.ink))
                 .frame(maxWidth: .infinity).frame(height: 48)
-                .background(danger ? Color(hex: "#b23a2a") : (filled ? c.ink : Color.clear), in: Capsule())
+                .background(danger ? Color.ds(.danger) : (filled ? c.ink : Color.clear), in: Capsule())
                 .overlay(Capsule().stroke(filled || danger ? Color.clear : c.line, lineWidth: 1))
                 .contentShape(Capsule())
         }
@@ -338,7 +338,7 @@ struct Chat27GuardSheet: View {
         VStack(alignment: .leading, spacing: 8) {
             ForEach(s.guardLeaves, id: \.self) { x in
                 HStack(alignment: .top, spacing: 10) {
-                    Text("↗").font(c.ui(14, .bold)).foregroundStyle(Color(hex: "#b23a2a"))
+                    Text("↗").font(c.ui(14, .bold)).foregroundStyle(Color.ds(.accent))
                     Text(x).font(c.ui(14.5, .semibold)).foregroundStyle(c.ink).fixedSize(horizontal: false, vertical: true)
                 }
             }
@@ -480,8 +480,8 @@ struct Chat27ModsSheet: View {
                     Button { s.deleteModel(m, store) } label: {
                         Text(arm ? "Bekreft" : "Slett").font(c.ui(13, .bold)).foregroundStyle(arm ? Color.white : c.ink)
                             .padding(.horizontal, 14).frame(height: 34)
-                            .background(arm ? Color(hex: "#b23a2a") : Color.clear, in: Capsule())
-                            .overlay(Capsule().stroke(arm ? Color(hex: "#b23a2a") : c.line, lineWidth: 1))
+                            .background(arm ? Color.ds(.danger) : Color.clear, in: Capsule())
+                            .overlay(Capsule().stroke(arm ? Color.ds(.danger) : c.line, lineWidth: 1))
                     }
                     .buttonStyle(.plain)
                 }
@@ -548,7 +548,7 @@ struct Chat27ModsSheet: View {
             GeometryReader { g in
                 ZStack(alignment: .leading) {
                     Capsule().fill(c.line)
-                    Capsule().fill(Color(hex: "#2f7a4f")).frame(width: g.size.width * CGFloat(Swift.min(100, Swift.max(0, pct)) / 100))
+                    Capsule().fill(Color.ds(.success)).frame(width: g.size.width * CGFloat(Swift.min(100, Swift.max(0, pct)) / 100))
                 }
             }
             .frame(height: 6)

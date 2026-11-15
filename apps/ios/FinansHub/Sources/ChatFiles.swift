@@ -340,7 +340,7 @@ struct Chat50AttachRow: View {
                 face(a)
                     .frame(width: 64, height: 64)
                     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                    .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(a.err.isEmpty ? c.line : Color(hex: "#b23a2a"), lineWidth: a.err.isEmpty ? 1 : 2))
+                    .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(a.err.isEmpty ? c.line : Color.ds(.danger), lineWidth: a.err.isEmpty ? 1 : 2))
                     .overlay(alignment: .bottom) { if a.uploading { progress(a.pct) } }
                 Button { s.removeAttach(a) } label: {
                     Image(systemName: "xmark").font(.dyn51(size: 11, weight: .bold)).foregroundStyle(c.bg)
@@ -378,7 +378,7 @@ struct Chat50AttachRow: View {
         GeometryReader { (g: GeometryProxy) in
             ZStack(alignment: .leading) {
                 Rectangle().fill(Color.black.opacity(0.12))
-                Rectangle().fill(Color(hex: "#b23a2a")).frame(width: g.size.width * CGFloat(Swift.max(0.02, Swift.min(1, v))))
+                Rectangle().fill(Color.ds(.accent)).frame(width: g.size.width * CGFloat(Swift.max(0.02, Swift.min(1, v))))
             }
         }
         .frame(height: 3)
