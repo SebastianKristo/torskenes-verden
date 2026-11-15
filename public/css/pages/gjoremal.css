@@ -1,6 +1,8 @@
 /* Huskeliste (prompt 17). Mørk i «Nåværende», papir i «Vindu og papir» (html[data-hl="2c"]). */
-.tk{--t-ink:var(--text);--t-mut:var(--text-2);--t-line:var(--line);--t-lab:#f59a8f;--t-pos:#8fe0b0;--t-card:var(--card,#141a26);--t-chip:rgba(255,255,255,.06);--t-bg:var(--bg,#0b0e15);display:flex;flex-direction:column;gap:14px;color:var(--t-ink);max-width:860px}
-html[data-hl="2c"] .tk{--t-ink:#1b1a17;--t-mut:#6f6a5f;--t-line:#e3ddcf;--t-lab:#b23a2a;--t-pos:#2f7a4f;--t-card:#fff;--t-chip:#f3efe6;--t-bg:#f3efe6;font-family:Manrope,system-ui,sans-serif}
+/* Fargene er designtokens (tokens.css), så Gjøremål følger stil og modus. */
+.tk{--t-ink:var(--ds-text-primary);--t-mut:var(--ds-text-secondary);--t-line:var(--ds-line);--t-lab:var(--ds-accent);--t-pos:var(--ds-success);--t-card:var(--ds-surface-raised);
+  --t-chip:var(--ds-surface-sunken);--t-bg:var(--ds-surface);--t-sheet:var(--ds-surface);--t-in:var(--ds-surface-sunken);
+  display:flex;flex-direction:column;gap:14px;color:var(--t-ink);max-width:860px;font-family:var(--ds-font-sans)}
 .tk-top{display:flex;align-items:baseline;gap:16px;flex-wrap:wrap;margin-bottom:16px}
 .tk-sub{color:var(--text-2);font-size:13px}
 .tk-lists{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
@@ -84,8 +86,6 @@ html[data-hl="2c"] .tk-card{background:#fff;border-radius:20px;border:0}
 /* !important: skallets generelle regler (app.css, paper.css, web*.css) har høyere spesifisitet for kort og knapper; fjernes når siden bruker felles komponenter. */
 html[data-hl="2c"] body .tk .card.tk-card{background:#fff;border:0;border-radius:20px;padding:2px 14px!important}
 /* Prompt 37: Gjøremål (fasit Huskeliste.dc.html) – avatarer på delte lister, infokort, Glimt-kortet, Glimt-tips, detaljark og listeark. */
-.tk{--t-sheet:#161b26;--t-in:rgba(255,255,255,.06)}
-html[data-hl="2c"] .tk{--t-sheet:#f3efe6;--t-in:#f3efe6}
 /* !important: skallets generelle regler (app.css, paper.css, web*.css) har høyere spesifisitet for kort og knapper; fjernes når siden bruker felles komponenter. */
 .tk-new{border:1.5px dashed var(--t-line)!important;background:transparent!important;color:var(--t-ink)}
 .tk-avs{display:inline-flex;align-items:center}
