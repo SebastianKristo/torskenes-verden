@@ -13,7 +13,7 @@
 //   Boliger + import rett til Boliger                      → boliger-web.js
 //   GET  /stocks (mellomvare): hver posisjon får logo:{url, issuer, domain}, monogram, tickerBadge, exchange, subtitle:'VUAG · London · USD', instrument
 //   GET  /aksjer/logo/:key                                 → bildet (Cache-Control 30 d) eller 404 (klienten viser monogram)
-import { lastVisitSpecial52 } from '../glimt/my-brief.js'; // prompt 52
+import { lastVisitSpecial52 } from '../glimt/last-visit.js'; // prompt 52
 import { Hono } from 'hono';
 import { streamSSE } from 'hono/streaming';
 import { db, q, settings, ensureLedger } from './db.js';

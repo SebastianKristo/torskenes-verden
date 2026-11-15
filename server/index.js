@@ -40,7 +40,7 @@ import appUpdateApi from './app-update.js'; // prompt 32: Android-appen oppdater
 import { updateNow, versionApi44 } from './system/update.js'; // Oppdater fra appen: data/update/ ↔ updater-containeren
 import { logMigrationsAtStartup } from './system/ops.js'; // migrasjonsloggen ved oppstart
 import smbBrowseApi from './smb-browse.js'; // prompt 30: SMB-veiviser (finn server, shares, mapper, test, lagre) – bare admin
-import { mountGlimt } from './glimt/index.js'; // Glimt: motoren, minnet, brief, innstillingene og /api/assist (server/glimt/)
+import { mountGlimt, mountGlimtEarly } from './glimt/index.js'; // Glimt: motoren, minnet, brief, innstillingene og /api/assist (server/glimt/)
 import { recipesApi61 } from './recipes61/api.js'; // prompt 61 (prompt 49 del 1): Glimt lærer (oppskrifter)
 import { schedulesApi62 } from './sched62/api.js'; // prompt 62 (prompt 49 del 2): planlagte oppgaver («Faste oppgaver»)
 import { mountSkjold } from './skjold/index.js'; // Skjold Lab: sorteringsskapet (deler, skuffer, bilder, søk, LED, produkter)
@@ -73,7 +73,6 @@ import { startJobs } from './jobs/index.js'; // én planlegger for bakgrunnsjobb
 import { badInput85 } from './http/bad-input.js'; // prompt 85 (SRVSEC85): feil i kroppen fra klienten → 400, ikke 500
 import { anonBodyCap85 } from './http/anon-body-limit.js'; // prompt 85 (SRVSEC85): store kropper bare fra innloggede klienter
 import { mountLive89, startLive89 } from './live89.js'; // prompt 89 (SRV89): Live Activities / Live Updates (/api/live/*) og APNs-push
-import { mountSrv52 } from './glimt/my-brief.js'; // prompt 52 (SRV52): Glimt «sist jeg var på», kalenderkontekst, brief-kort, Glimt-figur per bruker
 import { mountDal53 } from './dal53/index.js'; // prompt 53 (DAL53): Desert Ant Labs-modellene (Eye, Redact, Gist, Tongue, Emo, Moderator, Clear, Voz)
 import { mountBilder } from './bilder/index.js'; // Bilder: Google Photos-album som bakgrunn (/api/bg/gphoto)
 import { mountVaer } from './vaer/index.js'; // Vær: /here, /week-summary, /place, /layout og ski i /full
@@ -150,7 +149,7 @@ app.route('/api/version', versionApi44); // prompt 44: {version, features} uten 
 mountAppAuth(app);
 mountSystemEarly(app); // server/system/: serveradresser, helse/spor/ntfy, flagg, krasj, «Nytt i versjonen», felles søk, tema, deling, offline-konflikter
 mountAuthInvites(app); // onboarding for nye familiemedlemmer: /api/onboard51/*, /join/:token (server/auth/invites.js)
-mountSrv52(app); // prompt 52 (SRV52): /api/glimt/quickparse52, /api/glimt/lex52, /api/brief52, /api/me/glimt-char52, admin; mellomvare foran POST /api/glimt/agent
+mountGlimtEarly(app); // server/glimt/: «sist jeg var på» foran POST /api/glimt/agent, /api/glimt/quickparse52, /lex52, /api/brief52, /api/me/glimt-char52, /api/brief-cards
 mountAiEngines(app); // server/ai/: /api/admin/{fermion53,whisper54,voxcpm57,omlx58}/* (bare admin) og /api/voices57*
 mountDal53(app); // prompt 53 (DAL53): /api/admin/dal53/{health,preload}, /api/emo53/suggest, /api/voice53/*; Moderator foran /api/chat/files og /api/img
 mountLocalFetch86(app, authOrToken); // prompt 86: GET|PUT /api/admin/local-fetch-hosts (bare admin)

@@ -38,7 +38,7 @@ test.after(() => { globalThis.fetch = realFetch; });
 
 const { default: app } = await import('../server/index.js');
 const { db, kv, OWNER } = await import('../server/db.js');
-const S52 = await import('../server/glimt/my-brief.js');
+const S52 = { ...(await import('../server/glimt/last-visit.js')), ...(await import('../server/glimt/quick-parse.js')) };
 const guard = await import('../server/finans/receipts/cloud-guard.js');
 const fai = await import('../server/finans/ai.js');
 const r48s = await import('../server/finans/receipts/settings.js');

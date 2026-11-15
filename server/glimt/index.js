@@ -27,8 +27,27 @@ import { glimtApi } from '../ai/control.js';
 import { settingsApi, ttsApi, imgApi } from './settings.js';
 import briefApi, { briefExtras } from './brief.js';
 import { assistLocalMw44 } from '../kalender/invites.js';
+import { authOrToken } from '../mobile.js';
+import { glimtAgentMw52 } from './last-visit.js';
+import { quickParseApi } from './quick-parse.js';
+import { myBriefApi } from './my-brief.js';
+import { characterApi } from './character.js';
+import { brief73Api } from '../brief73.js';
 
 /** Alle Glimt-rutene: minnet, brief, innstillinger, motoren, entitetene, /api/glimt og /api/assist. */
+/**
+ * Tidlig i index.js (før /api-rutene med requireAuth og før Glimt-motoren): mellomvaren «sist jeg var på X» foran
+ * POST /api/glimt/agent, hurtigtolkingen og de lærte ordene, brief-kortene per bruker, Glimt-figuren og «Innhold i briefen».
+ * Før mountSrv52 i srv52.js.
+ */
+export function mountGlimtEarly(app) {
+  app.post('/api/glimt/agent', authOrToken, glimtAgentMw52);
+  app.route('/api', quickParseApi); // /api/glimt/quickparse52, /api/glimt/lex52
+  app.route('/api', myBriefApi); // /api/brief52, /api/brief52/homelab/:id/start, /api/admin/brief52/access
+  app.route('/api', characterApi); // /api/me/glimt-char52, /api/admin/glimt-char52
+  app.route('/api', brief73Api); // GET/PUT /api/brief-cards, POST /api/brief-cards/reset
+}
+
 export function mountGlimt(app) {
   app.route('/api/glimt/memory', memoryApi63); // /pending, /conflicts, /stale, /hygiene (før «Glimt husker»-rutene)
   app.route('/api/glimt/memory', remember); // GET/POST/DELETE, POST /:id/apply (per bruker)
