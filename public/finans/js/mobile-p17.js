@@ -144,9 +144,9 @@ export function p17SetMain(T = {}) {
     ${P30.progGroup(grp, row)}
     ${globalThis.P44?.homelabGroup?.() ?? '' /* prompt 44: HOMELAB → Logger */}
     ${grp('KONTO', [row('#/set/konto', 'Kontoer og brukere', '', '', 'users', 'konto'), row('#/set/sik', 'Sikkerhet', me.totp ? '2FA på' : '2FA av', '', 'shield', 'sik'), row('#/set/tok', 'API-tokens', T.tokens ? `${T.tokens.length} aktive` : '', '', 'key', 'tok'), P29.isAdmin() ? row('#/set/sysbk', 'Backup', P29.bkSummary(), '', 'backup', 'sysbk') : ''])}
-    ${grp('FINANS', [row('#/aictl/fin', 'AI og tolkning', canSrv() ? [ENG[st.provider] ?? 'Ollama', st.groqKeySet ? 'Groq' : '', st.roboflowKeySet ? 'Roboflow' : '', st.geminiKeySet && st.provider !== 'gemini' ? 'Gemini' : ''].filter(Boolean).join(' · ') : ADMIN_NOTE, '', 'ai', 'fai'),
+    ${grp('ØKONOMI', [row('#/imp', 'Import', 'Bank, Excel, CSV og Finn', '', 'bank', 'imp') /* O3: Import bor i Innstillinger */, row('#/aictl/fin', 'AI og tolkning', canSrv() ? [ENG[st.provider] ?? 'Ollama', st.groqKeySet ? 'Groq' : '', st.roboflowKeySet ? 'Roboflow' : '', st.geminiKeySet && st.provider !== 'gemini' ? 'Gemini' : ''].filter(Boolean).join(' · ') : ADMIN_NOTE, '', 'ai', 'fai'),
       row('#/set/kat', 'Kategorier og budsjett', `${(S.boot?.categories ?? []).length} kategorier`, '', 'cat', 'kat'), row('#/set/regel', 'Regler', `${(S.boot?.rules ?? []).length} regler`, '', 'rule', 'regel'),
-      row('#/set/bank', 'Bankimport', 'DNB · CSV · ✦ AI', '', 'bank', 'bank'), row('#/set/t212', 'Aksjer · Trading 212', t212, '', 'aks', 't212'), row('#/set/fanelinje', 'Fanelinje og Mer i Finans', `${fk} faner`, '', 'list', 'fanelinje'), row('#/sub', 'Subscription OS', 'Abonnementer og AI-sparing', '', 'sub', 'sub')])}
+      row('#/set/bank', 'Bankimport', 'DNB · CSV · ✦ AI', '', 'bank', 'bank'), row('#/set/t212', 'Aksjer · Trading 212', t212, '', 'aks', 't212'), row('#/set/fanelinje', 'Fanelinje og Mer i Økonomi', `${fk} faner`, '', 'list', 'fanelinje'), row('#/fast/abonnementer', 'Faste betalinger', 'Abonnementer, faste utgifter og AI-sparing', '', 'sub', 'sub')])}
     ${grp(appName().toUpperCase(), [row('#/set/tilpass', 'Tilpass', 'Navn, ikon, tema, farger, bakgrunn og fanelinje', '', 'look', 'tilpass'), /* prompt 39: Navn, App-ikon, Fanelinje-stil og Fanelinje i Hjem ligger i Tilpass */
       row('#/set/mod', 'Moduler', domOk() ? 'Sporing, Domener, Mat, Nyheter' : 'Sporing, Mat, Nyheter', '', 'globe', 'mod'), row('#/nyheter', 'Nyhetsleser', 'Kilder og AI', '', 'look', 'rss')])}
     ${grp('GLIMT', [row('#/glimt', 'Glimt', 'Figur, brief, stemme og venner', '', 'ai', 'glimt')])}
@@ -204,7 +204,7 @@ export function p17AiExtra() {
 
 export const NT = { d: null, err: '', busy: false };
 const SOUNDS = [['klokke', 'Klokke'], ['pling', 'Pling'], ['papir', 'Papir'], ['dobbel', 'Dobbel'], ['dyp', 'Dyp'], ['egen', 'Egen lyd'], ['stille', 'Stille']];
-const NGROUPS = [['pakker', 'Pakker', 'Ny pakke, klar for henting, levert'], ['finans', 'Finans og hjem', 'Kvitteringer, budsjett og faste utgifter'], ['familie', 'Familie', 'Kommer og går fra soner'], ['birthdays', 'Bursdager', 'Kl. 09:00 før en bursdag (påminnelse per person)'], ['reise', 'Reise og vær', 'Avganger og værvarsler'], ['haptikk', 'Haptikk', 'Vibrasjon ved varsler']];
+const NGROUPS = [['pakker', 'Pakker', 'Ny pakke, klar for henting, levert'], ['finans', 'Økonomi og hjem', 'Kvitteringer, budsjett og faste utgifter'], ['familie', 'Familie', 'Kommer og går fra soner'], ['birthdays', 'Bursdager', 'Kl. 09:00 før en bursdag (påminnelse per person)'], ['reise', 'Reise og vær', 'Avganger og værvarsler'], ['haptikk', 'Haptikk', 'Vibrasjon ved varsler']];
 const NDEF = { on: true, quietOn: true, quietFrom: '22:00', quietTo: '07:00', sound: 'klokke', volume: 70, groups: { pakker: true, finans: true, familie: true, birthdays: true, reise: false, haptikk: true } };
 export async function notifyLoad() {
   try { const r = await hlApi('/me/notify'); NT.d = { ...NDEF, ...(r ?? {}), groups: { ...NDEF.groups, ...(r?.groups ?? {}) } }; NT.err = ''; }

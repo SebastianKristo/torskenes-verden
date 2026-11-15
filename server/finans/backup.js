@@ -274,7 +274,7 @@ export async function decryptFile(path, phrase, outPath) {
   const fd = await open(path, 'r');
   await fd.read(head, 0, head.length, 0);
   const tag = Buffer.alloc(16); await fd.read(tag, 0, 16, st.size - 16); await fd.close();
-  if (!head.subarray(0, MAGIC.length).equals(MAGIC)) throw new Error('Filen er ikke en kryptert FinansHub-backup');
+  if (!head.subarray(0, MAGIC.length).equals(MAGIC)) throw new Error('Filen er ikke en kryptert backup fra Økonomi');
   const salt = head.subarray(MAGIC.length, MAGIC.length + 16), iv = head.subarray(MAGIC.length + 16, MAGIC.length + 28);
   const d = createDecipheriv('aes-256-gcm', keyOf(phrase, salt), iv); d.setAuthTag(tag);
   try { await pipeline(createReadStream(path, { start: head.length, end: st.size - 17 }), d, createWriteStream(outPath)); }

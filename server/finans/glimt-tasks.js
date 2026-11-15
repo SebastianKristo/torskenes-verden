@@ -129,12 +129,12 @@ function advice42({ categories, subs, out }) {
 const C = { ink: '#1b1a17', mute: '#5e5a52', line: '#d6cdbb', red: '#b23a2a', paper: '#fbf7ee', card: '#f3ecdd', green: '#2f6b4a' };
 /** Forbruksrapporten som PDF (A4, 2 sider). → Buffer */
 export function reportPdf42(d) {
-  const pdf = new Pdf42({ title: `Forbruksrapport ${d.period.label}`, author: 'Glimt · FinansHub' });
+  const pdf = new Pdf42({ title: `Forbruksrapport ${d.period.label}`, author: 'Glimt · Økonomi' });
   const L = 48, R = A4.w - 48, W = R - L;
   const stamp = new Date(d.generatedAt).toLocaleString('nb-NO', { timeZone: 'Europe/Oslo', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).replace(',', ' kl.');
-  const foot = (n) => { pdf.line(L, 806, R, 806); pdf.text(L, 822, `FinansHub · Forbruksrapport ${d.period.label.toLowerCase()}`, { size: 8, color: C.mute }); pdf.text(R, 822, `Side ${n} av 2`, { size: 8, color: C.mute, align: 'right' }); };
+  const foot = (n) => { pdf.line(L, 806, R, 806); pdf.text(L, 822, `Økonomi · Forbruksrapport ${d.period.label.toLowerCase()}`, { size: 8, color: C.mute }); pdf.text(R, 822, `Side ${n} av 2`, { size: 8, color: C.mute, align: 'right' }); };
   // Side 1
-  pdf.rect(L, 40, 22, 22, { fill: '#1f3350' }); pdf.text(L + 30, 56, 'FinansHub', { size: 13, font: 'bold' });
+  pdf.rect(L, 40, 22, 22, { fill: '#1f3350' }); pdf.text(L + 30, 56, 'Økonomi', { size: 13, font: 'bold' });
   pdf.text(R, 56, `LAGET AV GLIMT · ${stamp}`.toUpperCase(), { size: 8, font: 'mono', color: C.mute, align: 'right' });
   pdf.text(L, 96, 'FORBRUKSRAPPORT', { size: 9, font: 'monob', color: C.red });
   pdf.text(L, 132, d.period.label, { size: 34, font: 'serif' });
@@ -187,7 +187,7 @@ export function reportPdf42(d) {
   y += 40;
   pdf.text(L, y, 'Glimt foreslår', { size: 15, font: 'serif' }); y += 22;
   d.advice.forEach((a, i) => { pdf.circle(L + 8, y - 3, 8, { fill: C.red }); pdf.text(L + 8, y + 1, String(i + 1), { size: 9, font: 'bold', color: '#ffffff', align: 'center' }); pdf.text(L + 24, y, a.title, { size: 10, font: 'bold' }); y = pdf.para(L + 24, y + 14, a.text, W - 24, { size: 9.5, color: C.mute }) + 8; });
-  pdf.para(L, 770, `Tallene er hentet fra kontoene, kvitteringene og abonnementene i FinansHub per ${stamp}. Glimt skrev sammendraget og forslagene ut fra disse tallene.`, W, { size: 8, color: C.mute });
+  pdf.para(L, 770, `Tallene er hentet fra kontoene, kvitteringene og abonnementene i Økonomi per ${stamp}. Glimt skrev sammendraget og forslagene ut fra disse tallene.`, W, { size: 8, color: C.mute });
   foot(2);
   return pdf.output();
 }

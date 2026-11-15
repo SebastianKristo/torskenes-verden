@@ -1,13 +1,13 @@
-// Modulene i FinansHub-sidemenyen: Subscription OS, Boliger (boliger.js), Finn-handler og Import.
+// Modulene i Økonomi-sidemenyen: Abonnementer (en del av Faste betalinger), Aksjer, Sparing og planer, Boliger (boliger.js), Finn og Import.
 // Samme mønster som desktop.js: sidene tegnes fra S, hendelser fanges med delegering (data-m*-attributter).
 import { S, api, esc, n0, n2, sgn, dd, render, toast, loadBoot, accs, logo, aiLine, ICONS, smooth } from './core.js';
 import { finnPage as finnDesk, loadFinn as loadFinnDesk, bindFinn } from './finn-desktop.js'; // Finn-handler med detaljside
-import { subPage, loadSubs, bindSubs } from './subs-desktop.js'; // Subscription OS: Oversikt og Kalender
+import { subPage, loadSubs, bindSubs } from './subs-desktop.js'; // Faste betalinger → Abonnementer: Oversikt og Kalender
 import { glimt } from '/assets/js/glimt.js';
 import { aiStart, aiDone } from '/assets/js/ai-jobs.js';
 import { bolPage, loadB42, bindB42 } from './boliger.js'; // prompt 42: Boliger 2a + 1b
 import { stockLogo, instrSub } from './ui-felles.js';
-import { plan51Page, PLAN51_ICON } from './planlegging.js'; // prompt 51 (FIN51): Planlegging – sparemål, kalender, skatt, priser, abonnementsjeger
+import { plan51Page, PLAN51_ICON } from './planlegging.js'; // Sparing og planer (sparemål, skatt, priser, abonnementsjeger) og Planlagte trekk
 
 Object.assign(ICONS, {
   sub: 'M17 2l4 4-4 4M3 11V9a3 3 0 0 1 3-3h15M7 22l-4-4 4-4M21 13v2a3 3 0 0 1-3 3H3',
@@ -17,9 +17,9 @@ Object.assign(ICONS, {
   aks: 'M3 17l6-6 4 4 8-8M15 7h6v6',
 });
 
-export const MODULE_PAGES = [['aks', 'Aksjer'], ['sub', 'Subscription OS'], ['plan', 'Planlegging'], ['dir', 'Boliger'], ['finn', 'Finn-handler'], ['imp', 'Import']];
+export const MODULE_PAGES = [['aks', 'Aksjer'], ['sub', 'Abonnementer'], ['trekk', 'Planlagte trekk'], ['plan', 'Sparing og planer'], ['dir', 'Boliger'], ['finn', 'Finn-handler'], ['imp', 'Import']];
 ICONS.plan = PLAN51_ICON; // prompt 51 (FIN51)
-export const MODULE_SUB = { aks: 'Trading 212', sub: 'Abonnementer', finn: 'Trygg betaling, Fiks ferdig, Tillit', imp: 'CSV, XLSX og tekst', plan: 'Sparemål, faste trekk, skatt, priser og abonnementsjeger' };
+export const MODULE_SUB = { fast: 'Abonnementer, faste utgifter og planlagte trekk', konto: 'Kontoer, sparemål og aksjer (Trading 212)', finn: 'Trygg betaling, Fiks ferdig, Tillit', imp: 'CSV, XLSX og tekst', plan: 'Sparemål, skatt, priser og abonnementsjeger' };
 const u = S.ui;
 const card = (inner, style = '') => `<section class="card" style="${style}">${inner}</section>`;
 const skel = (h = 160) => `<div class="skel" style="min-height:${h}px"></div>`;
@@ -287,7 +287,7 @@ export function backupTab() {
   return `<div style="display:flex;flex-direction:column;gap:18px">
     <div class="bk-status" style="background:${stBg};border-color:${stBd}"><span class="dot" style="width:10px;height:10px;background:${stDot}"></span><div class="grow"><div style="font-weight:600;color:var(--text)">${esc(stTitle)}</div><div class="sub" style="font-size:12.5px">${esc(stSub)}</div></div><button class="btn pri" data-mact="bk-run" ${b.running ? 'disabled' : ''}>${b.running ? 'Kjører …' : 'Ta backup nå'}</button></div>
     <div class="mod-box"><div class="set-label">Last ned</div><div style="display:flex;gap:10px;flex-wrap:wrap"><a class="btn" href="/finans/api/backup/export?format=json">Full backup (.json)</a><a class="btn" href="/finans/api/backup/export?format=xlsx">Excel-database (.xlsx)</a><a class="btn" href="/finans/api/transactions.csv">Bare transaksjoner (CSV)</a></div>
-      <div class="note" style="font-size:12.5px;line-height:1.5">JSON-filen er den komplette backupen av FinansHub og brukes til gjenoppretting. Excel-filen har ett ark per tabell (Info, Kontoer, Kategorier, Transaksjoner, Kvitteringer, Varelinjer, Budsjett, Faste_utgifter, Aksjer, Utbytte, Ordre, Regler og modulene) med ID-kolonner som kobler arkene sammen, filter på overskriftene og beløp som tall. CSV-en bruker semikolon og UTF-8 med BOM.</div></div>
+      <div class="note" style="font-size:12.5px;line-height:1.5">JSON-filen er den komplette backupen av Økonomi og brukes til gjenoppretting. Excel-filen har ett ark per tabell (Info, Kontoer, Kategorier, Transaksjoner, Kvitteringer, Varelinjer, Budsjett, Faste_utgifter, Aksjer, Utbytte, Ordre, Regler og modulene) med ID-kolonner som kobler arkene sammen, filter på overskriftene og beløp som tall. CSV-en bruker semikolon og UTF-8 med BOM.</div></div>
     <form class="mod-box" data-mform="smb"><div class="card-h"><div class="set-label">SMB-share</div><button type="button" class="tog-inline" data-mact="smb-on"><span class="toggle" role="switch" aria-checked="${!!c.on}"></span>${c.on ? 'På' : 'Av'}</button></div>
       ${b.smbclient ? '' : '<div class="err-msg">smbclient er ikke installert på serveren. Docker-imaget har det fra denne versjonen; på andre installasjoner: apt install smbclient.</div>'}
       <div class="smb-wiz-row"><div class="grow"><div style="font-weight:600;color:var(--text)">${c.share ? esc(`${c.share}${c.dir ? '/' + c.dir : ''}`) : 'Ingen nettverksdisk satt opp'}</div><div class="sub" style="font-size:12.5px">${c.share ? esc(`${c.user ? c.user : 'Gjest'} · SMB ${c.version}${c.pwSet ? ' · passord lagret' : ''}`) : 'Finn NAS-en på nettverket, logg inn og velg mappe – uten å skrive stier for hånd.'}</div></div><button type="button" class="btn pri" data-mact="smb-wiz">Sett opp med veiviser</button></div>
@@ -313,7 +313,7 @@ export function backupTab() {
 }
 
 const downloadBox = () => `<div class="mod-box"><div class="set-label">Last ned</div><div style="display:flex;gap:10px;flex-wrap:wrap"><a class="btn" href="/finans/api/backup/export?format=json">Full backup (.json)</a><a class="btn" href="/finans/api/backup/export?format=xlsx">Excel-database (.xlsx)</a><a class="btn" href="/finans/api/transactions.csv">Bare transaksjoner (CSV)</a></div>
-      <div class="note" style="font-size:12.5px;line-height:1.5">JSON-filen er den komplette backupen av ditt regnskap i FinansHub og brukes til gjenoppretting. Excel-filen har ett ark per tabell med ID-kolonner som kobler arkene sammen. CSV-en bruker semikolon og UTF-8 med BOM.</div></div>`;
+      <div class="note" style="font-size:12.5px;line-height:1.5">JSON-filen er den komplette backupen av ditt regnskap i Økonomi og brukes til gjenoppretting. Excel-filen har ett ark per tabell med ID-kolonner som kobler arkene sammen. CSV-en bruker semikolon og UTF-8 med BOM.</div></div>`;
 function ownBackupTab() {
   return `<div style="display:flex;flex-direction:column;gap:18px">
     ${downloadBox()}
@@ -328,7 +328,7 @@ function ownBackupTab() {
 
 // Første oppstart (tom database): start tom, hent fra SMB-share eller last opp en backupfil.
 export function firstRunCard() {
-  return `<section class="card first-run"><div><h2>Velkommen til FinansHub</h2><div class="note">Dette ser ut som en ny installasjon. Hvordan vil du begynne?</div></div>
+  return `<section class="card first-run"><div><h2>Velkommen til Økonomi</h2><div class="note">Dette ser ut som en ny installasjon. Hvordan vil du begynne?</div></div>
     <div class="fr-opts"><button class="fr-opt" data-mact="fr-empty"><b>Start tom</b><span>Legg til kontoer og importer fra nettbanken selv</span></button>
       ${(S.backup ? S.backup.canSmb !== false : S.boot?.me?.isMainAdmin !== false) ? '<button class="fr-opt" data-mact="fr-smb"><b>Hent fra SMB-share</b><span>Gjenopprett en backup fra NAS-en</span></button>' : ''}
       <label class="fr-opt"><b>Last opp backupfil</b><span>.json, .xlsx eller .tar.gz.enc</span><input type="file" accept=".json,.xlsx,.gz,.enc,application/json" data-mbk-file data-first hidden></label>
@@ -336,14 +336,18 @@ export function firstRunCard() {
     ${S.stage ? stagePreview() : ''}</section>`;
 }
 
-export const MODULE_FN = { aks: aksPage, sub: subPage, dir: bolPage, finn: finnDesk, imp: impPage, plan: plan51Page };
+// Planlagte trekk (før fanen Kalender i Planlegging) vises under Faste betalinger; Sparing og planer har de andre fanene.
+const planPage = () => plan51Page({ hide: 'kal' });
+const trekkPage = () => plan51Page({ only: 'kal' });
+export const MODULE_FN = { aks: aksPage, sub: subPage, dir: bolPage, finn: finnDesk, imp: impPage, plan: planPage, trekk: trekkPage };
 
 /* ===================== Lasting ===================== */
 
 const loadFinn = async () => { S.finn = await api('/finn'); };
 const loadStocks = async (force) => { S.stocks = await api(`/stocks${force === true ? '?force=1' : ''}`); };
 export async function loadBackup() { S.backup = await api('/backup'); }
-export const MODULE_LOADERS = { aks: [loadStocks], sub: [loadSubs], dir: [loadB42], finn: [loadFinnDesk], imp: [loadImpTpl], plan: [] }; // prompt 85: plan manglet → «Cannot read properties of undefined (reading 'map')» som toast hver gang Planlegging ble åpnet (siden henter sine egne data)
+const loadFb = async () => { S.fb = await api('/faste-betalinger'); }; // filtrene på Faste betalinger (antall og sum)
+export const MODULE_LOADERS = { aks: [loadStocks], sub: [loadSubs, loadFb], dir: [loadB42], finn: [loadFinnDesk], imp: [loadImpTpl], plan: [], trekk: [loadFb] }; // prompt 85: plan manglet → «Cannot read properties of undefined (reading 'map')» som toast hver gang Planlegging ble åpnet (siden henter sine egne data)
 
 /* ===================== Hendelser ===================== */
 

@@ -138,11 +138,8 @@ export async function logo(domain) {
 
 /* ---------------- Sammendrag ---------------- */
 
-const CAT_TEXT = {
-  'Mat og dagligvarer': 'Dagligvarer', 'Restaurant og kafé': 'Mat ute', 'Transport og lading': 'Transport', Bolig: 'Bolig og faste boutgifter',
-  Hjem: 'Til hjemmet', 'Fritid og hobby': 'Fritid', Abonnementer: 'Abonnement, fast trekk', Skole: 'Skole og studier', Inntekt: 'Innbetaling', Sparing: 'Overført til sparing',
-  Overføring: 'Overføring mellom kontoer',
-};
+// Fase 6 (Q11): kategorien vises med det lagrede navnet. Før ble standardkategoriene oversatt her («Hjem» → «Til hjemmet»,
+// «Abonnementer» → «Abonnement, fast trekk»), så samme kategori hadde to navn.
 const HINTS = [[/lading|recharge|mer\b|circle k.*lad/i, 'Lading av elbil'], [/strøm|fjordkraft|tibber|kraft/i, 'Strømregning'], [/husleie/i, 'Husleie for måneden'],
   [/lønn/i, 'Lønnsutbetaling'], [/lånekass/i, 'Utbetaling fra Lånekassen'], [/vipps/i, 'Vipps-overføring'], [/ruter|vy\b|flytoget/i, 'Kollektivbillett'],
   [/kaffe|espresso/i, 'Kaffe og bakst'], [/netflix|viaplay|disney|hbo|max\b/i, 'Strømmetjeneste, månedlig trekk'], [/spotify/i, 'Musikkabonnement'],
@@ -155,7 +152,7 @@ export function heuristic({ merchant, amount, lines, category }) {
   if (items.length) {
     short = items.slice(0, 3).join(', ') + (items.length > 3 ? ` + ${items.length - 3} til` : '');
   } else {
-    short = HINTS.find(([r]) => r.test(name))?.[1] ?? CAT_TEXT[category] ?? null;
+    short = HINTS.find(([r]) => r.test(name))?.[1] ?? (category || null);
   }
   if (short && short.length > 60) short = short.slice(0, 57).trimEnd() + ' …';
   let long = null;

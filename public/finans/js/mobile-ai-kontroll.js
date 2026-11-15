@@ -97,7 +97,7 @@ function head() {
   const md = AC.md, loc = md?.installed?.length ?? 0, sky = (md?.cloud ?? []).filter((c) => c.on).length, J = jobsOf(), n = J.run.length;
   const line = `${AC.fin ? 'Kvitteringer, kategorier og spørsmål' : md ? `${loc} lokale modeller · ${sky} i skyen` : 'Modeller, jobber, forbruk og nøkler'} · ${n ? `${n} jobb${n > 1 ? 'er' : ''} kjører` : 'ingen jobber kjører'}`;
   const bad = J.run.length + J.rec.filter((x) => x.status === 'fail').length;
-  return `<div class="p34a-hd"><span class="m-grow"><span class="p34a-k">${AC.fin ? 'FINANSHUB · KUNSTIG INTELLIGENS' : 'GLIMT · AI-KONTROLL'}</span><b class="p34a-t">${AC.fin ? 'AI i Finans' : 'AI'}</b><span class="p34a-s">${esc(line)}</span></span>
+  return `<div class="p34a-hd"><span class="m-grow"><span class="p34a-k">${AC.fin ? 'ØKONOMI · KUNSTIG INTELLIGENS' : 'GLIMT · AI-KONTROLL'}</span><b class="p34a-t">${AC.fin ? 'AI i Økonomi' : 'AI'}</b><span class="p34a-s">${esc(line)}</span></span>
     <button type="button" class="p34-done" data-ai="close" data-p34back>Ferdig</button></div>
     <nav class="p34a-tabs" aria-label="Faner i AI-kontroll">${tabs().map(([k, nm]) => { const b = k === 'job' ? bad : 0; return `<button type="button" data-ai="tab" data-k="${k}" aria-pressed="${curTab() === k}"${curTab() === k ? ' aria-current="page"' : ''}>${esc(nm)}${b ? `<i>${b}</i>` : ''}</button>`; }).join('')}</nav>`;
 }
@@ -286,7 +286,7 @@ async function pullAll() {
    fallback, options:[{id, label, local}], warning). Eldre server: Finans-oppgavene fra /ai/routing, ellers standardene.
    Ingen modeller installert eller tilkoblet → «Ingen modeller ennå» + Installer modell ›, aldri et tomt kort. */
 const FIN4 = [['rc', 'Kvitteringer (bilde)', 'Leser butikk, beløp og varelinjer · bare lokalt', 'qwen2.5vl:7b', 'tesseract', 'vision'], ['kat', 'Kategorisering', 'Foreslår kategori for transaksjoner', 'llama3.2:3b', 'llama-3.3-70b-versatile', 'text'],
-  ['fsok', 'Finans · spør', '«Har jeg et musikkabonnement?»', 'gemma4:latest', 'gemini-2.5-flash', 'text'], ['bar', 'Strekkoder og pakkelapper', 'Bildefelt fra kamera', 'roboflow/kvittering/1', 'qwen2.5vl:7b', 'vision']];
+  ['fsok', 'Økonomi · spør', '«Har jeg et musikkabonnement?»', 'gemma4:latest', 'gemini-2.5-flash', 'text'], ['bar', 'Strekkoder og pakkelapper', 'Bildefelt fra kamera', 'roboflow/kvittering/1', 'qwen2.5vl:7b', 'vision']];
 function finTasks(R) {
   const F = AC.rtf, L = Array.isArray(F?.tasks) ? F.tasks : Array.isArray(F?.rows) ? F.rows : Array.isArray(F) ? F : null;
   const own = (R?.tasks ?? []).filter((t) => t.fin);
@@ -342,7 +342,7 @@ function rt() {
     .map(([k, n, s, o, can], i) => `<div class="p34a-par" style="border-top:${i ? '1px solid var(--pp-line)' : '0'}"><span class="p34a-row2"><span class="p34a-rtn"><b>${n}</b><span>${s}</span></span><b class="p34a-mono">${esc((o.find(([v]) => String(v) === String(P[k])) ?? [0, P[k] ?? '–'])[1])}</b></span>${seg(k, o, can)}</div>`).join('');
   return `${(R.warnings ?? []).length ? `<div class="p34a-err">${esc(R.warnings.join(' · '))}</div>` : ''}
     ${glPick() /* prompt 39: La Glimt velge modeller */}
-    <span class="p34a-lab" data-hl="ai-sel"><span>${AC.fin ? 'HVILKEN MODELL GJØR HVA I FINANS' : 'HVILKEN MODELL GJØR HVA'}</span></span><div class="p34a-list">${rows}</div>
+    <span class="p34a-lab" data-hl="ai-sel"><span>${AC.fin ? 'HVILKEN MODELL GJØR HVA I ØKONOMI' : 'HVILKEN MODELL GJØR HVA'}</span></span><div class="p34a-list">${rows}</div>
     ${lab('REGLER')}<div class="p34a-list">${rules}</div>${lab('PARAMETRE')}<div class="p34a-list">${par}</div>
     <span class="p34a-foot">${A ? 'Endringer for Chat, AI-søk og Glimt lagres for deg. Resten er serverstandard for alle brukere.' : 'Du kan velge egne modeller for Chat, AI-søk og Glimt. Resten styres av administrator.'} Selvtesten kjøres etter endringer.</span>`;
 }

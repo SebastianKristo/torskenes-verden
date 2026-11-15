@@ -802,3 +802,10 @@ html[data-v3]{--accf-check:var(--card2);--accf-check-ink:var(--card2-ink)}
 .m-ini.tint,.m-logo.tint.err{background:color-mix(in oklab,var(--ini-c) 18%,transparent)}
 .m-ini.tint,.m-logo.tint i{color:var(--ini-c);color:color-mix(in oklab,var(--ini-c) 50%,black)}
 :is(html[data-ui=desktop][data-theme=mork],html[data-ui=desktop][data-theme=glod],.m:not(.pl)) :is(.m-ini.tint,.m-logo.tint i){color:color-mix(in oklab,var(--ini-c) 50%,white)}
+
+/* Fase 6 (Q4): filtrene på Faste betalinger og fanene på Kontoer og aksjer (desktop.js subNav) */
+.fb-filters{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 16px}
+.fb-filter{display:flex;flex-direction:column;gap:2px;min-height:44px;justify-content:center;padding:8px 16px;border:1px solid var(--sep);border-radius:14px;background:var(--card);color:var(--text);text-decoration:none}
+.fb-filter .note{font-size:12px}
+.fb-filter.on{border-color:var(--text);box-shadow:inset 0 0 0 1px var(--text)}
+.fb-filter:focus-visible{outline:2px solid var(--acc);outline-offset:2px}

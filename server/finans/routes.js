@@ -59,7 +59,7 @@ import { mountLogos52 } from '../logos/local.js'; // prompt 52
 import { warnCloudReceipt52, RECEIPT_SOURCE_LABEL52, RECEIPT_ENGINE_NOTE52 } from './receipts/cloud-guard.js'; // prompt 52: kvitteringer bare lokalt
 import { bolApi, catTree, catOptions, entryCat, linkLegacy, assignCategory, catById as bolCat, catPair, colorOf, noticesFor, layoutFor, upcomingOf, backgroundOf, validBackground } from './boliger.js';
 import { osloDate, osloToUtc, clampDate, addDays } from '../dates/oslo.js';
-import { CYCLES, CYCLE_DAYS, CYCLE_NAME, PER_LABEL, THEN_TEXT, cycleIn, perMonth, nextCharge, nextChargePreview, seriesOf, seriesFrom } from './cycles.js';
+import { CYCLES, CYCLE_DAYS, CYCLE_NAME, PER_LABEL, THEN_TEXT, cycleIn, perMonth, nextCharge, nextChargePreview, seriesOf, seriesFrom, recurringNextDate } from './cycles.js';
 
 const DIR = resolve(config.dataDir, 'receipts');
 // Prompt 23: tidsavbrudd i kvitteringskøen. timeout_engine = motoren som ikke svarte, retry_at = når jobben prøves igjen (onTimeout=queue).
@@ -211,28 +211,18 @@ function budgetsFor(month, u = me()) {
   return out;
 }
 
-function nextDate(r, from = new Date()) {
-  const d = new Date(from.getFullYear(), from.getMonth(), 1);
-  const clamp = (y, m, day) => new Date(y, m, Math.min(day, new Date(y, m + 1, 0).getDate()));
-  if (r.interval === 'yearly') {
-    let x = clamp(d.getFullYear(), (r.month ?? 1) - 1, r.day);
-    if (x < new Date(from.toDateString())) x = clamp(d.getFullYear() + 1, (r.month ?? 1) - 1, r.day);
-    return x;
-  }
-  if (r.interval === 'weekly') {
-    const x = new Date(from.toDateString()); x.setDate(x.getDate() + ((r.day % 7) - x.getDay() + 7) % 7); return x;
-  }
-  let x = clamp(d.getFullYear(), d.getMonth(), r.day);
-  if (x < new Date(from.toDateString())) x = clamp(d.getFullYear(), d.getMonth() + 1, r.day);
-  return x;
-}
+// Neste trekk for en fast utgift regnes i Oslo-tid (cycles.js recurringNextDate), ikke i serverens lokale tid.
+const MON3_NB = ['jan.', 'feb.', 'mars', 'apr.', 'mai', 'juni', 'juli', 'aug.', 'sep.', 'okt.', 'nov.', 'des.'];
+const dayLabelNb = (iso) => `${+iso.slice(8, 10)}. ${MON3_NB[+iso.slice(5, 7) - 1]}`;
 // Beløp per måned (øre) for en fast utgift, samme omregning som abonnementene (cycles.js). Sendes som `monthly` (kr), så klientene ikke regner selv.
 const monthlyOf = (r) => perMonth(r.amount, r.interval);
 
 function recurringOut(r, cats = catById()) {
-  const cat = cats.get(r.category_id);
+  const cat = cats.get(r.category_id), next = recurringNextDate(r);
   return { id: r.id, name: r.name, amount: r.amount / 100, monthly: Math.round(monthlyOf(r)) / 100, interval: r.interval, day: r.day, month: r.month, active: !!r.active, detected: !!r.detected,
-    categoryId: r.category_id, category: cat?.name ?? '–', color: cat?.color ?? '#A0A0AA', accountId: r.account_id, next: nextDate(r).toLocaleDateString('sv-SE') };
+    categoryId: r.category_id, category: cat?.name ?? '–', color: cat?.color ?? '#A0A0AA', accountId: r.account_id,
+    // Fase 6 (Faste betalinger): nextDate (Oslo), cycle, cycleName og label, så klientene viser i stedet for å regne. `next` er det eldre navnet.
+    next, nextDate: next, cycle: r.interval, cycleName: CYCLE_NAME[r.interval] ?? 'Månedlig', label: `${CYCLE_NAME[r.interval] ?? 'Månedlig'} · neste trekk ${dayLabelNb(next)}` };
 }
 
 function receiptOut(r, cats = catById(), accs = accById()) {
@@ -574,7 +564,9 @@ const upload = bodyLimit({ maxSize: Number(process.env.MAX_UPLOAD_MB ?? 40) * 10
 
 // Sidemenyen: Import ligger nå under Innstillinger, AI-søk har egen side etter Transaksjoner.
 // Matplan er den felles Homelab-komponenten (bare for administratorer, som resten av regnskapet).
-const NAV_DEFAULT = ['ov', 'tx', 'ai', 'kv', 'bud', 'fast', 'konto', 'aks', 'rap', 'sub', 'dir', 'finn', 'inn']; // Import ligger under Innstillinger
+// Fase 6 (Q3, Q4): samme sider som undermenyen på mobil. Abonnementer (sub) og Aksjer (aks) er filtre/faner på Faste betalinger (fast)
+// og Kontoer og aksjer (konto), og faller bort fra lagrede menyer (navMerge). Import ligger under Innstillinger.
+const NAV_DEFAULT = ['ov', 'tx', 'ai', 'filter', 'bud', 'fast', 'plan', 'konto', 'kv', 'dir', 'finn', 'rap', 'inn'];
 const NAV_FIXED = ['ov', 'inn'];
 // Lagret rekkefølge beholdes; sider som er fjernet (f.eks. Matplan, som nå er i Homelab) faller bort, og nye sider
 // (AI-søk, Import) settes inn rett etter nærmeste side som står foran dem i standardrekkefølgen.

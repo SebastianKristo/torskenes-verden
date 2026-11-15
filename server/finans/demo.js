@@ -5,7 +5,11 @@ import { db, OWNER, settings, ensureLedger } from './db.js';
 export function loadDemo(u = OWNER) {
   ensureLedger(u);
   const q = (sql) => db.prepare(sql);
-  const cat = (n) => q('SELECT id FROM fh_categories WHERE name=? AND user_id=?').get(n, u)?.id ?? null;
+  const catId = (n) => q('SELECT id FROM fh_categories WHERE name=? AND user_id=?').get(n, u)?.id ?? null;
+  // Fase 6 (Q11): nye regnskap har «Hjem og interiør» og ingen «Abonnementer» (abonnementer ligger i Faste betalinger).
+  // Eldre regnskap har fortsatt de gamle navnene, så demoen bruker det som finnes.
+  const NEW = { Hjem: 'Hjem og interiør', Abonnementer: 'Fritid og hobby' };
+  const cat = (n) => catId(n) ?? (NEW[n] ? catId(NEW[n]) : null);
   const rcId = (k) => (u === OWNER ? `demo-${k}` : `demo-${k}-${u}`);
   const now = new Date();
   const day = (offsetMonths, d) => { const x = new Date(now.getFullYear(), now.getMonth() + offsetMonths, Math.min(d, 28)); return x.toLocaleDateString('sv-SE'); };
@@ -65,10 +69,10 @@ export function loadDemo(u = OWNER) {
     }
     const budIns = q("INSERT OR REPLACE INTO fh_budgets(category_id,month,amount,user_id) VALUES(?, 'default', ?, ?)");
     const bud = { run: (...a) => budIns.run(...a, u) };
-    for (const [c, v] of Object.entries({ 'Mat og dagligvarer': 6000, 'Restaurant og kafé': 1800, 'Transport og lading': 1500, Bolig: 11000, Hjem: 1000, 'Fritid og hobby': 1500, Abonnementer: 750, Skole: 1000 })) bud.run(cat(c), v * 100);
+    for (const [c, v] of Object.entries({ 'Mat og dagligvarer': 6000, 'Restaurant og kafé': 1800, 'Transport og lading': 1500, Bolig: 11000, Hjem: 1000, 'Fritid og hobby': 1500, ...(catId('Abonnementer') ? { Abonnementer: 750 } : {}), Skole: 1000 })) bud.run(cat(c), v * 100);
     const recIns = q('INSERT INTO fh_recurring(name,amount,interval,day,category_id,account_id,user_id) VALUES(?,?,?,?,?,?,?)');
     const rec = { run: (...a) => recIns.run(...a, u) };
-    for (const [n, a, d, c] of [['Husleie', 9500, 1, 'Bolig'], ['Spotify', 129, 6, 'Abonnementer'], ['Ruter månedskort', 518, 10, 'Transport og lading'], ['Mobilabonnement', 399, 20, 'Abonnementer'],
+    for (const [n, a, d, c] of [['Husleie', 9500, 1, 'Bolig'], ['Spotify', 129, 6, 'Abonnementer'], ['Ruter månedskort', 518, 10, 'Transport og lading'], ['Mobilabonnement', 399, 20, 'Annet'],
       ['Innboforsikring', 214, 25, 'Bolig'], ['Netflix', 279, 28, 'Abonnementer'], ['Treningssenter', 549, 1, 'Fritid og hobby']]) rec.run(n, a * 100, 'monthly', d, cat(c), acc.Brukskonto);
     const goalIns = q('INSERT INTO fh_goals(name,saved,target,color,user_id) VALUES(?,?,?,?,?)');
     const goal = { run: (...a) => goalIns.run(...a, u) };

@@ -55,7 +55,7 @@ export const PAGES51 = [
   FIN('transaksjoner', 'tx'),
   FIN('budsjett', 'bud'),
   FIN('abonnementer', 'sub'),
-  FIN('faste', 'fast'),
+  FIN('faste', 'fast/faste'), // Fase 6: Faste utgifter er et filter i Faste betalinger (#/fast alene åpner sist brukte filter)
   FIN('kvitteringer', 'kv'),
   FIN('boliger', 'dir'),
   FIN('aksjer', 'aks'),

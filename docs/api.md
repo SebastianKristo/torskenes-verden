@@ -71,6 +71,7 @@ Klientene viser det serveren sender og regner ikke selv (fasit i `shared/testvek
 
 - **Datoer:** `POST /api/dates/parse`. «I dag» er alltid Oslo-datoen (`today` i svaret).
 - **Neste trekk** (`/finans/api/subscriptions`): send `cycle` (`weekly`, `biweekly`, `monthly`, `quarterly`, `halfyearly`, `yearly`, `biennial`), `chargeDay`/`billDay`, `billMonth` og gjerne `startDate` (et kjent trekk). Serveren regner `nextDate`. En `nextDate` fra klienten brukes bare som anker når trekkdag mangler, og erstattes hvis den ikke stemmer med syklusen. Eksplisitt manuell overstyring: `nextDateManual: true`. `GET /subscriptions` har `cycles[]`, og hvert abonnement har `monthly`, `yearly`, `perLabel` og `cycleName`.
+- **Faste betalinger** (`GET /finans/api/faste-betalinger?days=30`, Q4): abonnementer og faste utgifter i én form (`items[]` med `kind`, `amount`, `monthly`, `yearly`, `cycle`, `cycleName`, `nextDate`, `nextLabel`, `daysLeft`, `label`, `href`, `duplicateOf`), filtrene (`filters[]`: Abonnementer, Faste utgifter, Planlagte trekk med antall og sum), trekkdagene i måneden (`chargeDays[]`) og planlagte trekk (`planned.items[]`). En fast utgift for samme tjeneste som et aktivt abonnement har `duplicateOf` og telles ikke. `/recurring` har også `nextDate` (Oslo), `cycle`, `cycleName` og `label`.
 - **Betalt siste 12 mnd** (`GET /subscriptions/log`): `summary.paid12m` og `summary.paid12mText`, med prøver som gikk over til betalt (Q21).
 - **Prøveperioder:** tolkes på serveren (`POST /subscriptions/trials/parse`). Varselplanen står i `notifications[]` (`{key, dedupeKey, kind, at, title, body}`, `at` i UTC) på prøven og i `GET /api/widgets/trials`. Appene planlegger bare den kopien og dedupliserer mot push med `dedupeKey`.
 - **Bolig «brukt»** (`GET /finans/api/folders/:id`): `spent`, `pending: {count, amount, text:'venter: X kr'}`, `months[].spent`/`.pending`, `kpi.spentByMonth[]`, `kpi.budgetLeft` (fra `spent`) og `kpi.over`. Poster til gjennomgang og kvitteringer som leses, er ikke «brukt» (Q21).
@@ -118,7 +119,7 @@ Kalender og e-post, Media, Økonomi, Reise og pakker, AI, Varsler, Nettverk, Gen
 | Oversikt | `GET /bootstrap`, `GET /summary`, `GET /reports` |
 | Transaksjoner | `GET/POST /transactions`, `PATCH/DELETE /transactions/:id`, `GET /transactions.csv` |
 | Kvitteringer | `GET/POST /receipts` (flere filer), `GET /receipts/jobs`, `GET/PATCH/DELETE /receipts/:id`, `…/file`, `…/thumb`, `POST …/book`, `…/reject`, `…/reprocess` |
-| Budsjett og faste | `PUT /budgets`, `GET/POST /recurring`, `PATCH/DELETE /recurring/:id`, `POST /recurring/detect` |
+| Budsjett og faste | `PUT /budgets`, `GET /faste-betalinger`, `GET/POST /recurring`, `PATCH/DELETE /recurring/:id`, `POST /recurring/detect` |
 | Kontoer og mål | `POST /accounts`, `PATCH/DELETE /accounts/:id`, `POST /goals`, `PATCH/DELETE /goals/:id` |
 | Kategorier og regler | `POST /categories`, `PATCH/DELETE /categories/:id`, `POST /rules`, `PATCH/DELETE /rules/:id`, `POST /rules/apply` |
 | Import | `POST /import` (forhåndsvisning, `?commit=1` lagrer), `POST /import/csv` |

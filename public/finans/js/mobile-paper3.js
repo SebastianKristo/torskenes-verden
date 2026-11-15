@@ -39,14 +39,18 @@ export function save15(patch) {
 
 /* ---------- Fanelinja ---------- */
 
-// Finans-fanene brukeren kan velge (opptil 4); Mer er alltid siste fane.
+// Økonomi-fanene brukeren kan velge (opptil 4); Mer er alltid siste fane. Fase 6 (Q3): standard er undermenyen Oversikt, Transaksjoner,
+// Budsjett og Faste betalinger; resten av Økonomi ligger i Mer.
 export const FT = {
-  oversikt: ['hjem', 'Oversikt', '◎'], liste: ['liste', 'Liste', '≡'], finn: ['finn', 'Finn', '⇄'], sok: ['sok', 'Søk', '⌕'], budsjett: ['budsjett', 'Budsjett', '◔'],
-  kvitteringer: ['kv', 'Kvitteringer', '▢'], aksjer: ['aks', 'Aksjer', '↗'], abonnementer: ['sub', 'Abonnementer', '↻'], kontoer: ['konto', 'Kontoer', '▤'], boliger: ['dir', 'Boliger', '⌂'], chat: ['chat', 'Chat', '✦'],
+  oversikt: ['hjem', 'Oversikt', '◎'], liste: ['liste', 'Transaksjoner', '≡'], finn: ['finn', 'Finn', '⇄'], sok: ['sok', 'Søk', '⌕'], budsjett: ['budsjett', 'Budsjett', '◔'],
+  kvitteringer: ['kv', 'Kvitteringer', '▢'], aksjer: ['aks', 'Aksjer', '↗'], abonnementer: ['fast', 'Faste betalinger', '↻'] /* Fase 6: nøkkelen er den samme som i appene og /api/me/layout */, kontoer: ['konto', 'Kontoer', '▤'], boliger: ['dir', 'Boliger', '⌂'], chat: ['chat', 'Chat', '✦'],
 };
-export const FT_DEF = ['oversikt', 'liste', 'finn', 'sok'];
+export const FT_DEF = ['oversikt', 'liste', 'budsjett', 'abonnementer'];
+// Serverens standard før Fase 6 (server/mobile.js, profilen «standard»). Har brukeren ikke endret fanene, gjelder den nye standarden.
+const OLD_DEF = ['oversikt', 'liste', 'finn', 'sok'];
+const sameList = (a, b) => Array.isArray(a) && a.length === b.length && a.every((x, i) => x === b[i]);
 // Prompt 24: profilene (Finans + Boliger) har fem Finans-faner; ellers fire.
-export const finKeys = () => { const v = [...new Set((L.finTabs ?? FT_DEF).filter((k) => FT[k]))]; return (v.length ? v : FT_DEF).slice(0, 5); }; // Prompt 26: maks 5 faner (Mer kommer alltid sist)
+export const finKeys = () => { const v = [...new Set((!L.finTabs || sameList(L.finTabs, OLD_DEF) ? FT_DEF : L.finTabs).filter((k) => FT[k]))]; return (v.length ? v : FT_DEF).slice(0, 5); }; // Prompt 26: maks 5 faner (Mer kommer alltid sist)
 /** Setter Finans-fanene (profilvalg). push = lagre i /api/me/layout også. */
 export function setFinTabs(list, push = true) { L.finTabs = list.filter((k) => FT[k]); keep(); if (push) hlApi('/me/layout', { method: 'PUT', json: { finTabs: L.finTabs } }).catch(() => {}); }
 export const finScreens = () => finKeys().map((k) => FT[k][0]);
@@ -252,14 +256,14 @@ const IC = {
   budsjett: 'M12 3v9l6.4 6.4A9 9 0 1 1 12 3zM15 3.5A9 9 0 0 1 20.5 9H15z', kv: 'M4 7V5a1 1 0 0 1 1-1h2M17 4h2a1 1 0 0 1 1 1v2M20 17v2a1 1 0 0 1-1 1h-2M7 20H5a1 1 0 0 1-1-1v-2M9 8h4l2 2v6H9z',
   fast: 'M17 2l4 4-4 4M3 11V9a3 3 0 0 1 3-3h15M7 22l-4-4 4-4M21 13v2a3 3 0 0 1-3 3H3', konto: 'M3 10h18M5 10v8M9 10v8M15 10v8M19 10v8M3 20h18M12 3l9 5H3z',
   aks: 'M3 20h18M5 16l5-5 3 3 6-7M15 7h4v4', rap: 'M5 20V10M10 20V4M15 20v-7M20 20v-11', sub: 'M20 12a8 8 0 0 1-14.3 4.9M4 12A8 8 0 0 1 18.3 7.1M18 3v4h-4M6 21v-4h4',
-  dir: 'M3 11l9-7 9 7v9H3zM9 20v-6h6v6', imp: 'M12 3v12M7 10l5 5 5-5M4 20h16',
+  dir: 'M3 11l9-7 9 7v9H3zM9 20v-6h6v6', imp: 'M12 3v12M7 10l5 5 5-5M4 20h16', plan: 'M4 5h16v15H4zM4 10h16M9 3v4M15 3v4M8 14h3M13 14h3M8 17h3',
   set: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM4 12h2M18 12h2M12 4v2M12 18v2M6.3 6.3l1.4 1.4M16.3 16.3l1.4 1.4M6.3 17.7l1.4-1.4M16.3 7.7l1.4-1.4',
 };
 export const FM = { d: null };
 export async function fmerLoad() {
   const ok = (p) => p.catch(() => null);
-  const [rec, sub, dirs, stocks] = await Promise.all([ok(api('/recurring')), ok(api('/subscriptions')), ok(api('/folders')), ok(api('/stocks'))]);
-  FM.d = { rec, sub, dirs, stocks };
+  const [rec, sub, dirs, stocks, fb] = await Promise.all([ok(api('/recurring')), ok(api('/subscriptions')), ok(api('/folders')), ok(api('/stocks')), ok(api('/faste-betalinger'))]);
+  FM.d = { rec, sub, dirs, stocks, fb };
   await rcCount();
 }
 const monthly = (r) => r.monthly ?? 0; // beløpet per måned regnes ut av serveren (/finans/api/recurring)
@@ -270,18 +274,22 @@ export function finMerGrid() {
   const bal = (S.boot?.accounts ?? []).reduce((a, x) => a + (x.balance ?? 0), 0);
   const st = D.stocks?.summary, chg = st?.changePct ?? st?.dayPct ?? null;
   const dirs = Array.isArray(D.dirs) ? D.dirs : D.dirs?.items ?? null;
+  // Fase 6 (Q3): Økonomis undermeny i samme rekkefølge og med samme navn som sidemenyen på desktop. Faste betalinger samler
+  // Abonnementer, Faste utgifter og Planlagte trekk (summen fra serveren); Import ligger under Innstillinger (O3).
   const T = [
-    ...(P24.profRoot() ? [['hl', 'Hjem', 'Pakker, avganger og widgets']] : []), // Prompt 24: Hjem som flis i profilene
-    ['sok', 'Søk', '✦ Med Glimt'], ['liste', 'Liste', 'Alle transaksjoner'], ['finn', 'Finn', 'Kjøp og salg'],
+    ...(P24.profRoot() ? [['hl', 'Homelab', 'Pakker, avganger og widgets']] : []), // Prompt 24: Homelab som flis i profilene
+    ['liste', 'Transaksjoner', 'Alle transaksjoner'],
     ['budsjett', 'Budsjett', s?.budgetTotal ? `${n0(s.left ?? 0)} kr ${(s.left ?? 0) < 0 ? 'over' : 'igjen'}` : 'Ikke satt opp'],
-    ['kv', 'Kvitteringer', rv ? `${rv} til gjennomgang` : 'Ingen til gjennomgang', rv],
-    ['fast', 'Faste utgifter', D.rec ? `${n0(recNext)} kr/mnd` : 'Neste 30 dager'],
-    ['konto', 'Kontoer', `${bal < 0 ? '−' : ''}${n0(bal)} kr`],
+    ['fast', 'Faste betalinger', D.fb ? `${n0(D.fb.monthly ?? 0)} kr/mnd` : D.rec ? `${n0(recNext)} kr/mnd` : 'Abonnementer og faste utgifter'],
+    ['plan', 'Sparing og planer', 'Sparemål, skatt og priser'],
+    ['konto', 'Kontoer og aksjer', `${bal < 0 ? '−' : ''}${n0(bal)} kr`],
     ['aks', 'Aksjer', st ? `${n0(st.value ?? st.total ?? 0)} kr${chg != null ? ` · ${chg >= 0 ? '▲' : '▼'} ${Math.abs(chg).toLocaleString('nb-NO', { maximumFractionDigits: 1 })} %` : ''}` : D.stocks?.configured === false ? 'Ikke koblet til' : 'Trading 212'],
-    ['rap', 'Rapporter', 'Måned og år'],
-    ['sub', 'Subscription OS', D.sub ? `${n0(D.sub.monthly ?? 0)} kr/mnd` : 'Abonnementer'],
+    ['kv', 'Kvitteringer', rv ? `${rv} til gjennomgang` : 'Ingen til gjennomgang', rv],
     ['dir', 'Boliger', dirs ? `${dirs.length} ${dirs.length === 1 ? 'bolig' : 'boliger'}` : 'Utgifter og prosjekter'],
-    ['imp', 'Import', 'Bank, Excel og Finn'], ['set', 'Innstillinger', 'Kategorier og regler'],
+    ['finn', 'Finn-handler', 'Kjøp og salg'],
+    ['rap', 'Rapporter', 'Måned og år'],
+    ['sok', 'Glimt', '✦ Spør om økonomien'],
+    ['set', 'Innstillinger', 'Import, kategorier og regler'],
   ].filter(([k]) => !inTabs.includes(k));
   // Prompt 20: egen ikonfarge per flis, og rekkefølgen brukeren har valgt (hold inne for å flytte). Linja med
   // Ferdig/Tilbakestill ligger under flisene, så de ikke flytter seg under fingeren når redigeringen starter.
@@ -525,7 +533,7 @@ export function navSettings() {
   return `<span class="pp-lab">FANELINJE</span><div class="pp-card pp-tight">
       ${row('data-ppset="fab"', 'Skanneknapp', fabStyle() === 'float' ? 'Flyter over linjen, søk ligger i linjen' : 'Ligger i linjen som +', fabStyle() === 'float' ? 'Flytende ›' : 'I linjen ›')}
       ${!domOk() ? '' : row('data-ppset="t4"', 'Fjerde fane', f4 === 'auto' ? `Domener, eller Sporing når pakker er på vei (nå: ${cur === 'spor' ? `Sporing, ${n} på vei` : 'Domener'})` : `Alltid ${f4 === 'sporing' ? 'Sporing' : 'Domener'}`, `${f4 === 'auto' ? 'Automatisk' : f4 === 'sporing' ? 'Sporing' : 'Domener'} ›`)}</div>
-    <span class="pp-lab">FINANS · FANELINJE OG MER</span><div class="pp-card pp-tight">${fin}
+    <span class="pp-lab">ØKONOMI · FANELINJE OG MER</span><div class="pp-card pp-tight">${fin}
       ${row('data-ppset="finrm"', 'Fjern fra fanelinjen', 'Trykk for å flytte siste fane til Mer', fk.length > 1 ? `Fjern ${FT[last][1]}` : '–', 'lab')}
       ${row('data-ppset="finreset"', 'Tilbakestill', 'Oversikt, Liste, Finn, Søk', 'Nullstill')}</div>`;
 }

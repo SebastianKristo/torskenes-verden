@@ -64,7 +64,7 @@ const mpSave = (mode, patch) => {
 function hidVis52(mode) { const P = MP[mode] ?? {}; ls.set(mode === 'fin' ? 'papir_fmer_hid_vis' : 'papir_mer_hid_vis', { sok: !P.sokOff, tit: !P.titleOff, vkt: !P.toolsOff }); }
 export function merTake45(pages) { for (const mode of ['hl', 'fin']) { const v = pages?.[`mer45${mode}`]; if (!v) continue; MP[mode] = { ...MP[mode], tiles: Array.isArray(v.order) && v.order.length === 4 ? v.order : MP[mode].tiles, titleOff: (v.hidden ?? []).includes('_title'), toolsOff: (v.hidden ?? []).includes('_tools'), sokOff: (v.hidden ?? []).includes('_sok') }; ls.set(`papir_mer45_${mode}`, MP[mode]); } }
 const tilesOf = (mode) => { const t = MP[mode]?.tiles; return Array.isArray(t) && t.length === 4 ? t : TILES0[mode]; };
-const TITLE0 = { hl: 'HVERDAG OG FAMILIE', fin: 'FINANS' };
+const TITLE0 = { hl: 'HVERDAG OG FAMILIE', fin: 'ØKONOMI' };
 const titleOf = (mode) => (MP[mode]?.titleOff ? '' : String(MP[mode]?.title || TITLE0[mode]).toUpperCase());
 /* Finans → Mer: skjulte lagres separat (papir_fmer_hid + /api/prefs/mer?scope=fin). */
 const FKEY = { konto: 'kontoer', budsjett: 'budsjett', kv: 'kvitt', fast: 'faste', aks: 'aksjer', finn: 'finn', dir: 'boliger', sub: 'abo', liste: 'fliste', imp: 'fimport', rap: 'rapp', sok: 'fsok' };
@@ -178,7 +178,7 @@ export function merNew(rows, opt = {}) {
   const P52 = MP[mode] ?? {}, sokOn = !P52.sokOff;
   // Prompt 52: i wiggle en rad med tre brytere (Søkefelt · tittel · Verktøy). På = svart pille med ✓, av = kontur med +.
   const pill = (k, n, on) => `<button type="button" class="p52-pill${on ? ' on' : ''}" data-p44="p52vis" data-k="${k}" role="switch" aria-checked="${on}"><span aria-hidden="true">${on ? '✓' : '+'}</span>${esc(n)}</button>`;
-  const ttlName = String(MP[mode]?.title || (mode === 'fin' ? 'Finans' : 'Hverdag og familie')).toLowerCase().replace(/^./, (c) => c.toUpperCase());
+  const ttlName = String(MP[mode]?.title || (mode === 'fin' ? 'Økonomi' : 'Hverdag og familie')).toLowerCase().replace(/^./, (c) => c.toUpperCase());
   const pills = ed ? `<div class="p52-pills" role="group" aria-label="Vis eller skjul">${pill('sok', 'Søkefelt', sokOn)}${pill('tit', ttlName, !P52.titleOff)}${pill('vkt', 'Verktøy', !P52.toolsOff)}</div>` : '';
   return `<div class="p44-mer${ed ? ' ed' : ''}${mode === 'fin' ? ' p45-fmer' : ''}${sokOn ? '' : ' p52-nosok'}">${pills}
     ${sokOn ? `<label class="p44-msrch">${svg('M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-4-4', 16, 2.2)}<input id="p44-merq" data-p44in="merq" value="${esc(ME.q)}" placeholder="Søk i moduler" autocomplete="off" enterkeyhint="search" aria-label="Søk i moduler">${ME.q ? '<button type="button" class="p44-mclr" data-p44="merclr" aria-label="Tøm søket">×</button>' : ''}</label>` : ''}

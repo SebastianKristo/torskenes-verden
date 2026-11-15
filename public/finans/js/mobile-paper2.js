@@ -75,7 +75,7 @@ export function paperFMer() {
   const s = S.summary, rv = (s?.review ?? []).filter((r) => r.status === 'needs_review').length;
   const bud = s?.budgetTotal ? `${Math.round((s.budgetUsed / s.budgetTotal) * 100)} %` : '';
   const G = [['PENGER', [['budsjett', 'Budsjett', 'Per kategori', bud], ['kv', 'Kvitteringer', 'Kø og bokført', rv ? String(rv) : '', rv], ['fast', 'Faste trekk', 'Neste 30 dager', ''], ['konto', 'Kontoer', 'Saldo og kort', '']]],
-    ['MODULER', [['aks', 'Aksjer', 'Trading 212', ''], ['sub', 'Abonnementer', 'Subscription OS', ''], ['dir', 'Boliger', 'Utgifter, prosjekter og regninger', '']]],
+    ['MODULER', [['aks', 'Aksjer', 'Trading 212', ''], ['fast', 'Faste betalinger', 'Abonnementer og faste utgifter', ''], ['dir', 'Boliger', 'Utgifter, prosjekter og regninger', '']]],
     ['DATA', [['imp', 'Import', 'Bank, Excel og Finn', ''], ['rap', 'Rapporter', 'Måned og år', ''], ['set', 'Innstillinger', 'Tema, kategorier og regler', '']]]];
   return G.map(([t, rows]) => `<div class="pp-grp"><span class="pp-lab">${t}</span><div class="pp-card pp-list">${rows.map(([k, n, sd, v, hot]) => `<a href="#/${k}"><span class="m-grow"><b class="pp-serif">${n}</b><span class="pp-mut">${sd}</span></span>${v ? `<span class="${hot ? 'pp-lab-c' : 'pp-mut'}" style="font-size:13px">${esc(v)}</span>` : ''}<span class="pp-mut">›</span></a>`).join('')}</div></div>`).join('');
 }

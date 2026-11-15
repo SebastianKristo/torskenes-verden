@@ -334,13 +334,17 @@ for (const t of ['fh_accounts', 'fh_transactions', 'fh_budgets', 'fh_recurring',
 addUserCol('fh_receipts', `CASE WHEN uploaded_by IS NOT NULL AND uploaded_by IN (SELECT id FROM users WHERE role<>'admin') THEN uploaded_by ELSE '${OWNER}' END`);
 db.exec('CREATE INDEX IF NOT EXISTS fh_tx_uid_date ON fh_transactions(user_id, date)');
 
+// Standardkategoriene for nye regnskap (Fase 6, Q11): «Bolig» er faste boutgifter (husleie, strøm, forsikring), «Hjem og interiør» er
+// innkjøp til hjemmet. «Abonnementer» er ikke lenger en kategori: abonnementer hører til Faste betalinger (fh_subscriptions), og trekket
+// får kategorien for det det gjelder (strømming → Fritid og hobby). Eksisterende regnskap endres bare av admin
+// (Økonomi → Innstillinger → Kategorier, category-migration.js), aldri ved oppstart.
 export const DEFAULT_CATEGORIES = [
   ['Mat og dagligvarer', '#FF9F5A', 'expense'], ['Restaurant og kafé', '#F2C14E', 'expense'], ['Transport og lading', '#7AA7FF', 'expense'],
-  ['Bolig', '#B79CFF', 'expense'], ['Hjem', '#8FD3FF', 'expense'], ['Fritid og hobby', '#5FD3A8', 'expense'], ['Abonnementer', '#FF6B8B', 'expense'],
+  ['Bolig', '#B79CFF', 'expense'], ['Hjem og interiør', '#8FD3FF', 'expense'], ['Fritid og hobby', '#5FD3A8', 'expense'],
   ['Skole', '#C9E265', 'expense'], ['Annet', '#A0A0AA', 'expense'], ['Inntekt', '#9FE3C6', 'income'], ['Sparing', '#A0A0AA', 'transfer'], ['Overføring', '#6B6B75', 'transfer'],
 ];
 const DEFAULT_RULES = [['REMA*', 'Mat og dagligvarer'], ['KIWI*', 'Mat og dagligvarer'], ['MENY*', 'Mat og dagligvarer'], ['COOP*', 'Mat og dagligvarer'],
-  ['CIRCLE K*', 'Transport og lading'], ['RUTER*', 'Transport og lading'], ['SPOTIFY*', 'Abonnementer'], ['NETFLIX*', 'Abonnementer']];
+  ['CIRCLE K*', 'Transport og lading'], ['RUTER*', 'Transport og lading'], ['SPOTIFY*', 'Fritid og hobby'], ['NETFLIX*', 'Fritid og hobby']];
 
 export const DEFAULT_SETTINGS = {
   name: '', currency: 'NOK', monthStart: 1, yearGoal: 120000,

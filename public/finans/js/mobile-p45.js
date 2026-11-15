@@ -199,18 +199,20 @@ function kbSync() {
 }
 
 /* =====================================================================
-   3. Finans → Mer (samme komponent som Mer, mode 'fin')
+   3. Økonomi → Mer (samme komponent som Mer, mode 'fin'). Fase 6 (Q3): samme sider og navn som sidemenyen på desktop.
    ===================================================================== */
 function finRows() {
   const s = S.summary, D = PA3.FM.d ?? {}, rv = PA3.rcNum(), acc = S.boot?.accounts ?? [];
   const bal = acc.reduce((a, x) => a + (x.balance ?? 0), 0), rec = (Array.isArray(D.rec) ? D.rec : D.rec?.items ?? []).filter((r) => r.active !== false);
-  const nx = rec.map((r) => ({ r, d: Date.parse(r.next ?? r.nextDate ?? r.due ?? '') })).filter((x) => !isNaN(x.d) && x.d >= Date.now() - 864e5).sort((a, b) => a.d - b.d)[0];
+  // Neste trekk og dager igjen fra serveren (GET /faste-betalinger, Oslo-dato), ikke regnet ut her.
+  const fbN = (D.fb?.items ?? []).filter((x) => x.active && !x.duplicateOf && x.daysLeft != null).sort((a, b) => a.daysLeft - b.daysLeft)[0];
+  const nx = fbN ? { r: { name: fbN.name, amount: fbN.amount } } : rec.map((r) => ({ r, d: Date.parse(r.next ?? r.nextDate ?? r.due ?? '') })).filter((x) => !isNaN(x.d) && x.d >= Date.now() - 864e5).sort((a, b) => a.d - b.d)[0];
   const st = D.stocks?.summary, dirs = Array.isArray(D.dirs) ? D.dirs : D.dirs?.items ?? null;
   const pctB = s?.budgetTotal ? Math.round(((s.spent ?? (s.budgetTotal - (s.left ?? 0))) / s.budgetTotal) * 100) : null;
   const dLeft = (() => { const n = new Date(), e = new Date(n.getFullYear(), n.getMonth() + 1, 0); return e.getDate() - n.getDate(); })();
   const mon = new Date().toLocaleDateString('nb-NO', { month: 'long' }).replace(/^./, (c) => c.toUpperCase());
   const banks = [...new Set(acc.map((a) => a.bank ?? a.institution ?? a.name).filter(Boolean))].slice(0, 2).join(' · ');
-  const nxD = nx ? Math.round((nx.d - Date.now()) / 864e5) : null;
+  const nxD = fbN ? fbN.daysLeft : nx ? Math.round((nx.d - Date.now()) / 864e5) : null;
   const live = {
     saldo: { k: 'Disponibelt', v: acc.length ? `${bal < 0 ? '−' : ''}${n0(bal)} kr` : '–', s: banks || (acc.length ? `${acc.length} kontoer` : 'Ingen kontoer ennå'), row: acc.length ? `${bal < 0 ? '−' : ''}${n0(bal)} kr disponibelt` : 'Ingen kontoer ennå' },
     budsjett: pctB != null ? { k: mon, v: `${pctB} %`, s: `brukt · ${dLeft} dager igjen`, row: `${pctB} % brukt i ${mon.toLowerCase()}` } : { k: '', v: '', s: 'Ikke satt opp', row: 'Ikke satt opp' },
@@ -219,12 +221,17 @@ function finRows() {
   };
   const inTabs = PA3.finScreens?.() ?? [];
   const R = [
-    { k: 'saldo', n: 'Saldo', s: live.saldo.row, href: 'konto' }, { k: 'budsjett', n: 'Budsjett', s: live.budsjett.row }, { k: 'kv', n: 'Kvitteringer', s: live.kv.row }, { k: 'fast', n: 'Faste trekk', s: live.fast.row },
+    { k: 'saldo', n: 'Saldo', s: live.saldo.row, href: 'konto' }, { k: 'budsjett', n: 'Budsjett', s: live.budsjett.row }, { k: 'kv', n: 'Kvitteringer', s: live.kv.row }, { k: 'fast', n: 'Faste betalinger', s: live.fast.row },
+    { k: 'liste', n: 'Transaksjoner', s: 'Alle kontoer' },
+    { k: 'plan', n: 'Sparing og planer', s: 'Sparemål, skatt, priser og abonnementsjeger' },
+    { k: 'konto', n: 'Kontoer og aksjer', s: banks || `${acc.length} kontoer` },
     { k: 'aks', n: 'Aksjer', s: st ? `${n0(st.value ?? st.total ?? 0)} kr` : D.stocks?.configured === false ? 'Ikke koblet til' : 'Portefølje og kurser' },
-    { k: 'finn', n: 'Finn', s: 'Kjøp og salg med Fiks ferdig' }, { k: 'dir', n: 'Boliger', s: dirs ? `${dirs.length} ${dirs.length === 1 ? 'bolig' : 'boliger'}` : 'Utgifter per bolig' },
-    { k: 'sub', n: 'Abonnement', s: D.sub ? `${n0(D.sub.monthly ?? 0)} kr/mnd` : 'Abonnementer og prøveperioder' }, { k: 'plan', n: 'Planlegging', s: 'Sparemål, faste trekk, skatt og priser' } /* prompt 51 (FIN51) */, { k: 'liste', n: 'Transaksjoner', s: 'Alle kontoer' },
-    { k: 'konto', n: 'Kontoer', s: banks || `${acc.length} kontoer` }, { k: 'imp', n: 'Import', s: 'Bank, CSV og e-post' }, { k: 'rap', n: 'Rapporter', s: 'Måned og år' },
-    { k: 'set', n: 'Innstillinger', s: 'Kategorier, regler og fanelinje' },
+    { k: 'dir', n: 'Boliger', s: dirs ? `${dirs.length} ${dirs.length === 1 ? 'bolig' : 'boliger'}` : 'Utgifter per bolig' },
+    { k: 'finn', n: 'Finn-handler', s: 'Kjøp og salg med Fiks ferdig' },
+    { k: 'rap', n: 'Rapporter', s: 'Måned og år' },
+    { k: 'sok', n: 'Glimt', s: '✦ Spør om økonomien' },
+    // Abonnementer ligger i Faste betalinger, og Import i Innstillinger → Import (O3).
+    { k: 'set', n: 'Innstillinger', s: 'Import, kategorier, regler og fanelinje' },
   ].filter((r) => ['saldo', 'budsjett', 'kv', 'fast', 'set'].includes(r.k) || !inTabs.includes(r.k));
   return { R, live };
 }

@@ -20,7 +20,7 @@ Regler:
 - payment_method = betalingsmåten slik den står (BankAxept, Visa, Mastercard, Vipps, Kontant …) eller null.
 - category_suggestion = én kategori fra listen brukeren gir. Aldri en kategori som ikke står i listen.`;
 
-const CATS = 'Mat og dagligvarer, Restaurant og kafé, Transport og lading, Bolig, Hjem, Fritid og hobby, Abonnementer, Skole, Annet';
+const CATS = 'Mat og dagligvarer, Restaurant og kafé, Transport og lading, Bolig, Hjem og interiør, Fritid og hobby, Skole, Annet';
 const userMsg = (rows, cats, feedback) => `Kategorier: ${cats}\n\nRader:\n${rows.join('\n')}${feedback ? `\n\n${feedback}` : ''}`;
 export const FEWSHOTS48 = [
   {

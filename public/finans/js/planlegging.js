@@ -1,4 +1,4 @@
-// Prompt 51 (FIN51): «Planlegging» i FinansHub – sparemål, faste utgifter-kalender med saldoprognose, skattehjelp,
+// «Sparing og planer» i Økonomi (før «Planlegging», prompt 51) – sparemål, planlagte trekk med saldoprognose, skattehjelp,
 // prishistorikk og abonnementsjeger. Samme modul brukes på desktop (siden «plan» i FinansHub, modules.js) og som egen
 // side for PWA/mobil (/finans/plan51). Selvstendig: egen tilstand og egne hendelser (data-p51*), ingen avhengighet til
 // desktop.js. Desktop tegner hele siden på nytt ofte, så modulen monterer seg selv i hvert nytt [data-p51-host] (MutationObserver)
@@ -6,7 +6,11 @@
 import { fhDesign, nårTemaEndres } from './tema.js';
 
 const BASE = '/finans/api';
-const TABS = [['spar', 'Sparemål'], ['kal', 'Kalender'], ['skatt', 'Skatt'], ['pris', 'Priser'], ['jakt', 'Abonnementsjeger']];
+const TABS = [['spar', 'Sparemål'], ['kal', 'Planlagte trekk'], ['skatt', 'Skatt'], ['pris', 'Priser'], ['jakt', 'Abonnementsjeger']];
+// Fase 6 (Q4): planlagte trekk (kalenderen med saldoprognose) hører til Faste betalinger. På desktop viser Faste betalinger → Planlagte
+// trekk bare den fanen (data-p51-only="kal"), og Sparing og planer skjuler den (data-p51-hide="kal"). Den egne siden /finans/plan51 har alle.
+const onlyOf = (h) => h?.dataset?.p51Only || null;
+const tabsOf = (h) => (onlyOf(h) ? TABS.filter(([k]) => k === onlyOf(h)) : TABS.filter(([k]) => !(h?.dataset?.p51Hide ?? '').split(',').includes(k)));
 const P = { tab: 'spar', data: {}, busy: {}, err: {}, ui: { days: 30, acc: 'all', year: null, q: '', sort: 'change', open: null, weeks: 6, draft: null, edit: null, newGoal: false, dep: null } };
 try { const t = localStorage.getItem('fin51_tab'); if (TABS.some(([k]) => k === t)) P.tab = t; } catch { /* privat modus */ }
 { const h = location.hash.replace(/^#\/?/, ''); if (TABS.some(([k]) => k === h)) P.tab = h; }
@@ -51,15 +55,15 @@ function toast(msg) {
 /* ---------------- Tegning ---------------- */
 
 const hosts = () => [...document.querySelectorAll('[data-p51-host]')];
-function paint() { for (const h of hosts()) { h.innerHTML = view(); h.dataset.p51On = '1'; } }
+function paint() { for (const h of hosts()) { h.innerHTML = view(h); h.dataset.p51On = '1'; } }
 const card = (inner, cls = '') => `<section class="card p51-card ${cls}">${inner}</section>`;
 const loading = () => '<div class="p51-skel" aria-busy="true"><span></span><span></span><span></span></div>';
 const errBox = (t) => `<div class="p51-err" role="alert">${esc(P.err[t])} <button type="button" class="p51-lnk" data-p51="retry">Prøv igjen</button></div>`;
 const bar = (pct, color = 'var(--acc)') => `<div class="p51-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(pct)}"><span style="width:${Math.max(0, Math.min(100, pct))}%;background:${esc(color)}"></span></div>`;
 
-function view() {
-  const tabs = `<nav class="p51-tabs" role="tablist" aria-label="Planlegging">${TABS.map(([k, n]) => `<button type="button" role="tab" aria-selected="${P.tab === k}" class="${P.tab === k ? 'on' : ''}" data-p51="tab" data-k="${k}">${n}</button>`).join('')}</nav>`;
-  const t = P.tab, d = P.data[t];
+function view(h = null) {
+  const tabs = onlyOf(h) ? '' : `<nav class="p51-tabs" role="tablist" aria-label="Sparing og planer">${tabsOf(h).map(([k, n]) => `<button type="button" role="tab" aria-selected="${P.tab === k}" class="${P.tab === k ? 'on' : ''}" data-p51="tab" data-k="${k}">${n}</button>`).join('')}</nav>`;
+  const own = tabsOf(h), t = own.some(([k]) => k === P.tab) ? P.tab : own[0][0], d = P.data[t];
   const body = P.err[t] && !d ? errBox(t) : !d ? loading() : { spar: sparView, kal: kalView, skatt: skattView, pris: prisView, jakt: jaktView }[t](d);
   return `<div class="p51-wrap">${tabs}<div class="p51-body" role="tabpanel">${body}</div></div>`;
 }
@@ -189,7 +193,7 @@ function prisView(d) {
     return `<li class="p51-pr${open ? ' open' : ''}"><button type="button" class="p51-prb" data-p51="pris-open" data-k="${esc(i.key)}" aria-expanded="${open}"><span><b>${esc(i.name)}</b><small>${nf(i.last.price, 2)} kr/${esc(i.unit)} · ${esc(i.last.store)} · ${i.count} kjøp</small></span>
       <span class="p51-prr"><span class="${i.changePct >= 1 ? 'neg' : i.changePct <= -1 ? 'pos' : 'p51-mut'}">${esc(i.changeText)}</span>${i.cheapest ? `<small>Billigst: ${esc(i.cheapest.store)} ${nf(i.cheapest.price, 2)} kr (−${i.cheapest.savingPct} %)</small>` : ''}</span></button>${det}</li>`;
   }).join('');
-  return `${head}${card(`${tools}${rows ? `<ul class="p51-prices">${rows}</ul>` : `<div class="p51-note">${P.ui.q ? 'Ingen varer passer søket.' : 'Ingen varelinjer ennå. Skann kvitteringer med varelinjer, så følger FinansHub prisene for deg.'}</div>`}`)}`;
+  return `${head}${card(`${tools}${rows ? `<ul class="p51-prices">${rows}</ul>` : `<div class="p51-note">${P.ui.q ? 'Ingen varer passer søket.' : 'Ingen varelinjer ennå. Skann kvitteringer med varelinjer, så følger Økonomi prisene for deg.'}</div>`}`)}`;
 }
 
 /* --- Abonnementsjeger --- */
@@ -300,16 +304,23 @@ async function onSubmit(e) {
 /* ---------------- Montering ---------------- */
 
 function mount(h) {
-  if (h.dataset.p51Bound) { h.innerHTML = view(); return; }
+  // Verten bestemmer hvilke faner som finnes (se tabsOf); en fane verten ikke har, byttes til den første den har.
+  const tabs = tabsOf(h);
+  if (!tabs.some(([k]) => k === P.tab)) P.tab = tabs[0][0];
+  if (h.dataset.p51Bound) { h.innerHTML = view(h); return; }
   h.dataset.p51Bound = '1';
   h.addEventListener('click', onClick);
   h.addEventListener('change', onChange);
   h.addEventListener('submit', onSubmit);
-  h.innerHTML = view();
+  h.innerHTML = view(h);
   load();
 }
 /** Desktop (modules.js): siden «Planlegging» i FinansHub. Innholdet monteres av modulen selv. */
-export function plan51Page() { return `<div class="p51 p51-desk" data-p51-host>${view()}</div>`; }
+export function plan51Page({ only = null, hide = null } = {}) {
+  const at = `${only ? ` data-p51-only="${esc(only)}"` : ''}${hide ? ` data-p51-hide="${esc(hide)}"` : ''}`;
+  const h = { dataset: { p51Only: only ?? '', p51Hide: hide ?? '' } };
+  return `<div class="p51 p51-desk" data-p51-host${at}>${view(h)}</div>`;
+}
 export const PLAN51_ICON = 'M4 5h16v15H4zM4 10h16M9 3v4M15 3v4M8 14h3M13 14h3M8 17h3';
 
 function scan() { for (const h of document.querySelectorAll('[data-p51-host]')) if (!h.dataset.p51Bound) mount(h); }

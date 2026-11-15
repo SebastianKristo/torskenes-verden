@@ -217,8 +217,8 @@ test('Finans → Søk: «Abonnementer» gir kort svar uten markdown, tre nøkkel
   add('Spotify', 12900, 'monthly', inDays(12)); add('TV 2 Play', 19900, 'monthly', inDays(5)); add('iCloud', 120000, 'yearly', inDays(40));
   const r = await A('/finans/api/search/ask', 'POST', { q: 'Abonnementer' });
   assert.equal(r.status, 200, r.text);
-  assert.equal(r.body.source, 'Subscription OS');
-  assert.equal(r.body.sourceLabel, 'fra Subscription OS');
+  assert.equal(r.body.source, 'Abonnementer'); // Fase 6 (Q4): «Subscription OS» utgår
+  assert.equal(r.body.sourceLabel, 'fra Abonnementer');
   assert.equal(r.body.text, 'Du har 3 aktive abonnementer, til sammen 428 kr i måneden. Dyrest: TV 2 Play 199 kr, Spotify 129 kr, iCloud 100 kr. Neste trekk: TV 2 Play 25. okt.'.replace('25. okt', `${+inDays(5).slice(8)}. ${['jan', 'feb', 'mar', 'apr', 'mai', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'des'][+inDays(5).slice(5, 7) - 1]}`)); // prompt 42: ny tekst (claude-code-finans-glimt-abonnement.md)
   assert.ok(!/\*\*|\[\d\]/.test(r.body.text));
   assert.deepEqual(r.body.cards.filter((c) => c.kind === 'stat').map((c) => [c.label, c.value]), [['PER MÅNED', '428 kr'], ['PER ÅR', '5 136 kr'], ['NESTE TREKK', r.body.cards.find((c) => c.key === 'next').value]]);

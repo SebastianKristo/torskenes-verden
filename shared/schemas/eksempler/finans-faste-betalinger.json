@@ -1,0 +1,266 @@
+{
+  "today": "2026-11-15",
+  "month": "2026-11",
+  "filters": [
+    {
+      "id": "abonnementer",
+      "name": "Abonnementer",
+      "count": 9,
+      "active": 9,
+      "monthly": 1693,
+      "yearly": 20316
+    },
+    {
+      "id": "faste",
+      "name": "Faste utgifter",
+      "count": 7,
+      "active": 7,
+      "monthly": 10662,
+      "yearly": 127944,
+      "duplicates": 3
+    },
+    {
+      "id": "planlagte",
+      "name": "Planlagte trekk",
+      "count": 13,
+      "total": -12564,
+      "days": 30
+    }
+  ],
+  "items": [
+    {
+      "key": "abonnement:2",
+      "kind": "abonnement",
+      "id": 2,
+      "name": "Spotify",
+      "plan": "Familie",
+      "amount": 239,
+      "monthly": 239,
+      "yearly": 2868,
+      "cycle": "monthly",
+      "cycleName": "Månedlig",
+      "perLabel": "/mnd",
+      "nextDate": "2026-11-20",
+      "nextLabel": "20. nov.",
+      "daysLeft": 5,
+      "label": "Månedlig · neste trekk 20. nov.",
+      "active": true,
+      "category": "Underholdning",
+      "color": null,
+      "source": "Abonnement",
+      "shared": null,
+      "href": "#/fast/abonnementer/2",
+      "duplicateOf": null
+    },
+    {
+      "key": "abonnement:3",
+      "kind": "abonnement",
+      "id": 3,
+      "name": "iCloud+",
+      "plan": "200 GB",
+      "amount": 39,
+      "monthly": 39,
+      "yearly": 468,
+      "cycle": "monthly",
+      "cycleName": "Månedlig",
+      "perLabel": "/mnd",
+      "nextDate": "2026-11-27",
+      "nextLabel": "27. nov.",
+      "daysLeft": 12,
+      "label": "Månedlig · neste trekk 27. nov.",
+      "active": true,
+      "category": "Lagring og sky",
+      "color": null,
+      "source": "Abonnement",
+      "shared": null,
+      "href": "#/fast/abonnementer/3",
+      "duplicateOf": null
+    },
+    {
+      "key": "abonnement:6",
+      "kind": "abonnement",
+      "id": 6,
+      "name": "Viaplay",
+      "plan": "Total",
+      "amount": 449,
+      "monthly": 449,
+      "yearly": 5388,
+      "cycle": "monthly",
+      "cycleName": "Månedlig",
+      "perLabel": "/mnd",
+      "nextDate": "2026-11-30",
+      "nextLabel": "30. nov.",
+      "daysLeft": 15,
+      "label": "Månedlig · neste trekk 30. nov.",
+      "active": true,
+      "category": "Underholdning",
+      "color": null,
+      "source": "Abonnement",
+      "shared": null,
+      "href": "#/fast/abonnementer/6",
+      "duplicateOf": null
+    },
+    {
+      "key": "abonnement:1",
+      "kind": "abonnement",
+      "id": 1,
+      "name": "Netflix",
+      "plan": "Standard",
+      "amount": 149,
+      "monthly": 149,
+      "yearly": 1788,
+      "cycle": "monthly",
+      "cycleName": "Månedlig",
+      "perLabel": "/mnd",
+      "nextDate": "2026-12-02",
+      "nextLabel": "2. des.",
+      "daysLeft": 17,
+      "label": "Månedlig · neste trekk 2. des.",
+      "active": true,
+      "category": "Underholdning",
+      "color": null,
+      "source": "Abonnement",
+      "shared": null,
+      "href": "#/fast/abonnementer/1",
+      "duplicateOf": null
+    }
+  ],
+  "monthly": 12355,
+  "yearly": 148260,
+  "chargeDays": [
+    {
+      "day": 1,
+      "count": 2,
+      "names": [
+        "Husleie",
+        "Treningssenter"
+      ]
+    },
+    {
+      "day": 2,
+      "count": 1,
+      "names": [
+        "Netflix"
+      ]
+    },
+    {
+      "day": 4,
+      "count": 1,
+      "names": [
+        "ChatGPT"
+      ]
+    },
+    {
+      "day": 8,
+      "count": 1,
+      "names": [
+        "Ruter"
+      ]
+    }
+  ],
+  "planned": {
+    "days": 30,
+    "from": "2026-11-15",
+    "to": "2026-12-14",
+    "items": [
+      {
+        "date": "2026-11-20",
+        "label": "20. nov.",
+        "kind": "fast",
+        "id": 4,
+        "name": "Mobilabonnement",
+        "amount": -399,
+        "account": "Brukskonto",
+        "source": "Fast utgift"
+      },
+      {
+        "date": "2026-11-20",
+        "label": "20. nov.",
+        "kind": "abonnement",
+        "id": 2,
+        "name": "Spotify",
+        "amount": -239,
+        "account": "Kredittkort",
+        "source": "Abonnement"
+      },
+      {
+        "date": "2026-11-25",
+        "label": "25. nov.",
+        "kind": "fast",
+        "id": 5,
+        "name": "Innboforsikring",
+        "amount": -214,
+        "account": "Brukskonto",
+        "source": "Fast utgift"
+      },
+      {
+        "date": "2026-11-27",
+        "label": "27. nov.",
+        "kind": "abonnement",
+        "id": 3,
+        "name": "iCloud+",
+        "amount": -39,
+        "account": "Brukskonto",
+        "source": "Abonnement"
+      }
+    ],
+    "total": -12564,
+    "lowest": {
+      "accountId": 1,
+      "account": "Brukskonto",
+      "balance": 95002.8,
+      "date": "2026-12-10"
+    },
+    "warnings": [],
+    "accounts": [
+      {
+        "id": 1,
+        "name": "Brukskonto",
+        "type": "checking",
+        "start": 106910.8,
+        "end": 136202.8,
+        "min": 95002.8,
+        "minDate": "2026-12-10",
+        "out": -11908,
+        "in": 41200,
+        "warn": null
+      },
+      {
+        "id": 2,
+        "name": "Kredittkort",
+        "type": "credit",
+        "start": -4740.4,
+        "end": -5396.4,
+        "min": -5396.4,
+        "minDate": "2026-12-14",
+        "out": -656,
+        "in": 0,
+        "warn": null
+      },
+      {
+        "id": 3,
+        "name": "Sparekonto",
+        "type": "savings",
+        "start": 79950,
+        "end": 79950,
+        "min": 79950,
+        "minDate": "2026-11-15",
+        "out": 0,
+        "in": 0,
+        "warn": null
+      },
+      {
+        "id": 4,
+        "name": "Kontanter",
+        "type": "cash",
+        "start": 650,
+        "end": 650,
+        "min": 650,
+        "minDate": "2026-11-15",
+        "out": 0,
+        "in": 0,
+        "warn": null
+      }
+    ]
+  }
+}

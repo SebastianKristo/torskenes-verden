@@ -9,7 +9,7 @@ import * as P38 from './mobile-p38.js'; // prompt 38: Glimt-oppsummering og alt 
 export const MODS = [
   ['mat', 'Mat', 'Ukemeny, kokk og handleliste', 'mat'],
   ['dom', 'Domener', 'Trafikk, besøk, ytelse og sikkerhet', 'globe'],
-  ['sub', 'Subscription OS', 'Abonnementer og trekk', 'sub'],
+  ['sub', 'Abonnementer', 'Faste betalinger', 'sub'],
   ['dir', 'Boliger', 'Utgifter, prosjekter og regninger', 'dir'],
   ['finn', 'Finn-handler', 'Trygg betaling, Fiks ferdig, Tillit', 'finn'],
 ];

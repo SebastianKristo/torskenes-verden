@@ -53,8 +53,8 @@ async function pick() {
 // Prompt 85: uten nett (eller når serveren er nede) sto det bare «Kunne ikke starte FinansHub: Failed to fetch» i hjørnet.
 // Nå: norsk forklaring, «Prøv igjen», og siden laster seg selv når nettet er tilbake.
 export const bootFailText = (e, online = true) => (!online || e instanceof TypeError
-  ? { title: 'Ingen kontakt med Homelab', text: online ? 'Serveren svarer ikke. Sjekk at du er på riktig nett, og prøv igjen.' : 'Du er uten nett. FinansHub åpner seg igjen når nettet er tilbake.' }
-  : { title: 'Kunne ikke starte FinansHub', text: String(e?.message || 'Ukjent feil') });
+  ? { title: 'Ingen kontakt med Homelab', text: online ? 'Serveren svarer ikke. Sjekk at du er på riktig nett, og prøv igjen.' : 'Du er uten nett. Økonomi åpner seg igjen når nettet er tilbake.' }
+  : { title: 'Kunne ikke starte Økonomi', text: String(e?.message || 'Ukjent feil') });
 function bootFail(e) {
   if (e?.auth) return; // innloggingen (core.js authLost) har tatt over skjermen
   const app = document.getElementById('app'), t = bootFailText(e, navigator.onLine !== false);

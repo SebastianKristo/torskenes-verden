@@ -76,7 +76,7 @@ const ica2 = addTx(d(9), 'ICA Nær Bislett', -88, 'Mat og dagligvarer');
 addRc('rc-ica-2', 'ICA Nær Bislett', d(9), 88, [{ description: 'Plommetomater 400g', amount: 34.9 }], ica2);
 const kaffe = addTx(d(4), 'Kaffebrenneriet', -129, 'Restaurant og kafé');
 addRc('rc-kaffe', 'Kaffebrenneriet', d(4), 129, [{ description: 'Filterkaffe 250g', amount: 129 }], kaffe);
-const jula = addTx(d(5), 'Jula', -199, 'Hjem');
+const jula = addTx(d(5), 'Jula', -199, 'Hjem og interiør');
 addRc('rc-jula', 'Jula', d(5), 199, [{ description: 'Batterier AA 8PK', amount: 99 }, { description: 'Lyspærer LED E27', amount: 100 }], jula);
 
 /* ---------------- 1. Glimt-søkedatabase ---------------- */
@@ -190,8 +190,8 @@ test('filter: butikk, kategori, beløp, måneder/uker, facets og Glimt-utfylling
   const amt = await A('/finans/api/transactions?min=100&max=200');
   assert.ok(amt.body.items.every((t) => Math.abs(t.amount) >= 100 && Math.abs(t.amount) <= 200));
   assert.ok(amt.body.chips.some((c) => c.label === '100–200 kr'));
-  const c = await A(`/finans/api/transactions?category[]=${cat('Hjem')}`);
-  assert.ok(c.body.items.length && c.body.items.every((t) => t.category === 'Hjem'));
+  const c = await A(`/finans/api/transactions?category[]=${cat('Hjem og interiør')}`);
+  assert.ok(c.body.items.length && c.body.items.every((t) => t.category === 'Hjem og interiør'));
   const wk = await A('/finans/api/transactions?week=1-53');
   assert.equal(wk.status, 200);
   assert.ok(wk.body.chips.some((x) => x.label === 'Uke 1–53'));
@@ -357,7 +357,7 @@ test('import rett til Boliger: regler (konto/butikk), mest spesifikke vinner, fi
   assert.equal(put.body.rules.length, 2);
   assert.match(put.body.rules[1].sub, /^Bare Biltema · legges rett inn$/);
   assert.equal(put.body.offer90.label, 'Importer også de siste 90 dagene?');
-  const t1 = addTx(today, 'BILTEMA SANDVIKA', -450, 'Hjem'), t2 = addTx(today, 'Coop Extra', -210, 'Mat og dagligvarer');
+  const t1 = addTx(today, 'BILTEMA SANDVIKA', -450, 'Hjem og interiør'), t2 = addTx(today, 'Coop Extra', -210, 'Mat og dagligvarer');
   const r = h42.applyHomeRules42(sebId, [t1, t2]);
   assert.equal(r.sent, 2);
   assert.equal(fhDb.prepare('SELECT folder_id FROM fh_folder_entries WHERE tx_id=?').pluck().get(t1), geilo, 'butikk-regel før konto-regel');

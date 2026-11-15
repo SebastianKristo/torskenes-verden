@@ -60,15 +60,15 @@ function subsAnswer(u, today) {
   const perMonth = Math.round(items.reduce((a, s) => a + s.monthly, 0) * 100) / 100;
   const next = items.find((s) => s.nextIn != null && s.nextIn >= 0);
   const n = items.length;
-  const text = !n ? 'Du har ingen aktive abonnementer i Subscription OS.'
+  const text = !n ? 'Du har ingen aktive abonnementer i Faste betalinger.'
     : `Du har ${n <= 10 ? NUMW[n].replace(/^ett$/, 'ett') : n} ${n === 1 ? 'abonnement' : 'abonnementer'}. Til sammen ${kr40(perMonth)} i måneden.${next ? ` Neste trekk er ${next.name} ${inDays(next.nextIn)}.` : ''}`;
   const stats = n ? [
     { kind: 'stat', key: 'month', label: 'PER MÅNED', value: kr40(perMonth), raw: perMonth },
     { kind: 'stat', key: 'year', label: 'PER ÅR', value: kr40(Math.round(perMonth * 12 * 100) / 100), raw: Math.round(perMonth * 1200) / 100 },
     ...(next ? [{ kind: 'stat', key: 'next', label: 'NESTE TREKK', value: dLabel(next.nextDate), sub: `${next.name} · ${kr40(next.amount)}`, raw: next.nextDate }] : []),
   ] : [];
-  return { intent: 'subscriptions', text, source: 'Subscription OS', sourceLabel: 'fra Subscription OS', cards: [...stats, ...items], items, total: perMonth,
-    open: { label: 'Åpne Subscription OS ›', target: '/finans/#/abonnement' } };
+  return { intent: 'subscriptions', text, source: 'Abonnementer', sourceLabel: 'fra Abonnementer', cards: [...stats, ...items], items, total: perMonth,
+    open: { label: 'Åpne Abonnementer ›', target: '/finans/#/fast/abonnementer' } };
 }
 
 function fixedAnswer(u, today) {
