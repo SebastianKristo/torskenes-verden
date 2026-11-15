@@ -68,7 +68,7 @@ import { mediaCalendarsMw43 } from './media/arr.js'; // kalenderkilden «Media»
 import { integrationsStatusApi44 } from './media/servers.js'; // felles status for Integrasjoner og Media
 import { logs44Api, startLogs44 } from './logs44.js';
 import { impersonation44, admin44Api, layoutLockMw44, setMobileApi44 } from './admin44.js';
-import { study44Api } from './study44.js';
+import { mountStudieFrames, mountStudie } from './studie/index.js'; // Studie: dokumenter (vitnemål, karakterutskrift) og oversikten
 import { mountAuthSecurity, mountAppAuth, mountAuthInvites, mountAuthRefresh, mountAuth, registerAccountRoutes } from './auth/index.js'; // innlogging og sikkerhet
 import { mountApi45 } from './api45.js'; // prompt 45 (SERVER45)
 import { traceObs51, mountObs51, startObs51 } from './obs51/index.js'; // prompt 51 (OBS51): helsedashbord, selvreparasjon, spor, ntfy
@@ -121,19 +121,7 @@ app.get('/starting.html', async (c) => c.body(await readFile(join(resolve('publi
 const UPLOADS = resolve(config.dataDir, 'uploads');
 const PUBLIC = resolve('public');
 
-// Prompt 45 (SERVER45): originalen i Studie (PDF/bilde) skal kunne vises inne i appen/web (iframe/WebView fra samme opprinnelse).
-// Registrert FØR secureHeaders, så dette kjører etter den og erstatter den globale frame-ancestors 'none' for akkurat disse rutene.
-// Bare eieren får fila (ruten sjekker det); andre opprinnelser kan fortsatt ikke ramme den inn.
-const STUDY_FILE45 = /^\/api\/(?:study\/documents|studie\/docs)\/\d+\/(?:file|thumb)$/;
-app.use('/api/*', async (c, next) => {
-  await next();
-  if (!STUDY_FILE45.test(c.req.path) || c.res.status !== 200) return;
-  const ct = c.res.headers.get('content-type') ?? '';
-  const viewable = /^(application\/pdf|image\/(jpeg|png|webp|gif|heic|heif))\b/i.test(ct);
-  c.res.headers.set('Content-Security-Policy', viewable ? "frame-ancestors 'self'" : "default-src 'none'; sandbox; frame-ancestors 'self'");
-  c.res.headers.set('X-Frame-Options', 'SAMEORIGIN');
-  c.res.headers.set('X-Content-Type-Options', 'nosniff');
-});
+mountStudieFrames(app); // server/studie/: originalen i Studie kan vises i en ramme fra samme opprinnelse (FØR secureHeaders)
 app.use('*', secureHeaders({
   contentSecurityPolicy: {
     defaultSrc: ["'self'"],
@@ -640,7 +628,7 @@ app.route('/api/gsc', gscApi); // prompt 32: Google Search Console-kobling per b
 app.route('/api', api36); // prompt 36: /dashboard/layout og /weather/places/summary (før mobileApi)
 app.route('/api/bible', bibleApi); // prompt 37: dagens bibelvers (bare med modulen)
 app.route('/api', profilesApi); // prompt 37: profiler og onboarding
-app.route('/api', study44Api); // prompt 44: /study/documents, /study/overview
+mountStudie(app); // server/studie/: /api/study/documents, /api/studie/docs og /api/study/overview
 app.get('/api/admin/jobs', authOrToken, (c) => (isAdmin(c.get('user')) ? c.json({ started: jobsStarted(), jobs: listJobs() }) : c.json({ error: 'Bare administratorer har tilgang', restricted: true }, 403))); // bakgrunnsjobbene (server/jobs/)
 app.get('/api/admin/aliases', authOrToken, (c) => (isAdmin(c.get('user')) ? c.json({ aliases: aliases.usage() }) : c.json({ error: 'Bare administratorer har tilgang', restricted: true }, 403))); // Q29
 app.route('/api', admin44Api); // prompt 44: /admin/impersonate, /users/:id/layout, /server/owner

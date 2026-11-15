@@ -23,8 +23,8 @@ import { execFile } from 'node:child_process';
 import { mkdtemp, writeFile, readFile, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { tool45, pdfPages45, heicToJpg45, parseCourses45 } from './study45.js';
-import { isSubjectCode55, unwrapGrade55, clean55 } from './study55.js'; // prompt 55: karakter, fagkode og fagnavn
+import { tool45, pdfPages45, heicToJpg45, parseCourses45 } from './extract.js';
+import { isSubjectCode55, unwrapGrade55, clean55 } from './grades.js'; // prompt 55: karakter, fagkode og fagnavn
 
 const run = (cmd, args, timeout = 60_000) => new Promise((res, rej) => execFile(cmd, args, { timeout, maxBuffer: 64 * 1024 * 1024, encoding: 'utf8' }, (e, out) => (e ? rej(e) : res(out))));
 const tmp = async (fn) => { const dir = await mkdtemp(join(tmpdir(), 'st46-')); try { return await fn(dir); } finally { await rm(dir, { recursive: true, force: true }).catch(() => {}); } };
@@ -279,7 +279,7 @@ let stripeImpl = null;
 /** Bare for tester: (stripeBuffer, user, i) → {rows:[…]}. */
 export const _setStudyStripe46 = (fn) => { stripeImpl = fn; };
 const stripeAi = () => stripeImpl ?? (process.env.MOCK_DATA === '1' ? null : async (img, user) => {
-  const { run: aiRun } = await import('./ai-run.js');
+  const { run: aiRun } = await import('../ai-run.js');
   const out = await aiRun('rc', { user, images: [img], prompt: STRIPE_PROMPT55, schema: ROWS_SCHEMA46, json: true, localOnly: true, numPredict: 700, title: 'Glimt · les vitnemål (stripe)', background: true });
   return out.data ?? JSON.parse(String(out.text).match(/\{[\s\S]*\}/)?.[0] ?? '{}');
 });

@@ -22,13 +22,13 @@ import { mkdtemp, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { inflateSync } from 'node:zlib';
-import { config } from './config.js';
-import { sessionSecret86 } from './auth/server-secret.js'; // prompt 86
-import { db, q, kv } from './db.js';
-import { authOrToken } from './mobile.js';
-import { ocrTools } from './ocr-fallback.js';
-import { extract45, parseCourses45, cleanAiCourses45, statusOf45, STUDY_SCHEMA45, pdfPages45, tool45 } from './study45.js'; // prompt 45: ekte vitnemål (se study45.js)
-import { readStudy46, vgsAverage46, cleanEdited46 } from './study46.js'; // prompt 46: tabeller med posisjon, OCR-bokser, visjon i striper (se study46.js)
+import { config } from '../config.js';
+import { sessionSecret86 } from '../auth/server-secret.js'; // prompt 86
+import { db, q, kv } from '../db.js';
+import { authOrToken } from '../mobile.js';
+import { ocrTools } from '../ocr-fallback.js';
+import { extract45, parseCourses45, cleanAiCourses45, statusOf45, STUDY_SCHEMA45, pdfPages45, tool45 } from './extract.js'; // prompt 45: ekte vitnemål (se extract.js)
+import { readStudy46, vgsAverage46, cleanEdited46 } from './tables.js'; // prompt 46: tabeller med posisjon, OCR-bokser, visjon i striper (se tables.js)
 
 const MOCK = () => process.env.MOCK_DATA === '1';
 const DIR = () => resolve(config.dataDir, 'study44');
@@ -76,7 +76,7 @@ let textImpl = null;
 export const _setStudyText44 = (fn) => { textImpl = fn; };
 async function extract(buf, mime, name) {
   if (textImpl) return { text: await textImpl(buf, mime), how: 'test' };
-  // Prompt 45: poppler/innebygd PDF-leser med ToUnicode, skannede sider som bilder, HEIC → JPG (study45.js). Demoteksten bare i MOCK uten verktøy.
+  // Prompt 45: poppler/innebygd PDF-leser med ToUnicode, skannede sider som bilder, HEIC → JPG (extract.js). Demoteksten bare i MOCK uten verktøy.
   try {
     const r = await extract45(buf, mime, name);
     if (MOCK() && !visionImpl && r.how === 'ocr' && !r.text.trim()) return { ...r, text: DEMO_TEXT };
@@ -179,15 +179,15 @@ function foundOf(d) {
 let visionImpl = null;
 /** Bare for tester: (images, user) → {emner, institution, …}. */
 export const _setStudyVision45 = (fn) => { visionImpl = fn; };
-const vision = () => visionImpl ?? (MOCK() ? null : async (images, user) => { const { run: aiRun } = await import('./ai-run.js'); const out = await aiRun('rc', { user, images, prompt: 'Dette er et norsk vitnemål eller en karakterutskrift. Les ALLE fag/emner med fagkode, navn, studiepoeng, karakter (A–F, 1–6, Bestått/Ikke bestått), semester, og for vitnemål standpunkt og eksamen. Svar KUN med JSON etter skjemaet. Ikke regn ut snitt, ikke finn på fag.', json: true, schema: STUDY_SCHEMA45, localOnly: true, step: 'document', numCtx: 8192, numPredict: 4096, title: 'Glimt · les vitnemål (bilde)', background: true }); /* prompt 47: 8192 (visjonsmodellen + bilde), 4096 ut */ return out.data ?? JSON.parse(String(out.text).match(/\{[\s\S]*\}/)?.[0] ?? '{}'); });
+const vision = () => visionImpl ?? (MOCK() ? null : async (images, user) => { const { run: aiRun } = await import('../ai-run.js'); const out = await aiRun('rc', { user, images, prompt: 'Dette er et norsk vitnemål eller en karakterutskrift. Les ALLE fag/emner med fagkode, navn, studiepoeng, karakter (A–F, 1–6, Bestått/Ikke bestått), semester, og for vitnemål standpunkt og eksamen. Svar KUN med JSON etter skjemaet. Ikke regn ut snitt, ikke finn på fag.', json: true, schema: STUDY_SCHEMA45, localOnly: true, step: 'document', numCtx: 8192, numPredict: 4096, title: 'Glimt · les vitnemål (bilde)', background: true }); /* prompt 47: 8192 (visjonsmodellen + bilde), 4096 ut */ return out.data ?? JSON.parse(String(out.text).match(/\{[\s\S]*\}/)?.[0] ?? '{}'); });
 let aiImpl = null;
 export const _setStudyAi44 = (fn) => { aiImpl = fn; };
 // Prompt 47: dokumentstrukturering med steg «document» (params47: num_ctx 16384, num_predict 4096, temperatur 0, think av) og
 // strengt JSON-skjema når kalleren gir et – før kuttet 4096/900 lange dokumenter, og fag manglet.
-import { completeness47, retryMissing47, completenessText47 } from './glimt/document.js'; // prompt 47
-import { clean55 } from './study55.js'; // prompt 55
-import { dtf } from './intl-format.js'; // gjenbrukte Intl.DateTimeFormat
-const ai = () => aiImpl ?? (MOCK() ? null : async (prompt, user, schema = null) => { const { run: aiRun } = await import('./ai-run.js'); const out = await aiRun('glimt', { user, prompt, json: true, ...(schema ? { schema } : {}), step: 'document', localOnly: true, title: 'Glimt · les dokument', background: true }); return out.data ?? JSON.parse(String(out.text).match(/\{[\s\S]*\}/)?.[0] ?? '{}'); });
+import { completeness47, retryMissing47, completenessText47 } from '../glimt/document.js'; // prompt 47
+import { clean55 } from './grades.js'; // prompt 55
+import { dtf } from '../intl-format.js'; // gjenbrukte Intl.DateTimeFormat
+const ai = () => aiImpl ?? (MOCK() ? null : async (prompt, user, schema = null) => { const { run: aiRun } = await import('../ai-run.js'); const out = await aiRun('glimt', { user, prompt, json: true, ...(schema ? { schema } : {}), step: 'document', localOnly: true, title: 'Glimt · les dokument', background: true }); return out.data ?? JSON.parse(String(out.text).match(/\{[\s\S]*\}/)?.[0] ?? '{}'); });
 async function analyse(user, buf, mime, name) {
   const steps = [];
   const step = async (key, label, fn) => { const t0 = Date.now(); try { const r = await fn(); steps.push({ key, label: typeof label === 'function' ? label(r) : label, ms: Date.now() - t0, ok: true }); return r; } catch (e) { steps.push({ key, label: typeof label === 'function' ? label(null) : label, ms: Date.now() - t0, ok: false, error: e.message }); throw e; } };
@@ -349,7 +349,7 @@ const hmOf = (iso) => { const p = OSLO(Date.parse(iso)); return `${p.hour}:${p.m
 const minOf = (iso) => { const p = OSLO(Date.parse(iso)); return +p.hour * 60 + +p.minute; };
 export async function overview44(u, now = Date.now()) {
   const p = OSLO(now), today = `${p.year}-${p.month}-${p.day}`;
-  const { eventsFor, lessonNowOf } = await import('./kalender/events.js');
+  const { eventsFor, lessonNowOf } = await import('../kalender/events.js');
   const end = new Date(Date.parse(`${today}T12:00:00Z`) + 21 * 86400_000).toISOString().slice(0, 10);
   let events = [];
   try { events = (await eventsFor(u, today, end)).events; } catch { events = []; }

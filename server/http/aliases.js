@@ -8,7 +8,7 @@
 /** @type {ReadonlyArray<{alias: string, method?: string, target: string, note: string}>} */
 export const ALIASES = Object.freeze([
   { alias: '/api/integrasjoner', target: '/api/integrations', note: 'Norsk navn på samme app (integrations-api.js)' },
-  { alias: '/api/studie', target: '/api/study', note: 'Studie-dokumenter (study44.js)' },
+  { alias: '/api/studie', target: '/api/study', note: 'Studie-dokumenter (studie/documents.js)' },
   { alias: '/api/rom', target: '/api/space', note: 'Rom/APOD/satellitter (rom/space.js)' },
   { alias: '/api/update', target: '/api/system/update', note: 'Samme systemUpdateApi' },
   { alias: '/api/domener/sammendrag', target: '/api/domains/summary', note: 'Norsk navn' },
