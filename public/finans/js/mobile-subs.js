@@ -92,7 +92,7 @@ const soAttr = (k) => `data-sk="${k}" style="order:${soOrder().indexOf(k)}"`;
 
 const catOf = (x) => x.category || CAT_RE.find(([, re]) => re.test(x.name))?.[0] || 'Annet';
 const statusOf = (x) => (!x.active ? 'off' : x.status ?? (x.lowUse ? 'low_use' : 'active'));
-const per = (x) => x.monthly ?? (x.cycle === 'yearly' ? x.price / 12 : x.cycle === 'biennial' ? x.price / 24 : x.price);
+const per = (x) => x.monthly ?? 0; // Fase 3: omregningen per måned kommer fra serveren (cycles.js), klienten regner ikke selv
 const dayOf = (x) => x.chargeDay ?? (x.nextDate ? +x.nextDate.slice(8, 10) : null);
 const items = () => SB.d?.items ?? [];
 const act = () => items().filter((x) => x.active);
@@ -280,20 +280,20 @@ export function openEditor(x) {
     members: (Array.isArray(x?.members) && x.members.length ? x.members.map((p) => String(p.userId ?? p.id)) : [String(m.me?.id ?? '')]), split: x?.split ?? 'equal', payerId: x?.payerId ?? null, mem0: JSON.stringify(x?.members ?? []) }; // prompt 37: delte abonnementer
   P37B.household().then((L) => { if (SB.ed) { SB.ed.ppl = L; draw(); } }).catch(() => {});
 }
-function nextCharge(day, mon, cycle) {
-  const t = new Date(); t.setHours(12, 0, 0, 0);
-  const mk = (y, mo) => new Date(y, mo, Math.min(day, new Date(y, mo + 1, 0).getDate()), 12);
-  let d;
-  if (cycle === 'monthly') { d = mk(t.getFullYear(), t.getMonth()); if (d < t) d = mk(t.getFullYear(), t.getMonth() + 1); }
-  else { d = mk(t.getFullYear(), mon - 1); if (d < t) d = mk(t.getFullYear() + 1, mon - 1); }
-  return d.toLocaleDateString('sv-SE');
+// Fase 3: neste trekk regnes på serveren (POST/PATCH /subscriptions med syklus, trekkdag og -måned → nextDate). Arket viser serverens
+// dato for et lagret abonnement når valgene er uendret, ellers bare det som er valgt.
+const THEN = { monthly: 'deretter hver måned', yearly: 'deretter hvert år', biennial: 'deretter hvert 2. år' };
+function whenText(e, day, mon) {
+  const x = e.id ? items().find((s) => String(s.id) === String(e.id)) : null;
+  const same = x?.nextDate && x.cycle === e.cycle && +(x.billDay ?? x.chargeDay ?? 0) === day && (e.cycle === 'monthly' || +(x.billMonth ?? 0) === mon);
+  if (same) { const nd = new Date(x.nextDate + 'T12:00'); return `Neste trekk ${nd.getDate()}. ${MNL[nd.getMonth()]}, ${THEN[e.cycle] ?? THEN.monthly}`; }
+  return e.cycle === 'monthly' ? `Trekkes den ${day}. hver måned` : `Trekkes ${day}. ${MNL[mon - 1]} ${e.cycle === 'yearly' ? 'hvert år' : 'hvert 2. år'}`;
 }
 function editor() {
   const e = SB.ed;
   if (!e) return '';
   const day = Math.min(31, Math.max(1, parseInt(e.day, 10) || 1)), mon = Math.min(12, Math.max(1, parseInt(e.mon, 10) || 1));
-  const nx = nextCharge(day, mon, e.cycle), ndt = new Date(nx + 'T12:00');
-  const when = `Neste trekk ${ndt.getDate()}. ${MNL[ndt.getMonth()]}${e.cycle === 'monthly' ? ', deretter hver måned' : e.cycle === 'yearly' ? ', deretter hvert år' : ', deretter hvert 2. år'}`;
+  const when = whenText(e, day, mon);
   const chip = (attr, on, n) => `<button type="button" class="chip" ${attr} aria-pressed="${on}">${n}</button>`;
   const lgBox = e.logoUrl || e.file ? `<span class="sb-elogo" style="background-image:url('${esc(e.file ? URL.createObjectURL(e.file) : e.logoUrl)}')"></span>` : `<span class="sb-elogo ini">${esc((e.name || '?').trim().charAt(0).toUpperCase())}</span>`;
   return `<div class="sheet-bg" data-sbx="close"></div><div class="sb-edit ${isI() ? 'glass' : ''}" role="dialog" aria-label="${e.id ? 'Rediger abonnement' : 'Nytt abonnement'}"><span class="sb-grab"></span>
@@ -313,7 +313,7 @@ async function saveEditor() {
   const e = SB.ed, price = parseAmount(e.price);
   if (!e.name.trim() || !(price >= 0) || price === null) { haptic('err'); flash('Fyll inn navn og pris'); return; }
   const day = Math.min(31, Math.max(1, parseInt(e.day, 10) || 1)), mon = Math.min(12, Math.max(1, parseInt(e.mon, 10) || 1));
-  const body = { name: e.name.trim(), plan: e.plan.trim(), price, cycle: e.cycle, billDay: day, billMonth: mon, chargeDay: day, nextDate: nextCharge(day, mon, e.cycle),
+  const body = { name: e.name.trim(), plan: e.plan.trim(), price, cycle: e.cycle, billDay: day, billMonth: mon, chargeDay: day, // serveren regner nextDate
     category: e.category, status: e.status, active: e.status !== 'cancelled', logoUrl: e.file ? undefined : e.logoUrl ?? null, domain: e.domain ?? undefined };
   e.busy = 'save'; draw();
   try {
@@ -413,11 +413,10 @@ export async function subsBind(e, t) {
     // Serveren kjenner ikke ukentlige abonnementer: regnes om til månedlig (× 52 / 12) med «Ukentlig» som plan.
     const wk = f.cycle === 'weekly', price = wk && p0 ? Math.round(((p0 * 52) / 12) * 100) / 100 : p0;
     if (!f.name.trim() || !price) { haptic('err'); flash('Skriv tjeneste og beløp'); return true; }
-    let next = null;
-    if (day) { const n = new Date(); let dt = new Date(n.getFullYear(), n.getMonth(), day); if (dt < new Date(n.toDateString())) dt = new Date(n.getFullYear(), n.getMonth() + 1, day); next = dt.toLocaleDateString('sv-SE'); }
     SB.busy = true; draw();
     try {
-      await api('/subscriptions', { method: 'POST', json: { name: f.name.trim(), price, cycle: wk ? 'monthly' : f.cycle, nextDate: next, chargeDay: day || undefined, ...(wk ? { plan: `Ukentlig · ${n0(p0)} kr/uke` } : {}) } });
+      // Fase 3: bare trekkdagen sendes; serveren regner neste trekk (før regnet appen det selv og sendte nextDate).
+      await api('/subscriptions', { method: 'POST', json: { name: f.name.trim(), price, cycle: wk ? 'monthly' : f.cycle, chargeDay: day || undefined, ...(wk ? { plan: `Ukentlig · ${n0(p0)} kr/uke` } : {}) } });
       SB.f = { name: '', price: '', day: '', cycle: 'monthly' }; SB.sheet = false; SB.mode = null;
       await subsLoad(); flash(`${f.name.trim()} er lagt til`);
     } finally { SB.busy = false; draw(); }

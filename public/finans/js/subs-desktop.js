@@ -227,7 +227,7 @@ async function skInstall() {
 }
 function skJson(r) {
   const nd = r.neste_trekk ?? '';
-  return { name: r.tjeneste, plan: r.plan ?? '', price: (r.pris ?? 0) / 100, cycle: SK_CYC[r.syklus] ?? 'monthly', ...(nd ? { billDay: +nd.slice(8, 10), billMonth: +nd.slice(5, 7), nextDate: `${+nd.slice(8, 10)}.${+nd.slice(5, 7)}` } : {}), category: r.kategori, ...(r.logoUrl ? { logoUrl: r.logoUrl } : {}) };
+  return { name: r.tjeneste, plan: r.plan ?? '', price: (r.pris ?? 0) / 100, cycle: SK_CYC[r.syklus] ?? 'monthly', ...(nd ? { billDay: +nd.slice(8, 10), billMonth: +nd.slice(5, 7), startDate: nd } : {}), /* neste trekk fra skjermbildet er et kjent trekk */ category: r.kategori, ...(r.logoUrl ? { logoUrl: r.logoUrl } : {}) };
 }
 
 function candPanel() {
@@ -473,7 +473,8 @@ export function bindSubs(el) {
   const saveEd = async () => {
     const e2 = u.subEd, price = parseAmount(e2.v);
     if (!e2.n.trim() || !(price >= 0)) return toast('Fyll inn navn og pris');
-    const json = { name: e2.n.trim(), plan: e2.plan.trim(), price, cycle: e2.cyc, billDay: +e2.day, billMonth: +e2.mon, nextDate: `${+e2.day}.${+e2.mon}`, category: e2.cat, status: e2.st };
+    // Fase 3: syklus, trekkdag og -måned; serveren regner neste trekk (nextDate sendes ikke lenger, se docs/api.md).
+    const json = { name: e2.n.trim(), plan: e2.plan.trim(), price, cycle: e2.cyc, billDay: +e2.day, billMonth: +e2.mon, category: e2.cat, status: e2.st };
     if (!e2.logo && !e2.file && e2.id) json.logoUrl = null;
     const s = e2.id ? await api(`/subscriptions/${e2.id}`, { method: 'PATCH', json }) : await api('/subscriptions', { method: 'POST', json });
     if (e2.file) { const fd = new FormData(); fd.append('file', e2.file); await api(`/subscriptions/${s.id}/logo`, { method: 'POST', body: fd }).catch((err) => toast(err.message)); }
@@ -596,7 +597,7 @@ export function bindSubs(el) {
         case 'sk-update': {
           const r = u.subSk?.r; if (!r?.existingId) return;
           const { name, ...rest } = skJson(r); void name;
-          await api(`/subscriptions/${r.existingId}`, { method: 'PATCH', json: { plan: rest.plan, price: rest.price, cycle: rest.cycle, ...(rest.billDay ? { billDay: rest.billDay, billMonth: rest.billMonth, nextDate: rest.nextDate } : {}) } });
+          await api(`/subscriptions/${r.existingId}`, { method: 'PATCH', json: { plan: rest.plan, price: rest.price, cycle: rest.cycle, ...(rest.billDay ? { billDay: rest.billDay, billMonth: rest.billMonth, startDate: rest.startDate } : {}) } });
           u.subSk = null; toast(`${r.existing?.name ?? r.tjeneste} er oppdatert`); return reload();
         }
         case 'sk-edit': {
