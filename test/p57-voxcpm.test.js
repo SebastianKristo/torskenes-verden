@@ -59,7 +59,7 @@ assert.equal((await A('/api/users', 'POST', { username: 'ingrid', password: 'ing
 const I = as(await cookie('ingrid', 'ingridPassord123'));
 // Prompt 59: /api/tts venter aldri på VoxCPM (for treg på Mac mini-en). Første gang: rask reserve, og lyden lages i bakgrunnen
 // (nyheter lages ikke i bakgrunnen – de forhåndslages ikke, så her lages lyden direkte med speak() uten «live»).
-const G57 = await import('../server/glimt35.js');
+const G57 = await import('../server/glimt/settings.js');
 const vxIdle = async () => { for (let i = 0; i < 800 && (V.vxQueueState57().running || V.vxQueueState57().waiting); i++) await new Promise((r) => setTimeout(r, 25)); };
 const ingridId = async () => { const l = (await A('/api/users')).body; return (Array.isArray(l) ? l : l?.users ?? []).find((x) => x.username === 'ingrid')?.id; };
 async function ttsVx(body) {

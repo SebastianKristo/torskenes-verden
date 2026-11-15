@@ -23,7 +23,7 @@ export const ALIASES = Object.freeze([
   { alias: '/api/boliger/oversikt', method: 'GET', target: '/finans/api/boliger/oversikt', note: 'index.js' },
   { alias: '/finans/api/login', method: 'POST', target: '/finans/api/auth/token', note: 'Mobilappene (Mobil v2)' },
   { alias: '/finans/api/logout', method: 'POST', target: '/finans/api/auth/logout', note: 'Kalender-appene før Fase 0b' },
-  { alias: '/api/brief/settings', target: '/api/glimt/settings', note: 'Eldre klienter (brief34.js / glimt35.js)' },
+  { alias: '/api/brief/settings', target: '/api/glimt/settings', note: 'Eldre klienter (glimt/brief.js / glimt/settings.js)' },
   { alias: '/mat/api', target: '/api/matplan', note: 'Samme matApi; fhweb, iOS og Android bruker /mat/api' },
   { alias: '/home/api', target: '(ingen)', note: 'home.js – ingen klient funnet i AUDIT A §2.2' },
 ]);

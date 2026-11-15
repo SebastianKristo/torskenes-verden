@@ -1,6 +1,6 @@
 // Den ene tolkeren for norske dato- og tidsuttrykk på serveren (BESLUTNINGER.md Q17, Q36–Q38, F-logikk L1).
 // Ren funksjon av (tekst, i dag, nå): ingen DOM, ingen nett. Fasit: shared/testvektorer/datoer.json.
-// Glimt (glimt45/dates.js), parse-day35.js, gjøremål og Rask-avtaler bruker denne. Klientene får den via POST /api/dates/parse.
+// Glimt (glimt/dates.js), parse-day35.js, gjøremål og Rask-avtaler bruker denne. Klientene får den via POST /api/dates/parse.
 //
 //   parseDate(text, today, {prefer:'future'|'past'|'nearest'}) → {date:'YYYY-MM-DD', raw, kind, span} | {error, message, raw} | null
 //   parseTime(text, {evening}) → {start:'HH:MM', end?:'HH:MM', raw, span, assumedPm?} | {error, message, raw} | null

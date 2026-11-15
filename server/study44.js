@@ -184,7 +184,7 @@ let aiImpl = null;
 export const _setStudyAi44 = (fn) => { aiImpl = fn; };
 // Prompt 47: dokumentstrukturering med steg «document» (params47: num_ctx 16384, num_predict 4096, temperatur 0, think av) og
 // strengt JSON-skjema når kalleren gir et – før kuttet 4096/900 lange dokumenter, og fag manglet.
-import { completeness47, retryMissing47, completenessText47 } from './glimt45/document47.js'; // prompt 47
+import { completeness47, retryMissing47, completenessText47 } from './glimt/document.js'; // prompt 47
 import { clean55 } from './study55.js'; // prompt 55
 import { dtf } from './intl-format.js'; // gjenbrukte Intl.DateTimeFormat
 const ai = () => aiImpl ?? (MOCK() ? null : async (prompt, user, schema = null) => { const { run: aiRun } = await import('./ai-run.js'); const out = await aiRun('glimt', { user, prompt, json: true, ...(schema ? { schema } : {}), step: 'document', localOnly: true, title: 'Glimt · les dokument', background: true }); return out.data ?? JSON.parse(String(out.text).match(/\{[\s\S]*\}/)?.[0] ?? '{}'); });

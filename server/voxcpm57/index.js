@@ -1,6 +1,6 @@
 // Prompt 57 (VOX57): VoxCPM2 (OpenBMB, Apache-2.0) på Mac mini-en – lokale stemmer, kloning og stemmevalg for Glimt og nyhetsleseren.
 // Mac-delen: tools/voxcpm/. Veiledning: docs/voxcpm-57.md. API-formene: SERVER57-API.md (scratchpad) og docs/voxcpm-57.md.
-// Motoren «voxcpm» i POST /api/tts ligger i server/glimt35.js (bruker vxSpeakFor57 herfra).
+// Motoren «voxcpm» i POST /api/tts ligger i server/glimt/settings.js (bruker vxSpeakFor57 herfra).
 //
 //   GET    /api/voices57                     → {voices, engineReady, configured, selected, consentText, sampleText, limits}
 //   POST   /api/voices57                     JSON {name, kind:'design', prompt} · multipart {name, kind:'clone', file, transcript?, consent}
@@ -32,7 +32,7 @@ const fail = (c, e) => {
 const audioResponse = (r, extra = {}) => new Response(r.audio, { status: 200, headers: { 'Content-Type': r.contentType || 'audio/mpeg', 'Content-Length': String(r.audio.length),
   'Cache-Control': 'private, max-age=2592000', 'X-TTS-Engine': 'voxcpm', 'X-TTS-Cache': r.cache, 'X-TTS-Voice': r.voice, 'X-TTS-Chars': String(r.chars), 'X-TTS-AI': '1', ...extra } });
 
-async function glimt() { return import('../glimt35.js'); }
+async function glimt() { return import('../glimt/settings.js'); }
 
 /* ─────────────── stemmer per bruker ─────────────── */
 

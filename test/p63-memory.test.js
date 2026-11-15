@@ -25,10 +25,10 @@ test.after(() => { globalThis.fetch = realFetch; });
 
 const { default: app } = await import('../server/index.js');
 const { db, kv } = await import('../server/db.js');
-const ST = await import('../server/mem63/store.js');
-const EX = await import('../server/mem63/extract.js');
-const NI = await import('../server/mem63/nightly.js');
-const API = await import('../server/mem63/api.js');
+const ST = await import('../server/glimt/memory/store.js');
+const EX = await import('../server/glimt/memory/extract.js');
+const NI = await import('../server/glimt/memory/nightly.js');
+const API = await import('../server/glimt/memory/hygiene-api.js');
 const SC = await import('../server/sched62/scheduler.js');
 const RUN = await import('../server/sched62/run.js');
 

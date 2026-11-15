@@ -201,7 +201,7 @@ test('Glimt: «hvor er ESP32-ene brukt?» svarer med produktene', async () => {
   const out = await tool.run(v.args, { text: 'hvor er ESP32-ene brukt?', user });
   assert.equal(out.result.used, true);
   assert.equal(out.result.items[0].usedIn[0].name, 'Værstasjon 2');
-  const { SENTENCES46 } = await import('../server/glimt45/tools46.js');
+  const { SENTENCES46 } = await import('../server/glimt/tools-weather-subs.js');
   assert.match(SENTENCES46['skjold.find'](v.args, out), /ESP32 DevKitC er brukt i «Værstasjon 2» \(1 stk\)/);
   const plain = await tool.run(v.args, { text: 'hvor er ESP32-ene?', user });
   assert.equal(plain.result.used, undefined);

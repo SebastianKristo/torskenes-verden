@@ -4,15 +4,15 @@
 //   schedule.update {target, when, action}   – DESTRUKTIV: flytt/pause/start; «morgenbriefen» endrer brief-innstillingen (glimt35)
 //   schedule.delete {target}                 – DESTRUKTIV: «stopp» = pause, «slett» = slett
 // «Når» og betingelsen tolkes i koden (task.js); modellen gir bare råtekst.
-import { TOOLS45, TOOL45 } from '../glimt45/tools.js';
-import { SENTENCES46, FAIL_TEXT46 } from '../glimt45/tools46.js';
-import { parseRecurrence62, nextRuns62, ruleOfWhen62, ruleToRRule62, labelOf62, osloParts62, osloToUtc62, afterQuiet62, quiet62, nextRun62 } from '../glimt45/dates.js';
+import { TOOLS45, TOOL45 } from '../glimt/tools.js';
+import { SENTENCES46, FAIL_TEXT46 } from '../glimt/tools-weather-subs.js';
+import { parseRecurrence62, nextRuns62, ruleOfWhen62, ruleToRRule62, labelOf62, osloParts62, osloToUtc62, afterQuiet62, quiet62, nextRun62 } from '../glimt/dates.js';
 import { interpret62, briefIn62, builtinBriefs62, timeOf62, summaryOf62, BRIEF62 } from './task.js';
 import { rowOf62, rowsOf62, insertSchedule62, updateSchedule62, deleteSchedule62, publicSchedule62, ruleOfRow62, nextOf62 } from './store.js';
 import { sched62 } from './settings.js';
 import { now62 } from './scheduler.js';
-import { registerLocalPlan62 } from '../glimt45/plan.js';
-import { glimtSettingsOf, cleanGlimtPatch, saveGlimtSettings } from '../glimt35.js';
+import { registerLocalPlan62 } from '../glimt/plan.js';
+import { glimtSettingsOf, cleanGlimtPatch, saveGlimtSettings } from '../glimt/settings.js';
 
 const S = (props, required = []) => ({ type: 'object', properties: props, required, additionalProperties: false });
 const sTxt = (d) => ({ type: 'string', description: d });

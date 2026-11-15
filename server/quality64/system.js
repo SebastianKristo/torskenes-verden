@@ -22,7 +22,7 @@ export const qualityRow64 = () => q("SELECT * FROM glimt_schedules WHERE kind='q
 
 async function insert(user, kind, now) {
   const s = SYSTEM64[kind];
-  const [{ insertSchedule62 }, { osloParts62 }] = await Promise.all([import('../sched62/store.js'), import('../glimt45/dates.js')]);
+  const [{ insertSchedule62 }, { osloParts62 }] = await Promise.all([import('../sched62/store.js'), import('../glimt/dates.js')]);
   const rule = { freq: s.freq, interval: 1, byday: s.byday, bymonthday: [], bymonth: [], dtstart: osloParts62(now).date, time: s.time, until: null };
   try {
     return insertSchedule62(user, { title: s.title, what: s.what, kind, when: { text: s.text, rule, explicitTime: true }, condition: null, params: {}, channel: 'push', source: 'system',

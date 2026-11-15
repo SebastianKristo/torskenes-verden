@@ -197,7 +197,7 @@ test('run(glimt) på oMLX: JSON-skjema, think av (+ /no_think), max_tokens, nøk
 });
 
 test('run(glimt) med verktøy (tools-modus): navn uten punktum til oMLX, tilbake som calendar.create med argumenter', async () => {
-  const { ollamaTools45 } = await import('../server/glimt45/tools.js');
+  const { ollamaTools45 } = await import('../server/glimt/tools.js');
   const tools = ollamaTools45(['calendar.create', 'calendar.search', 'weather.get']);
   const out = await ai.run('glimt', { system: 'Planlegger', prompt: 'Melding: Skal se Dune på Colosseum kino 17.12 17.30', ollamaTools: tools, temperature: 0, numPredict: 320, localOnly: true, noRetry: true });
   const c = lastChat();

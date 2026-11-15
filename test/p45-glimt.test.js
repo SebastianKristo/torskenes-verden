@@ -23,10 +23,10 @@ test.after(() => { globalThis.fetch = realFetch; });
 
 const { default: app } = await import('../server/index.js');
 const { db, kv } = await import('../server/db.js');
-const D = await import('../server/glimt45/dates.js');
-const E = await import('../server/glimt45/engine.js');
-const P = await import('../server/glimt45/plan.js');
-const TL = await import('../server/glimt45/tools.js');
+const D = await import('../server/glimt/dates.js');
+const E = await import('../server/glimt/engine.js');
+const P = await import('../server/glimt/plan.js');
+const TL = await import('../server/glimt/tools.js');
 const { runAsUser } = await import('../server/settings.js');
 const { eventsFor } = await import('../server/kalender/events.js');
 
@@ -555,7 +555,7 @@ test('personlighet: Av · Litt · Full rakker; bekreftelse først, maks én spø
   const off = await agent(K, 'Legg til konsert onsdag kl 21', { requestId: RID() });
   assert.equal(off.body.joke, null);
   assert.equal(off.body.personality, 'off');
-  const { quipFor } = await import('../server/glimt45/personality.js');
+  const { quipFor } = await import('../server/glimt/personality.js');
   assert.equal(quipFor('full', { kind: 'calendar', ok: true, title: 'Legetime' }), null, 'alvorlig tema');
   assert.match(quipFor('full', { kind: 'calendar', ok: true, title: 'Fest' }, { today: '2027-05-17' }), /17\. mai/);
   assert.match(quipFor('full', { kind: 'tasks', ok: true, title: 'Rydde' }, { today: '2027-02-21' }), /Kongen/);

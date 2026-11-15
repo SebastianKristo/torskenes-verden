@@ -31,7 +31,7 @@ const ST = await import('../server/skjold76/store.js');
 const IMG = await import('../server/skjold76/images.js');
 const CSV = await import('../server/skjold76/csv.js');
 const GL = await import('../server/skjold76/glimt.js');
-const P = await import('../server/glimt45/plan.js');
+const P = await import('../server/glimt/plan.js');
 const { magick50 } = await import('../server/img50.js');
 
 let ipN = 10;
@@ -467,9 +467,9 @@ test('Glimt: skjold.find svarer «… ligger i Hovedskap · Rad 4 · Skuff 2 (ca
   const none = await A('/api/glimt/agent', 'POST', { text: 'Hvor er skuffen med flux-pennen?', module: 'home', requestId: 't76-0002-abcdef' });
   assert.match(none.body.reply, /Fant ingen deler/);
   // Verktøyet ligger i registeret og i planleggerens liste.
-  const { TOOL45 } = await import('../server/glimt45/tools.js');
+  const { TOOL45 } = await import('../server/glimt/tools.js');
   assert.ok(TOOL45['skjold.find']);
-  const { plannerSystem47, INTENTS47 } = await import('../server/glimt45/plan47.js');
+  const { plannerSystem47, INTENTS47 } = await import('../server/glimt/planner.js');
   assert.ok(INTENTS47.includes('parts_find'));
   assert.match(plannerSystem47(), /skjold\.find/);
 });

@@ -45,7 +45,7 @@ import * as ai from './ai-run.js';
 import { gateLoad, gateUnload, loadedModels, gateState, keepAliveFor, GateError, backendConfig, thinkLeaks, clearThinkLeak, testOpenWebuiModels, maskSecrets } from './ai-gate.js'; // prompt 43/44: alle AI-kall via gaten
 import { updateConfig } from './settings.js';
 import { webSearch, webSettings, clearWebCache, PROVIDERS as WEB_PROVIDERS, PROVIDER_NAME as WEB_NAME } from './web-search.js'; // prompt 44
-import { getAzureRegion, setAzureRegion } from './glimt35.js'; // prompt 35: Azure-region for TTS
+import { getAzureRegion, setAzureRegion } from './glimt/settings.js'; // prompt 35: Azure-region for TTS
 import { hostHw, envHw, hwOut, fit38, recommendFor, SUGGESTED_MODELS, TIMEOUTS, FIT_LABEL } from './aihw38.js'; // prompt 38: Mac mini M4
 import { externalModels53 } from './fermion53/index.js'; // prompt 53 (FERMION53): Neutrino/Phonon på Mac mini-en i AI-kontroll
 
@@ -415,7 +415,7 @@ api.put('/keys/:provider', adminOnly, async (c) => {
 api.post('/keys/:provider/test', async (c) => {
   const p = c.req.param('provider');
   if (['openai', 'elevenlabs', 'azure'].includes(p)) { // prompt 35: ekte kort opplesning med motoren
-    const { speakWith } = await import('./glimt35.js');
+    const { speakWith } = await import('./glimt/settings.js');
     const t0 = Date.now();
     try { const r = await speakWith(c.get('user'), p, 'Hei! Jeg er Glimt.'); return c.json({ ok: true, state: 'ok', label: 'Svarer', ms: Date.now() - t0, model: r.model, error: null }); }
     catch (e) { return c.json({ ok: false, state: 'off', label: 'Svarer ikke', ms: Date.now() - t0, model: null, error: e.message }); }

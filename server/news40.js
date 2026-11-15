@@ -14,7 +14,7 @@ import { createHash } from 'node:crypto';
 import { kv } from './db.js';
 import { authOrToken } from './mobile.js';
 import { latest, CATEGORIES } from './rss.js';
-import { proxied } from './glimt35.js';
+import { proxied } from './glimt/settings.js';
 
 const TOPIC_ORDER = ['norge', 'okonomi', 'verden', 'sport', 'teknologi', 'kultur'];
 const TOPIC_NAME = { norge: 'Norge og Oslo', okonomi: 'Økonomi', verden: 'Verden', sport: 'Sport', teknologi: 'Teknologi', kultur: 'Kultur' };

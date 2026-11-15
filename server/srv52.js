@@ -18,7 +18,7 @@ import { authOrToken } from './mobile.js';
 import { userInfo, listUsers, isAdmin } from './auth/session.js';
 import { runAsUser } from './settings.js';
 import { parseQuick, osloTodayISO } from './dates/quick.js'; // dato og tid fra den felles tolkeren
-import { CHARS, glimtSettingsOf, cleanGlimtPatch, saveGlimtSettings, charDefaultOf52, setCharDefault52, CHAR_META52 } from './glimt35.js';
+import { CHARS, glimtSettingsOf, cleanGlimtPatch, saveGlimtSettings, charDefaultOf52, setCharDefault52, CHAR_META52 } from './glimt/settings.js';
 import { matchMerchant, filePath as libraryFile } from './logos/match.js';
 import { brief73Api, rawCards73, B52_OF73, KEY_OF_B52 } from './brief73.js'; // prompt 73: Innhold i briefen (rekkefølge og av/på)
 import { dtf } from './intl-format.js'; // gjenbrukte Intl.DateTimeFormat
@@ -488,7 +488,7 @@ const base73 = new Map(); // bruker → {at, p}
 function briefBase73(u, t) {
   const hit = base73.get(u);
   if (hit && Date.now() - hit.at < 20_000) return hit.p;
-  const p = (async () => { try { const { buildBrief } = await import('./brief34.js'); return await withTimeout(runAsUser(u, () => buildBrief(u, { t, llm: false, raw: true })), 6000, null); } catch { return null; } })();
+  const p = (async () => { try { const { buildBrief } = await import('./glimt/brief.js'); return await withTimeout(runAsUser(u, () => buildBrief(u, { t, llm: false, raw: true })), 6000, null); } catch { return null; } })();
   base73.set(u, { at: Date.now(), p });
   p.then((v) => { if (!v) base73.delete(u); });
   return p;

@@ -8,7 +8,7 @@
 import { insertRun62, finishRun62, publicRun62 } from './store.js';
 import { evalCondition62, conditionSentence62 } from './cond.js';
 import { sched62 } from './settings.js';
-import { osloParts62 } from '../glimt45/dates.js';
+import { osloParts62 } from '../glimt/dates.js';
 
 const J = (s, d) => { if (s == null) return d; try { return JSON.parse(s) ?? d; } catch { return d; } };
 const nb = (v, d = 2) => Number(v).toFixed(d).replace('.', ',');
@@ -34,7 +34,7 @@ export async function powerData62(zone, day, now) {
 /** Været for stedet og dagen. → {place, temp_c:[lav, høy], precip_mm:[…]} */
 async function weatherData62(user, place, day, now) {
   if (weatherImpl) return weatherImpl({ place, day, now });
-  const { fetchWeather46, whenOf46 } = await import('../glimt45/weather46.js');
+  const { fetchWeather46, whenOf46 } = await import('../glimt/weather.js');
   const today = osloParts62(now).date;
   const r = await fetchWeather46(user, { place, when: whenOf46(day === 'tomorrow' ? 'i morgen' : 'i dag', today), info: 'temp' }, today);
   if (!r.ok) throw Object.assign(new Error(r.error ?? 'Fikk ikke hentet været'), { notYet: !!r.missing });
@@ -79,7 +79,7 @@ export async function compute62(row, { now = Date.now(), runId = null } = {}) {
       return { status: 'ok', condition: condOut, result: conditionSentence62(cond, res, data) ?? `Betingelsen er oppfylt: ${cond.label}.` };
     }
     // Prompt 63 (del 5): systemoppgaven «Nattlig oppsummering av minnet» – ingen levering kl. 03 (push kommer om morgenen).
-    if (row.kind === 'memory') return (await import('../mem63/nightly.js')).computeMemory63(row, { now });
+    if (row.kind === 'memory') return (await import('../glimt/memory/nightly.js')).computeMemory63(row, { now });
     // Prompt 64 (del 7): systemoppgavene «Nattlig eval» (kl. 02, starter evalen i bakgrunnen) og «Ukerapport» (søndag kl. 20, egen push).
     if (row.kind === 'quality' || row.kind === 'weekly') return (await import('../quality64/system.js')).computeSystem64(row, { now });
     if (row.kind === 'reminder') return { status: 'ok', result: `Påminnelse: ${row.what.charAt(0).toUpperCase()}${row.what.slice(1)}.` };
@@ -89,7 +89,7 @@ export async function compute62(row, { now = Date.now(), runId = null } = {}) {
     }
     // query: en vanlig Glimt-forespørsel med bakgrunnsprioritet.
     const ask = agentImpl ?? (async (user, text, o) => {
-      const [{ agent45 }, { runAsUser }] = await Promise.all([import('../glimt45/engine.js'), import('../settings.js')]);
+      const [{ agent45 }, { runAsUser }] = await Promise.all([import('../glimt/engine.js'), import('../settings.js')]);
       return runAsUser(user, () => agent45(user, text, o));
     });
     const out = await ask(row.user_id, row.what, { module: 'home', requestId: `sched62-${runId ?? row.id}-${now}`, background: true, scheduled: { id: row.id } });

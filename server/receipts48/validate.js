@@ -8,7 +8,7 @@
 //   - mva: satsene 25/15/12 (0 godtas med beløp 0), beløpet omtrent riktig mot totalen
 //   - category_suggestion: fra brukerens kategoriliste (ingen fritekst)
 // → {ok, confidence:'high'|'medium'|'low', failed_fields[], errors[], warnings[], feedback, receipt}
-import { isIsoDate45, isHm45, parseDate45, todayOslo45, addDays45 } from '../glimt45/dates.js';
+import { isIsoDate45, isHm45, parseDate45, todayOslo45, addDays45 } from '../glimt/dates.js';
 import { findDate, mod11Ok } from '../ocr-fallback.js';
 import { nameSim } from '../finans/receipts39.js';
 import { amount48, normalizeReceipt48 } from './normalize.js';

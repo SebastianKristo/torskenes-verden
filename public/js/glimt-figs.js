@@ -110,7 +110,7 @@ export const NAME_COLOR = { gris: '#f6b3c1', glimt: '#ffc7b8', natt: '#ffe7a8', 
 /* ---------- Prompt 40: julemodus (claude-code-glimt-jul.md, fasit glimt-figurer.js → julOn/dress) ----------
    Figurbiblioteket legger selv på antrekket når julemodus er aktiv, så alle steder som tegner Glimt (Hjem-briefen, brief-siden,
    chat, widgets, varsler, søk, oppstartssiden) får lue og skjerf uten egen kode. Unntak: fig(id, S, mood, {noJul:true}).
-   Valget: 'auto' (1. des–13. jan, Europe/Oslo) | 'av' | 'pa' + fase. Synkes via /api/glimt/settings (glimt35.js → setJul);
+   Valget: 'auto' (1. des–13. jan, Europe/Oslo) | 'av' | 'pa' + fase. Synkes via /api/glimt/settings (glimt/settings.js → setJul);
    lokal kopi i localStorage glimt_jul / glimt_jul_p (samme nøkler som fasiten). Endring → window-hendelsen «glimt-jul». */
 const PH = { advent: 'advent', jul: 'jul', nyttar: 'nyttar', 'nyttår': 'nyttar', vinter: 'vinter' };
 const PH_NAME = { advent: 'Advent', jul: 'Jul', nyttar: 'Nyttår', vinter: 'Vinter' };

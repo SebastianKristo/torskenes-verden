@@ -3,7 +3,7 @@
 //   fewshot – lignende oppskrifter som eksempler til planleggeren (maks 3, ca. 600 tokens)
 //   fast    – hurtigvei: hopp over planleggeren ved svært lik forespørsel (strenge krav, se engine61.js)
 //   learn   – lær av rettelser («nei, jeg mente …»): negativt eksempel, ny kandidat, testtilfelle i eval/learned/
-// Effektiv verdi = server OG bruker (samme modell som convo60/settings.js). Serveren i kv(OWNER,'recipes61'), brukeren i
+// Effektiv verdi = server OG bruker (samme modell som glimt/convo/settings.js). Serveren i kv(OWNER,'recipes61'), brukeren i
 // kv(bruker,'recipes61_user'). Se $S/SERVER61-API.md §6.
 import { kv, OWNER } from '../db.js';
 

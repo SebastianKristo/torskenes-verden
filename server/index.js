@@ -46,18 +46,18 @@ import systemUpdateApi, { startUpdateScheduler, updateNow, versionApi44 } from '
 import systemBackupApi, { startSystemBackupScheduler } from './system-backup.js'; // prompt 29: systembackup (bare admin)
 import ops51Api, { startOps51 } from './ops51.js'; // prompt 51 (OPS51): restic-backup 3-2-1, testet gjenoppretting, staging/tilbakerulling, DB-vedlikehold
 import smbBrowseApi from './smb-browse.js'; // prompt 30: SMB-veiviser (finn server, shares, mapper, test, lagre) – bare admin
-import glimtMemoryApi from './glimt-memory.js'; // prompt 33: «Glimt husker» (alias per bruker)
-import { agentApi45 } from './glimt45/api.js'; // prompt 45: Glimt-motoren
-import { entitiesApi60 } from './convo60/api.js'; // prompt 60 (prompt 49 del 3): entitetsregisteret
+import glimtMemoryApi from './glimt/memory/remember.js'; // prompt 33: «Glimt husker» (alias per bruker)
+import { agentApi45 } from './glimt/agent-api.js'; // prompt 45: Glimt-motoren
+import { entitiesApi60 } from './glimt/convo/api.js'; // prompt 60 (prompt 49 del 3): entitetsregisteret
 import { recipesApi61 } from './recipes61/api.js'; // prompt 61 (prompt 49 del 1): Glimt lærer (oppskrifter)
 import { schedulesApi62 } from './sched62/api.js'; // prompt 62 (prompt 49 del 2): planlagte oppgaver («Faste oppgaver»)
 import { skjoldApi76 } from './skjold76/api.js'; // prompt 76 (SKJSRV): Skjold Lab – sorteringsskapet (deler, skuffer, bilder, søk)
 import { startScheduler62 } from './sched62/scheduler.js'; // prompt 62: scheduler (tikk hvert minutt, ikke i test)
-import { memoryApi63 } from './mem63/api.js'; // prompt 63 (prompt 49 del 5): minnet holder seg ryddig (forslag, motstrid, ubrukte fakta)
-import { startMem63 } from './mem63/nightly.js'; // prompt 63: systemoppgaven kl. 03 og morgenvarselet (ikke i test)
+import { memoryApi63 } from './glimt/memory/hygiene-api.js'; // prompt 63 (prompt 49 del 5): minnet holder seg ryddig (forslag, motstrid, ubrukte fakta)
+import { startMem63 } from './glimt/memory/nightly.js'; // prompt 63: systemoppgaven kl. 03 og morgenvarselet (ikke i test)
 import { qualityApi64 } from './quality64/api.js'; // prompt 64 (prompt 49 del 7): kvalitet over tid (nattlig eval, ukerapport)
 import { startQuality64 } from './quality64/system.js'; // prompt 64: systemoppgavene kl. 02 / søndag kl. 20 og innsamling fra sporene (ikke i test)
-import assistApi from './assist.js'; // prompt 31: Glimt – POST /api/assist (vær, kalender, … før LLM), serverjobb
+import assistApi from './glimt/assist.js'; // prompt 31: Glimt – POST /api/assist (vær, kalender, … før LLM), serverjobb
 import aiApi, { glimtApi } from './ai-api.js';
 import api36 from './api36.js'; // prompt 36 (SERVER36)
 import { profilesApi, bibleApi, trackingKeysApi } from './api37.js'; // prompt 37 (SERVER37)
@@ -103,9 +103,9 @@ import { mountOmlx58 } from './omlx58/index.js'; // prompt 58 (OMLX58): oMLX på
 import { tracking46Api, startAccounts46 } from './tracking46.js'; // prompt 46 (DATA46): Posten/Bring- og PostNord-konto
 import { gphoto46Api, startGphoto46 } from './gphoto46.js'; // prompt 46 (DATA46): Google Photos-album som bakgrunn
 import { kart46Api } from './kart46.js'; // prompt 46 (DATA46): Kart-API
-import { settingsApi as glimtSettingsApi, ttsApi, imgApi } from './glimt35.js'; // prompt 35: /api/glimt/settings, /api/tts, /api/img
+import { settingsApi as glimtSettingsApi, ttsApi, imgApi } from './glimt/settings.js'; // prompt 35: /api/glimt/settings, /api/tts, /api/img
 import weather35Api from './weather35.js'; // prompt 35: /api/weather/place?q=
-import briefApi from './brief34.js'; // prompt 34: Glimt-brief /api/brief (+ /widget, /settings) og daglig generering // prompt 34: AI-kontroll /api/ai/* (status, modeller, ruting, jobber, forbruk, nøkler, selvtest)
+import briefApi from './glimt/brief.js'; // prompt 34: Glimt-brief /api/brief (+ /widget, /settings) og daglig generering // prompt 34: AI-kontroll /api/ai/* (status, modeller, ruting, jobber, forbruk, nøkler, selvtest)
 import { startTrialScheduler } from './trials-notify.js'; // prompt 31: varsler for gratis prøveperioder
 import { installCacheBust } from './cache-bust.js'; // prompt 32 (SERVER32)
 import searchHistoryApi from './search-history.js'; // prompt 32: søkehistorikk per bruker

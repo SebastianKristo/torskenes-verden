@@ -8,7 +8,7 @@
 //   Vær-uke via Glimt (Ollama + 7 dager), skiføre i brief/Vær                                                          → weather41.js (+ assist.js, chat.js), under
 //   AI-jobber: createdAt/startedAt/endedAt + timeLabel                                                                 → ai41.js (+ ai-run.js)
 //   Finans: Les på nytt for alle statuser, receipt_reads, /receipts/:id/reread, /receipts/:id/review                    → finans/routes.js
-//   17. mai: /api/glimt/settings mai17/mai17Active, /api/glimt/mai17, brief.mai17                                       → mai17-41.js (+ glimt35.js)
+//   17. mai: /api/glimt/settings mai17/mai17Active, /api/glimt/mai17, brief.mai17                                       → mai17-41.js (+ glimt/settings.js)
 //   Innlogging uten adresse + Kalender-innlogging: /api/discovery, /api/me/server, /api/auth/device-*, app-code, token, /app-auth → auth/app-login.js (montert fra auth/index.js)
 import { Hono } from 'hono';
 import { kv } from './db.js';
@@ -16,7 +16,7 @@ import { authOrToken as authOrToken0 } from './mobile.js';
 import { sessionUser } from './auth/session.js';
 import { startJob41 } from './tasks-glimt41.js';
 import { ski41 } from './weather41.js';
-import { glimtSettingsOf } from './glimt35.js';
+import { glimtSettingsOf } from './glimt/settings.js';
 import { mai17Active, mai17Day41 } from './mai17-41.js';
 import { postnordHealth41 } from './tracking-carriers.js';
 import { journeyOf41 } from './ruter41.js';

@@ -33,7 +33,7 @@ import { db, kv, OWNER } from './db.js';
 import { settings as fhSettings, secret, me } from './finans/db.js';
 import { geminiFetch, hasGemini } from './finans/gemini-keys.js';
 import { shortBody, stripThink, SHORT_NUM_CTX, THINKING_RE } from './ollama-opts.js';
-import { STEP47, TASK_STEP47, stepOf47, estTokens47, CTX_MARGIN47 } from './glimt45/params47.js'; // prompt 47: parametre per steg
+import { STEP47, TASK_STEP47, stepOf47, estTokens47, CTX_MARGIN47 } from './glimt/model-params.js'; // prompt 47: parametre per steg
 import { configureGate, gateChat, gateEmbed, gateLoad, gateState, holdGate, setGatePaused, gatePaused, loadedModels, DEFAULT_MODEL_KEEP_ALIVE, GateError, maskSecrets, backendConfig, owuiConf, testOpenWebuiModels } from './ai-gate.js';
 import { broadcast } from './realtime.js';
 import { envHw } from './aihw38.js';
@@ -579,7 +579,7 @@ async function callOllama(model, o, signal, r, ctx = {}) {
   if (sys) msgs.push({ role: 'system', content: sys });
   msgs.push({ role: 'user', content: String(o.prompt ?? ''), ...(o.images?.length ? { images: o.images.map(b64) } : {}) });
   const t = taskId(o.task);
-  // Prompt 47: parametre per steg fra én sentral config (glimt45/params47.js). num_ctx sendes ALLTID eksplisitt (aldri Ollamas
+  // Prompt 47: parametre per steg fra én sentral config (glimt/model-params.js). num_ctx sendes ALLTID eksplisitt (aldri Ollamas
   // standard), og korte kall har ikke lenger et 4096-tak: o.numCtx → stegets num_ctx → Chat: rutens numCtx, ellers 8192.
   const sp = stepParams(o, t);
   const options = { temperature: o.temperature ?? sp?.temperature ?? r.params.temperature, num_ctx: o.numCtx ?? sp?.numCtx ?? (t === 'chat' ? r.params.numCtx : STEP47.short.numCtx) };

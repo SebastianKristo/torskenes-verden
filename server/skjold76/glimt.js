@@ -2,9 +2,9 @@
 //   skjold.find {query} – lesekall: «hvor er M3-skruene?» → «M3 × 10 skruer ligger i Hovedskap · Rad 4 · Skuff 2 (ca. 50 stk)» + kort som åpner Skjold Lab.
 //   Felles søk (⌘K, webx51): typen «Deler» (partDocs76 / partSig76 / partResult76).
 import { db } from '../db.js';
-import { TOOLS45, TOOL45 } from '../glimt45/tools.js';
-import { SENTENCES46, FAIL_TEXT46 } from '../glimt45/tools46.js';
-import { registerLocalPlan76 } from '../glimt45/plan.js';
+import { TOOLS45, TOOL45 } from '../glimt/tools.js';
+import { SENTENCES46, FAIL_TEXT46 } from '../glimt/tools-weather-subs.js';
+import { registerLocalPlan76 } from '../glimt/plan.js';
 import { ensureUser76, searchParts76, partOut76, cabCache76, normSpec76, words76, locationOf76 } from './store.js';
 import { usedIn82 } from './projects82.js'; // prompt 82: «hvor er ESP32-ene brukt?»
 

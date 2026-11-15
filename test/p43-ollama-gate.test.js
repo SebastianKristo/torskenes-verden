@@ -29,7 +29,7 @@ const { default: app } = await import('../server/index.js');
 const ai = await import('../server/ai-run.js');
 const gate = await import('../server/ollama-gate.js');
 const opts = await import('../server/ollama-opts.js');
-const brief = await import('../server/brief34.js');
+const brief = await import('../server/glimt/brief.js');
 const { OWNER } = await import('../server/db.js');
 
 async function login(username, password) {

@@ -13,7 +13,7 @@ Alt som står under er kjørt mot koden eller lest i den, med fil:linje. Rådata
 
 ## Kort fortalt
 
-Glimt har allerede én motor (`server/glimt45/`) med register, validering, utførelse og kontroll. Problemet er hva som skjer *før* motoren:
+Glimt har allerede én motor (`server/glimt/`) med register, validering, utførelse og kontroll. Problemet er hva som skjer *før* motoren:
 1. **Regex bestemmer fortsatt hvem som får svare.** `LEGACY_FIRST` (`plan.js:154`) og «personal»-regexen (`engine.js:207–208`) avgjør om modellen får se spørsmålet i det hele tatt. Tre av de fire eksemplene kommer aldri til planleggeren. De går til `detectIntent` i `assist.js:230`, en regex-kjede fra prompt 32–41.
 2. **Når regexen bommer, havner spørsmålet hos en modell uten data.** `toolLlm` (`assist.js:500–520`) sender spørsmålet til ruten `sok` (llama3.2:3b) med en systemprompt på 206 tegn: «maks to korte setninger», dato og alias-lista. Det følger ingen kalender, ingen verktøy og ingen abonnementer med.
 3. **Verktøyene matcher for snevert eller for vidt.** `calendar.search` krever at *alle* ord treffer (AND) og bruker ikke aliaser. Den gamle `toolCalendarNext` holder seg med *ett* ord (OR), også ord som «oslo», og leter i sted-feltet.
@@ -32,7 +32,7 @@ Dette går ikke an å fikse i systemprompten, fordi modellen ikke blir spurt.
 
 | Hvem | Rute | Fil:linje |
 |---|---|---|
-| Glimt-planleggeren («Glimt · forstår») | `glimt` | `glimt45/plan.js:46` |
+| Glimt-planleggeren («Glimt · forstår») | `glimt` | `glimt/plan.js:46` |
 | Fritt svar fra Hjem/Chat-søket når regexen ga `llm` (inkl. nettsøk-svar) | `sok` | `assist.js:507–512` |
 | Klassifisering spørsmål/handling (300 ms) | `sok` | `assist.js:220` |
 | Verktøyruter for Chat/Hjem («hos brukeren llama3.2:3b») | `sok` | `tool-router44.js:7` |
@@ -101,7 +101,7 @@ To lagre som ikke snakker sammen:
 
 ### 1.5 Hvordan er verktøyene definert, og hvor mange er eksponert?
 
-- Registeret `TOOLS45` ligger i `tools.js:263–622`, pluss `tools46.js`. Hvert verktøy har navn, norsk beskrivelse, JSON-skjema, `module`, `destructive`, `validate`, `run` og `verify`. Navnene har punktum (`calendar.create`).
+- Registeret `TOOLS45` ligger i `tools.js:263–622`, pluss `glimt/tools-weather-subs.js`. Hvert verktøy har navn, norsk beskrivelse, JSON-skjema, `module`, `destructive`, `validate`, `run` og `verify`. Navnene har punktum (`calendar.create`).
 - **Alle 17 eksponeres i hvert planleggerkall** (`plan.js:119`, `ollamaTools45()` uten filter).
 - `app.answer` er en sekkepost («vær, avganger, pakker, sol, … neste time hos X, ledig tid») som sender spørsmålet tilbake til regex-kjeden i `assist.js`. Planleggeren blir til og med bedt om å bruke den for «neste time hos …» (`plan.js:87`).
 - `calendar.search` har parametrene `{query, past}`, altså én fritekst og ingen `terms[]`. Den matcher `terms.every(...)` mot tittel, sted og notat (`tools.js:382`).
@@ -136,15 +136,15 @@ Testdata: alias Nina = frisør, og hendelsen «Frisør» 3.11 kl. 14:00.
 
 ### 2.3 Vær → kalendersvar (begge formuleringene)
 Gjengitt nøyaktig: «TRE1400 Forelesning er **tirsdag 27. oktober kl. 14.30** (om 3 dager).»
-1. `analyzeWeather46` kjenner ikke «neste time» som tid (`TIME_RE`, `weather46.js:19–23`). Leddet «været i Oslo neste time» får stedet «Oslo Neste Time» og tiden `null`.
-2. **Feil i `weather46.js:104–105`:** når et ledd mangler tid og et senere ledd har tid, blir `ws = [null]`, og `if (w)` dropper forespørselen. Etterfyllingen i linje 111 blir død kode. Bare New York står igjen, så `isCompoundWeather46` returnerer false.
+1. `analyzeWeather46` kjenner ikke «neste time» som tid (`TIME_RE`, `glimt/weather.js:19–23`). Leddet «været i Oslo neste time» får stedet «Oslo Neste Time» og tiden `null`.
+2. **Feil i `glimt/weather.js:104–105`:** når et ledd mangler tid og et senere ledd har tid, blir `ws = [null]`, og `if (w)` dropper forespørselen. Etterfyllingen i linje 111 blir død kode. Bare New York står igjen, så `isCompoundWeather46` returnerer false.
 3. Uten «sammensatt vær» faller den til `LEGACY_FIRST` (vær, og «neste time»), deretter `app.answer` og så `detectIntent`. Der kommer **`calendar.next`-sjekken (linje 244) FØR vær-sjekken (linje 250)**. «neste» + «time» oppfyller `RE.next` og `RE.nextWhat`.
 4. `toolCalendarNext` (`assist.js:355–364`) lager nøkkelord av hele setningen (hvordan, været, oslo, og, new, york, …) og godtar **hvilken som helst** hendelse der *ett* ord står i tittel **eller sted**. «oslo» treffer stedet «OsloMet P35», så den første kommende forelesningen blir svaret.
 - Det skyldes ikke cache, gamle svar eller samtidighet. Det er feil ruting pluss et for løst kalendersøk. Idempotensnøkkelen (`engine.js:157`) er riktig per tekst.
 - Hvis planleggeren *hadde* fått spørsmålet, ville `reconcile46` (`engine.js:262`) uansett ha byttet værkallene med den (feilaktige) lokale oppdelingen. Værverktøyet har heller ikke timeoppløsning («neste time»), bare `now` og dag.
 
 ### 2.4 «Hva er det dyreste abonnementet jeg har?»
-- **Fungerer i dag** (fikset i prompt 46): `finance.subscriptions` normaliserer i kode (`subs46.js`). Verifisert: Adobe CC 2 999 kr/år blir 250 kr/mnd og rangeres øverst. Modellen formulerer ikke svaret, koden gjør det.
+- **Fungerer i dag** (fikset i prompt 46): `finance.subscriptions` normaliserer i kode (`glimt/subscriptions.js`). Verifisert: Adobe CC 2 999 kr/år blir 250 kr/mnd og rangeres øverst. Modellen formulerer ikke svaret, koden gjør det.
 - Gjenstår: rangering etter **år** som standard (`basis:'yearly'`), mens oppdraget vil ha «Y kr/mnd (Z kr/år)» først. Ukepris (`× 52 / 12`) må testes. Svarteksten gjentar «518 kr per måned» to ganger. Planleggerkallet ligger like under taket på 4096 (se 1.3).
 
 ### 2.5 Vitnemål fra bilde
@@ -171,7 +171,7 @@ Gjengitt nøyaktig: «TRE1400 Forelesning er **tirsdag 27. oktober kl. 14.30** (
 
 ## 3. Arkitekturen A–G: hva finnes og hva mangler
 
-| Steg | Finnes i `server/glimt45/` (bygg videre) | Mangler |
+| Steg | Finnes i `server/glimt/` (bygg videre) | Mangler |
 |---|---|---|
 | **A Kontekst** | `nowLineOf` (`engine.js:187`, dato og ukedag, ikke klokke), `osloNowLine` (`tool-router44.js`, med klokke), `ctxOf45` sist viste (30 min), `sanitizeCtx` (valgt/synlig) | Én `buildContext()` brukt i *alle* modellkall, profil (navn/by), relevante fakta, siste 4–6 meldinger |
 | **B Minne** | `glimt_memory` (alias + fact), `parseMemoryIntent`/`learnFromAssist`, embeddings-infrastruktur (`ai-run.embed`, `ai_memory45_vec`, nomic-embed-text) | Aliaser per fakta, navn til type-utvidelse, henting per forespørsel (eksakt/fuzzy + embedding, maks 10), søketerm-utvidelse til verktøyene, felles bruk av `ai_memory43` |
@@ -191,18 +191,18 @@ Prinsipp: motoren beholdes og utvides. De gamle stiene blir verktøy bak motoren
 **0. Testsuite og baseline** (se 5) – `eval/`, `npm run eval`. Kjøres mot dagens kode først.
 
 **1. Kontekstbygger + dato**
-- Ny `glimt45/context.js`: `buildContext(user, text, {today, now, history})` gir «Nå: lørdag 24. oktober 2026 kl. 10:03 (Europe/Oslo)», profil, fakta og historikk.
+- Ny `glimt/context.js`: `buildContext(user, text, {today, now, history})` gir «Nå: lørdag 24. oktober 2026 kl. 10:03 (Europe/Oslo)», profil, fakta og historikk.
 - Brukes av `plan.js` (`systemPrompt45`), `assist.js` (`localSystem`) og svarsteget.
 - Klokke-fryst testkrok finnes allerede (`_setClock45`). Utvid den med `nowMs`.
 
 **2. Datoparser**
-- `glimt45/dates.js`: `parseNorwegianDateTime(text, now, tz)` som felles inngang. Legg til «neste time», «om N timer/minutter», «i kveld/natt» som tidsvindu, «etter jul», «neste uke»-vindu, og «på fredag» = i dag hvis klokka ikke er passert.
-- `weather46.js` bruker denne (fjern `TIME_RE`/`whenOf46`-duplikat) og retter null-tid-feilen (`weather46.js:104–111`).
+- `glimt/dates.js`: `parseNorwegianDateTime(text, now, tz)` som felles inngang. Legg til «neste time», «om N timer/minutter», «i kveld/natt» som tidsvindu, «etter jul», «neste uke»-vindu, og «på fredag» = i dag hvis klokka ikke er passert.
+- `glimt/weather.js` bruker denne (fjern `TIME_RE`/`whenOf46`-duplikat) og retter null-tid-feilen (`glimt/weather.js:104–111`).
 - Enhetstester i `test/p47-dates.test.js`.
 
 **3. Minne**
 - Additiv migrering av `glimt_memory` (`glimt-memory.js`): kolonnene `aliases TEXT(JSON)`, `predicate`, `source`, `embed_model` og `vec BLOB`. Eksisterende rader blir `subject=match, object=type, aliases=[type + synonymer fra TYPE_WORDS]`.
-- Ny `glimt45/memory47.js`: `recallFacts(user, text)` (eksakt/fuzzy navn og alias, deretter embedding topp 5 med terskel, maks 10) og `expandTerms(facts)` som gir søketermer.
+- Ny `glimt/memory/recall.js`: `recallFacts(user, text)` (eksakt/fuzzy navn og alias, deretter embedding topp 5 med terskel, maks 10) og `expandTerms(facts)` som gir søketermer.
 - Læring: dagens `parseMemoryIntent` blir som den er, og får i tillegg «husk at …» som `fact`.
 - Valgfritt: hent også fra `ai_memory43`.
 
@@ -218,12 +218,12 @@ Prinsipp: motoren beholdes og utvides. De gamle stiene blir verktøy bak motoren
 - Fjern `calendar.next` fra `detectIntent` (eller flytt den etter vær), og stram inn `toolCalendarNext` (`assist.js:244, 354–364`) til den er erstattet.
 - `calendar.create`: kino-varighet 3 t (eller spilletid) merket `endAssumed`, kolonfjerning i titler.
 - `calendar-quick.js:92–106`: dato og tid fra `dates.js`, modellens tittel bare hvis den er ≤ 60 tegn og ≠ meldingen (samme regel som `wordsFromText46`). Alternativt: rask time går gjennom motorens `calendar.create`.
-- **Abonnement** (`subs46.js`/`tools46.js`): `query_subscriptions(sort_by, order, limit)`-form, månedspris først, ukepris-test.
-- **Vær** (`tools46.js`/`weather46.js`): `weather.get {location, time_range}` med `next_hour` (timeprognose), geokoding og stedets tidssone. Feil gir «værdata ikke tilgjengelig», aldri et annet verktøy.
+- **Abonnement** (`glimt/subscriptions.js`/`glimt/tools-weather-subs.js`): `query_subscriptions(sort_by, order, limit)`-form, månedspris først, ukepris-test.
+- **Vær** (`glimt/tools-weather-subs.js`/`glimt/weather.js`): `weather.get {location, time_range}` med `next_hour` (timeprognose), geokoding og stedets tidssone. Feil gir «værdata ikke tilgjengelig», aldri et annet verktøy.
 - **Media** (`media43.js:848–906`): tolking til `{handling, type, tittel, utvalg, sesong, episode}` (modell med skjema, regex som reserve), normaliserte titler (9-1-1 = 911), bibliotek først, «episode/sesong» gir bare Sonarr, `siste_episode` → `EpisodeSearch`, valgknapper ved likhet. Registrer `media.request` i `TOOLS45` for Hjem.
 
 **6. Svarformulering**
-- `glimt45/answer47.js`: modellkall bare for `chat.answer`/nettsøk og andre fritekstsvar. Engelsk grounding-prompt med svar på norsk og kontekst fra steg 1.
+- `glimt/answer.js`: modellkall bare for `chat.answer`/nettsøk og andre fritekstsvar. Engelsk grounding-prompt med svar på norsk og kontekst fra steg 1.
 - `num_ctx` 8192, `num_predict` 600, temperatur 0,3.
 - Nettsøk: regelen fra oppdraget først i prompten, kilde påkrevd, og kontroll av at egennavn i svaret finnes i treffene (ellers nytt forsøk eller sitat fra treffet).
 - Kodemalene beholdes for verktøysvar.
@@ -235,7 +235,7 @@ Prinsipp: motoren beholdes og utvides. De gamle stiene blir verktøy bak motoren
 - Kvittering (`finans/ai.js:392`): OCR først, så tekst-JSON, med visjon som kontroll. Samme fullstendighetssjekk på varelinjer mot total.
 
 **8. Kø og modellstyring**
-- Én sentral steg-config `glimt45/params47.js` (planner, document, answer, brief) som tabellen i oppdraget beskriver. `ai-run.run` får `step:` og slår opp.
+- Én sentral steg-config `glimt/model-params.js` (planner, document, answer, brief) som tabellen i oppdraget beskriver. `ai-run.run` får `step:` og slår opp.
 - Fjern `'llama3.2:3b': '1h'` fra `DEFAULT_MODEL_KEEP_ALIVE` (`ai-gate.js:57`). Bytt standardforslag for `kat`/`sok` til hovedmodellen.
 - Visjon `keep_alive 0` (finnes), gaten serialiserer allerede (`ollamaConcurrency 1`). Bakgrunnsjobber settes bak interaktive (finnes, sjekk morgenbrief/nyheter).
 
@@ -245,7 +245,7 @@ Prinsipp: motoren beholdes og utvides. De gamle stiene blir verktøy bak motoren
 
 **10. oMLX** (se 7) – etter at stegene over virker på Ollama, så samme eval kan sammenligne.
 
-Filer som endres (hovedsakelig): `server/glimt45/{engine,plan,tools,tools46,weather46,dates,subs46,calendar46}.js`, nye `context.js`, `memory47.js`, `answer47.js`, `params47.js`, `trace47.js`, `server/assist.js` (detectIntent/toolCalendarNext/toolLlm), `server/glimt-memory.js` (migrering), `server/calendar-quick.js`, `server/media/arr.js`, `server/study44.js`, `server/study46.js`, `server/finans/ai.js`, `server/ai-run.js` (steg-params, numCtx), `server/ai-gate.js` (oMLX-backend, keep_alive), `public/js/ai-control.js` (motorvalg), `package.json` (`eval`-script), `docs/glimt-dataflyt.md`.
+Filer som endres (hovedsakelig): `server/glimt/{engine,plan,tools,tools46,weather46,dates,subs46,calendar46}.js`, nye `context.js`, `glimt/memory/recall.js`, `glimt/answer.js`, `glimt/model-params.js`, `glimt/trace.js`, `server/glimt/assist.js` (detectIntent/toolCalendarNext/toolLlm), `server/glimt/memory/remember.js` (migrering), `server/calendar-quick.js`, `server/media/arr.js`, `server/study44.js`, `server/study46.js`, `server/finans/ai.js`, `server/ai-run.js` (steg-params, numCtx), `server/ai-gate.js` (oMLX-backend, keep_alive), `public/js/ai-control.js` (motorvalg), `package.json` (`eval`-script), `docs/glimt-dataflyt.md`.
 
 ---
 

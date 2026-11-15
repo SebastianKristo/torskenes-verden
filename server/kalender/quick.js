@@ -23,7 +23,7 @@ import { eventInput, createEvent, deleteEvent } from './events.js';
 import { settings } from '../finans/db.js';
 import { aiTimeoutsOf, _aiTest, logAi } from '../finans/ai.js';
 import { parseQuick, quickLabel, osloTodayISO, TYPES, DURATION, NO_DATE, memoryMatch, aliasTitle, isNoiseLine, senderOf } from '../dates/quick.js'; // dato og tid fra den felles tolkeren
-import { aliasesOf, aliasPrompt, setContext, touchMemory } from '../glimt-memory.js'; // prompt 33: «Glimt husker»
+import { aliasesOf, aliasPrompt, setContext, touchMemory } from '../glimt/memory/remember.js'; // prompt 33: «Glimt husker»
 import { run as aiRun } from '../ai-run.js';
 
 const MOCK = process.env.MOCK_DATA === '1';
@@ -106,7 +106,7 @@ export function fromOllama(o) {
 }
 
 /**
- * Prompt 47: modellens svar brukes ikke ukritisk. Dato og klokkeslett kommer fra den felles datoparseren (glimt45/dates.js) når
+ * Prompt 47: modellens svar brukes ikke ukritisk. Dato og klokkeslett kommer fra den felles datoparseren (glimt/dates.js) når
  * teksten har dem – modellens dato bare når teksten ikke sier noe selv. Tittelvakt: maks 60 tegn, ikke lik hele meldingen, og
  * ordene må stå i teksten (typeord som «Frisør» er lov) – ellers den lokale tittelen.
  */
@@ -114,8 +114,8 @@ export function fromOllama(o) {
 const NO_GUESS = { timeWithoutDate: 'none' };
 
 async function guardQuick47(r, text, today, local) {
-  const { whenOf45, addMin45 } = await import('../glimt45/dates.js');
-  const { wordsFromText46 } = await import('../glimt45/tools.js');
+  const { whenOf45, addMin45 } = await import('../glimt/dates.js');
+  const { wordsFromText46 } = await import('../glimt/tools.js');
   const w = whenOf45(text, today, { prefer: 'future', timeWithoutDate: 'none' });
   const out = { ...r };
   if (!w.errors.length) {

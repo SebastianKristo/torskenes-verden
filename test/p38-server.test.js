@@ -27,7 +27,7 @@ const { db, kv } = await import('../server/db.js');
 const totp = await import('../server/auth/totp.js');
 const auth = await import('../server/auth/session.js');
 const { _qr38 } = await import('../server/auth/qr-login.js');
-const b38 = await import('../server/brief38.js');
+const b38 = await import('../server/glimt/brief-cards.js');
 const hw38 = await import('../server/aihw38.js');
 const ai = await import('../server/ai-run.js');
 

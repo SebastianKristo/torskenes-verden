@@ -57,7 +57,7 @@ process.env.APP_PASSWORD_HASH = hashPassword('evalpassord47');
 const imp = (p) => import(pathToFileURL(join(REPO, p)).href);
 const { default: app } = await imp('server/index.js');
 const ai = await imp('server/ai-run.js');
-const E = await imp('server/glimt45/engine.js');
+const E = await imp('server/glimt/engine.js');
 const W = await imp('server/web-search.js');
 const { db, kv } = await imp('server/db.js');
 ai._setAiFetch((u, i) => globalThis.fetch(u, i));
