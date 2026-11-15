@@ -211,7 +211,7 @@ test('web: «Endre logo»-arket i papir-design, debounce 250 ms, overstyringen i
 });
 
 test('iOS: LogoSheet73 med søk, opplasting (kvadrat 512) og overstyring i PaperLogo', () => {
-  const s = src('apps/ios/FinansHub/Sources/LogoSheet73.swift');
+  const s = src('apps/ios/FinansHub/Sources/LogoSheet.swift');
   for (const t of ['Endre logo', 'Søk etter butikk', 'Bruk denne logoen', 'Tilbakestill til automatisk', 'Bruk initialer', '/logos?q=', '/merchants/logo-overrides', '/merchants/logo/upload', '512']) assert.ok(s.includes(t), t);
   assert.ok(!s.includes('/*/'), 'ingen /* inne i blokkommentar');
   assert.match(src('apps/ios/FinansHub/Sources/PaperPages.swift'), /LogoOv73/);

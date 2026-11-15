@@ -84,7 +84,7 @@ final class NotifyDelegate: NSObject, UNUserNotificationCenterDelegate {
         completionHandler([.banner, .list, .sound])
     }
 
-    /// Prompt 31: trykk på varsler og handlingene på prøve-varsler (Notify31.swift).
+    /// Prompt 31: trykk på varsler og handlingene på prøve-varsler (BackgroundNotifications.swift).
     func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse,
                                 withCompletionHandler completionHandler: @escaping () -> Void) {
         Notify31.handle(response)

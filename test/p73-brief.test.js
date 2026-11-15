@@ -211,20 +211,20 @@ test('web: briefen tegnes fra lista med cache per kort, skjelett i full høyde, 
 
 /* ---------------- iOS ---------------- */
 
-test('iOS: Brief73.swift – innstillinger (piler, bryter, dra, Tilbakestill) og kort med cache/skjelett', () => {
-  const s = src('apps/ios/FinansHub/Sources/Brief73.swift');
+test('iOS: BriefContentSettings.swift – innstillinger (piler, bryter, dra, Tilbakestill) og kort med cache/skjelett', () => {
+  const s = src('apps/ios/FinansHub/Sources/BriefContentSettings.swift');
   for (const re of [/struct Brief73Settings: View/, /INNHOLD I BRIEFEN/, /LongPressGesture\(minimumDuration: 0\.35\)/, /"Tilbakestill"/, /opacity\(it\.on \? 1 : 0\.45\)/,
     /\/brief-cards/, /struct Brief73Stack: View/, /struct Brief73Skeleton: View/, /0xe6dfd1/, /0xfffdf8/, /Oppdatert kl\. /, /Klarte ikke hente/]) assert.match(s, re);
   // Ingen «/*» inne i blokkommentarer.
   for (const m of s.matchAll(/\/\*([\s\S]*?)\*\//g)) assert.ok(!m[1].includes('/*'), 'nøstet blokkommentar');
-  const b52 = src('apps/ios/FinansHub/Sources/Brief52.swift');
+  const b52 = src('apps/ios/FinansHub/Sources/BriefUserCards.swift');
   assert.match(b52, /"\/brief52\?only=" \+ enc, timeout: 6\)/);
   assert.match(b52, /func prefetch\(_ store: Store\) async/);
   assert.match(b52, /UserDefaults\.standard/);
-  assert.match(src('apps/ios/FinansHub/Sources/Brief35Page.swift'), /Brief73Stack\(b: b, has34: m\.brief != nil, target: target\)/);
-  assert.match(src('apps/ios/FinansHub/Sources/Glimt35Settings.swift'), /Brief73Settings\(\)/);
-  assert.match(src('apps/ios/FinansHub/Sources/Brief34Model.swift'), /timeout: 6\)/);
-  assert.match(src('apps/ios/FinansHub/Sources/Brief34Page.swift'), /Brief52Model\.shared\.prefetch\(store\)/);
+  assert.match(src('apps/ios/FinansHub/Sources/BriefPage.swift'), /Brief73Stack\(b: b, has34: m\.brief != nil, target: target\)/);
+  assert.match(src('apps/ios/FinansHub/Sources/GlimtSettingsPage.swift'), /Brief73Settings\(\)/);
+  assert.match(src('apps/ios/FinansHub/Sources/BriefModel.swift'), /timeout: 6\)/);
+  assert.match(src('apps/ios/FinansHub/Sources/BriefCards.swift'), /Brief52Model\.shared\.prefetch\(store\)/);
 });
 
 /* ---------------- Android ---------------- */

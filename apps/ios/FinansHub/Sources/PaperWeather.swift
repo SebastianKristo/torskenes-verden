@@ -3,7 +3,7 @@ import SwiftUI
 /* ---------------- Værappen (Vaer.dc.html): trykk på temperaturen på Hjem ---------------- */
 // Prompt 22: siden følger designet nøyaktig. Systemfonten (SF Pro) brukes bare her. Kartknapp nede til venstre,
 // ☰ (Steder) nede til høyre, animert bakgrunn, kortet «Yr og Pent» og detaljark for alle kortene.
-// Visningene ligger i Weather22*.swift, ikonene i Glyphs22.swift.
+// Visningene ligger i Weather22*.swift, ikonene i DesignGlyphs.swift.
 
 /// GET /api/weather/full: nå, i dag, i går, timer, 7 dager, månen, neste regn og (prompt 22) compare med Pent.
 struct WeatherFull {

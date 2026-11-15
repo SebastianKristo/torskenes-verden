@@ -14,7 +14,7 @@ const read = (f) => readFileSync(join(SRC, f), 'utf8');
 const code = (f) => read(f).replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
 
 test('widget-størrelse: håndtak, eget Layout og lagring av sz', () => {
-  const g = code('Home70Grid.swift');
+  const g = code('HomeWidgetSize.swift');
   assert.match(g, /struct Home70GridLayout: Layout/);
   assert.match(g, /Home52Rows\.rows\(keys, half: half, tall: tall\)/, 'samme radlogikk som prompt 52');
   assert.match(g, /fixed: Set<String> = \["h1", "h16"\]/, 'Søk og Snarveier er alltid fulle');
@@ -22,18 +22,18 @@ test('widget-størrelse: håndtak, eget Layout og lagring av sz', () => {
   assert.match(g, /return dx < -40/, 'full → halv ved mer enn 40 pt mot venstre');
   assert.match(g, /DragGesture\(minimumDistance: 0, coordinateSpace: \.global\)/);
   assert.match(g, /h\["sz"\] = sz/, 'sz følger med når pages.hjem lagres');
-  const w = code('WiggleList43.swift');
+  const w = code('WiggleList.swift');
   assert.match(w, /Home70GridLayout\(half: half, tall: tall, spacing: spacing\)/);
   assert.match(w, /\.layoutValue\(key: Home70KeyLV\.self, value: k\)/);
   assert.match(w, /Home70Handle\(key: k, isHalf: half\.contains\(k\)/);
   assert.doesNotMatch(w, /row52\(/, 'ingen HStack/VStack-rader som bygger cellene på nytt ved bytte');
   assert.match(code('PaperPages.swift'), /Home70Size\.shared\.half\(Home52\.half\)/);
   assert.match(code('PaperStore.swift'), /Home70Size\.shared\.inject\(body\)/);
-  assert.match(code('Paper15.swift'), /Home70Size\.shared\.take\(pages\)/);
+  assert.match(code('PaperLayout.swift'), /Home70Size\.shared\.take\(pages\)/);
 });
 
 test('scroll mens Glimt svarer: ingen fullskjerm-lag, sveip bare fra grepet, trykk utenfor', () => {
-  const a = code('Assist38.swift');
+  const a = code('Assist.swift');
   const catcher = a.slice(a.indexOf('struct Assist38Catcher'), a.indexOf('struct Assist38CloseButton'));
   assert.doesNotMatch(catcher, /DragGesture|contentShape|onTapGesture/, 'laget over Hjem er borte');
   assert.match(catcher, /Assist70Pill\(\)/);
@@ -41,17 +41,17 @@ test('scroll mens Glimt svarer: ingen fullskjerm-lag, sveip bare fra grepet, try
   assert.match(swipe, /\.overlay\(alignment: \.bottom\) \{ grip \}/);
   assert.match(swipe, /\.frame\(height: 30\)/);
   assert.equal((swipe.match(/DragGesture\(/g) || []).length, 1, 'én drag-gest, på grepet');
-  const h = code('Home70Assist.swift');
+  const h = code('HomeAssistScroll.swift');
   assert.match(h, /\.simultaneousGesture\(\s*SpatialTapGesture/);
   assert.match(h, /guard a\.homeAnswer != nil, !a\.homeBusy else \{ return \}/, 'tenker: lukkes bare med ✕');
   assert.match(h, /Glimt svarte ↑/);
   assert.match(h, /d\.scrollTarget = "h1"/);
   assert.match(code('PaperPages.swift'), /\.assist70Tap\(\)/);
-  assert.match(code('HomeSearch29.swift'), /\.assist70Track\(\)/);
+  assert.match(code('HomeSearch.swift'), /\.assist70Track\(\)/);
 });
 
 test('mikrofon: nytt ikon, opptakskort med × · bølge · ■ · ↑, serveren viser ikke live tekst', () => {
-  const m = code('Home70Mic.swift');
+  const m = code('HomeMic.swift');
   assert.match(m, /struct Home70MicGlyph: Shape/);
   assert.match(m, /Color\(hex: "#C8633F"\)/, 'send er terrakotta');
   assert.match(m, /"Snakk nå …"/);
@@ -59,14 +59,14 @@ test('mikrofon: nytt ikon, opptakskort med × · bølge · ■ · ↑, serveren 
   assert.match(m, /cornerRadius: 26/);
   // Prompt 71: prøvene tas fortsatt ~11/s, men bølgen tegnes av TimelineView(.animation) i sin egen lille visning.
   assert.match(m, /static let every: Double = 0\.09/, 'egen prøvetakt i bølgen (~11/s)');
-  const s = code('HomeSearch29.swift');
+  const s = code('HomeSearch.swift');
   assert.match(s, /home70: true/);
   assert.match(s, /Home70RecCard\(text: dev \? live70 : ""/, 'live tekst bare med motoren på enheten');
   assert.doesNotMatch(s, /onText: \{ \(t: String\) in q = t \}/, 'teksten fra enheten går ikke rett i feltet lenger');
-  const v = code('Voice56.swift');
+  const v = code('VoiceInput.swift');
   assert.match(v, /Home70MicButton\(ink: ink, label: label\)/);
   // Ingen /* inne i blokkommentarer i de nye filene.
-  for (const f of ['Home70Grid.swift', 'Home70Assist.swift', 'Home70Mic.swift']) {
+  for (const f of ['HomeWidgetSize.swift', 'HomeAssistScroll.swift', 'HomeMic.swift']) {
     const t = read(f);
     assert.equal((t.match(/\/\*/g) || []).length, (t.match(/\*\//g) || []).length, f);
   }

@@ -286,7 +286,7 @@ struct ShellPageView<Page: View>: View {
 /* ---------- Seksjonsfanene (Finans, Domener, Abonnement, Familie) ---------- */
 
 /// Segmentert velger nederst på siden for fanene i en seksjon. Samme valg og samme redigering som den gamle seksjonslinja
-/// (Nav32.swift, FinNav26.swift), men fanelinja nederst er den samme overalt (Q33).
+/// (NavTabEditor.swift, FinNav26.swift), men fanelinja nederst er den samme overalt (Q33).
 struct ShellSectionBar: View {
     @Environment(Store.self) private var store
     @Environment(\.paper) private var p

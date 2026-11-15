@@ -25,34 +25,34 @@ function balanced(src) {
 }
 
 test('wiggle: søkekortet (h1) har ingen hold-gest, de andre kortene har', () => {
-  const w = code('WiggleList43.swift');
+  const w = code('WiggleList.swift');
   assert.match(w, /static let noHold: Set<String> = \["h1"\]/);
   assert.match(w, /content\(k\)\.wiggle43Hold\(editing: !Wiggle43\.holds\(k\)\)/, 'listen hopper over h1');
   assert.doesNotMatch(w, /content\(k\)\.wiggle43Hold\(editing: false\)/, 'ingen ubetinget hold på cellene');
-  const p = code('Paper15.swift');
+  const p = code('PaperLayout.swift');
   assert.match(p, /cardView\(k, vis, keys\)\.wiggle43Hold\(editing: !Wiggle43\.holds\(k\)\)/, 'bred skjerm hopper over h1');
   // Søkefeltet, svarkortet og opptakskortet ligger alle i h1 (HomeSearch29).
   assert.match(code('PaperPages.swift'), /PaperCardDef\(key: "h1", label: "Søk", view: AnyView\(HomeSearch29\(\)\)\)/);
-  const hs = code('HomeSearch29.swift');
+  const hs = code('HomeSearch.swift');
   assert.match(hs, /Assist31Bubble\(\)/);
   assert.match(hs, /recCard70/);
   // Ingen hold-gest i selve søkefeltet / svarkortet.
-  for (const f of ['HomeSearch29.swift', 'Home70Assist.swift', 'Assist38.swift']) {
+  for (const f of ['HomeSearch.swift', 'HomeAssistScroll.swift', 'Assist.swift']) {
     assert.doesNotMatch(code(f), /LongPressGesture|onLongPressGesture/, f);
   }
 });
 
 test('svar- og opptakskortet: tekstmarkering', () => {
-  const a = code('Assist31.swift');
+  const a = code('Assist.swift');
   const bubble = a.slice(a.indexOf('struct Assist31Bubble'), a.indexOf('struct Assist31BubbleFoot'));
   assert.match(bubble, /Assist31BoldText\(text: a\.text, size: 17, [^\n]*\n\s*\.fixedSize\(horizontal: false, vertical: true\)\s*\.textSelection\(\.enabled\)/);
-  const m = code('Home70Mic.swift');
+  const m = code('HomeMic.swift');
   const rec = m.slice(m.indexOf('struct Home70RecText'));
   assert.match(rec, /\.textSelection\(\.enabled\)/);
 });
 
 test('trykk utenfor: bare et ekte trykk (Touch74), aldri etter scroll', () => {
-  const h = code('Home70Assist.swift');
+  const h = code('HomeAssistScroll.swift');
   // Stedet kommer fortsatt fra SpatialTapGesture, men avgjøres etter hele berøringen.
   assert.match(h, /\.simultaneousGesture\(\s*SpatialTapGesture/);
   assert.match(h, /func tapped\(_ pt: CGPoint\) \{\s*Task \{ @MainActor in Assist70\.shared\.decide\(pt\) \}\s*\}/);
@@ -78,7 +78,7 @@ test('trykk utenfor: bare et ekte trykk (Touch74), aldri etter scroll', () => {
   assert.match(r, /delaysTouchesEnded = false/);
   assert.doesNotMatch(r, /state = \.(recognized|ended|began)/, 'blir aldri gjenkjent');
   assert.equal((r.match(/state = \.failed/g) || []).length, 2);
-  assert.match(read('Home70Assist.swift'), /^import UIKit\.UIGestureRecognizerSubclass$/m);
+  assert.match(read('HomeAssistScroll.swift'), /^import UIKit\.UIGestureRecognizerSubclass$/m);
   assert.match(h, /\.background\(Touch74Host\(\)\.allowsHitTesting\(false\)\)/);
   assert.match(h, /g is Touch74Recognizer/, 'én observatør per vindu');
   // Ingen TapGesture/DragGesture på hele Hjem.
@@ -86,7 +86,7 @@ test('trykk utenfor: bare et ekte trykk (Touch74), aldri etter scroll', () => {
 });
 
 test('sveip opp lukker bare fra grepet, over 60 pt og raskt', () => {
-  const a = code('Assist38.swift');
+  const a = code('Assist.swift');
   assert.match(a, /nonisolated static func swipeCloses\(_ t: CGFloat, _ predicted: CGFloat\) -> Bool \{\s*t < -60 && predicted - t < -40\s*\}/);
   assert.match(a, /if Assist38\.swipeCloses\(v\.translation\.height, v\.predictedEndTranslation\.height\)/);
   assert.doesNotMatch(a, /translation\.height < -40/);
@@ -95,13 +95,13 @@ test('sveip opp lukker bare fra grepet, over 60 pt og raskt', () => {
 });
 
 test('tastatur og fokus lukker ikke Glimt', () => {
-  const all = ['HomeSearch29.swift', 'Home70Assist.swift', 'Assist38.swift', 'Assist31.swift'].map(code).join('\n');
+  const all = ['HomeSearch.swift', 'HomeAssistScroll.swift', 'Assist.swift', 'Assist.swift'].map(code).join('\n');
   assert.doesNotMatch(all, /keyboardWill[A-Za-z]*Notification[\s\S]{0,200}closeHome/);
-  assert.doesNotMatch(code('HomeSearch29.swift'), /onChange\(of: focused\)[^\n]*closeHome/);
+  assert.doesNotMatch(code('HomeSearch.swift'), /onChange\(of: focused\)[^\n]*closeHome/);
 });
 
 test('klammene går opp i de endrede filene', () => {
-  for (const f of ['Home70Assist.swift', 'Assist38.swift', 'WiggleList43.swift', 'Paper15.swift', 'Assist31.swift', 'Home70Mic.swift']) {
+  for (const f of ['HomeAssistScroll.swift', 'Assist.swift', 'WiggleList.swift', 'PaperLayout.swift', 'Assist.swift', 'HomeMic.swift']) {
     assert.ok(balanced(code(f)), f);
   }
 });

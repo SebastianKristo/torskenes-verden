@@ -68,12 +68,12 @@ function lex(src) {
   return st.length ? 'ulukket ' + st[st.length - 1] : '';
 }
 
-const NEW = ['FinansHub/Sources/Login89.swift', 'FinansHub/Sources/Live89Host.swift', 'Shared/Live89.swift',
-  'FinansHubWidgets/Sources/Live89Live.swift', 'SharedKal/Core/KalSrv89Core.swift', 'Kalender/Sources/KalLogin89.swift',
+const NEW = ['FinansHub/Sources/LoginServerGear.swift', 'FinansHub/Sources/LiveActivitiesHost.swift', 'Shared/LiveActivities.swift',
+  'FinansHubWidgets/Sources/LiveActivityWidgets.swift', 'SharedKal/Core/KalSrv89Core.swift', 'Kalender/Sources/KalLogin89.swift',
   'KalenderMac/Sources/MacLogin89.swift'];
-const CHANGED = ['FinansHub/Sources/Store.swift', 'FinansHub/Sources/Server41.swift', 'FinansHub/Sources/PaperGate.swift',
-  'FinansHub/Sources/App.swift', 'FinansHub/Sources/Notify31.swift', 'FinansHub/Sources/Paper17.swift', 'Shared/Plat51Intents.swift',
-  'FinansHubWidgets/Sources/Plat51Live.swift', 'Kalender/Sources/KalLogin41.swift', 'Kalender/Sources/KalStore.swift',
+const CHANGED = ['FinansHub/Sources/Store.swift', 'FinansHub/Sources/ServerLogin.swift', 'FinansHub/Sources/PaperGate.swift',
+  'FinansHub/Sources/App.swift', 'FinansHub/Sources/BackgroundNotifications.swift', 'FinansHub/Sources/PaperAppSettings.swift', 'Shared/PlatformIntents.swift',
+  'FinansHubWidgets/Sources/PlatformLiveActivity.swift', 'Kalender/Sources/KalLogin41.swift', 'Kalender/Sources/KalStore.swift',
   'KalenderMac/Sources/MacLogin.swift', 'KalenderMac/Sources/MacStore.swift'];
 
 /* ---------- 1. Domenet ---------- */
@@ -84,7 +84,7 @@ const OLD_RE = new RegExp('smarthjem' + 'experten', 'i');
 test('domenet: ingen gammel stavemåte igjen i iOS-appene; ny standard i konstanter og project.yml', () => {
   const bad = walk(IOS).filter((p) => /\.(swift|yml|plist|json|md|entitlements)$/.test(p)).filter((p) => OLD_RE.test(readFileSync(p, 'utf8')));
   assert.deepEqual(bad, []);
-  assert.match(raw('FinansHub/Sources/Server41.swift'), /return "https:\/\/os\.smarthjemeksperten\.no"/);
+  assert.match(raw('FinansHub/Sources/ServerLogin.swift'), /return "https:\/\/os\.smarthjemeksperten\.no"/);
   assert.match(raw('SharedKal/Core/KalAuth41Core.swift'), /static let standardExternal47: String = "https:\/\/os\.smarthjemeksperten\.no"/);
   assert.match(raw('SharedKal/Core/KalAuth41Core.swift'), /static let standardLocal47: String = "http:\/\/10\.69\.1\.39:3000"/);
   const yml = raw('project.yml');
@@ -99,7 +99,7 @@ test('domenet: ingen gammel stavemåte igjen i iOS-appene; ny standard i konstan
 });
 
 test('migrering: bare nøyaktig den gamle standarden skrives om (Homelab, Kalender, Mac)', () => {
-  const l = code('FinansHub/Sources/Login89.swift');
+  const l = code('FinansHub/Sources/LoginServerGear.swift');
   assert.match(l, /static let oldExternal: String = "https:\/\/os\.smarthjem" \+ "experten\.no"/);
   assert.match(l, /return s\.lowercased\(\) == oldExternal \? newExternal : nil/);
   assert.match(l, /for k in \[extKey, "hl41_manual_server"\]/);
@@ -137,7 +137,7 @@ test('migrering (samme regel i JS): nøyaktig gammel standard → ny, egendefine
 /* ---------- 2. Tannhjulet ---------- */
 
 test('Homelab: tannhjul (gearshape, 44×44) øverst til høyre → arket «Server» med begge felt, test, tilbakestill, lagre/avbryt', () => {
-  const l = code('FinansHub/Sources/Login89.swift');
+  const l = code('FinansHub/Sources/LoginServerGear.swift');
   assert.match(l, /Image\(systemName: "gearshape"\)/);
   assert.match(l, /\.frame\(width: 44, height: 44\)/);
   assert.match(l, /\.accessibilityLabel\("Server"\)/);
@@ -165,11 +165,11 @@ test('Homelab: tannhjul (gearshape, 44×44) øverst til høyre → arket «Serve
   assert.ok(form.indexOf('Login89ServerLine()') > form.indexOf('PInkButton(title: store.busy'), 'under innloggingsknappen');
   assert.match(l, /Text\("Server: " \+ Server89\.displayHost\(store\)\)\n\s+\.font\(PF\.ui\(12\.5\)\)\.foregroundStyle\(p\.mut\)/);
   // Feilkortet «Endre serveradresse» åpner samme ark.
-  assert.match(code('FinansHub/Sources/Server41.swift'), /Button \{ Login89Model\.shared\.open = true \} label: \{\n\s+Text\("Endre serveradresse"\)/);
+  assert.match(code('FinansHub/Sources/ServerLogin.swift'), /Button \{ Login89Model\.shared\.open = true \} label: \{\n\s+Text\("Endre serveradresse"\)/);
 });
 
 test('Homelab: én felles lagring med Innstillinger → Server', () => {
-  const l = code('FinansHub/Sources/Login89.swift');
+  const l = code('FinansHub/Sources/LoginServerGear.swift');
   assert.match(l, /Server89\.remember\(local: l, external: e\)/);
   assert.match(l, /if store\.account != nil \{\n\s+store\.updateAddresses\(local: l, external: e\)\n\s+s41\.push\(store\)/);
   assert.match(l, /if let a = store\.account \{\n\s+external = a\.external\.isEmpty \? a\.server : a\.external\n\s+local = a\.local/);
@@ -178,7 +178,7 @@ test('Homelab: én felles lagring med Innstillinger → Server', () => {
   assert.match(upd, /Server89\.remember\(local: a\.local, external: a\.external\.isEmpty \? a\.server : a\.external\)/);
   assert.match(st, /local: same\?\.local \?\? seed\.local, external: same\?\.external \?\? seed\.external/);
   // Innloggingen prøver lagret lokal adresse og den lagrede eksterne (manual) før kjente kontoer, så standardene.
-  const c = code('FinansHub/Sources/Server41.swift');
+  const c = code('FinansHub/Sources/ServerLogin.swift');
   const cand = c.slice(c.indexOf('func candidates('), c.indexOf('func pick('));
   assert.ok(cand.indexOf('add(Server89.savedLocal)') < cand.indexOf('add(manual)'));
   assert.ok(cand.indexOf('add(Server47.defaultLocal)') < cand.indexOf('add(Server41.defaultServer)'));
@@ -227,7 +227,7 @@ test('Kalender for Mac: tannhjul og arket «Server», feltet fylles med standard
 /* ---------- 3. Live Activities ---------- */
 
 test('Live Activities: bygger på Plat51Attributes; ContentState leser API-feltene (Akt) og egne nøkler', () => {
-  const s = code('Shared/Plat51Intents.swift');
+  const s = code('Shared/PlatformIntents.swift');
   assert.match(s, /struct Plat51Attributes: ActivityAttributes \{/);
   assert.equal((s.match(/ActivityAttributes/g) || []).length, 1, 'ingen ny ActivityAttributes');
   assert.match(s, /case tittel, undertittel, verdi, status, start, slutt, segmenter, handlinger/);
@@ -240,14 +240,14 @@ test('Live Activities: bygger på Plat51Attributes; ContentState leser API-felte
   assert.match(s, /case kind, key, color, type, id/);
   // Gamle pakker/nedlastinger fra Plat51 bare når serveren mangler /api/live.
   assert.equal((s.match(/if Live89Sync\.serverHasLive \{ return \}/g) || []).length, 2);
-  const l = code('Shared/Live89.swift');
+  const l = code('Shared/LiveActivities.swift');
   assert.match(l, /static let types: \[String\] = \["nedlasting", "backup", "spiller", "avtale", "pakke"\]/);
   assert.match(l, /static let actionIds: \[String\] = \["pause", "fortsett", "stopp", "rute", "utsett"\]/);
   assert.match(l, /case "pause": return "paused"\n\s+case "ferdig": return "done"/);
 });
 
 test('Live Activities: farger, symboler og avslutning etter fasiten', () => {
-  const l = code('Shared/Live89.swift');
+  const l = code('Shared/LiveActivities.swift');
   for (const [t, hex] of [['nedlasting', '#5ac8fa'], ['backup', '#30d158'], ['spiller', '#ffb340'], ['avtale', '#ff6a4d'], ['pakke', '#bf8cff']]) {
     assert.match(l, new RegExp(`case "${t}": return "${hex}"`), t);
   }
@@ -258,7 +258,7 @@ test('Live Activities: farger, symboler og avslutning etter fasiten', () => {
 });
 
 test('Live Activities: polling (GET /api/live/aktiviteter), knapper (POST /api/live/handling) og tokens (POST /api/live/tokens)', () => {
-  const l = code('Shared/Live89.swift');
+  const l = code('Shared/LiveActivities.swift');
   assert.match(l, /Plat51Net\.request\("GET", "\/api\/live\/aktiviteter", timeout: 10\)/);
   assert.match(l, /Plat51Net\.request\("POST", "\/api\/live\/handling", body: \["id": id, "handling": handling\], timeout: 12\)/);
   assert.match(l, /struct Live89ActionIntent: LiveActivityIntent \{/);
@@ -267,7 +267,7 @@ test('Live Activities: polling (GET /api/live/aktiviteter), knapper (POST /api/l
   assert.match(l, /if fast \{ return 5 \}/, 'nedlasting\/backup hvert 5. s');
   assert.match(l, /pushType: \.token\)\n\s+\} catch \{\n\s+made = try\? Activity<Plat51Attributes>\.request\(attributes: attr, content: content\(st, kind: kind\), pushType: nil\)/);
   assert.match(l, /if a\.content\.state != st \{ await a\.update/);
-  const h = code('FinansHub/Sources/Live89Host.swift');
+  const h = code('FinansHub/Sources/LiveActivitiesHost.swift');
   assert.match(h, /Activity<Plat51Attributes>\.pushToStartTokenUpdates/);
   assert.match(h, /if #available\(iOS 17\.2, \*\) \{/);
   assert.match(h, /await post\(d, kind: "pushtostart", id: nil, type: nil\)/);
@@ -278,7 +278,7 @@ test('Live Activities: polling (GET /api/live/aktiviteter), knapper (POST /api/l
   // Appen: løkke mens aktiv, bakgrunnshenting, «Vis rute».
   assert.match(code('FinansHub/Sources/App.swift'), /\.live89Host\(\)/);
   assert.match(code('FinansHub/Sources/App.swift'), /if Live89Link\.handle\(u, store\) \{ return \}\n\s+store\.openDeepLink\(u\)/);
-  assert.match(code('FinansHub/Sources/Notify31.swift'), /await Live89Model\.background\(\)/);
+  assert.match(code('FinansHub/Sources/BackgroundNotifications.swift'), /await Live89Model\.background\(\)/);
   assert.match(h, /content\.task\(id: key\) \{\n\s+await Live89Model\.shared\.run\(store, active: phase == \.active\)/);
   assert.match(h, /if s == "https" \|\| s == "maps" \|\| s == "comgooglemaps" \{ return u \}/);
   // Ingen nøkler i appen.
@@ -286,7 +286,7 @@ test('Live Activities: polling (GET /api/live/aktiviteter), knapper (POST /api/l
 });
 
 test('Live Activities: visningene etter fasiten (låseskjerm, kompakt, minimal, utvidet, StandBy)', () => {
-  const v = code('FinansHubWidgets/Sources/Live89Live.swift');
+  const v = code('FinansHubWidgets/Sources/LiveActivityWidgets.swift');
   assert.match(v, /static let background: Color = Color\(white: 0\.11\)\.opacity\(0\.86\)/);
   assert.match(v, /\.padding\(\.horizontal, 16\)\.padding\(\.vertical, 14\)/);
   assert.match(v, /Live89Tile\(kind: attr\.kind, st: st, size: 40\)/);
@@ -306,7 +306,7 @@ test('Live Activities: visningene etter fasiten (låseskjerm, kompakt, minimal, 
   assert.match(v, /\.background\(Color\.black\)/);
   // Utvidet: aldri bredere enn skjermen (ingen faste bredder over 326 − 24).
   for (const m of v.matchAll(/\.frame\((?:maxW|w)idth: (\d+)/g)) assert.ok(Number(m[1]) <= 302, m[0]);
-  const w = code('FinansHubWidgets/Sources/Plat51Live.swift');
+  const w = code('FinansHubWidgets/Sources/PlatformLiveActivity.swift');
   assert.match(w, /Live89Tile\(kind: ctx\.attributes\.kind, st: ctx\.state, size: 44\)/);
   assert.match(w, /\.font\(\.system\(size: 26, weight: \.semibold\)\)\.monospacedDigit\(\)/);
   assert.match(w, /Live89ExpandedBottom\(attr: ctx\.attributes, st: ctx\.state\)/);
@@ -318,13 +318,13 @@ test('Live Activities: visningene etter fasiten (låseskjerm, kompakt, minimal, 
 });
 
 test('Innstillinger → Varsler → Live Activities: én bryter per aktivitet, backup bare for admin', () => {
-  const h = code('FinansHub/Sources/Live89Host.swift');
+  const h = code('FinansHub/Sources/LiveActivitiesHost.swift');
   assert.match(h, /PLabel\(text: "Live Activities"\)/);
   assert.match(h, /store\.api\.callAt\("\/api", "GET", "\/live\/innstillinger", timeout: 10\)/);
   assert.match(h, /store\.api\.callAt\("\/api", "PUT", "\/live\/innstillinger", json: body, timeout: 10\)/);
   assert.match(h, /t != "backup" \|\| Update28Model\.isAdmin\(store\)/);
   assert.match(h, /if !on \{ await Live89Sync\.endAll\(type\) \}/);
-  const p = code('FinansHub/Sources/Paper17.swift');
+  const p = code('FinansHub/Sources/PaperAppSettings.swift');
   const n = p.slice(p.indexOf('struct PaperNotifySettings'), p.indexOf('private var sep: some View', p.indexOf('struct PaperNotifySettings')));
   assert.match(n, /Live89Settings\(\)\n\s+PaperLinkList/);
 });
@@ -343,6 +343,6 @@ test('nye og endrede Swift-filer: klammebalanse, ingen tvungen utpakking, iOS 17
   // SharedKal/Core bygges også i Mac-widgetene: bare Foundation.
   assert.doesNotMatch(raw('SharedKal/Core/KalSrv89Core.swift'), /import (SwiftUI|UIKit|AppKit)/);
   // ActivityKit-koden i Shared er bak canImport (widgetene bygges også for Mac Catalyst-løse mål).
-  const sh = raw('Shared/Live89.swift');
+  const sh = raw('Shared/LiveActivities.swift');
   assert.ok(sh.indexOf('#if canImport(ActivityKit)\nenum Live89Sync') > 0);
 });

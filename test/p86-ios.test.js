@@ -45,7 +45,7 @@ test('Kalender iOS: handlingslenker utenfra spør først, appens egne kall er tr
 
   // Varsler (UNNotificationResponse) og den innebygde Kalenderen i Homelab virker som før.
   assert.match(code('Kalender/Sources/KalNotify.swift'), /Task \{ @MainActor in KalLinks\.handle\(url, trusted: true\) \}/);
-  const embed = code('FinansHub/Sources/Kal84Embed.swift');
+  const embed = code('FinansHub/Sources/KalenderInApp.swift');
   assert.equal((embed.match(/KalLinks\.handle\(url, trusted: true\)/g) || []).length, 2);
   assert.doesNotMatch(embed, /KalLinks\.handle\(url\)/);
 });
@@ -59,7 +59,7 @@ test('trusted: true brukes bare av appens egne kall (aldri fra onOpenURL / unive
       if (/onOpenURL|webpageURL/.test(l) && !l.trim().startsWith('//')) assert.doesNotMatch(l, /trusted: true/, f);
     }
   }
-  assert.deepEqual(hits.sort(), ['FinansHub/Sources/Kal84Embed.swift', 'Kalender/Sources/KalLinks.swift', 'Kalender/Sources/KalNotify.swift']);
+  assert.deepEqual(hits.sort(), ['FinansHub/Sources/KalenderInApp.swift', 'Kalender/Sources/KalLinks.swift', 'Kalender/Sources/KalNotify.swift']);
 });
 
 test('Kalender Mac: ny?text=… og glimt?q=… bekreftes før MacLinks.handle', () => {
@@ -75,7 +75,7 @@ test('Kalender Mac: ny?text=… og glimt?q=… bekreftes før MacLinks.handle', 
 });
 
 test('widgetene: ingen lenker med handlingsparametre (bare sider), handlinger går via App Intents', () => {
-  const dirs = ['FinansHubWidgets/Sources', 'KalenderWidgets/Sources', 'Watch51/Sources', 'Shared'];
+  const dirs = ['FinansHubWidgets/Sources', 'KalenderWidgets/Sources', 'Watch/Sources', 'Shared'];
   for (const d of dirs) {
     for (const f of walk(join(IOS, d))) {
       const src = readFileSync(f, 'utf8').split('\n').filter((l) => !l.trim().startsWith('//')).join('\n');
@@ -94,11 +94,11 @@ test('Homelab: dyplenkene åpner sider; innlogging har egen bekreftelse (uendret
   const deep = w.slice(w.indexOf('func openDeepLink'));
   assert.doesNotMatch(deep, /"POST"|"DELETE"|"PUT"|"PATCH"|\.start\(|\.checkIn|\.arrived|\.send\(/);
   // QR: lenken henter bare enhetsinfo og viser «ask» (Godkjenn / Avvis). App-auth: arket + Face ID før koden lages.
-  const qr = code('FinansHub/Sources/QrLogin38.swift');
+  const qr = code('FinansHub/Sources/QrLoginApprove.swift');
   assert.match(qr, /"\/auth\/qr\/scan"/);
   assert.match(qr, /self\.phase = "ask"/);
   assert.match(qr, /func approve\(_ store: Store\) \{\n\s+guard phase == "ask" else \{ return \}/);
-  const auth = code('FinansHub/Sources/AppAuth41.swift');
+  const auth = code('FinansHub/Sources/AppAuth.swift');
   assert.match(auth, /guard AppAuth41\.allowed\(r\.redirect, store\) else \{/);
   assert.match(auth, /let ok: Bool = await AppAuth41\.verifyOwner\(\)\n\s+guard ok else \{/);
   // Magnet-lenker fyller bare ut arket.

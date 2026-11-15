@@ -170,7 +170,7 @@ test('Info.plist: «Arkiver bilde» i delingsarket har tillatelsestekst (ellers 
   const yml = readFileSync(join(IOS, 'project.yml'), 'utf8');
   const fh = yml.slice(yml.indexOf('\n  FinansHub:'), yml.indexOf('\n  FinansHubWidgets:'));
   // Appen deler bildefiler med delingsarket …
-  assert.match(raw('FinansHub/Sources/Chat50Attach.swift'), /jpegData[\s\S]{0,400}ChatShare27\(url: u\)/);
+  assert.match(raw('FinansHub/Sources/ChatFiles.swift'), /jpegData[\s\S]{0,400}ChatShare27\(url: u\)/);
   assert.match(raw('FinansHub/Sources/Paper.swift'), /UIActivityViewController\(activityItems: \[url\]/);
   // … og da må begge stedene ha teksten (INFOPLIST_KEY_ og info.properties, som de andre personverntekstene).
   assert.match(fh, /INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription: ".+"/);
@@ -205,7 +205,7 @@ test('BGTask-identifikatorene som registreres står i BGTaskSchedulerPermittedId
 });
 
 test('innebygd Kalender: økten følger Homelab-kontoen (aldri en annen brukers kalender)', () => {
-  const k = code('FinansHub/Sources/Kal84Embed.swift');
+  const k = code('FinansHub/Sources/KalenderInApp.swift');
   const login = k.slice(k.indexOf('func login(force: Bool)'), k.indexOf('static let acctDef85'));
   const iStale = login.indexOf('KalCompanion33.clear()');
   const iBoot = login.indexOf('s.bootstrap()');
@@ -247,7 +247,7 @@ test('widgetene: alle bufre med personlige data tømmes ved kontobytte', () => {
 });
 
 test('offline-køen følger kontoen: bindes før widget-tokenet byttes', () => {
-  const p = code('Shared/Plat51Shared.swift');
+  const p = code('Shared/PlatformShared.swift');
   const bind = p.slice(p.indexOf('static func bind(_ owner: String)'), p.indexOf('static func module('));
   assert.match(bind, /if old == owner \|\| owner\.isEmpty \{ return \}/);
   assert.match(bind, /if let q = d\.data\(forKey: key\) \{ d\.set\(q, forKey: key \+ "" \+ old\) \}/);
@@ -258,11 +258,11 @@ test('offline-køen følger kontoen: bindes før widget-tokenet byttes', () => {
   const iSave = w.indexOf('WidgetShared.save(');
   assert.ok(iBind > 0 && iBind < iSave, 'bind før save');
   // Køen sendes alltid med widget-tokenet (kontoen som er i bruk) – derfor må de to byttes samtidig.
-  assert.match(raw('Shared/Plat51Shared.swift'), /WidgetShared\.token/);
+  assert.match(raw('Shared/PlatformShared.swift'), /WidgetShared\.token/);
 });
 
 test('kontobytte tømmer også nyere modeller med personlige data', () => {
-  const iso = code('FinansHub/Sources/Isolation21.swift');
+  const iso = code('FinansHub/Sources/UserIsolation.swift');
   const fn = iso.slice(iso.indexOf('private func resetSharedModels21()'));
   assert.match(fn, /plan\.goals = nil; plan\.cal = nil; plan\.tax = nil/);
   assert.match(fn, /mem\.pending = \[\]; mem\.conflicts = \[\]; mem\.stale = \[\]; mem\.hygiene = nil/);
@@ -274,7 +274,7 @@ test('kontobytte tømmer også nyere modeller med personlige data', () => {
 });
 
 test('Apple Watch: Glimt prøver neste adresse, og «Hent meg» venter på posisjonstillatelsen', () => {
-  const w = code('Watch51/Sources/Watch51Store.swift');
+  const w = code('Watch/Sources/WatchStore.swift');
   const ask = w.slice(w.indexOf('func ask(_ text: String) async'), w.indexOf('private func handle('));
   assert.match(ask, /for b in list \{/);
   assert.match(ask, /var started: Bool = false/);
@@ -292,7 +292,7 @@ test('Apple Watch: Glimt prøver neste adresse, og «Hent meg» venter på posis
 test('VoiceOver og trykkflater: symbolknappene som manglet tekst', () => {
   // Fase 4: den døde SubView (den andre forekomsten) er fjernet; knappen i den levende visningen har fortsatt teksten.
   assert.equal((raw('FinansHub/Sources/Modules.swift').match(/\.accessibilityLabel\(adding \? "Lukk" : "Legg til"\)/g) || []).length, 1);
-  assert.match(raw('FinansHub/Sources/SearchField27.swift'), /\.accessibilityLabel\("Tøm søket"\)/);
+  assert.match(raw('FinansHub/Sources/SearchField.swift'), /\.accessibilityLabel\("Tøm søket"\)/);
   assert.match(raw('FinansHub/Sources/SubsMobile.swift'), /chevron\.left[^\n]*\.accessibilityLabel\("Tilbake"\)/);
   assert.match(raw('FinansHub/Sources/Tasks37Detail.swift'), /contentShape\(Rectangle\(\)\)\.padding\(\.vertical, -10\)[\s\S]{0,160}\.accessibilityLabel\(s\.done \? "Ferdig" : "Ikke ferdig"\)/);
   assert.match(raw('FinansHub/Sources/Tasks41Glimt.swift'), /\.padding\(11\)\.contentShape\(Rectangle\(\)\)\.padding\(-11\)[\s\S]{0,160}\.accessibilityLabel\(t\.done \? "Ferdig" : "Ikke ferdig"\)/);

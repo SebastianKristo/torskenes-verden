@@ -15,19 +15,19 @@ const code = (f) => read(f).replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm
 
 const FH = 'FinansHub/Sources/';
 const TOUCHED = [
-  FH + 'Anim71.swift',
+  FH + 'SmoothAnimations.swift',
   FH + 'Fin43.swift',
-  FH + 'Glimt31.swift',
-  FH + 'Home70Mic.swift',
-  FH + 'WiggleList43.swift',
-  FH + 'Wiggle30.swift',
+  FH + 'GlimtMark.swift',
+  FH + 'HomeMic.swift',
+  FH + 'WiggleList.swift',
+  FH + 'WiggleToolbar.swift',
   FH + 'Vaer41.swift',
   FH + 'Departures16.swift',
-  FH + 'Convo67.swift',
+  FH + 'Conversations.swift',
   FH + 'Media44Banner.swift',
   FH + 'Family50Views.swift',
-  FH + 'HomeSearch29.swift',
-  FH + 'Home70Assist.swift',
+  FH + 'HomeSearch.swift',
+  FH + 'HomeAssistScroll.swift',
   'Kalender/Sources/KalSpark.swift',
 ];
 
@@ -38,7 +38,7 @@ test('ingen Timer.publish / Timer.scheduledTimer / sleep-løkker driver animasjo
     assert.doesNotMatch(c, /Timer\.scheduledTimer/, f);
   }
   // Bølgeformen: ingen egen sleep-løkke som endrer @State; TimelineView + Canvas i en liten visning.
-  const m = code(FH + 'Home70Mic.swift');
+  const m = code(FH + 'HomeMic.swift');
   assert.doesNotMatch(m, /Task\.sleep/);
   assert.doesNotMatch(m, /@State private var samples/);
   assert.match(m, /TimelineView\(\.animation\(minimumInterval: slow \? Home70WaveBuf\.every : nil\)\)/);
@@ -53,7 +53,7 @@ test('evig repeatForever er alltid avgrenset til én egenskap (ikke .animation(�
     assert.doesNotMatch(c, /repeatForever[^\n]*value:/, f + ': repeatForever med value: lekker inn i layout');
     assert.doesNotMatch(c, /withAnimation\([^\n]*repeatForever/, f + ': withAnimation(repeatForever) lekker inn i layout');
   }
-  const a = code(FH + 'Anim71.swift');
+  const a = code(FH + 'SmoothAnimations.swift');
   assert.match(a, /content\.animation\(anim\) \{ \$0\.rotationEffect\(\.degrees\(deg\)\) \}/);
   assert.match(a, /\.animation\(anim\) \{ \$0\.opacity\(o\) \}/);
   assert.match(a, /static let sheet: Animation = \.spring\(response: 0\.35, dampingFraction: 0\.85\)/);
@@ -64,7 +64,7 @@ test('orb: TimelineView(.animation) i full takt, ferdig ringlag med drawingGroup
   assert.match(o, /TimelineView\(\.animation\(minimumInterval: nil, paused: reduceMotion\)\)/);
   assert.match(o, /struct Orb43Ring: View[\s\S]*?\.drawingGroup\(\)/);
   assert.doesNotMatch(o, /@State private var spin/);
-  const g = code(FH + 'Glimt31.swift');
+  const g = code(FH + 'GlimtMark.swift');
   assert.match(g, /struct Glimt31Ring: View[\s\S]*?\.drawingGroup\(\)/);
   assert.doesNotMatch(g, /minimumInterval: 1\.0 \/ 30\.0/, 'ikke låst til 30 bilder/s');
   const k = code('Kalender/Sources/KalSpark.swift');
@@ -83,21 +83,21 @@ test('orb: TimelineView(.animation) i full takt, ferdig ringlag med drawingGroup
 });
 
 test('wiggle: fast fase per flis (nøkkelen), stabile id-er, bare rotasjonen animeres', () => {
-  const w = code(FH + 'WiggleList43.swift');
+  const w = code(FH + 'WiggleList.swift');
   assert.match(w, /Edit28\.angle \* Anim71\.sign\(k\)/);
   assert.doesNotMatch(w, /Wiggle43\.sign\(i\)/);
   assert.match(w, /\.wiggle71\(editing, up: wig, angle: a, half: Edit28\.half\)/);
   assert.match(w, /ForEach\(Array\(o\.enumerated\(\)\), id: \\\.element\)/);
   assert.match(w, /\.id\("card37-" \+ k\)/);
   assert.doesNotMatch(w, /\.id\((?:UUID|Date)\(/);
-  assert.match(code(FH + 'Wiggle30.swift'), /\.wiggle71\(on, up: phase/);
+  assert.match(code(FH + 'WiggleToolbar.swift'), /\.wiggle71\(on, up: phase/);
   assert.match(code(FH + 'Vaer41.swift'), /\.wiggle71\(v\.editing, up: on/);
 });
 
 test('ark og fade: designets fjær, Reduser bevegelse gir fade', () => {
   assert.match(code(FH + 'Family50Views.swift'), /withAnimation\(Anim71\.sheet\)/);
-  assert.match(code(FH + 'HomeSearch29.swift'), /reduce71 \? AnyTransition\.opacity :/);
-  assert.match(code(FH + 'Home70Assist.swift'), /reduce \? AnyTransition\.opacity :/);
+  assert.match(code(FH + 'HomeSearch.swift'), /reduce71 \? AnyTransition\.opacity :/);
+  assert.match(code(FH + 'HomeAssistScroll.swift'), /reduce \? AnyTransition\.opacity :/);
 });
 
 test('120 Hz: CADisableMinimumFrameDurationOnPhone i Info.plist for FinansHub og Kalender', () => {

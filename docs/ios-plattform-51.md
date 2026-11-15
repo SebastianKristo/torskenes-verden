@@ -34,7 +34,7 @@ Egen app, **FinansHub for Apple Watch**: Sjekk inn, Hent meg (med posisjonen din
 
 Innlogging: åpne appen på klokka → **Logg inn via iPhone**. iPhone viser «Logge inn på ny enhet?» – sjekk at tallet stemmer med klokka og godkjenn med Face ID. Klokka får sitt eget token (du kan logge den ut under Kontoer/enheter som andre enheter). Er FinansHub ikke åpen på iPhone, får du et varsel som åpner den.
 
-Installering: klokke-appen er ikke med i FinansHub-.ipa-en (den bygges separat). Bygg og kjør `FinansHubWatch51` fra Xcode på en klokke som er paret med telefonen (krever egen Team ID for signering).
+Installering: klokke-appen er ikke med i FinansHub-.ipa-en (den bygges separat). Bygg og kjør `HomelabWatch` fra Xcode på en klokke som er paret med telefonen (krever egen Team ID for signering).
 
 ## Offline-modus
 Uten nett lagres disse endringene i telefonen og sendes når nettet er tilbake: gjøremål (nye, endringer, sletting, deloppgaver), handlelisten, Sjekk inn og «Hent meg». Kvitteringer har egen kø som før.
@@ -52,7 +52,7 @@ Uten nett lagres disse endringene i telefonen og sendes når nettet er tilbake: 
 Klokke-appen bygges med et eget steg (ikke med FinansHub):
 
 ```
-xcodebuild -project FinansHub.xcodeproj -scheme FinansHubWatch51 -configuration Debug \
+xcodebuild -project FinansHub.xcodeproj -scheme HomelabWatch -configuration Debug \
   -sdk watchsimulator -destination 'generic/platform=watchOS Simulator' \
   CODE_SIGNING_ALLOWED=NO build
 ```

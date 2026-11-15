@@ -65,7 +65,7 @@ struct PaperLoginView: View {
                 GateHeader(kicker: store.pending != nil ? "\(AppMeta.shared.name) · \(host)" : "\(AppMeta.shared.name) · \(host.isEmpty ? "logg inn" : host)",
                            title: Sec51Model.shared.wait != nil ? "Ny\nenhet" : store.pending != nil ? "Totrinns-\nbekreftelse" : store.addingAccount ? "Legg til\nkonto" : "Hei,\nvelkommen hjem")
                 VStack(alignment: .leading, spacing: 18) {
-                    // Prompt 51 (SEC51): «Venter på godkjenning» når innloggingen fra en ny enhet må godkjennes (FHSec51.swift).
+                    // Prompt 51 (SEC51): «Venter på godkjenning» når innloggingen fra en ny enhet må godkjennes (DeviceApproval.swift).
                     if Sec51Model.shared.wait != nil { Sec51WaitView() } else if let pd = store.pending { twoFactor(pd, p) } else { form(p) }
                 }
                 .padding(.horizontal, 26).padding(.top, 26).padding(.bottom, 40)
@@ -77,7 +77,7 @@ struct PaperLoginView: View {
         .background(p.bg.ignoresSafeArea())
         .environment(\.paper, p)
         .environment(\.colorScheme, p.dark ? .dark : .light)
-        // Prompt 89: tannhjulet øverst til høyre åpner arket «Server» (Login89.swift).
+        // Prompt 89: tannhjulet øverst til høyre åpner arket «Server» (LoginServerGear.swift).
         .overlay(alignment: .topTrailing) {
             if store.pending == nil && Sec51Model.shared.wait == nil {
                 Login89Gear().padding(.trailing, 12).padding(.top, 4)
@@ -96,7 +96,7 @@ struct PaperLoginView: View {
     }
 
     @ViewBuilder private func form(_ p: PaperPalette) -> some View {
-        // Prompt 41: ingen SERVER-felt. Adressen er kjent (standard, sist brukt eller lært fra serveren), Server41.swift.
+        // Prompt 41: ingen SERVER-felt. Adressen er kjent (standard, sist brukt eller lært fra serveren), ServerLogin.swift.
         GateField(label: "Brukernavn") {
             TextField("Brukernavn", text: $username).textContentType(.username).textInputAutocapitalization(.never).autocorrectionDisabled()
         }
@@ -114,9 +114,9 @@ struct PaperLoginView: View {
         if store.addingAccount {
             PLineButton(title: "Avbryt", height: 48, full: true) { store.addingAccount = false }
         }
-        // Prompt 46: QR-innlogging – en innlogget mobil skanner koden og godkjenner med Face ID (Qr46Login.swift).
+        // Prompt 46: QR-innlogging – en innlogget mobil skanner koden og godkjenner med Face ID (QrLoginSignIn.swift).
         Qr46LoginButton()
-        // Prompt 51 (IOSFEAT51): ny i familien – skann invitasjons-QR-en (Onboard51.swift).
+        // Prompt 51 (IOSFEAT51): ny i familien – skann invitasjons-QR-en (OnboardingInvite.swift).
         Onboard51Button()
         Text("Nye brukere opprettes av admin i Homelab → Innstillinger → Innlogging.").font(PF.ui(12.5)).foregroundStyle(p.mut)
     }
@@ -173,7 +173,7 @@ struct PaperOnboardingView: View {
                 GateHeader(kicker: "Steg \(step + 1) av 3", title: titles[Swift.min(2, step)])
                 VStack(alignment: .leading, spacing: 14) {
                     dots(step, p)
-                    // Prompt 37: først «Hvem er du?» – koble brukeren til en profil i husstanden (Profile37.swift).
+                    // Prompt 37: først «Hvem er du?» – koble brukeren til en profil i husstanden (ProfileOnboarding.swift).
                     if step == 0 && Profile37Model.shared.needsLink {
                         Profile37LinkView()
                     } else {

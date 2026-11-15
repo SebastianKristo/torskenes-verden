@@ -171,7 +171,7 @@ final class Store {
     var aiHistory: [String] = []
     /// Melding når AI-søket falt tilbake til vanlig søk.
     var aiNote: String?
-    /// Prompt 25: AI-søk som jobb (AiJob25.swift): fremdrift, tidsgrense fra /ai/limits og Avbryt.
+    /// Prompt 25: AI-søk som jobb (AiSearchJob.swift): fremdrift, tidsgrense fra /ai/limits og Avbryt.
     var aiJob25: AiJob25?
     var aiClientTimeout25: Double = 180
     @ObservationIgnored var aiLimitsLoaded25: Bool = false
@@ -422,7 +422,7 @@ final class Store {
     @ObservationIgnored private var polling = false
     @ObservationIgnored private let monitor = NWPathMonitor()
     private(set) var onWifi = true
-    /// «Venter på opplasting»: kvitteringer som ikke kom fram. Lagres på disk (UploadQueue18.swift) og lastes opp når nettet er tilbake.
+    /// «Venter på opplasting»: kvitteringer som ikke kom fram. Lagres på disk (UploadQueue.swift) og lastes opp når nettet er tilbake.
     var pendingUploads: [PendingUpload] = PendingQueue.load()
     @ObservationIgnored var pendingBusy = false
 
@@ -470,7 +470,7 @@ final class Store {
     }
 
     nonisolated private static func loadAccounts() -> [LoginAccount] {
-        // Prompt 89: den gamle feilstavede standardadressen skrives om til os.smarthjemeksperten.no (Login89.swift).
+        // Prompt 89: den gamle feilstavede standardadressen skrives om til os.smarthjemeksperten.no (LoginServerGear.swift).
         Server89.migrate()
         if let raw = Keychain.get("accounts"), let d = raw.data(using: .utf8), let list = try? JSONDecoder().decode([LoginAccount].self, from: d) {
             let fixed: [LoginAccount] = Server89.migrateAccounts(list)
@@ -544,7 +544,7 @@ final class Store {
                 self.pending = PendingLogin(server: srv, username: username, password: password)
                 return
             } catch let e as APIError where e.approval51 != nil {
-                // Prompt 51 (SEC51): ny enhet fra internett – «Venter på godkjenning» (FHSec51.swift), ingen token ennå.
+                // Prompt 51 (SEC51): ny enhet fra internett – «Venter på godkjenning» (DeviceApproval.swift), ingen token ennå.
                 self.pending = nil
                 if let ap = e.approval51 { Sec51Model.shared.beginWait(ap, server: srv, self) }
                 return
@@ -581,7 +581,7 @@ final class Store {
         return ("", "")
     }
 
-    /// Prompt 46: QR-innlogging (Qr46Login.swift) – serveren har gitt denne enheten et eget token etter godkjenning på en annen
+    /// Prompt 46: QR-innlogging (QrLoginSignIn.swift) – serveren har gitt denne enheten et eget token etter godkjenning på en annen
     /// mobil. Samme konto-oppsett som login(server:…), men uten passord.
     func adoptToken46(server raw: String, token: String, username: String, name: String, role: String) {
         let srv: String = API.normalize(raw)
@@ -683,7 +683,7 @@ final class Store {
         a.external = external.trimmingCharacters(in: .whitespaces).isEmpty ? "" : API.normalize(external)
         accounts = accounts.map { $0.id == a.id ? a : $0 }
         saveAccounts()
-        // Prompt 89: én felles lagring med tannhjulet på innloggingen (Login89.swift).
+        // Prompt 89: én felles lagring med tannhjulet på innloggingen (LoginServerGear.swift).
         Server89.remember(local: a.local, external: a.external.isEmpty ? a.server : a.external)
         refresh()
     }
@@ -1078,7 +1078,7 @@ final class Store {
                 do {
                     // ✦ AI er på: kjør AI-søket med en gang (force), også for korte søk.
                     let body: [String: Any] = ["q": t, "force": true]
-                    // Prompt 25: ingen fast 25/30 s-grense. Jobbmodus med fremdrift og Avbryt (AiJob25.swift).
+                    // Prompt 25: ingen fast 25/30 s-grense. Jobbmodus med fremdrift og Avbryt (AiSearchJob.swift).
                     self.aiCancelled25 = false
                     let job: Task<Data, Error> = Task { @MainActor in try await self.aiSearch25(body) }
                     self.aiTask25 = job

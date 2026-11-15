@@ -28,7 +28,7 @@ test('nettverk: én felles URLSession (HomelabHTTP.session), ingen URLSession.sh
 
 test('nettverk: SharedNet er med i alle mål (også klokka og testene)', () => {
   const yml = raw('project.yml');
-  const targets = ['FinansHub', 'FinansHubWidgets', 'Kalender', 'KalenderWidgets', 'KalenderMac', 'KalenderMacWidgets', 'FinansHubWatch51', 'HomelabTests'];
+  const targets = ['FinansHub', 'FinansHubWidgets', 'Kalender', 'KalenderWidgets', 'KalenderMac', 'KalenderMacWidgets', 'HomelabWatch', 'HomelabTests'];
   for (const t of targets) {
     const start = yml.indexOf(`\n  ${t}:\n`);
     assert.ok(start > 0, t);
@@ -71,7 +71,7 @@ test('design: evige animasjoner respekterer Reduser bevegelse (MotionTimeline)',
     }
   }
   // Brief34Page er død (C-ios vedlegg B) og fjernes i bølge 2.
-  assert.deepEqual(bad.filter((b) => !b.startsWith('FinansHub/Sources/Brief34Page.swift')), []);
+  assert.deepEqual(bad.filter((b) => !b.startsWith('FinansHub/Sources/BriefCards.swift')), []);
 });
 
 test('navigasjon: TabView + NavigationStack per fane, ingen egen fanelinje eller eget kantsveip', () => {

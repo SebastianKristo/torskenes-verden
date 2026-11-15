@@ -8,11 +8,11 @@ extension Store {
     /* ---------- Oppsett per bruker (/api/me/layout) ---------- */
 
     /// paperMode og photo fra serveren. Lokalt valg brukes til serveren har svart.
-    /// Prompt 42: mobileDesign = «klassisk» fra serveren flyttes til Papir (Design42.swift).
+    /// Prompt 42: mobileDesign = «klassisk» fra serveren flyttes til Papir (ClassicDesignMigration.swift).
     func applyPaperLayout(_ o: [String: Any]) {
         if JS.str(o, "mobileDesign") == "klassisk" { migrateClassic42(server: true) }
         // Prompt 50: Liquid Glass er et lokalt valg (serveren kjenner bare auto/lys/mork) og overskrives ikke herfra.
-        // Prompt 51 (IOSFEAT51): når temaet er synket via /api/me/theme51 (Theme51.swift), er det den som gjelder (også «auto51-…»).
+        // Prompt 51 (IOSFEAT51): når temaet er synket via /api/me/theme51 (ThemeSync.swift), er det den som gjelder (også «auto51-…»).
         if let v = JS.str(o, "paperMode"), ["auto", "lys", "mork"].contains(v), v != paperMode, paperMode != Glass50.mode,
            !paperMode.hasPrefix(Theme51.autoPrefix), Theme51.shared.updatedAt <= 0 { paperMode = v }
         // Prompt 46: Google Photos-albumet synkes som bgType 'gphoto' (layout.photo godtar ikke verdien) og vinner over photo.
@@ -67,7 +67,7 @@ extension Store {
     }
 
     func savePaperLayout(_ body: [String: Any]) {
-        // Prompt 70: pages.hjem.sz (halv/full per widget) følger med når pages.hjem lagres (Home70Grid.swift).
+        // Prompt 70: pages.hjem.sz (halv/full per widget) følger med når pages.hjem lagres (HomeWidgetSize.swift).
         let b70: [String: Any] = Home70Size.shared.inject(body)
         Task { _ = try? await self.api.callAt("/api", "PUT", "/me/layout", json: b70) }
     }
@@ -76,7 +76,7 @@ extension Store {
         paperMode = v
         // Prompt 50: Glass lagres bare lokalt (layout.paperMode godtar ikke verdien).
         if v != Glass50.mode { savePaperLayout(["paperMode": v]) }
-        // Prompt 51 (IOSFEAT51): temaet følger kontoen til de andre enhetene (/api/me/theme51, Theme51.swift).
+        // Prompt 51 (IOSFEAT51): temaet følger kontoen til de andre enhetene (/api/me/theme51, ThemeSync.swift).
         if v != Glass50.mode {
             Theme51.shared.mode = v == "lys" ? "light" : (v == "mork" ? "dark" : "system")
             Task { await Theme51.shared.push(v, self) }
@@ -116,12 +116,12 @@ extension Store {
         if t == "innst-oppdatering" { System31Model.shared.show(); return }
         // Prompt 46: Kart (Mer → Kart, Glimt «vis bussene rundt hjemme» → tkart / tkart:<sone>) i fullskjerm.
         if t == "tkart" || t.hasPrefix("tkart:") { Kart46.shared.show(self, zone: t.hasPrefix("tkart:") ? String(t.dropFirst(6)) : nil); return }
-        // Prompt 33: kalenderfanen, Mer → Kalender, varsler og Glimt åpner Kalender-appen når den er installert (KalLink33.swift).
+        // Prompt 33: kalenderfanen, Mer → Kalender, varsler og Glimt åpner Kalender-appen når den er installert (KalenderLink.swift).
         // Prompt 84: med «Kalender i appen» åpner Kalender også når Homelabs egen kalenderfane står åpen.
         if t == "kalender" && (paperTab != "kalender" || Kal84.on) && KalLink33.today() { return }
         // Prompt 34: en tilbake-handling har allerede gitt én lett impuls (Haptic34) – ikke et valg-tikk i tillegg.
         if !Haptic34.recent { Haptics.shared.select() }
-        // Prompt 38: husk hvor Abonnement ble åpnet fra, så ‹ går tilbake dit (Nav38.swift).
+        // Prompt 38: husk hvor Abonnement ble åpnet fra, så ‹ går tilbake dit (NavSubsBack.swift).
         abo38Note(t)
         // Mellom Domener-fanene byttes bare seksjonen (dataene er de samme).
         if paperInDomains && Store.paperDomTabs.contains(t) && module == .domains {
@@ -175,7 +175,7 @@ extension Store {
 
     /// Pila øverst til venstre: i Finans og Domener tilbake til Hjem (Domener: dit brukeren kom fra).
     func paperUp() {
-        Haptic34.back() // prompt 34: lett impuls på alle tilbake-knapper (Nav34.swift)
+        Haptic34.back() // prompt 34: lett impuls på alle tilbake-knapper (NavRoute.swift)
         // En Finans-side fra den klassiske appen (Liste med valgt rad, Budsjett …): rett tilbake til Papir-fanen.
         if paperFin != nil && original == nil && editing == nil && detail == nil {
             selectedTx = nil
@@ -338,11 +338,11 @@ extension Store {
         if kind == "cur" { photoWindow = nil; photoImage = nil; bgInfo = nil; return }
         // Bildet fra forrige gang vises med en gang.
         if let cached = Store.cachedBg(kind) { photoImage = cached }
-        // Prompt 41: Oslo = frie Commons-bilder fra lufta som skifter gjennom dagen (Bg41Oslo.swift), med mindre serveren har egne.
+        // Prompt 41: Oslo = frie Commons-bilder fra lufta som skifter gjennom dagen (BackgroundOslo.swift), med mindre serveren har egne.
         if kind == "oslo", await Oslo41.shared.load(self) { return }
         // Prompt 52: «Vær nå» velger bilde etter værtype × tid på døgnet (Wx52Bg.swift).
         if kind == "weather", await Wx52Bg.shared.load(self) { return }
-        // Prompt 46: delt Google Photos-album (serveren henter og cacher, GPhoto46.swift).
+        // Prompt 46: delt Google Photos-album (serveren henter og cacher, BackgroundGooglePhotos.swift).
         if kind == "gphoto" { if !(await GPhoto46.shared.load(self)) { photoFailed = true }; return }
         // Ny bakgrunnstjeneste (prompt 19). Eldre servere: /api/photo-window under.
         if await loadBackground(kind) { return }

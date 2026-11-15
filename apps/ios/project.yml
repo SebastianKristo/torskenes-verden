@@ -59,7 +59,7 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: no.kristo.finanshub
         TARGETED_DEVICE_FAMILY: "1,2"
         # Prompt 84: den innebygde Kalenderen – #if !KAL_EMBED rundt det som hører til den frittstående appen (@main, App Intents,
-        # BGTask, varsel-delegat/-kategorier, krasjfanger, kalender://, widget-reload). Kal84Embed.swift / KalEmbed84.swift.
+        # BGTask, varsel-delegat/-kategorier, krasjfanger, kalender://, widget-reload). KalenderInApp.swift / KalEmbed84.swift.
         SWIFT_ACTIVE_COMPILATION_CONDITIONS: "$(inherited) KAL_EMBED"
         # Prompt 47: FoundationModels (iOS 26) lenkes svakt, så appen starter på iOS 17/18. Bare med iOS 26-SDK (Xcode 26);
         # Xcode 16 har ikke rammeverket, og koden er bak #if canImport(FoundationModels) (Receipt47Engine.swift).
@@ -88,7 +88,7 @@ targets:
         INFOPLIST_KEY_NSLocalNetworkUsageDescription: "Homelab kobler til homelab-serveren din på lokalt nett."
         INFOPLIST_KEY_NSLocationWhenInUseUsageDescription: "Posisjonen din deles med familien i Familie og kart når du har slått på deling."
         INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription: "Med «Alltid» oppdateres posisjonen din for familien også når appen er lukket, og du får varsler når noen kommer til eller forlater en sone."
-        # Prompt 27: mikrofonen i Chat (tale til tekst på norsk). Prompt 56: tale til tekst via serveren (Voice56.swift).
+        # Prompt 27: mikrofonen i Chat (tale til tekst på norsk). Prompt 56: tale til tekst via serveren (VoiceInput.swift).
         INFOPLIST_KEY_NSMicrophoneUsageDescription: "Homelab bruker mikrofonen til tale til tekst. Lyden sendes bare til serveren i huset og lagres ikke."
         INFOPLIST_KEY_NSSpeechRecognitionUsageDescription: "Talen din gjøres om til tekst på norsk i Chat."
         INFOPLIST_KEY_NSMotionUsageDescription: "Aktivitet (går, sykler, kjører) vises for familien sammen med posisjonen din."
@@ -141,11 +141,11 @@ targets:
         # Prompt 31: no.kristo.finanshub.notify henter /api/notify/pending (Glimt-svar, prøve-varsler) når appen er lukket.
         BGTaskSchedulerPermittedIdentifiers: [no.kristo.finanshub.health, no.kristo.finanshub.family, no.kristo.finanshub.notify]
         # Deep links fra widgetene: finanshub://<side>
-        # Prompt 38: homelab://login?c=<sid>.<nonce> – QR-innlogging på ny enhet (QrLogin38.swift).
-        # Prompt 41: homelab://app-auth?client=kalender&redirect=kalender://auth&state=…&cc=… (AppAuth41.swift).
+        # Prompt 38: homelab://login?c=<sid>.<nonce> – QR-innlogging på ny enhet (QrLoginApprove.swift).
+        # Prompt 41: homelab://app-auth?client=kalender&redirect=kalender://auth&state=…&cc=… (AppAuth.swift).
         CFBundleURLTypes:
           - CFBundleURLName: no.kristo.finanshub
-            # Prompt 46: papir://login?s=…&c=…&srv=… – QR-innlogging (Qr46Login.swift / QrLogin38.swift).
+            # Prompt 46: papir://login?s=…&c=…&srv=… – QR-innlogging (QrLoginSignIn.swift / QrLoginApprove.swift).
             CFBundleURLSchemes: [finanshub, homelab, papir]
           # Prompt 43: magnet:-lenker åpner «Legg til magnet-lenke» i Media (qBittorrent).
           - CFBundleURLName: no.kristo.finanshub.magnet
@@ -158,8 +158,8 @@ targets:
         NSUserActivityTypes: [INSendMessageIntent]
         # Prompt 41: tilgangsgruppen for det delte enhets-tokenet (KalShared41, SharedKal/Group). Tom prefiks uten Team ID → ignoreres.
         KalKeychainGroup41: $(AppIdentifierPrefix)no.kristo.shared
-        # Prompt 41: standardadressen appen leveres med (innlogging uten serverfelt, Server41.swift).
-        # Prompt 47: ny standard ekstern og lokal adresse (Server47.swift). Klartekst-HTTP til den lokale adressen dekkes av
+        # Prompt 41: standardadressen appen leveres med (innlogging uten serverfelt, ServerLogin.swift).
+        # Prompt 47: ny standard ekstern og lokal adresse (ServerDefaults.swift). Klartekst-HTTP til den lokale adressen dekkes av
         # NSAllowsLocalNetworking over (ATS er ikke slått av globalt).
         HomelabServer: https://os.smarthjemeksperten.no
         HomelabLocal47: http://10.69.1.39:3000
@@ -502,18 +502,19 @@ targets:
   # Prompt 51 (IOSPLAT51): FinansHub for Apple Watch (watchOS 10+) – EGET target uten avhengighet til/fra FinansHub, så
   # FinansHub-, Kalender- og KalenderMac-byggene i CI er uendret (klokka bygges ikke med dem og legges ikke i FinansHub.app).
   # Scheme: med vilje ingen `schemes:`-seksjon. Prosjektet har i dag ingen delte schemes, og xcodebuild lager da en scheme per
-  # target (FinansHub, Kalender, KalenderMac, KalenderUITests47 … og nå FinansHubWatch51). Én delt scheme her ville slått av
+  # target (FinansHub, Kalender, KalenderMac, KalenderUITests47 … og HomelabWatch). Én delt scheme her ville slått av
   # dette for de andre targetene og knekt dagens CI-steg. Bygg: se docs/ios-plattform-51.md («CI») –
-  #   xcodebuild -project FinansHub.xcodeproj -scheme FinansHubWatch51 -configuration Debug \
+  #   xcodebuild -project FinansHub.xcodeproj -scheme HomelabWatch -configuration Debug \
   #     -sdk watchsimulator -destination 'generic/platform=watchOS Simulator' CODE_SIGNING_ALLOWED=NO build
   # Selvstendig app (WKRunsIndependentlyOfCompanionApp) med FinansHub som følgeapp (WatchConnectivity for innloggingen).
-  # Kildene er egne (Watch51/Sources) – ingenting fra Shared/, som bruker UIKit/WidgetKit/ActivityKit.
-  FinansHubWatch51:
+  # Kildene er egne (Watch/Sources) – ingenting fra Shared/, som bruker UIKit/WidgetKit/ActivityKit.
+  # Fase 4: målet het FinansHubWatch51 og mappen Watch51. Bundle-id og produktnavn er uendret.
+  HomelabWatch:
     type: application
     platform: watchOS
     deploymentTarget: "10.0"
     sources:
-      - Watch51/Sources
+      - Watch/Sources
       # Opprydding H2: samme Nøkkelring-hjelper (bare Foundation/Security). Klokka bruker fortsatt W51Keychain (ThisDeviceOnly).
       - SharedKeychain
       - SharedNet
@@ -530,13 +531,13 @@ targets:
         INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp: YES
         INFOPLIST_KEY_NSLocationWhenInUseUsageDescription: "Posisjonen sendes bare med når du trykker «Hent meg», så familien vet hvor du er."
     info:
-      path: Watch51/Info.plist
+      path: Watch/Info.plist
       properties:
         WKApplication: true
         WKCompanionAppBundleIdentifier: no.kristo.finanshub
         WKRunsIndependentlyOfCompanionApp: true
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true
-        # Samme standardadresser som FinansHub (Server47.swift) – brukes bare når iPhone ikke svarer.
+        # Samme standardadresser som FinansHub (ServerDefaults.swift) – brukes bare når iPhone ikke svarer.
         HomelabServer: https://os.smarthjemeksperten.no
         HomelabLocal47: http://10.69.1.39:3000

@@ -10,7 +10,7 @@ private func pkr(_ v: Double) -> String { "\(neg0(v)) kr" }
 struct PaperHome: View {
     @Environment(Store.self) private var store
     @Environment(\.paper) private var p
-    /// Prompt 45: iPad/brettet (1c) – kortene for én fane i høyre kolonne (layout.pages["fold-…"], Home45Wide.swift).
+    /// Prompt 45: iPad/brettet (1c) – kortene for én fane i høyre kolonne (layout.pages["fold-…"], HomeWide.swift).
     var page45: String? = nil
 
     var body: some View {
@@ -21,7 +21,7 @@ struct PaperHome: View {
                 phone
             }
         }
-        // Prompt 70: trykk utenfor søkefeltet og Glimt-kortet lukker et ferdig svar – uten lag over Hjem (Home70Assist.swift).
+        // Prompt 70: trykk utenfor søkefeltet og Glimt-kortet lukker et ferdig svar – uten lag over Hjem (HomeAssistScroll.swift).
         .assist70Tap()
         // Prompt 46: Min posisjon (standard) holdes fersk for Vær-kortet på Hjem (Vaer46.swift).
         .vaer46Keeper()
@@ -35,10 +35,10 @@ struct PaperHome: View {
     @ViewBuilder private var phone: some View {
         // Prompt 30: oppdateringsbanneret øverst, over søkefeltet (bare admin, ✕ skjuler i 24 t). Update30.swift.
         Update30Banner(home: true)
-        // Prompt 41: 17. mai – eget Hjem på dagen med bryteren «17. mai-design» (Mai17Home41.swift).
+        // Prompt 41: 17. mai – eget Hjem på dagen med bryteren «17. mai-design» (NationalDayHome.swift).
         Mai17Home41()
         // Hold inne et kort for å flytte eller skjule det (Søk, Pakker, Avganger, Snarveier og Siste nytt).
-        // Prompt 52 (IOS52B): med fliser er Hjem et 2-kolonners rutenett (3a), og de fem flisene er egne kort (Home52Grid.swift).
+        // Prompt 52 (IOS52B): med fliser er Hjem et 2-kolonners rutenett (3a), og de fem flisene er egne kort (HomeGrid.swift).
         let tiles52: Bool = Home50Tiles.shared.on
         PaperCardStack(page: "hjem", cards: tiles52 ? Home52.asTiles(homeCards) + Home52.tileCards() : homeCards + [shortcuts46],
                        fullWidth: ["h1", "h5", "h12", "h13", "h14", "h16"], twoColumns: true,
@@ -48,7 +48,7 @@ struct PaperHome: View {
         homeErrorText
     }
 
-    /// Prompt 70: halve kort etter brukerens valg (↔ i redigering), med Home52.half som standard (Home70Grid.swift).
+    /// Prompt 70: halve kort etter brukerens valg (↔ i redigering), med Home52.half som standard (HomeWidgetSize.swift).
     private var half70: Set<String> { Home70Size.shared.half(Home52.half) }
 
     @ViewBuilder private var homeErrorText: some View {
@@ -73,9 +73,9 @@ struct PaperHome: View {
     }
 
     /// Prompt 46: Søk (h1) og Snarveier (h16: Finans · Mat · Domener) er to egne kort på mobil – hvert med egen «–» og plass.
-    /// Eksisterende oppsett får h16 rett etter h1 (pageCards i Paper15.swift), så ingenting flytter seg.
+    /// Eksisterende oppsett får h16 rett etter h1 (pageCards i PaperLayout.swift), så ingenting flytter seg.
     private var shortcuts46: PaperCardDef {
-        // Prompt 50: «Hjem som fliser» (standard) – flisene ligger i h16 i stedet for minikortene (Home50Tiles.swift).
+        // Prompt 50: «Hjem som fliser» (standard) – flisene ligger i h16 i stedet for minikortene (HomeTiles.swift).
         let label: String = Home50Tiles.shared.on ? "Fliser" : "Snarveier (Finans, Mat, Domener)"
         return PaperCardDef(key: "h16", label: label, view: AnyView(Home50TilesSlot(minis: AnyView(minis))))
     }
@@ -83,9 +83,9 @@ struct PaperHome: View {
     /// Kortene på Hjem. Prompt 37: «Dagens bibelvers» (h13) finnes bare for brukere med modulen (Bible37Views.swift).
     private var homeCards: [PaperCardDef] {
         var out: [PaperCardDef] = [
-                // Prompt 34: Glimt-brief øverst (blått kort med figuren), flyttes og skjules i wiggle-modus (Brief34Page.swift).
-                PaperCardDef(key: "h12", label: "Glimt-brief", view: AnyView(Brief36SwipeCard())), // prompt 36: sveip bort (Brief36.swift)
-                // Prompt 29: søkefelt med søkemotor-meny (System-AI/Google/DuckDuckGo) og timer til kalenderen (HomeSearch29.swift).
+                // Prompt 34: Glimt-brief øverst (blått kort med figuren), flyttes og skjules i wiggle-modus (BriefCards.swift).
+                PaperCardDef(key: "h12", label: "Glimt-brief", view: AnyView(Brief36SwipeCard())), // prompt 36: sveip bort (BriefSwipe.swift)
+                // Prompt 29: søkefelt med søkemotor-meny (System-AI/Google/DuckDuckGo) og timer til kalenderen (HomeSearch.swift).
                 PaperCardDef(key: "h1", label: "Søk", view: AnyView(HomeSearch29())), // prompt 46: Snarveier er eget kort (h16)
                 PaperCardDef(key: "h2", label: "Pakker", view: AnyView(packages)),
                 // Prompt 43: Media (nedlastinger og det som kommer), Media43Home.swift. Nøkkelen h12 er Glimt-brief på iOS.
@@ -99,7 +99,7 @@ struct PaperHome: View {
                 // Prompt 26: KALENDER etter Avganger (med lagret oppsett legger pageCards den nederst).
                 PaperCardDef(key: "h10", label: "Kalender", view: AnyView(Cal26HomeCard())),
                 PaperCardDef(key: "h4", label: "Lenker", view: AnyView(shortcuts)), // prompt 46: «Snarveier» er nå h16
-                // Prompt 52: hele Siste nytt-kortet åpner nyhetsleseren, med haptikk (Home52Grid.swift).
+                // Prompt 52: hele Siste nytt-kortet åpner nyhetsleseren, med haptikk (HomeGrid.swift).
                 PaperCardDef(key: "h5", label: "Siste nytt", view: AnyView(Home52NewsTile())),
                 PaperCardDef(key: "h6", label: "Gjøremål", view: AnyView(PaperTasksCard())),
                 PaperCardDef(key: "h7", label: "Posisjon", view: AnyView(PaperFamilyCard())),
@@ -131,7 +131,7 @@ struct PaperHome: View {
     }
 
     /// Prompt 24: Pakker vises også uten aktive pakker («Ingen aktive pakker · Legg til et sporingsnummer»), med mindre
-    /// «Vis bare når det er pakker» er på (prompt 37). Prompt 37: 2 eller 3 pakker når det er valgt i «Rediger widget» (Pkg37.swift).
+    /// «Vis bare når det er pakker» er på (prompt 37). Prompt 37: 2 eller 3 pakker når det er valgt i «Rediger widget» (HomePackages.swift).
     @ViewBuilder private var packages: some View {
         let n: Int = Wopt37.shared.h2N
         let list: [Shipment] = Pkg37.sorted(store)
@@ -520,7 +520,7 @@ struct PaperLinkList: View {
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                // Prompt 25: «Ta meg dit →» scroller hit og fremhever raden (Settings25.swift).
+                // Prompt 25: «Ta meg dit →» scroller hit og fremhever raden (SettingsSearch.swift).
                 .set25Highlight(r.name)
             }
         }

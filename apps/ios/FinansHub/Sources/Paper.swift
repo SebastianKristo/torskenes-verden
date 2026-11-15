@@ -10,7 +10,7 @@ struct PaperPalette {
     let ink, bg, card, line, lab, mut, pos, nav, navInk, navAct, navActInk: Color
     /// Ikonet på +-knappen, nedtrekksmenyen og valgt rad i den.
     let onLab, pop, popSel: Color
-    /// Prompt 50: Liquid Glass (glass på kort, fliser og fanelinje, fargeskyer bak). Glass50.swift.
+    /// Prompt 50: Liquid Glass (glass på kort, fliser og fanelinje, fargeskyer bak). GlassTheme.swift.
     var glass: Bool = false
 
     /// Fase 4: Papir lys og mørk fra DS-tokenene (shared/design/tokens.json → DesignTokens.xcassets), PaperTheme.swift.
@@ -18,12 +18,12 @@ struct PaperPalette {
     static let night: PaperPalette = PaperPalette.tokens(.papir, dark: true)
 
     static func of(_ mode: String, system: ColorScheme) -> PaperPalette {
-        // Prompt 51 (IOSFEAT51): automatisk tema – «auto51-d» (mørk nå) / «auto51-l» (lys nå), Theme51.swift.
+        // Prompt 51 (IOSFEAT51): automatisk tema – «auto51-d» (mørk nå) / «auto51-l» (lys nå), ThemeSync.swift.
         if mode.hasPrefix("auto51") { return mode.hasSuffix("-d") ? night : light }
         switch mode {
         case "lys": return light
         case "mork": return night
-        case "glass": return glass50 // prompt 50 (Glass50.swift)
+        case "glass": return glass50 // prompt 50 (GlassTheme.swift)
         default: return system == .dark ? night : light
         }
     }
@@ -140,7 +140,7 @@ struct PaperShell: View {
         // Systemets valg leses fra skjermen (roten setter appens modus med preferredColorScheme).
         let p = PaperPalette.of(store.paperMode, system: paperSystemScheme(phase))
         GeometryReader { (g: GeometryProxy) in
-            // Prompt 45: én felles regel for brettoppsett (≥ 700 pt og ikke kompakt), Layout45.swift.
+            // Prompt 45: én felles regel for brettoppsett (≥ 700 pt og ikke kompakt), LayoutMode.swift.
             let wide: Bool = Layout45.mode(width: g.size.width, hsc: hsc45) == .wide
             AppTabs(scan: { sidebarScan() }) {
                 page(p, wide: wide)
@@ -169,8 +169,8 @@ struct PaperShell: View {
                 .presentationDetents([.medium, .large])
                 .sheetEdge30(p.bg)
         }
-        // Prompt 32: samme Papir-ark (Ferdig-pille, ingen Avbryt) for Hjem, Finans, Domener, Abonnement og Familie (Nav32.swift).
-        // Prompt 42: Innstillinger → Tilpass → Fanelinje → Hjem-knapp (NavHome42.swift).
+        // Prompt 32: samme Papir-ark (Ferdig-pille, ingen Avbryt) for Hjem, Finans, Domener, Abonnement og Familie (NavTabEditor.swift).
+        // Prompt 42: Innstillinger → Tilpass → Fanelinje → Hjem-knapp (NavHomeButton.swift).
         .sheet(isPresented: Binding(get: { NavHome42.shared.picking }, set: { NavHome42.shared.picking = $0 })) {
             NavHomeSheet42()
                 .environment(\.paper, p)
@@ -208,10 +208,10 @@ struct PaperShell: View {
         .dismissHaptic30(store.weatherOpen)
         // Prompt 31: System-siden «Nordlys OS» i fullskjerm, varsel-trykk og prøve-varsler (System31.swift).
         .system31Host(p)
-        // Prompt 34: AI-kontroll i fullskjerm (AiCtl34Page.swift) og Glimt-briefen (Brief34Page.swift).
+        // Prompt 34: AI-kontroll i fullskjerm (AiControlPage.swift) og Glimt-briefen (BriefCards.swift).
         .aiCtl34Host(p)
         .brief34Host(p)
-        // Prompt 35: Innstillinger → GLIMT → Glimt i fullskjerm (Glimt35Settings.swift).
+        // Prompt 35: Innstillinger → GLIMT → Glimt i fullskjerm (GlimtSettingsPage.swift).
         .glimt35Host(p)
         // Prompt 40: Hjemlys – start (1a/1c), mottakerskjerm når noen er sen, og Glimt-samtalen (1b).
         .hjemlys40Host(p)
@@ -219,11 +219,11 @@ struct PaperShell: View {
         .media43Host(p)
         // Prompt 46: Kart i fullskjerm (Mer → Kart, side-nøkkel tkart), Kart46Views.swift.
         .kart46Host(p, store)
-        // Prompt 43: Innstillinger → Widgets (galleriet), Widgets43.swift.
+        // Prompt 43: Innstillinger → Widgets (galleriet), WidgetGallery.swift.
         .widgets43Host(p)
         // Prompt 44: Logger (Innstillinger → Server), Studie → Dokumenter og «Logget inn som X · Gå ut» (Logs44/Study44/Konto44.swift).
         .hosts44(p)
-        // Prompt 51 (IOSFEAT51): Planlegging, Familiekalender, «I kveld», felles søk, onboarding og tema (Feat51Kit.swift).
+        // Prompt 51 (IOSFEAT51): Planlegging, Familiekalender, «I kveld», felles søk, onboarding og tema (FeatureKit.swift).
         .feat51Host(p)
         // Prompt 76 (SKJIOS): Skjold Lab – deler, skuffer og skap i fullskjerm (Skjold76*.swift).
         .skjold76Host(p)
@@ -269,9 +269,9 @@ struct PaperShell: View {
         let fp: PaperPalette = store.finPalette22(p)
         ZStack(alignment: .bottom) {
             p.bg.ignoresSafeArea()
-            // Prompt 50: Liquid Glass – tre fargeskyer bak alt innhold (Glass50.swift).
+            // Prompt 50: Liquid Glass – tre fargeskyer bak alt innhold (GlassTheme.swift).
             if p.glass { Glass50Clouds() }
-            // Prompt 22: FinansHub-sidene bruker «Lys hovedbok» (lys-tokens) som standard (Theme22.swift).
+            // Prompt 22: FinansHub-sidene bruker «Lys hovedbok» (lys-tokens) som standard (ThemeColors.swift).
             content(fp).environment(\.paper, fp).frame(maxWidth: .infinity, maxHeight: .infinity)
                 .safeAreaInset(edge: .bottom, spacing: 0) {
                     if section { ShellSectionBar() }
@@ -321,13 +321,13 @@ struct PaperShell: View {
             VStack(spacing: 8) {
                 // Q19: serveren og appen passer ikke sammen («Oppdater serveren» / «Oppdater appen»), på Oversikt.
                 if store.paperTab == "hjem" && store.paperClassic == nil { ShellCompatBanner() }
-                // Prompt 29: «✦ Legger til i kalenderen …» og banneret «✓ Nina frisør · …» over hele appen (Quick29Views.swift).
+                // Prompt 29: «✦ Legger til i kalenderen …» og banneret «✓ Nina frisør · …» over hele appen (QuickAddViews.swift).
                 Quick29Overlay()
             }
         }
-        // Prompt 38/70: pillen «Glimt svarte ↑» (Assist38.swift, Home70Assist.swift).
+        // Prompt 38/70: pillen «Glimt svarte ↑» (Assist.swift, HomeAssistScroll.swift).
         .overlay { Assist38Catcher() }
-        // Prompt 41: svar-pillen vokser til fullskjerm og blir Chat (Search41Pull.swift).
+        // Prompt 41: svar-pillen vokser til fullskjerm og blir Chat (HomeSearchPull.swift).
         .overlay { Pull41Overlay() }
     }
 
@@ -377,7 +377,7 @@ struct PaperShell: View {
             // Prompt 50: Familie i nytt design – fullskjerm med egen fanelinje (Family50Views.swift).
             Family50Page().environment(\.colorScheme, p.dark ? .dark : .light)
         } else if store.full27 {
-            // Prompt 27: Kalender v2 og Chat i fullskjerm (Calendar27Page.swift, Chat27Page.swift).
+            // Prompt 27: Kalender v2 og Chat i fullskjerm (Calendar27Page.swift, ChatPage.swift).
             if store.paperTab == "chat" { Chat27Page() } else { Cal27Page() }
         } else {
             PaperPage().environment(\.colorScheme, p.dark ? .dark : .light)
@@ -587,7 +587,7 @@ struct PaperBgMenu: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            // Prompt 46: Google Photos-album under «Eget bilde» (GPhoto46.swift).
+            // Prompt 46: Google Photos-album under «Eget bilde» (BackgroundGooglePhotos.swift).
             GPhoto46Row()
         }
         .padding(6)
@@ -699,7 +699,7 @@ struct PaperPage: View {
     }
 
     @ViewBuilder private var page46: some View {
-        // Prompt 45: Hjem på iPad (brettet modus) er 1c – Glimt-kort til venstre, faner til høyre (Home45Wide.swift).
+        // Prompt 45: Hjem på iPad (brettet modus) er 1c – Glimt-kort til venstre, faner til høyre (HomeWide.swift).
         if wide && store.paperTab == "hjem" {
             Color.clear // prompt 46: Hjem ligger alltid under (wide46)
         } else if wide && store.paperTab == "familie" {
@@ -715,7 +715,7 @@ struct PaperPage: View {
             }
             .ignoresSafeArea(edges: .top)
         } else if wide && store.inSettings32b {
-            // Prompt 50: Innstillinger i to kolonner på Fold og iPad (Settings50Wide.swift).
+            // Prompt 50: Innstillinger i to kolonner på Fold og iPad (SettingsWide.swift).
             Settings50Wide()
         } else {
             scrollPage
@@ -730,7 +730,7 @@ struct PaperPage: View {
         let maxW: CGFloat = wide ? (home ? 960 : (store.paperTab == "huske" || store.paperTab == "finans" || store.paperTab == "familie" ? 1500 : (store.paperTab == "bibel" ? 1100 : 720))) : .infinity
         VStack(spacing: 0) {
             PaperHero(home: home)
-            // Prompt 25: ScrollViewReader for «Ta meg dit →» (Settings25.swift).
+            // Prompt 25: ScrollViewReader for «Ta meg dit →» (SettingsSearch.swift).
             ScrollViewReader { proxy in
             ScrollView {
                 VStack(spacing: 0) {
@@ -768,7 +768,7 @@ struct PaperPage: View {
             .onPreferenceChange(PaperScrollKey.self) { v in
                 let s = v < -1
                 if s != scrolled { scrolled = s }
-                // Prompt 51 (IOSFEAT51): dra Hjem langt ned (> 120 pt) → felles søk (Search51.swift). Passivt, ingen gest.
+                // Prompt 51 (IOSFEAT51): dra Hjem langt ned (> 120 pt) → felles søk (GlobalSearch.swift). Passivt, ingen gest.
                 let y51: CGFloat = v
                 let home51: Bool = home
                 if home51 && (y51 > 110 || (y51 >= 0 && y51 < 10)) { Task { @MainActor in Search51.shared.pull(y51, home: home51) } }
@@ -784,11 +784,11 @@ struct PaperPage: View {
             // Prompt 40: Bibel-siden går 36 pt opp i bakgrunnen (de andre sidene 23 pt). Kortet har egen skygge og runde hjørner.
             // Prompt 45: Gjøremål har ikke bakgrunnsbilde, og innholdet overlapper ikke toppen (ingen negativ marg).
             .padding(.top, topShift45)
-            // Prompt 28: pillene i redigeringsmodus ligger over listen, utenfor scroll-innholdet (Wiggle28.swift).
+            // Prompt 28: pillene i redigeringsmodus ligger over listen, utenfor scroll-innholdet (WiggleMode.swift).
             .edit28Layer(p)
             .overlay(alignment: .top) { Mer30Pills() }
             .refreshable { await refresh() }
-            // Prompt 26: nytt trykk på aktiv fane på roten scroller til toppen (Nav26.swift).
+            // Prompt 26: nytt trykk på aktiv fane på roten scroller til toppen (NavRoute.swift).
             .onChange(of: Nav26.shared.topTick) { _, _ in
                 withAnimation(.easeOut(duration: 0.3)) { proxy.scrollTo("nav26top", anchor: .top) }
             }
@@ -836,7 +836,7 @@ struct PaperPage: View {
         case "abo": PaperSubs()
         case "mat": MatView(pal: MatPal.paper(p))
         case "sporing": PaperTracking()
-        // Prompt 44: Mer med levende kort, Store · Lave og wiggle uten «Rediger» (More44.swift).
+        // Prompt 44: Mer med levende kort, Store · Lave og wiggle uten «Rediger» (MorePage.swift).
         case "mer": PaperMore44()
         case "bursdag": BirthdaysPage24()
         case "kalender": Cal26Page()
@@ -851,7 +851,7 @@ struct PaperPage: View {
         case "familie": FamilyView()
         case "avg": PaperDepartures()
         case "profil": PaperProfile()
-        // Prompt 39: «Utseende» er en del av «Tilpass»; gamle lenker til innst-ut havner der (Settings39.swift).
+        // Prompt 39: «Utseende» er en del av «Tilpass»; gamle lenker til innst-ut havner der (SettingsCustomize.swift).
         case "innst-ut", "innst-tilpass": Tilpass39Page()
         case "innst-appprofil": AppProfile39Page()
         case "innst-fam": FamilySettingsView()
@@ -920,7 +920,7 @@ struct PaperHero: View {
         // Prompt 50: alle sider med bakgrunnsbilde har samme høyde som Hjem (målt fra toppen av skjermen), så bunnkanten
         // av bildet står helt i ro ved fanebytte. Unntak som før: Gjøremål (uten bilde).
         .frame(height: Paper50Hero.height(wide: wide, plain: plain45) + topInset)
-        // Prompt 41: ingen bildekreditering på Hjem (flyttet til Innstillinger → Tilpass → Bakgrunn, Bg41Oslo.swift).
+        // Prompt 41: ingen bildekreditering på Hjem (flyttet til Innstillinger → Tilpass → Bakgrunn, BackgroundOslo.swift).
         .clipped()
     }
 
@@ -935,7 +935,7 @@ struct PaperHero: View {
         if store.paperTab == "avg" {
             RuterHeroArt()
         } else if let img = store.photoImage, store.photo != "cur" {
-            // Bildet med uskarphet, mørklegging, dempede farger, papirtekstur og ev. regn/snø (Background19.swift).
+            // Bildet med uskarphet, mørklegging, dempede farger, papirtekstur og ev. regn/snø (Background.swift).
             BgPhotoLayer(image: img)
                 // Prompt 41: nytt bilde (Oslo hver time) tones inn over 600 ms.
                 .id(ObjectIdentifier(img))
@@ -984,7 +984,7 @@ struct PaperHero: View {
             }
             // Prompt 37: profilbildet øverst åpner Innstillinger (oversikten), ikke Konto. Konto nås fra profilkortet der.
             Button { store.paperGo("innst") } label: {
-                // Prompt 46: Glimt-ringen (40 pt), alle lag klippet til sirkel (Profile46.swift).
+                // Prompt 46: Glimt-ringen (40 pt), alle lag klippet til sirkel (ProfileAvatar.swift).
                 Avatar46(size: 40, gap: plain45 ? p.bg : Color.black.opacity(0.35), busy: Brief34Model.shared.loading, shadow: !plain45)
             }
             .buttonStyle(.plain)
@@ -1032,7 +1032,7 @@ struct PaperHero: View {
         let w = store.homeWeather
         let t = w?.temp ?? store.mobileHome?.weather?.temp
         if let t {
-            // Prompt 36: trykk åpner Vær, hold inne ≥ 550 ms åpner yr.no for stedet (Temp36.swift).
+            // Prompt 36: trykk åpner Vær, hold inne ≥ 550 ms åpner yr.no for stedet (HomeTemperature.swift).
             Temp36Press(temp: "\(Int(t.rounded()))°", line: "\(w?.text ?? store.mobileHome?.weather?.text ?? "") · \(clock) ›")
         }
     }
