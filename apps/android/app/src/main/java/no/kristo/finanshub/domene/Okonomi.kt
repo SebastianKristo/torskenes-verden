@@ -1504,7 +1504,7 @@ fun AppViewModel.saveFinNav26(items: List<FinItem26>, defLabel: (String) -> Stri
     }
 }
 
-/** «Tilbakestill til standard»: Oversikt, Liste, Finn og Søk, uten egne navn. */
+/** «Tilbakestill til standard»: Oversikt, Transaksjoner, Budsjett og Faste betalinger, uten egne navn. */
 fun AppViewModel.resetFinNav26() {
     updatePaperFinTabs(FIN_TABS_DEFAULT)
     saveFinLabels26(emptyMap())

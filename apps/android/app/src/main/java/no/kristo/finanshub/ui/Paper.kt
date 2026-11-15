@@ -190,19 +190,20 @@ private fun paperBar(vm: AppViewModel): String = when {
 private fun heroText(vm: AppViewModel): Pair<String, String> {
     val first = vm.displayName.split(' ').firstOrNull().orEmpty().ifBlank { "du" }
     val today = LocalDate.now()
-    if (vm.selectedTx != null && (vm.paperPage == null || vm.paperPage == "fsok") && (vm.screen.isFinance || vm.paperPage == "fsok")) return "Finans" to "Detaljer"
+    if (vm.selectedTx != null && (vm.paperPage == null || vm.paperPage == "fsok") && (vm.screen.isFinance || vm.paperPage == "fsok")) return "Økonomi" to "Detaljer"
     return when (vm.paperPage) {
         "mer" -> "Alle moduler" to "Mer"
-        "fmer" -> "Finans" to "Mer"
+        "fmer" -> "Økonomi" to "Mer"
         "set" -> if (vm.settingsPage == null) "Konto og utseende" to "Innstillinger" else "Alle innstillinger" to (settingsTitle26(vm))
-        "fsok" -> "Finans · ✦ AI" to "Søk"
+        "fsok" -> "Økonomi · ✦ AI" to "Glimt"
+        "faste" -> "Økonomi" to "Faste betalinger"
         "media" -> "Plex · Jellyfin" to "Media"
         else -> when (vm.screen) {
             Screen.Homelab -> longDate(today) to "${greetingFor()},\n$first"
             Screen.Home -> {
                 val m = monthLabel(today.toString().take(7))
                 val left = vm.summary?.daysLeft
-                (if (left != null) "$m · $left dager igjen" else m) to "Finans"
+                (if (left != null) "$m · $left dager igjen" else m) to "Økonomi"
             }
             Screen.Mat -> "Uke ${vm.week?.week ?: today.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR)}" to "Mat"
             Screen.Tracking -> {
@@ -218,14 +219,14 @@ private fun heroText(vm: AppViewModel): Pair<String, String> {
                 else -> (vm.domain ?: "Siste 24 timer") to "Domener"
             }
             Screen.Stocks -> "Trading 212" to "Aksjer"
-            Screen.Sub -> "Subscription OS" to "Abonnementer"
+            Screen.Sub -> "Faste betalinger" to "Abonnementer"
             Screen.Folders -> (boligKicker24(vm) ?: "Utgifter og regninger") to "Boliger"
-            Screen.Finn -> "Kjøp og salg" to "Finn"
+            Screen.Finn -> "Kjøp og salg" to "Finn-handler"
             Screen.Settings -> if (vm.settingsPage == null) "Konto og utseende" to "Innstillinger" else "Alle innstillinger" to (settingsTitle26(vm))
-            Screen.List -> "Alle kontoer" to "Liste"
-            Screen.Search -> "Finans · ✦ AI" to "Søk"
-            Screen.Scan -> "Finans" to "Kvitteringer"
-            else -> "Finans" to vm.screen.label
+            Screen.List -> "Alle kontoer" to "Transaksjoner"
+            Screen.Search -> "Økonomi · ✦ AI" to "Glimt"
+            Screen.Scan -> "Økonomi" to "Kvitteringer"
+            else -> "Økonomi" to vm.screen.label
         }
     }
 }
@@ -233,14 +234,14 @@ private fun heroText(vm: AppViewModel): Pair<String, String> {
 private fun backLabel(vm: AppViewModel, outOfSet50: Boolean = false): String = when {
     vm.b24BackLabel() != null -> vm.b24BackLabel()!!
     !outOfSet50 && vm.settingsPage != null && (vm.paperPage == "set" || vm.screen == Screen.Settings) -> vm.settingsBackLabel26()
-    vm.selectedTx != null && vm.paperPage == "fsok" -> "Søk"
-    vm.selectedTx != null && vm.paperPage == null -> when (vm.screen) { Screen.List -> "Liste"; Screen.Home -> "Oversikt"; else -> "Tilbake" }
+    vm.selectedTx != null && vm.paperPage == "fsok" -> "Glimt"
+    vm.selectedTx != null && vm.paperPage == null -> when (vm.screen) { Screen.List -> "Transaksjoner"; Screen.Home -> "Oversikt"; else -> "Tilbake" }
     vm.screen == Screen.Domains && vm.paperPage == null -> "Hjem"
     vm.paperPage == "mer" || vm.paperPage == "fmer" || vm.paperPage == "fsok" -> "Hjem"
     vm.paperFromFinMer -> "Mer"
     vm.paperFin && vm.screen in PAPER_FIN_SCREENS -> "Hjem"
     vm.paperPage != null || vm.paperFromMer -> "Mer"
-    vm.screen.isFinance && vm.screen != Screen.Home -> "Finans"
+    vm.screen.isFinance && vm.screen != Screen.Home -> "Økonomi"
     else -> "Hjem"
 }
 
@@ -357,6 +358,7 @@ private fun PaperApp45(
                             vm.paperPage == "mer" -> PaperMore24(vm, navBottom, PAPER_BAR)
                             vm.paperPage == "fmer" -> PaperFinMoreGrid(vm, navBottom, wide)
                             vm.paperPage == "fsok" && vm.selectedTx == null -> PaperFinSearch(vm, navBottom)
+                            vm.paperPage == "faste" -> PaperFaste(vm, navBottom) // Q4: Faste betalinger (ui/FasteBetalinger.kt)
                             vm.paperPage == "set" -> PaperSettings17(vm, navBottom, onPrivacyChanged)
                             vm.paperPage == "media" -> PaperMedia(vm, navBottom)
                             vm.selectedTx != null && (s.isFinance || vm.paperPage == "fsok") -> PaperTxDetail(vm, navBottom, takePhoto, pickFiles)

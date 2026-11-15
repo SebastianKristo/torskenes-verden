@@ -2,14 +2,27 @@ package no.kristo.finanshub
 
 import org.json.JSONObject
 
-/** Fanene Finans-linja kan ha (opptil 4, «Mer» er alltid sist). */
+/**
+ * Fanene Økonomi-linja kan ha (opptil 4, «Mer» er alltid sist). Fase 6 (Q3, Q4): samme navn som på web, Transaksjoner (ikke
+ * «Liste»), Glimt (ikke «Søk») og Faste betalinger. Nøklene er de samme som før, så lagrede oppsett virker.
+ */
 val FIN_TABS: List<Pair<String, String>> = listOf(
-    "oversikt" to "Oversikt", "liste" to "Liste", "finn" to "Finn", "sok" to "Søk", "budsjett" to "Budsjett",
-    "kvitt" to "Kvitteringer", "aksjer" to "Aksjer", "abo" to "Abonnementer", "kontoer" to "Kontoer", "boliger" to "Boliger",
-    "chat" to "Chat",
+    "oversikt" to "Oversikt", "liste" to "Transaksjoner", "budsjett" to "Budsjett", "abo" to "Faste betalinger",
+    "finn" to "Finn", "sok" to "Glimt", "kvitt" to "Kvitteringer", "aksjer" to "Aksjer", "kontoer" to "Kontoer",
+    "boliger" to "Boliger", "chat" to "Chat",
 )
 
-val FIN_TABS_DEFAULT = listOf("oversikt", "liste", "finn", "sok")
+/** Standard: Oversikt, Transaksjoner, Budsjett og Faste betalinger (+ Mer), som på web. */
+val FIN_TABS_DEFAULT = listOf("oversikt", "liste", "budsjett", "abo")
+
+/** Standarden før Fase 6. Et lagret oppsett som er lik den, er ikke valgt av brukeren og følger den nye standarden. */
+val FIN_TABS_GAMMEL = listOf("oversikt", "liste", "finn", "sok")
+
+/** Lagret Økonomi-linje → det som vises: serverens nøkler (abonnementer, kvitteringer) løses opp, og den gamle standarden flyttes. */
+fun normFinTabs(l: List<String>): List<String> {
+    val v = l.map { finKey24(it) }.filter { k -> FIN_TABS.any { it.first == k } }.distinct().take(5)
+    return if (v == FIN_TABS_GAMMEL) FIN_TABS_DEFAULT else v
+}
 
 /* ---------------- Transaksjonsdetaljer (GET /transactions/:id) ---------------- */
 

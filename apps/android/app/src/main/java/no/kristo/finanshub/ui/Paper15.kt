@@ -323,7 +323,7 @@ internal fun navTabs(vm: AppViewModel, bar: String, float: Boolean): List<NavTab
         "fin" -> {
             val l = vm.paperFinTabs.mapNotNull { k -> FIN_TABS.firstOrNull { it.first == k } }
                 .map { (k, n) -> NavTab(k, vm.finTabLabel26(k, n), vm.finTabIcon26(k, finIcon(k))) { vm.paperFinTab(k) } }.toMutableList()
-            if (float && l.none { it.key == "sok" }) l += NavTab("sok", "Søk", "⌕") { vm.paperFinTab("sok") }
+            if (float && l.none { it.key == "sok" }) l += NavTab("sok", "Glimt", "⌕") { vm.paperFinTab("sok") }
             l += NavTab("fmer", "Mer", "⋯") { vm.paperFinTab("fmer") }
             l
         }
@@ -359,6 +359,7 @@ internal fun navCurrent(vm: AppViewModel, bar: String): String = when (bar) {
     "dom" -> vm.domSection
     "fin" -> when {
         vm.paperPage == "fsok" -> "sok"
+        vm.paperPage == "faste" -> "abo"
         vm.paperPage == "fmer" || vm.paperFromFinMer -> "fmer"
         else -> vm.paperFinTabs.firstOrNull { finTabScreen(it) == vm.screen } ?: "fmer"
     }
@@ -458,19 +459,21 @@ internal fun PaperFinMoreGrid(vm: AppViewModel, navBottom: Dp, wide: Boolean) {
     val saldo = vm.boot?.accounts?.sumOf { it.balance }
     val st = vm.stocks?.summary
     val all = listOf(
-        FinTile("sok", "Søk", "✦ Med AI", Icons.Filled.Search) { vm.paperFinTab("sok") },
-        FinTile("liste", "Liste", "Alle transaksjoner", Icons.AutoMirrored.Filled.List) { vm.openFromFinMer(Screen.List) },
-        FinTile("finn", "Finn", vm.finn?.items?.size?.let { "$it handler" } ?: "Kjøp og salg", Icons.Filled.Storefront) { vm.openFromFinMer(Screen.Finn) },
+        // Fase 6: samme navn som Mer i Økonomi på web (Glimt, Transaksjoner, Faste betalinger, Sparing og planer, Finn-handler).
+        FinTile("sok", "Glimt", "✦ Spør om økonomien", Icons.Filled.Search) { vm.paperFinTab("sok") },
+        FinTile("liste", "Transaksjoner", "Alle kontoer", Icons.AutoMirrored.Filled.List) { vm.openFromFinMer(Screen.List) },
+        FinTile("finn", "Finn-handler", vm.finn?.items?.size?.let { "$it handler" } ?: "Kjøp og salg", Icons.Filled.Storefront) { vm.openFromFinMer(Screen.Finn) },
         FinTile("budsjett", "Budsjett", sm?.let { "${n0(it.left)} kr igjen" } ?: "Per kategori", Icons.Filled.PieChart) { vm.openFromFinMer(Screen.Budget) },
         FinTile("kvitt", "Kvitteringer", if (review > 0) "$review til gjennomgang" else "Kø og bokført", Icons.Filled.Receipt, if (review > 0) "$review" else null) { vm.openFromFinMer(Screen.Scan) },
-        FinTile("faste", "Faste utgifter", vm.recurring?.let { "${it.size} faste trekk" } ?: "Neste 30 dager", Icons.Filled.Repeat) { vm.openFromFinMer(Screen.Fast) },
+        FinTile("faste", "Faste betalinger", "Abonnementer, faste utgifter og planlagte trekk", Icons.Filled.Repeat) { vm.openFaste("faste") },
         FinTile("kontoer", "Kontoer", saldo?.let { "${neg0(it)} kr" } ?: "Saldo og sparemål", Icons.Filled.AccountBalance) { vm.openFromFinMer(Screen.Accounts) },
-        FinTile("plan", "Planlegging", "Sparemål, kalender og skatt", Icons.Filled.Savings) { vm.open51("plan") }, // prompt 51 (ANDFEAT51): ui/Plan51Ui.kt
+        FinTile("plan", "Sparing og planer", "Sparemål, planlagte trekk og skatt", Icons.Filled.Savings) { vm.open51("plan") }, // prompt 51 (ANDFEAT51): ui/Plan51Ui.kt
         FinTile("aksjer", "Aksjer", st?.let { "${n0(it.value)} kr" } ?: "Trading 212", Icons.AutoMirrored.Filled.ShowChart, pos = (st?.result ?: 0.0) > 0) { vm.openFromFinMer(Screen.Stocks) },
         FinTile("rapp", "Rapporter", "Måned og år", Icons.Filled.BarChart) { vm.openFromFinMer(Screen.Reports) },
-        FinTile("abo", "Subscription OS", vm.subs?.let { "${n0(it.monthly)} kr/mnd" } ?: "Abonnementer", Icons.Filled.Autorenew) { vm.openFromFinMer(Screen.Sub) },
+        FinTile("abo", "Abonnementer", vm.subs?.let { "${n0(it.monthly)} kr/mnd · Faste betalinger" } ?: "Faste betalinger", Icons.Filled.Autorenew) { vm.openFromFinMer(Screen.Sub) },
         FinTile("boliger", "Boliger", vm.folders?.let { if (it.size == 1) "1 bolig" else "${it.size} boliger" } ?: "Utgifter og regninger", Icons.Filled.Home) { vm.openFromFinMer(Screen.Folders) },
-        FinTile("fimport", "Import", "Bank, Excel og Finn", Icons.Filled.FileUpload) { vm.openFromFinMer(Screen.Import) },
+        // O3: Import bor under Innstillinger (som på web); flisen er en snarvei dit.
+        FinTile("fimport", "Import", "Innstillinger · bank, Excel og Finn", Icons.Filled.FileUpload) { vm.openFromFinMer(Screen.Import) },
         FinTile("innst", "Innstillinger", "Kategorier og regler", Icons.Filled.Settings) { vm.settingsPage = null; vm.openFromFinMer(Screen.Settings) },
     )
     var editing by remember { mutableStateOf(false) }
@@ -1063,7 +1066,7 @@ internal fun PaperNavSettings(vm: AppViewModel) {
         PRow("Fjern fra fanelinjen", "Flytter siste fane til Mer", if (tabs.size > 1) "Fjern ${FIN_TABS.firstOrNull { it.first == tabs.last() }?.second ?: ""}" else "–", p.lab, serif = false, top = true) {
             if (tabs.size > 1) vm.updatePaperFinTabs(tabs.dropLast(1))
         }
-        PRow("Tilbakestill", "Oversikt, Liste, Finn, Søk", "Nullstill", serif = false, top = true) { vm.updatePaperFinTabs(FIN_TABS_DEFAULT) }
+        PRow("Tilbakestill", "Oversikt, Transaksjoner, Budsjett, Faste betalinger", "Nullstill", serif = false, top = true) { vm.updatePaperFinTabs(FIN_TABS_DEFAULT) }
     }
     PLabel("Fanelinje", modifier = Modifier.padding(start = 4.dp, top = 10.dp))
     PCard {

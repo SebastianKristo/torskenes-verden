@@ -32,6 +32,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.sync.withLock
 import no.kristo.finanshub.ui.Privacy
+import no.kristo.finanshub.ui.loadFaste
+import no.kristo.finanshub.ui.openFaste
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.ByteArrayOutputStream
@@ -41,14 +43,14 @@ import java.time.LocalDate
 import java.util.UUID
 
 /**
- * Skjermer. Homelab er forsiden; Finans (Oversikt, Liste, Budsjett, Søk, Mer) og sidene under Mer er «Andre OS»
- * sammen med Mat og Domener.
+ * Skjermer. Homelab (Oversikt, Q1) er forsiden; Økonomi (Oversikt, Transaksjoner, Budsjett, Faste betalinger, Mer) og sidene
+ * under Mer, sammen med Mat og Domener. Navnene er de samme som i Økonomi på web (Fase 6, Q2–Q4, Q7).
  */
 enum class Screen(val label: String) {
-    Homelab("Homelab"),
-    Home("Oversikt"), List("Liste"), Budget("Budsjett"), Search("Søk"), More("Mer"),
+    Homelab("Oversikt"),
+    Home("Oversikt"), List("Transaksjoner"), Budget("Budsjett"), Search("Glimt"), More("Mer"),
     Scan("Kvitteringer"), Fast("Faste utgifter"), Accounts("Kontoer"), Stocks("Aksjer"), Reports("Rapporter"), Import("Import"),
-    Sub("Subscription OS"), Folders("Boliger"), Finn("Finn-handler"),
+    Sub("Abonnementer"), Folders("Boliger"), Finn("Finn-handler"),
     Mat("Mat"), Domains("Domener"), Settings("Innstillinger"), Tracking("Sporing");
 
     /** Fanelinja for Finans vises (Mer er markert på undersidene). */
@@ -2102,7 +2104,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             "budsjett" -> go(Screen.Budget)
             "kvitt" -> go(Screen.Scan)
             "aksjer" -> go(Screen.Stocks)
-            "abo" -> go(Screen.Sub)
+            // Q4: fanen er Faste betalinger (filtrene Abonnementer, Faste utgifter og Planlagte trekk, ui/FasteBetalinger.kt).
+            "abo" -> { if (!screen.isFinance) go(Screen.Home); paperPage = "faste"; paperFin = true; loadFaste(); Haptics.select(); return }
             "kontoer" -> go(Screen.Accounts)
             "boliger" -> go(Screen.Folders)
             "sok" -> { if (!screen.isFinance) go(Screen.Home); paperPage = "fsok" }
@@ -2430,7 +2433,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val v = l.distinct().filter { k -> FIN_TABS.any { it.first == k } }.take(5).ifEmpty { listOf("oversikt") }
         paperFinTabs = v
         prefs.set(AppPrefs.FIN_TABS + (account?.id ?: ""), v.joinToString(","))
-        viewModelScope.launch { runCatching { api.hlPut("/me/layout", JSONObject().put("finTabs", JSONArray(v))) } }
+        // Serveren kaller to av fanene abonnementer og kvitteringer (server/mobile.js FIN_TABS), og godtar opptil 4.
+        val server = v.map { when (it) { "abo" -> "abonnementer"; "kvitt" -> "kvitteringer"; else -> it } }.take(4)
+        viewModelScope.launch { runCatching { api.hlPut("/me/layout", JSONObject().put("finTabs", JSONArray(server))) } }
     }
 
     /** Fjerde fane i hovedlinja: «auto» (Domener, eller Sporing når pakker er på vei), «domener» eller «sporing». */
@@ -2467,7 +2472,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 pageLayouts = o.keys().asSequence().associateWith { k -> o.getJSONObject(k).let { v -> PageLay(v.optJSONArray("order").strings(), v.optJSONArray("hidden").strings(), parseSz70(v.optJSONObject("sz"))) } }
             }
         }
-        prefs.str(AppPrefs.FIN_TABS + id, "").takeIf { it.isNotBlank() }?.let { paperFinTabs = it.split(',').filter { k -> FIN_TABS.any { t -> t.first == k } }.ifEmpty { FIN_TABS_DEFAULT } }
+        prefs.str(AppPrefs.FIN_TABS + id, "").takeIf { it.isNotBlank() }?.let { paperFinTabs = normFinTabs(it.split(',')).ifEmpty { FIN_TABS_DEFAULT } }
     }
 
     /* Antall kvitteringer til gjennomgang (banneret i Finans → Oversikt). */
@@ -2962,7 +2967,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             "nyheter" -> openNews()
             "aksjer" -> { paperPage = null; openFromMer(Screen.Stocks) }
             "boliger" -> { paperPage = null; openFromMer(Screen.Folders) }
-            "abonnementer" -> { paperPage = null; openFromMer(Screen.Sub) }
+            // Q4: Faste betalinger (Abonnementer er et filter der, og den fulle abonnementssiden åpnes derfra).
+            "abonnementer" -> openFaste("abonnementer")
             "media" -> openPaperPage("media")
             "chat" -> openChat()
             // Prompt 40: sidene fra Mer. Now Brief og Nyhetsleser er ark/overlegg og åpnes som ark; resten navigeres til.
