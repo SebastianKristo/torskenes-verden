@@ -153,6 +153,14 @@ function calOf(x, kind) {
 }
 
 /** Gjør svaret fra /api/kalender (eller reserven) om til hendelser per dag. */
+// Helligdagene fra serveren (hentes én gang, bare når kalenderdataene ikke har dem): i fjor, i år og neste år.
+let HOL = null, holP = null;
+function loadHolidays() {
+  if (holP) return;
+  const y0 = new Date().getFullYear();
+  holP = api(`/dates/holidays?from=${y0 - 1}-01-01&to=${y0 + 1}-12-31`).then((r) => { HOL = Array.isArray(r?.items) ? r.items : []; }, () => { HOL = []; })
+    .then(() => { if (K.data && !K.loading) ensureKal(true); });
+}
 function normalize(r) {
   const subjects = r.subjects && typeof r.subjects === 'object' ? r.subjects : {};
   const byDay = new Map();
@@ -188,10 +196,11 @@ function normalize(r) {
     } else if (kind === 'innl') push(key(st), { ...base, k: key(st), s: '', e: hm(en > st ? en : st) });
     else push(key(st), { ...base, k: key(st), s: hm(st), e: key(en) === key(st) && en > st ? hm(en) : '23:59' });
   }
-  // Prompt 39: Helligdager (innebygd Norge) når serveren ikke sender dem selv.
+  // Prompt 39: Helligdager når serveren ikke sender dem som hendelser. Fase 3: listen kommer fra serveren (GET /api/dates/holidays, Q18)
+  // i stedet for å regnes ut her (påskeregelen og datoene bor på serveren).
   if (![...byDay.values()].some((L) => L.some((e) => e.ac === 'helligdager'))) {
-    const y0 = new Date().getFullYear();
-    for (const y of [y0 - 1, y0, y0 + 1]) for (const h of k39.holidays(y)) push(h.k, { id: `hd|${h.k}`, oid: '', kind: 'fri', cal: 'helligdager', ac: 'helligdager', t: h.t, short: h.t, subj: '', r: '', rRaw: '', rUrl: '', teacher: '', n: '', c: '', sc: '', sk: '', src: 'builtin', url: '', map: '', editable: false, rep: '', recurrence: null, srvRem: '', all: true, startRaw: h.k, endRaw: h.k, addr: '', gmap: null, k37: '', stx: '', slt: '', k: h.k, s: '', e: '' });
+    if (HOL) { for (const h of HOL) if (h.type === 'helligdag') push(h.date, { id: `hd|${h.date}`, oid: '', kind: 'fri', cal: 'helligdager', ac: 'helligdager', t: h.name, short: h.name, subj: '', r: '', rRaw: '', rUrl: '', teacher: '', n: '', c: '', sc: '', sk: '', src: 'builtin', url: '', map: '', editable: false, rep: '', recurrence: null, srvRem: '', all: true, startRaw: h.date, endRaw: h.date, addr: '', gmap: null, k37: '', stx: '', slt: '', k: h.date, s: '', e: '' });
+    } else loadHolidays();
   }
   // Planleggingsdag/fri fjerner timene, og en prøve med klokkeslett erstatter timene den overlapper.
   for (const [k, L] of byDay) {
