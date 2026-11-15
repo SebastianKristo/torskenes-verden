@@ -96,3 +96,16 @@ test('kv-minne: hver leser får sitt eget objekt', async () => {
   kv.set('u5', 'o', { n: 1 });
   await withKvMemo(async () => { kv.get('u5', 'o').n = 2; assert.deepEqual(kv.get('u5', 'o'), { n: 1 }); });
 });
+
+test('indekser: fremmednøkler og bruker-kolonner får indeks, idempotent, og manglende tabeller hoppes over', async () => {
+  const { ensureIndexes } = await import('../server/db-indexes.js');
+  db.exec(`CREATE TABLE IF NOT EXISTS t_foreldre (id INTEGER PRIMARY KEY);
+    CREATE TABLE IF NOT EXISTS t_barn (id INTEGER PRIMARY KEY, foreldre_id INTEGER REFERENCES t_foreldre(id), user_id TEXT);
+    CREATE TABLE IF NOT EXISTS t_dekket (id INTEGER PRIMARY KEY, user_id TEXT, x TEXT);
+    CREATE INDEX IF NOT EXISTS t_dekket_ux ON t_dekket(user_id, x);`);
+  const list = [['t_barn', ['foreldre_id']], ['t_barn', ['user_id']], ['t_dekket', ['user_id']], ['finnes_ikke', ['user_id']], ['t_barn', ['mangler']]];
+  assert.deepEqual(ensureIndexes(db, list), ['ix_t_barn_foreldre_id', 'ix_t_barn_user_id']);
+  assert.deepEqual(ensureIndexes(db, list), [], 'andre gang: ingenting nytt');
+  const plan = db.prepare('EXPLAIN QUERY PLAN SELECT * FROM t_barn WHERE user_id=?').all('x').map((r) => r.detail).join(' ');
+  assert.match(plan, /USING INDEX ix_t_barn_user_id/);
+});

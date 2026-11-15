@@ -9,6 +9,7 @@ import { randomBytes } from 'node:crypto';
 import { join, resolve } from 'node:path';
 import { config } from './config.js';
 import { db, kv, OWNER, withKvMemo } from './db.js';
+import { ensureIndexes } from './db-indexes.js';
 import { createSession, destroySession, sessionUser, rememberDevice, pauseDevice, forgetDevice, currentDeviceId, currentSessionId, trustIp, isLan, requireAuth, requireAdmin, clientIp, verifyLogin, createTicket, redeemTicket, userInfo, listUsers, listUsersFor, createUser, deleteUser, updateUser, setPassword, checkPassword, isAdmin, needsSetup, setupServer, serverName, setServerName, startTotpSetup, confirmTotpSetup, disableTotp, totpReadable, loginBlocked, loginFailed, loginSucceeded } from './auth.js';
 import * as integrations from './integrations.js';
 import { cfg, publicConfig, updateConfig, runRequest, userCfgSet, runAsUser } from './settings.js';
@@ -117,6 +118,8 @@ import { calendarsApi as kalCalendarsApi, weatherApi as kalWeatherApi, eventsMid
 if (process.env.MOCK_DATA === '1' && !fhDb.prepare('SELECT 1 FROM fh_transactions LIMIT 1').get()) (await import('./finans/demo.js')).loadDemo();
 
 // Prompt 36: alle moduler (og migreringene de kjører når de lastes) er ferdige her.
+// Manglende indekser for fremmednøkler og bruker-kolonner (server/db-indexes.js), etter at alle tabellene finnes.
+try { const made = ensureIndexes(); if (made.length) console.info(`[db] ${made.length} nye indekser`); } catch (e) { console.warn('[db] indekser:', e?.message); }
 bootStep('migrate', 'ok');
 const api = process.env.MOCK_DATA === '1' ? await import('./mock.js') : integrations;
 if (api !== integrations) console.warn('[mock] MOCK_DATA=1 – viser eksempeldata.');
