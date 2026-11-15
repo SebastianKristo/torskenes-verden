@@ -55,7 +55,7 @@ import { profilesApi, bibleApi } from './api37.js'; // prompt 37 (SERVER37)
 import { bearerFallthrough46 } from './api-auth46.js'; // prompt 46 (SERVER46)
 import { pages40Api, briefJul40, startApi40 } from './api40.js'; // prompt 40 (SERVER40)
 import { mountServer47 } from './server47.js'; // prompt 47 (SERVER47)
-import { ruter41Api, mai17Api, brief41 } from './api41.js'; // prompt 41 (SERVER41)
+import { mai17Api, brief41 } from './api41.js'; // prompt 41 (SERVER41)
 import { mountFamilie, startFamilie, hlPage41 } from './familie/index.js'; // Familie: /api/family, /api/kart, /api/famcal51, /api/hjemlys (+ /api/velfremme)
 import { mountFinans, mountFinansAliases, mountTrialWidgets, mountSubsCalendar, registerLegacyReceipts, legacyReceiptOwner } from './finans/index.js'; // Økonomi: /finans/api, Boliger-aliasene, prøveperiode-widgets og kalenderen «Abonnementer»
 import { widgets43Api, gscDomains43Api, gsc43Api, gscViewMw43, gscOverviewMw43 } from './api43.js'; // prompt 43 (SERVER43)
@@ -85,6 +85,7 @@ import { gphoto46Api, startGphoto46 } from './gphoto46.js'; // prompt 46 (DATA46
 import { mountVaer } from './vaer/index.js'; // Vær: /here, /week-summary, /place, /layout og ski i /full
 import { installCacheBust } from './cache-bust.js'; // prompt 32 (SERVER32)
 import searchHistoryApi from './search-history.js'; // prompt 32: søkehistorikk per bruker
+import { mountReise } from './reise/index.js'; // Reise: /api/ruter (Min reise, skolesoner, «forlot skolen»)
 import { mountRom, startRom } from './rom/index.js'; // Rom: /api/space og /api/rom (APOD, Mars, satellitter)
 import { domainGlimtApi, gscApi, startDomainGlimtScheduler } from './domains-glimt.js'; // prompt 32
 import { companionsOf } from './kalender/calendars.js'; // companion-tokens (Kalender) i /api/me/devices
@@ -572,7 +573,7 @@ app.route('/api/integrations', integrationsApi);
 app.route('/api/integrasjoner', integrationsApi); // prompt 26: samme liste under norsk navn
 // Prompt 26: Kalender (skolens iCal, Canvas, Bursdager og Google) og kompakt widget-svar. Sesjon eller app-token, per bruker.
 mountKalenderFront(app); // server/kalender/: invitasjoner, Glimt-søk, beskriv, rask time, HA, fag (før /api/kalender og de innebygde kalenderne)
-app.route('/api/ruter', ruter41Api); // prompt 41: Min reise, skolesoner, «forlot skolen»
+mountReise(app); // server/reise/: /api/ruter – Min reise, skolesoner, «forlot skolen» (før mobileApi sine /ruter/search og /departures)
 app.use('/api/kalender/calendars', mediaCalendarsMw43); // prompt 43: innebygd kalender «Media» (Sonarr/Radarr)
 app.use('/api/kalender/calendars/*', mediaCalendarsMw43);
 mountSubsCalendar(app); // server/finans/: innebygd kalender «Abonnementer» (trekkdatoer) – etter Media-kalenderen, før mountKalender

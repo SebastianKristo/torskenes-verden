@@ -477,7 +477,7 @@ async function tonightOf52(today) {
   return { items, count: items.length, configured: up.configured !== false };
 }
 async function tripOf52(u) {
-  const { myTrip41 } = await import('./ruter41.js');
+  const { myTrip41 } = await import('./reise/ruter.js');
   const t = await withTimeout(myTrip41(u), 4000, null);
   if (!t || t.empty || !t.options?.length) return null;
   const now = Date.now();

@@ -1,6 +1,6 @@
 // Prompt 41 (SERVER41): kobler sammen modulene for prompt 41 (montert i index.js).
 //   Hjemlys «Si fra» + tur til valgfritt mål: /api/hjemlys/notice|status|notices|recipients, start {destination}            → server/familie/ (mountFamilie)
-//   Min reise: /api/ruter/my-routes|my-trip|school-zones|left-school|journey|settings                                     → ruter41.js
+//   Min reise: /api/ruter/my-routes|my-trip|school-zones|left-school|journey|settings                                     → reise/ (mountReise)
 //   PostNord uten nøkkel (recipientview), dynamisk polling, push ved endring, helsesjekk GET /api/tracking/postnord/health → server/sporing/ (mountSporing)
 //   Gjøremål-Glimt i bakgrunnen + «Laget med Glimt»: /api/tasks/glimt {async:true}, /glimt/jobs, /glimt/sources           → server/gjoremal/
 //     alias POST /api/huske/glimt-jobs; /api/assist gjenkjenner huskebeskjeder                                           → server/gjoremal/, assist.js
@@ -14,9 +14,8 @@ import { sessionUser } from './auth/session.js';
 import { ski41 } from './vaer/week-glimt.js';
 import { glimtSettingsOf } from './glimt/settings.js';
 import { mai17Active, mai17Day41 } from './mai17-41.js';
-import { journeyOf41 } from './ruter41.js';
+import { journeyOf41 } from './reise/ruter.js';
 
-export { ruter41Api } from './ruter41.js';
 export { mai17Api } from './mai17-41.js';
 
 /* ---------------- Brief: skiføre, 17. mai og Min reise ---------------- */

@@ -1,5 +1,5 @@
 // Prompt 41 (SERVER41): Ruter → Min reise (forhåndsruter skole ⇄ Amagerveien), skolesoner og «forlot skolen» (claude-code-ruter-forhandsruter-sebastian.md).
-// Montert under /api/ruter (api41.js). Sesjon eller app-token, alt per bruker.
+// Montert under /api/ruter (reise/index.js). Sesjon eller app-token, alt per bruker.
 //
 // GET  /api/ruter/my-routes → {routes:[route], homeCard, preset:boolean}
 // PUT  /api/ruter/my-routes {routes:[route]} → samme      route = {id, name, from, to, via, legs:[{mode:'foot'|'tram'|'bus', from, to, lines?[]}], prefer_lines[], allow_lines[]}
@@ -23,10 +23,10 @@
 // POST /api/ruter/journey/home · POST /api/ruter/journey/hide · DELETE /api/ruter/journey/hide (Angre) → {journey}
 // GET/PUT /api/ruter/settings {homeCard:'over'|'instead'|'off', push:false} → samme
 import { Hono } from 'hono';
-import { db, q, kv, OWNER } from './db.js';
-import { authOrToken as authOrToken0 } from './mobile.js';
-import { family50 as F50, placesChanged50, areaOut50 } from './familie/positions.js'; // prompt 50 (SRVFAM50): skolen kommer fra Familie › Steder
-import { dtf } from './intl-format.js'; // gjenbrukte Intl.DateTimeFormat
+import { db, q, kv, OWNER } from '../db.js';
+import { authOrToken as authOrToken0 } from '../mobile.js';
+import { family50 as F50, placesChanged50, areaOut50 } from '../familie/positions.js'; // prompt 50 (SRVFAM50): skolen kommer fra Familie › Steder
+import { dtf } from '../intl-format.js'; // gjenbrukte Intl.DateTimeFormat
 const authOrToken = (c, next) => authOrToken0(c, next); // sen binding (mobile.js kan være midt i lastingen)
 
 db.exec(`CREATE TABLE IF NOT EXISTS school_zones (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT NOT NULL, name TEXT NOT NULL, lat REAL NOT NULL, lon REAL NOT NULL, radius_m INTEGER NOT NULL, created INTEGER NOT NULL);
