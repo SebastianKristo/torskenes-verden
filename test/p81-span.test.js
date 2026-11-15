@@ -23,9 +23,9 @@ process.env.APP_PASSWORD_HASH = hashPassword('testpassord1');
 
 const { default: app } = await import('../server/index.js');
 const auth = await import('../server/auth/session.js');
-const L = await import('../server/skjold76/leds78.js');
-const LAY = await import('../server/skjold76/layout81.js');
-const ST = await import('../server/skjold76/store.js');
+const L = await import('../server/skjold/leds.js');
+const LAY = await import('../server/skjold/layout.js');
+const ST = await import('../server/skjold/store.js');
 const { db } = await import('../server/db.js');
 
 const wled = { state: { on: true, bri: 77, ps: -1, seg: [{ id: 0, start: 0, stop: 300, len: 300, fx: 0, col: [[255, 160, 0]], frz: false }] }, posts: [] };

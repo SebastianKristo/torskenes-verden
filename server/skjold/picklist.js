@@ -7,11 +7,11 @@
 //   POST /picklist/take {items?:[{partId, qty}]} → {ok, parts:[{partId, name, before, after, low}], undo:[{partId, set}], skipped?}
 //        uten items: hele den lagrede lista. Trekker fra (aldri under 0) med historikk. Tømmer ikke lista.
 //   POST /picklist/undo {undo:[{partId, set}]} → {ok, parts:[…]}
-//   Prompt 82: take med {projectId|projectName} sjekker ut til et produkt (projects82.js) → også {project, usages, undoToken};
+//   Prompt 82: take med {projectId|projectName} sjekker ut til et produkt (projects.js) → også {project, usages, undoToken};
 //        undo med {undoToken} angrer utsjekkingen (legger tilbake og sletter usage-radene).
 import { kv } from '../db.js';
 import { partRow76, updatePart76, addHistory76 } from './store.js';
-import { checkout82, undoCheckout82, rateOk82 } from './projects82.js'; // prompt 82: «Ta ut av lager» til et produkt
+import { checkout82, undoCheckout82, rateOk82 } from './projects.js'; // prompt 82: «Ta ut av lager» til et produkt
 
 const NS = { 'Cache-Control': 'no-store' };
 const KEY = 'skjold79_picklist';

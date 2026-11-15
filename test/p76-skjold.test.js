@@ -27,10 +27,10 @@ test.after(() => { globalThis.fetch = realFetch; try { rmSync(DATA, { recursive:
 const { default: app } = await import('../server/index.js');
 const { db } = await import('../server/db.js');
 const auth = await import('../server/auth/session.js');
-const ST = await import('../server/skjold76/store.js');
-const IMG = await import('../server/skjold76/images.js');
-const CSV = await import('../server/skjold76/csv.js');
-const GL = await import('../server/skjold76/glimt.js');
+const ST = await import('../server/skjold/store.js');
+const IMG = await import('../server/skjold/images.js');
+const CSV = await import('../server/skjold/csv.js');
+const GL = await import('../server/skjold/glimt.js');
 const P = await import('../server/glimt/plan.js');
 const { magick50 } = await import('../server/img50.js');
 
@@ -439,7 +439,7 @@ test('etiketter: HTML per skuff med «4-2», innhold og QR til /#/skjold/skap/<i
   assert.ok((only.text.match(/<svg /g) ?? []).length < 60);
   assert.equal((await B(`/api/skjold/labels?cabinet=${CAB.id}`)).status, 404);
   // QR-en peker til /#/skjold/skap/<id>/4-2 på serverens adresse (samme matrise som qrSvg av URL-en).
-  const { labelsHtml76 } = await import('../server/skjold76/labels.js');
+  const { labelsHtml76 } = await import('../server/skjold/labels.js');
   const { qrSvg } = await import('../server/auth/totp.js');
   const html = labelsHtml76(ME, [ST.cabinetRow76(ME, CAB.id)], 'https://hjem.example');
   const want = qrSvg(`https://hjem.example/#/skjold/skap/${CAB.id}/4-2`, { px: 64, dark: '#000', light: '#fff' }).replace('QR-kode for 2FA', 'QR til skuff 4-2');

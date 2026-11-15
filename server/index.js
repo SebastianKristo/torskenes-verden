@@ -47,7 +47,7 @@ import smbBrowseApi from './smb-browse.js'; // prompt 30: SMB-veiviser (finn ser
 import { mountGlimt } from './glimt/index.js'; // Glimt: motoren, minnet, brief, innstillingene og /api/assist (server/glimt/)
 import { recipesApi61 } from './recipes61/api.js'; // prompt 61 (prompt 49 del 1): Glimt lærer (oppskrifter)
 import { schedulesApi62 } from './sched62/api.js'; // prompt 62 (prompt 49 del 2): planlagte oppgaver («Faste oppgaver»)
-import { skjoldApi76 } from './skjold76/api.js'; // prompt 76 (SKJSRV): Skjold Lab – sorteringsskapet (deler, skuffer, bilder, søk)
+import { mountSkjold } from './skjold/index.js'; // Skjold Lab: sorteringsskapet (deler, skuffer, bilder, søk, LED, produkter)
 import { startScheduler62 } from './sched62/scheduler.js'; // prompt 62: scheduler (tikk hvert minutt, ikke i test)
 import { startMem63 } from './glimt/memory/nightly.js'; // prompt 63: systemoppgaven kl. 03 (ikke i test); morgenvarselet går via server/jobs/
 import { qualityApi64 } from './quality64/api.js'; // prompt 64 (prompt 49 del 7): kvalitet over tid (nattlig eval, ukerapport)
@@ -616,7 +616,7 @@ app.route('/api/glimt/mai17', mai17Api); // prompt 41: 17. mai (program, design-
 mountVaer(app); // server/vaer/: /api/weather/here, /week-summary, /place, ski i /full og /layout (før mobileApi sine værruter)
 app.route('/api/glimt/recipes', recipesApi61); // prompt 61: oppskrifter som lærer av bruk (per bruker)
 app.route('/api/glimt/schedules', schedulesApi62); // prompt 62: planlagte oppgaver (per bruker)
-app.route('/api/skjold', skjoldApi76); // prompt 76 (SKJSRV): Skjold Lab (per bruker, sesjon eller app-token)
+mountSkjold(app); // server/skjold/: /api/skjold (per bruker, sesjon eller app-token)
 startScheduler62();
 startMem63();
 startQuality64();

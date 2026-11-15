@@ -1,5 +1,5 @@
 // Prompt 82 (CHKSRV): Produkter/prosjekter i Skjold Lab – sjekk ut deler til noe man bygger (og sjekk inn igjen).
-// Alt per bruker, under /api/skjold med samme auth som resten (montert fra api.js).
+// Alt per bruker, under /api/skjold med samme auth som resten (montert fra routes.js).
 //
 //   GET    /projects → [{id, name, status, notes, parts, units, cost, updated}]  (aktive først, så ferdige; nyeste endring først)
 //   POST   /projects {name, notes?} · PATCH /projects/:id {name?, notes?, status?} · DELETE /projects/:id (409 med aktive utsjekkinger)

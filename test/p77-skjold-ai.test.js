@@ -28,9 +28,9 @@ test.after(() => { globalThis.fetch = realFetch; try { rmSync(DATA, { recursive:
 const { default: app } = await import('../server/index.js');
 const { db } = await import('../server/db.js');
 const auth = await import('../server/auth/session.js');
-const D = await import('../server/skjold76/decode77.js');
-const AI = await import('../server/skjold76/ai77.js');
-const IM = await import('../server/skjold76/images77.js');
+const D = await import('../server/skjold/decode.js');
+const AI = await import('../server/skjold/ai.js');
+const IM = await import('../server/skjold/image-search.js');
 const N73 = await import('../server/news73.js');
 const RUN = await import('../server/ai-run.js');
 const { updateConfig } = await import('../server/settings.js');

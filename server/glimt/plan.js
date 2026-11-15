@@ -24,7 +24,7 @@ const INTENT_OF_TOOL = { 'calendar.create': 'create', 'tasks.create': 'create', 
 // Prompt 62 (del 2): lokal plan for planlagte oppgaver (sched62/tools.js registrerer seg; modellen nede / hint til planleggeren).
 let localHook62 = null;
 export const registerLocalPlan62 = (fn) => { localHook62 = typeof fn === 'function' ? fn : null; };
-// Prompt 76: Skjold Lab («hvor er M3-skruene?») – server/skjold76/glimt.js registrerer seg; får brukeren (sjekker treff i egne deler).
+// Prompt 76: Skjold Lab («hvor er M3-skruene?») – server/skjold/glimt.js registrerer seg; får brukeren (sjekker treff i egne deler).
 let localHook76 = null;
 export const registerLocalPlan76 = (fn) => { localHook76 = typeof fn === 'function' ? fn : null; };
 export const intentOfCalls45 = (calls) => (calls.length > 1 ? 'multi' : INTENT_OF_TOOL[calls[0]?.tool] ?? 'chat');

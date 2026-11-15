@@ -3,10 +3,10 @@
 // et_u, nb, venstre_rader, brede_h). Modellen teller rader nedenfra (enhet u = 0 nederst); her er rad 1 øverst.
 //   GET  /presets                       → [{id, name, options:{etasjer:[4,5]}, description}]
 //   POST /cabinets/:id/preset {id, etasjer} → oppdatert skap (409 med deler utenfor nye grenser)
-//   PUT  /cabinets/:id/drawers/:row/:col {spanR, spanC} (håndteres i api.js, logikken er her: setSpan81)
+//   PUT  /cabinets/:id/drawers/:row/:col {spanR, spanC} (håndteres i routes.js, logikken er her: setSpan81)
 import { db, q } from '../db.js';
 import { cabinetRow76, drawerRows76, setDrawer76, updatePart76, addHistory76, locSnap76, partRow76, reindexDrawer76, updateCabinet76, coverMap81, drawerRow76, now76 } from './store.js';
-import { ledsOf78 } from './leds78.js';
+import { ledsOf78 } from './leds.js';
 
 
 const deling = (n, m, i) => Math.floor(n / m) + (i < n % m ? 1 : 0);

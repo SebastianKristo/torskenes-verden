@@ -6,7 +6,7 @@ import { TOOLS45, TOOL45 } from '../glimt/tools.js';
 import { SENTENCES46, FAIL_TEXT46 } from '../glimt/tools-weather-subs.js';
 import { registerLocalPlan76 } from '../glimt/plan.js';
 import { ensureUser76, searchParts76, partOut76, cabCache76, normSpec76, words76, locationOf76 } from './store.js';
-import { usedIn82 } from './projects82.js'; // prompt 82: «hvor er ESP32-ene brukt?»
+import { usedIn82 } from './projects.js'; // prompt 82: «hvor er ESP32-ene brukt?»
 
 const S = (props, required = []) => ({ type: 'object', properties: props, required, additionalProperties: false });
 export const OPEN76 = (id = null) => (id ? { web: `/#/skjold/del/${id}`, deepLink: `finanshub://skjold/del/${id}` } : { web: '/#/skjold', deepLink: 'finanshub://skjold' });

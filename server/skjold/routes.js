@@ -11,15 +11,15 @@ import {
   partRow76, partOut76, cabCache76, insertPart76, updatePart76, softDelete76, restore76, purge76, addHistory76, historyOf76, historyAll76, locSnap76,
   searchParts76, setFileUrl76, thumbOf76, shortLoc76, defaultLabel76, indexPart76, now76, words76, coverMap81, coverOf81, spanText81,
 } from './store.js';
-import { presetsMount81, presetLayout81, applyPreset81, setSpan81, clampSpans81, drawerCount81 } from './layout81.js'; // prompt 81 (SPANSRV): sammenslåtte skuffer
+import { presetsMount81, presetLayout81, applyPreset81, setSpan81, clampSpans81, drawerCount81 } from './layout.js'; // prompt 81 (SPANSRV): sammenslåtte skuffer
 import { saveImage76, removeImage76, readImage76, signedUrl76, signedUser76, MAX_IN76 } from './images.js';
 import { exportCsv76, importCsv76 } from './csv.js';
 import { labelsHtml76 } from './labels.js';
-import { mountAi77, undoEdit77 } from './ai77.js'; // prompt 77 (SKJAISRV): forslag, bildesøk, Rydd opp
-import { thumbUser77 } from './images77.js';
-import { mountLeds78, ledsBrief78 } from './leds78.js'; // prompt 78 (LEDSRV): LED over hver skuff (WLED)
-import { mountPicklist79 } from './picklist79.js'; // prompt 79 (PICKSRV): plukkliste
-import { mountProjects82, usedIn82 } from './projects82.js'; // prompt 82 (CHKSRV): produkter – sjekk ut/inn deler
+import { mountAi77, undoEdit77 } from './ai.js'; // prompt 77 (SKJAISRV): forslag, bildesøk, Rydd opp
+import { thumbUser77 } from './image-search.js';
+import { mountLeds78, ledsBrief78 } from './leds.js'; // prompt 78 (LEDSRV): LED over hver skuff (WLED)
+import { mountPicklist79 } from './picklist.js'; // prompt 79 (PICKSRV): plukkliste
+import { mountProjects82, usedIn82 } from './projects.js'; // prompt 82 (CHKSRV): produkter – sjekk ut/inn deler
 
 setFileUrl76((name, user) => signedUrl76(name, user));
 const NS = { 'Cache-Control': 'no-store' };

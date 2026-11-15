@@ -21,7 +21,7 @@ CREATE INDEX IF NOT EXISTS skj_history_part ON skj_history(user_id, part_id, at)
 CREATE TABLE IF NOT EXISTS skj_files (name TEXT PRIMARY KEY, user_id TEXT NOT NULL, created INTEGER NOT NULL);
 CREATE VIRTUAL TABLE IF NOT EXISTS skj_parts_fts USING fts5(name, body, part_id UNINDEXED, user_id UNINDEXED, tokenize = 'unicode61 remove_diacritics 2');`);
 
-// Prompt 81 (SPANSRV): sammenslåtte skuffer. Ankeret (øverste venstre rute) dekker span_r × span_c ruter. Se layout81.js.
+// Prompt 81 (SPANSRV): sammenslåtte skuffer. Ankeret (øverste venstre rute) dekker span_r × span_c ruter. Se layout.js.
 for (const c of ['span_r', 'span_c']) if (!q('PRAGMA table_info(skj_drawers)').all().some((x) => x.name === c)) db.exec(`ALTER TABLE skj_drawers ADD COLUMN ${c} INTEGER NOT NULL DEFAULT 1`);
 
 export const KINDS76 = ['kjøpt', '3d'];
@@ -147,7 +147,7 @@ export function locationOf76(row, cabCache = null) {
 }
 
 let fileUrl = (name) => `/api/skjold/files/${name}`;
-/** api.js setter signerte URL-er per bruker (bilder i appene uten header). */
+/** routes.js setter signerte URL-er per bruker (bilder i appene uten header). */
 export const setFileUrl76 = (fn) => { fileUrl = fn; };
 export const thumbOf76 = (name) => String(name).replace(/\.(jpg|png|webp)$/, '_t.$1');
 

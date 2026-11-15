@@ -1,18 +1,18 @@
 // Prompt 77 (SKJAISRV): Skjold Lab med smarte forslag – AI-oppgaven «skj» (Skjold Lab · gjenkjenning) via ai-run.
 //   POST /ai/suggest            → forslag (navn, kategori, specs, tags, sikkerhet, begrunnelse) fra bilde og/eller tekst
-//   POST /ai/images {q}         → bildekandidater (images77.js), GET /ai/thumb/:id (proxy), POST /parts/:id/photos/from-search {id}
+//   POST /ai/images {q}         → bildekandidater (image-search.js), GET /ai/thumb/:id (proxy), POST /parts/:id/photos/from-search {id}
 //   POST /ai/tidy               → «Rydd opp» som bakgrunnsjobb (én del om gangen, viker for Glimt: ai-run background → gate-prioritet)
 //   GET  /ai/tidy/:jobId · POST /ai/tidy/:jobId/apply {partIds} · POST /ai/tidy/:jobId/skip {partIds} · DELETE /ai/tidy/:jobId
 //   GET|PUT /ai/settings        → {webImages, autoSuggestOnPhoto}
 // Modellen svarer strukturert (JSON-schema, tenker aldri) og valideres i kode; ugyldig svar gir ett nytt forsøk, så norsk feil.
-// Verdier fra fargebånd og koder regnes ut i decode77.js – modellen oppgir bare fargene/koden. Ingenting endres uten godkjenning.
+// Verdier fra fargebånd og koder regnes ut i decode.js – modellen oppgir bare fargene/koden. Ingenting endres uten godkjenning.
 import { randomBytes } from 'node:crypto';
 import { db, q, kv } from '../db.js';
 import { partRow76, partOut76, updatePart76, addHistory76 } from './store.js';
 import { readImage76, saveImage76 } from './images.js';
 import { magick50, toJpeg50 } from '../img50.js';
-import { finalize77, heuristic77, colorOf77, DEFAULT_CATEGORIES77 } from './decode77.js';
-import { searchImages77, proxyImage77, downloadImage77, searxngConfigured77 } from './images77.js';
+import { finalize77, heuristic77, colorOf77, DEFAULT_CATEGORIES77 } from './decode.js';
+import { searchImages77, proxyImage77, downloadImage77, searxngConfigured77 } from './image-search.js';
 
 const NS = { 'Cache-Control': 'no-store' };
 const J = (s, d) => { if (s == null) return d; try { return JSON.parse(s) ?? d; } catch { return d; } };
@@ -267,7 +267,7 @@ export function undoEdit77(user, h) {
 
 const inflight = new Map();
 /**
- * Monterer rutene på /api/skjold (kalles fra api.js). helpers = {fileOf(c), uploadLimit}.
+ * Monterer rutene på /api/skjold (kalles fra routes.js). helpers = {fileOf(c), uploadLimit}.
  */
 export function mountAi77(app, { fileOf, uploadLimit }) {
   const err = (c, e) => c.json({ error: e.message, code: e.code ?? null }, e.status ?? 500);

@@ -22,7 +22,7 @@ process.env.APP_PASSWORD_HASH = hashPassword('testpassord1');
 
 const { default: app } = await import('../server/index.js');
 const auth = await import('../server/auth/session.js');
-const L = await import('../server/skjold76/leds78.js');
+const L = await import('../server/skjold/leds.js');
 
 /* ---------------- Mocket WLED ---------------- */
 
