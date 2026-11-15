@@ -552,22 +552,25 @@ struct FamilyEmptyShare21: View {
     @Environment(Store.self) private var store
     @Environment(\.paper) private var p
 
+    // Fase 4: systemets tomtilstand (ContentUnavailableView) med Papir-fontene og -fargene, i samme kort som før.
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 10) {
-                Image(systemName: "location.slash").font(.dyn51(size: 18, weight: .semibold)).foregroundStyle(p.mut)
+        ContentUnavailableView {
+            Label {
                 Text("Ingen deler posisjon med deg ennå").font(PF.ui(15, .semibold)).foregroundStyle(p.ink)
+            } icon: {
+                Image(systemName: "location.slash").foregroundStyle(p.mut)
             }
+        } description: {
             Text("Deling er av som standard. Når noen i familien slår på deling i appen, vises de her og på kartet.")
-                .font(PF.ui(13)).foregroundStyle(p.mut).fixedSize(horizontal: false, vertical: true)
+                .font(PF.ui(13)).foregroundStyle(p.mut)
+        } actions: {
             Button { store.paperGo("innst-fam") } label: {
-                Text("Mine delingsvalg ›").font(PF.ui(13, .semibold)).foregroundStyle(p.lab)
+                Text("Mine delingsvalg").font(PF.ui(13, .semibold)).foregroundStyle(p.lab).frame(minHeight: 44)
             }
             .buttonStyle(.plain)
-            .padding(.top, 2)
         }
-        .padding(14)
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.vertical, 4)
+        .frame(maxWidth: .infinity)
         .background(p.card, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
     }
 }

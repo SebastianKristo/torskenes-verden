@@ -40,10 +40,16 @@ struct Media44LibNoHit: View {
     let kind: String
     let q: String
 
+    // Fase 4: systemets tomtilstand for søk (ContentUnavailableView) med Papir-fontene og -fargene.
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text((kind == "series" ? "Ingen serier" : "Ingen filmer") + " i biblioteket som heter «\(q)».")
-                .font(PF.ui(14)).foregroundStyle(p.mut).fixedSize(horizontal: false, vertical: true)
+        ContentUnavailableView {
+            Label {
+                Text((kind == "series" ? "Ingen serier" : "Ingen filmer") + " i biblioteket som heter «\(q)».")
+                    .font(PF.ui(14)).foregroundStyle(p.mut)
+            } icon: {
+                Image(systemName: "magnifyingglass").foregroundStyle(p.mut)
+            }
+        } actions: {
             Button {
                 Haptics.shared.tap()
                 m.addPrefill = q
