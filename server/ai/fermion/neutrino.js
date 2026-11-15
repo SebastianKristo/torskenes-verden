@@ -1,7 +1,7 @@
 // Prompt 53 (FERMION53): Neutrino-1 8B (Fermion Research, Qwen3-8B ternær, Apache-2.0) som valgfri tekstmotor på Mac mini-en.
 // `fermion serve neutrino-8b` (OpenAI-kompatibel) bak vakten i tools/fermion/guard.py (LAN-adresse, IP-filter, nøkkel).
 //
-// Backenden «neutrino53» registreres i AI-gaten med den eksisterende registerBackend (ai-gate.js er ikke endret). Kallene går i
+// Backenden «neutrino53» registreres i AI-gaten med den eksisterende registerBackend (ai/gate.js er ikke endret). Kallene går i
 // SAMME kø som Ollama (samme instans/adresse), fordi begge kjører på Mac mini-en og deler 16 GB minne: aldri to modeller samtidig.
 // Gaten sender Ollama-formen ({messages, options}); her blir den til /v1/chat/completions (SSE) og tilbake til Ollama-biter.
 //

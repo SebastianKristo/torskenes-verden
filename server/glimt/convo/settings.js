@@ -2,7 +2,7 @@
 //   state    – samtaletilstand per samtale («og i Bergen?», «flytt den til 11», «si opp det»)
 //   entities – entitetsregisteret (personer, steder, butikker, abonnementer, faste hendelser med aliaser)
 //   choices  – oppfølgingsspørsmål med konkrete valg (knapper) og forståelse av «den første»
-// Effektiv verdi = server OG bruker (samme modell som fast59/settings.js). Serveren i kv(OWNER,'convo60'), brukeren i kv(bruker,'convo60_user').
+// Effektiv verdi = server OG bruker (samme modell som glimt/fast/settings.js). Serveren i kv(OWNER,'convo60'), brukeren i kv(bruker,'convo60_user').
 // Se $S/SERVER60-API.md §5.
 import { kv, OWNER } from '../../db.js';
 

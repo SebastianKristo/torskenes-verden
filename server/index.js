@@ -260,7 +260,7 @@ app.get('/api/cv', (c) => c.json({ cv: cvOf(), canEdit: isAdmin(sessionUser(c)) 
 
 const authed = new Hono();
 // Prompt 46 (SERVER46): app-token mot en /api-sti som ikke finnes → 404 (ikke 401 «Ikke innlogget» – den ekte årsaken til «Utlogget» i Media
-// på mobil). Ingen/ugyldig innlogging → 401 code:'HOMELAB_AUTH'. Se server/api-auth46.js.
+// på mobil). Ingen/ugyldig innlogging → 401 code:'HOMELAB_AUTH'. Se server/auth/bearer-fallthrough.js.
 authed.use('*', bearerFallthrough46(authed));
 authed.use('*', requireAuth);
 

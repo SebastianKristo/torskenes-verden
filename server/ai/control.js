@@ -27,7 +27,7 @@
 //             startedAt, ms, tokens:{in,out}, costKr, error, fallbackFrom, ref, retryable, cancellable}
 // POST /jobs/:id/cancel → {ok, status} · POST /jobs/:id/retry → {ok, jobId} · DELETE /jobs → {ok, removed} (Tøm historikk)
 // POST /queue/pause {paused} → {paused} (admin; gjelder bakgrunnsjobber, interaktive kall går alltid)
-// GET  /usage?days=1|7|30[&all=1] → se usage() i ai-run.js
+// GET  /usage?days=1|7|30[&all=1] → se usage() i ai/run.js
 // GET  /keys               → {providers:[{id, name, set, tail, source?, url?, model?, keys?, link}]}
 // PUT  /keys/:provider {key?, url?, model?} → samme (admin). key:'' fjerner. Svaret har aldri nøkkelen.
 // POST /keys/:provider/test → {ok, state, ms, model, error}

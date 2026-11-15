@@ -1,4 +1,4 @@
-// Prompt 52 (SRV52): «Nytt i versjon» som lesbare punkter. GET /api/whatsnew (qa51.js) får i tillegg:
+// Prompt 52 (SRV52): «Nytt i versjon» som lesbare punkter. GET /api/whatsnew (system/flags-crashes.js) får i tillegg:
 //   {date_label, label, heading, title (renset), points:[{title, text, more}], items (renset)}
 // Interne merknader («prompt 51», «(prompt NN)», «runde 1», «SRV52» o.l.) fjernes fra tittel og tekst; de skal ikke vises for brukeren.
 const MON = ['januar', 'februar', 'mars', 'april', 'mai', 'juni', 'juli', 'august', 'september', 'oktober', 'november', 'desember'];

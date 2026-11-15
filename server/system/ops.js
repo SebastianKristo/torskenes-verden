@@ -1,7 +1,7 @@
 // Prompt 51 (OPS51): backup og oppdateringer – restic-backup (3-2-1) med ukentlig testet gjenoppretting, staging-kanal og
 // tilbakerulling med ett trykk (updateren), og database-vedlikehold. Montert under /api/ops51. Alt er bare for admin.
 //
-// Tilgang (samme mønster som system-update.js og system-backup.js): GET virker med økt eller admin-app-token (finance:read).
+// Tilgang (samme mønster som system/update.js og system/backup.js): GET virker med økt eller admin-app-token (finance:read).
 // Endringer krever økt i nettleseren ELLER admin-token med finance:write, og JSON-kropp. Å vise repo-passordet krever passordet
 // på nytt. Staging/bytt/tilbakerulling krever passord bare når «Krev passord for å oppdatere» er på (som /api/system/update).
 //

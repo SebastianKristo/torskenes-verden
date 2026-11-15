@@ -3,7 +3,7 @@
 //   mountAiEngines(app) – motorene på Mac mini-en (bare admin): Neutrino/Phonon, NB-Whisper, VoxCPM (+ /api/voices57) og oMLX
 //   mountAi(app)        – /api/ai: AI-minnet, ✦ Glimt anbefaler modeller (ai39.js) og AI-kontrollen, i den rekkefølgen
 //   mountChat(app)      – /api/chat: Claude-importen før Chat
-// Alle AI-kall går fortsatt gjennom server/ai-gate.js og server/ai-run.js (kø, ruting, nøkler); filene her bruker dem.
+// Alle AI-kall går fortsatt gjennom server/ai/gate.js og server/ai/run.js (kø, ruting, nøkler); filene her bruker dem.
 // Filene:
 //   control.js        – AI-kontrollen (/api/ai: status, modeller, ruting, jobber, forbruk, nøkler, selvtest) og POST /api/glimt
 //   memory.js         – AI-minnet per bruker (/api/ai/memory)

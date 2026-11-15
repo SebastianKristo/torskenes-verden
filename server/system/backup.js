@@ -1,6 +1,6 @@
 // Prompt 29 (SERVER29): systembackup (Innstillinger → Backup). Montert under /api/backup. Serveroppsett: bare admin.
 //
-// Tilgang (samme mønster som system-update.js):
+// Tilgang (samme mønster som system/update.js):
 //   - Alle ruter krever admin. GET virker med app-token (finance:read).
 //   - Endringer, kjøring, nøkkel og gjenoppretting: økt i nettleseren ELLER app-token med finance:write fra en admin.
 //     Med økt kreves JSON-kropp (en vanlig skjema-POST fra et annet nettsted kan ikke sette den).

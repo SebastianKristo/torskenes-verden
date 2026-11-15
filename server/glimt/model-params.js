@@ -1,4 +1,4 @@
-// Prompt 47 (GLIMT47): én sentral config for modellparametre per steg. ai-run.js slår opp her når et kall har `step`
+// Prompt 47 (GLIMT47): én sentral config for modellparametre per steg. ai/run.js slår opp her når et kall har `step`
 // (eller når oppgaven har et standardsteg, f.eks. brief), og num_ctx sendes ALLTID eksplisitt – vi stoler aldri på
 // Ollamas standard. Verdiene følger tabellen i oppdraget («Gjør Glimt faktisk forståelsesfull»):
 //

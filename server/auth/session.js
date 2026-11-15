@@ -352,7 +352,7 @@ export function destroySession(c) {
 }
 
 export function sessionUser(c) {
-  // Prompt 44 (WEB44): «Logg inn som» på web – admin44.js har byttet forespørselen til X-tokenet (hl_imp) og fjernet admin-økten.
+  // Prompt 44 (WEB44): «Logg inn som» på web – system/admin.js har byttet forespørselen til X-tokenet (hl_imp) og fjernet admin-økten.
   // Da er X «innlogget» også for rutene som ellers bare godtar økt (/api/state, /api/ui …).
   const imp = c.get?.('impersonation');
   if (imp?.target) return imp.target;

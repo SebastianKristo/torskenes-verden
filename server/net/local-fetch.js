@@ -134,7 +134,7 @@ const NATIVE = /internal\/deps\/undici/;
 async function pinned() {
   const f = globalThis.fetch;
   let under = f;
-  while (under?.__obs51 && under.__orig51) under = under.__orig51; // målingen i obs51/trace.js ligger utenpå
+  while (under?.__obs51 && under.__orig51) under = under.__orig51; // målingen i system/observability/trace.js ligger utenpå
   let native = false;
   try { native = NATIVE.test(Function.prototype.toString.call(under)); } catch { native = false; }
   return native ? (await news73()).safeFetch73 : f;

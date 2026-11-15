@@ -181,7 +181,7 @@ const qi = (n) => `"${String(n).replace(/"/g, '""')}"`;
 
 /**
  * Krypterer lagrede verdier på nytt med dagens nøkler der de bare kan leses med en eldre, kjent nøkkel.
- * Kjøres i transaksjonen til gjenopprettingen (system-backup.js) eller fra scripts/rekey-secrets.js.
+ * Kjøres i transaksjonen til gjenopprettingen (system/backup.js) eller fra scripts/rekey-secrets.js.
  *   conn       better-sqlite3-tilkoblingen (main)
  *   tables     Set med tabeller som skal gås gjennom (null = alle)
  *   kvFilter   (key) → bool: hvilke kv-rader (null = alle)

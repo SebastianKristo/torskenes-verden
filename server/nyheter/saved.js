@@ -23,7 +23,7 @@
 // image/jpeg|png|gif|webp|avif for bilder – ikke SVG).
 //
 // Lagret HTML bygges av tekstblokker (alt escapes) og saneres i tillegg ved visning (sanitize73): ingen script, iframe, on*-attributter,
-// style eller javascript:-lenker. Glimt/felles søk: webx51.js leser news73_saved (type 'article').
+// style eller javascript:-lenker. Glimt/felles søk: system/search.js leser news73_saved (type 'article').
 import { Hono } from 'hono';
 import { Agent, fetch as undiciFetch } from 'undici';
 import { lookup as dnsLookupCb } from 'node:dns';

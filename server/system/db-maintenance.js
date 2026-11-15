@@ -1,7 +1,7 @@
-// Prompt 51 (OPS51): database-vedlikehold. Bare admin (rutene ligger i ops51.js).
+// Prompt 51 (OPS51): database-vedlikehold. Bare admin (rutene ligger i system/ops.js).
 //
 // - WAL-sjekk: journal_mode, størrelse på -wal-fila, sjekkpunkt (PASSIVE ved lesing, TRUNCATE ved vedlikehold).
-// - Ukentlig vedlikehold (søndag 04:40 Europe/Oslo, se ops51.js): PRAGMA integrity_check, wal_checkpoint(TRUNCATE), VACUUM og
+// - Ukentlig vedlikehold (søndag 04:40 Europe/Oslo, se system/ops.js): PRAGMA integrity_check, wal_checkpoint(TRUNCATE), VACUUM og
 //   PRAGMA optimize. Resultatet lagres i ops51_maint (nyeste 100).
 // - Størrelse per tabell: dbstat (better-sqlite3 har DBSTAT_VTAB), ellers antall rader.
 // - Migrasjonslogg: ved hver oppstart sammenlignes skjemaet (tabeller og kolonner) med forrige øyeblikksbilde. Endringer
@@ -173,7 +173,7 @@ const hashOf = (s) => createHash('sha256').update(JSON.stringify(s)).digest('hex
 
 /**
  * Sammenligner skjemaet med forrige øyeblikksbilde (kv ops51_schema) og logger endringen. → raden som ble lagt til, eller null.
- * version/dbSchema: versjonen som kjører (CHANGELOG) og DB_SCHEMA fra system-update.js.
+ * version/dbSchema: versjonen som kjører (CHANGELOG) og DB_SCHEMA fra system/update.js.
  */
 export function recordMigrations51({ version = null, dbSchema = null, now = Date.now() } = {}) {
   const snap = schemaSnapshot51(), hash = hashOf(snap);

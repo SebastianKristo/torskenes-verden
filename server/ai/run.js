@@ -24,8 +24,8 @@
 //    params:{keepAlive:'5m'|'30m'|-1|0, numCtx:8192|32768|131072, temperature:0.7, parallel:1–4, minConf:70–95,
 //            prompt 43: ollamaConcurrency:1–4, modelKeepAlive:{'qwen3:8b':'15m', …}, loadTimeout (kald modell, 90 s), firstTokenTimeout (30 s),
 //            idleTimeout (30 s tekst), idleTimeoutImage (60 s bilde)},
-// Prompt 44: alle AI-kall går gjennom server/ai-gate.js (to backends: Ollama direkte og Open WebUI; ai_backend velger).
-// Prompt 43: alle Ollama-kall går gjennom server/ai-gate.js (kø, gruppering per modell, keep_alive per modell, strømming og
+// Prompt 44: alle AI-kall går gjennom server/ai/gate.js (to backends: Ollama direkte og Open WebUI; ai_backend velger).
+// Prompt 43: alle Ollama-kall går gjennom server/ai/gate.js (kø, gruppering per modell, keep_alive per modell, strømming og
 // to tidsgrenser, nye forsøk). Her er det ingen egen kø lenger.
 //    budget:{monthlyKr:0 (= ingen grense), hardStop:true, warn80:true}, cloudOn:{'gemini-2.5-flash':true, …}, migratedAt}
 import { randomUUID } from 'node:crypto';
@@ -494,7 +494,7 @@ export const jobsClear = (user) => db.prepare("DELETE FROM ai_runs WHERE user_id
 
 /* ---------------- Kø (Ollama-gaten) ---------------- */
 
-// Prompt 43: køen ligger i server/ai-gate.js. Pause (bakgrunnsjobber) og hold (selvtesten: ingen nye bakgrunnsjobber
+// Prompt 43: køen ligger i server/ai/gate.js. Pause (bakgrunnsjobber) og hold (selvtesten: ingen nye bakgrunnsjobber
 // imens) virker der; interaktive kall går foran, men går også gjennom køen (ingen slipper forbi).
 configureGate({ params: () => serverRouting().params });
 export const queueState = () => { const g = gateState(); return { active: g.running.length, waiting: g.waiting.reduce((a, x) => a + x.n, 0), paused: g.paused, hold: g.hold, gate: g }; };

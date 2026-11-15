@@ -6,7 +6,7 @@
 //   - Med OLLAMA_MAX_LOADED_MODELS=1 krangler vi ikke med visjonsmodellen: oppvarmingen venter til ingen bildejobb er i gang eller i kø
 //     (gateBusyWith59), og den startes aldri midt i en bildejobb.
 //   - keep_alive: hovedmodellen får minst 1 t (setKeepAliveHook59 i gaten), med mindre administratoren eksplisitt har valgt 0 eller «alltid».
-// Av/på: innstillingen «warm» (fast59/settings.js, admin). Av → ingen oppvarming og ingen keep_alive-gulv.
+// Av/på: innstillingen «warm» (glimt/fast/settings.js, admin). Av → ingen oppvarming og ingen keep_alive-gulv.
 import { OWNER } from '../../db.js';
 import { fastOn59 } from './settings.js';
 import { onGateJobDone59, gateBusyWith59, setKeepAliveHook59, loadedModels } from '../../ai/gate.js';

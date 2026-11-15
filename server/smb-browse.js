@@ -1,6 +1,6 @@
 // Prompt 30: SMB-veiviser («Sett opp nettverksdisk»). Montert under /api/smb. Serveroppsett: bare admin.
 //
-// Tilgang (samme mønster som system-backup.js / system-update.js):
+// Tilgang (samme mønster som system/backup.js / system/update.js):
 //   - Alle ruter er POST og krever admin: økt i nettleseren (med JSON-kropp) ELLER app-token med finance:write fra en admin.
 //   - Passordet til NAS-en sendes med hvert kall fra klienten (holdes bare i minnet i veiviseren), går til smbclient via en
 //     midlertidig auth-fil (0600, slettes etterpå) og sendes aldri ut igjen. Det lagres kryptert (setSecret) først ved /save.

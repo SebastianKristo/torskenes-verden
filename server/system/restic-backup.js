@@ -1,4 +1,4 @@
-// Prompt 51 (OPS51): restic-backup med 3-2-1 og ukentlig testet gjenoppretting. Bare admin (rutene ligger i ops51.js).
+// Prompt 51 (OPS51): restic-backup med 3-2-1 og ukentlig testet gjenoppretting. Bare admin (rutene ligger i system/ops.js).
 //
 // 3-2-1: tre kopier (dataene + to backuper), to medier (lokal disk + NAS), én utenfor huset (valgfritt: Backblaze B2, S3 eller
 // rest-server). Hvert mål er sitt eget restic-repo. restic krypterer alt (AES-256) med repo-passordet, som genereres her første

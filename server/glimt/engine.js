@@ -24,7 +24,7 @@ import { SENTENCES46, FAIL_TEXT46 } from './tools-weather-subs.js'; // prompt 46
 import { weatherCompare46 } from './weather.js';
 import { installTaskHooks46 } from '../gjoremal/glimt-wording.js';
 import { installPosterDecorator46 } from './calendar.js';
-// Prompt 59 (prompt 49 del 4): svar-cache, strømming (status + tekstbiter), parallelle verktøy – hver for seg av/på (fast59/settings.js).
+// Prompt 59 (prompt 49 del 4): svar-cache, strømming (status + tekstbiter), parallelle verktøy – hver for seg av/på (glimt/fast/settings.js).
 import { fast59 } from './fast/settings.js';
 import { cacheKindOf59, legacyKindOf59, planKey59, legacyKey59, cacheGet59, cachePut59 } from './fast/cache.js';
 import { toolStatus59, legacyStatus59, PLAN_STATUS59, ANSWER_STATUS59, CACHE_STATUS59 } from './fast/status.js';
