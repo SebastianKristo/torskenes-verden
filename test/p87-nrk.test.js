@@ -459,7 +459,7 @@ test('web: hele bredden – rutenettet fra designet, NRK øverst og Bibliotek i 
   assert.doesNotMatch(css, /\.nrk87\{[^}]*max-width/, 'ingen smal maksbredde (NRK fylte bare venstre halvdel)');
   assert.match(css, /\.nrk87 \.nrk-grid\{display:grid;grid-template-columns:repeat\(auto-fill,minmax\(150px,1fr\)\)/);
   assert.match(css, /\.nrk87 \.nrk-pl\{[^}]*aspect-ratio:2 \/ 3/);
-  assert.match(css, /--n-bl:#2b5d8a;--n-ok:#2f7a4f/);
+  assert.match(css, /--n-bl:var\(--ds-category-blue\);--n-ok:var\(--ds-category-green\)/);
   assert.match(css, /\.m43\.m70\.dk \.nrk87\{/);
   // rekkefølgen i DOM = rekkefølgen på mobil: NRK (søk) → Køen → Serier → Bibliotek → bunnlinja (prompt 88)
   assert.match(web, /\[\['form', 'full form', \[toppHtml\(\), kroppHtml\(\)\]\], \['ko', 'ko', koHtml\(\)\], \['folg', 'folg', folgerHtml\(\)\], \['lib', 'full lib', libHtml\(\)\], \['bunn', 'full bunn', bunnHtml\(\)\]\]/);

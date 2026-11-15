@@ -53,7 +53,7 @@ test('Sporing: fremdriften vises i mørk modus, og klokkeslettet kuttes ikke', (
 
 test('Familie: zoomknappene på kartet er lesbare i mørk modus', () => {
   const css = read('css/pages/familie.css');
-  assert.match(css, /html\[data-mode="dark"\] \.f50 \.leaflet-bar a \{[^}]*background-color: #211e18;[^}]*color: #f3efe6/);
+  assert.match(css, /html\[data-mode="dark"\] \.f50 \.leaflet-bar a \{[^}]*background-color: var\(--ds-surface-raised\);[^}]*color: var\(--ds-text-primary\)/); // tokens: #211e18 og #f3efe6 i Papir mørk
 });
 
 test('Gjøremål: #/gjoremal har fotovindu som #/huskeliste', () => {
