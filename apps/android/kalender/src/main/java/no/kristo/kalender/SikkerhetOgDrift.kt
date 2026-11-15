@@ -29,6 +29,7 @@ import java.net.URL
 import java.security.SecureRandom
 import java.time.Instant
 import java.time.OffsetDateTime
+import androidx.compose.ui.graphics.toArgb
 
 /*
  * Prompt 51 (KAL51): Kalender Android – ny enhet godkjennes, krasjrapporter, feature flags, «Nytt i denne versjonen».
@@ -392,7 +393,7 @@ class K51State(private val vm: KalVm) {
             seen.add(x.id); changed = true
             val text = x.device + (if (x.place.isNotBlank()) " · " + x.place else "") + ". Godkjenn eller avvis i Kalender → Innstillinger → Sikkerhet."
             val id = x.id.hashCode() and 0x7fffffff
-            val n = NotificationCompat.Builder(ctx, Kal51.CH_SEC).setSmallIcon(R.drawable.ic_kal_notif).setColor(0xFFB23A2A.toInt())
+            val n = NotificationCompat.Builder(ctx, Kal51.CH_SEC).setSmallIcon(R.drawable.ic_kal_notif).setColor(Red.toArgb())
                 .setContentTitle("Ny enhet vil logge inn").setContentText(text).setStyle(NotificationCompat.BigTextStyle().bigText(text))
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setAutoCancel(true).setContentIntent(KalNotify.openIntent(ctx, "kalender://sikkerhet", id)).build()

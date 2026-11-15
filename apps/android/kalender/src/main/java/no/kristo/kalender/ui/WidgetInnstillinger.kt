@@ -74,8 +74,8 @@ fun Widgets70Section(vm: KalVm) {
             redraw()
         }
         Column(Modifier.padding(vertical = 11.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Tx("Legg til widget", man(14.5.sp, FontWeight.Bold, k.ink))
-            Tx("Velg størrelse – telefonen spør hvor den skal ligge", man(12.sp, FontWeight.Medium, k.mut), maxLines = 2)
+            Tx("Legg til widget", man(KType.callout, FontWeight.Bold, k.ink))
+            Tx("Velg størrelse – telefonen spør hvor den skal ligge", man(KType.footnote, FontWeight.Medium, k.mut), maxLines = 2)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 PIN70.forEach { (kind, name) -> Chip(name, false, { Hap.tick(); pin70(vm, kind) }) }
             }
@@ -111,9 +111,9 @@ fun Intro70Host(vm: KalVm) {
                 .border(1.dp, k.line, RoundedCornerShape(24.dp)).tap(null) { }.padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Tx("NYTT I DENNE VERSJONEN", mono(10.5.sp, Red, .12f))
-            Tx("Kalender på hjemskjermen", news(26.sp, k.ink, 30.sp), maxLines = 2)
-            Tx("Hold inne på hjemskjermen og legg til Kalender-widgeten.", man(14.sp, FontWeight.Medium, k.ink, 20.sp), maxLines = 4)
+            Tx("NYTT I DENNE VERSJONEN", mono(KType.caption, Red, .12f))
+            Tx("Kalender på hjemskjermen", news(KType.title3, k.ink, 30.sp), maxLines = 2)
+            Tx("Hold inne på hjemskjermen og legg til Kalender-widgeten.", man(KType.callout, FontWeight.Medium, k.ink, 20.sp), maxLines = 4)
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Spacer(Modifier.weight(1f))
                 LinePill("Senere", { Hap.tick(); done() })

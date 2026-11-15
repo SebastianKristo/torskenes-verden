@@ -1,5 +1,6 @@
 package no.kristo.kalender.widget
 
+import no.kristo.kalender.ui.KType
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.content.Context
@@ -295,7 +296,7 @@ private fun base70(s: Sty70): GlanceModifier = GlanceModifier.fillMaxSize().appW
 
 /** Rund knapp (+ ‹ ›). */
 @Composable
-private fun Btn70(label: String, bg: ColorProvider, fg: ColorProvider, action: androidx.glance.action.Action, size: Dp = 30.dp, fs: TextUnit = 17.sp) =
+private fun Btn70(label: String, bg: ColorProvider, fg: ColorProvider, action: androidx.glance.action.Action, size: Dp = 30.dp, fs: TextUnit = KType.body) =
     Box(GlanceModifier.size(size).cornerRadius(size / 2).background(bg).clickable(action), contentAlignment = Alignment.Center) {
         T70(label, fs, fg, FontWeight.Medium)
     }
@@ -315,8 +316,8 @@ private fun Empty70(w: W70, s: Sty70) {
     val ctx = LocalContext.current
     val n = w.up.firstOrNull()
     Column(GlanceModifier.fillMaxWidth().clickable(open70(ctx, if (n == null) dayLink(w.T) else evLink70(n)))) {
-        T70("Ingen flere i dag", 13.sp, s.ink, FontWeight.Medium)
-        if (n != null) T70(w.dl(n.d) + " · " + n.t + " " + w.hmS(n), 11.5.sp, s.mut, maxLines = 2)
+        T70("Ingen flere i dag", KType.subheadline, s.ink, FontWeight.Medium)
+        if (n != null) T70(w.dl(n.d) + " · " + n.t + " " + w.hmS(n), KType.caption, s.mut, maxLines = 2)
     }
 }
 
@@ -334,13 +335,13 @@ private fun SmallMy70(w: W70, s: Sty70) {
     val n = w.todays.firstOrNull()
     Column(base70(s).padding(16.dp).clickable(open70(ctx, dayLink(w.T)))) {
         Box(GlanceModifier.height(26.dp).cornerRadius(13.dp).background(s.pill).padding(horizontal = 10.dp), contentAlignment = Alignment.Center) {
-            T70(cap(WD[w.T.jsDay]), 12.sp, s.ink, FontWeight.Medium)
+            T70(cap(WD[w.T.jsDay]), KType.footnote, s.ink, FontWeight.Medium)
         }
-        T70("${w.T.dayOfMonth}", 56.sp, s.ink, FontWeight.Medium, modifier = GlanceModifier.padding(top = 6.dp))
+        T70("${w.T.dayOfMonth}", 56.sp /* stor dato i 2 × 2-widgeten, over typeskjemaet */, s.ink, FontWeight.Medium, modifier = GlanceModifier.padding(top = 6.dp))
         Spacer(GlanceModifier.defaultWeight())
         if (n == null) Empty70(w, s) else Column(GlanceModifier.fillMaxWidth().clickable(open70(ctx, evLink70(n)))) {
-            T70(n.t, 13.sp, s.ink, FontWeight.Medium)
-            T70(w.wl(n), 11.5.sp, s.mut)
+            T70(n.t, KType.subheadline, s.ink, FontWeight.Medium)
+            T70(w.wl(n), KType.caption, s.mut)
         }
     }
 }
@@ -351,20 +352,20 @@ private fun SmallOneUi70(w: W70, s: Sty70) {
     val rows = w.up.take(2)
     Column(base70(s).padding(16.dp).clickable(open70(ctx, dayLink(w.T)))) {
         Row(verticalAlignment = Alignment.Bottom) {
-            T70("${w.T.dayOfMonth}", 34.sp, s.ink, FontWeight.Bold)
+            T70("${w.T.dayOfMonth}", KType.title2, s.ink, FontWeight.Bold)
             Spacer(GlanceModifier.width(6.dp))
-            T70(cap(WS[w.T.jsDay]), 13.sp, s.mut, FontWeight.Medium, modifier = GlanceModifier.padding(bottom = 4.dp))
+            T70(cap(WS[w.T.jsDay]), KType.subheadline, s.mut, FontWeight.Medium, modifier = GlanceModifier.padding(bottom = 4.dp))
         }
         Spacer(GlanceModifier.defaultWeight())
-        if (w.todays.isEmpty()) T70("Ingen flere i dag", 11.sp, s.mut, FontWeight.Medium, modifier = GlanceModifier.padding(bottom = 4.dp))
+        if (w.todays.isEmpty()) T70("Ingen flere i dag", KType.caption, s.mut, FontWeight.Medium, modifier = GlanceModifier.padding(bottom = 4.dp))
         rows.forEachIndexed { i, e ->
             if (i > 0) Spacer(GlanceModifier.height(7.dp))
             Row(GlanceModifier.fillMaxWidth().clickable(open70(ctx, evLink70(e))), verticalAlignment = Alignment.CenterVertically) {
                 Dot70(w.color(e))
                 Spacer(GlanceModifier.width(7.dp))
                 Column(GlanceModifier.defaultWeight()) {
-                    T70(e.t, 12.5.sp, s.ink, FontWeight.Bold)
-                    T70(w.wl(e), 11.sp, s.mut)
+                    T70(e.t, KType.footnote, s.ink, FontWeight.Bold)
+                    T70(w.wl(e), KType.caption, s.mut)
                 }
             }
         }
@@ -400,14 +401,14 @@ private fun WeekMy70(w: W70, s: Sty70) {
             GlanceModifier.width(76.dp).fillMaxHeight().cornerRadius(20.dp).background(s.block).clickable(open70(ctx, dayLink(w.T))),
             verticalAlignment = Alignment.CenterVertically, horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            T70(WS[w.T.jsDay].uppercase(), 11.sp, s.blockFg, FontWeight.Medium)
-            T70("${w.T.dayOfMonth}", 34.sp, s.blockFg, FontWeight.Medium)
-            T70("uke " + w.wk, 10.5.sp, s.blockFg)
+            T70(WS[w.T.jsDay].uppercase(), KType.caption, s.blockFg, FontWeight.Medium)
+            T70("${w.T.dayOfMonth}", KType.title2, s.blockFg, FontWeight.Medium)
+            T70("uke " + w.wk, KType.caption, s.blockFg)
         }
         Spacer(GlanceModifier.width(12.dp))
         Column(GlanceModifier.defaultWeight().fillMaxHeight()) {
             if (none) Box(GlanceModifier.fillMaxWidth().defaultWeight().padding(horizontal = 4.dp), contentAlignment = Alignment.Center) {
-                Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) { T70("Ingen flere i dag", 13.sp, s.ink, FontWeight.Medium) }
+                Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) { T70("Ingen flere i dag", KType.subheadline, s.ink, FontWeight.Medium) }
             }
             rows.forEachIndexed { i, e ->
                 if (i > 0 || none) Spacer(GlanceModifier.height(6.dp))
@@ -418,8 +419,8 @@ private fun WeekMy70(w: W70, s: Sty70) {
                     Stripe70(w.color(e), 22.dp)
                     Spacer(GlanceModifier.width(10.dp))
                     Column(GlanceModifier.defaultWeight()) {
-                        T70(e.t, 13.sp, s.ink, FontWeight.Medium)
-                        T70(w.wl(e), 11.sp, s.mut)
+                        T70(e.t, KType.subheadline, s.ink, FontWeight.Medium)
+                        T70(w.wl(e), KType.caption, s.mut)
                     }
                 }
             }
@@ -434,23 +435,23 @@ private fun WeekOneUi70(w: W70, s: Sty70) {
     Column(base70(s).padding(horizontal = 18.dp, vertical = 16.dp)) {
         Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Row(GlanceModifier.defaultWeight().clickable(open70(ctx, dayLink(w.T))), verticalAlignment = Alignment.CenterVertically) {
-                T70(w.longDate, 16.sp, s.ink, FontWeight.Bold)
+                T70(w.longDate, KType.body, s.ink, FontWeight.Bold)
                 Spacer(GlanceModifier.width(8.dp))
-                T70("uke " + w.wk, 11.5.sp, s.mut)
+                T70("uke " + w.wk, KType.caption, s.mut)
             }
             Btn70("+", s.btn, s.btnFg, open70(ctx, "kalender://ny"))
         }
         Spacer(GlanceModifier.height(10.dp))
-        if (rows.isEmpty() || w.todays.isEmpty()) T70("Ingen flere i dag", 12.sp, s.mut, FontWeight.Medium, modifier = GlanceModifier.padding(bottom = 6.dp))
+        if (rows.isEmpty() || w.todays.isEmpty()) T70("Ingen flere i dag", KType.footnote, s.mut, FontWeight.Medium, modifier = GlanceModifier.padding(bottom = 6.dp))
         rows.forEachIndexed { i, e ->
             if (i > 0) Spacer(GlanceModifier.height(10.dp))
             Row(GlanceModifier.fillMaxWidth().clickable(open70(ctx, evLink70(e))), verticalAlignment = Alignment.CenterVertically) {
-                T70(w.hmS(e), 12.sp, s.time, FontWeight.Bold, modifier = GlanceModifier.width(44.dp))
+                T70(w.hmS(e), KType.footnote, s.time, FontWeight.Bold, modifier = GlanceModifier.width(44.dp))
                 Dot70(w.color(e))
                 Spacer(GlanceModifier.width(10.dp))
-                T70(e.t, 13.5.sp, s.ink, FontWeight.Medium, modifier = GlanceModifier.defaultWeight())
+                T70(e.t, KType.subheadline, s.ink, FontWeight.Medium, modifier = GlanceModifier.defaultWeight())
                 Spacer(GlanceModifier.width(8.dp))
-                T70(w.dl(e.d), 11.5.sp, s.mut)
+                T70(w.dl(e.d), KType.caption, s.mut)
             }
         }
     }
@@ -482,29 +483,29 @@ internal fun Agenda70(w: W70) {
     Column(base70(s).padding(16.dp)) {
         Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Column(GlanceModifier.defaultWeight().clickable(open70(ctx, dayLink(w.T)))) {
-                T70(w.longDate, 17.sp, s.ink, FontWeight.Medium)
-                T70(w.countText, 12.sp, s.mut)
+                T70(w.longDate, KType.body, s.ink, FontWeight.Medium)
+                T70(w.countText, KType.footnote, s.mut)
             }
             Spacer(GlanceModifier.width(8.dp))
-            if (narrow) Btn70("+", s.btn, s.btnFg, open70(ctx, "kalender://ny"), 40.dp, 18.sp)
+            if (narrow) Btn70("+", s.btn, s.btnFg, open70(ctx, "kalender://ny"), 40.dp, KType.headline)
             else Row(
                 GlanceModifier.height(40.dp).cornerRadius(20.dp).background(if (s.oneUi) s.accent else s.btn)
                     .padding(start = 12.dp, end = 16.dp).clickable(open70(ctx, "kalender://ny")),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                T70("+", 18.sp, if (s.oneUi) s.accentFg else s.btnFg, FontWeight.Medium)
+                T70("+", KType.headline, if (s.oneUi) s.accentFg else s.btnFg, FontWeight.Medium)
                 Spacer(GlanceModifier.width(6.dp))
-                T70("Ny", 13.sp, if (s.oneUi) s.accentFg else s.btnFg, FontWeight.Medium)
+                T70("Ny", KType.subheadline, if (s.oneUi) s.accentFg else s.btnFg, FontWeight.Medium)
             }
         }
         Spacer(GlanceModifier.height(10.dp))
         if (gs.isEmpty()) {
-            T70("Ingenting planlagt de neste to ukene.", 13.sp, s.mut, maxLines = 2)
+            T70("Ingenting planlagt de neste to ukene.", KType.subheadline, s.mut, maxLines = 2)
             return@Column
         }
         LazyColumn(GlanceModifier.fillMaxWidth().defaultWeight()) {
             gs.forEach { g ->
-                item { T70(g.h, 11.5.sp, s.mut, FontWeight.Medium, modifier = GlanceModifier.padding(start = 4.dp, top = 4.dp, end = 4.dp, bottom = 6.dp)) }
+                item { T70(g.h, KType.caption, s.mut, FontWeight.Medium, modifier = GlanceModifier.padding(start = 4.dp, top = 4.dp, end = 4.dp, bottom = 6.dp)) }
                 g.ev.forEach { e -> item { AgendaRow70(w, s, e, narrow) } }
             }
         }
@@ -519,12 +520,12 @@ private fun AgendaRow70(w: W70, s: Sty70, e: KEv, narrow: Boolean) {
             GlanceModifier.fillMaxWidth().cornerRadius(16.dp).background(s.row).padding(horizontal = 12.dp, vertical = 6.dp).clickable(open70(ctx, evLink70(e))),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            if (!narrow) T70(w.hmS(e), 12.sp, s.ink, FontWeight.Medium, modifier = GlanceModifier.width(44.dp))
+            if (!narrow) T70(w.hmS(e), KType.footnote, s.ink, FontWeight.Medium, modifier = GlanceModifier.width(44.dp))
             Stripe70(w.color(e), 24.dp)
             Spacer(GlanceModifier.width(12.dp))
             Column(GlanceModifier.defaultWeight()) {
-                T70(e.t, 13.5.sp, s.ink, FontWeight.Medium)
-                T70(if (narrow) w.span(e) else w.place(e), 11.5.sp, s.mut)
+                T70(e.t, KType.subheadline, s.ink, FontWeight.Medium)
+                T70(if (narrow) w.span(e) else w.place(e), KType.caption, s.mut)
             }
         }
     }
@@ -572,10 +573,10 @@ private fun Month70(w: W70, off: Int) {
     val tFg = if (s.oneUi) s.accentFg else s.blockFg
     Column(base70(s).padding(horizontal = 18.dp, vertical = 16.dp)) {
         Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            T70(title, 16.sp, s.ink, FontWeight.Bold, modifier = GlanceModifier.defaultWeight().clickable(open70(ctx, "kalender://mnd/$first")))
-            Btn70("‹", s.btn, s.btnFg, actionRunCallback<KalMonthNav70>(actionParametersOf(KalMonthNav70.DIR to -1)), fs = 14.sp)
+            T70(title, KType.body, s.ink, FontWeight.Bold, modifier = GlanceModifier.defaultWeight().clickable(open70(ctx, "kalender://mnd/$first")))
+            Btn70("‹", s.btn, s.btnFg, actionRunCallback<KalMonthNav70>(actionParametersOf(KalMonthNav70.DIR to -1)), fs = KType.callout)
             Spacer(GlanceModifier.width(6.dp))
-            Btn70("›", s.btn, s.btnFg, actionRunCallback<KalMonthNav70>(actionParametersOf(KalMonthNav70.DIR to 1)), fs = 14.sp)
+            Btn70("›", s.btn, s.btnFg, actionRunCallback<KalMonthNav70>(actionParametersOf(KalMonthNav70.DIR to 1)), fs = KType.callout)
             Spacer(GlanceModifier.width(6.dp))
             Btn70("+", tBg, tFg, open70(ctx, "kalender://ny"))
         }
@@ -597,7 +598,7 @@ private fun MonthGrid70(w: W70, s: Sty70, first: LocalDate, today: ColorProvider
     val letters = if (w.sun) listOf("S", "M", "T", "O", "T", "F", "L") else listOf("M", "T", "O", "T", "F", "L", "S")
     Column(GlanceModifier.fillMaxWidth()) {
         Row(GlanceModifier.fillMaxWidth().padding(bottom = 4.dp)) {
-            letters.forEach { l -> Box(GlanceModifier.defaultWeight(), contentAlignment = Alignment.Center) { T70(l, 10.5.sp, s.mut, FontWeight.Bold) } }
+            letters.forEach { l -> Box(GlanceModifier.defaultWeight(), contentAlignment = Alignment.Center) { T70(l, KType.caption, s.mut, FontWeight.Bold) } }
         }
         for (r in 0 until rows) {
             Row(GlanceModifier.fillMaxWidth()) {
@@ -616,7 +617,7 @@ private fun androidx.glance.layout.RowScope.DayCell70(w: W70, s: Sty70, d: Local
     val fg = when { isT -> todayFg; inMonth -> s.ink; else -> s.mut }
     Column(GlanceModifier.defaultWeight().height(32.dp).clickable(open70(ctx, dayLink(d))), horizontalAlignment = Alignment.CenterHorizontally) {
         Box(GlanceModifier.size(26.dp).cornerRadius(13.dp).background(if (isT) today else fixed70(0x00000000)), contentAlignment = Alignment.Center) {
-            T70("${d.dayOfMonth}", 12.5.sp, fg, if (isT) FontWeight.Bold else FontWeight.Medium)
+            T70("${d.dayOfMonth}", KType.footnote, fg, if (isT) FontWeight.Bold else FontWeight.Medium)
         }
         Spacer(GlanceModifier.height(2.dp))
         Dot70(if (isT || !inMonth) null else w.dot(d), 4.dp)
@@ -629,15 +630,15 @@ private fun Next2Box70(w: W70, s: Sty70) {
     val ctx = LocalContext.current
     val rows = w.up.take(2)
     Column(GlanceModifier.fillMaxWidth().cornerRadius(18.dp).background(s.row).padding(horizontal = 12.dp, vertical = 10.dp)) {
-        if (rows.isEmpty()) T70("Ingen flere i dag", 13.sp, s.mut, FontWeight.Medium)
+        if (rows.isEmpty()) T70("Ingen flere i dag", KType.subheadline, s.mut, FontWeight.Medium)
         rows.forEachIndexed { i, e ->
             if (i > 0) Spacer(GlanceModifier.height(6.dp))
             Row(GlanceModifier.fillMaxWidth().clickable(open70(ctx, evLink70(e))), verticalAlignment = Alignment.CenterVertically) {
                 Dot70(w.color(e))
                 Spacer(GlanceModifier.width(10.dp))
-                T70(e.t, 13.sp, s.ink, FontWeight.Medium, modifier = GlanceModifier.defaultWeight())
+                T70(e.t, KType.subheadline, s.ink, FontWeight.Medium, modifier = GlanceModifier.defaultWeight())
                 Spacer(GlanceModifier.width(8.dp))
-                T70(w.wl(e), 11.5.sp, s.mut)
+                T70(w.wl(e), KType.caption, s.mut)
             }
         }
     }

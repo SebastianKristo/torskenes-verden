@@ -41,7 +41,6 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import no.kristo.kalender.Green
@@ -56,12 +55,14 @@ import no.kristo.kalender.undo70
 import no.kristo.kalender.week70
 import org.json.JSONObject
 import java.time.LocalDate
+import no.kristo.kalender.ui.designsystem.DsPalette
+import no.kristo.felles.tid.OsloDato
 
 /*
  * Prompt 70 (GLIMTCAL70): kort C i Glimt-panelet – «✓ LAGT INN», fargestrek + tittel, «tor 17. des · 17:30–20:15 · Colosseum Kino ·
  * med pappa», piller: kalender ▾ (lista folder seg ut i kortet, 44 dp rader) · Vis i uka · Angre (10 s). Spørsmål med knapper.
  */
-private fun hexK70(s: String): Color = s.removePrefix("#").takeIf { it.length == 6 }?.toLongOrNull(16)?.let { Color(0xFF000000 or it) } ?: Color(0xFF7A7468)
+private fun hexK70(s: String): Color = s.removePrefix("#").takeIf { it.length == 6 }?.toLongOrNull(16)?.let { Color(0xFF000000 or it) } ?: DsPalette.Category.neutral
 
 @Composable
 internal fun KalCal70Card(vm: KalVm, json: JSONObject) {
@@ -84,25 +85,25 @@ internal fun KalCal70Card(vm: KalVm, json: JSONObject) {
         }
     }
     val scope = rememberCoroutineScope()
-    val green = if (k.dark) Color(0xFF8FD4A8) else Green
+    val green = k.ds.success
     Column(
         Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(if (k.dark) k.card else k.bg).border(1.dp, k.line2, RoundedCornerShape(20.dp)).padding(14.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         if (undone) {
-            Tx("↶ ANGRET", mono(10.5.sp, k.mut, .12f))
-            Tx("«${c.title}» er fjernet fra kalenderen.", man(13.5.sp, FontWeight.Medium, k.mut), maxLines = 3)
+            Tx("↶ ANGRET", mono(KType.caption, k.mut, .12f))
+            Tx("«${c.title}» er fjernet fra kalenderen.", man(KType.subheadline, FontWeight.Medium, k.mut), maxLines = 3)
             return@Column
         }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Box(Modifier.size(18.dp).clip(CircleShape).background(Green), contentAlignment = Alignment.Center) { Tx("✓", man(11.sp, FontWeight.Bold, Color.White)) }
-            Tx("LAGT INN", mono(10.5.sp, green, .12f))
+            Box(Modifier.size(18.dp).clip(CircleShape).background(Green), contentAlignment = Alignment.Center) { Tx("✓", man(KType.caption, FontWeight.Bold, Color.White)) }
+            Tx("LAGT INN", mono(KType.caption, green, .12f))
         }
         Row(Modifier.height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.width(4.dp).fillMaxHeight().clip(RoundedCornerShape(2.dp)).background(hexK70(c.calColor)))
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Tx(c.title, news(19.sp, k.ink), maxLines = 2)
-                Tx(c.line, man(12.5.sp, FontWeight.Medium, k.mut), maxLines = 3)
+                Tx(c.title, news(KType.headline, k.ink), maxLines = 2)
+                Tx(c.line, man(KType.footnote, FontWeight.Medium, k.mut), maxLines = 3)
             }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -112,24 +113,24 @@ internal fun KalCal70Card(vm: KalVm, json: JSONObject) {
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp),
             ) {
                 Box(Modifier.size(9.dp).clip(CircleShape).background(hexK70(c.calColor)))
-                Tx(c.calName, man(12.5.sp, FontWeight.SemiBold, k.ink))
-                Tx("▾", man(12.sp, FontWeight.SemiBold, k.mut), Modifier.rotate(if (open) 180f else 0f))
+                Tx(c.calName, man(KType.footnote, FontWeight.SemiBold, k.ink))
+                Tx("▾", man(KType.footnote, FontWeight.SemiBold, k.mut), Modifier.rotate(if (open) 180f else 0f))
             }
             Box(
                 Modifier.height(34.dp).clip(CircleShape).background(k.card).border(1.dp, k.line, CircleShape).tap("Vis i uka") { vm.week70(c.date) }.padding(horizontal = 12.dp),
                 contentAlignment = Alignment.Center,
-            ) { Tx("Vis i uka", man(12.5.sp, FontWeight.SemiBold, k.ink)) }
+            ) { Tx("Vis i uka", man(KType.footnote, FontWeight.SemiBold, k.ink)) }
             if (left > 0) Box(
                 Modifier.height(34.dp).clip(CircleShape).background(k.card).border(1.dp, k.line, CircleShape)
                     .tap("Angre, $left sekunder igjen") {
                         if (!busy) { busy = true; err = ""; scope.launch { val e = vm.undo70(c); if (e == null) undone = true else err = e; busy = false } }
                     }.padding(horizontal = 12.dp),
                 contentAlignment = Alignment.Center,
-            ) { Tx("Angre", man(12.5.sp, FontWeight.SemiBold, k.ink)) }
+            ) { Tx("Angre", man(KType.footnote, FontWeight.SemiBold, k.ink)) }
         }
         AnimatedVisibility(open, enter = fadeIn() + expandVertically(), exit = fadeOut() + shrinkVertically()) {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Tx("LEGG I", mono(10.sp, k.mut, .12f))
+                Tx("LEGG I", mono(KType.caption, k.mut, .12f))
                 c.calendars.forEach { x ->
                     K70Row(x, x.id == c.calId, green) {
                         if (busy) return@K70Row
@@ -145,8 +146,8 @@ internal fun KalCal70Card(vm: KalVm, json: JSONObject) {
                 }
             }
         }
-        if (err.isNotBlank()) Tx(err, man(12.5.sp, FontWeight.SemiBold, Red), maxLines = 3)
-        else if (note.isNotBlank()) Tx(note, man(12.5.sp, FontWeight.SemiBold, green))
+        if (err.isNotBlank()) Tx(err, man(KType.footnote, FontWeight.SemiBold, Red), maxLines = 3)
+        else if (note.isNotBlank()) Tx(note, man(KType.footnote, FontWeight.SemiBold, green))
     }
 }
 
@@ -160,10 +161,10 @@ private fun K70Row(x: K70Cal, on: Boolean, green: Color, onClick: () -> Unit) {
     ) {
         Box(Modifier.size(11.dp).clip(CircleShape).background(hexK70(x.color)))
         Column(Modifier.weight(1f)) {
-            Tx(x.name, man(14.sp, FontWeight.SemiBold, k.ink))
-            if (x.sub.isNotBlank()) Tx(x.sub, man(11.5.sp, FontWeight.Medium, k.mut))
+            Tx(x.name, man(KType.callout, FontWeight.SemiBold, k.ink))
+            if (x.sub.isNotBlank()) Tx(x.sub, man(KType.caption, FontWeight.Medium, k.mut))
         }
-        Tx(if (on) "✓" else "", man(14.sp, FontWeight.Bold, green))
+        Tx(if (on) "✓" else "", man(KType.callout, FontWeight.Bold, green))
     }
 }
 
@@ -175,7 +176,7 @@ internal fun KalCal70Ask(vm: KalVm, ask: JSONObject) {
     val key = ask.toString()
     var gone by remember(key) { mutableStateOf(false) }
     var dateFor by remember(key) { mutableStateOf("") }
-    var day by remember(key) { mutableStateOf(LocalDate.now()) }
+    var day by remember(key) { mutableStateOf(OsloDato.iDag()) }
     if (gone) return
     val field = ask.optString("field")
     val text = ask.optString("text")
@@ -196,20 +197,20 @@ internal fun KalCal70Ask(vm: KalVm, ask: JSONObject) {
                         }
                     }.padding(horizontal = 13.dp, vertical = 8.dp),
                     contentAlignment = Alignment.Center,
-                ) { Tx(label, man(13.sp, FontWeight.SemiBold, k.ink)) }
+                ) { Tx(label, man(KType.subheadline, FontWeight.SemiBold, k.ink)) }
             }
         }
         if (dateFor.isNotBlank()) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            val today = LocalDate.now()
+            val today = OsloDato.iDag()
             val wd = listOf("man", "tir", "ons", "tor", "fre", "lør", "søn")[day.dayOfWeek.value - 1]
             val mn = listOf("jan", "feb", "mar", "apr", "mai", "jun", "jul", "aug", "sep", "okt", "nov", "des")[day.monthValue - 1]
             listOf("«" to -7L, "‹" to -1L).forEach { (s, d) -> K70Step(s) { if (!day.plusDays(d).isBefore(today)) day = day.plusDays(d) } }
-            Tx("$wd ${day.dayOfMonth}. $mn${if (day.year != today.year) " ${day.year}" else ""}", man(13.5.sp, FontWeight.Bold, k.ink))
+            Tx("$wd ${day.dayOfMonth}. $mn${if (day.year != today.year) " ${day.year}" else ""}", man(KType.subheadline, FontWeight.Bold, k.ink))
             listOf("›" to 1L, "»" to 7L).forEach { (s, d) -> K70Step(s) { day = day.plusDays(d) } }
             InkPill("Legg inn", {
                 gone = true
                 vm.answer70(dateFor.replace("{dato}", "%02d.%02d.%04d".format(day.dayOfMonth, day.monthValue, day.year)), null)
-            }, h = 36.dp, padH = 14.dp, fs = 13.sp)
+            }, h = 36.dp, padH = 14.dp, fs = KType.subheadline)
         }
     }
 }
@@ -219,6 +220,6 @@ private fun K70Step(s: String, onClick: () -> Unit) {
     val k = LocalK.current
     val label = when (s) { "«" -> "En uke tilbake"; "‹" -> "En dag tilbake"; "›" -> "En dag fram"; else -> "En uke fram" }
     Box(Modifier.size(36.dp).clip(CircleShape).border(1.dp, k.line, CircleShape).tap(label, onClick = onClick), contentAlignment = Alignment.Center) {
-        Tx(s, man(15.sp, FontWeight.Bold, k.ink))
+        Tx(s, man(KType.callout, FontWeight.Bold, k.ink))
     }
 }

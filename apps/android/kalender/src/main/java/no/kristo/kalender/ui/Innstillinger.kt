@@ -63,7 +63,6 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import no.kristo.kalender.Hap
 import no.kristo.kalender.KCal
 import no.kristo.kalender.KREMS
@@ -104,7 +103,7 @@ fun SettingsPage35(vm: KalVm) {
     Column(Modifier.fillMaxSize().background(k.bg).tap(null) {}) {
         Spacer(Modifier.windowInsetsTopHeight(WindowInsets.statusBars))
         Row(Modifier.fillMaxWidth().padding(start = 18.dp, end = 18.dp, top = 8.dp, bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-            Tx("Innstillinger", news(32.sp, k.ink), Modifier.weight(1f))
+            Tx("Innstillinger", news(KType.title2, k.ink), Modifier.weight(1f))
             InkPill("Ferdig", { vm.closeSettings() })
         }
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -143,7 +142,7 @@ fun SettingsPage35(vm: KalVm) {
                     val on = vm.th == key
                     Box(Modifier.weight(1f).height(36.dp).then(if (on) Modifier.shadow(1.5.dp, RoundedCornerShape(50)) else Modifier).clip(RoundedCornerShape(50))
                         .background(if (on) k.card else Color.Transparent).tap(n, Role.RadioButton) { vm.setTheme(key) }, contentAlignment = Alignment.Center) {
-                        Tx(n, man(12.5.sp, FontWeight.Bold, if (on) k.ink else k.mut))
+                        Tx(n, man(KType.footnote, FontWeight.Bold, if (on) k.ink else k.mut))
                     }
                 }
             }
@@ -192,14 +191,14 @@ fun SettingsPage35(vm: KalVm) {
             Label("KONTO", Modifier.padding(top = 4.dp))
             val s = vm.session
             if (s != null) Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Tx(s.name.ifBlank { s.username }, man(14.5.sp, FontWeight.Bold, k.ink))
-                Tx(s.server.substringAfter("://") + if (s.via == "homelab") " · via Homelab-appen" else "", man(12.sp, FontWeight.Medium, k.mut), maxLines = 2)
-                vm.syncErr?.let { Tx(it, man(12.sp, FontWeight.Medium, k.acc), maxLines = 3) }
+                Tx(s.name.ifBlank { s.username }, man(KType.callout, FontWeight.Bold, k.ink))
+                Tx(s.server.substringAfter("://") + if (s.via == "homelab") " · via Homelab-appen" else "", man(KType.footnote, FontWeight.Medium, k.mut), maxLines = 2)
+                vm.syncErr?.let { Tx(it, man(KType.footnote, FontWeight.Medium, k.acc), maxLines = 3) }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 LinePill(if (vm.syncing) "Henter …" else "Oppdater", { Hap.tick(); vm.refresh() })
             }
-            Tx("Kalender 1.0 · synket med Homelab " + syncAgo35(vm.data.at), man(12.sp, FontWeight.Medium, k.mut2).copy(textAlign = TextAlign.Center), Modifier.fillMaxWidth().padding(top = 8.dp))
+            Tx("Kalender 1.0 · synket med Homelab " + syncAgo35(vm.data.at), man(KType.footnote, FontWeight.Medium, k.mut2).copy(textAlign = TextAlign.Center), Modifier.fillMaxWidth().padding(top = 8.dp))
             Spacer(Modifier.height(30.dp).windowInsetsPadding(WindowInsets.navigationBars))
         }
     }
@@ -221,15 +220,15 @@ private fun Seg35(n: String, sub: String, opts: List<Pair<String, String>>, cur:
     val k = LocalK.current
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Tx(n, man(13.5.sp, FontWeight.Bold, k.ink), Modifier.weight(1f))
-            if (sub.isNotEmpty()) Tx(sub, man(12.sp, FontWeight.Medium, k.mut))
+            Tx(n, man(KType.subheadline, FontWeight.Bold, k.ink), Modifier.weight(1f))
+            if (sub.isNotEmpty()) Tx(sub, man(KType.footnote, FontWeight.Medium, k.mut))
         }
         Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(50)).background(k.chip).padding(3.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
             opts.forEach { (v, l) ->
                 val on = v == cur
                 Box(Modifier.weight(1f).height(36.dp).then(if (on) Modifier.shadow(1.5.dp, RoundedCornerShape(50)) else Modifier).clip(RoundedCornerShape(50))
                     .background(if (on) k.card else Color.Transparent).tap(l, Role.RadioButton) { if (!on) onPick(v) }.padding(horizontal = 4.dp), contentAlignment = Alignment.Center) {
-                    Tx(l, man(12.sp, FontWeight.Bold, if (on) k.ink else k.mut))
+                    Tx(l, man(KType.footnote, FontWeight.Bold, if (on) k.ink else k.mut))
                 }
             }
         }
@@ -244,10 +243,10 @@ private fun LinkRow35(n: String, sub: String, onClick: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
-            Tx(n, man(14.5.sp, FontWeight.Bold, k.ink))
-            Tx(sub, man(12.sp, FontWeight.Medium, k.mut), maxLines = 2)
+            Tx(n, man(KType.callout, FontWeight.Bold, k.ink))
+            Tx(sub, man(KType.footnote, FontWeight.Medium, k.mut), maxLines = 2)
         }
-        Tx("›", man(16.sp, FontWeight.Bold, k.mut))
+        Chevron(k.mut)
     }
 }
 
@@ -271,5 +270,5 @@ fun DefCal46(vm: KalVm) {
             }, dot = c.col)
         }
     }
-    Tx("Nye hendelser fra «+», rask time og Glimt havner her, med mindre du nevner en annen kalender.", man(12.sp, FontWeight.Medium, k.mut), maxLines = 3)
+    Tx("Nye hendelser fra «+», rask time og Glimt havner her, med mindre du nevner en annen kalender.", man(KType.footnote, FontWeight.Medium, k.mut), maxLines = 3)
 }

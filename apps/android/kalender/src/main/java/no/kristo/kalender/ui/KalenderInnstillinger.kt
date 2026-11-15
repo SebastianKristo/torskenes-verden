@@ -60,7 +60,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
 import no.kristo.kalender.Hap
@@ -356,15 +355,15 @@ fun Cals39Page(vm: KalVm) {
         Spacer(Modifier.windowInsetsTopHeight(WindowInsets.statusBars))
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 18.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                Tx(if (vm.setOn) "‹ Innstillinger" else "‹ Kalender", man(15.sp, FontWeight.SemiBold, k.ink), Modifier.weight(1f).heightIn(min = 44.dp).tap("Tilbake") { st.close() }.padding(top = 12.dp))
+                Tx(if (vm.setOn) "‹ Innstillinger" else "‹ Kalender", man(KType.callout, FontWeight.SemiBold, k.ink), Modifier.weight(1f).heightIn(min = 44.dp).tap("Tilbake") { st.close() }.padding(top = 12.dp))
                 InkPill("Ferdig", { st.close() })
             }
-            Tx("Kalendere", news(34.sp, k.ink))
+            Tx("Kalendere", news(KType.title2, k.ink))
             val mt = st.migText
             if (mt.isNotEmpty()) Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(k.card).padding(horizontal = 14.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Tx(mt, man(13.sp, FontWeight.Medium, k.ink), Modifier.weight(1f), maxLines = 3)
-                if (Kal39.migration.canUndo) Tx("Angre", man(13.sp, FontWeight.Bold, Red), Modifier.tap("Angre") { st.undoMig() }.padding(8.dp))
-                Tx("×", man(17.sp, FontWeight.Bold, k.mut), Modifier.tap("Lukk") { st.dismissMig() }.padding(8.dp))
+                Tx(mt, man(KType.subheadline, FontWeight.Medium, k.ink), Modifier.weight(1f), maxLines = 3)
+                if (Kal39.migration.canUndo) Tx("Angre", man(KType.subheadline, FontWeight.Bold, Red), Modifier.tap("Angre") { st.undoMig() }.padding(8.dp))
+                Box(Modifier.size(48.dp).tap("Lukk") { st.dismissMig() }, contentAlignment = Alignment.Center) { Svg(Ic.CLOSE, 14.dp, k.mut, 2.4f) }
             }
             Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(k.card).padding(horizontal = 14.dp, vertical = 2.dp)) {
                 vm.cals.forEachIndexed { i, c -> CalRow39(vm, c, i == 0) }
@@ -375,14 +374,14 @@ fun Cals39Page(vm: KalVm) {
                         cornerRadius = androidx.compose.ui.geometry.CornerRadius(size.height / 2))
                 }.tap("Legg til kalender") { st.openAdd() },
                 contentAlignment = Alignment.Center,
-            ) { Tx("+ Legg til kalender", man(15.sp, FontWeight.Bold, k.ink)) }
+            ) { Tx("+ Legg til kalender", man(KType.callout, FontWeight.Bold, k.ink)) }
             Column(Modifier.padding(horizontal = 6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Tx("Trykk på fargen for å vise eller skjule. Trykk på navnet for å redigere.", man(12.5.sp, FontWeight.Medium, k.mut2), maxLines = 3)
+                Tx("Trykk på fargen for å vise eller skjule. Trykk på navnet for å redigere.", man(KType.footnote, FontWeight.Medium, k.mut2), maxLines = 3)
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Tx(st.syncText() + " · ", man(12.5.sp, FontWeight.Medium, k.mut2))
-                    Tx(if (vm.syncing) "Synker …" else "Synk nå", man(12.5.sp, FontWeight.Bold, Red), Modifier.tap("Synk nå") { Hap.tick(); vm.refresh() })
+                    Tx(st.syncText() + " · ", man(KType.footnote, FontWeight.Medium, k.mut2))
+                    Tx(if (vm.syncing) "Synker …" else "Synk nå", man(KType.footnote, FontWeight.Bold, Red), Modifier.tap("Synk nå") { Hap.tick(); vm.refresh() })
                 }
-                vm.syncErr?.let { Tx(it, man(12.sp, FontWeight.Medium, k.acc), maxLines = 3) }
+                vm.syncErr?.let { Tx(it, man(KType.footnote, FontWeight.Medium, k.acc), maxLines = 3) }
             }
             Spacer(Modifier.height(24.dp))
             Spacer(Modifier.windowInsetsBottomHeight(WindowInsets.navigationBars))
@@ -393,10 +392,10 @@ fun Cals39Page(vm: KalVm) {
 @Composable
 fun Badge39(badge: String) {
     val k = LocalK.current
-    val fg = when (badge) { "GOOGLE" -> if (k.dark) Color(0xFF9CC2EE) else Color(0xFF2B5D8A); "URL" -> if (k.dark) Color(0xFF8FD4A8) else Color(0xFF2F7A4F); else -> k.mut }
-    val bg = when (badge) { "GOOGLE" -> Color(0x1F4285F4); "URL" -> Color(0x1F2F7A4F); else -> k.chip }
+    val fg = when (badge) { "GOOGLE" -> k.ds.info; "URL" -> k.ds.success; else -> k.mut }
+    val bg = when (badge) { "GOOGLE" -> k.ds.info.copy(alpha = .12f); "URL" -> k.ds.successSoft; else -> k.chip }
     Box(Modifier.clip(RoundedCornerShape(5.dp)).background(bg).padding(horizontal = 6.dp, vertical = 2.dp)) {
-        Tx(badge, mono(10.sp, fg, .06f).copy(fontWeight = FontWeight.Bold))
+        Tx(badge, mono(KType.caption, fg, .06f).copy(fontWeight = FontWeight.Bold))
     }
 }
 
@@ -414,19 +413,19 @@ private fun CalRow39(vm: KalVm, c: KCal, first: Boolean) {
     ) {
         Box(Modifier.size(34.dp, 44.dp).tap(if (on) "Skjul ${c.n}" else "Vis ${c.n}", Role.Checkbox) { vm.calEd = false; vm.toggleCal(c) }, contentAlignment = Alignment.Center) {
             Box(Modifier.size(26.dp).clip(RoundedCornerShape(8.dp)).background(if (on) c.col else Color.Transparent).border(2.dp, c.col, RoundedCornerShape(8.dp)), contentAlignment = Alignment.Center) {
-                if (on) Tx("✓", man(13.sp, FontWeight.Bold, Color.White))
+                if (on) Tx("✓", man(KType.subheadline, FontWeight.Bold, Color.White))
             }
         }
         Row(Modifier.weight(1f).tap("Rediger ${c.n}") { vm.k39.openEdit(c) }, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Tx(c.n, man(16.sp, FontWeight.Bold, k.ink))
+                Tx(c.n, man(KType.body, FontWeight.Bold, k.ink))
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     Badge39(c.p39?.badge?.ifEmpty { "EGEN" } ?: "EGEN")
-                    Tx(sub, man(12.5.sp, FontWeight.Medium, if (bad) k.acc else k.mut))
+                    Tx(sub, man(KType.footnote, FontWeight.Medium, if (bad) k.acc else k.mut))
                 }
             }
-            Tx((c.count ?: 0).toString(), mono(12.sp, k.mut2))
-            Tx("›", man(18.sp, FontWeight.Medium, k.mut2))
+            Tx((c.count ?: 0).toString(), mono(KType.footnote, k.mut2))
+            Chevron(k.mut2, 16.dp)
         }
     }
 }
@@ -445,24 +444,24 @@ fun CalEdit39Page(vm: KalVm, c: KCal) {
         Spacer(Modifier.windowInsetsTopHeight(WindowInsets.statusBars))
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                Tx("‹ Kalendere", man(15.sp, FontWeight.SemiBold, k.ink), Modifier.weight(1f).heightIn(min = 44.dp).tap("Tilbake") { st.closeEdit() }.padding(top = 12.dp))
+                BackLink("Kalendere", k.ink, man(KType.callout, FontWeight.SemiBold, k.ink), Modifier.weight(1f).padding(top = 12.dp)) { st.closeEdit() }
                 InkPill(if (st.busy) "Lagrer …" else "Lagre", { if (!st.busy) st.save(c) }, enabled = !st.busy)
             }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Box(Modifier.size(44.dp).clip(RoundedCornerShape(14.dp)).background(Color(d.c)))
                 Column {
-                    Tx(Kal39.kicker(c), mono(10.5.sp, Red, .12f))
-                    Tx(d.name.ifBlank { c.n }, news(30.sp, k.ink))
+                    Tx(Kal39.kicker(c), mono(KType.caption, Red, .12f))
+                    Tx(d.name.ifBlank { c.n }, news(KType.title2, k.ink))
                 }
             }
             Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(k.card).padding(horizontal = 14.dp, vertical = 4.dp)) {
                 Row(Modifier.fillMaxWidth().heightIn(min = 52.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Tx("Navn", man(15.sp, FontWeight.Medium, k.ink), Modifier.width(80.dp))
+                    Tx("Navn", man(KType.callout, FontWeight.Medium, k.ink), Modifier.width(80.dp))
                     BasicTextField(d.name, { st.draft = d.copy(name = it) }, Modifier.weight(1f), singleLine = true, cursorBrush = SolidColor(Red),
-                        textStyle = man(15.sp, FontWeight.Bold, k.ink).copy(textAlign = TextAlign.End))
+                        textStyle = man(KType.callout, FontWeight.Bold, k.ink).copy(textAlign = TextAlign.End))
                 }
                 Column(Modifier.fillMaxWidth().drawBehind { drawLine(k.line2, Offset(0f, 0f), Offset(size.width, 0f), 1.dp.toPx()) }.padding(vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Tx("Farge", man(15.sp, FontWeight.Medium, k.ink))
+                    Tx("Farge", man(KType.callout, FontWeight.Medium, k.ink))
                     Swatches39(d.c) { st.draft = d.copy(c = it) }
                 }
             }
@@ -503,10 +502,10 @@ fun CalEdit39Page(vm: KalVm, c: KCal) {
             }
             if (badge == "URL") Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Box(Modifier.weight(1f).height(40.dp).clip(RoundedCornerShape(20.dp)).background(k.card).tap("Lim inn ny URL") { st.pasteUrl(c, clip.getText()?.text) }, contentAlignment = Alignment.Center) {
-                    Tx("Lim inn ny URL", man(13.sp, FontWeight.Bold, k.ink))
+                    Tx("Lim inn ny URL", man(KType.subheadline, FontWeight.Bold, k.ink))
                 }
                 Box(Modifier.weight(1f).height(40.dp).clip(RoundedCornerShape(20.dp)).background(k.card).tap("Oppdater nå") { st.refreshCal(c) }, contentAlignment = Alignment.Center) {
-                    Tx("↻ Oppdater nå", man(13.sp, FontWeight.Bold, k.ink))
+                    Tx("↻ Oppdater nå", man(KType.subheadline, FontWeight.Bold, k.ink))
                 }
             }
             Label("VIS OG VARSLE", Modifier.padding(horizontal = 6.dp))
@@ -516,15 +515,15 @@ fun CalEdit39Page(vm: KalVm, c: KCal) {
                 TogRow39("Varsel", Kal39.notifyText(c), d.notify) { st.draft = d.copy(notify = !d.notify) }
                 if (role == "s") TogRow39("Farge per fag", "Hvert fag får sin farge", d.fag) { st.draft = d.copy(fag = !d.fag) }
             }
-            st.err?.let { Tx(it, man(12.5.sp, FontWeight.Medium, k.acc), maxLines = 4) }
+            st.err?.let { Tx(it, man(KType.footnote, FontWeight.Medium, k.acc), maxLines = 4) }
             if (Kal39.canRemove(c)) {
                 if (st.confirmDel) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally), verticalAlignment = Alignment.CenterVertically) {
-                    Tx("Fjerne «${c.n}»?", man(13.5.sp, FontWeight.Bold, k.ink))
+                    Tx("Fjerne «${c.n}»?", man(KType.subheadline, FontWeight.Bold, k.ink))
                     LinePill("Avbryt", { st.confirmDel = false })
                     Box(Modifier.height(36.dp).clip(RoundedCornerShape(50)).background(Red).tap("Fjern") { vm.removeCal(c); st.closeEdit() }.padding(horizontal = 16.dp), contentAlignment = Alignment.Center) {
-                        Tx("Fjern", man(13.5.sp, FontWeight.Bold, Color.White))
+                        Tx("Fjern", man(KType.subheadline, FontWeight.Bold, Color.White))
                     }
-                } else Tx("Fjern kalenderen", man(14.sp, FontWeight.Bold, Red), Modifier.align(Alignment.CenterHorizontally).tap("Fjern kalenderen") { Hap.tick(); st.confirmDel = true }.padding(10.dp))
+                } else Tx("Fjern kalenderen", man(KType.callout, FontWeight.Bold, Red), Modifier.align(Alignment.CenterHorizontally).tap("Fjern kalenderen") { Hap.tick(); st.confirmDel = true }.padding(10.dp))
             }
             Spacer(Modifier.height(24.dp))
             Spacer(Modifier.windowInsetsBottomHeight(WindowInsets.navigationBars))
@@ -553,8 +552,8 @@ private fun SrcRow39(key: String, v: String, first: Boolean = false, mono: Boole
             .then(if (onClick != null) Modifier.tap(key) { Hap.tick(); onClick() } else Modifier),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Tx(key, man(15.sp, FontWeight.Medium, k.ink))
-        Tx(v, (if (mono) mono(13.sp, k.ink) else man(14.sp, FontWeight.SemiBold, if (link) Red else k.ink)).copy(textAlign = TextAlign.End), Modifier.weight(1f).padding(start = 8.dp), maxLines = 1)
+        Tx(key, man(KType.callout, FontWeight.Medium, k.ink))
+        Tx(v, (if (mono) mono(KType.subheadline, k.ink) else man(KType.callout, FontWeight.SemiBold, if (link) Red else k.ink)).copy(textAlign = TextAlign.End), Modifier.weight(1f).padding(start = 8.dp), maxLines = 1)
     }
 }
 
@@ -567,8 +566,8 @@ private fun TogRow39(n: String, sub: String, on: Boolean, first: Boolean = false
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {
-            Tx(n, man(15.sp, FontWeight.Medium, k.ink))
-            if (sub.isNotEmpty()) Tx(sub, man(12.sp, FontWeight.Medium, k.mut2))
+            Tx(n, man(KType.callout, FontWeight.Medium, k.ink))
+            if (sub.isNotEmpty()) Tx(sub, man(KType.footnote, FontWeight.Medium, k.mut2))
         }
         Toggle(on)
     }
@@ -588,24 +587,24 @@ fun CalAdd39Sheet(vm: KalVm) {
     ) {
         Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { Grip() }
         Row(verticalAlignment = Alignment.Bottom) {
-            Tx("Legg til kalender", news(28.sp, k.ink), Modifier.weight(1f))
-            Tx("Avbryt", man(15.sp, FontWeight.SemiBold, k.mut), Modifier.tap("Avbryt") { st.closeAdd() }.padding(8.dp))
+            Tx("Legg til kalender", news(KType.title2, k.ink), Modifier.weight(1f))
+            Tx("Avbryt", man(KType.callout, FontWeight.SemiBold, k.mut), Modifier.tap("Avbryt") { st.closeAdd() }.padding(8.dp))
         }
         Column(Modifier.heightIn(max = 560.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            AddOpt39("g", "Google-kalender", "Velg en kalender fra Google-kontoen din, f.eks. Personlig eller Bursdager.", "G", Color(0x244285F4), Color(0xFF2B5D8A), st.addMode == "g") { st.openGMap() }
-            AddOpt39("url", "Abonner med URL", "iCal/webcal-lenke, f.eks. timeplanen fra skolen.", "⧉", Color(0x242F7A4F), Color(0xFF2F7A4F), st.addMode == "url") { st.addMode = "url"; st.err = null }
+            AddOpt39("g", "Google-kalender", "Velg en kalender fra Google-kontoen din, f.eks. Personlig eller Bursdager.", "G", k.ds.info.copy(alpha = .14f), k.ds.info, st.addMode == "g") { st.openGMap() }
+            AddOpt39("url", "Abonner med URL", "iCal/webcal-lenke, f.eks. timeplanen fra skolen.", "⧉", k.ds.success.copy(alpha = .14f), k.ds.success, st.addMode == "url") { st.addMode = "url"; st.err = null }
             if (st.addMode == "url") Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(k.card).padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Label("ICAL-ADRESSE")
                 Box(Modifier.fillMaxWidth().height(44.dp).clip(RoundedCornerShape(12.dp)).background(k.bg).padding(horizontal = 12.dp), contentAlignment = Alignment.CenterStart) {
-                    if (st.url.isEmpty()) Tx("webcal://tp.uio.no/ical?…", mono(13.sp, k.mut2))
+                    if (st.url.isEmpty()) Tx("webcal://tp.uio.no/ical?…", mono(KType.subheadline, k.mut2))
                     BasicTextField(st.url, { st.url = it; st.preview = null }, Modifier.fillMaxWidth(), singleLine = true, cursorBrush = SolidColor(Red),
-                        textStyle = mono(13.sp, k.ink), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri))
+                        textStyle = mono(KType.subheadline, k.ink), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri))
                 }
-                Tx("Finnes i timeplanen på skolens side under «Abonner» eller «Eksporter til kalender». Lim inn, så henter vi navn og fag.", man(12.5.sp, FontWeight.Medium, k.mut), maxLines = 4)
+                Tx("Finnes i timeplanen på skolens side under «Abonner» eller «Eksporter til kalender». Lim inn, så henter vi navn og fag.", man(KType.footnote, FontWeight.Medium, k.mut), maxLines = 4)
                 st.preview?.let { p ->
                     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(k.chip).padding(10.dp)) {
-                        Tx(p.name.ifEmpty { "Kalender" }, man(14.sp, FontWeight.Bold, k.ink))
-                        Tx("${p.count} hendelser" + (if (p.subjects.isEmpty()) "" else " · " + p.subjects.take(5).joinToString(", ")), man(12.5.sp, FontWeight.Medium, k.mut), maxLines = 3)
+                        Tx(p.name.ifEmpty { "Kalender" }, man(KType.callout, FontWeight.Bold, k.ink))
+                        Tx("${p.count} hendelser" + (if (p.subjects.isEmpty()) "" else " · " + p.subjects.take(5).joinToString(", ")), man(KType.footnote, FontWeight.Medium, k.mut), maxLines = 3)
                     }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -623,23 +622,23 @@ fun CalAdd39Sheet(vm: KalVm) {
             if (st.addMode == "h") Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(k.card).padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Label("LAND")
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { Kal39.COUNTRIES.forEach { (c, n) -> Chip(n, st.country == c, { st.country = c }) } }
-                Tx("Fridager og merkedager vises som heldag. Beregnes i appen – ingen nett.", man(12.5.sp, FontWeight.Medium, k.mut), maxLines = 3)
+                Tx("Fridager og merkedager vises som heldag. Beregnes i appen – ingen nett.", man(KType.footnote, FontWeight.Medium, k.mut), maxLines = 3)
                 InkPill("Bruk ${Kal39.countryName(st.country)}", { st.useHolidays() }, h = 44.dp)
             }
             if (st.addMode == "own") Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(k.card).padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Label("EGEN KALENDER")
                 Box(Modifier.fillMaxWidth().height(44.dp).clip(RoundedCornerShape(12.dp)).background(k.bg).padding(horizontal = 12.dp), contentAlignment = Alignment.CenterStart) {
-                    if (st.ownName.isEmpty()) Tx("Navn", man(15.sp, FontWeight.Medium, k.mut2))
-                    BasicTextField(st.ownName, { st.ownName = it }, Modifier.fillMaxWidth(), singleLine = true, cursorBrush = SolidColor(Red), textStyle = man(15.sp, FontWeight.SemiBold, k.ink))
+                    if (st.ownName.isEmpty()) Tx("Navn", man(KType.callout, FontWeight.Medium, k.mut2))
+                    BasicTextField(st.ownName, { st.ownName = it }, Modifier.fillMaxWidth(), singleLine = true, cursorBrush = SolidColor(Red), textStyle = man(KType.callout, FontWeight.SemiBold, k.ink))
                 }
                 Swatches39(st.ownC) { st.ownC = it }
                 InkPill("Lag kalenderen", { st.makeOwn() }, enabled = st.ownName.isNotBlank(), h = 44.dp)
             } else Row(Modifier.fillMaxWidth().heightIn(min = 40.dp).tap("Lag en egen kalender") { Hap.tick(); st.addMode = "own" }, horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                Tx("Eller ", man(13.sp, FontWeight.Medium, k.mut2))
-                Tx("lag en egen kalender", man(13.sp, FontWeight.Bold, k.ink))
-                Tx(" som bare finnes i appen", man(13.sp, FontWeight.Medium, k.mut2))
+                Tx("Eller ", man(KType.subheadline, FontWeight.Medium, k.mut2))
+                Tx("lag en egen kalender", man(KType.subheadline, FontWeight.Bold, k.ink))
+                Tx(" som bare finnes i appen", man(KType.subheadline, FontWeight.Medium, k.mut2))
             }
-            st.err?.let { Tx(it, man(12.5.sp, FontWeight.Medium, k.acc), maxLines = 4) }
+            st.err?.let { Tx(it, man(KType.footnote, FontWeight.Medium, k.acc), maxLines = 4) }
             Spacer(Modifier.height(20.dp))
         }
         Spacer(Modifier.windowInsetsBottomHeight(WindowInsets.navigationBars))
@@ -654,12 +653,12 @@ private fun AddOpt39(key: String, n: String, sub: String, g: String, ib: Color, 
             .tap(n) { Hap.tick(); onClick() }.padding(16.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        Box(Modifier.size(44.dp).clip(RoundedCornerShape(13.dp)).background(ib), contentAlignment = Alignment.Center) { Tx(g, man(16.sp, FontWeight.ExtraBold, ic)) }
+        Box(Modifier.size(44.dp).clip(RoundedCornerShape(13.dp)).background(ib), contentAlignment = Alignment.Center) { Tx(g, man(KType.body, FontWeight.ExtraBold, ic)) }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-            Tx(n, man(16.sp, FontWeight.Bold, k.ink))
-            Tx(sub, man(13.sp, FontWeight.Medium, k.mut), maxLines = 3)
+            Tx(n, man(KType.body, FontWeight.Bold, k.ink))
+            Tx(sub, man(KType.subheadline, FontWeight.Medium, k.mut), maxLines = 3)
         }
-        Tx("›", man(18.sp, FontWeight.Medium, k.mut2))
+        Chevron(k.mut2, 16.dp)
     }
 }
 
@@ -676,29 +675,29 @@ fun GMap39Sheet(vm: KalVm) {
         Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { Grip() }
         Row(verticalAlignment = Alignment.Top) {
             Column(Modifier.weight(1f)) {
-                Tx("GOOGLE KALENDER", mono(10.5.sp, Red, .12f))
-                Tx("Hvilken kalender er hva?", news(26.sp, k.ink))
+                Tx("GOOGLE KALENDER", mono(KType.caption, Red, .12f))
+                Tx("Hvilken kalender er hva?", news(KType.title3, k.ink))
             }
-            Tx("Avbryt", man(15.sp, FontWeight.SemiBold, k.mut), Modifier.tap("Avbryt") { st.closeGMap() }.padding(8.dp))
+            Tx("Avbryt", man(KType.callout, FontWeight.SemiBold, k.mut), Modifier.tap("Avbryt") { st.closeGMap() }.padding(8.dp))
         }
         Column(Modifier.heightIn(max = 600.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             val m = st.gmap
             when {
-                m == null -> Tx("Henter Google-kalendere …", man(13.sp, FontWeight.Medium, k.mut))
+                m == null -> Tx("Henter Google-kalendere …", man(KType.subheadline, FontWeight.Medium, k.mut))
                 !m.connected -> {
-                    Tx(m.error ?: "Google er ikke koblet til ennå.", man(13.5.sp, FontWeight.Medium, k.mut), maxLines = 4)
+                    Tx(m.error ?: "Google er ikke koblet til ennå.", man(KType.subheadline, FontWeight.Medium, k.mut), maxLines = 4)
                     InkPill("Koble til Google", { vm.googleLogin() }, h = 44.dp)
                 }
                 else -> {
-                    if (m.email.isNotEmpty()) Tx(m.email, man(13.sp, FontWeight.SemiBold, k.mut))
+                    if (m.email.isNotEmpty()) Tx(m.email, man(KType.subheadline, FontWeight.SemiBold, k.mut))
                     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(k.card).padding(horizontal = 14.dp, vertical = 4.dp)) {
                         m.calendars.forEachIndexed { i, g ->
                             Column(Modifier.fillMaxWidth().drawBehind { if (i > 0) drawLine(k.line2, Offset(0f, 0f), Offset(size.width, 0f), 1.dp.toPx()) }.padding(vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                                     Box(Modifier.size(12.dp).clip(CircleShape).background(Color(g.color)))
                                     Column {
-                                        Tx(g.name, man(14.5.sp, FontWeight.Bold, k.ink))
-                                        if (g.access.isNotEmpty()) Tx(g.access, man(12.sp, FontWeight.Medium, k.mut2))
+                                        Tx(g.name, man(KType.callout, FontWeight.Bold, k.ink))
+                                        if (g.access.isNotEmpty()) Tx(g.access, man(KType.footnote, FontWeight.Medium, k.mut2))
                                     }
                                 }
                                 Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(11.dp)).background(k.chip).padding(3.dp)) {
@@ -706,7 +705,7 @@ fun GMap39Sheet(vm: KalVm) {
                                         val on = g.role == r
                                         Box(Modifier.weight(1f).height(32.dp).clip(RoundedCornerShape(8.dp)).background(if (on) (if (r == "x") k.card else k.ink) else Color.Transparent)
                                             .tap("${g.name}: $n", Role.RadioButton) { st.setRole(g.googleId, r) }, contentAlignment = Alignment.Center) {
-                                            Tx(n, man(12.5.sp, FontWeight.Bold, if (on) (if (r == "x") k.ink else k.bg) else k.mut))
+                                            Tx(n, man(KType.footnote, FontWeight.Bold, if (on) (if (r == "x") k.ink else k.bg) else k.mut))
                                         }
                                     }
                                 }
@@ -723,8 +722,8 @@ fun GMap39Sheet(vm: KalVm) {
                     Sum39(vm.cals.firstOrNull { Kal39.role(it) == "b" }?.c ?: 0xFF8A3FA0, "Bursdager", if (bn.isEmpty()) "Ingen valgt" else bn.joinToString(" + "))
                     Sum39(sk?.c ?: 0xFF2F7A4F, "Skole", if (surl.isEmpty()) "Ingen URL ennå" else "Abonnement fra " + Kal39.host(surl))
                     Sum39(hd?.c ?: 0xFFA39D90, "Helligdager", Kal39.countryName(m.country) + " · innebygd")
-                    Tx("Ikke brukt-kalendere hentes ikke. Nye hendelser du lager i appen havner i Personlig (din primære Google-kalender).", man(12.sp, FontWeight.Medium, k.mut2), maxLines = 4)
-                    st.err?.let { Tx(it, man(12.5.sp, FontWeight.Medium, k.acc), maxLines = 4) }
+                    Tx("Ikke brukt-kalendere hentes ikke. Nye hendelser du lager i appen havner i Personlig (din primære Google-kalender).", man(KType.footnote, FontWeight.Medium, k.mut2), maxLines = 4)
+                    st.err?.let { Tx(it, man(KType.footnote, FontWeight.Medium, k.acc), maxLines = 4) }
                     InkPill(if (st.busy) "Lagrer …" else "Lagre", { if (!st.busy) st.saveGMap() }, enabled = !st.busy, h = 44.dp)
                 }
             }
@@ -740,8 +739,8 @@ private fun Sum39(c: Long, n: String, s: String) {
     Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(k.card).padding(12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         Box(Modifier.padding(top = 5.dp).size(10.dp).clip(CircleShape).background(Color(c)))
         Column {
-            Tx(n, man(14.5.sp, FontWeight.Bold, k.ink))
-            Tx(s, man(12.5.sp, FontWeight.Medium, k.mut), maxLines = 3)
+            Tx(n, man(KType.callout, FontWeight.Bold, k.ink))
+            Tx(s, man(KType.footnote, FontWeight.Medium, k.mut), maxLines = 3)
         }
     }
 }

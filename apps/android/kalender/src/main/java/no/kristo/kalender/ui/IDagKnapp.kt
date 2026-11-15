@@ -73,8 +73,8 @@ fun TodayIcon44(size: Dp = 24.dp) {
     }
 }
 
-/** Rund «I dag»-knapp (44 dp) med ikonet – brukes når det er trangt i toppfeltet. */
+/** Rund «I dag»-knapp (48 dp trykkflate) med ikonet – brukes når det er trangt i toppfeltet. */
 @Composable
 fun TodayBtn44(onClick: () -> Unit) {
-    Box(Modifier.size(44.dp).tap("I dag", onClick = onClick), contentAlignment = Alignment.Center) { TodayIcon44() }
+    Box(Modifier.size(48.dp).tap("I dag", onClick = onClick), contentAlignment = Alignment.Center) { TodayIcon44() }
 }

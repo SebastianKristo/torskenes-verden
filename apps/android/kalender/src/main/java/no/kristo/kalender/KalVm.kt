@@ -10,9 +10,11 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import no.kristo.kalender.widget.KalSync
 import org.json.JSONArray
 import org.json.JSONObject
@@ -256,7 +258,8 @@ class KalVm(app: Application) : AndroidViewModel(app) {
             val t = today()
             val from = minOf(t.minusDays(42), a.withDayOfMonth(1).minusDays(7))
             val to = maxOf(t.plusDays(84), a.withDayOfMonth(1).plusMonths(1).plusDays(7))
-            val err = runCatching { KalRepo.sync(ctx, s, from, to) }.getOrElse { it.message }
+            // Fase 5: tolkingen av hendelsene og skrivingen av bufferen skjer utenfor hovedtråden (nettet var det fra før).
+            val err = runCatching { withContext(Dispatchers.Default) { KalRepo.sync(ctx, s, from, to) } }.getOrElse { it.message }
             syncing = false
             syncErr = err
             // Prompt 44: fornyelsen (Kal44.recover) kan ha lagret et nytt token eller en annen adresse.

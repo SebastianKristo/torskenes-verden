@@ -70,6 +70,7 @@ import no.kristo.kalender.KalVm
 import no.kristo.kalender.LocalK
 import no.kristo.kalender.Red
 import no.kristo.kalender.reduceMotion
+import no.kristo.kalender.KLight
 
 /* «Send testvarsel» og banneret når det kommer mens appen er åpen (prompt 41, notTest / ntBan). */
 
@@ -93,16 +94,16 @@ fun TestRow41(vm: KalVm) {
                 Svg("M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15zM10 20a2 2 0 0 0 4 0", 17.dp, Color.White, 2.2f)
             }
             Column(Modifier.weight(1f)) {
-                Tx("Send testvarsel", man(14.5.sp, FontWeight.Bold, k.ink))
-                Tx("Kommer om 5 sekunder · lås skjermen for å se det", man(12.5.sp, FontWeight.Medium, k.mut), maxLines = 2)
+                Tx("Send testvarsel", man(KType.callout, FontWeight.Bold, k.ink))
+                Tx("Kommer om 5 sekunder · lås skjermen for å se det", man(KType.footnote, FontWeight.Medium, k.mut), maxLines = 2)
             }
-            Tx("Test", man(13.sp, FontWeight.Bold, Red))
+            Tx("Test", man(KType.subheadline, FontWeight.Bold, Red))
         }
         if (s.denied) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Tx("Varsler er slått av for Kalender", man(13.sp, FontWeight.SemiBold, k.acc), Modifier.weight(1f), maxLines = 2)
+            Tx("Varsler er slått av for Kalender", man(KType.subheadline, FontWeight.SemiBold, k.acc), Modifier.weight(1f), maxLines = 2)
             LinePill("Åpne Innstillinger", { s.openNotifSettings() }, h = 32.dp)
         }
-        if (s.pushText.isNotEmpty()) Tx(s.pushText, man(12.5.sp, FontWeight.Medium, k.mut), maxLines = 2)
+        if (s.pushText.isNotEmpty()) Tx(s.pushText, man(KType.footnote, FontWeight.Medium, k.mut), maxLines = 2)
     }
 }
 
@@ -112,18 +113,18 @@ fun TestBanner41(vm: KalVm) {
     if (!vm.k41.banner) return
     Row(
         Modifier.windowInsetsPadding(WindowInsets.statusBars).padding(start = 10.dp, end = 10.dp, top = 6.dp).fillMaxWidth()
-            .shadow(16.dp, RoundedCornerShape(22.dp)).clip(RoundedCornerShape(22.dp)).background(Color(0xF5F5F0E6)).tap("Lukk") { vm.k41.banner = false }
+            .shadow(16.dp, RoundedCornerShape(22.dp)).clip(RoundedCornerShape(22.dp)).background(KLight.bg.copy(alpha = .96f)).tap("Lukk") { vm.k41.banner = false }
             .padding(horizontal = 14.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Column(Modifier.size(36.dp).clip(RoundedCornerShape(9.dp)).background(Color(0xFFFFFDF8)), horizontalAlignment = Alignment.CenterHorizontally) {
+        Column(Modifier.size(36.dp).clip(RoundedCornerShape(9.dp)).background(KLight.card), horizontalAlignment = Alignment.CenterHorizontally) {
             Box(Modifier.fillMaxWidth().height(11.dp).background(Red))
-            Tx("${no.kristo.kalender.today().dayOfMonth}", news(18.sp, Color(0xFF1B1A17), 24.sp))
+            Tx("${no.kristo.kalender.today().dayOfMonth}", news(KType.headline, KLight.ink, 24.sp))
         }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
-            Row { Tx(Kal41.TEST_TITLE, man(12.sp, FontWeight.Bold, Color(0xFF1B1A17)), Modifier.weight(1f)); Tx("nå", man(12.sp, FontWeight.Medium, Color(0xFF6B665C))) }
-            Tx("Tannlege kl. 17:30 · om 15 min", man(14.sp, FontWeight.Bold, Color(0xFF1B1A17)))
-            Tx("Varsler virker.", man(13.sp, FontWeight.Medium, Color(0xFF3D3A33)))
+            Row { Tx(Kal41.TEST_TITLE, man(KType.footnote, FontWeight.Bold, KLight.ink), Modifier.weight(1f)); Tx("nå", man(KType.footnote, FontWeight.Medium, KLight.mut)) }
+            Tx("Tannlege kl. 17:30 · om 15 min", man(KType.callout, FontWeight.Bold, KLight.ink))
+            Tx("Varsler virker.", man(KType.subheadline, FontWeight.Medium, KLight.ink2))
         }
     }
 }

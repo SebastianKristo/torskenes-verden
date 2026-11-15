@@ -66,18 +66,18 @@ private fun News51Card(n: Kal51News, close: () -> Unit) {
             .border(1.dp, k.line, RoundedCornerShape(24.dp)).tap(null) { }.padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Tx("NYTT I DENNE VERSJONEN", mono(10.5.sp, Red, .12f))
-        Tx(n.title.ifBlank { "Versjon " + n.version }, news(26.sp, k.ink, 30.sp), maxLines = 3)
+        Tx("NYTT I DENNE VERSJONEN", mono(KType.caption, Red, .12f))
+        Tx(n.title.ifBlank { "Versjon " + n.version }, news(KType.title3, k.ink, 30.sp), maxLines = 3)
         Column(Modifier.heightIn(max = 320.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             n.items.forEach { t ->
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Tx("•", man(14.sp, FontWeight.Bold, Red))
-                    Tx(t, man(14.sp, FontWeight.Medium, k.ink, 20.sp), maxLines = 8)
+                    Tx("•", man(KType.callout, FontWeight.Bold, Red))
+                    Tx(t, man(KType.callout, FontWeight.Medium, k.ink, 20.sp), maxLines = 8)
                 }
             }
         }
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Tx(n.version + (if (n.date.isBlank()) "" else " · " + n.date), mono(11.sp, k.mut2).copy(textAlign = TextAlign.Start), Modifier.weight(1f))
+            Tx(n.version + (if (n.date.isBlank()) "" else " · " + n.date), mono(KType.caption, k.mut2).copy(textAlign = TextAlign.Start), Modifier.weight(1f))
             Spacer(Modifier.height(1.dp))
             InkPill("Fint", close)
         }

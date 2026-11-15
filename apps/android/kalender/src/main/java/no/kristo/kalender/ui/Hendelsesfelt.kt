@@ -44,7 +44,6 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import no.kristo.kalender.KAddr44
 import no.kristo.kalender.KAtt44
@@ -91,12 +90,12 @@ fun AddrField44(vm: KalVm, f: KNewForm) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Box(Modifier.fillMaxWidth().height(40.dp).drawBehind { drawLine(k.line2, Offset(0f, size.height), Offset(size.width, size.height), 1.dp.toPx()) }.padding(horizontal = 2.dp),
             contentAlignment = Alignment.CenterStart) {
-            if (f.loc.isEmpty()) Tx("Sted eller adresse", man(16.sp, FontWeight.Medium, k.mut2))
+            if (f.loc.isEmpty()) Tx("Sted eller adresse", man(KType.body, FontWeight.Medium, k.mut2))
             BasicTextField(f.loc, { v ->
                 vm.nf = vm.nf?.copy(loc = v, lat = null, lon = null)
                 if (picked) picked = false else q = v
             }, Modifier.fillMaxWidth().onFocusChanged { focused = it.isFocused; if (!it.isFocused) sug = emptyList() }.semantics { contentDescription = "Sted eller adresse" },
-                textStyle = man(16.sp, FontWeight.Medium, k.ink), singleLine = true, cursorBrush = SolidColor(Red))
+                textStyle = man(KType.body, FontWeight.Medium, k.ink), singleLine = true, cursorBrush = SolidColor(Red))
         }
         // Lista krymper aldri (egen høyde per rad, minst 48 dp) – arket ruller.
         if (focused && sug.isNotEmpty()) Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).border(1.dp, k.line, RoundedCornerShape(14.dp)).background(k.card)) {
@@ -110,13 +109,13 @@ fun AddrField44(vm: KalVm, f: KNewForm) {
                     verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Svg("M12 21s-6-5.6-6-11a6 6 0 0 1 12 0c0 5.4-6 11-6 11zM12 7.8a2.2 2.2 0 1 0 0 4.4a2.2 2.2 0 1 0 0-4.4", 16.dp, Red, 2.2f)
                     Column(Modifier.weight(1f)) {
-                        Tx(a.street, man(14.sp, FontWeight.SemiBold, k.ink))
-                        if (a.place.isNotBlank()) Tx(a.place, man(12.sp, FontWeight.Medium, k.mut))
+                        Tx(a.street, man(KType.callout, FontWeight.SemiBold, k.ink))
+                        if (a.place.isNotBlank()) Tx(a.place, man(KType.footnote, FontWeight.Medium, k.mut))
                     }
                 }
             }
             Box(Modifier.fillMaxWidth().drawBehind { drawLine(k.line, Offset(0f, 0f), Offset(size.width, 0f), 1.dp.toPx()) }.padding(horizontal = 12.dp, vertical = 6.dp)) {
-                Tx("ADRESSER FRA KARTVERKET", mono(9.5.sp, k.mut, .1f))
+                Tx("ADRESSER FRA KARTVERKET", mono(KType.caption, k.mut, .1f))
             }
         }
     }
@@ -154,33 +153,33 @@ fun People44(vm: KalVm, f: KNewForm) {
                     .border(1.dp, if (on) k.ink else k.line, RoundedCornerShape(18.dp))
                     .tap(u.name) { no.kristo.kalender.Hap.tick(); setAtt(if (on) f.att.filter { it.userId != u.id } else f.att + KAtt44(userId = u.id, email = u.email.ifBlank { null }, name = u.name)) }
                     .padding(start = 4.dp, end = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                    Box(Modifier.size(28.dp).clip(CircleShape).background(Color(u.color)), contentAlignment = Alignment.Center) { Tx(u.name.take(1).uppercase(), man(11.sp, FontWeight.ExtraBold, Color.White)) }
-                    Tx(u.name + if (on) " ✓" else "", man(12.5.sp, FontWeight.Bold, if (on) k.bg else k.ink))
+                    Box(Modifier.size(28.dp).clip(CircleShape).background(Color(u.color)), contentAlignment = Alignment.Center) { Tx(u.name.take(1).uppercase(), man(KType.caption, FontWeight.ExtraBold, Color.White)) }
+                    Tx(u.name + if (on) " ✓" else "", man(KType.footnote, FontWeight.Bold, if (on) k.bg else k.ink))
                 }
             }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.weight(1f).height(40.dp).clip(RoundedCornerShape(12.dp)).border(1.dp, k.line, RoundedCornerShape(12.dp)).padding(horizontal = 12.dp), contentAlignment = Alignment.CenterStart) {
-                if (em.isEmpty()) Tx("E-post til andre, f.eks. ola@firma.no", man(13.5.sp, FontWeight.Medium, k.mut2))
-                BasicTextField(em, { em = it }, Modifier.fillMaxWidth().semantics { contentDescription = "E-post til andre" }, textStyle = man(13.5.sp, FontWeight.Medium, k.ink), singleLine = true,
+                if (em.isEmpty()) Tx("E-post til andre, f.eks. ola@firma.no", man(KType.subheadline, FontWeight.Medium, k.mut2))
+                BasicTextField(em, { em = it }, Modifier.fillMaxWidth().semantics { contentDescription = "E-post til andre" }, textStyle = man(KType.subheadline, FontWeight.Medium, k.ink), singleLine = true,
                     cursorBrush = SolidColor(Red), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Done, autoCorrectEnabled = false),
                     keyboardActions = KeyboardActions(onDone = { add() }))
             }
-            InkPill("Legg til", { add() }, h = 40.dp, padH = 14.dp, fs = 13.sp)
+            InkPill("Legg til", { add() }, h = 40.dp, padH = 14.dp, fs = KType.subheadline)
         }
         f.att.filter { it.userId == null }.forEach { a ->
             val m = a.email ?: a.name
             Row(Modifier.fillMaxWidth().heightIn(min = 40.dp).drawBehind { drawLine(k.line, Offset(0f, size.height), Offset(size.width, size.height), 1.dp.toPx()) },
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Box(Modifier.size(28.dp).clip(CircleShape).background(k.line), contentAlignment = Alignment.Center) { Tx(m.take(1).uppercase(), man(11.sp, FontWeight.ExtraBold, k.ink)) }
-                Tx(m, man(13.5.sp, FontWeight.Medium, k.ink), Modifier.weight(1f))
-                Tx(a.label, man(11.5.sp, FontWeight.Medium, k.mut))
-                Box(Modifier.size(36.dp).tap("Fjern $m") { setAtt(f.att.filter { it.id != a.id }) }, contentAlignment = Alignment.Center) { Tx("✕", man(14.sp, FontWeight.Medium, k.mut)) }
+                Box(Modifier.size(28.dp).clip(CircleShape).background(k.line), contentAlignment = Alignment.Center) { Tx(m.take(1).uppercase(), man(KType.caption, FontWeight.ExtraBold, k.ink)) }
+                Tx(m, man(KType.subheadline, FontWeight.Medium, k.ink), Modifier.weight(1f))
+                Tx(a.label, man(KType.caption, FontWeight.Medium, k.mut))
+                Box(Modifier.size(48.dp).tap("Fjern $m") { setAtt(f.att.filter { it.id != a.id }) }, contentAlignment = Alignment.Center) { Svg(Ic.CLOSE, 14.dp, k.mut, 2.2f) }
             }
         }
         Tx(if (f.att.isEmpty()) "Velg brukere i appen, eller skriv e-posten til noen utenfor. De får en invitasjon fra $from."
             else "Brukere i appen får hendelsen i sin kalender. Andre får en vanlig e-post med invitasjon (.ics) sendt fra $from og kan svare Ja, Kanskje eller Nei.",
-            man(12.sp, FontWeight.Medium, k.mut), maxLines = 4)
+            man(KType.footnote, FontWeight.Medium, k.mut), maxLines = 4)
     }
 }
 
@@ -194,20 +193,20 @@ fun MediaInfo44(e: KEv) {
     val ctx = LocalContext.current
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Tx(if (x.movie) "Film" else "Episode", man(14.sp, FontWeight.Medium, k.mut))
-            Tx(e.note ?: "–", man(14.sp, FontWeight.Bold, k.ink))
+            Tx(if (x.movie) "Film" else "Episode", man(KType.callout, FontWeight.Medium, k.mut))
+            Tx(e.note ?: "–", man(KType.callout, FontWeight.Bold, k.ink))
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Tx("Status i Media", man(14.sp, FontWeight.Medium, k.mut))
-            Tx(x.mediaStatus, man(14.sp, FontWeight.Bold, k.ink))
+            Tx("Status i Media", man(KType.callout, FontWeight.Medium, k.mut))
+            Tx(x.mediaStatus, man(KType.callout, FontWeight.Bold, k.ink))
         }
         Box(Modifier.fillMaxWidth().height(44.dp).clip(RoundedCornerShape(22.dp)).background(k.ink).tap("Åpne i Media") {
             val link = x.link.replace("papir://", "homelab://").ifBlank { "homelab://media" }
             runCatching { ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(link)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }.onFailure {
                 runCatching { ctx.packageManager.getLaunchIntentForPackage("no.kristo.finanshub")?.let { i -> ctx.startActivity(i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } }
             }
-        }, contentAlignment = Alignment.Center) { Tx("Åpne i Media ›", man(14.sp, FontWeight.Bold, k.bg)) }
-        Tx("Fra Sonarr og Radarr · endres i Media, ikke her.", man(12.sp, FontWeight.Medium, k.mut))
+        }, contentAlignment = Alignment.Center) { Tx("Åpne i Media ›", man(KType.callout, FontWeight.Bold, k.bg)) }
+        Tx("Fra Sonarr og Radarr · endres i Media, ikke her.", man(KType.footnote, FontWeight.Medium, k.mut))
     }
 }
 
@@ -220,9 +219,9 @@ fun AttList44(att: List<KAtt44>) {
         att.forEach { a ->
             val n = a.name.ifBlank { a.email ?: "" }
             Row(Modifier.fillMaxWidth().heightIn(min = 34.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Box(Modifier.size(26.dp).clip(CircleShape).background(k.line), contentAlignment = Alignment.Center) { Tx(n.take(1).uppercase(), man(11.sp, FontWeight.ExtraBold, k.ink)) }
-                Tx(n, man(13.5.sp, FontWeight.Medium, k.ink), Modifier.weight(1f))
-                Tx(a.label, man(12.sp, FontWeight.Bold, k.mut))
+                Box(Modifier.size(26.dp).clip(CircleShape).background(k.line), contentAlignment = Alignment.Center) { Tx(n.take(1).uppercase(), man(KType.caption, FontWeight.ExtraBold, k.ink)) }
+                Tx(n, man(KType.subheadline, FontWeight.Medium, k.ink), Modifier.weight(1f))
+                Tx(a.label, man(KType.footnote, FontWeight.Bold, k.mut))
             }
         }
     }
@@ -238,8 +237,8 @@ fun NewFail46(vm: KalVm, modifier: Modifier = Modifier) {
             .border(1.dp, k.line, RoundedCornerShape(20.dp)).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Tx("Kunne ikke åpne ny hendelse", man(15.sp, FontWeight.Bold, k.ink))
-        Tx("Prøv igjen, eller skriv hendelsen i feltet nederst.", man(13.sp, FontWeight.Medium, k.mut), maxLines = 3)
+        Tx("Kunne ikke åpne ny hendelse", man(KType.callout, FontWeight.Bold, k.ink))
+        Tx("Prøv igjen, eller skriv hendelsen i feltet nederst.", man(KType.subheadline, FontWeight.Medium, k.mut), maxLines = 3)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             InkPill("Prøv igjen", { Hap.tick(); Kal46Guard.retry(vm) })
             LinePill("Lukk", { Hap.tick(); Kal46Guard.failed = null })
@@ -252,8 +251,8 @@ fun NewFail46(vm: KalVm, modifier: Modifier = Modifier) {
 fun RaskBadge46(glimt: Boolean) {
     val k = LocalK.current
     when {
-        Kal46Rask.thinking -> Tx("Glimt tenker …", man(11.sp, FontWeight.Bold, k.mut))
-        glimt -> Tx("✦ Glimt", man(11.sp, FontWeight.Bold, k.acc))
+        Kal46Rask.thinking -> Tx("Glimt tenker …", man(KType.caption, FontWeight.Bold, k.mut))
+        glimt -> Tx("✦ Glimt", man(KType.caption, FontWeight.Bold, k.acc))
     }
 }
 
@@ -261,5 +260,5 @@ fun RaskBadge46(glimt: Boolean) {
 fun RaskPlace46(loc: String, address: String) {
     val k = LocalK.current
     if (loc.isBlank()) return
-    Tx("📍 " + (if (address.isBlank()) loc else "$loc · $address"), man(12.5.sp, FontWeight.SemiBold, k.ink), maxLines = 2)
+    Tx("📍 " + (if (address.isBlank()) loc else "$loc · $address"), man(KType.footnote, FontWeight.SemiBold, k.ink), maxLines = 2)
 }

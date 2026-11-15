@@ -102,20 +102,20 @@ fun Drawer(vm: KalVm) {
                 Spacer(Modifier.windowInsetsTopHeight(WindowInsets.statusBars))
                 Spacer(Modifier.height(8.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Tx("Kalendere", news(28.sp, k.ink), Modifier.weight(1f))
+                    Tx("Kalendere", news(KType.title2, k.ink), Modifier.weight(1f))
                     InkPill("Ferdig", { Hap.dismiss(); vm.cs = false; vm.calEd = false; vm.pickC = null })
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Label("MINE KALENDERE", Modifier.weight(1f))
                     Box(Modifier.heightIn(min = 44.dp).tap(if (ed) "Ferdig med å redigere" else "Rediger") { Hap.tick(); vm.calEd = !ed; vm.pickC = null }, contentAlignment = Alignment.Center) {
-                        Tx(if (ed) "Ferdig" else "Rediger", man(13.sp, FontWeight.Bold, k.acc))
+                        Tx(if (ed) "Ferdig" else "Rediger", man(KType.subheadline, FontWeight.Bold, k.acc))
                     }
                 }
                 Column(Modifier.drawBehind { drawLine(k.line2, Offset(0f, 0f), Offset(size.width, 0f), 1.dp.toPx()) }) {
                     cals.filter { ed || vm.showHid || !it.hidMenu }.forEach { c -> CalRow35(vm, c, c.count ?: counts[c.id] ?: 0) }
                 }
                 if (!ed && hidN > 0) Box(Modifier.heightIn(min = 36.dp).tap("Vis skjulte") { Hap.tick(); vm.showHid = !vm.showHid }, contentAlignment = Alignment.CenterStart) {
-                    Tx(if (vm.showHid) "Skjul skjulte ($hidN)" else "Vis skjulte ($hidN)", man(12.5.sp, FontWeight.Bold, k.mut))
+                    Tx(if (vm.showHid) "Skjul skjulte ($hidN)" else "Vis skjulte ($hidN)", man(KType.footnote, FontWeight.Bold, k.mut))
                 }
                 // «+ Legg til kalender» (stiplet kant).
                 Box(
@@ -123,7 +123,7 @@ fun Drawer(vm: KalVm) {
                         drawRoundRect(k.line, cornerRadius = CornerRadius(22.dp.toPx()), style = Stroke(1.5.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(6.dp.toPx(), 4.dp.toPx()))))
                     }.tap("Legg til kalender") { vm.ac = null; vm.k39.openAdd() }, // Prompt 39: arket 1c
                     contentAlignment = Alignment.Center,
-                ) { Tx("+ Legg til kalender", man(13.5.sp, FontWeight.Bold, k.ink)) }
+                ) { Tx("+ Legg til kalender", man(KType.subheadline, FontWeight.Bold, k.ink)) }
                 if (vm.ac != null) AddCalPanel35(vm)
                 Spacer(Modifier.height(8.dp))
             }
@@ -135,10 +135,10 @@ fun Drawer(vm: KalVm) {
             ) {
                 Box(Modifier.size(34.dp).clip(RoundedCornerShape(10.dp)).background(k.chip), contentAlignment = Alignment.Center) { Svg(Ic.GEAR, 17.dp, k.ink, 2.1f) }
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                    Tx("Innstillinger", man(14.5.sp, FontWeight.Bold, k.ink))
-                    Tx("Visning, utseende, varsler og Glimt", man(12.sp, FontWeight.Medium, k.mut))
+                    Tx("Innstillinger", man(KType.callout, FontWeight.Bold, k.ink))
+                    Tx("Visning, utseende, varsler og Glimt", man(KType.footnote, FontWeight.Medium, k.mut))
                 }
-                Tx("›", man(16.sp, FontWeight.Bold, k.mut))
+                Chevron(k.mut)
             }
             Spacer(Modifier.height(14.dp).windowInsetsPadding(WindowInsets.navigationBars))
         }
@@ -164,25 +164,25 @@ private fun CalRow35(vm: KalVm, c: KCal, n: Int) {
             ) {
                 Column(Modifier.weight(1f).graphicsLayer { alpha = if (hm) .45f else 1f }, verticalArrangement = Arrangement.spacedBy(1.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Tx(c.n, man(14.5.sp, FontWeight.Bold, k.ink), Modifier.weight(1f, fill = false))
+                        Tx(c.n, man(KType.callout, FontWeight.Bold, k.ink), Modifier.weight(1f, fill = false))
                         c.badge?.let { b ->
-                            Box(Modifier.clip(RoundedCornerShape(50)).background(k.chip).padding(horizontal = 6.dp, vertical = 1.dp)) { Tx(b, mono(9.5.sp, k.mut).copy(fontWeight = FontWeight.Bold)) }
+                            Box(Modifier.clip(RoundedCornerShape(50)).background(k.chip).padding(horizontal = 6.dp, vertical = 1.dp)) { Tx(b, mono(KType.caption, k.mut).copy(fontWeight = FontWeight.Bold)) }
                         }
                     }
                     // Prompt 44: Media-kalenderen (Sonarr/Radarr) – «Media · N de neste 30 dagene».
                     val pre = if (c.id == "media") "Media · " else when (c.src) { "ha" -> "Home Assistant · "; "ical" -> "Abonnement · "; "google" -> "Google · "; "caldav" -> "iCloud · "; else -> "" }
-                    Tx(if (hm) "Skjult fra menyen" else "$pre$n de neste 30 dagene", man(12.sp, FontWeight.Medium, k.mut))
+                    Tx(if (hm) "Skjult fra menyen" else "$pre$n de neste 30 dagene", man(KType.footnote, FontWeight.Medium, k.mut))
                 }
                 if (!ed) Toggle(on && !hm)
             }
             if (ed) {
                 Box(Modifier.height(44.dp).tap(if (hm) "Vis i menyen" else "Skjul fra menyen") { vm.setHidMenu(c, !hm) }, contentAlignment = Alignment.Center) {
                     Box(Modifier.height(30.dp).clip(RoundedCornerShape(15.dp)).border(1.dp, k.line, RoundedCornerShape(15.dp)).padding(horizontal = 11.dp), contentAlignment = Alignment.Center) {
-                        Tx(if (hm) "Vis i menyen" else "Skjul fra menyen", man(12.sp, FontWeight.Bold, k.ink))
+                        Tx(if (hm) "Vis i menyen" else "Skjul fra menyen", man(KType.footnote, FontWeight.Bold, k.ink))
                     }
                 }
-                if (c.removable) Box(Modifier.size(36.dp, 44.dp).tap("Fjern ${c.n}") { vm.removeCal(c) }, contentAlignment = Alignment.Center) {
-                    Tx("×", man(18.sp, FontWeight.Bold, k.acc))
+                if (c.removable) Box(Modifier.size(48.dp).tap("Fjern ${c.n}") { vm.removeCal(c) }, contentAlignment = Alignment.Center) {
+                    Svg(Ic.CLOSE, 15.dp, k.acc, 2.6f)
                 }
             }
         }
@@ -214,7 +214,7 @@ private fun AddCalPanel35(vm: KalVm) {
             listOf("ics" to "iCal-lenke", "ha" to "Home Assistant", "acc" to "Konto").forEach { (t, n) ->
                 val on = x.tab == t
                 Box(Modifier.weight(1f).height(36.dp).clip(RoundedCornerShape(50)).background(if (on) k.ink else Color.Transparent).tap(n, Role.Tab) { vm.acTab(t) }, contentAlignment = Alignment.Center) {
-                    Tx(n, man(12.sp, FontWeight.Bold, if (on) k.bg else k.ink))
+                    Tx(n, man(KType.footnote, FontWeight.Bold, if (on) k.bg else k.ink))
                 }
             }
         }
@@ -222,16 +222,16 @@ private fun AddCalPanel35(vm: KalVm) {
             "ics" -> {
                 Input35(x.url, { u -> vm.ac = x.copy(url = u, name = x.name.ifBlank { icalName35(u) }) }, "webcal://… eller https://…/kalender.ics", true)
                 Input35(x.name, { vm.ac = x.copy(name = it) }, "Navn, f.eks. Fotballkamper", false)
-                Tx("Abonnerer og oppdateres hver time. Fungerer med Google, iCloud, Outlook, skole (Visma/itslearning), lag og ligaer.", man(12.sp, FontWeight.Medium, k.mut, 16.sp), maxLines = 4)
+                Tx("Abonnerer og oppdateres hver time. Fungerer med Google, iCloud, Outlook, skole (Visma/itslearning), lag og ligaer.", man(KType.footnote, FontWeight.Medium, k.mut, 16.sp), maxLines = 4)
             }
             "ha" -> {
                 val l = x.ha
                 when {
-                    x.haBusy || l == null -> Tx("Henter kalendere fra Home Assistant …", man(12.sp, FontWeight.Medium, k.mut))
-                    l.error != null -> Tx(l.error, man(12.sp, FontWeight.Medium, k.acc), maxLines = 4)
-                    !l.connected -> Tx("Home Assistant er ikke koblet til. Legg inn adresse og langtids-token i Homelab → Innstillinger → Integrasjoner.", man(12.sp, FontWeight.Medium, k.mut, 16.sp), maxLines = 4)
+                    x.haBusy || l == null -> Tx("Henter kalendere fra Home Assistant …", man(KType.footnote, FontWeight.Medium, k.mut))
+                    l.error != null -> Tx(l.error, man(KType.footnote, FontWeight.Medium, k.acc), maxLines = 4)
+                    !l.connected -> Tx("Home Assistant er ikke koblet til. Legg inn adresse og langtids-token i Homelab → Innstillinger → Integrasjoner.", man(KType.footnote, FontWeight.Medium, k.mut, 16.sp), maxLines = 4)
                     else -> {
-                        Tx("Home Assistant · ${l.entities.size} kalendere funnet", man(12.sp, FontWeight.Medium, k.mut))
+                        Tx("Home Assistant · ${l.entities.size} kalendere funnet", man(KType.footnote, FontWeight.Medium, k.mut))
                         l.entities.forEach { e ->
                             val sel = e.id in x.sel
                             Row(
@@ -240,10 +240,10 @@ private fun AddCalPanel35(vm: KalVm) {
                                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
                             ) {
                                 Column(Modifier.weight(1f)) {
-                                    Tx(e.name, man(13.5.sp, FontWeight.Bold, k.ink))
-                                    Tx(e.id + if (e.added) " · lagt til" else "", mono(11.sp, k.mut))
+                                    Tx(e.name, man(KType.subheadline, FontWeight.Bold, k.ink))
+                                    Tx(e.id + if (e.added) " · lagt til" else "", mono(KType.caption, k.mut))
                                 }
-                                Tx(if (sel || e.added) "✓" else "", man(14.sp, FontWeight.ExtraBold, k.acc))
+                                Tx(if (sel || e.added) "✓" else "", man(KType.callout, FontWeight.ExtraBold, k.acc))
                             }
                         }
                     }
@@ -256,8 +256,8 @@ private fun AddCalPanel35(vm: KalVm) {
                         Modifier.fillMaxWidth().height(44.dp).clip(RoundedCornerShape(12.dp)).background(k.card).border(1.dp, k.line, RoundedCornerShape(12.dp)).tap(n) { vm.openAccount(n) }.padding(horizontal = 14.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Tx(n, man(13.5.sp, FontWeight.Bold, k.ink), Modifier.weight(1f))
-                        Tx(sub, man(12.sp, FontWeight.SemiBold, k.mut))
+                        Tx(n, man(KType.subheadline, FontWeight.Bold, k.ink), Modifier.weight(1f))
+                        Tx(sub, man(KType.footnote, FontWeight.SemiBold, k.mut))
                     }
                 }
             }
@@ -272,7 +272,7 @@ private fun AddCalPanel35(vm: KalVm) {
             if (x.tab != "acc") {
                 val ok = !x.busy && ((x.tab == "ics" && icalOk35(x.url) && x.name.isNotBlank()) || (x.tab == "ha" && x.sel.isNotEmpty()))
                 val n = x.sel.size
-                InkPill(if (x.busy) "Legger til …" else if (x.tab == "ha") "Legg til " + (if (n > 0) "$n " else "") + (if (n == 1) "kalender" else "kalendere") else "Abonner", { if (ok) vm.acSave() }, enabled = ok, padH = 16.dp, fs = 13.sp)
+                InkPill(if (x.busy) "Legger til …" else if (x.tab == "ha") "Legg til " + (if (n > 0) "$n " else "") + (if (n == 1) "kalender" else "kalendere") else "Abonner", { if (ok) vm.acSave() }, enabled = ok, padH = 16.dp, fs = KType.subheadline)
             }
         }
     }
@@ -282,7 +282,7 @@ private fun AddCalPanel35(vm: KalVm) {
 private fun Input35(v: String, on: (String) -> Unit, hint: String, url: Boolean) {
     val k = LocalK.current
     Box(Modifier.fillMaxWidth().height(44.dp).clip(RoundedCornerShape(12.dp)).background(k.card).border(1.dp, k.line, RoundedCornerShape(12.dp)).padding(horizontal = 12.dp), contentAlignment = Alignment.CenterStart) {
-        val st = if (url) mono(13.5.sp, k.ink).copy(fontWeight = FontWeight.Medium) else man(14.sp, FontWeight.Medium, k.ink)
+        val st = if (url) mono(KType.subheadline, k.ink).copy(fontWeight = FontWeight.Medium) else man(KType.callout, FontWeight.Medium, k.ink)
         if (v.isEmpty()) Tx(hint, st.copy(color = k.mut2))
         BasicTextField(v, on, Modifier.fillMaxWidth().semantics { contentDescription = hint }, textStyle = st, singleLine = true, cursorBrush = SolidColor(Red),
             keyboardOptions = KeyboardOptions(keyboardType = if (url) KeyboardType.Uri else KeyboardType.Text, autoCorrectEnabled = !url))

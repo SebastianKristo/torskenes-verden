@@ -35,7 +35,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import kotlinx.coroutines.launch
 import no.kristo.kalender.Green
@@ -77,15 +76,15 @@ fun ServerDialog47(onClose: () -> Unit, login: Boolean = false) {
             Modifier.clip(RoundedCornerShape(24.dp)).background(k.card).verticalScroll(rememberScrollState()).padding(18.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Tx("Server", news(22.sp, k.ink))
+            Tx("Server", news(KType.title3, k.ink))
             SrvField47("EKSTERN ADRESSE", ext, { ext = it }, Kal47Srv.stdExternal(ctx), extMs) { Hap.tick(); test(true) }
             SrvField47("LOKAL ADRESSE", loc, { loc = it }, Kal47Srv.stdLocal(ctx), locMs) { Hap.tick(); test(false) }
             Tx("Hjemme (lokal adresse svarer innen 1,5 s) brukes lokal, ellers ekstern. Endringer synkes til dine andre enheter.",
-                man(12.sp, FontWeight.Medium, k.mut), maxLines = 4)
-            if (msg.isNotBlank()) Tx(msg, man(12.5.sp, FontWeight.SemiBold, k.ink2), maxLines = 3)
+                man(KType.footnote, FontWeight.Medium, k.mut), maxLines = 4)
+            if (msg.isNotBlank()) Tx(msg, man(KType.footnote, FontWeight.SemiBold, k.ink2), maxLines = 3)
             if (login) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 LinePill("Test tilkobling", { Hap.tick(); health = null; scope.launch { health = no.kristo.kalender.Kal89.health(Kal47Srv.normalize(ext)) } })
-                health?.let { (ok, t) -> Tx(t, man(12.5.sp, FontWeight.SemiBold, if (ok) Green else Red), Modifier.weight(1f), maxLines = 2) }
+                health?.let { (ok, t) -> Tx(t, man(KType.footnote, FontWeight.SemiBold, if (ok) Green else Red), Modifier.weight(1f), maxLines = 2) }
             }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 LinePill("Tilbakestill til standard", {
@@ -123,15 +122,15 @@ private fun SrvField47(label: String, v: String, on: (String) -> Unit, hint: Str
         Label(label)
         Box(Modifier.fillMaxWidth().height(48.dp).clip(RoundedCornerShape(14.dp)).background(k.bg).border(1.dp, k.line, RoundedCornerShape(14.dp)).padding(horizontal = 14.dp),
             contentAlignment = Alignment.CenterStart) {
-            if (v.isEmpty()) Tx(hint, mono(13.5.sp, k.mut2))
-            BasicTextField(v, on, Modifier.fillMaxWidth().semantics { contentDescription = label }, textStyle = mono(13.5.sp, k.ink), singleLine = true,
+            if (v.isEmpty()) Tx(hint, mono(KType.subheadline, k.mut2))
+            BasicTextField(v, on, Modifier.fillMaxWidth().semantics { contentDescription = label }, textStyle = mono(KType.subheadline, k.ink), singleLine = true,
                 cursorBrush = SolidColor(Red), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Done, autoCorrectEnabled = false))
         }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             Box(Modifier.size(7.dp).clip(CircleShape).background(col))
-            Tx(Kal47Srv.status(ms), man(12.sp, FontWeight.SemiBold, col), Modifier.weight(1f))
+            Tx(Kal47Srv.status(ms), man(KType.footnote, FontWeight.SemiBold, col), Modifier.weight(1f))
             Box(Modifier.height(36.dp).tap("Test", onClick = test).padding(horizontal = 10.dp), contentAlignment = Alignment.Center) {
-                Tx("Test", man(12.5.sp, FontWeight.Bold, k.acc))
+                Tx("Test", man(KType.footnote, FontWeight.Bold, k.acc))
             }
         }
     }

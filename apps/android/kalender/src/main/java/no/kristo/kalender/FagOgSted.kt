@@ -23,6 +23,7 @@ import kotlin.math.cos
 import kotlin.math.floor
 import kotlin.math.ln
 import kotlin.math.tan
+import androidx.compose.ui.graphics.toArgb
 
 /*
  * Prompt 37: Kalender-appen (fasit: prompt-37-pakke/design/Kalender App.dc.html → fagKey(), CC(), FAGP, ask(), geoFor(), mapOf()).
@@ -393,7 +394,7 @@ object Geo37 {
                 val x0 = px - w / 2.0; val y0 = py - h / 2.0
                 val out = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
                 val cv = android.graphics.Canvas(out)
-                cv.drawColor(0xFFE9E2D3.toInt())
+                cv.drawColor(KLight.chip.toArgb())
                 var got = 0
                 for (tx in floor(x0 / 256).toInt()..floor((x0 + w) / 256).toInt()) for (ty in floor(y0 / 256).toInt()..floor((y0 + h) / 256).toInt()) {
                     val t = tile(z, tx, ty) ?: continue

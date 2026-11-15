@@ -1,5 +1,6 @@
 package no.kristo.kalender.widget
 
+import no.kristo.kalender.ui.KType
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -11,7 +12,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.LocalContext
@@ -78,6 +78,8 @@ import no.kristo.kalender.withOverrides
 import no.kristo.kalender.wkd
 import java.time.LocalDate
 import java.util.concurrent.TimeUnit
+import no.kristo.kalender.KDark
+import no.kristo.kalender.KLight
 
 /*
  * Prompt 33 (KAL-ANDROID): Kalender-widgets (Glance) etter «WIDGETS OG LÅSESKJERM» i Kalender App Oversikt.dc.html
@@ -175,15 +177,17 @@ private fun data(ctx: Context): WData {
 private fun dn(day: Long, night: Long): ColorProvider = androidx.glance.color.ColorProvider(day = Color(day), night = Color(night))
 private fun fixed(c: Long): ColorProvider = ColorProvider(Color(c))
 
-/** Papir-tokens (THM.light / THM.dark). */
+private fun dn(day: Color, night: Color): ColorProvider = androidx.glance.color.ColorProvider(day = day, night = night)
+
+/** Papir-tokenene (lys / mørk) fra designsystemet, via KLight og KDark. */
 private object P {
-    val card = dn(0xFFFFFDF8, 0xFF211F1B)
-    val ink = dn(0xFF1B1A17, 0xFFEFE9DE)
-    val bg = dn(0xFFF3EFE6, 0xFF161513)
-    val mut = dn(0xFF6B665C, 0xFFA49D91)
-    val ink2 = dn(0xFF3D3A33, 0xFFD6CFC2)
-    val acc = dn(0xFFB23A2A, 0xFFEC7A64)
-    val line2 = dn(0xFFE6DFD1, 0xFF2E2B26)
+    val card = dn(KLight.card, KDark.card)
+    val ink = dn(KLight.ink, KDark.ink)
+    val bg = dn(KLight.bg, KDark.bg)
+    val mut = dn(KLight.mut, KDark.mut)
+    val ink2 = dn(KLight.ink2, KDark.ink2)
+    val acc = dn(KLight.acc, KDark.acc)
+    val line2 = dn(KLight.line2, KDark.line2)
 }
 
 private fun open(ctx: Context, link: String): Action = actionStartActivity(
@@ -233,11 +237,11 @@ private fun NextBody(w: WData) {
     val n = w.next
     // Inverterte farger: blekk som bakgrunn (lys i mørkt tema), papir som tekst.
     Column(GlanceModifier.fillMaxSize().appWidgetBackground().cornerRadius(28.dp).background(P.ink).padding(16.dp).clickable(open(ctx, evLink(n)))) {
-        Tx("NESTE", 10.sp, dn(0xFFE8A294, 0xFFB23A2A), FontWeight.Bold, FontFamily.Monospace)
+        Tx("NESTE", KType.caption, dn(0xFFE8A294, 0xFFB23A2A), FontWeight.Bold, FontFamily.Monospace)
         Spacer(GlanceModifier.height(4.dp))
-        Tx(n?.t ?: "Ingenting planlagt", 22.sp, P.bg, FontWeight.Medium, FontFamily.Serif, maxLines = 3)
+        Tx(n?.t ?: "Ingenting planlagt", KType.title3, P.bg, FontWeight.Medium, FontFamily.Serif, maxLines = 3)
         Grow()
-        if (n != null) Tx(w.whenL(n) + w.tm(n), 12.sp, P.bg, FontWeight.Medium, FontFamily.Monospace)
+        if (n != null) Tx(w.whenL(n) + w.tm(n), KType.footnote, P.bg, FontWeight.Medium, FontFamily.Monospace)
     }
 }
 
@@ -280,9 +284,9 @@ private fun ClockBody(w: WData) {
         Spacer(GlanceModifier.width(16.dp))
         Column(GlanceModifier.defaultWeight()) {
             // Prompt 35: «Man 19. okt · U43» først i linjen.
-            Tx(cap(WS[T.jsDay]) + " " + T.dayOfMonth + ". " + no.kristo.kalender.MS[T.monthValue - 1] + " · U" + w.wk + (w.wx?.let { " · " + it.hi + "° " + WTXT[wkd(it.c)] } ?: ""), 14.sp, white, FontWeight.Bold)
+            Tx(cap(WS[T.jsDay]) + " " + T.dayOfMonth + ". " + no.kristo.kalender.MS[T.monthValue - 1] + " · U" + w.wk + (w.wx?.let { " · " + it.hi + "° " + WTXT[wkd(it.c)] } ?: ""), KType.callout, white, FontWeight.Bold)
             Spacer(GlanceModifier.height(4.dp))
-            Tx(n?.let { "▦ " + it.t + " · " + (if (it.all) "Hele dagen" else hm(it.s ?: 0)) } ?: "Ingen hendelser", 13.sp, soft, maxLines = 2)
+            Tx(n?.let { "▦ " + it.t + " · " + (if (it.all) "Hele dagen" else hm(it.s ?: 0)) } ?: "Ingen hendelser", KType.subheadline, soft, maxLines = 2)
         }
     }
 }

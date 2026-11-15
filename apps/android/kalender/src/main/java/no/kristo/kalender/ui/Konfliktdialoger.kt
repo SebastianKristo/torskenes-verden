@@ -44,7 +44,6 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import no.kristo.kalender.KAddr44
 import no.kristo.kalender.KAtt44
@@ -67,8 +66,8 @@ fun Dialogs44(vm: KalVm) {
     val k = LocalK.current
     if (vm.conflict44 != null) Box(Modifier.fillMaxSize().background(k.dim).tap("Lukk") { vm.resolveConflict44(false) }, contentAlignment = Alignment.Center) {
         Column(Modifier.padding(16.dp).widthIn(max = 420.dp).clip(RoundedCornerShape(20.dp)).background(k.card).tap(null) {}.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Tx("Endret et annet sted", news(22.sp, k.ink))
-            Tx("Hendelsen er endret i kilden siden du åpnet den. Behold din eller deres?", man(13.5.sp, FontWeight.Medium, k.mut), maxLines = 3)
+            Tx("Endret et annet sted", news(KType.title3, k.ink))
+            Tx("Hendelsen er endret i kilden siden du åpnet den. Behold din eller deres?", man(KType.subheadline, FontWeight.Medium, k.mut), maxLines = 3)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 LinePill("Bruk deres", { vm.resolveConflict44(false) })
                 InkPill("Behold din", { vm.resolveConflict44(true) })
@@ -77,12 +76,12 @@ fun Dialogs44(vm: KalVm) {
     }
     if (vm.askScope44) Box(Modifier.fillMaxSize().background(k.dim).tap("Lukk") { vm.askScope44 = false }, contentAlignment = Alignment.Center) {
         Column(Modifier.padding(16.dp).widthIn(max = 420.dp).clip(RoundedCornerShape(20.dp)).background(k.card).tap(null) {}.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Tx("Gjentakende hendelse", news(22.sp, k.ink))
+            Tx("Gjentakende hendelse", news(KType.title3, k.ink))
             listOf("this" to "Bare denne", "future" to "Denne og fremtidige", "all" to "Alle").forEach { (sc, n) ->
                 Box(Modifier.fillMaxWidth().height(44.dp).clip(RoundedCornerShape(22.dp)).border(1.dp, k.line, RoundedCornerShape(22.dp)).tap(n) { vm.saveForm44(sc) },
-                    contentAlignment = Alignment.Center) { Tx(n, man(14.sp, FontWeight.Bold, k.ink)) }
+                    contentAlignment = Alignment.Center) { Tx(n, man(KType.callout, FontWeight.Bold, k.ink)) }
             }
-            Box(Modifier.fillMaxWidth().height(40.dp).tap("Avbryt") { vm.askScope44 = false }, contentAlignment = Alignment.Center) { Tx("Avbryt", man(13.5.sp, FontWeight.Bold, k.mut)) }
+            Box(Modifier.fillMaxWidth().height(40.dp).tap("Avbryt") { vm.askScope44 = false }, contentAlignment = Alignment.Center) { Tx("Avbryt", man(KType.subheadline, FontWeight.Bold, k.mut)) }
         }
     }
 }

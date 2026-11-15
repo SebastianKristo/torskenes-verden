@@ -71,7 +71,7 @@ fun AbBadge42(vm: KalVm, e: KEv) {
     val c = vm.evCal(e)
     val b = e.ab?.badge ?: "TREKK"
     Box(Modifier.clip(RoundedCornerShape(50)).background(if (b == "PRØVE") Red else c.col.copy(alpha = .133f)).padding(horizontal = 6.dp, vertical = 1.dp)) {
-        Tx(b, mono(9.5.sp, if (b == "PRØVE") Color.White else c.fg(k), .06f).copy(fontWeight = FontWeight.Bold))
+        Tx(b, mono(KType.caption, if (b == "PRØVE") Color.White else c.fg(k), .06f).copy(fontWeight = FontWeight.Bold))
     }
 }
 
@@ -84,13 +84,13 @@ fun AbRowBody42(vm: KalVm, e: KEv, modifier: Modifier = Modifier) {
         AbLogo42(vm, e, 20.dp)
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Tx(Ab42.short(e), man(14.5.sp, FontWeight.Bold, k.ink), Modifier.weight(1f, fill = false))
+                Tx(Ab42.short(e), man(KType.callout, FontWeight.Bold, k.ink), Modifier.weight(1f, fill = false))
                 AbBadge42(vm, e)
             }
             val x = e.ab
-            Tx(listOf(x?.cancelled?.takeIf { it.isNotEmpty() } ?: x?.account.orEmpty(), c.n).filter { it.isNotEmpty() }.joinToString(" · "), man(12.5.sp, FontWeight.Medium, k.mut))
+            Tx(listOf(x?.cancelled?.takeIf { it.isNotEmpty() } ?: x?.account.orEmpty(), c.n).filter { it.isNotEmpty() }.joinToString(" · "), man(KType.footnote, FontWeight.Medium, k.mut))
         }
-        Tx(Ab42.amountText(e), mono(13.sp, k.ink))
+        Tx(Ab42.amountText(e), mono(KType.subheadline, k.ink))
     }
 }
 
@@ -101,8 +101,8 @@ private fun AbInfo42(label: String, value: String) {
         Modifier.fillMaxWidth().drawBehind { drawLine(k.line2, Offset(0f, size.height), Offset(size.width, size.height), 1.dp.toPx()) }.padding(vertical = 11.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Tx(label, man(14.sp, FontWeight.Medium, k.mut))
-        Box(Modifier.weight(1f), contentAlignment = Alignment.CenterEnd) { Tx(value, man(14.sp, FontWeight.Bold, k.ink).copy(textAlign = TextAlign.End), maxLines = 2) }
+        Tx(label, man(KType.callout, FontWeight.Medium, k.mut))
+        Box(Modifier.weight(1f), contentAlignment = Alignment.CenterEnd) { Tx(value, man(KType.callout, FontWeight.Bold, k.ink).copy(textAlign = TextAlign.End), maxLines = 2) }
     }
 }
 
@@ -116,12 +116,12 @@ fun AbDetail42(vm: KalVm, e: KEv) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             AbLogo42(vm, e, 44.dp)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                Tx(if (e.kind == "trial") e.t else Ab42.short(e), news(26.sp, k.ink, 29.sp), maxLines = 3)
+                Tx(if (e.kind == "trial") e.t else Ab42.short(e), news(KType.title3, k.ink, 29.sp), maxLines = 3)
                 Row { AbBadge42(vm, e) }
             }
         }
         val amt = Ab42.amountText(e)
-        if (amt.isNotEmpty()) Tx(amt, mono(24.sp, k.ink))
+        if (amt.isNotEmpty()) Tx(amt, mono(KType.title3, k.ink))
         Column(Modifier.drawBehind { drawLine(k.line2, Offset(0f, 0f), Offset(size.width, 0f), 1.dp.toPx()) }) {
             AbInfo42(if (e.kind == "trial") "Prøveperioden slutter" else "Trekkdato", cap(fd(e.d)))
             if (x.account.isNotEmpty()) AbInfo42("Konto", x.account)
@@ -134,6 +134,6 @@ fun AbDetail42(vm: KalVm, e: KEv) {
             InkPill("Åpne i Finans ›", { Ab42.openFinans(ctx, e, vm.session?.server) })
             if (x.cancelUrl.isNotEmpty() && x.cancelled.isEmpty()) LinePill("Si opp …", { Ab42.openUrl(ctx, x.cancelUrl) })
         }
-        Tx("Endres i Finans → Abonnementer", man(12.5.sp, FontWeight.Medium, k.mut))
+        Tx("Endres i Finans → Abonnementer", man(KType.footnote, FontWeight.Medium, k.mut))
     }
 }

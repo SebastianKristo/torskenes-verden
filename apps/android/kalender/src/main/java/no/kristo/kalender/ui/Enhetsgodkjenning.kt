@@ -54,18 +54,18 @@ fun Approve51(vm: KalVm) {
     Spark(34.dp, true)
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(k.card).padding(horizontal = 14.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Tx("Godkjenn innloggingen fra en enhet som allerede er logget inn – Kalender eller Homelab-appen (Innstillinger → Sikkerhet), eller Homelab på web.",
-            man(13.5.sp, FontWeight.Medium, k.ink, 19.sp), maxLines = 6)
+            man(KType.subheadline, FontWeight.Medium, k.ink, 19.sp), maxLines = 6)
         Tx("Er du hjemme? Logg inn på hjemmenettet, så trengs ingen godkjenning. Du kan også avbryte og bruke «Logg inn med Homelab-appen» eller QR-kode.",
-            man(12.5.sp, FontWeight.Medium, k.mut, 18.sp), maxLines = 6)
+            man(KType.footnote, FontWeight.Medium, k.mut, 18.sp), maxLines = 6)
     }
     s.approval51?.let { ap ->
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            if (ap.device.isNotBlank()) Tx("Enhet: " + ap.device, man(12.5.sp, FontWeight.SemiBold, k.mut))
-            Tx("Venter til kl. " + Kal51.hm(ap.expires), man(12.5.sp, FontWeight.Medium, k.mut2))
+            if (ap.device.isNotBlank()) Tx("Enhet: " + ap.device, man(KType.footnote, FontWeight.SemiBold, k.mut))
+            Tx("Venter til kl. " + Kal51.hm(ap.expires), man(KType.footnote, FontWeight.Medium, k.mut2))
         }
     }
     Box(Modifier.fillMaxWidth().height(50.dp).clip(RoundedCornerShape(25.dp)).border(1.dp, k.line, RoundedCornerShape(25.dp)).tap("Avbryt innloggingen") { s.cancelApproval51() },
-        contentAlignment = Alignment.Center) { Tx("Avbryt", man(14.5.sp, FontWeight.Bold, k.ink)) }
+        contentAlignment = Alignment.Center) { Tx("Avbryt", man(KType.callout, FontWeight.Bold, k.ink)) }
 }
 
 /* ---------- Innstillinger → SIKKERHET ---------- */
@@ -78,22 +78,22 @@ fun Sec51Section(vm: KalVm) {
     Column(Modifier.drawBehind { drawLine(k.line2, Offset(0f, 0f), Offset(size.width, 0f), 1.dp.toPx()) }) {
         if (s.pending.isEmpty()) {
             Column(Modifier.fillMaxWidth().line51(k.line2).padding(vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                Tx("Ingen enheter venter", man(14.5.sp, FontWeight.Bold, k.ink))
-                Tx("Nye enheter som logger inn fra internett må godkjennes her, i Homelab-appen eller på web.", man(12.sp, FontWeight.Medium, k.mut), maxLines = 3)
+                Tx("Ingen enheter venter", man(KType.callout, FontWeight.Bold, k.ink))
+                Tx("Nye enheter som logger inn fra internett må godkjennes her, i Homelab-appen eller på web.", man(KType.footnote, FontWeight.Medium, k.mut), maxLines = 3)
             }
         } else {
             s.pending.forEach { p -> Sec51Row(vm, p) }
         }
-        if (s.msg.isNotBlank()) Tx(s.msg, man(12.5.sp, FontWeight.Medium, k.mut), Modifier.padding(vertical = 8.dp), maxLines = 3)
+        if (s.msg.isNotBlank()) Tx(s.msg, man(KType.footnote, FontWeight.Medium, k.mut), Modifier.padding(vertical = 8.dp), maxLines = 3)
         Row(
             Modifier.fillMaxWidth().heightIn(min = 44.dp).tap("Nytt i denne versjonen") { Hap.tick(); s.openNews() }.line51(k.line2).padding(vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                Tx("Nytt i denne versjonen", man(14.5.sp, FontWeight.Bold, k.ink))
-                Tx("Endringene i siste oppdatering av Homelab", man(12.sp, FontWeight.Medium, k.mut))
+                Tx("Nytt i denne versjonen", man(KType.callout, FontWeight.Bold, k.ink))
+                Tx("Endringene i siste oppdatering av Homelab", man(KType.footnote, FontWeight.Medium, k.mut))
             }
-            Tx("›", man(16.sp, FontWeight.Bold, k.mut))
+            Chevron(k.mut)
         }
     }
 }
@@ -109,8 +109,8 @@ private fun Sec51Row(vm: KalVm, p: Kal51Pending) {
         p.created.takeIf { it > 0 }?.let { "kl. " + Kal51.hm(it) }).joinToString(" · ")
     Column(Modifier.fillMaxWidth().line51(k.line2).padding(vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
-            Tx(p.device, man(14.5.sp, FontWeight.Bold, k.ink))
-            if (sub.isNotBlank()) Tx(sub, man(12.sp, FontWeight.Medium, k.mut), maxLines = 3)
+            Tx(p.device, man(KType.callout, FontWeight.Bold, k.ink))
+            if (sub.isNotBlank()) Tx(sub, man(KType.footnote, FontWeight.Medium, k.mut), maxLines = 3)
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
             if (s.busyId == p.id) Spark(22.dp, true) else {

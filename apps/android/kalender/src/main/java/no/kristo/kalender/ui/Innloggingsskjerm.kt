@@ -84,6 +84,7 @@ import no.kristo.kalender.Kal46Prefs
 import no.kristo.kalender.Kal46Qr
 import no.kristo.kalender.Kal46Rask
 import no.kristo.kalender.setPref46
+import no.kristo.kalender.KLight
 
 /* Innloggingsskjermen uten serverfelt (prompt 41, auVals i Kalender App.dc.html) og «Logg inn med QR-kode» (prompt 46). */
 
@@ -111,15 +112,15 @@ fun LoginScreen41(vm: KalVm) {
         horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(18.dp, Alignment.CenterVertically),
     ) {
         val T = no.kristo.kalender.today()
-        Column(Modifier.size(84.dp).shadow(10.dp, RoundedCornerShape(20.dp)).clip(RoundedCornerShape(20.dp)).background(Color(0xFFFFFDF8)), horizontalAlignment = Alignment.CenterHorizontally) {
+        Column(Modifier.size(84.dp).shadow(10.dp, RoundedCornerShape(20.dp)).clip(RoundedCornerShape(20.dp)).background(KLight.card), horizontalAlignment = Alignment.CenterHorizontally) {
             Box(Modifier.fillMaxWidth().height(24.dp).background(Red), contentAlignment = Alignment.Center) {
-                Tx(no.kristo.kalender.WS[T.dayOfWeek.value % 7].uppercase(), man(11.sp, FontWeight.ExtraBold, Color.White))
+                Tx(no.kristo.kalender.WS[T.dayOfWeek.value % 7].uppercase(), man(KType.caption, FontWeight.ExtraBold, Color.White))
             }
-            Box(Modifier.fillMaxWidth().height(60.dp), contentAlignment = Alignment.Center) { Tx("${T.dayOfMonth}", news(40.sp, Color(0xFF1B1A17), 44.sp)) }
+            Box(Modifier.fillMaxWidth().height(60.dp), contentAlignment = Alignment.Center) { Tx("${T.dayOfMonth}", news(KType.largeTitle, KLight.ink, 44.sp)) }
         }
         Column(Modifier.widthIn(max = 320.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Tx(title, news(30.sp, k.ink, 33.sp).copy(textAlign = TextAlign.Center), maxLines = 2)
-            if (sub.isNotEmpty()) Tx(sub, man(14.5.sp, FontWeight.Medium, k.mut, 21.sp).copy(textAlign = TextAlign.Center), maxLines = 4)
+            Tx(title, news(KType.title2, k.ink, 33.sp).copy(textAlign = TextAlign.Center), maxLines = 2)
+            if (sub.isNotEmpty()) Tx(sub, man(KType.callout, FontWeight.Medium, k.mut, 21.sp).copy(textAlign = TextAlign.Center), maxLines = 4)
         }
         Column(Modifier.widthIn(max = 340.dp).fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
             when (s.phase) {
@@ -134,7 +135,7 @@ fun LoginScreen41(vm: KalVm) {
             }
             if (s.phase == "start" || s.phase == "pw" || s.phase == "err") {
                 val host = androidx.compose.runtime.remember(tick89) { Kal89.hostLabel(Kal41.external(ctx89)) }
-                Tx("Server: $host", man(12.sp, FontWeight.Medium, k.mut), Modifier.semantics { contentDescription = "Server: $host" })
+                Tx("Server: $host", man(KType.footnote, FontWeight.Medium, k.mut), Modifier.semantics { contentDescription = "Server: $host" })
             }
         }
     }
@@ -166,19 +167,19 @@ private fun Start41(vm: KalVm) {
             Modifier.fillMaxWidth().height(62.dp).clip(RoundedCornerShape(20.dp)).background(k.ink).tap("Fortsett som $n") { s.quick() }.padding(start = 10.dp, end = 16.dp),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Box(Modifier.size(42.dp).clip(CircleShape).background(Red), contentAlignment = Alignment.Center) { Tx(n.take(1).uppercase(), man(15.sp, FontWeight.ExtraBold, Color.White)) }
+            Box(Modifier.size(42.dp).clip(CircleShape).background(Red), contentAlignment = Alignment.Center) { Tx(n.take(1).uppercase(), man(KType.callout, FontWeight.ExtraBold, Color.White)) }
             Column(Modifier.weight(1f)) {
-                Tx("Fortsett som $n", man(15.5.sp, FontWeight.Bold, k.bg))
-                Tx("Innlogget i Homelab på denne enheten", man(12.5.sp, FontWeight.Medium, k.bg.copy(alpha = .75f)))
+                Tx("Fortsett som $n", man(KType.body, FontWeight.Bold, k.bg))
+                Tx("Innlogget i Homelab på denne enheten", man(KType.footnote, FontWeight.Medium, k.bg.copy(alpha = .75f)))
             }
-            Tx("›", man(18.sp, FontWeight.Bold, k.bg))
+            Chevron(k.bg, 16.dp)
         }
     }
     Box(Modifier.fillMaxWidth().height(52.dp).clip(RoundedCornerShape(26.dp)).background(k.card).border(1.dp, k.line, RoundedCornerShape(26.dp)).tap("Logg inn med Homelab-appen") { s.viaApp() },
-        contentAlignment = Alignment.Center) { Tx("Logg inn med Homelab-appen", man(14.5.sp, FontWeight.Bold, k.ink)) }
+        contentAlignment = Alignment.Center) { Tx("Logg inn med Homelab-appen", man(KType.callout, FontWeight.Bold, k.ink)) }
     QrButton46(vm)
     Box(Modifier.fillMaxWidth().height(44.dp).tap("Bruk brukernavn og passord") { s.password() }, contentAlignment = Alignment.Center) {
-        Tx("Bruk brukernavn og passord", man(13.5.sp, FontWeight.Bold, k.mut))
+        Tx("Bruk brukernavn og passord", man(KType.subheadline, FontWeight.Bold, k.mut))
     }
 }
 
@@ -191,16 +192,16 @@ private fun Wait41(vm: KalVm) {
         listOf("Åpner Homelab", "Godkjenn i Homelab (Face ID / fingeravtrykk)", "Sender deg tilbake til Kalender", "Henter kalenderne dine").forEachIndexed { i, n ->
             val c = if (i <= s.step) k.ink else k.mut
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Tx(if (i < s.step) "✓" else if (i == s.step) "•" else "·", man(13.5.sp, FontWeight.Bold, c), Modifier.width(16.dp))
-                Tx(n, man(13.5.sp, if (i == s.step) FontWeight.Bold else FontWeight.Medium, c))
+                Tx(if (i < s.step) "✓" else if (i == s.step) "•" else "·", man(KType.subheadline, FontWeight.Bold, c), Modifier.width(16.dp))
+                Tx(n, man(KType.subheadline, if (i == s.step) FontWeight.Bold else FontWeight.Medium, c))
             }
         }
     }
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Box(Modifier.weight(1f).height(44.dp).clip(RoundedCornerShape(22.dp)).border(1.dp, k.line, RoundedCornerShape(22.dp)).tap("Åpne Homelab igjen") { s.viaApp() }, contentAlignment = Alignment.Center) {
-            Tx("Åpne Homelab igjen", man(13.5.sp, FontWeight.Bold, k.ink))
+            Tx("Åpne Homelab igjen", man(KType.subheadline, FontWeight.Bold, k.ink))
         }
-        Box(Modifier.weight(1f).height(44.dp).tap("Avbryt") { s.cancel() }, contentAlignment = Alignment.Center) { Tx("Avbryt", man(13.5.sp, FontWeight.Bold, k.mut)) }
+        Box(Modifier.weight(1f).height(44.dp).tap("Avbryt") { s.cancel() }, contentAlignment = Alignment.Center) { Tx("Avbryt", man(KType.subheadline, FontWeight.Bold, k.mut)) }
     }
 }
 
@@ -209,15 +210,15 @@ private fun Err41(vm: KalVm) {
     val k = LocalK.current
     val s = vm.k41
     Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(k.card).border(1.5.dp, Red, RoundedCornerShape(16.dp)).padding(horizontal = 14.dp, vertical = 12.dp)) {
-        Tx(s.err.ifBlank { "Homelab svarte ikke. Sjekk at Homelab-appen er installert og innlogget, og prøv igjen." }, man(13.5.sp, FontWeight.Medium, k.ink, 19.sp), maxLines = 6)
+        Tx(s.err.ifBlank { "Homelab svarte ikke. Sjekk at Homelab-appen er installert og innlogget, og prøv igjen." }, man(KType.subheadline, FontWeight.Medium, k.ink, 19.sp), maxLines = 6)
     }
     Box(Modifier.fillMaxWidth().height(52.dp).clip(RoundedCornerShape(26.dp)).background(k.ink).tap("Prøv igjen") { s.viaApp() }, contentAlignment = Alignment.Center) {
-        Tx("Prøv igjen", man(14.5.sp, FontWeight.Bold, k.bg))
+        Tx("Prøv igjen", man(KType.callout, FontWeight.Bold, k.bg))
     }
     if (s.webOffer) Box(Modifier.fillMaxWidth().height(44.dp).clip(RoundedCornerShape(22.dp)).border(1.dp, k.line, RoundedCornerShape(22.dp)).tap("Godkjenn i nettleseren") { s.approveInBrowser() },
-        contentAlignment = Alignment.Center) { Tx("Godkjenn i nettleseren", man(13.5.sp, FontWeight.Bold, k.ink)) }
+        contentAlignment = Alignment.Center) { Tx("Godkjenn i nettleseren", man(KType.subheadline, FontWeight.Bold, k.ink)) }
     Box(Modifier.fillMaxWidth().height(44.dp).tap("Bruk brukernavn og passord") { s.password() }, contentAlignment = Alignment.Center) {
-        Tx("Bruk brukernavn og passord", man(13.5.sp, FontWeight.Bold, k.mut))
+        Tx("Bruk brukernavn og passord", man(KType.subheadline, FontWeight.Bold, k.mut))
     }
     if (s.offerServer) ServerFix41(vm)
 }
@@ -229,17 +230,15 @@ private fun Pw41(vm: KalVm) {
     Field41(vm.lUser, { vm.lUser = it }, "Brukernavn", KeyboardType.Text)
     Field41(vm.lPass, { vm.lPass = it }, "Passord", KeyboardType.Password, password = true)
     if (vm.lTotp) Field41(vm.lCode, { vm.lCode = it.filter(Char::isDigit).take(6) }, "6-sifret kode (2FA)", KeyboardType.NumberPassword)
-    vm.lErr?.let { Tx(it, man(13.sp, FontWeight.SemiBold, k.acc), Modifier.fillMaxWidth(), maxLines = 4) }
+    vm.lErr?.let { Tx(it, man(KType.subheadline, FontWeight.SemiBold, k.acc), Modifier.fillMaxWidth(), maxLines = 4) }
     Box(Modifier.fillMaxWidth().height(52.dp).clip(RoundedCornerShape(26.dp)).background(k.ink).tap("Logg inn") { s.submitPassword() }, contentAlignment = Alignment.Center) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             if (vm.lBusy) Spark(20.dp, true)
-            Tx(if (vm.lBusy) "Logger inn …" else "Logg inn", man(14.5.sp, FontWeight.Bold, k.bg))
+            Tx(if (vm.lBusy) "Logger inn …" else "Logg inn", man(KType.callout, FontWeight.Bold, k.bg))
         }
     }
     if (s.offerServer) ServerFix41(vm)
-    Box(Modifier.height(40.dp).tap("Tilbake") { Hap.tick(); vm.lErr = null; s.phase = "start" }, contentAlignment = Alignment.Center) {
-        Tx("‹ Tilbake", man(13.sp, FontWeight.Bold, k.mut))
-    }
+    BackLink("Tilbake", k.mut, man(KType.subheadline, FontWeight.Bold, k.mut)) { Hap.tick(); vm.lErr = null; s.phase = "start" }
 }
 
 /** «Endre serveradresse» – bare når ingen adresse svarer. */
@@ -249,7 +248,7 @@ private fun ServerFix41(vm: KalVm) {
     val s = vm.k41
     if (!s.serverOpen) {
         Box(Modifier.height(36.dp).tap("Endre serveradresse") { Hap.tick(); s.serverOpen = true }, contentAlignment = Alignment.Center) {
-            Tx("Endre serveradresse", man(13.sp, FontWeight.SemiBold, k.acc))
+            Tx("Endre serveradresse", man(KType.subheadline, FontWeight.SemiBold, k.acc))
         }
         return
     }
@@ -265,8 +264,8 @@ private fun Field41(v: String, on: (String) -> Unit, hint: String, type: Keyboar
     val k = LocalK.current
     Box(Modifier.fillMaxWidth().height(50.dp).clip(RoundedCornerShape(16.dp)).background(k.card).border(1.dp, k.line, RoundedCornerShape(16.dp)).padding(horizontal = 16.dp),
         contentAlignment = Alignment.CenterStart) {
-        if (v.isEmpty()) Tx(hint, man(15.sp, FontWeight.Medium, k.mut2))
-        BasicTextField(v, on, Modifier.fillMaxWidth().semantics { contentDescription = hint }, textStyle = man(15.sp, FontWeight.Medium, k.ink), singleLine = true,
+        if (v.isEmpty()) Tx(hint, man(KType.callout, FontWeight.Medium, k.mut2))
+        BasicTextField(v, on, Modifier.fillMaxWidth().semantics { contentDescription = hint }, textStyle = man(KType.callout, FontWeight.Medium, k.ink), singleLine = true,
             cursorBrush = SolidColor(Red), keyboardOptions = KeyboardOptions(keyboardType = type, imeAction = ImeAction.Next, autoCorrectEnabled = false),
             visualTransformation = if (password) PasswordVisualTransformation() else VisualTransformation.None)
     }
@@ -279,7 +278,7 @@ fun QrButton46(vm: KalVm) {
     val k = LocalK.current
     Box(Modifier.fillMaxWidth().height(44.dp).clip(RoundedCornerShape(22.dp)).border(1.dp, k.line, RoundedCornerShape(22.dp))
         .tap("Logg inn med QR-kode") { Hap.tick(); vm.k41.err = ""; vm.k41.phase = "qr" }, contentAlignment = Alignment.Center) {
-        Tx("Logg inn med QR-kode", man(13.5.sp, FontWeight.Bold, k.ink))
+        Tx("Logg inn med QR-kode", man(KType.subheadline, FontWeight.Bold, k.ink))
     }
 }
 
@@ -293,22 +292,20 @@ fun QrLogin46(vm: KalVm) {
             .border(1.dp, k.line, RoundedCornerShape(18.dp)).padding(14.dp), contentAlignment = Alignment.Center) {
             val m = Kal46Qr.matrix
             if (m != null && Kal46Qr.phase != "scanned") QrCanvas46(m)
-            else if (Kal46Qr.phase == "scanned") Tx(Kal46Qr.match.ifBlank { "✓" }, mono(34.sp, Color(0xFF1B1A17)))
+            else if (Kal46Qr.phase == "scanned") Tx(Kal46Qr.match.ifBlank { "✓" }, mono(KType.title2, KLight.ink))
             else no.kristo.kalender.ui.Spark(28.dp, true)
         }
         val head = when (Kal46Qr.phase) { "scanned" -> "Skannet – godkjenn på mobilen"; "err" -> "Fikk ikke laget koden"; else -> "Logg inn med mobilen" }
-        Tx(head, man(16.sp, FontWeight.Bold, k.ink).copy(textAlign = TextAlign.Center), maxLines = 2)
+        Tx(head, man(KType.body, FontWeight.Bold, k.ink).copy(textAlign = TextAlign.Center), maxLines = 2)
         val sub = if (Kal46Qr.phase == "scanned") "Sjekk at tallet ${Kal46Qr.match} også vises på mobilen."
             else "Skann med Papir Finans på mobilen: Innstillinger → Logg inn på annen enhet. En innlogget Kalender kan også godkjenne."
-        Tx(sub, man(13.sp, FontWeight.Medium, k.mut, 18.sp).copy(textAlign = TextAlign.Center), maxLines = 4)
-        if (Kal46Qr.phase == "pending") Tx("Koden fornyes om ${Kal46Qr.secondsLeft} s", mono(12.sp, k.mut2))
+        Tx(sub, man(KType.subheadline, FontWeight.Medium, k.mut, 18.sp).copy(textAlign = TextAlign.Center), maxLines = 4)
+        if (Kal46Qr.phase == "pending") Tx("Koden fornyes om ${Kal46Qr.secondsLeft} s", mono(KType.footnote, k.mut2))
         if (Kal46Qr.phase == "err") {
-            Tx(Kal46Qr.err, man(13.sp, FontWeight.SemiBold, k.acc).copy(textAlign = TextAlign.Center), maxLines = 4)
+            Tx(Kal46Qr.err, man(KType.subheadline, FontWeight.SemiBold, k.acc).copy(textAlign = TextAlign.Center), maxLines = 4)
             InkPill("Ny kode", { Hap.tick(); Kal46Qr.start(vm) })
         }
-        Box(Modifier.height(40.dp).tap("Logg inn på en annen måte") { Hap.tick(); Kal46Qr.stop(); vm.k41.phase = "start" }, contentAlignment = Alignment.Center) {
-            Tx("‹ Logg inn på en annen måte", man(13.sp, FontWeight.Bold, k.mut))
-        }
+        BackLink("Logg inn på en annen måte", k.mut, man(KType.subheadline, FontWeight.Bold, k.mut)) { Hap.tick(); Kal46Qr.stop(); vm.k41.phase = "start" }
     }
 }
 
@@ -329,10 +326,10 @@ fun ScanRow46(vm: KalVm) {
     val k = LocalK.current
     Row(Modifier.fillMaxWidth().height(56.dp).tap("Logg inn på annen enhet") { Hap.tick(); Kal46Qr.openScan() }, verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
-            Tx("Logg inn på annen enhet", man(14.5.sp, FontWeight.Bold, k.ink))
-            Tx("Godkjenn QR-koden Kalender på Mac, iPad eller en annen telefon viser", man(12.sp, FontWeight.Medium, k.mut), maxLines = 2)
+            Tx("Logg inn på annen enhet", man(KType.callout, FontWeight.Bold, k.ink))
+            Tx("Godkjenn QR-koden Kalender på Mac, iPad eller en annen telefon viser", man(KType.footnote, FontWeight.Medium, k.mut), maxLines = 2)
         }
-        Tx("›", man(16.sp, FontWeight.Bold, k.mut))
+        Chevron(k.mut)
     }
 }
 
@@ -343,25 +340,25 @@ fun ScanDialog46(vm: KalVm) {
     val ctx = LocalContext.current
     Dialog(onDismissRequest = { Kal46Qr.scanOpen = false }) {
         Column(Modifier.clip(RoundedCornerShape(24.dp)).background(k.card).padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Tx("Logg inn på annen enhet", news(22.sp, k.ink), maxLines = 2)
+            Tx("Logg inn på annen enhet", news(KType.title3, k.ink), maxLines = 2)
             when (Kal46Qr.scanPhase) {
                 "busy" -> Box(Modifier.fillMaxWidth().height(80.dp), contentAlignment = Alignment.Center) { no.kristo.kalender.ui.Spark(28.dp, true) }
                 "ask" -> {
-                    Tx("Logge inn ${Kal46Qr.askDevice}?", man(15.sp, FontWeight.Bold, k.ink), maxLines = 3)
-                    if (Kal46Qr.askPlace.isNotBlank()) Tx(Kal46Qr.askPlace, man(13.sp, FontWeight.Medium, k.mut), maxLines = 2)
-                    Tx("Som ${Kal46Qr.askAccount}", man(13.sp, FontWeight.Medium, k.mut))
+                    Tx("Logge inn ${Kal46Qr.askDevice}?", man(KType.callout, FontWeight.Bold, k.ink), maxLines = 3)
+                    if (Kal46Qr.askPlace.isNotBlank()) Tx(Kal46Qr.askPlace, man(KType.subheadline, FontWeight.Medium, k.mut), maxLines = 2)
+                    Tx("Som ${Kal46Qr.askAccount}", man(KType.subheadline, FontWeight.Medium, k.mut))
                     if (Kal46Qr.askMatch.isNotBlank()) {
-                        Tx("Sjekk at tallet også vises på den andre skjermen", man(12.sp, FontWeight.Medium, k.mut), maxLines = 2)
-                        Tx(Kal46Qr.askMatch, mono(32.sp, k.ink))
+                        Tx("Sjekk at tallet også vises på den andre skjermen", man(KType.footnote, FontWeight.Medium, k.mut), maxLines = 2)
+                        Tx(Kal46Qr.askMatch, mono(KType.title2, k.ink))
                     }
-                    if (Kal46Qr.scanMsg.isNotBlank()) Tx(Kal46Qr.scanMsg, man(13.sp, FontWeight.SemiBold, k.acc), maxLines = 3)
+                    if (Kal46Qr.scanMsg.isNotBlank()) Tx(Kal46Qr.scanMsg, man(KType.subheadline, FontWeight.SemiBold, k.acc), maxLines = 3)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         InkPill("Logg inn", { confirm46(ctx) { ok -> if (ok) Kal46Qr.answer(vm, true) else Kal46Qr.scanMsg = "Godkjenningen ble avbrutt." } }, h = 44.dp)
                         LinePill("Avbryt", { Kal46Qr.answer(vm, false) }, h = 44.dp)
                     }
                 }
                 "done", "err" -> {
-                    Tx(Kal46Qr.scanMsg, man(13.5.sp, FontWeight.Medium, if (Kal46Qr.scanPhase == "done") k.ink else k.acc, 19.sp), maxLines = 6)
+                    Tx(Kal46Qr.scanMsg, man(KType.subheadline, FontWeight.Medium, if (Kal46Qr.scanPhase == "done") k.ink else k.acc, 19.sp), maxLines = 6)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         LinePill("Ny kode", { Kal46Qr.openScan() }, h = 44.dp)
                         InkPill("Ferdig", { Kal46Qr.scanOpen = false }, h = 44.dp)
@@ -369,20 +366,20 @@ fun ScanDialog46(vm: KalVm) {
                 }
                 else -> {
                     Tx("Skann QR-koden som den andre enheten viser. Du kan også lime inn lenken eller koden under QR-koden.",
-                        man(13.sp, FontWeight.Medium, k.mut, 18.sp), maxLines = 5)
+                        man(KType.subheadline, FontWeight.Medium, k.mut, 18.sp), maxLines = 5)
                     // Prompt 46: Googles skanner-UI (ingen kameratillatelse) → samme håndtering som innlimt kode (serversjekk, så biometri før godkjenning).
                     InkPill("Skann QR-kode", {
                         Hap.tick(); Kal46Qr.scanMsg = ""
                         no.kristo.kalender.KalScan46.start(ctx, onRaw = { raw -> Kal46Qr.scanText = raw; Kal46Qr.scan(vm, raw) }, onMsg = { Kal46Qr.scanMsg = it })
                     }, h = 48.dp)
-                    Tx("ELLER LIM INN", man(11.sp, FontWeight.Bold, k.mut2))
+                    Tx("ELLER LIM INN", man(KType.caption, FontWeight.Bold, k.mut2))
                     Box(Modifier.fillMaxWidth().height(48.dp).clip(RoundedCornerShape(14.dp)).border(1.dp, k.line, RoundedCornerShape(14.dp)).padding(horizontal = 12.dp),
                         contentAlignment = Alignment.CenterStart) {
-                        if (Kal46Qr.scanText.isEmpty()) Tx("papir://login?… eller kode", man(14.sp, FontWeight.Medium, k.mut2))
+                        if (Kal46Qr.scanText.isEmpty()) Tx("papir://login?… eller kode", man(KType.callout, FontWeight.Medium, k.mut2))
                         BasicTextField(Kal46Qr.scanText, { Kal46Qr.scanText = it }, Modifier.fillMaxWidth().semantics { contentDescription = "Innloggingskode" },
-                            textStyle = man(14.sp, FontWeight.Medium, k.ink), singleLine = true, cursorBrush = SolidColor(Red))
+                            textStyle = man(KType.callout, FontWeight.Medium, k.ink), singleLine = true, cursorBrush = SolidColor(Red))
                     }
-                    if (Kal46Qr.scanMsg.isNotBlank()) Tx(Kal46Qr.scanMsg, man(13.sp, FontWeight.SemiBold, k.acc), maxLines = 3)
+                    if (Kal46Qr.scanMsg.isNotBlank()) Tx(Kal46Qr.scanMsg, man(KType.subheadline, FontWeight.SemiBold, k.acc), maxLines = 3)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         InkPill("Fortsett", { Kal46Qr.scan(vm, Kal46Qr.scanText) }, enabled = Kal46Qr.scanText.isNotBlank(), h = 44.dp)
                         LinePill("Avbryt", { Kal46Qr.scanOpen = false }, h = 44.dp)

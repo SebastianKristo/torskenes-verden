@@ -36,6 +36,7 @@ import java.security.MessageDigest
 import java.security.SecureRandom
 import java.time.LocalDate
 import kotlin.math.sin
+import androidx.compose.ui.graphics.toArgb
 
 /*
  * Prompt 41: Kalender (Android)
@@ -384,7 +385,7 @@ object Kal41 {
     fun postTest(ctx: Context) {
         KalNotify.channels(ctx)
         val n = NotificationCompat.Builder(ctx, KalNotify.CH_EVENTS)
-            .setSmallIcon(R.drawable.ic_kal_notif).setColor(0xFFB23A2A.toInt())
+            .setSmallIcon(R.drawable.ic_kal_notif).setColor(Red.toArgb())
             .setContentTitle(TEST_TITLE).setContentText(TEST_BODY).setStyle(NotificationCompat.BigTextStyle().bigText(TEST_BODY))
             .setCategory(NotificationCompat.CATEGORY_EVENT).setPriority(NotificationCompat.PRIORITY_HIGH).setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setAutoCancel(true).setContentIntent(KalNotify.openIntent(ctx, "kalender://", 4141)).build()

@@ -70,12 +70,14 @@ import no.kristo.kalender.KalVm
 import no.kristo.kalender.LocalK
 import no.kristo.kalender.Red
 import no.kristo.kalender.reduceMotion
+import no.kristo.kalender.Illustrasjon
+import no.kristo.kalender.KLight
 
 /* Bursdagskortet i hendelsesarket (prompt 41, R.dt.bd i Kalender App.dc.html). */
 
 /* ---------------- Bursdagskortet ---------------- */
 
-private val CONF = listOf(Color(0xFFF2C14E), Color(0xFFFFFFFF), Color(0xFF3FBF9A), Color(0xFFA8D4FB), Color(0xFFFFD2C2))
+private val CONF = listOf(Illustrasjon.glimtGul, Color.White, Illustrasjon.glimtGronn, Illustrasjon.konfettiBla, Illustrasjon.konfettiRosa)
 
 @Composable
 fun BdCard41(vm: KalVm, e: KEv, color: Color) {
@@ -107,29 +109,29 @@ fun BdCard41(vm: KalVm, e: KEv, color: Color) {
                     Box(Modifier.size(64.dp).clip(CircleShape).background(Color.White.copy(alpha = .22f)).border(3.dp, Color.White.copy(alpha = .85f), CircleShape), contentAlignment = Alignment.Center) {
                         val img = p?.let { s.photos[it.id] }
                         if (img != null) Image(img, null, Modifier.size(64.dp).clip(CircleShape), contentScale = ContentScale.Crop)
-                        else Tx(name.split(' ').filter { it.isNotBlank() }.take(2).joinToString("") { it.take(1) }.uppercase(), man(22.sp, FontWeight.ExtraBold, Color.White))
+                        else Tx(name.split(' ').filter { it.isNotBlank() }.take(2).joinToString("") { it.take(1) }.uppercase(), man(KType.title3, FontWeight.ExtraBold, Color.White))
                     }
                     PartyHat41(Modifier.size(30.dp, 32.dp).offset(x = 34.dp, y = (-22).dp).rotate(18f))
                 }
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Tx(kicker, mono(10.5.sp, Color.White.copy(alpha = .9f), .14f))
-                    Tx(name, news(30.sp, Color.White, 32.sp), maxLines = 2)
-                    Tx(Kal41.bdSub(e.d, p?.year), man(14.sp, FontWeight.Medium, Color.White.copy(alpha = .92f)), maxLines = 2)
+                    Tx(kicker, mono(KType.caption, Color.White.copy(alpha = .9f), .14f))
+                    Tx(name, news(KType.title2, Color.White, 32.sp), maxLines = 2)
+                    Tx(Kal41.bdSub(e.d, p?.year), man(KType.callout, FontWeight.Medium, Color.White.copy(alpha = .92f)), maxLines = 2)
                 }
                 Column(horizontalAlignment = Alignment.End) {
-                    Tx(big, news(if (isToday) 30.sp else 44.sp, Color.White, if (isToday) 32.sp else 46.sp, FontWeight.Normal))
-                    if (unit.isNotEmpty()) Tx(unit, man(12.5.sp, FontWeight.Medium, Color.White.copy(alpha = .9f)))
+                    Tx(big, news(if (isToday) KType.title2 else KType.largeTitle, Color.White, if (isToday) 32.sp else 46.sp, FontWeight.Normal))
+                    if (unit.isNotEmpty()) Tx(unit, man(KType.footnote, FontWeight.Medium, Color.White.copy(alpha = .9f)))
                 }
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Box(Modifier.weight(1f).height(40.dp).clip(RoundedCornerShape(20.dp)).background(Color.White).tap("Gratuler") { s.congratulate(name, p) }, contentAlignment = Alignment.Center) {
-                    Tx("Gratuler", man(13.sp, FontWeight.Bold, Color(0xFF1B1A17)))
+                    Tx("Gratuler", man(KType.subheadline, FontWeight.Bold, KLight.ink))
                 }
                 Box(Modifier.weight(1f).height(40.dp).clip(RoundedCornerShape(20.dp)).background(Color.White.copy(alpha = .2f)).tap("Gaveidé") { s.gift(name, e.d) }, contentAlignment = Alignment.Center) {
-                    Tx("Gaveidé", man(13.sp, FontWeight.Bold, Color.White))
+                    Tx("Gaveidé", man(KType.subheadline, FontWeight.Bold, Color.White))
                 }
                 Box(Modifier.weight(1f).height(40.dp).clip(RoundedCornerShape(20.dp)).background(Color.White.copy(alpha = .2f)).tap("Bursdager") { s.openBirthdays(name, p) }, contentAlignment = Alignment.Center) {
-                    Tx("Bursdager ›", man(13.sp, FontWeight.Bold, Color.White))
+                    Tx("Bursdager ›", man(KType.subheadline, FontWeight.Bold, Color.White))
                 }
             }
             if (isToday) Jenka41()
@@ -144,8 +146,8 @@ private fun PartyHat41(modifier: Modifier) {
         val sx = size.width / 60f
         val sy = size.height / 62f
         val cone = Path().apply { moveTo(8 * sx, 56 * sy); lineTo(30 * sx, 4 * sy); lineTo(52 * sx, 56 * sy); close() }
-        drawPath(cone, Color(0xFF1B1A17))
-        val y = Color(0xFFF2C14E)
+        drawPath(cone, KLight.ink)
+        val y = Illustrasjon.glimtGul
         drawLine(y, Offset(14 * sx, 42 * sy), Offset(46 * sx, 42 * sy), 3 * sx)
         drawLine(y, Offset(19 * sx, 30 * sy), Offset(41 * sx, 30 * sy), 3 * sx)
         drawLine(y, Offset(24 * sx, 18 * sy), Offset(36 * sx, 18 * sy), 3 * sx)

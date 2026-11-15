@@ -80,7 +80,7 @@ fun GlimtButton41(vm: KalVm) {
     val k = LocalK.current
     val on = vm.k41.aiOn
     Box(Modifier.height(32.dp).clip(RoundedCornerShape(16.dp)).background(if (on) Red else k.chip).tap("Søk med Glimt") { vm.k41.aiGo(vm.q) }.padding(horizontal = 11.dp),
-        contentAlignment = Alignment.Center) { Tx("✦ Glimt", man(12.5.sp, FontWeight.ExtraBold, if (on) Color.White else k.ink)) }
+        contentAlignment = Alignment.Center) { Tx("✦ Glimt", man(KType.footnote, FontWeight.ExtraBold, if (on) Color.White else k.ink)) }
 }
 
 @Composable
@@ -91,20 +91,20 @@ fun AiCard41(vm: KalVm) {
     Column(Modifier.fillMaxWidth().padding(bottom = 6.dp).clip(RoundedCornerShape(18.dp)).background(k.card).border(1.5.dp, Red, RoundedCornerShape(18.dp)).padding(horizontal = 14.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Box(Modifier.size(18.dp).clip(CircleShape).background(Red), contentAlignment = Alignment.Center) { Tx("✦", man(10.sp, FontWeight.Bold, Color.White)) }
-            Tx("GLIMT · " + if (s.aiLocal) "UTEN AI" else "OLLAMA", mono(10.sp, Red, .14f))
+            Box(Modifier.size(18.dp).clip(CircleShape).background(Red), contentAlignment = Alignment.Center) { Tx("✦", man(KType.caption, FontWeight.Bold, Color.White)) }
+            Tx("GLIMT · " + if (s.aiLocal) "UTEN AI" else "OLLAMA", mono(KType.caption, Red, .14f))
         }
-        if (s.aiBusy) Tx("Leser kalenderen din med Ollama …", man(14.sp, FontWeight.Medium, k.mut))
+        if (s.aiBusy) Tx("Leser kalenderen din med Ollama …", man(KType.callout, FontWeight.Medium, k.mut))
         else {
-            Tx(s.aiText, man(14.5.sp, FontWeight.Medium, k.ink, 21.sp), maxLines = 6)
+            Tx(s.aiText, man(KType.callout, FontWeight.Medium, k.ink, 21.sp), maxLines = 6)
             s.aiHits.forEach { e ->
                 val c = vm.evCal(e)
                 Row(Modifier.fillMaxWidth().height(androidx.compose.foundation.layout.IntrinsicSize.Min).tap(e.t) { vm.openEv(e) }.padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Box(Modifier.width(4.dp).height(34.dp).clip(RoundedCornerShape(2.dp)).background(c.col))
                     Column(Modifier.weight(1f)) {
-                        Tx(Kal41.listTitle(e, c.n), man(14.sp, FontWeight.Bold, k.ink))
+                        Tx(Kal41.listTitle(e, c.n), man(KType.callout, FontWeight.Bold, k.ink))
                         Tx(no.kristo.kalender.cap(no.kristo.kalender.WD[e.d.dayOfWeek.value % 7]) + " " + e.d.dayOfMonth + ". " + no.kristo.kalender.MN[e.d.monthValue - 1] +
-                            if (e.all) " · hele dagen" else " · " + no.kristo.kalender.hm(e.s ?: 0), man(12.sp, FontWeight.Medium, k.mut))
+                            if (e.all) " · hele dagen" else " · " + no.kristo.kalender.hm(e.s ?: 0), man(KType.footnote, FontWeight.Medium, k.mut))
                     }
                 }
             }

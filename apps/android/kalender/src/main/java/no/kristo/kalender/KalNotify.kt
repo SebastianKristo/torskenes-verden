@@ -16,6 +16,7 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import java.time.LocalDateTime
 import java.time.LocalTime
+import androidx.compose.ui.graphics.toArgb
 
 /*
  * Prompt 33: lokale varsler i Kalender-appen (AlarmManager + kanalen «Hendelser»).
@@ -146,7 +147,7 @@ object KalNotify {
         val id = rc(key)
         val b = NotificationCompat.Builder(ctx, CH_EVENTS)
             .setSmallIcon(no.kristo.kalender.R.drawable.ic_kal_notif)
-            .setColor(0xFFB23A2A.toInt())
+            .setColor(Red.toArgb())
             .setContentTitle(if (kind == "rem") e.t + " · " + (if (snoozed) "om 10 min" else inText(e, kind)) else title)
             .setContentText(if (kind == "rem") listOfNotNull(time, e.loc).joinToString(" · ") else body)
             .setStyle(NotificationCompat.BigTextStyle().bigText(if (kind == "rem") listOfNotNull(time, e.loc).joinToString(" · ") else body))
@@ -178,7 +179,7 @@ object KalNotify {
         if (!canPost(ctx)) return
         channels(ctx)
         val id = (title + text).hashCode() and 0x7fffffff
-        val n = NotificationCompat.Builder(ctx, CH_GLIMT).setSmallIcon(no.kristo.kalender.R.drawable.ic_kal_notif).setColor(0xFFB23A2A.toInt())
+        val n = NotificationCompat.Builder(ctx, CH_GLIMT).setSmallIcon(no.kristo.kalender.R.drawable.ic_kal_notif).setColor(Red.toArgb())
             .setContentTitle(title).setContentText(text).setStyle(NotificationCompat.BigTextStyle().bigText(text))
             .setAutoCancel(true).setContentIntent(openIntent(ctx, link, id)).build()
         runCatching { NotificationManagerCompat.from(ctx).notify("glimt", id, n) }

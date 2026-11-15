@@ -194,30 +194,30 @@ fun Google36Panel(vm: KalVm) {
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Tx("Google Kalender", man(14.sp, FontWeight.Bold, k.ink), Modifier.weight(1f))
-            if (st.busy) Tx("Lagrer …", man(12.sp, FontWeight.Medium, k.mut))
+            Tx("Google Kalender", man(KType.callout, FontWeight.Bold, k.ink), Modifier.weight(1f))
+            if (st.busy) Tx("Lagrer …", man(KType.footnote, FontWeight.Medium, k.mut))
         }
         val g = st.g
         when {
-            g == null -> Tx("Henter Google-kalendere …", man(12.sp, FontWeight.Medium, k.mut))
+            g == null -> Tx("Henter Google-kalendere …", man(KType.footnote, FontWeight.Medium, k.mut))
             !g.connected -> GoogleNotConnected36(vm, g)
             else -> GoogleConnected36(vm, g)
         }
-        st.err?.let { Tx(it, man(12.sp, FontWeight.Medium, k.acc), maxLines = 4) }
+        st.err?.let { Tx(it, man(KType.footnote, FontWeight.Medium, k.acc), maxLines = 4) }
     }
 }
 
 @Composable
 private fun GoogleNotConnected36(vm: KalVm, g: KGoogle36) {
     val k = LocalK.current
-    g.error?.let { Tx(it, man(12.sp, FontWeight.Medium, k.acc), maxLines = 4) }
+    g.error?.let { Tx(it, man(KType.footnote, FontWeight.Medium, k.acc), maxLines = 4) }
     Tx(
         if (g.configured || g.error != null) "Logg inn med Google i Homelab. Deretter velger du hovedkalenderen her."
         else "Google Kalender er ikke satt opp på serveren ennå (Homelab → Innstillinger → Integrasjoner).",
-        man(12.sp, FontWeight.Medium, k.mut, 16.sp), maxLines = 4,
+        man(KType.footnote, FontWeight.Medium, k.mut, 16.sp), maxLines = 4,
     )
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        InkPill("Koble til Google", { vm.googleLogin() }, padH = 16.dp, fs = 13.sp)
+        InkPill("Koble til Google", { vm.googleLogin() }, padH = 16.dp, fs = KType.subheadline)
         if (vm.g36.waiting) LinePill("Oppdater", { Hap.tick(); vm.g36.waiting = false; vm.googleLoad(force = true) })
     }
 }
@@ -225,12 +225,12 @@ private fun GoogleNotConnected36(vm: KalVm, g: KGoogle36) {
 @Composable
 private fun GoogleConnected36(vm: KalVm, g: KGoogle36) {
     val k = LocalK.current
-    g.email?.let { Tx(it, mono(11.5.sp, k.mut)) }
-    Tx("HOVEDKALENDER", mono(10.5.sp, k.mut, 1.2f))
+    g.email?.let { Tx(it, mono(KType.caption, k.mut)) }
+    Tx("HOVEDKALENDER", mono(KType.caption, k.mut, 1.2f))
     g.writable.forEach { c -> GoogleMainRow36(vm, c) }
     val rest = g.others
     if (rest.isNotEmpty()) {
-        Tx("VIS OGSÅ", mono(10.5.sp, k.mut, 1.2f), Modifier.padding(top = 4.dp))
+        Tx("VIS OGSÅ", mono(KType.caption, k.mut, 1.2f), Modifier.padding(top = 4.dp))
         rest.forEach { c -> GoogleShowRow36(vm, c) }
     }
 }
@@ -246,8 +246,8 @@ private fun GoogleMainRow36(vm: KalVm, c: KGCal36) {
             if (c.main) Box(Modifier.size(10.dp).clip(CircleShape).background(k.acc))
         }
         Column(Modifier.weight(1f)) {
-            Tx(c.name, man(13.5.sp, FontWeight.Bold, k.ink))
-            Tx(if (c.main) "Personlig · nye hendelser lagres her" else accessText(c), man(11.5.sp, FontWeight.Medium, k.mut))
+            Tx(c.name, man(KType.subheadline, FontWeight.Bold, k.ink))
+            Tx(if (c.main) "Personlig · nye hendelser lagres her" else accessText(c), man(KType.caption, FontWeight.Medium, k.mut))
         }
     }
 }
@@ -263,8 +263,8 @@ private fun GoogleShowRow36(vm: KalVm, c: KGCal36) {
             Box(Modifier.size(12.dp).clip(CircleShape).background(c.color?.let { Color(it) } ?: k.mut))
         }
         Column(Modifier.weight(1f)) {
-            Tx(c.name, man(13.5.sp, FontWeight.Bold, k.ink))
-            Tx(accessText(c), man(11.5.sp, FontWeight.Medium, k.mut))
+            Tx(c.name, man(KType.subheadline, FontWeight.Bold, k.ink))
+            Tx(accessText(c), man(KType.caption, FontWeight.Medium, k.mut))
         }
         Toggle(c.shown)
     }

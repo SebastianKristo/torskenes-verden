@@ -44,7 +44,6 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
 import no.kristo.kalender.Fag37
@@ -128,7 +127,7 @@ fun GlimtMap37(vm: no.kristo.kalender.KalVm, e: KEv) {
     Box(Modifier.fillMaxWidth().padding(top = 8.dp).tap("Veibeskrivelse til " + h.a) { open(ctx, Geo37.dirUrl(h)) }) {
         MapImage37(h, 120, 14)
         Box(Modifier.align(Alignment.BottomStart).padding(8.dp).clip(RoundedCornerShape(50)).background(k.glass).padding(horizontal = 10.dp, vertical = 5.dp)) {
-            Tx(h.a.ifBlank { e.loc.orEmpty() }, man(12.sp, FontWeight.Bold, k.ink))
+            Tx(h.a.ifBlank { e.loc.orEmpty() }, man(KType.footnote, FontWeight.Bold, k.ink))
         }
     }
 }
@@ -144,13 +143,13 @@ fun DetailMap37(vm: no.kristo.kalender.KalVm, e: KEv) {
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Box(Modifier.tap("Kart") { open(ctx, Geo37.geoUri(h, label)) }) { MapImage37(h, 170, 16) }
-        Tx(label, man(12.5.sp, FontWeight.Medium, k.mut), maxLines = 3)
+        Tx(label, man(KType.footnote, FontWeight.Medium, k.mut), maxLines = 3)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Box(Modifier.weight(1f).height(38.dp).clip(RoundedCornerShape(19.dp)).background(k.chip).tap("Åpne i Kart") { open(ctx, Geo37.geoUri(h, label)) }, contentAlignment = Alignment.Center) {
-                Tx("Åpne i Kart", man(13.sp, FontWeight.Bold, k.ink))
+                Tx("Åpne i Kart", man(KType.subheadline, FontWeight.Bold, k.ink))
             }
             Box(Modifier.weight(1f).height(38.dp).clip(RoundedCornerShape(19.dp)).background(k.ink).tap("Veibeskrivelse") { open(ctx, Geo37.dirUrl(h)) }, contentAlignment = Alignment.Center) {
-                Tx("Veibeskrivelse ›", man(13.sp, FontWeight.Bold, k.bg))
+                Tx("Veibeskrivelse ›", man(KType.subheadline, FontWeight.Bold, k.bg))
             }
         }
     }
@@ -191,8 +190,8 @@ fun FagPick37(vm: no.kristo.kalender.KalVm, e: KEv) {
         Row(Modifier.fillMaxWidth().heightIn(min = 44.dp).tap("Farge for " + Fag37.label(key)) { open = !open }, verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(12.dp).clip(CircleShape).background(Color(Fag37.color(key))))
             Spacer(Modifier.width(8.dp))
-            Tx("Farge for " + Fag37.label(key), man(14.sp, FontWeight.Bold, k.ink), Modifier.weight(1f))
-            Tx(if (open) "Lukk" else "Endre", man(13.sp, FontWeight.Bold, k.mut))
+            Tx("Farge for " + Fag37.label(key), man(KType.callout, FontWeight.Bold, k.ink), Modifier.weight(1f))
+            Tx(if (open) "Lukk" else "Endre", man(KType.subheadline, FontWeight.Bold, k.mut))
         }
         if (open) FagSwatches37(key) { open = false }
     }
@@ -207,14 +206,14 @@ fun FagSettings37(vm: no.kristo.kalender.KalVm) {
     val rows = Fag37.rows(vm.all) { vm.cal(it) }
     var picking by remember { mutableStateOf("") }
     Column(Modifier.drawBehind { drawLine(k.line2, Offset(0f, 0f), Offset(size.width, 0f), 1.dp.toPx()) }) {
-        if (rows.isEmpty()) Tx("Ingen fag i Studie-kalenderen ennå.", man(13.sp, FontWeight.Medium, k.mut), Modifier.padding(vertical = 12.dp))
+        if (rows.isEmpty()) Tx("Ingen fag i Studie-kalenderen ennå.", man(KType.subheadline, FontWeight.Medium, k.mut), Modifier.padding(vertical = 12.dp))
         rows.forEach { row ->
             Column(Modifier.fillMaxWidth().drawBehind { drawLine(k.line2, Offset(0f, size.height), Offset(size.width, size.height), 1.dp.toPx()) }) {
                 Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).tap("Farge for " + row.label) { picking = if (picking == row.key) "" else row.key }, verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.width(26.dp), contentAlignment = Alignment.Center) { Box(Modifier.size(14.dp).clip(CircleShape).background(Color(row.c))) }
                     Spacer(Modifier.width(12.dp))
-                    Tx(row.label, man(14.5.sp, FontWeight.Bold, k.ink), Modifier.weight(1f))
-                    Tx(if (row.own) "Eget valg" else "Fast", man(12.sp, FontWeight.Medium, k.mut))
+                    Tx(row.label, man(KType.callout, FontWeight.Bold, k.ink), Modifier.weight(1f))
+                    Tx(if (row.own) "Eget valg" else "Fast", man(KType.footnote, FontWeight.Medium, k.mut))
                 }
                 if (picking == row.key) Box(Modifier.padding(start = 38.dp, bottom = 10.dp)) { FagSwatches37(row.key) { picking = "" } }
             }
