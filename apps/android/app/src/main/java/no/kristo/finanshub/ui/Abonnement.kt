@@ -712,64 +712,6 @@ private fun AgentCard23(vm: AppViewModel, x: SubsX, t: SubTok) {
     }
 }
 
-/* ---------------- Legg til abonnement (kortet øverst, åpnet med + i fanelinja) ---------------- */
-
-@Composable
-private fun AddCard23(vm: AppViewModel, t: SubTok) {
-    var mode by remember { mutableStateOf<String?>(null) }
-    val pick = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> if (uri != null) { vm.uploadSubReceipt(uri); vm.subAdding = false } }
-    val shot = rememberShotPicker27(vm)
-    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(t.card).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("Legg til abonnement", color = t.fg, fontFamily = sans, fontWeight = FontWeight.SemiBold, fontSize = 17.sp, modifier = Modifier.weight(1f))
-            Box(Modifier.size(32.dp).clip(CircleShape).background(t.chip).clickable { vm.subAdding = false }, contentAlignment = Alignment.Center) { Text("×", modifier = Modifier.semantics { contentDescription = "Lukk" }, color = t.fg, fontSize = 18.sp) }
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf(Triple("sk", "▣", "Skjermbilde"), Triple("man", "✎", "Manuelt"), Triple("rc", "⎙", "Kvittering"), Triple("tx", "⇄", "Transaksjon")).forEach { (k, ic, n) ->
-                Column(Modifier.weight(1f).clip(RoundedCornerShape(18.dp)).background(t.card2).border(2.dp, if (mode == k) ORANGE else Color.Transparent, RoundedCornerShape(18.dp))
-                    .clickable {
-                        Haptics.select()
-                        when (k) {
-                            "sk" -> shot()
-                            "man" -> { vm.subAdding = false; vm.m23.subEditNew = true }
-                            "rc" -> pick.launch(arrayOf("image/*", "application/pdf"))
-                            else -> { mode = "tx"; vm.loadSubCandidates() }
-                        }
-                    }.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(ic, color = PEACH, fontSize = 18.sp)
-                    Text(n, color = t.fg, fontFamily = sans, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                }
-            }
-        }
-        if (mode == "tx") {
-            val list = vm.subCandidates
-            when {
-                list == null -> Box(Modifier.fillMaxWidth().padding(12.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = t.fg, modifier = Modifier.size(22.dp), strokeWidth = 2.dp) }
-                list.isEmpty() -> Text("Fant ingen nye faste trekk. Alt ser ut til å være registrert.", color = t.mut, fontFamily = sans, fontSize = 13.sp)
-                else -> Column {
-                    list.forEachIndexed { i, c ->
-                        if (i > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(t.bd))
-                        val have = vm.subsX?.items?.any { it.name.equals(c.merchant, ignoreCase = true) } == true
-                        Row(Modifier.fillMaxWidth().padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Box(Modifier.size(34.dp).clip(CircleShape)) { Logo(vm, c.domain, c.merchant, 0xFFFF7A3D, 34) }
-                            Column(Modifier.weight(1f)) {
-                                Text(c.merchant, color = t.fg, fontFamily = sans, fontWeight = FontWeight.Medium, fontSize = 14.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                val day = c.lastDate.takeIf { it.length >= 10 }?.substring(8, 10)?.toIntOrNull()
-                                Text("${day?.let { "Trekkes $it. " } ?: ""}${if (c.cycle == "yearly") "hvert år" else "hver måned"} · ${kr23(c.amount)} · sett ${c.count} ganger",
-                                    color = t.mut, fontFamily = sans, fontSize = 12.5.sp, maxLines = 2)
-                            }
-                            Box(Modifier.height(32.dp).clip(RoundedCornerShape(16.dp)).background(if (have) Color.Transparent else ORANGE).clickable(enabled = !have) { Haptics.tap(); vm.addSubCandidate(c) }
-                                .padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
-                                Text(if (have) "✓ Lagt til" else "+ Legg til", color = if (have) Color(0xFF2F7A4F) else Color(0xFF1A0C04), fontFamily = sans, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
 /* ---------------- «Endre abonnement»-arket i Papir ---------------- */
 
 @Composable
@@ -1035,14 +977,6 @@ internal fun SubShotCard27(vm: AppViewModel, card: Color = SK_CARD, fg: Color = 
         }
         Text("Leses lokalt av qwen2.5vl på hjemmeserveren. Bildet slettes etter lesing. Felt merket «Sjekk» var utydelige.", color = mut, fontSize = 12.sp, lineHeight = 17.sp)
     }
-}
-
-/** Valgknappen «Fra skjermbilde» i Legg til-kortet (photo picker, bare bilder). */
-@Composable
-internal fun rememberShotPicker27(vm: AppViewModel): () -> Unit {
-    val ctx = LocalContext.current
-    val pick = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri -> if (uri != null) { vm.subAdding = false; vm.subFromShot27(ctx, uri) } }
-    return { pick.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }
 }
 
 /** Første trekk-dato i skjemaet fra et skjermbilde (dag, måned). */
