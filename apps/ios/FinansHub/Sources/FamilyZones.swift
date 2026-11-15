@@ -196,7 +196,7 @@ struct Fam22DraftCard: View {
                 nameField(t, d)
                 Fam22RadiusHead(radius: d.radius)
                 Slider(value: Binding<Double>(get: { m.draft22?.radius ?? 200 }, set: { m.draft22?.radius = $0 }), in: 50...2000, step: 25)
-                    .tint(Fam22Tok.light.lab)
+                    .tint(t.lab)
                 Text("Ikon").font(PF.ui(13)).foregroundStyle(t.mut)
                 IconPicker42(selected: d.iconKey, color: d.color, cell: 40, glyph: 20) { k in m.draft22?.icon = k }
                 Text("Farge").font(PF.ui(13)).foregroundStyle(t.mut)
