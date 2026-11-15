@@ -1,4 +1,4 @@
-// Musikk i Media: server/yubal.js er eneste vei inn til yubal (som ikke har innlogging). Adressen blir på serveren, alt
+// Musikk i Media: server/media/yubal.js er eneste vei inn til yubal (som ikke har innlogging). Adressen blir på serveren, alt
 // valideres her, og 409 «køen er full» kommer frem som norsk tekst.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -21,7 +21,7 @@ test.after(() => { globalThis.fetch = realFetch; });
 const { default: app } = await import('../server/index.js');
 const { updateConfig } = await import('../server/settings.js');
 const { OWNER } = await import('../server/db.js');
-const y = await import('../server/yubal.js');
+const y = await import('../server/media/yubal.js');
 const { INTEGRATIONS } = await import('../server/integrations-api.js');
 
 async function req(path, { method = 'GET', headers = {}, body } = {}) {
@@ -194,15 +194,16 @@ test('bildeproxy: bare YouTube sine bildeverter', async () => {
   y._setBildeYubal(null);
 });
 
-test('integrasjonen: Media-gruppen, bare adresse, guide om format; ruten er montert før media50/43', () => {
+test('integrasjonen: Media-gruppen, bare adresse, guide om format; ruten er montert før images.js og arr.js', () => {
   const x = INTEGRATIONS.find((i) => i.id === 'yubal');
   assert.equal(x.group, 'Media');
   assert.deepEqual(x.fields.map((f) => f.key), ['yubal_url']);
   const src = readFileSync(new URL('../server/integrations-api.js', import.meta.url), 'utf8');
   assert.match(src, /YUBAL_AUDIO_FORMAT/);
   assert.match(src, /docker compose up -d --force-recreate/);
-  const idx = readFileSync(new URL('../server/index.js', import.meta.url), 'utf8');
-  assert.ok(idx.indexOf("app.route('/api/media/yubal', yubalApi)") < idx.indexOf('mountMedia50(app)'));
+  const idx = readFileSync(new URL('../server/media/index.js', import.meta.url), 'utf8'); // mountMedia
+  assert.ok(idx.indexOf("app.route('/api/media/yubal', yubalApi)") < idx.indexOf("app.route('/api/media', imagesApi)"));
+  assert.ok(idx.indexOf("app.route('/api/media/yubal', yubalApi)") < idx.indexOf("app.route('/api/media', media43Api)"));
   const web = readFileSync(new URL('../public/js/media-musikk.js', import.meta.url), 'utf8');
   assert.doesNotMatch(web, /10\.69\.|:8010/);
   assert.match(web, /\/api\/media\/yubal/);

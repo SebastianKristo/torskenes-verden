@@ -28,8 +28,8 @@ test.after(() => { globalThis.fetch = realFetch; });
 
 const { default: app } = await import('../server/index.js');
 const { db, kv, OWNER } = await import('../server/db.js');
-const m43 = await import('../server/media43.js');
-const mock43 = await import('../server/media43-mock.js');
+const m43 = await import('../server/media/arr.js');
+const mock43 = await import('../server/media/mock.js');
 const mem43 = await import('../server/ai-memory43.js');
 const imp43 = await import('../server/claude-import43.js');
 const gsc43 = await import('../server/gsc43.js');

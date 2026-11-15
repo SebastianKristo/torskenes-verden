@@ -1,4 +1,4 @@
-// NRK-nedlaster i Media: server/nrkdl.js snakker med nrk-dl (bak egen norsk VPN) og holder tokenet på serveren.
+// NRK-nedlaster i Media: server/media/nrk.js snakker med nrk-dl (bak egen norsk VPN) og holder tokenet på serveren.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtempSync, readFileSync } from 'node:fs';
@@ -12,7 +12,7 @@ delete process.env.MOCK_DATA;
 
 const { updateConfig, cfg } = await import('../server/settings.js');
 const { OWNER } = await import('../server/db.js');
-const nrk = await import('../server/nrkdl.js');
+const nrk = await import('../server/media/nrk.js');
 const { INTEGRATIONS } = await import('../server/integrations-api.js');
 
 const json = (o, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { 'content-type': 'application/json' } });

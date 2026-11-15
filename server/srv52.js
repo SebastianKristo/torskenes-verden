@@ -381,7 +381,7 @@ export function briefAccess52() {
   return { children: ids(a.children), homelab: ids(a.homelab), domains: ids(a.domains), stocks: ids(a.stocks) };
 }
 export const isChild52 = (u) => briefAccess52().children.includes(u);
-const mediaOk52 = async (u) => { try { const { mediaAllowed43 } = await import('./media43.js'); return mediaAllowed43(u); } catch { return isAdmin(u); } };
+const mediaOk52 = async (u) => { try { const { mediaAllowed43 } = await import('./media/arr.js'); return mediaAllowed43(u); } catch { return isAdmin(u); } };
 const CARDS52 = [['focus', '1b', 'Dagens fokus'], ['trip', '3b', 'Min reise'], ['todo', '4a', 'Huskeliste'], ['bills', '2a', 'Regninger'], ['clothes', '9b', 'Klær'],
   ['tonight', '5b', 'Nytt i kveld'], ['homelab', '6a', 'Homelab'], ['domains', '7a', 'Domener'], ['stocks', '8b', 'Aksjer']];
 /** Hvilke kort brukeren får. → {allowed:Set, hidden:[{id, reason}]} */
@@ -470,7 +470,7 @@ async function stocksOf52(u) {
   return { value, value_text: value != null ? `${nb0(value)} kr` : null, change_pct: pct, items, synced_at: s.syncedAt ? new Date(s.syncedAt).toISOString() : null, status: s.status ?? null };
 }
 async function tonightOf52(today) {
-  const { upcoming43 } = await import('./media43.js');
+  const { upcoming43 } = await import('./media/arr.js');
   const up = await withTimeout(upcoming43(1), 4000, null);
   if (!up) return { items: [], error: 'Media svarte ikke' };
   const items = (up.items ?? []).filter((x) => x.date === today).slice(0, 5).map((x) => ({ title: x.title, subtitle: [x.code, x.episodeTitle].filter(Boolean).join(' · ') || null, time: x.time || null, kind: x.kind, poster: x.poster ?? null }));

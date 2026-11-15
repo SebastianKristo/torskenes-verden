@@ -1,14 +1,14 @@
 // Prompt 44 (SERVER44): Media – flere servere per sted, felles status, interaktivt søk som jobb, slett fil, søk i biblioteket.
 // Spesifikasjon: claude-code-media-arr.md, claude-code-media-interaktivt-sok-504.md, claude-code-media-mobil-ikke-innlogget.md.
 //
-// Den ekte årsaken til «ikke logget inn» i Media på mobil (se også mediaSource43 i media43.js):
+// Den ekte årsaken til «ikke logget inn» i Media på mobil (se også mediaSource43 i media/arr.js):
 //   Sonarr, Radarr, Plex og Jellyfin er «personlige» integrasjoner (ISO2). Innstillinger → Integrasjoner viser verdiene til den
 //   som er innlogget, mens Media leste eierens (OWNER) – og de gamle rutene /api/media/now|recent|history (Plex/Jellyfin,
 //   «Spilles nå») leste den innloggedes egne og svarte {configured:false} for alle andre. To kilder til samme spørsmål. Nå:
 //   - Media bruker serverens oppsett for alle med tilgang (eierens verdier, ellers første admin som har lagt dem inn).
 //   - GET /api/integrations/status og GET /api/media/status har samme felt: {service, site, connected, state, lastOk, error, source}.
 //   - /api/media/now|recent|history: har brukeren ikke egne Plex/Jellyfin-verdier, men tilgang til Media, brukes serverens.
-//   Den ekte årsaken til «Feil 504» i interaktivt søk: /release fikk samme grense (15 s) som alle andre kall. Se media43.js.
+//   Den ekte årsaken til «Feil 504» i interaktivt søk: /release fikk samme grense (15 s) som alle andre kall. Se media/arr.js.
 //
 // Ruter (alle krever innlogging + modulen «media»; endringer av servere bare admin):
 //   GET    /api/media/servers[?status=1]       → [{id, name, color, default, builtin, selected, sonarr, radarr, qbit, prowlarr}]
@@ -35,12 +35,12 @@
 import { Hono } from 'hono';
 import { streamSSE } from 'hono/streaming';
 import { randomUUID } from 'node:crypto';
-import { kv, OWNER } from './db.js';
-import { isAdmin, sessionUser } from './auth/session.js';
-import { tokenAccessOf } from './finans/routes.js';
-import { authOrToken } from './mobile.js';
-import { userCfgSet } from './settings.js';
-import * as M from './media43.js';
+import { kv, OWNER } from '../db.js';
+import { isAdmin, sessionUser } from '../auth/session.js';
+import { tokenAccessOf } from '../finans/routes.js';
+import { authOrToken } from '../mobile.js';
+import { userCfgSet } from '../settings.js';
+import * as M from './arr.js';
 
 const SERVICES = ['sonarr', 'radarr', 'qbit', 'prowlarr'];
 const DEFAULT_SITE = 'hjemme';
@@ -462,9 +462,12 @@ export async function grabViaProwlarr80(p) {
     }
   });
 }
-media44Api.post('/release', ...G, async (c, next) => {
+// POST /api/media/release {guid, indexerId, service?, via?} → {ok, guid, message:'Sendt til qBittorrent: 1080p WEB-DL · 2,4 GB', release}
+// Treff fra Prowlarr-søket (pGrab) sendes rett til qBittorrent; ellers kjenner Sonarr/Radarr treffet (grabRelease43 i arr.js).
+// Var to lag (denne + next() til arr.js) – nå én handler, med samme tilgang (innlogget + Media-tilgang) og samme feilsvar.
+media44Api.post('/release', ...G, async (c) => {
   const b = await M.mediaBody43(c), p = pGrab.get(String(b.guid ?? ''));
-  if (!p || b.via === 'sonarr' || b.via === 'radarr') return next(); // Sonarr/Radarr kjenner treffet: som før (media43)
+  if (!p || b.via === 'sonarr' || b.via === 'radarr') { try { return c.json(await M.grabRelease43(b)); } catch (e) { return M.mediaFail43(c, e); } }
   try { return c.json(await grabViaProwlarr80(p)); } catch (e) { return M.mediaFail43(c, e instanceof M.MediaError ? e : new M.MediaError(e.message, 502)); }
 });
 

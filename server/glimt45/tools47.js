@@ -172,7 +172,7 @@ const mediaTool = {
     return { args: { title, pick: p?.pick ?? (args.pick === 'next' ? 'next' : 'latest'), season: p?.season ?? (Number.isInteger(args.season) ? args.season : null), episode: p?.episode ?? (Number.isInteger(args.episode) ? args.episode : null), download: p?.download ?? /last\s+ned|hent|søk/i.test(ctx.text) } };
   },
   async run(a, ctx) {
-    const { episodeGlimt43 } = await import('../media43.js');
+    const { episodeGlimt43 } = await import('../media/arr.js');
     const r = await episodeGlimt43(ctx.user, a);
     return { status: r.ok === false ? 'failed' : 'done', ...(r.ok === false ? { error: r.text } : {}), result: r, cards: (r.results ?? []).map((x) => ({ kind: 'episode', id: String(x.episodeId ?? x.id ?? x.title), title: x.title, subtitle: x.subtitle ?? null, episodeId: x.episodeId ?? null })) };
   },

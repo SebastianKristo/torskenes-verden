@@ -11,8 +11,8 @@ feiler hjemme.
 
 | Ledd | Hva | Hvor i Homelab |
 |---|---|---|
-| 1 | Appen → server: `POST /api/media/command {name:'EpisodeSearch', episodeIds}` (eller `MoviesSearch`) | `server/media43.js` → Sonarr/Radarr `POST /api/v3/command` (svarer 201 med `id`) |
-| 2 | Kommandoen i Sonarr/Radarr: `GET /api/v3/command/{id}` til `completed`/`failed`, `message` | `server/media50.js` `evaluate()` |
+| 1 | Appen → server: `POST /api/media/command {name:'EpisodeSearch', episodeIds}` (eller `MoviesSearch`) | `server/media/arr.js` → Sonarr/Radarr `POST /api/v3/command` (svarer 201 med `id`) |
+| 2 | Kommandoen i Sonarr/Radarr: `GET /api/v3/command/{id}` til `completed`/`failed`, `message` | `server/media/images.js` `evaluate()` |
 | 3 | Indeksere (Prowlarr): `GET /api/v3/release?episodeId=` → kandidater og `rejections` | `releaseSummary50()` |
 | 4 | Grab: køen (`GET /api/v3/queue`) og `GET /api/v3/history?eventType=1` (grabbed) | `evaluate()` |
 | 5 | Nedlastingsklient: `GET /api/v3/downloadclient`, `POST /api/v3/downloadclient/testall`, `GET /api/v3/health` | `diagnose50()` |
@@ -60,7 +60,7 @@ Ledd 2–6 kunne altså ikke feilsøkes fra appen. Den ekte feilen hjemme er san
 
 ## Endret i koden
 
-- **Sann status, ikke «Søker»** (`server/media50.js`): `POST /api/media/command` (og Glimt i Media) gir `track` i svaret.
+- **Sann status, ikke «Søker»** (`server/media/images.js`): `POST /api/media/command` (og Glimt i Media) gir `track` i svaret.
   `GET /api/media/track/:id` går gjennom ledd 2–6 og svarer med én av:
   `searching` «Søker i indekserne via Sonarr …» · `none`/`rejected` «Fant ingen utgivelser» (grunnen fra `rejections`) + «Velg manuelt» ·
   `sent` «Sendt til qBittorrent» · `downloading` «Laster ned 12 % · 4,2 MB/s · 8 min» · `stopped` «Lagt til, men stoppet» [Start] ·

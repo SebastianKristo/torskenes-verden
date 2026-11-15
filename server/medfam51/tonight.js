@@ -1,11 +1,11 @@
 // Prompt 51 (MEDFAM51): «Hva skal vi se i kveld?» – forslag fra eget bibliotek (Radarr/Sonarr) og egen historikk (Plex/Jellyfin via
-// plays44 i playback44.js), tilpasset hvem som er hjemme (Familie › Steder, stedet med type hjem) og ønsket sjanger/lengde.
+// plays44 i media/playback.js), tilpasset hvem som er hjemme (Familie › Steder, stedet med type hjem) og ønsket sjanger/lengde.
 // Rangeringen er regler i koden (forklaringen per forslag bygges herfra); den lokale modellen brukes BARE til å formulere teksten
 // (ai-run med localOnly – aldri skyen), og forslagene virker likt uten modell.
 import { db, q, kv } from '../db.js';
 import { userInfo } from '../auth/session.js';
 import { family50 as F } from '../family.js';
-import * as M from '../media43.js';
+import * as M from '../media/arr.js';
 import { run as aiRun } from '../ai-run.js';
 import { HOUR, DAY, clean, minText } from './common.js';
 

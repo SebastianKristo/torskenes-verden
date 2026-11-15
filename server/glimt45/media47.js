@@ -1,4 +1,4 @@
-// Prompt 47 (GLIMT47): tolkning av episode-forespørsler for Media (Sonarr). Ren tekst, ingen nett – brukes av media43.js
+// Prompt 47 (GLIMT47): tolkning av episode-forespørsler for Media (Sonarr). Ren tekst, ingen nett – brukes av media/arr.js
 // (Media-Glimt) og av Glimt-motorens hurtigvei/verktøy media.episode.
 /** Tittelnormalisering: «9-1-1» ≈ «911» ≈ «9 1 1», «The Rookie» ≈ «the rookie». */
 export const normTitle43 = (s) => String(s ?? '').toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9æøå]+/g, '');

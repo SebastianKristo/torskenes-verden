@@ -4,7 +4,7 @@
 //       Widget = {id, group, name, size:'small'|'medium'|'large'|'lock-rect'|'lock-circle'|'lock-inline', sizeLabel, kind, families?, receiver?, cells?, data, lock}
 import { Hono } from 'hono';
 import { authOrToken } from './mobile.js';
-import { mediaAllowed43, mediaWidget43 } from './media43.js';
+import { mediaAllowed43, mediaWidget43 } from './media/arr.js';
 
 const IOS_SIZE = { small: 'Liten', medium: 'Medium', large: 'Stor', 'lock-rect': 'Låseskjerm', 'lock-circle': 'Låseskjerm · rund', 'lock-inline': 'Låseskjerm · linje' };
 const FAMILY = { small: 'systemSmall', medium: 'systemMedium', large: 'systemLarge', 'lock-rect': 'accessoryRectangular', 'lock-circle': 'accessoryCircular', 'lock-inline': 'accessoryInline' };

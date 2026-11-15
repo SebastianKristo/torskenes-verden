@@ -1,4 +1,4 @@
-// Prompt 87 (pakke 57): NRK-nedlasteren i Media – hele API-et under /api/media/nrk/* (server/nrkdl.js) mot en mocket nrk-dl,
+// Prompt 87 (pakke 57): NRK-nedlasteren i Media – hele API-et under /api/media/nrk/* (server/media/nrk.js) mot en mocket nrk-dl,
 // og web-fanen (public/js/media-nrk.js, public/css/media-nrk.css). Fasit: «Media NRK.dc.html».
 //  - Token og adresse til nrk-dl kommer aldri ut. Bare NRK-lenker, type/kvalitet fra listene, id = 12 hex, komprimer = boolean.
 //  - Bibliotek-endepunktene finnes kanskje ikke i nrk-dl ennå: 404 uten {feil} → tilgjengelig:false, ikke en feil.
@@ -22,7 +22,7 @@ process.env.APP_PASSWORD_HASH = hashPassword('testpassord1');
 const { default: app } = await import('../server/index.js');
 const { updateConfig } = await import('../server/settings.js');
 const { OWNER } = await import('../server/db.js');
-const nrk = await import('../server/nrkdl.js');
+const nrk = await import('../server/media/nrk.js');
 
 const TOKEN = 'hemmelig-token-87', ADR = 'http://nrk.p87:8020';
 const LAN = { incoming: { socket: { remoteAddress: '192.168.1.20' } } };
@@ -431,7 +431,7 @@ test('bilde: bare NRK sine verter over https, bare bilder, og svaret caches', as
 });
 
 test('bilde: standardhenteren godtar bare NRK-verter også ved omdirigering (vertssjekken i guardedGet46)', async () => {
-  const src = readFileSync(new URL('../server/nrkdl.js', import.meta.url), 'utf8');
+  const src = readFileSync(new URL('../server/media/nrk.js', import.meta.url), 'utf8');
   assert.match(src, /guardedGet46\(url, \{ hostOk: \(u\) => nrkBilde\(u\.href\) != null, maxBytes: BILDE_MAX/);
   assert.equal(nrk.bildeUrl('https://gfx.nrk.no/x'), '/api/media/nrk/bilde?u=https%3A%2F%2Fgfx.nrk.no%2Fx');
   for (const v of ['http://gfx.nrk.no/x', 'https://localhost/x', 'https://10.0.0.1/x', '/api/bilde/1', null, 42]) assert.equal(nrk.bildeUrl(v), null, String(v));

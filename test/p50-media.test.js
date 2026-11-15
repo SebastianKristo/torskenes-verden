@@ -24,9 +24,10 @@ globalThis.fetch = async () => { throw new TypeError('fetch failed'); };
 test.after(() => { globalThis.fetch = realFetch; });
 
 const { default: app } = await import('../server/index.js');
-const m43 = await import('../server/media43.js');
-const m50 = await import('../server/media50.js');
-const { rgbaToThumbHash50 } = await import('../server/thumbhash50.js');
+const m43 = await import('../server/media/arr.js');
+const m50 = await import('../server/media/images.js');
+const trk = await import('../server/media/tracking.js');
+const { rgbaToThumbHash50 } = await import('../server/media/thumbhash.js');
 const { thumbHashToRGBA50, thumbHashAverage50, b64ToBytes50 } = await import('../public/js/thumbhash50.js');
 
 let ipN = 10;
@@ -124,7 +125,7 @@ m43._setMediaFetch43(async (url, init = {}) => {
   throw new TypeError('fetch failed');
 });
 const HASH = 'a'.repeat(40);
-const fresh = () => { m43.clearMedia43(); for (const t of m50._tracks50.values()) { t.lastAt = 0; t.histAt = 0; } };
+const fresh = () => { m43.clearMedia43(); for (const t of trk._tracks50.values()) { t.lastAt = 0; t.histAt = 0; } };
 await A('/api/integrations/sonarr', 'PUT', { sonarr_url: 'http://sonarr.test:8989', sonarr_key: 'sonarr-hemmelig-nokkel' });
 await A('/api/integrations/radarr', 'PUT', { radarr_url: 'http://radarr.test:7878', radarr_key: 'radarr-hemmelig-nokkel' });
 await A('/api/integrations/qbittorrent', 'PUT', { qbit_url: 'http://qbit.test:8080', qbit_user: 'admin', qbit_pass: 'qbit-hemmelig-passord' });
@@ -276,7 +277,7 @@ test('Sporing: qBittorrent nede → «qBittorrent svarer ikke», ikke evig «Sø
 
 test('Sporing: alle utgivelser avvist → «Fant ingen utgivelser» med grunn og «Velg manuelt»', async () => {
   reset();
-  m50._setNoGrabMs50(0);
+  trk._setNoGrabMs50(0);
   try {
     S.releases = [{ guid: 'a', title: '9-1-1.S08E03.720p.HDTV', size: 7e8, seeders: 40, rejected: true, rejections: ['HDTV-720p is not wanted in profile'], quality: { quality: { name: 'HDTV-720p' } }, indexer: 'EZTV' },
       { guid: 'b', title: '9-1-1.S08E03.480p', size: 2e8, seeders: 10, rejected: true, rejections: [{ reason: 'SDTV is not wanted in profile' }], quality: { quality: { name: 'SDTV' } }, indexer: 'EZTV' }];
@@ -292,7 +293,7 @@ test('Sporing: alle utgivelser avvist → «Fant ingen utgivelser» med grunn og
     // Diagnostikken ble kjørt automatisk (ingen grab innen grensen): grønn kjede, ledd 4 sier «ingen grab».
     for (let i = 0; i < 20 && !t.diagnostics; i++) { await new Promise((r) => setTimeout(r, 20)); t = await track(c.body.track.id); }
     assert.ok(t.diagnostics?.steps?.some((s) => s.id === 'sonarr:grab' && s.state === 'warn'));
-  } finally { m50._setNoGrabMs50(null); }
+  } finally { trk._setNoGrabMs50(null); }
 });
 
 test('Sporing: qBittorrent 4.x – start gir 404, reserve /torrents/resume', async () => {
@@ -321,7 +322,7 @@ test('Sporing: GET /track?episodeId= gir status uten egen kommando (grab i histo
   reset();
   S.history = [{ eventType: 'grabbed', date: new Date().toISOString(), sourceTitle: '9-1-1.S08E03', downloadId: HASH, episodeId: 701 }];
   S.qbAuthFail = true;
-  m50._tracks50.clear(); fresh();
+  trk._tracks50.clear(); fresh();
   const r = await A('/api/media/track?episodeId=701');
   assert.equal(r.status, 200, r.text);
   assert.equal(r.body.state, 'qbit_auth');

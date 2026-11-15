@@ -32,10 +32,10 @@ import { testBackgrounds } from './background.js';
 import { iconSvg } from './icons.js';
 import { clearCache } from './cache.js';
 import { testOpenWebui } from './chat.js';
-import { testNrk } from './nrkdl.js'; // NRK-nedlaster
-import { testYubal } from './yubal.js'; // Musikk (yubal)
+import { testNrk } from './media/nrk.js'; // NRK-nedlaster
+import { testYubal } from './media/yubal.js'; // Musikk (yubal)
 import { testApns89 } from './apns.js'; // prompt 89 (SRV89): Apple Push for Live Activities
-import { mediaTest43, mediaHookPath43 } from './media43.js'; // prompt 43: Test tilkobling og webhook-token for MEDIA
+import { mediaTest43, mediaHookPath43 } from './media/arr.js'; // prompt 43: Test tilkobling og webhook-token for MEDIA
 
 const MOCK = process.env.MOCK_DATA === '1';
 

@@ -11,15 +11,17 @@
 //   GET  /api/playback/history?q=&user=&server=&page=1 → {items:[{id, server, when, whenText, title, subtitle, poster, user, device, platform, duration, durationText, percent, watched}], users:[{name, count}], page, pages, total}
 //   GET  /api/playback/stats?range=7d|30d|12m → {range, perDay:[{date, count}], topShows:[{title, plays}], topUsers:[{name, hours, hoursText}], platforms:[{name, pct}], total}
 //   GET  /api/playback/libraries → {items:[{server, key, title, type, count, countText, size, sizeText, lastAdded}]}
+//   GET  /api/playback/summary?range=7d|30d|year|all → sammendrag for mobil (topplister, per bruker/enhet, siste 20) – fra prompt 45
 //   Jobb: hvert minutt leses sesjonene og lagres i tabellen plays44 (historikken forsvinner ikke når Plex/Jellyfin glemmer den).
 import { Hono } from 'hono';
 import { randomUUID } from 'node:crypto';
-import { db, q, kv, OWNER } from './db.js';
-import { isAdmin } from './auth/session.js';
-import { authOrToken } from './mobile.js';
-import { userCfg, setUserCfg } from './settings.js';
-import { mediaAllowed43, mediaSource43 } from './media43.js';
-import { dtf } from './intl-format.js'; // gjenbrukte Intl.DateTimeFormat
+import { db, q, kv, OWNER } from '../db.js';
+import { isAdmin } from '../auth/session.js';
+import { authOrToken } from '../mobile.js';
+import { userCfg, setUserCfg } from '../settings.js';
+import { mediaAllowed43, mediaSource43 } from './arr.js';
+import { dtf } from '../intl-format.js'; // gjenbrukte Intl.DateTimeFormat
+import { registerJob } from '../jobs/index.js'; // logging av avspillinger
 
 const MOCK = () => process.env.MOCK_DATA === '1';
 db.exec(`CREATE TABLE IF NOT EXISTS plays44 (id INTEGER PRIMARY KEY AUTOINCREMENT, server TEXT NOT NULL, skey TEXT NOT NULL, user TEXT NOT NULL DEFAULT '', item TEXT NOT NULL DEFAULT '',
@@ -176,13 +178,8 @@ export async function logPlays44(now = Date.now()) {
   for (const r of q('SELECT id, server, skey, seen FROM plays44 WHERE stopped IS NULL AND seen>?').all(now - 3 * 3600_000)) if (!active.has(`${r.server}|${r.skey}`)) q('UPDATE plays44 SET stopped=? WHERE id=?').run(r.seen, r.id);
   return list.length;
 }
-let timer = null;
-export function startPlayback44() {
-  if (timer || process.env.NODE_ENV === 'test') return;
-  timer = setInterval(() => logPlays44().catch((e) => console.warn('[playback]', e.message)), 60_000);
-  timer.unref?.();
-  setTimeout(() => logPlays44().catch(() => {}), 15_000).unref?.();
-}
+// Felles planlegger (server/jobs/): ikke i test/sandkasse. Første runde 15 s etter oppstart står i startMedia (media/index.js).
+registerJob('media.avspillinger', 60_000, () => logPlays44(), { note: 'Avspilling: aktive Plex/Jellyfin-økter lagres i historikken' });
 
 /* ---------------- Historikk, statistikk og biblioteker ---------------- */
 
@@ -238,6 +235,35 @@ export async function libraries44() {
   return { items, ...(Object.keys(errors).length ? { errors } : {}) };
 }
 
+/* ---------------- Sammendrag for mobil (GET /summary, fra prompt 45) ---------------- */
+
+const RANGES = [['7d', '7 d', 7], ['30d', '30 d', 30], ['year', 'År', 365], ['all', 'Alt', null]];
+const hrs = (ms) => Math.round((ms / 3600_000) * 10) / 10;
+const hText = (h) => `${String(h).replace('.', ',')} t`;
+export function playbackSummary45(range = '7d', now = Date.now()) {
+  try { stats44('7d'); } catch { /* sår demodata i MOCK */ }
+  const r = RANGES.find((x) => x[0] === range) ?? RANGES[0];
+  const since = r[2] ? now - r[2] * 86400_000 : 0;
+  const rows = q('SELECT * FROM plays44 WHERE started>? ORDER BY started DESC').all(since);
+  const dur = (x) => Math.max(0, (x.stopped ?? x.seen) - x.started);
+  const group = (key) => { const m = new Map(); for (const x of rows) { const k = key(x); if (!k) continue; const g = m.get(k) ?? { plays: 0, ms: 0, x }; g.plays++; g.ms += dur(x); m.set(k, g); } return [...m.entries()].sort((a, b) => b[1].plays - a[1].plays || b[1].ms - a[1].ms); };
+  const perDay = new Map();
+  const days = r[2] && r[2] <= 31 ? r[2] : null;
+  if (days) for (let i = days - 1; i >= 0; i--) perDay.set(new Date(now - i * 86400_000).toLocaleDateString('sv-SE', { timeZone: 'Europe/Oslo' }), 0);
+  for (const x of rows) { const d = new Date(x.started).toLocaleDateString('sv-SE', { timeZone: 'Europe/Oslo' }); const k = days ? d : d.slice(0, 7); if (days && !perDay.has(k)) continue; perDay.set(k, (perDay.get(k) ?? 0) + 1); }
+  const totalMs = rows.reduce((a, x) => a + dur(x), 0), n = rows.length || 1;
+  const users = group((x) => x.user), devices = group((x) => `${x.device ?? ''}|${x.platform ?? ''}`);
+  return { range: r[0], ranges: RANGES.map(([id, label]) => ({ id, label, selected: id === r[0] })),
+    total: { plays: rows.length, hours: hrs(totalMs), hoursText: hText(hrs(totalMs)), users: users.length, titles: new Set(rows.map((x) => x.title)).size },
+    perDay: [...perDay.entries()].sort().map(([date, count]) => ({ date, count, label: days ? WD[new Date(`${date}T12:00:00Z`).getUTCDay()] : date.slice(5) })),
+    topShows: group((x) => (x.kind === 'episode' ? x.title : null)).slice(0, 8).map(([title, g]) => ({ title, plays: g.plays, hours: hrs(g.ms), poster: g.x.poster ?? null })),
+    topMovies: group((x) => (x.kind === 'movie' ? x.title : null)).slice(0, 8).map(([title, g]) => ({ title, plays: g.plays, hours: hrs(g.ms), poster: g.x.poster ?? null })),
+    perUser: users.map(([name, g]) => ({ name, initial: String(name)[0]?.toUpperCase() ?? '?', plays: g.plays, hours: hrs(g.ms), hoursText: hText(hrs(g.ms)) })),
+    perDevice: devices.map(([k, g]) => { const [name, platform] = k.split('|'); return { name: name || platform || 'Ukjent', platform: platform || null, plays: g.plays, pct: Math.round((g.plays / n) * 100) }; }).slice(0, 10),
+    history: rows.slice(0, 20).map((x) => ({ id: x.id, server: x.server, when: new Date(x.started).toISOString(), whenText: new Date(x.started).toLocaleString('nb-NO', { timeZone: 'Europe/Oslo', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }), title: x.title, subtitle: x.subtitle ?? null, user: x.user, device: x.device ?? null, platform: x.platform ?? null, percent: x.percent ?? 0, poster: x.poster ?? null })),
+    empty: !rows.length, emptyText: rows.length ? null : 'Ingen avspillinger i perioden' };
+}
+
 /* ---------------- Ruter ---------------- */
 
 const guard = async (c, next) => { if (!mediaAllowed43(c.get('user'))) return c.json({ error: 'Du har ikke tilgang til Avspilling. Be en administrator om tilgang.', restricted: true }, 403); await next(); };
@@ -261,6 +287,7 @@ playback44Api.get('/history', ...G, H((c) => history44(c.req.query())));
 playback44Api.get('/stats', ...G, H((c) => stats44(c.req.query('range'))));
 playback44Api.get('/libraries', ...G, H(() => libraries44()));
 playback44Api.get('/status', ...G, (c) => c.json(serversOut()));
+playback44Api.get('/summary', ...G, (c) => c.json(playbackSummary45(c.req.query('range')))); // ?range=7d|30d|year|all
 
-// Prompt 51 (MEDCTL51): mediekontrollen (server/medctl51.js) leser sesjonene med de samme hjelperne og samme test-fetch.
+// Prompt 51 (MEDCTL51): mediekontrollen (media/control.js) leser sesjonene med de samme hjelperne og samme test-fetch.
 export const pb44 = { plexConf, jfConf, plexOn, jfOn, demo, PLEX_HDR, plexGet, jfGet, plexSession, jfSession, DEMO_SESS, fetch: (url, o) => (fx ?? fetch)(url, o) };

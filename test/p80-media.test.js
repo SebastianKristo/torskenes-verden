@@ -14,11 +14,11 @@ process.env.NODE_ENV = 'test';
 delete process.env.MOCK_DATA;
 
 const { kv, OWNER } = await import('../server/db.js');
-const m43 = await import('../server/media43.js');
-const m44 = await import('../server/media44.js');
+const m43 = await import('../server/media/arr.js');
+const m44 = await import('../server/media/servers.js');
 
 const web = readFileSync(new URL('../public/js/media43.js', import.meta.url), 'utf8');
-const srv = readFileSync(new URL('../server/media44.js', import.meta.url), 'utf8');
+const srv = readFileSync(new URL('../server/media/servers.js', import.meta.url), 'utf8');
 
 const json = (o, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { 'content-type': 'application/json' } });
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -158,7 +158,9 @@ test('«Last ned» uten Sonarr: grab via Prowlarr, ellers rett i qBittorrent med
     assert.equal(m44.QBIT_CATEGORY80.radarr, 'radarr');
     assert.ok(!log.join('\n').includes('magnet:') && !log.join('\n').includes('pk'), 'lenke/nøkkel logges ikke');
   } finally { console.log = orig; }
-  assert.match(srv, /media44Api\.post\('\/release', \.\.\.G, async \(c, next\) =>/);
+  // Én handler for POST /release (Prowlarr-treff her, ellers Sonarr/Radarr via grabRelease43), ikke to lag med next().
+  assert.match(srv, /media44Api\.post\('\/release', \.\.\.G, async \(c\) =>[^\n]*\n[^\n]*pGrab[^\n]*\n[^\n]*M\.grabRelease43\(b\)/);
+  assert.doesNotMatch(readFileSync(new URL('../server/media/arr.js', import.meta.url), 'utf8'), /media43Api\.post\('\/release'/);
 });
 
 test('SSE: ingen bufring, hjerteslag «: ping» hvert 10. s', () => {

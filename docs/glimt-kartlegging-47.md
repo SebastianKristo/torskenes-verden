@@ -245,7 +245,7 @@ Prinsipp: motoren beholdes og utvides. De gamle stiene blir verktøy bak motoren
 
 **10. oMLX** (se 7) – etter at stegene over virker på Ollama, så samme eval kan sammenligne.
 
-Filer som endres (hovedsakelig): `server/glimt45/{engine,plan,tools,tools46,weather46,dates,subs46,calendar46}.js`, nye `context.js`, `memory47.js`, `answer47.js`, `params47.js`, `trace47.js`, `server/assist.js` (detectIntent/toolCalendarNext/toolLlm), `server/glimt-memory.js` (migrering), `server/calendar-quick.js`, `server/media43.js`, `server/study44.js`, `server/study46.js`, `server/finans/ai.js`, `server/ai-run.js` (steg-params, numCtx), `server/ai-gate.js` (oMLX-backend, keep_alive), `public/js/ai-control.js` (motorvalg), `package.json` (`eval`-script), `docs/glimt-dataflyt.md`.
+Filer som endres (hovedsakelig): `server/glimt45/{engine,plan,tools,tools46,weather46,dates,subs46,calendar46}.js`, nye `context.js`, `memory47.js`, `answer47.js`, `params47.js`, `trace47.js`, `server/assist.js` (detectIntent/toolCalendarNext/toolLlm), `server/glimt-memory.js` (migrering), `server/calendar-quick.js`, `server/media/arr.js`, `server/study44.js`, `server/study46.js`, `server/finans/ai.js`, `server/ai-run.js` (steg-params, numCtx), `server/ai-gate.js` (oMLX-backend, keep_alive), `public/js/ai-control.js` (motorvalg), `package.json` (`eval`-script), `docs/glimt-dataflyt.md`.
 
 ---
 

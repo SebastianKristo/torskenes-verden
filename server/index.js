@@ -61,7 +61,7 @@ import assistApi from './assist.js'; // prompt 31: Glimt – POST /api/assist (v
 import aiApi, { glimtApi } from './ai-api.js';
 import api36 from './api36.js'; // prompt 36 (SERVER36)
 import { profilesApi, bibleApi, trackingKeysApi } from './api37.js'; // prompt 37 (SERVER37)
-import { bearerFallthrough46, homelabAuthCode46, signImages46, mediaDiag46, mediaDiagOut46 } from './api-auth46.js'; // prompt 46 (SERVER46)
+import { bearerFallthrough46 } from './api-auth46.js'; // prompt 46 (SERVER46)
 import { brief38Api, startApi38 } from './api38.js'; // prompt 38 (SERVER38)
 import { rec39Api, week39Api } from './api39.js'; // prompt 39 (SERVER39)
 import { finans40Api, news40Api, newsDigestApi, hjemlys40Api, pages40Api, briefJul40, tasksAfter40, tasksCreate40, startApi40 } from './api40.js'; // prompt 40 (SERVER40)
@@ -70,20 +70,18 @@ import { hjemlys41Api, hjemlysGet41, hlPage41, ruter41Api, mai17Api, huske41Api,
 import { finans42Api, abCalendarsMw42, abApi42, calendarsEvents42, abIcs42, tracking42Api, health42Api, familyHealthMw42, startHealth42, hjemlys42Api, tasks42Api } from './api42.js'; // prompt 42 (SERVER42)
 import fin51Api from './finans/fin51.js'; // prompt 51 (FIN51): sparemål, faste utgifter-kalender, skattehjelp, prishistorikk, abonnementsjeger
 import { startTax51 } from './finans/fin51-tax.js'; // prompt 51 (FIN51): påminnelse før skattemeldingen
-import { media43Api, mediaCalendarsMw43, startMediaWatch43, widgets43Api, claudeImport43Api, aiMemory43Api, gscDomains43Api, gsc43Api, gscViewMw43, gscOverviewMw43, finans43Api, summaryMw43, transactionsMw43, tasks43Api, tasksOrderMw43 } from './api43.js'; // prompt 43 (SERVER43)
+import { widgets43Api, claudeImport43Api, aiMemory43Api, gscDomains43Api, gsc43Api, gscViewMw43, gscOverviewMw43, finans43Api, summaryMw43, transactionsMw43, tasks43Api, tasksOrderMw43 } from './api43.js'; // prompt 43 (SERVER43)
+import { mountMedia, startMedia } from './media/index.js'; // Media: alle /api/media-, /api/playback- og /api/medctl51-ruter
+import { mediaCalendarsMw43 } from './media/arr.js'; // kalenderkilden «Media»
 // Prompt 44 (SERVER44): Logger (Docker), Media (servere, søk som jobb, felles status), Avspilling, Studie-dokumenter, Kalender-deltakere,
 // Logg inn som / andres oppsett / overfør eier.
-import { media44Api, mediaSiteMw44, librarySearchMw44, legacyMedia44, integrationsStatusApi44 } from './media44.js';
+import { integrationsStatusApi44 } from './media/servers.js'; // felles status for Integrasjoner og Media
 import { logs44Api, startLogs44 } from './logs44.js';
 import { impersonation44, admin44Api, layoutLockMw44, setMobileApi44 } from './admin44.js';
 import { assistLocalMw44 } from './kalender/invites.js';
 import { study44Api } from './study44.js';
 import { mountAuthSecurity, mountAppAuth, mountAuthInvites, mountAuthRefresh, mountAuth, registerAccountRoutes } from './auth/index.js'; // innlogging og sikkerhet
-import { playback44Api, startPlayback44 } from './playback44.js';
 import { mountApi45 } from './api45.js'; // prompt 45 (SERVER45)
-import { nrkApi } from './nrkdl.js'; // NRK-nedlaster: /api/media/nrk/* (nrk-dl bak norsk VPN)
-import { yubalApi } from './yubal.js'; // Musikk: /api/media/yubal/* (yubal, YouTube Music → musikkbiblioteket)
-import { mountMedia50, startMedia50 } from './media50.js'; // prompt 50 (SRVMEDIA50): bilder med diskcache, sporing etter søk, diagnostikk
 import { mountFamily50 } from './family50.js'; // prompt 50 (SRVFAM50): Steder med områder, Folk, Helse, I dag, Sjekk inn
 import { traceObs51, mountObs51, startObs51 } from './obs51/index.js'; // prompt 51 (OBS51): helsedashbord, selvreparasjon, spor, ntfy
 import { mountQa51, startQa51, reportServerError51 } from './qa51.js'; // prompt 51 (QA51): feature flags, krasjrapporter (GlitchTip), «Nytt i denne versjonen»
@@ -94,7 +92,6 @@ import { startJobs, listJobs, jobsStarted } from './jobs/index.js'; // én planl
 import { badInput85 } from './badinput85.js'; // prompt 85 (SRVSEC85): feil i kroppen fra klienten → 400, ikke 500
 import { anonBodyCap85 } from './anonbody85.js'; // prompt 85 (SRVSEC85): store kropper bare fra innloggede klienter
 import { mountMedfam51, startMedfam51 } from './medfam51/index.js'; // prompt 51 (MEDFAM51): familiekalender med «hvem kjører?», «I kveld», undertekster, lagring, lydbøker
-import { mountMedctl51 } from './medctl51.js'; // prompt 51 (MEDCTL51): mediekontroll for Plex/Jellyfin, Audiobookshelf-fremdrift
 import { mountLive89, startLive89 } from './live89.js'; // prompt 89 (SRV89): Live Activities / Live Updates (/api/live/*) og APNs-push
 import { mountWebx51 } from './webx51.js'; // prompt 51 (WEBX51): felles søk, onboarding, tema per bruker, offline-konfliktvarsel
 import { mountSrv52 } from './srv52.js'; // prompt 52 (SRV52): Glimt «sist jeg var på», kalenderkontekst, brief-kort, Glimt-figur per bruker
@@ -626,32 +623,11 @@ authed.get('/upcoming', personal('upcoming', proxy(api.getUpcoming)));
 authed.get('/news', proxy(api.getNews));
 // Plex og Jellyfin: «Spilles nå» (30 s) og «Nylig lagt til» (10 min). Plakater hentes via serveren så tokenet aldri når nettleseren.
 // Hver bruker ser sin egen Plex/Jellyfin (ISO2).
-// Prompt 44: valgt sted (?server= eller brukerens valg) for hele /api/media, søk i biblioteket, og serverens Plex/Jellyfin for alle med
-// tilgang som ikke har egne verdier (den ekte årsaken til «ikke logget inn» på mobil, se media44.js).
-// Prompt 46 (SERVER46): hvert Media-kall logges (GET /api/media/diag), 401 får code:'HOMELAB_AUTH', bilde-URL-er signeres.
-app.use('/api/media/*', mediaDiag46, homelabAuthCode46, signImages46);
-app.use('/api/playback/*', mediaDiag46, homelabAuthCode46, signImages46);
-app.get('/api/media/diag', authOrToken, (c) => c.json(mediaDiagOut46(c.get('user')), 200, { 'Cache-Control': 'no-store' }));
-app.use('/api/media/*', mediaSiteMw44);
-app.use('/api/media/series', librarySearchMw44);
-app.use('/api/media/movies', librarySearchMw44);
-app.route('/api/media/nrk', nrkApi); // NRK-nedlaster (før media50/43, som eier resten av /api/media)
-app.route('/api/media/yubal', yubalApi); // Musikk (yubal), også før media50/43
-mountMedia50(app); // prompt 50 (SRVMEDIA50): /bilde, /track, /diagnostics, /torrents/:hash/start + posterImg/track i svarene (før mountApi45 og media43/44)
-mountApi45(app); // prompt 45 (SERVER45): Docker-oppsett, Search Console, AI-import, Media/Avspilling, sonevarsler, HA-helse, Vær, Gjøremål, Innstillinger (etter mediaSiteMw44, før de eldre rutene)
-app.get('/api/media/now', authOrToken, legacyMedia44(personal('media', proxy(api.getMediaNow))));
-app.get('/api/media/recent', authOrToken, legacyMedia44(personal('media', proxy(api.getMediaRecent))));
-app.get('/api/media/history', authOrToken, legacyMedia44(personal('media', proxy(api.getMediaHistory))));
-app.get('/api/media/poster', authOrToken, async (c) => {
-  try {
-    const img = await api.getMediaPoster(c.req.query('src'), c.req.query('id'));
-    if (!img) return c.notFound();
-    return c.body(img.body, 200, { 'Content-Type': /^image\//.test(img.type) ? img.type : 'image/jpeg', 'Cache-Control': 'private, max-age=86400', 'X-Content-Type-Options': 'nosniff' });
-  } catch (e) { console.warn('[media/poster]', e.message); return c.body(null, 502); }
-});
-app.route('/api/media', media44Api); // prompt 44: /servers, /release/search (jobb + SSE), /episodes/:id/file, /movies/:id/file
-app.route('/api/playback', playback44Api); // prompt 44: Avspilling (Plex/Jellyfin, PIN-flyt, historikk, statistikk)
-app.route('/api/media', media43Api); // prompt 43: Media (Sonarr, Radarr, qBittorrent, Prowlarr, Glimt, webhooks) – etter /now, /recent, /history og /poster
+// Media (server/media/): /api/media/*, /api/playback/* og /api/medctl51/* i lagenes rekkefølge. Plex/Jellyfin-rutene bruker
+// integrasjonsklienten her (ekte eller mock) og de personlige verdiene (ISO2), og den som har tilgang til Media uten egne verdier
+// får serverens oppsett (se media/servers.js).
+mountMedia(app, { now: personal('media', proxy(api.getMediaNow)), recent: personal('media', proxy(api.getMediaRecent)), history: personal('media', proxy(api.getMediaHistory)), poster: (src, id) => api.getMediaPoster(src, id) });
+mountApi45(app); // prompt 45 (SERVER45): Docker-oppsett, Search Console, AI-import, sonevarsler, HA-helse, Vær, Gjøremål, Innstillinger
 authed.get('/space/tle', proxy(api.getTle));
 authed.get('/space/apod', proxy(api.getApod));
 authed.get('/space/gallery/:key', proxy((c) => {
@@ -676,7 +652,6 @@ app.route('/api/icons', iconsApi); // Ikoner (prompt 23): Iconify-søk, SVG cach
 // Kartfliser (prompt 20): /tiles/:style/:z/:x/:y.png og /api/config/map, sesjon eller app-token (header eller ?token=).
 app.route('/', tilesApi);
 mountMedfam51(app); // prompt 51 (MEDFAM51): /api/famcal51/* og /api/media51/*
-mountMedctl51(app); // prompt 51 (MEDCTL51): /api/medctl51/now og /api/medctl51/sessions/:id/:action
 mountLive89(app); // prompt 89 (SRV89): /api/live/aktiviteter, /handling, /innstillinger, /tokens
 mountFamily50(app); // prompt 50 (SRVFAM50): /api/family/places…, /people50, /today50, /health50…, /checkin… (før de eldre /api/family-rutene)
 app.route('/api/family/health/ha', health42Api); // prompt 42: helse fra Home Assistant
@@ -821,7 +796,7 @@ app.get('/mat/calendar.ics', matCalendar);
 // (ingen varsler, e-post, backup, oppdateringer eller selvreparasjon). Bare HTTP-serveren og migreringene kjører.
 const BG51 = process.env.NODE_ENV !== 'test' && process.env.OPS51_SANDBOX !== '1';
 migrateLocalHosts86().catch((e) => console.warn('[localfetch]', e.message)); // prompt 86: én gang – lokale verter i administratorenes abonnementer godkjennes
-if (BG51) { startMatScheduler(); startTrackingWorker(); startRssWorker(); startBirthdayWorker(); startSystemBackupScheduler(); startUpdateScheduler(); startTrialScheduler(); startDomainGlimtScheduler(); startSpaceScheduler(); startApi38(); startApi40(); startHealth42(); startMediaWatch43(); startMedia50(); startLogs44(); startPlayback44(); startLive89(); }
+if (BG51) { startMatScheduler(); startTrackingWorker(); startRssWorker(); startBirthdayWorker(); startSystemBackupScheduler(); startUpdateScheduler(); startTrialScheduler(); startDomainGlimtScheduler(); startSpaceScheduler(); startApi38(); startApi40(); startHealth42(); startMedia(); startLogs44(); startLive89(); }
 if (BG51) { startAccounts46(); startGphoto46(); } // prompt 46 (DATA46)
 if (BG51) startJobs(); // felles planlegger (server/jobs/): backup, brief, iCal, skolekalendere, Sjekk inn, «forlot»
 if (process.env.NODE_ENV !== 'test') startOps51(); // prompt 51 (OPS51): planlegger (backup, testet gjenoppretting, vedlikehold) og migrasjonslogg

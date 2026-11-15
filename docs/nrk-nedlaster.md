@@ -13,7 +13,7 @@ Undertekstene legges inn i fila, og «Følg serien» laster ned nye episoder aut
 ## Slik henger det sammen
 
 ```
-Nettleser / app ──▶ Homelab OS  /api/media/nrk/*  (server/nrkdl.js, samme tilgang som Media)
+Nettleser / app ──▶ Homelab OS  /api/media/nrk/*  (server/media/nrk.js, samme tilgang som Media)
                         │  Bearer-token (bare på serveren)
                         ▼
                     nrk-dl :8020 ──▶ gluetun-nrk ──WireGuard──▶ Proton VPN, Norge ──▶ NRK
