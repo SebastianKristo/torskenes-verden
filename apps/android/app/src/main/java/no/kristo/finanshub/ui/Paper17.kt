@@ -43,7 +43,7 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 /** Undersidene i Innstillinger (vm.settingsPage) med tittel i fotovinduet. */
 internal val PAPER_SET_TITLES = mapOf(
     "accounts" to "Konto", "security" to "Sikkerhet", "tokens" to "API-tokens", "ai" to "AI", // prompt 67: navnene fra web-menyen
-    "cats" to "Kategorier og budsjett", "rules" to "Regler", "stocks" to "Aksjer · Trading 212", "fin" to "Fanelinje og Mer i Finans",
+    "cats" to "Kategorier og budsjett", "rules" to "Regler", "stocks" to "Aksjer · Trading 212", "fin" to "Fanelinje og Mer i Økonomi",
     "modules" to "Moduler", "look" to "Utseende", "tilpass" to "Utseende", "profil" to "Appprofil", "notify" to "Varsler", "haptics" to "Haptikk",
     "scan" to "Skanning", "server" to "Server og synk", "data" to "Data og lagring", "backup" to "Backup og data", "about" to "Om appen", "healthpos" to "Helse og posisjon", "integ" to "Integrasjoner", "kal" to "Kalendere",
     "update" to "Oppdatering", "sysbackup" to "Backup",
@@ -70,7 +70,7 @@ internal fun PaperSettings17(vm: AppViewModel, navBottom: Dp, onPrivacyChanged: 
 private fun PaperSettings17Body(vm: AppViewModel, navBottom: Dp, onPrivacyChanged: () -> Unit, wide50: Boolean) {
     val sub = vm.settingsPage
     LaunchedEffect(sub) {
-        when (sub) { "tokens" -> vm.loadTokens(); "notify" -> vm.loadNotify(); null -> { vm.loadAppInfo(); if (vm.userIsAdmin) { vm.loadUpd28(); vm.loadBk29(); vm.loadUpd30(); vm.loadUpdSettings30() } } }
+        when (sub) { "tokens", "enheter" -> vm.loadTokens(); "notify" -> vm.loadNotify(); null -> { vm.loadAppInfo(); if (vm.userIsAdmin) { vm.loadUpd28(); vm.loadBk29(); vm.loadUpd30(); vm.loadUpdSettings30() } } }
     }
     // Utseende: tema, ikonfarger, bakgrunn og fanelinje (egen liste fra prompt 16).
     // Prompt 39: «Tilpass» samler navn, ikon, fanelinje, tema og bakgrunn. Gamle lenker til «look» havner også her.
@@ -100,6 +100,10 @@ private fun PaperSettings17Body(vm: AppViewModel, navBottom: Dp, onPrivacyChange
             "modules" -> item { ModulesSub(vm) }
             "notify" -> { item { NotifySub(vm) }; item { Live89Section(vm) }; item { Ntfy51Section(vm) } } // prompt 51: ntfy
             "profil" -> profilPage39(vm) // Prompt 39: Appprofil som egen underside
+            // Q12: Konto og sikkerhet er én side (det som lå på Konto og Sikkerhet). De gamle sidene virker fortsatt fra søk og lenker.
+            "konto" -> { item { AccountsPage(vm) }; item { SecurityPage(vm, onPrivacyChanged) }; item { Sec51Section(vm) } }
+            // O4: Enheter og widgets (widgets, logg inn på en annen enhet, API-tokens og appen på telefonen).
+            "enheter" -> { item { Enheter67Page(vm) }; item { TokensPage(vm) }; item { App67Page(vm) } }
             "accounts" -> item { AccountsPage(vm) }
             "security" -> { item { SecurityPage(vm, onPrivacyChanged) }; item { Sec51Section(vm) } } // prompt 51: enheter som venter
             "tokens" -> item { TokensPage(vm) }
@@ -200,7 +204,8 @@ private fun roleName(r: String?) = when (r) { "admin" -> "Admin"; "bruker", "use
 
 /** Gruppe med Plex Mono-etikett og hvitt kort. i() gir neste fargeindeks, så ikonfargene varierer. */
 private fun androidx.compose.foundation.lazy.LazyListScope.group(title: String, rows: @Composable ColumnScope.(() -> Int) -> Unit) {
-    item { PLabel(title, modifier = Modifier.padding(start = 4.dp, top = 10.dp)) }
+    // Fase 6: sidene som står alene (Konto og sikkerhet … Husstand, Enheter og widgets) har ingen overskrift, som på web.
+    item { if (title.isNotBlank()) PLabel(title, modifier = Modifier.padding(start = 4.dp, top = 10.dp)) else Spacer(Modifier.height(10.dp)) }
     item {
         var n = 0
         PCard { rows { n++ } }

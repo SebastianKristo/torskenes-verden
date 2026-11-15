@@ -2,6 +2,7 @@ package no.kristo.felles
 
 import no.kristo.felles.moduler.Fanenokler
 import no.kristo.felles.moduler.Modulliste
+import no.kristo.felles.moduler.Tilkoblinger
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -107,5 +108,20 @@ class ModullisteTest {
         assertEquals("reise/kart", Modulliste.normRute("homelab://reise/kart"))
         assertEquals("", Modulliste.normRute("  "))
         assertTrue(JSONObject(kilde.tilJson().toString()).has("innstillinger"))
+    }
+
+    /** Grupperingen av integrasjonene er bygd inn og lik shared/schemas/tilkoblinger.json (samme grupper som på web). */
+    @Test fun tilkoblinger() {
+        val t = Tilkoblinger.innebygd()
+        assertNotNull("tilkoblinger.json er ikke bygd inn i :felles (processResources)", t)
+        assertEquals(Tilkoblinger.fra(Repo.fil("shared/schemas/tilkoblinger.json").readText()), t)
+        assertEquals("Smarthjem", t!!.grupper.first())
+        assertEquals("Generelt", t.grupper.last())
+        assertEquals("Smarthjem", t.gruppe("ha"))
+        assertEquals("Kalender og e-post", t.gruppe("google"))
+        assertEquals("Reise og pakker", t.gruppe("entur"))
+        assertEquals("Generelt", t.gruppe("finnes-ikke"))
+        assertEquals("Media", t.gruppe("sonarr", "Annet"))
+        assertEquals("Økonomi", t.gruppe("sonarr", "Økonomi"))
     }
 }

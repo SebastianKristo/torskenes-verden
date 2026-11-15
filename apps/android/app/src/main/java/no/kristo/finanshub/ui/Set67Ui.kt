@@ -11,34 +11,40 @@ import androidx.compose.ui.unit.dp
 import no.kristo.finanshub.*
 
 /*
- * Prompt 67 (ANDSET67, prompt 50b/66 – settings-meny.js på web): Innstillinger gruppert som på web.
- *   GENERELT    Konto · Sikkerhet · API-tokens · Utseende · Varsler · App
- *   HUSSTAND    Brukere og familie (prompt 68: brukerne og Logg inn som, Glimt-figur per bruker, Familie, helse og posisjon – ui/Users68Ui.kt)
- *   GLIMT OG AI Glimt (figur/brief/stemme, Glimt husker, Entitetsregister, Glimt lærer, Faste oppgaver, Kvalitet) · AI
- *   TILKOBLINGER Integrasjoner · Kalender og gjøremål
- *   MODULER     Moduler · Finans · Media · Nyheter
- *   SERVER      System · Backup · Logger (bare admin, som før)
- * Samme liste brukes på telefon (Paper17.kt, med undertekst) og i venstre kolonne på brett (Settings50.kt).
- * Ingen funksjon er fjernet; radene som lå direkte i menyen før, ligger nå på App- og Finans-sidene (app67, fin67).
- * Hver innstilling finnes ett sted: Glimt husker og «Send til Chat etter» er flyttet fra AI og tolkning til Glimt.
+ * Innstillinger gruppert som på web (settings-meny.js), og med sidene i samme rekkefølge og med samme navn som innstillinger[]
+ * i modullisten (Fase 6, shared/schemas/moduler.json):
+ *   Konto og sikkerhet · Utseende · Varsler · Husstand          (uten overskrift)
+ *   GLIMT OG AI   Glimt · AI
+ *   TILKOBLINGER  Integrasjoner (gruppert etter category fra serveren) · Kalender og gjøremål
+ *   MODULER       én rad per modul
+ *   Enheter og widgets                                           (uten overskrift)
+ *   SERVER        System · Backup · Logger (bare admin)
+ * Navnene på sidene kommer fra modullisten (Moduler.innstilling). Samme liste brukes på telefon (Paper17.kt, med undertekst) og i
+ * venstre kolonne på brett (Innstillinger.kt). Ingen funksjon er fjernet: Konto og sikkerhet er én side (Q12) med det som lå
+ * på Konto og Sikkerhet, og Enheter og widgets har det som lå på App og API-tokens. De gamle sidene virker fortsatt (søk og lenker).
  */
 
 internal class Menu67Row(val key: String?, val title: String, val sub: String, val icon: ImageVector, val value: String? = null, val go: () -> Unit)
 internal class Menu67Group(val title: String, val rows: List<Menu67Row>)
 
+/** Navnet på en side i Innstillinger fra modullisten (innstillinger[]), ellers [reserve]. */
+internal fun setNavn(id: String, reserve: String): String = Moduler.liste.innstilling(id)?.navn ?: Moduler.innebygd.innstilling(id)?.navn ?: reserve
+
 /** Forelderen til en underside (tilbake-knappen og markeringen i venstre kolonne på brett). null = rett under Innstillinger. */
 internal fun parent67(page: String?): String? = when (page) {
     "g67mem", "g67ent", "g67rec", "g67sch", "g67q" -> "glimt67"
-    "profil", "scan", "server", "backup", "data", "about" -> "app67"
+    "profil", "scan", "server", "backup", "data", "about" -> "enheter"
     "cats", "rules", "stocks", "fin" -> "fin67"
     else -> null
 }
 
 /** Titlene på de nye sidene (legges inn i PAPER_SET_TITLES). */
-internal val SET67_TITLES = mapOf(
-    "glimt67" to "Glimt", "g67mem" to "Glimt husker", "g67ent" to "Entitetsregister", "g67rec" to "Glimt lærer",
-    "g67sch" to "Faste oppgaver", "g67q" to "Kvalitet", "app67" to "App", "fin67" to "Økonomi",
-)
+internal val SET67_TITLES: Map<String, String>
+    get() = mapOf(
+        "glimt67" to "Glimt", "g67mem" to "Glimt husker", "g67ent" to "Entitetsregister", "g67rec" to "Glimt lærer",
+        "g67sch" to "Faste oppgaver", "g67q" to "Kvalitet", "app67" to setNavn("enheter", "Enheter og widgets"), "fin67" to "Økonomi",
+        "konto" to setNavn("konto", "Konto og sikkerhet"), "enheter" to setNavn("enheter", "Enheter og widgets"),
+    )
 
 internal fun menu67(vm: AppViewModel): List<Menu67Group> {
     val admin = vm.userIsAdmin
@@ -47,39 +53,49 @@ internal fun menu67(vm: AppViewModel): List<Menu67Group> {
     val appAvail = AppUpd32.s.phase == "avail"
     fun page(k: String): () -> Unit = { vm.settingsPage = k }
     return listOf(
-        Menu67Group("Generelt", listOf(
-            Menu67Row("accounts", "Konto", "Profil, kontoer, økter og logg ut", Icons.Filled.Person, go = page("accounts")),
-            Menu67Row("security", "Sikkerhet", if (vm.me?.totp == true) "2FA på" else "2FA av", Icons.Filled.Lock, go = page("security")),
-            Menu67Row("tokens", "API-tokens", vm.tokens?.let { "${it.size} aktive" } ?: "Snarveier og integrasjoner", Icons.Filled.Key, go = page("tokens")),
-            Menu67Row("tilpass", "Utseende", "Navn, ikon, tema, farger, bakgrunn og fanelinje", Icons.Filled.Palette, go = page("tilpass")),
-            Menu67Row("notify", "Varsler", "Lyd, stille timer, haptikk og test", Icons.Filled.Notifications, go = page("notify")),
-            Menu67Row("app67", "App", "Appprofil, widgets, skanning, server, data og oppdatering", Icons.Filled.PhoneAndroid, if (appAvail) "Oppdater" else null, page("app67")),
+        Menu67Group("", listOf(
+            Menu67Row("konto", setNavn("konto", "Konto og sikkerhet"), if (vm.me?.totp == true) "Profil, passord og økter · 2FA på" else "Profil, passord og økter · 2FA av", Icons.Filled.Person, go = page("konto")),
+            Menu67Row("tilpass", setNavn("utseende", "Utseende"), "Navn, ikon, tema, farger, bakgrunn og fanelinje", Icons.Filled.Palette, go = page("tilpass")),
+            Menu67Row("notify", setNavn("varsler", "Varsler"), "Lyd, stille timer, haptikk og test", Icons.Filled.Notifications, go = page("notify")),
+            // Prompt 68: brukerne og Logg inn som (admin), Glimt-figur per bruker, Familie, helse og posisjon (ui/Users68Ui.kt).
+            Menu67Row(USERS68, setNavn("husstand", "Husstand"), users68Sub(admin), Icons.Filled.Groups, go = page(USERS68)),
         )),
-        Menu67Group("Husstand", listOf(
-            // Prompt 68: «Brukere og familie» (ui/Users68Ui.kt) – brukerne og Logg inn som (admin), Glimt-figur per bruker, Familie, helse og posisjon.
-            Menu67Row(USERS68, "Brukere og familie", users68Sub(admin), Icons.Filled.Groups, go = page(USERS68)),
-        )),
-        Menu67Group("Glimt og AI", listOf(
+        Menu67Group(setNavn("glimt", "Glimt og AI"), listOf(
             Menu67Row("glimt67", "Glimt", "Figur, brief, stemme · Glimt husker, Glimt lærer, faste oppgaver og kvalitet", Icons.Filled.AutoAwesome, go = page("glimt67")),
             Menu67Row("ai", "AI", "Modeller, kvitteringer, chat, tale og tidsgrenser", Icons.Filled.Memory, go = page("ai")),
         )),
-        Menu67Group("Tilkoblinger", listOf(
-            Menu67Row("integ", "Integrasjoner", if (admin) "Home Assistant, Media, Entur, Bring og flere" else "Kalendere, Trading 212, Bring, e-post og flere", Icons.Filled.Home, go = page("integ")),
+        Menu67Group(setNavn("tilkoblinger", "Tilkoblinger"), listOf(
+            Menu67Row("integ", "Integrasjoner", if (admin) "Smarthjem, Media, Reise og pakker, Økonomi og flere" else "Kalender og e-post, Økonomi, Reise og pakker og flere", Icons.Filled.Home, go = page("integ")),
             Menu67Row("kal", "Kalender og gjøremål", "Google Kalender · Home Assistant · Skole-iCal · synk av gjøremål", Icons.Filled.CalendarMonth) { vm.openKalSettings26(null) },
         )),
-        Menu67Group("Moduler", listOf(
-            Menu67Row("modules", "Moduler", "Familie, Gjøremål, Avganger, Vær", Icons.Filled.Dashboard, go = page("modules")),
-            Menu67Row("fin67", "Økonomi", "Kategorier, regler, bankimport, aksjer, fanelinje og abonnementer", Icons.Filled.AccountBalance, go = page("fin67")),
-            Menu67Row("media", "Media", "Sonarr, Radarr, qBittorrent, Prowlarr · status", Icons.Filled.Movie, go = page("media")),
-            Menu67Row("skjold", "Skjold Lab", "Glimt-forslag, bilder på nett og auto-forslag", Icons.Filled.Inventory2) { vm.openSkjoldSettings77() }, // prompt 77
-            Menu67Row("nyheter", "Nyheter", "Kilder, kategorier, For deg og Glimt-sammendrag", Icons.Filled.Newspaper) { vm.settingsPage = "nyheter"; if (vm.news == null) vm.loadNews() },
+        Menu67Group(setNavn("moduler", "Moduler"), listOf(
+            Menu67Row("modules", "Familie, Gjøremål, Reise og Vær", "Innstillingene for modulene på telefonen", Icons.Filled.Dashboard, go = page("modules")),
+            Menu67Row("fin67", Moduler.navn("finans", "Økonomi"), "Kategorier, regler, bankimport, aksjer, fanelinje og abonnementer", Icons.Filled.AccountBalance, go = page("fin67")),
+            Menu67Row("media", Moduler.navn("media", "Media"), "Sonarr, Radarr, qBittorrent, Prowlarr · status", Icons.Filled.Movie, go = page("media")),
+            Menu67Row("skjold", Moduler.navn("skjold", "Skjold Lab"), "Glimt-forslag, bilder på nett og auto-forslag", Icons.Filled.Inventory2) { vm.openSkjoldSettings77() }, // prompt 77
+            Menu67Row("nyheter", Moduler.navn("nyheter", "Nyheter"), "Kilder, kategorier, For deg og Glimt-sammendrag", Icons.Filled.Newspaper) { vm.settingsPage = "nyheter"; if (vm.news == null) vm.loadNews() },
         )),
-        Menu67Group("Server", if (!admin) emptyList() else listOf(
+        Menu67Group("", listOf(
+            Menu67Row("enheter", setNavn("enheter", "Enheter og widgets"), vm.tokens?.let { "Widgets, logg inn på en annen enhet · ${it.size} API-tokens" } ?: "Widgets, logg inn på en annen enhet og API-tokens", Icons.Filled.PhoneAndroid, if (appAvail) "Oppdater" else null, page("enheter")),
+        )),
+        Menu67Group(setNavn("server", "Server"), if (!admin) emptyList() else listOf(
             Menu67Row("prog50", "System", "Nordlys OS, versjon og automatiske oppdateringer", Icons.Filled.SystemUpdate, if (sysAvail) "Oppdater" else null, page("prog50")),
             Menu67Row("sysbackup", "Backup", bkSummary29(vm.bk29), Icons.Filled.Backup, go = page("sysbackup")),
             Menu67Row(null, "Logger", "Docker-logger, feil og feilsøking", Icons.Filled.Dns) { vm.openLogs44() },
         )),
     ).filter { it.rows.isNotEmpty() }
+}
+
+/** Enheter og widgets (O4): widgets på telefonen og logg inn på en annen enhet. API-tokens og appen ligger under. */
+@Composable
+internal fun Enheter67Page(vm: AppViewModel) {
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        PLabel("Enheter", modifier = Modifier.padding(start = 4.dp, top = 4.dp))
+        PCard {
+            SetRow(vm, 0, Icons.Filled.Widgets, "Widgets", "Media, Avganger, Kalender og flere") { vm.p43.galleryOpen = true }
+            SetRow(vm, 1, Icons.Filled.QrCodeScanner, "Logg inn på annen enhet", "Skann QR-koden på den andre skjermen", top = true) { vm.openQr38() }
+        }
+    }
 }
 
 /** Innstillinger → App: det som gjelder selve appen på telefonen (flyttet fra APP- og PROGRAMVARE-gruppene). */
@@ -89,8 +105,7 @@ internal fun App67Page(vm: AppViewModel) {
         PLabel("Appen", modifier = Modifier.padding(start = 4.dp, top = 4.dp))
         PCard {
             SetRow(vm, 0, Icons.Filled.People, "Appprofil", profileName39(vm)) { vm.settingsPage = "profil" }
-            SetRow(vm, 1, Icons.Filled.Widgets, "Widgets", "Media, Avganger, Kalender og 3 til", top = true) { vm.p43.galleryOpen = true }
-            SetRow(vm, 2, Icons.Filled.DocumentScanner, "Skanning", "Kamera, beskjæring og opplasting", top = true) { vm.settingsPage = "scan" }
+            SetRow(vm, 1, Icons.Filled.DocumentScanner, "Skanning", "Kamera, beskjæring og opplasting", top = true) { vm.settingsPage = "scan" }
             SetRow(vm, 3, Icons.Filled.Dns, "Server og synk", "Lokal og ekstern adresse", top = true) { vm.settingsPage = "server" }
             SetRow(vm, 4, Icons.Filled.Backup, "Backup og data", "Nedlasting og lagring", top = true) { vm.settingsPage = "backup" }
             SetRow(vm, 5, Icons.Filled.Info, "Om appen", "Versjon, personvern og lisenser", top = true) { vm.settingsPage = "about" }
@@ -110,7 +125,7 @@ internal fun Fin67Page(vm: AppViewModel) {
             SetRow(vm, 1, Icons.Filled.Tune, "Regler", "Automatisk kategorisering", top = true) { vm.settingsPage = "rules" }
             SetRow(vm, 2, Icons.Filled.AccountBalance, "Bankimport", "DNB · CSV · ✦ AI", top = true) { vm.openFromMer(Screen.Import) }
             SetRow(vm, 3, Icons.AutoMirrored.Filled.ShowChart, "Aksjer · Trading 212", "Nøkkel, miljø og synk", top = true) { vm.settingsPage = "stocks" }
-            SetRow(vm, 4, Icons.Filled.ViewWeek, "Fanelinje og Mer i Finans", "${vm.paperFinTabs.size} faner", top = true) { vm.settingsPage = "fin" }
+            SetRow(vm, 4, Icons.Filled.ViewWeek, "Fanelinje og Mer i Økonomi", "${vm.paperFinTabs.size} faner", top = true) { vm.settingsPage = "fin" }
             SetRow(vm, 5, Icons.Filled.Autorenew, "Abonnementer", "Faste betalinger og AI-sparing", top = true) { vm.openFromMer(Screen.Sub) }
         }
     }

@@ -55,7 +55,8 @@ test('filene finnes og er koblet inn i Skjold Lab (skjema, liste, tilbake, innst
   assert.match(m, /s\.screen == "tidy" -> closeTidy77\(\)/);
   assert.match(m, /loadAiSettings77\(\)/);
   assert.match(m, /Skjold77\.reset\(\)/);
-  assert.match(code('ui/Set67Ui.kt'), /Menu67Row\("skjold", "Skjold Lab",[^\n]*vm\.openSkjoldSettings77\(\)/, 'Innstillinger → Moduler → Skjold Lab');
+  // Fase 6: navnet kommer fra modullisten (Moduler.navn("skjold", …)), med «Skjold Lab» som reserve.
+  assert.match(code('ui/Set67Ui.kt'), /Menu67Row\("skjold", Moduler\.navn\("skjold", "Skjold Lab"\),[^\n]*vm\.openSkjoldSettings77\(\)/, 'Innstillinger → Moduler → Skjold Lab');
 });
 
 test('API-kallene følger CONTRACT77', () => {
