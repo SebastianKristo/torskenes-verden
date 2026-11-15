@@ -7216,8 +7216,12 @@ html.h40-ov,html.h40-ov body{overflow:hidden}
 /* E-B5: den flytende Skann-/+-knappen lå over beløpskolonnen i lister (Siste transaksjoner). På smal skjerm står den nå i
    samme rad som fanelinja, som gjør plass til den. Lista har allerede luft under fanelinja, så ingenting dekkes. */
 @media (max-width: 599px) {
-  .m.papir .pp-nav:has(+ .pp-fab){right:84px;max-width:none}
+  .m.papir .pp-nav:has(+ .pp-fab){right:80px;max-width:none}
   .m.papir .pp-nav:has(+ .pp-fab) + .pp-fab{right:12px;bottom:calc(var(--pp-navb) + 1px)}
+  /* Smalere fanelinje: mindre luft og ikonet i den valgte fanen skjules, så fem navn (også «Oversikt») får plass uten «…». */
+  .m.papir .pp-nav:has(+ .pp-fab) a{padding-left:3px;padding-right:3px}
+  .m.papir .pp-nav:has(+ .pp-fab) a[aria-current]{padding-left:12px;padding-right:12px}
+  .m.papir .pp-nav:has(+ .pp-fab) a[aria-current] i{display:none}
 }
 
 /* ===== PWA: saldokortet, månedslinja, Mer-bryterne og «Nytt i x.y.z» (prompt 52, WEB52F). Lå før i fin52.css ===== */
