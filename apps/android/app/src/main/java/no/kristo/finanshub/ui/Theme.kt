@@ -6,10 +6,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
-import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -17,12 +17,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import no.kristo.finanshub.R
+import no.kristo.finanshub.ui.designsystem.DsPalette
+import no.kristo.finanshub.ui.designsystem.HomelabTypography
+import no.kristo.finanshub.ui.designsystem.LocalDsColors
+import no.kristo.finanshub.ui.designsystem.LocalDsStil
+import no.kristo.finanshub.ui.designsystem.LocalPaperPal
+import no.kristo.finanshub.ui.designsystem.dsDark
+import no.kristo.finanshub.ui.designsystem.dsStil
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
@@ -255,30 +261,25 @@ private fun schemeFromPalette(light: Boolean): ColorScheme = if (light) lightCol
 
 val Mono = FontFamily.Monospace
 
-/** Papir: Manrope i brødtekst, Newsreader i titler. */
-private val paperType = Typography(
-    displaySmall = TextStyle(fontFamily = PaperFonts.serif, fontSize = 40.sp, fontWeight = FontWeight.Medium),
-    headlineMedium = TextStyle(fontFamily = PaperFonts.serif, fontSize = 30.sp, fontWeight = FontWeight.Medium),
-    titleLarge = TextStyle(fontFamily = PaperFonts.serif, fontSize = 24.sp, fontWeight = FontWeight.Medium),
-    titleMedium = TextStyle(fontFamily = PaperFonts.sans, fontSize = 16.sp, fontWeight = FontWeight.SemiBold),
-    bodyLarge = TextStyle(fontFamily = PaperFonts.sans, fontSize = 16.sp),
-    bodyMedium = TextStyle(fontFamily = PaperFonts.sans, fontSize = 14.sp),
-    bodySmall = TextStyle(fontFamily = PaperFonts.sans, fontSize = 12.sp),
-    labelLarge = TextStyle(fontFamily = PaperFonts.sans, fontSize = 14.sp, fontWeight = FontWeight.SemiBold),
-    labelMedium = TextStyle(fontFamily = PaperFonts.sans, fontSize = 12.sp, fontWeight = FontWeight.SemiBold),
-    labelSmall = TextStyle(fontFamily = PaperFonts.sans, fontSize = 11.sp, fontWeight = FontWeight.SemiBold),
-)
+/* Typografien er HomelabTypography (ui/designsystem/HomelabTheme.kt): tokenstilene med Papir-fontene (Fase 5). */
 
 // Uttrykksfulle former: ulik rundingsgrad på hjørnene, som i M3 Expressive.
 private val shapes = Shapes(
     small = RoundedCornerShape(12.dp), medium = RoundedCornerShape(20.dp), large = RoundedCornerShape(28.dp), extraLarge = RoundedCornerShape(32.dp),
 )
 
-/** Papir · lys, Papir · mørk, Liquid Glass (prompt 50) eller «auto» (følger systemet). Prompt 42: det eneste temaet (Material You-«Klassisk» er slettet). */
+/**
+ * Papir · lys, Papir · mørk, Liquid Glass (prompt 50) eller «auto» (følger systemet). Prompt 42: det eneste temaet (Material You-«Klassisk»
+ * er slettet, og dynamic color forblir av, Q16).
+ *
+ * Fase 5: temaet gir også tokenene til skjermene: LocalDsColors (DsColors for stil × modus), LocalDsStil, LocalPaperPal og
+ * MaterialTheme.typography = HomelabTypography (tokenstilene med Papir-fontene). Se ui/designsystem/HomelabTheme.kt. Fargeskjemaet
+ * for M3-komponentene er uendret i denne bølgen (fra Papir-paletten), så utseendet er det samme.
+ */
 @Composable
 fun FinansTheme(paperMode: String, content: @Composable () -> Unit) {
     val sysDark = isSystemInDarkTheme()
-    val paperDark = when (paperMode) { "mork", "glass" -> true; "lys" -> false; else -> sysDark }
+    val paperDark = dsDark(paperMode, sysDark)
     if (Tone.paperDark != paperDark) Tone.paperDark = paperDark
     if (Tone.glass != (paperMode == "glass")) Tone.glass = paperMode == "glass" // prompt 50: Liquid Glass
     if (Tone.light != !paperDark) Tone.light = !paperDark
@@ -292,7 +293,14 @@ fun FinansTheme(paperMode: String, content: @Composable () -> Unit) {
             c.isAppearanceLightNavigationBars = !paperDark
         }
     }
-    MaterialTheme(colorScheme = scheme, typography = paperType, shapes = shapes, content = content)
+    val stil = dsStil(paperMode)
+    CompositionLocalProvider(
+        LocalDsColors provides DsPalette.colors(stil, paperDark),
+        LocalDsStil provides stil,
+        LocalPaperPal provides PaperPal.current,
+    ) {
+        MaterialTheme(colorScheme = scheme, typography = HomelabTypography, shapes = shapes, content = content)
+    }
 }
 
 /* ---------- Formatering (norsk, minus som −) ---------- */

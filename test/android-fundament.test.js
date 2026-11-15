@@ -86,6 +86,22 @@ test('D §6: appen viser det serveren regner (neste trekk, neste forekomst), lok
   assert.match(raw(join(ROOT, '.github/workflows/mobile.yml')), /\.\/gradlew --no-daemon :felles:test :kalender:testDebugUnitTest/);
 });
 
+test('tema: FinansTheme gir tokenene (LocalDsColors, typografi fra tokens) uten hex, uten fontSize og uten dynamic color', () => {
+  const ht = raw(join(APP, 'ui/designsystem/HomelabTheme.kt'));
+  const c = strip(ht);
+  assert.ok(!/Color\(0x/.test(c), 'ingen hex i temaet');
+  assert.ok(!/fontSize\s*=/.test(c), 'størrelsene kommer fra DsText');
+  for (const s of ['caption', 'footnote', 'subheadline', 'callout', 'body', 'headline', 'title3', 'title2', 'largeTitle']) assert.match(c, new RegExp(`val ${s}: TextStyle by lazy \\{ DsText\\.`), s);
+  assert.match(c, /object HomelabTheme \{[\s\S]*?val colors: DsColors\s*@Composable @ReadOnlyComposable get\(\) = LocalDsColors\.current/);
+  const th = strip(raw(join(APP, 'ui/Theme.kt')));
+  const ft = th.slice(th.indexOf('fun FinansTheme('));
+  assert.match(ft, /LocalDsColors provides DsPalette\.colors\(stil, paperDark\)/);
+  assert.match(ft, /typography = HomelabTypography/);
+  assert.ok(!/dynamicLightColorScheme|dynamicDarkColorScheme/.test(th), 'Q16: ingen dynamic color');
+  // Generert kode redigeres aldri for hånd.
+  assert.match(raw(join(APP, 'ui/designsystem/DesignTokens.kt')), /^\/\/ GENERERT av scripts\/design-tokens\.mjs/);
+});
+
 test('B3: CSV-eksporten hentes fra serveren og bygges aldri på Main', () => {
   const vm = strip(raw(join(APP, 'AppViewModel.kt')));
   const f = vm.slice(vm.indexOf('fun exportCsv()'), vm.indexOf('private fun localCsv('));
