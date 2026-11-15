@@ -8,7 +8,7 @@ import { readFileSync } from 'node:fs';
 const rd = (p) => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8');
 const Q = rd('public/js/quality64.js');
 const S64 = rd('public/js/settings64.js');
-const ST = rd('public/js/settings.js');
+const ST = rd('public/js/settings-view.js');
 const A = rd('public/js/ai-control.js');
 const SS = rd('public/js/settings-search.js');
 const q = await import('../public/js/quality64.js');

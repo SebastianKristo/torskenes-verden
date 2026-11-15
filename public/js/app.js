@@ -3,25 +3,12 @@ import { store, on, load, mountAll } from './store.js';
 import { setupDnd, resetLayouts } from './dnd.js';
 import { applyBackground, preloadAll } from './background.js';
 import { bgState } from './bgsvc.js';
-import { openSettings, bindSettings, applyTop, settingsOwnsHash } from './settings.js';
+import { openSettings, bindSettings, applyTop, settingsOwnsHash, preloadSettings } from './settings.js';
 import { bindPopup, bindSearch, menuLabels, toggle, renderTicker } from './extras.js';
 import { applyHead, toggleHeadEdit, uiDefaults } from './topedit.js';
 import { applyProfile, applyNav } from './profile.js';
-import * as dash from './dash.js';
 import * as study from './study.js';
-import * as space from './space.js';
-import * as net from './net.js';
-import * as home from './home.js';
-import * as mat from './mat.js';
-import * as domains from './domains.js';
-import * as tracking from './tracking.js';
-import * as family from './family50-web.js'; // prompt 50 (FAMWEB50): Familie i nytt design (family50.js); gammel side: family.js
-import * as tasks from './tasks.js';
-import * as weatherPage from './weather-page.js';
-import * as birthdays from './birthdays.js';
-import * as kalender from './kalender.js';
-import * as chat from './chat.js';
-import * as media43 from './media43.js'; // prompt 43: Media (Sonarr, Radarr, qBittorrent, Prowlarr)
+import { poll, wakePolls } from './lib/poll.js';
 import { initI18n, setLang, lang } from './i18n.js';
 import { loadUpdBanner } from './upd-banner.js';
 import { loadProfileMenu, renderProfileMenu, profileMenuClick, profileMenuClosed } from './profile-menu.js';
@@ -30,7 +17,6 @@ import { logout, noteUser } from './usercache.js';
 import { loadAppIdentity, appName } from './appicon.js';
 import { scrollMemory } from './scrollmem.js';
 import { startVersionCheck } from './vercheck.js';
-import { mountDash, startEdit } from './dash-edit36.js';
 import { initWeb36 } from './web36.js';
 import { initWeb37 } from './web37.js';
 import { initWeb38 } from './web38.js';
@@ -38,7 +24,6 @@ import { initWeb40 } from './web40.js';
 import { initWeb41, after41 } from './web41.js';
 import { loadHlTheme, applyHlTheme, is2c, setHlTheme, pwHeader, paintPhoto, bindPhoto } from './hltheme.js';
 import { initWeb44, after44 } from './web44.js'; // prompt 44: lys/mørk, GlimtInput, logg inn som, sidetillegg
-import * as study44 from './study44.js'; // prompt 44: nytt Studie-design
 import { initWeb45, after45 } from './web45.js'; // prompt 45
 import { initWeb46, after46, renderKart46 } from './web46.js'; // prompt 46: Kart, nyheter, bakgrunn m.m.
 import { renderFam51, renderMedia51, afterMedfam51 } from './medfam51.js'; // prompt 51 (MEDFAM51): Familiekalender og «I kveld»
@@ -46,7 +31,44 @@ import { initWeb52, after52 } from './web52.js'; // prompt 52 (WEB52H): oppstart
 // Prompt 76 (SKJWEB): Skjold Lab (#/skjold) – skallet tegnes her, selve modulen (skjold76.js) lastes ved behov.
 const renderSkjold76 = () => '<section class="sk76" id="sk76" aria-label="Skjold Lab" aria-busy="true"></section>';
 
-const ROUTES = { dash: dash.render, studie: study44.render, rom: space.render, hjem: home.render, matplan: mat.render, sporing: tracking.render, familie: family.render, huskeliste: tasks.render, gjoremal: tasks.render, vaer: weatherPage.render, bursdager: birthdays.render, kalender: kalender.render, chat: chat.render, media: media43.render, kart: renderKart46, familiekalender: renderFam51, mediakveld: renderMedia51, skjold: renderSkjold76, domener: domains.render, nettverk: net.render, mer: net.renderMore };
+// Fase 3 (B §3 P1): rutemodulene lastes når ruten åpnes (import()), ikke alle ved oppstart. Før lastet hver rute ca. 180 moduler.
+// Skallet (topplinje, meny, søk, Glimt-feltet, temaer, innstillingsinngangen) er fortsatt statisk importert over.
+// MODS: modulnøkkel → lasting. ROUTES: rute → [modulnøkkel eller null, tegnefunksjon(modul)].
+const MODS = {
+  dash: () => Promise.all([import('./dash.js'), import('./dash-edit36.js')]).then(([d, e]) => ({ ...d, mountDash: e.mountDash, startEdit: e.startEdit })),
+  studie: () => import('./study44.js'), // prompt 44: nytt Studie-design
+  rom: () => import('./space.js'),
+  hjem: () => import('./home.js'),
+  matplan: () => import('./mat.js'),
+  sporing: () => import('./tracking.js'),
+  familie: () => import('./family50-web.js'), // prompt 50 (FAMWEB50): Familie i nytt design (family50.js)
+  tasks: () => import('./tasks.js'),
+  vaer: () => import('./weather-page.js'),
+  bursdager: () => import('./birthdays.js'),
+  kalender: () => import('./kalender.js'),
+  chat: () => import('./chat.js'),
+  media: () => import('./media43.js'), // prompt 43: Media (Sonarr, Radarr, qBittorrent, Prowlarr)
+  domener: () => import('./domains.js'),
+  net: () => import('./net.js'),
+};
+// Modulene som kobler lyttere til visningen (#view) gjør det én gang, når de lastes.
+const BIND = { rom: (m) => m.bind(view), hjem: (m) => m.bind(view), matplan: (m) => m.bind(view), sporing: (m) => m.bind(view), domener: (m) => m.bind(view) };
+const r0 = (m) => m.render();
+const ROUTES = { dash: ['dash', r0], studie: ['studie', r0], rom: ['rom', r0], hjem: ['hjem', r0], matplan: ['matplan', r0], sporing: ['sporing', r0], familie: ['familie', r0], huskeliste: ['tasks', r0], gjoremal: ['tasks', r0], vaer: ['vaer', r0], bursdager: ['bursdager', r0], kalender: ['kalender', r0], chat: ['chat', r0], media: ['media', r0], kart: [null, renderKart46], familiekalender: [null, renderFam51], mediakveld: [null, renderMedia51], skjold: [null, renderSkjold76], domener: ['domener', r0], nettverk: ['net', r0], mer: ['net', (m) => m.renderMore()] };
+const mods = {}, loading = {};
+function loadMod(k) {
+  if (!k || mods[k]) return Promise.resolve(mods[k]);
+  loading[k] ??= MODS[k]().then((m) => { mods[k] = m; BIND[k]?.(m); return m; }, (e) => { delete loading[k]; throw e; });
+  return loading[k];
+}
+// Forhåndslasting: fanene ved siden av den åpne (i menyens rekkefølge) når nettleseren er ledig, og en fane man holder pekeren over.
+const idle = (fn) => (window.requestIdleCallback ? requestIdleCallback(fn, { timeout: 5000 }) : setTimeout(fn, 2000));
+function preloadNeighbours() {
+  const tabs = [...document.querySelectorAll('nav [data-r]')].filter((a) => !a.hidden && !a.closest('[hidden]')).map((a) => a.dataset.r);
+  const i = tabs.indexOf(route);
+  const near = i < 0 ? ['dash'] : [tabs[i - 1], tabs[i + 1]];
+  for (const r of near) if (ROUTES[r]?.[0]) loadMod(ROUTES[r][0]).catch(() => {});
+}
 const view = document.getElementById('view');
 const KAL_APP = !!document.documentElement.dataset.kalApp;
 const scrollMem = scrollMemory();
@@ -63,8 +85,15 @@ function current() {
   return ROUTES[r] ? r : 'dash';
 }
 
+let renderSeq = 0;
 function renderRoute() {
-  const next = current();
+  const next = current(), seq = ++renderSeq;
+  const [mk, draw] = ROUTES[next];
+  // Modulen er ikke lastet ennå: siden som vises blir stående til den er klar (lokalt noen få ms).
+  if (mk && !mods[mk]) {
+    loadMod(mk).then(() => { if (seq === renderSeq) renderRoute(); }, (e) => { if (seq === renderSeq) swapView(`<div class="err">Kunne ikke laste siden: ${esc(e.message)}</div>`); });
+    return;
+  }
   route = next;
   // Bakgrunnsbilde og «Siste nytt» vises bare på dashboardet.
   document.body.classList.toggle('not-dash', route !== 'dash');
@@ -79,12 +108,12 @@ function renderRoute() {
   // Prompt 40: Gjøremål er fullskjerm på web (som Chat), uten fotovindu og toppmeny.
   const fsTasks = (route === 'huskeliste' || route === 'gjoremal') && !isMobile();
   document.body.classList.toggle('tk-fs40', fsTasks);
-  swapView((is2c() && route !== 'vaer' && route !== 'rom' && route !== 'chat' && route !== 'media' && !fsTasks ? pwHeader(route) : '') + ROUTES[route]()); // Vær, Rom (prompt 32) og Chat (prompt 33) er fullskjerm
+  swapView((is2c() && route !== 'vaer' && route !== 'rom' && route !== 'chat' && route !== 'media' && !fsTasks ? pwHeader(route) : '') + draw(mods[mk])); // Vær, Rom (prompt 32) og Chat (prompt 33) er fullskjerm
   placeTicker();
   paintPhoto();
   mountAll(view);
   setupDnd(view);
-  if (route === 'dash') { mountDash(view); if (isEditingPending) { isEditingPending = false; requestAnimationFrame(() => startEdit()); } }
+  if (route === 'dash') { mods.dash.mountDash(view); if (isEditingPending) { isEditingPending = false; requestAnimationFrame(() => mods.dash.startEdit()); } }
   after41(route, view); // prompt 41: 17. mai på Hjem
   after44(route, view); // prompt 44
   after45(route, view); // prompt 45
@@ -98,6 +127,8 @@ function renderRoute() {
   setTitle();
   // Prompt 23: tilbake gir samme scrollposisjon som før, nye sider åpner øverst.
   scrollMem.enter(route);
+  wakePolls(); // hentinger som venter på at ruten vises
+  idle(preloadNeighbours);
 }
 
 // Prompt 87 (claude-code-web-navigasjon-uten-reload.md): fotovinduet øverst hører til skallet og skal ikke tegnes på nytt ved fanebytte.
@@ -178,7 +209,7 @@ function bindShell() {
     if (act === 'toggle-search') await toggle('search');
     if (act === 'toggle-news') await toggle('news');
     if (act === 'head-edit') toggleHeadEdit();
-    if (act === 'dash-edit') { if (current() !== 'dash') { isEditingPending = true; location.hash = '#/dash'; } else startEdit(); }
+    if (act === 'dash-edit') { if (current() !== 'dash' || !mods.dash) { isEditingPending = true; location.hash = '#/dash'; } else mods.dash.startEdit(); }
     if (act === 'logout') {
       if (!confirm('Logge ut? Denne enheten må da logge inn med passord igjen.')) return;
       const d = await api('/devices').catch(() => null), cur = d?.devices?.find((x) => x.current);
@@ -188,7 +219,11 @@ function bindShell() {
   });
   // Innstillinger legger #/innstillinger/<fane> i adressen (og fjerner den igjen) uten at siden under skal tegnes på nytt.
   // Prompt 44: Media styrer sin egen adresse (#/media/sonarr/s/12 …, frem/tilbake), så siden tegnes ikke på nytt for den.
-  window.addEventListener('hashchange', () => { if (!settingsOwnsHash() && !(route === 'media' && current() === 'media' && media43.ownsHash?.()) && !(route === 'familie' && current() === 'familie' && family.ownsHash?.()) && !(route === 'skjold' && current() === 'skjold')) renderRoute(); }); // prompt 76: Skjold Lab styrer sine egne undersider
+  window.addEventListener('hashchange', (e) => { store.prevUrl = e.oldURL; }); // Chat (lastes ved behov) vil vite hvor man kom fra
+  window.addEventListener('hashchange', () => { if (!settingsOwnsHash() && !(route === 'media' && current() === 'media' && mods.media?.ownsHash?.()) && !(route === 'familie' && current() === 'familie' && mods.familie?.ownsHash?.()) && !(route === 'skjold' && current() === 'skjold')) renderRoute(); }); // prompt 76: Skjold Lab styrer sine egne undersider
+  // Pekeren over en fane eller profilknappen: last modulen (eller innstillingene) før trykket.
+  document.querySelector('nav')?.addEventListener('pointerover', (e) => { const r = e.target.closest?.('[data-r]')?.dataset.r; if (ROUTES[r]?.[0]) loadMod(ROUTES[r][0]).catch(() => {}); }, { passive: true });
+  btn.addEventListener('pointerenter', preloadSettings, { once: true, passive: true });
   document.addEventListener('hl:theme', () => { route = null; renderRoute(); weatherPill(); });
   // Nytt språk: tegn visningen på nytt (tekster fra t() og Intl-datoer).
   document.addEventListener('hl:lang', () => { route = null; renderRoute(); weatherPill(); langLabel(); renderTicker(); });
@@ -201,6 +236,7 @@ function bindShell() {
 }
 
 async function main() {
+  loadMod(ROUTES[current()]?.[0]).catch(() => {}); // rutemodulen lastes mens oppstartsdataene hentes
   const [me, ui, , , lay44] = await Promise.all([api('/state'), api('/ui').catch(() => uiDefaults()), loadHlTheme(), loadAppIdentity(), api('/me/layout').catch(() => null)]);
   store.me = me;
   noteUser(me?.me?.id); // kontobytte: tøm den forrige brukerens cacher
@@ -228,7 +264,7 @@ async function main() {
   initWeb52();
   bindSearch();
   setupDnd(document.querySelector('header'));
-  study.bind(view); space.bind(view); home.bind(view); mat.bind(view); tracking.bind(view); domains.bind(view);
+  study.bind(view); // Rom, Hjem, Mat, Sporing og Domener kobler seg til når modulen lastes (BIND)
   applyTop();
   applyHead();
   renderTicker();
@@ -237,23 +273,26 @@ async function main() {
   renderRoute();
 
   // Henter data parallelt; hver widget oppdateres når sine data kommer.
-  const poll = (key, ms, path) => { load(key, path); setInterval(() => { if (!document.hidden) load(key, path); }, ms); };
-  poll('ruter', 30_000);
-  poll('weather', 15 * 60_000);
-  poll('school', 15 * 60_000);
-  poll('trading', 60_000);
-  poll('energy', 60_000);
-  poll('health', 60_000);
-  poll('upcoming', 10 * 60_000);
-  poll('news', 5 * 60_000);
-  poll('finans', 5 * 60_000, '/../finans/api/summary');
+  // Fase 3 (B §3 P2/B7): det som bare vises på Dashboard (og Nettverk/Mer for helse), hentes periodisk bare mens den ruten
+  // vises og fanen er synlig (lib/poll.js). Første henting skjer med en gang på riktig rute, ellers én gang når nettleseren
+  // er ledig, så dashbordet er klart når man går dit. Vær (topplinjen) og skole (Kalender, Studie, Dashboard) hentes alltid.
+  const onDash = () => route === 'dash', onNet = () => route === 'nettverk' || route === 'mer';
+  const every = (key, ms, visible, path) => poll(() => load(key, path), ms, visible ? { visible, first: 'idle' } : { first: 'now' });
+  every('ruter', 30_000, onDash);
+  every('weather', 15 * 60_000);
+  every('school', 15 * 60_000);
+  every('trading', 60_000, onDash);
+  every('energy', 60_000, onDash);
+  every('health', 60_000, onNet);
+  every('upcoming', 10 * 60_000, onDash);
+  every('news', 5 * 60_000, onDash);
+  every('finans', 5 * 60_000, onDash, '/../finans/api/summary');
   study.loadStudy();
 
   on('weather', () => { weatherPill(); if (bgState().type === 'weather') { applyBackground(); paintPhoto(); } });
   on('route', renderRoute);
 
-  setInterval(() => { store.now = new Date(); if (route === 'dash') dash.tick(); }, 1000);
-  document.addEventListener('visibilitychange', () => { if (!document.hidden) load('ruter'); });
+  setInterval(() => { store.now = new Date(); if (route === 'dash' && !document.hidden) mods.dash?.tick(); }, 1000);
 
   // Prompt 24: ikonene i Nyhetsleser lastes på forhånd, så de vises med en gang leseren åpnes.
   setTimeout(() => import('./news.js').then((m) => m.preloadNewsIcons?.()).catch(() => {}), 1200);
@@ -263,5 +302,9 @@ async function main() {
   // Prompt 31: presence-heartbeat mens fanen er synlig (serveren holder push tilbake da) og Web Push hvis slått på her.
   import('./webpush.js').then((m) => m.startPresence()).catch(() => {});
 }
+
+// Logo som ikke lar seg hente (Media-brikker på Dashboard, transportører i Sporing): skjul bildet (CSP tillater ikke inline onerror).
+// Lå i media.js; flyttet hit i Fase 3 fordi media.js nå lastes med Dashboard, og Sporing kan åpnes først.
+document.addEventListener('error', (e) => { const img = e.target; if (img?.tagName === 'IMG' && (img.parentNode?.classList?.contains('media-chip') || img.classList.contains('trk-logo'))) img.remove(); }, true);
 
 main().catch((e) => { view.innerHTML = `<div class="err">Kunne ikke starte: ${esc(e.message)}</div>`; });

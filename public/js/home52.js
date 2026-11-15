@@ -13,7 +13,7 @@
 import { api, esc, haptic } from './util.js';
 import { store, card } from './store.js';
 import { hiddenWidgets, hiddenTabs } from './profile.js';
-import { ruterColorA11y } from './dash.js'; // linjemerket med minst 4,5:1 kontrast
+import { ruterColorA11y } from './ruter-color.js'; // linjemerket med minst 4,5:1 kontrast
 
 const T = { // id → [navn, bredde ('h' halv | 'f' full), høy]
   p_school: ['I dag på skolen', 'f'], d_cal: ['Skolekalender', 'f'],

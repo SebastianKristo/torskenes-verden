@@ -6,7 +6,7 @@ import { readFileSync } from 'node:fs';
 import * as N from '../public/js/settings65.js';
 
 const read = (p) => readFileSync(p, 'utf8');
-const ST = read('public/js/settings.js');
+const ST = read('public/js/settings-view.js');
 const SS = read('public/js/settings-search.js');
 const SY = read('public/js/settings-system.js');
 const SI = read('public/js/settings-integ.js');

@@ -11,6 +11,7 @@ import { grp } from './mobile-p17.js';
 import * as CHAT from './mobile-chat.js';
 import * as KAL from './mobile-kal.js';
 import { parseQuick, quickLabel } from '/assets/js/quick-time.js';
+import { quickParse, quickCached } from '/assets/js/lib/dates.js'; // Fase 3: dato og tid fra serveren (POST /api/kalender/quick/parse)
 import * as P31 from './mobile-p31.js';
 import * as P32 from './mobile-p32.js';
 import * as P36 from './mobile-p36.js'; // prompt 36: spørsmål med dato er ikke avtaler, én Glimt-visning, backup-kvittering
@@ -35,13 +36,16 @@ function setEng(k) {
   if (!ENG[k]) return; SE.eng = k; SE.open = false; lsSet('papir_search', k); haptic('tab'); draw();
   hlApi('/me/layout', { method: 'PUT', json: { search_engine: k } }).catch(() => {});
 }
-/** Tolker teksten: en time hvis den har dato og intensjon/type (samme regler som Kalender → rask time). */
+/** Tolker teksten: en time hvis den har dato og intensjon/type (samme regler som Kalender → rask time).
+ *  Fase 3: tolkningen er serverens. Er den ikke hentet ennå, er svaret null og feltet tegnes på nytt når den kommer. */
 function apptOf(q) {
   const t = String(q ?? '').trim();
   if (t.length <= 4) return null;
   // Prompt 36: spørsmålsvakt før avtaletolkning («hvor mange timer med dagslys er det 29.06.2027?» er et spørsmål).
   if (P36.isQ(t)) return null;
-  const r0 = parseQuick(t, todayKey()), r = globalThis.P44?.fixQuick ? globalThis.P44.fixQuick(t, r0) : r0; // prompt 44: tittel etter dato/tid, 1630, kl 16
+  const r0 = quickCached(t, () => { if (SE.q.trim() === t) syncSearch(); });
+  if (!r0) return null;
+  const r = globalThis.P44?.fixQuick ? globalThis.P44.fixQuick(t, r0) : r0; // prompt 44: tittel etter dato/tid, 1630, kl 16
   if (!(r.ok && r.isAppointment)) return null;
   // Intensjonsordet må være et helt ord: «timer», «timeplan» og «sommertid» teller ikke som «time».
   if (/time/i.test(t) && !P36.hasApptWord(t) && !/(frisør|lege|tannlege|møte|trening|kl\.?\s*\d|\d{1,2}[.:]\d{2})/i.test(t)) return null;
@@ -71,8 +75,10 @@ function syncSearch() {
   if (w) w.innerHTML = apptHtml(r) || (globalThis.P41?.huskeRow?.(SE.q) ?? ''); // prompt 41: «Legg i Huskeliste»
   document.querySelector('.p29-clr')?.classList.toggle('off', !SE.q);
 }
-function searchGo() {
+function searchGo(waited = false) {
   const t = SE.q.trim(); if (!t) return;
+  // Fase 3: har ikke serveren tolket teksten ennå (trykket rett etter siste tastetrykk), ventes det på svaret først.
+  if (!waited && t.length > 4 && !P36.isQ(t) && !quickCached(t)) { quickParse(t).catch(() => null).finally(() => { SE.q = t; searchGo(true); }); return; }
   document.activeElement?.blur?.();
   // Prompt 32: alt som sendes fra søkefeltet logges for brukeren (vises bare på web under «Nylige søk»).
   P32.hsLog(t, SE.eng === 'ai' ? 'glimt' : SE.eng);
@@ -107,7 +113,7 @@ export async function quickRun(text, parsed) {
   const tmp = { id: `tmp${Date.now()}`, text: t };
   QJ.jobs.push(tmp); haptic('tap');
   // Prompt 31: jobben vises i Glimt-toasten (trykk → glassboble med steg og det AI har funnet).
-  const pr = parsed?.ok ? parsed : (() => { try { return parseQuick(t, todayKey()); } catch { return null; } })();
+  const pr = parsed?.ok ? parsed : quickCached(t); // feltene i Glimt-toasten: serverens tolkning når den er hentet
   P31.jobPut(tmp.id, { kind: 'quick', title: 'Legger til i kalenderen', model: 'Glimt · lokal', input: t, dur: 2600,
     fields: pr?.ok ? [['Hva', pr.title], ['Når', quickLabel(pr)], ['Kalender', 'Privat'], ['Varsel', pr.start ? '1 time før' : 'Ingen']] : [] });
   draw();

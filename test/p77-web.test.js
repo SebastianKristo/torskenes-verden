@@ -82,7 +82,7 @@ test('koblet inn i Skjold Lab, skjemaet og Innstillinger', () => {
   assert.match(ed, /onNewPhotos77\(F, added\)/);
   assert.match(ed, /saveWeb77\(F, id\)/);
   assert.match(ed, /default: return aiClick77\(a, F\)/);
-  const s = read('public/js/settings.js');
+  const s = read('public/js/settings-view.js');
   assert.match(s, /\.\.\.TABS77/);
   assert.match(s, /skjold: \(\) => skjView77\(H/);
   assert.match(s, /clickSkj77\(e, render\)/);

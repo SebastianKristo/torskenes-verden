@@ -12,6 +12,7 @@ import { api, esc, haptic, isMobile } from './util.js';
 import { store } from './store.js';
 import { hiddenWidgets, saveLayout } from './profile.js';
 import { is2c } from './hltheme.js';
+import { vw } from './lib/viewport.js';
 
 const KEY = 'hl_web_dash_layout_v1';
 const GAP = 16, HOLD = 560, V = 1;
@@ -130,7 +131,7 @@ async function loadServer() {
 const profHidden = (id) => { const m = META()[id], h = hiddenWidgets(); if (!m || !m.hid.length) return false; return m.all ? m.hid.every((k) => h.has(k)) : m.hid.some((k) => h.has(k)); };
 const visible = (i) => !i.hidden && !profHidden(i.id);
 /** Kolonner som faktisk vises (under 900 px: 4, bare visning). */
-const viewCols = () => (window.innerWidth < 900 ? 4 : S.cols);
+const viewCols = () => (vw() < 900 ? 4 : S.cols); // vw(): ingen tvungen layout midt i tegningen
 const viewLay = () => {
   const vis = S.lay.map((i) => (visible(i) ? i : { ...i, hidden: true }));
   return viewCols() === S.cols ? compact(vis) : scaleCols(vis, S.cols, 4);
@@ -159,7 +160,8 @@ export function mountDash(view) {
   g.querySelectorAll('.dg36-wig').forEach((w) => ro.observe(w.firstElementChild ?? w));
   ro.observe(g);
   bindGrid(g);
-  measure();
+  // Ingen measure() her: ResizeObserver melder alle kortene første gang etter layouten (før bildet tegnes), så høydene måles
+  // uten en tvungen layout midt i rutebyttet (Fase 3, B §3 P3).
   if (S.edit) { decorate(); toolbar(); }
   loadServer();
 }
@@ -227,7 +229,7 @@ const SVG = {
   rs: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M20 9v11H9M14 20l6-6"/></svg>',
 };
 export const editIcon = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><path d="M14 17.5h7M17.5 14v7"/></svg>';
-export const canEdit = () => !isMobile() && window.innerWidth >= 900;
+export const canEdit = () => !isMobile() && vw() >= 900;
 export const isEditing = () => S.edit;
 
 /** Starter vuggingen (fra profilmenyen eller hold inne). Går til Dashboard hvis man står et annet sted. */

@@ -3,6 +3,7 @@
 // brukerens uskarphet og mørklegging, en scrim for lesbar tekst, papirtekstur i Papir og diskret regn/snø.
 import { esc, hlApi } from './core.js';
 import { pref, setPref } from './mobile.js';
+import { vw } from '/assets/js/lib/viewport.js'; // vindusstørrelsen uten tvungen layout
 
 export const BG_TYPES = [
   ['weather', 'Vær', 'Følger været der du er (MET)'],
@@ -44,7 +45,7 @@ const creditUrl = (c) => (c && typeof c === 'object' ? c.url ?? null : null);
 
 /** Henter bakgrunnen for typen. Normaliserer til {url, fallbacks, gradient, credit, creditUrl, hint, particles, weather}. */
 export async function bgFetch(kind) {
-  const s = bgSet(), w = Math.min(1600, Math.round((window.innerWidth || 400) * Math.min(2, window.devicePixelRatio || 1)));
+  const s = bgSet(), w = Math.min(1600, Math.round((vw() || 400) * Math.min(2, window.devicePixelRatio || 1)));
   const type = kind === 'cur' ? 'none' : kind;
   try {
     const q = new URLSearchParams({ type, w: String(w), dpr: '1' });

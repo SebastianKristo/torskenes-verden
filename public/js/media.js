@@ -1,6 +1,7 @@
 // Dashbord-kort «Media»: Plex og Jellyfin (spilles nå + nylig lagt til). Data og plakater går via serveren.
 import { esc, NOT_SET_UP } from './util.js';
 import { store, widget, refresh, errBox, on, load } from './store.js';
+import { poll } from './lib/poll.js';
 
 const SRC = { plex: { name: 'Plex', bg: '#e5a00d', fg: '#1a1200', domain: 'plex.tv' }, jellyfin: { name: 'Jellyfin', bg: '#7b4fd6', fg: '#fff', domain: 'jellyfin.org' } };
 const TINTS = ['#3b4a6b', '#5a3b6b', '#3b6b5e', '#6b4f3b', '#3b5a6b', '#6b3b48'];
@@ -96,13 +97,9 @@ on('media_now', () => refresh('d_media'));
 on('media_recent', () => refresh('d_media'));
 
 // «Spilles nå» hvert 30. sekund, «Nylig lagt til» hvert 10. minutt (serveren cacher like lenge).
-const visible = () => !document.hidden && document.querySelector('[data-w="d_media"]');
-load('media_now', '/media/now');
-load('media_recent', '/media/recent');
-load('media_history', '/media/history');
-setInterval(() => { if (visible()) load('media_now', '/media/now'); }, 30_000);
-setInterval(() => { if (visible()) load('media_recent', '/media/recent'); }, 10 * 60_000);
-setInterval(() => { if (!document.hidden && document.querySelector('[data-w="d_media_hist"]')) load('media_history', '/media/history'); }, 5 * 60_000);
-
-// Logo som ikke lar seg hente: skjul bildet (CSP tillater ikke inline onerror).
-document.addEventListener('error', (e) => { const img = e.target; if (img?.tagName === 'IMG' && (img.parentNode?.classList?.contains('media-chip') || img.classList.contains('trk-logo'))) img.remove(); }, true);
+// Fase 3 (lib/poll.js): første henting med en gang (modulen lastes med Dashboard), deretter bare mens kortene vises.
+const shown = (w) => () => !!document.querySelector(`[data-w="${w}"]`);
+poll(() => load('media_now', '/media/now'), 30_000, { visible: shown('d_media'), first: 'now' });
+poll(() => load('media_recent', '/media/recent'), 10 * 60_000, { visible: shown('d_media'), first: 'now' });
+poll(() => load('media_history', '/media/history'), 5 * 60_000, { visible: shown('d_media_hist'), first: 'now' });
+// Logoer som ikke lar seg hente (media-chip, trk-logo) skjules av skallet (app.js), så det virker også før Dashboard er lastet.

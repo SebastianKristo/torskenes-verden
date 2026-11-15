@@ -3,6 +3,7 @@
 import { esc, nb } from './util.js';
 import { pkgLogo, pkgTitle, moreText } from './pkglogo.js';
 import { store, load, on } from './store.js';
+import { poll } from './lib/poll.js';
 
 const WI = {
   rain: 'M7 15a4 4 0 1 1 .9-7.9A5 5 0 0 1 17.6 9 3.5 3.5 0 0 1 17 16H7zM8 19l-1 2M12 19l-1 2M16 19l-1 2',
@@ -150,5 +151,5 @@ let pkTimer = null;
 export function startPackages() {
   if (pkTimer) return;
   load('trackw', '/tracking/widget');
-  pkTimer = setInterval(() => { if (!document.hidden && document.querySelector('[data-wxs="p"]')) load('trackw', '/tracking/widget'); }, 120_000);
+  pkTimer = poll(() => load('trackw', '/tracking/widget'), 120_000, { visible: () => !!document.querySelector('[data-wxs="p"]'), first: 'wait' });
 }

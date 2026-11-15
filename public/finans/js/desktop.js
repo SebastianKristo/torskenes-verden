@@ -1,5 +1,6 @@
 // FinansHub desktop. Alle sider tegnes fra S (core.js); hendelser fanges med delegering på roten.
 import { scrollMemory } from '/assets/js/scrollmem.js';
+import { appendChunks } from '/assets/js/lib/chunks.js';
 import { agent, agentFull, isPlain } from '/assets/js/glimt-agent45.js'; // prompt 45: felles Glimt-agent
 import {
   S, api, esc, n0, n2, sgn, neg, neg0, k, dd, dLong, today, monthName, cap, shiftMonth, ini, rgba, greet, pctChange, parseAmount,
@@ -376,16 +377,30 @@ function txHl(t) {
   return hlBanner(hlQ(), t.lines.map((l) => ({ text: l.description, price: l.amount })), idx)
     + (t.receiptId ? `<a class="rc-hlopen" href="#/kv" data-open-rc="${esc(t.receiptId)}" data-hl="${esc(hlQ())}">Vis i kvitteringen ›</a>` : '');
 }
-function transactions() {
-  const list = S.tx;
-  const chips = [{ id: '', name: 'Alle', color: 'var(--text)' }, ...cats()].map((c) => `<button class="chip" data-cat="${c.id}" aria-pressed="${String(u.cat) === String(c.id)}"><i style="background:${c.color}"></i>${esc(c.name)}</button>`).join('');
-  const qs = new URLSearchParams({ ...(u.q && { q: u.q }), ...(u.cat && { category: u.cat }), ...(u.acc && { account: u.acc }), ...(u.type && { type: u.type }) });
-  const rows = list?.items.map((t) => `<tr data-open-tx="${t.id}" class="${u.sel === t.id ? 'on' : ''}">
+const TX_FIRST = 60;
+let txShown = 0, txList = null;
+const txTableRow = (t) => `<tr data-open-tx="${t.id}" class="${u.sel === t.id ? 'on' : ''}">
     <td class="mono muted" style="white-space:nowrap">${dd(t.date)}</td>
     <td><div style="display:flex;align-items:center;gap:10px">${logo(t, 30, 9)}<div style="min-width:0"><div style="font-weight:500">${esc(t.description)}</div><div class="note" style="font-size:12px">${esc(t.account)}${t.note ? ' · ' + esc(t.note) : ''}${t.folder ? ' · ' + esc(t.folder) : ''}</div>${aiLine(t.aiShort, 'd-ai ell')}</div></div></td>
     <td><span class="tag"><i style="background:${t.color}"></i>${esc(t.category)}</span></td>
     <td style="font-size:12.5px;color:${t.receipt === 'needs_review' ? 'var(--acc-l)' : 'var(--muted)'}">${t.receipt === 'booked' ? 'Vedlagt' : t.receipt ? 'Til gjennomgang' : '–'}</td>
-    <td class="mono" style="white-space:nowrap;font-weight:500;color:${amtColor(t.amount)}">${sgn(t.amount)}</td></tr>`).join('');
+    <td class="mono" style="white-space:nowrap;font-weight:500;color:${amtColor(t.amount)}">${sgn(t.amount)}</td></tr>`;
+/** Etter tegningen: resten av transaksjonene i porsjoner (lib/chunks.js). */
+function moreTx(el) {
+  const body = el.querySelector('.tbl-wrap tbody'), L = txList?.items ?? [];
+  if (!body || txShown >= L.length) return;
+  appendChunks(body, L.length - txShown, (from, n) => { const html = L.slice(txShown, txShown + n).map(txTableRow).join(''); txShown += n; return html; });
+}
+function transactions() {
+  const list = S.tx;
+  const chips = [{ id: '', name: 'Alle', color: 'var(--text)' }, ...cats()].map((c) => `<button class="chip" data-cat="${c.id}" aria-pressed="${String(u.cat) === String(c.id)}"><i style="background:${c.color}"></i>${esc(c.name)}</button>`).join('');
+  const qs = new URLSearchParams({ ...(u.q && { q: u.q }), ...(u.cat && { category: u.cat }), ...(u.acc && { account: u.acc }), ...(u.type && { type: u.type }) });
+  // Fase 3 (B §3 P6): lange lister tegnes i porsjoner (lib/chunks.js): de første radene med en gang, resten ved scroll eller når
+  // nettleseren er ledig. Hvor mange som er tegnet, huskes til listen hentes på nytt (så en ny tegning beholder scrollposisjonen).
+  if (list !== txList) { txList = list; txShown = TX_FIRST; }
+  const selIx = list?.items.findIndex((t) => t.id === u.sel) ?? -1;
+  if (selIx >= txShown) txShown = selIx + 1;
+  const rows = list?.items.slice(0, txShown).map(txTableRow).join('');
   const sel = list?.items.find((t) => t.id === u.sel);
   // Prompt 52 (WEB52F): felles kvitteringspanel (rcpanel52.js) – sticky med egen scroll, skuff under 1100 px.
   const detail = sel ? `<div class="rcp52-scrim" data-act="close-sel" aria-hidden="true"></div>${rcPanel52({
@@ -1008,6 +1023,7 @@ export function draw() {
   const r48 = el.querySelector('[data-r48-mount]');
   if (r48) import('/assets/js/receipts48-set.js').then((m) => m.mountReceipts48(r48)).catch(() => { r48.innerHTML = '<div class="note">Kunne ikke laste kvitteringsoppsettet.</div>'; });
   if (u.page === 'dir') afterB42(el);
+  if (u.page === 'tx') moreTx(el);
   window.scrollTo(0, scroll);
   rcpAfter52(el); rcpGone52(); // prompt 52
   window.fhLoaded?.(); // fjerner lasteskjermen fra index.html (loader.js)

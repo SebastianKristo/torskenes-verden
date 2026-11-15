@@ -112,21 +112,7 @@ export function localColors() {
   try { const m = JSON.parse(ls.get('kal39_col') || '{}'); for (const c of cals()) if (m[c.id] && !S.srv) c.color = m[c.id]; } catch { /* */ }
 }
 
-/* ---------------- Helligdager (innebygd Norge, bevegelige beregnet) ---------------- */
-
-function easter(y) {
-  const a = y % 19, b = Math.floor(y / 100), c = y % 100, d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25), g = Math.floor((b - f + 1) / 3);
-  const h = (19 * a + b - d - g + 15) % 30, i = Math.floor(c / 4), k = c % 4, l = (32 + 2 * e + 2 * i - h - k) % 7, m = Math.floor((a + 11 * h + 22 * l) / 451);
-  const mo = Math.floor((h + l - 7 * m + 114) / 31), da = ((h + l - 7 * m + 114) % 31) + 1;
-  return new Date(y, mo - 1, da, 12);
-}
-export function holidays(y) {
-  const E = easter(y), at = (n) => { const d = new Date(E); d.setDate(d.getDate() + n); return d; };
-  const k = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-  return [[new Date(y, 0, 1, 12), 'Første nyttårsdag'], [at(-3), 'Skjærtorsdag'], [at(-2), 'Langfredag'], [E, 'Første påskedag'], [at(1), 'Andre påskedag'],
-    [new Date(y, 4, 1, 12), 'Offentlig høytidsdag'], [new Date(y, 4, 17, 12), 'Grunnlovsdag'], [at(39), 'Kristi himmelfartsdag'], [at(49), 'Første pinsedag'], [at(50), 'Andre pinsedag'],
-    [new Date(y, 11, 25, 12), 'Første juledag'], [new Date(y, 11, 26, 12), 'Andre juledag']].map(([d, t]) => ({ k: k(d), t }));
-}
+/* Helligdager: fra serveren (GET /api/dates/holidays), se kalender.js. */
 
 /* ---------------- Farger på hendelser (KalFag37.tint) ---------------- */
 
@@ -397,16 +383,22 @@ function monthView() {
   return { st: first, end: new Date(first.getFullYear(), first.getMonth() + 1, 0, 12), html: `<div class="k39-mo">${head}<div class="k39-mog">${rows}</div></div>` };
 }
 /** Så mange hendelser som får plass i hver rute (MacMonthCellMath.chips), resten som «+N». */
+// Fase 3 (B §3 P3): tre runder i stedet for les/skriv per rute (42 tvungne layouter): nullstill alle, mål alle, skriv alle.
+// Rutene har fast høyde (flex: 1, min-height: 0, overflow: hidden), så høyden avhenger ikke av hvor mange som vises.
 export function fitMonth(h) {
-  for (const c of h.querySelectorAll('.k39-moc')) {
+  const cells = [...h.querySelectorAll('.k39-moc')].map((c) => {
     const list = c.querySelector('.k39-mol'), chips = [...list.querySelectorAll('.k39-chip')];
     list.querySelector('.k39-more')?.remove();
     chips.forEach((x) => { x.hidden = false; });
-    if (chips.length <= Math.max(1, Math.floor((c.clientHeight - 30) / 19))) continue;
-    const max = Math.max(1, Math.min(40, Math.floor((c.clientHeight - 45) / 19))); // plass til «+N» under
+    return { c, list, chips };
+  });
+  const H = cells.map((x) => (x.chips.length > 1 ? x.c.clientHeight : 0)); // én layout for alle (én eller ingen brikke får alltid plass)
+  cells.forEach(({ list, chips }, i) => {
+    if (chips.length <= Math.max(1, Math.floor((H[i] - 30) / 19))) return;
+    const max = Math.max(1, Math.min(40, Math.floor((H[i] - 45) / 19))); // plass til «+N» under
     chips.slice(max).forEach((x) => { x.hidden = true; });
     const m = document.createElement('span'); m.className = 'k39-more'; m.textContent = `+${chips.length - max}`; list.appendChild(m);
-  }
+  });
 }
 
 /* ---------------- År (MacYearView) ---------------- */

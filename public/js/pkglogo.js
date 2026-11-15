@@ -46,8 +46,8 @@ function serverLogo(p, lg, size, cls) {
   const main = lg.kind === 'shop' ? lg.url : lg.kind === 'carrier' ? carSrc(lg, key) ?? (MANUAL.has(key) ? null : p.carrierLogo) : null;
   const color = hex(MANUAL_COLOR[key], hex(lg.color, hex(p.carrierColor, '#6b665c'))), fg = hex(lg.fg, hex(p.carrierFg, '#fff'));
   const full = (u) => (/\/carriers\//.test(u ?? '') ? ' full' : '');
-  const img = main ? `<img class="pkl-img${full(main)}" data-pkl src="${esc(main)}"${car ? ` data-fb="${esc(car)}"` : ''} alt="" loading="lazy" decoding="async">` : '';
-  const badge = car ? `<img class="pkl-car${full(car)}" data-pkl src="${esc(car)}" alt="${esc(name)}" title="${esc(name)}" loading="lazy" decoding="async">` : '';
+  const img = main ? `<img class="pkl-img${full(main)}" data-pkl src="${esc(main)}" width="40" height="40"${car ? ` data-fb="${esc(car)}"` : ''} alt="" loading="lazy" decoding="async">` : '';
+  const badge = car ? `<img class="pkl-car${full(car)}" data-pkl src="${esc(car)}" width="18" height="18" alt="${esc(name)}" title="${esc(name)}" loading="lazy" decoding="async">` : '';
   const label = lg.kind === 'shop' ? lg.name || p.shop || name : name;
   const txt = lg.kind === 'carrier' ? letterOf(key, label, lg.letter) : lg.letter || initials(label);
   return `<span class="pkl ${cls}${main ? ' has' : ''}" style="--s:${size}px;--c:${color};--fg:${fg}" role="img" aria-label="${esc(label)}"><i class="${nmCls(txt).trim()}">${esc(txt)}</i>${img}${badge}</span>`;
@@ -68,8 +68,8 @@ export function pkgLogo(p, size = 52, cls = '') {
   const color = MANUAL_COLOR[key] ?? (/^#[0-9a-f]{3,8}$/i.test(p?.carrierColor ?? '') ? p.carrierColor : '#6b665c');
   const fg = /^#[0-9a-f]{3,8}$/i.test(p?.carrierFg ?? '') ? p.carrierFg : '#fff';
   const full = (u) => (/\/carriers\//.test(u) ? ' full' : '');
-  const img = main ? `<img class="pkl-img${full(main)}" data-pkl src="${esc(main)}"${shop && car ? ` data-fb="${esc(car)}"` : ''} alt="" loading="lazy" decoding="async">` : '';
-  const badge = shop && car ? `<img class="pkl-car${full(car)}" data-pkl src="${esc(car)}" alt="${esc(carName(p))}" title="${esc(carName(p))}" loading="lazy" decoding="async">` : '';
+  const img = main ? `<img class="pkl-img${full(main)}" data-pkl src="${esc(main)}" width="40" height="40"${shop && car ? ` data-fb="${esc(car)}"` : ''} alt="" loading="lazy" decoding="async">` : '';
+  const badge = shop && car ? `<img class="pkl-car${full(car)}" data-pkl src="${esc(car)}" width="18" height="18" alt="${esc(carName(p))}" title="${esc(carName(p))}" loading="lazy" decoding="async">` : '';
   return `<span class="pkl ${cls}${main ? ' has' : ''}" style="--s:${size}px;--c:${color};--fg:${fg}" role="img" aria-label="${esc(shop ? p.shop || carName(p) : carName(p))}"><i class="${nmCls(ini).trim()}">${esc(ini)}</i>${img}${badge}</span>`;
 }
 

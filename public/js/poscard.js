@@ -4,6 +4,7 @@
 import { api, esc, hm } from './util.js';
 import { store, widget, refresh, on, emit } from './store.js';
 import { hjemlysHtml, bindHjemlys } from './hjemlys40.js';
+import { poll } from './lib/poll.js';
 
 const PALETTE = ['#b23a2a', '#2f5d8a', '#2f7a4f', '#c98a1b', '#6b4fa0', '#a03c8a', '#1f7a7a', '#8a5a2b'];
 const STALE_MS = 15 * 60_000, MAX = 4;
@@ -58,7 +59,7 @@ export async function loadPositions() {
 }
 function ensure() {
   if (!store.data.positions && !store.errors.positions) loadPositions();
-  timer ??= setInterval(() => { if (!document.hidden && document.querySelector('[data-w="d_pos"],[data-w="p_pos"]')) loadPositions(); }, 60_000);
+  timer ??= poll(loadPositions, 60_000, { visible: () => !!document.querySelector('[data-w="d_pos"],[data-w="p_pos"]'), first: 'wait' });
 }
 
 const dotTitle = { fresh: 'Posisjon delt nå', stale: 'Eldre enn 15 minutter', off: 'Deler ikke posisjon' };

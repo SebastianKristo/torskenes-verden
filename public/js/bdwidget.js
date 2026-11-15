@@ -4,11 +4,12 @@
 import { esc } from './util.js';
 import { store, widget, refresh, on } from './store.js';
 import { loadBirthdays, sorted, whenTxt, avatar, MS } from './birthdays.js';
+import { poll } from './lib/poll.js';
 
 let loading = false, timer = null;
 function ensure() {
   if (!store.data.birthdays && !loading) { loading = true; loadBirthdays().finally(() => { loading = false; }); }
-  timer ??= setInterval(() => { if (!document.hidden && document.querySelector('[data-w="d_bday"],[data-w="p_bday"]')) loadBirthdays(); }, 30 * 60_000);
+  timer ??= poll(loadBirthdays, 30 * 60_000, { visible: () => !!document.querySelector('[data-w="d_bday"],[data-w="p_bday"]'), first: 'wait' });
 }
 
 function body() {

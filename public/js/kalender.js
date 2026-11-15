@@ -18,10 +18,9 @@ import { openSettings } from './settings.js';
 import { loadBirthdays } from './birthdays.js';
 import { searchField } from './searchfield.js';
 import { fmtDate } from './i18n.js';
-import { addQuick, preview, quickLabel, setQuickHooks } from './kal-quick.js';
+import { addQuick, preview, previewAsync, quickLabel, setQuickHooks } from './kal-quick.js';
 import { glimt } from './glimt.js';
 import { LEARN_TYPES, typeName, addMemory, applyMemory, nameOfEvent, loadMemory, dinOf } from './glimt-memory.js'; // prompt 33
-import { parseDay } from './parse-day35.js'; // prompt 35: felles dag-tolkning
 import { agent, agentOn, agentFull } from './glimt-agent45.js'; // prompt 45
 import * as k38 from './kal38.js'; // prompt 38: zoom, Glimt-assistenten, kart, ark/tastatur, app-modus (Mac)
 import * as k42 from './kal42.js'; // prompt 42: Abonnementer (trekkdatoer fra Finans)
@@ -153,6 +152,14 @@ function calOf(x, kind) {
 }
 
 /** Gjør svaret fra /api/kalender (eller reserven) om til hendelser per dag. */
+// Helligdagene fra serveren (hentes én gang, bare når kalenderdataene ikke har dem): i fjor, i år og neste år.
+let HOL = null, holP = null;
+function loadHolidays() {
+  if (holP) return;
+  const y0 = new Date().getFullYear();
+  holP = api(`/dates/holidays?from=${y0 - 1}-01-01&to=${y0 + 1}-12-31`).then((r) => { HOL = Array.isArray(r?.items) ? r.items : []; }, () => { HOL = []; })
+    .then(() => { if (K.data && !K.loading) ensureKal(true); });
+}
 function normalize(r) {
   const subjects = r.subjects && typeof r.subjects === 'object' ? r.subjects : {};
   const byDay = new Map();
@@ -188,10 +195,11 @@ function normalize(r) {
     } else if (kind === 'innl') push(key(st), { ...base, k: key(st), s: '', e: hm(en > st ? en : st) });
     else push(key(st), { ...base, k: key(st), s: hm(st), e: key(en) === key(st) && en > st ? hm(en) : '23:59' });
   }
-  // Prompt 39: Helligdager (innebygd Norge) når serveren ikke sender dem selv.
+  // Prompt 39: Helligdager når serveren ikke sender dem som hendelser. Fase 3: listen kommer fra serveren (GET /api/dates/holidays, Q18)
+  // i stedet for å regnes ut her (påskeregelen og datoene bor på serveren).
   if (![...byDay.values()].some((L) => L.some((e) => e.ac === 'helligdager'))) {
-    const y0 = new Date().getFullYear();
-    for (const y of [y0 - 1, y0, y0 + 1]) for (const h of k39.holidays(y)) push(h.k, { id: `hd|${h.k}`, oid: '', kind: 'fri', cal: 'helligdager', ac: 'helligdager', t: h.t, short: h.t, subj: '', r: '', rRaw: '', rUrl: '', teacher: '', n: '', c: '', sc: '', sk: '', src: 'builtin', url: '', map: '', editable: false, rep: '', recurrence: null, srvRem: '', all: true, startRaw: h.k, endRaw: h.k, addr: '', gmap: null, k37: '', stx: '', slt: '', k: h.k, s: '', e: '' });
+    if (HOL) { for (const h of HOL) if (h.type === 'helligdag') push(h.date, { id: `hd|${h.date}`, oid: '', kind: 'fri', cal: 'helligdager', ac: 'helligdager', t: h.name, short: h.name, subj: '', r: '', rRaw: '', rUrl: '', teacher: '', n: '', c: '', sc: '', sk: '', src: 'builtin', url: '', map: '', editable: false, rep: '', recurrence: null, srvRem: '', all: true, startRaw: h.date, endRaw: h.date, addr: '', gmap: null, k37: '', stx: '', slt: '', k: h.date, s: '', e: '' });
+    } else loadHolidays();
   }
   // Planleggingsdag/fri fjerner timene, og en prøve med klokkeslett erstatter timene den overlapper.
   for (const [k, L] of byDay) {
@@ -469,7 +477,7 @@ async function runFmAi() {
     if (txt.length > 60 && !F.n) F.n = txt;
     return got;
   };
-  const p = preview(txt);
+  const p = await previewAsync(txt).catch(() => ({ ok: false }));
   if (p.ok && p.date) {
     await new Promise((r) => setTimeout(r, 350));
     const got = apply({ t: p.title, k: p.date, s: p.start, e: p.end, all: p.allDay, r: p.place || addrOf(txt) });
@@ -504,7 +512,7 @@ function qaSheet() {
     <form class="k2-form" data-k-qform>
       <textarea class="k2-in k2-qa-in" name="qa" rows="3" data-k-qtxt placeholder="F.eks. «time hos Nina frisør 14.30 25.09» eller lim inn meldingen fra legekontoret">${esc(Q.txt)}</textarea>
       <div class="k2-chips"><button type="button" class="k2-chip sm on" data-k-qpaste><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4h6v3H9zM7 5H5v16h14V5h-2"/></svg>Lim inn melding</button>${QA_CHIPS.map((n) => `<button type="button" class="k2-chip sm" data-k-qchip="${esc(n)}">${esc(n)}</button>`).join('')}</div>
-      <div data-k-qpv>${qaPreview()}</div>
+      <div data-k-qpv>${qaPreview() ?? ''}</div>
       ${Q.err ? `<span class="k2-err">${esc(Q.err)}</span>` : ''}
       <button type="submit" class="k2-qa-go"${(Q.txt ?? '').trim() ? '' : ' aria-disabled="true"'}>Legg til i kalenderen</button>
       <button type="button" class="k2-qa-man" data-k-qman>Fyll ut selv</button>
@@ -515,12 +523,13 @@ function qaSheet() {
 function qaPreview() {
   const v = (K.qa?.txt ?? '').trim();
   if (v.length <= 3) return '';
-  const p = preview(v);
+  const p = preview(v, () => paintQa());
+  if (p.pending) return null; // svaret fra serveren kommer straks: behold det som vises
   if (!p.ok) return `<span class="k2-qa-bad">${esc(p.why || 'Fant ikke dato.')}</span>`;
   const dt = `${quickLabel({ date: p.date })}${p.start ? ` · ${p.start}–${p.end}` : ' · hele dagen'}`;
   return `<div class="k2-qa-pv"><span class="k2-strip" style="background:${esc(calById('personlig').color)}"></span><div class="k2-grow"><b data-no-i18n>${esc(p.title)}</b><span>${esc(dt)}</span>${p.place ? `<span data-no-i18n>${esc(p.place)}</span>` : ''}<span class="k2-qa-cal">Personlig · varsel 1 time før</span></div></div>`;
 }
-function paintQa() { const el = host()?.querySelector('[data-k-qpv]'); if (el) el.innerHTML = qaPreview(); const b = host()?.querySelector('.k2-qa-go'); if (b) { if ((K.qa?.txt ?? '').trim()) b.removeAttribute('aria-disabled'); else b.setAttribute('aria-disabled', 'true'); } }
+function paintQa() { const el = host()?.querySelector('[data-k-qpv]'); const pv = el ? qaPreview() : null; if (el && pv != null) el.innerHTML = pv; const b = host()?.querySelector('.k2-qa-go'); if (b) { if ((K.qa?.txt ?? '').trim()) b.removeAttribute('aria-disabled'); else b.setAttribute('aria-disabled', 'true'); } }
 function openQa(txt = '') { K.sel = null; K.form = null; K.srch = null; K.drawer = false; K.qa = { txt, err: '', focus: true }; paint(); loadMemory().then(() => { if (K.qa) paintQa(); }); }
 function submitQa() {
   const v = (K.qa?.txt ?? '').trim();
@@ -578,14 +587,23 @@ function srHas(text, w) {
   if (T.includes(w)) return true;
   return T.split(/[^\p{L}\p{N}]+/u).some((t) => t.length >= 4 && w.length >= 4 && (t.startsWith(w.slice(0, Math.max(4, Math.min(w.length, t.length)))) || w.startsWith(t)));
 }
-/** Lokale svar (raskt, uten nett): dag/periode, ledig tid, prøver/frister, «neste X». null = la AI svare. */
-function srLocal(q) {
+/** Fase 3: dagen i spørsmålet tolkes av serveren (POST /api/dates/parse, Q17), ikke her. → {date: Date (00:00), label} eller null.
+ *  Bare et dagsuttrykk teller («i morgen», «fredag», «21.10»): et klokkeslett alene («kl 14») gir ingen dag her. */
+async function srDay(q) {
+  try {
+    const r = await api('/dates/parse', { method: 'POST', json: { text: q.slice(0, 500) } });
+    if (!r?.date || !r.dateText) return null;
+    const [y, m, d] = r.date.split('-').map(Number);
+    return { date: new Date(y, m - 1, d), label: String(r.label ?? r.dateText).replace(/ kl\. .*$/, '') };
+  } catch { return null; }
+}
+/** Lokale svar (raskt): dag/periode, ledig tid, prøver/frister, «neste X». day = srDay(q). null = la AI svare. */
+function srLocal(q, day = null) {
   const now = new Date(), today = d0(now), nm = now.getHours() * 60 + now.getMinutes(), n = q.toLowerCase().replace(/[?!.,]/g, ' ');
   let from = null, to = null, lbl = '';
-  // Prompt 35: felles dag-tolkning (parse-day35.js): «imorgen», «i morra», «tomorrow», ukedager og datoer.
   if (/neste uke|next week/.test(n)) { const m = add(today, 7 - ((today.getDay() + 6) % 7)); from = m; to = add(m, 6); lbl = 'neste uke'; }
   else if (/denne uk|resten av uk|this week/.test(n)) { from = today; to = add(today, 6 - ((today.getDay() + 6) % 7)); lbl = 'resten av uka'; }
-  else { const pd = parseDay(n, now); if (pd) { from = to = pd.date; lbl = pd.label; } }
+  else if (day) { from = to = day.date; lbl = day.label; }
   const span = (a, b) => { const out = []; for (let d = a; d <= b; d = add(d, 1)) evOn(d).forEach((e) => { if (srFilt(e) && (d.getTime() !== today.getTime() || !e.e || mm(e.e) > nm || /ledig/.test(n))) out.push({ e, d }); }); return out; };
   const rel = (d) => relOf(Math.round((d - today) / 864e5));
   if (/ledig|fri tid|tid til|opptatt/.test(n)) {
@@ -675,8 +693,10 @@ function askGlimt(t) {
   if (!S || !q) return;
   S.q = q; S.hi = -1; S.ai = { q, busy: true }; S.res = localSearch(q);
   if (host()?.querySelector('[data-k-sai]')) paintAi(); else paint();
-  const loc = agentOn() ? null : srLocal(q); // prompt 45: agenten tolker (ingen lokal regex først)
+  const dayP = agentOn() ? null : srDay(q); // prompt 45: agenten tolker (ingen lokal regex først); dagen fra serveren mens Glimt «tenker»
   setTimeout(async () => {
+    if (K.srch !== S || S.ai?.q !== q) return;
+    const loc = dayP ? srLocal(q, await dayP) : null;
     if (K.srch !== S || S.ai?.q !== q) return;
     if (loc) { S.ai = { q, ...loc }; paintAi(); return; }
     S.ai = { q, txt: 'Jeg er ikke sikker på hva du mener, men her er det som skjer fremover …', items: nextFive(), wait: true }; paintAi();
@@ -808,8 +828,11 @@ function paint() {
   const glb = h.querySelector('[data-k38-glb]')?.scrollTop ?? null;
   applyFull();
   h.classList.toggle('k38-nowk', !!K.noWeeks); h.classList.toggle('k38-noside', !!K.noSide);
+  // Fase 3 (B §3 P3): toppen leses sammen med scrollposisjonene over, før innholdet byttes (den avhenger ikke av innholdet),
+  // så tegningen tvinger ikke fram en egen layout for den.
+  const top = topOf(h);
   h.innerHTML = body();
-  fitHeight();
+  fitHeight(top);
   k39.fitMonth(h);
   k38.applyZoom(h);
   k44.afterPaint(h); // prompt 44
@@ -832,12 +855,13 @@ function applyFull() {
   document.body.classList.toggle('kal-fs', on);
 }
 /** Med toppmeny: høyden er vinduet minus det som ligger over kalenderen (toppmenyen), minst 620 px. */
-function fitHeight() {
+const topOf = (h) => (h.classList.contains('k39-fs') || isMobile() ? null : Math.max(0, Math.round(h.getBoundingClientRect().top + window.scrollY)));
+function fitHeight(top) {
   const h = host();
   if (!h) return;
-  if (h.classList.contains('k39-fs') || isMobile()) { h.style.removeProperty('--k2-top'); return; }
-  const top = Math.max(0, Math.round(h.getBoundingClientRect().top + window.scrollY));
-  h.style.setProperty('--k2-top', `${top}px`);
+  if (top === undefined) top = topOf(h);
+  if (top == null) { h.style.removeProperty('--k2-top'); return; }
+  if (h.style.getPropertyValue('--k2-top') !== `${top}px`) h.style.setProperty('--k2-top', `${top}px`);
 }
 function closeCal() {
   if (k38.appMode()) return; // Mac-appen: vinduet lukkes med den røde knappen, ikke her
@@ -1099,7 +1123,7 @@ function bind(h) {
     if ('kQa' in d) return openQa();
     if ('kQpaste' in d) { navigator.clipboard?.readText?.().then((v) => { if (v && K.qa) { K.qa.txt = v; K.qa.focus = true; paint(); } }).catch(() => { if (K.qa) { K.qa.err = 'Fikk ikke lese utklippstavlen. Lim inn med ⌘V / Ctrl+V.'; K.qa.focus = true; paint(); } }); return; }
     if (d.kQchip) { if (K.qa) { K.qa.txt = `Time hos ${d.kQchip.toLowerCase()} `; K.qa.focus = true; K.qa.err = ''; paint(); } return; }
-    if ('kQman' in d) { const v = (K.qa?.txt ?? '').trim(), p = v ? preview(v) : null; K.qa = null; return openForm(p ? { t: p.title || '', ...(p.date ? { k: p.date } : {}), ...(p.start ? { s: p.start, e: p.end } : {}), r: p.place || '', n: v.length > 60 ? v : '', rem: '1h' } : {}); }
+    if ('kQman' in d) { const v = (K.qa?.txt ?? '').trim(); K.qa = null; return (v ? previewAsync(v).catch(() => null) : Promise.resolve(null)).then((p) => openForm(p ? { t: p.title || '', ...(p.date ? { k: p.date } : {}), ...(p.start ? { s: p.start, e: p.end } : {}), r: p.place || '', n: v.length > 60 ? v : '', rem: '1h' } : {})); }
     if ('kFull' in d) return setWebLayout(K.full ? 'menu' : 'full');
     if ('kClosecal' in d) return closeCal();
     if ('kDrawer' in d) { K.drawer = !K.drawer; return paint(); }

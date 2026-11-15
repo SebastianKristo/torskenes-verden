@@ -82,10 +82,13 @@ try { localStorage.removeItem('hl_chat_full'); } catch { /* privat modus */ }
 function applyChFull() { const h = host(), on = !!h; h?.classList.add('ch-fs'); document.body.classList.toggle('chat-fs', on); }
 // ✕ og Esc går tilbake til forrige side i appen (Dashboard hvis det ikke finnes noen).
 let chPrev = '';
-window.addEventListener('hashchange', (e) => {
+function notePrev(e) {
   const r = (u) => { try { return new URL(u).hash.replace(/^#\/?/, '').split(/[/?]/)[0]; } catch { return ''; } };
   if (r(e.newURL) === 'chat' && r(e.oldURL) !== 'chat') chPrev = r(e.oldURL) && r(e.oldURL) !== 'okonomi' ? new URL(e.oldURL).hash : '';
-});
+}
+window.addEventListener('hashchange', notePrev);
+// Fase 3: chat.js lastes først når Chat åpnes, altså etter hashendringen dit. Skallet husker forrige adresse (store.prevUrl).
+if (store.prevUrl) notePrev({ newURL: location.href, oldURL: store.prevUrl });
 function closeChat() { document.body.classList.remove('chat-fs'); const to = chPrev || '#/dash'; chPrev = ''; location.hash = to; }
 function fsBtns() {
   return '<button type="button" class="ch-fsb ink" data-ch-fsclose aria-label="Lukk chat" title="Lukk (Esc)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>';
