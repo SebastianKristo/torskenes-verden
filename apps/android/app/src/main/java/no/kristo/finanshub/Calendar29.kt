@@ -105,7 +105,8 @@ private fun pad29(n: Int) = "%02d".format(n)
 
 private fun safeDate29(y: Int, m: Int, d: Int): LocalDate? = runCatching { LocalDate.of(y, m, d) }.getOrNull()
 
-fun parseQuickLocal29(txt: String, today: LocalDate = LocalDate.now()): Quick29Parse {
+// Reserve når serveren ikke svarer (parseQuick29 spør POST /api/kalender/quick/parse først). «I dag» er Oslo-datoen (Q20).
+fun parseQuickLocal29(txt: String, today: LocalDate = no.kristo.felles.tid.OsloDato.iDag()): Quick29Parse {
     val raw = txt.replace(Regex("\\s+"), " ").trim()
     val t = raw.lowercase()
     if (raw.isEmpty()) return Quick29Parse(false, "Skriv hva timen gjelder.", "", null, null, null, "", "annet", false)

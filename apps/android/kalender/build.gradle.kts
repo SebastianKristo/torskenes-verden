@@ -79,4 +79,8 @@ dependencies {
     implementation(libs.work.runtime.ktx)
     // Prompt 46: QR-skanning uten kameratillatelse (Googles skanner-UI)
     implementation(libs.play.code.scanner)
+    // JUnit (Q25): HurtigtolkingTest kjører shared/testvektorer/datoer.json mot parseQuick. org.json fra Maven, fordi
+    // org.json i android.jar bare er stubber i enhetstester.
+    testImplementation(libs.junit)
+    testImplementation(libs.org.json)
 }

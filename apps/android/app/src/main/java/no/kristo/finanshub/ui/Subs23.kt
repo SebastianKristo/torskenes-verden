@@ -824,7 +824,14 @@ private fun SubForm23(vm: AppViewModel, s: SubItem?, t: SubTok, close: () -> Uni
                 SheetSelect(null, "$day.", (1..31).map { "$it." }, t, Modifier.width(96.dp)) { day = it + 1 }
                 SheetSelect(null, if (cycle == "monthly") "hver måned" else MON_NL[(month - 1).coerceIn(0, 11)], MON_NL, t, Modifier.weight(1f), enabled = cycle != "monthly") { month = it + 1 }
             }
-            Text(nextChargeText(day, if (cycle == "monthly") null else month, cycle), color = t.neg, fontFamily = sans, fontSize = 12.5.sp)
+            // Fase 5: teksten kommer fra serveren (samme regel som når abonnementet lagres); den lokale er bare reserve uten nett.
+            val billMonth: Int? = if (cycle == "monthly") null else month
+            val nesteTrekk: String by produceState(nextChargeText(day, billMonth, cycle), day, billMonth, cycle) {
+                value = nextChargeText(day, billMonth, cycle) // straks (og uten nett), til serveren svarer
+                kotlinx.coroutines.delay(250)
+                vm.nextChargeLabel(day, billMonth, cycle)?.let { value = it }
+            }
+            Text(nesteTrekk, color = t.neg, fontFamily = sans, fontSize = 12.5.sp)
         }
         SheetChips("Status", listOf("active" to "Aktiv", "cancelled" to "Sagt opp"), status, t) { status = it }
         // Prompt 37: Del med husstanden (Starlink): medlemmer, Del likt / Jeg betaler, din del.

@@ -88,7 +88,7 @@ fun TaskItem.toJson37(): JSONObject = JSONObject().put("title", title).put("n", 
     .put("dl", dl ?: JSONObject.NULL).put("pl", place ?: JSONObject.NULL)
     .put("geo", geo?.let { JSONObject().put("lat", it.first).put("lon", it.second) } ?: JSONObject.NULL)
 
-/** Neste forekomst for en gjentagende oppgave. */
+/** Neste forekomst for en gjentagende oppgave. Reserve for eldre servere: serveren sender nextDue (server/gjoremal/routes.js). */
 fun nextDue37(due: String?, rep: String?): String? {
     val d = due?.let { runCatching { LocalDate.parse(it.take(10)) }.getOrNull() } ?: LocalDate.now(OSLO37)
     return when (rep) {
@@ -442,8 +442,9 @@ fun AppViewModel.toggleTask37(id: String) {
     val it0 = t.items.firstOrNull { it.id == id } ?: return
     if (!it0.done && it0.rep != null) {
         Haptics.success()
-        val next = nextDue37(it0.due, it0.rep)
-        patchTask37(id) { it.copy(due = next, subs = it.subs.map { s -> s.copy(done = false) }) }
+        // Fase 5: serverens nextDue; den lokale regelen bare for eldre servere uten feltet.
+        val next = it0.nextDue ?: nextDue37(it0.due, it0.rep)
+        patchTask37(id) { it.copy(due = next, nextDue = null, subs = it.subs.map { s -> s.copy(done = false) }) }
         flash("Neste: " + (next?.let { dueLabel37(it) } ?: "senere"))
         return
     }

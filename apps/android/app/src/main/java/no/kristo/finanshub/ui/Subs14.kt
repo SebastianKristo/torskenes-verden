@@ -25,15 +25,19 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import no.kristo.finanshub.*
 import java.time.LocalDate
+import no.kristo.felles.tid.OsloDato
 
 /* ---------------- Subscription OS: rediger og legg til (prompt 14) ---------------- */
 
 private val MONTH_NAMES = listOf("januar", "februar", "mars", "april", "mai", "juni", "juli", "august", "september", "oktober", "november", "desember")
 
-/** «Neste trekk 21. oktober, deretter hvert år» ut fra dag, måned og syklus. */
+/**
+ * «Neste trekk 21. oktober, deretter hvert år» ut fra dag, måned og syklus. Bare reserve uten nett: skjemaet viser serverens tekst
+ * (AppViewModel.nextChargeLabel → GET /finans/api/subscriptions/next-charge, server/finans/cycles.js nextChargePreview).
+ */
 internal fun nextChargeText(day: Int?, month: Int?, cycle: String): String {
     val d = day?.coerceIn(1, 31) ?: return "Velg faktureringsdag"
-    val now = LocalDate.now()
+    val now: LocalDate = OsloDato.iDag() // Q20: «i dag» i Oslo
     val next: LocalDate = if (cycle == "monthly" || month == null) {
         var x = now.withDayOfMonth(minOf(d, now.lengthOfMonth()))
         if (x.isBefore(now)) { val m = now.plusMonths(1); x = m.withDayOfMonth(minOf(d, m.lengthOfMonth())) }

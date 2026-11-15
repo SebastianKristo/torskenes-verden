@@ -24,6 +24,8 @@ data class TaskItem(
     val after: String? = null,
     /** Prompt 44 (claude-code-gjoremal-infoside.md): frist (dl, siste dag) skilt fra dato/tid (due, time), og stedets koordinater (geo). */
     val dl: String? = null, val geo: Pair<Double, Double>? = null,
+    /** Fase 5: neste forekomst fra serveren (nextDue) for en gjentagende oppgave. null på eldre server. */
+    val nextDue: String? = null,
 )
 data class TaskMember(val id: String, val name: String, val color: Long? = null, val role: String? = null)
 data class TasksData(val lists: List<TaskList>, val items: List<TaskItem>, val members: List<TaskMember>)
@@ -48,6 +50,7 @@ fun parseTasks(s: String): TasksData {
             place = t.optStr("place") ?: t.optJSONObject("place")?.optStr("name"),
             after = t.optStr("after") ?: t.optStr("afterId") ?: t.optStr("after_id"),
             dl = (t.optStr("dl") ?: t.optStr("deadline"))?.take(10),
+            nextDue = t.optStr("nextDue")?.take(10),
             geo = (t.optJSONObject("geo") ?: t.optJSONObject("place"))?.let { g -> val la = g.optDouble("lat"); val lo = g.optDouble("lon", g.optDouble("lng")); if (la.isNaN() || lo.isNaN()) null else la to lo },
         )
     }

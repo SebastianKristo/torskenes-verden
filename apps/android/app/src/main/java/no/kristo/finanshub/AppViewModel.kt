@@ -2317,6 +2317,19 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Logo lastet opp eller funnet av AI (krever token). */
     suspend fun subLogo(url: String): Bitmap? = if (url.startsWith("/")) image(url) else null
 
+    /**
+     * «Neste trekk 21. oktober, deretter hvert år» fra serveren (GET /finans/api/subscriptions/next-charge, Fase 5): skjemaet viser
+     * det serveren regner, ikke en egen utregning. null uten nett eller på eldre server (da viser skjemaet reserven nextChargeText).
+     */
+    suspend fun nextChargeLabel(day: Int?, month: Int?, cycle: String): String? {
+        if (day == null) return null
+        val q = "cycle=" + URLEncoder.encode(cycle, "UTF-8") + "&day=" + day + (if (month != null) "&month=$month" else "")
+        return try {
+            val body = api.get("/subscriptions/next-charge?$q")
+            withContext(Dispatchers.Default) { JSONObject(body).optString("label").takeIf { it.isNotBlank() } }
+        } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { null }
+    }
+
     /** «1 234,50», «1234.5» eller «−200» som tall. */
     private fun parseAmountNo(s: String): Double? = s.replace(" ", "").replace("\u00a0", "").replace("kr", "").replace("−", "-").replace(',', '.').trim().toDoubleOrNull()
 

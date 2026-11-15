@@ -70,6 +70,22 @@ test('S2: brukerinstallerte CA-er bare for lokale navn; B1: App Links også for 
   }
 });
 
+test('D §6: appen viser det serveren regner (neste trekk, neste forekomst), lokal regel bare som reserve', () => {
+  const vm = strip(raw(join(APP, 'AppViewModel.kt')));
+  assert.match(vm, /suspend fun nextChargeLabel\(day: Int\?, month: Int\?, cycle: String\): String\? \{[\s\S]*?api\.get\("\/subscriptions\/next-charge\?\$q"\)/);
+  const skjema = strip(raw(join(APP, 'ui/Subs23.kt')));
+  assert.match(skjema, /produceState\(nextChargeText\(day, billMonth, cycle\), day, billMonth, cycle\) \{[\s\S]*?vm\.nextChargeLabel\(day, billMonth, cycle\)\?\.let \{ value = it \}/);
+  assert.match(strip(raw(join(APP, 'ui/Subs14.kt'))), /val now: LocalDate = OsloDato\.iDag\(\)/, 'reserven bruker Oslo-datoen');
+  assert.match(strip(raw(join(APP, 'P37.kt'))), /val next = it0\.nextDue \?: nextDue37\(it0\.due, it0\.rep\)/);
+  assert.match(strip(raw(join(APP, 'P46.kt'))), /val next = before\.nextDue \?: nextDue37\(before\.due, before\.rep\)/);
+  assert.match(strip(raw(join(APP, 'Models17.kt'))), /nextDue = t\.optStr\("nextDue"\)\?\.take\(10\)/);
+  assert.match(strip(raw(join(APP, 'Calendar29.kt'))), /fun parseQuickLocal29\(txt: String, today: LocalDate = no\.kristo\.felles\.tid\.OsloDato\.iDag\(\)\)/);
+  // Kalenders lokale hurtigtolking har felles fasit (JUnit i :kalender, kjørt av «Mobilapper»).
+  const t = raw(join(AND, 'kalender/src/test/java/no/kristo/kalender/HurtigtolkingTest.kt'));
+  assert.match(t, /shared\/testvektorer\/datoer\.json/);
+  assert.match(raw(join(ROOT, '.github/workflows/mobile.yml')), /\.\/gradlew --no-daemon :felles:test :kalender:testDebugUnitTest/);
+});
+
 test('B3: CSV-eksporten hentes fra serveren og bygges aldri på Main', () => {
   const vm = strip(raw(join(APP, 'AppViewModel.kt')));
   const f = vm.slice(vm.indexOf('fun exportCsv()'), vm.indexOf('private fun localCsv('));

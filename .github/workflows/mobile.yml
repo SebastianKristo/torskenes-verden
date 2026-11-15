@@ -39,9 +39,9 @@ jobs:
         if: env.HAR_ANDROID_NOKKEL != 'true'
         run: echo "::warning title=Android-signering::ANDROID_KEYSTORE_* er ikke satt. APK-ene er signert med Androids standard debug-nøkkel og kan ikke installeres over en tidligere installert versjon. Se docs/android-signering.md."
       - name: Enhetstester (JUnit)
-        # Fase 5 (Q25): :felles kjører shared/testvektorer (serveradresse, idag) og shared/schemas/eksempler mot den delte koden.
-        # Ren JVM, ingen emulator og ingen signering.
-        run: ./gradlew --no-daemon :felles:test
+        # Fase 5 (Q25): :felles kjører shared/testvektorer (serveradresse, idag) og shared/schemas/eksempler mot den delte koden,
+        # og :kalender kjører datoer.json mot den lokale hurtigtolkingen. Ren JVM, ingen emulator og ingen signering.
+        run: ./gradlew --no-daemon :felles:test :kalender:testDebugUnitTest
       - name: Bygg APK
         env:
           # Tomme uten hemmeligheter – da signerer Gradle debug-byggene med standard debug-nøkkel (og advarer).

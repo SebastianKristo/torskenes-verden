@@ -180,8 +180,8 @@ fun AppViewModel.finishFromPage46(id: String, confirmed: Boolean = false) {
         val before = tasks?.items?.firstOrNull { it.id == id } ?: return@launch46
         val rep = before.rep != null
         if (rep) {
-            val next = nextDue37(before.due, before.rep)
-            patchTask37(id) { it.copy(due = next, subs = it.subs.map { s -> s.copy(done = false) }) }
+            val next = before.nextDue ?: nextDue37(before.due, before.rep) // Fase 5: serverens nextDue først
+            patchTask37(id) { it.copy(due = next, nextDue = null, subs = it.subs.map { s -> s.copy(done = false) }) }
             showTaskToast46(TaskToast46(id, "Fullført · neste " + (next?.let { dueLabel37(it) } ?: "senere"), before.due, before.subs, true))
         } else {
             if (before.subs.any { !it.done }) patchTask37(id) { it.copy(subs = it.subs.map { s -> s.copy(done = true) }) }
