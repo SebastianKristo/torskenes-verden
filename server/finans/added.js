@@ -1,5 +1,5 @@
 // Prompt 40 (SERVER40): «Lagt til …»-linja og endringshistorikk for transaksjoner og kvitteringer (datanivå, ingen ruter).
-// Brukes av txOut/receiptOut i routes.js (feltet added) og av finans/p40.js (PATCH-historikk, søk).
+// Brukes av txOut/receiptOut i routes.js (feltet added) og av finans/tx-edit.js (PATCH-historikk, søk).
 //
 // added = {at:'2026-10-16T15:46:00.000Z', by:'<bruker-id>'|null, byName:'Sebastian'|null, source:'scan'|'bank'|'manual'|'email'|'import',
 //          via:'glimt'|'shortcut'|'api'|null, sourceLabel:'skannet kvittering', text:'Lagt til 16.10.2026 kl. 17.46 · skannet kvittering · Sebastian',

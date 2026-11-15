@@ -3,11 +3,11 @@
 //   /api/bible/*                                                                        → bible37.js
 //   /api/tracking/keys                                                                  → tracking-keys37.js (+ tracking37.js)
 //   /api/tasks/* (Gjøremål, Glimt)                                                      → tasks.js + tasks-glimt37.js
-//   /finans/api/subscriptions/:id/members|leave                                         → finans/shared37.js
+//   /finans/api/subscriptions/:id/members|leave                                         → finans/shared-subs.js
 //   «hvor er X» i /api/assist                                                           → where37.js
 import { colorOf } from './family.js';
 import { _setTaskColors } from './tasks.js';
-import { _setSubColors, hasSharedSubs } from './finans/shared37.js';
+import { _setSubColors, hasSharedSubs } from './finans/shared-subs.js';
 import { _setProfileHas } from './profiles37.js';
 import { db } from './db.js';
 

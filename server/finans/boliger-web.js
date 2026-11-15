@@ -25,7 +25,7 @@ import { db, q, me, settings } from './db.js';
 import { catTree, catPair, catById, entryCat, assignCategory, linkLegacy, aiCat, aiNewAllowed } from './boliger.js';
 import { matchMerchant, hasFile } from '../logos/match.js';
 import { domainFor } from './enrich.js';
-import { fold42, stem42, synonymsOf42, parsePeriod42 } from './search42.js';
+import { fold42, stem42, synonymsOf42, parsePeriod42 } from './search-db.js';
 import { kv, OWNER } from '../db.js';
 import { osloDate } from '../dates/oslo.js';
 
@@ -416,7 +416,7 @@ export function applyHomeRules42(u, txIds = null, { days = null, forceHome = nul
 
 /* ---------------- Ruter ---------------- */
 
-/** Monteres av finans42.js. auth(scope) gir mellomvaren som setter c.get('user') og c.get('access'). */
+/** Monteres av glimt-routes.js. auth(scope) gir mellomvaren som setter c.get('user') og c.get('access'). */
 export function mountHomes42(api, auth) {
   const R = auth('finance:read'), W = auth('finance:write');
   const H = (need = 'view') => async (c, next) => {

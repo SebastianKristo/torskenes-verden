@@ -20,10 +20,10 @@ process.env.APP_PASSWORD_HASH = hashPassword('testpassord1');
 
 const { default: app } = await import('../server/index.js');
 const { db } = await import('../server/db.js');
-const fin = await import('../server/finans/fin51.js');
-const tax = await import('../server/finans/fin51-tax.js');
-const pr = await import('../server/finans/fin51-prices.js');
-const ut = await import('../server/finans/fin51-util.js');
+const fin = await import('../server/finans/planning.js');
+const tax = await import('../server/finans/tax.js');
+const pr = await import('../server/finans/prices.js');
+const ut = await import('../server/finans/planning-util.js');
 
 let ip = 30;
 async function req(path, { method = 'GET', headers = {}, body, raw } = {}) {

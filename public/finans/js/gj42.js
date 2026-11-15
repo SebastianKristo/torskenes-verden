@@ -14,7 +14,7 @@ export const TASKS = [
   ['compare_year', 'Sammenlign med i fjor', 'Samme måned i fjor, kategori for kategori'],
   ['tidy_cats', 'Rydd kategorier', 'Finner ukategoriserte og feilplasserte kjøp'],
 ];
-// Prompt 85: serveren kaller to av oppgavene noe annet (glimt-tasks42.js KINDS42). Uten oversettelsen svarte den «Velg en oppgave (kind)».
+// Prompt 85: serveren kaller to av oppgavene noe annet (glimt-tasks.js KINDS42). Uten oversettelsen svarte den «Velg en oppgave (kind)».
 export const SERVER_KIND = { subs_cut: 'cut_subs', tidy_cats: 'clean_categories' };
 const STEPS = ['Leser transaksjoner', 'Leser kvitteringer og varelinjer', 'Grupperer etter kategori', 'Skriver rapporten'];
 const MN = ['januar', 'februar', 'mars', 'april', 'mai', 'juni', 'juli', 'august', 'september', 'oktober', 'november', 'desember'];
@@ -26,7 +26,7 @@ export async function loadTasks() {
   catch { G.jobs = []; G.server = false; }
   poll();
 }
-// Prompt 85: serveren (glimt-tasks42.js jobOut42) sender state ('failed'), stepLabel (step er et tall), endedAt og ISO-tider, og resultatet
+// Prompt 85: serveren (glimt-tasks.js jobOut42) sender state ('failed'), stepLabel (step er et tall), endedAt og ISO-tider, og resultatet
 // har categories/items/advice. Uten oversettelsen sto ferdige oppgaver som «3 … 100 %» for alltid, og etter to kunne ingen nye startes.
 const ms85 = (t) => (typeof t === 'number' ? t : t ? Date.parse(t) || null : null);
 export function res85(R) {

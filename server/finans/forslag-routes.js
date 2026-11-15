@@ -12,7 +12,7 @@ import { findLogo, setManualLogo, clearLogo, isLogoFile, LOGO_DIR } from './logo
 import { streamSSE } from 'hono/streaming';
 import { readScreenshot, decodeImageField, imageKind, errorBody, shotError, pickVisionModel, clearVisionCache, VISION_INSTALL, canGemini48 } from './sub-screenshot.js';
 import { startPull, pullStatus } from './ollama-models.js';
-import { annotateForslag } from './highlight30.js';
+import { annotateForslag } from './highlight.js';
 
 const bad = (c, msg, code = 400) => c.json({ error: msg }, code);
 const str = (v, max = 200) => String(v ?? '').trim().slice(0, max);

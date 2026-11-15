@@ -6,8 +6,8 @@
 //   GET /fin51/prices/item?key=<key>                     → {key, name, unit, points:[{date, store, price, receiptId}], stores:[…], change}
 //   PriceItem: {key, name, unit:'stk'|'kg'|'l', count, first:{date, price, store}, last:{date, price, store}, min, max, changePct, changeText,
 //               stores:[{store, last, lastDate, min, avg, count}], cheapest:{store, price, savingPct}|null}
-import { q51 as q, r2, krText51, bad51 as bad, monthYear51 } from './fin51-util.js';
-import { receiptLines } from './highlight30.js';
+import { q51 as q, r2, krText51, bad51 as bad, monthYear51 } from './planning-util.js';
+import { receiptLines } from './highlight.js';
 
 const CHAINS = ['REMA 1000', 'Kiwi', 'Coop Extra', 'Coop Prix', 'Coop Mega', 'Coop Obs', 'Obs Bygg', 'Obs', 'Extra', 'Meny', 'Spar', 'Joker', 'Bunnpris', 'Oda', 'Europris',
   'Normal', 'Clas Ohlson', 'Vinmonopolet', 'Lidl', 'Circle K', 'Esso', 'Shell', 'Uno-X', 'YX', 'Apotek 1', 'Vitusapotek', 'Boots', 'Elkjøp', 'Power', 'Biltema', 'Jula',

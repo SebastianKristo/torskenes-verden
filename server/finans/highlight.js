@@ -7,7 +7,7 @@
 // - POST /finans/api/receipts/:id/reread → les kvitteringen på nytt (samme kø som «Les på nytt») for å få posisjoner.
 import { db, q } from './db.js';
 import { fold, stem } from './search.js';
-import { cleanBbox } from './bbox30.js';
+import { cleanBbox } from './bbox.js';
 
 export { cleanBbox };
 

@@ -1,5 +1,5 @@
 // FinansHub-API: /finans/api/*. Tilgang med innlogget sesjon (nettleser) eller API-token med finans-scope (mobil/snarvei).
-import { addedOf40, tagsOf40, applyRereadTx40 } from './added40.js'; // prompt 40
+import { addedOf40, tagsOf40, applyRereadTx40 } from './added.js'; // prompt 40
 import { decodeTxCursor, TX_AFTER_SQL, txAfterParams, pageOf } from './tx-cursor.js';
 import { Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
@@ -12,7 +12,7 @@ import { runAsUser, userCfg, setUserCfg } from '../settings.js';
 import { loadDemo } from './demo.js';
 import { extract, extractText, extractOcr, health, providerName, testEngine, testRoboflow, ENGINES, TASKS, aiLog, barcode, aiTimeoutsOf, cleanAiTimeouts, AI_TIMEOUT_DEFAULTS, TIMEOUT_STEPS, ON_TIMEOUT, _aiTest, aiLimits } from './ai.js';
 import { startJob, getJob, cancelJob, jobView, subscribe, runningFor, MAX_RUNNING_PER_USER, _jobTest } from './ai-jobs.js';
-import { modelImage50, classify50, KODER50, REREAD50 } from './reread50.js'; // prompt 50 (SRVCHAT50): nedskalering + feilkoder for «Les på nytt»
+import { modelImage50, classify50, KODER50, REREAD50 } from './reread.js'; // prompt 50 (SRVCHAT50): nedskalering + feilkoder for «Les på nytt»
 import { streamSSE } from 'hono/streaming';
 import { hasGemini, listKeysOut, addKey, removeKey, renameKey, orderKeys, resetKey, testKey } from './gemini-keys.js';
 import { ollamaModels, startPull, pullStatus, deleteModel } from './ollama-models.js';
@@ -34,21 +34,21 @@ import { stocks, resetStocks, t212Configured, t212Base, cleanCred, testT212 } fr
 import { answer as aiAnswer, plainSearch, suggestionGroups, AiUnavailable, isSimpleQuery } from './search.js';
 import * as backup from './backup.js';
 import * as subsOs from './subs.js';
-import { mountP27, mountP27Public } from './p27-routes.js';
-import { mountLogo73 } from './logo73.js'; // prompt 73: «Endre logo» (søk i logobiblioteket, overstyr per butikk)
+import { mountP27, mountP27Public } from './forslag-routes.js';
+import { mountLogo73 } from './logo-override.js'; // prompt 73: «Endre logo» (søk i logobiblioteket, overstyr per butikk)
 import { mountTrials, trialsFor } from './trials.js'; // prompt 31: gratis prøveperioder
 import { mountSubsLog46, trialsVisible46 } from '../subs-log46.js'; // prompt 46 (SERVER46)
-import { mountShared37, visibleSubs, decorateSub, asShare, editableSub } from './shared37.js'; // prompt 37: delte abonnementer
-import { subscriptionAnswer, mountSubsAsk } from './subs-ask32.js'; // prompt 32: AI-søk med abonnementer
+import { mountShared37, visibleSubs, decorateSub, asShare, editableSub } from './shared-subs.js'; // prompt 37: delte abonnementer
+import { subscriptionAnswer, mountSubsAsk } from './subs-ask.js'; // prompt 32: AI-søk med abonnementer
 import { findLogo } from './logo-lookup.js';
-import { storeLines, receiptLines, matchLines, annotateSearch } from './highlight30.js';
-import { shareableUsers, logEntryChange, entryHistory } from './boliger30.js';
+import { storeLines, receiptLines, matchLines, annotateSearch } from './highlight.js';
+import { shareableUsers, logEntryChange, entryHistory } from './boliger-sharing.js';
 import { broadcast } from '../realtime.js';
-import { classify39, verify39, createAiCategory, categoryOut39, confirmOnBook39, nameSim, stepsOut39 } from './receipts39.js'; // prompt 39: kategori, sumkontroll, «✦ På nytt» med fremdrift
+import { classify39, verify39, createAiCategory, categoryOut39, confirmOnBook39, nameSim, stepsOut39 } from './receipt-lines.js'; // prompt 39: kategori, sumkontroll, «✦ På nytt» med fremdrift
 import { jobStart as aiJobStart, jobUpdate as aiJobUpdate, jobEnd as aiJobEnd } from '../ai-run.js'; // prompt 34: AI-kontroll → Jobber
 import { upsertScanChat, scanChatFor } from '../chat-scans.js'; // prompt 34: Chat-mappen «Kvitteringer og skanninger»
-import { mailAddress42 } from './homes42.js'; // prompt 42
-import { mountReceipts47, preParsed47, textKind47, ocrTextOf47 } from './receipts47.js'; // prompt 47 (SERVER47): OCR-tekst og ferdig tolket kvittering fra enheten
+import { mailAddress42 } from './boliger-web.js'; // prompt 42
+import { mountReceipts47, preParsed47, textKind47, ocrTextOf47 } from './receipts-device.js'; // prompt 47 (SERVER47): OCR-tekst og ferdig tolket kvittering fra enheten
 import { mountReceipts48, preScanned48, setMerchant51 } from '../receipts48/routes.js';
 import { ocrRaw51, crossCheck51 } from '../receipts48/ocr-raw51.js'; // prompt 51 (RCPTSRV51): rådata per kvittering, OCR-kontroll av den gamle kjeden
 import { merchantOut51 } from '../receipts48/brreg51.js'; // prompt 48 (SERVER48): /receipts/scan (kjeden A→B→C→Tesseract→D), /receipts/health, rettelser
@@ -994,7 +994,7 @@ export async function ingestReceipt({ buffer, mime, name, meta, target = null, s
 }
 
 api.post('/receipts', need('receipts:write'), upload, (c) => receiptUpload(c));
-// Prompt 47: POST /receipts/ocr-text og /receipts/parsed (receipts47.js) – samme kø, samme datamodell og samme Til godkjenning.
+// Prompt 47: POST /receipts/ocr-text og /receipts/parsed (receipts-device.js) – samme kø, samme datamodell og samme Til godkjenning.
 mountReceipts47(api, { W: need('receipts:write'), enqueue: (id) => { queue.push({ id }); runQueue(); }, out: (id) => { const r = origSelect.get(id); return { ...receiptOut(r), jobs: [jobOut(r)] }; } });
 // Prompt 48: POST /receipts/scan, GET /receipts/health, /receipts/schemas/:kind og rettelser (server/receipts48/) – samme kø og datamodell.
 mountReceipts48(api, { W: need('receipts:write', 'finance:write'), R: need('finance:read', 'receipts:write'), adminOnly, sessionOnly, enqueue: (id) => { queue.push({ id }); runQueue(); }, out: (id) => { const r = origSelect.get(id); return { ...receiptOut(r), jobs: [jobOut(r)] }; } });
@@ -1372,7 +1372,7 @@ api.post('/receipts/:id/reanalyze/apply', W, async (c) => {
 });
 
 // Prompt 41: «✦ Les på nytt med Glimt» for alle statuser = POST /receipts/:id/reanalyze (bokført/avvist: alltid apply:false) eller
-// POST /transactions/:id/reread (p40.js). /receipts/:id/reread over er fortsatt «les posisjoner» (prompt 30).
+// POST /transactions/:id/reread (tx-edit.js). /receipts/:id/reread over er fortsatt «les posisjoner» (prompt 30).
 // Prompt 41: receipt_reads – hver ny lesing lagres som forslag (receipt_id, engine, read_at, fields_json, lines_json, confidence). GET /receipts/:id/reads.
 q(`CREATE TABLE IF NOT EXISTS receipt_reads (id INTEGER PRIMARY KEY AUTOINCREMENT, receipt_id TEXT NOT NULL, engine TEXT, model TEXT, read_at INTEGER NOT NULL, fields_json TEXT, lines_json TEXT, confidence REAL, candidate_id TEXT)`).run();
 q('CREATE INDEX IF NOT EXISTS receipt_reads_r ON receipt_reads(receipt_id, read_at)').run();
@@ -2870,7 +2870,7 @@ api.delete('/all', sessionOnly, async (c) => {
 });
 
 export default api;
-// Prompt 42 (SERVER42): transaksjonsformen og spørringen brukes av filteret i finans42.js.
+// Prompt 42 (SERVER42): transaksjonsformen og spørringen brukes av filteret i glimt-routes.js.
 export const txOut42 = (t) => txOut(t);
 /** Felles oppslag (kategorier, kontoer, navn) for en hel liste: (t) => txOut(t). */
 export const txOutList42 = () => { const cats = catById(), accs = accById(), names = new Map(); return (t) => txOut(t, cats, accs, names); };

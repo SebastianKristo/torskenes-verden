@@ -17,7 +17,7 @@ Dette var en ren lesejobb. Ingen filer i repoet er endret. Alle stier er relativ
 - Dokumentskanneren `VNDocumentCameraViewController` (automatisk beskjæring og perspektivretting) brukes når enheten støtter den. Ellers brukes vanlig kamera. Se `apps/ios/FinansHub/Sources/Receipts23.swift:195-206` og `:598-620`.
 - Flere sider er én kvittering: `Receipts23.swift:209-215`.
 - Vision-OCR og tolking på telefonen kjører **bare** når bryteren «Tolk kvitteringer på iPhone» er på. Den er av som standard (`Receipt47Engine.swift:77-96`, `Store.swift:1241-1253`).
-- Er Foundation Models utilgjengelig eller feiler, går *bildet* til `/receipts` via `Receipt47Views.swift:50-66`, og OCR-teksten kastes. **iOS kaller aldri `/receipts/ocr-text`.** Serveren godtar `ios-vision` der (`server/finans/receipts47.js:32`), men ingen klient bruker det.
+- Er Foundation Models utilgjengelig eller feiler, går *bildet* til `/receipts` via `Receipt47Views.swift:50-66`, og OCR-teksten kastes. **iOS kaller aldri `/receipts/ocr-text`.** Serveren godtar `ios-vision` der (`server/finans/receipts-device.js:32`), men ingen klient bruker det.
 - Vision-oppsett (`Receipt47Engine.swift:256-272`):
   - `recognitionLevel = .accurate` og `usesLanguageCorrection = true`.
   - Språk: `nb-NO, no-NO, nn-NO, da-DK, sv-SE, en-US`, filtrert mot `supportedRecognitionLanguages()`, med `en-US` som reserve.
@@ -56,7 +56,7 @@ Dette var en ren lesejobb. Ingen filer i repoet er endret. Alle stier er relativ
 
 | Målfelt | iOS i dag (Receipt47Engine.swift:173-192, 303-331) | Avvik | Hva som må til |
 |---|---|---|---|
-| `merchant` | `butikk` | Norsk navn (serveren godtar begge, receipts47.js:75) | Engelsk feltnavn |
+| `merchant` | `butikk` | Norsk navn (serveren godtar begge, receipts-device.js:75) | Engelsk feltnavn |
 | `org_number` | Finnes ikke | Mangler | Legg til i `@Generable` og valider mod11 |
 | `date` | `dato` (ÅÅÅÅ-MM-DD, utelates når ugyldig) | Navnet | – |
 | `time` | Finnes ikke | Mangler | Legg til (HH:MM) |
@@ -64,7 +64,7 @@ Dette var en ren lesejobb. Ingen filer i repoet er endret. Alle stier er relativ
 | `items[{description, quantity, unit_price, amount}]` | `varelinjer[{navn, antall?, pris}]` | Ingen `unit_price`. Navnene avviker. | Legg til `unit_price` |
 | `discounts[{description, amount}]` | Finnes ikke. Rabatter filtreres ikke bort. | Mangler | Legg til |
 | `subtotal` | Finnes ikke | Mangler | Legg til |
-| `vat[{rate, amount}]` | `mva` er ett tall uten sats. Serveren lagrer det som `{rate:0}` (receipts47.js:109). | Feil struktur | Liste per sats |
+| `vat[{rate, amount}]` | `mva` er ett tall uten sats. Serveren lagrer det som `{rate:0}` (receipts-device.js:109). | Feil struktur | Liste per sats |
 | `total` | `totalsum` | Navnet | – |
 | `payment_method` | `betalingsmiddel` | Navnet | – |
 | `category_suggestion` | `kategori`, låst til `["Mat","Transport","Bolig","Helse","Klær","Elektronikk","Restaurant","Annet"]` (:78, :316) | **Passer ikke FinansHubs kategorier** (se punkt 6). `catIdByName` slår opp på eksakt navn (routes.js:151), så «Mat» treffer ikke «Mat og dagligvarer». Det reddes bare av `classify39`, som bruker fuzzy-likhet. | Kategorilisten må komme fra serveren (`/boot` eller ny `/receipts/health`) |
@@ -82,7 +82,7 @@ Dette var en ren lesejobb. Ingen filer i repoet er endret. Alle stier er relativ
   - Toleransen er 0,5 · median linjehøyde, og den sammenligner med *snittet* av radens `centerY`.
   - Rader sorteres på `left` og slås sammen med TAB.
   - Bbox, konfidens og bildestørrelse kastes.
-- Det som sendes (`ReceiptOcr47.kt:114-121`) er JSON `POST /finans/api/receipts/ocr-text` med `{text (≤ 20 000), lines: [rad som TAB-streng, ≤ 400 × 300 tegn], source:"android-mlkit"}`. Ved 404/405 lastes bildet opp i stedet (`:153-158`). **Bildet sendes ikke med OCR-teksten**, så kvitteringen lagres uten originalbilde, bare som `.txt` (receipts47.js:209).
+- Det som sendes (`ReceiptOcr47.kt:114-121`) er JSON `POST /finans/api/receipts/ocr-text` med `{text (≤ 20 000), lines: [rad som TAB-streng, ≤ 400 × 300 tegn], source:"android-mlkit"}`. Ved 404/405 lastes bildet opp i stedet (`:153-158`). **Bildet sendes ikke med OCR-teksten**, så kvitteringen lagres uten originalbilde, bare som `.txt` (receipts-device.js:209).
 - Køen når appen er uten nett:
   - Room finnes ikke.
   - **WorkManager finnes** (`build.gradle.kts:81`). `upload/PendingUploads.kt` er en filbasert kø (`filesDir/pending/<id>/meta.json` og `part*.bin`) med `PendingUploadWorker` og nettverkskrav (`:96-102`, `:125`).
@@ -102,7 +102,7 @@ Dette var en ren lesejobb. Ingen filer i repoet er endret. Alle stier er relativ
 | `full_text` | `text` | Navnet | – |
 | `image_size` | Ikke sendt (`InputImage` har `width/height`) | Mangler | Legg til |
 | `ms` | Ikke målt | Mangler | Legg til |
-| Bildet | Sendes ikke med ocr-text | Målet er multipart med bilde + `device_ocr` | Send multipart: `image` + `device_ocr`. Serveren støtter allerede `file` i multipart (receipts47.js:188-197). |
+| Bildet | Sendes ikke med ocr-text | Målet er multipart med bilde + `device_ocr` | Send multipart: `image` + `device_ocr`. Serveren støtter allerede `file` i multipart (receipts-device.js:188-197). |
 | Skalering/EXIF | EXIF OK, ingen skalering | – | Vurder en grense (f.eks. 2000 px) for fart og minne |
 | Kø ved offline | WorkManager-kø bare for bilder | OCR-tekst kan gå tapt | Legg OCR-JSON-en som en part i `PendingUploads` (den støtter vilkårlige parts) og bruk den nye ruten |
 | Bundlet modell | play-services (unbundled) | Krever GMS | Valg: `com.google.mlkit:text-recognition:16.x` (bundlet, ca. +4 MB per arkitektur) hvis appen skal virke uten GMS |
@@ -116,11 +116,11 @@ Android har ingen parsing på enheten (`device_parse`). Android leverer alltid b
 ### Rutene
 - Monteres under **`/finans/api`** (`server/index.js:182-185`). Målet sier `POST /api/receipts/scan`. Avgjør om ruten skal ligge under `/finans/api/receipts/scan` (der auth og `need('receipts:write')` allerede finnes) eller under `/api`.
 - `POST /finans/api/receipts` → `receiptUpload` (`routes.js:878-946`). Tar imot `file`, `scan`, `thumb` og `accountId` og lagrer med `saveReceipt` (`:901-925`).
-- `POST /finans/api/receipts/ocr-text` (`receipts47.js:185-217`):
+- `POST /finans/api/receipts/ocr-text` (`receipts-device.js:185-217`):
   - Tar JSON eller multipart med `text|ocrText`, `lines` og `source ∈ {android-mlkit, ios-vision}` (`:32`).
   - `ocrText47` (`:44-55`) godtar `lines` som `string | {text}`. **bbox og konfidens kastes.**
   - Teksten lagres i `ocr_text47` (med bilde) eller som `.txt`.
-- `POST /finans/api/receipts/parsed` (`receipts47.js:219-252`): bare `source = apple-fm`, validert av `parsedReceipt47` (`:69-158`).
+- `POST /finans/api/receipts/parsed` (`receipts-device.js:219-252`): bare `source = apple-fm`, validert av `parsedReceipt47` (`:69-158`).
 - `GET /finans/api/health/ai` → `health()` (`routes.js:1644`, `ai.js:585-616`): status for Ollama, Gemini, Groq, Roboflow og Tesseract/ImageMagick/zbar. **`/receipts/health` finnes ikke**, men `health()` dekker det meste.
 - Web/PWA: `public/finans/js/core.js:113-126` (`uploadReceipt`) sender `file`, `scan` og `thumb` til `/finans/api/receipts`. Ingen OCR i nettleseren.
 
@@ -131,7 +131,7 @@ Android har ingen parsing på enheten (`device_parse`). Android leverer alltid b
   - Ellers, med `ocr_text47`: `extractText(.., {kind:'ocr'})`.
   - Ellers, for `text/plain`: `extractText`.
   - Ellers: `extract(bilde)`.
-- Etter tolkingen kjøres regel eller `classify39` (kategori, kan lage nye), `verify39`, bankmatch `findMatch` (±1 kr, ±3 dager, `:259-266`), `storeLines` (bbox, highlight30.js:25), sammendrag og `routeTarget`.
+- Etter tolkingen kjøres regel eller `classify39` (kategori, kan lage nye), `verify39`, bankmatch `findMatch` (±1 kr, ±3 dager, `:259-266`), `storeLines` (bbox, highlight.js:25), sammendrag og `routeTarget`.
 - `scanLog` (`server/finans/scan.js:39-50`) logger steg i `fh_receipts.scan_log`.
 
 ### Motorene og kallene (`server/finans/ai.js`)
@@ -163,18 +163,18 @@ Android har ingen parsing på enheten (`device_parse`). Android leverer alltid b
 - `fh_receipts` (`db.js:94-112`):
   - Grunnkolonner: `id, file, scan, thumb, mime, status, provider, model, seconds, extraction (JSON), error, merchant, date, total (øre), category_id, account_id, confidence, transaction_id, created`.
   - Lagt til senere: `name, started, target, uploaded_by, source, meta, ai_short, ai_long, domain, user_id, retry_at/retry_n/timeout_engine`.
-  - Andre filer legger til `scan_log` (scan.js:7), `line_boxes` (highlight30.js:15) og `ocr_text47` (receipts47.js:29). `receipt_reads` lagrer hver lesing (routes.js:1295).
+  - Andre filer legger til `scan_log` (scan.js:7), `line_boxes` (highlight.js:15) og `ocr_text47` (receipts-device.js:29). `receipt_reads` lagrer hver lesing (routes.js:1295).
 - **Varelinjer, mva, org.nr., rabatter og klokkeslett har ingen egne kolonner.** Alt ligger i `extraction`-JSON-en (`validate`-formen). `line_boxes` er en kopi med bbox.
 - Kategorier: `fh_categories(id, name, color, kind, sort, user_id)` (`db.js:73-79`, unik per bruker `:319`).
 
 ### Kvitteringsformat på serveren: målfelt mot `validate()` / `SCHEMA`
 
-| Målfelt | Server i dag (ai.js:27-90, receipts39.js:48-67) | Avvik | Hva som må til |
+| Målfelt | Server i dag (ai.js:27-90, receipt-lines.js:48-67) | Avvik | Hva som må til |
 |---|---|---|---|
 | `merchant` | `merchant` (≤ 120) | OK | – |
 | `org_number` | `org_number`, bare siffer, ≤ 9 tegn. **Ingen mod11 i `validate`.** Mod11 bare i Tesseract-sporet. | Mangler validering | Bruk `mod11Ok`, eventuelt `brregName` |
 | `date` | Bare regex `^\d{4}-\d{2}-\d{2}$` i `validate`. Kalender-, fremtids- og ≥ 2000-sjekk **bare** i `parsedReceipt47`. | Svak i AI-sporet | Felles datosjekk (punkt 5) |
-| `time` | `extras39.time`, `HH:MM` (receipts39.js:64) | OK | – |
+| `time` | `extras39.time`, `HH:MM` (receipt-lines.js:64) | OK | – |
 | `currency` | `currency`, 3 tegn, standard NOK | OK | – |
 | `items[]` | `lines[]` med `description, quantity, amount, bbox?` + `name, nameRaw, qty, unitPrice, discount, vatRate` | `items`↔`lines`, `unit_price`↔`unitPrice`. `quantity` er `null`, men `qty` blir 1 som standard. | Avbilde ved inngang/utgang, eller endre navn |
 | `discounts[{description, amount}]` | `discounts[{text, amount}]`, positivt beløp | `text`↔`description` | Avbilde |
@@ -183,7 +183,7 @@ Android har ingen parsing på enheten (`device_parse`). Android leverer alltid b
 | `total` | `total` (kr, 2 desimaler) | OK | – |
 | `payment_method` | `payment_method` (≤ 20) + `card_last4` | OK | – |
 | `category_suggestion` | `suggested_category` (≤ 60). Listen kommer fra databasen (routes.js:352) og sendes inn i PROMPT. | Navnet | Avbilde |
-| bbox (ekstra) | Prosent 0–100, origo øverst til venstre (ai.js:21, bbox30.js:3-12). `cleanBbox` skalerer 0–1 opp til 0–100. | Målet bruker 0–1 | Bestem én skala. `cleanBbox` tåler begge allerede. |
+| bbox (ekstra) | Prosent 0–100, origo øverst til venstre (ai.js:21, bbox.js:3-12). `cleanBbox` skalerer 0–1 opp til 0–100. | Målet bruker 0–1 | Bestem én skala. `cleanBbox` tåler begge allerede. |
 
 ---
 
@@ -191,8 +191,8 @@ Android har ingen parsing på enheten (`device_parse`). Android leverer alltid b
 
 | Steg i målet | Finnes i dag? | Hvor | Avvik |
 |---|---|---|---|
-| **A** `device_parse` (tolket på enheten) | Delvis, bare iOS apple-fm | `receipts47.js:219-252`, `preParsed47` :170-173 | Egen rute og norske felt. Ingen felles `device_parse`-felt i én scan-rute. Android har ingen A. |
-| **B** `device_ocr` + `qwen3:8b` | Delvis: `ocr-text` → `extractText(kind:'ocr')` | `receipts47.js:185-217`, `ai.js:716-722` | Går til **Gemini først** (TASKS.receipts). Ollama-modellen er rc-visjonsruten (qwen2.5vl), ikke qwen3:8b. bbox og konfidens kastes. |
+| **A** `device_parse` (tolket på enheten) | Delvis, bare iOS apple-fm | `receipts-device.js:219-252`, `preParsed47` :170-173 | Egen rute og norske felt. Ingen felles `device_parse`-felt i én scan-rute. Android har ingen A. |
+| **B** `device_ocr` + `qwen3:8b` | Delvis: `ocr-text` → `extractText(kind:'ocr')` | `receipts-device.js:185-217`, `ai.js:716-722` | Går til **Gemini først** (TASKS.receipts). Ollama-modellen er rc-visjonsruten (qwen2.5vl), ikke qwen3:8b. bbox og konfidens kastes. |
 | **C** Mac Vision + `qwen3:8b` | **Nei** | – | Ingen Mac-OCR-tjeneste, ingen `mac_vision`, ingen `8765` i koden |
 | **Tesseract** + `qwen3:8b` | Delvis: Tesseract + **regex**, ikke LLM | `ai.js:445-458`, `ocr-fallback.js:205-234` | Tesseract-teksten sendes aldri til en LLM. Den er siste reserve *etter* alle AI-motorene. |
 | **D** Gemini Flash (bilde) | Ja, men **først** | `ai.js:377-379`, `:319-350` | Står først som standard (`engineOrder`/`TASKS`). Groq ligger mellom. Må flyttes til sist og respektere `finLocal` og sky-budsjettet. Bildesporet `extract()` sjekker ikke `finLocal`, bare `textJson` gjør det (`:525-533`). |
@@ -247,7 +247,7 @@ Anbefaling:
   - overføring: **Sparing, Overføring**
 - Regler: `DEFAULT_RULES` (`:331-332`), for eksempel REMA* → Mat og dagligvarer.
 - Listen er **per bruker og kan endres** (`fh_categories.user_id`). Kvitteringskøen bruker brukerens `kind='expense'`-kategorier (`routes.js:352`).
-- `classify39` (`receipts39.js:119+`) kan **lage nye** kategorier fra `MERCHANT_TYPES` (`:100+`), for eksempel «Skole og studier», «Drivstoff», «Helse og apotek», «Elektronikk», «Klær og sko».
+- `classify39` (`receipt-lines.js:119+`) kan **lage nye** kategorier fra `MERCHANT_TYPES` (`:100+`), for eksempel «Skole og studier», «Drivstoff», «Helse og apotek», «Elektronikk», «Klær og sko».
 - Konklusjon: `category_suggestion` må velges fra **brukerens egen liste**, hentet fra serveren. iOS-listen med 8 kategorier (`Receipt47Engine.swift:78`) stemmer ikke.
 
 ---
@@ -264,15 +264,15 @@ Anbefaling:
    - Bare admin kan endre den: `SERVER_SECRETS` og `adminOnly` (`routes.js:106`, `:1587-1602`, `:1665-1670`).
    - **Men Gemini står først i kjeden i dag** (`TASKS.receipts.engine='gemini'`, `ai.js:99-104`, `AI_FALLBACK=gemini`, `db.js:336`). D krever at rekkefølgen snus, og at bildesporet respekterer `finLocal` og sky-budsjettet. I dag gjør bare `textJson` det.
 3. **Validering finnes delvis:**
-   - `parsedReceipt47` (`receipts47.js:69-158`) er den strengeste: typer, kalenderdato, ikke i fremtiden, ≥ 2000, total 0–1 000 000, ISO-valuta, mva ≤ total, antall linjer, linjebeløp, `card_last4`, og summen som myk advarsel.
-   - `verify39` (`receipts39.js:69-92`): linjer − rabatter + pant = total (±1 kr) og total mot banktransaksjonen. Den gir `status` ok/usikker og en tilbakemeldingstekst til nytt forsøk.
+   - `parsedReceipt47` (`receipts-device.js:69-158`) er den strengeste: typer, kalenderdato, ikke i fremtiden, ≥ 2000, total 0–1 000 000, ISO-valuta, mva ≤ total, antall linjer, linjebeløp, `card_last4`, og summen som myk advarsel.
+   - `verify39` (`receipt-lines.js:69-92`): linjer − rabatter + pant = total (±1 kr) og total mot banktransaksjonen. Den gir `status` ok/usikker og en tilbakemeldingstekst til nytt forsøk.
    - `mod11Ok` finnes (`ocr-fallback.js:57-63`), men brukes bare av Tesseract.
    - Disse bør samles i én validator (`validateReceipt48`) som brukes etter hvert steg og avgjør om kjeden skal gå videre. Ingen eksisterende kode sjekker mva-sats eller mva-sum, `subtotal` eller `time`.
 4. **`qwen3:8b` brukes ikke for kvitteringstekst i dag.** Tekstsporet bruker `modelFor('rc')`, som er visjonsruten (qwen2.5vl:7b). B, C og Tesseract+LLM trenger en egen rute- eller oppgave-ID for tekst, for eksempel `rct` = «Kvitteringer (tekst)» i `ai-run.js:49`. Bare én av qwen3:8b og qwen2.5vl:7b får plass i minnet samtidig (`ai-gate.js:15-16`). Gaten grupperer per modell, men et bytte koster 2–40 s.
 5. **OCR-formatet må lages fra bunnen:**
    - Begge klientene leser bbox og (for Vision) konfidens, men kaster dem.
    - Begge bruker TAB og en annen radgruppering enn målet.
-   - Serveren kaster alt utenom tekst (`receipts47.js:49`).
+   - Serveren kaster alt utenom tekst (`receipts-device.js:49`).
    - Navnebruken er snudd på Android: dagens `lines` er målformatets `rows`.
    - Tesseract må kjøres med `tsv` for å gi linjer og bbox.
    - Én felles, ren `rows()`-funksjon (overlappende y-intervall) bør finnes på server og klienter med samme tester.

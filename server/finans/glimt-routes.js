@@ -9,8 +9,8 @@
 //        → {items:[tx], count, net, sum, filter, chips:[{key, label}]}
 //   GET  /filter/facets                                    → {merchants:[{key, name, count, logo}], categories:[{id, name, color, count}], homes:[{id, name}], top:6}
 //   POST /filter/glimt {q}                                 → {filter, text:'✦ Glimt satte filteret: … · 0,04 s', ms, engine}
-//   POST /glimt/tasks · GET /glimt/tasks · GET/DELETE /glimt/tasks/:id · GET /glimt/tasks/:id/events · GET /glimt/tasks/:id/report.pdf   (glimt-tasks42.js)
-//   Boliger + import rett til Boliger                      → homes42.js
+//   POST /glimt/tasks · GET /glimt/tasks · GET/DELETE /glimt/tasks/:id · GET /glimt/tasks/:id/events · GET /glimt/tasks/:id/report.pdf   (glimt-tasks.js)
+//   Boliger + import rett til Boliger                      → boliger-web.js
 //   GET  /stocks (mellomvare): hver posisjon får logo:{url, issuer, domain}, monogram, tickerBadge, exchange, subtitle:'VUAG · London · USD', instrument
 //   GET  /aksjer/logo/:key                                 → bildet (Cache-Control 30 d) eller 404 (klienten viser monogram)
 import { lastVisitSpecial52 } from '../srv52.js'; // prompt 52
@@ -20,11 +20,11 @@ import { db, q, settings, ensureLedger } from './db.js';
 import { runAsUser } from '../settings.js';
 import { tokenAccessOf, txOutList42, TX_SELECT42 } from './routes.js';
 import { decodeTxCursor, isAfterTxCursor, pageOf } from './tx-cursor.js';
-import { financeAsk40 } from './p40.js';
-import { subscriptionSources } from './subs-ask32.js';
-import { ask42, searchLog42, merchantKey42, filterFromText42, weekRange42, fold42 } from './search42.js';
-import { startTask42, listTasks42, getTask42, deleteTask42, jobOut42, subscribe42, reportFile42, kindFromText42, KINDS42, MAX_RUNNING42 } from './glimt-tasks42.js';
-import { mountHomes42, homeSearch42, homesOf42 } from './homes42.js';
+import { financeAsk40 } from './tx-edit.js';
+import { subscriptionSources } from './subs-ask.js';
+import { ask42, searchLog42, merchantKey42, filterFromText42, weekRange42, fold42 } from './search-db.js';
+import { startTask42, listTasks42, getTask42, deleteTask42, jobOut42, subscribe42, reportFile42, kindFromText42, KINDS42, MAX_RUNNING42 } from './glimt-tasks.js';
+import { mountHomes42, homeSearch42, homesOf42 } from './boliger-web.js';
 import { logo as faviconLogo, validDomain } from './enrich.js';
 import { itemForDomain, filePath as logoFile } from '../logos/match.js';
 import { readFile } from 'node:fs/promises';

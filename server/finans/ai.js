@@ -2,14 +2,14 @@
 // Svaret valideres; ugyldig svar gir ett nytt forsøk før bilaget markeres for manuell utfylling.
 import { settings, secret, db, me, addUserCol } from './db.js';
 import { geminiFetch, hasGemini, usableKeys } from './gemini-keys.js';
-import { cleanBbox } from './bbox30.js';
+import { cleanBbox } from './bbox.js';
 import { shortBody } from '../ollama-opts.js';
 import { gateChat } from '../ai-gate.js'; // prompt 43: alle Ollama-kall via gaten
 import { modelFor, routing as aiRouting, budgetState } from '../ai-run.js';
 // Prompt 34: finans-oppgavene → oppgavene i AI-kontroll-rutingen.
 const AI_TASK_OF = { search: 'fsok', categorize: 'kat', receipts: 'rc', barcode: 'bar', text: 'sok', test: 'sok', summary: 'fsok', mat: 'sok', rss: 'sok', finn: 'fsok', import: 'fsok' }; // prompt 48: import = bankimport (finansdata)
 import { ocrEnabled, ocrReceipt, cropImage, decodeBarcodes, ocrTools } from '../ocr-fallback.js';
-import { RULES39, normalizeLines39, extras39, verify39 } from './receipts39.js'; // prompt 39: varelinjer og sumkontroll
+import { RULES39, normalizeLines39, extras39, verify39 } from './receipt-lines.js'; // prompt 39: varelinjer og sumkontroll
 import { blockCloudReceipt52, warnCloudReceipt52, RECEIPT_ENGINE_NOTE52 } from '../receipts48/cloud-guard52.js'; // prompt 52: kvitteringer bare lokalt
 import { externalBlocked48 } from '../receipts48/settings.js'; // prompt 48: sperren for eksterne tjenester i kvitteringskjeden
 

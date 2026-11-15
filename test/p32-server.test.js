@@ -115,7 +115,7 @@ test('AI-søk: abonnementer og prøver som kilde, inkluderer[], Ja/Nei først, u
   assert.equal(books.subscriptions[0].kind, 'prøve');
   const kari = (await K('/finans/api/search/ai', 'POST', { q: 'har jeg et abonnement for musikk' })).body;
   assert.ok(!kari.subscriptions?.some((s) => s.name === 'YouTube Premium'));
-  const { stripMarkers } = await import('../server/finans/subs-ask32.js');
+  const { stripMarkers } = await import('../server/finans/subs-ask.js');
   assert.equal(stripMarkers('Du brukte 200 kr [1] på mat [n] [2, 3].'), 'Du brukte 200 kr på mat.');
   assert.ok((await A('/finans/api/subscriptions/knowledge')).body.items.some((k) => k.service === 'YouTube Premium'));
 });

@@ -17,7 +17,7 @@ const body = async (c) => { const b = await c.req.json().catch(() => ({})); retu
 
 
 const LOGO_DIR52 = join(config.dataDir, 'logos');
-// Prompt 73 (LOGO73): brukerens manuelle logovalg («Endre logo») går foran alt. Settes av finans/logo73.js (unngår importsirkel).
+// Prompt 73 (LOGO73): brukerens manuelle logovalg («Endre logo») går foran alt. Settes av finans/logo-override.js (unngår importsirkel).
 let override52 = null;
 export const setLogoOverride52 = (fn) => { override52 = typeof fn === 'function' ? fn : null; };
 /** Logo for et butikknavn uten nettkall: logobiblioteket, så brukerens lagrede merchant_logos (fil på disk). */

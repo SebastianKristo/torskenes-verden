@@ -5,7 +5,7 @@
 //   GET /finans/api/transactions (mellomvare) → får months:[…] for månedene i svaret (samme filter på kategori/konto/type)
 import { Hono } from 'hono';
 import { db, q } from './db.js';
-import { auth42 } from './finans42.js';
+import { auth42 } from './glimt-routes.js';
 import finansApi from './routes.js';
 import { osloDate } from '../dates/oslo.js';
 

@@ -36,7 +36,7 @@ const gsc43 = await import('../server/gsc43.js');
 const domG = await import('../server/domains-glimt.js');
 const appUpd = await import('../server/app-update.js');
 const kal43 = await import('../server/kalender/app-update.js');
-const fin43 = await import('../server/finans/finans43.js');
+const fin43 = await import('../server/finans/overview.js');
 
 let ipN = 30;
 async function req(path, { method = 'GET', headers = {}, body, raw } = {}) {

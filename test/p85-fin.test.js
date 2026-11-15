@@ -19,7 +19,7 @@ function pick(code, start, endLine) {
 }
 
 test('Glimt-oppgaver: alle fire oppgavene sendes med et navn serveren kjenner', () => {
-  const gj = src('public/finans/js/gj42.js'), srv = src('server/finans/glimt-tasks42.js');
+  const gj = src('public/finans/js/gj42.js'), srv = src('server/finans/glimt-tasks.js');
   const kinds = [...pick(gj, 'export const TASKS = [', '];').matchAll(/\['([a-z_]+)',/g)].map((m) => m[1]);
   assert.equal(kinds.length, 4);
   const map = Function(`${pick(gj, 'export const SERVER_KIND', '};').replace('export ', '')} return SERVER_KIND;`)();

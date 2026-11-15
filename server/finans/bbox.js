@@ -1,4 +1,4 @@
-// Prompt 30: felles validering av bbox per kvitteringslinje (brukes av ai.js og highlight30.js, uten sirkulær import).
+// Prompt 30: felles validering av bbox per kvitteringslinje (brukes av ai.js og highlight.js, uten sirkulær import).
 /** Gyldig bbox: fire tall i prosent (0–100), bredde og høyde > 0. Ellers null. */
 export function cleanBbox(b) {
   if (!Array.isArray(b) || b.length !== 4) return null;

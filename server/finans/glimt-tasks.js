@@ -16,9 +16,9 @@ import { writeFile, readFile, unlink } from 'node:fs/promises';
 import { join } from 'node:path';
 import { db, q, settings } from './db.js';
 import { config } from '../config.js';
-import { subscriptionSources } from './subs-ask32.js';
-import { Pdf42, A4 } from './pdf42.js';
-import { parsePeriod42 } from './search42.js';
+import { subscriptionSources } from './subs-ask.js';
+import { Pdf42, A4 } from './pdf.js';
+import { parsePeriod42 } from './search-db.js';
 import { dtf } from '../intl-format.js'; // gjenbrukte Intl.DateTimeFormat
 
 db.exec(`CREATE TABLE IF NOT EXISTS glimt_jobs (

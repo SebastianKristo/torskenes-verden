@@ -66,5 +66,5 @@ fra Fase 3–5.
 | `t` er ISO uten sone (lokal tid) | `/api/brief` | – (Fase 3) |
 | Beløp er kroner som desimaltall (`amount: -1284.5`) | `/finans/api/*` (transaksjoner, oversikt, budsjett, abonnement) | `amountOre` (transaksjoner), `priceOre` (abonnement) |
 | Gamle kvitteringer lagrer `amount REAL` i kroner | `/api/receipts` | – (åpent spørsmål i AUDIT A, «Spørsmål» 4) |
-| `{ok:false, error}` med status 200 | 24 steder (bl.a. `finans/p27-routes.js`) | – |
+| `{ok:false, error}` med status 200 | 24 steder (bl.a. `finans/forslag-routes.js`) | – |
 | Live-aktiviteter har norske feltnavn (`tittel`, `oppdatert`) | `/api/live/*` | – (appene leser de norske navnene) |

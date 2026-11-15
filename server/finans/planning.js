@@ -18,24 +18,24 @@
 //   POST   /fin51/hunter/used {subId}           → {ok, lastUsed}   (bruk-signal: «Jeg bruker den»)
 //   POST   /fin51/hunter/dismiss {key}          → {ok}             · DELETE /fin51/hunter/dismiss → {ok} (vis alle igjen)
 //   POST   /fin51/hunter/draft {subId | name, reason?} → {subject, text, engine:'lokal'|'mal', model, sent:false, note}
-//   Skattehjelp → fin51-tax.js · Prishistorikk → fin51-prices.js
+//   Skattehjelp → tax.js · Prishistorikk → prices.js
 import { Hono } from 'hono';
 import { randomUUID } from 'node:crypto';
 import { mkdir, readFile, writeFile, unlink } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { db, kv } from './db.js';
 import { config } from '../config.js';
-import { auth42 } from './finans42.js';
-import { recurringFromTx42 } from './finans42.js';
+import { auth42 } from './glimt-routes.js';
+import { recurringFromTx42 } from './glimt-routes.js';
 import { sniffMime } from './scan.js';
 import { userInfo } from '../auth/session.js';
 import { run as aiRun } from '../ai-run.js';
-import { mountTax51 } from './fin51-tax.js';
-import { mountPrices51 } from './fin51-prices.js';
+import { mountTax51 } from './tax.js';
+import { mountPrices51 } from './prices.js';
 import {
   q51 as q, today51, isDate51, addDays51, daysBetween51, addMonths51, r2, kr51, krText51, ore51, str51, bad51 as bad, dayLabel51, weekday51,
   key51, accounts51, defaultAccount51, tx51, median51, mostUsedAccount51,
-} from './fin51-util.js';
+} from './planning-util.js';
 import { osloDate } from '../dates/oslo.js';
 import { perMonth, seriesOf, chargesBetween } from './cycles.js';
 

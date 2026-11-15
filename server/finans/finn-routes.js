@@ -4,7 +4,7 @@
 // - E-poster fra FINN, Posten/Bring, Tillit eller motparten kobles til handelen via Finn-koden, ordrenummer, sporingsnummer
 //   eller varenavnet (IMAP-arbeideren i mail.js kaller linkMail), og .eml kan legges ved manuelt.
 // - Stegene er faste: Betalt → Sendt → Mottatt → Godkjent ved kjøp, Solgt → Sendt → Levert → Utbetalt ved salg.
-import { adImages42, dropShared42, logFinn42, cleanStoredAds42 } from './finn42.js'; // prompt 42: riktige bilder per annonse
+import { adImages42, dropShared42, logFinn42, cleanStoredAds42 } from './finn-images.js'; // prompt 42: riktige bilder per annonse
 import { randomBytes } from 'node:crypto';
 import { mkdir, readFile, writeFile, unlink, rmdir } from 'node:fs/promises';
 import { join, resolve, extname } from 'node:path';

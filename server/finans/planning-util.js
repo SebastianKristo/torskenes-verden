@@ -1,7 +1,7 @@
 // Prompt 51 (FIN51): felles hjelpere for sparemål, kalender, skattehjelp, prishistorikk og abonnementsjeger.
 // Beløp i databasen er øre (heltall, negativt = ut); alt som går ut av API-et er kroner med to desimaler.
 import { db, q } from './db.js';
-import { merchantKey42, fold42 } from './search42.js';
+import { merchantKey42, fold42 } from './search-db.js';
 import { osloDate } from '../dates/oslo.js';
 
 export const q51 = q; // statement-cache i server/db.js

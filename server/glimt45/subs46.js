@@ -4,7 +4,7 @@
 //
 // Datakildene (eksisterende, ingenting nytt):
 //   fh_subscriptions  – registrerte abonnementer (Subscription OS): price i øre per trekk, cycle monthly|yearly|biennial,
-//                       prev_price/price_changed (prisendring), active, delte via subscription_members (shared37.js).
+//                       prev_price/price_changed (prisendring), active, delte via subscription_members (shared-subs.js).
 //   fh_recurring      – faste trekk (Budsjett): amount i øre, interval monthly|yearly|weekly, active.
 //   trials            – gratis prøveperioder (finans/trials.js): ends_at, price_after, status active|cancelled|kept, subscription_id.
 // trials får to nye kolonner (additivt): cancel_by (avslutningsfristen brukeren oppga) og ends_kind ('trial_end' = ends_at er når
@@ -47,7 +47,7 @@ export function normalizeCost46(priceKr, cycle) {
 let shareOf = null;
 async function shareFn() {
   if (shareOf) return shareOf;
-  try { const m = await import('../finans/shared37.js'); shareOf = { visible: m.visibleSubs, share: m.shareOre, members: m.memberIds }; } catch { shareOf = { visible: null, share: null, members: () => [] }; }
+  try { const m = await import('../finans/shared-subs.js'); shareOf = { visible: m.visibleSubs, share: m.shareOre, members: m.memberIds }; } catch { shareOf = { visible: null, share: null, members: () => [] }; }
   return shareOf;
 }
 let failImpl = null;

@@ -25,7 +25,7 @@ test.after(() => { globalThis.fetch = realFetch; });
 
 const { default: app } = await import('../server/index.js');
 const { db } = await import('../server/db.js');
-const L73 = await import('../server/finans/logo73.js');
+const L73 = await import('../server/finans/logo-override.js');
 const { findLogo, cachedLogoUrl } = await import('../server/finans/logo-lookup.js');
 const ROOT = new URL('..', import.meta.url).pathname;
 const src = (p) => readFileSync(join(ROOT, p), 'utf8');

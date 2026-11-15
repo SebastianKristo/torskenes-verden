@@ -47,7 +47,7 @@ test.after(() => { globalThis.fetch = realFetch; });
 
 const { default: app } = await import('../server/index.js');
 const s47 = await import('../server/server47.js');
-const r47 = await import('../server/finans/receipts47.js');
+const r47 = await import('../server/finans/receipts-device.js');
 
 let ipN = 10;
 async function req(path, { method = 'GET', headers = {}, body } = {}) {

@@ -12,7 +12,7 @@
 //             source:'transaksjoner'|'registrert'|'anslag'|'mangler', sources:[{date, name, amount}], note, missing?:string}
 import { kv } from './db.js';
 import { notifyUser } from '../notify.js';
-import { q51 as q, today51, kr51, krText51, ore51, str51, bad51 as bad, r2, tx51, csvCell51, esc51, dayLabel51 } from './fin51-util.js';
+import { q51 as q, today51, kr51, krText51, ore51, str51, bad51 as bad, r2, tx51, csvCell51, esc51, dayLabel51 } from './planning-util.js';
 
 // Satser og grenser per inntektsår (kr). Anslag – kontroller alltid hos Skatteetaten. Ukjent år bruker siste kjente.
 export const TAX_RATES51 = {

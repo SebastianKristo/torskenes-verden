@@ -18,7 +18,7 @@ import { authOrToken } from './mobile.js';
 import { userInfo, listUsers, isAdmin } from './auth/session.js';
 import { broadcast } from './realtime.js';
 import { family50 as F } from './family.js';
-import { ensureIndex42, norm42, fold42, synonymsOf42 } from './finans/search42.js';
+import { ensureIndex42, norm42, fold42, synonymsOf42 } from './finans/search-db.js';
 import { settings as fhSettings } from './finans/db.js';
 import { gateEmbed } from './ai-gate.js';
 import { sunTime } from './weather.js';

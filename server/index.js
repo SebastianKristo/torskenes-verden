@@ -68,8 +68,8 @@ import { finans40Api, news40Api, newsDigestApi, hjemlys40Api, pages40Api, briefJ
 import { mountServer47 } from './server47.js'; // prompt 47 (SERVER47)
 import { hjemlys41Api, hjemlysGet41, hlPage41, ruter41Api, mai17Api, huske41Api, tracking41Api, weather41Api, brief41, weatherFull41 } from './api41.js'; // prompt 41 (SERVER41)
 import { finans42Api, abCalendarsMw42, abApi42, calendarsEvents42, abIcs42, tracking42Api, health42Api, familyHealthMw42, startHealth42, hjemlys42Api, tasks42Api } from './api42.js'; // prompt 42 (SERVER42)
-import fin51Api from './finans/fin51.js'; // prompt 51 (FIN51): sparemål, faste utgifter-kalender, skattehjelp, prishistorikk, abonnementsjeger
-import { startTax51 } from './finans/fin51-tax.js'; // prompt 51 (FIN51): påminnelse før skattemeldingen
+import fin51Api from './finans/planning.js'; // prompt 51 (FIN51): sparemål, faste utgifter-kalender, skattehjelp, prishistorikk, abonnementsjeger
+import { startTax51 } from './finans/tax.js'; // prompt 51 (FIN51): påminnelse før skattemeldingen
 import { widgets43Api, claudeImport43Api, aiMemory43Api, gscDomains43Api, gsc43Api, gscViewMw43, gscOverviewMw43, finans43Api, summaryMw43, transactionsMw43, tasks43Api, tasksOrderMw43 } from './api43.js'; // prompt 43 (SERVER43)
 import { mountMedia, startMedia } from './media/index.js'; // Media: alle /api/media-, /api/playback- og /api/medctl51-ruter
 import { mediaCalendarsMw43 } from './media/arr.js'; // kalenderkilden «Media»

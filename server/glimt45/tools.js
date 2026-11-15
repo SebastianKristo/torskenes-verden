@@ -7,7 +7,7 @@ import { runAsUser } from '../settings.js';
 import { broadcast } from '../realtime.js';
 import { eventsFor, createEvent, updateEvent, deleteEvent, findEvent, eventInput, normText } from '../kalender/events.js';
 import { KINDS, parseQuick } from '../dates/quick.js'; // dato og tid fra den felles tolkeren
-import { ensureIndex42, merchantKey42, synonymsOf42, stem42, fold42, norm42 } from '../finans/search42.js';
+import { ensureIndex42, merchantKey42, synonymsOf42, stem42, fold42, norm42 } from '../finans/search-db.js';
 import { ensureLedger, settings as fhSettings } from '../finans/db.js';
 import { inOriginal46 } from './tasks46.js';
 import { whenOf45, parsePeriod45, parseAmount45, parseDate45, parseTime45, isIsoDate45, isHm45, addDays45, addMin45, todayOslo45, longDate45, relDate45, mondayOf45, MON45 } from './dates.js';

@@ -45,7 +45,7 @@ const { isLan } = await import('../server/auth/session.js');
 const { osloDate } = await import('../server/kalender/birthdays.js');
 const { ymd: medfamYmd } = await import('../server/medfam51/common.js');
 const { osloYmd } = await import('../server/jul40.js');
-const { today51 } = await import('../server/finans/fin51-util.js');
+const { today51 } = await import('../server/finans/planning-util.js');
 const { osloDate: osloDate2, today: osloToday } = await import('../server/dates/oslo.js');
 
 /* ---------------- Hjelpere ---------------- */
@@ -197,7 +197,7 @@ const IDAG_IMPL = [
   ['server birthdays.js osloDate', (ms) => osloDate(ms)],
   ['server medfam51/common.js ymd', (ms) => medfamYmd(ms)],
   ['server jul40.js osloYmd', (ms) => { const { y, m, d } = osloYmd(ms); return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`; }],
-  ['server finans/fin51-util.js today51', null], // leser klokka selv, kjøres med fast klokke under
+  ['server finans/planning-util.js today51', null], // leser klokka selv, kjøres med fast klokke under
   ['web js/quick-time.js osloTodayISO', (ms) => osloTodayISO(new RealDate(ms))],
   // Den ene hjelperen for «i dag» på serveren (erstatter toISOString().slice(0, 10), som ga UTC-datoen). test/dates.test.js
   // passer på at «nå» ikke regnes i UTC eller prosessens tidssone igjen.

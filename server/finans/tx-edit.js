@@ -17,9 +17,9 @@ import { Hono } from 'hono';
 import { db, q } from './db.js';
 import { sessionUser } from '../auth/session.js';
 import { bearerOk } from './routes.js';
-import { subscriptionSources, subIntent } from './subs-ask32.js';
+import { subscriptionSources, subIntent } from './subs-ask.js';
 import { plainSearch } from './search.js';
-import { addedOf40, markCreated40, historyOf40, recordChange40, tagsOf40, applyRereadTx40 } from './added40.js';
+import { addedOf40, markCreated40, historyOf40, recordChange40, tagsOf40, applyRereadTx40 } from './added.js';
 import { osloTodayISO } from '../../public/js/quick-time.js';
 import { PER_TEXT, perMonth } from './cycles.js';
 

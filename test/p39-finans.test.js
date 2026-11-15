@@ -13,7 +13,7 @@ const { hashPassword } = await import('../server/auth/password.js');
 process.env.APP_PASSWORD_HASH = hashPassword('testpassord1');
 const { setSecret, db } = await import('../server/finans/db.js');
 const { default: api } = await import('../server/finans/routes.js');
-const r39 = await import('../server/finans/receipts39.js');
+const r39 = await import('../server/finans/receipt-lines.js');
 
 const calls = [];
 let ollamaReplies = [];
