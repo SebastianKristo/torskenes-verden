@@ -76,6 +76,40 @@ Klientene viser det serveren sender og regner ikke selv (fasit i `shared/testvek
 - **Bolig «brukt»** (`GET /finans/api/folders/:id`): `spent`, `pending: {count, amount, text:'venter: X kr'}`, `months[].spent`/`.pending`, `kpi.spentByMonth[]`, `kpi.budgetLeft` (fra `spent`) og `kpi.over`. Poster til gjennomgang og kvitteringer som leses, er ikke «brukt» (Q21).
 - **Helligdager og merkedager:** `GET /api/dates/holidays` og kalenderen «Helligdager» (`type` på hendelsen).
 
+## Moduler (`GET /api/moduler`, sesjon eller app-token)
+
+Én modulliste for web, iOS, Android og klokka (Fase 6, E-ia §4 og Q1–Q12). Kilden er
+[`shared/schemas/moduler.json`](../shared/schemas/moduler.json), kontrakten er `shared/schemas/api/moduler.schema.json` og
+eksempelet `shared/schemas/eksempler/moduler.json`. Klientene lager menyer, Mer, «Alle sider», fanelinje-redigering, søk og
+titler fra lista i stedet for å ha egne lister.
+
+`GET /api/moduler[?plattform=web|ios|android]` gir bare modulene brukeren har tilgang til: `adminOnly`-moduler bare for admin,
+moduler med `tilgang` (Media, Bibel) bare når brukeren har den. Med `plattform` kommer bare modulene som finnes der. Brukerens
+eget valg (rekkefølge, skjulte faner, egne navn) ligger i layouten (`/api/me/layout`), ikke her.
+
+| Felt | Hva |
+|---|---|
+| `versjon` | Versjonen av lista. Øker når et felt endrer betydning |
+| `grupper[]` | `{id, navn}` i fast rekkefølge: I dag, Hjemme, Tid, Ute, Økonomi, Fritid og læring, Verksted, Drift. Bare grupper med moduler |
+| `toppmeny[]` | Modul-id-ene som står fast i toppmenyen på desktop (Q6). Resten ligger under «Alle sider ▾» |
+| `bunnmeny[]` | Fanene i bunnmenyen på mobil (web), i tillegg til «Mer» |
+| `moduler[].id` | Fast id, lik på alle plattformer (`oversikt`, `smarthjem`, `gjoremal`, `reise`, `okonomi` …). Innstillingssiden for modulen har samme id |
+| `moduler[].navn` | Navnet i UI (Q1–Q12, se [ordlisten](ordliste.md)) |
+| `moduler[].gruppe` | Id i `grupper` |
+| `moduler[].ikon` | `{tegn, sf, material}`: tegn til web og reserve, SF Symbol (Apple) og Material Symbols-navn (Android) |
+| `moduler[].plattformer[]` | `web`, `ios`, `android` |
+| `moduler[].adminOnly` | Bare for admin |
+| `moduler[].tilgang` | Valgfri: `media` eller `bibel` (egen tilgang) |
+| `moduler[].type` | Valgfri: `ark` = åpnes som ark over siden (Brief, Nyheter). Ellers en side |
+| `moduler[].rute` | Adressen på web (`#/…`, eller `/finans/` for Økonomi). `null` = finnes ikke på web |
+| `moduler[].aliaser[]` | Gamle adresser som videresendes til `rute` (`#/dash` → `#/oversikt`, `#/huskeliste` → `#/gjoremal` …) |
+| `moduler[].undersider[]` | `{id, navn, kort?, type, rute, aliaser?}`. `type`: `fane` (egen fane i modulen), `visning` (f.eks. Kalenderens År … Liste) eller `filter` (Kalenderens Familie, Bursdager, Skole). `kort` er navnet der plassen ikke strekker til |
+| `innstillinger[]` | Sidene i Innstillinger i fast rekkefølge, `{id, navn, beskrivelse, adminOnly?, aliaser}`: Konto og sikkerhet, Utseende, Varsler, Husstand, Glimt og AI, Tilkoblinger, Moduler, Enheter og widgets, Server |
+
+Integrasjonene grupperes én gang, i [`shared/schemas/tilkoblinger.json`](../shared/schemas/tilkoblinger.json) (O8):
+`group` og `category` i `GET /api/integrations` og `category` i `GET /api/config` er gruppenavnet derfra (Smarthjem,
+Kalender og e-post, Media, Økonomi, Reise og pakker, AI, Varsler, Nettverk, Generelt).
+
 ## FinansHub (`/finans/api`)
 
 | Område | Endepunkter |

@@ -74,6 +74,7 @@ import { mountBilder } from './bilder/index.js'; // Bilder: Google Photos-album 
 import { mountVaer } from './vaer/index.js'; // Vær: /here, /week-summary, /place, /layout og ski i /full
 import { installCacheBust } from './cache-bust.js'; // prompt 32 (SERVER32)
 import searchHistoryApi from './search-history.js'; // prompt 32: søkehistorikk per bruker
+import { mountModuler } from './moduler/index.js'; // Moduler: GET /api/moduler, modullisten per bruker (shared/schemas/moduler.json)
 import { mountReise } from './reise/index.js'; // Reise: /api/ruter (Min reise, skolesoner, «forlot skolen»)
 import { mountRom, startRom } from './rom/index.js'; // Rom: /api/space og /api/rom (APOD, Mars, satellitter)
 import { mountDomener } from './domener/index.js'; // Domener: statistikk, Glimt-oppsummering og Google Search Console
@@ -549,6 +550,7 @@ app.route('/', tilesApi);
 mountLive89(app); // prompt 89 (SRV89): /api/live/aktiviteter, /handling, /innstillinger, /tokens
 mountFamilie(app); // server/familie/: sonevarsler, Kart, familiekalender, Steder/Folk/Helse/Sjekk inn, posisjon og Vel fremme
 mountGjoremal(app); // server/gjoremal/: /api/tasks (synk-raden, listerekkefølge, Glimt-logg, Huskeliste) og /api/huske
+mountModuler(app); // server/moduler/: GET /api/moduler (sesjon eller app-token)
 app.route('/api/app/pages', pages40Api); // prompt 40: alle sider i Mer (fanelinja), før /api/app
 app.route('/api/app/android', appUpdateApi); // prompt 32: /latest og /apk/:version, sesjon eller app-token, alle brukere
 app.route('/api', notifyApi); // Varsler (/api/me/notify) og appnavn (/api/app) (prompt 17)

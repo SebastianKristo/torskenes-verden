@@ -28,6 +28,7 @@ import { testMail } from './finans/mail.js';
 import * as integ from './integrations.js';
 import { testTracking } from './sporing/shipments.js';
 import { testMap } from './tiles.js';
+import { tilkoblingsgruppe, TILKOBLINGSGRUPPER } from './moduler/tilkoblinger.js'; // én gruppering (shared/schemas/tilkoblinger.json)
 import { testBackgrounds } from './background.js';
 import { iconSvg } from './icons.js';
 import { clearCache } from './cache.js';
@@ -237,12 +238,14 @@ export const INTEGRATIONS = [
     F('pexels_key', 'Pexels API-nøkkel', 'secret', cfgStore('pexels_key', true)),
   ] },
 ];
+// Fase 6 (O8): gruppen kommer fra shared/schemas/tilkoblinger.json, ikke fra hver rad over (samme gruppe i /api/config og appene).
+for (const x of INTEGRATIONS) x.group = tilkoblingsgruppe(x.id);
 const byId = new Map(INTEGRATIONS.map((x) => [x.id, x]));
 
 /* ---------------- Metadata som på web (prompt 26) ---------------- */
-// id → [kategori, merke, farge, kort beskrivelse, SCHEMA-gruppe for guiden (settings.js), titler fra den guiden (tom = alle)].
-// Kategoriene: Smarthjem · Transport og pakker · Økonomi · AI · Informasjon · Annet (rekkefølgen i CATEGORIES).
-export const CATEGORIES = ['Smarthjem', 'Transport og pakker', 'Økonomi', 'AI', 'Informasjon', 'Annet'];
+// id → [kategori (ikke brukt lenger), merke, farge, kort beskrivelse, SCHEMA-gruppe for guiden (settings.js), titler fra den guiden (tom = alle)].
+// Fase 6 (O8): kategorien er gruppen fra shared/schemas/tilkoblinger.json (samme som group), i rekkefølgen i CATEGORIES.
+export const CATEGORIES = TILKOBLINGSGRUPPER;
 const META = {
   ha: ['Smarthjem', 'HA', '#18bcf2', 'Lokal server og to-do-lister', 'ha'],
   entur: ['Transport og pakker', 'R', '#d0605a', 'Sanntid for avganger', 'ruter'],
@@ -374,7 +377,8 @@ function guideOf(x) {
   return g.help ? stepsOf([['Slik gjør du', g.help]]) : [];
 }
 function metaOut(x, status, fields = null) {
-  const [category, badge, color, description] = META[x.id] ?? ['Annet', x.name.slice(0, 2).toUpperCase(), '#5b6478', ''];
+  const [, badge, color, description] = META[x.id] ?? ['', x.name.slice(0, 2).toUpperCase(), '#5b6478', ''];
+  const category = tilkoblingsgruppe(x.id);
   // Prompt 43: MEDIA viser hvilket felt som mangler («Mangler api-nøkkel», «Mangler passord»).
   const firstMissing = MEDIA43.has(x.id) && fields ? x.fields.find((f, i) => f.required && !fields[i]?.saved) : null;
   const statusText = status === 'ok' ? 'Tilkoblet' : status === 'error' ? 'Tilkoblingen feilet' : firstMissing ? `Mangler ${firstMissing.label.replace(/ \(valgfri\)$/, '').toLowerCase()}` : x.id === 'calendars' || x.id === 'calendar' ? 'Mangler iCal-adresse' : 'Mangler API-nøkkel';

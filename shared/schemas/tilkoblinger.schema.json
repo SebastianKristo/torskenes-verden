@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tilkoblinger.schema.json",
+  "title": "Grupperingen av integrasjoner",
+  "description": "Formen på shared/schemas/tilkoblinger.json: én liste med grupper for Innstillinger → Tilkoblinger, og hvilken gruppe hver integrasjon hører til (E-ia O8).",
+  "type": "object",
+  "required": ["versjon", "grupper", "integrasjoner"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "$comment": { "type": "string" },
+    "versjon": { "type": "integer", "minimum": 1 },
+    "grupper": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "navn"],
+        "properties": { "id": { "type": "string", "pattern": "^[a-z0-9-]+$" }, "navn": { "type": "string", "minLength": 1 } },
+        "additionalProperties": false
+      }
+    },
+    "integrasjoner": {
+      "type": "object",
+      "propertyNames": { "pattern": "^[a-z0-9_-]+$" },
+      "additionalProperties": { "type": "string", "pattern": "^[a-z0-9-]+$" }
+    }
+  },
+  "additionalProperties": false
+}

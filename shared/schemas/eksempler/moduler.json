@@ -1,0 +1,155 @@
+{
+  "versjon": 1,
+  "grupper": [
+    {
+      "id": "idag",
+      "navn": "I dag"
+    },
+    {
+      "id": "hjemme",
+      "navn": "Hjemme"
+    },
+    {
+      "id": "tid",
+      "navn": "Tid"
+    },
+    {
+      "id": "ute",
+      "navn": "Ute"
+    }
+  ],
+  "toppmeny": [
+    "oversikt",
+    "kalender",
+    "okonomi",
+    "media"
+  ],
+  "bunnmeny": [
+    "oversikt",
+    "studie",
+    "okonomi"
+  ],
+  "moduler": [
+    {
+      "id": "oversikt",
+      "navn": "Oversikt",
+      "gruppe": "idag",
+      "ikon": {
+        "tegn": "⌂",
+        "sf": "square.grid.2x2",
+        "material": "dashboard"
+      },
+      "plattformer": [
+        "web",
+        "ios",
+        "android"
+      ],
+      "adminOnly": false,
+      "rute": "#/oversikt",
+      "aliaser": [
+        "#/dash",
+        "#/start"
+      ],
+      "undersider": []
+    },
+    {
+      "id": "chat",
+      "navn": "Chat",
+      "gruppe": "idag",
+      "ikon": {
+        "tegn": "✦",
+        "sf": "sparkles",
+        "material": "auto_awesome"
+      },
+      "plattformer": [
+        "web",
+        "ios",
+        "android"
+      ],
+      "adminOnly": false,
+      "rute": "#/chat",
+      "aliaser": [],
+      "undersider": []
+    },
+    {
+      "id": "brief",
+      "navn": "Brief",
+      "gruppe": "idag",
+      "ikon": {
+        "tegn": "✧",
+        "sf": "sun.horizon",
+        "material": "wb_twilight"
+      },
+      "plattformer": [
+        "ios",
+        "android"
+      ],
+      "adminOnly": false,
+      "type": "ark",
+      "rute": null,
+      "aliaser": [],
+      "undersider": []
+    },
+    {
+      "id": "smarthjem",
+      "navn": "Smarthjem",
+      "gruppe": "hjemme",
+      "ikon": {
+        "tegn": "⌂",
+        "sf": "house",
+        "material": "home"
+      },
+      "plattformer": [
+        "web"
+      ],
+      "adminOnly": false,
+      "rute": "#/hjem",
+      "aliaser": [
+        "#/smarthjem"
+      ],
+      "undersider": []
+    }
+  ],
+  "innstillinger": [
+    {
+      "id": "konto",
+      "navn": "Konto og sikkerhet",
+      "beskrivelse": "Profil, passord, totrinnsbekreftelse (2FA), økter og passkeys.",
+      "aliaser": [
+        "sikkerhet",
+        "innlogging",
+        "2fa"
+      ]
+    },
+    {
+      "id": "utseende",
+      "navn": "Utseende",
+      "beskrivelse": "Tema, lys og mørk, bakgrunn, kort på Oversikt, fanelinjen og appnavnet.",
+      "aliaser": [
+        "look",
+        "tema",
+        "startside",
+        "app"
+      ]
+    },
+    {
+      "id": "varsler",
+      "navn": "Varsler",
+      "beskrivelse": "Grupper per modul · Levering: push, e-post, stille timer, haptikk og lyd.",
+      "aliaser": [
+        "varsel",
+        "notify"
+      ]
+    },
+    {
+      "id": "husstand",
+      "navn": "Husstand",
+      "beskrivelse": "Brukere, roller, tilgang, invitasjoner, barn og helse.",
+      "aliaser": [
+        "users",
+        "brukere",
+        "brukere-og-familie"
+      ]
+    }
+  ]
+}

@@ -6,6 +6,7 @@ import { config } from './config.js';
 import { sessionSecret86 } from './auth/server-secret.js'; // prompt 86
 import { kv, OWNER } from './db.js';
 import { clearCache } from './cache.js';
+import { tilkoblingsgruppe } from './moduler/tilkoblinger.js'; // Fase 6 (O8): gruppen i /api/config
 
 // Hemmelige felt lagres kryptert (AES-256-GCM, nøkkel avledet fra SESSION_SECRET) med prefikset «enc1:».
 // Eldre verdier i klartekst leses som før og krypteres neste gang de lagres.
@@ -33,17 +34,17 @@ const DEFAULT_ROUTES = 'Amagerveien (6354) > Majorstuen (58381)\nFrydenlund (625
 
 // [gruppe, { id, domain (logo), category, help, guide? }, [[nøkkel, etikett, standardverdi (fra env), hemmelig?, type], …]]
 export const SCHEMA = [
-  ['Vær (MET/Yr)', { id: 'weather', domain: 'yr.no', category: 'Generelt', help: 'Stedet og koordinatene brukes til værmeldingen fra MET (yr.no). Finn koordinatene ved å høyreklikke på et sted i Google Maps.' }, [
+  ['Vær (MET/Yr)', { id: 'weather', domain: 'yr.no', help: 'Stedet og koordinatene brukes til værmeldingen fra MET (yr.no). Finn koordinatene ved å høyreklikke på et sted i Google Maps.' }, [
     ['wx_place', 'Sted', e('PLACE', 'Oslo')],
     ['wx_lat', 'Breddegrad', e('LAT', '59.9139')],
     ['wx_lon', 'Lengdegrad', e('LON', '10.7522')],
   ]],
-  ['Ruter (Entur)', { id: 'ruter', domain: 'ruter.no', category: 'Generelt', help: 'Finn stopp-ID (NSR) på stoppested.entur.org. Skriv én strekning per linje: Fra (ID) > Til (ID).' }, [
+  ['Ruter (Entur)', { id: 'ruter', domain: 'ruter.no', help: 'Finn stopp-ID (NSR) på stoppested.entur.org. Skriv én strekning per linje: Fra (ID) > Til (ID).' }, [
     ['ruter_routes', 'Strekninger – én per linje: Fra (NSR-ID) > Til (NSR-ID)', e('RUTER_ROUTES', DEFAULT_ROUTES), false, 'textarea'],
     ['ruter_count', 'Antall avganger', '3'],
   ]],
   // Prompt 26: Kalender-modulen leser skolens iCal (timeplan, prøver) og en valgfri Canvas-iCal (innleveringer), per bruker.
-  ['Kalender / timeplan', { id: 'calendar', scope: 'personal', domain: 'calendar.google.com', category: 'Skole', help: 'Lim inn iCal-adressen fra Canvas (Kalender → Kalenderfeed) eller Outlook (Publiser kalender → ICS).', guide: [
+  ['Kalender / timeplan', { id: 'calendar', scope: 'personal', domain: 'calendar.google.com', help: 'Lim inn iCal-adressen fra Canvas (Kalender → Kalenderfeed) eller Outlook (Publiser kalender → ICS).', guide: [
     ['Finn skolens iCal-adresse', 'Timeplanen ligger i skolens system (Visma InSchool, Outlook eller Teams). Se etter «Abonner på kalender», «Publiser kalender» eller «Eksporter til kalender», og kopier adressen som slutter på .ics.', 'https://skole.example.no/kalender/elev/abc123.ics'],
     ['Canvas (valgfritt)', 'I Canvas: Kalender → Kalenderfeed nederst til høyre. Kopier adressen. Den gir innleveringer og frister fra alle fagene.', 'https://skole.instructure.com/feeds/calendars/user_abc123.ics'],
     ['Lim inn', 'Lim inn adressene under Skole-iCal og Canvas-iCal. webcal:// gjøres om til https:// automatisk. Kalenderen hentes på nytt hver time.'],
@@ -55,7 +56,7 @@ export const SCHEMA = [
     ['cal_mazemap', 'MazeMap campus-ID', e('MAZEMAP_CAMPUS_ID')],
     ['school_url', 'Skolens nettside', e('SCHOOL_URL', 'https://www.vilbli.no')],
   ]],
-  ['Home Assistant', { id: 'ha', domain: 'home-assistant.io', category: 'Hjem', help: 'Lag et long-lived token i Home Assistant: Profil → Sikkerhet → Long-lived access tokens → Opprett token.' }, [
+  ['Home Assistant', { id: 'ha', domain: 'home-assistant.io', help: 'Lag et long-lived token i Home Assistant: Profil → Sikkerhet → Long-lived access tokens → Opprett token.' }, [
     ['ha_url', 'URL', e('HA_URL', 'http://192.168.1.20:8123')],
     ['ha_token', 'Long-lived token', e('HA_TOKEN'), true],
     ['ha_sensor_power', 'Effektsensor (nå)', e('HA_SENSOR_POWER', 'sensor.power_now')],
@@ -63,7 +64,7 @@ export const SCHEMA = [
     ['ha_sensor_price', 'Strømpris-sensor', e('HA_SENSOR_PRICE', 'sensor.nordpool_kwh_oslo_nok')],
   ]],
   // Prompt 24: Bursdager. OAuth-klienten (type «Web application») lages i Google Cloud Console; hver bruker logger inn selv.
-  ['Google Kalender', { id: 'google', domain: 'calendar.google.com', category: 'Hjem', help: 'Brukes av Bursdager. Lag en OAuth-klient (Web application) i Google Cloud Console → APIs & Services → Credentials, slå på Google Calendar API, og legg inn omdirigerings-URI-en https://<din adresse>/api/birthdays/google/callback.', guide: [
+  ['Google Kalender', { id: 'google', domain: 'calendar.google.com', help: 'Brukes av Bursdager. Lag en OAuth-klient (Web application) i Google Cloud Console → APIs & Services → Credentials, slå på Google Calendar API, og legg inn omdirigerings-URI-en https://<din adresse>/api/birthdays/google/callback.', guide: [
     ['Lag klienten', 'console.cloud.google.com → APIs & Services → Credentials → Create credentials → OAuth client ID → Web application.'],
     ['Omdirigering', 'Under «Authorized redirect URIs» legger du inn BEGGE: https://<din adresse>/api/birthdays/google/callback (Kalender og Bursdager) og https://<din adresse>/api/gsc/callback (Search Console). Tomt felt for omdirigerings-URI her betyr at serveren bruker adressen den blir nådd på.'],
     ['Search Console', 'Slå også på «Google Search Console API» under APIs & Services → Library, og legg til scopet webmasters.readonly på samtykkeskjermen.'],
@@ -73,21 +74,21 @@ export const SCHEMA = [
     ['googleClientSecret', 'Klienthemmelighet', e('GOOGLE_CLIENT_SECRET'), true],
     ['googleRedirectUri', 'Omdirigerings-URI (valgfri)', e('GOOGLE_REDIRECT_URI')],
   ]],
-  ['Sonarr', { id: 'sonarr', scope: 'personal', domain: 'sonarr.tv', category: 'Media', help: 'API-nøkkelen finner du i Sonarr under Settings → General → Security → API Key.' }, [
+  ['Sonarr', { id: 'sonarr', scope: 'personal', domain: 'sonarr.tv', help: 'API-nøkkelen finner du i Sonarr under Settings → General → Security → API Key.' }, [
     ['sonarr_url', 'URL', e('SONARR_URL', 'http://192.168.1.20:8989')],
     ['sonarr_key', 'API-nøkkel', e('SONARR_API_KEY'), true],
     ['sonarr_days', 'Dager frem', e('SONARR_DAYS', '14')],
     ['sonarr_root', 'Rotmappe for serier', e('SONARR_ROOT', '/data/media/tv')], // prompt 43: Media
     ['sonarr_profile', 'Standard kvalitetsprofil', e('SONARR_PROFILE', 'HD-1080p')],
   ]],
-  ['Radarr', { id: 'radarr', scope: 'personal', domain: 'radarr.video', category: 'Media', help: 'API-nøkkelen finner du i Radarr under Settings → General → Security → API Key.' }, [
+  ['Radarr', { id: 'radarr', scope: 'personal', domain: 'radarr.video', help: 'API-nøkkelen finner du i Radarr under Settings → General → Security → API Key.' }, [
     ['radarr_url', 'URL', e('RADARR_URL', 'http://192.168.1.20:7878')],
     ['radarr_key', 'API-nøkkel', e('RADARR_API_KEY'), true],
     ['radarr_days', 'Dager frem', e('RADARR_DAYS', '14')],
     ['radarr_root', 'Rotmappe for filmer', e('RADARR_ROOT', '/data/media/film')], // prompt 43: Media
     ['radarr_profile', 'Standard kvalitetsprofil', e('RADARR_PROFILE', 'Ultra-HD')],
   ]],
-  ['Plex', { id: 'plex', scope: 'personal', domain: 'plex.tv', category: 'Media', help: 'Plex må være tilgjengelig fra serveren som kjører dashbordet.', guide: [
+  ['Plex', { id: 'plex', scope: 'personal', domain: 'plex.tv', help: 'Plex må være tilgjengelig fra serveren som kjører dashbordet.', guide: [
     ['Finn adressen', 'Adressen er IP-en til serveren med port 32400, for eksempel http://192.168.1.20:32400. Du finner IP-en i Plex under Innstillinger → Fjerntilgang, eller i ruteren.'],
     ['Finn X-Plex-Token', 'Åpne Plex i nettleseren og logg inn. Velg en film eller episode → ⋯ → Hent info → Vis XML. Adressen som åpnes slutter med X-Plex-Token=…, og det som står etter = er tokenet.', 'http://192.168.1.20:32400/library/metadata/123?X-Plex-Token=AbCdEf123456'],
     ['Eller hent det fra serveren', 'Tokenet står også i filen Preferences.xml som PlexOnlineToken. I Docker ligger den i config-mappen til Plex.', 'grep -o \'PlexOnlineToken="[^"]*"\' Preferences.xml'],
@@ -96,7 +97,7 @@ export const SCHEMA = [
     ['plex_url', 'URL', e('PLEX_URL', 'http://192.168.1.20:32400')],
     ['plex_token', 'X-Plex-Token', e('PLEX_TOKEN'), true],
   ]],
-  ['Jellyfin', { id: 'jellyfin', scope: 'personal', domain: 'jellyfin.org', category: 'Media', help: 'Jellyfin må være tilgjengelig fra serveren som kjører dashbordet.', guide: [
+  ['Jellyfin', { id: 'jellyfin', scope: 'personal', domain: 'jellyfin.org', help: 'Jellyfin må være tilgjengelig fra serveren som kjører dashbordet.', guide: [
     ['Finn adressen', 'Adressen er IP-en til serveren med port 8096, for eksempel http://192.168.1.20:8096.'],
     ['Lag en API-nøkkel', 'I Jellyfin: Kontrollpanel → Avansert → API-nøkler → +. Gi den navnet Homelab og kopier nøkkelen.'],
     ['Skriv brukernavnet', '«Nylig lagt til» hentes for én bruker. Skriv brukernavnet du logger inn med i Jellyfin. Tomt felt bruker den første brukeren.'],
@@ -107,44 +108,44 @@ export const SCHEMA = [
     ['jf_user', 'Brukernavn (for «Nylig lagt til»)', e('JELLYFIN_USER')],
   ]],
   // Prompt 43: Media. qBittorrent og Prowlarr er serveroppsett (bare admin); nøklene sendes aldri til klienten.
-  ['qBittorrent', { id: 'qbittorrent', domain: 'qbittorrent.org', category: 'Media', help: 'Web UI-adressen (port 8080), brukernavn og passord. Tillat bare Homelab-serverens IP, og ikke åpne Web UI mot internett.' }, [
+  ['qBittorrent', { id: 'qbittorrent', domain: 'qbittorrent.org', help: 'Web UI-adressen (port 8080), brukernavn og passord. Tillat bare Homelab-serverens IP, og ikke åpne Web UI mot internett.' }, [
     ['qbit_url', 'Web UI-adresse', e('QBIT_URL', 'http://192.168.1.20:8080')],
     ['qbit_user', 'Brukernavn', e('QBIT_USER', 'admin')],
     ['qbit_pass', 'Passord', e('QBIT_PASSWORD'), true],
     ['qbit_save', 'Standard lagringsmappe', e('QBIT_SAVE_PATH', '/data/downloads')],
   ]],
-  ['Prowlarr', { id: 'prowlarr', domain: 'prowlarr.com', category: 'Media', help: 'API-nøkkelen finner du i Prowlarr under Settings → General → Security → API Key.' }, [
+  ['Prowlarr', { id: 'prowlarr', domain: 'prowlarr.com', help: 'API-nøkkelen finner du i Prowlarr under Settings → General → Security → API Key.' }, [
     ['prowlarr_url', 'Adresse', e('PROWLARR_URL', 'http://192.168.1.20:9696')],
     ['prowlarr_key', 'API-nøkkel', e('PROWLARR_API_KEY'), true],
     ['flaresolverr_url', 'FlareSolverr (valgfri)', e('FLARESOLVERR_URL')],
   ]],
   // NRK-nedlaster (skjold-proxmox-media/apps/nrk-dl): egen norsk VPN-tunnel, lagrer i /data/media. Tokenet blir på serveren.
-  ['NRK-nedlaster', { id: 'nrk', domain: 'nrk.no', category: 'Media', help: 'Adressen til nrk-dl (port 8020 i arr-containeren) og NRK_API_TOKEN fra /opt/arr/.env.' }, [
+  ['NRK-nedlaster', { id: 'nrk', domain: 'nrk.no', help: 'Adressen til nrk-dl (port 8020 i arr-containeren) og NRK_API_TOKEN fra /opt/arr/.env.' }, [
     ['nrk_url', 'Adresse', e('NRK_DL_URL')],
     ['nrk_token', 'API-token', e('NRK_DL_TOKEN'), true],
   ]],
   // Musikk (yubal, github.com/guillevc/yubal): YouTube Music → musikkbiblioteket. yubal har ingen innlogging; adressen blir på serveren.
-  ['Musikk (yubal)', { id: 'yubal', domain: 'music.youtube.com', category: 'Media', help: 'Adressen til yubal (port 8010 i arr-containeren). Format og kvalitet settes i /opt/arr/docker-compose.yml.' }, [
+  ['Musikk (yubal)', { id: 'yubal', domain: 'music.youtube.com', help: 'Adressen til yubal (port 8010 i arr-containeren). Format og kvalitet settes i /opt/arr/docker-compose.yml.' }, [
     ['yubal_url', 'Adresse', e('YUBAL_URL')],
   ]],
   // Prompt 89 (SRV89): Apple Push for Live Activities (server/apns.js). Serveroppsett (bare admin); .p8-nøkkelen er hemmelig og sendes aldri ut.
-  ['Apple Push (Live Activities)', { id: 'apns', domain: 'developer.apple.com', category: 'Varsler', help: 'Lag en nøkkel for Apple Push Notifications service (APNs) på developer.apple.com → Certificates, Identifiers & Profiles → Keys. Last ned .p8-filen og lim inn innholdet.' }, [
+  ['Apple Push (Live Activities)', { id: 'apns', domain: 'developer.apple.com', help: 'Lag en nøkkel for Apple Push Notifications service (APNs) på developer.apple.com → Certificates, Identifiers & Profiles → Keys. Last ned .p8-filen og lim inn innholdet.' }, [
     ['apns_team', 'Team-ID', e('APNS_TEAM_ID')],
     ['apns_key_id', 'Nøkkel-ID', e('APNS_KEY_ID')],
     ['apns_p8', '.p8-nøkkel', e('APNS_P8'), true, 'textarea'],
     ['apns_bundle', 'Bundle-ID', e('APNS_BUNDLE_ID', 'no.kristo.finanshub')],
     ['apns_env', 'Miljø (sandbox eller produksjon)', e('APNS_ENV', 'produksjon')],
   ]],
-  ['Trading 212', { id: 't212', scope: 'personal', domain: 'trading212.com', category: 'Økonomi', help: 'Lag nøkkelen på app.trading212.com under Innstillinger → API, i samme konto og miljø (Live eller Demo). Gi bare lesetilgang.' }, [
+  ['Trading 212', { id: 't212', scope: 'personal', domain: 'trading212.com', help: 'Lag nøkkelen på app.trading212.com under Innstillinger → API, i samme konto og miljø (Live eller Demo). Gi bare lesetilgang.' }, [
     ['t212_key', 'API-nøkkel (Key ID)', e('TRADING212_API_KEY'), true],
     ['t212_secret', 'Secret', e('TRADING212_API_SECRET'), true],
     ['t212_env', 'Miljø (live eller demo)', e('TRADING212_ENV', 'live')],
   ]],
-  ['NASA / CelesTrak', { id: 'nasa', domain: 'nasa.gov', category: 'Rom', help: 'En egen nøkkel får du gratis på api.nasa.gov. DEMO_KEY virker, men har lav grense.' }, [
+  ['NASA / CelesTrak', { id: 'nasa', domain: 'nasa.gov', help: 'En egen nøkkel får du gratis på api.nasa.gov. DEMO_KEY virker, men har lav grense.' }, [
     ['nasa_key', 'NASA API-nøkkel', e('NASA_API_KEY', 'DEMO_KEY'), true],
     ['sat_group', 'CelesTrak-gruppe', e('SAT_GROUP', 'starlink')],
   ]],
-  ['Bakgrunner', { id: 'backgrounds', domain: 'unsplash.com', category: 'Hjem', help: 'Brukes til bakgrunnene Oslo og Vær. Uten nøkler vises egne opplastede bilder og de medfølgende illustrasjonene. Planeter kommer fra NASA og trenger ingen nøkkel.', guide: [
+  ['Bakgrunner', { id: 'backgrounds', domain: 'unsplash.com', help: 'Brukes til bakgrunnene Oslo og Vær. Uten nøkler vises egne opplastede bilder og de medfølgende illustrasjonene. Planeter kommer fra NASA og trenger ingen nøkkel.', guide: [
     ['Unsplash', 'Lag en gratis app på unsplash.com/developers og kopier «Access Key». Fotografen krediteres automatisk med lenke, slik Unsplash krever.'],
     ['Pexels', 'Lag en gratis nøkkel på pexels.com/api. Brukes når Unsplash mangler eller ikke gir treff.'],
     ['Egne bilder', 'Last opp egne Oslo-bilder i Utseende → Bakgrunn. Getty-bilder kan bare brukes hvis du har kjøpt lisens.'],
@@ -152,11 +153,11 @@ export const SCHEMA = [
     ['unsplash_key', 'Unsplash Access Key', e('UNSPLASH_ACCESS_KEY'), true],
     ['pexels_key', 'Pexels API-nøkkel', e('PEXELS_API_KEY'), true],
   ]],
-  ['Cloudflare', { id: 'cloudflare', domain: 'cloudflare.com', category: 'Nettverk', help: 'Lag tokenet i Cloudflare under My Profile → API Tokens med Zone, DNS, Analytics, Registrar og Firewall Services: Read.' }, [
+  ['Cloudflare', { id: 'cloudflare', domain: 'cloudflare.com', help: 'Lag tokenet i Cloudflare under My Profile → API Tokens med Zone, DNS, Analytics, Registrar og Firewall Services: Read.' }, [
     ['cf_token', 'Standard-token for Domener (Zone, DNS, Analytics, Registrar og Firewall Services: Read)', e('CLOUDFLARE_API_TOKEN'), true],
     ['cf_domain', 'Første domene (legges inn i Domener ved oppstart)', e('CLOUDFLARE_DOMAIN')],
   ]],
-  ['Sporing', { id: 'tracking', scope: 'personal', domain: 'posten.no', category: 'Hjem', help: 'Nøkler til transportørenes sporings-API. Uten nøkkel for en transportør brukes 17TRACK som reserve. Pakker kan spores uten nøkler, men da oppdateres ikke statusen automatisk.', guide: [
+  ['Sporing', { id: 'tracking', scope: 'personal', domain: 'posten.no', help: 'Nøkler til transportørenes sporings-API. Uten nøkkel for en transportør brukes 17TRACK som reserve. Pakker kan spores uten nøkler, men da oppdateres ikke statusen automatisk.', guide: [
     ['Posten og Bring', 'Lag en gratis Mybring-bruker på mybring.com, og hent API-nøkkelen under Mybring → Innstillinger → API. Brukeren er e-postadressen din.'],
     ['PostNord', 'Nøkkelen er valgfri. Uten nøkkel hentes status fra PostNords offentlige sporingsside (uoffisielt), med ParcelsApp som reserve. Har du organisasjonsnummer, kan du lage en API-nøkkel for «Track and Trace» på developer.postnord.com.'],
     ['DHL', 'Lag en app på developer.dhl.com og legg til «Shipment Tracking – Unified». Bruk API Key (ikke secret).'],
@@ -174,23 +175,23 @@ export const SCHEMA = [
     ['trk_17_key', '17TRACK: API-nøkkel (reserve)', e('TRACK17_API_KEY'), true],
     ['trk_parcelsapp_key', 'ParcelsApp: API-nøkkel (reserve, 3 oppslag i måneden)', e('PARCELSAPP_API_KEY'), true],
   ]],
-  ['Kart', { id: 'map', domain: 'maptiler.com', category: 'Generelt', help: 'Kartet bruker CARTO og Kartverket (topo) via serverens egen kartproxy (/tiles), uten nøkkel. Med en nøkkel kan du også velge MapTiler eller Stadia Maps.', guide: [
+  ['Kart', { id: 'map', domain: 'maptiler.com', help: 'Kartet bruker CARTO og Kartverket (topo) via serverens egen kartproxy (/tiles), uten nøkkel. Med en nøkkel kan du også velge MapTiler eller Stadia Maps.', guide: [
     ['MapTiler', 'Lag en gratis konto på cloud.maptiler.com og kopier nøkkelen under Account → API keys.'],
     ['Stadia Maps (valgfritt)', 'Lag en gratis konto på client.stadiamaps.com og lag en API-nøkkel for eiendommen din.'],
   ] }, [
     ['maptilerKey', 'MapTiler API-nøkkel', e('MAPTILER_KEY'), true],
     ['stadiaKey', 'Stadia Maps API-nøkkel (valgfri)', e('STADIA_KEY'), true],
   ]],
-  ['Søk', { id: 'search', domain: 'google.com', category: 'Generelt', help: 'Søket legges til på slutten av adressen, for eksempel https://www.google.com/search?q=' }, [
+  ['Søk', { id: 'search', domain: 'google.com', help: 'Søket legges til på slutten av adressen, for eksempel https://www.google.com/search?q=' }, [
     ['search_url', 'Søke-URL (søket legges til på slutten)', e('SEARCH_URL', 'https://www.google.com/search?q=')],
   ]],
   // Prompt 27: Chat. Open WebUI er serveroppsett (admin); uten den bruker Chat egen lagring og Ollama/Gemini/Groq direkte.
-  ['Open WebUI', { id: 'openwebui', domain: 'openwebui.com', category: 'AI', help: 'Valgfri motor for Chat (historikk, kunnskapsbase, nettsøk, tale). Lag en API-nøkkel i Open WebUI under Innstillinger → Konto → API-nøkler. Uten Open WebUI virker Chat med Ollama, Gemini og Groq direkte.' }, [
+  ['Open WebUI', { id: 'openwebui', domain: 'openwebui.com', help: 'Valgfri motor for Chat (historikk, kunnskapsbase, nettsøk, tale). Lag en API-nøkkel i Open WebUI under Innstillinger → Konto → API-nøkler. Uten Open WebUI virker Chat med Ollama, Gemini og Groq direkte.' }, [
     ['openwebui_url', 'Adresse', e('OPENWEBUI_URL')],
     ['openwebui_key', 'API-nøkkel', e('OPENWEBUI_KEY'), true],
   ]],
   // Prompt 44: hvilken backend AI-kallene bruker (tom = Open WebUI når adresse og nøkkel er satt, ellers Ollama) og Glimts eget nettsøk.
-  ['AI-backend og nettsøk', { id: 'aibackend', domain: 'openwebui.com', category: 'AI', help: 'Backend for AI-kallene (Open WebUI eller Ollama direkte) og kildene for Glimts nettsøk: Open WebUI, SearXNG, Brave Search og DuckDuckGo, i rekkefølgen under.' }, [
+  ['AI-backend og nettsøk', { id: 'aibackend', domain: 'openwebui.com', help: 'Backend for AI-kallene (Open WebUI eller Ollama direkte) og kildene for Glimts nettsøk: Open WebUI, SearXNG, Brave Search og DuckDuckGo, i rekkefølgen under.' }, [
     ['ai_backend', 'Backend (openwebui eller ollama, tom = automatisk)', e('AI_BACKEND')],
     ['ai_think_direct', 'Tenkemodeller (qwen3 o.l.) direkte til Ollama (1 = på, standard; 0 = via Open WebUI)', e('AI_THINK_DIRECT')],
     ['web_order', 'Rekkefølge for nettsøk', e('WEB_SEARCH_ORDER', 'openwebui,searxng,brave,ddg')],
@@ -199,28 +200,28 @@ export const SCHEMA = [
     ['web_ddg', 'DuckDuckGo som reserve (uten nøkkel)', '1', false, 'bool'],
   ]],
   // Prompt 27: personlige valg for Chat og for logo-oppslag (Innstillinger → AI og tolkning → CHAT / PERSONVERN OG LOGOER).
-  ['Chat', { id: 'chat', scope: 'personal', domain: 'openwebui.com', category: 'AI', help: 'Dine valg for Chat. «Mine data» gir modellen et kort sammendrag fra Finans, Kalender og Huskeliste.' }, [
+  ['Chat', { id: 'chat', scope: 'personal', domain: 'openwebui.com', help: 'Dine valg for Chat. «Mine data» gir modellen et kort sammendrag fra Finans, Kalender og Huskeliste.' }, [
     ['chat_my_data', 'Chat kan lese mine data', '1', false, 'bool'], // prompt 41: på som standard (av med vilje beholdes)
     ['chat_ask_cloud', 'Spør før sky-modeller får data', '1', false, 'bool'],
     ['chat_default_model', 'Standardmodell', ''],
     ['chat_theme', 'Tema (papir eller noytral)', 'papir'],
   ]],
   // Prompt 44: e-post fra brukerens egen adresse (Kalender → Send invitasjon med .ics). Gmail: smtp.gmail.com, 587, app-passord.
-  ['E-post (SMTP)', { id: 'smtp', scope: 'personal', domain: 'gmail.com', category: 'Annet', help: 'Brukes når du sender invitasjoner fra Kalender. Gmail og iCloud: lag et app-passord. Port 587 (STARTTLS) eller 465 (TLS).' }, [
+  ['E-post (SMTP)', { id: 'smtp', scope: 'personal', domain: 'gmail.com', help: 'Brukes når du sender invitasjoner fra Kalender. Gmail og iCloud: lag et app-passord. Port 587 (STARTTLS) eller 465 (TLS).' }, [
     ['smtp_host', 'SMTP-server', ''],
     ['smtp_port', 'Port', '587'],
     ['smtp_user', 'Brukernavn (e-postadressen)', ''],
     ['smtp_pass', 'App-passord', '', true],
     ['smtp_from', 'Avsender (Navn <adresse>)', ''],
   ]],
-  ['Personvern og logoer', { id: 'privacy', scope: 'personal', domain: 'brreg.no', category: 'AI', help: 'Logoer finnes uten at AI gjetter: Brønnøysundregistrene, Wikidata, nettstedet selv og (valgfritt) Gemini med bare butikknavnet.' }, [
+  ['Personvern og logoer', { id: 'privacy', scope: 'personal', domain: 'brreg.no', help: 'Logoer finnes uten at AI gjetter: Brønnøysundregistrene, Wikidata, nettstedet selv og (valgfritt) Gemini med bare butikknavnet.' }, [
     ['logo_local_receipts', 'Les kvitteringer lokalt', '1', false, 'bool'],
     ['logo_wikidata', 'Finn logo i Wikidata (bare butikknavnet)', '1', false, 'bool'], // prompt 69: på som standard
     ['logo_gemini', 'Finn logo med Gemini (bare butikknavnet)', '0', false, 'bool'], // prompt 52: av som standard
     ['logo_verify', 'Sjekk logoen før den lagres', '1', false, 'bool'],
   ]],
   // Korte AI-oppgaver (Glimt, rask time, logo, kvitteringer, oppsummeringer …) sender think:false til Ollama (server/ai/ollama-options.js).
-  ['Lokal AI', { id: 'ailocal', scope: 'personal', domain: 'ollama.com', category: 'AI', help: 'Lokal AI (Ollama) i korte oppgaver som Glimt, rask time, logoer, kvitteringer og oppsummeringer. Tenkemodeller svarer mye raskere når de ikke tenker først.' }, [
+  ['Lokal AI', { id: 'ailocal', scope: 'personal', domain: 'ollama.com', help: 'Lokal AI (Ollama) i korte oppgaver som Glimt, rask time, logoer, kvitteringer og oppsummeringer. Tenkemodeller svarer mye raskere når de ikke tenker først.' }, [
     ['ai_think', 'La modellen tenke før den svarer (tregere, men noen ganger smartere)', '0', false, 'bool'],
   ]],
 ];
@@ -380,7 +381,8 @@ export function publicConfig(user = OWNER, { admin = true } = {}) {
   return SCHEMA.filter(([, meta]) => admin || meta.scope === 'personal').map(([name, meta, fs]) => {
     const scope = meta.scope === 'personal' ? 'personal' : 'server';
     return {
-      name, id: meta.id, scope, domain: meta.domain, category: meta.category, help: meta.help ?? '', guide: meta.guide ?? [],
+      name, id: meta.id, scope, domain: meta.domain, category: tilkoblingsgruppe(meta.id), // Fase 6 (O8): én gruppering
+      help: meta.help ?? '', guide: meta.guide ?? [],
       fields: fs.map(([key]) => {
         const f = FIELDS.get(key);
         const own = scope === 'personal' ? userCfgOverride(user, key) : stored(over, key);

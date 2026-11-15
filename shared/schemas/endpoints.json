@@ -98,6 +98,12 @@
       "path": "/api/dates/holidays?year=2026",
       "schema": "api/dates-holidays.schema.json",
       "auth": "session|token"
+    },
+    {
+      "method": "GET",
+      "path": "/api/moduler",
+      "schema": "api/moduler.schema.json",
+      "auth": "session|token"
     }
   ]
 }

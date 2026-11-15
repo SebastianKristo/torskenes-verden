@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "moduler.schema.json",
+  "title": "Modullisten",
+  "description": "Formen på shared/schemas/moduler.json: alle moduler med id, navn, ikon, gruppe, plattformer, tilgang, undersider og gamle ruter. GET /api/moduler sender det samme, filtrert per bruker (api/moduler.schema.json).",
+  "type": "object",
+  "required": ["versjon", "grupper", "toppmeny", "bunnmeny", "moduler", "innstillinger"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "$comment": { "type": "string" },
+    "versjon": { "type": "integer", "minimum": 1 },
+    "grupper": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/gruppe" } },
+    "toppmeny": { "type": "array", "items": { "$ref": "#/$defs/id" }, "description": "Faste faner i toppmenyen på desktop, i rekkefølge (Q6). Resten ligger under «Alle sider ▾»." },
+    "bunnmeny": { "type": "array", "items": { "$ref": "#/$defs/id" }, "maxItems": 4, "description": "Fanene i bunnmenyen på mobil (web), i tillegg til «Mer»." },
+    "moduler": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/modul" } },
+    "innstillinger": { "type": "array", "items": { "$ref": "#/$defs/innstilling" } }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+    "rute": { "type": "string", "pattern": "^(#/[a-z0-9æøå/-]*|/[a-z0-9/-]*)$" },
+    "gruppe": {
+      "type": "object",
+      "required": ["id", "navn"],
+      "properties": { "id": { "$ref": "#/$defs/id" }, "navn": { "type": "string", "minLength": 1 } },
+      "additionalProperties": false
+    },
+    "ikon": {
+      "type": "object",
+      "required": ["tegn", "sf", "material"],
+      "properties": {
+        "tegn": { "type": "string", "minLength": 1, "maxLength": 3, "description": "Tegn til web og reserve" },
+        "sf": { "type": "string", "minLength": 1, "description": "SF Symbol (iOS, Mac, Watch)" },
+        "material": { "type": "string", "minLength": 1, "description": "Material Symbols-navn (Android, Wear)" }
+      },
+      "additionalProperties": false
+    },
+    "underside": {
+      "type": "object",
+      "required": ["id", "navn", "type", "rute"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "navn": { "type": "string", "minLength": 1 },
+        "kort": { "type": "string", "minLength": 1, "description": "Kort navn der plassen ikke strekker til (smale skjermer, widgets, klokka)" },
+        "type": { "enum": ["fane", "visning", "filter"] },
+        "rute": { "$ref": "#/$defs/rute" },
+        "aliaser": { "type": "array", "items": { "$ref": "#/$defs/rute" } }
+      },
+      "additionalProperties": false
+    },
+    "modul": {
+      "type": "object",
+      "required": ["id", "navn", "gruppe", "ikon", "plattformer", "adminOnly", "rute", "aliaser", "undersider"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "navn": { "type": "string", "minLength": 1 },
+        "gruppe": { "$ref": "#/$defs/id" },
+        "ikon": { "$ref": "#/$defs/ikon" },
+        "plattformer": { "type": "array", "minItems": 1, "items": { "enum": ["web", "ios", "android"] } },
+        "adminOnly": { "type": "boolean" },
+        "tilgang": { "enum": ["media", "bibel"], "description": "Modulen krever egen tilgang (admin gir den). Serveren tar den bare med for brukere som har tilgang." },
+        "type": { "enum": ["side", "ark"], "description": "ark = åpnes som ark over siden (Brief, Nyheter). Standard: side" },
+        "rute": { "anyOf": [{ "$ref": "#/$defs/rute" }, { "type": "null" }], "description": "Adressen på web (#/…, eller /finans/ for Økonomi). null = finnes ikke på web" },
+        "aliaser": { "type": "array", "items": { "$ref": "#/$defs/rute" }, "description": "Gamle adresser som videresendes til rute" },
+        "undersider": { "type": "array", "items": { "$ref": "#/$defs/underside" } }
+      },
+      "additionalProperties": false
+    },
+    "innstilling": {
+      "type": "object",
+      "required": ["id", "navn"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "navn": { "type": "string", "minLength": 1 },
+        "beskrivelse": { "type": "string" },
+        "adminOnly": { "type": "boolean" },
+        "aliaser": { "type": "array", "items": { "type": "string" } }
+      },
+      "additionalProperties": false
+    }
+  }
+}

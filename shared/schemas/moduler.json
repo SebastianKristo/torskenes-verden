@@ -1,0 +1,197 @@
+{
+  "$schema": "./moduler.schema.json",
+  "$comment": "Én modulliste for alle plattformer (E-ia §4, Q1–Q12). Serveren leverer den per bruker på GET /api/moduler (server/moduler/). Web leser den derfra; iOS og Android skal gjøre det samme (bølge 2). Rekkefølgen her er standardrekkefølgen i «Alle sider» og i Mer. Nye moduler legges til her, ikke i egne lister i klientene.",
+  "versjon": 1,
+  "grupper": [
+    { "id": "idag", "navn": "I dag" },
+    { "id": "hjemme", "navn": "Hjemme" },
+    { "id": "tid", "navn": "Tid" },
+    { "id": "ute", "navn": "Ute" },
+    { "id": "okonomi", "navn": "Økonomi" },
+    { "id": "fritid", "navn": "Fritid og læring" },
+    { "id": "verksted", "navn": "Verksted" },
+    { "id": "drift", "navn": "Drift" }
+  ],
+  "toppmeny": ["oversikt", "kalender", "okonomi", "media", "familie", "mat", "gjoremal", "skjold"],
+  "bunnmeny": ["oversikt", "studie", "okonomi"],
+  "moduler": [
+    {
+      "id": "oversikt", "navn": "Oversikt", "gruppe": "idag",
+      "ikon": { "tegn": "⌂", "sf": "square.grid.2x2", "material": "dashboard" },
+      "plattformer": ["web", "ios", "android"], "adminOnly": false,
+      "rute": "#/oversikt", "aliaser": ["#/dash", "#/start"],
+      "undersider": []
+    },
+    {
+      "id": "chat", "navn": "Chat", "gruppe": "idag",
+      "ikon": { "tegn": "✦", "sf": "sparkles", "material": "auto_awesome" },
+      "plattformer": ["web", "ios", "android"], "adminOnly": false,
+      "rute": "#/chat", "aliaser": [],
+      "undersider": []
+    },
+    {
+      "id": "brief", "navn": "Brief", "gruppe": "idag",
+      "ikon": { "tegn": "✧", "sf": "sun.horizon", "material": "wb_twilight" },
+      "plattformer": ["ios", "android"], "adminOnly": false, "type": "ark",
+      "rute": null, "aliaser": [],
+      "undersider": []
+    },
+    {
+      "id": "smarthjem", "navn": "Smarthjem", "gruppe": "hjemme",
+      "ikon": { "tegn": "⌂", "sf": "house", "material": "home" },
+      "plattformer": ["web"], "adminOnly": false,
+      "rute": "#/hjem", "aliaser": ["#/smarthjem"],
+      "undersider": []
+    },
+    {
+      "id": "mat", "navn": "Mat", "gruppe": "hjemme",
+      "ikon": { "tegn": "◐", "sf": "fork.knife", "material": "restaurant" },
+      "plattformer": ["web", "ios", "android"], "adminOnly": false,
+      "rute": "#/matplan", "aliaser": ["#/mat"],
+      "undersider": []
+    },
+    {
+      "id": "gjoremal", "navn": "Gjøremål", "gruppe": "hjemme",
+      "ikon": { "tegn": "☑", "sf": "checklist", "material": "checklist" },
+      "plattformer": ["web", "ios", "android"], "adminOnly": false,
+      "rute": "#/gjoremal", "aliaser": ["#/huskeliste", "#/huske"],
+      "undersider": []
+    },
+    {
+      "id": "familie", "navn": "Familie", "gruppe": "hjemme",
+      "ikon": { "tegn": "◉", "sf": "person.2", "material": "groups" },
+      "plattformer": ["web", "ios", "android"], "adminOnly": false,
+      "rute": "#/familie", "aliaser": [],
+      "undersider": [
+        { "id": "folk", "navn": "Folk", "type": "fane", "rute": "#/familie" },
+        { "id": "kart", "navn": "Kart", "type": "fane", "rute": "#/familie/kart" },
+        { "id": "steder", "navn": "Steder", "type": "fane", "rute": "#/familie/steder" },
+        { "id": "helse", "navn": "Helse", "type": "fane", "rute": "#/familie/helse" },
+        { "id": "sjekk", "navn": "Sjekk inn", "type": "fane", "rute": "#/familie/sjekk" }
+      ]
+    },
+    {
+      "id": "kalender", "navn": "Kalender", "gruppe": "tid",
+      "ikon": { "tegn": "▦", "sf": "calendar", "material": "calendar_month" },
+      "plattformer": ["web", "ios", "android"], "adminOnly": false,
+      "rute": "#/kalender", "aliaser": [],
+      "undersider": [
+        { "id": "ar", "navn": "År", "kort": "År", "type": "visning", "rute": "#/kalender" },
+        { "id": "mnd", "navn": "Måned", "kort": "Mnd", "type": "visning", "rute": "#/kalender" },
+        { "id": "uke", "navn": "Uke", "kort": "Uke", "type": "visning", "rute": "#/kalender" },
+        { "id": "3d", "navn": "3 dager", "kort": "3 d", "type": "visning", "rute": "#/kalender" },
+        { "id": "dag", "navn": "Dag", "kort": "Dag", "type": "visning", "rute": "#/kalender" },
+        { "id": "liste", "navn": "Liste", "kort": "Liste", "type": "visning", "rute": "#/kalender" },
+        { "id": "alle", "navn": "Alle", "type": "filter", "rute": "#/kalender" },
+        { "id": "familie", "navn": "Familie", "type": "filter", "rute": "#/kalender/familie", "aliaser": ["#/familiekalender"] },
+        { "id": "bursdager", "navn": "Bursdager", "type": "filter", "rute": "#/kalender/bursdager", "aliaser": ["#/bursdager", "#/bursdag"] },
+        { "id": "skole", "navn": "Skole", "type": "filter", "rute": "#/kalender" }
+      ]
+    },
+    {
+      "id": "vaer", "navn": "Vær", "gruppe": "ute",
+      "ikon": { "tegn": "☼", "sf": "sun.max", "material": "wb_sunny" },
+      "plattformer": ["web", "ios", "android"], "adminOnly": false,
+      "rute": "#/vaer", "aliaser": [],
+      "undersider": []
+    },
+    {
+      "id": "reise", "navn": "Reise", "gruppe": "ute",
+      "ikon": { "tegn": "⇄", "sf": "tram", "material": "directions_transit" },
+      "plattformer": ["web", "ios", "android"], "adminOnly": false,
+      "rute": "#/reise", "aliaser": ["#/avganger", "#/ruter"],
+      "undersider": [
+        { "id": "avganger", "navn": "Avganger", "type": "fane", "rute": "#/reise" },
+        { "id": "kart", "navn": "Kart", "type": "fane", "rute": "#/reise/kart", "aliaser": ["#/kart"] }
+      ]
+    },
+    {
+      "id": "sporing", "navn": "Sporing", "gruppe": "ute",
+      "ikon": { "tegn": "▣", "sf": "shippingbox", "material": "local_shipping" },
+      "plattformer": ["web", "ios", "android"], "adminOnly": false,
+      "rute": "#/sporing", "aliaser": [],
+      "undersider": []
+    },
+    {
+      "id": "okonomi", "navn": "Økonomi", "gruppe": "okonomi",
+      "ikon": { "tegn": "kr", "sf": "creditcard", "material": "account_balance_wallet" },
+      "plattformer": ["web", "ios", "android"], "adminOnly": false,
+      "rute": "/finans/", "aliaser": ["#/okonomi", "#/finans"],
+      "undersider": []
+    },
+    {
+      "id": "media", "navn": "Media", "gruppe": "fritid", "tilgang": "media",
+      "ikon": { "tegn": "▶", "sf": "play.rectangle", "material": "play_circle" },
+      "plattformer": ["web", "ios", "android"], "adminOnly": false,
+      "rute": "#/media", "aliaser": [],
+      "undersider": [
+        { "id": "na", "navn": "Nå", "type": "fane", "rute": "#/media", "aliaser": ["#/media/oversikt"] },
+        { "id": "kommer", "navn": "Kommer", "type": "fane", "rute": "#/media/kommer", "aliaser": ["#/media/kalender"] },
+        { "id": "bibliotek", "navn": "Bibliotek", "type": "fane", "rute": "#/media/bibliotek" },
+        { "id": "nedlastinger", "navn": "Nedlastinger", "type": "fane", "rute": "#/media/nedlastinger" },
+        { "id": "kilder", "navn": "Kilder", "type": "fane", "rute": "#/media/kilder", "aliaser": ["#/media/nrk", "#/media/musikk"] },
+        { "id": "ikveld", "navn": "I kveld", "type": "visning", "rute": "#/mediakveld" }
+      ]
+    },
+    {
+      "id": "nyheter", "navn": "Nyheter", "gruppe": "fritid",
+      "ikon": { "tegn": "¶", "sf": "newspaper", "material": "newspaper" },
+      "plattformer": ["web", "ios", "android"], "adminOnly": false, "type": "ark",
+      "rute": "#/nyheter", "aliaser": ["#/nyhetsleser"],
+      "undersider": []
+    },
+    {
+      "id": "studie", "navn": "Studie", "gruppe": "fritid",
+      "ikon": { "tegn": "✎", "sf": "graduationcap", "material": "school" },
+      "plattformer": ["web", "ios", "android"], "adminOnly": false,
+      "rute": "#/studie", "aliaser": [],
+      "undersider": []
+    },
+    {
+      "id": "rom", "navn": "Rom", "gruppe": "fritid",
+      "ikon": { "tegn": "✶", "sf": "moon.stars", "material": "public" },
+      "plattformer": ["web"], "adminOnly": false,
+      "rute": "#/rom", "aliaser": [],
+      "undersider": []
+    },
+    {
+      "id": "bibel", "navn": "Bibel", "gruppe": "fritid", "tilgang": "bibel",
+      "ikon": { "tegn": "✝", "sf": "book.closed", "material": "menu_book" },
+      "plattformer": ["ios", "android"], "adminOnly": false,
+      "rute": null, "aliaser": [],
+      "undersider": []
+    },
+    {
+      "id": "skjold", "navn": "Skjold Lab", "gruppe": "verksted",
+      "ikon": { "tegn": "⚒", "sf": "wrench.and.screwdriver", "material": "handyman" },
+      "plattformer": ["web", "ios", "android"], "adminOnly": false,
+      "rute": "#/skjold", "aliaser": [],
+      "undersider": []
+    },
+    {
+      "id": "domener", "navn": "Domener", "gruppe": "drift",
+      "ikon": { "tegn": "◎", "sf": "globe", "material": "language" },
+      "plattformer": ["web", "ios", "android"], "adminOnly": true,
+      "rute": "#/domener", "aliaser": [],
+      "undersider": []
+    },
+    {
+      "id": "nettverk", "navn": "Nettverk", "gruppe": "drift",
+      "ikon": { "tegn": "⌁", "sf": "network", "material": "lan" },
+      "plattformer": ["web"], "adminOnly": false,
+      "rute": "#/nettverk", "aliaser": [],
+      "undersider": []
+    }
+  ],
+  "innstillinger": [
+    { "id": "konto", "navn": "Konto og sikkerhet", "beskrivelse": "Profil, passord, totrinnsbekreftelse (2FA), økter og passkeys.", "aliaser": ["sikkerhet", "innlogging", "2fa"] },
+    { "id": "utseende", "navn": "Utseende", "beskrivelse": "Tema, lys og mørk, bakgrunn, kort på Oversikt, fanelinjen og appnavnet.", "aliaser": ["look", "tema", "startside", "app"] },
+    { "id": "varsler", "navn": "Varsler", "beskrivelse": "Grupper per modul · Levering: push, e-post, stille timer, haptikk og lyd.", "aliaser": ["varsel", "notify"] },
+    { "id": "husstand", "navn": "Husstand", "beskrivelse": "Brukere, roller, tilgang, invitasjoner, barn og helse.", "aliaser": ["users", "brukere", "brukere-og-familie"] },
+    { "id": "glimt", "navn": "Glimt og AI", "beskrivelse": "Glimt, AI-modeller, faste oppgaver og kvalitet.", "aliaser": ["ai"] },
+    { "id": "tilkoblinger", "navn": "Tilkoblinger", "beskrivelse": "Integrasjoner (gruppert som i shared/schemas/tilkoblinger.json) og Kalender og gjøremål.", "aliaser": ["int", "integrasjoner", "kal"] },
+    { "id": "moduler", "navn": "Moduler", "beskrivelse": "Én side per modul, med samme id som modulen.", "aliaser": [] },
+    { "id": "enheter", "navn": "Enheter og widgets", "beskrivelse": "Widgets på telefonen, API-tokens og logg inn på en annen enhet.", "aliaser": ["widgets", "tokens", "enheter-og-widgets"] },
+    { "id": "server", "navn": "Server", "beskrivelse": "System, Backup og Logger.", "adminOnly": true, "aliaser": ["system", "backup", "logger"] }
+  ]
+}

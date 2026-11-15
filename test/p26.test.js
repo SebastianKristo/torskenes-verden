@@ -191,10 +191,12 @@ test('Kalenderinnstillinger i /api/me/layout: rekkefølge, skjulte kort, filter,
 });
 
 test('Integrasjoner: metadata som på web, guide og «calendars»', async () => {
-  const CATS = ['Smarthjem', 'Transport og pakker', 'Økonomi', 'AI', 'Informasjon', 'Annet'];
+  // Fase 6 (O8): én gruppering fra shared/schemas/tilkoblinger.json; category og group er det samme.
+  const CATS = ['Smarthjem', 'Kalender og e-post', 'Media', 'Økonomi', 'Reise og pakker', 'AI', 'Varsler', 'Nettverk', 'Generelt'];
   const list = (await S('/api/integrations')).body;
   for (const x of list) {
     assert.ok(CATS.includes(x.category), `${x.id}: ${x.category}`);
+    assert.equal(x.group, x.category, x.id);
     assert.ok(x.badge && x.color && typeof x.description === 'string' && x.statusText, x.id);
     assert.ok(Array.isArray(x.guide));
   }
@@ -207,7 +209,7 @@ test('Integrasjoner: metadata som på web, guide og «calendars»', async () => 
   assert.ok(by.mybring.guide.every((g) => g.title === 'Posten og Bring'));
   assert.equal(by.parcelsapp.statusText, 'Mangler API-nøkkel');
   const c = by.calendars;
-  assert.deepEqual([c.category, c.badge, c.status, c.statusText], ['Informasjon', '31', 'ok', 'Tilkoblet']);
+  assert.deepEqual([c.category, c.badge, c.status, c.statusText], ['Kalender og e-post', '31', 'ok', 'Tilkoblet']);
   assert.deepEqual(c.fields.map((f) => f.key), ['cal_ics', 'canvas_ics', 'cal_mazemap']);
   assert.deepEqual(c.links.map((l) => l.id), ['google', 'ha']);
   assert.ok(c.guide.some((g) => g.title === 'Canvas (valgfritt)'));

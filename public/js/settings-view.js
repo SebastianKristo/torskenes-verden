@@ -408,22 +408,23 @@ function domView() {
 
 /* ---------- Integrasjoner ---------- */
 
-// gruppe → [visningsnavn, undertekst, kategori, domene for logo, verdi(v, satt)]. Verdi som starter med «!» er en advarsel.
+// gruppe → [visningsnavn, undertekst, (ikke brukt: gruppen kommer fra serveren), domene for logo, verdi(v, satt)]. Verdi som starter med «!» er en advarsel.
 const INT = {
-  'Vær (MET/Yr)': ['Vær', 'MET / Yr', 'Informasjon', 'yr.no', (v) => v.wx_place || 'Oslo'],
-  'Ruter (Entur)': ['Ruter', 'Entur', 'Informasjon', 'ruter.no', (v) => { const n = String(v.ruter_routes ?? '').split('\n').filter((l) => l.trim()).length; return n ? `${n} ${n === 1 ? 'strekning' : 'strekninger'}` : '!Ingen strekninger'; }],
-  'Kalender / timeplan': ['Kalender og timeplan', 'iCal · MazeMap', 'Informasjon', 'calendar.google.com', (v, set) => (set.cal_ics ? 'Koblet' : '!Ikke koblet')],
-  'NASA / CelesTrak': ['Rom', 'NASA · CelesTrak', 'Informasjon', 'nasa.gov', (v) => v.sat_group || 'starlink'],
-  'Home Assistant': ['Home Assistant', 'Lokal server', 'Smarthjem', 'home-assistant.io', (v, set) => (set.ha_token ? 'Tilkoblet' : '!Mangler token')],
-  Sonarr: ['Sonarr', 'Serier', 'Media', 'sonarr.tv', (v, set) => (set.sonarr_key ? `${v.sonarr_days || 14} dager frem` : '!Mangler API-nøkkel')],
-  Radarr: ['Radarr', 'Filmer', 'Media', 'radarr.video', (v, set) => (set.radarr_key ? `${v.radarr_days || 14} dager frem` : '!Mangler API-nøkkel')],
-  Plex: ['Plex', 'Mediaserver', 'Media', 'plex.tv', null],
-  Jellyfin: ['Jellyfin', 'Mediaserver', 'Media', 'jellyfin.org', null],
-  'Trading 212': ['Trading 212', 'Aksjer', 'Økonomi', 'trading212.com', null],
-  Cloudflare: ['Cloudflare', 'Standard-token for Domener', 'Nett', 'cloudflare.com', (v, set) => (set.cf_token ? 'Token lagret' : '!Mangler token')],
-  'Søk': ['Søkemotor', 'Søke-URL', 'Annet', 'google.com', (v) => (/google\./.test(v.search_url ?? '') ? 'Google' : 'Egen')],
+  'Vær (MET/Yr)': ['Vær', 'MET / Yr', null, 'yr.no', (v) => v.wx_place || 'Oslo'],
+  'Ruter (Entur)': ['Ruter', 'Entur', null, 'ruter.no', (v) => { const n = String(v.ruter_routes ?? '').split('\n').filter((l) => l.trim()).length; return n ? `${n} ${n === 1 ? 'strekning' : 'strekninger'}` : '!Ingen strekninger'; }],
+  'Kalender / timeplan': ['Kalender og timeplan', 'iCal · MazeMap', null, 'calendar.google.com', (v, set) => (set.cal_ics ? 'Koblet' : '!Ikke koblet')],
+  'NASA / CelesTrak': ['Rom', 'NASA · CelesTrak', null, 'nasa.gov', (v) => v.sat_group || 'starlink'],
+  'Home Assistant': ['Home Assistant', 'Lokal server', null, 'home-assistant.io', (v, set) => (set.ha_token ? 'Tilkoblet' : '!Mangler token')],
+  Sonarr: ['Sonarr', 'Serier', null, 'sonarr.tv', (v, set) => (set.sonarr_key ? `${v.sonarr_days || 14} dager frem` : '!Mangler API-nøkkel')],
+  Radarr: ['Radarr', 'Filmer', null, 'radarr.video', (v, set) => (set.radarr_key ? `${v.radarr_days || 14} dager frem` : '!Mangler API-nøkkel')],
+  Plex: ['Plex', 'Mediaserver', null, 'plex.tv', null],
+  Jellyfin: ['Jellyfin', 'Mediaserver', null, 'jellyfin.org', null],
+  'Trading 212': ['Trading 212', 'Aksjer', null, 'trading212.com', null],
+  Cloudflare: ['Cloudflare', 'Standard-token for Domener', null, 'cloudflare.com', (v, set) => (set.cf_token ? 'Token lagret' : '!Mangler token')],
+  'Søk': ['Søkemotor', 'Søke-URL', null, 'google.com', (v) => (/google\./.test(v.search_url ?? '') ? 'Google' : 'Egen')],
 };
-const CAT_ORDER = ['Informasjon', 'Smarthjem', 'Media', 'Økonomi', 'Nett', 'Annet'];
+// Fase 6 (O8): gruppene og rekkefølgen kommer fra serveren (shared/schemas/tilkoblinger.json, feltet category i /api/config).
+const CAT_ORDER = ['Smarthjem', 'Kalender og e-post', 'Media', 'Økonomi', 'Reise og pakker', 'AI', 'Varsler', 'Nettverk', 'Generelt'];
 const NOTES = {
   'Home Assistant': 'Home Assistant må være tilgjengelig fra serveren. Lag et long-lived access token under profilen din i Home Assistant.',
   'Trading 212': 'Lag nøkkelen på app.trading212.com under Innstillinger → API, i samme konto og miljø (Live eller Demo) som over. Du får en Key ID og en secret, og secret vises bare én gang. Gi bare lesetilgang, og lås gjerne nøkkelen til IP-adressen til homelaben.',
@@ -449,9 +450,9 @@ const GUIDE = {
   ],
 };
 const metaOf = (g) => {
-  const m = INT[g.name] ?? [g.name, '', 'Annet', null, null];
-  // Kjente grupper sorteres som i designet; nye grupper fra serveren bruker serverens kategori.
-  return { name: m[0], s: m[1], cat: INT[g.name] ? m[2] : g.category || 'Annet', domain: g.domain || m[3], val: m[4] };
+  const m = INT[g.name] ?? [g.name, '', null, null, null];
+  // Gruppen er alltid serverens (category), så web, appene og /api/integrations grupperer likt.
+  return { name: m[0], s: m[1], cat: g.category || 'Generelt', domain: g.domain || m[3], val: m[4] };
 };
 const valsOf = (g) => [Object.fromEntries(g.fields.map((f) => [f.key, f.value])), Object.fromEntries(g.fields.map((f) => [f.key, f.set]))];
 // Felles verdi når gruppen ikke har en egen: mangler en hemmelighet → advarsel, ellers «Tilkoblet».

@@ -10,6 +10,8 @@ der sier hvilken appversjon serveren fortsatt svarer riktig for (Q19).
 | `common/types.schema.json` | Felles typer i `$defs`: `date`, `month`, `timestamp`, `epochMs`, `ore`, `kroner`, `money`, `page`, `id`, `color`, `ok` |
 | `api/*.schema.json` | Ett skjema per endepunkt. `x-endpoint` sier hvilket |
 | `endpoints.json` | Endepunktene som har skjema, med innlogging. Kontrakttesten går gjennom denne |
+| `moduler.json` / `moduler.schema.json` | Modullisten for alle plattformer (Fase 6). Serveren leverer den per bruker på `GET /api/moduler` (`api/moduler.schema.json`), se `docs/api.md` |
+| `tilkoblinger.json` / `tilkoblinger.schema.json` | Én gruppering av integrasjonene (gruppen i `/api/integrations` og `/api/config`) |
 | `receipt*.schema.json` | Kvitteringsformatet og OCR-formatet (prompt 48, brukt av server og apper) |
 
 Testen `test/kontrakt-schemas.test.js` starter serveren med eksempeldata (`MOCK_DATA=1`, samme app som

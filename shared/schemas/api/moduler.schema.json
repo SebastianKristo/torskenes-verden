@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "api/moduler.schema.json",
+  "title": "Modullisten per bruker",
+  "description": "Modulene brukeren har tilgang til (admin-moduler bare for admin, Media og Bibel bare med tilgang), i standardrekkefølge, med grupper, faste faner og innstillingssidene. Kilden er shared/schemas/moduler.json. ?plattform=web|ios|android gir bare modulene som finnes på den plattformen. Brukerens eget valg (rekkefølge, skjulte faner, egne navn) ligger i layouten, ikke her.",
+  "x-endpoint": "GET /api/moduler",
+  "type": "object",
+  "required": ["versjon", "grupper", "toppmeny", "bunnmeny", "moduler", "innstillinger"],
+  "properties": {
+    "versjon": { "type": "integer", "minimum": 1 },
+    "grupper": { "type": "array", "items": { "$ref": "../moduler.schema.json#/$defs/gruppe" } },
+    "toppmeny": { "type": "array", "items": { "$ref": "../moduler.schema.json#/$defs/id" } },
+    "bunnmeny": { "type": "array", "items": { "$ref": "../moduler.schema.json#/$defs/id" } },
+    "moduler": { "type": "array", "items": { "$ref": "../moduler.schema.json#/$defs/modul" } },
+    "innstillinger": { "type": "array", "items": { "$ref": "../moduler.schema.json#/$defs/innstilling" } }
+  }
+}
