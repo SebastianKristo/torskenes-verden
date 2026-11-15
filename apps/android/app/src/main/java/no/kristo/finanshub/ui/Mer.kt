@@ -531,7 +531,7 @@ internal fun FinMer45(vm: AppViewModel, tiles: List<FinTile>, navBottom: android
             }
         }
         if (big.isNotEmpty()) {
-            if (tit52) item(key = "fm45-hl") { PLabel("Finans", modifier = Modifier.padding(start = 4.dp, top = 4.dp)) }
+            if (tit52) item(key = "fm45-hl") { PLabel("Økonomi", modifier = Modifier.padding(start = 4.dp, top = 4.dp)) }
             big.chunked(if (wide) 4 else 2).forEachIndexed { i, ch ->
                 item(key = "fm45-c$i") {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -541,7 +541,7 @@ internal fun FinMer45(vm: AppViewModel, tiles: List<FinTile>, navBottom: android
                                 "budsjett" -> Triple("Budsjett", sm?.takeIf { it.budgetTotal > 0 }?.let { "${Math.round(it.budgetUsed / it.budgetTotal * 100)} %" } ?: "–",
                                     sm?.let { "brukt · ${it.daysLeft} dager igjen" } ?: "Per kategori")
                                 "kvitt" -> Triple("Kvitteringer", "$review", if (review > 0) "til gjennomgang" else "alt er gjennomgått")
-                                else -> Triple("Faste trekk", nextFast?.name ?: "–", nextFast?.let { f -> "neste ${f.next.orEmpty().take(10)} · ${n0(f.amount)} kr" } ?: "Ingen kommende")
+                                else -> Triple("Faste utgifter", nextFast?.name ?: "–", nextFast?.let { f -> "neste ${f.next.orEmpty().take(10)} · ${n0(f.amount)} kr" } ?: "Ingen kommende")
                             }
                             Column(
                                 Modifier.weight(1f).height(150.dp).shadow(8.dp, RoundedCornerShape(22.dp), ambientColor = androidx.compose.ui.graphics.Color.Black.copy(alpha = .25f), spotColor = androidx.compose.ui.graphics.Color.Black.copy(alpha = .25f))

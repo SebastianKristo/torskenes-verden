@@ -977,7 +977,7 @@ fun AppViewModel.sendChat27(text: String, confirm: Boolean = false, noData: Bool
     val atts = s.att
     // Bilder krever en bildemodell (prompt 50: opplastede bilder velger serveren vision-modell/OCR for selv).
     if (atts.any { it.kind == "img" && it.id == null } && !m.vision && m.sky.not() && s.models.any { it.vision }) chatToast27("${m.label} leser kanskje ikke bilder – velg en bildemodell")
-    val tools = (if (useData) listOf("Finans", "Kalender", "Gjøremål") else emptyList()) + (if (s.web) listOf("Nettsøk") else emptyList()) +
+    val tools = (if (useData) listOf("Økonomi", "Kalender", "Gjøremål") else emptyList()) + (if (s.web) listOf("Nettsøk") else emptyList()) +
         atts.filter { it.kind != "img" }.map { it.name }
     val history: List<ChatMsg27>
     if (editFrom == null) {

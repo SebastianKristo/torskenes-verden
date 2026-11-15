@@ -79,7 +79,7 @@ fun AppViewModel.deleteZone41(z: Zone41) {
 }
 
 /** Huskebeskjed fra Hjem-søk: samme Glimt-animasjon som for avtaler (AI-toasten med stjerne), så bakgrunnsjobben. */
-private val HUSKE_STEPS41 = listOf("Leser beskjeden", "Deler opp i punkter", "Finner rekkefølge og steder", "Lagrer i Huskeliste")
+private val HUSKE_STEPS41 = listOf("Leser beskjeden", "Deler opp i punkter", "Finner rekkefølge og steder", "Lagrer i Gjøremål")
 
 fun AppViewModel.huskeHome41(text: String) {
     val q = text.trim()
@@ -87,8 +87,8 @@ fun AppViewModel.huskeHome41(text: String) {
     Haptics.tap()
     val id = "huske41-" + System.currentTimeMillis()
     val t0 = System.currentTimeMillis()
-    val list = "Huskeliste"
-    fun job(cur: Int, state: String, fields: List<Pair<String, String>>) = AiJob31(id, "huske", "Legger til i Huskeliste", "Glimt", q,
+    val list = "Gjøremål"
+    fun job(cur: Int, state: String, fields: List<Pair<String, String>>) = AiJob31(id, "huske", "Legger til i Gjøremål", "Glimt", q,
         HUSKE_STEPS41.mapIndexed { i, l -> AiStep31(l, if (i < cur || state == "done") "done" else if (i == cur) "active" else "pending") }, fields, ((cur + 1) * 100 / HUSKE_STEPS41.size).coerceAtMost(95), state, t0)
     val baseFields = listOf("Beskjed" to q.take(60), "Liste" to list, "Original" to "lagres i «Laget med Glimt»")
     fun put(j: AiJob31) { p31.jobs = p31.jobs.filter { it.id != id } + j }
@@ -101,9 +101,9 @@ fun AppViewModel.huskeHome41(text: String) {
         val before = p41.glimtJobs.any { it.text == q }
         p31.jobs = p31.jobs.filter { it.id != id }
         p31.toastMsg = when {
-            !started && !before -> "Fikk ikke lagt beskjeden i Huskeliste"
+            !started && !before -> "Fikk ikke lagt beskjeden i Gjøremål"
             p41.glimtJobs.any { it.text == q } -> "✦ Glimt deler opp i bakgrunnen …"
-            else -> p41.glimtDone ?: "✓ Glimt la beskjeden i Huskeliste"
+            else -> p41.glimtDone ?: "✓ Glimt la beskjeden i Gjøremål"
         }
         p31.toastSeq++
     }

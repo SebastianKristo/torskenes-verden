@@ -582,7 +582,7 @@ private fun Fam22Hero(vm: AppViewModel) {
                     Modifier.height(34.dp).clip(CircleShape).background(DsPalette.PapirLys.textPrimary.copy(alpha = .55f)).clickable(onClickLabel = "Tilbake til Hjem") { vm.closeFamily() }
                         .padding(start = 10.dp, end = 14.dp),
                     contentAlignment = Alignment.Center,
-                ) { Fam22Text("‹ Hjem", 13.sp, Color.White, FontWeight.SemiBold, maxLines = 1) }
+                ) { Fam22Text("‹ ${Moduler.oversikt}", 13.sp, Color.White, FontWeight.SemiBold, maxLines = 1) }
                 Spacer(Modifier.weight(1f))
                 GlimtAvatar46(vm) { vm.closeFamily(); vm.openPaperPage("set") } // prompt 46
             }

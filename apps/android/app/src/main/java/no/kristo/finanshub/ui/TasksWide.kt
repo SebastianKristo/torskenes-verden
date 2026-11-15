@@ -49,7 +49,7 @@ internal fun TaskHero45(vm: AppViewModel) {
                 Modifier.height(36.dp).clip(CircleShape).background(p.surfaceRaised).border(1.dp, p.line, CircleShape)
                     .clickable(role = Role.Button, onClickLabel = "Til Hjem") { Haptics.select(); vm.closeTasksHome40() }.padding(start = 12.dp, end = 14.dp),
                 contentAlignment = Alignment.Center,
-            ) { Text("‹ Hjem", color = p.textPrimary, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize, maxLines = 1) }
+            ) { Text("‹ ${Moduler.oversikt}", color = p.textPrimary, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize, maxLines = 1) }
             Spacer(Modifier.weight(1f))
             Box(
                 Modifier.size(40.dp).shadow(6.dp, CircleShape).clip(CircleShape).background(p.surfaceRaised).border(1.dp, p.line, CircleShape)

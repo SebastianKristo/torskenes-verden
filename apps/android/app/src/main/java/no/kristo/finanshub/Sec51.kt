@@ -227,7 +227,7 @@ private suspend fun AppViewModel.finishApproval51(base: String, w: Wait51) {
                 if (token == null) { sec51.wait = w.copy(state = "error", note = "Uventet svar fra serveren. Logg inn på nytt."); return }
                 val u = o.optJSONObject("user")
                 val uname = u?.optString("username").orEmpty()
-                val name = u?.optString("name")?.takeIf { it.isNotBlank() } ?: uname.ifBlank { "FinansHub" }
+                val name = u?.optString("name")?.takeIf { it.isNotBlank() } ?: uname.ifBlank { "Homelab" }
                 val role = u?.optString("role")?.takeIf { it.isNotBlank() } ?: "user"
                 sec51.wait = null
                 sec51.job = null

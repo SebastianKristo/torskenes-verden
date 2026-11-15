@@ -170,8 +170,8 @@ internal fun FinTile50(vm: AppViewModel, modifier: Modifier) {
     val p = PaperPal.current
     val saldo = vm.boot?.accounts?.sumOf { it.balance }
     val review = vm.boot?.reviewCount ?: vm.summary?.review?.size ?: 0
-    Tile50(p.card, "Finans", modifier, { vm.paperTab("fin") }, edge = false) {
-        TileLabel50("Finans", p.mut)
+    Tile50(p.card, "Økonomi", modifier, { vm.paperTab("fin") }, edge = false) {
+        TileLabel50("Økonomi", p.mut)
         PSerif(saldo?.let { neg0(it) } ?: "–", 26.sp, p.ink, maxLines = 1)
         Text(if (review > 0) "$review ${if (review == 1) "kvittering" else "kvitteringer"}" else "alt bokført", color = if (review > 0) p.lab else p.mut, fontSize = 12.sp, maxLines = 1)
     }

@@ -573,7 +573,7 @@
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_ui_mat" />
         </receiver>
-        <receiver android:name=".widget.OneUiFinanceReceiver" android:exported="true" android:label="FinansHub · One UI">
+        <receiver android:name=".widget.OneUiFinanceReceiver" android:exported="true" android:label="Økonomi · One UI">
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_ui_finance" />
         </receiver>
@@ -819,7 +819,7 @@
         <receiver android:name=".Checkin50Receiver" android:exported="false" />
 
         <!-- Prompt 51 (ANDPLAT51): widgets Planlegging · saldo og Sjekk inn (Glance, widget/Widgets51Plat.kt). -->
-        <receiver android:name=".widget.Plan51SaldoReceiver" android:exported="true" android:label="Planlegging · saldo">
+        <receiver android:name=".widget.Plan51SaldoReceiver" android:exported="true" android:label="Sparing og planer · saldo">
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_plan51" />
         </receiver>

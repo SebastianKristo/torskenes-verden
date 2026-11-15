@@ -140,8 +140,8 @@ internal fun NavEditor32b(
                 }
             }
             NavStyleSection25(vm, items.map { TabItem(it.key, it.label.ifBlank { defLabel(it.key) }, it.icon) }, mer = mer)
-            if (title == "Hjem" || title == "Finans") HomeBtnSection42(vm) // Prompt 42: HJEM-KNAPP · FORHÅNDSVISNING
-            if (title == "Hjem") PCard { ScanHomeRow41(vm) } // Prompt 41: samme valg som Innstillinger → Tilpass → Fanelinje
+            if (title == Moduler.oversikt || title == "Økonomi") HomeBtnSection42(vm) // Prompt 42: HJEM-KNAPP · FORHÅNDSVISNING
+            if (title == Moduler.oversikt) PCard { ScanHomeRow41(vm) } // Prompt 41: samme valg som Innstillinger → Tilpass → Fanelinje
             val missing = all.filter { a -> items.none { it.key == a.key } }
             if (missing.isNotEmpty() && items.size < max) {
                 PLabel("Legg til")
@@ -222,7 +222,7 @@ internal fun HomeCircle42(vm: AppViewModel, home: Boolean) {
     val p = PaperPal.current
     Box(
         Modifier.size(62.dp).shadow(16.dp, CircleShape).clip(CircleShape).background(if (home) p.navAct else p.nav)
-            .clickable(role = Role.Button, onClickLabel = "Hjem") { Haptics.tap(); vm.goHome42() }.semantics { contentDescription = "Hjem" },
+            .clickable(role = Role.Button, onClickLabel = Moduler.oversikt) { Haptics.tap(); vm.goHome42() }.semantics { contentDescription = Moduler.oversikt },
         contentAlignment = Alignment.Center,
     ) { GlyphIcon("⌂", if (home) p.navActInk else p.navInk, 22.dp) }
 }
@@ -233,7 +233,7 @@ internal fun RowScope.HomeSlot42(vm: AppViewModel, home: Boolean) {
     val p = PaperPal.current
     Box(
         Modifier.size(46.dp).clip(CircleShape).background(if (home) p.navAct else Color.Transparent)
-            .clickable(role = Role.Button, onClickLabel = "Hjem") { Haptics.tap(); vm.goHome42() }.semantics { contentDescription = "Hjem" },
+            .clickable(role = Role.Button, onClickLabel = Moduler.oversikt) { Haptics.tap(); vm.goHome42() }.semantics { contentDescription = Moduler.oversikt },
         contentAlignment = Alignment.Center,
     ) { GlyphIcon("⌂", if (home) p.navActInk else p.navInk, 20.dp) }
     Box(Modifier.padding(horizontal = 4.dp).width(1.dp).height(26.dp).background(p.navInk.copy(alpha = .3f)).align(Alignment.CenterVertically))
@@ -245,7 +245,7 @@ internal fun HomeRaised42(vm: AppViewModel, home: Boolean, modifier: Modifier = 
     val p = PaperPal.current
     Box(
         modifier.size(60.dp).shadow(10.dp, CircleShape).clip(CircleShape).background(if (home) p.navAct else p.bg).padding(5.dp).clip(CircleShape).background(p.lab)
-            .clickable(role = Role.Button, onClickLabel = "Hjem") { Haptics.tap(); vm.goHome42() }.semantics { contentDescription = "Hjem" },
+            .clickable(role = Role.Button, onClickLabel = Moduler.oversikt) { Haptics.tap(); vm.goHome42() }.semantics { contentDescription = Moduler.oversikt },
         contentAlignment = Alignment.Center,
     ) { GlyphIcon("⌂", p.onLab, 22.dp) }
 }
@@ -343,7 +343,7 @@ internal fun NavHomePreview42(k: String, modifier: Modifier = Modifier) {
     Box(modifier.fillMaxWidth().height(44.dp).clip(RoundedCornerShape(12.dp)).background(androidx.compose.ui.graphics.Brush.verticalGradient(*HERO_FALLBACK)).padding(6.dp, 6.dp)) {
         when (k) {
             "standard" -> Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.SpaceBetween) {
-                Box(Modifier.height(10.dp).clip(CircleShape).background(Color(0x8C1B1A17)).padding(horizontal = 5.dp), contentAlignment = Alignment.Center) { Text("‹ Hjem", color = Color.White, fontSize = 6.5.sp, lineHeight = 7.sp, maxLines = 1) }
+                Box(Modifier.height(10.dp).clip(CircleShape).background(Color(0x8C1B1A17)).padding(horizontal = 5.dp), contentAlignment = Alignment.Center) { Text("‹ ${Moduler.oversikt}", color = Color.White, fontSize = 6.5.sp, lineHeight = 7.sp, maxLines = 1) }
                 Row(Modifier.fillMaxWidth().height(22.dp).clip(CircleShape).background(p.nav).padding(horizontal = 2.dp), verticalAlignment = Alignment.CenterVertically) { tabs.forEachIndexed { i, g -> ic(g, i == 0) } }
             }
             "1a" -> Row(Modifier.fillMaxWidth().align(Alignment.BottomCenter), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -424,7 +424,7 @@ internal fun NavHomeSheet42(vm: AppViewModel) {
                 }
                 SheetButton30("Ferdig", onClick = close)
             }
-            Text("Velg hvordan du kommer hjem fra modulene. Med 1a–1d forsvinner «‹ Hjem» øverst på modulens forside.", color = p.mut, fontSize = 13.sp, lineHeight = 18.sp)
+            Text("Velg hvordan du kommer hjem fra modulene. Med 1a–1d forsvinner «‹ ${Moduler.oversikt}» øverst på modulens forside.", color = p.mut, fontSize = 13.sp, lineHeight = 18.sp)
             NAV_HOME42.forEach { (k, n, d) -> NavHomeCard42(vm, k, n, d, Modifier.fillMaxWidth(), compact = false) }
         }
     }
@@ -488,7 +488,7 @@ private fun RedHome25(vm: AppViewModel) {
             horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp, Alignment.CenterVertically),
         ) {
             WxIcon(P25_HOUSE, p.onLab, 20.dp, stroke = 2.2f)
-            Text("Hjem", color = p.onLab, style = TAB_TEXT24.copy(fontSize = 11.5.sp, lineHeight = 13.sp), maxLines = 1)
+            Text(Moduler.oversikt, color = p.onLab, style = TAB_TEXT24.copy(fontSize = 11.5.sp, lineHeight = 13.sp), maxLines = 1)
         }
     }
 }

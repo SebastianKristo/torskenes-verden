@@ -445,7 +445,7 @@ private fun Folk50(vm: AppViewModel, wide: Boolean, startSharing: () -> Unit) {
     val s = vm.fam50
     var plus by remember { mutableStateOf(false) }
     Row(Modifier.fillMaxWidth().padding(16.dp, 10.dp, 16.dp, 0.dp), verticalAlignment = Alignment.CenterVertically) {
-        Pill50("‹ Hjem") { vm.closeFamily() }
+        Pill50("‹ ${Moduler.oversikt}") { vm.closeFamily() }
         Spacer(Modifier.weight(1f))
         Box {
             Box(Modifier.size(40.dp).clip(CircleShape).background(p.textPrimary).clickable(role = Role.Button, onClickLabel = "Nytt sted eller deling") { plus = true },

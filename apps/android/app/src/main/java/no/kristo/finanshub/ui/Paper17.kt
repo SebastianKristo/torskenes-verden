@@ -213,11 +213,11 @@ private fun ModulesSub(vm: AppViewModel) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         PLabel("Moduler", modifier = Modifier.padding(start = 4.dp, top = 6.dp))
         PCard {
-            SetRow(vm, 0, Icons.Filled.MyLocation, "Familie og kart", "Posisjon, soner og helse") { vm.openFamily() }
+            SetRow(vm, 0, Icons.Filled.MyLocation, "Familie", "Folk, kart, soner og helse") { vm.openFamily() }
             SetRow(vm, 1, Icons.Filled.Checklist, "Gjøremål", "To-do for hele familien", top = true) { vm.openTasks() }
-            SetRow(vm, 2, Icons.Filled.DirectionsBus, "Avganger", "Holdeplasser og sanntid fra Ruter", top = true) { vm.openRuter() }
+            SetRow(vm, 2, Icons.Filled.DirectionsBus, "Reise", "Avganger, holdeplasser og sanntid fra Ruter", top = true) { vm.openRuter() }
             SetRow(vm, 3, Icons.Filled.WbSunny, "Vær", "Steder, varsel og Yr mot Storm", top = true) { vm.openWeather() }
-            SetRow(vm, 4, Icons.Filled.Newspaper, "Nyhetsleser", "RSS med ✦ AI-sammendrag", top = true) { vm.openNews() }
+            SetRow(vm, 4, Icons.Filled.Newspaper, "Nyheter", "RSS med ✦ AI-sammendrag", top = true) { vm.openNews() }
             SetRow(vm, 5, Icons.Filled.LocalShipping, "Sporing", "Pakker fra e-post og Finn", top = true) { vm.openFromMer(Screen.Tracking) }
             SetRow(vm, 0, Icons.Filled.Language, "Domener", "Cloudflare-statistikk", top = true) { vm.openFromMer(Screen.Domains) }
             SetRow(vm, 1, Icons.Filled.Restaurant, "Mat", "Ukeplan og oppskrifter", top = true) { vm.paperTab("mat") }

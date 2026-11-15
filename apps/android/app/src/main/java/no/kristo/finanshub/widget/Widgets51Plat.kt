@@ -197,7 +197,7 @@ class Plan51SaldoWidget : GlanceAppWidget() {
 private fun PlanBody51(p: WPlan51?) {
     val ctx = LocalContext.current
     val wide = LocalSize.current.width >= 220.dp
-    val desc = if (p?.balance == null) "Planlegging, saldo ikke tilgjengelig" else "Laveste saldo ${kr51(p.balance)} ${day51(p.date)}"
+    val desc = if (p?.balance == null) "Sparing og planer, saldo ikke tilgjengelig" else "Laveste saldo ${kr51(p.balance)} ${day51(p.date)}"
     Column(
         GlanceModifier.fillMaxSize().appWidgetBackground().cornerRadius(24.dp).background(BG51).padding(14.dp)
             .clickable(open51(ctx, "finanshub://plan")).semantics { contentDescription = desc },
@@ -206,7 +206,7 @@ private fun PlanBody51(p: WPlan51?) {
         Spacer(GlanceModifier.height(4.dp))
         if (p?.balance == null) {
             Text("Ikke tilgjengelig ennå", style = TextStyle(color = INK51, fontSize = 15.sp, fontWeight = FontWeight.Medium))
-            Text("Åpne Planlegging i appen", style = TextStyle(color = MUT51, fontSize = 12.sp))
+            Text("Åpne Sparing og planer i appen", style = TextStyle(color = MUT51, fontSize = 12.sp))
             return@Column
         }
         Text("Laveste saldo", style = TextStyle(color = MUT51, fontSize = 12.sp))

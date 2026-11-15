@@ -34,7 +34,7 @@ class WidgetWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
             Ruter27Store.useAccount(ctx, null)
             Trials32bStore.useAccount(ctx, null)
             Plat51Store.useAccount(ctx, null) // prompt 51 (ANDPLAT51)
-            WidgetStore.fail(ctx, "Logg inn i FinansHub", loggedIn = false)
+            WidgetStore.fail(ctx, "Logg inn i Homelab", loggedIn = false)
             WidgetSync.redraw(ctx)
             return Result.success()
         }

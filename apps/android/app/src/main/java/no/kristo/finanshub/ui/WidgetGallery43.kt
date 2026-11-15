@@ -54,7 +54,7 @@ private val WIDGETS43 = listOf(
     WDef43("Glimt-brief", "Glimt-brief", "4 × 2", "BriefReceiver34"), WDef43("Glimt-brief", "Glimt-brief · Samsung", "2 × 2", "S35Brief22Receiver", true),
     WDef43("Glimt-brief", "Glimt-brief · Samsung", "4 × 1", "S35Brief41Receiver", true), WDef43("Glimt-brief", "Glimt-brief · Samsung", "4 × 4", "S35Brief44Receiver", true),
     WDef43("Andre", "Vær", "4 × 2", "WeatherReceiver"), WDef43("Andre", "Gjøremål", "4 × 2", "TasksReceiver"), WDef43("Andre", "Bursdager", "4 × 2", "BirthdaysReceiver24"),
-    WDef43("Andre", "Budsjett", "4 × 2", "BudgetReceiver"), WDef43("Andre", "Finans", "4 × 2", "FinanceReceiver"), WDef43("Andre", "Skann", "1 × 1", "ScanReceiver"),
+    WDef43("Andre", "Budsjett", "4 × 2", "BudgetReceiver"), WDef43("Andre", "Økonomi", "4 × 2", "FinanceReceiver"), WDef43("Andre", "Skann", "1 × 1", "ScanReceiver"),
     WDef43("Andre", "Bibelvers", "4 × 2", "Bible37Receiver"), WDef43("Andre", "Hjemlys", "4 × 2", "HjemlysStart40Receiver"),
 )
 

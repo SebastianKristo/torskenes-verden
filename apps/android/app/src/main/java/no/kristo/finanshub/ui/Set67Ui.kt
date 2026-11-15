@@ -37,7 +37,7 @@ internal fun parent67(page: String?): String? = when (page) {
 /** Titlene på de nye sidene (legges inn i PAPER_SET_TITLES). */
 internal val SET67_TITLES = mapOf(
     "glimt67" to "Glimt", "g67mem" to "Glimt husker", "g67ent" to "Entitetsregister", "g67rec" to "Glimt lærer",
-    "g67sch" to "Faste oppgaver", "g67q" to "Kvalitet", "app67" to "App", "fin67" to "Finans",
+    "g67sch" to "Faste oppgaver", "g67q" to "Kvalitet", "app67" to "App", "fin67" to "Økonomi",
 )
 
 internal fun menu67(vm: AppViewModel): List<Menu67Group> {
@@ -69,7 +69,7 @@ internal fun menu67(vm: AppViewModel): List<Menu67Group> {
         )),
         Menu67Group("Moduler", listOf(
             Menu67Row("modules", "Moduler", "Familie, Gjøremål, Avganger, Vær", Icons.Filled.Dashboard, go = page("modules")),
-            Menu67Row("fin67", "Finans", "Kategorier, regler, bankimport, aksjer, fanelinje og abonnementer", Icons.Filled.AccountBalance, go = page("fin67")),
+            Menu67Row("fin67", "Økonomi", "Kategorier, regler, bankimport, aksjer, fanelinje og abonnementer", Icons.Filled.AccountBalance, go = page("fin67")),
             Menu67Row("media", "Media", "Sonarr, Radarr, qBittorrent, Prowlarr · status", Icons.Filled.Movie, go = page("media")),
             Menu67Row("skjold", "Skjold Lab", "Glimt-forslag, bilder på nett og auto-forslag", Icons.Filled.Inventory2) { vm.openSkjoldSettings77() }, // prompt 77
             Menu67Row("nyheter", "Nyheter", "Kilder, kategorier, For deg og Glimt-sammendrag", Icons.Filled.Newspaper) { vm.settingsPage = "nyheter"; if (vm.news == null) vm.loadNews() },
@@ -104,14 +104,14 @@ internal fun App67Page(vm: AppViewModel) {
 @Composable
 internal fun Fin67Page(vm: AppViewModel) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        PLabel("Finans", modifier = Modifier.padding(start = 4.dp, top = 4.dp))
+        PLabel("Økonomi", modifier = Modifier.padding(start = 4.dp, top = 4.dp))
         PCard {
             SetRow(vm, 0, Icons.Filled.Category, "Kategorier og budsjett", "Farger og typer") { vm.settingsPage = "cats" }
             SetRow(vm, 1, Icons.Filled.Tune, "Regler", "Automatisk kategorisering", top = true) { vm.settingsPage = "rules" }
             SetRow(vm, 2, Icons.Filled.AccountBalance, "Bankimport", "DNB · CSV · ✦ AI", top = true) { vm.openFromMer(Screen.Import) }
             SetRow(vm, 3, Icons.AutoMirrored.Filled.ShowChart, "Aksjer · Trading 212", "Nøkkel, miljø og synk", top = true) { vm.settingsPage = "stocks" }
             SetRow(vm, 4, Icons.Filled.ViewWeek, "Fanelinje og Mer i Finans", "${vm.paperFinTabs.size} faner", top = true) { vm.settingsPage = "fin" }
-            SetRow(vm, 5, Icons.Filled.Autorenew, "Subscription OS", "Abonnementer og AI-sparing", top = true) { vm.openFromMer(Screen.Sub) }
+            SetRow(vm, 5, Icons.Filled.Autorenew, "Abonnementer", "Faste betalinger og AI-sparing", top = true) { vm.openFromMer(Screen.Sub) }
         }
     }
 }

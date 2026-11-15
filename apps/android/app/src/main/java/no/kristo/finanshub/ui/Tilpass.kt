@@ -51,7 +51,7 @@ internal fun LookExtras42(vm: AppViewModel) {
                     colors = SliderDefaults.colors(thumbColor = p.ink, activeTrackColor = p.ink, inactiveTrackColor = p.line))
             }
         }
-        Text("Gjelder Samsung-widgetene (Søk, Klokke, Vær, Pakker, Skann, Budsjett, Aksjer, Middag, FinansHub, Domener og Finn).",
+        Text("Gjelder Samsung-widgetene (Søk, Klokke, Vær, Pakker, Skann, Budsjett, Aksjer, Middag, Økonomi, Domener og Finn).",
             color = p.mut, fontSize = 12.sp, lineHeight = 16.sp, modifier = Modifier.padding(horizontal = 6.dp))
         PLabel("Widgets · låseskjerm", modifier = Modifier.padding(start = 4.dp, top = 10.dp))
         PCard {

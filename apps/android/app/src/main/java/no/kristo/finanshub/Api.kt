@@ -202,7 +202,7 @@ class Api(private val baseUrl: String, private val token: String?) {
             val res = try { api.post("/login", body) } catch (e: ApiException) {
                 if (e.needsTotp || (e.status != 404 && !(e.status == 401 && e.message?.contains("Ikke innlogget") == true))) throw e
                 try { api.post("/auth/token", body) } catch (e2: ApiException) {
-                    if (e2.status == 404) throw ApiException("Fant ikke FinansHub på $baseUrl (404). Sjekk adressen, eller oppdater homelab-serveren.", 404)
+                    if (e2.status == 404) throw ApiException("Fant ikke Homelab på $baseUrl (404). Sjekk adressen, eller oppdater homelab-serveren.", 404)
                     throw e2
                 }
             }
@@ -211,7 +211,7 @@ class Api(private val baseUrl: String, private val token: String?) {
             val u = o.optJSONObject("user")
             val uname = u?.optString("username")?.takeIf { it.isNotBlank() } ?: username.ifBlank { o.optString("user") }
             val name = u?.optString("name")?.takeIf { it.isNotBlank() } ?: o.optString("user").ifBlank { uname }
-            return LoginResult(token, uname, name.ifBlank { "FinansHub" }, u?.optString("role")?.takeIf { it.isNotBlank() } ?: "admin")
+            return LoginResult(token, uname, name.ifBlank { "Homelab" }, u?.optString("role")?.takeIf { it.isNotBlank() } ?: "admin")
         }
 
         /**

@@ -155,7 +155,7 @@ class P32bState {
 /** Sidene med egen fanelinje: overskrift og alle faner (nøkkel, navn, ikon). */
 val SEC32B: Map<String, Pair<String, List<Triple<String, String, String>>>> = mapOf(
     "dom" to ("Domener" to listOf(Triple("oversikt", "Oversikt", "◎"), Triple("publikum", "Publikum", "◍"), Triple("ytelse", "Ytelse", "⚡"), Triple("infra", "Infra", "▤"))),
-    "abo" to ("Abonnement" to listOf(Triple("home", "Hjem", "⌂"), Triple("ins", "Innsikt", "◔"), Triple("hist", "Historikk", "↻"))),
+    "abo" to ("Abonnementer" to listOf(Triple("home", "Hjem", "⌂"), Triple("ins", "Innsikt", "◔"), Triple("hist", "Historikk", "↻"))),
     // Prompt 42: Vel fremme (tidligere Hjemlys) er en fane i Familie.
     // Prompt 50: Familie i nytt design – Folk · Steder · Helse · Sjekk inn (ui/Family50.kt).
     "kart" to ("Familie" to listOf(Triple("folk", "Folk", "◎"), Triple("steder", "Steder", "◌"), Triple("helse", "Helse", "♡"), Triple("sjekk", "Sjekk inn", "●"))),

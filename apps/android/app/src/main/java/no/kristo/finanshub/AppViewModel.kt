@@ -1462,7 +1462,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         tokenError = null
         try { tokens = parseTokens(api.get("/tokens")) } catch (e: ApiException) {
             tokens = emptyList()
-            tokenError = if (e.status == 401 || e.status == 403) "Tokens kan bare administreres fra FinansHub i nettleseren for denne kontoen." else e.message
+            tokenError = if (e.status == 401 || e.status == 403) "Tokens kan bare administreres fra Homelab i nettleseren for denne kontoen." else e.message
         }
     }
 
@@ -1895,7 +1895,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             applyNewsExtras46(raw) // prompt 46: egne kategorier, interesser, favicon, sammendrag per kategori
             newsError = null
         } catch (e: ApiException) {
-            newsError = if (e.status == 404) "Nyhetsleseren finnes ikke på serveren ennå. Oppdater homelab." else e.message
+            newsError = if (e.status == 404) "Nyheter finnes ikke på serveren ennå. Oppdater Homelab." else e.message
         } finally { newsBusy = false }
     }
 

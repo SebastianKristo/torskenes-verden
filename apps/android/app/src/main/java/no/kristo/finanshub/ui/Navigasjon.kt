@@ -311,7 +311,7 @@ internal fun FinTabBarEditor26(vm: AppViewModel) {
     // Prompt 32: det felles arket (ui/Ui32b.kt) med Ferdig som Papir-pille og uten «Mer»-rad.
     fun current() = vm.paperFinTabs.map { NavEd32b(it, vm.finTabLabel26(it, finName26(it)), vm.finTabIcon26(it, finIcon26(it))) }
     NavEditor32b(
-        vm, "Finans", current(), FIN_TABS.map { (k, n) -> NavEd32b(k, n, finIcon26(k)) }, 5, mer = true, icons = FIN_ICONS26,
+        vm, "Økonomi", current(), FIN_TABS.map { (k, n) -> NavEd32b(k, n, finIcon26(k)) }, 5, mer = true, icons = FIN_ICONS26,
         onSave = { l -> vm.saveFinNav26(l.map { FinItem26(it.key, it.label, it.icon) }, ::finName26, ::finIcon26) },
         onReset = { vm.resetFinNav26(); current() },
         onClose = { vm.b26.finEdit = false },

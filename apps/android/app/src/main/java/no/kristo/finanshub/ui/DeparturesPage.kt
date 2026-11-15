@@ -99,7 +99,7 @@ internal fun RuterScreen24(vm: AppViewModel) {
                     Box(Modifier.matchParentSize().background(Brush.verticalGradient(0f to Color.Black.copy(alpha = .30f), .45f to Color.Black.copy(alpha = .08f), 1f to Color.Black.copy(alpha = .50f))))
                     Column(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = maxOf(52.dp, top + 8.dp), bottom = 40.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            GlassPill("‹ Hjem", "Tilbake") { vm.closeRuter() }
+                            GlassPill("‹ ${Moduler.oversikt}", "Tilbake") { vm.closeRuter() }
                             Spacer(Modifier.weight(1f))
                             GlassPill("↻ $at", "Oppdater") { Haptics.select(); vm.refreshStops() }
                         }

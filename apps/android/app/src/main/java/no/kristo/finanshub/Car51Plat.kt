@@ -62,7 +62,7 @@ abstract class Car51Base(ctx: CarContext) : Screen(ctx) {
     protected fun api(): Api? = bgApi41(carContext)
 
     protected fun load(block: suspend (Api) -> Unit) {
-        val api = api() ?: run { loading = false; error = "Logg inn i FinansHub på telefonen først."; return }
+        val api = api() ?: run { loading = false; error = "Logg inn i Homelab på telefonen først."; return }
         loading = true
         scope.launch {
             try { withContext(Dispatchers.IO) { block(api) }; error = null } catch (e: ApiException) {

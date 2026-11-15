@@ -52,7 +52,7 @@ private val TABKEY51 = mapOf("spar" to "goals", "kal" to "cal", "skatt" to "tax"
 @Composable
 internal fun Plan51Page(vm: AppViewModel) {
     val tab = F51.opt("plan.tab", "spar")
-    Page51("Planlegging", "Finans", onRefresh = { vm.load51(TABKEY51[tab] ?: "goals", force = true) }) {
+    Page51("Sparing og planer", "Økonomi", onRefresh = { vm.load51(TABKEY51[tab] ?: "goals", force = true) }) {
         Tabs51(TABS51, tab) { F51.ui["plan.tab"] = it }
         when (tab) {
             "kal" -> Keyed51(vm, "cal") { Cal51(vm, it) }
@@ -76,7 +76,7 @@ private fun Goals51(vm: AppViewModel, d: JSONObject) {
     val accounts = d.arr51("accounts")
     Cols51(
         left = {
-            if (goals.isEmpty()) Empty51("Ingen sparemål ennå", "Lag et mål med beløp, frist og bilde. Planlegging viser fremdriften og hvor mye du må spare i måneden, og foreslår å runde opp kjøpene dine til målet.")
+            if (goals.isEmpty()) Empty51("Ingen sparemål ennå", "Lag et mål med beløp, frist og bilde. Sparing og planer viser fremdriften og hvor mye du må spare i måneden, og foreslår å runde opp kjøpene dine til målet.")
             goals.forEach { g -> key(g.str51("id")) { Goal51(vm, g, accounts) } }
             NewGoal51(vm, accounts)
         },

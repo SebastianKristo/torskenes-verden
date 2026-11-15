@@ -24,7 +24,7 @@ import java.time.ZoneId
 
 /** Modulene som kan tas med: nøkkel, navn og hva som ligger i dem (rekkefølgen fra fasiten). */
 val BK29_MODULES = listOf(
-    Triple("finans", "Finans", "Transaksjoner, kvitteringer, budsjett, abonnementer"),
+    Triple("finans", "Økonomi", "Transaksjoner, kvitteringer, budsjett, abonnementer"),
     Triple("kalender", "Kalender", "Egne hendelser og påminnelser"),
     Triple("familie", "Familie", "Posisjoner, soner og helse"),
     Triple("mat", "Mat", "Oppskrifter og ukeplan"),

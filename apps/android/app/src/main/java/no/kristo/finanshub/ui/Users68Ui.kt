@@ -38,7 +38,7 @@ internal fun Users68Page(vm: AppViewModel) {
         }
         PLabel("Familie", modifier = Modifier.padding(start = 4.dp, top = 10.dp))
         PCard {
-            SetRow(vm, 0, Icons.Filled.MyLocation, "Familie og kart", "Posisjon, soner, innsjekk og helse for husstanden") { vm.openFamily() }
+            SetRow(vm, 0, Icons.Filled.MyLocation, "Familie", "Folk, kart, soner, innsjekk og helse for husstanden") { vm.openFamily() }
             SetRow(vm, 1, Icons.Filled.NotificationsActive, "Sonevarsler", "Når noen kommer til eller forlater en sone – under Varsler", top = true) { vm.settingsPage = "notify" }
         }
         // Helse og posisjon (Health Connect, datatyper, posisjonsdeling) – tidligere egen side «healthpos».

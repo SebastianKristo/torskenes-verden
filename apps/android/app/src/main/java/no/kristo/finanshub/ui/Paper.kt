@@ -235,7 +235,7 @@ private fun backLabel(vm: AppViewModel, outOfSet50: Boolean = false): String = w
     vm.b24BackLabel() != null -> vm.b24BackLabel()!!
     !outOfSet50 && vm.settingsPage != null && (vm.paperPage == "set" || vm.screen == Screen.Settings) -> vm.settingsBackLabel26()
     vm.selectedTx != null && vm.paperPage == "fsok" -> "Glimt"
-    vm.selectedTx != null && vm.paperPage == null -> when (vm.screen) { Screen.List -> "Transaksjoner"; Screen.Home -> "Oversikt"; else -> "Tilbake" }
+    vm.selectedTx != null && vm.paperPage == null -> when (vm.screen) { Screen.List -> "Transaksjoner"; Screen.Home -> "Økonomi"; else -> "Tilbake" }
     vm.screen == Screen.Domains && vm.paperPage == null -> "Hjem"
     vm.paperPage == "mer" || vm.paperPage == "fmer" || vm.paperPage == "fsok" -> "Hjem"
     vm.paperFromFinMer -> "Mer"
@@ -526,7 +526,7 @@ private fun Hero(vm: AppViewModel, home: Boolean, wide: Boolean, toggleMenu: () 
                     if (!vm.b24IsRoot() && (set50 || (!(wide && bl50 == "Hjem") && !navHomeHidesBack42(vm, wide, bl50)))) Box(
                         Modifier.height(34.dp).clip(CircleShape).background(Color(0x8C1B1A17)).clickable(onClickLabel = "Tilbake") { if (set50) vm.settingsPage = null; if (!vm.b24Back()) vm.back() }.padding(start = 10.dp, end = 14.dp),
                         contentAlignment = Alignment.Center,
-                    ) { Text("‹ $bl50", color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, maxLines = 1) }
+                    ) { Text("‹ " + (if (bl50 == "Hjem") Moduler.oversikt else bl50), color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, maxLines = 1) }
                     Spacer(Modifier.weight(1f))
                 }
                 // Prompt 29: pillen «<bakgrunn> ▾» på Hjem og øverst i Innstillinger, rett til venstre for profilbildet (samme meny).
@@ -974,7 +974,7 @@ private fun PaperMinis(vm: AppViewModel) {
     val review = vm.boot?.reviewCount ?: vm.summary?.review?.size ?: 0
     val dom = vm.domainToday
     Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Mini("Finans", saldo?.let { neg0(it) } ?: "–", if (review > 0) "$review kvitteringer" else "alt bokført", if (review > 0) p.lab else p.mut, 20.sp, Modifier.weight(1f)) { vm.paperTab("fin") }
+        Mini("Økonomi", saldo?.let { neg0(it) } ?: "–", if (review > 0) "$review kvitteringer" else "alt bokført", if (review > 0) p.lab else p.mut, 20.sp, Modifier.weight(1f)) { vm.paperTab("fin") }
         Mini("Mat", vm.todayMeal ?: "Ingen rett", "", p.mut, 16.sp, Modifier.weight(1f)) { vm.paperTab("mat") }
         Mini("Domener", dom?.let { count(it.second) } ?: "–", dom?.first ?: "", p.pos, 20.sp, Modifier.weight(1f)) { vm.domSection = "oversikt"; vm.go(Screen.Domains) }
     }
@@ -1119,12 +1119,12 @@ private fun PaperMore(vm: AppViewModel, navBottom: Dp) {
                     if (vm.tab4 == "sporing") Triple("Domener", "Trafikk, besøk og oppetid", { vm.domSection = "oversikt"; vm.openFromMer(Screen.Domains) })
                     else Triple("Sporing", if (onWay > 0) "$onWay pakker på vei" else "Pakker og sendinger", { vm.openFromMer(Screen.Tracking) }),
                     Triple("Gjøremål", "To-do for hele familien", { vm.openTasks() }),
-                    Triple("Familie og kart", "Hvor alle er, soner og helse", { vm.openFamily() }),
-                    Triple("Avganger", "Ruter i sanntid og egne stopp", { vm.openRuter() }),
+                    Triple("Familie", "Hvor alle er, kart, soner og helse", { vm.openFamily() }),
+                    Triple("Reise", "Avganger i sanntid og egne stopp", { vm.openRuter() }),
                     Triple("Vær", "Steder og varsel fra MET (yr.no)", { vm.openWeather() }),
                     Triple("Media", "Sonarr, Radarr, qBittorrent og Prowlarr", { vm.openMedia43() }),
-                    Triple("Finans", "Oversikt, liste, Finn og mer", { vm.paperTab("fin") }),
-                    Triple("Nyhetsleser", "RSS med ✦ AI-sammendrag", { vm.openNews() }),
+                    Triple("Økonomi", "Oversikt, transaksjoner, budsjett og mer", { vm.paperTab("fin") }),
+                    Triple("Nyheter", "RSS med ✦ AI-sammendrag", { vm.openNews() }),
                     Triple("Innstillinger", "Tema, bakgrunn og konto", { vm.openPaperPage("set") }),
                 )
                 rows.forEachIndexed { i, (n, sub, go) -> PRow(n, sub, top = i > 0, onClick = go) }
@@ -1151,7 +1151,7 @@ private fun PaperSettings(vm: AppViewModel, navBottom: Dp) {
         item {
             PCard {
                 PRow("Bakgrunn", photoName(vm.photoKind), "Endre ›", serif = false) { vm.paperTab("hjem"); vm.photoMenu = true }
-                PRow("Nyhetsleser", "Kilder, kategorier og AI", "Åpne ›", serif = false, top = true) { vm.openNews(settings = true) }
+                PRow("Nyheter", "Kilder, kategorier og AI", "Åpne ›", serif = false, top = true) { vm.openNews(settings = true) }
             }
         }
         item { PLabel("Konto", modifier = Modifier.padding(start = 4.dp, top = 10.dp)) }

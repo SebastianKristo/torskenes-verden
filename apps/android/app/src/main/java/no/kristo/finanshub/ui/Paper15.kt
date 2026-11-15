@@ -331,7 +331,7 @@ internal fun navTabs(vm: AppViewModel, bar: String, float: Boolean): List<NavTab
         "sub" -> vm.secTabs32b("abo").map { (k, n, ic) -> NavTab(k, n, ic) { vm.subTab = k } }
         else -> buildList {
             // Én linje, satt opp av brukeren (hold inne på linja eller via Innstillinger). «Hjem» kommer bare på Hjem.
-            if (home) add(NavTab("hjem", "Hjem", "⌂") { vm.paperTab("hjem") })
+            if (home) add(NavTab("hjem", Moduler.oversikt, "⌂") { vm.paperTab("hjem") })
             vm.tabBarItems().forEach { t ->
                 if (t.id == "sok" && !float) return@forEach
                 // Uten egen oppsett følger fjerde fane «Automatisk» (Domener, eller Sporing når pakker er på vei).
@@ -489,7 +489,7 @@ internal fun PaperFinMoreGrid(vm: AppViewModel, navBottom: Dp, wide: Boolean) {
     // Prompt 30: skjulte sider (finance_more_hidden) vises ikke; i redigering viser ＋ dem i SKJULT-seksjonen.
     LaunchedEffect(vm.account?.id) { vm.loadFinHidden30() }
     val finHid = vm.p30.finHidden
-    val tiles = (if (vm.b24ProfileOn) listOf(FinTile("hjem", "Hjem", "Pakker, avganger og widgets", Icons.Filled.Home) { vm.paperTab("hjem") }) else emptyList()) +
+    val tiles = (if (vm.b24ProfileOn) listOf(FinTile("hjem", Moduler.oversikt, "Pakker, avganger og widgets", Icons.Filled.Home) { vm.paperTab("hjem") }) else emptyList()) +
         order.mapNotNull { byKey[it] }.filter { it.key !in vm.paperFinTabs && it.key !in finHid }
     val hidTiles = order.mapNotNull { byKey[it] }.filter { it.key !in vm.paperFinTabs && it.key in finHid }
     DisposableEffect(Unit) { onDispose { vm.p30.fmAdd = false } }
@@ -573,11 +573,11 @@ internal fun PaperFinMoreGrid(vm: AppViewModel, navBottom: Dp, wide: Boolean) {
             if (!editing) PCard(shadow = true) {
                 Column(Modifier.padding(16.dp, 12.dp)) {
                     PLabel("Finans · Mer")
-                    Text("Alt fra FinansHub på nettsiden · hold inne for å flytte", color = p.mut, fontSize = 13.sp)
+                    Text("Alt fra Økonomi på nettsiden · hold inne for å flytte", color = p.mut, fontSize = 13.sp)
                 }
             } else Column {
                 WiggleSpace30(true, extra = (-10).dp) // Prompt 30: 64 dp luft under ＋ N · ✓ (animert)
-                MerHideRow52(vm, "fmer", "Finans") // prompt 52: Søkefelt · Finans · Verktøy
+                MerHideRow52(vm, "fmer", "Økonomi") // prompt 52: Søkefelt · Finans · Verktøy
             }
         }
         items(tiles.size, key = { tiles[it].key }) { i ->
