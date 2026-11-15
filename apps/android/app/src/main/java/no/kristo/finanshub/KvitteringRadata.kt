@@ -5,7 +5,7 @@ import org.json.JSONObject
 /*
  * Prompt 51 (RCPTUI51) – kvitteringsrettingen i Android-appen (feltnavn fra SERVER51-API.md, RCPTSRV51):
  *   - kilden til butikknavnet: merchant_source (orgnr | known | model | user) og merchant_label («fra org.nr.», «kjent butikk»,
- *     «modellens forslag», «rettet av deg») fra serveren, vist som merkelapp ved butikkfeltet (ui/Receipt51Ui.kt)
+ *     «modellens forslag», «rettet av deg») fra serveren, vist som merkelapp ved butikkfeltet (ui/KvitteringRadataVisning.kt)
  *   - «Rådata»: ocr_raw {engine, engine_label, rows, image_size, ms, preprocess} fra GET /finans/api/receipts/:id
  *   - rettet butikknavn → POST /receipts/:id/merchant {merchant, org_number?}, så serveren lærer org.nr. → visningsnavn
  *   - bildet: originalen sendes som «image» (Lagre originalbildet på), ellers den oppreiste JPEG-en på ca. 2000 px

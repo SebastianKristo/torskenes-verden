@@ -88,7 +88,7 @@ dependencies {
     implementation(libs.play.mlkit.text)
     // Prompt 48: ML Kit Document Scanner (kantfinning, perspektivretting og beskjæring av kvitteringer). Skanner-UI og modell kommer
     // fra Play-tjenester (ingen kameratillatelse, ingen modell i APK-en). Brukes bare når «Dokumentskanner» er på; ellers/uten
-    // Play-tjenester brukes systemkameraet som før (ui/Receipt48Ui.kt).
+    // Play-tjenester brukes systemkameraet som før (ui/KvitteringSkann.kt).
     implementation(libs.play.mlkit.document.scanner)
     // Prompt 51 (ANDPLAT51): Android Auto – Avganger, På vei hjem og Media som bilmaler (Car51Plat.kt). Fast stabil versjon.
     implementation(libs.car.app)

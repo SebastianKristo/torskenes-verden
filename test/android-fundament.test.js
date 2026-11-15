@@ -73,9 +73,9 @@ test('S2: brukerinstallerte CA-er bare for lokale navn; B1: App Links også for 
 test('D §6: appen viser det serveren regner (neste trekk, neste forekomst), lokal regel bare som reserve', () => {
   const vm = strip(raw(join(APP, 'AppViewModel.kt')));
   assert.match(vm, /suspend fun nextChargeLabel\(day: Int\?, month: Int\?, cycle: String\): String\? \{[\s\S]*?api\.get\("\/subscriptions\/next-charge\?\$q"\)/);
-  const skjema = strip(raw(join(APP, 'ui/Subs23.kt')));
+  const skjema = strip(raw(join(APP, 'ui/Abonnement.kt')));
   assert.match(skjema, /produceState\(nextChargeText\(day, billMonth, cycle\), day, billMonth, cycle\) \{[\s\S]*?vm\.nextChargeLabel\(day, billMonth, cycle\)\?\.let \{ value = it \}/);
-  assert.match(strip(raw(join(APP, 'ui/Subs14.kt'))), /val now: LocalDate = OsloDato\.iDag\(\)/, 'reserven bruker Oslo-datoen');
+  assert.match(strip(raw(join(APP, 'ui/Abonnement.kt'))), /val now: LocalDate = OsloDato\.iDag\(\)/, 'reserven bruker Oslo-datoen');
   assert.match(strip(raw(join(APP, 'P37.kt'))), /val next = it0\.nextDue \?: nextDue37\(it0\.due, it0\.rep\)/);
   assert.match(strip(raw(join(APP, 'P46.kt'))), /val next = before\.nextDue \?: nextDue37\(before\.due, before\.rep\)/);
   assert.match(strip(raw(join(APP, 'Models17.kt'))), /nextDue = t\.optStr\("nextDue"\)\?\.take\(10\)/);

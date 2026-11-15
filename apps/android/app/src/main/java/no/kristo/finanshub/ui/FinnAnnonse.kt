@@ -242,4 +242,3 @@ private fun FitImage23(vm: AppViewModel, path: String, modifier: Modifier) {
     LaunchedEffect(path) { if (path.startsWith("/")) bmp = vm.image(path) }
     bmp?.let { androidx.compose.foundation.Image(it.asImageBitmap(), null, contentScale = androidx.compose.ui.layout.ContentScale.Fit, modifier = modifier) }
 }
-

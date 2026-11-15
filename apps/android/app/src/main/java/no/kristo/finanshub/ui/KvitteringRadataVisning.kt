@@ -33,7 +33,7 @@ import no.kristo.finanshub.OcrRaw51
 import no.kristo.finanshub.loadOcrRaw51
 import no.kristo.finanshub.merchantSourceText51
 
-// Prompt 51 (RCPTUI51): merkelapp for kilden til butikknavnet og den sammenleggbare «Rådata»-seksjonen (Receipt51.kt).
+// Prompt 51 (RCPTUI51): merkelapp for kilden til butikknavnet og den sammenleggbare «Rådata»-seksjonen (KvitteringRadata.kt).
 
 /** «fra org.nr.» (grønn), «kjent butikk», «modellens forslag» (oransje), «rettet av deg». Ingenting når kilden mangler. */
 @Composable

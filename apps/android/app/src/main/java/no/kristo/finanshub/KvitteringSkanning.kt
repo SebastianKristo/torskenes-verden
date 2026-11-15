@@ -19,7 +19,7 @@ import java.util.Locale
  *
  * Veien for ett kvitteringsbilde fra Skann (kamera, dokumentskanner, Bilder eller Filer):
  *   1. Forbehandling på telefonen: EXIF-rotasjon og nedskalering til ca. 2000 px (ReceiptImage48). Perspektiv/beskjæring med
- *      ML Kit Document Scanner når «Dokumentskanner» er på (ui/Receipt48Ui.kt).
+ *      ML Kit Document Scanner når «Dokumentskanner» er på (ui/KvitteringSkann.kt).
  *   2. «Les teksten på telefonen» på (PREF_OCR_LOCAL47, AV som standard): ML Kit → device_ocr i felles OCR-format.
  *      Android har ingen device_parse (Gemini Nano er droppet).
  *   3. POST /finans/api/receipts/scan (multipart): image + scan (1600 px) + thumb + client «android x.y» + device_ocr (bare når

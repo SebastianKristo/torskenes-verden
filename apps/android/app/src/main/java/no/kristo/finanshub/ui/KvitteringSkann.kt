@@ -46,7 +46,7 @@ import kotlin.math.abs
 
 /*
  * Prompt 48 (ANDROID48): dokumentskanneren (ML Kit Document Scanner) og kvitteringsarket med redigerbart skjema (Del 5).
- * Logikken ligger i ReceiptScan48.kt (ReceiptScanViewModel48 med StateFlow) og ReceiptOcr48.kt (felles OCR-format).
+ * Logikken ligger i KvitteringSkanning.kt (ReceiptScanViewModel48 med StateFlow) og KvitteringOcr.kt (felles OCR-format).
  */
 
 private fun Context.activity48(): Activity? {

@@ -1,5 +1,5 @@
 // Fase 5 (D-android §6): «Neste trekk …» i abonnementsskjemaet regnes av serveren (GET /finans/api/subscriptions/next-charge),
-// ikke av appene (Android Subs14.kt nextChargeText). Datoene følger shared/testvektorer/abonnement.json (testvektorer.test.js).
+// ikke av appene (Android ui/Abonnement.kt nextChargeText). Datoene følger shared/testvektorer/abonnement.json (testvektorer.test.js).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtempSync } from 'node:fs';

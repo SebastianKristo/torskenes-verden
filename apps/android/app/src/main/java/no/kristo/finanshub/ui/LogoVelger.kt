@@ -56,6 +56,17 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.io.ByteArrayOutputStream
 import java.net.URLEncoder
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.withStyle
+import no.kristo.finanshub.*
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 /* ---------------- Prompt 73 (LOGO73): «Endre logo» for en butikk i Finans ----------------
  * Fasit: «Lagre og logo.dc.html» 1a (mobil-ark fra transaksjon). Papir-design: bakgrunn #f3efe6, kort #fff, kant #d8d1c2,
@@ -349,3 +360,119 @@ private fun Line73Button(text: String, modifier: Modifier, onClick: () -> Unit) 
         contentAlignment = Alignment.Center,
     ) { Text(text, color = Ink73, fontFamily = PaperFonts.sans, fontWeight = FontWeight.SemiBold, fontSize = 14.sp) }
 }
+
+/* ---------------- Innstillinger → AI og tolkning → PERSONVERN OG LOGOER ---------------- */
+
+private val AUDIT_FMT = DateTimeFormatter.ofPattern("d. MMM HH:mm", Locale("nb", "NO"))
+
+private fun auditTime27(ts: String?): String = ts?.let { t ->
+    runCatching { java.time.OffsetDateTime.parse(t).atZoneSameInstant(java.time.ZoneId.systemDefault()).format(AUDIT_FMT) }.getOrNull()
+        ?: runCatching { java.time.LocalDateTime.parse(t.replace(' ', 'T').take(19)).format(AUDIT_FMT) }.getOrNull()
+        ?: t.take(16)
+} ?: ""
+
+@Composable
+internal fun PrivacyLogos27(vm: AppViewModel) {
+    val p = PaperPal.current
+    val s = vm.b27
+    LaunchedEffect(Unit) { vm.loadPrivacy27() }
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        PLabel("Personvern og logoer", modifier = Modifier.padding(start = 4.dp, top = 10.dp))
+        PCard {
+            PRIVACY27.forEachIndexed { i, (k, n, sub) ->
+                PToggle(n, sub, s.privacy[k] ?: true, top = i > 0) { vm.setPrivacy27(k, it) }
+            }
+            Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
+            Row(
+                Modifier.fillMaxWidth().clickable { s.auditOpen = !s.auditOpen; if (s.auditOpen) vm.loadAiAudit27() }.padding(14.dp, 12.dp),
+                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text("AI-logg", color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 14.5.sp)
+                    Text("Hva som ble sendt til hvilken motor, og når", color = p.mut, fontSize = 12.5.sp, maxLines = 2)
+                }
+                Text(if (s.auditOpen) "Skjul" else "Vis ›", color = p.mut, fontSize = 13.sp)
+            }
+            if (s.auditOpen) {
+                val a = s.audit
+                when {
+                    a == null -> Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = p.ink, modifier = Modifier.size(20.dp), strokeWidth = 2.dp) }
+                    a.isEmpty() -> Text(s.auditError ?: "Ingenting er sendt til AI ennå.", color = if (s.auditError != null) p.lab else p.mut, fontSize = 13.sp, modifier = Modifier.padding(14.dp, 4.dp, 14.dp, 14.dp))
+                    else -> a.take(40).forEach { r ->
+                        Box(Modifier.fillMaxWidth().padding(start = 14.dp).height(1.dp).background(p.line))
+                        Column(Modifier.fillMaxWidth().padding(14.dp, 10.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(r.engine, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, modifier = Modifier.weight(1f), maxLines = 1)
+                                Text(auditTime27(r.ts), color = p.mut, fontFamily = PaperFonts.mono, fontSize = 11.5.sp)
+                            }
+                            if (r.purpose.isNotBlank()) Text(r.purpose, color = p.mut, fontSize = 12.5.sp, maxLines = 2)
+                            if (r.fields.isNotBlank()) Text("Sendt: ${r.fields}", color = p.ink, fontFamily = PaperFonts.mono, fontSize = 11.5.sp, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                        }
+                    }
+                }
+            }
+        }
+        Text("Ollama leser kvitteringen på hjemmeserveren. Gemini får bare det ryddede butikknavnet, aldri bildet, varelinjer, beløp, org.nr. eller kortdata.",
+            color = p.mut, fontSize = 12.sp, lineHeight = 17.sp, modifier = Modifier.padding(horizontal = 4.dp))
+    }
+}
+
+/* ---------------- «Velg logo» der logo mangler ---------------- */
+
+/** Vises bare når butikken ikke har logo: «Velg logo» åpner Finn logo · Last opp · Lim inn domene. */
+@Composable
+internal fun VelgLogo27(vm: AppViewModel, domain: String?, name: String, receiptId: String?) {
+    val p = PaperPal.current
+    val ctx = LocalContext.current
+    val s = vm.b27
+    var missing by remember(domain, name) { mutableStateOf(false) }
+    LaunchedEffect(domain, name) { missing = vm.logoFor(domain, name) == null }
+    val done = s.logoDone[name.lowercase()]
+    if (!missing && done == null) return
+    val open = s.logoPick?.name == name
+    val pick = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri -> if (uri != null) vm.logoUpload27(ctx, LogoPick27(name, domain, receiptId), uri) }
+    var dom by remember(name) { mutableStateOf("") }
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            if (done != null) {
+                Box(Modifier.size(30.dp).clip(RoundedCornerShape(8.dp)).background(Color.White).padding(3.dp)) {
+                    Image(done.asImageBitmap(), null, contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize())
+                }
+                Text("Ny logo er lagret", color = p.pos, fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+            } else {
+                Text("Ingen logo", color = p.mut, fontSize = 12.5.sp, modifier = Modifier.weight(1f))
+            }
+            Box(
+                Modifier.height(32.dp).clip(CircleShape).border(1.dp, p.line, CircleShape).clickable { s.logoPick = if (open) null else LogoPick27(name, domain, receiptId); s.logoMsg = null }
+                    .padding(horizontal = 12.dp),
+                contentAlignment = Alignment.Center,
+            ) { Text(if (open) "Lukk" else "Velg logo", color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 12.5.sp) }
+        }
+        if (open) {
+            val pk = LogoPick27(name, domain, receiptId)
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                PButton(if (s.logoBusy) "Leter …" else "✦ Finn logo", Modifier.weight(1f), height = 40.dp) { if (!s.logoBusy) vm.findLogo27(pk) }
+                PButton("↑ Last opp", Modifier.weight(1f), kind = "line", height = 40.dp) { pick.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }
+            }
+            Row(
+                Modifier.fillMaxWidth().height(42.dp).clip(RoundedCornerShape(14.dp)).background(p.bg).border(1.dp, p.line, RoundedCornerShape(14.dp)).padding(start = 12.dp, end = 4.dp),
+                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                BasicTextField(
+                    dom, { dom = it }, singleLine = true, modifier = Modifier.weight(1f),
+                    textStyle = TextStyle(color = p.ink, fontSize = 14.sp, fontFamily = PaperFonts.mono), cursorBrush = SolidColor(p.lab),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { vm.logoDomain27(pk, dom) }),
+                    decorationBox = { inner -> Box(contentAlignment = Alignment.CenterStart) { if (dom.isEmpty()) Text("Lim inn domene, f.eks. blomsterlandet.no", color = p.mut, fontSize = 13.sp, maxLines = 1); inner() } },
+                )
+                Box(Modifier.height(34.dp).clip(CircleShape).background(p.ink).clickable { vm.logoDomain27(pk, dom) }.padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
+                    Text("Bruk", color = p.bg, fontWeight = FontWeight.Bold, fontSize = 12.5.sp)
+                }
+            }
+            s.logoMsg?.let { Text(it, color = p.lab, fontSize = 12.5.sp) }
+            Text("Gemini får bare butikknavnet «$name». Koden henter og sjekker logoen.", color = p.mut, fontSize = 11.5.sp)
+        }
+    }
+}
+
+/* ---------------- Abonnement: «Fra skjermbilde» ---------------- */

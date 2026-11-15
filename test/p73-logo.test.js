@@ -218,8 +218,8 @@ test('iOS: LogoSheet73 med søk, opplasting (kvadrat 512) og overstyring i Paper
   assert.match(src('apps/ios/FinansHub/Sources/KvitteringPanel.swift'), /LogoSheet73/);
 });
 
-test('Android: LogoSheet73 med søk, opplasting (kvadrat 512) og overstyring i Logo og StoreLogo52', () => {
-  const s = src('apps/android/app/src/main/java/no/kristo/finanshub/ui/LogoSheet73.kt');
+test('Android: LogoVelger (LogoSheet73) med søk, opplasting (kvadrat 512) og overstyring i Logo og StoreLogo52', () => {
+  const s = src('apps/android/app/src/main/java/no/kristo/finanshub/ui/LogoVelger.kt');
   for (const t of ['Endre logo', 'Søk etter butikk', 'Bruk denne logoen', 'Tilbakestill til automatisk', 'Bruk initialer', '/logos?q=', '/merchants/logo-overrides', '/merchants/logo/upload', '512']) assert.ok(s.includes(t), t);
   assert.match(s, /CancellationException/);
   assert.match(src('apps/android/app/src/main/java/no/kristo/finanshub/ui/Finance.kt'), /LogoOv73/);

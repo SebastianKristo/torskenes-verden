@@ -1,25 +1,48 @@
 package no.kristo.finanshub.ui
 
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.unit.dp
+import no.kristo.finanshub.AppViewModel
+import android.graphics.Bitmap
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.sp
+import no.kristo.finanshub.*
+import java.time.LocalDate
+import no.kristo.felles.tid.OsloDato
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
-import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -27,11 +50,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.CornerRadius
@@ -52,18 +71,64 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
-import no.kristo.finanshub.*
-import java.time.LocalDate
 import java.time.temporal.ChronoUnit
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.input.ImeAction
+import java.time.format.DateTimeFormatter
+import java.util.Locale
+
+/* ---------------- Subscription OS ---------------- */
+
+// Prompt 42: den klassiske Subscription OS-skjermen (Material You) er slettet; Papir bruker Abonnement.kt.
+@Composable
+internal fun SubsMobileScreen(vm: AppViewModel) {
+    // Prompt 23: Papir bruker den nøyaktige kopien av Subscription OS (Abonnement.kt). Her ligger den i PaneBox (23 dp toppmarg),
+    // så den løftes 23 dp for å overlappe toppbildet. Ruter Paper.kt direkte til PaperSubs23, brukes lift = 0.
+    PaperSubs23(vm, WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding(), lift = 23.dp)
+}
+
+/* ---------------- Subscription OS: rediger og legg til (prompt 14) ---------------- */
+
+private val MONTH_NAMES = listOf("januar", "februar", "mars", "april", "mai", "juni", "juli", "august", "september", "oktober", "november", "desember")
+
+/**
+ * «Neste trekk 21. oktober, deretter hvert år» ut fra dag, måned og syklus. Bare reserve uten nett: skjemaet viser serverens tekst
+ * (AppViewModel.nextChargeLabel → GET /finans/api/subscriptions/next-charge, server/finans/cycles.js nextChargePreview).
+ */
+internal fun nextChargeText(day: Int?, month: Int?, cycle: String): String {
+    val d = day?.coerceIn(1, 31) ?: return "Velg faktureringsdag"
+    val now: LocalDate = OsloDato.iDag() // Q20: «i dag» i Oslo
+    val next: LocalDate = if (cycle == "monthly" || month == null) {
+        var x = now.withDayOfMonth(minOf(d, now.lengthOfMonth()))
+        if (x.isBefore(now)) { val m = now.plusMonths(1); x = m.withDayOfMonth(minOf(d, m.lengthOfMonth())) }
+        x
+    } else {
+        val m = month.coerceIn(1, 12)
+        var x = now.withMonth(m).let { it.withDayOfMonth(minOf(d, it.lengthOfMonth())) }
+        if (x.isBefore(now)) x = x.plusYears(1).let { it.withDayOfMonth(minOf(d, it.lengthOfMonth())) }
+        x
+    }
+    val then = when (cycle) { "yearly" -> "hvert år"; "biennial" -> "hvert 2. år"; else -> "hver måned" }
+    return "Neste trekk ${next.dayOfMonth}. ${MONTH_NAMES[next.monthValue - 1]}, deretter $then"
+}
+
+/** Logoen til et abonnement: egen opplastet / funnet av AI, ellers tjenestens logo fra domenet. */
+@Composable
+internal fun SubLogo(vm: AppViewModel, s: SubItem?, name: String, size: Int) {
+    val url = s?.logoUrl
+    var bmp by remember(url) { mutableStateOf<Bitmap?>(null) }
+    LaunchedEffect(url) { bmp = url?.let { vm.subLogo(it) } }
+    val b = bmp
+    if (b != null) Image(b.asImageBitmap(), name, contentScale = ContentScale.Crop, modifier = Modifier.size(size.dp).clip(RoundedCornerShape((size / 4).dp)))
+    else Logo(vm, s?.domain, name.ifBlank { "?" }, 0xFFFF7A3D, size)
+}
 
 /*
  * Prompt 23: Abonnementer (Subscription OS) i Papir, nøyaktig etter Subscription OS.dc.html (variant mobile, theme papir/papirDark,
@@ -896,3 +961,89 @@ private fun SubShare37(vm: AppViewModel, s: SubItem, t: SubTok) {
         }
     }
 }
+
+private val SK_CARD = Color(0xFF141418)
+private val SK_LINE = Color(0xFF2A2A31)
+private val SK_MUT = Color(0xFFA0A0AA)
+private val SK_OK = Color(0xFF9FE3C6)
+private val SK_CHECK = Color(0xFFFFB08A)
+private val SK_ORANGE = Color(0xFFFF7A3D)
+/** «1 234 kr» uten desimaler (minus som −). */
+private fun krShot(v: Double): String = (if (v < 0) "−" else "") + String.format(Locale("nb", "NO"), "%,.0f", kotlin.math.abs(v)).replace(',', ' ').replace(' ', ' ') + " kr"
+private val MON27 = listOf("jan", "feb", "mar", "apr", "mai", "jun", "jul", "aug", "sep", "okt", "nov", "des")
+
+/** «✦ Ollama leser skjermbildet»: miniatyr, rader med ✓ / «Sjekk», «+ Legg til …» og «Rediger først». */
+@Composable
+internal fun SubShotCard27(vm: AppViewModel, card: Color = SK_CARD, fg: Color = Color.White, mut: Color = SK_MUT, line: Color = SK_LINE, check: Color = SK_CHECK, ok: Color = SK_OK) {
+    val s = vm.b27
+    if (!s.shotOpen) return
+    val r = s.shot
+    Column(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(card).border(1.dp, Color(0x55FF7A3D), RoundedCornerShape(24.dp)).padding(18.dp, 18.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("✦ Ollama leser skjermbildet", color = fg, fontWeight = FontWeight.SemiBold, fontSize = 16.sp, fontFamily = PaperFonts.sans, modifier = Modifier.weight(1f))
+            SheetButton30("Lukk", "secondary", dark = card.luminance() < .5f) { s.shotOpen = false; s.shot = null; s.shotThumb = null } // Prompt 30
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.Top) {
+            Box(Modifier.size(76.dp, 130.dp).clip(RoundedCornerShape(12.dp)).background(line).border(1.dp, line, RoundedCornerShape(12.dp))) {
+                s.shotThumb?.let { Image(it.asImageBitmap(), null, contentScale = ContentScale.Crop, alignment = Alignment.TopCenter, modifier = Modifier.fillMaxSize()) }
+            }
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                when {
+                    s.shotBusy -> {
+                        Text("Finner tjeneste, plan, pris og trekkdato …", color = fg, fontSize = 14.sp, lineHeight = 20.sp)
+                        Spacer(Modifier.height(8.dp))
+                        androidx.compose.material3.LinearProgressIndicator(color = SK_ORANGE, trackColor = line, modifier = Modifier.fillMaxWidth().height(4.dp).clip(RoundedCornerShape(2.dp)))
+                        Spacer(Modifier.height(6.dp))
+                        Text(s.shotName, color = mut, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                    s.shotError != null -> Text(s.shotError ?: "", color = check, fontSize = 13.5.sp, lineHeight = 19.sp)
+                    r != null -> {
+                        val (day, mon) = shotDay27(r)
+                        val price = (if (r.currency.uppercase() != "NOK") "≈ " else "") + krShot(r.price).removePrefix("−") + (r.priceOriginal?.let { " ($it)" } ?: "")
+                        listOf(
+                            Triple("Tjeneste", r.service, "tjeneste"), Triple("Plan", r.plan.ifBlank { "–" }, "plan"), Triple("Pris", price, "pris"),
+                            Triple("Syklus", if (r.cycle == "yearly") "Årlig" else "Månedlig", "syklus"), Triple("Neste trekk", "$day. ${MON27[(mon - 1).coerceIn(0, 11)]}", "neste_trekk"),
+                            Triple("Kategori", r.category, "kategori"),
+                        ).forEach { (k, v, key) ->
+                            val unsure = key in r.check || (key == "pris" && r.currency.uppercase() != "NOK" && "valuta" in r.check)
+                            Column {
+                                Row(Modifier.fillMaxWidth().heightIn(min = 34.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                    Text(k, color = mut, fontSize = 12.5.sp, modifier = Modifier.width(92.dp))
+                                    Text(v, color = fg, fontWeight = FontWeight.SemiBold, fontSize = 14.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                                    Text(if (unsure) "Sjekk" else "✓", color = if (unsure) check else ok, fontWeight = FontWeight.Bold, fontSize = 11.5.sp)
+                                }
+                                Box(Modifier.fillMaxWidth().height(1.dp).background(line))
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        if (r != null && !s.shotBusy) {
+            if (r.existingId != null) Text("${r.service} finnes allerede. Du kan oppdatere plan og pris.", color = check, fontSize = 12.5.sp)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Box(Modifier.weight(1f).height(44.dp).clip(RoundedCornerShape(22.dp)).background(SK_ORANGE).clickable { Haptics.tap(); vm.addShot27(r) }, contentAlignment = Alignment.Center) {
+                    Text(if (r.existingId != null) "Oppdater ${r.service}" else "+ Legg til ${r.service}", color = Color(0xFF1A0C04), fontWeight = FontWeight.SemiBold, fontSize = 14.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+                Box(Modifier.weight(1f).height(44.dp).clip(RoundedCornerShape(22.dp)).border(1.dp, line, RoundedCornerShape(22.dp)).clickable { vm.editShot27(r) }, contentAlignment = Alignment.Center) {
+                    Text("Rediger først", color = fg, fontWeight = FontWeight.SemiBold, fontSize = 14.5.sp)
+                }
+            }
+        }
+        Text("Leses lokalt av qwen2.5vl på hjemmeserveren. Bildet slettes etter lesing. Felt merket «Sjekk» var utydelige.", color = mut, fontSize = 12.sp, lineHeight = 17.sp)
+    }
+}
+
+/** Valgknappen «Fra skjermbilde» i Legg til-kortet (photo picker, bare bilder). */
+@Composable
+internal fun rememberShotPicker27(vm: AppViewModel): () -> Unit {
+    val ctx = LocalContext.current
+    val pick = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri -> if (uri != null) { vm.subAdding = false; vm.subFromShot27(ctx, uri) } }
+    return { pick.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }
+}
+
+/** Første trekk-dato i skjemaet fra et skjermbilde (dag, måned). */
+internal fun prefillDay27(r: SubShot27): Pair<Int, Int> = shotDay27(r)
