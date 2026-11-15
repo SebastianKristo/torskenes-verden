@@ -136,24 +136,6 @@ internal fun VoiceBar56(vm: AppViewModel, target: String, ink: Color, mut: Color
     }
 }
 
-/** Mikrofonknappen i søkefeltet på Hjem (30 dp, rød mens den lytter). */
-@Composable
-internal fun SearchMic56(vm: AppViewModel) {
-    val p = PaperPal.current
-    val ctx = LocalContext.current
-    LaunchedEffect(Unit) { vm.voice56Refresh() }
-    val start = rememberMic56(onDenied = { vm.say56(Voice56.SEARCH, "Mikrofonen trenger tillatelse") }) { vm.micSearch56(ctx) }
-    val on = Voice56.on(Voice56.SEARCH)
-    Box(
-        Modifier.size(34.dp).clip(CircleShape).background(if (on) MIC56_ON else Color.Transparent)
-            .holdMic56("Snakk inn søket (hold inne, eller trykk for start og stopp)",
-                onTap = { Haptics.select(); if (on) vm.micSearch56(ctx) else start() },
-                onHold = { if (micOk56(ctx)) vm.micSearch56(ctx, hold = true) else start() },
-                onRelease = { cancel -> vm.releaseMic56(Voice56.SEARCH, cancel) }),
-        contentAlignment = Alignment.Center,
-    ) { WxIcon(MIC56, if (on) Color.White else p.ink, 18.dp, stroke = 2f) }
-}
-
 /** Innstillinger → AI og tolkning: hvor talen skrives ned. Lagres på telefonen. */
 @Composable
 internal fun VoiceSettings56(vm: AppViewModel) {

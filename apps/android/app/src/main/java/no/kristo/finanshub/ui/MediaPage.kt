@@ -177,15 +177,6 @@ internal fun Pill43(text: String, on: Boolean, count: Int? = null, onClick: () -
 }
 
 @Composable
-internal fun IconBtn43(icon: String, label: String, on: Boolean, onClick: () -> Unit) {
-    val p = PaperPal.current
-    Box(Modifier.size(44.dp).clip(CircleShape).background(if (on) RED43 else p.card).border(1.dp, if (on) RED43 else p.line, CircleShape)
-        .clickable(role = Role.Button, onClickLabel = label, onClick = onClick), contentAlignment = Alignment.Center) {
-        Text(icon, color = if (on) Color.White else p.ink, fontSize = 17.sp, fontWeight = FontWeight.Bold)
-    }
-}
-
-@Composable
 internal fun Btn43(text: String, dark: Boolean = false, color: Color? = null, modifier: Modifier = Modifier, enabled: Boolean = true, onClick: () -> Unit) {
     val p = PaperPal.current
     val bg = color ?: if (dark) p.ink else Color.Transparent

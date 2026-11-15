@@ -370,43 +370,6 @@ internal fun wxNext24(w: WeatherFull): List<WxHour> {
     return w.hours.filter { h -> wxLdt(h.t)?.let { !it.isBefore(now) } ?: false }.take(24)
 }
 
-@Composable
-private fun HourCard(vm: AppViewModel, w: WeatherFull, forhold: () -> Unit) {
-    var mode by remember { mutableStateOf("temp") }
-    val hrs = wxNext24(w)
-    val pent = vm.wxCmp22?.pentHours ?: emptyMap()
-    Column(Modifier.fillMaxWidth().glass().padding(top = 14.dp, bottom = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f).clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = forhold)) {
-                Text("Forhold ›", fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                Text(when (mode) { "rain" -> "Sjanse for nedbør"; "wind" -> "Vind (m/s)"; else -> "Temperatur (°C)" }, fontSize = 12.5.sp, color = wxPp)
-            }
-            Row(Modifier.clip(CircleShape).background(Color.Black.copy(alpha = .18f)).padding(3.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                listOf("temp" to WX_IC.getValue("part"), "rain" to P_DROP, "wind" to P_WIND).forEach { (k, ic) ->
-                    Box(Modifier.size(44.dp, 30.dp).clip(CircleShape).background(if (mode == k) Color.White.copy(alpha = .28f) else Color.Transparent).clickable { Haptics.select(); mode = k },
-                        contentAlignment = Alignment.Center) { WxIcon(ic, Color.White, 18.dp, stroke = 1.9f) }
-                }
-            }
-        }
-        if (hrs.isEmpty()) Text("Ingen timevarsel.", fontSize = 13.sp, modifier = Modifier.padding(horizontal = 16.dp).alpha(.75f))
-        Row(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 8.dp)) {
-            hrs.forEachIndexed { k, h ->
-                val hh = wxLdt(h.t)?.hour ?: 0
-                val pp = h.precipProb?.roundToInt() ?: 0
-                Column(Modifier.width(56.dp).padding(vertical = 4.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(if (k == 0) "Nå" else wxPad(hh), fontSize = 14.sp, fontWeight = if (k == 0) FontWeight.ExtraBold else FontWeight.Bold)
-                    WxCodeIcon(wxKey(h.code, !h.isDay), 28.dp)
-                    Text(if (pp >= 20) "$pp %" else "", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = wxPp, modifier = Modifier.heightIn(min = 13.dp), lineHeight = 13.sp)
-                    Text(when (mode) { "rain" -> "$pp %"; "wind" -> "${(h.wind ?: 0.0).roundToInt()}"; else -> wxR(h.temp) }, fontSize = 17.sp, fontWeight = FontWeight.Bold)
-                    // Pent i oransje under Yr, så avvik ses med en gang.
-                    val pt = if (mode == "temp") pent[h.t.take(13)] else null
-                    Text(pt?.let { "${it.roundToInt()}°" } ?: "", fontSize = 12.5.sp, fontWeight = FontWeight.Bold, color = Color(0xFFFFB27A), modifier = Modifier.heightIn(min = 15.dp), lineHeight = 15.sp)
-                }
-            }
-        }
-    }
-}
-
 /* ---------- 7 dager ---------- */
 
 @Composable
@@ -556,13 +519,6 @@ private fun CmpCard(vm: AppViewModel, w: WeatherFull, openIt: () -> Unit) {
             Text("Time for time og hele uka", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
             Text("›", fontSize = 14.sp, modifier = Modifier.alpha(.7f))
         }
-    }
-}
-
-@Composable
-private fun Badge(t: String, c: Color, modifier: Modifier) {
-    Box(modifier.size(28.dp).clip(CircleShape).background(c).border(2.dp, Color.White.copy(alpha = .7f), CircleShape), contentAlignment = Alignment.Center) {
-        Text(t, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold)
     }
 }
 

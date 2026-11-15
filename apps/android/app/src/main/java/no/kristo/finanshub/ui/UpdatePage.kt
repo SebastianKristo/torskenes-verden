@@ -79,66 +79,10 @@ fun AppViewModel.loadUpd28() {
     }
 }
 
-/** Kortstatus til raden i Innstillinger. */
-internal fun upd28Summary(s: Upd28State): String = when {
-    s.missing -> "Ikke tilgjengelig"
-    !s.loaded -> "Versjon og oppdatering"
-    s.running -> "Oppdatering pågår …"
-    !s.available -> "Installert ${s.installed} · ikke satt opp"
-    s.updateAvailable -> "Ny versjon: ${s.latest}"
-    else -> "Installert ${s.installed}"
-}
-
 /** Nettsiden med Innstillinger → System åpent. */
 internal fun upd28WebUrl(vm: AppViewModel): String {
     val b: String = vm.base.ifBlank { vm.account?.server ?: "" }.trimEnd('/')
     return "$b/#/innstillinger/system"
 }
 
-@Composable
-internal fun Update28Page(vm: AppViewModel) {
-    val p = PaperPal.current
-    val s: Upd28State = vm.upd28
-    val ctx = LocalContext.current
-    LaunchedEffect(Unit) { if (vm.userIsAdmin) { vm.loadUpd28(); vm.loadUpd30(force = true); vm.loadUpdSettings30() } }
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        PLabel("Oppdatering", modifier = Modifier.padding(start = 4.dp, top = 6.dp))
-        if (!vm.userIsAdmin) {
-            PCard { PRow("Oppdatering", "Gjøres av en administrator", "Bare admin", serif = false) }
-            return@Column
-        }
-        // Prompt 30: banneret og PROGRAMVARE (oppdater fra appen med passord); nettleseren er bare en sekundær vei.
-        UpdateBanner30(vm, home = false)
-        PCard { Programvare30(vm) }
-        PCard { Update28Rows(s) }
-        Text(upd28Note(s), color = p.mut, fontSize = 12.5.sp, modifier = Modifier.padding(horizontal = 4.dp))
-        PButton("Oppdater i nettleseren ›", Modifier.fillMaxWidth(), kind = "line", height = 44.dp) { openCustomTab24(ctx, upd28WebUrl(vm)) }
-        PButton(if (s.loading) "Henter …" else "Se etter på nytt", Modifier.fillMaxWidth(), kind = "line", height = 44.dp) { vm.loadUpd28() }
-    }
-}
-
-@Composable
-private fun Update28Rows(s: Upd28State) {
-    val p = PaperPal.current
-    if (s.missing) {
-        PRow("Oppdatering fra appen", "Serveren har ikke denne funksjonen ennå", "Ikke tilgjengelig", serif = false)
-        return
-    }
-    if (!s.loaded) {
-        PRow("Oppdatering", s.error.ifBlank { "Henter versjon fra serveren" }, if (s.loading) "Laster …" else "–", serif = false)
-        return
-    }
-    val latestSub: String = when {
-        s.latestError.isNotBlank() -> "Kunne ikke hente fra GitHub"
-        s.updateAvailable -> "Ny versjon er tilgjengelig"
-        else -> "Du har nyeste versjon"
-    }
-    PRow("Installert versjon", "På serveren", s.installed, serif = false)
-    PRow("Nyeste versjon", latestSub, s.latest, valueColor = if (s.updateAvailable) p.pos else p.mut, serif = false, top = true)
-    if (s.running) PRow("Status", "Følg med i nettleseren", "Pågår …", valueColor = p.lab, serif = false, top = true)
-    else if (!s.available) PRow("Oppdatering fra appen", "Kjør update.sh én gang fra Proxmox", "Ikke satt opp", serif = false, top = true)
-}
-
-private fun upd28Note(s: Upd28State): String =
-    if (s.missing || (s.loaded && !s.available)) "Kjør update.sh én gang fra Proxmox for å slå på oppdatering fra appen. Kommandoen finnes på nettsiden under Innstillinger → System."
     else "Trykk «Oppdater ›» og skriv passordet ditt på nytt. Serveren tar backup av databasen og starter på nytt (vanligvis 2–5 minutter)."

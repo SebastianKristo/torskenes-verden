@@ -237,16 +237,6 @@ private fun ListChip37(l: TaskList, on: Boolean, count: Int, users: List<TaskMem
     }
 }
 
-@Composable
-private fun NewListChip37(onClick: () -> Unit) {
-    val p = PaperPal.current
-    Box(Modifier.height(38.dp).clip(CircleShape).drawBehind {
-        drawRoundRect(p.mut, cornerRadius = CornerRadius(size.height / 2), style = Stroke(1.2.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(5.dp.toPx(), 4.dp.toPx()))))
-    }.clickable(role = Role.Button) { onClick() }.padding(horizontal = 14.dp), contentAlignment = Alignment.Center) {
-        Text("+ Ny liste", color = p.ink, fontWeight = FontWeight.Bold, fontSize = 13.sp, maxLines = 1)
-    }
-}
-
 private fun names37(l: List<String>): String = when (l.size) { 0 -> ""; 1 -> l[0]; else -> l.dropLast(1).joinToString(", ") + " og " + l.last() }
 
 /** «Delt med Ingrid og Pål · …» + Administrer, eller «Bare du ser denne listen · …» + Del. */
@@ -738,28 +728,3 @@ private fun ListSheet37(vm: AppViewModel, l: TaskList?, users: List<TaskMember>)
 
 /* ======================= Now Brief: Gjøremål-kortet ======================= */
 
-/** «Gjøremål · 3 gjøremål i dag» med de tre første (forfalt + i dag), avkrysning rett i briefen og «Åpne Gjøremål ›». */
-@Composable
-internal fun BriefTodos37(vm: AppViewModel) {
-    val p = PaperPal.current
-    LaunchedEffect(Unit) { if (vm.tasks == null) vm.refreshTasks37() }
-    val today = LocalDate.now(OSLO37).toString()
-    val due = (vm.tasks?.items ?: emptyList()).filter { !it.done && it.due != null && it.due <= today }.sortedWith(compareBy<TaskItem> { it.due }.thenByDescending { it.prio })
-    if (due.isEmpty()) return
-    val over = due.count { it.due!! < today }
-    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(p.card).padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("GJØREMÅL", color = p.lab, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = 10.5.sp, letterSpacing = 1.5.sp, modifier = Modifier.weight(1f))
-            Text("${due.size} i dag" + if (over > 0) " · $over forfalt" else "", color = p.mut, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = 11.sp)
-        }
-        PSerif(if (due.size == 1) "1 gjøremål i dag" else "${due.size} gjøremål i dag", 20.sp, maxLines = 1)
-        due.take(3).forEach { t ->
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Box(Modifier.size(22.dp).clip(CircleShape).border(2.dp, if (t.due!! < today) RED37 else p.mut, CircleShape).clickable(role = Role.Checkbox, onClickLabel = "Ferdig") { vm.toggleTask37(t.id) })
-                Text(t.title, color = p.ink, fontSize = 14.5.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                Text(if (t.due < today) "Forfalt" else t.time ?: "I dag", color = if (t.due < today) RED37 else p.mut, fontSize = 12.sp)
-            }
-        }
-        Text("Åpne Gjøremål ›", color = p.ink, fontWeight = FontWeight.Bold, fontSize = 13.sp, modifier = Modifier.clickable(role = Role.Button) { vm.closeBrief34(); vm.openTasks() }.padding(vertical = 4.dp))
-    }
-}

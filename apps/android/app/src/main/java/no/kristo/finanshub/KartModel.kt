@@ -39,11 +39,6 @@ data class KPrefs46(
 val MODES46 = listOf("bus", "metro", "tram", "rail", "water")
 val MODE_NAME46 = mapOf("bus" to "Buss", "metro" to "T-bane", "tram" to "Trikk", "rail" to "Tog", "water" to "Båt")
 val MODE_COLOR46 = mapOf("bus" to 0xFFC8372DL, "metro" to 0xFFD9661FL, "tram" to 0xFF2B6FB3L, "rail" to 0xFF2F7A4FL, "water" to 0xFF5B4BB5L)
-val MODE_PATH46 = mapOf(
-    "bus" to "M6 4h12a2 2 0 0 1 2 2v10H4V6a2 2 0 0 1 2-2zM4 11h16M7 20v-4M17 20v-4", "metro" to "M5 5h14M12 5v15",
-    "tram" to "M7 7h10v9H7zM9 3h6M12 3v4M8 21l2-5M16 21l-2-5", "rail" to "M7 3h10v12H7zM7 10h10M9 19l-2 2M15 19l2 2",
-    "water" to "M3 16c2 1.5 4 1.5 6 0s4-1.5 6 0 4 1.5 6 0M6 13l1-5h10l1 5M12 4v4",
-)
 
 class Kart46State {
     var open by mutableStateOf(false)

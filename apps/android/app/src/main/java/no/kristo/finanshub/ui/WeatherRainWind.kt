@@ -53,10 +53,6 @@ private val WIND32B = Color(0xFF3FD0E0)
 private const val DROP32B = "M12 3c3 4 6 7.5 6 11a6 6 0 0 1-12 0c0-3.5 3-7 6-11z"
 private const val WINDP32B = "M3 8h11a3 3 0 1 0-3-3M3 12h16a3 3 0 1 1-3 3M3 16h8"
 
-/** ✕ Lukk – prompt 73: ingen egen variant lenger, bare den felles VaerCloseButton (ui/Ui40.kt). */
-@Composable
-internal fun WxClose32b(onClick: () -> Unit) = VaerCloseButton(onClick = onClick)
-
 private fun mm32b(v: Double?): String = when {
     v == null || v < 0.05 -> ""
     v < 10 -> wxF1(v)

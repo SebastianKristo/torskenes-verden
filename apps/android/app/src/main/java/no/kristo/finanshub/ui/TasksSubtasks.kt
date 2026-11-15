@@ -132,23 +132,6 @@ internal fun AskDone44(vm: AppViewModel) {
         dismissButton = { TextButton({ vm.p44.askDone = null }) { Text("Ikke nå", color = p.ink) } })
 }
 
-/** Raden som erstatter synk-kortet i Gjøremål. */
-@Composable
-internal fun HaRow44(vm: AppViewModel) {
-    val p = PaperPal.current
-    val ha = vm.tasksHa ?: return
-    val st = if (!ha.enabled) "av" else ha.syncedAt?.let { s -> "Synket " + (runCatching { java.time.Instant.parse(s).atZone(java.time.ZoneId.systemDefault()).toLocalTime().toString().take(5) }.getOrNull() ?: "") } ?: "på"
-    Row(Modifier.padding(horizontal = 16.dp).fillMaxWidth().heightIn(min = 52.dp).clip(RoundedCornerShape(16.dp)).background(p.card)
-        .clickable { vm.tasksOpen = false; vm.openPaperPage("set"); vm.settingsPage = "huske" }.padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text("⇄", color = p.ink, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-        Column(Modifier.weight(1f).padding(start = 10.dp)) {
-            Text("Synk med Home Assistant · $st", color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, maxLines = 1)
-            Text("Endres i Innstillinger → Gjøremål", color = p.mut, fontSize = 12.sp, maxLines = 1)
-        }
-        Text("›", color = p.mut, fontSize = 18.sp)
-    }
-}
-
 /** Innstillinger → Gjøremål: kortet SYNK MED HOME ASSISTANT (samme lagring som før). */
 @Composable
 internal fun TasksSyncPage44(vm: AppViewModel) {

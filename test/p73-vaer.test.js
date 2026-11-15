@@ -84,7 +84,8 @@ test('Android: én VaerCloseButton (42 dp, 44 dp trykkflate), ingen egne variant
   assert.match(u, /internal fun VaerCloseButton\(dark: Boolean = false, onClick: \(\) -> Unit\)/);
   assert.match(u, /Modifier\.size\(44\.dp\)/);
   assert.match(u, /size\(42\.dp\)\.clip\(CircleShape\)\.background\(if \(dark\) Color\(0x9E0A1423\) else Color\.White\.copy\(alpha = \.22f\)\)/);
-  assert.match(kt('ui/WeatherRainWind.kt'), /internal fun WxClose32b\(onClick: \(\) -> Unit\) = VaerCloseButton\(onClick = onClick\)/);
+  // Fase 5: den ubrukte WxClose32b er fjernet; ingen egen lukkeknapp i Forhold-visningen.
+  assert.doesNotMatch(kt('ui/WeatherRainWind.kt'), /fun WxClose32b|Text\("✕"/);
   const w22 = kt('ui/WeatherSheets.kt');
   assert.doesNotMatch(w22, /SheetButton30\("Ferdig"/);
   assert.match(w22, /VaerCloseButton\(dark = true, onClick = close\)/, 'kartet: mørk glass');

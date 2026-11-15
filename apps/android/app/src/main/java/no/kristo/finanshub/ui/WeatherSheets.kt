@@ -451,95 +451,6 @@ private fun BigSub(big: String, sub: String) {
 
 /* ---------- «Yr mot Storm» (prompt 30: fullskjerm) ---------- */
 
-/**
- * Fullskjerm (#17191e helt ut, innhold maks 760 dp midtstilt, topp = statuslinja + 48 dp). Ingen logoer i headeren, bare
- * «Yr mot Storm» (30 sp), stedet under og Ferdig-pillen til høyre. Små logoer i grafforklaringen (16) og tabellhodet (18).
- */
-@Composable
-internal fun CmpSheet(vm: AppViewModel, w: WeatherFull, close: () -> Unit) {
-    val v = cmpView(vm, w)
-    val ctx = LocalContext.current
-    val tm = rememberTextMeasurer()
-    val top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
-    Box(Modifier.fillMaxSize().zIndex(22f).background(sheetBg).clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {}, contentAlignment = Alignment.TopCenter) {
-    Column(
-        Modifier.widthIn(max = 760.dp).fillMaxWidth().fillMaxHeight().verticalScroll(rememberScrollState()).navigationBarsPadding()
-            .padding(start = 16.dp, end = 16.dp, top = top + 48.dp, bottom = 30.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
-        Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Column(Modifier.weight(1f)) {
-                Text("Yr mot Storm", fontSize = 30.sp, lineHeight = 33.sp, fontWeight = FontWeight.Bold)
-                Text(w.place, fontSize = 14.sp, color = mut2)
-            }
-            VaerCloseButton(onClick = close) // prompt 73: felles ✕ (ikke «Ferdig»)
-        }
-        if (vm.wxCmp22Busy) Text("Henter Storm-data …", fontSize = 13.sp, color = mut2)
-        if (!v.ready && vm.wxCmp22Failed) Text("Storm svarte ikke. Prøv igjen senere.", fontSize = 13.sp, color = mut2)
-        if (v.ready) {
-            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(sheetCard).padding(16.dp, 14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Box(Modifier.size(12.dp).clip(CircleShape).background(v.agC))
-                Column(Modifier.weight(1f)) {
-                    Text(v.agT, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-                    Text(v.agS, fontSize = 12.5.sp, color = mut2)
-                }
-            }
-            val c = vm.wxCmp22
-            val hrs = wxNext24(w)
-            if (c != null && hrs.size >= 2) Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(sheetCard).padding(14.dp, 14.dp, 14.dp, 10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("NESTE 24 TIMER", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, letterSpacing = .12.em, color = mut2, modifier = Modifier.weight(1f))
-                    Legend("Yr", sky, "yr"); Spacer(Modifier.width(12.dp)); Legend("Storm", Color(0xFFFF8A3D), "storm")
-                }
-                val ys = hrs.map { c.yrHours[it.t.take(13)] ?: it.temp }
-                val ss = hrs.map { c.pentHours[it.t.take(13)] }
-                val ym = hrs.map { c.yrMm[it.t.take(13)] ?: it.precip ?: 0.0 }
-                val sm = hrs.map { c.pentMm[it.t.take(13)] ?: 0.0 }
-                val all = (ys + ss).filterNotNull()
-                if (all.isNotEmpty()) {
-                    val lo = floor((all.min() - 1) / 2) * 2
-                    val hi = ceil((all.max() + 1) / 2) * 2
-                    val pm = max(2.0, (ym + sm).max())
-                    Canvas(Modifier.fillMaxWidth().aspectRatio(300f / 170f)) {
-                        val k = size.width / 300f
-                        val n = hrs.size
-                        fun X(i: Int) = (22 + i / max(1f, (n - 1).toFloat()) * 278) * k
-                        fun Y(x: Double) = ((10 + (1 - (x - lo) / max(1.0, hi - lo)) * 110) * k).toFloat()
-                        val step = max(2.0, ((hi - lo) / 4 / 2).roundToInt() * 2.0)
-                        var g = lo
-                        while (g <= hi + .01) {
-                            drawLine(Color.White.copy(alpha = .08f), Offset(22 * k, Y(g)), Offset(300 * k, Y(g)), k)
-                            svgText(tm, "${g.roundToInt()}°", 0f, Y(g) / k + 3, k, 9f, mut2)
-                            g += step
-                        }
-                        for (i in 0 until n) listOf(Triple(ym[i], sky, -4.5f), Triple(sm[i], Color(0xFFFF8A3D), .5f)).forEach { (x, col, o) ->
-                            if (x > 0) { val bh = max(2.0, x / pm * 30).toFloat(); drawRoundRect(col, Offset(X(i) + o * k, (152 - bh) * k), Size(4 * k, bh * k), CornerRadius(1.5f * k)) }
-                        }
-                        drawPath(linePath(ys, ::X, ::Y), sky, style = Stroke(2.5f * k, cap = StrokeCap.Round, join = StrokeJoin.Round))
-                        drawPath(linePath(ss, ::X, ::Y), Color(0xFFFF8A3D), style = Stroke(2.5f * k, cap = StrokeCap.Round, join = StrokeJoin.Round))
-                        for (i in 0 until n step 4) svgText(tm, hrs[i].t.drop(11).take(2), X(i) / k, 168f, k, 9f, mut2, anchor = 1)
-                    }
-                }
-                Text("Søyler viser nedbør per time. Yr til venstre, Storm til høyre.", fontSize = 11.5.sp, color = mut2)
-            }
-            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(sheetCard).padding(horizontal = 14.dp, vertical = 4.dp)) {
-                CmpHead(sky, Color(0xFFFF8A3D), mut2, 44.dp, 44.dp, Modifier.padding(top = 10.dp, bottom = 8.dp), logo = 18.dp)
-                v.rows.forEach { CmpTableRow(it, Color.White.copy(alpha = .08f), 44.dp, 44.dp) }
-            }
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf("Åpne yr.no ↗" to (w.yrUrl ?: "https://www.yr.no/nb"), "Åpne storm.no ↗" to "https://www.storm.no/").forEach { (n, u) ->
-                Box(Modifier.weight(1f).height(42.dp).clip(CircleShape).background(sheetCard).clickable { openLink(ctx, u) }, contentAlignment = Alignment.Center) {
-                    Text(n, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                }
-            }
-        }
-        Text("Yr er MET Norway (api.met.no). Storm (StormGeo) har ikke et åpent API, så Storm-kolonnen viser ECMWF-modellen fra Open-Meteo, som er nærmeste åpne kilde. Avvik er forskjellen i makstemperatur.",
-            fontSize = 12.sp, color = mut2, lineHeight = 17.sp)
-    }
-    }
-}
-
 @Composable
 private fun Legend(t: String, c: Color, logo: String? = null) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
@@ -547,12 +458,6 @@ private fun Legend(t: String, c: Color, logo: String? = null) {
         Box(Modifier.size(14.dp, 3.dp).clip(RoundedCornerShape(2.dp)).background(c))
         Text(t, fontSize = 12.sp, fontWeight = FontWeight.Bold)
     }
-}
-
-@Composable
-private fun WhitePill(t: String, onClick: () -> Unit) {
-    // Prompt 30: felles pille (hvit på mørk flate).
-    SheetButton30(t, dark = true, onClick = onClick)
 }
 
 /* ---------- Steder: søk, legg til, hold inne og dra, sveip mot høyre for å slette ---------- */
