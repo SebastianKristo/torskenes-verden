@@ -1,17 +1,14 @@
-// Prompt 45 (SERVER45): Media – slett filer som ikke er overvåket (claude-code-media-slett-uovervakede-episoder.md) og
-// avspillingsstatistikk for mobil (claude-code-avspilling-statistikk-mobil.md). Se SERVER45-API.md.
+// Prompt 45 (SERVER45): Media – slett filer som ikke er overvåket (claude-code-media-slett-uovervakede-episoder.md). Se SERVER45-API.md.
+// (Avspillingssammendraget for mobil, GET /api/playback/summary, ligger i playback.js.)
 //   GET    /api/media/unmonitored?service=sonarr|radarr&seriesId=&season= (admin) → liste + «Slette 12 episodefiler (8,4 GB) …?»
 //   POST   /api/media/unmonitored/delete {service, fileIds, confirm:true, delaySec?} (admin) → 202 med Angre (eller 200 med delaySec:0)
 //   GET    /api/media/unmonitored/pending/:id · DELETE …/:id (Angre)
-//   GET    /api/playback/summary?range=7d|30d|year|all (tilgang til Media)
 // Bare filer som FORTSATT er uovervåket når slettingen kjører, slettes (hentes på nytt fra Sonarr/Radarr). ?server= respekteres via
 // mediaSiteMw44 (stedet huskes for den utsatte slettingen).
 import { Hono } from 'hono';
 import { randomBytes } from 'node:crypto';
-import { db, q } from '../db.js';
 import { authOrToken } from '../mobile.js';
 import * as M from './arr.js';
-import { stats44 } from './playback.js';
 
 const fail = (c, e) => M.mediaFail43(c, e instanceof M.MediaError ? e : Object.assign(new M.MediaError(e.message, e.status ?? 500)));
 const A = [authOrToken, M.mediaGuard43, M.mediaAdmin43];
@@ -104,35 +101,3 @@ media45Api.delete('/unmonitored/pending/:id', ...A, (c) => {
   clearTimeout(p.timer); p.state = 'cancelled';
   return c.json({ ok: true, ...pendOut(p) });
 });
-
-/* ---------------- Avspilling: mobilstatistikk ---------------- */
-
-const RANGES = [['7d', '7 d', 7], ['30d', '30 d', 30], ['year', 'År', 365], ['all', 'Alt', null]];
-const WD = ['søn', 'man', 'tir', 'ons', 'tor', 'fre', 'lør'];
-const hrs = (ms) => Math.round((ms / 3600_000) * 10) / 10;
-const hText = (h) => `${String(h).replace('.', ',')} t`;
-export function playbackSummary45(range = '7d', now = Date.now()) {
-  try { stats44('7d'); } catch { /* sår demodata i MOCK */ }
-  const r = RANGES.find((x) => x[0] === range) ?? RANGES[0];
-  const since = r[2] ? now - r[2] * 86400_000 : 0;
-  const rows = q('SELECT * FROM plays44 WHERE started>? ORDER BY started DESC').all(since);
-  const dur = (x) => Math.max(0, (x.stopped ?? x.seen) - x.started);
-  const group = (key) => { const m = new Map(); for (const x of rows) { const k = key(x); if (!k) continue; const g = m.get(k) ?? { plays: 0, ms: 0, x }; g.plays++; g.ms += dur(x); m.set(k, g); } return [...m.entries()].sort((a, b) => b[1].plays - a[1].plays || b[1].ms - a[1].ms); };
-  const perDay = new Map();
-  const days = r[2] && r[2] <= 31 ? r[2] : null;
-  if (days) for (let i = days - 1; i >= 0; i--) perDay.set(new Date(now - i * 86400_000).toLocaleDateString('sv-SE', { timeZone: 'Europe/Oslo' }), 0);
-  for (const x of rows) { const d = new Date(x.started).toLocaleDateString('sv-SE', { timeZone: 'Europe/Oslo' }); const k = days ? d : d.slice(0, 7); if (days && !perDay.has(k)) continue; perDay.set(k, (perDay.get(k) ?? 0) + 1); }
-  const totalMs = rows.reduce((a, x) => a + dur(x), 0), n = rows.length || 1;
-  const users = group((x) => x.user), devices = group((x) => `${x.device ?? ''}|${x.platform ?? ''}`);
-  return { range: r[0], ranges: RANGES.map(([id, label]) => ({ id, label, selected: id === r[0] })),
-    total: { plays: rows.length, hours: hrs(totalMs), hoursText: hText(hrs(totalMs)), users: users.length, titles: new Set(rows.map((x) => x.title)).size },
-    perDay: [...perDay.entries()].sort().map(([date, count]) => ({ date, count, label: days ? WD[new Date(`${date}T12:00:00Z`).getUTCDay()] : date.slice(5) })),
-    topShows: group((x) => (x.kind === 'episode' ? x.title : null)).slice(0, 8).map(([title, g]) => ({ title, plays: g.plays, hours: hrs(g.ms), poster: g.x.poster ?? null })),
-    topMovies: group((x) => (x.kind === 'movie' ? x.title : null)).slice(0, 8).map(([title, g]) => ({ title, plays: g.plays, hours: hrs(g.ms), poster: g.x.poster ?? null })),
-    perUser: users.map(([name, g]) => ({ name, initial: String(name)[0]?.toUpperCase() ?? '?', plays: g.plays, hours: hrs(g.ms), hoursText: hText(hrs(g.ms)) })),
-    perDevice: devices.map(([k, g]) => { const [name, platform] = k.split('|'); return { name: name || platform || 'Ukjent', platform: platform || null, plays: g.plays, pct: Math.round((g.plays / n) * 100) }; }).slice(0, 10),
-    history: rows.slice(0, 20).map((x) => ({ id: x.id, server: x.server, when: new Date(x.started).toISOString(), whenText: new Date(x.started).toLocaleString('nb-NO', { timeZone: 'Europe/Oslo', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }), title: x.title, subtitle: x.subtitle ?? null, user: x.user, device: x.device ?? null, platform: x.platform ?? null, percent: x.percent ?? 0, poster: x.poster ?? null })),
-    empty: !rows.length, emptyText: rows.length ? null : 'Ingen avspillinger i perioden' };
-}
-export const playback45Api = new Hono();
-playback45Api.get('/summary', authOrToken, async (c, next) => { if (!M.mediaAllowed43(c.get('user'))) return c.json({ error: 'Du har ikke tilgang til Avspilling. Be en administrator om tilgang.', restricted: true }, 403); return c.json(playbackSummary45(c.req.query('range'))); });

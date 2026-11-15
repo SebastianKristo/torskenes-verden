@@ -21,7 +21,7 @@ import { media44Api, mediaSiteMw44, librarySearchMw44, legacyMedia44 } from './s
 import { nrkApi } from './nrk.js';
 import { yubalApi } from './yubal.js';
 import { mountMedia50 } from './images.js';
-import { media45Api, playback45Api } from './unmonitored.js';
+import { media45Api } from './unmonitored.js';
 import { playback44Api } from './playback.js';
 import { media43Api } from './arr.js';
 import { mountMedctl51 } from './control.js';
@@ -44,7 +44,6 @@ export function mountMedia(app, plex) {
   app.route('/api/media/yubal', yubalApi);
   mountMedia50(app); // /bilde, /track, /diagnostics, /torrents/:hash/start + posterImg/track i svarene (før de eldre rutene)
   app.route('/api/media', media45Api); // uovervåkede filer
-  app.route('/api/playback', playback45Api); // GET /summary
   // Plex/Jellyfin («Spilles nå», «Nylig lagt til», historikk): serverens oppsett for alle med tilgang som ikke har egne verdier.
   app.get('/api/media/now', authOrToken, legacyMedia44(plex.now));
   app.get('/api/media/recent', authOrToken, legacyMedia44(plex.recent));
