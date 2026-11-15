@@ -32,11 +32,17 @@ extension Store {
         }
     }
 
-    /// finanshub://<side>[/<under>]. Et trykk på en widget åpner riktig side.
+    /// finanshub://<side>[/<under>] og homelab://<side>[/<under>]. Et trykk på en widget åpner riktig side.
+    /// Fase 6: modul-id-ene og hash-rutene fra web går via modullisten (Dyplenker.swift).
     func openDeepLink(_ url: URL) {
-        guard url.scheme == "finanshub", loggedIn else { return }
+        guard url.scheme == "finanshub" || url.scheme == "homelab", loggedIn else { return }
         let page = (url.host ?? "").lowercased()
         let sub = url.pathComponents.dropFirst().first?.lowercased() ?? ""
+        // Q35: dyplenker går forbi velkomststegene.
+        noteDeepLink()
+        // En hash-rute fra web (homelab://app#/kalender/bursdager) slås opp blant rutene og aliasene i modullisten.
+        if let f = url.fragment, f.hasPrefix("/"), openRute("#" + f) { return }
+        if openOkonomiLenke(page, sub) { return }
         // Prompt 26: finanshub://kalender[/<id>] åpner Kalender (og detaljkortet for timen).
         // Prompt 33: kalender-login fra Kalender-appen, og widget-lenkene videre til Kalender-appen når den er installert.
         if page == "kalender-login" { KalCompanion33.loginLink(self); return }
@@ -75,7 +81,8 @@ extension Store {
         case "budget", "budsjett": paperGo("fmer"); paperOpenFin(.budget)
         case "finn": paperGo("finn")
         case "receipts", "review", "kvitteringer": paperGo("finans"); paperOpen(.upload)
-        case "subs", "nextcharge", "abonnement": paperGo("fmer"); paperOpen(.sub)
+        // Fase 6 (Q4): Abonnementer er et filter i Faste betalinger (finanshub://abonnement fra Glimt og widgetene).
+        case "subs", "nextcharge", "abonnement", "abonnementer": FasteBetalingerModell.shared.filter = "abonnementer"; paperGo("abo")
         case "stocks", "aksjer": paperGo("fmer"); paperOpen(.stocks)
         case "domains", "domener": paperOpenDomains(from: "hjem")
         case "boliger", "folders": paperFinGo("boliger")
@@ -84,7 +91,11 @@ extension Store {
         case "update", "oppdatering", "nordlys", "system": System31Model.shared.show()
         case "news", "nyheter", "rss": openNews()
         case "scan", "skann": pendingScan = sub == "files" ? "files" : "camera"
-        default: paperGo("hjem")
+        default:
+            // Fase 6: modul-id-ene og de nye rutene («reise/kart», «kalender/familie», «oversikt», «skjold» …).
+            if let t = ModulListe.shared.liste?.treff(rute: "#/" + page + (sub.isEmpty ? "" : "/" + sub)), openModul(t.modul.id, underside: t.underside?.id) { return }
+            if openModul(page, underside: sub.isEmpty ? nil : sub) { return }
+            paperGo("hjem")
         }
     }
 }

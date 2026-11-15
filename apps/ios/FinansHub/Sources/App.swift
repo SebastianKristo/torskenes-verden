@@ -51,7 +51,12 @@ struct FinansHubApp: App {
                     if let u = a.webpageURL {
                         if AppAuth41.shared.handle(u, store) { return }
                         if Onboard51.shared.handleURL(u, store) { return }
-                        _ = Qr38Model.shared.handle(u, store)
+                        if Qr38Model.shared.handle(u, store) { return }
+                        // Fase 6: en web-adresse med hash-rute (https://<server>/#/huskeliste) åpner samme side i appen.
+                        if store.loggedIn, let f = u.fragment, f.hasPrefix("/") {
+                            store.noteDeepLink()
+                            store.openRute("#" + f)
+                        }
                     }
                 }
                 .task {
