@@ -433,31 +433,6 @@ extension Store {
 
 // Fase 4: den egne fanelinja (PaperTabBar) er erstattet av systemets TabView og seksjonsvelgeren i AppShell.swift.
 
-/// +-knappen: trykk = valg, hold inne = opplasting med en gang (haptisk tikk og et kort hint).
-struct PaperPlusButton: View {
-    @Environment(\.paper) private var p
-    let label: String
-    let tap: () -> Void
-    let hold: () -> Void
-    /// Prompt 38: «✦» (Glimt) i Domener.
-    var glyph: String = "+"
-    @State private var pressed = false
-
-    var body: some View {
-        Text(glyph).font(.system(size: glyph == "+" ? 24 : 20, weight: glyph == "+" ? .regular : .bold)).foregroundStyle(p.onLab)
-            .frame(width: 46, height: 46)
-            .background(p.lab, in: Circle())
-            .scaleEffect(pressed ? 0.88 : 1)
-            .animation(.easeOut(duration: 0.15), value: pressed)
-            .contentShape(Circle())
-            .onTapGesture { tap() }
-            .onLongPressGesture(minimumDuration: 0.45, perform: { hold() }, onPressingChanged: { pressed = $0 })
-            .accessibilityLabel(label)
-            .accessibilityHint("Trykk for valg, hold inne for å laste opp")
-            .accessibilityAddTraits(.isButton)
-    }
-}
-
 /// Skann-arket: kvittering, oppskrift eller dokument, og køen med det som leses nå.
 struct PaperScanSheet: View {
     @Environment(Store.self) private var store

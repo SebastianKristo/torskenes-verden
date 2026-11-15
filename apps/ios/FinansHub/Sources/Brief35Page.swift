@@ -234,51 +234,6 @@ struct Brief35Content: View {
     }
 }
 
-/// «GLIMT · KVELDSBRIEF», høyttaler, ⚙ og Ferdig.
-struct Brief35Top: View {
-    @Environment(Store.self) private var store
-    @MainActor private var m: Brief34Model { Brief34Model.shared }
-    @MainActor private var g: Glimt35Model { Glimt35Model.shared }
-    let kick: String
-    let openCfg: () -> Void
-
-    var body: some View {
-        let on: Bool = g.cfg.readAloud
-        HStack(spacing: 6) {
-            // Prompt 37: etiketten «GLIMT · KVELDSBRIEF» er fjernet (dobbelt med tittelen). Knappene står høyrejustert.
-            Spacer(minLength: 8)
-            Button { g.setBool("readAloud", !on, store) } label: {
-                Image(systemName: on ? "speaker.wave.2.fill" : "speaker.slash")
-                    .font(.dyn51(size: 15, weight: .semibold))
-                    .foregroundStyle(on ? Brief34C.paper : Brief34C.ink)
-                    .frame(width: 36, height: 36)
-                    .background(on ? Brief34C.ink : Brief34C.card, in: Circle())
-                    .overlay(Circle().strokeBorder(Brief34C.rgb(0xddd5c5), lineWidth: 1))
-                    .frame(width: 44, height: 44)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(on ? "Slå av opplesning" : "Slå på opplesning")
-            Button { Haptic34.light(); openCfg() } label: {
-                Image(systemName: "slider.horizontal.3")
-                    .font(.dyn51(size: 14, weight: .semibold))
-                    .foregroundStyle(Brief34C.ink)
-                    .frame(width: 36, height: 36)
-                    .background(Brief34C.card, in: Circle())
-                    .overlay(Circle().strokeBorder(Brief34C.rgb(0xddd5c5), lineWidth: 1))
-                    .frame(width: 44, height: 44)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Brief-innstillinger")
-            Glimt35DoneButton(title: "Ferdig") {
-                Glimt35Voice.shared.stop()
-                m.close()
-            }
-        }
-    }
-}
-
 /// «▮▮▮ Sky snakker · Nora · Stopp» mens noen leser opp.
 struct Brief35SpeakingPill: View {
     @MainActor private var v: Glimt35Voice { Glimt35Voice.shared }

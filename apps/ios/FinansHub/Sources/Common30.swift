@@ -181,70 +181,9 @@ extension View {
 
 /* ---------- Kantsveip tilbake (fullskjerm og egne sider) ---------- */
 
-/// 28 pt kantsone til venstre (startpunktet i skjermkoordinater). Siden følger fingeren; slipp etter min(110, 28 % av bredden) → lukk (260 ms) med lett haptikk.
-/// Låser til vannrett når |dx| > 1,2·|dy|. Brukes på fullScreenCover og sider med egen navigasjon.
-struct EdgeSwipeClose30: ViewModifier {
-    let enabled: Bool
-    let close: () -> Void
-    @State private var dx: CGFloat = 0
-    @State private var width: CGFloat = 390
-    @State private var locked: Int = 0
-
-    func body(content: Content) -> some View {
-        content
-            .offset(x: dx)
-            .shadow(color: Color.black.opacity(dx > 0 ? 0.25 : 0), radius: 16, x: -6, y: 0)
-            .background(GeometryReader { (g: GeometryProxy) in
-                Color.clear
-                    .onAppear { width = g.size.width }
-                    .onChange(of: g.size.width) { _, v in width = v }
-            })
-            // Samtidig gest (ikke et lag over kanten), så knapper ved venstre kant fortsatt kan trykkes.
-            .simultaneousGesture(drag, including: enabled ? .all : .subviews)
-    }
-
-    private var threshold: CGFloat { Swift.min(110, width * 0.28) }
-
-    private var drag: some Gesture {
-        DragGesture(minimumDistance: 8, coordinateSpace: .global)
-            .onChanged { (v: DragGesture.Value) in changed(v) }
-            .onEnded { (v: DragGesture.Value) in ended(v) }
-    }
-
-    private func changed(_ v: DragGesture.Value) {
-        let x: CGFloat = v.translation.width
-        let y: CGFloat = v.translation.height
-        if locked == 0 {
-            // Bare fra kantsonen (28 pt) og vannrett mot høyre.
-            let fromEdge: Bool = v.startLocation.x <= 28
-            locked = (fromEdge && x > 0 && abs(x) > 1.2 * abs(y)) ? 1 : -1
-        }
-        if locked == 1 { dx = Swift.max(0, x) }
-    }
-
-    private func ended(_ v: DragGesture.Value) {
-        let wasLocked: Bool = locked == 1
-        locked = 0
-        guard wasLocked else { return }
-        let x: CGFloat = Swift.max(v.translation.width, v.predictedEndTranslation.width * 0.5)
-        if x > threshold {
-            withAnimation(.timingCurve(0.2, 0.8, 0.2, 1, duration: 0.26)) { dx = width }
-            Haptic30.light()
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.24) {
-                close()
-                var t: Transaction = Transaction()
-                t.disablesAnimations = true
-                withTransaction(t) { dx = 0 }
-            }
-        } else {
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) { dx = 0 }
-        }
-    }
-}
-
 extension View {
     /// Prompt 50: UIKit-kantgesten (EdgeClose50, Nav50Back.swift) i stedet for SwiftUI-draget over, som tapte mot
-    /// ScrollView, vannrette fanerader og lister. EdgeSwipeClose30 står igjen ubrukt.
+    /// ScrollView, vannrette fanerader og lister. Det gamle draget (EdgeSwipeClose30) er fjernet.
     func edgeSwipeClose30(enabled: Bool = true, _ close: @escaping () -> Void) -> some View {
         modifier(EdgeClose50(enabled: enabled, close: close))
     }

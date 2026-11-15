@@ -1275,44 +1275,6 @@ struct PaperAiSettings: View {
 
 /* ---------- Navn på appen og app-ikon ---------- */
 
-struct AppNameSheet: View {
-    @Environment(Store.self) private var store
-    @Environment(\.paper) private var p
-    let close: () -> Void
-    @State private var name = AppMeta.shared.name
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Navn på appen").font(PF.serif(24, medium: true)).foregroundStyle(p.ink)
-            Text("Vises på Hjem, i innloggingen, i varsler og i nettleserfanen.").font(PF.ui(13)).foregroundStyle(p.mut)
-            TextField("Navn", text: $name)
-                .font(PF.serif(20))
-                .padding(.vertical, 8)
-                .overlay(alignment: .bottom) { Rectangle().fill(p.lab).frame(height: 2) }
-                .textInputAutocapitalization(.words)
-            HStack(spacing: 8) {
-                ForEach(AppMeta.suggestions, id: \.self) { s in
-                    Button { name = s } label: {
-                        Text(s).font(PF.ui(13, .semibold)).foregroundStyle(name == s ? p.bg : p.ink).padding(.horizontal, 14).frame(height: 34)
-                            .background(name == s ? p.ink : p.card, in: Capsule())
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-            Spacer()
-            HStack(spacing: 10) {
-                PLineButton(title: "Avbryt", height: 48, full: true) { close() }
-                PInkButton(title: "Lagre", height: 48, full: true) {
-                    AppMeta.shared.setName(name, store)
-                    close()
-                }
-            }
-        }
-        .padding(20)
-        .environment(\.colorScheme, p.dark ? .dark : .light)
-    }
-}
-
 struct AppIconSheet: View {
     @Environment(Store.self) private var store
     @Environment(\.paper) private var p

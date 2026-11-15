@@ -186,23 +186,3 @@ struct Dom38GlimtCard: View {
         }
     }
 }
-
-/// Den runde Glimt-knappen (fylt ✦) som erstatter skann-knappen i Domener.
-struct Dom38GlimtFab: View {
-    @Environment(Store.self) private var store
-    @Environment(\.paper) private var p
-
-    var body: some View {
-        Button { Dom38Glimt.shared.tap(store) } label: {
-            Image(systemName: "sparkle")
-                .font(.system(size: 24, weight: .semibold))
-                .foregroundStyle(p.onLab)
-                .frame(width: 60, height: 60)
-                .background(p.lab, in: Circle())
-                .shadow(color: .black.opacity(0.45), radius: 14, y: 10)
-                .contentShape(Circle())
-        }
-        .buttonStyle(Press37Style())
-        .accessibilityLabel("Glimt · oppsummering av domenene")
-    }
-}

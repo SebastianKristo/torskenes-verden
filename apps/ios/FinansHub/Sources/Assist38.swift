@@ -31,19 +31,6 @@ final class Assist38 {
     }
 }
 
-/// Hele flaten minus hullet (even-odd). Prompt 70: brukes ikke lenger av laget (det er fjernet), beholdt for andre flater.
-struct Hole38: Shape {
-    var hole: CGRect
-
-    func path(in r: CGRect) -> Path {
-        var p: Path = Path(r)
-        if hole.width > 0 && hole.height > 0 {
-            p.addRoundedRect(in: hole, cornerSize: CGSize(width: 26, height: 26), style: .continuous)
-        }
-        return p
-    }
-}
-
 /// Prompt 70 (hjem-scroll-mens-ai): det usynlige fullskjerm-laget er borte – det stoppet scroll og lukket kortet ved første
 /// bevegelse. Hjem scroller fritt mens Glimt tenker og etter svaret. Trykk utenfor lukker via Assist70Tap på innholdet
 /// (Home70Assist.swift). Plassen over PaperShell (Paper.swift) viser nå bare pillen «Glimt svarte ↑» nederst over fanelinjen

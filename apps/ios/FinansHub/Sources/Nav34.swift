@@ -13,17 +13,6 @@ import UIKit
    ‹ Alle innstillinger, Chat ‹, Hjem-fanen fra en annen side, sveip tilbake (når siden lukkes), Vær ✕, AI-kontroll Ferdig.
    Debounce 120 ms, så knapp + navigering aldri gir to. Følger Varsler og haptikk → Haptikk (av = ingen). */
 
-/// Tom plass nederst som tilsvarer fanelinjen (0 = ingen fanelinje).
-struct Nav34BarSpace: View {
-    let height: CGFloat
-
-    var body: some View {
-        Color.clear
-            .frame(height: Swift.max(0, height))
-            .allowsHitTesting(false)
-    }
-}
-
 enum Haptic34 {
     nonisolated(unsafe) private static var last: Date = .distantPast
 

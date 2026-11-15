@@ -186,22 +186,6 @@ struct Quick29Overlay: View {
     }
 }
 
-struct Quick29Pill: View {
-    @Environment(\.paper) private var p
-    let text: String
-
-    var body: some View {
-        HStack(spacing: 8) {
-            Text("✦").font(PF.ui(13, .bold)).foregroundStyle(Color(hex: "#f08a76"))
-            Text(text).font(PF.ui(13, .semibold)).foregroundStyle(p.bg).lineLimit(1)
-        }
-        .padding(.horizontal, 14).frame(height: 36)
-        .background(p.ink, in: Capsule())
-        .shadow(color: .black.opacity(0.35), radius: 12, y: 6)
-        .accessibilityElement(children: .combine)
-    }
-}
-
 struct Quick29Banner: View {
     @Environment(Store.self) private var store
     @Environment(\.paper) private var p

@@ -256,14 +256,3 @@ struct WhatsNew52Block: View {
         .accessibilityElement(children: .combine)
     }
 }
-
-private struct WhatsNew51Item: View {
-    @Environment(\.paper) private var p
-    let text: String
-    var body: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 10) {
-            Text("•").font(PF.ui(15, .bold)).foregroundStyle(p.lab)
-            Text(text).font(PF.ui(15)).foregroundStyle(p.ink).fixedSize(horizontal: false, vertical: true)
-        }
-    }
-}

@@ -315,61 +315,6 @@ struct Server41Sheet: View {
 
 /* ---------- Innstillinger → Konto → SERVER ---------- */
 
-struct Server41Group: View {
-    @Environment(Store.self) private var store
-    @Environment(\.paper) private var p
-    @MainActor private var s: Server41 { Server41.shared }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            PLabel(text: "Server").padding(.leading, 4).padding(.bottom, 6)
-            VStack(spacing: 0) {
-                row("Lokal adresse", value: local.isEmpty ? "Ikke satt" : short(local), sub: "Brukes når du er hjemme på Wi-Fi") { s.editKind = "local" }
-                Rectangle().fill(p.line).frame(height: 1)
-                row("Ekstern adresse", value: short(external), sub: "Brukes ellers") { s.editKind = "external" }
-                Rectangle().fill(p.line).frame(height: 1)
-                HStack(spacing: 12) {
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text("Bytt automatisk").font(PF.ui(15, .semibold)).foregroundStyle(p.ink)
-                        Text("Lokal når den svarer · nå: " + store.route).font(PF.ui(12.5)).foregroundStyle(p.mut)
-                    }
-                    Spacer(minLength: 8)
-                    Toggle("", isOn: Binding(get: { store.useLocal }, set: { (v: Bool) in s.setAuto(store, v) }))
-                        .labelsHidden().tint(p.pos)
-                }
-                .padding(.horizontal, 14).padding(.vertical, 11)
-            }
-            .background(p.card, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-        }
-        .padding(.bottom, 8)
-        .task { await s.learn(store) }
-    }
-
-    private var local: String { store.account?.local ?? "" }
-    private var external: String { store.account.map { $0.external.isEmpty ? $0.server : $0.external } ?? "" }
-
-    private func short(_ u: String) -> String {
-        u.replacingOccurrences(of: "https://", with: "").replacingOccurrences(of: "http://", with: "")
-    }
-
-    private func row(_ name: String, value: String, sub: String, _ act: @escaping () -> Void) -> some View {
-        Button(action: act) {
-            HStack(spacing: 12) {
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(name).font(PF.ui(15, .semibold)).foregroundStyle(p.ink)
-                    Text(sub).font(PF.ui(12.5)).foregroundStyle(p.mut)
-                }
-                Spacer(minLength: 8)
-                Text(value).font(PF.mono(12.5, bold: false)).foregroundStyle(p.mut).lineLimit(1).truncationMode(.middle)
-                Text("›").font(PF.ui(16)).foregroundStyle(p.mut)
-            }
-            .padding(.horizontal, 14).padding(.vertical, 11)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-    }
-}
-
 /// Arket for Server41 (legges på innloggingen og på Konto-siden).
 struct Server41Host: ViewModifier {
     @MainActor private var s: Server41 { Server41.shared }

@@ -6,8 +6,8 @@ import Foundation
    prompts/prompt-34-pakke/claude-code-glimt-brief.md.
    Data: GET /api/brief?kind=morning|day|evening → {title, summary, weather{now, hi, lo, cond, rain12h[], vsYesterday, sunset},
    events[], news[], generatedAt, mood?}. Widget-endepunkt: GET /api/brief/widget?size=… (kompakt form, leses av samme parse). Appen legger siste brief i
-   App Group (w.brief34), så widgetene har noe å vise uten nett. Figuren (Glimt34Figure) er vektor i SwiftUI med tilstandene
-   idle, talk, point og wave; i widgetene er den stillestående. */
+   App Group (w.brief34), så widgetene har noe å vise uten nett. Figurens tilstand (Glimt34Mood: idle, talk, point og wave)
+   brukes av widgetene. */
 
 enum Brief34C {
     static func rgb(_ v: UInt32, _ a: Double = 1) -> Color {
@@ -304,178 +304,11 @@ struct Brief34: Hashable {
     }()
 }
 
-/* ---------- Glimt-figuren ---------- */
+/* ---------- Glimt-figurens tilstand (widgetene) ---------- */
 
 /// idle · talk (munnen beveger seg, ringen spinner raskere) · point (armen peker) · wave (vinker).
 enum Glimt34Mood: String {
     case idle, talk, point, wave
-}
-
-/// Figuren i én ramme. t = sekunder (TimelineView i appen, 0 i widgetene). Høyde = size × 1,12.
-struct Glimt34Figure: View {
-    let size: CGFloat
-    var mood: Glimt34Mood = .idle
-    var lean: Double = 0
-    var t: Double = 0
-    var still: Bool = false
-    /// Prompt 44: beholderen (Glimt44Brief34Stack) står for svevet, så pynten følger figuren.
-    var carried44: Bool = false
-
-    var body: some View {
-        let s: CGFloat = size
-        let bob: CGFloat = (still || carried44) ? 0 : CGFloat(-2.5 + 2.5 * cos(t * 2 * .pi / 2.6))
-        ZStack(alignment: .topLeading) {
-            Glimt34Arm(size: s, left: true, angle: armAngle)
-            Glimt34Arm(size: s, left: false, angle: 12)
-            Glimt34Ring(size: s, angle: ringAngle)
-                .offset(x: 0, y: s * 0.14)
-            Glimt34Face(size: s * 0.84, blink: blink, talk: talkScale)
-                .offset(x: s * 0.08, y: s * 0.22)
-            Glimt34Star(size: s * 0.2, phase: still ? 0.5 : t)
-                .offset(x: s * 0.4, y: -s * 0.02)
-        }
-        .frame(width: s, height: s * 1.12, alignment: .topLeading)
-        .rotationEffect(.degrees(lean))
-        .offset(y: bob)
-        .accessibilityLabel("Glimt")
-    }
-
-    private var armAngle: Double {
-        if mood == .point { return -28 }
-        if still { return 10 }
-        let speed: Double = mood == .wave ? 0.9 : 1.6
-        return 9 + 19 * sin(t * 2 * .pi / speed)
-    }
-
-    private var ringAngle: Double {
-        if still { return 0 }
-        let period: Double = mood == .talk ? 1.6 : 6
-        return (t.truncatingRemainder(dividingBy: period) / period) * 360
-    }
-
-    /// Øynene lukkes et øyeblikk hvert 4. sekund.
-    private var blink: CGFloat {
-        if still { return 1 }
-        let p: Double = t.truncatingRemainder(dividingBy: 4) / 4
-        return p > 0.92 && p < 0.98 ? 0.1 : 1
-    }
-
-    private var talkScale: CGFloat {
-        if mood != .talk || still { return 1 }
-        return CGFloat(0.725 + 0.275 * sin(t * 2 * .pi / 0.32))
-    }
-}
-
-/// Regnbueringen (roterer sakte).
-struct Glimt34Ring: View {
-    let size: CGFloat
-    let angle: Double
-
-    var body: some View {
-        let w: CGFloat = Swift.max(2.5, size * 0.07)
-        Circle()
-            .strokeBorder(AngularGradient(colors: Brief34C.ringColors, center: .center), lineWidth: w)
-            .rotationEffect(.degrees(angle))
-            .frame(width: size, height: size)
-    }
-}
-
-/// Krem fjes med øyne som blunker, rosa kinn og rød munn.
-struct Glimt34Face: View {
-    let size: CGFloat
-    let blink: CGFloat
-    let talk: CGFloat
-
-    var body: some View {
-        let u: CGFloat = size / 0.84
-        ZStack(alignment: .topLeading) {
-            Circle().fill(Brief34C.card)
-                .overlay(Circle().strokeBorder(Brief34C.ink.opacity(0.06), lineWidth: Swift.max(1, u * 0.03)))
-            Glimt34Eye(w: u * 0.1, h: u * 0.14, blink: blink).offset(x: size * 0.27, y: size * 0.36)
-            Glimt34Eye(w: u * 0.1, h: u * 0.14, blink: blink).offset(x: size * 0.73 - u * 0.1, y: size * 0.36)
-            Ellipse().fill(Brief34C.rgb(0xe8794a, 0.35)).frame(width: u * 0.1, height: u * 0.06).offset(x: size * 0.16, y: size * 0.56)
-            Ellipse().fill(Brief34C.rgb(0xe8794a, 0.35)).frame(width: u * 0.1, height: u * 0.06).offset(x: size * 0.84 - u * 0.1, y: size * 0.56)
-            Glimt34Mouth(w: u * 0.22, h: u * 0.12, talk: talk).offset(x: size * 0.5 - u * 0.11, y: size * 0.6)
-        }
-        .frame(width: size, height: size, alignment: .topLeading)
-    }
-}
-
-struct Glimt34Eye: View {
-    let w: CGFloat
-    let h: CGFloat
-    let blink: CGFloat
-
-    var body: some View {
-        RoundedRectangle(cornerRadius: w * 0.6, style: .continuous)
-            .fill(Brief34C.ink)
-            .frame(width: w, height: h)
-            .scaleEffect(x: 1, y: blink, anchor: .center)
-    }
-}
-
-/// Halvsirkel-munn (avrundet nederst); «snakker» ved å skalere i høyden fra toppen.
-struct Glimt34Mouth: View {
-    let w: CGFloat
-    let h: CGFloat
-    let talk: CGFloat
-
-    var body: some View {
-        UnevenRoundedRectangle(topLeadingRadius: 0, bottomLeadingRadius: h, bottomTrailingRadius: h, topTrailingRadius: 0, style: .continuous)
-            .fill(Brief34C.red)
-            .frame(width: w, height: h)
-            .scaleEffect(x: 1, y: talk, anchor: .top)
-    }
-}
-
-/// Armene: venstre vinker (eller peker), høyre hviler.
-struct Glimt34Arm: View {
-    let size: CGFloat
-    let left: Bool
-    let angle: Double
-
-    var body: some View {
-        let w: CGFloat = size * (left ? 0.22 : 0.2)
-        let h: CGFloat = size * 0.1
-        Capsule().fill(Brief34C.ink)
-            .frame(width: w, height: h)
-            .rotationEffect(.degrees(angle), anchor: left ? UnitPoint(x: 0.9, y: 0.5) : .center)
-            .offset(x: left ? -size * 0.06 : size * 1.06 - w, y: size * (left ? 0.56 : 0.6))
-    }
-}
-
-/// Stjernen over hodet som glitrer.
-struct Glimt34Star: View {
-    let size: CGFloat
-    let phase: Double
-
-    var body: some View {
-        let p: Double = (sin(phase * 2 * .pi / 1.8) + 1) / 2
-        Glimt34StarShape()
-            .fill(Brief34C.star)
-            .frame(width: size, height: size)
-            .scaleEffect(CGFloat(0.6 + 0.5 * p))
-            .rotationEffect(.degrees(45 * p))
-            .opacity(0.3 + 0.7 * p)
-    }
-}
-
-/// Fireuddet stjerne (M12 1.5c.6 4.9 4.6 8.9 9.5 9.5v2c-4.9.6-8.9 4.6-9.5 9.5 … i 24-ruter).
-struct Glimt34StarShape: Shape {
-    func path(in r: CGRect) -> Path {
-        let cx: CGFloat = r.midX
-        let cy: CGFloat = r.midY
-        let a: CGFloat = r.width / 2
-        let k: CGFloat = a * 0.18
-        var p: Path = Path()
-        p.move(to: CGPoint(x: cx, y: cy - a))
-        p.addQuadCurve(to: CGPoint(x: cx + a, y: cy), control: CGPoint(x: cx + k, y: cy - k))
-        p.addQuadCurve(to: CGPoint(x: cx, y: cy + a), control: CGPoint(x: cx + k, y: cy + k))
-        p.addQuadCurve(to: CGPoint(x: cx - a, y: cy), control: CGPoint(x: cx - k, y: cy + k))
-        p.addQuadCurve(to: CGPoint(x: cx, y: cy - a), control: CGPoint(x: cx - k, y: cy - k))
-        p.closeSubpath()
-        return p
-    }
 }
 
 /* ---------- Vær-ikon (samme stier som fasiten, enkle former) ---------- */

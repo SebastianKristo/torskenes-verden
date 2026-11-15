@@ -377,21 +377,6 @@ struct F51Error: View {
 
 /* ---------- Beskjed nederst (felles for sidene) ---------- */
 
-@MainActor
-@Observable
-final class F51Toast {
-    static let shared = F51Toast()
-    var text: String = ""
-
-    func show(_ t: String) {
-        text = t
-        Task { @MainActor in
-            try? await Task.sleep(nanoseconds: 2_800_000_000)
-            if self.text == t { self.text = "" }
-        }
-    }
-}
-
 /* ---------- Fullskjermene ---------- */
 
 struct Feat51Host: ViewModifier {

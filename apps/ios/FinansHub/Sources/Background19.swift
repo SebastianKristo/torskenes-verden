@@ -323,23 +323,6 @@ struct BgParticles: View {
     }
 }
 
-/// Liten kreditering nederst i fotovinduet (f.eks. «Foto: Ola Nordmann · Unsplash» eller «NASA»).
-struct BgCredit: View {
-    @Environment(Store.self) private var store
-
-    var body: some View {
-        if let c = store.bgInfo?.creditText, !c.isEmpty, store.photoImage != nil, store.photo != "cur" {
-            Button {
-                if let u = URL(string: store.bgInfo?.creditUrl ?? ""), u.scheme?.hasPrefix("http") == true { UIApplication.shared.open(u) }
-            } label: {
-                Text(c).font(PF.ui(10)).foregroundStyle(.white.opacity(0.7)).lineLimit(1).truncationMode(.tail)
-                    .shadow(color: .black.opacity(0.6), radius: 2, y: 1)
-            }
-            .buttonStyle(.plain)
-        }
-    }
-}
-
 /// Innstillinger → Utseende → Bakgrunn: planet, bytte, uskarphet, mørklegging, Wi-Fi og animasjon.
 struct BgTuning: View {
     @Environment(Store.self) private var store

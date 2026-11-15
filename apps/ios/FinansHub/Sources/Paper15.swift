@@ -378,48 +378,6 @@ struct PaperCardStack: View {
     }
 }
 
-/// Linjen øverst i redigeringsmodus: «Ferdig» og skjulte kort som kan hentes tilbake.
-struct PaperEditBar: View {
-    @Environment(Store.self) private var store
-    @Environment(\.paper) private var p
-    let page: String
-    let hidden: [String]
-    let cards: [PaperCardDef]
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 10) {
-                Text("Dra for å flytte · ▲ ▼ · skjul med −").font(PF.ui(13.5, .semibold)).foregroundStyle(p.bg).lineLimit(1).minimumScaleFactor(0.8)
-                Spacer(minLength: 4)
-                Button { store.exitPaperEdit() } label: {
-                    Text("Ferdig").font(PF.ui(13, .bold)).foregroundStyle(p.ink).padding(.horizontal, 16).frame(height: 34)
-                        .background(p.bg, in: Capsule())
-                }
-                .buttonStyle(.plain)
-            }
-            if !hidden.isEmpty {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 6) {
-                        Text("Skjult:").font(PF.ui(12.5)).foregroundStyle(p.bg.opacity(0.75))
-                        ForEach(hidden, id: \.self) { k in
-                            Button { store.setPaperCardHidden(page, k, false, cards.map(\.key)) } label: {
-                                Text("+ " + label(k)).font(PF.ui(12.5, .semibold)).foregroundStyle(p.bg).padding(.horizontal, 12).frame(height: 30)
-                                    .overlay(Capsule().stroke(p.bg.opacity(0.5), lineWidth: 1))
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    }
-                }
-            }
-        }
-        .padding(.leading, 16).padding(.trailing, 10).padding(.vertical, 10)
-        .background(p.ink, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-        .shadow(color: .black.opacity(0.3), radius: 12, y: 8)
-    }
-
-    private func label(_ k: String) -> String { cards.first { $0.key == k }?.label ?? k }
-}
-
 /// Ett kort: innholdet er av i redigeringsmodus, og Pakker uten pakker vises dempet.
 /// Prompt 43: vugging, hold, minus og flytting ligger i WiggleReorderList (WiggleList43.swift), ikke per kort.
 struct PaperEditableCard<C: View>: View {
@@ -517,65 +475,6 @@ struct PaperFab: View {
 }
 
 /* ---------- Navigasjonsskinnen på bred skjerm ---------- */
-
-/// Loddrett skinne til venstre (84 pt, avrundet, halvgjennomsiktig): ikon over etikett, aktiv fane lys, + nederst.
-struct PaperRail: View {
-    @Environment(\.paper) private var p
-    let tabs: [(String, String, String)]
-    let current: String
-    let showPlus: Bool
-    let tapTab: (String, Bool) -> Void
-    let plusTap: () -> Void
-    let plusHold: () -> Void
-    /// Prompt 25: fanelinje-stil, og den røde Hjem-knappen øverst når du ikke er på Hjem (NavStyle25.swift).
-    var style: String = "text"
-    var showHome: Bool = false
-    var goHome: () -> Void = {}
-    /// Prompt 45: siden som redigeres (wiggle) – da står + / ↺ / ✓ nederst i stedet for skann-knappen.
-    var editPage: String? = nil
-    var scanLabel: String = "Skann"
-    @Environment(\.accessibilityReduceMotion) private var reduce45
-
-    var body: some View {
-        let shape: RoundedRectangle = RoundedRectangle(cornerRadius: 28, style: .continuous)
-        // Prompt 45: Hjem-knappen i fane-form (samme mål som aktiv fane) med jevn inn/ut-animasjon (Layout45.swift).
-        let home45: Bool = showHome && !Layout45.shared.homeLeaving
-        VStack(spacing: 4) {
-            if home45 {
-                RailHome45()
-                    .padding(.bottom, 8)
-                    .transition(.railHome45(reduce: reduce45))
-            }
-            ForEach(tabs, id: \.0) { t in item(t.0, t.1, t.2, on: current == t.0) }
-            Spacer(minLength: 8)
-            if let e = editPage {
-                if RailEdit45.handles(e) { RailEdit45(page: e) }
-            } else if showPlus {
-                RailScan45(label: scanLabel, tap: plusTap, hold: plusHold)
-                    .transition(.scale(scale: 0.6).combined(with: .opacity))
-            }
-        }
-        .animation(reduce45 ? .easeOut(duration: 0.18) : .spring(response: 0.32, dampingFraction: 0.78), value: home45)
-        .animation(.timingCurve(0.2, 0.9, 0.25, 1.15, duration: 0.32), value: editPage)
-        .padding(.horizontal, 6).padding(.vertical, 12)
-        .frame(width: 84)
-        .frame(maxHeight: .infinity)
-        // Samme farge som fanelinja på telefon: nav-tokenet over uskarphet (ikke en ugjennomsiktig grå flate).
-        .background(p.nav.opacity(0.88), in: shape)
-        .background(.ultraThinMaterial, in: shape)
-        .shadow(color: .black.opacity(0.35), radius: 15, y: 12)
-        .environment(\.colorScheme, .dark)
-    }
-
-    private func item(_ id: String, _ name: String, _ icon: String, on: Bool) -> some View {
-        Button { tapTab(id, on) } label: {
-            RailTabLabel25(name: name, icon: icon, on: on, style: style)
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(name)
-        .accessibilityAddTraits(on ? .isSelected : [])
-    }
-}
 
 /* ---------- Scroll som klippes under headeren ---------- */
 

@@ -221,32 +221,6 @@ struct Brief38TitleRow: View {
 
 /* ---------- Kortene ---------- */
 
-/// De nye kortene i rekkefølgen fra Innstillinger → Glimt → Brief.
-struct Brief38CardsStack: View {
-    @Environment(Store.self) private var store
-    @MainActor private var c: Brief38Cards { Brief38Cards.shared }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            ForEach(c.order, id: \.self) { (id: String) in
-                if !c.off.contains(id) { card(id) }
-            }
-        }
-        .task { await c.loadSettings(store) }
-    }
-
-    @ViewBuilder private func card(_ id: String) -> some View {
-        switch id {
-        case "packages": if !c.packages.isEmpty { Brief38PkgCard() }
-        case "family": if !c.family.isEmpty { Brief38FamCard() }
-        case "school": if !c.school.isEmpty { Brief38SchoolCard() }
-        case "birthdays": if !c.birthdays.isEmpty { Brief38BdayCard() }
-        case "aurora": if c.aurora.show && Brief38AuroraCard.evening { Brief38AuroraCard() }
-        default: EmptyView()
-        }
-    }
-}
-
 struct Brief38Head: View {
     let title: String
     let kick: String
@@ -534,43 +508,3 @@ struct Brief38AuroraBack: View {
 }
 
 /* ---------- Innstillinger → Glimt: kortene i briefen ---------- */
-
-struct Brief38CardsSettings: View {
-    @Environment(Store.self) private var store
-    @MainActor private var c: Brief38Cards { Brief38Cards.shared }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            ForEach(Array(c.order.enumerated()), id: \.element) { (pair: (offset: Int, element: String)) in
-                row(pair.element, first: pair.offset == 0, last: pair.offset == c.order.count - 1)
-            }
-        }
-        .overlay(alignment: .top) { Rectangle().fill(Brief34C.line).frame(height: 1) }
-        .task { await c.loadSettings(store) }
-    }
-
-    private func row(_ id: String, first: Bool, last: Bool) -> some View {
-        let on: Bool = !c.off.contains(id)
-        return HStack(spacing: 8) {
-            Text(Brief38Cards.names[id] ?? id).font(PF.ui(14.5, .bold)).foregroundStyle(Brief34C.ink)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            Button { c.move(id, up: true, store) } label: {
-                Image(systemName: "chevron.up").font(.dyn51(size: 12, weight: .bold)).foregroundStyle(first ? Brief34C.mut2 : Brief34C.ink)
-                    .frame(width: 32, height: 32)
-            }
-            .buttonStyle(.plain).disabled(first)
-            .accessibilityLabel("Flytt opp")
-            Button { c.move(id, up: false, store) } label: {
-                Image(systemName: "chevron.down").font(.dyn51(size: 12, weight: .bold)).foregroundStyle(last ? Brief34C.mut2 : Brief34C.ink)
-                    .frame(width: 32, height: 32)
-            }
-            .buttonStyle(.plain).disabled(last)
-            .accessibilityLabel("Flytt ned")
-            Button { c.toggle(id, store) } label: { Glimt35Switch(on: on) }
-                .buttonStyle(.plain)
-                .accessibilityValue(on ? "På" : "Av")
-        }
-        .padding(.vertical, 10)
-        .overlay(alignment: .bottom) { Rectangle().fill(Brief34C.line).frame(height: 1) }
-    }
-}

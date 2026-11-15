@@ -290,7 +290,8 @@ test('Apple Watch: Glimt prøver neste adresse, og «Hent meg» venter på posis
 });
 
 test('VoiceOver og trykkflater: symbolknappene som manglet tekst', () => {
-  assert.equal((raw('FinansHub/Sources/Modules.swift').match(/\.accessibilityLabel\(adding \? "Lukk" : "Legg til"\)/g) || []).length, 2);
+  // Fase 4: den døde SubView (den andre forekomsten) er fjernet; knappen i den levende visningen har fortsatt teksten.
+  assert.equal((raw('FinansHub/Sources/Modules.swift').match(/\.accessibilityLabel\(adding \? "Lukk" : "Legg til"\)/g) || []).length, 1);
   assert.match(raw('FinansHub/Sources/SearchField27.swift'), /\.accessibilityLabel\("Tøm søket"\)/);
   assert.match(raw('FinansHub/Sources/SubsMobile.swift'), /chevron\.left[^\n]*\.accessibilityLabel\("Tilbake"\)/);
   assert.match(raw('FinansHub/Sources/Tasks37Detail.swift'), /contentShape\(Rectangle\(\)\)\.padding\(\.vertical, -10\)[\s\S]{0,160}\.accessibilityLabel\(s\.done \? "Ferdig" : "Ikke ferdig"\)/);

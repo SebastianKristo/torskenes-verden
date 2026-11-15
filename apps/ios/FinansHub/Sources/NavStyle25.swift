@@ -97,49 +97,6 @@ struct NavTabLabel25: View {
     }
 }
 
-/// Én fane i sidelinja (bred modus): ikon 22 på alle faner, etikett på én linje under (ikke i «Bare ikoner»).
-struct RailTabLabel25: View {
-    @Environment(\.paper) private var p
-    let name: String
-    let icon: String
-    let on: Bool
-    let style: String
-
-    var body: some View {
-        let clean: String = String(name.split(separator: "/").first ?? Substring(name))
-        VStack(spacing: 3) {
-            NavIcon25(icon: icon, size: 22)
-            if style != "icons" {
-                Text(clean).font(PF.ui(12.5, .semibold)).lineLimit(1).truncationMode(.tail).minimumScaleFactor(0.8)
-            }
-        }
-        .foregroundStyle(on ? p.navActInk : p.navInk)
-        .padding(.horizontal, 2)
-        .frame(maxWidth: .infinity)
-        .frame(height: style == "icons" ? 52 : 60)
-        .background(on ? p.navAct : Color.clear, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .contentShape(Rectangle())
-    }
-}
-
-/// Rund rød Hjem-knapp øverst i sidelinja (60 pt, lab-rød, hus 24 pt).
-struct RailHomeButton25: View {
-    @Environment(\.paper) private var p
-    let act: () -> Void
-
-    var body: some View {
-        Button(action: act) {
-            Image(systemName: "house").font(.system(size: 22, weight: .semibold))
-                .foregroundStyle(p.onLab)
-                .frame(width: 60, height: 60)
-                .background(p.lab, in: Circle())
-                .shadow(color: .black.opacity(0.5), radius: 10, y: 8)
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("Til Hjem")
-    }
-}
-
 /* ---------- Stil-velgeren i «Rediger fanelinjen» ---------- */
 
 /// En forhåndsvisning av fanelinja (første fane valgt) med valgt stil.

@@ -490,28 +490,6 @@ struct AiTestDot34: View {
     }
 }
 
-struct AiCtl34Hardware: View {
-    @Environment(\.paper) private var p
-    @MainActor private var m: AiCtl34 { AiCtl34.shared }
-
-    var body: some View {
-        let vt: Double = m.vramTotal > 0 ? m.vramTotal : 8
-        let dt: Double = m.diskTotal > 0 ? m.diskTotal : 500
-        let used: Double = m.cost30
-        AiCard34(title: "HJEMMESERVER") {
-            VStack(alignment: .leading, spacing: 12) {
-                Text(m.gpu.isEmpty ? "GPU ukjent" : m.gpu).font(PF.ui(14, .bold)).foregroundStyle(p.ink)
-                AiBar34(label: "VRAM i bruk", value: AiCtl34.gb(m.vramUsed) + " / " + AiCtl34.gb(vt), frac: m.vramUsed / vt,
-                        color: m.vramUsed > vt * 0.9 ? AiPal34.warn : p.pos)
-                AiBar34(label: "Modeller på disk", value: AiCtl34.gb(m.diskUsed) + " / " + AiCtl34.gb(dt), frac: m.diskUsed / dt, color: p.ink)
-                AiBar34(label: "Sky-budsjett denne måneden", value: AiCtl34.kr(used) + " / " + String(Int(m.budget)) + " kr",
-                        frac: m.budget > 0 ? used / m.budget : 0, color: p.lab)
-            }
-            .padding(.vertical, 12)
-        }
-    }
-}
-
 struct AiCtl34Providers: View {
     @Environment(\.paper) private var p
     @MainActor private var m: AiCtl34 { AiCtl34.shared }

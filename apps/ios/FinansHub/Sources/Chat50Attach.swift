@@ -442,47 +442,6 @@ struct Chat50Thumb: View {
     }
 }
 
-struct Chat50BubbleImages: View {
-    let m: ChatMsg27
-    let c: ChatPal27
-
-    var body: some View {
-        let list: [Chat50LBItem] = Chat50.shared.items(m)
-        if list.count == 1 {
-            one(list[0], list)
-        } else if list.count > 1 {
-            LazyVGrid(columns: [GridItem(.fixed(120), spacing: 4), GridItem(.fixed(120), spacing: 4)], alignment: .trailing, spacing: 4) {
-                ForEach(Array(list.enumerated()), id: \.element.id) { (pair: (offset: Int, element: Chat50LBItem)) in
-                    Button { Chat50.shared.open(list, pair.offset) } label: {
-                        Chat50Thumb(it: pair.element, c: c)
-                            .frame(width: 120, height: 120)
-                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Åpne " + pair.element.name)
-                }
-            }
-            .frame(width: 244, alignment: .trailing)
-        }
-    }
-
-    /// Ett bilde: maks 240 × 240 med riktig forhold (fra serverens w/h eller bildet selv), så layouten ikke hopper.
-    private func one(_ it: Chat50LBItem, _ list: [Chat50LBItem]) -> some View {
-        var w: CGFloat = CGFloat(it.w), h: CGFloat = CGFloat(it.h)
-        if w <= 0 || h <= 0, let img = Chat50.shared.localImage(it) { w = img.size.width; h = img.size.height }
-        if w <= 0 || h <= 0 { w = 240; h = 180 }
-        let k: CGFloat = Swift.min(240 / w, 240 / h)
-        let size: CGSize = CGSize(width: Swift.max(80, w * k), height: Swift.max(80, h * k))
-        return Button { Chat50.shared.open(list, 0) } label: {
-            Chat50Thumb(it: it, c: c)
-                .frame(width: size.width, height: size.height)
-                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("Åpne " + it.name)
-    }
-}
-
 /// Små miniatyrer (28 pt, radius 6) + filnavn ved svaret; trykk åpner lysboksen.
 struct Chat50FilePills: View {
     let items: [Chat50LBItem]
