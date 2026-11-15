@@ -205,7 +205,7 @@ const itemOut = (r) => {
   let geo = null; try { geo = r.geo ? JSON.parse(r.geo) : null; } catch { geo = null; }
   return { id: r.id, title: r.title, n: r.title, list: r.list || null, l: r.list || null, due: r.due ?? null, time: r.time ?? null, assignee: r.assignee ?? null, who: r.assignee ?? null,
     note: r.note, notes: r.note, done: !!r.done, doneAt: r.done_at ?? null, archived: !!r.archived_at, arch: !!r.archived_at, archivedAt: r.archived_at ?? null,
-    urgent: !!r.urgent, rep: r.rep ?? 'none', early: r.early ?? 'none', prio: r.prio ?? 0, flag: !!r.flag, tags, subs, subsDone: subs.filter((x) => x.done).length,
+    urgent: !!r.urgent, rep: r.rep ?? 'none', nextDue: r.done ? null : nextDue(r.due, r.rep), early: r.early ?? 'none', prio: r.prio ?? 0, flag: !!r.flag, tags, subs, subsDone: subs.filter((x) => x.done).length,
     subsText: subs.length ? `${subs.filter((x) => x.done).length}/${subs.length}` : null, dl: r.dl ?? null, deadline: r.dl ?? null, dlOverdue: !!r.dl && !r.done && r.dl < today(), geo, // prompt 44
     place: r.place ?? null, glimt: !!r.glimt, doneBy: r.done_by ?? null, createdBy: r.created_by ?? null, by: r.created_by ?? null, createdAt: r.created_at, updatedAt: r.updated_at, createdAtIso: isoOf(r.created_at), updatedAtIso: isoOf(r.updated_at), ...haInfo(r), // *Iso: kontrakten (ms → ISO)
     ...extraOut40(r), ...origin41(r) }; // prompt 40: placeName, after, mentions · prompt 41: origin {id, text, at, engine}

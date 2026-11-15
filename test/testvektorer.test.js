@@ -35,7 +35,7 @@ const { parseQuick: serverQuick } = await import('../server/dates/quick.js');
 const { parseDatesRequest } = await import('../server/dates/api.js');
 const { default: finansApi } = await import('../server/finans/routes.js');
 const { chargesInYear } = await import('../server/finans/subs.js');
-const { nextCharge } = await import('../server/finans/cycles.js');
+const { nextCharge, nextChargePreview } = await import('../server/finans/cycles.js');
 const { parseTrialText, notificationsOf } = await import('../server/finans/trials.js');
 const { migrateUrl89 } = await import('../server/auth/server-address.js');
 const { cleanUrl46, isPrivateIp46 } = await import('../server/auth/server-address.js');
@@ -181,6 +181,8 @@ const ABO_IMPL = [
   ['server POST /subscriptions {chargeDay, billMonth}', (v) => postSvar.get(`${v.id}:dag`), fasenErKjent],
   ['server POST /subscriptions med feil nextDate fra klienten', (v) => postSvar.get(`${v.id}:feilNeste`)],
   ['server finans/cycles.js nextCharge', (v) => nextCharge({ cycle: v.syklus, anchor: v.anker, day: ['weekly', 'biweekly'].includes(v.syklus) ? null : +v.anker.slice(8, 10) }, v.idag)],
+  // Fase 5: forhåndsvisningen i skjemaet (GET /finans/api/subscriptions/next-charge) bruker samme regel.
+  ['server finans/cycles.js nextChargePreview', (v) => nextChargePreview({ cycle: v.syklus, startDate: v.anker, day: ['weekly', 'biweekly'].includes(v.syklus) ? null : +v.anker.slice(8, 10) }, v.idag).nextDate],
   ['server finans/subs.js chargesInYear', (v) => {
     const s = { cycle: v.syklus, next_date: v.anker, charge_day: +v.anker.slice(8, 10), active: 1 };
     const y = +v.idag.slice(0, 4);

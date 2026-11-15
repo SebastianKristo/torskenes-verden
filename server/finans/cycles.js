@@ -117,3 +117,21 @@ export function seriesFrom({ cycle, day = null, month = null, startDate = null, 
   const thisYear = clampDate(ty, m, day);
   return seriesOf({ cycle: c, anchor: thisYear >= today ? thisYear : clampDate(ty + 1, m, day), day });
 }
+
+const MONTHS_NB = ['januar', 'februar', 'mars', 'april', 'mai', 'juni', 'juli', 'august', 'september', 'oktober', 'november', 'desember'];
+export const NO_CHARGE_DAY = 'Velg faktureringsdag';
+
+/**
+ * Forhåndsvisning i skjemaet for nytt eller endret abonnement (før det er lagret): {cycle, day?, month?, startDate?} →
+ * {cycle, nextDate, label}, f.eks. «Neste trekk 21. oktober, deretter hvert år». Samme regel som lagringen (seriesFrom + nextCharge),
+ * så appene ikke regner neste trekk selv (Fase 5, D-android §6: Subs14.kt nextChargeText). Uten trekkdag: nextDate null.
+ */
+export function nextChargePreview({ cycle, day = null, month = null, startDate = null } = {}, today = osloToday()) {
+  const c = cycleIn(cycle) ?? 'monthly';
+  const d = Number.isInteger(Number(day)) && Number(day) >= 1 ? Math.min(31, Number(day)) : null;
+  const m = Number.isInteger(Number(month)) && Number(month) >= 1 ? Math.min(12, Number(month)) : null;
+  const series = d || isIsoDate(startDate) ? seriesFrom({ cycle: c, day: d, month: m, startDate: isIsoDate(startDate) ? startDate : null }, today) : null;
+  const next = series ? nextCharge(series, today) : null;
+  if (!next) return { cycle: c, nextDate: null, label: NO_CHARGE_DAY };
+  return { cycle: c, nextDate: next, label: `Neste trekk ${+next.slice(8, 10)}. ${MONTHS_NB[+next.slice(5, 7) - 1]}, ${THEN_TEXT[c]}` };
+}

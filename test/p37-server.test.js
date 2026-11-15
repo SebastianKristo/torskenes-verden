@@ -170,12 +170,17 @@ test('Gjøremål: «Mine» per bruker, felter fra detaljarket, gjentagelse lager
   assert.equal(it.l, mine.id, 'standardlisten er «Mine»');
   assert.deepEqual([it.n, it.title, it.notes, it.time, it.urgent, it.rep, it.early, it.prio, it.flag, it.tags, it.subs.map(({ n, done }) => ({ n, done })), it.place, it.by, it.arch], // prompt 44: subs har også id
     ['Kanseller Overleaf', 'Kanseller Overleaf', 'https://overleaf.com', '09:00', true, 'monthly', '1d', 3, true, ['abo', 'jobb'], [{ n: 'Logg inn', done: false }, { n: 'Si opp', done: true }], 'work', sebId, false]);
+  // Fase 5: neste forekomst står i svaret (appene viser den i stedet for å regne selv), og er den serveren lager ved avkryssing.
+  assert.equal(it.nextDue, '2026-11-21');
+  assert.equal((await A('/api/tasks', 'POST', { n: 'Engangs', due: '2026-10-21' })).body.item.nextDue, null, 'uten gjentagelse');
   assert.equal((await A('/api/tasks', 'POST', { n: 'x', rep: 'sometimes' })).status, 400);
   assert.equal((await A('/api/tasks', 'POST', { n: 'x', time: '25:00' })).status, 400);
   const d = await A(`/api/tasks/${it.id}`, 'PATCH', { done: true });
   assert.equal(d.body.item.done, true);
   assert.equal(d.body.item.doneBy, sebId);
   assert.equal(d.body.next.due, '2026-11-21', 'neste forekomst hver måned');
+  assert.equal(d.body.item.nextDue, null, 'fullført har ingen neste');
+  assert.equal(d.body.next.nextDue, '2026-12-21', 'den nye forekomsten peker videre');
   assert.deepEqual(d.body.next.subs.map((x) => x.done), [false, false]);
   const t2 = await A('/api/tasks', 'POST', { n: 'Bare tid', time: '18:30' });
   assert.equal(t2.body.item.due, TODAY, 'tid slår på dato');

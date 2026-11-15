@@ -59,7 +59,7 @@ import { mountLogos52 } from '../logos/local.js'; // prompt 52
 import { warnCloudReceipt52, RECEIPT_SOURCE_LABEL52, RECEIPT_ENGINE_NOTE52 } from './receipts/cloud-guard.js'; // prompt 52: kvitteringer bare lokalt
 import { bolApi, catTree, catOptions, entryCat, linkLegacy, assignCategory, catById as bolCat, catPair, colorOf, noticesFor, layoutFor, upcomingOf, backgroundOf, validBackground } from './boliger.js';
 import { osloDate, osloToUtc, clampDate, addDays } from '../dates/oslo.js';
-import { CYCLES, CYCLE_DAYS, CYCLE_NAME, PER_LABEL, THEN_TEXT, cycleIn, perMonth, nextCharge, seriesOf, seriesFrom } from './cycles.js';
+import { CYCLES, CYCLE_DAYS, CYCLE_NAME, PER_LABEL, THEN_TEXT, cycleIn, perMonth, nextCharge, nextChargePreview, seriesOf, seriesFrom } from './cycles.js';
 
 const DIR = resolve(config.dataDir, 'receipts');
 // Prompt 23: tidsavbrudd i kvitteringskøen. timeout_engine = motoren som ikke svarte, retry_at = når jobben prøves igjen (onTimeout=queue).
@@ -1918,6 +1918,10 @@ api.get('/subscriptions', R, (c) => {
     trials, // prompt 31: aktive prøveperioder («Prøve · 12 dager igjen»)
     trialsVisible: trialsVisible46(uid) }); // prompt 46: {visible, count, editHint} – seksjonen skjules uten aktive prøveperioder
 });
+// Fase 5: «Neste trekk …» i skjemaet før abonnementet er lagret (appene regner ikke selv). ?cycle=&day=&month=&startDate=
+api.get('/subscriptions/next-charge', R, (c) => c.json(nextChargePreview({
+  cycle: c.req.query('cycle'), day: c.req.query('day'), month: c.req.query('month'), startDate: c.req.query('startDate'),
+})));
 api.get('/subscriptions/candidates', R, (c) => c.json(subsOs.candidates(q('SELECT * FROM fh_subscriptions WHERE user_id=?').all(c.get('user')))
   .map((x) => ({ ...x, domain: x.domain || domainFor(x.merchant) }))));
 api.post('/subscriptions', W, async (c) => {

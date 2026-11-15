@@ -86,6 +86,17 @@
             }
           ]
         },
+        "nextDue": {
+          "anyOf": [
+            {
+              "$ref": "../common/types.schema.json#/$defs/date"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Neste forekomst når en gjentagende oppgave krysses av (serverens nextDue). null når den ikke gjentas eller er fullført. Appene viser denne i stedet for å regne selv."
+        },
         "time": {
           "type": [
             "string",
