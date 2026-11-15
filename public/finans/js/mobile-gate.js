@@ -141,6 +141,25 @@ async function finish() {
 export function showLogin() { if (el && G.step !== 'onb') return; G.step = 'login'; G.err = ''; G.busy = false; loadBgGuest(); mount(); }
 // Bakgrunnen i headeren: fra forrige økt, ellers gradienten (photo-window krever innlogging).
 function loadBgGuest() { try { G.bg = localStorage.getItem('fh_gate_bg') || null; } catch {} }
+/** Q35 (B-B11): åpnes appen med en dyp lenke (f.eks. /finans/#/kv) før oppsettet er fullført, vises siden med en gang og
+ *  onboardingen som et kort nederst, som kan fullføres nå eller senere («Senere» skjuler kortet til neste åpning). */
+export function showOnboardingCard(layout) {
+  if (el || document.querySelector('.pp-obk')) return;
+  try { if (sessionStorage.getItem('fh_obk_senere')) return; } catch { /* privat modus */ }
+  const name = (layout?.name || '').split(' ')[0];
+  const c = document.createElement('div');
+  c.className = 'pp-obk'; c.setAttribute('role', 'region'); c.setAttribute('aria-label', 'Oppsett av appen');
+  c.innerHTML = `<div class="pp-obk-t"><b>Velkommen${name ? `, ${esc(name)}` : ''}</b><span>Velg design, bakgrunn og varsler når det passer deg.</span></div>
+    <div class="pp-obk-k"><button type="button" class="pp-obk-later" data-obk="later">Senere</button><button type="button" class="pp-obk-go" data-obk="go">Fullfør oppsettet</button></div>`;
+  c.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-obk]');
+    if (!b) return;
+    c.remove();
+    if (b.dataset.obk === 'go') showOnboarding(layout);
+    else { try { sessionStorage.setItem('fh_obk_senere', '1'); } catch { /* privat modus */ } }
+  });
+  document.body.appendChild(c);
+}
 /** Onboarding i tre steg første gang etter innlogging. */
 export function showOnboarding(layout) {
   if (el) return;

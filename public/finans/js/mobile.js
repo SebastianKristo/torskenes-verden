@@ -111,7 +111,9 @@ export const hide = (txt) => (pref('hideAmt') && !m.reveal ? '••••' : tx
 /* ---------- Startside og vei tilbake ---------- */
 // Startside lagres per bruker (LAY.start). Med Finans som startside går «hjem» til Finans, og Homelab ligger i profilmenyen.
 const START = { homelab: 'hl', 'fin-hjem': 'hjem', 'fin-liste': 'liste', 'fin-budsjett': 'budsjett' };
+// Adressen appen ble åpnet med: har den en rute (#/kv, #/tx …), er det en dyp lenke (Q35).
 let temaBundet = false;
+const DYP_LENKE = /^#\/[a-z]/i.test(location.hash);
 export const startScr = () => P24.profStart() ?? START[LAY().start] ?? (['hl', 'hjem', 'liste', 'budsjett'].includes(pref('start')) ? pref('start') : 'hl');
 export const startFin = () => startScr() !== 'hl';
 // Prompt 14: «Knapp i linjen» er fjernet. Pila øverst til venstre går alltid til startsiden.
@@ -799,7 +801,8 @@ export function bind() {
   loadLayout().then((r) => {
     takeDesign(r); P37B.takeWopt(r); take15(r); take16(r); take20(r); P24.take24(r); P25.take25(r); P26.take26(r); P27.take27(r); P29.take29(r); P32.take32(r); takeApp(r); P39.take39(r);
     // Første gang etter innlogging (nye installasjoner): onboarding i tre steg.
-    if (r && r.onboarded === false) import('./mobile-gate.js').then((g) => g.showOnboarding(r)).catch(() => {});
+    // Q35: en dyp lenke (/finans/#/kv) åpnes direkte, og onboardingen vises da som et kort som kan fullføres senere.
+    if (r && r.onboarded === false) import('./mobile-gate.js').then((g) => (DYP_LENKE ? g.showOnboardingCard(r) : g.showOnboarding(r))).catch(() => {});
     if (document.documentElement.dataset.ui === 'mobile') draw();
   }).catch(() => {});
   // Skanneknappen: trykk = kamera (eller valg), hold inne ~480 ms = arket med Bilder/Filer.
