@@ -18,7 +18,7 @@ const { hashPassword } = await import('../server/auth/password.js');
 process.env.APP_PASSWORD_HASH = hashPassword('testpassord1');
 const { db } = await import('../server/db.js');
 const { default: fin } = await import('../server/finans/routes.js');
-const trk = await import('../server/tracking.js');
+const trk = await import('../server/sporing/shipments.js');
 const { matchMerchant } = await import('../server/logos/match.js');
 
 const { token } = await (await fin.request('/login', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ password: 'testpassord1', device: 'test' }) })).json();

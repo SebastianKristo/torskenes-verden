@@ -28,7 +28,7 @@ const { updateConfig } = await import('../server/settings.js');
 const L = await import('../server/live89.js');
 const AP = await import('../server/apns.js');
 const { createEvent, eventInput } = await import('../server/kalender/events.js');
-const { upsertShipment } = await import('../server/tracking.js');
+const { upsertShipment } = await import('../server/sporing/shipments.js');
 
 let ipN = 10;
 async function req(path, { method = 'GET', headers = {}, body } = {}) {

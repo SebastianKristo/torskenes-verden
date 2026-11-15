@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildWeather, nowcastText, windDirText, uvText, symbolIcon, sunTime, osloOffset } from '../server/weather.js';
+import { buildWeather, nowcastText, windDirText, uvText, symbolIcon, sunTime, osloOffset } from '../server/vaer/met.js';
 import { mockForecast, mockNowcast } from '../server/mock.js';
 
 const NOW = Date.parse('2026-10-17T10:15:00Z');

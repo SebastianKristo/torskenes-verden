@@ -17,8 +17,8 @@ const { default: fin } = await import('../server/finans/routes.js');
 const { default: mobile, designOf } = await import('../server/mobile.js');
 const bg = await import('../server/bg.js');
 const ext = await import('../server/integrations.js');
-const { default: trk } = await import('../server/tracking.js');
-const car = await import('../server/tracking-carriers.js');
+const { default: trk } = await import('../server/sporing/shipments.js');
+const car = await import('../server/sporing/carriers.js');
 
 const login = await fin.request('/login', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ password: 'testpassord1', device: 'test' }) });
 const { token } = await login.json();

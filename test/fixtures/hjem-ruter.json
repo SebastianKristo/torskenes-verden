@@ -1,0 +1,4523 @@
+{
+ "GET /api/family": {
+  "status": "200 200 200 401",
+  "A": {
+   "events": [
+    {
+     "id": "",
+     "kind": "",
+     "name": "",
+     "ts": "",
+     "userId": "",
+     "zone": "",
+     "zoneId": ""
+    }
+   ],
+   "me": {
+    "color": "",
+    "precision": "",
+    "shareHealth": {
+     "activeKcal": "",
+     "hr": "",
+     "restingHr": "",
+     "sleep": "",
+     "steps": "",
+     "week": ""
+    },
+    "sharing": "",
+    "userId": ""
+   },
+   "members": [
+    {
+     "avatarUrl": "",
+     "color": "",
+     "deviceCount": "",
+     "devices": "[]",
+     "health": "{}",
+     "last": "{}",
+     "mock": "",
+     "name": "",
+     "photoOverride": "",
+     "photoUrl": "",
+     "precision": "",
+     "self": "",
+     "sharing": "",
+     "sourceDevice": "",
+     "sourceMode": "",
+     "userId": "",
+     "username": ""
+    }
+   ],
+   "updatedAt": "",
+   "zones": [
+    {
+     "areas": "[]",
+     "color": "",
+     "createdBy": "",
+     "icon": "",
+     "id": "",
+     "lat": "",
+     "lon": "",
+     "mine": "",
+     "name": "",
+     "notify": "{}",
+     "radius": "",
+     "shared": "",
+     "type": ""
+    }
+   ]
+  },
+  "I": {
+   "events": [
+    {
+     "id": "",
+     "kind": "",
+     "name": "",
+     "ts": "",
+     "userId": "",
+     "zone": "",
+     "zoneId": ""
+    }
+   ],
+   "me": {
+    "color": "",
+    "precision": "",
+    "shareHealth": {
+     "activeKcal": "",
+     "hr": "",
+     "restingHr": "",
+     "sleep": "",
+     "steps": "",
+     "week": ""
+    },
+    "sharing": "",
+    "userId": ""
+   },
+   "members": [
+    {
+     "avatarUrl": "",
+     "color": "",
+     "deviceCount": "",
+     "devices": "[]",
+     "health": "{}",
+     "last": "{}",
+     "mock": "",
+     "name": "",
+     "photoOverride": "",
+     "photoUrl": "",
+     "precision": "",
+     "self": "",
+     "sharing": "",
+     "sourceDevice": "",
+     "sourceMode": "",
+     "userId": "",
+     "username": ""
+    }
+   ],
+   "updatedAt": "",
+   "zones": [
+    {
+     "areas": "[]",
+     "color": "",
+     "createdBy": "",
+     "icon": "",
+     "id": "",
+     "lat": "",
+     "lon": "",
+     "mine": "",
+     "name": "",
+     "notify": "{}",
+     "radius": "",
+     "shared": "",
+     "type": ""
+    }
+   ]
+  }
+ },
+ "GET /api/family/positions": {
+  "status": "200 200 200 401",
+  "A": [
+   {
+    "aktivitet": "",
+    "bilde": "",
+    "deviceCount": "",
+    "devices": [
+     "…"
+    ],
+    "enheter": "",
+    "farge": "",
+    "id": "",
+    "initialer": "",
+    "linje2": "",
+    "mock": "",
+    "name": "",
+    "navn": "",
+    "oppdatert": "",
+    "oppdatertMs": "",
+    "photoUrl": "",
+    "self": "",
+    "sharing": "",
+    "sone": "",
+    "sourceDevice": "",
+    "status": "",
+    "sted": "",
+    "userId": ""
+   }
+  ],
+  "I": [
+   {
+    "aktivitet": "",
+    "bilde": "",
+    "deviceCount": "",
+    "devices": [
+     "…"
+    ],
+    "enheter": "",
+    "farge": "",
+    "id": "",
+    "initialer": "",
+    "linje2": "",
+    "mock": "",
+    "name": "",
+    "navn": "",
+    "oppdatert": "",
+    "oppdatertMs": "",
+    "photoUrl": "",
+    "self": "",
+    "sharing": "",
+    "sone": "",
+    "sourceDevice": "",
+    "status": "",
+    "sted": "",
+    "userId": ""
+   }
+  ]
+ },
+ "GET /api/family/events": {
+  "status": "200 200 200 401",
+  "A": {
+   "events": [
+    {
+     "id": "",
+     "kind": "",
+     "name": "",
+     "ts": "",
+     "userId": "",
+     "zone": "",
+     "zoneId": ""
+    }
+   ],
+   "now": ""
+  },
+  "I": {
+   "events": [
+    {
+     "id": "",
+     "kind": "",
+     "name": "",
+     "ts": "",
+     "userId": "",
+     "zone": "",
+     "zoneId": ""
+    }
+   ],
+   "now": ""
+  }
+ },
+ "GET /api/family/places": {
+  "status": "200 200 200 401",
+  "A": {
+   "maxAreas": "",
+   "places": [
+    {
+     "areaCount": "",
+     "areaText": "",
+     "areas": "[]",
+     "canEdit": "",
+     "canRemoveArea": "",
+     "chips": "",
+     "color": "",
+     "createdBy": "",
+     "here": "[]",
+     "hereCount": "",
+     "hereText": "",
+     "icon": "",
+     "id": "",
+     "lat": "",
+     "lon": "",
+     "mine": "",
+     "name": "",
+     "notify": "{}",
+     "notifyText": "",
+     "radius": "",
+     "shared": "",
+     "type": "",
+     "usedBy": "[]",
+     "usedByText": ""
+    }
+   ],
+   "radius": {
+    "max": "",
+    "min": ""
+   },
+   "types": [
+    ""
+   ],
+   "version": ""
+  },
+  "I": {
+   "maxAreas": "",
+   "places": [
+    {
+     "areaCount": "",
+     "areaText": "",
+     "areas": "[]",
+     "canEdit": "",
+     "canRemoveArea": "",
+     "chips": "",
+     "color": "",
+     "createdBy": "",
+     "here": "[]",
+     "hereCount": "",
+     "hereText": "",
+     "icon": "",
+     "id": "",
+     "lat": "",
+     "lon": "",
+     "mine": "",
+     "name": "",
+     "notify": "{}",
+     "notifyText": "",
+     "radius": "",
+     "shared": "",
+     "type": "",
+     "usedBy": "[]",
+     "usedByText": ""
+    }
+   ],
+   "radius": {
+    "max": "",
+    "min": ""
+   },
+   "types": [
+    ""
+   ],
+   "version": ""
+  }
+ },
+ "GET /api/family/places/regions": {
+  "status": "200 200 200 401",
+  "A": {
+   "max": "",
+   "regions": [
+    {
+     "areaId": "",
+     "id": "",
+     "lat": "",
+     "lon": "",
+     "name": "",
+     "place": "",
+     "placeId": "",
+     "radius_m": "",
+     "type": ""
+    }
+   ],
+   "total": "",
+   "version": ""
+  },
+  "I": {
+   "max": "",
+   "regions": [
+    {
+     "areaId": "",
+     "id": "",
+     "lat": "",
+     "lon": "",
+     "name": "",
+     "place": "",
+     "placeId": "",
+     "radius_m": "",
+     "type": ""
+    }
+   ],
+   "total": "",
+   "version": ""
+  }
+ },
+ "GET /api/family/people50": {
+  "status": "200 200 200 401",
+  "A": {
+   "count": "",
+   "people": [
+    {
+     "acc": "",
+     "activity": "",
+     "approx": "",
+     "battery": "",
+     "charging": "",
+     "color": "",
+     "device": "",
+     "fromMe": "",
+     "healthShared": "",
+     "initials": "",
+     "lat": "",
+     "lon": "",
+     "lowBattery": "",
+     "mock": "",
+     "name": "",
+     "phone": "",
+     "photoUrl": "",
+     "place": "",
+     "precision": "",
+     "self": "",
+     "sharing": "",
+     "since": "",
+     "speedKmh": "",
+     "status": "",
+     "statusLine": "",
+     "sub": "",
+     "updatedAt": "",
+     "userId": "",
+     "zone": ""
+    }
+   ],
+   "subtitle": "",
+   "title": "",
+   "updatedAt": ""
+  },
+  "I": {
+   "count": "",
+   "people": [
+    {
+     "acc": "",
+     "activity": "",
+     "approx": "",
+     "battery": "",
+     "charging": "",
+     "color": "",
+     "device": "",
+     "fromMe": "",
+     "healthShared": "",
+     "initials": "",
+     "lat": "",
+     "lon": "",
+     "lowBattery": "",
+     "mock": "",
+     "name": "",
+     "phone": "",
+     "photoUrl": "",
+     "place": "",
+     "precision": "",
+     "self": "",
+     "sharing": "",
+     "since": "",
+     "speedKmh": "",
+     "status": "",
+     "statusLine": "",
+     "sub": "",
+     "updatedAt": "",
+     "userId": "",
+     "zone": ""
+    }
+   ],
+   "subtitle": "",
+   "title": "",
+   "updatedAt": ""
+  }
+ },
+ "GET /api/family/today50": {
+  "status": "200 200 200 401",
+  "A": {
+   "items": [
+    {
+     "alert": "",
+     "avatar": "{}",
+     "id": "",
+     "kind": "",
+     "pending": "",
+     "place": "",
+     "placeId": "",
+     "right": "",
+     "sub": "",
+     "time": "",
+     "title": "",
+     "ts": ""
+    }
+   ],
+   "title": "",
+   "updatedAt": ""
+  },
+  "I": {
+   "items": [
+    {
+     "alert": "",
+     "avatar": "{}",
+     "id": "",
+     "kind": "",
+     "pending": "",
+     "place": "",
+     "placeId": "",
+     "right": "",
+     "sub": "",
+     "time": "",
+     "title": "",
+     "ts": ""
+    }
+   ],
+   "title": "",
+   "updatedAt": ""
+  }
+ },
+ "GET /api/family/health50": {
+  "status": "200 200 200 401",
+  "A": {
+   "people": [
+    {
+     "action": "{}",
+     "color": "",
+     "date": "",
+     "device": "",
+     "initials": "",
+     "mock": "",
+     "name": "",
+     "photoUrl": "",
+     "self": "",
+     "shareAction": "{}",
+     "shareText": "",
+     "shared": "",
+     "shares": "{}",
+     "short": "",
+     "sourceText": "",
+     "text": "",
+     "today": "{}",
+     "updatedAt": "",
+     "userId": "",
+     "week": "[]",
+     "weekAvg": "",
+     "weekHit": "",
+     "weekText": ""
+    }
+   ],
+   "summary": "",
+   "title": "",
+   "updatedAt": ""
+  },
+  "I": {
+   "people": [
+    {
+     "action": "{}",
+     "color": "",
+     "date": "",
+     "device": "",
+     "initials": "",
+     "mock": "",
+     "name": "",
+     "photoUrl": "",
+     "self": "",
+     "shareAction": "{}",
+     "shareText": "",
+     "shared": "",
+     "shares": "{}",
+     "short": "",
+     "sourceText": "",
+     "text": "",
+     "today": "{}",
+     "updatedAt": "",
+     "userId": "",
+     "week": "[]",
+     "weekAvg": "",
+     "weekHit": "",
+     "weekText": ""
+    }
+   ],
+   "summary": "",
+   "title": "",
+   "updatedAt": ""
+  }
+ },
+ "GET /api/family/health/ha": {
+  "status": "200 200 200 401",
+  "A": {
+   "connected": "",
+   "consent": {},
+   "counts": {
+    "all": "",
+    "other": "",
+    "phones": ""
+   },
+   "devices": [
+    {
+     "entities": "",
+     "healthCount": "",
+     "healthText": "",
+     "id": "",
+     "integration": "",
+     "kind": "",
+     "limited": "",
+     "limitedText": "",
+     "manufacturer": "",
+     "model": "",
+     "name": "",
+     "noHealth": "",
+     "noHealthText": "",
+     "os": "",
+     "personId": "",
+     "platform": "",
+     "registryId": "",
+     "selected": "[]",
+     "sensors": "[]",
+     "subtitle": "",
+     "suggestText": "",
+     "suggestedPersonId": "",
+     "suggestedPersonName": "",
+     "unavailableSince": ""
+    }
+   ],
+   "filter": {
+    "source": ""
+   },
+   "groups": [
+    {
+     "color": "",
+     "count": "",
+     "devices": "[]",
+     "label": "",
+     "name": "",
+     "personId": ""
+    }
+   ],
+   "hidden": {
+    "count": "",
+    "text": ""
+   },
+   "lastSync": "",
+   "mock": "",
+   "people": [
+    {
+     "first": "",
+     "id": "",
+     "name": ""
+    }
+   ],
+   "persons": [
+    {
+     "first": "",
+     "id": "",
+     "name": ""
+    }
+   ],
+   "segments": [
+    {
+     "count": "",
+     "id": "",
+     "label": "",
+     "selected": ""
+    }
+   ],
+   "status": {
+    "connected": "",
+    "linked": "",
+    "text": "",
+    "total": "",
+    "url": ""
+   },
+   "view": ""
+  },
+  "I": {
+   "connected": "",
+   "consent": {},
+   "counts": {
+    "all": "",
+    "other": "",
+    "phones": ""
+   },
+   "devices": [
+    {
+     "entities": "",
+     "healthCount": "",
+     "healthText": "",
+     "id": "",
+     "integration": "",
+     "kind": "",
+     "manufacturer": "",
+     "model": "",
+     "name": "",
+     "noHealth": "",
+     "noHealthText": "",
+     "os": "",
+     "personId": "",
+     "platform": "",
+     "registryId": "",
+     "selected": "[]",
+     "sensors": "[]",
+     "subtitle": "",
+     "suggestedPersonId": ""
+    }
+   ],
+   "filter": {
+    "source": ""
+   },
+   "groups": [
+    {
+     "color": "",
+     "count": "",
+     "devices": "[]",
+     "label": "",
+     "name": "",
+     "personId": ""
+    }
+   ],
+   "hidden": {
+    "count": "",
+    "text": ""
+   },
+   "lastSync": "",
+   "mock": "",
+   "people": [
+    {
+     "first": "",
+     "id": "",
+     "name": ""
+    }
+   ],
+   "persons": [
+    {
+     "first": "",
+     "id": "",
+     "name": ""
+    }
+   ],
+   "segments": [
+    {
+     "count": "",
+     "id": "",
+     "label": "",
+     "selected": ""
+    }
+   ],
+   "status": {
+    "connected": "",
+    "linked": "",
+    "text": "",
+    "total": "",
+    "url": ""
+   },
+   "view": ""
+  }
+ },
+ "GET /api/family/checkin": {
+  "status": "200 200 200 401",
+  "A": {
+   "homeTrip": {
+    "label": "",
+    "url": ""
+   },
+   "latest": "",
+   "log": {
+    "items": [],
+    "title": ""
+   },
+   "people": [
+    {
+     "color": "",
+     "initials": "",
+     "mock": "",
+     "name": "",
+     "photoUrl": "",
+     "userId": ""
+    }
+   ],
+   "position": "",
+   "quick": [
+    {
+     "id": "",
+     "priority": "",
+     "text": ""
+    }
+   ],
+   "requests": [],
+   "suggestion": "",
+   "suggestions": [],
+   "title": ""
+  },
+  "I": {
+   "homeTrip": {
+    "label": "",
+    "url": ""
+   },
+   "latest": "",
+   "log": {
+    "items": [],
+    "title": ""
+   },
+   "people": [
+    {
+     "color": "",
+     "initials": "",
+     "mock": "",
+     "name": "",
+     "photoUrl": "",
+     "userId": ""
+    }
+   ],
+   "position": "",
+   "quick": [
+    {
+     "id": "",
+     "priority": "",
+     "text": ""
+    }
+   ],
+   "requests": [],
+   "suggestion": "",
+   "suggestions": [],
+   "title": ""
+  }
+ },
+ "GET /api/family/checkin/log": {
+  "status": "200 200 200 401",
+  "A": {
+   "items": [],
+   "title": ""
+  },
+  "I": {
+   "items": [],
+   "title": ""
+  }
+ },
+ "GET /api/family/checkin/suggest": {
+  "status": "200 200 200 401",
+  "A": {
+   "position": "",
+   "quick": [
+    {
+     "id": "",
+     "priority": "",
+     "text": ""
+    }
+   ],
+   "suggestion": "",
+   "suggestions": []
+  },
+  "I": {
+   "position": "",
+   "quick": [
+    {
+     "id": "",
+     "priority": "",
+     "text": ""
+    }
+   ],
+   "suggestion": "",
+   "suggestions": []
+  }
+ },
+ "GET /api/family/zone-alerts": {
+  "status": "200 200 200 401",
+  "A": {
+   "on": "",
+   "people": [
+    {
+     "avatar": "",
+     "color": "",
+     "id": "",
+     "initials": "",
+     "name": "",
+     "on": ""
+    }
+   ],
+   "sample": {
+    "badge": "",
+    "body": "",
+    "channel": "",
+    "color": "",
+    "icon": "",
+    "iconUrl": "",
+    "title": ""
+   },
+   "zones": [
+    {
+     "color": "",
+     "icon": "",
+     "iconUrl": "",
+     "id": "",
+     "name": "",
+     "on": ""
+    }
+   ]
+  },
+  "I": {
+   "on": "",
+   "people": [
+    {
+     "avatar": "",
+     "color": "",
+     "id": "",
+     "initials": "",
+     "name": "",
+     "on": ""
+    }
+   ],
+   "sample": {
+    "badge": "",
+    "body": "",
+    "channel": "",
+    "color": "",
+    "icon": "",
+    "iconUrl": "",
+    "title": ""
+   },
+   "zones": [
+    {
+     "color": "",
+     "icon": "",
+     "iconUrl": "",
+     "id": "",
+     "name": "",
+     "on": ""
+    }
+   ]
+  }
+ },
+ "GET /api/famcal51/events": {
+  "status": "200 200 200 401",
+  "A": {
+   "events": [],
+   "from": "",
+   "home": {
+    "lat": "",
+    "lon": "",
+    "name": ""
+   },
+   "kinds": [
+    {
+     "id": "",
+     "label": ""
+    }
+   ],
+   "members": [
+    {
+     "color": "",
+     "initials": "",
+     "name": "",
+     "photoUrl": "",
+     "self": "",
+     "userId": ""
+    }
+   ],
+   "needsDriver": "",
+   "to": ""
+  },
+  "I": {
+   "events": [],
+   "from": "",
+   "home": {
+    "lat": "",
+    "lon": "",
+    "name": ""
+   },
+   "kinds": [
+    {
+     "id": "",
+     "label": ""
+    }
+   ],
+   "members": [
+    {
+     "color": "",
+     "initials": "",
+     "name": "",
+     "photoUrl": "",
+     "self": "",
+     "userId": ""
+    }
+   ],
+   "needsDriver": "",
+   "to": ""
+  }
+ },
+ "GET /api/famcal51/drives": {
+  "status": "200 200 200 401",
+  "A": {
+   "mine": "",
+   "open": "",
+   "tasks": [],
+   "text": ""
+  },
+  "I": {
+   "mine": "",
+   "open": "",
+   "tasks": [],
+   "text": ""
+  }
+ },
+ "GET /api/famcal51/settings": {
+  "status": "200 200 200 401",
+  "A": {
+   "inCalendar": ""
+  },
+  "I": {
+   "inCalendar": ""
+  }
+ },
+ "GET /api/hjemlys": {
+  "status": "200 200 200 401",
+  "A": {
+   "household": [
+    {
+     "avatar": "",
+     "eta": "",
+     "name": "",
+     "phone": "",
+     "since": "",
+     "state": "",
+     "userId": ""
+    }
+   ],
+   "mine": "",
+   "notices": {
+    "mine": [],
+    "received": []
+   }
+  },
+  "I": {
+   "household": [
+    {
+     "avatar": "",
+     "eta": "",
+     "name": "",
+     "phone": "",
+     "since": "",
+     "state": "",
+     "userId": ""
+    }
+   ],
+   "mine": "",
+   "notices": {
+    "mine": [],
+    "received": []
+   }
+  }
+ },
+ "GET /api/hjemlys/notices": {
+  "status": "200 200 200 401",
+  "A": {
+   "mine": [],
+   "received": []
+  },
+  "I": {
+   "mine": [],
+   "received": []
+  }
+ },
+ "GET /api/hjemlys/recipients": {
+  "status": "200 200 200 401",
+  "A": {
+   "household": [
+    {
+     "avatar": "",
+     "name": "",
+     "userId": ""
+    }
+   ],
+   "last": {}
+  },
+  "I": {
+   "household": [
+    {
+     "avatar": "",
+     "name": "",
+     "userId": ""
+    }
+   ],
+   "last": {}
+  }
+ },
+ "GET /api/hjemlys/suggest": {
+  "status": "200 200 200 401",
+  "A": {
+   "eta": "",
+   "reason": "",
+   "suggest": ""
+  },
+  "I": {
+   "eta": "",
+   "reason": "",
+   "suggest": ""
+  }
+ },
+ "GET /api/velfremme/notices": {
+  "status": "200 200 200 401",
+  "A": {
+   "mine": [],
+   "received": []
+  },
+  "I": {
+   "mine": [],
+   "received": []
+  }
+ },
+ "GET /api/kart": {
+  "status": "200 200 200 401",
+  "A": {
+   "iconsFromZoom": "",
+   "modes": [
+    {
+     "id": "",
+     "name": ""
+    }
+   ],
+   "namesFromZoom": "",
+   "people": [
+    {
+     "acc": "",
+     "approx": "",
+     "color": "",
+     "fullName": "",
+     "heading": "",
+     "lat": "",
+     "lon": "",
+     "mock": "",
+     "name": "",
+     "photoUrl": "",
+     "pulse": "",
+     "self": "",
+     "updatedAt": "",
+     "userId": "",
+     "zone": "",
+     "zoneId": ""
+    }
+   ],
+   "prefs": {
+    "c": [
+     "…"
+    ],
+    "md": [
+     "…"
+    ],
+    "show": {
+     "people": "",
+     "stops": "",
+     "vehicles": "",
+     "zones": ""
+    },
+    "vz": [],
+    "z": ""
+   },
+   "source": "",
+   "sourceText": "",
+   "stopsFromZoom": "",
+   "tiles": {
+    "attribution": "",
+    "directUrl": "",
+    "maxZoom": "",
+    "minZoom": "",
+    "style": "",
+    "url": ""
+   },
+   "vehiclePollMs": "",
+   "zones": [
+    {
+     "color": "",
+     "icon": "",
+     "id": "",
+     "lat": "",
+     "live": "",
+     "lon": "",
+     "mine": "",
+     "name": "",
+     "radius": "",
+     "shared": ""
+    }
+   ]
+  },
+  "I": {
+   "iconsFromZoom": "",
+   "modes": [
+    {
+     "id": "",
+     "name": ""
+    }
+   ],
+   "namesFromZoom": "",
+   "people": [
+    {
+     "acc": "",
+     "approx": "",
+     "color": "",
+     "fullName": "",
+     "heading": "",
+     "lat": "",
+     "lon": "",
+     "mock": "",
+     "name": "",
+     "photoUrl": "",
+     "pulse": "",
+     "self": "",
+     "updatedAt": "",
+     "userId": "",
+     "zone": "",
+     "zoneId": ""
+    }
+   ],
+   "prefs": {
+    "c": [
+     "…"
+    ],
+    "md": [
+     "…"
+    ],
+    "show": {
+     "people": "",
+     "stops": "",
+     "vehicles": "",
+     "zones": ""
+    },
+    "vz": [],
+    "z": ""
+   },
+   "source": "",
+   "sourceText": "",
+   "stopsFromZoom": "",
+   "tiles": {
+    "attribution": "",
+    "directUrl": "",
+    "maxZoom": "",
+    "minZoom": "",
+    "style": "",
+    "url": ""
+   },
+   "vehiclePollMs": "",
+   "zones": [
+    {
+     "color": "",
+     "icon": "",
+     "id": "",
+     "lat": "",
+     "live": "",
+     "lon": "",
+     "mine": "",
+     "name": "",
+     "radius": "",
+     "shared": ""
+    }
+   ]
+  }
+ },
+ "GET /api/kart/people": {
+  "status": "200 200 200 401",
+  "A": {
+   "people": [
+    {
+     "acc": "",
+     "approx": "",
+     "color": "",
+     "fullName": "",
+     "heading": "",
+     "lat": "",
+     "lon": "",
+     "mock": "",
+     "name": "",
+     "photoUrl": "",
+     "pulse": "",
+     "self": "",
+     "updatedAt": "",
+     "userId": "",
+     "zone": "",
+     "zoneId": ""
+    }
+   ]
+  },
+  "I": {
+   "people": [
+    {
+     "acc": "",
+     "approx": "",
+     "color": "",
+     "fullName": "",
+     "heading": "",
+     "lat": "",
+     "lon": "",
+     "mock": "",
+     "name": "",
+     "photoUrl": "",
+     "pulse": "",
+     "self": "",
+     "updatedAt": "",
+     "userId": "",
+     "zone": "",
+     "zoneId": ""
+    }
+   ]
+  }
+ },
+ "GET /api/kart/prefs": {
+  "status": "200 200 200 401",
+  "A": {
+   "c": [
+    ""
+   ],
+   "md": [
+    ""
+   ],
+   "show": {
+    "people": "",
+    "stops": "",
+    "vehicles": "",
+    "zones": ""
+   },
+   "vz": [],
+   "z": ""
+  },
+  "I": {
+   "c": [
+    ""
+   ],
+   "md": [
+    ""
+   ],
+   "show": {
+    "people": "",
+    "stops": "",
+    "vehicles": "",
+    "zones": ""
+   },
+   "vz": [],
+   "z": ""
+  }
+ },
+ "GET /api/kart/zones": {
+  "status": "200 200 200 401",
+  "A": {
+   "zones": [
+    {
+     "color": "",
+     "icon": "",
+     "id": "",
+     "lat": "",
+     "live": "",
+     "lon": "",
+     "mine": "",
+     "name": "",
+     "radius": "",
+     "shared": ""
+    }
+   ]
+  },
+  "I": {
+   "zones": [
+    {
+     "color": "",
+     "icon": "",
+     "id": "",
+     "lat": "",
+     "live": "",
+     "lon": "",
+     "mine": "",
+     "name": "",
+     "radius": "",
+     "shared": ""
+    }
+   ]
+  }
+ },
+ "GET /api/tracking": {
+  "status": "200 200 200 401",
+  "A": {
+   "carriers": [
+    {
+     "color": "",
+     "configured": "",
+     "fg": "",
+     "id": "",
+     "ini": "",
+     "keyMissing": "",
+     "logo": "",
+     "manual": "",
+     "name": ""
+    }
+   ],
+   "counts": {
+    "active": "",
+    "archived": "",
+    "delivered": "",
+    "pickup": ""
+   },
+   "items": [
+    {
+     "archived": "",
+     "canonicalStatus": "",
+     "carrier": "",
+     "carrierColor": "",
+     "carrierDetected": "",
+     "carrierDetectedName": "",
+     "carrierFg": "",
+     "carrierIni": "",
+     "carrierLabel": "",
+     "carrierLogo": "",
+     "carrierName": "",
+     "carrierOverride": "",
+     "checkedAt": "",
+     "delayed": "",
+     "direction": "",
+     "estimatedDelivery": "",
+     "eta": "",
+     "events": "[]",
+     "id": "",
+     "keyMissing": "",
+     "keyed": "",
+     "lastError": "",
+     "lastEvent": "{}",
+     "logo": "{}",
+     "name": "",
+     "nextCheckAt": "",
+     "noEtaText": "",
+     "notScanned": "",
+     "pickup": "{}",
+     "pickupPoint": "",
+     "rawStatus": "",
+     "shop": "",
+     "shopDomain": "",
+     "source": "",
+     "sourceNote": "",
+     "sourceRef": "",
+     "status": "",
+     "statusText": "",
+     "statusUnverified": "",
+     "step": "",
+     "steps": "[]",
+     "timeline": "[]",
+     "title": "",
+     "trackingNo": "",
+     "updateError": "",
+     "updatedAt": "",
+     "url": "",
+     "via": "",
+     "viaLabel": ""
+    }
+   ],
+   "lastRun": "",
+   "moreCount": "",
+   "notices": [],
+   "overrides": [
+    {
+     "color": "",
+     "fg": "",
+     "id": "",
+     "ini": "",
+     "name": ""
+    }
+   ],
+   "parcelsapp": {
+    "configured": "",
+    "limit": "",
+    "month": "",
+    "used": ""
+   },
+   "prefs": {
+    "delayed": "",
+    "delivered": "",
+    "found": "",
+    "out": "",
+    "pickup": ""
+   },
+   "sources": {
+    "autoArchive": {
+     "on": ""
+    },
+    "email": {
+     "lastCheck": "",
+     "on": ""
+    },
+    "finn": {
+     "lastCheck": "",
+     "on": ""
+    }
+   }
+  },
+  "I": {
+   "carriers": [
+    {
+     "color": "",
+     "configured": "",
+     "fg": "",
+     "id": "",
+     "ini": "",
+     "keyMissing": "",
+     "logo": "",
+     "manual": "",
+     "name": ""
+    }
+   ],
+   "counts": {
+    "active": "",
+    "archived": "",
+    "delivered": "",
+    "pickup": ""
+   },
+   "items": [
+    {
+     "archived": "",
+     "canonicalStatus": "",
+     "carrier": "",
+     "carrierColor": "",
+     "carrierDetected": "",
+     "carrierDetectedName": "",
+     "carrierFg": "",
+     "carrierIni": "",
+     "carrierLabel": "",
+     "carrierLogo": "",
+     "carrierName": "",
+     "carrierOverride": "",
+     "checkedAt": "",
+     "delayed": "",
+     "direction": "",
+     "estimatedDelivery": "",
+     "eta": "",
+     "events": "[]",
+     "id": "",
+     "keyMissing": "",
+     "keyed": "",
+     "lastError": "",
+     "lastEvent": "{}",
+     "logo": "{}",
+     "name": "",
+     "nextCheckAt": "",
+     "noEtaText": "",
+     "notScanned": "",
+     "pickup": "{}",
+     "pickupPoint": "",
+     "rawStatus": "",
+     "shop": "",
+     "shopDomain": "",
+     "source": "",
+     "sourceNote": "",
+     "sourceRef": "",
+     "status": "",
+     "statusText": "",
+     "statusUnverified": "",
+     "step": "",
+     "steps": "[]",
+     "timeline": "[]",
+     "title": "",
+     "trackingNo": "",
+     "updateError": "",
+     "updatedAt": "",
+     "url": "",
+     "via": "",
+     "viaLabel": ""
+    }
+   ],
+   "lastRun": "",
+   "moreCount": "",
+   "notices": [],
+   "overrides": [
+    {
+     "color": "",
+     "fg": "",
+     "id": "",
+     "ini": "",
+     "name": ""
+    }
+   ],
+   "parcelsapp": {
+    "configured": "",
+    "limit": "",
+    "month": "",
+    "used": ""
+   },
+   "prefs": {
+    "delayed": "",
+    "delivered": "",
+    "found": "",
+    "out": "",
+    "pickup": ""
+   },
+   "sources": {
+    "autoArchive": {
+     "on": ""
+    },
+    "email": {
+     "lastCheck": "",
+     "on": ""
+    },
+    "finn": {
+     "lastCheck": "",
+     "on": ""
+    }
+   }
+  }
+ },
+ "GET /api/tracking/widget": {
+  "status": "200 200 200 401",
+  "A": {
+   "count": {
+    "active": "",
+    "archived": "",
+    "delivered": "",
+    "pickup": ""
+   },
+   "items": [
+    {
+     "activeCount": "",
+     "carrier": "",
+     "carrierColor": "",
+     "carrierFg": "",
+     "carrierIni": "",
+     "carrierLogo": "",
+     "carrierName": "",
+     "direction": "",
+     "estimatedDelivery": "",
+     "eta": "",
+     "id": "",
+     "lastEvent": "{}",
+     "logo": "{}",
+     "moreCount": "",
+     "name": "",
+     "pickup": "{}",
+     "pickupPoint": "",
+     "shop": "",
+     "shopDomain": "",
+     "status": "",
+     "statusText": "",
+     "step": "",
+     "title": "",
+     "trackingNo": "",
+     "updateError": ""
+    }
+   ],
+   "moreCount": ""
+  },
+  "I": {
+   "count": {
+    "active": "",
+    "archived": "",
+    "delivered": "",
+    "pickup": ""
+   },
+   "items": [
+    {
+     "activeCount": "",
+     "carrier": "",
+     "carrierColor": "",
+     "carrierFg": "",
+     "carrierIni": "",
+     "carrierLogo": "",
+     "carrierName": "",
+     "direction": "",
+     "estimatedDelivery": "",
+     "eta": "",
+     "id": "",
+     "lastEvent": "{}",
+     "logo": "{}",
+     "moreCount": "",
+     "name": "",
+     "pickup": "{}",
+     "pickupPoint": "",
+     "shop": "",
+     "shopDomain": "",
+     "status": "",
+     "statusText": "",
+     "step": "",
+     "title": "",
+     "trackingNo": "",
+     "updateError": ""
+    }
+   ],
+   "moreCount": ""
+  }
+ },
+ "GET /api/tracking/keys": {
+  "status": "200 200 200 401",
+  "A": {
+   "admin": "",
+   "note": "",
+   "providers": [
+    {
+     "addedBy": "",
+     "addedByText": "",
+     "editable": "",
+     "fields": "[]",
+     "id": "",
+     "managedBy": "",
+     "masked": "",
+     "name": "",
+     "scope": "",
+     "set": "",
+     "status": "",
+     "tail": "",
+     "updatedAt": ""
+    }
+   ],
+   "quota": {
+    "left": "",
+    "limit": "",
+    "line": "",
+    "mine": "",
+    "month": "",
+    "myLimit": "",
+    "perUserPct": "",
+    "provider": "",
+    "text": "",
+    "used": ""
+   }
+  },
+  "I": {
+   "admin": "",
+   "note": "",
+   "providers": [
+    {
+     "addedBy": "",
+     "addedByText": "",
+     "editable": "",
+     "fields": "[]",
+     "id": "",
+     "managedBy": "",
+     "masked": "",
+     "name": "",
+     "scope": "",
+     "set": "",
+     "status": "",
+     "tail": "",
+     "updatedAt": ""
+    }
+   ],
+   "quota": {
+    "left": "",
+    "limit": "",
+    "line": "",
+    "mine": "",
+    "month": "",
+    "myLimit": "",
+    "perUserPct": "",
+    "provider": "",
+    "text": "",
+    "used": ""
+   }
+  }
+ },
+ "GET /api/tracking/postnord/health": {
+  "status": "200 200 200 401",
+  "A": {
+   "blockedUntil": "",
+   "calls": "",
+   "endpoint": "",
+   "lastError": "",
+   "lastErrorAt": "",
+   "lastOkAt": "",
+   "notifiedAt": "",
+   "ok": "",
+   "shapeErrorAt": "",
+   "shapeOk": "",
+   "text": "",
+   "unofficial": ""
+  },
+  "I": {
+   "blockedUntil": "",
+   "calls": "",
+   "endpoint": "",
+   "lastError": "",
+   "lastErrorAt": "",
+   "lastOkAt": "",
+   "notifiedAt": "",
+   "ok": "",
+   "shapeErrorAt": "",
+   "shapeOk": "",
+   "text": "",
+   "unofficial": ""
+  }
+ },
+ "GET /api/tracking/sources46": {
+  "status": "200 200 200 401",
+  "A": {
+   "sources": [
+    {
+     "active": "",
+     "alwaysOn": "",
+     "brand": "",
+     "connected": "",
+     "connectedAt": "",
+     "count": "",
+     "error": "",
+     "id": "",
+     "kind": "",
+     "lastSync": "",
+     "login": "[]",
+     "mybring": "{}",
+     "name": "",
+     "state": "",
+     "text": ""
+    }
+   ],
+   "statusText": {
+    "at_pickup_point": "",
+    "delivered": "",
+    "in_transit": "",
+    "out_for_delivery": "",
+    "problem": "",
+    "registered": "",
+    "returning": "",
+    "unknown": ""
+   },
+   "webview": {
+    "bring": {
+     "callbackScheme": ""
+    },
+    "posten": {
+     "callbackScheme": ""
+    },
+    "postnord": {
+     "callbackScheme": ""
+    }
+   }
+  },
+  "I": {
+   "sources": [
+    {
+     "active": "",
+     "alwaysOn": "",
+     "brand": "",
+     "connected": "",
+     "connectedAt": "",
+     "count": "",
+     "error": "",
+     "id": "",
+     "kind": "",
+     "lastSync": "",
+     "login": "[]",
+     "mybring": "{}",
+     "name": "",
+     "state": "",
+     "text": ""
+    }
+   ],
+   "statusText": {
+    "at_pickup_point": "",
+    "delivered": "",
+    "in_transit": "",
+    "out_for_delivery": "",
+    "problem": "",
+    "registered": "",
+    "returning": "",
+    "unknown": ""
+   },
+   "webview": {
+    "bring": {
+     "callbackScheme": ""
+    },
+    "posten": {
+     "callbackScheme": ""
+    },
+    "postnord": {
+     "callbackScheme": ""
+    }
+   }
+  }
+ },
+ "GET /api/tracking/aliexpress": {
+  "status": "200 200 200 401",
+  "A": {
+   "folder": "",
+   "lastRun": "",
+   "seen": "",
+   "status": ""
+  },
+  "I": {
+   "folder": "",
+   "lastRun": "",
+   "seen": "",
+   "status": ""
+  }
+ },
+ "GET /api/tracking/detect?no=70712345678901234": {
+  "status": "200 200 200 401",
+  "A": {
+   "carrier": "",
+   "configured": "",
+   "name": ""
+  },
+  "I": {
+   "carrier": "",
+   "configured": "",
+   "name": ""
+  }
+ },
+ "GET /api/weather/layout": {
+  "status": "200 200 200 401",
+  "A": {
+   "cards": [
+    ""
+   ],
+   "glimt": "",
+   "hidden": [],
+   "order": [
+    ""
+   ],
+   "ski": ""
+  },
+  "I": {
+   "cards": [
+    ""
+   ],
+   "glimt": "",
+   "hidden": [],
+   "order": [
+    ""
+   ],
+   "ski": ""
+  }
+ },
+ "GET /api/weather/places": {
+  "status": "200 200 200 401",
+  "A": [
+   {
+    "id": "",
+    "lat": "",
+    "lon": "",
+    "name": "",
+    "region": ""
+   }
+  ],
+  "I": [
+   {
+    "id": "",
+    "lat": "",
+    "lon": "",
+    "name": "",
+    "region": ""
+   }
+  ]
+ },
+ "GET /api/weather/full": {
+  "status": "200 200 200 401",
+  "A": {
+   "compare": {
+    "agreement": "",
+    "avgDiff": "",
+    "days": [
+     "…"
+    ],
+    "hours": [
+     "…"
+    ],
+    "label": "",
+    "sources": {
+     "pent": "",
+     "yr": ""
+    }
+   },
+   "current": {
+    "code": "",
+    "dew": "",
+    "feels": "",
+    "gust": "",
+    "humidity": "",
+    "isDay": "",
+    "precip": "",
+    "pressure": "",
+    "pressureTrend": "",
+    "temp": "",
+    "text": "",
+    "uv": "",
+    "visibility": "",
+    "wind": "",
+    "windDir": ""
+   },
+   "days": [
+    {
+     "blocks2h": "[]",
+     "code": "",
+     "date": "",
+     "gustMax": "",
+     "gustMin": "",
+     "hi": "",
+     "lo": "",
+     "precipProb": "",
+     "precipSum": "",
+     "sunrise": "",
+     "sunset": "",
+     "uvMax": "",
+     "windMax": ""
+    }
+   ],
+   "detail": {
+    "days": [
+     "…"
+    ],
+    "sources": {
+     "fill": "",
+     "primary": ""
+    }
+   },
+   "hours": [
+    {
+     "code": "",
+     "feels": "",
+     "gust": "",
+     "isDay": "",
+     "precip": "",
+     "precipProb": "",
+     "t": "",
+     "temp": "",
+     "wind": "",
+     "windDir": ""
+    }
+   ],
+   "hours7": [
+    {
+     "code": "",
+     "feels": "",
+     "gust": "",
+     "humidity": "",
+     "precip": "",
+     "precipProb": "",
+     "pressure": "",
+     "src": "",
+     "temp": "",
+     "time": "",
+     "uv": "",
+     "visibility": "",
+     "wind": "",
+     "windDir": ""
+    }
+   ],
+   "kind": "",
+   "moon": {
+    "illum": "",
+    "name": "",
+    "nextFull": "",
+    "nextNew": "",
+    "phase": ""
+   },
+   "nextRain": {
+    "mm": "",
+    "t": ""
+   },
+   "place": {
+    "id": "",
+    "lat": "",
+    "lon": "",
+    "name": ""
+   },
+   "ski": {
+    "chip": "",
+    "glide": "",
+    "grip": "",
+    "places": [
+     "…"
+    ],
+    "source": "",
+    "text": "",
+    "title": "",
+    "voice": "",
+    "wax": ""
+   },
+   "source": "",
+   "sunMoon": [
+    {
+     "date": "",
+     "daylight": "",
+     "moon": "{}",
+     "sunrise": "",
+     "sunset": ""
+    }
+   ],
+   "today": {
+    "daylight": "",
+    "hi": "",
+    "lo": "",
+    "precipProb": "",
+    "precipSum": "",
+    "sunrise": "",
+    "sunset": ""
+   },
+   "updatedAt": "",
+   "yesterday": {
+    "hi": "",
+    "lo": ""
+   },
+   "yrUrl": ""
+  },
+  "I": {
+   "compare": {
+    "agreement": "",
+    "avgDiff": "",
+    "days": [
+     "…"
+    ],
+    "hours": [
+     "…"
+    ],
+    "label": "",
+    "sources": {
+     "pent": "",
+     "yr": ""
+    }
+   },
+   "current": {
+    "code": "",
+    "dew": "",
+    "feels": "",
+    "gust": "",
+    "humidity": "",
+    "isDay": "",
+    "precip": "",
+    "pressure": "",
+    "pressureTrend": "",
+    "temp": "",
+    "text": "",
+    "uv": "",
+    "visibility": "",
+    "wind": "",
+    "windDir": ""
+   },
+   "days": [
+    {
+     "blocks2h": "[]",
+     "code": "",
+     "date": "",
+     "gustMax": "",
+     "gustMin": "",
+     "hi": "",
+     "lo": "",
+     "precipProb": "",
+     "precipSum": "",
+     "sunrise": "",
+     "sunset": "",
+     "uvMax": "",
+     "windMax": ""
+    }
+   ],
+   "detail": {
+    "days": [
+     "…"
+    ],
+    "sources": {
+     "fill": "",
+     "primary": ""
+    }
+   },
+   "hours": [
+    {
+     "code": "",
+     "feels": "",
+     "gust": "",
+     "isDay": "",
+     "precip": "",
+     "precipProb": "",
+     "t": "",
+     "temp": "",
+     "wind": "",
+     "windDir": ""
+    }
+   ],
+   "hours7": [
+    {
+     "code": "",
+     "feels": "",
+     "gust": "",
+     "humidity": "",
+     "precip": "",
+     "precipProb": "",
+     "pressure": "",
+     "src": "",
+     "temp": "",
+     "time": "",
+     "uv": "",
+     "visibility": "",
+     "wind": "",
+     "windDir": ""
+    }
+   ],
+   "kind": "",
+   "moon": {
+    "illum": "",
+    "name": "",
+    "nextFull": "",
+    "nextNew": "",
+    "phase": ""
+   },
+   "nextRain": {
+    "mm": "",
+    "t": ""
+   },
+   "place": {
+    "id": "",
+    "lat": "",
+    "lon": "",
+    "name": ""
+   },
+   "ski": {
+    "chip": "",
+    "glide": "",
+    "grip": "",
+    "places": [
+     "…"
+    ],
+    "source": "",
+    "text": "",
+    "title": "",
+    "voice": "",
+    "wax": ""
+   },
+   "source": "",
+   "sunMoon": [
+    {
+     "date": "",
+     "daylight": "",
+     "moon": "{}",
+     "sunrise": "",
+     "sunset": ""
+    }
+   ],
+   "today": {
+    "daylight": "",
+    "hi": "",
+    "lo": "",
+    "precipProb": "",
+    "precipSum": "",
+    "sunrise": "",
+    "sunset": ""
+   },
+   "updatedAt": "",
+   "yesterday": {
+    "hi": "",
+    "lo": ""
+   },
+   "yrUrl": ""
+  }
+ },
+ "GET /api/weather/compare": {
+  "status": "200 200 200 401",
+  "A": {
+   "agreement": "",
+   "days": [
+    {
+     "agree": "",
+     "date": "",
+     "diffHi": "",
+     "ecmwf": "{}",
+     "yr": "{}"
+    }
+   ],
+   "hours": [
+    {
+     "ecmwf": "{}",
+     "t": "",
+     "yr": "{}"
+    }
+   ],
+   "mock": "",
+   "place": {
+    "id": "",
+    "lat": "",
+    "lon": "",
+    "name": ""
+   },
+   "sources": {
+    "ecmwf": "",
+    "yr": ""
+   },
+   "updatedAt": ""
+  },
+  "I": {
+   "agreement": "",
+   "days": [
+    {
+     "agree": "",
+     "date": "",
+     "diffHi": "",
+     "ecmwf": "{}",
+     "yr": "{}"
+    }
+   ],
+   "hours": [
+    {
+     "ecmwf": "{}",
+     "t": "",
+     "yr": "{}"
+    }
+   ],
+   "mock": "",
+   "place": {
+    "id": "",
+    "lat": "",
+    "lon": "",
+    "name": ""
+   },
+   "sources": {
+    "ecmwf": "",
+    "yr": ""
+   },
+   "updatedAt": ""
+  }
+ },
+ "GET /api/weather/places/summary": {
+  "status": "200 200 200 401",
+  "A": {
+   "places": [
+    {
+     "cardBg": "",
+     "code": "",
+     "hi": "",
+     "id": "",
+     "isDay": "",
+     "kind": "",
+     "lat": "",
+     "lo": "",
+     "localTime": "",
+     "lon": "",
+     "name": "",
+     "note": "",
+     "otherTz": "",
+     "rainNote": "",
+     "region": "",
+     "sky": "",
+     "sub": "",
+     "temp": "",
+     "text": "",
+     "timezone": "",
+     "utcOffset": ""
+    }
+   ],
+   "source": "",
+   "updatedAt": ""
+  },
+  "I": {
+   "places": [
+    {
+     "cardBg": "",
+     "code": "",
+     "hi": "",
+     "id": "",
+     "isDay": "",
+     "kind": "",
+     "lat": "",
+     "lo": "",
+     "localTime": "",
+     "lon": "",
+     "name": "",
+     "note": "",
+     "otherTz": "",
+     "rainNote": "",
+     "region": "",
+     "sky": "",
+     "sub": "",
+     "temp": "",
+     "text": "",
+     "timezone": "",
+     "utcOffset": ""
+    }
+   ],
+   "source": "",
+   "updatedAt": ""
+  }
+ },
+ "GET /api/weather/here?lat=59.91&lon=10.75": {
+  "status": "200 200 200 401",
+  "A": {
+   "distanceKm": "",
+   "label": "",
+   "now": {
+    "code": "",
+    "icon": "",
+    "isDay": "",
+    "temp": "",
+    "text": "",
+    "wind": ""
+   },
+   "place": {
+    "lat": "",
+    "lon": "",
+    "name": ""
+   },
+   "refreshAfterSec": "",
+   "sameAsSelected": "",
+   "source": "",
+   "today": {
+    "hi": "",
+    "lo": "",
+    "precipProb": ""
+   },
+   "updatedAt": ""
+  },
+  "I": {
+   "distanceKm": "",
+   "label": "",
+   "now": {
+    "code": "",
+    "icon": "",
+    "isDay": "",
+    "temp": "",
+    "text": "",
+    "wind": ""
+   },
+   "place": {
+    "lat": "",
+    "lon": "",
+    "name": ""
+   },
+   "refreshAfterSec": "",
+   "sameAsSelected": "",
+   "source": "",
+   "today": {
+    "hi": "",
+    "lo": "",
+    "precipProb": ""
+   },
+   "updatedAt": ""
+  }
+ },
+ "GET /api/weather/place?q=Oslo": {
+  "status": "200 200 200 401",
+  "A": {
+   "days": [
+    {
+     "code": "",
+     "cond": "",
+     "date": "",
+     "hi": "",
+     "ic": "",
+     "icon": "",
+     "lo": "",
+     "precipProb": ""
+    }
+   ],
+   "hours": [
+    {
+     "code": "",
+     "cond": "",
+     "precip": "",
+     "precipProb": "",
+     "t": "",
+     "temp": "",
+     "wind": ""
+    }
+   ],
+   "now": {
+    "code": "",
+    "cond": "",
+    "ic": "",
+    "icon": "",
+    "isDay": "",
+    "temp": "",
+    "wind": ""
+   },
+   "open": {
+    "lat": "",
+    "lon": "",
+    "name": "",
+    "route": ""
+   },
+   "place": {
+    "cc": "",
+    "country": "",
+    "label": "",
+    "lat": "",
+    "lon": "",
+    "name": "",
+    "norway": "",
+    "tz": ""
+   },
+   "plain": "",
+   "source": "",
+   "text": "",
+   "today": {
+    "code": "",
+    "cond": "",
+    "date": "",
+    "hi": "",
+    "ic": "",
+    "icon": "",
+    "lo": "",
+    "precipProb": ""
+   },
+   "tomorrow": {
+    "code": "",
+    "cond": "",
+    "date": "",
+    "hi": "",
+    "ic": "",
+    "icon": "",
+    "lo": "",
+    "precipProb": ""
+   }
+  },
+  "I": {
+   "days": [
+    {
+     "code": "",
+     "cond": "",
+     "date": "",
+     "hi": "",
+     "ic": "",
+     "icon": "",
+     "lo": "",
+     "precipProb": ""
+    }
+   ],
+   "hours": [
+    {
+     "code": "",
+     "cond": "",
+     "precip": "",
+     "precipProb": "",
+     "t": "",
+     "temp": "",
+     "wind": ""
+    }
+   ],
+   "now": {
+    "code": "",
+    "cond": "",
+    "ic": "",
+    "icon": "",
+    "isDay": "",
+    "temp": "",
+    "wind": ""
+   },
+   "open": {
+    "lat": "",
+    "lon": "",
+    "name": "",
+    "route": ""
+   },
+   "place": {
+    "cc": "",
+    "country": "",
+    "label": "",
+    "lat": "",
+    "lon": "",
+    "name": "",
+    "norway": "",
+    "tz": ""
+   },
+   "plain": "",
+   "source": "",
+   "text": "",
+   "today": {
+    "code": "",
+    "cond": "",
+    "date": "",
+    "hi": "",
+    "ic": "",
+    "icon": "",
+    "lo": "",
+    "precipProb": ""
+   },
+   "tomorrow": {
+    "code": "",
+    "cond": "",
+    "date": "",
+    "hi": "",
+    "ic": "",
+    "icon": "",
+    "lo": "",
+    "precipProb": ""
+   }
+  }
+ },
+ "GET /api/weather/week-summary": {
+  "status": "200 200 200 401",
+  "A": {
+   "char": "",
+   "charDesc": "",
+   "charName": "",
+   "chars": [
+    {
+     "desc": "",
+     "id": "",
+     "name": ""
+    }
+   ],
+   "diff": {
+    "precipMm": "",
+    "sunHours": "",
+    "temp": ""
+   },
+   "engine": "",
+   "highlights": [
+    {
+     "date": "",
+     "dates": "[]",
+     "k": "",
+     "label": "",
+     "text": ""
+    }
+   ],
+   "lastWeek": {
+    "avgMax": "",
+    "avgMin": "",
+    "avgTemp": "",
+    "days": [
+     "…"
+    ],
+    "from": "",
+    "precipMm": "",
+    "rainDays": "",
+    "sunHours": "",
+    "to": ""
+   },
+   "place": {
+    "lat": "",
+    "lon": "",
+    "name": ""
+   },
+   "source": "",
+   "text": "",
+   "thisWeek": {
+    "avgMax": "",
+    "avgMin": "",
+    "avgTemp": "",
+    "days": [
+     "…"
+    ],
+    "from": "",
+    "precipMm": "",
+    "rainDays": "",
+    "sunHours": "",
+    "to": ""
+   },
+   "tiles": [
+    {
+     "k": "",
+     "label": "",
+     "sub": "",
+     "value": ""
+    }
+   ],
+   "updatedAt": ""
+  },
+  "I": {
+   "char": "",
+   "charDesc": "",
+   "charName": "",
+   "chars": [
+    {
+     "desc": "",
+     "id": "",
+     "name": ""
+    }
+   ],
+   "diff": {
+    "precipMm": "",
+    "sunHours": "",
+    "temp": ""
+   },
+   "engine": "",
+   "highlights": [
+    {
+     "date": "",
+     "dates": "[]",
+     "k": "",
+     "label": "",
+     "text": ""
+    }
+   ],
+   "lastWeek": {
+    "avgMax": "",
+    "avgMin": "",
+    "avgTemp": "",
+    "days": [
+     "…"
+    ],
+    "from": "",
+    "precipMm": "",
+    "rainDays": "",
+    "sunHours": "",
+    "to": ""
+   },
+   "place": {
+    "lat": "",
+    "lon": "",
+    "name": ""
+   },
+   "source": "",
+   "text": "",
+   "thisWeek": {
+    "avgMax": "",
+    "avgMin": "",
+    "avgTemp": "",
+    "days": [
+     "…"
+    ],
+    "from": "",
+    "precipMm": "",
+    "rainDays": "",
+    "sunHours": "",
+    "to": ""
+   },
+   "tiles": [
+    {
+     "k": "",
+     "label": "",
+     "sub": "",
+     "value": ""
+    }
+   ],
+   "updatedAt": ""
+  }
+ },
+ "GET /api/weather/search?q=Oslo": {
+  "status": "200 200 200 401",
+  "A": [],
+  "I": []
+ },
+ "GET /api/tasks": {
+  "status": "200 200 200 401",
+  "A": {
+   "archivedCount": "",
+   "items": [
+    {
+     "after": "",
+     "arch": "",
+     "archived": "",
+     "archivedAt": "",
+     "assignee": "",
+     "by": "",
+     "createdAt": "",
+     "createdAtIso": "",
+     "createdBy": "",
+     "deadline": "",
+     "dl": "",
+     "dlOverdue": "",
+     "done": "",
+     "doneAt": "",
+     "doneBy": "",
+     "due": "",
+     "early": "",
+     "flag": "",
+     "geo": "",
+     "glimt": "",
+     "id": "",
+     "l": "",
+     "list": "",
+     "mentions": "[]",
+     "n": "",
+     "note": "",
+     "notes": "",
+     "place": "",
+     "placeName": "",
+     "prio": "",
+     "rep": "",
+     "subs": "[]",
+     "subsDone": "",
+     "subsText": "",
+     "tags": "[]",
+     "time": "",
+     "title": "",
+     "updatedAt": "",
+     "updatedAtIso": "",
+     "urgent": "",
+     "who": ""
+    }
+   ],
+   "listOrder": [
+    ""
+   ],
+   "lists": [
+    {
+     "color": "",
+     "household": "",
+     "id": "",
+     "kind": "",
+     "members": "[]",
+     "mine": "",
+     "name": "",
+     "owner": "",
+     "ownerId": "",
+     "ownerName": "",
+     "private": "",
+     "shared": ""
+    }
+   ],
+   "members": [
+    {
+     "avatarUrl": "",
+     "id": "",
+     "name": "",
+     "username": ""
+    }
+   ],
+   "today": ""
+  },
+  "I": {
+   "archivedCount": "",
+   "items": [],
+   "listOrder": [
+    ""
+   ],
+   "lists": [
+    {
+     "color": "",
+     "household": "",
+     "id": "",
+     "kind": "",
+     "members": "[]",
+     "mine": "",
+     "name": "",
+     "owner": "",
+     "ownerId": "",
+     "ownerName": "",
+     "private": "",
+     "shared": ""
+    }
+   ],
+   "members": [
+    {
+     "avatarUrl": "",
+     "id": "",
+     "name": ""
+    }
+   ],
+   "today": ""
+  }
+ },
+ "GET /api/tasks/lists": {
+  "status": "200 200 200 401",
+  "A": {
+   "listOrder": [
+    ""
+   ],
+   "lists": [
+    {
+     "color": "",
+     "household": "",
+     "id": "",
+     "kind": "",
+     "members": "[]",
+     "mine": "",
+     "name": "",
+     "owner": "",
+     "ownerId": "",
+     "ownerName": "",
+     "private": "",
+     "shared": ""
+    }
+   ],
+   "members": [
+    {
+     "avatarUrl": "",
+     "id": "",
+     "name": "",
+     "username": ""
+    }
+   ]
+  },
+  "I": {
+   "listOrder": [
+    ""
+   ],
+   "lists": [
+    {
+     "color": "",
+     "household": "",
+     "id": "",
+     "kind": "",
+     "members": "[]",
+     "mine": "",
+     "name": "",
+     "owner": "",
+     "ownerId": "",
+     "ownerName": "",
+     "private": "",
+     "shared": ""
+    }
+   ],
+   "members": [
+    {
+     "avatarUrl": "",
+     "id": "",
+     "name": ""
+    }
+   ]
+  }
+ },
+ "GET /api/tasks/lists/order": {
+  "status": "200 200 200 401",
+  "A": {
+   "custom": "",
+   "default": [
+    ""
+   ],
+   "ids": [
+    ""
+   ],
+   "keys": [
+    {
+     "color": "",
+     "id": "",
+     "name": "",
+     "special": ""
+    }
+   ]
+  },
+  "I": {
+   "custom": "",
+   "default": [
+    ""
+   ],
+   "ids": [
+    ""
+   ],
+   "keys": [
+    {
+     "color": "",
+     "id": "",
+     "name": "",
+     "special": ""
+    }
+   ]
+  }
+ },
+ "GET /api/tasks/next": {
+  "status": "200 200 200 401",
+  "A": {
+   "items": [
+    {
+     "after": "",
+     "arch": "",
+     "archived": "",
+     "archivedAt": "",
+     "assignee": "",
+     "by": "",
+     "createdAt": "",
+     "createdAtIso": "",
+     "createdBy": "",
+     "deadline": "",
+     "dl": "",
+     "dlOverdue": "",
+     "done": "",
+     "doneAt": "",
+     "doneBy": "",
+     "due": "",
+     "early": "",
+     "flag": "",
+     "geo": "",
+     "glimt": "",
+     "id": "",
+     "l": "",
+     "list": "",
+     "mentions": "[]",
+     "n": "",
+     "note": "",
+     "notes": "",
+     "overdue": "",
+     "place": "",
+     "placeName": "",
+     "prio": "",
+     "rep": "",
+     "subs": "[]",
+     "subsDone": "",
+     "subsText": "",
+     "tags": "[]",
+     "time": "",
+     "title": "",
+     "today": "",
+     "updatedAt": "",
+     "updatedAtIso": "",
+     "urgent": "",
+     "who": ""
+    }
+   ],
+   "lists": [
+    {
+     "color": "",
+     "household": "",
+     "id": "",
+     "kind": "",
+     "members": "[]",
+     "mine": "",
+     "name": "",
+     "owner": "",
+     "ownerId": "",
+     "ownerName": "",
+     "private": "",
+     "shared": ""
+    }
+   ],
+   "open": ""
+  },
+  "I": {
+   "items": [],
+   "lists": [
+    {
+     "color": "",
+     "household": "",
+     "id": "",
+     "kind": "",
+     "members": "[]",
+     "mine": "",
+     "name": "",
+     "owner": "",
+     "ownerId": "",
+     "ownerName": "",
+     "private": "",
+     "shared": ""
+    }
+   ],
+   "open": ""
+  }
+ },
+ "GET /api/tasks/brief": {
+  "status": "200 200 200 401",
+  "A": {
+   "count": "",
+   "deepLink": "",
+   "items": [
+    {
+     "done": "",
+     "due": "",
+     "id": "",
+     "list": "",
+     "listName": "",
+     "overdue": "",
+     "time": "",
+     "title": "",
+     "urgent": ""
+    }
+   ],
+   "open": {
+    "route": ""
+   },
+   "overdue": "",
+   "text": "",
+   "title": ""
+  },
+  "I": {
+   "count": "",
+   "deepLink": "",
+   "items": [],
+   "open": {
+    "route": ""
+   },
+   "overdue": "",
+   "text": "",
+   "title": ""
+  }
+ },
+ "GET /api/tasks/settings": {
+  "status": "200 200 200 401",
+  "A": {
+   "defaultList": "",
+   "lists": [
+    {
+     "color": "",
+     "household": "",
+     "id": "",
+     "kind": "",
+     "members": "[]",
+     "mine": "",
+     "name": "",
+     "owner": "",
+     "ownerId": "",
+     "ownerName": "",
+     "private": "",
+     "shared": ""
+    }
+   ]
+  },
+  "I": {
+   "defaultList": "",
+   "lists": [
+    {
+     "color": "",
+     "household": "",
+     "id": "",
+     "kind": "",
+     "members": "[]",
+     "mine": "",
+     "name": "",
+     "owner": "",
+     "ownerId": "",
+     "ownerName": "",
+     "private": "",
+     "shared": ""
+    }
+   ]
+  }
+ },
+ "GET /api/tasks/sync": {
+  "status": "200 200 200 401",
+  "A": {
+   "canEdit": "",
+   "connectedCount": "",
+   "enabled": "",
+   "entities": [
+    {
+     "entity_id": "",
+     "name": ""
+    }
+   ],
+   "error": "",
+   "lists": [
+    {
+     "color": "",
+     "connected": "",
+     "entityId": "",
+     "entityName": "",
+     "id": "",
+     "name": "",
+     "text": ""
+    }
+   ],
+   "map": {},
+   "maps": [],
+   "on": "",
+   "queue": "",
+   "status": "",
+   "syncedAt": "",
+   "t": "",
+   "text": "",
+   "transport": ""
+  },
+  "I": {
+   "canEdit": "",
+   "connectedCount": "",
+   "enabled": "",
+   "entities": [
+    {
+     "entity_id": "",
+     "name": ""
+    }
+   ],
+   "error": "",
+   "lists": [
+    {
+     "color": "",
+     "connected": "",
+     "entityId": "",
+     "entityName": "",
+     "id": "",
+     "name": "",
+     "text": ""
+    }
+   ],
+   "map": {},
+   "maps": [],
+   "on": "",
+   "queue": "",
+   "status": "",
+   "syncedAt": "",
+   "t": "",
+   "text": "",
+   "transport": ""
+  }
+ },
+ "GET /api/tasks/ha": {
+  "status": "200 403 403 401",
+  "A": {
+   "enabled": "",
+   "entities": [
+    {
+     "entity_id": "",
+     "name": ""
+    }
+   ],
+   "error": "",
+   "maps": [],
+   "queue": "",
+   "status": "",
+   "syncedAt": "",
+   "transport": ""
+  },
+  "I": {
+   "code": "",
+   "error": ""
+  }
+ },
+ "GET /api/tasks/ha/summary": {
+  "status": "200 200 200 401",
+  "A": {
+   "canEdit": "",
+   "enabled": "",
+   "hint": "",
+   "integrationText": "",
+   "linked": "",
+   "lists": [],
+   "settings": {
+    "detail": "",
+    "event": "",
+    "mobile": "",
+    "web": ""
+   },
+   "syncedAt": "",
+   "syncedText": "",
+   "text": ""
+  },
+  "I": {
+   "canEdit": "",
+   "enabled": "",
+   "hint": "",
+   "integrationText": "",
+   "linked": "",
+   "lists": [],
+   "settings": {
+    "detail": "",
+    "event": "",
+    "mobile": "",
+    "web": ""
+   },
+   "syncedAt": "",
+   "syncedText": "",
+   "text": ""
+  }
+ },
+ "GET /api/tasks/glimt/cards": {
+  "status": "200 200 200 401",
+  "A": {
+   "cards": [
+    {
+     "actions": "[]",
+     "key": "",
+     "kind": "",
+     "list": "{}",
+     "text": ""
+    }
+   ]
+  },
+  "I": {
+   "cards": []
+  }
+ },
+ "GET /api/tasks/glimt/jobs": {
+  "status": "200 200 200 401",
+  "A": {
+   "jobs": []
+  },
+  "I": {
+   "jobs": []
+  }
+ },
+ "GET /api/tasks/glimt/log": {
+  "status": "200 200 200 401",
+  "A": {
+   "items": []
+  },
+  "I": {
+   "items": []
+  }
+ },
+ "GET /api/tasks/glimt/sources": {
+  "status": "200 200 200 401",
+  "A": {
+   "count": "",
+   "sources": []
+  },
+  "I": {
+   "count": "",
+   "sources": []
+  }
+ },
+ "GET /api/tasks/glimt/tips": {
+  "status": "200 200 200 401",
+  "A": {
+   "dup": "",
+   "overdue": "",
+   "pack": "",
+   "store": ""
+  },
+  "I": {
+   "dup": "",
+   "overdue": "",
+   "pack": "",
+   "store": ""
+  }
+ },
+ "GET /api/matplan/week": {
+  "status": "200 200 200 401",
+  "A": {
+   "auto": "",
+   "calendarUrl": "",
+   "canShare": "",
+   "chefs": [
+    {
+     "best": "[]",
+     "name": ""
+    }
+   ],
+   "cooks": [
+    ""
+   ],
+   "days": [
+    {
+     "bestCook": "",
+     "cook": "",
+     "cost": "",
+     "date": "",
+     "dishId": "",
+     "fixed": "",
+     "index": "",
+     "ingredients": "[]",
+     "name": "",
+     "source": "",
+     "tag": "",
+     "today": "",
+     "updatedAt": "",
+     "updatedBy": "",
+     "updatedById": "",
+     "version": "",
+     "weekday": ""
+    }
+   ],
+   "dishes": [
+    {
+     "cost": "",
+     "days": "[]",
+     "fixedDays": "[]",
+     "folder": "",
+     "folderId": "",
+     "id": "",
+     "image": "",
+     "ing": "[]",
+     "ingredients": "[]",
+     "links": "[]",
+     "name": "",
+     "servings": "",
+     "sourceUrl": "",
+     "src": "",
+     "steps": "[]",
+     "time": ""
+    }
+   ],
+   "end": "",
+   "fixed": [
+    {
+     "cook": "",
+     "dishId": "",
+     "index": "",
+     "name": "",
+     "weekday": ""
+    }
+   ],
+   "folders": [
+    {
+     "count": "",
+     "id": "",
+     "name": "",
+     "sort": ""
+    }
+   ],
+   "food": {
+    "budget": "",
+    "category": "",
+    "from": "",
+    "left": "",
+    "month": "",
+    "planned": "",
+    "to": "",
+    "used": ""
+   },
+   "hellofresh": [
+    {
+     "cost": "",
+     "id": "",
+     "meta": "",
+     "name": ""
+    }
+   ],
+   "household": "",
+   "library": [
+    {
+     "cost": "",
+     "id": "",
+     "name": ""
+    }
+   ],
+   "shared": "",
+   "sharedNote": "",
+   "shopping": [
+    {
+     "auto": "",
+     "count": "",
+     "dishes": "[]",
+     "done": "",
+     "id": "",
+     "price": "",
+     "text": ""
+    }
+   ],
+   "start": "",
+   "today": "",
+   "updatedAt": "",
+   "updatedBy": "",
+   "updatedById": "",
+   "week": "",
+   "weekCost": ""
+  },
+  "I": {
+   "auto": "",
+   "calendarUrl": "",
+   "canShare": "",
+   "chefs": [
+    {
+     "best": "[]",
+     "name": ""
+    }
+   ],
+   "cooks": [
+    ""
+   ],
+   "days": [
+    {
+     "bestCook": "",
+     "cook": "",
+     "cost": "",
+     "date": "",
+     "dishId": "",
+     "fixed": "",
+     "index": "",
+     "ingredients": "[]",
+     "name": "",
+     "source": "",
+     "tag": "",
+     "today": "",
+     "updatedAt": "",
+     "updatedBy": "",
+     "updatedById": "",
+     "version": "",
+     "weekday": ""
+    }
+   ],
+   "dishes": [
+    {
+     "cost": "",
+     "days": "[]",
+     "fixedDays": "[]",
+     "folder": "",
+     "folderId": "",
+     "id": "",
+     "image": "",
+     "ing": "[]",
+     "ingredients": "[]",
+     "links": "[]",
+     "name": "",
+     "servings": "",
+     "sourceUrl": "",
+     "src": "",
+     "steps": "[]",
+     "time": ""
+    }
+   ],
+   "end": "",
+   "fixed": [
+    {
+     "cook": "",
+     "dishId": "",
+     "index": "",
+     "name": "",
+     "weekday": ""
+    }
+   ],
+   "folders": [
+    {
+     "count": "",
+     "id": "",
+     "name": "",
+     "sort": ""
+    }
+   ],
+   "food": "",
+   "hellofresh": [
+    {
+     "cost": "",
+     "id": "",
+     "meta": "",
+     "name": ""
+    }
+   ],
+   "household": "",
+   "library": [
+    {
+     "cost": "",
+     "id": "",
+     "name": ""
+    }
+   ],
+   "shared": "",
+   "sharedNote": "",
+   "shopping": [
+    {
+     "auto": "",
+     "count": "",
+     "dishes": "[]",
+     "done": "",
+     "id": "",
+     "price": "",
+     "text": ""
+    }
+   ],
+   "start": "",
+   "today": "",
+   "updatedAt": "",
+   "updatedBy": "",
+   "updatedById": "",
+   "week": "",
+   "weekCost": ""
+  }
+ },
+ "GET /api/matplan/folders": {
+  "status": "200 200 200 401",
+  "A": [
+   {
+    "count": "",
+    "id": "",
+    "name": "",
+    "sort": ""
+   }
+  ],
+  "I": [
+   {
+    "count": "",
+    "id": "",
+    "name": "",
+    "sort": ""
+   }
+  ]
+ },
+ "GET /api/matplan/recipes/jobs": {
+  "status": "200 200 200 401",
+  "A": [],
+  "I": []
+ },
+ "GET /mat/api/week": {
+  "status": "200 200 200 401",
+  "A": {
+   "auto": "",
+   "calendarUrl": "",
+   "canShare": "",
+   "chefs": [
+    {
+     "best": "[]",
+     "name": ""
+    }
+   ],
+   "cooks": [
+    ""
+   ],
+   "days": [
+    {
+     "bestCook": "",
+     "cook": "",
+     "cost": "",
+     "date": "",
+     "dishId": "",
+     "fixed": "",
+     "index": "",
+     "ingredients": "[]",
+     "name": "",
+     "source": "",
+     "tag": "",
+     "today": "",
+     "updatedAt": "",
+     "updatedBy": "",
+     "updatedById": "",
+     "version": "",
+     "weekday": ""
+    }
+   ],
+   "dishes": [
+    {
+     "cost": "",
+     "days": "[]",
+     "fixedDays": "[]",
+     "folder": "",
+     "folderId": "",
+     "id": "",
+     "image": "",
+     "ing": "[]",
+     "ingredients": "[]",
+     "links": "[]",
+     "name": "",
+     "servings": "",
+     "sourceUrl": "",
+     "src": "",
+     "steps": "[]",
+     "time": ""
+    }
+   ],
+   "end": "",
+   "fixed": [
+    {
+     "cook": "",
+     "dishId": "",
+     "index": "",
+     "name": "",
+     "weekday": ""
+    }
+   ],
+   "folders": [
+    {
+     "count": "",
+     "id": "",
+     "name": "",
+     "sort": ""
+    }
+   ],
+   "food": {
+    "budget": "",
+    "category": "",
+    "from": "",
+    "left": "",
+    "month": "",
+    "planned": "",
+    "to": "",
+    "used": ""
+   },
+   "hellofresh": [
+    {
+     "cost": "",
+     "id": "",
+     "meta": "",
+     "name": ""
+    }
+   ],
+   "household": "",
+   "library": [
+    {
+     "cost": "",
+     "id": "",
+     "name": ""
+    }
+   ],
+   "shared": "",
+   "sharedNote": "",
+   "shopping": [
+    {
+     "auto": "",
+     "count": "",
+     "dishes": "[]",
+     "done": "",
+     "id": "",
+     "price": "",
+     "text": ""
+    }
+   ],
+   "start": "",
+   "today": "",
+   "updatedAt": "",
+   "updatedBy": "",
+   "updatedById": "",
+   "week": "",
+   "weekCost": ""
+  },
+  "I": {
+   "auto": "",
+   "calendarUrl": "",
+   "canShare": "",
+   "chefs": [
+    {
+     "best": "[]",
+     "name": ""
+    }
+   ],
+   "cooks": [
+    ""
+   ],
+   "days": [
+    {
+     "bestCook": "",
+     "cook": "",
+     "cost": "",
+     "date": "",
+     "dishId": "",
+     "fixed": "",
+     "index": "",
+     "ingredients": "[]",
+     "name": "",
+     "source": "",
+     "tag": "",
+     "today": "",
+     "updatedAt": "",
+     "updatedBy": "",
+     "updatedById": "",
+     "version": "",
+     "weekday": ""
+    }
+   ],
+   "dishes": [
+    {
+     "cost": "",
+     "days": "[]",
+     "fixedDays": "[]",
+     "folder": "",
+     "folderId": "",
+     "id": "",
+     "image": "",
+     "ing": "[]",
+     "ingredients": "[]",
+     "links": "[]",
+     "name": "",
+     "servings": "",
+     "sourceUrl": "",
+     "src": "",
+     "steps": "[]",
+     "time": ""
+    }
+   ],
+   "end": "",
+   "fixed": [
+    {
+     "cook": "",
+     "dishId": "",
+     "index": "",
+     "name": "",
+     "weekday": ""
+    }
+   ],
+   "folders": [
+    {
+     "count": "",
+     "id": "",
+     "name": "",
+     "sort": ""
+    }
+   ],
+   "food": "",
+   "hellofresh": [
+    {
+     "cost": "",
+     "id": "",
+     "meta": "",
+     "name": ""
+    }
+   ],
+   "household": "",
+   "library": [
+    {
+     "cost": "",
+     "id": "",
+     "name": ""
+    }
+   ],
+   "shared": "",
+   "sharedNote": "",
+   "shopping": [
+    {
+     "auto": "",
+     "count": "",
+     "dishes": "[]",
+     "done": "",
+     "id": "",
+     "price": "",
+     "text": ""
+    }
+   ],
+   "start": "",
+   "today": "",
+   "updatedAt": "",
+   "updatedBy": "",
+   "updatedById": "",
+   "week": "",
+   "weekCost": ""
+  }
+ },
+ "GET /mat/api/folders": {
+  "status": "200 200 200 401",
+  "A": [
+   {
+    "count": "",
+    "id": "",
+    "name": "",
+    "sort": ""
+   }
+  ],
+  "I": [
+   {
+    "count": "",
+    "id": "",
+    "name": "",
+    "sort": ""
+   }
+  ]
+ },
+ "GET /api/media51/status": {
+  "status": "200 403 403 401",
+  "A": {
+   "admin": "",
+   "audio": {
+    "configured": "",
+    "mock": "",
+    "reachable": "",
+    "text": ""
+   },
+   "subs": {
+    "configured": "",
+    "mock": "",
+    "reachable": "",
+    "text": ""
+   }
+  },
+  "I": {
+   "code": "",
+   "error": "",
+   "restricted": ""
+  }
+ },
+ "GET /api/media51/tonight/home": {
+  "status": "200 403 403 401",
+  "A": {
+   "ids": [],
+   "note": "",
+   "source": ""
+  },
+  "I": {
+   "code": "",
+   "error": "",
+   "restricted": ""
+  }
+ },
+ "GET /api/media51/tonight/profile": {
+  "status": "200 403 403 401",
+  "A": {
+   "names": [
+    ""
+   ],
+   "plexUser": ""
+  },
+  "I": {
+   "code": "",
+   "error": "",
+   "restricted": ""
+  }
+ },
+ "GET /api/media51/subs/status": {
+  "status": "200 403 403 401",
+  "A": {
+   "configured": "",
+   "languages": [
+    ""
+   ],
+   "mock": "",
+   "reachable": "",
+   "text": "",
+   "version": "",
+   "whisper": {
+    "available": "",
+    "text": ""
+   }
+  },
+  "I": {
+   "code": "",
+   "error": "",
+   "restricted": ""
+  }
+ },
+ "GET /api/media51/audio/status": {
+  "status": "200 403 403 401",
+  "A": {
+   "configured": "",
+   "libraries": [
+    {
+     "id": "",
+     "mediaType": "",
+     "name": ""
+    }
+   ],
+   "mock": "",
+   "reachable": "",
+   "text": ""
+  },
+  "I": {
+   "code": "",
+   "error": "",
+   "restricted": ""
+  }
+ },
+ "GET /api/media51/storage": {
+  "status": "200 403 403 401",
+  "A": {
+   "bigThreshold": "",
+   "bigThresholdText": "",
+   "deletions": [],
+   "disks": [
+    {
+     "free": "",
+     "freeText": "",
+     "label": "",
+     "path": "",
+     "total": "",
+     "totalText": "",
+     "usedPct": "",
+     "warn": ""
+    }
+   ],
+   "recommendText": "",
+   "recommendations": [],
+   "services": {
+    "qbit": {
+     "count": "",
+     "free": "",
+     "freeText": "",
+     "seeding": "",
+     "size": "",
+     "sizeText": ""
+    },
+    "radarr": {
+     "count": "",
+     "size": "",
+     "sizeText": ""
+    },
+    "sonarr": {
+     "count": "",
+     "size": "",
+     "sizeText": ""
+    }
+   },
+   "trash": {
+    "configured": "",
+    "text": ""
+   }
+  },
+  "I": {
+   "code": "",
+   "error": "",
+   "restricted": ""
+  }
+ },
+ "GET /api/media51/storage/deletions": {
+  "status": "200 403 403 401",
+  "A": {
+   "deletions": []
+  },
+  "I": {
+   "code": "",
+   "error": "",
+   "restricted": ""
+  }
+ },
+ "POST /api/tasks": {
+  "status": "201",
+  "A": {
+   "item": {
+    "after": "",
+    "arch": "",
+    "archived": "",
+    "archivedAt": "",
+    "assignee": "",
+    "by": "",
+    "createdAt": "",
+    "createdAtIso": "",
+    "createdBy": "",
+    "deadline": "",
+    "dl": "",
+    "dlOverdue": "",
+    "done": "",
+    "doneAt": "",
+    "doneBy": "",
+    "due": "",
+    "early": "",
+    "flag": "",
+    "geo": "",
+    "glimt": "",
+    "id": "",
+    "l": "",
+    "list": "",
+    "mentions": [],
+    "n": "",
+    "note": "",
+    "notes": "",
+    "place": "",
+    "placeName": "",
+    "prio": "",
+    "rep": "",
+    "subs": [],
+    "subsDone": "",
+    "subsText": "",
+    "tags": [],
+    "time": "",
+    "title": "",
+    "updatedAt": "",
+    "updatedAtIso": "",
+    "urgent": "",
+    "who": ""
+   }
+  }
+ },
+ "POST /api/tasks (after)": {
+  "status": "201",
+  "A": {
+   "item": {
+    "after": "",
+    "arch": "",
+    "archived": "",
+    "archivedAt": "",
+    "assignee": "",
+    "by": "",
+    "createdAt": "",
+    "createdAtIso": "",
+    "createdBy": "",
+    "deadline": "",
+    "dl": "",
+    "dlOverdue": "",
+    "done": "",
+    "doneAt": "",
+    "doneBy": "",
+    "due": "",
+    "early": "",
+    "flag": "",
+    "geo": "",
+    "glimt": "",
+    "id": "",
+    "l": "",
+    "list": "",
+    "mentions": [],
+    "n": "",
+    "note": "",
+    "notes": "",
+    "place": "",
+    "placeName": "",
+    "prio": "",
+    "rep": "",
+    "subs": [],
+    "subsDone": "",
+    "subsText": "",
+    "tags": [],
+    "time": "",
+    "title": "",
+    "updatedAt": "",
+    "updatedAtIso": "",
+    "urgent": "",
+    "who": ""
+   }
+  }
+ },
+ "PATCH /api/tasks/:id": {
+  "status": "200",
+  "A": {
+   "item": {
+    "after": "",
+    "arch": "",
+    "archived": "",
+    "archivedAt": "",
+    "assignee": "",
+    "by": "",
+    "createdAt": "",
+    "createdAtIso": "",
+    "createdBy": "",
+    "deadline": "",
+    "dl": "",
+    "dlOverdue": "",
+    "done": "",
+    "doneAt": "",
+    "doneBy": "",
+    "due": "",
+    "early": "",
+    "flag": "",
+    "geo": "",
+    "glimt": "",
+    "id": "",
+    "l": "",
+    "list": "",
+    "mentions": [],
+    "n": "",
+    "note": "",
+    "notes": "",
+    "place": "",
+    "placeName": "",
+    "prio": "",
+    "rep": "",
+    "subs": [],
+    "subsDone": "",
+    "subsText": "",
+    "tags": [],
+    "time": "",
+    "title": "",
+    "updatedAt": "",
+    "updatedAtIso": "",
+    "urgent": "",
+    "who": ""
+   }
+  }
+ },
+ "PUT /api/tasks/lists/order": {
+  "status": "200",
+  "A": {
+   "custom": "",
+   "default": [
+    ""
+   ],
+   "ids": [
+    ""
+   ],
+   "keys": [
+    {
+     "color": "",
+     "id": "",
+     "name": "",
+     "special": ""
+    }
+   ]
+  }
+ },
+ "POST /api/tracking": {
+  "status": "200",
+  "A": {
+   "item": {
+    "archived": "",
+    "canonicalStatus": "",
+    "carrier": "",
+    "carrierColor": "",
+    "carrierDetected": "",
+    "carrierDetectedName": "",
+    "carrierFg": "",
+    "carrierIni": "",
+    "carrierLabel": "",
+    "carrierLogo": "",
+    "carrierName": "",
+    "carrierOverride": "",
+    "checkedAt": "",
+    "delayed": "",
+    "direction": "",
+    "estimatedDelivery": "",
+    "eta": "",
+    "events": [
+     "…"
+    ],
+    "id": "",
+    "keyMissing": "",
+    "keyed": "",
+    "lastError": "",
+    "lastEvent": {
+     "line": "",
+     "place": "",
+     "text": "",
+     "time": ""
+    },
+    "logo": {
+     "carrierLogo": "",
+     "color": "",
+     "domain": "",
+     "fg": "",
+     "hasFile": "",
+     "id": "",
+     "kind": "",
+     "label": "",
+     "letter": "",
+     "manual": "",
+     "name": "",
+     "svg": "",
+     "url": ""
+    },
+    "name": "",
+    "nextCheckAt": "",
+    "noEtaText": "",
+    "notScanned": "",
+    "pickup": "",
+    "pickupPoint": "",
+    "rawStatus": "",
+    "shop": "",
+    "shopDomain": "",
+    "source": "",
+    "sourceNote": "",
+    "sourceRef": "",
+    "status": "",
+    "statusText": "",
+    "statusUnverified": "",
+    "step": "",
+    "steps": [
+     "…"
+    ],
+    "timeline": [
+     "…"
+    ],
+    "title": "",
+    "trackingNo": "",
+    "updateError": "",
+    "updatedAt": "",
+    "url": "",
+    "via": "",
+    "viaLabel": ""
+   },
+   "message": ""
+  }
+ },
+ "POST /api/family/location": {
+  "status": "200",
+  "A": {
+   "events": [],
+   "ok": "",
+   "sharing": "",
+   "stored": ""
+  }
+ },
+ "PUT /api/weather/layout": {
+  "status": "200",
+  "A": {
+   "cards": [
+    ""
+   ],
+   "glimt": "",
+   "hidden": [],
+   "order": [
+    ""
+   ],
+   "ski": ""
+  }
+ },
+ "POST /api/hjemlys/start": {
+  "status": "200",
+  "A": {
+   "session": {
+    "avatar": "",
+    "destination": {
+     "kind": "",
+     "lat": "",
+     "lon": "",
+     "name": ""
+    },
+    "eta": "",
+    "etaLabel": "",
+    "id": "",
+    "lateMinutes": "",
+    "leg": "",
+    "live": {
+     "eta": "",
+     "from": "",
+     "homeAt": "",
+     "lateMinutes": "",
+     "leg": "",
+     "progress": "",
+     "state": ""
+    },
+    "mode": "",
+    "name": "",
+    "okAt": "",
+    "progress": "",
+    "recipients": [
+     "…"
+    ],
+    "startedAt": "",
+    "state": "",
+    "userId": "",
+    "waitMin": ""
+   }
+  }
+ },
+ "POST /api/hjemlys/notice": {
+  "status": "200",
+  "A": {
+   "notice": {
+    "contacts": [],
+    "createdAt": "",
+    "destination": "",
+    "eta": "",
+    "expiresAt": "",
+    "id": "",
+    "kind": "",
+    "leaveAt": "",
+    "live": "",
+    "name": "",
+    "note": "",
+    "place": "",
+    "recipients": [
+     "…"
+    ],
+    "text": "",
+    "userId": ""
+   }
+  }
+ },
+ "POST /api/hjemlys/end (admin)": {
+  "status": "200",
+  "A": {
+   "endedBy": "",
+   "session": {
+    "avatar": "",
+    "destination": {
+     "kind": "",
+     "lat": "",
+     "lon": "",
+     "name": ""
+    },
+    "endedAt": "",
+    "eta": "",
+    "etaLabel": "",
+    "id": "",
+    "lateMinutes": "",
+    "leg": "",
+    "live": {
+     "eta": "",
+     "from": "",
+     "homeAt": "",
+     "lateMinutes": "",
+     "leg": "",
+     "progress": "",
+     "state": ""
+    },
+    "mode": "",
+    "name": "",
+    "okAt": "",
+    "progress": "",
+    "recipients": [
+     "…"
+    ],
+    "startedAt": "",
+    "state": "",
+    "userId": "",
+    "waitMin": ""
+   }
+  }
+ },
+ "POST /api/huske/glimt-jobs": {
+  "status": "202",
+  "A": {
+   "jobId": "",
+   "job_id": "",
+   "placeholder": {
+    "id": "",
+    "label": "",
+    "list": "",
+    "startedAt": "",
+    "text": ""
+   }
+  }
+ },
+ "POST /api/famcal51/events": {
+  "status": "201",
+  "A": {
+   "event": {
+    "allDay": "",
+    "canEdit": "",
+    "color": "",
+    "createdBy": {
+     "color": "",
+     "initials": "",
+     "name": "",
+     "photoUrl": "",
+     "self": "",
+     "userId": ""
+    },
+    "date": "",
+    "end": "",
+    "id": "",
+    "needsDriver": "",
+    "needsDriverText": "",
+    "note": "",
+    "place": "",
+    "start": "",
+    "tasks": [],
+    "time": "",
+    "title": ""
+   }
+  }
+ },
+ "PATCH /api/tracking/:id": {
+  "status": "200",
+  "A": {
+   "item": {
+    "archived": "",
+    "canonicalStatus": "",
+    "carrier": "",
+    "carrierColor": "",
+    "carrierDetected": "",
+    "carrierDetectedName": "",
+    "carrierFg": "",
+    "carrierIni": "",
+    "carrierLabel": "",
+    "carrierLogo": "",
+    "carrierName": "",
+    "carrierOverride": "",
+    "checkedAt": "",
+    "delayed": "",
+    "direction": "",
+    "estimatedDelivery": "",
+    "eta": "",
+    "events": [
+     "…"
+    ],
+    "id": "",
+    "keyMissing": "",
+    "keyed": "",
+    "lastError": "",
+    "lastEvent": {
+     "line": "",
+     "place": "",
+     "text": "",
+     "time": ""
+    },
+    "logo": {
+     "carrierLogo": "",
+     "color": "",
+     "domain": "",
+     "fg": "",
+     "hasFile": "",
+     "id": "",
+     "kind": "",
+     "label": "",
+     "letter": "",
+     "manual": "",
+     "name": "",
+     "svg": "",
+     "url": ""
+    },
+    "name": "",
+    "nextCheckAt": "",
+    "noEtaText": "",
+    "notScanned": "",
+    "pickup": "",
+    "pickupPoint": "",
+    "rawStatus": "",
+    "shop": "",
+    "shopDomain": "",
+    "source": "",
+    "sourceNote": "",
+    "sourceRef": "",
+    "status": "",
+    "statusText": "",
+    "statusUnverified": "",
+    "step": "",
+    "steps": [
+     "…"
+    ],
+    "timeline": [
+     "…"
+    ],
+    "title": "",
+    "trackingNo": "",
+    "updateError": "",
+    "updatedAt": "",
+    "url": "",
+    "via": "",
+    "viaLabel": ""
+   }
+  }
+ },
+ "POST /api/matplan/dishes": {
+  "status": "201",
+  "A": {
+   "auto": "",
+   "calendarUrl": "",
+   "canShare": "",
+   "chefs": [
+    {
+     "best": "[]",
+     "name": ""
+    }
+   ],
+   "cooks": [
+    ""
+   ],
+   "days": [
+    {
+     "bestCook": "",
+     "cook": "",
+     "cost": "",
+     "date": "",
+     "dishId": "",
+     "fixed": "",
+     "index": "",
+     "ingredients": "[]",
+     "name": "",
+     "source": "",
+     "tag": "",
+     "today": "",
+     "updatedAt": "",
+     "updatedBy": "",
+     "updatedById": "",
+     "version": "",
+     "weekday": ""
+    }
+   ],
+   "dish": {
+    "cost": "",
+    "folder": "",
+    "folderId": "",
+    "id": "",
+    "image": "",
+    "ing": [],
+    "ingredients": [],
+    "links": [],
+    "name": "",
+    "servings": "",
+    "sourceUrl": "",
+    "src": "",
+    "steps": [],
+    "time": ""
+   },
+   "dishes": [
+    {
+     "cost": "",
+     "days": "[]",
+     "fixedDays": "[]",
+     "folder": "",
+     "folderId": "",
+     "id": "",
+     "image": "",
+     "ing": "[]",
+     "ingredients": "[]",
+     "links": "[]",
+     "name": "",
+     "servings": "",
+     "sourceUrl": "",
+     "src": "",
+     "steps": "[]",
+     "time": ""
+    }
+   ],
+   "end": "",
+   "fixed": [
+    {
+     "cook": "",
+     "dishId": "",
+     "index": "",
+     "name": "",
+     "weekday": ""
+    }
+   ],
+   "folders": [
+    {
+     "count": "",
+     "id": "",
+     "name": "",
+     "sort": ""
+    }
+   ],
+   "food": "",
+   "hellofresh": [
+    {
+     "cost": "",
+     "id": "",
+     "meta": "",
+     "name": ""
+    }
+   ],
+   "household": "",
+   "library": [
+    {
+     "cost": "",
+     "id": "",
+     "name": ""
+    }
+   ],
+   "shared": "",
+   "sharedNote": "",
+   "shopping": [
+    {
+     "auto": "",
+     "count": "",
+     "dishes": "[]",
+     "done": "",
+     "id": "",
+     "price": "",
+     "text": ""
+    }
+   ],
+   "start": "",
+   "today": "",
+   "updatedAt": "",
+   "updatedBy": "",
+   "updatedById": "",
+   "week": "",
+   "weekCost": ""
+  }
+ },
+ "GET /api/tracking/debug/1 (bruker)": {
+  "status": "403",
+  "A": {
+   "code": "",
+   "error": "",
+   "restricted": ""
+  }
+ }
+}

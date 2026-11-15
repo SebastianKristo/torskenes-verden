@@ -23,11 +23,11 @@ test.after(() => { globalThis.fetch = realFetch; });
 
 const { default: app } = await import('../server/index.js');
 const { db, kv, OWNER } = await import('../server/db.js');
-const mat = await import('../server/mat.js');
+const mat = await import('../server/mat/plan.js');
 const boot = await import('../server/boot36.js');
 const su = await import('../server/system-update.js');
 const assist = await import('../server/glimt/assist.js');
-const sun = await import('../server/sun36.js');
+const sun = await import('../server/vaer/sun.js');
 const api36 = await import('../server/api36.js');
 const qt = await import('../public/js/quick-time.js');
 

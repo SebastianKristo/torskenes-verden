@@ -3,24 +3,21 @@
 //   SMB: validering etter SMB-reglene, feiltype per kind, POST /api/smb/shares {host, user, pass}                       → finans/backup.js, smb-browse.js
 //   «Starter opp» bare ved ekte omstart: /api/health {restarting, updating, state} + X-Homelab-State                      → index.js, system-update.js
 //   2FA i appen: /api/auth/2fa/*                                                                                       → auth/two-factor.js (montert fra auth/login.js)
-//   Gjøremål-Glimt: flere punkter med rekkefølge, sted og person                                                      → tasks-glimt40.js (+ tasks-glimt37.js, tasks.js itemOut)
+//   Gjøremål-Glimt: flere punkter med rekkefølge, sted og person (placeName/after i POST og PATCH)                    → server/gjoremal/
 //   Nyheter Glimt-side: /api/news/glimt, /api/news/glimt/sources, /api/glimt/news-digest                               → news40.js
 //   Julemodus: /api/glimt/settings jul*, julActive; brief.jul                                                         → jul40.js (+ glimt/settings.js), mellomvaren under
-//   Hjemlys: /api/hjemlys/*                                                                                           → hjemlys40.js
+//   Hjemlys: /api/hjemlys/*                                                                                           → server/familie/ (mountFamilie)
 //   Fanelinje: GET /api/app/pages + alle nøklene i homeNav                                                            → under (+ mobile.js TAB_IDS)
 import { Hono } from 'hono';
 import { authOrToken } from './mobile.js';
 import { bibleEnabled } from './bible37.js';
 import { glimtSettingsOf } from './glimt/settings.js';
 import { julBrief } from './jul40.js';
-import { afterDone40, migrate40 } from './tasks-glimt40.js';
 import { db } from './db.js';
-import { startHjemlys40 } from './hjemlys40.js';
 import { startHungSweeper } from './ai-run.js';
 import { sessionUser } from './auth/session.js';
 
 export { news40Api, newsDigestApi } from './news40.js';
-export { hjemlys40Api } from './hjemlys40.js';
 
 /* ---------------- Fanelinje: alle sider i Mer ---------------- */
 // Én kilde for Mer-menyen og «Rediger fanelinjen» (fasit HNAV_ALL). key = nøkkelen i designet, id = nøkkelen i homeNav/tabBar (mobile.js TAB_IDS).
@@ -71,33 +68,4 @@ export async function briefJul40(c, next) {
   } catch { /* briefen står */ }
 }
 
-/* ---------------- Gjøremål: «Nå kan du: …» når punktet før er gjort ---------------- */
-export async function tasksAfter40(c, next) {
-  let b = null;
-  if (c.req.method === 'PATCH') { try { b = await c.req.json(); } catch { b = null; } }
-  if (b && (('placeName' in b && b.placeName !== null && typeof b.placeName !== 'string') || ('after' in b && b.after !== null && !Number.isInteger(b.after)))) return c.json({ error: 'placeName må være tekst og after en oppgave-id' }, 400);
-  await next();
-  if (c.res.status !== 200 || !b) return;
-  const id = +c.req.param('id');
-  if ('placeName' in b || 'after' in b) await setExtra40(c, id, b);
-  if (b.done === true) { try { await afterDone40(id, c.get('user')); } catch { /* best effort */ } }
-}
-/** placeName (fritt sted) og after (oppgave-id som må gjøres først) på en oppgave; svaret {item} oppdateres. */
-async function setExtra40(c, id, b) {
-  migrate40();
-  const after = 'after' in b ? (b.after && b.after !== id && db.prepare('SELECT 1 FROM hl_tasks WHERE id=?').get(b.after) ? b.after : null) : undefined;
-  if ('placeName' in b) db.prepare('UPDATE hl_tasks SET place_name=? WHERE id=?').run(b.placeName ? String(b.placeName).replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, 80) || null : null, id);
-  if (after !== undefined) db.prepare('UPDATE hl_tasks SET after_id=? WHERE id=?').run(after, id);
-  try { const j = await c.res.clone().json(); if (j?.item) { const r = db.prepare('SELECT place_name, after_id FROM hl_tasks WHERE id=?').get(id); c.res = c.json({ ...j, item: { ...j.item, placeName: r?.place_name ?? null, after: r?.after_id ?? null } }, c.res.status); } } catch { /* */ }
-}
-// POST /api/tasks godtar også placeName og after (prompt 40).
-export async function tasksCreate40(c, next) {
-  let b = null;
-  if (c.req.method === 'POST') { try { b = await c.req.json(); } catch { b = null; } }
-  if (b && (('placeName' in b && b.placeName !== null && typeof b.placeName !== 'string') || ('after' in b && b.after !== null && !Number.isInteger(b.after)))) return c.json({ error: 'placeName må være tekst og after en oppgave-id' }, 400);
-  await next();
-  if (!b || ![200, 201].includes(c.res.status) || !('placeName' in b || 'after' in b)) return;
-  try { const j = await c.res.clone().json(); if (j?.item?.id) await setExtra40(c, j.item.id, b); } catch { /* */ }
-}
-
-export function startApi40() { startHjemlys40(); startHungSweeper(); }
+export function startApi40() { startHungSweeper(); }

@@ -32,7 +32,7 @@ import java.util.Locale
 
 /*
  * Prompt 50 (FAMAND50): Familie i nytt design (claude-code-familie-nytt-design.md + claude-code-steder-flere-omrader-ruter.md).
- * Data og handlinger her, skjermene i ui/Family50.kt. Server-API: SRVFAM50 i SERVER50-API.md (server/family50.js).
+ * Data og handlinger her, skjermene i ui/Family50.kt. Server-API: SRVFAM50 i SERVER50-API.md (server/familie/places.js).
  *  - Folk (/family/people50), I DAG (/family/today50), Steder med flere områder (/family/places…), Helse (/family/health50…),
  *    Sjekk inn (/family/checkin…), Ruter › Min reise (/ruter/school50).
  *  - Geofencing: én region per område fra /family/places/regions (maks 20), registrert som nærhetsvarsler i LocationManager

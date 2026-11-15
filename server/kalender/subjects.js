@@ -16,7 +16,7 @@ import { Hono } from 'hono';
 import { db, q, kv } from '../db.js';
 import { authOrToken, layoutOf } from '../mobile.js';
 import { addEventDecorator } from './events.js';
-import { NOMINATIM_UA } from '../family.js';
+import { NOMINATIM_UA } from '../familie/positions.js';
 import { dtf } from '../intl-format.js'; // gjenbrukte Intl.DateTimeFormat
 
 const MOCK = process.env.MOCK_DATA === '1';

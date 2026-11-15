@@ -49,7 +49,7 @@ final class HealthSync {
     var asked: Bool = UserDefaults.standard.bool(forKey: "fh_health_asked") {
         didSet { UserDefaults.standard.set(asked, forKey: "fh_health_asked") }
     }
-    /// Samme standard som serveren (DEF_PREFS i server/family.js).
+    /// Samme standard som serveren (DEF_PREFS i server/familie/positions.js).
     nonisolated static let defaultShare: [String: Bool] = ["steps": true, "restingHr": true, "hr": false, "sleep": true, "activeKcal": true, "week": true]
     var available: Bool { HKHealthStore.isHealthDataAvailable() }
 

@@ -16,9 +16,10 @@ import * as integrations from './integrations.js';
 import { cfg, publicConfig, updateConfig, runRequest, userCfgSet, runAsUser } from './settings.js';
 import { db as fhDb } from './finans/db.js';
 import homeApi from './home.js';
-import { matApi, matCalendar, startMatScheduler } from './mat.js';
+import { mountMat } from './mat/index.js'; // Mat: /api/matplan, /mat/api og /mat/calendar.ics
 import domainsApi, { domainSummary } from './domains.js';
-import trackingApi, { startTrackingWorker, hasTrackingTest, testTracking } from './tracking.js';
+import { startTrackingWorker, hasTrackingTest, testTracking } from './sporing/shipments.js';
+import { mountSporing } from './sporing/index.js'; // Sporing: /api/tracking (kontoer, feilsøking, nøkler, pakker)
 import uiApi from './ui.js';
 import backgroundApi, { hasBackgroundTest, testBackgrounds } from './background.js';
 import mobileApi, { meOut, removeAvatar, shortcutsFor, layoutOf, authOrToken, designOf } from './mobile.js';
@@ -28,9 +29,8 @@ import { mountLocalFetch86, migrateLocalHosts86 } from './localfetch86.js'; // p
 import { faviconHandler46 } from './news46.js'; // prompt 46 (SERVER46)
 import { news73Api } from './news73.js'; // prompt 73 (NEWS73)
 import iconsApi from './icons.js';
-import familyApi from './family.js';
 import tilesApi, { hasMapTest, testMap } from './tiles.js';
-import tasksApi from './tasks.js';
+import { mountGjoremal } from './gjoremal/index.js'; // Gjøremål: /api/tasks og /api/huske
 import notifyApi, { appMeta } from './notify.js';
 import { attachRealtime } from './realtime.js';
 import { revokeUserTokens } from './finans/routes.js';
@@ -53,15 +53,14 @@ import { startMem63 } from './glimt/memory/nightly.js'; // prompt 63: systemoppg
 import { qualityApi64 } from './quality64/api.js'; // prompt 64 (prompt 49 del 7): kvalitet over tid (nattlig eval, ukerapport)
 import { startQuality64 } from './quality64/system.js'; // prompt 64: systemoppgavene kl. 02 / søndag kl. 20 og innsamling fra sporene (ikke i test)
 import api36 from './api36.js'; // prompt 36 (SERVER36)
-import { profilesApi, bibleApi, trackingKeysApi } from './api37.js'; // prompt 37 (SERVER37)
+import { profilesApi, bibleApi } from './api37.js'; // prompt 37 (SERVER37)
 import { bearerFallthrough46 } from './api-auth46.js'; // prompt 46 (SERVER46)
-import { week39Api } from './api39.js'; // prompt 39 (SERVER39)
-import { news40Api, newsDigestApi, hjemlys40Api, pages40Api, briefJul40, tasksAfter40, tasksCreate40, startApi40 } from './api40.js'; // prompt 40 (SERVER40)
+import { news40Api, newsDigestApi, pages40Api, briefJul40, startApi40 } from './api40.js'; // prompt 40 (SERVER40)
 import { mountServer47 } from './server47.js'; // prompt 47 (SERVER47)
-import { hjemlys41Api, hjemlysGet41, hlPage41, ruter41Api, mai17Api, huske41Api, tracking41Api, weather41Api, brief41, weatherFull41 } from './api41.js'; // prompt 41 (SERVER41)
-import { tracking42Api, health42Api, familyHealthMw42, startHealth42, hjemlys42Api, tasks42Api } from './api42.js'; // prompt 42 (SERVER42)
+import { ruter41Api, mai17Api, brief41 } from './api41.js'; // prompt 41 (SERVER41)
+import { mountFamilie, startFamilie, hlPage41 } from './familie/index.js'; // Familie: /api/family, /api/kart, /api/famcal51, /api/hjemlys (+ /api/velfremme)
 import { mountFinans, mountFinansAliases, mountTrialWidgets, mountSubsCalendar, registerLegacyReceipts, legacyReceiptOwner } from './finans/index.js'; // Økonomi: /finans/api, Boliger-aliasene, prøveperiode-widgets og kalenderen «Abonnementer»
-import { widgets43Api, gscDomains43Api, gsc43Api, gscViewMw43, gscOverviewMw43, tasks43Api, tasksOrderMw43 } from './api43.js'; // prompt 43 (SERVER43)
+import { widgets43Api, gscDomains43Api, gsc43Api, gscViewMw43, gscOverviewMw43 } from './api43.js'; // prompt 43 (SERVER43)
 import { mountMedia, startMedia } from './media/index.js'; // Media: alle /api/media-, /api/playback- og /api/medctl51-ruter
 import { mediaCalendarsMw43 } from './media/arr.js'; // kalenderkilden «Media»
 // Prompt 44 (SERVER44): Logger (Docker), Media (servere, søk som jobb, felles status), Avspilling, Studie-dokumenter, Kalender-deltakere,
@@ -72,7 +71,6 @@ import { impersonation44, admin44Api, layoutLockMw44, setMobileApi44 } from './a
 import { study44Api } from './study44.js';
 import { mountAuthSecurity, mountAppAuth, mountAuthInvites, mountAuthRefresh, mountAuth, registerAccountRoutes } from './auth/index.js'; // innlogging og sikkerhet
 import { mountApi45 } from './api45.js'; // prompt 45 (SERVER45)
-import { mountFamily50 } from './family50.js'; // prompt 50 (SRVFAM50): Steder med områder, Folk, Helse, I dag, Sjekk inn
 import { traceObs51, mountObs51, startObs51 } from './obs51/index.js'; // prompt 51 (OBS51): helsedashbord, selvreparasjon, spor, ntfy
 import { mountQa51, startQa51, reportServerError51 } from './qa51.js'; // prompt 51 (QA51): feature flags, krasjrapporter (GlitchTip), «Nytt i denne versjonen»
 import { errorShape, API_PREFIXES, serverError } from './http/errors.js'; // felles feilform {error, code} for /api og /finans/api
@@ -81,15 +79,12 @@ import { aliasCounter } from './http/aliases.js';
 import { startJobs, listJobs, jobsStarted } from './jobs/index.js'; // én planlegger for bakgrunnsjobber med sideeffekter (ikke i test/sandkasse) // Q29: eldre API-aliaser samlet i én tabell, bruken telles
 import { badInput85 } from './badinput85.js'; // prompt 85 (SRVSEC85): feil i kroppen fra klienten → 400, ikke 500
 import { anonBodyCap85 } from './anonbody85.js'; // prompt 85 (SRVSEC85): store kropper bare fra innloggede klienter
-import { mountMedfam51, startMedfam51 } from './medfam51/index.js'; // prompt 51 (MEDFAM51): familiekalender med «hvem kjører?», «I kveld», undertekster, lagring, lydbøker
 import { mountLive89, startLive89 } from './live89.js'; // prompt 89 (SRV89): Live Activities / Live Updates (/api/live/*) og APNs-push
 import { mountWebx51 } from './webx51.js'; // prompt 51 (WEBX51): felles søk, onboarding, tema per bruker, offline-konfliktvarsel
 import { mountSrv52 } from './srv52.js'; // prompt 52 (SRV52): Glimt «sist jeg var på», kalenderkontekst, brief-kort, Glimt-figur per bruker
 import { mountDal53 } from './dal53/index.js'; // prompt 53 (DAL53): Desert Ant Labs-modellene (Eye, Redact, Gist, Tongue, Emo, Moderator, Clear, Voz)
-import { tracking46Api, startAccounts46 } from './tracking46.js'; // prompt 46 (DATA46): Posten/Bring- og PostNord-konto
 import { gphoto46Api, startGphoto46 } from './gphoto46.js'; // prompt 46 (DATA46): Google Photos-album som bakgrunn
-import { kart46Api } from './kart46.js'; // prompt 46 (DATA46): Kart-API
-import weather35Api from './weather35.js'; // prompt 35: /api/weather/place?q=
+import { mountVaer } from './vaer/index.js'; // Vær: /here, /week-summary, /place, /layout og ski i /full
 import { installCacheBust } from './cache-bust.js'; // prompt 32 (SERVER32)
 import searchHistoryApi from './search-history.js'; // prompt 32: søkehistorikk per bruker
 import romApi, { startSpaceScheduler, spaceApi } from './space32.js'; // prompt 32
@@ -563,39 +558,18 @@ authed.get('/space/gallery/:key', proxy((c) => {
 }));
 
 app.route('/api/ui', uiApi);
-app.route('/api/tracking', tracking46Api); // prompt 46 (DATA46): /sources46, /accounts/:src/{start,finish,sync} (Posten/Bring, PostNord)
+mountSporing(app); // server/sporing/: /api/tracking – kontoer, PostNord-helse, feilsøking, AliExpress, nøkler og pakkene
 app.route('/api/bg', gphoto46Api); // prompt 46 (DATA46): /api/bg/gphoto (før mobileApi sin /api/bg/:file)
-app.route('/api/kart', kart46Api); // prompt 46 (DATA46): holdeplasser, avganger, kjøretøy for valgte soner, soner og personer
-app.route('/api/tracking', tracking41Api); // prompt 41: GET /postnord/health
-app.route('/api/tracking', tracking42Api); // prompt 42: /debug/:id (+ /test), /aliexpress (mappe, sjekk nå, e-post)
-app.route('/api/tracking/keys', trackingKeysApi); // prompt 37: husstandens sporingsnøkler (før /api/tracking/:id)
-app.route('/api/tracking', trackingApi); // Sporing (prompt 11): pakker fra Finn, e-post og manuelt
-app.route('/api/matplan', matApi); // samme Matplan-API som /mat/api (prompt 10: Matplan hører til Homelab)
+mountMat(app); // server/mat/: /api/matplan og /mat/api (samme app) og /mat/calendar.ics
 // Profil, oppsett, søk, mobilforside og widgets: sesjon ELLER FinansHub-token (må stå før /api med requireAuth).
 app.get('/api/rss/favicon', faviconHandler46); // prompt 46: offentlig, bare domener fra kildelistene (news46.js)
 app.route('/api/rss', rssApi); // Nyhetsleser (prompt 13): RSS/Atom med ✦ AI-sammendrag og -kategorisering
 app.route('/api/icons', iconsApi); // Ikoner (prompt 23): Iconify-søk, SVG cachet på disk og ✦ AI-forslag
 // Kartfliser (prompt 20): /tiles/:style/:z/:x/:y.png og /api/config/map, sesjon eller app-token (header eller ?token=).
 app.route('/', tilesApi);
-mountMedfam51(app); // prompt 51 (MEDFAM51): /api/famcal51/* og /api/media51/*
 mountLive89(app); // prompt 89 (SRV89): /api/live/aktiviteter, /handling, /innstillinger, /tokens
-mountFamily50(app); // prompt 50 (SRVFAM50): /api/family/places…, /people50, /today50, /health50…, /checkin… (før de eldre /api/family-rutene)
-app.route('/api/family/health/ha', health42Api); // prompt 42: helse fra Home Assistant
-app.use('/api/family/*', familyHealthMw42); // prompt 42: health.source/sourceDevice/limited/stale
-app.route('/api/family', familyApi); // Familie og kart (prompt 16): posisjon, soner, varsler og helse
-app.use('/api/tasks', tasksOrderMw43); // prompt 43: listOrder
-app.use('/api/tasks/lists', tasksOrderMw43);
-app.route('/api/tasks', tasks43Api); // prompt 43: GET/PUT /lists/order
-app.route('/api/tasks', tasks42Api); // prompt 42: /glimt/log
-app.use('/api/tasks/:id{[0-9]+}', tasksAfter40); // prompt 40: «Nå kan du: …» når punktet før er gjort, placeName/after i PATCH
-app.use('/api/tasks', tasksCreate40); // prompt 40: POST /api/tasks godtar placeName og after
-app.route('/api/tasks', tasksApi); // Huskeliste (prompt 17): delt i familien, sanntid via /api/ws
-app.route('/api/hjemlys', hjemlys42Api); // prompt 42: admin kan avslutte andres Vel fremme-økt
-// Prompt 42: Hjemlys heter nå Vel fremme – /api/velfremme/* er et alias for /api/hjemlys/*.
-app.all('/api/velfremme/*', async (c) => { const u = new URL(c.req.url); u.pathname = u.pathname.replace(/^\/api\/velfremme/, '/api/hjemlys'); const m = c.req.method; return app.fetch(new Request(u, { method: m, headers: c.req.raw.headers, body: m === 'GET' || m === 'HEAD' ? undefined : await c.req.arrayBuffer() }), c.env); });
-app.use('/api/hjemlys', hjemlysGet41); // prompt 41: GET /api/hjemlys får notices
-app.route('/api/hjemlys', hjemlys41Api); // prompt 41: Si fra (notice/status), tur med valgfritt mål (før prompt 40)
-app.route('/api/hjemlys', hjemlys40Api); // prompt 40: Hjemlys (start, status, posisjon, ok/hjemme/avslutt, tokens, forslag)
+mountFamilie(app); // server/familie/: sonevarsler, Kart, familiekalender, Steder/Folk/Helse/Sjekk inn, posisjon og Vel fremme
+mountGjoremal(app); // server/gjoremal/: /api/tasks (synk-raden, listerekkefølge, Glimt-logg, Huskeliste) og /api/huske
 app.route('/api/news/saved', news73Api); // prompt 73 (NEWS73): lagrede artikler (offline, SSRF-vern)
 app.route('/api/news', news40Api); // prompt 40: Nyheter · Glimt-siden
 app.route('/api/app/pages', pages40Api); // prompt 40: alle sider i Mer (fanelinja), før /api/app
@@ -617,7 +591,6 @@ app.route('/api/integrasjoner', integrationsApi); // prompt 26: samme liste unde
 // Prompt 26: Kalender (skolens iCal, Canvas, Bursdager og Google) og kompakt widget-svar. Sesjon eller app-token, per bruker.
 mountKalenderFront(app); // server/kalender/: invitasjoner, Glimt-søk, beskriv, rask time, HA, fag (før /api/kalender og de innebygde kalenderne)
 app.route('/api/ruter', ruter41Api); // prompt 41: Min reise, skolesoner, «forlot skolen»
-app.route('/api/huske', huske41Api); // prompt 41: POST /glimt-jobs
 app.use('/api/kalender/calendars', mediaCalendarsMw43); // prompt 43: innebygd kalender «Media» (Sonarr/Radarr)
 app.use('/api/kalender/calendars/*', mediaCalendarsMw43);
 mountSubsCalendar(app); // server/finans/: innebygd kalender «Abonnementer» (trekkdatoer) – etter Media-kalenderen, før mountKalender
@@ -640,8 +613,7 @@ mountAi(app); // server/ai/: /api/ai/memory, ✦ modellanbefalingene og AI-kontr
 app.use('/api/brief', briefJul40);
 app.use('/api/brief', brief41); // prompt 41: ski, mai17, minReise // prompt 40: brief.jul i julemodus
 app.route('/api/glimt/mai17', mai17Api); // prompt 41: 17. mai (program, design-bryter, hurra)
-app.route('/api/weather/week-summary', week39Api); // prompt 39: Glimt · ukas vær
-app.route('/api/weather/place', weather35Api); // prompt 35
+mountVaer(app); // server/vaer/: /api/weather/here, /week-summary, /place, ski i /full og /layout (før mobileApi sine værruter)
 app.route('/api/glimt/recipes', recipesApi61); // prompt 61: oppskrifter som lærer av bruk (per bruker)
 app.route('/api/glimt/schedules', schedulesApi62); // prompt 62: planlagte oppgaver (per bruker)
 app.route('/api/skjold', skjoldApi76); // prompt 76 (SKJSRV): Skjold Lab (per bruker, sesjon eller app-token)
@@ -666,8 +638,6 @@ app.route('/api/domains', gscDomains43Api); // prompt 43: /:domain/gsc/refresh (
 app.route('/api/domains', domainGlimtApi); // prompt 32: /:domain/summary (Glimt) og /:domain/gsc (Google Search Console), bare admin
 app.route('/api/gsc', gsc43Api); // prompt 43: /test (diagnose per eiendom)
 app.route('/api/gsc', gscApi); // prompt 32: Google Search Console-kobling per bruker (webmasters.readonly)
-app.use('/api/weather/full', weatherFull41); // prompt 41: ski
-app.route('/api/weather', weather41Api); // prompt 41: GET/PUT /layout (Rediger Vær)
 app.route('/api', api36); // prompt 36: /dashboard/layout og /weather/places/summary (før mobileApi)
 app.route('/api/bible', bibleApi); // prompt 37: dagens bibelvers (bare med modulen)
 app.route('/api', profilesApi); // prompt 37: profiler og onboarding
@@ -680,20 +650,18 @@ setMobileApi44(mobileApi);
 app.route('/api', mobileApi);
 app.route('/api', authed);
 app.route('/home/api', homeApi);
-app.route('/mat/api', matApi);
 app.route('/domains/api', domainsApi);
-app.get('/mat/calendar.ics', matCalendar);
 // Prompt 51 (OPS51): OPS51_SANDBOX=1 = testet gjenoppretting / staging-kopi mot en kopi av databasen: ingen bakgrunnsjobber
 // (ingen varsler, e-post, backup, oppdateringer eller selvreparasjon). Bare HTTP-serveren og migreringene kjører.
 const BG51 = process.env.NODE_ENV !== 'test' && process.env.OPS51_SANDBOX !== '1';
 migrateLocalHosts86().catch((e) => console.warn('[localfetch]', e.message)); // prompt 86: én gang – lokale verter i administratorenes abonnementer godkjennes
-if (BG51) { startMatScheduler(); startTrackingWorker(); startRssWorker(); startBirthdayWorker(); startSystemBackupScheduler(); startUpdateScheduler(); startDomainGlimtScheduler(); startSpaceScheduler(); startApi40(); startHealth42(); startMedia(); startLogs44(); startLive89(); }
-if (BG51) { startAccounts46(); startGphoto46(); } // prompt 46 (DATA46)
+if (BG51) { startTrackingWorker(); startRssWorker(); startBirthdayWorker(); startSystemBackupScheduler(); startUpdateScheduler(); startDomainGlimtScheduler(); startSpaceScheduler(); startApi40(); startMedia(); startLogs44(); startLive89(); }
+if (BG51) { startGphoto46(); } // prompt 46 (DATA46)
 if (BG51) startJobs(); // felles planlegger (server/jobs/): backup, prøveperioder, skattemelding, brief, iCal, skolekalendere, Sjekk inn, «forlot»
 if (process.env.NODE_ENV !== 'test') startOps51(); // prompt 51 (OPS51): planlegger (backup, testet gjenoppretting, vedlikehold) og migrasjonslogg
 if (process.env.OPS51_SANDBOX !== '1') startObs51(); // prompt 51 (OBS51): samples, driftsvarsler og selvreparasjon (ikke i test)
 if (BG51) startQa51(); // prompt 51 (QA51): sender krasjrapporter som ikke kom fram til GlitchTip
-if (BG51) startMedfam51(); // prompt 51 (MEDFAM51): påminnelser «hvem kjører?» og slettinger etter angrefristen
+if (BG51) startFamilie(); // server/familie/: første runde av påminnelsene «hvem kjører?» (resten går i server/jobs/)
 if (BG51) import('./ai39.js').then((m) => m.startBest59()).catch((e) => console.warn('[ai39] beste modeller:', e?.message)); // prompt 59: de beste modellene (fra eval) settes én gang
 if (BG51) import('./fast59/warm.js').then((m) => m.startWarm59()).catch((e) => console.warn('[fast59] varm modell:', e?.message)); // prompt 59 (del 4): hovedmodellen varm ved oppstart
 

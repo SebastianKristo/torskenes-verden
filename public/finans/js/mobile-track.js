@@ -13,7 +13,7 @@ Object.assign(ICONS, {
   vib: 'M7 4h10v16H7zM3 8v8M21 8v8M11 17h2',
 });
 
-// [id, navn, initialer, farge, tekst, formater, sporingslenke] – samme som server/tracking-carriers.js.
+// [id, navn, initialer, farge, tekst, formater, sporingslenke] – samme som server/sporing/carriers.js.
 export const CAR = [
   ['posten', 'Posten', 'P', '#E32D22', '#fff', [/^[A-Z]{2}\d{9}NO$/, /^(LP|LZ)\d{12,}$/], 'https://sporing.posten.no/sporing/'],
   ['bring', 'Bring', 'B', '#7BC144', '#0f2a05', [/^70\d{15}$/, /^3707\d{14}$/], 'https://tracking.bring.com/tracking/'],

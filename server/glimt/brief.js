@@ -36,19 +36,19 @@
 //   Daglig generering følger brukerens briefer (briefs.{kind}.on/at i /api/glimt/settings), varsel bare hvis notify er på.
 //   Med readAloud og en klar stemmemotor forhåndsgenereres lyden for guide-replikkene (cache i /api/tts).
 import { Hono } from 'hono';
-import { here46, noteHere46 } from '../here46.js'; // prompt 46 (SERVER46)
+import { here46, noteHere46 } from '../vaer/here.js'; // prompt 46 (SERVER46)
 import { db, kv } from '../db.js';
 import { authOrToken } from '../mobile.js';
 import { eventsFor } from '../kalender/events.js';
-import { weatherFull, wmoText, iconOf } from '../weather-full.js';
+import { weatherFull, wmoText, iconOf } from '../vaer/full.js';
 import { newsFor } from '../rss.js';
-import { packagesFor } from '../tracking.js';
+import { packagesFor } from '../sporing/shipments.js';
 import { notifyUser } from '../notify.js';
 import { run as aiRun } from '../ai-run.js';
 import { once, inFlight } from '../ai-gate.js'; // prompt 43: én LLM-oppsummering per bruker/brief/dato om gangen
 import { glimtSettingsOf, cleanGlimtPatch, saveGlimtSettings, hostOf, charName, proxied, engineReady, speak } from './settings.js'; // prompt 35
 import { trialCompact } from '../finans/trial-widgets.js'; // prompt 35: prøveperioder i briefen
-import { todosForBrief } from '../tasks-glimt37.js'; // prompt 37: Gjøremål-kortet
+import { todosForBrief } from '../gjoremal/glimt.js'; // prompt 37: Gjøremål-kortet
 import { bibleForBrief } from '../bible37.js'; // prompt 37: dagens bibelvers (bare med modulen)
 import { profileName } from '../profiles37.js'; // prompt 37: profilnavnet i hilsenen
 import { applyBriefCards73, guideFilter73 } from '../brief73.js'; // prompt 73: bare kortene som er på (Innhold i briefen)
@@ -105,7 +105,7 @@ const nameOf = (u) => { try { const p = profileName(u); if (p) return p.split(' 
 
 async function weatherPart(u, now) {
   const list = kv.get(u, 'wx_places', null);
-  // Prompt 46: «Min posisjon» – enhetens posisjon (here46.js) går foran det lagrede stedet og Oslo.
+  // Prompt 46: «Min posisjon» – enhetens posisjon (vaer/here.js) går foran det lagrede stedet og Oslo.
   const here = here46(u);
   const own = here ? { lat: here.lat, lon: here.lon, name: here.name ?? null, here: true } : Array.isArray(list) && list[0]?.lat != null ? list[0] : null;
   const place = own ? { lat: own.lat, lon: own.lon, ...(own.name ? { name: own.name } : {}) } : { place: 'oslo' };

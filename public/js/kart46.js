@@ -8,7 +8,7 @@
 // Kartet er Leaflet fra egen server (samme som Familie) med Kartverket-fliser via /tiles (gråtone når serveren har den).
 import { api, esc } from './util.js';
 
-// Server-API (DATA46, server/kart46.js): GET /api/kart → {prefs, zones, people, source}; /kart/stops?minLat&minLon&maxLat&maxLon;
+// Server-API (DATA46, server/familie/map.js): GET /api/kart → {prefs, zones, people, source}; /kart/stops?minLat&minLon&maxLat&maxLon;
 // /kart/stops/:id/departures → {source, stop, calls}; /kart/vehicles?zones=1,2 → {source, vehicles}; /kart/search?q= → {results};
 // GET/PUT /kart/prefs {z, c:[la,lo], show:{stops,vehicles,zones,people}, md:[…], vz:[…]}. Formene tåler også rå Entur-svar.
 const EP = {

@@ -27,8 +27,8 @@ test.after(() => { globalThis.fetch = realFetch; });
 
 const { default: app } = await import('../server/index.js');
 const { db, kv, OWNER } = await import('../server/db.js');
-const C = await import('../server/tracking-carriers.js');
-const T = await import('../server/tracking46.js');
+const C = await import('../server/sporing/carriers.js');
+const T = await import('../server/sporing/accounts.js');
 const { updateConfig } = await import('../server/settings.js');
 
 const FX = join(dirname(fileURLToPath(import.meta.url)), 'fixtures', 'p46');

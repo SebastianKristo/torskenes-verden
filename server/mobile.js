@@ -14,19 +14,19 @@ import { kv, OWNER, db as hlDb } from './db.js';
 import { broadcast as rtBroadcast } from './realtime.js';
 import { aiJson } from './homeos-common.js';
 import { sessionUser, userInfo, serverName, isAdmin, installKind } from './auth/session.js';
-import { packagesFor } from './tracking.js';
+import { packagesFor } from './sporing/shipments.js';
 import { newsFor } from './rss.js';
 import finansApi, { bearerOk } from './finans/routes.js';
 import { signedImageUser46 } from './media/middleware.js'; // signerte bilde-URL-er i Media
-import { noteHere46, hereWeather46 } from './here46.js'; // prompt 46 (SERVER46)
-import { matApi } from './mat.js';
+import { noteHere46, hereWeather46 } from './vaer/here.js'; // prompt 46 (SERVER46)
+import { matApi } from './mat/plan.js';
 import { domainOverview } from './domains.js';
 import { readBg, weatherImages, weatherKind, planetsToday, osloImages, apodImage } from './bg.js';
 import { uiPrefs, saveUiPrefs } from './ui.js';
-import { weatherFull, searchPlaces, DEFAULT_PLACES, weatherCompare, PLACES as WX_PLACES } from './weather-full.js';
-import { searchPlacesV2 } from './weather-places.js';
+import { weatherFull, searchPlaces, DEFAULT_PLACES, weatherCompare, PLACES as WX_PLACES } from './vaer/full.js';
+import { searchPlacesV2 } from './vaer/place-search.js';
 import { appMeta } from './notify.js';
-import { nextTasks } from './tasks.js';
+import { nextTasks } from './gjoremal/routes.js';
 import * as integrations from './integrations.js';
 import { widgetOut as birthdaysWidget } from './kalender/birthdays.js';
 import { osloDate } from './dates/oslo.js';

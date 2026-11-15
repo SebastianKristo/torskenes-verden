@@ -14,7 +14,7 @@ import java.util.Locale
 
 /*
  * Prompt 46 (claude-code-kart-side.md, fasit Kart.dc.html): ny side Kart (Mer → Kart, side-nøkkel tkart).
- * Alt går via serverens /api/kart (DATA46, server/kart46.js): holdeplasser i utsnittet (Entur stopPlacesByBbox, fra zoom 14),
+ * Alt går via serverens /api/kart (DATA46, server/familie/map.js): holdeplasser i utsnittet (Entur stopPlacesByBbox, fra zoom 14),
  * avganger (estimatedCalls 12 / 2 t), kjøretøy i sanntid BARE for valgte soner (poll 10 s), søk (Entur Geocoder) og soner/personer
  * fra Familie med de samme delingsreglene. Brukervalg kart_v1 = {z, c, show, md, vz} per bruker (PUT /api/kart/prefs).
  * Fliser: Kartverket topograatone (WMTS webmercator), som serveren oppgir i GET /api/kart → tiles.url.

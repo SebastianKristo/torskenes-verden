@@ -38,7 +38,7 @@ import { aiTimeoutsOf, GEMINI_DEFAULT, GROQ_DEFAULT, GROQ_MODELS, GROQ_VISION_DE
 import { CATALOG } from '../../finans/ollama-models.js';
 import { audit } from '../../finans/ai-audit.js';
 import { finansSummary } from '../../finans/summary.js';
-import { nextTasks } from '../../tasks.js';
+import { nextTasks } from '../../gjoremal/routes.js';
 import { chatBody, isThinkingModel } from '../ollama-options.js';
 import { thinkSplit52, thinkState52, glimtSteps52, stripThink52, cleanAttTh52 } from './thinking.js'; // prompt 52 (SRV52): tankegang
 import { gateChat, GateError } from '../../ai-gate.js'; // prompt 43: alle Ollama-kall via gaten
@@ -46,7 +46,7 @@ import { chatModels53, neutrinoChatStream53, isNeutrino53, NEUTRINO_NAME53 } fro
 import { ensureScanFolder, scanFolderInfo, isSysFolder, upsertScanChat } from './scans.js';
 import { gatherFacts, factsPrompt, factsAnswer, hasFactWords } from './tools.js'; // prompt 41: Glimt henter fakta
 import { AUTO_ID, pickAuto41, autoEntry41, recordAuto41, feedbackAuto41, autoSummary41 } from './auto-model.js'; // prompt 41: «✦ Auto»
-import { weekFact41, isWeekWeather41 } from '../../weather41.js'; // prompt 41: ukesvær til modellen
+import { weekFact41, isWeekWeather41 } from '../../vaer/week-glimt.js'; // prompt 41: ukesvær til modellen
 import { routeTools, routeTextOf, pickData, osloNowLine } from '../tool-router.js'; // prompt 44: ruting før hovedmodellen
 import { webSearch, webPrompt, webMeta, webFact } from '../../web-search.js'; // prompt 44: eget nettsøk
 import { powerFact, powerPrompt } from '../../power-price.js'; // prompt 44: strømpris

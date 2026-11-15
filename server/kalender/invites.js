@@ -23,7 +23,7 @@ import { authOrToken } from '../mobile.js';
 import { userCfg } from '../settings.js';
 import { notifyUser } from '../notify.js';
 import { addEventDecorator, addEventSource, findEvent } from './events.js';
-import { NOMINATIM_UA } from '../family.js';
+import { NOMINATIM_UA } from '../familie/positions.js';
 import { dtf } from '../intl-format.js'; // gjenbrukte Intl.DateTimeFormat
 
 const MOCK = () => process.env.MOCK_DATA === '1';

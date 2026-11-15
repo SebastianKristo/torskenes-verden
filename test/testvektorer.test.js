@@ -43,7 +43,7 @@ const { isLocalHost51 } = await import('../server/qa51.js');
 const { normalizeServerUrl, isLocalHost } = await import('../server/net/server-url.js');
 const { isLan } = await import('../server/auth/session.js');
 const { osloDate } = await import('../server/kalender/birthdays.js');
-const { ymd: medfamYmd } = await import('../server/medfam51/common.js');
+const { ymd: medfamYmd } = await import('../server/media/helpers.js');
 const { osloYmd } = await import('../server/jul40.js');
 const { today51 } = await import('../server/finans/planning-util.js');
 const { osloDate: osloDate2, today: osloToday } = await import('../server/dates/oslo.js');
@@ -195,7 +195,7 @@ for (const [impl, fn, gjelder = () => true] of ABO_IMPL) {
 const IDAG_IMPL = [
   ['server glimt/dates.js todayOslo45', (ms) => todayOslo45(new RealDate(ms))],
   ['server birthdays.js osloDate', (ms) => osloDate(ms)],
-  ['server medfam51/common.js ymd', (ms) => medfamYmd(ms)],
+  ['server media/helpers.js ymd', (ms) => medfamYmd(ms)],
   ['server jul40.js osloYmd', (ms) => { const { y, m, d } = osloYmd(ms); return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`; }],
   ['server finans/planning-util.js today51', null], // leser klokka selv, kjøres med fast klokke under
   ['web js/quick-time.js osloTodayISO', (ms) => osloTodayISO(new RealDate(ms))],

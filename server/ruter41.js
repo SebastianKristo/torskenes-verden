@@ -25,7 +25,7 @@
 import { Hono } from 'hono';
 import { db, q, kv, OWNER } from './db.js';
 import { authOrToken as authOrToken0 } from './mobile.js';
-import { family50 as F50, placesChanged50, areaOut50 } from './family.js'; // prompt 50 (SRVFAM50): skolen kommer fra Familie › Steder
+import { family50 as F50, placesChanged50, areaOut50 } from './familie/positions.js'; // prompt 50 (SRVFAM50): skolen kommer fra Familie › Steder
 import { dtf } from './intl-format.js'; // gjenbrukte Intl.DateTimeFormat
 const authOrToken = (c, next) => authOrToken0(c, next); // sen binding (mobile.js kan være midt i lastingen)
 
@@ -141,7 +141,7 @@ export function school50(u) {
   return { ...base, place: { id: p.id, name: p.name, color: String(p.color).toLowerCase(), icon: p.icon ?? 'school', mine: p.created_by === u, shared: !!p.shared }, areas, chips: areas.map((a) => a.label).join(' · '),
     edit: { label: 'Endre i Steder ›', tab: 'steder', placeId: p.id, url: `/#/familie/steder?sted=${p.id}` }, empty: null };
 }
-/** Hendelser fra Familie (family.js): kom til skolen → ankomst; forlot skolen (utenfor alle områdene i 2 min) → Min reise. */
+/** Hendelser fra Familie (familie/positions.js): kom til skolen → ankomst; forlot skolen (utenfor alle områdene i 2 min) → Min reise. */
 export function ruterPlaceEvents50(u, events) {
   const p = schoolPlaceOf50(u);
   if (!p) return;

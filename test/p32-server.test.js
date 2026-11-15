@@ -414,7 +414,7 @@ test('Huskeliste: arkiver/gjenopprett, ?archived=1, auto etter 7 dager, telles i
 /* ---------------- 11. Vær: Forhold-data ---------------- */
 
 test('Vær: dagene har 12 blokker à 2 t med mm/vind/kast og min–maks kast', async () => {
-  const { buildFull } = await import('../server/weather-full.js');
+  const { buildFull } = await import('../server/vaer/full.js');
   const times = Array.from({ length: 48 }, (_, i) => `2026-10-19T${String(i % 24).padStart(2, '0')}:00`).map((t, i) => (i >= 24 ? t.replace('19T', '20T') : t));
   const raw = { hourly: { time: times, precipitation: times.map((_, i) => (i % 3 ? 0 : 0.6)), wind_speed_10m: times.map(() => 4), wind_gusts_10m: times.map((_, i) => 5 + (i % 24) / 4) },
     daily: { time: ['2026-10-19', '2026-10-20'] }, current: {} };

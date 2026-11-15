@@ -21,7 +21,7 @@ const { serve } = await import('@hono/node-server');
 const { WebSocket } = await import('ws');
 const { cfg, updateConfig } = await import('../server/settings.js');
 const { kv, OWNER } = await import('../server/db.js');
-const C = await import('../server/tracking-carriers.js');
+const C = await import('../server/sporing/carriers.js');
 
 const login = await fin.request('/login', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ password: 'testpassord1', device: 'test' }) });
 const { token } = await login.json();

@@ -32,7 +32,7 @@ const { default: app } = await import('../server/index.js');
 const shot = await import('../server/finans/sub-screenshot.js');
 const ai = await import('../server/finans/ai.js');
 const { setSecret } = await import('../server/finans/db.js');
-const places = await import('../server/weather-places.js');
+const places = await import('../server/vaer/place-search.js');
 const { clearCache } = await import('../server/cache.js');
 
 async function login(username, password) {

@@ -96,7 +96,7 @@ const { hashPassword } = await import('../server/auth/password.js');
 process.env.APP_PASSWORD_HASH = hashPassword('testpassord1');
 const { default: app } = await import('../server/index.js');
 const { updateConfig } = await import('../server/settings.js');
-const ha = await import('../server/tasks-ha.js');
+const ha = await import('../server/gjoremal/ha.js');
 const { db } = await import('../server/db.js');
 
 async function login(username, password) {

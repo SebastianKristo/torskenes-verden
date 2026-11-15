@@ -11,7 +11,7 @@ import { Hono } from 'hono';
 import { kv } from './db.js';
 import { authOrToken } from './mobile.js';
 import { cached, fetchJson } from './cache.js';
-import { DEFAULT_PLACES, wmoText, weatherKindOf, mockRaw, weatherFull } from './weather-full.js';
+import { DEFAULT_PLACES, wmoText, weatherKindOf, mockRaw, weatherFull } from './vaer/full.js';
 
 const api = new Hono();
 const MOCK = process.env.MOCK_DATA === '1';

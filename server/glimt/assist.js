@@ -62,9 +62,9 @@ import { runAsUser } from '../settings.js';
 import { broadcast } from '../realtime.js';
 import { notifyOf, notifyUser } from '../notify.js';
 import { eventsFor, normText, findEvent } from '../kalender/events.js';
-import { weatherFull, wmoText, iconOf, PLACES } from '../weather-full.js';
-import { packagesFor } from '../tracking.js';
-import { nextTasks } from '../tasks.js';
+import { weatherFull, wmoText, iconOf, PLACES } from '../vaer/full.js';
+import { packagesFor } from '../sporing/shipments.js';
+import { nextTasks } from '../gjoremal/routes.js';
 import { settings as fhSettings, ensureLedger } from '../finans/db.js';
 import { createTrial, trialOut } from '../finans/trials.js';
 import { startQuickJob } from '../kalender/quick.js';
@@ -76,20 +76,20 @@ import * as integrations from '../integrations.js';
 import { calendarAnswer } from '../kalender/calendars.js'; // prompt 33: source:'calendar'
 import { fagAnswer, rememberCtx } from './fag.js'; // prompt 39: oppfølging og fag
 import { parseDay } from '../parse-day35.js'; // prompt 35: felles dag-tolkning
-import { extractPlace, placeWeather, PlaceNotFound } from '../weather35.js'; // prompt 35: været for et sted
+import { extractPlace, placeWeather, PlaceNotFound } from '../vaer/place.js'; // prompt 35: været for et sted
 import { run as aiRun, routing as aiRouting, AiRunError, isCloud, providerOf, providerLabel } from '../ai-run.js';
 import { aiRun53 } from '../dal53/text.js'; // prompt 53 (DAL53): Redact på brukerteksten når AI-søket kan gå til sky
 import { once } from '../ai-gate.js'; // prompt 43: single-flight
 import { routeTools, osloNowLine } from '../ai/tool-router.js'; // prompt 44: ruting før modellen (Glimt-søk på Hjem)
 import { webSearch, webPrompt, webMeta, webFact, PROVIDER_NAME } from '../web-search.js'; // prompt 44: eget nettsøk
 import { powerFact } from '../power-price.js'; // prompt 44: strømpris
-import { isSunQuestion, daylight } from '../sun36.js'; // prompt 36: dagslys lokalt
-import { whereIntent, whereAnswer } from '../where37.js'; // prompt 37: «hvor er Ingrid?»
+import { isSunQuestion, daylight } from '../vaer/sun.js'; // prompt 36: dagslys lokalt
+import { whereIntent, whereAnswer } from '../familie/where.js'; // prompt 37: «hvor er Ingrid?»
 import { parseIntent37, schoolTestAnswer } from '../kalender/subjects.js'; // prompt 37: skoleprøve ≠ prøveperiode
 import { bareDay37 } from '../kalender/calendars.js'; // prompt 37: «i morgen?»
 import { needsChatTools } from '../ai/chat/tools.js'; // prompt 41: sammensatte faktaspørsmål går til chatten
-import { isWeekWeather41, weekAnswer41 } from '../weather41.js'; // prompt 41: ukesvær med Ollama og 7 dager data
-import { isHuskeMessage41, startJob41 } from '../tasks-glimt41.js'; // prompt 41: huskebeskjeder fra søkefeltet → Glimt i bakgrunnen
+import { isWeekWeather41, weekAnswer41 } from '../vaer/week-glimt.js'; // prompt 41: ukesvær med Ollama og 7 dager data
+import { isHuskeMessage41, startJob41 } from '../gjoremal/glimt-jobs.js'; // prompt 41: huskebeskjeder fra søkefeltet → Glimt i bakgrunnen
 import { agent45, registerLegacy45, toAssist45, wantsAgent45 } from './engine.js';
 import { hasWord47 } from './words.js'; // prompt 47: ordgrenser // prompt 45: felles Glimt-motor
 

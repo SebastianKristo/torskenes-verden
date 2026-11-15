@@ -388,7 +388,7 @@ export function finnOut(f) {
     cover, image: cover, summary: summaryOf(f), shipment: shipmentOf(f) };
 }
 // Sporing (prompt 11): sendingen til handelen fra Sporing-fanen (hl_shipments), med de siste hendelsene til tidslinjen.
-// Leses direkte fra tabellen for å unngå sirkulær import med server/tracking.js; finnes ikke tabellen ennå, er feltet null.
+// Leses direkte fra tabellen for å unngå sirkulær import med server/sporing/shipments.js; finnes ikke tabellen ennå, er feltet null.
 const STATUS_NB = { registered: 'Registrert', picked_up: 'Hentet', in_transit: 'I transport', ready_for_pickup: 'Klar for henting', out_for_delivery: 'Ute for levering', delivered: 'Levert', delayed: 'Forsinket', unknown: 'Ukjent status' };
 function shipmentOf(f) {
   try {

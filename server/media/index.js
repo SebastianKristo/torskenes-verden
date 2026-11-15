@@ -11,6 +11,8 @@
 //   playback.js    Avspilling: Plex/Jellyfin, PIN-flyt, historikk, statistikk, sammendrag
 //   arr.js         Sonarr, Radarr, qBittorrent, Prowlarr, Glimt, webhooks, varsler, kalenderkilden «Media»
 //   control.js     mediekontroll (/api/medctl51/*)
+//   extras.js      /api/media51/*: «I kveld» (tonight.js), undertekster (subtitles.js), lagring (storage.js), lydbøker (audiobooks.js);
+//                  helpers.js har hjelperne de deler (også med familiekalenderen i server/familie/famcal.js)
 //   mock.js        innebygd Sonarr/Radarr/qBittorrent/Prowlarr for MOCK_DATA=1
 //
 // index.js kaller mountMedia(app, …) én gang, på stedet der Media-rutene alltid har stått (etter /api/upcoming og /api/news,
@@ -30,6 +32,8 @@ import { media45Api } from './unmonitored.js';
 import { playback44Api, logPlays44 } from './playback.js';
 import { media43Api, mediaWatch43 } from './arr.js';
 import { mountMedctl51 } from './control.js';
+import { media51Api } from './extras.js';
+import { sweepDeletions51 } from './storage.js';
 
 /**
  * @param {import('hono').Hono} app
@@ -71,11 +75,13 @@ export function mountMedia(app, plex) {
   app.route('/api/playback', playback44Api); // Avspilling (Plex/Jellyfin, PIN-flyt, historikk, statistikk)
   app.route('/api/media', media43Api); // Sonarr, Radarr, qBittorrent, Prowlarr, Glimt, webhooks – etter /now, /recent, /history og /poster
   mountMedctl51(app); // /api/medctl51/now og /api/medctl51/sessions/:id/:action (egen prefiks, rekkefølgen er fri)
+  app.route('/api/media51', media51Api); // I kveld, undertekster, lagring, lydbøker (egen prefiks, rekkefølgen er fri)
 }
 
-/** Første runde av jobbene 15 s etter oppstart (ellers først etter ett intervall), og plakatene forhåndsgenereres etter 45 s. */
+/** Første runde av jobbene 15 s (slettingene 30 s) etter oppstart (ellers først etter ett intervall), og plakatene forhåndsgenereres etter 45 s. */
 export function startMedia() {
   setTimeout(() => mediaWatch43().catch(() => {}), 15_000).unref?.();
   setTimeout(() => logPlays44().catch(() => {}), 15_000).unref?.();
+  setTimeout(() => sweepDeletions51().catch((e) => console.warn('[media51] sletting:', e.message)), 30_000).unref?.();
   startMedia50();
 }

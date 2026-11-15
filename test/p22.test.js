@@ -18,10 +18,10 @@ process.env.APP_PASSWORD_HASH = hashPassword('testpassord1');
 const { default: app } = await import('../server/index.js');
 const { db, kv, OWNER } = await import('../server/db.js');
 const { cfg, updateConfig, publicConfig } = await import('../server/settings.js');
-const trk = await import('../server/tracking.js');
-const { mybringStatus, normStatus } = await import('../server/tracking-carriers.js');
+const trk = await import('../server/sporing/shipments.js');
+const { mybringStatus, normStatus } = await import('../server/sporing/carriers.js');
 const match = await import('../server/logos/match.js');
-const wx = await import('../server/weather-full.js');
+const wx = await import('../server/vaer/full.js');
 
 async function login(username, password) {
   const r = await app.request('/api/login', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ username, password }) });

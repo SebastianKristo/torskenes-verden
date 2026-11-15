@@ -30,8 +30,8 @@ const P = await import('../server/glimt/plan.js');
 const W = await import('../server/glimt/weather.js');
 const SB = await import('../server/glimt/subscriptions.js');
 const C46 = await import('../server/glimt/calendar.js');
-const T46 = await import('../server/glimt/tasks.js');
-const tg41 = await import('../server/tasks-glimt41.js');
+const T46 = await import('../server/gjoremal/glimt-wording.js');
+const tg41 = await import('../server/gjoremal/glimt-jobs.js');
 const gate = await import('../server/ai-gate.js');
 const web = await import('../server/web-search.js');
 

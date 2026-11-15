@@ -16,7 +16,7 @@ const { setSecret, saveSettings } = await import('../server/finans/db.js');
 const { default: fin } = await import('../server/finans/routes.js');
 const { default: mobile } = await import('../server/mobile.js');
 const AI = await import('../server/finans/ai.js');
-const W = await import('../server/weather-full.js');
+const W = await import('../server/vaer/full.js');
 
 const login = await fin.request('/login', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ password: 'testpassord1', device: 'test' }) });
 const { token } = await login.json();

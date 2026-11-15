@@ -32,11 +32,11 @@ test.after(() => { globalThis.fetch = realFetch; });
 
 const { default: app } = await import('../server/index.js');
 const { db } = await import('../server/db.js');
-const fam = await import('../server/family.js');
+const fam = await import('../server/familie/positions.js');
 const m43 = await import('../server/media/arr.js');
-const C = await import('../server/medfam51/common.js');
-const FC = await import('../server/medfam51/famcal.js');
-const ST = await import('../server/medfam51/storage.js');
+const C = await import('../server/media/helpers.js');
+const FC = await import('../server/familie/famcal.js');
+const ST = await import('../server/media/storage.js');
 const { pendingFor } = await import('../server/notify.js');
 
 let ipN = 10;
