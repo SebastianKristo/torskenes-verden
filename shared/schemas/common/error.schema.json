@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "common/error.schema.json",
+  "title": "Feil",
+  "description": "Alle feilsvar (status 400–599) fra /api/* og /finans/api/*, også ukjent sti (404) og uventede feil (500). Se server/http/errors.js.",
+  "type": "object",
+  "required": ["error", "code"],
+  "properties": {
+    "error": { "type": "string", "minLength": 1, "description": "Norsk tekst som kan vises til brukeren." },
+    "code": {
+      "type": "string",
+      "description": "Maskinlesbar kode. Nye koder er SNAKE_CASE (NOT_FOUND, HOMELAB_AUTH, TOKEN_EXPIRED). Eldre koder med små bokstaver (not_found, expired …) finnes til klientene er flyttet (LEGACY_CODES i server/http/errors.js).",
+      "pattern": "^[A-Za-z][A-Za-z0-9_]*$"
+    },
+    "reason": { "type": "string", "description": "Ved 401 med HOMELAB_AUTH/TOKEN_EXPIRED: none | invalid | expired. Andre ruter bruker feltet til egne årsaker." }
+  },
+  "if": { "properties": { "code": { "enum": ["HOMELAB_AUTH", "TOKEN_EXPIRED"] } } },
+  "then": { "required": ["reason"], "properties": { "reason": { "enum": ["none", "invalid", "expired"] } } },
+  "$defs": {
+    "notFound": {
+      "title": "404 Finnes ikke",
+      "allOf": [{ "$ref": "#" }],
+      "properties": { "code": { "enum": ["NOT_FOUND", "not_found"] } }
+    },
+    "unauthorized": {
+      "title": "401 Ikke innlogget",
+      "description": "HOMELAB_AUTH = ingen/ugyldig innlogging (appen logger ut). TOKEN_EXPIRED = app-tokenet er utløpt etter 180 dager uten bruk (Q23); behandles som HOMELAB_AUTH. LOGIN_FAILED = feil passord/kode ved innlogging. SESSION_REQUIRED = funksjonen krever nettleserøkt.",
+      "allOf": [{ "$ref": "#" }],
+      "properties": { "code": { "type": "string" } }
+    },
+    "internal": {
+      "title": "500 Intern feil",
+      "description": "Aldri stack, filstier eller SQL.",
+      "type": "object",
+      "required": ["error", "code"],
+      "properties": { "error": { "const": "Intern feil" }, "code": { "const": "INTERNAL_ERROR" } }
+    }
+  }
+}

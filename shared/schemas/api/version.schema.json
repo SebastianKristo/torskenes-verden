@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "api/version.schema.json",
+  "title": "Serverversjon",
+  "description": "Uten innlogging. Appene sammenligner minClient med sin egen versjon og viser «Oppdater serveren»/«Oppdater appen» (Q19).",
+  "x-endpoint": "GET /api/version",
+  "type": "object",
+  "required": [
+    "version",
+    "minClient",
+    "contract",
+    "api",
+    "features"
+  ],
+  "properties": {
+    "version": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "minClient": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "Eldste appversjon serveren svarer riktig for."
+    },
+    "contract": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Versjonen av kontrakten i shared/schemas."
+    },
+    "api": {
+      "type": "integer"
+    },
+    "dbSchema": {
+      "type": "integer"
+    },
+    "name": {
+      "type": "string"
+    },
+    "codename": {
+      "type": "string"
+    },
+    "shortName": {
+      "type": "string"
+    },
+    "features": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

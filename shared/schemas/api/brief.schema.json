@@ -1,0 +1,123 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "api/brief.schema.json",
+  "title": "Brief",
+  "description": "Morgen-/kveldsbriefen (Glimt). generatedAt/nextAt er ISO med sone.",
+  "x-endpoint": "GET /api/brief",
+  "type": "object",
+  "required": [
+    "kind",
+    "title",
+    "greeting",
+    "generatedAt"
+  ],
+  "properties": {
+    "kind": {
+      "type": "string"
+    },
+    "title": {
+      "type": "string"
+    },
+    "greeting": {
+      "type": "string"
+    },
+    "summary": {
+      "type": "string"
+    },
+    "events": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "title",
+          "date"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "date": {
+            "$ref": "../common/types.schema.json#/$defs/date"
+          },
+          "start": {
+            "anyOf": [
+              {
+                "anyOf": [
+                  {
+                    "$ref": "../common/types.schema.json#/$defs/timestamp"
+                  },
+                  {
+                    "$ref": "../common/types.schema.json#/$defs/date"
+                  }
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "end": {
+            "anyOf": [
+              {
+                "anyOf": [
+                  {
+                    "$ref": "../common/types.schema.json#/$defs/timestamp"
+                  },
+                  {
+                    "$ref": "../common/types.schema.json#/$defs/date"
+                  }
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "allDay": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "generatedAt": {
+      "$ref": "../common/types.schema.json#/$defs/timestamp"
+    },
+    "nextAt": {
+      "anyOf": [
+        {
+          "$ref": "../common/types.schema.json#/$defs/timestamp"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "deepLink": {
+      "type": "string"
+    },
+    "cards": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "on"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "on": {
+            "type": "boolean"
+          },
+          "label": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}
