@@ -69,6 +69,10 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 import no.kristo.finanshub.ui.designsystem.HomelabTheme
 import no.kristo.finanshub.ui.designsystem.HomelabType
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.Icon
+import androidx.compose.material3.minimumInteractiveComponentSize
 
 /* ---------------- Prompt 73 (LOGO73): «Endre logo» for en butikk i Finans ----------------
  * Fasit: «Lagre og logo.dc.html» 1a (mobil-ark fra transaksjon). Papir-design: bakgrunn #f3efe6, kort #fff, kant #d8d1c2,
@@ -184,7 +188,7 @@ internal fun LogoTap73(vm: AppViewModel, name: String, names: List<String> = emp
         Box(
             Modifier.align(Alignment.BottomEnd).offset(x = 5.dp, y = 5.dp).size(20.dp).clip(CircleShape).background(HomelabTheme.colors.surface).padding(2.dp).clip(CircleShape).background(HomelabTheme.colors.textPrimary),
             contentAlignment = Alignment.Center,
-        ) { Text("✎", color = HomelabTheme.colors.surface, style = HomelabType.caption, fontWeight = FontWeight.Normal, lineHeight = 10.sp) }
+        ) { Icon(Icons.Filled.Edit, contentDescription = null, tint = HomelabTheme.colors.surface, modifier = Modifier.size(11.dp)) }
     }
     if (open) LogoSheet73(vm, name, names) { open = false }
 }
@@ -277,16 +281,16 @@ internal fun LogoSheet73(vm: AppViewModel, name: String, names: List<String> = e
                 }
                 LogoThumb73(vm, preview, name, 44, 12)
                 Box(
-                    Modifier.size(44.dp).clip(CircleShape).background(Color.White).border(1.dp, HomelabTheme.colors.line, CircleShape).clickable(role = Role.Button, onClickLabel = "Lukk") { onDismiss() }
+                    Modifier.size(48.dp).clip(CircleShape).background(HomelabTheme.colors.surfaceField).border(1.dp, HomelabTheme.colors.line, CircleShape).clickable(role = Role.Button, onClickLabel = "Lukk") { onDismiss() }
                         .semantics { contentDescription = "Lukk" },
                     contentAlignment = Alignment.Center,
-                ) { Text("✕", color = HomelabTheme.colors.textPrimary, style = HomelabType.callout) }
+                ) { Icon(Icons.Filled.Close, contentDescription = null, tint = HomelabTheme.colors.textPrimary, modifier = Modifier.size(20.dp)) }
             }
             Row(
                 Modifier.fillMaxWidth().height(48.dp).clip(RoundedCornerShape(24.dp)).background(Color.White).border(1.dp, HomelabTheme.colors.line, RoundedCornerShape(24.dp)).padding(start = 16.dp, end = 10.dp),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                Text("⌕", color = HomelabTheme.colors.textTertiary, style = HomelabType.headline, fontWeight = FontWeight.Normal)
+                Icon(Icons.Filled.Search, contentDescription = null, tint = HomelabTheme.colors.textTertiary, modifier = Modifier.size(20.dp))
                 BasicTextField(
                     q, { q = it }, singleLine = true, modifier = Modifier.weight(1f).semantics { contentDescription = "Søk etter butikk" },
                     textStyle = HomelabType.body.copy(color = HomelabTheme.colors.textPrimary, fontFamily = PaperFonts.sans), cursorBrush = SolidColor(HomelabTheme.colors.accent),
@@ -294,9 +298,9 @@ internal fun LogoSheet73(vm: AppViewModel, name: String, names: List<String> = e
                     decorationBox = { inner -> Box(contentAlignment = Alignment.CenterStart) { if (q.isEmpty()) Text("Søk etter butikk", color = HomelabTheme.colors.textTertiary, style = HomelabType.body, maxLines = 1); inner() } },
                 )
                 if (q.isNotEmpty()) Box(
-                    Modifier.size(28.dp).clip(CircleShape).background(HomelabTheme.colors.surfaceSunken).clickable(role = Role.Button, onClickLabel = "Tøm") { q = "" },
+                    Modifier.minimumInteractiveComponentSize().size(28.dp).clip(CircleShape).background(HomelabTheme.colors.surfaceSunken).clickable(role = Role.Button, onClickLabel = "Tøm søket") { q = "" },
                     contentAlignment = Alignment.Center,
-                ) { Text("✕", color = HomelabTheme.colors.textPrimary, style = HomelabType.caption, fontWeight = FontWeight.Normal) }
+                ) { Icon(Icons.Filled.Close, contentDescription = "Tøm søket", tint = HomelabTheme.colors.textPrimary, modifier = Modifier.size(14.dp)) }
             }
             Text(
                 "LOGODATABASEN · ${hits.size} TREFF", color = HomelabTheme.colors.textTertiary, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, style = HomelabType.caption, letterSpacing = 1.2.sp,
@@ -317,7 +321,7 @@ internal fun LogoSheet73(vm: AppViewModel, name: String, names: List<String> = e
                                 Text(h.name, color = HomelabTheme.colors.textPrimary, fontFamily = PaperFonts.sans, fontWeight = FontWeight.SemiBold, style = HomelabType.callout, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                 if (h.domain.isNotEmpty()) Text(h.domain, color = HomelabTheme.colors.textTertiary, style = HomelabType.subheadline, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             }
-                            if (on) Box(Modifier.size(24.dp).clip(CircleShape).background(HomelabTheme.colors.textPrimary), contentAlignment = Alignment.Center) { Text("✓", color = HomelabTheme.colors.surface, style = HomelabType.footnote, fontWeight = FontWeight.Bold) }
+                            if (on) Box(Modifier.size(24.dp).clip(CircleShape).background(HomelabTheme.colors.textPrimary), contentAlignment = Alignment.Center) { Icon(Icons.Filled.Check, contentDescription = "Valgt", tint = HomelabTheme.colors.surface, modifier = Modifier.size(16.dp)) }
                         }
                         Box(Modifier.fillMaxWidth().height(1.dp).background(HomelabTheme.colors.lineSubtle))
                     }
@@ -439,7 +443,7 @@ internal fun VelgLogo27(vm: AppViewModel, domain: String?, name: String, receipt
                 Text("Ingen logo", color = p.textTertiary, style = HomelabType.footnote, modifier = Modifier.weight(1f))
             }
             Box(
-                Modifier.height(32.dp).clip(CircleShape).border(1.dp, p.line, CircleShape).clickable { s.logoPick = if (open) null else LogoPick27(name, domain, receiptId); s.logoMsg = null }
+                Modifier.minimumInteractiveComponentSize().height(32.dp).clip(CircleShape).border(1.dp, p.line, CircleShape).clickable { s.logoPick = if (open) null else LogoPick27(name, domain, receiptId); s.logoMsg = null }
                     .padding(horizontal = 12.dp),
                 contentAlignment = Alignment.Center,
             ) { Text(if (open) "Lukk" else "Velg logo", color = p.textPrimary, fontWeight = FontWeight.SemiBold, style = HomelabType.footnote) }
@@ -461,7 +465,7 @@ internal fun VelgLogo27(vm: AppViewModel, domain: String?, name: String, receipt
                     keyboardActions = KeyboardActions(onDone = { vm.logoDomain27(pk, dom) }),
                     decorationBox = { inner -> Box(contentAlignment = Alignment.CenterStart) { if (dom.isEmpty()) Text("Lim inn domene, f.eks. blomsterlandet.no", color = p.textTertiary, style = HomelabType.subheadline, maxLines = 1); inner() } },
                 )
-                Box(Modifier.height(34.dp).clip(CircleShape).background(p.textPrimary).clickable { vm.logoDomain27(pk, dom) }.padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
+                Box(Modifier.minimumInteractiveComponentSize().height(34.dp).clip(CircleShape).background(p.textPrimary).clickable { vm.logoDomain27(pk, dom) }.padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
                     Text("Bruk", color = p.surface, fontWeight = FontWeight.Bold, style = HomelabType.footnote)
                 }
             }

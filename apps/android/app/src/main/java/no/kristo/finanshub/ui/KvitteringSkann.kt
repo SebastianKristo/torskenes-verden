@@ -45,6 +45,11 @@ import no.kristo.finanshub.*
 import kotlin.math.abs
 import no.kristo.finanshub.ui.designsystem.HomelabTheme
 import no.kristo.finanshub.ui.designsystem.HomelabType
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.Icon
+import androidx.compose.material3.minimumInteractiveComponentSize
+import androidx.compose.material3.IconButton
 
 /*
  * Prompt 48 (ANDROID48): dokumentskanneren (ML Kit Document Scanner) og kvitteringsarket med redigerbart skjema (Del 5).
@@ -296,6 +301,8 @@ private fun ItemRow48(vm: AppViewModel, i: Int, it: ScanItem48) {
         BasicTextField(it.amount, { v -> vm.scan48.edit { f -> f.copy(items = f.items.mapIndexed { j, x -> if (j == i) x.copy(amount = v) else x }) } },
             singleLine = true, textStyle = style.copy(fontFamily = PaperFonts.mono), cursorBrush = SolidColor(p.accent), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
             modifier = Modifier.width(92.dp).border(1.dp, p.line, RoundedCornerShape(8.dp)).padding(8.dp, 6.dp))
-        Text("×", color = p.textTertiary, style = HomelabType.headline, fontWeight = FontWeight.Normal, modifier = Modifier.semantics { contentDescription = "Fjern" }.clickable(role = Role.Button) { vm.scan48.edit { f -> f.copy(items = f.items.filterIndexed { j, _ -> j != i }) } }.padding(6.dp))
+        IconButton(onClick = { vm.scan48.edit { f -> f.copy(items = f.items.filterIndexed { j, _ -> j != i }) } }) {
+            Icon(Icons.Filled.Close, contentDescription = "Fjern varelinjen", tint = p.textTertiary, modifier = Modifier.size(20.dp))
+        }
     }
 }

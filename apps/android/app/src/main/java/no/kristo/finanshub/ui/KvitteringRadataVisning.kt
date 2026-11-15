@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.Text
@@ -34,6 +35,10 @@ import no.kristo.finanshub.loadOcrRaw51
 import no.kristo.finanshub.merchantSourceText51
 import no.kristo.finanshub.ui.designsystem.HomelabTheme
 import no.kristo.finanshub.ui.designsystem.HomelabType
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.Icon
+import androidx.compose.material3.minimumInteractiveComponentSize
 
 // Prompt 51 (RCPTUI51): merkelapp for kilden til butikknavnet og den sammenleggbare «Rådata»-seksjonen (KvitteringRadata.kt).
 
@@ -70,7 +75,7 @@ internal fun RawData51(vm: AppViewModel, receiptId: String?, raw: OcrRaw51?) {
         ) {
             PLabel("RÅDATA", p.textTertiary, HomelabType.caption.fontSize)
             Text(shown?.let { "· ${it.engineLabel} · ${it.rows.size} rader" } ?: "", color = p.textTertiary, style = HomelabType.footnote, maxLines = 1, modifier = Modifier.weight(1f))
-            Text(if (open) "▴" else "▾", color = p.textTertiary, style = HomelabType.footnote)
+            Icon(if (open) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore, contentDescription = if (open) "Skjul rådata" else "Vis rådata", tint = p.textTertiary, modifier = Modifier.size(18.dp))
         }
         if (open) {
             when {

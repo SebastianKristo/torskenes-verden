@@ -43,6 +43,10 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 import no.kristo.finanshub.ui.designsystem.HomelabTheme
 import no.kristo.finanshub.ui.designsystem.HomelabType
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.Icon
+import androidx.compose.material3.minimumInteractiveComponentSize
 
 /*
  * Prompt 27 (ANDROID-B): Finans-søkeforslag (Google-stil), Innstillinger → AI og tolkning → PERSONVERN OG LOGOER med AI-logg,
@@ -97,14 +101,14 @@ internal fun FinSuggest27(vm: AppViewModel) {
                     Text(sugSub27(g), color = p.textTertiary, style = HomelabType.footnote, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
                 Box(
-                    Modifier.size(44.dp).clip(CircleShape).clickable(role = Role.Button, onClickLabel = "Fyll inn i søket") {
+                    Modifier.size(48.dp).clip(CircleShape).clickable(role = Role.Button, onClickLabel = "Fyll inn i søket") {
                         Haptics.select()
                         vm.finSearchQ = g.name
                         vm.b27.sugHidden = false
                         vm.finSug27(g.name)
                     },
                     contentAlignment = Alignment.Center,
-                ) { Text("↖", color = p.textTertiary, style = HomelabType.body) }
+                ) { Icon(Icons.Filled.NorthWest, contentDescription = null, tint = p.textTertiary, modifier = Modifier.size(20.dp)) }
             }
         }
     }

@@ -97,6 +97,8 @@ import no.kristo.finanshub.shareHome30
 import no.kristo.finanshub.ui.designsystem.HomelabTheme
 import no.kristo.finanshub.ui.designsystem.HomelabType
 import no.kristo.finanshub.ui.designsystem.DsPalette
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.minimumInteractiveComponentSize
 
 /*
  * Prompt 24: Boliger nøyaktig etter Boliger.dc.html (variant mobile, tema papir, hide-title) og claude-code-boliger-lik.md.
@@ -267,7 +269,7 @@ internal fun PaperBoliger24(vm: AppViewModel, navBottom: Dp, takePhoto: () -> Un
                     listOf("ov" to "Oversikt", "ex" to (if (rv.isNotEmpty()) "Utgifter · ${d?.entries?.size ?: 0}" else "Utgifter")).forEach { (k, n) ->
                         val on = s.tab == k
                         Box(
-                            Modifier.weight(1f).height(38.dp).clip(CircleShape).background(if (on) p.textPrimary else Color.Transparent).clickable(role = Role.Tab) { Haptics.select(); s.tab = k },
+                            Modifier.weight(1f).minimumInteractiveComponentSize().height(38.dp).clip(CircleShape).background(if (on) p.textPrimary else Color.Transparent).clickable(role = Role.Tab) { Haptics.select(); s.tab = k },
                             contentAlignment = Alignment.Center,
                         ) { Text(n, color = if (on) p.surface else p.textPrimary, fontWeight = FontWeight.Bold, style = HomelabType.subheadline, maxLines = 1, softWrap = false) }
                     }
@@ -363,7 +365,7 @@ private fun Actions24(vm: AppViewModel, id: Int, takePhoto: () -> Unit, pickFile
                 Box(Modifier.size(38.dp).clip(CircleShape).background(if (i == 0) p.accent else p.surface), contentAlignment = Alignment.Center) {
                     val v = if (d.isNotEmpty()) svg24(d) else null
                     if (v != null) Icon(v, null, tint = if (i == 0) p.onAccent else p.textPrimary, modifier = Modifier.size(19.dp))
-                    else Text("+", color = p.textPrimary, style = HomelabType.headline, fontWeight = FontWeight.Normal)
+                    else Icon(Icons.Filled.Add, contentDescription = null, tint = p.textPrimary, modifier = Modifier.size(20.dp))
                 }
                 Text(n, color = p.textPrimary, fontWeight = FontWeight.Bold, style = HomelabType.footnote, maxLines = 1, softWrap = false)
             }
@@ -398,7 +400,7 @@ private fun Review24(vm: AppViewModel, d: HomeDetail24, rv: List<HomeEntry24>) {
                         Text(if (ai) "Glimt leser lokalt …" else "AI foreslår ${e.category}" + (e.paidBy?.let { " · $it" } ?: ""), color = if (ai) p.accent else p.textTertiary, style = HomelabType.footnote, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                     Text(if (ai) "…" else kr24(e.amount), color = p.textPrimary, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, style = HomelabType.callout, maxLines = 1)
-                    Text("›", color = p.textTertiary, style = HomelabType.body)
+                    Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = p.textTertiary, modifier = Modifier.size(20.dp))
                 }
                 if (!ai) {
                     val opts = (listOf(e.category) + (d.cats.ifEmpty { CATS24.map { it.first } }).filter { it != e.category && it != "Annet" }).take(4)
@@ -544,7 +546,7 @@ private fun Shared24(vm: AppViewModel, d: HomeDetail24) {
             Text("Delt med ${d.members.size} ${if (d.members.size == 1) "person" else "personer"}", color = p.textPrimary, fontWeight = FontWeight.Bold, style = HomelabType.callout, maxLines = 1)
             Text("Tilgang · hvem som kan se og laste opp", color = p.textTertiary, style = HomelabType.footnote, maxLines = 1)
         }
-        Text("›", color = p.textTertiary, style = HomelabType.body)
+        Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = p.textTertiary, modifier = Modifier.size(20.dp))
     }
 }
 
@@ -619,9 +621,9 @@ private fun Access24(vm: AppViewModel, d: HomeDetail24, homeCount: Int) {
                         contentAlignment = Alignment.Center,
                     ) { Text("${roleName24(m.role)} ▾", color = p.textPrimary, fontWeight = FontWeight.Bold, style = HomelabType.footnote, maxLines = 1, softWrap = false) }
                     if (!m.you && d.isOwner) Box(
-                        Modifier.size(32.dp).clip(CircleShape).clickable(role = Role.Button, onClickLabel = "Fjern ${m.name}") { vm.b24RemoveMember(id, m) },
+                        Modifier.size(48.dp).clip(CircleShape).clickable(role = Role.Button, onClickLabel = "Fjern ${m.name}") { vm.b24RemoveMember(id, m) },
                         contentAlignment = Alignment.Center,
-                    ) { Text("−", color = p.accent, style = HomelabType.headline, fontWeight = FontWeight.Normal) }
+                    ) { Icon(Icons.Filled.Remove, contentDescription = null, tint = p.accent, modifier = Modifier.size(20.dp)) }
                 }
             }
         }
@@ -795,9 +797,9 @@ private fun EditHomeSheet24(vm: AppViewModel, h: Home24, index: Int, count: Int)
             Box(Modifier.fillMaxWidth().height(44.dp)) {
                 PSerif("Rediger bolig", HomelabType.title3.fontSize, modifier = Modifier.align(Alignment.Center), maxLines = 1)
                 Box(
-                    Modifier.align(Alignment.CenterEnd).size(38.dp).clip(CircleShape).background(p.surfaceRaised).border(1.dp, p.line, CircleShape).clickable(role = Role.Button, onClickLabel = "Lukk") { s.edit = null },
+                    Modifier.align(Alignment.CenterEnd).minimumInteractiveComponentSize().size(38.dp).clip(CircleShape).background(p.surfaceRaised).border(1.dp, p.line, CircleShape).clickable(role = Role.Button, onClickLabel = "Lukk") { s.edit = null },
                     contentAlignment = Alignment.Center,
-                ) { Text("×", modifier = Modifier.semantics { contentDescription = "Lukk" }, color = p.textPrimary, style = HomelabType.body) }
+                ) { Icon(Icons.Filled.Close, contentDescription = "Lukk", tint = p.textPrimary, modifier = Modifier.size(18.dp)) }
             }
             // Forhåndsvisning med bakgrunn og navn.
             Box(Modifier.fillMaxWidth().height(120.dp).clip(RoundedCornerShape(20.dp)).background(Brush.linearGradient(listOf(c, lerp(c, Color.Black, .3f)), Offset.Zero, Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY)))) {
@@ -850,7 +852,7 @@ private fun EditHomeSheet24(vm: AppViewModel, h: Home24, index: Int, count: Int)
                                 contentAlignment = Alignment.Center,
                             ) {
                                 when {
-                                    o == null -> if (uploading) CircularProgressIndicator(color = p.textTertiary, strokeWidth = 2.dp, modifier = Modifier.size(18.dp)) else Text("+", color = p.textTertiary, style = HomelabType.headline, fontWeight = FontWeight.Normal)
+                                    o == null -> if (uploading) CircularProgressIndicator(color = p.textTertiary, strokeWidth = 2.dp, modifier = Modifier.size(18.dp)) else Icon(Icons.Filled.Add, contentDescription = "Last opp eget bilde", tint = p.textTertiary, modifier = Modifier.size(22.dp))
                                     o.first == "preset:stromstad" -> Image(painterResource(no.kristo.finanshub.R.drawable.bolig_stromstad), null, contentScale = ContentScale.Crop, modifier = Modifier.matchParentSize())
                                     o.first == own -> ownBmp?.let { Image(it.asImageBitmap(), null, contentScale = ContentScale.Crop, modifier = Modifier.matchParentSize()) }
                                 }
@@ -867,7 +869,7 @@ private fun EditHomeSheet24(vm: AppViewModel, h: Home24, index: Int, count: Int)
                     if (!s.busy) vm.b24SaveHome(h.id, name.ifBlank { h.name }, addr, bud, col, bg)
                 }
                 Box(
-                    Modifier.fillMaxWidth().height(44.dp).clip(RoundedCornerShape(22.dp)).clickable(enabled = count > 1, role = Role.Button) {
+                    Modifier.fillMaxWidth().minimumInteractiveComponentSize().height(44.dp).clip(RoundedCornerShape(22.dp)).clickable(enabled = count > 1, role = Role.Button) {
                         if (!arm) arm = true else { arm = false; vm.b24DeleteHome(h.id) }
                     },
                     contentAlignment = Alignment.Center,
@@ -982,7 +984,7 @@ private fun NewEntrySheet24(vm: AppViewModel, d: HomeDetail24) {
 private fun BackToOverview47(vm: AppViewModel) {
     val p = HomelabTheme.colors
     Box(
-        Modifier.height(40.dp).clip(RoundedCornerShape(20.dp)).background(p.surfaceRaised).clickable(role = Role.Button) { Haptics.select(); vm.b24.tab = "ov" }.padding(horizontal = 16.dp),
+        Modifier.minimumInteractiveComponentSize().height(40.dp).clip(RoundedCornerShape(20.dp)).background(p.surfaceRaised).clickable(role = Role.Button) { Haptics.select(); vm.b24.tab = "ov" }.padding(horizontal = 16.dp),
         contentAlignment = Alignment.Center,
     ) { Text("‹ Oversikt", color = p.textPrimary, fontWeight = FontWeight.Bold, style = HomelabType.subheadline, maxLines = 1, softWrap = false) }
 }
@@ -1073,7 +1075,7 @@ internal fun ShareHome30(vm: AppViewModel, d: HomeDetail24, invite: (String, Str
             else -> "Send invitasjon"
         }
         Box(
-            Modifier.fillMaxWidth().height(46.dp).clip(RoundedCornerShape(23.dp)).background(p.textPrimary).clickable(role = Role.Button) {
+            Modifier.fillMaxWidth().minimumInteractiveComponentSize().height(46.dp).clip(RoundedCornerShape(23.dp)).background(p.textPrimary).clickable(role = Role.Button) {
                 if (sel.isNotEmpty()) vm.shareHome30(id) else if (email.isNotBlank()) { invite(email, s.shareRole); email = "" }
             },
             contentAlignment = Alignment.Center,

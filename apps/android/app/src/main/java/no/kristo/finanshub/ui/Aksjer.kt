@@ -425,10 +425,10 @@ private fun TopCard(vm: AppViewModel, ps: StockPos, i: Int, trade: (StockPos, Bo
                 }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Box(Modifier.weight(1f).height(36.dp).clip(RoundedCornerShape(18.dp)).border(1.5.dp, p.textPrimary, RoundedCornerShape(18.dp)).clickable { trade(ps, true) }, contentAlignment = Alignment.Center) {
+                Box(Modifier.weight(1f).minimumInteractiveComponentSize().height(36.dp).clip(RoundedCornerShape(18.dp)).border(1.5.dp, p.textPrimary, RoundedCornerShape(18.dp)).clickable { trade(ps, true) }, contentAlignment = Alignment.Center) {
                     Text("Kjøp", color = p.textPrimary, fontWeight = FontWeight.SemiBold, style = HomelabType.subheadline, fontFamily = PaperFonts.sans)
                 }
-                Box(Modifier.weight(1f).height(36.dp).clip(RoundedCornerShape(18.dp)).background(p.textPrimary).clickable { trade(ps, false) }, contentAlignment = Alignment.Center) {
+                Box(Modifier.weight(1f).minimumInteractiveComponentSize().height(36.dp).clip(RoundedCornerShape(18.dp)).background(p.textPrimary).clickable { trade(ps, false) }, contentAlignment = Alignment.Center) {
                     Text("Selg", color = p.surface, fontWeight = FontWeight.SemiBold, style = HomelabType.subheadline, fontFamily = PaperFonts.sans)
                 }
             }
@@ -523,7 +523,7 @@ private fun RangePicker(range: String, onPick: (String) -> Unit) {
     Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(HomelabTheme.colors.surfaceSunken).padding(3.dp)) {
         RANGES.forEach { (k, _, _) ->
             val on = range == k
-            Box(Modifier.weight(1f).height(32.dp).clip(RoundedCornerShape(11.dp)).background(if (on) HomelabTheme.colors.line else Color.Transparent).clickable { Haptics.select(); onPick(k) }, contentAlignment = Alignment.Center) {
+            Box(Modifier.weight(1f).minimumInteractiveComponentSize().height(32.dp).clip(RoundedCornerShape(11.dp)).background(if (on) HomelabTheme.colors.line else Color.Transparent).clickable { Haptics.select(); onPick(k) }, contentAlignment = Alignment.Center) {
                 Text(k, color = if (on) HomelabTheme.colors.textPrimary else HomelabTheme.colors.textSecondary, fontWeight = FontWeight.SemiBold, style = HomelabType.subheadline)
             }
         }

@@ -58,6 +58,9 @@ import org.json.JSONObject
 import no.kristo.finanshub.ui.designsystem.HomelabTheme
 import no.kristo.finanshub.ui.designsystem.HomelabType
 import no.kristo.finanshub.ui.designsystem.DsPalette
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.minimumInteractiveComponentSize
+import androidx.compose.ui.semantics.Role
 
 /*
  * Prompt 23: Kvitteringer i Papir, nøyaktig etter «Mobil Papir App» → kvitt:
@@ -362,19 +365,19 @@ private fun RcEditor(vm: AppViewModel, r: Receipt, cats: List<no.kristo.finanshu
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             val busy = st.busy == r.id
             Box(
-                Modifier.weight(1f).height(42.dp).clip(RoundedCornerShape(21.dp)).background(p.textPrimary).clickable(enabled = !busy) { vm.approve23(r) },
+                Modifier.weight(1f).minimumInteractiveComponentSize().height(42.dp).clip(RoundedCornerShape(21.dp)).background(p.textPrimary).clickable(enabled = !busy) { vm.approve23(r) },
                 contentAlignment = Alignment.Center,
             ) { Text(if (busy) "Bokfører …" else "✓ Godkjenn og bokfør", color = p.surface, fontFamily = PaperFonts.sans, fontWeight = FontWeight.Bold, style = HomelabType.callout, maxLines = 1) }
             // Prompt 39: «✦ På nytt» med fremdrift (reanalyze async), knappen viser «✦ 42 %» mens den jobber.
             val re = vm.p39.re[r.id]
             Box(
-                Modifier.height(42.dp).clip(RoundedCornerShape(21.dp)).border(1.dp, p.line, RoundedCornerShape(21.dp)).clickable(enabled = re?.running != true) { vm.reanalyze39(r.id) }.padding(horizontal = 14.dp),
+                Modifier.minimumInteractiveComponentSize().height(42.dp).clip(RoundedCornerShape(21.dp)).border(1.dp, p.line, RoundedCornerShape(21.dp)).clickable(enabled = re?.running != true) { vm.reanalyze39(r.id) }.padding(horizontal = 14.dp),
                 contentAlignment = Alignment.Center,
             ) { Text(if (re?.running == true) "✦ ${re.pct} %" else "✦ På nytt", color = if (re?.running == true) p.textTertiary else p.accent, fontFamily = PaperFonts.sans, fontWeight = FontWeight.Bold, style = HomelabType.subheadline, maxLines = 1) }
             Box(
-                Modifier.size(42.dp).clip(CircleShape).border(1.dp, p.line, CircleShape).clickable(onClickLabel = "Slett") { vm.delete23(r.id) },
+                Modifier.size(48.dp).clip(CircleShape).border(1.dp, p.line, CircleShape).clickable(role = Role.Button, onClickLabel = "Slett kvitteringen") { vm.delete23(r.id) },
                 contentAlignment = Alignment.Center,
-            ) { Text("🗑", color = p.accent, style = HomelabType.body) }
+            ) { Icon(Icons.Filled.Delete, contentDescription = "Slett", tint = p.accent, modifier = Modifier.size(20.dp)) }
         }
         vm.p39.re[r.id]?.let { ReProgress39(vm, r.id, it) } // prompt 39: fremdriftspanelet
         if (r.file != null || r.ocrRaw != null) RawData51(vm, r.id, r.ocrRaw) // prompt 51: «Rådata»

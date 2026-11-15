@@ -41,6 +41,12 @@ import no.kristo.finanshub.ui.designsystem.HomelabTheme
 import no.kristo.finanshub.ui.designsystem.HomelabType
 import no.kristo.finanshub.ui.designsystem.DsPalette
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.Icon
+import androidx.compose.material3.minimumInteractiveComponentSize
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.ui.semantics.Role
 
 /*
  * Prompt 23: Finn-annonsen i appen (Mobil Papir App.dc.html → Finans → Finn → trykk på et kort). Fullskjerm over alt:
@@ -103,10 +109,13 @@ internal fun FinnAdScreen23(vm: AppViewModel) {
                         }
                     }
                     Row(Modifier.fillMaxWidth().statusBarsPadding().padding(start = 14.dp, end = 14.dp, top = 8.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Box(Modifier.height(38.dp).clip(CircleShape).background(SCRIM).clickable(onClickLabel = "Tilbake til Finn") { vm.closeFinnAd23() }.padding(start = 10.dp, end = 14.dp),
-                            contentAlignment = Alignment.Center) { Text("‹ Finn", color = Color.White, fontWeight = FontWeight.SemiBold, style = HomelabType.subheadline) }
-                        Box(Modifier.size(38.dp).clip(CircleShape).background(SCRIM).clickable(onClickLabel = "Rediger") { vm.closeFinnAd23(); vm.finnEdit = id },
-                            contentAlignment = Alignment.Center) { Text("✎", color = Color.White, style = HomelabType.callout) }
+                        Row(Modifier.minimumInteractiveComponentSize().height(38.dp).clip(CircleShape).background(SCRIM).clickable(role = Role.Button, onClickLabel = "Tilbake til Finn") { vm.closeFinnAd23() }.padding(start = 6.dp, end = 14.dp),
+                            verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+                            Text("Finn", color = Color.White, fontWeight = FontWeight.SemiBold, style = HomelabType.subheadline, modifier = Modifier.padding(start = 4.dp))
+                        }
+                        Box(Modifier.minimumInteractiveComponentSize().size(38.dp).clip(CircleShape).background(SCRIM).clickable(role = Role.Button, onClickLabel = "Rediger") { vm.closeFinnAd23(); vm.finnEdit = id },
+                            contentAlignment = Alignment.Center) { Icon(Icons.Filled.Edit, contentDescription = "Rediger", tint = Color.White, modifier = Modifier.size(18.dp)) }
                     }
                     Row(Modifier.align(Alignment.BottomCenter).padding(bottom = 12.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         slides.indices.forEach { i -> Box(Modifier.size(7.dp).clip(CircleShape).background(if (i == pager.currentPage) Color.White else Color.White.copy(alpha = .45f))) }
@@ -228,7 +237,7 @@ internal fun FinnAdScreen23(vm: AppViewModel) {
                                 modifier = Modifier.weight(1f).height(44.dp).clip(RoundedCornerShape(22.dp)).background(p.surfaceRaised).border(1.dp, p.line, RoundedCornerShape(22.dp)).padding(horizontal = 14.dp),
                                 decorationBox = { inner -> Box(Modifier.fillMaxHeight(), contentAlignment = Alignment.CenterStart) { if (msg.isEmpty()) Text("Skriv en melding …", color = p.textTertiary, style = HomelabType.callout); inner() } },
                             )
-                            Box(Modifier.size(44.dp).clip(CircleShape).background(p.textPrimary).clickable(onClickLabel = "Send i Finn") { send() }, contentAlignment = Alignment.Center) {
+                            Box(Modifier.minimumInteractiveComponentSize().size(44.dp).clip(CircleShape).background(p.textPrimary).clickable(onClickLabel = "Send i Finn") { send() }, contentAlignment = Alignment.Center) {
                                 Text("↑", color = p.surface, style = HomelabType.body)
                             }
                         }

@@ -88,6 +88,8 @@ import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.compositeOver
 import no.kristo.finanshub.ui.designsystem.DsPalette
 import no.kristo.finanshub.ui.designsystem.HomelabTheme
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
 
 /* ---------------- Subscription OS ---------------- */
 
@@ -271,16 +273,16 @@ private fun HomeCards23(vm: AppViewModel, x: SubsX, t: SubTok) {
         if (s.subArrange) {
             Row(Modifier.fillMaxWidth().shadow(14.dp, CircleShape, ambientColor = Color.Black.copy(alpha = .35f), spotColor = Color.Black.copy(alpha = .35f)).clip(CircleShape).background(t.card)
                 .padding(start = 8.dp, top = 8.dp, end = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Row(Modifier.height(34.dp).clip(RoundedCornerShape(17.dp)).background(t.chip).clickable { Haptics.select(); vm.p37.subAdd = true }.padding(horizontal = 12.dp),
+                Row(Modifier.minimumInteractiveComponentSize().height(34.dp).clip(RoundedCornerShape(17.dp)).background(t.chip).clickable(onClickLabel = "Legg til kort") { Haptics.select(); vm.p37.subAdd = true }.padding(horizontal = 12.dp),
                     verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text("＋", modifier = Modifier.semantics { contentDescription = "Legg til" }, color = t.fg, fontFamily = sans, fontWeight = FontWeight.Bold, style = HomelabType.callout)
+                    Icon(Icons.Filled.Add, contentDescription = "Legg til", tint = t.fg, modifier = Modifier.size(18.dp))
                     if (hid.isNotEmpty()) Text("${hid.size}", color = t.neg, fontFamily = sans, fontWeight = FontWeight.Bold, style = HomelabType.subheadline)
                 }
                 Text("Dra for å flytte · − for å skjule", color = t.fg, fontFamily = sans, fontWeight = FontWeight.SemiBold, style = HomelabType.footnote, modifier = Modifier.weight(1f), maxLines = 2)
-                Box(Modifier.height(34.dp).clip(RoundedCornerShape(17.dp)).background(t.chip).clickable { Haptics.select(); vm.saveSubOrder23(SUB_HOME_DEFAULT); vm.setSubHid37(emptyList()) }.padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
+                Box(Modifier.minimumInteractiveComponentSize().height(34.dp).clip(RoundedCornerShape(17.dp)).background(t.chip).clickable { Haptics.select(); vm.saveSubOrder23(SUB_HOME_DEFAULT); vm.setSubHid37(emptyList()) }.padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
                     Text("Tilbakestill", color = t.fg, fontFamily = sans, fontWeight = FontWeight.SemiBold, style = HomelabType.footnote)
                 }
-                Box(Modifier.height(34.dp).clip(RoundedCornerShape(17.dp)).background(t.fg).clickable { s.subArrange = false; s.subDrag = null; vm.p37.subAdd = false; Haptics.success() }.padding(horizontal = 14.dp), contentAlignment = Alignment.Center) {
+                Box(Modifier.minimumInteractiveComponentSize().height(34.dp).clip(RoundedCornerShape(17.dp)).background(t.fg).clickable { s.subArrange = false; s.subDrag = null; vm.p37.subAdd = false; Haptics.success() }.padding(horizontal = 14.dp), contentAlignment = Alignment.Center) {
                     Text("Ferdig", color = t.card, fontFamily = sans, fontWeight = FontWeight.Bold, style = HomelabType.subheadline)
                 }
             }
@@ -398,7 +400,7 @@ private fun SubAddCards37(vm: AppViewModel, t: SubTok) {
                     Row(Modifier.fillMaxWidth().heightIn(min = 54.dp).clickable { Haptics.select(); vm.setSubHid37(hid - k); if (hid.size <= 1) close() }.padding(horizontal = 16.dp),
                         verticalAlignment = Alignment.CenterVertically) {
                         Text(SUB_NAMES37[k] ?: k, color = t.fg, fontFamily = sans, fontWeight = FontWeight.SemiBold, style = HomelabType.callout, modifier = Modifier.weight(1f))
-                        Box(Modifier.size(28.dp).clip(CircleShape).background(t.ok), contentAlignment = Alignment.Center) { Text("＋", color = HomelabTheme.colors.onSuccess, fontWeight = FontWeight.Bold, style = HomelabType.callout) }
+                        Box(Modifier.size(28.dp).clip(CircleShape).background(t.ok), contentAlignment = Alignment.Center) { Icon(Icons.Filled.Add, contentDescription = null, tint = HomelabTheme.colors.onSuccess, modifier = Modifier.size(18.dp)) }
                     }
                 }
             }
@@ -446,10 +448,10 @@ private fun TrialsOS37(vm: AppViewModel, t: SubTok) {
                     Box(Modifier.fillMaxWidth((1f - left / maxOf(30f, left.toFloat())).coerceIn(.04f, 1f)).fillMaxHeight().clip(RoundedCornerShape(3.dp)).background(col))
                 }
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Box(Modifier.height(32.dp).clip(CircleShape).background(t.fg).clickable {
+                    Box(Modifier.minimumInteractiveComponentSize().height(32.dp).clip(CircleShape).background(t.fg).clickable {
                         Haptics.select(); tr.cancelUrl?.let { openLink(ctx, it) }; vm.patchTrial31(tr.id, "cancelled")
                     }.padding(horizontal = 12.dp), contentAlignment = Alignment.Center) { Text("Avslutt nå ↗", color = t.card, fontFamily = sans, fontWeight = FontWeight.Bold, style = HomelabType.footnote) }
-                    Box(Modifier.height(32.dp).clip(CircleShape).border(1.dp, t.bd, CircleShape).clickable {
+                    Box(Modifier.minimumInteractiveComponentSize().height(32.dp).clip(CircleShape).border(1.dp, t.bd, CircleShape).clickable {
                         Haptics.select()
                         vm.patchTrial31(tr.id, "kept")
                         val price = Regex("(\\d+[\\d ]*[,.]?\\d*)").find(tr.priceAfter)?.value?.replace(" ", "")?.replace(',', '.')?.toDoubleOrNull() ?: 0.0
@@ -490,7 +492,7 @@ private fun AiCard23(vm: AppViewModel, x: SubsX) {
         Text("Spar ${kr23(save)}\ni måneden", color = g.textPrimary, fontFamily = sans, fontWeight = FontWeight.SemiBold, style = HomelabType.title2, lineHeight = 36.7.sp, letterSpacing = (-0.68).sp)
         Text(txt, color = g.textPrimary.copy(alpha = .8f), fontFamily = sans, style = HomelabType.callout, lineHeight = 20.3.sp)
         Spacer(Modifier.weight(1f, fill = false))
-        Box(Modifier.height(44.dp).clip(RoundedCornerShape(22.dp)).background(g.textPrimary).clickable(onClickLabel = "Gå gjennom abonnementene") { Haptics.select(); vm.subTab = "hist" }.padding(horizontal = 20.dp), contentAlignment = Alignment.Center) {
+        Box(Modifier.minimumInteractiveComponentSize().height(44.dp).clip(RoundedCornerShape(22.dp)).background(g.textPrimary).clickable(onClickLabel = "Gå gjennom abonnementene") { Haptics.select(); vm.subTab = "hist" }.padding(horizontal = 20.dp), contentAlignment = Alignment.Center) {
             Text("Gå gjennom", color = g.surface, fontFamily = sans, fontWeight = FontWeight.SemiBold, style = HomelabType.callout)
         }
     }
@@ -750,10 +752,10 @@ private fun SheetSelect(label: String?, value: String, options: List<String>, t:
     Column(modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
         if (label != null) Text(label, color = t.mut, fontFamily = sans, style = HomelabType.footnote)
         Box {
-            Row(Modifier.fillMaxWidth().height(44.dp).clip(RoundedCornerShape(12.dp)).background(t.card).border(1.dp, t.bd, RoundedCornerShape(12.dp)).clickable(enabled = enabled) { open = true }.padding(horizontal = 12.dp),
+            Row(Modifier.fillMaxWidth().minimumInteractiveComponentSize().height(44.dp).clip(RoundedCornerShape(12.dp)).background(t.card).border(1.dp, t.bd, RoundedCornerShape(12.dp)).clickable(enabled = enabled) { open = true }.padding(horizontal = 12.dp),
                 verticalAlignment = Alignment.CenterVertically) {
                 Text(value, color = if (enabled) t.fg else t.mut, fontFamily = sans, style = HomelabType.callout, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                if (enabled) Text("▾", color = t.mut, style = HomelabType.subheadline)
+                if (enabled) Icon(Icons.Filled.ArrowDropDown, contentDescription = null, tint = t.mut)
             }
             DropdownMenu(open, { open = false }, Modifier.background(t.sheet).heightIn(max = 320.dp)) {
                 options.forEachIndexed { i, o -> DropdownMenuItem(text = { Text(o, color = t.fg, fontFamily = sans) }, onClick = { open = false; onPick(i) }) }
@@ -910,10 +912,10 @@ private fun SubShare37(vm: AppViewModel, s: SubItem, t: SubTok) {
                 color = t.mut, fontFamily = sans, style = HomelabType.footnote)
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            if (canEdit && changed) Box(Modifier.height(40.dp).clip(RoundedCornerShape(20.dp)).background(t.on).clickable(enabled = !vm.p37.subShareBusy) {
+            if (canEdit && changed) Box(Modifier.minimumInteractiveComponentSize().height(40.dp).clip(RoundedCornerShape(20.dp)).background(t.on).clickable(enabled = !vm.p37.subShareBusy) {
                 Haptics.tap(); vm.shareSub37(s.id, all, split, if (split == "payer") me else s.payerId)
             }.padding(horizontal = 16.dp), contentAlignment = Alignment.Center) { Text(if (vm.p37.subShareBusy) "Lagrer …" else "Lagre deling", color = t.onFg, fontFamily = sans, fontWeight = FontWeight.SemiBold, style = HomelabType.callout) }
-            if (s.shared && !canEdit) Box(Modifier.height(40.dp).clip(RoundedCornerShape(20.dp)).border(1.dp, t.bd, RoundedCornerShape(20.dp)).clickable { Haptics.tap(); vm.leaveSub37(s.id) }
+            if (s.shared && !canEdit) Box(Modifier.minimumInteractiveComponentSize().height(40.dp).clip(RoundedCornerShape(20.dp)).border(1.dp, t.bd, RoundedCornerShape(20.dp)).clickable { Haptics.tap(); vm.leaveSub37(s.id) }
                 .padding(horizontal = 16.dp), contentAlignment = Alignment.Center) { Text("Forlat abonnementet", color = t.neg, fontFamily = sans, fontWeight = FontWeight.SemiBold, style = HomelabType.callout) }
         }
     }
@@ -974,10 +976,10 @@ internal fun SubShotCard27(vm: AppViewModel, card: Color, fg: Color, mut: Color,
         if (r != null && !s.shotBusy) {
             if (r.existingId != null) Text("${r.service} finnes allerede. Du kan oppdatere plan og pris.", color = check, style = HomelabType.footnote)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Box(Modifier.weight(1f).height(44.dp).clip(RoundedCornerShape(22.dp)).background(HomelabTheme.colors.accent).clickable { Haptics.tap(); vm.addShot27(r) }, contentAlignment = Alignment.Center) {
+                Box(Modifier.weight(1f).minimumInteractiveComponentSize().height(44.dp).clip(RoundedCornerShape(22.dp)).background(HomelabTheme.colors.accent).clickable { Haptics.tap(); vm.addShot27(r) }, contentAlignment = Alignment.Center) {
                     Text(if (r.existingId != null) "Oppdater ${r.service}" else "+ Legg til ${r.service}", color = HomelabTheme.colors.onAccent, fontWeight = FontWeight.SemiBold, style = HomelabType.callout, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
-                Box(Modifier.weight(1f).height(44.dp).clip(RoundedCornerShape(22.dp)).border(1.dp, line, RoundedCornerShape(22.dp)).clickable { vm.editShot27(r) }, contentAlignment = Alignment.Center) {
+                Box(Modifier.weight(1f).minimumInteractiveComponentSize().height(44.dp).clip(RoundedCornerShape(22.dp)).border(1.dp, line, RoundedCornerShape(22.dp)).clickable { vm.editShot27(r) }, contentAlignment = Alignment.Center) {
                     Text("Rediger først", color = fg, fontWeight = FontWeight.SemiBold, style = HomelabType.callout)
                 }
             }

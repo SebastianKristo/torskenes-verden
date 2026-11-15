@@ -57,6 +57,7 @@ import no.kristo.finanshub.rereadReceipt30
 import no.kristo.finanshub.ui.designsystem.HomelabTheme
 import no.kristo.finanshub.ui.designsystem.HomelabType
 import no.kristo.finanshub.ui.designsystem.DsPalette
+import androidx.compose.material3.minimumInteractiveComponentSize
 
 /*
  * Prompt 30 (ANDROID30) – claude-code-kvittering-highlight.md: når en transaksjon åpnes fra Søk (eller Liste med søketekst)
@@ -95,7 +96,7 @@ internal fun HlBanner30(term: String, lineNo: Int, price: String, more: Int, onG
             color = ink, fontFamily = PaperFonts.sans, fontWeight = FontWeight.SemiBold, style = HomelabType.subheadline,
             modifier = Modifier.weight(1f).clickable(onClick = onGo),
         )
-        Box(Modifier.height(30.dp).clip(RoundedCornerShape(15.dp)).background(ink.copy(alpha = .1f)).clickable(onClick = onClear).padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
+        Box(Modifier.minimumInteractiveComponentSize().height(30.dp).clip(RoundedCornerShape(15.dp)).background(ink.copy(alpha = .1f)).clickable(onClick = onClear).padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
             Text("Fjern", color = ink, fontFamily = PaperFonts.sans, fontWeight = FontWeight.Bold, style = HomelabType.footnote)
         }
     }
