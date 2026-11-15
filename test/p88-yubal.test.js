@@ -194,14 +194,14 @@ test('bildeproxy: bare YouTube sine bildeverter', async () => {
   y._setBildeYubal(null);
 });
 
-test('integrasjonen: Media-gruppen, bare adresse, guide om format; ruten er montert før media50/43', () => {
+test('integrasjonen: Media-gruppen, bare adresse, guide om format; ruten er montert før images.js og arr.js', () => {
   const x = INTEGRATIONS.find((i) => i.id === 'yubal');
   assert.equal(x.group, 'Media');
   assert.deepEqual(x.fields.map((f) => f.key), ['yubal_url']);
   const src = readFileSync(new URL('../server/integrations-api.js', import.meta.url), 'utf8');
   assert.match(src, /YUBAL_AUDIO_FORMAT/);
   assert.match(src, /docker compose up -d --force-recreate/);
-  const idx = readFileSync(new URL('../server/index.js', import.meta.url), 'utf8');
+  const idx = readFileSync(new URL('../server/media/index.js', import.meta.url), 'utf8'); // mountMedia
   assert.ok(idx.indexOf("app.route('/api/media/yubal', yubalApi)") < idx.indexOf('mountMedia50(app)'));
   const web = readFileSync(new URL('../public/js/media-musikk.js', import.meta.url), 'utf8');
   assert.doesNotMatch(web, /10\.69\.|:8010/);

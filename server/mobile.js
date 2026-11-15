@@ -17,7 +17,7 @@ import { sessionUser, userInfo, serverName, isAdmin, installKind } from './auth.
 import { packagesFor } from './tracking.js';
 import { newsFor } from './rss.js';
 import finansApi, { bearerOk } from './finans/routes.js';
-import { signedImageUser46 } from './api-auth46.js'; // prompt 46 (SERVER46)
+import { signedImageUser46 } from './media/middleware.js'; // signerte bilde-URL-er i Media
 import { noteHere46, hereWeather46 } from './here46.js'; // prompt 46 (SERVER46)
 import { matApi } from './mat.js';
 import { domainOverview } from './domains.js';
