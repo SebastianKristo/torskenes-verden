@@ -28,7 +28,8 @@ html[data-ui=desktop][data-theme=lys]{
 }
 html[data-ui=desktop][data-theme=mork]{
   --bg:#121210; --side:#0d0d0c; --card:#1a1a17; --inner:#24231f; --line:#2a2925; --line2:#34322d; --sep:#2a2925; --line3:#3e3c35;
-  --text:#ece8df; --text2:#a8a294; --muted:#8a8478; --dim:#a8a294;
+  /* B-F6: --muted fra designtokens (Papir mørk, tokens.css). #8a8478 ga 3,75:1 på innfelte flater (segmentknapper). */
+  --text:#ece8df; --text2:#a8a294; --muted:var(--ds-text-secondary); --dim:#a8a294;
   --acc:#6fbf8e; --acc-l:#e07a5f; --acc-ink:#121210; --acc-h:#86cfa2; --pos:#6fbf8e; --warn:#e07a5f; --neg:#e07a5f; --note:#e8957d; --ok:#6fbf8e;
   --blue:#8fb3dc; --blue-l:#8fb3dc; --blue-t:#8fb3dc; --blue-soft:#16202b; --purple:#b3a3e0; --purple-soft:#1f1a2a;
   --pos-bg:#17271e; --pos-soft:#17271e; --pos-line:#24402f; --warn-soft:#2a1c15; --gold:#e8c27d;
