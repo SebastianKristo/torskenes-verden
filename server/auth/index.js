@@ -10,11 +10,13 @@
 //   3. mountAuthInvites – onboarding for nye familiemedlemmer (/api/onboard51/*, /join/:token), rett etter mountWebx51 der den lå før.
 //   4. mountAuthRefresh – POST /api/auth/refresh og POST /api/apps/kalender/log (etter observabiliteten, som før).
 //   5. mountAuth – passord, 2FA-steg og -oppsett, reauth, QR, førstegangsoppsett og utlogging.
+// Kontorutene (enheter, passord, brukere, 2FA fra web) registreres på den innloggede routeren med registerAccountRoutes(authed).
 import { mountSecurity } from './security.js';
 import { mountAppLogin } from './app-login.js';
 import { mountInvites } from './invites.js';
 import { auth44Api } from './refresh.js';
 import { mountLogin } from './login.js';
+export { registerAccountRoutes } from './account.js'; // kontorutene på den innloggede routeren (authed i index.js)
 
 export const mountAuthSecurity = (app) => mountSecurity(app);
 export const mountAppAuth = (app) => mountAppLogin(app);

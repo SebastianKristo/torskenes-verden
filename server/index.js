@@ -11,7 +11,7 @@ import { config } from './config.js';
 import { db, kv, OWNER, withKvMemo } from './db.js';
 import { ensureIndexes } from './db-indexes.js';
 import { compressJson } from './http/compress.js';
-import { sessionUser, rememberDevice, forgetDevice, currentDeviceId, currentSessionId, trustIp, isLan, requireAuth, requireAdmin, clientIp, userInfo, listUsersFor, createUser, deleteUser, updateUser, setPassword, checkPassword, isAdmin, needsSetup, serverName, setServerName, startTotpSetup, confirmTotpSetup, disableTotp, totpReadable, loginBlocked, loginFailed, loginSucceeded } from './auth/session.js';
+import { sessionUser, requireAuth, requireAdmin, userInfo, isAdmin, needsSetup, serverName } from './auth/session.js';
 import * as integrations from './integrations.js';
 import { cfg, publicConfig, updateConfig, runRequest, userCfgSet, runAsUser } from './settings.js';
 import finansApi from './finans/routes.js';
@@ -79,7 +79,7 @@ import { logs44Api, startLogs44 } from './logs44.js';
 import { impersonation44, admin44Api, layoutLockMw44, setMobileApi44 } from './admin44.js';
 import { kal44Api, kalEventsMw44, assistLocalMw44 } from './kal44.js';
 import { study44Api } from './study44.js';
-import { mountAuthSecurity, mountAppAuth, mountAuthInvites, mountAuthRefresh, mountAuth } from './auth/index.js'; // innlogging og sikkerhet
+import { mountAuthSecurity, mountAppAuth, mountAuthInvites, mountAuthRefresh, mountAuth, registerAccountRoutes } from './auth/index.js'; // innlogging og sikkerhet
 import { playback44Api, startPlayback44 } from './playback44.js';
 import { mountApi45 } from './api45.js'; // prompt 45 (SERVER45)
 import { nrkApi } from './nrkdl.js'; // NRK-nedlaster: /api/media/nrk/* (nrk-dl bak norsk VPN)
@@ -405,66 +405,10 @@ authed.put('/settings/:key', async (c) => {
 });
 authed.delete('/layouts', (c) => { kv.delPrefix(c.get('user'), 'layout_'); kv.delPrefix(c.get('user'), 'size_'); return c.json({ ok: true }); });
 
-/* --- Pålitelige enheter --- */
+/* --- Konto: pålitelige enheter, passord, brukere, servernavn og 2FA (server/auth/account.js) --- */
 
-authed.get('/devices', (c) => {
-  const cur = currentDeviceId(c), ip = trustIp(c);
-  const list = db.prepare('SELECT id, name, created, last_seen, last_ip FROM devices WHERE user=? ORDER BY last_seen DESC').all(c.get('user'));
-  return c.json({ lan: isLan(ip), trusted: list.some((d) => d.id === cur),
-    devices: list.map((d) => ({ id: d.id.slice(0, 16), name: d.name, created: d.created, lastSeen: d.last_seen, lastIp: d.last_ip, current: d.id === cur })),
-    apps: companionsOf(c.get('user')) }); // prompt 33: companion-tokens (Kalender), trekkes tilbake med DELETE /api/tokens/companion/:id
-});
-authed.put('/password', async (c) => {
-  const { current, next } = await c.req.json().catch(() => ({}));
-  const ip = clientIp(c), wait = loginBlocked(ip);
-  if (wait) return c.json({ error: `For mange forsøk. Prøv igjen om ${Math.ceil(wait / 60)} min.` }, 429);
-  if (!checkPassword(c.get('user'), current)) { loginFailed(ip); return c.json({ error: 'Nåværende passord er feil' }, 403); }
-  try { setPassword(c.get('user'), next, { keepSession: currentSessionId(c) }); } catch (e) { return c.json({ error: e.message }, e.status ?? 400); }
-  loginSucceeded(ip);
-  return c.json({ ok: true });
-});
+registerAccountRoutes(authed);
 
-/* --- Brukere, 2FA og innstillinger per bruker --- */
-
-const fail = (c, e) => c.json({ error: e.message }, e.status ?? 400);
-// Alle innloggede ser listen (brukes til deling av boliger og huskelister); bare admin kan endre den.
-// Vanlige brukere ser bare id, navn og profilbilde om de andre (prompt 21), ikke rolle, brukernavn eller 2FA.
-// Prompt 91: totpUnreadable = 2FA er på, men hemmeligheten kan ikke leses med dagens serverhemmelighet (bare et flagg, aldri nøkkelen).
-const tfaFlag91 = (u) => (u && totpReadable(u.id) === false ? { ...u, totpUnreadable: true } : u);
-authed.get('/users', (c) => c.json({ me: tfaFlag91(userInfo(c.get('user'))), users: listUsersFor(c.get('user')).map(tfaFlag91) }));
-authed.post('/users', requireAdmin, async (c) => {
-  try { return c.json(createUser(await c.req.json().catch(() => ({})))); } catch (e) { return fail(c, e); }
-});
-// Admin kan endre alle; andre kan bare endre sitt eget visningsnavn.
-authed.patch('/users/:id', async (c) => {
-  const b = await c.req.json().catch(() => ({}));
-  const id = c.req.param('id'), self = id === c.get('user');
-  if (c.get('role') !== 'admin') {
-    if (!self || b.role !== undefined || b.password !== undefined || b.resetTotp) return c.json({ error: 'Du kan bare endre ditt eget navn og brukernavn' }, 403);
-  }
-  try { return c.json(updateUser(id, { role: b.role, password: b.password, name: b.displayName ?? b.name, resetTotp: !!b.resetTotp, username: b.username })); } catch (e) { return fail(c, e); }
-});
-authed.put('/server', requireAdmin, async (c) => {
-  try { return c.json({ serverName: setServerName((await c.req.json().catch(() => ({}))).name) }); } catch (e) { return fail(c, e); }
-});
-authed.delete('/users/:id', requireAdmin, (c) => {
-  const id = c.req.param('id');
-  try { deleteUser(id, c.get('user')); } catch (e) { return fail(c, e); }
-  removeAvatar(id); revokeUserTokens(id);
-  import('./voxcpm57/voices.js').then((m) => m.purgeUser57(id)).catch(() => {}); // prompt 57: brukerens stemmer og opptak
-  return c.json({ ok: true });
-});
-authed.post('/auth/totp/setup', (c) => { try { return c.json(startTotpSetup(c.get('user'))); } catch (e) { return fail(c, e); } });
-authed.post('/auth/totp/verify', async (c) => {
-  const { code } = await c.req.json().catch(() => ({}));
-  try { return c.json({ ok: true, recoveryCodes: confirmTotpSetup(c.get('user'), code) }); } catch (e) { return fail(c, e); }
-});
-authed.post('/auth/totp/disable', async (c) => {
-  const ip = clientIp(c), wait = loginBlocked(ip);
-  if (wait) return c.json({ error: `For mange forsøk. Prøv igjen om ${Math.ceil(wait / 60)} min.` }, 429);
-  const b = await c.req.json().catch(() => ({}));
-  try { disableTotp(c.get('user'), b); loginSucceeded(ip); return c.json({ ok: true }); } catch (e) { if (e.code === 'TOTP_UNREADABLE') return c.json({ error: e.message, unreadable: true }, 409); loginFailed(ip); return fail(c, e); } // prompt 91
-});
 // Fritt innhold per bruker (layout, topplinje, nyhetsbar, rekkefølge i sidemenyen, mobilvalg). PUT fletter toppnivånøkler.
 authed.get('/prefs', (c) => c.json(kv.get(c.get('user'), 'prefs', {})));
 authed.put('/prefs', async (c) => {
@@ -475,13 +419,6 @@ authed.put('/prefs', async (c) => {
   if (JSON.stringify(next).length > 64_000) return c.json({ error: 'For mye data' }, 413);
   kv.set(c.get('user'), 'prefs', next);
   return c.json(next);
-});
-authed.post('/devices/current', (c) => { rememberDevice(c, c.get('user')); return c.json({ ok: true }); });
-authed.delete('/devices/:id', (c) => {
-  const id = c.req.param('id');
-  const row = /^[a-f0-9]{16}$/.test(id) && db.prepare("SELECT id FROM devices WHERE user=? AND substr(id,1,16)=?").get(c.get('user'), id);
-  if (row) forgetDevice(c, row.id);
-  return c.json({ ok: true });
 });
 
 /* --- Integrasjonsinnstillinger --- */
