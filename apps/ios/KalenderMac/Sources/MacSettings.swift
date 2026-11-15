@@ -4,7 +4,7 @@ import AppKit
 /* ---------------- Prompt 34: Kalender for Mac – Innstillinger (⌘,) ---------------- */
 // Generelt: menylinje-kalender (av/på, bare ikon / dato / neste hendelse), Dock-merke, start ved innlogging, standardvarsel.
 // Utseende: System / Lys / Mørk. Visning: ukenummer og vær. Konto: innlogget som …, logg ut.
-// Prompt 43: faner Generelt · Kontoer · Oppdateringer; oppdatering i appen (MacUpdater43.swift, ingen Sparkle).
+// Prompt 43: faner Generelt · Kontoer · Oppdateringer; oppdatering i appen (MacUpdater.swift, ingen Sparkle).
 
 /// Prompt 43: Innstillinger-vinduet med fanene Generelt · Kontoer · Oppdateringer (Mac-stil, fasit Kalender Mac.dc.html).
 /// Kalender → Se etter oppdateringer … åpner fanen Oppdateringer (MacPrefsTab43).

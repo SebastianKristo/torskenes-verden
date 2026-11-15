@@ -20,7 +20,7 @@ struct MacApp: App {
 
     init() {
         MacSession.install()
-        // Prompt 51: krasjfangeren tidlig (forrige økts krasj legges i køen), enhetsnøkkel og flagg (KalSec51Core.swift).
+        // Prompt 51: krasjfangeren tidlig (forrige økts krasj legges i køen), enhetsnøkkel og flagg (KalSecurityCore.swift).
         KalSec51.enabled = true
         KalCrash51.install()
     }

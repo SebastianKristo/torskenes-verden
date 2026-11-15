@@ -260,14 +260,14 @@ test('innebygd: ingen BGTask, varsel-delegat/-kategorier, kalender://-lenker, kr
   assert.match(code('Kalender/Sources/KalApp.swift', false), /UNUserNotificationCenter\.current\(\)\.delegate = KalNotifyDelegate\.shared/);
   assert.match(code('Kalender/Sources/KalApp.swift', false), /KalCrash51\.install\(\)/);
   assert.match(code('Kalender/Sources/KalApp.swift', false), /\.onOpenURL \{ \(url: URL\) in KalLinks\.handle\(url\) \}/);
-  assert.match(code('Kalender/Sources/KalWidgets70.swift', false), /WidgetCenter\.shared\.reloadAllTimelines\(\)/);
+  assert.match(code('Kalender/Sources/KalWidgetSettings.swift', false), /WidgetCenter\.shared\.reloadAllTimelines\(\)/);
   assert.match(code('Kalender/Sources/KalNotify.swift', false), /setNotificationCategories\(\[cat\]\)/);
   // Påminnelser: bare når den frittstående appen ikke er installert, og nye enheter varsles av Homelab selv.
   assert.match(code('Kalender/Sources/KalNotify.swift', true), /if !KalEmbed84\.shared\.notify \{ return \}/);
-  assert.doesNotMatch(rawpp('SharedKal/Core/KalSec51Core.swift', true), /"kal51-approve-"/);
-  assert.match(rawpp('SharedKal/Core/KalSec51Core.swift', false), /"kal51-approve-"/);
+  assert.doesNotMatch(rawpp('SharedKal/Core/KalSecurityCore.swift', true), /"kal51-approve-"/);
+  assert.match(rawpp('SharedKal/Core/KalSecurityCore.swift', false), /"kal51-approve-"/);
   // Innstillinger: Widgets og oppdateringsinfo (TestFlight/IPA) bare i den frittstående appen.
-  const set = read('Kalender/Sources/KalSettings35.swift');
+  const set = read('Kalender/Sources/KalSettings.swift');
   assert.match(set, /if !KalEmbed84\.on \{\n\s+KalLabel\(text: "WIDGETS"\)/);
   assert.match(set, /if !KalEmbed84\.on \{ KalUpdateInfo43\(\) \}/);
 });
@@ -403,14 +403,14 @@ test('innlogging: samme konto som Homelab uten egen innloggingsskjerm (enhets-to
   assert.match(s, /UserDefaults\.standard\.set\(false, forKey: "kal\.noAuto"\)/);
   assert.match(read('FinansHub/Sources/KalLink33.swift'), /static func ensure84\(_ store: Store\) async \{/);
   // «Logg inn med Homelab-appen» innebygd → Homelab logger inn selv (ikke homelab://app-auth til seg selv).
-  assert.match(read('Kalender/Sources/KalLogin41.swift'), /func viaApp\(\) \{\n[^\n]*\n\s+if let h = KalEmbed84\.shared\.login \{\n\s+h\(\)\n\s+return\n\s+\}/);
+  assert.match(read('Kalender/Sources/KalLogin.swift'), /func viaApp\(\) \{\n[^\n]*\n\s+if let h = KalEmbed84\.shared\.login \{\n\s+h\(\)\n\s+return\n\s+\}/);
   assert.match(s, /e\.login = \{ Kal84Host\.shared\.login\(force: true\) \}/);
 });
 
 test('nye/endrede Swift-filer: klammene går opp (begge varianter av #if)', () => {
-  const files = ['FinansHub/Sources/Kal84Embed.swift', 'Kalender/Sources/KalEmbed84.swift', 'Kalender/Sources/KalApp.swift', 'Kalender/Sources/KalIntent.swift',
-    'Kalender/Sources/KalBg44.swift', 'Kalender/Sources/KalNotify.swift', 'Kalender/Sources/KalWidgets70.swift', 'Kalender/Sources/KalSettings35.swift',
-    'Kalender/Sources/KalLogin41.swift', 'Kalender/Sources/KalStore.swift', 'SharedKal/Core/KalSec51Core.swift', 'FinansHub/Sources/KalLink33.swift',
+  const files = ['FinansHub/Sources/Kal84Embed.swift', 'Kalender/Sources/KalEmbed.swift', 'Kalender/Sources/KalApp.swift', 'Kalender/Sources/KalIntent.swift',
+    'Kalender/Sources/KalBackgroundRefresh.swift', 'Kalender/Sources/KalNotify.swift', 'Kalender/Sources/KalWidgetSettings.swift', 'Kalender/Sources/KalSettings.swift',
+    'Kalender/Sources/KalLogin.swift', 'Kalender/Sources/KalStore.swift', 'SharedKal/Core/KalSecurityCore.swift', 'FinansHub/Sources/KalLink33.swift',
     'FinansHub/Sources/App.swift', 'FinansHub/Sources/Notify31.swift', 'FinansHub/Sources/Paper17.swift', 'FinansHub/Sources/Settings50Wide.swift'];
   for (const f of files) {
     assert.ok(existsSync(join(IOS, f)), f);
@@ -421,6 +421,6 @@ test('nye/endrede Swift-filer: klammene går opp (begge varianter av #if)', () =
     assert.equal(ifs, ends, `#if/#endif i ${f}`);
   }
   // KalEmbed84: på i Homelab, av i Kalender-appen.
-  const k = read('Kalender/Sources/KalEmbed84.swift');
+  const k = read('Kalender/Sources/KalEmbed.swift');
   assert.match(k, /#if KAL_EMBED\n\s+return true\n\s+#else\n\s+return false\n\s+#endif/);
 });

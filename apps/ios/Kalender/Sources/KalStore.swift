@@ -164,7 +164,7 @@ final class KalStore {
     var syncing44: Bool = false
 
     init() {
-        // Prompt 89: den gamle feilstavede standardadressen → os.smarthjemeksperten.no (KalSrv89Core.swift).
+        // Prompt 89: den gamle feilstavede standardadressen → os.smarthjemeksperten.no (KalServerCore.swift).
         KalSrv89.migrate()
         KalQuick.defDur44 = (UserDefaults.standard.object(forKey: "kal.defDur") as? Int) ?? 60
         // Prompt 44: den store bufferen (−3 … +12 mnd) først, ellers widget-bufferen.
@@ -838,5 +838,425 @@ final class KalStore {
         anchor = day
         KalHaptic.done()
         Task { await self.add(p, loc: f.loc.trimmingCharacters(in: .whitespacesAndNewlines), toastPrefix: "La til") }
+    }
+}
+
+/* ---------------- Prompt 35: Kalender – zoom, kalenderstyring og innstillinger (KalStore) ---------------- */
+// Zoom-kjeden År → Måned → Uke → 3 dager → Dag (zoomTo/zoomStep i fasiten): trykk, pinch (> 1,22× / < 0,82×) og tittel-trykk.
+// Den nye visningen vokser fra trykkpunktet (scale .55 → 1 inn, 1.6 → 1 ut, 0,38 s cubic-bezier(.2,.8,.2,1)), lett haptikk.
+// Kalendere: farge (12 valg), vis/skjul, skjul fra menyen, iCal-abonnement, Home Assistant og fjerning – synkes til profilen.
+// Innstillinger: PUT /api/kalender/calendars/prefs (weekStart, openView, defaultDuration, timelineStart, varsler …).
+
+enum KalZoom35 {
+    /// Rekkefølgen i visningsvelgeren (retningen på animasjonen).
+    static let order: [String] = ["ar", "mnd", "uke", "3d", "dag", "liste"]
+    /// Zoom ut ett nivå.
+    static let outOf: [String: String] = ["dag": "3d", "3d": "uke", "uke": "mnd", "mnd": "ar", "ar": "ar", "liste": "mnd"]
+
+    static func clampUnit(_ v: CGFloat) -> CGFloat { Swift.max(0, Swift.min(0.999, v)) }
+}
+
+extension KalStore {
+    /* ---------- Zoom ---------- */
+
+    func zoomTo(_ v: String, day: String?, origin: UnitPoint, inward: Bool) {
+        let same: Bool = v == view && (day == nil || day == anchor)
+        if same { return }
+        KalHaptic.tap()
+        zoomOrigin = origin
+        zoomInward = inward
+        let anim: Animation = UIAccessibility.isReduceMotionEnabled
+            ? Animation.easeOut(duration: 0.2)
+            : Animation.timingCurve(0.2, 0.8, 0.2, 1, duration: 0.38)
+        withAnimation(anim) {
+            view = v
+            if let day { anchor = day } else if v == "liste" { anchor = KalD.todayKey() }
+        }
+        Task { await load() }
+    }
+
+    /// Zoom ut ett nivå (klyp sammen eller trykk på tittelen).
+    func zoomOutStep(_ origin: UnitPoint) {
+        let to: String = KalZoom35.outOf[view] ?? "mnd"
+        if to == view { return }
+        var day: String? = nil
+        if view == "liste" { day = KalD.todayKey() }
+        zoomTo(to, day: day, origin: origin, inward: false)
+    }
+
+    /// Spre to fingre: inn ett nivå fra punktet man klypte.
+    func zoomInAt(_ p: UnitPoint) {
+        let A: Date = KalD.date(anchor)
+        let x: CGFloat = KalZoom35.clampUnit(p.x)
+        let y: CGFloat = KalZoom35.clampUnit(p.y)
+        switch view {
+        case "ar":
+            let col: Int = Int(x * 3)
+            let row: Int = Int(y * 4)
+            let m: Int = Swift.min(12, row * 3 + col + 1)
+            if let d = KalQuick.makeDate(KalD.year(A), m, 1) { zoomTo("mnd", day: KalD.key(d), origin: p, inward: true) }
+        case "mnd":
+            let first: Date = KalD.firstOfMonth(A)
+            let start: Date = KalWeek35.start(first)
+            let rows: Int = KalWeek35.rows(first)
+            let row: Int = Swift.min(rows - 1, Int(y * CGFloat(rows)))
+            let col: Int = Swift.min(6, Int(x * 7))
+            zoomTo("uke", day: KalD.key(KalD.add(start, row * 7 + col)), origin: p, inward: true)
+        case "uke":
+            let col: Int = Swift.min(6, Int(x * 7))
+            zoomTo("3d", day: KalD.key(KalD.add(KalWeek35.start(A), col)), origin: p, inward: true)
+        case "3d":
+            let col: Int = Swift.min(2, Int(x * 3))
+            zoomTo("dag", day: KalD.key(KalD.add(A, col)), origin: p, inward: true)
+        default:
+            break
+        }
+    }
+
+    func pinch(_ m: CGFloat, at p: UnitPoint) {
+        if m > 1.22 { zoomInAt(p) } else if m < 0.82 { zoomOutStep(p) }
+    }
+
+    /* ---------- Innstillinger ---------- */
+
+    /// Sender ett eller flere valg til profilen (PUT /api/kalender/calendars/prefs).
+    func savePrefs(_ body: [String: Any]) {
+        Task { await KalCalAPI35.putPrefs(body) }
+    }
+
+    /// Valg fra profilen (samme for web, Homelab og widgetene). Bare feltene serveren sender.
+    func applyServerPrefs(_ p: [String: String]) {
+        if let v = p["weekStart"], (v == "mon" || v == "sun"), v != weekStart { weekStart = v }
+        if let v = p["openView"], ["mnd", "uke", "3d", "dag", "liste"].contains(v), v != openView { openView = v }
+        if let v = p["defaultDuration"], let n = Int(v), [30, 60, 90, 120].contains(n), n != defDur { defDur = n }
+        if let v = p["timelineStart"], ["now", "06", "08"].contains(v), v != tlStart { tlStart = v }
+        if let v = p["notifyBirthdays"] { nBd = v == "true" }
+        if let v = p["notifyDeadlines"] { nFr = v == "true" }
+        if let v = p["notifyBrief"] { nBrief = v == "true" }
+        if let v = p["travelTime"] { nTv = v == "true" }
+        if let v = p["weekNumbers"] { showWeeks = v == "true" }
+        if let v = p["weather"] { showWx = v == "true" }
+        if let v = p["theme"], ["system", "light", "dark"].contains(v), v != theme { theme = v }
+        if let v = p["defaultReminder"], let m = KalCalAPI35.remFromServer(v), m != defRemRaw { defRemRaw = m }
+        // Prompt 46: standardkalenderen (samme som web og Homelab).
+        if let v = p["defaultCalendar"], !v.isEmpty, v != defCal46 { defCal46 = v }
+    }
+
+    /* ---------- Kalendere ---------- */
+
+    /// Ny farge: tekstfargene regnes ut, lagres lokalt til serveren har bekreftet (PATCH {color}).
+    func setColor(_ id: String, _ hex: String) {
+        KalHaptic.tap()
+        guard let i = cals.firstIndex(where: { (c: KalCal) -> Bool in c.id == id }) else { return }
+        cals[i] = KalTone35.apply(cals[i], hex: hex)
+        colLocal[id] = hex
+        UserDefaults.standard.set(colLocal, forKey: "kal.calCol")
+        rebuild()
+        saveSnapshot()
+        if serverCals {
+            Task {
+                if await KalCalAPI35.patch(id, ["color": hex]) != nil {
+                    self.colLocal.removeValue(forKey: id)
+                    UserDefaults.standard.set(self.colLocal, forKey: "kal.calCol")
+                }
+            }
+        }
+    }
+
+    /// Skjul fra menyen / Vis i menyen (PATCH {hidMenu}). Skjulte kalendere forsvinner fra lista og visningene.
+    func setHidMenu(_ id: String, _ hide: Bool) {
+        KalHaptic.tap()
+        guard let i = cals.firstIndex(where: { (c: KalCal) -> Bool in c.id == id }) else { return }
+        cals[i].hidMenu = hide
+        hidMenuLocal[id] = hide
+        UserDefaults.standard.set(hidMenuLocal, forKey: "kal.hidMenu")
+        rebuild()
+        saveSnapshot()
+        if serverCals {
+            Task {
+                // Eldre servere ignorerer feltet: behold det lokalt til svaret viser hidMenu.
+                if let d = await KalCalAPI35.patch(id, ["hidMenu": hide]), KalCalAPI35.echoes(d, "hidMenu") {
+                    self.hidMenuLocal.removeValue(forKey: id)
+                    UserDefaults.standard.set(self.hidMenuLocal, forKey: "kal.hidMenu")
+                }
+            }
+        }
+    }
+
+    var hiddenFromMenu: [KalCal] { cals.filter { (c: KalCal) -> Bool in !c.inMenu } }
+
+    /// Abonner på en iCal-lenke. → feilmelding, eller tom ved suksess.
+    func addIcal(url: String, name: String, hex: String) async -> String {
+        do {
+            let made: KalCal? = try await KalCalAPI35.addIcal(url: url, name: name, color: hex)
+            let n: String = made?.name ?? name
+            showToast("Abonnerer på «" + n + "»", undo: "")
+            await load(force: true)
+            return ""
+        } catch let e as KalNetError {
+            if e.status == 404 { return "Serveren støtter ikke iCal-abonnement ennå. Oppdater Homelab." }
+            return e.message
+        } catch {
+            return error.localizedDescription
+        }
+    }
+
+    /// Legg til valgte Home Assistant-kalendere med farger fordelt automatisk.
+    func addHa(_ ids: [String], baseHex: String) async -> String {
+        if ids.isEmpty { return "" }
+        var colors: [String: String] = [:]
+        let start: Int = KalTone35.swatches.firstIndex(of: baseHex) ?? 0
+        for (ix, id) in ids.enumerated() {
+            colors[id] = KalTone35.swatches[(start + ix * 2) % KalTone35.swatches.count]
+        }
+        do {
+            _ = try await KalCalAPI35.addHa(ids, colors: colors)
+            showToast(String(ids.count) + (ids.count == 1 ? " kalender" : " kalendere") + " fra Home Assistant lagt til", undo: "")
+            await load(force: true)
+            return ""
+        } catch let e as KalNetError {
+            if e.status == 404 { return "Serveren støtter ikke Home Assistant-kalendere ennå." }
+            return e.message
+        } catch {
+            return error.localizedDescription
+        }
+    }
+
+    /// × for kalendere man har lagt til selv (egne, iCal, HA).
+    func removeCal(_ c: KalCal) {
+        KalHaptic.tap()
+        if c.local || !serverCals {
+            Task { await deleteCalendar(c.id) }
+            showToast("«" + c.name + "» fjernet", undo: "")
+            return
+        }
+        Task {
+            do {
+                try await KalCalAPI35.remove(c.id)
+                self.cals.removeAll { (x: KalCal) -> Bool in x.id == c.id }
+                self.rebuild()
+                self.saveSnapshot()
+                self.showToast("«" + c.name + "» fjernet", undo: "")
+            } catch let e as KalNetError {
+                self.showToast("Kunne ikke fjerne: " + e.message, undo: "")
+            } catch {}
+        }
+    }
+
+    /// Settings → «Kontoer og synk»: lukk innstillingene og åpne «Legg til kalender → Konto» i sidemenyen.
+    func openAccounts() {
+        KalHaptic.tap()
+        withAnimation(.timingCurve(0.2, 0.8, 0.2, 1, duration: 0.28)) {
+            settingsOpen = false
+            drawerOpen = true
+            addCalTab = "acc"
+        }
+    }
+
+    /// «Glimt» i innstillingene: Homelab → Innstillinger → Glimt.
+    func openGlimtSettings() {
+        KalHaptic.tap()
+        if let u = URL(string: "finanshub://glimt"), UIApplication.shared.canOpenURL(u) {
+            UIApplication.shared.open(u)
+        } else {
+            showToast("Glimt stilles inn i Homelab → Innstillinger → Glimt", undo: "")
+        }
+    }
+
+    /// Tidspunktet tidslinjen starter ved (time).
+    func timelineHour(todayIn: Bool) -> Int {
+        if tlStart == "06" { return 6 }
+        if tlStart == "08" { return 8 }
+        return todayIn ? Swift.max(0, KalD.minutesNow() / 60 - 2) : 7
+    }
+}
+
+/* ---------------- Prompt 39: Kalender – fire kalendere: lagring for Kalendere (1a), Rediger (1b) og Legg til (1c) ---------------- */
+// PATCH /api/kalender/calendars/:id {name, color, visible, notify, showInBrief, interval, country} (SERVER39; eldre servere ignorerer feltene).
+// Lokale valg (farge, vis/skjul) går via de eksisterende funksjonene, så de huskes til serveren har bekreftet.
+
+/// Det som endres i Rediger (1b).
+struct KalCalDraft39: Equatable {
+    var name: String = ""
+    var hex: String = "#b23a2a"
+    var visible: Bool = true
+    var notify: Bool = true
+    var brief: Bool = true
+    var fag: Bool = true
+    var interval: String = "1h"
+    var country: String = "NO"
+}
+
+extension KalStore {
+    /* ---------- Navigasjon ---------- */
+
+    func openCals39() {
+        KalHaptic.tap()
+        withAnimation(.timingCurve(0.2, 0.8, 0.2, 1, duration: 0.28)) { cals39Open = true }
+    }
+
+    func closeCals39() {
+        KalHaptic.tap()
+        withAnimation(.timingCurve(0.2, 0.8, 0.2, 1, duration: 0.28)) {
+            cal39Edit = nil
+            cals39Open = false
+        }
+    }
+
+    func editCal39(_ id: String?) {
+        KalHaptic.tap()
+        withAnimation(.timingCurve(0.2, 0.8, 0.2, 1, duration: 0.28)) { cal39Edit = id }
+    }
+
+    func openAdd39() {
+        KalHaptic.tap()
+        withAnimation(.timingCurve(0.2, 0.8, 0.2, 1, duration: 0.32)) { cal39AddOpen = true }
+    }
+
+    func openGMap39() {
+        KalHaptic.tap()
+        withAnimation(.timingCurve(0.2, 0.8, 0.2, 1, duration: 0.32)) {
+            cal39AddOpen = false
+            gmap39Open = true
+        }
+    }
+
+    /* ---------- Data ---------- */
+
+    /// Kalenderne i 1a: de fire først, så egne.
+    var cals39: [KalCal] { cals.uniqueIds() }
+
+    func draft39(_ c: KalCal) -> KalCalDraft39 {
+        var d: KalCalDraft39 = KalCalDraft39()
+        d.name = c.name
+        d.hex = c.hex
+        d.visible = c.on
+        d.notify = c.p39?.notify ?? KalCals39.notifyDefault(c)
+        d.brief = c.p39?.showInBrief ?? true
+        d.fag = c.p39?.subjectColors ?? ((UserDefaults.standard.object(forKey: "kal.fag39") as? Bool) ?? true)
+        d.interval = (c.p39?.interval ?? "").isEmpty ? "1h" : (c.p39?.interval ?? "1h")
+        d.country = (c.p39?.country ?? "").isEmpty ? "NO" : (c.p39?.country ?? "NO")
+        return d
+    }
+
+    /// Lagre i Rediger. → feilmelding (tom = ok).
+    func saveCal39(_ c: KalCal, _ d: KalCalDraft39) async -> String {
+        let old: KalCalDraft39 = draft39(c)
+        if d.hex.lowercased() != c.hex.lowercased() { setColor(c.id, d.hex) }
+        if d.visible != c.on { setCal(c.id, on: d.visible) }
+        var body: [String: Any] = [:]
+        let name: String = d.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !name.isEmpty && name != c.name { body["name"] = name }
+        if d.notify != old.notify { body["notify"] = d.notify }
+        if d.brief != old.brief { body["showInBrief"] = d.brief }
+        if d.interval != old.interval && KalCals39.role(c) == "s" { body["interval"] = d.interval }
+        if d.country != old.country && KalCals39.role(c) == "h" { body["country"] = d.country }
+        if let i = cals.firstIndex(where: { (x: KalCal) -> Bool in x.id == c.id }) {
+            if !name.isEmpty { cals[i].name = name }
+            var info: KalCalInfo39 = cals[i].p39 ?? KalCalInfo39()
+            info.notify = d.notify
+            info.showInBrief = d.brief
+            info.subjectColors = d.fag
+            if KalCals39.role(c) == "s" { info.interval = d.interval }
+            if KalCals39.role(c) == "h" {
+                info.country = d.country
+                info.sourceLabel = KalCals39.countryName(d.country)
+            }
+            cals[i].p39 = info
+        }
+        if d.fag != old.fag {
+            UserDefaults.standard.set(d.fag, forKey: "kal.fag39")
+            // Eget kall: eldre servere avviser ukjente nøkler, og da skal ikke resten feile.
+            let id: String = c.id
+            let fag: Bool = d.fag
+            Task { _ = await KalCalAPI39.save(id, ["subjectColors": fag]) }
+        }
+        rebuild()
+        saveSnapshot()
+        if body.isEmpty || !serverCals || (c.p39?.localHolidays ?? false) { return "" }
+        let err: String = await KalCalAPI39.save(c.id, body)
+        if err.isEmpty { await load(force: true) }
+        return err
+    }
+
+    /// «Lim inn ny URL»: adressen fra utklippstavlen. → feilmelding (tom = ok).
+    func pasteUrl39(_ c: KalCal) async -> String {
+        let raw: String = (UIPasteboard.general.string ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        if !KalCalAPI39.validIcs(raw) { return "Kopier en webcal:// eller https://-adresse først." }
+        let err: String = await KalCalAPI39.save(c.id, ["url": raw])
+        if err.isEmpty {
+            showToast("Ny adresse for «" + c.name + "» lagret", undo: "")
+            await load(force: true)
+        }
+        return err
+    }
+
+    /// «↻ Oppdater nå».
+    func refreshCal39(_ c: KalCal) async -> String {
+        let err: String = await KalCalAPI39.refresh(c.id)
+        if err.isEmpty {
+            showToast("«" + c.name + "» er oppdatert", undo: "")
+            await load(force: true)
+        }
+        return err
+    }
+
+    /// Skole uten adresse får URL-en (Legg til Skole) – ellers et nytt abonnement.
+    func addUrl39(url: String, name: String) async -> String {
+        if let sk = cals.first(where: { (c: KalCal) -> Bool in KalCals39.role(c) == "s" }), (sk.p39?.url ?? "").isEmpty, KalCals39.serverKnows {
+            let err: String = await KalCalAPI39.save(sk.id, ["url": url.trimmingCharacters(in: .whitespacesAndNewlines)])
+            if err.isEmpty {
+                showToast("Skole abonnerer nå på " + KalCals39.host(url), undo: "")
+                await load(force: true)
+            }
+            return err
+        }
+        return await addIcal(url: url, name: name, hex: KalCals39.colors["s"] ?? "#2f7a4f")
+    }
+
+    /* ---------- Opprydding 12 → 4 ---------- */
+
+    /// «Vi ryddet kalenderne: 12 → 4» vises én gang.
+    var migration39Text: String {
+        let m: KalMigration39 = KalCals39.migration
+        let seen: String = UserDefaults.standard.string(forKey: "kal.mig39") ?? ""
+        if m.done && m.from > m.to {
+            if seen == "s:" + m.undoUntil { return "" }
+            return "Vi ryddet kalenderne: " + String(m.from) + " → " + String(m.to) + "."
+        }
+        if !KalCals39.serverKnows && KalCals39.mergedFrom > 0 && seen.isEmpty {
+            return "Vi ryddet kalenderne: " + String(KalCals39.mergedFrom) + " → 4. Hendelsene ligger i Personlig og Skole."
+        }
+        return ""
+    }
+
+    func dismissMigration39() {
+        let m: KalMigration39 = KalCals39.migration
+        UserDefaults.standard.set(m.done ? "s:" + m.undoUntil : "local", forKey: "kal.mig39")
+        rebuild()
+    }
+
+    func undoMigration39() async {
+        let err: String = await KalCalAPI39.undoMigration()
+        if err.isEmpty {
+            showToast("Kalenderne er satt tilbake som før", undo: "")
+            dismissMigration39()
+            await load(force: true)
+        } else {
+            showToast(err, undo: "")
+        }
+    }
+}
+
+extension KalStore {
+    /// Prompt 39: én gang etter oppryddingen på serveren: «Vi ryddet kalenderne: 12 → 4» med Angre.
+    func announceMigration39() {
+        let m: KalMigration39 = KalCals39.migration
+        guard m.done, m.from > m.to else { return }
+        let key: String = "kal.mig39toast"
+        let mark: String = m.undoUntil.isEmpty ? "done" : m.undoUntil
+        if UserDefaults.standard.string(forKey: key) == mark { return }
+        UserDefaults.standard.set(mark, forKey: key)
+        showToast("Vi ryddet kalenderne: " + String(m.from) + " → " + String(m.to), undo: m.canUndo ? "mig39" : "")
     }
 }

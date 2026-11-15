@@ -2,7 +2,7 @@ import SwiftUI
 import UIKit
 
 /* ---------------- Prompt 51 (KAL51): Kalender iPhone/iPad – godkjenning av ny enhet, Sikkerhet, «Nytt i denne versjonen» ---------------- */
-// Logikken ligger i SharedKal/Core/KalSec51Core.swift (felles med Mac). Her er bare visningene:
+// Logikken ligger i SharedKal/Core/KalSecurityCore.swift (felles med Mac). Her er bare visningene:
 // - KalApprove51Wait: innloggingen venter på godkjenning (KalLogin41View, fase «approve51»).
 // - KalSec51Section: Innstillinger → SIKKERHET (ventende enheter med Godkjenn/Avvis, Face ID før godkjenning).
 // - KalNew51Host: kortet «Nytt i denne versjonen» første gang etter en oppdatering.

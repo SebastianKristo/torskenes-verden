@@ -47,7 +47,7 @@ test('logikk: ingen egen trekkdato, påske, Time44-tolker eller Open-Meteo direk
     assert.doesNotMatch(s, /static func nextCharge\(/, f);
   }
   assert.match(raw('FinansHub/Sources/QuickDates.swift'), /\/api\/dates\/parse/);
-  assert.match(raw('SharedKal/Core/KalCals39.swift'), /\/api\/dates\/holidays\?year=/);
+  assert.match(raw('SharedKal/Core/KalCalendarsCore.swift'), /\/api\/dates\/holidays\?year=/);
   assert.match(raw('FinansHub/Sources/Trial31.swift'), /dedupeKey/);
 });
 

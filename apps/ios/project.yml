@@ -59,7 +59,7 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: no.kristo.finanshub
         TARGETED_DEVICE_FAMILY: "1,2"
         # Prompt 84: den innebygde Kalenderen – #if !KAL_EMBED rundt det som hører til den frittstående appen (@main, App Intents,
-        # BGTask, varsel-delegat/-kategorier, krasjfanger, kalender://, widget-reload). Kal84Embed.swift / KalEmbed84.swift.
+        # BGTask, varsel-delegat/-kategorier, krasjfanger, kalender://, widget-reload). Kal84Embed.swift / KalEmbed.swift.
         SWIFT_ACTIVE_COMPILATION_CONDITIONS: "$(inherited) KAL_EMBED"
         # Prompt 47: FoundationModels (iOS 26) lenkes svakt, så appen starter på iOS 17/18. Bare med iOS 26-SDK (Xcode 26);
         # Xcode 16 har ikke rammeverket, og koden er bak #if canImport(FoundationModels) (Receipt47Engine.swift).
@@ -270,7 +270,7 @@ targets:
         KalDefaultServer41: "https://os.smarthjemeksperten.no"
         KalDefaultLocal47: "http://10.69.1.39:3000"
         KalKeychainGroup41: "$(AppIdentifierPrefix)no.kristo.shared"
-        # Prompt 44: forhåndslasting av kalenderen i bakgrunnen (BGAppRefreshTask, KalBg44.swift).
+        # Prompt 44: forhåndslasting av kalenderen i bakgrunnen (BGAppRefreshTask, KalBackgroundRefresh.swift).
         BGTaskSchedulerPermittedIdentifiers: [no.kristo.kalender.refresh44]
         UIBackgroundModes: [fetch]
         # Prompt 46: Innstillinger → Logg inn på annen enhet (skann QR-koden Kalender på Mac/Android viser, godkjenn med Face ID).
@@ -278,17 +278,17 @@ targets:
         NSFaceIDUsageDescription: "Kalender bekrefter med Face ID før en annen enhet logges inn på kontoen din."
 
   # Prompt 47: enkel UI-test – «+» skal vise «Ny hendelse» og «Tittel» synlig (hit-testbart), ikke bare i treet.
-  # Bygges bare med `xcodebuild test -scheme KalenderUITests47` (ikke en del av Kalender-skjemaet CI bygger).
-  KalenderUITests47:
+  # Bygges bare med `xcodebuild test -scheme KalenderUITests` (ikke en del av Kalender-skjemaet CI bygger).
+  KalenderUITests:
     type: bundle.ui-testing
     platform: iOS
     sources:
-      - KalenderUITests47
+      - KalenderUITests
     dependencies:
       - target: Kalender
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: no.kristo.kalender.uitests47
+        PRODUCT_BUNDLE_IDENTIFIER: no.kristo.kalender.uitests
         GENERATE_INFOPLIST_FILE: YES
         TEST_TARGET_NAME: Kalender
         TARGETED_DEVICE_FAMILY: "1,2"
@@ -379,7 +379,7 @@ targets:
       # Ren Foundation-tolking av «frisør 14.30 25.10» (KalParsed, KalRx, KalQuick) – delt med iOS-appen uten kopi.
       - path: Kalender/Sources/KalQuick.swift
       # Prompt 37: adresse og kart (geokoding + kartvisning) deles med iPhone-appen.
-      - path: Kalender/Sources/KalGeo37.swift
+      - path: Kalender/Sources/KalGeo.swift
     # Hovedvinduet er native SwiftUI (fasit siden prompt 39). Web-kalenderen fra prompt 38 (WKWebView mot <server>/kalender?app=mac)
     # finnes bare som valg (useWeb38, av som standard) – derfor WebKit.
     dependencies:
@@ -502,7 +502,7 @@ targets:
   # Prompt 51 (IOSPLAT51): FinansHub for Apple Watch (watchOS 10+) – EGET target uten avhengighet til/fra FinansHub, så
   # FinansHub-, Kalender- og KalenderMac-byggene i CI er uendret (klokka bygges ikke med dem og legges ikke i FinansHub.app).
   # Scheme: med vilje ingen `schemes:`-seksjon. Prosjektet har i dag ingen delte schemes, og xcodebuild lager da en scheme per
-  # target (FinansHub, Kalender, KalenderMac, KalenderUITests47 … og nå FinansHubWatch51). Én delt scheme her ville slått av
+  # target (FinansHub, Kalender, KalenderMac, KalenderUITests … og nå FinansHubWatch51). Én delt scheme her ville slått av
   # dette for de andre targetene og knekt dagens CI-steg. Bygg: se docs/ios-plattform-51.md («CI») –
   #   xcodebuild -project FinansHub.xcodeproj -scheme FinansHubWatch51 -configuration Debug \
   #     -sdk watchsimulator -destination 'generic/platform=watchOS Simulator' CODE_SIGNING_ALLOWED=NO build

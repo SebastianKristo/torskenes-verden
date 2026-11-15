@@ -19,7 +19,7 @@ struct KalGlimtMsg: Identifiable, Equatable {
     /// Prompt 34: svaret er en feil fra Glimt («Glimt fikk ikke svar fra {modell}: {feil}») → Prøv igjen.
     var error34: Bool = false
     var q34: String = ""
-    /// Prompt 70: kort C (card70 som JSON) og spørsmål med knapper (ask som JSON), KalCal70.swift.
+    /// Prompt 70: kort C (card70 som JSON) og spørsmål med knapper (ask som JSON), KalGlimtAgentCard.swift.
     var c70: String = ""
     var ask70: String = ""
 
@@ -488,7 +488,7 @@ struct KalGlimtRow: View {
             KalPill(title: "Prøv igjen", filled: false, height: 32) { KalGlimtModel.shared.retry(m) }
         }
         if m.done {
-            // Prompt 70: kort C i stedet for hendelseskortet, og spørsmålet med knapper (KalCal70.swift).
+            // Prompt 70: kort C i stedet for hendelseskortet, og spørsmålet med knapper (KalGlimtAgentCard.swift).
             if let c = KalCal70Data.parse(KalCal70.obj(m.c70)) { KalCal70Card(card: c).id(c.eventId) }
             else { ForEach(m.cards) { (e: KalEvent) in KalGlimtCard(e: e) } }
             if let q = KalCal70Ask.parse(KalCal70.obj(m.ask70)) { KalCal70AskView(ask: q) }

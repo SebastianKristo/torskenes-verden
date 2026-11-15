@@ -69,11 +69,11 @@ function lex(src) {
 }
 
 const NEW = ['FinansHub/Sources/Login89.swift', 'FinansHub/Sources/Live89Host.swift', 'Shared/Live89.swift',
-  'FinansHubWidgets/Sources/Live89Live.swift', 'SharedKal/Core/KalSrv89Core.swift', 'Kalender/Sources/KalLogin89.swift',
-  'KalenderMac/Sources/MacLogin89.swift'];
+  'FinansHubWidgets/Sources/Live89Live.swift', 'SharedKal/Core/KalServerCore.swift', 'Kalender/Sources/KalLogin.swift',
+  'KalenderMac/Sources/MacLogin.swift'];
 const CHANGED = ['FinansHub/Sources/Store.swift', 'FinansHub/Sources/Server41.swift', 'FinansHub/Sources/PaperGate.swift',
   'FinansHub/Sources/App.swift', 'FinansHub/Sources/Notify31.swift', 'FinansHub/Sources/Paper17.swift', 'Shared/Plat51Intents.swift',
-  'FinansHubWidgets/Sources/Plat51Live.swift', 'Kalender/Sources/KalLogin41.swift', 'Kalender/Sources/KalStore.swift',
+  'FinansHubWidgets/Sources/Plat51Live.swift', 'Kalender/Sources/KalLogin.swift', 'Kalender/Sources/KalStore.swift',
   'KalenderMac/Sources/MacLogin.swift', 'KalenderMac/Sources/MacStore.swift'];
 
 /* ---------- 1. Domenet ---------- */
@@ -85,8 +85,8 @@ test('domenet: ingen gammel stavemåte igjen i iOS-appene; ny standard i konstan
   const bad = walk(IOS).filter((p) => /\.(swift|yml|plist|json|md|entitlements)$/.test(p)).filter((p) => OLD_RE.test(readFileSync(p, 'utf8')));
   assert.deepEqual(bad, []);
   assert.match(raw('FinansHub/Sources/Server41.swift'), /return "https:\/\/os\.smarthjemeksperten\.no"/);
-  assert.match(raw('SharedKal/Core/KalAuth41Core.swift'), /static let standardExternal47: String = "https:\/\/os\.smarthjemeksperten\.no"/);
-  assert.match(raw('SharedKal/Core/KalAuth41Core.swift'), /static let standardLocal47: String = "http:\/\/10\.69\.1\.39:3000"/);
+  assert.match(raw('SharedKal/Core/KalAuthCore.swift'), /static let standardExternal47: String = "https:\/\/os\.smarthjemeksperten\.no"/);
+  assert.match(raw('SharedKal/Core/KalAuthCore.swift'), /static let standardLocal47: String = "http:\/\/10\.69\.1\.39:3000"/);
   const yml = raw('project.yml');
   assert.equal((yml.match(/HomelabServer: https:\/\/os\.smarthjemeksperten\.no/g) || []).length, 2);
   assert.equal((yml.match(/KalDefaultServer41: "https:\/\/os\.smarthjemeksperten\.no"/g) || []).length, 2);
@@ -110,14 +110,14 @@ test('migrering: bare nøyaktig den gamle standarden skrives om (Homelab, Kalend
   const load = st.slice(st.indexOf('private static func loadAccounts()'), st.indexOf('private func saveAccounts()'));
   assert.ok(load.indexOf('Server89.migrate()') > 0 && load.indexOf('Server89.migrate()') < load.indexOf('Keychain.get("accounts")'), 'migrering før kontoene leses');
   assert.match(load, /let fixed: \[LoginAccount\] = Server89\.migrateAccounts\(list\)\n\s+if fixed != list/);
-  const k = code('SharedKal/Core/KalSrv89Core.swift');
+  const k = code('SharedKal/Core/KalServerCore.swift');
   assert.match(k, /static let oldExternal: String = "https:\/\/os\.smarthjem" \+ "experten\.no"/);
   assert.match(k, /for k in \["kal41\.manual", "kal\.lastServer"\]/);
   assert.match(k, /for k in \["kal41\.external", "kal47\.defExt", "kal\.server"\]/);
   assert.match(k, /for k in \["kal\.bases", "kal41\.local"\]/);
   assert.match(code('Kalender/Sources/KalStore.swift'), /init\(\) \{\n\s+KalSrv89\.migrate\(\)/);
   assert.match(code('KalenderMac/Sources/MacStore.swift'), /init\(\) \{\n\s+KalSrv89\.migrate\(\)\n\s+MacLogin89\.migrate\(\)/);
-  assert.match(code('KalenderMac/Sources/MacLogin89.swift'), /u\.string\(forKey: "mac\.lastServer"\), let n = KalSrv89\.fixed\(v\)/);
+  assert.match(code('KalenderMac/Sources/MacLogin.swift'), /u\.string\(forKey: "mac\.lastServer"\), let n = KalSrv89\.fixed\(v\)/);
 });
 
 test('migrering (samme regel i JS): nøyaktig gammel standard → ny, egendefinert urørt', () => {
@@ -185,7 +185,7 @@ test('Homelab: én felles lagring med Innstillinger → Server', () => {
 });
 
 test('Kalender (iOS): tannhjul og arket «Server» med samme lagring som Innstillinger → Server', () => {
-  const v = code('Kalender/Sources/KalLogin89.swift');
+  const v = code('Kalender/Sources/KalLogin.swift');
   assert.match(v, /Image\(systemName: "gearshape"\)/);
   assert.match(v, /\.frame\(width: 44, height: 44\)/);
   assert.match(v, /field\("Ekstern adresse", KalSrv47\.standardExternal, \$external, extText, extOk\)/);
@@ -197,11 +197,11 @@ test('Kalender (iOS): tannhjul og arket «Server» med samme lagring som Innstil
   assert.match(v, /KalPill\(title: busy \? "Lagrer …" : "Lagre"/);
   assert.match(v, /foregroundStyle\(ok \? t\.green : t\.red\)/);
   assert.match(v, /Text\("Server: " \+ m\.server89\)/);
-  const k = code('SharedKal/Core/KalSrv89Core.swift');
+  const k = code('SharedKal/Core/KalServerCore.swift');
   assert.match(k, /URL\(string: s \+ "\/api\/health"\)/);
   assert.match(k, /if loggedIn \{ return await KalSrv47\.save\(external: ext, local: loc, device: device\) \}\n\s+KalSrv47\.storeLocally\(external: ext, local: loc\)/);
   assert.match(k, /static var external: String \{ KalServer41\.external \}/);
-  const l = code('Kalender/Sources/KalLogin41.swift');
+  const l = code('Kalender/Sources/KalLogin.swift');
   assert.match(l, /KalLogin89Gear\(\)\.padding\(\.trailing, 8\)/);
   assert.match(l, /KalLogin89Sheet\(\)\.environment\(\\\.kal, t\)/);
   assert.equal((l.match(/KalLogin89Line\(\)/g) || []).length, 2);
@@ -209,7 +209,7 @@ test('Kalender (iOS): tannhjul og arket «Server» med samme lagring som Innstil
 });
 
 test('Kalender for Mac: tannhjul og arket «Server», feltet fylles med standarden', () => {
-  const v = code('KalenderMac/Sources/MacLogin89.swift');
+  const v = code('KalenderMac/Sources/MacLogin.swift');
   assert.match(v, /Image\(systemName: "gearshape"\)/);
   assert.match(v, /\.frame\(width: 44, height: 44\)/);
   assert.match(v, /"Test tilkobling"/);
@@ -221,7 +221,7 @@ test('Kalender for Mac: tannhjul og arket «Server», feltet fylles med standard
   assert.match(l, /MacLogin89Gear \{ serverSheet = true \}/);
   assert.match(l, /Text\("Server: " \+ KalSrv89\.host/);
   // Mac-nøkkelen ligger i Mac-målet (SharedKal\/Core har bare kal*-nøkler, se p84).
-  assert.doesNotMatch(code('SharedKal/Core/KalSrv89Core.swift'), /mac\./);
+  assert.doesNotMatch(code('SharedKal/Core/KalServerCore.swift'), /mac\./);
 });
 
 /* ---------- 3. Live Activities ---------- */
@@ -341,7 +341,7 @@ test('nye og endrede Swift-filer: klammebalanse, ingen tvungen utpakking, iOS 17
     assert.equal(ifs, ends, `#if/#endif i ${f}`);
   }
   // SharedKal/Core bygges også i Mac-widgetene: bare Foundation.
-  assert.doesNotMatch(raw('SharedKal/Core/KalSrv89Core.swift'), /import (SwiftUI|UIKit|AppKit)/);
+  assert.doesNotMatch(raw('SharedKal/Core/KalServerCore.swift'), /import (SwiftUI|UIKit|AppKit)/);
   // ActivityKit-koden i Shared er bak canImport (widgetene bygges også for Mac Catalyst-løse mål).
   const sh = raw('Shared/Live89.swift');
   assert.ok(sh.indexOf('#if canImport(ActivityKit)\nenum Live89Sync') > 0);

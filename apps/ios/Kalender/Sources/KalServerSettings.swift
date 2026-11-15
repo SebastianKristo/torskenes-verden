@@ -3,7 +3,7 @@ import SwiftUI
 /* ---------------- Prompt 47: Kalender (iPhone/iPad) – Innstillinger → Server ---------------- */
 // Spesifikasjon: claude-code-standard-serveradresser.md. To felt (Ekstern adresse, Lokal adresse) forhåndsutfylt med
 // standardverdiene, status under hvert felt («Svarer · 34 ms» / «Svarer ikke») med «Test», «Tilbakestill til standard» og Lagre.
-// Logikken ligger i SharedKal/Core/KalSrv47Core.swift (felles med Mac).
+// Logikken ligger i SharedKal/Core/KalServerCore.swift (felles med Mac).
 
 struct KalSrv47Sheet: View {
     @Environment(\.kal) private var t

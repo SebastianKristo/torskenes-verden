@@ -5,7 +5,7 @@ import XCTest
 // Testen trykker «+» to ganger (andre gang var den som feilet) og krever at «Ny hendelse» og «Tittel» er hit-testbare.
 // Krever en innlogget Kalender på simulatoren; uten innlogging hoppes testen over.
 
-final class KalNewUITests47: XCTestCase {
+final class KalNewEventUITests: XCTestCase {
     override func setUp() {
         continueAfterFailure = false
     }

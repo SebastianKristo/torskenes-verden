@@ -2,7 +2,7 @@ import SwiftUI
 
 /* ---------------- Prompt 47: Kalender for Mac – Innstillinger → Kontoer → SERVER ---------------- */
 // Spesifikasjon: claude-code-standard-serveradresser.md. Ekstern og lokal adresse (forhåndsutfylt med standardverdiene),
-// status per adresse med «Test», «Tilbakestill til standard» og Lagre (synkes til kontoen). Logikk: SharedKal/Core/KalSrv47Core.swift.
+// status per adresse med «Test», «Tilbakestill til standard» og Lagre (synkes til kontoen). Logikk: SharedKal/Core/KalServerCore.swift.
 
 struct MacSrv47Section: View {
     @Environment(\.mk) private var t

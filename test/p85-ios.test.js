@@ -195,13 +195,13 @@ test('Info.plist: «Arkiver bilde» i delingsarket har tillatelsestekst (ellers 
 test('BGTask-identifikatorene som registreres står i BGTaskSchedulerPermittedIdentifiers', () => {
   const yml = readFileSync(join(IOS, 'project.yml'), 'utf8');
   const fh = yml.slice(yml.indexOf('\n  FinansHub:'), yml.indexOf('\n  FinansHubWidgets:'));
-  const kal = yml.slice(yml.indexOf('\n  Kalender:'), yml.indexOf('\n  KalenderUITests47:'));
+  const kal = yml.slice(yml.indexOf('\n  Kalender:'), yml.indexOf('\n  KalenderUITests:'));
   for (const id of ['no.kristo.finanshub.health', 'no.kristo.finanshub.family', 'no.kristo.finanshub.notify']) {
     assert.ok(new RegExp('BGTaskSchedulerPermittedIdentifiers: \\[[^\\]]*' + id.replace(/\./g, '\\.')).test(fh), id);
   }
   assert.match(kal, /BGTaskSchedulerPermittedIdentifiers: \[no\.kristo\.kalender\.refresh44\]/);
   // Kalenders oppgave registreres aldri i Homelab-appen (står ikke i Homelabs liste).
-  assert.match(raw('Kalender/Sources/KalBg44.swift'), /#if !KAL_EMBED\s+_ = BGTaskScheduler\.shared\.register/);
+  assert.match(raw('Kalender/Sources/KalBackgroundRefresh.swift'), /#if !KAL_EMBED\s+_ = BGTaskScheduler\.shared\.register/);
 });
 
 test('innebygd Kalender: økten følger Homelab-kontoen (aldri en annen brukers kalender)', () => {

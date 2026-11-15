@@ -13,7 +13,7 @@ struct KalNetError: LocalizedError, HomelabFailure {
     var needsTotp: Bool = false
     /// Prompt 44: serveren avviser tokenet også etter fornyelse (KalAuthGate44) – bare da logges man ut.
     var revoked44: Bool = false
-    /// Prompt 51: 403 DEVICE_APPROVAL_REQUIRED – ny enhet må godkjennes (KalSec51Core.swift).
+    /// Prompt 51: 403 DEVICE_APPROVAL_REQUIRED – ny enhet må godkjennes (KalSecurityCore.swift).
     var approval51: KalApproval51? = nil
     /// Serverens kode (NOT_FOUND, TOKEN_EXPIRED …) og årsak ved 401 (none | invalid | expired).
     var code: String? = nil
