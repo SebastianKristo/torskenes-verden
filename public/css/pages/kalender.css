@@ -310,6 +310,8 @@ html[data-kal-app] .k2.k2-fs{padding-top:6px}
 .k39-tabs{flex:none;display:flex;gap:2px;padding:3px;border-radius:999px;background:var(--chip)}
 .k39-tabs button{height:28px;padding:0 11px;border:0;border-radius:14px;background:transparent;color:var(--ink);cursor:pointer;font:700 12.5px/1 var(--ui);white-space:nowrap}
 .k39-tabs button.on{background:var(--ink);color:var(--bg)}
+.k39-tabs.k6-filt a{display:inline-flex;align-items:center;height:28px;padding:0 11px;border-radius:14px;color:var(--ink);font:700 12.5px/1 var(--ui);white-space:nowrap;text-decoration:none}
+.k39-tabs.k6-filt a:hover{background:var(--bg)}
 .k39-today{flex:none;position:relative;width:34px;height:34px;padding:0;border:0;background:transparent;color:var(--ink);cursor:pointer;display:grid;place-items:center}
 .k39-today>span{position:absolute;left:0;right:0;top:15px;text-align:center;font:800 8.5px/1 var(--ui)}
 .k39-today>i{position:absolute;top:4px;right:3px;width:7px;height:7px;border-radius:50%;background:var(--red)}
@@ -543,6 +545,7 @@ html[data-kal-app] .k2.k2-fs{padding-top:6px}
   .k39-tb>[data-k-search],.k39-today,.k39-quick,.k39-new{order:2}
   .k39-navs{order:3}
   .k39-tabs{order:4;flex:1 1 calc(100% - 90px);min-width:0;overflow-x:auto;scrollbar-width:none}
+  .k39-tabs.k6-filt{order:5;flex:0 1 auto}
   .k39-tabs::-webkit-scrollbar{display:none}
   .k39-tabs button{flex:1 0 auto}
   .k39-yrg{grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;padding:14px}

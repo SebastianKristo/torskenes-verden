@@ -125,11 +125,11 @@
       "plattformer": ["web", "ios", "android"], "adminOnly": false,
       "rute": "#/media", "aliaser": [],
       "undersider": [
-        { "id": "na", "navn": "Nå", "type": "fane", "rute": "#/media", "aliaser": ["#/media/oversikt"] },
+        { "id": "na", "navn": "Nå", "type": "fane", "rute": "#/media" },
         { "id": "kommer", "navn": "Kommer", "type": "fane", "rute": "#/media/kommer", "aliaser": ["#/media/kalender"] },
         { "id": "bibliotek", "navn": "Bibliotek", "type": "fane", "rute": "#/media/bibliotek" },
         { "id": "nedlastinger", "navn": "Nedlastinger", "type": "fane", "rute": "#/media/nedlastinger" },
-        { "id": "kilder", "navn": "Kilder", "type": "fane", "rute": "#/media/kilder", "aliaser": ["#/media/nrk", "#/media/musikk"] },
+        { "id": "kilder", "navn": "Kilder", "type": "fane", "rute": "#/media/kilder" },
         { "id": "ikveld", "navn": "I kveld", "type": "visning", "rute": "#/mediakveld" }
       ]
     },

@@ -7,6 +7,7 @@
 import { themeBtn } from './kalender-tema.js';
 import { orb43 } from './glimt-orb.js'; // prompt 43: Glimt-orben på «Skriv time» og «Dagen din»
 import { esc, isMobile } from './util.js';
+import { modul } from './moduler.js'; // Fase 6: visninger og filtre fra modullisten
 import { AB_CAL, groupSubs, chipInner, bindLogos, krTxt, badge as abBadge, logo as abLogo } from './kalender-abonnementer.js'; // prompt 42: Abonnementer
 import { todayIcon } from './kalender-deltakere.js'; // prompt 44: nytt I dag-ikon
 
@@ -217,7 +218,17 @@ export function titles() {
 
 /* ---------------- Verktøylinja (MacToolbar) ---------------- */
 
-const VIEWS = [['dag', 'Dag', 'D'], ['3d', '3 dager', '3'], ['uke', 'Uke', 'W'], ['mnd', 'Måned', 'M'], ['ar', 'År', 'Y'], ['liste', 'Liste', 'L']];
+// Fase 6: visningene i samme rekkefølge og med samme navn som appene (År, Måned, Uke, 3 dager, Dag, Liste), fra modullisten.
+// Hurtigtastene står her (web og Mac); navnet på smale skjermer er «kort» i lista (Mnd, 3 d).
+const HOTKEY = { ar: 'Y', mnd: 'M', uke: 'W', '3d': '3', dag: 'D', liste: 'L' };
+const VIEWS_FALLBACK = [['ar', 'År'], ['mnd', 'Måned'], ['uke', 'Uke'], ['3d', '3 dager'], ['dag', 'Dag'], ['liste', 'Liste']];
+const VIEWS = () => {
+  const l = (modul('kalender')?.undersider ?? []).filter((u) => u.type === 'visning' && HOTKEY[u.id]).map((u) => [u.id, u.navn, HOTKEY[u.id]]);
+  return l.length ? l : VIEWS_FALLBACK.map(([k, n]) => [k, n, HOTKEY[k]]);
+};
+// Q5: filtrene Familie og Bursdager er egne visninger under Kalender (#/kalender/familie, #/kalender/bursdager).
+const FILTERS = () => (modul('kalender')?.undersider ?? []).filter((u) => u.type === 'filter' && u.rute !== '#/kalender');
+const filterLinks = () => { const f = FILTERS(); return f.length ? `<nav class="k39-tabs k6-filt" aria-label="Filtre">${f.map((u) => `<a href="${esc(u.rute)}" data-k6-filter="${esc(u.id)}">${esc(u.navn)}</a>`).join('')}</nav>` : ''; };
 export function toolbar(app) {
   const K = C.K, V = K.view, tt = titles(), today = new Date(), isToday = isTodayVisible();
   // Prompt 43: × står helt til høyre (etter «+ Ny hendelse»), rund 40 px i ink med bg-kryss.
@@ -227,8 +238,8 @@ export function toolbar(app) {
     <button type="button" class="k39-title" data-k-titl title="Zoom ut"><span class="k39-tt" data-no-i18n>${esc(tt.t)}</span>${tt.s ? `<span class="k39-ts">${esc(tt.s)}</span>` : ''}</button>
     <span class="k39-sp"></span>
     <span class="k39-navs"><button type="button" class="k39-ib bd" data-k-nav="-1" aria-label="Forrige" title="Forrige (←)">${IC.left}</button><button type="button" class="k39-ib bd" data-k-nav="1" aria-label="Neste" title="Neste (→)">${IC.right}</button></span>
-    <div class="k39-tabs" role="tablist">${VIEWS.map(([k, n, h]) => `<button type="button" role="tab" aria-selected="${V === k}" class="${V === k ? 'on' : ''}" data-k-view="${k}" title="${n} (${h})">${n}</button>`).join('')}</div>
-    ${app ? '' : themeBtn()}<button type="button" class="k39-ib" data-k-search aria-label="Søk" title="Søk (/)">${IC.search}</button>
+    <div class="k39-tabs" role="tablist">${VIEWS().map(([k, n, h]) => `<button type="button" role="tab" aria-selected="${V === k}" class="${V === k ? 'on' : ''}" data-k-view="${k}" title="${n} (${h})">${n}</button>`).join('')}</div>
+    ${app ? '' : filterLinks()}${app ? '' : themeBtn()}<button type="button" class="k39-ib" data-k-search aria-label="Søk" title="Søk (/)">${IC.search}</button>
     <button type="button" class="k39-today k44-td" data-k-today aria-label="I dag" title="I dag (T)">${todayIcon(today.getDate())}${isToday ? '' : '<i></i>'}</button>
     <button type="button" class="k39-quick k43-quick" data-k-qa title="Skriv en hendelse med vanlige ord – Glimt fyller ut">${orb43(20)}<span class="k39-lg">Skriv time</span></button>
     <button type="button" class="k39-new k43-new" data-k-new title="Ny hendelse (N)"><span class="k39-lg">+ Ny hendelse</span><span class="k39-sm">+</span></button>

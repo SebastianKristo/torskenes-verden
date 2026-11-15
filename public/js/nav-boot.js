@@ -10,7 +10,7 @@
     c = JSON.parse(localStorage.getItem('hl_tabs52') || 'null');
     if (c && c.uid && String(c.uid) !== String(localStorage.getItem('hl_uid'))) c = null;
   } catch (e) { c = null; }
-  var r = (location.hash.replace(/^#\/?/, '').split('?')[0].split('/')[0]) || 'dash';
+  var r = (location.hash.replace(/^#\/?/, '').split('?')[0].split('/')[0]) || 'oversikt';
   var mobile = false;
   try { mobile = matchMedia('(max-width: 767px)').matches; } catch (e) { /* */ }
   function apply(navSel, list) {
@@ -28,10 +28,23 @@
     });
     return true;
   }
+  // Fase 6: modulen adressen hører til, fra modullisten (moduler.js cacher den i hl_mod6): gamle adresser (#/dash) via aliasene,
+  // ellers modulen med samme adresse (#/hjem → smarthjem) eller en underside (#/kalender/bursdager → kalender).
+  function moduleOf(seg) {
+    var m6 = null;
+    try { m6 = JSON.parse(localStorage.getItem('hl_mod6') || 'null'); } catch (e) { m6 = null; }
+    if (!m6 || !m6.moduler) return seg;
+    var to = m6.alias && m6.alias['#/' + seg];
+    var s2 = to ? String(to).replace(/^#\/?/, '').split('/')[0] : seg;
+    for (var i = 0; i < m6.moduler.length; i++) {
+      var m = m6.moduler[i];
+      if (m.rute === '#/' + s2 || m.id === s2) return m.id;
+    }
+    return s2;
+  }
   function mark() {
-    var key = r;
-    if (mobile && ['chat', 'rom', 'nettverk', 'hjem', 'matplan', 'sporing', 'familie', 'huskeliste', 'gjoremal', 'domener', 'bursdager', 'kalender', 'media', 'kart', 'familiekalender', 'mediakveld', 'skjold'].indexOf(r) >= 0) key = 'mer';
-    if (r === 'gjoremal') key = mobile ? 'mer' : 'huskeliste';
+    var key = moduleOf(r);
+    if (mobile && key !== 'mer' && !document.querySelector('.bottomnav [data-r="' + key + '"]')) key = 'mer';
     Array.prototype.forEach.call(document.querySelectorAll('.pillnav [data-r], .bottomnav [data-r]'), function (a) {
       if (a.getAttribute('data-r') === key) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
     });

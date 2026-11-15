@@ -88,7 +88,7 @@ async function goBack() {
   const info = backInfo();
   try { sessionStorage.removeItem(BACK); } catch { /* */ }
   document.getElementById('gb37-vback')?.remove();
-  location.hash = '#/dash';
+  location.hash = '#/oversikt';
   const m = await import('./brief.js');
   setTimeout(() => m.reopenBrief?.(info?.sc ?? 0), 60);
 }

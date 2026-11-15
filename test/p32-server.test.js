@@ -134,9 +134,9 @@ test('Glimt: side-snarveier (intent nav) før verktøyene', async () => {
   assert.equal(r.status, 200);
   assert.equal(r.body.intent, 'nav');
   assert.equal(r.body.target, 'nordlys');
-  assert.equal(r.body.text, 'Åpner **Nordlys OS · oppdatering**.');
+  assert.equal(r.body.text, 'Åpner **Server · System**.');
   assert.equal(r.body.source, 'Snarvei');
-  assert.deepEqual(r.body.nav, { target: 'nordlys', label: 'Nordlys OS · oppdatering', web: '/#/innstillinger/system', deepLink: 'finanshub://nordlys', delayMs: 450 });
+  assert.deepEqual(r.body.nav, { target: 'nordlys', label: 'Server · System', web: '/#/innstillinger/system', deepLink: 'finanshub://nordlys', delayMs: 450 });
 });
 
 test('hs_timeout_s i layout (5/8/15/30, standard 8)', async () => {

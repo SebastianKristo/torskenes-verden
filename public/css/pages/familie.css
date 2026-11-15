@@ -173,7 +173,7 @@ html[data-mode="dark"] .za45-bn{background:rgba(40,38,34,.94);color:var(--ds-tex
 .f50.web .f50-tabpad { height: 84px; }
 
 /* Fanelinja: mørk pille nederst */
-.f50 .f50-tabs { position: absolute; z-index: 700; left: 14px; right: 14px; bottom: calc(14px + env(safe-area-inset-bottom, 0px)); height: 62px; border-radius: 31px; background: var(--f-pill); display: grid; grid-template-columns: repeat(4, 1fr); padding: 6px; gap: 4px; box-shadow: 0 12px 30px -12px rgba(0, 0, 0, .5); max-width: 460px; margin: 0 auto; }
+.f50 .f50-tabs { position: absolute; z-index: 700; left: 14px; right: 14px; bottom: calc(14px + env(safe-area-inset-bottom, 0px)); height: 62px; border-radius: 31px; background: var(--f-pill); display: grid; grid-template-columns: repeat(5, 1fr); padding: 6px; gap: 4px; box-shadow: 0 12px 30px -12px rgba(0, 0, 0, .5); max-width: 460px; margin: 0 auto; }
 .f50.web .f50-tabs { position: sticky; bottom: 14px; margin: -76px auto 0; width: calc(100% - 28px); }
 .f50 .f50-tabs a { border-radius: 26px; color: var(--f-taboff); display: grid; place-items: center; font: 700 12.5px Manrope, sans-serif; white-space: nowrap; text-decoration: none; transition: background .2s, color .2s; }
 .f50 .f50-tabs a.on { background: var(--f-tabon); color: #1b1a17; }

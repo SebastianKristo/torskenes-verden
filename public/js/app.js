@@ -23,7 +23,8 @@ import { loadHlTheme, applyHlTheme, is2c, setHlTheme, pwHeader, paintPhoto, bind
 import { initPageAddons, afterPageAddons, renderKart } from './page-addons.js'; // lys/mørk, GlimtInput, logg inn som, Glimt-agent og tillegg per side
 import { renderFam51, renderMedia51, afterMedfam51 } from './mediakveld-familiekalender.js'; // prompt 51 (MEDFAM51): Familiekalender og «I kveld»
 import { initWeb52, after52 } from './startup.js'; // oppstart, sideanimasjon, Ruter-buffer m.m.
-import { initNavOverflow } from './nav-overflow.js'; // «Mer ▾» når fanene ikke får plass (B-B1/B2)
+import { initNavOverflow } from './nav-overflow.js'; // «Alle sider ▾» i toppmenyen (Q6, B-B1/B2)
+import { loadModuler, aliasTil, viewOf, navKeyOf, tittel, subtabs } from './moduler.js'; // Fase 6: modullisten (GET /api/moduler)
 // Prompt 76 (SKJWEB): Skjold Lab (#/skjold) – skallet tegnes her, selve modulen (skjold.js) lastes ved behov.
 const renderSkjold76 = () => '<section class="sk76" id="sk76" aria-label="Skjold Lab" aria-busy="true"></section>';
 
@@ -39,6 +40,7 @@ const MODS = {
   sporing: () => import('./tracking.js'),
   familie: () => import('./family-web.js'), // prompt 50 (FAMWEB50): Familie i nytt design (family.js)
   tasks: () => import('./tasks.js'),
+  reise: () => import('./reise.js'), // Fase 6 (Q8): Reise – avganger og kart
   vaer: () => import('./weather-page.js'),
   bursdager: () => import('./birthdays.js'),
   kalender: () => import('./kalender.js'),
@@ -50,7 +52,10 @@ const MODS = {
 // Modulene som kobler lyttere til visningen (#view) gjør det én gang, når de lastes.
 const BIND = { rom: (m) => m.bind(view), hjem: (m) => m.bind(view), matplan: (m) => m.bind(view), sporing: (m) => m.bind(view), domener: (m) => m.bind(view) };
 const r0 = (m) => m.render();
-const ROUTES = { dash: ['dash', r0], studie: ['studie', r0], rom: ['rom', r0], hjem: ['hjem', r0], matplan: ['matplan', r0], sporing: ['sporing', r0], familie: ['familie', r0], huskeliste: ['tasks', r0], gjoremal: ['tasks', r0], vaer: ['vaer', r0], bursdager: ['bursdager', r0], kalender: ['kalender', r0], chat: ['chat', r0], media: ['media', r0], kart: [null, renderKart], familiekalender: [null, renderFam51], mediakveld: [null, renderMedia51], skjold: [null, renderSkjold76], domener: ['domener', r0], nettverk: ['net', r0], mer: ['net', (m) => m.renderMore()] };
+// Nøklene er visningene på web (body[data-route]); adressen oversettes til dem i moduler.js (viewOf): #/oversikt → dash,
+// #/kalender/bursdager → bursdager, #/kalender/familie → familiekalender, #/reise/kart → kart. Gamle adresser (#/dash, #/huskeliste,
+// #/bursdager, #/familiekalender, #/kart …) videresendes etter aliasene i modullisten (aliasTil).
+const ROUTES = { dash: ['dash', r0], studie: ['studie', r0], rom: ['rom', r0], hjem: ['hjem', r0], matplan: ['matplan', r0], sporing: ['sporing', r0], familie: ['familie', r0], gjoremal: ['tasks', r0], vaer: ['vaer', r0], bursdager: ['bursdager', (m) => subtabs('kalender', 'bursdager', 'filter') + m.render()], kalender: ['kalender', r0], chat: ['chat', r0], media: ['media', r0], reise: ['reise', r0], kart: ['reise', (m) => m.kartTabs() + renderKart()], familiekalender: [null, () => subtabs('kalender', 'familie', 'filter') + renderFam51()], mediakveld: [null, renderMedia51], skjold: [null, renderSkjold76], domener: ['domener', r0], nettverk: ['net', r0], mer: ['net', (m) => m.renderMore()] };
 const mods = {}, loading = {};
 function loadMod(k) {
   if (!k || mods[k]) return Promise.resolve(mods[k]);
@@ -71,19 +76,25 @@ const scrollMem = scrollMemory();
 let route = null, wasMobile = isMobile(), isEditingPending = false;
 
 function current() {
-  // Prompt 30: undersider i adressen (#/kalender/dag/2026-10-21) hører til første ledd.
-  const r = location.hash.replace(/^#\/?/, '').split('?')[0].split('/')[0];
-  // Økonomi er nå FinansHub, en egen fullskjerm-app.
-  if (r === 'okonomi') { location.replace('/finans/'); return 'dash'; }
-  if (r === 'mer' && !isMobile()) return 'nettverk';
   // Prompt 38: Kalender.app for Mac (/kalender?app=mac) viser bare kalenderen.
   if (KAL_APP) return 'kalender';
+  // Fase 6: gamle adresser videresendes (#/dash → #/oversikt, #/kart → #/reise/kart …). #/okonomi og #/finans går til /finans/.
+  const to = aliasTil(location.hash);
+  if (to && !to.startsWith('#')) { location.replace(to); return 'dash'; }
+  if (to) history.replaceState(history.state, '', `${location.pathname}${location.search}${to}`);
+  // Undersider i adressen (#/kalender/dag/2026-10-21) hører til visningen for første ledd (moduler.js viewOf).
+  const r = viewOf(location.hash);
+  if (r === 'mer' && !isMobile()) return 'nettverk';
+  if (r === 'nyheter') return 'nyheter';
   return ROUTES[r] ? r : 'dash';
 }
 
 let renderSeq = 0;
 function renderRoute() {
-  const next = current(), seq = ++renderSeq;
+  let next = current();
+  // Nyheter (Q10) er et ark over siden: #/nyheter åpner leseren over Oversikt.
+  if (next === 'nyheter') { history.replaceState(history.state, '', `${location.pathname}${location.search}#/oversikt`); openNewsReader(); next = 'dash'; if (route === 'dash') return; }
+  const seq = ++renderSeq;
   const [mk, draw] = ROUTES[next];
   // Modulen er ikke lastet ennå: siden som vises blir stående til den er klar (lokalt noen få ms).
   if (mk && !mods[mk]) {
@@ -102,7 +113,7 @@ function renderRoute() {
   if (tk && view.contains(tk)) document.querySelector('header.top').after(tk);
   // Værsiden er en egen fullskjermside (systemfont, animert himmel) uten fotovindu.
   // Prompt 40: Gjøremål er fullskjerm på web (som Chat), uten fotovindu og toppmeny.
-  const fsTasks = (route === 'huskeliste' || route === 'gjoremal') && !isMobile();
+  const fsTasks = route === 'gjoremal' && !isMobile();
   document.body.classList.toggle('tk-fs40', fsTasks);
   swapView((is2c() && route !== 'vaer' && route !== 'rom' && route !== 'chat' && route !== 'media' && !fsTasks ? pwHeader(route) : '') + draw(mods[mk])); // Vær, Rom (prompt 32) og Chat (prompt 33) er fullskjerm
   placeTicker();
@@ -115,8 +126,9 @@ function renderRoute() {
   afterMedfam51(route, view); // prompt 51 (MEDFAM51)
   after52(route, view); // oppstart og sideanimasjon (startup.js)
   if (route === 'skjold') import('./skjold.js').then((m) => m.mount(view)).catch((e) => console.warn('skjold76', e)); // prompt 76
-  // Rom er en underside av «Mer» på mobil.
-  const navKey = isMobile() && ['chat', 'rom', 'nettverk', 'hjem', 'matplan', 'sporing', 'familie', 'huskeliste', 'gjoremal', 'domener', 'bursdager', 'kalender', 'media', 'kart', 'familiekalender', 'mediakveld', 'skjold'].includes(route) ? 'mer' : route;
+  // Fanen som markeres: modulen visningen hører til (bursdager → kalender). På mobil er alt som ikke står i bunnmenyen under «Mer».
+  const mk2 = navKeyOf(route);
+  const navKey = isMobile() && route !== 'mer' && !document.querySelector(`.bottomnav [data-r="${mk2}"]`) ? 'mer' : route === 'mer' ? 'mer' : mk2;
   document.querySelectorAll('[data-r]').forEach((a) => { if (a.dataset.r === navKey) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
   setTitle();
   // Prompt 23: tilbake gir samme scrollposisjon som før, nye sider åpner øverst.
@@ -150,9 +162,12 @@ function swapView(html) {
   if (oldImg && img && oldImg.style.backgroundImage) img.replaceWith(oldImg);
 }
 
-// Fanetittelen: «Side · Appnavn» (appnavnet fra Innstillinger → App, standard «Homelab»).
-const TITLES = { chat: 'Chat', vaer: 'Vær', studie: 'Studie', rom: 'Rom', hjem: 'Hjem', matplan: 'Mat', sporing: 'Sporing', familie: 'Familie', huskeliste: 'Gjøremål', gjoremal: 'Gjøremål', bursdager: 'Bursdager', kalender: 'Kalender', media: 'Media', kart: 'Kart', familiekalender: 'Familiekalender', mediakveld: 'I kveld', skjold: 'Skjold Lab', domener: 'Domener', nettverk: 'Nettverk', mer: 'Mer' };
-function setTitle() { document.title = KAL_APP ? 'Kalender' : TITLES[route] ? `${TITLES[route]} · ${appName()}` : appName(); }
+// Fanetittelen: «Side · Appnavn» (appnavnet fra Innstillinger → Utseende, standard «Homelab»). Navnet på siden kommer fra modullisten
+// (moduler.js tittel): undersiden når den har egen adresse (Bursdager, I kveld, Kart), ellers modulen. Oversikt har bare appnavnet.
+function setTitle() {
+  const t = route === 'mer' ? 'Mer' : route === 'dash' ? null : tittel(location.hash);
+  document.title = KAL_APP ? 'Kalender' : t ? `${t} · ${appName()}` : appName();
+}
 
 // Nyhetsbaren ligger under topplinjen, men i Vindu og papir under søkefeltet på papiret.
 function placeTicker() {
@@ -203,7 +218,7 @@ function bindShell() {
     if (act === 'toggle-search') await toggle('search');
     if (act === 'toggle-news') await toggle('news');
     if (act === 'head-edit') toggleHeadEdit();
-    if (act === 'dash-edit') { if (current() !== 'dash' || !mods.dash) { isEditingPending = true; location.hash = '#/dash'; } else mods.dash.startEdit(); }
+    if (act === 'dash-edit') { if (current() !== 'dash' || !mods.dash) { isEditingPending = true; location.hash = '#/oversikt'; } else mods.dash.startEdit(); }
     if (act === 'logout') {
       if (!confirm('Logge ut? Denne enheten må da logge inn med passord igjen.')) return;
       const d = await api('/devices').catch(() => null), cur = d?.devices?.find((x) => x.current);
@@ -231,7 +246,7 @@ function bindShell() {
 
 async function main() {
   loadMod(ROUTES[current()]?.[0]).catch(() => {}); // rutemodulen lastes mens oppstartsdataene hentes
-  const [me, ui, , , lay44] = await Promise.all([api('/state'), api('/ui').catch(() => uiDefaults()), loadHlTheme(), loadAppIdentity(), api('/me/layout').catch(() => null)]);
+  const [me, ui, , , lay44] = await Promise.all([api('/state'), api('/ui').catch(() => uiDefaults()), loadHlTheme(), loadAppIdentity(), api('/me/layout').catch(() => null), loadModuler(api)]);
   store.me = me;
   noteUser(me?.me?.id); // kontobytte: tøm den forrige brukerens cacher
   store.me.ui = { ...uiDefaults(), ...ui };
@@ -268,7 +283,7 @@ async function main() {
   // er ledig, så dashbordet er klart når man går dit. Vær (topplinjen) og skole (Kalender, Studie, Dashboard) hentes alltid.
   const onDash = () => route === 'dash', onNet = () => route === 'nettverk' || route === 'mer';
   const every = (key, ms, visible, path) => poll(() => load(key, path), ms, visible ? { visible, first: 'idle' } : { first: 'now' });
-  every('ruter', 30_000, onDash);
+  every('ruter', 30_000, () => route === 'dash' || route === 'reise'); // avgangene vises på Oversikt og i Reise
   every('weather', 15 * 60_000);
   every('school', 15 * 60_000);
   every('trading', 60_000, onDash);

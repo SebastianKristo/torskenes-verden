@@ -1,6 +1,8 @@
 // Profil (navn og bilde i menyknappen) og oppsett av forsiden: skjulte widgets og faner.
 import { esc, api } from './util.js';
 import { store } from './store.js';
+import { setOrder } from './dnd.js';
+import { liste, webModuler, modul, harModul, navn } from './moduler.js'; // Fase 6: fanene kommer fra modullisten
 
 /* ---------- Profil ---------- */
 
@@ -49,17 +51,23 @@ export async function removeAvatar() {
 // Widgets på dashboardet som kan skjules (id → navn). Rekkefølgen styres av dra-og-slipp / ▲▼.
 export const DASH_WIDGETS = [['d_cal', 'Skolekalender'], ['d_agenda', 'Agenda'], ['d_trading', 'Trading 212'], ['d_energy', 'Energi'], ['d_eco', 'Økonomi'], ['d_links', 'Snarveier'], ['d_upcoming', 'Kommer ut'], ['d_media', 'Media'], ['d_media_hist', 'Mediehistorikk'], ['d_pos', 'Posisjon · familie'], ['d_bday', 'Bursdager · neste'], ['d_kal', 'Kalender']];
 export const MOBILE_WIDGETS = [['d_weather_m', 'Vær og pakker'], ['d_agenda', 'I dag'], ['d_trading', 'Trading 212'], ['d_energy', 'Energi'], ['d_eco', 'Økonomi'], ['d_upcoming', 'Kommer ut'], ['d_media', 'Media'], ['d_media_hist', 'Mediehistorikk'], ['d_pos', 'Posisjon · familie'], ['d_bday', 'Bursdager · neste'], ['d_kal', 'Kalender']];
-export const TABS = [['dash', 'Dashboard'], ['vaer', 'Vær'], ['chat', 'Chat'], ['studie', 'Studie'], ['rom', 'Rom'], ['okonomi', 'Økonomi'], ['hjem', 'Hjem'], ['matplan', 'Mat'], ['sporing', 'Sporing'], ['familie', 'Familie'], ['domener', 'Domener'], ['nettverk', 'Nettverk'], ['huskeliste', 'Gjøremål'], ['bursdager', 'Bursdager'], ['kalender', 'Kalender'], ['media', 'Media'], ['kart', 'Kart'], ['skjold', 'Skjold Lab']]; // prompt 43: Media (indeks 15) vises etter Familie · prompt 46: Kart (indeks 16) rett etter Familie · prompt 76: Skjold Lab (indeks 17) sist
-// ISO2: Hjem, Mat og Sporing har egne data per bruker; bare Domener er for administratorer.
-const ADMIN_TABS = ['domener'];
-export const FIXED_TABS = ['dash'];
+// Fanene i toppmenyen: alle sidene på web fra modullisten (moduler.js, GET /api/moduler), i listens rekkefølge. [id, navn].
+// Fylles når lista er hentet (buildNav); ark (Nyheter) og Økonomi-snarveien er med, siden de kan stå som faner.
+export const TABS = [];
+export const FIXED_TABS = ['oversikt'];
+// De gamle fanene før Fase 6, i den gamle rekkefølgen. Bare til å flytte en lagret rekkefølge (indekser i denne lista) og lagrede
+// navn/skjulte faner over til modul-id-ene (migrateNav6). Ikke bruk den til noe annet.
+const OLD_TABS = ['dash', 'vaer', 'chat', 'studie', 'rom', 'okonomi', 'hjem', 'matplan', 'sporing', 'familie', 'domener', 'nettverk', 'huskeliste', 'bursdager', 'kalender', 'media', 'kart', 'skjold'];
+const OLD_ID = { dash: 'oversikt', hjem: 'smarthjem', matplan: 'mat', huskeliste: 'gjoremal', gjoremal: 'gjoremal', bursdager: 'kalender', kart: 'reise' };
+const newId = (k) => OLD_ID[k] ?? k;
 
 const layout = () => (store.me.layout ??= {});
 export const hiddenWidgets = () => new Set(layout().hiddenWidgets ?? []);
-export const hiddenTabs = () => new Set([...(layout().hiddenTabs ?? []), ...(store.me.me?.role === 'admin' ? [] : ADMIN_TABS), ...(mediaAllowed() ? [] : ['media'])].filter((k) => !FIXED_TABS.includes(k)));
-export const tabAllowed = (k) => (k === 'media' ? mediaAllowed() : store.me.me?.role === 'admin' || !ADMIN_TABS.includes(k));
-// Prompt 43: Media er for admin og dem admin gir tilgang (modulen «media»; serveren sier fra med 403 ellers).
-const mediaAllowed = () => { const me = store.me.me ?? {}; return me.role === 'admin' || me.media === true || (Array.isArray(me.modules) && me.modules.includes('media')); };
+/** Moduler brukeren har tilgang til (serveren sender bare dem: Domener for admin, Media med tilgang). */
+export const tabAllowed = (k) => harModul(k);
+// Q6: uten eget valg står bare de faste fanene i toppmenyen; resten ligger under «Alle sider ▾».
+const defaultHidden = () => TABS.map(([k]) => k).filter((k) => !liste().toppmeny.includes(k));
+export const hiddenTabs = () => new Set([...(layout().hiddenTabs ?? defaultHidden()), ...TABS.map(([k]) => k).filter((k) => !tabAllowed(k))].filter((k) => !FIXED_TABS.includes(k)));
 
 export async function saveLayout(changes) {
   Object.assign(layout(), changes);
@@ -67,38 +75,63 @@ export async function saveLayout(changes) {
   if (r?.homelab) store.me.layout = r.homelab;
 }
 
-const DEF_NAME = Object.fromEntries(TABS);
-/** Navnet brukeren har gitt fanen, eller standardnavnet. */
-export const tabLabel = (id, def = DEF_NAME[id] ?? id) => layout().labels?.[id] || def;
+/** Navnet brukeren har gitt fanen, eller standardnavnet fra modullisten. */
+export const tabLabel = (id, def = navn(id)) => layout().labels?.[id] || def;
 
-/** Skjuler og gir nytt navn til faner i topplinjen og bunnmenyen. Skjulte sider kan fortsatt åpnes med lenke. */
-export function applyNav() {
-  // Prompt 32: «Vær» ble satt inn rett etter Dashboard (indeks 1). En lagret rekkefølge fra før (uten indeks 14) flyttes ett hakk.
-  const lt = store.me?.layouts?.tabs;
-  // (Gjelder lagrede rekkefølger med 14 faner, før Kalender kom som indeks 14.)
-  if (Array.isArray(lt) && lt.length && Math.max(...lt) < 14 && !lt.includes(14)) {
-    const m = lt.map((i) => (i >= 1 ? i + 1 : i)); m.splice(m.indexOf(0) + 1, 0, 1); store.me.layouts.tabs = m;
+const tabHtml = (m) => `<a href="${esc(m.rute)}" data-r="${esc(m.id)}">${esc(m.navn)}</a>`;
+/** Bygger fanene i toppmenyen og bunnmenyen fra modullisten (samme rekkefølge som app.html, så nav-boot.js kan vise dem straks). */
+function buildNav() {
+  const tabs = webModuler();
+  TABS.splice(0, TABS.length, ...tabs.map((m) => [m.id, m.navn]));
+  const top = document.querySelector('.pillnav');
+  if (top) {
+    const have = [...top.querySelectorAll(':scope > a[data-r]')].map((a) => a.dataset.r).join();
+    if (have !== tabs.map((m) => m.id).join()) {
+      top.querySelectorAll(':scope > a[data-r]').forEach((a) => a.remove());
+      top.insertAdjacentHTML('afterbegin', tabs.map(tabHtml).join(''));
+    }
   }
-  // Prompt 43: Media (indeks 15) settes rett etter Familie (indeks 9), både i lagret og i standard rekkefølge.
-  const mi = TABS.findIndex(([k]) => k === 'media');
-  if (store.me) {
+  const bottom = document.querySelector('.bottomnav');
+  if (bottom) {
+    const want = [...liste().bunnmeny.map(modul).filter(Boolean), { id: 'mer', rute: '#/mer', navn: 'Mer' }];
+    if ([...bottom.querySelectorAll('[data-r]')].map((a) => a.dataset.r).join() !== want.map((m) => m.id).join()) bottom.innerHTML = want.map(tabHtml).join('');
+  }
+}
+
+/**
+ * Fase 6: rekkefølgen, navnene og de skjulte fanene brukeren har valgt, flyttes fra de gamle nøklene (dash, huskeliste, indekser i
+ * den gamle lista) til modul-id-ene. Kjøres én gang per bruker (layout.navV = 6). Uten eget valg brukes standarden (Q6).
+ */
+function migrateNav6() {
+  if (!store.me || layout().navV === 6 || !TABS.length) return;
+  store.me.layouts ??= {};
+  const ids = TABS.map(([k]) => k), changes = { navV: 6 };
+  const lt = store.me.layouts.tabs;
+  if (Array.isArray(lt) && lt.length) {
+    const order = [...new Set(lt.map((i) => newId(OLD_TABS[i])).filter((k) => ids.includes(k)))];
+    for (const k of ids) if (!order.includes(k)) order.push(k);
+    setOrder('tabs', order.map((k) => ids.indexOf(k)));
+  }
+  const L = layout();
+  if (Array.isArray(L.hiddenTabs)) changes.hiddenTabs = [...new Set(L.hiddenTabs.map(newId))];
+  if (L.labels && typeof L.labels === 'object') changes.labels = Object.fromEntries(Object.entries(L.labels).map(([k, v]) => [newId(k), v]));
+  saveLayout(changes);
+}
+
+/** Skjuler og gir nytt navn til faner i topplinjen og bunnmenyen. Skjulte sider kan fortsatt åpnes med lenke og fra «Alle sider». */
+export function applyNav() {
+  buildNav();
+  migrateNav6();
+  // Uten lagret rekkefølge: de faste fanene (Q6) først, i den rekkefølgen, så resten i listens rekkefølge.
+  if (store.me && !(store.me.layouts?.tabs?.length)) {
+    const ids = TABS.map(([k]) => k), first = liste().toppmeny.filter((k) => ids.includes(k));
     store.me.layouts ??= {};
-    const cur = store.me.layouts.tabs, fresh46 = !Array.isArray(cur) || !cur.length;
-    if (!Array.isArray(cur) || !cur.includes(mi)) {
-      const base = Array.isArray(cur) && cur.length ? cur.filter((i) => i !== mi) : TABS.map((_, i) => i).filter((i) => i !== mi);
-      const f = base.indexOf(TABS.findIndex(([k]) => k === 'familie'));
-      base.splice(f < 0 ? base.length : f + 1, 0, mi); store.me.layouts.tabs = base;
-    }
-    // Prompt 46: Kart (indeks 16) settes rett etter Familie, på samme måte.
-    const ki = TABS.findIndex(([k]) => k === 'kart'), cur2 = store.me.layouts.tabs;
-    if (Array.isArray(cur2) && (fresh46 || !cur2.includes(ki))) {
-      const base = cur2.filter((i) => i !== ki), f = base.indexOf(TABS.findIndex(([k]) => k === 'familie'));
-      base.splice(f < 0 ? base.length : f + 1, 0, ki); store.me.layouts.tabs = base;
-    }
+    store.me.layouts.tabs = [...first, ...ids.filter((k) => !first.includes(k))].map((k) => ids.indexOf(k));
   }
   const hid = hiddenTabs();
   document.querySelectorAll('.pillnav [data-r], .bottomnav [data-r]').forEach((a) => {
-    a.hidden = hid.has(a.dataset.r);
+    // Bunnmenyen på mobil viser alltid sine faner (så sant brukeren har modulen); valget i toppmenyen gjelder bare toppmenyen.
+    a.hidden = a.closest('.bottomnav') ? a.dataset.r !== 'mer' && !tabAllowed(a.dataset.r) : hid.has(a.dataset.r);
     a.dataset.def ??= a.textContent;
     a.textContent = tabLabel(a.dataset.r, a.dataset.def);
   });

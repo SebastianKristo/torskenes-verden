@@ -311,7 +311,7 @@ function bindPanel(el) {
     if (t.closest('[data-gb37-next]')) { nextVerse(); return; }
     const tk = t.closest('[data-gb37-tick]');
     if (tk) { tickTodo(tk.dataset.gb37Tick); return; }
-    if (t.closest('[data-gb37-todos]')) { closeBrief(); location.hash = '#/huskeliste'; return; }
+    if (t.closest('[data-gb37-todos]')) { closeBrief(); location.hash = '#/gjoremal'; return; }
     // Prompt 38: nye kort.
     const g38 = t.closest('[data-gb38-go]');
     if (g38) { closeBrief(); location.hash = g38.dataset.gb38Go; return; }
@@ -440,6 +440,6 @@ document.addEventListener('hl:glimt', (e) => {
   if (d.friends != null || d.tts?.lang) { if (P.open) paintPanel(); paintCards(); }
 });
 // #/brief (lenke fra varsel eller appene) åpner panelet over Dashboard.
-function fromHash() { if (/^#\/brief\/?$/.test(location.hash)) { history.replaceState(null, '', location.pathname + location.search + '#/dash'); setTimeout(() => openBrief({ tapped: false }), 50); } }
+function fromHash() { if (/^#\/brief\/?$/.test(location.hash)) { history.replaceState(null, '', location.pathname + location.search + '#/oversikt'); setTimeout(() => openBrief({ tapped: false }), 50); } }
 window.addEventListener('hashchange', fromHash);
 setTimeout(fromHash, 0);

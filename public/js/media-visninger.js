@@ -171,12 +171,13 @@ const speed = (b) => (b >= 1048576 ? `${nb(b / 1048576, 1)} MB/s` : b > 0 ? `${n
 
 /* ---------------- Topplinja ---------------- */
 
-const TABS70 = [['ov', 'Oversikt'], ['kal', 'Kalender'], ['bib', 'Bibliotek'], ['ned', 'Nedlastinger'], ['nrk', 'NRK'], ['musikk', 'Musikk']];
+// Fase 6: fanene i Media er Nå, Kommer, Bibliotek, Nedlastinger og Kilder (NRK og Musikk), som undersidene i modullisten.
+const TABS70 = [['ov', 'Nå'], ['kal', 'Kommer'], ['bib', 'Bibliotek'], ['ned', 'Nedlastinger'], ['nrk', 'Kilder']];
 const PH = { ov: 'Spør Glimt: «legg til Severance i 4K»', kal: 'Spør Glimt: «hva kommer på fredag?»', bib: 'Spør Glimt: «legg til Severance i 4K»', ned: 'Spør Glimt: «slett ferdige over 30 dager»', av: 'Spør Glimt: «hvem ser på noe nå?»', nrk: 'Spør Glimt om filmer og serier', musikk: 'Spør Glimt om filmer og serier' };
 // Prompt 89 (claude-code-media-fjern-varsler.md): varsler-pillen (grønn/rød prikk + antall) er fjernet fra Media-headeren –
 // Glimt-søket får plassen. Varsler vises fortsatt i hoveddashboardet.
 export function top70(srvHtml, orb) {
-  const M = C.M, cur = M.tab === 'av' ? 'ov' : M.tab;
+  const M = C.M, cur = M.tab === 'av' ? 'ov' : M.tab === 'musikk' ? 'nrk' : M.tab;
   const tabs = TABS70.map(([k, n]) => `<button type="button" class="m70-tab${cur === k ? ' on' : ''}" data-m43-tab="${k}" aria-current="${cur === k ? 'page' : 'false'}">${n}</button>`).join('');
   return `<header class="m70-top"><div class="m70-tl">
     <button type="button" class="m70-back" data-m43="close" title="Lukk Media (Esc)">‹ Tilbake</button>

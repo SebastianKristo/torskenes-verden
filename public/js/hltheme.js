@@ -3,6 +3,7 @@
 import { appName } from './appicon.js';
 import { api, esc } from './util.js';
 import { store } from './store.js';
+import { tittel } from './moduler.js'; // Fase 6: sidetitlene fra modullisten
 import { BG_TYPES, FALLBACK_GRAD, bgState, setBgFromLayout, saveBg, resolveBg, cachedBg, forgetBg, creditOf, particles, gphotoAlbum, loadGphoto } from './bgsvc.js';
 
 const KEY = 'hl_theme';
@@ -166,23 +167,24 @@ export function bindPhoto() {
 /* ---------- Toppen av hver side ---------- */
 // Dashboardet har et høyt vindu med hilsen og vær; de andre sidene et lavt (240 px) med kicker og sidetittel.
 const weekNo = (d = new Date()) => { const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())); const n = t.getUTCDay() || 7; t.setUTCDate(t.getUTCDate() + 4 - n); return Math.ceil(((t - Date.UTC(t.getUTCFullYear(), 0, 1)) / 864e5 + 1) / 7); };
+// Fotovinduet: [linjen over tittelen, reservetittel]. Tittelen kommer fra modullisten (moduler.js tittel), så den er lik menyen.
 const HEAD = {
   chat: () => ['Ollama lokalt · Gemini · Groq', 'Chat'],
   studie: () => [`Uke ${weekNo()}`, 'Studie'],
   rom: () => ['NASA · dagens rombilde', 'Satellitt og teleskop'],
-  hjem: () => ['Home Assistant', 'Hjem'],
+  hjem: () => ['Home Assistant', 'Smarthjem'],
   matplan: () => [`Uke ${weekNo()}`, 'Mat'],
   sporing: () => ['Pakker og sendinger', 'Sporing'],
   familie: () => ['Posisjon, soner og helse', 'Familie'],
-  kart: () => ['Holdeplasser · sanntid · soner', 'Kart'], // prompt 46
-  huskeliste: () => ['To-do for hele familien', 'Gjøremål'],
+  kart: () => ['Reise · holdeplasser · sanntid · soner', 'Kart'], // prompt 46; Fase 6 (Q8): kartet er en fane i Reise
+  reise: () => ['Avganger og kart', 'Reise'], // Fase 6 (Q8)
   gjoremal: () => ['To-do for hele familien', 'Gjøremål'], // prompt 85: #/gjoremal manglet fotovinduet på mobil, så toppmenyen lå oppå listen
-  bursdager: () => ['Familie og venner', 'Bursdager'],
+  bursdager: () => ['Kalender · familie og venner', 'Bursdager'], // Fase 6 (Q5): en visning i Kalender
   kalender: () => [`Skole · ${new Date().getMonth() >= 6 ? 'høst' : 'vår'} ${new Date().getFullYear()}`, 'Kalender'],
   domener: () => ['Trafikk, oppetid og sikkerhet', 'Domener'],
   nettverk: () => ['Nettverk og lenker', 'Nettverk'],
   mer: () => ['Alle sider', 'Mer'],
-  familiekalender: () => ['Hvem kjører? · henting og bringing', 'Familiekalender'], // prompt 51 (MEDFAM51)
+  familiekalender: () => ['Kalender · hvem kjører? · henting og bringing', 'Familie'], // prompt 51 (MEDFAM51); Fase 6 (Q5): filteret Familie i Kalender
   mediakveld: () => ['Eget bibliotek · hvem er hjemme', 'I kveld'], // prompt 51 (MEDFAM51)
   skjold: () => ['Deler · skuffer · skap', 'Skjold Lab'], // prompt 76 (SKJWEB)
 };
@@ -191,6 +193,7 @@ const HEAD = {
 export function pwHeader(route) {
   const h = HEAD[route]?.();
   if (!h) return '';
-  return `<section class="pw pw-low">${pwImg()}<div class="pw-bottom"><div><div class="pw-kick">${esc(h[0])}</div><div class="pw-title">${esc(h[1])}</div></div></div>
+  const title = route === 'mer' ? h[1] : tittel(location.hash) ?? h[1];
+  return `<section class="pw pw-low">${pwImg()}<div class="pw-bottom"><div><div class="pw-kick">${esc(h[0])}</div><div class="pw-title">${esc(title)}</div></div></div>
     <button type="button" class="pw-fail" hidden>Fikk ikke lastet bildet · trykk for å prøve igjen</button></section>`;
 }

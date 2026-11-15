@@ -129,7 +129,7 @@ function back() {
   if (par == null) { home(); return; }
   go(par);
 }
-function home() { if (F.o.home) F.o.home(); else location.hash = '#/dash'; }
+function home() { if (F.o.home) F.o.home(); else location.hash = '#/oversikt'; }
 
 /** Ny underside (fra verten eller hashchange). */
 export function setSub(sub) {
@@ -504,8 +504,11 @@ function velView() {
 }
 
 /* ---------------- Side og to kolonner ---------------- */
-const TABS = [['folk', 'Folk'], ['steder', 'Steder'], ['helse', 'Helse'], ['sjekk', 'Sjekk inn']];
-const tabBar = () => `<nav class="f50-tabs" aria-label="Familie">${TABS.map(([k, n]) => `<a href="${esc(href(k === 'folk' ? '' : k))}" class="${F.v.tab === k ? 'on' : ''}" aria-current="${F.v.tab === k ? 'page' : 'false'}" data-f50="tab" data-v="${k}">${n}</a>`).join('')}</nav>`;
+// Fanene i Familie: samme navn og rekkefølge som undersidene i modullisten (shared/schemas/moduler.json; test/moduler-web.test.js).
+// Fase 6 (Q9): Kart (posisjoner og soner) er en egen fane. #/kart (holdeplasser og sanntid) er Reise → Kart.
+const TABS = [['folk', 'Folk'], ['kart', 'Kart'], ['steder', 'Steder'], ['helse', 'Helse'], ['sjekk', 'Sjekk inn']];
+const tabOn = () => (F.v.v === 'kart' ? 'kart' : F.v.tab);
+const tabBar = () => `<nav class="f50-tabs" aria-label="Familie">${TABS.map(([k, n]) => `<a href="${esc(href(k === 'folk' ? '' : k))}" class="${tabOn() === k ? 'on' : ''}" aria-current="${tabOn() === k ? 'page' : 'false'}" data-f50="tab" data-v="${k}">${n}</a>`).join('')}</nav>`;
 function listFor(tab) { return tab === 'steder' ? stederList() : tab === 'helse' ? helseList() : tab === 'sjekk' ? ciForm() : folkList(); }
 function oneCol() {
   const v = F.v.v;

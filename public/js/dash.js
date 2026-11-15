@@ -108,7 +108,8 @@ function depPanel(trip, d, m) {
     <a class="dx-ruter" href="${esc(url)}" target="_blank" rel="noopener">Åpne i Ruter ›</a></div></div>`;
 }
 
-function renderTrips() {
+/** Avgangene (Ruter/Entur), brukt på Oversikt og i Reise (reise.js). */
+export function renderTrips() {
   const r = store.data.ruter;
   if (!r) return store.errors.ruter ? errBox('ruter', 'Ruter') : '<div class="trip"><div class="skeleton"></div></div>'.repeat(4);
   const t = store.now.getTime();

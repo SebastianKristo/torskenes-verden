@@ -1,5 +1,5 @@
-// Toppmenyen på desktop (B-B1/B2): fanene står på én linje, og de som ikke får plass, ligger under «Mer ▾».
-// Alle synlige faner kan nås, og fanen for siden som er åpen, står alltid i menyen.
+// Toppmenyen på desktop (B-B1/B2, Q6): fanene står på én linje, og «Alle sider ▾» viser alle modulene, gruppert som i modullisten.
+// Alle sider kan nås, og fanen for siden som er åpen, står alltid i menyen.
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { setup, BASE, PASSWORD, watchErrors, apiLogin } from './lib.mjs';
@@ -9,7 +9,7 @@ before(async (t) => { E = await setup(t); });
 after(async () => { await E?.close(); });
 
 for (const hlTheme of ['2c', 'cur']) {
-  test(`toppmenyen (${hlTheme === '2c' ? 'Papir' : 'Glass'}, 1280 px): én linje, resten under «Mer ▾»`, async (t) => {
+  test(`toppmenyen (${hlTheme === '2c' ? 'Papir' : 'Glass'}, 1280 px): én linje, alle sider under «Alle sider ▾»`, async (t) => {
     if (!E) return t.skip('ingen nettleser');
     const ctx = await E.browser.newContext({ viewport: { width: 1280, height: 860 } });
     await apiLogin(ctx, 'sebastian', PASSWORD);
@@ -35,9 +35,15 @@ for (const hlTheme of ['2c', 'cur']) {
     assert.equal(s.lines, 1, 'fanene står på én linje');
     assert.ok(s.fits, 'ingen fane er skjult bak rullefelt');
     assert.ok(s.cur, 'fanen for siden som er åpen, vises');
+    assert.equal(await page.$eval('.nav-more', (b) => b.textContent.trim()), 'Alle sider ▾');
     await page.click('.nav-more');
     const menu = await page.$$eval('.nav-more-menu:not([hidden]) a', (as) => as.map((a) => a.getAttribute('href')));
-    assert.equal(s.shown + menu.length, s.total, 'hver fane finnes enten i menyen eller under «Mer»');
+    const all = await page.$$eval('.pillnav > a[data-r]', (as) => as.map((a) => a.getAttribute('href')));
+    for (const h of all) assert.ok(menu.includes(h), `${h} finnes under «Alle sider»`);
+    const groups = await page.$$eval('.nav-more-menu .nav-more-g', (gs) => gs.map((g) => g.textContent));
+    assert.equal(groups[0], 'I dag', 'gruppene fra modullisten, i fast rekkefølge');
+    assert.ok(groups.includes('Verksted') && groups.includes('Tid'));
+    assert.equal(menu[0], '#/oversikt');
     await page.click('.nav-more-menu a >> nth=0');
     await page.waitForFunction((h) => location.hash === h || location.pathname === h, menu[0]);
     assert.ok(await page.$eval('.nav-more-menu', (m) => m.hidden), 'menyen lukkes etter valg');

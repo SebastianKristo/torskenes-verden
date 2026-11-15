@@ -76,11 +76,13 @@ test('web: fire faner som egne adresser, gamle adresser virker, funksjonene er k
   const m70 = readFileSync(new URL('../public/js/media-visninger.js', import.meta.url), 'utf8');
   const css = readFileSync(new URL('../public/css/pages/media.css', import.meta.url), 'utf8').split('/* ═══ Media-siden i nytt design')[1]; // delen fra media70.css
   // Ruter
-  assert.match(m43, /TAB_SLUG = \{ ov: '', kal: 'kalender', bib: 'bibliotek', ned: 'nedlastinger', nrk: 'nrk', musikk: 'musikk', av: 'avspilling' \}/); // + NRK og Musikk (p88)
-  for (const old of ['kommer', 'sonarr', 'radarr', 'qbittorrent', 'prowlarr', 'avspilling']) assert.match(m43, new RegExp(`${old}: '(kal|bib|ned|av)'`), old);
+  // Fase 6: «Kalender» i Media heter «Kommer» (#/media/kommer); #/media/kalender virker fortsatt. NRK og Musikk ligger under Kilder.
+  assert.match(m43, /TAB_SLUG = \{ ov: '', kal: 'kommer', bib: 'bibliotek', ned: 'nedlastinger', nrk: 'nrk', musikk: 'musikk', av: 'avspilling' \}/); // + NRK og Musikk (p88)
+  for (const old of ['kalender', 'kommer', 'sonarr', 'radarr', 'qbittorrent', 'prowlarr', 'avspilling']) assert.match(m43, new RegExp(`${old}: '(kal|bib|ned|av)'`), old);
+  assert.match(m43, /kilder: 'nrk'/);
   assert.match(m43, /'\/filmer'/);
   // Topplinja: Tilbake, fanene i rekkefølge, Glimt med ⌘K, servervelger og varsler
-  assert.match(m70, /\[\['ov', 'Oversikt'\], \['kal', 'Kalender'\], \['bib', 'Bibliotek'\], \['ned', 'Nedlastinger'\], \['nrk', 'NRK'\], \['musikk', 'Musikk'\]\]/); // + NRK og Musikk (p88)
+  assert.match(m70, /\[\['ov', 'Nå'\], \['kal', 'Kommer'\], \['bib', 'Bibliotek'\], \['ned', 'Nedlastinger'\], \['nrk', 'Kilder'\]\]/); // Fase 6: Kilder = NRK og Musikk (p88)
   assert.match(m70, /‹ Tilbake/);
   assert.match(m70, /⌘K/);
   assert.match(m43, /e\.key\?\.toLowerCase\(\) === 'k'/);

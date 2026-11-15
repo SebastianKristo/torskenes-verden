@@ -407,7 +407,7 @@ test('Hjem-søk: /api/assist gjenkjenner huskebeskjeder og sender dem til Glimt 
     const a = r.status === 202 ? (await A(`/api/assist/${r.body.jobId}`)).body.answer ?? r.body : r.body;
     assert.equal(a.intent, 'tasks.glimt');
     assert.equal(a.kind, 'action');
-    assert.equal(a.huske.title, 'Legger til i Huskeliste');
+    assert.equal(a.huske.title, 'Legger til i Gjøremål');
     const j = await tg41.waitJob41(a.huske.jobId);
     assert.equal(j.state, 'done');
     assert.equal(j.origin, 'home_search');

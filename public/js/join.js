@@ -70,7 +70,7 @@ form.addEventListener('submit', async (e) => {
     const shared = [r.j.share?.location && 'posisjon', r.j.share?.health && 'helse', r.j.share?.calendar && 'kalender'].filter(Boolean);
     $('j-done').textContent = `Du er logget inn som ${r.j.user.username}. ${shared.length ? `Du deler ${shared.join(', ').replace(/, ([^,]*)$/, ' og $1')} med familien.` : 'Du deler ingenting ennå.'} Har du appen på mobilen, logger du inn der med samme brukernavn og passord – eller med QR fra denne nettleseren.`;
     $('j-foot').textContent = '';
-    data.next = r.j.next || '/#/dash';
+    data.next = r.j.next || '/#/oversikt';
     return show(4);
   }
   if (step === 4) location.replace(data.next || '/');

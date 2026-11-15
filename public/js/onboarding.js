@@ -144,7 +144,7 @@ function bind(el) {
       }
       return paint();
     }
-    if (a === 'home') { close(); if (!/^#\/dash/.test(location.hash)) location.hash = '#/dash'; }
+    if (a === 'home') { close(); if (!/^#\/(dash|oversikt)/.test(location.hash)) location.hash = '#/oversikt'; }
   });
   el.addEventListener('input', (e) => { if (e.target.matches('[data-onb-name]')) { O.newName = e.target.value; const btn = el.querySelector('[data-onb="next"]'); if (btn) btn.disabled = !O.newName.trim(); } });
   el.addEventListener('keydown', (e) => {

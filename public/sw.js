@@ -114,7 +114,7 @@ self.addEventListener('push', (e) => {
   const title = d.title || 'Glimt';
   const opts = {
     body: String(d.body || '').replace(/\*\*/g, ''), tag: d.tag || undefined, renotify: !!d.tag, icon: d.icon || '/assets/icons/icon-192.png', badge: d.badge || '/assets/icons/icon-192.png', // prompt 39: Glimt-logo på AI-svar
-    data: { url: d.url || '/#/dash', category: d.category || '', id: d.id ?? null, actions: d.actions || d.data?.actions || null, kind: d.data?.kind || null, checkinId: d.data?.checkinId ?? null },
+    data: { url: d.url || '/#/oversikt', category: d.category || '', id: d.id ?? null, actions: d.actions || d.data?.actions || null, kind: d.data?.kind || null, checkinId: d.data?.checkinId ?? null },
     actions: (Array.isArray(d.actions) ? d.actions : Array.isArray(d.data?.actions) ? d.data.actions : []).slice(0, Math.max(2, (self.Notification && Notification.maxActions) || 2)).map((a) => ({ action: a.action || a.id, title: a.title })),
   };
   if (d.data?.priority === 'high') { opts.requireInteraction = true; opts.vibrate = [300, 120, 300, 120, 300]; }
@@ -128,7 +128,7 @@ self.addEventListener('push', (e) => {
 self.addEventListener('notificationclick', (e) => {
   const n = e.notification, D = n.data || {};
   n.close();
-  let url = D.url || '/#/dash';
+  let url = D.url || '/#/oversikt';
   // Handlinger på prøve-varsler: Avslutt nå (oppsigelsessiden), Behold, Minn meg i morgen (PATCH på prøven).
   const act = e.action && Array.isArray(D.actions) ? D.actions.find((a) => (a.action || a.id) === e.action) : null;
   if (act?.url) url = act.url;

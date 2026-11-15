@@ -30,7 +30,6 @@ const mountKart = (m) => ({ after46: (view) => { const h = view.querySelector('#
 
 /** Rute → tillegg i samme rekkefølge som før: [last modulen, navnet på kroken i modulen]. */
 const ADDONS = {
-  huskeliste: [[() => import('./tasks-deloppgaver.js'), 'after44']],
   gjoremal: [[() => import('./tasks-deloppgaver.js'), 'after44']],
   kalender: [[() => import('./kalender-deltakere.js'), 'after44']],
   media: [[() => import('./media-slett.js'), 'after45']],

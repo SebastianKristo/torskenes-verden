@@ -16,7 +16,7 @@ const today = () => new Date().toLocaleDateString('sv-SE');
    Familiekalender
    ===================================================================================================================== */
 
-export function renderFam51() { css(); return '<section class="mf51" id="mf51-fam" aria-busy="true"><h1>Familiekalender</h1><p class="mf51-sub">Laster …</p></section>'; }
+export function renderFam51() { css(); return '<section class="mf51" id="mf51-fam" aria-busy="true"><h1>Familie</h1><p class="mf51-sub">Laster …</p></section>'; }
 
 let famState = { members: [] };
 function taskRow(t, members) {
@@ -50,7 +50,7 @@ async function loadFam(root) {
   for (const e of ev.events) { const k = e.date; if (!byDay.has(k)) byDay.set(k, []); byDay.get(k).push(e); }
   const dayLabel = (d) => new Date(`${d}T12:00:00`).toLocaleDateString('nb-NO', { weekday: 'long', day: 'numeric', month: 'long' });
   const memberOpts = ev.members.map((m) => `<option value="${esc(m.userId)}">${esc(m.self ? `${m.name} (deg)` : m.name)}</option>`).join('');
-  root.innerHTML = `<h1>Familiekalender</h1>
+  root.innerHTML = `<h1>Familie</h1>
     <p class="mf51-sub">${esc(dr.text)}${ev.home ? '' : ' · Legg inn et sted med type hjem i Familie › Steder for Ruter-forslag'}</p>
     <div class="mf51-grid">
       <div class="mf51-card"><h2>Kommende</h2>${ev.events.length ? [...byDay].map(([d, list]) => `<div class="mf51-day">${esc(dayLabel(d))}</div>${list.map((e) => eventCard(e, ev.members)).join('')}`).join('') : '<p class="mf51-empty">Ingen hendelser de neste fire ukene.</p>'}</div>
@@ -174,7 +174,7 @@ async function loadMedia(root) {
   if (status.error) { root.innerHTML = `<h1>I kveld</h1><p class="mf51-sub">${esc(status.error)}</p>`; root.removeAttribute('aria-busy'); return; }
   const tabs = Object.entries(TABS).filter(([k]) => k !== 'lagring' || status.admin);
   if (!tabs.some(([k]) => k === tab)) tab = 'kveld';
-  root.innerHTML = `<h1>${esc(TABS[tab][0] === 'I kveld' ? 'Hva skal vi se i kveld?' : TABS[tab][0])}</h1><p class="mf51-sub">Fra eget bibliotek og egen historikk – ingenting sendes ut av huset.</p>
+  root.innerHTML = `<h1>${esc(TABS[tab][0])}</h1><p class="mf51-sub">Fra eget bibliotek og egen historikk – ingenting sendes ut av huset.</p>
     <div class="mf51-tabs" role="tablist">${tabs.map(([k, [l]]) => `<button class="mf51-b" role="tab" data-tab="${k}" aria-selected="${k === tab}">${l}</button>`).join('')}</div><div id="mf51-tab"></div>`;
   root.removeAttribute('aria-busy');
   const el = root.querySelector('#mf51-tab');
@@ -236,9 +236,9 @@ function jump(view, href, label) {
 }
 /** Kalles etter at siden er tegnet (app.js). */
 export function afterMedfam51(route, view) {
-  if (route === 'familie') jump(view, '#/familiekalender', 'Familiekalender · hvem kjører? ›');
-  if (route === 'media') jump(view, '#/mediakveld', 'Hva skal vi se i kveld? ›');
+  if (route === 'familie') jump(view, '#/kalender/familie', 'Kalender · Familie · hvem kjører? ›');
+  if (route === 'media') jump(view, '#/mediakveld', 'I kveld ›');
   const fam = view.querySelector('#mf51-fam'), med = view.querySelector('#mf51-media');
-  if (fam) { bindFam(fam); loadFam(fam).catch((e) => { fam.innerHTML = `<h1>Familiekalender</h1><p class="mf51-sub">${esc(e.message)}</p>`; }); }
+  if (fam) { bindFam(fam); loadFam(fam).catch((e) => { fam.innerHTML = `<h1>Familie</h1><p class="mf51-sub">${esc(e.message)}</p>`; }); }
   if (med) { status = null; bindMedia(med); loadMedia(med); }
 }

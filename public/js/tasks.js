@@ -838,7 +838,7 @@ window.addEventListener('hashchange', () => { if (layer && !/^#\/(huskeliste|gjo
    uten Homelab-toppmeny, skybilde eller nyhetslinje. Egen topplinje: «‹ Hjem», kicker + tittel, ✕. «‹ Hjem», ✕ og Esc
    går til Dashboard (Esc lukker først et åpent felt eller detaljark). Mobil (smal skjerm) beholder sin egen visning. */
 const fs40 = () => !isMobile();
-const closeFs40 = () => { location.hash = '#/dash'; };
+const closeFs40 = () => { location.hash = '#/oversikt'; };
 window.addEventListener('hashchange', () => setTimeout(() => { if (!host()) document.body.classList.remove('tk-fs40'); }));
 document.addEventListener('keydown', (e) => {
   if (e.key !== 'Escape' || !host() || !fs40() || layer || e.defaultPrevented) return;

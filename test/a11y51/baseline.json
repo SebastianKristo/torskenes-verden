@@ -67,18 +67,6 @@
     "media|glass|390": {
       "beroringsflate": 3
     },
-    "media-kalender|papir-lys|1440": {},
-    "media-kalender|papir-lys|390": {
-      "beroringsflate": 6
-    },
-    "media-kalender|papir-mork|1440": {},
-    "media-kalender|papir-mork|390": {
-      "beroringsflate": 6
-    },
-    "media-kalender|glass|1440": {},
-    "media-kalender|glass|390": {
-      "beroringsflate": 6
-    },
     "media-bibliotek|papir-lys|1440": {},
     "media-bibliotek|papir-lys|390": {},
     "media-bibliotek|papir-mork|1440": {},
@@ -474,6 +462,82 @@
     "finans-planlegging|papir-mork|1440": {},
     "finans-planlegging|papir-mork|390": {},
     "finans-planlegging|glass|1440": {},
-    "finans-planlegging|glass|390": {}
+    "finans-planlegging|glass|390": {},
+    "media-kommer|papir-lys|1440": {},
+    "media-kommer|papir-lys|390": {
+      "beroringsflate": 9
+    },
+    "media-kommer|papir-mork|1440": {},
+    "media-kommer|papir-mork|390": {
+      "beroringsflate": 9
+    },
+    "media-kommer|glass|1440": {},
+    "media-kommer|glass|390": {
+      "beroringsflate": 9
+    },
+    "familie-kart|papir-lys|1440": {},
+    "familie-kart|papir-lys|390": {},
+    "familie-kart|papir-mork|1440": {},
+    "familie-kart|papir-mork|390": {},
+    "familie-kart|glass|1440": {
+      "kontrast": 2
+    },
+    "familie-kart|glass|390": {
+      "kontrast": 2
+    },
+    "reise-kart|papir-lys|1440": {
+      "kontrast": 1,
+      "beroringsflate": 4
+    },
+    "reise-kart|papir-lys|390": {
+      "kontrast": 1,
+      "beroringsflate": 3
+    },
+    "reise-kart|papir-mork|1440": {
+      "kontrast": 1,
+      "beroringsflate": 4
+    },
+    "reise-kart|papir-mork|390": {
+      "kontrast": 1,
+      "beroringsflate": 3
+    },
+    "reise-kart|glass|1440": {
+      "kontrast": 2,
+      "beroringsflate": 4
+    },
+    "reise-kart|glass|390": {
+      "kontrast": 2,
+      "beroringsflate": 3
+    },
+    "innst-enheter|papir-lys|1440": {},
+    "innst-enheter|papir-lys|390": {},
+    "innst-enheter|papir-mork|1440": {},
+    "innst-enheter|papir-mork|390": {},
+    "innst-enheter|glass|1440": {
+      "beroringsflate": 4
+    },
+    "innst-enheter|glass|390": {
+      "beroringsflate": 4
+    },
+    "innst-husstand|papir-lys|1440": {
+      "kontrast": 2
+    },
+    "innst-husstand|papir-lys|390": {
+      "kontrast": 2
+    },
+    "innst-husstand|papir-mork|1440": {
+      "kontrast": 3
+    },
+    "innst-husstand|papir-mork|390": {
+      "kontrast": 3
+    },
+    "innst-husstand|glass|1440": {
+      "kontrast": 1,
+      "beroringsflate": 4
+    },
+    "innst-husstand|glass|390": {
+      "kontrast": 1,
+      "beroringsflate": 4
+    }
   }
 }

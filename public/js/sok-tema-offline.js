@@ -407,7 +407,7 @@ const QUEUE = [
   [/^\/api\/tasks\/\d+\/subs(\/[\w-]+)?$/, ['POST', 'PATCH', 'DELETE'], 'Deloppgave'],
   [/^\/(finans\/)?api\/receipts(\/scan)?$/, ['POST'], 'Kvittering'],
   [/^\/api\/family\/checkin(\/request|\/\d+\/reply)?$/, ['POST'], 'Sjekk inn'],
-  [/^\/api\/famcal51\/events(\/\d+)?$/, ['POST', 'PATCH'], 'Familiekalender'],
+  [/^\/api\/famcal51\/events(\/\d+)?$/, ['POST', 'PATCH'], 'Kalender · Familie'],
 ];
 const versions = new Map(); // «tasks:<id>» → updatedAt (fra GET /api/tasks)
 // Køen merkes med brukeren, så en annen bruker i samme nettleser aldri sender noen andres endringer.

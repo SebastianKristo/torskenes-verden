@@ -65,7 +65,7 @@ function bursdager(b) {
   if (!L.length) return '';
   const f = L[0], fn = String(f.name ?? '').split(' ')[0];
   return `<section data-gb="bur" class="gb-box gb38-c">${head('Bursdager', 'NESTE 30 DAGER')}
-    ${L.map((x) => `<button type="button" class="gb38-r" data-gb38-go="#/bursdager"><span class="gb38-av" style="background:${esc(colOf(x.name))}">${esc(ini(x.name))}</span><span class="gb38-m"><b>${esc(x.name)}</b><span>${esc(x.text || [x.age != null ? `Fyller ${x.age}` : '', x.date ? dLab(x.date) : ''].filter(Boolean).join(' · '))}</span></span><span class="gb38-n${x.daysLeft != null && x.daysLeft <= 3 ? ' red' : ''}"><b>${x.daysLeft === 0 ? 'I dag' : esc(x.daysLeft ?? '')}</b><span>${x.daysLeft === 0 ? '' : x.daysLeft === 1 ? 'dag' : 'dager'}</span></span></button>`).join('')}
+    ${L.map((x) => `<button type="button" class="gb38-r" data-gb38-go="#/kalender/bursdager"><span class="gb38-av" style="background:${esc(colOf(x.name))}">${esc(ini(x.name))}</span><span class="gb38-m"><b>${esc(x.name)}</b><span>${esc(x.text || [x.age != null ? `Fyller ${x.age}` : '', x.date ? dLab(x.date) : ''].filter(Boolean).join(' · '))}</span></span><span class="gb38-n${x.daysLeft != null && x.daysLeft <= 3 ? ' red' : ''}"><b>${x.daysLeft === 0 ? 'I dag' : esc(x.daysLeft ?? '')}</b><span>${x.daysLeft === 0 ? '' : x.daysLeft === 1 ? 'dag' : 'dager'}</span></span></button>`).join('')}
     <button type="button" class="gs-pill gb38-gift" data-gb38-gift="${esc(f.name)}" data-gb38-date="${esc(f.date ?? '')}"${gifted.has(f.name) ? ' disabled' : ''}>${gifted.has(f.name) ? `✓ Lagt i Gjøremål` : `+ Gave til ${esc(fn)} i Gjøremål`}</button></section>`;
 }
 function nordlys(a) {

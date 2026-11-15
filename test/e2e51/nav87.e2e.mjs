@@ -31,18 +31,19 @@ const mark = (page, sels) => page.evaluate((s) => {
 }, sels);
 const still = (page) => page.evaluate(() => Object.fromEntries(Object.entries(window.__n87).map(([k, n]) => [k, !!n && n.isConnected])));
 
-test('Homelab: Hjem → Studie → Hjem uten at skallet tegnes på nytt, uten bakgrunnskall og uten dokument-forespørsel', async (t) => {
+test('Homelab: Mat → Familie → Mat uten at skallet tegnes på nytt, uten bakgrunnskall og uten dokument-forespørsel', async (t) => {
   if (!E) return t.skip('ingen nettleser');
-  const { ctx, page, errors, docs } = await open('/#/hjem');
+  // Fase 6 (Q6): Smarthjem og Studie står ikke fast i toppmenyen lenger; Mat og Familie gjør det (data-r er modul-id-en).
+  const { ctx, page, errors, docs } = await open('/#/matplan');
   const bg = [];
   page.on('request', (r) => { if (/\/api\/(background|photo-window)|\/api\/bg\//.test(r.url())) bg.push(r.url()); });
-  for (const r of ['studie', 'hjem']) {
+  for (const [r, view] of [['familie', 'familie'], ['mat', 'matplan']]) {
     await mark(page, { toppmeny: 'header.top', faner: '.pillnav', bakgrunn: '.bg', hero: '#view > .pw', heroBilde: '#view > .pw > .pw-img' });
     await page.click(`.pillnav a[data-r="${r}"]`);
     await page.waitForTimeout(1000);
     assert.deepEqual(await still(page), { toppmeny: true, faner: true, bakgrunn: true, hero: true, heroBilde: true }, `skallet står etter bytte til ${r}`);
     assert.equal(await page.evaluate(() => window.__op87), 1, 'fotovinduet blinker ikke');
-    assert.equal(await page.evaluate(() => document.body.dataset.route), r);
+    assert.equal(await page.evaluate(() => document.body.dataset.route), view);
   }
   assert.deepEqual(bg, [], 'ingen nettverkskall for bakgrunnen');
   assert.deepEqual(docs, [], 'ingen dokument-forespørsel');

@@ -1,7 +1,8 @@
 import { esc, isMobile } from './util.js';
 import { store, widget, card, refresh, errBox, on } from './store.js';
 import { tiles } from './dash.js';
-import { tabAllowed, tabLabel, hiddenTabs } from './profile.js';
+import { tabAllowed, tabLabel } from './profile.js';
+import { gruppert } from './moduler.js';
 
 widget('n_lab', { render() {
   const h = store.data.health;
@@ -27,12 +28,18 @@ export function render() {
 
 widget('m_links', { render: () => `<div class="tiles">${tiles()}</div>` });
 
-// «Mer» på mobil: snarveier, homelab, Rom, CV og innstillinger.
+// «Mer» på mobil (Fase 6, O12): alle sidene først, gruppert som i modullisten (I dag, Hjemme, Tid …), uten dem som står i
+// bunnmenyen. Eksterne snarveier, Homelab-status, CV og Innstillinger står nederst.
 export function renderMore() {
-  return `<div class="page-title">Snar<b>veier</b></div>
-    <div class="grid" data-dnd="m_more">${card('m_links')}${card('n_lab')}</div>
+  const bottom = new Set([...document.querySelectorAll('.bottomnav [data-r]')].map((a) => a.dataset.r));
+  const groups = gruppert((m) => !bottom.has(m.id) && tabAllowed(m.id));
+  const btn = (m) => `<a class="btn-lg" href="${esc(m.rute)}" data-more-r="${esc(m.id)}" style="justify-content:center;padding:14px">${esc(tabLabel(m.id, m.navn))}</a>`;
+  return `<div class="page-title">Alle <b>sider</b></div>
+    ${groups.map((g) => `<section class="more-g" aria-label="${esc(g.navn)}"><h2 class="more-gh">${esc(g.navn)}</h2>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">${g.moduler.map(btn).join('')}</div></section>`).join('')}
+    <section class="more-g" aria-label="Snarveier"><h2 class="more-gh">Snarveier</h2>
+      <div class="grid" data-dnd="m_more">${card('m_links')}${card('n_lab')}</div></section>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-      ${['chat', 'rom', 'nettverk', 'hjem', 'matplan', 'sporing', 'familie', 'media', 'huskeliste', 'bursdager', 'kalender', 'kart', 'skjold', 'domener'].filter((k) => tabAllowed(k) && (k !== 'media' || !hiddenTabs().has('media'))).map((k) => `<a class="btn-lg" href="#/${k}" style="justify-content:center;padding:14px">${esc(tabLabel(k))} ↗</a>`).join('')}
       <a class="btn-lg" href="/cv" target="_blank" style="justify-content:center;padding:14px">CV ↗</a>
       <button class="btn-lg" data-act="settings" style="justify-content:center;padding:14px">Innstillinger</button>
     </div>`;

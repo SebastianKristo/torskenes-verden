@@ -104,7 +104,8 @@ function audit() {
   return out;
 }
 
-const env = await start51();
+// Fast klokke som de visuelle testene: forslag som avhenger av tiden (Vel fremme etter kl. 22) gir ellers ulike brudd.
+const env = await start51({ clock: true });
 if (!env) process.exit(0);
 const only = (process.env.A11Y51_PAGES || '').split(',').filter(Boolean);
 const results = [];
@@ -112,7 +113,7 @@ try {
   for (const p of PAGES51.filter((x) => !only.length || only.includes(x.name))) {
     for (const theme of THEMES51.filter((t) => !p.themes || p.themes.includes(t.name))) {
       for (const vp of VIEWPORTS51) {
-        const ctx = await context51(env, { viewport: vp, theme, auth: p.auth !== false });
+        const ctx = await context51(env, { viewport: vp, theme, auth: p.auth !== false, freeze: true });
         try {
           const { page } = await open51(ctx, p);
           const found = await page.evaluate(audit);

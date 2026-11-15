@@ -29,7 +29,7 @@ export async function startAs(u) {
   try {
     const r = await j('/api/admin/impersonate', { method: 'POST', body: JSON.stringify({ userId: u.id, web: true }) }, true);
     ss(KEY, { id: u.id, name: r?.user?.name ?? name, color: r?.user?.color ?? u.color ?? null, token: r?.token ?? r?.accessToken ?? null, cookie: true, exp: r?.expiresAt ?? null, snap, n: 0, at: Date.now(), admin: r?.actor?.name ?? null });
-    location.replace('/#/dash');
+    location.replace('/#/oversikt');
     setTimeout(() => location.reload(), 30);
   } catch (e) {
     alert(e.status === 404 ? 'Serveren har ikke «Logg inn som» ennå. Oppdater Nordlys først.' : e.status === 403 ? `Du kan ikke logge inn som ${name}.` : e.message);
@@ -43,7 +43,7 @@ export async function stopAs(reason) {
   try { r = await j('/api/admin/impersonate/exit', { method: 'POST', body: '{}', ...(a.token ? { headers: { Authorization: `Bearer ${a.token}` } } : {}) }, true); } catch { /* 404 eller utløpt: lokalt er nok */ }
   ss(KEY, null);
   ss(OUT, { id: a.id, name: a.name, n: r?.changes ?? a.n ?? 0, snap: a.snap, undo: r?.undo ?? null, at: Date.now(), reason: reason ?? null });
-  location.replace('/#/dash');
+  location.replace('/#/oversikt');
   setTimeout(() => location.reload(), 30);
 }
 

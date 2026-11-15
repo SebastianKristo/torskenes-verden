@@ -329,7 +329,7 @@ function start() {
 
 export function render() {
   setTimeout(() => { if (!root()) return; loadCss(); paint(); start(); });
-  return `<div id="rom" class="rom" role="region" aria-label="Rom"><div class="rom-bar"><b>Rom</b><a class="rom-x" href="#/dash" aria-label="Lukk" title="Lukk"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></a></div><div class="rom-c"></div></div>`;
+  return `<div id="rom" class="rom" role="region" aria-label="Rom"><div class="rom-bar"><b>Rom</b><a class="rom-x" href="#/oversikt" aria-label="Lukk" title="Lukk"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></a></div><div class="rom-c"></div></div>`;
 }
 function loadCss() {
   pageCss('rom');
@@ -348,7 +348,7 @@ export function bind(view) {
     if (b.dataset.romCat) { sp.off = { ...sp.off, [b.dataset.romCat]: !sp.off[b.dataset.romCat] }; return paint(); }
     if (b.dataset.romSel != null) { sp.sel = +b.dataset.romSel; return paint(); }
   });
-  view.addEventListener('keydown', (e) => { if (e.key === 'Escape' && root() && !document.querySelector('[role=dialog]:not([hidden])')) location.hash = '#/dash'; });
+  view.addEventListener('keydown', (e) => { if (e.key === 'Escape' && root() && !document.querySelector('[role=dialog]:not([hidden])')) location.hash = '#/oversikt'; });
   window.addEventListener('resize', () => { clearTimeout(resT); resT = setTimeout(draw, 120); });
   // Bilder som ikke laster: prøv miniatyren (data-fb), ellers skjul bildet (plassholderfargen står).
   view.addEventListener('error', (e) => { const t = e.target; if (t?.tagName !== 'IMG' || !t.closest('#rom')) return; if (t.dataset.fb) { const f = t.dataset.fb; delete t.dataset.fb; t.src = f; } else t.classList.add('gone'); }, true);

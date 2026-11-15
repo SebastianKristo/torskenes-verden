@@ -349,7 +349,7 @@ async function act(a) {
     case 'glogin':
       // Innloggingen går gjennom serveren (OAuth med PKCE), som sender tilbake til #/bursdager.
       S.busy = 'glogin'; paint();
-      location.assign('/api/birthdays/google/auth?return=' + encodeURIComponent(from === 'set' ? '/#/kalender?settings=kal' : '/#/bursdager'));
+      location.assign('/api/birthdays/google/auth?return=' + encodeURIComponent(from === 'set' ? '/#/kalender?settings=kal' : '/#/kalender/bursdager'));
       return;
     case 'gsync':
       S.busy = 'gsync'; paint();
@@ -403,7 +403,7 @@ export function render() {
     bind(h);
     // Tilbake fra Google: /?google=ok|error&message=…#/bursdager (eller i hashen).
     const qs = new URLSearchParams(location.search.includes('google=') ? location.search : location.hash.split('?')[1] ?? '');
-    if (qs.has('google')) { const ok = /^(ok|1|true|connected)$/.test(qs.get('google')), m = qs.get('message') || qs.get('error'); history.replaceState(null, '', location.pathname + '#/bursdager'); setTimeout(() => flash(ok ? 'Koblet til Google Kalender' : `Google: ${m || 'innloggingen ble avbrutt'}`), 300); }
+    if (qs.has('google')) { const ok = /^(ok|1|true|connected)$/.test(qs.get('google')), m = qs.get('message') || qs.get('error'); history.replaceState(null, '', location.pathname + '#/kalender/bursdager'); setTimeout(() => flash(ok ? 'Koblet til Google Kalender' : `Google: ${m || 'innloggingen ble avbrutt'}`), 300); }
     S.gcals = null; S.hacals = null;
     reload();
     clearInterval(pollT);

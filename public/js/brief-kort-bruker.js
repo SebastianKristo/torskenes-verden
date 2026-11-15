@@ -40,14 +40,14 @@ function trip() {
   const it = c.data?.items ?? [];
   if (!it.length) return `<section data-gb="rei" class="b52 b52-dark"><span class="b52-k">MIN REISE</span>${empty(c)}</section>`;
   const a = it[0], more = it.slice(1, 3).map((x) => `${x.line} ${x.in_min != null ? `om ${x.in_min} min` : x.dep ?? ''}`).join(' · ');
-  return `<section data-gb="rei" class="b52 b52-dark b52-tap" role="button" tabindex="0" data-b52-go="#/dash"><span class="b52-k">${esc(`NESTE FRA ${String(a.from || c.data.stop || '').toUpperCase()}`)}</span>
+  return `<section data-gb="rei" class="b52 b52-dark b52-tap" role="button" tabindex="0" data-b52-go="#/oversikt"><span class="b52-k">${esc(`NESTE FRA ${String(a.from || c.data.stop || '').toUpperCase()}`)}</span>
     <span class="b52-min"><b>${esc(a.in_min ?? '–')}</b><span>min</span></span>
     <span class="b52-line"><span style="background:${esc(MODE_C[a.mode] ?? '#f2c14e')}">${esc(a.line)}</span>${esc(a.dest ?? '')}</span>${more ? `<span class="b52-s">Deretter ${esc(more)}</span>` : ''}</section>`;
 }
 function todo() {
   const c = card('todo'); if (!c) return '';
   const L = c.data?.top ?? [];
-  return `<section data-gb="hus" class="b52">${head('Huskeliste', c.data?.open != null ? `${c.data.open} ÅPNE` : '')}${L.length ? L.slice(0, 3).map((x) => `<button type="button" class="b52-r" data-b52-go="#/gjoremal"><span class="b52-cb" style="border-color:${x.overdue ? '#b23a2a' : '#a39d90'}"></span><span class="b52-n">${esc(x.title)}</span>${x.due ? `<span class="b52-d${x.overdue ? ' red' : ''}">${esc(x.due)}</span>` : ''}</button>`).join('') : empty(c)}</section>`;
+  return `<section data-gb="hus" class="b52">${head('Gjøremål', c.data?.open != null ? `${c.data.open} ÅPNE` : '')}${L.length ? L.slice(0, 3).map((x) => `<button type="button" class="b52-r" data-b52-go="#/gjoremal"><span class="b52-cb" style="border-color:${x.overdue ? '#b23a2a' : '#a39d90'}"></span><span class="b52-n">${esc(x.title)}</span>${x.due ? `<span class="b52-d${x.overdue ? ' red' : ''}">${esc(x.due)}</span>` : ''}</button>`).join('') : empty(c)}</section>`;
 }
 function bills() {
   const c = card('bills'); if (!c) return '';

@@ -58,3 +58,11 @@
 .ui-toast--danger{background:var(--ds-danger);color:var(--ds-on-danger)}
 .ui-toast--success{background:var(--ds-success);color:var(--ds-on-success)}
 @keyframes ui-toast-in{from{opacity:0;transform:translateY(8px)}}
+
+/* Undersider i en modul (Fase 6): Reise (Avganger · Kart) og filtrene i Kalender (Alle · Familie · Bursdager). Navnene kommer fra modullisten. */
+.subtabs{display:flex;flex-wrap:wrap;gap:var(--ds-space-xs);margin:0 0 var(--ds-space-md);padding:var(--ds-space-xs);width:max-content;max-width:100%;border:1px solid var(--ds-line);border-radius:var(--ds-radius-full);background:var(--ds-surface-raised)}
+.subtabs a,.subtabs button{border:0;background:transparent;cursor:pointer;font-family:inherit;padding:var(--ds-space-xs) var(--ds-space-md);border-radius:var(--ds-radius-full);color:var(--ds-text-primary);font-size:var(--ds-text-callout-size);line-height:var(--ds-text-callout-line);font-weight:var(--ds-weight-medium);text-decoration:none}
+.subtabs a:hover,.subtabs button:hover{background:var(--ds-surface-sunken)}
+.subtabs a[aria-current="page"],.subtabs button[aria-current="page"]{background:var(--ds-accent);color:var(--ds-on-accent)}
+.rs{display:flex;flex-direction:column;gap:var(--ds-space-md)}
+.rs-empty{margin:0;color:var(--ds-text-secondary)}

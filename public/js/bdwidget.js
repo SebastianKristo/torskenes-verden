@@ -21,7 +21,7 @@ function body() {
   return head + L.map((x) => `<span class="bdw-r">${avatar(x, 'bdw-av')}<span class="bdw-t"><b>${esc(x.name)}</b><span>${esc(`${x.x.getDate()}. ${MS[x.x.getMonth()]}${x.age != null ? ` · fyller ${x.age}` : ''}`)}</span></span><b class="bdw-w${x.days <= 7 ? ' soon' : ''}">${whenTxt(x.days)}</b></span>`).join('');
 }
 
-const wrap = () => `<a class="bdw" href="#/bursdager" aria-label="Bursdager – åpne alle">${body()}</a>`;
+const wrap = () => `<a class="bdw" href="#/kalender/bursdager" aria-label="Bursdager – åpne alle">${body()}</a>`;
 widget('d_bday', { cls: 'card', render: wrap });
 widget('p_bday', { cls: 'p-sec', render: wrap });
 on('birthdays', () => refresh('d_bday', 'p_bday'));

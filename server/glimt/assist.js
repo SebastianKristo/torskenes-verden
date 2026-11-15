@@ -9,11 +9,11 @@
 // Svaret (200-kroppen, og answer i GET /:id og i realtime når state='done'):
 //   { text      'Det er **8° og lettskyet** i Oslo nå, vind 3 m/s. I dag 5–9°.'  (én–to setninger, det viktigste i **…**)
 //     bold      ['8° og lettskyet']                        (utdrag av **…**)
-//     source    'Open-Meteo · MET Norway' | 'Kalender' | 'Entur' | 'Sporing' | 'Finans' | 'Huskeliste' |
+//     source    'Open-Meteo · MET Norway' | 'Kalender' | 'Entur' | 'Sporing' | 'Finans' | 'Gjøremål' |
 //               'Abonnementer · varsel planlagt' | 'Abonnementer' | 'Kalender · rask time' | 'Glimt' | 'Glimt · Gemini'
 //     intent    'weather' | 'calendar.day' | 'calendar.next' | 'departures' | 'packages' | 'finance.spent' | 'tasks' |
 //               'trial.create' | 'appointment.create' | 'memory.add' | 'llm'
-//     tool?     'Vær' | 'Kalender' | 'Avganger' | 'Pakker' | 'Finans' | 'Huskeliste' | 'Abonnementer'
+//     tool?     'Vær' | 'Kalender' | 'Avganger' | 'Pakker' | 'Finans' | 'Gjøremål' | 'Abonnementer'
 //     card?     {k:'weather', city, t, ic, icon, d, hi, lo, night, kind, precipProb, wind, day:'today'|'tomorrow', umbrella, h:[{l, t, ic, icon}]}
 //               {k:'calendar', date, wd:'MAN', n:19, t:'I dag', sub:'19. oktober · 2 hendelser', items:[{id, time:'16:30'|'Hele', title, color, place}]}
 //               {k:'departures', stop, stopId, items:[{line, dest, minutes, clock, color, textColor, realtime}]}
@@ -158,20 +158,20 @@ const RE = {
 
 // Prompt 32: side-snarveier (samme liste som hsAsk() i designet). target = sidenøkkelen i appene, web = rute på web.
 export const NAV = [
-  [/oppdater|nordlys|ny versjon|versjon/, 'nordlys', 'Nordlys OS · oppdatering', '/#/innstillinger/system'],
+  [/oppdater|nordlys|ny versjon|versjon/, 'nordlys', 'Server · System', '/#/innstillinger/system'],
   [/kalender|timeplan/, 'kalender', 'Kalender', '/#/kalender'],
   [/v(æ|ae)ret? (side|app)|værside|vaerside|åpne vær/, 'vaer', 'Vær', '/#/vaer'],
   [/innstilling/, 'innstillinger', 'Innstillinger', '/#/innstillinger'],
   [/pakke|sporing|sending/, 'sporing', 'Sporing', '/#/sporing'],
   [/budsjett/, 'budsjett', 'Budsjett', '/finans/#/budsjett'],
   [/kvittering/, 'kvitteringer', 'Kvitteringer', '/finans/#/kv'],
-  [/finans|økonomi|saldo|konto/, 'finans', 'Finans', '/finans/'],
+  [/finans|økonomi|saldo|konto/, 'finans', 'Økonomi', '/finans/'],
   [/abonnement|prøveperiode/, 'abonnement', 'Abonnement', '/finans/#/abonnement'],
   [/domene/, 'domener', 'Domener', '/#/domener'],
   [/familie|posisjon|hvor er/, 'familie', 'Familie', '/#/familie'],
   [/middag|matplan|oppskrift|\bmat\b/, 'mat', 'Mat', '/#/matplan'],
-  [/huskeliste|handleliste|todo|to-do|gjøremål/, 'huskeliste', 'Gjøremål', '/#/huskeliste'], // prompt 37: «Gjøremål» (intern nøkkel huske)
-  [/bursdag/, 'bursdager', 'Bursdager', '/#/bursdager'],
+  [/huskeliste|handleliste|todo|to-do|gjøremål/, 'huskeliste', 'Gjøremål', '/#/gjoremal'], // prompt 37: «Gjøremål» (intern nøkkel huske); Fase 6: #/huskeliste er et alias
+  [/bursdag/, 'bursdager', 'Bursdager', '/#/kalender/bursdager'], // Fase 6 (Q5): Bursdager er en visning i Kalender,
   [/\brom\b|satellitt|rombilde|mars-?rover/, 'rom', 'Rom', '/#/rom'],
   [/\bchat\b/, 'chat', 'Chat', '/#/chat'],
 ];
@@ -439,9 +439,9 @@ async function toolSchoolTest(user, today) {
 
 function toolTasks(user) {
   const list = nextTasks(user, 5);
-  if (!list.length) return { text: 'Huskelisten er **tom**.', source: 'Huskeliste', tool: 'Huskeliste', card: { k: 'tasks', items: [], count: 0 } };
+  if (!list.length) return { text: 'Du har **ingen gjøremål**.', source: 'Gjøremål', tool: 'Gjøremål', card: { k: 'tasks', items: [], count: 0 } };
   const f = list[0];
-  return { text: `Du har **${list.length} ${list.length === 1 ? 'ting' : 'ting'}** på huskelisten. Først: ${f.title}${f.due ? ` (frist ${longDate(f.due)})` : ''}.`, source: 'Huskeliste', tool: 'Huskeliste',
+  return { text: `Du har **${list.length} ${list.length === 1 ? 'ting' : 'ting'}** i Gjøremål. Først: ${f.title}${f.due ? ` (frist ${longDate(f.due)})` : ''}.`, source: 'Gjøremål', tool: 'Gjøremål',
     card: { k: 'tasks', count: list.length, items: list.map((x) => ({ id: x.id, title: x.title, due: x.due ?? null, done: !!x.done, overdue: !!x.overdue })) } };
 }
 
@@ -556,9 +556,9 @@ function withDateContext(text, today) {
   return d?.date ? `${text}\n(Dato i spørsmålet: ${d.date}, ${d.label}. I dag er ${today}.)` : text;
 }
 
-const TITLES = { 'tasks.glimt': 'Legger til i Huskeliste', 'weather.week': 'Leser værdata for uken', 'sun.daylight': 'Regner på sola', 'calendar.free_slots': 'Finner ledig tid', 'calendar.search': 'Leter i kalenderen', 'calendar.summary': 'Oppsummerer', 'calendar.create': 'Legger til i kalenderen', 'weather.daily': 'Sjekker været', 'calendar.ask': 'Glimt tenker', weather: 'Sjekker været', 'calendar.day': 'Ser i kalenderen', 'calendar.next': 'Leter i kalenderen', departures: 'Henter avganger', packages: 'Ser på pakkene',
-  'finance.spent': 'Regner på forbruket', tasks: 'Leser huskelisten', 'trial.create': 'Lager påminnelse', 'family.where': 'Ser i Familie', 'calendar.school': 'Ser i Studie', 'calendar.fag': 'Slår opp faget', 'appointment.create': 'Legger til i kalenderen', 'memory.add': 'Glimt husker', nav: 'Åpner siden', llm: 'Glimt tenker' };
-const TOOL_OF = { 'sun.daylight': 'Vær', 'calendar.free_slots': 'Kalender', 'calendar.search': 'Kalender', 'calendar.summary': 'Kalender', 'calendar.create': 'Kalender', 'weather.daily': 'Vær', 'calendar.ask': 'Kalender', weather: 'Vær', 'calendar.day': 'Kalender', 'calendar.next': 'Kalender', departures: 'Avganger', packages: 'Pakker', 'finance.spent': 'Finans', tasks: 'Huskeliste', 'trial.create': 'Abonnementer', 'appointment.create': 'Kalender', 'memory.add': 'Glimt husker', nav: 'Snarvei', 'family.where': 'Familie', 'calendar.school': 'Kalender', 'calendar.fag': 'Kalender', 'tasks.glimt': 'Huskeliste', 'weather.week': 'Vær' };
+const TITLES = { 'tasks.glimt': 'Legger til i Gjøremål', 'weather.week': 'Leser værdata for uken', 'sun.daylight': 'Regner på sola', 'calendar.free_slots': 'Finner ledig tid', 'calendar.search': 'Leter i kalenderen', 'calendar.summary': 'Oppsummerer', 'calendar.create': 'Legger til i kalenderen', 'weather.daily': 'Sjekker været', 'calendar.ask': 'Glimt tenker', weather: 'Sjekker været', 'calendar.day': 'Ser i kalenderen', 'calendar.next': 'Leter i kalenderen', departures: 'Henter avganger', packages: 'Ser på pakkene',
+  'finance.spent': 'Regner på forbruket', tasks: 'Leser Gjøremål', 'trial.create': 'Lager påminnelse', 'family.where': 'Ser i Familie', 'calendar.school': 'Ser i Studie', 'calendar.fag': 'Slår opp faget', 'appointment.create': 'Legger til i kalenderen', 'memory.add': 'Glimt husker', nav: 'Åpner siden', llm: 'Glimt tenker' };
+const TOOL_OF = { 'sun.daylight': 'Vær', 'calendar.free_slots': 'Kalender', 'calendar.search': 'Kalender', 'calendar.summary': 'Kalender', 'calendar.create': 'Kalender', 'weather.daily': 'Vær', 'calendar.ask': 'Kalender', weather: 'Vær', 'calendar.day': 'Kalender', 'calendar.next': 'Kalender', departures: 'Avganger', packages: 'Pakker', 'finance.spent': 'Finans', tasks: 'Gjøremål', 'trial.create': 'Abonnementer', 'appointment.create': 'Kalender', 'memory.add': 'Glimt husker', nav: 'Snarvei', 'family.where': 'Familie', 'calendar.school': 'Kalender', 'calendar.fag': 'Kalender', 'tasks.glimt': 'Gjøremål', 'weather.week': 'Vær' };
 
 /** Svarer på spørsmålet. onStep(at, intent) for fremdrift. → svarobjektet (se toppen). */
 // Prompt 47: når Glimt-planleggeren (modellen) har valgt et av de eksisterende svarene (app.answer {topic}), brukes det svaret –
@@ -639,9 +639,9 @@ async function routedLlm(user, text, today, { noWeb = false } = {}) {
 function huskeGlimt41(user, text) {
   const q0 = text.replace(/^(?:legg (?:til )?i huskelist(?:a|en)|legg til i gjøremål|ny oppgave|nytt gjøremål)\s*:?\s*/i, '').trim() || text;
   const j = startJob41(user, q0, { origin: 'home_search' });
-  return { text: 'Glimt deler opp beskjeden i **punkter i Huskeliste** …', source: 'Huskeliste', tool: 'Huskeliste', engine: 'tool',
-    huske: { jobId: j.jobId, placeholder: j.placeholder, title: 'Legger til i Huskeliste', steps: ['Leser beskjeden', 'Deler opp i punkter', 'Finner rekkefølge og steder', 'Lagrer i Huskeliste'],
-      fields: [{ k: 'Beskjed', v: q0 }, { k: 'Liste', v: 'Huskeliste' }, { k: 'Original', v: text }], done: '✓ Glimt lagde {n} punkter i Huskeliste', background: '✦ Glimt deler opp i bakgrunnen …' } };
+  return { text: 'Glimt deler opp beskjeden i **punkter i Gjøremål** …', source: 'Gjøremål', tool: 'Gjøremål', engine: 'tool',
+    huske: { jobId: j.jobId, placeholder: j.placeholder, title: 'Legger til i Gjøremål', steps: ['Leser beskjeden', 'Deler opp i punkter', 'Finner rekkefølge og steder', 'Lagrer i Huskeliste'],
+      fields: [{ k: 'Beskjed', v: q0 }, { k: 'Liste', v: 'Gjøremål' }, { k: 'Original', v: text }], done: '✓ Glimt lagde {n} punkter i Gjøremål', background: '✦ Glimt deler opp i bakgrunnen …' } };
 }
 
 /* ---------------- Brukervalg ---------------- */

@@ -1,9 +1,10 @@
-// Toppmenyen på desktop: fanene som ikke får plass på én linje, flyttes til «Mer ▾» (AUDIT H1/M7, B-B1/B2).
-// Før ble fanene i Papir skjult bak en usynlig rullefelt, og i Glass brakk menyen over to linjer.
+// Toppmenyen på desktop: «Alle sider ▾» (Q6) viser alle modulene brukeren har, gruppert som i modullisten (I dag, Hjemme, Tid …).
+// Fanene som ikke får plass på én linje, skjules i menyen (AUDIT H1/M7, B-B1/B2) – de står uansett under «Alle sider».
 // - Bare fanene brukeren har valgt å vise (ikke [hidden]) telles. Rekkefølgen er brukerens.
 // - Fanen for siden som er åpen, blir alltid stående i menyen; da flyttes fanen foran den i stedet.
 // - Målingen skjer i et animasjonsbilde etter endringer (størrelse, faner, navn, rute), ikke i en løkke ved hver tegning.
-// Navnet på knappen («Mer») endres sammen med de andre navnene i Fase 6 (Q6: «Alle sider ▾»).
+import { gruppert } from './moduler.js';
+import { tabLabel } from './profile.js';
 
 const MOBILE = '(max-width: 767px)';
 let nav = null, btn = null, panel = null, raf = 0, open = false;
@@ -21,11 +22,10 @@ function layout() {
   if (!nav || !btn) return;
   const all = [...nav.querySelectorAll(':scope > a[data-r]')];
   all.forEach((a) => a.classList.remove('nav-ovf'));
-  btn.hidden = true;
-  if (matchMedia(MOBILE).matches || !nav.offsetParent) { fill([]); return; }
-  const fits = () => nav.scrollWidth <= nav.clientWidth + 1;
-  if (fits()) { fill([]); return; }
   btn.hidden = false;
+  if (matchMedia(MOBILE).matches || !nav.offsetParent) { btn.hidden = true; fill(); return; }
+  const fits = () => nav.scrollWidth <= nav.clientWidth + 1;
+  if (fits()) { fill(); return; }
   const shown = tabs();
   const cur = shown.find((a) => a.getAttribute('aria-current') === 'page');
   const hidden = [];
@@ -34,23 +34,32 @@ function layout() {
     shown[i].classList.add('nav-ovf');
     hidden.unshift(shown[i]);
   }
-  fill(hidden);
+  fill();
 }
 
-function fill(hidden) {
+/** Alle sidene, gruppert. Siden som er åpen, er markert, og knappen er markert når siden ikke står som synlig fane. */
+function fill() {
   if (!panel) return;
-  btn.classList.toggle('on', hidden.some((a) => a.getAttribute('aria-current') === 'page'));
+  const cur = nav.querySelector(':scope > a[aria-current="page"]')?.dataset.r ?? null;
+  const curShown = !!nav.querySelector(':scope > a[aria-current="page"]:not([hidden]):not(.nav-ovf)');
+  btn.classList.toggle('on', !!cur && !curShown);
   panel.innerHTML = '';
-  for (const a of hidden) {
-    const c = document.createElement('a');
-    c.href = a.getAttribute('href');
-    c.textContent = a.textContent;
-    c.setAttribute('role', 'menuitem');
-    c.dataset.moreR = a.dataset.r;
-    if (a.getAttribute('aria-current') === 'page') c.setAttribute('aria-current', 'page');
-    panel.appendChild(c);
+  for (const g of gruppert()) {
+    const h = document.createElement('div');
+    h.className = 'nav-more-g';
+    h.setAttribute('role', 'presentation');
+    h.textContent = g.navn;
+    panel.appendChild(h);
+    for (const m of g.moduler) {
+      const c = document.createElement('a');
+      c.href = m.rute;
+      c.textContent = tabLabel(m.id, m.navn);
+      c.setAttribute('role', 'menuitem');
+      c.dataset.moreR = m.id;
+      if (m.id === cur) c.setAttribute('aria-current', 'page');
+      panel.appendChild(c);
+    }
   }
-  if (!hidden.length) setOpen(false);
 }
 
 function setOpen(v) {
@@ -74,12 +83,12 @@ export function initNavOverflow() {
   btn.hidden = true;
   btn.setAttribute('aria-haspopup', 'menu');
   btn.setAttribute('aria-expanded', 'false');
-  btn.textContent = 'Mer ▾';
+  btn.textContent = 'Alle sider ▾';
   nav.appendChild(btn);
   panel = document.createElement('div');
   panel.className = 'nav-more-menu';
   panel.setAttribute('role', 'menu');
-  panel.setAttribute('aria-label', 'Flere sider');
+  panel.setAttribute('aria-label', 'Alle sider');
   panel.hidden = true;
   document.body.appendChild(panel);
 

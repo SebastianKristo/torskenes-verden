@@ -809,7 +809,7 @@ function bind(r) {
     }
     if (ds.wxWkc) { const ch = ds.wxWkc; haptic(8); S.wkCh = ch; S.wk = null; S.wkKey = ''; loadWeek(place(), ch); api('/weather/week-summary', { method: 'PUT', json: { char: ch } }).catch(() => {}); return paintMain(); }
     if (ds.wx === 'retry') return load();
-    if (ds.wx === 'close') { haptic(10); location.hash = '#/dash'; return; }
+    if (ds.wx === 'close') { haptic(10); location.hash = '#/oversikt'; return; }
     if (ds.wx === 'cmp') { S.cmpOpen = true; paintLayer(); if (!S.cmp && !S.cmpBusy) loadCmp(); return; }
     if (ds.wx === 'map') { S.mpOpen = true; return paintLayer(); }
     if (ds.wx === 'places') { S.plOpen = true; paintLayer(); r.querySelector('.wxp-search input')?.focus(); return; }
@@ -827,7 +827,7 @@ function bind(r) {
   r.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
       if (S.mpOpen || S.plOpen || S.cmpOpen || S.ms || S.sh != null) { S.mpOpen = S.plOpen = S.cmpOpen = false; S.ms = null; S.sh = null; S.plRes = null; S.plQ = ''; return paintLayer(); }
-      location.hash = '#/dash';
+      location.hash = '#/oversikt';
     }
     if ((e.key === 'Enter' || e.key === ' ') && e.target.matches?.('[role=button][data-wx-ms],[role=button][data-wx-pl],[role=button][data-wx]')) { e.preventDefault(); e.target.click(); }
   });

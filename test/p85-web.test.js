@@ -56,11 +56,11 @@ test('Familie: zoomknappene på kartet er lesbare i mørk modus', () => {
   assert.match(css, /html\[data-mode="dark"\] \.f50 \.leaflet-bar a \{[^}]*background-color: var\(--ds-surface-raised\);[^}]*color: var\(--ds-text-primary\)/); // tokens: #211e18 og #f3efe6 i Papir mørk
 });
 
-test('Gjøremål: #/gjoremal har fotovindu som #/huskeliste', () => {
+test('Gjøremål: #/gjoremal har fotovindu (#/huskeliste videresendes dit, Fase 6)', () => {
   const js = read('js/hltheme.js');
   const head = js.slice(js.indexOf('const HEAD = {'), js.indexOf('export function pwHeader'));
   assert.match(head, /\n\s*gjoremal: \(\) => \[/);
-  assert.match(head, /\n\s*huskeliste: \(\) => \[/);
+  assert.doesNotMatch(head, /\n\s*huskeliste: \(\) => \[/, 'den gamle ruten trenger ikke egen tittel');
 });
 
 test('Søkefelt: clearBtn() alene gir både stilark og lyttere', async () => {

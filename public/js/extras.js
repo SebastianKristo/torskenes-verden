@@ -1,6 +1,7 @@
 // Søkebar, nyhetslinje og popup.
 import { esc, hm, api, backdropClick, haptic } from './util.js';
 import { store, on, emit } from './store.js';
+import { modul } from './moduler.js'; // Fase 6: navn og adresser i snarveiene fra modullisten
 import { clearBtn, syncSearch, bindSearchFields } from './searchfield.js';
 import { addQuick, preview, previewAsync, quickLabel } from './kal-quick.js';
 import { aiParse52, waitParse52, apptText52, apptLabel52 } from './glimt-kalender.js'; // prompt 52: kalenderkontekst med AI
@@ -200,7 +201,7 @@ function drawDrop(form) {
   if (ai) { drop.innerHTML = aiPanel(ai); return; }
   // Mørkt forslag øverst: kalender-ikon · «Nina frisør» · «fre 25. sep · 14:30» · Legg i kalender (↵ gjør det samme).
   const apH = ap ? `<div class="sq-appt" role="option" data-sq-appt aria-label="Legg i kalender: ${esc(ap.title)}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v15H4zM4 10h16M9 3v4M15 3v4"/></svg><span class="sq-appt-t"><b data-no-i18n>${esc(ap.title)}</b><span>${ap.pending52 ? '✦ tolker … · ' : ''}${esc(ap.ai52 ? apptLabel52(ap, quickLabel(ap)) : quickLabel(ap))}</span></span><span class="sq-appt-b">Legg i kalender</span></div>` : '';
-  const huH = hu ? `<div class="sq-appt sq-huske41" role="option" data-sq-huske aria-label="Legg i Huskeliste: ${esc(hu)}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11l3 3 8-8M20 12v7a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h11"/></svg><span class="sq-appt-t"><b data-no-i18n>${esc(hu.length > 70 ? `${hu.slice(0, 70)} …` : hu)}</b><span>${pend52 ? '✦ tolker … · ' : ''}Glimt deler opp i punkter</span></span><span class="sq-appt-b">Legg i Huskeliste</span></div>` : '';
+  const huH = hu ? `<div class="sq-appt sq-huske41" role="option" data-sq-huske aria-label="Legg i Gjøremål: ${esc(hu)}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11l3 3 8-8M20 12v7a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h11"/></svg><span class="sq-appt-t"><b data-no-i18n>${esc(hu.length > 70 ? `${hu.slice(0, 70)} …` : hu)}</b><span>${pend52 ? '✦ tolker … · ' : ''}Glimt deler opp i punkter</span></span><span class="sq-appt-b">Legg i Huskeliste</span></div>` : '';
   if (huH) { drop.innerHTML = huH + (sq.items.length ? sq.items.slice(0, 4).map((x, i) => `<div class="sq-item" role="option" id="sq-${i}" aria-selected="${sq.sel === i}" data-sq-i="${i}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${x.h ? HIC : SIC}"/></svg><span class="sq-t" data-no-i18n><b>${esc(x.t)}</b></span></div>`).join('') : ''); return; }
   if (err) { drop.innerHTML = apH + (apH ? '' : `<div class="sq-empty">Forslag utilgjengelig: ${esc(err)}</div>`); return; }
   const split = (t) => { const i = lv ? t.toLowerCase().indexOf(lv) : -1; return i === 0 ? `<span>${esc(t.slice(0, lv.length))}</span><b>${esc(t.slice(lv.length))}</b>` : `<b>${esc(t)}</b>`; };
@@ -251,31 +252,57 @@ function runSearch(q) {
 /* ---------- Snarveier og «fullfør først» (prompt 32, claude-code-sok-fullfor-forst.md, fasit hsAsk) ---------- */
 // Samme liste som serveren (server/glimt/assist.js NAV). Med Glimt: «vis meg / åpne / gå til / ta meg til / hvor finner jeg / finn …»
 // eller 1–2 ord. Med Google/DuckDuckGo bare med «åpne / gå til / ta meg til / vis meg» foran.
+// Fase 6: [søkeord, modul-id] – navnet og adressen kommer fra modullisten (moduler.js), så søket alltid viser riktig navn og sti.
+// [søkeord, navn, adresse] brukes bare for det som ikke er en modul (Innstillinger, sider i Økonomi).
 const NAV = [
-  [/oppdater|nordlys|ny versjon|versjon/, 'Nordlys OS · oppdatering', 'set:system'],
-  [/kalender|timeplan/, 'Kalender', '#/kalender'],
-  [/v(æ|ae)ret? ?(side|app)|værside|vaerside|^(vis( meg)?|åpne|gå til) v(æ|ae)r(et)?$|^v(æ|ae)r(et)?$/, 'Vær', '#/vaer'],
+  [/oppdater|nordlys|ny versjon|versjon/, 'Server · System', 'set:system'],
+  [/bursdag/, 'bursdager'],
+  [/familiekalender/, 'familiekalender'],
+  [/kalender|timeplan/, 'kalender'],
+  [/v(æ|ae)ret? ?(side|app)|værside|vaerside|^(vis( meg)?|åpne|gå til) v(æ|ae)r(et)?$|^v(æ|ae)r(et)?$/, 'vaer'],
   [/innstilling/, 'Innstillinger', 'set:konto'],
-  [/pakke|sporing|sending/, 'Sporing', '#/sporing'],
+  [/pakke|sporing|sending/, 'sporing'],
+  [/avgang|buss|trikk|t-bane|kollektiv|\breise\b|\bruter\b/, 'reise'],
+  [/\bkart\b/, 'reise-kart'],
   [/budsjett/, 'Budsjett', '/finans/#/budsjett'],
   [/kvittering/, 'Kvitteringer', '/finans/#/kv'],
-  [/finans|økonomi|saldo/, 'Finans', '/finans/'],
-  [/abonnement|prøveperiode/, 'Abonnement', '/finans/#/abonnement'],
-  [/domene/, 'Domener', '#/domener'],
-  [/familie|posisjon|hvor er/, 'Familie', '#/familie'],
-  [/middag|matplan|oppskrift|^mat$|\bmat\b/, 'Mat', '#/matplan'],
-  [/gjøremål|to-?do|huskeliste|handleliste/, 'Gjøremål', '#/huskeliste'],
-  [/bursdag/, 'Bursdager', '#/bursdager'],
-  [/\brom\b|satellitt|rombilde|mars-?rover/, 'Rom', '#/rom'],
-  [/\bchat\b/, 'Chat', '#/chat'],
+  [/abonnement|prøveperiode|faste betalinger/, 'Faste betalinger', '/finans/#/abonnement'],
+  [/finans|økonomi|saldo/, 'okonomi'],
+  [/domene/, 'domener'],
+  [/familie|posisjon|hvor er/, 'familie'],
+  [/middag|matplan|oppskrift|^mat$|\bmat\b/, 'mat'],
+  [/gjøremål|to-?do|huskeliste|handleliste/, 'gjoremal'],
+  [/smarthjem|home assistant|lys(ene)?\b/, 'smarthjem'],
+  [/\bmedia\b|serier|filmer|nedlasting/, 'media'],
+  [/nyhet/, 'nyheter'],
+  [/skjold|komponent|skuff/, 'skjold'],
+  [/\bstudie\b|lekser|eksamen/, 'studie'],
+  [/\brom\b|satellitt|rombilde|mars-?rover/, 'rom'],
+  [/\bchat\b/, 'chat'],
+  [/oversikt|dashboard|forside/, 'oversikt'],
 ];
+// Undersider med egen adresse: [modul-id, underside-id].
+const NAV_SUB = { bursdager: ['kalender', 'bursdager'], familiekalender: ['kalender', 'familie'], 'reise-kart': ['reise', 'kart'] };
+/** [navn, adresse] for et treff i NAV, eller null når modulen ikke finnes for brukeren. */
+function navTarget(hit) {
+  if (hit[2]) return [hit[1], hit[2]];
+  const [mid, sid] = NAV_SUB[hit[1]] ?? [hit[1]];
+  const m = modul(mid);
+  if (!m?.rute) return null;
+  const u = sid ? m.undersider.find((x) => x.id === sid) : null;
+  return u ? [u.navn, u.rute] : [m.navn, m.rute];
+}
 const NAV_PRE = /^(vis( meg)?|åpne|gå til|ta meg til|hvor finner jeg|finn)\b/, NAV_PRE_STRICT = /^(vis meg|åpne|gå til|ta meg til)\b/;
 function navOf(q, glimtOn) {
   const n = String(q ?? '').toLowerCase().replace(/[?!.]+$/, '').trim();
   if (!n || isUrl(n) || apptOf(q)) return null;
   if (!(glimtOn ? NAV_PRE.test(n) || n.split(/\s+/).length <= 2 : NAV_PRE_STRICT.test(n))) return null;
-  const hit = NAV.find(([re]) => re.test(n));
-  return hit ? { label: hit[1], to: hit[2] } : null;
+  for (const hit of NAV) {
+    if (!hit[0].test(n)) continue;
+    const t = navTarget(hit);
+    if (t) return { label: t[0], to: t[1] };
+  }
+  return null;
 }
 function goNav(to) {
   if (to.startsWith('set:')) { document.dispatchEvent(new CustomEvent('hl:open-settings', { detail: to.slice(4) })); return; }
@@ -803,8 +830,8 @@ export function renderTicker() {
   // Listen dupliseres så rullingen går sømløst; kopien skjules for skjermlesere.
   const spBtn = paper()
     ? `<button type="button" class="ticker-speed t38-sp" data-tick-sp title="Fart: 1× → 2× → 0,5× → stopp"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9.5 2.5h5"/></svg><span class="mono"></span></button>`
-    : `<button class="ticker-speed" data-act="news-speed" title="Hastighet på nyhetsbaren" aria-label="Hastighet på nyhetsbaren"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 14l4-4M3.3 19a10 10 0 1 1 17.4 0"/></svg><span class="mono">${store.me.ui?.newsSpeed ?? 5}</span></button>`;
-  el.innerHTML = `<div class="ticker-label" role="button" tabindex="0">SISTE NYTT</div><div class="ticker-view"><div class="ticker-track">${list}<span style="display:contents" aria-hidden="true">${list.replace(/<a /g, '<a tabindex="-1" ')}</span></div></div>
+    : `<button class="ticker-speed" data-act="news-speed" title="Hastighet på nyhetslinjen" aria-label="Hastighet på nyhetslinjen"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 14l4-4M3.3 19a10 10 0 1 1 17.4 0"/></svg><span class="mono">${store.me.ui?.newsSpeed ?? 5}</span></button>`;
+  el.innerHTML = `<div class="ticker-label" role="button" tabindex="0">NYHETER</div><div class="ticker-view"><div class="ticker-track">${list}<span style="display:contents" aria-hidden="true">${list.replace(/<a /g, '<a tabindex="-1" ')}</span></div></div>
     ${spBtn}`;
   applyTicker();
 }

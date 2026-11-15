@@ -19,7 +19,7 @@ export function render() {
     mount50(slot, {
       env: 'web', base: '#/familie', sub: subOfHash(), api, ownHash: true, wide: 900,
       dark: () => document.documentElement.dataset.mode === 'dark',
-      home: () => { location.hash = '#/dash'; },
+      home: () => { location.hash = '#/oversikt'; },
       settings: (tab) => import('./settings.js').then((m) => m.openSettings(tab || 'familie')).catch(() => {}),
       velfremme: (fam, repaint) => { if (!fam) return null; loadHjemlys(); return hl41Html(fam, repaint); },
     });

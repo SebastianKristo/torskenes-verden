@@ -81,7 +81,7 @@ test('web: NRK-fanen i Media med egen adresse, uten token i nettleseren', () => 
   const m43 = readFileSync(new URL('../public/js/media-side.js', import.meta.url), 'utf8');
   const m70 = readFileSync(new URL('../public/js/media-visninger.js', import.meta.url), 'utf8');
   const nw = readFileSync(new URL('../public/js/media-nrk.js', import.meta.url), 'utf8');
-  assert.match(m70, /\['nrk', 'NRK'\]/);
+  assert.match(m43, /\['nrk', 'NRK'\]/); // Fase 6: NRK er en kilde under fanen Kilder
   assert.match(m43, /nrk: 'nrk'/);
   assert.match(m43, /mountNrk\(nrkHost\)/);
   assert.match(nw, /\/api\/media\/nrk/);

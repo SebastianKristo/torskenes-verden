@@ -18,7 +18,7 @@ import { ruterColorA11y } from './ruter-color.js'; // linjemerket med minst 4,5:
 const T = { // id → [navn, bredde ('h' halv | 'f' full), høy]
   p_school: ['I dag på skolen', 'f'], d_cal: ['Skolekalender', 'f'],
   w52av: ['Avgang', 'h', 1], w52fin: ['Finans', 'h'], w52mat: ['Middag', 'h'], w52fam: ['Familie', 'h'], w52dom: ['Domener', 'h'],
-  w52news: ['Siste nytt', 'f'], w52kal: ['Kalender', 'h'], w52bd: ['Bursdag', 'h'], w52bol: ['Bolig', 'h'], w52pr: ['Prøve', 'h'], w52hus: ['Huskeliste', 'h'], w52skj: ['Skjold Lab', 'h'], // prompt 76 (SKJWEB)
+  w52news: ['Nyheter', 'f'], w52kal: ['Kalender', 'h'], w52bd: ['Bursdag', 'h'], w52bol: ['Bolig', 'h'], w52pr: ['Prøve', 'h'], w52hus: ['Gjøremål', 'h'], w52skj: ['Skjold Lab', 'h'], // prompt 76 (SKJWEB)
   d_media: ['Media', 'f'], p_play: ['Spilles nå', 'f'], p_wx: ['Vær', 'f'], p_energy: ['Energi', 'f'], p_pk: ['Pakker', 'f'],
   p_money: ['Penger', 'f'], p_links: ['Snarveier', 'f'], d_upcoming: ['Kommer ut', 'f'], d_media_hist: ['Mediehistorikk', 'f'],
 };
@@ -108,7 +108,7 @@ function avgang() {
   const trip = r?.trips?.find((t) => t.deps?.some((d) => new Date(d.time) - now > -60_000));
   const deps = (trip?.deps ?? []).filter((d) => new Date(d.time) - now > -60_000);
   const d = deps[0];
-  if (!d) return tile('w52av', 't52-av', '#/dash', `${lab('AVGANG')}<b class="t52-mid">${r ? 'Ingen avganger' : 'Henter …'}</b>`);
+  if (!d) return tile('w52av', 't52-av', '#/oversikt', `${lab('AVGANG')}<b class="t52-mid">${r ? 'Ingen avganger' : 'Henter …'}</b>`);
   const m = Math.max(0, Math.round((new Date(d.time) - now) / 60000)), lc = ruterColorA11y(d);
   const more = deps.slice(1, 3).map((x) => `${Math.max(0, Math.round((new Date(x.time) - now) / 60000))}`).join(', ');
   return `<a class="t52 t52-av" href="${esc(trip.url || 'https://reise.ruter.no/')}" target="_blank" rel="noopener" draggable="false" data-t52-go="w52av">${lab('AVGANG')}<span class="t52-line" style="background:${esc(lc[0])};color:${esc(lc[1])}">${esc(d.line)}</span><span class="t52-dest">${esc(d.to ?? trip.to)}</span><span class="t52-mn"><b>${m === 0 ? 'nå' : m}</b>${m === 0 ? '' : '<span>min</span>'}</span><span class="t52-sub">${esc(`fra ${trip.from}${more ? ` · så ${more} min` : ''}`)}</span></a>`;
@@ -132,7 +132,7 @@ function domener() {
 function news() {
   const L = store.data.news?.items ?? [], a = L[0];
   const hm = (d) => { const x = new Date(d); return Number.isNaN(+x) ? '' : `${String(x.getHours()).padStart(2, '0')}:${String(x.getMinutes()).padStart(2, '0')}`; };
-  return `<button type="button" class="t52 t52-card t52-news" data-t52-news aria-label="Åpne nyhetsleseren"><span class="t52-row">${lab('SISTE NYTT')}${a ? `<span class="t52-k">${esc(a.src)} · ${esc(hm(a.date))}</span>` : ''}</span><b class="t52-nt">${esc(a?.title || 'Ingen nyheter akkurat nå')}</b>${L.length > 1 ? `<span class="t52-nl">${L.slice(1, 4).map((x) => `<span><i>${esc(x.src)}</i>${esc(x.title)}</span>`).join('')}</span>` : ''}</button>`;
+  return `<button type="button" class="t52 t52-card t52-news" data-t52-news aria-label="Åpne Nyheter"><span class="t52-row">${lab('SISTE NYTT')}${a ? `<span class="t52-k">${esc(a.src)} · ${esc(hm(a.date))}</span>` : ''}</span><b class="t52-nt">${esc(a?.title || 'Ingen nyheter akkurat nå')}</b>${L.length > 1 ? `<span class="t52-nl">${L.slice(1, 4).map((x) => `<span><i>${esc(x.src)}</i>${esc(x.title)}</span>`).join('')}</span>` : ''}</button>`;
 }
 function kalender() {
   const b = H.data.brief, n = b?.next, e = b?.events?.[0];
@@ -141,7 +141,7 @@ function kalender() {
 function bursdag() {
   const x = H.data.brief?.birthdays?.items?.[0] ?? store.data.birthdays?.items?.[0];
   const dl = x?.daysLeft;
-  return tile('w52bd', 't52-mat', '#/bursdager', `${lab('BURSDAG', ' mat')}${x ? `<span class="t52-mn"><b>${dl === 0 ? 'I dag' : esc(dl)}</b>${dl === 0 ? '' : `<span>${dl === 1 ? 'dag' : 'dager'}</span>`}</span><span class="t52-t">${esc(x.name)}</span><span class="t52-s mat">${esc(x.text || x.dateText || '')}</span>` : `<b class="t52-mid">${H.at ? 'Ingen snart' : 'Henter …'}</b>`}`);
+  return tile('w52bd', 't52-mat', '#/kalender/bursdager', `${lab('BURSDAG', ' mat')}${x ? `<span class="t52-mn"><b>${dl === 0 ? 'I dag' : esc(dl)}</b>${dl === 0 ? '' : `<span>${dl === 1 ? 'dag' : 'dager'}</span>`}</span><span class="t52-t">${esc(x.name)}</span><span class="t52-s mat">${esc(x.text || x.dateText || '')}</span>` : `<b class="t52-mid">${H.at ? 'Ingen snart' : 'Henter …'}</b>`}`);
 }
 function bolig() {
   const b = H.data.bol;

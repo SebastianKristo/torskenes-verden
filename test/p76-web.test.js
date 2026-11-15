@@ -73,9 +73,12 @@ test('ruting, meny, Mer og flis på Hjem', () => {
   assert.match(app, /import\('\.\/skjold\.js'\)\.then\(\(m\) => m\.mount\(view\)\)/);
   assert.match(app, /!\(route === 'skjold' && current\(\) === 'skjold'\)/);
   assert.match(read('public/app.html'), /<a href="#\/skjold" data-r="skjold">Skjold Lab<\/a>/);
-  assert.match(read('public/js/profile.js'), /\['skjold', 'Skjold Lab'\]\]/);
-  assert.match(read('public/js/net.js'), /'kart', 'skjold', 'domener'/);
-  assert.match(read('public/js/nav-boot.js'), /'mediakveld', 'skjold'\]/);
+  // Fase 6: fanene, Mer og markeringen kommer fra modullisten (shared/schemas/moduler.json, test/moduler-web.test.js).
+  const M = JSON.parse(read('shared/schemas/moduler.json'));
+  assert.deepEqual(M.moduler.find((m) => m.id === 'skjold'), { ...M.moduler.find((m) => m.id === 'skjold'), navn: 'Skjold Lab', rute: '#/skjold', gruppe: 'verksted' });
+  assert.ok(M.toppmeny.includes('skjold'), 'Skjold Lab er en fast fane (Q6)');
+  assert.match(read('public/js/net.js'), /gruppert\(/);
+  assert.match(read('public/js/nav-boot.js'), /hl_mod6/);
   const h = read('public/js/oversikt-mobil.js');
   assert.match(h, /w52skj: \['Skjold Lab', 'h'\]/);
   assert.match(h, /'w52hus', 'w52skj'/);

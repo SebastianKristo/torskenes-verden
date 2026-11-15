@@ -89,7 +89,7 @@ function notePrev(e) {
 window.addEventListener('hashchange', notePrev);
 // Fase 3: chat.js lastes først når Chat åpnes, altså etter hashendringen dit. Skallet husker forrige adresse (store.prevUrl).
 if (store.prevUrl) notePrev({ newURL: location.href, oldURL: store.prevUrl });
-function closeChat() { document.body.classList.remove('chat-fs'); const to = chPrev || '#/dash'; chPrev = ''; location.hash = to; }
+function closeChat() { document.body.classList.remove('chat-fs'); const to = chPrev || '#/oversikt'; chPrev = ''; location.hash = to; }
 function fsBtns() {
   return '<button type="button" class="ch-fsb ink" data-ch-fsclose aria-label="Lukk chat" title="Lukk (Esc)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>';
 }
@@ -671,7 +671,7 @@ async function sendTool(t, o60 = {}) {
 }
 
 /** Prompt 59: svaret fra Glimt-motoren (done i strømmen) i samme form som /api/assist ga, med kortet når det finnes. */
-const SRC59 = { calendar: 'Kalender', tasks: 'Huskeliste', finance: 'Finans', weather: 'Vær', ruter: 'Avganger', family: 'Familie', media: 'Media', study: 'Studie' };
+const SRC59 = { calendar: 'Kalender', tasks: 'Gjøremål', finance: 'Finans', weather: 'Vær', ruter: 'Avganger', family: 'Familie', media: 'Media', study: 'Studie' };
 const WD59 = ['søn', 'man', 'tir', 'ons', 'tor', 'fre', 'lør'];
 function fromAgent59(g, q) {
   const raw = g.raw ?? {};

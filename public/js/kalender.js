@@ -867,7 +867,7 @@ function closeCal() {
   if (k38.appMode()) return; // Mac-appen: vinduet lukkes med den røde knappen, ikke her
   closeSheets(); K.drawer = false;
   document.body.classList.remove('kal-fs');
-  location.hash = '#/dash';
+  location.hash = '#/oversikt';
 }
 function flash(tx) { K.toast = tx; paint(); clearTimeout(toastT); toastT = setTimeout(() => { K.toast = ''; paint(); }, 2600); }
 

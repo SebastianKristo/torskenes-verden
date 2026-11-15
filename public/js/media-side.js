@@ -507,9 +507,10 @@ function mainHtml() {
   if (M.tab === 'kal') return kal70();
   if (M.tab === 'bib') return bib70();
   if (M.tab === 'ned') return ned70();
-  if (M.tab === 'nrk') return '<div data-nrk-slot></div>'; // NRK-nedlaster (media-nrk.js eier innholdet)
-  if (M.tab === 'musikk') return '<div data-musikk-slot></div>'; // Musikk/yubal (media-musikk.js eier innholdet)
-  if (M.tab === 'av') return `${backBtn45('avback', 'Oversikt')}<div data-pb44-slot></div>`; // Avspilling (Plex/Jellyfin): fra «Spilles nå»
+  // Fase 6: NRK og Musikk er kilder, ikke visninger – de ligger under fanen Kilder (#/media/kilder → NRK).
+  if (M.tab === 'nrk') return `${kilder6('nrk')}<div data-nrk-slot></div>`; // NRK-nedlaster (media-nrk.js eier innholdet)
+  if (M.tab === 'musikk') return `${kilder6('musikk')}<div data-musikk-slot></div>`; // Musikk/yubal (media-musikk.js eier innholdet)
+  if (M.tab === 'av') return `${backBtn45('avback', 'Nå')}<div data-pb44-slot></div>`; // Avspilling (Plex/Jellyfin): fra «Spilles nå»
   return ov70();
 }
 let pbHost = null, nrkHost = null, musikkHost = null;
@@ -577,8 +578,10 @@ function openDet(k, id, fromHist) { M.tab = 'bib'; M.bibK = k === 'm' ? 'm' : 's
    (musens sideknapper, ⌘[ ⌘], Alt+←/→, nettleserknappene) går mellom stegene. Ark og menyer lukkes. */
 // Prompt 70: #/media (Oversikt), #/media/kalender, #/media/bibliotek[/filmer], #/media/nedlastinger, #/media/avspilling.
 // De gamle adressene (#/media/kommer|sonarr|radarr|qbittorrent|prowlarr …) virker fortsatt.
-const TAB_SLUG = { ov: '', kal: 'kalender', bib: 'bibliotek', ned: 'nedlastinger', nrk: 'nrk', musikk: 'musikk', av: 'avspilling' };
-const SLUG_TAB = { oversikt: 'ov', ov: 'ov', kalender: 'kal', kal: 'kal', kommer: 'kal', kom: 'kal', bibliotek: 'bib', bib: 'bib', sonarr: 'bib', son: 'bib', radarr: 'bib', rad: 'bib', nedlastinger: 'ned', ned: 'ned', qbittorrent: 'ned', qb: 'ned', prowlarr: 'ned', pro: 'ned', avspilling: 'av', av: 'av', nrk: 'nrk', musikk: 'musikk', yubal: 'musikk' };
+// Fase 6: fanen «Kalender» heter «Kommer» (#/media/kommer), så den ikke kolliderer med hovedkalenderen. #/media/kalender virker fortsatt.
+const TAB_SLUG = { ov: '', kal: 'kommer', bib: 'bibliotek', ned: 'nedlastinger', nrk: 'nrk', musikk: 'musikk', av: 'avspilling' };
+const kilder6 = (cur) => `<nav class="subtabs" aria-label="Kilder">${[['nrk', 'NRK'], ['musikk', 'Musikk']].map(([k, n]) => `<button type="button" data-m43-tab="${k}"${cur === k ? ' aria-current="page"' : ''}>${n}</button>`).join('')}</nav>`;
+const SLUG_TAB = { oversikt: 'ov', ov: 'ov', kalender: 'kal', kal: 'kal', kommer: 'kal', kom: 'kal', bibliotek: 'bib', bib: 'bib', sonarr: 'bib', son: 'bib', radarr: 'bib', rad: 'bib', nedlastinger: 'ned', ned: 'ned', qbittorrent: 'ned', qb: 'ned', prowlarr: 'ned', pro: 'ned', avspilling: 'av', av: 'av', nrk: 'nrk', kilder: 'nrk', musikk: 'musikk', yubal: 'musikk' };
 const SLUG_BIB = { radarr: 'm', rad: 'm', sonarr: 's', son: 's' };
 function hashNow() {
   const sl = TAB_SLUG[M.tab] ?? '';
