@@ -30,9 +30,9 @@ function extra(cfg) {
 }
 const statusTxt = (it) => {
   const t = test[it.id];
-  if (t?.st === 'run') return ['Tester …', '#b6bccb'];
-  if (t) return t.ok ? ['✓ OK', '#8fe0b0'] : ['✕ Feilet', '#f59a8f'];
-  return it.status === 'ok' ? ['Tilkoblet', undefined] : it.status === 'error' ? ['Feil', '#f59a8f'] : ['Mangler oppsett', '#f3b54a'];
+  if (t?.st === 'run') return ['Tester …', 'var(--ds-text-secondary)'];
+  if (t) return t.ok ? ['✓ OK', 'var(--ds-success)'] : ['✕ Feilet', 'var(--ds-danger)'];
+  return it.status === 'ok' ? ['Tilkoblet', undefined] : it.status === 'error' ? ['Feil', 'var(--ds-danger)'] : ['Mangler oppsett', 'var(--ds-warning)'];
 };
 
 const scopeOf = (it) => (it.scope === 'personal' ? 'personal' : 'server');
@@ -61,7 +61,7 @@ export function integSub(id, note) {
     return `<label class="sg-field"><span>${esc(f.label)}</span><input name="${esc(f.key)}" type="${type}" value="${esc(val)}" placeholder="${esc(ph)}" autocomplete="off" spellcheck="false">${f.saved ? `<button type="button" class="sg-link red" data-i24-clear="${esc(f.key)}">Fjern</button>` : ''}</label>${f.help ? `<div class="sg-fhelp">${esc(f.help)}</div>` : ''}`;
   }).join('');
   const t = test[it.id], m = msg[it.id];
-  const res = t && t.st !== 'run' ? `<div class="sg-res"><i style="background:${t.ok ? '#34c759' : '#f26b5e'}"></i><div><b>${t.ok ? 'Tilkoblet' : 'Tilkoblingen feilet'}</b><span>${esc(t.msg ?? '')}</span></div><span class="mono">${new Date(t.at).toLocaleTimeString('nb-NO')}${t.ms ? ` · ${t.ms} ms` : ''}</span></div>` : '';
+  const res = t && t.st !== 'run' ? `<div class="sg-res"><i style="background:${t.ok ? 'var(--ds-success)' : 'var(--ds-danger)'}"></i><div><b>${t.ok ? 'Tilkoblet' : 'Tilkoblingen feilet'}</b><span>${esc(t.msg ?? '')}</span></div><span class="mono">${new Date(t.at).toLocaleTimeString('nb-NO')}${t.ms ? ` · ${t.ms} ms` : ''}</span></div>` : '';
   const [v, vc] = statusTxt(it);
   const head = `<div class="int-head"><span class="sg-v"${vc ? ` style="color:${vc}"` : ''}>${esc(v)}</span><div><b>${esc(it.name)}</b><span>${esc(it.group ?? '')}</span></div></div>`;
   return { title: it.name, sub: `Integrasjoner · ${it.group ?? ''}`, html: `${head}<form class="sg" data-i24="${esc(it.id)}"><h3 class="sg-t">Oppsett</h3><div class="sg-box">${fields || '<div class="sg-row">Ingen felt.</div>'}</div>${it.help ? note(esc(it.help)) : ''}</form>

@@ -358,8 +358,8 @@ function overview() {
     const cd = days(d.sslExpires), st = statusOf(d);
     return `<button class="dm-row" data-dom-sel="${esc(x.name)}"><span class="nm"><b class="mono">${esc(x.name)}</b><span>${SRC[x.source]}${d.mock ? ' · demo' : ''}</span></span>
       <span class="st" style="color:${st.c}"><i style="background:${st.c}"></i>${st.t}</span><span class="r mono">${big(d.requests)}</span><span class="r mono">${big(d.visitors)}</span><span class="r mono">${pc(d.cachedPct)}</span>
-      <span class="r mono" style="color:${d.uptimePct == null ? 'var(--muted)' : d.uptimePct > 99.9 ? 'var(--green)' : '#f2b56b'}">${pc(d.uptimePct, 2)}</span>
-      <span class="mono sm" style="color:${cd == null ? 'var(--muted)' : cd < 30 ? 'var(--red)' : cd < 60 ? '#f2b56b' : 'var(--text)'}">${d.sslExpires ? `${date(d.sslExpires)} · ${cd} d` : '–'}</span><span class="mono sm muted">${date(d.renews)}</span></button>`;
+      <span class="r mono" style="color:${d.uptimePct == null ? 'var(--muted)' : d.uptimePct > 99.9 ? 'var(--ds-success)' : 'var(--ds-warning)'}">${pc(d.uptimePct, 2)}</span>
+      <span class="mono sm" style="color:${cd == null ? 'var(--muted)' : cd < 30 ? 'var(--ds-danger)' : cd < 60 ? 'var(--ds-warning)' : 'var(--text)'}">${d.sslExpires ? `${date(d.sslExpires)} · ${cd} d` : '–'}</span><span class="mono sm muted">${date(d.renews)}</span></button>`;
   }).join('');
   const ds = rows.map((r) => r.d).filter(Boolean);
   const next = ds.filter((d) => d.sslExpires).sort((a, b) => a.sslExpires.localeCompare(b.sslExpires))[0];
@@ -372,10 +372,10 @@ function overview() {
 }
 
 function statusOf(d) {
-  if (d.error && d.requests == null) return { t: 'Feil', c: 'var(--red)' };
-  if (d.status === 'down') return { t: 'Nede', c: 'var(--red)' };
-  if (d.status === 'active') return { t: 'Aktiv', c: 'var(--green)' };
-  if (d.status === 'pending') return { t: 'Venter', c: '#f2b56b' };
+  if (d.error && d.requests == null) return { t: 'Feil', c: 'var(--ds-danger)' };
+  if (d.status === 'down') return { t: 'Nede', c: 'var(--ds-danger)' };
+  if (d.status === 'active') return { t: 'Aktiv', c: 'var(--ds-success)' };
+  if (d.status === 'pending') return { t: 'Venter', c: 'var(--ds-warning)' };
   return { t: 'Ukjent', c: 'var(--muted)' };
 }
 
@@ -425,7 +425,7 @@ function one() {
   const info = [['Registrar', d.registrar ?? '–'], ['Utløper', d.renews ? `${date(d.renews)} · ${ed} d` : '–', ed != null && ed < 30 ? 'var(--red)' : null],
     ['Navnetjenere', d.nameServers?.length ? d.nameServers.join(' / ') : '–'], ['Plan', d.plan ?? '–'],
     ['SSL-modus', sec.sslMode ?? '–'], ['Alltid HTTPS', yes(sec.alwaysHttps)], ['Minimum TLS', sec.minTls ?? '–'], ['Bot Fight Mode', yes(sec.botFight)],
-    ['Sertifikat utløper', d.sslExpires ? `${date(d.sslExpires)} · ${cd} d` : '–', cd == null ? null : cd < 30 ? 'var(--red)' : cd < 60 ? '#f2b56b' : null], ['Statistikk fra', SRC[d.source] ?? d.source]];
+    ['Sertifikat utløper', d.sslExpires ? `${date(d.sslExpires)} · ${cd} d` : '–', cd == null ? null : cd < 30 ? 'var(--ds-danger)' : cd < 60 ? 'var(--ds-warning)' : null], ['Statistikk fra', SRC[d.source] ?? d.source]];
   const dnssec = sec.dnssec;
   const ev = d.threats?.events ?? [];
   return `

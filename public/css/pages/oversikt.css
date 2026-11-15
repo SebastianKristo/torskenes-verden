@@ -1019,3 +1019,13 @@ div.b52-r{cursor:default}
 .b73-up{font-size:12px;color:#8a8478;padding:0 4px}
 .b73-up button{border:0;background:transparent;padding:0;font:700 12px Manrope,system-ui,sans-serif;color:#b23a2a;cursor:pointer;text-decoration:underline}
 .b73-sum{color:#8a8478}
+
+/* ---------- Glass: kortene er glass, ikke Papir mørk (B-F3), og etikettene er lyse nok (E-B7) ----------
+   :where() på kortflaten holder spesifisiteten lik grunnregelen, så de fargede kortene (.dg40-s, .dg40-w) beholder fyllet sitt. */
+html[data-hl="cur"] .dg40{--c40-card:var(--ds-surface);--c40-ink:var(--ds-text-primary);--c40-mut:var(--ds-text-secondary);--c40-line:var(--ds-line);--c40-chip:var(--ds-surface-sunken)}
+:where(html[data-hl="cur"]) .dg40 .dg36-it>.dg36-wig{background:var(--ds-surface-raised);-webkit-backdrop-filter:blur(var(--ds-blur-raised));backdrop-filter:blur(var(--ds-blur-raised));--lab40:color-mix(in srgb,var(--wc) 40%,var(--ds-text-primary))}
+
+/* E-B6: forbokstavene i logoruter uten bilde (Snarveier m.fl.) hadde Glass-bunnen #262f40 med Papir-tekst i Papir (2,35:1).
+   :where() gir samme spesifisitet som .lg, så egne varianter (.logo-lg, .sg-lg …) beholder fargene sine. */
+:where(html[data-hl="2c"]) .lg:where(:not(.has)){background:var(--ds-surface-sunken);color:var(--ds-text-secondary)}
+html[data-hl="cur"] .dg40 .tile .lg:not(.has){color:var(--ds-text-primary)}

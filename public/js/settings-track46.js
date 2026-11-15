@@ -8,7 +8,7 @@ import { api, esc } from './util.js';
 
 const T = { d: null, loading: false, err: null, msg: {}, busy: {}, start: {}, paste: {} };
 const DOM = { posten: 'posten.no', 'postnord-number': 'postnord.no', postnord: 'postnord.no' };
-const COL = { ok: '#34c759', reauth: '#f3b54a', compat: '#f26b5e', error: '#f26b5e', off: '#8f897c' };
+const COL = { ok: 'var(--ds-success)', reauth: 'var(--ds-warning)', compat: 'var(--ds-danger)', error: 'var(--ds-danger)', off: 'var(--ds-text-secondary)' };
 
 export async function loadTrack46(rerender, force = false) {
   if (T.loading || (T.d && !force) || T.err === 404) return;

@@ -147,7 +147,7 @@ html[data-mode="dark"][data-hl="2c"] .dm-map path.hl{stroke:#f3efe6}
 html[data-mode="dark"][data-hl="2c"] .dm-scale i,html[data-mode="dark"][data-hl="2c"] body.not-dash .dm-scale i{background:#3a352c}
 html[data-mode="dark"][data-hl="2c"] .dm-dns .t{color:#ec7a64}
 html[data-mode="dark"][data-hl="2c"] .dm-form input,html[data-mode="dark"][data-hl="2c"] .dm-form select,html[data-mode="dark"][data-hl="2c"] body.not-dash .dm-form input,html[data-mode="dark"][data-hl="2c"] body.not-dash .dm-form select{background:#211e18}
-html[data-mode="dark"][data-hl="2c"] .fx{--f-bg:#16140f;--f-card:#211e18;--f-line:#3a352c;--f-in:#3a352c;--f-sub:#16140f;--f-t:#f3efe6;--f-2:#a39d90;--f-acc-t:#211e18}
+html[data-mode="dark"][data-hl="2c"] .fx{--f-bg:#16140f;--f-card:#211e18;--f-line:#3a352c;--f-in:#3a352c;--f-sub:#16140f;--f-t:#f3efe6;--f-2:#a39d90;--f-3:var(--ds-text-secondary);--f-acc-l:var(--ds-accent);--f-acc-t:#211e18}
 html[data-mode="dark"][data-hl="2c"] .fx .kpi,html[data-mode="dark"][data-hl="2c"] .fx .fcard,html[data-mode="dark"][data-hl="2c"] .fx .list,html[data-mode="dark"][data-hl="2c"] body.not-dash .fx .card{background:#211e18}
 html[data-mode="dark"][data-hl="2c"] .fx .fin{background:#211e18}
 html[data-mode="dark"][data-hl="2c"] .trk{--text:#f3efe6;--muted:#a39d90}
@@ -347,9 +347,10 @@ html[data-mode="dark"][data-hl="2c"] .wh-steps{color:var(--ink,#f3efe6)}
 :where(html[data-mode="dark"][data-hl="2c"]) .ny-hi{color:#6fbf8f}
 :where(html[data-mode="dark"][data-hl="2c"]) .ny-more{border:1px solid var(--w30-line,#3a352c)}
 :where(html[data-mode="dark"][data-hl="2c"]) .ns36-t b em{background:linear-gradient(180deg,#211e18 0%,#ffd9c2 45%,#ff8a5c 100%)}
-:where(html[data-mode="dark"][data-hl="2c"]) .dm36-gb{background:#f3efe6;color:#16140f}
-:where(html[data-mode="dark"][data-hl="2c"]) .dm36-orb{background:#16140f}
-:where(html[data-mode="dark"][data-hl="2c"]) .dm36-dot{box-shadow:0 0 0 2px #f3efe6}
+/* E-B4: Glimt-knappen på Domener er en mørk flate i mørk modus (før lys med 1,79:1 på etiketten). */
+:where(html[data-mode="dark"][data-hl="2c"]) .dm36-gb{background:var(--ds-surface-raised);color:var(--ds-text-primary);box-shadow:inset 0 0 0 1px var(--ds-line)}
+:where(html[data-mode="dark"][data-hl="2c"]) .dm36-gt span{color:var(--ds-accent)}
+:where(html[data-mode="dark"][data-hl="2c"]) .dm36-dot{box-shadow:0 0 0 2px var(--ds-surface-raised)}
 /* web37.css */
 :where(html[data-mode="dark"][data-hl="2c"]) .gb37-bv.k{color:#16140f}
 :where(html[data-mode="dark"][data-hl="2c"]) .gb37-bv.m .gb37-bh span:first-child{color:#ec7a64}
@@ -533,3 +534,6 @@ html[data-mode="dark"][data-hl="2c"] .gb38-ht,html[data-mode="dark"][data-hl="2c
 html[data-mode="dark"][data-hl="2c"] .gb-title span,html[data-mode="dark"][data-hl="2c"] .gb-pad .gb38-sum span{color:var(--p-ink2)}
 html[data-mode="dark"][data-hl="2c"] .gb-done{background:var(--p-ink);color:var(--p-card)}
 html[data-mode="dark"][data-hl="2c"] .gb-sback{background:rgba(0,0,0,.45)}
+
+/* B-F5: Bursdager i Papir mørk brukte lys-paletten (aksentrødt #b23a2a som tekst på mørk bunn, 3,1:1). */
+html[data-mode="dark"][data-hl="2c"] .bd{--b-ink:var(--ds-text-primary);--b-mut:var(--ds-text-secondary);--b-line:var(--ds-line);--b-labt:var(--ds-accent);--b-pos:var(--ds-success);--b-card:var(--ds-surface-raised);--b-bg:var(--ds-surface);--b-in:var(--ds-surface-sunken)}

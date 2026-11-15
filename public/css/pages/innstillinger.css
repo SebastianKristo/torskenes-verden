@@ -615,7 +615,7 @@ html[data-hl="2c"] #settings .set-box{background:var(--pp,#f3efe6)}
 #settings .ny-btn.blue{background:#2b5d8a}
 #settings .ny-btn.blue:hover:not(:disabled){filter:brightness(1.08)}
 #settings .ny-btn.green{background:#2f7d4f;box-shadow:0 12px 26px -14px rgba(47,125,79,.7)}
-#settings .ny-btn.grey{background:#b0a998;box-shadow:none;cursor:default}
+#settings .ny-btn.grey{background:var(--ds-surface-sunken);color:var(--ds-text-secondary);box-shadow:none;cursor:default} /* E-B7: «Du har siste versjon» (før hvit på #b0a998, 2,3:1) */
 #settings .ny-btn.busy{opacity:.75;cursor:default}
 #settings .ny-btn:disabled{cursor:default}
 .ny-sub{flex:1 1 220px;min-width:0;font-size:13.5px;color:var(--w30-mut,#6b6558)}
@@ -1286,7 +1286,7 @@ html[data-mode="dark"] .gp46-err,html:not([data-hl="2c"]) .gp46-err{color:#f59a8
 .trk46-f input{flex:1 1 260px;min-width:0;height:40px;padding:0 12px;border-radius:12px;border:1px solid var(--line,rgba(127,120,105,.35));background:transparent;color:inherit;font:500 13px 'IBM Plex Mono',ui-monospace,monospace;box-sizing:border-box}
 
 /* ---------- Sidemenyen: 38 px punkter, 26 px flis (radius 8, 14 px ikon), grå mono-etiketter ---------- */
-#settings .set-nav65 .set-sec-t{font:500 10.5px/1.2 'IBM Plex Mono',ui-monospace,monospace;letter-spacing:.12em;color:#8f897c;padding:7px 6px 2px;text-transform:uppercase}
+#settings .set-nav65 .set-sec-t{font:500 10.5px/1.2 'IBM Plex Mono',ui-monospace,monospace;letter-spacing:.12em;color:var(--ds-text-secondary);padding:7px 6px 2px;text-transform:uppercase}
 #settings .set-nav65 .set-sec:first-child .set-sec-t{padding-top:0}
 #settings .set-nav65 .set-sec{gap:0}
 /* Akseptkriterium: menyen får plass uten scroll til og med MODULER på en 900 px høy skjerm. */
@@ -1342,7 +1342,7 @@ html:not([data-hl="2c"]) #settings .set-body .si36.si36-green,html[data-mode="da
    tittel 13,5 px/600 + undertekst 12 px på én linje (web), 28 px ikonflis, knapp/segment/select 30 px, bryter 36×22. */
 #settings{--s65-card:#111723;--s65-line:#1f2736;--s65-fld:#1a2231;--s65-ink:#eef0f4;--s65-mut:#8a93a6;--s65-lab:#8a93a6;--s65-ico:#b6bccb;
   --s65-ok:#34c759;--s65-warn:#e0a85a;--s65-bad:#f59a8f;--s65-pri:#eef0f4;--s65-prifg:#0c1119;--s65-off:#3a4560;--s65-hov:rgba(255,255,255,.03);--s65-in:#0c1119}
-html[data-hl="2c"] #settings{--s65-card:#fffdf8;--s65-line:#ddd5c5;--s65-fld:#ece6da;--s65-ink:#1b1a17;--s65-mut:#6b665c;--s65-lab:#8f897c;--s65-ico:#4a463f;
+html[data-hl="2c"] #settings{--s65-card:#fffdf8;--s65-line:#ddd5c5;--s65-fld:#ece6da;--s65-ink:#1b1a17;--s65-mut:#6b665c;--s65-lab:var(--ds-text-secondary);--s65-ico:#4a463f;
   --s65-ok:#2f7a4f;--s65-warn:#a8661a;--s65-bad:#b23a2a;--s65-pri:#1b1a17;--s65-prifg:#f3efe6;--s65-off:#cfc8b9;--s65-hov:rgba(27,26,23,.03);--s65-in:#f3efe6}
 html[data-mode="dark"][data-hl="2c"] #settings{--s65-card:#1f1c17;--s65-line:#3a352c;--s65-fld:#2a261f;--s65-ink:#f3efe6;--s65-mut:#a39d90;--s65-lab:#8f897c;--s65-ico:#c9c2b4;
   --s65-ok:#6fc28f;--s65-warn:#e0a85a;--s65-bad:#ec7a64;--s65-pri:#f3efe6;--s65-prifg:#16140f;--s65-off:#4a443a;--s65-hov:rgba(243,239,230,.03);--s65-in:#16140f}
@@ -1639,3 +1639,9 @@ html[data-mode="dark"][data-hl="2c"] #settings .ny-setup .upd-cmd code{backgroun
 .b73-row.off .b73-t{opacity:.45}
 .b73-reset{align-self:flex-start;height:34px;padding:0 14px;border-radius:17px;border:1px solid var(--gs-off,#ddd5c5);background:transparent;color:var(--gs-ink,#1b1a17);cursor:pointer;font:700 12.5px Manrope,system-ui,sans-serif}
 .b73-set{display:flex;flex-direction:column;gap:12px}
+
+/* ---------- Kontrast (B-F9, E-B7): seksjonstitler, «FLYTTET FRA», tellere og merker ----------
+   Seksjonstitlene i Papir lys var #8f897c på #f3efe6 (3,0:1); de bruker nå --s65-lab = textSecondary. */
+html[data-hl="2c"]:not([data-mode="dark"]) .set-moved{color:var(--ds-accent)}
+html[data-hl="cur"] #settings .set-badge{background:var(--ds-accent);color:var(--ds-on-accent)}
+#settings .s51-tag.green{background:var(--ds-success);color:var(--ds-on-success)}

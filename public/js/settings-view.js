@@ -162,7 +162,7 @@ function profileRow37() {
   if (!profilesLoaded()) { loadProfiles().then((d) => { if (d && !modal().hidden && tab === 'konto') render(); }); return null; }
   if (!hasProfiles()) return null;
   const p = myProfile();
-  return row({ t: 'Profil i husstanden', k: 'profil koble husstand onboarding', s: p ? 'Posisjon, delte lister, abonnementer og kalendere følger profilen.' : 'Koble brukeren til personen din i husstanden.', v: p ? p.name : 'Ikke koblet', vc: p ? undefined : '#f3b54a', btn: p ? 'Bytt' : 'Koble', act: 'data-onb37' });
+  return row({ t: 'Profil i husstanden', k: 'profil koble husstand onboarding', s: p ? 'Posisjon, delte lister, abonnementer og kalendere følger profilen.' : 'Koble brukeren til personen din i husstanden.', v: p ? p.name : 'Ikke koblet', vc: p ? undefined : 'var(--ds-warning)', btn: p ? 'Bytt' : 'Koble', act: 'data-onb37' });
 }
 /* Prompt 38: antall økter (GET /api/me/sessions → {count} eller {sessions:[…]}); eldre server (404) = uten antall. */
 let sessCount38 = null, sessAt38 = 0;
@@ -291,7 +291,7 @@ function lookView() {
   if (sub === 'style') return { title: 'Stil på søkebar', sub: 'Utseende · Søkebar', html: `<div class="srch-opts">${SEARCH_STYLES.map(srchPreview).join('')}</div>` };
   if (sub === 'hist') return { title: 'Søkehistorikk', sub: 'Utseende · Søkebar', html: box(`${sq.hist?.length ?? 0} søk lagret`,
     `<label class="sg-row" style="cursor:pointer"><span class="sg-txt"><b>Importer Google-historikk</b><span>Google Takeout → Mine aktiviteter → Søk (JSON)</span></span><span class="sg-btn2">Velg fil</span><input type="file" accept=".json,application/json" data-sq-import hidden></label>
-      ${row({ t: 'Tøm søkehistorikk', tc: '#f59a8f', act: 'data-sq-clearall', btn: 'Tøm' }).html}`)
+      ${row({ t: 'Tøm søkehistorikk', tc: 'var(--ds-danger)', act: 'data-sq-clearall', btn: 'Tøm' }).html}`)
     + (sqMsg ? `<div class="sg-note green">${esc(sqMsg)}</div>` : '')
     + note('Google lar ikke andre sider lese søkehistorikken direkte. Eksporter den fra takeout.google.com og importer filen her, så kommer de gamle søkene med i forslagene.') };
   if (sub === 'cats') {
@@ -467,7 +467,7 @@ const when = (t) => new Date(t).toLocaleTimeString('nb-NO', { hour: '2-digit', m
 function testState(name) {
   const t = tests[name];
   if (!t) return null;
-  return t.st === 'run' ? { v: 'Tester …', vc: '#b6bccb' } : t.st === 'ok' ? { v: '✓ OK', vc: '#8fe0b0' } : { v: '✕ Feilet', vc: '#f59a8f' };
+  return t.st === 'run' ? { v: 'Tester …', vc: 'var(--ds-text-secondary)' } : t.st === 'ok' ? { v: '✓ OK', vc: 'var(--ds-success)' } : { v: '✕ Feilet', vc: 'var(--ds-danger)' };
 }
 
 // Proton Mail (kvitteringer fra e-post) lever i FinansHub; status hentes derfra.
@@ -504,9 +504,9 @@ function intView() {
       // Prompt 65: AI-gruppene i /api/config (Open WebUI, AI-backend og nettsøk, Chat, Personvern og logoer, Lokal AI) settes opp på AI-siden.
       if (isAi65(g)) return row({ t: m.name, s: `Settes opp under AI → ${AI_TABN65[AI_TAB65[g.name] ?? 'svc'] ?? 'Tjenester'}`, k: g.fields.map((f) => f.label).join(' '), logo: m.domain, ini: m.name, v: warn ? v.slice(1) : v, btn: 'AI', act: `data-p65-ai="${AI_TAB65[g.name] ?? 'svc'}"` });
       if (g.name === 'Kalender / timeplan') return row({ t: m.name, s: 'Settes opp under Kalender og gjøremål', k: g.fields.map((f) => f.label).join(' '), logo: m.domain, ini: m.name, v: warn ? v.slice(1) : v, btn: 'Kalender og gjøremål', go: 'kal' });
-      return row({ t: m.name, s: m.s, k: g.fields.map((f) => f.label).join(' '), logo: m.domain, ini: m.name, v: t?.v ?? (warn ? v.slice(1) : v), vc: t?.vc ?? (warn ? '#f3b54a' : undefined), btn: 'Oppsett', go: 'int|cfg:' + g.name });
+      return row({ t: m.name, s: m.s, k: g.fields.map((f) => f.label).join(' '), logo: m.domain, ini: m.name, v: t?.v ?? (warn ? v.slice(1) : v), vc: t?.vc ?? (warn ? 'var(--ds-warning)' : undefined), btn: 'Oppsett', go: 'int|cfg:' + g.name });
     };
-    const mv = mailVal(), mailRow = row({ t: 'Proton Mail', s: 'Kvitteringer fra e-post via Bridge', logo: 'proton.me', v: mv.replace(/^!/, ''), vc: mv.startsWith('!') ? '#f3b54a' : undefined, btn: 'Oppsett', go: 'int|mail' });
+    const mv = mailVal(), mailRow = row({ t: 'Proton Mail', s: 'Kvitteringer fra e-post via Bridge', logo: 'proton.me', v: mv.replace(/^!/, ''), vc: mv.startsWith('!') ? 'var(--ds-warning)' : undefined, btn: 'Oppsett', go: 'int|mail' });
     // Prompt 43: Media-tjenestene (Sonarr, Radarr, qBittorrent, Prowlarr, Jellyfin, Plex) i egen gruppe «Media».
     const mediaCfg = cfg.filter((g) => isMedia43(g) && (canEdit(g) || isAdmin())), notMedia = cfg.filter((g) => !isMedia43(g));
     const mineBy = byCat(notMedia.filter(isPersonal)), srvBy = byCat(notMedia.filter((g) => !isPersonal(g)));
@@ -533,7 +533,7 @@ function intView() {
   const fields = g.fields.map((f) => f.type === 'textarea'
     ? `<label class="sg-field area"><span>${esc(f.label)}</span><textarea name="${f.key}" rows="5" spellcheck="false"${ro ? ' readonly' : ''}>${esc(f.value)}</textarea></label>`
     : `<label class="sg-field"><span>${esc(f.label)}</span><input name="${f.key}" type="${f.type}" value="${esc(f.value)}" placeholder="${f.secret ? (f.set ? '•••••••• lagret' : 'ikke satt') : esc(f.placeholder ?? '')}" autocomplete="off" spellcheck="false"${ro ? ' readonly' : ''}>${f.secret && f.set && !ro ? `<button type="button" class="sg-link red" data-clear-secret="${f.key}">Fjern</button>` : ''}</label>`).join('');
-  const res = t && t.st !== 'run' ? `<div class="sg-res"><i style="background:${t.st === 'ok' ? '#34c759' : '#f26b5e'}"></i><div><b>${t.st === 'ok' ? 'Tilkoblet' : 'Tilkoblingen feilet'}</b><span>${esc(t.msg)}</span></div><span class="mono">${when(t.at)}${t.ms ? ` · ${t.ms} ms` : ''}</span></div>` : '';
+  const res = t && t.st !== 'run' ? `<div class="sg-res"><i style="background:${t.st === 'ok' ? 'var(--ds-success)' : 'var(--ds-danger)'}"></i><div><b>${t.st === 'ok' ? 'Tilkoblet' : 'Tilkoblingen feilet'}</b><span>${esc(t.msg)}</span></div><span class="mono">${when(t.at)}${t.ms ? ` · ${t.ms} ms` : ''}</span></div>` : '';
   const med = isMedia43(g), mst = med ? cfgStatus43(g, t) : null;
   const head = `<div class="int-head">${logoImg(m.domain, m.name, 'sg-lg big')}<div><b>${esc(m.name)}</b><span>${esc(m.s)}</span></div>${mst ? `<span class="sg-v m43i-st" style="color:${mst[1]}">${esc(mst[0])}</span>` : ''}</div>`;
   // Prompt 22: Huskeliste ↔ HA To-do under Home Assistant. Prompt 65: står nå bare på Kalender og gjøremål – her en lenke.
@@ -686,7 +686,7 @@ function backupView65() {
 /** Ruter: Entur-status med lenke til Integrasjoner (nøkkelen/strekningene settes der, ikke her). */
 function ruterView65() {
   const v = ruterView45(H), g = cfg?.find((x) => x.name === 'Ruter (Entur)'), val = g ? valOf(g) : '';
-  const st = row({ t: 'Entur', k: 'entur ruter strekninger stopp nsr', s: 'Strekninger og stopp settes under Integrasjoner', v: val.replace(/^!/, ''), vc: val.startsWith('!') ? '#f3b54a' : undefined, btn: 'Integrasjoner', go: g ? 'int|cfg:Ruter (Entur)' : 'int' });
+  const st = row({ t: 'Entur', k: 'entur ruter strekninger stopp nsr', s: 'Strekninger og stopp settes under Integrasjoner', v: val.replace(/^!/, ''), vc: val.startsWith('!') ? 'var(--ds-warning)' : undefined, btn: 'Integrasjoner', go: g ? 'int|cfg:Ruter (Entur)' : 'int' });
   return v.groups ? { ...v, groups: [...v.groups, group('Entur', [st])] } : v;
 }
 let sysTab65 = 'ov'; // System-fanen som vises (Oversikt · Oppdateringer · Ytelse · Selvreparasjon · Mer)

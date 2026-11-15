@@ -151,7 +151,7 @@ test('stil: meny 38 px / flis 26 px, grå mono-etiketter, oransje «FLYTTET FRA�
   assert.match(read('public/app.html'), /<link rel="stylesheet" href="\/assets\/css\/pages\/innstillinger\.css">/);
   assert.match(CSS, /\.set-nav65 \.set-tab\{height:38px/);
   assert.match(CSS, /\.set-ic\{width:26px!important;height:26px!important;border-radius:8px!important\}/);
-  assert.match(CSS, /\.set-sec-t\{font:500 10\.5px[^}]*color:#8f897c/);
+  assert.match(CSS, /\.set-sec-t\{font:500 10\.5px[^}]*color:var\(--ds-text-secondary\)/); // B-F9: #8f897c ga 3,0:1
   assert.match(CSS, /\.set-moved\{[^}]*color:#c0562a/);
   assert.match(CSS, /\.si36\{width:28px;height:28px;border-radius:8px/);
   assert.match(CSS, /#ece6da;color:#4a463f/);

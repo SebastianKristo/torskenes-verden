@@ -6,7 +6,7 @@ import { api, esc } from './util.js';
 
 const K = { d: null, loading: false, err: null, msg: {}, test: {} };
 const DOM = { parcelsapp: 'parcelsapp.com', postnord: 'postnord.no', posten: 'posten.no', bring: 'bring.no', mybring: 'bring.no', helthjem: 'helthjem.no', dhl: 'dhl.com', ups: 'ups.com', instabox: 'instabox.se', porterbuddy: 'porterbuddy.com', '17track': '17track.net', budbee: 'budbee.com', imap: 'proton.me', gmail: 'mail.google.com', webhook: null };
-const ST = { ok: ['OK', '#34c759'], error: ['Feil', '#f26b5e'], quota: ['Kvote brukt opp', '#f3b54a'], missing: ['Ikke satt', '#8f897c'] };
+const ST = { ok: ['OK', 'var(--ds-success)'], error: ['Feil', 'var(--ds-danger)'], quota: ['Kvote brukt opp', 'var(--ds-warning)'], missing: ['Ikke satt', 'var(--ds-text-secondary)'] };
 
 export async function loadTrackKeys(rerender, force = false) {
   if (K.loading || (K.d && !force) || K.err === 404) return;
@@ -20,7 +20,7 @@ const mask = (p) => (p.set ? p.masked ?? `••••${p.tail ?? ''}` : 'ikke s
 const byName = (p) => (typeof p.addedBy === 'object' ? p.addedBy?.name : p.addedBy) ?? '';
 // Prompt 41 (claude-code-postnord-uten-nokkel.md): PostNord sporer uten konto og uten nøkkel (offentlig Track & Trace). Nøkkelen er valgfri.
 const keyless41 = (p) => p.id === 'postnord' && !p.set;
-const stOf = (p) => (keyless41(p) ? (p.status === 'error' || p.health === 'error' ? ['PostNord svarer ikke akkurat nå', '#f26b5e'] : ['OK · offentlig endepunkt', '#34c759']) : ST[p.set ? (p.status ?? 'ok') : 'missing'] ?? ST.ok);
+const stOf = (p) => (keyless41(p) ? (p.status === 'error' || p.health === 'error' ? ['PostNord svarer ikke akkurat nå', 'var(--ds-danger)'] : ['OK · offentlig endepunkt', 'var(--ds-success)']) : ST[p.set ? (p.status ?? 'ok') : 'missing'] ?? ST.ok);
 const byLine = (p) => (keyless41(p) ? 'Sporing uten konto og uten nøkkel · nøkkel er valgfri' : p.set ? `Delt i husstanden${byName(p) ? ` · lagt inn av ${byName(p)}` : ''}` : 'Ikke satt opp');
 
 /** Linjen på Sporing-siden: «Bruker husstandens ParcelsApp-nøkkel · 17 oppslag igjen». */
