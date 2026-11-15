@@ -1,6 +1,6 @@
 // Eksempeldata for utvikling og demo (MOCK_DATA=1). Brukes når eksterne API-er ikke er tilgjengelige.
 import * as real from './integrations.js';
-import { buildWeather } from './weather.js';
+import { buildWeather } from './vaer/met.js';
 
 export const { GALLERIES, getTle, getApod, getGallery } = real;
 

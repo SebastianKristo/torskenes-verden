@@ -36,11 +36,11 @@
 //   Daglig generering følger brukerens briefer (briefs.{kind}.on/at i /api/glimt/settings), varsel bare hvis notify er på.
 //   Med readAloud og en klar stemmemotor forhåndsgenereres lyden for guide-replikkene (cache i /api/tts).
 import { Hono } from 'hono';
-import { here46, noteHere46 } from './here46.js'; // prompt 46 (SERVER46)
+import { here46, noteHere46 } from './vaer/here.js'; // prompt 46 (SERVER46)
 import { db, kv } from './db.js';
 import { authOrToken } from './mobile.js';
 import { eventsFor } from './kalender/events.js';
-import { weatherFull, wmoText, iconOf } from './weather-full.js';
+import { weatherFull, wmoText, iconOf } from './vaer/full.js';
 import { newsFor } from './rss.js';
 import { packagesFor } from './sporing/shipments.js';
 import { notifyUser } from './notify.js';
@@ -104,7 +104,7 @@ const nameOf = (u) => { try { const p = profileName(u); if (p) return p.split(' 
 
 async function weatherPart(u, now) {
   const list = kv.get(u, 'wx_places', null);
-  // Prompt 46: «Min posisjon» – enhetens posisjon (here46.js) går foran det lagrede stedet og Oslo.
+  // Prompt 46: «Min posisjon» – enhetens posisjon (vaer/here.js) går foran det lagrede stedet og Oslo.
   const here = here46(u);
   const own = here ? { lat: here.lat, lon: here.lon, name: here.name ?? null, here: true } : Array.isArray(list) && list[0]?.lat != null ? list[0] : null;
   const place = own ? { lat: own.lat, lon: own.lon, ...(own.name ? { name: own.name } : {}) } : { place: 'oslo' };

@@ -46,7 +46,7 @@ import { chatModels53, neutrinoChatStream53, isNeutrino53, NEUTRINO_NAME53 } fro
 import { ensureScanFolder, scanFolderInfo, isSysFolder, upsertScanChat } from './chat-scans.js';
 import { gatherFacts, factsPrompt, factsAnswer, hasFactWords } from './chat-tools41.js'; // prompt 41: Glimt henter fakta
 import { AUTO_ID, pickAuto41, autoEntry41, recordAuto41, feedbackAuto41, autoSummary41 } from './chat41.js'; // prompt 41: «✦ Auto»
-import { weekFact41, isWeekWeather41 } from './weather41.js'; // prompt 41: ukesvær til modellen
+import { weekFact41, isWeekWeather41 } from './vaer/week-glimt.js'; // prompt 41: ukesvær til modellen
 import { routeTools, routeTextOf, pickData, osloNowLine } from './tool-router44.js'; // prompt 44: ruting før hovedmodellen
 import { webSearch, webPrompt, webMeta, webFact } from './web-search.js'; // prompt 44: eget nettsøk
 import { powerFact, powerPrompt } from './power-price.js'; // prompt 44: strømpris

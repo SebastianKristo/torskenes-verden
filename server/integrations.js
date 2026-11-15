@@ -4,7 +4,7 @@ import { t212AuthHeader } from './finans/stocks.js';
 import { Agent, fetch as undiciFetch } from 'undici';
 import { config } from './config.js';
 import { cached, fetchJson } from './cache.js';
-import { fetchWeather } from './weather.js';
+import { fetchWeather } from './vaer/met.js';
 import { cfg, parseRoutes, groupOf, activeUser } from './settings.js';
 import { parseIcs, expandIcs } from './kalender/ical.js';
 
@@ -223,7 +223,7 @@ export async function getSuggestions(q, { withError = false } = {}) {
 
 /* ---------------- Vær / MET ---------------- */
 
-// Logikken ligger i weather.js (Locationforecast complete + Nowcast + Sunrise). Locationforecast oppdateres
+// Logikken ligger i vaer/met.js (Locationforecast complete + Nowcast + Sunrise). Locationforecast oppdateres
 // omtrent hver time og Nowcast hvert 5. minutt, så 10 minutters cache holder «nå»-linja fersk uten å mase på MET.
 export const getWeather = () => cached('weather', 10 * 60_000, () => fetchWeather({
   lat: parseFloat(cfg('wx_lat')) || 59.9139, lon: parseFloat(cfg('wx_lon')) || 10.7522, place: cfg('wx_place'), userAgent: config.metUserAgent,

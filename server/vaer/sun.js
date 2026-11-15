@@ -1,7 +1,7 @@
-// Prompt 36: dagslys, soloppgang og solnedgang for en dato og et sted, regnet lokalt (NOAA/suncalc-formelen i weather.js,
+// Prompt 36: dagslys, soloppgang og solnedgang for en dato og et sted, regnet lokalt (NOAA/suncalc-formelen i met.js,
 // ingen ny avhengighet og ingen nettkall). Brukes av Glimt (assist.js) for «hvor mange timer med dagslys er det 29.06.2027».
-import { sunTime } from './weather.js';
-import { dtf } from './intl-format.js'; // gjenbrukte Intl.DateTimeFormat
+import { sunTime } from './met.js';
+import { dtf } from '../intl-format.js'; // gjenbrukte Intl.DateTimeFormat
 
 const MONTHS = ['januar', 'februar', 'mars', 'april', 'mai', 'juni', 'juli', 'august', 'september', 'oktober', 'november', 'desember'];
 /** Gjelder spørsmålet sola/dagslyset? */

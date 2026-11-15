@@ -5,7 +5,7 @@
 //   Gjøremål-Glimt i bakgrunnen + «Laget med Glimt»: /api/tasks/glimt {async:true}, /glimt/jobs, /glimt/sources           → tasks-glimt41.js (+ tasks.js)
 //     alias POST /api/huske/glimt-jobs; /api/assist gjenkjenner huskebeskjeder                                           → under, assist.js
 //   Chat: «Mine data» på som standard, «✦ Auto»                                                                        → settings.js, chat41.js (+ chat.js)
-//   Vær-uke via Glimt (Ollama + 7 dager), skiføre i brief/Vær                                                          → weather41.js (+ assist.js, chat.js), under
+//   Vær-uke via Glimt (Ollama + 7 dager), skiføre i brief/Vær                                                          → vaer/week-glimt.js (+ assist.js, chat.js), under
 //   AI-jobber: createdAt/startedAt/endedAt + timeLabel                                                                 → ai41.js (+ ai-run.js)
 //   Finans: Les på nytt for alle statuser, receipt_reads, /receipts/:id/reread, /receipts/:id/review                    → finans/routes.js
 //   17. mai: /api/glimt/settings mai17/mai17Active, /api/glimt/mai17, brief.mai17                                       → mai17-41.js (+ glimt35.js)
@@ -15,7 +15,7 @@ import { kv } from './db.js';
 import { authOrToken as authOrToken0 } from './mobile.js';
 import { sessionUser } from './auth/session.js';
 import { startJob41 } from './tasks-glimt41.js';
-import { ski41 } from './weather41.js';
+import { ski41 } from './vaer/week-glimt.js';
 import { glimtSettingsOf } from './glimt35.js';
 import { mai17Active, mai17Day41 } from './mai17-41.js';
 import { journeyOf41 } from './ruter41.js';

@@ -12,10 +12,10 @@
 // (weatherFull), andre fra Open-Meteo med timezone=auto, så «i dag» og «i morgen» gjelder stedets tid.
 // extractPlace(text) finner stedet i teksten etter «i / på / in / for / at / ved / rundt» (ikke «i morgen», «i dag» …).
 import { Hono } from 'hono';
-import { cached } from './cache.js';
-import { authOrToken } from './mobile.js';
-import { weatherFull, wmoText, iconOf, PLACES } from './weather-full.js';
-import { searchPlacesV2, fold } from './weather-places.js';
+import { cached } from '../cache.js';
+import { authOrToken } from '../mobile.js';
+import { weatherFull, wmoText, iconOf, PLACES } from './full.js';
+import { searchPlacesV2, fold } from './place-search.js';
 
 const MOCK = () => process.env.MOCK_DATA === '1';
 const WX_EMOJI = { clear: '☀️', partly: '⛅', cloudy: '☁️', fog: '🌫️', drizzle: '🌦️', rain: '🌧️', sleet: '🌨️', snow: '❄️', thunder: '⛈️' };

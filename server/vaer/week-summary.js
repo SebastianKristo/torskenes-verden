@@ -13,14 +13,14 @@
 //   < 13° lett jakke, < 18° genser, ellers T-skjorte). Med Glimt-LLM: 2–3 setninger i valgt stemme, ellers lokal tekst.
 // PUT /api/weather/week-summary {char} → {char}  (lagrer valget, vaer_glimt_p)
 import { Hono } from 'hono';
-import { kv } from './db.js';
-import { authOrToken } from './mobile.js';
-import { cached } from './cache.js';
-import { PLACES, wmoText } from './weather-full.js';
-import { geocode } from './weather35.js';
-import { run as aiRun } from './ai-run.js';
-import { once } from './ai-gate.js'; // prompt 43
-import { osloDate } from './dates/oslo.js';
+import { kv } from '../db.js';
+import { authOrToken } from '../mobile.js';
+import { cached } from '../cache.js';
+import { PLACES, wmoText } from './full.js';
+import { geocode } from './place.js';
+import { run as aiRun } from '../ai-run.js';
+import { once } from '../ai-gate.js'; // prompt 43
+import { osloDate } from '../dates/oslo.js';
 
 const MOCK = () => process.env.MOCK_DATA === '1';
 export const CHARS39 = [

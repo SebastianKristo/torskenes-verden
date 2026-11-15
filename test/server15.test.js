@@ -14,7 +14,7 @@ process.env.APP_PASSWORD_HASH = hashPassword('testpassord1');
 const { db } = await import('../server/finans/db.js');
 const { default: fin } = await import('../server/finans/routes.js');
 const { default: mobile, greetingFor } = await import('../server/mobile.js');
-const W = await import('../server/weather-full.js');
+const W = await import('../server/vaer/full.js');
 
 const login = await fin.request('/login', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ password: 'testpassord1', device: 'test' }) });
 const { token } = await login.json();

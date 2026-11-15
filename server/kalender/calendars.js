@@ -81,14 +81,14 @@ import { runAsUser } from '../settings.js';
 import { cached } from '../cache.js';
 import { eventsFor, eventInput, createEvent, normText, setEventDecorator, osloAt, widgetOut } from './events.js';
 import { askCalendar } from './glimt.js';
-import { weatherFull, wmoText, iconOf, PLACES } from '../weather-full.js';
+import { weatherFull, wmoText, iconOf, PLACES } from '../vaer/full.js';
 import { aliasesOf, typeOfWord, eventHitsAlias } from '../glimt-memory.js';
 import { parseQuick, osloTodayISO } from '../dates/quick.js'; // dato og tid fra den felles tolkeren
 import { parseDay, normDayText } from '../parse-day35.js'; // prompt 35: felles dag-tolkning
 import { attachGeo, parseIntent37, schoolTestAnswer } from './subjects.js'; // prompt 37
 import { extCalendarsOf, mountExt, patchExt, removeExt, isExtId, shades } from './external.js'; // prompt 35: iCal og Home Assistant
 import { googleKalApi, googleCalendarsOf, isGoogleCalId, patchGoogleCal, removeGoogleCal } from './google.js'; // prompt 36b: Google-kalendere
-import { extractPlace, placeWeather } from '../weather35.js'; // prompt 35: været for et sted
+import { extractPlace, placeWeather } from '../vaer/place.js'; // prompt 35: været for et sted
 import { tokenAccessOf, issueToken, tokensById, revokeTokenOf, TOKEN_SCOPES } from '../finans/routes.js';
 import { fagAnswer, rememberCtx } from '../glimt39-fag.js'; // prompt 39: oppfølging og fag
 

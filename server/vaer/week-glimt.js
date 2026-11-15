@@ -10,10 +10,10 @@
 //   weekFact41(u, tekst) → fakta til chatten {tool:'weather', place, when:'7 dager', label, text, source:'Open-Meteo', prompt}
 // Ski: ski41(u) → {text, chip:'Ski: blå', wax:'Blå (V30)', grip:'Feste: Blå (V30)', glide:'Glid: universal', places:[{name, snowCm, newCm, tempC, humidity, url}], source} | null
 //   Vises når snødybde ≥ 15 cm i Nordmarka (59.99, 10.67) og «Skiføre» ikke er slått av (kv vaer_layout.ski === false). Brief og Vær får ski.
-import { kv } from './db.js';
-import { extractPlace, geocode } from './weather35.js';
-import { homePlace } from './chat-tools41.js';
-import { osloDate } from './dates/oslo.js';
+import { kv } from '../db.js';
+import { extractPlace, geocode } from './place.js';
+import { homePlace } from '../chat-tools41.js';
+import { osloDate } from '../dates/oslo.js';
 
 const MOCK = () => process.env.MOCK_DATA === '1';
 let F = null, llm = null;
@@ -104,7 +104,7 @@ const SYSTEM = 'Du er Glimt, en værassistent. Svar kort på norsk bokmål (1–
 async function askLlm(u, question, table, place) {
   const prompt = `Værdata for ${place} de neste 7 dagene (Open-Meteo):\n${table}\n\nSpørsmål: ${question}`;
   if (llm) return { text: await llm({ prompt, system: SYSTEM }), model: 'test' };
-  const { run } = await import('./ai-run.js');
+  const { run } = await import('../ai-run.js');
   const r = await run('sok', { user: u, prompt, system: SYSTEM, localOnly: true, numPredict: 220, temperature: 0.2, timeoutMs: WEEK_LLM_MS, title: 'Glimt · ukas vær' });
   return { text: r.text, model: r.model };
 }

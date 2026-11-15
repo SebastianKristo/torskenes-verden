@@ -28,7 +28,7 @@ const k39 = await import('../server/kalender/four-calendars.js');
 const fag = await import('../server/glimt39-fag.js');
 const k33 = await import('../server/kalender/calendars.js');
 const tg = await import('../server/tasks-glimt37.js');
-const w39 = await import('../server/weather39.js');
+const w39 = await import('../server/vaer/week-summary.js');
 const { osloTodayISO } = await import('../public/js/quick-time.js');
 const TODAY = osloTodayISO();
 const addDays = (s, n) => { const [y, m, d] = s.split('-').map(Number); return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10); };

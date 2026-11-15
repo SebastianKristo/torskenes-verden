@@ -573,7 +573,7 @@ test('QR (gammel flyt, Kalender iOS/Mac): {app:"kalender"} kan godkjennes av Kal
 });
 
 test('«Min posisjon»: Hjem-været og briefen bruker enhetens posisjon (?lat&lon&name), gps=0 slår av; gphoto er et gyldig fotovindu', async () => {
-  const here = await import('../server/here46.js');
+  const here = await import('../server/vaer/here.js');
   here._setHereWeather46(async ({ lat, lon }) => ({ temp: 13, symbol: 'clearsky_day', place: 'X', lat, lon, hi: 14, lo: 8 }));
   let h = (await T('/api/mobile/home?lat=60.39&lon=5.32&name=Bergen')).body;
   assert.deepEqual([h.weather.place, h.weather.temp, h.weather.lat], ['Bergen', 13, 60.39]);

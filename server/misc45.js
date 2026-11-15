@@ -7,7 +7,7 @@ import { Hono } from 'hono';
 import { db, q, kv, OWNER } from './db.js';
 import { authOrToken } from './mobile.js';
 import { isAdmin } from './auth/session.js';
-import { weatherFull, iconOf, wmoText } from './weather-full.js';
+import { weatherFull, iconOf, wmoText } from './vaer/full.js';
 import { indexFor } from './settings-ask30.js';
 
 const MOCK = () => process.env.MOCK_DATA === '1';

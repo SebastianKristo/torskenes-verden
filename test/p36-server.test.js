@@ -27,7 +27,7 @@ const mat = await import('../server/mat.js');
 const boot = await import('../server/boot36.js');
 const su = await import('../server/system-update.js');
 const assist = await import('../server/assist.js');
-const sun = await import('../server/sun36.js');
+const sun = await import('../server/vaer/sun.js');
 const api36 = await import('../server/api36.js');
 const qt = await import('../public/js/quick-time.js');
 

@@ -14,9 +14,9 @@
 import { cached } from './cache.js';
 import { config } from './config.js';
 import { kv } from './db.js';
-import { wmoText, metToRaw, DEFAULT_PLACES } from './weather-full.js';
-import { geocode, extractPlace } from './weather35.js';
-import { daylight, SUN_RE } from './sun36.js';
+import { wmoText, metToRaw, DEFAULT_PLACES } from './vaer/full.js';
+import { geocode, extractPlace } from './vaer/place.js';
+import { daylight, SUN_RE } from './vaer/sun.js';
 
 const MOCK = () => process.env.MOCK_DATA === '1';
 let F = null, planLlm = null;

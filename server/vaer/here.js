@@ -2,9 +2,9 @@
 // standardsted. Når klienten står på «Min posisjon» (__gps) sender den enhetens posisjon: ?lat=&lon=[&name=] (eller ?gps=0 for å slå av).
 // Posisjonen lagres per bruker (kv here46, 6 t), så også briefen som lages i bakgrunnen/push bruker den. Stedsnavnet kommer fra
 // klienten (name) eller fra værdata; ellers «Min posisjon». Posisjonen sendes aldri videre til andre brukere.
-import { kv } from './db.js';
-import { config } from './config.js';
-import { fetchWeather } from './weather.js';
+import { kv } from '../db.js';
+import { config } from '../config.js';
+import { fetchWeather } from './met.js';
 
 const MAX_AGE = 6 * 3600_000;
 const num = (v, lo, hi) => { const n = Number(v); return Number.isFinite(n) && n >= lo && n <= hi ? Math.round(n * 1e4) / 1e4 : null; };

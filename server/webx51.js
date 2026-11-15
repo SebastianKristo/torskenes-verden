@@ -21,7 +21,7 @@ import { family50 as F } from './family.js';
 import { ensureIndex42, norm42, fold42, synonymsOf42 } from './finans/search42.js';
 import { settings as fhSettings } from './finans/db.js';
 import { gateEmbed } from './ai-gate.js';
-import { sunTime } from './weather.js';
+import { sunTime } from './vaer/met.js';
 import { savedDocs73, savedSig73 } from './news73.js'; // prompt 73 (NEWS73): lagrede artikler i felles søk
 import { partDocs76, partSig76, partResult76 } from './skjold76/glimt.js'; // prompt 76 (SKJSRV): Skjold Lab-deler i felles søk
 import { osloDate } from './dates/oslo.js';
@@ -482,7 +482,7 @@ export function computeTheme(u, t = themeOf(u), now = Date.now()) {
   const rise = sunTime(today, p.lat, p.lon, -0.833, true), set = sunTime(today, p.lat, p.lon, -0.833, false);
   const riseMs = rise ? +new Date(rise) : null, setMs = set ? +new Date(set) : null;
   if (!riseMs || !setMs) {
-    // Midnattssol eller mørketid: deklinasjonen avgjør (samme formel som sun36.js).
+    // Midnattssol eller mørketid: deklinasjonen avgjør (samme formel som vaer/sun.js).
     const rad = Math.PI / 180, n = Math.round((Date.parse(`${today}T12:00:00Z`) - Date.UTC(2000, 0, 1, 12)) / DAY) - p.lon / 360;
     const M = (357.5291 + 0.98560028 * n) % 360, C = 1.9148 * Math.sin(M * rad) + 0.02 * Math.sin(2 * M * rad);
     const L = (M + C + 180 + 102.9372) % 360, decl = Math.asin(Math.sin(L * rad) * Math.sin(23.4397 * rad));

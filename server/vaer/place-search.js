@@ -5,8 +5,8 @@
 // User-Agent/Referer (kravet i Nominatims bruksvilkår).
 // Svar: [{name, sub:'Fylke/region, Land', lat, lon, country, source:'open-meteo'|'osm', region}] (region = sub før landet,
 // for eldre klienter som sender region videre til POST /api/weather/places).
-import { cached } from './cache.js';
-import { config } from './config.js';
+import { cached } from '../cache.js';
+import { config } from '../config.js';
 
 const MOCK = () => process.env.MOCK_DATA === '1';
 export const NOMINATIM_UA = process.env.NOMINATIM_USER_AGENT || `Homelab-Torskenes/1.0 (${String(config.metUserAgent ?? '').match(/[\w.+-]+@[\w.-]+/)?.[0] ?? 'homelab'})`;

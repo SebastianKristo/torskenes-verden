@@ -2,9 +2,9 @@
 // User-Agent fra config). Open-Meteo fyller inn det MET ikke har: i går, passerte timer, sikt og UV. Cachet i 10 minutter.
 // Uten nett eller med MOCK_DATA=1 gis realistiske eksempeldata. Månefasen regnes lokalt.
 // Prompt 32: days[] har også blocks2h (12×2 t: mm, wind, gust, day), gustMin og gustMax for Forhold → 💧 Nedbør og 🌬 Vind. hours[] har precip, precipProb, wind, gust.
-import { cached, fetchJson } from './cache.js';
-import { config } from './config.js';
-import { sunTime, feelsLike } from './weather.js';
+import { cached, fetchJson } from '../cache.js';
+import { config } from '../config.js';
+import { sunTime, feelsLike } from './met.js';
 
 export const PLACES = {
   oslo: { id: 'oslo', name: 'Oslo', lat: 59.9139, lon: 10.7522 },

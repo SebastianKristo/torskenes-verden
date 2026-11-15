@@ -27,7 +27,7 @@ test.after(() => { globalThis.fetch = realFetch; });
 
 const { default: app } = await import('../server/index.js');
 const { parseDay } = await import('../server/parse-day35.js');
-const w35 = await import('../server/weather35.js');
+const w35 = await import('../server/vaer/place.js');
 const g35 = await import('../server/glimt35.js');
 const brief = await import('../server/brief34.js');
 const k35 = await import('../server/kalender/external.js');
