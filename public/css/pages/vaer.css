@@ -303,6 +303,7 @@ body[data-route=vaer] .bottomnav{display:none}
 .wxp-cmpin::-webkit-scrollbar{display:none}
 .wxp-cmpin>*{flex-shrink:0}
 .wxp-cmpin .wxp-shh{align-items:flex-start}
+/* !important: elementet har også felles klasser (kort, knapp eller felt i skallet/modulen) med høyere spesifisitet; ikke målt bort ennå. */
 .wxp-cmpt{font-size:30px!important;line-height:1.1}
 .wxp-cmpin .wxp-shh .wxp-mut{font-size:14px}
 .nw-sh .nw-done{height:36px;padding:0 16px;border-radius:18px;font-size:14px}
@@ -481,7 +482,7 @@ body[data-route=vaer] .bottomnav{display:none}
 .wx41-btns{display:flex;gap:8px}
 .wx41-btns button{flex:1;height:40px;border-radius:20px;border:1px solid rgba(255,255,255,.2);background:transparent;color:#fff;cursor:pointer;font:700 12.5px Manrope,system-ui,sans-serif}
 .wx41-btns button.ghost{flex:none;padding:0 14px;border:0;opacity:.75}
-.wx36-c.wx41-skic{background:none!important;border:0!important;padding:0!important}
+.wx36-c.wx41-skic{background:none;border:0;padding:0}
 .wx41-ski{display:flex;flex-direction:column;gap:12px;padding:16px;border-radius:24px;background:linear-gradient(160deg,rgba(40,90,150,.55),rgba(20,50,90,.55));border:1px solid rgba(255,255,255,.1);color:#fff;backdrop-filter:blur(30px)}
 .wx41-skh{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:12px;opacity:.8}
 .wx41-skh span:first-child{font-weight:800;letter-spacing:.08em}
@@ -501,7 +502,7 @@ body[data-route=vaer] .bottomnav{display:none}
 @media (max-width:420px){ .wx41-sks{grid-template-columns:repeat(2,minmax(0,1fr))} }
 
 /* ---------- Vær: Min posisjon (weather-posisjon.js) ---------- */
-.wx45-k{display:inline-flex;align-items:center;gap:4px;font-size:10.5px!important;font-weight:800;letter-spacing:.12em;opacity:.85}
+.wx45-k{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:800;letter-spacing:.12em;opacity:.85}
 .wx45-here.wx36-pc{background:linear-gradient(180deg,#2f6fb0 0%,#4d8bc6 60%,#7fb0dc 100%)}
 div.wx45-here{display:flex;flex-direction:column;gap:8px;padding:14px 16px;border-radius:16px;background:rgba(255,255,255,.12);border:1px dashed rgba(255,255,255,.35);color:#fff}
 .wx45-t{font-size:13.5px;font-weight:600}
@@ -509,11 +510,13 @@ div.wx45-here{display:flex;flex-direction:column;gap:8px;padding:14px 16px;borde
 
 /* Vær: glass-pille med dra (weather-pille.js) på Forhold-bryteren, «Faktisk / Føles som» og lagvelgeren. */
 .g52{position:relative;isolation:isolate;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none} /* prompt 50b: ikke pan-y – skrå fingerdrag ga pointercancel */
+/* !important: målt nødvendig – skallets regler for knapper/kort vinner ellers (fjernes når siden bruker felles komponenter). */
 .g52>button{position:relative;z-index:1;background:transparent!important;color:#fff!important;transition:color .2s}
 .g52-pill{position:absolute;left:0;top:0;z-index:0;border-radius:999px;pointer-events:none;opacity:0;
   background:linear-gradient(180deg,rgba(255,255,255,.46),rgba(255,255,255,.2));-webkit-backdrop-filter:blur(10px) saturate(1.4);backdrop-filter:blur(10px) saturate(1.4);
   box-shadow:inset 0 1px 0 rgba(255,255,255,.55),inset 0 -1px 0 rgba(255,255,255,.12),0 4px 14px -6px rgba(0,0,0,.35);will-change:transform,width}
 .g52.g52-press .g52-pill{transform-origin:center;scale:.96 .92}
 .wxp-seg.g52 .g52-pill{background:linear-gradient(180deg,rgba(255,255,255,.3),rgba(255,255,255,.12))}
+/* !important: redusert bevegelse skal stoppe animasjonene uansett hvilken regel som starter dem. */
 @media (prefers-reduced-motion:reduce){.g52-pill{transition:none!important}.g52.g52-press .g52-pill{scale:none}}
 .b52-m b.b52-mid{font:500 24px/1.15 var(--gb-serif,Newsreader,serif);white-space:normal}

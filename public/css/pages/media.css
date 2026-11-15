@@ -131,6 +131,7 @@ button.m44-gc{cursor:pointer}
 .pb44-lh{display:flex;align-items:center;gap:10px}.pb44-lh b{font:500 22px Newsreader,Georgia,serif}.pb44-li{width:32px;height:32px;border-radius:10px;background:var(--sf);display:grid;place-items:center}
 .pb44-lx{display:flex;gap:18px;flex-wrap:wrap}.pb44-lx>div{display:flex;flex-direction:column}.pb44-lx b{font:500 22px Newsreader,Georgia,serif}
 .m44-dh{display:none}
+/* !important: skjuler elementet uansett hvilken display-verdi skallet eller modulen ellers gir det (fullskjerm-visning). */
 .m43 .m44-dh{display:none!important}
 @media (max-width:900px){.m43 .m44-srv{order:20;flex-basis:100%}.m43 .m44-sb{height:34px}.m44-sm{left:0}}
 

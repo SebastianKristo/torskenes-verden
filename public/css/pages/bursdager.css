@@ -179,7 +179,8 @@ html[data-hl="2c"] .p-sec .bdw{padding:2px 0}
 
 /* ═══ Bursdager: regler fra det gamle skallet (web*.css), lastes etter sidens egne regler som før ═══ */
 /* ---------- Bursdager: jenka-tog i toppkortet, bilder ---------- */
-.bd41-one{grid-template-columns:minmax(0,1fr)!important;max-width:760px}
+.bd41-one{grid-template-columns:minmax(0,1fr);max-width:760px}
+/* !important: elementet har også felles klasser (kort, knapp eller felt i skallet/modulen) med høyere spesifisitet; ikke målt bort ennå. */
 .bd-hero.bd41-on{position:relative;overflow:hidden;padding-bottom:78px!important;isolation:isolate}
 .bd-hero.bd41-on>*:not(.bd41-party){position:relative;z-index:2}
 .bd41-party{position:absolute;inset:0;z-index:1;pointer-events:none;overflow:hidden}
@@ -198,8 +199,9 @@ html[data-hl="2c"] .p-sec .bdw{padding:2px 0}
 @keyframes bd41n{0%{opacity:0;transform:translate(0,0)}20%{opacity:1}100%{opacity:0;transform:translate(14px,-34px)}}
 .bd41-party.still .bd41-row{animation:none;left:50%;transform:translateX(-50%)}
 .bd41-party.still .bd41-car{animation:bd41hop .42s ease-in-out 2 alternate}
+/* !important: redusert bevegelse skal stoppe animasjonene uansett hvilken regel som starter dem. */
 @media (prefers-reduced-motion:reduce){ .bd41-row{animation:none!important;left:50%;transform:translateX(-50%)} .bd41-car,.bd41-trw,.bd41-note{animation:none!important} .bd41-conf{display:none} }
-.bd41-plus{position:relative;overflow:visible!important}
+.bd41-plus{position:relative;overflow:visible}
 .bd41-plus::after{content:'+';position:absolute;right:-3px;bottom:-3px;width:16px;height:16px;border-radius:8px;background:var(--b-ink,#1b1a17);color:var(--b-bg,#f3efe6);display:grid;place-items:center;font:800 12px/1 Manrope,system-ui,sans-serif;box-shadow:0 0 0 2px var(--b-card,#fff)}
 .bd41-ph{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0 0 8px}
 .bd41-up{display:inline-flex;align-items:center;gap:6px;cursor:pointer}

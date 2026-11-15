@@ -223,8 +223,7 @@ html[data-hl="cur"] .mat,html[data-mode="dark"][data-hl="2c"] .mat{
 .mat .mp-scan.drop{outline-color:var(--mp-acc)}
 .mat .mp-st{font-size:17px;font-weight:600}
 .mat .mp-scanbtns{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-/* !important: skallets generelle regler (app.css, paper.css, web*.css) har høyere spesifisitet for kort og knapper; fjernes når siden bruker felles komponenter. */
-.mat .mp-big{height:52px!important;border-radius:14px;font-size:15.5px}
+.mat .mp-big{height:52px;border-radius:14px;font-size:15.5px}
 .mat .mp-scan .mp-in{height:44px;background:var(--mp-bg)}
 .mat .mp-imp{display:flex;flex-direction:column;gap:12px;padding:14px;border-radius:14px;background:var(--mp-bg);border:1px solid var(--mp-acc-bd)}
 .mat .mp-impimg{flex:none;width:84px;height:84px;border-radius:12px;object-fit:cover;background:linear-gradient(135deg,var(--mp-chip),var(--mp-in))}

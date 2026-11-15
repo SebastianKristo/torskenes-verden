@@ -104,8 +104,7 @@ body{font-family:var(--g-sans);color:var(--g-ink);-webkit-font-smoothing:antiali
 
 /* Prompt 89 (WEB89): animert Oslo-scene i toppbildet (fasit «Logg inn Animert.dc.html»), se js/login-scene.js.
    Løkkene animerer bare transform/opacity på egne lag. Pauses når fanen er skjult. Redusert bevegelse = stille bilde. */
-/* !important: skallets generelle regler (app.css, paper.css, web*.css) har høyere spesifisitet for kort og knapper; fjernes når siden bruker felles komponenter. */
-.gate-hero.sc89-on{background-color:#141834;background-image:none!important;overflow:hidden;isolation:isolate}
+.gate-hero.sc89-on{background-color:#141834;background-image:none;overflow:hidden;isolation:isolate}
 .gate-hero.sc89-on>:not(.sc89){position:relative;z-index:1}
 .sc89{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:0}
 .sc89-l{position:absolute;inset:0}

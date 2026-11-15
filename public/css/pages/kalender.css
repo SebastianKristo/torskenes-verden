@@ -21,8 +21,7 @@ html[data-hl="2c"] body[data-route="kalender"] .pw-low .pw-bottom{display:none}
    skygge, sidemarg eller max-width. Høyde = vinduet minus toppmenyen (--k2-top måles i kalender.js), minst 620 px.
    En tynn linje skiller toppmenyen fra kalenderen. Ingen side-scroll; bare rutenettet scroller. */
 /* Prompt 39: selve flaten (.k39) og alle visningene ligger i kal39.css (kopi av Kalender.app for Mac). */
-/* !important: skallets generelle regler (app.css, paper.css, web*.css) har høyere spesifisitet for kort og knapper; fjernes når siden bruker felles komponenter. */
-body[data-route="kalender"] .shell{padding-bottom:0!important;gap:14px}
+body[data-route="kalender"] .shell{padding-bottom:0;gap:14px}
 html[data-hl="2c"] body[data-route="kalender"] .shell{max-width:none}
 html:not([data-hl="2c"]) body[data-route="kalender"] .shell{gap:12px}
 /* Fullskjerm: ingen Homelab-toppmeny, kalenderen dekker hele vinduet (som Økonomi/Finans). Under Innstillinger (z 30). */
@@ -130,8 +129,7 @@ html:not([data-hl="2c"]) .kq-layer{--k-ink:var(--ds-surface);--k-bg:#141a26}
 .kal-wp.soon{background:#b23a2a;color:#fff}
 
 /* Hjem-widget KALENDER */
-/* !important: skallets generelle regler (app.css, paper.css, web*.css) har høyere spesifisitet for kort og knapper; fjernes når siden bruker felles komponenter. */
-.kal-hw-card{padding:0!important;overflow:hidden}
+.kal-hw-card{padding:0;overflow:hidden}
 .kal.kal-hw{display:flex;flex-direction:column;gap:10px;padding:14px 16px;border-radius:20px;background:var(--k-card);color:var(--k-ink);text-decoration:none;max-width:none}
 .card .kal.kal-hw{background:transparent;padding:var(--pad-card,22px)}
 html[data-hl="2c"] .card .kal.kal-hw{padding:0}
@@ -252,7 +250,9 @@ html:not([data-hl="2c"]) .k3-fa-err{color:#f59a8f}
 /* Bare kalenderen i hele vinduet: ingen Homelab-meny, nyhetslinje, bakgrunn eller bunnmeny. Papirtema som følger systemet. */
 html[data-kal-app]{background:#f3efe6}
 html[data-kal-app] body{background:#f3efe6;overflow:hidden}
+/* !important: skjuler elementet uansett hvilken display-verdi skallet eller modulen ellers gir det (fullskjerm-visning). */
 html[data-kal-app] header.top,html[data-kal-app] .ticker,html[data-kal-app] .bottomnav,html[data-kal-app] .bg,html[data-kal-app] .pw,html[data-kal-app] .upd-banner{display:none!important}
+/* !important: i Kalender.app (data-kal-app) skal kalenderen fylle vinduet; skallets marg og bredde på .shell har høyere spesifisitet. */
 html[data-kal-app] .shell{padding:0!important;max-width:none!important}
 html[data-kal-app] .kal{--k-ink:#1b1a17;--k-mut:#6b665c;--k-line:#ddd5c5;--k-lab:#b23a2a;--k-labt:#b23a2a;--k-card:#fffdf8;--k-bg:#f3efe6;--k-in:#f3efe6;--k-hero:#1b1a17;--k-herofg:#f3efe6;--k-shadow:0 10px 30px -18px rgba(0,0,0,.3)}
 html[data-kal-app] .k2.k2-fs{padding-top:6px}
@@ -596,6 +596,7 @@ html[data-kal-app] #kal.k39{margin:0}
 .k2-it .k2-grow>span,.k2-sr .k2-grow>span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .k2-rows>div>b{min-width:0;overflow-wrap:anywhere}
 /* NÅ/NESTE-kortet: stedspillen krymper (maks 55 %) og kuttes med …, tittelen får plass. */
+/* !important: elementet har også felles klasser (kort, knapp eller felt i skallet/modulen) med høyere spesifisitet; ikke målt bort ennå. */
 .k2-now-pl{flex:0 1 auto!important;min-width:0;max-width:55%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .k2-now-t b{flex:0 1 auto;min-width:3.5em}
 /* Innstillinger: Glimt-merket i AI-svaret. */
@@ -701,6 +702,7 @@ html[data-kal-app] #kal.k39{margin:0}
 .k38-pva{display:flex;flex-direction:column;gap:2px;padding:12px 14px}
 .k38-pva b{font:500 19px/1.2 Newsreader,Georgia,serif}
 .k38-pva>span{font-size:13px;color:var(--k-mut)}
+/* !important: elementet har også felles klasser (kort, knapp eller felt i skallet/modulen) med høyere spesifisitet; ikke målt bort ennå. */
 .k38-pvr{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:6px;font-size:12px!important}
 .k38-pvb{height:32px;padding:0 14px;border-radius:16px;border:0;background:var(--k-lab);color:#fff;cursor:pointer;font:700 13px Manrope,system-ui,sans-serif}
 
@@ -725,6 +727,7 @@ html[data-kal-app] #kal.k39{margin:0}
 .k38-orb.th i{animation-duration:1.2s}
 .k38-orb b{position:relative;width:calc(100% - 8px);height:calc(100% - 8px);border-radius:50%;background:var(--k-card);display:grid;place-items:center}
 .k38-orb.big{width:92px;height:92px}
+/* !important: redusert bevegelse skal stoppe animasjonene uansett hvilken regel som starter dem. */
 @media (prefers-reduced-motion: reduce){.k38-orb,.k38-orb i,.k38-gl{animation:none!important}}
 .k38-gl-b{flex:1;min-height:0;overflow-y:auto;scrollbar-width:thin;padding:14px 14px 8px;display:flex;flex-direction:column;gap:12px}
 .k38-gl-e{margin:auto 0;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;padding:16px 8px}
@@ -792,6 +795,7 @@ html:not([data-hl="2c"]) .k38-tiles{filter:invert(1) hue-rotate(180deg) brightne
   .k38-gin{height:46px}
   .k38-gplus{width:46px;height:46px}
 }
+/* !important: redusert bevegelse skal stoppe animasjonene uansett hvilken regel som starter dem. */
 @media (prefers-reduced-motion: reduce){.k2-sheet{animation:none!important}}
 
 /* Mac-appen: kalApp.cmd('weeks:0') skjuler ukenumrene, 'sidebar' skjuler sidepanelet */

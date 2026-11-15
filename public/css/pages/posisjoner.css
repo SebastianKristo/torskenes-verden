@@ -122,6 +122,7 @@ a.hl40-b{display:inline-grid;place-items:center;text-decoration:none}
 .hl40-late.alarm .hl40-b.ink{background:#fff;color:#3a0f0c;border-color:#fff}
 .hl40-lt{font:500 20px/1.2 Newsreader,Georgia,serif;color:var(--hl-ink)}
 .hl40-ls{font-size:12px;color:var(--hl-mut)}
+/* !important: elementet har også felles klasser (kort, knapp eller felt i skallet/modulen) med høyere spesifisitet; ikke målt bort ennå. */
 .hl40-sug{flex-direction:column;align-items:stretch!important}
 .hl40-st{font:500 15px/1.35 Newsreader,Georgia,serif}
 .hl40-map{height:120px;border-radius:14px;background:repeating-linear-gradient(135deg,var(--hl-chip) 0 10px,transparent 10px 20px);display:grid;place-items:center;overflow:hidden;font:600 11px 'IBM Plex Mono',monospace;color:var(--hl-mut)}

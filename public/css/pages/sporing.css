@@ -214,6 +214,7 @@ html[data-hl="2c"] .trk-head{color:var(--ink)}
 html[data-hl="2c"] .trk-tt b{font:500 19px var(--serif);color:var(--ink)}
 html[data-hl="2c"] .trk-tt small,html[data-hl="2c"] .trk-st small,html[data-hl="2c"] .trk-last,html[data-hl="2c"] .trk-last span{color:var(--ink2)}
 html[data-hl="2c"] .trk-st b{font:700 15px var(--sans)}
+/* !important: målt nødvendig – skallets regler for knapper/kort vinner ellers (fjernes når siden bruker felles komponenter). */
 html[data-hl="2c"] .trk-card.ready .trk-st b{color:var(--acc)!important}
 html[data-hl="2c"] .trk-src{background:transparent!important;border:1px solid var(--rule);color:var(--ink2)!important;border-radius:8px;font:600 10.5px var(--pmono)}
 html[data-hl="2c"] .trk-ini{border:1px solid var(--rule)}

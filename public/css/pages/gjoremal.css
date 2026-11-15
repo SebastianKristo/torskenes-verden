@@ -24,8 +24,7 @@ html:not([data-hl="2c"]) .tk-add button{color:#1a0d0b}
 .tk-group{display:flex;flex-direction:column;gap:6px}
 .tk-gt{font:600 10.5px/1 'IBM Plex Mono',var(--mono,monospace);letter-spacing:.12em;padding:0 4px;color:var(--t-mut)}
 .tk-gt.late{color:var(--t-lab)}.tk-gt.pos{color:var(--t-pos)}
-/* !important: skallets generelle regler (app.css, paper.css, web*.css) har høyere spesifisitet for kort og knapper; fjernes når siden bruker felles komponenter. */
-.tk-card{padding:2px 14px!important;gap:0!important}
+.tk-card{padding:2px 14px;gap:0}
 html[data-hl="2c"] .tk-card{background:#fff;border-radius:20px;border:0}
 .tk-row{display:flex;align-items:center;gap:12px;min-height:54px}
 .tk-row.bt{border-top:1px solid var(--t-line)}
@@ -84,11 +83,10 @@ html[data-hl="2c"] .tk-card{background:#fff;border-radius:20px;border:0}
 .tk-restore{flex:none;height:30px;padding:0 10px;border-radius:15px;border:1px solid var(--t-line);background:transparent;color:var(--t-ink);cursor:pointer;font:700 12px inherit;white-space:nowrap}
 .tk-restore:hover{border-color:var(--t-ink)}
 .tk-arc{display:grid;place-items:center;padding:0}
-/* !important: skallets generelle regler (app.css, paper.css, web*.css) har høyere spesifisitet for kort og knapper; fjernes når siden bruker felles komponenter. */
-html[data-hl="2c"] body .tk .card.tk-card{background:#fff;border:0;border-radius:20px;padding:2px 14px!important}
+html[data-hl="2c"] body .tk .card.tk-card{background:#fff;border:0;border-radius:20px;padding:2px 14px}
 /* Prompt 37: Gjøremål (fasit Huskeliste.dc.html) – avatarer på delte lister, infokort, Glimt-kortet, Glimt-tips, detaljark og listeark. */
 /* !important: skallets generelle regler (app.css, paper.css, web*.css) har høyere spesifisitet for kort og knapper; fjernes når siden bruker felles komponenter. */
-.tk-new{border:1.5px dashed var(--t-line)!important;background:transparent!important;color:var(--t-ink)}
+.tk-new{border:1.5px dashed var(--t-line)!important;background:transparent;color:var(--t-ink)}
 .tk-avs{display:inline-flex;align-items:center}
 .tk-avs i{width:var(--s);height:var(--s);border-radius:50%;margin-left:calc(var(--s) * -.32);box-shadow:0 0 0 1.5px var(--t-card);color:#fff;font:800 calc(var(--s) * .52)/var(--s) Manrope,system-ui,sans-serif;font-style:normal;text-align:center;display:inline-block}
 .tk-avs i:first-child{margin-left:0}
@@ -309,6 +307,7 @@ html:not([data-hl="2c"]) .tk-sel{color-scheme:dark}
 
 /* ---------- Gjøremål i fullskjerm på web (claude-code-gjoremal-web-fullskjerm.md) ---------- */
 body.tk-fs40{overflow:hidden}
+/* !important: skjuler elementet uansett hvilken display-verdi skallet eller modulen ellers gir det (fullskjerm-visning). */
 body.tk-fs40 header.top,body.tk-fs40 .ticker,body.tk-fs40 .bottomnav,body.tk-fs40 .pw-hero,body.tk-fs40 #p-ticker-slot{display:none!important}
 .tk40-fs{--f-bg:#0b0e15;--f-ink:#eef0f4;--f-mut:#8a93a6;--f-line:#1f2736;--f-btn:#141a26;--f-x:#eef0f4;--f-xfg:#0b0e15;
   position:fixed;inset:0;z-index:110;display:flex;flex-direction:column;background:var(--f-bg);color:var(--f-ink);font-family:Manrope,system-ui,sans-serif}
@@ -335,6 +334,7 @@ html[data-hl="2c"] .tk40-fs{--f-bg:var(--ds-surface);--f-ink:var(--ds-text-prima
 .tk41-done{display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:16px;background:var(--t-card);color:var(--t-ink);font-weight:700;font-size:14px}
 .tk41-done>span{flex:1;min-width:0}
 .tk41-done.err{color:var(--t-lab)}
+/* !important: elementet har også felles klasser (kort, knapp eller felt i skallet/modulen) med høyere spesifisitet; ikke målt bort ennå. */
 .tk41-red,.tk-dot.tk41-red{background:#b23a2a!important}
 .tk-list .tk-n{opacity:.6;font-weight:700}
 .tk41-mw{display:flex;flex-direction:column;gap:12px}
@@ -425,19 +425,21 @@ html[data-mode="dark"][data-hl="2c"] .tk{--t-chip:var(--ds-surface);--t-in:var(-
 .geo44 button i{flex:none;color:var(--c44-lab);display:grid}
 .geo44 button>span{display:flex;flex-direction:column;min-width:0}.geo44 b{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.geo44 button>span>span{font-size:12px;color:var(--c44-mut)}
 .geo44-foot{flex:none;padding:6px 10px 4px;font:600 10px 'IBM Plex Mono',ui-monospace,monospace;letter-spacing:.08em;color:var(--c44-mut)}
+/* !important: elementet har også felles klasser (kort, knapp eller felt i skallet/modulen) med høyere spesifisitet; ikke målt bort ennå. */
 .geo44-lk{flex:1;height:36px;border-radius:18px;border:1px solid var(--c44-line);color:var(--c44-ink)!important;display:grid;place-items:center;font:700 12.5px Manrope,system-ui,sans-serif;text-decoration:none}
 .geo44-lk:first-child{background:var(--c44-inv);color:var(--c44-invt)!important;border:0}
 .geo44-nomap{display:block;padding:14px;font-size:12.5px;color:var(--c44-mut)}
 
 /* ---------- Gjøremål: fullskjerm uten ramme, samme bakgrunn som resten (claude-code-gjoremal-web-bakgrunn.md, -web-fullskjerm.md) ----------
    Ingen kort rundt visningen: kolonnene skilles med tynne linjer og fyller hele flaten under topplinja. */
-.tk40-sc{padding:0!important;display:flex;flex-direction:column}
+.tk40-sc{padding:0;display:flex;flex-direction:column}
 .tk40-fs .tk{flex:1;min-height:0;display:flex;flex-direction:column}
-.tk40-fs .tw{flex:1;min-height:100%!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;overflow:visible}
-.tk40-fs .tw-side{background:transparent!important;padding-left:clamp(16px,3vw,44px)}
+.tk40-fs .tw{flex:1;min-height:100%;border:0;border-radius:0;background:transparent;box-shadow:none;overflow:visible}
+.tk40-fs .tw-side{background:transparent;padding-left:clamp(16px,3vw,44px)}
 .tk40-fs .tw-mid{padding-left:clamp(16px,2vw,32px);padding-right:clamp(16px,2vw,32px)}
 .tk40-fs .tw-right{padding-right:clamp(16px,3vw,44px)}
 /* Synk med Home Assistant ligger bare i Innstillinger → Gjøremål (prompt 45). */
+/* !important: skjuler elementet uansett hvilken display-verdi skallet eller modulen ellers gir det (fullskjerm-visning). */
 .tk40-fs .tk44-ha,.tw .tk44-ha{display:none!important}
 
 /* ---------- Gjøremål: fullfør lukker panelet (claude-code-gjoremal-fullfor-lukker.md) ---------- */

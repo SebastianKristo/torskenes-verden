@@ -326,10 +326,12 @@ html:not([data-hl="2c"]) .ch.papir .ch70-shim,.ch.noytral .ch70-shim{background:
 /* ---------- Chat i fullskjerm (claude-code-chat-web-fullskjerm.md, fasit chW) ---------- */
 /* Prompt 33: alltid fullskjerm, over toppmeny, hero, Vær-pillen og profilbildet (z 110, chW). Innstillinger og popup
    (z 30/40) som åpnes oppå Chat legger seg likevel over. */
-#chat.ch.ch-fs,html[data-hl] body[data-route] #chat.ch-fs{position:fixed;inset:0;z-index:110;height:auto!important;min-height:0;max-width:none;margin:0!important;border-radius:0;border:0;box-shadow:none}
+#chat.ch.ch-fs,html[data-hl] body[data-route] #chat.ch-fs{position:fixed;inset:0;z-index:110;height:auto;min-height:0;max-width:none;margin:0;border-radius:0;border:0;box-shadow:none}
 body:has(#settings:not([hidden])) #chat.ch-fs,body:has(#popup:not([hidden])) #chat.ch-fs{z-index:26}
 body.chat-fs,body[data-route="chat"]{overflow:hidden}
+/* !important: skjuler elementet uansett hvilken display-verdi skallet eller modulen ellers gir det (fullskjerm-visning). */
 body[data-route="chat"] header.top,body[data-route="chat"] .ticker,body[data-route="chat"] .bottomnav,body.chat-fs .bottomnav{display:none!important}
+/* !important: skallets generelle regler (app.css, paper.css, web*.css) har høyere spesifisitet for kort og knapper; .ch-fsb.ink er målt nødvendig. Fjernes når siden bruker felles komponenter. */
 .ch-fsb{flex:none;width:40px;height:40px;margin-left:2px;border-radius:20px;border:1px solid var(--cl);background:var(--cc);color:var(--ci)!important;cursor:pointer;display:grid;place-items:center;padding:0}
 .ch-fsb.ink{margin-left:6px;border:0;background:var(--ci);color:var(--cb)!important}
 .ch-fsb:hover{filter:brightness(.97)}
@@ -340,5 +342,6 @@ html:not([data-hl="2c"]) .ch-badge.auto41{color:#b9a4ff;background:rgba(160,130,
 .ch-auto41 b{color:inherit}
 
 /* ---------- Chat: «Søk denne gangen» når Nettsøk er av (claude-code-chat-nettsok-av.md) ---------- */
+/* !important: elementet har også felles klasser (kort, knapp eller felt i skallet/modulen) med høyere spesifisitet; ikke målt bort ennå. */
 .ch-acts button.ch-web46{border:1px solid currentColor!important;color:var(--ci,inherit)!important}
 .nw46-int.sug{border:1px dashed var(--line);background:transparent;color:var(--ink);cursor:pointer;padding:0 12px}
