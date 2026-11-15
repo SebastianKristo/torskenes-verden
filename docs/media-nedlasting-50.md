@@ -36,7 +36,7 @@ media.track id=98e16ca9 svc=sonarr episodeIds=701 ledd=6 state=downloading "Last
    lå torrenten stoppet i qBittorrent, så det ut som «søker» for alltid. Derfor «ingenting lastes ned» uten noen forklaring.
 2. **Stoppede torrenter ble aldri startet.** qBittorrent 5.x legger til torrenter stoppet når «Start torrent automatically»
    er av (eller når Sonarr/Radarr har Initial State Stop/Pause). Media viste dem som «Pauset». Ingen startet dem.
-3. **Statusen fra køen ble forenklet bort.** `queues()` i `media43.js` gjorde alle køstatuser til `dl`/`pause`/`stall`.
+3. **Statusen fra køen ble forenklet bort.** `queues()` i `media-side.js` gjorde alle køstatuser til `dl`/`pause`/`stall`.
    «Venter på forsinkelsesprofil» (`delay`), «Nedlastingsklient utilgjengelig» (`downloadClientUnavailable`) og
    importfeil ble derfor vist som «Lastes ned» eller «Mangler».
 4. **4.x-reserven i `qbVerb` gjaldt bare 404.** Svarte qBittorrent 405 på `/torrents/start`, ble `/resume` aldri prøvd.

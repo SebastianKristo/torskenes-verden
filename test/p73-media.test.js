@@ -158,7 +158,7 @@ const el = () => ({ style: {}, dataset: {}, setAttribute() {}, appendChild() {},
 globalThis.document ??= { addEventListener() {}, querySelector() { return null; }, createElement: el, head: el(), body: el(), documentElement: { dataset: {} } };
 globalThis.addEventListener ??= () => {};
 globalThis.window ??= globalThis;
-const W = await import('../public/js/media70.js');
+const W = await import('../public/js/media-visninger.js');
 
 test('Klar til å se: Plex + Kalender + nedlasting = ett kort med Plex-tittel, episodenavn og kvalitet/størrelse', () => {
   const plex = { src: 'plex', kind: 'episode', title: 'CIA (2026)', code: 'S02E04', episodeTitle: 'Black Tie Optional', plexPoster: '/api/media/poster?src=plex&id=%2Flibrary%2Fmetadata%2F1%2Fthumb', at: '2026-11-05T10:00:00Z' };
@@ -184,7 +184,7 @@ test('Klar til å se: Plex + Kalender + nedlasting = ett kort med Plex-tittel, e
 });
 
 test('Media-web: X-knapp i stedet for ⚙, plakatkjede overalt, lazy-lasting', () => {
-  const src = readFileSync(new URL('../public/js/media70.js', import.meta.url), 'utf8');
+  const src = readFileSync(new URL('../public/js/media-visninger.js', import.meta.url), 'utf8');
   const css = readFileSync(new URL('../public/css/pages/media.css', import.meta.url), 'utf8');
   assert.ok(src.includes('class="m70-x" data-m43="close" aria-label="Lukk Media"'));
   assert.ok(!src.includes('data-m43="set"'), 'innstillinger-ikonet er borte fra headeren');

@@ -28,7 +28,7 @@ const m43 = await import('../server/media/arr.js');
 const m50 = await import('../server/media/images.js');
 const trk = await import('../server/media/tracking.js');
 const { rgbaToThumbHash50 } = await import('../server/media/thumbhash.js');
-const { thumbHashToRGBA50, thumbHashAverage50, b64ToBytes50 } = await import('../public/js/thumbhash50.js');
+const { thumbHashToRGBA50, thumbHashAverage50, b64ToBytes50 } = await import('../public/js/thumbhash.js');
 
 let ipN = 10;
 async function req(path, { method = 'GET', headers = {}, body } = {}) {

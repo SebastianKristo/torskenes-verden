@@ -123,7 +123,7 @@ npm run eval -- --case 23,24,25,26 --convo60 off   # før/etter: samtaletilstand
 
 Hjem-spørsmål går til `POST /api/glimt/agent` (module `home`), akkurat som søkefeltet på Hjem. Ber motoren om bekreftelse,
 bekrefter eval automatisk, som når brukeren trykker Ja. Det står i tracen (`confirmed`). Media-casen gjør som
-`public/js/media43.js`: agenten (module `media`) først, så `/api/media/glimt` hvis svaret er ren prat. Bildene går gjennom
+`public/js/media-side.js`: agenten (module `media`) først, så `/api/media/glimt` hvis svaret er ren prat. Bildene går gjennom
 `POST /api/study/documents` og `POST /finans/api/receipts`.
 
 Bakgrunnsjobber som lagrer etter at svaret er sendt (rask time, Huskeliste), rekker å bli ferdige før sjekken. Eval venter

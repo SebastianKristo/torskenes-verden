@@ -36,7 +36,7 @@ import kotlin.math.roundToInt
  *    så andre gang kommer bildet fra disken uten nettverkskall. Uten nett: FORCE_CACHE (cachede plakater vises fortsatt).
  *  - Avbryt: kallet kanselleres når composablen forlater skjermen (scrollet forbi), så synlige bilder får båndbredden.
  *  - Authorization sendes bare til egen server, og ikke når URL-en er signert (`sig=`). Aldri til andre verter (TMDB o.l.).
- *  - ThumbHash50: port av evanw/thumbhash (samme format som `public/js/thumbhash50.js`) → 32 px plassholder i plakatens farger.
+ *  - ThumbHash50: port av evanw/thumbhash (samme format som `public/js/thumbhash.js`) → 32 px plassholder i plakatens farger.
  */
 object Img50 {
     @Volatile private var http: OkHttpClient? = null
@@ -149,7 +149,7 @@ fun bildeW50(url: String, px: Int, widths: List<Int> = listOf(160, 320, 640)): S
     return url.replace(Regex("([?&])w=\\d+"), "$1w=$w")
 }
 
-/** ThumbHash → 32 px bitmap (port av evanw/thumbhash, MIT – samme algoritme som public/js/thumbhash50.js). */
+/** ThumbHash → 32 px bitmap (port av evanw/thumbhash, MIT – samme algoritme som public/js/thumbhash.js). */
 object ThumbHash50 {
     private val memo = LruCache<String, Bitmap>(600)
 

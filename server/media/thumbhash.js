@@ -1,6 +1,6 @@
 // Prompt 50 (SRVMEDIA50, claude-code-media-bilder-raskt.md): ThumbHash i ren JS (samme format som evanw/thumbhash, MIT).
 // Serveren regner hashen fra et lite RGBA-uttrekk (≤ 100 × 100, laget med ImageMagick), klientene tegner en uskarp
-// plassholder i plakatens farger fra de ~25 bytene før det ekte bildet er lastet. Dekoderen ligger i public/js/thumbhash50.js.
+// plassholder i plakatens farger fra de ~25 bytene før det ekte bildet er lastet. Dekoderen ligger i public/js/thumbhash.js.
 
 /** RGBA (Uint8Array/Buffer, w × h × 4) → ThumbHash (Uint8Array). */
 export function rgbaToThumbHash50(w, h, rgba) {

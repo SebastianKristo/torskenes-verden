@@ -1,4 +1,4 @@
-/* Familiekalender (#/familiekalender) og «Hva skal vi se i kveld?» (#/mediakveld), medfam51.js.
+/* Familiekalender (#/familiekalender) og «Hva skal vi se i kveld?» (#/mediakveld), mediakveld-familiekalender.js.
    Fargene er designtokens, så sidene følger stil og modus. Primærknapper og valgt fane er aksent med onAccent (B-F10). */
 .mf51{max-width:1100px;margin:0 auto;padding:8px 0 40px;color:var(--ds-text-primary);font:400 14px/1.45 var(--ds-font-sans)}
 .mf51 h1{margin:0;font:600 26px/1.2 var(--ds-font-sans)}.mf51 h2{margin:0 0 10px;font:600 17px/1.25 var(--ds-font-sans)}

@@ -1,17 +1,17 @@
 // Prompt 43 (claude-code-media-arr.md): Media på web – Sonarr, Radarr, qBittorrent og Prowlarr. Fasit: design/Media.dc.html
 // (2a, variant web): pille-faner i topplinja (Kommer snart · Sonarr · Radarr · qBittorrent · Prowlarr), Glimt-felt, ⚙ og ×,
 // alt i full bredde med 32 px marg. Egen fullskjerm-side (#/media) som Vær og Chat; × går tilbake til Dashboard.
-// Alt går via serveren (SERVER43, server/media43.js): /api/media/* er en proxy, tjenestenøklene sendes aldri hit.
-// Svarformene står ved hver rute i server/media43.js. 404 (eldre server) og «ikke satt opp» gir tomtilstander, ingen feil.
+// Alt går via serveren (SERVER43, server/media-side.js): /api/media/* er en proxy, tjenestenøklene sendes aldri hit.
+// Svarformene står ved hver rute i server/media-side.js. 404 (eldre server) og «ikke satt opp» gir tomtilstander, ingen feil.
 import { esc } from './util.js';
 import { orb43 } from './orb43.js';
-import { mountPlayback } from './playback44.js'; // prompt 44: fanen Avspilling (Plex/Jellyfin)
+import { mountPlayback } from './media-avspilling.js'; // prompt 44: fanen Avspilling (Plex/Jellyfin)
 import { glimtSource } from './glimt-input44.js'; // prompt 44: forslag i Glimt-feltet (Tab)
 import { agent, agentOn, isPlain, agentFull } from './glimt-agent45.js'; // prompt 45
 // Prompt 50: plakater med ThumbHash-plassholder + srcset, og sann status etter søk (sporing) i stedet for «Søker».
-import { bg50, img50, prefetch50, setup50, onToast50, startTrack50, trackGrab50, trackHtml50, multiTrackHtml50, click50 } from './media50.js';
-// Prompt 70 (MEDIA70): nytt design – Oversikt, Kalender, Bibliotek og Nedlastinger som egne adresser (media70.js).
-import { init70, top70, ov70, kal70, bib70, ned70, act70, enter70, outside70, esc70, setBibSort70, resetSite70, state70 } from './media70.js';
+import { bg50, img50, prefetch50, setup50, onToast50, startTrack50, trackGrab50, trackHtml50, multiTrackHtml50, click50 } from './media-plakater.js';
+// Prompt 70 (MEDIA70): nytt design – Oversikt, Kalender, Bibliotek og Nedlastinger som egne adresser (media-visninger.js).
+import { init70, top70, ov70, kal70, bib70, ned70, act70, enter70, outside70, esc70, setBibSort70, resetSite70, state70 } from './media-visninger.js';
 import { mountNrk } from './media-nrk.js'; // NRK-nedlaster (#/media/nrk)
 import { mountMusikk } from './media-musikk.js'; // Musikk/yubal (#/media/musikk)
 import { pageCss } from './lib/page-css.js';
@@ -229,7 +229,7 @@ const emptySvc = (d, name) => `<div class="m43-empty"><b>${esc(name)} er ikke sa
 const errBox = (e) => `<div class="m43-empty err"><b>Fikk ikke hentet data</b><span>${esc(e)}</span><button type="button" class="m43-btn line" data-m43="retry">Prøv igjen</button></div>`;
 const skel = (h = 220) => `<div class="m43-skel" style="min-height:${h}px"></div>`;
 
-// Prompt 70: de nye sidene (media70.js) får tilstanden, datakallene og hjelperne herfra.
+// Prompt 70: de nye sidene (media-visninger.js) får tilstanden, datakallene og hjelperne herfra.
 init70({ M, mapi, paint: () => paint(), paintMain: () => paintMain(), paintTop: () => paintTop(), toast: (t) => toast(t), cmd: (b, k, m) => cmd(b, k, m), openDet: (k, id) => openDet(k, id), nav: (r) => nav(r), go: (t) => goTab(t), search: (x) => search70(x),
   loadTor, loadUp, loadSer, loadMov, loadIdx, isAdm: () => isAdm45(), errBox, emptySvc, confOff, norm44, prefetch50, ic });
 
@@ -302,7 +302,7 @@ async function glAct(i) {
   }
 }
 
-/* Prompt 70: Kommer snart, Sonarr, Radarr, qBittorrent og Prowlarr er erstattet av Oversikt, Kalender, Bibliotek og Nedlastinger (media70.js). */
+/* Prompt 70: Kommer snart, Sonarr, Radarr, qBittorrent og Prowlarr er erstattet av Oversikt, Kalender, Bibliotek og Nedlastinger (media-visninger.js). */
 
 /* ---------------- Serie- og filmside ---------------- */
 /** Prompt 44: banner med fanart (uskarp), mørk gradient, plakat 2:3, tittel, ←/→ i biblioteket, fakta og info-brikker. */
@@ -774,7 +774,7 @@ function bind(r) {
       if (v === 'series' || v.startsWith('season:')) { q.seriesId = M.detail?.id; q.label = M.detail?.title; if (v.startsWith('season:')) { q.season = +v.slice(7); q.label = `${M.detail?.title} · sesong ${q.season}`; } }
       else if (v === 'movie') { q.movieId = M.detail?.id; q.label = M.detail?.title; }
       else q.label = film ? 'alle filmer' : 'alle serier';
-      import('./media45.js').then((m) => m.openUnmonitored(q, () => { if (M.det) openDet(M.det.k, M.det.id, true); else { M.ser = M.mov = null; enterTab(); paint(); } }));
+      import('./media-slett.js').then((m) => m.openUnmonitored(q, () => { if (M.det) openDet(M.det.k, M.det.id, true); else { M.ser = M.mov = null; enterTab(); paint(); } }));
       return;
     }
     if (d.m43Open) { const [k, id] = d.m43Open.split(':'); return openDet(k, id); }

@@ -7,7 +7,7 @@ import { esc } from './util.js';
 import { store } from './store.js';
 import { TAB_IC } from './settings-search.js';
 import { toast } from './toast.js';
-import { diagGroup50, diagClick50 } from './settings-media50.js'; // prompt 50: Media → Diagnostikk (admin)
+import { diagGroup50, diagClick50 } from './settings-media-diagnose.js'; // prompt 50: Media → Diagnostikk (admin)
 
 const admin = () => store.me?.me?.role === 'admin';
 async function j(path, opt = {}) {

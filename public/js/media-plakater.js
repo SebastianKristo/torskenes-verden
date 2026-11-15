@@ -6,7 +6,7 @@
 //    GET /api/media/track/:id til den er ferdig og viser «Fant ingen utgivelser», «Laster ned 12 % · 4,2 MB/s · 8 min»,
 //    «qBittorrent svarer ikke», «Lagt til, men stoppet» [Start] osv. i stedet for et evig «Søker».
 import { esc } from './util.js';
-import { thumbHashToRGBA50, b64ToBytes50 } from './thumbhash50.js';
+import { thumbHashToRGBA50, b64ToBytes50 } from './thumbhash.js';
 import { pageCss } from './lib/page-css.js';
 
 if (typeof document !== 'undefined') {
@@ -62,7 +62,7 @@ export function prefetch50(items, from, n = 12, w = 320) {
 /* ---------------- Sann status etter søk ---------------- */
 
 let api = null, repaint = () => {};
-/** media43.js gir oss sin mapi (med ?server=) og hvordan siden tegnes på nytt. */
+/** media-side.js gir oss sin mapi (med ?server=) og hvordan siden tegnes på nytt. */
 export function setup50(mapi, paint) { api = mapi; repaint = paint; }
 const TR = new Map(); // nøkkel («e:<episodeId>» | «m:<movieId>» | «s:<serieId>:<sesong>») → {id, t, timer, at}
 const keysOf = (t) => (t.movieIds?.length ? t.movieIds.map((id) => `m:${id}`) : t.episodeIds?.length ? t.episodeIds.map((id) => `e:${id}`) : t.seriesId != null ? [`s:${t.seriesId}:${t.seasonNumber ?? ''}`] : []);

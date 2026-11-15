@@ -7,7 +7,7 @@ import CryptoKit
  `posterImg {url, hash, w, h, srcset, widths, version}` / `fanartImg`. Her:
  – Media50Reg: husker posterImg/fanartImg per plakat-URL når listene tolkes (Media43Model), så alle eksisterende
    Media43Poster-kall får plassholder og riktig bredde uten nye parametre.
- – Thumb50: ThumbHash → UIImage (port av public/js/thumbhash50.js, samme format som evanw/thumbhash). Tegnes med én gang,
+ – Thumb50: ThumbHash → UIImage (port av public/js/thumbhash.js, samme format som evanw/thumbhash). Tegnes med én gang,
    i plakatens farger – ingen grå bokser og ingen hopp (fast 2:3-ramme).
  – Img50Cache: minne (NSCache) + disk (Caches/img50, ≥ 300 MB, eldste slettes først). URL-ene har versjon (v=), så en
    endret plakat får ny nøkkel, og den gamle brukes aldri. Uten nett vises plakatene fra disken.
@@ -127,7 +127,7 @@ enum Thumb50 {
         return ly == 0 ? 1 : Double(lx) / Double(ly)
     }
 
-    /// Port av thumbHashToRGBA (evanw/thumbhash, MIT) – samme som public/js/thumbhash50.js.
+    /// Port av thumbHashToRGBA (evanw/thumbhash, MIT) – samme som public/js/thumbhash.js.
     nonisolated static func decode(_ hash: [UInt8]) -> (Int, Int, [UInt8])? {
         if hash.count < 5 { return nil }
         let header24: Int = Int(hash[0]) | (Int(hash[1]) << 8) | (Int(hash[2]) << 16)

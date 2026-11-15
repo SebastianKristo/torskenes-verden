@@ -18,7 +18,7 @@ import { loadNotify, notifyView, notifyClick, notifyChange, notifyInput } from '
 import { loadFam42, fam42View, fam42Click, fam42Change } from './settings-familie42.js'; // prompt 42: Familie → Helse (Familie)
 import { loadApp, appView, appClick, appInput, appKey } from './settings-app.js';
 import { loadInteg, integRows, integSub, integClick, integChange, integCount } from './settings-integ.js';
-import { mediaRows43, mediaNote43, isMedia43, cfgStatus43, cfgGuide43, mediaSub43, mediaClick43, mediaSubmit43 } from './settings-integ43.js'; // prompt 43: MEDIA-gruppen
+import { mediaRows43, mediaNote43, isMedia43, cfgStatus43, cfgGuide43, mediaSub43, mediaClick43, mediaSubmit43 } from './settings-integ-media.js'; // prompt 43: MEDIA-gruppen
 import { myProfile, profilesLoaded, hasProfiles, loadProfiles } from './onboard37.js'; // prompt 37: profil i husstanden
 import { loadTrackKeys, trackGroup, trackSub, trackClick, trackChange } from './settings-track37.js'; // prompt 37: delte sporingsnøkler
 import { loadTrack46, trackGroup46, trackSub46, trackClick46, trackSubmit46, trackInput46 } from './settings-track46.js'; // prompt 46: Posten/Bring og PostNord-konto

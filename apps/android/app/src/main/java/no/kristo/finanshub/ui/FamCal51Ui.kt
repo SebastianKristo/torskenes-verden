@@ -23,7 +23,7 @@ import java.util.Locale
 
 /*
  * Prompt 51 (ANDFEAT51): felles familiekalender med «hvem kjører?» – MEDFAM51 /api/famcal51 ($S/SERVER51-API.md), fasit
- * public/js/medfam51.js (#/familiekalender). Hendelser de neste fire ukene med bringing/henting som oppgaver: «Jeg kjører»,
+ * public/js/mediakveld-familiekalender.js (#/familiekalender). Hendelser de neste fire ukene med bringing/henting som oppgaver: «Jeg kjører»,
  * «Si fra meg», velg sjåfør, Ruter-forslag, Gjort og Slett; ny hendelse med valgfri bringing/henting; «Vis i Kalender».
  * Åpnes fra Familie (kortet «Familiekalender») og varslene «Du kjører …»/«Hvem kjører?» (finanshub://famcal/<taskId>).
  */

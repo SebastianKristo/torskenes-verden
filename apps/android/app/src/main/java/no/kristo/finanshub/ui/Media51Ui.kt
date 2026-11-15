@@ -21,7 +21,7 @@ import no.kristo.finanshub.*
 import org.json.JSONObject
 
 /*
- * Prompt 51 (ANDFEAT51): Media – MEDFAM51 /api/media51 ($S/SERVER51-API.md), fasit public/js/medfam51.js (#/mediakveld).
+ * Prompt 51 (ANDFEAT51): Media – MEDFAM51 /api/media51 ($S/SERVER51-API.md), fasit public/js/mediakveld-familiekalender.js (#/mediakveld).
  *  - «Hva skal vi se i kveld?»: forslag fra eget bibliotek ut fra hvem som er hjemme, lengde, type og sjanger, med forklaring.
  *  - Fortsett: lydbøker og podkaster fra Audiobookshelf («fortsett der du slapp»).
  *  - Undertekster: filmer/episoder som mangler norsk, «Hent undertekster» (Bazarr).

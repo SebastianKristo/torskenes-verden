@@ -269,7 +269,7 @@ const h = {
   seedTrace63: (message, agoMs = 3600_000) => db.prepare('INSERT INTO glimt47_trace(id, user_id, created, data) VALUES(?,?,?,?)').run(`t63e${Math.random().toString(16).slice(2, 12)}`, USER, Date.now() - agoMs, JSON.stringify({ user: USER, message })),
   /** Prompt 59: Glimt-tracen for et svar (s.traceId). */
   glimtTrace: (s) => glimtTrace(s?.traceId),
-  /** Media-feltet: agenten (module media) først, så Media-Glimt hvis svaret er ren prat (som public/js/media43.js). */
+  /** Media-feltet: agenten (module media) først, så Media-Glimt hvis svaret er ren prat (som public/js/media-side.js). */
   async askMedia(text) {
     const a = await h.ask(text, 'media');
     const plain = !a.actions?.length && !a.results?.length && !a.ask;

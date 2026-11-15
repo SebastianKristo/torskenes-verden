@@ -17,7 +17,7 @@ const { kv, OWNER } = await import('../server/db.js');
 const m43 = await import('../server/media/arr.js');
 const m44 = await import('../server/media/servers.js');
 
-const web = readFileSync(new URL('../public/js/media43.js', import.meta.url), 'utf8');
+const web = readFileSync(new URL('../public/js/media-side.js', import.meta.url), 'utf8');
 const srv = readFileSync(new URL('../server/media/servers.js', import.meta.url), 'utf8');
 
 const json = (o, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { 'content-type': 'application/json' } });

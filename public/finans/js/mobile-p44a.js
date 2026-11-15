@@ -6,7 +6,7 @@
 import { esc, hlApi } from './core.js';
 import { m, draw, flash } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
-import { loadCtl51, ctlBar51, audioNow51, linksHtml51, mountCtl51 } from '/assets/js/medctl51.js'; // prompt 51 (MEDCTL51): fjernkontroll i «Spilles nå»
+import { loadCtl51, ctlBar51, audioNow51, linksHtml51, mountCtl51 } from '/assets/js/media-fjernkontroll.js'; // prompt 51 (MEDCTL51): fjernkontroll i «Spilles nå»
 
 const A = { tab: 'now', srv: 'plex', d: {}, err: {}, miss: false, t: {}, q: '', user: '', range: '30d', sumMiss: false, pin: null, poll: null, live: null };
 const TABS = [['now', 'Spilles nå'], ['hist', 'Historikk'], ['stat', 'Statistikk'], ['lib', 'Biblioteker']];

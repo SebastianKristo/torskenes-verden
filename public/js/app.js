@@ -24,7 +24,7 @@ import { initWeb40 } from './web40.js';
 import { initWeb41, after41 } from './web41.js';
 import { loadHlTheme, applyHlTheme, is2c, setHlTheme, pwHeader, paintPhoto, bindPhoto } from './hltheme.js';
 import { initPageAddons, afterPageAddons, renderKart } from './page-addons.js'; // lys/mørk, GlimtInput, logg inn som, Glimt-agent og tillegg per side
-import { renderFam51, renderMedia51, afterMedfam51 } from './medfam51.js'; // prompt 51 (MEDFAM51): Familiekalender og «I kveld»
+import { renderFam51, renderMedia51, afterMedfam51 } from './mediakveld-familiekalender.js'; // prompt 51 (MEDFAM51): Familiekalender og «I kveld»
 import { initWeb52, after52 } from './web52.js'; // prompt 52 (WEB52H): oppstart, sideanimasjon, Ruter-buffer m.m.
 import { initNavOverflow } from './nav-overflow.js'; // «Mer ▾» når fanene ikke får plass (B-B1/B2)
 // Prompt 76 (SKJWEB): Skjold Lab (#/skjold) – skallet tegnes her, selve modulen (skjold76.js) lastes ved behov.
@@ -46,7 +46,7 @@ const MODS = {
   bursdager: () => import('./birthdays.js'),
   kalender: () => import('./kalender.js'),
   chat: () => import('./chat.js'),
-  media: () => import('./media43.js'), // prompt 43: Media (Sonarr, Radarr, qBittorrent, Prowlarr)
+  media: () => import('./media-side.js'), // prompt 43: Media (Sonarr, Radarr, qBittorrent, Prowlarr)
   domener: () => import('./domains.js'),
   net: () => import('./net.js'),
 };

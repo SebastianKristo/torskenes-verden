@@ -2,7 +2,7 @@ import SwiftUI
 import UIKit
 
 /* ---------------- Prompt 51 (IOSFEAT51): Media – «Hva skal vi se i kveld?», Fortsett, Undertekster og Lagring ----------------
- Server: /api/media51/… ($S/SERVER51-API.md, MEDFAM51). Web-fasit: public/js/medfam51.js (#/mediakveld).
+ Server: /api/media51/… ($S/SERVER51-API.md, MEDFAM51). Web-fasit: public/js/mediakveld-familiekalender.js (#/mediakveld).
  – I kveld: forslag fra eget bibliotek og egen historikk (hvem ser på, lengde, sjanger, film/serie), «Formuler med lokal modell».
  – Fortsett: lydbøker og podkaster fra Audiobookshelf («fortsett der du slapp»), egen ABS-bruker.
  – Undertekster: norske undertekster via Bazarr («Hent undertekster»).

@@ -1,6 +1,6 @@
 // Prompt 50 (SRVMEDIA50, claude-code-media-bilder-raskt.md): ThumbHash-dekoder i ren JS (samme format som evanw/thumbhash, MIT).
 // Brukes av Media på web til å tegne en uskarp plassholder i plakatens farger med én gang listen kommer.
-// Ingen DOM her (testene kjører den i Node); tegning til data-URL ligger i media50.js.
+// Ingen DOM her (testene kjører den i Node); tegning til data-URL ligger i media-plakater.js.
 
 /** ThumbHash (Uint8Array) → {w, h, rgba} (maks 32 px på den lengste siden). */
 export function thumbHashToRGBA50(hash) {

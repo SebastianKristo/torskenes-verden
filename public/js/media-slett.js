@@ -89,4 +89,4 @@ function bind() {
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && U.open) { e.stopPropagation(); close(); } }, true);
 }
 
-export function after45() { /* Media kobles fra media43.js */ }
+export function after45() { /* Media kobles fra media-side.js */ }

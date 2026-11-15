@@ -451,7 +451,7 @@ test('401 fra nrk-dl blir 502 med forklaring om tokenet (aldri «utlogget fra Ho
 
 const web = readFileSync(new URL('../public/js/media-nrk.js', import.meta.url), 'utf8');
 const css = readFileSync(new URL('../public/css/pages/media.css', import.meta.url), 'utf8');
-const m43 = readFileSync(new URL('../public/js/media43.js', import.meta.url), 'utf8');
+const m43 = readFileSync(new URL('../public/js/media-side.js', import.meta.url), 'utf8');
 
 test('web: hele bredden – rutenettet fra designet, NRK øverst og Bibliotek i full bredde (pakke 58)', () => {
   assert.match(css, /\.nrk87\{[^}]*display:grid;grid-template-columns:repeat\(auto-fit,minmax\(min\(100%,max\(460px,34%\)\),1fr\)\)/);

@@ -8,7 +8,7 @@ html[data-hl="2c"] .mh-meta{padding:8px 0 0;color:var(--ink2);font-family:var(--
 html[data-hl="2c"] .mh-meta .mh-ell:nth-child(3){color:var(--ink);font:500 15px var(--serif)}
 html[data-hl="2c"] .mh-user{color:#8c600b}
 
-/* ---------- Media (media43.js, prompt 44): servervalg, søk, 2:3-plakater, Kommer snart Liste, banner, jobbsøk ---------- */
+/* ---------- Media (media-side.js, prompt 44): servervalg, søk, 2:3-plakater, Kommer snart Liste, banner, jobbsøk ---------- */
 .m44-srv{position:relative;flex:none}
 .m44-sb{display:flex;align-items:center;gap:8px;height:38px;padding:0 14px;border-radius:19px;border:1px solid var(--ln);background:var(--cd);color:var(--k);font:700 13px Manrope,system-ui,sans-serif;cursor:pointer;white-space:nowrap}
 .m44-sm{position:absolute;top:46px;left:0;z-index:40;width:min(420px,calc(100vw - 32px));border-radius:16px;background:var(--cd);border:1px solid var(--ln);box-shadow:0 18px 40px -18px rgba(0,0,0,.4);padding:10px;display:flex;flex-direction:column;gap:4px}
@@ -75,7 +75,7 @@ button.m44-gc{cursor:pointer}
 .m44-undo{border:0;background:transparent;color:#f0a493;font:800 13px Manrope,system-ui,sans-serif;cursor:pointer;margin-left:12px}
 .m43-toast{display:flex;align-items:center}
 
-/* ---------- Avspilling (playback44.js, fasit Avspilling.dc.html) ---------- */
+/* ---------- Avspilling (media-avspilling.js, fasit Avspilling.dc.html) ---------- */
 .pb44{display:flex;flex-direction:column;gap:18px;color:var(--k);font-family:Manrope,system-ui,sans-serif}
 .pb44-top{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 .pb44-srv,.pb44-secs,.pb44-seg{display:flex;padding:3px;border-radius:12px;background:var(--sf);gap:2px}
@@ -160,7 +160,7 @@ html .m45-back{flex:none;width:40px;height:40px;border-radius:50%;display:grid;p
 html .m45-back:hover{background:var(--cd)}
 html .m45-bkl{font:600 14px Manrope,system-ui,sans-serif;color:var(--mt)}
 
-/* ---------- Media: slett uovervåkede (media45.js) ---------- */
+/* ---------- Media: slett uovervåkede (media-slett.js) ---------- */
 .m45u-bg{position:fixed;inset:0;z-index:400;background:rgba(14,12,9,.45);display:grid;place-items:center;padding:16px}
 .m45u{--k:#1b1a17;--cd:#fffdf8;--ln:#e3ddcf;--mt:#6b665c;width:min(560px,100%);max-height:min(82vh,720px);display:flex;flex-direction:column;gap:12px;padding:20px 22px;border-radius:24px;background:var(--cd);color:var(--k);box-shadow:0 30px 80px -30px rgba(0,0,0,.5);font-family:Manrope,system-ui,sans-serif;overflow:hidden}
 html[data-mode="dark"] .m45u,.m43.dk~.m45u-host .m45u{--k:#efe9de;--cd:#211f1b;--ln:#3b3731;--mt:#a49d91}
@@ -605,8 +605,8 @@ html[data-mode="dark"] .m45u,.m43.dk~.m45u-host .m45u{--k:#efe9de;--cd:#211f1b;-
 }
 @media (prefers-reduced-motion:reduce){.mu88 .mu-sw,.mu88 .mu-sw i,.mu88 .mu-tog,.mu88 .mu-tog i,.mu88 .mu-bar i,.mu88 .mu-pil{transition:none}}
 
-/* ═══ Media-siden: bibliotek, detaljer, nedlastinger, søk (media43.js) ═══ */
-/* Prompt 43: Media på web (media43.js). Fasit: design/Media.dc.html, variant web (2a). Følger valgt tema:
+/* ═══ Media-siden: bibliotek, detaljer, nedlastinger, søk (media-side.js) ═══ */
+/* Prompt 43: Media på web (media-side.js). Fasit: design/Media.dc.html, variant web (2a). Følger valgt tema:
    Papir lyst, og mørkt (.dk) når Homelab-temaet / systemet er mørkt. Statusfarger: grønn, gul og rød. */
 .m43{--k:#1b1a17;--b:#f3efe6;--cd:#fffdf8;--ln:#d8d1c2;--lb:#b23a2a;--mt:#6b665c;--ok:#2f6b4a;--warn:#82531a;--warn2:#c48a1a;--bad:#b23a2a;--gr:#8a8478;
   --sf:color-mix(in srgb,var(--ln) 60%,transparent);
@@ -800,8 +800,8 @@ body[data-route="media"]{overflow:hidden}
 /* !important: skjuler skallet (toppmeny, ticker, bunnmeny) på fullskjermsiden uansett hvilken regel som viser det. */
 body[data-route="media"] header.top,body[data-route="media"] .ticker,body[data-route="media"] .bottomnav{display:none!important}
 
-/* ═══ Media-siden i nytt design (media70.js) ═══ */
-/* Prompt 70 (MEDIA70): Media på web i nytt design (media70.js). Fasit: Media Web.dc.html (pakke 54).
+/* ═══ Media-siden i nytt design (media-visninger.js) ═══ */
+/* Prompt 70 (MEDIA70): Media på web i nytt design (media-visninger.js). Fasit: Media Web.dc.html (pakke 54).
    Papir: bakgrunn #F3F0E9, kort #FCFBF7 med kant #E3DED3, radius 18–24, Inter for tekst, Newsreader for titler, JetBrains Mono for tall.
    Mørkt (.dk) følger valgt tema som resten av web. Bare transform/opacity animeres. */
 .m43.m70{

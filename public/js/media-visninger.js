@@ -1,14 +1,14 @@
 // Prompt 70 (MEDIA70, claude-code-media-web-nytt-design.md): Media på web i nytt design. Fasit: Media Web.dc.html (pakke 54).
 // Fire faner som egne adresser: #/media (Oversikt), #/media/kalender, #/media/bibliotek[/filmer], #/media/nedlastinger.
-// media43.js eier tilstanden (M), datakallene, arkene (legg til, magnet, indekser, torrent-valg), seriesiden og interaktivt søk;
+// media-side.js eier tilstanden (M), datakallene, arkene (legg til, magnet, indekser, torrent-valg), seriesiden og interaktivt søk;
 // her tegnes de fire sidene og topplinja, og handlingene som er nye i designet håndteres (act70).
 // Data er ekte verdier fra /api/media/* (Sonarr, Radarr, qBittorrent, Prowlarr) og /api/playback/sessions (Plex, Jellyfin).
 //   Nytt på serveren (små lesefelt): GET /api/media/upcoming?days=7&from=YYYY-MM-DD (bla i uker), torrent.ratio, serie.nextAiring/added, film.added.
 // Fartsgrafen (siste 2 t, 48 søyler à 2,5 min) bygges i nettleseren av målingene siden får (qBittorrent har ingen historikk).
 import { esc } from './util.js';
-import { bg50 } from './media50.js';
+import { bg50 } from './media-plakater.js';
 
-let C = null; // fra media43.js: { M, mapi, paint, paintMain, paintTop, toast, cmd, openDet, nav, tor, loadTor, loadUp, loadSer, loadMov, loadIdx, isAdm, tone, errBox, emptySvc, skel, confOff, norm44, prefetch50, narrow, ic }
+let C = null; // fra media-side.js: { M, mapi, paint, paintMain, paintTop, toast, cmd, openDet, nav, tor, loadTor, loadUp, loadSer, loadMov, loadIdx, isAdm, tone, errBox, emptySvc, skel, confOff, norm44, prefetch50, narrow, ic }
 const lsg = (k, d) => { try { return localStorage.getItem(k) ?? d; } catch { return d; } };
 const lss = (k, v) => { try { localStorage.setItem(k, v); } catch { /* privat vindu */ } };
 const S = {

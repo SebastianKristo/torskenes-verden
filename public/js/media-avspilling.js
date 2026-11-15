@@ -4,7 +4,7 @@
 // tokenet er lagret på serveren (det kommer aldri hit). Data: GET /api/playback/sessions · history?q=&user=&page= · stats?range= ·
 // libraries (alle med ?server=plex|jellyfin). 404 (eldre server): tomtilstand.
 import { esc } from './util.js';
-import { loadCtl51, ctlBar51, audioNow51, linksHtml51, mountCtl51 } from './medctl51.js'; // prompt 51 (MEDCTL51): fjernkontroll i «Spilles nå»
+import { loadCtl51, ctlBar51, audioNow51, linksHtml51, mountCtl51 } from './media-fjernkontroll.js'; // prompt 51 (MEDCTL51): fjernkontroll i «Spilles nå»
 
 const P = { srv: 'plex', sec: 'now', hq: '', user: '', range: '7d', d: {}, err: {}, login: null, t: 0, host: null };
 try { const s = localStorage.getItem('pb44_srv'); if (s === 'plex' || s === 'jellyfin') P.srv = s; } catch { /* */ }

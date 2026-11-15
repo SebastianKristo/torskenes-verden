@@ -1,7 +1,7 @@
 // NRK-nedlaster i Media (#/media/nrk). Lim inn en lenke fra tv.nrk.no / radio.nrk.no → nrk-dl laster ned bak en egen
 // VPN-tunnel til Norge og lagrer i /data/media/{tv,movies,podcast}. Alt går via /api/media/nrk/* (server/nrkdl.js);
 // nettleseren ser aldri adressen eller tokenet til nrk-dl.
-// media43.js lager en vert-<div> (som avspillingssiden) og kaller mountNrk(host) hver gang Media tegnes på nytt, så
+// media-side.js lager en vert-<div> (som avspillingssiden) og kaller mountNrk(host) hver gang Media tegnes på nytt, så
 // skjemaet ikke mister det du skriver når resten av siden oppdateres.
 //
 // Prompt 87 (pakke 57, fasit «Media NRK.dc.html»): hele bredden (rutenett med Køen over to rader), VPN-merke og banner,
@@ -551,7 +551,7 @@ function wire(h) {
   h.addEventListener('error', (e) => { if (e.target.tagName === 'IMG') { S.badImg.add(e.target.getAttribute('src')); e.target.remove(); } }, true);
 }
 
-/** Kalles av media43.js hver gang NRK-siden tegnes. Verten gjenbrukes, så lyttere legges på bare én gang. */
+/** Kalles av media-side.js hver gang NRK-siden tegnes. Verten gjenbrukes, så lyttere legges på bare én gang. */
 export function mountNrk(host) {
   if (!host) return;
   if (!host.dataset.nrk) { host.dataset.nrk = '1'; host.style.cssText = 'flex:1 1 100%;min-width:0'; wire(host); }

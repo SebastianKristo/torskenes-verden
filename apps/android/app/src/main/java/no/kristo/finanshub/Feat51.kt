@@ -20,7 +20,7 @@ import java.net.URLEncoder
  *    skatt, priser, abonnementsjeger – ui/Plan51Ui.kt), «famcal» (familiekalender med «hvem kjører?» – ui/FamCal51Ui.kt),
  *    «kveld», «lyd», «subs», «lagring» (Media – ui/Media51Ui.kt), «sok» (felles søk – ui/Search51Ui.kt) og «tema» (ui/Theme51Ui.kt).
  *  - Data hentes som rå JSON fra API-ene i $S/SERVER51-API.md (FIN51, MEDFAM51, WEBX51) og leses i grensesnittet med s43/i43/d43,
- *    samme felt som web (public/finans/js/plan51.js, public/js/medfam51.js). Alt følger kontoen (nullstilles ved kontobytte).
+ *    samme felt som web (public/finans/js/plan51.js, public/js/mediakveld-familiekalender.js). Alt følger kontoen (nullstilles ved kontobytte).
  *  - Dyplenker: finanshub://plan[/spar|kal|skatt|pris|jakt], finanshub://famcal[/<taskId>], finanshub://kveld, finanshub://sok.
  */
 

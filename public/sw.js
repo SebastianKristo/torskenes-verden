@@ -13,7 +13,7 @@
 // Prompt 51 (WEBX51): v36 – offline-modus. Noen få lese-API-er (gjøremål, familiekalender, profil, tema) svares nettverk-først med
 // siste kopi som reserve (egen cache API51, tømmes ved utlogging/401), og «sync»-hendelsen ber åpne faner sende offline-køen
 // (webx51.js, IndexedDB). Skrivinger går aldri via cachen.
-// Prompt 51 (MEDCTL51): v37 – fjernkontroll i Media › Avspilling › Spilles nå (medctl51.js).
+// Prompt 51 (MEDCTL51): v37 – fjernkontroll i Media › Avspilling › Spilles nå (media-fjernkontroll.js).
 // Prompt 51 (A11Y51): v38 – kontrast, berøringsflater og fokusmarkering (temavariabler i lys/mørk, web46.css).
 // Prompt 52 (WEB52H): v39 – oppstart med faneoppsett fra cache (boot52.js), sideanimasjon, Ruter-buffer, «Nytt i versjon» som papirkort.
 // Prompt 85: v40 – /api/state og /api/ui er med i lese-API-ene over. Uten dem stoppet oppstarten uten nett på «Kunne ikke starte:

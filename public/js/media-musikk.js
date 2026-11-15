@@ -1,6 +1,6 @@
 // Musikk i Media (#/media/musikk). yubal laster ned album, spillelister og sanger fra YouTube Music til musikkbiblioteket
 // (Navidrome). Alt går via /api/media/yubal/* (server/yubal.js); nettleseren ser aldri adressen til yubal.
-// media43.js lager en vert-<div> (som NRK og avspillingssiden) og kaller mountMusikk(host) hver gang Media tegnes på nytt,
+// media-side.js lager en vert-<div> (som NRK og avspillingssiden) og kaller mountMusikk(host) hver gang Media tegnes på nytt,
 // så lenkefeltet ikke mister teksten. Fasit: «Media Musikk.dc.html» (pakke 58), sanger i spillelister du følger:
 // «claude-code-musikk-spilleliste-sanger.md». Hvert kort tegnes på nytt bare når innholdet faktisk er endret.
 import { esc } from './util.js';
@@ -249,7 +249,7 @@ function wire(h) {
   h.addEventListener('error', (e) => { if (e.target.tagName === 'IMG' && e.target.closest('.mu-cv')) e.target.remove(); }, true);
 }
 
-/** Kalles av media43.js hver gang Musikk-siden tegnes. Verten gjenbrukes, så lyttere legges på bare én gang. */
+/** Kalles av media-side.js hver gang Musikk-siden tegnes. Verten gjenbrukes, så lyttere legges på bare én gang. */
 export function mountMusikk(host) {
   if (!host) return;
   if (!host.dataset.musikk) { host.dataset.musikk = '1'; host.style.cssText = 'flex:1 1 100%;min-width:0'; wire(host); }

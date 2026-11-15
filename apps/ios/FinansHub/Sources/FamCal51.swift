@@ -2,7 +2,7 @@ import SwiftUI
 import UIKit
 
 /* ---------------- Prompt 51 (IOSFEAT51): felles familiekalender med «hvem kjører?» ----------------
- Server: /api/famcal51/… ($S/SERVER51-API.md, MEDFAM51). Web-fasit: public/js/medfam51.js (#/familiekalender).
+ Server: /api/famcal51/… ($S/SERVER51-API.md, MEDFAM51). Web-fasit: public/js/mediakveld-familiekalender.js (#/familiekalender).
  Hendelser de neste fire ukene, bringing/henting som oppgaver med sjåfør («Jeg kjører», «Si fra meg», velg sjåfør, «Gjort»),
  Ruter-forslag per oppgave, ny hendelse og «Vis i Kalender». Åpnes fra Familie (stripen under personene), Mer → Familiekalender,
  varsler (data.kind famcal51 / url /#/familiekalender) og finanshub://familiekalender[/<oppgave-id>]. */

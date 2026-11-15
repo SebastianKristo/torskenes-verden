@@ -37,7 +37,7 @@ test('Chat: sidepanelet (--cs) er mørkt i mørk papirmodus, og Nøytral-temaet 
 });
 
 test('Familie/Media: snarveien settes etter fotovinduet, ikke oppå toppmenyen', () => {
-  const js = read('js/medfam51.js');
+  const js = read('js/mediakveld-familiekalender.js');
   const body = js.slice(js.indexOf('function jump('), js.indexOf('export function afterMedfam51'));
   assert.match(body, /querySelector\(':scope > section\.pw'\)/);
   assert.match(body, /if \(pw\) pw\.after\(a\); else view\.prepend\(a\)/);

@@ -111,7 +111,7 @@ To lagre som ikke snakker sammen:
 - **Planleggeren** (`plan.js:113–136`): maks to kall. «does not support tools» gir JSON-modus. En feilmelding med «JSON» ved første forsøk gir et nytt forsøk. Andre feil gir `null`, og da brukes lokal plan. To ubrukelige svar gir «Jeg skjønte ikke helt …». `timeoutMs: 45 000`, `noRetry: true`.
 - **Gaten** (`ai-gate.js`): én felles kø (`ollamaConcurrency: 1`, `ai-run.js:91`) med prioritet interaktiv/bakgrunn. Grensene er innlasting 90 s, første token 30 s og 30 s uten nye tokens. Forbigående feil (5xx, «unloaded», ECONNRESET) prøves på nytt, maks 2 ganger (`ai-gate.js:663–669`).
 - **Motoren:** `validate` per verktøy gir enten et spørsmål eller en feil. `verify()` leser tilbake fra datakilden. Feilet verktøy gir «Fikk ikke …: <feil>» (`engine.js:321`).
-- **Eldre stier:** mange `catch {}` (f.eks. `assist.js:361`, `glimt-memory.js:207`). `toolLlm` gir feilteksten med «Prøv igjen»-knapp. **Media-Glimt** sier «Fant ingenting» uten å skille mellom ingen treff og feil i oppslaget (`media43.js:901–905`, `.catch(() => [])`).
+- **Eldre stier:** mange `catch {}` (f.eks. `assist.js:361`, `glimt-memory.js:207`). `toolLlm` gir feilteksten med «Prøv igjen»-knapp. **Media-Glimt** sier «Fant ingenting» uten å skille mellom ingen treff og feil i oppslaget (`media-side.js:901–905`, `.catch(() => [])`).
 
 ---
 
@@ -162,7 +162,7 @@ Gjengitt nøyaktig: «TRE1400 Forelesning er **tirsdag 27. oktober kl. 14.30** (
 - Det finnes ingen kontroll av at navnet i svaret finnes i søkeresultatene. Kunne ikke verifiseres her (ingen modell, ingen nett). Må testes med mocket søkeresultat mot ekte modell.
 
 ### 2.7 «Last ned siste episode fra 9-1-1»
-- Media-Glimt (`media43.js:897`) er ren regex: `(?:legg til|last ned|hent|finn)\s+(.+?)…$` gjør hele resten, «siste episode fra 9-1-1», til tittel.
+- Media-Glimt (`media-side.js:897`) er ren regex: `(?:legg til|last ned|hent|finn)\s+(.+?)…$` gjør hele resten, «siste episode fra 9-1-1», til tittel.
 - Den søker i **både Sonarr og Radarr** med den teksten (linje 901). Treffregelen er «tittel == tekst» eller «tittel *inneholder* tekst» (linje 904), altså feil retning, og den normaliserer ikke «9-1-1» og «911».
 - Ingen modell, ingen bibliotek-først og ingen `utvalg`. Verifisert med mock (The Rookie finnes): «Last ned siste episode fra The Rookie» gir «Fant ingenting som heter «siste episode fra The Rookie»», mens «Last ned The Rookie» gir «finnes allerede».
 - Media er heller ikke et verktøy i `TOOLS45`, så hovedmotoren kan ikke ta det.
@@ -220,7 +220,7 @@ Prinsipp: motoren beholdes og utvides. De gamle stiene blir verktøy bak motoren
 - `calendar-quick.js:92–106`: dato og tid fra `dates.js`, modellens tittel bare hvis den er ≤ 60 tegn og ≠ meldingen (samme regel som `wordsFromText46`). Alternativt: rask time går gjennom motorens `calendar.create`.
 - **Abonnement** (`glimt/subscriptions.js`/`glimt/tools-weather-subs.js`): `query_subscriptions(sort_by, order, limit)`-form, månedspris først, ukepris-test.
 - **Vær** (`glimt/tools-weather-subs.js`/`glimt/weather.js`): `weather.get {location, time_range}` med `next_hour` (timeprognose), geokoding og stedets tidssone. Feil gir «værdata ikke tilgjengelig», aldri et annet verktøy.
-- **Media** (`media43.js:848–906`): tolking til `{handling, type, tittel, utvalg, sesong, episode}` (modell med skjema, regex som reserve), normaliserte titler (9-1-1 = 911), bibliotek først, «episode/sesong» gir bare Sonarr, `siste_episode` → `EpisodeSearch`, valgknapper ved likhet. Registrer `media.request` i `TOOLS45` for Hjem.
+- **Media** (`media-side.js:848–906`): tolking til `{handling, type, tittel, utvalg, sesong, episode}` (modell med skjema, regex som reserve), normaliserte titler (9-1-1 = 911), bibliotek først, «episode/sesong» gir bare Sonarr, `siste_episode` → `EpisodeSearch`, valgknapper ved likhet. Registrer `media.request` i `TOOLS45` for Hjem.
 
 **6. Svarformulering**
 - `glimt/answer.js`: modellkall bare for `chat.answer`/nettsøk og andre fritekstsvar. Engelsk grounding-prompt med svar på norsk og kontekst fra steg 1.

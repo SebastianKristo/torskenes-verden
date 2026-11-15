@@ -52,7 +52,7 @@ Regler for hvem som ser hva:
   backuper vises som `ferdig` i 15 min.
 
 Handlingene: `pause`/`fortsett` på torrent (qBittorrent stop/start), NRK-jobb (avbryt/igjen i nrk-dl) og spiller
-(mediekontrollen i `medctl51.js`, med samme eierskapssjekk). `stopp` stopper avspillingen. `utsett` skjuler avtalen i 5 min
+(mediekontrollen i `media-fjernkontroll.js`, med samme eierskapssjekk). `stopp` stopper avspillingen. `utsett` skjuler avtalen i 5 min
 (lagres per bruker, `kv live89_utsatt`), så kommer den tilbake hvis den fortsatt starter innen en time. `rute` gjør ingenting
 på serveren og svarer med kart-lenken (Apple Kart, eller Google Maps med `platform: "android"`).
 

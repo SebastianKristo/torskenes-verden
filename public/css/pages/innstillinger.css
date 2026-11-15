@@ -870,7 +870,7 @@ html[data-hl="2c"] .f42-chip{border-color:#d8d1c2}
 html[data-hl="2c"] .f42-chip.on{background:#1b1a17;border-color:#1b1a17;color:#f3efe6}
 @media (max-width:767px){ .f42-chips{padding:4px 16px 14px} }
 
-/* ---------- Innstillinger → Integrasjoner → Media (settings-integ43.js) ---------- */
+/* ---------- Innstillinger → Integrasjoner → Media (settings-integ-media.js) ---------- */
 .m43i-st{margin-left:auto;font-weight:700}
 .m43i-opt{font-style:normal;opacity:.6;font-weight:500}
 .m43i-steps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:14px}

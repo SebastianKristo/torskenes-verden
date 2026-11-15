@@ -5,7 +5,7 @@ import UIKit
  POST /api/media/command svarer nå med `track {id, url, state, text, pollMs}`. Vi spør GET /api/media/track/:id til `final`
  og viser serverens tekst («Fant ingen utgivelser» + grunn, «Sendt til qBittorrent», «Laster ned 12 % · 4,2 MB/s · 8 min»,
  «qBittorrent svarer ikke», «Lagt til, men stoppet» …) med handlingene Velg manuelt / Start / Innstillinger → Media / Søk igjen.
- Manuelt valg i interaktivt søk: POST /api/media/track {episodeId|movieId, grabbed:true}. Fasit for oppførsel: public/js/media50.js.
+ Manuelt valg i interaktivt søk: POST /api/media/track {episodeId|movieId, grabbed:true}. Fasit for oppførsel: public/js/media-plakater.js.
  Innstillinger → Media → Diagnostikk (bare admin): GET /api/media/diagnostics → ledd 2–6 grønt/gult/rødt med feilmeldingen. */
 
 struct Media50TrackAction: Identifiable, Hashable {

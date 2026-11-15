@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
-const web = readFileSync(new URL('../public/js/media43.js', import.meta.url), 'utf8');
+const web = readFileSync(new URL('../public/js/media-side.js', import.meta.url), 'utf8');
 const srv = readFileSync(new URL('../server/media/servers.js', import.meta.url), 'utf8');
 
 test('nettleseren: brutt strøm → GET-polling til jobben er ferdig, også etter at hendelser er mottatt, og vakt på 25 s', () => {
