@@ -157,9 +157,13 @@ test('API: ugyldig serveradresse gir feilmelding, ikke krasj', () => {
   assert.match(api, /static let badURL85: URL = URL\(string: ""\) \?\? URL\(fileURLWithPath: ""\)/);
   assert.match(api, /prefix \+ path\) \?\? API\.badURL85/);
   assert.match(api, /\+ path\) \?\? API\.badURL85/);
-  assert.match(api, /case \.unsupportedURL, \.badURL: throw APIError\(message: "", status: 0\)/);
+  // Fase 4: oversettelsen av URLError ligger i den felles feiltypen (SharedNet/HomelabError.swift), som API bruker via APIClient.
+  const herr = code('SharedNet/HomelabError.swift');
+  assert.match(herr, /case \.unsupportedURL, \.badURL:\s*return HomelabError\(message: "", transportCode: raw\)/);
+  assert.match(raw('SharedNet/HomelabError.swift'), /Ugyldig serveradresse\. Sjekk adressen\./);
+  assert.match(api, /typealias APIError = HomelabError/);
+  assert.match(api, /APIClient\.shared\.data\(for: req, context: context, timeout: timeout\)/);
   assert.match(raw('FinansHub/Sources/API.swift'), /"ugyldig:\/\/adresse"/);
-  assert.match(raw('FinansHub/Sources/API.swift'), /Ugyldig serveradresse\. Sjekk adressen\./);
 });
 
 test('Info.plist: «Arkiver bilde» i delingsarket har tillatelsestekst (ellers avslutter iOS appen)', () => {

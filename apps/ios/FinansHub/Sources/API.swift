@@ -1,22 +1,14 @@
 import Foundation
 import Security
 
-/// Klient for FinansHub-API-et (/finans/api). Appen snakker aldri med resten av homelab.
-struct APIError: LocalizedError {
-    let message: String
-    let status: Int
-    /// Innloggingen krever en 6-sifret kode (2FA).
-    var needsTotp = false
-    /// Prompt 28: maskinlesbar feilkode fra serveren (f.eks. ollama_down, no_vision, timeout, not_found) og om Gemini kan brukes.
-    var code: String? = nil
-    var canGemini = false
-    /// Prompt 51 (SEC51): 403 DEVICE_APPROVAL_REQUIRED – ny enhet må godkjennes (FHSec51.swift).
-    var approval51: DeviceApproval51? = nil
-    var errorDescription: String? { message }
-}
+/// Fase 4: Homelab-appens feiltype er den felles HomelabError (SharedNet/HomelabError.swift). Navnet APIError beholdes for de
+/// mange stedene som fanger den. Godkjenning av ny enhet (403 DEVICE_APPROVAL_REQUIRED) leses fra feilkroppen (FHDevice51.swift).
+typealias APIError = HomelabError
 
 struct LoginResult { let token: String; let username: String; let name: String; let role: String }
 
+/// Homelab-appens fasade over APIClient (SharedNet/APIClient.swift): adressen og tokenet til kontoen som er aktiv, enhetsnøkkelen
+/// og offline-køen. Alle kall går gjennom APIClient (felles URLSession, feiltolking og TOKEN_EXPIRED → utlogging i Store).
 struct API {
     let base: String
     let token: String?
@@ -26,49 +18,48 @@ struct API {
     /// avviser (unsupportedURL) → vanlig feilmelding «Ugyldig serveradresse».
     static let badURL85: URL = URL(string: "ugyldig://adresse") ?? URL(fileURLWithPath: "/ugyldig-adresse")
 
+    /// Konteksten for APIClient: adresse, token og (prompt 51, SEC51) den faste enhetsnøkkelen, så serveren kjenner igjen en
+    /// godkjent enhet (FHDevice51.swift).
+    var context: APIContext { APIContext(base: base, token: token, headers: ["X-Device-Key": Device51.key]) }
+
     private func url(_ path: String, prefix: String = "/finans/api") -> URL {
         URL(string: base.trimmingCharacters(in: CharacterSet(charactersIn: "/")) + prefix + path) ?? API.badURL85
     }
 
     private func send(_ req: URLRequest, timeout: TimeInterval = 30) async throws -> Data {
-        var r = req
-        r.timeoutInterval = timeout
-        r.setValue("application/json", forHTTPHeaderField: "Accept")
-        if let token { r.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization") }
-        // Prompt 51 (SEC51): fast enhetsnøkkel, så serveren kjenner igjen en godkjent enhet (FHDevice51.swift).
-        if r.value(forHTTPHeaderField: "X-Device-Key") == nil { r.setValue(Device51.key, forHTTPHeaderField: "X-Device-Key") }
-        let data: Data, res: URLResponse
-        do { (data, res) = try await URLSession.shared.data(for: r) } catch let e as URLError {
-            let host = r.url?.host ?? base
+        do {
+            return try await APIClient.shared.data(for: req, context: context, timeout: timeout)
+        } catch let e as HomelabError where e.neverSent {
             // Prompt 51 (IOSPLAT51): forespørselen nådde aldri serveren → skrivinger som tåler å vente (gjøremål, handleliste,
             // Sjekk inn) legges i offline-køen og sendes når nettet er tilbake (Plat51Host.swift). Aldri ved tidsavbrudd.
-            let unsent51: [URLError.Code] = [.notConnectedToInternet, .cannotConnectToHost, .cannotFindHost, .dnsLookupFailed]
-            if unsent51.contains(e.code), Plat51Queue.offer(r, base: base) {
+            var r: URLRequest = req
+            r.timeoutInterval = timeout
+            if r.value(forHTTPHeaderField: "Accept") == nil { r.setValue("application/json", forHTTPHeaderField: "Accept") }
+            if let token { r.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization") }
+            if r.value(forHTTPHeaderField: "X-Device-Key") == nil { r.setValue(Device51.key, forHTTPHeaderField: "X-Device-Key") }
+            if Plat51Queue.offer(r, base: base) {
                 throw APIError(message: Plat51Queue.message, status: 0, code: Plat51Queue.queuedCode)
             }
-            switch e.code {
-            case .unsupportedURL, .badURL: throw APIError(message: "Ugyldig serveradresse. Sjekk adressen.", status: 0)
-            case .cannotFindHost, .dnsLookupFailed: throw APIError(message: "Fant ikke serveren \(host). Sjekk adressen.", status: 0)
-            case .cannotConnectToHost, .networkConnectionLost, .notConnectedToInternet:
-                throw APIError(message: "Fikk ikke kontakt med \(host). Er du på samme nett, og stemmer http/https og port?", status: 0)
-            // Prompt 48: code «timeout» (status 0) skiller tidsavbrudd fra manglende nett (kvitteringer i køen sendes ikke dobbelt).
-            case .timedOut: throw APIError(message: "Serveren svarte ikke i tide.", status: 0, code: "timeout")
-            case .secureConnectionFailed, .serverCertificateUntrusted, .serverCertificateHasBadDate, .serverCertificateNotYetValid:
-                throw APIError(message: "HTTPS-feil. Bruk http:// på lokalt nett, eller installer sertifikatet.", status: 0)
-            case .appTransportSecurityRequiresSecureConnection:
-                throw APIError(message: "iOS krever https for denne adressen. Bruk en lokal IP eller https.", status: 0)
-            default: throw APIError(message: e.localizedDescription, status: 0)
-            }
+            throw e
         }
-        let code = (res as? HTTPURLResponse)?.statusCode ?? 0
-        if code >= 400 {
-            let obj = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
-            var err = APIError(message: (obj?["error"] as? String) ?? "Feil \(code)", status: code, needsTotp: (obj?["needsTotp"] as? Bool) ?? false,
-                               code: (obj?["code"] as? String) ?? (obj?["kode"] as? String), canGemini: (obj?["canGemini"] as? Bool) ?? false) // prompt 50: også «kode»
-            if code == 403 && err.code == "DEVICE_APPROVAL_REQUIRED" { err.approval51 = DeviceApproval51.parse(obj) }
-            throw err
-        }
-        return data
+    }
+
+    /// Fase 4: typet GET mot en DTO fra kontrakten (SharedNet/APIModels.swift), dekodet i APIClient (utenfor main actor).
+    /// Eksempel: `let me: MeDTO = try await store.api.fetch(MeDTO.self, "/api/me")`.
+    func fetch<T: Decodable & Sendable>(_ type: T.Type, _ path: String, timeout: TimeInterval = 30) async throws -> T {
+        let d: Data = try await send(URLRequest(url: url(path, prefix: "")), timeout: timeout)
+        return try APIClient.decode(type, from: d)
+    }
+
+    /// Fase 4: typet POST/PUT/PATCH med en Encodable kropp. Stien er fra serverens rot («/api/dates/parse»).
+    func fetch<B: Encodable & Sendable, T: Decodable & Sendable>(_ type: T.Type, _ method: String, _ path: String, body: B,
+                                                                 timeout: TimeInterval = 30) async throws -> T {
+        var r: URLRequest = URLRequest(url: url(path, prefix: ""))
+        r.httpMethod = method
+        r.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        r.httpBody = try JSONEncoder().encode(body)
+        let d: Data = try await send(r, timeout: timeout)
+        return try APIClient.decode(type, from: d)
     }
 
     func get<T: Decodable>(_ path: String, as: T.Type = T.self) async throws -> T {
@@ -208,44 +199,17 @@ struct API {
         return LoginResult(token: t, username: uname, name: name.isEmpty ? "FinansHub" : name, role: (u?["role"] as? String) ?? "admin")
     }
 
-    static func isLocal(_ host: String) -> Bool {
-        let p = host.split(separator: ".").compactMap { Int($0) }
-        let ip = p.count == 4
-        return host == "localhost" || host.hasSuffix(".local") || host.hasSuffix(".lan") || host.hasSuffix(".home.arpa") || !host.contains(".")
-            || (ip && (p[0] == 10 || p[0] == 127 || (p[0] == 192 && p[1] == 168) || (p[0] == 172 && (16...31).contains(p[1])) || (p[0] == 100 && (64...127).contains(p[1]))))
-    }
+    /// Fase 4: regelen ligger i SharedNet/ServerAddress.swift (fasit shared/testvektorer/serveradresse.json, Q39).
+    static func isLocal(_ host: String) -> Bool { ServerAddress.isLocal(host) }
 
-    /// Legger til skjema når det mangler: http:// for lokale adresser, ellers https://.
-    static func normalize(_ raw: String) -> String {
-        var s = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-        while s.hasSuffix("/") { s.removeLast() }
-        // Fjern sti som «/finans» – appen legger selv til /finans/api.
-        let start = s.range(of: "://")?.upperBound ?? s.startIndex
-        if let slash = s[start...].firstIndex(of: "/") { s = String(s[..<slash]) }
-        let lower = s.lowercased()
-        if lower.hasPrefix("http://") || lower.hasPrefix("https://") { return s }
-        if s.isEmpty { return s }
-        let host = String(lower.split(separator: "/").first ?? "").split(separator: ":").first.map(String.init) ?? ""
-        return (isLocal(host) ? "http://" : "https://") + s
-    }
+    /// Legger til skjema når det mangler (http:// for lokale adresser, ellers https://) og fjerner sti og / til slutt.
+    static func normalize(_ raw: String) -> String { ServerAddress.normalize(raw) ?? "" }
 }
 
-/// Token og serveradresse lagres i nøkkelringen.
+/// Token og serveradresse lagres i Nøkkelringen (tjenesten «finanshub», bare denne enheten). Fase 4: via den delte hjelperen
+/// Nokkelring (SharedKeychain/Nokkelring.swift), som alltid skriver med kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly.
 enum Keychain {
-    static func set(_ key: String, _ value: String?) {
-        let q: [String: Any] = [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: "finanshub", kSecAttrAccount as String: key]
-        SecItemDelete(q as CFDictionary)
-        guard let value else { return }
-        var add = q
-        add[kSecValueData as String] = Data(value.utf8)
-        add[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
-        SecItemAdd(add as CFDictionary, nil)
-    }
-    static func get(_ key: String) -> String? {
-        let q: [String: Any] = [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: "finanshub", kSecAttrAccount as String: key,
-                                kSecReturnData as String: true, kSecMatchLimit as String: kSecMatchLimitOne]
-        var out: CFTypeRef?
-        guard SecItemCopyMatching(q as CFDictionary, &out) == errSecSuccess, let d = out as? Data else { return nil }
-        return String(data: d, encoding: .utf8)
-    }
+    static let service: String = "finanshub"
+    static func set(_ key: String, _ value: String?) { Nokkelring.writeString(key, value, service: service) }
+    static func get(_ key: String) -> String? { Nokkelring.readString(key, service: service) }
 }

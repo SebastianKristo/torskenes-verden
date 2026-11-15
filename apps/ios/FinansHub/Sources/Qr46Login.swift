@@ -134,7 +134,7 @@ final class Qr46Show {
         r.timeoutInterval = 10
         r.setValue("application/json", forHTTPHeaderField: "Accept")
         if !key.isEmpty { r.setValue(key, forHTTPHeaderField: "X-QR-Key") }
-        guard let pair = try? await URLSession.shared.data(for: r) else { return nil }
+        guard let pair = try? await HomelabHTTP.session.data(for: r) else { return nil }
         let d: Data = pair.0
         let code: Int = (pair.1 as? HTTPURLResponse)?.statusCode ?? 0
         if code == 404 || code == 410 { return ["state": "expired"] }

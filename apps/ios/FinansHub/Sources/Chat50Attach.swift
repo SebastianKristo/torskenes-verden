@@ -174,7 +174,7 @@ final class Chat50 {
         let d: Data
         let res: URLResponse
         do {
-            (d, res) = try await URLSession.shared.upload(for: r, from: body, delegate: Chat50Progress(onPct))
+            (d, res) = try await HomelabHTTP.session.upload(for: r, from: body, delegate: Chat50Progress(onPct))
         } catch {
             throw APIError(message: "Fikk ikke lastet opp \(name). Sjekk nettet.", status: 0)
         }

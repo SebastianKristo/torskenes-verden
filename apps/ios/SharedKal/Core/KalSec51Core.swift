@@ -222,7 +222,7 @@ enum KalApprove51 {
             r.setValue("application/json", forHTTPHeaderField: "Content-Type")
             r.httpBody = Data("{}".utf8)
         }
-        guard let pair = try? await URLSession.shared.data(for: r) else { return (0, [:]) }
+        guard let pair = try? await HomelabHTTP.session.data(for: r) else { return (0, [:]) }
         let code: Int = (pair.1 as? HTTPURLResponse)?.statusCode ?? 0
         let o: [String: Any] = ((try? JSONSerialization.jsonObject(with: pair.0)) as? [String: Any]) ?? [:]
         return (code, o)

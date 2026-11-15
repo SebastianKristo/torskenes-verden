@@ -72,7 +72,7 @@ enum Stream67 {
         let bytes: URLSession.AsyncBytes
         let res: URLResponse
         do {
-            (bytes, res) = try await URLSession.shared.bytes(for: req)
+            (bytes, res) = try await HomelabHTTP.session.bytes(for: req)
         } catch {
             if Task.isCancelled || (error as? URLError)?.code == .cancelled { throw Stream67Error(message: "Stoppet", status: 499) }
             throw Stream67Error(message: "Fikk ikke kontakt med Glimt: " + error.localizedDescription, status: 0)
@@ -156,7 +156,7 @@ enum Stream67 {
     nonisolated static func stop(_ api: API, requestId: String) async {
         guard !requestId.isEmpty, let body = try? JSONSerialization.data(withJSONObject: ["requestId": requestId]),
               let req = request(api, "/glimt/agent/stream/stop", body: body, sse: false, timeout: 10) else { return }
-        _ = try? await URLSession.shared.data(for: req)
+        _ = try? await HomelabHTTP.session.data(for: req)
     }
 
     /// Body-en som JSON (Data er Sendable og kan gå til den nonisolated leseren).

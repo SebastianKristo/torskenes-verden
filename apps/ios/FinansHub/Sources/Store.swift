@@ -427,6 +427,9 @@ final class Store {
     @ObservationIgnored var pendingBusy = false
 
     var api: API { API(base: base.isEmpty ? (account?.server ?? "") : base, token: account?.token) }
+    /// Fase 4 (Q19): resultatet av versjonssjekken mot /api/version (AppShell viser meldingen).
+    var serverCompat: ServerCompat = .unknown
+    @ObservationIgnored private var expiryObserver: NSObjectProtocol? = nil
 
     init() {
         base = account?.server ?? ""
@@ -450,6 +453,10 @@ final class Store {
             }
         }
         monitor.start(queue: DispatchQueue(label: "finanshub.net"))
+        expiryObserver = NotificationCenter.default.addObserver(forName: APIClient.tokenExpiredNotification, object: nil, queue: .main) { [weak self] (n: Notification) in
+            let t: String = (n.userInfo?["token"] as? String) ?? ""
+            Task { @MainActor in self?.tokenExpired(t) }
+        }
     }
 
     /// Startsiden: Homelab (standard) eller en av Finans-fanene.
@@ -485,7 +492,8 @@ final class Store {
 
     func run(_ work: @escaping () async throws -> Void) {
         Task {
-            do { try await work() } catch let e as APIError where e.status == 401 && loggedIn && !e.needsTotp {
+            // Fase 4: TOKEN_EXPIRED logges ut av APIClient.tokenExpiredNotification (tokenExpired), ikke to ganger her.
+            do { try await work() } catch let e as APIError where e.status == 401 && loggedIn && !e.needsTotp && !e.isTokenExpired {
                 expired()
             } catch { message = error.localizedDescription; Haptics.shared.error() }
         }
@@ -681,12 +689,26 @@ final class Store {
     }
 
     /// Lokal adresse når den svarer (og «Bruk lokal adresse hjemme» er på), ellers ekstern.
+    /// Fase 4: valget ligger i APIClient.pickBase (samme regel for alle klientene).
     private func resolveBase() async {
         guard let a = account else { return }
-        if useLocal, !a.local.isEmpty, await API(base: a.local, token: a.token).reachable() { base = a.local; route = "Lokal"; return }
-        base = a.external.isEmpty ? a.server : a.external
-        let host = URL(string: base)?.host ?? ""
-        route = API.isLocal(host) ? "Lokal" : "Ekstern"
+        let ext: String = a.external.isEmpty ? a.server : a.external
+        let pick: (base: String, isLocal: Bool) = await APIClient.shared.pickBase(local: a.local, external: ext, preferLocal: useLocal, token: a.token)
+        base = pick.base
+        route = pick.isLocal ? "Lokal" : "Ekstern"
+    }
+
+    /// Fase 4: 401 TOKEN_EXPIRED fra APIClient (app-tokenet er utløpt, Q23) → utlogget tilstand for kontoen med det tokenet.
+    func tokenExpired(_ token: String) {
+        guard loggedIn, let a = account, a.token == token else { return }
+        expired()
+    }
+
+    /// Fase 4 (Q19): sjekker /api/version og viser «Oppdater serveren» / «Oppdater appen» når de ikke passer sammen.
+    func checkServerCompat() async {
+        let b: String = base.isEmpty ? (account?.server ?? "") : base
+        if b.isEmpty { serverCompat = .unknown; return }
+        serverCompat = await APIClient.shared.compatibility(base: b)
     }
 
     /// Prompt 47: velger lokal/ekstern adresse på nytt uten å laste alt på nytt (nettverksendring).
@@ -712,6 +734,7 @@ final class Store {
     func reload() async throws {
         await resolveBase()
         syncWidgets()
+        Task { await self.checkServerCompat() }
         boot = try await api.get("/bootstrap")
         summary = try? await api.get("/summary", as: Summary.self)
         await loadMe()
@@ -1488,7 +1511,7 @@ final class Store {
             let d = try await api.get("/finn/\(id)", as: FinnDetail.self)
             if finnSel == id { finnDetail = d }
         } catch let e as APIError where e.status == 404 {
-        } catch let e as APIError where e.status == 401 && loggedIn && !e.needsTotp {
+        } catch let e as APIError where e.status == 401 && loggedIn && !e.needsTotp && !e.isTokenExpired {
             expired()
         } catch {}
     }
@@ -1601,7 +1624,7 @@ final class Store {
         if let m = mapCache { return m }
         var data = try? await api.raw("/domains/api", "/vendor/countries-110m.json")
         if data.flatMap({ MapCountry.parse($0) })?.isEmpty != false, let u = URL(string: "https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/countries-110m.json") {
-            data = try? await URLSession.shared.data(from: u).0
+            data = try? await HomelabHTTP.session.data(from: u).0
         }
         let list = data.flatMap { MapCountry.parse($0) } ?? []
         if !list.isEmpty { mapCache = list }

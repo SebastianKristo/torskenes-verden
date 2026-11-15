@@ -244,7 +244,7 @@ final class Media46Images {
         if url.hasPrefix("/") {
             data = try? await store.api.bytes(url)
         } else if let u = URL(string: url), u.scheme == "https" || u.scheme == "http" {
-            data = try? await URLSession.shared.data(from: u).0
+            data = try? await HomelabHTTP.session.data(from: u).0
         }
         guard let data, let img = UIImage(data: data) else {
             failed.insert(url)

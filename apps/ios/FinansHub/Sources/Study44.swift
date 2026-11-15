@@ -181,7 +181,7 @@ final class Study44 {
         body.append(data)
         body.append(Data(("\r\n--" + boundary + "--\r\n").utf8))
         r.httpBody = body
-        let (d, res) = try await URLSession.shared.data(for: r)
+        let (d, res) = try await HomelabHTTP.session.data(for: r)
         let code: Int = (res as? HTTPURLResponse)?.statusCode ?? 0
         if code >= 400 {
             let o: [String: Any] = JS.obj(d)

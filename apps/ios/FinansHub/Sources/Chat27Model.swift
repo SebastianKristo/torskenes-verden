@@ -817,7 +817,7 @@ final class ChatStore27 {
         let request: URLRequest = req
         runTask = Task {
             do {
-                let (bytes, res) = try await URLSession.shared.bytes(for: request)
+                let (bytes, res) = try await HomelabHTTP.session.bytes(for: request)
                 let code: Int = (res as? HTTPURLResponse)?.statusCode ?? 0
                 if code >= 400 {
                     var data = Data()
@@ -1101,7 +1101,7 @@ final class ChatStore27 {
         let request: URLRequest = req
         Task {
             do {
-                let (bytes, res) = try await URLSession.shared.bytes(for: request)
+                let (bytes, res) = try await HomelabHTTP.session.bytes(for: request)
                 let code: Int = (res as? HTTPURLResponse)?.statusCode ?? 0
                 if code >= 400 {
                     self.pulls[n] = nil

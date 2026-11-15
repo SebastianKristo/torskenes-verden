@@ -539,7 +539,7 @@ enum KalCalAPI39 {
         }
         var r: URLRequest = URLRequest(url: url)
         r.timeoutInterval = 20
-        guard let pair = try? await URLSession.shared.data(for: r) else {
+        guard let pair = try? await HomelabHTTP.session.data(for: r) else {
             out.error = "Fikk ikke hentet adressen. Sjekk at den er riktig."
             return out
         }

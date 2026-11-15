@@ -163,7 +163,7 @@ final class Logs44 {
             r.timeoutInterval = 3600
             r.setValue("text/event-stream", forHTTPHeaderField: "Accept")
             if let t = api.token { r.setValue("Bearer " + t, forHTTPHeaderField: "Authorization") }
-            guard let res = try? await URLSession.shared.bytes(for: r) else { self.live = false; return }
+            guard let res = try? await HomelabHTTP.session.bytes(for: r) else { self.live = false; return }
             let bytes: URLSession.AsyncBytes = res.0
             var event: String = ""
             do {

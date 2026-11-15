@@ -56,7 +56,7 @@ enum TrialsFetch32b {
         var r = URLRequest(url: url)
         r.timeoutInterval = 6
         if let tok = WidgetShared.token { r.setValue("Bearer \(tok)", forHTTPHeaderField: "Authorization") }
-        guard let pair = try? await URLSession.shared.data(for: r), (pair.1 as? HTTPURLResponse)?.statusCode == 200 else { return nil }
+        guard let pair = try? await HomelabHTTP.session.data(for: r), (pair.1 as? HTTPURLResponse)?.statusCode == 200 else { return nil }
         // Bare ekte bilder (og små nok for widgeten).
         guard let img = UIImage(data: pair.0), img.size.width > 1 else { return nil }
         let small: Data? = img.preparingThumbnail(of: CGSize(width: 64, height: 64))?.pngData() ?? pair.0

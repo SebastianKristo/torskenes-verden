@@ -83,6 +83,15 @@ struct DeviceApproval51 {
     }
 }
 
+extension HomelabError {
+    /// Prompt 51 (SEC51): 403 DEVICE_APPROVAL_REQUIRED – ny enhet må godkjennes (Fase 4: lest fra feilkroppen i den felles
+    /// feiltypen i stedet for å settes i API.send).
+    var approval51: DeviceApproval51? {
+        guard status == 403, code == "DEVICE_APPROVAL_REQUIRED" else { return nil }
+        return DeviceApproval51.parse(bodyObject)
+    }
+}
+
 enum Sec51Fmt {
     nonisolated static func date(_ s: String?) -> Date? {
         guard let s, !s.isEmpty else { return nil }

@@ -28,7 +28,7 @@ final class MacLive {
         guard let url = URL(string: s + "/api/ws") else { return }
         var req: URLRequest = URLRequest(url: url)
         req.setValue("Bearer " + token, forHTTPHeaderField: "Authorization")
-        let t: URLSessionWebSocketTask = URLSession.shared.webSocketTask(with: req)
+        let t: URLSessionWebSocketTask = HomelabHTTP.session.webSocketTask(with: req)
         task = t
         t.resume()
         receive(t)

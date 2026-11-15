@@ -33,7 +33,7 @@ final class KalAbLogos42 {
         }
         if path.hasPrefix("/") { return try? await KalNet.get(path, timeout: 10) }
         guard let u = URL(string: path) else { return nil }
-        let pair: (Data, URLResponse)? = try? await URLSession.shared.data(from: u)
+        let pair: (Data, URLResponse)? = try? await HomelabHTTP.session.data(from: u)
         return pair?.0
     }
 }

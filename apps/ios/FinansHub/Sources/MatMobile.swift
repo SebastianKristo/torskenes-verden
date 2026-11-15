@@ -429,7 +429,7 @@ struct DishThumb: View {
 @MainActor func loadImage(_ store: Store, _ raw: String?) async -> UIImage? {
     guard let raw, !raw.isEmpty else { return nil }
     if raw.hasPrefix("http://") || raw.hasPrefix("https://") {
-        guard let u = URL(string: raw), let r = try? await URLSession.shared.data(from: u) else { return nil }
+        guard let u = URL(string: raw), let r = try? await HomelabHTTP.session.data(from: u) else { return nil }
         return UIImage(data: r.0)
     }
     return await store.image(raw.hasPrefix("/") ? raw : "/" + raw)

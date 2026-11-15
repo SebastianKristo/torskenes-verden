@@ -310,7 +310,7 @@ final class Img50Cache: @unchecked Sendable {
         if url.hasPrefix("/") {
             data = try? await api.bytes(url)
         } else if let u = URL(string: url), u.scheme == "https" || u.scheme == "http" {
-            data = try? await URLSession.shared.data(from: u).0
+            data = try? await HomelabHTTP.session.data(from: u).0
         }
         guard let data, let img = Img50Cache.decode(data) else { return nil }
         remember(k, img)

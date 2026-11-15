@@ -370,7 +370,7 @@ extension Store {
 
     func loadBg(_ u: String) async -> UIImage? {
         if u.hasPrefix("http://") || u.hasPrefix("https://") {
-            guard let url = URL(string: u), let r = try? await URLSession.shared.data(from: url) else { return nil }
+            guard let url = URL(string: u), let r = try? await HomelabHTTP.session.data(from: url) else { return nil }
             return UIImage(data: r.0)
         }
         return await image(u.hasPrefix("/") ? u : "/" + u)

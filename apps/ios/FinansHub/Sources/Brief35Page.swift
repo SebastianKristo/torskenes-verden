@@ -654,7 +654,7 @@ struct Brief35Img: View {
             let enc: String = src.addingPercentEncoding(withAllowedCharacters: allowed) ?? src
             data = try? await store.api.bytes("/api/img?u=" + enc)
             if data.flatMap({ UIImage(data: $0) }) == nil, let u = URL(string: src) {
-                data = try? await URLSession.shared.data(from: u).0
+                data = try? await HomelabHTTP.session.data(from: u).0
             }
         }
         guard let d = data, let im = UIImage(data: d) else { return nil }

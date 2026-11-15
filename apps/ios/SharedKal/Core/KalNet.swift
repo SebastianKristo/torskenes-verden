@@ -4,7 +4,9 @@ import Foundation
 // Samme server og konto som Homelab-appene: /api/kalender*, /api/assist, /api/kalender/calendars, /api/kalender/weather.
 // Endepunkt som mangler (404/405) gir fornuftige reserver: faste kalenderfarger lokalt og vær fra Open-Meteo.
 
-struct KalNetError: LocalizedError {
+/// Fase 4: samme feilprotokoll som APIClient (HomelabFailure i SharedNet/HomelabError.swift) og samme tolking av feilkroppen
+/// ({error, code, reason}). Kalender beholder egen sender fordi den prøver flere adresser og fornyer tokenet (KalAuthGate44).
+struct KalNetError: LocalizedError, HomelabFailure {
     let status: Int
     let message: String
     /// Innloggingen krever 2FA-kode.
@@ -13,6 +15,9 @@ struct KalNetError: LocalizedError {
     var revoked44: Bool = false
     /// Prompt 51: 403 DEVICE_APPROVAL_REQUIRED – ny enhet må godkjennes (KalSec51Core.swift).
     var approval51: KalApproval51? = nil
+    /// Serverens kode (NOT_FOUND, TOKEN_EXPIRED …) og årsak ved 401 (none | invalid | expired).
+    var code: String? = nil
+    var reason: String? = nil
     var errorDescription: String? { message }
 }
 
@@ -80,7 +85,7 @@ enum KalNet {
             }
             let pair: (Data, URLResponse)
             do {
-                pair = try await URLSession.shared.data(for: r)
+                pair = try await HomelabHTTP.session.data(for: r)
             } catch {
                 lastError = KalNetError(status: 0, message: "Fikk ikke kontakt med " + (url.host ?? trimmed))
                 continue
@@ -91,10 +96,16 @@ enum KalNet {
                 return pair.0
             }
             let obj: [String: Any] = ((try? JSONSerialization.jsonObject(with: pair.0)) as? [String: Any]) ?? [:]
-            let msg: String = (obj["error"] as? String) ?? ("Feil " + String(code))
+            let f: HomelabError.Fields = HomelabError.fields(pair.0)
+            let msg: String = f.error ?? ("Feil " + String(code))
             // Serveren svarte: ikke prøv neste adresse (samme server, samme svar).
-            throw KalNetError(status: code, message: msg, needsTotp: (obj["needsTotp"] as? Bool) ?? false,
-                              approval51: code == 403 ? KalApproval51.parse(obj, base: trimmed) : nil)
+            var err: KalNetError = KalNetError(status: code, message: msg, needsTotp: f.needsTotp,
+                                               approval51: code == 403 ? KalApproval51.parse(obj, base: trimmed) : nil)
+            err.code = f.code
+            err.reason = f.reason
+            // Fase 4: utløpt app-token (Q23) meldes på samme måte som i APIClient.
+            if err.isTokenExpired, let token, !token.isEmpty { APIClient.announceExpired(token) }
+            throw err
         }
         throw lastError
     }
@@ -136,7 +147,7 @@ enum KalNet {
         guard let url = URL(string: u) else { return [] }
         var r: URLRequest = URLRequest(url: url)
         r.timeoutInterval = 10
-        guard let pair = try? await URLSession.shared.data(for: r) else { return [] }
+        guard let pair = try? await HomelabHTTP.session.data(for: r) else { return [] }
         return KalParse.openMeteo(pair.0)
     }
 

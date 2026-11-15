@@ -129,7 +129,7 @@ enum Server89 {
         r.setValue("application/json", forHTTPHeaderField: "Accept")
         let t0: Date = Date()
         do {
-            let pair: (Data, URLResponse) = try await URLSession.shared.data(for: r)
+            let pair: (Data, URLResponse) = try await HomelabHTTP.session.data(for: r)
             let code: Int = (pair.1 as? HTTPURLResponse)?.statusCode ?? 0
             let ms: Int = Int(Date().timeIntervalSince(t0) * 1000)
             if code >= 200 && code < 300 { return Health(ok: true, text: "Tilkoblet · \(ms) ms") }

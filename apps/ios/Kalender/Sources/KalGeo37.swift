@@ -92,7 +92,7 @@ final class KalGeo37: ObservableObject {
         var req: URLRequest = URLRequest(url: url)
         req.timeoutInterval = 12
         req.setValue("Kalender/4 (Homelab; kristo.no)", forHTTPHeaderField: "User-Agent")
-        guard let pair = try? await URLSession.shared.data(for: req) else { return nil }
+        guard let pair = try? await HomelabHTTP.session.data(for: req) else { return nil }
         guard let arr = (try? JSONSerialization.jsonObject(with: pair.0)) as? [[String: Any]], let x = arr.first else { return nil }
         let la: Double? = Double((x["lat"] as? String) ?? "")
         let lo: Double? = Double((x["lon"] as? String) ?? "")

@@ -100,7 +100,7 @@ final class SubShot28Model {
         if let t = store.api.token { r.setValue("Bearer \(t)", forHTTPHeaderField: "Authorization") }
         var ok: Bool = false
         do {
-            let (bytes, res) = try await URLSession.shared.bytes(for: r)
+            let (bytes, res) = try await HomelabHTTP.session.bytes(for: r)
             let status: Int = (res as? HTTPURLResponse)?.statusCode ?? 0
             if status == 403 { installText = "Bare administratorer kan installere modeller."; return }
             if status >= 400 { installText = "Installeringen feilet (\(status))."; return }

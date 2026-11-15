@@ -186,7 +186,7 @@ enum WidgetFetch {
             r.timeoutInterval = 8
             r.setValue("application/json", forHTTPHeaderField: "Accept")
             r.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-            if let pair = try? await URLSession.shared.data(for: r), (pair.1 as? HTTPURLResponse)?.statusCode == 200 {
+            if let pair = try? await HomelabHTTP.session.data(for: r), (pair.1 as? HTTPURLResponse)?.statusCode == 200 {
                 let data = pair.0
                 WidgetShared.cache = data
                 return (WidgetData(json: data), true)

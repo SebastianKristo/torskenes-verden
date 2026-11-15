@@ -193,7 +193,7 @@ enum KalAuth41 {
         var r: URLRequest = URLRequest(url: url)
         r.timeoutInterval = timeout
         r.setValue("application/json", forHTTPHeaderField: "Accept")
-        guard let pair = try? await URLSession.shared.data(for: r) else { return false }
+        guard let pair = try? await HomelabHTTP.session.data(for: r) else { return false }
         return pair.1 is HTTPURLResponse
     }
 

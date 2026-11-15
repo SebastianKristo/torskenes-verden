@@ -50,7 +50,7 @@ final class WxWeek39Model {
         let s: String = "https://api.open-meteo.com/v1/forecast?latitude=\(lat)&longitude=\(lon)"
             + "&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,sunshine_duration,weather_code,wind_speed_10m_max"
             + "&wind_speed_unit=ms&timezone=auto&past_days=7&forecast_days=7"
-        if let url = URL(string: s), let res = try? await URLSession.shared.data(from: url) {
+        if let url = URL(string: s), let res = try? await HomelabHTTP.session.data(from: url) {
             let o: [String: Any] = JS.obj(res.0)
             if let daily = o["daily"] as? [String: Any] {
                 var w: WxWeek39Data = WxWeek39Data()

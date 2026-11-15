@@ -524,7 +524,7 @@ final class Realtime: NSObject {
         key = k
         var req = URLRequest(url: url)
         req.setValue("Bearer " + token, forHTTPHeaderField: "Authorization")
-        let t = URLSession.shared.webSocketTask(with: req)
+        let t = HomelabHTTP.session.webSocketTask(with: req)
         task = t
         t.resume()
         receive(t)

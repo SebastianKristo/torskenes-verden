@@ -22,6 +22,8 @@ targets:
       - Shared
       # Opprydding H2: den delte Nøkkelring-hjelperen (Nokkelring.swift) – med i alle mål.
       - SharedKeychain
+      # Fase 4: det felles nettverkslaget (APIClient, HomelabError, DTO-ene, ServerAddress) – med i alle mål.
+      - SharedNet
       # Prompt 33: App Group-nøklene som Kalender-appen leser (companion-token).
       - SharedKal/Group
       # Prompt 84: «Kalender i appen» – hele Kalender-appen (samme kode) inni Homelab, bak flagget KAL_EMBED (under).
@@ -168,6 +170,7 @@ targets:
       # Inkluderer DesignTokens.xcassets (designtokens).
       - Shared
       - SharedKeychain
+      - SharedNet
     entitlements:
       path: FinansHubWidgets/FinansHubWidgets.entitlements
       properties:
@@ -198,6 +201,7 @@ targets:
       - Kalender/Sources
       - Kalender/Resources
       - SharedKeychain
+      - SharedNet
       # Delt med KalenderWidgets (og Group med Homelab-appen). Fonts: Newsreader, Manrope og IBM Plex Mono (kopi av Papir-fontene, OFL).
       - SharedKal/Group
       - SharedKal/Core
@@ -290,6 +294,7 @@ targets:
     sources:
       - KalenderWidgets/Sources
       - SharedKeychain
+      - SharedNet
       - SharedKal/Group
       - SharedKal/Core
       - SharedKal/Fonts
@@ -337,6 +342,7 @@ targets:
       - KalenderMac/Sources
       - KalenderMac/Resources
       - SharedKeychain
+      - SharedNet
       - SharedKal/Core
       - SharedKal/Group
       # Fontene kopieres til Contents/Resources og lastes via ATSApplicationFontsPath.
@@ -428,6 +434,7 @@ targets:
     sources:
       - KalenderWidgets/Sources
       - SharedKeychain
+      - SharedNet
       - SharedKal/Group
       - SharedKal/Core
       # Fontene kopieres til Contents/Resources og lastes via ATSApplicationFontsPath.
@@ -479,6 +486,7 @@ targets:
       - Watch51/Sources
       # Opprydding H2: samme Nøkkelring-hjelper (bare Foundation/Security). Klokka bruker fortsatt W51Keychain (ThisDeviceOnly).
       - SharedKeychain
+      - SharedNet
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: no.kristo.finanshub.watchkitapp

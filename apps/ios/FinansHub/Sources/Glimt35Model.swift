@@ -25,7 +25,7 @@ enum Glimt35Net {
             r.setValue("application/json", forHTTPHeaderField: "Content-Type")
             r.httpBody = try JSONSerialization.data(withJSONObject: json)
         }
-        let pair: (Data, URLResponse) = try await URLSession.shared.data(for: r)
+        let pair: (Data, URLResponse) = try await HomelabHTTP.session.data(for: r)
         guard let h = pair.1 as? HTTPURLResponse else { throw APIError(message: "Serveren svarte ikke", status: 0) }
         return (pair.0, h)
     }

@@ -207,7 +207,7 @@ enum KalEv44 {
         var r: URLRequest = URLRequest(url: url)
         r.timeoutInterval = 6
         r.setValue("Kalender (Homelab)", forHTTPHeaderField: "User-Agent")
-        guard let pair = try? await URLSession.shared.data(for: r),
+        guard let pair = try? await HomelabHTTP.session.data(for: r),
               let o = (try? JSONSerialization.jsonObject(with: pair.0)) as? [String: Any] else { return [] }
         let list: [[String: Any]] = (o["adresser"] as? [[String: Any]]) ?? []
         return list.prefix(6).compactMap { (a: [String: Any]) -> KalAddr44? in

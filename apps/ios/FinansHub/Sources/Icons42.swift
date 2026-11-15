@@ -230,7 +230,7 @@ final class IconSearch42 {
     nonisolated static func fetch(_ q: String) async -> [(String, String)]? {
         let enc: String = q.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? q
         guard let u = URL(string: "https://api.iconify.design/search?query=" + enc + "&prefixes=lucide,tabler&limit=48") else { return nil }
-        guard let res = try? await URLSession.shared.data(from: u),
+        guard let res = try? await HomelabHTTP.session.data(from: u),
               let o = (try? JSONSerialization.jsonObject(with: res.0)) as? [String: Any] else { return nil }
         let names: [String] = Array(((o["icons"] as? [String]) ?? []).prefix(36))
         if names.isEmpty { return [] }
@@ -244,7 +244,7 @@ final class IconSearch42 {
         for (prefix, list) in byPrefix {
             let icons: String = list.joined(separator: ",")
             guard let iu = URL(string: "https://api.iconify.design/" + prefix + ".json?icons=" + icons),
-                  let rr = try? await URLSession.shared.data(from: iu),
+                  let rr = try? await HomelabHTTP.session.data(from: iu),
                   let oo = (try? JSONSerialization.jsonObject(with: rr.0)) as? [String: Any],
                   let ic = oo["icons"] as? [String: Any] else { continue }
             for (name, v) in ic {

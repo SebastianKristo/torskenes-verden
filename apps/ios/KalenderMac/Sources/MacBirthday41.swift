@@ -47,7 +47,7 @@ final class MacBdPeople41: ObservableObject {
             if url.hasPrefix("/") {
                 data = try? await KalNet.get(url, timeout: 15)
             } else if let u = URL(string: url) {
-                data = try? await URLSession.shared.data(from: u).0
+                data = try? await HomelabHTTP.session.data(from: u).0
             }
             if let data, let img = NSImage(data: data) { self.images[p.id] = img }
         }

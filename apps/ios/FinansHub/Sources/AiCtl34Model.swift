@@ -953,7 +953,7 @@ final class AiCtl34 {
         if let tok = api.token { req.setValue("Bearer " + tok, forHTTPHeaderField: "Authorization") }
         req.httpBody = try? JSONSerialization.data(withJSONObject: body)
         do {
-            let (bytes, res) = try await URLSession.shared.bytes(for: req)
+            let (bytes, res) = try await HomelabHTTP.session.bytes(for: req)
             let code: Int = (res as? HTTPURLResponse)?.statusCode ?? 0
             if code >= 400 { return false }
             var failed: Bool = false

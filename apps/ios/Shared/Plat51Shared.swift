@@ -46,7 +46,7 @@ enum Plat51Net {
                 r.httpBody = try? JSONSerialization.data(withJSONObject: body)
             }
             do {
-                let pair: (Data, URLResponse) = try await URLSession.shared.data(for: r)
+                let pair: (Data, URLResponse) = try await HomelabHTTP.session.data(for: r)
                 let code: Int = (pair.1 as? HTTPURLResponse)?.statusCode ?? 0
                 if code > 0 { return Reply(data: pair.0, status: code) }
             } catch let e as URLError {

@@ -94,7 +94,7 @@ enum Hjemlys40Net {
                 r.httpBody = try? JSONSerialization.data(withJSONObject: body)
             }
             do {
-                let pair: (Data, URLResponse) = try await URLSession.shared.data(for: r)
+                let pair: (Data, URLResponse) = try await HomelabHTTP.session.data(for: r)
                 let code: Int = (pair.1 as? HTTPURLResponse)?.statusCode ?? 0
                 if code > 0 && code < 400 { return pair.0 }
                 if code >= 400 { return nil }

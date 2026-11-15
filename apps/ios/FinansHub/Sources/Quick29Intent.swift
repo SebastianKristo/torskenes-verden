@@ -35,7 +35,7 @@ struct Quick29Intent: AppIntent {
             r.setValue("application/json", forHTTPHeaderField: "Accept")
             r.setValue("Bearer " + token, forHTTPHeaderField: "Authorization")
             r.httpBody = body
-            guard let pair = try? await URLSession.shared.data(for: r) else { continue }
+            guard let pair = try? await HomelabHTTP.session.data(for: r) else { continue }
             let code: Int = (pair.1 as? HTTPURLResponse)?.statusCode ?? 0
             if code >= 200 && code < 300 { return true }
             if code > 0 { return false }

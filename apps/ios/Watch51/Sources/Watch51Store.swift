@@ -241,7 +241,7 @@ final class W51Store {
                 r.setValue("application/json", forHTTPHeaderField: "Content-Type")
                 r.httpBody = try? JSONSerialization.data(withJSONObject: body)
             }
-            guard let pair = try? await URLSession.shared.data(for: r) else { continue }
+            guard let pair = try? await HomelabHTTP.session.data(for: r) else { continue }
             let code: Int = (pair.1 as? HTTPURLResponse)?.statusCode ?? 0
             if code == 401 && auth { logout(silent: true) }
             if code > 0 { return Reply(data: pair.0, status: code, base: base) }
@@ -511,7 +511,7 @@ final class W51Store {
             r.httpBody = try? JSONSerialization.data(withJSONObject: body)
             var started: Bool = false
             do {
-                let (bytes, res) = try await URLSession.shared.bytes(for: r)
+                let (bytes, res) = try await HomelabHTTP.session.bytes(for: r)
                 started = true
                 let code: Int = (res as? HTTPURLResponse)?.statusCode ?? 0
                 if code >= 400 {

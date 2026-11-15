@@ -53,7 +53,7 @@ enum TasksFetch {
                 r.setValue("application/json", forHTTPHeaderField: "Content-Type")
                 r.httpBody = try? JSONSerialization.data(withJSONObject: body)
             }
-            if let pair = try? await URLSession.shared.data(for: r), let code = (pair.1 as? HTTPURLResponse)?.statusCode, code < 400 { return pair.0 }
+            if let pair = try? await HomelabHTTP.session.data(for: r), let code = (pair.1 as? HTTPURLResponse)?.statusCode, code < 400 { return pair.0 }
         }
         return nil
     }
