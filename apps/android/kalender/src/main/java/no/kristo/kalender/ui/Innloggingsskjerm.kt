@@ -70,11 +70,22 @@ import no.kristo.kalender.KalVm
 import no.kristo.kalender.LocalK
 import no.kristo.kalender.Red
 import no.kristo.kalender.reduceMotion
+import android.os.Build
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.window.Dialog
+import no.kristo.kalender.Kal46Guard
+import no.kristo.kalender.Kal46Prefs
+import no.kristo.kalender.Kal46Qr
+import no.kristo.kalender.Kal46Rask
+import no.kristo.kalender.setPref46
 
-/*
- * Prompt 41 (Android Kalender): innloggingsskjermen uten serverfelt (auVals i Kalender App.dc.html), bursdagskortet i
- * hendelsesarket (R.dt.bd), svarkortet for søk med Glimt (sAi), «Send testvarsel» og banneret (notTest / ntBan).
- */
+/* Innloggingsskjermen uten serverfelt (prompt 41, auVals i Kalender App.dc.html) og «Logg inn med QR-kode» (prompt 46). */
 
 /* ---------------- Innlogging ---------------- */
 
@@ -117,7 +128,7 @@ fun LoginScreen41(vm: KalVm) {
                 "pw" -> Pw41(vm)
                 // Prompt 46: QR-koden (skannes med Papir Finans eller en innlogget Kalender på mobilen).
                 "qr" -> QrLogin46(vm)
-                // Prompt 51: ny enhet må godkjennes fra en kjent enhet (Kal51Ui.kt).
+                // Prompt 51: ny enhet må godkjennes fra en kjent enhet (Enhetsgodkjenning.kt).
                 "approve51" -> Approve51(vm)
                 else -> Start41(vm)
             }
@@ -261,134 +272,120 @@ private fun Field41(v: String, on: (String) -> Unit, hint: String, type: Keyboar
     }
 }
 
-/* ---------------- Bursdagskortet ---------------- */
-
-private val CONF = listOf(Color(0xFFF2C14E), Color(0xFFFFFFFF), Color(0xFF3FBF9A), Color(0xFFA8D4FB), Color(0xFFFFD2C2))
+/* ---------------- QR: vis (innloggingsskjermen) ---------------- */
 
 @Composable
-fun BdCard41(vm: KalVm, e: KEv, color: Color) {
-    val s = vm.k41
-    LaunchedEffect(e.id) { s.loadPeople() }
-    val name = Kal41.bdName(e.t)
-    val p = Kal41.match(name, s.people)
-    LaunchedEffect(p?.id) { p?.let { s.loadPhoto(it) } }
-    val (kicker, big, unit) = Kal41.counter(e.d)
-    val isToday = e.d == no.kristo.kalender.today()
-    Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(color)) {
-        // 16 faste konfettibiter (gul, hvit, mint, lyseblå, fersken).
-        Canvas(Modifier.matchParentSize()) {
-            for (i in 0 until 16) {
-                val w = (5 + Kal41.rr(i + 3) * 5).dp.toPx()
-                val h = (8 + Kal41.rr(i + 4) * 6).dp.toPx()
-                val x = (Kal41.rr(i) * size.width).toFloat()
-                val y = (Kal41.rr(i + 9) * size.height).toFloat()
-                val a = (Kal41.rr(i + 6) * 180).toFloat()
-                rotateDraw(a, Offset(x, y)) {
-                    if (Kal41.rr(i + 2) > .6) drawOval(CONF[i % CONF.size].copy(alpha = .9f), Offset(x - w / 2, y - h / 2), androidx.compose.ui.geometry.Size(w, h))
-                    else drawRect(CONF[i % CONF.size].copy(alpha = .9f), Offset(x - w / 2, y - h / 2), androidx.compose.ui.geometry.Size(w, h))
-                }
-            }
+fun QrButton46(vm: KalVm) {
+    val k = LocalK.current
+    Box(Modifier.fillMaxWidth().height(44.dp).clip(RoundedCornerShape(22.dp)).border(1.dp, k.line, RoundedCornerShape(22.dp))
+        .tap("Logg inn med QR-kode") { Hap.tick(); vm.k41.err = ""; vm.k41.phase = "qr" }, contentAlignment = Alignment.Center) {
+        Tx("Logg inn med QR-kode", man(13.5.sp, FontWeight.Bold, k.ink))
+    }
+}
+
+@Composable
+fun QrLogin46(vm: KalVm) {
+    val k = LocalK.current
+    LaunchedEffect(Unit) { Kal46Qr.start(vm) }
+    DisposableEffect(Unit) { onDispose { if (Kal46Qr.phase != "done") Kal46Qr.stop() } }
+    Column(Modifier.widthIn(max = 320.dp).fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Box(Modifier.widthIn(max = 260.dp).fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(18.dp)).background(Color.White)
+            .border(1.dp, k.line, RoundedCornerShape(18.dp)).padding(14.dp), contentAlignment = Alignment.Center) {
+            val m = Kal46Qr.matrix
+            if (m != null && Kal46Qr.phase != "scanned") QrCanvas46(m)
+            else if (Kal46Qr.phase == "scanned") Tx(Kal46Qr.match.ifBlank { "✓" }, mono(34.sp, Color(0xFF1B1A17)))
+            else no.kristo.kalender.ui.Spark(28.dp, true)
         }
-        Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                Box(Modifier.size(64.dp)) {
-                    Box(Modifier.size(64.dp).clip(CircleShape).background(Color.White.copy(alpha = .22f)).border(3.dp, Color.White.copy(alpha = .85f), CircleShape), contentAlignment = Alignment.Center) {
-                        val img = p?.let { s.photos[it.id] }
-                        if (img != null) Image(img, null, Modifier.size(64.dp).clip(CircleShape), contentScale = ContentScale.Crop)
-                        else Tx(name.split(' ').filter { it.isNotBlank() }.take(2).joinToString("") { it.take(1) }.uppercase(), man(22.sp, FontWeight.ExtraBold, Color.White))
+        val head = when (Kal46Qr.phase) { "scanned" -> "Skannet – godkjenn på mobilen"; "err" -> "Fikk ikke laget koden"; else -> "Logg inn med mobilen" }
+        Tx(head, man(16.sp, FontWeight.Bold, k.ink).copy(textAlign = TextAlign.Center), maxLines = 2)
+        val sub = if (Kal46Qr.phase == "scanned") "Sjekk at tallet ${Kal46Qr.match} også vises på mobilen."
+            else "Skann med Papir Finans på mobilen: Innstillinger → Logg inn på annen enhet. En innlogget Kalender kan også godkjenne."
+        Tx(sub, man(13.sp, FontWeight.Medium, k.mut, 18.sp).copy(textAlign = TextAlign.Center), maxLines = 4)
+        if (Kal46Qr.phase == "pending") Tx("Koden fornyes om ${Kal46Qr.secondsLeft} s", mono(12.sp, k.mut2))
+        if (Kal46Qr.phase == "err") {
+            Tx(Kal46Qr.err, man(13.sp, FontWeight.SemiBold, k.acc).copy(textAlign = TextAlign.Center), maxLines = 4)
+            InkPill("Ny kode", { Hap.tick(); Kal46Qr.start(vm) })
+        }
+        Box(Modifier.height(40.dp).tap("Logg inn på en annen måte") { Hap.tick(); Kal46Qr.stop(); vm.k41.phase = "start" }, contentAlignment = Alignment.Center) {
+            Tx("‹ Logg inn på en annen måte", man(13.sp, FontWeight.Bold, k.mut))
+        }
+    }
+}
+
+@Composable
+private fun QrCanvas46(m: Array<BooleanArray>) {
+    Canvas(Modifier.fillMaxWidth().aspectRatio(1f).semantics { contentDescription = "QR-kode for innlogging" }) {
+        val n = m.size
+        val cell = size.width / n
+        for (y in 0 until n) for (x in 0 until n) if (m[y][x]) drawRect(Color.Black, Offset(x * cell, y * cell), Size(cell + 0.5f, cell + 0.5f))
+    }
+}
+
+/* ---------------- QR: skann/godkjenn (innlogget) ---------------- */
+
+/** Innstillinger → GLIMT OG KONTO → «Logg inn på annen enhet». */
+@Composable
+fun ScanRow46(vm: KalVm) {
+    val k = LocalK.current
+    Row(Modifier.fillMaxWidth().height(56.dp).tap("Logg inn på annen enhet") { Hap.tick(); Kal46Qr.openScan() }, verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            Tx("Logg inn på annen enhet", man(14.5.sp, FontWeight.Bold, k.ink))
+            Tx("Godkjenn QR-koden Kalender på Mac, iPad eller en annen telefon viser", man(12.sp, FontWeight.Medium, k.mut), maxLines = 2)
+        }
+        Tx("›", man(16.sp, FontWeight.Bold, k.mut))
+    }
+}
+
+@Composable
+fun ScanDialog46(vm: KalVm) {
+    if (!Kal46Qr.scanOpen) return
+    val k = LocalK.current
+    val ctx = LocalContext.current
+    Dialog(onDismissRequest = { Kal46Qr.scanOpen = false }) {
+        Column(Modifier.clip(RoundedCornerShape(24.dp)).background(k.card).padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Tx("Logg inn på annen enhet", news(22.sp, k.ink), maxLines = 2)
+            when (Kal46Qr.scanPhase) {
+                "busy" -> Box(Modifier.fillMaxWidth().height(80.dp), contentAlignment = Alignment.Center) { no.kristo.kalender.ui.Spark(28.dp, true) }
+                "ask" -> {
+                    Tx("Logge inn ${Kal46Qr.askDevice}?", man(15.sp, FontWeight.Bold, k.ink), maxLines = 3)
+                    if (Kal46Qr.askPlace.isNotBlank()) Tx(Kal46Qr.askPlace, man(13.sp, FontWeight.Medium, k.mut), maxLines = 2)
+                    Tx("Som ${Kal46Qr.askAccount}", man(13.sp, FontWeight.Medium, k.mut))
+                    if (Kal46Qr.askMatch.isNotBlank()) {
+                        Tx("Sjekk at tallet også vises på den andre skjermen", man(12.sp, FontWeight.Medium, k.mut), maxLines = 2)
+                        Tx(Kal46Qr.askMatch, mono(32.sp, k.ink))
                     }
-                    PartyHat41(Modifier.size(30.dp, 32.dp).offset(x = 34.dp, y = (-22).dp).rotate(18f))
+                    if (Kal46Qr.scanMsg.isNotBlank()) Tx(Kal46Qr.scanMsg, man(13.sp, FontWeight.SemiBold, k.acc), maxLines = 3)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        InkPill("Logg inn", { confirm46(ctx) { ok -> if (ok) Kal46Qr.answer(vm, true) else Kal46Qr.scanMsg = "Godkjenningen ble avbrutt." } }, h = 44.dp)
+                        LinePill("Avbryt", { Kal46Qr.answer(vm, false) }, h = 44.dp)
+                    }
                 }
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Tx(kicker, mono(10.5.sp, Color.White.copy(alpha = .9f), .14f))
-                    Tx(name, news(30.sp, Color.White, 32.sp), maxLines = 2)
-                    Tx(Kal41.bdSub(e.d, p?.year), man(14.sp, FontWeight.Medium, Color.White.copy(alpha = .92f)), maxLines = 2)
+                "done", "err" -> {
+                    Tx(Kal46Qr.scanMsg, man(13.5.sp, FontWeight.Medium, if (Kal46Qr.scanPhase == "done") k.ink else k.acc, 19.sp), maxLines = 6)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        LinePill("Ny kode", { Kal46Qr.openScan() }, h = 44.dp)
+                        InkPill("Ferdig", { Kal46Qr.scanOpen = false }, h = 44.dp)
+                    }
                 }
-                Column(horizontalAlignment = Alignment.End) {
-                    Tx(big, news(if (isToday) 30.sp else 44.sp, Color.White, if (isToday) 32.sp else 46.sp, FontWeight.Normal))
-                    if (unit.isNotEmpty()) Tx(unit, man(12.5.sp, FontWeight.Medium, Color.White.copy(alpha = .9f)))
-                }
-            }
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Box(Modifier.weight(1f).height(40.dp).clip(RoundedCornerShape(20.dp)).background(Color.White).tap("Gratuler") { s.congratulate(name, p) }, contentAlignment = Alignment.Center) {
-                    Tx("Gratuler", man(13.sp, FontWeight.Bold, Color(0xFF1B1A17)))
-                }
-                Box(Modifier.weight(1f).height(40.dp).clip(RoundedCornerShape(20.dp)).background(Color.White.copy(alpha = .2f)).tap("Gaveidé") { s.gift(name, e.d) }, contentAlignment = Alignment.Center) {
-                    Tx("Gaveidé", man(13.sp, FontWeight.Bold, Color.White))
-                }
-                Box(Modifier.weight(1f).height(40.dp).clip(RoundedCornerShape(20.dp)).background(Color.White.copy(alpha = .2f)).tap("Bursdager") { s.openBirthdays(name, p) }, contentAlignment = Alignment.Center) {
-                    Tx("Bursdager ›", man(13.sp, FontWeight.Bold, Color.White))
-                }
-            }
-            if (isToday) Jenka41()
-        }
-    }
-}
-
-/** Festhatten (viewBox 60×62). */
-@Composable
-private fun PartyHat41(modifier: Modifier) {
-    Canvas(modifier) {
-        val sx = size.width / 60f
-        val sy = size.height / 62f
-        val cone = Path().apply { moveTo(8 * sx, 56 * sy); lineTo(30 * sx, 4 * sy); lineTo(52 * sx, 56 * sy); close() }
-        drawPath(cone, Color(0xFF1B1A17))
-        val y = Color(0xFFF2C14E)
-        drawLine(y, Offset(14 * sx, 42 * sy), Offset(46 * sx, 42 * sy), 3 * sx)
-        drawLine(y, Offset(19 * sx, 30 * sy), Offset(41 * sx, 30 * sy), 3 * sx)
-        drawLine(y, Offset(24 * sx, 18 * sy), Offset(36 * sx, 18 * sy), 3 * sx)
-        drawCircle(y, 5 * sx, Offset(30 * sx, 4 * sy))
-    }
-}
-
-/** Jenka-toget på bursdagsdagen: Glimt-stjerner som hopper i takt langs bunnen av kortet. */
-@Composable
-private fun Jenka41() {
-    val reduce = reduceMotion()
-    val inf = androidx.compose.animation.core.rememberInfiniteTransition(label = "jenka")
-    val t by inf.animateFloat(0f, 1f, androidx.compose.animation.core.infiniteRepeatable(androidx.compose.animation.core.tween(7000, easing = androidx.compose.animation.core.LinearEasing)), label = "t")
-    BoxWithConstraints(Modifier.fillMaxWidth().height(28.dp)) {
-        val w = maxWidth.value
-        val head = if (reduce) w * .6f else (t * (w + 160f)) - 80f
-        for (i in 0 until 5) {
-            val hop = if (reduce) 0f else (kotlin.math.abs(kotlin.math.sin((t * 60f + i * .9f).toDouble())) * 6).toFloat()
-            Box(Modifier.offset(x = (head - i * 22f).dp, y = (8f - hop).dp)) { Spark(16.dp, false) }
-        }
-    }
-}
-
-/* ---------------- Søk med Glimt ---------------- */
-
-@Composable
-fun GlimtButton41(vm: KalVm) {
-    val k = LocalK.current
-    val on = vm.k41.aiOn
-    Box(Modifier.height(32.dp).clip(RoundedCornerShape(16.dp)).background(if (on) Red else k.chip).tap("Søk med Glimt") { vm.k41.aiGo(vm.q) }.padding(horizontal = 11.dp),
-        contentAlignment = Alignment.Center) { Tx("✦ Glimt", man(12.5.sp, FontWeight.ExtraBold, if (on) Color.White else k.ink)) }
-}
-
-@Composable
-fun AiCard41(vm: KalVm) {
-    val k = LocalK.current
-    val s = vm.k41
-    if (!s.aiOn) return
-    Column(Modifier.fillMaxWidth().padding(bottom = 6.dp).clip(RoundedCornerShape(18.dp)).background(k.card).border(1.5.dp, Red, RoundedCornerShape(18.dp)).padding(horizontal = 14.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Box(Modifier.size(18.dp).clip(CircleShape).background(Red), contentAlignment = Alignment.Center) { Tx("✦", man(10.sp, FontWeight.Bold, Color.White)) }
-            Tx("GLIMT · " + if (s.aiLocal) "UTEN AI" else "OLLAMA", mono(10.sp, Red, .14f))
-        }
-        if (s.aiBusy) Tx("Leser kalenderen din med Ollama …", man(14.sp, FontWeight.Medium, k.mut))
-        else {
-            Tx(s.aiText, man(14.5.sp, FontWeight.Medium, k.ink, 21.sp), maxLines = 6)
-            s.aiHits.forEach { e ->
-                val c = vm.evCal(e)
-                Row(Modifier.fillMaxWidth().height(androidx.compose.foundation.layout.IntrinsicSize.Min).tap(e.t) { vm.openEv(e) }.padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Box(Modifier.width(4.dp).height(34.dp).clip(RoundedCornerShape(2.dp)).background(c.col))
-                    Column(Modifier.weight(1f)) {
-                        Tx(Kal41.listTitle(e, c.n), man(14.sp, FontWeight.Bold, k.ink))
-                        Tx(no.kristo.kalender.cap(no.kristo.kalender.WD[e.d.dayOfWeek.value % 7]) + " " + e.d.dayOfMonth + ". " + no.kristo.kalender.MN[e.d.monthValue - 1] +
-                            if (e.all) " · hele dagen" else " · " + no.kristo.kalender.hm(e.s ?: 0), man(12.sp, FontWeight.Medium, k.mut))
+                else -> {
+                    Tx("Skann QR-koden som den andre enheten viser. Du kan også lime inn lenken eller koden under QR-koden.",
+                        man(13.sp, FontWeight.Medium, k.mut, 18.sp), maxLines = 5)
+                    // Prompt 46: Googles skanner-UI (ingen kameratillatelse) → samme håndtering som innlimt kode (serversjekk, så biometri før godkjenning).
+                    InkPill("Skann QR-kode", {
+                        Hap.tick(); Kal46Qr.scanMsg = ""
+                        no.kristo.kalender.KalScan46.start(ctx, onRaw = { raw -> Kal46Qr.scanText = raw; Kal46Qr.scan(vm, raw) }, onMsg = { Kal46Qr.scanMsg = it })
+                    }, h = 48.dp)
+                    Tx("ELLER LIM INN", man(11.sp, FontWeight.Bold, k.mut2))
+                    Box(Modifier.fillMaxWidth().height(48.dp).clip(RoundedCornerShape(14.dp)).border(1.dp, k.line, RoundedCornerShape(14.dp)).padding(horizontal = 12.dp),
+                        contentAlignment = Alignment.CenterStart) {
+                        if (Kal46Qr.scanText.isEmpty()) Tx("papir://login?… eller kode", man(14.sp, FontWeight.Medium, k.mut2))
+                        BasicTextField(Kal46Qr.scanText, { Kal46Qr.scanText = it }, Modifier.fillMaxWidth().semantics { contentDescription = "Innloggingskode" },
+                            textStyle = man(14.sp, FontWeight.Medium, k.ink), singleLine = true, cursorBrush = SolidColor(Red))
+                    }
+                    if (Kal46Qr.scanMsg.isNotBlank()) Tx(Kal46Qr.scanMsg, man(13.sp, FontWeight.SemiBold, k.acc), maxLines = 3)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        InkPill("Fortsett", { Kal46Qr.scan(vm, Kal46Qr.scanText) }, enabled = Kal46Qr.scanText.isNotBlank(), h = 44.dp)
+                        LinePill("Avbryt", { Kal46Qr.scanOpen = false }, h = 44.dp)
                     }
                 }
             }
@@ -396,57 +393,29 @@ fun AiCard41(vm: KalVm) {
     }
 }
 
-/* ---------------- Testvarsel ---------------- */
-
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-fun TestRow41(vm: KalVm) {
-    val k = LocalK.current
-    val s = vm.k41
-    val ask = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { ok -> s.permissionResult(ok) }
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(
-            Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(k.card).border(1.dp, k.line, RoundedCornerShape(16.dp))
-                .combinedClickable(remember { MutableInteractionSource() }, indication = null, onClickLabel = "Send testvarsel", onLongClickLabel = "Send push fra serveren",
-                    onLongClick = { s.pushTest() }, onClick = { s.test { runCatching { ask.launch(android.Manifest.permission.POST_NOTIFICATIONS) } } })
-                .padding(horizontal = 14.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Box(Modifier.size(34.dp).clip(RoundedCornerShape(10.dp)).background(Red), contentAlignment = Alignment.Center) {
-                Svg("M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15zM10 20a2 2 0 0 0 4 0", 17.dp, Color.White, 2.2f)
-            }
-            Column(Modifier.weight(1f)) {
-                Tx("Send testvarsel", man(14.5.sp, FontWeight.Bold, k.ink))
-                Tx("Kommer om 5 sekunder · lås skjermen for å se det", man(12.5.sp, FontWeight.Medium, k.mut), maxLines = 2)
-            }
-            Tx("Test", man(13.sp, FontWeight.Bold, Red))
-        }
-        if (s.denied) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Tx("Varsler er slått av for Kalender", man(13.sp, FontWeight.SemiBold, k.acc), Modifier.weight(1f), maxLines = 2)
-            LinePill("Åpne Innstillinger", { s.openNotifSettings() }, h = 32.dp)
-        }
-        if (s.pushText.isNotEmpty()) Tx(s.pushText, man(12.5.sp, FontWeight.Medium, k.mut), maxLines = 2)
+/** Fingeravtrykk/ansikt med PIN/mønster som reserve (systemets BiometricPrompt, ingen ny avhengighet). Krever Android 9+. */
+private fun confirm46(ctx: android.content.Context, done: (Boolean) -> Unit) {
+    if (Build.VERSION.SDK_INT < 28) {
+        val km = ctx.getSystemService(android.content.Context.KEYGUARD_SERVICE) as? android.app.KeyguardManager
+        // Uten BiometricPrompt: godkjenning krever i det minste en låst telefon (PIN/mønster). Ellers nei.
+        done(km?.isDeviceSecure == true)
+        return
     }
-}
-
-/** Banneret når testvarselet kommer mens appen er åpen. */
-@Composable
-fun TestBanner41(vm: KalVm) {
-    if (!vm.k41.banner) return
-    Row(
-        Modifier.windowInsetsPadding(WindowInsets.statusBars).padding(start = 10.dp, end = 10.dp, top = 6.dp).fillMaxWidth()
-            .shadow(16.dp, RoundedCornerShape(22.dp)).clip(RoundedCornerShape(22.dp)).background(Color(0xF5F5F0E6)).tap("Lukk") { vm.k41.banner = false }
-            .padding(horizontal = 14.dp, vertical = 12.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Column(Modifier.size(36.dp).clip(RoundedCornerShape(9.dp)).background(Color(0xFFFFFDF8)), horizontalAlignment = Alignment.CenterHorizontally) {
-            Box(Modifier.fillMaxWidth().height(11.dp).background(Red))
-            Tx("${no.kristo.kalender.today().dayOfMonth}", news(18.sp, Color(0xFF1B1A17), 24.sp))
-        }
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
-            Row { Tx(Kal41.TEST_TITLE, man(12.sp, FontWeight.Bold, Color(0xFF1B1A17)), Modifier.weight(1f)); Tx("nå", man(12.sp, FontWeight.Medium, Color(0xFF6B665C))) }
-            Tx("Tannlege kl. 17:30 · om 15 min", man(14.sp, FontWeight.Bold, Color(0xFF1B1A17)))
-            Tx("Varsler virker.", man(13.sp, FontWeight.Medium, Color(0xFF3D3A33)))
-        }
+    val exec = ctx.mainExecutor
+    val b = android.hardware.biometrics.BiometricPrompt.Builder(ctx)
+        .setTitle("Logg inn den andre enheten")
+        .setSubtitle("Bekreft at det er deg")
+    if (Build.VERSION.SDK_INT >= 30) {
+        b.setAllowedAuthenticators(android.hardware.biometrics.BiometricManager.Authenticators.BIOMETRIC_WEAK or android.hardware.biometrics.BiometricManager.Authenticators.DEVICE_CREDENTIAL)
+    } else if (Build.VERSION.SDK_INT >= 29) {
+        @Suppress("DEPRECATION")
+        b.setDeviceCredentialAllowed(true)
+    } else {
+        b.setNegativeButton("Avbryt", exec) { _, _ -> done(false) }
     }
+    val cb = object : android.hardware.biometrics.BiometricPrompt.AuthenticationCallback() {
+        override fun onAuthenticationSucceeded(result: android.hardware.biometrics.BiometricPrompt.AuthenticationResult?) { done(true) }
+        override fun onAuthenticationError(errorCode: Int, errString: CharSequence?) { done(false) }
+    }
+    runCatching { b.build().authenticate(android.os.CancellationSignal(), exec, cb) }.onFailure { done(false) }
 }

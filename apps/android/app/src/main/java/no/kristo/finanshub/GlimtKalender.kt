@@ -5,7 +5,7 @@ import org.json.JSONObject
 /*
  * Prompt 70 (GLIMTCAL70, claude-code-glimt-kalender-ikke-spor.md): Glimt legger avtalen rett i standardkalenderen og bekrefter
  * med kort A. Serveren sender kortdata i actions[].result.card70 (POST /api/glimt/agent og /stream) eller card {k:'cal70', …}
- * (/api/assist). Her: data og kall (PATCH move.url {calendarId}, POST undo.url). Visningen ligger i ui/Cal70Card.kt.
+ * (/api/assist). Her: data og kall (PATCH move.url {calendarId}, POST undo.url). Visningen ligger i ui/GlimtKalenderkort.kt.
  */
 
 /** card70 fra en utført calendar.create som kort ({k:'cal70', …}), ellers null. */

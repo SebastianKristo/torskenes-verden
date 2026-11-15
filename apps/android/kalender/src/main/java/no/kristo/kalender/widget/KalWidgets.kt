@@ -127,7 +127,7 @@ object KalSync {
         }
     }
 
-    // Prompt 70: + 4 × 2 og 4 × 4 måned (KalWidgets70.kt).
+    // Prompt 70: + 4 × 2 og 4 × 4 måned (UkeOgManedWidgets.kt).
     val ALL: List<GlanceAppWidget> get() = listOf(KalDateWidget(), KalNextWidget(), KalAgendaWidget(), KalClockWidget(), KalWeek70Widget(), KalMonth70Widget())
 
     suspend fun redraw(ctx: Context) { ALL.forEach { w -> runCatching { w.updateAll(ctx) } } }
@@ -207,7 +207,7 @@ class KalDateWidget : GlanceAppWidget() {
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         provideContent {
             val st by KalStore.data.collectAsState()
-            // Prompt 70: Material You / One UI-designet (KalWidgets70.kt → Small70).
+            // Prompt 70: Material You / One UI-designet (UkeOgManedWidgets.kt → Small70).
             val w = W70(context).also { st.hashCode() }
             androidx.glance.GlanceTheme { Small70(w) }
         }
@@ -244,7 +244,7 @@ private fun NextBody(w: WData) {
 /* ---------------- 4 × 3 I dag og i morgen ---------------- */
 
 class KalAgendaWidget : GlanceAppWidget() {
-    // Prompt 70: skalerbar agenda (SizeMode.Responsive) i Material You / One UI-stil (KalWidgets70.kt → Agenda70).
+    // Prompt 70: skalerbar agenda (SizeMode.Responsive) i Material You / One UI-stil (UkeOgManedWidgets.kt → Agenda70).
     override val sizeMode: SizeMode = SizeMode.Responsive(AGENDA_SIZES)
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         provideContent {

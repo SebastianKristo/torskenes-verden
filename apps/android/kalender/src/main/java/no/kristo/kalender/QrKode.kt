@@ -1,5 +1,14 @@
 package no.kristo.kalender
 
+import no.kristo.felles.nett.openSikker
+
+import android.net.Uri
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.launch
+
 /*
  * Prompt 46 (KAL46): en liten QR-koder (byte-modus, feilretting M, versjon 1–15) for «Logg inn med QR-kode» i Kalender for
  * Android. Ingen nye avhengigheter (iOS/Mac bruker CoreImage). Etter ISO/IEC 18004 – samme oppsett som Nayukis referansekoder:
@@ -283,6 +292,188 @@ object KalScan46 {
                 "download" in m || "module" in m -> "Skanneren lastes ned fra Google Play … prøv igjen om litt. Du kan også lime inn koden."
             code == com.google.mlkit.common.MlKitException.CODE_SCANNER_GOOGLE_PLAY_SERVICES_VERSION_TOO_OLD -> "Google Play-tjenester må oppdateres for å skanne. Lim inn koden i stedet."
             else -> "Kunne ikke skanne nå. Prøv igjen, eller lim inn koden."
+        }
+    }
+}
+
+/* ---------------- QR-innlogging (claude-code-qr-innlogging-finans-kalender.md) ---------------- */
+
+/**
+ * Vis (ikke innlogget): POST /api/auth/qr/session {app:'kalender', platform:'android', device} → {sessionId, code, qr, clientKey,
+ * expiresAt, ttl}. QR-en (papir://login?s=…&c=…&srv=<offentlig URL>) har aldri et token. Appen poller
+ * GET /api/auth/qr/session/:id (X-QR-Key) hvert 2. sekund; når en innlogget mobil har godkjent, kommer ÉN gang et eget, nytt
+ * token for denne enheten. Ny kode ved utløp (2 min).
+ * Skann (innlogget): koden limes inn eller kommer fra en lenke → POST /api/auth/qr/scan {code} → bekreftelse med enhet, sted og
+ * matchkode → fingeravtrykk/PIN → POST /api/auth/qr/approve {sid, approve, biometric:true, match}. Koden sendes bare til
+ * serveren denne appen er logget inn på – aldri til adressen i QR-en.
+ */
+object Kal46Qr {
+    /** idle | loading | pending | scanned | done | expired | err */
+    var phase by mutableStateOf("idle")
+    var matrix by mutableStateOf<Array<BooleanArray>?>(null)
+    var secondsLeft by mutableStateOf(0)
+    var match by mutableStateOf("")
+    var err by mutableStateOf("")
+    private var job: kotlinx.coroutines.Job? = null
+
+    private suspend fun http(method: String, url: String, body: org.json.JSONObject?, key: String?, token: String?): Pair<Int, String> =
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            val c = java.net.URL(url).openSikker()
+            try {
+                c.requestMethod = method
+                c.connectTimeout = Kal46Srv.TIMEOUT; c.readTimeout = Kal46Srv.TIMEOUT
+                c.setRequestProperty("Accept", "application/json")
+                c.setRequestProperty("X-Client", "kalender-android")
+                key?.let { c.setRequestProperty("X-QR-Key", it) }
+                token?.let { c.setRequestProperty("Authorization", "Bearer $it") }
+                if (body != null) {
+                    c.doOutput = true
+                    c.setRequestProperty("Content-Type", "application/json; charset=utf-8")
+                    c.outputStream.use { it.write(body.toString().toByteArray()) }
+                }
+                val code = c.responseCode
+                val txt = (if (code < 400) c.inputStream else c.errorStream)?.bufferedReader()?.use { it.readText() } ?: ""
+                code to txt
+            } catch (e: java.io.IOException) { 0 to "" } finally { c.disconnect() }
+        }
+
+    fun stop() { job?.cancel(); job = null; phase = "idle"; matrix = null }
+
+    /** Lager en ny økt og viser QR-en. base = adressen appen kan nå (ingen Docker-/loopback-adresse). */
+    fun start(vm: KalVm) {
+        job?.cancel()
+        phase = "loading"; err = ""; match = ""; matrix = null
+        val ctx = vm.getApplication<android.app.Application>()
+        job = vm.viewModelScope.launch {
+            val cands = Kal41.candidates(ctx).filter { !Kal46Srv.isContainerIp(Kal46Srv.host(it)) }
+            val base = Kal41.firstReachable(cands.take(3)) ?: cands.firstOrNull() ?: Kal41.DEFAULT_BASE
+            val dev = "Kalender (Android · ${KalApi.device})"
+            val (st, raw) = http("POST", base.trimEnd('/') + "/api/auth/qr/session",
+                org.json.JSONObject().put("app", "kalender").put("platform", "android").put("device", dev), null, null)
+            if (st == 404 || st == 405) { phase = "err"; err = "Serveren har ikke QR-innlogging ennå. Oppdater Homelab-serveren."; return@launch }
+            if (st == 429) { phase = "err"; err = "For mange forsøk. Vent litt og prøv igjen."; return@launch }
+            if (st == 0) { phase = "err"; err = "Fikk ikke kontakt med serveren (${Kal46Srv.display(base)})."; return@launch }
+            val o = runCatching { org.json.JSONObject(raw) }.getOrNull()
+            val id = o?.optString("sessionId").orEmpty()
+            val key = o?.optString("clientKey").orEmpty()
+            val qr = o?.optString("qr").orEmpty().ifBlank {
+                "papir://login?s=$id&c=" + (o?.optString("code").orEmpty()) + "&srv=" + Uri.encode(base)
+            }
+            if (st >= 400 || id.isBlank()) { phase = "err"; err = o?.optString("error")?.ifBlank { null } ?: "Kunne ikke lage en QR-kode."; return@launch }
+            matrix = KalQr46.encode(qr)
+            val ttl = o?.optInt("ttl", 120) ?: 120
+            val until = System.currentTimeMillis() + ttl * 1000L
+            phase = "pending"
+            while (true) {
+                secondsLeft = ((until - System.currentTimeMillis()) / 1000).toInt().coerceAtLeast(0)
+                if (secondsLeft <= 0) { start(vm); return@launch }
+                kotlinx.coroutines.delay(2000)
+                val (ps, pr) = http("GET", base.trimEnd('/') + "/api/auth/qr/session/" + Uri.encode(id), null, key, null)
+                if (ps == 404 || ps == 410) { start(vm); return@launch }
+                if (ps != 200) continue
+                val p = runCatching { org.json.JSONObject(pr) }.getOrNull() ?: continue
+                when (p.optString("state")) {
+                    "scanned" -> { phase = "scanned"; match = p.optString("match") }
+                    "denied" -> { phase = "err"; err = "Innloggingen ble avvist på mobilen."; return@launch }
+                    "expired" -> { start(vm); return@launch }
+                    "done", "approved" -> {
+                        val tok = p.optString("token")
+                        if (tok.isBlank()) continue
+                        p.optString("refresh").takeIf { it.isNotBlank() }?.let { Kal41.saveRefresh(ctx, it) }
+                        val u = p.optJSONObject("user")
+                        val un = u?.optString("username").orEmpty()
+                        val s = KalSession(base.trimEnd('/'), tok, un, u?.optString("name")?.ifBlank { null } ?: un, "qr")
+                        KalAuth.rememberServer(ctx, base.trimEnd('/'))
+                        phase = "done"; matrix = null
+                        vm.signedIn41(s)
+                        vm.showToast("✓ Logget inn som " + s.name.ifBlank { "Homelab-kontoen" })
+                        return@launch
+                    }
+                }
+            }
+        }
+    }
+
+    /* ---------- Skann (innlogget) ---------- */
+
+    var scanOpen by mutableStateOf(false)
+    /** input | busy | ask | done | err */
+    var scanPhase by mutableStateOf("input")
+    var scanText by mutableStateOf("")
+    var scanMsg by mutableStateOf("")
+    var askSid by mutableStateOf("")
+    var askDevice by mutableStateOf("")
+    var askPlace by mutableStateOf("")
+    var askAccount by mutableStateOf("")
+    var askMatch by mutableStateOf("")
+
+    private val CODE = Regex("^[A-Za-z0-9_-]{4,}\\.[A-Za-z0-9_-]{4,}$")
+
+    /** «s.c» fra papir://login?s=…&c=…, homelab://login?c=…, https://<server>/l/<s.c> eller koden selv. null = ikke en kode. */
+    fun codeOf(raw: String): String? {
+        val t = raw.trim()
+        if (CODE.matches(t)) return t
+        val u = runCatching { Uri.parse(t) }.getOrNull() ?: return null
+        val s = runCatching { u.getQueryParameter("s") }.getOrNull().orEmpty()
+        val c = runCatching { u.getQueryParameter("c") }.getOrNull().orEmpty()
+        if (s.isNotBlank() && c.isNotBlank() && CODE.matches("$s.$c")) return "$s.$c"
+        if (CODE.matches(c)) return c
+        val segs = u.pathSegments ?: emptyList()
+        val i = segs.indexOf("l")
+        if (i >= 0 && i + 1 < segs.size && CODE.matches(segs[i + 1])) return segs[i + 1]
+        return segs.lastOrNull()?.takeIf { CODE.matches(it) }
+    }
+
+    fun openScan() { scanOpen = true; scanPhase = "input"; scanText = ""; scanMsg = "" }
+
+    private fun msgFor(e: KalApiException): String = when (e.status) {
+        0 -> "Fikk ikke kontakt med serveren. Prøv igjen."
+        403 -> "Denne innloggingen kan ikke godkjenne andre enheter. Bruk Papir Finans på mobilen, eller logg inn på nytt."
+        404, 405 -> "Serveren har ikke QR-innlogging ennå. Oppdater Homelab-serveren."
+        409, 410 -> "Koden er allerede brukt eller utløpt. Be om en ny kode på den andre enheten."
+        429 -> "For mange forsøk. Vent litt og prøv igjen."
+        else -> e.message ?: "Kunne ikke lese koden."
+    }
+
+    fun scan(vm: KalVm, raw: String) {
+        val s = vm.session ?: return
+        val code = codeOf(raw) ?: run { scanMsg = "Det er ikke en innloggingskode. Lim inn lenken eller koden som den andre enheten viser."; return }
+        val srv = runCatching { Uri.parse(raw.trim()).getQueryParameter("srv") }.getOrNull().orEmpty()
+        if (srv.isNotBlank() && Kal46Srv.host(srv).isNotBlank() && Kal46Srv.host(srv) != Kal46Srv.host(s.server)) {
+            scanPhase = "err"; scanMsg = "Koden er fra en annen server (${Kal46Srv.host(srv)}). Logg inn der i stedet."; return
+        }
+        scanPhase = "busy"; scanMsg = ""
+        vm.viewModelScope.launch {
+            try {
+                val o = org.json.JSONObject(s.api.post("/api/auth/qr/scan", org.json.JSONObject().put("code", code)))
+                val d = o.optJSONObject("device")
+                val name = d?.optString("name").orEmpty().ifBlank { d?.optString("os").orEmpty().ifBlank { "Ny enhet" } }
+                val os = d?.optString("os").orEmpty()
+                askDevice = if (os.isNotBlank() && !name.contains(os)) "$name · $os" else name
+                askPlace = listOf(d?.optString("place").orEmpty(), d?.optString("ip").orEmpty()).filter { it.isNotBlank() }.joinToString(" · ")
+                askAccount = o.optJSONObject("account")?.let { it.optString("name").ifBlank { it.optString("username") } }.orEmpty().ifBlank { s.name }
+                askMatch = o.optString("match")
+                askSid = o.optString("sid")
+                scanPhase = "ask"
+            } catch (e: KalApiException) { scanPhase = "err"; scanMsg = msgFor(e) } catch (e: org.json.JSONException) { scanPhase = "err"; scanMsg = "Uventet svar fra serveren." }
+        }
+    }
+
+    /** Etter fingeravtrykk/PIN (approve = true) eller Avbryt. */
+    fun answer(vm: KalVm, approve: Boolean) {
+        val s = vm.session ?: return
+        scanPhase = "busy"
+        vm.viewModelScope.launch {
+            try {
+                val body = org.json.JSONObject().put("sid", askSid).put("approve", approve).put("biometric", approve).put("match", askMatch)
+                val o = runCatching { org.json.JSONObject(s.api.post("/api/auth/qr/approve", body)) }.getOrNull() ?: org.json.JSONObject()
+                scanPhase = "done"
+                scanMsg = when {
+                    !approve -> "Innloggingen ble avvist. Den andre enheten får en ny kode."
+                    o.optBoolean("needs2fa") -> "Godkjent. Skriv koden fra autentiseringsappen på den andre enheten for å fullføre."
+                    else -> "$askDevice er logget inn som $askAccount. Du finner den under Innstillinger → Enheter i Homelab."
+                }
+            } catch (e: KalApiException) { scanPhase = "err"; scanMsg = msgFor(e) }
         }
     }
 }

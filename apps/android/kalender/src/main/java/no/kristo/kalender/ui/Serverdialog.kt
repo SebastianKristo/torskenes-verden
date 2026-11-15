@@ -45,7 +45,7 @@ import no.kristo.kalender.Kal47Srv
 import no.kristo.kalender.LocalK
 import no.kristo.kalender.Red
 
-/* Prompt 47: Innstillinger → Server (ekstern og lokal adresse, standardverdier, Test, Tilbakestill til standard). Logikk: Kal47.kt. */
+/* Prompt 47: Innstillinger → Server (ekstern og lokal adresse, standardverdier, Test, Tilbakestill til standard). Logikk: Serveradresser.kt. */
 
 @Composable
 fun ServerDialog47(onClose: () -> Unit, login: Boolean = false) {

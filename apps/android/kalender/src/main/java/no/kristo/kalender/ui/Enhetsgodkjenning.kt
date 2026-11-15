@@ -43,10 +43,8 @@ import no.kristo.kalender.KalVm
 import no.kristo.kalender.LocalK
 import no.kristo.kalender.Red
 
-/*
- * Prompt 51 (KAL51): Kalender Android – visningene for godkjenning av ny enhet, Innstillinger → SIKKERHET og
- * «Nytt i denne versjonen». Logikken ligger i Kal51.kt (K51State og K41State.startApproval51).
- */
+/* Godkjenning av ny enhet og Innstillinger → SIKKERHET (prompt 51, KAL51). Logikken ligger i SikkerhetOgDrift.kt
+ * (K51State og K41State.startApproval51). */
 
 /** «Venter på godkjenning» (LoginScreen41, fase «approve51»). */
 @Composable
@@ -145,43 +143,4 @@ private fun confirm51(ctx: android.content.Context, title: String, done: (Boolea
         override fun onAuthenticationError(errorCode: Int, errString: CharSequence?) { done(false) }
     }
     runCatching { b.build().authenticate(android.os.CancellationSignal(), exec, cb) }.onFailure { done(false) }
-}
-
-/* ---------- «Nytt i denne versjonen» ---------- */
-
-/** Over hele appen (KalRoot). Tegner ingenting når det ikke er noe nytt. */
-@Composable
-fun News51Host(vm: KalVm) {
-    val n = vm.k51.news ?: return
-    val k = LocalK.current
-    BackHandler { vm.k51.dismissNews() }
-    Box(Modifier.fillMaxSize().background(k.dim).tap("Lukk") { vm.k51.dismissNews() }.windowInsetsPadding(WindowInsets.systemBars).padding(22.dp), contentAlignment = Alignment.Center) {
-        News51Card(n) { Hap.tick(); vm.k51.dismissNews() }
-    }
-}
-
-@Composable
-private fun News51Card(n: Kal51News, close: () -> Unit) {
-    val k = LocalK.current
-    Column(
-        Modifier.widthIn(max = 440.dp).fillMaxWidth().shadow(16.dp, RoundedCornerShape(24.dp)).clip(RoundedCornerShape(24.dp)).background(k.bg)
-            .border(1.dp, k.line, RoundedCornerShape(24.dp)).tap(null) { }.padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Tx("NYTT I DENNE VERSJONEN", mono(10.5.sp, Red, .12f))
-        Tx(n.title.ifBlank { "Versjon " + n.version }, news(26.sp, k.ink, 30.sp), maxLines = 3)
-        Column(Modifier.heightIn(max = 320.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            n.items.forEach { t ->
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Tx("•", man(14.sp, FontWeight.Bold, Red))
-                    Tx(t, man(14.sp, FontWeight.Medium, k.ink, 20.sp), maxLines = 8)
-                }
-            }
-        }
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Tx(n.version + (if (n.date.isBlank()) "" else " · " + n.date), mono(11.sp, k.mut2).copy(textAlign = TextAlign.Start), Modifier.weight(1f))
-            Spacer(Modifier.height(1.dp))
-            InkPill("Fint", close)
-        }
-    }
 }

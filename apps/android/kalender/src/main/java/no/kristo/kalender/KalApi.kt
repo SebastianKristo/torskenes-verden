@@ -31,7 +31,7 @@ import javax.net.ssl.SSLException
  *  - Bare plattformens HttpURLConnection og org.json (ingen nye avhengigheter).
  */
 
-/** Prompt 51: approval51 er satt når serveren svarer 403 DEVICE_APPROVAL_REQUIRED (ny enhet må godkjennes, Kal51.kt). */
+/** Prompt 51: approval51 er satt når serveren svarer 403 DEVICE_APPROVAL_REQUIRED (ny enhet må godkjennes, SikkerhetOgDrift.kt). */
 class KalApiException(message: String, val status: Int = 0, val needsTotp: Boolean = false, val approval51: Kal51Approval? = null) : Exception(message)
 
 class KalApi(private val base: String, private val token: String?) {

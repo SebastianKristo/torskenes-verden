@@ -56,31 +56,22 @@ import no.kristo.kalender.KalVm
 import no.kristo.kalender.LocalK
 import no.kristo.kalender.Red
 import no.kristo.kalender.today
+import android.os.Build
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.window.Dialog
+import no.kristo.kalender.Hap
+import no.kristo.kalender.Kal46Guard
+import no.kristo.kalender.Kal46Prefs
+import no.kristo.kalender.Kal46Qr
+import no.kristo.kalender.Kal46Rask
+import no.kristo.kalender.setPref46
 
-/*
- * Prompt 44 (KAL44): Compose-delene – «I dag»-ikonet, «Sted eller adresse» med forslag, DELTAKERE, Media-utgivelse og
- * deltakere i detaljarket, og konflikt / gjentakende ved Lagre. Fasit: Kalender App.dc.html og Kalender.dc.html.
- */
-
-/** 24 × 24: avrundet ramme (6 dp, 1,8 dp strek i tekstfarge), rød topp-stripe 6 dp, dagens tall midtstilt (Manrope 800, 10,5 sp). */
-@Composable
-fun TodayIcon44(size: Dp = 24.dp) {
-    val k = LocalK.current
-    val n = today().dayOfMonth
-    val f = size.value / 24f
-    Column(Modifier.size(size).clip(RoundedCornerShape(6.dp * f)).border(1.8.dp * f, k.ink, RoundedCornerShape(6.dp * f))) {
-        Box(Modifier.fillMaxWidth().height(6.dp * f).background(Red))
-        Box(Modifier.fillMaxWidth().weight(1f).padding(bottom = 1.dp), contentAlignment = Alignment.Center) {
-            Tx("$n", man((10.5f * f).sp, FontWeight.ExtraBold, k.ink))
-        }
-    }
-}
-
-/** Rund «I dag»-knapp (44 dp) med ikonet – brukes når det er trangt i toppfeltet. */
-@Composable
-fun TodayBtn44(onClick: () -> Unit) {
-    Box(Modifier.size(44.dp).tap("I dag", onClick = onClick), contentAlignment = Alignment.Center) { TodayIcon44() }
-}
+/* Feltene i hendelsesarkene (prompt 44 og 46): «Sted eller adresse» med forslag, DELTAKERE, Media-utgivelse og deltakere i
+ * detaljarket, «Kunne ikke åpne ny hendelse» og «✦ Glimt» / sted i GLIMT FORSTÅR. Fasit: Kalender App.dc.html og Kalender.dc.html. */
 
 /* ---------------- Sted eller adresse ---------------- */
 
@@ -237,30 +228,38 @@ fun AttList44(att: List<KAtt44>) {
     }
 }
 
-/* ---------------- Konflikt og gjentakende ---------------- */
-
-/** «Endret et annet sted. Behold din eller deres?» og «Bare denne / Denne og fremtidige / Alle». */
+/** Arket kom ikke fram: feilmelding med «Prøv igjen» i stedet for grå skjerm. */
 @Composable
-fun Dialogs44(vm: KalVm) {
+fun NewFail46(vm: KalVm, modifier: Modifier = Modifier) {
     val k = LocalK.current
-    if (vm.conflict44 != null) Box(Modifier.fillMaxSize().background(k.dim).tap("Lukk") { vm.resolveConflict44(false) }, contentAlignment = Alignment.Center) {
-        Column(Modifier.padding(16.dp).widthIn(max = 420.dp).clip(RoundedCornerShape(20.dp)).background(k.card).tap(null) {}.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Tx("Endret et annet sted", news(22.sp, k.ink))
-            Tx("Hendelsen er endret i kilden siden du åpnet den. Behold din eller deres?", man(13.5.sp, FontWeight.Medium, k.mut), maxLines = 3)
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                LinePill("Bruk deres", { vm.resolveConflict44(false) })
-                InkPill("Behold din", { vm.resolveConflict44(true) })
-            }
+    if (Kal46Guard.failed == null) return
+    Column(
+        modifier.padding(horizontal = 16.dp).widthIn(max = 420.dp).fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(k.card)
+            .border(1.dp, k.line, RoundedCornerShape(20.dp)).padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Tx("Kunne ikke åpne ny hendelse", man(15.sp, FontWeight.Bold, k.ink))
+        Tx("Prøv igjen, eller skriv hendelsen i feltet nederst.", man(13.sp, FontWeight.Medium, k.mut), maxLines = 3)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            InkPill("Prøv igjen", { Hap.tick(); Kal46Guard.retry(vm) })
+            LinePill("Lukk", { Hap.tick(); Kal46Guard.failed = null })
         }
     }
-    if (vm.askScope44) Box(Modifier.fillMaxSize().background(k.dim).tap("Lukk") { vm.askScope44 = false }, contentAlignment = Alignment.Center) {
-        Column(Modifier.padding(16.dp).widthIn(max = 420.dp).clip(RoundedCornerShape(20.dp)).background(k.card).tap(null) {}.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Tx("Gjentakende hendelse", news(22.sp, k.ink))
-            listOf("this" to "Bare denne", "future" to "Denne og fremtidige", "all" to "Alle").forEach { (sc, n) ->
-                Box(Modifier.fillMaxWidth().height(44.dp).clip(RoundedCornerShape(22.dp)).border(1.dp, k.line, RoundedCornerShape(22.dp)).tap(n) { vm.saveForm44(sc) },
-                    contentAlignment = Alignment.Center) { Tx(n, man(14.sp, FontWeight.Bold, k.ink)) }
-            }
-            Box(Modifier.fillMaxWidth().height(40.dp).tap("Avbryt") { vm.askScope44 = false }, contentAlignment = Alignment.Center) { Tx("Avbryt", man(13.5.sp, FontWeight.Bold, k.mut)) }
-        }
+}
+
+/** «✦ Glimt» / «Glimt tenker …» ved GLIMT FORSTÅR. */
+@Composable
+fun RaskBadge46(glimt: Boolean) {
+    val k = LocalK.current
+    when {
+        Kal46Rask.thinking -> Tx("Glimt tenker …", man(11.sp, FontWeight.Bold, k.mut))
+        glimt -> Tx("✦ Glimt", man(11.sp, FontWeight.Bold, k.acc))
     }
+}
+
+@Composable
+fun RaskPlace46(loc: String, address: String) {
+    val k = LocalK.current
+    if (loc.isBlank()) return
+    Tx("📍 " + (if (address.isBlank()) loc else "$loc · $address"), man(12.5.sp, FontWeight.SemiBold, k.ink), maxLines = 2)
 }

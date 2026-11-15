@@ -52,7 +52,7 @@ import java.time.temporal.ChronoUnit
 
 /*
  * Prompt 26 (ANDROID-A): Hjem-kortet KALENDER. Selve Kalender-siden er erstattet av Kalender v2 i prompt 27
- * (Calendar27Ui.kt, KalenderScreen27): kortene, rediger-modusen og widget-forhåndsvisningene nederst er fjernet.
+ * (KalenderSkjerm.kt, KalenderScreen27): kortene, rediger-modusen og widget-forhåndsvisningene nederst er fjernet.
  */
 
 @Composable

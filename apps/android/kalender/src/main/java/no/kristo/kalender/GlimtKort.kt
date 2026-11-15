@@ -10,7 +10,7 @@ import java.time.LocalDate
  * Prompt 70 (GLIMTCAL70, claude-code-glimt-kalender-ikke-spor.md): kort C i Glimt-panelet – samme motor og kort som Hjem, i
  * Kalenders farger. /api/assist gir card {k:'cal70', …} (eller created.card70) og agent.ask. Ingen «Hvilken kalender?»-tekst:
  * spørsmål (bare når noe mangler) vises som knapper; svaret går til POST /api/glimt/agent med samme tekst og context.calendarId
- * (kalendervalg) eller teksten med datoen («{dato}» → 17.12.2026). Visningen ligger i ui/KalCal70Ui.kt.
+ * (kalendervalg) eller teksten med datoen («{dato}» → 17.12.2026). Visningen ligger i ui/GlimtKalenderkort.kt.
  */
 
 data class K70Cal(val id: String, val name: String, val color: String, val sub: String)

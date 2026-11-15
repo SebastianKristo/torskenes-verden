@@ -259,7 +259,7 @@ private fun PickBox(text: String, mono: Boolean = false, onClick: () -> Unit) {
     }
 }
 
-/* ---------------- Sidemenyen Kalendere: se Kal35Ui.kt (prompt 35) ---------------- */
+/* ---------------- Sidemenyen Kalendere: se Sidemeny.kt (prompt 35) ---------------- */
 
 @Composable
 fun OptRow(n: String, sub: String, on: Boolean, onClick: () -> Unit) {

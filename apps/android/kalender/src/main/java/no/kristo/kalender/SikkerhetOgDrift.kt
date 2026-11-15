@@ -1,7 +1,6 @@
 package no.kristo.kalender
 
 import no.kristo.felles.android.SikkerLagring
-
 import no.kristo.felles.nett.openSikker
 
 import android.app.Application

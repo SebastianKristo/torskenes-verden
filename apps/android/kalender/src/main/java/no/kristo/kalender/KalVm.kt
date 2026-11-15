@@ -45,7 +45,7 @@ class KGMsg(val id: Long, val user: Boolean, val text: String) {
     var engine by mutableStateOf("lokal")
     /** Prompt 34: Glimt fikk ikke svar – svaret viser feilen med Prøv igjen og Åpne AI-kontroll. */
     var err by mutableStateOf(false)
-    /** Prompt 70: kort C (card70) og spørsmål med knapper (ask) fra Glimt, ui/KalCal70Ui.kt. */
+    /** Prompt 70: kort C (card70) og spørsmål med knapper (ask) fra Glimt, ui/GlimtKalenderkort.kt. */
     var c70 by mutableStateOf<JSONObject?>(null)
     var ask70 by mutableStateOf<JSONObject?>(null)
     var q: String = ""
@@ -119,11 +119,11 @@ class KalVm(app: Application) : AndroidViewModel(app) {
     val g36 = no.kristo.kalender.ui.KGoogleUi36()
     /** Prompt 39: Kalendere (1a), Rediger (1b), Legg til (1c) og Google-velgeren (1d). */
     val k39 = no.kristo.kalender.ui.K39State(this)
-    /** Prompt 41: innlogging uten adresse (Fortsett som / PKCE), bursdagskort, Glimt-søk og testvarsel (Kal41.kt). */
+    /** Prompt 41: innlogging uten adresse (Fortsett som / PKCE), bursdagskort, Glimt-søk og testvarsel (Innlogging.kt). */
     val k41 = K41State(this)
-    /** Prompt 51: ventende enheter (Sikkerhet), «Nytt i denne versjonen», flagg og krasjrapporter (Kal51.kt). */
+    /** Prompt 51: ventende enheter (Sikkerhet), «Nytt i denne versjonen», flagg og krasjrapporter (SikkerhetOgDrift.kt). */
     val k51 = K51State(this)
-    /** Prompt 43: oppsett på Fold/nettbrett (tlf | delt | full) og om steg 2 av 2 er vist (Kal43.kt). */
+    /** Prompt 43: oppsett på Fold/nettbrett (tlf | delt | full) og om steg 2 av 2 er vist (Oppdatering.kt). */
     val k43 = K43State(app)
     /** Prompt 43: «Full skjerm» med dagspanel – trykk på en dag i måneden bytter bare dag (Wide43 setter den). */
     var full43 by mutableStateOf(false)
@@ -635,7 +635,7 @@ class KalVm(app: Application) : AndroidViewModel(app) {
 
     /**
      * Prompt 86 (AND86): kalender://ny?text=… kan startes av en nettside eller en annen app. Ville teksten laget en hendelse
-     * uten flere trykk, spør vi først («Vil du … ?» · Avbryt / Utfør, ui/Kal86Ui.kt). Del → Kalender er brukerens eget valg og
+     * uten flere trykk, spør vi først («Vil du … ?» · Avbryt / Utfør, ui/Lenkebekreftelse.kt). Del → Kalender er brukerens eget valg og
      * går som før, og lenker som bare åpner en side eller fyller skrivefeltet, åpnes som før.
      */
     var ask86 by mutableStateOf<String?>(null)

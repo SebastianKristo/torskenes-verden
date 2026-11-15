@@ -25,7 +25,7 @@ data class KEv(
     val subjectHex: Long? = null, val address: String? = null, val lat: Double? = null, val lon: Double? = null,
     /** Prompt 42: trekk fra Abonnementer (Finans): beløp, konto, logo, merke TREKK / PRØVE / ÅRLIG. null for alle andre. */
     val ab: KAb42? = null,
-    /** Prompt 44: Media-status, deltakere, gjentakelse og etag (Kal44.kt). null for de fleste. */
+    /** Prompt 44: Media-status, deltakere, gjentakelse og etag (OktOgHendelser.kt). null for de fleste. */
     val x44: KX44? = null,
 ) {
     val all: Boolean get() = s == null

@@ -18,7 +18,7 @@ import no.kristo.kalender.widget.KalSync
 class KalApplication : Application() {
     override fun onCreate() {
         super.onCreate()
-        // Prompt 51: krasjfangeren og enhetsnøkkelen først (Kal51.kt).
+        // Prompt 51: krasjfangeren og enhetsnøkkelen først (SikkerhetOgDrift.kt).
         Kal51.init(this)
         Kal89.migrate(this) // prompt 89: gammel, feilstavet standardadresse → os.smarthjemeksperten.no
         KalNotify.channels(this)

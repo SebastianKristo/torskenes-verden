@@ -171,7 +171,7 @@ test('B: ingen HTTP-klient går utenom regelen (alle modulene)', () => {
   assert.match(code('Geo.kt'), /const val WORLD_ATLAS = "https:\/\//);
   assert.ok(ktFiles(SRC).filter((f) => /openSikker\(\)/.test(raw(f))).length >= 15, 'kallene i :app går via openSikker()');
   assert.match(code('KalApi.kt', KAL), /URL\(base\.trimEnd\('\/'\) \+ path\)\.openSikker\(\)/);
-  assert.match(code('WearApi51.kt', WEAR), /\.openSikker\(\)/);
+  assert.match(code('WearApi.kt', WEAR), /\.openSikker\(\)/);
 
   const okh = code('LokalOkHttp.kt');
   assert.match(okh, /if \(!u\.isHttps && !LokaltNett\.lokalVert\(u\.host\)\) throw UsikretHttp\(\)/);
@@ -187,7 +187,7 @@ test('B: ingen HTTP-klient går utenom regelen (alle modulene)', () => {
 
 test('B: brukeren får teksten, og konfigurasjonen har ingen hardkodet adresse', () => {
   assert.match(code('Api.kt'), /catch \(e: UsikretHttp\) \{\s*throw ApiException\(LokaltNett\.MSG\)[\s\S]*?catch \(e: IOException\)/, 'Api: før den generelle nettverksfeilen');
-  assert.match(code('WearApi51.kt', WEAR), /catch \(e: UsikretHttp\) \{\s*throw WearApiError51\(LokaltNett\.MSG\)[\s\S]*?catch \(e: IOException\)/);
+  assert.match(code('WearApi.kt', WEAR), /catch \(e: UsikretHttp\) \{\s*throw WearApiError51\(LokaltNett\.MSG\)[\s\S]*?catch \(e: IOException\)/);
   assert.match(code('KalApi.kt', KAL), /catch \(e: IOException\) \{\s*throw KalApiException\(e\.message \?: "Nettverksfeil"\)/, 'Kalender viser meldingen fra unntaket');
   assert.match(code('P47.kt'), /fun cleartextBlocked47\(u: String\): Boolean = !LokaltNett\.ok\(u\)/, 'innstillingene bruker samme regel');
   for (const f of ['P47.kt', 'ui/Ui47.kt', 'Ntfy51.kt']) assert.ok(!/tillater bare http/.test(code(f)), `${f}: gammel tekst om én fast adresse`);
@@ -303,7 +303,7 @@ test('A: arbeidsflytene dekoder nøkkelen utenfor repoet, bare når hemmelighete
 });
 
 test('A: Homelab gir bare token til en Kalender-app med samme signeringssertifikat', () => {
-  const p = code('Kal33.kt');
+  const p = code('KalenderApp.kt');
   assert.match(p, /private fun sameSigner86\(ctx: Context, uid: Int\): Boolean =\s*runCatching \{ ctx\.packageManager\.checkSignatures\(uid, android\.os\.Process\.myUid\(\)\) == PackageManager\.SIGNATURE_MATCH \}\.getOrDefault\(false\)/);
   const call = p.slice(p.indexOf('override fun call('));
   const perm = call.indexOf('checkCallingPermission(PERM)'), pkg = call.indexOf('KalenderApp33.PKG !in caller'), sig = call.indexOf('!sameSigner86(ctx, Binder.getCallingUid())'), konto = call.indexOf('AccountStore(ctx)');
@@ -312,7 +312,7 @@ test('A: Homelab gir bare token til en Kalender-app med samme signeringssertifik
   const ka = code('KalApi.kt', KAL);
   assert.match(ka, /fun homelabSameKey86\(ctx: Context\): Boolean =\s*runCatching \{ ctx\.packageManager\.checkSignatures\(ctx\.packageName, HOMELAB_PKG\) == android\.content\.pm\.PackageManager\.SIGNATURE_MATCH \}\.getOrDefault\(false\)/);
   assert.match(ka, /if \(!homelabSameKey86\(ctx\)\) return@withContext null to "Homelab-appen er signert med en annen nøkkel/);
-  const k41 = code('Kal41.kt', KAL);
+  const k41 = code('Innlogging.kt', KAL);
   assert.match(k41, /!KalAuth\.homelabInstalled\(ctx\) \|\| !KalAuth\.homelabSameKey86\(ctx\)\) return@withContext null/);
   assert.match(k41, /if \(KalAuth\.homelabInstalled\(ctx\) && !KalAuth\.homelabSameKey86\(ctx\)\) return@withContext null to/);
 });
@@ -385,7 +385,7 @@ test('C: Kalender – kalender://ny?text=… som ville laget en hendelse, spør 
   assert.match(vm, /private fun autoQuick86\(t: String\) = t\.isNotBlank\(\) && looksPasted\(t\) && parseQuick\(t, drem, defDur = dd\)\.s == null/);
   assert.match(vm, /fun confirmLink86\(\) \{ val t = ask86 \?: return; ask86 = null; quick\(t\) \}/);
   assert.match(vm, /if \(autoQuick86\(t\)\) quick\(t\) else \{ ct = t; focusComposer\+\+ \}/, 'Del → Kalender går som før');
-  const ui = code('ui/Kal86Ui.kt', KAL);
+  const ui = code('ui/Lenkebekreftelse.kt', KAL);
   assert.match(ui, /TextButton\(\{ vm\.confirmLink86\(\) \}\) \{ Text\("Utfør"/);
   assert.match(ui, /TextButton\(\{ vm\.ask86 = null \}\) \{ Text\("Avbryt"/);
   assert.match(code('ui/KalRoot.kt', KAL), /if \(vm\.session != null\) Link86Host\(vm\)/);

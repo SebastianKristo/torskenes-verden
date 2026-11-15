@@ -49,8 +49,8 @@ test('domenet: ingen gammel stavemåte noe sted i apps/android (bare den oppdelt
   assert.match(rd(join(FELLES, 'ServerAdresse.kt')), /const val GAMMEL_STANDARD: String = "https:\/\/os\.smarthjem" \+ "experten\.no"/);
   assert.match(code(APP, 'Regel89.kt'), /fun isOld\(s: String\?\): Boolean = ServerAdresse\.erGammelStandard\(s\)/);
   assert.match(code(APP, 'Regel89.kt'), /fun migrate\(s: String\?\): String\? = ServerAdresse\.migrer\(s\)/);
-  assert.match(code(KAL, 'Kal89.kt'), /fun isOld\(s: String\?\): Boolean = ServerAdresse\.erGammelStandard\(s\)/);
-  assert.match(code(WEAR, 'WearApi51.kt'), /internal fun migrate89\(s: String\?\): String\? = ServerAdresse\.migrer\(s\)/);
+  assert.match(code(KAL, 'Serveradresser.kt'), /fun isOld\(s: String\?\): Boolean = ServerAdresse\.erGammelStandard\(s\)/);
+  assert.match(code(WEAR, 'WearApi.kt'), /internal fun migrate89\(s: String\?\): String\? = ServerAdresse\.migrer\(s\)/);
 });
 
 test('domenet: standardverdiene er os.smarthjemeksperten.no, lokal uendret http://10.69.1.39:3000', () => {
@@ -59,9 +59,9 @@ test('domenet: standardverdiene er os.smarthjemeksperten.no, lokal uendret http:
   assert.match(code(APP, 'P41.kt'), /const val DEFAULT_SERVER41 = DEFAULT_EXTERNAL47/);
   assert.match(code(FELLES, 'ServerAdresse.kt'), /const val STANDARD: String = "https:\/\/os\.smarthjemeksperten\.no"/);
   assert.match(code(APP, 'Regel89.kt'), /const val EXTERNAL = ServerAdresse\.STANDARD/);
-  assert.match(code(KAL, 'Kal41.kt'), /const val DEFAULT_BASE = "https:\/\/os\.smarthjemeksperten\.no"/);
-  assert.match(code(KAL, 'Kal41.kt'), /const val DEFAULT_LOCAL = "http:\/\/10\.69\.1\.39:3000"/);
-  assert.match(code(WEAR, 'WearApi51.kt'), /const val DEFAULT_SERVER51 = ServerAdresse\.STANDARD/);
+  assert.match(code(KAL, 'Innlogging.kt'), /const val DEFAULT_BASE = "https:\/\/os\.smarthjemeksperten\.no"/);
+  assert.match(code(KAL, 'Innlogging.kt'), /const val DEFAULT_LOCAL = "http:\/\/10\.69\.1\.39:3000"/);
+  assert.match(code(WEAR, 'WearApi.kt'), /const val DEFAULT_SERVER51 = ServerAdresse\.STANDARD/);
   // Klartekst er fortsatt bare for lokalt nett (prompt 86) – ingen ny vert i nettverkskonfigen.
   const nsc = rd(join(AND, 'app/src/main/res/xml/network_security_config.xml'));
   assert.ok(!/smarthjem/.test(nsc));
@@ -73,11 +73,11 @@ test('migrering: app (kontoer + forrige server), Kalender (oppstart) og Wear skr
   assert.match(load, /Regel89\.isOld\(a\.server\) \|\| Regel89\.isOld\(a\.external\)/);
   assert.match(load, /if \(fixed != list\) save\(fixed, active\(\)\)/);
   assert.match(block(acc, 'fun lastServer()'), /Regel89\.isOld\(s\)\) \{ rememberServer\(Regel89\.EXTERNAL\)/);
-  const k = code(KAL, 'Kal89.kt');
+  const k = code(KAL, 'Serveradresser.kt');
   for (const key of ['k41_external', 'k41_manual', 'k47_def_ext', 'last_server']) assert.ok(k.includes(`"${key}"`), key);
   assert.match(k, /KalAuth\.save\(ctx, s\.copy\(server = Kal41\.DEFAULT_BASE\)\)/);
   assert.match(code(KAL, 'MainActivity.kt'), /Kal51\.init\(this\)\s*Kal89\.migrate\(this\)/);
-  const w = code(WEAR, 'WearApi51.kt');
+  const w = code(WEAR, 'WearApi.kt');
   assert.match(w, /fun server\(ctx: Context\): String = stored89\(ctx\) \?: DEFAULT_SERVER51/);
   assert.match(block(w, 'fun account(ctx: Context)'), /stored89\(ctx\)/);
 });
@@ -110,17 +110,17 @@ test('én felles lagring: tannhjulet før innlogging = Innstillinger → Server 
 });
 
 test('tannhjul på innloggingen (Kalender): samme Server-ark som Innstillinger → Server, Test tilkobling mot /api/health', () => {
-  const ui = code(join(KAL, 'ui'), 'Kal41Ui.kt');
+  const ui = code(join(KAL, 'ui'), 'Innloggingsskjerm.kt');
   const scr = block(ui, 'fun LoginScreen41(');
   assert.match(scr, /Modifier\.align\(Alignment\.TopEnd\)[^\n]*size\(48\.dp\)/);
   assert.match(scr, /tap\("Server"\)/);
   assert.match(scr, /ServerDialog47\(onClose = \{ srv89 = false; tick89\+\+ \}, login = true\)/);
   assert.match(scr, /"Server: \$host"/);
-  const dlg = code(join(KAL, 'ui'), 'Kal47Ui.kt');
+  const dlg = code(join(KAL, 'ui'), 'Serverdialog.kt');
   assert.match(dlg, /fun ServerDialog47\(onClose: \(\) -> Unit, login: Boolean = false\)/);
   assert.match(dlg, /LinePill\("Test tilkobling"/);
   assert.match(dlg, /LinePill\(if \(login\) "Avbryt" else "Ferdig", onClose\)/);
-  assert.match(code(KAL, 'Kal89.kt'), /"\/api\/health"\)\.openSikker\(\)/);
+  assert.match(code(KAL, 'Serveradresser.kt'), /"\/api\/health"\)\.openSikker\(\)/);
 });
 
 /* ---------------- 3. Live Updates ---------------- */

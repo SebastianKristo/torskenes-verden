@@ -56,8 +56,8 @@ test('avbrudd: filteret kjenner igjen «StandaloneCoroutine was cancelled» og r
 });
 
 test('avbrudd: catch (e: Exception) med e.message i coroutines har CancellationException foran og ingen rå tekst', () => {
-  const files = ['Offline51Plat.kt', 'Calendar29.kt', 'P46.kt', 'Car51Plat.kt', 'Calendar27.kt', 'Backup29.kt', 'G67.kt', 'Smb30.kt', 'Feat51.kt',
-    'Mod28B.kt', 'Memory33.kt', 'P41.kt', 'Birthdays24.kt', 'P30.kt', 'P31.kt', 'Calendar26.kt', 'Chat27.kt', 'ui/Family16.kt', 'ui/Update28.kt',
+  const files = ['Offline51Plat.kt', 'RaskTime.kt', 'P46.kt', 'Car51Plat.kt', 'Kalender.kt', 'Backup29.kt', 'G67.kt', 'Smb30.kt', 'Feat51.kt',
+    'Mod28B.kt', 'Memory33.kt', 'P41.kt', 'Birthdays24.kt', 'P30.kt', 'P31.kt', 'Chat27.kt', 'ui/Family16.kt', 'ui/Update28.kt',
     'ui/Search51Ui.kt', 'ui/Ui41.kt', 'ui/Health20.kt', 'upload/PendingUploads.kt', 'Onboard51.kt', 'AppViewModel.kt'];
   for (const f of files) {
     const s = code(f);

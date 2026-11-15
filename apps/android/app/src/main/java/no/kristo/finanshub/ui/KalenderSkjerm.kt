@@ -106,7 +106,7 @@ internal fun KalenderScreen27(vm: AppViewModel) {
         Column(Modifier.fillMaxSize().statusBarsPadding()) {
             K27Top(vm, cur, today)
             if (s.mini) K27Mini(vm, cur, today)
-            // Prompt 29: lyst Nå/Neste-kort (Calendar29Ui.kt) i stedet for den svarte stripa.
+            // Prompt 29: lyst Nå/Neste-kort (RaskTimeArk.kt) i stedet for den svarte stripa.
             K29NowCard(vm, kalNow29(s, evs, now))
             s.error?.let { e -> Text(e, color = p.lab, fontSize = 12.5.sp, modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp)) }
             if (s.unavailable) Text("Serveren har ikke Kalender ennå. Oppdater Homelab-serveren for å se timeplanen.", color = p.mut, fontSize = 12.5.sp,
@@ -709,7 +709,7 @@ private fun K27Form(vm: AppViewModel, f: Kal27Form) {
         PSerif(if (f.id != null) "Rediger hendelse" else "Ny hendelse", 24.sp, modifier = Modifier.weight(1f))
         K27Close { s.form = null }
     }
-    // Prompt 32: «✦ BESKRIV MED GLIMT» over Tittel (ui/Kal32b.kt).
+    // Prompt 32: «✦ BESKRIV MED GLIMT» over Tittel (ui/KalenderGlimt.kt).
     LaunchedEffect(f.id, f.date) { if (vm.p32b.kAiNote.isBlank() && vm.p32b.kAi.isBlank()) vm.p32b.kAiErr = "" }
     DisposableEffect(Unit) { onDispose { vm.p32b.kAi = ""; vm.p32b.kAiNote = ""; vm.p32b.kAiErr = "" } }
     KalDescribe32b(vm)
@@ -771,6 +771,6 @@ private fun K27Form(vm: AppViewModel, f: Kal27Form) {
 
 @Composable
 private fun K27Search(vm: AppViewModel, today: LocalDate) {
-    // Prompt 32 (claude-code-kalender-sok-glimt.md): ny søkemeny med Glimt (ui/Kal32b.kt).
+    // Prompt 32 (claude-code-kalender-sok-glimt.md): ny søkemeny med Glimt (ui/KalenderGlimt.kt).
     KalSearch32b(vm, today)
 }
