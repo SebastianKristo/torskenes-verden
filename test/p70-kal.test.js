@@ -19,7 +19,7 @@ test('NÅ/NESTE-kortet øverst er borte på Mac, iPad og web', () => {
   const mac = code(`${IOS}/KalenderMac/Sources/MacRoot.swift`);
   assert.doesNotMatch(mac, /MacNextBanner/);
   assert.match(mac, /MacToolbar\(win: win\)\s*Rectangle\(\)\.fill\(t\.line\)\.frame\(height: 1\)/, 'rutenettet rett under verktøylinjen');
-  assert.doesNotMatch(code(`${IOS}/Kalender/Sources/KalPad42.swift`), /KalPad42Next/);
+  assert.doesNotMatch(code(`${IOS}/Kalender/Sources/KalPad.swift`), /KalPad42Next/);
   const web = code('public/js/kalender.js');
   assert.doesNotMatch(web, /nextBanner\(\)/);
   assert.match(web, /k39\.toolbar\(!!k38\.appMode\(\)\)\}<div class="k39-line">/);
@@ -29,7 +29,7 @@ test('NÅ/NESTE-kortet øverst er borte på Mac, iPad og web', () => {
 
 test('iOS-widgets: fasitens tekster, farger og lenker', () => {
   const w = code(`${IOS}/KalenderWidgets/Sources/KalWidgets.swift`);
-  const t = code(`${IOS}/KalenderWidgets/Sources/KalWText70.swift`);
+  const t = code(`${IOS}/KalenderWidgets/Sources/KalWidgetText.swift`);
   assert.match(w, /#8a8a8e/);
   assert.match(w, /#f2f2f7/, '+ i lys grå sirkel');
   assert.match(w, /"\+" \+ String\(today\.count - 1\) \+ " til"/, '«+N til» i liten');
@@ -50,12 +50,12 @@ test('iOS-widgets: fasitens tekster, farger og lenker', () => {
 });
 
 test('iOS/Mac: Innstillinger → Widgets og kortet én gang etter oppdateringen', () => {
-  const p = code(`${IOS}/SharedKal/Core/KalWPrefs70.swift`);
+  const p = code(`${IOS}/SharedKal/Core/KalWidgetPrefs.swift`);
   assert.match(p, /"kal70\.w\.off"/);
   assert.match(p, /if KalGroup\.defaults\.object\(forKey: doneKey\) == nil \{ return true \}/, '«Skjul fullførte i dag» er på som standard');
-  const s = code(`${IOS}/Kalender/Sources/KalSettings35.swift`);
+  const s = code(`${IOS}/Kalender/Sources/KalSettings.swift`);
   assert.match(s, /KalLabel\(text: "WIDGETS"\)[\s\S]*?KalWSettings70\(\)/);
-  const k = code(`${IOS}/Kalender/Sources/KalWidgets70.swift`);
+  const k = code(`${IOS}/Kalender/Sources/KalWidgetSettings.swift`);
   assert.match(k, /"Kalender på hjemskjermen"/);
   assert.match(k, /"Hold inne på hjemskjermen og legg til Kalender-widgeten\."/);
   assert.match(k, /"Senere"/);

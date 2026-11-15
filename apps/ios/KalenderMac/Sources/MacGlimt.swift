@@ -26,12 +26,13 @@ struct MacGlimtMsg: Identifiable, Equatable {
 }
 
 @MainActor
-final class MacGlimtModel: ObservableObject {
+@Observable
+final class MacGlimtModel {
     static let shared: MacGlimtModel = MacGlimtModel()
 
-    @Published var msgs: [MacGlimtMsg] = []
-    @Published var input: String = ""
-    private var seq: Int = 0
+    var msgs: [MacGlimtMsg] = []
+    var input: String = ""
+    @ObservationIgnored private var seq: Int = 0
 
     var thinking: Bool { msgs.contains { (m: MacGlimtMsg) -> Bool in m.thinking } }
 
@@ -259,8 +260,8 @@ enum MacGlimtServer {
 
 struct MacGlimtPanel: View {
     @Environment(\.mk) private var t
-    @ObservedObject var g: MacGlimtModel = MacGlimtModel.shared
-    @ObservedObject var win: MacWin
+    @Bindable var g: MacGlimtModel = MacGlimtModel.shared
+    @Bindable var win: MacWin
     @FocusState private var focused: Bool
 
     var body: some View {
@@ -392,7 +393,7 @@ struct MacSuggestion: View {
 struct MacGlimtRow: View {
     @Environment(\.mk) private var t
     let m: MacGlimtMsg
-    @ObservedObject var win: MacWin
+    @Bindable var win: MacWin
 
     var body: some View {
         if m.user {
@@ -483,7 +484,7 @@ struct MacStepRow: View {
 struct MacGlimtCard: View {
     @Environment(\.mk) private var t
     let e: KalEvent
-    @ObservedObject var win: MacWin
+    @Bindable var win: MacWin
 
     var body: some View {
         let c: KalCal? = KalFag37.tint(MacStore.shared.cal(e.cal), e)
@@ -519,7 +520,7 @@ struct MacGlimtCard: View {
 /// Grønn +chip med ledig tid → «Ny hendelse» ferdig utfylt.
 struct MacSlotChip: View {
     let slot: MacSlot
-    @ObservedObject var win: MacWin
+    @Bindable var win: MacWin
 
     var body: some View {
         Button(action: {
@@ -531,9 +532,9 @@ struct MacSlotChip: View {
                 Image(systemName: "plus").font(.system(size: 11, weight: .heavy))
                 Text(KalD.hm(slot.s) + "–" + KalD.hm(slot.e)).font(MacFont.mono(12.5))
             }
-            .foregroundColor(Color(kalHex: "#2f7a4f"))
+            .foregroundColor(DS.category(.green))
             .padding(.horizontal, 12).frame(height: 30)
-            .overlay(Capsule().strokeBorder(Color(kalHex: "#2f7a4f"), lineWidth: 1.5))
+            .overlay(Capsule().strokeBorder(DS.category(.green), lineWidth: 1.5))
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Ny hendelse " + KalD.hm(slot.s))

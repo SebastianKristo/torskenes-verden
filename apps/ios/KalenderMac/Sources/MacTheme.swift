@@ -22,23 +22,28 @@ struct MacTheme {
     /// Tittellinjen (#ece6da i fasiten).
     let bar: Color
 
-    let red: Color = Color(kalHex: "#b23a2a")
-    let green: Color = Color(kalHex: "#2f7a4f")
-    var sunday: Color { dark ? Color(kalHex: "#ec7a64") : Color(kalHex: "#b23a2a") }
+    /// Fast rød (lik i begge temaene, hvit tekst oppå). Tokensettet har ingen fast merkefarge; se MacTheme.brandRed.
+    let red: Color = MacTheme.brandRed
+    let green: Color = DS.category(.green)
+    var sunday: Color { DS.color(DS.Farge.accent, stil: .papir) }
 
-    static let light: MacTheme = MacTheme(
-        dark: false, bg: Color(kalHex: "#f3efe6"), ink: Color(kalHex: "#1b1a17"), card: Color(kalHex: "#fffdf8"),
-        chip: Color(kalHex: "#e9e2d3"), line: Color(kalHex: "#ddd5c5"), line2: Color(kalHex: "#e6dfd1"),
-        mut: Color(kalHex: "#6b665c"), mut2: Color(kalHex: "#a39d90"), ink2: Color(kalHex: "#3d3a33"),
-        acc: Color(kalHex: "#b23a2a"), glass: Color(kalHex: "#fffdf8", opacity: 0.94), dim: Color(kalHex: "#14120e", opacity: 0.46),
-        bar: Color(kalHex: "#ece6da"))
+    /// Den faste røde i Kalender (Papir accent i lys modus). Eneste farge uten token.
+    static let brandRed: Color = Color(kalHex: "#b23a2a")
 
-    static let darkTheme: MacTheme = MacTheme(
-        dark: true, bg: Color(kalHex: "#161513"), ink: Color(kalHex: "#efe9de"), card: Color(kalHex: "#211f1b"),
-        chip: Color(kalHex: "#2b2824"), line: Color(kalHex: "#3b3731"), line2: Color(kalHex: "#2e2b26"),
-        mut: Color(kalHex: "#a49d91"), mut2: Color(kalHex: "#7a746a"), ink2: Color(kalHex: "#d6cfc2"),
-        acc: Color(kalHex: "#ec7a64"), glass: Color(kalHex: "#211f1b", opacity: 0.94), dim: Color(kalHex: "#000000", opacity: 0.55),
-        bar: Color(kalHex: "#1d1b18"))
+    // Fase 4: verdiene kommer fra designtokens (DS, Papir-stilen) i stedet for egne hex-verdier. Fargesettene følger
+    // lys/mørk og «Øk kontrast»; light/darkTheme velges fortsatt etter colorScheme (MacThemed).
+    static let light: MacTheme = MacTheme.papir(dark: false, bar: DS.Farge.surfaceChip)
+    static let darkTheme: MacTheme = MacTheme.papir(dark: true, bar: DS.Farge.surfaceSunken)
+
+    static func papir(dark: Bool, bar: DS.Farge) -> MacTheme {
+        let s: DS.Stil = DS.Stil.papir
+        let ink: Color = DS.color(.textPrimary, stil: s)
+        return MacTheme(dark: dark, bg: DS.color(.surface, stil: s), ink: ink, card: DS.color(.surfaceRaised, stil: s),
+                        chip: DS.color(.surfaceChip, stil: s), line: DS.color(.line, stil: s), line2: DS.color(.lineSubtle, stil: s),
+                        mut: DS.color(.textSecondary, stil: s), mut2: DS.color(.textTertiary, stil: s), ink2: ink.opacity(0.82),
+                        acc: DS.color(DS.Farge.accent, stil: s), glass: DS.color(.surfaceRaised, stil: s).opacity(0.94),
+                        dim: DS.color(.scrim, stil: s), bar: DS.color(bar, stil: s))
+    }
 
     func calColor(_ c: KalCal?) -> Color { Color(kalHex: c?.hex ?? "#b23a2a") }
 
@@ -62,9 +67,10 @@ extension EnvironmentValues {
 }
 
 /// Newsreader (titler), Manrope (tekst), IBM Plex Mono (etiketter). Fontene ligger i Resources (ATSApplicationFontsPath).
+/// Fase 4: relativeTo som KalFont, så tekststørrelsen følger systemet der macOS skalerer (tilgjengelighet).
 enum MacFont {
     static func serif(_ size: CGFloat, medium: Bool = true) -> Font {
-        .custom(medium ? "Newsreader-Medium" : "Newsreader-Regular", size: size)
+        .custom(medium ? "Newsreader-Medium" : "Newsreader-Regular", size: size, relativeTo: .title)
     }
 
     static func ui(_ size: CGFloat, _ w: Font.Weight = .regular) -> Font {
@@ -76,10 +82,10 @@ enum MacFont {
         case .heavy, .black: name = "Manrope-ExtraBold"
         default: name = "Manrope-Regular"
         }
-        return .custom(name, size: size)
+        return .custom(name, size: size, relativeTo: .body)
     }
 
-    static func mono(_ size: CGFloat) -> Font { .custom("IBMPlexMono-SemiBold", size: size) }
+    static func mono(_ size: CGFloat) -> Font { .custom("IBMPlexMono-SemiBold", size: size, relativeTo: .caption) }
     /// Prompt 35: ukenummer i mono 800.
     static func monoHeavy(_ size: CGFloat) -> Font { .system(size: size, weight: .heavy, design: .monospaced) }
 }

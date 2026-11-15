@@ -75,7 +75,7 @@ test('S1: ingen token skrives til (App Group-)UserDefaults', () => {
   assert.doesNotMatch(g, /defaults\.(?:string|data)\(forKey: "(?:kal\.token|kal\.hl\.token|hl41\.device)"\)/);
   assert.match(g, /secretString\("kal\.token"\)/);
   assert.match(g, /secretString\("kal\.hl\.token"\)/);
-  const k41 = iosCode(code('SharedKal/Group/KalShared41.swift'));
+  const k41 = iosCode(code('SharedKal/Group/KalDeviceToken.swift'));
   assert.doesNotMatch(k41, /KalGroup\.defaults/);
   assert.match(k41, /KalGroup\.secretData\("hl41\.device"\)/);
   assert.match(k41, /KalGroup\.setSecretData\("hl41\.device", data\)/);
@@ -127,7 +127,7 @@ test('Nøkkelring: delt tilgangsgruppe med reserve til appens egen Nøkkelring (
   // Ingen keychain-access-groups slått på (sideloading uten Team ID avviser uutvidede verdier); App Group-en er gruppen.
   assert.doesNotMatch(yml.replace(/#.*$/gm, ''), /keychain-access-groups/);
   // Wrapperne bruker hjelperen.
-  const k41 = code('SharedKal/Group/KalShared41.swift');
+  const k41 = code('SharedKal/Group/KalDeviceToken.swift');
   const kc = k41.slice(k41.indexOf('enum KalKeychain41'), k41.indexOf('enum KalShared41'));
   assert.doesNotMatch(kc, /SecItem/);
   assert.match(kc, /Nokkelring\.write\(account, data, service: svc, group: group\)/);

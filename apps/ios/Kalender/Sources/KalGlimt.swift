@@ -19,7 +19,7 @@ struct KalGlimtMsg: Identifiable, Equatable {
     /// Prompt 34: svaret er en feil fra Glimt («Glimt fikk ikke svar fra {modell}: {feil}») → Prøv igjen.
     var error34: Bool = false
     var q34: String = ""
-    /// Prompt 70: kort C (card70 som JSON) og spørsmål med knapper (ask som JSON), KalCal70.swift.
+    /// Prompt 70: kort C (card70 som JSON) og spørsmål med knapper (ask som JSON), KalGlimtAgentCard.swift.
     var c70: String = ""
     var ask70: String = ""
 
@@ -480,7 +480,7 @@ struct KalGlimtRow: View {
     @ViewBuilder private var answer: some View {
         let shownText: String = m.words.prefix(m.shown).joined(separator: " ")
         HStack(alignment: .lastTextBaseline, spacing: 2) {
-            Text(shownText).font(KalFont.ui(14.5)).foregroundStyle(m.error34 ? Color(kalHex: "#b23a2a") : t.ink).lineSpacing(3)
+            Text(shownText).font(KalFont.ui(14.5)).foregroundStyle(m.error34 ? KalTheme.brandRed : t.ink).lineSpacing(3)
             if !m.done { KalCaret() }
         }
         if m.done && m.error34 {
@@ -488,7 +488,7 @@ struct KalGlimtRow: View {
             KalPill(title: "Prøv igjen", filled: false, height: 32) { KalGlimtModel.shared.retry(m) }
         }
         if m.done {
-            // Prompt 70: kort C i stedet for hendelseskortet, og spørsmålet med knapper (KalCal70.swift).
+            // Prompt 70: kort C i stedet for hendelseskortet, og spørsmålet med knapper (KalGlimtAgentCard.swift).
             if let c = KalCal70Data.parse(KalCal70.obj(m.c70)) { KalCal70Card(card: c).id(c.eventId) }
             else { ForEach(m.cards) { (e: KalEvent) in KalGlimtCard(e: e) } }
             if let q = KalCal70Ask.parse(KalCal70.obj(m.ask70)) { KalCal70AskView(ask: q) }
@@ -523,7 +523,7 @@ struct KalStepRow: View {
                     Circle().fill(t.green)
                     Text("✓").font(.system(size: 8, weight: .heavy)).foregroundStyle(Color.white)
                 } else if active {
-                    Circle().strokeBorder(Color(kalHex: "#b23a2a"), lineWidth: 2)
+                    Circle().strokeBorder(KalTheme.brandRed, lineWidth: 2)
                 } else {
                     Circle().strokeBorder(t.line, lineWidth: 1.5)
                 }
@@ -580,7 +580,7 @@ struct KalSlotChip: View {
             }
             .foregroundStyle(Color(kalHex: "#235c3b"))
             .padding(.horizontal, 13).frame(height: 34)
-            .overlay(Capsule().strokeBorder(Color(kalHex: "#2f7a4f"), lineWidth: 1.5))
+            .overlay(Capsule().strokeBorder(DS.category(.green), lineWidth: 1.5))
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Ny hendelse " + KalD.hm(slot.s))

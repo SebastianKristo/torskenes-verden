@@ -16,9 +16,9 @@ struct MacThemed<Content: View>: View {
 }
 
 struct MacMainWindow: View {
-    @StateObject private var win: MacWin = MacWin()
+    @State private var win: MacWin = MacWin()
     /// Prompt 38: web-kalenderen i dette vinduet (WKWebView mot <server>/kalender?app=mac).
-    @StateObject private var web: MacWeb38Model = MacWeb38Model()
+    @State private var web: MacWeb38Model = MacWeb38Model()
     @Environment(\.openWindow) private var openWindow
 
     var body: some View {
@@ -42,9 +42,9 @@ struct MacMainWindow: View {
 
 struct MacRoot: View {
     @Environment(\.mk) private var t
-    @ObservedObject var win: MacWin
-    @ObservedObject var web: MacWeb38Model
-    @ObservedObject var store: MacStore = MacStore.shared
+    @Bindable var win: MacWin
+    @Bindable var web: MacWeb38Model
+    @Bindable var store: MacStore = MacStore.shared
 
     var body: some View {
         ZStack {
@@ -87,7 +87,24 @@ struct MacRoot: View {
         if w.tabbingMode != .automatic { w.tabbingMode = .automatic }
     }
 
+    /// Fase 4 (H16): systemets NavigationSplitView med sidemenyen som egen kolonne (252 pt som før). Sidemenyen vises og
+    /// skjules med vinduets egen knapp i verktøylinja (⌥⌘S), så systemets sidemeny-knapp er fjernet.
     private var main: some View {
+        NavigationSplitView(columnVisibility: sidebarVisibility) {
+            MacSidebar(win: win)
+                .navigationSplitViewColumnWidth(min: 220, ideal: 252, max: 320)
+        } detail: {
+            detail
+        }
+        .navigationSplitViewStyle(.balanced)
+        .toolbar(removing: .sidebarToggle)
+        .overlay(alignment: .bottom) { toastView }
+        .sheet(isPresented: $win.newCalOpen) { MacThemed { MacNewCalendarSheet(open: $win.newCalOpen) } }
+        .sheet(isPresented: $win.addCalOpen) { MacThemed { MacAddCal35Sheet(open: $win.addCalOpen) } }
+        .sheet(isPresented: $win.gmap39Open) { MacThemed { MacGoogleMap39Sheet(open: $win.gmap39Open) } }
+    }
+
+    private var detail: some View {
         VStack(spacing: 0) {
             if store.useWeb38 && web.phase == .failed { MacWeb38Banner(model: web) }
             MacOffline43()
@@ -95,27 +112,26 @@ struct MacRoot: View {
             // Prompt 70: NÅ/NESTE-kortet under verktøylinjen er fjernet (rutenettet bruker plassen). Neste hendelse vises i widgets,
             // varsler og Glimt · Dagen din; den røde nå-linjen i uke/dag er uendret.
             Rectangle().fill(t.line).frame(height: 1)
-            HStack(spacing: 0) {
-                if win.sidebar {
-                    MacSidebar(win: win)
-                        .frame(width: 252)
-                        .transition(.move(edge: .leading).combined(with: .opacity))
-                    Rectangle().fill(t.line).frame(width: 1)
-                }
-                // Prompt 35: zoom – den nye visningen vokser fra punktet man klikket/klypte. «Uken starter» bygger alt på nytt.
-                ZStack {
-                    content
-                        .id(win.view + "|" + store.weekStart)
-                        .transition(zoomTransition)
-                }
-                .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
-                .clipped()
+            // Prompt 35: zoom – den nye visningen vokser fra punktet man klikket/klypte. «Uken starter» bygger alt på nytt.
+            ZStack {
+                content
+                    .id(win.view + "|" + store.weekStart)
+                    .transition(zoomTransition)
             }
+            .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
+            .clipped()
         }
-        .overlay(alignment: .bottom) { toastView }
-        .sheet(isPresented: $win.newCalOpen) { MacThemed { MacNewCalendarSheet(open: $win.newCalOpen) } }
-        .sheet(isPresented: $win.addCalOpen) { MacThemed { MacAddCal35Sheet(open: $win.addCalOpen) } }
-        .sheet(isPresented: $win.gmap39Open) { MacThemed { MacGoogleMap39Sheet(open: $win.gmap39Open) } }
+        .background(t.bg)
+    }
+
+    /// win.sidebar (lagret i mac.side) styrer kolonnen. Skrives bare når verdien faktisk endres.
+    private var sidebarVisibility: Binding<NavigationSplitViewVisibility> {
+        Binding<NavigationSplitViewVisibility>(
+            get: { win.sidebar ? NavigationSplitViewVisibility.all : NavigationSplitViewVisibility.detailOnly },
+            set: { (v: NavigationSplitViewVisibility) in
+                let on: Bool = v != NavigationSplitViewVisibility.detailOnly
+                if win.sidebar != on { win.sidebar = on }
+            })
     }
 
     private var zoomTransition: AnyTransition {
@@ -228,8 +244,8 @@ struct MacToastView: View {
 
 struct MacToolbar: View {
     @Environment(\.mk) private var t
-    @ObservedObject var win: MacWin
-    @ObservedObject var store: MacStore = MacStore.shared
+    @Bindable var win: MacWin
+    @Bindable var store: MacStore = MacStore.shared
 
     static let views: [MacViewTab] = [
         MacViewTab(id: "dag", name: "Dag", key: "⌘1"),
@@ -332,7 +348,7 @@ struct MacNewButton43: View {
     @State private var hover: Bool = false
 
     var body: some View {
-        let base: Color = t.dark ? Color(kalHex: "#cf5540") : Color(kalHex: "#b23a2a")
+        let base: Color = t.dark ? Color(kalHex: "#cf5540") : MacTheme.brandRed
         Button(action: action) {
             Text("+ Ny hendelse").font(MacFont.ui(13, .bold)).foregroundColor(Color.white)
                 .padding(.horizontal, 16).frame(height: 40)
@@ -348,7 +364,7 @@ struct MacNewButton43: View {
 /// Prompt 43: uten kontakt med serveren – lagret kalender vises, ingen frysing.
 struct MacOffline43: View {
     @Environment(\.mk) private var t
-    @ObservedObject var store: MacStore = MacStore.shared
+    @Bindable var store: MacStore = MacStore.shared
 
     var body: some View {
         if store.offline43 {

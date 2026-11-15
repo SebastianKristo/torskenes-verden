@@ -9,15 +9,16 @@ import SwiftUI
 // - Ingen blur og ingen periodisk omtegning: søkearket har egen tilstand (MacSearchModel), uavhengig av vinduet.
 
 @MainActor
-final class MacSearchModel: ObservableObject {
-    @Published var query: String = ""
-    @Published var cal: String? = nil
+@Observable
+final class MacSearchModel {
+    var query: String = ""
+    var cal: String? = nil
     /// Svaret som vises (blir stående mens man skriver).
-    @Published var answerQ: String = ""
-    @Published var answer: MacAnswer? = nil
-    @Published var busy: Bool = false
-    @Published var cloud: Bool = false
-    private var seq: Int = 0
+    var answerQ: String = ""
+    var answer: MacAnswer? = nil
+    var busy: Bool = false
+    var cloud: Bool = false
+    @ObservationIgnored private var seq: Int = 0
 
     func ask() {
         let q: String = query.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -69,11 +70,11 @@ final class MacSearchModel: ObservableObject {
 
 struct MacSearchView: View {
     @Environment(\.mk) private var t
-    @ObservedObject var win: MacWin
-    @StateObject private var m: MacSearchModel = MacSearchModel()
+    @Bindable var win: MacWin
+    @State private var m: MacSearchModel = MacSearchModel()
     /// Prompt 41: «✦ Glimt» – søk med Ollama på hjemmeserveren (lokal reserve «UTEN AI»).
-    @StateObject private var ai: MacAi41 = MacAi41()
-    @ObservedObject var store: MacStore = MacStore.shared
+    @State private var ai: MacAi41 = MacAi41()
+    @Bindable var store: MacStore = MacStore.shared
     @FocusState private var focused: Bool
 
     var body: some View {
@@ -117,7 +118,7 @@ struct MacSearchView: View {
                 Button(action: { ai.go(m.query) }) {
                     Text("✦ Glimt").font(MacFont.ui(12.5, .heavy)).foregroundColor(ai.on ? Color.white : t.ink)
                         .padding(.horizontal, 12).frame(height: 30)
-                        .background(Capsule().fill(ai.on ? Color(kalHex: "#b23a2a") : t.chip))
+                        .background(Capsule().fill(ai.on ? MacTheme.brandRed : t.chip))
                 }
                 .buttonStyle(.plain)
                 .help("Søk med Glimt (Ollama)")
@@ -225,8 +226,8 @@ struct MacSearchMark: View, Equatable {
 
 struct MacSearchAnswer: View {
     @Environment(\.mk) private var t
-    @ObservedObject var m: MacSearchModel
-    @ObservedObject var win: MacWin
+    @Bindable var m: MacSearchModel
+    @Bindable var win: MacWin
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {

@@ -1,6 +1,5 @@
 import SwiftUI
 import AppKit
-import Combine
 
 /* ---------------- Prompt 34: Menylinje-kalenderen (MenuBarExtra) og dyplenker ---------------- */
 // Ikon med dagens dato og neste hendelse («Tannlege 15:15»). Panel (340 pt): dato og ukenummer, minimåned, dagens og morgendagens
@@ -10,26 +9,41 @@ import Combine
 /// (MenuBarExtra), og å observere MacStore der bygget scenen på nytt ved hver dataendring (macOS 26/27: løkke i AppGraph).
 /// Verdiene settes bare når de faktisk endres, og alltid etter at MacStore er ferdig med oppdateringen (async).
 @MainActor
-final class MacBarModel: ObservableObject {
+@Observable
+final class MacBarModel {
     static let shared: MacBarModel = MacBarModel()
 
-    @Published private(set) var day: Int = KalD.dayOfMonth(Date())
-    @Published private(set) var mode: String = "next"
-    @Published private(set) var next: String = ""
-    private var sub: AnyCancellable? = nil
-    private var queued: Bool = false
+    private(set) var day: Int = KalD.dayOfMonth(Date())
+    private(set) var mode: String = "next"
+    private(set) var next: String = ""
 
     init() {
         refresh()
-        sub = MacStore.shared.objectWillChange.sink { [weak self] (_: Void) in
-            guard let self, !self.queued else { return }
-            self.queued = true
-            Task { @MainActor [weak self] in
-                guard let self else { return }
-                self.queued = false
-                self.refresh()
-            }
+        watch()
+    }
+
+    /// Fase 4 (@Observable): følger bare det etiketten bygger på (menylinje-valget, innloggingen, minutt-tikket og
+    /// hendelsene bak nextTimed()). Sporingen gjelder én endring; refresh() kjører i neste runde på main, etter at
+    /// MacStore er ferdig med oppdateringen, og så følges verdiene på nytt.
+    private func watch() {
+        withObservationTracking {
+            MacBarModel.inputs()
+        } onChange: {
+            Task { @MainActor in MacBarModel.shared.changed() }
         }
+    }
+
+    private func changed() {
+        refresh()
+        watch()
+    }
+
+    private static func inputs() {
+        let s: MacStore = MacStore.shared
+        _ = s.menuBarMode
+        _ = s.loggedIn
+        _ = s.tick
+        _ = s.nextTimed()
     }
 
     func refresh() {
@@ -46,7 +60,7 @@ final class MacBarModel: ObservableObject {
 }
 
 struct MacMenuBarLabel: View {
-    @ObservedObject var bar: MacBarModel = MacBarModel.shared
+    @Bindable var bar: MacBarModel = MacBarModel.shared
 
     var body: some View {
         let icon: Image = Image(systemName: String(bar.day) + ".square")
@@ -83,7 +97,7 @@ struct MacPanelRow43: Identifiable {
 struct MacMenuBarPanel: View {
     @Environment(\.openWindow) private var openWindow
     @Environment(\.mk) private var t
-    @ObservedObject var store: MacStore = MacStore.shared
+    @Bindable var store: MacStore = MacStore.shared
     @State private var text: String = ""
     @State private var month: Date = KalD.firstOfMonth(Date())
     @State private var sel: String = KalD.todayKey()

@@ -26,7 +26,7 @@
 - Vil du fjerne en enhet slik at den må godkjennes på nytt, gjør du det i Homelab → Innstillinger → Sikkerhet → Enheter.
 
 ## For utviklere
-- iOS og Mac: `apps/ios/SharedKal/Core/KalSec51Core.swift` inneholder logikken, `Kalender/Sources/KalSec51.swift` og `KalenderMac/Sources/MacSec51.swift` visningene.
+- iOS og Mac: `apps/ios/SharedKal/Core/KalSecurityCore.swift` inneholder logikken, `Kalender/Sources/KalSecurity.swift` og `KalenderMac/Sources/MacSecurity.swift` visningene.
 - Android: `apps/android/kalender/.../Kal51.kt` inneholder logikken, `ui/Kal51Ui.kt` visningene.
 - Bruk flagg i koden:
   - iOS/Mac: `KalFlags51.on("navn")`

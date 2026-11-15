@@ -6,7 +6,8 @@ import AppKit
 // (focusedSceneObject), og tastatursnarveiene (D 3 W M L T, piler, N, /) går til nøkkelvinduet via MacKeys.
 
 @MainActor
-final class MacWin: ObservableObject {
+@Observable
+final class MacWin {
     /// Alle åpne vinduer (svake referanser via window), så tastaturet og menylinja finner det i fokus.
     static var all: [MacWin] = []
 
@@ -16,9 +17,9 @@ final class MacWin: ObservableObject {
         return all.first { (x: MacWin) -> Bool in x.window?.isVisible ?? false }
     }
 
-    weak var window: NSWindow? = nil
+    @ObservationIgnored weak var window: NSWindow? = nil
     /// Prompt 38: web-kalenderen i dette vinduet. Når den er aktiv, sendes navigering og snarveier dit (window.kalApp.cmd).
-    weak var web38: MacWeb38Model? = nil
+    @ObservationIgnored weak var web38: MacWeb38Model? = nil
 
     /// Web-kalenderen viser vinduet (ikke den innebygde reservekalenderen).
     var webOn: Bool { web38?.active ?? false }
@@ -33,38 +34,38 @@ final class MacWin: ObservableObject {
 
     /// dag | 3d | uke | mnd | ar | liste
     /// Prompt 35: Innstillinger → «Åpne i» (ellers siste brukte).
-    @Published var view: String = UserDefaults.standard.string(forKey: "mac.openView") ?? UserDefaults.standard.string(forKey: "mac.view") ?? "mnd" {
+    var view: String = UserDefaults.standard.string(forKey: "mac.openView") ?? UserDefaults.standard.string(forKey: "mac.view") ?? "mnd" {
         didSet { UserDefaults.standard.set(view, forKey: "mac.view") }
     }
-    @Published var anchor: String = KalD.todayKey()
-    @Published var sidebar: Bool = (UserDefaults.standard.object(forKey: "mac.side") as? Bool) ?? true {
+    var anchor: String = KalD.todayKey()
+    var sidebar: Bool = (UserDefaults.standard.object(forKey: "mac.side") as? Bool) ?? true {
         didSet { UserDefaults.standard.set(sidebar, forKey: "mac.side") }
     }
     /// Minikalenderen i sidemenyen viser denne måneden.
-    @Published var miniMonth: Date = KalD.firstOfMonth(Date())
+    var miniMonth: Date = KalD.firstOfMonth(Date())
 
-    @Published var searchOpen: Bool = false
-    @Published var glimtOpen: Bool = false
-    @Published var detId: String? = nil
+    var searchOpen: Bool = false
+    var glimtOpen: Bool = false
+    var detId: String? = nil
     /// Hendelse fra Glimt/lenke som ikke finnes i bufferen.
-    @Published var linkEvent: KalEvent? = nil
-    @Published var newForm: MacNewForm? = nil
+    var linkEvent: KalEvent? = nil
+    var newForm: MacNewForm? = nil
     /// «✦ Skriv time»: Glimt-skrivefeltet.
-    @Published var quickOpen: Bool = false
-    @Published var gotoOpen: Bool = false
+    var quickOpen: Bool = false
+    var gotoOpen: Bool = false
     /// Arkiv → Ny kalender … / «Administrer kalendere ›».
-    @Published var newCalOpen: Bool = false
+    var newCalOpen: Bool = false
     /// Prompt 35: zoom mellom visningene – punktet den nye visningen vokser fra og retningen.
-    @Published var zoomOrigin: UnitPoint = .center
-    @Published var zoomInward: Bool = true
+    var zoomOrigin: UnitPoint = .center
+    var zoomInward: Bool = true
     /// Prompt 35: «+ Legg til kalender» (iCal / Home Assistant / Konto).
-    @Published var addCalOpen: Bool = false
+    var addCalOpen: Bool = false
     /// Prompt 39: «Hvilken kalender er hva?» (Google-velgeren, 1d).
-    @Published var gmap39Open: Bool = false
+    var gmap39Open: Bool = false
 
-    init() {
-        MacWin.all.append(self)
-    }
+    // Fase 4 (@Observable): vinduet registreres i MacMainWindow.onAppear, ikke her. @State kan lage modellen flere ganger
+    // når visningen bygges på nytt (bare den første beholdes), og de andre skulle ikke bli liggende i MacWin.all.
+    init() {}
 
     func forget() {
         MacWin.all.removeAll { (x: MacWin) -> Bool in x === self }

@@ -3,8 +3,8 @@ options:
   bundleIdPrefix: no.kristo
   deploymentTarget:
     iOS: "17.0"
-    # Prompt 34: Kalender for Mac (KalenderMac).
-    macOS: "13.0"
+    # Prompt 34: Kalender for Mac (KalenderMac). Fase 4 (Q28): macOS 14, så Mac-appen kan bruke @Observable som iOS.
+    macOS: "14.0"
 settings:
   base:
     SWIFT_VERSION: "5.10"
@@ -59,7 +59,7 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: no.kristo.finanshub
         TARGETED_DEVICE_FAMILY: "1,2"
         # Prompt 84: den innebygde Kalenderen – #if !KAL_EMBED rundt det som hører til den frittstående appen (@main, App Intents,
-        # BGTask, varsel-delegat/-kategorier, krasjfanger, kalender://, widget-reload). KalenderInApp.swift / KalEmbed84.swift.
+        # BGTask, varsel-delegat/-kategorier, krasjfanger, kalender://, widget-reload). KalenderInApp.swift / KalEmbed.swift.
         SWIFT_ACTIVE_COMPILATION_CONDITIONS: "$(inherited) KAL_EMBED"
         # Prompt 47: FoundationModels (iOS 26) lenkes svakt, så appen starter på iOS 17/18. Bare med iOS 26-SDK (Xcode 26);
         # Xcode 16 har ikke rammeverket, og koden er bak #if canImport(FoundationModels) (KvitteringTolking.swift).
@@ -207,6 +207,9 @@ targets:
       - SharedKeychain
       - SharedNet
       - SharedUI
+      # Fase 4: designtokens (DS, DSFyll, Font.ds) og fargesettene (lys/mørk og økt kontrast) – KalTheme/MacTheme bygger på dem.
+      - path: Shared/DesignTokens.swift
+      - path: Shared/DesignTokens.xcassets
       # Delt med KalenderWidgets (og Group med Homelab-appen). Fonts: Newsreader, Manrope og IBM Plex Mono (kopi av Papir-fontene, OFL).
       - SharedKal/Group
       - SharedKal/Core
@@ -270,7 +273,7 @@ targets:
         KalDefaultServer41: "https://os.smarthjemeksperten.no"
         KalDefaultLocal47: "http://10.69.1.39:3000"
         KalKeychainGroup41: "$(AppIdentifierPrefix)no.kristo.shared"
-        # Prompt 44: forhåndslasting av kalenderen i bakgrunnen (BGAppRefreshTask, KalBg44.swift).
+        # Prompt 44: forhåndslasting av kalenderen i bakgrunnen (BGAppRefreshTask, KalBackgroundRefresh.swift).
         BGTaskSchedulerPermittedIdentifiers: [no.kristo.kalender.refresh44]
         UIBackgroundModes: [fetch]
         # Prompt 46: Innstillinger → Logg inn på annen enhet (skann QR-koden Kalender på Mac/Android viser, godkjenn med Face ID).
@@ -278,17 +281,17 @@ targets:
         NSFaceIDUsageDescription: "Kalender bekrefter med Face ID før en annen enhet logges inn på kontoen din."
 
   # Prompt 47: enkel UI-test – «+» skal vise «Ny hendelse» og «Tittel» synlig (hit-testbart), ikke bare i treet.
-  # Bygges bare med `xcodebuild test -scheme KalenderUITests47` (ikke en del av Kalender-skjemaet CI bygger).
-  KalenderUITests47:
+  # Bygges bare med `xcodebuild test -scheme KalenderUITests` (ikke en del av Kalender-skjemaet CI bygger).
+  KalenderUITests:
     type: bundle.ui-testing
     platform: iOS
     sources:
-      - KalenderUITests47
+      - KalenderUITests
     dependencies:
       - target: Kalender
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: no.kristo.kalender.uitests47
+        PRODUCT_BUNDLE_IDENTIFIER: no.kristo.kalender.uitests
         GENERATE_INFOPLIST_FILE: YES
         TEST_TARGET_NAME: Kalender
         TARGETED_DEVICE_FAMILY: "1,2"
@@ -323,6 +326,9 @@ targets:
       - SharedKeychain
       - SharedNet
       - SharedUI
+      # Fase 4: designtokens (DS, DSFyll, Font.ds) og fargesettene (lys/mørk og økt kontrast) – KalTheme/MacTheme bygger på dem.
+      - path: Shared/DesignTokens.swift
+      - path: Shared/DesignTokens.xcassets
       - SharedKal/Group
       - SharedKal/Core
       - SharedKal/Fonts
@@ -358,20 +364,23 @@ targets:
           - Newsreader-Regular.ttf
 
   # Prompt 34: Kalender for Mac – egen macOS-app (no.kristo.kalender.mac, Kalender.app) med samme konto og backend som web og iPhone.
-  # Gjenbruker SharedKal (modeller, nett, fonter) og den rene tolkeren KalQuick.swift fra iOS-appen. Universal (arm64 + x86_64), macOS 13+.
+  # Gjenbruker SharedKal (modeller, nett, fonter) og den rene tolkeren KalQuick.swift fra iOS-appen. Universal (arm64 + x86_64), macOS 14+ (Q28).
   # Ingen Sparkle (ny avhengighet). Prompt 43: egen oppdaterer (MacUpdater43: /api/apps/kalender/latest, SHA-256, bytte-skript).
   # Prompt 41: widgets (KalenderMacWidgets, macOS 14+) – data via App Group
   # <TeamID>.group.no.kristo.kalender, som bare brukes når appen er signert med et team (Info-nøkkelen KalTeam41).
   KalenderMac:
     type: application
     platform: macOS
-    deploymentTarget: "13.0"
+    deploymentTarget: "14.0"
     sources:
       - KalenderMac/Sources
       - KalenderMac/Resources
       - SharedKeychain
       - SharedNet
       - SharedUI
+      # Fase 4: designtokens (DS, DSFyll, Font.ds) og fargesettene (lys/mørk og økt kontrast) – KalTheme/MacTheme bygger på dem.
+      - path: Shared/DesignTokens.swift
+      - path: Shared/DesignTokens.xcassets
       - SharedKal/Core
       - SharedKal/Group
       # Fontene kopieres til Contents/Resources og lastes via ATSApplicationFontsPath.
@@ -379,7 +388,7 @@ targets:
       # Ren Foundation-tolking av «frisør 14.30 25.10» (KalParsed, KalRx, KalQuick) – delt med iOS-appen uten kopi.
       - path: Kalender/Sources/KalQuick.swift
       # Prompt 37: adresse og kart (geokoding + kartvisning) deles med iPhone-appen.
-      - path: Kalender/Sources/KalGeo37.swift
+      - path: Kalender/Sources/KalGeo.swift
     # Hovedvinduet er native SwiftUI (fasit siden prompt 39). Web-kalenderen fra prompt 38 (WKWebView mot <server>/kalender?app=mac)
     # finnes bare som valg (useWeb38, av som standard) – derfor WebKit.
     dependencies:
@@ -411,7 +420,7 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: no.kristo.kalender.mac
         PRODUCT_NAME: Kalender
         PRODUCT_MODULE_NAME: KalenderMac
-        MACOSX_DEPLOYMENT_TARGET: "13.0"
+        MACOSX_DEPLOYMENT_TARGET: "14.0"
         ARCHS: "$(ARCHS_STANDARD)"
         GENERATE_INFOPLIST_FILE: YES
         ENABLE_HARDENED_RUNTIME: YES
@@ -436,7 +445,7 @@ targets:
         CFBundleDevelopmentRegion: nb
         CFBundleLocalizations: [nb]
         CFBundleAllowMixedLocalizations: true
-        LSMinimumSystemVersion: "13.0"
+        LSMinimumSystemVersion: "14.0"
         ATSApplicationFontsPath: "."
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true
@@ -465,6 +474,9 @@ targets:
       - SharedKeychain
       - SharedNet
       - SharedUI
+      # Fase 4: designtokens (DS, DSFyll, Font.ds) og fargesettene (lys/mørk og økt kontrast) – KalTheme/MacTheme bygger på dem.
+      - path: Shared/DesignTokens.swift
+      - path: Shared/DesignTokens.xcassets
       - SharedKal/Group
       - SharedKal/Core
       # Fontene kopieres til Contents/Resources og lastes via ATSApplicationFontsPath.
@@ -502,7 +514,7 @@ targets:
   # Prompt 51 (IOSPLAT51): FinansHub for Apple Watch (watchOS 10+) – EGET target uten avhengighet til/fra FinansHub, så
   # FinansHub-, Kalender- og KalenderMac-byggene i CI er uendret (klokka bygges ikke med dem og legges ikke i FinansHub.app).
   # Scheme: med vilje ingen `schemes:`-seksjon. Prosjektet har i dag ingen delte schemes, og xcodebuild lager da en scheme per
-  # target (FinansHub, Kalender, KalenderMac, KalenderUITests47 … og HomelabWatch). Én delt scheme her ville slått av
+  # target (FinansHub, Kalender, KalenderMac, KalenderUITests … og HomelabWatch). Én delt scheme her ville slått av
   # dette for de andre targetene og knekt dagens CI-steg. Bygg: se docs/ios-plattform-51.md («CI») –
   #   xcodebuild -project FinansHub.xcodeproj -scheme HomelabWatch -configuration Debug \
   #     -sdk watchsimulator -destination 'generic/platform=watchOS Simulator' CODE_SIGNING_ALLOWED=NO build

@@ -63,7 +63,7 @@ test('trusted: true brukes bare av appens egne kall (aldri fra onOpenURL / unive
 });
 
 test('Kalender Mac: ny?text=… og glimt?q=… bekreftes før MacLinks.handle', () => {
-  const m = code('KalenderMac/Sources/MacLinks45.swift');
+  const m = code('KalenderMac/Sources/MacDeepLinks.swift');
   assert.match(m, /if let a = MacLinks45\.action86\(url\), !MacLinks45\.confirm86\(a\.0, a\.1\) \{ return \}\n\s+MacLinks\.handle\(url, win: w, animated: false\)/);
   assert.match(m, /if \(host == "ny" \|\| host == "new"\) && !text\.isEmpty \{ return \("Vil du legge til denne hendelsen\?", text\) \}/);
   assert.match(m, /if \(host == "glimt" \|\| host == "spor"\) && !ask\.isEmpty \{ return \("Vil du sende dette til Glimt\?", ask\) \}/);
@@ -71,7 +71,7 @@ test('Kalender Mac: ny?text=… og glimt?q=… bekreftes før MacLinks.handle', 
   assert.match(m, /a\.addButton\(withTitle: "Avbryt"\)\n\s+a\.addButton\(withTitle: "Utfør"\)\n\s+return a\.runModal\(\) == \.alertSecondButtonReturn/);
   // MacLinks.handle har ingen andre innganger enn MacLinks45.flush.
   const callers = walk(join(IOS, 'KalenderMac')).filter((f) => /MacLinks\.handle\(/.test(readFileSync(f, 'utf8').split('\n').filter((l) => !l.trim().startsWith('//')).join('\n')));
-  assert.deepEqual(callers.map((f) => relative(IOS, f)), ['KalenderMac/Sources/MacLinks45.swift']);
+  assert.deepEqual(callers.map((f) => relative(IOS, f)), ['KalenderMac/Sources/MacDeepLinks.swift']);
 });
 
 test('widgetene: ingen lenker med handlingsparametre (bare sider), handlinger går via App Intents', () => {

@@ -5,8 +5,8 @@ import SwiftUI
 // glBreath: orben puster (3,6 s i ro, 1,1 s når den tenker). «Reduser bevegelse»: ingen rotasjon, bare rolig fade.
 
 enum KalAnim {
-    static let ring: [Color] = [Color(kalHex: "#b23a2a"), Color(kalHex: "#e8794a"), Color(kalHex: "#7a5ad6"), Color(kalHex: "#3fbf9a"), Color(kalHex: "#b23a2a")]
-    static let glow: [Color] = [Color(kalHex: "#b23a2a"), Color(kalHex: "#e8794a"), Color(kalHex: "#f2c14e"), Color(kalHex: "#3fbf9a"), Color(kalHex: "#7a5ad6"), Color(kalHex: "#b23a2a")]
+    static let ring: [Color] = [KalTheme.brandRed, Color(kalHex: "#e8794a"), Color(kalHex: "#7a5ad6"), Color(kalHex: "#3fbf9a"), KalTheme.brandRed]
+    static let glow: [Color] = [KalTheme.brandRed, Color(kalHex: "#e8794a"), Color(kalHex: "#f2c14e"), Color(kalHex: "#3fbf9a"), Color(kalHex: "#7a5ad6"), KalTheme.brandRed]
     static let starTop: Color = Color(kalHex: "#ffb38a")
     static let starBottom: Color = Color(kalHex: "#ff5a3c")
     static let peach: Color = Color(kalHex: "#ffd9c2")
@@ -217,7 +217,7 @@ struct KalShimmer: View {
             .overlay {
                 Text(text)
                     .font(KalFont.ui(14, .bold))
-                    .foregroundStyle(Color(kalHex: "#b23a2a"))
+                    .foregroundStyle(KalTheme.brandRed)
                     .mask { KalShimmerBand(reduce: reduce) }
                     .accessibilityHidden(true)
             }
@@ -266,7 +266,7 @@ struct KalCaret: View {
     var body: some View {
         TimelineView(.animation(minimumInterval: 1.0 / 20.0, paused: reduce)) { (ctx: TimelineViewDefaultContext) in
             let w: Double = reduce ? 1 : KalAnim.wave(ctx.date.timeIntervalSinceReferenceDate, 0.9)
-            RoundedRectangle(cornerRadius: 2).fill(Color(kalHex: "#b23a2a"))
+            RoundedRectangle(cornerRadius: 2).fill(KalTheme.brandRed)
                 .frame(width: 7, height: 15)
                 .opacity(0.2 + 0.8 * w)
         }

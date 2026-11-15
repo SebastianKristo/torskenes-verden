@@ -3,28 +3,36 @@ import SwiftUI
 /* ---------------- Prompt 34: Kalender for Mac – sidemenyen (aside i Kalender.dc.html variant web) ---------------- */
 // Minikalender med ukenummer, KALENDERE med hake og antall de neste 30 dagene, «Administrer kalendere ›», Glimt · dagen din
 // og hurtigtastene nederst.
+// Fase 4 (H16): sidekolonnen i NavigationSplitView (MacRoot) er en systemliste (List, .sidebar) med én seksjon per del.
+// Ingen List(selection:): sidemenyen velger ikke en side, den er minikalender og filtre (kalendere av/på).
 
 struct MacSidebar: View {
     @Environment(\.mk) private var t
-    @ObservedObject var win: MacWin
-    @ObservedObject var store: MacStore = MacStore.shared
+    @Bindable var win: MacWin
+    @Bindable var store: MacStore = MacStore.shared
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 18) {
+        List {
+            Section {
                 MacMiniMonth(month: win.miniMonth, selected: win.anchor, compact: false,
                              onPick: { (k: String) in win.goTo(KalD.date(k)) },
                              onWeek: { (k: String) in win.go(view: "uke", day: k) },
                              onMove: { (n: Int) in win.miniMonth = KalD.addMonths(win.miniMonth, n) })
-                calendars
-                MacDayCard(win: win)
+                    .sidebarRow()
+            }
+            Section {
+                calendars.sidebarRow()
+            }
+            Section {
+                MacDayCard(win: win).sidebarRow()
                 Text("Hurtigtaster: ← → bla · T i dag · D dag · 3 tre dager · W uke · M måned · Y år · L liste · N ny · / søk · ⌘K Glimt")
                     .font(MacFont.ui(11)).foregroundColor(t.mut2)
                     .fixedSize(horizontal: false, vertical: true)
+                    .sidebarRow()
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 14)
         }
+        .listStyle(.sidebar)
+        .scrollContentBackground(.hidden)
         .background(t.bg)
     }
 
@@ -34,40 +42,10 @@ struct MacSidebar: View {
     }
 }
 
-struct MacCalRow: View {
-    @Environment(\.mk) private var t
-    let cal: KalCal
-    let toggle: () -> Void
-    @State private var hover: Bool = false
-
-    var body: some View {
-        Button(action: toggle) {
-            HStack(spacing: 10) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 5).fill(cal.on ? t.calColor(cal) : Color.clear)
-                    RoundedRectangle(cornerRadius: 5).strokeBorder(t.calColor(cal), lineWidth: 1.5)
-                    if cal.on { Text("✓").font(.system(size: 10, weight: .heavy)).foregroundColor(Color.white) }
-                }
-                .frame(width: 18, height: 18)
-                Text(cal.name).font(MacFont.ui(13.5, .semibold)).foregroundColor(t.ink).lineLimit(1)
-                Spacer(minLength: 4)
-                if cal.count > 0 { Text(String(cal.count)).font(MacFont.mono(10.5)).foregroundColor(t.mut2) }
-            }
-            .padding(.horizontal, 8)
-            .frame(height: 32)
-            .background(RoundedRectangle(cornerRadius: 10).fill(hover ? t.card : Color.clear))
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .onHover { (h: Bool) in hover = h }
-        .accessibilityLabel(cal.name + (cal.on ? ", vises" : ", skjult"))
-    }
-}
-
 /// Minimåned (sidemenyen og menylinja). Ukenummer-kolonne, søndag i rødt, i dag med rød sirkel, prikk for dager med hendelser.
 struct MacMiniMonth: View {
     @Environment(\.mk) private var t
-    @ObservedObject var store: MacStore = MacStore.shared
+    @Bindable var store: MacStore = MacStore.shared
     let month: Date
     let selected: String
     let compact: Bool
@@ -138,7 +116,7 @@ struct MacMiniMonth: View {
 
 struct MacMiniDay: View {
     @Environment(\.mk) private var t
-    @ObservedObject var store: MacStore = MacStore.shared
+    @Bindable var store: MacStore = MacStore.shared
     let day: Date
     let month: Int
     let selected: String
@@ -177,8 +155,8 @@ struct MacMiniDay: View {
 /// «Glimt · dagen din» – trykk åpner Glimt.
 struct MacDayCard: View {
     @Environment(\.mk) private var t
-    @ObservedObject var win: MacWin
-    @ObservedObject var store: MacStore = MacStore.shared
+    @Bindable var win: MacWin
+    @Bindable var store: MacStore = MacStore.shared
 
     var body: some View {
         Button(action: { win.glimtOpen = true }) {
@@ -236,5 +214,15 @@ struct MacNewCalendarSheet: View {
         .padding(22)
         .frame(width: 400)
         .background(t.bg)
+    }
+}
+
+private extension View {
+    /// Raden i sidemenyen: samme luft som før (14 pt til sidene, 18 pt mellom delene), uten skillelinjer og radbakgrunn.
+    func sidebarRow() -> some View {
+        self
+            .listRowInsets(EdgeInsets(top: 9, leading: 14, bottom: 9, trailing: 14))
+            .listRowSeparator(.hidden)
+            .listRowBackground(Color.clear)
     }
 }

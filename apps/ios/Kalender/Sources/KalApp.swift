@@ -19,7 +19,7 @@ struct KalApp: App {
         // Opprydding H2: kal.token, kal.hl.token og hl41.device fra App Group-UserDefaults til Nøkkelringen (slettes der),
         // og Kalenders egne Nøkkelring-elementer skrives på nytt med ThisDeviceOnly.
         KalGroup.migrateSecrets()
-        // Prompt 51: krasjfangeren først (forrige økts krasj legges i køen), så enhetsnøkkel/flagg (KalSec51Core.swift).
+        // Prompt 51: krasjfangeren først (forrige økts krasj legges i køen), så enhetsnøkkel/flagg (KalSecurityCore.swift).
         KalSec51.enabled = true
         KalCrash51.install()
         // Prompt 44: forhåndslasting i bakgrunnen (BGAppRefreshTask) må registreres før appen er ferdig startet.

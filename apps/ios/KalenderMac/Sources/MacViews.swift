@@ -6,8 +6,8 @@ import SwiftUI
 
 struct MacMonthView: View {
     @Environment(\.mk) private var t
-    @ObservedObject var win: MacWin
-    @ObservedObject var store: MacStore = MacStore.shared
+    @Bindable var win: MacWin
+    @Bindable var store: MacStore = MacStore.shared
 
     private var first: Date { KalD.firstOfMonth(KalD.date(win.anchor)) }
 
@@ -48,8 +48,8 @@ struct MacMonthView: View {
 
 struct MacMonthRow: View {
     @Environment(\.mk) private var t
-    @ObservedObject var win: MacWin
-    @ObservedObject var store: MacStore = MacStore.shared
+    @Bindable var win: MacWin
+    @Bindable var store: MacStore = MacStore.shared
     let week: Date
     let month: Int
     var row: Int = 0
@@ -78,8 +78,8 @@ struct MacMonthRow: View {
 
 struct MacMonthCell: View {
     @Environment(\.mk) private var t
-    @ObservedObject var win: MacWin
-    @ObservedObject var store: MacStore = MacStore.shared
+    @Bindable var win: MacWin
+    @Bindable var store: MacStore = MacStore.shared
     let day: Date
     let month: Int
     var origin: UnitPoint = .center
@@ -183,7 +183,7 @@ struct MacMonthChip: View {
 
 struct MacYearView: View {
     @Environment(\.mk) private var t
-    @ObservedObject var win: MacWin
+    @Bindable var win: MacWin
 
     private var year: Int { KalD.year(KalD.date(win.anchor)) }
 
@@ -202,7 +202,7 @@ struct MacYearView: View {
 
 struct MacYearMonth: View {
     @Environment(\.mk) private var t
-    @ObservedObject var win: MacWin
+    @Bindable var win: MacWin
     let first: Date
     var origin: UnitPoint = .center
 
@@ -228,8 +228,8 @@ struct MacYearMonth: View {
 
 struct MacListView: View {
     @Environment(\.mk) private var t
-    @ObservedObject var win: MacWin
-    @ObservedObject var store: MacStore = MacStore.shared
+    @Bindable var win: MacWin
+    @Bindable var store: MacStore = MacStore.shared
 
     private var days: [String] {
         let start: String = win.anchor < KalD.todayKey() ? win.anchor : KalD.todayKey()
@@ -254,8 +254,8 @@ struct MacListView: View {
 
 struct MacListDay: View {
     @Environment(\.mk) private var t
-    @ObservedObject var win: MacWin
-    @ObservedObject var store: MacStore = MacStore.shared
+    @Bindable var win: MacWin
+    @Bindable var store: MacStore = MacStore.shared
     let k: String
 
     var body: some View {

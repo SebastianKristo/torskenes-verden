@@ -114,7 +114,7 @@ struct KalComposer: View {
             Image(systemName: "plus").font(.system(size: 20, weight: .heavy))
                 .foregroundStyle(Color.white)
                 .frame(width: 50, height: 50)
-                .background(Circle().fill(Color(kalHex: "#b23a2a")))
+                .background(Circle().fill(KalTheme.brandRed))
                 .shadow(color: Color(kalHex: "#b23a2a", opacity: 0.35), radius: 3, y: 2)
         }
         .buttonStyle(.plain)
@@ -189,8 +189,12 @@ struct KalPreview: View {
             // Prompt 46: trykk på en verdi for å rette den før lagring (Ny hendelse, utfylt).
             Text(p.title).font(KalFont.serif(22)).foregroundStyle(t.ink)
                 .onTapGesture { KalRask46Model.shared.edit(p, loc: mg.loc) }
+                .accessibilityAddTraits(.isButton)
+                .accessibilityHint("Rett før lagring")
             Text(when).font(KalFont.ui(13.5, .semibold)).foregroundStyle(t.ink)
                 .onTapGesture { KalRask46Model.shared.edit(p, loc: mg.loc) }
+                .accessibilityAddTraits(.isButton)
+                .accessibilityHint("Rett før lagring")
             Text(rem).font(KalFont.ui(12.5)).foregroundStyle(t.mut)
             if !mg.loc.isEmpty { KalRaskPlace46(loc: mg.loc, address: mg.address) }
             HStack {

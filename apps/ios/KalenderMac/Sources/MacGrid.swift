@@ -56,8 +56,8 @@ enum MacLayout {
 
 struct MacGridView: View {
     @Environment(\.mk) private var t
-    @ObservedObject var win: MacWin
-    @ObservedObject var store: MacStore = MacStore.shared
+    @Bindable var win: MacWin
+    @Bindable var store: MacStore = MacStore.shared
 
     private var count: Int { win.view == "dag" ? 1 : (win.view == "3d" ? 3 : 7) }
     private var hourH: CGFloat { count == 7 ? 48 : (count == 3 ? 56 : 64) }
@@ -81,7 +81,7 @@ struct MacGridView: View {
 
 struct MacGridHead: View {
     @Environment(\.mk) private var t
-    @ObservedObject var win: MacWin
+    @Bindable var win: MacWin
     let days: [Date]
 
     var body: some View {
@@ -101,8 +101,8 @@ struct MacGridHead: View {
 
 struct MacGridHeadCell: View {
     @Environment(\.mk) private var t
-    @ObservedObject var win: MacWin
-    @ObservedObject var store: MacStore = MacStore.shared
+    @Bindable var win: MacWin
+    @Bindable var store: MacStore = MacStore.shared
     let day: Date
     var origin: UnitPoint = .center
 
@@ -137,8 +137,8 @@ struct MacGridHeadCell: View {
 
 struct MacGridAllDay: View {
     @Environment(\.mk) private var t
-    @ObservedObject var win: MacWin
-    @ObservedObject var store: MacStore = MacStore.shared
+    @Bindable var win: MacWin
+    @Bindable var store: MacStore = MacStore.shared
     let days: [Date]
 
     var body: some View {
@@ -163,7 +163,7 @@ struct MacGridAllDay: View {
 
 struct MacGridBody: View {
     @Environment(\.mk) private var t
-    @ObservedObject var win: MacWin
+    @Bindable var win: MacWin
     let days: [Date]
     let hourH: CGFloat
 
@@ -207,8 +207,8 @@ struct MacGridBody: View {
 
 struct MacGridColumn: View {
     @Environment(\.mk) private var t
-    @ObservedObject var win: MacWin
-    @ObservedObject var store: MacStore = MacStore.shared
+    @Bindable var win: MacWin
+    @Bindable var store: MacStore = MacStore.shared
     let day: Date
     let hourH: CGFloat
 

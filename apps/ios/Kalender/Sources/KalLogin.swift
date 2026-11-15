@@ -1,9 +1,10 @@
 import SwiftUI
 import UIKit
 
-/* ---------------- Prompt 33: Kalender – innlogging ---------------- */
-// Serveradresse + brukernavn + passord (+ 2FA-kode) → app-token via /finans/api/login (samme flyt som Homelab-appen),
-// eller «Logg inn med Homelab-appen»: token fra App Group (kal.hl.*), eller finanshub://kalender-login som lager det.
+/* ---------------- Kalender (iPhone/iPad) – innloggingen ---------------- */
+// KalAuth: brukernavn + passord (+ 2FA-kode) → app-token via /finans/api/login (samme flyt som Homelab-appen).
+// Skjermen er KalLogin41View (uten serverfelt, prompt 41) med tannhjulet og arket «Server» (prompt 89) nederst i fila.
+// Fase 4: den gamle skjermen med serverfelt (KalLoginView, prompt 33) ble aldri vist og er fjernet.
 
 enum KalAuth {
     static func isLocal(_ host: String) -> Bool {
@@ -76,136 +77,6 @@ enum KalAuth {
     }
 }
 
-struct KalLoginView: View {
-    @Environment(\.kal) private var t
-    @MainActor private var s: KalStore { KalStore.shared }
-    @State private var server: String = UserDefaults.standard.string(forKey: "kal.lastServer") ?? ""
-    @State private var user: String = ""
-    @State private var pass: String = ""
-    @State private var code: String = ""
-    @State private var needsCode: Bool = false
-    @State private var busy: Bool = false
-    @State private var error: String = ""
-    /// Prompt 38: «Logg inn med QR fra mobilen» (nyttig på iPad).
-    @State private var qrMode: Bool = false
-
-    private var homelabReady: Bool { KalGroup.homelabToken != nil }
-    private var homelabInstalled: Bool {
-        guard let u = URL(string: "finanshub://kalender-login") else { return false }
-        return UIApplication.shared.canOpenURL(u)
-    }
-
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 14) {
-                KalAppIconView(size: 72).padding(.top, 40)
-                Text("Kalender").font(KalFont.serif(40)).foregroundStyle(t.ink)
-                Text("Logg inn med Homelab-kontoen din. Kalender deler kalendere, hendelser, bursdager og frister med Homelab.")
-                    .font(KalFont.ui(14)).foregroundStyle(t.mut).fixedSize(horizontal: false, vertical: true)
-                if homelabReady || homelabInstalled { homelabButton }
-                field("Serveradresse", text: $server, keyboard: .URL)
-                if qrMode {
-                    KalQRLogin38Panel(base: KalAuth.normalize(server), onPassword: { qrMode = false })
-                } else {
-                    passwordForm
-                }
-                if !KalGroup.linked {
-                    Text("App Group er ikke tilgjengelig i denne installasjonen (vanlig ved sideloading). Logg inn her, så virker appen – widgetene trenger App Group-en.")
-                        .font(KalFont.ui(12)).foregroundStyle(t.mut2).fixedSize(horizontal: false, vertical: true)
-                }
-            }
-            .padding(.horizontal, 24)
-            .padding(.bottom, 40)
-        }
-        .scrollDismissesKeyboard(.interactively)
-        .background(t.bg.ignoresSafeArea())
-    }
-
-    private var hasServer: Bool { !server.trimmingCharacters(in: .whitespaces).isEmpty }
-
-    @ViewBuilder private var passwordForm: some View {
-        field("Brukernavn", text: $user, keyboard: .default)
-        SecureField("Passord", text: $pass)
-            .font(KalFont.ui(16, .medium)).foregroundStyle(t.ink)
-            .padding(.horizontal, 14).frame(height: 50)
-            .background(RoundedRectangle(cornerRadius: 16).fill(t.card))
-            .overlay(RoundedRectangle(cornerRadius: 16).strokeBorder(t.line, lineWidth: 1))
-        if needsCode { field("Kode (6 sifre)", text: $code, keyboard: .numberPad) }
-        if !error.isEmpty {
-            Text(error).font(KalFont.ui(13)).foregroundStyle(t.acc).fixedSize(horizontal: false, vertical: true)
-        }
-        Button(action: { submit() }) {
-            HStack {
-                if busy { ProgressView().tint(t.bg) }
-                Text(busy ? "Logger inn …" : "Logg inn").font(KalFont.ui(15, .bold))
-            }
-            .foregroundStyle(t.bg)
-            .frame(maxWidth: .infinity).frame(height: 50)
-            .background(Capsule().fill(canSubmit ? t.ink : t.mut2))
-        }
-        .buttonStyle(.plain)
-        .disabled(!canSubmit || busy)
-        Button(action: { qrMode = true }) {
-            Text("Logg inn med QR fra mobilen").font(KalFont.ui(14, .semibold)).foregroundStyle(hasServer ? t.acc : t.mut2)
-        }
-        .buttonStyle(.plain)
-        .disabled(!hasServer)
-    }
-
-    private var canSubmit: Bool { !server.trimmingCharacters(in: .whitespaces).isEmpty && !pass.isEmpty }
-
-    private var homelabButton: some View {
-        Button(action: {
-            KalHaptic.tap()
-            if !s.adoptHomelab(), let u = URL(string: "finanshub://kalender-login") {
-                UIApplication.shared.open(u)
-            }
-        }) {
-            HStack(spacing: 10) {
-                Image(systemName: "house.fill").font(.system(size: 16, weight: .semibold))
-                Text("Logg inn med Homelab-appen").font(KalFont.ui(15, .bold))
-            }
-            .foregroundStyle(t.ink)
-            .frame(maxWidth: .infinity).frame(height: 50)
-            .overlay(Capsule().strokeBorder(t.ink, lineWidth: 1.5))
-        }
-        .buttonStyle(.plain)
-    }
-
-    private func field(_ title: String, text: Binding<String>, keyboard: UIKeyboardType) -> some View {
-        TextField(title, text: text)
-            .font(KalFont.ui(16, .medium)).foregroundStyle(t.ink)
-            .keyboardType(keyboard)
-            .textInputAutocapitalization(.never)
-            .autocorrectionDisabled(true)
-            .padding(.horizontal, 14).frame(height: 50)
-            .background(RoundedRectangle(cornerRadius: 16).fill(t.card))
-            .overlay(RoundedRectangle(cornerRadius: 16).strokeBorder(t.line, lineWidth: 1))
-    }
-
-    private func submit() {
-        let base: String = KalAuth.normalize(server)
-        busy = true
-        error = ""
-        Task {
-            do {
-                let r: KalAuth.Result = try await KalAuth.login(base: base, username: user, password: pass, code: code)
-                UserDefaults.standard.set(base, forKey: "kal.lastServer")
-                busy = false
-                pass = ""
-                s.didLogin(bases: [base], token: r.token, user: r.user)
-            } catch let f as KalAuth.Failure {
-                busy = false
-                error = f.message
-                if f.needsCode { needsCode = true }
-            } catch {
-                busy = false
-                self.error = error.localizedDescription
-            }
-        }
-    }
-}
-
 /// Appikonet tegnet i SwiftUI (krem, rød topp med ukedag og dagens dato i Newsreader).
 struct KalAppIconView: View {
     let size: CGFloat
@@ -216,7 +87,7 @@ struct KalAppIconView: View {
             Text(KalD.weekdaysShort[KalD.wd(T)].uppercased()).font(KalFont.mono(size * 0.14)).tracking(1)
                 .foregroundStyle(Color.white)
                 .frame(maxWidth: .infinity).frame(height: size * 0.28)
-                .background(Color(kalHex: "#b23a2a"))
+                .background(KalTheme.brandRed)
             Text(String(KalD.dayOfMonth(T))).font(KalFont.serif(size * 0.5)).foregroundStyle(Color(kalHex: "#1b1a17"))
                 .frame(maxHeight: .infinity)
         }
@@ -225,5 +96,877 @@ struct KalAppIconView: View {
         .clipShape(RoundedRectangle(cornerRadius: size * 0.23, style: .continuous))
         .shadow(color: Color.black.opacity(0.15), radius: 4, y: 2)
         .accessibilityHidden(true)
+    }
+}
+
+/* ---------------- Prompt 41: Kalender – innloggingsskjermen uten serveradresse ---------------- */
+// Fasit: Kalender App.dc.html → auVals. Start: «Fortsett som Sebastian» (enhets-token fra Homelab på samme enhet, ingen app-bytte),
+// «Logg inn med Homelab-appen» (PKCE, se SharedKal/Core/KalAuthCore.swift) og «Bruk brukernavn og passord» (+ 2FA).
+// Venter: spinner og fire steg, «Åpne Homelab igjen» og «Avbryt». Feil: konkret tekst, «Prøv igjen» og passord-reserve.
+// Ingen adresse spørres om; «Endre serveradresse» vises bare når ingen adresse svarer.
+
+@MainActor
+@Observable
+final class KalLogin41Model {
+    static let shared: KalLogin41Model = KalLogin41Model()
+
+    /// start | wait | err | pw
+    var phase: String = "start"
+    var error: String = ""
+    /// Vis «Endre serveradresse» (ingen adresse svarte).
+    var offerServer: Bool = false
+    var serverOpen: Bool = false
+    var serverText: String = UserDefaults.standard.string(forKey: "kal41.manual") ?? ""
+    /// Prompt 89: arket «Server» fra tannhjulet (KalLogin.swift) og domenet som vises under innloggingsknappene.
+    var gear89: Bool = false
+    var server89: String = KalSrv89.displayHost
+    /// 0 Åpner Homelab · 1 Godkjenn · 2 Sender tilbake · 3 Henter kalenderne
+    var step: Int = 0
+    var busy: Bool = false
+    var user: String = UserDefaults.standard.string(forKey: "kal41.lastUser") ?? ""
+    var pass: String = ""
+    var code: String = ""
+    var needsCode: Bool = false
+    /// Tilbud om å godkjenne i nettleseren (Homelab-appen mangler).
+    var webOffer: Bool = false
+    /// Prompt 51: ny enhet venter på godkjenning (fase «approve51»). pollKey vises aldri.
+    var approval51: KalApproval51? = nil
+    @ObservationIgnored private var waitId: Int = 0
+    /// Prompt 44: samme svar fra Homelab to ganger (onOpenURL + aktivering) skal ikke gi «koden er allerede brukt».
+    @ObservationIgnored private var lastCode44: String = ""
+    @ObservationIgnored private var returnId44: Int = 0
+
+    /// «Fortsett som …»: enhets-token (delt Nøkkelring / App Group) eller det eldre companion-tokenet fra Homelab.
+    var quickName: String? {
+        if let d = KalShared41.device() { return d.display.isEmpty ? "Homelab-kontoen" : d.display }
+        if KalGroup.homelabToken != nil, !KalGroup.homelabBases.isEmpty {
+            let u: String = KalGroup.homelabUser
+            return u.isEmpty ? "Homelab-kontoen" : u
+        }
+        return nil
+    }
+
+    /* ---------- Fortsett som ---------- */
+
+    func quick() {
+        KalHaptic.tap()
+        phase = "wait"
+        step = 3
+        error = ""
+        Task { @MainActor in
+            if let d = KalShared41.device() {
+                do {
+                    let s: KalSession41 = try await KalAuth41.deviceExchange(d)
+                    finish(s, via: "homelab")
+                    return
+                } catch let e as KalAuth41Error {
+                    // Eldre server uten device-exchange: bruk companion-tokenet hvis det finnes.
+                    if e.status == 404, KalStore.shared.adoptHomelab() { done(name: KalGroup.homelabUser); return }
+                    fail(KalAuth41.message(e), server: e.status == 0)
+                    return
+                } catch {
+                    fail(error.localizedDescription, server: false)
+                    return
+                }
+            }
+            if KalStore.shared.adoptHomelab() {
+                done(name: KalGroup.homelabUser)
+                return
+            }
+            fail("Fant ingen innlogging fra Homelab på denne enheten. Logg inn med Homelab-appen.", server: false)
+        }
+    }
+
+    /* ---------- Logg inn med Homelab-appen (PKCE) ---------- */
+
+    func viaApp() {
+        // Prompt 84: innebygd i Homelab logger Homelab inn med sin egen konto (ikke homelab://app-auth til seg selv).
+        if let h = KalEmbed84.shared.login {
+            h()
+            return
+        }
+        KalHaptic.tap()
+        error = ""
+        webOffer = false
+        step = 0
+        phase = "wait"
+        waitId += 1
+        let id: Int = waitId
+        Task { @MainActor in
+            let cands: [String] = KalAuth41.candidates()
+            let base: String = await KalAuth41.firstReachable(Array(cands.prefix(3))) ?? (cands.first ?? KalAuth41.defaultBase)
+            let p: KalPending41 = KalAuth41.begin(base: base)
+            KalLog44.send("auth.handoff.start", ["base": base])
+            open(p, base: base, id: id)
+        }
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: UInt64(KalAuth41.timeout * 1_000_000_000))
+            if self.phase == "wait" && self.waitId == id && self.step < 2 {
+                self.fail("Homelab svarte ikke. Sjekk at Homelab er innlogget, og prøv igjen.", server: false)
+            }
+        }
+    }
+
+    /// Universal link først (bare hvis Homelab fanger den), så homelab://, ellers feil med tilbud om web-godkjenning.
+    private func open(_ p: KalPending41, base: String, id: Int) {
+        guard let uni = KalAuth41.universalURL(p) else { return }
+        UIApplication.shared.open(uni, options: [UIApplication.OpenExternalURLOptionsKey.universalLinksOnly: true]) { (ok: Bool) in
+            Task { @MainActor in
+                if self.waitId != id { return }
+                if ok {
+                    self.step = 1
+                    return
+                }
+                guard let sch = KalAuth41.schemeURL(p) else { return }
+                UIApplication.shared.open(sch, options: [:]) { (ok2: Bool) in
+                    Task { @MainActor in
+                        if self.waitId != id { return }
+                        if ok2 {
+                            self.step = 1
+                        } else {
+                            self.webOffer = true
+                            self.fail("Fant ikke Homelab-appen. Logg inn med brukernavn og passord, eller installer Homelab.", server: false)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /// Homelab ikke installert: godkjenn på web-siden (samme PKCE, svaret kommer til kalender://auth).
+    func approveInBrowser() {
+        KalHaptic.tap()
+        waitId += 1
+        let id: Int = waitId
+        phase = "wait"
+        step = 1
+        error = ""
+        Task { @MainActor in
+            let cands: [String] = KalAuth41.candidates()
+            let base: String = await KalAuth41.firstReachable(Array(cands.prefix(3))) ?? KalAuth41.defaultBase
+            let p: KalPending41 = KalAuth41.begin(base: base)
+            if let u = KalAuth41.webURL(p, base: base) { _ = await UIApplication.shared.open(u) }
+            try? await Task.sleep(nanoseconds: 180_000_000_000)
+            if self.phase == "wait" && self.waitId == id && self.step < 2 {
+                self.fail("Fikk ikke svar fra godkjenningen. Prøv igjen.", server: false)
+            }
+        }
+    }
+
+    /// kalender://auth?code=…&state=…  ·  kalender://auth?error=denied&state=…
+    func handleRedirect(_ url: URL) {
+        let items: [URLQueryItem] = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
+        func q(_ k: String) -> String? {
+            let v: String? = items.first(where: { (i: URLQueryItem) -> Bool in i.name == k })?.value
+            return (v ?? "").isEmpty ? nil : v
+        }
+        waitId += 1
+        if let err = q("error") {
+            KalAuth41.clearPending()
+            let denied: Bool = err.contains("denied") || err.contains("avvist") || err.contains("cancel")
+            fail(denied ? "Innloggingen ble avvist i Homelab." : "Homelab: " + err, server: false)
+            return
+        }
+        guard let code = q("code"), let state = q("state") else { return }
+        if code == lastCode44 { return }
+        lastCode44 = code
+        KalLog44.send("auth.handoff.return", [:])
+        phase = "wait"
+        step = 2
+        error = ""
+        Task { @MainActor in
+            do {
+                let s: KalSession41 = try await KalAuth41.exchange(code: code, state: state, server: q("server") ?? q("base"))
+                self.step = 3
+                finish(s, via: "homelab")
+            } catch let e as KalAuth41Error {
+                fail(KalAuth41.message(e), server: e.status == 0)
+            } catch {
+                fail(error.localizedDescription, server: false)
+            }
+        }
+    }
+
+    func cancel() {
+        KalHaptic.tap()
+        waitId += 1
+        KalAuth41.clearPending()
+        phase = "start"
+    }
+
+    /* ---------- Brukernavn og passord ---------- */
+
+    func password() {
+        KalHaptic.tap()
+        error = ""
+        phase = "pw"
+    }
+
+    func submitPassword() {
+        let u: String = user.trimmingCharacters(in: .whitespaces)
+        if u.isEmpty || pass.isEmpty {
+            error = "Skriv inn brukernavn og passord."
+            return
+        }
+        busy = true
+        error = ""
+        offerServer = false
+        let p: String = pass
+        let c: String = code
+        Task { @MainActor in
+            guard let base = await KalAuth41.firstReachable(KalAuth41.candidates()) else {
+                busy = false
+                error = "Får ikke kontakt med Homelab."
+                offerServer = true
+                return
+            }
+            do {
+                let r: KalAuth.Result = try await KalAuth.login(base: base, username: u, password: p, code: c)
+                UserDefaults.standard.set(u, forKey: "kal41.lastUser")
+                UserDefaults.standard.set(base, forKey: "kal.lastServer")
+                busy = false
+                pass = ""
+                code = ""
+                finish(KalSession41(token: r.token, refresh: "", user: r.user, base: base), via: "login")
+            } catch let f as KalAuth.Failure {
+                busy = false
+                if let ap = f.approval51 {
+                    pass = ""
+                    code = ""
+                    startApproval51(ap)
+                    return
+                }
+                error = f.message
+                if f.needsCode { needsCode = true }
+            } catch {
+                busy = false
+                self.error = error.localizedDescription
+            }
+        }
+    }
+
+    /* ---------- Prompt 51: ny enhet venter på godkjenning ---------- */
+
+    /// Poller statusUrl til innloggingen er godkjent fra en kjent enhet (eller avvist/utløpt), og fullfører med finishUrl.
+    func startApproval51(_ ap: KalApproval51) {
+        waitId += 1
+        let id: Int = waitId
+        approval51 = ap
+        error = ""
+        phase = "approve51"
+        KalLog44.send("auth.approval51.wait", [:])
+        Task { @MainActor in
+            let r: KalApprove51Outcome = await KalApprove51.run(ap) { () -> Bool in self.waitId != id }
+            if self.waitId != id { return }
+            self.approval51 = nil
+            switch r {
+            case .done(let s):
+                KalHaptic.done()
+                self.finish(s, via: "login")
+            case .cancelled:
+                return
+            default:
+                self.error = KalApprove51.message(r)
+                self.phase = "pw"
+            }
+        }
+    }
+
+    func cancelApproval51() {
+        KalHaptic.tap()
+        waitId += 1
+        approval51 = nil
+        error = ""
+        phase = "start"
+    }
+
+    /* ---------- Serveradresse (bare ved feil) ---------- */
+
+    func saveServer() {
+        let s: String = KalAuth.normalize(serverText)
+        if !s.isEmpty && !(s.hasPrefix("http://") || s.hasPrefix("https://")) { return }
+        UserDefaults.standard.set(s, forKey: "kal41.manual")
+        serverOpen = false
+        offerServer = false
+        error = ""
+    }
+
+    /// Prompt 89: arket «Server» er lagret – ny visning og nye adresser ved neste forsøk.
+    func saved89() {
+        serverText = UserDefaults.standard.string(forKey: "kal41.manual") ?? ""
+        server89 = KalSrv89.displayHost
+        offerServer = false
+        error = ""
+        if phase == "err" { phase = "start" }
+    }
+
+    /* ---------- Ferdig ---------- */
+
+    private func finish(_ s: KalSession41, via: String) {
+        if !s.refresh.isEmpty { KalKeychain41.write("refresh", Data(s.refresh.utf8)) }
+        var bases: [String] = [s.base]
+        for b in KalAuth41.candidates() where b != s.base && !bases.contains(b) && bases.count < 3 { bases.append(b) }
+        let store: KalStore = KalStore.shared
+        if via == "login" {
+            store.didLogin(bases: bases, token: s.token, user: s.user)
+        } else {
+            KalGroup.saveSession(bases: bases, token: s.token, user: s.user, via: via)
+            UserDefaults.standard.set(false, forKey: "kal.noAuto")
+            store.loggedIn = true
+            store.userName = s.user
+            Task { await store.load(force: true) }
+        }
+        done(name: s.user)
+        Task { await KalLogin41Model.syncServers() }
+        // Prompt 51: flagg, ventende enheter og «Nytt i denne versjonen» for den nye innloggingen.
+        KalSec51Model.shared.didLogin()
+    }
+
+    private func done(name: String) {
+        KalLog44.send("auth.handoff.ok", [:])
+        KalHaptic.done()
+        phase = "start"
+        step = 0
+        error = ""
+        let n: String = name.isEmpty ? "Homelab-kontoen" : name
+        KalStore.shared.showToast("✓ Logget inn som " + n, undo: "")
+    }
+
+    private func fail(_ msg: String, server: Bool) {
+        error = msg
+        offerServer = server
+        phase = "err"
+        KalLog44.send("auth.handoff.fail", ["reason": msg])
+    }
+
+    /// Prompt 44: tilbake i Kalender (aktiv) mens den venter på Homelab: kommer det ikke svar innen 20 s, vis
+    /// «Fikk ikke svar fra Homelab» med Prøv igjen og Logg inn med passord (i stedet for å vente i det uendelige).
+    func returned44() {
+        guard phase == "wait", step < 2 else { return }
+        returnId44 += 1
+        let id: Int = returnId44
+        let w: Int = waitId
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 20_000_000_000)
+            if self.returnId44 == id && self.waitId == w && self.phase == "wait" && self.step < 2 {
+                self.fail("Fikk ikke svar fra Homelab. Prøv igjen, eller logg inn med passord.", server: false)
+            }
+        }
+    }
+
+    /// Lokal og ekstern adresse fra serveren; rekkefølgen velges automatisk (lokal når den svarer < 300 ms).
+    static func syncServers() async {
+        let ok: Bool = await KalServer41.refresh()
+        if !ok { return }
+        let ordered: [String] = await KalServer41.choose()
+        guard let tok = KalGroup.token, !ordered.isEmpty else { return }
+        var bases: [String] = ordered
+        for b in KalGroup.bases where !bases.contains(b) { bases.append(b) }
+        KalGroup.saveSession(bases: bases, token: tok, user: KalGroup.user, via: KalGroup.via)
+    }
+}
+
+struct KalLogin41View: View {
+    @Environment(\.kal) private var t
+    @MainActor private var m: KalLogin41Model { KalLogin41Model.shared }
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 18) {
+                Spacer(minLength: 40)
+                KalAppIconView(size: 84)
+                VStack(spacing: 6) {
+                    Text(title).font(KalFont.serif(30)).foregroundStyle(t.ink).multilineTextAlignment(.center)
+                    if !subtitle.isEmpty {
+                        Text(subtitle).font(KalFont.ui(14.5)).foregroundStyle(t.mut).multilineTextAlignment(.center)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                .frame(maxWidth: 320)
+                content.frame(maxWidth: 340)
+                Spacer(minLength: 40)
+            }
+            .padding(.horizontal, 28)
+            .frame(maxWidth: .infinity)
+        }
+        .scrollDismissesKeyboard(.interactively)
+        .background(t.bg.ignoresSafeArea())
+        .sheet(isPresented: Binding(get: { m.serverOpen }, set: { (v: Bool) in if m.serverOpen != v { m.serverOpen = v } })) {
+            KalServer41Sheet().environment(\.kal, t)
+        }
+        // Prompt 89: tannhjulet øverst til høyre åpner arket «Server» (KalLogin.swift).
+        .overlay(alignment: .topTrailing) {
+            if m.phase == "start" || m.phase == "pw" || m.phase == "err" {
+                KalLogin89Gear().padding(.trailing, 8)
+            }
+        }
+        .sheet(isPresented: Binding(get: { m.gear89 }, set: { (v: Bool) in if m.gear89 != v { m.gear89 = v } })) {
+            KalLogin89Sheet().environment(\.kal, t)
+        }
+    }
+
+    private var title: String {
+        if m.phase == "wait" { return "Godkjenn i Homelab" }
+        if m.phase == "err" { return "Fikk ikke logget inn" }
+        if m.phase == "qr" { return "Logg inn med QR-kode" }
+        if m.phase == "approve51" { return "Venter på godkjenning" }
+        return "Velkommen til Kalender"
+    }
+
+    private var subtitle: String {
+        if m.phase == "wait" { return "Homelab åpnes og spør om Kalender får logge inn. Du kommer tilbake hit av deg selv." }
+        if m.phase == "err" || m.phase == "qr" { return "" }
+        if m.phase == "approve51" { return "Denne enheten er ny for kontoen din." }
+        return "Bruk samme konto som i Homelab. Kalendere, bursdager og frister synkes med en gang."
+    }
+
+    @ViewBuilder private var content: some View {
+        switch m.phase {
+        case "wait": KalLogin41Wait()
+        case "err": KalLogin41Err()
+        case "pw": KalLogin41Pw()
+        // Prompt 46: QR-koden (skannes med Papir Finans eller en innlogget Kalender på mobilen).
+        case "qr": KalLoginQR46()
+        // Prompt 51: ny enhet må godkjennes fra en kjent enhet (KalSecurity.swift).
+        case "approve51": KalApprove51Wait()
+        default: KalLogin41Start()
+        }
+    }
+}
+
+struct KalLogin41Start: View {
+    @Environment(\.kal) private var t
+    @MainActor private var m: KalLogin41Model { KalLogin41Model.shared }
+
+    var body: some View {
+        VStack(spacing: 10) {
+            if let n = m.quickName { quickButton(n) }
+            Button(action: { m.viaApp() }) {
+                Text("Logg inn med Homelab-appen").font(KalFont.ui(14.5, .bold)).foregroundStyle(t.ink)
+                    .frame(maxWidth: .infinity).frame(height: 52)
+                    .background(Capsule().fill(t.card))
+                    .overlay(Capsule().strokeBorder(t.line, lineWidth: 1))
+                    .contentShape(Capsule())
+            }
+            .buttonStyle(.plain)
+            KalLoginQRButton46()
+            Button(action: { m.password() }) {
+                Text("Bruk brukernavn og passord").font(KalFont.ui(13.5, .bold)).foregroundStyle(t.mut)
+                    .frame(maxWidth: .infinity).frame(height: 44)
+            }
+            .buttonStyle(.plain)
+            // Prompt 89: valgt server i liten grå tekst.
+            KalLogin89Line()
+        }
+    }
+
+    private func quickButton(_ name: String) -> some View {
+        let initial: String = String(name.prefix(1)).uppercased()
+        return Button(action: { m.quick() }) {
+            HStack(spacing: 12) {
+                Text(initial).font(KalFont.ui(15, .heavy)).foregroundStyle(Color.white)
+                    .frame(width: 42, height: 42)
+                    .background(Circle().fill(t.red))
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("Fortsett som " + name).font(KalFont.ui(15.5, .bold)).lineLimit(1)
+                    Text("Innlogget i Homelab på denne enheten").font(KalFont.ui(12.5)).opacity(0.75).lineLimit(1)
+                }
+                Spacer(minLength: 4)
+                Image(systemName: "chevron.right").font(KalFont.ui(14, .semibold)).accessibilityHidden(true)
+            }
+            .foregroundStyle(t.bg)
+            .padding(.leading, 10).padding(.trailing, 16)
+            .frame(height: 62)
+            .background(RoundedRectangle(cornerRadius: 20, style: .continuous).fill(t.ink))
+            .contentShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Fortsett som " + name)
+    }
+}
+
+struct KalLogin41Wait: View {
+    @Environment(\.kal) private var t
+    @MainActor private var m: KalLogin41Model { KalLogin41Model.shared }
+    private let steps: [String] = ["Åpner Homelab", "Godkjenn i Homelab (Face ID)", "Sender deg tilbake til Kalender", "Henter kalenderne dine"]
+
+    var body: some View {
+        VStack(spacing: 14) {
+            ProgressView().controlSize(.large).tint(t.red)
+            VStack(alignment: .leading, spacing: 6) {
+                ForEach(0..<steps.count, id: \.self) { (i: Int) in
+                    HStack(spacing: 10) {
+                        Text(i < m.step ? "✓" : (i == m.step ? "•" : "·")).font(KalFont.ui(13.5, .bold)).frame(width: 16)
+                        Text(steps[i]).font(KalFont.ui(13.5, i == m.step ? .bold : .medium))
+                    }
+                    .foregroundStyle(i <= m.step ? t.ink : t.mut)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 14).padding(.vertical, 12)
+            .background(RoundedRectangle(cornerRadius: 16).fill(t.card))
+            HStack(spacing: 8) {
+                Button(action: { m.viaApp() }) {
+                    Text("Åpne Homelab igjen").font(KalFont.ui(13.5, .bold)).foregroundStyle(t.ink)
+                        .frame(maxWidth: .infinity).frame(height: 44)
+                        .overlay(Capsule().strokeBorder(t.line, lineWidth: 1))
+                        .contentShape(Capsule())
+                }
+                .buttonStyle(.plain)
+                Button(action: { m.cancel() }) {
+                    Text("Avbryt").font(KalFont.ui(13.5, .bold)).foregroundStyle(t.mut)
+                        .frame(maxWidth: .infinity).frame(height: 44)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+}
+
+struct KalLogin41Err: View {
+    @Environment(\.kal) private var t
+    @MainActor private var m: KalLogin41Model { KalLogin41Model.shared }
+
+    var body: some View {
+        VStack(spacing: 10) {
+            Text(m.error.isEmpty ? "Homelab svarte ikke. Sjekk at Homelab-appen er installert og innlogget, og prøv igjen." : m.error)
+                .font(KalFont.ui(13.5)).foregroundStyle(t.ink)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.horizontal, 14).padding(.vertical, 12)
+                .background(RoundedRectangle(cornerRadius: 16).fill(t.card))
+                .overlay(RoundedRectangle(cornerRadius: 16).strokeBorder(t.red, lineWidth: 1.5))
+            Button(action: { m.viaApp() }) {
+                Text("Prøv igjen").font(KalFont.ui(14.5, .bold)).foregroundStyle(t.bg)
+                    .frame(maxWidth: .infinity).frame(height: 52)
+                    .background(Capsule().fill(t.ink))
+                    .contentShape(Capsule())
+            }
+            .buttonStyle(.plain)
+            if m.webOffer {
+                Button(action: { m.approveInBrowser() }) {
+                    Text("Godkjenn i nettleseren").font(KalFont.ui(13.5, .bold)).foregroundStyle(t.ink)
+                        .frame(maxWidth: .infinity).frame(height: 44)
+                        .overlay(Capsule().strokeBorder(t.line, lineWidth: 1))
+                        .contentShape(Capsule())
+                }
+                .buttonStyle(.plain)
+            }
+            Button(action: { m.password() }) {
+                Text("Bruk brukernavn og passord").font(KalFont.ui(13.5, .bold)).foregroundStyle(t.mut)
+                    .frame(maxWidth: .infinity).frame(height: 44)
+            }
+            .buttonStyle(.plain)
+            if m.offerServer { KalServer41Link() }
+        }
+    }
+}
+
+struct KalLogin41Pw: View {
+    @Environment(\.kal) private var t
+    @MainActor private var m: KalLogin41Model { KalLogin41Model.shared }
+
+    var body: some View {
+        VStack(spacing: 10) {
+            KalLogin41Field(title: "Brukernavn", text: Binding(get: { m.user }, set: { (v: String) in m.user = v }), secure: false, keyboard: .default)
+            KalLogin41Field(title: "Passord", text: Binding(get: { m.pass }, set: { (v: String) in m.pass = v }), secure: true, keyboard: .default)
+            if m.needsCode {
+                KalLogin41Field(title: "Kode (6 sifre)", text: Binding(get: { m.code }, set: { (v: String) in m.code = v }), secure: false, keyboard: .numberPad)
+            }
+            if !m.error.isEmpty {
+                Text(m.error).font(KalFont.ui(13)).foregroundStyle(t.acc)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Button(action: { m.submitPassword() }) {
+                HStack(spacing: 8) {
+                    if m.busy { ProgressView().tint(t.bg) }
+                    Text(m.busy ? "Logger inn …" : "Logg inn").font(KalFont.ui(14.5, .bold))
+                }
+                .foregroundStyle(t.bg)
+                .frame(maxWidth: .infinity).frame(height: 52)
+                .background(Capsule().fill(t.ink))
+                .contentShape(Capsule())
+            }
+            .buttonStyle(.plain)
+            .disabled(m.busy)
+            // Prompt 89: valgt server i liten grå tekst under innloggingsknappen.
+            KalLogin89Line()
+            if m.offerServer { KalServer41Link() }
+            Button(action: {
+                KalHaptic.tap()
+                m.error = ""
+                m.phase = "start"
+            }) {
+                Text("‹ Tilbake").font(KalFont.ui(13, .bold)).foregroundStyle(t.mut).frame(height: 40)
+            }
+            .buttonStyle(.plain)
+        }
+    }
+}
+
+struct KalLogin41Field: View {
+    @Environment(\.kal) private var t
+    let title: String
+    @Binding var text: String
+    let secure: Bool
+    let keyboard: UIKeyboardType
+
+    var body: some View {
+        Group {
+            if secure {
+                SecureField(title, text: $text).textContentType(.password)
+            } else {
+                TextField(title, text: $text)
+                    .keyboardType(keyboard)
+                    .textContentType(keyboard == .numberPad ? UITextContentType.oneTimeCode : UITextContentType.username)
+            }
+        }
+        .font(KalFont.ui(15, .medium)).foregroundStyle(t.ink)
+        .textInputAutocapitalization(.never)
+        .autocorrectionDisabled(true)
+        .padding(.horizontal, 16).frame(height: 50)
+        .background(RoundedRectangle(cornerRadius: 16).fill(t.card))
+        .overlay(RoundedRectangle(cornerRadius: 16).strokeBorder(t.line, lineWidth: 1))
+    }
+}
+
+/// «Endre serveradresse» – vises bare når ingen adresse svarer.
+struct KalServer41Link: View {
+    @Environment(\.kal) private var t
+    @MainActor private var m: KalLogin41Model { KalLogin41Model.shared }
+
+    var body: some View {
+        Button(action: {
+            KalHaptic.tap()
+            // Prompt 89: samme ark som tannhjulet (ekstern og lokal adresse, Test tilkobling).
+            m.gear89 = true
+        }) {
+            Text("Endre serveradresse").font(KalFont.ui(13, .semibold)).foregroundStyle(t.acc).frame(height: 36)
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+struct KalServer41Sheet: View {
+    @Environment(\.kal) private var t
+    @MainActor private var m: KalLogin41Model { KalLogin41Model.shared }
+    @State private var testText: String = ""
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Serveradresse").font(KalFont.serif(24)).foregroundStyle(t.ink)
+            Text("Vanligvis hentes adressen fra Homelab. Skriv inn adressen hvis Kalender ikke finner serveren.")
+                .font(KalFont.ui(13)).foregroundStyle(t.mut).fixedSize(horizontal: false, vertical: true)
+            TextField(KalAuth41.defaultBase, text: Binding(get: { m.serverText }, set: { (v: String) in m.serverText = v }))
+                .keyboardType(.URL)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled(true)
+                .font(KalFont.ui(15, .medium)).foregroundStyle(t.ink)
+                .padding(.horizontal, 14).frame(height: 48)
+                .background(RoundedRectangle(cornerRadius: 14).fill(t.card))
+                .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(t.line, lineWidth: 1))
+            if !testText.isEmpty {
+                Text(testText).font(KalFont.ui(12.5)).foregroundStyle(t.mut).fixedSize(horizontal: false, vertical: true)
+            }
+            HStack(spacing: 8) {
+                KalPill(title: "Test", filled: false) { test() }
+                KalPill(title: "Lagre") { m.saveServer() }
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(20)
+        .background(t.bg.ignoresSafeArea())
+        .presentationDetents([.medium])
+    }
+
+    private func test() {
+        let s: String = KalAuth.normalize(m.serverText)
+        if !(s.hasPrefix("http://") || s.hasPrefix("https://")) {
+            testText = "Adressen må starte med http:// eller https://"
+            return
+        }
+        testText = "Tester …"
+        Task { @MainActor in
+            let t0: Date = Date()
+            let ok: Bool = await KalAuth41.reachable(s, timeout: 6)
+            let ms: Int = Int(Date().timeIntervalSince(t0) * 1000)
+            testText = ok ? "✓ Homelab svarer på " + s + " · " + String(ms) + " ms" : "Fikk ikke kontakt med " + s
+        }
+    }
+}
+
+/* ---------------- Prompt 89 (IOS89): Kalender – tannhjul for serveradresse på innloggingen ----------------
+ Tannhjulet (gearshape, 44×44) øverst til høyre på innloggingen åpner arket «Server»: Ekstern adresse (URL-tastatur,
+ forhåndsutfylt https://os.smarthjemeksperten.no), Lokal adresse (http://10.69.1.39:3000), «Test tilkobling» (GET /api/health,
+ «Tilkoblet» grønn / feilmelding rød), «Tilbakestill til standard», Lagre / Avbryt. Samme lagring som Innstillinger → Server
+ (KalSrv89.save → KalSrv47). Under innloggingsknappene: «Server: os.smarthjemeksperten.no» i liten grå tekst. */
+
+struct KalLogin89Gear: View {
+    @Environment(\.kal) private var t
+    @MainActor private var m: KalLogin41Model { KalLogin41Model.shared }
+
+    var body: some View {
+        Button(action: {
+            KalHaptic.tap()
+            m.gear89 = true
+        }) {
+            Image(systemName: "gearshape")
+                .font(.system(size: 19, weight: .semibold))
+                .foregroundStyle(t.mut)
+                .frame(width: 44, height: 44)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Server")
+        .accessibilityHint("Endre ekstern og lokal serveradresse")
+    }
+}
+
+/// «Server: os.smarthjemeksperten.no».
+struct KalLogin89Line: View {
+    @Environment(\.kal) private var t
+    @MainActor private var m: KalLogin41Model { KalLogin41Model.shared }
+
+    var body: some View {
+        Button(action: { m.gear89 = true }) {
+            Text("Server: " + m.server89)
+                .font(KalFont.ui(12.5)).foregroundStyle(t.mut2)
+                .lineLimit(1).truncationMode(.middle)
+                .frame(maxWidth: .infinity, minHeight: 28)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+struct KalLogin89Sheet: View {
+    @Environment(\.kal) private var t
+    @MainActor private var m: KalLogin41Model { KalLogin41Model.shared }
+    @State private var external: String = ""
+    @State private var local: String = ""
+    @State private var extText: String = ""
+    @State private var extOk: Bool = false
+    @State private var locText: String = ""
+    @State private var locOk: Bool = false
+    @State private var testing: Bool = false
+    @State private var busy: Bool = false
+    @State private var error: String = ""
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Text("Server").font(KalFont.serif(26)).foregroundStyle(t.ink)
+                    Spacer()
+                    Button(action: { m.gear89 = false }) {
+                        Text("Avbryt").font(KalFont.ui(14, .semibold)).foregroundStyle(t.mut).frame(minWidth: 44, minHeight: 44)
+                    }
+                    .buttonStyle(.plain)
+                }
+                Text("Adressene til Homelab-serveren. De samme verdiene finnes i Innstillinger → Server etter innlogging.")
+                    .font(KalFont.ui(13)).foregroundStyle(t.mut).fixedSize(horizontal: false, vertical: true)
+                field("Ekstern adresse", KalSrv47.standardExternal, $external, extText, extOk)
+                field("Lokal adresse", KalSrv47.standardLocal, $local, locText, locOk)
+                if !error.isEmpty {
+                    Text(error).font(KalFont.ui(13, .semibold)).foregroundStyle(t.red).fixedSize(horizontal: false, vertical: true)
+                }
+                Button(action: { test() }) {
+                    HStack(spacing: 8) {
+                        if testing { ProgressView() }
+                        Text(testing ? "Tester …" : "Test tilkobling").font(KalFont.ui(14, .bold))
+                    }
+                    .foregroundStyle(t.ink).frame(maxWidth: .infinity).frame(height: 46)
+                    .overlay(Capsule().strokeBorder(t.line, lineWidth: 1))
+                    .contentShape(Capsule())
+                }
+                .buttonStyle(.plain)
+                .disabled(testing)
+                Button(action: { reset() }) {
+                    Text("Tilbakestill til standard").font(KalFont.ui(13.5, .semibold)).foregroundStyle(t.mut).underline()
+                        .frame(maxWidth: .infinity).frame(minHeight: 44)
+                }
+                .buttonStyle(.plain)
+                HStack(spacing: 8) {
+                    KalPill(title: "Avbryt", filled: false, height: 46) { m.gear89 = false }
+                    KalPill(title: busy ? "Lagrer …" : "Lagre", enabled: !busy, height: 46) { save() }
+                }
+            }
+            .padding(20)
+        }
+        .background(t.bg.ignoresSafeArea())
+        .presentationDetents([.large])
+        .onAppear {
+            external = KalSrv89.external
+            local = KalSrv89.local
+        }
+    }
+
+    private func field(_ title: String, _ placeholder: String, _ text: Binding<String>, _ result: String, _ ok: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title).font(KalFont.ui(12.5, .bold)).foregroundStyle(t.mut)
+            TextField(placeholder, text: text)
+                .keyboardType(.URL)
+                .textContentType(.URL)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled(true)
+                .font(KalFont.ui(15, .medium)).foregroundStyle(t.ink)
+                .padding(.horizontal, 14).frame(height: 48)
+                .background(RoundedRectangle(cornerRadius: 14).fill(t.card))
+                .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(t.line, lineWidth: 1))
+            if !result.isEmpty {
+                Text(result).font(KalFont.ui(12.5, .semibold)).foregroundStyle(ok ? t.green : t.red)
+            }
+        }
+    }
+
+    private func reset() {
+        KalHaptic.tap()
+        external = KalSrv47.standardExternal
+        local = KalSrv47.standardLocal
+        extText = ""
+        locText = ""
+        error = ""
+    }
+
+    private func test() {
+        testing = true
+        extText = ""
+        locText = ""
+        let e: String = external
+        let l: String = local
+        Task { @MainActor in
+            let r1: (ok: Bool, text: String) = await KalSrv89.health(e)
+            extOk = r1.ok
+            extText = r1.text
+            if !KalSrv89.clean(l).isEmpty {
+                let r2: (ok: Bool, text: String) = await KalSrv89.health(l)
+                locOk = r2.ok
+                locText = r2.text
+            }
+            testing = false
+        }
+    }
+
+    private func save() {
+        let e: String = KalSrv89.clean(external)
+        let l: String = KalSrv89.clean(local)
+        if !KalSrv89.valid(e) {
+            error = "Ekstern adresse må starte med http:// eller https://"
+            return
+        }
+        if !l.isEmpty && !KalSrv89.valid(l) {
+            error = "Lokal adresse må starte med http:// eller https://"
+            return
+        }
+        busy = true
+        let logged: Bool = KalStore.shared.loggedIn
+        Task { @MainActor in
+            _ = await KalSrv89.save(external: e, local: l, loggedIn: logged, device: KalDev44.name)
+            busy = false
+            m.saved89()
+            KalHaptic.done()
+            m.gear89 = false
+        }
     }
 }
