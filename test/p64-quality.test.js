@@ -25,7 +25,7 @@ test.after(() => { globalThis.fetch = realFetch; });
 
 const { default: app } = await import('../server/index.js');
 const { db } = await import('../server/db.js');
-const { gateState } = await import('../server/ai-gate.js');
+const { gateState } = await import('../server/ai/gate.js');
 const ST = await import('../server/system/quality/store.js');
 const SET = await import('../server/system/quality/settings.js');
 const EV = await import('../server/system/quality/eval-run.js');

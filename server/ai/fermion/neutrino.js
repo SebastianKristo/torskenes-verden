@@ -7,7 +7,7 @@
 //
 // Modellnavnet i Homelab er «neutrino:8b». Det står i modellvalget (Chat) og AI-kontroll bare når tjenesten svarer og flagget
 // fermion_neutrino53 er på. Den er aldri standard (eval avgjør).
-import { registerBackend, gateChat, GateError, maskSecrets } from '../../ai-gate.js';
+import { registerBackend, gateChat, GateError, maskSecrets } from '../gate.js';
 import { settings as fhSettings } from '../../finans/db.js';
 import { OWNER } from '../../db.js';
 import { neutrinoConf53 } from './config.js';

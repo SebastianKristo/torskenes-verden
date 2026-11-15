@@ -15,7 +15,7 @@ import { db, q, kv, OWNER } from '../../db.js';
 import { config } from '../../config.js';
 import { runAsUser, sealSecret, openSecret } from '../../settings.js';
 import { docker51, dockerAvailable44 } from '../docker-logs.js';
-import { gateState, loadedModels } from '../../ai-gate.js';
+import { gateState, loadedModels } from '../../ai/gate.js';
 import { hostHw } from '../../aihw38.js';
 import { ntfyConf51 } from './ntfy.js';
 

@@ -32,7 +32,7 @@ const SB = await import('../server/glimt/subscriptions.js');
 const C46 = await import('../server/glimt/calendar.js');
 const T46 = await import('../server/gjoremal/glimt-wording.js');
 const tg41 = await import('../server/gjoremal/glimt-jobs.js');
-const gate = await import('../server/ai-gate.js');
+const gate = await import('../server/ai/gate.js');
 const web = await import('../server/web-search.js');
 
 const TODAY = '2026-10-23';

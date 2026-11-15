@@ -24,7 +24,7 @@ import { settings } from '../finans/db.js';
 import { aiTimeoutsOf, _aiTest, logAi } from '../finans/ai.js';
 import { parseQuick, quickLabel, osloTodayISO, TYPES, DURATION, NO_DATE, memoryMatch, aliasTitle, isNoiseLine, senderOf } from '../dates/quick.js'; // dato og tid fra den felles tolkeren
 import { aliasesOf, aliasPrompt, setContext, touchMemory } from '../glimt/memory/remember.js'; // prompt 33: «Glimt husker»
-import { run as aiRun } from '../ai-run.js';
+import { run as aiRun } from '../ai/run.js';
 
 const MOCK = process.env.MOCK_DATA === '1';
 const ORIGIN = 'AI · rask time';

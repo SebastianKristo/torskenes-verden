@@ -12,7 +12,7 @@ import { join, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { config } from '../../config.js';
 import { OWNER } from '../../db.js';
-import { gateState, holdGate } from '../../ai-gate.js';
+import { gateState, holdGate } from '../../ai/gate.js';
 import { serverQuality64 } from './settings.js';
 import { insertRun64, updateRun64, runRow64, publicRun64, storeReport64, rotate64, baseline64, saveBaseline64, qualityDir64, newRunId64 } from './store.js';
 import { compare64 } from './compare.js';

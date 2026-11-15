@@ -149,7 +149,7 @@ export async function understand40(u, text, today, { people = [], lists = [], ai
   const local = splitLocal40(text, today, { people });
   if (!local.length) return { items: [], engine: 'lokal' };
   try {
-    const ask = aiImpl ?? (async (prompt) => { const { run } = await import('../ai-run.js'); return (await run('glimt', { user: u, prompt, json: true, localOnly: true, numPredict: 400, temperature: 0.1, timeoutMs: 6000, title: 'Glimt · gjøremål' })).data; });
+    const ask = aiImpl ?? (async (prompt) => { const { run } = await import('../ai/run.js'); return (await run('glimt', { user: u, prompt, json: true, localOnly: true, numPredict: 400, temperature: 0.1, timeoutMs: 6000, title: 'Glimt · gjøremål' })).data; });
     const wd = new Date(`${today}T12:00:00Z`).toLocaleDateString('nb-NO', { weekday: 'long', timeZone: 'UTC' });
     const prompt = `I dag er ${wd} ${today}. Brukeren er ${userInfo(u)?.displayName ?? 'meg'}. Lister: ${lists.map((l) => l.name).join(', ')}. Familie: ${people.map((p) => p.first).join(', ')}.\n`
       + 'Del teksten i ett punkt per handling. Tittel kort i imperativ. «først/før det» = skal gjøres før. after = indeksen til punktet som må gjøres først. '

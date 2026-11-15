@@ -9,7 +9,7 @@
 // Av/på: innstillingen «warm» (fast59/settings.js, admin). Av → ingen oppvarming og ingen keep_alive-gulv.
 import { OWNER } from '../../db.js';
 import { fastOn59 } from './settings.js';
-import { onGateJobDone59, gateBusyWith59, setKeepAliveHook59, loadedModels } from '../../ai-gate.js';
+import { onGateJobDone59, gateBusyWith59, setKeepAliveHook59, loadedModels } from '../../ai/gate.js';
 
 export const WARM_KEEP59 = '1h';
 const KEEP_MS = { s: 1000, m: 60_000, h: 3_600_000 };
@@ -23,7 +23,7 @@ const on = () => { try { return fastOn59(OWNER, 'warm'); } catch { return false;
 async function mainModel() {
   if (state.model && Date.now() - state.mainAt < 60_000) return { id: state.model, engine: state.engine };
   try {
-    const ai = await import('../../ai-run.js');
+    const ai = await import('../../ai/run.js');
     const r = await ai.resolveTask('glimt', { user: OWNER, localOnly: true });
     const c = r.list[0];
     if (!c || c.provider !== 'ollama') return null;
@@ -57,7 +57,7 @@ export async function warmNow59(reason = 'manuelt', { force = false } = {}) {
   state.running = true;
   const t0 = Date.now();
   try {
-    const ai = await import('../../ai-run.js');
+    const ai = await import('../../ai/run.js');
     const { plannerSystem47 } = await import('../planner.js');
     // Samme statiske prefiks som planleggeren sender (systemprompten starter alltid med plannerSystem47()).
     await ai.run('glimt', { user: OWNER, system: `${plannerSystem47()}\n\n# Context\n`, prompt: 'Melding: hei', step: 'planner', numPredict: 1, localOnly: true, background: true,

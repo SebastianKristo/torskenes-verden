@@ -20,7 +20,7 @@ import { broadcast } from '../realtime.js';
 import { family50 as F } from '../familie/positions.js';
 import { ensureIndex42, norm42, fold42, synonymsOf42 } from '../finans/search-db.js';
 import { settings as fhSettings } from '../finans/db.js';
-import { gateEmbed } from '../ai-gate.js';
+import { gateEmbed } from '../ai/gate.js';
 import { sunTime } from '../vaer/met.js';
 import { savedDocs73, savedSig73 } from '../news73.js'; // prompt 73 (NEWS73): lagrede artikler i felles søk
 import { partDocs76, partSig76, partResult76 } from '../skjold76/glimt.js'; // prompt 76 (SKJSRV): Skjold Lab-deler i felles søk

@@ -53,7 +53,7 @@ export function toolModeFor45(model, backend = 'ollama') {
 const markNoTools = (model) => { try { kv.set(OWNER, NOTOOLS, { ...(kv.get(OWNER, NOTOOLS, {}) ?? {}), [model]: Date.now() }); } catch { /* */ } };
 
 async function defaultModel(o) {
-  const ai = await import('../ai-run.js');
+  const ai = await import('../ai/run.js');
   const out = await ai.run('glimt', { user: o.user, system: o.system, prompt: o.prompt, ...(o.mode === 'tools' ? { ollamaTools: o.tools } : { schema: o.schema }), temperature: 0, numPredict: 320,
     localOnly: true, background: false, title: 'Glimt · forstår', timeoutMs: 45_000, noRetry: true });
   return { toolCalls: out.toolCalls ?? null, text: out.text, data: out.data, model: out.model };
@@ -64,8 +64,8 @@ export async function modelInfo45(user) {
   // Prompt 47: planleggeren bruker JSON-skjema (Ollama format) som standard; tools-modus bare når en test tvinger den.
   if (!modelAvailable45()) return { model: null, mode: 'json' };
   try {
-    const ai = await import('../ai-run.js');
-    const { backendConfig } = await import('../ai-gate.js');
+    const ai = await import('../ai/run.js');
+    const { backendConfig } = await import('../ai/gate.js');
     const r = await ai.resolveTask('glimt', { user, localOnly: true });
     const c = r.list.find((x) => x.provider === 'ollama');
     return { model: c?.id ?? null, mode: toolModeFor45(c?.id, backendConfig().effective) };

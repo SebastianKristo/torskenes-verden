@@ -49,7 +49,7 @@ globalThis.fetch = (u, i) => (String(u).startsWith('http://ollama.fake45') ? oll
 test.after(() => { globalThis.fetch = realFetch; });
 
 const { default: app } = await import('../server/index.js');
-const ai = await import('../server/ai-run.js');
+const ai = await import('../server/ai/run.js');
 const E = await import('../server/glimt/engine.js');
 const { db, kv, OWNER } = await import('../server/db.js');
 ai._setAiFetch((u, i) => globalThis.fetch(u, i));

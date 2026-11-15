@@ -222,7 +222,7 @@ test('ai_think finnes som personlig innstilling, av som standard', async () => {
 });
 
 test('selvtesten tenker aldri, selv når «La modellen tenke» (ai_think) er på', async () => {
-  const ai = await import('../server/ai-run.js');
+  const ai = await import('../server/ai/run.js');
   setUserCfg(OWNER, { ai_think: '1' });
   calls.length = 0;
   const r = await ai.miniGenerate('ollama', 'qwen3:8b', { user: OWNER });
@@ -237,7 +237,7 @@ test('selvtesten tenker aldri, selv når «La modellen tenke» (ai_think) er på
 });
 
 test('regelen «Tenking» på: JSON-kall og bakgrunnsjobber tenker ikke; fritekst tenker med plass til tankene i num_predict', async () => {
-  const ai = await import('../server/ai-run.js');
+  const ai = await import('../server/ai/run.js');
   const r0 = ai.routing(OWNER);
   const { own, ...rest } = r0; void own;
   ai.saveServerRouting({ ...rest, rules: { ...rest.rules, think: true } });

@@ -79,10 +79,10 @@ chat._setChatFetch(fake);
 const chat50 = await import('../server/ai/chat/attachments.js');
 const fdb = await import('../server/finans/db.js');
 const tess = await import('../server/finans/receipts/engines/tesseract.js');
-const aiRun = await import('../server/ai-run.js');
+const aiRun = await import('../server/ai/run.js');
 const { _reread50 } = await import('../server/finans/reread.js');
 const { _resetAi } = await import('../server/finans/ai.js');
-const gate = await import('../server/ai-gate.js');
+const gate = await import('../server/ai/gate.js');
 gate._gateTest.backoffMs = [5, 5];
 
 const ROWS = ['REMA 1000', 'Org.nr 911 015 838', 'Dato 20.10.2026 17:42', 'MELK 1L 21,90', 'BRØD 34,50', 'TOTAL 56,40', 'BANKAXEPT 56,40'];

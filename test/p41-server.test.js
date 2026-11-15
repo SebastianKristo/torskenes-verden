@@ -487,7 +487,7 @@ test('AI-jobber: createdAt/startedAt/endedAt og timeLabel («startet 17:31», «
   assert.equal(ai41.clock41(Date.parse('2026-10-19T19:14:00Z'), now), 'i går 21:14');
   assert.equal(ai41.clock41(Date.parse('2026-10-18T19:14:00Z'), now), '18.10 21:14');
   assert.equal(ai41.groupTimes41([{ endedAt: '2026-10-20T14:02:00Z' }, { endedAt: '2026-10-20T15:20:00Z' }], now).timeRange, '16:02–17:20');
-  const { jobStart, jobEnd } = await import('../server/ai-run.js');
+  const { jobStart, jobEnd } = await import('../server/ai/run.js');
   jobEnd(jobStart({ user: sebId, task: 'sok', title: 'Test 41' }));
   const jobs = (await A('/api/ai/jobs')).body;
   const all = [...jobs.running, ...jobs.queued, ...jobs.recent];

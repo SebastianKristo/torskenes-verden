@@ -29,7 +29,7 @@ import { config } from '../config.js';
 import { sessionUser, isAdmin, listUsers } from '../auth/session.js';
 import { bearerOk } from '../finans/routes.js';
 import { notifyUser } from '../notify.js';
-import { maskSecrets } from '../ai-gate.js';
+import { maskSecrets } from '../ai/gate.js';
 
 const MOCK = () => process.env.MOCK_DATA === '1';
 
@@ -330,7 +330,7 @@ export async function explain44({ line, context, ct }, user) {
   const k = knownExplain44(l);
   if (k) return { source: 'pattern', ...k, line: l };
   const ctx = (Array.isArray(context) ? context : []).slice(-20).map((x) => maskLog44(String(typeof x === 'string' ? x : x?.msg ?? '').slice(0, 400)));
-  const ai = explainAi ?? (MOCK() ? null : async (prompt) => { const { run } = await import('../ai-run.js'); const out = await run('glimt', { user, prompt, json: true, localOnly: true, numPredict: 300, title: 'Glimt · forklar logglinje' }); return out.data ?? JSON.parse(String(out.text).match(/\{[\s\S]*\}/)?.[0] ?? '{}'); });
+  const ai = explainAi ?? (MOCK() ? null : async (prompt) => { const { run } = await import('../ai/run.js'); const out = await run('glimt', { user, prompt, json: true, localOnly: true, numPredict: 300, title: 'Glimt · forklar logglinje' }); return out.data ?? JSON.parse(String(out.text).match(/\{[\s\S]*\}/)?.[0] ?? '{}'); });
   if (ai) {
     try {
       const j = await ai(`Du er Glimt og hjelper med feilsøking på en hjemmeserver med Docker. Forklar på norsk bokmål, kort, hva denne logglinjen${ct ? ` fra containeren «${String(ct).slice(0, 40)}»` : ''} betyr og hva man gjør. Svar KUN med JSON {"title":"…","text":"…","steps":["…"]}.\nLinje: ${l}\n${ctx.length ? `Linjer rundt:\n${ctx.join('\n')}` : ''}`);

@@ -426,7 +426,7 @@ export function hintOf47(local, legacyIntent) {
 async function plannerCall47(o) {
   const impl = _glimtModel45();
   if (impl) return impl(o);
-  const ai = await import('../ai-run.js');
+  const ai = await import('../ai/run.js');
   const sp = STEP47[o.step] ?? STEP47.planner;
   // Prompt 55: tidsgrensen gjelder selve svaret – en kald modell (modellbytte) får lastetiden i tillegg (deadlineAfterLoad i gaten).
   const out = await ai.run('glimt', { user: o.user, system: o.system, prompt: o.prompt, ...(o.mode === 'tools' && o.tools ? { ollamaTools: o.tools } : { schema: o.schema }), step: o.step,
@@ -439,7 +439,7 @@ let answerImpl47 = null;
 export const _setAnswerModel47 = (fn) => { answerImpl47 = fn ?? null; };
 async function answerCall47(o) {
   if (answerImpl47) { const r = await answerImpl47(o); return { text: r?.text ?? '', model: r?.model ?? 'test' }; }
-  const ai = await import('../ai-run.js');
+  const ai = await import('../ai/run.js');
   const out = await ai.run('glimt', { user: o.user, system: o.system, prompt: o.prompt, step: 'answer', localOnly: true, background: !!o.background, title: o.background ? 'Glimt · planlagt oppgave' : 'Glimt · svarer', timeoutMs: STEP47.answer.timeoutMs, noRetry: true, retries: 0,
     ...(o.onToken ? { onToken: o.onToken } : {}), ...(o.signal ? { signal: o.signal } : {}) }); // prompt 59: strømming og Stopp
   return { text: out.text, model: out.model, tokens: out.tokens, params: out.params, timing: out.timing ?? null };

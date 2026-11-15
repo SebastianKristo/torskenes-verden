@@ -179,7 +179,7 @@ function foundOf(d) {
 let visionImpl = null;
 /** Bare for tester: (images, user) → {emner, institution, …}. */
 export const _setStudyVision45 = (fn) => { visionImpl = fn; };
-const vision = () => visionImpl ?? (MOCK() ? null : async (images, user) => { const { run: aiRun } = await import('./ai-run.js'); const out = await aiRun('rc', { user, images, prompt: 'Dette er et norsk vitnemål eller en karakterutskrift. Les ALLE fag/emner med fagkode, navn, studiepoeng, karakter (A–F, 1–6, Bestått/Ikke bestått), semester, og for vitnemål standpunkt og eksamen. Svar KUN med JSON etter skjemaet. Ikke regn ut snitt, ikke finn på fag.', json: true, schema: STUDY_SCHEMA45, localOnly: true, step: 'document', numCtx: 8192, numPredict: 4096, title: 'Glimt · les vitnemål (bilde)', background: true }); /* prompt 47: 8192 (visjonsmodellen + bilde), 4096 ut */ return out.data ?? JSON.parse(String(out.text).match(/\{[\s\S]*\}/)?.[0] ?? '{}'); });
+const vision = () => visionImpl ?? (MOCK() ? null : async (images, user) => { const { run: aiRun } = await import('./ai/run.js'); const out = await aiRun('rc', { user, images, prompt: 'Dette er et norsk vitnemål eller en karakterutskrift. Les ALLE fag/emner med fagkode, navn, studiepoeng, karakter (A–F, 1–6, Bestått/Ikke bestått), semester, og for vitnemål standpunkt og eksamen. Svar KUN med JSON etter skjemaet. Ikke regn ut snitt, ikke finn på fag.', json: true, schema: STUDY_SCHEMA45, localOnly: true, step: 'document', numCtx: 8192, numPredict: 4096, title: 'Glimt · les vitnemål (bilde)', background: true }); /* prompt 47: 8192 (visjonsmodellen + bilde), 4096 ut */ return out.data ?? JSON.parse(String(out.text).match(/\{[\s\S]*\}/)?.[0] ?? '{}'); });
 let aiImpl = null;
 export const _setStudyAi44 = (fn) => { aiImpl = fn; };
 // Prompt 47: dokumentstrukturering med steg «document» (params47: num_ctx 16384, num_predict 4096, temperatur 0, think av) og
@@ -187,7 +187,7 @@ export const _setStudyAi44 = (fn) => { aiImpl = fn; };
 import { completeness47, retryMissing47, completenessText47 } from './glimt/document.js'; // prompt 47
 import { clean55 } from './study55.js'; // prompt 55
 import { dtf } from './intl-format.js'; // gjenbrukte Intl.DateTimeFormat
-const ai = () => aiImpl ?? (MOCK() ? null : async (prompt, user, schema = null) => { const { run: aiRun } = await import('./ai-run.js'); const out = await aiRun('glimt', { user, prompt, json: true, ...(schema ? { schema } : {}), step: 'document', localOnly: true, title: 'Glimt · les dokument', background: true }); return out.data ?? JSON.parse(String(out.text).match(/\{[\s\S]*\}/)?.[0] ?? '{}'); });
+const ai = () => aiImpl ?? (MOCK() ? null : async (prompt, user, schema = null) => { const { run: aiRun } = await import('./ai/run.js'); const out = await aiRun('glimt', { user, prompt, json: true, ...(schema ? { schema } : {}), step: 'document', localOnly: true, title: 'Glimt · les dokument', background: true }); return out.data ?? JSON.parse(String(out.text).match(/\{[\s\S]*\}/)?.[0] ?? '{}'); });
 async function analyse(user, buf, mime, name) {
   const steps = [];
   const step = async (key, label, fn) => { const t0 = Date.now(); try { const r = await fn(); steps.push({ key, label: typeof label === 'function' ? label(r) : label, ms: Date.now() - t0, ok: true }); return r; } catch (e) { steps.push({ key, label: typeof label === 'function' ? label(null) : label, ms: Date.now() - t0, ok: false, error: e.message }); throw e; } };

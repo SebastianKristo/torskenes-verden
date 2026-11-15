@@ -255,7 +255,7 @@ api.post('/explain', async (c) => {
   const local = `${v.ref} er fra ${v.book}. ${v.before?.length ? `Versene rett før handler om det samme: «${v.before[v.before.length - 1].text.slice(0, 120)}${v.before[v.before.length - 1].text.length > 120 ? ' …' : ''}». ` : ''}Verset sier: «${v.text}» Les det langsomt, og tenk på hva det betyr for dagen din i dag.`;
   if (MOCK && !process.env.OLLAMA_URL) return c.json({ ref: v.ref, text: local, source: 'mal' });
   try {
-    const { run } = await import('./ai-run.js');
+    const { run } = await import('./ai/run.js');
     const out = await run('glimt', { user: c.get('user'), prompt: `Forklar bibelverset ${v.ref} (Bibelen 1930): «${v.text}» i 3–4 korte setninger på norsk bokmål: sammenheng i boken og hva det betyr. Ingen markdown.`, localOnly: true, numPredict: 220, title: 'Glimt · bibelvers' });
     const t = String(out.text ?? '').replace(/\s+/g, ' ').trim();
     return c.json({ ref: v.ref, text: t || local, source: t ? 'glimt' : 'mal' });

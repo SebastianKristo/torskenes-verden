@@ -16,7 +16,7 @@ import { db, kv, OWNER } from '../../db.js';
 import { sessionUser, isAdmin, listUsers } from '../../auth/session.js';
 import { bearerOk } from '../../finans/routes.js';
 import { notifyUser, setNotifyHook51 } from '../../notify.js';
-import { backendConfig } from '../../ai-gate.js';
+import { backendConfig } from '../../ai/gate.js';
 import { traceMw51, traces51, installTrace51, setAiHosts51 } from './trace.js';
 import { health51, takeSamples51, proxmoxOut51, saveProxmox51 } from './health.js';
 import { healOnce51, healOut51, saveHeal51, draft51, dismissDraft51 } from './heal.js';

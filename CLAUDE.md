@@ -61,7 +61,7 @@ Detaljer i [docs/sikkerhet.md](docs/sikkerhet.md). Disse brytes aldri:
 - Ollama (port 11434) eksponeres aldri.
 - Docker-proxyen utvides ikke. Containeren får aldri selve Docker-socketen.
 - API-nøkler logges aldri og sendes aldri til frontend. Medienøkler blir på serveren.
-- Alle AI-kall går via `server/ai-gate.js` / `server/ai-run.js`.
+- Alle AI-kall går via `server/ai/gate.js` / `server/ai/run.js`.
 - **Finansdata forlater aldri huset.**
 - QR-innlogging bærer aldri token.
 - Ikke omgå 403 eller bot-blokkering med falske nettleser-headere.

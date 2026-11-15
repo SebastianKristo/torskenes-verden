@@ -44,8 +44,8 @@ import { weatherFull, wmoText, iconOf } from '../vaer/full.js';
 import { newsFor } from '../rss.js';
 import { packagesFor } from '../sporing/shipments.js';
 import { notifyUser } from '../notify.js';
-import { run as aiRun } from '../ai-run.js';
-import { once, inFlight } from '../ai-gate.js'; // prompt 43: én LLM-oppsummering per bruker/brief/dato om gangen
+import { run as aiRun } from '../ai/run.js';
+import { once, inFlight } from '../ai/gate.js'; // prompt 43: én LLM-oppsummering per bruker/brief/dato om gangen
 import { glimtSettingsOf, cleanGlimtPatch, saveGlimtSettings, hostOf, charName, proxied, engineReady, speak } from './settings.js'; // prompt 35
 import { trialCompact } from '../finans/trial-widgets.js'; // prompt 35: prøveperioder i briefen
 import { todosForBrief } from '../gjoremal/glimt.js'; // prompt 37: Gjøremål-kortet

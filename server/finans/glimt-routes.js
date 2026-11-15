@@ -29,8 +29,8 @@ import { mountHomes42, homeSearch42, homesOf42 } from './boliger-web.js';
 import { logo as faviconLogo, validDomain } from './enrich.js';
 import { itemForDomain, filePath as logoFile } from '../logos/match.js';
 import { readFile } from 'node:fs/promises';
-import { gateLoad } from '../ai-gate.js'; // prompt 43
-import { modelFor } from '../ai-run.js';
+import { gateLoad } from '../ai/gate.js'; // prompt 43
+import { modelFor } from '../ai/run.js';
 import { osloDate, addDays } from '../dates/oslo.js';
 
 const bad = (c, msg, code = 400) => c.json({ error: msg }, code);

@@ -279,7 +279,7 @@ let stripeImpl = null;
 /** Bare for tester: (stripeBuffer, user, i) → {rows:[…]}. */
 export const _setStudyStripe46 = (fn) => { stripeImpl = fn; };
 const stripeAi = () => stripeImpl ?? (process.env.MOCK_DATA === '1' ? null : async (img, user) => {
-  const { run: aiRun } = await import('./ai-run.js');
+  const { run: aiRun } = await import('./ai/run.js');
   const out = await aiRun('rc', { user, images: [img], prompt: STRIPE_PROMPT55, schema: ROWS_SCHEMA46, json: true, localOnly: true, numPredict: 700, title: 'Glimt · les vitnemål (stripe)', background: true });
   return out.data ?? JSON.parse(String(out.text).match(/\{[\s\S]*\}/)?.[0] ?? '{}');
 });

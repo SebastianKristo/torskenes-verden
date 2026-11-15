@@ -37,8 +37,8 @@ import { bearerOk } from './finans/routes.js';
 import { settings as fhSettings } from './finans/db.js';
 import { notifyUser } from './notify.js';
 import { summaryFacts, domainNames, domainsOverview, PER_RANGE, addDomain39, cloudflareZones39, cloudflareTxt39 } from './domains.js';
-import { run as aiRun } from './ai-run.js';
-import { once } from './ai-gate.js'; // prompt 43: single-flight for oppsummeringen
+import { run as aiRun } from './ai/run.js';
+import { once } from './ai/gate.js'; // prompt 43: single-flight for oppsummeringen
 
 const MOCK = process.env.MOCK_DATA === '1';
 const TZ = 'Europe/Oslo';

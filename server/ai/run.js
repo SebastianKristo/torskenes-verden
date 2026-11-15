@@ -29,20 +29,20 @@
 // to tidsgrenser, nye forsøk). Her er det ingen egen kø lenger.
 //    budget:{monthlyKr:0 (= ingen grense), hardStop:true, warn80:true}, cloudOn:{'gemini-2.5-flash':true, …}, migratedAt}
 import { randomUUID } from 'node:crypto';
-import { db, kv, OWNER } from './db.js';
-import { settings as fhSettings, secret, me } from './finans/db.js';
-import { geminiFetch, hasGemini } from './finans/gemini-keys.js';
-import { shortBody, stripThink, SHORT_NUM_CTX, THINKING_RE } from './ai/ollama-options.js';
-import { STEP47, TASK_STEP47, stepOf47, estTokens47, CTX_MARGIN47 } from './glimt/model-params.js'; // prompt 47: parametre per steg
-import { configureGate, gateChat, gateEmbed, gateLoad, gateState, holdGate, setGatePaused, gatePaused, loadedModels, DEFAULT_MODEL_KEEP_ALIVE, GateError, maskSecrets, backendConfig, owuiConf, testOpenWebuiModels } from './ai-gate.js';
-import { broadcast } from './realtime.js';
-import { envHw } from './aihw38.js';
-import { jobTimes41, groupTimes41 } from './ai41.js'; // prompt 41: klokkeslett i Jobber
+import { db, kv, OWNER } from '../db.js';
+import { settings as fhSettings, secret, me } from '../finans/db.js';
+import { geminiFetch, hasGemini } from '../finans/gemini-keys.js';
+import { shortBody, stripThink, SHORT_NUM_CTX, THINKING_RE } from './ollama-options.js';
+import { STEP47, TASK_STEP47, stepOf47, estTokens47, CTX_MARGIN47 } from '../glimt/model-params.js'; // prompt 47: parametre per steg
+import { configureGate, gateChat, gateEmbed, gateLoad, gateState, holdGate, setGatePaused, gatePaused, loadedModels, DEFAULT_MODEL_KEEP_ALIVE, GateError, maskSecrets, backendConfig, owuiConf, testOpenWebuiModels } from './gate.js';
+import { broadcast } from '../realtime.js';
+import { envHw } from '../aihw38.js';
+import { jobTimes41, groupTimes41 } from '../ai41.js'; // prompt 41: klokkeslett i Jobber
 // Prompt 58 (OMLX58): oMLX som motor per oppgave (registrerer backend «omlx» i gaten). Ollama er fortsatt standard.
-import { OMLX_BACKEND58 } from './ai/omlx/backend.js';
-import { engineFor58, omlxModelFor58, omlxConf58 } from './ai/omlx/config.js';
-import { omlxModels58, resolveModel58, markDown58 } from './ai/omlx/health.js';
-import { tokenSink59 } from './glimt/fast/status.js'; // prompt 59: strømming av svarteksten (Glimt /stream)
+import { OMLX_BACKEND58 } from './omlx/backend.js';
+import { engineFor58, omlxModelFor58, omlxConf58 } from './omlx/config.js';
+import { omlxModels58, resolveModel58, markDown58 } from './omlx/health.js';
+import { tokenSink59 } from '../glimt/fast/status.js'; // prompt 59: strømming av svarteksten (Glimt /stream)
 
 /* ---------------- Oppgaver ---------------- */
 

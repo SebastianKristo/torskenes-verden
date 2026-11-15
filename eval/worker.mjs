@@ -24,7 +24,7 @@ process.env.USER_NAME = 'Sebastian';
 process.env.NODE_ENV = 'test'; // ingen HTTP-lytter og ingen bakgrunnsjobber (samme som testene)
 process.env.TZ = 'Europe/Oslo';
 process.env.AI_FALLBACK = 'none'; // aldri sky-reserve (Gemini/Groq) i eval
-delete process.env.MOCK_DATA; // MOCK_DATA ville slått av modellen (ai-run/plan/assist) og lagt inn demodata – eksterne data mockes i stedet i lib/net.mjs
+delete process.env.MOCK_DATA; // MOCK_DATA ville slått av modellen (ai/run.js, plan og assist) og lagt inn demodata – eksterne data mockes i stedet i lib/net.mjs
 for (const k of ['GEMINI_API_KEY', 'GROQ_API_KEY', 'AI_PROVIDER', 'OLLAMA_MODEL', 'OLLAMA_TEXT_MODEL', 'OPENWEBUI_URL', 'OPENWEBUI_KEY', 'AI_BACKEND', 'AI_GPU_VRAM_GB',
   'BRAVE_KEY', 'SEARXNG_URL', 'RADARR_API_KEY', 'QBIT_PASS', 'PROWLARR_API_KEY', 'JF_KEY', 'PLEX_TOKEN', 'HA_TOKEN', 'HA_URL',
   'OMLX_URL', 'OMLX_API_KEY', 'OMLX_TASKS', 'OMLX_FALLBACK', 'OMLX_MODEL_TEXT', 'OMLX_MODEL_VISION']) delete process.env[k];
@@ -56,7 +56,7 @@ const { hashPassword } = await import(pathToFileURL(join(REPO, 'server/auth/pass
 process.env.APP_PASSWORD_HASH = hashPassword('evalpassord47');
 const imp = (p) => import(pathToFileURL(join(REPO, p)).href);
 const { default: app } = await imp('server/index.js');
-const ai = await imp('server/ai-run.js');
+const ai = await imp('server/ai/run.js');
 const E = await imp('server/glimt/engine.js');
 const W = await imp('server/web-search.js');
 const { db, kv } = await imp('server/db.js');

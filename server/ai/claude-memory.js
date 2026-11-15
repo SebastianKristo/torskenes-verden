@@ -185,7 +185,7 @@ export const areasOf46 = (u) => q('SELECT * FROM ai_memory46_areas WHERE user_id
 export async function embedAreas46(u, added) {
   if (!added.length) return 0;
   try {
-    const { embed } = await import('../ai-run.js');
+    const { embed } = await import('./run.js');
     const r = await embed(added.map((m) => m.text), { user: u, title: 'Glimt-minne · Claude-minner', background: true });
     const ins = q('INSERT OR REPLACE INTO ai_memory45_vec(memory_id, user_id, model, vec, src, created) VALUES(?,?,?,?,?,?)');
     db.transaction(() => { added.forEach((m, i) => { if (Array.isArray(r.vectors?.[i])) ins.run(m.id, u, r.model, JSON.stringify(r.vectors[i]), MEMORY_SRC46, Date.now()); }); })();

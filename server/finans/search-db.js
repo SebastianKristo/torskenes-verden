@@ -420,7 +420,7 @@ export function fastAnswer42(u, p, rows) {
 export const _llm42 = { impl: null, ms: 6000 };
 async function llmText(u, prompt, rows) {
   if (_llm42.impl) return { text: await _llm42.impl(prompt, { rows }), model: 'test' };
-  const { run } = await import('../ai-run.js');
+  const { run } = await import('../ai/run.js');
   const r = await run('glimt', { user: u, prompt, numPredict: 200, temperature: 0.2, timeoutMs: _llm42.ms, title: 'Glimt · Finans-søk', background: true, localOnly: true });
   return { text: String(r.text ?? '').trim(), model: r.model ?? null, provider: r.provider ?? 'ollama' };
 }

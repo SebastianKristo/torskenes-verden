@@ -27,8 +27,8 @@ globalThis.fetch = async () => { throw new TypeError('fetch failed'); }; // inge
 test.after(() => { globalThis.fetch = realFetch; });
 
 const { default: app } = await import('../server/index.js');
-const ai = await import('../server/ai-run.js');
-const gate = await import('../server/ai-gate.js');
+const ai = await import('../server/ai/run.js');
+const gate = await import('../server/ai/gate.js');
 const be = await import('../server/ai/omlx/backend.js');
 const cfg58 = await import('../server/ai/omlx/config.js');
 const h58 = await import('../server/ai/omlx/health.js');

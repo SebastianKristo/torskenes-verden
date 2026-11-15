@@ -41,7 +41,7 @@ import { finansSummary } from '../../finans/summary.js';
 import { nextTasks } from '../../gjoremal/routes.js';
 import { chatBody, isThinkingModel } from '../ollama-options.js';
 import { thinkSplit52, thinkState52, glimtSteps52, stripThink52, cleanAttTh52 } from './thinking.js'; // prompt 52 (SRV52): tankegang
-import { gateChat, GateError } from '../../ai-gate.js'; // prompt 43: alle Ollama-kall via gaten
+import { gateChat, GateError } from '../gate.js'; // prompt 43: alle Ollama-kall via gaten
 import { chatModels53, neutrinoChatStream53, isNeutrino53, NEUTRINO_NAME53 } from '../fermion/neutrino.js'; // prompt 53 (FERMION53): Neutrino-1 8B på Mac mini-en
 import { ensureScanFolder, scanFolderInfo, isSysFolder, upsertScanChat } from './scans.js';
 import { gatherFacts, factsPrompt, factsAnswer, hasFactWords } from './tools.js'; // prompt 41: Glimt henter fakta
@@ -50,8 +50,8 @@ import { weekFact41, isWeekWeather41 } from '../../vaer/week-glimt.js'; // promp
 import { routeTools, routeTextOf, pickData, osloNowLine } from '../tool-router.js'; // prompt 44: ruting før hovedmodellen
 import { webSearch, webPrompt, webMeta, webFact } from '../../web-search.js'; // prompt 44: eget nettsøk
 import { powerFact, powerPrompt } from '../../power-price.js'; // prompt 44: strømpris
-import { backendConfig, maskSecrets } from '../../ai-gate.js';
-import { jobStart, jobUpdate, jobEnd } from '../../ai-run.js'; // prompt 44: Chat i jobbloggen (backend, verktøy, nettsøk)
+import { backendConfig, maskSecrets } from '../gate.js';
+import { jobStart, jobUpdate, jobEnd } from '../run.js'; // prompt 44: Chat i jobbloggen (backend, verktøy, nettsøk)
 import { memoryPrompt43 } from '../memory.js'; // prompt 43: AI-minne i systemprompten
 import { saveFile50, deleteFile50, desc50, mountFiles50, visionCaps50, bestVision50, prepareHistory50, stored50, dropImages50, ocrImages50, ocrNote50, receiptChat50, attIds50, RECEIPT_RE50, LIMITS50, kindOf50 } from './attachments.js'; // prompt 50 (SRVCHAT50): vedlegg, miniatyr, vision, kvittering i chat
 import { rankFor41 } from './auto-model.js';

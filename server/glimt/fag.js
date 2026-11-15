@@ -14,7 +14,7 @@
 // tidsavbrudd gir lokalt svar uten feilmelding.
 import { eventsFor } from '../kalender/events.js';
 import { runAsUser } from '../settings.js';
-import { run as aiRun } from '../ai-run.js';
+import { run as aiRun } from '../ai/run.js';
 import { parseDay } from '../parse-day35.js';
 import { osloTodayISO } from '../../public/js/quick-time.js';
 

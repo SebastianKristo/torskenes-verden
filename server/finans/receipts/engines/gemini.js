@@ -3,7 +3,7 @@
 // registrerer backenden «gemini48» med gatens eksisterende registerBackend (ai-gate.js er ikke endret) og kaller
 // gateChat({backend:'gemini48', noQueue:true}) – sky-kall venter ikke i Ollama-køen. Selve HTTP-kallet, nøkkelrotasjonen
 // og modellvalget gjenbrukes fra finans/ai.js (geminiJson48).
-import { registerBackend, GateError } from '../../../ai-gate.js';
+import { registerBackend, GateError } from '../../../ai/gate.js';
 import { geminiJson48 } from '../../ai.js';
 import { modelFormat48 } from '../schema.js';
 import { blockCloudReceipt52 } from '../cloud-guard.js'; // prompt 52

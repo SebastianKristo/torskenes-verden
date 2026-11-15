@@ -18,8 +18,8 @@ import { authOrToken } from '../mobile.js';
 import { cached } from '../cache.js';
 import { PLACES, wmoText } from './full.js';
 import { geocode } from './place.js';
-import { run as aiRun } from '../ai-run.js';
-import { once } from '../ai-gate.js'; // prompt 43
+import { run as aiRun } from '../ai/run.js';
+import { once } from '../ai/gate.js'; // prompt 43
 import { osloDate } from '../dates/oslo.js';
 
 const MOCK = () => process.env.MOCK_DATA === '1';

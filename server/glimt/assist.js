@@ -77,9 +77,9 @@ import { calendarAnswer } from '../kalender/calendars.js'; // prompt 33: source:
 import { fagAnswer, rememberCtx } from './fag.js'; // prompt 39: oppfølging og fag
 import { parseDay } from '../parse-day35.js'; // prompt 35: felles dag-tolkning
 import { extractPlace, placeWeather, PlaceNotFound } from '../vaer/place.js'; // prompt 35: været for et sted
-import { run as aiRun, routing as aiRouting, AiRunError, isCloud, providerOf, providerLabel } from '../ai-run.js';
+import { run as aiRun, routing as aiRouting, AiRunError, isCloud, providerOf, providerLabel } from '../ai/run.js';
 import { aiRun53 } from '../dal53/text.js'; // prompt 53 (DAL53): Redact på brukerteksten når AI-søket kan gå til sky
-import { once } from '../ai-gate.js'; // prompt 43: single-flight
+import { once } from '../ai/gate.js'; // prompt 43: single-flight
 import { routeTools, osloNowLine } from '../ai/tool-router.js'; // prompt 44: ruting før modellen (Glimt-søk på Hjem)
 import { webSearch, webPrompt, webMeta, webFact, PROVIDER_NAME } from '../web-search.js'; // prompt 44: eget nettsøk
 import { powerFact } from '../power-price.js'; // prompt 44: strømpris

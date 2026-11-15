@@ -42,7 +42,7 @@ export const _setLfmRun72 = (fn) => { runImpl = fn ?? null; };
 export const _setLfmText72 = (fn) => { textImpl = fn ?? null; };
 async function aiRun(task, o) {
   if (runImpl) return runImpl(task, o);
-  const { run } = await import('../../ai-run.js');
+  const { run } = await import('../../ai/run.js');
   return run(task, o);
 }
 

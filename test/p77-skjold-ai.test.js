@@ -32,7 +32,7 @@ const D = await import('../server/skjold76/decode77.js');
 const AI = await import('../server/skjold76/ai77.js');
 const IM = await import('../server/skjold76/images77.js');
 const N73 = await import('../server/news73.js');
-const RUN = await import('../server/ai-run.js');
+const RUN = await import('../server/ai/run.js');
 const { updateConfig } = await import('../server/settings.js');
 
 let ipN = 10;

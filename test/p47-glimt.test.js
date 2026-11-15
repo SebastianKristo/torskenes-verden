@@ -33,7 +33,7 @@ const D47 = await import('../server/glimt/document.js');
 const A47 = await import('../server/glimt/answer.js');
 const MED = await import('../server/glimt/episode-ask.js');
 const S46 = await import('../server/glimt/subscriptions.js');
-const ai = await import('../server/ai-run.js');
+const ai = await import('../server/ai/run.js');
 const web = await import('../server/web-search.js');
 
 E._setClock45({ today: '2026-10-24', nowMin: 600 });
@@ -217,7 +217,7 @@ test('modellstyring: tolkningsruter under 7B gir advarsel; standardforslag er qw
   assert.deepEqual(ai.INTERPRET_TASKS47, ['glimt', 'sok', 'kat', 'fsok']);
   const { SUGGESTED_MODELS } = await import('../server/aihw38.js');
   assert.equal(SUGGESTED_MODELS.kat, 'qwen3:8b');
-  const { DEFAULT_MODEL_KEEP_ALIVE } = await import('../server/ai-gate.js');
+  const { DEFAULT_MODEL_KEEP_ALIVE } = await import('../server/ai/gate.js');
   assert.equal(DEFAULT_MODEL_KEEP_ALIVE['llama3.2:3b'], undefined);
   const { STEP47 } = await import('../server/glimt/model-params.js');
   assert.deepEqual([STEP47.planner.numCtx, STEP47.planner.numPredict, STEP47.planner.temperature, STEP47.planner.think], [8192, 512, 0, false]);

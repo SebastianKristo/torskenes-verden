@@ -34,7 +34,7 @@ import { audit } from './ai-audit.js';
 import { validDomain } from './enrich.js';
 import { matchMerchant, filePath as libraryFile, itemForDomain, normalize as libNorm } from '../logos/match.js';
 import { ocrTools } from '../ocr-fallback.js';
-import { run as aiRun } from '../ai-run.js';
+import { run as aiRun } from '../ai/run.js';
 import { externalBlocked48 } from './receipts/settings.js'; // prompt 48: «Finansdata forlater aldri huset»
 
 const run = promisify(execFile);

@@ -343,7 +343,7 @@ export async function quickParse52(u, text, { now = Date.now(), ai = true } = {}
     const ta = Date.now();
     const prompt = quickPrompt52(text, { today, now: osloHm(now), voc });
     const call = quickAi52 ? Promise.resolve().then(() => quickAi52(prompt, { schema: QUICK_SCHEMA52 })).then((data) => ({ data, model: 'test' }))
-      : import('../ai-run.js').then(({ run }) => run('glimt', { user: u, prompt, schema: QUICK_SCHEMA52, json: true, think: false, numCtx: 2048, numPredict: 220, temperature: 0,
+      : import('../ai/run.js').then(({ run }) => run('glimt', { user: u, prompt, schema: QUICK_SCHEMA52, json: true, think: false, numCtx: 2048, numPredict: 220, temperature: 0,
         timeoutMs: QUICK_AI_MS52.ms, localOnly: true, title: 'Glimt · kalenderbeskjed', noRetry: true })).then((r) => ({ data: r.data ?? (() => { try { return JSON.parse(r.text); } catch { return null; } })(), model: r.model }));
     const TIMEOUT = Symbol('timeout');
     const r = await Promise.race([call.catch((e) => ({ error: e })), new Promise((res) => { setTimeout(() => res(TIMEOUT), QUICK_AI_MS52.ms); })]);

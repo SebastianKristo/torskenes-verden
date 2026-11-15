@@ -3,7 +3,7 @@
 // dine egne kvitteringer (bilde + <navn>.json-fasit ved siden av) – bildene og fasiten ligger aldri i repoet. Repoet har bare de
 // syntetiske eksemplene i eval/fixtures/receipts72/. Se tools/lfm72/README.md.
 //
-// Kombinasjonene (samme kjede som serveren: server/finans/receipts/chain.js og ocr-raw.js, alle modellkall via ai-run/ai-gate):
+// Kombinasjonene (samme kjede som serveren: server/finans/receipts/chain.js og ocr-raw.js, alle modellkall via ai/run.js og ai/gate.js):
 //   C        dagens kjede: Apple Vision OCR (Mac-OCR) + qwen3:8b
 //   V-qwen   steg V med qwen2.5vl (ingen OCR)
 //   V-lfm3   steg V med LFM3-VL-2B (ingen tenking)
@@ -139,7 +139,7 @@ globalThis.fetch = async (input, init = {}) => {
 /* ---------------- Serveren (bare modulene kjeden bruker) ---------------- */
 const imp = (p) => import(pathToFileURL(join(REPO, p)).href);
 const fdb = await imp('server/finans/db.js');
-const ai = await imp('server/ai-run.js');
+const ai = await imp('server/ai/run.js');
 const chain = await imp('server/finans/receipts/chain.js');
 const ocr51 = await imp('server/finans/receipts/ocr-raw.js');
 const lfm = await imp('server/finans/receipts/lfm.js');

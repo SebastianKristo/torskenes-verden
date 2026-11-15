@@ -49,11 +49,11 @@
 //   o.owuiExtra: felt som bare sendes til Open WebUI (files, features). o.noQueue: utenom køen (sky-modeller via Open WebUI).
 //   telemetry = {queueMs, loadMs, promptMs, genMs, totalMs, tokIn, tokOut, thinkChars, attempts, model, keepAlive, cold, backend, backendNote}
 //   GateError {kind:'load_timeout'|'idle_timeout'|'unloaded'|'http'|'nocontact'|'cancelled'|'memory', status?, ollamaError?, transient, telemetry}
-import { settings as fhSettings } from './finans/db.js';
-import { OWNER, kv } from './db.js';
-import { cfg } from './settings.js';
-import { THINK_UNSUPPORTED, isThinkingModel, rememberNoThink, hasNoThink, stripThink, userWantsThink } from './ai/ollama-options.js';
-import { omlxConf58 } from './ai/omlx/config.js'; // prompt 58: «Bruk Ollama hvis … ikke svarer» (felles for oMLX og Open WebUI)
+import { settings as fhSettings } from '../finans/db.js';
+import { OWNER, kv } from '../db.js';
+import { cfg } from '../settings.js';
+import { THINK_UNSUPPORTED, isThinkingModel, rememberNoThink, hasNoThink, stripThink, userWantsThink } from './ollama-options.js';
+import { omlxConf58 } from './omlx/config.js'; // prompt 58: «Bruk Ollama hvis … ikke svarer» (felles for oMLX og Open WebUI)
 
 /* ---------------- Innstillinger ---------------- */
 

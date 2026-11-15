@@ -26,7 +26,7 @@ let aiImpl = null;
 export const _setAi77 = (fn) => { aiImpl = fn ?? null; };
 async function aiRun(task, o) {
   if (aiImpl) return aiImpl(task, o);
-  const { run } = await import('../ai-run.js');
+  const { run } = await import('../ai/run.js');
   return run(task, o);
 }
 

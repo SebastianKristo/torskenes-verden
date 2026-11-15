@@ -30,7 +30,7 @@ test('stor maskin: store modeller kan fortsatt anbefales (ingen straff over 12 G
 });
 
 test('oppgraderingen setter de beste installerte modellene én gang (serverrutingen), og ikke på nytt', async () => {
-  const ai = await import('../server/ai-run.js');
+  const ai = await import('../server/ai/run.js');
   const inv = await ai.ollamaInventory({ force: true });
   const r1 = await r39.applyBest59();
   if (!inv.ok || !inv.models?.length) { assert.equal(r1.skipped, 'Ollama svarer ikke'); return; }

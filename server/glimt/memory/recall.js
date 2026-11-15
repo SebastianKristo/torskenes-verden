@@ -64,7 +64,7 @@ async function embedTexts(user, texts) {
   if (Date.now() < embedDownUntil) return null;
   try {
     const call = embedImpl ? Promise.resolve(embedImpl(texts)).then((v) => ({ vectors: v, model: 'test' }))
-      : import('../../ai-run.js').then((ai) => ai.embed(texts, { user, title: 'Glimt · minne (embedding)' }));
+      : import('../../ai/run.js').then((ai) => ai.embed(texts, { user, title: 'Glimt · minne (embedding)' }));
     const out = await Promise.race([call, new Promise((r) => { const t = setTimeout(() => r(null), EMBED_MS); t.unref?.(); })]);
     // Embedding-modellen svarer ikke, eller gir ikke ekte vektorer (mock gir 3 tall): bare eksakt/fuzzy.
     if (!out?.vectors?.length || !(out.vectors[0]?.length >= 64)) { embedDownUntil = Date.now() + 5 * 60_000; return null; }

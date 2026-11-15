@@ -78,7 +78,7 @@ export async function glimtSearch41(u, q, now = Date.now()) {
   const prompt = `I dag er ${longDate(d)} ${d}.\nHendelser (id | dato | ukedag | tid | tittel | sted | kalender):\n${compact41(evs.slice(0, 600))}\n\nSpørsmål: ${q}`;
   try {
     const ask = llm ? Promise.resolve(llm({ prompt, system: SYSTEM })) : (async () => {
-      const { run } = await import('../ai-run.js');
+      const { run } = await import('../ai/run.js');
       const r = await run('glimt', { user: u, prompt, system: SYSTEM, json: true, localOnly: true, numPredict: 260, temperature: 0.1, timeoutMs: SEARCH_MS41, title: 'Kalender · søk med Glimt' });
       return { ...(r.data ?? JSON.parse(String(r.text).match(/\{[\s\S]*\}/)?.[0] ?? '{}')), _model: r.model };
     })();

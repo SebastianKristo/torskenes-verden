@@ -94,9 +94,9 @@ const webp = (w, h) => { const b = Buffer.alloc(40); b.write('RIFF', 0, 'latin1'
 img50._setImg50({ cmd: 'convert', run: (args) => (args.at(-1) === 'webp:-' ? webp(480, 360) : jpeg(1600, 1200, 1000)) });
 
 const { default: app } = await import('../server/index.js');
-const gate = await import('../server/ai-gate.js');
+const gate = await import('../server/ai/gate.js');
 gate._gateTest.backoffMs = [5, 5];
-const aiRun = await import('../server/ai-run.js');
+const aiRun = await import('../server/ai/run.js');
 const fdb = await import('../server/finans/db.js');
 const ai = await import('../server/finans/ai.js');
 const chain = await import('../server/finans/receipts/chain.js');
