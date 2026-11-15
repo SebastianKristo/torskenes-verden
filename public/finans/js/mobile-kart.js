@@ -17,6 +17,7 @@ import { paperDark } from './mobile-paper.js';
 import { vw } from '/assets/js/lib/viewport.js'; // vindusstørrelsen uten tvungen layout
 
 const MD = { bus: { n: 'Buss', c: '#c8372d', p: 'M6 4h12a2 2 0 0 1 2 2v10H4V6a2 2 0 0 1 2-2zM4 11h16M7 20v-4M17 20v-4' }, metro: { n: 'T-bane', c: '#d9661f', p: 'M5 5h14M12 5v15' }, tram: { n: 'Trikk', c: '#2b6fb3', p: 'M7 7h10v9H7zM9 3h6M12 3v4M8 21l2-5M16 21l-2-5' }, rail: { n: 'Tog', c: '#2f7a4f', p: 'M7 3h10v12H7zM7 10h10M9 19l-2 2M15 19l2 2' }, water: { n: 'Båt', c: '#5b4bb5', p: 'M3 16c2 1.5 4 1.5 6 0s4-1.5 6 0 4 1.5 6 0M6 13l1-5h10l1 5M12 4v4' } };
+import { loadLeaflet } from './leaflet.js';
 const MK = ['bus', 'metro', 'tram', 'rail', 'water'];
 const nm = (x) => { const s = String(x ?? '').toLowerCase(); return s === 'coach' ? 'bus' : s === 'ferry' ? 'water' : s === 'train' ? 'rail' : s === 'subway' ? 'metro' : MD[s] ? s : 'bus'; };
 const svg = (d, s = 16, w = 2, c = 'currentColor') => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`;
@@ -147,17 +148,7 @@ async function search(q) {
 }
 
 /* ---------------- Leaflet-kartet (overlever nye tegninger) ---------------- */
-let LF = null, mapEl = null, map = null, layZ = null, layS = null, layV = null, layP = null, vI = null, tI = null, mode0 = '';
-function loadLeaflet() {
-  if (window.L?.map) return Promise.resolve(window.L);
-  if (LF) return LF;
-  LF = new Promise((res, rej) => {
-    const css = document.createElement('link'); css.rel = 'stylesheet'; css.href = '/api/family/vendor/leaflet.css'; document.head.appendChild(css);
-    const add = (src, next) => { const s = document.createElement('script'); s.src = src; s.async = true; s.onload = () => res(window.L); s.onerror = next; document.head.appendChild(s); };
-    add('/api/family/vendor/leaflet.js', () => { css.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'; add('https://unpkg.com/leaflet@1.9.4/dist/leaflet.js', () => { LF = null; rej(new Error('Kartet kunne ikke lastes')); }); });
-  });
-  return LF;
-}
+let mapEl = null, map = null, layZ = null, layS = null, layV = null, layP = null, vI = null, tI = null, mode0 = '';
 const divI = (Lf, html, cls = 'p46k-mk') => Lf.divIcon({ className: cls, html, iconSize: [0, 0] });
 function paint() { paintZones(); paintStops(); paintVeh(); paintPpl(); }
 function paintZones() {

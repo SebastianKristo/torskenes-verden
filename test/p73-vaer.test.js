@@ -120,7 +120,7 @@ test('Web: én vaerCloseButton – hovedsiden, alle ark, Steder, Yr mot Storm og
 });
 
 test('PWA: alle Vær-ark bruker samme ✕ (w32-x, 42 px), mørk over kartet', () => {
-  const a = web('finans/js/mobile-wx.js'), b = web('finans/js/mobile-wx22.js');
+  const a = web('finans/js/mobile-wx.js'), b = web('finans/js/mobile-vaer-kart-og-steder.js');
   assert.match(a, /class="w32-x" data-wx="back"/);
   assert.match(a, /class="w32-x" data-wx="shx" aria-label="Lukk"/);
   assert.match(b, /class="w32-x p40-dk" data-wx2="mapx"/);

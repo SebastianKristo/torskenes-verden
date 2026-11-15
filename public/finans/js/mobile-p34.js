@@ -7,7 +7,7 @@
 //  4. Innstillinger: AI-søk tar deg til siden og markerer elementet med pulserende rød ring (og boble for «Oppdater nå»)
 //     (claude-code-innst-ai-sok-highlight.md, fasit Innstillinger Web → IDX/match/goK/hl).
 //  5. Tydelige AI-feil i Glimt-boblen: «Glimt fikk ikke svar fra {modell}: {feil}» med Prøv igjen og Åpne AI-kontroll.
-// AI-kontroll (Innstillinger → APP → AI og modeller, og fra Chat) ligger i mobile-p34ai.js.
+// AI-kontroll (Innstillinger → APP → AI og modeller, og fra Chat) ligger i mobile-ai-kontroll.js.
 import { S, api, esc, hlApi, n2 } from './core.js';
 import { m, draw, flash, startScr, loadJobs } from './mobile.js';
 import { haptic, hapBack } from './mobile-haptics.js';

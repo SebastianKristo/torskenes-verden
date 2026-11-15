@@ -3,10 +3,10 @@
 //      undertekst, Innstillinger nederst. Hold inne → wiggle, «–» skjuler, Store · Lave og Ferdig, «Vis N skjulte».
 //   2. Gjøremål (Huskeliste.dc.html): ↳+ og deloppgaver rett i lista, «Fullfør X også?», infoside i Papir-stil
 //      (Frist/Når, Detaljer, Deloppgaver, Sted med kart, fast Fullfør-knapp) og raden «Synk med Home Assistant».
-//   3. Innstillinger → Gjøremål (HA-synk), Innstillinger → Homelab → Logger (mobile-p44l.js), Kontoer og brukere →
+//   3. Innstillinger → Gjøremål (HA-synk), Innstillinger → Homelab → Logger (mobile-logger.js), Kontoer og brukere →
 //      FAMILIE · LOGG INN SOM og SERVER · EIER (Mobil Papir App.dc.html asRows/ownRows), System → TIDLIGERE VERSJONER.
 //   4. Glimt-tid i Hjem-søket: «time 12.5 16:30 kino dune.» → Kino dune 12. mai 16:30 (QAP.QP i fasiten).
-//   5. Studie → Dokumenter (mobile-p44s.js) og Avspilling (mobile-p44a.js, også som fane i Media).
+//   5. Studie → Dokumenter (mobile-studie.js) og Avspilling (mobile-avspilling.js, også som fane i Media).
 // Lastes med dynamisk import fra mobile.js (statiske importer herfra er trygge fordi resten allerede er evaluert).
 // API-ene lages av SERVER44 samtidig: alt tåler 404 med en rolig tekst («Krever en nyere Homelab-server»).
 import { esc, hlApi } from './core.js';
@@ -401,7 +401,7 @@ export function huskeSet() {
 let LOGM = null;
 export function loggerSet() {
   if (!isAdmin()) return '<div class="snote">Loggene er serverinfrastruktur og vises bare for administrator.</div>';
-  if (!LOGM) { import('./mobile-p44l.js').then((x) => { LOGM = x; draw(); }).catch((e) => console.warn('mobile-p44l', e)); return '<div class="m-spin"></div>'; }
+  if (!LOGM) { import('./mobile-logger.js').then((x) => { LOGM = x; draw(); }).catch((e) => console.warn('mobile-logger', e)); return '<div class="m-spin"></div>'; }
   return LOGM.logView();
 }
 
@@ -700,17 +700,17 @@ export function fixQuick(text, r) {
 }
 
 /* =====================================================================
-   5. Studie (mobile-p44s.js) og Avspilling (mobile-p44a.js)
+   5. Studie (mobile-studie.js) og Avspilling (mobile-avspilling.js)
    ===================================================================== */
 let STU = null, AVS = null;
 export const studieMod = () => STU;
 export const avsMod = () => AVS;
 export function studieView() {
-  if (!STU) { import('./mobile-p44s.js').then((x) => { STU = x; draw(); STU.studieLoad?.().then(draw).catch(() => {}); }).catch((e) => console.warn('mobile-p44s', e)); return '<div class="m-spin"></div>'; }
+  if (!STU) { import('./mobile-studie.js').then((x) => { STU = x; draw(); STU.studieLoad?.().then(draw).catch(() => {}); }).catch((e) => console.warn('mobile-studie', e)); return '<div class="m-spin"></div>'; }
   return STU.studieView();
 }
 export function avsView(embedded = false) {
-  if (!AVS) { import('./mobile-p44a.js').then((x) => { AVS = x; draw(); AVS.avsLoad?.().then(draw).catch(() => {}); }).catch((e) => console.warn('mobile-p44a', e)); return '<div class="m-spin"></div>'; }
+  if (!AVS) { import('./mobile-avspilling.js').then((x) => { AVS = x; draw(); AVS.avsLoad?.().then(draw).catch(() => {}); }).catch((e) => console.warn('mobile-avspilling', e)); return '<div class="m-spin"></div>'; }
   return AVS.avsView(embedded);
 }
 

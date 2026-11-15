@@ -268,8 +268,8 @@ export function logo(t, size = 40, radius = 12) {
   if (ov73 !== undefined) {
     const nm = t?.description ?? t?.merchant ?? t?.name ?? '', col = t?.color && t.color !== DEF_COLOR ? t.color : DEF_COLOR;
     const bx = `width:${size}px;height:${size}px;border-radius:${radius}px;flex:none`;
-    if (ov73) return `<span class="m-logo" style="${bx}"><img src="${esc(ov73)}" alt="" loading="lazy" width="${size - 8}" height="${size - 8}"><i style="color:${esc(col)}">${esc(ini(nm))}</i></span>`;
-    return `<span class="m-ini" style="${bx};background:${rgba(col, 0.18)};color:${esc(col)};font-size:${Math.round(size * 0.4)}px">${esc(ini(nm))}</span>`;
+    if (ov73) return `<span class="m-logo tint" style="${bx};--ini-c:${esc(col)}"><img src="${esc(ov73)}" alt="" loading="lazy" width="${size - 8}" height="${size - 8}"><i>${esc(ini(nm))}</i></span>`;
+    return `<span class="m-ini tint" style="${bx};--ini-c:${esc(col)};font-size:${Math.round(size * 0.4)}px">${esc(ini(nm))}</span>`;
   }
   const it = logoMatch(t);
   const name = t?.description ?? t?.merchant ?? t?.name ?? it?.navn ?? '';
@@ -280,8 +280,9 @@ export function logo(t, size = 40, radius = 12) {
   // Prompt 52: serverens merchant_logo (lokal logo-cache, /finans/api/logos52) går foran registeret og favicon.
   const ml = t?.merchant_logo?.url && /^\/finans\/api\//.test(t.merchant_logo.url) ? t.merchant_logo.url : null;
   const src = ml ?? (it && it.hasFile !== false ? `/finans/api/logos/file/${encodeURIComponent(it.id)}` : fav);
-  if (src) return `<span class="m-logo" style="${box}"><img src="${src}"${src !== fav && fav ? ` data-fb="${fav}"` : ''} alt="" loading="lazy" width="${size - 8}" height="${size - 8}"><i style="color:${esc(color)}">${esc(ini(name))}</i></span>`;
-  return `<span class="m-ini" style="${box};background:${rgba(color, 0.18)};color:${esc(color)};font-size:${Math.round(size * 0.4)}px">${esc(ini(name))}</span>`;
+  // Initialene får fargen som --ini-c; finans.css gjør teksten lesbar mot den tonede flaten i lys og mørk modus.
+  if (src) return `<span class="m-logo tint" style="${box};--ini-c:${esc(color)}"><img src="${src}"${src !== fav && fav ? ` data-fb="${fav}"` : ''} alt="" loading="lazy" width="${size - 8}" height="${size - 8}"><i>${esc(ini(name))}</i></span>`;
+  return `<span class="m-ini tint" style="${box};--ini-c:${esc(color)};font-size:${Math.round(size * 0.4)}px">${esc(ini(name))}</span>`;
 }
 export const aiLine = (s, cls = 'ai') => (s ? `<span class="${cls}">✦ ${esc(s)}</span>` : '');
 

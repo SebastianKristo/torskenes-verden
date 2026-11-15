@@ -460,7 +460,7 @@ function salCard43(s, bal) {
   const hid = pref('hideAmt') && !m.reveal, amt = (v) => (hid ? '••••' : `${v < 0 ? '−' : ''}${n0(Math.abs(v))}`);
   const tag = hid ? 'div' : 'a';
   // Prompt 52 (claude-code-saldokort-utseende.md): utseende std | glass | kvitt | farge (papir_salsty, synkes som layout salSty).
-  // Hold inne 0,5 s → arket «Utseende på saldokortet» (mobile-p52.js). data-p52sal: holdet starter ikke wiggle og åpner ikke Kontoer.
+  // Hold inne 0,5 s → arket «Utseende på saldokortet» (mobile-saldokort.js). data-p52sal: holdet starter ikke wiggle og åpner ikke Kontoer.
   let sty = 'std'; try { sty = localStorage.getItem('papir_salsty') || 'std'; } catch {}
   if (!['std', 'glass', 'kvitt', 'farge'].includes(sty)) sty = 'std';
   const ring = sty === 'glass' ? `conic-gradient(#f08a76 0 ${pc}%, rgba(255,255,255,.25) ${pc}% 100%)` : sty === 'farge' ? `conic-gradient(var(--pp-on,#fff) 0 ${pc}%, color-mix(in srgb,var(--pp-on,#fff) 30%,transparent) ${pc}% 100%)` : `conic-gradient(var(--pp-lab) 0 ${pc}%, color-mix(in srgb,var(--pp-line) 80%,transparent) ${pc}% 100%)`;

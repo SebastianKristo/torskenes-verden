@@ -1,7 +1,7 @@
 // Papir (prompt 16): redigerbar fanelinje (hold inne på linja, eller Innstillinger → Fanelinje), fargetema for ikonene
 // i Innstillinger, Avganger (egen side i nyhetsleser-stil med flere stopp fra Entur og sanntid), Familie og kart
 // (OpenStreetMap via Leaflet, soner, personvern) og Boliger i full mobilversjon. Valgene lagres per bruker i /api/me/layout.
-import * as P30B from './mobile-p30b.js';
+import * as P30B from './mobile-boliger-deling.js';
 import { FT, famTabs, personCard, healthView } from './mobile-p17.js';
 const famTop = () => (paper() ? '' : famTabs()); // Papir: fanene ligger i fanelinja nederst
 import { api, esc, n0, ini, hlApi, dd, today, cap } from './core.js';
@@ -15,6 +15,7 @@ import { DEP, depKey, depStatus, stopList } from './mobile-p21.js';
 import * as P24 from './mobile-p24.js';
 import * as P22 from './mobile-p22.js';
 import * as P25 from './mobile-p25.js';
+import { loadLeaflet } from './leaflet.js';
 
 /* ---------- Valg (lokal kopi + /api/me/layout) ---------- */
 
@@ -261,7 +262,7 @@ AV.lpUp = () => { if (avlp) clearTimeout(avlp.t); avlp = null; };
 /* ---------- Familie og kart ---------- */
 
 export const FM = { d: null, err: '', sel: null, track: {}, zone: null, zoneMode: false, geo: false, geoErr: '', last: 0, seen: 0, busy: false };
-let LF = null, mapEl = null, map = null, layer = null, famTimer = null, watchId = null;
+let mapEl = null, map = null, layer = null, famTimer = null, watchId = null;
 export async function famLoad() {
   try { FM.d = await hlApi('/family'); if (Array.isArray(FM.d?.members)) FM.d.members = P22.groupMembers(FM.d.members); FM.err = ''; }
   catch (e) { FM.err = e.status === 404 ? 'Familie og kart krever en nyere server. Oppdater Homelab.' : e.message; }
@@ -337,20 +338,6 @@ export function famSheet() {
     <label class="p16-rad"><span>Radius</span><input type="range" min="50" max="2000" step="50" value="${z.radius}" data-p16z="radius"><b>${n0(z.radius)} m</b></label>
     <div class="p16-cols">${ZCOL.map((c) => `<button data-p16="zcol" data-c="${c}" style="background:${c}" aria-pressed="${z.color === c}" aria-label="Farge"></button>`).join('')}</div>
     <button class="pp-btn ink" data-p16="zsave" ${z.name.trim() ? '' : 'disabled'}>Lagre sone</button><button class="pp-btn" data-p16="zx">Avbryt</button></div>`;
-}
-function loadLeaflet() {
-  if (window.L?.map) return Promise.resolve(window.L);
-  if (LF) return LF;
-  LF = new Promise((res, rej) => {
-    // Leaflet ligger på serveren (/api/family/vendor); unpkg er reserve for eldre servere.
-    const css = document.createElement('link'); css.rel = 'stylesheet'; css.href = '/api/family/vendor/leaflet.css'; document.head.appendChild(css);
-    const add = (src, next) => { const s = document.createElement('script'); s.src = src; s.async = true; s.onload = () => res(window.L); s.onerror = next; document.head.appendChild(s); };
-    add('/api/family/vendor/leaflet.js', () => {
-      css.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-      add('https://unpkg.com/leaflet@1.9.4/dist/leaflet.js', () => { LF = null; rej(new Error('Kartet kunne ikke lastes')); });
-    });
-  });
-  return LF;
 }
 /** Etter hver tegning: flytt det faste kartelementet inn på plassen sin (Leaflet-kartet overlever nye tegninger). */
 export function famAfterDraw() {
