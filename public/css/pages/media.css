@@ -255,7 +255,7 @@ html[data-mode="dark"] .m45u,.m43.dk~.m45u-host .m45u{--k:#efe9de;--cd:#211f1b;-
 .s50-st{display:grid;grid-template-columns:26px 1fr;gap:4px 10px;padding:12px 16px;border-top:1px solid var(--line,rgba(0,0,0,.08))}
 .s50-st:first-child{border-top:0}
 .s50-ic{width:22px;height:22px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff;margin-top:1px}
-.s50-ic.ok{background:#2f7a4f}.s50-ic.warn{background:#b7791f}.s50-ic.fail{background:#b23a2a}.s50-ic.skip{background:#8a8478}
+.s50-ic.ok{background:var(--ds-category-green)}.s50-ic.warn{background:#b7791f}.s50-ic.fail{background:#b23a2a}.s50-ic.skip{background:#8a8478}
 .s50-tx{display:flex;flex-direction:column;gap:3px;min-width:0}
 .s50-tx b{font-size:14.5px}
 .s50-tx span{font-size:13px;opacity:.85;overflow-wrap:anywhere}
@@ -265,12 +265,12 @@ html[data-mode="dark"] .m45u,.m43.dk~.m45u-host .m45u{--k:#efe9de;--cd:#211f1b;-
 .s50-btn{border:1px solid currentColor;border-radius:8px;background:none;color:inherit;font:600 12.5px/1 inherit;padding:5px 10px;cursor:pointer}
 .s50-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;flex-wrap:wrap}
 .s50-sum{font-size:13.5px;font-weight:600}
-.s50-sum.ok{color:#2f7a4f}.s50-sum.fail{color:#b23a2a}.s50-sum.warn{color:#b7791f}
+.s50-sum.ok{color:var(--ds-category-green)}.s50-sum.fail{color:#b23a2a}.s50-sum.warn{color:#b7791f}
 
 /* ═══ NRK-fanen (media-nrk.js) ═══ */
 /* NRK-nedlaster i Media (media-nrk.js). Fasit: «Media NRK.dc.html» (pakke 57). Bruker fargene fra media70.css (--p-*),
    så Papir og mørkt tema følger med. Blå = laster ned, grønn = ferdig/VPN ok, rød = feil/VPN stoppet, dempet = i kø/avbrutt. */
-.nrk87{--n-bl:#2b5d8a;--n-ok:#2f7a4f;--n-rd:var(--p-red);--n-mt:var(--p-mt);
+.nrk87{--n-bl:var(--ds-category-blue);--n-ok:var(--ds-category-green);--n-rd:var(--p-red);--n-mt:var(--p-mt);
   display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,max(460px,34%)),1fr));align-items:start;gap:18px;width:100%}
 .m43.m70.dk .nrk87{--n-bl:var(--p-blue);--n-ok:var(--p-ok)}
 .nrk87 a{text-decoration:none}.nrk87 a:hover{text-decoration:underline}
@@ -497,7 +497,7 @@ html[data-mode="dark"] .m45u,.m43.dk~.m45u-host .m45u{--k:#efe9de;--cd:#211f1b;-
 /* ═══ Musikk-fanen (media-musikk.js) ═══ */
 /* Musikk i Media (media-musikk.js). Fasit: «Media Musikk.dc.html» (pakke 58). Fargene fra media70.css (--p-*), så Papir og
    mørkt tema følger med. Blå = henter/laster ned, lilla = importerer, grønn = ferdig/lastet ned, rød = feil, dempet = venter. */
-.mu88{--u-bl:#2b5d8a;--u-ok:#2f7a4f;--u-pu:#7a4fa0;--u-rd:var(--p-red);--u-mt:var(--p-mt);
+.mu88{--u-bl:var(--ds-category-blue);--u-ok:var(--ds-category-green);--u-pu:#7a4fa0;--u-rd:var(--p-red);--u-mt:var(--p-mt);
   display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,max(420px,34%)),1fr));align-items:start;gap:18px;width:100%;color:var(--p-k)}
 .m43.m70.dk .mu88{--u-bl:var(--p-blue);--u-ok:var(--p-ok);--u-pu:#b896d8}
 .mu88 .ok{--c:var(--u-ok)}.mu88 .rd{--c:var(--u-rd)}.mu88 .bl{--c:var(--u-bl)}.mu88 .mt{--c:var(--u-mt)}.mu88 .pu{--c:var(--u-pu)}

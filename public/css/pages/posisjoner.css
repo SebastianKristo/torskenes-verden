@@ -2,8 +2,8 @@
    Resten av den gamle Familie-siden (family.js) er erstattet av familie.css og er fjernet. */
 .fam{--f-ink:var(--text);--f-mute:var(--text-2);--f-faint:var(--muted);--f-line:var(--line);--f-acc:#f59a8f;--f-pos:#8fe0b0;--f-chip:rgba(255,255,255,.06);--f-sheet:#121722;--f-on:#eef0f4;--f-onink:#0b0e15;
   --f-card:rgba(255,255,255,.04);--f-bg:var(--bg,#0b0e15);color:var(--f-ink)}
-html[data-hl="2c"] .fam{--f-ink:#1b1a17;--f-mute:#6b665c;--f-faint:#6f6a5f;--f-line:#e3ddcf;--f-acc:#b23a2a;--f-pos:#2f7a4f;--f-chip:#f3efe6;--f-sheet:#fff;--f-on:#1b1a17;--f-onink:#f3efe6;
-  --f-card:#fff;--f-bg:#f3efe6}
+html[data-hl="2c"] .fam{--f-ink:var(--ds-text-primary);--f-mute:#6b665c;--f-faint:#6f6a5f;--f-line:#e3ddcf;--f-acc:var(--ds-accent);--f-pos:var(--ds-category-green);--f-chip:var(--ds-surface);--f-sheet:#fff;--f-on:var(--ds-text-primary);--f-onink:var(--ds-surface);
+  --f-card:#fff;--f-bg:var(--ds-surface)}
 .fam-sub{color:var(--f-mute,var(--text-2));font-size:13px;min-width:0}
 .fam-card{gap:12px}
 html[data-hl="2c"] body .fam .card.fam-card,.fam .card.fam-card{background:var(--f-card);border:0;border-radius:22px;padding:16px;box-shadow:none}
@@ -24,7 +24,7 @@ html[data-hl="2c"] .pos-host{--pos-ring:var(--pp);--pos-lab:var(--acc);--pos-mut
 .pos-av img{width:100%;height:100%;border-radius:50%;object-fit:cover}
 .pos-plus .pos-av{background:transparent;color:var(--pos-mut);border:1.5px dashed currentColor}
 .pos-dot{position:absolute;right:-2px;bottom:-2px;width:10px;height:10px;border-radius:50%;box-sizing:content-box;border:2px solid var(--pos-ring);background:#8a8578}
-.pos-dot.fresh{background:#2f7a4f}
+.pos-dot.fresh{background:var(--ds-category-green)}
 .pos-dot.stale{background:#d9a400}
 .pos-t{display:flex;flex-direction:column;min-width:0}
 .pos-t b{font-size:13.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -36,10 +36,10 @@ html[data-hl="2c"] .p-sec.pos-host{padding-bottom:16px;margin-bottom:6px;border-
 /* ---------- Hjemlys på Familie-kortet og Familie-siden (claude-code-hjemlys.md) ---------- */
 .hl40{display:flex;flex-direction:column;gap:10px;margin-top:12px;padding-top:12px;border-top:1px solid var(--c40-line,var(--rule,rgba(127,127,127,.25)));--hl-mut:var(--c40-mut,var(--ink2,#8a93a6));--hl-ink:var(--c40-ink,var(--ink,#eef0f4));--hl-chip:var(--c40-chip,rgba(127,127,127,.14))}
 .hl40.page{margin:0 0 18px;padding:16px 18px;border:1px solid var(--rule,rgba(127,127,127,.25));border-radius:20px;background:var(--card,rgba(255,255,255,.03))}
-html[data-hl="2c"] .hl40.page{background:#fffdf8;border-color:#e3dccd}
+html[data-hl="2c"] .hl40.page{background:var(--ds-surface-raised);border-color:#e3dccd}
 .hl40-k{font:600 10.5px 'IBM Plex Mono',ui-monospace,monospace;letter-spacing:.12em;color:var(--hl40-amb,#8f6112)}
-.hl40-glow{flex:none;width:18px;height:18px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#ffe7a3,#f2a93b 70%);box-shadow:0 0 0 2.5px #2f7a4f,0 0 12px rgba(242,169,59,.55)}
-.hl40-me.late .hl40-glow{box-shadow:0 0 0 2.5px #d4231b,0 0 12px rgba(212,35,27,.45)}
+.hl40-glow{flex:none;width:18px;height:18px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#ffe7a3,#f2a93b 70%);box-shadow:0 0 0 2.5px var(--ds-category-green),0 0 12px rgba(242,169,59,.55)}
+.hl40-me.late .hl40-glow{box-shadow:0 0 0 2.5px var(--ds-category-red),0 0 12px rgba(212,35,27,.45)}
 .hl40-me.home .hl40-glow,.hl40-start .hl40-glow{box-shadow:0 0 14px 3px rgba(242,169,59,.55)}
 .hl40-r,.hl40-o{display:flex;align-items:center;gap:10px;min-width:0}
 .hl40-tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
@@ -48,8 +48,8 @@ html[data-hl="2c"] .hl40.page{background:#fffdf8;border-color:#e3dccd}
 .hl40-eta{flex:none;font:500 22px/1 Newsreader,Georgia,serif;color:var(--hl-ink)}
 .hl40-me{display:flex;flex-direction:column;gap:8px}
 .hl40-bar{display:block;height:6px;border-radius:3px;background:var(--hl-chip);overflow:hidden}
-.hl40-bar i{display:block;height:100%;border-radius:3px;background:#2f7a4f}
-.hl40-me.late .hl40-bar i{background:#d4231b}
+.hl40-bar i{display:block;height:100%;border-radius:3px;background:var(--ds-category-green)}
+.hl40-me.late .hl40-bar i{background:var(--ds-category-red)}
 .hl40-acts{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 .hl40-b{height:32px;padding:0 13px;border-radius:999px;border:1px solid var(--c40-line,var(--rule,rgba(127,127,127,.3)));background:transparent;color:var(--hl-ink);cursor:pointer;font:700 12.5px Manrope,system-ui,sans-serif;white-space:nowrap}
 .hl40-b.ink{background:var(--hl-ink);border-color:var(--hl-ink);color:var(--c40-card,var(--pp,#0b0e15))}
@@ -57,14 +57,14 @@ html[data-hl="2c"] .hl40.page{background:#fffdf8;border-color:#e3dccd}
 .hl40-lnk{border:0;background:none;padding:0 4px;cursor:pointer;color:var(--hl-mut);font:600 12.5px Manrope,system-ui,sans-serif;text-decoration:underline;text-underline-offset:3px}
 .hl40-av{flex:none;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;color:#fff;font:800 10.5px Manrope,system-ui,sans-serif;overflow:hidden}
 .hl40-av img{width:100%;height:100%;object-fit:cover}
-.hl40-o.late .hl40-tx span{color:#d4231b;font-weight:600}
+.hl40-o.late .hl40-tx span{color:var(--ds-category-red);font-weight:600}
 .hl40-start{display:flex;align-items:center;gap:10px;width:100%;padding:8px 10px;border-radius:14px;border:1px dashed var(--c40-line,var(--rule,rgba(127,127,127,.35)));background:transparent;color:inherit;cursor:pointer;text-align:left;font:inherit}
 .hl40-start:hover{background:var(--hl-chip)}
 .hl40-go{flex:none;font:700 12.5px Manrope,system-ui,sans-serif;color:var(--hl40-amb,#8f6112)}
 .hl40-sug{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 10px;border-radius:12px;background:var(--hl-chip);font-size:12.5px;color:var(--hl-ink)}
 .hl40-sug>span:nth-child(2){flex:1;min-width:140px}
 .hl40-sk{font:600 10px 'IBM Plex Mono',ui-monospace,monospace;letter-spacing:.1em;color:#b23a2a}
-.hl40-err{font-size:12px;color:#d4231b}
+.hl40-err{font-size:12px;color:var(--ds-category-red)}
 /* Startarket */
 .hl40-ov{position:fixed;inset:0;z-index:120;background:rgba(20,18,14,.45);display:grid;place-items:center;padding:16px}
 .hl40-sh{width:min(440px,100%);max-height:calc(100dvh - 32px);overflow:auto;display:flex;flex-direction:column;gap:14px;padding:20px;border-radius:24px;background:#f3efe6;color:#1b1a17;font-family:Manrope,system-ui,sans-serif;box-shadow:0 24px 60px -18px rgba(0,0,0,.45);--hl-ink:#1b1a17;--hl-mut:#6b665c;--hl-chip:#e9e2d3}
@@ -114,8 +114,8 @@ a.hl40-b{display:inline-grid;place-items:center;text-decoration:none}
 .hl40-ring>span{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
 .hl40-ring b{font:600 26px/1 'IBM Plex Mono',ui-monospace,monospace;color:#f3efe6}
 .hl40-ring em{font-style:normal;font-size:11.5px;color:rgba(243,239,230,.65)}
-.hl40-late{display:flex;flex-direction:column;gap:8px;padding:12px 14px;border-radius:16px;background:rgba(212,35,27,.07);box-shadow:inset 3px 0 0 #d4231b}
-.hl40-late.alarm{background:#3a0f0c;color:#fff;box-shadow:0 0 0 2px #d4231b inset;--hl-ink:#fff;--hl-mut:rgba(255,255,255,.72);--c40-line:rgba(255,255,255,.18)}
+.hl40-late{display:flex;flex-direction:column;gap:8px;padding:12px 14px;border-radius:16px;background:rgba(212,35,27,.07);box-shadow:inset 3px 0 0 var(--ds-category-red)}
+.hl40-late.alarm{background:#3a0f0c;color:#fff;box-shadow:0 0 0 2px var(--ds-category-red) inset;--hl-ink:#fff;--hl-mut:rgba(255,255,255,.72);--c40-line:rgba(255,255,255,.18)}
 .hl40-late.alarm .hl40-k.n{color:#ff9a8f}
 .hl40-late.alarm .hl40-b{color:#fff;border-color:rgba(255,255,255,.4)}
 .hl40-late.alarm .hl40-b.ink{background:#fff;color:#3a0f0c;border-color:#fff}
@@ -130,7 +130,7 @@ a.hl40-b{display:inline-grid;place-items:center;text-decoration:none}
 .hl40-modes button:last-child{border-bottom:0}
 .hl40-modes button span{flex:1}
 .hl40-modes button[aria-checked="true"]{background:var(--hl-chip)}
-.hl40-modes i{font-style:normal;color:#2f7a4f}
+.hl40-modes i{font-style:normal;color:var(--ds-category-green)}
 .hl40-rec{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .hl40-rec b{font-size:14px;margin-left:4px}
 .hl40-chk{display:flex;flex-wrap:wrap;gap:6px 12px;font-size:13px}

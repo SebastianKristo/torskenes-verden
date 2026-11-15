@@ -6,7 +6,7 @@
    sidepanel (minikalender, kalendere) og visningen. Ark for detaljer, ny/rediger og søk. Hjem-widgeten nederst. */
 .kal{--k-ink:var(--text);--k-mut:var(--text-2);--k-line:rgba(255,255,255,.12);--k-lab:#c8483a;--k-labt:#f59a8f;--k-card:var(--card,#141a26);--k-bg:#0b0e15;--k-in:rgba(255,255,255,.05);
   --k-hero:#232b3b;--k-herofg:#f3efe6;--k-shadow:0 10px 30px -14px rgba(0,0,0,.6)}
-html[data-hl="2c"] .kal{--k-ink:#1b1a17;--k-mut:#6f6a5f;--k-line:#d8d1c2;--k-lab:#b23a2a;--k-labt:#b23a2a;--k-card:#fff;--k-bg:#f3efe6;--k-in:#f3efe6;--k-hero:#1b1a17;--k-herofg:#f3efe6;--k-shadow:0 10px 30px -18px rgba(0,0,0,.3)}
+html[data-hl="2c"] .kal{--k-ink:var(--ds-text-primary);--k-mut:#6f6a5f;--k-line:var(--ds-line);--k-lab:var(--ds-accent);--k-labt:var(--ds-accent);--k-card:#fff;--k-bg:var(--ds-surface);--k-in:var(--ds-surface);--k-hero:var(--ds-text-primary);--k-herofg:var(--ds-surface);--k-shadow:0 10px 30px -18px rgba(0,0,0,.3)}
 .kal-grow{flex:1;min-width:0}
 .kal-strip{flex:none;width:6px;align-self:stretch;border-radius:3px;background:var(--c)}
 
@@ -115,7 +115,7 @@ textarea.k2-in{height:auto;padding:12px 16px;resize:vertical}
 .kq-b.on{padding:0 14px;background:var(--k-bg);color:var(--k-ink)}
 .kq-toast.err .kq-tx b{color:#b23a2a}
 html[data-hl="2c"] .kq-toast.err .kq-tx b{color:#f59a8f}
-html:not([data-hl="2c"]) .kq-layer{--k-ink:#f3efe6;--k-bg:#141a26}
+html:not([data-hl="2c"]) .kq-layer{--k-ink:var(--ds-surface);--k-bg:#141a26}
 
 @media (max-width:767px){
   .k2{height:calc(100dvh - 200px);min-height:520px;border-radius:20px;margin:0;border:1px solid var(--k-line);padding-top:0}
@@ -234,7 +234,7 @@ html[data-hl="2c"] .p-sec .kal.kal-hw{background:#fff}
 .k3-fa-h{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
 .k3-fa-l{font:600 10.5px 'IBM Plex Mono',ui-monospace,monospace;letter-spacing:.12em;color:#7a5ad6}
 html:not([data-hl="2c"]) .k3-fa-l{color:#b9a3f2}
-.k3-fa-ok{font-size:12px;font-weight:700;color:#2f7a4f}
+.k3-fa-ok{font-size:12px;font-weight:700;color:var(--ds-category-green)}
 html:not([data-hl="2c"]) .k3-fa-ok{color:#8fe0b0}
 .k3-fa-r{display:flex;align-items:flex-end;gap:8px}
 .k3-fa-in{flex:1;min-width:0;resize:none;border:0;outline:none;background:transparent;color:var(--k-ink);font:500 14.5px/1.4 Manrope,system-ui,sans-serif;padding:2px 0;min-height:42px}
@@ -402,7 +402,7 @@ html[data-kal-app] .k2.k2-fs{padding-top:6px}
 .k39-ghx{display:flex;align-items:center;gap:6px;font:600 10px/1 var(--mono);color:var(--mut)}
 .k39-wxi{flex:none;color:var(--mut)}
 .k39-wx-sol{color:#b8860b}
-.k39-wx-regn{color:#2b5d8a}
+.k39-wx-regn{color:var(--ds-category-blue)}
 .k39-ga{flex:none;display:flex;align-items:stretch;padding:4px 8px 4px 0;border-bottom:1px solid var(--line)}
 .k39-gal{flex:none;width:52px;padding-top:4px;text-align:center;font:600 8.5px/1.25 var(--mono);color:var(--mut2)}
 .k39-gac{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;padding:0 2px;border-left:1px solid var(--line2)}
@@ -606,12 +606,12 @@ html[data-kal-app] #kal.k39{margin:0}
 .km35{position:fixed;inset:0;z-index:160}
 .km35-back{position:absolute;inset:0;background:rgba(27,26,23,.38);animation:gbFadeIn .2s ease both}
 .km35-panel{position:absolute;top:0;right:0;bottom:0;width:min(520px,100%);background:#fffdf8;color:#1b1a17;box-shadow:-20px 0 60px -20px rgba(0,0,0,.4);animation:hlBrIn .3s cubic-bezier(.2,.8,.2,1) both;overflow-y:auto;font-family:var(--gb-sans);color-scheme:light}
-.km35-in{padding:18px 18px 40px;display:flex;flex-direction:column;gap:12px;--gs-line:#e6dfd1;--gs-ink:#1b1a17;--gs-off:#ddd5c5;--gs-on:#2f7a4f}
+.km35-in{padding:18px 18px 40px;display:flex;flex-direction:column;gap:12px;--gs-line:#e6dfd1;--gs-ink:#1b1a17;--gs-off:#ddd5c5;--gs-on:var(--ds-category-green)}
 .km35-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .km35-head b{font:500 28px var(--gb-serif)}
 .km35-note{margin:0;font-size:12.5px;line-height:1.5;color:#6b665c}
 .km35-err,.km35-msg{margin:0;font-size:13px;font-weight:700;color:#b23a2a}
-.km35-msg{color:#2f7a4f}
+.km35-msg{color:var(--ds-category-green)}
 .km35-list{display:flex;flex-direction:column;border-top:1px solid #e6dfd1}
 .km35-row{display:grid;grid-template-columns:34px minmax(0,1fr) auto auto auto;grid-template-areas:"c n m s d" "c p p p p";align-items:center;column-gap:10px;row-gap:6px;padding:10px 0;border-bottom:1px solid #e6dfd1}
 .km35-row.off .km35-n{opacity:.5}
@@ -742,7 +742,7 @@ html[data-kal-app] #kal.k39{margin:0}
 .k38-steps>span i{flex:none;width:16px;height:16px;border-radius:8px;border:2px solid var(--k-line);display:grid;place-items:center;font:800 9px/1 Manrope,system-ui,sans-serif;font-style:normal;color:#fff}
 .k38-steps>span.on{color:var(--k-ink)}
 .k38-steps>span.on i{border-color:var(--k-lab);border-top-color:transparent;animation:k38spin .8s linear infinite}
-.k38-steps>span.ok i{background:#2f7a4f;border-color:#2f7a4f}
+.k38-steps>span.ok i{background:var(--ds-category-green);border-color:var(--ds-category-green)}
 .k38-card{display:flex;flex-direction:column;border-radius:14px;background:var(--k-card);overflow:hidden;border:1px solid var(--k-line)}
 .k38-cb{display:flex;align-items:center;gap:10px;min-height:52px;padding:8px 12px;border:0;background:transparent;color:var(--k-ink);cursor:pointer;text-align:left}
 .k38-cb:hover{background:color-mix(in oklab,var(--k-ink) 4%,transparent)}
@@ -847,7 +847,7 @@ html:not([data-hl="2c"]) .k38-tiles{filter:invert(1) hue-rotate(180deg) brightne
 
 /* ---------- Kalender på web i mørk modus (følger Homelab-modusen, html[data-mode]; Q14) ---------- */
 html[data-mode="dark"] #kal.k39{--bg:#161513;--ink:#efe9de;--card:#211f1b;--chip:#2b2824;--line:#3b3731;--line2:#2e2b26;--mut:#a49d91;--mut2:#8c867b;--ink2:#d6cfc2;
-  --acc:#ec7a64;--red:#cf5540;--sun:#ec7a64;--dim:rgba(0,0,0,.55);--glass:rgba(33,31,27,.94);--tint:32%;--tint-all:30%;--k-shadow:0 10px 30px -14px rgba(0,0,0,.7);color-scheme:dark}
+  --acc:var(--ds-accent);--red:#cf5540;--sun:var(--ds-accent);--dim:rgba(0,0,0,.55);--glass:rgba(33,31,27,.94);--tint:32%;--tint-all:30%;--k-shadow:0 10px 30px -14px rgba(0,0,0,.7);color-scheme:dark}
 html[data-mode="dark"] #kal.k39 .k39-ev,html[data-mode="dark"] #kal.k39 .k39-chip.all{color:var(--lt)}
 @media (prefers-color-scheme:dark){
   html:not([data-mode="light"]) #kal.k39{--red:#cf5540}
@@ -868,8 +868,8 @@ html[data-mode="dark"] #kal.k39 .k39-ev,html[data-mode="dark"] #kal.k39 .k39-chi
 .kal42-seg{display:flex;flex-wrap:wrap;gap:6px;padding:12px 0}
 .kal42-seg button{height:34px;padding:0 13px;border-radius:17px;border:1px solid #2a3346;background:transparent;color:inherit;cursor:pointer;font:700 12.5px Manrope,system-ui,sans-serif}
 .kal42-seg button[aria-pressed=true]{background:#eef0f4;border-color:#eef0f4;color:#0b0e15}
-html[data-hl="2c"] .kal42-seg button{border-color:#d8d1c2}
-html[data-hl="2c"] .kal42-seg button[aria-pressed=true]{background:#1b1a17;border-color:#1b1a17;color:#f3efe6}
+html[data-hl="2c"] .kal42-seg button{border-color:var(--ds-line)}
+html[data-hl="2c"] .kal42-seg button[aria-pressed=true]{background:var(--ds-text-primary);border-color:var(--ds-text-primary);color:var(--ds-surface)}
 .k2-btns a.k2-b.ink{color:var(--k-bg)}
 
 /* ---------- Kalender: topplinja ---------- */

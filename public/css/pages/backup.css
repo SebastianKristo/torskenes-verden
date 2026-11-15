@@ -1,7 +1,7 @@
 /* Prompt 29: Innstillinger → Backup (settings-backup.js) og segmentkontrollen «Med toppmeny · Fullskjerm»
    i Innstillinger → Kalendere. Fargene følger #settings-variablene fra Oppdatering (--upd-*). */
 #settings{--bk-pos:var(--upd-pos,#8fe0b0);--bk-neg:var(--upd-acc,#f59a8f);--bk-seg:rgba(255,255,255,.07);--bk-on:#eef0f4;--bk-onfg:#0c1119}
-html[data-hl="2c"] #settings{--bk-seg:rgba(27,26,23,.07);--bk-on:var(--ink,#1b1a17);--bk-onfg:var(--pp,#f3efe6)}
+html[data-hl="2c"] #settings{--bk-seg:rgba(27,26,23,.07);--bk-on:var(--ink,var(--ds-text-primary));--bk-onfg:var(--pp,var(--ds-surface))}
 .kal-seg{flex:none;display:inline-flex;gap:2px;padding:3px;border-radius:999px;background:var(--bk-seg,rgba(127,127,127,.16));max-width:100%;overflow-x:auto;scrollbar-width:none}
 .kal-seg-b{flex:none;height:34px;padding:0 14px;border:0;border-radius:999px;background:transparent;color:inherit;cursor:pointer;font:600 13.5px inherit;font-family:inherit;white-space:nowrap}
 .kal-seg-b[aria-pressed=true]{background:var(--bk-on,#eef0f4);color:var(--bk-onfg,#0c1119)}

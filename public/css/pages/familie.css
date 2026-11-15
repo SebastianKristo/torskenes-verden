@@ -114,7 +114,7 @@ html:not([data-hl="2c"]) .hl41-ch.dark{background:#eef0f4;color:#0b0e15}html:not
 .za45-t b{font-size:15px}.za45-t span{font-size:12.5px;opacity:.7}
 .za45-sw{flex:none;position:relative;width:52px;height:32px;border-radius:16px;border:0;background:#c9c2b4;cursor:pointer;transition:background .2s;padding:0}
 .za45-sw i{position:absolute;top:3px;left:3px;width:26px;height:26px;border-radius:13px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:transform .2s}
-.za45-sw.on{background:#2f7a4f}.za45-sw.on i{transform:translateX(20px)}
+.za45-sw.on{background:var(--ds-category-green)}.za45-sw.on i{transform:translateX(20px)}
 .za45-sw:disabled{cursor:default}
 .za45-ppl{display:flex;flex-direction:column;border-top:1px solid rgba(127,127,127,.22)}
 .za45-ppl.off{opacity:.45}
@@ -126,7 +126,7 @@ html:not([data-hl="2c"]) .hl41-ch.dark{background:#eef0f4;color:#0b0e15}html:not
 .za45-bn{position:fixed;top:12px;left:50%;z-index:600;width:min(420px,calc(100vw - 32px));display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:22px;background:rgba(245,245,247,.94);color:#1b1a17;
   box-shadow:0 14px 40px -14px rgba(0,0,0,.45);-webkit-backdrop-filter:blur(24px);backdrop-filter:blur(24px);font-family:-apple-system,system-ui,sans-serif;transform:translate(-50%,-140%);opacity:0;transition:transform .32s cubic-bezier(.2,.9,.25,1.1),opacity .2s;cursor:pointer}
 .za45-bn.on{transform:translate(-50%,0);opacity:1}
-html[data-mode="dark"] .za45-bn{background:rgba(40,38,34,.94);color:#f3efe6}
+html[data-mode="dark"] .za45-bn{background:rgba(40,38,34,.94);color:var(--ds-text-primary)}
 .za45-bic{position:relative;flex:none;width:38px;height:38px}
 .za45-bic img,.za45-bi{display:grid;place-items:center;width:38px;height:38px;border-radius:11px}
 .za45-badge{position:absolute;right:-4px;bottom:-4px;width:16px;height:16px;border-radius:5px;background:#b23a2a url("/assets/icons/icon.svg") center/12px no-repeat;box-shadow:0 0 0 2px rgba(245,245,247,.95)}
@@ -135,7 +135,7 @@ html[data-mode="dark"] .za45-bn{background:rgba(40,38,34,.94);color:#f3efe6}
 .za45-bn-n{align-self:flex-start;font-size:12px;opacity:.6}
 @media (prefers-reduced-motion:reduce){.za45-bn{transition:opacity .2s}}
 /* Papir mørk (før i papir-mork.css; står her fordi sidefila lastes etter den). */
-:where(html[data-mode="dark"][data-hl="2c"]) .hl41-ch.dark{background:#f3efe6;color:#16140f}
+:where(html[data-mode="dark"][data-hl="2c"]) .hl41-ch.dark{background:var(--ds-text-primary);color:var(--ds-surface)}
 :where(html[data-mode="dark"][data-hl="2c"]) .hl41-ch.dark span{color:rgba(22,20,15,.7)}
 :where(html[data-mode="dark"][data-hl="2c"]) .hl41-tg i{background:var(--ds-surface-raised)}
 
@@ -259,9 +259,9 @@ html[data-mode="dark"] .za45-bn{background:rgba(40,38,34,.94);color:#f3efe6}
 .f50 .leaflet-top.leaflet-right { top: 60px; }
 .f50 .leaflet-container { font-family: Manrope, sans-serif; background: var(--f-map); }
 /* Prompt 85: zoomknappene arvet tekstfargen fra siden (paper.css: a{color:inherit}) og ble lys tekst på hvit knapp i mørk modus. */
-html[data-mode="dark"] .f50 .leaflet-bar a { background-color: #211e18; color: #f3efe6; border-bottom-color: #3a352c; }
+html[data-mode="dark"] .f50 .leaflet-bar a { background-color: var(--ds-surface-raised); color: var(--ds-text-primary); border-bottom-color: var(--ds-line); }
 html[data-mode="dark"] .f50 .leaflet-bar a:hover { background-color: #2a261f; }
-html[data-mode="dark"] .f50 .leaflet-bar a.leaflet-disabled { background-color: #211e18; color: #6b665c; }
+html[data-mode="dark"] .f50 .leaflet-bar a.leaflet-disabled { background-color: var(--ds-surface-raised); color: #6b665c; }
 .f50 .f50-pinw { background: none; border: 0; }
 .f50 .f50-pin { position: relative; display: grid; place-items: center; width: var(--s); height: var(--s); border-radius: 50%; border: var(--b) solid #fff; background: var(--pc); color: #fff; font: 700 calc(var(--s) * .34) / 1 Manrope, sans-serif; box-shadow: 0 4px 10px rgba(0, 0, 0, .3); overflow: hidden; }
 .f50 .f50-pin img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }

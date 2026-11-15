@@ -193,7 +193,7 @@ html[data-hl="2c"] .trk-set70 em{color:var(--acc,#b23a2a)}
 
 /* ═══ Sporing på papir (fra det gamle skallet) ═══ */
 /* ---------- Sporing på papir ---------- */
-html[data-hl="2c"] .trk{--text:#1b1a17;--muted:#6b665c;--green:#2f7a4f;--yellow:#9a6a0c;color:var(--ink)}
+html[data-hl="2c"] .trk{--text:#1b1a17;--muted:#6b665c;--green:var(--ds-category-green);--yellow:#9a6a0c;color:var(--ink)}
 html[data-hl="2c"] .p-trk-bar{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 html[data-hl="2c"] .p-trk-tabs{display:flex;gap:6px;flex-wrap:wrap}
 html[data-hl="2c"] .p-trk-tabs button{height:36px;padding:0 14px;border-radius:999px;border:1px solid var(--rule);background:transparent;color:var(--ink);cursor:pointer;font:600 13px var(--sans);white-space:nowrap}

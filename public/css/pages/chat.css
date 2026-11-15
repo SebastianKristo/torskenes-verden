@@ -59,7 +59,7 @@ html[data-hl="2c"] body[data-route="chat"] #chat{margin-top:-56px;z-index:2}
 .ch-msel{flex:0 1 auto;min-width:0;display:flex;align-items:center;gap:8px;height:40px;padding:0 12px;border:0;border-radius:999px;background:transparent;cursor:pointer}
 .ch-msel:hover{background:var(--cc)}
 .ch-msel b{font-size:16px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.ch-badge{flex:none;font:700 9.5px 'IBM Plex Mono',var(--mono,monospace);letter-spacing:.08em;padding:3px 6px;border-radius:6px;background:#2f7a4f;color:#fff}
+.ch-badge{flex:none;font:700 9.5px 'IBM Plex Mono',var(--mono,monospace);letter-spacing:.08em;padding:3px 6px;border-radius:6px;background:var(--ds-category-green);color:#fff}
 .ch-badge.sky{background:#b23a2a}
 .ch-sc{flex:1;min-height:0;overflow-y:auto;scrollbar-width:thin}
 .ch-msgs{max-width:760px;min-height:100%;margin:0 auto;padding:10px 18px 24px;display:flex;flex-direction:column;gap:24px}
@@ -208,7 +208,7 @@ html[data-hl="2c"] body[data-route="chat"] #chat{margin-top:-56px;z-index:2}
 /* Prompt 70 (WEBCHAT70): lasteside for Chat på web (fasit «Chat Laster Web.dc.html», claude-code-chat-laster-web.md).
    Bruker Chat-variablene (--cb, --cc, --ci, --cm, --cl, --ca, --cs) så Papir, mørk Papir og Nøytral fungerer.
    Animerer bare transform og opacity. */
-.ch70{--l70card:color-mix(in srgb,var(--cc) 55%,var(--cb));--l70ok:#2f7a4f;--l70err:#b23a2a;flex:1;min-width:0;display:flex;min-height:0}
+.ch70{--l70card:color-mix(in srgb,var(--cc) 55%,var(--cb));--l70ok:var(--ds-category-green);--l70err:#b23a2a;flex:1;min-width:0;display:flex;min-height:0}
 html:not([data-hl="2c"]) .ch.papir .ch70,.ch.noytral .ch70{--l70ok:#5fbf86;--l70err:#f07a6c}
 .ch70 *{box-sizing:border-box}
 
