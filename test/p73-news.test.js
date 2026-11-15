@@ -281,7 +281,7 @@ test('klientene: web, iOS og Android har Lagret, lagre-knapp, Åpne original, fj
   assert.doesNotMatch(web, /innerHTML\s*=\s*[^;]*\.html\b(?![^;]*sanit)/, 'web setter ikke rå HTML');
   const nw = readFileSync(join(ROOT, 'public/js/news.js'), 'utf8');
   assert.match(nw, /news-lagret\.js/);
-  const ios = readFileSync(join(ROOT, 'apps/ios/FinansHub/Sources/News73Saved.swift'), 'utf8');
+  const ios = readFileSync(join(ROOT, 'apps/ios/FinansHub/Sources/NewsSaved.swift'), 'utf8');
   for (const s of ['/news/saved', 'offline=1', 'Åpne original', 'Fjern fra lagret', 'Prøv å laste ned på nytt', 'swipeActions']) assert.ok(ios.includes(s), `iOS: ${s}`);
   const and = readFileSync(join(ROOT, 'apps/android/app/src/main/java/no/kristo/finanshub/ui/News73.kt'), 'utf8');
   for (const s of ['/news/saved', 'offline=1', 'Åpne original', 'Fjern fra lagret', 'Prøv å laste ned på nytt', 'SwipeToDismissBox', 'CancellationException']) assert.ok(and.includes(s), `Android: ${s}`);

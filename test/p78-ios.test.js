@@ -8,8 +8,8 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const SRC = join(ROOT, 'apps/ios/FinansHub/Sources');
-const NEW = ['Skjold78LED.swift', 'Skjold78Views.swift'];
-const TOUCHED = ['Skjold76Model.swift', 'Skjold76Page.swift', 'Skjold76Detail.swift', 'Skjold76Setup.swift'];
+const NEW = ['SkjoldLED.swift', 'SkjoldLEDViews.swift'];
+const TOUCHED = ['SkjoldModel.swift', 'SkjoldPage.swift', 'SkjoldDetail.swift', 'SkjoldSetup.swift'];
 const read = (f) => readFileSync(join(SRC, f), 'utf8');
 /** Kode uten kommentarer. */
 const code = (f) => read(f).replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
@@ -34,7 +34,7 @@ test('filene finnes og klammene går opp', () => {
 });
 
 test('API-kontrakten: leds, test, locate, off, status, calibrate, override og settings under /api/skjold', () => {
-  const s = code('Skjold78LED.swift');
+  const s = code('SkjoldLED.swift');
   for (const re of [
     /"GET", Skjold76\.root \+ "\/cabinets\/\\\(id\)\/leds"/,
     /"PUT", path, json: Skjold78\.body\(c\)/, /"\/cabinets\/\\\(id\)\/leds"/,
@@ -59,7 +59,7 @@ test('API-kontrakten: leds, test, locate, off, status, calibrate, override og se
 });
 
 test('indeksen: overstyring først, nærmeste LED over midten, offset, reverse og serpentine (samme regel i JS)', () => {
-  const s = code('Skjold78LED.swift');
+  const s = code('SkjoldLED.swift');
   assert.match(s, /if let o = c\.overrides\["\\\(row\)-\\\(col\)"\] \{ return o \}/);
   assert.match(s, /let x: Double = c\.firstDrawerXmm \+ Double\(col - 1\) \* c\.drawerPitchMm/);
   assert.match(s, /\(\(x - r\.offsetMm\) \/ r\.pitchMm\)\.rounded\(\)/);
@@ -85,35 +85,35 @@ test('indeksen: overstyring først, nærmeste LED over midten, offset, reverse o
 });
 
 test('💡 Vis i skapet: detaljsiden, trefflista, «Vis alle» og linja med «Slå av»', () => {
-  const v = code('Skjold78Views.swift');
+  const v = code('SkjoldLEDViews.swift');
   assert.match(v, /"💡 Vis i skapet"/);
   assert.match(v, /Text\("💡"\)/);
   assert.match(v, /"💡 Vis alle \(\\\(n\)\)"/);
   assert.match(v, /"Lyser i skapet · " \+ where_/);
   assert.match(v, /Button\("Slå av"\) \{ Task \{ @MainActor in await l\.off\(store\) \} \}/);
   assert.match(v, /TimelineView\(\.periodic\(from: \.now, by: 1\)\)/);
-  const d = code('Skjold76Detail.swift');
+  const d = code('SkjoldDetail.swift');
   assert.match(d, /Skj78LocateButton\(part: x\)/);
   assert.match(d, /await Skjold78\.shared\.autoOnOpen\(x, store\)/);
-  const pg = code('Skjold76Page.swift');
+  const pg = code('SkjoldPage.swift');
   assert.match(pg, /Skj78RowButton\(part: part\)/);
   assert.match(pg, /Skj78AllButton\(parts: m\.items\)/);
   assert.match(pg, /Skj78LitBar\(\)/);
   assert.match(pg, /await Skjold78\.shared\.load\(store\)/);
   // Auto-lys bare når innstillingen er på og skapet har LED.
-  assert.match(code('Skjold78LED.swift'), /if !autoOpen \|\| !canLocate\(p\) \|\| lastAuto == p\.id \{ return \}/);
+  assert.match(code('SkjoldLED.swift'), /if !autoOpen \|\| !canLocate\(p\) \|\| lastAuto == p\.id \{ return \}/);
 });
 
 test('LED-oppsett per skap: vert, test, rader, status og veiviseren', () => {
-  const pg = code('Skjold76Page.swift');
+  const pg = code('SkjoldPage.swift');
   assert.match(pg, /Label\("LED-oppsett", systemImage: "lightbulb"\)/);
   assert.match(pg, /case \.leds\(let c\): Skj78Setup\(startId: c\)/);
   assert.match(pg, /case \.calibrate\(let c\): Skj78Calibrate\(cabinetId: c\)/);
-  const md = code('Skjold76Model.swift');
+  const md = code('SkjoldModel.swift');
   assert.match(md, /case leds\(String\)/);
   assert.match(md, /case calibrate\(String\)/);
-  assert.match(code('Skjold76Setup.swift'), /m\.sheet = \.leds\(c\.id\)/);
-  const v = code('Skjold78Views.swift');
+  assert.match(code('SkjoldSetup.swift'), /m\.sheet = \.leds\(c\.id\)/);
+  const v = code('SkjoldLEDViews.swift');
   for (const t of ['Vert (IP eller navn i hjemmenettet)', 'Test hele stripa', 'Samme retning', 'Serpentine', 'Avstand mellom skuffene (mm)',
     'LED-er per meter', 'Lagre LED-oppsettet', 'Kalibrer: trykk på skuffen som lyser', 'Forrige LED', 'Neste LED', 'Trykk på skuffen som lyser',
     'Lys opp automatisk når jeg åpner et treff', 'Lys opp når Glimt svarer', 'Sjekker WLED …'])
@@ -128,7 +128,7 @@ test('LED-oppsett per skap: vert, test, rader, status og veiviseren', () => {
 });
 
 test('feil: 404 skjuler knappene, 429 og tidsavbrudd gir norsk tekst; innstillingene faller tilbake til lokal lagring', () => {
-  const s = code('Skjold78LED.swift');
+  const s = code('SkjoldLED.swift');
   assert.match(s, /var anyEnabled: Bool \{ !missing && /);
   assert.match(s, /a\.status == 429 \{ return "Vent litt/);
   assert.match(s, /WLED svarte ikke i tide/);

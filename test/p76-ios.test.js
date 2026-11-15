@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const SRC = join(ROOT, 'apps/ios/FinansHub/Sources');
-const FILES = ['Skjold76Model.swift', 'Skjold76Parse.swift', 'Skjold76Page.swift', 'Skjold76Cabinet.swift', 'Skjold76Detail.swift', 'Skjold76Edit.swift', 'Skjold76Setup.swift'];
+const FILES = ['SkjoldModel.swift', 'SkjoldParse.swift', 'SkjoldPage.swift', 'SkjoldCabinet.swift', 'SkjoldDetail.swift', 'SkjoldEdit.swift', 'SkjoldSetup.swift'];
 const read = (f) => readFileSync(join(SRC, f), 'utf8');
 /** Kode uten kommentarer. */
 const code = (f) => read(f).replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
@@ -35,13 +35,13 @@ test('filene finnes og klammene går opp', () => {
 
 test('menyen, fullskjermen og dyplenkene', () => {
   assert.match(code('Paper.swift'), /\.feat51Host\(p\)\s*\.skjold76Host\(p\)/);
-  assert.match(code('Skjold76Page.swift'), /func skjold76Host\(_ p: PaperPalette\) -> some View \{ modifier\(Skjold76Host\(p: p\)\) \}/);
+  assert.match(code('SkjoldPage.swift'), /func skjold76Host\(_ p: PaperPalette\) -> some View \{ modifier\(Skjold76Host\(p: p\)\) \}/);
   const mer = code('More44Rows.swift');
   assert.match(mer, /More28Row\(id: "skjold", name: "Skjold Lab", sub: Skjold76\.shared\.merSub, icon: "cabinet"\) \{ Skjold76\.shared\.show\(\) \}/);
   const s = code('Search51.swift');
   assert.match(s, /case "skjold", "skjoldlab", "deler":\s*Skjold76\.shared\.link\(url\)/, 'finanshub://skjold');
   assert.match(s, /case "part", "skjold", "deler": Skjold76\.shared\.show\(part: ref\.isEmpty \? nil : ref\)/, 'felles søk: typen «Deler» (part)');
-  const m = code('Skjold76Model.swift');
+  const m = code('SkjoldModel.swift');
   assert.match(m, /if kind == "del", parts\.count > 1 \{ show\(part: parts\[1\]\); return \}/, 'finanshub://skjold/del/<id> fra Glimt');
   assert.match(m, /sheet = \.drawer\(parts\[1\], rc\[0\], rc\[1\]\)/, 'QR på etiketten: skap/<id>/4-2');
 });
@@ -69,7 +69,7 @@ test('API-kontrakten: alle endepunktene under /api/skjold', () => {
 });
 
 test('svarene leses som SKJSRV sender dem', () => {
-  const p = code('Skjold76Parse.swift');
+  const p = code('SkjoldParse.swift');
   assert.match(p, /\["tl", "tr", "br", "bl"\]\.compactMap \{ point\(JS\.dict\(k, \$0\)\) \}/, 'hjørner {tl,tr,br,bl}');
   assert.match(p, /JS\.dict\(n, "parts"\)|JS\.int\(n, "parts"\)/);
   assert.match(p, /JS\.int\(n, "usedDrawers"\)/);
@@ -77,23 +77,23 @@ test('svarene leses som SKJSRV sender dem', () => {
   assert.match(p, /JS\.num\(o, "minQty"\) \?\? JS\.num\(o, "min_qty"\)/);
   assert.match(p, /JS\.str\(o, "text"\) \?\? fallback/, 'plasseringsteksten fra serveren');
   assert.match(p, /\(JS\.str\(o, "kind"\) \?\? "part"\) == "part"/, 'forslag: del åpnes direkte');
-  const m = code('Skjold76Model.swift');
+  const m = code('SkjoldModel.swift');
   assert.match(m, /JS\.list\(o, "occupied"\)\.compactMap \{ JS\.str\(\$0, "name"\) \}/, 'advarsel om andre deler i skuffen');
-  assert.match(code('Skjold76Setup.swift'), /move\.map \{ "\?move=" \+ Skjold76\.enc\(\$0\) \}/, '?move=<id|none>');
-  assert.match(code('Skjold76Setup.swift'), /catch let e as APIError where e\.status == 409 \{\s*blocked = true/, '409 ved sletting av skap med deler');
-  assert.match(code('Skjold76Setup.swift'), /Button\("La delene stå uten plass", role: \.destructive\) \{ remove\("none"\) \}/);
+  assert.match(code('SkjoldSetup.swift'), /move\.map \{ "\?move=" \+ Skjold76\.enc\(\$0\) \}/, '?move=<id|none>');
+  assert.match(code('SkjoldSetup.swift'), /catch let e as APIError where e\.status == 409 \{\s*blocked = true/, '409 ved sletting av skap med deler');
+  assert.match(code('SkjoldSetup.swift'), /Button\("La delene stå uten plass", role: \.destructive\) \{ remove\("none"\) \}/);
 });
 
 test('perspektiv: homografi med ProjectionTransform (ikke CGAffineTransform)', () => {
-  const p = code('Skjold76Parse.swift');
+  const p = code('SkjoldParse.swift');
   assert.match(p, /func projection\(_ w: CGFloat, _ hgt: CGFloat\) -> ProjectionTransform/);
   for (const k of ['m11 = a / w', 'm12 = d / w', 'm13 = g / w', 'm21 = b / hgt', 'm22 = e / hgt', 'm23 = h / hgt', 'm31 = c', 'm32 = f', 'm33 = 1']) {
     assert.ok(p.includes('t.' + k), k);
   }
-  const c = code('Skjold76Cabinet.swift') + code('Skjold76Setup.swift');
+  const c = code('SkjoldCabinet.swift') + code('SkjoldSetup.swift');
   assert.equal((c.match(/\.projectionEffect\(projection\(s\)\)/g) || []).length, 2, 'bildet og hjørneoppsettet');
   assert.doesNotMatch(all(), /CGAffineTransform/);
-  assert.match(code('Skjold76Cabinet.swift'), /h\.invert\(pt\)/, 'trykk på bildet regnes tilbake til skuff');
+  assert.match(code('SkjoldCabinet.swift'), /h\.invert\(pt\)/, 'trykk på bildet regnes tilbake til skuff');
 
   // Samme formel som i Swift (Heckbert kvadrat → firkant) treffer hjørnene og kan inverteres.
   const sq = (q) => {
@@ -118,7 +118,7 @@ test('perspektiv: homografi med ProjectionTransform (ikke CGAffineTransform)', (
 });
 
 test('tegningen: rad 1 øverst, tall langs kanten, puls i 2 s bare med scale/opacity', () => {
-  const c = code('Skjold76Cabinet.swift');
+  const c = code('SkjoldCabinet.swift');
   assert.match(c, /ForEach\(1\.\.\.Swift\.max\(1, rows\), id: \\\.self\)/);
   assert.match(c, /static let aspect: CGFloat = 1\.33/);
   assert.match(c, /Capsule\(\)\.fill\(on \? Color\.white\.opacity\(0\.85\) : Skj76Look\.handle\)/, 'håndtak');
@@ -132,35 +132,35 @@ test('tegningen: rad 1 øverst, tall langs kanten, puls i 2 s bare med scale/opa
 });
 
 test('bilder: kamera og PhotosPicker, JPEG maks 1600 px, bilder med app-token', () => {
-  const e = code('Skjold76Edit.swift'), s = code('Skjold76Setup.swift');
+  const e = code('SkjoldEdit.swift'), s = code('SkjoldSetup.swift');
   for (const f of [e, s]) {
     assert.match(f, /PhotosPicker\(selection: \$pick/);
     assert.match(f, /CameraView \{/);
     assert.match(f, /loadTransferable\(type: Data\.self\)/);
   }
-  const m = code('Skjold76Model.swift');
+  const m = code('SkjoldModel.swift');
   assert.match(m, /side > 1600 \? 1600 \/ side : 1/);
-  assert.match(code('Skjold76Cabinet.swift'), /await store\.image\(path\)/, 'filene hentes med token (eier-sjekk)');
+  assert.match(code('SkjoldCabinet.swift'), /await store\.image\(path\)/, 'filene hentes med token (eier-sjekk)');
 });
 
 test('flytt med angre i 10 s, foreslå ledig, lavt lager og etiketter', () => {
-  const m = code('Skjold76Model.swift');
+  const m = code('SkjoldModel.swift');
   assert.match(m, /try\? await Task\.sleep\(nanoseconds: 10_000_000_000\)/);
   assert.match(m, /offerUndo\(msg\)/);
   assert.match(m, /func moveBack\(/);
   assert.match(m, /var low: Bool \{ minQty > 0 && qty <= minQty \}/);
-  assert.match(code('Skjold76Edit.swift'), /Skj76Button\(title: "Foreslå ledig", icon: "sparkles"\) \{ suggest\(\) \}/);
-  assert.match(code('Skjold76Page.swift'), /chip\("Lavt lager", on: m\.lowOnly\)/);
-  const e = code('Skjold76Edit.swift');
+  assert.match(code('SkjoldEdit.swift'), /Skj76Button\(title: "Foreslå ledig", icon: "sparkles"\) \{ suggest\(\) \}/);
+  assert.match(code('SkjoldPage.swift'), /chip\("Lavt lager", on: m\.lowOnly\)/);
+  const e = code('SkjoldEdit.swift');
   assert.match(e, /UIPrintInteractionController\.shared/);
   assert.match(e, /loadHTMLString\(html, baseURL: URL\(string: base\)\)/);
-  assert.match(code('Skjold76Setup.swift'), /name = "Tilleggsskap \(3D-print\)"/);
-  assert.match(code('Skjold76Setup.swift'), /cols = Skj76Setup\.colsFor\(widthMm: 270\)/);
+  assert.match(code('SkjoldSetup.swift'), /name = "Tilleggsskap \(3D-print\)"/);
+  assert.match(code('SkjoldSetup.swift'), /cols = Skj76Setup\.colsFor\(widthMm: 270\)/);
   assert.equal(Math.max(1, Math.floor((270 - 6) / 64)), 4, '27 cm → 4 skuffer');
 });
 
 test('offline: siste liste caches per konto, endringer krever nett', () => {
-  const m = code('Skjold76Model.swift'), p = code('Skjold76Parse.swift');
+  const m = code('SkjoldModel.swift'), p = code('SkjoldParse.swift');
   assert.match(m, /Skj76Cache\.put\("parts", d\)/);
   assert.match(m, /func searchOffline\(\)/);
   assert.match(m, /static let netMsg: String = "Endringer krever nett\./);

@@ -22,11 +22,11 @@ function balanced(src) {
   return Object.values(n).every((v) => v === 0);
 }
 
-const FILES = ['Skjold81Span.swift', 'Skjold81Preset.swift', 'Skjold76Model.swift', 'Skjold76Parse.swift', 'Skjold76Cabinet.swift',
-  'Skjold76Detail.swift', 'Skjold76Edit.swift', 'Skjold76Setup.swift'];
-const span = code('Skjold81Span.swift');
-const pre = code('Skjold81Preset.swift');
-const cab = code('Skjold76Cabinet.swift');
+const FILES = ['SkjoldSpan.swift', 'SkjoldPresets.swift', 'SkjoldModel.swift', 'SkjoldParse.swift', 'SkjoldCabinet.swift',
+  'SkjoldDetail.swift', 'SkjoldEdit.swift', 'SkjoldSetup.swift'];
+const span = code('SkjoldSpan.swift');
+const pre = code('SkjoldPresets.swift');
+const cab = code('SkjoldCabinet.swift');
 
 test('filene finnes og går opp', () => {
   for (const f of FILES) {
@@ -36,11 +36,11 @@ test('filene finnes og går opp', () => {
 });
 
 test('modell og lesing: spanR, spanC (1–4, standard 1) og coveredBy', () => {
-  const m = code('Skjold76Model.swift');
+  const m = code('SkjoldModel.swift');
   assert.match(m, /var spanR: Int = 1/);
   assert.match(m, /var spanC: Int = 1/);
   assert.match(m, /var coveredBy: String = ""/);
-  const p = code('Skjold76Parse.swift');
+  const p = code('SkjoldParse.swift');
   assert.match(p, /JS\.int\(d, "spanR"\) \?\? JS\.int\(d, "span_r"\) \?\? 1/);
   assert.match(p, /JS\.int\(d, "spanC"\) \?\? JS\.int\(d, "span_c"\) \?\? 1/);
   assert.match(p, /Swift\.min\(4, Swift\.max\(1,/);
@@ -109,7 +109,7 @@ test('bildet og skapvisningen: trykk på dekket rute gir ankeret, uthevingen dek
   assert.match(cab, /Skjold81\.markRect\(m, map, rows, cols, cw, rh\)/);
   assert.match(cab, /Skjold81\.outline\(map, cw, rh\)/);
   assert.match(cab, /let a: Skj81RC = map\?\.anchor81\(r, c\) \?\? Skj81RC\(r: r, c: c\)\s*pick\(a\.r, a\.c\)/);
-  assert.match(code('Skjold76Model.swift'), /maps\[parts\[1\]\]\?\.anchor81\(rc\[0\], rc\[1\]\)/);
+  assert.match(code('SkjoldModel.swift'), /maps\[parts\[1\]\]\?\.anchor81\(rc\[0\], rc\[1\]\)/);
 });
 
 test('plassering i tekst: «Rad 4–5 · Skuff 1–2», «Rad 3 · Skuff 1–2», ellers som før', () => {
@@ -120,13 +120,13 @@ test('plassering i tekst: «Rad 4–5 · Skuff 1–2», «Rad 3 · Skuff 1–2»
   assert.equal(place(4, 1, 2, 2), 'Rad 4–5 · Skuff 1–2');
   assert.equal(place(3, 1, 1, 2), 'Rad 3 · Skuff 1–2');
   assert.equal(place(4, 2, 1, 1), 'Rad 4 · Skuff 2');
-  const d = code('Skjold76Detail.swift');
+  const d = code('SkjoldDetail.swift');
   assert.match(d, /Skjold81\.text\(c\.name, m\.maps\[c\.id\], r, k, comp\)/);
   assert.match(d, /Skjold81\.text\(c\.name, m\.maps\[c\.id\], l\.row, l\.col, l\.comp\)/);
 });
 
 test('skuffdetaljer: «Bredde 1/2 · Høyde 1/2» sendes som spanR/spanC i PUT', () => {
-  const e = code('Skjold76Edit.swift');
+  const e = code('SkjoldEdit.swift');
   assert.match(e, /Skj81SpanPicker\(spanR: \$spanR, spanC: \$spanC\)/);
   assert.match(e, /"compartments": comps, "spanR": spanR, "spanC": spanC/);
   assert.match(e, /"PUT", Skjold76\.root \+ "\/cabinets\/\\\(cabinetId\)\/drawers\/\\\(row\)\/\\\(col\)"/);
@@ -150,7 +150,7 @@ test('forhåndsoppsett: knapp, 4/5 etasjer, bekreftelse og riktige kall', () => 
   assert.match(pre, /\["id": presetId, "etasjer": etasjer >= 5 \? 5 : 4\]/);
   assert.match(pre, /"GET", Skjold76\.root \+ "\/presets"/);
   assert.match(pre, /Text\("Skjold Lab-hylla \(3D\)"\)\.tag\(true\)/);
-  const s = code('Skjold76Setup.swift');
+  const s = code('SkjoldSetup.swift');
   assert.match(s, /Skj81PresetNew\(etasjer: \$preset81/);
   assert.match(s, /Skj81PresetApply\(cab: c\)/);
   assert.match(s, /b\["preset"\] = Skjold81\.presetBody\(e\)/);

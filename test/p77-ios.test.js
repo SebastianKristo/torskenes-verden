@@ -8,8 +8,8 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const SRC = join(ROOT, 'apps/ios/FinansHub/Sources');
-const NEW = ['Skjold77AI.swift', 'Skjold77Views.swift'];
-const TOUCHED = ['Skjold76Model.swift', 'Skjold76Page.swift', 'Skjold76Edit.swift', 'Paper17.swift'];
+const NEW = ['SkjoldAI.swift', 'SkjoldAIViews.swift'];
+const TOUCHED = ['SkjoldModel.swift', 'SkjoldPage.swift', 'SkjoldEdit.swift', 'Paper17.swift'];
 const read = (f) => readFileSync(join(SRC, f), 'utf8');
 /** Kode uten kommentarer. */
 const code = (f) => read(f).replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
@@ -33,7 +33,7 @@ test('filene finnes og klammene går opp', () => {
 });
 
 test('API-kontrakten: suggest, images, from-search, tidy og settings under /api/skjold', () => {
-  const s = code('Skjold77AI.swift');
+  const s = code('SkjoldAI.swift');
   for (const re of [
     /Skjold76\.root \+ "\/ai\/suggest"/, /Skjold76\.root \+ "\/ai\/images", json: \["q": text\]/,
     /"\/parts\/\\\(partId\)\/photos\/from-search"/, /json: \["id": c\.id\]/,
@@ -51,22 +51,22 @@ test('API-kontrakten: suggest, images, from-search, tidy og settings under /api/
 });
 
 test('tidsavbrudd: 60 s med bilde, 30 s med tekst (litt slakk), og «Glimt tenker …»', () => {
-  const s = code('Skjold77AI.swift');
+  const s = code('SkjoldAI.swift');
   assert.match(s, /photoTimeout: TimeInterval = 65/);
   assert.match(s, /textTimeout: TimeInterval = 35/);
   assert.match(s, /thinkingText: String = "Glimt tenker …"/);
-  assert.match(code('Skjold77Views.swift'), /Skjold77\.thinkingText/);
+  assert.match(code('SkjoldAIViews.swift'), /Skjold77\.thinkingText/);
 });
 
 test('bildekandidater: bare serverens proxy og maks 12', () => {
-  const s = code('Skjold77AI.swift');
+  const s = code('SkjoldAI.swift');
   assert.match(s, /if !t\.hasPrefix\("\/"\) \{ return nil \}/);
   assert.match(s, /\.prefix\(12\)/);
   assert.match(s, /webOffText/);
 });
 
 test('Ny/Endre del: ✦ Foreslå ved navnet, kortet med ✓ og «Bruk alle», Finn bilde og auto-forslag', () => {
-  const e = code('Skjold76Edit.swift');
+  const e = code('SkjoldEdit.swift');
   assert.match(e, /Skj76FormFields\(f: \$f, onSuggest: \{ suggestAI\(nil\) \}\)/);
   assert.match(e, /Text\("✦ Foreslå"\)/);
   assert.match(e, /Skj77SuggestCard\(f: \$f\)/);
@@ -74,7 +74,7 @@ test('Ny/Endre del: ✦ Foreslå ved navnet, kortet med ✓ og «Bruk alle», Fi
   assert.match(e, /Skj77ImageFinder\(query: f\.name, partId: id\)/);
   assert.match(e, /if ai\.settingsLoaded && ai\.autoSuggest && !ai\.thinking \{ suggestAI\(img\) \}/);
   assert.match(e, /for c in form\.found \{ _ = await ai\.useImage\(c, partId: pid, store\) \}/, 'valgt bilde for ny del lagres etter POST /parts');
-  const v = code('Skjold77Views.swift');
+  const v = code('SkjoldAIViews.swift');
   assert.match(v, /Skj76Button\(title: "Bruk alle"/);
   assert.match(v, /if s\.categoryNew \{ Skj76Badge\(text: "ny"\) \}/);
   assert.match(v, /checkmark\.circle\.fill/);
@@ -82,33 +82,33 @@ test('Ny/Endre del: ✦ Foreslå ved navnet, kortet med ✓ og «Bruk alle», Fi
 });
 
 test('Rydd opp: menyen, gjennomgangen, «Godta valgte» og «Hopp over»', () => {
-  const pg = code('Skjold76Page.swift');
+  const pg = code('SkjoldPage.swift');
   assert.match(pg, /Label\("Rydd opp med Glimt", systemImage: "sparkles"\)/);
   assert.match(pg, /case \.tidy\(let ids\): Skj77Tidy\(ids: ids\)/);
   assert.match(pg, /case \.ai: Skj77Settings\(\)/);
   assert.match(pg, /m\.sheet = \.ai/, '⚙ i Skjold Lab');
-  const md = code('Skjold76Model.swift');
+  const md = code('SkjoldModel.swift');
   assert.match(md, /case tidy\(\[String\]\)/);
   assert.match(md, /case ai\b/);
-  const v = code('Skjold77Views.swift');
+  const v = code('SkjoldAIViews.swift');
   assert.match(v, /"Godta valgte \(\\\(count\)\)"/);
   assert.match(v, /Skj76Button\(title: "Hopp over"/);
   assert.match(v, /checkmark\.square\.fill/);
   assert.match(v, /\\\(ai\.jobDone\) av \\\(ai\.jobTotal\)/);
-  const s = code('Skjold77AI.swift');
+  const s = code('SkjoldAI.swift');
   assert.match(s, /filter \{ chosen\.contains\(\$0\.id\) && \$0\.changed \}/, 'bare avkryssede deler sendes');
 });
 
 test('innstillingene: ⚙ i Skjold Lab og Innstillinger → Moduler → Skjold Lab', () => {
-  const v = code('Skjold77Views.swift');
+  const v = code('SkjoldAIViews.swift');
   assert.match(v, /toggle\("Finn bilder på nett"/);
   assert.match(v, /toggle\("Foreslå automatisk når jeg tar bilde"/);
   assert.match(code('Paper17.swift'), /PaperLinkRow\(name: "Skjold Lab", [^\n]*\{ Skjold77\.shared\.openSettings\(\) \}/);
-  assert.match(code('Skjold77AI.swift'), /m\.sheet = \.ai/);
+  assert.match(code('SkjoldAI.swift'), /m\.sheet = \.ai/);
 });
 
 test('standard kategoriliste når brukeren ikke har noen', () => {
-  const s = code('Skjold77AI.swift');
+  const s = code('SkjoldAI.swift');
   for (const c of ['Motstander', 'Kondensatorer', 'Dioder og LED', 'Skruer og bolter', 'Mutre og skiver', 'Avstandsstykker', 'Diverse']) assert.ok(s.includes(`"${c}"`), c);
-  assert.match(code('Skjold76Edit.swift'), /if m\.categories\.isEmpty \{/);
+  assert.match(code('SkjoldEdit.swift'), /if m\.categories\.isEmpty \{/);
 });

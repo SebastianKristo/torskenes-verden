@@ -18,7 +18,7 @@ struct NewsReaderView: View {
         VStack(spacing: 0) {
             header(data)
             tabs(data)
-            // Prompt 73 (NEWS73): fanen «Lagret» (News73Saved.swift) – lagrede artikler fra den lokale kopien.
+            // Prompt 73 (NEWS73): fanen «Lagret» (NewsSaved.swift) – lagrede artikler fra den lokale kopien.
             if News73Model.shared.showTab {
                 News73SavedList()
             } else {
@@ -122,11 +122,11 @@ struct NewsReaderView: View {
     private func tabs(_ d: NewsData) -> some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 18) {
-                // Prompt 46: «For deg» etter Siste og egne kategorier bakerst (News46.swift).
+                // Prompt 46: «For deg» etter Siste og egne kategorier bakerst (NewsSummary.swift).
                 ForEach(News46.shared.tabs(d.categories)) { c in
                     let on = store.newsCat == c.id && !News73Model.shared.showTab
                     Button { News73Model.shared.showTab = false; store.setNewsCat(c.id) } label: {
-                        // Prompt 23: ikon ved navnet (følger tekstfargen), se News23.swift.
+                        // Prompt 23: ikon ved navnet (følger tekstfargen), se NewsIcons.swift.
                         NewsTabLabel23(cat: c, color: on ? p.ink : p.mut)
                             .padding(.top, 6).padding(.bottom, 10)
                             .overlay(alignment: .bottom) { Rectangle().fill(on ? p.ink : Color.clear).frame(height: 2) }
@@ -163,7 +163,7 @@ struct NewsReaderView: View {
             VStack(alignment: .leading, spacing: 8) {
                 if d.aiSummary && !d.digest.isEmpty { PLabel(text: "✦ Glimt · sammendrag") }
                 Text(text).font(PF.italic(19)).foregroundStyle(p.ink).lineSpacing(3).fixedSize(horizontal: false, vertical: true)
-                // Prompt 40: egen Glimt-side med langt sammendrag, kilder og bilder (News40Glimt.swift).
+                // Prompt 40: egen Glimt-side med langt sammendrag, kilder og bilder (NewsGlimt.swift).
                 News40Entry()
             }
             .padding(.bottom, 14)
@@ -172,7 +172,7 @@ struct NewsReaderView: View {
         }
     }
 
-    /// Prompt 27: bilde 76 × 76 og artikkelvisning i appen (News27.swift).
+    /// Prompt 27: bilde 76 × 76 og artikkelvisning i appen (NewsArticle.swift).
     private func row(_ x: NewsItem, _ d: NewsData) -> some View {
         NewsRow27(item: x, category: store.newsCat == "siste" ? d.name(of: x.category) : nil) {
             Haptics.shared.tap()
@@ -319,7 +319,7 @@ struct NewsSourcesSheet: View {
 
     private func feedRow(_ f: NewsFeed, _ d: NewsData) -> some View {
         HStack(spacing: 10) {
-            // Prompt 46: nettstedets ikon (favicon), bokstavene bare når det ikke finnes (News46.swift).
+            // Prompt 46: nettstedets ikon (favicon), bokstavene bare når det ikke finnes (NewsSummary.swift).
             News46Fav(feed: f)
             VStack(alignment: .leading, spacing: 1) {
                 Text(f.name).font(PF.ui(14, .semibold)).foregroundStyle(p.ink).lineLimit(1)

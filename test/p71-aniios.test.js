@@ -21,11 +21,11 @@ const TOUCHED = [
   FH + 'Home70Mic.swift',
   FH + 'WiggleList43.swift',
   FH + 'Wiggle30.swift',
-  FH + 'Vaer41.swift',
-  FH + 'Departures16.swift',
+  FH + 'WeatherSki.swift',
+  FH + 'DeparturesModel.swift',
   FH + 'Convo67.swift',
   FH + 'MediaBanner.swift',
-  FH + 'Family50Views.swift',
+  FH + 'FamilyPage.swift',
   FH + 'HomeSearch29.swift',
   FH + 'Home70Assist.swift',
   'Kalender/Sources/KalSpark.swift',
@@ -91,11 +91,11 @@ test('wiggle: fast fase per flis (nøkkelen), stabile id-er, bare rotasjonen ani
   assert.match(w, /\.id\("card37-" \+ k\)/);
   assert.doesNotMatch(w, /\.id\((?:UUID|Date)\(/);
   assert.match(code(FH + 'Wiggle30.swift'), /\.wiggle71\(on, up: phase/);
-  assert.match(code(FH + 'Vaer41.swift'), /\.wiggle71\(v\.editing, up: on/);
+  assert.match(code(FH + 'WeatherSki.swift'), /\.wiggle71\(v\.editing, up: on/);
 });
 
 test('ark og fade: designets fjær, Reduser bevegelse gir fade', () => {
-  assert.match(code(FH + 'Family50Views.swift'), /withAnimation\(Anim71\.sheet\)/);
+  assert.match(code(FH + 'FamilyPage.swift'), /withAnimation\(Anim71\.sheet\)/);
   assert.match(code(FH + 'HomeSearch29.swift'), /reduce71 \? AnyTransition\.opacity :/);
   assert.match(code(FH + 'Home70Assist.swift'), /reduce \? AnyTransition\.opacity :/);
 });

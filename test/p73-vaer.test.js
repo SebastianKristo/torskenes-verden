@@ -94,12 +94,12 @@ test('Android: én VaerCloseButton (42 dp, 44 dp trykkflate), ingen egne variant
 });
 
 test('iOS: én felles VaerCloseButton brukes i hovedsiden, arkene, Steder, kartet og Yr mot Storm', () => {
-  assert.equal((sw('Vaer40.swift').match(/struct VaerCloseButton: View/g) ?? []).length, 1);
-  assert.match(sw('Weather22Cards.swift'), /VaerCloseButton \{ store\.weatherOpen = false \}/);
-  assert.match(sw('Weather22Sheets.swift'), /VaerCloseButton \{/);
-  assert.match(sw('Weather22Places.swift'), /VaerCloseButton \{ dismiss\(\) \}/);
-  assert.match(sw('Weather22Places.swift'), /VaerCloseButton\(dark: true\) \{ dismiss\(\) \}/);
-  assert.match(sw('WxCmp39.swift'), /VaerCloseButton \{ close\(\) \}/);
+  assert.equal((sw('WeatherButtons.swift').match(/struct VaerCloseButton: View/g) ?? []).length, 1);
+  assert.match(sw('WeatherCards.swift'), /VaerCloseButton \{ store\.weatherOpen = false \}/);
+  assert.match(sw('WeatherSheets.swift'), /VaerCloseButton \{/);
+  assert.match(sw('WeatherPlaces.swift'), /VaerCloseButton \{ dismiss\(\) \}/);
+  assert.match(sw('WeatherPlaces.swift'), /VaerCloseButton\(dark: true\) \{ dismiss\(\) \}/);
+  assert.match(sw('WeatherCompare.swift'), /VaerCloseButton \{ close\(\) \}/);
 });
 
 test('Web: én vaerCloseButton – hovedsiden, alle ark, Steder, Yr mot Storm og kartet', () => {

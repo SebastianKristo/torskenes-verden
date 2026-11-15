@@ -268,7 +268,7 @@ test('kontobytte tømmer også nyere modeller med personlige data', () => {
   assert.match(fn, /mem\.pending = \[\]; mem\.conflicts = \[\]; mem\.stale = \[\]; mem\.hygiene = nil/);
   assert.match(fn, /Skjold76\.shared\.resetForAccount85\(\)/);
   assert.match(fn, /sk\.projects = \[\]; sk\.details = \[:\]; sk\.lines = \[:\]; sk\.usedIn = \[:\]/);
-  const m = code('FinansHub/Sources/Skjold76Model.swift');
+  const m = code('FinansHub/Sources/SkjoldModel.swift');
   const r = m.slice(m.indexOf('func resetForAccount85()'), m.indexOf('func load(_ store: Store) async'));
   for (const w of ['cabinets = []', 'items = []', 'details = [:]', 'history = [:]', 'all = []', 'maps = [:]']) assert.ok(r.includes(w), w);
 });
@@ -293,8 +293,8 @@ test('VoiceOver og trykkflater: symbolknappene som manglet tekst', () => {
   assert.equal((raw('FinansHub/Sources/Modules.swift').match(/\.accessibilityLabel\(adding \? "Lukk" : "Legg til"\)/g) || []).length, 2);
   assert.match(raw('FinansHub/Sources/SearchField27.swift'), /\.accessibilityLabel\("Tøm søket"\)/);
   assert.match(raw('FinansHub/Sources/SubsMobile.swift'), /chevron\.left[^\n]*\.accessibilityLabel\("Tilbake"\)/);
-  assert.match(raw('FinansHub/Sources/Tasks37Detail.swift'), /contentShape\(Rectangle\(\)\)\.padding\(\.vertical, -10\)[\s\S]{0,160}\.accessibilityLabel\(s\.done \? "Ferdig" : "Ikke ferdig"\)/);
-  assert.match(raw('FinansHub/Sources/Tasks41Glimt.swift'), /\.padding\(11\)\.contentShape\(Rectangle\(\)\)\.padding\(-11\)[\s\S]{0,160}\.accessibilityLabel\(t\.done \? "Ferdig" : "Ikke ferdig"\)/);
+  assert.match(raw('FinansHub/Sources/TasksDetailSheet.swift'), /contentShape\(Rectangle\(\)\)\.padding\(\.vertical, -10\)[\s\S]{0,160}\.accessibilityLabel\(s\.done \? "Ferdig" : "Ikke ferdig"\)/);
+  assert.match(raw('FinansHub/Sources/TasksGlimt.swift'), /\.padding\(11\)\.contentShape\(Rectangle\(\)\)\.padding\(-11\)[\s\S]{0,160}\.accessibilityLabel\(t\.done \? "Ferdig" : "Ikke ferdig"\)/);
 });
 
 test('faste regler: token og passord skrives aldri til loggen', () => {

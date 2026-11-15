@@ -21,10 +21,10 @@ function balanced(src) {
   return Object.values(n).every((v) => v === 0);
 }
 
-const seg = code('WxSeg46.swift');
+const seg = code('WeatherSegments.swift');
 
 test('filene går opp', () => {
-  for (const f of ['WxSeg46.swift', 'Weather22Cards.swift', 'PaperWeather.swift']) assert.ok(balanced(code(f)), f);
+  for (const f of ['WeatherSegments.swift', 'WeatherCards.swift', 'PaperWeather.swift']) assert.ok(balanced(code(f)), f);
 });
 
 test('1–2) én DragGesture(minimumDistance: 0) som highPriorityGesture, ingen ScrollView/onTapGesture/SpatialTap', () => {
@@ -85,7 +85,7 @@ test('trykk-/dra-logikken: x → ikon og nærmeste ikon (JS-speil av formlene)',
 });
 
 test('4) «Forhold ›» har egen trykkflate til venstre, bryteren ligger utenfor knappen', () => {
-  const c = code('Weather22Cards.swift');
+  const c = code('WeatherCards.swift');
   const card = c.slice(c.indexOf('struct WxHourCard22'), c.indexOf('struct WxHourCell22'));
   const btn = card.indexOf('Button(action: openToday)');
   const shape = card.indexOf('.contentShape(Rectangle())', btn);
@@ -101,7 +101,7 @@ test('6) modus i én @AppStorage("vaer_mode") som bryter og timerader leser', ()
   assert.doesNotMatch(p, /@State private var mode: String = "temp"/);
   assert.match(p, /WxHourCard22\(w: w, mode: \$mode\)/);
   assert.match(p, /WxWide25\(w: w, width: g\.size\.width, mode: \$mode/);
-  const c = code('Weather22Cards.swift');
+  const c = code('WeatherCards.swift');
   assert.match(c, /@Binding var mode: String/);
   assert.match(c, /WxSeg46\(mode: \$mode, items: WxHourCard22\.modes46\)/);
 });
