@@ -6,14 +6,14 @@ import { Hono } from 'hono';
 import { readFile, writeFile, mkdir, unlink } from 'node:fs/promises';
 import { join } from 'node:path';
 import { bodyLimit } from 'hono/body-limit';
-import { config } from './config.js';
-import { db, q, kv, OWNER } from './db.js';
-import { userInfo, listUsers, sessionUser } from './auth/session.js';
-import { bearerOk } from './finans/routes.js';
-import { broadcast } from './realtime.js';
-import { dtf } from './intl-format.js'; // gjenbrukte Intl.DateTimeFormat
-import { registerJob } from './jobs/index.js';
-import { osloDate } from './dates/oslo.js';
+import { config } from '../config.js';
+import { db, q, kv, OWNER } from '../db.js';
+import { userInfo, listUsers, sessionUser } from '../auth/session.js';
+import { bearerOk } from '../finans/routes.js';
+import { broadcast } from '../realtime.js';
+import { dtf } from '../intl-format.js'; // gjenbrukte Intl.DateTimeFormat
+import { registerJob } from '../jobs/index.js';
+import { osloDate } from '../dates/oslo.js';
 
 const MOCK = process.env.MOCK_DATA === '1';
 const DAY = 86_400_000;
@@ -283,7 +283,7 @@ function zoneEvents(user, p) {
   return out;
 }
 let placeEventHook50 = null;
-/** Prompt 50: (bruker, hendelser) etter inn/ut – Ruter («forlot skolen»/ankomst) kobler seg på her (family50.js). */
+/** Prompt 50: (bruker, hendelser) etter inn/ut – Ruter («forlot skolen»/ankomst) kobler seg på her (places.js). */
 export const setPlaceEventHook50 = (fn) => { placeEventHook50 = fn; };
 const runPlaceHook = (user, events) => { if (placeEventHook50 && events.length) { try { placeEventHook50(user, events); } catch (err) { console.warn('[family] stedshendelse:', err.message); } } };
 /** Lagrer «forlot» for alle som har vært utenfor alle områdene i minst 2 min uten nye punkter. → antall hendelser. */
@@ -334,7 +334,7 @@ function notifyLive(user, events) {
     const z = q('SELECT * FROM family_zone WHERE id=?').get(e.zoneId);
     let viewers = q(`SELECT viewer FROM family_notify WHERE zone_id=? AND target=? AND viewer != ? AND ${e.kind === 'enter' ? 'enter' : 'leave'}=1`)
       .all(e.zoneId, user, user).map((r) => r.viewer).filter((v) => zoneVisible(z, v) && canSee(v, user));
-    // Prompt 45 (SERVER45): mottakerens egne sonevarsel-brytere (hovedbryter, per person, per sone) og systemvarsel med soneikon (zone45.js).
+    // Prompt 45 (SERVER45): mottakerens egne sonevarsel-brytere (hovedbryter, per person, per sone) og systemvarsel med soneikon (zone-alerts.js).
     if (zoneAlertHook) { try { viewers = zoneAlertHook(user, e, z, viewers) ?? viewers; } catch (err) { console.warn('[family] sonevarsel:', err.message); } }
     if (viewers.length) broadcast('family', { kind: 'event', event: e }, viewers);
   }
@@ -616,7 +616,7 @@ const VENDOR = { 'leaflet.js': ['leaflet/dist/leaflet.js', 'text/javascript'], '
 api.get('/vendor/:file', async (c) => {
   const v = VENDOR[c.req.param('file')];
   if (!v) return c.notFound();
-  return c.body(await readFile(new URL(`../node_modules/${v[0]}`, import.meta.url)), 200, { 'Content-Type': v[1], 'Cache-Control': 'private, max-age=604800' });
+  return c.body(await readFile(new URL(`../../node_modules/${v[0]}`, import.meta.url)), 200, { 'Content-Type': v[1], 'Cache-Control': 'private, max-age=604800' });
 });
 
 api.post('/location', async (c) => {
@@ -904,7 +904,7 @@ export function familyPeople37(me) {
     precision: m.precision, last: m.visible ? m.last : null, photoUrl: m.photoUrl ?? m.avatarUrl ?? null, mock: !!m.mock }));
 }
 
-/** Prompt 50 (SRVFAM50): hjelpere for family50.js (Steder, Folk, Helse, I dag, Sjekk inn). Personvernet er det samme som over. */
+/** Prompt 50 (SRVFAM50): hjelpere for places.js (Steder, Folk, Helse, I dag, Sjekk inn). Personvernet er det samme som over. */
 export const family50 = {
   q, MOCK, canSee: (v, id) => canSee(v, id), isMember: (id) => isMember(id), zonesFor: (v) => zonesFor(v), zoneOut: (z, v) => zoneOut(z, v),
   zoneById: (id) => q('SELECT * FROM family_zone WHERE id=?').get(id), zoneVisible: (z, v) => zoneVisible(z, v), areasOf: (id) => areasOf(id), inPlace: (p, z) => inPlace(p, z),

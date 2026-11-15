@@ -23,8 +23,8 @@ test.after(() => { globalThis.fetch = realFetch; });
 
 const { default: app } = await import('../server/index.js');
 const { db, kv } = await import('../server/db.js');
-const fam = await import('../server/family.js');
-const f50 = await import('../server/family50.js');
+const fam = await import('../server/familie/positions.js');
+const f50 = await import('../server/familie/places.js');
 const ruter = await import('../server/ruter41.js');
 const { pendingFor } = await import('../server/notify.js');
 

@@ -4,8 +4,8 @@
 import { docker45Api, dockerSetupMw45 } from './docker45.js';
 import { gsc45Api, gscInfoMw45 } from './gsc45.js';
 import { aiImport45Api } from './ai-import45.js';
-import { zone45Api } from './zone45.js';
-import { haHealthMw45 } from './health45.js';
+import { zone45Api } from './familie/zone-alerts.js';
+import { haHealthMw45 } from './familie/health-ha-devices.js';
 import { settings45Api } from './misc45.js';
 
 export function mountApi45(app) {

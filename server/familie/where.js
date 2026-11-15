@@ -2,8 +2,8 @@
 // whereIntent(text) → {kind:'where'|'is'|'self', name, zone?} | null
 // whereAnswer(viewer, text) → {intent:'family.where', text, person, place, open:{route:'familie', person}, source:'Familie · posisjon', card:{k:'where', …}}
 //   Personvern som Familie: bare personer som deler posisjon med deg (familyPeople37). Ellers «Pål deler ikke posisjon med deg.»
-import { familyPeople37, placeFor, dist } from './family.js';
-import { listUsers } from './auth/session.js';
+import { familyPeople37, placeFor, dist } from './positions.js';
+import { listUsers } from '../auth/session.js';
 
 const NAME = "([\\p{L}][\\p{L}'-]{1,30})";
 const PATTERNS = [
@@ -46,7 +46,7 @@ export async function whereAnswer(viewer, text, { now = Date.now() } = {}) {
   if (!p) {
     // Profiler uten bruker (Pål, Mormor) finnes i husstanden, men har ingen posisjon.
     let profiles = [];
-    try { const { profilesFor } = await import('./profiles37.js'); profiles = profilesFor(viewer).profiles; } catch { /* */ }
+    try { const { profilesFor } = await import('../profiles37.js'); profiles = profilesFor(viewer).profiles; } catch { /* */ }
     const pr = profiles.find((x) => norm(x.name) === norm(it.name));
     if (pr) return { ...base, text: `**${pr.name}** deler ikke posisjon med deg.`, person: { profileId: pr.id, name: pr.name, color: pr.color }, place: null, open: { route: 'familie', person: null } };
     const sharing = people.filter((x) => !x.self && x.visible && x.last).map((x) => x.name.split(' ')[0]);

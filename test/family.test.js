@@ -13,7 +13,7 @@ const { hashPassword } = await import('../server/auth/password.js');
 process.env.APP_PASSWORD_HASH = hashPassword('testpassord1');
 const auth = await import('../server/auth/session.js');
 const { default: fin } = await import('../server/finans/routes.js');
-const { default: fam, dist } = await import('../server/family.js');
+const { default: fam, dist } = await import('../server/familie/positions.js');
 
 auth.createUser({ username: 'ingrid', password: 'testpassord2', name: 'Ingrid' });
 const tok = async (username, password) => (await (await fin.request('/login', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ username, password, device: 'test' }) })).json()).token;

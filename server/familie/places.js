@@ -3,19 +3,19 @@
 //   Folk (kort per person), «I DAG», Helse per person (7 dager, søvn, hvilepuls, aktive kalorier, deling) og Sjekk inn (§6 i
 //   claude-code-familie-nytt-design.md): innsjekk, «Be noen sjekke inn», svar 👍/Ring/Hent, «Hent meg» med høy prioritet, påminnelse,
 //   logg «I dag i familien», forslag til sted fra kalender + posisjon, push via notifyUser (kø + Web Push + sanntid).
-// Personvern: samme regler som family.js (posisjon og helse bare når personen deler med deg). Sjekk inn deler posisjonen BARE i selve
+// Personvern: samme regler som positions.js (posisjon og helse bare når personen deler med deg). Sjekk inn deler posisjonen BARE i selve
 // innsjekken, og bare med mottakerne (og avsenderen). Ingen kontinuerlig deling. Eldre /api/family-endepunkter er urørt.
 import { Hono } from 'hono';
-import { db, q, kv } from './db.js';
-import { userInfo, sessionUser } from './auth/session.js';
-import { bearerOk } from './finans/routes.js';
-import { broadcast } from './realtime.js';
-import { notifyUser } from './notify.js';
-import { family50 as F, placesChanged50, deletePlace50, placesVersion50, areaOut50, setPlaceEventHook50 } from './family.js';
-import { schoolPlaceOf50, ruterPlaceEvents50 } from './ruter41.js';
-import { dtf } from './intl-format.js'; // gjenbrukte Intl.DateTimeFormat
-import { registerJob } from './jobs/index.js';
-import { osloDate } from './dates/oslo.js';
+import { db, q, kv } from '../db.js';
+import { userInfo, sessionUser } from '../auth/session.js';
+import { bearerOk } from '../finans/routes.js';
+import { broadcast } from '../realtime.js';
+import { notifyUser } from '../notify.js';
+import { family50 as F, placesChanged50, deletePlace50, placesVersion50, areaOut50, setPlaceEventHook50 } from './positions.js';
+import { schoolPlaceOf50, ruterPlaceEvents50 } from '../ruter41.js';
+import { dtf } from '../intl-format.js'; // gjenbrukte Intl.DateTimeFormat
+import { registerJob } from '../jobs/index.js';
+import { osloDate } from '../dates/oslo.js';
 
 const MIN = 60_000, HOUR = 3_600_000, DAY = 86_400_000;
 const FRESH = 15 * MIN;
@@ -320,7 +320,7 @@ let _events50 = null; // bare for tester: (user, fromDate, toDate) → {events}
 export const _setCalendar50 = (fn) => { _events50 = fn; };
 async function calendarNow(v, now) {
   try {
-    const fn = _events50 ?? (await import('./kalender/events.js')).eventsFor;
+    const fn = _events50 ?? (await import('../kalender/events.js')).eventsFor;
     const d = ymdOslo(now);
     const r = await Promise.race([fn(v, d, d), new Promise((res) => setTimeout(() => res(null), 2500))]);
     return (r?.events ?? []).filter((e) => {

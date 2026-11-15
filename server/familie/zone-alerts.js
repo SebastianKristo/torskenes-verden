@@ -5,10 +5,10 @@
 // også et systemvarsel (kø + Web Push, ikke når appen er åpen) med title = sonenavn, body = «Ingrid forlot Hjem» og icon = soneikonet.
 import { Hono } from 'hono';
 import { deflateSync, crc32 } from 'node:zlib';
-import { kv } from './db.js';
-import { authOrToken } from './mobile.js';
-import { notifyUser } from './notify.js';
-import { setZoneAlertHook45, family45 as F } from './family.js';
+import { kv } from '../db.js';
+import { authOrToken } from '../mobile.js';
+import { notifyUser } from '../notify.js';
+import { setZoneAlertHook45, family45 as F } from './positions.js';
 
 /* ---------------- Innstillinger ---------------- */
 

@@ -4,21 +4,21 @@
 //   Abonnementer som innebygd kalender                                                                                     → subs-cal42.js
 //   Sporing: AliExpress (mappen «AliExpress») + Cainiao, PostNord-varianter/feilsøkingslogg/reserve, /api/tracking/debug/:id   → server/sporing/ (mountSporing)
 //   Gjøremål-Glimt deler opp: liste-kontrakt, prompt, lengdevakt, lokal forhåndsdeling, Angre                                → server/gjoremal/
-//   Helse fra Home Assistant                                                                                                 → health42.js
+//   Helse fra Home Assistant                                                                                                 → familie/health-ha.js
 //   Vel fremme: alias /api/velfremme/* → /api/hjemlys/*, admin kan avslutte andres økt (POST /api/hjemlys/:id/end)
 //   Fanelinje: homeButton i /api/me/layout                                                                                    → mobile.js
 import { Hono } from 'hono';
 import { db } from './db.js';
 import { isAdmin } from './auth/session.js';
 import { authOrToken as authOrToken0 } from './mobile.js';
-import { end40, sessionOut40 } from './hjemlys40.js';
+import { end40, sessionOut40 } from './familie/hjemlys.js';
 
 const authOrToken = (c, next) => authOrToken0(c, next);
 export { finans42Api } from './finans/finans42.js';
 export { abCalendarsMw42, abApi42, calendarsEvents42, abIcs42 } from './subs-cal42.js';
-export { health42Api, familyHealthMw42, startHealth42 } from './health42.js';
+export { health42Api, familyHealthMw42, startHealth42 } from './familie/health-ha.js';
 
-/** POST /api/hjemlys/:id/end: eieren som før (hjemlys40.js); en administrator kan også avslutte andres økt («Avslutt for dem»). */
+/** POST /api/hjemlys/:id/end: eieren som før (familie/hjemlys.js); en administrator kan også avslutte andres økt («Avslutt for dem»). */
 export const hjemlys42Api = new Hono();
 hjemlys42Api.post('/:id/end', authOrToken, async (c, next) => {
   const s = db.prepare('SELECT * FROM hjemlys_sessions WHERE id=?').get(c.req.param('id'));

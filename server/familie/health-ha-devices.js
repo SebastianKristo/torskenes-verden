@@ -7,10 +7,10 @@
 //   3. Reserve uten registeret (eldre HA/feil): bare enheter med helsesensorer (heuristic).
 // Mellomvare på GET /api/family/health/ha (?view=phones|all). Se SERVER45-API.md for feltene.
 import WebSocket from 'ws';
-import { OWNER } from './db.js';
-import { cfg, runAsUser } from './settings.js';
-import { userInfo } from './auth/session.js';
-import { colorOf } from './family.js';
+import { OWNER } from '../db.js';
+import { cfg, runAsUser } from '../settings.js';
+import { userInfo } from '../auth/session.js';
+import { colorOf } from './positions.js';
 
 const MOCK = () => process.env.MOCK_DATA === '1';
 export const _ha45 = { ws: null, template: null }; // tester: erstatt kildene

@@ -36,7 +36,7 @@ const carriers = await import('../server/sporing/carriers.js');
 const trk42 = await import('../server/sporing/aliexpress-debug.js');
 const tk42 = await import('../server/gjoremal/glimt-split.js');
 const tg41 = await import('../server/gjoremal/glimt-jobs.js');
-const hl42 = await import('../server/health42.js');
+const hl42 = await import('../server/familie/health-ha.js');
 const sc42 = await import('../server/subs-cal42.js');
 
 let ipN = 20;

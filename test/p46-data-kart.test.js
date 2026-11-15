@@ -23,7 +23,7 @@ globalThis.fetch = async () => { throw new TypeError('fetch failed'); };
 test.after(() => { globalThis.fetch = realFetch; });
 
 const { default: app } = await import('../server/index.js');
-const K = await import('../server/kart46.js');
+const K = await import('../server/familie/map.js');
 
 let ipN = 80;
 async function req(path, { method = 'GET', headers = {}, body } = {}) {

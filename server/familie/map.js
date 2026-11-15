@@ -10,9 +10,9 @@
 // Alle Entur-kall går via serveren med «ET-Client-Name: kristo-homelab». Svarer ikke Entur (eller MOCK_DATA=1), gis demodata
 // med source:'demo' («DEMO-DATA» i klientene).
 import { Hono } from 'hono';
-import { kv } from './db.js';
-import { userGuard, readJson, bad, MOCK } from './homeos-common.js';
-import { family45, familyPeople37 } from './family.js';
+import { kv } from '../db.js';
+import { userGuard, readJson, bad, MOCK } from '../homeos-common.js';
+import { family45, familyPeople37 } from './positions.js';
 
 export const ENTUR_CLIENT46 = () => process.env.ENTUR_CLIENT_NAME_46 || 'kristo-homelab';
 const JP = 'https://api.entur.io/journey-planner/v3/graphql';

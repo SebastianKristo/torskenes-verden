@@ -4,8 +4,8 @@
 //   /api/tracking/keys                                                                  → server/sporing/ (mountSporing)
 //   /api/tasks/* (Gjøremål, Glimt)                                                      → gjoremal/routes.js + gjoremal/glimt.js
 //   /finans/api/subscriptions/:id/members|leave                                         → finans/shared37.js
-//   «hvor er X» i /api/assist                                                           → where37.js
-import { colorOf } from './family.js';
+//   «hvor er X» i /api/assist                                                           → familie/where.js
+import { colorOf } from './familie/positions.js';
 import { _setTaskColors } from './gjoremal/routes.js';
 import { _setSubColors, hasSharedSubs } from './finans/shared37.js';
 import { _setProfileHas } from './profiles37.js';

@@ -17,7 +17,7 @@ import { config } from './config.js';
 import { authOrToken } from './mobile.js';
 import { userInfo, listUsers, isAdmin } from './auth/session.js';
 import { broadcast } from './realtime.js';
-import { family50 as F } from './family.js';
+import { family50 as F } from './familie/positions.js';
 import { ensureIndex42, norm42, fold42, synonymsOf42 } from './finans/search42.js';
 import { settings as fhSettings } from './finans/db.js';
 import { gateEmbed } from './ai-gate.js';
@@ -536,7 +536,7 @@ export function shareOf51(u) {
 export function setShare51(u, b) {
   const cur = shareOf51(u);
   const next = { location: typeof b.location === 'boolean' ? b.location : cur.location, health: typeof b.health === 'boolean' ? b.health : cur.health, calendar: typeof b.calendar === 'boolean' ? b.calendar : cur.calendar };
-  // Familie har én delingsbryter (family.js): helse deles bare når deling med familien er på. Personvern først – uten posisjon
+  // Familie har én delingsbryter (familie/positions.js): helse deles bare når deling med familien er på. Personvern først – uten posisjon
   // deles heller ikke helse (klientene viser «Helse deles sammen med posisjon»).
   if (!next.location) next.health = false;
   const p = { ...(kv.get(u, 'family_prefs', {}) ?? {}) };

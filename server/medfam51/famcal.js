@@ -6,7 +6,7 @@
 import { db, q, kv } from '../db.js';
 import { isAdmin } from '../auth/session.js';
 import { notifyUser } from '../notify.js';
-import { family50 as F } from '../family.js';
+import { family50 as F } from '../familie/positions.js';
 import { tripBetween51 } from '../ruter41.js';
 import { addEventSource } from '../kalender/events.js';
 import { MIN, HOUR, DAY, clean, num, iso, hm, ymd, dayText, parseTime, osloAt } from './common.js';

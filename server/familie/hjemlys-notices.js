@@ -19,15 +19,15 @@
 // GET  /api/hjemlys får i tillegg notices:{mine, received} (Familie → Hjemlys).
 // Offentlig: GET /api/hjemlys/public/:token → {name, text, kind, place, at, eta, expiresAt} · GET /hl/:token → enkel statusside (HTML uten skript).
 import { Hono } from 'hono';
-import { originOf46 } from './auth/server-address.js'; // prompt 46 (SERVER46)
+import { originOf46 } from '../auth/server-address.js'; // prompt 46 (SERVER46)
 import { randomBytes } from 'node:crypto';
-import { db, q, kv } from './db.js';
-import { authOrToken as authOrToken0 } from './mobile.js';
+import { db, q, kv } from '../db.js';
+import { authOrToken as authOrToken0 } from '../mobile.js';
 const authOrToken = (c, next) => authOrToken0(c, next); // sen binding (mobile.js kan være midt i lastingen)
-import { userInfo, listUsers } from './auth/session.js';
-import { notifyUser } from './notify.js';
-import { broadcast } from './realtime.js';
-import { start40, sessionOut40 } from './hjemlys40.js';
+import { userInfo, listUsers } from '../auth/session.js';
+import { notifyUser } from '../notify.js';
+import { broadcast } from '../realtime.js';
+import { start40, sessionOut40 } from './hjemlys.js';
 
 db.exec(`CREATE TABLE IF NOT EXISTS hjemlys_status (
   id TEXT PRIMARY KEY, user_id TEXT NOT NULL, kind TEXT NOT NULL, place TEXT, note TEXT, eta INTEGER, leave_at INTEGER, recipients TEXT NOT NULL DEFAULT '[]',

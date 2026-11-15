@@ -8,11 +8,11 @@
 //   POST /api/family/health/ha/consent {allow:true|false} (personen selv) → {consent}
 //   Familie-svar (mellomvare): health får source:'ha:<enhet>', sourceDevice, sourceText:'Fra Home Assistant · OnePlus 12 · oppdatert 2 min siden', limited, stale, staleText.
 import { Hono } from 'hono';
-import { db, q, kv, OWNER } from './db.js';
-import { userInfo, listUsers, isAdmin, sessionUser } from './auth/session.js';
-import { cfg, runAsUser } from './settings.js';
-import { bearerOk } from './finans/routes.js';
-import { osloDate } from './dates/oslo.js';
+import { db, q, kv, OWNER } from '../db.js';
+import { userInfo, listUsers, isAdmin, sessionUser } from '../auth/session.js';
+import { cfg, runAsUser } from '../settings.js';
+import { bearerOk } from '../finans/routes.js';
+import { osloDate } from '../dates/oslo.js';
 
 db.exec(`CREATE TABLE IF NOT EXISTS health_daily (person_id TEXT NOT NULL, date TEXT NOT NULL, metric TEXT NOT NULL, value REAL, source TEXT NOT NULL, updated INTEGER NOT NULL,
   PRIMARY KEY (person_id, date, metric, source))`);
@@ -203,7 +203,7 @@ async function saveLinks(c, b) {
   kv.set(OWNER, 'health42_links', L);
   // Personer som ikke har godkjent ennå får et varsel (Homelab-appen); HA-varsel via notify.mobile_app_<enhet> er valgfritt.
   for (const pid of new Set(Object.values(L).map((x) => x.personId))) if (!consents()[pid]) {
-    import('./notify.js').then(({ notifyUser }) => notifyUser(pid, { title: 'Helse fra Home Assistant', body: 'Homelab vil vise skritt og søvn til familien. Tillat?', category: 'familie', tag: 'health42-consent', url: '/#/familie/helse' })).catch(() => {});
+    import('../notify.js').then(({ notifyUser }) => notifyUser(pid, { title: 'Helse fra Home Assistant', body: 'Homelab vil vise skritt og søvn til familien. Tillat?', category: 'familie', tag: 'health42-consent', url: '/#/familie/helse' })).catch(() => {});
   }
   const sync = await syncHa42({ history: true }).catch(() => null);
   return c.json({ ...(await haHealthOut42(c.get('user'))), sync });

@@ -84,7 +84,7 @@ import { routeTools, osloNowLine } from './tool-router44.js'; // prompt 44: ruti
 import { webSearch, webPrompt, webMeta, webFact, PROVIDER_NAME } from './web-search.js'; // prompt 44: eget nettsøk
 import { powerFact } from './power-price.js'; // prompt 44: strømpris
 import { isSunQuestion, daylight } from './vaer/sun.js'; // prompt 36: dagslys lokalt
-import { whereIntent, whereAnswer } from './where37.js'; // prompt 37: «hvor er Ingrid?»
+import { whereIntent, whereAnswer } from './familie/where.js'; // prompt 37: «hvor er Ingrid?»
 import { parseIntent37, schoolTestAnswer } from './kalender/subjects.js'; // prompt 37: skoleprøve ≠ prøveperiode
 import { bareDay37 } from './kalender/calendars.js'; // prompt 37: «i morgen?»
 import { needsChatTools } from './chat-tools41.js'; // prompt 41: sammensatte faktaspørsmål går til chatten

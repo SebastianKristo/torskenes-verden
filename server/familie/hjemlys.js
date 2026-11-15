@@ -20,12 +20,12 @@
 // Jobb hvert minutt (tick40): eta passert → «Alt OK?» til deg; eta + waitMin passert → late + varsel med delingsdata til mottakerne.
 import { Hono } from 'hono';
 import { randomUUID } from 'node:crypto';
-import { db, q, kv } from './db.js';
-import { authOrToken } from './mobile.js';
-import { userInfo, listUsers } from './auth/session.js';
-import { notifyUser } from './notify.js';
-import { broadcast } from './realtime.js';
-import { osloDate } from './dates/oslo.js';
+import { db, q, kv } from '../db.js';
+import { authOrToken } from '../mobile.js';
+import { userInfo, listUsers } from '../auth/session.js';
+import { notifyUser } from '../notify.js';
+import { broadcast } from '../realtime.js';
+import { osloDate } from '../dates/oslo.js';
 
 db.exec(`
 CREATE TABLE IF NOT EXISTS hjemlys_sessions (
@@ -65,7 +65,7 @@ export function homeOf(user) {
   } catch { return null; }
 }
 const household = (u) => listUsers().map((x) => x.id).filter((id) => id !== u);
-// Prompt 41: målet kan være et annet sted enn hjemmet (dest_* på økta, hjemlys41.js). → {lat, lon, radius, name, kind}|null
+// Prompt 41: målet kan være et annet sted enn hjemmet (dest_* på økta, hjemlys-notices.js). → {lat, lon, radius, name, kind}|null
 for (const [col, def] of [['dest_name', 'TEXT'], ['dest_lat', 'REAL'], ['dest_lon', 'REAL'], ['dest_kind', 'TEXT']]) if (!db.prepare('PRAGMA table_info(hjemlys_sessions)').all().some((c) => c.name === col)) db.exec(`ALTER TABLE hjemlys_sessions ADD COLUMN ${col} ${def}`);
 export function targetOf40(s) {
   if (s?.dest_lat != null && s?.dest_lon != null) return { lat: s.dest_lat, lon: s.dest_lon, radius: HOME_RADIUS_M, name: s.dest_name ?? 'Målet', kind: s.dest_kind ?? 'place' };
@@ -79,7 +79,7 @@ let calImpl = null;
 export const _setHjemlysCalendar = (fn) => { calImpl = fn; };
 async function eventsOf(user, from, to) {
   if (calImpl) return calImpl(user, from, to);
-  try { const { eventsFor } = await import('./kalender/events.js'); return (await eventsFor(user, from, to)).events ?? []; } catch { return []; }
+  try { const { eventsFor } = await import('../kalender/events.js'); return (await eventsFor(user, from, to)).events ?? []; } catch { return []; }
 }
 const endMsOf = (e) => Date.parse(e.end ?? e.start ?? '') || null;
 /** Hvem du var med: deltakerne (eller familie nevnt i tittel/beskrivelse) i hendelsen som slutter rett før start. */
@@ -192,7 +192,7 @@ export async function start40(u, b = {}, now = Date.now()) {
 async function goHome(s, now = Date.now(), why = 'manual') {
   const n = touch(s.id, { state: 'home', home_at: now, ended_at: now });
   await emit(n, 'home');
-  if (!isPlaceTrip(s)) { try { (await import('./ruter41.js')).arrivedHome41(s.user_id, now); } catch { /* Min reise er valgfri */ } } // prompt 41: Min reise forsvinner når du er hjemme
+  if (!isPlaceTrip(s)) { try { (await import('../ruter41.js')).arrivedHome41(s.user_id, now); } catch { /* Min reise er valgfri */ } } // prompt 41: Min reise forsvinner når du er hjemme
   for (const r of parse(s.recipients, [])) { try { await notifyUser(r, { title: 'Hjemlys', body: isPlaceTrip(s) ? `${first(s.user_id)} er fremme · ${s.dest_name ?? 'målet'} ${hhmm(now)}` : `${first(s.user_id)} er hjemme ${hhmm(now)}`, url: '/#/familie', category: 'familie', tag: `hjemlys-${s.id}`, data: { kind: 'hjemlys.home', sessionId: s.id, why } }); } catch { /* */ } }
   return n;
 }

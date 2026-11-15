@@ -27,7 +27,7 @@ const assist = await import('../server/assist.js');
 const glimt = await import('../server/gjoremal/glimt.js');
 const bible = await import('../server/bible37.js');
 const kal = await import('../server/kalender/subjects.js');
-const where = await import('../server/where37.js');
+const where = await import('../server/familie/where.js');
 const { osloTodayISO } = await import('../public/js/quick-time.js');
 const TODAY = osloTodayISO();
 const addDays = (s, n) => { const [y, m, d] = s.split('-').map(Number); return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10); };

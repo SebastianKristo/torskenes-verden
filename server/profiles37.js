@@ -16,7 +16,7 @@ import { Hono } from 'hono';
 import { db, q, kv, OWNER } from './db.js';
 import { userInfo, listUsers, isAdmin } from './auth/session.js';
 import { authOrToken } from './mobile.js';
-import { colorOf, prefsOf, PALETTE } from './family.js';
+import { colorOf, prefsOf, PALETTE } from './familie/positions.js';
 
 const MOCK = process.env.MOCK_DATA === '1';
 db.exec(`CREATE TABLE IF NOT EXISTS profiles37 (

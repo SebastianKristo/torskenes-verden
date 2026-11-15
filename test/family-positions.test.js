@@ -13,7 +13,7 @@ const { hashPassword } = await import('../server/auth/password.js');
 process.env.APP_PASSWORD_HASH = hashPassword('testpassord1');
 const auth = await import('../server/auth/session.js');
 const { default: fin } = await import('../server/finans/routes.js');
-const { default: fam, initials, PALETTE } = await import('../server/family.js');
+const { default: fam, initials, PALETTE } = await import('../server/familie/positions.js');
 const { default: mobile } = await import('../server/mobile.js');
 
 // Nominatim mockes: strøk etter breddegrad, og alle kall telles (de skal caches).

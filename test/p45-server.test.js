@@ -33,8 +33,8 @@ const gsc45 = await import('../server/gsc45.js');
 const st45 = await import('../server/study45.js');
 const st44 = await import('../server/study44.js');
 const ai45 = await import('../server/ai-import45.js');
-const zone = await import('../server/zone45.js');
-const h45 = await import('../server/health45.js');
+const zone = await import('../server/familie/zone-alerts.js');
+const h45 = await import('../server/familie/health-ha-devices.js');
 
 let ipN = 10;
 async function req(path, { method = 'GET', headers = {}, body, raw } = {}) {

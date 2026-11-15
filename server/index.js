@@ -32,7 +32,7 @@ import { mountLocalFetch86, migrateLocalHosts86 } from './localfetch86.js'; // p
 import { faviconHandler46 } from './news46.js'; // prompt 46 (SERVER46)
 import { news73Api } from './news73.js'; // prompt 73 (NEWS73)
 import iconsApi from './icons.js';
-import familyApi from './family.js';
+import familyApi from './familie/positions.js';
 import tilesApi, { hasMapTest, testMap } from './tiles.js';
 import { mountGjoremal } from './gjoremal/index.js'; // Gjøremål: /api/tasks og /api/huske
 import notifyApi, { appMeta } from './notify.js';
@@ -84,7 +84,7 @@ import { assistLocalMw44 } from './kalender/invites.js';
 import { study44Api } from './study44.js';
 import { mountAuthSecurity, mountAppAuth, mountAuthInvites, mountAuthRefresh, mountAuth, registerAccountRoutes } from './auth/index.js'; // innlogging og sikkerhet
 import { mountApi45 } from './api45.js'; // prompt 45 (SERVER45)
-import { mountFamily50 } from './family50.js'; // prompt 50 (SRVFAM50): Steder med områder, Folk, Helse, I dag, Sjekk inn
+import { mountFamily50 } from './familie/places.js'; // prompt 50 (SRVFAM50): Steder med områder, Folk, Helse, I dag, Sjekk inn
 import { traceObs51, mountObs51, startObs51 } from './obs51/index.js'; // prompt 51 (OBS51): helsedashbord, selvreparasjon, spor, ntfy
 import { mountQa51, startQa51, reportServerError51 } from './qa51.js'; // prompt 51 (QA51): feature flags, krasjrapporter (GlitchTip), «Nytt i denne versjonen»
 import { errorShape, API_PREFIXES, serverError } from './http/errors.js'; // felles feilform {error, code} for /api og /finans/api
@@ -104,7 +104,7 @@ import { mountVoxcpm57 } from './voxcpm57/index.js'; // prompt 57 (VOX57): VoxCP
 import { mountOmlx58 } from './omlx58/index.js'; // prompt 58 (OMLX58): oMLX på Mac mini-en som motor bak AI-gaten (admin: /api/admin/omlx58/*)
 import { startAccounts46 } from './sporing/accounts.js'; // prompt 46 (DATA46): Posten/Bring- og PostNord-konto
 import { gphoto46Api, startGphoto46 } from './gphoto46.js'; // prompt 46 (DATA46): Google Photos-album som bakgrunn
-import { kart46Api } from './kart46.js'; // prompt 46 (DATA46): Kart-API
+import { kart46Api } from './familie/map.js'; // prompt 46 (DATA46): Kart-API
 import { settingsApi as glimtSettingsApi, ttsApi, imgApi } from './glimt35.js'; // prompt 35: /api/glimt/settings, /api/tts, /api/img
 import { mountVaer } from './vaer/index.js'; // Vær: /here, /week-summary, /place, /layout og ski i /full
 import briefApi from './brief34.js'; // prompt 34: Glimt-brief /api/brief (+ /widget, /settings) og daglig generering // prompt 34: AI-kontroll /api/ai/* (status, modeller, ruting, jobber, forbruk, nøkler, selvtest)

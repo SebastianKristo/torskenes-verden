@@ -4,7 +4,7 @@
 // (ai-run med localOnly – aldri skyen), og forslagene virker likt uten modell.
 import { db, q, kv } from '../db.js';
 import { userInfo } from '../auth/session.js';
-import { family50 as F } from '../family.js';
+import { family50 as F } from '../familie/positions.js';
 import * as M from '../media/arr.js';
 import { run as aiRun } from '../ai-run.js';
 import { HOUR, DAY, clean, minText } from './common.js';
