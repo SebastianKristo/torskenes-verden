@@ -13,7 +13,7 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 import { kv, OWNER } from './db.js';
 import { userCfg, userCfgSet } from './settings.js';
 import { authOrToken } from './mobile.js';
-import { isAdmin, listUsers, userInfo, isLan } from './auth.js';
+import { isAdmin, listUsers, userInfo, isLan } from './auth/session.js';
 import { notifyUser } from './notify.js';
 import { addEventSource } from './calendar.js';
 import { mockFetch43, mockArt43 } from './media43-mock.js';

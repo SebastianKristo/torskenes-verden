@@ -1,11 +1,11 @@
 import { randomBytes, createHmac } from 'node:crypto';
 import { getCookie, setCookie, deleteCookie } from 'hono/cookie';
-import { db, q, kv, OWNER } from './db.js';
-import { config } from './config.js';
-import { sessionSecret86 } from './secret86.js'; // prompt 86
+import { db, q, kv, OWNER } from '../db.js';
+import { config } from '../config.js';
+import { sessionSecret86 } from './server-secret.js'; // prompt 86
 import { hashPassword, verifyPassword } from './password.js';
-import { passwordHash as legacyPasswordHash, setPasswordHash as setLegacyPasswordHash } from './settings.js';
-import { blocked51, fail51, clear51 } from './ratelimit51.js'; // prompt 51 (SEC51)
+import { passwordHash as legacyPasswordHash, setPasswordHash as setLegacyPasswordHash } from '../settings.js';
+import { blocked51, fail51, clear51 } from './rate-limit.js'; // prompt 51 (SEC51)
 import { verifyTotp, newSecret, base32Encode, otpauthUrl, qrSvg, encryptSecret, decryptSecret, newRecoveryCodes, recoveryHash, tfaUnreadable, TFA_UNREADABLE_LOGIN_MSG } from './totp.js';
 
 const COOKIE = 'hl_sid';

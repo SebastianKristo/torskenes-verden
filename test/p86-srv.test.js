@@ -27,7 +27,7 @@ delete process.env.MOCK_DATA;
 delete process.env.OLLAMA_URL;
 delete process.env.GEMINI_API_KEY;
 delete process.env.GLITCHTIP_DSN;
-const { hashPassword } = await import('../server/password.js');
+const { hashPassword } = await import('../server/auth/password.js');
 process.env.APP_PASSWORD_HASH = hashPassword('testpassord1');
 
 const RSS = (t) => `<?xml version="1.0"?><rss version="2.0"><channel><title>${t}</title><item><title>Sak fra ${t}</title><link>https://offentlig.example.no/sak/1</link><guid>${t}-1</guid><pubDate>Tue, 10 Nov 2026 10:00:00 GMT</pubDate></item></channel></rss>`;
@@ -54,7 +54,7 @@ globalThis.fetch = async (input) => {
 test.after(() => { globalThis.fetch = realFetch; });
 
 const { default: app } = await import('../server/index.js');
-const auth = await import('../server/auth.js');
+const auth = await import('../server/auth/session.js');
 const { db, kv, OWNER } = await import('../server/db.js');
 const L = await import('../server/localfetch86.js');
 const DNS = { 'offentlig.example.no': ['93.184.216.34'], 'snu.example.no': ['93.184.216.35'], 'snu2.example.no': ['93.184.216.36'], 'videre.example.no': ['93.184.216.37'],
@@ -265,7 +265,7 @@ function run(dataDir, code, extra = {}) {
   assert.ok(line, `skriptet ga ikke noe svar: ${r.stderr.slice(-800)}`);
   return { out: JSON.parse(line.slice(3)), stderr: r.stderr, stdout: r.stdout };
 }
-const SECRET_JS = `const m = await import(${JSON.stringify(mod('secret86.js'))});
+const SECRET_JS = `const m = await import(${JSON.stringify(mod('auth/server-secret.js'))});
 console.log('UT:' + JSON.stringify({ status: m.secretStatus86(), dev: m.sessionSecret86('dev'), os: m.sessionSecret86('homelab-os', true), tom: m.sessionSecret86() }));`;
 
 test('A: ny installasjon – 48 tilfeldige byte lages, lagres med 0600 og brukes igjen ved neste oppstart', () => {
@@ -304,11 +304,11 @@ test('A: eksisterende installasjon uten hemmelighet – samme reservenøkler som
 test('A: eksisterende installasjon – nøklene er bit for bit som før, og admin får varselet under Sikkerhet', () => {
   const dir = mkdtempSync(join(tmpdir(), 'hl-p86gml2-'));
   writeFileSync(join(dir, 'homelab.db'), '');
-  const code = `const { hashPassword } = await import(${JSON.stringify(mod('password.js'))});
+  const code = `const { hashPassword } = await import(${JSON.stringify(mod('auth/password.js'))});
 process.env.APP_PASSWORD_HASH = hashPassword('testpassord1'); process.env.USER_NAME = 'Sebastian';
 const { default: app } = await import(${JSON.stringify(mod('index.js'))});
 const { sealSecret } = await import(${JSON.stringify(mod('settings.js'))});
-const { recoveryHash } = await import(${JSON.stringify(mod('totp.js'))});
+const { recoveryHash } = await import(${JSON.stringify(mod('auth/totp.js'))});
 const { db } = await import(${JSON.stringify(mod('db.js'))});
 const LAN = { incoming: { socket: { remoteAddress: '192.168.1.20' } } };
 const l = await app.request('/api/login', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ username: 'sebastian', password: 'testpassord1' }) }, LAN);

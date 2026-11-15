@@ -92,7 +92,7 @@ const haUrl = `http://127.0.0.1:${server.address().port}`;
 const haDown = () => { HA.up = false; for (const c of wss.clients) c.terminate(); };
 
 /* ---------------- Appen ---------------- */
-const { hashPassword } = await import('../server/password.js');
+const { hashPassword } = await import('../server/auth/password.js');
 process.env.APP_PASSWORD_HASH = hashPassword('testpassord1');
 const { default: app } = await import('../server/index.js');
 const { updateConfig } = await import('../server/settings.js');

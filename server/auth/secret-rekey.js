@@ -23,8 +23,8 @@
 import { createDecipheriv, createCipheriv, createHash, createHmac, hkdfSync, randomBytes, scryptSync } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { config } from './config.js';
-import { sessionSecret86, secretStatus86, SECRET_FILE86 } from './secret86.js';
+import { config } from '../config.js';
+import { sessionSecret86, secretStatus86, SECRET_FILE86 } from './server-secret.js';
 import { encryptSecretWith, decryptSecretWith } from './totp.js';
 
 export const KINDS91 = ['totp', 'seal', 'settings', 'domains', 'hmac'];

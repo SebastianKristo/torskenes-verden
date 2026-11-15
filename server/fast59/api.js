@@ -5,7 +5,7 @@
 // Den ikke-strømmende POST / er uendret (appene bruker den).
 import { streamSSE } from 'hono/streaming';
 import { runAsUser } from '../settings.js';
-import { isAdmin } from '../auth.js';
+import { isAdmin } from '../auth/session.js';
 import { agent45, busyOf45 } from '../glimt45/engine.js';
 import { MODULES45 } from '../glimt45/plan.js';
 import { fast59, serverFast59, userFast59, saveFast59, FAST_LABELS59, FAST_HELP59 } from './settings.js';

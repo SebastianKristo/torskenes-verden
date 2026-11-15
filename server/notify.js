@@ -10,7 +10,7 @@ import { readFile, writeFile, unlink, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { config } from './config.js';
 import { db, kv, OWNER } from './db.js';
-import { sessionUser, userInfo, isAdmin } from './auth.js';
+import { sessionUser, userInfo, isAdmin } from './auth/session.js';
 import { bearerOk } from './finans/routes.js';
 import { broadcast } from './realtime.js';
 import { vapidPublicKey, sendPush, validEndpoint } from './webpush.js';

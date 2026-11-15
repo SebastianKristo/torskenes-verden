@@ -15,7 +15,7 @@
 import { Hono } from 'hono';
 import { randomUUID } from 'node:crypto';
 import { db, q, kv, OWNER } from './db.js';
-import { isAdmin } from './auth.js';
+import { isAdmin } from './auth/session.js';
 import { authOrToken } from './mobile.js';
 import { userCfg, setUserCfg } from './settings.js';
 import { mediaAllowed43, mediaSource43 } from './media43.js';

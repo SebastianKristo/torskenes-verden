@@ -8,7 +8,7 @@
 //        Endringer logges i fh_folder_entry_history («endret av»). GET …/entries/:eid/history → [{at, by, changes}].
 //   Alias under /api/homes/:id/… i server/index.js (members, shareable, expenses/:eid).
 import { db, q } from './db.js';
-import { listUsers } from '../auth.js';
+import { listUsers } from '../auth/session.js';
 
 
 db.exec(`CREATE TABLE IF NOT EXISTS fh_folder_entry_history (

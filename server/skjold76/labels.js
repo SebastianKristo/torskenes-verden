@@ -1,7 +1,7 @@
 // Prompt 76 (SKJSRV): utskriftsside med etiketter per skuff – «4-2», egen etikett, innhold og QR til /#/skjold/skap/<id>/4-2.
 // Ren HTML + CSS (ingen skript, så den globale CSP-en holder). Brukeren skriver ut med Ctrl/⌘+P.
 import { db } from '../db.js';
-import { qrSvg } from '../totp.js';
+import { qrSvg } from '../auth/totp.js';
 import { drawerRows76, defaultLabel76, coverMap81 } from './store.js';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));

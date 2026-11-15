@@ -20,7 +20,7 @@ process.env.OLLAMA_URL = 'http://ollama.test58:11434';
 delete process.env.MOCK_DATA;
 delete process.env.GEMINI_API_KEY;
 for (const k of ['OMLX_URL', 'OMLX_API_KEY', 'OMLX_TASKS', 'OMLX_FALLBACK', 'OMLX_MODEL_TEXT', 'OMLX_MODEL_VISION', 'OPENWEBUI_URL', 'OPENWEBUI_KEY', 'AI_BACKEND']) delete process.env[k];
-const { hashPassword } = await import('../server/password.js');
+const { hashPassword } = await import('../server/auth/password.js');
 process.env.APP_PASSWORD_HASH = hashPassword('testpassord1');
 const realFetch = globalThis.fetch;
 globalThis.fetch = async () => { throw new TypeError('fetch failed'); }; // ingenting annet skal ut

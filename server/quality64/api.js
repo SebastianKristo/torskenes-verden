@@ -2,7 +2,7 @@
 // Eval (kjøringer, rapporter, «Kjør nå», Avbryt, serverbrytere) er bare for admin (serverinfrastruktur). Ukerapporten er per bruker.
 import { Hono } from 'hono';
 import { authOrToken } from '../mobile.js';
-import { isAdmin } from '../auth.js';
+import { isAdmin } from '../auth/session.js';
 import { quality64, serverQuality64, userQuality64, saveQuality64, LABELS64, HELP64 } from './settings.js';
 import { runRow64, runRows64, publicRun64, readReport64, RID64, iso64 } from './store.js';
 import { startEval64, abortEval64, liveRun64 } from './evalrun.js';

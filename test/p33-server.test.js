@@ -13,7 +13,7 @@ process.env.USER_NAME = 'Sebastian';
 process.env.NODE_ENV = 'test';
 process.env.MOCK_DATA = '1';
 delete process.env.OLLAMA_URL;
-const { hashPassword } = await import('../server/password.js');
+const { hashPassword } = await import('../server/auth/password.js');
 process.env.APP_PASSWORD_HASH = hashPassword('testpassord1');
 
 const { default: app } = await import('../server/index.js');

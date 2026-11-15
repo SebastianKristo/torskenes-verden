@@ -15,7 +15,7 @@ process.env.OCR_FALLBACK = '0';
 process.env.OLLAMA_URL = 'http://ollama.test:11434';
 process.env.GEMINI_API_KEY = 'gemini-test-key';
 delete process.env.MOCK_DATA;
-const { hashPassword } = await import('../server/password.js');
+const { hashPassword } = await import('../server/auth/password.js');
 process.env.APP_PASSWORD_HASH = hashPassword('testpassord1');
 
 // PNG med gitt størrelse (IHDR) + fyll, nok til at koden godtar den som bilde.

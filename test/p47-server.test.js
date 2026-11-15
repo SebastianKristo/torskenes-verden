@@ -20,7 +20,7 @@ process.env.OLLAMA_MODEL = 'qwen2.5vl:7b';
 delete process.env.PUBLIC_URL;
 delete process.env.LOCAL_URL;
 delete process.env.GEMINI_API_KEY;
-const { hashPassword } = await import('../server/password.js');
+const { hashPassword } = await import('../server/auth/password.js');
 process.env.APP_PASSWORD_HASH = hashPassword('testpassord1');
 
 // Falsk Ollama (strømming via gaten): chat-kallene lagres, svaret styres per test.

@@ -1,7 +1,7 @@
 // Tofaktor (TOTP, RFC 6238) uten eksterne pakker: base32, koder, kryptering av hemmeligheten og QR-kode som SVG.
 import { createHmac, createCipheriv, createDecipheriv, createHash, hkdfSync, randomBytes, timingSafeEqual } from 'node:crypto';
-import { config } from './config.js';
-import { sessionSecret86 } from './secret86.js'; // prompt 86
+import { config } from '../config.js';
+import { sessionSecret86 } from './server-secret.js'; // prompt 86
 
 /* ---------------- Base32 (RFC 4648, uten padding) ---------------- */
 

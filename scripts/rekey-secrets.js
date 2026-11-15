@@ -10,7 +10,7 @@
 // Start serveren på nytt etterpå.
 import { readFileSync } from 'node:fs';
 import { db } from '../server/db.js';
-import { rekeyDb91, rekeyMessages91 } from '../server/secret91.js';
+import { rekeyDb91, rekeyMessages91 } from '../server/auth/secret-rekey.js';
 
 const args = process.argv.slice(2);
 const extra = [];

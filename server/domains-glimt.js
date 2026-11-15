@@ -31,8 +31,8 @@ import { createCipheriv, createDecipheriv, createHash, createSign, randomBytes, 
 import { db, q, kv } from './db.js';
 import { cfg } from './settings.js';
 import { config } from './config.js';
-import { sessionSecret86 } from './secret86.js'; // prompt 86
-import { sessionUser, userInfo, isAdmin, listUsers } from './auth.js';
+import { sessionSecret86 } from './auth/server-secret.js'; // prompt 86
+import { sessionUser, userInfo, isAdmin, listUsers } from './auth/session.js';
 import { bearerOk } from './finans/routes.js';
 import { settings as fhSettings } from './finans/db.js';
 import { notifyUser } from './notify.js';

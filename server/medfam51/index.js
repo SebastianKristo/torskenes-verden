@@ -7,7 +7,7 @@
 // (mediaAllowed43); lagring og sletting bare admin. Nøkler til Bazarr/Audiobookshelf står bare i .env og sendes aldri ut.
 import { Hono } from 'hono';
 import { kv } from '../db.js';
-import { isAdmin } from '../auth.js';
+import { isAdmin } from '../auth/session.js';
 import { authOrToken as authOrToken0 } from '../mobile.js';
 import { mediaAllowed43 } from '../media43.js';
 import { body, bad, ymd, DAY, MIN, clean } from './common.js';

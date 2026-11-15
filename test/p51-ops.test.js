@@ -83,7 +83,7 @@ die(1, 'ukjent kommando ' + a[0]);
 chmodSync(join(BIN, 'restic'), 0o755);
 process.env.RESTIC_BIN = join(BIN, 'restic');
 
-const { hashPassword } = await import('../server/password.js');
+const { hashPassword } = await import('../server/auth/password.js');
 process.env.APP_PASSWORD_HASH = hashPassword('testpassord1');
 const realFetch = globalThis.fetch;
 // Ingen nett ut – unntatt sandkassen på 127.0.0.1:4602 (testet gjenoppretting).

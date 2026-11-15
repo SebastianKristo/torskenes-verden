@@ -23,7 +23,7 @@ delete process.env.OLLAMA_URL;
 delete process.env.GEMINI_API_KEY;
 delete process.env.DAL53_AUTOLOAD;
 for (const k of ['NBWHISPER_URL', 'NBWHISPER_KEY', 'FERMION_PHONON_URL', 'FERMION_PHONON_KEY']) delete process.env[k];
-const { hashPassword } = await import('../server/password.js');
+const { hashPassword } = await import('../server/auth/password.js');
 process.env.APP_PASSWORD_HASH = hashPassword('testpassord1');
 const realFetch = globalThis.fetch;
 globalThis.fetch = async () => { throw Object.assign(new TypeError('fetch failed'), { cause: { code: 'ENOTFOUND' } }); }; // ingenting annet skal ut

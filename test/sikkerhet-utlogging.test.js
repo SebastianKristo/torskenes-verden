@@ -12,7 +12,7 @@ process.env.SESSION_SECRET = 'test-secret-test-secret-test-secret-12';
 process.env.USER_NAME = 'Sebastian';
 process.env.NODE_ENV = 'test';
 delete process.env.MOCK_DATA;
-const { hashPassword } = await import('../server/password.js');
+const { hashPassword } = await import('../server/auth/password.js');
 process.env.APP_PASSWORD_HASH = hashPassword('testpassord1');
 const { default: app } = await import('../server/index.js');
 

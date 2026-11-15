@@ -13,7 +13,7 @@ import { mkdir, readFile, writeFile, stat, rename } from 'node:fs/promises';
 import { join, resolve, dirname } from 'node:path';
 import { deflateSync } from 'node:zlib';
 import { config } from './config.js';
-import { sessionUser, userInfo } from './auth.js';
+import { sessionUser, userInfo } from './auth/session.js';
 import { bearerOk } from './finans/routes.js';
 import { cfg } from './settings.js';
 

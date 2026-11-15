@@ -14,7 +14,7 @@ delete process.env.MOCK_DATA;
 delete process.env.ANDROID_CERT_SHA256;
 delete process.env.APPLE_APP_ID;
 delete process.env.APPLE_TEAM_ID;
-const { hashPassword } = await import('../server/password.js');
+const { hashPassword } = await import('../server/auth/password.js');
 process.env.APP_PASSWORD_HASH = hashPassword('eierpassord1');
 const { default: app } = await import('../server/index.js');
 

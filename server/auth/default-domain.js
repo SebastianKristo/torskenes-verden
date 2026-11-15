@@ -1,7 +1,7 @@
 // Prompt 89 (WEB89, claude-code-standard-serveradresser.md): standarddomenet er os.smarthjemeksperten.no (med k).
 // Eldre versjoner lagret den feilstavede «…experten.no» som standard. En lagret adresse som er NØYAKTIG den gamle standarden
 // (evt. med / til slutt eller store bokstaver) byttes til den nye – første gang den leses – og skrives tilbake. Andre adresser røres ikke.
-import { kv } from './db.js';
+import { kv } from '../db.js';
 
 export const OLD_PUBLIC_URL89 = 'https://os.smarthjem' + 'experten.no';
 export const NEW_PUBLIC_URL89 = 'https://os.smarthjemeksperten.no';

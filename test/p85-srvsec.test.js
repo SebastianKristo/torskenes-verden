@@ -15,14 +15,14 @@ process.env.OCR_FALLBACK = '0';
 delete process.env.OLLAMA_URL;
 delete process.env.GEMINI_API_KEY;
 delete process.env.GLITCHTIP_DSN;
-const { hashPassword } = await import('../server/password.js');
+const { hashPassword } = await import('../server/auth/password.js');
 process.env.APP_PASSWORD_HASH = hashPassword('testpassord1');
 const realFetch = globalThis.fetch;
 globalThis.fetch = async () => { throw new TypeError('fetch failed'); };
 test.after(() => { globalThis.fetch = realFetch; });
 
 const { default: app } = await import('../server/index.js');
-const auth = await import('../server/auth.js');
+const auth = await import('../server/auth/session.js');
 const { ANON_BODY_MAX85 } = await import('../server/anonbody85.js');
 
 const LAN = { incoming: { socket: { remoteAddress: '192.168.1.20' } } };
@@ -140,7 +140,7 @@ test('vanlig bruker når ikke serveroppsett, AI-nøkler eller backup', async () 
 });
 
 test('hjelpeteksten for hemmeligheter peker på riktig tjeneste i docker-compose.yml', () => {
-  const src = readFileSync(new URL('../server/sec51.js', import.meta.url), 'utf8');
+  const src = readFileSync(new URL('../server/auth/security.js', import.meta.url), 'utf8');
   const compose = readFileSync(new URL('../docker-compose.yml', import.meta.url), 'utf8');
   assert.match(compose, /^services:\n\s+os:/m);
   assert.ok(!/compose up -d homelab/.test(src));

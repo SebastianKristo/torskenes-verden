@@ -15,7 +15,7 @@ process.env.PUBLIC_URL = 'https://home.example.no';
 delete process.env.OLLAMA_URL;
 delete process.env.OLLAMA_EMBED_MODEL;
 delete process.env.GEMINI_API_KEY;
-const { hashPassword } = await import('../server/password.js');
+const { hashPassword } = await import('../server/auth/password.js');
 process.env.APP_PASSWORD_HASH = hashPassword('testpassord1');
 const realFetch = globalThis.fetch;
 globalThis.fetch = async () => { throw new TypeError('fetch failed'); };

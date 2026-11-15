@@ -15,7 +15,7 @@
 import { Hono } from 'hono';
 import { db, q, kv, OWNER } from './db.js';
 import { authOrToken } from './mobile.js';
-import { userInfo, listUsers, isAdmin } from './auth.js';
+import { userInfo, listUsers, isAdmin } from './auth/session.js';
 import { runAsUser } from './settings.js';
 import { parseQuick, osloTodayISO } from './dates/quick.js'; // dato og tid fra den felles tolkeren
 import { CHARS, glimtSettingsOf, cleanGlimtPatch, saveGlimtSettings, charDefaultOf52, setCharDefault52, CHAR_META52 } from './glimt35.js';

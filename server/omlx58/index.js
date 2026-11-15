@@ -8,7 +8,7 @@
 // Sikkerhet: serverinfrastruktur → bare admin. Nøkkelen sendes aldri ut og logges aldri. Bare adresser i huset (LAN/localhost).
 import { Hono } from 'hono';
 import { authOrToken } from '../mobile.js';
-import { isAdmin } from '../auth.js';
+import { isAdmin } from '../auth/session.js';
 import { gateChat, maskSecrets } from '../ai-gate.js';
 import './backend.js'; // registrerer backend «omlx» i gaten
 import { confOut58, saveConf58, omlxConf58 } from './config.js';

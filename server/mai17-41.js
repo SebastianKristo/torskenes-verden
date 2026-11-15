@@ -10,7 +10,7 @@ import { Hono } from 'hono';
 import { kv } from './db.js';
 import { authOrToken as authOrToken0 } from './mobile.js';
 const authOrToken = (c, next) => authOrToken0(c, next); // sen binding (mobile.js kan være midt i lastingen)
-import { userInfo, listUsers } from './auth.js';
+import { userInfo, listUsers } from './auth/session.js';
 import { notifyUser } from './notify.js';
 
 export const MAI17_MODES = ['auto', 'av', 'pa'];

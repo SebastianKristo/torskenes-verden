@@ -15,7 +15,7 @@ process.env.MOCK_DATA = '1';
 process.env.OCR_FALLBACK = '0';
 delete process.env.OLLAMA_URL;
 delete process.env.GEMINI_API_KEY;
-const { hashPassword } = await import('../server/password.js');
+const { hashPassword } = await import('../server/auth/password.js');
 process.env.APP_PASSWORD_HASH = hashPassword('testpassord1');
 const realFetch = globalThis.fetch;
 globalThis.fetch = async () => { throw new TypeError('fetch failed'); };

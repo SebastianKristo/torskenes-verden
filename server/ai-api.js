@@ -37,7 +37,7 @@
 import { Hono } from 'hono';
 import { streamSSE } from 'hono/streaming';
 import { authOrToken } from './mobile.js';
-import { isAdmin } from './auth.js';
+import { isAdmin } from './auth/session.js';
 import { db, OWNER } from './db.js';
 import { settings as fhSettings, saveSettings, secret, setSecret, secretSource } from './finans/db.js';
 import { geminiKeys } from './finans/gemini-keys.js';

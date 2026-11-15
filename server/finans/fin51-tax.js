@@ -186,7 +186,7 @@ export function mountTax51(api, { R, W }) {
   api.get('/fin51/tax/export.html', R, async (c) => {
     const u = c.get('user'), s = taxSummary51(u, { year: yearOf(c) });
     let who = '';
-    try { who = (await import('../auth.js')).userInfo(u)?.name ?? ''; } catch { /* */ }
+    try { who = (await import('../auth/session.js')).userInfo(u)?.name ?? ''; } catch { /* */ }
     return c.body(taxHtml51(s, who), 200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'Content-Disposition': `inline; filename="skattehjelp-${s.year}.html"` });
   });
 }

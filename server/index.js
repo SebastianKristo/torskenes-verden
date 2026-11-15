@@ -11,7 +11,7 @@ import { config } from './config.js';
 import { db, kv, OWNER, withKvMemo } from './db.js';
 import { ensureIndexes } from './db-indexes.js';
 import { compressJson } from './http/compress.js';
-import { createSession, destroySession, sessionUser, rememberDevice, pauseDevice, forgetDevice, currentDeviceId, currentSessionId, trustIp, isLan, requireAuth, requireAdmin, clientIp, verifyLogin, createTicket, redeemTicket, userInfo, listUsers, listUsersFor, createUser, deleteUser, updateUser, setPassword, checkPassword, isAdmin, needsSetup, setupServer, serverName, setServerName, startTotpSetup, confirmTotpSetup, disableTotp, totpReadable, loginBlocked, loginFailed, loginSucceeded } from './auth.js';
+import { createSession, destroySession, sessionUser, rememberDevice, pauseDevice, forgetDevice, currentDeviceId, currentSessionId, trustIp, isLan, requireAuth, requireAdmin, clientIp, verifyLogin, createTicket, redeemTicket, userInfo, listUsers, listUsersFor, createUser, deleteUser, updateUser, setPassword, checkPassword, isAdmin, needsSetup, setupServer, serverName, setServerName, startTotpSetup, confirmTotpSetup, disableTotp, totpReadable, loginBlocked, loginFailed, loginSucceeded } from './auth/session.js';
 import * as integrations from './integrations.js';
 import { cfg, publicConfig, updateConfig, runRequest, userCfgSet, runAsUser } from './settings.js';
 import finansApi from './finans/routes.js';
@@ -47,7 +47,7 @@ import systemBackupApi, { startSystemBackupScheduler } from './system-backup.js'
 import ops51Api, { startOps51 } from './ops51.js'; // prompt 51 (OPS51): restic-backup 3-2-1, testet gjenoppretting, staging/tilbakerulling, DB-vedlikehold
 import smbBrowseApi from './smb-browse.js'; // prompt 30: SMB-veiviser (finn server, shares, mapper, test, lagre) – bare admin
 import calendarQuickApi from './calendar-quick.js'; // prompt 29: Kalender → rask time (AI-jobbkø)
-import { reauthHandler } from './reauth.js'; // prompt 31: POST /api/auth/reauth
+import { reauthHandler } from './auth/reauth.js'; // prompt 31: POST /api/auth/reauth
 import glimtMemoryApi from './glimt-memory.js'; // prompt 33: «Glimt husker» (alias per bruker)
 import { agentApi45 } from './glimt45/api.js'; // prompt 45: Glimt-motoren
 import { entitiesApi60 } from './convo60/api.js'; // prompt 60 (prompt 49 del 3): entitetsregisteret
@@ -80,13 +80,13 @@ import { logs44Api, startLogs44 } from './logs44.js';
 import { impersonation44, admin44Api, layoutLockMw44, setMobileApi44 } from './admin44.js';
 import { kal44Api, kalEventsMw44, assistLocalMw44 } from './kal44.js';
 import { study44Api } from './study44.js';
-import { auth44Api } from './auth44.js';
+import { auth44Api } from './auth/refresh.js';
 import { playback44Api, startPlayback44 } from './playback44.js';
 import { mountApi45 } from './api45.js'; // prompt 45 (SERVER45)
 import { nrkApi } from './nrkdl.js'; // NRK-nedlaster: /api/media/nrk/* (nrk-dl bak norsk VPN)
 import { yubalApi } from './yubal.js'; // Musikk: /api/media/yubal/* (yubal, YouTube Music → musikkbiblioteket)
 import { mountMedia50, startMedia50 } from './media50.js'; // prompt 50 (SRVMEDIA50): bilder med diskcache, sporing etter søk, diagnostikk
-import { mountSec51 } from './sec51.js'; // prompt 51 (SEC51): sikkerhet
+import { mountSec51 } from './auth/security.js'; // prompt 51 (SEC51): sikkerhet
 import { mountFamily50 } from './family50.js'; // prompt 50 (SRVFAM50): Steder med områder, Folk, Helse, I dag, Sjekk inn
 import { traceObs51, mountObs51, startObs51 } from './obs51/index.js'; // prompt 51 (OBS51): helsedashbord, selvreparasjon, spor, ntfy
 import { mountQa51, startQa51, reportServerError51 } from './qa51.js'; // prompt 51 (QA51): feature flags, krasjrapporter (GlitchTip), «Nytt i denne versjonen»

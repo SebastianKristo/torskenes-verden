@@ -6,7 +6,7 @@ import { join } from 'node:path';
 
 process.env.DATA_DIR = mkdtempSync(join(tmpdir(), 'fh-bk-'));
 process.env.SESSION_SECRET = 'test-secret-test-secret-test-secret-12';
-const { hashPassword } = await import('../server/password.js');
+const { hashPassword } = await import('../server/auth/password.js');
 process.env.APP_PASSWORD_HASH = hashPassword('testpassord1');
 const { writeXlsx, readXlsxSheets } = await import('../server/finans/xlsx.js');
 const { db, seal, unseal } = await import('../server/finans/db.js');

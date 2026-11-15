@@ -22,18 +22,18 @@ import { networkInterfaces } from 'node:os';
 import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import { db as fhDb } from './finans/db.js';
-import { kv, OWNER } from './db.js';
-import { config } from './config.js';
-import { sessionUser, userInfo, serverName, currentSessionId } from './auth.js';
-import { tokenAccessOf, issueToken, tokensById, revokeTokenOf, TOKEN_SCOPES } from './finans/routes.js';
-import { companionsOf, deviceName } from './kalender33.js';
-import { buildInfo } from './cache-bust.js';
-import { issueRefresh44 } from './auth44.js'; // prompt 44: refresh-token (90 d glidende, 60 s grace)
-import { lanUrls46, dropInternal46, publicUrl46, originOf46 } from './public-url46.js'; // prompt 46: aldri container-IP (172.18.0.3) som serveradresse
-import { serverUrls47 } from './server47.js';
+import { db as fhDb } from '../finans/db.js';
+import { kv, OWNER } from '../db.js';
+import { config } from '../config.js';
+import { sessionUser, userInfo, serverName, currentSessionId } from './session.js';
+import { tokenAccessOf, issueToken, tokensById, revokeTokenOf, TOKEN_SCOPES } from '../finans/routes.js';
+import { companionsOf, deviceName } from '../kalender33.js';
+import { buildInfo } from '../cache-bust.js';
+import { issueRefresh44 } from './refresh.js'; // prompt 44: refresh-token (90 d glidende, 60 s grace)
+import { lanUrls46, dropInternal46, publicUrl46, originOf46 } from './server-address.js'; // prompt 46: aldri container-IP (172.18.0.3) som serveradresse
+import { serverUrls47 } from '../server47.js';
 // prompt 47: standardadresser (os.smarthjemeksperten.no / 10.69.1.39:3000) og «Tilbakestill til standard»
-import { kvServer89 } from './domain89.js'; // prompt 89: lagret gammel standard (…experten.no) → os.smarthjemeksperten.no
+import { kvServer89 } from './default-domain.js'; // prompt 89: lagret gammel standard (…experten.no) → os.smarthjemeksperten.no
 
 fhDb.exec(`CREATE TABLE IF NOT EXISTS fh_app_codes (code_hash TEXT PRIMARY KEY, kind TEXT NOT NULL, user_id TEXT NOT NULL, client TEXT NOT NULL, redirect TEXT, challenge TEXT, scopes TEXT NOT NULL,
   expires_tok INTEGER, parent TEXT, created INTEGER NOT NULL, exp INTEGER NOT NULL, used INTEGER NOT NULL DEFAULT 0);`);

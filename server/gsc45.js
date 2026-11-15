@@ -15,7 +15,7 @@
 //   GET    /api/gsc (mellomvare) → + {auth:'oauth'|'service-account'|null, serviceAccount:{email, projectId}|null, lagDays:3, dataState:'all', reason?}
 //   POST   /api/gsc/site {domain, siteUrl} – siteUrl normaliseres før den gamle ruten tar over.
 import { Hono } from 'hono';
-import { userInfo, isAdmin, sessionUser } from './auth.js';
+import { userInfo, isAdmin, sessionUser } from './auth/session.js';
 import { bearerOk } from './finans/routes.js';
 import { kv } from './db.js';
 import { _gsc43 as G, gscApi } from './domains-glimt.js';

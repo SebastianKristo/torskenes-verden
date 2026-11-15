@@ -17,7 +17,7 @@ delete process.env.MOCK_DATA;
 delete process.env.UPDATE_REPO;
 delete process.env.UPDATE_BRANCH;
 delete process.env.OLLAMA_URL;
-const { hashPassword } = await import('../server/password.js');
+const { hashPassword } = await import('../server/auth/password.js');
 process.env.APP_PASSWORD_HASH = hashPassword('testpassord1');
 
 const realFetch = globalThis.fetch;

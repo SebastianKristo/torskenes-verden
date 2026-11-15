@@ -17,7 +17,7 @@ import { Hono } from 'hono';
 import { isIP } from 'node:net';
 import { lookup as dnsLookup } from 'node:dns/promises';
 import { db, kv, OWNER } from './db.js';
-import { isAdmin } from './auth.js';
+import { isAdmin } from './auth/session.js';
 import { _onIcsSet86, userCfg } from './settings.js';
 
 export const LOCAL_MSG86 = 'Lokale adresser må godkjennes av en administrator (Innstillinger → Sikkerhet).';

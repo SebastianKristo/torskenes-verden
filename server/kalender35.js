@@ -20,7 +20,7 @@ import { join } from 'node:path';
 import { db, kv } from './db.js';
 import { config } from './config.js';
 import { authOrToken } from './mobile.js';
-import { isAdmin } from './auth.js';
+import { isAdmin } from './auth/session.js';
 import { cfg, runAsUser } from './settings.js';
 import { cached } from './cache.js';
 import { addEventSource, typeOf } from './calendar.js';

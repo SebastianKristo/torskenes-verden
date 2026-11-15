@@ -1,5 +1,5 @@
 // Felles for Hjem, Matplan og Domener: tilgang (sesjon eller FinansHub-token) og en enkel JSON-AI-kall.
-import { sessionUser, isAdmin } from './auth.js';
+import { sessionUser, isAdmin } from './auth/session.js';
 import * as fh from './finans/routes.js';
 import { textJson } from './finans/ai.js';
 

@@ -13,7 +13,7 @@
 // Feil: 400 ugyldig, 403 ikke din avspilling, 404 avspillingen er borte, 409 avspilleren kan ikke fjernstyres, 429 for mange, 502 Plex/Jellyfin.
 import { Hono } from 'hono';
 import { kv, OWNER } from './db.js';
-import { isAdmin, userInfo, listUsers } from './auth.js';
+import { isAdmin, userInfo, listUsers } from './auth/session.js';
 import { authOrToken as authOrToken0 } from './mobile.js';
 import { mediaAllowed43 } from './media43.js';
 import { pb44 } from './playback44.js';

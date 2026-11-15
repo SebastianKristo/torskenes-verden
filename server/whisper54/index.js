@@ -8,7 +8,7 @@
 //   POST /api/admin/whisper54/test              → {ok, text, detected, ms, model, error?}
 import { Hono } from 'hono';
 import { authOrToken } from '../mobile.js';
-import { isAdmin } from '../auth.js';
+import { isAdmin } from '../auth/session.js';
 import { nbConfOut54, saveNbConf54 } from './config.js';
 import { nbHealthOut54, nbState54, probeNb54, startNbHealth54 } from './health.js';
 import { testNb54 } from './asr.js';

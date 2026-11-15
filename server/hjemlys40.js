@@ -22,7 +22,7 @@ import { Hono } from 'hono';
 import { randomUUID } from 'node:crypto';
 import { db, q, kv } from './db.js';
 import { authOrToken } from './mobile.js';
-import { userInfo, listUsers } from './auth.js';
+import { userInfo, listUsers } from './auth/session.js';
 import { notifyUser } from './notify.js';
 import { broadcast } from './realtime.js';
 import { osloDate } from './dates/oslo.js';

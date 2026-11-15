@@ -24,7 +24,7 @@ process.env.ABS_URL = 'http://abs.test:13378';
 process.env.ABS_TOKEN = 'abs-hemmelig-token-51';
 process.env.MEDFAM51_TRASH_DIR = join(MEDIA, 'papirkurv');
 process.env.MEDFAM51_PATH_MAP = `/data/media=${MEDIA}`;
-const { hashPassword } = await import('../server/password.js');
+const { hashPassword } = await import('../server/auth/password.js');
 process.env.APP_PASSWORD_HASH = hashPassword('testpassord1');
 const realFetch = globalThis.fetch;
 globalThis.fetch = async () => { throw new TypeError('fetch failed'); };

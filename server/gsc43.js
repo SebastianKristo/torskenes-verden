@@ -17,7 +17,7 @@
 //   GET|POST /api/gsc/test?siteUrl=|domain=   → samme for en eiendom (Innstillinger → Domener → Google Search Console → Test)
 import { Hono } from 'hono';
 import { db, q } from './db.js';
-import { sessionUser, userInfo, isAdmin } from './auth.js';
+import { sessionUser, userInfo, isAdmin } from './auth/session.js';
 import { bearerOk } from './finans/routes.js';
 import { domainNames } from './domains.js';
 import { _gsc43 as G, syncGsc, gscView } from './domains-glimt.js';

@@ -14,7 +14,7 @@ process.env.OCR_FALLBACK = '0';
 process.env.OLLAMA_URL = 'http://ollama.test:11434';
 delete process.env.OPENWEBUI_URL;
 delete process.env.OPENWEBUI_KEY;
-const { hashPassword } = await import('../server/password.js');
+const { hashPassword } = await import('../server/auth/password.js');
 process.env.APP_PASSWORD_HASH = hashPassword('testpassord1');
 
 const T = await import('../server/chat-tools41.js');

@@ -63,14 +63,14 @@ import { createGzip, createGunzip } from 'node:zlib';
 import Database from 'better-sqlite3';
 import { config } from './config.js';
 import { db, q, kv, OWNER, kvMemoReset } from './db.js';
-import { sessionUser, isAdmin, checkPassword, clientIp, loginBlocked, loginFailed, loginSucceeded } from './auth.js';
+import { sessionUser, isAdmin, checkPassword, clientIp, loginBlocked, loginFailed, loginSucceeded } from './auth/session.js';
 import { bearerOk } from './finans/routes.js';
 import { seal, unseal } from './finans/db.js';
 import { tarHeader, untar, encryptStream, decryptFile, ENC_MAGIC, ENC_HEAD, encKeyOf, smbRun, cdDirOf, parseSmbLs, localArg, normShare, splitShare, SMB_SEG, smbPutError, smbErrorText } from './finans/backup.js';
 import { settings as fhSettings, secret as fhSecret } from './finans/db.js';
 import { broadcast } from './realtime.js';
 import { parseChangelog } from './system-update.js';
-import { manifestSecret91, compareSecret91, cleanSecret91, rekeyDb91, rekeyMessages91 } from './secret91.js'; // prompt 91
+import { manifestSecret91, compareSecret91, cleanSecret91, rekeyDb91, rekeyMessages91 } from './auth/secret-rekey.js'; // prompt 91
 
 const DATA = resolve(config.dataDir);
 export const BACKUP_DIR = resolve(process.env.BACKUP_DIR || join(DATA, 'system-backups'));

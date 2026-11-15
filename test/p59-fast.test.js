@@ -17,7 +17,7 @@ process.env.OCR_FALLBACK = '0';
 process.env.OLLAMA_URL = 'http://ollama.p59:11434';
 process.env.FAST59_WARM = '1'; // oppvarmingen er ellers av i test
 for (const k of ['GEMINI_API_KEY', 'GROQ_API_KEY', 'MOCK_DATA', 'OPENWEBUI_URL', 'OPENWEBUI_KEY', 'OMLX_URL', 'OMLX_API_KEY']) delete process.env[k];
-const { hashPassword } = await import('../server/password.js');
+const { hashPassword } = await import('../server/auth/password.js');
 process.env.APP_PASSWORD_HASH = hashPassword('testpassord1');
 
 /* ---------------- Falsk Ollama ---------------- */

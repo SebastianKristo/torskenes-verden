@@ -33,7 +33,7 @@ import { randomBytes, randomUUID } from 'node:crypto';
 import { writeFileSync, rmSync, existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { config } from './config.js';
-import { sessionUser, isAdmin, clientIp, isLan } from './auth.js';
+import { sessionUser, isAdmin, clientIp, isLan } from './auth/session.js';
 import { bearerOk } from './finans/routes.js';
 import { saveSettings, setSecret, settings as fhSettings } from './finans/db.js';
 import { smbRun, smbCmdError, smbErrorText, smbConfig, parseSmbLs, localArg, SMB_SEG, SMB_SHARE, SMB_HOST, normShare, smbNameError } from './finans/backup.js';

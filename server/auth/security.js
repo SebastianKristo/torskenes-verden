@@ -14,22 +14,22 @@ import { createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypt
 import { existsSync, readdirSync, statSync, openSync, readSync, closeSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { getCookie, setCookie } from 'hono/cookie';
-import { db, kv, OWNER } from './db.js';
-import { config } from './config.js';
-import { sessionSecret86, secretStatus86 } from './secret86.js'; // prompt 86
+import { db, kv, OWNER } from '../db.js';
+import { config } from '../config.js';
+import { sessionSecret86, secretStatus86 } from './server-secret.js'; // prompt 86
 import { sessionUser, createSession, rememberDevice, currentDeviceId, currentSessionId, userInfo, listUsers, isAdmin, isLan, trustIp, viaCloudflare,
-  clientIp, checkPassword, cookieSecure, setAuthHook51 } from './auth.js';
-import { blocked51, fail51, clear51, list51, unlock51, onLock51, POLICY51 } from './ratelimit51.js';
-import { verifyRegistration51, verifyAssertion51, b64u, fromB64u } from './webauthn51.js';
-import { installLogGuard51, setSecretProvider51, ringsOf51, TOKEN_PATTERNS51, registerRing51 } from './logguard51.js';
-import { authOrToken } from './mobile.js';
-import { notifyUser } from './notify.js';
+  clientIp, checkPassword, cookieSecure, setAuthHook51 } from './session.js';
+import { blocked51, fail51, clear51, list51, unlock51, onLock51, POLICY51 } from './rate-limit.js';
+import { verifyRegistration51, verifyAssertion51, b64u, fromB64u } from './webauthn.js';
+import { installLogGuard51, setSecretProvider51, ringsOf51, TOKEN_PATTERNS51, registerRing51 } from './log-guard.js';
+import { authOrToken } from '../mobile.js';
+import { notifyUser } from '../notify.js';
 import { consumeReauth } from './reauth.js';
-import { deviceOf, _qr38 } from './qr38.js';
-import { issueToken, SCOPES as FH_SCOPES, tokenAccessOf } from './finans/routes.js';
-import { db as fhDb, secret as fhSecret, setSecret as fhSetSecret } from './finans/db.js';
-import { SCHEMA, cfg, updateConfig, userCfg, setUserCfg } from './settings.js';
-import { publicUrl46 } from './public-url46.js';
+import { deviceOf, _qr38 } from './qr-login.js';
+import { issueToken, SCOPES as FH_SCOPES, tokenAccessOf } from '../finans/routes.js';
+import { db as fhDb, secret as fhSecret, setSecret as fhSetSecret } from '../finans/db.js';
+import { SCHEMA, cfg, updateConfig, userCfg, setUserCfg } from '../settings.js';
+import { publicUrl46 } from './server-address.js';
 
 export { registerRing51 };
 installLogGuard51();
@@ -555,7 +555,7 @@ export async function logScan51({ docker = true, now = Date.now() } = {}) {
   let dockerState = 'skipped';
   if (docker && !MOCK()) {
     try {
-      const L = await import('./logs44.js');
+      const L = await import('../logs44.js');
       if (L.dockerAvailable44()) {
         const r = await L.queryLogs44({ since: '24h', limit: 5000 }, now);
         const by = new Map();

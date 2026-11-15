@@ -3,7 +3,7 @@
 import { createCipheriv, createDecipheriv, createHash, randomBytes, scryptSync } from 'node:crypto';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { config } from './config.js';
-import { sessionSecret86 } from './secret86.js'; // prompt 86
+import { sessionSecret86 } from './auth/server-secret.js'; // prompt 86
 import { kv, OWNER } from './db.js';
 import { clearCache } from './cache.js';
 

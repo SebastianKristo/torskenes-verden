@@ -15,7 +15,7 @@ process.env.OCR_FALLBACK = '0';
 delete process.env.OLLAMA_URL;
 delete process.env.GEMINI_API_KEY;
 for (const k of Object.keys(process.env)) if (k.startsWith('AI_HOST_') || k.startsWith('AI_GPU_')) delete process.env[k];
-const { hashPassword } = await import('../server/password.js');
+const { hashPassword } = await import('../server/auth/password.js');
 process.env.APP_PASSWORD_HASH = hashPassword('testpassord1');
 
 const realFetch = globalThis.fetch;
@@ -24,9 +24,9 @@ test.after(() => { globalThis.fetch = realFetch; });
 
 const { default: app } = await import('../server/index.js');
 const { db, kv } = await import('../server/db.js');
-const totp = await import('../server/totp.js');
-const auth = await import('../server/auth.js');
-const { _qr38 } = await import('../server/qr38.js');
+const totp = await import('../server/auth/totp.js');
+const auth = await import('../server/auth/session.js');
+const { _qr38 } = await import('../server/auth/qr-login.js');
 const b38 = await import('../server/brief38.js');
 const hw38 = await import('../server/aihw38.js');
 const ai = await import('../server/ai-run.js');

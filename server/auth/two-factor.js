@@ -12,9 +12,9 @@
 // POST /api/auth/2fa/disable {password|code} (= DELETE /api/auth/2fa) → {ok, enabled:false}
 // POST /api/auth/2fa/backup/regenerate {password|code|reauthToken} (= /backup-codes) → {ok, backupCodes:[10], backupLeft:10}
 import { Hono } from 'hono';
-import { db, kv } from './db.js';
-import { authOrToken } from './mobile.js';
-import { userInfo, checkPassword, checkSecondFactor, startTotpSetup, confirmTotpSetup, disableTotp, totpReadable, clientIp, loginBlocked, loginFailed, loginSucceeded, currentSessionId } from './auth.js';
+import { db, kv } from '../db.js';
+import { authOrToken } from '../mobile.js';
+import { userInfo, checkPassword, checkSecondFactor, startTotpSetup, confirmTotpSetup, disableTotp, totpReadable, clientIp, loginBlocked, loginFailed, loginSucceeded, currentSessionId } from './session.js';
 import { newRecoveryCodes, recoveryHash, STEP } from './totp.js';
 import { consumeReauth } from './reauth.js';
 

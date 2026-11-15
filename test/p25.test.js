@@ -14,7 +14,7 @@ process.env.USER_NAME = 'Sebastian';
 process.env.NODE_ENV = 'test';
 process.env.OCR_FALLBACK = '0';
 delete process.env.MOCK_DATA;
-const { hashPassword } = await import('../server/password.js');
+const { hashPassword } = await import('../server/auth/password.js');
 process.env.APP_PASSWORD_HASH = hashPassword('testpassord1');
 
 // Falsk Ollama på en ekte port: venter delayMs før første byte, og strømmer deretter tokens med gapMs mellom.

@@ -16,7 +16,7 @@
 import { chmodSync, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
 import { join } from 'node:path';
-import { config } from './config.js';
+import { config } from '../config.js';
 
 export const SECRET_FILE86 = 'session-secret';
 export const SECRET_HELP86 = 'Sett SESSION_SECRET i .env (lag en med: openssl rand -hex 32) og start serveren på nytt. NB: da blir alle logget ut, og lagrede integrasjonsnøkler må legges inn på nytt.';

@@ -9,7 +9,7 @@
 import WebSocket from 'ws';
 import { OWNER } from './db.js';
 import { cfg, runAsUser } from './settings.js';
-import { userInfo } from './auth.js';
+import { userInfo } from './auth/session.js';
 import { colorOf } from './family.js';
 
 const MOCK = () => process.env.MOCK_DATA === '1';

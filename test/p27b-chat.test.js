@@ -16,7 +16,7 @@ delete process.env.GROQ_API_KEY;
 delete process.env.MOCK_DATA;
 delete process.env.OPENWEBUI_URL;
 delete process.env.OPENWEBUI_KEY;
-const { hashPassword } = await import('../server/password.js');
+const { hashPassword } = await import('../server/auth/password.js');
 process.env.APP_PASSWORD_HASH = hashPassword('testpassord1');
 
 // Falsk nett: Ollama, Gemini og Open WebUI. Alle kall lagres.

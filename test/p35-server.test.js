@@ -18,7 +18,7 @@ delete process.env.OPENAI_API_KEY;
 delete process.env.ELEVENLABS_API_KEY;
 delete process.env.AZURE_SPEECH_KEY;
 delete process.env.AZURE_SPEECH_REGION;
-const { hashPassword } = await import('../server/password.js');
+const { hashPassword } = await import('../server/auth/password.js');
 process.env.APP_PASSWORD_HASH = hashPassword('testpassord1');
 
 const realFetch = globalThis.fetch;

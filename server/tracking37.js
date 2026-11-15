@@ -12,7 +12,7 @@
 // Kvote (ParcelsApp): felles teller per måned for husstanden + per bruker; med flere brukere kan én bruker bruke maks
 // perUserPct (standard 50 %) av kvoten.
 import { kv, OWNER, db } from './db.js';
-import { userInfo, listUsers, isAdmin } from './auth.js';
+import { userInfo, listUsers, isAdmin } from './auth/session.js';
 import { sealSecret, openSecret, userCfgOverride, activeUser } from './settings.js';
 
 export const PROVIDERS37 = [

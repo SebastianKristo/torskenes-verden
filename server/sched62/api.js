@@ -3,7 +3,7 @@
 // Alt per bruker (sesjon eller app-token).
 import { Hono } from 'hono';
 import { authOrToken } from '../mobile.js';
-import { isAdmin } from '../auth.js';
+import { isAdmin } from '../auth/session.js';
 import { sched62, serverSched62, userSched62, saveSched62, zone62, LABELS62, HELP62 } from './settings.js';
 import { SID62, rowOf62, rowsOf62, publicSchedule62, publicRun62, runsOf62, insertSchedule62, updateSchedule62, deleteSchedule62, nextOf62, KINDS62 } from './store.js';
 import { interpret62, builtinBriefs62, summaryOf62, BRIEF62 } from './task.js';

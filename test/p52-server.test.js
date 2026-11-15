@@ -30,7 +30,7 @@ writeFileSync(CL, `# Endringslogg
 - Annet.
 `);
 process.env.CHANGELOG_PATH = CL;
-const { hashPassword } = await import('../server/password.js');
+const { hashPassword } = await import('../server/auth/password.js');
 process.env.APP_PASSWORD_HASH = hashPassword('testpassord1');
 const realFetch = globalThis.fetch;
 globalThis.fetch = async () => { throw Object.assign(new TypeError('fetch failed'), { cause: { code: 'ENOTFOUND' } }); };

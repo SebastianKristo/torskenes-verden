@@ -20,7 +20,7 @@ process.env.PORT = '4652';
 delete process.env.OLLAMA_URL;
 delete process.env.GEMINI_API_KEY;
 for (const k of ['FERMION_NEUTRINO_URL', 'FERMION_NEUTRINO_KEY', 'FERMION_PHONON_URL', 'FERMION_PHONON_KEY', 'FERMION_PHONON_MODEL']) delete process.env[k];
-const { hashPassword } = await import('../server/password.js');
+const { hashPassword } = await import('../server/auth/password.js');
 process.env.APP_PASSWORD_HASH = hashPassword('testpassord1');
 const realFetch = globalThis.fetch;
 globalThis.fetch = async () => { throw new TypeError('fetch failed'); }; // ingenting annet skal ut

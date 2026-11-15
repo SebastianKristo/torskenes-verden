@@ -15,11 +15,11 @@ process.env.SKJOLD76_DEMO = '0';
 process.env.OCR_FALLBACK = '0';
 delete process.env.OLLAMA_URL;
 delete process.env.GEMINI_API_KEY;
-const { hashPassword } = await import('../server/password.js');
+const { hashPassword } = await import('../server/auth/password.js');
 process.env.APP_PASSWORD_HASH = hashPassword('testpassord1');
 
 const { default: app } = await import('../server/index.js');
-const auth = await import('../server/auth.js');
+const auth = await import('../server/auth/session.js');
 const P82 = await import('../server/skjold76/projects82.js');
 const G = await import('../server/skjold76/glimt.js');
 test.after(() => { try { rmSync(DATA, { recursive: true, force: true }); } catch { /* */ } });

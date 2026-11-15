@@ -13,7 +13,7 @@ import { config } from './config.js';
 import { kv, OWNER, db as hlDb } from './db.js';
 import { broadcast as rtBroadcast } from './realtime.js';
 import { aiJson } from './homeos-common.js';
-import { sessionUser, userInfo, serverName, isAdmin, installKind } from './auth.js';
+import { sessionUser, userInfo, serverName, isAdmin, installKind } from './auth/session.js';
 import { packagesFor } from './tracking.js';
 import { newsFor } from './rss.js';
 import finansApi, { bearerOk } from './finans/routes.js';

@@ -15,7 +15,7 @@ process.env.OCR_FALLBACK = '0';
 process.env.OLLAMA_URL = 'http://ollama.fake45:11434';
 delete process.env.MOCK_DATA;
 for (const k of ['GEMINI_API_KEY', 'GROQ_API_KEY', 'OLLAMA_MODEL', 'OLLAMA_TEXT_MODEL', 'OPENWEBUI_URL', 'AI_GPU_VRAM_GB']) delete process.env[k];
-const { hashPassword } = await import('../server/password.js');
+const { hashPassword } = await import('../server/auth/password.js');
 process.env.APP_PASSWORD_HASH = hashPassword('testpassord1');
 
 const fake = { models: ['qwen3:8b'], bodies: [] };

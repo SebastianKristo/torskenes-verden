@@ -15,7 +15,7 @@ import { db } from './db.js';
 import { keepUserWords46 } from './glimt45/tasks46.js'; // prompt 46: brukerens egne ord i titlene
 import { parseTask37 } from './tasks-glimt37.js';
 import { notifyUser } from './notify.js';
-import { userInfo } from './auth.js';
+import { userInfo } from './auth/session.js';
 
 const hasCol = (t, c) => db.prepare(`PRAGMA table_info(${t})`).all().some((x) => x.name === c);
 let migrated = false;

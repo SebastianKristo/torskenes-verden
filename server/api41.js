@@ -15,7 +15,7 @@
 import { Hono } from 'hono';
 import { kv } from './db.js';
 import { authOrToken as authOrToken0 } from './mobile.js';
-import { sessionUser } from './auth.js';
+import { sessionUser } from './auth/session.js';
 import { startJob41 } from './tasks-glimt41.js';
 import { ski41 } from './weather41.js';
 import { glimtSettingsOf } from './glimt35.js';
@@ -29,7 +29,7 @@ export { ruter41Api } from './ruter41.js';
 export { birthdays41Api } from './birthdays41.js';
 export { mai17Api } from './mai17-41.js';
 export { kalender41Api } from './kalender41.js';
-export { mountAuth41 } from './auth41.js';
+export { mountAuth41 } from './auth/app-login.js';
 
 /* ---------------- Huskeliste-alias ---------------- */
 // POST /api/huske/glimt-jobs {text, list?, origin?:'huske'|'home_search'} → 202 {job_id, jobId, placeholder}

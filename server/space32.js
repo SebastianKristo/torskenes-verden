@@ -24,7 +24,7 @@ import { kv, OWNER } from './db.js';
 import { config } from './config.js';
 import { cfg } from './settings.js';
 import { authOrToken } from './mobile.js';
-import { listUsers } from './auth.js';
+import { listUsers } from './auth/session.js';
 import { notifyUser } from './notify.js';
 
 const MOCK = process.env.MOCK_DATA === '1';

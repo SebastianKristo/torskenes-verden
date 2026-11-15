@@ -15,7 +15,7 @@ process.env.NODE_ENV = 'test';
 process.env.MOCK_DATA = '1';
 delete process.env.OLLAMA_URL;
 delete process.env.GEMINI_API_KEY;
-const { hashPassword } = await import('../server/password.js');
+const { hashPassword } = await import('../server/auth/password.js');
 process.env.APP_PASSWORD_HASH = hashPassword('testpassord1');
 const realFetch = globalThis.fetch;
 globalThis.fetch = async () => { throw new TypeError('fetch failed'); };
@@ -24,7 +24,7 @@ test.after(() => { globalThis.fetch = realFetch; });
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const { default: app } = await import('../server/index.js');
 const N = await import('../server/news73.js');
-const { createUser } = await import('../server/auth.js');
+const { createUser } = await import('../server/auth/session.js');
 
 let ipN = 20;
 async function req(path, { method = 'GET', headers = {}, body } = {}) {

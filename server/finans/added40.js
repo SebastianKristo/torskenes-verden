@@ -7,7 +7,7 @@
 // Additivt: nye kolonner created_by/created_via/updated_at/updated_by (+ tags på transaksjoner) og tabellen fh_tx_history40.
 // Eksisterende rader: tidspunktet er created (importtid for bankimport, opplastingstid for kvitteringer).
 import { db } from './db.js';
-import { userInfo } from '../auth.js';
+import { userInfo } from '../auth/session.js';
 
 const addCol = (t, col, def) => { if (!db.prepare(`PRAGMA table_info(${t})`).all().some((c) => c.name === col)) db.exec(`ALTER TABLE ${t} ADD COLUMN ${col} ${def}`); };
 for (const t of ['fh_transactions', 'fh_receipts']) { addCol(t, 'created_by', 'TEXT'); addCol(t, 'created_via', 'TEXT'); addCol(t, 'updated_at', 'INTEGER'); addCol(t, 'updated_by', 'TEXT'); }

@@ -75,7 +75,7 @@ import { randomBytes } from 'node:crypto';
 import { kv } from './db.js';
 import { db as fhDb } from './finans/db.js';
 import { authOrToken } from './mobile.js';
-import { sessionUser, userInfo } from './auth.js';
+import { sessionUser, userInfo } from './auth/session.js';
 import { broadcast } from './realtime.js';
 import { runAsUser } from './settings.js';
 import { cached } from './cache.js';

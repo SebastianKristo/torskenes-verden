@@ -7,7 +7,7 @@
 //     Sjekken venter aldri på at modellen lastes (den lastes i bakgrunnen).
 import { readFile, unlink } from 'node:fs/promises';
 import { db } from '../db.js';
-import { isAdmin, sessionUser } from '../auth.js';
+import { isAdmin, sessionUser } from '../auth/session.js';
 import { moderate53 } from './image.js';
 import { on53 } from './flags.js';
 

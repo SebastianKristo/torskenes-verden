@@ -19,7 +19,7 @@ process.env.MOCK_DATA = '1';
 process.env.OCR_FALLBACK = '0';
 process.env.OLLAMA_URL = 'http://ollama.p55:11434';
 for (const k of ['GEMINI_API_KEY', 'GROQ_API_KEY', 'MAC_OCR_KEY', 'MAC_OCR_URL', 'OPENWEBUI_URL', 'OPENWEBUI_KEY', 'OLLAMA_MODEL', 'OLLAMA_TEXT_MODEL']) delete process.env[k];
-const { hashPassword } = await import('../server/password.js');
+const { hashPassword } = await import('../server/auth/password.js');
 process.env.APP_PASSWORD_HASH = hashPassword('testpassord1');
 
 // Falskt nett: Ollama med llama3.2:3b, qwen3:8b og qwen2.5vl:7b installert. Alt annet feiler.

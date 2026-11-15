@@ -16,7 +16,7 @@ process.env.MOCK_DATA = '1';
 process.env.OCR_FALLBACK = '0';
 process.env.PORT = '4892';
 for (const k of ['OLLAMA_URL', 'GEMINI_API_KEY', 'DOCKER_HOST', 'ABS_URL', 'ABS_TOKEN', 'APNS_TEAM_ID', 'APNS_KEY_ID', 'APNS_P8', 'APNS_BUNDLE_ID', 'APNS_ENV']) delete process.env[k];
-const { hashPassword } = await import('../server/password.js');
+const { hashPassword } = await import('../server/auth/password.js');
 process.env.APP_PASSWORD_HASH = hashPassword('testpassord1');
 const realFetch = globalThis.fetch;
 globalThis.fetch = async () => { throw new TypeError('fetch failed'); };

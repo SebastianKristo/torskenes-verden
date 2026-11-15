@@ -21,7 +21,7 @@ import { Hono } from 'hono';
 import { randomBytes, timingSafeEqual, createHash } from 'node:crypto';
 import { kv, OWNER, db } from './db.js';
 import { config } from './config.js';
-import { userInfo } from './auth.js';
+import { userInfo } from './auth/session.js';
 import { userGuard, readJson, bad, str, num, MOCK, aiJson } from './homeos-common.js';
 import { activeUser, runAsUser } from './settings.js';
 import { mountRecipes, ensureDefaultFolders, folders, folderById, guessFolderId, allLinks, linksFor, removeDishData, HOUSEHOLD } from './mat-recipes.js';

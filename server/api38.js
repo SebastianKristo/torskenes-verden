@@ -4,7 +4,7 @@
 //   cards/auroraNotify i /api/glimt/settings                                                     → cards38.js (+ glimt35.js)
 //   AI-maskinen (server.hw, fit, recommend, tidsavbrudd) og /api/ai/routing?scope=finans        → aihw38.js (+ ai-api.js, ai-run.js)
 //   /api/domains/overview?all=1                                                                  → domains-glimt.js
-export { qrAuthApi, meSessionsApi, qrLinkHandler, preAuthTicket, qrAfter2fa, assetLinksHandler, appleAssociationHandler } from './qr38.js';
+export { qrAuthApi, meSessionsApi, qrLinkHandler, preAuthTicket, qrAfter2fa, assetLinksHandler, appleAssociationHandler } from './auth/qr-login.js';
 export { brief38Api } from './brief38.js';
 import { startBrief38 } from './brief38.js';
 

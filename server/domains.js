@@ -6,10 +6,10 @@ import { readFile } from 'node:fs/promises';
 import { connect } from 'node:tls';
 import { promises as dnsp } from 'node:dns';
 import { db, q } from './db.js';
-import { sessionSecret86 } from './secret86.js'; // prompt 86
+import { sessionSecret86 } from './auth/server-secret.js'; // prompt 86
 import { cfg } from './settings.js';
 import { cached, peek } from './cache.js';
-import * as auth from './auth.js';
+import * as auth from './auth/session.js';
 import * as fh from './finans/routes.js';
 import { guard, MOCK, readJson, str } from './homeos-common.js';
 import { osloDate } from './dates/oslo.js';

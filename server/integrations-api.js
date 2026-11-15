@@ -17,7 +17,7 @@ import { kv, OWNER } from './db.js';
 import { cfg, updateConfig, userCfg, userCfgOverride, setUserCfg, runAsUser, SCHEMA } from './settings.js';
 import { testCalendars } from './calendar.js';
 import { calendarLinks } from './birthdays.js';
-import { isAdmin, sessionUser, userInfo } from './auth.js';
+import { isAdmin, sessionUser, userInfo } from './auth/session.js';
 import { bearerOk } from './finans/routes.js';
 import { authOrToken } from './mobile.js';
 import { secret, setSecret, settings, saveSettings, DEFAULT_SETTINGS } from './finans/db.js';

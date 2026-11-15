@@ -9,7 +9,7 @@ setOverrides(kv.get(OWNER, 'logo_overrides', {}));
 const DOMAIN_RE = /^(?=.{3,120}$)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/;
 // Innlogging sjekkes her fordi rutene monteres før FinansHubs egen tilgangskontroll. Dynamisk import unngår en importsirkel.
 async function adminOnly(c) {
-  const [{ bearerOk }, { isAdmin }] = await Promise.all([import('../finans/routes.js'), import('../auth.js')]);
+  const [{ bearerOk }, { isAdmin }] = await Promise.all([import('../finans/routes.js'), import('../auth/session.js')]);
   if (!bearerOk(c, 'finance:read')) return c.json({ error: 'Ikke innlogget' }, 401);
   if (!isAdmin(c.get('user'))) return c.json({ error: 'Bare administratorer kan velge logo' }, 403);
   return null;

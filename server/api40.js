@@ -18,9 +18,9 @@ import { afterDone40, migrate40 } from './tasks-glimt40.js';
 import { db } from './db.js';
 import { startHjemlys40 } from './hjemlys40.js';
 import { startHungSweeper } from './ai-run.js';
-import { sessionUser } from './auth.js';
+import { sessionUser } from './auth/session.js';
 
-export { twofa40Api } from './auth40.js';
+export { twofa40Api } from './auth/two-factor.js';
 export { finans40Api } from './finans/p40.js';
 export { news40Api, newsDigestApi } from './news40.js';
 export { hjemlys40Api } from './hjemlys40.js';

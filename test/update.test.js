@@ -14,7 +14,7 @@ process.env.NODE_ENV = 'test';
 delete process.env.MOCK_DATA;
 delete process.env.UPDATE_REPO;
 delete process.env.UPDATE_BRANCH;
-const { hashPassword } = await import('../server/password.js');
+const { hashPassword } = await import('../server/auth/password.js');
 process.env.APP_PASSWORD_HASH = hashPassword('testpassord1');
 const { default: app } = await import('../server/index.js');
 const su = await import('../server/system-update.js');

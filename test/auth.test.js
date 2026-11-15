@@ -7,9 +7,9 @@ import { join } from 'node:path';
 process.env.DATA_DIR = mkdtempSync(join(tmpdir(), 'hl-auth-'));
 process.env.SESSION_SECRET = 'testsecret-testsecret-testsecret-12';
 process.env.USER_NAME = 'Sebastian';
-process.env.APP_PASSWORD_HASH = (await import('../server/password.js')).hashPassword('eierpassord1');
-const totp = await import('../server/totp.js');
-const auth = await import('../server/auth.js');
+process.env.APP_PASSWORD_HASH = (await import('../server/auth/password.js')).hashPassword('eierpassord1');
+const totp = await import('../server/auth/totp.js');
+const auth = await import('../server/auth/session.js');
 const { db } = await import('../server/db.js');
 
 test('HOTP/TOTP stemmer med testvektorene i RFC 6238', () => {

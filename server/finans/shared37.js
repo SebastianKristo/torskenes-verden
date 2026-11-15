@@ -7,7 +7,7 @@
 // PUT  /finans/api/subscriptions/:id/members {members:[userId], split?, payerId?} (eier/betaler) → abonnementet
 // POST /finans/api/subscriptions/:id/leave (medlem) → {ok}
 import { db, q } from './db.js';
-import { userInfo } from '../auth.js';
+import { userInfo } from '../auth/session.js';
 import { perMonth } from './cycles.js';
 
 db.exec('CREATE TABLE IF NOT EXISTS subscription_members (sub_id INTEGER NOT NULL, user_id TEXT NOT NULL, added INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (sub_id, user_id))');

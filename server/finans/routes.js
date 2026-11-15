@@ -25,10 +25,10 @@ import { parseFile } from './importer.js';
 import { importRows, splitRows, listTemplates, deleteTemplate } from './import-templates.js';
 import { parseFinnEmail } from './finn.js';
 import { mountFinn, mountFinnImport, linkMail, attachParsed, codesIn } from './finn-routes.js';
-import { sessionUser, clientIp, verifyLogin, userInfo, listUsers } from '../auth.js';
-import * as auth from '../auth.js';
+import { sessionUser, clientIp, verifyLogin, userInfo, listUsers } from '../auth/session.js';
+import * as auth from '../auth/session.js';
 import { config } from '../config.js';
-import { sessionSecret86 } from '../secret86.js'; // prompt 86
+import { sessionSecret86 } from '../auth/server-secret.js'; // prompt 86
 import { kv } from '../db.js';
 import { stocks, resetStocks, t212Configured, t212Base, cleanCred, testT212 } from './stocks.js';
 import { answer as aiAnswer, plainSearch, suggestionGroups, AiUnavailable, isSimpleQuery } from './search.js';

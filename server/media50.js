@@ -18,9 +18,9 @@ import { spawn } from 'node:child_process';
 import { mkdir, readFile, writeFile, rename, readdir, unlink, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { config } from './config.js';
-import { sessionSecret86 } from './secret86.js'; // prompt 86
+import { sessionSecret86 } from './auth/server-secret.js'; // prompt 86
 import { authOrToken } from './mobile.js';
-import { isAdmin, userInfo } from './auth.js';
+import { isAdmin, userInfo } from './auth/session.js';
 import * as M from './media43.js';
 import { rgbaToThumbHash50, thumbHashB64_50 } from './thumbhash50.js';
 import { dtf } from './intl-format.js'; // gjenbrukte Intl.DateTimeFormat

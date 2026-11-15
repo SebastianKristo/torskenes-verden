@@ -23,7 +23,7 @@ process.env.INSIDE_DOCKER = '1';
 process.env.OLLAMA_URL = 'http://ollama.test:11434';
 process.env.OLLAMA_MODEL = 'qwen2.5vl:7b';
 for (const k of ['GEMINI_API_KEY', 'GROQ_API_KEY', 'MAC_OCR_KEY', 'MAC_OCR_URL', 'OPENWEBUI_URL', 'OPENWEBUI_KEY']) delete process.env[k];
-const { hashPassword } = await import('../server/password.js');
+const { hashPassword } = await import('../server/auth/password.js');
 process.env.APP_PASSWORD_HASH = hashPassword('testpassord1');
 
 const MAC_KEY = 'b'.repeat(64);

@@ -36,7 +36,7 @@ import { Hono } from 'hono';
 import { streamSSE } from 'hono/streaming';
 import { randomUUID } from 'node:crypto';
 import { kv, OWNER } from './db.js';
-import { isAdmin, sessionUser } from './auth.js';
+import { isAdmin, sessionUser } from './auth/session.js';
 import { tokenAccessOf } from './finans/routes.js';
 import { authOrToken } from './mobile.js';
 import { userCfgSet } from './settings.js';

@@ -9,7 +9,7 @@ process.env.DATA_DIR = mkdtempSync(join(tmpdir(), 'hl-unbook-'));
 process.env.SESSION_SECRET = 'test-secret-test-secret-test-secret-12';
 process.env.USER_NAME = 'Sebastian';
 delete process.env.MOCK_DATA;
-const { hashPassword } = await import('../server/password.js');
+const { hashPassword } = await import('../server/auth/password.js');
 process.env.APP_PASSWORD_HASH = hashPassword('testpassord1');
 const { db } = await import('../server/db.js');
 const { default: fin } = await import('../server/finans/routes.js');

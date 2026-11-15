@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'node:crypto';
 import { db, q, OWNER, kv } from '../db.js';
 import { config } from '../config.js';
-import { sessionSecret86 } from '../secret86.js'; // prompt 86
+import { sessionSecret86 } from '../auth/server-secret.js'; // prompt 86
 import { currentUser, userCfg, userCfgSet, setUserCfg } from '../settings.js';
 
 // ISO2: regnskapet er per bruker. me() = brukeren i denne forespørselen/jobben (routes.js kjører hver forespørsel i

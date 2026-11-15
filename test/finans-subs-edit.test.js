@@ -7,7 +7,7 @@ import { join } from 'node:path';
 process.env.DATA_DIR = mkdtempSync(join(tmpdir(), 'fh-subed-'));
 process.env.SESSION_SECRET = 'test-secret-test-secret-test-secret-12';
 process.env.OLLAMA_URL = 'http://127.0.0.1:9';
-const { hashPassword } = await import('../server/password.js');
+const { hashPassword } = await import('../server/auth/password.js');
 process.env.APP_PASSWORD_HASH = hashPassword('testpassord1');
 const R = await import('../server/finans/routes.js');
 const api = R.default;

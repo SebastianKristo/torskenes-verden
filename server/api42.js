@@ -9,7 +9,7 @@
 //   Fanelinje: homeButton i /api/me/layout                                                                                    → mobile.js
 import { Hono } from 'hono';
 import { db } from './db.js';
-import { isAdmin } from './auth.js';
+import { isAdmin } from './auth/session.js';
 import { authOrToken as authOrToken0 } from './mobile.js';
 import { end40, sessionOut40 } from './hjemlys40.js';
 import { glimtLog42 } from './tasks-glimt42.js';

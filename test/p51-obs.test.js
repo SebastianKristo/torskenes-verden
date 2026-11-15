@@ -17,7 +17,7 @@ delete process.env.OLLAMA_URL;
 delete process.env.GEMINI_API_KEY;
 delete process.env.DOCKER_HOST;
 delete process.env.NTFY_URL;
-const { hashPassword } = await import('../server/password.js');
+const { hashPassword } = await import('../server/auth/password.js');
 process.env.APP_PASSWORD_HASH = hashPassword('testpassord1');
 const realFetch = globalThis.fetch;
 const extCalls = [];

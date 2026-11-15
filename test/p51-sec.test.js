@@ -18,7 +18,7 @@ process.env.PUBLIC_URL = 'https://os.example.no';
 process.env.TEST51_API_KEY = 'testnokkel-51-abcdefghijklmnop';
 delete process.env.OLLAMA_URL;
 delete process.env.GEMINI_API_KEY;
-const { hashPassword } = await import('../server/password.js');
+const { hashPassword } = await import('../server/auth/password.js');
 process.env.APP_PASSWORD_HASH = hashPassword('testpassord1');
 const realFetch = globalThis.fetch;
 globalThis.fetch = async () => { throw new TypeError('fetch failed'); };
@@ -26,11 +26,11 @@ test.after(() => { globalThis.fetch = realFetch; });
 
 const { default: app } = await import('../server/index.js');
 const { db, kv, OWNER } = await import('../server/db.js');
-const auth = await import('../server/auth.js');
-const rl = await import('../server/ratelimit51.js');
-const sec = await import('../server/sec51.js');
-const wa = await import('../server/webauthn51.js');
-const guard = await import('../server/logguard51.js');
+const auth = await import('../server/auth/session.js');
+const rl = await import('../server/auth/rate-limit.js');
+const sec = await import('../server/auth/security.js');
+const wa = await import('../server/auth/webauthn.js');
+const guard = await import('../server/auth/log-guard.js');
 const settings = await import('../server/settings.js');
 
 const LAN = { incoming: { socket: { remoteAddress: '192.168.1.20' } } };

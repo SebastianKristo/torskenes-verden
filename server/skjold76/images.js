@@ -5,7 +5,7 @@ import { mkdirSync, writeFileSync, readFileSync, existsSync, unlinkSync } from '
 import { join, resolve } from 'node:path';
 import { randomBytes, createHmac, timingSafeEqual } from 'node:crypto';
 import { config } from '../config.js';
-import { sessionSecret86 } from '../secret86.js'; // prompt 86
+import { sessionSecret86 } from '../auth/server-secret.js'; // prompt 86
 import { db, q } from '../db.js';
 import { toJpeg50, sniffImage50, magick50 } from '../img50.js';
 import { now76, thumbOf76 } from './store.js';

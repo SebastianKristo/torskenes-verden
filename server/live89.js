@@ -20,7 +20,7 @@
 import { Hono } from 'hono';
 import { createHash } from 'node:crypto';
 import { db, q, kv } from './db.js';
-import { isAdmin } from './auth.js';
+import { isAdmin } from './auth/session.js';
 import { authOrToken } from './mobile.js';
 import { runAsUser } from './settings.js';
 import { mediaAllowed43, torrentsOut43, torrentAction43 } from './media43.js';

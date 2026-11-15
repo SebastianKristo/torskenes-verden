@@ -24,7 +24,7 @@
 import { Hono } from 'hono';
 import { readFileSync } from 'node:fs';
 import { db, q } from './db.js';
-import { userInfo, listUsers, isAdmin } from './auth.js';
+import { userInfo, listUsers, isAdmin } from './auth/session.js';
 import { authOrToken } from './mobile.js';
 import { dtf } from './intl-format.js'; // gjenbrukte Intl.DateTimeFormat
 

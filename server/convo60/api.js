@@ -5,7 +5,7 @@
 // Alt per bruker (sesjon eller app-token).
 import { Hono } from 'hono';
 import { authOrToken } from '../mobile.js';
-import { isAdmin } from '../auth.js';
+import { isAdmin } from '../auth/session.js';
 import { convo60, serverConvo60, userConvo60, saveConvo60, LABELS60, HELP60 } from './settings.js';
 import { CONV_RE60, TTL60, loadState60, clearState60 } from './state.js';
 import { listEntities60, publicEntity60, createEntity60, patchEntity60, deleteEntity60, resolveEntity60, ETYPES60, ELABELS60, BUILTIN60 } from './entities.js';

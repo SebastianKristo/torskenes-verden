@@ -7,7 +7,7 @@
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'node:crypto';
 import { deflateSync } from 'node:zlib';
 import { config } from '../config.js';
-import { sessionSecret86 } from '../secret86.js'; // prompt 86
+import { sessionSecret86 } from '../auth/server-secret.js'; // prompt 86
 import { cfg } from '../settings.js';
 import { guardedGet73 } from '../news73.js';
 import { sniffImage50, magick50, toJpeg50 } from '../img50.js';

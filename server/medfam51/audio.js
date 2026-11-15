@@ -3,7 +3,7 @@
 // Tokenet sendes aldri til klienten: omslag går via /api/media51/audio/cover/:id. «Fortsett der du slapp» per familiemedlem: brukeren
 // kobles til en Audiobookshelf-bruker med samme brukernavn, eller valgt selv (PUT /api/media51/audio/me {absUser}).
 import { kv } from '../db.js';
-import { userInfo } from '../auth.js';
+import { userInfo } from '../auth/session.js';
 import { MOCK, DAY, getJson, errText, serviceUrl, minText, clean } from './common.js';
 
 export const absConf51 = () => ({ url: serviceUrl('ABS_URL'), token: String(process.env.ABS_TOKEN ?? '').trim(), publicUrl: serviceUrl('ABS_PUBLIC_URL') });

@@ -20,7 +20,7 @@
 import { Hono } from 'hono';
 import { createHash, randomBytes } from 'node:crypto';
 import { authOrToken } from './mobile.js';
-import { isAdmin } from './auth.js';
+import { isAdmin } from './auth/session.js';
 import { kv, OWNER } from './db.js';
 import * as ai from './ai-run.js';
 import { envHw, hostHw, fit38 } from './aihw38.js';

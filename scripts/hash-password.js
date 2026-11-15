@@ -1,6 +1,6 @@
 // Bruk: npm run hash-password -- 'mitt passord'   (eller uten argument for å bli spurt)
 import { createInterface } from 'node:readline/promises';
-import { hashPassword } from '../server/password.js';
+import { hashPassword } from '../server/auth/password.js';
 
 let pw = process.argv[2];
 if (!pw) {

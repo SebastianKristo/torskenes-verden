@@ -13,7 +13,7 @@ import { Hono } from 'hono';
 import { randomUUID } from 'node:crypto';
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { sessionUser, isAdmin } from './auth.js';
+import { sessionUser, isAdmin } from './auth/session.js';
 import { bearerOk } from './finans/routes.js';
 import { updaterAvailable, readStatus, _paths } from './system-update.js';
 import { dockerTarget45, SETUP44, _resetDockerTarget45 } from './logs44.js';

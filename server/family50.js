@@ -7,7 +7,7 @@
 // innsjekken, og bare med mottakerne (og avsenderen). Ingen kontinuerlig deling. Eldre /api/family-endepunkter er urørt.
 import { Hono } from 'hono';
 import { db, q, kv } from './db.js';
-import { userInfo, sessionUser } from './auth.js';
+import { userInfo, sessionUser } from './auth/session.js';
 import { bearerOk } from './finans/routes.js';
 import { broadcast } from './realtime.js';
 import { notifyUser } from './notify.js';

@@ -20,7 +20,7 @@
 // går lokalt med en gang. Data: huske_glimt_src (id, user_id, text, created_at, engine, item_ids, …), hl_tasks.src_id. Siste 60 per bruker.
 import { randomBytes } from 'node:crypto';
 import { db, q } from './db.js';
-import { userInfo, listUsers } from './auth.js';
+import { userInfo, listUsers } from './auth/session.js';
 import { broadcast } from './realtime.js';
 import { notifyUser } from './notify.js';
 import { imperative40, validateAi40, migrate40 } from './tasks-glimt40.js';

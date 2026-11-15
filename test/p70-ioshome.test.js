@@ -78,7 +78,7 @@ test('serveren beholder pages.hjem.sz (order, hidden og sz lagres sammen)', asyn
   process.env.USER_NAME = 'Sebastian';
   process.env.MOCK_DATA = '1';
   process.env.OLLAMA_URL = 'http://127.0.0.1:9';
-  const { hashPassword } = await import('../server/password.js');
+  const { hashPassword } = await import('../server/auth/password.js');
   process.env.APP_PASSWORD_HASH = hashPassword('testpassord1');
   const { default: fin } = await import('../server/finans/routes.js');
   const { default: mobile } = await import('../server/mobile.js');

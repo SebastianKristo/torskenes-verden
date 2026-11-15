@@ -3,7 +3,7 @@
 // Rangeringen er regler i koden (forklaringen per forslag bygges herfra); den lokale modellen brukes BARE til å formulere teksten
 // (ai-run med localOnly – aldri skyen), og forslagene virker likt uten modell.
 import { db, q, kv } from '../db.js';
-import { userInfo } from '../auth.js';
+import { userInfo } from '../auth/session.js';
 import { family50 as F } from '../family.js';
 import * as M from '../media43.js';
 import { run as aiRun } from '../ai-run.js';

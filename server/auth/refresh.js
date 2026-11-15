@@ -11,9 +11,9 @@
 //        «kal.app event=… ms=… reason=… platform=… user=…» i Docker-loggen.
 import { Hono } from 'hono';
 import { createHash, randomBytes } from 'node:crypto';
-import { db as fhDb, q } from './finans/db.js';
-import { userInfo, clientIp } from './auth.js';
-import { issueToken, revokeTokenOf, tokenAccessOf } from './finans/routes.js';
+import { db as fhDb, q } from '../finans/db.js';
+import { userInfo, clientIp } from './session.js';
+import { issueToken, revokeTokenOf, tokenAccessOf } from '../finans/routes.js';
 
 fhDb.exec(`CREATE TABLE IF NOT EXISTS fh_refresh44 (hash TEXT PRIMARY KEY, user_id TEXT NOT NULL, app TEXT NOT NULL, device TEXT NOT NULL, token_id TEXT NOT NULL, scopes TEXT NOT NULL,
   family TEXT NOT NULL, created INTEGER NOT NULL, expires INTEGER NOT NULL, used INTEGER, replaced_by TEXT);`);

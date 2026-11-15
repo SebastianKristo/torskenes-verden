@@ -9,7 +9,7 @@
 //   Familie-svar (mellomvare): health får source:'ha:<enhet>', sourceDevice, sourceText:'Fra Home Assistant · OnePlus 12 · oppdatert 2 min siden', limited, stale, staleText.
 import { Hono } from 'hono';
 import { db, q, kv, OWNER } from './db.js';
-import { userInfo, listUsers, isAdmin, sessionUser } from './auth.js';
+import { userInfo, listUsers, isAdmin, sessionUser } from './auth/session.js';
 import { cfg, runAsUser } from './settings.js';
 import { bearerOk } from './finans/routes.js';
 import { osloDate } from './dates/oslo.js';

@@ -23,7 +23,7 @@ import { dirname, isAbsolute, join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import Database from 'better-sqlite3';
 import { config } from './config.js';
-import { sessionSecret86 } from './secret86.js'; // prompt 86
+import { sessionSecret86 } from './auth/server-secret.js'; // prompt 86
 import { db, q, kv, OWNER } from './db.js';
 import { seal, unseal } from './finans/db.js';
 import { dbFiles51, integrityOf51 } from './dbmaint51.js';

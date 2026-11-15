@@ -15,7 +15,7 @@ process.env.PORT = process.env.E2E_PORT || '4605';
 delete process.env.OLLAMA_URL;
 delete process.env.GEMINI_API_KEY;
 delete process.env.GLITCHTIP_DSN;
-const { hashPassword } = await import('../../server/password.js');
+const { hashPassword } = await import('../../server/auth/password.js');
 // Prompt 90: E2E_FRESH=1 gir en helt ny installasjon (ingen brukere, førstegangsoppsettet vises på /login).
 if (process.env.E2E_FRESH === '1') delete process.env.APP_PASSWORD_HASH;
 else process.env.APP_PASSWORD_HASH = hashPassword(process.env.E2E_PASSWORD || 'testpassord1');

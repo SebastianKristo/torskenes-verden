@@ -19,7 +19,7 @@ process.env.OCR_FALLBACK = '0';
 delete process.env.OLLAMA_URL;
 delete process.env.GEMINI_API_KEY;
 delete process.env.SEARXNG_URL;
-const { hashPassword } = await import('../server/password.js');
+const { hashPassword } = await import('../server/auth/password.js');
 process.env.APP_PASSWORD_HASH = hashPassword('testpassord1');
 const realFetch = globalThis.fetch;
 globalThis.fetch = async () => { throw new TypeError('fetch failed'); };
@@ -27,7 +27,7 @@ test.after(() => { globalThis.fetch = realFetch; try { rmSync(DATA, { recursive:
 
 const { default: app } = await import('../server/index.js');
 const { db } = await import('../server/db.js');
-const auth = await import('../server/auth.js');
+const auth = await import('../server/auth/session.js');
 const D = await import('../server/skjold76/decode77.js');
 const AI = await import('../server/skjold76/ai77.js');
 const IM = await import('../server/skjold76/images77.js');

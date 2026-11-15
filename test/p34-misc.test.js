@@ -14,7 +14,7 @@ process.env.MOCK_DATA = '1';
 process.env.OCR_FALLBACK = '0';
 delete process.env.OLLAMA_URL;
 delete process.env.GEMINI_API_KEY;
-const { hashPassword } = await import('../server/password.js');
+const { hashPassword } = await import('../server/auth/password.js');
 process.env.APP_PASSWORD_HASH = hashPassword('testpassord1');
 
 // Falsk Ollama for kvitteringslesingen (127.0.0.1:9). gate holder svaret tilbake så «analyseres av AI» kan sees.

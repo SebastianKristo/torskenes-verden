@@ -8,7 +8,7 @@ import { join } from 'node:path';
 import { bodyLimit } from 'hono/body-limit';
 import { config } from './config.js';
 import { db, q, kv, OWNER } from './db.js';
-import { userInfo, listUsers, sessionUser } from './auth.js';
+import { userInfo, listUsers, sessionUser } from './auth/session.js';
 import { bearerOk } from './finans/routes.js';
 import { broadcast } from './realtime.js';
 import { dtf } from './intl-format.js'; // gjenbrukte Intl.DateTimeFormat

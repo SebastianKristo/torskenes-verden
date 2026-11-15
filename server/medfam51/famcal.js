@@ -4,7 +4,7 @@
 // påminnelse før avreise. Ruter-forslaget kommer fra ruter41.js (Entur) mellom hjemmet i Familie › Steder og stedet på hendelsen.
 // Hendelsene vises også i Kalender (egen kilde «Familiekalender»). API-formene står i SERVER51-API.md (seksjon MEDFAM51).
 import { db, q, kv } from '../db.js';
-import { isAdmin } from '../auth.js';
+import { isAdmin } from '../auth/session.js';
 import { notifyUser } from '../notify.js';
 import { family50 as F } from '../family.js';
 import { tripBetween51 } from '../ruter41.js';

@@ -37,7 +37,7 @@ for (const k of ['PLEX_TOKEN', 'PLEX_URL', 'SCHOOL_ICAL_URL', 'TRADING212_API_KE
   old.close();
 }
 
-const { hashPassword } = await import('../server/password.js');
+const { hashPassword } = await import('../server/auth/password.js');
 process.env.APP_PASSWORD_HASH = hashPassword('testpassord1');
 const { default: app } = await import('../server/index.js');
 const { db, kv, OWNER } = await import('../server/db.js');

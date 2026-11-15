@@ -47,7 +47,7 @@ const realFetch = globalThis.fetch;
 globalThis.fetch = fake;
 test.after(() => { globalThis.fetch = realFetch; });
 
-const { hashPassword } = await import('../server/password.js');
+const { hashPassword } = await import('../server/auth/password.js');
 process.env.APP_PASSWORD_HASH = hashPassword('testpassord1');
 const { default: app } = await import('../server/index.js');
 const ai = await import('../server/ai-run.js');

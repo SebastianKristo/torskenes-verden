@@ -23,7 +23,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { inflateSync } from 'node:zlib';
 import { config } from './config.js';
-import { sessionSecret86 } from './secret86.js'; // prompt 86
+import { sessionSecret86 } from './auth/server-secret.js'; // prompt 86
 import { db, q, kv } from './db.js';
 import { authOrToken } from './mobile.js';
 import { ocrTools } from './ocr-fallback.js';

@@ -16,7 +16,7 @@ process.env.MOCK_DATA = '1';
 delete process.env.OLLAMA_URL;
 delete process.env.GEMINI_API_KEY;
 delete process.env.DAL53_AUTOLOAD;
-const { hashPassword } = await import('../server/password.js');
+const { hashPassword } = await import('../server/auth/password.js');
 process.env.APP_PASSWORD_HASH = hashPassword('testpassord1');
 const realFetch = globalThis.fetch;
 globalThis.fetch = async () => { throw Object.assign(new TypeError('fetch failed'), { cause: { code: 'ENOTFOUND' } }); };

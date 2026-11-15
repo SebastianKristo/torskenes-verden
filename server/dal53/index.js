@@ -15,7 +15,7 @@ import { Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import { readFile } from 'node:fs/promises';
 import { authOrToken } from '../mobile.js';
-import { isAdmin } from '../auth.js';
+import { isAdmin } from '../auth/session.js';
 import { languageOf } from '../mobile.js';
 import { MODELS53, health53, load53, CREDIT53 } from './models.js';
 import { FLAGS53, on53 } from './flags.js';

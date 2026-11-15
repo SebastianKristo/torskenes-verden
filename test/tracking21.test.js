@@ -14,7 +14,7 @@ process.env.USER_NAME = 'Sebastian';
 process.env.LOGO_FILES_DIR = mkdtempSync(join(tmpdir(), 'hl-trk21-logos-'));
 cpSync(new URL('../server/logos/files', import.meta.url), process.env.LOGO_FILES_DIR, { recursive: true, filter: (src) => !/[\\/]manuell([\\/]|$)/.test(src) });
 delete process.env.MOCK_DATA;
-const { hashPassword } = await import('../server/password.js');
+const { hashPassword } = await import('../server/auth/password.js');
 process.env.APP_PASSWORD_HASH = hashPassword('testpassord1');
 const { db } = await import('../server/db.js');
 const { default: fin } = await import('../server/finans/routes.js');

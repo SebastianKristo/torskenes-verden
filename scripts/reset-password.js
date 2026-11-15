@@ -1,7 +1,7 @@
 // Nødvei hvis du er utestengt: setter nytt passord for en bruker og slår av 2FA.
 // Bruk (på serveren, med samme DATA_DIR som appen): npm run reset-password -- brukernavn ['nytt passord']
 import { createInterface } from 'node:readline/promises';
-import { listUsers, setPassword, updateUser } from '../server/auth.js';
+import { listUsers, setPassword, updateUser } from '../server/auth/session.js';
 
 const [username, arg] = process.argv.slice(2);
 const user = listUsers().find((u) => u.username === String(username ?? '').toLowerCase());

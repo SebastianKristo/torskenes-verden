@@ -8,7 +8,7 @@
 // app-token. Ellers stoppes den ved 1 MB med 413. Vanlige forespørsler (opp til 1 MB) berøres ikke, og innloggingen sjekkes
 // bare her når kroppen faktisk er stor – rutene gjør sin egen tilgangskontroll akkurat som før.
 import { bodyLimit } from 'hono/body-limit';
-import { sessionUser } from './auth.js';
+import { sessionUser } from './auth/session.js';
 import { tokenAccessOf } from './finans/routes.js';
 
 export const ANON_BODY_MAX85 = 1024 * 1024;

@@ -21,7 +21,7 @@
 // Samtaleinnstillinger (chat.settings): persona, system, temperature, topP, numCtx, theme, skipCloudAsk og think (av som
 // standard; på → Ollama får think:true, av → think:false, se server/ollama-opts.js).
 import { Hono } from 'hono';
-import { originOf46 } from './public-url46.js'; // prompt 46 (SERVER46)
+import { originOf46 } from './auth/server-address.js'; // prompt 46 (SERVER46)
 import { streamSSE } from 'hono/streaming';
 import { bodyLimit } from 'hono/body-limit';
 import { randomUUID, randomBytes } from 'node:crypto';
@@ -30,7 +30,7 @@ import { join, resolve } from 'node:path';
 import { config } from './config.js';
 import { db, q, kv } from './db.js';
 import { authOrToken, layoutOf } from './mobile.js';
-import { isAdmin } from './auth.js';
+import { isAdmin } from './auth/session.js';
 import { cfg, userCfg, userBool, setUserCfg } from './settings.js';
 import { settings, secret } from './finans/db.js';
 import { geminiFetch, hasGemini } from './finans/gemini-keys.js';

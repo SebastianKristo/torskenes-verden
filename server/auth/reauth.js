@@ -4,7 +4,7 @@
 //   holdes i minnet (forsvinner ved omstart). Brukes av POST /api/system/update/start|rollback {reauthToken} når
 //   «Krev passord for å oppdatere» er på.
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
-import { checkPassword, clientIp, loginBlocked, loginFailed, loginSucceeded } from './auth.js';
+import { checkPassword, clientIp, loginBlocked, loginFailed, loginSucceeded } from './session.js';
 
 export const REAUTH_TTL_MS = 5 * 60_000;
 const tokens = new Map(); // sha256(token) → {user, exp}

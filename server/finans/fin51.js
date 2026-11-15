@@ -28,7 +28,7 @@ import { config } from '../config.js';
 import { auth42 } from './finans42.js';
 import { recurringFromTx42 } from './finans42.js';
 import { sniffMime } from './scan.js';
-import { userInfo } from '../auth.js';
+import { userInfo } from '../auth/session.js';
 import { run as aiRun } from '../ai-run.js';
 import { mountTax51 } from './fin51-tax.js';
 import { mountPrices51 } from './fin51-prices.js';

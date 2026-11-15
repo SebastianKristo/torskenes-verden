@@ -1,7 +1,7 @@
 // Visningsvalg for Homelab per bruker: plassering i topplinjen, nyhetslinje og verdenskart.
 import { Hono } from 'hono';
 import { kv } from './db.js';
-import { sessionUser } from './auth.js';
+import { sessionUser } from './auth/session.js';
 
 const PARTS = ['logo', 'tabs', 'wx', 'menu'];
 const DEFAULTS = { hp: {}, headLock: true, newsSpeed: 5, newsPause: true, domMap: true, searchSuggest: true, searchSave: true };

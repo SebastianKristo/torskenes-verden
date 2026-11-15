@@ -14,7 +14,7 @@
 // Glimt, Hilsen, Now Brief og Bibelvers bruker profilnavnet (profileName(userId)), ikke brukernavnet.
 import { Hono } from 'hono';
 import { db, q, kv, OWNER } from './db.js';
-import { userInfo, listUsers, isAdmin } from './auth.js';
+import { userInfo, listUsers, isAdmin } from './auth/session.js';
 import { authOrToken } from './mobile.js';
 import { colorOf, prefsOf, PALETTE } from './family.js';
 

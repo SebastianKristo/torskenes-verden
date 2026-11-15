@@ -22,7 +22,7 @@ import { extraOut40 } from './tasks-glimt40.js'; // prompt 40
 import { Hono } from 'hono';
 import { randomBytes } from 'node:crypto';
 import { db, q, kv, OWNER } from './db.js';
-import { userInfo, listUsers, sessionUser, isAdmin } from './auth.js';
+import { userInfo, listUsers, sessionUser, isAdmin } from './auth/session.js';
 import { bearerOk } from './finans/routes.js';
 import { broadcast } from './realtime.js';
 import { initHa, mountHa, onLocal as haLocal, haInfo } from './tasks-ha.js';

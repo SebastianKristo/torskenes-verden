@@ -10,7 +10,7 @@
 import { Hono } from 'hono';
 import { simpleParser } from 'mailparser';
 import { db, q, kv } from './db.js';
-import { isAdmin, sessionUser } from './auth.js';
+import { isAdmin, sessionUser } from './auth/session.js';
 import { userGuard } from './homeos-common.js';
 import { runAsUser } from './settings.js';
 import { upsertShipment, setAliHook42, trk42 } from './tracking.js';

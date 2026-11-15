@@ -18,7 +18,7 @@ import { connect as tlsConnect } from 'node:tls';
 import { randomBytes, createHash } from 'node:crypto';
 import { parseQuick, osloTodayISO } from './dates/quick.js'; // dato og tid fra den felles tolkeren
 import { db, q, kv } from './db.js';
-import { userInfo, listUsers } from './auth.js';
+import { userInfo, listUsers } from './auth/session.js';
 import { authOrToken } from './mobile.js';
 import { userCfg } from './settings.js';
 import { notifyUser } from './notify.js';

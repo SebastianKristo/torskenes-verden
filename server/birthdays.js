@@ -21,7 +21,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import WebSocket from 'ws';
 import { db, q, kv } from './db.js';
 import { cfg } from './settings.js';
-import { sessionUser, userInfo, listUsers, isAdmin } from './auth.js';
+import { sessionUser, userInfo, listUsers, isAdmin } from './auth/session.js';
 import { bearerOk } from './finans/routes.js';
 import { seal, unseal } from './finans/db.js';
 import { broadcast } from './realtime.js';

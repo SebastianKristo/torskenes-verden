@@ -24,7 +24,7 @@
 // Alt Glimt lager får glimt:true (✦ i historikken) og by = brukeren.
 import { randomBytes } from 'node:crypto';
 import { kv } from './db.js';
-import { userInfo, listUsers } from './auth.js';
+import { userInfo, listUsers } from './auth/session.js';
 import { parseDay } from './parse-day35.js';
 import { multiAdd40 } from './tasks-glimt40.js'; // prompt 40
 /** Bare for tester: bytt ut Glimt-kallet i prompt 40-oppdelingen ((prompt) → {items}). */

@@ -23,7 +23,7 @@ process.env.MOCK_DATA = '1';
 delete process.env.OLLAMA_URL;
 delete process.env.GEMINI_API_KEY;
 for (const k of ['VOXCPM_URL', 'VOXCPM_KEY', 'OPENAI_API_KEY', 'ELEVENLABS_API_KEY', 'AZURE_SPEECH_KEY']) delete process.env[k];
-const { hashPassword } = await import('../server/password.js');
+const { hashPassword } = await import('../server/auth/password.js');
 process.env.APP_PASSWORD_HASH = hashPassword('testpassord1');
 const realFetch = globalThis.fetch;
 globalThis.fetch = async () => { throw Object.assign(new TypeError('fetch failed'), { cause: { code: 'ENOTFOUND' } }); }; // ingenting annet skal ut

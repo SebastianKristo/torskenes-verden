@@ -22,7 +22,7 @@ delete process.env.GEMINI_API_KEY;
 delete process.env.GROQ_API_KEY;
 delete process.env.MAC_OCR_KEY;
 delete process.env.MAC_OCR_URL;
-const { hashPassword } = await import('../server/password.js');
+const { hashPassword } = await import('../server/auth/password.js');
 process.env.APP_PASSWORD_HASH = hashPassword('testpassord1');
 
 const { todayOslo45, addDays45 } = await import('../server/glimt45/dates.js');

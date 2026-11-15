@@ -18,7 +18,7 @@ process.env.SKJOLD76_DEMO = '0'; // egne data i testen (demodataene testes for s
 process.env.OCR_FALLBACK = '0';
 delete process.env.OLLAMA_URL;
 delete process.env.GEMINI_API_KEY;
-const { hashPassword } = await import('../server/password.js');
+const { hashPassword } = await import('../server/auth/password.js');
 process.env.APP_PASSWORD_HASH = hashPassword('testpassord1');
 const realFetch = globalThis.fetch;
 globalThis.fetch = async () => { throw new TypeError('fetch failed'); };
@@ -26,7 +26,7 @@ test.after(() => { globalThis.fetch = realFetch; try { rmSync(DATA, { recursive:
 
 const { default: app } = await import('../server/index.js');
 const { db } = await import('../server/db.js');
-const auth = await import('../server/auth.js');
+const auth = await import('../server/auth/session.js');
 const ST = await import('../server/skjold76/store.js');
 const IMG = await import('../server/skjold76/images.js');
 const CSV = await import('../server/skjold76/csv.js');
@@ -440,7 +440,7 @@ test('etiketter: HTML per skuff med «4-2», innhold og QR til /#/skjold/skap/<i
   assert.equal((await B(`/api/skjold/labels?cabinet=${CAB.id}`)).status, 404);
   // QR-en peker til /#/skjold/skap/<id>/4-2 på serverens adresse (samme matrise som qrSvg av URL-en).
   const { labelsHtml76 } = await import('../server/skjold76/labels.js');
-  const { qrSvg } = await import('../server/totp.js');
+  const { qrSvg } = await import('../server/auth/totp.js');
   const html = labelsHtml76(ME, [ST.cabinetRow76(ME, CAB.id)], 'https://hjem.example');
   const want = qrSvg(`https://hjem.example/#/skjold/skap/${CAB.id}/4-2`, { px: 64, dark: '#000', light: '#fff' }).replace('QR-kode for 2FA', 'QR til skuff 4-2');
   assert.ok(html.includes(want));

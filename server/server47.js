@@ -12,8 +12,8 @@
 // Adresseinnstillingene per konto (synk mellom enheter) ligger fortsatt i GET/PUT /api/me/server (auth41.js), som nå også
 // gir defaults og godtar {reset:true} («Tilbakestill til standard»).
 // Passordregelen er uendret: om en forespørsel er «lokal» avgjøres av serveren fra tilkoblingen, aldri av disse verdiene.
-import { cleanUrl46, isInternalIp46 } from './public-url46.js';
-import { sessionUser, userInfo } from './auth.js';
+import { cleanUrl46, isInternalIp46 } from './auth/server-address.js';
+import { sessionUser, userInfo } from './auth/session.js';
 import { tokenAccessOf } from './finans/routes.js';
 
 export const DEFAULT_PUBLIC_URL47 = 'https://os.smarthjemeksperten.no';

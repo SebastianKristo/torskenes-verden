@@ -3,7 +3,7 @@
 // whereAnswer(viewer, text) → {intent:'family.where', text, person, place, open:{route:'familie', person}, source:'Familie · posisjon', card:{k:'where', …}}
 //   Personvern som Familie: bare personer som deler posisjon med deg (familyPeople37). Ellers «Pål deler ikke posisjon med deg.»
 import { familyPeople37, placeFor, dist } from './family.js';
-import { listUsers } from './auth.js';
+import { listUsers } from './auth/session.js';
 
 const NAME = "([\\p{L}][\\p{L}'-]{1,30})";
 const PATTERNS = [

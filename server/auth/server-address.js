@@ -10,10 +10,10 @@
 // LAN-adresser (lanUrls46): LOCAL_URL fra .env, ellers grensesnittene – men ikke inne i en container (der er de alltid interne).
 import { existsSync, readFileSync } from 'node:fs';
 import { networkInterfaces } from 'node:os';
-import { kv, OWNER } from './db.js';
-import { config } from './config.js';
-import { kvServer89 } from './domain89.js'; // prompt 89: gammel standarddomene migreres ved lesing
-import { normalizeServerUrl } from './net/server-url.js';
+import { kv, OWNER } from '../db.js';
+import { config } from '../config.js';
+import { kvServer89 } from './default-domain.js'; // prompt 89: gammel standarddomene migreres ved lesing
+import { normalizeServerUrl } from '../net/server-url.js';
 
 // Samme normalisering som appene (shared/testvektorer/serveradresse.json): uten skjema → http for lokale verter, ellers https;
 // sti og / til slutt fjernes, porten beholdes, aldri brukernavn/passord.

@@ -18,7 +18,7 @@ delete process.env.GROQ_API_KEY;
 delete process.env.OLLAMA_MODEL;
 delete process.env.OLLAMA_TEXT_MODEL;
 delete process.env.OPENWEBUI_URL;
-const { hashPassword } = await import('../server/password.js');
+const { hashPassword } = await import('../server/auth/password.js');
 process.env.APP_PASSWORD_HASH = hashPassword('testpassord1');
 
 // Falsk Ollama slik brukerens PC ser ut: gemma4:12b og qwen3:8b er installert, ikke qwen2.5vl:7b (standarden i innstillingene).

@@ -17,7 +17,7 @@ process.env.OLLAMA_MODEL = 'qwen3:8b'; // Chat-/kvitteringsmodellen uten vision:
 process.env.VISION_PULL_POLL_MS = '10';
 delete process.env.MOCK_DATA;
 delete process.env.GEMINI_API_KEY;
-const { hashPassword } = await import('../server/password.js');
+const { hashPassword } = await import('../server/auth/password.js');
 process.env.APP_PASSWORD_HASH = hashPassword('testpassord1');
 
 // Global fetch (Gemini, Nominatim, Open-Meteo, /api/pull): styres per test. Standard: nettet er nede.

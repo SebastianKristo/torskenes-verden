@@ -29,9 +29,9 @@ import { isIP } from 'node:net';
 import { deflateSync, crc32 } from 'node:zlib';
 import { kv, OWNER } from './db.js';
 import { config } from './config.js';
-import { sessionSecret86 } from './secret86.js'; // prompt 86
+import { sessionSecret86 } from './auth/server-secret.js'; // prompt 86
 import { authOrToken } from './mobile.js';
-import { isAdmin } from './auth.js';
+import { isAdmin } from './auth/session.js';
 import { secret } from './finans/db.js';
 import { broadcast } from './realtime.js';
 import * as ai from './ai-run.js';

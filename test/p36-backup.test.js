@@ -15,7 +15,7 @@ process.env.NODE_ENV = 'test';
 process.env.BACKUP_COMPRESS = 'gz';
 delete process.env.MOCK_DATA;
 delete process.env.OLLAMA_URL;
-const { hashPassword } = await import('../server/password.js');
+const { hashPassword } = await import('../server/auth/password.js');
 process.env.APP_PASSWORD_HASH = hashPassword('testpassord1');
 const realFetch = globalThis.fetch;
 globalThis.fetch = async () => { throw new TypeError('fetch failed'); };

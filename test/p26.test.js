@@ -15,7 +15,7 @@ process.env.NODE_ENV = 'test';
 process.env.OCR_FALLBACK = '0';
 delete process.env.MOCK_DATA;
 delete process.env.SCHOOL_ICAL_URL;
-const { hashPassword } = await import('../server/password.js');
+const { hashPassword } = await import('../server/auth/password.js');
 process.env.APP_PASSWORD_HASH = hashPassword('testpassord1');
 
 // Alt nett utenfor testen avvises; ParcelsApp-kallene lagres så carrier-hintet kan sjekkes.

@@ -15,7 +15,7 @@
 // POST  /finans/api/search/ask {q}             → {text, source, sourceLabel, cards:[{kind:'sub'|'tx'|'receipt'|'budget'|'stat', …}], items, total?, open?, intent}
 import { Hono } from 'hono';
 import { db, q } from './db.js';
-import { sessionUser } from '../auth.js';
+import { sessionUser } from '../auth/session.js';
 import { bearerOk } from './routes.js';
 import { subscriptionSources, subIntent } from './subs-ask32.js';
 import { plainSearch } from './search.js';

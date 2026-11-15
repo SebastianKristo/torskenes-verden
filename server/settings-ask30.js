@@ -10,7 +10,7 @@
 //        Bare spørsmålet og indeksen (id, tittel, sti, nøkkelord) sendes – aldri brukerdata. Gemini-kall logges i ai_audit.
 // Sesjon eller app-token (finance:read holder, søket endrer ingenting).
 import { Hono } from 'hono';
-import { sessionUser, userInfo, isAdmin } from './auth.js';
+import { sessionUser, userInfo, isAdmin } from './auth/session.js';
 import { bearerOk } from './finans/routes.js';
 
 const MOCK = process.env.MOCK_DATA === '1';

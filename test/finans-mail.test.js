@@ -165,7 +165,7 @@ test('E-post: STARTTLS-sertifikatet leses (for pinning) fra en lokal testserver'
 });
 
 test('E-post: ingestReceipt legger kvitteringen i køen med source=email og avsender/emne i API-et', async () => {
-  const { hashPassword } = await import('../server/password.js');
+  const { hashPassword } = await import('../server/auth/password.js');
   process.env.APP_PASSWORD_HASH = hashPassword('testpassord1');
   const { default: api, ingestReceipt } = await import('../server/finans/routes.js');
   const id = await ingestReceipt({ buffer: Buffer.from('Fra: a@b.no\nEmne: Kvittering\n\nTotalt 120 kr'), mime: 'text/plain', name: 'Kvittering.txt', meta: { from: 'Butikk <a@b.no>', subject: 'Kvittering', date: null } });

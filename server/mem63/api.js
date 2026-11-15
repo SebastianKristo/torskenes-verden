@@ -2,7 +2,7 @@
 // Montert under /api/glimt/memory FØR «Glimt husker»-rutene (glimt-memory.js), som er uendret. Alt per bruker (sesjon eller app-token).
 import { Hono } from 'hono';
 import { authOrToken } from '../mobile.js';
-import { isAdmin } from '../auth.js';
+import { isAdmin } from '../auth/session.js';
 import { mem63, serverMem63, userMem63, saveMem63, staleDays63, LABELS63, HELP63 } from './settings.js';
 import { PID63, CID63, pendingRows63, pendingCounts63, publicPending63, conflictRows63, conflictCounts63, publicConflict63, staleOf63, keepFact63, iso63 } from './store.js';
 import { approve63, reject63, edit63, resolve63 } from './review.js';

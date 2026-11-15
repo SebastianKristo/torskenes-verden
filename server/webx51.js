@@ -23,16 +23,16 @@ import { join, resolve } from 'node:path';
 import { createHash, randomBytes, randomInt, timingSafeEqual } from 'node:crypto';
 import { db, q, kv, OWNER } from './db.js';
 import { config } from './config.js';
-import { sessionSecret86 } from './secret86.js'; // prompt 86
+import { sessionSecret86 } from './auth/server-secret.js'; // prompt 86
 import { authOrToken } from './mobile.js';
-import { userInfo, listUsers, isAdmin, createUser, createSession, trustIp, serverName, rememberDevice } from './auth.js';
+import { userInfo, listUsers, isAdmin, createUser, createSession, trustIp, serverName, rememberDevice } from './auth/session.js';
 import { broadcast } from './realtime.js';
 import { notifyUser } from './notify.js';
 import { family50 as F } from './family.js';
-import { qrSvg } from './totp.js';
-import { publicUrl46, originOf46 } from './public-url46.js';
-import { blocked51, fail51, clear51 } from './ratelimit51.js';
-import { gate51, afterLogin51 } from './sec51.js';
+import { qrSvg } from './auth/totp.js';
+import { publicUrl46, originOf46 } from './auth/server-address.js';
+import { blocked51, fail51, clear51 } from './auth/rate-limit.js';
+import { gate51, afterLogin51 } from './auth/security.js';
 import { issueToken, SCOPES as FH_SCOPES } from './finans/routes.js';
 import { ensureIndex42, norm42, fold42, synonymsOf42 } from './finans/search42.js';
 import { settings as fhSettings } from './finans/db.js';

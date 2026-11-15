@@ -4,7 +4,7 @@
 import { Hono } from 'hono';
 import { createHash } from 'node:crypto';
 import { authOrToken } from '../mobile.js';
-import { isAdmin } from '../auth.js';
+import { isAdmin } from '../auth/session.js';
 import { runAsUser } from '../settings.js';
 import { db, q } from '../db.js';
 import { recipes61, serverRecipes61, userRecipes61, saveRecipes61, anyOn61, LABELS61, HELP61 } from './settings.js';

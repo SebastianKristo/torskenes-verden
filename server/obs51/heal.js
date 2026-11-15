@@ -6,7 +6,7 @@
 //   Homelab selv (os-containeren) startes aldri på nytt herfra, og containere admin har unntatt hoppes over.
 import { randomUUID } from 'node:crypto';
 import { db, q, kv, OWNER } from '../db.js';
-import { listUsers } from '../auth.js';
+import { listUsers } from '../auth/session.js';
 import { notifyUser } from '../notify.js';
 import { docker51, dockerAvailable44, maskLog44 } from '../logs44.js';
 import { healthOf51 } from './health.js';

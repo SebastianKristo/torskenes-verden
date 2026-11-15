@@ -18,7 +18,7 @@ delete process.env.GEMINI_API_KEY;
 delete process.env.GROQ_API_KEY;
 delete process.env.OPENWEBUI_URL;
 delete process.env.OPENWEBUI_KEY;
-const { hashPassword } = await import('../server/password.js');
+const { hashPassword } = await import('../server/auth/password.js');
 process.env.APP_PASSWORD_HASH = hashPassword('testpassord1');
 
 /* ---------- Falske bilder (ImageMagick erstattes, så testen ikke avhenger av verktøyet) ---------- */

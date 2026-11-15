@@ -54,11 +54,11 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, statSync,
 import { join, resolve } from 'node:path';
 import { config } from './config.js';
 import { db, kv, OWNER } from './db.js';
-import { sessionUser, isAdmin, checkPassword, clientIp, loginBlocked, loginFailed, loginSucceeded } from './auth.js';
+import { sessionUser, isAdmin, checkPassword, clientIp, loginBlocked, loginFailed, loginSucceeded } from './auth/session.js';
 import { bearerOk } from './finans/routes.js';
 import { broadcast } from './realtime.js';
-import { listUsers } from './auth.js';
-import { consumeReauth } from './reauth.js';
+import { listUsers } from './auth/session.js';
+import { consumeReauth } from './auth/reauth.js';
 import { notifyUser } from './notify.js';
 
 // Prompt 44: databaseskjemaet til denne versjonen (updateren leser linjen fra kildekoden og lagrer den i historikken).

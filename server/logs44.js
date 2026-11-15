@@ -26,7 +26,7 @@ import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { config } from './config.js';
-import { sessionUser, isAdmin, listUsers } from './auth.js';
+import { sessionUser, isAdmin, listUsers } from './auth/session.js';
 import { bearerOk } from './finans/routes.js';
 import { notifyUser } from './notify.js';
 import { maskSecrets } from './ai-gate.js';

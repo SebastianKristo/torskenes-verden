@@ -5,7 +5,7 @@
 //   docker compose exec -u 1000 os npm run reset-2fa -- <brukernavn>
 //   npm run reset-2fa -- <brukernavn>
 // Brukeren logger så inn med passordet og setter opp 2FA på nytt (Innstillinger → Innlogging → Tofaktor).
-import { listUsers, updateUser, totpReadable } from '../server/auth.js';
+import { listUsers, updateUser, totpReadable } from '../server/auth/session.js';
 
 const [username] = process.argv.slice(2);
 const users = listUsers();

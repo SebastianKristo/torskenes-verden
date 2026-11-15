@@ -15,7 +15,7 @@ process.env.OCR_FALLBACK = '0';
 process.env.PORT = '4791';
 process.env.MOCK_DATA = '1';
 delete process.env.OLLAMA_URL;
-const { hashPassword } = await import('../server/password.js');
+const { hashPassword } = await import('../server/auth/password.js');
 process.env.APP_PASSWORD_HASH = hashPassword('testpassord1');
 const realFetch = globalThis.fetch;
 globalThis.fetch = async () => { throw Object.assign(new TypeError('fetch failed'), { cause: { code: 'ENOTFOUND' } }); };

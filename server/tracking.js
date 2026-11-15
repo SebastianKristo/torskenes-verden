@@ -11,7 +11,7 @@ import { Hono } from 'hono';
 import { db, q, kv, OWNER } from './db.js';
 import { runAsUser } from './settings.js';
 import { config } from './config.js'; // prompt 41: fast forskyvning per installasjon
-import { sessionUser } from './auth.js';
+import { sessionUser } from './auth/session.js';
 import { userGuard, readJson, bad, str, MOCK, aiJson } from './homeos-common.js';
 import * as mailMod from './finans/mail.js';
 import { scanShippingMails, mailConfig, mailText } from './finans/mail.js';

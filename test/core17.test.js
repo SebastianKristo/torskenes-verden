@@ -12,7 +12,7 @@ process.env.USER_NAME = 'Sebastian';
 process.env.MOCK_DATA = '1';
 process.env.NODE_ENV = 'test';
 process.env.OLLAMA_URL = 'http://127.0.0.1:9';
-const { hashPassword } = await import('../server/password.js');
+const { hashPassword } = await import('../server/auth/password.js');
 process.env.APP_PASSWORD_HASH = hashPassword('testpassord1');
 const { default: app, wsUser } = await import('../server/index.js');
 const { default: fin } = await import('../server/finans/routes.js');
@@ -245,7 +245,7 @@ test('Boliger: budsjett, farge, autoCat og varsler på boligen, og status på ut
 });
 
 test('Familie: enhetsnavn på posisjonen og «Spill av lyd» bare til den personen', async () => {
-  const { createUser } = await import('../server/auth.js');
+  const { createUser } = await import('../server/auth/session.js');
   const kari = createUser({ username: 'kari17', password: 'kariPassord123', role: 'bruker', name: 'Kari' });
   const kl = await fin.request('/login', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ username: 'kari17', password: 'kariPassord123', device: 'test' }) });
   const kariToken = (await kl.json()).token;

@@ -10,7 +10,7 @@ process.env.SESSION_SECRET = 'testsecret-testsecret-testsecret-12';
 process.env.NODE_ENV = 'test';
 process.env.APP_PASSWORD_HASH = ''; // tom (ikke slettet), så .env ikke leses inn
 delete process.env.MOCK_DATA;
-const auth = await import('../server/auth.js');
+const auth = await import('../server/auth/session.js');
 const { default: app } = await import('../server/index.js');
 const { parseTakeout } = await import('../server/mobile.js');
 

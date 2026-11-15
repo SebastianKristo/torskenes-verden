@@ -13,7 +13,7 @@
 //   GET    /api/me/ntfy51 · POST /api/me/ntfy51/topics {device} · DELETE /api/me/ntfy51/topics/:id · POST /api/me/ntfy51/test
 import { Hono } from 'hono';
 import { db, kv, OWNER } from '../db.js';
-import { sessionUser, isAdmin, listUsers } from '../auth.js';
+import { sessionUser, isAdmin, listUsers } from '../auth/session.js';
 import { bearerOk } from '../finans/routes.js';
 import { notifyUser, setNotifyHook51 } from '../notify.js';
 import { backendConfig } from '../ai-gate.js';

@@ -6,7 +6,7 @@
 // - Brukerskille (prompt 21): uten userIds går meldingen bare til administratorer (Sporing og annet serveroppsett).
 //   Huskeliste og Familie sender alltid med en liste over dem som har tilgang.
 import { WebSocketServer } from 'ws';
-import { isAdmin } from './auth.js';
+import { isAdmin } from './auth/session.js';
 
 const clients = new Set(); // { ws, user, alive }
 let wss = null;

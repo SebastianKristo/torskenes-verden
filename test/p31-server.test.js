@@ -16,12 +16,12 @@ process.env.MOCK_DATA = '1'; // eksempeldata: vær, avganger, pakker, demoregnsk
 delete process.env.OLLAMA_URL;
 delete process.env.UPDATE_REPO;
 delete process.env.UPDATE_BRANCH;
-const { hashPassword } = await import('../server/password.js');
+const { hashPassword } = await import('../server/auth/password.js');
 process.env.APP_PASSWORD_HASH = hashPassword('testpassord1');
 
 const { default: app } = await import('../server/index.js');
 const su = await import('../server/system-update.js');
-const reauth = await import('../server/reauth.js');
+const reauth = await import('../server/auth/reauth.js');
 const assist = await import('../server/assist.js');
 const quick = await import('../server/calendar-quick.js');
 const tn = await import('../server/trials-notify.js');

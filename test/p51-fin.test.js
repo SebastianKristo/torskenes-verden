@@ -15,7 +15,7 @@ process.env.PORT = '4611';
 process.env.OLLAMA_URL = 'http://127.0.0.1:9';
 delete process.env.MOCK_DATA;
 for (const k of ['GEMINI_API_KEY', 'GROQ_API_KEY', 'OPENWEBUI_URL', 'OPENWEBUI_KEY']) delete process.env[k];
-const { hashPassword } = await import('../server/password.js');
+const { hashPassword } = await import('../server/auth/password.js');
 process.env.APP_PASSWORD_HASH = hashPassword('testpassord1');
 
 const { default: app } = await import('../server/index.js');

@@ -17,7 +17,7 @@ delete process.env.GLITCHTIP_DSN;
 const CL = join(process.env.DATA_DIR, 'CHANGELOG.md');
 writeFileSync(CL, '# Endringslogg\n\n## [4.45.0] – 25.10.2026 · prompt 51 – kvalitet\n- **Feature flags:** slå ting av og på per bruker.\n- Krasjrapporter til GlitchTip.\n\n## [4.44.0] – 24.10.2026 · prompt 50\n- Familie.\n');
 process.env.CHANGELOG_PATH = CL;
-const { hashPassword } = await import('../server/password.js');
+const { hashPassword } = await import('../server/auth/password.js');
 process.env.APP_PASSWORD_HASH = hashPassword('testpassord1');
 const realFetch = globalThis.fetch;
 globalThis.fetch = async () => { throw new TypeError('fetch failed'); };

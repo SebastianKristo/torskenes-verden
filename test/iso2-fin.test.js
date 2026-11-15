@@ -37,7 +37,7 @@ INSERT INTO fh_finn(id,role,item,date,amount,source,created) VALUES (5,'sold','G
   old.close();
 }
 
-const { hashPassword } = await import('../server/password.js');
+const { hashPassword } = await import('../server/auth/password.js');
 process.env.APP_PASSWORD_HASH = hashPassword('testpassord1');
 const { default: app } = await import('../server/index.js');
 const { db } = await import('../server/db.js');

@@ -20,8 +20,8 @@
 import { Hono } from 'hono';
 import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import { config } from './config.js';
-import { sessionSecret86 } from './secret86.js'; // prompt 86
-import { sessionUser, userInfo, isAdmin } from './auth.js';
+import { sessionSecret86 } from './auth/server-secret.js'; // prompt 86
+import { sessionUser, userInfo, isAdmin } from './auth/session.js';
 import { tokenAccessOf, tokensById } from './finans/routes.js';
 
 /* ---------------- Ukjente /api-stier med app-token → 404 ---------------- */
