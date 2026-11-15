@@ -35,14 +35,14 @@ struct Media43Poster: View {
     var width: CGFloat = 52
     var height: CGFloat = 78
     var radius: CGFloat = 10
-    /// Prompt 50: detaljsiden ber om 640 px, listene om 320 px (Media50Img.swift).
+    /// Prompt 50: detaljsiden ber om 640 px, listene om 320 px (MediaImages.swift).
     var big: Bool = false
 
     var body: some View {
         ZStack {
             LinearGradient(colors: [Media43Poster.tint(title), Media43Poster.tint(title).opacity(0.65)], startPoint: .top, endPoint: .bottom)
             Text(String(title.prefix(1)).uppercased()).font(PF.serif(width * 0.4, medium: true)).foregroundStyle(Color.white.opacity(0.85))
-            // Prompt 50: ThumbHash-plassholder i plakatens farger med en gang, så bildet fra disk-/minnecachen (Media50Img.swift).
+            // Prompt 50: ThumbHash-plassholder i plakatens farger med en gang, så bildet fra disk-/minnecachen (MediaImages.swift).
             // Feil = plassholderen eller forbokstaven står igjen.
             if !url.isEmpty {
                 Media50Placeholder(url: url)
@@ -83,7 +83,7 @@ struct Media43Chip: View {
     let text: String
     let on: Bool
     var count: Int? = nil
-    /// Prompt 45: tjenestens farge (Sonarr, Radarr, qBittorrent …) på aktiv fane og som prikk (Media45.swift).
+    /// Prompt 45: tjenestens farge (Sonarr, Radarr, qBittorrent …) på aktiv fane og som prikk (MediaFiles.swift).
     var tint: String? = nil
     let act: () -> Void
 
@@ -145,8 +145,8 @@ struct Media43Page: View {
                         .padding(.horizontal, wide ? 24 : 16).padding(.top, 6).padding(.bottom, 40)
                     }
                     .refreshable {
-                        // Prompt 87: NRK-fanen har egne data (Nrk87Model.swift).
-                        // Prompt 88: Musikk har også egne data (Musikk88Model.swift).
+                        // Prompt 87: NRK-fanen har egne data (NrkModel.swift).
+                        // Prompt 88: Musikk har også egne data (MusikkModel.swift).
                         if m.tab == "musikk" { await Musikk88.shared.load(store, full: true); return }
                         if m.tab == "nrk" { await Nrk87.shared.load(store, full: true) } else { await m.loadAll(store) }
                     }
@@ -171,7 +171,7 @@ struct Media43Page: View {
                     .presentationDragIndicator(.visible)
             }
             .media43Sheets(p)
-            // Prompt 45: «Slett uovervåkede» (ark + Angre), Media45.swift.
+            // Prompt 45: «Slett uovervåkede» (ark + Angre), MediaFiles.swift.
             .media45Host(p)
             .sheet(isPresented: Binding<Bool>(get: { Media44.shared.pickerOpen }, set: { Media44.shared.pickerOpen = $0 })) {
                 Media44SiteSheet(tab: m.tab).sheet43(p, store)
@@ -198,7 +198,7 @@ struct Media43Page: View {
                 withAnimation(.easeOut(duration: 0.2)) { m.glimtOpen.toggle() }
                 if m.glimtOpen { glimtFocus = true }
             }
-            // Prompt 51 (IOSFEAT51): «Hva skal vi se i kveld?» (Kveld51Views.swift) – Media lukkes først (én fullskjerm om gangen).
+            // Prompt 51 (IOSFEAT51): «Hva skal vi se i kveld?» (KveldPage.swift) – Media lukkes først (én fullskjerm om gangen).
             Kveld51MediaButton()
             // Innstillinger for Media (og «Rydd uovervåkede» for admin) som før, nå som rund knapp med kant.
             Media45Menu()
@@ -245,9 +245,9 @@ struct Media43Page: View {
         case "radarr": Media43Library(kind: "movie", wide: wide)
         case "qbit": Media43Qbit()
         case "prowlarr": Media43Prowlarr()
-        // Prompt 87: NRK-nedlasteren (Nrk87Views.swift).
+        // Prompt 87: NRK-nedlasteren (NrkPage.swift).
         case "nrk": Nrk87View(wide: wide)
-        // Prompt 88: Musikk (yubal, Musikk88Views.swift) – én kolonne, også på stor skjerm.
+        // Prompt 88: Musikk (yubal, MusikkPage.swift) – én kolonne, også på stor skjerm.
         case "musikk": Musikk88View().frame(maxWidth: 720, alignment: .leading)
         default: Media43Upcoming(wide: wide)
         }
@@ -547,7 +547,7 @@ struct Media43Detail: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            // Prompt 44: banner med fanart, plakat 2:3, ←/→, fakta, info-brikker og handling (Media44Banner.swift).
+            // Prompt 44: banner med fanart, plakat 2:3, ←/→, fakta, info-brikker og handling (MediaBanner.swift).
             Media44Banner(t: t, column: column)
             chips
             buttons
@@ -555,7 +555,7 @@ struct Media43Detail: View {
             // Prompt 44: ⟳ Last ned på nytt (interaktivt søk) og Slett fil for film med fil.
             if t.kind == "movie" && t.hasFile { Media44MovieFileActions(t: t, profile: profiles.first(where: { $0.id == t.profileId })?.name ?? "") }
             if t.kind == "series" { seasons }
-            // Prompt 45: slett episodefiler som ikke er overvåket (bare admin), Media45.swift.
+            // Prompt 45: slett episodefiler som ikke er overvåket (bare admin), MediaFiles.swift.
             if t.kind == "series" && Update28Model.isAdmin(store) {
                 Button { Media45Clean.shared.open(service: "sonarr", seriesId: t.id, season: nil, store) } label: {
                     Text("Slett uovervåkede episoder …").font(PF.ui(13.5, .semibold)).foregroundStyle(p.ink)
@@ -653,7 +653,7 @@ struct Media43Detail: View {
                     wideButton("Interaktivt søk", primary: false) { openManualMovie() }
                 }
             }
-            // Prompt 50: sann status etter søket (Media50Track.swift).
+            // Prompt 50: sann status etter søket (MediaTracking.swift).
             if t.kind == "movie" {
                 Media50TrackLine(key: "m:\(t.id)", manual: { openManualMovie() })
             } else {
@@ -770,7 +770,7 @@ struct Media43Detail: View {
                 }
                 Spacer(minLength: 4)
                 if !needs && !e.hasFile { Media43Status(status: status) }
-                // Prompt 44: episode med fil – ⟳ Last ned på nytt og Slett (Media44Banner.swift).
+                // Prompt 44: episode med fil – ⟳ Last ned på nytt og Slett (MediaBanner.swift).
                 if e.hasFile { Media44EpisodeFileActions(t: t, e: e, profile: profiles.first(where: { $0.id == t.profileId })?.name ?? "") }
             }
             if needs {

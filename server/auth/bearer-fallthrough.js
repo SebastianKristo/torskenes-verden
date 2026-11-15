@@ -1,6 +1,6 @@
 // Prompt 46 (SERVER46), claude-code-media-mobil-utlogget-2.md – Media sier «Utlogget» på mobil (andre gang), serverdelen.
 //
-// Den ekte årsaken (funnet sammen med IOS46/ANDROID46, se apps/ios/FinansHub/Sources/Media46.swift):
+// Den ekte årsaken (funnet sammen med IOS46/ANDROID46, se apps/ios/FinansHub/Sources/MediaDetails.swift):
 //   index.js monterer `authed` (authed.use('*', requireAuth)) på /api til slutt. requireAuth godtar bare økt-cookie, så ALLE
 //   /api-stier som ingen rute har, svarte 401 «Ikke innlogget» til appene (Bearer) – men 404 til web (cookie). Media prøver eldre
 //   og alternative stier først (/media/qbit/torrents før /media/torrents osv.) og går videre ved 404. På mobil ble første sti en

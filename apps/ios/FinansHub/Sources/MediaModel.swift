@@ -238,8 +238,8 @@ final class Media43 {
     @ObservationIgnored private var pollTask: Task<Void, Never>? = nil
     @ObservationIgnored private var toastTask: Task<Void, Never>? = nil
 
-    /// Prompt 44: «Avspilling» (Plex/Jellyfin, Playback44.swift) etter Prowlarr. Prompt 87: «NRK» (Nrk87Views.swift) mellom Prowlarr og Avspilling.
-    /// Prompt 88: «Musikk» (yubal, Musikk88Views.swift) etter NRK.
+    /// Prompt 44: «Avspilling» (Plex/Jellyfin, Playback44.swift) etter Prowlarr. Prompt 87: «NRK» (NrkPage.swift) mellom Prowlarr og Avspilling.
+    /// Prompt 88: «Musikk» (yubal, MusikkPage.swift) etter NRK.
     static let tabs: [(String, String)] = [("kommer", "Kommer snart"), ("sonarr", "Sonarr"), ("radarr", "Radarr"), ("qbit", "qBittorrent"), ("prowlarr", "Prowlarr"), ("nrk", "NRK"), ("musikk", "Musikk"), ("avspilling", "Avspilling")]
 
     /// Modulen «media»: false når serveren svarer 403 (ingen tilgang) eller ikke har Media (404). Lagres lokalt.
@@ -309,7 +309,7 @@ final class Media43 {
     func fetch(_ store: Store, _ paths: [String], method: String = "GET", json: [String: Any]? = nil, timeout: TimeInterval = 20) async throws -> Data {
         var last: Error = APIError(message: "Serveren har ikke Media ennå.", status: 404)
         for p0 in paths {
-            // Prompt 44: felles servervalg (?server=<sted>), med fallback til standard når stedet mangler tjenesten (Media44.swift).
+            // Prompt 44: felles servervalg (?server=<sted>), med fallback til standard når stedet mangler tjenesten (MediaSites.swift).
             let p: String = Media44.shared.withSite(p0)
             do {
                 // Prompt 46: logg + 401 bekreftes mot /api/me (en sti serveren ikke har gir 401 for token, 404 for cookie).
@@ -431,7 +431,7 @@ final class Media43 {
         it.sub = movieLike ? (JS.str(r, "sub") ?? "Film") : [code, epTitle].filter { !$0.isEmpty }.joined(separator: " · ")
         it.date = JS.date(r["airDateUtc"] ?? r["date"] ?? r["airDate"] ?? r["digitalRelease"] ?? r["releaseDate"])
         it.poster = JS.str(r, "poster") ?? Media43.poster(series ?? r)
-        Media50Reg.take(r) // prompt 50: posterImg (hash, srcset) for plassholder og riktig bredde (Media50Img.swift)
+        Media50Reg.take(r) // prompt 50: posterImg (hash, srcset) for plassholder og riktig bredde (MediaImages.swift)
         it.status = (JS.str(r, "status") ?? (JS.bool(r, "hasFile") == true ? "downloaded" : "missing")).lowercased()
         it.progress = JS.num(r, "progress") ?? 0
         if it.progress > 1 { it.progress /= 100 }
@@ -467,7 +467,7 @@ final class Media43 {
         t.network = JS.str(r, "network") ?? JS.str(r, "studio") ?? ""
         t.status = (JS.str(r, "status") ?? "").lowercased()
         t.poster = Media43.poster(r)
-        Media50Reg.take(r) // prompt 50: posterImg/fanartImg (Media50Img.swift)
+        Media50Reg.take(r) // prompt 50: posterImg/fanartImg (MediaImages.swift)
         t.overview = JS.str(r, "overview") ?? ""
         t.have = JS.int(stats, "episodeFileCount") ?? JS.int(r, "episodeFileCount") ?? JS.int(r, "have") ?? 0
         t.total = JS.int(stats, "episodeCount") ?? JS.int(r, "episodeCount") ?? JS.int(r, "total") ?? 0
@@ -648,7 +648,7 @@ final class Media43 {
         Task { @MainActor in
             do {
                 let d: Data = try await self.fetch(store, ["/media/command?service=\(service)", "/media/\(service)/command"], method: "POST", json: b)
-                // Prompt 50: sann status etter søk (track) i stedet for et evig «Søker» (Media50Track.swift).
+                // Prompt 50: sann status etter søk (track) i stedet for et evig «Søker» (MediaTracking.swift).
                 if !Media50Track.shared.start(d, body: b, store) { self.flash(toast) }
             } catch { self.flash(self.errorText(error)) }
         }
@@ -884,7 +884,7 @@ final class Media43 {
     }
 
     nonisolated static func statusColor(_ s: String, _ p: PaperPalette) -> Color {
-        // Prompt 45: Lastes ned blå, Venter gul, Ferdig grønn, Mangler rød, Uovervåket grå (Media45.swift).
+        // Prompt 45: Lastes ned blå, Venter gul, Ferdig grønn, Mangler rød, Uovervåket grå (MediaFiles.swift).
         if let c = Media45.status(s) { return c }
         switch s {
         case "downloaded", "hasfile", "ok": return Color(hex: "#2f6b4a")

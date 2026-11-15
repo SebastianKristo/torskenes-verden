@@ -59,10 +59,10 @@ function lex(src) {
 }
 
 test('NRK-fanen finnes i Media, mellom Prowlarr og Avspilling, og fanelinja ruller valgt fane inn i midten', () => {
-  const model = code('Media43Model.swift');
+  const model = code('MediaModel.swift');
   // Prompt 88: «Musikk» (yubal) står mellom NRK og Avspilling (test/p88-ios.test.js).
   assert.match(model, /\("prowlarr", "Prowlarr"\), \("nrk", "NRK"\), \("musikk", "Musikk"\), \("avspilling", "Avspilling"\)\]/);
-  const views = code('Media43Views.swift');
+  const views = code('MediaPage.swift');
   assert.match(views, /case "nrk": Nrk87View\(wide: wide\)/);
   assert.match(views, /ScrollViewReader \{ \(proxy: ScrollViewProxy\) in/);
   assert.match(views, /\.id\(t\.0\)/);
@@ -70,28 +70,28 @@ test('NRK-fanen finnes i Media, mellom Prowlarr og Avspilling, og fanelinja rull
   assert.match(views, /proxy\.scrollTo\(now, anchor: \.center\)/);
   // Dra for å oppdatere henter NRK-dataene når NRK-fanen vises.
   assert.match(views, /if m\.tab == "nrk" \{ await Nrk87\.shared\.load\(store, full: true\) \} else \{ await m\.loadAll\(store\) \}/);
-  assert.match(code('Media45.swift'), /case "nrk": return Color\(hex: "#2b5d8a"\)/);
+  assert.match(code('MediaFiles.swift'), /case "nrk": return Color\(hex: "#2b5d8a"\)/);
 });
 
 test('filene er hele (kommentarer, strenger og klammer går opp)', () => {
   assert.equal(lex('/* a /api/x/*, b */ let a = 1'), 'uavsluttet blokk-kommentar');
   assert.equal(lex('let s = "a \\(f("x")) {" + "https://x" // (\n'), '');
-  for (const f of ['Nrk87Model.swift', 'Nrk87Views.swift', 'Media43Views.swift', 'Media43Model.swift', 'Media45.swift']) {
+  for (const f of ['NrkModel.swift', 'NrkPage.swift', 'MediaPage.swift', 'MediaModel.swift', 'MediaFiles.swift']) {
     assert.equal(lex(raw(f)), '', f);
   }
   // Ingen tvungen utpakking i de nye filene.
-  for (const f of ['Nrk87Model.swift', 'Nrk87Views.swift']) {
+  for (const f of ['NrkModel.swift', 'NrkPage.swift']) {
     const c = code(f);
     assert.doesNotMatch(c, /try!|as!|fatalError\(|\.first!|\.last!|\)!\s/, f);
   }
 });
 
 test('alle kall går via Homelab-serveren (/api/media/nrk/*) – aldri rett mot nrk-dl, og ingen token i appen', () => {
-  const m = code('Nrk87Model.swift');
+  const m = code('NrkModel.swift');
   assert.match(m, /try await Media46\.shared\.call\(store, method, "\/media\/nrk" \+ path, json: json, timeout: timeout\)/);
   // Eneste nettverksvei i modellen er call(…); ingen egne URLSession-kall og ingen adresser til nrk-dl.
   assert.doesNotMatch(m, /URLSession|URLRequest|:8020|10\.69\.|Bearer|nrk_token|NRK_DL/);
-  assert.doesNotMatch(code('Nrk87Views.swift'), /URLSession|URLRequest|:8020|10\.69\.|Bearer|nrk_token|NRK_DL|Media46\.shared\.call/);
+  assert.doesNotMatch(code('NrkPage.swift'), /URLSession|URLRequest|:8020|10\.69\.|Bearer|nrk_token|NRK_DL|Media46\.shared\.call/);
   for (const p of ['"/jobber"', '"/status"', '"/bibliotek"', '"/serie?url=" + q', '"/rydd"', '"/folger/" + f.id + "/sjekk"', '"/folger/" + f.id', '"/jobber/" + j.id']) {
     assert.ok(m.includes(p), p);
   }
@@ -104,7 +104,7 @@ test('alle kall går via Homelab-serveren (/api/media/nrk/*) – aldri rett mot 
 });
 
 test('lenker: bare nrk.no / nrksuper.no (https), 409 = ligger allerede i køen, komprimer bare når valget er endret', () => {
-  const m = code('Nrk87Model.swift');
+  const m = code('NrkModel.swift');
   assert.match(m, /let re: String = "\^https:\/\/\(\[a-z0-9-\]\+\\\\\.\)\*\(nrk\\\\\.no\|nrksuper\\\\\.no\)\(\/\|\$\)"/);
   assert.match(m, /formErr = "Bare lenker fra nrk\.no og nrksuper\.no\."/);
   assert.match(m, /catch let e as APIError where e\.status == 409 \{\n\s+self\.formErr = "Lenken ligger allerede i køen\."/);
@@ -120,32 +120,32 @@ test('lenker: bare nrk.no / nrksuper.no (https), 409 = ligger allerede i køen, 
 });
 
 test('«Lim inn» og lenker utenfra fyller bare ut feltet – ingen nedlasting uten «Last ned» (regelen fra prompt 86)', () => {
-  const m = code('Nrk87Model.swift');
+  const m = code('NrkModel.swift');
   const pre = m.slice(m.indexOf('func prefill('), m.indexOf('private func call('));
   assert.match(pre, /url = String\(l\.prefix\(2000\)\)/);
   assert.match(pre, /guard let s = UIPasteboard\.general\.string, !s\.isEmpty else/);
   assert.doesNotMatch(pre, /add\(|call\(|"POST"|"DELETE"|Task \{/);
   // Dyplenken homelab://media/nrk?url=… (eksisterende mottak i Media43.handleURL) kaller bare prefill.
-  const h = code('Media43Model.swift');
+  const h = code('MediaModel.swift');
   const body = h.slice(h.indexOf('func handleURL('), h.indexOf('/* ---------- Nettverk ---------- */'));
   assert.match(body, /if t == "nrk" \{[\s\S]*?if !link\.isEmpty \{ Nrk87\.shared\.prefill\(link\) \}\n\s+\}\n\s+show\(t\)/);
   assert.doesNotMatch(body, /Nrk87\.shared\.add|"POST"|\.queue\(/);
   // add(…) kalles bare fra knappen og tastaturets «Gå» i skjemaet.
-  const v = code('Nrk87Views.swift');
+  const v = code('NrkPage.swift');
   assert.equal((v.match(/m\.add\(store\)/g) || []).length, 2);
   assert.match(v, /Button \{ m\.paste\(\) \} label: \{\n\s+Text\("Lim inn"\)/);
-  for (const f of ['App.swift', 'AppWidgets.swift', 'Media43Model.swift']) assert.doesNotMatch(code(f), /Nrk87\.shared\.(add|queue|act|clean|check|unfollow)\(/, f);
+  for (const f of ['App.swift', 'AppWidgets.swift', 'MediaModel.swift']) assert.doesNotMatch(code(f), /Nrk87\.shared\.(add|queue|act|clean|check|unfollow)\(/, f);
   // Ny konto = ingenting fra forrige konto.
   assert.match(m, /let acct: String = store\.account\?\.id \?\? ""\n\s+if acct == scope \{ return \}/);
 });
 
 test('oppdatering: 2 s med noe i kø, ellers 10 s, og stopper når fanen ikke vises', () => {
-  const m = code('Nrk87Model.swift');
+  const m = code('NrkModel.swift');
   assert.match(m, /while !Task\.isCancelled \{\n\s+let wait: UInt64 = active \? 2_000_000_000 : 10_000_000_000\n\s+try\? await Task\.sleep\(nanoseconds: wait\)\n\s+if Task\.isCancelled \{ break \}/);
   assert.match(m, /if UIApplication\.shared\.applicationState != \.active \{ continue \}/);
   assert.match(m, /var active: Bool \{ jobs\.contains \{ \$0\.active \} \}/);
   // Løkka eies av visningens .task (avbrytes av SwiftUI når fanen byttes) – ingen løs Task eller Timer.
-  const v = code('Nrk87Views.swift');
+  const v = code('NrkPage.swift');
   assert.match(v, /\.task \{ await m\.run\(store\) \}/);
   assert.doesNotMatch(m + v, /Timer\.|DispatchQueue\.main\.asyncAfter/);
   // Skjemaet lever i modellen, så feltet ikke mister teksten når Media tegnes på nytt.
@@ -153,14 +153,14 @@ test('oppdatering: 2 s med noe i kø, ellers 10 s, og stopper når fanen ikke vi
 });
 
 test('tåler at felt mangler: uten komprimer ingen avkrysningsboks, uten bibliotek «krever en nyere versjon av nrk-dl»', () => {
-  const m = code('Nrk87Model.swift');
+  const m = code('NrkModel.swift');
   assert.match(m, /if let k = JS\.dict\(o, "komprimer"\) \{[\s\S]*?if !kompTouched \{ komp = kompStd \}\n\s+\} else \{\n\s+hasKomp = false/);
   assert.match(m, /if JS\.bool\(o, "bibliotek"\) == false \{\n\s+libState = "gammel"/);
   assert.match(m, /if JS\.bool\(o, "tilgjengelig"\) == false \{\n\s+libState = "gammel"/);
   assert.match(m, /catch let e as APIError where e\.status == 404 \|\| e\.status == 405 \{[\s\S]*?libState = "gammel"/);
   assert.match(m, /if libState == "gammel" \{ return \}/);
-  // Prompt 88: kvalitet, komprimering og VPN-merket står øverst i kort 1 «NRK» (Nrk88Views.swift).
-  const v = code('Nrk87Views.swift') + code('Nrk88Views.swift');
+  // Prompt 88: kvalitet, komprimering og VPN-merket står øverst i kort 1 «NRK» (NrkSeriesPage.swift).
+  const v = code('NrkPage.swift') + code('NrkSeriesPage.swift');
   assert.match(v, /if m\.hasKomp \{ compress \}/);
   assert.match(v, /if m\.libState == "gammel" \{[\s\S]*?Text\("Biblioteket krever en nyere versjon av nrk-dl\."\)/);
   assert.match(v, /if m\.hasVpn \{/);
@@ -168,9 +168,9 @@ test('tåler at felt mangler: uten komprimer ingen avkrysningsboks, uten bibliot
 });
 
 test('tekstene og knappene fra designet', () => {
-  // Prompt 88: kort 1 heter «NRK» (søk, kvalitet, komprimering, VPN) i Nrk88Views.swift; lenkeskjemaet under «Har du en lenke?».
-  const v = code('Nrk87Views.swift') + code('Nrk88Views.swift');
-  const m = code('Nrk87Model.swift');
+  // Prompt 88: kort 1 heter «NRK» (søk, kvalitet, komprimering, VPN) i NrkSeriesPage.swift; lenkeskjemaet under «Har du en lenke?».
+  const v = code('NrkPage.swift') + code('NrkSeriesPage.swift');
+  const m = code('NrkModel.swift');
   for (const t of [
     'Har du en lenke?', 'Lim inn', 'Last ned', 'TYPE', 'KVALITET', 'Følg serien', 'Laster ned nye episoder automatisk',
     'Komprimer (H.265, ca. halv størrelse)', 'På som standard på serveren', 'Av som standard på serveren',

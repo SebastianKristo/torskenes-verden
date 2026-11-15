@@ -12,7 +12,7 @@ const SRC = join(ROOT, 'apps/ios/FinansHub/Sources');
 const raw = (f) => readFileSync(join(SRC, f), 'utf8');
 /** Uten linjekommentarer. */
 const code = (f) => raw(f).split('\n').filter((l) => !l.trim().startsWith('//') && !l.trim().startsWith('///')).join('\n');
-const NEW = ['Nrk88Model.swift', 'Nrk88Views.swift', 'Musikk88Model.swift', 'Musikk88Views.swift'];
+const NEW = ['NrkSearchModel.swift', 'NrkSeriesPage.swift', 'MusikkModel.swift', 'MusikkPage.swift'];
 
 /** Liten Swift-lekser (som i p87-ios): nestede blokk-kommentarer, strenger med interpolasjon, så klammebalanse. */
 function lex(src) {
@@ -61,7 +61,7 @@ function lex(src) {
 }
 
 test('filene er hele, uten tvungen utpakking, og XcodeGen plukker dem opp (FinansHub/Sources)', () => {
-  for (const f of [...NEW, 'Nrk87Model.swift', 'Nrk87Views.swift', 'Media43Model.swift', 'Media43Views.swift', 'Media45.swift']) {
+  for (const f of [...NEW, 'NrkModel.swift', 'NrkPage.swift', 'MediaModel.swift', 'MediaPage.swift', 'MediaFiles.swift']) {
     assert.equal(lex(raw(f)), '', f);
   }
   for (const f of NEW) {
@@ -75,22 +75,22 @@ test('filene er hele, uten tvungen utpakking, og XcodeGen plukker dem opp (Finan
 });
 
 test('Musikk-fanen står etter NRK, med egen farge, visning og «dra for å oppdatere»', () => {
-  assert.match(code('Media43Model.swift'), /\("nrk", "NRK"\), \("musikk", "Musikk"\), \("avspilling", "Avspilling"\)\]/);
-  const v = code('Media43Views.swift');
+  assert.match(code('MediaModel.swift'), /\("nrk", "NRK"\), \("musikk", "Musikk"\), \("avspilling", "Avspilling"\)\]/);
+  const v = code('MediaPage.swift');
   assert.match(v, /case "musikk": Musikk88View\(\)/);
   assert.match(v, /if m\.tab == "musikk" \{ await Musikk88\.shared\.load\(store, full: true\); return \}/);
-  assert.match(code('Media45.swift'), /case "musikk": return Color\(hex: "#7a4fa0"\)/);
+  assert.match(code('MediaFiles.swift'), /case "musikk": return Color\(hex: "#7a4fa0"\)/);
 });
 
 test('alle kall går via Homelab-serveren (Media46.call) – ingen adresser, token eller egne nettverkskall', () => {
-  const nrk = code('Nrk88Model.swift');
-  const mu = code('Musikk88Model.swift');
+  const nrk = code('NrkSearchModel.swift');
+  const mu = code('MusikkModel.swift');
   assert.match(nrk, /try await Media46\.shared\.call\(store, method, "\/media\/nrk" \+ path, json: json, timeout: timeout\)/);
   assert.match(mu, /try await Media46\.shared\.call\(store, method, "\/media\/yubal" \+ path, json: json, timeout: timeout\)/);
   for (const f of NEW) {
     assert.doesNotMatch(code(f), /URLSession|URLRequest|:8010|:8020|10\.69\.|Bearer|nrk_token|yubal_url|NRK_DL|YUBAL_URL/, f);
   }
-  for (const f of ['Nrk88Views.swift', 'Musikk88Views.swift']) assert.doesNotMatch(code(f), /Media46\.shared\.call/, f);
+  for (const f of ['NrkSeriesPage.swift', 'MusikkPage.swift']) assert.doesNotMatch(code(f), /Media46\.shared\.call/, f);
   // NRK: søk, serie, sesong, jobber med episoder, følg.
   for (const p of ['"/sok?q=" + Nrk88.enc(text)', '"/serie/" + sid', '"/serie/" + sid + "/sesong/" + name', '"POST", "/jobber"', '"POST", "/folger"', '"DELETE", "/folger/" + f.id']) {
     assert.ok(nrk.includes(p), p);
@@ -112,17 +112,17 @@ test('alle kall går via Homelab-serveren (Media46.call) – ingen adresser, tok
 });
 
 test('bilder bare via serverens bildeproxy, med samme innlogging som andre Media-bilder', () => {
-  assert.match(code('Nrk88Model.swift'), /return s\.hasPrefix\("\/api\/media\/nrk\/bilde\?"\) \? s : ""/);
-  assert.match(code('Musikk88Model.swift'), /return s\.hasPrefix\("\/api\/media\/yubal\/bilde\?"\) \? s : ""/);
+  assert.match(code('NrkSearchModel.swift'), /return s\.hasPrefix\("\/api\/media\/nrk\/bilde\?"\) \? s : ""/);
+  assert.match(code('MusikkModel.swift'), /return s\.hasPrefix\("\/api\/media\/yubal\/bilde\?"\) \? s : ""/);
   // Følg-objektene får bilde og radio fra GET /jobber.
-  const m87 = code('Nrk87Model.swift');
+  const m87 = code('NrkModel.swift');
   assert.match(m87, /f\.image = Nrk88\.img\(JS\.str\(r, "bilde"\)\)/);
   assert.match(m87, /f\.radio = JS\.bool\(r, "radio"\) \?\? false/);
-  for (const f of ['Nrk88Views.swift', 'Musikk88Views.swift']) assert.match(code(f), /Media50Remote\(url: url, want: 320\)/, f);
+  for (const f of ['NrkSeriesPage.swift', 'MusikkPage.swift']) assert.match(code(f), /Media50Remote\(url: url, want: 320\)/, f);
 });
 
 test('NRK: kort «NRK» med søk, kvalitet, komprimering, VPN, treff (16:9) og «Har du en lenke?»', () => {
-  const v = code('Nrk88Views.swift');
+  const v = code('NrkSeriesPage.swift');
   for (const t of ['NRK', 'Søk i NRK TV og NRK Radio', 'KVALITET', 'Komprimer (H.265, ca. halv størrelse)', 'Har du en lenke?',
     'Søk etter serier, filmer og podkaster.', 'Søker …', 'SERIE', 'FILM', 'RADIO', 'EPISODE', 'I KØ', 'IKKE TILGJENGELIG', 'Last ned',
     'Søket krever en nyere versjon av nrk-dl. Bruk lenkefeltet under.', 'VPN nede – stoppet', '‹ Søk']) {
@@ -133,16 +133,16 @@ test('NRK: kort «NRK» med søk, kvalitet, komprimering, VPN, treff (16:9) og �
   assert.match(v, /\.aspectRatio\(16\.0 \/ 9\.0, contentMode: \.fit\)/);
   assert.match(v, /if open \{ Nrk87Form\(\) \}/);
   // Kort 1 erstatter det gamle skjemaet øverst; Bibliotek er beholdt.
-  const v87 = code('Nrk87Views.swift');
+  const v87 = code('NrkPage.swift');
   assert.match(v87, /\} else \{\n\s+Nrk88Top\(\)\n\s+Nrk87Queue\(\)\n\s+Nrk87Follows\(\)\n\s+\}\n\s+Nrk87Library\(\)/);
   assert.doesNotMatch(v87, /"Last ned fra NRK"/);
   // Komprimering sendes bare når valget avviker fra serverens standard (som web).
-  assert.equal((code('Nrk88Model.swift').match(/if nrk\.hasKomp && nrk\.komp != nrk\.kompStd \{ body\["komprimer"\] = nrk\.komp \}/g) || []).length, 3);
+  assert.equal((code('NrkSearchModel.swift').match(/if nrk\.hasKomp && nrk\.komp != nrk\.kompStd \{ body\["komprimer"\] = nrk\.komp \}/g) || []).length, 3);
 });
 
 test('NRK: serieside med sesongvelger, avkrysning, merker og bunnlinje', () => {
-  const v = code('Nrk88Views.swift');
-  const m = code('Nrk88Model.swift');
+  const v = code('NrkSeriesPage.swift');
+  const m = code('NrkSearchModel.swift');
   for (const t of ['Fjern valg', 'Velg alle tilgjengelige (', '✓ Følger serien', 'Følg serien', 'Legger i køen …', 'Last ned 1 episode',
     'Henter serien fra NRK …', 'Henter episodene …', 'Ingen episoder i denne sesongen.', 'Ingen episoder tilgjengelig hos NRK akkurat nå.',
     'Ikke tilgjengelig', 'Lastet ned', 'I kø', 'Prøv igjen']) {
@@ -160,54 +160,54 @@ test('NRK: serieside med sesongvelger, avkrysning, merker og bunnlinje', () => {
   assert.match(m, /let chosen: \[Nrk88Ep\] = Array\(list\.filter \{ canPick\(\$0\) && pick\.contains\(\$0\.id\) \}\.prefix\(200\)\)/);
   assert.match(m, /"episoder": urls\]/);
   // En serie i Bibliotek åpner seriesiden (i Bibliotek-kortet, med «‹ Bibliotek»).
-  const v87 = code('Nrk87Views.swift');
+  const v87 = code('NrkPage.swift');
   assert.match(v87, /Nrk88\.shared\.open\(sid, title: it\.title, from: "lib", store\)/);
   assert.match(v87, /Nrk88SeriesPage\(back: "‹ Bibliotek"\)/);
 });
 
 test('NRK: «Serier du følger» med plakat 48×72 (radio 72×72) og reserveflate med tittel', () => {
-  const v = code('Nrk87Views.swift');
+  const v = code('NrkPage.swift');
   assert.match(v, /Nrk88Image\(url: f\.image, title: f\.title, font: 12, bottom: true\)\n\s+\.frame\(width: f\.radio \? 72 : 48, height: 72\)/);
   assert.match(v, /"Du følger ingen serier\. Åpne en serie og trykk «Følg serien»\."/);
 });
 
 test('ingen handling uten trykk: søk er lesing, delingsmottaket og «Lim inn» fyller bare feltet', () => {
-  const nrk = code('Nrk88Model.swift');
+  const nrk = code('NrkSearchModel.swift');
   // Søket gjør bare GET.
   const sok = nrk.slice(nrk.indexOf('func search('), nrk.indexOf('nonisolated static func hits('));
   assert.doesNotMatch(sok, /"POST"|"DELETE"|"PATCH"/);
   const typed = nrk.slice(nrk.indexOf('func typed('), nrk.indexOf('func clear('));
   assert.doesNotMatch(typed, /download|"POST"/);
   // Nedlasting/følg bare fra knappene.
-  const v = code('Nrk88Views.swift');
+  const v = code('NrkSeriesPage.swift');
   assert.equal((v.match(/s\.download\(h, store\)/g) || []).length, 1);
   assert.equal((v.match(/s\.downloadPicked\(store\)/g) || []).length, 1);
   assert.equal((v.match(/s\.toggleFollow\(store\)/g) || []).length, 1);
   // Lenker utenfra: prefill åpner bare «Har du en lenke?».
-  const m87 = code('Nrk87Model.swift');
+  const m87 = code('NrkModel.swift');
   const pre = m87.slice(m87.indexOf('func prefill('), m87.indexOf('func paste('));
   assert.match(pre, /Nrk88\.shared\.showLink\(\)/);
   const show = nrk.slice(nrk.indexOf('func showLink('), nrk.indexOf('/* ---------- Søk ---------- */', nrk.indexOf('func showLink(')));
   assert.doesNotMatch(show, /call\(|Task|download/);
   // Musikk: homelab://media/musikk?url=… og «Lim inn» fyller bare ut.
-  const mu = code('Musikk88Model.swift');
+  const mu = code('MusikkModel.swift');
   const mpre = mu.slice(mu.indexOf('func prefill('), mu.indexOf('func edited('));
   assert.match(mpre, /guard let s = UIPasteboard\.general\.string, !s\.isEmpty else/);
   assert.doesNotMatch(mpre, /call\(|Task|start\(|preview\(/);
-  const h = code('Media43Model.swift');
+  const h = code('MediaModel.swift');
   const body = h.slice(h.indexOf('func handleURL('), h.indexOf('/* ---------- Nettverk ---------- */'));
   assert.match(body, /if !ml\.isEmpty \{ Musikk88\.shared\.prefill\(ml\) \}/);
   assert.doesNotMatch(body, /Musikk88\.shared\.(start|preview|sync|act|toggle|unfollow|clean)\(/);
-  for (const f of ['App.swift', 'AppWidgets.swift', 'Media43Model.swift']) {
+  for (const f of ['App.swift', 'AppWidgets.swift', 'MediaModel.swift']) {
     assert.doesNotMatch(code(f), /Musikk88\.shared\.(start|sync|act|toggle|unfollow|clean)\(|Nrk88\.shared\.(download|downloadPicked|toggleFollow)\(/, f);
   }
-  const mv = code('Musikk88Views.swift');
+  const mv = code('MusikkPage.swift');
   assert.equal((mv.match(/m\.start\(store\)/g) || []).length, 1);
   assert.match(mv, /Button \{ m\.paste\(\) \} label: \{\n\s+Text\("Lim inn"\)/);
 });
 
 test('Musikk: lenker bare fra YouTube Music/YouTube, max_items 1–10000, følg bare spillelister', () => {
-  const mu = code('Musikk88Model.swift');
+  const mu = code('MusikkModel.swift');
   assert.match(mu, /let re: String = "\^https:\/\/\(music\\\\\.youtube\\\\\.com\|youtube\\\\\.com\|www\\\\\.youtube\\\\\.com\|m\\\\\.youtube\\\\\.com\|youtu\\\\\.be\)\/"/);
   assert.match(mu, /static let bareYt: String = "Bare lenker fra music\.youtube\.com, youtube\.com eller youtu\.be\."/);
   assert.match(mu, /maxN = Swift\.max\(1, Swift\.min\(10000, v\)\)/);
@@ -219,8 +219,8 @@ test('Musikk: lenker bare fra YouTube Music/YouTube, max_items 1–10000, følg 
 });
 
 test('Musikk: tekstene fra designet, tomtilstand og sangene i en spilleliste', () => {
-  const v = code('Musikk88Views.swift');
-  const m = code('Musikk88Model.swift');
+  const v = code('MusikkPage.swift');
+  const m = code('MusikkModel.swift');
   for (const t of ['Musikk er ikke satt opp', 'Åpne Integrasjoner', 'Last ned musikk', 'Album, spilleliste eller sang fra music.youtube.com', 'Lim inn',
     'Forhåndsvis', 'Henter …', 'Alle spor', 'Bare de første', 'spor', 'Følg spillelisten (nye sanger lastes ned automatisk)', 'Følg og last ned',
     'Lagres som ', ' i musikkbiblioteket (Navidrome)', 'Køen', 'Fjern ferdige', 'Ingenting i køen.', 'Automatisk', 'Manuell', 'Avbryt', 'Fjern',
@@ -243,21 +243,21 @@ test('Musikk: tekstene fra designet, tomtilstand og sangene i en spilleliste', (
 });
 
 test('oppdatering: 2 s mens noe pågår, ellers 10 s, stopper når fanen ikke vises og hoppes over i bakgrunnen', () => {
-  const m = code('Musikk88Model.swift');
+  const m = code('MusikkModel.swift');
   assert.match(m, /while !Task\.isCancelled \{\n\s+let wait: UInt64 = active \? 2_000_000_000 : 10_000_000_000\n\s+try\? await Task\.sleep\(nanoseconds: wait\)\n\s+if Task\.isCancelled \{ break \}/);
   assert.match(m, /if UIApplication\.shared\.applicationState != \.active \{ continue \}/);
   assert.match(m, /var active: Bool \{ jobs\.contains \{ !\$0\.done \} \}/);
-  const v = code('Musikk88Views.swift');
+  const v = code('MusikkPage.swift');
   assert.match(v, /\.task \{ await m\.run\(store\) \}/);
   for (const f of NEW) assert.doesNotMatch(code(f), /Timer\.|DispatchQueue\.main\.asyncAfter/, f);
   // NRK-søket venter 350 ms etter siste tastetrykk; seriesiden friskes opp når en jobb blir ferdig.
-  assert.match(code('Nrk88Model.swift'), /try\? await Task\.sleep\(nanoseconds: 350_000_000\)/);
-  assert.match(code('Nrk88Views.swift'), /if now < old \{ Task \{ await s\.refreshQuiet\(store\) \} \}/);
+  assert.match(code('NrkSearchModel.swift'), /try\? await Task\.sleep\(nanoseconds: 350_000_000\)/);
+  assert.match(code('NrkSeriesPage.swift'), /if now < old \{ Task \{ await s\.refreshQuiet\(store\) \} \}/);
 });
 
 test('tilgjengelighet: 44 pt trykkflater, VoiceOver-etiketter og Dynamic Type (ingen faste systemfonter for tekst)', () => {
-  const v = code('Nrk88Views.swift');
-  const mv = code('Musikk88Views.swift');
+  const v = code('NrkSeriesPage.swift');
+  const mv = code('MusikkPage.swift');
   assert.match(v, /\.frame\(width: 44, height: 44\)/); // «Tøm søk»
   assert.match(v, /\.accessibilityLabel\("Tøm søk"\)/);
   assert.match(v, /\.accessibilityLabel\("Søk i NRK"\)/);

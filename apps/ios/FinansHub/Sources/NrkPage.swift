@@ -2,11 +2,11 @@ import SwiftUI
 import UIKit
 
 /* ---------------- Prompt 87: Media → NRK (visning) ----------------
- Prompt 88: kort 1 er nå «NRK» med søk og serieside (Nrk88Views.swift); lenkeskjemaet under ligger under «Har du en lenke?».
+ Prompt 88: kort 1 er nå «NRK» med søk og serieside (NrkSeriesPage.swift); lenkeskjemaet under ligger under «Har du en lenke?».
  Fasit: design/Media NRK.dc.html. Én kolonne på telefon: Last ned → Køen → Serier du følger → Bibliotek (med detalj).
  På stor skjerm: «Last ned fra NRK» og «Serier du følger» til venstre, «Køen» til høyre, Bibliotek i full bredde under.
  Farger: blå = laster ned, grønn (pos) = ferdig / VPN ok, rød (lab) = feil / VPN stoppet, dempet = i kø / avbrutt.
- Oppdateringen (2 s / 10 s) kjører i .task og stopper av seg selv når fanen ikke vises. Modell: Nrk87Model.swift. */
+ Oppdateringen (2 s / 10 s) kjører i .task og stopper av seg selv når fanen ikke vises. Modell: NrkModel.swift. */
 
 enum Nrk87Tint {
     static func blue(_ p: PaperPalette) -> Color { Color(hex: p.dark ? "#7fb0dc" : "#2b5d8a") }

@@ -7,7 +7,7 @@ import UIKit
    (16:9-bilde, merke Serie/Film/Radio/Episode) eller seriesiden, og «Har du en lenke?» (lenkefeltet fra prompt 87).
    Seriesiden: bilde, tittel, beskrivelse, sesongvelger (tomme dempet), episoder med avkrysning (dato · varighet),
    bunnlinje med «Velg alle tilgjengelige (N)», «Følg serien», «Last ned N episoder» og hjelpeteksten.
- Ingenting legges i køen uten trykk. Modell: Nrk88Model.swift. */
+ Ingenting legges i køen uten trykk. Modell: NrkSearchModel.swift. */
 
 /// Bilde fra serverens bildeproxy, med fargeflate og tittel som reserve (16:9, 2:3 eller kvadrat – rammen settes utenfor).
 struct Nrk88Image: View {

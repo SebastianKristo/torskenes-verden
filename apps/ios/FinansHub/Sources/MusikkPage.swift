@@ -5,7 +5,7 @@ import UIKit
  Fasit: design/Media Musikk.dc.html (pakke 58). Én kolonne: «Last ned musikk» → «Køen» → «Spillelister du følger».
  Ikke satt opp → tomtilstand med «Åpne Integrasjoner». Oppdateringen (2 s / 10 s) kjører i .task og stopper av seg selv når
  fanen ikke vises; i bakgrunnen hoppes den over. Farger: blå = henter/laster ned, lilla = importerer, grønn = ferdig,
- rød = feilet, dempet = venter/avbrutt. Modell: Musikk88Model.swift. */
+ rød = feilet, dempet = venter/avbrutt. Modell: MusikkModel.swift. */
 
 enum Mu88Tint {
     static func job(_ s: String, _ p: PaperPalette) -> Color {

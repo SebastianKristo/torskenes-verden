@@ -24,7 +24,7 @@ const TOUCHED = [
   FH + 'Vaer41.swift',
   FH + 'Departures16.swift',
   FH + 'Convo67.swift',
-  FH + 'Media44Banner.swift',
+  FH + 'MediaBanner.swift',
   FH + 'Family50Views.swift',
   FH + 'HomeSearch29.swift',
   FH + 'Home70Assist.swift',
@@ -79,7 +79,7 @@ test('orb: TimelineView(.animation) i full takt, ferdig ringlag med drawingGroup
   for (const f of TOUCHED) {
     assert.doesNotMatch(code(f), /\.blur\(radius:[^)\n]*(?:phase|wave|ctx\.date|timeInterval)/, f);
   }
-  assert.match(code(FH + 'Media44Banner.swift'), /\.animation\(nil\) \{ \$0\.blur\(radius:/);
+  assert.match(code(FH + 'MediaBanner.swift'), /\.animation\(nil\) \{ \$0\.blur\(radius:/);
 });
 
 test('wiggle: fast fase per flis (nøkkelen), stabile id-er, bare rotasjonen animeres', () => {

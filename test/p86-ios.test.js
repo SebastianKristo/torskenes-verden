@@ -102,5 +102,5 @@ test('Homelab: dyplenkene åpner sider; innlogging har egen bekreftelse (uendret
   assert.match(auth, /guard AppAuth41\.allowed\(r\.redirect, store\) else \{/);
   assert.match(auth, /let ok: Bool = await AppAuth41\.verifyOwner\(\)\n\s+guard ok else \{/);
   // Magnet-lenker fyller bare ut arket.
-  assert.match(code('FinansHub/Sources/Media43Model.swift'), /magnetPrefill = s/);
+  assert.match(code('FinansHub/Sources/MediaModel.swift'), /magnetPrefill = s/);
 });

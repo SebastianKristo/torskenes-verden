@@ -414,7 +414,7 @@ struct Media43SearchSheet: View {
     @Environment(\.paper) private var p
     @MainActor private var m: Media43 { Media43.shared }
     let target: Media43SearchTarget
-    /// Prompt 44: søket kjører som jobb på serveren med status per indekser (Media44Search.swift).
+    /// Prompt 44: søket kjører som jobb på serveren med status per indekser (MediaSearchJobs.swift).
     @State private var job: Media44Job = Media44Job()
     private var rows: [Media43Release] { job.rows }
     private var loading: Bool { job.running }
@@ -543,7 +543,7 @@ struct Media43SearchSheet: View {
                 Haptics.shared.success()
                 sent.insert(r.guid)
                 m.flash("Sendt til qBittorrent: " + [r.quality, Media43.size(r.size)].filter { !$0.isEmpty }.joined(separator: " · "))
-                // Prompt 50: følg nedlastingen videre (Laster ned … / Lagt til, men stoppet), Media50Track.swift.
+                // Prompt 50: følg nedlastingen videre (Laster ned … / Lagt til, men stoppet), MediaTracking.swift.
                 Media50Track.shared.grabbed(target, store)
             } catch { m.flash(m.errorText(error)) }
         }
@@ -1119,7 +1119,7 @@ struct Media43SettingsContent: View {
                 .background(p.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                 Text("Varsler når en nedlasting er ferdig, feiler eller står fast sendes fra serveren (Glimt-brief og push).")
                     .font(PF.ui(12)).foregroundStyle(p.mut)
-                // Prompt 50: Diagnostikk (ledd 2–6) – bare for administrator (Media50Track.swift).
+                // Prompt 50: Diagnostikk (ledd 2–6) – bare for administrator (MediaTracking.swift).
                 if Update28Model.isAdmin(store) { Media50DiagCard().padding(.top, 6) }
             }
             .task { if !inSheet { await m.loadStatus(store) } }
