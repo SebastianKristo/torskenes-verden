@@ -52,11 +52,11 @@ test('filene finnes, og Skjold Lab er koblet inn i Mer, sidene, tilbake, dyplenk
   assert.ok(existsSync(join(SRC, 'Skjold76.kt')));
   assert.ok(existsSync(join(SRC, 'ui/Skjold76Ui.kt')));
   assert.match(code('ui/Paper.kt'), /if \(Skjold76\.open\) PgIn52 \{ SkjoldPage76\(vm\) \}/);
-  assert.match(code('ui/Ui52B.kt'), /no\.kristo\.finanshub\.Skjold76\.open,\s*\)\.count \{ it \}/);
+  assert.match(code('ui/Effekter.kt'), /no\.kristo\.finanshub\.Skjold76\.open,\s*\)\.count \{ it \}/);
   assert.match(code('ui/Mer24.kt'), /row\("skjold", "Skjold Lab", "Deler, skuffer og skap"\) \{ vm\.openSkjold76\(\) \}/);
-  assert.match(code('ui/P25Ui.kt'), /"skjold" to "M4 3h16v18H4z/, 'ikon: skuffeskap');
+  assert.match(code('ui/MerListe.kt'), /"skjold" to "M4 3h16v18H4z/, 'ikon: skuffeskap');
   assert.match(code('AppViewModel.kt'), /"skjold", "deler" -> skjoldLink76\(uri\)/);
-  const nav = code('P32b.kt');
+  const nav = code('Glimt.kt');
   assert.match(nav, /"skjold" -> openSkjold76\(\)/);
   assert.ok(nav.indexOf('"skjold", "Skjold Lab"') < nav.indexOf('"kart", "Familie"'), 'Skjold-snarveien før Familie');
   assert.match(nav, /navShortcut32b\(t\)\?\.takeIf \{ it\.second != "kart" \|\| !skjoldKnows76\(t\) \}/, '«hvor er M3-skruene?» går til Glimt');

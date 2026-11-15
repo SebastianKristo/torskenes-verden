@@ -61,7 +61,7 @@ test('trykk utenfor: bare et ekte trykk lukker (bevegelse, tid, scroll, fling)',
 });
 
 test('sveip opp lukker bare fra grepet, over 60 dp og raskt', () => {
-  const u = code('ui/Ui38.kt');
+  const u = code('ui/GlobaleLag.kt');
   const box = u.slice(u.indexOf('fun AnsBox38'));
   assert.match(box, /gripHit70\(down\.type, down\.position\.y, size\.height, gripPx\)/);
   assert.match(box, /swipeClose74\(-drag, -vy, 60\.dp\.toPx\(\), 600\.dp\.toPx\(\)\)/);

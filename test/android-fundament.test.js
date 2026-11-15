@@ -76,9 +76,9 @@ test('D §6: appen viser det serveren regner (neste trekk, neste forekomst), lok
   const skjema = strip(raw(join(APP, 'ui/Subs23.kt')));
   assert.match(skjema, /produceState\(nextChargeText\(day, billMonth, cycle\), day, billMonth, cycle\) \{[\s\S]*?vm\.nextChargeLabel\(day, billMonth, cycle\)\?\.let \{ value = it \}/);
   assert.match(strip(raw(join(APP, 'ui/Subs14.kt'))), /val now: LocalDate = OsloDato\.iDag\(\)/, 'reserven bruker Oslo-datoen');
-  assert.match(strip(raw(join(APP, 'P37.kt'))), /val next = it0\.nextDue \?: nextDue37\(it0\.due, it0\.rep\)/);
-  assert.match(strip(raw(join(APP, 'P46.kt'))), /val next = before\.nextDue \?: nextDue37\(before\.due, before\.rep\)/);
-  assert.match(strip(raw(join(APP, 'Models17.kt'))), /nextDue = t\.optStr\("nextDue"\)\?\.take\(10\)/);
+  assert.match(strip(raw(join(APP, 'domene/Gjoremal.kt'))), /val next = it0\.nextDue \?: nextDue37\(it0\.due, it0\.rep\)/);
+  assert.match(strip(raw(join(APP, 'domene/Gjoremal.kt'))), /val next = before\.nextDue \?: nextDue37\(before\.due, before\.rep\)/);
+  assert.match(strip(raw(join(APP, 'domene/Gjoremal.kt'))), /nextDue = t\.optStr\("nextDue"\)\?\.take\(10\)/);
   assert.match(strip(raw(join(APP, 'Calendar29.kt'))), /fun parseQuickLocal29\(txt: String, today: LocalDate = no\.kristo\.felles\.tid\.OsloDato\.iDag\(\)\)/);
   // Kalenders lokale hurtigtolking har felles fasit (JUnit i :kalender, kjørt av «Mobilapper»).
   const t = raw(join(AND, 'kalender/src/test/java/no/kristo/kalender/HurtigtolkingTest.kt'));

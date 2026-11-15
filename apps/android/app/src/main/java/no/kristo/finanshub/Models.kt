@@ -6,6 +6,7 @@ import org.json.JSONObject
 /* ---------------- FinansHub ---------------- */
 
 data class Category(val id: Int, val name: String, val color: Long, val kind: String)
+
 data class Account(val id: Int, val name: String, val type: String, val last4: String?, val balance: Double)
 
 data class Settings(
@@ -14,6 +15,7 @@ data class Settings(
 )
 
 data class Goal(val id: Int, val name: String, val saved: Double, val target: Double, val color: Long)
+
 data class Rule(val id: Int, val pattern: String, val category: String?)
 
 data class Boot(
@@ -51,6 +53,7 @@ data class Receipt(
 
 /** Én tolkning av en kvittering (forrige eller ny fra Gemini) i sammenligningen. */
 data class ReExtract(val merchant: String?, val date: String?, val total: Double?, val items: List<Pair<String, Double>>, val confidence: Double?, val engine: String?)
+
 data class Reanalysis(val receiptId: String, val previous: ReExtract, val result: ReExtract, val candidateId: String)
 
 private fun parseReExtract(o: JSONObject?): ReExtract = ReExtract(
@@ -77,85 +80,6 @@ data class Me(
     val avatarUrl: String? = null, val serverName: String? = null, val isMainAdmin: Boolean = false,
 )
 
-/* ---------------- Homelab (mobil forside) ---------------- */
-
-data class Weather(val place: String, val temp: Double?, val text: String?, val wind: Double?, val max: Double?, val min: Double?, val code: Int?, val lat: Double? = null, val lon: Double? = null)
-data class Shortcut(val name: String, val url: String, val local: Boolean)
-data class Departure(val line: String, val color: Long?, val min: Int?, val time: String?, val to: String? = null, val textColor: Long? = null, val mode: String? = null)
-data class RuterLine(val from: String, val to: String, val departures: List<Departure>)
-data class ServerStatus(val cpu: Double?, val mem: Double?, val disk: Double?, val temp: Double?, val uptime: String?)
-data class MobileHome(
-    val name: String?, val serverName: String?, val avatarUrl: String?, val greeting: String?,
-    val weather: Weather?, val shortcuts: List<Shortcut>, val ruter: List<RuterLine>, val serverStatus: ServerStatus?,
-    val layout: HomeLayout? = null,
-    /** De 2 viktigste pakkene (null = eldre server uten Sporing). */
-    val packages: List<Shipment>? = null,
-    /** Ekstrafeltene i været (MET), lest romslig. */
-    val weatherX: WeatherX? = null,
-    /** Prompt 21: antall aktive pakker i alt (for «+12 pakker ›»), når serveren sender det. */
-    val packagesTotal: Int? = null,
-)
-
-/** Oppsettet av mobilforsiden (per bruker og enhet): rekkefølge og synlighet for seksjoner og faner. */
-data class HomeLayout(
-    val sec: List<String>, val hlTabs: List<String>, val finTabs: List<String>, val hide: Map<String, Boolean>,
-    /** Egne fanenavn. Nøkkel «hl.<id>» eller «fin.<id>», maks 30 tegn. */
-    val names: Map<String, String> = emptyMap(),
-    /** Tilbake til startsiden: «arrow» (pil øverst, standard) eller «bar» (knapp i fanelinja). */
-    val backStyle: String = "arrow",
-    /** Mat: eldre valg for lys/mørk («light», «dark» eller «system»); brukes ikke lenger. */
-    val matTheme: String = "light",
-    /** Startside: «homelab», «fin-hjem», «fin-liste» eller «fin-budsjett». */
-    val start: String? = null,
-) {
-    fun visible(id: String) = hide[id] != true
-    fun toJson(): JSONObject = JSONObject().put("sec", JSONArray(sec)).put("hlTabs", JSONArray(hlTabs)).put("finTabs", JSONArray(finTabs))
-        .put("hide", JSONObject().apply { hide.forEach { (k, v) -> put(k, v) } })
-        .put("names", JSONObject().apply { names.forEach { (k, v) -> put(k, v) } })
-        .put("backStyle", backStyle).put("matTheme", matTheme)
-        .apply { start?.let { put("start", it) } }
-
-    companion object {
-        val SECTIONS = listOf("clock", "search", "links", "os", "srv", "ruter")
-        val HL_TABS = listOf("hl", "home", "trk", "dom", "mat")
-        val FIN_TABS = listOf("home", "list", "finn", "bud", "ai", "mer")
-        /** Kan ikke skjules. */
-        val FIXED_HL = setOf("hl", "home")
-        val FIXED_FIN = setOf("home", "mer")
-        val STARTS = listOf("homelab", "fin-hjem", "fin-liste", "fin-budsjett")
-        /** Budsjett er skjult som fane (ligger øverst under Mer) og kan slås på i navbar-redigeringen. */
-        val DEFAULT = HomeLayout(SECTIONS, HL_TABS, FIN_TABS, mapOf("srv" to true, "ruter" to true, "bud" to true))
-
-        /** Nye ID-er som ikke finnes i lagret oppsett legges sist; ukjente fjernes. */
-        private fun fix(saved: List<String>, all: List<String>) = saved.filter { it in all }.distinct() + all.filter { it !in saved }
-
-        fun from(o: JSONObject?): HomeLayout {
-            if (o == null) return DEFAULT
-            val hide = DEFAULT.hide.toMutableMap()
-            o.optJSONObject("hide")?.let { h -> h.keys().forEach { k -> hide[k] = h.optBoolean(k) } }
-            val names = mutableMapOf<String, String>()
-            o.optJSONObject("names")?.let { n -> n.keys().forEach { k -> n.optString(k).trim().takeIf { it.isNotEmpty() }?.let { names[k] = it.take(30) } } }
-            // Eldre oppsett uten Finn-fanen: Finn tar plassen til Budsjett, og Budsjett skjules (prompt 10).
-            var fin = o.optJSONArray("finTabs").strings().filter { it in FIN_TABS }
-            if (fin.isNotEmpty() && "finn" !in fin) {
-                val at = fin.indexOf("bud").takeIf { it >= 0 } ?: fin.indexOf("ai").takeIf { it >= 0 } ?: fin.size
-                fin = fin.toMutableList().apply { add(at, "finn") }
-                hide["bud"] = true
-            }
-            // Eldre oppsett uten Sporing: fanen settes inn foran Domener (samme som PWA-en og iOS).
-            var hl = o.optJSONArray("hlTabs").strings().filter { it in HL_TABS }
-            if (hl.isNotEmpty() && "trk" !in hl) hl = hl.toMutableList().apply { add(indexOf("dom").takeIf { it >= 0 } ?: size, "trk") }
-            return HomeLayout(
-                fix(o.optJSONArray("sec").strings(), SECTIONS), fix(hl, HL_TABS),
-                fix(fin, FIN_TABS), hide, names,
-                o.optString("backStyle").takeIf { it == "arrow" || it == "bar" } ?: "arrow",
-                o.optString("matTheme").takeIf { it in listOf("light", "dark", "system") } ?: "light",
-                o.optString("start").takeIf { it in STARTS },
-            )
-        }
-    }
-}
-
 /* ---------------- Mer: sidene fra nettsiden ---------------- */
 
 data class Recurring(val id: Int, val name: String, val amount: Double, val interval: String?, val day: Int?, val active: Boolean, val category: String?, val next: String?) {
@@ -164,24 +88,34 @@ data class Recurring(val id: Int, val name: String, val amount: Double, val inte
 }
 
 data class StockSummary(val total: Double, val invested: Double, val value: Double, val result: Double, val cash: Double, val realized: Double)
+
 data class Position(val ticker: String, val symbol: String, val name: String, val quantity: Double, val avg: Double, val price: Double, val value: Double, val pl: Double, val plPct: Double, val dayPct: Double)
+
 data class StockOrder(val symbol: String, val side: String, val quantity: Double, val value: Double, val price: Double, val date: String)
+
 data class Dividend(val symbol: String, val amount: Double, val date: String)
+
 data class Stocks(
     val configured: Boolean, val status: String?, val env: String?, val summary: StockSummary?, val positions: List<Position>,
     val history: List<Pair<String, Double>>, val orders: List<StockOrder>, val dividends: List<Dividend>, val mock: Boolean,
 )
 
 data class CatAmount(val category: String, val color: Long, val amount: Double)
+
 data class MerchantAmount(val name: String, val amount: Double, val count: Int)
+
 data class MonthInOut(val month: String, val inn: Double, val ut: Double)
+
 data class Report(val mode: String, val total: Double, val byCategory: List<CatAmount>, val merchants: List<MerchantAmount>, val months: List<MonthInOut>)
 
 data class ImportRow(val date: String, val description: String, val raw: String?, val amount: Double, val category: String?, val domain: String?, val aiShort: String?, val duplicate: Boolean)
+
 data class ImportResult(val rows: List<ImportRow>, val imported: Int, val skipped: Int, val errors: List<String>)
 
 data class SearchHit(val type: String, val txId: Int?, val receiptId: String?, val description: String, val date: String?, val amount: Double?, val source: String?, val reason: String?)
+
 data class StoreHit(val name: String, val count: Int, val last: String?)
+
 /** Svar fra ✦ AI-søk (POST /search/ai) eller vanlig søk (GET /search, mode = «plain»). */
 data class AiAnswer(
     val q: String, val answer: String, val hits: List<SearchHit>, val engine: String?, val suggestions: List<String>,
@@ -190,15 +124,18 @@ data class AiAnswer(
     /** Vanlig søk ga treff for 1–2 ord, så AI ble ikke brukt («✦ Spør AI likevel» sender force). */
     val plainFirst: Boolean = false, val notice: String? = null,
 )
+
 /** Forslagsgrupper til søket (GET /search/suggestions). */
 data class SuggestGroup(val title: String, val items: List<String>)
 
 /** Original kvittering og bankrad for en transaksjon. */
 data class ReceiptFile(val id: String, val mime: String?, val fileUrl: String?, val thumbUrl: String?)
+
 data class BankRow(
     val bookingDate: String?, val valueDate: String?, val description: String?, val amount: Double?, val account: String?,
     val archiveReference: String?, val source: String?, val raw: String?, val json: String,
 )
+
 data class Original(val receipt: ReceiptFile?, val bankRow: BankRow?)
 
 /** En rad på en Mer-side som åpner en detaljside med felt og tilhørende transaksjoner. */
@@ -219,13 +156,16 @@ data class Day(
     val date: String, val weekday: String, val name: String?, val cost: Double?, val source: String?, val cook: String?, val fixed: Boolean,
     val dishId: String? = null, val today: Boolean = false, val tag: String? = null, val bestCook: String? = null, val ingredients: List<String> = emptyList(),
 )
+
 data class Dish(
     val id: String, val name: String, val src: String?, val ing: List<String>, val steps: List<String>, val cost: Double, val days: List<Int>,
     /** Mat (prompt 13): mappe, kilde-URL, bilde, lenker og filer, tid og porsjoner. */
     val folderId: String? = null, val sourceUrl: String? = null, val image: String? = null, val links: List<DishLink> = emptyList(),
     val time: String? = null, val servings: String? = null,
 )
+
 data class Shop(val id: String, val text: String, val done: Boolean)
+
 data class Week(
     val start: String, val days: List<Day>, val cooks: List<String>, val shopping: List<Shop>, val weekCost: Double, val auto: Boolean,
     val end: String? = null, val week: Int? = null, val dishes: List<Dish> = emptyList(),
@@ -235,24 +175,34 @@ data class Sub(
     val id: Int, val name: String, val plan: String?, val price: Double, val cycle: String, val nextDate: String?, val usageNote: String?,
     val lowUse: Boolean, val active: Boolean, val domain: String?, val aiShort: String?, val monthly: Double,
 )
+
 data class SubList(val items: List<Sub>, val monthly: Double, val yearly: Double, val lowUse: Double)
 
 data class Member(val id: String, val name: String, val role: String)
+
 data class Folder(val id: Int, val name: String, val type: String?, val address: String?, val members: List<Member>, val total: Double, val count: Int, val myRole: String?)
+
 data class Balance(val name: String, val paid: Double, val balance: Double)
+
 data class Entry(val id: Int, val description: String, val date: String, val amount: Double, val paidBy: String?, val split: String?, val domain: String?, val aiShort: String?, val category: String?,
     val subcategory: String? = null, val aiCategory: Boolean = false) {
     /** «Kategori › Underkategori», med ✦ når AI har laget kategorien. */
     val categoryPath: String? get() = category?.let { c -> (if (aiCategory) "✦ " else "") + (subcategory?.let { "$c › $it" } ?: c) }
 }
+
 /** Boligkategori med underkategorier (GET /finans/api/boliger/categories). */
 data class CategoryShare(val name: String, val amount: Double, val children: List<Pair<String, Double>>)
+
 data class Installment(val label: String, val due: String?, val amount: Double, val paid: Boolean)
+
 data class Project(val id: Int, val name: String, val vendor: String?, val budget: Double, val spent: Double, val installments: List<Installment>)
+
 data class Bill(val name: String, val category: String?, val freq: String?, val payer: String?, val lastPaid: String?, val nextDue: String?, val amount: Double?)
+
 data class FolderDetail(val folder: Folder, val balances: List<Balance>, val entries: List<Entry>, val projects: List<Project>, val bills: List<Bill>, val categories: List<CategoryShare>)
 
 data class FinnStep(val t: String, val done: Boolean, val date: String? = null)
+
 data class FinnDeal(
     val id: Int, val role: String, val item: String, val counterpart: String?, val date: String, val amount: Double, val steps: List<FinnStep>, val done: Boolean,
     /** Finn-koden, forsidebildet (egne bilder eller annonsens), sammendraget («5 e-poster · kvittering ✓ …») og ev. steg 1–4 fra serveren. */
@@ -280,12 +230,17 @@ data class FinnDeal(
         else listOf("Venter på at selger sender", "Pakken er på vei til deg", "Godkjenn varen innen 24 t", "Fullført")[level - 1]
     val status get() = if (finished) "Fullført" else points[level - 1]
 }
+
 data class FinnList(val items: List<FinnDeal>, val bought: Double, val sold: Double, val ongoing: Int)
 
 data class FinnAd(val url: String?, val title: String?, val price: Double?, val place: String?, val description: String?, val images: List<String>, val saved: String?)
+
 data class FinnFile(val id: String, val name: String, val mime: String?, val url: String?, val thumb: String?)
+
 data class FinnMail(val id: String, val date: String?, val from: String?, val subject: String?, val snippet: String?, val body: String?)
+
 data class FinnLine(val label: String, val amount: Double)
+
 data class FinnDetail(val deal: FinnDeal, val ad: FinnAd?, val receipts: List<FinnFile>, val emails: List<FinnMail>, val photos: List<FinnFile>, val summary: String?, val lines: List<FinnLine>,
     /** Kvitteringen: total og «Betalt»/«Utbetalt» fra serveren; annonselenken serveren har funnet i e-postene. */
     val total: Double? = null, val totalLabel: String? = null, val adUrlGuess: String? = null,
@@ -297,41 +252,26 @@ data class FinnDetail(val deal: FinnDeal, val ad: FinnAd?, val receipts: List<Fi
 
 data class TokenInfo(val id: String, val name: String, val scopes: List<String>, val created: Long?, val lastUsed: Long?, val expires: Long?)
 
-/* ---------------- Domener ---------------- */
-
-data class DomainRef(val id: String, val name: String, val source: String)
-data class Named(val name: String, val value: Double)
-data class Country(val iso2: String, val name: String, val visitors: Double, val threats: Double, val iso3n: Int? = null)
-data class Point(val t: String, val requests: Double, val cached: Double, val visitors: Double)
-data class ThreatEvent(val time: String, val action: String, val country: String, val ip: String, val path: String)
-data class DnsRecord(val type: String, val name: String, val content: String, val proxied: Boolean)
-
-data class Analytics(
-    val name: String, val status: String?, val plan: String?, val mock: Boolean,
-    val requests: Double, val visitors: Double, val pageviews: Double, val cachedPct: Double, val bytes: Double, val uptimePct: Double,
-    val sslExpires: String?, val renews: String?,
-    val series: List<Point>, val liveVisitors: Double, val liveRequests: Double, val liveMb: Double, val liveSpark: List<Double>,
-    val countries: List<Country>, val devices: List<Named>, val browsers: List<Named>,
-    val status2xx: Double, val status3xx: Double, val status4xx: Double, val status5xx: Double,
-    val ttfbP50: Double, val ttfbP95: Double, val originMs: Double, val errorPct: Double, val http: List<Named>, val tls: List<Named>,
-    val threatsTotal: Double, val threatTypes: List<Named>, val events: List<ThreatEvent>,
-    val sslMode: String?, val alwaysHttps: Boolean?, val minTls: String?, val dnssec: Boolean?, val botFight: Boolean?, val certExpires: String?,
-    val topPages: List<Named>, val referrers: List<Named>, val uptime90: List<Double>, val dns: List<DnsRecord>,
-    val registrar: String? = null, val nameServers: List<String> = emptyList(), val source: String? = null,
-)
-
 /* ---------------- Parsing ---------------- */
 
 fun color(hex: String?): Long = runCatching { 0xFF000000 or hex!!.removePrefix("#").toLong(16) }.getOrDefault(0xFFA0A0AA)
 
 internal fun JSONObject.optStr(k: String): String? = if (!has(k) || isNull(k)) null else optString(k).takeIf { it.isNotBlank() }
+
 internal fun JSONObject.optIntOrNull(k: String): Int? = if (!has(k) || isNull(k)) null else optInt(k)
+
 internal fun JSONObject.optDoubleOrNull(k: String): Double? = if (!has(k) || isNull(k)) null else optDouble(k).takeIf { !it.isNaN() }
+
 internal fun JSONObject.optBoolOrNull(k: String): Boolean? = if (!has(k) || isNull(k)) null else optBoolean(k)
+
 internal fun JSONObject.num(k: String): Double = optDouble(k, 0.0).let { if (it.isNaN()) 0.0 else it }
+
 internal inline fun <T : Any> JSONArray.map(f: (JSONObject) -> T): List<T> = (0 until length()).mapNotNull { optJSONObject(it)?.let(f) }
+
 internal fun JSONArray?.doubles(): List<Double> = if (this == null) emptyList() else (0 until length()).map { optDouble(it, 0.0) }
+
 internal fun JSONArray?.strings(): List<String> = if (this == null) emptyList() else (0 until length()).map { optString(it) }
+
 private fun JSONObject.named(k: String, valueKey: String = "pct"): List<Named> =
     optJSONArray(k)?.map { Named(it.optString("name", it.optString("path")), it.optDouble(valueKey, it.optDouble("count", 0.0))) } ?: emptyList()
 

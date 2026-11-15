@@ -224,5 +224,5 @@ test('Android: LogoSheet73 med søk, opplasting (kvadrat 512) og overstyring i L
   assert.match(s, /CancellationException/);
   assert.match(src('apps/android/app/src/main/java/no/kristo/finanshub/ui/Finance.kt'), /LogoOv73/);
   assert.match(src('apps/android/app/src/main/java/no/kristo/finanshub/ui/And52AUi.kt'), /LogoTap73/);
-  assert.match(src('apps/android/app/src/main/java/no/kristo/finanshub/ui/Ui52B.kt'), /LogoOv73/);
+  assert.match(src('apps/android/app/src/main/java/no/kristo/finanshub/ui/domene/Okonomi.kt'), /LogoOv73/);
 });

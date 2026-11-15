@@ -18,8 +18,13 @@ const code = (f) => read(f).replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm
 /** Filene prompt 71 har rørt (animasjoner). */
 const TOUCHED = [
   'ui/Anim71.kt', 'ui/Home70.kt', 'ui/Paper15.kt', 'ui/Paper14.kt', 'ui/Paper16.kt', 'ui/Vaer41.kt', 'ui/Weather39.kt', 'ui/Weather22.kt',
-  'ui/Glimt31.kt', 'ui/Glimt43.kt', 'ui/Glimt36.kt', 'ui/Mic70.kt', 'ui/Convo67Ui.kt', 'ui/Chat27Ui.kt', 'ui/Voice56Ui.kt', 'ui/Ui38.kt',
-  'ui/Ui46.kt', 'ui/Ui34.kt', 'ui/Ui52B.kt', 'ui/Brief35.kt', 'ui/Tasks37.kt', 'ui/AiCtl34.kt',
+  'ui/Glimt31.kt', 'ui/Glimt43.kt', 'ui/Glimt36.kt', 'ui/Mic70.kt', 'ui/Convo67Ui.kt', 'ui/Chat27Ui.kt', 'ui/Voice56Ui.kt',
+  'ui/Brief35.kt', 'ui/Tasks37.kt', 'ui/AiCtl34.kt',
+  // Fase 5: Ui34/38/46/52B er delt opp etter funksjon.
+  'ui/GlobaleLag.kt', 'ui/Innlogging.kt', 'ui/Konto.kt', 'ui/GlimtFigurer.kt', 'ui/Brief.kt', 'ui/AiKontroll.kt', 'ui/Komponenter.kt',
+  'ui/HjemDeler.kt', 'ui/Fanelinje.kt', 'ui/Innstillinger.kt', 'ui/ChatDeler.kt', 'ui/Effekter.kt', 'ui/HjemFliser.kt',
+  'ui/domene/Domener.kt', 'ui/domene/Familie.kt', 'ui/domene/Media.kt', 'ui/domene/Gjoremal.kt', 'ui/domene/Vaer.kt',
+  'ui/domene/Avganger.kt', 'ui/domene/Drift.kt', 'ui/domene/Okonomi.kt',
 ];
 
 /** Navn på animerte verdier i fila (State/Animatable/delegater fra animasjonsmotoren, klokker og vugging). */
@@ -87,11 +92,11 @@ test('Glimt-orben og -merket: ringen er et ferdig lag som roteres (rememberInfin
   const m = code('ui/Glimt31.kt');
   assert.match(m, /if \(!done\) Canvas\(Modifier\.matchParentSize\(\)\.graphicsLayer \{ rotationZ = if \(reduce\) 0f else rot \}\)/);
   assert.doesNotMatch(m, /rotate\(if \(reduce\) 0f else rot/);
-  assert.match(code('ui/Ui46.kt'), /rotate\(110f \+ \(spin\?\.value \?: 0f\)\)/, 'profilringen leser vinkelen i drawBehind');
+  assert.match(code('ui/Konto.kt'), /rotate\(110f \+ \(spin\?\.value \?: 0f\)\)/, 'profilringen leser vinkelen i drawBehind');
 });
 
 test('Glimt-svaret og mikrofonen: dra, inngang, prikker, markør og bølge uten rekomponering hvert bilde', () => {
-  const u = code('ui/Ui38.kt');
+  const u = code('ui/GlobaleLag.kt');
   const box = u.slice(u.indexOf('fun AnsBox38'));
   assert.match(box, /derivedStateOf \{ if \(hasPull41 && drag > 0f\)/, 'pull41 er derivedStateOf');
   assert.match(box, /size\(80\.dp, 4\.dp\)\.drawBehind \{/, 'håndtaket tegnes i tegnefasen');
@@ -108,7 +113,7 @@ test('Glimt-svaret og mikrofonen: dra, inngang, prikker, markør og bølge uten 
 });
 
 test('stabile typer for Hjem-radene', () => {
-  assert.match(read('Models15.kt'), /@androidx\.compose\.runtime\.Immutable[^\n]*\ndata class PageLay\(/);
+  assert.match(read('Hjem.kt'), /@androidx\.compose\.runtime\.Immutable[^\n]*\ndata class PageLay\(/);
   assert.match(read('ui/Paper15.kt'), /@androidx\.compose\.runtime\.Immutable[^\n]*\ndata class PSec\(/);
   const h = read('ui/Home70.kt');
   assert.match(h, /@Immutable\ninternal sealed class Row70\(/);
@@ -126,7 +131,7 @@ test('Baseline Profile: profileinstaller uten ny Gradle-plugin, baseline-prof.tx
   const f = join(APP, 'src/main/baseline-prof.txt');
   assert.ok(existsSync(f));
   const p = readFileSync(f, 'utf8');
-  for (const c of ['MainActivity', 'ui/Home70Kt', 'ui/PaperKt', 'ui/Glimt31Kt', 'ui/Ui38Kt', 'ui/Chat27UiKt', 'androidx/compose/material3/ModalBottomSheet']) {
+  for (const c of ['MainActivity', 'ui/Home70Kt', 'ui/PaperKt', 'ui/Glimt31Kt', 'ui/GlobaleLagKt', 'ui/Chat27UiKt', 'androidx/compose/material3/ModalBottomSheet']) {
     assert.match(p, new RegExp(`^HSPL[\\w/]*${c.replace(/\//g, '\\/')}\\*;->\\*\\*\\(\\*\\*\\)\\*\\*$`, 'm'), c);
   }
   // Hver regel er på formen HSPL<klasse>*;->**(**)** eller L<klasse>*; (kommentarer med #).
