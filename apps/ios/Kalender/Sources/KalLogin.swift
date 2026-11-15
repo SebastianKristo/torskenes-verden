@@ -87,7 +87,7 @@ struct KalAppIconView: View {
             Text(KalD.weekdaysShort[KalD.wd(T)].uppercased()).font(KalFont.mono(size * 0.14)).tracking(1)
                 .foregroundStyle(Color.white)
                 .frame(maxWidth: .infinity).frame(height: size * 0.28)
-                .background(Color(kalHex: "#b23a2a"))
+                .background(KalTheme.brandRed)
             Text(String(KalD.dayOfMonth(T))).font(KalFont.serif(size * 0.5)).foregroundStyle(Color(kalHex: "#1b1a17"))
                 .frame(maxHeight: .infinity)
         }

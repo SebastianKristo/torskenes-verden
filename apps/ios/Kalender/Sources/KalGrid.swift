@@ -337,8 +337,8 @@ struct KalNowLine: View {
         TimelineView(.periodic(from: Date(), by: 30)) { (_: TimelineViewDefaultContext) in
             let y: CGFloat = CGFloat(KalD.minutesNow()) / 60 * hourH
             ZStack(alignment: .leading) {
-                Rectangle().fill(Color(kalHex: "#b23a2a")).frame(height: 2)
-                Circle().fill(Color(kalHex: "#b23a2a")).frame(width: 8, height: 8).offset(x: -4)
+                Rectangle().fill(KalTheme.brandRed).frame(height: 2)
+                Circle().fill(KalTheme.brandRed).frame(width: 8, height: 8).offset(x: -4)
             }
             .offset(y: y - 1)
             .allowsHitTesting(false)

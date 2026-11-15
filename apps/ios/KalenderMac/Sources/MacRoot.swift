@@ -348,7 +348,7 @@ struct MacNewButton43: View {
     @State private var hover: Bool = false
 
     var body: some View {
-        let base: Color = t.dark ? Color(kalHex: "#cf5540") : Color(kalHex: "#b23a2a")
+        let base: Color = t.dark ? Color(kalHex: "#cf5540") : MacTheme.brandRed
         Button(action: action) {
             Text("+ Ny hendelse").font(MacFont.ui(13, .bold)).foregroundColor(Color.white)
                 .padding(.horizontal, 16).frame(height: 40)

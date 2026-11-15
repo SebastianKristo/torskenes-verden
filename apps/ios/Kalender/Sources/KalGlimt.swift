@@ -480,7 +480,7 @@ struct KalGlimtRow: View {
     @ViewBuilder private var answer: some View {
         let shownText: String = m.words.prefix(m.shown).joined(separator: " ")
         HStack(alignment: .lastTextBaseline, spacing: 2) {
-            Text(shownText).font(KalFont.ui(14.5)).foregroundStyle(m.error34 ? Color(kalHex: "#b23a2a") : t.ink).lineSpacing(3)
+            Text(shownText).font(KalFont.ui(14.5)).foregroundStyle(m.error34 ? KalTheme.brandRed : t.ink).lineSpacing(3)
             if !m.done { KalCaret() }
         }
         if m.done && m.error34 {
@@ -523,7 +523,7 @@ struct KalStepRow: View {
                     Circle().fill(t.green)
                     Text("✓").font(.system(size: 8, weight: .heavy)).foregroundStyle(Color.white)
                 } else if active {
-                    Circle().strokeBorder(Color(kalHex: "#b23a2a"), lineWidth: 2)
+                    Circle().strokeBorder(KalTheme.brandRed, lineWidth: 2)
                 } else {
                     Circle().strokeBorder(t.line, lineWidth: 1.5)
                 }
@@ -580,7 +580,7 @@ struct KalSlotChip: View {
             }
             .foregroundStyle(Color(kalHex: "#235c3b"))
             .padding(.horizontal, 13).frame(height: 34)
-            .overlay(Capsule().strokeBorder(Color(kalHex: "#2f7a4f"), lineWidth: 1.5))
+            .overlay(Capsule().strokeBorder(DS.category(.green), lineWidth: 1.5))
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Ny hendelse " + KalD.hm(slot.s))

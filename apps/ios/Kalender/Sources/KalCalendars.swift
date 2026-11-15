@@ -114,8 +114,9 @@ struct KalBadge39: View {
 
     private var fg: Color {
         switch badge {
-        case "GOOGLE": return t.dark ? Color(kalHex: "#9cc2ee") : Color(kalHex: "#2b5d8a")
-        case "URL": return t.dark ? Color(kalHex: "#8fd4a8") : Color(kalHex: "#2f7a4f")
+        // Fase 4: tokens (info/success følger lys/mørk og økt kontrast) i stedet for egne hex-par.
+        case "GOOGLE": return DS.color(.info, stil: .papir)
+        case "URL": return DS.color(.success, stil: .papir)
         default: return t.mut
         }
     }

@@ -118,7 +118,7 @@ struct MacSearchView: View {
                 Button(action: { ai.go(m.query) }) {
                     Text("✦ Glimt").font(MacFont.ui(12.5, .heavy)).foregroundColor(ai.on ? Color.white : t.ink)
                         .padding(.horizontal, 12).frame(height: 30)
-                        .background(Capsule().fill(ai.on ? Color(kalHex: "#b23a2a") : t.chip))
+                        .background(Capsule().fill(ai.on ? MacTheme.brandRed : t.chip))
                 }
                 .buttonStyle(.plain)
                 .help("Søk med Glimt (Ollama)")

@@ -31,7 +31,7 @@ struct KalCalAdd39Sheet: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
                     option("g", "Google-kalender", "Velg en kalender fra Google-kontoen din, f.eks. Personlig eller Bursdager.", "G", Color(kalHex: "#4285f4", opacity: 0.14), Color(kalHex: "#2b5d8a"))
-                    option("url", "Abonner med URL", "iCal/webcal-lenke, f.eks. timeplanen fra skolen.", "⧉", Color(kalHex: "#2f7a4f", opacity: 0.14), Color(kalHex: "#2f7a4f"))
+                    option("url", "Abonner med URL", "iCal/webcal-lenke, f.eks. timeplanen fra skolen.", "⧉", Color(kalHex: "#2f7a4f", opacity: 0.14), DS.category(.green))
                     if mode == "url" { urlBox }
                     option("h", "Helligdager", "Fridager for Norge eller et annet land.", "★", t.chip, t.mut)
                     if mode == "h" { holidayBox }

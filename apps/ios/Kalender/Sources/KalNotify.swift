@@ -332,7 +332,7 @@ struct KalTestBanner41: View {
         VStack {
             HStack(alignment: .top, spacing: 12) {
                 VStack(spacing: 0) {
-                    Color(kalHex: "#b23a2a").frame(height: 11)
+                    KalTheme.brandRed.frame(height: 11)
                     Text(String(KalD.dayOfMonth(Date()))).font(KalFont.serif(18)).foregroundStyle(Color(kalHex: "#1b1a17"))
                         .frame(maxHeight: .infinity)
                 }

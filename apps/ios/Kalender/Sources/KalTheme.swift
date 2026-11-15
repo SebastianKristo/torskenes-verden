@@ -4,6 +4,8 @@ import UIKit
 /* ---------------- Prompt 33: Kalender – tema (THM.light / THM.dark i fasiten) og fonter ---------------- */
 // Alle farger er tokens: bg ink card chip line line2 mut mut2 ink2 acc glass dim. Mørke piller blir lyse i mørkt tema
 // (bakgrunn ink, tekst bg). Kalenderfargene har lyse tekstvarianter i mørkt tema.
+// Fase 4: verdiene kommer fra designtokens (DS, Papir-stilen i shared/design/tokens.json) i stedet for egne hex-verdier.
+// Fargesettene følger lys/mørk og «Øk kontrast» selv; light/darkTheme velges fortsatt etter colorScheme (KalSchemeReader).
 
 struct KalTheme {
     let dark: Bool
@@ -20,21 +22,29 @@ struct KalTheme {
     let glass: Color
     let dim: Color
 
-    /// Fast rød (rød +, i dag-sirkel, nå-linje).
-    let red: Color = Color(kalHex: "#b23a2a")
+    /// Fast rød (rød +, i dag-sirkel, nå-linje) – lik i lyst og mørkt tema med hvit tekst oppå. Tokensettet har ingen fast
+    /// merkefarge (accent er lys rød i mørk modus), så verdien er KalTheme.brandRed til en slik token finnes.
+    let red: Color = KalTheme.brandRed
     /// Søndag og i dag-tekst.
-    var sunday: Color { dark ? Color(kalHex: "#ec7a64") : Color(kalHex: "#b23a2a") }
-    let green: Color = Color(kalHex: "#2f7a4f")
+    var sunday: Color { DS.color(DS.Farge.accent, stil: .papir) }
+    let green: Color = DS.category(.green)
 
-    static let light: KalTheme = KalTheme(dark: false, bg: Color(kalHex: "#f3efe6"), ink: Color(kalHex: "#1b1a17"), card: Color(kalHex: "#fffdf8"),
-                                          chip: Color(kalHex: "#e9e2d3"), line: Color(kalHex: "#ddd5c5"), line2: Color(kalHex: "#e6dfd1"),
-                                          mut: Color(kalHex: "#6b665c"), mut2: Color(kalHex: "#a39d90"), ink2: Color(kalHex: "#3d3a33"),
-                                          acc: Color(kalHex: "#b23a2a"), glass: Color(kalHex: "#fffdf8", opacity: 0.82), dim: Color(kalHex: "#1b1a17", opacity: 0.32))
+    /// Den faste røde i Kalender (Papir accent i lys modus). Eneste farge uten token; se red.
+    static let brandRed: Color = Color(kalHex: "#b23a2a")
 
-    static let darkTheme: KalTheme = KalTheme(dark: true, bg: Color(kalHex: "#161513"), ink: Color(kalHex: "#efe9de"), card: Color(kalHex: "#211f1b"),
-                                              chip: Color(kalHex: "#2b2824"), line: Color(kalHex: "#3b3731"), line2: Color(kalHex: "#2e2b26"),
-                                              mut: Color(kalHex: "#a49d91"), mut2: Color(kalHex: "#7a746a"), ink2: Color(kalHex: "#d6cfc2"),
-                                              acc: Color(kalHex: "#ec7a64"), glass: Color(kalHex: "#211f1b", opacity: 0.84), dim: Color(kalHex: "#000000", opacity: 0.55))
+    static let light: KalTheme = KalTheme.papir(dark: false, glass: 0.82)
+    static let darkTheme: KalTheme = KalTheme.papir(dark: true, glass: 0.84)
+
+    /// Samme tokens i begge temaene; fargesettene gir lys/mørk verdi etter colorScheme.
+    static func papir(dark: Bool, glass: Double) -> KalTheme {
+        let s: DS.Stil = DS.Stil.papir
+        let ink: Color = DS.color(.textPrimary, stil: s)
+        return KalTheme(dark: dark, bg: DS.color(.surface, stil: s), ink: ink, card: DS.color(.surfaceRaised, stil: s),
+                        chip: DS.color(.surfaceChip, stil: s), line: DS.color(.line, stil: s), line2: DS.color(.lineSubtle, stil: s),
+                        mut: DS.color(.textSecondary, stil: s), mut2: DS.color(.textTertiary, stil: s), ink2: ink.opacity(0.82),
+                        acc: DS.color(DS.Farge.accent, stil: s), glass: DS.color(.surfaceRaised, stil: s).opacity(glass),
+                        dim: DS.color(.scrim, stil: s))
+    }
 
     /// Kalenderfargen (prikker, striper).
     func calColor(_ c: KalCal?) -> Color { Color(kalHex: c?.hex ?? "#b23a2a") }

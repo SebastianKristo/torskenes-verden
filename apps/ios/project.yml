@@ -207,6 +207,9 @@ targets:
       - SharedKeychain
       - SharedNet
       - SharedUI
+      # Fase 4: designtokens (DS, DSFyll, Font.ds) og fargesettene (lys/mørk og økt kontrast) – KalTheme/MacTheme bygger på dem.
+      - path: Shared/DesignTokens.swift
+      - path: Shared/DesignTokens.xcassets
       # Delt med KalenderWidgets (og Group med Homelab-appen). Fonts: Newsreader, Manrope og IBM Plex Mono (kopi av Papir-fontene, OFL).
       - SharedKal/Group
       - SharedKal/Core
@@ -323,6 +326,9 @@ targets:
       - SharedKeychain
       - SharedNet
       - SharedUI
+      # Fase 4: designtokens (DS, DSFyll, Font.ds) og fargesettene (lys/mørk og økt kontrast) – KalTheme/MacTheme bygger på dem.
+      - path: Shared/DesignTokens.swift
+      - path: Shared/DesignTokens.xcassets
       - SharedKal/Group
       - SharedKal/Core
       - SharedKal/Fonts
@@ -372,6 +378,9 @@ targets:
       - SharedKeychain
       - SharedNet
       - SharedUI
+      # Fase 4: designtokens (DS, DSFyll, Font.ds) og fargesettene (lys/mørk og økt kontrast) – KalTheme/MacTheme bygger på dem.
+      - path: Shared/DesignTokens.swift
+      - path: Shared/DesignTokens.xcassets
       - SharedKal/Core
       - SharedKal/Group
       # Fontene kopieres til Contents/Resources og lastes via ATSApplicationFontsPath.
@@ -465,6 +474,9 @@ targets:
       - SharedKeychain
       - SharedNet
       - SharedUI
+      # Fase 4: designtokens (DS, DSFyll, Font.ds) og fargesettene (lys/mørk og økt kontrast) – KalTheme/MacTheme bygger på dem.
+      - path: Shared/DesignTokens.swift
+      - path: Shared/DesignTokens.xcassets
       - SharedKal/Group
       - SharedKal/Core
       # Fontene kopieres til Contents/Resources og lastes via ATSApplicationFontsPath.

@@ -114,7 +114,7 @@ struct KalComposer: View {
             Image(systemName: "plus").font(.system(size: 20, weight: .heavy))
                 .foregroundStyle(Color.white)
                 .frame(width: 50, height: 50)
-                .background(Circle().fill(Color(kalHex: "#b23a2a")))
+                .background(Circle().fill(KalTheme.brandRed))
                 .shadow(color: Color(kalHex: "#b23a2a", opacity: 0.35), radius: 3, y: 2)
         }
         .buttonStyle(.plain)

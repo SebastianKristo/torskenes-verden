@@ -201,7 +201,7 @@ struct KalLayoutPreview43: View {
                     .padding(5)
                     .background(RoundedRectangle(cornerRadius: 10).fill(paper))
                 VStack(alignment: .leading, spacing: 4) {
-                    RoundedRectangle(cornerRadius: 3).fill(Color(kalHex: "#b23a2a")).frame(width: 30, height: 7)
+                    RoundedRectangle(cornerRadius: 3).fill(KalTheme.brandRed).frame(width: 30, height: 7)
                     ForEach(0..<4, id: \.self) { (i: Int) in
                         RoundedRectangle(cornerRadius: 3).fill(i == 1 ? Color(kalHex: "#2b5d8a").opacity(0.6) : cell).frame(height: i == 1 ? 18 : 8)
                     }
@@ -233,7 +233,7 @@ struct KalLayoutPreview43: View {
                     ForEach(0..<cols, id: \.self) { (c: Int) in
                         let i: Int = r * cols + c
                         RoundedRectangle(cornerRadius: 1.5)
-                            .fill(i == 16 ? Color(kalHex: "#b23a2a") : ([3, 9, 20, 24].contains(i) ? Color(kalHex: "#2b5d8a") : cell))
+                            .fill(i == 16 ? KalTheme.brandRed : ([3, 9, 20, 24].contains(i) ? Color(kalHex: "#2b5d8a") : cell))
                     }
                 }
             }

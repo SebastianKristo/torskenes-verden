@@ -259,7 +259,7 @@ struct KalTopNew44: View {
         Button(action: { s.openNew() }) {
             label
                 .foregroundStyle(Color.white)
-                .background(Capsule().fill(Color(kalHex: "#b23a2a")))
+                .background(Capsule().fill(KalTheme.brandRed))
                 .frame(minHeight: 44)
                 .contentShape(Capsule())
         }
@@ -296,7 +296,7 @@ struct KalTodayIcon44: View {
     private func face(_ n: String) -> some View {
         let k: CGFloat = size / 24
         return VStack(spacing: 0) {
-            Rectangle().fill(Color(kalHex: "#b23a2a")).frame(height: 6 * k)
+            Rectangle().fill(KalTheme.brandRed).frame(height: 6 * k)
             Text(n).font(KalFont.ui(10.5 * k, .heavy)).tracking(-0.2).foregroundStyle(t.ink)
                 .lineLimit(1).minimumScaleFactor(0.6)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)

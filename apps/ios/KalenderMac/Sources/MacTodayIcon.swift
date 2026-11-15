@@ -19,7 +19,7 @@ struct MacTodayIcon44: View {
     private func face(_ n: String) -> some View {
         let k: CGFloat = size / 24
         return VStack(spacing: 0) {
-            Rectangle().fill(Color(kalHex: "#b23a2a")).frame(height: 6 * k)
+            Rectangle().fill(MacTheme.brandRed).frame(height: 6 * k)
             Text(n).font(MacFont.ui(10.5 * k, .heavy)).foregroundColor(t.ink)
                 .lineLimit(1).minimumScaleFactor(0.6)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)

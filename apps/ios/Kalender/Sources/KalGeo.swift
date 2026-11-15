@@ -148,7 +148,7 @@ struct KalMap37Modern: View {
         let c: CLLocationCoordinate2D = CLLocationCoordinate2D(latitude: la, longitude: lo)
         let cam: MapCamera = MapCamera(centerCoordinate: c, distance: 900)
         Map(initialPosition: MapCameraPosition.camera(cam), interactionModes: []) {
-            Marker("", coordinate: c).tint(Color(kalHex: "#b23a2a"))
+            Marker("", coordinate: c).tint(DS.category(.red))
         }
     }
 }

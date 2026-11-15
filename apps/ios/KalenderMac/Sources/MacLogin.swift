@@ -367,7 +367,7 @@ struct MacLogin41View: View {
                 Button(action: { m.quick() }) {
                     HStack(spacing: 12) {
                         Text(String(n.prefix(1)).uppercased()).font(MacFont.ui(15, .bold)).foregroundColor(Color.white)
-                            .frame(width: 38, height: 38).background(Circle().fill(Color(kalHex: "#b23a2a")))
+                            .frame(width: 38, height: 38).background(Circle().fill(MacTheme.brandRed))
                         VStack(alignment: .leading, spacing: 1) {
                             Text("Fortsett som " + n).font(MacFont.ui(14.5, .bold))
                             Text("Innlogget i Homelab på denne Mac-en").font(MacFont.ui(12)).opacity(0.75)
@@ -423,7 +423,7 @@ struct MacLogin41View: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(12)
                 .background(RoundedRectangle(cornerRadius: 14).fill(t.card))
-                .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Color(kalHex: "#b23a2a"), lineWidth: 1.5))
+                .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(MacTheme.brandRed, lineWidth: 1.5))
             big("Prøv igjen", filled: true) { m.viaApp() }
             quiet("Bruk brukernavn og passord") { m.phase = "pw" }
             if m.offerServer { serverLink }

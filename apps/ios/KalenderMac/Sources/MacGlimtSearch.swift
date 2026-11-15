@@ -74,8 +74,8 @@ struct MacAiCard41: View {
             HStack(spacing: 8) {
                 Text("✦").font(.system(size: 10, weight: .bold)).foregroundColor(Color.white)
                     .frame(width: 18, height: 18)
-                    .background(Circle().fill(Color(kalHex: "#b23a2a")))
-                MacLabel(text: "GLIMT · " + (ai.local ? "UTEN AI" : "OLLAMA"), color: Color(kalHex: "#b23a2a"))
+                    .background(Circle().fill(MacTheme.brandRed))
+                MacLabel(text: "GLIMT · " + (ai.local ? "UTEN AI" : "OLLAMA"), color: MacTheme.brandRed)
             }
             if ai.busy {
                 Text("Leser kalenderen din med Ollama …").font(MacFont.ui(14)).foregroundColor(t.mut)
@@ -92,6 +92,6 @@ struct MacAiCard41: View {
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(RoundedRectangle(cornerRadius: 18).fill(t.card))
-        .overlay(RoundedRectangle(cornerRadius: 18).strokeBorder(Color(kalHex: "#b23a2a"), lineWidth: 1.5))
+        .overlay(RoundedRectangle(cornerRadius: 18).strokeBorder(MacTheme.brandRed, lineWidth: 1.5))
     }
 }

@@ -532,9 +532,9 @@ struct MacSlotChip: View {
                 Image(systemName: "plus").font(.system(size: 11, weight: .heavy))
                 Text(KalD.hm(slot.s) + "–" + KalD.hm(slot.e)).font(MacFont.mono(12.5))
             }
-            .foregroundColor(Color(kalHex: "#2f7a4f"))
+            .foregroundColor(DS.category(.green))
             .padding(.horizontal, 12).frame(height: 30)
-            .overlay(Capsule().strokeBorder(Color(kalHex: "#2f7a4f"), lineWidth: 1.5))
+            .overlay(Capsule().strokeBorder(DS.category(.green), lineWidth: 1.5))
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Ny hendelse " + KalD.hm(slot.s))
