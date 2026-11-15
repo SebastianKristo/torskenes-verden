@@ -10,7 +10,7 @@
 //   Fanelinje: GET /api/app/pages + alle nøklene i homeNav                                                            → under (+ mobile.js TAB_IDS)
 import { Hono } from 'hono';
 import { authOrToken } from './mobile.js';
-import { bibleEnabled } from './bible37.js';
+import { bibleEnabled } from './bibel/bible.js';
 import { glimtSettingsOf } from './glimt/settings.js';
 import { julBrief } from './jul40.js';
 import { db } from './db.js';

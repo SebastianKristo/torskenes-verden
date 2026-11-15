@@ -1,6 +1,6 @@
 // Prompt 37 (SERVER37): kobler sammen modulene for prompt 37 (montert i index.js).
 //   /api/profiles, /api/onboarding/link, /api/users/:id/profile, /api/profiles/settings  → profiles37.js
-//   /api/bible/*                                                                        → bible37.js
+//   /api/bible/*                                                                        → bibel/ (mountBibel)
 //   /api/tracking/keys                                                                  → server/sporing/ (mountSporing)
 //   /api/tasks/* (Gjøremål, Glimt)                                                      → gjoremal/routes.js + gjoremal/glimt.js
 //   /finans/api/subscriptions/:id/members|leave                                         → finans/shared-subs.js
@@ -19,4 +19,3 @@ _setProfileHas({
 });
 
 export { default as profilesApi } from './profiles37.js';
-export { default as bibleApi } from './bible37.js';

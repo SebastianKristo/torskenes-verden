@@ -51,7 +51,8 @@ import { startMem63 } from './glimt/memory/nightly.js'; // prompt 63: systemoppg
 import { qualityApi64 } from './quality64/api.js'; // prompt 64 (prompt 49 del 7): kvalitet over tid (nattlig eval, ukerapport)
 import { startQuality64 } from './quality64/system.js'; // prompt 64: systemoppgavene kl. 02 / søndag kl. 20 og innsamling fra sporene (ikke i test)
 import api36 from './api36.js'; // prompt 36 (SERVER36)
-import { profilesApi, bibleApi } from './api37.js'; // prompt 37 (SERVER37)
+import { profilesApi } from './api37.js'; // prompt 37 (SERVER37)
+import { mountBibel } from './bibel/index.js'; // Bibel: dagens bibelvers, leseplan og lagrede vers (/api/bible)
 import { bearerFallthrough46 } from './api-auth46.js'; // prompt 46 (SERVER46)
 import { pages40Api, briefJul40, startApi40 } from './api40.js'; // prompt 40 (SERVER40)
 import { mountServer47 } from './server47.js'; // prompt 47 (SERVER47)
@@ -621,7 +622,7 @@ app.route('/api/domains', domainGlimtApi); // prompt 32: /:domain/summary (Glimt
 app.route('/api/gsc', gsc43Api); // prompt 43: /test (diagnose per eiendom)
 app.route('/api/gsc', gscApi); // prompt 32: Google Search Console-kobling per bruker (webmasters.readonly)
 app.route('/api', api36); // prompt 36: /dashboard/layout og /weather/places/summary (før mobileApi)
-app.route('/api/bible', bibleApi); // prompt 37: dagens bibelvers (bare med modulen)
+mountBibel(app); // server/bibel/: /api/bible – dagens bibelvers (bare med modulen)
 app.route('/api', profilesApi); // prompt 37: profiler og onboarding
 mountStudie(app); // server/studie/: /api/study/documents, /api/studie/docs og /api/study/overview
 app.get('/api/admin/jobs', authOrToken, (c) => (isAdmin(c.get('user')) ? c.json({ started: jobsStarted(), jobs: listJobs() }) : c.json({ error: 'Bare administratorer har tilgang', restricted: true }, 403))); // bakgrunnsjobbene (server/jobs/)
