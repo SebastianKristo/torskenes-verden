@@ -22,6 +22,8 @@ export const FARGER = [
   'textPrimary', 'textSecondary', 'textTertiary',
   'accent', 'onAccent', 'success', 'onSuccess', 'warning', 'onWarning', 'danger', 'onDanger',
   'focus', 'scrim',
+  'surfaceField', 'surfaceChip', 'surfaceOverlay', 'lineSubtle',
+  'info', 'onInfo', 'successSoft', 'warningSoft', 'dangerSoft',
 ];
 /** Tokenene som kan ha en egen verdi ved økt kontrast. */
 export const HOY_KONTRAST = ['textSecondary', 'textTertiary', 'line'];

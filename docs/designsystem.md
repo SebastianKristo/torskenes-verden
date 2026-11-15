@@ -47,6 +47,15 @@ Da kan verdien endres ett sted, og mørk modus, glass og økt kontrast får hver
 | `onDanger` | `#ffffff` | `#1b1a17` | `#1b1a17` | Tekst på `danger`-fyll |
 | `focus` | `#1b1a17` | `#ec7a64` | `#a8d4fb` | Fokusring (tastatur) |
 | `scrim` | `rgba(0,0,0,0.35)` | `rgba(0,0,0,0.5)` | `rgba(0,0,0,0.5)` | Bak ark og dialoger |
+| `surfaceField` | `#ffffff` | `#1c1a15` | `#0b0e15` | Inndatafelt (tekst, søk, valg) |
+| `surfaceChip` | `#ece6da` | `#2a261f` | `rgba(255,255,255,0.08)` | Brikker, segmentvalg, hover på rader |
+| `surfaceOverlay` | `#fffdf8` | `#211e18` | `rgba(18,25,38,0.86)` | Ark, menyer og dialoger (glass: tettere enn `surfaceRaised`, så teksten kan leses over bildet) |
+| `lineSubtle` | `#e3ddcf` | `#3a352c` | `#1f2736` | Svake skillelinjer inne i kort og lister |
+| `info` | `#2b5d8a` | `#a8d4fb` | `#a8d4fb` | Informasjon, lenker i glass, «pågår» |
+| `onInfo` | `#ffffff` | `#1b1a17` | `#1b1a17` | Tekst og ikon på `info`-fyll |
+| `successSoft` | `#e3eee5` | `rgba(111,191,143,0.16)` | `rgba(111,191,143,0.16)` | Svakt fyll bak OK-brikker (tekst: `textPrimary` eller `success`) |
+| `warningSoft` | `#f4e8cf` | `rgba(224,168,90,0.16)` | `rgba(224,168,90,0.16)` | Svakt fyll bak advarsler |
+| `dangerSoft` | `#f6dfd8` | `rgba(236,122,100,0.16)` | `rgba(236,122,100,0.16)` | Svakt fyll bak feil og «slett» |
 
 Merk: `warning` i Papir lys har 4,0:1 mot `surface`. Bruk den som ikon, fyll (med `onWarning`) eller stor tekst, ikke som liten tekst.
 

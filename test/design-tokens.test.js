@@ -59,6 +59,12 @@ for (const stil of STILER) {
         // Fokusring og statusfarger som grafikk (WCAG 1.4.11): ≥ 3:1 mot bunnen.
         ['focus', 'surface', 3], ['focus', 'surfaceRaised', 3],
         ['success', 'surface', 3], ['warning', 'surface', 3], ['danger', 'surface', 3], ['accent', 'surface', 3],
+        // Fase 3: felt, brikker, ark, info og svake statusfyll.
+        ['textPrimary', 'surfaceField', 4.5], ['textPrimary', 'surfaceChip', 4.5], ['textSecondary', 'surfaceChip', 4.5],
+        ['textPrimary', 'surfaceOverlay', 4.5], ['textSecondary', 'surfaceOverlay', 4.5],
+        ['info', 'surface', 3], ['onInfo', 'info', 4.5],
+        ['textPrimary', 'successSoft', 4.5], ['textPrimary', 'warningSoft', 4.5], ['textPrimary', 'dangerSoft', 4.5],
+        ['success', 'successSoft', 3], ['warning', 'warningSoft', 3], ['danger', 'dangerSoft', 3],
       ];
       for (const [fg, bg, min] of krav) {
         const r = ratio(farger, fg, bg);
