@@ -67,6 +67,8 @@ import androidx.compose.ui.text.withStyle
 import no.kristo.finanshub.*
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import no.kristo.finanshub.ui.designsystem.HomelabTheme
+import no.kristo.finanshub.ui.designsystem.HomelabType
 
 /* ---------------- Prompt 73 (LOGO73): «Endre logo» for en butikk i Finans ----------------
  * Fasit: «Lagre og logo.dc.html» 1a (mobil-ark fra transaksjon). Papir-design: bakgrunn #f3efe6, kort #fff, kant #d8d1c2,
@@ -77,12 +79,6 @@ import java.util.Locale
  * Overstyringene (GET /finans/api/merchants/logo-overrides → names) brukes av Logo() og StoreLogo52 overalt i Finans.
  * CancellationException kastes alltid videre; rå feiltekst vises aldri. */
 
-private val Bg73 = Color(0xFFF3EFE6)
-private val Ink73 = Color(0xFF1B1A17)
-private val Line73 = Color(0xFFD8D1C2)
-private val Soft73 = Color(0xFFE6E0D3)
-private val Mut73 = Color(0xFF8F897C)
-private val Acc73 = Color(0xFFB23A2A)
 
 /** Brukerens egne logovalg: navn (små bokstaver) → url, "" = initialer. */
 object LogoOv73 {
@@ -169,10 +165,10 @@ private fun LogoThumb73(vm: AppViewModel, url: String, name: String, size: Int =
     var bmp by remember(url) { mutableStateOf<Bitmap?>(null) }
     LaunchedEffect(url) { bmp = if (url.startsWith("/")) vm.image(url) else null }
     val shape = RoundedCornerShape(radius.dp)
-    Box(Modifier.size(size.dp).clip(shape).background(Color.White).border(1.dp, Soft73, shape), contentAlignment = Alignment.Center) {
+    Box(Modifier.size(size.dp).clip(shape).background(Color.White).border(1.dp, HomelabTheme.colors.surfaceChip, shape), contentAlignment = Alignment.Center) {
         val b = bmp
         if (b != null) Image(b.asImageBitmap(), null, contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize().padding((size * 0.16f).dp))
-        else Text(name.trim().take(1).uppercase(), color = Ink73, fontFamily = PaperFonts.serif, fontWeight = FontWeight.Medium, fontSize = (size * 0.45f).sp)
+        else Text(name.trim().take(1).uppercase(), color = HomelabTheme.colors.textPrimary, fontFamily = PaperFonts.serif, fontWeight = FontWeight.Medium, fontSize = (size * 0.45f).sp)
     }
 }
 
@@ -186,9 +182,9 @@ internal fun LogoTap73(vm: AppViewModel, name: String, names: List<String> = emp
     ) {
         content()
         Box(
-            Modifier.align(Alignment.BottomEnd).offset(x = 5.dp, y = 5.dp).size(20.dp).clip(CircleShape).background(Bg73).padding(2.dp).clip(CircleShape).background(Ink73),
+            Modifier.align(Alignment.BottomEnd).offset(x = 5.dp, y = 5.dp).size(20.dp).clip(CircleShape).background(HomelabTheme.colors.surface).padding(2.dp).clip(CircleShape).background(HomelabTheme.colors.textPrimary),
             contentAlignment = Alignment.Center,
-        ) { Text("✎", color = Bg73, fontSize = 10.sp, lineHeight = 10.sp) }
+        ) { Text("✎", color = HomelabTheme.colors.surface, style = HomelabType.caption, fontWeight = FontWeight.Normal, lineHeight = 10.sp) }
     }
     if (open) LogoSheet73(vm, name, names) { open = false }
 }
@@ -269,61 +265,61 @@ internal fun LogoSheet73(vm: AppViewModel, name: String, names: List<String> = e
     val preview = sel?.logoUrl ?: if (manual) (if (initials) "" else curUrl) else curUrl
 
     ModalBottomSheet(
-        onDismissRequest = onDismiss, sheetState = state, containerColor = Bg73, contentColor = Ink73,
+        onDismissRequest = onDismiss, sheetState = state, containerColor = HomelabTheme.colors.surface, contentColor = HomelabTheme.colors.textPrimary,
         shape = RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp),
-        dragHandle = { BottomSheetDefaults.DragHandle(width = 38.dp, height = 5.dp, color = Line73) },
+        dragHandle = { BottomSheetDefaults.DragHandle(width = 38.dp, height = 5.dp, color = HomelabTheme.colors.line) },
     ) {
         Column(Modifier.fillMaxWidth().fillMaxHeight(0.92f).navigationBarsPadding().imePadding().padding(start = 22.dp, end = 22.dp, bottom = 16.dp)) {
             Row(Modifier.padding(top = 6.dp, bottom = 16.dp), verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Column(Modifier.weight(1f)) {
-                    Text("FINANS · BUTIKKLOGO", color = Acc73, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = 10.5.sp, letterSpacing = 1.2.sp)
-                    Text("Endre logo", color = Ink73, fontFamily = PaperFonts.serif, fontWeight = FontWeight.Medium, fontSize = 28.sp, lineHeight = 31.sp)
+                    Text("FINANS · BUTIKKLOGO", color = HomelabTheme.colors.accent, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, style = HomelabType.caption, letterSpacing = 1.2.sp)
+                    Text("Endre logo", color = HomelabTheme.colors.textPrimary, fontFamily = PaperFonts.serif, fontWeight = FontWeight.Medium, style = HomelabType.title2, lineHeight = 31.sp)
                 }
                 LogoThumb73(vm, preview, name, 44, 12)
                 Box(
-                    Modifier.size(44.dp).clip(CircleShape).background(Color.White).border(1.dp, Line73, CircleShape).clickable(role = Role.Button, onClickLabel = "Lukk") { onDismiss() }
+                    Modifier.size(44.dp).clip(CircleShape).background(Color.White).border(1.dp, HomelabTheme.colors.line, CircleShape).clickable(role = Role.Button, onClickLabel = "Lukk") { onDismiss() }
                         .semantics { contentDescription = "Lukk" },
                     contentAlignment = Alignment.Center,
-                ) { Text("✕", color = Ink73, fontSize = 15.sp) }
+                ) { Text("✕", color = HomelabTheme.colors.textPrimary, style = HomelabType.callout) }
             }
             Row(
-                Modifier.fillMaxWidth().height(48.dp).clip(RoundedCornerShape(24.dp)).background(Color.White).border(1.dp, Line73, RoundedCornerShape(24.dp)).padding(start = 16.dp, end = 10.dp),
+                Modifier.fillMaxWidth().height(48.dp).clip(RoundedCornerShape(24.dp)).background(Color.White).border(1.dp, HomelabTheme.colors.line, RoundedCornerShape(24.dp)).padding(start = 16.dp, end = 10.dp),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                Text("⌕", color = Mut73, fontSize = 18.sp)
+                Text("⌕", color = HomelabTheme.colors.textTertiary, style = HomelabType.headline, fontWeight = FontWeight.Normal)
                 BasicTextField(
                     q, { q = it }, singleLine = true, modifier = Modifier.weight(1f).semantics { contentDescription = "Søk etter butikk" },
-                    textStyle = TextStyle(color = Ink73, fontSize = 16.sp, fontFamily = PaperFonts.sans), cursorBrush = SolidColor(Acc73),
+                    textStyle = HomelabType.body.copy(color = HomelabTheme.colors.textPrimary, fontFamily = PaperFonts.sans), cursorBrush = SolidColor(HomelabTheme.colors.accent),
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                    decorationBox = { inner -> Box(contentAlignment = Alignment.CenterStart) { if (q.isEmpty()) Text("Søk etter butikk", color = Mut73, fontSize = 16.sp, maxLines = 1); inner() } },
+                    decorationBox = { inner -> Box(contentAlignment = Alignment.CenterStart) { if (q.isEmpty()) Text("Søk etter butikk", color = HomelabTheme.colors.textTertiary, style = HomelabType.body, maxLines = 1); inner() } },
                 )
                 if (q.isNotEmpty()) Box(
-                    Modifier.size(28.dp).clip(CircleShape).background(Color(0xFFEBE5D8)).clickable(role = Role.Button, onClickLabel = "Tøm") { q = "" },
+                    Modifier.size(28.dp).clip(CircleShape).background(HomelabTheme.colors.surfaceSunken).clickable(role = Role.Button, onClickLabel = "Tøm") { q = "" },
                     contentAlignment = Alignment.Center,
-                ) { Text("✕", color = Ink73, fontSize = 11.sp) }
+                ) { Text("✕", color = HomelabTheme.colors.textPrimary, style = HomelabType.caption, fontWeight = FontWeight.Normal) }
             }
             Text(
-                "LOGODATABASEN · ${hits.size} TREFF", color = Mut73, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = 10.5.sp, letterSpacing = 1.2.sp,
+                "LOGODATABASEN · ${hits.size} TREFF", color = HomelabTheme.colors.textTertiary, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, style = HomelabType.caption, letterSpacing = 1.2.sp,
                 modifier = Modifier.padding(start = 2.dp, top = 16.dp, bottom = 8.dp),
             )
-            Box(Modifier.fillMaxWidth().weight(1f).clip(RoundedCornerShape(18.dp)).background(Color.White).border(1.dp, Soft73, RoundedCornerShape(18.dp))) {
-                if (hits.isEmpty()) Text(if (searching) "Søker …" else "Ingen butikker funnet", color = Mut73, fontSize = 15.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(vertical = 28.dp))
+            Box(Modifier.fillMaxWidth().weight(1f).clip(RoundedCornerShape(18.dp)).background(Color.White).border(1.dp, HomelabTheme.colors.surfaceChip, RoundedCornerShape(18.dp))) {
+                if (hits.isEmpty()) Text(if (searching) "Søker …" else "Ingen butikker funnet", color = HomelabTheme.colors.textTertiary, style = HomelabType.callout, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(vertical = 28.dp))
                 LazyColumn(Modifier.fillMaxSize()) {
                     items(hits, key = { it.id }) { h ->
                         val on = sel?.id == h.id
                         Row(
-                            Modifier.fillMaxWidth().heightIn(min = 60.dp).background(if (on) Color(0xFFF6F1E6) else Color.White)
+                            Modifier.fillMaxWidth().heightIn(min = 60.dp).background(if (on) HomelabTheme.colors.surfaceSunken else HomelabTheme.colors.surfaceField)
                                 .clickable(role = Role.Button, onClickLabel = h.name) { sel = h }.semantics { selected = on }.padding(horizontal = 14.dp, vertical = 10.dp),
                             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
                         ) {
                             LogoThumb73(vm, h.logoUrl, h.name)
                             Column(Modifier.weight(1f)) {
-                                Text(h.name, color = Ink73, fontFamily = PaperFonts.sans, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                if (h.domain.isNotEmpty()) Text(h.domain, color = Mut73, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text(h.name, color = HomelabTheme.colors.textPrimary, fontFamily = PaperFonts.sans, fontWeight = FontWeight.SemiBold, style = HomelabType.callout, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                if (h.domain.isNotEmpty()) Text(h.domain, color = HomelabTheme.colors.textTertiary, style = HomelabType.subheadline, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             }
-                            if (on) Box(Modifier.size(24.dp).clip(CircleShape).background(Ink73), contentAlignment = Alignment.Center) { Text("✓", color = Bg73, fontSize = 12.sp, fontWeight = FontWeight.Bold) }
+                            if (on) Box(Modifier.size(24.dp).clip(CircleShape).background(HomelabTheme.colors.textPrimary), contentAlignment = Alignment.Center) { Text("✓", color = HomelabTheme.colors.surface, style = HomelabType.footnote, fontWeight = FontWeight.Bold) }
                         }
-                        Box(Modifier.fillMaxWidth().height(1.dp).background(Color(0xFFEEE8DC)))
+                        Box(Modifier.fillMaxWidth().height(1.dp).background(HomelabTheme.colors.lineSubtle))
                     }
                 }
             }
@@ -333,22 +329,22 @@ internal fun LogoSheet73(vm: AppViewModel, name: String, names: List<String> = e
             }
             val canApply = sel != null && !busy
             Box(
-                Modifier.padding(top = 10.dp).fillMaxWidth().height(54.dp).clip(RoundedCornerShape(27.dp)).background(if (canApply) Ink73 else Ink73.copy(alpha = .4f))
+                Modifier.padding(top = 10.dp).fillMaxWidth().height(54.dp).clip(RoundedCornerShape(27.dp)).background(if (canApply) HomelabTheme.colors.textPrimary else HomelabTheme.colors.textPrimary.copy(alpha = .4f))
                     .clickable(enabled = canApply, role = Role.Button) {
                         val s = sel ?: return@clickable
                         save(if (s.uploadId.isNotEmpty()) JSONObject().put("uploadId", s.uploadId) else JSONObject().put("logoId", s.id), "Logo oppdatert")
                     },
                 contentAlignment = Alignment.Center,
-            ) { Text("Bruk denne logoen", color = Bg73, fontFamily = PaperFonts.sans, fontWeight = FontWeight.Bold, fontSize = 16.sp) }
+            ) { Text("Bruk denne logoen", color = HomelabTheme.colors.surface, fontFamily = PaperFonts.sans, fontWeight = FontWeight.Bold, style = HomelabType.body) }
             Text(
-                if (count > 0) "Gjelder alle $count kjøp fra $name" else "Gjelder alle kjøp fra $name", color = Mut73, fontSize = 13.sp, textAlign = TextAlign.Center,
+                if (count > 0) "Gjelder alle $count kjøp fra $name" else "Gjelder alle kjøp fra $name", color = HomelabTheme.colors.textTertiary, style = HomelabType.subheadline, textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
             )
-            if (err.isNotEmpty()) Text(err, color = Acc73, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(top = 6.dp))
+            if (err.isNotEmpty()) Text(err, color = HomelabTheme.colors.accent, style = HomelabType.subheadline, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(top = 6.dp))
             if (manual) Box(
                 Modifier.fillMaxWidth().heightIn(min = 44.dp).clickable(role = Role.Button) { save(null, "Tilbake til automatisk logo") },
                 contentAlignment = Alignment.Center,
-            ) { Text("Tilbakestill til automatisk", color = Color(0xFF4A463E), fontFamily = PaperFonts.sans, fontWeight = FontWeight.SemiBold, fontSize = 14.sp) }
+            ) { Text("Tilbakestill til automatisk", color = HomelabTheme.colors.textSecondary, fontFamily = PaperFonts.sans, fontWeight = FontWeight.SemiBold, style = HomelabType.callout) }
         }
     }
 }
@@ -356,9 +352,9 @@ internal fun LogoSheet73(vm: AppViewModel, name: String, names: List<String> = e
 @Composable
 private fun Line73Button(text: String, modifier: Modifier, onClick: () -> Unit) {
     Box(
-        modifier.height(48.dp).clip(RoundedCornerShape(24.dp)).background(Color.White).border(1.dp, Line73, RoundedCornerShape(24.dp)).clickable(role = Role.Button, onClick = onClick),
+        modifier.height(48.dp).clip(RoundedCornerShape(24.dp)).background(Color.White).border(1.dp, HomelabTheme.colors.line, RoundedCornerShape(24.dp)).clickable(role = Role.Button, onClick = onClick),
         contentAlignment = Alignment.Center,
-    ) { Text(text, color = Ink73, fontFamily = PaperFonts.sans, fontWeight = FontWeight.SemiBold, fontSize = 14.sp) }
+    ) { Text(text, color = HomelabTheme.colors.textPrimary, fontFamily = PaperFonts.sans, fontWeight = FontWeight.SemiBold, style = HomelabType.callout) }
 }
 
 /* ---------------- Innstillinger → AI og tolkning → PERSONVERN OG LOGOER ---------------- */
@@ -373,7 +369,7 @@ private fun auditTime27(ts: String?): String = ts?.let { t ->
 
 @Composable
 internal fun PrivacyLogos27(vm: AppViewModel) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val s = vm.b27
     LaunchedEffect(Unit) { vm.loadPrivacy27() }
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -388,32 +384,32 @@ internal fun PrivacyLogos27(vm: AppViewModel) {
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 Column(Modifier.weight(1f)) {
-                    Text("AI-logg", color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 14.5.sp)
-                    Text("Hva som ble sendt til hvilken motor, og når", color = p.mut, fontSize = 12.5.sp, maxLines = 2)
+                    Text("AI-logg", color = p.textPrimary, fontWeight = FontWeight.SemiBold, style = HomelabType.callout)
+                    Text("Hva som ble sendt til hvilken motor, og når", color = p.textTertiary, style = HomelabType.footnote, maxLines = 2)
                 }
-                Text(if (s.auditOpen) "Skjul" else "Vis ›", color = p.mut, fontSize = 13.sp)
+                Text(if (s.auditOpen) "Skjul" else "Vis ›", color = p.textTertiary, style = HomelabType.subheadline)
             }
             if (s.auditOpen) {
                 val a = s.audit
                 when {
-                    a == null -> Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = p.ink, modifier = Modifier.size(20.dp), strokeWidth = 2.dp) }
-                    a.isEmpty() -> Text(s.auditError ?: "Ingenting er sendt til AI ennå.", color = if (s.auditError != null) p.lab else p.mut, fontSize = 13.sp, modifier = Modifier.padding(14.dp, 4.dp, 14.dp, 14.dp))
+                    a == null -> Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = p.textPrimary, modifier = Modifier.size(20.dp), strokeWidth = 2.dp) }
+                    a.isEmpty() -> Text(s.auditError ?: "Ingenting er sendt til AI ennå.", color = if (s.auditError != null) p.accent else p.textTertiary, style = HomelabType.subheadline, modifier = Modifier.padding(14.dp, 4.dp, 14.dp, 14.dp))
                     else -> a.take(40).forEach { r ->
                         Box(Modifier.fillMaxWidth().padding(start = 14.dp).height(1.dp).background(p.line))
                         Column(Modifier.fillMaxWidth().padding(14.dp, 10.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(r.engine, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, modifier = Modifier.weight(1f), maxLines = 1)
-                                Text(auditTime27(r.ts), color = p.mut, fontFamily = PaperFonts.mono, fontSize = 11.5.sp)
+                                Text(r.engine, color = p.textPrimary, fontWeight = FontWeight.SemiBold, style = HomelabType.callout, modifier = Modifier.weight(1f), maxLines = 1)
+                                Text(auditTime27(r.ts), color = p.textTertiary, fontFamily = PaperFonts.mono, style = HomelabType.caption, fontWeight = FontWeight.Normal)
                             }
-                            if (r.purpose.isNotBlank()) Text(r.purpose, color = p.mut, fontSize = 12.5.sp, maxLines = 2)
-                            if (r.fields.isNotBlank()) Text("Sendt: ${r.fields}", color = p.ink, fontFamily = PaperFonts.mono, fontSize = 11.5.sp, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                            if (r.purpose.isNotBlank()) Text(r.purpose, color = p.textTertiary, style = HomelabType.footnote, maxLines = 2)
+                            if (r.fields.isNotBlank()) Text("Sendt: ${r.fields}", color = p.textPrimary, fontFamily = PaperFonts.mono, style = HomelabType.caption, fontWeight = FontWeight.Normal, maxLines = 3, overflow = TextOverflow.Ellipsis)
                         }
                     }
                 }
             }
         }
         Text("Ollama leser kvitteringen på hjemmeserveren. Gemini får bare det ryddede butikknavnet, aldri bildet, varelinjer, beløp, org.nr. eller kortdata.",
-            color = p.mut, fontSize = 12.sp, lineHeight = 17.sp, modifier = Modifier.padding(horizontal = 4.dp))
+            color = p.textTertiary, style = HomelabType.footnote, lineHeight = 17.sp, modifier = Modifier.padding(horizontal = 4.dp))
     }
 }
 
@@ -422,7 +418,7 @@ internal fun PrivacyLogos27(vm: AppViewModel) {
 /** Vises bare når butikken ikke har logo: «Velg logo» åpner Finn logo · Last opp · Lim inn domene. */
 @Composable
 internal fun VelgLogo27(vm: AppViewModel, domain: String?, name: String, receiptId: String?) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val ctx = LocalContext.current
     val s = vm.b27
     var missing by remember(domain, name) { mutableStateOf(false) }
@@ -438,15 +434,15 @@ internal fun VelgLogo27(vm: AppViewModel, domain: String?, name: String, receipt
                 Box(Modifier.size(30.dp).clip(RoundedCornerShape(8.dp)).background(Color.White).padding(3.dp)) {
                     Image(done.asImageBitmap(), null, contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize())
                 }
-                Text("Ny logo er lagret", color = p.pos, fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                Text("Ny logo er lagret", color = p.success, style = HomelabType.footnote, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
             } else {
-                Text("Ingen logo", color = p.mut, fontSize = 12.5.sp, modifier = Modifier.weight(1f))
+                Text("Ingen logo", color = p.textTertiary, style = HomelabType.footnote, modifier = Modifier.weight(1f))
             }
             Box(
                 Modifier.height(32.dp).clip(CircleShape).border(1.dp, p.line, CircleShape).clickable { s.logoPick = if (open) null else LogoPick27(name, domain, receiptId); s.logoMsg = null }
                     .padding(horizontal = 12.dp),
                 contentAlignment = Alignment.Center,
-            ) { Text(if (open) "Lukk" else "Velg logo", color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 12.5.sp) }
+            ) { Text(if (open) "Lukk" else "Velg logo", color = p.textPrimary, fontWeight = FontWeight.SemiBold, style = HomelabType.footnote) }
         }
         if (open) {
             val pk = LogoPick27(name, domain, receiptId)
@@ -455,22 +451,22 @@ internal fun VelgLogo27(vm: AppViewModel, domain: String?, name: String, receipt
                 PButton("↑ Last opp", Modifier.weight(1f), kind = "line", height = 40.dp) { pick.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }
             }
             Row(
-                Modifier.fillMaxWidth().height(42.dp).clip(RoundedCornerShape(14.dp)).background(p.bg).border(1.dp, p.line, RoundedCornerShape(14.dp)).padding(start = 12.dp, end = 4.dp),
+                Modifier.fillMaxWidth().height(42.dp).clip(RoundedCornerShape(14.dp)).background(p.surface).border(1.dp, p.line, RoundedCornerShape(14.dp)).padding(start = 12.dp, end = 4.dp),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 BasicTextField(
                     dom, { dom = it }, singleLine = true, modifier = Modifier.weight(1f),
-                    textStyle = TextStyle(color = p.ink, fontSize = 14.sp, fontFamily = PaperFonts.mono), cursorBrush = SolidColor(p.lab),
+                    textStyle = HomelabType.callout.copy(color = p.textPrimary, fontFamily = PaperFonts.mono), cursorBrush = SolidColor(p.accent),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Done),
                     keyboardActions = KeyboardActions(onDone = { vm.logoDomain27(pk, dom) }),
-                    decorationBox = { inner -> Box(contentAlignment = Alignment.CenterStart) { if (dom.isEmpty()) Text("Lim inn domene, f.eks. blomsterlandet.no", color = p.mut, fontSize = 13.sp, maxLines = 1); inner() } },
+                    decorationBox = { inner -> Box(contentAlignment = Alignment.CenterStart) { if (dom.isEmpty()) Text("Lim inn domene, f.eks. blomsterlandet.no", color = p.textTertiary, style = HomelabType.subheadline, maxLines = 1); inner() } },
                 )
-                Box(Modifier.height(34.dp).clip(CircleShape).background(p.ink).clickable { vm.logoDomain27(pk, dom) }.padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
-                    Text("Bruk", color = p.bg, fontWeight = FontWeight.Bold, fontSize = 12.5.sp)
+                Box(Modifier.height(34.dp).clip(CircleShape).background(p.textPrimary).clickable { vm.logoDomain27(pk, dom) }.padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
+                    Text("Bruk", color = p.surface, fontWeight = FontWeight.Bold, style = HomelabType.footnote)
                 }
             }
-            s.logoMsg?.let { Text(it, color = p.lab, fontSize = 12.5.sp) }
-            Text("Gemini får bare butikknavnet «$name». Koden henter og sjekker logoen.", color = p.mut, fontSize = 11.5.sp)
+            s.logoMsg?.let { Text(it, color = p.accent, style = HomelabType.footnote) }
+            Text("Gemini får bare butikknavnet «$name». Koden henter og sjekker logoen.", color = p.textTertiary, style = HomelabType.caption, fontWeight = FontWeight.Normal)
         }
     }
 }

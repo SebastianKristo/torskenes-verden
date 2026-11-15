@@ -42,6 +42,8 @@ import no.kristo.finanshub.glimtJobErr50
 import no.kristo.finanshub.parseReanalysis
 import no.kristo.finanshub.reread40
 import org.json.JSONObject
+import no.kristo.finanshub.ui.designsystem.HomelabTheme
+import no.kristo.finanshub.ui.designsystem.HomelabType
 
 /*
  * Prompt 50 (ANDROID50B):
@@ -54,7 +56,7 @@ import org.json.JSONObject
  */
 
 /** Aksenten fra spesifikasjonen (--b-acc, som «Prøv igjen» på web). Hvit tekst gir 4,9:1. */
-private val ACC50 = Color(0xFF4F63FF)
+
 
 /** Tilstand for «Analyser på nytt» på bekreftelsessiden (én kvittering om gangen, som vm.reanalyzing). */
 private object ReState50 {
@@ -67,24 +69,24 @@ private object ReState50 {
 @Composable
 internal fun ReadSecs50(started: Long, small: Boolean = false) {
     if (started <= 0L) return
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
     LaunchedEffect(started) { while (true) { now = System.currentTimeMillis(); delay(1000) } }
     val s = ((now - started) / 1000).coerceAtLeast(0)
-    Text("Leser${if (small) " mindre versjon" else ""} … $s s", color = p.mut, fontSize = 12.5.sp, fontFamily = PaperFonts.mono)
+    Text("Leser${if (small) " mindre versjon" else ""} … $s s", color = p.textTertiary, style = HomelabType.footnote, fontFamily = PaperFonts.mono)
 }
 
 @Composable
 private fun Btn50(text: String, primary: Boolean, enabled: Boolean = true, onClick: () -> Unit) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val shape = RoundedCornerShape(20.dp)
-    val bg = when { !enabled -> p.surf2; primary -> ACC50; else -> p.card }
-    val fg = when { !enabled -> p.mut; primary -> Color.White; else -> p.ink }
+    val bg = when { !enabled -> p.surfaceSunken; primary -> p.info; else -> p.surfaceRaised }
+    val fg = when { !enabled -> p.textTertiary; primary -> p.onInfo; else -> p.textPrimary }
     Box(
-        Modifier.height(40.dp).clip(shape).background(bg).then(if (!primary || !enabled) Modifier.border(1.dp, p.line, shape) else Modifier)
+        Modifier.heightIn(min = 48.dp).clip(shape).background(bg).then(if (!primary || !enabled) Modifier.border(1.dp, p.line, shape) else Modifier)
             .clickable(enabled = enabled, role = Role.Button, onClick = onClick).padding(horizontal = 16.dp),
         contentAlignment = Alignment.Center,
-    ) { Text(text, color = fg, fontWeight = FontWeight.SemiBold, fontSize = 13.5.sp, maxLines = 1) }
+    ) { Text(text, color = fg, fontWeight = FontWeight.SemiBold, style = HomelabType.subheadline, maxLines = 1) }
 }
 
 /** Feilknappene i «✦ Glimt leser kvitteringen på nytt»: Prøv igjen · Les mindre versjon (ved tidsavbrudd) · Lukk. */
@@ -140,7 +142,7 @@ internal fun AppViewModel.reanalyze50(id: String, engine: String = "ollama", sma
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun LowConfBox50(vm: AppViewModel, r: Receipt) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val busy = vm.reanalyzing == r.id
     val err = ReState50.err?.takeIf { it.first == r.id }?.second
     val pct = (if (r.confidence <= 1) r.confidence * 100 else r.confidence).toInt()
@@ -150,10 +152,10 @@ internal fun LowConfBox50(vm: AppViewModel, r: Receipt) {
         else -> "Lav sikkerhet fra ${r.provider ?: "lesingen"}${if (pct > 0) " ($pct %)" else ""}. Sjekk beløp og dato, eller les kvitteringen på nytt."
     }
     val shape = RoundedCornerShape(16.dp)
-    Column(Modifier.fillMaxWidth().clip(shape).background(p.surf2).border(1.dp, p.line, shape).padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Text(info, color = p.sub, fontSize = 13.5.sp, lineHeight = 19.sp)
+    Column(Modifier.fillMaxWidth().clip(shape).background(p.surfaceSunken).border(1.dp, p.line, shape).padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Text(info, color = p.textSecondary, style = HomelabType.subheadline, lineHeight = 19.sp)
         if (busy) {
-            Text(if (ReState50.engine == "tesseract") "Lokal OCR leser kvitteringen …" else "Glimt leser lokalt …", color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 13.5.sp)
+            Text(if (ReState50.engine == "tesseract") "Lokal OCR leser kvitteringen …" else "Glimt leser lokalt …", color = p.textPrimary, fontWeight = FontWeight.SemiBold, style = HomelabType.subheadline)
             ReadSecs50(ReState50.started)
         } else FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Btn50("✦ Analyser på nytt lokalt", true, enabled = !localOff) { vm.reanalyze50(r.id) }
@@ -161,7 +163,7 @@ internal fun LowConfBox50(vm: AppViewModel, r: Receipt) {
             if (err?.kind == GlimtErrKind50.SLOW) Btn50("Les mindre versjon", false, enabled = !localOff) { vm.reanalyze50(r.id, small = true) }
         }
         // Grunnen til at lesingen er av (en gammel server kan fortsatt si «Gemini-nøkkel mangler» – den vises ikke).
-        if (localOff) Text(r.reanalyzeReason ?: "", color = p.sub, fontSize = 12.5.sp, lineHeight = 17.sp)
-        if (err != null && !busy) Text(err.text, color = p.lab, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, lineHeight = 18.sp)
+        if (localOff) Text(r.reanalyzeReason ?: "", color = p.textSecondary, style = HomelabType.footnote, lineHeight = 17.sp)
+        if (err != null && !busy) Text(err.text, color = p.accent, fontWeight = FontWeight.SemiBold, style = HomelabType.subheadline, lineHeight = 18.sp)
     }
 }

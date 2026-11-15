@@ -43,6 +43,8 @@ import com.google.mlkit.vision.documentscanner.GmsDocumentScanning
 import com.google.mlkit.vision.documentscanner.GmsDocumentScanningResult
 import no.kristo.finanshub.*
 import kotlin.math.abs
+import no.kristo.finanshub.ui.designsystem.HomelabTheme
+import no.kristo.finanshub.ui.designsystem.HomelabType
 
 /*
  * Prompt 48 (ANDROID48): dokumentskanneren (ML Kit Document Scanner) og kvitteringsarket med redigerbart skjema (Del 5).
@@ -101,17 +103,17 @@ internal fun ReceiptSheet48(vm: AppViewModel) {
     val st by vm.scan48.state.collectAsState()
     val visible by vm.scan48.visible.collectAsState()
     if (!visible || st == ReceiptScanState48.Idle) return
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     ModalBottomSheet(
         onDismissRequest = { vm.scan48.close() }, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        containerColor = p.bg, contentColor = p.ink, shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+        containerColor = p.surface, contentColor = p.textPrimary, shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
         dragHandle = { BottomSheetDefaults.DragHandle(width = 36.dp, height = 5.dp, color = p.line) },
     ) {
         Column(
             Modifier.fillMaxWidth().imePadding().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(start = 18.dp, end = 18.dp, bottom = 26.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            PSerif("Kvittering", 24.sp, maxLines = 1)
+            PSerif("Kvittering", HomelabType.title3.fontSize, maxLines = 1)
             when (val s = st) {
                 ReceiptScanState48.Idle -> Unit
                 is ReceiptScanState48.Scanning -> Busy48(s.note)
@@ -126,31 +128,31 @@ internal fun ReceiptSheet48(vm: AppViewModel) {
 
 @Composable
 private fun Busy48(text: String) {
-    val p = PaperPal.current
-    Text(text, color = p.mut, fontSize = 13.sp)
-    LinearProgressIndicator(Modifier.fillMaxWidth(), color = p.ink, trackColor = p.line)
+    val p = HomelabTheme.colors
+    Text(text, color = p.textTertiary, style = HomelabType.subheadline)
+    LinearProgressIndicator(Modifier.fillMaxWidth(), color = p.textPrimary, trackColor = p.line)
 }
 
 @Composable
 private fun Uploading48(s: ReceiptScanState48.Uploading) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     Busy48(if (s.withOcr) "Glimt kontrollerer teksten fra telefonen …" else "Glimt leser kvitteringen …")
-    s.note?.let { Text(it, color = p.lab, fontSize = 12.5.sp) }
-    Text("Du kan lukke arket. Kvitteringen leses ferdig og havner under Til gjennomgang.", color = p.mut, fontSize = 12.5.sp)
+    s.note?.let { Text(it, color = p.accent, style = HomelabType.footnote) }
+    Text("Du kan lukke arket. Kvitteringen leses ferdig og havner under Til gjennomgang.", color = p.textTertiary, style = HomelabType.footnote)
 }
 
 @Composable
 private fun Done48(vm: AppViewModel, s: ReceiptScanState48.Done) {
-    val p = PaperPal.current
-    Text(s.title, color = p.ink, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-    Text(s.text, color = p.mut, fontSize = 13.sp)
+    val p = HomelabTheme.colors
+    Text(s.title, color = p.textPrimary, fontWeight = FontWeight.Bold, style = HomelabType.body)
+    Text(s.text, color = p.textTertiary, style = HomelabType.subheadline)
     PButton("Ferdig", Modifier.fillMaxWidth()) { vm.scan48.close() }
 }
 
 @Composable
 private fun Error48(vm: AppViewModel, s: ReceiptScanState48.Error) {
-    val p = PaperPal.current
-    Text(s.message, color = p.lab, fontWeight = FontWeight.SemiBold, fontSize = 13.5.sp)
+    val p = HomelabTheme.colors
+    Text(s.message, color = p.accent, fontWeight = FontWeight.SemiBold, style = HomelabType.subheadline)
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         PButton("Last opp bildet", Modifier.weight(1f), kind = "line") { vm.scan48.uploadPlain() }
         if (s.retry) PButton("Prøv igjen", Modifier.weight(1f)) { vm.scan48.retry() }
@@ -169,12 +171,12 @@ private fun status48(status: String) = when (status) {
 
 @Composable
 private fun Draft48(vm: AppViewModel, s: ReceiptScanState48.Draft) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val r = s.result
     val f = s.form
     Path48(r)
-    if (r.receipt == null) Text("Glimt fant ingen tolkning som besto kontrollen. Fyll ut feltene selv.", color = p.lab, fontSize = 13.sp)
-    (r.errors + r.warnings).take(3).forEach { Text(it, color = p.mut, fontSize = 12.sp, maxLines = 3) }
+    if (r.receipt == null) Text("Glimt fant ingen tolkning som besto kontrollen. Fyll ut feltene selv.", color = p.accent, style = HomelabType.subheadline)
+    (r.errors + r.warnings).take(3).forEach { Text(it, color = p.textTertiary, style = HomelabType.footnote, maxLines = 3) }
     Field48("Butikk", f.merchant, r.unsure("merchant")) { v -> vm.scan48.edit { it.copy(merchant = v) } }
     if (f.merchant.trim() == (r.receipt?.optStr("merchant") ?: "")) MerchantSource51(r.merchantSource, r.merchantLabel) // prompt 51
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -189,7 +191,7 @@ private fun Draft48(vm: AppViewModel, s: ReceiptScanState48.Draft) {
     }
     Items48(vm, r, f)
     RawData51(vm, r.receiptId, r.ocrRaw) // prompt 51: «Rådata» (OCR-motor, rader, bildestørrelse)
-    s.error?.let { Text(it, color = p.lab, fontWeight = FontWeight.SemiBold, fontSize = 13.sp) }
+    s.error?.let { Text(it, color = p.accent, fontWeight = FontWeight.SemiBold, style = HomelabType.subheadline) }
     if (s.saving) Busy48("Lagrer …")
     else Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         PButton("Til gjennomgang", Modifier.weight(1f), kind = "line") { vm.scan48.save(book = false) }
@@ -200,22 +202,22 @@ private fun Draft48(vm: AppViewModel, s: ReceiptScanState48.Draft) {
 /** Merkelapp for veien («Android + Glimt», «Mac», «Glimt (Tesseract)», «Gemini») + sikkerhet, og stegene på serveren. */
 @Composable
 private fun Path48(r: ScanResult48) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     var open by remember(r.receiptId) { mutableStateOf(false) }
     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-        Pill48(r.label?.let { "Lest av $it" } ?: "Ikke tolket", if (r.label == null) p.lab else p.ink)
-        Pill48(conf48(r.confidence), if (r.confidence == "high") p.pos else p.lab)
-        if (r.sentOcr) Pill48("Tekst fra telefonen", p.mut)
+        Pill48(r.label?.let { "Lest av $it" } ?: "Ikke tolket", if (r.label == null) p.accent else p.textPrimary)
+        Pill48(conf48(r.confidence), if (r.confidence == "high") p.success else p.accent)
+        if (r.sentOcr) Pill48("Tekst fra telefonen", p.textTertiary)
     }
     if (r.pipeline.isNotEmpty()) {
         Text(
             r.pipeline.joinToString("   ") { "${it.step} ${sym48(it.status)}${if (it.ms > 0) " " + ms48(it.ms) else ""}" } + if (open) "   ▴" else "   ▾",
-            color = p.mut, fontFamily = PaperFonts.mono, fontSize = 11.5.sp,
+            color = p.textTertiary, fontFamily = PaperFonts.mono, style = HomelabType.caption, fontWeight = FontWeight.Normal,
             modifier = Modifier.clickable(role = Role.Button) { open = !open },
         )
         if (open) r.pipeline.forEach { st ->
             val extra = listOfNotNull(st.engine, st.reason, if (st.ms > 0) ms48(st.ms) else null).joinToString(" · ")
-            Text("${st.step} · ${st.name.ifBlank { st.step }} · ${status48(st.status)}${if (extra.isNotEmpty()) " · $extra" else ""}", color = p.mut, fontSize = 12.sp)
+            Text("${st.step} · ${st.name.ifBlank { st.step }} · ${status48(st.status)}${if (extra.isNotEmpty()) " · $extra" else ""}", color = p.textTertiary, style = HomelabType.footnote)
         }
     }
 }
@@ -223,33 +225,33 @@ private fun Path48(r: ScanResult48) {
 @Composable
 private fun Pill48(text: String, color: Color) {
     Box(Modifier.clip(CircleShape).border(1.dp, color, CircleShape).padding(horizontal = 11.dp, vertical = 5.dp)) {
-        Text(text, color = color, fontWeight = FontWeight.SemiBold, fontSize = 12.sp, maxLines = 1)
+        Text(text, color = color, fontWeight = FontWeight.SemiBold, style = HomelabType.footnote, maxLines = 1)
     }
 }
 
 /** Understreket felt. Usikre felt (failed_fields/uncertain_fields fra serveren) har rød etikett og strek. */
 @Composable
 private fun Field48(label: String, value: String, unsure: Boolean, modifier: Modifier = Modifier, keyboard: KeyboardType = KeyboardType.Text, onChange: (String) -> Unit) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-        PLabel(if (unsure) "$label · sjekk" else label, if (unsure) p.lab else p.mut, 10.sp)
+        PLabel(if (unsure) "$label · sjekk" else label, if (unsure) p.accent else p.textTertiary, HomelabType.caption.fontSize)
         BasicTextField(
-            value, onChange, singleLine = true, textStyle = TextStyle(color = p.ink, fontSize = 17.sp, fontFamily = PaperFonts.serif),
-            cursorBrush = SolidColor(p.lab), keyboardOptions = KeyboardOptions(keyboardType = keyboard), modifier = Modifier.fillMaxWidth(),
+            value, onChange, singleLine = true, textStyle = HomelabType.body.copy(color = p.textPrimary, fontFamily = PaperFonts.serif),
+            cursorBrush = SolidColor(p.accent), keyboardOptions = KeyboardOptions(keyboardType = keyboard), modifier = Modifier.fillMaxWidth(),
         )
-        Box(Modifier.fillMaxWidth().height(if (unsure) 2.dp else 1.dp).background(if (unsure) p.lab else p.line))
+        Box(Modifier.fillMaxWidth().height(if (unsure) 2.dp else 1.dp).background(if (unsure) p.accent else p.line))
     }
 }
 
 /** Kategori fra brukerens egne utgiftskategorier (samme liste som serveren velger category_suggestion fra). */
 @Composable
 private fun Category48(vm: AppViewModel, f: ScanForm48, unsure: Boolean) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val cats = vm.boot?.categories?.filter { it.kind == "expense" }?.map { it.name } ?: emptyList()
     val all = if (f.category.isNotBlank() && cats.none { it.equals(f.category, true) }) listOf(f.category) + cats else cats
     if (all.isEmpty()) return
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        PLabel(if (unsure) "Kategori · sjekk" else "Kategori", if (unsure) p.lab else p.mut, 10.sp)
+        PLabel(if (unsure) "Kategori · sjekk" else "Kategori", if (unsure) p.accent else p.textTertiary, HomelabType.caption.fontSize)
         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             all.forEach { c -> PChip(c, c.equals(f.category, true)) { vm.scan48.edit { it.copy(category = c, categoryTouched = true) } } }
         }
@@ -258,42 +260,42 @@ private fun Category48(vm: AppViewModel, f: ScanForm48, unsure: Boolean) {
 
 @Composable
 private fun Items48(vm: AppViewModel, r: ScanResult48, f: ScanForm48) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val unsure = r.unsure("items")
     val sum = f.items.sumOf { amount48(it.amount) ?: 0.0 }
     val disc = r.receipt?.optJSONArray("discounts")?.let { a -> (0 until a.length()).mapNotNull { a.optJSONObject(it) } } ?: emptyList()
     val discSum = disc.sumOf { it.optDouble("amount", 0.0).let { v -> if (v.isNaN()) 0.0 else v } }
     val total = amount48(f.total)
-    PLabel(if (unsure) "Varelinjer · ${f.items.size} · sjekk" else "Varelinjer · ${f.items.size}", if (unsure) p.lab else p.mut, 10.sp)
+    PLabel(if (unsure) "Varelinjer · ${f.items.size} · sjekk" else "Varelinjer · ${f.items.size}", if (unsure) p.accent else p.textTertiary, HomelabType.caption.fontSize)
     f.items.forEachIndexed { i, it -> ItemRow48(vm, i, it) }
     disc.forEach { d ->
         Row(Modifier.fillMaxWidth()) {
-            Text(d.optString("description").ifBlank { "Rabatt" }, color = p.mut, fontSize = 13.sp, modifier = Modifier.weight(1f), maxLines = 1)
-            Text(amountText48(d.optDouble("amount")), color = p.mut, fontFamily = PaperFonts.mono, fontSize = 13.sp)
+            Text(d.optString("description").ifBlank { "Rabatt" }, color = p.textTertiary, style = HomelabType.subheadline, modifier = Modifier.weight(1f), maxLines = 1)
+            Text(amountText48(d.optDouble("amount")), color = p.textTertiary, fontFamily = PaperFonts.mono, style = HomelabType.subheadline)
         }
     }
-    Text("+ Legg til linje", color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 13.sp,
+    Text("+ Legg til linje", color = p.textPrimary, fontWeight = FontWeight.SemiBold, style = HomelabType.subheadline,
         modifier = Modifier.clickable(role = Role.Button) { vm.scan48.edit { it.copy(items = it.items + ScanItem48("", "")) } }.padding(vertical = 4.dp))
     if (total != null && f.items.isNotEmpty()) {
         val diff = sum + discSum - total
         val ok = abs(diff) <= 1.0
         Text(
             if (ok) "Linjene summerer til totalen" else "Linjene summerer ${amountText48(sum + discSum)} kr – avvik ${amountText48(diff)} kr",
-            color = if (ok) p.pos else p.lab, fontSize = 12.5.sp,
+            color = if (ok) p.success else p.accent, style = HomelabType.footnote,
         )
     }
 }
 
 @Composable
 private fun ItemRow48(vm: AppViewModel, i: Int, it: ScanItem48) {
-    val p = PaperPal.current
-    val style = TextStyle(color = p.ink, fontSize = 14.sp, fontFamily = PaperFonts.sans)
+    val p = HomelabTheme.colors
+    val style = HomelabType.callout.copy(color = p.textPrimary, fontFamily = PaperFonts.sans)
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         BasicTextField(it.description, { v -> vm.scan48.edit { f -> f.copy(items = f.items.mapIndexed { j, x -> if (j == i) x.copy(description = v) else x }) } },
-            singleLine = true, textStyle = style, cursorBrush = SolidColor(p.lab), modifier = Modifier.weight(1f).border(1.dp, p.line, RoundedCornerShape(8.dp)).padding(8.dp, 6.dp))
+            singleLine = true, textStyle = style, cursorBrush = SolidColor(p.accent), modifier = Modifier.weight(1f).border(1.dp, p.line, RoundedCornerShape(8.dp)).padding(8.dp, 6.dp))
         BasicTextField(it.amount, { v -> vm.scan48.edit { f -> f.copy(items = f.items.mapIndexed { j, x -> if (j == i) x.copy(amount = v) else x }) } },
-            singleLine = true, textStyle = style.copy(fontFamily = PaperFonts.mono), cursorBrush = SolidColor(p.lab), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+            singleLine = true, textStyle = style.copy(fontFamily = PaperFonts.mono), cursorBrush = SolidColor(p.accent), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
             modifier = Modifier.width(92.dp).border(1.dp, p.line, RoundedCornerShape(8.dp)).padding(8.dp, 6.dp))
-        Text("×", color = p.mut, fontSize = 18.sp, modifier = Modifier.semantics { contentDescription = "Fjern" }.clickable(role = Role.Button) { vm.scan48.edit { f -> f.copy(items = f.items.filterIndexed { j, _ -> j != i }) } }.padding(6.dp))
+        Text("×", color = p.textTertiary, style = HomelabType.headline, fontWeight = FontWeight.Normal, modifier = Modifier.semantics { contentDescription = "Fjern" }.clickable(role = Role.Button) { vm.scan48.edit { f -> f.copy(items = f.items.filterIndexed { j, _ -> j != i }) } }.padding(6.dp))
     }
 }

@@ -32,6 +32,8 @@ import no.kristo.finanshub.AppViewModel
 import no.kristo.finanshub.OcrRaw51
 import no.kristo.finanshub.loadOcrRaw51
 import no.kristo.finanshub.merchantSourceText51
+import no.kristo.finanshub.ui.designsystem.HomelabTheme
+import no.kristo.finanshub.ui.designsystem.HomelabType
 
 // Prompt 51 (RCPTUI51): merkelapp for kilden til butikknavnet og den sammenleggbare «Rådata»-seksjonen (KvitteringRadata.kt).
 
@@ -39,17 +41,17 @@ import no.kristo.finanshub.merchantSourceText51
 @Composable
 internal fun MerchantSource51(source: String?, label: String?) {
     val text = merchantSourceText51(source, label) ?: return
-    val p = PaperPal.current
-    val c = when (source) { "orgnr" -> p.pos; "model" -> Color(0xFFB07612); else -> p.mut }
+    val p = HomelabTheme.colors
+    val c = when (source) { "orgnr" -> p.success; "model" -> p.warning; else -> p.textTertiary }
     Box(Modifier.clip(RoundedCornerShape(10.dp)).background(c.copy(alpha = 0.13f)).padding(horizontal = 8.dp, vertical = 3.dp)) {
-        Text("Butikknavn $text", color = c, fontFamily = PaperFonts.sans, fontWeight = FontWeight.Bold, fontSize = 11.sp, maxLines = 1)
+        Text("Butikknavn $text", color = c, fontFamily = PaperFonts.sans, fontWeight = FontWeight.Bold, style = HomelabType.caption, maxLines = 1)
     }
 }
 
 /** «Rådata» (lukket som standard): OCR-motor, bildestørrelse og radene i mono. Uten raw hentes detaljen når den åpnes. */
 @Composable
 internal fun RawData51(vm: AppViewModel, receiptId: String?, raw: OcrRaw51?) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val scope = rememberCoroutineScope()
     var open by remember(receiptId) { mutableStateOf(false) }
     var loaded by remember(receiptId) { mutableStateOf<OcrRaw51?>(null) }
@@ -66,15 +68,15 @@ internal fun RawData51(vm: AppViewModel, receiptId: String?, raw: OcrRaw51?) {
             }.padding(vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            PLabel("RÅDATA", p.mut, 10.sp)
-            Text(shown?.let { "· ${it.engineLabel} · ${it.rows.size} rader" } ?: "", color = p.mut, fontSize = 12.sp, maxLines = 1, modifier = Modifier.weight(1f))
-            Text(if (open) "▴" else "▾", color = p.mut, fontSize = 12.sp)
+            PLabel("RÅDATA", p.textTertiary, HomelabType.caption.fontSize)
+            Text(shown?.let { "· ${it.engineLabel} · ${it.rows.size} rader" } ?: "", color = p.textTertiary, style = HomelabType.footnote, maxLines = 1, modifier = Modifier.weight(1f))
+            Text(if (open) "▴" else "▾", color = p.textTertiary, style = HomelabType.footnote)
         }
         if (open) {
             when {
                 shown != null -> RawBody51(shown)
-                state == 1 -> Text("Henter rådata …", color = p.mut, fontSize = 12.5.sp)
-                else -> Text("Ingen OCR-rader er lagret for denne kvitteringen.", color = p.mut, fontSize = 12.5.sp)
+                state == 1 -> Text("Henter rådata …", color = p.textTertiary, style = HomelabType.footnote)
+                else -> Text("Ingen OCR-rader er lagret for denne kvitteringen.", color = p.textTertiary, style = HomelabType.footnote)
             }
         }
     }
@@ -82,31 +84,31 @@ internal fun RawData51(vm: AppViewModel, receiptId: String?, raw: OcrRaw51?) {
 
 @Composable
 private fun RawBody51(r: OcrRaw51) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     Column(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(p.card).border(1.dp, p.line, RoundedCornerShape(14.dp)).padding(12.dp),
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(p.surfaceRaised).border(1.dp, p.line, RoundedCornerShape(14.dp)).padding(12.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Fact51("OCR-motor", r.engineLabel)
         Fact51("Bildestørrelse", r.sizeText)
         r.ms?.takeIf { it > 0 }?.let { Fact51("Tid", if (it < 1000) "$it ms" else String.format(java.util.Locale("nb", "NO"), "%.1f s", it / 1000.0)) }
         if (r.preprocess.isNotBlank()) Fact51("Forbehandling", r.preprocess)
-        if (r.rows.isEmpty()) Text("OCR-en fant ingen tekst.", color = p.mut, fontSize = 12.5.sp)
+        if (r.rows.isEmpty()) Text("OCR-en fant ingen tekst.", color = p.textTertiary, style = HomelabType.footnote)
         else SelectionContainer {
             Text(
                 r.rows.mapIndexed { i, s -> "${(i + 1).toString().padStart(3)}  $s" }.joinToString("\n"),
-                color = p.ink, fontFamily = PaperFonts.mono, fontSize = 11.5.sp, lineHeight = 16.sp,
+                color = p.textPrimary, fontFamily = PaperFonts.mono, style = HomelabType.caption, fontWeight = FontWeight.Normal, lineHeight = 16.sp,
             )
         }
-        Text("Står teksten riktig her, men feltene over er feil, ligger feilen i modellen. Mangler teksten, ligger den i OCR-en.", color = p.mut, fontSize = 11.5.sp)
+        Text("Står teksten riktig her, men feltene over er feil, ligger feilen i modellen. Mangler teksten, ligger den i OCR-en.", color = p.textTertiary, style = HomelabType.caption, fontWeight = FontWeight.Normal)
     }
 }
 
 @Composable
 private fun Fact51(k: String, v: String) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(k, color = p.mut, fontSize = 12.sp, modifier = Modifier.width(110.dp))
-        Text(v, color = p.ink, fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold)
+        Text(k, color = p.textTertiary, style = HomelabType.footnote, modifier = Modifier.width(110.dp))
+        Text(v, color = p.textPrimary, style = HomelabType.footnote, fontWeight = FontWeight.SemiBold)
     }
 }

@@ -54,6 +54,9 @@ import no.kristo.finanshub.TxReceipt
 import no.kristo.finanshub.hlMatch30
 import no.kristo.finanshub.loadBoxes30
 import no.kristo.finanshub.rereadReceipt30
+import no.kristo.finanshub.ui.designsystem.HomelabTheme
+import no.kristo.finanshub.ui.designsystem.HomelabType
+import no.kristo.finanshub.ui.designsystem.DsPalette
 
 /*
  * Prompt 30 (ANDROID30) – claude-code-kvittering-highlight.md: når en transaksjon åpnes fra Søk (eller Liste med søketekst)
@@ -62,6 +65,7 @@ import no.kristo.finanshub.rereadReceipt30
  * rektangler og zoom til første treff (klyp for å zoome). Uten bbox: «Les kvitteringen på nytt».
  */
 
+// Markeringsgult (som en tusj på papiret) finnes ikke som token ennå; de tre fargene brukes også av Paper15 i tegnekode.
 internal val HL_LINE30 = Color(0x6BFFCD28)
 internal val HL_EDGE30 = Color(0xFFE0A800)
 internal val HL_WORD30 = Color(0xFFFFD23F)
@@ -80,19 +84,19 @@ internal fun hlText30(text: String, terms: List<String>): AnnotatedString {
 /** Gult banner: trykk på teksten scroller til linjen igjen, Fjern skjuler markeringen. */
 @Composable
 internal fun HlBanner30(term: String, lineNo: Int, price: String, more: Int, onGo: () -> Unit, onClear: () -> Unit) {
-    val ink = Color(0xFF3A2F00)
+    val ink = HomelabTheme.colors.textPrimary
     Row(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Color(0xFFFFF4C2)).padding(start = 12.dp, top = 8.dp, end = 8.dp, bottom = 8.dp),
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(HomelabTheme.colors.warningSoft).padding(start = 12.dp, top = 8.dp, end = 8.dp, bottom = 8.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Box(Modifier.size(10.dp).clip(RoundedCornerShape(3.dp)).background(HL_WORD30).border(1.5.dp, HL_EDGE30, RoundedCornerShape(3.dp)))
         Text(
             "‹$term› står på linje $lineNo · $price kr" + if (more > 0) " og $more til" else "",
-            color = ink, fontFamily = PaperFonts.sans, fontWeight = FontWeight.SemiBold, fontSize = 13.sp,
+            color = ink, fontFamily = PaperFonts.sans, fontWeight = FontWeight.SemiBold, style = HomelabType.subheadline,
             modifier = Modifier.weight(1f).clickable(onClick = onGo),
         )
         Box(Modifier.height(30.dp).clip(RoundedCornerShape(15.dp)).background(ink.copy(alpha = .1f)).clickable(onClick = onClear).padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
-            Text("Fjern", color = ink, fontFamily = PaperFonts.sans, fontWeight = FontWeight.Bold, fontSize = 12.5.sp)
+            Text("Fjern", color = ink, fontFamily = PaperFonts.sans, fontWeight = FontWeight.Bold, style = HomelabType.footnote)
         }
     }
 }
@@ -113,7 +117,7 @@ internal fun rememberHlPulse30(seq: Int): Float {
  */
 @Composable
 internal fun ReceiptBoxes30(vm: AppViewModel, rc: TxReceipt, txId: Int, terms: List<String>) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     LaunchedEffect(txId) { vm.loadBoxes30(txId) }
     val s = vm.p30
     val lines: List<RcLine30>? = s.boxes.takeIf { s.boxesFor == txId }
@@ -124,7 +128,7 @@ internal fun ReceiptBoxes30(vm: AppViewModel, rc: TxReceipt, txId: Int, terms: L
     if (hits.isEmpty() || !isImg) {
         if (rc.id != null && lines.none { it.box != null }) Text(
             if (s.rereading) "Leser kvitteringen på nytt …" else "Les kvitteringen på nytt for å se hvor på bildet linjen står ›",
-            color = p.mut, fontFamily = PaperFonts.sans, fontWeight = FontWeight.SemiBold, fontSize = 12.5.sp,
+            color = p.textTertiary, fontFamily = PaperFonts.sans, fontWeight = FontWeight.SemiBold, style = HomelabType.footnote,
             modifier = Modifier.fillMaxWidth().clickable(enabled = !s.rereading) { vm.rereadReceipt30(rc.id, txId) }.padding(4.dp, 6.dp),
         )
         return
@@ -143,7 +147,7 @@ internal fun ReceiptBoxes30(vm: AppViewModel, rc: TxReceipt, txId: Int, terms: L
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Box(
             Modifier.fillMaxWidth().heightIn(max = 420.dp).aspectRatio(b.width.toFloat() / b.height.coerceAtLeast(1)).clip(RoundedCornerShape(10.dp))
-                .background(Color(0xFFFBF8F1)).transformable(tf),
+                .background(DsPalette.PapirLys.surfaceRaised).transformable(tf),
         ) {
             Box(
                 Modifier.fillMaxSize().graphicsLayer {
@@ -162,12 +166,12 @@ internal fun ReceiptBoxes30(vm: AppViewModel, rc: TxReceipt, txId: Int, terms: L
                         val x = l.box!!
                         val tl = Offset(x[0] / 100f * size.width, x[1] / 100f * size.height)
                         val sz = Size(x[2] / 100f * size.width, x[3] / 100f * size.height)
-                        drawRoundRect(Color(0x59FFD23F), tl, sz, CornerRadius(4.dp.toPx()))
+                        drawRoundRect(HL_WORD30.copy(alpha = .35f), tl, sz, CornerRadius(4.dp.toPx()))
                         drawRoundRect(HL_EDGE30, tl, sz, CornerRadius(4.dp.toPx()), style = Stroke(2.dp.toPx() / scale))
                     }
                 }
             }
         }
-        Text("Klyp for å zoome · ${hits.size} treff markert på bildet", color = p.mut, fontFamily = PaperFonts.sans, fontSize = 11.5.sp, modifier = Modifier.padding(horizontal = 4.dp))
+        Text("Klyp for å zoome · ${hits.size} treff markert på bildet", color = p.textTertiary, fontFamily = PaperFonts.sans, style = HomelabType.caption, fontWeight = FontWeight.Normal, modifier = Modifier.padding(horizontal = 4.dp))
     }
 }

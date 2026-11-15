@@ -94,6 +94,9 @@ import no.kristo.finanshub.loadShareable30
 import no.kristo.finanshub.patchEntry30
 import no.kristo.finanshub.share30Names
 import no.kristo.finanshub.shareHome30
+import no.kristo.finanshub.ui.designsystem.HomelabTheme
+import no.kristo.finanshub.ui.designsystem.HomelabType
+import no.kristo.finanshub.ui.designsystem.DsPalette
 
 /*
  * Prompt 24: Boliger nøyaktig etter Boliger.dc.html (variant mobile, tema papir, hide-title) og claude-code-boliger-lik.md.
@@ -107,12 +110,14 @@ private fun monthName24(m: YearMonth, full: Boolean = true): String =
     m.month.getDisplayName(if (full) JTextStyle.FULL else JTextStyle.SHORT, NB24).removeSuffix(".").replaceFirstChar { it.uppercase() }
 private fun ddmm24(iso: String): String = runCatching { LocalDate.parse(iso.take(10)).let { String.format("%02d.%02d.%d", it.dayOfMonth, it.monthValue, it.year) } }.getOrDefault(iso.take(10))
 
-/** Kategorifarger og -tegn som i designet (CATS); ukjente kategorier får serverens farge og «•». */
-private val CATS24 = listOf(
-    Triple("Strøm", 0xFFD9A400, "⚡"), Triple("Vaktmester", 0xFF2B5D8A, "⌂"), Triple("Hage", 0xFF2F7A4F, "✿"), Triple("Vedlikehold", 0xFFA8661A, "⚒"),
-    Triple("Forsikring", 0xFF7A3B6B, "◈"), Triple("Kommunale avgifter", 0xFF4B5563, "▤"), Triple("Annet", 0xFF7A7468, "•"),
-)
-private fun catColor24(name: String, hex: String?): Color = CATS24.firstOrNull { it.first.equals(name, true) }?.let { Color(it.second) } ?: hex?.let { Color(color(it)) } ?: Color(0xFF7A7468)
+/** Kategorifarger (kategoritokenene) og -tegn som i designet (CATS); ukjente kategorier får serverens farge og «•». */
+private val CATS24 = DsPalette.Category.let { k ->
+    listOf(
+        Triple("Strøm", k.amber, "⚡"), Triple("Vaktmester", k.blue, "⌂"), Triple("Hage", k.green, "✿"), Triple("Vedlikehold", k.brown, "⚒"),
+        Triple("Forsikring", k.purple, "◈"), Triple("Kommunale avgifter", k.teal, "▤"), Triple("Annet", k.neutral, "•"),
+    )
+}
+private fun catColor24(name: String, hex: String?): Color = CATS24.firstOrNull { it.first.equals(name, true) }?.second ?: hex?.let { Color(color(it)) } ?: DsPalette.Category.neutral
 private fun catIcon24(name: String): String = CATS24.firstOrNull { it.first.equals(name, true) }?.third ?: "•"
 private fun guess24(s: String): String = when {
     Regex("strøm|fjordkraft|tibber|elvia|kwh", RegexOption.IGNORE_CASE).containsMatchIn(s) -> "Strøm"
@@ -127,7 +132,8 @@ private fun homeColor24(h: Home24, i: Int): Color = h.color?.let { Color(color(i
 private fun roleName24(r: String) = when (r) { "owner" -> "Eier"; "viewer" -> "Kan se"; else -> "Kan redigere" }
 private fun roleDesc24(r: String) = when (r) { "owner" -> "Full tilgang, kan invitere og slette"; "viewer" -> "Ser oversikt og kvitteringer"; else -> "Legger til kvitteringer og utgifter" }
 private val ROLES24 = listOf("owner", "editor", "viewer")
-private val MEMC24 = listOf(0xFFB23A2A, 0xFF2B5D8A, 0xFFA8661A, 0xFF2F6B45, 0xFF7A3B6B, 0xFF3D4652)
+/** Avatarfargene for medlemmene (kategoritokenene). */
+private val MEMC24: List<Color> = DsPalette.Category.let { listOf(it.red, it.blue, it.amber, it.green, it.purple, it.neutral) }
 
 /** Mørk gradient over toppbildet (OV i designet). */
 private val OV24 = Brush.verticalGradient(0f to Color.Black.copy(alpha = .25f), .35f to Color.Transparent, 1f to Color.Black.copy(alpha = .45f))
@@ -180,16 +186,18 @@ internal fun DomainPill24(vm: AppViewModel) {
     if (!vm.b24ProfileOn || vm.screen != Screen.Folders || vm.paperPage != null || vm.selectedTx != null) return
     LaunchedEffect(Unit) { vm.b24LoadDomSummary() }
     val d = vm.b24.domSum ?: return
-    val dot = when (d.status) { "error" -> Color(0xFFE5484D); "warn" -> Color(0xFFE5B53A); else -> Color(0xFF5FD38A) }
+    // Pillen ligger over toppbildet (mørk flate), så statusfargene er de mørke variantene.
+    val g = DsPalette.PapirMork
+    val dot = when (d.status) { "error" -> g.danger; "warn" -> g.warning; else -> g.success }
     Row(
-        Modifier.padding(start = 8.dp, bottom = 4.dp).clip(CircleShape).background(Color(0x8C1B1A17)).clickable(onClickLabel = "Åpne Domener") { vm.b24OpenDomains() }
+        Modifier.padding(start = 8.dp, bottom = 4.dp).clip(CircleShape).background(DsPalette.PapirLys.textPrimary.copy(alpha = .55f)).clickable(onClickLabel = "Åpne Domener") { vm.b24OpenDomains() }
             .padding(start = 10.dp, end = 12.dp, top = 7.dp, bottom = 7.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp),
     ) {
         Icon(Icons.Filled.Public, null, tint = Color.White, modifier = Modifier.size(15.dp))
         Column {
-            Text(n0(d.visitsToday.toDouble()), color = Color.White, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, lineHeight = 15.sp, maxLines = 1)
-            Text("besøk i dag · ${d.domains} domener", color = Color.White.copy(alpha = .85f), fontSize = 10.5.sp, lineHeight = 12.sp, maxLines = 1)
+            Text(n0(d.visitsToday.toDouble()), color = Color.White, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, style = HomelabType.callout, lineHeight = 15.sp, maxLines = 1)
+            Text("besøk i dag · ${d.domains} domener", color = Color.White.copy(alpha = .85f), style = HomelabType.caption, fontWeight = FontWeight.Normal, lineHeight = 12.sp, maxLines = 1)
         }
         Box(Modifier.size(8.dp).clip(CircleShape).background(dot))
     }
@@ -203,7 +211,7 @@ internal fun boligKicker24(vm: AppViewModel): String? = vm.b24.homes?.takeIf { i
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 internal fun PaperBoliger24(vm: AppViewModel, navBottom: Dp, takePhoto: () -> Unit, pickFiles: () -> Unit) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val s = vm.b24
     LaunchedEffect(Unit) {
         if (s.homes == null) vm.b24LoadHomes() else s.cur?.let { if (vm.folder?.folder?.id != it) vm.b24OpenHome(it) }
@@ -224,7 +232,7 @@ internal fun PaperBoliger24(vm: AppViewModel, navBottom: Dp, takePhoto: () -> Un
                 (homes ?: emptyList()).forEachIndexed { i, h ->
                     val on = h.id == cur?.id
                     Row(
-                        Modifier.height(52.dp).clip(RoundedCornerShape(26.dp)).background(if (on) p.ink else p.card).border(1.dp, if (on) p.ink else p.line, RoundedCornerShape(26.dp))
+                        Modifier.height(52.dp).clip(RoundedCornerShape(26.dp)).background(if (on) p.textPrimary else p.surfaceRaised).border(1.dp, if (on) p.textPrimary else p.line, RoundedCornerShape(26.dp))
                             .combinedClickable(
                                 onClickLabel = "Velg ${h.name}", onLongClickLabel = "Rediger ${h.name}",
                                 onLongClick = { Haptics.tap(); if (h.id != cur?.id) vm.b24OpenHome(h.id); s.edit = h.id },
@@ -233,39 +241,39 @@ internal fun PaperBoliger24(vm: AppViewModel, navBottom: Dp, takePhoto: () -> Un
                         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
                         Box(Modifier.size(36.dp).clip(CircleShape).background(homeColor24(h, i)), contentAlignment = Alignment.Center) {
-                            Text(h.name.take(1), color = Color.White, fontFamily = PaperFonts.serif, fontWeight = FontWeight.Medium, fontSize = 17.sp, maxLines = 1)
+                            Text(h.name.take(1), color = Color.White, fontFamily = PaperFonts.serif, fontWeight = FontWeight.Medium, style = HomelabType.body, maxLines = 1)
                         }
                         Column {
-                            Text(h.name, color = if (on) p.bg else p.ink, fontWeight = FontWeight.Bold, fontSize = 14.sp, maxLines = 1, softWrap = false)
-                            Text("${kr24(spentOf(h.id))} i ${monthName24(ym, false).lowercase(NB24)}", color = (if (on) p.bg else p.ink).copy(alpha = .75f), fontSize = 11.5.sp, maxLines = 1, softWrap = false)
+                            Text(h.name, color = if (on) p.surface else p.textPrimary, fontWeight = FontWeight.Bold, style = HomelabType.callout, maxLines = 1, softWrap = false)
+                            Text("${kr24(spentOf(h.id))} i ${monthName24(ym, false).lowercase(NB24)}", color = (if (on) p.surface else p.textPrimary).copy(alpha = .75f), style = HomelabType.caption, fontWeight = FontWeight.Normal, maxLines = 1, softWrap = false)
                         }
                     }
                 }
                 Box(
                     Modifier.height(52.dp).clip(RoundedCornerShape(26.dp)).dashed24(p.line, 26.dp).clickable(role = Role.Button) { s.newHome = true }.padding(horizontal = 18.dp),
                     contentAlignment = Alignment.Center,
-                ) { Text("+ Ny bolig", color = p.ink, fontWeight = FontWeight.Bold, fontSize = 13.5.sp, maxLines = 1, softWrap = false) }
+                ) { Text("+ Ny bolig", color = p.textPrimary, fontWeight = FontWeight.Bold, style = HomelabType.subheadline, maxLines = 1, softWrap = false) }
             }
         }
-        if (homes == null) item { Box(Modifier.fillMaxWidth().padding(30.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = p.ink) } }
+        if (homes == null) item { Box(Modifier.fillMaxWidth().padding(30.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = p.textPrimary) } }
         else if (homes.isEmpty()) item {
-            Text("Ingen boliger ennå. Trykk «+ Ny bolig» for å lage den første.", color = p.mut, fontSize = 13.5.sp, modifier = Modifier.padding(horizontal = 20.dp))
+            Text("Ingen boliger ennå. Trykk «+ Ny bolig» for å lage den første.", color = p.textTertiary, style = HomelabType.subheadline, modifier = Modifier.padding(horizontal = 20.dp))
         }
         if (cur != null) {
             val rv = d?.entries?.filter { it.status == "review" || it.status == "ai" } ?: emptyList()
             // Fanevelger
             item {
-                Row(Modifier.padding(horizontal = 16.dp).fillMaxWidth().clip(CircleShape).background(p.card).padding(4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                Row(Modifier.padding(horizontal = 16.dp).fillMaxWidth().clip(CircleShape).background(p.surfaceRaised).padding(4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     listOf("ov" to "Oversikt", "ex" to (if (rv.isNotEmpty()) "Utgifter · ${d?.entries?.size ?: 0}" else "Utgifter")).forEach { (k, n) ->
                         val on = s.tab == k
                         Box(
-                            Modifier.weight(1f).height(38.dp).clip(CircleShape).background(if (on) p.ink else Color.Transparent).clickable(role = Role.Tab) { Haptics.select(); s.tab = k },
+                            Modifier.weight(1f).height(38.dp).clip(CircleShape).background(if (on) p.textPrimary else Color.Transparent).clickable(role = Role.Tab) { Haptics.select(); s.tab = k },
                             contentAlignment = Alignment.Center,
-                        ) { Text(n, color = if (on) p.bg else p.ink, fontWeight = FontWeight.Bold, fontSize = 13.sp, maxLines = 1, softWrap = false) }
+                        ) { Text(n, color = if (on) p.surface else p.textPrimary, fontWeight = FontWeight.Bold, style = HomelabType.subheadline, maxLines = 1, softWrap = false) }
                     }
                 }
             }
-            if (d == null) item { Box(Modifier.fillMaxWidth().padding(30.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = p.ink) } }
+            if (d == null) item { Box(Modifier.fillMaxWidth().padding(30.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = p.textPrimary) } }
             else when (s.tab) {
                 "ex" -> item { Box(Modifier.padding(horizontal = 16.dp)) { Expenses24(vm, d) } }
                 // Prompt 47 (claude-code-boliger-mobil-uten-epost-tilgang.md): Tilgang er ikke en fane lenger, men åpnes fra Rediger bolig → «Delt med N».
@@ -307,33 +315,33 @@ private fun HomeCard24(d: HomeDetail24, c: Color, spent: Double, prev: Double, y
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Box(Modifier.size(46.dp).clip(CircleShape).background(Color.White.copy(alpha = .18f)), contentAlignment = Alignment.Center) {
-                Text(h.name.take(1), color = Color.White, fontFamily = PaperFonts.serif, fontWeight = FontWeight.Medium, fontSize = 22.sp)
+                Text(h.name.take(1), color = Color.White, fontFamily = PaperFonts.serif, fontWeight = FontWeight.Medium, style = HomelabType.title3)
             }
             Column(Modifier.weight(1f)) {
-                Text(h.name, color = Color.White, fontFamily = PaperFonts.serif, fontWeight = FontWeight.Medium, fontSize = 24.sp, lineHeight = 26.4.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                h.address?.let { Text(it, color = Color.White.copy(alpha = .85f), fontSize = 12.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+                Text(h.name, color = Color.White, fontFamily = PaperFonts.serif, fontWeight = FontWeight.Medium, style = HomelabType.title3, lineHeight = 26.4.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                h.address?.let { Text(it, color = Color.White.copy(alpha = .85f), style = HomelabType.footnote, maxLines = 1, overflow = TextOverflow.Ellipsis) }
             }
             Box(Modifier.clip(RoundedCornerShape(12.dp)).background(Color.White.copy(alpha = .16f)).padding(10.dp, 5.dp)) {
-                Text(monthName24(ym), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp, maxLines = 1)
+                Text(monthName24(ym), color = Color.White, fontWeight = FontWeight.Bold, style = HomelabType.footnote, maxLines = 1)
             }
         }
         Column {
-            Text("Brukt denne måneden", color = Color.White.copy(alpha = .85f), fontSize = 13.sp)
+            Text("Brukt denne måneden", color = Color.White.copy(alpha = .85f), style = HomelabType.subheadline)
             Row(Modifier.padding(top = 2.dp), verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 FitText(kr24(spent), Color.White, 44.sp, FontWeight.Medium, modifier = Modifier.weight(1f, fill = false), family = PaperFonts.serif, min = 26.sp)
                 Box(Modifier.padding(bottom = 6.dp).clip(RoundedCornerShape(10.dp)).background(Color.White.copy(alpha = .16f)).padding(9.dp, 3.dp)) {
-                    Text((if (dl >= 0) "▲ " else "▼ ") + "${Math.abs(Math.round(dl))} % fra ${monthName24(ym.minusMonths(1)).lowercase(NB24)}", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp, maxLines = 1)
+                    Text((if (dl >= 0) "▲ " else "▼ ") + "${Math.abs(Math.round(dl))} % fra ${monthName24(ym.minusMonths(1)).lowercase(NB24)}", color = Color.White, fontWeight = FontWeight.Bold, style = HomelabType.subheadline, maxLines = 1)
                 }
             }
         }
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             val pct = if (bud != null && bud > 0) (spent / bud).toFloat().coerceIn(0f, 1f) else 0f
             Box(Modifier.fillMaxWidth().height(10.dp).clip(RoundedCornerShape(5.dp)).background(Color.White.copy(alpha = .2f))) {
-                if (pct > 0f) Box(Modifier.fillMaxWidth(pct).fillMaxHeight().clip(RoundedCornerShape(5.dp)).background(if (over) Color(0xFFFFB4A8) else Color.White))
+                if (pct > 0f) Box(Modifier.fillMaxWidth(pct).fillMaxHeight().clip(RoundedCornerShape(5.dp)).background(if (over) DsPalette.PapirMork.danger else Color.White))
             }
             Row {
-                Text(if (bud != null) "av ${kr24(bud)} i budsjett" else "Ingen budsjett · hold inne på boligen", color = Color.White.copy(alpha = .9f), fontSize = 12.5.sp, modifier = Modifier.weight(1f), maxLines = 1)
-                if (bud != null) Text(if (over) "${kr24(spent - bud)} over" else "${kr24(bud - spent)} igjen", color = Color.White.copy(alpha = .9f), fontWeight = FontWeight.Bold, fontSize = 12.5.sp, maxLines = 1)
+                Text(if (bud != null) "av ${kr24(bud)} i budsjett" else "Ingen budsjett · hold inne på boligen", color = Color.White.copy(alpha = .9f), style = HomelabType.footnote, modifier = Modifier.weight(1f), maxLines = 1)
+                if (bud != null) Text(if (over) "${kr24(spent - bud)} over" else "${kr24(bud - spent)} igjen", color = Color.White.copy(alpha = .9f), fontWeight = FontWeight.Bold, style = HomelabType.footnote, maxLines = 1)
             }
         }
     }
@@ -341,7 +349,7 @@ private fun HomeCard24(d: HomeDetail24, c: Color, spent: Double, prev: Double, y
 
 @Composable
 private fun Actions24(vm: AppViewModel, id: Int, takePhoto: () -> Unit, pickFiles: () -> Unit) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         listOf<Triple<String, String, () -> Unit>>(
             Triple("Skann", "<path d=\"M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3M8 12h8\"/>") { vm.scanTarget = "receipt"; takePhoto() },
@@ -349,15 +357,15 @@ private fun Actions24(vm: AppViewModel, id: Int, takePhoto: () -> Unit, pickFile
             Triple("Ny utgift", "") { vm.b24.newEntry = true },
         ).forEachIndexed { i, (n, d, go) ->
             Column(
-                Modifier.weight(1f).clip(RoundedCornerShape(18.dp)).background(p.card).clickable(role = Role.Button, onClick = go).padding(vertical = 12.dp, horizontal = 4.dp),
+                Modifier.weight(1f).clip(RoundedCornerShape(18.dp)).background(p.surfaceRaised).clickable(role = Role.Button, onClick = go).padding(vertical = 12.dp, horizontal = 4.dp),
                 horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
-                Box(Modifier.size(38.dp).clip(CircleShape).background(if (i == 0) p.lab else p.bg), contentAlignment = Alignment.Center) {
+                Box(Modifier.size(38.dp).clip(CircleShape).background(if (i == 0) p.accent else p.surface), contentAlignment = Alignment.Center) {
                     val v = if (d.isNotEmpty()) svg24(d) else null
-                    if (v != null) Icon(v, null, tint = if (i == 0) p.onLab else p.ink, modifier = Modifier.size(19.dp))
-                    else Text("+", color = p.ink, fontSize = 20.sp)
+                    if (v != null) Icon(v, null, tint = if (i == 0) p.onAccent else p.textPrimary, modifier = Modifier.size(19.dp))
+                    else Text("+", color = p.textPrimary, style = HomelabType.headline, fontWeight = FontWeight.Normal)
                 }
-                Text(n, color = p.ink, fontWeight = FontWeight.Bold, fontSize = 12.sp, maxLines = 1, softWrap = false)
+                Text(n, color = p.textPrimary, fontWeight = FontWeight.Bold, style = HomelabType.footnote, maxLines = 1, softWrap = false)
             }
         }
     }
@@ -366,17 +374,17 @@ private fun Actions24(vm: AppViewModel, id: Int, takePhoto: () -> Unit, pickFile
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun Review24(vm: AppViewModel, d: HomeDetail24, rv: List<HomeEntry24>) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val id = d.home.id
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.Bottom) {
-            PLabel("Til gjennomgang · ${rv.size}", size = 11.sp, modifier = Modifier.weight(1f))
-            Text("Godkjenn alle", color = p.ink, fontWeight = FontWeight.Bold, fontSize = 12.5.sp, modifier = Modifier.clickable(role = Role.Button) { vm.b24ApproveAll(id) })
+            PLabel("Til gjennomgang · ${rv.size}", size = HomelabType.caption.fontSize, modifier = Modifier.weight(1f))
+            Text("Godkjenn alle", color = p.textPrimary, fontWeight = FontWeight.Bold, style = HomelabType.footnote, modifier = Modifier.clickable(role = Role.Button) { vm.b24ApproveAll(id) })
         }
         rv.forEach { e ->
             val ai = e.status == "ai"
             Column(
-                Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(p.card).border(1.5.dp, if (ai) p.line else p.lab, RoundedCornerShape(20.dp)).padding(14.dp),
+                Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(p.surfaceRaised).border(1.5.dp, if (ai) p.line else p.accent, RoundedCornerShape(20.dp)).padding(14.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 // Prompt 30: hele toppraden (miniatyr · butikk · forslag · beløp · ›) åpner detaljarket, også mens AI leser.
@@ -386,11 +394,11 @@ private fun Review24(vm: AppViewModel, d: HomeDetail24, rv: List<HomeEntry24>) {
                 ) {
                     ReceiptThumb24(vm, id, e, Modifier.size(42.dp, 52.dp))
                     Column(Modifier.weight(1f)) {
-                        Text(e.description, color = p.ink, fontWeight = FontWeight.Bold, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text(if (ai) "Glimt leser lokalt …" else "AI foreslår ${e.category}" + (e.paidBy?.let { " · $it" } ?: ""), color = if (ai) p.lab else p.mut, fontSize = 12.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(e.description, color = p.textPrimary, fontWeight = FontWeight.Bold, style = HomelabType.callout, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(if (ai) "Glimt leser lokalt …" else "AI foreslår ${e.category}" + (e.paidBy?.let { " · $it" } ?: ""), color = if (ai) p.accent else p.textTertiary, style = HomelabType.footnote, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
-                    Text(if (ai) "…" else kr24(e.amount), color = p.ink, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, maxLines = 1)
-                    Text("›", color = p.mut, fontSize = 17.sp)
+                    Text(if (ai) "…" else kr24(e.amount), color = p.textPrimary, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, style = HomelabType.callout, maxLines = 1)
+                    Text("›", color = p.textTertiary, style = HomelabType.body)
                 }
                 if (!ai) {
                     val opts = (listOf(e.category) + (d.cats.ifEmpty { CATS24.map { it.first } }).filter { it != e.category && it != "Annet" }).take(4)
@@ -409,16 +417,16 @@ private fun Review24(vm: AppViewModel, d: HomeDetail24, rv: List<HomeEntry24>) {
 
 @Composable
 private fun Categories24(vm: AppViewModel, d: HomeDetail24, ym: YearMonth) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val es = d.entries.filter { it.status != "ai" && it.date.startsWith(ym.toString()) }
     val spent = es.sumOf { kotlin.math.abs(it.amount) }
     val by = es.groupBy { it.category }.map { (n, l) -> Triple(n, l, l.sumOf { kotlin.math.abs(it.amount) }) }.filter { it.third > 0 }.sortedByDescending { it.third }
-    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(p.card).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(p.surfaceRaised).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(verticalAlignment = Alignment.Bottom) {
-            PSerif("Kategorier", 20.sp, modifier = Modifier.weight(1f), maxLines = 1)
-            Text(monthName24(ym), color = p.mut, fontSize = 12.5.sp)
+            PSerif("Kategorier", HomelabType.headline.fontSize, modifier = Modifier.weight(1f), maxLines = 1)
+            Text(monthName24(ym), color = p.textTertiary, style = HomelabType.footnote)
         }
-        if (by.isEmpty()) Text("Ingen utgifter ennå denne måneden.", color = p.mut, fontSize = 13.sp)
+        if (by.isEmpty()) Text("Ingen utgifter ennå denne måneden.", color = p.textTertiary, style = HomelabType.subheadline)
         else {
             Row(Modifier.fillMaxWidth().height(12.dp).clip(RoundedCornerShape(6.dp)), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
                 by.forEach { (n, l, v) -> Box(Modifier.weight(v.toFloat().coerceAtLeast(1f)).widthIn(min = 4.dp).fillMaxHeight().background(catColor24(n, l.firstOrNull()?.color))) }
@@ -430,14 +438,14 @@ private fun Categories24(vm: AppViewModel, d: HomeDetail24, ym: YearMonth) {
                     verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     Box(Modifier.size(30.dp).clip(RoundedCornerShape(10.dp)).background(c.copy(alpha = .16f)), contentAlignment = Alignment.Center) {
-                        Text(catIcon24(n), color = c, fontWeight = FontWeight.ExtraBold, fontSize = 14.sp)
+                        Text(catIcon24(n), color = c, fontWeight = FontWeight.ExtraBold, style = HomelabType.callout)
                     }
                     Row(Modifier.weight(1f)) {
-                        Text(n, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
-                        Text(" · ${l.size} ${if (l.size == 1) "utgift" else "utgifter"}", color = p.mut, fontWeight = FontWeight.Medium, fontSize = 14.sp, maxLines = 1, softWrap = false)
+                        Text(n, color = p.textPrimary, fontWeight = FontWeight.SemiBold, style = HomelabType.callout, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+                        Text(" · ${l.size} ${if (l.size == 1) "utgift" else "utgifter"}", color = p.textTertiary, fontWeight = FontWeight.Medium, style = HomelabType.callout, maxLines = 1, softWrap = false)
                     }
-                    if (spent > 0) Text("${Math.round(v / spent * 100)} %", color = p.mut, fontSize = 12.sp, maxLines = 1)
-                    Text(kr24(v), color = p.ink, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, textAlign = TextAlign.End, maxLines = 1, modifier = Modifier.width(86.dp))
+                    if (spent > 0) Text("${Math.round(v / spent * 100)} %", color = p.textTertiary, style = HomelabType.footnote, maxLines = 1)
+                    Text(kr24(v), color = p.textPrimary, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, style = HomelabType.callout, textAlign = TextAlign.End, maxLines = 1, modifier = Modifier.width(86.dp))
                 }
             }
         }
@@ -446,24 +454,24 @@ private fun Categories24(vm: AppViewModel, d: HomeDetail24, ym: YearMonth) {
 
 @Composable
 private fun History24(d: HomeDetail24, c: Color, ym: YearMonth) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val months = (5 downTo 0).map { ym.minusMonths(it.toLong()) }
     val vals = months.map { m -> d.entries.filter { it.status != "ai" && it.date.startsWith(m.toString()) }.sumOf { kotlin.math.abs(it.amount) } }
     val mx = (vals.maxOrNull() ?: 0.0).coerceAtLeast(1.0)
     val avg = vals.dropLast(1).average().takeIf { !it.isNaN() } ?: 0.0
-    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(p.card).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(p.surfaceRaised).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(verticalAlignment = Alignment.Bottom) {
-            PSerif("Historikk", 20.sp, modifier = Modifier.weight(1f), maxLines = 1)
-            Text("Snitt ${kr24(avg)}", color = p.mut, fontSize = 12.5.sp)
+            PSerif("Historikk", HomelabType.headline.fontSize, modifier = Modifier.weight(1f), maxLines = 1)
+            Text("Snitt ${kr24(avg)}", color = p.textTertiary, style = HomelabType.footnote)
         }
         Row(Modifier.fillMaxWidth().height(130.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.Bottom) {
             months.forEachIndexed { i, m ->
                 val last = i == months.lastIndex
                 Column(Modifier.weight(1f).fillMaxHeight(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp, Alignment.Bottom)) {
-                    Text("${String.format(NB24, "%.1f", vals[i] / 1000).replace(",0", "")}k", color = p.mut, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = 10.5.sp, maxLines = 1)
+                    Text("${String.format(NB24, "%.1f", vals[i] / 1000).replace(",0", "")}k", color = p.textTertiary, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, style = HomelabType.caption, maxLines = 1)
                     Box(Modifier.fillMaxWidth().fillMaxHeight(.66f * (vals[i] / mx).toFloat().coerceIn(0.04f, 1f)).clip(RoundedCornerShape(8.dp))
-                        .background(if (last) c else lerp(p.bg, c, .3f)))
-                    Text(monthName24(m, false).take(3), color = if (last) p.ink else p.mut, fontWeight = if (last) FontWeight.ExtraBold else FontWeight.Medium, fontSize = 11.5.sp, maxLines = 1)
+                        .background(if (last) c else lerp(p.surface, c, .3f)))
+                    Text(monthName24(m, false).take(3), color = if (last) p.textPrimary else p.textTertiary, fontWeight = if (last) FontWeight.ExtraBold else FontWeight.Medium, style = HomelabType.caption, maxLines = 1)
                 }
             }
         }
@@ -472,7 +480,7 @@ private fun History24(d: HomeDetail24, c: Color, ym: YearMonth) {
 
 @Composable
 private fun ExpenseRow24(vm: AppViewModel, e: HomeEntry24, top: Boolean, full: Boolean) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val c = catColor24(e.category, e.color)
     val ai = e.status == "ai"
     val rv = e.status == "review"
@@ -483,17 +491,17 @@ private fun ExpenseRow24(vm: AppViewModel, e: HomeEntry24, top: Boolean, full: B
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Box(Modifier.size(36.dp).clip(RoundedCornerShape(12.dp)).background(c.copy(alpha = .16f)), contentAlignment = Alignment.Center) {
-                Text(catIcon24(e.category), color = c, fontWeight = FontWeight.ExtraBold, fontSize = 14.sp)
+                Text(catIcon24(e.category), color = c, fontWeight = FontWeight.ExtraBold, style = HomelabType.callout)
             }
             Column(Modifier.weight(1f)) {
-                Text(e.description, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 14.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(ddmm24(e.date) + " · " + e.category + (if (full) e.paidBy?.let { " · $it" } ?: "" else ""), color = if (full && (ai || rv)) p.lab else p.mut, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(e.description, color = p.textPrimary, fontWeight = FontWeight.SemiBold, style = HomelabType.callout, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(ddmm24(e.date) + " · " + e.category + (if (full) e.paidBy?.let { " · $it" } ?: "" else ""), color = if (full && (ai || rv)) p.accent else p.textTertiary, style = HomelabType.footnote, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             Column(horizontalAlignment = Alignment.End) {
-                Text(if (ai) "…" else kr24(e.amount), color = p.ink, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, maxLines = 1)
+                Text(if (ai) "…" else kr24(e.amount), color = p.textPrimary, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, style = HomelabType.callout, maxLines = 1)
                 if (full) {
                     val rc = when { ai -> "Leses av AI"; rv -> "Til gjennomgang"; e.receiptId != null -> "⎙ Kvittering"; else -> "" }
-                    if (rc.isNotEmpty()) Text(rc, color = p.mut, fontSize = 11.sp, maxLines = 1)
+                    if (rc.isNotEmpty()) Text(rc, color = p.textTertiary, style = HomelabType.caption, fontWeight = FontWeight.Normal, maxLines = 1)
                 }
             }
         }
@@ -502,21 +510,21 @@ private fun ExpenseRow24(vm: AppViewModel, e: HomeEntry24, top: Boolean, full: B
 
 @Composable
 private fun Recent24(vm: AppViewModel, d: HomeDetail24) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val l = d.entries.filter { it.status == "ok" }.take(5)
-    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(p.card).padding(16.dp, 6.dp)) {
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(p.surfaceRaised).padding(16.dp, 6.dp)) {
         Row(Modifier.fillMaxWidth().padding(top = 10.dp, bottom = 4.dp), verticalAlignment = Alignment.Bottom) {
-            PSerif("Siste utgifter", 20.sp, modifier = Modifier.weight(1f), maxLines = 1)
-            Text("Alle ›", color = p.ink, fontWeight = FontWeight.Bold, fontSize = 12.5.sp, modifier = Modifier.clickable { vm.b24.fc = "Alle"; vm.b24.tab = "ex" })
+            PSerif("Siste utgifter", HomelabType.headline.fontSize, modifier = Modifier.weight(1f), maxLines = 1)
+            Text("Alle ›", color = p.textPrimary, fontWeight = FontWeight.Bold, style = HomelabType.footnote, modifier = Modifier.clickable { vm.b24.fc = "Alle"; vm.b24.tab = "ex" })
         }
-        if (l.isEmpty()) Text("Ingen utgifter ennå. Skann en kvittering, så havner den her.", color = p.mut, fontSize = 13.sp, modifier = Modifier.padding(vertical = 12.dp))
+        if (l.isEmpty()) Text("Ingen utgifter ennå. Skann en kvittering, så havner den her.", color = p.textTertiary, style = HomelabType.subheadline, modifier = Modifier.padding(vertical = 12.dp))
         l.forEachIndexed { i, e -> ExpenseRow24(vm, e, i > 0, false) }
     }
 }
 
 @Composable
 private fun Shared24(vm: AppViewModel, d: HomeDetail24) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     // Prompt 47: raden står i Rediger bolig (ikke på Oversikt); trykk lukker arket og åpner Tilgang.
     Row(
         Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).border(1.dp, p.line, RoundedCornerShape(18.dp))
@@ -527,16 +535,16 @@ private fun Shared24(vm: AppViewModel, d: HomeDetail24) {
         Box(Modifier.width(if (n == 0) 0.dp else (34 + 26 * (n - 1)).dp).height(34.dp)) {
             d.members.take(4).forEachIndexed { i, m ->
                 Box(
-                    Modifier.offset(x = (26 * i).dp).size(34.dp).clip(CircleShape).background(p.card).padding(2.dp).clip(CircleShape).background(Color(MEMC24[i % MEMC24.size])),
+                    Modifier.offset(x = (26 * i).dp).size(34.dp).clip(CircleShape).background(p.surfaceRaised).padding(2.dp).clip(CircleShape).background(MEMC24[i % MEMC24.size]),
                     contentAlignment = Alignment.Center,
-                ) { Text(m.name.take(2).uppercase(NB24), color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 12.sp, maxLines = 1) }
+                ) { Text(m.name.take(2).uppercase(NB24), color = Color.White, fontWeight = FontWeight.ExtraBold, style = HomelabType.footnote, maxLines = 1) }
             }
         }
         Column(Modifier.weight(1f).padding(start = 10.dp)) {
-            Text("Delt med ${d.members.size} ${if (d.members.size == 1) "person" else "personer"}", color = p.ink, fontWeight = FontWeight.Bold, fontSize = 14.5.sp, maxLines = 1)
-            Text("Tilgang · hvem som kan se og laste opp", color = p.mut, fontSize = 12.sp, maxLines = 1)
+            Text("Delt med ${d.members.size} ${if (d.members.size == 1) "person" else "personer"}", color = p.textPrimary, fontWeight = FontWeight.Bold, style = HomelabType.callout, maxLines = 1)
+            Text("Tilgang · hvem som kan se og laste opp", color = p.textTertiary, style = HomelabType.footnote, maxLines = 1)
         }
-        Text("›", color = p.mut, fontSize = 17.sp)
+        Text("›", color = p.textTertiary, style = HomelabType.body)
     }
 }
 
@@ -544,37 +552,37 @@ private fun Shared24(vm: AppViewModel, d: HomeDetail24) {
 
 @Composable
 private fun Expenses24(vm: AppViewModel, d: HomeDetail24) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val s = vm.b24
     val q = s.q.trim().lowercase()
     val cats = listOf("Alle") + (d.cats.ifEmpty { CATS24.map { it.first } } + d.entries.map { it.category }).distinct()
     val ex = d.entries.filter { (s.fc == "Alle" || it.category == s.fc) && (q.isEmpty() || "${it.description} ${it.category} ${it.aiShort ?: ""} ${it.paidBy ?: ""}".lowercase().contains(q)) }
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Row(Modifier.fillMaxWidth().height(46.dp).clip(CircleShape).background(p.card).padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(Modifier.fillMaxWidth().height(46.dp).clip(CircleShape).background(p.surfaceRaised).padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             // Prompt 27: ✕ til venstre når det står tekst.
-            SearchLead27(s.q.isNotEmpty(), p.ink, p.mut, bg = p.line, idle = { svg24("<circle cx=\"11\" cy=\"11\" r=\"7\"/><path d=\"M20 20l-3.5-3.5\"/>")?.let { Icon(it, null, tint = p.mut, modifier = Modifier.size(17.dp)) } }) { s.q = "" }
+            SearchLead27(s.q.isNotEmpty(), p.textPrimary, p.textTertiary, bg = p.line, idle = { svg24("<circle cx=\"11\" cy=\"11\" r=\"7\"/><path d=\"M20 20l-3.5-3.5\"/>")?.let { Icon(it, null, tint = p.textTertiary, modifier = Modifier.size(17.dp)) } }) { s.q = "" }
             BasicTextField(
                 s.q, { s.q = it }, singleLine = true, modifier = Modifier.weight(1f),
-                textStyle = TextStyle(color = p.ink, fontSize = 15.sp, fontWeight = FontWeight.Medium), cursorBrush = SolidColor(p.ink),
-                decorationBox = { inner -> Box { if (s.q.isEmpty()) Text("Søk i utgifter og kvitteringer", color = p.mut, fontSize = 15.sp, maxLines = 1); inner() } },
+                textStyle = HomelabType.callout.copy(color = p.textPrimary, fontWeight = FontWeight.Medium), cursorBrush = SolidColor(p.textPrimary),
+                decorationBox = { inner -> Box { if (s.q.isEmpty()) Text("Søk i utgifter og kvitteringer", color = p.textTertiary, style = HomelabType.callout, maxLines = 1); inner() } },
             )
         }
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             cats.forEach { n ->
                 val on = s.fc == n
                 Box(
-                    Modifier.height(34.dp).clip(RoundedCornerShape(17.dp)).background(if (on) p.ink else p.card).border(1.dp, if (on) p.ink else p.line, RoundedCornerShape(17.dp))
+                    Modifier.height(34.dp).clip(RoundedCornerShape(17.dp)).background(if (on) p.textPrimary else p.surfaceRaised).border(1.dp, if (on) p.textPrimary else p.line, RoundedCornerShape(17.dp))
                         .clickable { s.fc = n }.padding(horizontal = 14.dp),
                     contentAlignment = Alignment.Center,
-                ) { Text(n, color = if (on) p.bg else p.ink, fontWeight = FontWeight.SemiBold, fontSize = 12.5.sp, maxLines = 1, softWrap = false) }
+                ) { Text(n, color = if (on) p.surface else p.textPrimary, fontWeight = FontWeight.SemiBold, style = HomelabType.footnote, maxLines = 1, softWrap = false) }
             }
         }
         Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp)) {
-            Text("${ex.size} utgifter", color = p.mut, fontSize = 13.sp, modifier = Modifier.weight(1f))
-            Text(kr24(ex.filter { it.status != "ai" }.sumOf { kotlin.math.abs(it.amount) }), color = p.ink, fontFamily = PaperFonts.mono, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+            Text("${ex.size} utgifter", color = p.textTertiary, style = HomelabType.subheadline, modifier = Modifier.weight(1f))
+            Text(kr24(ex.filter { it.status != "ai" }.sumOf { kotlin.math.abs(it.amount) }), color = p.textPrimary, fontFamily = PaperFonts.mono, fontWeight = FontWeight.Bold, style = HomelabType.subheadline)
         }
-        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(p.card).padding(16.dp, 4.dp)) {
-            if (ex.isEmpty()) Text("Ingen utgifter passer søket.", color = p.mut, fontSize = 13.5.sp, modifier = Modifier.padding(vertical = 16.dp))
+        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(p.surfaceRaised).padding(16.dp, 4.dp)) {
+            if (ex.isEmpty()) Text("Ingen utgifter passer søket.", color = p.textTertiary, style = HomelabType.subheadline, modifier = Modifier.padding(vertical = 16.dp))
             ex.take(150).forEachIndexed { i, e -> ExpenseRow24(vm, e, i > 0, true) }
         }
     }
@@ -584,23 +592,23 @@ private fun Expenses24(vm: AppViewModel, d: HomeDetail24) {
 
 @Composable
 private fun Access24(vm: AppViewModel, d: HomeDetail24, homeCount: Int) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val id = d.home.id
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(p.card).padding(16.dp, 4.dp)) {
-            PSerif("Hvem har tilgang", 20.sp, modifier = Modifier.padding(top = 12.dp, bottom = 4.dp), maxLines = 1)
+        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(p.surfaceRaised).padding(16.dp, 4.dp)) {
+            PSerif("Hvem har tilgang", HomelabType.headline.fontSize, modifier = Modifier.padding(top = 12.dp, bottom = 4.dp), maxLines = 1)
             d.members.forEachIndexed { i, m ->
                 if (i > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
                 Row(Modifier.fillMaxWidth().padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Box(Modifier.size(40.dp).clip(CircleShape).background(Color(MEMC24[i % MEMC24.size])), contentAlignment = Alignment.Center) {
-                        Text(m.name.take(2).uppercase(NB24), color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 13.sp)
+                    Box(Modifier.size(40.dp).clip(CircleShape).background(MEMC24[i % MEMC24.size]), contentAlignment = Alignment.Center) {
+                        Text(m.name.take(2).uppercase(NB24), color = Color.White, fontWeight = FontWeight.ExtraBold, style = HomelabType.subheadline)
                     }
                     Column(Modifier.weight(1f)) {
-                        Text(m.name, color = p.ink, fontWeight = FontWeight.Bold, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text(roleDesc24(m.role) + if (m.you) " · deg" else "", color = p.mut, fontSize = 12.sp, maxLines = 2)
+                        Text(m.name, color = p.textPrimary, fontWeight = FontWeight.Bold, style = HomelabType.callout, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(roleDesc24(m.role) + if (m.you) " · deg" else "", color = p.textTertiary, style = HomelabType.footnote, maxLines = 2)
                     }
                     Box(
-                        Modifier.height(32.dp).clip(RoundedCornerShape(16.dp)).background(p.bg).border(1.dp, p.line, RoundedCornerShape(16.dp))
+                        Modifier.height(32.dp).clip(RoundedCornerShape(16.dp)).background(p.surface).border(1.dp, p.line, RoundedCornerShape(16.dp))
                             .clickable(role = Role.Button) {
                                 when {
                                     !d.isOwner -> vm.flash("Bare eiere kan endre tilgang")
@@ -609,11 +617,11 @@ private fun Access24(vm: AppViewModel, d: HomeDetail24, homeCount: Int) {
                                 }
                             }.padding(horizontal = 12.dp),
                         contentAlignment = Alignment.Center,
-                    ) { Text("${roleName24(m.role)} ▾", color = p.ink, fontWeight = FontWeight.Bold, fontSize = 12.sp, maxLines = 1, softWrap = false) }
+                    ) { Text("${roleName24(m.role)} ▾", color = p.textPrimary, fontWeight = FontWeight.Bold, style = HomelabType.footnote, maxLines = 1, softWrap = false) }
                     if (!m.you && d.isOwner) Box(
                         Modifier.size(32.dp).clip(CircleShape).clickable(role = Role.Button, onClickLabel = "Fjern ${m.name}") { vm.b24RemoveMember(id, m) },
                         contentAlignment = Alignment.Center,
-                    ) { Text("−", color = p.lab, fontSize = 18.sp) }
+                    ) { Text("−", color = p.accent, style = HomelabType.headline, fontWeight = FontWeight.Normal) }
                 }
             }
         }
@@ -625,7 +633,7 @@ private fun Access24(vm: AppViewModel, d: HomeDetail24, homeCount: Int) {
 
 @Composable
 private fun AboutHome24(vm: AppViewModel, d: HomeDetail24, homeCount: Int) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val h = d.home
     var name by remember(h.id) { mutableStateOf(h.name) }
     var addr by remember(h.id) { mutableStateOf(h.address ?: "") }
@@ -642,16 +650,16 @@ private fun AboutHome24(vm: AppViewModel, d: HomeDetail24, homeCount: Int) {
         if (body.length() > 0) vm.b24PatchHome(h.id, body)
     }
     LaunchedEffect(arm) { if (arm) { delay(2500); arm = false } }
-    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(p.card).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        PSerif("Om boligen", 20.sp, maxLines = 1)
-        FieldLabel24("Navn"); Input24(name, { name = it.take(60) }, "", bg = p.bg, height = 44.dp)
-        FieldLabel24("Adresse"); Input24(addr, { addr = it.take(120) }, "", bg = p.bg, weight = FontWeight.Medium, height = 44.dp)
-        FieldLabel24("Månedsbudsjett (kr)"); Input24(bud, { bud = it.filter { c -> c.isDigit() }.take(9) }, "", bg = p.bg, mono = true, number = true, height = 44.dp)
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(p.surfaceRaised).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        PSerif("Om boligen", HomelabType.headline.fontSize, maxLines = 1)
+        FieldLabel24("Navn"); Input24(name, { name = it.take(60) }, "", bg = p.surface, height = 44.dp)
+        FieldLabel24("Adresse"); Input24(addr, { addr = it.take(120) }, "", bg = p.surface, weight = FontWeight.Medium, height = 44.dp)
+        FieldLabel24("Månedsbudsjett (kr)"); Input24(bud, { bud = it.filter { c -> c.isDigit() }.take(9) }, "", bg = p.surface, mono = true, number = true, height = 44.dp)
         FieldLabel24("Farge")
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             HOME24_COLORS.take(6).forEach { c ->
                 val on = h.color.equals(c, true)
-                Box(Modifier.size(34.dp).clip(CircleShape).border(3.dp, if (on) p.ink else Color.Transparent, CircleShape).background(Color(color(c)), CircleShape)
+                Box(Modifier.size(34.dp).clip(CircleShape).border(3.dp, if (on) p.textPrimary else Color.Transparent, CircleShape).background(Color(color(c)), CircleShape)
                     .clickable { vm.b24PatchHome(h.id, JSONObject().put("color", c)) })
             }
         }
@@ -663,8 +671,8 @@ private fun AboutHome24(vm: AppViewModel, d: HomeDetail24, homeCount: Int) {
                 Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
                 Row(Modifier.fillMaxWidth().clickable { vm.b24PatchHome(h.id, JSONObject().put(t.first, !on)) }.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Column(Modifier.weight(1f)) {
-                        Text(t.second, color = p.ink, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                        Text(t.third, color = p.mut, fontSize = 12.sp)
+                        Text(t.second, color = p.textPrimary, fontWeight = FontWeight.Bold, style = HomelabType.callout)
+                        Text(t.third, color = p.textTertiary, style = HomelabType.footnote)
                     }
                     Toggle24(on)
                 }
@@ -677,7 +685,7 @@ private fun AboutHome24(vm: AppViewModel, d: HomeDetail24, homeCount: Int) {
             contentAlignment = Alignment.Center,
         ) {
             Text(if (homeCount <= 1) "Kan ikke slette eneste bolig" else if (!d.isOwner) "Bare eiere kan slette boligen" else "Slett ${h.name}",
-                color = p.lab.copy(alpha = if (canDel) 1f else .4f), fontWeight = FontWeight.Bold, fontSize = 13.5.sp)
+                color = p.accent.copy(alpha = if (canDel) 1f else .4f), fontWeight = FontWeight.Bold, style = HomelabType.subheadline)
         }
     }
 }
@@ -686,53 +694,53 @@ private fun AboutHome24(vm: AppViewModel, d: HomeDetail24, homeCount: Int) {
 
 @Composable
 private fun Toggle24(on: Boolean) {
-    val p = PaperPal.current
-    Box(Modifier.size(44.dp, 26.dp).clip(RoundedCornerShape(13.dp)).background(if (on) p.pos else p.line).padding(3.dp), contentAlignment = if (on) Alignment.CenterEnd else Alignment.CenterStart) {
+    val p = HomelabTheme.colors
+    Box(Modifier.size(44.dp, 26.dp).clip(RoundedCornerShape(13.dp)).background(if (on) p.success else p.line).padding(3.dp), contentAlignment = if (on) Alignment.CenterEnd else Alignment.CenterStart) {
         Box(Modifier.size(20.dp).clip(CircleShape).background(Color.White))
     }
 }
 
 @Composable
-private fun FieldLabel24(t: String) = Text(t, color = PaperPal.current.mut, fontSize = 12.5.sp)
+private fun FieldLabel24(t: String) = Text(t, color = HomelabTheme.colors.textTertiary, style = HomelabType.footnote)
 
 @Composable
 private fun PillBtn24(text: String, modifier: Modifier, height: Dp, filled: Boolean = true, color: Color? = null, onClick: () -> Unit) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     Box(
-        modifier.height(height).clip(RoundedCornerShape(height / 2)).background(if (filled) p.ink else Color.Transparent)
+        modifier.height(height).clip(RoundedCornerShape(height / 2)).background(if (filled) p.textPrimary else Color.Transparent)
             .then(if (filled) Modifier else Modifier.border(1.dp, p.line, RoundedCornerShape(height / 2))).clickable(role = Role.Button, onClick = onClick),
         contentAlignment = Alignment.Center,
-    ) { Text(text, color = color ?: if (filled) p.bg else p.ink, fontWeight = FontWeight.Bold, fontSize = if (height >= 46.dp) 15.sp else 13.5.sp, maxLines = 1) }
+    ) { Text(text, color = color ?: if (filled) p.surface else p.textPrimary, fontWeight = FontWeight.Bold, fontSize = if (height >= 46.dp) HomelabType.callout.fontSize else HomelabType.subheadline.fontSize, maxLines = 1) }
 }
 
 @Composable
 private fun CatChip24(n: String, on: Boolean, c: Color, height: Dp, onClick: () -> Unit) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     Row(
-        Modifier.height(height).clip(RoundedCornerShape(height / 2)).background(if (on) p.ink else p.card).border(1.dp, if (on) p.ink else p.line, RoundedCornerShape(height / 2))
+        Modifier.height(height).clip(RoundedCornerShape(height / 2)).background(if (on) p.textPrimary else p.surfaceRaised).border(1.dp, if (on) p.textPrimary else p.line, RoundedCornerShape(height / 2))
             .clickable(onClick = onClick).padding(horizontal = 12.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Box(Modifier.size(8.dp).clip(CircleShape).background(c))
-        Text(n, color = if (on) p.bg else p.ink, fontWeight = FontWeight.SemiBold, fontSize = 12.5.sp, maxLines = 1, softWrap = false)
+        Text(n, color = if (on) p.surface else p.textPrimary, fontWeight = FontWeight.SemiBold, style = HomelabType.footnote, maxLines = 1, softWrap = false)
     }
 }
 
 @Composable
 private fun Input24(
-    value: String, onChange: (String) -> Unit, placeholder: String, bg: Color = PaperPal.current.card, mono: Boolean = false,
+    value: String, onChange: (String) -> Unit, placeholder: String, bg: Color = HomelabTheme.colors.surfaceRaised, mono: Boolean = false,
     weight: FontWeight = FontWeight.SemiBold, number: Boolean = false, height: Dp = 46.dp, size: TextUnit = 15.sp, onDone: (() -> Unit)? = null,
 ) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     BasicTextField(
         value, onChange, singleLine = true, modifier = Modifier.fillMaxWidth(),
-        textStyle = TextStyle(color = p.ink, fontSize = size, fontWeight = weight, fontFamily = if (mono) PaperFonts.mono else PaperFonts.sans),
-        cursorBrush = SolidColor(p.ink),
+        textStyle = TextStyle(color = p.textPrimary, fontSize = size, fontWeight = weight, fontFamily = if (mono) PaperFonts.mono else PaperFonts.sans),
+        cursorBrush = SolidColor(p.textPrimary),
         keyboardOptions = KeyboardOptions(keyboardType = if (number) KeyboardType.Number else KeyboardType.Text, imeAction = ImeAction.Done),
         keyboardActions = KeyboardActions(onDone = { onDone?.invoke() }),
         decorationBox = { inner ->
             Box(Modifier.fillMaxWidth().height(height).clip(RoundedCornerShape(14.dp)).background(bg).border(1.dp, p.line, RoundedCornerShape(14.dp)).padding(horizontal = 14.dp), contentAlignment = Alignment.CenterStart) {
-                if (value.isEmpty() && placeholder.isNotEmpty()) Text(placeholder, color = p.mut, fontSize = size, fontWeight = FontWeight.Medium, maxLines = 1)
+                if (value.isEmpty() && placeholder.isNotEmpty()) Text(placeholder, color = p.textTertiary, fontSize = size, fontWeight = FontWeight.Medium, maxLines = 1)
                 inner()
             }
         },
@@ -741,18 +749,18 @@ private fun Input24(
 
 @Composable
 private fun ReceiptThumb24(vm: AppViewModel, folderId: Int, e: HomeEntry24, modifier: Modifier) {
-    val p = PaperPal.current
-    Box(modifier.clip(RoundedCornerShape(8.dp)).background(p.bg).border(1.dp, p.line, RoundedCornerShape(8.dp)), contentAlignment = Alignment.Center) {
+    val p = HomelabTheme.colors
+    Box(modifier.clip(RoundedCornerShape(8.dp)).background(p.surface).border(1.dp, p.line, RoundedCornerShape(8.dp)), contentAlignment = Alignment.Center) {
         if (e.receiptId != null) ServerImage(vm, "/finans/api/folders/$folderId/receipts/${e.receiptId}/thumb", Modifier.matchParentSize()) {
-            Text("⎙", color = p.mut, fontSize = 16.sp, modifier = Modifier.align(Alignment.Center))
-        } else Text("⎙", color = p.mut, fontSize = 16.sp)
+            Text("⎙", color = p.textTertiary, style = HomelabType.body, modifier = Modifier.align(Alignment.Center))
+        } else Text("⎙", color = p.textTertiary, style = HomelabType.body)
     }
 }
 
 /** Håndtaket øverst i bunnarkene (40 × 5, strekfarge), som i designet. */
 @Composable
 private fun Handle24() = Box(Modifier.fillMaxWidth().padding(top = 14.dp, bottom = 6.dp), contentAlignment = Alignment.Center) {
-    Box(Modifier.size(40.dp, 5.dp).clip(RoundedCornerShape(3.dp)).background(PaperPal.current.line))
+    Box(Modifier.size(40.dp, 5.dp).clip(RoundedCornerShape(3.dp)).background(HomelabTheme.colors.line))
 }
 
 private val SHEET24 = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
@@ -763,7 +771,7 @@ private val SHEET24 = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun EditHomeSheet24(vm: AppViewModel, h: Home24, index: Int, count: Int) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val s = vm.b24
     val sheet = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var name by remember(h.id) { mutableStateOf(h.name) }
@@ -781,15 +789,15 @@ private fun EditHomeSheet24(vm: AppViewModel, h: Home24, index: Int, count: Int)
     val c = Color(color(col))
     val ownBmp by produceState<Bitmap?>(null, own) { value = own?.let { vm.b24BgBitmap(h, it) } }
     ModalBottomSheet(
-        onDismissRequest = { s.edit = null }, sheetState = sheet, containerColor = p.bg, contentColor = p.ink, shape = SHEET24, dragHandle = { Handle24() },
+        onDismissRequest = { s.edit = null }, sheetState = sheet, containerColor = p.surface, contentColor = p.textPrimary, shape = SHEET24, dragHandle = { Handle24() },
     ) {
         Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).imePadding().padding(16.dp, 0.dp, 16.dp, 30.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Box(Modifier.fillMaxWidth().height(44.dp)) {
-                PSerif("Rediger bolig", 22.sp, modifier = Modifier.align(Alignment.Center), maxLines = 1)
+                PSerif("Rediger bolig", HomelabType.title3.fontSize, modifier = Modifier.align(Alignment.Center), maxLines = 1)
                 Box(
-                    Modifier.align(Alignment.CenterEnd).size(38.dp).clip(CircleShape).background(p.card).border(1.dp, p.line, CircleShape).clickable(role = Role.Button, onClickLabel = "Lukk") { s.edit = null },
+                    Modifier.align(Alignment.CenterEnd).size(38.dp).clip(CircleShape).background(p.surfaceRaised).border(1.dp, p.line, CircleShape).clickable(role = Role.Button, onClickLabel = "Lukk") { s.edit = null },
                     contentAlignment = Alignment.Center,
-                ) { Text("×", modifier = Modifier.semantics { contentDescription = "Lukk" }, color = p.ink, fontSize = 17.sp) }
+                ) { Text("×", modifier = Modifier.semantics { contentDescription = "Lukk" }, color = p.textPrimary, style = HomelabType.body) }
             }
             // Forhåndsvisning med bakgrunn og navn.
             Box(Modifier.fillMaxWidth().height(120.dp).clip(RoundedCornerShape(20.dp)).background(Brush.linearGradient(listOf(c, lerp(c, Color.Black, .3f)), Offset.Zero, Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY)))) {
@@ -798,7 +806,7 @@ private fun EditHomeSheet24(vm: AppViewModel, h: Home24, index: Int, count: Int)
                     bg == own -> ownBmp?.let { Image(it.asImageBitmap(), null, contentScale = ContentScale.Crop, modifier = Modifier.matchParentSize()) }
                 }
                 if (bg != "color") Box(Modifier.matchParentSize().background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = .1f), Color.Black.copy(alpha = .5f)))))
-                Text(name.ifBlank { h.name }, color = Color.White, fontFamily = PaperFonts.serif, fontWeight = FontWeight.Medium, fontSize = 26.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                Text(name.ifBlank { h.name }, color = Color.White, fontFamily = PaperFonts.serif, fontWeight = FontWeight.Medium, style = HomelabType.title3, maxLines = 1, overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.align(Alignment.BottomStart).padding(14.dp))
             }
             FieldLabel24("Navn"); Input24(name, { name = it.take(60) }, "")
@@ -808,12 +816,12 @@ private fun EditHomeSheet24(vm: AppViewModel, h: Home24, index: Int, count: Int)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                 HOME24_COLORS.forEach { k ->
                     Box(
-                        Modifier.size(32.dp).clip(CircleShape).border(3.dp, if (col.equals(k, true)) p.ink else Color.Transparent, CircleShape).padding(3.dp)
-                            .border(2.dp, p.bg, CircleShape).clip(CircleShape).background(Color(color(k))).clickable { col = k },
+                        Modifier.size(32.dp).clip(CircleShape).border(3.dp, if (col.equals(k, true)) p.textPrimary else Color.Transparent, CircleShape).padding(3.dp)
+                            .border(2.dp, p.surface, CircleShape).clip(CircleShape).background(Color(color(k))).clickable { col = k },
                     )
                 }
                 Box(
-                    Modifier.size(32.dp).clip(CircleShape).background(Brush.sweepGradient(listOf(Color(0xFFFF4444), Color(0xFFFFDD00), Color(0xFF44CC44), Color(0xFF00CCFF), Color(0xFF4444FF), Color(0xFFCC44FF), Color(0xFFFF4444))))
+                    Modifier.size(32.dp).clip(CircleShape).background(Brush.sweepGradient(listOf(0f, 60f, 120f, 190f, 240f, 285f, 360f).map { Color.hsv(it % 360f, .73f, 1f) }))
                         .clickable(onClickLabel = "Egen farge") { hex = if (hex == null) col else null },
                 )
             }
@@ -835,19 +843,19 @@ private fun EditHomeSheet24(vm: AppViewModel, h: Home24, index: Int, count: Int)
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                             val sel = o != null && bg == o.first
                             Box(
-                                Modifier.fillMaxWidth().aspectRatio(1.6f).then(if (sel) Modifier.border(2.dp, p.ink, RoundedCornerShape(14.dp)).padding(4.dp) else Modifier)
+                                Modifier.fillMaxWidth().aspectRatio(1.6f).then(if (sel) Modifier.border(2.dp, p.textPrimary, RoundedCornerShape(14.dp)).padding(4.dp) else Modifier)
                                     .clip(RoundedCornerShape(12.dp))
-                                    .then(if (o == null) Modifier.dashed24(p.line, 12.dp) else if (o.first == "color") Modifier.background(c) else Modifier.background(p.card))
+                                    .then(if (o == null) Modifier.dashed24(p.line, 12.dp) else if (o.first == "color") Modifier.background(c) else Modifier.background(p.surfaceRaised))
                                     .clickable { if (o == null) runCatching { pick.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) } else bg = o.first },
                                 contentAlignment = Alignment.Center,
                             ) {
                                 when {
-                                    o == null -> if (uploading) CircularProgressIndicator(color = p.mut, strokeWidth = 2.dp, modifier = Modifier.size(18.dp)) else Text("+", color = p.mut, fontSize = 20.sp)
+                                    o == null -> if (uploading) CircularProgressIndicator(color = p.textTertiary, strokeWidth = 2.dp, modifier = Modifier.size(18.dp)) else Text("+", color = p.textTertiary, style = HomelabType.headline, fontWeight = FontWeight.Normal)
                                     o.first == "preset:stromstad" -> Image(painterResource(no.kristo.finanshub.R.drawable.bolig_stromstad), null, contentScale = ContentScale.Crop, modifier = Modifier.matchParentSize())
                                     o.first == own -> ownBmp?.let { Image(it.asImageBitmap(), null, contentScale = ContentScale.Crop, modifier = Modifier.matchParentSize()) }
                                 }
                             }
-                            Text(o?.second ?: "Last opp", color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 12.sp, maxLines = 1)
+                            Text(o?.second ?: "Last opp", color = p.textPrimary, fontWeight = FontWeight.SemiBold, style = HomelabType.footnote, maxLines = 1)
                         }
                     }
                     repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
@@ -864,7 +872,7 @@ private fun EditHomeSheet24(vm: AppViewModel, h: Home24, index: Int, count: Int)
                     },
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text(if (count <= 1) "Kan ikke slette siste bolig" else if (arm) "Trykk igjen for å slette ${h.name}" else "Slett bolig", color = p.lab, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    Text(if (count <= 1) "Kan ikke slette siste bolig" else if (arm) "Trykk igjen for å slette ${h.name}" else "Slett bolig", color = p.accent, fontWeight = FontWeight.Bold, style = HomelabType.callout)
                 }
             }
         }
@@ -875,18 +883,18 @@ private fun EditHomeSheet24(vm: AppViewModel, h: Home24, index: Int, count: Int)
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 private fun EntrySheet24(vm: AppViewModel, d: HomeDetail24, e: HomeEntry24) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val s = vm.b24
     val id = d.home.id
     var cat by remember(e.id) { mutableStateOf(e.category) }
-    ModalBottomSheet(onDismissRequest = { s.sel = null }, containerColor = p.bg, contentColor = p.ink, shape = SHEET24, dragHandle = { Handle24() }) {
+    ModalBottomSheet(onDismissRequest = { s.sel = null }, containerColor = p.surface, contentColor = p.textPrimary, shape = SHEET24, dragHandle = { Handle24() }) {
         Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(18.dp, 0.dp, 18.dp, 30.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Column(Modifier.weight(1f)) {
-                    PLabel(d.home.name + " · " + when (e.status) { "ok" -> "Godkjent"; "ai" -> "Leses av AI"; else -> "Til gjennomgang" }, size = 11.sp)
+                    PLabel(d.home.name + " · " + when (e.status) { "ok" -> "Godkjent"; "ai" -> "Leses av AI"; else -> "Til gjennomgang" }, size = HomelabType.caption.fontSize)
                     // Prompt 30: butikk/beskrivelse kan redigeres (lagres fortløpende).
                     if (d.canEdit && e.status != "ai") EntryTitle30(vm, id, e, Modifier.padding(top = 4.dp))
-                    else PSerif(e.description, 26.sp, modifier = Modifier.padding(top = 4.dp), maxLines = 3)
+                    else PSerif(e.description, HomelabType.title3.fontSize, modifier = Modifier.padding(top = 4.dp), maxLines = 3)
                 }
                 SheetButton30("Ferdig") { s.sel = null }
             }
@@ -894,17 +902,17 @@ private fun EntrySheet24(vm: AppViewModel, d: HomeDetail24, e: HomeEntry24) {
             // kortet (ReceiptHead52: logo, butikk, «kategori · dato · bolig», beløp, ✦ Glimt) og så «ORIGINAL KVITTERING».
             val rc52 by produceState<BoligRc52?>(null, id, e.id) { value = runCatching { parseBoligRc52(JSONObject(vm.api50 { get("/homes/$id/expenses/${e.id}") })) }.getOrNull() }
             ReceiptHead52(
-                vm, null, e.description.substringBefore(" · "), e.color?.let { runCatching { color(it) }.getOrNull() } ?: 0xFF7A7468,
+                vm, null, e.description.substringBefore(" · "), e.color?.let { runCatching { color(it) }.getOrNull() } ?: DsPalette.Category.neutral.argbLong(),
                 listOfNotNull(rc52?.category ?: e.category, ddmm24(e.date), d.home.name).joinToString(" · "),
                 if (e.status == "ai") "…" else "−${kr24(e.amount)}", glimt = if (e.status == "ai") "Glimt leser lokalt …" else rc52?.glimt ?: e.aiShort, logoUrl = rc52?.logoUrl,
-                extra = if (d.canEdit && e.status != "ai") { { EntryAmountDate30(vm, id, e); e.paidBy?.let { Text("Lagt til av $it", color = p.mut, fontSize = 12.sp) } } } else null,
+                extra = if (d.canEdit && e.status != "ai") { { EntryAmountDate30(vm, id, e); e.paidBy?.let { Text("Lagt til av $it", color = p.textTertiary, style = HomelabType.footnote) } } } else null,
             )
             PLabel("Original kvittering", modifier = Modifier.padding(start = 4.dp, top = 4.dp))
             val full52 = rc52?.fileUrl ?: e.receiptId?.let { "/finans/api/folders/$id/receipts/$it/file" }
-            if (e.receiptId == null) Text("Ingen kvittering er lagt ved.", color = p.mut, fontSize = 13.sp, modifier = Modifier.padding(start = 4.dp))
+            if (e.receiptId == null) Text("Ingen kvittering er lagt ved.", color = p.textTertiary, style = HomelabType.subheadline, modifier = Modifier.padding(start = 4.dp))
             else if (rc52 != null && rc52!!.lines.isNotEmpty()) ReceiptSlip52(e.description.substringBefore(" · "), e.date, rc52!!.lines, e.amount,
                 onOpen = full52?.takeIf { rc52?.isPdf != true }?.let { u -> { vm.launch50 { vm.receiptFull = vm.image(u) } } })
-            else Box(Modifier.fillMaxWidth().heightIn(min = 220.dp).clip(RoundedCornerShape(12.dp)).background(p.card).border(1.dp, p.line, RoundedCornerShape(12.dp))
+            else Box(Modifier.fillMaxWidth().heightIn(min = 220.dp).clip(RoundedCornerShape(12.dp)).background(p.surfaceRaised).border(1.dp, p.line, RoundedCornerShape(12.dp))
                 .clickable(enabled = full52 != null) { full52?.let { u -> vm.launch50 { vm.receiptFull = vm.image(u) } } }, contentAlignment = Alignment.Center) {
                 ServerImage(vm, rc52?.thumbUrl ?: "/finans/api/folders/$id/receipts/${e.receiptId}/thumb", Modifier.matchParentSize())
             }
@@ -913,7 +921,7 @@ private fun EntrySheet24(vm: AppViewModel, d: HomeDetail24, e: HomeEntry24) {
                 (d.cats.ifEmpty { CATS24.map { it.first } } + listOf(e.category)).distinct().forEach { n -> CatChip24(n, n == cat, catColor24(n, if (n == e.category) e.color else null), 34.dp) { cat = n } }
             }
             Row(Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                PillBtn24("Slett", Modifier.weight(1f), 46.dp, filled = false, color = p.lab) { vm.b24DeleteEntry(id, e.id) }
+                PillBtn24("Slett", Modifier.weight(1f), 46.dp, filled = false, color = p.accent) { vm.b24DeleteEntry(id, e.id) }
                 PillBtn24(if (e.status == "ok") "Lagre" else "Godkjenn", Modifier.weight(1f), 46.dp) {
                     vm.b24PatchEntry(id, e.id, status = "ok", category = cat.takeIf { it != e.category }, msg = "Lagret i ${d.home.name}")
                     s.sel = null
@@ -926,18 +934,18 @@ private fun EntrySheet24(vm: AppViewModel, d: HomeDetail24, e: HomeEntry24) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun NewHomeSheet24(vm: AppViewModel) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val s = vm.b24
     var n by remember { mutableStateOf("") }
     var a by remember { mutableStateOf("") }
     var b by remember { mutableStateOf("") }
-    ModalBottomSheet(onDismissRequest = { s.newHome = false }, containerColor = p.bg, contentColor = p.ink, shape = SHEET24, dragHandle = { Handle24() }) {
+    ModalBottomSheet(onDismissRequest = { s.newHome = false }, containerColor = p.surface, contentColor = p.textPrimary, shape = SHEET24, dragHandle = { Handle24() }) {
         Column(Modifier.fillMaxWidth().imePadding().padding(18.dp, 0.dp, 18.dp, 30.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            PSerif("Ny bolig", 26.sp, maxLines = 1)
+            PSerif("Ny bolig", HomelabType.title3.fontSize, maxLines = 1)
             Input24(n, { n = it.take(60) }, "Navn, f.eks. Hytta")
             Input24(a, { a = it.take(120) }, "Adresse eller sted", weight = FontWeight.Medium)
             Input24(b, { b = it.filter { c -> c.isDigit() }.take(9) }, "Månedsbudsjett (kr)", mono = true, number = true)
-            Text("Du blir eier. Du kan invitere andre etterpå.", color = p.mut, fontSize = 12.sp, lineHeight = 17.4.sp)
+            Text("Du blir eier. Du kan invitere andre etterpå.", color = p.textTertiary, style = HomelabType.footnote, lineHeight = 17.4.sp)
             PillBtn24(if (s.busy) "Oppretter …" else "Opprett bolig", Modifier.fillMaxWidth(), 48.dp) { if (n.isNotBlank() && !s.busy) vm.b24CreateHome(n, a, b) }
         }
     }
@@ -946,16 +954,16 @@ private fun NewHomeSheet24(vm: AppViewModel) {
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 private fun NewEntrySheet24(vm: AppViewModel, d: HomeDetail24) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val s = vm.b24
     var m by remember { mutableStateOf("") }
     var a by remember { mutableStateOf("") }
     var c by remember { mutableStateOf("Annet") }
     var picked by remember { mutableStateOf(false) }
     val cats = (d.cats.ifEmpty { CATS24.map { it.first } } + "Annet").distinct()
-    ModalBottomSheet(onDismissRequest = { s.newEntry = false }, containerColor = p.bg, contentColor = p.ink, shape = SHEET24, dragHandle = { Handle24() }) {
+    ModalBottomSheet(onDismissRequest = { s.newEntry = false }, containerColor = p.surface, contentColor = p.textPrimary, shape = SHEET24, dragHandle = { Handle24() }) {
         Column(Modifier.fillMaxWidth().imePadding().padding(18.dp, 0.dp, 18.dp, 30.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            PSerif("Ny utgift · ${d.home.name}", 26.sp, maxLines = 1)
+            PSerif("Ny utgift · ${d.home.name}", HomelabType.title3.fontSize, maxLines = 1)
             Input24(m, { m = it.take(120); if (!picked) c = guess24(it).takeIf { g -> g in cats } ?: "Annet" }, "Hva, f.eks. Byggmakker")
             Input24(a, { a = it.filter { ch -> ch.isDigit() || ch == ',' || ch == '.' }.take(12) }, "Beløp (kr)", mono = true, number = true)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -972,11 +980,11 @@ private fun NewEntrySheet24(vm: AppViewModel, d: HomeDetail24) {
 /** Prompt 47: «‹ Oversikt» øverst på Tilgang-siden. */
 @Composable
 private fun BackToOverview47(vm: AppViewModel) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     Box(
-        Modifier.height(40.dp).clip(RoundedCornerShape(20.dp)).background(p.card).clickable(role = Role.Button) { Haptics.select(); vm.b24.tab = "ov" }.padding(horizontal = 16.dp),
+        Modifier.height(40.dp).clip(RoundedCornerShape(20.dp)).background(p.surfaceRaised).clickable(role = Role.Button) { Haptics.select(); vm.b24.tab = "ov" }.padding(horizontal = 16.dp),
         contentAlignment = Alignment.Center,
-    ) { Text("‹ Oversikt", color = p.ink, fontWeight = FontWeight.Bold, fontSize = 13.5.sp, maxLines = 1, softWrap = false) }
+    ) { Text("‹ Oversikt", color = p.textPrimary, fontWeight = FontWeight.Bold, style = HomelabType.subheadline, maxLines = 1, softWrap = false) }
 }
 
 /*
@@ -987,13 +995,13 @@ private fun BackToOverview47(vm: AppViewModel) {
 
 private val ROLES30 = listOf("owner" to "Eier", "editor" to "Kan laste opp", "viewer" to "Kan se")
 private fun roleHelp30(r: String) = when (r) { "owner" -> "Full tilgang, kan invitere og slette."; "viewer" -> "Ser oversikt og kvitteringer."; else -> "Legger til kvitteringer og utgifter." }
-private val AVC30 = listOf(0xFF2B5D8A, 0xFFA8661A, 0xFF2F6B45, 0xFF7A3B6B, 0xFFB23A2A, 0xFF3D4652)
+private val AVC30: List<Color> = DsPalette.Category.let { listOf(it.blue, it.amber, it.green, it.purple, it.red, it.neutral) }
 
 /** Kortet «Del boligen» (bare eiere). invite = den gamle e-post-/navneinvitasjonen. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun ShareHome30(vm: AppViewModel, d: HomeDetail24, invite: (String, String) -> Unit) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val s = vm.p30
     val id = d.home.id
     LaunchedEffect(id) { vm.loadShareable30(id) }
@@ -1001,31 +1009,31 @@ internal fun ShareHome30(vm: AppViewModel, d: HomeDetail24, invite: (String, Str
     val users = s.shareUsers.takeIf { s.shareFor == id }
     // Eldre server uten /users/shareable: bare e-post/navn som før.
     val old = s.shareErr == "old"
-    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(p.card).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        PSerif("Del boligen", 20.sp, maxLines = 1)
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(p.surfaceRaised).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        PSerif("Del boligen", HomelabType.headline.fontSize, maxLines = 1)
         if (!old) {
             Label30("BRUKERE I HOMELAB")
             when {
-                users == null -> Text("Henter brukere …", color = p.mut, fontSize = 13.sp)
-                users.isEmpty() -> Text("Alle brukerne har allerede tilgang.", color = p.mut, fontSize = 13.sp)
+                users == null -> Text("Henter brukere …", color = p.textTertiary, style = HomelabType.subheadline)
+                users.isEmpty() -> Text("Alle brukerne har allerede tilgang.", color = p.textTertiary, style = HomelabType.subheadline)
                 else -> FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp), maxItemsInEachRow = 3) {
                     users.forEachIndexed { i, u ->
                         val on = u.id in s.shareSel
                         Box(
-                            Modifier.weight(1f).clip(RoundedCornerShape(16.dp)).background(if (on) p.bg else Color.Transparent)
-                                .border(1.5.dp, if (on) p.ink else p.line, RoundedCornerShape(16.dp))
+                            Modifier.weight(1f).clip(RoundedCornerShape(16.dp)).background(if (on) p.surface else Color.Transparent)
+                                .border(1.5.dp, if (on) p.textPrimary else p.line, RoundedCornerShape(16.dp))
                                 .clickable(role = Role.Checkbox, onClickLabel = u.name) { Haptics.select(); s.shareSel = if (on) s.shareSel - u.id else s.shareSel + u.id }
                                 .padding(start = 6.dp, end = 6.dp, top = 12.dp, bottom = 10.dp),
                         ) {
                             Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                Box(Modifier.size(44.dp).clip(CircleShape).background(Color(u.color ?: AVC30[i % AVC30.size])), contentAlignment = Alignment.Center) {
-                                    Text(u.initial.take(2), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                                Box(Modifier.size(44.dp).clip(CircleShape).background(u.color?.let { Color(it) } ?: AVC30[i % AVC30.size]), contentAlignment = Alignment.Center) {
+                                    Text(u.initial.take(2), color = Color.White, fontWeight = FontWeight.Bold, style = HomelabType.callout)
                                 }
-                                Text(u.name, color = p.ink, fontWeight = FontWeight.Bold, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                Text(u.relation ?: " ", color = p.mut, fontSize = 11.sp, maxLines = 1)
+                                Text(u.name, color = p.textPrimary, fontWeight = FontWeight.Bold, style = HomelabType.subheadline, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text(u.relation ?: " ", color = p.textTertiary, style = HomelabType.caption, fontWeight = FontWeight.Normal, maxLines = 1)
                             }
-                            Box(Modifier.align(Alignment.TopEnd).padding(end = 0.dp).size(20.dp).alpha(if (on) 1f else 0f).clip(CircleShape).background(p.ink), contentAlignment = Alignment.Center) {
-                                WxIcon(IC_CHECK30, p.bg, 11.dp, stroke = 3.4f)
+                            Box(Modifier.align(Alignment.TopEnd).padding(end = 0.dp).size(20.dp).alpha(if (on) 1f else 0f).clip(CircleShape).background(p.textPrimary), contentAlignment = Alignment.Center) {
+                                WxIcon(IC_CHECK30, p.surface, 11.dp, stroke = 3.4f)
                             }
                         }
                     }
@@ -1039,23 +1047,23 @@ internal fun ShareHome30(vm: AppViewModel, d: HomeDetail24, invite: (String, Str
             ROLES30.forEach { (k, n) ->
                 val on = s.shareRole == k
                 Box(
-                    Modifier.weight(1f).height(36.dp).clip(RoundedCornerShape(18.dp)).background(if (on) p.ink else Color.Transparent).border(1.dp, if (on) p.ink else p.line, RoundedCornerShape(18.dp))
+                    Modifier.weight(1f).height(36.dp).clip(RoundedCornerShape(18.dp)).background(if (on) p.textPrimary else Color.Transparent).border(1.dp, if (on) p.textPrimary else p.line, RoundedCornerShape(18.dp))
                         .clickable { s.shareRole = k; Haptics.select() },
                     contentAlignment = Alignment.Center,
-                ) { Text(n, color = if (on) p.bg else p.ink, fontWeight = FontWeight.Bold, fontSize = 12.sp, maxLines = 1, softWrap = false) }
+                ) { Text(n, color = if (on) p.surface else p.textPrimary, fontWeight = FontWeight.Bold, style = HomelabType.footnote, maxLines = 1, softWrap = false) }
             }
         }
-        Text(roleHelp30(s.shareRole), color = p.mut, fontSize = 12.sp, lineHeight = 17.4.sp)
+        Text(roleHelp30(s.shareRole), color = p.textTertiary, style = HomelabType.footnote, lineHeight = 17.4.sp)
         val sel = users.orEmpty().filter { it.id in s.shareSel }
         if (sel.isEmpty()) BasicTextField(
             email, { email = it }, singleLine = true, modifier = Modifier.fillMaxWidth(),
-            textStyle = TextStyle(color = p.ink, fontSize = 15.sp, fontWeight = FontWeight.Medium, fontFamily = PaperFonts.sans),
-            cursorBrush = SolidColor(p.ink),
+            textStyle = HomelabType.callout.copy(color = p.textPrimary, fontWeight = FontWeight.Medium, fontFamily = PaperFonts.sans),
+            cursorBrush = SolidColor(p.textPrimary),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Send),
             keyboardActions = KeyboardActions(onSend = { if (email.isNotBlank()) { invite(email, s.shareRole); email = "" } }),
             decorationBox = { inner ->
-                Box(Modifier.fillMaxWidth().height(46.dp).clip(RoundedCornerShape(14.dp)).background(p.bg).border(1.dp, p.line, RoundedCornerShape(14.dp)).padding(horizontal = 14.dp), contentAlignment = Alignment.CenterStart) {
-                    if (email.isEmpty()) Text(if (old) "Navn eller e-post" else "Eller e-post til noen utenfor Homelab", color = p.mut, fontSize = 15.sp, maxLines = 1)
+                Box(Modifier.fillMaxWidth().height(46.dp).clip(RoundedCornerShape(14.dp)).background(p.surface).border(1.dp, p.line, RoundedCornerShape(14.dp)).padding(horizontal = 14.dp), contentAlignment = Alignment.CenterStart) {
+                    if (email.isEmpty()) Text(if (old) "Navn eller e-post" else "Eller e-post til noen utenfor Homelab", color = p.textTertiary, style = HomelabType.callout, maxLines = 1)
                     inner()
                 }
             },
@@ -1065,17 +1073,17 @@ internal fun ShareHome30(vm: AppViewModel, d: HomeDetail24, invite: (String, Str
             else -> "Send invitasjon"
         }
         Box(
-            Modifier.fillMaxWidth().height(46.dp).clip(RoundedCornerShape(23.dp)).background(p.ink).clickable(role = Role.Button) {
+            Modifier.fillMaxWidth().height(46.dp).clip(RoundedCornerShape(23.dp)).background(p.textPrimary).clickable(role = Role.Button) {
                 if (sel.isNotEmpty()) vm.shareHome30(id) else if (email.isNotBlank()) { invite(email, s.shareRole); email = "" }
             },
             contentAlignment = Alignment.Center,
-        ) { Text(label, color = p.bg, fontWeight = FontWeight.Bold, fontSize = 14.5.sp, maxLines = 1) }
+        ) { Text(label, color = p.surface, fontWeight = FontWeight.Bold, style = HomelabType.callout, maxLines = 1) }
     }
 }
 
 @Composable
 private fun Label30(t: String, modifier: Modifier = Modifier) =
-    Text(t, color = PaperPal.current.mut, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = 11.sp, letterSpacing = 1.3.sp, modifier = modifier)
+    Text(t, color = HomelabTheme.colors.textTertiary, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, style = HomelabType.caption, letterSpacing = 1.3.sp, modifier = modifier)
 
 private fun parseAmt30(s: String): Double? = s.replace(" ", "").replace(" ", "").replace(',', '.').toDoubleOrNull()
 private fun fmtAmt30(v: Double): String = if (v % 1.0 == 0.0) v.toLong().toString() else String.format(java.util.Locale("nb", "NO"), "%.2f", v)
@@ -1083,7 +1091,7 @@ private fun fmtAmt30(v: Double): String = if (v % 1.0 == 0.0) v.toLong().toStrin
 /** Butikk/beskrivelse som redigerbar tittel (serif 26, stiplet understrek). Lagres 400 ms etter siste tastetrykk. */
 @Composable
 internal fun EntryTitle30(vm: AppViewModel, homeId: Int, e: HomeEntry24, modifier: Modifier = Modifier) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     var t by remember(e.id) { mutableStateOf(e.description) }
     LaunchedEffect(t) {
         if (t.isBlank() || t == e.description) return@LaunchedEffect
@@ -1092,15 +1100,15 @@ internal fun EntryTitle30(vm: AppViewModel, homeId: Int, e: HomeEntry24, modifie
     }
     BasicTextField(
         t, { t = it }, modifier = modifier.fillMaxWidth().dashedLine30(p.line), maxLines = 3,
-        textStyle = TextStyle(color = p.ink, fontSize = 26.sp, lineHeight = 30.sp, fontFamily = PaperFonts.serif, fontWeight = FontWeight.Medium),
-        cursorBrush = SolidColor(p.ink), keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+        textStyle = HomelabType.title3.copy(color = p.textPrimary, lineHeight = 30.sp, fontFamily = PaperFonts.serif, fontWeight = FontWeight.Medium),
+        cursorBrush = SolidColor(p.textPrimary), keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
     )
 }
 
 /** Beløp (34, «kr», desimal med komma) og dato (datovelger). */
 @Composable
 internal fun EntryAmountDate30(vm: AppViewModel, homeId: Int, e: HomeEntry24) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val ctx = LocalContext.current
     var a by remember(e.id) { mutableStateOf(fmtAmt30(e.amount)) }
     var date by remember(e.id) { mutableStateOf(e.date.take(10)) }
@@ -1114,15 +1122,15 @@ internal fun EntryAmountDate30(vm: AppViewModel, homeId: Int, e: HomeEntry24) {
         Row(Modifier.fillMaxWidth().dashedLine30(p.line), verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             BasicTextField(
                 a, { v -> a = v.filter { it.isDigit() || it == ',' || it == '.' || it == ' ' } }, singleLine = true, modifier = Modifier.weight(1f),
-                textStyle = TextStyle(color = p.ink, fontSize = 34.sp, lineHeight = 37.sp, fontFamily = PaperFonts.serif, fontWeight = FontWeight.Medium),
-                cursorBrush = SolidColor(p.ink), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done),
+                textStyle = HomelabType.title2.copy(color = p.textPrimary, lineHeight = 37.sp, fontFamily = PaperFonts.serif, fontWeight = FontWeight.Medium),
+                cursorBrush = SolidColor(p.textPrimary), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done),
             )
-            Text("kr", color = p.mut, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, modifier = Modifier.padding(bottom = 6.dp))
+            Text("kr", color = p.textTertiary, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, style = HomelabType.callout, modifier = Modifier.padding(bottom = 6.dp))
         }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("Dato", color = p.mut, fontSize = 13.sp)
+            Text("Dato", color = p.textTertiary, style = HomelabType.subheadline)
             Box(
-                Modifier.weight(1f).heightIn(min = 34.dp).clip(RoundedCornerShape(10.dp)).background(p.card).border(1.dp, p.line, RoundedCornerShape(10.dp))
+                Modifier.weight(1f).heightIn(min = 34.dp).clip(RoundedCornerShape(10.dp)).background(p.surfaceRaised).border(1.dp, p.line, RoundedCornerShape(10.dp))
                     .clickable(role = Role.Button, onClickLabel = "Velg dato") {
                         val d0 = runCatching { LocalDate.parse(date) }.getOrDefault(LocalDate.now())
                         android.app.DatePickerDialog(ctx, { _, y, m, dd ->
@@ -1133,7 +1141,7 @@ internal fun EntryAmountDate30(vm: AppViewModel, homeId: Int, e: HomeEntry24) {
                 contentAlignment = Alignment.CenterStart,
             ) {
                 val shown = runCatching { LocalDate.parse(date).let { String.format("%02d.%02d.%d", it.dayOfMonth, it.monthValue, it.year) } }.getOrDefault(date)
-                Text(shown, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                Text(shown, color = p.textPrimary, fontWeight = FontWeight.SemiBold, style = HomelabType.subheadline)
             }
         }
     }

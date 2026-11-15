@@ -55,6 +55,9 @@ import no.kristo.finanshub.Receipt
 import no.kristo.finanshub.learnMerchant51
 import no.kristo.finanshub.parseReceipts
 import org.json.JSONObject
+import no.kristo.finanshub.ui.designsystem.HomelabTheme
+import no.kristo.finanshub.ui.designsystem.HomelabType
+import no.kristo.finanshub.ui.designsystem.DsPalette
 
 /*
  * Prompt 23: Kvitteringer i Papir, nøyaktig etter «Mobil Papir App» → kvitt:
@@ -135,7 +138,7 @@ private class QRow(val key: String, val name: String, val status: String, val co
 
 @Composable
 internal fun PaperReceipts23(vm: AppViewModel, navBottom: Dp, camera: () -> Unit, photos: () -> Unit, files: () -> Unit) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val st = vm.rc23
     LaunchedEffect(vm.base) { vm.loadBooked23() }
     val receipts = vm.receipts
@@ -146,18 +149,18 @@ internal fun PaperReceipts23(vm: AppViewModel, navBottom: Dp, camera: () -> Unit
     val review = reviewAll.filter { it.id !in readyIds }
     val q = buildList {
         vm.pendingUploads.forEach { u ->
-            add(QRow("u" + u.id, u.name.ifBlank { "Kvittering" }, "Venter på nett · sendes automatisk", p.mut, 1f, false, null) { vm.retryPending() })
+            add(QRow("u" + u.id, u.name.ifBlank { "Kvittering" }, "Venter på nett · sendes automatisk", p.textTertiary, 1f, false, null) { vm.retryPending() })
         }
-        if (vm.uploading > 0) add(QRow("up", if (vm.uploading == 1) "Laster opp 1 fil" else "Laster opp ${vm.uploading} filer", "✦ Leser … 0 %", p.lab, 0.02f, false, null) {})
+        if (vm.uploading > 0) add(QRow("up", if (vm.uploading == 1) "Laster opp 1 fil" else "Laster opp ${vm.uploading} filer", "✦ Leser … 0 %", p.accent, 0.02f, false, null) {})
         // Prompt 34: kvitteringer som leses av AI står i «✦ ANALYSERES AV AI» (RcAiSection34), ikke i KØ.
         val aiIds34 = vm.p34.rcAi.map { it.id }.toSet()
         vm.jobs.filter { (it.status == "pending" || it.status == "processing" || it.status == "error") && it.id !in aiIds34 }.forEach { j ->
             val err = j.status == "error"
             val pct = if (err) 1f else (j.progress.coerceIn(0, 99)) / 100f
-            add(QRow(j.id, j.name, if (err) "Feilet · prøv ✦ Analyser på nytt" else j.statusText?.takeIf { it.isNotBlank() }?.let { t -> (if (t.startsWith("✦")) t else "✦ $t") + if (t.contains("svarte ikke")) "" else " ${j.progress.coerceIn(0, 99)} %" } ?: "✦ Leser … ${j.progress.coerceIn(0, 99)} %", p.lab, pct, false, null) { vm.reread23(j.id) })
+            add(QRow(j.id, j.name, if (err) "Feilet · prøv ✦ Analyser på nytt" else j.statusText?.takeIf { it.isNotBlank() }?.let { t -> (if (t.startsWith("✦")) t else "✦ $t") + if (t.contains("svarte ikke")) "" else " ${j.progress.coerceIn(0, 99)} %" } ?: "✦ Leser … ${j.progress.coerceIn(0, 99)} %", p.accent, pct, false, null) { vm.reread23(j.id) })
         }
         readyJobs.forEach { j ->
-            add(QRow(j.id, j.merchant ?: j.name, "Klar · trykk for å bekrefte", p.pos, 1f, true, {
+            add(QRow(j.id, j.merchant ?: j.name, "Klar · trykk for å bekrefte", p.success, 1f, true, {
                 st.seen = st.seen + j.id; st.open = j.id; Haptics.select()
             }) { vm.reread23(j.id) })
         }
@@ -170,22 +173,22 @@ internal fun PaperReceipts23(vm: AppViewModel, navBottom: Dp, camera: () -> Unit
             val shape = RoundedCornerShape(22.dp)
             Row(
                 Modifier.fillMaxWidth().shadow(14.dp, shape, ambientColor = Color.Black.copy(alpha = .3f), spotColor = Color.Black.copy(alpha = .3f))
-                    .clip(shape).background(p.card).clickable(onClickLabel = "Ta bilde av kvittering", onClick = camera).padding(16.dp),
+                    .clip(shape).background(p.surfaceRaised).clickable(onClickLabel = "Ta bilde av kvittering", onClick = camera).padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp),
             ) {
-                Box(Modifier.size(52.dp).clip(CircleShape).background(p.lab), contentAlignment = Alignment.Center) {
+                Box(Modifier.size(52.dp).clip(CircleShape).background(p.accent), contentAlignment = Alignment.Center) {
                     Icon(Icons.Outlined.PhotoCamera, null, tint = Color.White, modifier = Modifier.size(24.dp))
                 }
                 Column(Modifier.weight(1f)) {
-                    Text("Ta bilde av kvittering", color = p.ink, fontFamily = PaperFonts.sans, fontWeight = FontWeight.Bold, fontSize = 17.sp, maxLines = 1)
-                    Text("Bakkamera · ✦ Glimt leser lokalt beløp og butikk", color = p.mut, fontFamily = PaperFonts.sans, fontSize = 13.sp, maxLines = 2)
+                    Text("Ta bilde av kvittering", color = p.textPrimary, fontFamily = PaperFonts.sans, fontWeight = FontWeight.Bold, style = HomelabType.body, maxLines = 1)
+                    Text("Bakkamera · ✦ Glimt leser lokalt beløp og butikk", color = p.textTertiary, fontFamily = PaperFonts.sans, style = HomelabType.subheadline, maxLines = 2)
                 }
             }
         }
         item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                PickCard("Bilder", Modifier.weight(1f), { Icon(Icons.Outlined.Image, null, tint = p.ink, modifier = Modifier.size(20.dp)) }, photos)
-                PickCard("Filer", Modifier.weight(1f), { Icon(Icons.Outlined.Description, null, tint = p.ink, modifier = Modifier.size(20.dp)) }, files)
+                PickCard("Bilder", Modifier.weight(1f), { Icon(Icons.Outlined.Image, null, tint = p.textPrimary, modifier = Modifier.size(20.dp)) }, photos)
+                PickCard("Filer", Modifier.weight(1f), { Icon(Icons.Outlined.Description, null, tint = p.textPrimary, modifier = Modifier.size(20.dp)) }, files)
             }
         }
         item { RcAiSection34(vm) } // Prompt 34: ✦ ANALYSERES AV AI · N (ui/Ui34.kt)
@@ -201,13 +204,13 @@ internal fun PaperReceipts23(vm: AppViewModel, navBottom: Dp, camera: () -> Unit
                                     Modifier.weight(1f).then(if (x.go != null) Modifier.clickable(onClick = x.go) else Modifier),
                                     verticalArrangement = Arrangement.spacedBy(5.dp),
                                 ) {
-                                    Text(x.name, color = p.ink, fontFamily = PaperFonts.sans, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                    Text(x.status, color = x.color, fontFamily = PaperFonts.sans, fontWeight = FontWeight.SemiBold, fontSize = 12.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Text(x.name, color = p.textPrimary, fontFamily = PaperFonts.sans, fontWeight = FontWeight.SemiBold, style = HomelabType.callout, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Text(x.status, color = x.color, fontFamily = PaperFonts.sans, fontWeight = FontWeight.SemiBold, style = HomelabType.footnote, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                     Box(Modifier.fillMaxWidth().height(3.dp).clip(RoundedCornerShape(2.dp)).background(p.line)) {
                                         Box(Modifier.fillMaxHeight().fillMaxWidth(x.pct.coerceIn(0f, 1f)).clip(RoundedCornerShape(2.dp)).background(x.color))
                                     }
                                 }
-                                Text("✦ Analyser på nytt", color = p.lab, fontFamily = PaperFonts.sans, fontWeight = FontWeight.Bold, fontSize = 12.5.sp,
+                                Text("✦ Analyser på nytt", color = p.accent, fontFamily = PaperFonts.sans, fontWeight = FontWeight.Bold, style = HomelabType.footnote,
                                     modifier = Modifier.clip(RoundedCornerShape(8.dp)).clickable(onClick = x.again).padding(vertical = 6.dp))
                             }
                         }
@@ -217,10 +220,10 @@ internal fun PaperReceipts23(vm: AppViewModel, navBottom: Dp, camera: () -> Unit
         }
         item { RcLabel("Til gjennomgang · ${review.size}") }
         when {
-            receipts == null -> item { Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = p.ink) } }
+            receipts == null -> item { Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = p.textPrimary) } }
             review.isEmpty() -> item {
-                Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(p.card).padding(16.dp)) {
-                    Text("Alt er gjennomgått ✓", color = p.mut, fontFamily = PaperFonts.sans, fontSize = 14.sp)
+                Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(p.surfaceRaised).padding(16.dp)) {
+                    Text("Alt er gjennomgått ✓", color = p.textTertiary, fontFamily = PaperFonts.sans, style = HomelabType.callout)
                 }
             }
             else -> item {
@@ -231,7 +234,7 @@ internal fun PaperReceipts23(vm: AppViewModel, navBottom: Dp, camera: () -> Unit
                             val open = st.open == r.id
                             // Prompt 39: «✦ Analyserer på nytt … 42 %», tynn rød linje og gul markering når den er ferdig.
                             val re = vm.p39.re[r.id]
-                            Box(Modifier.fillMaxWidth().background(if (r.id in vm.p39.reFlash) Color(0x33E8B931) else Color.Transparent)) {
+                            Box(Modifier.fillMaxWidth().background(if (r.id in vm.p39.reFlash) HomelabTheme.colors.warningSoft else Color.Transparent)) {
                                 RcRow(vm, r, meta = if (re?.running == true && !open) "✦ Glimt analyserer på nytt … ${re.pct} %" else rcMeta(r, booked = false),
                                     onClick = { st.open = if (open) null else r.id; Haptics.select() })
                             }
@@ -257,7 +260,7 @@ internal fun PaperReceipts23(vm: AppViewModel, navBottom: Dp, camera: () -> Unit
                                     Modifier.height(30.dp).clip(RoundedCornerShape(15.dp)).border(1.dp, p.line, RoundedCornerShape(15.dp))
                                         .clickable(enabled = reB?.running != true, onClickLabel = "Les på nytt med Glimt") { vm.reanalyze39(r.id) }.padding(horizontal = 10.dp),
                                     contentAlignment = Alignment.Center,
-                                ) { Text(if (reB?.running == true) "✦ ${reB.pct} %" else "✦ På nytt", color = p.lab, fontFamily = PaperFonts.sans, fontWeight = FontWeight.Bold, fontSize = 12.sp, maxLines = 1) }
+                                ) { Text(if (reB?.running == true) "✦ ${reB.pct} %" else "✦ På nytt", color = p.accent, fontFamily = PaperFonts.sans, fontWeight = FontWeight.Bold, style = HomelabType.footnote, maxLines = 1) }
                             }
                             if (openB) BookedEditor41(vm, r, cats)
                         }
@@ -277,50 +280,50 @@ private fun rcMeta(r: Receipt, booked: Boolean): String {
 }
 
 @Composable
-private fun RcLabel(text: String) = PLabel(text, color = PaperPal.current.lab, modifier = Modifier.padding(start = 4.dp, end = 4.dp, top = 6.dp))
+private fun RcLabel(text: String) = PLabel(text, color = HomelabTheme.colors.accent, modifier = Modifier.padding(start = 4.dp, end = 4.dp, top = 6.dp))
 
 /** Kortet rundt radene: radius 20, 2/16 dp innvendig, linjene klippes i hjørnene. */
 @Composable
 private fun RcCard(content: @Composable () -> Unit) {
-    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(PaperPal.current.card).padding(horizontal = 16.dp, vertical = 2.dp)) { content() }
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(HomelabTheme.colors.surfaceRaised).padding(horizontal = 16.dp, vertical = 2.dp)) { content() }
 }
 
 @Composable
 private fun PickCard(label: String, modifier: Modifier, icon: @Composable () -> Unit, onClick: () -> Unit) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     Row(
-        modifier.height(56.dp).clip(RoundedCornerShape(20.dp)).background(p.card).clickable(onClickLabel = label, onClick = onClick),
+        modifier.height(56.dp).clip(RoundedCornerShape(20.dp)).background(p.surfaceRaised).clickable(onClickLabel = label, onClick = onClick),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally),
     ) {
         icon()
-        Text(label, color = p.ink, fontFamily = PaperFonts.sans, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+        Text(label, color = p.textPrimary, fontFamily = PaperFonts.sans, fontWeight = FontWeight.Bold, style = HomelabType.callout)
     }
 }
 
 /** Butikklogo (logobiblioteket) i hvit 44 dp rute med strek, ellers forbokstaven. */
 @Composable
 private fun RcLogo(vm: AppViewModel, r: Receipt) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val name = r.merchant ?: "Kvittering"
     Box(Modifier.size(44.dp).clip(RoundedCornerShape(12.dp)).background(Color.White).border(1.dp, p.line, RoundedCornerShape(12.dp)), contentAlignment = Alignment.Center) {
-        if (r.domain != null || r.merchant != null) Logo(vm, r.domain, name, 0xFF8A8478, 30, RoundedCornerShape(6.dp))
-        else Text(name.take(1), color = p.mut, fontFamily = PaperFonts.sans, fontWeight = FontWeight.ExtraBold, fontSize = 16.sp)
+        if (r.domain != null || r.merchant != null) Logo(vm, r.domain, name, DsPalette.Category.neutral.argbLong(), 30, RoundedCornerShape(6.dp))
+        else Text(name.take(1), color = p.textTertiary, fontFamily = PaperFonts.sans, fontWeight = FontWeight.ExtraBold, style = HomelabType.body)
     }
 }
 
 @Composable
 private fun RcRow(vm: AppViewModel, r: Receipt, meta: String, onClick: (() -> Unit)?, trailing: (@Composable () -> Unit)? = null) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     Row(
         Modifier.fillMaxWidth().then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier).padding(vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         RcLogo(vm, r)
         Column(Modifier.weight(1f)) {
-            Text(r.merchant ?: "Ny kvittering", color = p.ink, fontFamily = PaperFonts.sans, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(meta, color = p.mut, fontFamily = PaperFonts.sans, fontSize = 12.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(r.merchant ?: "Ny kvittering", color = p.textPrimary, fontFamily = PaperFonts.sans, fontWeight = FontWeight.SemiBold, style = HomelabType.callout, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(meta, color = p.textTertiary, fontFamily = PaperFonts.sans, style = HomelabType.footnote, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
-        Text(r.total?.let { "−" + n2(it) } ?: "–", color = p.ink, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = 16.sp, maxLines = 1)
+        Text(r.total?.let { "−" + n2(it) } ?: "–", color = p.textPrimary, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, style = HomelabType.body, maxLines = 1)
         trailing?.invoke()
     }
 }
@@ -328,21 +331,21 @@ private fun RcRow(vm: AppViewModel, r: Receipt, meta: String, onClick: (() -> Un
 /** Utvidet rad: navn og beløp, kategori-chips og knappene Godkjenn og bokfør, ✦ På nytt og 🗑. */
 @Composable
 private fun RcEditor(vm: AppViewModel, r: Receipt, cats: List<no.kristo.finanshub.Category>) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val st = vm.rc23
     val d = st.drafts[r.id] ?: Rc23Draft(r.merchant.orEmpty(), amountText(r.total), r.categoryId)
     fun set(n: Rc23Draft) { st.drafts = st.drafts + (r.id to n) }
-    val field = Modifier.height(42.dp).clip(RoundedCornerShape(12.dp)).background(p.bg).border(1.dp, p.line, RoundedCornerShape(12.dp)).padding(horizontal = 12.dp)
+    val field = Modifier.height(42.dp).clip(RoundedCornerShape(12.dp)).background(p.surface).border(1.dp, p.line, RoundedCornerShape(12.dp)).padding(horizontal = 12.dp)
     Column(Modifier.fillMaxWidth().padding(bottom = 14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Box(field.weight(1f), contentAlignment = Alignment.CenterStart) {
-                BasicTextField(d.name, { set(d.copy(name = it)) }, singleLine = true, cursorBrush = SolidColor(p.ink),
-                    textStyle = TextStyle(color = p.ink, fontFamily = PaperFonts.sans, fontWeight = FontWeight.SemiBold, fontSize = 14.sp), modifier = Modifier.fillMaxWidth())
+                BasicTextField(d.name, { set(d.copy(name = it)) }, singleLine = true, cursorBrush = SolidColor(p.textPrimary),
+                    textStyle = HomelabType.callout.copy(color = p.textPrimary, fontFamily = PaperFonts.sans, fontWeight = FontWeight.SemiBold), modifier = Modifier.fillMaxWidth())
             }
             Box(field.width(120.dp), contentAlignment = Alignment.CenterEnd) {
-                BasicTextField(d.amount, { set(d.copy(amount = it)) }, singleLine = true, cursorBrush = SolidColor(p.ink),
+                BasicTextField(d.amount, { set(d.copy(amount = it)) }, singleLine = true, cursorBrush = SolidColor(p.textPrimary),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    textStyle = TextStyle(color = p.ink, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, textAlign = TextAlign.End), modifier = Modifier.fillMaxWidth())
+                    textStyle = HomelabType.callout.copy(color = p.textPrimary, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.End), modifier = Modifier.fillMaxWidth())
             }
         }
         if (d.name == r.merchant.orEmpty()) MerchantSource51(r.merchantSource, r.merchantLabel) // prompt 51
@@ -350,28 +353,28 @@ private fun RcEditor(vm: AppViewModel, r: Receipt, cats: List<no.kristo.finanshu
             cats.forEach { c ->
                 val on = d.categoryId == c.id
                 Box(
-                    Modifier.height(32.dp).clip(RoundedCornerShape(16.dp)).background(if (on) p.ink else Color.Transparent)
-                        .border(1.dp, if (on) p.ink else p.line, RoundedCornerShape(16.dp)).clickable { set(d.copy(categoryId = c.id)); Haptics.select() }.padding(horizontal = 12.dp),
+                    Modifier.height(32.dp).clip(RoundedCornerShape(16.dp)).background(if (on) p.textPrimary else Color.Transparent)
+                        .border(1.dp, if (on) p.textPrimary else p.line, RoundedCornerShape(16.dp)).clickable { set(d.copy(categoryId = c.id)); Haptics.select() }.padding(horizontal = 12.dp),
                     contentAlignment = Alignment.Center,
-                ) { Text(c.name, color = if (on) p.bg else p.ink, fontFamily = PaperFonts.sans, fontWeight = FontWeight.SemiBold, fontSize = 12.5.sp, maxLines = 1) }
+                ) { Text(c.name, color = if (on) p.surface else p.textPrimary, fontFamily = PaperFonts.sans, fontWeight = FontWeight.SemiBold, style = HomelabType.footnote, maxLines = 1) }
             }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             val busy = st.busy == r.id
             Box(
-                Modifier.weight(1f).height(42.dp).clip(RoundedCornerShape(21.dp)).background(p.ink).clickable(enabled = !busy) { vm.approve23(r) },
+                Modifier.weight(1f).height(42.dp).clip(RoundedCornerShape(21.dp)).background(p.textPrimary).clickable(enabled = !busy) { vm.approve23(r) },
                 contentAlignment = Alignment.Center,
-            ) { Text(if (busy) "Bokfører …" else "✓ Godkjenn og bokfør", color = p.bg, fontFamily = PaperFonts.sans, fontWeight = FontWeight.Bold, fontSize = 14.sp, maxLines = 1) }
+            ) { Text(if (busy) "Bokfører …" else "✓ Godkjenn og bokfør", color = p.surface, fontFamily = PaperFonts.sans, fontWeight = FontWeight.Bold, style = HomelabType.callout, maxLines = 1) }
             // Prompt 39: «✦ På nytt» med fremdrift (reanalyze async), knappen viser «✦ 42 %» mens den jobber.
             val re = vm.p39.re[r.id]
             Box(
                 Modifier.height(42.dp).clip(RoundedCornerShape(21.dp)).border(1.dp, p.line, RoundedCornerShape(21.dp)).clickable(enabled = re?.running != true) { vm.reanalyze39(r.id) }.padding(horizontal = 14.dp),
                 contentAlignment = Alignment.Center,
-            ) { Text(if (re?.running == true) "✦ ${re.pct} %" else "✦ På nytt", color = if (re?.running == true) p.mut else p.lab, fontFamily = PaperFonts.sans, fontWeight = FontWeight.Bold, fontSize = 13.sp, maxLines = 1) }
+            ) { Text(if (re?.running == true) "✦ ${re.pct} %" else "✦ På nytt", color = if (re?.running == true) p.textTertiary else p.accent, fontFamily = PaperFonts.sans, fontWeight = FontWeight.Bold, style = HomelabType.subheadline, maxLines = 1) }
             Box(
                 Modifier.size(42.dp).clip(CircleShape).border(1.dp, p.line, CircleShape).clickable(onClickLabel = "Slett") { vm.delete23(r.id) },
                 contentAlignment = Alignment.Center,
-            ) { Text("🗑", color = p.lab, fontSize = 16.sp) }
+            ) { Text("🗑", color = p.accent, style = HomelabType.body) }
         }
         vm.p39.re[r.id]?.let { ReProgress39(vm, r.id, it) } // prompt 39: fremdriftspanelet
         if (r.file != null || r.ocrRaw != null) RawData51(vm, r.id, r.ocrRaw) // prompt 51: «Rådata»

@@ -37,6 +37,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import no.kristo.finanshub.*
+import no.kristo.finanshub.ui.designsystem.HomelabTheme
+import no.kristo.finanshub.ui.designsystem.HomelabType
+import no.kristo.finanshub.ui.designsystem.DsPalette
+import androidx.compose.ui.graphics.lerp
 
 /*
  * Prompt 23: Finn-annonsen i appen (Mobil Papir App.dc.html → Finans → Finn → trykk på et kort). Fullskjerm over alt:
@@ -44,8 +48,9 @@ import no.kristo.finanshub.*
  * Fiks ferdig-steg, «Om annonsen», beskrivelse, «Åpne annonsen i Finn ›», E-poster (trykk for å lese) og Meldinger.
  */
 
-private val TINT23 = listOf(0xFF3A2F4A, 0xFF1E2A3F, 0xFF3B2E22, 0xFF22362C, 0xFF2C2C33, 0xFF2A3540)
-private val SCRIM = Color(0x991B1A17)
+/** Plassholderne i bildefeltet (alltid mørkt): kategorifargene, mørknet. */
+private val TINT23: List<Color> = DsPalette.Category.let { listOf(it.purple, it.blue, it.brown, it.green, it.neutral, it.teal) }.map { lerp(it, Color.Black, .62f) }
+private val SCRIM = DsPalette.PapirLys.textPrimary.copy(alpha = .6f)
 
 private fun mailTime(iso: String?): String {
     if (iso.isNullOrBlank()) return ""
@@ -64,7 +69,7 @@ private fun finnUrl(d: FinnDeal, ad: FinnAd23?, old: FinnAd?): String? =
 @Composable
 internal fun FinnAdScreen23(vm: AppViewModel) {
     val id = vm.m23.finnAdFor ?: return
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val ctx = LocalContext.current
     val s = vm.m23
     val detail = vm.finnDetail?.takeIf { it.deal.id == id }
@@ -81,51 +86,51 @@ internal fun FinnAdScreen23(vm: AppViewModel) {
     val st = (deal.level - 1).coerceIn(0, 3)
     val done = deal.finished
     val ini = deal.item.split(Regex("\\s+")).filter { it.isNotBlank() }.take(2).joinToString("") { it.take(1) }.uppercase()
-    BoxWithConstraints(Modifier.fillMaxSize().background(p.bg).clickable(remember { MutableInteractionSource() }, null) {}) {
+    BoxWithConstraints(Modifier.fillMaxSize().background(p.surface).clickable(remember { MutableInteractionSource() }, null) {}) {
         val screenH = maxHeight
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).imePadding()) {
             BoxWithConstraints(Modifier.fillMaxWidth()) {
                 val h = minOf(this.maxWidth, screenH * 0.62f)
-                Box(Modifier.fillMaxWidth().height(h).background(Color(0xFF1B1A17))) {
+                Box(Modifier.fillMaxWidth().height(h).background(DsPalette.PapirMork.surface)) {
                     HorizontalPager(pager, Modifier.fillMaxSize()) { i ->
                         val u = slides[i]
-                        Box(Modifier.fillMaxSize().background(Color(TINT23[Math.floorMod(deal.id + i, TINT23.size)])), contentAlignment = Alignment.Center) {
+                        Box(Modifier.fillMaxSize().background(TINT23[Math.floorMod(deal.id + i, TINT23.size)]), contentAlignment = Alignment.Center) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                Text(ini, color = Color.White.copy(alpha = .4f), fontFamily = PaperFonts.sans, fontWeight = FontWeight.Bold, fontSize = 44.sp)
-                                Text("Bilde ${i + 1}", color = Color.White.copy(alpha = .4f), fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
+                                Text(ini, color = Color.White.copy(alpha = .4f), fontFamily = PaperFonts.sans, fontWeight = FontWeight.Bold, style = HomelabType.largeTitle)
+                                Text("Bilde ${i + 1}", color = Color.White.copy(alpha = .4f), fontWeight = FontWeight.SemiBold, style = HomelabType.footnote)
                             }
                             if (u != null) FitImage23(vm, u, Modifier.matchParentSize())
                         }
                     }
                     Row(Modifier.fillMaxWidth().statusBarsPadding().padding(start = 14.dp, end = 14.dp, top = 8.dp), horizontalArrangement = Arrangement.SpaceBetween) {
                         Box(Modifier.height(38.dp).clip(CircleShape).background(SCRIM).clickable(onClickLabel = "Tilbake til Finn") { vm.closeFinnAd23() }.padding(start = 10.dp, end = 14.dp),
-                            contentAlignment = Alignment.Center) { Text("‹ Finn", color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 13.5.sp) }
+                            contentAlignment = Alignment.Center) { Text("‹ Finn", color = Color.White, fontWeight = FontWeight.SemiBold, style = HomelabType.subheadline) }
                         Box(Modifier.size(38.dp).clip(CircleShape).background(SCRIM).clickable(onClickLabel = "Rediger") { vm.closeFinnAd23(); vm.finnEdit = id },
-                            contentAlignment = Alignment.Center) { Text("✎", color = Color.White, fontSize = 14.sp) }
+                            contentAlignment = Alignment.Center) { Text("✎", color = Color.White, style = HomelabType.callout) }
                     }
                     Row(Modifier.align(Alignment.BottomCenter).padding(bottom = 12.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         slides.indices.forEach { i -> Box(Modifier.size(7.dp).clip(CircleShape).background(if (i == pager.currentPage) Color.White else Color.White.copy(alpha = .45f))) }
                     }
-                    Box(Modifier.align(Alignment.BottomEnd).padding(end = 12.dp, bottom = 10.dp).clip(RoundedCornerShape(10.dp)).background(Color(0xA61B1A17)).padding(9.dp, 3.dp)) {
-                        Text("${pager.currentPage + 1} / ${slides.size}", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 11.5.sp)
+                    Box(Modifier.align(Alignment.BottomEnd).padding(end = 12.dp, bottom = 10.dp).clip(RoundedCornerShape(10.dp)).background(DsPalette.PapirLys.textPrimary.copy(alpha = .65f)).padding(9.dp, 3.dp)) {
+                        Text("${pager.currentPage + 1} / ${slides.size}", color = Color.White, fontWeight = FontWeight.Bold, style = HomelabType.caption)
                     }
                 }
             }
             Column(Modifier.fillMaxWidth().padding(16.dp, 18.dp, 16.dp, 40.dp).navigationBarsPadding(), verticalArrangement = Arrangement.spacedBy(18.dp)) {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    PLabel("${if (done) "Fullført" else deal.points[st]} · ${ddmm(deal.date)}", if (done) p.pos else p.lab)
-                    PSerif(ad?.title ?: detail?.ad?.title ?: deal.item, 28.sp, p.ink)
-                    PSerif(n0(deal.amount) + " kr", 34.sp, p.ink, weight = FontWeight.Normal, maxLines = 1)
-                    Text((if (deal.sold) "Solgt til " else "Kjøpt fra ") + other, color = p.mut, fontSize = 13.5.sp)
+                    PLabel("${if (done) "Fullført" else deal.points[st]} · ${ddmm(deal.date)}", if (done) p.success else p.accent)
+                    PSerif(ad?.title ?: detail?.ad?.title ?: deal.item, HomelabType.title2.fontSize, p.textPrimary)
+                    PSerif(n0(deal.amount) + " kr", HomelabType.title2.fontSize, p.textPrimary, weight = FontWeight.Normal, maxLines = 1)
+                    Text((if (deal.sold) "Solgt til " else "Kjøpt fra ") + other, color = p.textTertiary, style = HomelabType.subheadline)
                 }
-                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(p.card).padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    PLabel("Fiks ferdig", p.lab)
+                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(p.surfaceRaised).padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    PLabel("Fiks ferdig", p.accent)
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         deal.points.forEachIndexed { j, n ->
-                            val c = when { j < st -> p.ink; j == st && !done -> p.lab; done -> p.pos; else -> p.line }
+                            val c = when { j < st -> p.textPrimary; j == st && !done -> p.accent; done -> p.success; else -> p.line }
                             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                 Box(Modifier.fillMaxWidth().height(4.dp).clip(RoundedCornerShape(2.dp)).background(c))
-                                Text(n, color = if (j <= st) p.ink else p.mut, fontWeight = FontWeight.SemiBold, fontSize = 11.5.sp, maxLines = 1)
+                                Text(n, color = if (j <= st) p.textPrimary else p.textTertiary, fontWeight = FontWeight.SemiBold, style = HomelabType.caption, maxLines = 1)
                             }
                         }
                     }
@@ -134,51 +139,51 @@ internal fun FinnAdScreen23(vm: AppViewModel) {
                 val spec = ad?.attrs?.takeIf { it.isNotEmpty() } ?: listOfNotNull(detail?.ad?.place?.let { "Sted" to it })
                 val desc = ad?.description ?: detail?.ad?.description
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    PLabel("Om annonsen", p.lab)
-                    if (spec.isNotEmpty()) Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(p.card).padding(horizontal = 14.dp, vertical = 2.dp)) {
+                    PLabel("Om annonsen", p.accent)
+                    if (spec.isNotEmpty()) Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(p.surfaceRaised).padding(horizontal = 14.dp, vertical = 2.dp)) {
                         spec.forEachIndexed { i, (a, b) ->
                             if (i > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
                             Row(Modifier.fillMaxWidth().padding(vertical = 11.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                Text(a, color = p.mut, fontSize = 14.sp)
-                                Text(b, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, textAlign = TextAlign.End, modifier = Modifier.weight(1f))
+                                Text(a, color = p.textTertiary, style = HomelabType.callout)
+                                Text(b, color = p.textPrimary, fontWeight = FontWeight.SemiBold, style = HomelabType.callout, textAlign = TextAlign.End, modifier = Modifier.weight(1f))
                             }
                         }
                     }
                     when {
-                        desc != null -> Text(desc, color = p.ink, fontSize = 15.sp, lineHeight = 23.sp, modifier = Modifier.padding(start = 2.dp, end = 2.dp, top = 4.dp))
-                        s.finnAdBusy -> Text("Henter annonsen …", color = p.mut, fontSize = 13.sp)
-                        else -> Text("Annonsen er ikke lagret ennå.", color = p.mut, fontSize = 13.sp, modifier = Modifier.clickable { vm.refreshFinnAd23(id) })
+                        desc != null -> Text(desc, color = p.textPrimary, style = HomelabType.callout, lineHeight = 23.sp, modifier = Modifier.padding(start = 2.dp, end = 2.dp, top = 4.dp))
+                        s.finnAdBusy -> Text("Henter annonsen …", color = p.textTertiary, style = HomelabType.subheadline)
+                        else -> Text("Annonsen er ikke lagret ennå.", color = p.textTertiary, style = HomelabType.subheadline, modifier = Modifier.clickable { vm.refreshFinnAd23(id) })
                     }
-                    if (ad?.removed == true) Text("Annonsen er fjernet fra Finn · viser lagret kopi", color = p.mut, fontSize = 12.sp)
-                    if (url != null) Text("Åpne annonsen i Finn ›", color = p.lab, fontWeight = FontWeight.Bold, fontSize = 13.5.sp, textDecoration = TextDecoration.Underline,
+                    if (ad?.removed == true) Text("Annonsen er fjernet fra Finn · viser lagret kopi", color = p.textTertiary, style = HomelabType.footnote)
+                    if (url != null) Text("Åpne annonsen i Finn ›", color = p.accent, fontWeight = FontWeight.Bold, style = HomelabType.subheadline, textDecoration = TextDecoration.Underline,
                         modifier = Modifier.clickable { openLink(ctx, url) })
                 }
                 // E-poster (Proton Mail)
                 val mails = s.finnMails ?: detail?.emails ?: emptyList()
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(verticalAlignment = Alignment.Bottom) {
-                        PLabel("E-poster · ${mails.size}", p.lab, modifier = Modifier.weight(1f))
-                        Text("Proton Mail", color = p.mut, fontSize = 12.sp)
+                        PLabel("E-poster · ${mails.size}", p.accent, modifier = Modifier.weight(1f))
+                        Text("Proton Mail", color = p.textTertiary, style = HomelabType.footnote)
                     }
-                    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(p.card).padding(horizontal = 14.dp, vertical = 2.dp)) {
-                        if (mails.isEmpty()) Text(if (s.finnAdBusy) "Henter e-poster …" else "Ingen e-poster koblet til handelen.", color = p.mut, fontSize = 13.sp, modifier = Modifier.padding(vertical = 12.dp))
+                    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(p.surfaceRaised).padding(horizontal = 14.dp, vertical = 2.dp)) {
+                        if (mails.isEmpty()) Text(if (s.finnAdBusy) "Henter e-poster …" else "Ingen e-poster koblet til handelen.", color = p.textTertiary, style = HomelabType.subheadline, modifier = Modifier.padding(vertical = 12.dp))
                         mails.forEachIndexed { i, m ->
                             if (i > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
                             val from = m.from ?: ""
                             val fl = from.lowercase()
-                            val (lbl, lc) = when { "finn" in fl -> "F" to Color(0xFF0063FB); "posten" in fl || "bring" in fl -> "P" to Color(0xFFE32D22); else -> from.trim().take(1).uppercase().ifEmpty { "@" } to p.ink }
+                            val (lbl, lc) = when { "finn" in fl -> "F" to DsPalette.Category.blue; "posten" in fl || "bring" in fl -> "P" to DsPalette.Category.red; else -> from.trim().take(1).uppercase().ifEmpty { "@" } to p.textPrimary }
                             val open = s.finnMailOpen == m.id
                             Row(Modifier.fillMaxWidth().clickable { vm.toggleFinnMail23(id, m) }.padding(vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                                 Box(Modifier.size(34.dp).clip(RoundedCornerShape(10.dp)).background(lc), contentAlignment = Alignment.Center) {
-                                    Text(lbl, color = if (lc == p.ink) p.bg else Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 13.sp)
+                                    Text(lbl, color = if (lc == p.textPrimary) p.surface else Color.White, fontWeight = FontWeight.ExtraBold, style = HomelabType.subheadline)
                                 }
                                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        Text(m.subject ?: "(uten emne)", color = p.ink, fontWeight = FontWeight.Bold, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                                        Text(mailTime(m.date), color = p.mut, fontSize = 11.5.sp, maxLines = 1)
+                                        Text(m.subject ?: "(uten emne)", color = p.textPrimary, fontWeight = FontWeight.Bold, style = HomelabType.callout, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                                        Text(mailTime(m.date), color = p.textTertiary, style = HomelabType.caption, fontWeight = FontWeight.Normal, maxLines = 1)
                                     }
-                                    Text(from.substringBefore('<').trim().ifBlank { from }, color = p.mut, fontSize = 12.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                    if (open) Text(s.finnMailBody[m.id] ?: m.body ?: m.snippet ?: "Henter …", color = p.ink, fontSize = 14.sp, lineHeight = 21.sp, modifier = Modifier.padding(top = 6.dp))
+                                    Text(from.substringBefore('<').trim().ifBlank { from }, color = p.textTertiary, style = HomelabType.footnote, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    if (open) Text(s.finnMailBody[m.id] ?: m.body ?: m.snippet ?: "Henter …", color = p.textPrimary, style = HomelabType.callout, lineHeight = 21.sp, modifier = Modifier.padding(top = 6.dp))
                                 }
                             }
                         }
@@ -189,22 +194,22 @@ internal fun FinnAdScreen23(vm: AppViewModel) {
                 var msg by remember(id) { mutableStateOf("") }
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(verticalAlignment = Alignment.Bottom) {
-                        PLabel("Meldinger · $other", p.lab, modifier = Modifier.weight(1f))
-                        if (chatUrl != null) Text("Åpne i Finn ›", color = p.mut, fontSize = 12.sp, modifier = Modifier.clickable { openLink(ctx, chatUrl) })
+                        PLabel("Meldinger · $other", p.accent, modifier = Modifier.weight(1f))
+                        if (chatUrl != null) Text("Åpne i Finn ›", color = p.textTertiary, style = HomelabType.footnote, modifier = Modifier.clickable { openLink(ctx, chatUrl) })
                     }
-                    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(p.bg).border(1.dp, p.line, RoundedCornerShape(18.dp)).padding(14.dp),
+                    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(p.surface).border(1.dp, p.line, RoundedCornerShape(18.dp)).padding(14.dp),
                         verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         val chat = s.finnChat ?: emptyList()
                         if (chat.isEmpty()) Text(if (s.finnChat == null && s.finnAdBusy) "Henter meldinger …" else "Ingen meldinger hentet ennå. Meldinger fra Finn-varsler i e-posten vises her.",
-                            color = p.mut, fontSize = 13.sp)
+                            color = p.textTertiary, style = HomelabType.subheadline)
                         chat.forEach { c ->
                             Column(Modifier.fillMaxWidth(), horizontalAlignment = if (c.mine) Alignment.End else Alignment.Start, verticalArrangement = Arrangement.spacedBy(2.dp)) {
                                 val shape = if (c.mine) RoundedCornerShape(18.dp, 18.dp, 6.dp, 18.dp) else RoundedCornerShape(18.dp, 18.dp, 18.dp, 6.dp)
                                 Box(Modifier.fillMaxWidth(.8f).wrapContentWidth(if (c.mine) Alignment.End else Alignment.Start)) {
-                                    Text(c.text, color = if (c.mine) p.bg else p.ink, fontSize = 14.5.sp, lineHeight = 20.sp,
-                                        modifier = Modifier.clip(shape).background(if (c.mine) p.ink else p.card).padding(13.dp, 9.dp))
+                                    Text(c.text, color = if (c.mine) p.surface else p.textPrimary, style = HomelabType.callout, lineHeight = 20.sp,
+                                        modifier = Modifier.clip(shape).background(if (c.mine) p.textPrimary else p.surfaceRaised).padding(13.dp, 9.dp))
                                 }
-                                c.time?.let { Text(mailTime(it).ifBlank { it }, color = p.mut, fontSize = 10.5.sp, modifier = Modifier.padding(horizontal = 6.dp)) }
+                                c.time?.let { Text(mailTime(it).ifBlank { it }, color = p.textTertiary, style = HomelabType.caption, fontWeight = FontWeight.Normal, modifier = Modifier.padding(horizontal = 6.dp)) }
                             }
                         }
                         val send = {
@@ -217,18 +222,18 @@ internal fun FinnAdScreen23(vm: AppViewModel) {
                         Row(Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                             BasicTextField(
                                 msg, { msg = it }, singleLine = true,
-                                textStyle = TextStyle(color = p.ink, fontSize = 14.5.sp, fontFamily = PaperFonts.sans, fontWeight = FontWeight.Medium),
-                                cursorBrush = SolidColor(p.lab),
+                                textStyle = HomelabType.callout.copy(color = p.textPrimary, fontFamily = PaperFonts.sans, fontWeight = FontWeight.Medium),
+                                cursorBrush = SolidColor(p.accent),
                                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send), keyboardActions = KeyboardActions(onSend = { send() }),
-                                modifier = Modifier.weight(1f).height(44.dp).clip(RoundedCornerShape(22.dp)).background(p.card).border(1.dp, p.line, RoundedCornerShape(22.dp)).padding(horizontal = 14.dp),
-                                decorationBox = { inner -> Box(Modifier.fillMaxHeight(), contentAlignment = Alignment.CenterStart) { if (msg.isEmpty()) Text("Skriv en melding …", color = p.mut, fontSize = 14.5.sp); inner() } },
+                                modifier = Modifier.weight(1f).height(44.dp).clip(RoundedCornerShape(22.dp)).background(p.surfaceRaised).border(1.dp, p.line, RoundedCornerShape(22.dp)).padding(horizontal = 14.dp),
+                                decorationBox = { inner -> Box(Modifier.fillMaxHeight(), contentAlignment = Alignment.CenterStart) { if (msg.isEmpty()) Text("Skriv en melding …", color = p.textTertiary, style = HomelabType.callout); inner() } },
                             )
-                            Box(Modifier.size(44.dp).clip(CircleShape).background(p.ink).clickable(onClickLabel = "Send i Finn") { send() }, contentAlignment = Alignment.Center) {
-                                Text("↑", color = p.bg, fontSize = 16.sp)
+                            Box(Modifier.size(44.dp).clip(CircleShape).background(p.textPrimary).clickable(onClickLabel = "Send i Finn") { send() }, contentAlignment = Alignment.Center) {
+                                Text("↑", color = p.surface, style = HomelabType.body)
                             }
                         }
                     }
-                    Text("Finn har ikke åpent chat-API: Send kopierer meldingen og åpner samtalen i Finn.", color = p.mut, fontSize = 12.sp, lineHeight = 17.sp)
+                    Text("Finn har ikke åpent chat-API: Send kopierer meldingen og åpner samtalen i Finn.", color = p.textTertiary, style = HomelabType.footnote, lineHeight = 17.sp)
                 }
             }
         }

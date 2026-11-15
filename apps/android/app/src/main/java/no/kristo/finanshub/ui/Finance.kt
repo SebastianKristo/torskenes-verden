@@ -38,6 +38,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
@@ -59,6 +60,9 @@ import androidx.compose.ui.semantics.Role
 import java.time.LocalDate
 import java.time.format.TextStyle as JTextStyle
 import java.util.Locale
+import no.kristo.finanshub.ui.designsystem.HomelabTheme
+import no.kristo.finanshub.ui.designsystem.HomelabType
+import no.kristo.finanshub.ui.designsystem.DsPalette
 
 /* ---------------- Felles ---------------- */
 
@@ -69,7 +73,7 @@ internal fun Page(content: LazyListScopeContent) {
 internal typealias LazyListScopeContent = androidx.compose.foundation.lazy.LazyListScope.() -> Unit
 
 @Composable
-internal fun Empty(text: String) = Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) { Text(text, color = C.text2) }
+internal fun Empty(text: String) = Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) { Text(text, color = HomelabTheme.colors.textSecondary) }
 
 @Composable
 internal fun SectionLabel(text: String) {
@@ -109,8 +113,11 @@ internal fun Logo(vm: AppViewModel, domain: String?, name: String, color: Long, 
 
 @Composable
 internal fun AiLine(text: String?) {
-    if (!text.isNullOrBlank()) Text("✦ $text", color = C.accentLight, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    if (!text.isNullOrBlank()) Text("✦ $text", color = HomelabTheme.colors.textPrimary, style = HomelabType.footnote, maxLines = 1, overflow = TextOverflow.Ellipsis)
 }
+
+/** En tokenfarge som ARGB-tall, for API-ene som tar fargen som Long (Logo, Initial). */
+internal fun Color.argbLong(): Long = toArgb().toLong() and 0xFFFFFFFFL
 
 /** Liste-elementer i M3 Expressive: første og siste har stor runding, de i midten liten. */
 internal fun itemShape(i: Int, n: Int) = when {
@@ -123,37 +130,37 @@ internal fun itemShape(i: Int, n: Int) = when {
 @Composable
 internal fun TxRow(vm: AppViewModel, t: Tx, shape: RoundedCornerShape, selected: Boolean = false, onClick: () -> Unit) {
     Row(
-        Modifier.fillMaxWidth().clip(shape).background(if (selected) C.surface3 else C.surface1).clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 12.dp),
+        Modifier.fillMaxWidth().clip(shape).background(if (selected) HomelabTheme.colors.line else HomelabTheme.colors.surfaceRaised).clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         Logo(vm, t.domain, t.description, t.color)
         Column(Modifier.weight(1f)) {
             Text(t.description, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text("${ddmm(t.date)} · ${t.category}", color = C.text2, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text("${ddmm(t.date)} · ${t.category}", color = HomelabTheme.colors.textSecondary, style = HomelabType.subheadline, maxLines = 1, overflow = TextOverflow.Ellipsis)
             AiLine(t.aiShort)
         }
-        Text(signed(t.amount), fontFamily = Mono, fontWeight = FontWeight.SemiBold, color = if (t.amount > 0) C.positive else C.text)
+        Text(signed(t.amount), fontFamily = Mono, fontWeight = FontWeight.SemiBold, color = if (t.amount > 0) HomelabTheme.colors.success else HomelabTheme.colors.textPrimary)
     }
 }
 
 @Composable
 internal fun Hero(vm: AppViewModel) {
-    val s = vm.summary ?: return Box(Modifier.fillMaxWidth().height(160.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = C.primary) }
+    val s = vm.summary ?: return Box(Modifier.fillMaxWidth().height(160.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = HomelabTheme.colors.textPrimary) }
     val pct = if (s.budgetTotal > 0) (s.budgetUsed / s.budgetTotal).toFloat().coerceIn(0f, 1f) else 0f
     Column(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(32.dp, 32.dp, 32.dp, 8.dp)).background(C.primary)
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(32.dp, 32.dp, 32.dp, 8.dp)).background(HomelabTheme.colors.textPrimary)
             .clickable(enabled = vm.flag(AppPrefs.HIDE_AMOUNTS)) { Privacy.hidden = !Privacy.hidden }.padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Text("Igjen å bruke", color = C.onPrimary, fontWeight = FontWeight.SemiBold)
+        Text("Igjen å bruke", color = HomelabTheme.colors.surface, fontWeight = FontWeight.SemiBold)
         Row(verticalAlignment = Alignment.Bottom) {
-            Text(neg0(s.left), color = C.onPrimary, fontFamily = Mono, fontSize = 44.sp, fontWeight = FontWeight.SemiBold)
-            Text(" kr", color = C.onPrimary.copy(alpha = .7f), fontSize = 18.sp, modifier = Modifier.padding(bottom = 8.dp))
+            Text(neg0(s.left), color = HomelabTheme.colors.surface, fontFamily = Mono, style = HomelabType.largeTitle, fontWeight = FontWeight.SemiBold)
+            Text(" kr", color = HomelabTheme.colors.surface.copy(alpha = .7f), style = HomelabType.headline, fontWeight = FontWeight.Normal, modifier = Modifier.padding(bottom = 8.dp))
         }
-        LinearProgressIndicator(progress = { pct }, Modifier.fillMaxWidth().height(10.dp).clip(RoundedCornerShape(5.dp)), color = C.onPrimary, trackColor = C.onPrimary.copy(alpha = .18f))
+        LinearProgressIndicator(progress = { pct }, Modifier.fillMaxWidth().height(10.dp).clip(RoundedCornerShape(5.dp)), color = HomelabTheme.colors.surface, trackColor = HomelabTheme.colors.surface.copy(alpha = .18f))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text("Brukt ${n0(s.budgetUsed)} kr", color = C.onPrimary, fontWeight = FontWeight.Medium)
-            Text("${n0(maxOf(0.0, s.left) / maxOf(1, s.daysLeft))} kr/dag", color = C.onPrimary, fontWeight = FontWeight.Medium)
+            Text("Brukt ${n0(s.budgetUsed)} kr", color = HomelabTheme.colors.surface, fontWeight = FontWeight.Medium)
+            Text("${n0(maxOf(0.0, s.left) / maxOf(1, s.daysLeft))} kr/dag", color = HomelabTheme.colors.surface, fontWeight = FontWeight.Medium)
         }
     }
 }
@@ -163,8 +170,8 @@ internal fun Hero(vm: AppViewModel) {
 @Composable
 internal fun Tile(label: String, value: String, shape: RoundedCornerShape, bg: Color, modifier: Modifier) {
     Column(modifier.clip(shape).background(bg).padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(label, color = C.text2, fontSize = 13.sp)
-        Text(value, fontFamily = Mono, fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
+        Text(label, color = HomelabTheme.colors.textSecondary, style = HomelabType.subheadline)
+        Text(value, fontFamily = Mono, style = HomelabType.title3, fontWeight = FontWeight.SemiBold)
     }
 }
 
@@ -181,9 +188,9 @@ internal fun BudgetScreen(vm: AppViewModel) {
         vm.summary?.let { s ->
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Tile("Budsjett", n0(s.budgetTotal), RoundedCornerShape(24.dp, 8.dp, 8.dp, 24.dp), C.surface2, Modifier.weight(1f))
-                    Tile("Brukt", n0(s.budgetUsed), RoundedCornerShape(8.dp), C.surface2, Modifier.weight(1f))
-                    Tile("Dager igjen", "${s.daysLeft}", RoundedCornerShape(8.dp, 24.dp, 24.dp, 8.dp), C.surface2, Modifier.weight(1f))
+                    Tile("Budsjett", n0(s.budgetTotal), RoundedCornerShape(24.dp, 8.dp, 8.dp, 24.dp), HomelabTheme.colors.surfaceSunken, Modifier.weight(1f))
+                    Tile("Brukt", n0(s.budgetUsed), RoundedCornerShape(8.dp), HomelabTheme.colors.surfaceSunken, Modifier.weight(1f))
+                    Tile("Dager igjen", "${s.daysLeft}", RoundedCornerShape(8.dp, 24.dp, 24.dp, 8.dp), HomelabTheme.colors.surfaceSunken, Modifier.weight(1f))
                 }
             }
         }
@@ -192,20 +199,20 @@ internal fun BudgetScreen(vm: AppViewModel) {
             val over = b.used > b.budget
             val days = maxOf(1, vm.summary?.daysLeft ?: 1)
             Column(
-                Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(if (vm.selectedBudget == b.categoryId) C.surface3 else C.surface1)
+                Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(if (vm.selectedBudget == b.categoryId) HomelabTheme.colors.line else HomelabTheme.colors.surfaceRaised)
                     .clickable { vm.selectedBudget = b.categoryId }.padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text(b.category, fontWeight = FontWeight.SemiBold)
-                    Text("${n0(b.used)} / ${n0(b.budget)}", fontFamily = Mono, color = if (over) C.primary else C.text2, fontSize = 14.sp)
+                    Text("${n0(b.used)} / ${n0(b.budget)}", fontFamily = Mono, color = if (over) HomelabTheme.colors.textPrimary else HomelabTheme.colors.textSecondary, style = HomelabType.callout)
                 }
                 LinearProgressIndicator(progress = { (b.used / b.budget).toFloat().coerceIn(0f, 1f) }, Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)),
-                    color = if (over) C.accent else Color(b.color), trackColor = C.surface2)
+                    color = if (over) HomelabTheme.colors.accent else Color(b.color), trackColor = HomelabTheme.colors.surfaceSunken)
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text(if (over) "Over med ${n0(b.used - b.budget)} kr" else "${n0(b.budget - b.used)} kr igjen · ${n0((b.budget - b.used) / days)} kr/dag",
-                        color = if (over) C.primary else C.text2, fontSize = 13.sp)
-                    Text("${(b.used / b.budget * 100).toInt()} % brukt", color = C.text2, fontSize = 13.sp)
+                        color = if (over) HomelabTheme.colors.textPrimary else HomelabTheme.colors.textSecondary, style = HomelabType.subheadline)
+                    Text("${(b.used / b.budget * 100).toInt()} % brukt", color = HomelabTheme.colors.textSecondary, style = HomelabType.subheadline)
                 }
                 val chips = buildList {
                     if (b.count > 0) add("${b.count} kjøp")
@@ -213,7 +220,7 @@ internal fun BudgetScreen(vm: AppViewModel) {
                     b.prevUsed?.takeIf { it > 0 }?.let { p -> val d = ((b.used - p) / p * 100).toInt(); add((if (d > 0) "↑ $d" else "↓ ${-d}") + " % mot forrige mnd") }
                 }
                 if (chips.isNotEmpty()) Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    chips.forEach { Text(it, fontSize = 12.sp, color = C.text2, modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(C.surface2).padding(8.dp, 4.dp)) }
+                    chips.forEach { Text(it, style = HomelabType.footnote, color = HomelabTheme.colors.textSecondary, modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(HomelabTheme.colors.surfaceSunken).padding(8.dp, 4.dp)) }
                 }
             }
         }
@@ -233,21 +240,21 @@ internal fun TxDetail(vm: AppViewModel, back: (() -> Unit)?) {
         if (back != null) FilledTonalIconButton(onClick = back, modifier = Modifier.size(48.dp)) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Tilbake") }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
             Logo(vm, t.domain, t.description, t.color, 60, RoundedCornerShape(18.dp))
-            Column { Text(t.description, style = MaterialTheme.typography.titleLarge); Text(dayLabel(t.date), color = C.text2) }
+            Column { Text(t.description, style = MaterialTheme.typography.titleLarge); Text(dayLabel(t.date), color = HomelabTheme.colors.textSecondary) }
         }
         Row(verticalAlignment = Alignment.Bottom) {
-            Text(signed(t.amount), fontFamily = Mono, fontSize = 40.sp, fontWeight = FontWeight.SemiBold, color = if (t.amount > 0) C.positive else C.text)
-            Text(" kr", color = C.text2, fontSize = 18.sp, modifier = Modifier.padding(bottom = 8.dp))
+            Text(signed(t.amount), fontFamily = Mono, style = HomelabType.largeTitle, fontWeight = FontWeight.SemiBold, color = if (t.amount > 0) HomelabTheme.colors.success else HomelabTheme.colors.textPrimary)
+            Text(" kr", color = HomelabTheme.colors.textSecondary, style = HomelabType.headline, fontWeight = FontWeight.Normal, modifier = Modifier.padding(bottom = 8.dp))
         }
         (t.aiLong ?: t.aiShort)?.let { txt ->
-            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp, 28.dp, 28.dp, 10.dp)).background(C.heroAi).padding(18.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("✦ AI-beskrivelse", color = C.onContainer, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
-                Text(txt, color = C.onContainer)
+            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp, 28.dp, 28.dp, 10.dp)).background(HomelabTheme.colors.surfaceChip).padding(18.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text("✦ AI-beskrivelse", color = HomelabTheme.colors.textPrimary, fontWeight = FontWeight.SemiBold, style = HomelabType.subheadline)
+                Text(txt, color = HomelabTheme.colors.textPrimary)
             }
         }
         if (t.lines.isNotEmpty()) {
             SectionLabel("Varelinjer")
-            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(C.surface1).padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(HomelabTheme.colors.surfaceRaised).padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 t.lines.forEach { (d, a) -> Row(Modifier.fillMaxWidth()) { Text(d, Modifier.weight(1f), maxLines = 2); Text(n2(a), fontFamily = Mono) } }
             }
         }
@@ -261,28 +268,28 @@ internal fun TxDetail(vm: AppViewModel, back: (() -> Unit)?) {
             .plus(if (t.note.isNotBlank()) listOf("Notat" to t.note) else emptyList())
         Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
             info.forEachIndexed { i, (k, v) ->
-                Row(Modifier.fillMaxWidth().clip(itemShape(i, info.size)).background(C.surface1).padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text(k, color = C.text2); Text(v, fontWeight = FontWeight.Medium)
+                Row(Modifier.fillMaxWidth().clip(itemShape(i, info.size)).background(HomelabTheme.colors.surfaceRaised).padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text(k, color = HomelabTheme.colors.textSecondary); Text(v, fontWeight = FontWeight.Medium)
                 }
             }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(onClick = { vm.editTx(t) }, modifier = Modifier.weight(1f).height(52.dp), shape = RoundedCornerShape(26.dp, 8.dp, 8.dp, 26.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = C.primary, contentColor = C.onPrimary)) { Icon(Icons.Filled.Edit, null); Spacer(Modifier.width(6.dp)); Text("Rediger", fontWeight = FontWeight.Bold) }
-            OutlinedButton(onClick = { confirm = true }, modifier = Modifier.weight(1f).height(52.dp), shape = RoundedCornerShape(8.dp, 26.dp, 26.dp, 8.dp)) { Text("Slett", color = C.red) }
+                colors = ButtonDefaults.buttonColors(containerColor = HomelabTheme.colors.textPrimary, contentColor = HomelabTheme.colors.surface)) { Icon(Icons.Filled.Edit, null); Spacer(Modifier.width(6.dp)); Text("Rediger", fontWeight = FontWeight.Bold) }
+            OutlinedButton(onClick = { confirm = true }, modifier = Modifier.weight(1f).height(52.dp), shape = RoundedCornerShape(8.dp, 26.dp, 26.dp, 8.dp)) { Text("Slett", color = HomelabTheme.colors.danger) }
         }
     }
     if (confirm) AlertDialog(onDismissRequest = { confirm = false }, title = { Text("Slette transaksjonen?") }, text = { Text("Den forsvinner fra liste, rapporter, budsjett og AI-søk.") },
-        confirmButton = { TextButton(onClick = { confirm = false; vm.deleteTx(t.id) }) { Text("Slett", color = C.red) } },
+        confirmButton = { TextButton(onClick = { confirm = false; vm.deleteTx(t.id) }) { Text("Slett", color = HomelabTheme.colors.danger) } },
         dismissButton = { TextButton(onClick = { confirm = false }) { Text("Avbryt") } })
 }
 
 @Composable
 private fun OriginalRow(title: String, sub: String, icon: ImageVector, shape: RoundedCornerShape, onClick: () -> Unit) {
-    Row(Modifier.fillMaxWidth().clip(shape).background(C.surface1).clickable(onClick = onClick).padding(16.dp, 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-        Icon(icon, null, tint = C.primary)
-        Column(Modifier.weight(1f)) { Text(title, fontWeight = FontWeight.Medium); Text(sub, color = C.text2, fontSize = 13.sp) }
-        Icon(Icons.Filled.ChevronRight, null, tint = C.text2)
+    Row(Modifier.fillMaxWidth().clip(shape).background(HomelabTheme.colors.surfaceRaised).clickable(onClick = onClick).padding(16.dp, 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+        Icon(icon, null, tint = HomelabTheme.colors.textPrimary)
+        Column(Modifier.weight(1f)) { Text(title, fontWeight = FontWeight.Medium); Text(sub, color = HomelabTheme.colors.textSecondary, style = HomelabType.subheadline) }
+        Icon(Icons.Filled.ChevronRight, null, tint = HomelabTheme.colors.textSecondary)
     }
 }
 
@@ -294,7 +301,7 @@ internal fun ScanQueue(vm: AppViewModel, scan: () -> Unit, pick: () -> Unit) {
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(onClick = scan, modifier = Modifier.weight(2f).height(64.dp), shape = RoundedCornerShape(28.dp, 8.dp, 8.dp, 28.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = C.primary, contentColor = C.onPrimary)) {
+                    colors = ButtonDefaults.buttonColors(containerColor = HomelabTheme.colors.textPrimary, contentColor = HomelabTheme.colors.surface)) {
                     Icon(Icons.Filled.PhotoCamera, null); Spacer(Modifier.width(8.dp)); Text("Ta bilde", fontWeight = FontWeight.Bold)
                 }
                 OutlinedButton(onClick = pick, modifier = Modifier.weight(1f).height(64.dp), shape = RoundedCornerShape(8.dp, 28.dp, 28.dp, 8.dp)) { Text("Bilder / filer") }
@@ -306,10 +313,10 @@ internal fun ScanQueue(vm: AppViewModel, scan: () -> Unit, pick: () -> Unit) {
                 Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
                     val n = vm.pendingUploads.size
                     vm.pendingUploads.forEachIndexed { i, u ->
-                        Row(Modifier.fillMaxWidth().clip(itemShape(i, n)).background(C.surface1).padding(16.dp, 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Row(Modifier.fillMaxWidth().clip(itemShape(i, n)).background(HomelabTheme.colors.surfaceRaised).padding(16.dp, 8.dp), verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) {
                                 Text(u.name.ifBlank { "Kvittering" }, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                Text(pendingSub(u), color = C.text2, fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                                Text(pendingSub(u), color = HomelabTheme.colors.textSecondary, style = HomelabType.subheadline, maxLines = 2, overflow = TextOverflow.Ellipsis)
                             }
                             TextButton(onClick = { vm.removePending(u.id) }) { Text("Fjern") }
                         }
@@ -342,7 +349,7 @@ internal fun ScanQueue(vm: AppViewModel, scan: () -> Unit, pick: () -> Unit) {
             }
         }
         when {
-            q == null -> item { Box(Modifier.fillMaxWidth().padding(30.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = C.primary) } }
+            q == null -> item { Box(Modifier.fillMaxWidth().padding(30.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = HomelabTheme.colors.textPrimary) } }
             q.isEmpty() -> item { Empty("Ingen kvitteringer i køen.") }
             else -> {
                 item { SectionLabel("Til gjennomgang") }
@@ -350,18 +357,18 @@ internal fun ScanQueue(vm: AppViewModel, scan: () -> Unit, pick: () -> Unit) {
                     Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
                         q.forEachIndexed { i, r ->
                             Row(
-                                Modifier.fillMaxWidth().clip(itemShape(i, q.size)).background(if (vm.selectedReceipt == r.id) C.surface3 else C.surface1)
+                                Modifier.fillMaxWidth().clip(itemShape(i, q.size)).background(if (vm.selectedReceipt == r.id) HomelabTheme.colors.line else HomelabTheme.colors.surfaceRaised)
                                     .clickable { vm.selectedReceipt = r.id }.padding(14.dp),
                                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp),
                             ) {
                                 Thumb(vm, r.thumb)
                                 Column(Modifier.weight(1f)) {
                                     Text(r.merchant ?: "Ny kvittering", fontWeight = FontWeight.Medium)
-                                    Text(if (r.status == "needs_review") "${ddmm(r.date)} · ${r.provider ?: "manuell"}" else "Leser …", color = C.text2, fontSize = 13.sp)
+                                    Text(if (r.status == "needs_review") "${ddmm(r.date)} · ${r.provider ?: "manuell"}" else "Leser …", color = HomelabTheme.colors.textSecondary, style = HomelabType.subheadline)
                                 }
                                 r.total?.let { Text(n2(it), fontFamily = Mono) }
                                 if (r.canReanalyze || r.status == "error") IconButton(onClick = { vm.selectedReceipt = r.id; vm.reanalyze(r.id) }, enabled = vm.reanalyzing == null) {
-                                    if (vm.reanalyzing == r.id) CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(18.dp)) else Text("✦", color = C.primary, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                                    if (vm.reanalyzing == r.id) CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(18.dp)) else Text("✦", color = HomelabTheme.colors.textPrimary, style = HomelabType.headline, fontWeight = FontWeight.Bold)
                                 }
                             }
                         }
@@ -374,10 +381,10 @@ internal fun ScanQueue(vm: AppViewModel, scan: () -> Unit, pick: () -> Unit) {
 
 @Composable
 internal fun JobRow(title: String, sub: String, progress: Int?, shape: RoundedCornerShape, onClick: () -> Unit) {
-    Column(Modifier.fillMaxWidth().clip(shape).background(C.surface1).clickable(onClick = onClick).padding(16.dp, 12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    Column(Modifier.fillMaxWidth().clip(shape).background(HomelabTheme.colors.surfaceRaised).clickable(onClick = onClick).padding(16.dp, 12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text(title, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        Text(sub, color = if (sub.startsWith("Klar")) C.positive else C.text2, fontSize = 13.sp)
-        if (progress != null) LinearProgressIndicator(progress = { progress / 100f }, Modifier.fillMaxWidth().height(4.dp).clip(RoundedCornerShape(2.dp)), color = C.primary, trackColor = C.surface2)
+        Text(sub, color = if (sub.startsWith("Klar")) HomelabTheme.colors.success else HomelabTheme.colors.textSecondary, style = HomelabType.subheadline)
+        if (progress != null) LinearProgressIndicator(progress = { progress / 100f }, Modifier.fillMaxWidth().height(4.dp).clip(RoundedCornerShape(2.dp)), color = HomelabTheme.colors.textPrimary, trackColor = HomelabTheme.colors.surfaceSunken)
     }
 }
 
@@ -385,7 +392,7 @@ internal fun JobRow(title: String, sub: String, progress: Int?, shape: RoundedCo
 internal fun Thumb(vm: AppViewModel, path: String?) {
     var bmp by remember(path) { mutableStateOf<Bitmap?>(null) }
     LaunchedEffect(path) { if (path != null) bmp = vm.image(path) }
-    Box(Modifier.size(40.dp).clip(RoundedCornerShape(10.dp)).background(C.paper)) {
+    Box(Modifier.size(40.dp).clip(RoundedCornerShape(10.dp)).background(DsPalette.PapirLys.surfaceSunken)) {
         bmp?.let { Image(it.asImageBitmap(), null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()) }
     }
 }
@@ -402,11 +409,11 @@ internal fun ReceiptConfirm(vm: AppViewModel, back: (() -> Unit)?) {
             if (back != null) FilledTonalIconButton(onClick = back, modifier = Modifier.size(48.dp)) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Tilbake") }
             Text("Bekreft kvittering", style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
             val idx = queue.indexOfFirst { it.id == r.id }
-            if (idx >= 0) Text("${idx + 1} av ${queue.size}", color = C.text2)
+            if (idx >= 0) Text("${idx + 1} av ${queue.size}", color = HomelabTheme.colors.textSecondary)
         }
         if (r.status == "pending" || r.status == "processing") {
             Column(Modifier.fillMaxWidth().padding(40.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                CircularProgressIndicator(color = C.primary); Text("Glimt leser lokalt …", color = C.text2)
+                CircularProgressIndicator(color = HomelabTheme.colors.textPrimary); Text("Glimt leser lokalt …", color = HomelabTheme.colors.textSecondary)
             }
             return@Column
         }
@@ -415,10 +422,10 @@ internal fun ReceiptConfirm(vm: AppViewModel, back: (() -> Unit)?) {
         // Feilet, lav sikkerhet eller usikker lesing: les originalbildet på nytt lokalt (prompt 52: aldri Gemini).
         if (r.canReanalyze || r.status == "error" || !high) ReanalyzeButton(vm, r)
         Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text(r.provider?.let { p -> "$p${r.seconds?.let { " · ${n2(it)} s" } ?: ""}" } ?: "Manuell utfylling", color = C.text2, fontSize = 13.sp)
-            Text(if (r.error != null) "Fyll ut" else if (high) "Høy sikkerhet" else "Sjekk beløp", color = if (high) C.positive else C.primary, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+            Text(r.provider?.let { p -> "$p${r.seconds?.let { " · ${n2(it)} s" } ?: ""}" } ?: "Manuell utfylling", color = HomelabTheme.colors.textSecondary, style = HomelabType.subheadline)
+            Text(if (r.error != null) "Fyll ut" else if (high) "Høy sikkerhet" else "Sjekk beløp", color = if (high) HomelabTheme.colors.success else HomelabTheme.colors.textPrimary, style = HomelabType.subheadline, fontWeight = FontWeight.SemiBold)
         }
-        r.error?.let { Text(it, color = C.primary, fontSize = 13.sp) }
+        r.error?.let { Text(it, color = HomelabTheme.colors.textPrimary, style = HomelabType.subheadline) }
         EditField("Butikk", r.merchant ?: "", key = r.id) { vm.updateReceipt(r.id, "merchant", it) }
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             EditField("Dato (ÅÅÅÅ-MM-DD)", r.date ?: "", key = r.id, modifier = Modifier.weight(1f)) { vm.updateReceipt(r.id, "date", it) }
@@ -435,17 +442,17 @@ internal fun ReceiptConfirm(vm: AppViewModel, back: (() -> Unit)?) {
             vm.boot?.categories?.filter { it.kind == "expense" }?.forEach { c ->
                 val on = r.categoryId == c.id
                 FilterChip(selected = on, onClick = { vm.updateReceipt(r.id, "categoryId", c.id) }, label = { Text(c.name) }, shape = RoundedCornerShape(if (on) 18.dp else 10.dp),
-                    colors = FilterChipDefaults.filterChipColors(selectedContainerColor = C.container, selectedLabelColor = C.onContainer))
+                    colors = FilterChipDefaults.filterChipColors(selectedContainerColor = HomelabTheme.colors.surfaceChip, selectedLabelColor = HomelabTheme.colors.textPrimary))
             }
         }
-        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(if (r.match != null) C.positiveBg else C.surface2).padding(16.dp, 14.dp)) {
-            Text(if (r.match != null) "Matchet mot kortkjøp" else "Ingen bankmatch", fontWeight = FontWeight.SemiBold, color = if (r.match != null) C.positive else C.text)
-            Text(r.match?.let { "${ddmm(it.date)} · ${signed(it.amount)} kr · ${it.account}" } ?: "Bokføres som ny transaksjon", color = C.text2, fontSize = 14.sp)
+        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(if (r.match != null) HomelabTheme.colors.successSoft else HomelabTheme.colors.surfaceSunken).padding(16.dp, 14.dp)) {
+            Text(if (r.match != null) "Matchet mot kortkjøp" else "Ingen bankmatch", fontWeight = FontWeight.SemiBold, color = if (r.match != null) HomelabTheme.colors.success else HomelabTheme.colors.textPrimary)
+            Text(r.match?.let { "${ddmm(it.date)} · ${signed(it.amount)} kr · ${it.account}" } ?: "Bokføres som ny transaksjon", color = HomelabTheme.colors.textSecondary, style = HomelabType.callout)
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedButton(onClick = { vm.reject(r.id) }, modifier = Modifier.weight(1f).height(56.dp), shape = RoundedCornerShape(28.dp, 8.dp, 8.dp, 28.dp)) { Text("Avvis") }
             Button(onClick = { vm.book(r.id) }, modifier = Modifier.weight(2f).height(56.dp), shape = RoundedCornerShape(8.dp, 28.dp, 28.dp, 8.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = C.primary, contentColor = C.onPrimary)) { Text("Bokfør", fontWeight = FontWeight.Bold) }
+                colors = ButtonDefaults.buttonColors(containerColor = HomelabTheme.colors.textPrimary, contentColor = HomelabTheme.colors.surface)) { Text("Bokfør", fontWeight = FontWeight.Bold) }
         }
     }
 }
@@ -456,11 +463,11 @@ internal fun ReceiptImage(vm: AppViewModel, r: Receipt) {
     LaunchedEffect(r.id) { if (r.file != null && r.mime?.startsWith("image/") == true) bmp = vm.image(r.file) }
     val b = bmp
     if (b != null) Image(b.asImageBitmap(), "Kvittering", contentScale = ContentScale.Fit, modifier = Modifier.fillMaxWidth().heightIn(max = 380.dp).clip(RoundedCornerShape(28.dp, 28.dp, 8.dp, 28.dp)).background(Color.Black))
-    else Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp, 28.dp, 8.dp, 28.dp)).background(C.paper).padding(18.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text((r.merchant ?: "").uppercase(), color = Color(0xFF3A362E), fontFamily = Mono, fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.CenterHorizontally))
-        r.lines.forEach { (d, a) -> Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) { Text(d, color = Color(0xFF3A362E), fontFamily = Mono, fontSize = 12.sp, modifier = Modifier.weight(1f)); Text(n2(a), color = Color(0xFF3A362E), fontFamily = Mono, fontSize = 12.sp) } }
-        HorizontalDivider(color = Color(0xFFB9B4A8))
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) { Text("TOTAL", color = Color(0xFF3A362E), fontFamily = Mono, fontWeight = FontWeight.Bold); Text(r.total?.let(::n2) ?: "–", color = Color(0xFF3A362E), fontFamily = Mono, fontWeight = FontWeight.Bold) }
+    else Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp, 28.dp, 8.dp, 28.dp)).background(DsPalette.PapirLys.surfaceSunken).padding(18.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text((r.merchant ?: "").uppercase(), color = DsPalette.PapirLys.textPrimary, fontFamily = Mono, fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.CenterHorizontally))
+        r.lines.forEach { (d, a) -> Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) { Text(d, color = DsPalette.PapirLys.textPrimary, fontFamily = Mono, style = HomelabType.footnote, modifier = Modifier.weight(1f)); Text(n2(a), color = DsPalette.PapirLys.textPrimary, fontFamily = Mono, style = HomelabType.footnote) } }
+        HorizontalDivider(color = DsPalette.PapirLys.line)
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) { Text("TOTAL", color = DsPalette.PapirLys.textPrimary, fontFamily = Mono, fontWeight = FontWeight.Bold); Text(r.total?.let(::n2) ?: "–", color = DsPalette.PapirLys.textPrimary, fontFamily = Mono, fontWeight = FontWeight.Bold) }
     }
 }
 
@@ -474,7 +481,7 @@ internal fun EditField(label: String, value: String, key: Any, number: Boolean =
         keyboardOptions = KeyboardOptions(keyboardType = if (number) KeyboardType.Decimal else KeyboardType.Text, imeAction = ImeAction.Done),
         keyboardActions = KeyboardActions(onDone = { if (text != value) onSave(text) }),
         shape = RoundedCornerShape(16.dp, 16.dp, 4.dp, 4.dp),
-        colors = TextFieldDefaults.colors(focusedContainerColor = C.surface2, unfocusedContainerColor = C.surface2, focusedIndicatorColor = C.primary, focusedLabelColor = C.primary),
+        colors = TextFieldDefaults.colors(focusedContainerColor = HomelabTheme.colors.surfaceSunken, unfocusedContainerColor = HomelabTheme.colors.surfaceSunken, focusedIndicatorColor = HomelabTheme.colors.textPrimary, focusedLabelColor = HomelabTheme.colors.textPrimary),
     )
     // Lagre også når feltet mister fokus med endringer.
     DisposableEffect(key) { onDispose { if (text != value) onSave(text) } }
@@ -495,7 +502,7 @@ internal fun ReanalyzeButton(vm: AppViewModel, r: Receipt) {
 private fun ReanalysisDialog(vm: AppViewModel, a: Reanalysis) {
     AlertDialog(
         onDismissRequest = { vm.reanalysis = null },
-        containerColor = C.surface1,
+        containerColor = HomelabTheme.colors.surfaceRaised,
         title = { Text("Sammenlign tolkningene") },
         text = {
             Row(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -503,14 +510,14 @@ private fun ReanalysisDialog(vm: AppViewModel, a: Reanalysis) {
                 ExtractColumn("Ny lesing", a.result, a.previous, Modifier.weight(1f)) // prompt 50: Gemini eller lokal OCR
             }
         },
-        confirmButton = { Button(onClick = { vm.applyReanalysis("new") }, colors = ButtonDefaults.buttonColors(containerColor = C.primary, contentColor = C.onPrimary)) { Text("Bruk ny lesing") } },
+        confirmButton = { Button(onClick = { vm.applyReanalysis("new") }, colors = ButtonDefaults.buttonColors(containerColor = HomelabTheme.colors.textPrimary, contentColor = HomelabTheme.colors.surface)) { Text("Bruk ny lesing") } },
         dismissButton = { TextButton(onClick = { vm.applyReanalysis("old") }) { Text("Behold forrige") } },
     )
 }
 
 @Composable
 private fun ExtractColumn(title: String, e: ReExtract, other: ReExtract, modifier: Modifier) {
-    Column(modifier.clip(RoundedCornerShape(18.dp)).background(C.surface2).padding(12.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+    Column(modifier.clip(RoundedCornerShape(18.dp)).background(HomelabTheme.colors.surfaceSunken).padding(12.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
         Text(title + (e.engine?.let { " · $it" } ?: ""), fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
         ExtractField("Butikk", e.merchant ?: "–", e.merchant != other.merchant)
         ExtractField("Dato", e.date?.let(::ddmmyyyy) ?: "–", e.date != other.date)
@@ -522,8 +529,8 @@ private fun ExtractColumn(title: String, e: ReExtract, other: ReExtract, modifie
 
 @Composable
 private fun ExtractField(label: String, v: String, diff: Boolean) {
-    Text(label, color = C.text2, fontSize = 11.sp)
-    Text(v, fontWeight = if (diff) FontWeight.Bold else FontWeight.Normal, color = if (diff) C.primary else C.text, fontSize = 14.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+    Text(label, color = HomelabTheme.colors.textSecondary, style = HomelabType.caption, fontWeight = FontWeight.Normal)
+    Text(v, fontWeight = if (diff) FontWeight.Bold else FontWeight.Normal, color = if (diff) HomelabTheme.colors.textPrimary else HomelabTheme.colors.textPrimary, style = HomelabType.callout, maxLines = 2, overflow = TextOverflow.Ellipsis)
 }
 
 private val NB43 = Locale("nb", "NO")
@@ -535,7 +542,7 @@ private val NB43 = Locale("nb", "NO")
  */
 @Composable
 internal fun MonthHead43(ym: String, cat: String, count: Int, net: Double, top: androidx.compose.ui.unit.Dp) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val m = runCatching { java.time.YearMonth.parse(ym) }.getOrNull()
     val now = java.time.YearMonth.now()
     val full = m?.month?.getDisplayName(JTextStyle.FULL_STANDALONE, NB43)?.uppercase(NB43) ?: ym
@@ -543,13 +550,13 @@ internal fun MonthHead43(ym: String, cat: String, count: Int, net: Double, top: 
     val yr = if (m != null && m.year != now.year) " ${m.year}" else ""
     val label = if (cat == "Alle") "$full$yr · $count" else "${cat.uppercase(NB43)} · $short$yr · $count"
     val netTxt = (if (net > 0) "+" else if (net < 0) "−" else "") + money2_43(kotlin.math.abs(net))
-    Column(Modifier.fillMaxWidth().background(p.bg).padding(top = top)) {
+    Column(Modifier.fillMaxWidth().background(p.surface).padding(top = top)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text(label, color = p.lab, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = 10.5.sp, letterSpacing = 1.26.sp, maxLines = 1,
+            Text(label, color = p.accent, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, style = HomelabType.caption, letterSpacing = 1.26.sp, maxLines = 1,
                 overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-            Text("Netto $netTxt kr", color = p.mut, fontFamily = PaperFonts.sans, fontSize = 12.sp, maxLines = 1)
+            Text("Netto $netTxt kr", color = p.textTertiary, fontFamily = PaperFonts.sans, style = HomelabType.footnote, maxLines = 1)
         }
-        Box(Modifier.fillMaxWidth().padding(top = 6.dp).height(2.dp).background(p.ink))
+        Box(Modifier.fillMaxWidth().padding(top = 6.dp).height(2.dp).background(p.textPrimary))
     }
 }
 

@@ -41,6 +41,8 @@ import androidx.compose.ui.unit.sp
 import no.kristo.finanshub.*
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import no.kristo.finanshub.ui.designsystem.HomelabTheme
+import no.kristo.finanshub.ui.designsystem.HomelabType
 
 /*
  * Prompt 27 (ANDROID-B): Finans-søkeforslag (Google-stil), Innstillinger → AI og tolkning → PERSONVERN OG LOGOER med AI-logg,
@@ -61,13 +63,13 @@ private fun sugSub27(s: FinSug27): String {
 /** Forslagslisten under Finans → Søk: rad ≥ 52 dp, ikon i merkefarge, skrevet del normal og resten fet, ↖ (44 dp) fyller inn. */
 @Composable
 internal fun FinSuggest27(vm: AppViewModel) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val s = vm.b27
     val q = vm.finSearchQ
     if (s.sug.isEmpty() || s.sugHidden || vm.finSearchAi || q.isBlank()) return
     Column(
         Modifier.fillMaxWidth().shadow(14.dp, RoundedCornerShape(22.dp), ambientColor = Color.Black.copy(alpha = .3f), spotColor = Color.Black.copy(alpha = .3f))
-            .clip(RoundedCornerShape(22.dp)).background(p.card).padding(6.dp),
+            .clip(RoundedCornerShape(22.dp)).background(p.surfaceRaised).padding(6.dp),
     ) {
         s.sug.forEach { g ->
             Row(
@@ -91,8 +93,8 @@ internal fun FinSuggest27(vm: AppViewModel) {
                             withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append(g.name.substring(r.last + 1)) }
                         }
                     }
-                    Text(txt, color = p.ink, fontSize = 15.sp, fontFamily = PaperFonts.sans, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Text(sugSub27(g), color = p.mut, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(txt, color = p.textPrimary, style = HomelabType.callout, fontFamily = PaperFonts.sans, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(sugSub27(g), color = p.textTertiary, style = HomelabType.footnote, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
                 Box(
                     Modifier.size(44.dp).clip(CircleShape).clickable(role = Role.Button, onClickLabel = "Fyll inn i søket") {
@@ -102,7 +104,7 @@ internal fun FinSuggest27(vm: AppViewModel) {
                         vm.finSug27(g.name)
                     },
                     contentAlignment = Alignment.Center,
-                ) { Text("↖", color = p.mut, fontSize = 17.sp) }
+                ) { Text("↖", color = p.textTertiary, style = HomelabType.body) }
             }
         }
     }
@@ -116,6 +118,6 @@ private fun SugIcon27(vm: AppViewModel, g: FinSug27) {
     if (b != null) Box(Modifier.size(34.dp).clip(RoundedCornerShape(10.dp)).background(Color.White).padding(4.dp)) {
         Image(b.asImageBitmap(), null, contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize())
     } else Box(Modifier.size(34.dp).clip(RoundedCornerShape(10.dp)).background(Color(g.color)), contentAlignment = Alignment.Center) {
-        Text(g.icon.take(2), color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 11.sp, maxLines = 1)
+        Text(g.icon.take(2), color = Color.White, fontWeight = FontWeight.ExtraBold, style = HomelabType.caption, maxLines = 1)
     }
 }

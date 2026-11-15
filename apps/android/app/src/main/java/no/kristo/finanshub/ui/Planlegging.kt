@@ -33,6 +33,9 @@ import androidx.compose.ui.unit.sp
 import no.kristo.finanshub.*
 import org.json.JSONArray
 import org.json.JSONObject
+import no.kristo.finanshub.ui.designsystem.HomelabTheme
+import no.kristo.finanshub.ui.designsystem.HomelabType
+import no.kristo.finanshub.ui.designsystem.DsPalette
 
 /*
  * Prompt 51 (ANDFEAT51): «Planlegging» i FinansHub Android – FIN51 ($S/SERVER51-API.md), fasit public/finans/js/plan51.js.
@@ -82,7 +85,7 @@ private fun Goals51(vm: AppViewModel, d: JSONObject) {
                     PLabel("Totalt spart")
                     Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         PSerif(kr51(t.num51("saved")), 28.sp)
-                        Text("av ${kr51(t.num51("target"))}", color = PaperPal.current.mut, fontSize = 13.sp, modifier = Modifier.padding(bottom = 4.dp))
+                        Text("av ${kr51(t.num51("target"))}", color = HomelabTheme.colors.textTertiary, style = HomelabType.subheadline, modifier = Modifier.padding(bottom = 4.dp))
                     }
                     Bar51(t.num51("pct"))
                 }
@@ -94,24 +97,24 @@ private fun Goals51(vm: AppViewModel, d: JSONObject) {
 
 @Composable
 private fun RoundUp51(vm: AppViewModel, ru: JSONObject, goals: List<JSONObject>) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val count = ru.i43("count") ?: 0
     val amount = ru.num51("amount")
     val step = ru.i43("step") ?: 10
     val steps = ru.optJSONArray("steps").strs51().ifEmpty { listOf("5", "10", "20", "50", "100") }
     Card51 {
         PLabel("Rund opp")
-        PSerif(if (count > 0) "${kr51(amount, true)} klar til sparing" else "Ingenting å runde opp nå", 20.sp)
-        Text("${ru.str51("text")}. Kjøp fra ${dl51(ru.s43("from"))} til ${dl51(ru.s43("until"))} rundes opp til nærmeste $step kr.", color = p.mut, fontSize = 13.sp)
+        PSerif(if (count > 0) "${kr51(amount, true)} klar til sparing" else "Ingenting å runde opp nå", HomelabType.headline.fontSize)
+        Text("${ru.str51("text")}. Kjøp fra ${dl51(ru.s43("from"))} til ${dl51(ru.s43("until"))} rundes opp til nærmeste $step kr.", color = p.textTertiary, style = HomelabType.subheadline)
         Choice51(steps.map { it to "$it kr" }, step.toString()) { s ->
             vm.act51("ru-step", "PUT", Api.FINANS, "/fin51/roundup", JSONObject().put("step", s.toInt()), reload = listOf("goals"))
         }
         ru.arr51("sample").take(5).forEachIndexed { i, x ->
-            Line51(x.str51("name"), "${dl51(x.s43("date"))} · ${kr51(x.num51("amount"), true)}", "+${num51(x.num51("roundUp"), 2)} kr", p.pos, top = i > 0)
+            Line51(x.str51("name"), "${dl51(x.s43("date"))} · ${kr51(x.num51("amount"), true)}", "+${num51(x.num51("roundUp"), 2)} kr", p.success, top = i > 0)
         }
         if (goals.isNotEmpty()) {
             val gid = ru.s43("goalId") ?: goals.first().str51("id")
-            Text("Til sparemål", color = p.mut, fontSize = 12.sp)
+            Text("Til sparemål", color = p.textTertiary, style = HomelabType.footnote)
             Choice51(goals.map { it.str51("id") to it.str51("name") }, gid) { g ->
                 vm.act51("ru-goal", "PUT", Api.FINANS, "/fin51/roundup", JSONObject().put("goalId", id51(g)), reload = listOf("goals"))
             }
@@ -121,41 +124,41 @@ private fun RoundUp51(vm: AppViewModel, ru: JSONObject, goals: List<JSONObject>)
                     F51.toast = a?.s43("transferHint") ?: "${kr51(a?.num51("amount") ?: amount, true)} satt inn på «${r.obj51("goal")?.str51("name") ?: ""}»"
                 }
             }
-        } else Text("Lag et sparemål for å bruke rund opp.", color = p.mut, fontSize = 13.sp)
+        } else Text("Lag et sparemål for å bruke rund opp.", color = p.textTertiary, style = HomelabType.subheadline)
     }
 }
 
 @Composable
 private fun Goal51(vm: AppViewModel, g: JSONObject, accounts: List<JSONObject>) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val id = g.str51("id")
     var mode by remember(id) { mutableStateOf("") } // "", "dep", "edit"
     var askDel by remember(id) { mutableStateOf(false) }
     val pick = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri -> uri?.let { vm.goalImage51(id, it) } }
-    val color = hex51(g.s43("color")) ?: p.pos
+    val color = hex51(g.s43("color")) ?: p.success
     if (mode == "edit") { GoalForm51(vm, g, accounts) { mode = "" }; return }
     Card51 {
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
             NetImg51(vm, g.s43("imageUrl"), null, Modifier.size(56.dp).clip(RoundedCornerShape(14.dp))) {
                 Box(Modifier.fillMaxSize().background(color), contentAlignment = Alignment.Center) {
-                    Text(g.str51("name").take(1).uppercase(), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 22.sp)
+                    Text(g.str51("name").take(1).uppercase(), color = Color.White, fontWeight = FontWeight.Bold, style = HomelabType.title3, fontFamily = PaperFonts.sans)
                 }
             }
             Column(Modifier.weight(1f)) {
-                PSerif(g.str51("name"), 20.sp, maxLines = 2)
+                PSerif(g.str51("name"), HomelabType.headline.fontSize, maxLines = 2)
                 val sub = listOfNotNull(g.s43("deadlineLabel")?.let { "Frist $it" } ?: "Ingen frist", g.s43("account")?.let { "følger $it" }).joinToString(" · ")
-                Text(sub, color = p.mut, fontSize = 12.5.sp)
+                Text(sub, color = p.textTertiary, style = HomelabType.footnote)
             }
             val (st, tone) = statusOf51(g.str51("status"))
             Tag51(st, tone)
         }
         Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(kr51(g.num51("saved")), color = p.ink, fontWeight = FontWeight.Bold, fontSize = 20.sp)
-            Text("av ${kr51(g.num51("target"))} · ${num51(g.num51("pct"), if (g.num51("pct") % 1.0 > 0.05) 1 else 0)} %", color = p.mut, fontSize = 13.sp, modifier = Modifier.padding(bottom = 2.dp))
+            Text(kr51(g.num51("saved")), color = p.textPrimary, fontWeight = FontWeight.Bold, style = HomelabType.headline)
+            Text("av ${kr51(g.num51("target"))} · ${num51(g.num51("pct"), if (g.num51("pct") % 1.0 > 0.05) 1 else 0)} %", color = p.textTertiary, style = HomelabType.subheadline, modifier = Modifier.padding(bottom = 2.dp))
         }
         Bar51(g.num51("pct"), color)
         val pace = g.num51("pace")
-        Text(g.str51("statusText") + if (pace > 0) " · tempo ${kr51(pace)}/mnd" else "", color = p.ink, fontSize = 13.sp)
+        Text(g.str51("statusText") + if (pace > 0) " · tempo ${kr51(pace)}/mnd" else "", color = p.textPrimary, style = HomelabType.subheadline)
         if (mode == "dep") Deposit51(vm, id) { mode = "" }
         FlowRow51 {
             if (!g.optBoolean("followsAccount")) Btn51("Sett inn") { mode = if (mode == "dep") "" else "dep" }
@@ -202,7 +205,7 @@ private val GOALCOLORS51 = listOf("#2f7a4f", "#2b5d8a", "#b23a2a", "#c08a1e", "#
 
 @Composable
 private fun GoalForm51(vm: AppViewModel, g: JSONObject?, accounts: List<JSONObject>, close: () -> Unit) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     var name by remember { mutableStateOf(g?.str51("name").orEmpty()) }
     var target by remember { mutableStateOf(g?.d43("target")?.let { num51(it) }.orEmpty()) }
     var saved by remember { mutableStateOf("") }
@@ -210,23 +213,23 @@ private fun GoalForm51(vm: AppViewModel, g: JSONObject?, accounts: List<JSONObje
     var color by remember { mutableStateOf(g?.s43("color") ?: GOALCOLORS51.first()) }
     var acc by remember { mutableStateOf(g?.s43("accountId").orEmpty()) }
     Card51 {
-        PSerif(if (g == null) "Nytt sparemål" else "Endre «${g.str51("name")}»", 20.sp)
+        PSerif(if (g == null) "Nytt sparemål" else "Endre «${g.str51("name")}»", HomelabType.headline.fontSize)
         PField("Navn", name, { name = it.take(60) }, placeholder = "F.eks. Japan-tur")
         PField("Målbeløp (kr)", target, { target = it }, placeholder = "30 000", keyboard = KeyboardOptions(keyboardType = KeyboardType.Decimal))
         if (g == null) PField("Allerede spart (kr)", saved, { saved = it }, placeholder = "0", keyboard = KeyboardOptions(keyboardType = KeyboardType.Decimal))
         PField("Frist (ÅÅÅÅ-MM-DD)", deadline, { deadline = it.take(10) }, placeholder = "2026-06-30", keyboard = KeyboardOptions(keyboardType = KeyboardType.Number))
-        Text("Farge", color = p.mut, fontSize = 12.sp)
+        Text("Farge", color = p.textTertiary, style = HomelabType.footnote)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             GOALCOLORS51.forEach { c ->
                 val on = c.equals(color, true)
                 Box(
                     Modifier.size(48.dp).clip(CircleShape).clickable { color = c }.semantics { contentDescription = "Farge $c" + if (on) ", valgt" else "" },
                     contentAlignment = Alignment.Center,
-                ) { Box(Modifier.size(if (on) 34.dp else 28.dp).clip(CircleShape).background(hex51(c) ?: p.ink)) }
+                ) { Box(Modifier.size(if (on) 34.dp else 28.dp).clip(CircleShape).background(hex51(c) ?: p.textPrimary)) }
             }
         }
         if (accounts.isNotEmpty()) {
-            Text("Følg en sparekonto", color = p.mut, fontSize = 12.sp)
+            Text("Følg en sparekonto", color = p.textTertiary, style = HomelabType.footnote)
             Choice51(listOf("" to "Nei – jeg registrerer selv") + accounts.map { it.str51("id") to "${it.str51("name")} (${kr51(it.num51("balance"))})" }, acc) { acc = it }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -251,7 +254,7 @@ private fun kindLabel51(k: String) = when (k) { "sub" -> "Abonnement"; "recurrin
 
 @Composable
 private fun Cal51(vm: AppViewModel, d: JSONObject) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val accs = d.arr51("accounts")
     val selId = F51.opt("cal.acc", "all")
     val sel = accs.firstOrNull { it.str51("id") == selId }
@@ -270,29 +273,29 @@ private fun Cal51(vm: AppViewModel, d: JSONObject) {
         left = {
             Card51 {
                 PLabel("Saldoprognose · ${dl51(d.s43("from"))}–${dl51(d.s43("to"))}")
-                PSerif(kr51(end), 28.sp)
-                Text("om ${days.size} dager (nå ${kr51(start)})", color = p.mut, fontSize = 13.sp)
+                PSerif(kr51(end), HomelabType.title2.fontSize)
+                Text("om ${days.size} dager (nå ${kr51(start)})", color = p.textTertiary, style = HomelabType.subheadline)
                 Choice51(listOf("30" to "30 dager", "60" to "60 dager", "90" to "90 dager"), F51.opt("cal.days", "30")) { F51.ui["cal.days"] = it; vm.load51("cal", force = true) }
                 if (accs.size > 1) Choice51(listOf("all" to "Alle kontoer") + accs.map { it.str51("id") to it.str51("name") }, if (sel == null) "all" else selId) { F51.ui["cal.acc"] = it }
                 val minI = series.indices.minByOrNull { series[it].second }
                 Spark51(series.map { it.second }, "Saldo de neste ${series.size} dagene" + (minI?.let { ", lavest ${kr51(series[it].second)} ${dl51(series[it].first)}" } ?: ""))
                 val tot = d.obj51("total")
-                if (tot != null) Text("Ut ${kr51(tot.num51("out"))} · Inn ${kr51(tot.num51("in"))} · ${tot.i43("count") ?: 0} trekk og innbetalinger", color = p.ink, fontSize = 13.sp)
+                if (tot != null) Text("Ut ${kr51(tot.num51("out"))} · Inn ${kr51(tot.num51("in"))} · ${tot.i43("count") ?: 0} trekk og innbetalinger", color = p.textPrimary, style = HomelabType.subheadline)
                 d.obj51("lowest")?.let { lo ->
-                    Text("Lavest: ${kr51(lo.num51("balance"))} ${dl51(lo.s43("date"))} (${lo.str51("account")})", color = if (lo.num51("balance") < 0) p.lab else p.ink, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                    Text("Lavest: ${kr51(lo.num51("balance"))} ${dl51(lo.s43("date"))} (${lo.str51("account")})", color = if (lo.num51("balance") < 0) p.accent else p.textPrimary, style = HomelabType.subheadline, fontWeight = FontWeight.SemiBold)
                 }
-                d.optJSONArray("warnings").strs51().forEach { w -> Text(w, color = p.lab, fontSize = 13.sp, fontWeight = FontWeight.SemiBold) }
-                d.obj51("unassigned")?.s43("text")?.let { Text(it, color = p.mut, fontSize = 12.5.sp) }
+                d.optJSONArray("warnings").strs51().forEach { w -> Text(w, color = p.accent, style = HomelabType.subheadline, fontWeight = FontWeight.SemiBold) }
+                d.obj51("unassigned")?.s43("text")?.let { Text(it, color = p.textTertiary, style = HomelabType.footnote) }
             }
         },
         right = {
             Card51 {
-                PSerif("Neste ${days.size} dager", 20.sp)
+                PSerif("Neste ${days.size} dager", HomelabType.headline.fontSize)
                 val shown = days.filter { x -> x.optBoolean("today") || x.arr51("items").any { sel == null || it.str51("accountId") == selId } }
-                if (shown.isEmpty()) Text("Ingen faste trekk i perioden.", color = p.mut, fontSize = 13.sp)
+                if (shown.isEmpty()) Text("Ingen faste trekk i perioden.", color = p.textTertiary, style = HomelabType.subheadline)
                 shown.forEach { x -> key(x.str51("date")) { Day51(x, series, sel == null, selId) } }
                 Text("Kilder: abonnementer, faste utgifter, gjentakende trekk funnet i transaksjonene og inntekter som kommer hver måned. Samme tjeneste telles bare én gang.",
-                    color = p.mut, fontSize = 12.sp)
+                    color = p.textTertiary, style = HomelabType.footnote)
             }
         },
     )
@@ -300,19 +303,19 @@ private fun Cal51(vm: AppViewModel, d: JSONObject) {
 
 @Composable
 private fun Day51(x: JSONObject, series: List<Pair<String, Double>>, all: Boolean, selId: String) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val items = x.arr51("items").filter { all || it.str51("accountId") == selId }
     val bal = series.firstOrNull { it.first == x.str51("date") }?.second
     Column(Modifier.fillMaxWidth().padding(top = 6.dp)) {
-        Box(Modifier.fillMaxWidth().height(1.dp).background(if (x.optBoolean("today")) p.ink else p.line))
+        Box(Modifier.fillMaxWidth().height(1.dp).background(if (x.optBoolean("today")) p.textPrimary else p.line))
         Row(Modifier.fillMaxWidth().padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(x.str51("label").replaceFirstChar { it.uppercase() } + if (x.optBoolean("today")) " · i dag" else "", color = p.ink, fontWeight = FontWeight.Bold, fontSize = 13.5.sp, modifier = Modifier.weight(1f))
-            if (bal != null) Text("Saldo ${kr51(bal)}", color = if (bal < 0) p.lab else p.mut, fontSize = 12.5.sp)
+            Text(x.str51("label").replaceFirstChar { it.uppercase() } + if (x.optBoolean("today")) " · i dag" else "", color = p.textPrimary, fontWeight = FontWeight.Bold, style = HomelabType.subheadline, modifier = Modifier.weight(1f))
+            if (bal != null) Text("Saldo ${kr51(bal)}", color = if (bal < 0) p.accent else p.textTertiary, style = HomelabType.footnote)
         }
-        if (items.isEmpty()) Text("Ingen trekk", color = p.mut, fontSize = 12.5.sp)
+        if (items.isEmpty()) Text("Ingen trekk", color = p.textTertiary, style = HomelabType.footnote)
         items.forEach { it2 ->
             val amt = it2.num51("amount")
-            Line51(it2.str51("name"), kindLabel51(it2.str51("kind")) + (it2.s43("account")?.takeIf { all }?.let { " · $it" } ?: ""), krS51(amt), if (amt > 0) p.pos else p.ink, top = false)
+            Line51(it2.str51("name"), kindLabel51(it2.str51("kind")) + (it2.s43("account")?.takeIf { all }?.let { " · $it" } ?: ""), krS51(amt), if (amt > 0) p.success else p.textPrimary, top = false)
         }
     }
 }
@@ -323,7 +326,7 @@ private fun srcLabel51(s: String) = when (s) { "transaksjoner" -> "Fra transaksj
 
 @Composable
 private fun Tax51(vm: AppViewModel, d: JSONObject) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val year = d.i43("year") ?: java.time.LocalDate.now().year - 1
     val y0 = java.time.LocalDate.now().year
     Cols51(
@@ -331,7 +334,7 @@ private fun Tax51(vm: AppViewModel, d: JSONObject) {
             d.obj51("reminder")?.takeIf { it.optBoolean("show") }?.let { r ->
                 Card51 {
                     PLabel("Skattemeldingen")
-                    Text(r.str51("text"), color = p.ink, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                    Text(r.str51("text"), color = p.textPrimary, style = HomelabType.callout, fontWeight = FontWeight.SemiBold)
                     r.s43("url")?.let { u -> val ctx = LocalContext.current; Btn51("Åpne skatteetaten.no") { runCatching { ctx.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(u))) } } }
                 }
             }
@@ -339,16 +342,16 @@ private fun Tax51(vm: AppViewModel, d: JSONObject) {
                 PLabel("Skattehjelp · inntektsåret $year")
                 val tot = d.obj51("total")
                 PSerif(kr51(tot?.num51("value") ?: 0.0), 28.sp)
-                Text("anslått skatteverdi av ${kr51(tot?.num51("deduction") ?: 0.0)} i fradrag", color = p.mut, fontSize = 13.sp)
+                Text("anslått skatteverdi av ${kr51(tot?.num51("deduction") ?: 0.0)} i fradrag", color = p.textTertiary, style = HomelabType.subheadline)
                 Choice51(listOf(y0, y0 - 1, y0 - 2).map { it.toString() to it.toString() }, year.toString()) { F51.ui["tax.year"] = it; vm.load51("tax", force = true) }
-                Text("Forbehold: " + d.str51("disclaimer") + (d.s43("ratesNote")?.let { " $it" } ?: ""), color = p.mut, fontSize = 12.sp)
+                Text("Forbehold: " + d.str51("disclaimer") + (d.s43("ratesNote")?.let { " $it" } ?: ""), color = p.textTertiary, style = HomelabType.footnote)
                 FlowRow51 {
                     Btn51("Del CSV", busy = F51.acting == "export") { vm.shareExport51("/fin51/tax/export.csv?year=$year", "skattehjelp-$year.csv", "text/csv") }
                     Btn51("Utskrift / PDF", busy = F51.acting == "export") { vm.shareExport51("/fin51/tax/export.html?year=$year", "skattehjelp-$year.html", "text/html") }
                 }
             }
             Card51 {
-                PSerif("Fradragsposter", 20.sp)
+                PSerif("Fradragsposter", HomelabType.headline.fontSize)
                 d.arr51("items").forEachIndexed { i, t -> key(t.str51("key")) { TaxItem51(t, i > 0) } }
             }
         },
@@ -358,7 +361,7 @@ private fun Tax51(vm: AppViewModel, d: JSONObject) {
 
 @Composable
 private fun TaxItem51(t: JSONObject, top: Boolean) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     var open by remember { mutableStateOf(false) }
     val skatte = t.str51("kind") == "skattefradrag"
     val sources = t.arr51("sources")
@@ -366,21 +369,21 @@ private fun TaxItem51(t: JSONObject, top: Boolean) {
         if (top) Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
         Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(t.str51("title"), color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 14.5.sp)
-                t.s43("note")?.let { Text(it, color = p.mut, fontSize = 12.5.sp) }
+                Text(t.str51("title"), color = p.textPrimary, fontWeight = FontWeight.SemiBold, style = HomelabType.callout)
+                t.s43("note")?.let { Text(it, color = p.textTertiary, style = HomelabType.footnote) }
                 val orgs = t.arr51("orgs")
-                if (orgs.isNotEmpty()) Text(orgs.joinToString(" · ") { o -> "${o.str51("org")} ${kr51(o.num51("amount"))}" + if (o.optBoolean("counts", true)) "" else " (under 500 kr)" }, color = p.mut, fontSize = 12.5.sp)
-                t.s43("missing")?.let { Text(it, color = p.lab, fontSize = 12.5.sp) }
+                if (orgs.isNotEmpty()) Text(orgs.joinToString(" · ") { o -> "${o.str51("org")} ${kr51(o.num51("amount"))}" + if (o.optBoolean("counts", true)) "" else " (under 500 kr)" }, color = p.textTertiary, style = HomelabType.footnote)
+                t.s43("missing")?.let { Text(it, color = p.accent, style = HomelabType.footnote) }
             }
             Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                Text(kr51(if (skatte) t.num51("basis") else t.num51("deduction")), color = p.ink, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                Text("${if (skatte) "grunnlag" else "fradrag"} · verdi ${kr51(t.num51("value"))}", color = p.mut, fontSize = 11.5.sp)
+                Text(kr51(if (skatte) t.num51("basis") else t.num51("deduction")), color = p.textPrimary, fontWeight = FontWeight.Bold, style = HomelabType.callout)
+                Text("${if (skatte) "grunnlag" else "fradrag"} · verdi ${kr51(t.num51("value"))}", color = p.textTertiary, style = HomelabType.caption, fontWeight = FontWeight.Normal)
                 val src = t.str51("source")
                 Tag51(srcLabel51(src), when (src) { "mangler" -> "mut"; "anslag" -> "warn"; else -> "ok" })
             }
         }
         if (sources.isNotEmpty()) {
-            Text(if (open) "Skjul transaksjonene" else "${sources.size} transaksjoner ›", color = p.lab, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
+            Text(if (open) "Skjul transaksjonene" else "${sources.size} transaksjoner ›", color = p.accent, style = HomelabType.subheadline, fontWeight = FontWeight.SemiBold,
                 modifier = Modifier.heightIn(min = 40.dp).clickable { open = !open }.padding(vertical = 8.dp))
             if (open) sources.forEach { s -> Line51(s.str51("name"), s.s43("date"), kr51(s.num51("amount"), true), top = false) }
         }
@@ -389,7 +392,7 @@ private fun TaxItem51(t: JSONObject, top: Boolean) {
 
 @Composable
 private fun TaxProfile51(vm: AppViewModel, pr: JSONObject, year: Int) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     fun v(k: String) = pr.d43(k)?.takeIf { it != 0.0 }?.let { num51(it, if (it % 1.0 > 0.004) 2 else 0) }.orEmpty()
     var km by remember(pr) { mutableStateOf(v("commuteKm")) }
     var days by remember(pr) { mutableStateOf(pr.i43("workDays")?.toString() ?: "230") }
@@ -401,20 +404,20 @@ private fun TaxProfile51(vm: AppViewModel, pr: JSONObject, year: Int) {
     var remind by remember(pr) { mutableStateOf(pr.optBoolean("remind", true)) }
     val dec = KeyboardOptions(keyboardType = KeyboardType.Decimal)
     Card51 {
-        PSerif("Det du vet best selv", 20.sp)
-        Text("Brukes i anslaget for $year. Lagres bare for deg.", color = p.mut, fontSize = 12.5.sp)
+        PSerif("Det du vet best selv", HomelabType.headline.fontSize)
+        Text("Brukes i anslaget for $year. Lagres bare for deg.", color = p.textTertiary, style = HomelabType.footnote)
         PField("Avstand til jobben, én vei (km)", km, { km = it }, keyboard = dec)
         PField("Arbeidsdager i året", days, { days = it }, keyboard = KeyboardOptions(keyboardType = KeyboardType.Number))
         PField("Renter på lån (kr, hvis ikke i transaksjonene)", loan, { loan = it }, keyboard = dec)
         PField("Fagforening (kr, i tillegg)", union, { union = it }, keyboard = dec)
         PField("BSU-innskudd i året (kr)", bsu, { bsu = it }, keyboard = dec)
         PField("IPS-innskudd i året (kr)", ips, { ips = it }, keyboard = dec)
-        Text("Andre gaver – én per linje: «Organisasjon: beløp»", color = p.mut, fontSize = 12.sp)
+        Text("Andre gaver – én per linje: «Organisasjon: beløp»", color = p.textTertiary, style = HomelabType.footnote)
         androidx.compose.foundation.text.BasicTextField(
             gifts, { gifts = it.take(2000) },
-            textStyle = androidx.compose.ui.text.TextStyle(color = p.ink, fontSize = 15.sp, fontFamily = PaperFonts.sans),
-            cursorBrush = androidx.compose.ui.graphics.SolidColor(p.lab),
-            modifier = Modifier.fillMaxWidth().heightIn(min = 72.dp).clip(RoundedCornerShape(12.dp)).background(p.surf2).padding(12.dp)
+            textStyle = androidx.compose.ui.text.TextStyle(color = p.textPrimary, fontSize = HomelabType.callout.fontSize, fontFamily = PaperFonts.sans),
+            cursorBrush = androidx.compose.ui.graphics.SolidColor(p.accent),
+            modifier = Modifier.fillMaxWidth().heightIn(min = 72.dp).clip(RoundedCornerShape(12.dp)).background(p.surfaceSunken).padding(12.dp)
                 .semantics { contentDescription = "Andre gaver" },
         )
         PToggle("Påminnelse om skattemeldingen", "Når den kommer (mars) og før fristen (april)", remind) { remind = it }
@@ -433,7 +436,7 @@ private fun TaxProfile51(vm: AppViewModel, pr: JSONObject, year: Int) {
 
 @Composable
 private fun Prices51(vm: AppViewModel, d: JSONObject) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     var q by remember { mutableStateOf(F51.opt("pris.q", "")) }
     val items = d.arr51("items")
     Cols51(
@@ -443,7 +446,7 @@ private fun Prices51(vm: AppViewModel, d: JSONObject) {
                     onDone = { F51.ui["pris.q"] = q.trim(); vm.load51("prices", force = true) })
                 Choice51(listOf("change" to "Mest økt", "count" to "Mest kjøpt", "name" to "Navn"), F51.opt("pris.sort", "change")) { F51.ui["pris.sort"] = it; vm.load51("prices", force = true) }
                 if (items.isEmpty()) Text(if (F51.opt("pris.q", "").isNotBlank()) "Ingen varer passer søket." else "Ingen varelinjer ennå. Skann kvitteringer med varelinjer, så følger FinansHub prisene for deg.",
-                    color = p.mut, fontSize = 13.sp)
+                    color = p.textTertiary, style = HomelabType.subheadline)
                 items.forEachIndexed { i, it -> key(it.str51("key")) { PriceRow51(vm, it, i > 0) } }
             }
         },
@@ -451,14 +454,14 @@ private fun Prices51(vm: AppViewModel, d: JSONObject) {
             d.obj51("basket")?.let { b ->
                 Card51 {
                     PLabel("Billigste butikk for det du kjøper")
-                    PSerif(b.str51("text"), 19.sp)
+                    PSerif(b.str51("text"), HomelabType.headline.fontSize)
                     val stores = b.arr51("stores")
                     val first = stores.firstOrNull()?.num51("index") ?: 0.0
                     stores.forEachIndexed { i, s ->
                         Line51(s.str51("store"), "${s.i43("items") ?: 0} varer sammenlignet · billigst på ${s.i43("cheapestFor") ?: 0}",
-                            if (i == 0) "billigst" else "+${num51(s.num51("index") - first)} %", if (i == 0) p.pos else p.ink, top = i > 0)
+                            if (i == 0) "billigst" else "+${num51(s.num51("index") - first)} %", if (i == 0) p.success else p.textPrimary, top = i > 0)
                     }
-                    Text("${d.i43("receipts") ?: 0} kvitteringer · ${d.i43("count") ?: 0} varer · ${d.i43("raised") ?: 0} har økt minst 5 %", color = p.mut, fontSize = 12.5.sp)
+                    Text("${d.i43("receipts") ?: 0} kvitteringer · ${d.i43("count") ?: 0} varer · ${d.i43("raised") ?: 0} har økt minst 5 %", color = p.textTertiary, style = HomelabType.footnote)
                 }
             }
         },
@@ -467,7 +470,7 @@ private fun Prices51(vm: AppViewModel, d: JSONObject) {
 
 @Composable
 private fun PriceRow51(vm: AppViewModel, it: JSONObject, top: Boolean) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val k = it.str51("key")
     val open = F51.ui["pris.open"] == k
     val last = it.obj51("last")
@@ -480,14 +483,14 @@ private fun PriceRow51(vm: AppViewModel, it: JSONObject, top: Boolean) {
             }.padding(vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
-            Text(it.str51("name"), color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 14.5.sp)
-            Text("${num51(last?.num51("price") ?: 0.0, 2)} kr/${it.str51("unit", "stk")} · ${last?.str51("store").orEmpty()} · ${it.i43("count") ?: 0} kjøp", color = p.mut, fontSize = 12.5.sp)
-            Text(it.str51("changeText"), color = if (ch >= 1) p.lab else if (ch <= -1) p.pos else p.mut, fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold)
-            it.obj51("cheapest")?.let { c -> Text("Billigst: ${c.str51("store")} ${num51(c.num51("price"), 2)} kr (−${num51(c.num51("savingPct"))} %)", color = p.mut, fontSize = 12.5.sp) }
+            Text(it.str51("name"), color = p.textPrimary, fontWeight = FontWeight.SemiBold, style = HomelabType.callout)
+            Text("${num51(last?.num51("price") ?: 0.0, 2)} kr/${it.str51("unit", "stk")} · ${last?.str51("store").orEmpty()} · ${it.i43("count") ?: 0} kjøp", color = p.textTertiary, style = HomelabType.footnote)
+            Text(it.str51("changeText"), color = if (ch >= 1) p.accent else if (ch <= -1) p.success else p.textTertiary, style = HomelabType.footnote, fontWeight = FontWeight.SemiBold)
+            it.obj51("cheapest")?.let { c -> Text("Billigst: ${c.str51("store")} ${num51(c.num51("price"), 2)} kr (−${num51(c.num51("savingPct"))} %)", color = p.textTertiary, style = HomelabType.footnote) }
         }
         if (open) {
             val det = F51.data["priceItem"]?.takeIf { d -> d.str51("key") == k }
-            if (det == null) { if (F51.err["priceItem"] != null) Text(F51.err["priceItem"]!!, color = p.lab, fontSize = 13.sp) else Loading51() }
+            if (det == null) { if (F51.err["priceItem"] != null) Text(F51.err["priceItem"]!!, color = p.accent, style = HomelabType.subheadline) else Loading51() }
             else {
                 PriceChart51(det.arr51("points"))
                 it.arr51("stores").forEach { s ->
@@ -498,13 +501,13 @@ private fun PriceRow51(vm: AppViewModel, it: JSONObject, top: Boolean) {
     }
 }
 
-private val STORECOLORS51 = listOf(Color(0xFF2B5D8A), Color(0xFFB23A2A), Color(0xFF2F7A4F), Color(0xFFC08A1E), Color(0xFF6B4FA0))
+private val STORECOLORS51 = DsPalette.Category.let { listOf(it.blue, it.red, it.green, it.amber, it.purple) }
 
 /** Pris over tid, én linje per butikk. */
 @Composable
 private fun PriceChart51(points: List<JSONObject>) {
     if (points.isEmpty()) return
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val stores = points.map { it.str51("store") }.distinct()
     val pts = points.mapNotNull { o -> runCatching { java.time.LocalDate.parse(o.str51("date").take(10)).toEpochDay() }.getOrNull()?.let { Triple(it, o.num51("price"), o.str51("store")) } }
     if (pts.isEmpty()) return
@@ -526,7 +529,7 @@ private fun PriceChart51(points: List<JSONObject>) {
         stores.forEachIndexed { si, s ->
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                 Box(Modifier.size(10.dp).clip(CircleShape).background(STORECOLORS51[si % STORECOLORS51.size]))
-                Text(s, color = p.ink, fontSize = 12.sp)
+                Text(s, color = p.textPrimary, style = HomelabType.footnote)
             }
         }
     }
@@ -536,23 +539,23 @@ private fun PriceChart51(points: List<JSONObject>) {
 
 @Composable
 private fun Hunter51(vm: AppViewModel, d: JSONObject) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val sum = d.obj51("summary") ?: JSONObject()
     val finds = d.arr51("findings")
     Cols51(
         left = {
             if (finds.isEmpty()) Empty51("Ingen funn akkurat nå", "Jegeren ser etter prisøkninger i banktrekkene, doble abonnementer og abonnementer uten bruk.")
             finds.forEach { f -> key(f.str51("key")) { Finding51(vm, f) } }
-            Text("Oppsigelsesteksten skrives av en lokal modell på hjemmeserveren og sendes aldri automatisk.", color = p.mut, fontSize = 12.sp)
+            Text("Oppsigelsesteksten skrives av en lokal modell på hjemmeserveren og sendes aldri automatisk.", color = p.textTertiary, style = HomelabType.footnote)
         },
         right = {
             Card51 {
                 PLabel("Abonnementsjeger")
                 PSerif(kr51(sum.num51("monthlySaving")), 28.sp)
-                Text("per måned å spare (${kr51(sum.num51("yearlySaving"))} i året)", color = p.mut, fontSize = 13.sp)
-                Text("Ubrukt etter", color = p.mut, fontSize = 12.sp)
+                Text("per måned å spare (${kr51(sum.num51("yearlySaving"))} i året)", color = p.textTertiary, style = HomelabType.subheadline)
+                Text("Ubrukt etter", color = p.textTertiary, style = HomelabType.footnote)
                 Choice51(listOf("4", "6", "8", "12").map { it to "$it uker" }, (d.i43("weeks") ?: 6).toString()) { F51.ui["jakt.weeks"] = it; vm.load51("hunter", force = true) }
-                Text(sum.str51("text") + ". " + d.obj51("signals")?.str51("note").orEmpty(), color = p.ink, fontSize = 13.sp)
+                Text(sum.str51("text") + ". " + d.obj51("signals")?.str51("note").orEmpty(), color = p.textPrimary, style = HomelabType.subheadline)
                 val dis = sum.i43("dismissed") ?: 0
                 if (dis > 0) Btn51("Vis $dis skjulte igjen") { vm.act51("undismiss", "DELETE", Api.FINANS, "/fin51/hunter/dismiss", reload = listOf("hunter")) }
             }
@@ -562,7 +565,7 @@ private fun Hunter51(vm: AppViewModel, d: JSONObject) {
 
 @Composable
 private fun Finding51(vm: AppViewModel, f: JSONObject) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val ctx = LocalContext.current
     val kind = f.str51("kind")
     val (lab, tone) = when (kind) { "price_up" -> "Prisøkning" to "warn"; "double" -> "Dobbelt" to "warn"; "unused" -> "Ubrukt" to "mut"; else -> kind to "mut" }
@@ -572,13 +575,13 @@ private fun Finding51(vm: AppViewModel, f: JSONObject) {
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Tag51(lab, tone)
-                PSerif(f.str51("title"), 19.sp)
-                Text(f.str51("text"), color = p.ink, fontSize = 13.sp)
+                PSerif(f.str51("title"), HomelabType.headline.fontSize)
+                Text(f.str51("text"), color = p.textPrimary, style = HomelabType.subheadline)
             }
             val sv = f.num51("saving")
             if (sv > 0) Column(horizontalAlignment = Alignment.End) {
-                Text(kr51(sv), color = p.ink, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                Text("per mnd", color = p.mut, fontSize = 11.5.sp)
+                Text(kr51(sv), color = p.textPrimary, fontWeight = FontWeight.Bold, style = HomelabType.callout)
+                Text("per mnd", color = p.textTertiary, style = HomelabType.caption, fontWeight = FontWeight.Normal)
             }
         }
         FlowRow51 {
@@ -590,13 +593,13 @@ private fun Finding51(vm: AppViewModel, f: JSONObject) {
             }
             Btn51("Skjul") { vm.act51("dismiss", "POST", Api.FINANS, "/fin51/hunter/dismiss", JSONObject().put("key", f.str51("key")), reload = listOf("hunter")) }
         }
-        if (F51.acting == "draft${f.str51("key")}") Text("Skriver med den lokale modellen …", color = p.mut, fontSize = 13.sp)
+        if (F51.acting == "draft${f.str51("key")}") Text("Skriver med den lokale modellen …", color = p.textTertiary, style = HomelabType.subheadline)
         draft?.let { dr ->
-            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(p.surf2).padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(dr.str51("subject"), color = p.ink, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                Text(dr.str51("text"), color = p.ink, fontSize = 13.5.sp)
+            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(p.surfaceSunken).padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(dr.str51("subject"), color = p.textPrimary, fontWeight = FontWeight.Bold, style = HomelabType.callout)
+                Text(dr.str51("text"), color = p.textPrimary, style = HomelabType.subheadline)
                 val eng = if (dr.str51("engine") == "lokal") "Skrevet av lokal modell" + (dr.s43("model")?.let { " ($it)" } ?: "") else "Mal"
-                Text(eng + (dr.s43("notice")?.let { " · $it" } ?: "") + ". " + dr.str51("note"), color = p.mut, fontSize = 12.sp)
+                Text(eng + (dr.s43("notice")?.let { " · $it" } ?: "") + ". " + dr.str51("note"), color = p.textTertiary, style = HomelabType.footnote)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Btn51("Kopier", "ink") {
                         val cm = ctx.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
