@@ -244,7 +244,7 @@ export function logo(t, size = 40, radius = 12) {
   const c = t?.color && t.color !== '#A0A0AA' ? t.color : it.farge || t?.color;
   if (it.hasFile === false) return coreLogo({ ...t, domain: t?.domain || it.domene || null, color: c }, size, radius);
   const name = t?.description ?? t?.merchant ?? t?.name ?? it.navn;
-  return `<span class="m-logo" style="width:${size}px;height:${size}px;border-radius:${radius}px;flex:none"><img src="${fileUrl(it)}" alt="" loading="lazy" width="${size - 8}" height="${size - 8}"><i style="color:${esc(c || '#A0A0AA')}">${esc(String(name).replace(/[^A-Za-zÆØÅæøå0-9]/g, '').charAt(0).toUpperCase() || '•')}</i></span>`;
+  return `<span class="m-logo tint" style="width:${size}px;height:${size}px;border-radius:${radius}px;flex:none;--ini-c:${esc(c || '#A0A0AA')}"><img src="${fileUrl(it)}" alt="" loading="lazy" width="${size - 8}" height="${size - 8}"><i>${esc(String(name).replace(/[^A-Za-zÆØÅæøå0-9]/g, '').charAt(0).toUpperCase() || '•')}</i></span>`;
 }
 /** Papir-radene (.pp-ti): bokstav i butikkens farge, med logo over når registeret har en fil. */
 export function ppTi(t, letter, color) {

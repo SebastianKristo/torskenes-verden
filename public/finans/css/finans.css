@@ -785,3 +785,10 @@ html[data-v3]{--accf-check:var(--card2);--accf-check-ink:var(--card2-ink)}
 :where(html[data-ui=desktop]) .orig-img.zoom{cursor:zoom-out}
 :where(html[data-ui=desktop]) .orig-img.zoom img{width:220%;max-width:none}
 :where(html[data-ui=desktop]) .orig-pdf{flex:1;width:100%;min-height:60vh;border:0;border-radius:18px;background:#fff}
+
+/* Initialer i stedet for logo (logo() i core.js, desktop og mobil). Fargen kommer som --ini-c. Før var teksten selve fargen på en
+   18 % tonet flate, som ga ned mot 1:1 i kontrast for lyse farger på papir og mørke farger i mørk modus. Nå blandes teksten
+   halvveis mot svart (lys modus) eller hvitt (mørk modus): minst 5:1 for alle kategori- og merkefargene. */
+.m-ini.tint,.m-logo.tint.err{background:color-mix(in oklab,var(--ini-c) 18%,transparent)}
+.m-ini.tint,.m-logo.tint i{color:var(--ini-c);color:color-mix(in oklab,var(--ini-c) 50%,black)}
+:is(html[data-ui=desktop][data-theme=mork],html[data-ui=desktop][data-theme=glod],.m:not(.pl)) :is(.m-ini.tint,.m-logo.tint i){color:color-mix(in oklab,var(--ini-c) 50%,white)}
