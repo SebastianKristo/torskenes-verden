@@ -89,6 +89,7 @@ import { traceObs51, mountObs51, startObs51 } from './obs51/index.js'; // prompt
 import { mountQa51, startQa51, reportServerError51 } from './qa51.js'; // prompt 51 (QA51): feature flags, krasjrapporter (GlitchTip), «Nytt i denne versjonen»
 import { errorShape, API_PREFIXES, serverError } from './http/errors.js'; // felles feilform {error, code} for /api og /finans/api
 import { tokenStateOf } from './finans/routes.js';
+import { aliasCounter } from './http/aliases.js'; // Q29: eldre API-aliaser samlet i én tabell, bruken telles
 import { badInput85 } from './badinput85.js'; // prompt 85 (SRVSEC85): feil i kroppen fra klienten → 400, ikke 500
 import { anonBodyCap85 } from './anonbody85.js'; // prompt 85 (SRVSEC85): store kropper bare fra innloggede klienter
 import { mountMedfam51, startMedfam51 } from './medfam51/index.js'; // prompt 51 (MEDFAM51): familiekalender med «hvem kjører?», «I kveld», undertekster, lagring, lydbøker
@@ -130,6 +131,9 @@ traceObs51(app); // prompt 51 (OBS51): spor for trege forespørsler (DB, AI, eks
 // Felles feilform: alle feilsvar fra /api og /finans/api blir JSON {error, code} (også ukjent sti og 500). Før alle ruter,
 // så den ser det endelige svaret. Se server/http/errors.js og shared/schemas/common/error.schema.json.
 for (const p of API_PREFIXES) app.use(p, errorShape({ tokenState: tokenStateOf }));
+// Q29: hver bruk av et eldre alias (tabellen i server/http/aliases.js) telles i kv, admin ser det på GET /api/admin/aliases.
+const aliases = aliasCounter({ kv, owner: OWNER });
+for (const p of ['/api/*', '/finans/api/*', '/mat/api/*', '/home/api/*']) app.use(p, aliases.middleware);
 // Prompt 36: «Starter opp»-siden. Registrert før secureHeaders: siden er én fil med innebygd skript/stil, så den får sin
 // egen strenge CSP (ingen eksterne skript, bare fonten fra Google Fonts, fetch bare til samme opphav).
 app.get('/starting.html', async (c) => c.body(await readFile(join(resolve('public'), 'starting.html'), 'utf8'), 200, {
@@ -938,6 +942,7 @@ app.route('/api', api36); // prompt 36: /dashboard/layout og /weather/places/sum
 app.route('/api/bible', bibleApi); // prompt 37: dagens bibelvers (bare med modulen)
 app.route('/api', profilesApi); // prompt 37: profiler og onboarding
 app.route('/api', study44Api); // prompt 44: /study/documents, /study/overview
+app.get('/api/admin/aliases', authOrToken, (c) => (isAdmin(c.get('user')) ? c.json({ aliases: aliases.usage() }) : c.json({ error: 'Bare administratorer har tilgang', restricted: true }, 403))); // Q29
 app.route('/api', admin44Api); // prompt 44: /admin/impersonate, /users/:id/layout, /server/owner
 app.use('/api/me/layout', layoutLockMw44); // prompt 44: låst oppsett
 setMobileApi44(mobileApi);

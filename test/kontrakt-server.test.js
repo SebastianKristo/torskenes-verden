@@ -87,3 +87,43 @@ test('Q23: fast utløp forlenges ikke, og migreringen gir eldre tokens uten utl�
   assert.deepEqual({ ...fhDb.prepare('SELECT expires, sliding FROM fh_tokens WHERE id=?').get('gammel-app') }, { expires: now + TOKEN_SLIDE_MS, sliding: 1 });
   assert.deepEqual({ ...fhDb.prepare('SELECT expires, sliding FROM fh_tokens WHERE id=?').get('glimt-api') }, { expires: null, sliding: 0 });
 });
+
+const { aliasFor, aliasCounter, ALIASES, KV_KEY } = await import('../server/http/aliases.js');
+const { kv, OWNER } = await import('../server/db.js');
+
+test('Q29: alias-tabellen – lengste treff vinner, metode teller, kanoniske stier er ikke aliaser', () => {
+  assert.equal(aliasFor('POST', '/api/finans/kvitteringer/ocr').alias, '/api/finans/kvitteringer/ocr');
+  assert.equal(aliasFor('POST', '/api/finans/kvitteringer').alias, '/api/finans/kvitteringer');
+  assert.equal(aliasFor('GET', '/api/integrasjoner/status').alias, '/api/integrasjoner');
+  assert.equal(aliasFor('GET', '/api/integrations/status'), null);
+  assert.equal(aliasFor('GET', '/finans/api/login'), null); // bare POST er alias
+  assert.equal(aliasFor('GET', '/api/updates'), null); // prefiks må være hele segment
+  assert.equal(new Set(ALIASES.map((a) => a.alias + (a.method ?? ''))).size, ALIASES.length, 'ingen dubletter');
+});
+
+test('Q29: bruken telles i kv og vises for admin på /api/admin/aliases', async () => {
+  const store = new Map();
+  const fake = { get: (u, k, f) => (store.has(`${u}/${k}`) ? structuredClone(store.get(`${u}/${k}`)) : f), set: (u, k, v) => store.set(`${u}/${k}`, structuredClone(v)) };
+  let t = Date.UTC(2026, 10, 15, 12);
+  const ctr = aliasCounter({ kv: fake, owner: 'o', now: () => t, flushMs: 60_000 });
+  const ctx = (method, path) => ({ req: { method, path } });
+  for (let i = 0; i < 3; i++) await ctr.middleware(ctx('GET', '/api/studie/docs'), async () => {});
+  await ctr.middleware(ctx('GET', '/api/study/docs'), async () => {});
+  t += 86400_000 * 2;
+  const u = ctr.usage().find((x) => x.alias === '/api/studie');
+  assert.equal(u.count, 3);
+  assert.equal(u.daysSinceUse, 2);
+  assert.equal(ctr.usage().find((x) => x.alias === '/api/rom').count, 0);
+  assert.equal(store.get(`o/${KV_KEY}`)['/api/studie'].n, 3);
+
+  // Hele appen: et kall mot /api/integrasjoner telles, og bare admin ser listen.
+  const cookie = (await app.request('/api/login', { method: 'POST', headers: { 'content-type': 'application/json', 'x-forwarded-for': '198.51.100.200' }, body: JSON.stringify({ username: 'sebastian', password: 'testpassord1' }) })).headers.get('set-cookie').split(';')[0];
+  await req('/api/integrasjoner', { headers: { cookie } });
+  const r = await req('/api/admin/aliases', { headers: { cookie } });
+  assert.equal(r.status, 200);
+  const row = r.body.aliases.find((a) => a.alias === '/api/integrasjoner');
+  assert.ok(row.count >= 1);
+  assert.match(row.lastUsedAt, /^\d{4}-\d{2}-\d{2}T/);
+  assert.ok((kv.get(OWNER, KV_KEY, {}) ?? {})['/api/integrasjoner'].n >= 1);
+  assert.equal((await req('/api/admin/aliases')).status, 401);
+});
