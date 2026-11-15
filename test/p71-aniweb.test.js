@@ -118,10 +118,10 @@ test('mikrofon-bølgeformen, Hjem-flisene og fanebyttet bruker animasjonsbilder 
   assert.doesNotMatch(wave, /setInterval/);
   assert.match(wave, /requestAnimationFrame/);
   assert.match(wave, /if \(last\[i\] !== tf\)/, 'bare endrede streker skrives');
-  const h = ALL.find((x) => x.rel === 'js/home52.js').text;
+  const h = ALL.find((x) => x.rel === 'js/oversikt-mobil.js').text;
   assert.match(h, /function flip71\(/);
   assert.match(h, /\.animate\(\[\{ translate:/);
-  const w = ALL.find((x) => x.rel === 'js/web52.js').text;
+  const w = ALL.find((x) => x.rel === 'js/startup.js').text;
   const pe = w.slice(w.indexOf('function pageEnter'), w.indexOf('/* ---------------- Ruter: buffer')).replace(/\/\/.*$/gm, '');
   assert.doesNotMatch(pe, /offsetWidth/);
   assert.match(pe, /\.animate\(/); // prompt 87: innholdet animeres, ikke hele visningen (fotovinduet står i ro)

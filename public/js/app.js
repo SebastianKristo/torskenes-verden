@@ -17,15 +17,12 @@ import { logout, noteUser } from './usercache.js';
 import { loadAppIdentity, appName } from './appicon.js';
 import { scrollMemory } from './scrollmem.js';
 import { startVersionCheck } from './vercheck.js';
-import { initWeb36 } from './web36.js';
-import { initWeb37 } from './web37.js';
-import { initWeb38 } from './web38.js';
-import { initWeb40 } from './web40.js';
-import { initWeb41, after41 } from './web41.js';
+import { initShell } from './shell.js'; // små ting i skallet (Vær-trykk, Mac-appen, låsetast, julemodus, Oslo-bakgrunn …)
+import { initMai17, afterMai17 } from './mai17.js'; // 17. mai på Hjem
 import { loadHlTheme, applyHlTheme, is2c, setHlTheme, pwHeader, paintPhoto, bindPhoto } from './hltheme.js';
 import { initPageAddons, afterPageAddons, renderKart } from './page-addons.js'; // lys/mørk, GlimtInput, logg inn som, Glimt-agent og tillegg per side
 import { renderFam51, renderMedia51, afterMedfam51 } from './mediakveld-familiekalender.js'; // prompt 51 (MEDFAM51): Familiekalender og «I kveld»
-import { initWeb52, after52 } from './web52.js'; // prompt 52 (WEB52H): oppstart, sideanimasjon, Ruter-buffer m.m.
+import { initWeb52, after52 } from './startup.js'; // oppstart, sideanimasjon, Ruter-buffer m.m.
 import { initNavOverflow } from './nav-overflow.js'; // «Mer ▾» når fanene ikke får plass (B-B1/B2)
 // Prompt 76 (SKJWEB): Skjold Lab (#/skjold) – skallet tegnes her, selve modulen (skjold.js) lastes ved behov.
 const renderSkjold76 = () => '<section class="sk76" id="sk76" aria-label="Skjold Lab" aria-busy="true"></section>';
@@ -34,7 +31,7 @@ const renderSkjold76 = () => '<section class="sk76" id="sk76" aria-label="Skjold
 // Skallet (topplinje, meny, søk, Glimt-feltet, temaer, innstillingsinngangen) er fortsatt statisk importert over.
 // MODS: modulnøkkel → lasting. ROUTES: rute → [modulnøkkel eller null, tegnefunksjon(modul)].
 const MODS = {
-  dash: () => Promise.all([import('./dash.js'), import('./dash-edit36.js')]).then(([d, e]) => ({ ...d, mountDash: e.mountDash, startEdit: e.startEdit })),
+  dash: () => Promise.all([import('./dash.js'), import('./dash-edit.js')]).then(([d, e]) => ({ ...d, mountDash: e.mountDash, startEdit: e.startEdit })),
   studie: () => import('./study-page.js'), // prompt 44: nytt Studie-design
   rom: () => import('./space.js'),
   hjem: () => import('./home.js'),
@@ -113,10 +110,10 @@ function renderRoute() {
   mountAll(view);
   setupDnd(view);
   if (route === 'dash') { mods.dash.mountDash(view); if (isEditingPending) { isEditingPending = false; requestAnimationFrame(() => mods.dash.startEdit()); } }
-  after41(route, view); // prompt 41: 17. mai på Hjem
+  afterMai17(route, view); // 17. mai på Hjem
   afterPageAddons(route, view);
   afterMedfam51(route, view); // prompt 51 (MEDFAM51)
-  after52(route, view); // prompt 52 (WEB52H)
+  after52(route, view); // oppstart og sideanimasjon (startup.js)
   if (route === 'skjold') import('./skjold.js').then((m) => m.mount(view)).catch((e) => console.warn('skjold76', e)); // prompt 76
   // Rom er en underside av «Mer» på mobil.
   const navKey = isMobile() && ['chat', 'rom', 'nettverk', 'hjem', 'matplan', 'sporing', 'familie', 'huskeliste', 'gjoremal', 'domener', 'bursdager', 'kalender', 'media', 'kart', 'familiekalender', 'mediakveld', 'skjold'].includes(route) ? 'mer' : route;
@@ -250,11 +247,8 @@ async function main() {
   bindSettings();
   if (!KAL_APP) loadUpdBanner(); // prompt 30: oppdateringsbanner (bare admin)
   bindPopup();
-  initWeb36();
-  if (!KAL_APP) initWeb37(); // onboarding og Vær-tilbake hører ikke hjemme i Mac-appen
-  initWeb38();
-  initWeb40();
-  initWeb41();
+  initShell(KAL_APP); // onboarding og Vær-tilbake hører ikke hjemme i Mac-appen
+  initMai17();
   initPageAddons(lay44);
   initWeb52();
   bindSearch();

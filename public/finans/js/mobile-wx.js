@@ -8,7 +8,7 @@ import { m, draw, flash } from './mobile.js';
 import { hlData } from './mobile-hl.js';
 import { CMP, cmpLoad } from './mobile-p17.js';
 import * as P39 from './mobile-p39.js'; // prompt 39: Yr mot Storm 2a med wiggle og Glimt · ukas vær
-import { WX2, normCmp, pentAt, cmpCard, bottomBtns, mapView, placesSheet, metricSheet, fxKind, fxAfterDraw, wx22Bind } from './mobile-wx22.js';
+import { WX2, normCmp, pentAt, cmpCard, bottomBtns, mapView, placesSheet, metricSheet, fxKind, fxAfterDraw, wx22Bind } from './mobile-vaer-kart-og-steder.js';
 import * as P25 from './mobile-p25.js';
 import { haptic } from './mobile-haptics.js';
 
@@ -412,6 +412,6 @@ export async function wxBind(e, t) {
 /** Etter tegning: animert værbakgrunn (prompt 22). */
 export function wxAfterDraw() { fxAfterDraw(m.screen === 'vaer' ? WX.fx : null); }
 export const wxPlaces = () => ({ WX, plist, wxLoad });
-// Prompt 46: Min posisjon brukes også fra Steder-arket (mobile-wx22.js) uten syklisk import.
+// Prompt 46: Min posisjon brukes også fra Steder-arket (mobile-vaer-kart-og-steder.js) uten syklisk import.
 globalThis.P46WX = { gpsEnsure, gpsState, GPS_ID };
 if (typeof document !== 'undefined') document.addEventListener('visibilitychange', () => { if (!document.hidden && WX.place === GPS_ID && m.screen === 'vaer') gpsEnsure(true); });

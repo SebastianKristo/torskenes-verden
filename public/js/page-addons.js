@@ -1,11 +1,11 @@
 // Sidetillegg på web: felles ting som kobles på ved oppstart, og tillegg per side som lastes ved behov etter at siden er tegnet.
 // Kalles fra app.js (initPageAddons ved oppstart, afterPageAddons etter hver side). Slått sammen fra web44.js, web45.js og web46.js.
-// - Oppstart: Lys · Mørk · Følg systemet (mode44.js), felles GlimtInput med Tab og forslag (glimt-input.js), «Logg inn som»
+// - Oppstart: Lys · Mørk · Følg systemet (mode.js), felles GlimtInput med Tab og forslag (glimt-input.js), «Logg inn som»
 //   (logg-inn-som.js), den felles Glimt-agenten (glimt-agent.js) og Innstillinger → Nyheter (settings-nyheter.js).
 // - Per side: Gjøremål (tasks-deloppgaver.js), Kalender (kalender-deltakere.js), Media (media-slett.js), Vær (weather-posisjon.js), Familie (family-soner.js)
 //   og Kart (kart.js, skallet tegnes med en gang og kartet monteres etterpå).
-// - Frem/tilbake i nettleseren: Media bruker pushState (media-side.js); Innstillinger og Kalender hadde det fra før.
-import { initMode } from './mode44.js';
+// - Frem/tilbake i nettleseren: Media bruker pushState (media44.js); Innstillinger og Kalender hadde det fra før.
+import { initMode } from './mode.js';
 import { initGlimtInput } from './glimt-input.js';
 import { initAs, asState } from './logg-inn-som.js';
 import { initAgent45 } from './glimt-agent.js';

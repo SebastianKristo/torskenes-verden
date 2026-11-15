@@ -154,7 +154,7 @@ test('stil: meny 38 px / flis 26 px, grå mono-etiketter, oransje «FLYTTET FRA�
   assert.match(CSS, /\.set-sec-t\{font:500 10\.5px[^}]*color:var\(--ds-text-secondary\)/); // B-F9: #8f897c ga 3,0:1
   assert.match(CSS, /\.set-moved\{[^}]*color:#c0562a/);
   assert.match(CSS, /\.si36\{width:28px;height:28px;border-radius:8px/);
-  assert.match(CSS, /#ece6da;color:#4a463f/);
+  assert.match(CSS, /var\(--ds-surface-chip\);color:#4a463f/); // Fase 3: brikkefyllet er token
   assert.match(CSS, /\.set-tabs65\{position:sticky/);
   assert.match(CSS, /\.set-tab65\{[^}]*height:38px[^}]*font:600 13\.5px/);
   assert.match(CSS, /\.set-tab65\[aria-selected="true"\]\{[^}]*border-bottom-color/);

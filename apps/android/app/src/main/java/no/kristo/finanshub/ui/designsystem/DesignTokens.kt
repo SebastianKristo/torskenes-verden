@@ -63,6 +63,15 @@ data class DsColors(
     val onDanger: Color,
     val focus: Color,
     val scrim: Color,
+    val surfaceField: Color,
+    val surfaceChip: Color,
+    val surfaceOverlay: Color,
+    val lineSubtle: Color,
+    val info: Color,
+    val onInfo: Color,
+    val successSoft: Color,
+    val warningSoft: Color,
+    val dangerSoft: Color,
     val category: DsCategoryColors,
 )
 
@@ -99,6 +108,15 @@ object DsPalette {
         onDanger = Color(0xFFFFFFFF),
         focus = Color(0xFF1B1A17),
         scrim = Color(0x59000000),
+        surfaceField = Color(0xFFFFFFFF),
+        surfaceChip = Color(0xFFECE6DA),
+        surfaceOverlay = Color(0xFFFFFDF8),
+        lineSubtle = Color(0xFFE3DDCF),
+        info = Color(0xFF2B5D8A),
+        onInfo = Color(0xFFFFFFFF),
+        successSoft = Color(0xFFE3EEE5),
+        warningSoft = Color(0xFFF4E8CF),
+        dangerSoft = Color(0xFFF6DFD8),
         category = Category,
     )
 
@@ -121,6 +139,15 @@ object DsPalette {
         onDanger = Color(0xFF1B1A17),
         focus = Color(0xFFEC7A64),
         scrim = Color(0x80000000),
+        surfaceField = Color(0xFF1C1A15),
+        surfaceChip = Color(0xFF2A261F),
+        surfaceOverlay = Color(0xFF211E18),
+        lineSubtle = Color(0xFF3A352C),
+        info = Color(0xFFA8D4FB),
+        onInfo = Color(0xFF1B1A17),
+        successSoft = Color(0x296FBF8F),
+        warningSoft = Color(0x29E0A85A),
+        dangerSoft = Color(0x29EC7A64),
         category = Category,
     )
 
@@ -146,6 +173,15 @@ object DsPalette {
         onDanger = Color(0xFF1B1A17),
         focus = Color(0xFFA8D4FB),
         scrim = Color(0x80000000),
+        surfaceField = Color(0xFF0B0E15),
+        surfaceChip = Color(0x14FFFFFF),
+        surfaceOverlay = Color(0xDB121926),
+        lineSubtle = Color(0xFF1F2736),
+        info = Color(0xFFA8D4FB),
+        onInfo = Color(0xFF1B1A17),
+        successSoft = Color(0x296FBF8F),
+        warningSoft = Color(0x29E0A85A),
+        dangerSoft = Color(0x29EC7A64),
         category = Category,
     )
 

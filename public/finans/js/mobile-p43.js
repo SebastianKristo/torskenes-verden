@@ -1,5 +1,5 @@
 // Prompt 43 (PWA43): mobilpunktene i design_handoff_homelab/prompts/prompt-43-pakke/ som trenger ny kode.
-//   · Media (mobile-p43m.js, lastes herfra) + Hjem-widget «Media» (h16) og Widgets-siden (Innstillinger → Widgets)
+//   · Media (mobile-media.js, lastes herfra) + Hjem-widget «Media» (h16) og Widgets-siden (Innstillinger → Widgets)
 //   · Gjøremål: hold inne på en pille → «Rekkefølge på lister» (dra ≡ eller ▲▼, Tilbakestill), «+ Ny liste» alltid sist
 //   · Chat → AI-kontroll → Importer: minne og samtaler fra Claude (POST /api/chat/import/claude …)
 //   · Stor skjerm (iPad/Fold, ≥ 600 og bredde ≥ 0,9 × høyde): klasse p43-big på roten (sentrerte ark, kolonner)
@@ -14,7 +14,7 @@ import * as P37 from './mobile-p37.js';
 import { glimtOrb } from './mobile-orb.js';
 import { vw, vh } from '/assets/js/lib/viewport.js'; // vindusstørrelsen uten tvungen layout
 
-let MED = null; // mobile-p43m.js
+let MED = null; // mobile-media.js
 export const media = () => MED;
 const vib = (p) => { try { navigator.vibrate?.(p); } catch {} };
 const svg = (d, s = 18, w = 2) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`;
@@ -305,7 +305,7 @@ export async function submit43(e, t) { return MED ? MED.submit43m(e, t) : false;
 
 export function boot43() {
   globalThis.P43 = { ...globalThis.P43, mediaHome, widgetGallery, claudeImport, bigOn, glimtOrb, mediaFrom: null };
-  import('./mobile-p43m.js').then((x) => { MED = x; x.boot43m(); globalThis.P43.media = x; if (document.documentElement.dataset.ui === 'mobile' && ['media', 'hl', 'set'].includes(m.screen)) draw(); }).catch((err) => console.warn('mobile-p43m', err));
+  import('./mobile-media.js').then((x) => { MED = x; x.boot43m(); globalThis.P43.media = x; if (document.documentElement.dataset.ui === 'mobile' && ['media', 'hl', 'set'].includes(m.screen)) draw(); }).catch((err) => console.warn('mobile-media', err));
   // «‹ Tilbake» i Media går dit man kom fra (Mer, Hjem-widgeten …).
   let prev = m.screen;
   addEventListener('hashchange', () => { setTimeout(() => { if (m.screen === 'media' && prev !== 'media') globalThis.P43.mediaFrom = prev === 'hl' ? 'hl' : prev === 'set' ? 'set/widgets' : 'mer'; if (m.screen !== 'huske') ORD.open = false; if (m.screen !== 'set') WG.how = null; prev = m.screen; }, 0); });

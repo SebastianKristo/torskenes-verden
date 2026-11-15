@@ -15,13 +15,33 @@ if (!document.getElementById('fh-ns32')) {
   document.head.appendChild(st);
 }
 
+// Fase 3: mobile.css (mobilvisningen, ~750 kB) har ingen href i index.html, så desktop verken laster eller tolker den.
+// Den slås på før mobilvisningen tegnes første gang, og av igjen når vinduet blir så bredt at desktop tar over.
+let mobileCssReady = null;
+function mobileCss(on) {
+  const l = document.getElementById('fh-mobile-css');
+  if (!l) return Promise.resolve();
+  if (!on) { l.disabled = true; return Promise.resolve(); }
+  if (mobileCssReady) { l.disabled = false; return mobileCssReady; }
+  mobileCssReady = new Promise((res) => {
+    const done = () => res();
+    l.addEventListener('load', done, { once: true });
+    l.addEventListener('error', done, { once: true }); // uten stiler er bedre enn en side som aldri tegnes
+    setTimeout(done, 10000);
+    l.disabled = false;
+    l.href = l.dataset.href;
+  });
+  return mobileCssReady;
+}
+
 let picking = 0;
 async function pick() {
   const mob = isMobile(), n = ++picking;
   let next;
-  try { next = await loadUi(mob); } catch (e) { delete UI[mob]; if (!ui) bootFail(e); return; }
+  try { [next] = await Promise.all([loadUi(mob), mobileCss(mob)]); } catch (e) { delete UI[mob]; if (!ui) bootFail(e); return; }
   if (n !== picking || next === ui) return; // et nyere valg (resize) har tatt over
   ui = next;
+  mobileCss(mob); // et raskere valg kan ha slått den av eller på i mellomtiden
   document.documentElement.dataset.ui = mob ? 'mobile' : 'desktop';
   const old = document.getElementById('app');
   const fresh = old.cloneNode(false); // fjern gamle lyttere
@@ -46,6 +66,7 @@ function bootFail(e) {
 
 async function start() {
   loadUi(isMobile()).catch(() => {});
+  mobileCss(isMobile()); // mobilstilene hentes parallelt med /bootstrap
   try { await loadBoot(); } catch (e) { bootFail(e); return; }
   onChange(() => ui?.draw());
   window.addEventListener('hashchange', () => ui?.route());

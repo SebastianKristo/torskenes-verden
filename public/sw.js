@@ -15,7 +15,7 @@
 // (sok-tema-offline.js, IndexedDB). Skrivinger går aldri via cachen.
 // Prompt 51 (MEDCTL51): v37 – fjernkontroll i Media › Avspilling › Spilles nå (media-fjernkontroll.js).
 // Prompt 51 (A11Y51): v38 – kontrast, berøringsflater og fokusmarkering (temavariabler i lys/mørk, web46.css).
-// Prompt 52 (WEB52H): v39 – oppstart med faneoppsett fra cache (boot52.js), sideanimasjon, Ruter-buffer, «Nytt i versjon» som papirkort.
+// Prompt 52 (WEB52H): v39 – oppstart med faneoppsett fra cache (nav-boot.js), sideanimasjon, Ruter-buffer, «Nytt i versjon» som papirkort.
 // Prompt 85: v40 – /api/state og /api/ui er med i lese-API-ene over. Uten dem stoppet oppstarten uten nett på «Kunne ikke starte:
 // Failed to fetch», så verken skallet eller de lagrede gjøremålene kom fram når appen ble åpnet eller lastet på nytt frakoblet.
 // Fase 3: v41 – skallet forhåndscaches ved installasjon (appskallet / og de statiske modulene og stilarkene det laster, med ?v=<build>),

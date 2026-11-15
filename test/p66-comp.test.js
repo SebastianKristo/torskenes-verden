@@ -16,7 +16,7 @@ test('punkt 1: kort og rad er ikke lenger bare for Papir – tokens per tema og 
   // Fargene som variabler: Nåværende (standard), Vindu og papir, papir i mørk modus, og AI-variablene inni .ac
   assert.match(W65, /#settings\{--s65-card:#111723;--s65-line:#1f2736;--s65-fld:#1a2231/);
   assert.match(W65, /html\[data-hl="2c"\] #settings\{--s65-card:#fffdf8;--s65-line:#ddd5c5;--s65-fld:#ece6da/);
-  assert.match(W65, /html\[data-mode="dark"\]\[data-hl="2c"\] #settings\{--s65-card:#1f1c17;--s65-line:#3a352c/);
+  assert.match(W65, /html\[data-mode="dark"\]\[data-hl="2c"\] #settings\{--s65-card:var\(--ds-surface-raised\);--s65-line:var\(--ds-line\)/); // Fase 3: tokens
   assert.match(W65, /#settings \.ac\{--s65-card:var\(--card\);--s65-line:var\(--line\)/);
   // Ingen kort-/radregler som bare gjelder Papir-temaet
   assert.ok(!/html\[data-hl="2c"\] #settings \.set-body \.sg-(box|row|t)\{/.test(W65));

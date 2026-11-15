@@ -1,6 +1,6 @@
-// Prompt 52 (claude-code-web-oppstart-animasjon.md): kjøres synkront rett etter topplinjen og bunnmenyen, før første tegning.
+// Faneoppsett ved oppstart (claude-code-web-oppstart-animasjon.md): kjøres synkront rett etter topplinjen og bunnmenyen, før første tegning.
 // Faneoppsettet (rekkefølge, skjulte faner, navn) og logo-teksten leses fra forrige besøk (localStorage hl_tabs52, skrevet av
-// web52.js), så skjulte faner aldri vises og riktig fane er markert fra første frame. Uten cache: fanepillen og innholdet vises
+// startup.js), så skjulte faner aldri vises og riktig fane er markert fra første frame. Uten cache: fanepillen og innholdet vises
 // som skjelett til appen har lest oppsettet. Innholdsområdet får skjelettkort til siden er tegnet.
 (function () {
   var de = document.documentElement;

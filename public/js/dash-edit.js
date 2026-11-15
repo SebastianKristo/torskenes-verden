@@ -1,4 +1,4 @@
-// Prompt 36: Dashboard på web som rutenett med full wiggle-redigering (fasit Dashboard Rediger Web.dc.html,
+// Oversikt (dashbordet) på web som rutenett med full wiggle-redigering (fasit Dashboard Rediger Web.dc.html,
 // claude-code-web-dashboard-rediger.md inkl. «Oppdatering (2)»).
 // - Widgetene ligger i et CSS-rutenett (4 · 6 · 8 · 12 kolonner) med {id, x, y, w, h} i rutenett-enheter og vertikal
 //   «tyngdekraft» (som gridstack/react-grid-layout). Høyden følger innholdet til brukeren selv endrer den (auto).

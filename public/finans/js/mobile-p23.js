@@ -10,6 +10,7 @@ import * as P34 from './mobile-p34.js'; // prompt 34: ✦ ANALYSERES AV AI i Kvi
 import { logo } from './mobile-p20.js';
 import { canSrv } from './mobile-p17.js';
 import { form48, via48, uncCls48, uncTag48, is48, flush48, bind48, setRedraw48, _e48 } from './kvittering-skjema.js'; // prompt 48: skjemaet for skannede kvitteringer
+import { appendChunks } from '/assets/js/lib/chunks.js';
 import { srcTag51, raw51, bind51, learn51 } from './kvittering-kilde.js'; // prompt 51: kilden til butikknavnet, «Rådata» og læring av butikknavn
 bind48(); setRedraw48(() => draw());
 bind51((id) => (S.receipts ?? []).find((x) => x.id === id));
@@ -214,6 +215,28 @@ function finishSwipe() {
    3. Kvitteringer i Papir (Mobil Papir App → kvitt)
    ===================================================================== */
 export const KV = { open: null, e: {}, del: null, busy: null };
+// Lange kvitteringslister i porsjoner (lib/chunks.js), som på desktop: de første KV_FIRST radene i hver boks med en gang, resten ved
+// scroll eller når nettleseren er ledig. Antallet huskes til kvitteringene hentes på nytt (mobilen tegner hele siden ved hver endring).
+const KV_FIRST = 40;
+const KVC = { src: null, shown: { rev: KV_FIRST, ok: KV_FIRST }, rest: [] };
+function kvShown(all, key, list, row, booked) {
+  if (all !== KVC.src) { KVC.src = all; KVC.shown = { rev: KV_FIRST, ok: KV_FIRST }; }
+  // En åpen kvittering langt nede i lista tegnes alltid.
+  const openIx = booked ? -1 : list.findIndex((r) => r.id === KV.open);
+  if (openIx >= KVC.shown[key]) KVC.shown[key] = openIx + 1;
+  const n = Math.min(KVC.shown[key], list.length);
+  if (n < list.length) KVC.rest.push({ key, list, row, booked, from: n });
+  return list.slice(0, n).map((r, i) => row(r, i, booked)).join('');
+}
+/** Etter tegningen av Kvitteringer: resten av radene i porsjoner. */
+export function kvAfterDraw() {
+  const rest = KVC.rest; KVC.rest = [];
+  for (const x of rest) {
+    const box = document.querySelector(`[data-kv-list="${x.key}"]`);
+    if (!box) continue;
+    appendChunks(box, x.list.length - x.from, (from, n) => { KVC.shown[x.key] += n; return x.list.slice(x.from + from, x.from + from + n).map((r, i) => x.row(r, x.from + from + i, x.booked)).join(''); }, { step: 40 });
+  }
+}
 const isRev = (r) => ['needs_review', 'failed', 'error'].includes(r.status);
 const thisMonth = (r) => String(r.date ?? new Date(r.created ?? 0).toLocaleDateString('sv-SE')).slice(0, 7) === today().slice(0, 7);
 const kr2 = (v) => `${(v ?? 0) > 0 ? '−' : ''}${n2(v ?? 0)}`;
@@ -231,6 +254,7 @@ function qItems() {
   return [...off, ...jobs];
 }
 export function kvView() {
+  KVC.rest = [];
   const all = S.receipts ?? [], rev = all.filter(isRev), ok = all.filter((r) => r.status === 'booked' && thisMonth(r)), Q = qItems();
   const cats = (S.boot?.categories ?? []).filter((c) => c.kind !== 'income' && c.kind !== 'transfer');
   const row = (r, i, booked) => {
@@ -262,8 +286,8 @@ export function kvView() {
     ${Q.length ? `${lab('KØ')}<div class="p23-box">${Q.map((x, i) => `<div class="p23-q" style="border-top:${i ? '1px solid var(--pp-line)' : '0'}"><span class="p23-qt"><b>${esc(x.n)}</b><span style="color:${x.c}">${esc(x.st)}</span><span class="p23-qbar"><i style="width:${x.w}%;background:${x.c}"></i></span></span>
       <button class="p23-qre" data-p23="${x.k === 'off' ? 'qretry' : 'qre'}" data-id="${esc(x.id)}">${x.k === 'off' ? '↻ Send nå' : '✦ Analyser på nytt'}</button></div>`).join('')}</div>` : ''}
     ${lab(`TIL GJENNOMGANG · ${rev.length}`)}
-    ${rev.length ? `<div class="p23-box">${rev.map((r, i) => row(r, i, false)).join('')}</div>` : '<div class="p23-box p23-none">Alt er gjennomgått ✓</div>'}
-    ${ok.length ? `${lab(`BOKFØRT · ${ok.length}`)}<div class="p23-box">${ok.map((r, i) => row(r, i, true)).join('')}</div>` : ''}
+    ${rev.length ? `<div class="p23-box" data-kv-list="rev">${kvShown(all, 'rev', rev, row, false)}</div>` : '<div class="p23-box p23-none">Alt er gjennomgått ✓</div>'}
+    ${ok.length ? `${lab(`BOKFØRT · ${ok.length}`)}<div class="p23-box" data-kv-list="ok">${kvShown(all, 'ok', ok, row, true)}</div>` : ''}
   </div>`;
 }
 async function rcBook(id) {

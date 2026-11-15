@@ -1,4 +1,4 @@
-// Prompt 51 (MEDCTL51): fjernkontroll for «Spilles nå» – felles for web (media-avspilling.js) og PWA (finans/js/mobile-p44a.js).
+// Prompt 51 (MEDCTL51): fjernkontroll for «Spilles nå» – felles for web (media-avspilling.js) og PWA (finans/js/mobile-avspilling.js).
 // Data: GET /api/medctl51/now → {items:[Ctl], audio:[Lyd], admin}. Kommando: POST /api/medctl51/sessions/:id/:action
 // (play|pause|toggle|stop|next|previous|seek {offset|position}|volume {volume}). Serveren avgjør hvem som kan styre hva
 // (egne avspillinger, admin alle) og har rate limit; her vises bare knappene serveren sier er lov. Tåler 404 (eldre server).

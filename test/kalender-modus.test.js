@@ -16,7 +16,7 @@ test('kalender: CSS og JS bruker html[data-mode], ikke et eget data-kal-theme', 
 
 test('kalender: lys/mørk-knappen bytter Homelab-modusen (samme valg som Innstillinger → Utseende)', () => {
   const js = read('public/js/kalender-tema.js');
-  assert.match(js, /import \{ webMode, setMode \} from '\.\/mode44\.js'/);
+  assert.match(js, /import \{ webMode, setMode \} from '\.\/mode\.js'/);
   assert.match(js, /setMode\(ORDER\[/);
   assert.doesNotMatch(js, /localStorage\.setItem\('kal_theme'/);
   assert.match(read('public/js/kalender-oppsett.js'), /themeBtn\(\)/);

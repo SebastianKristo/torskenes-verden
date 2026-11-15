@@ -1,4 +1,4 @@
-// Prompt 44 (claude-code-web-lys-mork-modus.md): Lys (standard) · Mørk · Følg systemet på web.
+// Modus på web (claude-code-web-lys-mork-modus.md): Lys (standard) · Mørk · Følg systemet på web.
 // - Valget lagres på brukeren (/api/me/layout · web_theme) og i localStorage «papir_web_mode», så hl-boot.js kan sette
 //   html[data-mode="light|dark"] før første tegning (ingen hvit blink).
 // - Følg systemet: matchMedia('(prefers-color-scheme: dark)') med change-lytter, bytter med en gang.

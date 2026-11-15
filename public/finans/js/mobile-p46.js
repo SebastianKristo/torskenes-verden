@@ -1,5 +1,5 @@
 // Prompt 46 (PWA46): mobilpunktene i design_handoff_homelab/prompts/prompt-46-pakke/ (kontrakt CONTRACT46.md).
-//   1. Kart (Mer → Kart, #/tkart) – mobile-p46k.js.
+//   1. Kart (Mer → Kart, #/tkart) – mobile-kart.js.
 //   2. Innstillinger → Nyheter (#/set/nyheter): innstillingene er flyttet fra Nyheter-siden; «…» på Nyheter har en snarvei.
 //      Kategori per kilde som nedtrekksmeny, favicon, «Sammendrag per kategori» og egne kategorier / «For deg» når serveren har det.
 //   3. Glimt-sammendrag øverst i hver kategori (GET /api/rss/digest?cat=, tåler 404 → bare «Siste» har sammendrag som før).
@@ -12,7 +12,7 @@ import { m, draw, flash } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
 import { WX } from './mobile-wx.js';
 import { newsSetBody, newsLoad, paperState as P } from './mobile-paper.js';
-import * as KART from './mobile-p46k.js';
+import * as KART from './mobile-kart.js';
 
 const NEWER = 'Krever en nyere Homelab-server';
 const errMsg = (e) => (e?.status === 404 || e?.status === 405 ? NEWER : e?.message || 'Noe gikk galt');

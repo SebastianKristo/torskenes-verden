@@ -1,5 +1,5 @@
 // Prompt 33: felles tekst for Innstillinger → «Widgets» (Slik legger du til widget) og «Kalender-appen», brukt av
-// web (settings-app.js) og PWA (finans/js/mobile-p33.js). Kilde: claude-code-widgets-vises-ikke.md og kontrakten (WEB33).
+// web (settings-app.js) og PWA (finans/js/mobile-glimt-husker.js). Kilde: claude-code-widgets-vises-ikke.md og kontrakten (WEB33).
 
 export const RELEASES = 'https://github.com/SebastianKristo/torskenes-verden/releases/latest';
 

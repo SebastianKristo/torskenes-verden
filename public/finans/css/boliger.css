@@ -5,7 +5,8 @@
   zoom:.8;color:var(--b-ink);font-family:Manrope,system-ui,sans-serif;font-size:18px;line-height:1.4;display:flex;flex-direction:column;gap:30px;padding:0 0 32px}
 html[data-theme=mork] .b42,html[data-theme=glod] .b42{--b-card:#1f1e1b;--b-line:#34322d;--b-line2:#2c2b27;--b-ink:#ece8df;--b-mute:#bdb6a8;--b-mute2:#ada698;--b-chip:#2a2925;--b-alt:#23221e;--b-hover:#2a2925;--b-row:#26251f;--b-head:#2a2925;--b-sheet:#1a1a17;--b-panel:#1a1a17;
   --b-green:#3f8a60;--b-green-h:#4a9a6d;--b-greenS:#1d2e23;--b-greenT:#a9dbbb;--b-red:#f0a090;--b-amber:#e8c27d;--b-yel:#3a3020;--b-yelB:#c08a3a;--b-yelT:#f3dcae;--b-dash:#5a564c;--b-btn:#ece8df;--b-btn-ink:#121210;--b-btn-h:#d6d1c6;--b-field:#2a2925;--b-fieldB:#3a3832;--b-spark:#3a3832;--b-ai:#262a24;--b-aiB:#4a5446;--b-blue:#8fb3dc}
-html[data-theme=glod] .b42{--b-card:#221a15;--b-line:#3a2d25;--b-line2:#2c221c;--b-chip:#2c221c;--b-alt:#261e19;--b-row:#2c221c;--b-head:#2c221c;--b-sheet:#16110e;--b-panel:#16110e;--b-field:#2c221c}
+/* Glass: flatene fra Økonomis glass-palett (finans.css, bygget på Homelabs glass-tokens). */
+html[data-theme=glod] .b42{--b-card:var(--card);--b-line:var(--line2);--b-line2:var(--line);--b-ink:var(--ds-text-primary);--b-chip:var(--inner);--b-alt:var(--card);--b-hover:var(--inner);--b-row:var(--inner);--b-head:var(--inner);--b-sheet:var(--ds-surface);--b-panel:var(--ds-surface);--b-field:var(--inner)}
 .b42 *{box-sizing:border-box}
 .b42 button,.b42 input,.b42 select{font-family:inherit;color:inherit}
 .b42 :is(button,input,select,a,[role=button]):focus-visible{outline:3px solid var(--b-ink);outline-offset:2px}

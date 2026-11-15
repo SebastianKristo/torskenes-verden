@@ -30,7 +30,7 @@ html:not([data-hl="2c"]){--hl40-amb:#c98a1b}
 .tw-lb{color:color-mix(in srgb,var(--c) 72%,var(--t-ink,#1b1a17))}
 html[data-mode="dark"] .tw-lb{color:color-mix(in srgb,var(--c) 45%,var(--t-ink,#f3efe6))}
 /* Innstillinger: tellermerket i mørk modus (hvitt på lys korall ga 2,8:1) */
-html[data-mode="dark"][data-hl="2c"] #settings .set-badge{color:#16140f}
+html[data-mode="dark"][data-hl="2c"] #settings .set-badge{color:var(--ds-on-accent)}
 /* Fokusmarkering: felt som skrur av omrisset får det tilbake ved tastaturfokus, og søkefelt-innpakninger viser fokus rundt hele feltet */
 :is(.field,.search,.bare,.ch-inp,.ch-ta,.bd-in,.k2-in,.m43-in,.fam-inp,.ci43-ta,.ci43-in,.tab-name):focus-visible{outline:2px solid var(--acc,var(--blue,#2f5d8a));outline-offset:1px}
 :is(.set-q,.bd-q,.k2-sf,.k3-sr-in,.ch-sf,.m43-gl,.ac-search,.sg-field):has(input:focus-visible,select:focus-visible){outline:2px solid var(--acc,var(--blue,#2f5d8a));outline-offset:2px}
@@ -40,4 +40,5 @@ html[data-mode="dark"][data-hl="2c"] #settings .set-badge{color:#16140f}
 @keyframes pgIn{from{opacity:0;transform:translate3d(0,10px,0)}to{opacity:1;transform:none}}
 /* Prompt 71 (ANIWEB71): «Reduser bevegelse» – ark og kort som ellers glir/skaleres inn, tones i stedet kort inn (150 ms). */
 @keyframes fade71{from{opacity:0}to{opacity:1}}
+/* !important: «Reduser bevegelse» skal vinne over animasjonene arkene setter selv. */
 @media (prefers-reduced-motion:reduce){.tk-sheet,.k2-sheet,.wxp-sheet,.gb-sheet,.ub-sheet,.gl-ans:not(.gl71-still),.v54-card{animation:fade71 .15s ease-out both!important}}

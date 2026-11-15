@@ -1,4 +1,4 @@
-// Prompt 52 (WEB52H): Hjem i PWA-en (mobil, papirdesign) som 2-kolonners rutenett – fasit Homelab.dc.html (Hjem, edVals PG.hjem)
+// Oversikt (Hjem) i PWA-en (mobil, papirdesign) som 2-kolonners rutenett – fasit Homelab.dc.html (Hjem, edVals PG.hjem)
 // og Hjem Widgets Varianter 3a.
 //  - Flisstil: 24 px hjørner, 16 px luft, 10 px mono-etikett, større serif-tall, uten «alle ›».
 //  - Halve fliser: Avgang (dobbelt høy), Finans, Middag, Familie, Domener, Kalender, Bursdag, Bolig, Prøve og Huskeliste.

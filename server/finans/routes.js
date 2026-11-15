@@ -226,11 +226,12 @@ function nextDate(r, from = new Date()) {
   if (x < new Date(from.toDateString())) x = clamp(d.getFullYear(), d.getMonth() + 1, r.day);
   return x;
 }
-const monthlyOf = (r) => perMonth(r.amount, r.interval); // samme omregning som abonnementene (cycles.js)
+// Beløp per måned (øre) for en fast utgift, samme omregning som abonnementene (cycles.js). Sendes som `monthly` (kr), så klientene ikke regner selv.
+const monthlyOf = (r) => perMonth(r.amount, r.interval);
 
 function recurringOut(r, cats = catById()) {
   const cat = cats.get(r.category_id);
-  return { id: r.id, name: r.name, amount: r.amount / 100, interval: r.interval, day: r.day, month: r.month, active: !!r.active, detected: !!r.detected,
+  return { id: r.id, name: r.name, amount: r.amount / 100, monthly: Math.round(monthlyOf(r)) / 100, interval: r.interval, day: r.day, month: r.month, active: !!r.active, detected: !!r.detected,
     categoryId: r.category_id, category: cat?.name ?? '–', color: cat?.color ?? '#A0A0AA', accountId: r.account_id, next: nextDate(r).toLocaleDateString('sv-SE') };
 }
 

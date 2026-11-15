@@ -1,6 +1,6 @@
 // Prompt 48 (WEB48): Innstillinger › AI › Kvitteringer – Mac-OCR og stegene i kvitteringskjeden på serveren.
 // Brukes tre steder: Homelab web (Innstillinger → AI, settings-ai.js), FinansHub på desktop (Innstillinger → AI,
-// desktop.js) og PWA-en (Finans → AI og tolkning → fanen «Kvitteringer», mobile-p34ai.js).
+// desktop.js) og PWA-en (Finans → AI og tolkning → fanen «Kvitteringer», mobile-ai-kontroll.js).
 //   GET  /finans/api/receipts/health        → status for Mac-OCR, lokal modell, Tesseract og Gemini (+ sperren) og stegene
 //   GET  /finans/api/settings               → canEditServer, server.macOcrUrl og server.macOcrKeySet (bare admin)
 //   PUT  /finans/api/settings               → {macOcrUrl, macOcrKey} | {receipts48:{deviceOcr|deviceParse|macOcr|tesseract|gemini|compareMac}}

@@ -13,7 +13,7 @@
 <link rel="icon" href="/assets/finans/icons/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/assets/finans/icons/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&family=Instrument+Serif&family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=DM+Mono:wght@400;500&family=Roboto+Flex:opsz,wght@8..144,400;8..144,500;8..144,600;8..144,700;8..144,800&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@500;600&family=Instrument+Serif:ital@0;1&family=Bricolage+Grotesque:opsz,wght@12..96,500..800&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&family=Instrument+Serif&family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Outfit:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Roboto+Flex:opsz,wght@8..144,400;8..144,500;8..144,600;8..144,700;8..144,800&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@500;600&family=Instrument+Serif:ital@0;1&family=Bricolage+Grotesque:opsz,wght@12..96,500..800&display=swap">
 <script src="/assets/js/crash.js"></script>
 <script src="/assets/finans/js/loader.js"></script>
 <style>
@@ -43,7 +43,9 @@ html[data-fhl="dark"] #fh-load .fhl-sub{color:#8a8478}
 </style>
 <link rel="stylesheet" href="/assets/css/tokens.css">
 <link rel="stylesheet" href="/assets/finans/css/finans.css">
-<link rel="stylesheet" href="/assets/finans/css/mobile.css">
+<!-- Mobilvisningens stiler: main.js setter href (fra data-href, som får ?v av serveren) først når mobil velges, så desktop
+     laster dem ikke. loader.js forhåndslaster dem på mobil. Plassen her bestemmer rekkefølgen i kaskaden. -->
+<link rel="stylesheet" id="fh-mobile-css" data-href="/assets/finans/css/mobile.css">
 <link rel="stylesheet" href="/assets/finans/css/felles.css">
 <link rel="stylesheet" href="/assets/finans/css/boliger.css">
 <link rel="stylesheet" href="/assets/finans/css/planlegging.css">

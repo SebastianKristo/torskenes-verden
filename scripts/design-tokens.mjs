@@ -22,6 +22,8 @@ export const FARGER = [
   'textPrimary', 'textSecondary', 'textTertiary',
   'accent', 'onAccent', 'success', 'onSuccess', 'warning', 'onWarning', 'danger', 'onDanger',
   'focus', 'scrim',
+  'surfaceField', 'surfaceChip', 'surfaceOverlay', 'lineSubtle',
+  'info', 'onInfo', 'successSoft', 'warningSoft', 'dangerSoft',
 ];
 /** Tokenene som kan ha en egen verdi ved økt kontrast. */
 export const HOY_KONTRAST = ['textSecondary', 'textTertiary', 'line'];
@@ -210,7 +212,7 @@ function cssColorBlock(tokens, stil, modus, { hoy = false } = {}) {
 }
 
 /**
- * Selektorer som matcher dagens temaattributter (settes av hl-boot.js, hltheme.js, mode44.js/sok-tema-offline.js og FinansHub):
+ * Selektorer som matcher dagens temaattributter (settes av hl-boot.js, hltheme.js, mode.js/sok-tema-offline.js og FinansHub):
  *   papir lys:  :root (standard), html[data-hl="2c"], FinansHub html[data-theme="lys"]
  *   papir mørk: html[data-hl="2c"][data-mode="dark"], FinansHub html[data-theme="mork"] (Q15),
  *               Kalender.app (html[data-kal-app], følger systemet) under prefers-color-scheme: dark

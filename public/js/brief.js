@@ -337,7 +337,7 @@ function bindPanel(el) {
 
 /* ---------- Prompt 37: Vær fra briefen, bibelvers og gjøremål ---------- */
 
-// Vær åpnes som fullskjerm-fanen; web37.js viser ✕ som går tilbake hit på samme scroll-posisjon.
+// Vær åpnes som fullskjerm-fanen; shell.js viser ✕ som går tilbake hit på samme scroll-posisjon.
 function openVaer() {
   try { navigator.vibrate?.(6); } catch { /* */ }
   stopSpeak();

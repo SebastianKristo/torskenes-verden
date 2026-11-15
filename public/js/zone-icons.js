@@ -1,7 +1,7 @@
-// Prompt 42 (WEB42, claude-code-familie-soner-uten-kart.md): soneikoner. 49 innebygde ikoner (fasit Familie.dc.html → ZIC; de 13 første er
+// Soneikoner (claude-code-familie-soner-uten-kart.md). 49 innebygde ikoner (fasit Familie.dc.html → ZIC; de 13 første er
 // de gamle fra prompt 22), norske søkeord og søk i Lucide (~1 600) og Tabler (~5 900) via Iconify-API-et (api.iconify.design, CSP connect-src).
 // Valgt Iconify-ikon lagres på sonen som icon:'ify:lucide:sailboat' + icp (path-data, 24×24 stroke), så det vises uten nett og likt i appene.
-// Brukes av Familie på web (family.js). Kan også importeres av PWA-en (/assets/js/icons42.js).
+// Brukes av Familie på web (family.js). Kan også importeres av PWA-en (/assets/js/zone-icons.js).
 
 export const ZIC42 = {
   home: ['Hjem', 'M3 11l9-7 9 7M5 10v10h14V10M10 20v-6h4v6'],

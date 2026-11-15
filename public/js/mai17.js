@@ -1,38 +1,10 @@
-// Prompt 41 (WEB41): små ting i skallet.
-// - Bakgrunn «Oslo» (claude-code-bakgrunn-oslo-dognet.md): sjekker hvert minutt om timen/tidsrommet er endret, forhåndslaster
-//   neste times bilde 5 min før, og bytter med crossfade når det er lastet. Soloppgang/solnedgang fra Vær.
-// - 17. mai (claude-code-17-mai.md): eget Hjem på selve dagen (eller «Vis nå»), med pillen «17. mai-design» som slår
-//   festdesignet av for i dag. Program i dag, 17. mai-brief og «Hipp hipp hurra!» med konfetti i flaggfargene.
+// 17. mai på Hjem (claude-code-17-mai.md): eget Hjem på selve dagen (eller «Vis nå»), med pillen «17. mai-design» som slår
+// festdesignet av for i dag. Program i dag, 17. mai-brief og «Hipp hipp hurra!» med konfetti i flaggfargene.
+// Kalles fra app.js: initMai17 ved oppstart, afterMai17 etter hver tegning av en side.
 import { api, esc } from './util.js';
-import { store, on } from './store.js';
-import { bgState, osloKey41, osloUrls41, setSun41 } from './bgsvc.js';
-import { applyBackground } from './background.js';
-import { paintPhoto } from './hltheme.js';
+import { store } from './store.js';
 import { fig, mai17State } from './glimt-figs.js';
 
-/* ---------- Oslo-bakgrunnen gjennom døgnet ---------- */
-let lastKey = null, preKey = null;
-function sunFromWeather() {
-  const w = store.data?.weather;
-  const rise = w?.sunrise ?? w?.daily?.sunrise?.[0], set = w?.sunset ?? w?.daily?.sunset?.[0];
-  if (rise && set) setSun41(rise, set);
-}
-function osloTick() {
-  if (bgState().type !== 'oslo' || document.hidden) return;
-  sunFromWeather();
-  const k = osloKey41();
-  if (lastKey && k !== lastKey) { applyBackground(); paintPhoto(); }
-  lastKey = k;
-  // 5 min før hel time: last neste times bilde i bakgrunnen (nettleserens cache tar vare på det).
-  const n = new Date();
-  if (n.getMinutes() >= 55) {
-    const next = new Date(n); next.setHours(n.getHours() + 1, 0, 0, 0);
-    const nk = osloKey41(next);
-    if (nk !== preKey) { preKey = nk; const img = new Image(); img.src = osloUrls41(next).urls[0]; }
-  }
-}
-
-/* ---------- 17. mai ---------- */
 const p2 = (n) => String(n).padStart(2, '0');
 const todayKey = () => { const d = new Date(); return `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`; };
 function osloDay() { try { const p = Object.fromEntries(new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Oslo', month: 'numeric', day: 'numeric' }).formatToParts(new Date()).map((x) => [x.type, +x.value])); return { m: p.month, d: p.day }; } catch { const d = new Date(); return { m: d.getMonth() + 1, d: d.getDate() }; } }
@@ -58,6 +30,7 @@ function loadM17(view) {
   api('/glimt/mai17').then((r) => { M.d = r && typeof r === 'object' ? r : null; }).catch(() => { M.d = null; }).finally(() => { M.busy = false; if (M.d && view?.isConnected) mountMai17(view, true); });
 }
 const PROG = [['07:00', 'Salutt fra Akershus festning', 'Festningen'], ['10:00', 'Barnetoget', 'Festningsplassen → Slottet'], ['13:00', 'Folketoget', 'Youngstorget']];
+// Flaggfargene (hvit, blå, rød) er faste fysiske farger, ikke tema: de skal se like ut i alle stiler og moduser.
 const BUNT = () => `<svg class="m17-bunt" viewBox="0 0 400 44" preserveAspectRatio="none" aria-hidden="true"><path d="M0 6 Q200 30 400 6" fill="none" stroke="rgba(255,255,255,.7)" stroke-width="1.5"/>${Array.from({ length: 16 }, (_, i) => { const x = 12 + i * 24.5, y = 6 + Math.sin((x / 400) * Math.PI) * 17; const c = ['#ffffff', '#00205b', '#ba0c2f'][i % 3]; return `<path class="m17-pen" style="animation-delay:${(i * 0.09).toFixed(2)}s;transform-origin:${x.toFixed(1)}px ${y.toFixed(1)}px" d="M${(x - 8).toFixed(1)} ${y.toFixed(1)} L${(x + 8).toFixed(1)} ${y.toFixed(1)} L${x.toFixed(1)} ${(y + 18).toFixed(1)} Z" fill="${c}" stroke="${c === '#ffffff' ? 'rgba(0,0,0,.12)' : 'none'}"/>`; }).join('')}</svg>`;
 function progHtml() {
   if (Array.isArray(M.d?.program) && M.d.program.length) return M.d.program.map((x) => `<div class="m17-pr${x.past ? ' past' : x.next ? ' next' : ''}"><span>${esc(x.time)}</span><i></i><span><b>${esc(x.title)}</b><small>${esc(x.place ?? (x.kind === 'calendar' ? 'Kalender' : M.d.city ?? 'Oslo'))}</small></span></div>`).join('');
@@ -88,7 +61,7 @@ function bannerHtml() {
 }
 function confetti() {
   if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  const C = ['#ba0c2f', '#ffffff', '#00205b'], el = document.createElement('div');
+  const C = ['#ba0c2f', '#ffffff', '#00205b'], el = document.createElement('div'); // flaggfargene (faste, se BUNT)
   el.className = 'm17-conf'; el.setAttribute('aria-hidden', 'true');
   el.innerHTML = Array.from({ length: 70 }, (_, i) => `<i style="left:${Math.random() * 100}%;width:${6 + Math.random() * 5}px;height:${9 + Math.random() * 7}px;border-radius:${Math.random() > 0.6 ? '50%' : '2px'};background:${C[i % 3]};animation-duration:${(1.8 + Math.random() * 1.6).toFixed(2)}s;animation-delay:${(Math.random() * 0.5).toFixed(2)}s"></i>`).join('');
   document.body.appendChild(el);
@@ -122,18 +95,12 @@ function bindMai17() {
   });
 }
 
-export function initWeb41() {
-  // Prompt 87: nøkkelen huskes fra start (før været har gitt soloppgang/solnedgang), og sjekkes straks været kommer. Før ble et
-  // endret tidsrom først oppdaget ved neste fanebytte, så bakgrunnen ble hentet og byttet midt i byttet.
-  lastKey = bgState().type === 'oslo' ? osloKey41() : null;
-  setInterval(osloTick, 60_000);
-  setTimeout(osloTick, 4000);
-  on?.('weather', () => { sunFromWeather(); osloTick(); });
+export function initMai17() {
   bindMai17();
   document.addEventListener('hl:mai17', () => { const v = document.getElementById('view'); if (v && document.body.dataset.route === 'dash') mountMai17(v); });
 }
 /** Kalles av app.js etter hver tegning av en side. */
-export function after41(route, view) {
+export function afterMai17(route, view) {
   if (route === 'dash') mountMai17(view);
   else document.body.classList.remove('m17-on');
 }

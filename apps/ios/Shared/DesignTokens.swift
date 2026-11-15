@@ -43,6 +43,15 @@ enum DS {
         case onDanger
         case focus
         case scrim
+        case surfaceField
+        case surfaceChip
+        case surfaceOverlay
+        case lineSubtle
+        case info
+        case onInfo
+        case successSoft
+        case warningSoft
+        case dangerSoft
 
         fileprivate var assetSuffix: String {
             switch self {
@@ -63,6 +72,15 @@ enum DS {
             case .onDanger: return "OnDanger"
             case .focus: return "Focus"
             case .scrim: return "Scrim"
+            case .surfaceField: return "SurfaceField"
+            case .surfaceChip: return "SurfaceChip"
+            case .surfaceOverlay: return "SurfaceOverlay"
+            case .lineSubtle: return "LineSubtle"
+            case .info: return "Info"
+            case .onInfo: return "OnInfo"
+            case .successSoft: return "SuccessSoft"
+            case .warningSoft: return "WarningSoft"
+            case .dangerSoft: return "DangerSoft"
             }
         }
     }

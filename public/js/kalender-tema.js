@@ -1,9 +1,9 @@
 // Kalender på web: lys/mørk-knappen i verktøylinja (rett før søk).
 // Kalenderen har ikke lenger sitt eget tema (html[data-kal-theme], localStorage «kal_theme»). Den følger Homelab-stilen og
-// -modusen som resten av appen (BESLUTNINGER Q14): CSS-en bruker html[data-mode], som mode44.js og hl-boot.js setter.
+// -modusen som resten av appen (BESLUTNINGER Q14): CSS-en bruker html[data-mode], som mode.js og hl-boot.js setter.
 // Knappen er en snarvei til samme valg som Innstillinger → Utseende → Lys og mørk og går i ring Følg systemet → Mørk → Lys.
 // Kalender.app for Mac (html[data-kal-app]) har ingen knapp og følger systemet (tokens.css).
-import { webMode, setMode } from './mode44.js';
+import { webMode, setMode } from './mode.js';
 
 const ORDER = ['system', 'dark', 'light'];
 const LBL = { system: 'Lys og mørk: følger systemet', light: 'Lys og mørk: lys', dark: 'Lys og mørk: mørk' };

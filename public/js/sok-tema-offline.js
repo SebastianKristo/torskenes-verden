@@ -308,7 +308,7 @@ async function putTheme(patch) {
   else if (r.status === 409 && j?.theme) applyTheme(j.theme);
   return j;
 }
-// Brukeren byttet lys/mørk/system i Innstillinger (mode44.js): lagres også her, så alle enheter får det.
+// Brukeren byttet lys/mørk/system i Innstillinger (mode.js): lagres også her, så alle enheter får det.
 addEventListener('papir-web-mode', (e) => {
   const m = e.detail?.mode;
   if (T.applying || e.detail?.source === 'theme51' || !['light', 'dark', 'system'].includes(m) || m === T.applied) return;

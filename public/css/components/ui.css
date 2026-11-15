@@ -1,0 +1,60 @@
+/* Felles UI-komponenter (public/js/ui/): kort, knapp, ark, tomtilstand, laster og toast.
+   Bare tokens fra tokens.css (--ds-*), så stil (Papir, Glass) og modus (lys, mørk) kommer derfra uten egne overstyringer.
+   Klassene begynner med .ui- så de ikke kolliderer med de eldre sideklassene. Se docs/designsystem.md. */
+
+/* Kort */
+.ui-card{background:var(--ds-surface-raised);color:var(--ds-text-primary);border:1px solid var(--ds-line);border-radius:var(--ds-radius-lg);
+  padding:var(--ds-space-lg);display:flex;flex-direction:column;gap:var(--ds-space-md);min-width:0;
+  -webkit-backdrop-filter:blur(var(--ds-blur-raised));backdrop-filter:blur(var(--ds-blur-raised))}
+.ui-card-h{display:flex;align-items:baseline;justify-content:space-between;gap:var(--ds-space-sm);margin:0;
+  font:var(--ds-text-headline-weight) var(--ds-text-headline-size)/var(--ds-text-headline-line) var(--ds-font-sans)}
+.ui-card-sub{color:var(--ds-text-secondary);font-size:var(--ds-text-footnote-size);line-height:var(--ds-text-footnote-line);font-weight:var(--ds-weight-regular)}
+
+/* Knapp: standard (sekundær), primær, fare og stille */
+.ui-btn{display:inline-flex;align-items:center;justify-content:center;gap:var(--ds-space-sm);min-height:44px;padding:0 var(--ds-space-lg);
+  border:1px solid var(--ds-line);border-radius:var(--ds-radius-full);background:transparent;color:var(--ds-text-primary);
+  font:var(--ds-weight-semibold) var(--ds-text-callout-size)/1 var(--ds-font-sans);cursor:pointer;
+  transition:background-color var(--ds-motion-fast) var(--ds-ease-standard),opacity var(--ds-motion-fast) var(--ds-ease-standard)}
+.ui-btn:hover{background:var(--ds-surface-chip)}
+.ui-btn:focus-visible{outline:2px solid var(--ds-focus);outline-offset:2px}
+.ui-btn:disabled{opacity:.5;cursor:default}
+.ui-btn--primary{border-color:transparent;background:var(--ds-accent);color:var(--ds-on-accent)}
+.ui-btn--primary:hover{background:var(--ds-accent);opacity:.9}
+.ui-btn--danger{border-color:transparent;background:var(--ds-danger);color:var(--ds-on-danger)}
+.ui-btn--danger:hover{background:var(--ds-danger);opacity:.9}
+.ui-btn--quiet{border-color:transparent}
+
+/* Ark / dialog */
+.ui-scrim{position:fixed;inset:0;z-index:var(--ds-z-sheet);background:var(--ds-scrim);display:grid;place-items:center;padding:var(--ds-space-lg)}
+.ui-sheet{width:min(400px,100%);max-height:calc(100dvh - 2 * var(--ds-space-lg));overflow:auto;margin:0;display:flex;flex-direction:column;gap:var(--ds-space-md);
+  padding:var(--ds-space-xl);border-radius:var(--ds-radius-xl);background:var(--ds-surface-overlay);color:var(--ds-text-primary);
+  border:1px solid var(--ds-line);box-shadow:var(--ds-shadow-high);font-family:var(--ds-font-sans);
+  -webkit-backdrop-filter:blur(var(--ds-blur-raised));backdrop-filter:blur(var(--ds-blur-raised))}
+.ui-sheet-t{margin:0;font:var(--ds-text-title3-weight) var(--ds-text-title3-size)/var(--ds-text-title3-line) var(--ds-font-serif)}
+.ui-sheet-x{margin:0;color:var(--ds-text-secondary);font-size:var(--ds-text-callout-size);line-height:var(--ds-text-callout-line)}
+.ui-sheet-f{display:flex;gap:var(--ds-space-sm);justify-content:flex-end;flex-wrap:wrap}
+.ui-field{min-height:44px;padding:0 var(--ds-space-md);border-radius:var(--ds-radius-md);border:1px solid var(--ds-line);background:var(--ds-surface-field);
+  color:var(--ds-text-primary);font:var(--ds-weight-semibold) var(--ds-text-callout-size) var(--ds-font-sans)}
+.ui-field:focus{outline:2px solid var(--ds-focus);outline-offset:1px}
+.ui-err{margin:0;color:var(--ds-danger);font-size:var(--ds-text-subheadline-size);font-weight:var(--ds-weight-semibold)}
+
+/* Tomtilstand */
+.ui-empty{display:flex;flex-direction:column;align-items:center;gap:var(--ds-space-sm);padding:var(--ds-space-xl) var(--ds-space-lg);text-align:center;color:var(--ds-text-secondary)}
+.ui-empty-t{margin:0;color:var(--ds-text-primary);font:var(--ds-text-headline-weight) var(--ds-text-headline-size)/var(--ds-text-headline-line) var(--ds-font-sans)}
+.ui-empty-x{margin:0;font-size:var(--ds-text-callout-size);line-height:var(--ds-text-callout-line)}
+
+/* Laster */
+.ui-loader{display:inline-flex;align-items:center;gap:var(--ds-space-sm);color:var(--ds-text-secondary);font-size:var(--ds-text-callout-size)}
+.ui-loader i{width:18px;height:18px;border-radius:50%;border:2px solid var(--ds-line);border-top-color:var(--ds-accent);animation:ui-spin 800ms linear infinite}
+@keyframes ui-spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion: reduce){.ui-loader i{animation:none;border-top-color:var(--ds-text-secondary)}}
+
+/* Toast */
+.ui-toasts{position:fixed;left:50%;bottom:calc(var(--ds-space-xl) + env(safe-area-inset-bottom, 0px));transform:translateX(-50%);z-index:var(--ds-z-toast);
+  display:flex;flex-direction:column;align-items:center;gap:var(--ds-space-sm);pointer-events:none;width:min(480px,calc(100% - 2 * var(--ds-space-lg)))}
+.ui-toast{pointer-events:auto;padding:var(--ds-space-md) var(--ds-space-lg);border-radius:var(--ds-radius-full);background:var(--ds-text-primary);color:var(--ds-surface);
+  box-shadow:var(--ds-shadow-mid);font:var(--ds-weight-semibold) var(--ds-text-callout-size)/var(--ds-text-callout-line) var(--ds-font-sans);
+  animation:ui-toast-in var(--ds-motion-normal) var(--ds-ease-enter)}
+.ui-toast--danger{background:var(--ds-danger);color:var(--ds-on-danger)}
+.ui-toast--success{background:var(--ds-success);color:var(--ds-on-success)}
+@keyframes ui-toast-in{from{opacity:0;transform:translateY(8px)}}

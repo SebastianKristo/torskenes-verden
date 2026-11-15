@@ -46,7 +46,7 @@ test('hjem-scroll-mens-ai: ingen fullskjerm-lag, trykk utenfor < 8 px, sveip fra
 });
 
 test('widget-storrelse-mobil: håndtak ↔, terskel 40 px, trykk bytter, sz lagres ved siden av order/hidden', () => {
-  const h = read('public/js/home52.js');
+  const h = read('public/js/oversikt-mobil.js');
   assert.match(h, /data-h52-rz=/);
   assert.match(h, /class="h52-rz" data-edc/);
   assert.match(h, /const FIXED = new Set\(\['p_links'\]\)/, 'Snarveier alltid full');

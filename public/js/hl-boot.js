@@ -26,7 +26,7 @@
     }
   } catch (e) { /* eldre nettleser */ }
   // Prompt 44 (claude-code-web-lys-mork-modus.md): Lys (standard) · Mørk · Følg systemet. Settes før første tegning,
-  // så siden ikke blinker hvit. mode44.js henter valget fra brukeren (web_theme) og lytter på systemet etterpå.
+  // så siden ikke blinker hvit. mode.js henter valget fra brukeren (web_theme) og lytter på systemet etterpå.
   try {
     var wm = sm || localStorage.getItem('papir_web_mode'); if (wm !== 'dark' && wm !== 'system') wm = 'light';
     var dm = wm === 'dark' || (wm === 'system' && matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';

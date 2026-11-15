@@ -2,13 +2,13 @@
 // claude-code-steder-flere-omrader-ruter.md). Fasit: design/Familie App.dc.html og Familie Redesign.dc.html 2a.
 //   Faner: Folk · Steder · Helse · Sjekk inn (mørk pille nederst). Undersider: Kart, Personside, Sted (flere områder, 4b),
 //   Helse for personen (5b) og Sendt (6b). Fold/brett/desktop: to kolonner – lista til venstre, kart/personside til høyre.
-// Én modul for begge klientene: web (public/js/app.js, #/familie/…) og PWA-en (public/finans/js/mobile-p50f.js, #/fam/…).
+// Én modul for begge klientene: web (public/js/app.js, #/familie/…) og PWA-en (public/finans/js/mobile-familie.js, #/fam/…).
 // Undersidene har egen hash, så nettleserens tilbake, kant-sveip og Android-tilbake går dit du kom fra (Folk, Kart eller Helse).
 // Rot-elementet (og Leaflet-kartene) beholdes mellom tegninger; verten legger det inn i en plassholder (mount50).
 // API (SERVER50-API.md, SRVFAM50): /api/family/people50(/:id), /today50, /places(/:id/areas…), /health50(/:id, /goal, /:id/request),
 // /checkin(…), /api/ruter/school50. Eldre: /api/family (Min deling), /family/me, /family/zones/:id/notify, /api/velfremme (På vei hjem).
 // Personvern håndheves på serveren; her vises bare det den sender. Posisjonen sendes bare med selve innsjekken.
-import { ZIC42, IFY42 } from './icons42.js';
+import { ZIC42, IFY42 } from './zone-icons.js';
 import { pageCss } from './lib/page-css.js';
 
 const NB = new Intl.NumberFormat('nb-NO');
