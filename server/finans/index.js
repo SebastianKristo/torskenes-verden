@@ -4,6 +4,8 @@
 //   mountFinansAliases(app)   – Boliger under /api/homes/* og /api/boliger/oversikt (samme tilgang som /finans/api)
 //   mountTrialWidgets(app)    – /api/widgets/trials (prøveperiode-widgets)
 //   mountSubsCalendar(app)    – den innebygde kalenderen «Abonnementer» i Kalender (før mountKalender)
+// Den gamle kvitteringslista (/api/receipts, tabellen receipts, Q30) registreres på den innloggede routeren i index.js med
+// registerLegacyReceipts(authed, {upload, saveFile, removeFile}) (legacy-receipts.js).
 //
 // Lagene på /finans/api, i rekkefølge (alle har egen tilgangskontroll: økt eller token med finance:read / finance:write):
 //   overview.js      – /overview og /transactions/months
@@ -24,6 +26,7 @@ import trialWidgetsApi from './trial-widgets.js';
 import { abCalendarsMw42, abApi42, calendarsEvents42, abIcs42 } from './subs-calendar.js';
 import './trials-notify.js'; // registrerer jobben finans.provetider
 import './tax.js'; // registrerer jobben finans.skattemelding
+export { registerLegacyReceipts, legacyReceiptOwner } from './legacy-receipts.js'; // den gamle kvitteringslista (/api/receipts)
 
 /** /finans/api med lagene før routes.js, aliasene /api/receipts/scan og /health, og del-målet /finans/share. */
 export function mountFinans(app) {
