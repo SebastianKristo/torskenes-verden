@@ -781,8 +781,10 @@ private fun EditScreen76(vm: AppViewModel) {
                 PField("Navn", d.name, { d.name = it }, placeholder = "M3 × 10 skruer")
                 SuggestBar77(vm, d) // prompt 77: ✦ Foreslå + kortet
                 PField("Kategori", d.category, { d.category = it }, placeholder = "Skruer, motstander, LED …")
-                if (s.cats.isNotEmpty()) FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    s.cats.take(14).forEach { c -> PChip(c.name, d.category == c.name) { d.category = c.name } }
+                // Fase 6: brukerens kategorier først, så standardlisten fra serveren (Skjold Lab har ingen egen liste i appen).
+                val choices = catChoices(s.cats.take(14).map { it.name }, s.standardCats)
+                if (choices.isNotEmpty()) FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    choices.take(24).forEach { n -> PChip(n, d.category == n) { d.category = n } }
                 }
                 PField("Beskrivelse", d.description, { d.description = it })
             }
