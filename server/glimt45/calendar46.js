@@ -5,7 +5,7 @@
 //  2. Rask time (claude-code-kalender-rask-time-glimt.md): «vi skal se på dune på coluseum kino 17.12 kl 17:30» → tittel «Dune – Kino»,
 //     sted «Colosseum Kino» (stavefeil rettet, slått opp i stedssøket), slutt = start + spilletid + 15 min når filmen er kjent (Radarr/TMDB).
 import { kv } from '../db.js';
-import { normText } from '../calendar.js';
+import { normText } from '../kalender/events.js';
 
 const cap = (s) => String(s ?? '').replace(/^\s*(\p{L})/u, (m, c) => m.replace(c, c.toUpperCase()));
 const fold = (s) => normText(String(s ?? '')).normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9æøå ]+/g, ' ').replace(/\s+/g, ' ').trim();
@@ -21,7 +21,7 @@ function lev(a, b) {
 
 /* ---------------- Kalendere ---------------- */
 
-const K33 = async () => import('../kalender33.js');
+const K33 = async () => import('../kalender/calendars.js');
 /**
  * Kalenderne brukeren kan skrive til. → {calendars:[{id, name, backend, source:'app'|'google', calId?, google:boolean}], defaultId, google:boolean}
  * Lokale/app-kalendere skrives via Privat/Familie-backenden (Google når koblet til, ellers lokalt). Google-kalendere som er
@@ -29,11 +29,11 @@ const K33 = async () => import('../kalender33.js');
  */
 export async function writableCalendars46(user) {
   const k = await K33();
-  const { googleConnected } = await import('../birthdays.js');
+  const { googleConnected } = await import('../kalender/birthdays.js');
   const g = googleConnected(user);
   const all = k.appCalendarsOf(user);
   const list = [];
-  const { isGoogleCalId } = await import('../kalender36g.js');
+  const { isGoogleCalId } = await import('../kalender/google.js');
   for (const c of all) {
     if (isGoogleCalId(c.id)) { if (g && c.readOnly === false && c.calId) list.push({ id: c.id, name: c.name, backend: 'privat', source: 'google', calId: c.calId, google: true }); continue; }
     if (!c.writable || c.readOnly) continue;
@@ -119,7 +119,7 @@ export const _setPlace46 = (fn) => { geoImpl = fn ?? null; };
 export async function lookupPlace46(name) {
   if (!name) return null;
   try {
-    const g = geoImpl ? await geoImpl(name) : await Promise.race([(await import('../kal37.js')).geocode(name), new Promise((r) => setTimeout(() => r(null), 2500))]);
+    const g = geoImpl ? await geoImpl(name) : await Promise.race([(await import('../kalender/subjects.js')).geocode(name), new Promise((r) => setTimeout(() => r(null), 2500))]);
     return g ? { name, address: g.address ?? g.label ?? null, label: g.label ?? g.address ?? null, lat: g.lat ?? null, lon: g.lon ?? null } : null;
   } catch { return null; }
 }
@@ -208,7 +208,7 @@ let decorated = false;
 export async function installPosterDecorator46() {
   if (decorated) return; decorated = true;
   try {
-    const { addEventDecorator } = await import('../calendar.js');
+    const { addEventDecorator } = await import('../kalender/events.js');
     addEventDecorator((user, events) => {
       const m = kv.get(user, POSTERS, null);
       if (!m) return events;

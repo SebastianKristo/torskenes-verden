@@ -101,7 +101,7 @@ export const getSchool = async () => {
   return { configured: true, events };
 };
 
-/* ---------------- Prompt 26: Kalender (iCal-tekst, så calendar.js tolker den som en ekte kalender) ---------------- */
+/* ---------------- Prompt 26: Kalender (iCal-tekst, så kalender/events.js tolker den som en ekte kalender) ---------------- */
 // Timeplan for Vg3 (studiespesialisering) med ukentlige gjentakelser (RRULE), lærer i DESCRIPTION/ORGANIZER og rom i LOCATION.
 // Testtilfellene fra claude-code-kalender.md: Prøve i engelsk tor. 22.10 kl. 10 (erstatter engelsktimen), Foreldremøte 22.10
 // kl. 18 (utenfor 08–16), Planleggingsdag fre. 30.10 (ingen timer) og Heldagsprøve R2 fre. 06.11. Høstferie og juleferie er fri.

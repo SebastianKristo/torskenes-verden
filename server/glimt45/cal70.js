@@ -48,7 +48,7 @@ export function rememberMade70(user, eventId, a, extra = {}) {
 const sourceLabel70 = (c) => (c.source === 'google' ? 'Google' : c.google ? 'Google' : c.backend === 'local' ? 'Innebygd' : 'Innebygd');
 async function calendarsOf70(user, selectedId, suggest) {
   const C46 = await import('./calendar46.js');
-  const k = await import('../kalender33.js');
+  const k = await import('../kalender/calendars.js');
   const cals = await C46.writableCalendars46(user);
   const colors = new Map(k.appCalendarsOf(user).map((c) => [c.id, c.color ?? null]));
   const list = cals.calendars.filter((c) => c.id !== 'bursdager').map((c) => ({ id: c.id, name: C46.calendarLabel46(c), color: colors.get(c.id) ?? (c.id === 'familie' ? '#a8661a' : '#7a7468'), source: sourceLabel70(c),
@@ -90,18 +90,18 @@ export async function card70(user, a, ev) {
 /* ---------------- Flytte og angre ---------------- */
 
 async function deleteMade(user, rec) {
-  if (rec.source === 'google' && rec.calId) { const { googleEventWrite } = await import('../birthdays.js'); await googleEventWrite(user, 'DELETE', rec.calId, rec.id); return; }
-  const { deleteEvent } = await import('../calendar.js');
+  if (rec.source === 'google' && rec.calId) { const { googleEventWrite } = await import('../kalender/birthdays.js'); await googleEventWrite(user, 'DELETE', rec.calId, rec.id); return; }
+  const { deleteEvent } = await import('../kalender/events.js');
   await runAsUser(user, () => deleteEvent(user, rec.id));
-  try { const k = await import('../kalender33.js'); k.kal46.setCalendar(user, rec.id, null); } catch { /* */ }
+  try { const k = await import('../kalender/calendars.js'); k.kal46.setCalendar(user, rec.id, null); } catch { /* */ }
 }
 async function createIn(user, rec, cal) {
-  const { eventInput, createEvent, googleBody } = await import('../calendar.js');
+  const { eventInput, createEvent, googleBody } = await import('../kalender/events.js');
   const e = rec.ev;
   const v = eventInput({ title: e.title, allDay: e.allDay, date: e.date, start: e.start, end: e.end, location: e.location ?? '', calendar: cal.backend === 'familie' ? 'familie' : 'privat', repeat: 'none', reminder: e.reminder ?? (e.allDay ? 'none' : '1h'), note: e.note ?? '' });
   if (v.error) throw Object.assign(new Error(v.error), { status: 400 });
   if (cal.source === 'google' && cal.calId) {
-    const { googleEventWrite } = await import('../birthdays.js');
+    const { googleEventWrite } = await import('../kalender/birthdays.js');
     const g = await googleEventWrite(user, 'POST', cal.calId, null, googleBody({ ...v.value, origin: 'Glimt' }));
     return { id: g?.id ?? null, calId: cal.calId };
   }
@@ -122,7 +122,7 @@ export async function move70(user, id, calendarId) {
     const ro = cals.readOnly.find((c) => c.id === calendarId);
     return { error: ro ? `${ro.name} er skrivebeskyttet.` : 'Ukjent kalender', status: 400, ...(ro ? { readOnly: true } : {}) };
   }
-  const k = await import('../kalender33.js');
+  const k = await import('../kalender/calendars.js');
   let newId = rec.id, calId = null;
   const sameStore = rec.source !== 'google' && cal.source !== 'google' && (cal.backend ?? 'privat') === (rec.backend ?? 'privat');
   if (cal.id === rec.calendarId) { /* allerede der */ }
@@ -141,7 +141,7 @@ export async function move70(user, id, calendarId) {
   const next = { ...rec, id: String(newId), calendarId: cal.id, source: cal.source, calId, backend: cal.backend ?? 'privat' };
   m[base70(newId)] = next;
   saveMade(user, m);
-  try { const { clearCalendarCache } = await import('../calendar.js'); clearCalendarCache(user); } catch { /* */ }
+  try { const { clearCalendarCache } = await import('../kalender/events.js'); clearCalendarCache(user); } catch { /* */ }
   broadcast('kalender', { action: 'updated', id: String(newId) }, [user]);
   return { ok: true, moved: cal.id !== rec.calendarId, card70: await card70(user, { ...rec.ev, ...next, eventId: newId, calendarId: cal.id, calendarName: C46.calendarLabel46(cal), madeAt: rec.at }, { id: newId }) };
 }
@@ -152,7 +152,7 @@ export async function undo70(user, id) {
   if (Date.now() - (rec.at ?? 0) > UNDO_SERVER_MS70) return { error: 'For sent å angre. Slett avtalen i Kalender.', status: 409 };
   try { await deleteMade(user, rec); } catch (e) { return { error: String(e?.message ?? e).slice(0, 200), status: e?.status ?? 502 }; }
   const m = madeAll(user); delete m[base70(rec.id)]; saveMade(user, m);
-  try { const { clearCalendarCache } = await import('../calendar.js'); clearCalendarCache(user); } catch { /* */ }
+  try { const { clearCalendarCache } = await import('../kalender/events.js'); clearCalendarCache(user); } catch { /* */ }
   broadcast('kalender', { action: 'deleted', id: rec.id }, [user]);
   return { ok: true, undone: true, eventId: rec.id, text: `Angret · «${rec.ev.title}» er fjernet.` };
 }

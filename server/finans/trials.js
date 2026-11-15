@@ -110,7 +110,7 @@ export function createTrial(user, b, { source = 'skjema', today = osloTodayISO()
   return { row };
 }
 
-/** Heldagshendelser i Kalender (Privat) for aktive prøver mellom to datoer. Formen er rådata; calendar.js lager hendelsen. */
+/** Heldagshendelser i Kalender (Privat) for aktive prøver mellom to datoer. Formen er rådata; kalender/events.js lager hendelsen. */
 export function trialCalendarItems(user, fromDate, toDate) {
   return q("SELECT * FROM trials WHERE user_id=? AND status='active' AND ends_at>=? AND ends_at<=? ORDER BY ends_at").all(user, fromDate, toDate)
     .map((r) => ({ id: `trial-${r.id}`, trialId: r.id, title: `${r.service}-prøven slutter`, date: r.ends_at, note: r.price_after != null ? `Avslutt før i dag for å slippe ${r.price_after} kr/mnd.` : 'Gratis prøveperiode slutter.', url: r.cancel_url || cancelUrlFor(r.service) }));

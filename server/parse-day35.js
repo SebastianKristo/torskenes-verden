@@ -1,5 +1,5 @@
 // Prompt 35 (SERVER35): felles dag-tolkning for Glimt – brukt av /api/assist (Homelab-søket og Chat), Kalender-Glimt
-// (calendar-glimt.js og kalender33.js) og POST /api/glimt. Fiksen for «Hva skjer i morgen?» som ga svar for i dag:
+// (kalender/glimt.js og kalender/calendars.js) og POST /api/glimt. Fiksen for «Hva skjer i morgen?» som ga svar for i dag:
 // spørsmålet normaliseres først (små bokstaver, tegnsetting fjernet, mellomrom slått sammen og polstret), så leses dag-ordet.
 //
 // parseDay(text, today='YYYY-MM-DD') → {date, offset, word, label:'i morgen', Label:'I morgen', kind} | null

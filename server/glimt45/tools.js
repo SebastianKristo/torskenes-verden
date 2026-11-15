@@ -5,7 +5,7 @@
 import { db, q, kv } from '../db.js';
 import { runAsUser } from '../settings.js';
 import { broadcast } from '../realtime.js';
-import { eventsFor, createEvent, updateEvent, deleteEvent, findEvent, eventInput, normText } from '../calendar.js';
+import { eventsFor, createEvent, updateEvent, deleteEvent, findEvent, eventInput, normText } from '../kalender/events.js';
 import { KINDS, parseQuick } from '../dates/quick.js'; // dato og tid fra den felles tolkeren
 import { ensureIndex42, merchantKey42, synonymsOf42, stem42, fold42, norm42 } from '../finans/search42.js';
 import { ensureLedger, settings as fhSettings } from '../finans/db.js';
@@ -355,7 +355,7 @@ export const TOOLS45 = [
       const durationAssumed = !!(w.start && !w.end && !movie?.runtime);
       const end = w.start ? (w.end ?? addMin45(w.start, movie?.runtime ? Math.round(movie.runtime / 5) * 5 : dur.min)) : null;
       const place = location && (sp.location === location || C46.VENUES46.some(([n]) => n === location)) ? await C46.lookupPlace46(location) : null;
-      const prefs = await import('../kalender33.js').then((k) => k.kal46.prefs(ctx.user)).catch(() => ({}));
+      const prefs = await import('../kalender/calendars.js').then((k) => k.kal46.prefs(ctx.user)).catch(() => ({}));
       return { args: { title, date: w.date, start: w.start, end, allDay, location, note: [str(args.note ?? args.notes, 500), w.softTime].filter(Boolean).join(' · ') || null, assumedPm: w.assumedPm, corrections: w.corrections,
         ...(durationAssumed ? { durationAssumed: true, durationMin: dur.min, durationKind: dur.kind } : {}),
         calendarId: cal.id, calendarName: C46.calendarLabel46(cal), calendarSource: cal.source, ...(cal.calId ? { calId: cal.calId } : {}), backend: cal.backend,
@@ -374,15 +374,15 @@ export const TOOLS45 = [
       let ev;
       if (a.calendarSource === 'google' && a.calId) {
         // Prompt 46: Google-kalender som er skrivbar i Google (ikke Personlig/Familie) – skrives direkte dit.
-        const { googleEventWrite } = await import('../birthdays.js');
-        const { googleBody } = await import('../calendar.js');
+        const { googleEventWrite } = await import('../kalender/birthdays.js');
+        const { googleBody } = await import('../kalender/events.js');
         const g = await googleEventWrite(user, 'POST', a.calId, null, googleBody({ ...v.value, origin: 'Glimt' }));
         ev = { id: g?.id ?? null, title: a.title, date: a.date, allDay: a.allDay, start: a.start, end: a.end, room: a.location ?? null, s: a.start, source: 'google', editable: true, appCalendar: a.calendarId, googleId: g?.id ?? null };
       } else {
         ev = await runAsUser(user, () => createEvent(user, { ...v.value, origin: 'Glimt' }));
-        try { if (ev?.id && a.calendarId && !['familie'].includes(a.calendarId)) { const k = await import('../kalender33.js'); k.kal46.setCalendar(user, ev.id, a.calendarId); k.kal46.decorate(user, [ev]); } } catch { /* visning, best effort */ }
+        try { if (ev?.id && a.calendarId && !['familie'].includes(a.calendarId)) { const k = await import('../kalender/calendars.js'); k.kal46.setCalendar(user, ev.id, a.calendarId); k.kal46.decorate(user, [ev]); } } catch { /* visning, best effort */ }
       }
-      try { const { attachGeo } = await import('../kal37.js'); if (ev?.id) await attachGeo(user, ev, { place: a.location ?? null, text: ctx.text }); if (ev?.id && !ev.address && a.place?.address) await attachGeo(user, ev, { place: a.place.address, text: '' }); } catch { /* best effort */ }
+      try { const { attachGeo } = await import('../kalender/subjects.js'); if (ev?.id) await attachGeo(user, ev, { place: a.location ?? null, text: ctx.text }); if (ev?.id && !ev.address && a.place?.address) await attachGeo(user, ev, { place: a.place.address, text: '' }); } catch { /* best effort */ }
       if (ev?.id && a.movie?.poster) { const C46 = await import('./calendar46.js'); C46.rememberPoster46(user, ev.id, a.movie.poster); ev.image = a.movie.poster; }
       broadcast('kalender', { action: 'created', id: ev?.id }, [user]);
       // Prompt 70: kort A (lagt inn i standardkalenderen, bytt kalender i kortet, Angre i 10 s).
@@ -393,7 +393,7 @@ export const TOOLS45 = [
     async verify(r, ctx) {
       if (r.result?.existing) return true;
       if (!r.result?.eventId) return false;
-      if (r.result.calId) { try { const { googleEventWrite } = await import('../birthdays.js'); const g = await googleEventWrite(ctx.user, 'GET', r.result.calId, r.result.eventId); return !!g?.id; } catch { return false; } }
+      if (r.result.calId) { try { const { googleEventWrite } = await import('../kalender/birthdays.js'); const g = await googleEventWrite(ctx.user, 'GET', r.result.calId, r.result.eventId); return !!g?.id; } catch { return false; } }
       return !!(await runAsUser(ctx.user, () => findEvent(ctx.user, r.result.eventId)).catch(() => null)) || (await eventsIn(ctx.user, r.result.event.date, r.result.event.date)).some((e) => String(e.id).split('~')[0] === String(r.result.eventId).split('~')[0]);
     },
   },

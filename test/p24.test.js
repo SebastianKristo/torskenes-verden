@@ -17,7 +17,7 @@ delete process.env.MOCK_DATA;
 const { hashPassword } = await import('../server/password.js');
 process.env.APP_PASSWORD_HASH = hashPassword('testpassord1');
 const { default: app } = await import('../server/index.js');
-const bd = await import('../server/birthdays.js');
+const bd = await import('../server/kalender/birthdays.js');
 const ia = await import('../server/integrations-api.js');
 const { kv } = await import('../server/db.js');
 const { secret } = await import('../server/finans/db.js');

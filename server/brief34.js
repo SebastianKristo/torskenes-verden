@@ -39,7 +39,7 @@ import { Hono } from 'hono';
 import { here46, noteHere46 } from './here46.js'; // prompt 46 (SERVER46)
 import { db, kv } from './db.js';
 import { authOrToken } from './mobile.js';
-import { eventsFor } from './calendar.js';
+import { eventsFor } from './kalender/events.js';
 import { weatherFull, wmoText, iconOf } from './weather-full.js';
 import { newsFor } from './rss.js';
 import { packagesFor } from './tracking.js';

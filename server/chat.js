@@ -235,7 +235,7 @@ function toMarkdown(r) {
 const withTimeout = (p, ms, d) => Promise.race([p, sleep(ms).then(() => d)]);
 const hm = (isoStr) => (isoStr ? new Date(isoStr).toLocaleTimeString('nb-NO', { timeZone: 'Europe/Oslo', hour: '2-digit', minute: '2-digit' }) : '');
 async function kalenderSummary(u) {
-  const { eventsFor } = await import('./calendar.js');
+  const { eventsFor } = await import('./kalender/events.js');
   const from = osloDate(), to = osloDate(Date.now() + 7 * 86400_000);
   const { events } = await eventsFor(u, from, to);
   const list = events.filter((e) => (e.allDay ? e.end > from : Date.parse(e.end ?? e.start) > Date.now())).slice(0, 15);

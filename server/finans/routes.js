@@ -1795,7 +1795,7 @@ api.post('/tokens', tokenAdmin, async (c) => {
   const row = q('INSERT INTO fh_tokens(id,name,scopes,created,user_id,expires) VALUES(?,?,?,?,?,?) RETURNING *').get(tokenKey(token), str(b.name, 60) || 'Token', scopes.join(' '), Date.now(), c.get('user'), days ? Date.now() + days * 86400_000 : null);
   return c.json({ token, ...tokenOut(row) }); // vises én gang
 });
-// Prompt 33 (SERVER33): companion-token for Kalender-appen (server/kalender33.js). Samme tabell, hash og tokenOut som over.
+// Prompt 33 (SERVER33): companion-token for Kalender-appen (server/kalender/calendars.js). Samme tabell, hash og tokenOut som over.
 /** Tilgangen for forespørselen (økt eller fh_-token), eller null. → {user, info, admin, scopes:Set, session, tokenId?} */
 export const tokenAccessOf = (c) => access(c);
 /** Lager et token for userId. scopes må allerede være kontrollert (aldri bredere enn den som ber om det). → {token, ...tokenOut} */

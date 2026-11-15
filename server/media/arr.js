@@ -15,7 +15,7 @@ import { userCfg, userCfgSet } from '../settings.js';
 import { authOrToken } from '../mobile.js';
 import { isAdmin, listUsers, userInfo, isLan } from '../auth.js';
 import { notifyUser } from '../notify.js';
-import { addEventSource } from '../calendar.js';
+import { addEventSource } from '../kalender/events.js';
 import { mockFetch43, mockArt43 } from './mock.js';
 import { dtf } from '../intl-format.js'; // gjenbrukte Intl.DateTimeFormat
 import { registerJob } from '../jobs/index.js'; // varsler-jobben

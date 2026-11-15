@@ -30,9 +30,9 @@ const { parseDay } = await import('../server/parse-day35.js');
 const w35 = await import('../server/weather35.js');
 const g35 = await import('../server/glimt35.js');
 const brief = await import('../server/brief34.js');
-const k35 = await import('../server/kalender35.js');
-const k33 = await import('../server/kalender33.js');
-const cg = await import('../server/calendar-glimt.js');
+const k35 = await import('../server/kalender/external.js');
+const k33 = await import('../server/kalender/calendars.js');
+const cg = await import('../server/kalender/glimt.js');
 const { db } = await import('../server/db.js');
 
 async function login(username, password) {

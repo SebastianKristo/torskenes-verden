@@ -79,7 +79,7 @@ let calImpl = null;
 export const _setHjemlysCalendar = (fn) => { calImpl = fn; };
 async function eventsOf(user, from, to) {
   if (calImpl) return calImpl(user, from, to);
-  try { const { eventsFor } = await import('./calendar.js'); return (await eventsFor(user, from, to)).events ?? []; } catch { return []; }
+  try { const { eventsFor } = await import('./kalender/events.js'); return (await eventsFor(user, from, to)).events ?? []; } catch { return []; }
 }
 const endMsOf = (e) => Date.parse(e.end ?? e.start ?? '') || null;
 /** Hvem du var med: deltakerne (eller familie nevnt i tittel/beskrivelse) i hendelsen som slutter rett før start. */
