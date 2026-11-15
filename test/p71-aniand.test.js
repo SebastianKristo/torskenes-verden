@@ -117,7 +117,11 @@ test('stabile typer for Hjem-radene', () => {
 
 test('Baseline Profile: profileinstaller uten ny Gradle-plugin, baseline-prof.txt for Hjem, Chat og ark', () => {
   const g = readFileSync(join(APP, 'build.gradle.kts'), 'utf8');
-  assert.match(g, /implementation\("androidx\.profileinstaller:profileinstaller:1\.4\.1"\)/);
+  // Fase 5: versjonen står i versjonskatalogen (gradle/libs.versions.toml).
+  assert.match(g, /implementation\(libs\.profileinstaller\)/);
+  const cat = readFileSync(join(APP, '../gradle/libs.versions.toml'), 'utf8');
+  assert.match(cat, /^profileinstaller = "1\.4\.1"$/m);
+  assert.match(cat, /^profileinstaller = \{ module = "androidx\.profileinstaller:profileinstaller", version\.ref = "profileinstaller" \}$/m);
   assert.doesNotMatch(g, /baselineprofile/i, 'ingen baselineprofile-plugin (krever emulator/Macrobenchmark)');
   const f = join(APP, 'src/main/baseline-prof.txt');
   assert.ok(existsSync(f));

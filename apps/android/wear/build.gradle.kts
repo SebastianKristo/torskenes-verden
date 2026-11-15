@@ -1,7 +1,7 @@
 plugins {
-    id("com.android.application")
-    id("org.jetbrains.kotlin.android")
-    id("org.jetbrains.kotlin.plugin.compose")
+    alias(libs.plugins.android.application)
+    alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.kotlin.compose)
 }
 
 // Prompt 51 (ANDPLAT51): Wear OS-app (no.kristo.finanshub.wear) – frittstående, logger inn med QR fra FinansHub på telefonen.
@@ -61,15 +61,14 @@ android {
 
 dependencies {
     // Samme Compose-BOM og AndroidX-versjoner som :app (ingen nye utenom de godkjente Wear-bibliotekene under).
-    val composeBom = platform("androidx.compose:compose-bom:2024.12.01")
-    implementation(composeBom)
-    implementation("androidx.compose.ui:ui")
-    implementation("androidx.compose.foundation:foundation")
-    implementation("androidx.activity:activity-compose:1.9.3")
-    implementation("androidx.core:core-ktx:1.15.0")
-    implementation("androidx.security:security-crypto:1.0.0")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
+    implementation(platform(libs.compose.bom))
+    implementation(libs.compose.ui)
+    implementation(libs.compose.foundation)
+    implementation(libs.activity.compose)
+    implementation(libs.core.ktx)
+    implementation(libs.security.crypto)
+    implementation(libs.coroutines.android)
     // Prompt 51: godkjente Wear-avhengigheter (faste, stabile versjoner). androidx.wear:wear trengs ikke (ingen ambient-modus ennå).
-    implementation("androidx.wear.compose:compose-material:1.4.0")
-    implementation("androidx.wear.compose:compose-foundation:1.4.0")
+    implementation(libs.wear.compose.material)
+    implementation(libs.wear.compose.foundation)
 }

@@ -1,7 +1,7 @@
 plugins {
-    id("com.android.application")
-    id("org.jetbrains.kotlin.android")
-    id("org.jetbrains.kotlin.plugin.compose")
+    alias(libs.plugins.android.application)
+    alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.kotlin.compose)
 }
 
 // Versjon kan overstyres fra CI: ./gradlew assembleRelease -PversionName=4.1 -PversionCode=41
@@ -56,41 +56,40 @@ android {
 }
 
 dependencies {
-    val composeBom = platform("androidx.compose:compose-bom:2024.12.01")
-    implementation(composeBom)
-    implementation("androidx.compose.ui:ui")
-    implementation("androidx.compose.material3:material3")
-    implementation("androidx.compose.material3:material3-window-size-class")
-    implementation("androidx.compose.material:material-icons-extended")
-    implementation("androidx.activity:activity-compose:1.9.3")
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
-    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
-    implementation("androidx.core:core-ktx:1.15.0")
-    implementation("androidx.exifinterface:exifinterface:1.3.7")
-    implementation("androidx.security:security-crypto:1.0.0")
-    implementation("androidx.fragment:fragment-ktx:1.8.5")
-    implementation("androidx.biometric:biometric:1.1.0")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
+    implementation(platform(libs.compose.bom))
+    implementation(libs.compose.ui)
+    implementation(libs.compose.material3)
+    implementation(libs.compose.material3.windowsize)
+    implementation(libs.compose.material.icons.extended)
+    implementation(libs.activity.compose)
+    implementation(libs.lifecycle.viewmodel.compose)
+    implementation(libs.lifecycle.runtime.compose)
+    implementation(libs.core.ktx)
+    implementation(libs.exifinterface)
+    implementation(libs.security.crypto)
+    implementation(libs.fragment.ktx)
+    implementation(libs.biometric)
+    implementation(libs.coroutines.android)
     // Hjemskjerm-widgets (Glance) og henting av widgetdata hvert 15. minutt.
-    implementation("androidx.glance:glance-appwidget:1.1.1")
-    implementation("androidx.work:work-runtime-ktx:2.10.0")
+    implementation(libs.glance.appwidget)
+    implementation(libs.work.runtime.ktx)
     // Familie: kart med OpenStreetMap-fliser, og helse fra Health Connect.
-    implementation("org.osmdroid:osmdroid-android:6.1.20")
-    implementation("androidx.health.connect:connect-client:1.1.0-alpha07")
+    implementation(libs.osmdroid)
+    implementation(libs.health.connect)
     // Sanntid (Huskeliste, Familie, Sporing): én WebSocket mot /api/ws.
-    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation(libs.okhttp)
     // Prompt 46: QR-skanning uten kameratillatelse (Googles skanner-UI)
-    implementation("com.google.android.gms:play-services-code-scanner:16.1.0")
+    implementation(libs.play.code.scanner)
     // Prompt 47: kvitteringer leses på telefonen (Google ML Kit, modellen via Play-tjenester). Task ventes på med
     // suspendCancellableCoroutine, så kotlinx-coroutines-play-services trengs ikke. Krever fragment ≥ 1.3 (fragment-ktx over).
-    implementation("com.google.android.gms:play-services-mlkit-text-recognition:19.0.1")
+    implementation(libs.play.mlkit.text)
     // Prompt 48: ML Kit Document Scanner (kantfinning, perspektivretting og beskjæring av kvitteringer). Skanner-UI og modell kommer
     // fra Play-tjenester (ingen kameratillatelse, ingen modell i APK-en). Brukes bare når «Dokumentskanner» er på; ellers/uten
     // Play-tjenester brukes systemkameraet som før (ui/Receipt48Ui.kt).
-    implementation("com.google.android.gms:play-services-mlkit-document-scanner:16.0.0-beta1")
+    implementation(libs.play.mlkit.document.scanner)
     // Prompt 51 (ANDPLAT51): Android Auto – Avganger, På vei hjem og Media som bilmaler (Car51Plat.kt). Fast stabil versjon.
-    implementation("androidx.car.app:app:1.4.0")
+    implementation(libs.car.app)
     // Prompt 71 (ANIAND71): Baseline Profile (src/main/baseline-prof.txt) for Hjem, Chat og ark. Profilinstalleren skriver profilen ved
     // første oppstart, også for APK-er som sideloades. Ingen ny Gradle-plugin (AGP tar med baseline-prof.txt av seg selv).
-    implementation("androidx.profileinstaller:profileinstaller:1.4.1")
+    implementation(libs.profileinstaller)
 }

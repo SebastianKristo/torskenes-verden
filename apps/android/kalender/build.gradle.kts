@@ -1,7 +1,7 @@
 plugins {
-    id("com.android.application")
-    id("org.jetbrains.kotlin.android")
-    id("org.jetbrains.kotlin.plugin.compose")
+    alias(libs.plugins.android.application)
+    alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.kotlin.compose)
 }
 
 // Prompt 33: Kalender – egen app med eget ikon og egne widgets. Samme versjonering og signering som Homelab-appen (:app):
@@ -60,21 +60,20 @@ android {
 
 // Bare avhengigheter som :app allerede har (ingen nye eksterne biblioteker).
 dependencies {
-    val composeBom = platform("androidx.compose:compose-bom:2024.12.01")
-    implementation(composeBom)
-    implementation("androidx.compose.ui:ui")
-    implementation("androidx.compose.material3:material3")
-    implementation("androidx.activity:activity-compose:1.9.3")
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
-    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
-    implementation("androidx.core:core-ktx:1.15.0")
+    implementation(platform(libs.compose.bom))
+    implementation(libs.compose.ui)
+    implementation(libs.compose.material3)
+    implementation(libs.activity.compose)
+    implementation(libs.lifecycle.viewmodel.compose)
+    implementation(libs.lifecycle.runtime.compose)
+    implementation(libs.core.ktx)
     // Code Scanner drar inn en gammel fragment-versjon; ActivityResult-API-et krever ≥ 1.3 (lintVitalRelease). Samme versjon som Finans-appen.
-    implementation("androidx.fragment:fragment-ktx:1.8.5")
-    implementation("androidx.security:security-crypto:1.0.0")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
+    implementation(libs.fragment.ktx)
+    implementation(libs.security.crypto)
+    implementation(libs.coroutines.android)
     // Hjemskjerm-widgets (Glance) og henting hvert 15. minutt.
-    implementation("androidx.glance:glance-appwidget:1.1.1")
-    implementation("androidx.work:work-runtime-ktx:2.10.0")
+    implementation(libs.glance.appwidget)
+    implementation(libs.work.runtime.ktx)
     // Prompt 46: QR-skanning uten kameratillatelse (Googles skanner-UI)
-    implementation("com.google.android.gms:play-services-code-scanner:16.1.0")
+    implementation(libs.play.code.scanner)
 }
