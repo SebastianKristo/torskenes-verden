@@ -4,7 +4,7 @@
 //   «Starter opp» bare ved ekte omstart: /api/health {restarting, updating, state} + X-Homelab-State                      → index.js, system-update.js
 //   2FA i appen: /api/auth/2fa/*                                                                                       → auth/two-factor.js (montert fra auth/login.js)
 //   Gjøremål-Glimt: flere punkter med rekkefølge, sted og person (placeName/after i POST og PATCH)                    → server/gjoremal/
-//   Nyheter Glimt-side: /api/news/glimt, /api/news/glimt/sources, /api/glimt/news-digest                               → news40.js
+//   Nyheter Glimt-side: /api/news/glimt, /api/news/glimt/sources, /api/glimt/news-digest                               → nyheter/ (mountNyheter)
 //   Julemodus: /api/glimt/settings jul*, julActive; brief.jul                                                         → jul40.js (+ glimt/settings.js), mellomvaren under
 //   Hjemlys: /api/hjemlys/*                                                                                           → server/familie/ (mountFamilie)
 //   Fanelinje: GET /api/app/pages + alle nøklene i homeNav                                                            → under (+ mobile.js TAB_IDS)
@@ -17,7 +17,6 @@ import { db } from './db.js';
 import { startHungSweeper } from './ai-run.js';
 import { sessionUser } from './auth/session.js';
 
-export { news40Api, newsDigestApi } from './news40.js';
 
 /* ---------------- Fanelinje: alle sider i Mer ---------------- */
 // Én kilde for Mer-menyen og «Rediger fanelinjen» (fasit HNAV_ALL). key = nøkkelen i designet, id = nøkkelen i homeNav/tabBar (mobile.js TAB_IDS).

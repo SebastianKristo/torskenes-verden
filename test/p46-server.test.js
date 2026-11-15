@@ -33,7 +33,7 @@ const { db, kv, OWNER } = await import('../server/db.js');
 const upd = await import('../server/system-update.js');
 const pu = await import('../server/auth/server-address.js');
 const st46 = await import('../server/studie/tables.js');
-const news = await import('../server/news46.js');
+const news = await import('../server/nyheter/categories.js');
 const aa = await import('../server/media/middleware.js');
 const mem = await import('../server/ai/claude-memory.js');
 

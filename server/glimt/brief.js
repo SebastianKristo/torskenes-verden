@@ -41,7 +41,7 @@ import { db, kv } from '../db.js';
 import { authOrToken } from '../mobile.js';
 import { eventsFor } from '../kalender/events.js';
 import { weatherFull, wmoText, iconOf } from '../vaer/full.js';
-import { newsFor } from '../rss.js';
+import { newsFor } from '../nyheter/rss.js';
 import { packagesFor } from '../sporing/shipments.js';
 import { notifyUser } from '../notify.js';
 import { run as aiRun } from '../ai-run.js';

@@ -31,7 +31,7 @@ const auth = await import('../server/auth/session.js');
 const D = await import('../server/skjold/decode.js');
 const AI = await import('../server/skjold/ai.js');
 const IM = await import('../server/skjold/image-search.js');
-const N73 = await import('../server/news73.js');
+const N73 = await import('../server/nyheter/saved.js');
 const RUN = await import('../server/ai-run.js');
 const { updateConfig } = await import('../server/settings.js');
 

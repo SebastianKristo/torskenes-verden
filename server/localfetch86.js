@@ -4,7 +4,7 @@
 //   - bare http/https, og omdirigeringer følges for hånd (maks 5) med ny kontroll for hvert hopp;
 //   - private, loopback-, link-local- og metadata-adresser (10/8, 172.16/12, 192.168/16, 127/8, 169.254/16, ::1, fc00::/7, fe80::/10 …),
 //     navn som localhost/*.local/*.lan/*.internal og navn som DNS peker til slike adresser, avvises med LOCAL_MSG86;
-//   - offentlige adresser hentes via den vernede agenten i news73.js (kontroll også ved selve tilkoblingen, så DNS-rebinding
+//   - offentlige adresser hentes via den vernede agenten i nyheter/saved.js (kontroll også ved selve tilkoblingen, så DNS-rebinding
 //     ikke slipper gjennom);
 //   - verter på godkjenningslista (bare admin kan endre den) hentes som før.
 //
@@ -29,9 +29,9 @@ const HOST_RE = /^(?=.{1,253}$)[a-z0-9_]([a-z0-9_-]{0,61}[a-z0-9_])?(\.[a-z0-9_]
 const localErr = () => Object.assign(new Error(LOCAL_MSG86), { code: 'ELOCAL86', status: 403 });
 const bare = (h) => String(h ?? '').trim().toLowerCase().replace(/^\[|\]$/g, '').replace(/\.$/, '');
 
-// news73.js lastes først ved bruk (den importerer mobile.js, som igjen importerer rss.js – unngår sirkulær last ved oppstart).
+// nyheter/saved.js lastes først ved bruk (den importerer mobile.js, som igjen importerer nyheter/rss.js – unngår sirkulær last ved oppstart).
 let n73 = null;
-const news73 = () => (n73 ??= import('./news73.js'));
+const news73 = () => (n73 ??= import('./nyheter/saved.js'));
 
 let resolver = async (host) => (await dnsLookup(host, { all: true, verbatim: true })).map((x) => x.address);
 let transport = null;
@@ -128,7 +128,7 @@ export async function guardedFetch86(url, init = {}) {
   }
   throw new Error('For mange omdirigeringer');
 }
-// Vanlig drift: den vernede agenten i news73.js (kontrollerer adressen ved tilkoblingen). Er globalThis.fetch byttet ut (tester som
+// Vanlig drift: den vernede agenten i nyheter/saved.js (kontrollerer adressen ved tilkoblingen). Er globalThis.fetch byttet ut (tester som
 // later som de er nettet), brukes den – kontrollen over (navn, IP og DNS) gjelder uansett.
 const NATIVE = /internal\/deps\/undici/;
 async function pinned() {

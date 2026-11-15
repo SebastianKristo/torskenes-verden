@@ -23,7 +23,7 @@ test.after(() => { globalThis.fetch = realFetch; });
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const { default: app } = await import('../server/index.js');
-const N = await import('../server/news73.js');
+const N = await import('../server/nyheter/saved.js');
 const { createUser } = await import('../server/auth/session.js');
 
 let ipN = 20;

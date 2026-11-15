@@ -22,7 +22,7 @@ import { ensureIndex42, norm42, fold42, synonymsOf42 } from './finans/search-db.
 import { settings as fhSettings } from './finans/db.js';
 import { gateEmbed } from './ai-gate.js';
 import { sunTime } from './vaer/met.js';
-import { savedDocs73, savedSig73 } from './news73.js'; // prompt 73 (NEWS73): lagrede artikler i felles søk
+import { savedDocs73, savedSig73 } from './nyheter/saved.js'; // prompt 73 (NEWS73): lagrede artikler i felles søk
 import { partDocs76, partSig76, partResult76 } from './skjold/glimt.js'; // prompt 76 (SKJSRV): Skjold Lab-deler i felles søk
 import { osloDate } from './dates/oslo.js';
 import { dtf } from './intl-format.js'; // gjenbrukte Intl.DateTimeFormat

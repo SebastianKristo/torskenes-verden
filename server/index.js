@@ -24,10 +24,8 @@ import uiApi from './ui.js';
 import backgroundApi, { hasBackgroundTest, testBackgrounds } from './background.js';
 import mobileApi, { meOut, removeAvatar, shortcutsFor, layoutOf, authOrToken, designOf } from './mobile.js';
 import { mountDates } from './dates/api.js';
-import rssApi, { startRssWorker } from './rss.js';
 import { mountLocalFetch86, migrateLocalHosts86 } from './localfetch86.js'; // prompt 86: godkjente lokale verter for RSS/iCal (admin: /api/admin/local-fetch-hosts)
-import { faviconHandler46 } from './news46.js'; // prompt 46 (SERVER46)
-import { news73Api } from './news73.js'; // prompt 73 (NEWS73)
+import { mountNyheter, startNyheter } from './nyheter/index.js'; // Nyheter: /api/rss, /api/news (Glimt-siden, lagrede artikler) og /api/glimt/news-digest
 import iconsApi from './icons.js';
 import tilesApi, { hasMapTest, testMap } from './tiles.js';
 import { mountGjoremal } from './gjoremal/index.js'; // Gjøremål: /api/tasks og /api/huske
@@ -55,7 +53,7 @@ import { startQuality64 } from './quality64/system.js'; // prompt 64: systemoppg
 import api36 from './api36.js'; // prompt 36 (SERVER36)
 import { profilesApi, bibleApi } from './api37.js'; // prompt 37 (SERVER37)
 import { bearerFallthrough46 } from './api-auth46.js'; // prompt 46 (SERVER46)
-import { news40Api, newsDigestApi, pages40Api, briefJul40, startApi40 } from './api40.js'; // prompt 40 (SERVER40)
+import { pages40Api, briefJul40, startApi40 } from './api40.js'; // prompt 40 (SERVER40)
 import { mountServer47 } from './server47.js'; // prompt 47 (SERVER47)
 import { ruter41Api, mai17Api, brief41 } from './api41.js'; // prompt 41 (SERVER41)
 import { mountFamilie, startFamilie, hlPage41 } from './familie/index.js'; // Familie: /api/family, /api/kart, /api/famcal51, /api/hjemlys (+ /api/velfremme)
@@ -550,16 +548,13 @@ mountSporing(app); // server/sporing/: /api/tracking – kontoer, PostNord-helse
 app.route('/api/bg', gphoto46Api); // prompt 46 (DATA46): /api/bg/gphoto (før mobileApi sin /api/bg/:file)
 mountMat(app); // server/mat/: /api/matplan og /mat/api (samme app) og /mat/calendar.ics
 // Profil, oppsett, søk, mobilforside og widgets: sesjon ELLER FinansHub-token (må stå før /api med requireAuth).
-app.get('/api/rss/favicon', faviconHandler46); // prompt 46: offentlig, bare domener fra kildelistene (news46.js)
-app.route('/api/rss', rssApi); // Nyhetsleser (prompt 13): RSS/Atom med ✦ AI-sammendrag og -kategorisering
+mountNyheter(app); // server/nyheter/: /api/rss (favicon offentlig), /api/news/saved, /api/news og /api/glimt/news-digest
 app.route('/api/icons', iconsApi); // Ikoner (prompt 23): Iconify-søk, SVG cachet på disk og ✦ AI-forslag
 // Kartfliser (prompt 20): /tiles/:style/:z/:x/:y.png og /api/config/map, sesjon eller app-token (header eller ?token=).
 app.route('/', tilesApi);
 mountLive89(app); // prompt 89 (SRV89): /api/live/aktiviteter, /handling, /innstillinger, /tokens
 mountFamilie(app); // server/familie/: sonevarsler, Kart, familiekalender, Steder/Folk/Helse/Sjekk inn, posisjon og Vel fremme
 mountGjoremal(app); // server/gjoremal/: /api/tasks (synk-raden, listerekkefølge, Glimt-logg, Huskeliste) og /api/huske
-app.route('/api/news/saved', news73Api); // prompt 73 (NEWS73): lagrede artikler (offline, SSRF-vern)
-app.route('/api/news', news40Api); // prompt 40: Nyheter · Glimt-siden
 app.route('/api/app/pages', pages40Api); // prompt 40: alle sider i Mer (fanelinja), før /api/app
 app.route('/api/app/android', appUpdateApi); // prompt 32: /latest og /apk/:version, sesjon eller app-token, alle brukere
 app.route('/api', notifyApi); // Varsler (/api/me/notify) og appnavn (/api/app) (prompt 17)
@@ -593,7 +588,6 @@ app.route('/api/system', logs44Api); // prompt 44: /api/system/containers, /api/
 // Prompt 30: kort versjonssvar for oppdateringsbanneret (samme tilgang som /api/system/update).
 app.get('/api/system/version', (c) => { const u = new URL(c.req.url); u.pathname = '/api/system/update/version'; return app.fetch(new Request(u, { headers: c.req.raw.headers }), c.env); });
 app.get('/api/system/changelog', (c) => { const u = new URL(c.req.url); u.pathname = '/api/system/update/changelog'; return app.fetch(new Request(u, { headers: c.req.raw.headers }), c.env); }); // prompt 36
-app.route('/api/glimt/news-digest', newsDigestApi); // prompt 40: samme som POST /api/news/glimt
 app.route('/api/glimt/quality', qualityApi64); // prompt 64: /runs, /runs/:id, /run-now, /abort, /weekly, /settings
 app.route('/api/search-history', searchHistoryApi); // prompt 32: søkehistorikk per bruker (mobil logger, web viser)
 mountAi(app); // server/ai/: /api/ai/memory, ✦ modellanbefalingene og AI-kontrollen (/api/ai)
@@ -642,7 +636,7 @@ app.route('/domains/api', domainsApi);
 // (ingen varsler, e-post, backup, oppdateringer eller selvreparasjon). Bare HTTP-serveren og migreringene kjører.
 const BG51 = process.env.NODE_ENV !== 'test' && process.env.OPS51_SANDBOX !== '1';
 migrateLocalHosts86().catch((e) => console.warn('[localfetch]', e.message)); // prompt 86: én gang – lokale verter i administratorenes abonnementer godkjennes
-if (BG51) { startTrackingWorker(); startRssWorker(); startBirthdayWorker(); startSystemBackupScheduler(); startUpdateScheduler(); startDomainGlimtScheduler(); startRom(); startApi40(); startMedia(); startLogs44(); startLive89(); }
+if (BG51) { startTrackingWorker(); startNyheter(); startBirthdayWorker(); startSystemBackupScheduler(); startUpdateScheduler(); startDomainGlimtScheduler(); startRom(); startApi40(); startMedia(); startLogs44(); startLive89(); }
 if (BG51) { startGphoto46(); } // prompt 46 (DATA46)
 if (BG51) startJobs(); // felles planlegger (server/jobs/): backup, prøveperioder, skattemelding, brief, iCal, skolekalendere, Sjekk inn, «forlot»
 if (process.env.NODE_ENV !== 'test') startOps51(); // prompt 51 (OPS51): planlegger (backup, testet gjenoppretting, vedlikehold) og migrasjonslogg

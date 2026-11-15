@@ -32,9 +32,9 @@ import { isIP } from 'node:net';
 import { createHash, randomUUID } from 'node:crypto';
 import { mkdirSync, writeFileSync, readFileSync, rmSync, existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { db, q } from './db.js';
-import { config } from './config.js';
-import { authOrToken } from './mobile.js';
+import { db, q } from '../db.js';
+import { config } from '../config.js';
+import { authOrToken } from '../mobile.js';
 
 const MOCK = () => process.env.MOCK_DATA === '1';
 export const MAX_BYTES73 = 5 * 1024 * 1024;
@@ -668,7 +668,7 @@ export function download73(user, id, extra = {}) {
     const rssLen = row.rss.length;
     let ext = null, reason = null, via = null;
     if (MOCK() && !injected) {
-      const { mockArticle } = await import('./mock.js');
+      const { mockArticle } = await import('../mock.js');
       const m = mockArticle(row.title, 'norge', row.source || 'NRK');
       const paras = m.text.split(/\n\n+/).map((x) => ({ t: 'p', x: x.trim() })).filter((b) => b.x);
       ext = { title: row.title, lead: row.lead || '', author: null, published: row.published, source: row.source, image: null, blocks: paras, text: m.text, words: m.text.split(/\s+/).length, amp: null, paywall: false, via: 'page' };

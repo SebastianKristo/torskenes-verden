@@ -9,15 +9,16 @@
 //       readability (<article>/<p>), ✦ AI lager JSON {sammendrag, punkter} på brukerens språk (language). Cache per bruker og URL.
 //       Uten AI: de første setningene fra saken (ai:false). MOCK_DATA=1: realistisk tekst fra mock.js.
 import { Hono } from 'hono';
-import { db, kv } from './db.js';
-import { config } from './config.js';
-import { guardedFetch86, approveIfAdmin86 } from './localfetch86.js'; // prompt 86: SSRF-vern, lokale verter må være godkjent av admin
-import { aiJson } from './homeos-common.js';
-import { authOrToken, languageOf } from './mobile.js';
-import { ICON_DEFAULTS, validId as validIconId } from './icons.js';
-// Prompt 46 (SERVER46): egne kategorier + «For deg», favicon på kildene, sammendrag per kategori, Innstillinger → Nyheter (news46.js).
-import { mountNews46, customIds46, feedIcon46, itemsForCat46, fetchIcon46, feedDomain46, categoriesOut46 } from './news46.js';
-import { gistCategory53, topicSlugs53 } from './dal53/topics.js'; // prompt 53 (DAL53): emner fra Gist per sak
+import { db, kv } from '../db.js';
+import { registerJob } from '../jobs/index.js';
+import { config } from '../config.js';
+import { guardedFetch86, approveIfAdmin86 } from '../localfetch86.js'; // prompt 86: SSRF-vern, lokale verter må være godkjent av admin
+import { aiJson } from '../homeos-common.js';
+import { authOrToken, languageOf } from '../mobile.js';
+import { ICON_DEFAULTS, validId as validIconId } from '../icons.js';
+// Prompt 46 (SERVER46): egne kategorier + «For deg», favicon på kildene, sammendrag per kategori, Innstillinger → Nyheter (categories.js).
+import { mountNews46, customIds46, feedIcon46, itemsForCat46, fetchIcon46, feedDomain46, categoriesOut46 } from './categories.js';
+import { gistCategory53, topicSlugs53 } from '../dal53/topics.js'; // prompt 53 (DAL53): emner fra Gist per sak
 
 const MOCK = process.env.MOCK_DATA === '1';
 const REFRESH_MS = 10 * 60_000;
@@ -232,12 +233,11 @@ export async function refresh(user, { force = false } = {}) {
   }
 }
 
-let timer = null;
+// Kildene hentes hvert 10. minutt via den felles planleggeren (ikke i test/sandkasse).
+const tick = () => refresh(null).catch((e) => console.warn('[rss]', e.message));
+registerJob('nyheter.rss', REFRESH_MS, tick, { note: 'Nyheter: RSS- og Atom-kildene hentes på nytt' });
+/** Første henting 15 s etter oppstart (ellers først etter ett intervall). Bare når bakgrunnsjobber er lov. */
 export function startRssWorker() {
-  if (timer) return;
-  const tick = () => refresh(null).catch((e) => console.warn('[rss]', e.message));
-  timer = setInterval(tick, REFRESH_MS);
-  timer.unref?.();
   setTimeout(tick, 15_000).unref?.();
 }
 
@@ -311,7 +311,7 @@ export async function articleFor(user, url) {
   let d = hit && Date.now() - hit.fetched < 7 * 24 * 3600_000 ? JSON.parse(hit.data) : null;
   if (!d) {
     let a = { image: null, title: null, text: '', words: 0, readMin: null }, mock = null;
-    if (MOCK && !pageFetch) { mockMod ??= await import('./mock.js'); mock = mockMod.mockArticle(row.title, category, row.feed); a = { ...a, text: mock.text, words: mock.text.split(/\s+/).length, readMin: Math.max(1, Math.round(mock.text.split(/\s+/).length / WPM)) }; }
+    if (MOCK && !pageFetch) { mockMod ??= await import('../mock.js'); mock = mockMod.mockArticle(row.title, category, row.feed); a = { ...a, text: mock.text, words: mock.text.split(/\s+/).length, readMin: Math.max(1, Math.round(mock.text.split(/\s+/).length / WPM)) }; }
     else { try { a = articleOf(await fetchPage(url), url); } catch { /* bare tittel og ingress */ } }
     const source = a.text || row.excerpt || row.title;
     let summary = null, points = [], ai = false, provider = null;
