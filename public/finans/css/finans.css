@@ -574,6 +574,11 @@ html[data-v3]{--c-in:var(--acc);--c-out:var(--warn)}
 .btn,.inp{border-radius:var(--r2)}
 .btn.sm{border-radius:calc(var(--r2) - 2px)}
 .av{background:var(--av)}
+/* B-F6: lys tekst (--acc-ink) på fersken-avataren ga 1,26:1 i lyst tema. */
+html[data-theme=lys] .av{color:var(--text)}
+/* B-F6: mobile.css (lastes også på desktop) demper .kpi span/small med opasitet («Total saldo», «kr», «mot oktober», trendtallene:
+   2,4–3,3:1). Fargene her er alt dempet nok, så desktop viser dem uten ekstra opasitet. Størrelsene derfra beholdes. */
+html[data-ui=desktop] .kpi span,html[data-ui=desktop] .kpi small{opacity:1}
 .nav a[aria-current=page]{background:var(--nav-act)}
 .nav .badge{color:var(--badge-ink)}
 html[data-v3] body{font-size:14.5px}

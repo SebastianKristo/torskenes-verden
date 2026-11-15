@@ -63,7 +63,8 @@ html[data-theme=mork] .action span.a42-tile,html[data-theme=glod] .action span.a
 html[data-theme=mork] .s42-logo:not([style*=background]),html[data-theme=glod] .s42-logo:not([style*=background]){background:#f3efe6}
 
 /* ---------- Aksjelogoer (48 × 48, radius 14, kremflate) ---------- */
-.k42-logo{position:relative;flex:none;width:var(--k);height:var(--k);border-radius:14px;overflow:hidden;display:grid;place-items:center;background:color-mix(in oklab,var(--kc) 18%,var(--card));color:var(--kc)}
+/* E-B8: tickeren i instrumentfargen alene ga 1,6–2,4:1 på lys bunn. Fargen blandes med tekstfargen, så den holder ≥ 4,5:1 i alle temaer. */
+.k42-logo{position:relative;flex:none;width:var(--k);height:var(--k);border-radius:14px;overflow:hidden;display:grid;place-items:center;background:color-mix(in oklab,var(--kc) 18%,var(--card));color:color-mix(in oklab,var(--kc) 45%,var(--text))}
 .k42-logo>i{font:700 calc(var(--k) * .26) var(--mono);font-style:normal;letter-spacing:-.02em}
 .k42-logo img{position:absolute;inset:0;width:100%;height:100%;padding:8px;box-sizing:border-box;object-fit:contain;background:#fffdf8;opacity:0;transition:opacity .15s}
 .k42-logo img.on{opacity:1}
