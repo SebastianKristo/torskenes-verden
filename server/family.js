@@ -12,6 +12,7 @@ import { userInfo, listUsers, sessionUser } from './auth.js';
 import { bearerOk } from './finans/routes.js';
 import { broadcast } from './realtime.js';
 import { registerJob } from './jobs/index.js';
+import { osloDate } from './dates/oslo.js';
 
 const MOCK = process.env.MOCK_DATA === '1';
 const DAY = 86_400_000;
@@ -345,7 +346,7 @@ function prune() {
   lastPrune = Date.now();
   q('DELETE FROM family_pos WHERE ts < ?').run(Date.now() - POS_KEEP);
   q('DELETE FROM family_event WHERE ts < ?').run(Date.now() - 30 * DAY);
-  const cut = new Date(Date.now() - HEALTH_KEEP_DAYS * DAY).toISOString().slice(0, 10);
+  const cut = osloDate(Date.now() - HEALTH_KEEP_DAYS * DAY);
   q('DELETE FROM family_health WHERE date < ?').run(cut);
 }
 
@@ -412,7 +413,7 @@ function mockAt(m, ts) {
 function mockMember(m, viewer) {
   const now = Date.now(), [lat, lon] = mockAt(m, now);
   const raw = { ts: now - 40_000, lat, lon, acc: m.activity === 'still' ? 12 : 8, speed: m.speed, heading: 75, alt: 40, battery: m.battery, charging: m.charging ? 1 : 0, activity: m.activity };
-  const days = Array.from({ length: 7 }, (_, i) => { const d = new Date(now - (6 - i) * DAY).toISOString().slice(0, 10); return { date: d, steps: 4200 + ((i * 1777 + m.id.length * 991) % 7400), sleepMin: 380 + ((i * 37) % 90), activeKcal: 260 + ((i * 53) % 340), restingHr: 56 + (i % 5) }; });
+  const days = Array.from({ length: 7 }, (_, i) => { const d = osloDate(now - (6 - i) * DAY); return { date: d, steps: 4200 + ((i * 1777 + m.id.length * 991) % 7400), sleepMin: 380 + ((i * 37) % 90), activeKcal: 260 + ((i * 53) % 340), restingHr: 56 + (i % 5) }; });
   const exact = m.precision === 'exact';
   const devs = (m.devices ?? [['iPhone', 'ios']]).map(([name, platform, bat, ago], i) => ({ id: `${m.id}-${i}`, name, platform, battery: bat ?? m.battery, lastSeen: now - (ago ?? 40_000), accuracy: exact ? (i ? 25 : raw.acc) : 1000, isSource: i === 0 }));
   return {

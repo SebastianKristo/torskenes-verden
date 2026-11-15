@@ -13,9 +13,11 @@ import { networkInterfaces } from 'node:os';
 import { kv, OWNER } from './db.js';
 import { config } from './config.js';
 import { kvServer89 } from './domain89.js'; // prompt 89: gammel standarddomene migreres ved lesing
+import { normalizeServerUrl } from './net/server-url.js';
 
-const URL_RE = /^https?:\/\/[^\s/?#@]+(?::\d+)?(\/[^\s]*)?$/i;
-export const cleanUrl46 = (v) => { const s = String(v ?? '').trim().replace(/\/+$/, ''); return URL_RE.test(s) ? s : null; };
+// Samme normalisering som appene (shared/testvektorer/serveradresse.json): uten skjema → http for lokale verter, ellers https;
+// sti og / til slutt fjernes, porten beholdes, aldri brukernavn/passord.
+export const cleanUrl46 = (v) => normalizeServerUrl(v);
 const hostOfUrl = (u) => { try { return new URL(u).host.toLowerCase(); } catch { return null; } };
 const hostnameOf = (h) => String(h ?? '').toLowerCase().replace(/:\d{1,5}$/, '').replace(/^\[|\]$/g, '');
 

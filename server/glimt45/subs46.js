@@ -11,6 +11,7 @@
 // prøven faktisk slutter, 'cancel_by' = ends_at er bare fristen brukeren ga Glimt, prøveslutten er ukjent).
 import { db } from '../db.js';
 import { addDays45, todayOslo45 } from './dates.js';
+import { PER_YEAR } from '../finans/cycles.js';
 
 const q = (sql) => db.prepare(sql);
 const cols = (t) => { try { return q(`PRAGMA table_info(${t})`).all().map((c) => c.name); } catch { return []; } };
@@ -30,8 +31,9 @@ function ensureTrialCols() {
 /* ---------------- Normalisering ---------------- */
 
 // Måneder per trekk. Ukjent syklus → null (sammenligningen er usikker, ikke gjett).
-export const CYCLE_MONTHS46 = { weekly: 12 / 52, monthly: 1, quarterly: 3, halfyearly: 6, semiannual: 6, yearly: 12, annual: 12, biennial: 24 };
-export const CYCLE_LABEL46 = { weekly: 'uke', monthly: 'måned', quarterly: 'kvartal', halfyearly: 'halvår', semiannual: 'halvår', yearly: 'år', annual: 'år', biennial: 'andre år' };
+// Fra syklustabellen i finans/cycles.js (måneder per trekk), med de engelske aliasene modellen kan bruke.
+export const CYCLE_MONTHS46 = { ...Object.fromEntries(Object.entries(PER_YEAR).map(([c, n]) => [c, 12 / n])), semiannual: 6, annual: 12 };
+export const CYCLE_LABEL46 = { weekly: 'uke', biweekly: 'andre uke', monthly: 'måned', quarterly: 'kvartal', halfyearly: 'halvår', semiannual: 'halvår', yearly: 'år', annual: 'år', biennial: 'andre år' };
 const r2 = (v) => Math.round(v * 100) / 100;
 /** Pris per trekk (kr) + syklus → {monthly, yearly} eller {uncertain:'cycle'|'price'}. */
 export function normalizeCost46(priceKr, cycle) {

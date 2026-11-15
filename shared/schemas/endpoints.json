@@ -92,6 +92,12 @@
       "path": "/api/live/aktiviteter",
       "schema": "api/live-aktiviteter.schema.json",
       "auth": "session|token"
+    },
+    {
+      "method": "GET",
+      "path": "/api/dates/holidays?year=2026",
+      "schema": "api/dates-holidays.schema.json",
+      "auth": "session|token"
     }
   ]
 }

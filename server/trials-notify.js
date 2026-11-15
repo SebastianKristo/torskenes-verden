@@ -28,7 +28,7 @@ export async function trialTick(now = Date.now()) {
       if (now - at > LATE_MS) { out.push({ trialId: row.id, key: n.key, sent: false }); continue; }
       const t = trialOut(row);
       await notifyUser(row.user_id, { title: n.title, body: n.body, url: t.cancelUrl || '/finans/#/sub', tag: `trial-${row.id}`, category: 'abonnement',
-        data: { kind: 'trial', trialId: row.id, service: row.service, endsAt: row.ends_at, cancelUrl: t.cancelUrl, deepLink: `finanshub://abonnementer?trial=${row.id}`, final: n.kind === 'final',
+        data: { kind: 'trial', trialId: row.id, key: n.key, dedupeKey: `trial-${row.id}-${n.key}`, service: row.service, endsAt: row.ends_at, cancelUrl: t.cancelUrl, deepLink: `finanshub://abonnementer?trial=${row.id}`, final: n.kind === 'final',
           actions: n.actions } }, { now }).catch((e) => console.warn('[prøveperioder] varsel:', e.message));
       out.push({ trialId: row.id, key: n.key, sent: true });
     }

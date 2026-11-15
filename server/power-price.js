@@ -8,6 +8,7 @@
 // MOCK_DATA=1 (uten injisert fetch) gir faste priser.
 import { cfg } from './settings.js';
 import { cached } from './cache.js';
+import { osloDate } from './dates/oslo.js';
 
 const MOCK = () => process.env.MOCK_DATA === '1';
 let F = null;
@@ -37,7 +38,6 @@ export function homeZone() {
   return /bergen/.test(s) ? 'NO5' : /tr_?heim|trondheim/.test(s) ? 'NO3' : /troms/.test(s) ? 'NO4' : /kr_?sand|kristiansand|_no2/.test(s) ? 'NO2' : 'NO1';
 }
 const pad = (n) => String(n).padStart(2, '0');
-const osloDate = (t = Date.now()) => new Date(t).toLocaleDateString('sv-SE', { timeZone: 'Europe/Oslo' });
 const osloHour = (t) => +new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Oslo', hour: '2-digit', hourCycle: 'h23' }).format(new Date(t));
 const r1 = (v) => Math.round(v * 10) / 10;
 const nbn = (v) => String(r1(v)).replace('.', ',');

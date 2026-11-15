@@ -58,6 +58,7 @@ import { rankFor41 } from './chat41.js';
 import { externalBlocked48, r48Settings } from './receipts48/settings.js';
 import { imageIntent51, looksLikeDocument51, documentNote51, readDocument51, visionModel51, textModel51, isMultimodalError51, markNoVision51, friendlyError51, owuiVision51 } from './chat51.js'; // prompt 51 (RCPTSRV51): bilder i chatten
 import { engine53, webSearch53, eyeIntent53 } from './dal53/index.js'; // prompt 53 (DAL53): Tongue/Redact rundt motoren, Redact på søkeord, Eye for bilder
+import { osloDate } from './dates/oslo.js';
 
 const q = (sql) => db.prepare(sql);
 const isMock = () => process.env.MOCK_DATA === '1' && !fx;
@@ -233,7 +234,6 @@ function toMarkdown(r) {
 /* ---------------- Mine data ---------------- */
 
 const withTimeout = (p, ms, d) => Promise.race([p, sleep(ms).then(() => d)]);
-const osloDate = (t = Date.now()) => new Date(t).toLocaleDateString('sv-SE', { timeZone: 'Europe/Oslo' });
 const hm = (isoStr) => (isoStr ? new Date(isoStr).toLocaleTimeString('nb-NO', { timeZone: 'Europe/Oslo', hour: '2-digit', minute: '2-digit' }) : '');
 async function kalenderSummary(u) {
   const { eventsFor } = await import('./calendar.js');

@@ -28,6 +28,29 @@ test('forfall: ISO, dd.mm og neste år', () => {
   assert.deepEqual(up.map((x) => [x.kind, x.date, x.days]), [['bill', '2026-10-20', 2], ['installment', '2026-10-25', 7]]);
 });
 
+test('bolig «brukt» (Q21): poster til gjennomgang telles ikke, men vises som «venter»; igjen regnes fra det brukte', async () => {
+  const f = await call('/folders', 'POST', { name: 'Leiligheten', type: 'Leilighet' });
+  const id = f.body.id;
+  assert.equal((await call(`/folders/${id}`, 'PATCH', { budget: 10000 })).status, 200);
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Oslo' }).format(new Date());
+  const a = await call(`/folders/${id}/entries`, 'POST', { description: 'Maling', date: today, amount: 1200 });
+  const b = await call(`/folders/${id}/entries`, 'POST', { description: 'AI-forslag', date: today, amount: 800 });
+  assert.equal(a.status, 200, JSON.stringify(a.body));
+  const { db } = await import('../server/finans/db.js');
+  const eid = db.prepare("SELECT id FROM fh_folder_entries WHERE folder_id=? AND description='AI-forslag'").get(id).id;
+  db.prepare("UPDATE fh_folder_entries SET status='review' WHERE id=?").run(eid);
+  assert.equal(b.status, 200);
+  const full = (await call(`/folders/${id}`)).body;
+  assert.equal(full.yearTotal, 2000, 'summen av alle poster er uendret');
+  assert.equal(full.spent, 1200);
+  assert.deepEqual(full.pending, { count: 1, amount: 800, text: 'venter: 800 kr' });
+  assert.equal(full.kpi.budgetLeft, 8800);
+  assert.equal(full.kpi.over, false);
+  const m = full.months.find((x) => x.month === today.slice(0, 7));
+  assert.deepEqual([m.total, m.spent, m.pending], [2000, 1200, 800]);
+  assert.deepEqual(full.kpi.spentByMonth.find((x) => x.month === today.slice(0, 7)), { month: today.slice(0, 7), spent: 1200, pending: 800 });
+});
+
 test('boligen gir kommende forfall og kvitteringsliste; kvitteringsbilde bare for poster i boligen', async () => {
   const f = await call('/folders', 'POST', { name: 'Hytta', type: 'Hytte' });
   assert.equal(f.status, 200, JSON.stringify(f.body));

@@ -13,6 +13,8 @@
 import { db } from '../db.js';
 import { parseTrial, trialSchedule, trialTitle, trialBody, trialBadge, trialPreview, cancelUrlFor, CANCEL_LINKS, REMIND_OPTIONS, DEFAULT_OFFSETS, daysBetween, addDaysISO } from '../../public/js/trial-parse.js';
 import { osloTodayISO } from '../../public/js/quick-time.js';
+import { osloToUtc } from '../dates/oslo.js';
+import { parseDate } from '../dates/parse.js';
 
 db.exec(`CREATE TABLE IF NOT EXISTS trials (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -39,15 +41,20 @@ const parseJ = (s, d) => { try { return JSON.parse(s) ?? d; } catch { return d; 
 const pad = (n) => String(n).padStart(2, '0');
 
 /** Veggklokke i Oslo (dato + HH:MM) → ms UTC (sommer- og vintertid). */
-export function osloMs(date, hm) {
-  const [y, m, d] = date.split('-').map(Number), [h, mi] = hm.split(':').map(Number);
-  for (const off of [1, 2]) {
-    const t = Date.UTC(y, m - 1, d, h - off, mi);
-    const p = Object.fromEntries(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Oslo', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
-      .formatToParts(new Date(t)).map((x) => [x.type, x.value]));
-    if (`${p.year}-${p.month}-${p.day}` === date && `${p.hour}:${p.minute}` === `${pad(h)}:${pad(mi)}`) return t;
-  }
-  return Date.UTC(y, m - 1, d, h - 1, mi);
+export const osloMs = (date, hm) => osloToUtc(date, hm).getTime();
+
+/**
+ * Den ene tolkeren for prøveperioder på serveren (F-logikk L4, fasit shared/testvektorer/proveperioder.json): trial-parse.js finner
+ * tjeneste, pris og varighet («tre uker», «en måned», «til 25.11»); en sluttdato som bare står som dag («slutter fredag»,
+ * «ut neste fredag») tolkes av den felles datotolkeren (dates/parse.js), så den følger samme regler som resten (Q17).
+ */
+export function parseTrialText(text, today = osloTodayISO()) {
+  const p = parseTrial(text, today);
+  if (p.endsAt) return p;
+  const d = parseDate(String(text ?? '').slice(0, 500), today, { prefer: 'future' });
+  if (!d?.date || d.error || d.date < today) return p;
+  const missing = p.missing.filter((m) => m !== 'endsAt');
+  return { ...p, endsAt: d.date, missing, ok: !missing.length, question: missing.length ? 'Hvilken tjeneste gjelder prøven?' : null };
 }
 
 export const offsetsOf = (row) => { const v = parseJ(row.remind_offsets_days, DEFAULT_OFFSETS); return Array.isArray(v) ? v.filter((x) => Number.isInteger(x)) : [...DEFAULT_OFFSETS]; };
@@ -79,7 +86,7 @@ export const trialsFor = (user, all = false) => (all ? q('SELECT * FROM trials W
 export function createTrial(user, b, { source = 'skjema', today = osloTodayISO() } = {}) {
   let v = b ?? {};
   if (typeof v.text === 'string' && !v.service && !v.endsAt) {
-    const p = parseTrial(v.text, today);
+    const p = parseTrialText(v.text, today);
     if (!p.ok) return { error: p.question, missing: p.missing, parsed: p };
     v = { ...p, ...v, service: p.service, endsAt: p.endsAt, priceAfter: v.priceAfter ?? p.priceAfter };
   }
@@ -116,7 +123,7 @@ export function mountTrials(api, { R, W, toSubscription }) {
     const b = await c.req.json().catch(() => null);
     if (typeof b?.text !== 'string') return c.json({ error: 'Forventet {text}' }, 400);
     const today = typeof b.today === 'string' && validDate(b.today) ? b.today : osloTodayISO();
-    const r = parseTrial(b.text, today);
+    const r = parseTrialText(b.text, today);
     return c.json({ ...r, preview: r.ok ? trialPreview(r) : null });
   });
   api.post('/subscriptions/trials', W, async (c) => {

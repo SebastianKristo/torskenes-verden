@@ -25,6 +25,7 @@ import { authOrToken } from './mobile.js';
 import { userInfo, listUsers } from './auth.js';
 import { notifyUser } from './notify.js';
 import { broadcast } from './realtime.js';
+import { osloDate } from './dates/oslo.js';
 
 db.exec(`
 CREATE TABLE IF NOT EXISTS hjemlys_sessions (
@@ -81,7 +82,6 @@ async function eventsOf(user, from, to) {
   if (calImpl) return calImpl(user, from, to);
   try { const { eventsFor } = await import('./calendar.js'); return (await eventsFor(user, from, to)).events ?? []; } catch { return []; }
 }
-const osloDate = (t = Date.now()) => new Date(t).toLocaleDateString('sv-SE', { timeZone: 'Europe/Oslo' });
 const endMsOf = (e) => Date.parse(e.end ?? e.start ?? '') || null;
 /** Hvem du var med: deltakerne (eller familie nevnt i tittel/beskrivelse) i hendelsen som slutter rett før start. */
 async function withWhom(user, startedAt) {

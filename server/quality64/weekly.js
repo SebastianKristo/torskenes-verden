@@ -8,6 +8,7 @@ import { insertRequest64, requestsBetween64, runsBetween64, publicRun64 } from '
 import { quality64 } from './settings.js';
 import { push64, PUSH_URL64 } from './notify64.js';
 import { osloParts62, osloToUtc62 } from '../glimt45/dates.js';
+import { osloDate } from '../dates/oslo.js';
 
 const q = (sql) => db.prepare(sql);
 const DAY = 86400_000;
@@ -17,7 +18,7 @@ export const WEEK64 = /^(\d{4})-W(\d{2})$/;
 
 /* ---------------- Uker (ISO 8601, Europe/Oslo) ---------------- */
 
-const ymd = (t) => new Date(t).toISOString().slice(0, 10);
+const ymd = (t) => osloDate(t); // «i dag» i Oslo (dates/oslo.js)
 /** «2026-10-26» → '2026-W44' */
 export function weekOfDate64(date) {
   const [y, m, d] = date.split('-').map(Number);

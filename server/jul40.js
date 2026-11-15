@@ -1,3 +1,4 @@
+import { osloParts } from './dates/oslo.js';
 // Prompt 40 (SERVER40): Glimt i julemodus (1. desember – 13. januar), Auto/Av/På + fasevalg (claude-code-glimt-jul.md).
 // Valget lagres per bruker i Glimt-innstillingene (glimt35.js): jul:'auto'|'av'|'pa', julPhase:'advent'|'jul'|'nyttar'|'vinter'|null,
 // snow:true, julSound:'av'|'bjelle'. Avledet julActive = {on, phase, until, label, auto, outfit} (Europe/Oslo). Sanntid «glimt:settings».
@@ -12,7 +13,7 @@ const OUTFIT = { advent: 'nisse', jul: 'jul', nyttar: 'nyttar', vinter: 'vinter'
 const MON = ['januar', 'februar', 'mars', 'april', 'mai', 'juni', 'juli', 'august', 'september', 'oktober', 'november', 'desember'];
 
 /** {y, m, d} i Oslo. */
-export const osloYmd = (t = Date.now()) => { const [y, m, d] = new Date(t).toLocaleDateString('sv-SE', { timeZone: 'Europe/Oslo' }).split('-').map(Number); return { y, m, d }; };
+export const osloYmd = (t = Date.now()) => { const p = osloParts(t); return { y: p.year, m: p.month, d: p.day }; };
 /** Fasen for datoen (auto), eller null utenfor 1. des – 13. jan. */
 export function autoPhase(t = Date.now()) {
   const { m, d } = osloYmd(t);

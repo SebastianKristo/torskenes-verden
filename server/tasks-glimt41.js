@@ -25,6 +25,7 @@ import { broadcast } from './realtime.js';
 import { notifyUser } from './notify.js';
 import { imperative40, validateAi40, migrate40 } from './tasks-glimt40.js';
 import { parseTask37 } from './tasks-glimt37.js';
+import { osloDate } from './dates/oslo.js';
 
 db.exec(`CREATE TABLE IF NOT EXISTS huske_glimt_src (
   id TEXT PRIMARY KEY, user_id TEXT NOT NULL, text TEXT NOT NULL, created_at INTEGER NOT NULL, engine TEXT, item_ids TEXT NOT NULL DEFAULT '[]',
@@ -103,7 +104,7 @@ const SPLIT41 = /\s*,?\s*\b(før (?:vi|jeg|du|dere) (?:skal|må)|før det|hvor (
  * → [{n:'Lever pakke på butikken'}, {n:'Kjør til Toten', after:0}, {n:'Ta med tilhengeren hjem til Oslo', after:1, note:'Skal ha med møbler til Strømstad'}]
  * → [{n, list:null, who:null, date, time, place, after, tags:[], note}]
  */
-export function splitLocal41(text, today = new Date().toISOString().slice(0, 10)) {
+export function splitLocal41(text, today = osloDate()) {
   const out = [];
   const sentences = String(text ?? '').replace(/\r/g, '').split(/(?:[.!?]+\s+)|\n+/).map((s) => s.trim().replace(/[.!?]+$/, '')).filter(Boolean);
   for (const s of sentences) {
@@ -156,7 +157,7 @@ const withTimeout = (p, ms) => Promise.race([p, new Promise((_, rej) => { const 
 /** → {items, engine:'glimt'|'lokal', engineLabel} */
 /** Prompt 42 (tasks-glimt42.js): liste-kontrakt {tasks:[…]}, ny prompt, lengdevakt og bedre lokal forhåndsdeling. */
 export const _hooks42 = { prompt: null, normalize: null, guard: null, local: null, log: null, verbatim: null }; // verbatim: prompt 46 (glimt45/tasks46.js)
-export async function understand41(u, text, { lists = [], people = [], today = new Date().toISOString().slice(0, 10) } = {}) {
+export async function understand41(u, text, { lists = [], people = [], today = osloDate() } = {}) {
   const log = { input_len: String(text ?? '').length, model: null, tasks_count: 0, parse_ok: false, path: 'local' };
   const done = (r) => { log.tasks_count = r.items.length; if (r.engine === 'glimt') { log.path = 'ai'; log.model = r.engineLabel; } try { _hooks42.log?.(u, log); } catch { /* */ } return { ...r, log }; };
   if (needsAi41(text)) {

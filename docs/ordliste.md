@@ -34,6 +34,9 @@ Når du finner et begrep som mangler eller brukes ulikt, legg det til her i samm
 | **Mangler API-nøkkel for Mybring** | Mangler posten/bring: mybring api-nøkkel | Samme mønster for andre tjenester |
 | **Måned**, **3 dager** | Mnd, 3 d | Forkortelsen bare der plassen ikke strekker til (smale skjermer, widgets, klokka) |
 | **Laster …** (mellomrom før …) | Laster..., Laster… | |
+| **Helligdag** (offentlig høytidsdag, fri), **Merkedag** (Palmesøndag, Julaften, Nyttårsaften: ikke fri) | Offentlig høytidsdag (som type), Høytid | `type` i kalenderen og `/api/dates/holidays` (Q18) |
+| **Ukentlig**, **Hver 2. uke**, **Månedlig**, **Kvartalsvis**, **Halvårlig**, **Årlig**, **Hvert 2. år** | Annenhver uke, Kvartalvis, Halvårig (som syklusnavn) | Syklusnavnene serveren sender (`cycleName`, Q40) |
+| **venter: 1 234 kr** (bolig) | Brukt (om poster som venter) | Poster til gjennomgang telles ikke som brukt (Q21) |
 
 ## Skrivemåte
 

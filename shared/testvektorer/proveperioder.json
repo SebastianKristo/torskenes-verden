@@ -1,0 +1,37 @@
+{
+  "beskrivelse": "Fasit for gratis prøveperioder (F-logikk L4): tolking av fritekst og varselplanen serveren lager. Serveren er eneste kilde. Appene planlegger bare kopien av planen (notifications[].at) for å varsle uten nett, og deduplicerer mot push med key.",
+  "felt": {
+    "idag": "«I dag» i Oslo (YYYY-MM-DD).",
+    "tekst": "Det brukeren skriver.",
+    "tjeneste": "Forventet tjeneste.",
+    "slutt": "Forventet sluttdato (YYYY-MM-DD) eller null.",
+    "prisEtter": "Forventet pris etter prøven (kr/mnd) eller null.",
+    "varsler": "Bare i plan-vektorene: [{key, at}] der at er UTC-tidspunktet (ISO 8601) for varselet."
+  },
+  "regler": {
+    "varighet": "«14 dager», «tre uker», «en måned», «to måneder», «1 uke» regnes fra i dag. Måneder: samme dag, kuttet til siste dag i måneden.",
+    "dato": "«til 25.11», «til 3. desember» = neste gang datoen kommer. Ukedager og «neste fredag» følger datoreglene (datoer.json, Q17).",
+    "plan": "Hvert valgt varsel kl. 09:00 Oslo-tid (sluttdato − antall dager), og siste varsel kl. 18:00 på sluttdagen. Standard er 1 dag før. Sommertid gir 07:00/16:00 UTC, vintertid 08:00/17:00 UTC."
+  },
+  "vektorer": [
+    { "id": "p01", "idag": "2026-11-16", "tekst": "Viaplay gratis i 14 dager", "tjeneste": "Viaplay", "slutt": "2026-11-30", "prisEtter": null },
+    { "id": "p02", "idag": "2026-11-16", "tekst": "Max prøve i tre uker", "tjeneste": "Max", "slutt": "2026-12-07", "prisEtter": null },
+    { "id": "p03", "idag": "2026-11-16", "tekst": "Netflix en måned gratis", "tjeneste": "Netflix", "slutt": "2026-12-16", "prisEtter": null },
+    { "id": "p04", "idag": "2026-11-16", "tekst": "Disney+ prøveperiode 1 uke", "tjeneste": "Disney+", "slutt": "2026-11-23", "prisEtter": null },
+    { "id": "p05", "idag": "2026-11-16", "tekst": "Storytel gratis i to måneder", "tjeneste": "Storytel", "slutt": "2027-01-16", "prisEtter": null },
+    { "id": "p06", "idag": "2026-11-16", "tekst": "Spotify premium prøve til 25.11", "tjeneste": "Spotify", "slutt": "2026-11-25", "prisEtter": null },
+    { "id": "p07", "idag": "2026-11-16", "tekst": "Audible gratis til 3. desember", "tjeneste": "Audible", "slutt": "2026-12-03", "prisEtter": null },
+    { "id": "p08", "idag": "2026-11-16", "tekst": "Strava gratis i 30 dager, deretter 99 kr/mnd", "tjeneste": "Strava", "slutt": "2026-12-16", "prisEtter": 99 },
+    { "id": "p09", "idag": "2026-11-16", "tekst": "Viaplay gratis i fjorten dager", "tjeneste": "Viaplay", "slutt": "2026-11-30", "prisEtter": null },
+    { "id": "p10", "idag": "2026-11-16", "tekst": "Tidal prøveperiode slutter fredag", "tjeneste": "Tidal", "slutt": "2026-11-20", "prisEtter": null },
+    { "id": "p11", "idag": "2026-11-16", "tekst": "Storytel prøve ut neste fredag", "tjeneste": "Storytel", "slutt": "2026-11-20", "prisEtter": null },
+    { "id": "p12", "idag": "2026-01-31", "tekst": "Netflix gratis en måned", "tjeneste": "Netflix", "slutt": "2026-02-28", "prisEtter": null },
+    { "id": "p13", "idag": "2026-11-16", "tekst": "Viaplay 149 kr etter prøven, gratis i 7 dager", "tjeneste": "Viaplay", "slutt": "2026-11-23", "prisEtter": 149 }
+  ],
+  "plan": [
+    { "id": "v01", "slutt": "2026-11-30", "varselDagerFor": [1], "varsler": [{ "key": "d1", "at": "2026-11-29T08:00:00.000Z" }, { "key": "final", "at": "2026-11-30T17:00:00.000Z" }] },
+    { "id": "v02", "slutt": "2027-06-15", "varselDagerFor": [1], "varsler": [{ "key": "d1", "at": "2027-06-14T07:00:00.000Z" }, { "key": "final", "at": "2027-06-15T16:00:00.000Z" }] },
+    { "id": "v03", "slutt": "2026-03-30", "varselDagerFor": [0, 3], "varsler": [{ "key": "d3", "at": "2026-03-27T08:00:00.000Z" }, { "key": "d0", "at": "2026-03-30T07:00:00.000Z" }, { "key": "final", "at": "2026-03-30T16:00:00.000Z" }] },
+    { "id": "v04", "slutt": "2026-10-26", "varselDagerFor": [1], "varsler": [{ "key": "d1", "at": "2026-10-25T08:00:00.000Z" }, { "key": "final", "at": "2026-10-26T17:00:00.000Z" }] }
+  ]
+}

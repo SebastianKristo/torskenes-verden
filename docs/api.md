@@ -62,6 +62,19 @@ curl -s https://os.dittdomene.no/finans/api/search/ai -H "Authorization: Bearer 
 | CRUD | `/api/grades`, `/api/tests` | Studie |
 | GET / PUT / DELETE | `/api/cv` | CV-en. Lesing er offentlig, endring krever admin. |
 | GET | `/healthz` | `ok` |
+| POST | `/api/dates/parse` | `{text, now?}` → `{date, time, end, allDay, rest, label, today, dateText, timeText, errors}`. Den felles datotolkeren (Q17). Sesjon eller app-token |
+| GET | `/api/dates/holidays?year=` (eller `?from=&to=`) | `{from, to, items:[{date, name, type:'helligdag'\|'merkedag', fri}]}` (Q18) |
+
+### Regler serveren eier (Fase 2)
+
+Klientene viser det serveren sender og regner ikke selv (fasit i `shared/testvektorer/`):
+
+- **Datoer:** `POST /api/dates/parse`. «I dag» er alltid Oslo-datoen (`today` i svaret).
+- **Neste trekk** (`/finans/api/subscriptions`): send `cycle` (`weekly`, `biweekly`, `monthly`, `quarterly`, `halfyearly`, `yearly`, `biennial`), `chargeDay`/`billDay`, `billMonth` og gjerne `startDate` (et kjent trekk). Serveren regner `nextDate`. En `nextDate` fra klienten brukes bare som anker når trekkdag mangler, og erstattes hvis den ikke stemmer med syklusen. Eksplisitt manuell overstyring: `nextDateManual: true`. `GET /subscriptions` har `cycles[]`, og hvert abonnement har `monthly`, `yearly`, `perLabel` og `cycleName`.
+- **Betalt siste 12 mnd** (`GET /subscriptions/log`): `summary.paid12m` og `summary.paid12mText`, med prøver som gikk over til betalt (Q21).
+- **Prøveperioder:** tolkes på serveren (`POST /subscriptions/trials/parse`). Varselplanen står i `notifications[]` (`{key, dedupeKey, kind, at, title, body}`, `at` i UTC) på prøven og i `GET /api/widgets/trials`. Appene planlegger bare den kopien og dedupliserer mot push med `dedupeKey`.
+- **Bolig «brukt»** (`GET /finans/api/folders/:id`): `spent`, `pending: {count, amount, text:'venter: X kr'}`, `months[].spent`/`.pending`, `kpi.spentByMonth[]`, `kpi.budgetLeft` (fra `spent`) og `kpi.over`. Poster til gjennomgang og kvitteringer som leses, er ikke «brukt» (Q21).
+- **Helligdager og merkedager:** `GET /api/dates/holidays` og kalenderen «Helligdager» (`type` på hendelsen).
 
 ## FinansHub (`/finans/api`)
 

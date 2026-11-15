@@ -149,7 +149,8 @@
           ]
         },
         "type": {
-          "type": "string"
+          "type": "string",
+          "description": "Bl.a. 'helligdag' (offentlig høytidsdag) og 'merkedag' (ikke fridag) i kalenderen «Helligdager» (Q18)."
         },
         "color": {
           "type": [
@@ -186,6 +187,10 @@
         },
         "etag": {
           "type": "string"
+        },
+        "fri": {
+          "type": "boolean",
+          "description": "Helligdager: fridag eller ikke."
         }
       },
       "if": {

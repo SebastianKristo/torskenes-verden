@@ -7,10 +7,11 @@ import { Hono } from 'hono';
 import { db } from './db.js';
 import { auth42 } from './finans42.js';
 import finansApi from './routes.js';
+import { osloDate } from '../dates/oslo.js';
 
 const q = (sql) => db.prepare(sql);
 const MONTHS = ['januar', 'februar', 'mars', 'april', 'mai', 'juni', 'juli', 'august', 'september', 'oktober', 'november', 'desember'];
-const today = () => new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Oslo' });
+const today = () => osloDate();
 const kr = (v) => `${v < 0 ? '−' : v > 0 ? '+' : ''}${Math.abs(v).toLocaleString('nb-NO', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).replace(/\s/g, ' ')} kr`;
 const R = auth42('finance:read');
 

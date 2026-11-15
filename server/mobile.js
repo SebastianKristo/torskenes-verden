@@ -29,6 +29,7 @@ import { appMeta } from './notify.js';
 import { nextTasks } from './tasks.js';
 import * as integrations from './integrations.js';
 import { widgetOut as birthdaysWidget } from './birthdays.js';
+import { osloDate } from './dates/oslo.js';
 
 const MOCK = process.env.MOCK_DATA === '1';
 const ext = MOCK ? await import('./mock.js') : integrations;
@@ -1009,7 +1010,7 @@ const inner = async (app, path, c) => {
 };
 const part = (p) => p.then((v) => v ?? null, () => null);
 const r0 = (n) => (Number.isFinite(+n) ? Math.round(+n) : null);
-const daysTo = (d) => (d ? Math.round((new Date(`${String(d).slice(0, 10)}T12:00:00`) - new Date(`${new Date().toLocaleDateString('sv-SE')}T12:00:00`)) / 864e5) : null);
+const daysTo = (d) => (d ? Math.round((new Date(`${String(d).slice(0, 10)}T12:00:00`) - new Date(`${osloDate()}T12:00:00`)) / 864e5) : null);
 
 api.get('/mobile/widgets', authOrToken, async (c) => {
   const id = c.get('user'), admin = isAdmin(id);
@@ -1056,7 +1057,7 @@ api.get('/mobile/widgets', authOrToken, async (c) => {
   if (admin) { try { const d = domainOverview(); domains = { total: d.total, up: d.up, down: d.down, expiringSoon: d.expiringSoon }; } catch { domains = null; } }
 
   const dayOf = (wk, date) => wk?.days?.find((d) => d.date === date);
-  const today = dayOf(week, new Date().toLocaleDateString('sv-SE')), tm = dayOf(week, tomorrow) ?? dayOf(week2, tomorrow);
+  const today = dayOf(week, osloDate()), tm = dayOf(week, tomorrow) ?? dayOf(week2, tomorrow);
   const meal = (d) => (d?.name ? { dish: d.name, cook: d.cook ?? null } : null);
   const matplan = week ? { today: meal(today), tomorrow: meal(tm) } : null;
 

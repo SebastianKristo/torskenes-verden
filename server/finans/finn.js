@@ -2,6 +2,7 @@
 // AI først; regex-reserve når ingen motor svarer.
 import { createHash } from 'node:crypto';
 import { askJson } from './ai.js';
+import { osloDate } from '../dates/oslo.js';
 
 const SCHEMA = {
   type: 'object',
@@ -43,7 +44,7 @@ export function regexFinn(mail) {
   if (/utbetalt/i.test(t)) steps.push({ t: 'Utbetalt', done: true });
   else if (/godkjent|(?<!når kjøper(en)? )har bekreftet mottatt/i.test(t)) steps.push({ t: 'Godkjent', done: true });
   else steps.push({ t: sold ? 'Venter på utbetaling' : 'Ikke mottatt', done: false });
-  return { role: sold ? 'sold' : 'bought', item: item ?? null, counterpart: who ? `${who[1].toLowerCase()} ${who[2]}` : '', date: iso(t) ?? new Date().toLocaleDateString('sv-SE'),
+  return { role: sold ? 'sold' : 'bought', item: item ?? null, counterpart: who ? `${who[1].toLowerCase()} ${who[2]}` : '', date: iso(t) ?? osloDate(),
     amount: Number.isFinite(amount) ? amount : NaN, order_id: t.match(/(?:ordre|handel|referanse)(?:nummer|nr\.?)?\s*[:#]?\s*([A-Z0-9-]{5,})/i)?.[1] ?? null, steps };
 }
 

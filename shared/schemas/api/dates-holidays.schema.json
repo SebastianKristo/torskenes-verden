@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "api/dates-holidays.schema.json",
+  "title": "Helligdager og merkedager",
+  "description": "Norske helligdager (fri) og merkedager (ikke fri) i perioden (Q18). Appene bufrer lista og viser den uten nett.",
+  "x-endpoint": "GET /api/dates/holidays?year=|from=&to=",
+  "type": "object",
+  "required": [
+    "from",
+    "to",
+    "items"
+  ],
+  "properties": {
+    "from": {
+      "$ref": "../common/types.schema.json#/$defs/date"
+    },
+    "to": {
+      "$ref": "../common/types.schema.json#/$defs/date"
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "date",
+          "name",
+          "type",
+          "fri"
+        ],
+        "properties": {
+          "date": {
+            "$ref": "../common/types.schema.json#/$defs/date"
+          },
+          "name": {
+            "type": "string"
+          },
+          "type": {
+            "enum": [
+              "helligdag",
+              "merkedag"
+            ]
+          },
+          "fri": {
+            "type": "boolean"
+          }
+        }
+      }
+    }
+  }
+}

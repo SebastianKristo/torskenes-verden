@@ -21,6 +21,7 @@ import { subscriptionSources, subIntent } from './subs-ask32.js';
 import { plainSearch } from './search.js';
 import { addedOf40, markCreated40, historyOf40, recordChange40, tagsOf40, applyRereadTx40 } from './added40.js';
 import { osloTodayISO } from '../../public/js/quick-time.js';
+import { PER_TEXT, perMonth } from './cycles.js';
 
 const q = (sql) => db.prepare(sql);
 const who = (c) => sessionUser(c) ?? (bearerOk(c, 'finance:read') ? c.get('user') : null);
@@ -53,8 +54,8 @@ function subsAnswer(u, today) {
   const subs = subscriptionSources(u).filter((s) => s.kind === 'abonnement');
   const items = subs.map((s) => {
     const d = s.nextDate ? daysTo(today, s.nextDate) : null;
-    return { kind: 'sub', id: s.id, name: s.name, plan: s.plan || null, logo: s.logoUrl, domain: s.domain, amount: s.price, cycle: s.perLabel === '/år' ? 'yearly' : s.perLabel === '/2 år' ? 'biennial' : 'monthly',
-      perLabel: s.perLabel === '/år' ? `per år · ${krN(s.monthly)}/mnd` : s.perLabel === '/2 år' ? `per 2 år · ${krN(s.monthly)}/mnd` : 'per mnd', monthly: s.monthly,
+    return { kind: 'sub', id: s.id, name: s.name, plan: s.plan || null, logo: s.logoUrl, domain: s.domain, amount: s.price, cycle: s.cycle ?? 'monthly',
+      perLabel: (s.cycle ?? 'monthly') === 'monthly' ? 'per mnd' : `${PER_TEXT[s.cycle] ?? 'per mnd'} · ${krN(s.monthly)}/mnd`, monthly: s.monthly,
       nextDate: s.nextDate, nextIn: d, nextLabel: s.nextDate ? `Neste trekk ${dLabel(s.nextDate)} · ${inDays(d)}` : null, soon: d != null && d >= 0 && d <= 7, url: s.url, target: s.url };
   }).sort((a, b) => (a.nextDate ?? '9999').localeCompare(b.nextDate ?? '9999'));
   const perMonth = Math.round(items.reduce((a, s) => a + s.monthly, 0) * 100) / 100;
@@ -73,7 +74,7 @@ function subsAnswer(u, today) {
 
 function fixedAnswer(u, today) {
   const rows = q('SELECT r.*, c.name AS cat FROM fh_recurring r LEFT JOIN fh_categories c ON c.id=r.category_id WHERE r.user_id=? AND r.active=1 ORDER BY r.day').all(u);
-  const monthly = (r) => (r.interval === 'yearly' ? r.amount / 12 : r.interval === 'weekly' ? (r.amount * 52) / 12 : r.amount) / 100;
+  const monthly = (r) => perMonth(r.amount, r.interval) / 100;
   const items = rows.map((r) => ({ kind: 'tx', id: `rec-${r.id}`, recurringId: r.id, name: r.name, description: r.name, amount: -Math.abs(r.amount / 100), category: r.cat ?? null,
     perLabel: r.interval === 'yearly' ? 'per år' : r.interval === 'weekly' ? 'per uke' : 'per mnd', nextLabel: r.interval === 'monthly' ? `Hver ${r.day}. i måneden` : null }));
   const sum = Math.round(rows.reduce((a, r) => a + Math.abs(monthly(r)), 0) * 100) / 100;

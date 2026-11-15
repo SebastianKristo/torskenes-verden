@@ -36,6 +36,8 @@ import {
   q51 as q, today51, isDate51, addDays51, daysBetween51, addMonths51, r2, kr51, krText51, ore51, str51, bad51 as bad, dayLabel51, weekday51,
   key51, accounts51, defaultAccount51, tx51, median51, mostUsedAccount51,
 } from './fin51-util.js';
+import { osloDate } from '../dates/oslo.js';
+import { perMonth, seriesOf, chargesBetween } from './cycles.js';
 
 const R = auth42('finance:read'), W = auth42('finance:write');
 export const fin51Api = new Hono();
@@ -270,7 +272,6 @@ fin51Api.post('/fin51/roundup/apply', W, async (c) => {
 
 /* ---------------- Faste utgifter-kalender med saldoprognose ---------------- */
 
-const SUB_STEP = { monthly: 1, yearly: 12, biennial: 24 };
 /** Datoene i [from, to] for et trekk som starter på `first` og gjentas hver `months` måned (eller `days` dag). */
 function occurrences(first, { months = 0, days = 0 }, from, to, day = +first.slice(8, 10)) {
   const out = [];
@@ -328,7 +329,7 @@ export function calendar51(u, { days = 30, today = today51() } = {}) {
     if (!first) continue;
     seen.add(k);
     const src = { kind: 'sub', id: s.id, key: k, name: s.name, amount: -Math.abs(s.price), accountId: accFor(k), source: 'Abonnement' };
-    occurrences(first, { months: SUB_STEP[s.cycle] ?? 1 }, from, to, s.charge_day || +first.slice(8, 10)).forEach(push(src));
+    chargesBetween(seriesOf({ cycle: s.cycle, next_date: first, charge_day: s.charge_day }), from, to).forEach(push(src)); // cycles.js (Q40)
   }
   for (const r of q('SELECT * FROM fh_recurring WHERE user_id=? AND active=1').all(u)) {
     const k = key51(r.name) ?? `rec${r.id}`;
@@ -399,7 +400,7 @@ const OVERLAP = [
   ['VPN', /\b(nordvpn|expressvpn|surfshark|protonvpn|mullvad|cyberghost)\b/i],
   ['Lydbøker', /\b(storytel|bookbeat|audible|nextory|fabel)\b/i],
 ];
-const monthlyOre = (s) => s.price / (SUB_STEP[s.cycle] ?? 1);
+const monthlyOre = (s) => perMonth(s.price, s.cycle);
 /** Siste bruk-signal (ms) per abonnement: «Jeg bruker den» og avspilling på Plex/Jellyfin. */
 function usageSignals(u, subs) {
   const out = new Map();
@@ -445,7 +446,7 @@ export function hunter51(u, { weeks = 6, today = today51() } = {}) {
       priced.add(k);
       add({ key: `price:${s.id}:${s.price}`, kind: 'price_up', subId: s.id, name: s.name, title: `${s.name} har økt prisen ${String(pct).replace('.', ',')} %`,
         text: `Fra ${krText51(kr51(s.prev_price), true)} til ${krText51(kr51(s.price), true)} per trekk${s.price_changed ? ` (${dayLabel51(s.price_changed)} ${s.price_changed.slice(0, 4)})` : ''}. Sjekk om en billigere plan holder.`,
-        from: kr51(s.prev_price), to: kr51(s.price), pct, date: s.price_changed ?? null, monthly: kr51(monthlyOre(s)), saving: kr51((s.price - s.prev_price) / (SUB_STEP[s.cycle] ?? 1)), source: 'abonnement' });
+        from: kr51(s.prev_price), to: kr51(s.price), pct, date: s.price_changed ?? null, monthly: kr51(monthlyOre(s)), saving: kr51(perMonth(s.price - s.prev_price, s.cycle)), source: 'abonnement' });
     }
   }
   const txKeys = new Set([...subKey.values()]), weekly = new Set();
@@ -500,7 +501,7 @@ export function hunter51(u, { weeks = 6, today = today51() } = {}) {
     const g = sig.get(s.id);
     if (g && g.ts < limit) {
       const w = Math.floor(Math.round((Date.parse(`${today}T12:00:00Z`) - g.ts) / 86400_000) / 7); // hele dager, så klokkeslettet ikke gir én uke for lite
-      add({ key: `unused:${s.id}:${N}`, kind: 'unused', subId: s.id, name: s.name, title: `${s.name} er ikke brukt på ${w} uker`, text: `Siste bruk-signal: ${g.source.toLowerCase()} ${dayLabel51(new Date(g.ts).toISOString().slice(0, 10))}. Si opp, eller trykk «Jeg bruker den».`,
+      add({ key: `unused:${s.id}:${N}`, kind: 'unused', subId: s.id, name: s.name, title: `${s.name} er ikke brukt på ${w} uker`, text: `Siste bruk-signal: ${g.source.toLowerCase()} ${dayLabel51(osloDate(g.ts))}. Si opp, eller trykk «Jeg bruker den».`,
         lastUsed: new Date(g.ts).toISOString(), weeks: w, signal: g.source, monthly: kr51(monthlyOre(s)), saving: kr51(monthlyOre(s)), source: 'bruk' });
     } else if (!g && s.low_use) {
       add({ key: `lowuse:${s.id}`, kind: 'unused', subId: s.id, name: s.name, title: `${s.name} er merket som lite brukt`, text: `${s.usage_note ? `${s.usage_note}. ` : ''}Vurder å si det opp.`,

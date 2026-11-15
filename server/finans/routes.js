@@ -56,6 +56,8 @@ import { correctionOnBook48 } from '../receipts48/corrections.js';
 import { mountLogos52 } from '../logos52.js'; // prompt 52
 import { warnCloudReceipt52, RECEIPT_SOURCE_LABEL52, RECEIPT_ENGINE_NOTE52 } from '../receipts48/cloud-guard52.js'; // prompt 52: kvitteringer bare lokalt
 import { bolApi, catTree, catOptions, entryCat, linkLegacy, assignCategory, catById as bolCat, catPair, colorOf, noticesFor, layoutFor, upcomingOf, backgroundOf, validBackground } from './boliger.js';
+import { osloDate, osloToUtc, clampDate, addDays } from '../dates/oslo.js';
+import { CYCLES, CYCLE_DAYS, CYCLE_NAME, PER_LABEL, THEN_TEXT, cycleIn, perMonth, nextCharge, seriesOf, seriesFrom } from './cycles.js';
 
 const DIR = resolve(config.dataDir, 'receipts');
 const q = (sql) => db.prepare(sql);
@@ -65,7 +67,7 @@ for (const [col, def] of [['timeout_engine', 'TEXT'], ['retry_at', 'INTEGER'], [
 }
 const ok = (c) => c.json({ ok: true });
 const bad = (c, msg, code = 400) => c.json({ error: msg }, code);
-const today = () => new Date().toLocaleDateString('sv-SE');
+const today = () => osloDate(); // «i dag» i Oslo (dates/oslo.js)
 const isDate = (s) => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s);
 const ore = (v) => { const n = typeof v === 'number' ? v : parseFloat(String(v ?? '').replace(/\s/g, '').replace('−', '-').replace(',', '.')); return Number.isFinite(n) ? Math.round(n * 100) : null; };
 const str = (v, max = 200) => String(v ?? '').trim().slice(0, max);
@@ -222,7 +224,7 @@ function nextDate(r, from = new Date()) {
   if (x < new Date(from.toDateString())) x = clamp(d.getFullYear(), d.getMonth() + 1, r.day);
   return x;
 }
-const monthlyOf = (r) => (r.interval === 'yearly' ? r.amount / 12 : r.interval === 'weekly' ? (r.amount * 52) / 12 : r.amount);
+const monthlyOf = (r) => perMonth(r.amount, r.interval); // samme omregning som abonnementene (cycles.js)
 
 function recurringOut(r, cats = catById()) {
   const cat = cats.get(r.category_id);
@@ -1808,15 +1810,15 @@ api.delete('/tokens/:id', tokenAdmin, (c) => { q('DELETE FROM fh_tokens WHERE su
 
 /* --- Subscription OS --- */
 
-// Pris lagres per trekk. Hvert 2. år: pris/24 per måned og pris/2 per år.
-const CYCLES = { monthly: 1, yearly: 12, biennial: 24 };
-const cycleIn = (v) => ({ monthly: 'monthly', mnd: 'monthly', yearly: 'yearly', 'år': 'yearly', biennial: 'biennial', '2år': 'biennial' }[v] ?? null);
-const monthlyOre = (s) => s.price / (CYCLES[s.cycle] ?? 1);
+// Pris lagres per trekk. Syklusene, neste trekk og omregningen per måned kommer fra cycles.js (Q40, abonnement.json).
+const monthlyOre = (s) => perMonth(s.price, s.cycle);
+/** Neste trekk for en lagret rad, rullet fram til i dag (Oslo) når det lagrede trekket er passert. */
+const nextOf = (s) => (s.next_date ? nextCharge(seriesOf(s), osloDate()) ?? s.next_date : null);
 function subOut(s) {
-  return { id: s.id, name: s.name, plan: s.plan, price: s.price / 100, priceOre: s.price, cycle: s.cycle, nextDate: s.next_date, usageNote: s.usage_note, lowUse: !!s.low_use,
+  return { id: s.id, name: s.name, plan: s.plan, price: s.price / 100, priceOre: s.price, cycle: s.cycle, nextDate: nextOf(s), usageNote: s.usage_note, lowUse: !!s.low_use,
     active: !!s.active, domain: s.domain || domainFor(s.name), aiShort: s.ai_short || heuristic({ merchant: s.name, category: 'Abonnementer' }).short, txId: s.tx_id,
-    monthly: Math.round(monthlyOre(s)) / 100, yearly: Math.round(monthlyOre(s) * 12) / 100, perLabel: { monthly: '/mnd', yearly: '/år', biennial: '/2 år' }[s.cycle] ?? '/mnd',
-    cycleName: { monthly: 'Månedlig', yearly: 'Årlig', biennial: 'Hvert 2. år' }[s.cycle] ?? 'Månedlig',
+    monthly: Math.round(monthlyOre(s)) / 100, yearly: Math.round(monthlyOre(s) * 12) / 100, perLabel: PER_LABEL[s.cycle] ?? '/mnd',
+    cycleName: CYCLE_NAME[s.cycle] ?? 'Månedlig',
     status: subsOs.statusOf(s), chargeDay: subsOs.chargeDayOf(s), category: subsOs.categoryFor(s.name, s.category),
     prevPrice: s.prev_price != null ? s.prev_price / 100 : null, priceChanged: s.price_changed ?? null,
     // Prompt 14: faktureringsdato som dag + måned, tilstand (aktiv/sagt opp) og egen logo.
@@ -1828,20 +1830,28 @@ const MON_NB = ['januar', 'februar', 'mars', 'april', 'mai', 'juni', 'juli', 'au
 const billMonthOf = (s) => s.bill_month || (s.next_date ? +s.next_date.slice(5, 7) : null);
 function nextChargeOf(s) {
   if (!s.next_date || !s.active) return null;
-  const then = { monthly: 'deretter hver måned', yearly: 'deretter hvert år', biennial: 'deretter hvert 2. år' }[s.cycle] ?? 'deretter hver måned';
-  return { date: s.next_date, label: `Neste trekk ${+s.next_date.slice(8, 10)}. ${MON_NB[+s.next_date.slice(5, 7) - 1]}, ${then}` };
+  const then = THEN_TEXT[s.cycle] ?? 'deretter hver måned', d = nextOf(s);
+  return { date: d, label: `Neste trekk ${+d.slice(8, 10)}. ${MON_NB[+d.slice(5, 7) - 1]}, ${then}` };
 }
 const monthIn = (v) => { const n = Math.round(+v); return n >= 1 && n <= 12 ? n : null; };
-// Neste trekk fra dag + måned (årlig / hvert 2. år): neste gang den datoen kommer, i år eller senere.
-function nextFromDayMonth(day, month) {
-  if (!day || !month) return null;
-  const now = new Date(), t = new Date(now.toDateString());
-  const at = (y) => new Date(y, month - 1, Math.min(day, new Date(y, month, 0).getDate()));
-  let d = at(now.getFullYear());
-  if (d < t) d = at(now.getFullYear() + 1);
-  return d.toLocaleDateString('sv-SE');
+/**
+ * Serveren eier neste trekk (F-logikk L2). Klientene sender trekkdag, trekkmåned og syklus, og ev. startDate (første/kjent trekk).
+ * Rekkefølge: startDate → trekkdag (+ måned) → nextDate som anker (bare når trekkdag ikke er sendt, f.eks. Android) → lagret trekk.
+ * En nextDate som ikke stemmer med syklusen, erstattes av serverens egen. Eksplisitt manuell overstyring: nextDateManual: true
+ * (f.eks. et trekk som er flyttet én gang); da lagres nextDate som den er, og serien fortsetter fra den.
+ * → {next, day} (day = trekkdagen som lagres for månedssykluser)
+ */
+function nextDateFrom(b, { cycle, day, month, cur = null }) {
+  const today = osloDate();
+  const start = b.startDate !== undefined ? dateIn(b.startDate) : null;
+  const sent = b.nextDate !== undefined ? dateIn(b.nextDate) : null;
+  const dayOf = (d) => (d && !CYCLE_DAYS[cycle] ? +d.slice(8, 10) : null);
+  if (b.nextDateManual === true && sent) return { next: sent, day: day ?? dayOf(sent) };
+  const anchor = start ?? (day ? null : sent);
+  const series = seriesFrom({ cycle, day: day ?? dayOf(anchor), month, startDate: anchor, fallbackAnchor: cur?.next_date ?? null }, today);
+  const next = series ? nextCharge(series, today) : null;
+  return { next: next ?? sent ?? null, day: day ?? dayOf(anchor) };
 }
-const nextFor = (day, month, cycle) => (cycle !== 'monthly' && month ? nextFromDayMonth(day, month) : nextFromDay(day, cycle));
 // status fra redigeringsarket: active / low_use (Lite brukt) / cancelled / paused (regnes som sagt opp).
 function applyStatus(n, st) {
   if (st === 'active' || st === 'Aktiv') { n.active = 1; n.low_use = 0; }
@@ -1851,27 +1861,18 @@ function applyStatus(n, st) {
 const logoUrlIn = (v) => { const t = String(v ?? '').trim(); return /^\/finans\/api\/(?:logo\/[a-z0-9.-]+|subscriptions\/\d+\/logo(?:\?v=\d+)?|merchants\/logo\/file\/[a-z0-9-]+\.png(?:\?v=\d+)?|logos\/file\/[a-z0-9-]+)$/i.test(t) || /^https:\/\/[^\s"'<>]{4,400}$/.test(t) ? t : null; };
 const dayIn = (v) => { const n = Math.round(+v); return n >= 1 && n <= 31 ? n : null; };
 const catIn = (v) => (subsOs.SUB_CATEGORIES.includes(v) ? v : null);
-// Neste trekk fra trekkdag: denne måneden hvis dagen ikke er passert, ellers neste.
-function nextFromDay(day, cycle = 'monthly') {
-  if (!day) return null;
-  const now = new Date(), t = new Date(now.toDateString());
-  const at = (y, m) => new Date(y, m, Math.min(day, new Date(y, m + 1, 0).getDate()));
-  let d = at(now.getFullYear(), now.getMonth());
-  if (d < t) d = at(now.getFullYear(), now.getMonth() + 1);
-  return d.toLocaleDateString('sv-SE');
-}
-// Neste trekk kan skrives som dd.mm, dd.mm.åå eller ISO.
+// Neste trekk kan skrives som dd.mm, dd.mm.åå eller ISO. Uten år: neste gang datoen kommer (Oslo).
 function dateIn(v) {
   const t = String(v ?? '').trim();
   if (!t || t === '–') return null;
   if (isDate(t)) return t;
   const m = t.match(/^(\d{1,2})\.(\d{1,2})(?:\.(\d{2,4}))?$/);
-  if (!m) return null;
-  const now = new Date();
-  let y = m[3] ? (m[3].length === 2 ? 2000 + +m[3] : +m[3]) : now.getFullYear();
-  let d = new Date(y, +m[2] - 1, +m[1]);
-  if (!m[3] && d < new Date(now.toDateString())) d = new Date(y + 1, +m[2] - 1, +m[1]);
-  return d.toLocaleDateString('sv-SE');
+  if (!m || +m[2] < 1 || +m[2] > 12 || +m[1] < 1 || +m[1] > 31) return null;
+  const today = osloDate();
+  const y = m[3] ? (m[3].length === 2 ? 2000 + +m[3] : +m[3]) : +today.slice(0, 4);
+  let d = clampDate(y, +m[2], +m[1]);
+  if (!m[3] && d < today) d = clampDate(y + 1, +m[2], +m[1]);
+  return d;
 }
 
 api.get('/subscriptions', R, (c) => {
@@ -1884,16 +1885,15 @@ api.get('/subscriptions', R, (c) => {
   const raw = full.map((x) => asShare(x, uid));
   const act = rows.filter((s) => s.active);
   const monthly = act.reduce((a, s) => a + s.myShareMonthly, 0);
-  const now = new Date(), year = +c.req.query('year') || now.getFullYear();
-  const ym = (d) => d.toLocaleDateString('sv-SE').slice(0, 7);
-  const month = /^\d{4}-\d{2}$/.test(c.req.query('month') ?? '') ? c.req.query('month') : ym(now);
-  const prevMonth = ym(new Date(+month.slice(0, 4), +month.slice(5, 7) - 2, 1));
+  const todayIso = osloDate(), year = +c.req.query('year') || +todayIso.slice(0, 4);
+  const month = /^\d{4}-\d{2}$/.test(c.req.query('month') ?? '') ? c.req.query('month') : todayIso.slice(0, 7);
+  const prevMonth = clampDate(+month.slice(0, 4), +month.slice(5, 7) - 1, 1).slice(0, 7);
   const sum = (list) => Math.round(list.reduce((a, x) => a + x.amount, 0) * 100) / 100;
   const thisMonth = subsOs.chargesInMonth(raw, month);
   // Trend: samme sum som den var ved starten av måneden (uten nye abonnementer og med pris før en økning denne måneden).
-  const mStart = new Date(now.getFullYear(), now.getMonth(), 1), mIso = mStart.toLocaleDateString('sv-SE');
+  const mIso = `${todayIso.slice(0, 7)}-01`, mStart = osloToUtc(mIso);
   const prevMonthly = raw.filter((s) => s.active && s.created < mStart.getTime())
-    .reduce((a, s) => a + (s.prev_price && s.price_changed >= mIso ? s.prev_price : s.price) / (CYCLES[s.cycle] ?? 1), 0) / 100;
+    .reduce((a, s) => a + perMonth(s.prev_price && s.price_changed >= mIso ? s.prev_price : s.price, s.cycle), 0) / 100;
   const trials = trialsFor(uid);
   const ifKept = trials.reduce((a, t) => a + (t.priceAfter ?? 0), 0);
   return c.json({ items: rows, monthly: Math.round(monthly * 100) / 100, yearly: Math.round(act.reduce((a, x) => a + x.myShareMonthly * 12, 0) * 100) / 100,
@@ -1901,7 +1901,8 @@ api.get('/subscriptions', R, (c) => {
     trialsSummary: { count: trials.length, ifKept: Math.round(ifKept * 100) / 100, label: trials.length ? `+${Math.round(ifKept)} kr/mnd hvis du beholder` : null }, // prompt 37
     categories: subsOs.SUB_CATEGORIES, year, byMonth: subsOs.byMonth(raw, year), health: subsOs.health(raw), savings: subsOs.savings(raw),
     prevMonthly: Math.round(prevMonthly * 100) / 100, upcoming: subsOs.upcoming(raw, 7), month, thisMonth, monthTotal: sum(thisMonth), prevMonthTotal: sum(subsOs.chargesInMonth(raw, prevMonth)),
-    today: now.toLocaleDateString('sv-SE'),
+    today: todayIso,
+    cycles: CYCLES.map((id) => ({ id, name: CYCLE_NAME[id], perLabel: PER_LABEL[id] })), // Q40: syklusene serveren regner med
     trials, // prompt 31: aktive prøveperioder («Prøve · 12 dager igjen»)
     trialsVisible: trialsVisible46(uid) }); // prompt 46: {visible, count, editHint} – seksjonen skjules uten aktive prøveperioder
 });
@@ -1921,8 +1922,7 @@ api.post('/subscriptions', W, async (c) => {
     const k = b.fromCandidate, name = str(k.merchant, 80), price = ore(k.amount), cycle = cycleIn(k.cycle) ?? 'monthly';
     if (!name || price === null) return bad(c, 'Mangler navn eller beløp');
     const last = isDate(k.lastDate) ? k.lastDate : null;
-    let next = last ? shiftDate(last, CYCLES[cycle]) : null;
-    while (next && next < new Date().toLocaleDateString('sv-SE')) next = shiftDate(next, CYCLES[cycle]);
+    const next = last ? nextCharge(seriesOf({ cycle, anchor: last }), [osloDate(), addDays(last, 1)].sort()[1]) : null;
     const s = q('INSERT INTO fh_subscriptions(name,plan,price,cycle,next_date,usage_note,domain,tx_id,charge_day,category,created,user_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?) RETURNING *')
       .get(name, str(k.plan, 80), Math.abs(price), cycle, next, `Funnet i banken · ${Math.max(0, Math.round(+k.count) || 0)} trekk`, validDomain(k.domain) || domainFor(name),
         Number.isInteger(+k.txId) && +k.txId > 0 && own('fh_transactions', +k.txId) ? +k.txId : null, last ? +last.slice(8, 10) : null, subsOs.categoryFor(name), Date.now(), c.get('user'));
@@ -1933,9 +1933,10 @@ api.post('/subscriptions', W, async (c) => {
   const cycle = cycleIn(b.cycle) ?? 'monthly', day = dayIn(b.billDay ?? b.chargeDay), month = monthIn(b.billMonth);
   const st = { active: 1, low_use: b.lowUse ? 1 : 0 };
   if (b.status !== undefined) applyStatus(st, b.status);
+  const nd = nextDateFrom(b, { cycle, day, month });
   const s = q('INSERT INTO fh_subscriptions(name,plan,price,cycle,next_date,usage_note,low_use,active,domain,charge_day,bill_month,category,logo_url,created,user_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) RETURNING *')
-    .get(str(b.name, 80), str(b.plan, 80), Math.abs(price), cycle, dateIn(b.nextDate) ?? nextFor(day, month, cycle), str(b.usageNote, 80) || 'Ny', st.low_use, st.active,
-      validDomain(b.domain) || domainFor(b.name), day, cycle === 'monthly' ? null : month, catIn(b.category), logoUrlIn(b.logoUrl), Date.now(), c.get('user'));
+    .get(str(b.name, 80), str(b.plan, 80), Math.abs(price), cycle, nd.next, str(b.usageNote, 80) || 'Ny', st.low_use, st.active,
+      validDomain(b.domain) || domainFor(b.name), nd.day, cycle === 'monthly' || CYCLE_DAYS[cycle] ? null : month ?? (nd.next ? +nd.next.slice(5, 7) : null), catIn(b.category), logoUrlIn(b.logoUrl), Date.now(), c.get('user'));
   return c.json(subOut(s));
 });
 api.post('/subscriptions/receipts', need('receipts:write'), upload, (c) => receiptUpload(c, 'sub'));
@@ -1947,18 +1948,22 @@ api.patch('/subscriptions/:id', W, async (c) => {
   if (b.name !== undefined) n.name = str(b.name, 80) || cur.name;
   if (b.plan !== undefined) n.plan = str(b.plan, 80);
   if (b.price !== undefined && ore(b.price) !== null) n.price = Math.abs(ore(b.price));
-  if (n.price > cur.price) { n.prev_price = cur.price; n.price_changed = new Date().toLocaleDateString('sv-SE'); } // «Pris økt» også når prisen endres for hånd
+  if (n.price > cur.price) { n.prev_price = cur.price; n.price_changed = osloDate(); } // «Pris økt» også når prisen endres for hånd
   if (b.cycle !== undefined) n.cycle = cycleIn(b.cycle) ?? cur.cycle;
   const dayV = b.billDay !== undefined ? b.billDay : b.chargeDay;
   if (dayV !== undefined) n.charge_day = dayIn(dayV);
   if (b.billMonth !== undefined) n.bill_month = monthIn(b.billMonth);
-  if (n.cycle === 'monthly') n.bill_month = null;
-  // Ny dag, måned eller syklus: regn ut neste trekk på nytt (med mindre nextDate er sendt med).
-  if ((dayV !== undefined || b.billMonth !== undefined || b.cycle !== undefined) && b.nextDate === undefined && n.charge_day) n.next_date = nextFor(n.charge_day, n.bill_month, n.cycle);
+  if (n.cycle === 'monthly' || CYCLE_DAYS[n.cycle]) n.bill_month = null;
+  // Ny dag, måned, syklus, startdato eller neste trekk: serveren regner ut neste trekk på nytt (nextDateFrom).
+  if (dayV !== undefined || b.billMonth !== undefined || b.cycle !== undefined || b.nextDate !== undefined || b.startDate !== undefined) {
+    // Sendt nextDate/startDate uten trekkdag er et nytt anker (og ny trekkdag); ellers gjelder trekkdagen.
+    const anchorOnly = dayV === undefined && (b.nextDate !== undefined || b.startDate !== undefined);
+    const nd = nextDateFrom(b, { cycle: n.cycle, day: anchorOnly ? null : n.charge_day, month: n.bill_month, cur });
+    if (nd.next || b.nextDate !== undefined) { n.next_date = nd.next; if (nd.day && !CYCLE_DAYS[n.cycle]) n.charge_day = nd.day; }
+  }
   if (b.category !== undefined) n.category = catIn(b.category);
   if (b.status !== undefined) applyStatus(n, b.status);
   if (b.logoUrl !== undefined) n.logo_url = b.logoUrl ? logoUrlIn(b.logoUrl) : null;
-  if (b.nextDate !== undefined) n.next_date = dateIn(b.nextDate);
   if (b.usageNote !== undefined) n.usage_note = str(b.usageNote, 80);
   if (b.lowUse !== undefined) n.low_use = b.lowUse ? 1 : 0;
   if (b.active !== undefined) n.active = b.active ? 1 : 0;
@@ -2084,6 +2089,7 @@ function pruneMembers(fid) {
     else q('UPDATE fh_folder_members SET user_id=NULL WHERE id=?').run(m.id);
   }
 }
+const krText = (v) => `${Math.round(v).toLocaleString('nb-NO').replace(/\s/g, ' ')} kr`;
 function folderOut(f, uid, full = false) {
   pruneMembers(f.id);
   linkLegacy();
@@ -2093,11 +2099,18 @@ function folderOut(f, uid, full = false) {
   const entries = q('SELECT e.*, p.name AS project FROM fh_folder_entries e LEFT JOIN fh_folder_projects p ON p.id=e.project_id WHERE e.folder_id=? ORDER BY e.date DESC, e.id DESC').all(f.id);
   const yearRows = entries.filter((e) => e.date >= ys);
   const yearTotal = yearRows.reduce((a, e) => a + e.amount, 0);
+  // Q21: bare bekreftede poster er «brukt». Poster til gjennomgang (AI-forslag) og kvitteringer som fortsatt leses, vises som en egen
+  // linje («venter: X kr»). total/yearTotal er fortsatt summen av alle poster.
+  const waitingIds = new Set(entries.filter((e) => e.status === 'review' || (e.receipt_id && ['pending', 'processing'].includes(origSelect.get(e.receipt_id)?.status))).map((e) => e.id));
+  const sumOf = (rows) => rows.reduce((a, e) => a + e.amount, 0);
+  const spentYear = sumOf(yearRows.filter((e) => !waitingIds.has(e.id))), waitingRows = yearRows.filter((e) => waitingIds.has(e.id)), waitingYear = sumOf(waitingRows);
+  const pendingOut = { count: waitingRows.length, amount: waitingYear / 100, text: waitingRows.length ? `venter: ${krText(waitingYear / 100)}` : null };
   const out = { id: f.id, name: f.name, type: f.type, address: f.address, myRole: me ? ROLES[me.role] : null, role: me?.role ?? null,
     members: mem.map((m) => ({ id: m.id, userId: m.user_id, name: m.name, email: m.email, role: m.role, roleName: ROLES[m.role] ?? 'Kan redigere', you: m.user_id === uid, login: !!m.user_id })),
     total: entries.reduce((a, e) => a + e.amount, 0) / 100, yearTotal: yearTotal / 100, count: entries.length,
     budget: f.budget == null ? null : f.budget / 100, color: f.color ?? null, autoCat: f.auto_cat !== 0, notify: f.notify !== 0,
-    review: entries.filter((e) => e.status === 'review').length, ...backgroundOf(f), mailAddress: mailAddress42(f) }; // prompt 42: «Send fra e-post»
+    review: entries.filter((e) => e.status === 'review').length, ...backgroundOf(f), mailAddress: mailAddress42(f), // prompt 42: «Send fra e-post»
+    spent: spentYear / 100, pending: pendingOut }; // Q21: brukt i år (bekreftet) og det som venter
   if (!full) return out;
   out.canEdit = !!me && me.role !== 'viewer';
   out.isOwner = me?.role === 'owner';
@@ -2118,7 +2131,8 @@ function folderOut(f, uid, full = false) {
     const rows = yearRows.filter((e) => e.date.startsWith(mm));
     const by = {};
     for (const e of rows) { const k = entryCat(e).category; by[k] = (by[k] ?? 0) + e.amount / 100; }
-    return { month: mm, label: MONTHS_SHORT[i], total: rows.reduce((a, e) => a + e.amount, 0) / 100, byCat: by };
+    return { month: mm, label: MONTHS_SHORT[i], total: rows.reduce((a, e) => a + e.amount, 0) / 100, byCat: by,
+      spent: sumOf(rows.filter((e) => !waitingIds.has(e.id))) / 100, pending: sumOf(rows.filter((e) => waitingIds.has(e.id))) / 100 }; // Q21
   });
   // Kategorikortet: hovedkategoriene, hver med fordeling på underkategorier («Uten underkategori» når posten bare har hovedkategori).
   const catSum = {}, catMeta = {};
@@ -2149,7 +2163,10 @@ function folderOut(f, uid, full = false) {
   out.kpi = { yearTotal: yearTotal / 100, count: yearRows.length, perMonth: Math.round(yearTotal / months) / 100, months,
     stromYear: Object.values(out.months).reduce((a, m) => a + (m.byCat['Strøm'] ?? 0), 0), stromNow: strom(nowM), stromPrev: strom(nowM - 1),
     projectsLeft: projects.reduce((a, p) => a + Math.max(0, p.remaining), 0), projectNames: projects.map((p) => p.name), catCount: out.categories.length,
-    review: out.review, budget: out.budget, budgetLeft: out.budget == null ? null : Math.round(out.budget * 100 - yearTotal) / 100 };
+    review: out.review, budget: out.budget,
+    // Q21: «igjen» regnes fra det som er brukt (bekreftet), ikke fra poster som venter.
+    spent: spentYear / 100, pending: pendingOut, budgetLeft: out.budget == null ? null : Math.round(out.budget * 100 - spentYear) / 100, over: out.budget != null && spentYear > out.budget * 100,
+    spentByMonth: out.months.map((m) => ({ month: m.month, spent: m.spent, pending: m.pending })) };
   out.entries = entries.map((e) => {
     const t = e.tx_id ? q('SELECT ai_short, domain FROM fh_transactions WHERE id=?').get(e.tx_id) : null;
     const r = e.receipt_id ? origSelect.get(e.receipt_id) : null;

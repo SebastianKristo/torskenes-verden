@@ -27,6 +27,7 @@ import { seal, unseal } from './finans/db.js';
 import { broadcast } from './realtime.js';
 import { notifyOf } from './notify.js';
 import { photoUrl41 } from './birthdays41.js'; // prompt 41: bilder av personer
+import { osloDate } from './dates/oslo.js';
 
 const MOCK = process.env.MOCK_DATA === '1';
 const q = (sql) => db.prepare(sql);
@@ -67,7 +68,7 @@ const WEEKDAYS = ['søndag', 'mandag', 'tirsdag', 'onsdag', 'torsdag', 'fredag',
 /* ---------------- Datoer (norsk tid) ---------------- */
 
 const pad = (n) => String(n).padStart(2, '0');
-export const osloDate = (now = Date.now()) => new Intl.DateTimeFormat('sv-SE', { timeZone: TZ }).format(new Date(now));
+export { osloDate }; // «i dag» i Oslo (dates/oslo.js)
 const ymd = (s) => s.split('-').map(Number);
 const utc = (y, m, d) => Date.UTC(y, m - 1, d);
 const isLeap = (y) => (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;

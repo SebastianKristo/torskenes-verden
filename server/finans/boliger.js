@@ -4,6 +4,7 @@
 import { Hono } from 'hono';
 import { db, kv, OWNER, settings, saveSettings } from './db.js';
 import { askJson } from './ai.js';
+import { osloDate, osloToUtc } from '../dates/oslo.js';
 
 const q = (sql) => db.prepare(sql);
 const bad = (c, msg, code = 400) => c.json({ error: msg }, code);
@@ -327,7 +328,7 @@ export function dueDate(raw, today = new Date()) {
   return iso(y);
 }
 export function upcomingOf(out, { days = 90, today = new Date() } = {}) {
-  const t0 = new Date(today.toISOString().slice(0, 10) + 'T00:00').getTime();
+  const t0 = osloToUtc(osloDate(today)).getTime();
   const rows = [];
   for (const b of out.bills ?? []) {
     const date = dueDate(b.nextDue, today);

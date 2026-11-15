@@ -3,6 +3,7 @@
 // i media43.js (normalisering, kø-kobling, Glimt) kjøres også i demo og tester. Dataene er de samme som i Media.dc.html.
 // Vertene er http://mock-sonarr, http://mock-radarr, http://mock-qbit og http://mock-prowlarr.
 import { createHash } from 'node:crypto';
+import { osloDate } from './dates/oslo.js';
 
 const GB = 1024 ** 3, MB = 1024 ** 2;
 const DAY = 86400_000;
@@ -10,7 +11,7 @@ const pad = (n) => String(n).padStart(2, '0');
 const code = (s, e) => `S${pad(s)}E${pad(e)}`;
 const dotN = (t) => t.replace(/[':]/g, '').replace(/[^A-Za-z0-9]+/g, '.').replace(/\.$/, '');
 const sha1 = (s) => createHash('sha1').update(String(s)).digest('hex');
-const osloDay = (t = Date.now()) => new Date(t).toLocaleDateString('sv-SE', { timeZone: 'Europe/Oslo' });
+const osloDay = (t = Date.now()) => osloDate(t);
 const addDays = (s, n) => { const [y, m, d] = s.split('-').map(Number); return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10); };
 /** Oslo-tid «YYYY-MM-DD HH:MM» → ISO (UTC). Sommer-/vintertid regnes ut med Intl. */
 function osloIso(date, hm = '03:00') {

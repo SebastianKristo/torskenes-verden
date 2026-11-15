@@ -19,6 +19,7 @@ import { stageOf } from './finans/finn-routes.js';
 import { CARRIERS, CARRIER, detect, normNo, trackUrl, findTrackingNumbers, normStatus, STATUS_TEXT, STEPS_IN, STEPS_OUT, stepOf, fetchStatus, isConfigured, testCarriers, parcelsappUsage, FINAL, missingKeyText, canonical41, carrierId42 } from './tracking-carriers.js';
 import { broadcast } from './realtime.js';
 import { matchMerchant, itemForDomain, filePath as logoFile, isManual } from './logos/match.js';
+import { osloDate } from './dates/oslo.js';
 
 db.exec(`
 CREATE TABLE IF NOT EXISTS hl_shipments (
@@ -135,7 +136,7 @@ export function nextCheckAt(r, t = Date.now()) {
   return r.checked_at ? r.checked_at + iv + stagger41() : t;
 }
 const osloHour41 = (t = now()) => +new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Oslo', hour: '2-digit', hourCycle: 'h23' }).format(new Date(t));
-const osloDay41 = (t = now()) => new Date(t).toLocaleDateString('sv-SE', { timeZone: 'Europe/Oslo' });
+const osloDay41 = (t = now()) => osloDate(t);
 /** Stille vindu 00–06: false bortsett fra én runde etter midnatt (ankeret). Kl. 06 går det som vanlig igjen. */
 export function pollAllowed41(u, t = now()) {
   if (osloHour41(t) >= 6) return true;
@@ -258,7 +259,7 @@ function view(r0) {
   const c = CARRIER[r.carrier] ?? CARRIER.other;
   const events = q('SELECT ts, status, location, raw FROM hl_shipment_events WHERE shipment_id=? ORDER BY ts DESC, id DESC LIMIT 40').all(r.id);
   const out = r.direction === 'out';
-  const late = !!r.eta && /^\d{4}-\d{2}-\d{2}/.test(r.eta) && r.eta.slice(0, 10) < new Date().toLocaleDateString('sv-SE') && !['delivered', 'ready_for_pickup', 'returned'].includes(r.status);
+  const late = !!r.eta && /^\d{4}-\d{2}-\d{2}/.test(r.eta) && r.eta.slice(0, 10) < osloDate() && !['delivered', 'ready_for_pickup', 'returned'].includes(r.status);
   const status = late && r.status !== 'delivered' ? 'delayed' : r.status;
   let statusText = STATUS_TEXT[status] ?? STATUS_TEXT.unknown;
   if (status === 'delivered' && out) statusText = 'Levert til mottaker';

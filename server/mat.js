@@ -26,6 +26,7 @@ import { userGuard, readJson, bad, str, num, MOCK, aiJson } from './homeos-commo
 import { activeUser, runAsUser } from './settings.js';
 import { mountRecipes, ensureDefaultFolders, folders, folderById, guessFolderId, allLinks, linksFor, removeDishData, HOUSEHOLD } from './mat-recipes.js';
 import { broadcast } from './realtime.js';
+import { osloDate } from './dates/oslo.js';
 export { HOUSEHOLD };
 
 const DN = ['Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lørdag', 'Søndag'];
@@ -409,7 +410,7 @@ function week(s, start) {
 
 // Prompt 36: «Felles for husstanden · Endret av Nina 18.42» (klokkeslett i dag, ellers dato + klokkeslett).
 const osloHm = (t) => new Date(t).toLocaleTimeString('nb-NO', { timeZone: 'Europe/Oslo', hour: '2-digit', minute: '2-digit' }).replace(':', '.');
-const osloDay = (t) => new Date(t).toLocaleDateString('sv-SE', { timeZone: 'Europe/Oslo' });
+const osloDay = (t) => osloDate(t);
 export function sharedNote(updatedBy, updatedAt, now = Date.now()) {
   if (!updatedAt) return 'Felles for husstanden';
   const t = +new Date(updatedAt), when = osloDay(t) === osloDay(now) ? osloHm(t)

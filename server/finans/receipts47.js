@@ -22,6 +22,7 @@ import { db } from './db.js';
 import { config } from '../config.js';
 import { scanLog } from './scan.js';
 import { validate } from './ai.js';
+import { osloDate } from '../dates/oslo.js';
 
 const DIR = resolve(config.dataDir, 'receipts');
 const q = (sql) => db.prepare(sql);
@@ -35,7 +36,7 @@ const PARSED_ALIASES = { 'apple-fm': 'apple-fm', 'apple-on-device': 'apple-fm' }
 const IMG = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/heic': 'heic', 'image/heif': 'heif', 'application/pdf': 'pdf' };
 export const LIMITS47 = { textChars: 50_000, lines: 500, lineChars: 500, items: 80, maxAmount: 1_000_000 };
 
-const osloToday = (offsetDays = 0) => new Date(Date.now() + offsetDays * 86400_000).toLocaleDateString('sv-SE', { timeZone: 'Europe/Oslo' });
+const osloToday = (offsetDays = 0) => osloDate(Date.now() + offsetDays * 86400_000);
 // Kontrolltegn bort (tab og linjeskift beholdes – ML Kit-formatet bruker tab mellom kolonner).
 const clean = (s) => String(s ?? '').replace(/\r\n?/g, '\n').replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, '').replace(/ /g, ' ');
 const oneLine = (s, max) => clean(s).replace(/\s+/g, ' ').trim().slice(0, max);

@@ -63,7 +63,7 @@ test('parseDay: i morgen?/imorgen/tomorrow/overmorgen/ukedager/datoer, og «i mo
   assert.equal(d('i dag!'), TODAY);
   assert.equal(d('i går'), '2026-10-18');
   assert.equal(d('hva har jeg på fredag'), '2026-10-23');
-  assert.equal(d('neste fredag'), '2026-10-30');
+  assert.equal(d('neste fredag'), '2026-10-23'); // Q17: førstkommende fredag (om 4 dager fra mandag)
   assert.equal(d('Finn ledig tid 24.10?'), '2026-10-24');
   assert.equal(d('25. okt'), '2026-10-25');
   assert.equal(d('1.1'), '2027-01-01');

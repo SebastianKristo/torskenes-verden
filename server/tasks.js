@@ -28,6 +28,7 @@ import { broadcast } from './realtime.js';
 import { initHa, mountHa, onLocal as haLocal, haInfo } from './tasks-ha.js';
 import { mountGlimt37 } from './tasks-glimt37.js'; // prompt 37: Glimt i Gjøremål
 import { mountGlimt41, origin41 } from './tasks-glimt41.js'; // prompt 41: Glimt deler opp i bakgrunnen, «Laget med Glimt»
+import { osloDate } from './dates/oslo.js';
 
 db.exec(`
 CREATE TABLE IF NOT EXISTS hl_task_lists (
@@ -214,7 +215,7 @@ const lists = (uid) => listsOf(uid).map((l) => listOut(l, uid));
 const members = (uid) => { const admin = isAdmin(uid); return listUsers().map((u) => ({ id: u.id, name: u.displayName, avatarUrl: u.avatarUrl, ...(admin ? { username: u.username } : {}) })); };
 const byId = (id) => q('SELECT * FROM hl_tasks WHERE id=?').get(id);
 
-const today = () => new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Oslo' });
+const today = () => osloDate();
 // Ikke-ferdige først (forfalt/i dag, så med dato, så uten dato), deretter ferdige (nyeste først).
 function sortItems(items) {
   return items.sort((a, b) => (a.done - b.done)

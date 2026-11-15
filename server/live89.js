@@ -31,6 +31,7 @@ import { trk42 } from './tracking.js';
 import { jobOut, smbTarget } from './system-backup.js';
 import { backupRunning51, getRun51, backupRuns51, LABEL as RESTIC_LABEL } from './backup51.js';
 import { apnsConf89, sendLive89 } from './apns.js';
+import { osloDate } from './dates/oslo.js';
 
 db.exec(`CREATE TABLE IF NOT EXISTS live89_tokens (user_id TEXT NOT NULL, platform TEXT NOT NULL, kind TEXT NOT NULL, token TEXT NOT NULL,
   aktivitet_id TEXT, type TEXT, updated INTEGER NOT NULL, PRIMARY KEY (user_id, token));
@@ -54,7 +55,7 @@ const pct = (p) => `${Math.max(0, Math.min(100, Math.floor(p)))} %`;
 const clamp01 = (x) => (Number.isFinite(x) ? Math.max(0, Math.min(1, Math.round(x * 1000) / 1000)) : null);
 const H = (id, tittel) => ({ id, tittel });
 const hhmm = (t) => new Date(t).toLocaleTimeString('nb-NO', { timeZone: 'Europe/Oslo', hour: '2-digit', minute: '2-digit' });
-const osloDay = (t) => new Date(t).toLocaleDateString('sv-SE', { timeZone: 'Europe/Oslo' });
+const osloDay = (t) => osloDate(t);
 const join = (...xs) => xs.filter((x) => x != null && x !== '').join(' · ');
 /** Én aktivitet i kontraktens form. Interne oppslag (ref) holdes utenfor svaret. */
 function akt(type, o) {

@@ -8,6 +8,7 @@
 // POST /finans/api/subscriptions/:id/leave (medlem) → {ok}
 import { db } from './db.js';
 import { userInfo } from '../auth.js';
+import { perMonth } from './cycles.js';
 
 const q = (sql) => db.prepare(sql);
 db.exec('CREATE TABLE IF NOT EXISTS subscription_members (sub_id INTEGER NOT NULL, user_id TEXT NOT NULL, added INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (sub_id, user_id))');
@@ -34,13 +35,12 @@ export function shareOre(s, uid) {
   if (s.split === 'payer') return uid === payer ? s.price : 0;
   return Math.round(s.price / (mem.length + 1));
 }
-const CYC = { monthly: 1, yearly: 12, biennial: 24 };
 const kr = (v) => `${Math.round(v).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ')} kr`;
 const person = (id, role) => { const u = userInfo(id); return { userId: id, id, name: u?.displayName ?? 'Ukjent', color: colorOf(id), role, avatarUrl: u?.avatarUrl ?? null }; };
 /** Legger delingsfeltene på subOut(s). */
 export function decorateSub(out, s, uid) {
   const mem = memberIds(s.id);
-  const share = shareOre(s, uid), perM = share / (CYC[s.cycle] ?? 1);
+  const share = shareOre(s, uid), perM = perMonth(share, s.cycle);
   const shared = mem.length > 0;
   return { ...out, ownerId: s.user_id, mine: s.user_id === uid, shared, split: s.split || 'equal', payerId: s.payer_id || s.user_id,
     members: [person(s.user_id, 'owner'), ...mem.map((m) => person(m, 'member'))],

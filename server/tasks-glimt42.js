@@ -7,6 +7,7 @@
 import { _hooks42, splitLocal41, title41 } from './tasks-glimt41.js';
 import { parseTask37 } from './tasks-glimt37.js';
 import { kv } from './db.js';
+import { osloDate } from './dates/oslo.js';
 
 export const TASK_SCHEMA42 = { type: 'object', properties: { tasks: { type: 'array', items: { type: 'object', properties: { title: { type: 'string' }, note: { type: ['string', 'null'] }, due: { type: ['string', 'null'] },
   dueText: { type: ['string', 'null'] }, place: { type: ['string', 'null'] }, list: { type: ['string', 'null'] }, linkTo: { type: ['integer', 'null'] } }, required: ['title'] } }, confidence: { type: 'number' } }, required: ['tasks'] };
@@ -88,7 +89,7 @@ export function presplit42(text) {
   return out;
 }
 /** Lokal oppdeling for prompt 42. → samme form som splitLocal41: [{n, list, who, date, time, place, after, tags, note, dueText}] */
-export function splitLocal42(text, today = new Date().toISOString().slice(0, 10)) {
+export function splitLocal42(text, today = osloDate()) {
   const parts = presplit42(text);
   if (parts.length <= 1) {
     const r = splitLocal41(text, today);

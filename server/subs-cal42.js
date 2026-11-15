@@ -15,6 +15,8 @@ import { db as fhDb } from './finans/db.js';
 import { authOrToken } from './mobile.js';
 import { addEventSource, addEventDecorator } from './calendar.js';
 import { broadcast } from './realtime.js';
+import { osloDate } from './dates/oslo.js';
+import { CYCLE_MONTHS, CYCLE_DAYS, INTERVAL_TEXT, chargesBetween, nextCharge, seriesOf } from './finans/cycles.js';
 
 const q = (sql) => fhDb.prepare(sql);
 export const AB42 = { id: 'abonnementer', key: 'ab', name: 'Abonnementer', color: '#3d7f8a', textColor: '#2a5c64', lightColor: '#8fcdd6' };
@@ -39,7 +41,6 @@ const addMonths = (s, n, day) => { const d = D(s); d.setUTCDate(1); d.setUTCMont
 /** Første virkedag (lørdag/søndag → mandag). */
 export const bankDay42 = (s) => { const w = D(s).getUTCDay(); return w === 6 ? addDays(s, 2) : w === 0 ? addDays(s, 1) : s; };
 const krN = (v) => Math.round(v).toLocaleString('nb-NO').replace(/\s/g, ' ');
-const CYC = { monthly: 1, quarterly: 3, yearly: 12, biennial: 24 };
 /** Trekkdatoene i [from, to] for brukeren. */
 export function abEvents42(u, from, to) {
   const out = [];
@@ -47,20 +48,19 @@ export function abEvents42(u, from, to) {
   try { subs = q('SELECT s.*, a.name AS acc FROM fh_subscriptions s LEFT JOIN fh_accounts a ON a.id=(SELECT account_id FROM fh_transactions WHERE id=s.tx_id) WHERE s.user_id=? AND s.active=1 AND s.next_date IS NOT NULL').all(u); } catch { return out; }
   const color = prefsOf(u).color;
   for (const s of subs) {
-    const step = CYC[s.cycle] ?? 1, day = s.charge_day || +s.next_date.slice(8);
+    const cycle = CYCLE_MONTHS[s.cycle] || CYCLE_DAYS[s.cycle] ? s.cycle : 'monthly', day = s.charge_day || +s.next_date.slice(8);
     const price = s.price / 100;
-    const yearly = step >= 12;
-    let d = s.next_date, n = 0;
-    while (d < from && n++ < 400) d = addMonths(d, step, day);
-    for (let i = 0; d <= to && i < 24; i++, d = addMonths(d, step, day)) {
+    const yearly = (CYCLE_MONTHS[cycle] ?? 0) >= 12;
+    // Serien fra lagret neste trekk (cycles.js); bare fremover, maks 24 i vinduet som før.
+    for (const d of chargesBetween(seriesOf(s), from, to).slice(0, 24)) {
       const real = bankDay42(d);
       if (real < from || real > to) continue;
       const title = yearly ? `${s.name} fornyes · ${krN(price)} kr` : `${s.name} · ${krN(price)} kr`;
       out.push({ id: `ab-${s.id}-${real.replace(/-/g, '')}`, title, short: title.length > 18 ? `${title.slice(0, 17)}…` : title, subject: null, room: '', teacher: '', note: 'Endres i Finans → Abonnementer',
         start: real, end: addDays(real, 1), allDay: true, date: real, time: null, inAllDayRow: true, type: 'abonnement', color, source: 'abonnementer', calendar: 'abonnementer', editable: false, reminder: yearly ? 'week' : 'none',
-        kind: 'trekk', renewal: yearly, badge: yearly ? 'ÅRLIG' : 'TREKK', cancelled: false, cancelUrl: null, nextCharge: s.next_date, subId: s.id, amount: price, currency: 'NOK', account: s.acc ? `Trekkes fra ${s.acc}` : null, agreedDate: real !== d ? d : null,
-        logo: s.logo_url || (s.domain ? `/finans/api/logo/${s.domain}` : null), domain: s.domain ?? null, interval: step === 1 ? 'monthly' : step === 12 ? 'yearly' : step === 24 ? 'biennial' : 'quarterly', intervalText: step === 1 ? `Hver måned den ${day}.` : step === 12 ? 'Hvert år' : step === 24 ? 'Annethvert år' : `Hver ${step}. måned`,
-        nextDate: s.next_date, deepLink: `finans://abonnement/${s.id}`, url: `/finans/#/abonnement/${s.id}`, openLabel: 'Åpne i Finans ›', origin: 'Finans · Abonnementer', appCalendar: 'abonnementer', appColor: color });
+        kind: 'trekk', renewal: yearly, badge: yearly ? 'ÅRLIG' : 'TREKK', cancelled: false, cancelUrl: null, nextCharge: nextCharge(seriesOf(s), osloDate()) ?? s.next_date, subId: s.id, amount: price, currency: 'NOK', account: s.acc ? `Trekkes fra ${s.acc}` : null, agreedDate: real !== d ? d : null,
+        logo: s.logo_url || (s.domain ? `/finans/api/logo/${s.domain}` : null), domain: s.domain ?? null, interval: cycle, intervalText: cycle === 'monthly' ? `Hver måned den ${day}.` : INTERVAL_TEXT[cycle],
+        nextDate: nextCharge(seriesOf(s), osloDate()) ?? s.next_date, deepLink: `finans://abonnement/${s.id}`, url: `/finans/#/abonnement/${s.id}`, openLabel: 'Åpne i Finans ›', origin: 'Finans · Abonnementer', appCalendar: 'abonnementer', appColor: color });
     }
   }
   let trials = [];
@@ -119,7 +119,7 @@ export async function abCalendarsMw42(c, next) {
     if (!Array.isArray(j.calendars) || j.calendars.some((x) => x.id === AB42.id)) return;
     const u = c.get('user');
     if (!u) return;
-    const t = new Date().toISOString().slice(0, 10);
+    const t = osloDate();
     const n = abEvents42(u, t, addDays(t, 29)).length;
     c.res = c.json({ ...j, calendars: [...j.calendars, abCalendar42(u, n)] }, 200, { 'Cache-Control': 'no-store' });
   } catch { /* lista står */ }
@@ -127,7 +127,7 @@ export async function abCalendarsMw42(c, next) {
 export const abApi42 = new Hono();
 abApi42.use('*', authOrToken);
 const range = (c) => {
-  const t = new Date().toISOString().slice(0, 10);
+  const t = osloDate();
   const from = /^\d{4}-\d{2}-\d{2}$/.test(c.req.query('from') ?? c.req.query('start') ?? '') ? (c.req.query('from') ?? c.req.query('start')) : t;
   let to = /^\d{4}-\d{2}-\d{2}$/.test(c.req.query('to') ?? c.req.query('end') ?? '') ? (c.req.query('to') ?? c.req.query('end')) : addMonths(t, 12);
   if (to < from) to = from;

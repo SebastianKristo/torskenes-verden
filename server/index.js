@@ -22,6 +22,7 @@ import trackingApi, { startTrackingWorker, hasTrackingTest, testTracking } from 
 import uiApi from './ui.js';
 import backgroundApi, { hasBackgroundTest, testBackgrounds } from './background.js';
 import mobileApi, { meOut, removeAvatar, shortcutsFor, layoutOf, authOrToken, designOf } from './mobile.js';
+import { mountDates } from './dates/api.js';
 import rssApi, { startRssWorker } from './rss.js';
 import { mountLocalFetch86, migrateLocalHosts86 } from './localfetch86.js'; // prompt 86: godkjente lokale verter for RSS/iCal (admin: /api/admin/local-fetch-hosts)
 import { faviconHandler46 } from './news46.js'; // prompt 46 (SERVER46)
@@ -118,6 +119,7 @@ import romApi, { startSpaceScheduler, spaceApi } from './space32.js'; // prompt 
 import { domainGlimtApi, gscApi, startDomainGlimtScheduler } from './domains-glimt.js'; // prompt 32
 import { describeApi as calendarDescribeApi, searchAiMiddleware as calendarSearchAi } from './calendar-glimt.js'; // prompt 32
 import { calendarsApi as kalCalendarsApi, weatherApi as kalWeatherApi, eventsMiddleware as kalEventsMw, widgetMiddleware as kalWidgetMw, companionApi, companionsOf } from './kalender33.js'; // prompt 33 (SERVER33)
+import { osloDate } from './dates/oslo.js';
 if (process.env.MOCK_DATA === '1' && !fhDb.prepare('SELECT 1 FROM fh_transactions LIMIT 1').get()) (await import('./finans/demo.js')).loadDemo();
 
 // Prompt 36: alle moduler (og migreringene de kjører når de lastes) er ferdige her.
@@ -199,6 +201,7 @@ mountDal53(app); // prompt 53 (DAL53): /api/admin/dal53/{health,preload}, /api/e
 mountWhisper54(app); // prompt 54 (WHISPER54): /api/admin/whisper54/{health,config,test} (bare admin)
 mountVoxcpm57(app); // prompt 57 (VOX57): /api/voices57*, /api/admin/voxcpm57/{health,config,test}
 mountLocalFetch86(app, authOrToken); // prompt 86: GET|PUT /api/admin/local-fetch-hosts (bare admin)
+mountDates(app, authOrToken); // POST /api/dates/parse: den felles datotolkeren for klientene (Q17)
 mountOmlx58(app); // prompt 58 (OMLX58): /api/admin/omlx58/{health,config,test} (bare admin)
 app.route('/api', auth44Api); // prompt 44: POST /api/auth/refresh og POST /api/apps/kalender/log
 app.get('/hl/:token', hlPage41); // prompt 41: Hjemlys-statusside for kontakter uten Papir (24 t)
@@ -633,7 +636,7 @@ authed.post('/receipts', upload, async (c) => {
   const body = await c.req.parseBody();
   let file, thumb;
   try { file = await saveFile(body.file); thumb = await saveFile(body.thumb, false); } catch (e) { return c.json({ error: e.message }, 400); }
-  const today = new Date().toLocaleDateString('sv-SE');
+  const today = osloDate();
   const date = /^\d{4}-\d{2}-\d{2}$/.test(body.date) ? body.date : today;
   const r = db.prepare('INSERT INTO receipts(user,store,date,category,amount,file,thumb,mime,created) VALUES(?,?,?,?,?,?,?,?,?) RETURNING *')
     .get(c.get('user'), String(body.store ?? '').slice(0, 120), date, String(body.category ?? 'Annet').slice(0, 30), Number(body.amount) || 0, file?.name ?? null, thumb?.name ?? null, file?.mime ?? null, Date.now());
@@ -723,7 +726,7 @@ authed.get('/school', personal('school', proxy(api.getSchool)));
 authed.get('/trading', personal('trading', proxy(async (c) => {
   const t = await api.getTrading();
   if (!t.configured || !Number.isFinite(t.total)) return t;
-  const today = new Date().toLocaleDateString('sv-SE'), u = c.get('user');
+  const today = osloDate(), u = c.get('user');
   let base = kv.get(u, 't212_day');
   if (base?.date !== today) { base = { date: today, total: t.total }; kv.set(u, 't212_day', base); }
   // Merk: innskudd/uttak samme dag regnes med i endringen.

@@ -29,6 +29,7 @@ import { itemForDomain, filePath as logoFile } from '../logos/match.js';
 import { readFile } from 'node:fs/promises';
 import { gateLoad } from '../ai-gate.js'; // prompt 43
 import { modelFor } from '../ai-run.js';
+import { osloDate, addDays } from '../dates/oslo.js';
 
 const q = (sql) => db.prepare(sql);
 const bad = (c, msg, code = 400) => c.json({ error: msg }, code);
@@ -69,15 +70,15 @@ export function recurringFromTx42(u, now = new Date()) {
     const iv = [7, 30, 90, 365].find((d) => gaps.every((x) => Math.abs(x - d) <= (d === 30 ? 4 : d === 7 ? 1 : 6)));
     if (!iv) continue;
     const last = g.rows.at(-1).date;
-    const next = new Date(`${last}T12:00:00`); next.setDate(next.getDate() + iv);
-    out.push({ name: g.name, amount: Math.round(avg * 100) / 100, interval: iv, monthly: Math.round((avg * 30) / iv * 100) / 100, last, nextDate: next.toISOString().slice(0, 10), count: g.rows.length });
+    const next = addDays(last, iv);
+    out.push({ name: g.name, amount: Math.round(avg * 100) / 100, interval: iv, monthly: Math.round((avg * 30) / iv * 100) / 100, last, nextDate: next, count: g.rows.length });
   }
   return out.sort((a, b) => b.monthly - a.monthly);
 }
 /** «Har jeg noen abonnementer?» – Subscription OS / prøveperioder først, så gjentakende transaksjoner. Hurtigvei (ingen LLM). */
 export function subsAnswer42(u, text) {
   const base = financeAsk40(u, text);
-  const today = new Date().toISOString().slice(0, 10);
+  const today = osloDate();
   let trials = [];
   try { trials = subscriptionSources(u).filter((s) => s.kind === 'prøve' && s.nextDate && daysTo(today, s.nextDate) >= 0 && daysTo(today, s.nextDate) <= 14); } catch { /* */ }
   const trialCards = trials.map((t) => ({ kind: 'sub', id: t.id, name: t.name, trial: true, badge: `PRØVE · slutter ${dLabel(t.nextDate)}`, amount: t.price, nextDate: t.nextDate, nextLabel: `Prøveperioden slutter ${dLabel(t.nextDate)}` }));
@@ -148,7 +149,7 @@ finans42Api.post('/search/warm', R, async (c) => {
 const listParam = (c, ...names) => names.flatMap((n) => [...(c.req.queries(n) ?? []), ...(c.req.queries(`${n}[]`) ?? [])]).flatMap((v) => String(v).split(',')).map((s) => s.trim()).filter(Boolean);
 const FILTER_KEYS = ['merchant', 'merchant[]', 'shop', 'category[]', 'cat', 'home', 'min', 'max', 'week', 'wk'];
 const ymd = (s, end = false) => {
-  if (/^\d{4}-\d{2}-\d{2}$/.test(s ?? '')) return end ? (() => { const d = new Date(`${s}T12:00:00`); d.setDate(d.getDate() + 1); return d.toISOString().slice(0, 10); })() : s;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s ?? '')) return end ? addDays(s, 1) : s;
   if (/^\d{4}-\d{2}$/.test(s ?? '')) { if (!end) return `${s}-01`; const [y, m] = s.split('-').map(Number); return new Date(Date.UTC(y, m, 1)).toISOString().slice(0, 10); }
   return null;
 };

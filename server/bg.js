@@ -9,6 +9,7 @@ import { readFile, writeFile, mkdir, readdir, unlink } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { config } from './config.js';
+import { osloDate } from './dates/oslo.js';
 
 const BUNDLED = join(dirname(fileURLToPath(import.meta.url)), '..', 'public', 'bg');
 export const BG_CACHE = join(config.dataDir, 'media', 'bg');
@@ -47,7 +48,7 @@ let apodTry = { date: '', at: 0, pending: null };
 const looksLikeImage = (b) => b.length > 1000 && ((b[0] === 0xff && b[1] === 0xd8) || (b[0] === 0x89 && b[1] === 0x50) || b.slice(8, 12).toString() === 'WEBP');
 export async function apodImage(apod, { fetchFn = fetch, timeout = 15000 } = {}) {
   if (!apod || apod.media_type !== 'image' || !apod.url || !/^https:\/\//.test(apod.url)) return null;
-  const date = String(apod.date ?? new Date().toISOString().slice(0, 10)).replace(/[^\d-]/g, '').slice(0, 10);
+  const date = String(apod.date ?? osloDate()).replace(/[^\d-]/g, '').slice(0, 10);
   const ext = /\.png($|\?)/i.test(apod.url) ? 'png' : 'jpg';
   const name = `apod-${date}.${ext}`;
   try { await readFile(join(BG_CACHE, name)); return url(name); } catch { /* ikke lastet ned ennå */ }

@@ -83,7 +83,7 @@ import { eventsFor, eventInput, createEvent, normText, setEventDecorator, osloAt
 import { askCalendar } from './calendar-glimt.js';
 import { weatherFull, wmoText, iconOf, PLACES } from './weather-full.js';
 import { aliasesOf, typeOfWord, eventHitsAlias } from './glimt-memory.js';
-import { parseQuick, osloTodayISO } from '../public/js/quick-time.js';
+import { parseQuick, osloTodayISO } from './dates/quick.js'; // dato og tid fra den felles tolkeren
 import { parseDay, normDayText } from './parse-day35.js'; // prompt 35: felles dag-tolkning
 import { attachGeo, parseIntent37, schoolTestAnswer } from './kal37.js'; // prompt 37
 import { extCalendarsOf, mountExt, patchExt, removeExt, isExtId, shades } from './kalender35.js'; // prompt 35: iCal og Home Assistant

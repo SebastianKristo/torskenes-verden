@@ -1,12 +1,12 @@
 // Alle kall mot eksterne tjenester. Kjøres kun på serveren; nøkler sendes aldri til nettleseren.
 import { t212AuthHeader } from './finans/stocks.js';
-import ical from 'node-ical';
 // undici sin egen fetch må brukes med undici-Agent: Node sin innebygde fetch har en eldre undici og avviser den («invalid onRequestStart method»).
 import { Agent, fetch as undiciFetch } from 'undici';
 import { config } from './config.js';
 import { cached, fetchJson } from './cache.js';
 import { fetchWeather } from './weather.js';
 import { cfg, parseRoutes, groupOf, activeUser } from './settings.js';
+import { parseIcs, expandIcs } from './ical-expand.js';
 
 // Personlige integrasjoner (ISO2): cfg() gir den innloggede brukerens verdier (se settings.js), og cachen deles bare per bruker.
 const mine = (k) => `${k}:${activeUser() ?? '-'}`;
@@ -238,39 +238,20 @@ function colorFor(title = '') {
   return SUBJECT_COLORS[h % SUBJECT_COLORS.length];
 }
 
-function expand(ev, from, to) {
-  const dur = (ev.end ? ev.end - ev.start : 3600_000);
-  if (!ev.rrule) return ev.start < to && ev.start.getTime() + dur > from ? [ev.start] : [];
-  const ex = new Set(Object.values(ev.exdate ?? {}).map((d) => new Date(d).getTime()));
-  return ev.rrule.between(new Date(from.getTime() - dur), to, true).filter((d) => !ex.has(d.getTime()));
-}
-
 export const getSchool = () => cached(mine('school'), 15 * 60_000, async () => {
   const icalUrl = cfg('cal_ics');
   if (!icalUrl) return { configured: false, events: [] };
   const res = await fetch(icalUrl, { signal: AbortSignal.timeout(15_000) });
   if (!res.ok) throw new Error(`iCal svarte ${res.status}`);
-  const parsed = ical.sync.parseICS(await res.text());
-  const from = new Date(Date.now() - 45 * 86400_000), to = new Date(Date.now() + 75 * 86400_000);
-  const events = [];
-  for (const ev of Object.values(parsed)) {
-    if (ev.type !== 'VEVENT' || !ev.start) continue;
-    const dur = ev.end ? ev.end - ev.start : 0;
-    const allDay = ev.datetype === 'date';
-    const overrides = ev.recurrences ?? {};
-    for (const start of expand(ev, from, to)) {
-      const key = start.toISOString().slice(0, 10);
-      const o = overrides[key];
-      const e = o ?? ev;
-      const s = o ? o.start : start;
-      const title = String(e.summary?.val ?? e.summary ?? '(uten tittel)');
-      events.push({
-        title, location: String(e.location?.val ?? e.location ?? ''), start: s.toISOString(),
-        end: new Date(s.getTime() + (o?.end ? o.end - o.start : dur)).toISOString(), allDay, color: colorFor(title),
-        deadline: /frist|innlever|deadline|due/i.test(title) || (!allDay && dur === 0),
-      });
-    }
-  }
+  // Samme iCal-leser og RRULE-utvider som /api/kalender (ical-expand.js): gjentakelser i Oslo-tid over sommertid, flyttede og avlyste
+  // timer (RECURRENCE-ID), EXDATE og RDATE (F-logikk §2.7).
+  const cal = parseIcs(await res.text());
+  const now = Date.now();
+  const events = expandIcs(cal, now - 45 * 86400_000, now + 75 * 86400_000).map((x) => {
+    const title = String(x.summary || '(uten tittel)');
+    return { title, location: String(x.location ?? ''), start: new Date(x.startMs).toISOString(), end: new Date(x.endMs).toISOString(), allDay: !!x.allDay, color: colorFor(title),
+      deadline: /frist|innlever|deadline|due/i.test(title) || (!x.allDay && x.endMs === x.startMs) };
+  });
   events.sort((a, b) => a.start.localeCompare(b.start));
   return { configured: true, events, mazemapCampusId: cfg('cal_mazemap') };
 });

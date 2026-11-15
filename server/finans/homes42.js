@@ -27,6 +27,7 @@ import { matchMerchant, hasFile } from '../logos/match.js';
 import { domainFor } from './enrich.js';
 import { fold42, stem42, synonymsOf42, parsePeriod42 } from './search42.js';
 import { kv, OWNER } from '../db.js';
+import { osloDate } from '../dates/oslo.js';
 
 const q = (sql) => db.prepare(sql);
 // Prompt 52 (SRV52): kvitteringen i samme form som Transaksjoner/Kvitteringer (receiptOut) – samme panel/komponent i Boliger.
@@ -35,7 +36,7 @@ import('./routes.js').then((m) => { receiptOut52 = m.receiptOut52 ?? null; }).ca
 const MON = ['jan', 'feb', 'mar', 'apr', 'mai', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'des'];
 const MONTHS = ['januar', 'februar', 'mars', 'april', 'mai', 'juni', 'juli', 'august', 'september', 'oktober', 'november', 'desember'];
 const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-const today = () => iso(new Date());
+const today = () => osloDate(); // «i dag» i Oslo (dates/oslo.js)
 const dLabel = (s) => (s ? `${+s.slice(8, 10)}. ${MON[+s.slice(5, 7) - 1]}` : '');
 const krN = (v) => Math.round(Math.abs(v)).toLocaleString('nb-NO').replace(/\s/g, ' ');
 const kr = (v) => `${krN(v)} kr`;

@@ -20,6 +20,7 @@ import { PLACES, wmoText } from './weather-full.js';
 import { geocode } from './weather35.js';
 import { run as aiRun } from './ai-run.js';
 import { once } from './ai-gate.js'; // prompt 43
+import { osloDate } from './dates/oslo.js';
 
 const MOCK = () => process.env.MOCK_DATA === '1';
 export const CHARS39 = [
@@ -36,7 +37,7 @@ const cap = (s) => (s ? s[0].toUpperCase() + s.slice(1) : s);
 const joinNo = (a) => (a.length <= 1 ? a.join('') : `${a.slice(0, -1).join(', ')} og ${a[a.length - 1]}`);
 const wdOf = (d) => WD[new Date(`${d}T12:00:00Z`).getUTCDay()];
 const addDays = (s, n) => { const [y, m, d] = s.split('-').map(Number); return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10); };
-const todayOslo = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Oslo' }).format(new Date());
+const todayOslo = () => osloDate();
 
 let F = (u, i) => fetch(u, i);
 let injectedFlag = false;

@@ -17,7 +17,7 @@ import { db, kv, OWNER } from './db.js';
 import { authOrToken } from './mobile.js';
 import { userInfo, listUsers, isAdmin } from './auth.js';
 import { runAsUser } from './settings.js';
-import { parseQuick, osloTodayISO } from '../public/js/quick-time.js';
+import { parseQuick, osloTodayISO } from './dates/quick.js'; // dato og tid fra den felles tolkeren
 import { CHARS, glimtSettingsOf, cleanGlimtPatch, saveGlimtSettings, charDefaultOf52, setCharDefault52, CHAR_META52 } from './glimt35.js';
 import { matchMerchant, filePath as libraryFile } from './logos/match.js';
 import { brief73Api, rawCards73, B52_OF73, KEY_OF_B52 } from './brief73.js'; // prompt 73: Innhold i briefen (rekkefølge og av/på)

@@ -27,6 +27,7 @@ import { isAdmin } from './auth.js';
 import { authOrToken, designOf, layoutOf } from './mobile.js';
 import { albumOut46 } from './gphoto46.js'; // prompt 46 (DATA46)
 import { CATALOG, PLANETS, PLANET_NAME, PLANET_FILES, KNOWN_CREDITS, bundledPath, filePathUrl, infoUrl, pageUrl, creditFromInfo } from './backgrounds/catalog.js';
+import { osloDate } from './dates/oslo.js';
 
 const isMock = () => process.env.MOCK_DATA === '1';
 const ROOT = join(config.dataDir, 'backgrounds');
@@ -215,7 +216,7 @@ export async function currentWeather(lat, lon, now = Date.now()) {
     temp = ts?.data?.instant?.details?.air_temperature ?? null;
   } catch (e) { console.warn('[bakgrunn] MET:', e.message); }
   try {
-    const date = new Date(now + HOUR).toISOString().slice(0, 10);
+    const date = osloDate(now);
     const s = await getJson(`https://api.met.no/weatherapi/sunrise/3.0/sun?lat=${lat.toFixed(4)}&lon=${lon.toFixed(4)}&date=${date}&offset=+01:00`, { 'User-Agent': UA() });
     const up = Date.parse(s.properties?.sunrise?.time ?? ''), down = Date.parse(s.properties?.sunset?.time ?? '');
     if (Number.isFinite(up) && Number.isFinite(down)) isDay = now >= up && now < down;

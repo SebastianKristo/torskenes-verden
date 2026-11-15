@@ -12,6 +12,7 @@ import { cached, peek } from './cache.js';
 import * as auth from './auth.js';
 import * as fh from './finans/routes.js';
 import { guard, MOCK, readJson, str } from './homeos-common.js';
+import { osloDate } from './dates/oslo.js';
 
 const CF = 'https://api.cloudflare.com/client/v4';
 const SOURCES = ['cloudflare', 'tunnel', 'plausible', 'umami', 'uptime', 'gsc']; // prompt 39: gsc = Google Search Console (ingen token, bruker Google-tilkoblingen)
@@ -98,7 +99,7 @@ function blank(r) {
 
 /* ---------- Oppetid, SSL, RDAP og DNS (krever ingen token) ---------- */
 
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => osloDate(); // «i dag» i Oslo (dates/oslo.js)
 async function probe(name) {
   const t0 = Date.now();
   let ok = 0;
@@ -113,8 +114,8 @@ if (!MOCK) {
   setInterval(run, 5 * 60_000).unref();
 }
 function uptime(name) {
-  const rows = new Map(q('SELECT day, ok, total FROM hl_uptime WHERE domain=? AND day>=?').all(name, new Date(Date.now() - 90 * 864e5).toISOString().slice(0, 10)).map((x) => [x.day, x]));
-  const days = Array.from({ length: 90 }, (_, i) => { const d = new Date(Date.now() - (89 - i) * 864e5).toISOString().slice(0, 10); const x = rows.get(d); return x?.total ? Math.round(x.ok / x.total * 1000) / 1000 : null; });
+  const rows = new Map(q('SELECT day, ok, total FROM hl_uptime WHERE domain=? AND day>=?').all(name, osloDate(Date.now() - 90 * 864e5)).map((x) => [x.day, x]));
+  const days = Array.from({ length: 90 }, (_, i) => { const d = osloDate(Date.now() - (89 - i) * 864e5); const x = rows.get(d); return x?.total ? Math.round(x.ok / x.total * 1000) / 1000 : null; });
   const tot = [...rows.values()].reduce((a, x) => [a[0] + x.ok, a[1] + x.total], [0, 0]);
   return { uptime90: days, uptimePct: tot[1] ? Math.round(tot[0] / tot[1] * 10000) / 100 : null };
 }
@@ -236,7 +237,7 @@ async function cfLoad(r, range) {
     out.tls = pctList((tl ?? []).map((g) => [g.dimensions.clientSSLProtocol === 'none' ? 'Uten TLS' : g.dimensions.clientSSLProtocol, g.count]));
   } else {
     const daily = hours > 168;
-    const ds = daily ? 'httpRequests1dGroups' : 'httpRequests1hGroups';
+    const ds = daily ? 'httpRequests1dGroups' : 'httpRequests1hGroups'; // UTC: Cloudflare regner døgn i UTC
     const f = daily ? 'date_geq:$s,date_lt:$u' : 'datetime_geq:$s,datetime_lt:$u';
     const T = daily ? 'Date' : 'Time';
     const v = daily ? { z: tag, s: day(since), u: day(new Date(+until + 864e5)) } : { z: tag, s: iso(since), u: iso(until) };
@@ -564,7 +565,7 @@ export async function verifyCfToken(token, domain = '') {
     await Promise.all([
       cfTry(`/zones/${z.id}/dns_records?per_page=1`, token).then(() => { perms[1].ok = true; }, (e) => fail(1, e)),
       cfTry('/graphql', token, { method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: 'query($z:String!,$d:Date!){viewer{zones(filter:{zoneTag:$z}){g:httpRequests1dGroups(limit:1,filter:{date_geq:$d}){sum{requests}}}}}', variables: { z: z.id, d: new Date(Date.now() - 86400_000).toISOString().slice(0, 10) } }) })
+        body: JSON.stringify({ query: 'query($z:String!,$d:Date!){viewer{zones(filter:{zoneTag:$z}){g:httpRequests1dGroups(limit:1,filter:{date_geq:$d}){sum{requests}}}}}', variables: { z: z.id, d: new Date(Date.now() - 86400_000).toISOString().slice(0, 10) } }) }) // UTC: Cloudflare regner døgn i UTC
         .then(() => { perms[2].ok = true; }, (e) => fail(2, e)),
       cfTry(`/zones/${z.id}/firewall/access_rules/rules?per_page=1`, token).then(() => { perms[3].ok = true; }, (e) => fail(3, e)),
       z.account?.id ? cfTry(`/accounts/${z.account.id}/registrar/domains?per_page=1`, token).then(() => { perms[4].ok = true; }, (e) => fail(4, e)) : Promise.resolve(fail(4, 'Fant ikke kontoen')),

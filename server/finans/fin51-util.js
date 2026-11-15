@@ -2,9 +2,10 @@
 // Beløp i databasen er øre (heltall, negativt = ut); alt som går ut av API-et er kroner med to desimaler.
 import { db } from './db.js';
 import { merchantKey42, fold42 } from './search42.js';
+import { osloDate } from '../dates/oslo.js';
 
 export const q51 = (sql) => db.prepare(sql);
-export const today51 = () => new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Oslo' });
+export const today51 = () => osloDate();
 export const isDate51 = (v) => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) && !Number.isNaN(Date.parse(`${v}T12:00:00Z`));
 export const addDays51 = (iso, n) => { const d = new Date(`${iso}T12:00:00Z`); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
 export const daysBetween51 = (a, b) => Math.round((Date.parse(`${b}T12:00:00Z`) - Date.parse(`${a}T12:00:00Z`)) / 86400_000);

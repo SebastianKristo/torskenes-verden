@@ -12,6 +12,7 @@ import { db, kv, OWNER } from './db.js';
 import { userInfo, listUsers, isAdmin, sessionUser } from './auth.js';
 import { cfg, runAsUser } from './settings.js';
 import { bearerOk } from './finans/routes.js';
+import { osloDate } from './dates/oslo.js';
 
 const q = (sql) => db.prepare(sql);
 db.exec(`CREATE TABLE IF NOT EXISTS health_daily (person_id TEXT NOT NULL, date TEXT NOT NULL, metric TEXT NOT NULL, value REAL, source TEXT NOT NULL, updated INTEGER NOT NULL,
@@ -96,7 +97,7 @@ export async function haHealthOut42(viewer) {
 }
 const num = (v) => (Number.isFinite(+v) ? +v : null);
 const MAP = { steps: 'steps', heart_rate: 'hr', resting_heart_rate: 'resting_hr', sleep_duration: 'sleep_min', active_calories_burned: 'active_kcal' };
-const today = () => new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Oslo' });
+const today = () => osloDate();
 /** Leser sensorene og lagrer dagsaggregatene per person (Health Connect > iOS; høyeste skritt per dag, ingen dobbelttelling). */
 export async function syncHa42({ history = false } = {}) {
   const st = await states();

@@ -4,6 +4,7 @@
 import { kv, OWNER } from '../db.js';
 import { settings, secret, secretSource, me } from './db.js';
 import { userCfgOverride } from '../settings.js';
+import { osloDate } from '../dates/oslo.js';
 
 const BASE = { live: 'https://live.trading212.com/api/v0', demo: 'https://demo.trading212.com/api/v0' };
 export const t212Base = (env = settings().t212Env) => BASE[env === 'demo' ? 'demo' : 'live'];
@@ -147,14 +148,14 @@ const normDividends = (list) => items(list).map((d) => ({ ticker: d.ticker ?? ''
 
 // Dagsbilder: total verdi og kurs per ticker, maks to år.
 function snapshot(summary, positions) {
-  const day = new Date().toLocaleDateString('sv-SE');
+  const day = osloDate();
   const hist = kv.get(me(), 'fh_t212_hist', []).filter((h) => h.date !== day);
   hist.push({ date: day, value: Math.round(summary.total * 100) / 100, prices: Object.fromEntries(positions.map((p) => [p.ticker, p.price])) });
   kv.set(me(), 'fh_t212_hist', hist.slice(-730));
   return hist;
 }
 function dayChange(positions, hist) {
-  const day = new Date().toLocaleDateString('sv-SE');
+  const day = osloDate();
   const prev = [...hist].reverse().find((h) => h.date < day);
   for (const p of positions) { const old = prev?.prices?.[p.ticker]; p.dayPct = old ? ((p.price - old) / old) * 100 : null; }
 }

@@ -16,12 +16,13 @@ import { config } from '../config.js';
 import { writeXlsx, readXlsxSheets, fromSerial } from './xlsx.js';
 import { cachedStocks } from './stocks.js';
 import { registerJob } from '../jobs/index.js';
+import { osloDate } from '../dates/oslo.js';
 
 const q = (sql) => db.prepare(sql);
 const DATA = resolve(config.dataDir);
 const WORK = join(DATA, 'backups');
 mkdirSync(WORK, { recursive: true });
-const today = () => new Date().toLocaleDateString('sv-SE');
+const today = () => osloDate(); // «i dag» i Oslo (dates/oslo.js)
 
 /* ---------------- Tabeller ---------------- */
 

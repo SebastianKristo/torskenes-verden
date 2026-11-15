@@ -36,6 +36,7 @@ import { fagKey } from './kal37.js';
 import { parseIcs, expandIcs } from './ical-expand.js';
 import { osloTodayISO } from '../public/js/quick-time.js';
 import { registerJob } from './jobs/index.js';
+import { holidaysBetween } from './dates/holidays.js';
 
 const pad = (n) => String(n).padStart(2, '0');
 const addDays = (s, n) => { const [y, m, d] = s.split('-').map(Number); return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10); };
@@ -123,36 +124,16 @@ export function redoMigration(u) {
   return ensureMigrated(u);
 }
 
-/* ---------------- Helligdager (innebygd, ingen nett) ---------------- */
+/* ---------------- Helligdager og merkedager (innebygd, ingen nett) ---------------- */
 
-/** Første påskedag (gregoriansk, «anonym» algoritme). → 'YYYY-MM-DD' */
-export function easter(y) {
-  const a = y % 19, b = Math.floor(y / 100), c = y % 100, d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25), g = Math.floor((b - f + 1) / 3);
-  const h = (19 * a + b - d - g + 15) % 30, i = Math.floor(c / 4), k = c % 4, l = (32 + 2 * e + 2 * i - h - k) % 7, m = Math.floor((a + 11 * h + 22 * l) / 451);
-  const month = Math.floor((h + l - 7 * m + 114) / 31), day = ((h + l - 7 * m + 114) % 31) + 1;
-  return `${y}-${pad(month)}-${pad(day)}`;
-}
-/** Norske offentlige høytidsdager (fridager) for året. → [{date, name}] */
-export function holidaysNO(y) {
-  const E = easter(y);
-  return [
-    [`${y}-01-01`, 'Første nyttårsdag'], [addDays(E, -3), 'Skjærtorsdag'], [addDays(E, -2), 'Langfredag'], [E, 'Første påskedag'], [addDays(E, 1), 'Andre påskedag'],
-    [`${y}-05-01`, 'Arbeidernes dag'], [`${y}-05-17`, 'Grunnlovsdag'], [addDays(E, 39), 'Kristi himmelfartsdag'], [addDays(E, 49), 'Første pinsedag'], [addDays(E, 50), 'Andre pinsedag'],
-    [`${y}-12-25`, 'Første juledag'], [`${y}-12-26`, 'Andre juledag'],
-  ].map(([date, name]) => ({ date, name })).sort((a, b) => (a.date < b.date ? -1 : 1));
-}
+// Lista ligger i dates/holidays.js (Q18). easter og holidaysNO (bare fridagene) beholdes som navn for eksisterende brukere.
+export { easter, publicHolidaysOfYear as holidaysNO } from './dates/holidays.js';
 function holidayEvents(u, fromDate, toDate) {
-  const out = [];
   const color = appCalendarsOf(u).find((c) => c.id === 'helligdager')?.color ?? '#a39d90';
-  for (let y = Number(fromDate.slice(0, 4)); y <= Number(toDate.slice(0, 4)); y++) {
-    for (const h of holidaysNO(y)) {
-      if (h.date < fromDate || h.date > toDate) continue;
-      out.push({ id: `hol-no-${h.date.replace(/-/g, '')}`, title: h.name, short: h.name.length > 18 ? `${h.name.slice(0, 17)}…` : h.name, subject: null, room: '', teacher: '', note: 'Offentlig høytidsdag · fridag',
-        start: h.date, end: addDays(h.date, 1), allDay: true, date: h.date, time: null, inAllDayRow: true, type: 'helligdag', color, source: 'helligdager', calendar: 'helligdager',
-        editable: false, reminder: 'none', holiday: true, fri: true, origin: 'Helligdager · Norge' });
-    }
-  }
-  return out;
+  // type: 'helligdag' (offentlig høytidsdag, fri) eller 'merkedag' (Palmesøndag, Julaften, Nyttårsaften: ikke fri).
+  return holidaysBetween(fromDate, toDate).map((h) => ({ id: `hol-no-${h.date.replace(/-/g, '')}`, title: h.name, short: h.name.length > 18 ? `${h.name.slice(0, 17)}…` : h.name, subject: null, room: '', teacher: '',
+    note: h.fri ? 'Offentlig høytidsdag · fridag' : 'Merkedag · ikke fridag', start: h.date, end: addDays(h.date, 1), allDay: true, date: h.date, time: null, inAllDayRow: true, type: h.type, color,
+    source: 'helligdager', calendar: 'helligdager', editable: false, reminder: 'none', holiday: h.fri, fri: h.fri, origin: 'Helligdager · Norge' }));
 }
 addEventSource(async (u, fromDate, toDate) => (modeOf(u) === 'four' ? { id: 'helligdager', name: 'Helligdager', events: holidayEvents(u, fromDate, toDate) } : null));
 

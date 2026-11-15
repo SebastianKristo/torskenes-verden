@@ -13,6 +13,7 @@
 import { kv } from './db.js';
 import { extractPlace, geocode } from './weather35.js';
 import { homePlace } from './chat-tools41.js';
+import { osloDate } from './dates/oslo.js';
 
 const MOCK = () => process.env.MOCK_DATA === '1';
 let F = null, llm = null;
@@ -48,7 +49,7 @@ async function getJson(url, ms = 8000) {
   if (!res.ok) throw new Error(`${new URL(url).host} svarte ${res.status}`);
   return res.json();
 }
-const osloToday = () => new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Oslo' });
+const osloToday = () => osloDate();
 const addDays = (iso, n) => { const d = new Date(`${iso}T12:00:00Z`); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
 /** Deterministiske eksempeldager (MOCK_DATA=1), med regn torsdag/fredag og tørr helg. */
 export function mockWeek41(p, today = osloToday()) {

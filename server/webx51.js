@@ -40,6 +40,7 @@ import { gateEmbed } from './ai-gate.js';
 import { sunTime } from './weather.js';
 import { savedDocs73, savedSig73 } from './news73.js'; // prompt 73 (NEWS73): lagrede artikler i felles søk
 import { partDocs76, partSig76, partResult76 } from './skjold76/glimt.js'; // prompt 76 (SKJSRV): Skjold Lab-deler i felles søk
+import { osloDate } from './dates/oslo.js';
 
 const q = (sql) => db.prepare(sql);
 const MIN = 60_000, HOUR = 3_600_000, DAY = 86_400_000;
@@ -51,7 +52,7 @@ const isoOf = (t) => (t ? new Date(t).toISOString() : null);
 const nameOf = (id) => { const u = userInfo(id); return u?.displayName ?? u?.name ?? u?.username ?? null; };
 const hasTable = (t) => !!q("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(t);
 const hasCol = (t, col) => hasTable(t) && q(`PRAGMA table_info(${t})`).all().some((x) => x.name === col);
-const ymdOslo = (t = Date.now()) => new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Oslo' }).format(new Date(t));
+const ymdOslo = (t = Date.now()) => osloDate(t);
 const dayLabel = (ymd) => {
   if (!ymd) return null;
   const today = ymdOslo(), tomorrow = ymdOslo(Date.now() + DAY), yesterday = ymdOslo(Date.now() - DAY);

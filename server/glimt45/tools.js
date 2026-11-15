@@ -6,7 +6,7 @@ import { db, kv } from '../db.js';
 import { runAsUser } from '../settings.js';
 import { broadcast } from '../realtime.js';
 import { eventsFor, createEvent, updateEvent, deleteEvent, findEvent, eventInput, normText } from '../calendar.js';
-import { KINDS, parseQuick } from '../../public/js/quick-time.js';
+import { KINDS, parseQuick } from '../dates/quick.js'; // dato og tid fra den felles tolkeren
 import { ensureIndex42, merchantKey42, synonymsOf42, stem42, fold42, norm42 } from '../finans/search42.js';
 import { ensureLedger, settings as fhSettings } from '../finans/db.js';
 import { inOriginal46 } from './tasks46.js';

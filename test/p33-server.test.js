@@ -276,7 +276,7 @@ test('calendarAnswer: onStep får tenker-stegene (etiketter) før og etter verkt
   assert.equal(a.steps[0], 'Leser i morgen i kalenderen');
   assert.equal(a.deepLink, 'kalender://liste');
   assert.equal(k33.dayOfQuestion('Finn ledig tid 24.10?', '2026-10-19'), '2026-10-24');
-  assert.equal(k33.dayOfQuestion('hva skjer neste fredag', '2026-10-19'), '2026-10-30');
+  assert.equal(k33.dayOfQuestion('hva skjer neste fredag', '2026-10-19'), '2026-10-23'); // Q17: førstkommende fredag
   assert.deepEqual(k33.extrasOf('møte med Ola i morgen 10-11 varsle 30 min før'), { start: '10:00', end: '11:00', reminder: '1h' });
 });
 

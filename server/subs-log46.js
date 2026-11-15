@@ -20,6 +20,7 @@
 // Glimt (GLIMT46): subsLog46(user, {service?, from?, to?, types?}) og trialSavings46(user) – se SERVER46-API.md.
 import { db } from './finans/db.js';
 import { domainFor } from './finans/enrich.js';
+import { osloDate } from './dates/oslo.js';
 
 const q = (sql) => db.prepare(sql);
 db.exec(`CREATE TABLE IF NOT EXISTS subscription_events (
@@ -32,7 +33,7 @@ CREATE INDEX IF NOT EXISTS subscription_events_user ON subscription_events(user_
 
 export const EVENT_TYPES46 = ['charge', 'trial_start', 'trial_end', 'trial_converted', 'trial_cancelled', 'price_change', 'cancelled'];
 const TRIAL_TYPES = new Set(['trial_start', 'trial_end', 'trial_converted', 'trial_cancelled']);
-const today = () => new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Oslo' });
+const today = () => osloDate();
 const addMonths = (iso, n) => { const d = new Date(`${iso.slice(0, 7)}-01T12:00:00Z`); d.setUTCMonth(d.getUTCMonth() + n); return d.toISOString().slice(0, 10); };
 const kr = (ore) => { const v = Math.abs(ore) / 100; return `${Number.isInteger(v) ? v.toLocaleString('nb-NO') : v.toLocaleString('nb-NO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kr`; };
 const MON = ['januar', 'februar', 'mars', 'april', 'mai', 'juni', 'juli', 'august', 'september', 'oktober', 'november', 'desember'];
@@ -124,7 +125,8 @@ export function subsLogOut46(user, { filter = 'all', months = 3, before = null, 
   const ev = rowsOf(user, 'all');
   const since12 = addMonths(now, -12);
   const charges = ev.filter((e) => e.type === 'charge').length, trials = ev.filter((e) => e.type === 'trial_start').length;
-  const paid12 = ev.filter((e) => (e.type === 'charge') && e.date >= since12).reduce((a, e) => a - e.amount, 0);
+  // Q21: prøver som gikk over til betalt telles med i «betalt siste 12 mnd» (som fakturaene). Beløpet er øre, alltid positivt her.
+  const paid12 = ev.filter((e) => (e.type === 'charge' || e.type === 'trial_converted') && e.date >= since12).reduce((a, e) => a + Math.abs(e.amount), 0);
   const groups = new Map();
   for (const e of all) { const m = e.date.slice(0, 7); if (before && m >= before) continue; if (!groups.has(m)) groups.set(m, []); groups.get(m).push(e); }
   const keys = [...groups.keys()].sort().reverse();
@@ -135,7 +137,7 @@ export function subsLogOut46(user, { filter = 'all', months = 3, before = null, 
     return { month: m, label: `${MON[+m.slice(5, 7) - 1].replace(/^./, (c) => c.toUpperCase())} ${m.slice(0, 4)}`, total: total / 100, totalText: total ? `−${kr(total)}` : '0 kr', items: list.map((e) => eventOut(e, prices, trialDays)) };
   });
   const rest = keys.length - shown.length;
-  return { filter: f, summary: { charges, trials, paid12m: paid12 / 100, text: `${charges} ${charges === 1 ? 'faktura' : 'fakturaer'} · ${trials} ${trials === 1 ? 'prøveperiode' : 'prøveperioder'} · ${kr(paid12)} betalt siste 12 mnd` },
+  return { filter: f, summary: { charges, trials, paid12m: paid12 / 100, paid12mText: `${kr(paid12)} betalt siste 12 mnd`, text: `${charges} ${charges === 1 ? 'faktura' : 'fakturaer'} · ${trials} ${trials === 1 ? 'prøveperiode' : 'prøveperioder'} · ${kr(paid12)} betalt siste 12 mnd` },
     months: out, more: rest > 0 ? { months: rest, before: shown[shown.length - 1], label: `Vis eldre (${rest} ${rest === 1 ? 'måned' : 'måneder'})` } : null,
     // Flat liste (WEB46/ANDROID46 grupperer selv): hendelsene i de siste `months` månedene, amount positivt for belastninger.
     events: ev.filter((e) => e.date >= addMonths(now, -(Math.max(1, Math.min(36, months)) - 1))).map((e) => { const o = eventOut(e, prices, trialDays);

@@ -22,7 +22,7 @@ import { notifyOf, notifyUser } from './notify.js';
 import { eventInput, createEvent, deleteEvent } from './calendar.js';
 import { settings } from './finans/db.js';
 import { aiTimeoutsOf, _aiTest, logAi } from './finans/ai.js';
-import { parseQuick, quickLabel, osloTodayISO, TYPES, DURATION, NO_DATE, memoryMatch, aliasTitle, isNoiseLine, senderOf } from '../public/js/quick-time.js';
+import { parseQuick, quickLabel, osloTodayISO, TYPES, DURATION, NO_DATE, memoryMatch, aliasTitle, isNoiseLine, senderOf } from './dates/quick.js'; // dato og tid fra den felles tolkeren
 import { aliasesOf, aliasPrompt, setContext, touchMemory } from './glimt-memory.js'; // prompt 33: «Glimt husker»
 import { run as aiRun } from './ai-run.js';
 
@@ -111,6 +111,9 @@ export function fromOllama(o) {
  * teksten har dem – modellens dato bare når teksten ikke sier noe selv. Tittelvakt: maks 60 tegn, ikke lik hele meldingen, og
  * ordene må stå i teksten (typeord som «Frisør» er lov) – ellers den lokale tittelen.
  */
+/** Køen lager avtalen uten å spørre: klokkeslett uten dato gir «Fant ikke dato» (brukeren velger), ikke i dag/i morgen. */
+const NO_GUESS = { timeWithoutDate: 'none' };
+
 async function guardQuick47(r, text, today, local) {
   const { whenOf45, addMin45 } = await import('./glimt45/dates.js');
   const { wordsFromText46 } = await import('./glimt45/tools.js');
@@ -130,7 +133,7 @@ async function guardQuick47(r, text, today, local) {
 export async function interpret(text, user, today = osloTodayISO()) {
   let aliases = [];
   try { aliases = aliasesOf(user); } catch { /* */ }
-  const local = parseQuick(text, today, aliases);
+  const local = parseQuick(text, today, aliases, NO_GUESS);
   const fn = ollamaOf();
   let res = null;
   if (fn) {
@@ -203,7 +206,7 @@ async function runJob(id) {
   const text = row.text;
   let r, engine = 'lokal';
   progressEvent(user, id, 1);
-  try { ({ r, engine } = await interpret(text, user)); } catch (e) { r = parseQuick(text); }
+  try { ({ r, engine } = await interpret(text, user)); } catch (e) { r = parseQuick(text, undefined, undefined, NO_GUESS); }
   if (getJob(id)?.cancelled) {
     setJob(id, { state: 'failed', error: CANCELLED, engine });
     announce(user, jobOut(getJob(id)));
@@ -278,7 +281,7 @@ api.post('/parse', async (c) => {
   const today = typeof b.today === 'string' && validDate(b.today) ? b.today : osloTodayISO();
   let aliases = [];
   try { aliases = aliasesOf(c.get('user')); } catch { /* */ }
-  const r = parseQuick(b.text.slice(0, MAX_TEXT), today, aliases);
+  const r = parseQuick(b.text.slice(0, MAX_TEXT), today, aliases, NO_GUESS);
   return c.json({ ...r, label: quickLabel(r) });
 });
 

@@ -26,13 +26,13 @@ import { insertTask, mineListOf } from './tasks.js';
 import { notifyUser } from './notify.js';
 import { cached } from './cache.js';
 import { cardsOf, cardOn, auroraNotifyOf } from './cards38.js';
+import { osloDate } from './dates/oslo.js';
 
 const MOCK = process.env.MOCK_DATA === '1';
 const TZ = 'Europe/Oslo';
 const WD = ['søn', 'man', 'tir', 'ons', 'tor', 'fre', 'lør'];
 const MS = ['jan', 'feb', 'mar', 'apr', 'mai', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'des'];
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
-const osloDate = (t = Date.now()) => new Intl.DateTimeFormat('sv-SE', { timeZone: TZ }).format(new Date(t));
 const osloHour = (t = Date.now()) => +new Intl.DateTimeFormat('en-GB', { timeZone: TZ, hour: '2-digit', hourCycle: 'h23' }).format(new Date(t));
 const osloHm = (iso) => new Intl.DateTimeFormat('en-GB', { timeZone: TZ, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(iso));
 const addDays = (s, n) => { const [y, m, d] = s.split('-').map(Number); return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10); };

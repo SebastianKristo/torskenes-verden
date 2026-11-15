@@ -2,9 +2,11 @@
 // «Pris økt» fra banktransaksjonene og kandidater (faste trekk som ikke er registrert ennå).
 // Alt regnes ut fra fh_subscriptions og fh_transactions; ingenting her endrer data unntatt priceCheck().
 import { db, me } from './db.js';
+import { CYCLE_MONTHS, perMonth, seriesOf, chargesBetween } from './cycles.js';
+import { osloDate } from '../dates/oslo.js';
 
 const q = (sql) => db.prepare(sql);
-export const CYCLE_MONTHS = { monthly: 1, yearly: 12, biennial: 24 };
+export { CYCLE_MONTHS }; // syklustabellen ligger i cycles.js
 
 // Kategorier i grafen og kalenderen. Rekkefølgen er fargerekkefølgen i grensesnittet.
 export const SUB_CATEGORIES = ['Underholdning', 'Produktivitet', 'Lagring og sky', 'Helse og trening', 'Transport', 'Mobil og internett', 'Nyheter og lesing', 'Annet'];
@@ -22,23 +24,16 @@ export function categoryFor(name, stored) {
   return CAT_RULES.find(([, re]) => re.test(String(name ?? '')))?.[0] ?? 'Annet';
 }
 
-const iso = (d) => d.toLocaleDateString('sv-SE');
-const addMonths = (dateStr, n) => { const d = new Date(`${dateStr}T12:00:00`); const day = d.getDate(); d.setDate(1); d.setMonth(d.getMonth() + n); d.setDate(Math.min(day, new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate())); return iso(d); };
 
 // Trekkdag: lagret dag, ellers dagen i neste trekk.
 export const chargeDayOf = (s) => s.charge_day || (s.next_date ? +s.next_date.slice(8, 10) : null);
 
-// Alle trekkdatoer for et abonnement i et år (projisert fra neste trekk og syklus). Dagen regnes fra neste trekk
-// hver gang, så 31. blir 30. i april uten at mai også blir 30.
+// Alle trekkdatoer for et abonnement i et år (projisert fra neste trekk og syklus, også bakover i året). Dagen er trekkdagen
+// hver gang, så 31. blir 30. i april uten at mai også blir 30 (cycles.js).
 export function chargesInYear(s, year) {
-  const step = CYCLE_MONTHS[s.cycle] ?? 1;
   const base = s.next_date ?? (s.charge_day ? `${year}-01-${String(Math.min(28, s.charge_day)).padStart(2, '0')}` : null);
   if (!base) return [];
-  const [by, bm] = base.split('-').map(Number);
-  const k0 = Math.ceil(((year - by) * 12 + 1 - bm) / step); // første k med måned ≥ januar i året
-  const out = [];
-  for (let k = k0; ; k++) { const d = addMonths(base, k * step); if (d > `${year}-12-31`) break; if (d >= `${year}-01-01`) out.push(d); }
-  return out;
+  return chargesBetween(seriesOf({ cycle: s.cycle, anchor: base, day: s.charge_day || null }), `${year}-01-01`, `${year}-12-31`, { backward: true });
 }
 
 // Grafen «Forbruk per måned»: 12 måneder i året, stablet per kategori. Bare aktive abonnementer (oppsagte er ikke med).
@@ -66,7 +61,7 @@ export function chargesInMonth(subs, ym) {
 }
 
 export function upcoming(subs, days = 7, now = new Date()) {
-  const from = iso(now), to = iso(new Date(now.getTime() + days * 86400_000));
+  const from = osloDate(now), to = osloDate(now.getTime() + days * 86400_000);
   const out = [];
   for (const s of subs) {
     if (!s.active) continue;
@@ -76,9 +71,9 @@ export function upcoming(subs, days = 7, now = new Date()) {
 }
 
 // «Pris økt» vises i 120 dager etter at prisen endret seg.
-const recent = (d) => !d || d >= iso(new Date(Date.now() - 120 * 86400_000));
+const recent = (d) => !d || d >= osloDate(Date.now() - 120 * 86400_000);
 export const statusOf = (s) => (!s.active ? 'cancelled' : s.prev_price && s.price > s.prev_price && recent(s.price_changed) ? 'price_up' : s.low_use ? 'low_use' : 'active');
-const monthly = (s) => s.price / 100 / (CYCLE_MONTHS[s.cycle] ?? 1);
+const monthly = (s) => perMonth(s.price / 100, s.cycle);
 
 // Abonnementshelse 0–100: trekk for lite brukte, prisøkninger og abonnementer uten neste trekk.
 export function health(subs) {
@@ -100,7 +95,7 @@ export function savings(subs) {
   for (const s of act.filter((x) => statusOf(x) === 'low_use')) sug.push({ id: s.id, kind: 'cancel', name: s.name, domain: s.domain, text: `Si opp ${s.name}.${s.usage_note ? ` ${s.usage_note}.` : ' Lite brukt i det siste.'}`.replace(/\.\./g, '.'), amount: Math.round(monthly(s)) });
   for (const s of act.filter((x) => statusOf(x) === 'price_up')) {
     const pct = Math.round(((s.price - s.prev_price) / s.prev_price) * 100);
-    sug.push({ id: s.id, kind: 'price', name: s.name, domain: s.domain, text: `${s.name} har økt prisen ${pct} %. Sjekk om en billigere plan holder.`, amount: Math.round((s.price - s.prev_price) / 100 / (CYCLE_MONTHS[s.cycle] ?? 1)) });
+    sug.push({ id: s.id, kind: 'price', name: s.name, domain: s.domain, text: `${s.name} har økt prisen ${pct} %. Sjekk om en billigere plan holder.`, amount: Math.round(perMonth((s.price - s.prev_price) / 100, s.cycle)) });
   }
   sug.sort((a, b) => b.amount - a.amount);
   return { monthly: sug.reduce((a, x) => a + x.amount, 0), suggestions: sug };

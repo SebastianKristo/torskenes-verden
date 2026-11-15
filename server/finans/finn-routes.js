@@ -14,13 +14,14 @@ import { db, settings, secret, me } from './db.js';
 import { config } from '../config.js';
 import { askJson } from './ai.js';
 import { parseFinnEmail } from './finn.js';
+import { osloDate } from '../dates/oslo.js';
 
 const q = (sql) => db.prepare(sql);
 const MOCK = process.env.MOCK_DATA === '1';
 const ROOT = resolve(config.dataDir, 'finn');
 const bad = (c, msg, code = 400) => c.json({ error: msg }, code);
 const str = (v, max = 200) => String(v ?? '').trim().slice(0, max);
-const today = () => new Date().toLocaleDateString('sv-SE');
+const today = () => osloDate(); // «i dag» i Oslo (dates/oslo.js)
 const isDate = (s) => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s);
 
 /* ---------------- Tabeller ---------------- */

@@ -98,7 +98,7 @@ test('kalendere: standard bare fire (Personlig · Bursdager · Skole · Helligda
   assert.equal(ev.body.event.appKind, 'jobb');
 });
 
-test('helligdager: innebygd Norge (bevegelige beregnet), heldag i Helligdager', async () => {
+test('helligdager og merkedager: innebygd Norge (bevegelige beregnet), heldag i Helligdager med type (Q18)', async () => {
   assert.equal(k39.easter(2026), '2026-04-05');
   assert.equal(k39.easter(2027), '2027-03-28');
   const h26 = k39.holidaysNO(2026);
@@ -106,7 +106,8 @@ test('helligdager: innebygd Norge (bevegelige beregnet), heldag i Helligdager', 
   assert.deepEqual(h26.find((x) => x.name === 'Kristi himmelfartsdag').date, '2026-05-14');
   const r = await A('/api/kalender?from=2026-12-20&to=2026-12-31');
   const hol = (r.body.events ?? []).filter((e) => e.appCalendar === 'helligdager');
-  assert.deepEqual(hol.map((e) => [e.date, e.title, e.allDay, e.type]), [['2026-12-25', 'Første juledag', true, 'helligdag'], ['2026-12-26', 'Andre juledag', true, 'helligdag']]);
+  assert.deepEqual(hol.map((e) => [e.date, e.title, e.allDay, e.type, e.fri]), [['2026-12-24', 'Julaften', true, 'merkedag', false], ['2026-12-25', 'Første juledag', true, 'helligdag', true],
+    ['2026-12-26', 'Andre juledag', true, 'helligdag', true], ['2026-12-31', 'Nyttårsaften', true, 'merkedag', false]]);
 });
 
 test('opprydding 12 → 4: egne duplikater og gamle id-er flyttes (ingenting slettes), kan angres og kjøres på nytt', async () => {

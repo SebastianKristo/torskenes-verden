@@ -16,7 +16,7 @@ import { Hono } from 'hono';
 import { connect as netConnect } from 'node:net';
 import { connect as tlsConnect } from 'node:tls';
 import { randomBytes, createHash } from 'node:crypto';
-import { parseQuick, osloTodayISO } from '../public/js/quick-time.js';
+import { parseQuick, osloTodayISO } from './dates/quick.js'; // dato og tid fra den felles tolkeren
 import { db, kv } from './db.js';
 import { userInfo, listUsers } from './auth.js';
 import { authOrToken } from './mobile.js';

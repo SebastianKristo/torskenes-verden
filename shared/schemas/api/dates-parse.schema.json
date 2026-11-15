@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "api/dates-parse.schema.json",
+  "title": "Datotolking",
+  "description": "Den felles tolkeren for norske dato- og tidsuttrykk (Q17, shared/testvektorer/datoer.json). Kropp: {text, now?}. «I dag» er Oslo-datoen for now.",
+  "x-endpoint": "POST /api/dates/parse",
+  "type": "object",
+  "required": [
+    "date",
+    "time",
+    "end",
+    "allDay",
+    "rest",
+    "label",
+    "today",
+    "errors"
+  ],
+  "properties": {
+    "date": {
+      "anyOf": [
+        {
+          "$ref": "../common/types.schema.json#/$defs/date"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "time": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "end": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "allDay": {
+      "type": "boolean"
+    },
+    "rest": {
+      "type": "string"
+    },
+    "label": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "today": {
+      "$ref": "../common/types.schema.json#/$defs/date"
+    },
+    "dateText": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "timeText": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "errors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "field",
+          "message"
+        ],
+        "properties": {
+          "field": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

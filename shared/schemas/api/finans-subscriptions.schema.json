@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "api/finans-subscriptions.schema.json",
   "title": "Faste betalinger",
-  "description": "Abonnementer og faste betalinger. Serveren eier nextDate og monthly (CLAUDE.md: logikk på serveren). price er kroner per trekk (eldre form), priceOre det samme i øre.",
+  "description": "Abonnementer og faste betalinger. Serveren eier nextDate og monthly (CLAUDE.md: logikk på serveren). price er kroner per trekk (eldre form), priceOre det samme i øre. nextDate regnes av serveren fra cycle, trekkdag/-måned og ev. startDate (shared/testvektorer/abonnement.json); en nextDate klienten sender brukes bare som anker når trekkdag mangler, eller med nextDateManual: true.",
   "x-endpoint": "GET /finans/api/subscriptions",
   "type": "object",
   "required": [
@@ -55,6 +55,37 @@
           }
         }
       }
+    },
+    "cycles": {
+      "description": "Syklusene serveren regner med (Q40).",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "perLabel"
+        ],
+        "properties": {
+          "id": {
+            "enum": [
+              "weekly",
+              "biweekly",
+              "monthly",
+              "quarterly",
+              "halfyearly",
+              "yearly",
+              "biennial"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "perLabel": {
+            "type": "string"
+          }
+        }
+      }
     }
   },
   "$defs": {
@@ -87,7 +118,15 @@
           "$ref": "../common/types.schema.json#/$defs/ore"
         },
         "cycle": {
-          "type": "string"
+          "enum": [
+            "weekly",
+            "biweekly",
+            "monthly",
+            "quarterly",
+            "halfyearly",
+            "yearly",
+            "biennial"
+          ]
         },
         "nextDate": {
           "anyOf": [
@@ -146,6 +185,12 @@
         },
         "shared": {
           "type": "boolean"
+        },
+        "cycleName": {
+          "type": "string"
+        },
+        "perLabel": {
+          "type": "string"
         }
       }
     }

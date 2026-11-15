@@ -27,6 +27,7 @@ import { authOrToken } from './mobile.js';
 import { isAdmin, userInfo, listUsers, currentDeviceId, sessionUser, clientIp } from './auth.js';
 import { parseChangelog } from './system-update.js';
 import { whatsNewExtra52 } from './whatsnew52.js'; // prompt 52 (SRV52)
+import { isLocalHost } from './net/server-url.js';
 
 const q = (sql) => db.prepare(sql);
 
@@ -246,14 +247,8 @@ export function parseDsn51(dsn = process.env.GLITCHTIP_DSN) {
     return { key: decodeURIComponent(u.username), host: u.host, hostname: u.hostname, origin: `${u.protocol}//${u.host}`, project };
   } catch { return null; }
 }
-export function isLocalHost51(h) {
-  const s = String(h ?? '').toLowerCase().replace(/^\[|\]$/g, '');
-  if (!s) return false;
-  if (s === 'localhost' || s === '::1' || /^127\./.test(s)) return true;
-  if (/^10\.|^192\.168\.|^172\.(1[6-9]|2\d|3[01])\./.test(s) || /^169\.254\./.test(s) || /^f[cd][0-9a-f]{2}:/.test(s)) return true;
-  if (!s.includes('.') && /^[a-z0-9-]+$/.test(s)) return true; // Docker-tjenestenavn (glitchtip)
-  return /\.(local|lan|home\.arpa|internal)$/.test(s);
-}
+// Lokalt nett etter serveradresse.json (Q39), også 100.64/10 (Tailscale) og navn uten punktum (Docker-tjenestenavn som glitchtip).
+export const isLocalHost51 = (h) => isLocalHost(h);
 function forwardTarget() {
   const d = parseDsn51();
   if (!d) return null;

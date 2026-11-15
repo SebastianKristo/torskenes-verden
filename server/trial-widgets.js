@@ -15,6 +15,7 @@ import { authOrToken } from './mobile.js';
 import { osloTodayISO } from '../public/js/quick-time.js';
 import { domainFor } from './finans/enrich.js';
 import { cancelUrlFor, daysBetween, addDaysISO } from '../public/js/trial-parse.js';
+import { notificationsOf } from './finans/trials.js';
 
 const q = (sql) => db.prepare(sql);
 const WDS = ['søn', 'man', 'tir', 'ons', 'tor', 'fre', 'lør'];
@@ -35,7 +36,10 @@ export function trialCompact(row, today = osloTodayISO()) {
   return { id: row.id, name: row.service, endsAt: row.ends_at, endLabel: shortDate(row.ends_at), cancelBefore: `Avslutt før ${shortDate(row.ends_at)}`, daysLeft,
     daysLabel: daysLeft === 0 ? 'i dag' : daysLeft === 1 ? '1 dag igjen' : `${daysLeft} dager igjen`, tone, color: tone === 'red' ? '#b23a2a' : tone === 'orange' ? '#a8661a' : null,
     startAt: start, progress, price: row.price_after ?? null, priceLabel: pl, afterLabel: pl ? `deretter ${pl}` : '', logoUrl: domain ? `/finans/api/logo/${domain}` : null, domain,
-    cancelUrl: row.cancel_url || cancelUrlFor(row.service) || null, deepLink: `finanshub://abonnement/prove/${row.id}`, url: '/finans/#/abonnement' };
+    cancelUrl: row.cancel_url || cancelUrlFor(row.service) || null, deepLink: `finanshub://abonnement/prove/${row.id}`, url: '/finans/#/abonnement',
+    // Varselplanen serveren lager (F-logikk L4): appene planlegger bare denne kopien for å varsle uten nett, og dedupliserer mot
+    // push med dedupeKey (samme som data.dedupeKey i pushen).
+    notifications: notificationsOf(row).filter((n) => !n.sent).map((n) => ({ key: n.key, dedupeKey: `trial-${row.id}-${n.key}`, kind: n.kind, at: n.at, title: n.title, body: n.body })) };
 }
 
 export function trialsWidget(user, today = osloTodayISO()) {

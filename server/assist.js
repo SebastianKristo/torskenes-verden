@@ -68,9 +68,10 @@ import { nextTasks } from './tasks.js';
 import { settings as fhSettings, ensureLedger } from './finans/db.js';
 import { createTrial, trialOut } from './finans/trials.js';
 import { startQuickJob } from './calendar-quick.js';
-import { parseQuick, osloTodayISO, quickLabel, senderOf } from '../public/js/quick-time.js';
+import { parseQuick, osloTodayISO, quickLabel, senderOf } from './dates/quick.js'; // dato og tid fra den felles tolkeren
 import { aliasesOf, aliasPrompt, parseMemoryIntent, learnFromAssist, typeOfWord, eventHitsAlias, getContext, setContext } from './glimt-memory.js'; // prompt 33
-import { parseTrial, serviceOf, trialSentence, MONTHS, WEEKDAYS, addDaysISO, daysBetween } from '../public/js/trial-parse.js';
+import { serviceOf, trialSentence, MONTHS, WEEKDAYS, addDaysISO, daysBetween } from '../public/js/trial-parse.js';
+import { parseTrialText as parseTrial } from './finans/trials.js'; // den ene prøvetolkeren på serveren
 import * as integrations from './integrations.js';
 import { calendarAnswer } from './kalender33.js'; // prompt 33: source:'calendar'
 import { fagAnswer, rememberCtx } from './glimt39-fag.js'; // prompt 39: oppfølging og fag

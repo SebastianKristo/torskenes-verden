@@ -12,6 +12,7 @@ import { Hono } from 'hono';
 import { authOrToken as authOrToken0 } from './mobile.js';
 import { notifyUser } from './notify.js';
 import { runAsUser } from './settings.js';
+import { osloDate } from './dates/oslo.js';
 
 const authOrToken = (c, next) => authOrToken0(c, next); // sen binding
 export const SEARCH_MS41 = 20_000;
@@ -23,7 +24,7 @@ export const _setKal41Events = (fn) => { evImpl = fn ?? null; };
 const TZ = 'Europe/Oslo';
 const WD = ['søndag', 'mandag', 'tirsdag', 'onsdag', 'torsdag', 'fredag', 'lørdag'];
 const MON = ['januar', 'februar', 'mars', 'april', 'mai', 'juni', 'juli', 'august', 'september', 'oktober', 'november', 'desember'];
-const today = (t = Date.now()) => new Date(t).toLocaleDateString('sv-SE', { timeZone: TZ });
+const today = (t = Date.now()) => osloDate(t);
 const addDays = (iso, n) => { const d = new Date(`${iso}T12:00:00Z`); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
 const wdOf = (iso) => new Date(`${iso}T12:00:00Z`).getUTCDay();
 const hm = (s) => (s ? new Date(Date.parse(s)).toLocaleTimeString('nb-NO', { timeZone: TZ, hour: '2-digit', minute: '2-digit' }) : null);

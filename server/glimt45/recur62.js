@@ -9,7 +9,7 @@
 //                                                  | {ok:false, error, question}
 //   parseRRule62('FREQ=…') → rule · ruleToRRule62(rule) → 'FREQ=…' · nextRun62(rule, afterMs) → ms | null · nextRuns62(rule, afterMs, n)
 //   osloToUtc62('YYYY-MM-DD', 'HH:MM') → ms · osloParts62(ms) → {date, hm, h, m, wd} · quiet62(ms) / afterQuiet62(ms)
-import { parseTime45, parseDate45, addDays45, weekdayOf45, mondayOf45, isIsoDate45, isHm45, MON45, WD45 } from './dates.js';
+import { parseTime as parseTime45, parseDate as parseDate45, addDays as addDays45, weekdayOf as weekdayOf45, mondayOf as mondayOf45, isIsoDate as isIsoDate45, isHm as isHm45, MONTHS as MON45, WEEKDAYS as WD45 } from '../dates/parse.js';
 
 export const TZ62 = 'Europe/Oslo';
 const pad = (n) => String(n).padStart(2, '0');

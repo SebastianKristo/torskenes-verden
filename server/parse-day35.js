@@ -4,10 +4,11 @@
 //
 // parseDay(text, today='YYYY-MM-DD') → {date, offset, word, label:'i morgen', Label:'I morgen', kind} | null
 //   kind: 'rel' (i dag/i morgen/overmorgen/i går/om N dager) | 'weekday' | 'date'
-//   overmorgen / overimorgen / i overmorgen → +2 · i morgen / imorgen / i morra / imorra / imorgo / tomorrow → +1
-//   i dag / idag / i kveld / ikveld / i natt / today / tonight → 0 · i går / igår / yesterday → −1 · om 3 dager → +3
-//   ukedag (norsk/engelsk): neste forekomst (samme ukedag = om 7 dager), «neste fredag» = fredag i neste uke (+7 hvis < 7)
-//   dato: 25.10 · 25.10.2026 · 25/10 · 25. okt · 25 oktober · 2026-10-25 (uten år og passert → neste år)
+//   Norske uttrykk tolkes av den felles tolkeren (server/dates/parse.js, fasit shared/testvektorer/datoer.json, Q17):
+//   ukedag = førstkommende (i dag teller), «neste fredag» = førstkommende fredag etter i dag, «fredag neste uke» = uka etter.
+//   Det den ikke kjenner (engelsk: tomorrow/next friday/in 3 days, «imorgo», «i natt»), tolkes her som før.
+import { parseDate } from './dates/parse.js';
+
 export const WD_NO = ['søndag', 'mandag', 'tirsdag', 'onsdag', 'torsdag', 'fredag', 'lørdag'];
 const WD_EN = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 export const MON_NO = ['januar', 'februar', 'mars', 'april', 'mai', 'juni', 'juli', 'august', 'september', 'oktober', 'november', 'desember'];
@@ -43,6 +44,8 @@ function out(date, today, word, kind) {
 /** Dagen teksten gjelder, eller null (ingen dag-ord). */
 export function parseDay(text, today) {
   if (!validDate(String(today ?? ''))) throw new Error('parseDay: today må være YYYY-MM-DD');
+  const shared = sharedDay(text, today);
+  if (shared) return shared;
   const n = normDayText(text);
   let m;
   if ((m = n.match(/ (i )?over ?i? ?morgen /))) return out(addDaysISO(today, 2), today, m[0], 'rel');
@@ -73,6 +76,15 @@ export function parseDay(text, today) {
     return out(addDaysISO(today, df), today, m[0], 'weekday');
   }
   return null;
+}
+
+const KIND = { abs: 'date', rel: 'rel', weekday: 'weekday' };
+/** Den felles tolkeren. «neste uke» alene (en uke, ikke en dag) og omtrentlige datoer («etter jul») er ikke en dag her. */
+function sharedDay(text, today) {
+  const r = parseDate(text, today, { prefer: 'future' });
+  if (!r?.date || !KIND[r.kind] || r.approx) return null;
+  const word = r.kind === 'abs' ? r.raw : normDayText(r.raw).trim();
+  return out(r.date, today, word, KIND[r.kind]);
 }
 
 function dateOf(d, mo, y, today) {

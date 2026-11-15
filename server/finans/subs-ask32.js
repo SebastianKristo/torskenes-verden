@@ -18,6 +18,8 @@
 import { db, me } from './db.js';
 import { kv } from '../db.js';
 import { osloTodayISO } from '../../public/js/quick-time.js';
+import { osloDate } from '../dates/oslo.js';
+import { PER_LABEL, perMonth, nextCharge, seriesOf } from './cycles.js';
 
 const q = (sql) => db.prepare(sql);
 const fold = (s) => String(s ?? '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').normalize('NFC');
@@ -95,21 +97,20 @@ export function subIntent(text) {
 const MON = ['jan', 'feb', 'mar', 'apr', 'mai', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'des'];
 const dLabel = (iso) => (iso ? `${+iso.slice(8, 10)}. ${MON[+iso.slice(5, 7) - 1]}` : null);
 const krS = (v) => { const r = Math.round(v * 100) / 100; return Number.isInteger(r) ? String(r) : r.toFixed(2).replace('.', ','); };
-const CYC = { monthly: 1, yearly: 12, biennial: 24 };
-const PER = { monthly: '/mnd', yearly: '/år', biennial: '/2 år' };
 const daysTo = (a, b) => Math.round((Date.parse(b + 'T12:00:00Z') - Date.parse(a + 'T12:00:00Z')) / 86400_000);
 const incCat = (i) => { const t = fold(i);
   return /music|musikk/.test(t) ? 'musikk' : /lydbøk|lydbok|e-bøk|bøker/.test(t) ? 'lydbok' : /tv|video|film|serier/.test(t) ? 'film/TV' : /lagring|icloud|onedrive|disk/.test(t) ? 'lagring' : /arcade|spill/.test(t) ? 'spill' : /frakt/.test(t) ? 'frakt' : /ai/.test(t) ? 'AI' : null; };
 const listJoin = (a) => (a.length <= 1 ? a.join('') : `${a.slice(0, -1).join(', ')} og ${a.at(-1)}`);
 
+const nextOf = (s) => (s.next_date ? nextCharge(seriesOf(s), osloDate()) ?? s.next_date : null);
 /** Abonnementer + aktive prøver for brukeren, med inkluderer[] og kategorier. */
 export function subscriptionSources(u = me()) {
   const today = osloTodayISO();
   const subs = q('SELECT * FROM fh_subscriptions WHERE user_id=? AND active=1 ORDER BY name').all(u).map((s) => {
     const k = knowledgeFor(s.name, u);
     const domain = s.domain || null;
-    return { id: s.id, kind: 'abonnement', name: s.name, plan: s.plan || '', price: s.price / 100, perLabel: PER[s.cycle] ?? '/mnd', monthly: Math.round(s.price / (CYC[s.cycle] ?? 1)) / 100,
-      nextDate: s.next_date ?? null, nextLabel: dLabel(s.next_date), category: s.category ?? null, status: s.low_use ? 'aktiv' : 'aktiv', includes: k?.includes ?? [], cats: k?.cats ?? [],
+    return { id: s.id, kind: 'abonnement', name: s.name, plan: s.plan || '', price: s.price / 100, cycle: s.cycle, perLabel: PER_LABEL[s.cycle] ?? '/mnd', monthly: Math.round(perMonth(s.price, s.cycle)) / 100,
+      nextDate: nextOf(s), nextLabel: dLabel(nextOf(s)), category: s.category ?? null, status: s.low_use ? 'aktiv' : 'aktiv', includes: k?.includes ?? [], cats: k?.cats ?? [],
       domain, logoUrl: s.logo_url || (domain ? `/finans/api/logo/${domain}` : null), url: `/finans/#/abonnement/${s.id}`, openLabel: 'Åpne i Abonnement ›' };
   });
   let trials = [];
@@ -126,7 +127,7 @@ export function subscriptionSources(u = me()) {
 
 /** Transaksjoner fra kjente selgere siste 12 mnd som hører til et av abonnementene. */
 function linkedTx(u, subs) {
-  const from = new Date(Date.now() - 365 * 86400_000).toISOString().slice(0, 10);
+  const from = osloDate(Date.now() - 365 * 86400_000);
   const rows = q('SELECT id, date, amount, description, merchant FROM fh_transactions WHERE user_id=? AND amount<0 AND date>=? ORDER BY date DESC LIMIT 2000').all(u, from);
   const out = [];
   for (const t of rows) {
