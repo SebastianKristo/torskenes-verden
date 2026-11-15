@@ -24,7 +24,7 @@ test('papir-mork.css lastes sist i app.html', () => {
 
 test('temavariabler for mørk modus', () => {
   const r = rule(rd('public/css/papir-mork.css'), D);
-  for (const v of ['--p-ink:#f3efe6', '--p-card:#1b1a17', '--p-line:#34312c']) assert.ok(r.includes(v), v);
+  for (const v of ['--p-ink:var(--ds-text-primary)', '--p-card:var(--ds-surface-sunken)', '--p-line:var(--ds-line)']) assert.ok(r.includes(v), v);
 });
 
 test('«Vær ▾»: mørkt glass, lys tekst, 40 px, rund', () => {
