@@ -1,5 +1,5 @@
 // Prompt 37 (SERVER37): Glimt i Gjøremål – alle 11 funksjonene fra claude-code-gjoremal-glimt.md på serversiden.
-// Montert av tasks.js under /api/tasks (sesjon eller app-token, samme tilgang som resten: bare lister man er medlem av).
+// Montert av routes.js under /api/tasks (sesjon eller app-token, samme tilgang som resten: bare lister man er medlem av).
 //
 // POST /api/tasks/glimt {q, list?, image?(base64), action?, eventId?, ids?}
 //   → {kind:'question'|'add'|'action', intent, text, items:[oppgave], undo:{token, expiresAt}|null, skipped?, example?}
@@ -23,10 +23,10 @@
 // POST /api/tasks/:id/suggest → {list:{id, name}|null, who:{id, name}|null, tags:[], place:null|'store'…, text:'Handel · Pål · #hytte · påminn ved butikken'}
 // Alt Glimt lager får glimt:true (✦ i historikken) og by = brukeren.
 import { randomBytes } from 'node:crypto';
-import { kv } from './db.js';
-import { userInfo, listUsers } from './auth/session.js';
-import { parseDay } from './parse-day35.js';
-import { multiAdd40 } from './tasks-glimt40.js'; // prompt 40
+import { kv } from '../db.js';
+import { userInfo, listUsers } from '../auth/session.js';
+import { parseDay } from '../parse-day35.js';
+import { multiAdd40 } from './glimt-sentences.js'; // prompt 40
 /** Bare for tester: bytt ut Glimt-kallet i prompt 40-oppdelingen ((prompt) → {items}). */
 export const _ai40 = { impl: null };
 
@@ -238,7 +238,7 @@ export function mountGlimt37(api, T) {
   /* ---- matplan → Handel (punkt 3) ---- */
   async function matplan(u, t0) {
     const handel = listByWord(u, 'Handel') ?? listRow(defaultList(u));
-    const { weekIngredients37 } = await import('./mat.js');
+    const { weekIngredients37 } = await import('../mat.js');
     let days = [];
     try { days = weekIngredients37(t0); } catch (e) { return { kind: 'action', intent: 'tasks.matplan', text: `Fikk ikke lest matplanen: ${e.message}`, items: [] }; }
     const have = new Set(openRows(u, handel?.id).map((r) => norm(r.title)));
@@ -301,8 +301,8 @@ export function mountGlimt37(api, T) {
   /* ---- pakkeliste fra kalenderen (punkt 10) ---- */
   async function nextTripEvent(u, t0, eventId = null) {
     try {
-      const { eventsFor } = await import('./kalender/events.js');
-      const { runAsUser } = await import('./settings.js');
+      const { eventsFor } = await import('../kalender/events.js');
+      const { runAsUser } = await import('../settings.js');
       const { events } = await runAsUser(u, () => eventsFor(u, t0, addDays(t0, 30)));
       const list = events.filter((e) => (eventId ? e.id === eventId : packEligible39(e, t0) && ['hytte', 'reise'].includes(kindOfEvent(e) ?? 'reise')) && e.date >= t0).sort((a, b) => a.date.localeCompare(b.date));
       return list[0] ?? null;
@@ -331,7 +331,7 @@ export function mountGlimt37(api, T) {
     let names = null, example = false;
     if (!(MOCK && !process.env.OLLAMA_URL)) {
       try {
-        const { run } = await import('./ai-run.js');
+        const { run } = await import('../ai-run.js');
         const out = await run('glimt', { user: u, prompt: 'Les varene på handlelappen eller ingrediensene i oppskriften. Svar KUN med JSON {"items":["Melk","Egg"]} på norsk.', images: [String(image).replace(/^data:[^,]+,/, '')], json: true, localOnly: true, numPredict: 300, title: 'Glimt · handlelapp' });
         const j = out.data ?? JSON.parse(String(out.text).match(/\{[\s\S]*\}/)?.[0] ?? '{}');
         if (Array.isArray(j.items)) names = j.items.map((x) => cap(String(x).trim().slice(0, 80))).filter(Boolean).slice(0, 40);
@@ -362,7 +362,7 @@ export function mountGlimt37(api, T) {
       rows = db.transaction(() => shop.map((n) => add(u, { title: n, list: target?.id })))();
       return { kind: 'add', intent: 'tasks.shopping', text: `La ${shop.map((x) => x.toLowerCase()).join(', ').replace(/, ([^,]*)$/, ' og $1')} i ${target?.name ?? 'listen'}.`, items: rows.map(itemOut), undo: mkUndo(u, [{ created: rows.map((r) => r.id) }]) };
     }
-    // Prompt 40: flere handlinger («… men først må jeg levere pakken») eller en nevnt person → Glimt deler opp (tasks-glimt40.js).
+    // Prompt 40: flere handlinger («… men først må jeg levere pakken») eller en nevnt person → Glimt deler opp (glimt-sentences.js).
     const multi = await multiAdd40({ add, listRow, listByWord, canSeeList, defaultList, mkUndo, itemOut, byId, visibleLists, aiImpl: _ai40.impl }, u, text, listId, t0, { people: ppl });
     if (multi) return multi;
     const p = parseTask37(text, t0, { people: ppl });
@@ -490,7 +490,7 @@ export function mountGlimt37(api, T) {
     let subs = null, source = 'mal';
     if (!(MOCK && !process.env.OLLAMA_URL)) {
       try {
-        const { run } = await import('./ai-run.js');
+        const { run } = await import('../ai-run.js');
         const out = await run('glimt', { user: u, prompt: `Del opp gjøremålet «${cur.title}» i 3–6 korte, konkrete deloppgaver på norsk bokmål. Svar KUN med JSON {"subs":["…"]}.`, json: true, localOnly: true, numPredict: 200, title: 'Glimt · del opp', background: true });
         const j = out.data ?? JSON.parse(String(out.text).match(/\{[\s\S]*\}/)?.[0] ?? '{}');
         if (Array.isArray(j.subs) && j.subs.length >= 2) { subs = j.subs.slice(0, 6).map((x) => cap(String(x).trim().slice(0, 120))).filter(Boolean); source = 'glimt'; }

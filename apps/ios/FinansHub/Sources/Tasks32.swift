@@ -3,7 +3,7 @@ import WidgetKit
 
 /* ---------------- Prompt 32: Huskeliste – Arkivert ---------------- */
 // Fasit: design/Huskeliste.dc.html. Spesifikasjon: claude-code-rom-fullskjerm-bursdag-huskeliste.md (Huskeliste).
-// API (SERVER32, server/tasks.js): GET /api/tasks?archived=1 → {items (nyeste først), archivedCount}, PATCH /api/tasks/:id
+// API (SERVER32, server/gjoremal/routes.js): GET /api/tasks?archived=1 → {items (nyeste først), archivedCount}, PATCH /api/tasks/:id
 // {archived:true|false[, done:false]}, POST /api/tasks/archive-done {list?}, DELETE /api/tasks/archived?list=…
 // Fullførte oppgaver arkiveres automatisk på serveren etter 7 dager. Arkiverte telles ikke i lister, widgets eller på Hjem.
 

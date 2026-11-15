@@ -34,8 +34,8 @@ const finn42 = await import('../server/finans/finn42.js');
 const pdf42 = await import('../server/finans/pdf42.js');
 const carriers = await import('../server/sporing/carriers.js');
 const trk42 = await import('../server/sporing/aliexpress-debug.js');
-const tk42 = await import('../server/tasks-glimt42.js');
-const tg41 = await import('../server/tasks-glimt41.js');
+const tk42 = await import('../server/gjoremal/glimt-split.js');
+const tg41 = await import('../server/gjoremal/glimt-jobs.js');
 const hl42 = await import('../server/health42.js');
 const sc42 = await import('../server/subs-cal42.js');
 

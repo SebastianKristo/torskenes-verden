@@ -17,18 +17,18 @@
 //     rep: none|daily|weekdays|weekly|biweekly|monthly|yearly (fullført → neste forekomst lages, svaret har next)
 //     early: none|5m|15m|30m|1h|1d|2d|1w · prio 0–3 · place: store|home|leave|work|cabin|null
 //   Sanntid: {type:'todo:changed', action, …} i tillegg til {type:'tasks', …} (bare til dem med tilgang).
-//   Glimt (11 funksjoner): se tasks-glimt37.js.
-import { extraOut40 } from './tasks-glimt40.js'; // prompt 40
+//   Glimt (11 funksjoner): se glimt.js.
+import { extraOut40 } from './glimt-sentences.js'; // prompt 40
 import { Hono } from 'hono';
 import { randomBytes } from 'node:crypto';
-import { db, q, kv, OWNER } from './db.js';
-import { userInfo, listUsers, sessionUser, isAdmin } from './auth/session.js';
-import { bearerOk } from './finans/routes.js';
-import { broadcast } from './realtime.js';
-import { initHa, mountHa, onLocal as haLocal, haInfo } from './tasks-ha.js';
-import { mountGlimt37 } from './tasks-glimt37.js'; // prompt 37: Glimt i Gjøremål
-import { mountGlimt41, origin41 } from './tasks-glimt41.js'; // prompt 41: Glimt deler opp i bakgrunnen, «Laget med Glimt»
-import { osloDate } from './dates/oslo.js';
+import { db, q, kv, OWNER } from '../db.js';
+import { userInfo, listUsers, sessionUser, isAdmin } from '../auth/session.js';
+import { bearerOk } from '../finans/routes.js';
+import { broadcast } from '../realtime.js';
+import { initHa, mountHa, onLocal as haLocal, haInfo } from './ha.js';
+import { mountGlimt37 } from './glimt.js'; // prompt 37: Glimt i Gjøremål
+import { mountGlimt41, origin41 } from './glimt-jobs.js'; // prompt 41: Glimt deler opp i bakgrunnen, «Laget med Glimt»
+import { osloDate } from '../dates/oslo.js';
 
 db.exec(`
 CREATE TABLE IF NOT EXISTS hl_task_lists (
@@ -314,7 +314,7 @@ const send = (users, action, extra = {}) => {
   broadcast('todo:changed', { action, ...extra }, ids); // prompt 37: samme hendelse under det nye navnet
 };
 
-// Prompt 22: synk med Home Assistant To-do (tasks-ha.js). Får de samme tilgangsreglene og sendingen som resten av Huskeliste.
+// Prompt 22: synk med Home Assistant To-do (ha.js). Får de samme tilgangsreglene og sendingen som resten av Huskeliste.
 initHa({ listRow, canSeeList, audienceOfTask, send, itemOut, userInfo, isAdmin });
 
 /* ---------------- API (/api/tasks) ---------------- */
@@ -514,7 +514,7 @@ api.put('/settings', async (c) => {
 /* Prompt 37: Glimt i Gjøremål (POST /glimt, /glimt/undo, GET /glimt/cards, POST /:id/split, POST /:id/suggest, …) */
 mountGlimt41(api, { q, listRow, canSeeList, listsOf, itemOut, byId, cleanTask, insertTask, send, audienceOfTask, defaultList, today }); // prompt 41: før prompt 37-rutene
 // Prompt 45: Glimt-motoren får hjelperne (dynamisk import: unngår sirkulær import via kalender/events.js → mobile.js).
-import('./glimt45/tools.js').then((m) => m.setTaskHelpers45({ q, listRow, canSeeList, canSeeTask, listsOf, itemOut, byId, cleanTask, insertTask, send, audienceOfTask, defaultList, VISIBLE, haLocal })).catch((e) => console.warn('[glimt45] gjøremål:', e.message));
+import('../glimt45/tools.js').then((m) => m.setTaskHelpers45({ q, listRow, canSeeList, canSeeTask, listsOf, itemOut, byId, cleanTask, insertTask, send, audienceOfTask, defaultList, VISIBLE, haLocal })).catch((e) => console.warn('[glimt45] gjøremål:', e.message));
 mountGlimt37(api, { q, db, listRow, canSeeList, canSeeTask, listsOf, lists, listOut, itemOut, byId, cleanTask, insertTask, send, audienceOfTask, defaultList, mineOf, VISIBLE, today, haLocal, parseArr, members });
 
 /* Lister */

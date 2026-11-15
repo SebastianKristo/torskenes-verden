@@ -127,8 +127,8 @@ let installed = false;
 export async function installTaskHooks46() {
   if (installed) return; installed = true;
   try {
-    const m41 = await import('../tasks-glimt41.js');
-    await import('../tasks-glimt42.js'); // 42 setter sine kroker først; våre erstatter prompt og tolking
+    const m41 = await import('../gjoremal/glimt-jobs.js');
+    await import('../gjoremal/glimt-split.js'); // 42 setter sine kroker først; våre erstatter prompt og tolking
     const prev = m41._hooks42.normalize;
     Object.assign(m41._hooks42, { prompt: prompt46, normalize: (j, text) => normalize46(j, text, prev), verbatim: keepUserWords46 });
   } catch (e) { console.warn('[glimt46] gjøremål-kroker:', e.message); }

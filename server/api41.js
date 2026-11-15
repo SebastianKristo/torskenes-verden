@@ -2,7 +2,7 @@
 //   Hjemlys «Si fra» + tur til valgfritt mål: /api/hjemlys/notice|status|notices|recipients, start {destination}            → hjemlys41.js (+ hjemlys40.js dest_*)
 //   Min reise: /api/ruter/my-routes|my-trip|school-zones|left-school|journey|settings                                     → ruter41.js
 //   PostNord uten nøkkel (recipientview), dynamisk polling, push ved endring, helsesjekk GET /api/tracking/postnord/health → server/sporing/ (mountSporing)
-//   Gjøremål-Glimt i bakgrunnen + «Laget med Glimt»: /api/tasks/glimt {async:true}, /glimt/jobs, /glimt/sources           → tasks-glimt41.js (+ tasks.js)
+//   Gjøremål-Glimt i bakgrunnen + «Laget med Glimt»: /api/tasks/glimt {async:true}, /glimt/jobs, /glimt/sources           → gjoremal/glimt-jobs.js (+ gjoremal/routes.js)
 //     alias POST /api/huske/glimt-jobs; /api/assist gjenkjenner huskebeskjeder                                           → under, assist.js
 //   Chat: «Mine data» på som standard, «✦ Auto»                                                                        → settings.js, chat41.js (+ chat.js)
 //   Vær-uke via Glimt (Ollama + 7 dager), skiføre i brief/Vær, Rediger Vær                                               → server/vaer/ (+ assist.js, chat.js), brief under
@@ -14,7 +14,7 @@ import { Hono } from 'hono';
 import { kv } from './db.js';
 import { authOrToken as authOrToken0 } from './mobile.js';
 import { sessionUser } from './auth/session.js';
-import { startJob41 } from './tasks-glimt41.js';
+import { startJob41 } from './gjoremal/glimt-jobs.js';
 import { ski41 } from './vaer/week-glimt.js';
 import { glimtSettingsOf } from './glimt35.js';
 import { mai17Active, mai17Day41 } from './mai17-41.js';

@@ -33,7 +33,7 @@ import { news73Api } from './news73.js'; // prompt 73 (NEWS73)
 import iconsApi from './icons.js';
 import familyApi from './family.js';
 import tilesApi, { hasMapTest, testMap } from './tiles.js';
-import tasksApi from './tasks.js';
+import tasksApi from './gjoremal/routes.js';
 import notifyApi, { appMeta } from './notify.js';
 import { attachRealtime } from './realtime.js';
 import { revokeUserTokens } from './finans/routes.js';

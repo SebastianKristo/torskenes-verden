@@ -130,10 +130,10 @@ const CTX_MS = 30 * 60_000;
 export function ctxOf45(user) { const c = kv.get(user, CTX, null); return c && Date.now() - (c.at ?? 0) < CTX_MS ? c : {}; }
 export function setCtx45(user, patch) { try { kv.set(user, CTX, { ...ctxOf45(user), ...patch, at: Date.now() }); } catch { /* best effort */ } }
 
-/* ---------------- Gjøremål (hjelpere fra tasks.js) ---------------- */
+/* ---------------- Gjøremål (hjelpere fra gjoremal/routes.js) ---------------- */
 
 let T = null;
-/** tasks.js gir oss sine egne hjelpere (samme tilgangsregler som resten av /api/tasks). */
+/** gjoremal/routes.js gir oss sine egne hjelpere (samme tilgangsregler som resten av /api/tasks). */
 export const setTaskHelpers45 = (h) => { T = h; };
 const needT = () => { if (!T) throw new Error('Gjøremål er ikke klare'); return T; };
 function listByName(user, name) {

@@ -22,7 +22,7 @@ import { positions } from './family.js';
 import { listFor as birthdaysOf } from './kalender/birthdays.js';
 import { eventsFor } from './kalender/events.js';
 import { fagKey, subjectColor } from './kalender/subjects.js';
-import { insertTask, mineListOf } from './tasks.js';
+import { insertTask, mineListOf } from './gjoremal/routes.js';
 import { notifyUser } from './notify.js';
 import { cached } from './cache.js';
 import { cardsOf, cardOn, auroraNotifyOf } from './cards38.js';

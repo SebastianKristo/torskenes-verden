@@ -64,7 +64,7 @@ import { notifyOf, notifyUser } from './notify.js';
 import { eventsFor, normText, findEvent } from './kalender/events.js';
 import { weatherFull, wmoText, iconOf, PLACES } from './vaer/full.js';
 import { packagesFor } from './sporing/shipments.js';
-import { nextTasks } from './tasks.js';
+import { nextTasks } from './gjoremal/routes.js';
 import { settings as fhSettings, ensureLedger } from './finans/db.js';
 import { createTrial, trialOut } from './finans/trials.js';
 import { startQuickJob } from './kalender/quick.js';
@@ -89,7 +89,7 @@ import { parseIntent37, schoolTestAnswer } from './kalender/subjects.js'; // pro
 import { bareDay37 } from './kalender/calendars.js'; // prompt 37: «i morgen?»
 import { needsChatTools } from './chat-tools41.js'; // prompt 41: sammensatte faktaspørsmål går til chatten
 import { isWeekWeather41, weekAnswer41 } from './vaer/week-glimt.js'; // prompt 41: ukesvær med Ollama og 7 dager data
-import { isHuskeMessage41, startJob41 } from './tasks-glimt41.js'; // prompt 41: huskebeskjeder fra søkefeltet → Glimt i bakgrunnen
+import { isHuskeMessage41, startJob41 } from './gjoremal/glimt-jobs.js'; // prompt 41: huskebeskjeder fra søkefeltet → Glimt i bakgrunnen
 import { agent45, registerLegacy45, toAssist45, wantsAgent45 } from './glimt45/engine.js';
 import { hasWord47 } from './glimt45/words47.js'; // prompt 47: ordgrenser // prompt 45: felles Glimt-motor
 

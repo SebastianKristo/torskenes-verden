@@ -38,7 +38,7 @@ import { aiTimeoutsOf, GEMINI_DEFAULT, GROQ_DEFAULT, GROQ_MODELS, GROQ_VISION_DE
 import { CATALOG } from './finans/ollama-models.js';
 import { audit } from './finans/ai-audit.js';
 import { finansSummary } from './finans/summary.js';
-import { nextTasks } from './tasks.js';
+import { nextTasks } from './gjoremal/routes.js';
 import { chatBody, isThinkingModel } from './ollama-opts.js';
 import { thinkSplit52, thinkState52, glimtSteps52, stripThink52, cleanAttTh52 } from './chat52.js'; // prompt 52 (SRV52): tankegang
 import { gateChat, GateError } from './ai-gate.js'; // prompt 43: alle Ollama-kall via gaten

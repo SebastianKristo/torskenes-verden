@@ -3,7 +3,7 @@
 //   Finn-bilder (bare annonsens egne, felles bilder fjernes)                                                                → finans/finn42.js (+ finn-routes.js)
 //   Abonnementer som innebygd kalender                                                                                     → subs-cal42.js
 //   Sporing: AliExpress (mappen «AliExpress») + Cainiao, PostNord-varianter/feilsøkingslogg/reserve, /api/tracking/debug/:id   → server/sporing/ (mountSporing)
-//   Gjøremål-Glimt deler opp: liste-kontrakt, prompt, lengdevakt, lokal forhåndsdeling, Angre                                → tasks-glimt42.js (+ tasks-glimt41.js)
+//   Gjøremål-Glimt deler opp: liste-kontrakt, prompt, lengdevakt, lokal forhåndsdeling, Angre                                → gjoremal/glimt-split.js (+ gjoremal/glimt-jobs.js)
 //   Helse fra Home Assistant                                                                                                 → health42.js
 //   Vel fremme: alias /api/velfremme/* → /api/hjemlys/*, admin kan avslutte andres økt (POST /api/hjemlys/:id/end)
 //   Fanelinje: homeButton i /api/me/layout                                                                                    → mobile.js
@@ -12,7 +12,7 @@ import { db } from './db.js';
 import { isAdmin } from './auth/session.js';
 import { authOrToken as authOrToken0 } from './mobile.js';
 import { end40, sessionOut40 } from './hjemlys40.js';
-import { glimtLog42 } from './tasks-glimt42.js';
+import { glimtLog42 } from './gjoremal/glimt-split.js';
 
 const authOrToken = (c, next) => authOrToken0(c, next);
 export { finans42Api } from './finans/finans42.js';

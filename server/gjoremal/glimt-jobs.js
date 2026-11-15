@@ -1,7 +1,7 @@
 // Prompt 41 (SERVER41): Glimt i Gjøremål/Huskeliste deler opp lange beskjeder med ekte AI, i bakgrunnen, og husker originalen
 // («Laget med Glimt»). claude-code-huskeliste-glimt-ai-bakgrunn.md.
 //
-// Montert av tasks.js under /api/tasks (før prompt 37-rutene), samme tilgang (sesjon eller app-token):
+// Montert av routes.js under /api/tasks (før prompt 37-rutene), samme tilgang (sesjon eller app-token):
 //   POST   /api/tasks/glimt {q, async:true, list?, origin?:'huske'|'home_search'}
 //          → 202 {jobId, placeholder:{id, text, list, label:'Glimt deler opp beskjeden …', startedAt}}   (uten async: som før, prompt 37/40)
 //   GET    /api/tasks/glimt/jobs → {jobs:[job]}            (pågående + de 10 siste)
@@ -11,21 +11,21 @@
 //   POST   /api/tasks/glimt/sources/:id/redo → 202 {jobId, placeholder} («✦ Del opp på nytt»: ufullførte punkter fra beskjeden slettes først)
 //   DELETE /api/tasks/glimt/sources/:id → {ok} («Glem beskjeden», punktene blir)
 //   Alias (api41.js): POST /api/huske/glimt-jobs {text, list?, origin?} → 202 {job_id, jobId, placeholder}
-// Sanntid: «glimt-job» {jobId, state, …job} til brukeren, og «todo:changed»/«tasks» for punktene (tasks.js).
+// Sanntid: «glimt-job» {jobId, state, …job} til brukeren, og «todo:changed»/«tasks» for punktene (routes.js).
 // Push når ferdig (Glimt-varsel): «Glimt lagde 3 punkter i riktig rekkefølge» (notifyUser hopper over push når appen er i forgrunnen).
-// Oppgaven får origin:{id, text, at, engine} (itemOut i tasks.js) når den er laget av en slik beskjed.
+// Oppgaven får origin:{id, text, at, engine} (itemOut i routes.js) når den er laget av en slik beskjed.
 //
 // Motor: samme AI-kjede som Glimt ellers (run('glimt'), rutingen velger Groq → Gemini → Ollama), 60 s per forsøk, 2 nye forsøk,
 // så den lokale tolkeren splitLocal41 (forstår «før vi skal», «hvor vi må», «og så», «siden/fordi» → note). Korte enkeltoppgaver
 // går lokalt med en gang. Data: huske_glimt_src (id, user_id, text, created_at, engine, item_ids, …), hl_tasks.src_id. Siste 60 per bruker.
 import { randomBytes } from 'node:crypto';
-import { db, q } from './db.js';
-import { userInfo, listUsers } from './auth/session.js';
-import { broadcast } from './realtime.js';
-import { notifyUser } from './notify.js';
-import { imperative40, validateAi40, migrate40 } from './tasks-glimt40.js';
-import { parseTask37 } from './tasks-glimt37.js';
-import { osloDate } from './dates/oslo.js';
+import { db, q } from '../db.js';
+import { userInfo, listUsers } from '../auth/session.js';
+import { broadcast } from '../realtime.js';
+import { notifyUser } from '../notify.js';
+import { imperative40, validateAi40, migrate40 } from './glimt-sentences.js';
+import { parseTask37 } from './glimt.js';
+import { osloDate } from '../dates/oslo.js';
 
 db.exec(`CREATE TABLE IF NOT EXISTS huske_glimt_src (
   id TEXT PRIMARY KEY, user_id TEXT NOT NULL, text TEXT NOT NULL, created_at INTEGER NOT NULL, engine TEXT, item_ids TEXT NOT NULL DEFAULT '[]',
@@ -148,13 +148,13 @@ export function prompt41(text, { lists = [], people = [], today }) {
 }
 async function askAi(u, prompt, attempt) {
   if (_ai41.impl) return _ai41.impl(prompt, { attempt });
-  const { run } = await import('./ai-run.js');
+  const { run } = await import('../ai-run.js');
   const r = await run('glimt', { user: u, prompt, json: true, numPredict: 700, temperature: 0.1, timeoutMs: _ai41.ms ?? AI_MS41, title: 'Glimt · deler opp beskjed', background: true });
   return { ...(r.data ?? JSON.parse(String(r.text).match(/\{[\s\S]*\}/)?.[0] ?? '{}')), _engine: `${r.provider === 'ollama' ? 'Ollama' : r.provider === 'gemini' ? 'Gemini' : r.provider === 'groq' ? 'Groq' : r.provider} · ${r.model}` };
 }
 const withTimeout = (p, ms) => Promise.race([p, new Promise((_, rej) => { const t = setTimeout(() => rej(Object.assign(new Error('Tidsavbrudd'), { timeout: true })), ms); t.unref?.(); })]);
 /** → {items, engine:'glimt'|'lokal', engineLabel} */
-/** Prompt 42 (tasks-glimt42.js): liste-kontrakt {tasks:[…]}, ny prompt, lengdevakt og bedre lokal forhåndsdeling. */
+/** Prompt 42 (glimt-split.js): liste-kontrakt {tasks:[…]}, ny prompt, lengdevakt og bedre lokal forhåndsdeling. */
 export const _hooks42 = { prompt: null, normalize: null, guard: null, local: null, log: null, verbatim: null }; // verbatim: prompt 46 (glimt45/tasks46.js)
 export async function understand41(u, text, { lists = [], people = [], today = osloDate() } = {}) {
   const log = { input_len: String(text ?? '').length, model: null, tasks_count: 0, parse_ok: false, path: 'local' };
@@ -183,7 +183,7 @@ export async function understand41(u, text, { lists = [], people = [], today = o
 
 /* ---------------- Jobbene ---------------- */
 
-let T = null; // hjelperne fra tasks.js (settes av mountGlimt41)
+let T = null; // hjelperne fra routes.js (settes av mountGlimt41)
 const queue = [];
 let running = 0;
 const MAX_PAR = 2;
@@ -275,7 +275,7 @@ async function runJob(id) {
   }
 }
 
-/** origin på oppgaven (itemOut i tasks.js). */
+/** origin på oppgaven (itemOut i routes.js). */
 export function origin41(r) {
   if (!r?.src_id) return {};
   const s = srcRow(r.src_id);

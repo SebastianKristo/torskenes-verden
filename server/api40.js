@@ -4,7 +4,7 @@
 //   «Starter opp» bare ved ekte omstart: /api/health {restarting, updating, state} + X-Homelab-State                      → index.js, system-update.js
 //   2FA i appen: /api/auth/2fa/*                                                                                       → auth/two-factor.js (montert fra auth/login.js)
 //   Finans: added, PATCH alt + historikk, Les på nytt, POST /finans/api/search/ask                                    → finans/added40.js, finans/p40.js (+ routes.js txOut/receiptOut)
-//   Gjøremål-Glimt: flere punkter med rekkefølge, sted og person                                                      → tasks-glimt40.js (+ tasks-glimt37.js, tasks.js itemOut)
+//   Gjøremål-Glimt: flere punkter med rekkefølge, sted og person                                                      → gjoremal/glimt-sentences.js (+ gjoremal/glimt.js, gjoremal/routes.js itemOut)
 //   Nyheter Glimt-side: /api/news/glimt, /api/news/glimt/sources, /api/glimt/news-digest                               → news40.js
 //   Julemodus: /api/glimt/settings jul*, julActive; brief.jul                                                         → jul40.js (+ glimt35.js), mellomvaren under
 //   Hjemlys: /api/hjemlys/*                                                                                           → hjemlys40.js
@@ -14,7 +14,7 @@ import { authOrToken } from './mobile.js';
 import { bibleEnabled } from './bible37.js';
 import { glimtSettingsOf } from './glimt35.js';
 import { julBrief } from './jul40.js';
-import { afterDone40, migrate40 } from './tasks-glimt40.js';
+import { afterDone40, migrate40 } from './gjoremal/glimt-sentences.js';
 import { db } from './db.js';
 import { startHjemlys40 } from './hjemlys40.js';
 import { startHungSweeper } from './ai-run.js';

@@ -315,7 +315,7 @@ async function pipeline(user, text, opts) {
     if (opts.preview) return { ...base, preview: false, reply: 'Ingen avtale å forhåndsvise.', text: 'Ingen avtale å forhåndsvise.', intent: 'ask', module: opts.module, actions: [], results: [], engine: plan.engine, ms: Date.now() - t0 };
     if (opts.legacyOk === false || !legacy?.answer) { tr?.save({ reply: '(gamle svar)', engine: plan.engine }); return lg; }
     if (opts.module === 'tasks' && plan.calls[0]?.args?.topic === 'tasks37') {
-      const { handleGlimt37 } = await import('../tasks-glimt37.js');
+      const { handleGlimt37 } = await import('../gjoremal/glimt.js');
       if (handleGlimt37) {
         const r = await handleGlimt37(user, { q: text, ...(context.listId ? { list: context.listId } : {}) });
         const b = r.body ?? {};

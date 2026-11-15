@@ -9,12 +9,12 @@
 // - Konflikt: sist endret vinner (hl_tasks.updated_at mot tidspunktet HA-endringen ble sett). Sletting på én side sletter på
 //   den andre. Første kobling slår listene sammen uten duplikater (samme tekst, store og små bokstaver likt).
 // - Kø: endringer i appen legges i huske_ha_queue (i databasen) og sendes når HA svarer. Mens HA er nede er status «error».
-// - Sanntid til klientene går via tasks.js sin send(), dvs. bare til dem som har tilgang til listen.
+// - Sanntid til klientene går via routes.js sin send(), dvs. bare til dem som har tilgang til listen.
 // - MOCK_DATA=1 uten HA-token: en innebygd HA i minnet (todo.handleliste, todo.huskeliste), så klientene kan utvikles uten HA.
 import WebSocket from 'ws';
-import { db, q, kv, OWNER } from './db.js';
-import { cfg } from './settings.js';
-import { broadcast } from './realtime.js';
+import { db, q, kv, OWNER } from '../db.js';
+import { cfg } from '../settings.js';
+import { broadcast } from '../realtime.js';
 
 const hasCol = (t, col) => q(`PRAGMA table_info(${t})`).all().some((c) => c.name === col);
 const RETRY_MS = Number(process.env.HA_SYNC_RETRY_MS) || 30_000;
@@ -23,7 +23,7 @@ const DEBOUNCE_MS = Number(process.env.HA_SYNC_DEBOUNCE_MS) || 150;
 const TIMEOUT = 8000;
 const MOCK = process.env.MOCK_DATA === '1';
 
-let T = null; // hjelpere fra tasks.js (listRow, canSeeList, audienceOfTask, send, itemOut, userInfo, isAdmin)
+let T = null; // hjelpere fra routes.js (listRow, canSeeList, audienceOfTask, send, itemOut, userInfo, isAdmin)
 
 function migrate() {
   db.exec(`
@@ -454,7 +454,7 @@ export function stopHa() {
   if (!conf().enabled) setStatus('off');
 }
 
-/* ---------------- Kroker fra tasks.js ---------------- */
+/* ---------------- Kroker fra routes.js ---------------- */
 
 /** Kalles etter endringer i appen. kind: created | updated | deleted | listDeleted. */
 export function onLocal(kind, before, after) {
@@ -501,7 +501,7 @@ async function out(uid, force = false) {
     entities: ents.list ?? [], maps, queue: queueCount(), transport: transport().kind };
 }
 
-/** Rutene under /api/tasks/ha. Brukeren er satt av tasks.js (c.get('user')). Alt krever administrator. */
+/** Rutene under /api/tasks/ha. Brukeren er satt av routes.js (c.get('user')). Alt krever administrator. */
 export function mountHa(api) {
   const admin = (c) => (T.isAdmin(c.get('user')) ? null : c.json({ error: 'Bare administratorer kan sette opp synk med Home Assistant' }, 403));
   const body = (c) => c.req.json().catch(() => ({}));
@@ -610,12 +610,12 @@ export function mountHa(api) {
   });
 }
 
-/** Kobler modulen til tasks.js (kalles når tabellene finnes). */
+/** Kobler modulen til routes.js (kalles når tabellene finnes). */
 export function initHa(ctx) {
   T = ctx;
   migrate();
   if (conf().enabled && process.env.NODE_ENV !== 'test') setTimeout(() => startHa(), 2000).unref?.();
 }
 
-/** Felt til itemOut i tasks.js: om oppgaven er synket med HA. */
+/** Felt til itemOut i routes.js: om oppgaven er synket med HA. */
 export const haInfo = (r) => (r.ha_uid ? { ha: true } : {});

@@ -24,7 +24,7 @@ test.after(() => { globalThis.fetch = realFetch; });
 const { default: app } = await import('../server/index.js');
 const { db, kv, OWNER } = await import('../server/db.js');
 const assist = await import('../server/assist.js');
-const glimt = await import('../server/tasks-glimt37.js');
+const glimt = await import('../server/gjoremal/glimt.js');
 const bible = await import('../server/bible37.js');
 const kal = await import('../server/kalender/subjects.js');
 const where = await import('../server/where37.js');

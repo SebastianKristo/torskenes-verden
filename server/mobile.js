@@ -26,7 +26,7 @@ import { uiPrefs, saveUiPrefs } from './ui.js';
 import { weatherFull, searchPlaces, DEFAULT_PLACES, weatherCompare, PLACES as WX_PLACES } from './vaer/full.js';
 import { searchPlacesV2 } from './vaer/place-search.js';
 import { appMeta } from './notify.js';
-import { nextTasks } from './tasks.js';
+import { nextTasks } from './gjoremal/routes.js';
 import * as integrations from './integrations.js';
 import { widgetOut as birthdaysWidget } from './kalender/birthdays.js';
 import { osloDate } from './dates/oslo.js';

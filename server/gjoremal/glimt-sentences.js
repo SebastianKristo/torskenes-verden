@@ -1,5 +1,5 @@
 // Prompt 40 (SERVER40): Glimt i Gjøremål forstår setninger og lager riktige punkter (claude-code-huskeliste-glimt-forstar.md).
-// Kalles fra tasks-glimt37.js (addFromText) for tekst med flere handlinger eller en nevnt person. Enkle ting går som før.
+// Kalles fra glimt.js (addFromText) for tekst med flere handlinger eller en nevnt person. Enkle ting går som før.
 //
 // «Jeg må huske å ta med noen pakker og møbeler til Strømstad men først må jeg levere pakken» →
 //   1. Lever pakken · Mine · #pakke #strømstad · først
@@ -11,15 +11,15 @@
 // Datamodell (additivt): hl_tasks.place_name (fritt sted), place_lat/place_lng, after_id (punktet som skal gjøres først), mentions ('["<bruker-id>"]').
 // Svaret fra POST /api/tasks/glimt: {kind:'add', intent:'tasks.multi', text, items:[oppgave + placeName, after, mentions, step:{n, label}], undo, engine:'glimt'|'lokal'}
 //   oppgave.who = {userId, name} når en person er nevnt (assignee = personen når hen ser lista), mentions = [bruker-id].
-import { db } from './db.js';
-import { keepUserWords46 } from './glimt45/tasks46.js'; // prompt 46: brukerens egne ord i titlene
-import { parseTask37 } from './tasks-glimt37.js';
-import { notifyUser } from './notify.js';
-import { userInfo } from './auth/session.js';
+import { db } from '../db.js';
+import { keepUserWords46 } from '../glimt45/tasks46.js'; // prompt 46: brukerens egne ord i titlene
+import { parseTask37 } from './glimt.js';
+import { notifyUser } from '../notify.js';
+import { userInfo } from '../auth/session.js';
 
 const hasCol = (t, c) => db.prepare(`PRAGMA table_info(${t})`).all().some((x) => x.name === c);
 let migrated = false;
-/** Nye kolonner (additivt). Kjøres første gang de trengs (tasks.js lager tabellen etter at denne modulen er lastet). */
+/** Nye kolonner (additivt). Kjøres første gang de trengs (routes.js lager tabellen etter at denne modulen er lastet). */
 export function migrate40() {
   if (migrated) return;
   if (!db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='hl_tasks'").get()) return;
@@ -149,7 +149,7 @@ export async function understand40(u, text, today, { people = [], lists = [], ai
   const local = splitLocal40(text, today, { people });
   if (!local.length) return { items: [], engine: 'lokal' };
   try {
-    const ask = aiImpl ?? (async (prompt) => { const { run } = await import('./ai-run.js'); return (await run('glimt', { user: u, prompt, json: true, localOnly: true, numPredict: 400, temperature: 0.1, timeoutMs: 6000, title: 'Glimt · gjøremål' })).data; });
+    const ask = aiImpl ?? (async (prompt) => { const { run } = await import('../ai-run.js'); return (await run('glimt', { user: u, prompt, json: true, localOnly: true, numPredict: 400, temperature: 0.1, timeoutMs: 6000, title: 'Glimt · gjøremål' })).data; });
     const wd = new Date(`${today}T12:00:00Z`).toLocaleDateString('nb-NO', { weekday: 'long', timeZone: 'UTC' });
     const prompt = `I dag er ${wd} ${today}. Brukeren er ${userInfo(u)?.displayName ?? 'meg'}. Lister: ${lists.map((l) => l.name).join(', ')}. Familie: ${people.map((p) => p.first).join(', ')}.\n`
       + 'Del teksten i ett punkt per handling. Tittel kort i imperativ. «først/før det» = skal gjøres før. after = indeksen til punktet som må gjøres først. '

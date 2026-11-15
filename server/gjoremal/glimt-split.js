@@ -1,13 +1,13 @@
 // Prompt 42 (SERVER42): Glimt i Huskeliste deler opp beskjeden (claude-code-huskeliste-glimt-del-opp.md).
 // - Kontrakt: Glimt svarer alltid med en liste {"tasks":[{title, note, due, dueText, place, list, linkTo}], "confidence"} (format:'json' / JSON-schema).
-// - ```-gjerder fjernes, ugyldig JSON → ett nytt forsøk med «Svar kun med gyldig JSON» (tasks-glimt41.js), lengdevakt (> 60 tegn / flere verbfraser).
+// - ```-gjerder fjernes, ugyldig JSON → ett nytt forsøk med «Svar kun med gyldig JSON» (glimt-jobs.js), lengdevakt (> 60 tegn / flere verbfraser).
 // - Lokal forhåndsdeling (også når AI-en feiler): punktum/linjeskift, «og så», «og husk», «og <verb>», og gjentatt stedsnavn («Strømstad Strømstad»).
 // - Den midlertidige oppgaven erstattes med alle tasks[] (jobben lager alle), én Angre: POST /api/tasks/glimt/jobs/:id/undo.
 // - Logg per beskjed: input_len, model, tasks_count, parse_ok, path (local|ai) → kv 'huske42_log' (GET /api/tasks/glimt/log).
-import { _hooks42, splitLocal41, title41 } from './tasks-glimt41.js';
-import { parseTask37 } from './tasks-glimt37.js';
-import { kv } from './db.js';
-import { osloDate } from './dates/oslo.js';
+import { _hooks42, splitLocal41, title41 } from './glimt-jobs.js';
+import { parseTask37 } from './glimt.js';
+import { kv } from '../db.js';
+import { osloDate } from '../dates/oslo.js';
 
 export const TASK_SCHEMA42 = { type: 'object', properties: { tasks: { type: 'array', items: { type: 'object', properties: { title: { type: 'string' }, note: { type: ['string', 'null'] }, due: { type: ['string', 'null'] },
   dueText: { type: ['string', 'null'] }, place: { type: ['string', 'null'] }, list: { type: ['string', 'null'] }, linkTo: { type: ['integer', 'null'] } }, required: ['title'] } }, confidence: { type: 'number' } }, required: ['tasks'] };
