@@ -20,8 +20,10 @@ const call = async (path, method = 'GET', body) => {
 
 test('Sidemenyen har riktig standard (uten Import og Matplan) og Boliger-ID-en dir', async () => {
   const r = (await call('/prefs')).body;
-  // Import ligger bare under Innstillinger → Import (prompt 14).
-  assert.deepEqual(r.navDefault, ['ov', 'tx', 'ai', 'kv', 'bud', 'fast', 'konto', 'aks', 'rap', 'sub', 'dir', 'finn', 'inn']);
+  // Import ligger bare under Innstillinger → Import (prompt 14). Fase 6: Abonnementer og Aksjer ligger under Faste betalinger og
+  // Kontoer og aksjer, og Sparing og planer (plan) står etter Faste betalinger.
+  assert.deepEqual(r.navDefault, ['ov', 'tx', 'ai', 'filter', 'bud', 'fast', 'plan', 'konto', 'kv', 'dir', 'finn', 'rap', 'inn']);
+  assert.ok(!r.navDefault.includes('sub') && !r.navDefault.includes('aks'));
   assert.ok(!r.navDefault.includes('imp'));
   assert.ok(!r.navDefault.includes('mat'));
   assert.ok(r.navDefault.includes('dir'));
@@ -49,7 +51,8 @@ test('Egne navn lagres, renses og kan tilbakestilles', async () => {
 test('Lagret sidemeny migreres: Matplan og Import fjernes', async () => {
   const { navMerge } = await import('../server/finans/routes.js');
   const old = ['ov', 'tx', 'ai', 'kv', 'bud', 'fast', 'konto', 'aks', 'rap', 'sub', 'dir', 'finn', 'mat', 'imp', 'inn'];
-  assert.deepEqual(navMerge(old), ['ov', 'tx', 'ai', 'kv', 'bud', 'fast', 'konto', 'aks', 'rap', 'sub', 'dir', 'finn', 'inn']);
+  // Fase 6: Aksjer og Abonnementer faller bort (de er faner/filtre nå); Filter og Sparing og planer settes inn der de hører hjemme.
+  assert.deepEqual(navMerge(old), ['ov', 'tx', 'ai', 'filter', 'kv', 'bud', 'fast', 'plan', 'konto', 'rap', 'dir', 'finn', 'inn']);
   // Egen rekkefølge beholdes, og nye sider havner etter nærmeste side foran dem (AI-søk etter Transaksjoner).
   assert.deepEqual(navMerge(['finn', 'ov', 'inn', 'tx', 'kv', 'bud', 'fast', 'konto', 'aks', 'rap', 'sub', 'dir', 'mat']).slice(0, 5), ['finn', 'ov', 'inn', 'tx', 'ai']);
 });

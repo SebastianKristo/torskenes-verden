@@ -20,6 +20,8 @@
           "count": { "type": "integer" },
           "active": { "type": "integer" },
           "monthly": { "$ref": "../common/types.schema.json#/$defs/kroner" },
+          "yearly": { "$ref": "../common/types.schema.json#/$defs/kroner" },
+          "duplicates": { "type": "integer", "description": "Faste utgifter som også er registrert som abonnement (telles under Abonnementer)." },
           "total": { "$ref": "../common/types.schema.json#/$defs/kroner" },
           "days": { "type": "integer" }
         }

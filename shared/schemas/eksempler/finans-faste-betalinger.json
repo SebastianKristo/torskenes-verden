@@ -7,14 +7,17 @@
       "name": "Abonnementer",
       "count": 9,
       "active": 9,
-      "monthly": 1693
+      "monthly": 1693,
+      "yearly": 20316
     },
     {
       "id": "faste",
       "name": "Faste utgifter",
       "count": 7,
       "active": 7,
-      "monthly": 10662
+      "monthly": 10662,
+      "yearly": 127944,
+      "duplicates": 3
     },
     {
       "id": "planlagte",

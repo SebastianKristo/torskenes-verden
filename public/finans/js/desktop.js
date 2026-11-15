@@ -1,4 +1,4 @@
-// FinansHub desktop. Alle sider tegnes fra S (core.js); hendelser fanges med delegering på roten.
+// Økonomi (internt «FinansHub») på desktop. Alle sider tegnes fra S (core.js); hendelser fanges med delegering på roten.
 import { scrollMemory } from '/assets/js/scrollmem.js';
 import { appendChunks } from '/assets/js/lib/chunks.js';
 import { agent, agentFull, isPlain } from '/assets/js/glimt-agent.js'; // prompt 45: felles Glimt-agent
@@ -23,13 +23,22 @@ import { form48, via48, uncTag48, uncCls48, is48, flush48, bind48, setRedraw48, 
 import { srcTag51, raw51, bind51, learn51 } from './kvittering-kilde.js'; // prompt 51: kilden til butikknavnet, «Rådata» og læring av butikknavn
 import { logoBtn73 } from './endre-logo.js'; // prompt 73: trykk på logoen → «Endre logo»
 import { rcPanel52, rcpBefore52, rcpAfter52, rcpGone52 } from './kvitteringspanel.js'; // prompt 52 (WEB52F): felles kvitteringspanel
+import { catMigrationBox, loadCatMigration } from './kategori-flytting.js'; // Fase 6 (Q11): admin flytter gamle kategoridata
 
 ICONS.ai = 'M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9zM19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z';
 ICONS.filter = 'M4 6h16M7 12h10M10 18h4';
-const BASE_PAGES = [['ov', 'Oversikt'], ['tx', 'Transaksjoner'], ['ai', 'Glimt'], ['filter', 'Filter'], ['kv', 'Kvitteringer'], ['bud', 'Budsjett'], ['fast', 'Faste utgifter'], ['konto', 'Kontoer'], ['rap', 'Rapporter'], ['inn', 'Innstillinger']];
-// Import ligger bare under Innstillinger → Import (prompt 14), ikke i sidemenyen.
-const NAV_DEFAULT = ['ov', 'tx', 'ai', 'filter', 'kv', 'bud', 'fast', 'konto', 'aks', 'rap', 'sub', 'dir', 'finn', 'inn'];
-const NAV_NEVER = ['imp'];
+const BASE_PAGES = [['ov', 'Oversikt'], ['tx', 'Transaksjoner'], ['ai', 'Glimt'], ['filter', 'Filter'], ['kv', 'Kvitteringer'], ['bud', 'Budsjett'], ['fast', 'Faste betalinger'], ['konto', 'Kontoer og aksjer'], ['rap', 'Rapporter'], ['inn', 'Innstillinger']];
+// Fase 6 (Q3, Q4): samme sider og navn som undermenyen på mobil. Faste betalinger samler Abonnementer (sub, før Subscription OS),
+// Faste utgifter (fast) og Planlagte trekk (trekk, før Kalender i Planlegging) som filtre; Kontoer og aksjer har Aksjer (aks) som fane.
+// Import ligger bare under Innstillinger → Import (prompt 14, O3), ikke i sidemenyen.
+const NAV_DEFAULT = ['ov', 'tx', 'ai', 'filter', 'bud', 'fast', 'plan', 'konto', 'kv', 'dir', 'finn', 'rap', 'inn'];
+const NAV_NEVER = ['imp', 'sub', 'aks', 'trekk'];
+/** Undersider som hører til en side i sidemenyen: menyen markerer forelderen, og toppen viser forelderens navn og filtre. */
+const PARENT = { sub: 'fast', trekk: 'fast', aks: 'konto' };
+const navPage = (p = u.page) => PARENT[p] ?? p;
+/** Filtrene på Faste betalinger: adresse (#/fast/<id>), intern side og navn. */
+export const FB_FILTERS = [['abonnementer', 'sub', 'Abonnementer'], ['faste', 'fast', 'Faste utgifter'], ['planlagte', 'trekk', 'Planlagte trekk']];
+const fbLast = () => { const v = lsGet('fh_fb_filter'); return FB_FILTERS.some(([k]) => k === v) ? v : 'abonnementer'; };
 const NAV_FIXED = ['ov', 'inn'];
 const PAGES = [...BASE_PAGES, ...MODULE_PAGES];
 const defaultName = (p) => PAGES.find(([x]) => x === p)?.[1] ?? p;
@@ -58,7 +67,7 @@ function navCfg() {
   const def = (S.boot.navDefault ?? NAV_DEFAULT).filter((p) => PAGES.some(([x]) => x === p) && !NAV_NEVER.includes(p));
   // Prompt 42: Filter ligger rett under Glimt, også når serverens standardliste ikke kjenner siden ennå.
   if (!def.includes('filter')) def.splice(def.includes('ai') ? def.indexOf('ai') + 1 : 2, 0, 'filter');
-  if (!def.includes('plan')) def.splice(def.includes('sub') ? def.indexOf('sub') + 1 : def.length - 1, 0, 'plan'); // prompt 51 (FIN51): Planlegging etter Subscription OS
+  if (!def.includes('plan')) def.splice(def.includes('fast') ? def.indexOf('fast') + 1 : def.length - 1, 0, 'plan'); // Sparing og planer etter Faste betalinger
   const fin = sideCfg();
   const saved = (fin?.order?.length ? fin.order : S.boot.nav) ?? def;
   // Fjernede sider faller bort; nye (AI-søk, Import) settes inn etter nærmeste side foran dem i standardrekkefølgen.
@@ -71,7 +80,7 @@ function navCfg() {
 const navOrder = () => { const { order, hidden } = navCfg(); return order.filter((p) => !hidden.includes(p)); };
 function sideNav() {
   const b = S.boot;
-  const items = navOrder().map((p) => `<a href="#/${p}" title="${esc(pageName(p))}" ${p === u.page ? 'aria-current="page"' : ''}>${navTile(p, p === u.page, icon(p, 18, 'currentColor', 1.9))}<span>${esc(pageName(p))}</span>${p === 'kv' && b.reviewCount ? `<span class="badge">${b.reviewCount}</span>` : ''}</a>`).join('');
+  const items = navOrder().map((p) => `<a href="#/${p}" title="${esc(pageName(p))}" ${p === navPage() ? 'aria-current="page"' : ''}>${navTile(p, p === navPage(), icon(p, 18, 'currentColor', 1.9))}<span>${esc(pageName(p))}</span>${p === 'kv' && b.reviewCount ? `<span class="badge">${b.reviewCount}</span>` : ''}</a>`).join('');
   return `<div class="side-label">Generelt</div><nav class="nav">${items}</nav>`;
 }
 
@@ -205,8 +214,8 @@ function shell(content) {
   const me = b.me ?? { name: st.name, role: 'admin' };
   const aiMode = !!u.aiMode;
   return `<div class="app">
-  <aside class="side" aria-label="FinansHub-meny">
-    <div class="brand">${brandMark()}<div class="brand-t">Finans<span>Hub</span></div></div>
+  <aside class="side" aria-label="Økonomi-meny">
+    <div class="brand">${brandMark()}<div class="brand-t">Økonomi</div></div>
     ${sideNav()}
     ${`<button type="button" class="ai-box a42" data-act="open-ai-set" title="Åpne AI-innstillinger"><div class="side-label" style="padding:0">AI-motor</div>
       <div style="display:flex;align-items:center;gap:8px;font-weight:600"><span class="ai-dot ${aiOk === null ? 'unk' : aiOk ? '' : 'off'}"></span>${prov === 'ollama' ? 'Ollama · lokalt' : 'Gemini · sky'}</div>
@@ -214,7 +223,7 @@ function shell(content) {
   </aside>
   <main class="main"><div class="wrap">
     <header class="head">
-      <div style="display:flex;gap:14px;align-items:flex-start"><button class="side-tog" data-act="compact-nav" aria-label="${compactNav() ? 'Vis hele sidemenyen' : 'Kompakt sidemeny'}" title="${compactNav() ? 'Vis hele sidemenyen' : 'Kompakt sidemeny'}" aria-pressed="${compactNav()}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 5h16v14H4zM9 5v14"/></svg></button><div><div class="crumb"><span>FinansHub</span><span>›</span><b>${esc(pageName(u.page))}</b></div>${u.page === 'dir' ? '' : `<h1>${u.page === 'ov' ? `${greet()}, ${esc(String(me.name ?? '').split(/\s+/)[0] || '@' + (me.username ?? ''))}` : esc(pageName(u.page))}</h1>`}${MODULE_SUB[u.page] ? `<div class="note" style="font-size:14px;margin-top:4px">${MODULE_SUB[u.page]}</div>` : ''}</div></div>
+      <div style="display:flex;gap:14px;align-items:flex-start"><button class="side-tog" data-act="compact-nav" aria-label="${compactNav() ? 'Vis hele sidemenyen' : 'Kompakt sidemeny'}" title="${compactNav() ? 'Vis hele sidemenyen' : 'Kompakt sidemeny'}" aria-pressed="${compactNav()}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 5h16v14H4zM9 5v14"/></svg></button><div><div class="crumb"><span>Økonomi</span><span>›</span><b>${esc(pageName(navPage()))}</b></div>${u.page === 'dir' ? '' : `<h1>${u.page === 'ov' ? `${greet()}, ${esc(String(me.name ?? '').split(/\s+/)[0] || '@' + (me.username ?? ''))}` : esc(pageName(navPage()))}</h1>`}${MODULE_SUB[navPage()] ? `<div class="note" style="font-size:14px;margin-top:4px">${MODULE_SUB[navPage()]}</div>` : ''}</div></div>
       <div class="head-r">
         ${(() => {
           // Prompt 42 (claude-code-boliger-sok-scope.md): på Boliger-siden søker feltet bare i Boliger / boligen som er åpen.
@@ -223,12 +232,33 @@ function shell(content) {
         })()}
         <a class="icon-btn" href="#/kv" aria-label="Varsler: ${b.reviewCount} kvitteringer til gjennomgang">${icon('bell', 18)}${b.reviewCount ? '<span class="dot"></span>' : ''}</a>
         <a class="me" href="#/inn" title="${esc(me.name ?? '')}" aria-label="Innstillinger for ${esc(me.name ?? 'deg')}"><div class="av">${me.avatarUrl ? `<img src="${esc(me.avatarUrl)}" alt="">` : esc(ini(me.name ?? me.username))}</div></a>
-        <a class="close" href="/#/dash" aria-label="Tilbake til Hjem" title="Tilbake til Hjem">×</a>
+        <a class="close" href="/" aria-label="Tilbake til Homelab" title="Tilbake til Homelab">×</a>
       </div>
     </header>
     ${u.page === 'ai' ? '' : aiPanel()}
+    ${subNav()}
     ${content}
   </div></main></div>${modalHtml()}`;
+}
+
+/* ===================== Undermeny: Faste betalinger og Kontoer og aksjer ===================== */
+
+// Filtrene øverst på Faste betalinger (antall og sum per måned fra GET /faste-betalinger) og fanene på Kontoer og aksjer.
+function subNav() {
+  const g = navPage();
+  if (g === 'fast') {
+    const f = Object.fromEntries((S.fb?.filters ?? []).map((x) => [x.id, x]));
+    const sub = (id) => { const x = f[id]; if (!x) return ''; return id === 'planlagte' ? `${x.count} neste ${x.days} dager` : `${x.active ?? x.count} aktive · ${n0(x.monthly)} kr/mnd`; };
+    return `<nav class="fb-filters" aria-label="Faste betalinger">${FB_FILTERS.map(([id, page, name]) => `<a class="fb-filter${u.page === page ? ' on' : ''}" href="#/fast/${id}" ${u.page === page ? 'aria-current="page"' : ''}><b>${name}</b>${sub(id) ? `<span class="note">${esc(sub(id))}</span>` : ''}</a>`).join('')}</nav>`;
+  }
+  if (g === 'konto') return `<nav class="fb-filters" aria-label="Kontoer og aksjer">${[['konto', '#/konto', 'Kontoer'], ['aks', '#/konto/aksjer', 'Aksjer']].map(([p, h, n]) => `<a class="fb-filter${u.page === p ? ' on' : ''}" href="${h}" ${u.page === p ? 'aria-current="page"' : ''}><b>${n}</b></a>`).join('')}</nav>`;
+  return '';
+}
+if (!document.getElementById('fb-filters-css')) {
+  const st = document.createElement('style'); st.id = 'fb-filters-css';
+  st.textContent = `.fb-filters{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 16px}.fb-filter{display:flex;flex-direction:column;gap:2px;min-height:44px;justify-content:center;padding:8px 16px;border:1px solid var(--sep);border-radius:14px;background:var(--card);color:var(--text);text-decoration:none}
+.fb-filter .note{font-size:12px}.fb-filter.on{border-color:var(--text);box-shadow:inset 0 0 0 1px var(--text)}.fb-filter:focus-visible{outline:2px solid var(--acc);outline-offset:2px}`;
+  document.head.appendChild(st);
 }
 
 /* ===================== Glimt (egen side) ===================== */
@@ -336,7 +366,7 @@ function overview() {
   // På PC lastes kvitteringer opp fra filer (ingen kamera).
   // Prompt 42 (claude-code-finans-handlinger-ikonfarge.md): brikken er en lys tone av ikonfargen, ikke surf/rgba.
   const actions = `<label class="action" style="background:var(--warn-soft);color:var(--text);cursor:pointer"><span class="a42-tile" style="--ic:var(--warn)">${icon('down', 17)}</span>Last opp kvittering<input type="file" multiple accept="image/*,application/pdf" data-upload hidden></label>`
-    + [['Ny transaksjon', 'var(--blue-soft)', 'var(--blue)', 'plus', 'data-act="add-tx"'], ['Importer', 'var(--pos-soft)', 'var(--pos)', 'imp', 'data-act="goto-import" href="#/inn"'], ['Rapport', 'var(--purple-soft)', 'var(--purple)', 'rap', 'href="#/rap"']]
+    + [['Ny transaksjon', 'var(--blue-soft)', 'var(--blue)', 'plus', 'data-act="add-tx"'], ['Importer', 'var(--pos-soft)', 'var(--pos)', 'imp', 'data-act="goto-import" href="#/inn/imp"'], ['Rapport', 'var(--purple-soft)', 'var(--purple)', 'rap', 'href="#/rap"']]
     .map(([n, bg, c, ic, at]) => `<${at.startsWith('href') ? 'a' : 'button'} class="action" ${at} style="background:${bg};color:var(--text)"><span class="a42-tile" style="--ic:${c}">${icon(ic, 17)}</span>${n}</${at.startsWith('href') ? 'a' : 'button'}>`).join('');
   const noData = !S.boot.hasData ? card(`<div class="card-h"><div><h2>Kom i gang</h2><div class="note">Legg til en konto, importer fra nettbanken eller last opp en kvittering. Du kan også laste inn demodata for å se hvordan alt ser ut.</div></div>
     <div style="display:flex;gap:10px;flex-wrap:wrap"><a class="btn" href="#/konto">Legg til konto</a><button class="btn" data-act="goto-import">Importer CSV</button><button class="btn pri" data-act="demo">Last inn demodata</button></div></div>`, '', 'border-color:var(--warm-line)') : '';
@@ -541,24 +571,26 @@ function recurring() {
   const list = S.recurring;
   if (!list) return skel(300);
   const act = list.filter((r) => r.active);
-  const monthly = act.reduce((a, r) => a + (r.monthly ?? 0), 0); // per måned fra serveren
-  const now = new Date(), y = now.getFullYear(), m = now.getMonth();
-  const first = (new Date(y, m, 1).getDay() + 6) % 7, dim = new Date(y, m + 1, 0).getDate();
-  const days = new Set(act.filter((r) => r.interval === 'monthly' || (r.interval === 'yearly' && r.month === m + 1)).map((r) => Math.min(r.day, dim)));
+  // Summen per måned og år fra serveren (GET /faste-betalinger): en fast utgift som også er et abonnement, telles under Abonnementer.
+  const fbF = S.fb?.filters?.find((f) => f.id === 'faste'), monthly = fbF?.monthly ?? act.reduce((a, r) => a + (r.monthly ?? 0), 0), yearly = fbF?.yearly ?? monthly * 12;
+  const dupOf = new Map((S.fb?.items ?? []).filter((x) => x.kind === 'fast' && x.duplicateOf).map((x) => [x.id, x.duplicateOf]));
+  // Måneden, i dag og trekkdagene kommer fra serveren (Oslo-dato, GET /faste-betalinger chargeDays), ikke fra nettleserens klokke.
+  const ym = S.fb?.month ?? today().slice(0, 7), td = S.fb?.today ?? today(), y = +ym.slice(0, 4), m = +ym.slice(5, 7) - 1;
+  const first = (new Date(Date.UTC(y, m, 1)).getUTCDay() + 6) % 7, dim = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+  const recNames = new Set(act.map((r) => r.name)), days = new Set((S.fb?.chargeDays ?? []).filter((d) => d.names.some((n) => recNames.has(n))).map((d) => d.day));
   let cal = ['M', 'T', 'O', 'T', 'F', 'L', 'S'].map((d) => `<span class="wd">${d}</span>`).join('') + '<span class="blank"></span>'.repeat(first);
-  for (let d = 1; d <= dim; d++) cal += `<span class="${d === now.getDate() ? 'today' : days.has(d) ? 'has' : ''}">${d}</span>`;
-  const IV = { monthly: 'Månedlig', yearly: 'Årlig', weekly: 'Ukentlig' };
+  for (let d = 1; d <= dim; d++) cal += `<span class="${td === `${ym}-${String(d).padStart(2, '0')}` ? 'today' : days.has(d) ? 'has' : ''}">${d}</span>`;
   const rows = list.map((r) => `<div style="display:flex;align-items:center;gap:14px;padding:12px 0;border-top:1px solid var(--sep);opacity:${r.active ? 1 : 0.45}">
     <span class="ini" style="background:${rgba(r.color, 0.14)};color:${r.color}">${esc(ini(r.name))}</span>
-    <button class="grow link" style="color:var(--text);text-align:left" data-edit-rec="${r.id}"><div style="font-weight:500">${esc(r.name)}${r.detected ? ' <span class="pill" style="background:var(--blue-soft);color:var(--blue-l);font-size:11px">oppdaget</span>' : ''}</div><div class="note" style="font-size:12px">${esc(r.category)} · ${IV[r.interval]} · ${r.day}.${r.interval === 'yearly' && r.month ? ' ' + monthName(`2000-${String(r.month).padStart(2, '0')}`) : ''} · neste ${dd(r.next)}</div></button>
+    <button class="grow link" style="color:var(--text);text-align:left" data-edit-rec="${r.id}"><div style="font-weight:500">${esc(r.name)}${r.detected ? ' <span class="pill" style="background:var(--blue-soft);color:var(--blue-l);font-size:11px">oppdaget</span>' : ''}${dupOf.has(r.id) ? ' <span class="pill" style="font-size:11px" title="Telles under Abonnementer, ikke to ganger">også abonnement</span>' : ''}</div><div class="note" style="font-size:12px">${esc(r.category)} · ${esc(r.label ?? '')}</div></button>
     <span class="mono" style="font-weight:500">${n0(r.amount)} kr</span>
     <button class="toggle" role="switch" aria-checked="${r.active}" aria-label="Aktiv" data-rec-toggle="${r.id}"></button></div>`).join('');
   return `<div class="row-flex">
-    ${card(`<div class="card-h" style="margin-bottom:10px"><h2>Abonnementer og regninger</h2><div style="display:flex;gap:8px"><button class="btn sm" data-act="detect-rec">Finn faste trekk</button><button class="btn sm pri" data-act="add-rec">+ Legg til</button></div></div>
+    ${card(`<div class="card-h" style="margin-bottom:10px"><h2>Faste utgifter</h2><div style="display:flex;gap:8px"><button class="btn sm" data-act="detect-rec">Finn faste trekk</button><button class="btn sm pri" data-act="add-rec">+ Legg til</button></div></div>
       ${rows || '<div class="note" style="padding:12px 0">Ingen faste utgifter ennå. «Finn faste trekk» ser etter gjentakende trekk i transaksjonene dine.</div>'}${u.msg.rec ? `<div class="ok-msg" style="padding-top:8px">${esc(u.msg.rec)}</div>` : ''}`, '', 'flex:2 1 520px;gap:4px')}
     <div style="flex:1 1 320px;min-width:0;display:flex;flex-direction:column;gap:16px">
-      ${card(`<div class="note" style="font-size:13px">Faste utgifter per måned</div><div class="mono" style="font-size:30px;font-weight:600">${n0(monthly)} <span style="font-size:14px;color:var(--muted);font-weight:400">kr</span></div><div class="note">${n0(monthly * 12)} kr i året · ${act.length} aktive</div>`, '', 'gap:6px')}
-      ${card(`<div class="card-h"><b style="font-weight:600">${cap(monthName(`${y}-${String(m + 1).padStart(2, '0')}`))}</b><span class="note">trekkdager</span></div><div class="cal7">${cal}</div>`, '', 'gap:12px')}
+      ${card(`<div class="note" style="font-size:13px">Faste utgifter per måned</div><div class="mono" style="font-size:30px;font-weight:600">${n0(monthly)} <span style="font-size:14px;color:var(--muted);font-weight:400">kr</span></div><div class="note">${n0(yearly)} kr i året · ${act.length} aktive${fbF?.duplicates ? ` · ${fbF.duplicates} telles under Abonnementer` : ''}</div>`, '', 'gap:6px')}
+      ${card(`<div class="card-h"><b style="font-weight:600">${cap(monthName(ym))}</b><span class="note">trekkdager</span></div><div class="cal7">${cal}</div>`, '', 'gap:12px')}
     </div></div>`;
 }
 
@@ -828,7 +860,7 @@ function settingsPage() {
       ${aiLogBox()}`;
   } else if (t === 'cat') body = `<div style="display:flex;flex-direction:column;gap:8px">${cats().map((c) => `<div class="edit-row"><input type="color" value="${c.color}" data-cat-field="color" data-id="${c.id}" aria-label="Farge"><input class="inp grow" value="${esc(c.name)}" data-cat-field="name" data-id="${c.id}" aria-label="Navn" style="flex:1 1 160px">
       <select class="inp" data-cat-field="kind" data-id="${c.id}" style="width:140px">${Object.entries(KINDS).map(([k2, l]) => opt(k2, l, c.kind)).join('')}</select><button class="del" data-del-cat="${c.id}" aria-label="Slett">×</button></div>`).join('')}
-    <button class="add" data-act="add-cat">+ Ny kategori</button><div class="note" style="font-size:12.5px">Overføringer (f.eks. til sparekonto) telles verken som inntekt eller utgift.</div></div>`;
+    <button class="add" data-act="add-cat">+ Ny kategori</button><div class="note" style="font-size:12.5px">Overføringer (f.eks. til sparekonto) telles verken som inntekt eller utgift.</div>${catMigrationBox(canSrv())}</div>`;
   else if (t === 'rule') body = `<div style="display:flex;flex-direction:column;gap:8px"><div class="sub" style="font-size:13px">Regler går foran AI-forslaget. Bruk * som jokertegn – «REMA*» treffer også «VARER REMA 1000». Rettelser du gjør ved bokføring blir nye regler automatisk.</div>
     ${S.boot.rules.map((r) => `<div class="edit-row"><input class="inp mono" style="flex:1 1 140px;font-size:13px" value="${esc(r.pattern)}" data-rule-field="pattern" data-id="${r.id}" aria-label="Mønster"><span class="muted">→</span><select class="inp" style="flex:1 1 180px" data-rule-field="categoryId" data-id="${r.id}">${catOpts(r.categoryId)}</select><button class="del" data-del-rule="${r.id}" aria-label="Slett">×</button></div>`).join('')}
     <div style="display:flex;gap:10px;flex-wrap:wrap"><button class="add" data-act="add-rule">+ Ny regel</button><button class="add" data-act="apply-rules">Bruk på ukategoriserte</button></div>${u.msg.rules ? `<div class="ok-msg">${esc(u.msg.rules)}</div>` : ''}</div>`;
@@ -1031,7 +1063,8 @@ async function loadLayout() {
   try { const r = await fetch('/api/me/layout', { headers: { Accept: 'application/json' } }); S.layout = r.ok && r.headers.get('content-type')?.includes('json') ? await r.json() : null; } catch { S.layout = null; }
   S.layoutOk = !!S.layout;
 }
-const LOADERS = { ov: [loadSummary], tx: [loadTx, loadTxFolders], ai: [loadAiPage, loadTasks], filter: [loadFilter], kv: [loadReceipts], bud: [loadSummary], fast: [loadRecurring], konto: [], rap: [loadReport], inn: [], ...MODULE_LOADERS };
+const loadFb = async () => { S.fb = await api('/faste-betalinger'); }; // Faste betalinger: filtrene og trekkdagene (Oslo-dato) fra serveren
+const LOADERS = { ov: [loadSummary], tx: [loadTx, loadTxFolders], ai: [loadAiPage, loadTasks], filter: [loadFilter], kv: [loadReceipts], bud: [loadSummary], fast: [loadRecurring, loadFb], konto: [], rap: [loadReport], inn: [], ...MODULE_LOADERS };
 // ISO2: alle roller har hele FinansHub (eget regnskap per bruker).
 const allowed = () => true;
 export async function load(page = u.page) {
@@ -1041,6 +1074,7 @@ export async function load(page = u.page) {
   if (page === 'inn' && u.setTab === 'aks') await loadStocksSettings().catch((e) => toast(e.message));
   if (page === 'inn' && (u.setTab === 'imp' || u.setTab === 'bank')) await Promise.all([loadImpTpl(), loadHomeRules()]);
   if (page === 'inn' && u.setTab === 'bol') await loadBolSettings().catch((e) => toast(e.message));
+  if (page === 'inn' && u.setTab === 'cat' && canSrv()) await loadCatMigration();
   render();
   schedulePoll();
 }
@@ -1068,8 +1102,20 @@ export function route() {
   if (hq.get('hl')) { u.hl = hq.get('hl'); u.hlOff = false; u.hlFocus = true; if (hq.get('rc')) { u.selRc = hq.get('rc'); u.hlRc = hq.get('rc'); } if (hq.get('tx')) u.sel = +hq.get('tx'); }
   // Matplan er en Homelab-fane; gamle lenker til FinansHub-siden sendes dit.
   if (p === 'mat') { location.replace('/#/matplan'); return; }
-  // Gamle lenker til Import-siden åpner Innstillinger → Import.
-  if (p === 'imp') { u.setTab = 'imp'; location.replace('#/inn'); return; }
+  // Gamle lenker til Import-siden åpner Innstillinger → Import (O3: Import har ett hjem).
+  if (p === 'imp' || p === 'import') { u.setTab = 'imp'; location.replace('#/inn/imp'); return; }
+  // Fase 6: gamle adresser til sider som er slått sammen, sendes til den nye plassen (dyplenker virker som før).
+  const seg = location.hash.replace(/^#\/?/, '').split('?')[0].split('/');
+  const OLD = { sub: '#/fast/abonnementer', abonnement: '#/fast/abonnementer', abonnementer: '#/fast/abonnementer', faste: '#/fast/faste', aks: '#/konto/aksjer', aksjer: '#/konto/aksjer', planlegging: '#/plan', kategorier: '#/inn/cat' };
+  if (OLD[p]) { location.replace(OLD[p]); return; }
+  if (p === 'fast') {
+    const f = FB_FILTERS.find(([k]) => k === seg[1]);
+    if (!f) { location.replace(`#/fast/${fbLast()}`); return; }
+    lsSet('fh_fb_filter', f[0]);
+    p = f[1];
+  }
+  if (p === 'konto' && seg[1] === 'aksjer') p = 'aks';
+  if (p === 'inn' && SET_TABS.some(([k]) => k === seg[1])) u.setTab = seg[1];
   const next = PAGE_FN[p] && allowed(p) ? p : 'ov';
   const entered = next !== u.page;
   if (entered) { u.page = next; u.msg = {}; u.bolScopeOff = false; }
@@ -1303,7 +1349,8 @@ export function bind() {
     if ((x = d('[data-cat]'))) { u.cat = x.dataset.cat; await loadTx(); return render(); }
     if ((x = d('[data-rc-cat]'))) return patchRc(u.selRc, { categoryId: +x.dataset.rcCat });
     if ((x = d('[data-test-engine]'))) { const k = x.dataset.testEngine; u.msg.ai = 'Tester …'; render(); const r = await api('/ai/test', { method: 'POST', json: { provider: k } }).catch((e) => ({ ok: false, message: e.message })); u.msg.aiOk = r.ok; u.msg.ai = r.message; return render(); }
-    if ((x = d('[data-settab]'))) { u.setTab = x.dataset.settab; u.msg = {}; if (u.setTab === 'ai') loadAi().then(render); return load(); }
+    if ((x = d('[data-settab]'))) { u.setTab = x.dataset.settab; u.msg = {}; history.replaceState(null, '', `#/inn/${u.setTab}`); // adressen viser fanen (dyplenke)
+      if (u.setTab === 'ai') loadAi().then(render); return load(); }
     if ((x = d('[data-theme-pick]'))) { settHomelabTema({ design: x.dataset.themePick }); if (S.layout) { S.layout.hlTheme = x.dataset.themePick === 'glod' ? 'cur' : '2c'; if (x.dataset.themePick !== 'glod') S.layout.web_theme = x.dataset.themePick === 'mork' ? 'dark' : 'light'; } try { sessionStorage.setItem('fh_jump', '1'); } catch {} applyTheme(); return render(); }
     if ((x = d('[data-provider]'))) return saveSet({ provider: x.dataset.provider });
     if ((x = d('[data-tog]'))) return saveSet({ [x.dataset.tog]: !S.boot.settings[x.dataset.tog] });
@@ -1330,7 +1377,7 @@ export function bind() {
     const R = S.receipts?.find((y) => y.id === u.selRc);
     switch (act) {
       case 'add-tx': u.add = { type: 'tx', kind: 'ut' }; if (u.page !== 'tx') location.hash = '#/tx'; return render();
-      case 'goto-import': u.setTab = 'imp'; location.hash = '#/inn'; return u.page === 'inn' && render();
+      case 'goto-import': u.setTab = 'imp'; location.hash = '#/inn/imp'; return u.page === 'inn' && render(); // O3: Import bor i Innstillinger → Import
       case 'close-modal': u.add = null; return render();
       case 'close-sel': u.sel = null; return render();
       case 'hl-clear': u.hlOff = true; return render();

@@ -70,6 +70,7 @@ export function fasteBetalinger(uid, { today = today51(), days = 30 } = {}) {
   const counted = items.filter((x) => x.active && !x.duplicateOf);
   const sum = (list, f) => r2(list.reduce((a, x) => a + x[f], 0));
   const monthOf = (kind) => sum(counted.filter((x) => x.kind === kind), 'monthly');
+  const yearOf = (kind) => sum(counted.filter((x) => x.kind === kind), 'yearly');
 
   const cal = calendar51(uid, { days, today });
   const plannedItems = cal.items.filter((x) => x.amount < 0).map((x) => ({
@@ -96,8 +97,9 @@ export function fasteBetalinger(uid, { today = today51(), days = 30 } = {}) {
   return {
     today, month,
     filters: [
-      { id: 'abonnementer', name: 'Abonnementer', count: subs.length, active: subs.filter((s) => s.active).length, monthly: monthOf('abonnement') },
-      { id: 'faste', name: 'Faste utgifter', count: recs.length, active: recs.filter((r) => r.active).length, monthly: monthOf('fast') },
+      { id: 'abonnementer', name: 'Abonnementer', count: subs.length, active: subs.filter((s) => s.active).length, monthly: monthOf('abonnement'), yearly: yearOf('abonnement') },
+      { id: 'faste', name: 'Faste utgifter', count: recs.length, active: recs.filter((r) => r.active).length, monthly: monthOf('fast'), yearly: yearOf('fast'),
+        duplicates: recs.filter((r) => r.active && r.duplicateOf).length },
       { id: 'planlagte', name: 'Planlagte trekk', count: plannedItems.length, total: planned.total, days: planned.days },
     ],
     items, monthly: sum(counted, 'monthly'), yearly: sum(counted, 'yearly'), chargeDays, planned,

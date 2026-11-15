@@ -564,7 +564,9 @@ const upload = bodyLimit({ maxSize: Number(process.env.MAX_UPLOAD_MB ?? 40) * 10
 
 // Sidemenyen: Import ligger nå under Innstillinger, AI-søk har egen side etter Transaksjoner.
 // Matplan er den felles Homelab-komponenten (bare for administratorer, som resten av regnskapet).
-const NAV_DEFAULT = ['ov', 'tx', 'ai', 'kv', 'bud', 'fast', 'konto', 'aks', 'rap', 'sub', 'dir', 'finn', 'inn']; // Import ligger under Innstillinger
+// Fase 6 (Q3, Q4): samme sider som undermenyen på mobil. Abonnementer (sub) og Aksjer (aks) er filtre/faner på Faste betalinger (fast)
+// og Kontoer og aksjer (konto), og faller bort fra lagrede menyer (navMerge). Import ligger under Innstillinger.
+const NAV_DEFAULT = ['ov', 'tx', 'ai', 'filter', 'bud', 'fast', 'plan', 'konto', 'kv', 'dir', 'finn', 'rap', 'inn'];
 const NAV_FIXED = ['ov', 'inn'];
 // Lagret rekkefølge beholdes; sider som er fjernet (f.eks. Matplan, som nå er i Homelab) faller bort, og nye sider
 // (AI-søk, Import) settes inn rett etter nærmeste side som står foran dem i standardrekkefølgen.
