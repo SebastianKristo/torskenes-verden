@@ -70,7 +70,7 @@
 /* ⋯ og ⚙ */
 .sk77-hw{position:relative;display:inline-flex;gap:8px}
 .sk77-ib{min-width:44px;padding:0 12px;font-size:17px}
-.sk77-menu{position:absolute;right:0;top:calc(100% + 6px);z-index:40;display:flex;flex-direction:column;min-width:230px;padding:6px;border-radius:16px;border:1px solid var(--s-line);background:var(--s-card);box-shadow:0 18px 40px -18px rgba(0,0,0,.35)}
+.sk77-menu{position:absolute;right:0;top:calc(100% + 6px);z-index:40;display:flex;flex-direction:column;min-width:230px;padding:6px;border-radius:16px;border:1px solid var(--s-line);background:var(--s-pop);box-shadow:0 18px 40px -18px rgba(0,0,0,.35)}
 .sk77-menu a,.sk77-menu button{display:flex;align-items:center;min-height:44px;padding:0 12px;border:0;border-radius:10px;background:none;color:var(--s-ink);font:600 14px var(--s-sans);text-decoration:none;text-align:left;cursor:pointer}
 .sk77-menu a:hover,.sk77-menu button:hover{background:var(--s-line2)}
 [data-sk77-gearbox]:empty{display:none}
@@ -197,9 +197,9 @@ html.sk82-lock{overflow:hidden}
    Bruker fargene fra .sk76 (lys/mørk følger dem). Bare transform/opacity animeres. */
 .sk79-pb{flex:none;width:48px;border-radius:16px;border:1px solid var(--s-line);background:var(--s-card);color:var(--s-ink);font:700 22px/1 var(--s-sans);cursor:pointer}
 .sk79-pb:hover{border-color:var(--s-ink)}
-.sk79-pb.on{background:var(--s-ink);border-color:var(--s-ink);color:var(--s-card);font-size:18px}
+.sk79-pb.on{background:var(--s-ink);border-color:var(--s-ink);color:var(--s-on-ink);font-size:18px}
 .sk79-prow{display:flex;flex-wrap:wrap;gap:10px;min-width:0}
-.sk79-pd.on{background:var(--s-ink);border-color:var(--s-ink);color:var(--s-card)}
+.sk79-pd.on{background:var(--s-ink);border-color:var(--s-ink);color:var(--s-on-ink)}
 .sk79-pb:focus-visible,.sk79-pd:focus-visible,.sk79-bar button:focus-visible,.sk79-sheet button:focus-visible,.sk79-sheet a:focus-visible,.sk79-diag button:focus-visible{outline:2px solid var(--s-acc);outline-offset:2px}
 .sk79-dot{display:inline-block;flex:none;width:12px;height:12px;margin-right:6px;border-radius:6px;vertical-align:-1px;box-shadow:0 0 0 1px color-mix(in srgb,var(--s-ink) 30%,transparent)}
 
@@ -222,7 +222,7 @@ html.sk79-lock{overflow:hidden}
 .sk79-scrim{position:fixed;inset:0;z-index:80;background:rgba(10,9,7,.42);animation:sk79fade .18s ease-out both}
 .sk79-scrim[hidden],.sk79-sheet[hidden]{display:none}
 @keyframes sk79fade{from{opacity:0}}
-.sk79-sheet{position:fixed;z-index:81;top:12px;right:12px;bottom:12px;width:min(460px,calc(100vw - 24px));display:flex;flex-direction:column;border-radius:26px;border:1px solid var(--s-line);background:var(--s-card);color:var(--s-ink);box-shadow:0 30px 70px -20px rgba(0,0,0,.5);overflow:hidden;animation:sk79in .22s ease-out both}
+.sk79-sheet{position:fixed;z-index:81;top:12px;right:12px;bottom:12px;width:min(460px,calc(100vw - 24px));display:flex;flex-direction:column;border-radius:26px;border:1px solid var(--s-line);background:var(--s-pop);color:var(--s-ink);box-shadow:0 30px 70px -20px rgba(0,0,0,.5);overflow:hidden;animation:sk79in .22s ease-out both}
 @keyframes sk79in{from{opacity:0;transform:translateX(24px)}}
 .sk79-sh{flex:none;padding:16px 18px 10px;border-bottom:1px solid var(--s-line2);display:flex;flex-direction:column;gap:10px}
 .sk79-grab{display:none}
@@ -392,10 +392,13 @@ html[data-mode="dark"] .sk78-cell,html:not([data-hl="2c"]) .sk78-cell{color:#f3e
   --s-bg:var(--ds-surface);--s-card:var(--ds-surface-raised);--s-ink:var(--ds-text-primary);--s-mut:var(--ds-text-secondary);--s-line:var(--ds-line);
   --s-line2:color-mix(in srgb,var(--ds-line) 50%,var(--ds-surface-raised));--s-fld:var(--ds-surface-raised);--s-acc:var(--ds-accent);--s-acc-ink:var(--ds-on-accent);
   --s-ok:var(--ds-success);--s-warn:var(--ds-warning);--s-num:var(--ds-text-secondary);
+  --s-on-ink:var(--ds-surface);--s-pop:var(--ds-surface-raised); /* tekst på blekkfylte knapper; ugjennomsiktige ark og menyer */
   /* Tegningen av skapet (ramme, skuffer, håndtak) er en illustrasjon av ekte metall og plast, ikke en flate i temaet. */
   --s-frame:#24252a;--s-frame2:#3a3c42;--s-drawer:#e8ecef;--s-drawer-l:#c9d0d6;--s-handle:#9aa3ab;
   --s-serif:var(--ds-font-serif);--s-sans:var(--ds-font-sans);--s-mono:var(--ds-font-mono);
   display:flex;flex-direction:column;gap:14px;max-width:1280px;margin:0 auto;padding:4px 0 32px;color:var(--s-ink);font:500 14px/1.45 var(--s-sans);box-sizing:border-box;min-width:0}
+/* Glass: kortflaten er gjennomsiktig, så ark og menyer får en ugjennomsiktig flate blandet av tokens. */
+html[data-hl="cur"] .sk76{--s-pop:color-mix(in srgb,var(--ds-text-primary) 8%,var(--ds-surface))}
 html[data-mode="dark"] .sk76,html:not([data-hl="2c"]) .sk76{--s-frame:#0d0e10;--s-frame2:#2a2c31;--s-drawer:#3b4046;--s-drawer-l:#565c63;--s-handle:#7d868e}
 .sk76 *,.sk76 *::before,.sk76 *::after{box-sizing:border-box}
 .sk76[aria-busy="true"]{min-height:50vh}
@@ -410,7 +413,7 @@ html[data-mode="dark"] .sk76,html:not([data-hl="2c"]) .sk76{--s-frame:#0d0e10;--
 .sk76-acts,.sk76-row,.sk76-pacts{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .sk76-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:44px;padding:0 16px;border-radius:22px;border:1px solid var(--s-line);background:var(--s-card);color:var(--s-ink);font:700 14px var(--s-sans);text-decoration:none;cursor:pointer;white-space:nowrap}
 .sk76-btn:hover{border-color:var(--s-ink)}
-.sk76-btn.pri{background:var(--s-ink);border-color:var(--s-ink);color:var(--s-card)}
+.sk76-btn.pri{background:var(--s-ink);border-color:var(--s-ink);color:var(--s-on-ink)}
 .sk76-btn.danger{color:var(--s-acc)}
 .sk76-btn:disabled{opacity:.55;cursor:default}
 .sk76-btn:focus-visible,.sk76-chip:focus-visible,.sk76-item:focus-visible,.sk76-link:focus-visible,.sk76 [data-sk76-dr]:focus-visible{outline:2px solid var(--s-acc);outline-offset:2px}
@@ -431,7 +434,7 @@ html[data-mode="dark"] .sk76,html:not([data-hl="2c"]) .sk76{--s-frame:#0d0e10;--
 .sk76-filters[hidden]{display:none}
 .sk76-chip{flex:none;min-height:36px;padding:0 14px;border-radius:18px;border:1px solid var(--s-line);background:transparent;color:var(--s-ink);font:600 13px var(--s-sans);cursor:pointer}
 .sk76-chip small{color:var(--s-mut);margin-left:4px}
-.sk76-chip.on{background:var(--s-ink);border-color:var(--s-ink);color:var(--s-card)}
+.sk76-chip.on{background:var(--s-ink);border-color:var(--s-ink);color:var(--s-on-ink)}
 .sk76-chip.on small{color:inherit;opacity:.7}
 .sk76-off{padding:10px 14px;border-radius:14px;background:color-mix(in srgb,var(--s-warn) 14%,var(--s-card));border:1px solid color-mix(in srgb,var(--s-warn) 40%,var(--s-line));color:var(--s-ink);font-weight:600}
 .sk76-off[hidden]{display:none}
@@ -462,7 +465,7 @@ html[data-mode="dark"] .sk76,html:not([data-hl="2c"]) .sk76{--s-frame:#0d0e10;--
 /* Prompt 85: blokk (ikke flex) – ellers virker ikke text-overflow på teksten, og «Skuff 3» ble klippet midt i tegnet på mobil. */
 .sk76-loc{display:block;font-size:12.5px;line-height:18px;color:var(--s-ink);overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 .sk76-loc>.sk76-code{display:inline-block;line-height:14px;margin-right:6px;vertical-align:top}
-.sk76-code{font:700 11px var(--s-mono);font-style:normal;padding:2px 6px;border-radius:6px;background:var(--s-ink);color:var(--s-card)}
+.sk76-code{font:700 11px var(--s-mono);font-style:normal;padding:2px 6px;border-radius:6px;background:var(--s-ink);color:var(--s-on-ink)}
 .sk76-q{display:flex;flex-direction:column;align-items:flex-end;gap:2px;font:700 14px var(--s-sans);white-space:nowrap}
 .sk76-q em,.sk76-lowb{font:700 10px var(--s-mono);font-style:normal;letter-spacing:.08em;text-transform:uppercase;padding:2px 7px;border-radius:8px;background:color-mix(in srgb,var(--s-acc) 14%,transparent);color:var(--s-acc)}
 .sk76-q.low{color:var(--s-acc)}
@@ -546,7 +549,7 @@ html[data-mode="dark"] .sk76,html:not([data-hl="2c"]) .sk76{--s-frame:#0d0e10;--
 .sk76-cname{font:500 20px var(--s-serif)}
 .sk76-ctabs{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;min-width:0}
 .sk76-ctabs button{flex:none;min-height:36px;padding:0 12px;border-radius:18px;border:1px solid var(--s-line);background:transparent;color:var(--s-ink);font:700 13px var(--s-sans);cursor:pointer}
-.sk76-ctabs button[aria-selected="true"]{background:var(--s-ink);color:var(--s-card);border-color:var(--s-ink)}
+.sk76-ctabs button[aria-selected="true"]{background:var(--s-ink);color:var(--s-on-ink);border-color:var(--s-ink)}
 .sk76-seg{display:inline-flex;padding:3px;border-radius:20px;background:var(--s-line2)}
 .sk76-seg button{min-height:34px;padding:0 14px;border:0;border-radius:17px;background:transparent;color:var(--s-mut);font:700 13px var(--s-sans);cursor:pointer}
 .sk76-seg button[aria-pressed="true"]{background:var(--s-card);color:var(--s-ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
@@ -567,7 +570,7 @@ html[data-mode="dark"] .sk76,html:not([data-hl="2c"]) .sk76{--s-frame:#0d0e10;--
 .sk76-wall{stroke:var(--s-drawer-l);stroke-width:1}
 .sk76-handle{fill:var(--s-handle)}
 .sk76-dot{fill:var(--s-ink);opacity:.82}
-.sk76-dotn{font-size:8.5px;font-weight:700;fill:var(--s-card)}
+.sk76-dotn{font-size:8.5px;font-weight:700;fill:var(--s-on-ink)}
 .sk76-lbl{font-size:7.5px;font-weight:600;fill:var(--s-mut)}
 .sk76-hl{fill:var(--s-acc);opacity:.6}
 .sk76-hlb{fill:none;stroke:var(--s-acc);stroke-width:3}
