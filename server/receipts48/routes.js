@@ -30,7 +30,7 @@ import { health48 } from './health.js';
 import { macHealth48 } from './engines/mac-vision.js';
 import { r48Settings, macOcrKey48 } from './settings.js';
 import { recordCorrection48, listCorrections48, exportCorrections48 } from './corrections.js';
-import { todayOslo45 } from '../glimt45/dates.js';
+import { todayOslo45 } from '../glimt/dates.js';
 import { MERCHANT_LABELS51, brregStatus51, brregLookup51, updateBrreg51, learnMerchant51, mod11Ok } from './brreg51.js'; // prompt 51: Enhetsregisteret (lokal kopi)
 
 const DIR = resolve(config.dataDir, 'receipts');

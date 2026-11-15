@@ -70,7 +70,7 @@
 //   Ord for ord: når klienten fikk 202, sendes «assist» {jobId, state:'running', partial:'tekst så langt', done:false} i biter før
 //   svaret; ellers animerer klienten text selv. Opprettelse (calendar.create) skjer med en gang og kan angres med undo.
 import { Hono } from 'hono';
-import { agent45, registerLegacy45, toAssist45 } from '../glimt45/engine.js'; // prompt 45: felles Glimt-motor
+import { agent45, registerLegacy45, toAssist45 } from '../glimt/engine.js'; // prompt 45: felles Glimt-motor
 import { randomBytes } from 'node:crypto';
 import { kv } from '../db.js';
 import { db as fhDb } from '../finans/db.js';
@@ -82,7 +82,7 @@ import { cached } from '../cache.js';
 import { eventsFor, eventInput, createEvent, normText, setEventDecorator, osloAt, widgetOut } from './events.js';
 import { askCalendar } from './glimt.js';
 import { weatherFull, wmoText, iconOf, PLACES } from '../vaer/full.js';
-import { aliasesOf, typeOfWord, eventHitsAlias } from '../glimt-memory.js';
+import { aliasesOf, typeOfWord, eventHitsAlias } from '../glimt/memory/remember.js';
 import { parseQuick, osloTodayISO } from '../dates/quick.js'; // dato og tid fra den felles tolkeren
 import { parseDay, normDayText } from '../parse-day35.js'; // prompt 35: felles dag-tolkning
 import { attachGeo, parseIntent37, schoolTestAnswer } from './subjects.js'; // prompt 37
@@ -90,7 +90,7 @@ import { extCalendarsOf, mountExt, patchExt, removeExt, isExtId, shades } from '
 import { googleKalApi, googleCalendarsOf, isGoogleCalId, patchGoogleCal, removeGoogleCal } from './google.js'; // prompt 36b: Google-kalendere
 import { extractPlace, placeWeather } from '../vaer/place.js'; // prompt 35: været for et sted
 import { tokenAccessOf, issueToken, tokensById, revokeTokenOf, TOKEN_SCOPES } from '../finans/routes.js';
-import { fagAnswer, rememberCtx } from '../glimt39-fag.js'; // prompt 39: oppfølging og fag
+import { fagAnswer, rememberCtx } from '../glimt/fag.js'; // prompt 39: oppfølging og fag
 
 const MOCK = process.env.MOCK_DATA === '1';
 const DATE = /^\d{4}-\d{2}-\d{2}$/;

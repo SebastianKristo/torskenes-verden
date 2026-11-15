@@ -3,7 +3,7 @@ package no.kristo.finanshub
 import org.json.JSONArray
 
 // Prompt 41: «Glimt henter fakta». /api/chat/send legger meta.facts i svaret (vær, tid og sol per deloppgave,
-// se server/chat-tools41.js). Vises som små kort under Glimt-svaret (ui/Chat41Ui.kt).
+// se server/ai/chat/tools.js). Vises som små kort under Glimt-svaret (ui/Chat41Ui.kt).
 
 /** Ett faktum: «Vær · New York · neste time · vind 6 m/s, kast 9 m/s · Open-Meteo». */
 data class ChatFact41(

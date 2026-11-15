@@ -1,18 +1,18 @@
 // Prompt 40 (SERVER40): kobler sammen modulene for prompt 40 (montert i index.js).
-//   AI-selvtester (to tidsgrenser, oppvarming, én modell om gangen, minnesjekk, helsesjekk, vakthund), Jobber-gruppering  → ai-run.js, ai-api.js, ai39.js
+//   AI-selvtester (to tidsgrenser, oppvarming, én modell om gangen, minnesjekk, helsesjekk, vakthund), Jobber-gruppering  → ai-run.js, ai/control.js, ai39.js
 //   SMB: validering etter SMB-reglene, feiltype per kind, POST /api/smb/shares {host, user, pass}                       → finans/backup.js, smb-browse.js
 //   «Starter opp» bare ved ekte omstart: /api/health {restarting, updating, state} + X-Homelab-State                      → index.js, system-update.js
 //   2FA i appen: /api/auth/2fa/*                                                                                       → auth/two-factor.js (montert fra auth/login.js)
 //   Finans: added, PATCH alt + historikk, Les på nytt, POST /finans/api/search/ask                                    → finans/added40.js, finans/p40.js (+ routes.js txOut/receiptOut)
 //   Gjøremål-Glimt: flere punkter med rekkefølge, sted og person (placeName/after i POST og PATCH)                    → server/gjoremal/
 //   Nyheter Glimt-side: /api/news/glimt, /api/news/glimt/sources, /api/glimt/news-digest                               → news40.js
-//   Julemodus: /api/glimt/settings jul*, julActive; brief.jul                                                         → jul40.js (+ glimt35.js), mellomvaren under
+//   Julemodus: /api/glimt/settings jul*, julActive; brief.jul                                                         → jul40.js (+ glimt/settings.js), mellomvaren under
 //   Hjemlys: /api/hjemlys/*                                                                                           → server/familie/ (mountFamilie)
 //   Fanelinje: GET /api/app/pages + alle nøklene i homeNav                                                            → under (+ mobile.js TAB_IDS)
 import { Hono } from 'hono';
 import { authOrToken } from './mobile.js';
 import { bibleEnabled } from './bible37.js';
-import { glimtSettingsOf } from './glimt35.js';
+import { glimtSettingsOf } from './glimt/settings.js';
 import { julBrief } from './jul40.js';
 import { db } from './db.js';
 import { startHungSweeper } from './ai-run.js';

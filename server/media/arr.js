@@ -6,7 +6,7 @@
 // Tilgang: sesjon eller app-token (skriving krever finance:write) + modulen «media» (admin alltid, andre når admin gir tilgang,
 // PUT /api/media/access). Bare admin kan slette, endre profiler/overvåking, legge til indeksere og velge bort filer.
 // Ruter under /api/media (svarformene står i rapporten for prompt 43 og i kommentarene ved hver rute).
-import { normTitle43, parseEpisodeAsk43 } from '../glimt45/media47.js'; // prompt 47
+import { normTitle43, parseEpisodeAsk43 } from '../glimt/episode-ask.js'; // prompt 47
 import { Hono } from 'hono';
 import { randomBytes, createHash } from 'node:crypto';
 import { AsyncLocalStorage } from 'node:async_hooks';
@@ -951,7 +951,7 @@ async function statusOut(u) {
 
 /* ---------------- Prompt 47: «siste/neste episode av X» (bare Sonarr) ---------------- */
 
-// Tolkningen (normTitle43, parseEpisodeAsk43) ligger i glimt45/media47.js, så Glimt-motoren kan bruke den uten å laste Media.
+// Tolkningen (normTitle43, parseEpisodeAsk43) ligger i glimt/episode-ask.js, så Glimt-motoren kan bruke den uten å laste Media.
 /**
  * Bibliotek først (Sonarr /series), så oppslag. Eksakt normalisert tittel vinner («9-1-1» før «9-1-1: Lone Star»); flere like
  * gode treff → valgknapper. Siste episode = siste sendte (sesong > 0) → Sonarr EpisodeSearch. Neste = neste usendte (bare info).

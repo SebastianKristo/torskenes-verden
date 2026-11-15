@@ -1,5 +1,5 @@
 // Prompt 41 (SERVER41): 17. mai – Glimt med flagg (14.–17. mai) og eget Hjem på selve dagen (claude-code-17-mai.md).
-// Valget ligger i Glimt-innstillingene (glimt35.js): mai17:'auto'|'av'|'pa' (auto = 17. mai i Norge, pa = «Vis nå» som forhåndsvisning).
+// Valget ligger i Glimt-innstillingene (glimt/settings.js): mai17:'auto'|'av'|'pa' (auto = 17. mai i Norge, pa = «Vis nå» som forhåndsvisning).
 // Avledet mai17Active = {on, phase:'17mai'|null, day, home, label, mode, design, until, flag:{red, white, blue}} i GET/PUT /api/glimt/settings (sanntid glimt:settings).
 // GET  /api/glimt/mai17 → {active, dateLabel:'Søndag 17. mai · Grunnlovsdagen', greeting:'Gratulerer med dagen, Sebastian!', city:'Oslo',
 //                          program:[{time, title, kind:'city'|'calendar', past, next}], brief:{title, text, items[]}, hurra:{count, text}, design}
@@ -91,12 +91,12 @@ export async function mai17Day41(u, s, t = Date.now()) {
 
 export const mai17Api = new Hono();
 mai17Api.use('*', authOrToken);
-mai17Api.get('/', async (c) => { const { glimtSettingsOf } = await import('./glimt35.js'); return c.json(await mai17Day41(c.get('user'), glimtSettingsOf(c.get('user')))); });
+mai17Api.get('/', async (c) => { const { glimtSettingsOf } = await import('./glimt/settings.js'); return c.json(await mai17Day41(c.get('user'), glimtSettingsOf(c.get('user')))); });
 mai17Api.put('/design', async (c) => {
   const u = c.get('user'), b = await c.req.json().catch(() => ({}));
   if (typeof b?.on !== 'boolean') return c.json({ error: 'on må være true eller false' }, 400);
   kv.set(u, designKey, { date: ymd().iso, on: b.on });
-  const { glimtSettingsOf } = await import('./glimt35.js');
+  const { glimtSettingsOf } = await import('./glimt/settings.js');
   return c.json({ design: b.on, mai17Active: mai17Active(glimtSettingsOf(u), Date.now(), u) });
 });
 mai17Api.post('/hurra', async (c) => {

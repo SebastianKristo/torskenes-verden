@@ -116,7 +116,7 @@ function tasks(c) {
     <button type="button" class="gc-open" data-gc-go="huskeliste">Åpne Gjøremål ›</button></div>`;
 }
 
-const cal70 = (c) => cal70Html(c, { mode: 'card' }); // prompt 70: kort A (cal70.js)
+const cal70 = (c) => cal70Html(c, { mode: 'card' }); // prompt 70: kort A (glimt/calendar-card.js)
 const KIND = { weather, wx: weather, vaer: weather, calendar, cal: calendar, kalender: calendar, cal70, departures, avganger: departures, packages, pakker: packages, finance, finans: finance, tasks, huskeliste: tasks };
 /** HTML for kortet, eller '' når typen er ukjent. */
 export function cardHtml(card) {

@@ -12,7 +12,7 @@
 // Svaret fra POST /api/tasks/glimt: {kind:'add', intent:'tasks.multi', text, items:[oppgave + placeName, after, mentions, step:{n, label}], undo, engine:'glimt'|'lokal'}
 //   oppgave.who = {userId, name} når en person er nevnt (assignee = personen når hen ser lista), mentions = [bruker-id].
 import { db } from '../db.js';
-import { keepUserWords46 } from '../glimt45/tasks46.js'; // prompt 46: brukerens egne ord i titlene
+import { keepUserWords46 } from '../glimt/tasks.js'; // prompt 46: brukerens egne ord i titlene
 import { parseTask37 } from './glimt.js';
 import { notifyUser } from '../notify.js';
 import { userInfo } from '../auth/session.js';
@@ -156,7 +156,7 @@ export async function understand40(u, text, today, { people = [], lists = [], ai
       + 'Svar KUN JSON {"items":[{"n":"…","list":"…","who":"…","date":"YYYY-MM-DD","time":"HH:MM","place":"…","after":0,"tags":["…"]}]}.\n'
       + `Tekst: «${String(text).slice(0, 600)}»`;
     const j = await Promise.race([ask(prompt), new Promise((r) => setTimeout(() => r(null), 6500).unref?.())]);
-    // Prompt 46 (GLIMT46): titler modellen skrev om, byttes med brukerens egne ord (glimt45/tasks46.js).
+    // Prompt 46 (GLIMT46): titler modellen skrev om, byttes med brukerens egne ord (glimt/tasks.js).
     const ai = keepUserWords46(text, validateAi40(j, { lists, people }), local);
     if (ai && ai.length >= local.length) return { items: ai, engine: 'glimt' };
   } catch { /* lokal tolker */ }

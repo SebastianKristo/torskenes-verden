@@ -24,13 +24,13 @@ test.after(() => { globalThis.fetch = realFetch; });
 
 const { default: app } = await import('../server/index.js');
 const { db, kv } = await import('../server/db.js');
-const E = await import('../server/glimt45/engine.js');
-const P = await import('../server/glimt45/plan.js');
-const P47 = await import('../server/glimt45/plan47.js');
-const W = await import('../server/glimt45/weather46.js');
-const ST = await import('../server/convo60/state.js');
-const S60 = await import('../server/convo60/settings.js');
-const EN = await import('../server/convo60/entities.js');
+const E = await import('../server/glimt/engine.js');
+const P = await import('../server/glimt/plan.js');
+const P47 = await import('../server/glimt/planner.js');
+const W = await import('../server/glimt/weather.js');
+const ST = await import('../server/glimt/convo/state.js');
+const S60 = await import('../server/glimt/convo/settings.js');
+const EN = await import('../server/glimt/convo/entities.js');
 
 E._setClock45({ today: '2026-10-24', nowMin: 600 });
 let ipN = 10;

@@ -157,7 +157,7 @@ async function askAi(u, prompt, attempt) {
 const withTimeout = (p, ms) => Promise.race([p, new Promise((_, rej) => { const t = setTimeout(() => rej(Object.assign(new Error('Tidsavbrudd'), { timeout: true })), ms); t.unref?.(); })]);
 /** → {items, engine:'glimt'|'lokal', engineLabel} */
 /** Prompt 42 (glimt-split.js): liste-kontrakt {tasks:[…]}, ny prompt, lengdevakt og bedre lokal forhåndsdeling. */
-export const _hooks42 = { prompt: null, normalize: null, guard: null, local: null, log: null, verbatim: null }; // verbatim: prompt 46 (glimt45/tasks46.js)
+export const _hooks42 = { prompt: null, normalize: null, guard: null, local: null, log: null, verbatim: null }; // verbatim: prompt 46 (glimt/tasks.js)
 export async function understand41(u, text, { lists = [], people = [], today = osloDate() } = {}) {
   const log = { input_len: String(text ?? '').length, model: null, tasks_count: 0, parse_ok: false, path: 'local' };
   const done = (r) => { log.tasks_count = r.items.length; if (r.engine === 'glimt') { log.path = 'ai'; log.model = r.engineLabel; } try { _hooks42.log?.(u, log); } catch { /* */ } return { ...r, log }; };

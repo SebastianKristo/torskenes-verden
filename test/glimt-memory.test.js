@@ -21,8 +21,8 @@ test.after(() => { globalThis.fetch = realFetch; });
 
 const { default: app } = await import('../server/index.js');
 const quick = await import('../server/kalender/quick.js');
-const assist = await import('../server/assist.js');
-const mem = await import('../server/glimt-memory.js');
+const assist = await import('../server/glimt/assist.js');
+const mem = await import('../server/glimt/memory/remember.js');
 const { OWNER } = await import('../server/db.js');
 const { parseQuick, senderOf, niceCase, memoryMatch, osloTodayISO } = await import('../public/js/quick-time.js');
 assist._setDirectMs(15000);

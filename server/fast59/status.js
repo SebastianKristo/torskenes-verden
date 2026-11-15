@@ -1,6 +1,6 @@
 // Prompt 59 (prompt 49 del 4, D4SRV): statuslinja mens Glimt jobber («Sjekker kalenderen …», «Henter været for Oslo …») og
 // små hjelpere for strømmingen (tekstbiter fra modellen, ord for ord fra kodemalene). Se $S/SERVER59-API.md §1.
-import { thinkFilter } from '../ollama-opts.js';
+import { thinkFilter } from '../ai/ollama-options.js';
 
 const TOOL_TEXT = {
   'calendar.search': 'Sjekker kalenderen …', 'calendar.next': 'Sjekker kalenderen …', 'calendar.list': 'Sjekker kalenderen …',

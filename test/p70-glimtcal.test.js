@@ -22,9 +22,9 @@ test.after(() => { globalThis.fetch = realFetch; });
 
 const { default: app } = await import('../server/index.js');
 const { db, kv } = await import('../server/db.js');
-const E = await import('../server/glimt45/engine.js');
-const C46 = await import('../server/glimt45/calendar46.js');
-const C70 = await import('../server/glimt45/cal70.js');
+const E = await import('../server/glimt/engine.js');
+const C46 = await import('../server/glimt/calendar.js');
+const C70 = await import('../server/glimt/calendar-card.js');
 
 const TODAY = '2026-10-26';
 E._setClock45({ today: TODAY, nowMin: 600 });
@@ -56,7 +56,7 @@ C46._setMovie46(async (t) => (/^dune$/i.test(t) ? { title: 'Dune: Part Two', yea
 
 const EX = 'legg til i kalender at jeg og pappa skal se på dune på colosseum kino 17 desember kl 17:30';
 
-const TL = await import('../server/glimt45/tools.js');
+const TL = await import('../server/glimt/tools.js');
 
 test('«i kalender at …» er ikke en kalender som heter «at»; navn etter «kalenderen» må ha stor forbokstav', () => {
   assert.equal(C46.calendarMention46(EX), null);

@@ -84,7 +84,7 @@ for (const [name, mod, fns] of [['net', net, ['connect', 'createConnection']], [
 syncBuiltinESMExports();
 
 // ---------- Falske tjenester bak globalThis.fetch ----------
-const { todayOslo45, addDays45 } = await import('../server/glimt45/dates.js');
+const { todayOslo45, addDays45 } = await import('../server/glimt/dates.js');
 const D = addDays45(todayOslo45(), -3);
 const DMY = `${D.slice(8, 10)}.${D.slice(5, 7)}.${D.slice(0, 4)}`;
 const MAC_KEY = 'c'.repeat(64);

@@ -57,7 +57,7 @@ globalThis.fetch = mockFetch; // Gemini går via geminiFetch (global fetch)
 test.after(() => { globalThis.fetch = realFetch; });
 
 const { default: app } = await import('../server/index.js');
-const chat = await import('../server/chat.js');
+const chat = await import('../server/ai/chat/routes.js');
 chat._setChatFetch(mockFetch);
 const { auditList } = await import('../server/finans/ai-audit.js');
 

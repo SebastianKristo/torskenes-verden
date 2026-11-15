@@ -6,14 +6,14 @@
 import { streamSSE } from 'hono/streaming';
 import { runAsUser } from '../settings.js';
 import { isAdmin } from '../auth/session.js';
-import { agent45, busyOf45 } from '../glimt45/engine.js';
-import { MODULES45 } from '../glimt45/plan.js';
+import { agent45, busyOf45 } from '../glimt/engine.js';
+import { MODULES45 } from '../glimt/plan.js';
 import { fast59, serverFast59, userFast59, saveFast59, FAST_LABELS59, FAST_HELP59 } from './settings.js';
 import { cacheCount59, cacheClear59, TTL59 } from './cache.js';
 import { wordsOf59 } from './status.js';
 import { warmNow59, warmState59 } from './warm.js';
-import { saveGlimtChat59 } from '../assist.js';
-import { bodyConvo60 } from '../convo60/api.js';
+import { saveGlimtChat59 } from '../glimt/assist.js';
+import { bodyConvo60 } from '../glimt/convo/api.js';
 
 const RID = /^[A-Za-z0-9_-]{8,80}$/;
 const live = new Map(); // `${user}|${requestId}` → AbortController

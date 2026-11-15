@@ -24,16 +24,16 @@ test.after(() => { globalThis.fetch = realFetch; });
 
 const { default: app } = await import('../server/index.js');
 const { db, kv, OWNER } = await import('../server/db.js');
-const E = await import('../server/glimt45/engine.js');
-const P = await import('../server/glimt45/plan.js');
-const D = await import('../server/glimt45/dates.js');
+const E = await import('../server/glimt/engine.js');
+const P = await import('../server/glimt/plan.js');
+const D = await import('../server/glimt/dates.js');
 const C = await import('../server/sched62/cond.js');
 const ST = await import('../server/sched62/store.js');
 const RUN = await import('../server/sched62/run.js');
 const SC = await import('../server/sched62/scheduler.js');
 const SET = await import('../server/sched62/settings.js');
 const TK = await import('../server/sched62/task.js');
-const G35 = await import('../server/glimt35.js');
+const G35 = await import('../server/glimt/settings.js');
 
 E._setClock45({ today: '2026-10-24', nowMin: 600 }); // lørdag 24.10.2026 kl. 10:00 (sommertid til natt til søndag)
 const NOW = Date.parse('2026-10-24T10:00:00+02:00');
@@ -80,7 +80,7 @@ P._setGlimtModel45(async (o) => {
   return { data: { intent: 'chat', calls: [{ tool: 'chat.answer', args: {} }] }, model: 'test-planner' };
 });
 E._setAnswerModel47(async () => ({ text: 'Greit.', model: 'test-answer' }));
-const W = await import('../server/glimt45/weather46.js');
+const W = await import('../server/glimt/weather.js');
 W._setWeather46(async (name) => ({ place: { name, label: name, tz: 'Europe/Oslo' }, now: { temp: 7, cond: 'Skyet', wind: 3 }, source: 'test', days: [0, 1, 2].map((i) => ({ date: D.addDays45('2026-10-24', i), hi: 9 - i * 6, lo: 3 - i * 6, cond: 'Skyet', precipProb: 10 })) }));
 const pushed = [];
 let PRICES = null; // [24 kr/kWh]
@@ -313,7 +313,7 @@ test('«Flytt morgenbriefen til 06:30» endrer den eksisterende brief-innstillin
   assert.equal(c.body.reply, 'Morgenbriefen kommer nå kl. 06:30.');
   assert.equal(G35.glimtSettingsOf(ME).briefs.morning.at, '06:30');
   assert.equal(rows().length, 0, 'ingen ny planlagt oppgave');
-  const { windowsOf } = await import('../server/brief34.js');
+  const { windowsOf } = await import('../server/glimt/brief.js');
   assert.ok(windowsOf(ME).some(([k, h, m]) => k === 'morning' && h === 6 && m === 30), 'brief-planleggeren bruker det nye tidspunktet');
   const l = await A('/api/glimt/schedules');
   assert.equal(l.body.builtin.find((b) => b.id === 'brief:morning').at, '06:30');

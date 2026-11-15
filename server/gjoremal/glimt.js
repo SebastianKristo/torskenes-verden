@@ -533,5 +533,5 @@ export function mountGlimt37(api, T) {
 
 let briefImpl = () => null;
 const setBrief = (fn) => { briefImpl = fn; };
-/** For brief34.js: Gjøremål-kortet i Now Brief ({count, items[3], text}). */
+/** For glimt/brief.js: Gjøremål-kortet i Now Brief ({count, items[3], text}). */
 export const todosForBrief = (u) => { try { return briefImpl(u); } catch { return null; } };

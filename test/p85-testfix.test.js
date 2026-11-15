@@ -1,6 +1,6 @@
 // Prompt 85 (TESTFIX85): rettinger funnet mens de kjente feilende testene ble gjort grønne.
 //  1. Sporing: en returnert sending med passert forventet levering vises som «Returnert», ikke «Forsinket» (server/sporing/shipments.js).
-//  2. Glimt: planlegger modellen bare prat eller nettsøk for et strømprisspørsmål, svarer strømprisverktøyet (server/glimt45/engine.js);
+//  2. Glimt: planlegger modellen bare prat eller nettsøk for et strømprisspørsmål, svarer strømprisverktøyet (server/glimt/engine.js);
 //     planlagte oppgaver om strømpris røres ikke.
 //  3. Min reise (mock-rutetabellen): hvilke minutter i 30-minutterssyklusen 46 står først – begrunner den låste klokka i p41-testen.
 // Ingen nett: fetch er byttet ut.
@@ -38,8 +38,8 @@ test.after(() => { globalThis.fetch = realFetch; });
 const { default: app } = await import('../server/index.js');
 const { db, OWNER } = await import('../server/db.js');
 const trk = await import('../server/sporing/shipments.js');
-const E = await import('../server/glimt45/engine.js');
-const P = await import('../server/glimt45/plan.js');
+const E = await import('../server/glimt/engine.js');
+const P = await import('../server/glimt/plan.js');
 const ruter = await import('../server/ruter41.js');
 
 const r0 = await app.request('/api/login', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ username: 'sebastian', password: 'testpassord1' }) });

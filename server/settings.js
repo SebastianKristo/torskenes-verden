@@ -219,7 +219,7 @@ export const SCHEMA = [
     ['logo_gemini', 'Finn logo med Gemini (bare butikknavnet)', '0', false, 'bool'], // prompt 52: av som standard
     ['logo_verify', 'Sjekk logoen før den lagres', '1', false, 'bool'],
   ]],
-  // Korte AI-oppgaver (Glimt, rask time, logo, kvitteringer, oppsummeringer …) sender think:false til Ollama (server/ollama-opts.js).
+  // Korte AI-oppgaver (Glimt, rask time, logo, kvitteringer, oppsummeringer …) sender think:false til Ollama (server/ai/ollama-options.js).
   ['Lokal AI', { id: 'ailocal', scope: 'personal', domain: 'ollama.com', category: 'AI', help: 'Lokal AI (Ollama) i korte oppgaver som Glimt, rask time, logoer, kvitteringer og oppsummeringer. Tenkemodeller svarer mye raskere når de ikke tenker først.' }, [
     ['ai_think', 'La modellen tenke før den svarer (tregere, men noen ganger smartere)', '0', false, 'bool'],
   ]],

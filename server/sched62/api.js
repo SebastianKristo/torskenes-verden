@@ -8,9 +8,9 @@ import { sched62, serverSched62, userSched62, saveSched62, zone62, LABELS62, HEL
 import { SID62, rowOf62, rowsOf62, publicSchedule62, publicRun62, runsOf62, insertSchedule62, updateSchedule62, deleteSchedule62, nextOf62, KINDS62 } from './store.js';
 import { interpret62, builtinBriefs62, summaryOf62, BRIEF62 } from './task.js';
 import { runNow62, now62 } from './scheduler.js';
-import { nextRuns62, ruleToRRule62, osloParts62, afterQuiet62, quiet62 } from '../glimt45/dates.js';
+import { nextRuns62, ruleToRRule62, osloParts62, afterQuiet62, quiet62 } from '../glimt/dates.js';
 import { ZONES } from '../power-price.js';
-import { glimtSettingsOf, cleanGlimtPatch, saveGlimtSettings } from '../glimt35.js';
+import { glimtSettingsOf, cleanGlimtPatch, saveGlimtSettings } from '../glimt/settings.js';
 import './tools.js';
 
 export const schedulesApi62 = new Hono();

@@ -29,9 +29,9 @@ test.after(() => { globalThis.fetch = realFetch; });
 const { default: app } = await import('../server/index.js');
 const ai = await import('../server/ai-run.js');
 const gate = await import('../server/ai-gate.js');
-const be = await import('../server/omlx58/backend.js');
-const cfg58 = await import('../server/omlx58/config.js');
-const h58 = await import('../server/omlx58/health.js');
+const be = await import('../server/ai/omlx/backend.js');
+const cfg58 = await import('../server/ai/omlx/config.js');
+const h58 = await import('../server/ai/omlx/health.js');
 const { startFakeOmlx58 } = await import('../eval/lib/fake-omlx.mjs');
 const { makeFakeModel } = await import('../eval/lib/fake-model.mjs');
 const { pct58, resolveMlx58 } = await import('../eval/lib/omlx58.mjs');
@@ -197,7 +197,7 @@ test('run(glimt) på oMLX: JSON-skjema, think av (+ /no_think), max_tokens, nøk
 });
 
 test('run(glimt) med verktøy (tools-modus): navn uten punktum til oMLX, tilbake som calendar.create med argumenter', async () => {
-  const { ollamaTools45 } = await import('../server/glimt45/tools.js');
+  const { ollamaTools45 } = await import('../server/glimt/tools.js');
   const tools = ollamaTools45(['calendar.create', 'calendar.search', 'weather.get']);
   const out = await ai.run('glimt', { system: 'Planlegger', prompt: 'Melding: Skal se Dune på Colosseum kino 17.12 17.30', ollamaTools: tools, temperature: 0, numPredict: 320, localOnly: true, noRetry: true });
   const c = lastChat();

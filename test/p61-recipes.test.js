@@ -25,11 +25,11 @@ test.after(() => { globalThis.fetch = realFetch; });
 
 const { default: app } = await import('../server/index.js');
 const { db, kv, OWNER } = await import('../server/db.js');
-const E = await import('../server/glimt45/engine.js');
-const P = await import('../server/glimt45/plan.js');
-const P47 = await import('../server/glimt45/plan47.js');
-const W = await import('../server/glimt45/weather46.js');
-const M47 = await import('../server/glimt45/memory47.js');
+const E = await import('../server/glimt/engine.js');
+const P = await import('../server/glimt/plan.js');
+const P47 = await import('../server/glimt/planner.js');
+const W = await import('../server/glimt/weather.js');
+const M47 = await import('../server/glimt/memory/recall.js');
 const T = await import('../server/recipes61/template.js');
 const S61 = await import('../server/recipes61/settings.js');
 const L61 = await import('../server/recipes61/learn.js');

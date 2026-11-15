@@ -1,6 +1,6 @@
 import { osloParts } from './dates/oslo.js';
 // Prompt 40 (SERVER40): Glimt i julemodus (1. desember – 13. januar), Auto/Av/På + fasevalg (claude-code-glimt-jul.md).
-// Valget lagres per bruker i Glimt-innstillingene (glimt35.js): jul:'auto'|'av'|'pa', julPhase:'advent'|'jul'|'nyttar'|'vinter'|null,
+// Valget lagres per bruker i Glimt-innstillingene (glimt/settings.js): jul:'auto'|'av'|'pa', julPhase:'advent'|'jul'|'nyttar'|'vinter'|null,
 // snow:true, julSound:'av'|'bjelle'. Avledet julActive = {on, phase, until, label, auto, outfit} (Europe/Oslo). Sanntid «glimt:settings».
 // Brief i julemodus: jul = {phase, label, countdown, countdownText, luke:{n, text}|null, aaret?:{title, items}} (luke 1.–24. des, «Året ditt» 31. des).
 //

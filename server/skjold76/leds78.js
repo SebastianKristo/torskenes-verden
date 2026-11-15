@@ -24,7 +24,7 @@ import { lookup as dnsLookup } from 'node:dns/promises';
 import { db, q, kv } from '../db.js';
 import { cabinetRow76, cabinetRows76, partRow76, anchorOf81 } from './store.js';
 import { findTool76 } from './glimt.js';
-import { SENTENCES46 } from '../glimt45/tools46.js';
+import { SENTENCES46 } from '../glimt/tools-weather-subs.js';
 
 if (!q('PRAGMA table_info(skj_cabinets)').all().some((c) => c.name === 'leds')) db.exec('ALTER TABLE skj_cabinets ADD COLUMN leds TEXT');
 

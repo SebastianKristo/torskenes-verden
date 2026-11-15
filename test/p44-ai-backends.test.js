@@ -33,7 +33,7 @@ const sim = createOllamaSim({ base: 'http://ollama.sim:11434', scale: 0.01 });
 const owui = createOwuiSim({ base: 'http://owui.sim:8080', key: KEY, ollama: sim });
 // Falsk hvakosterstrommen.no: 96 kvarterspriser, NOK/kWh = 0,50 + 0,01 × time (uten mva).
 const powerCalls = [];
-const { offsetMin } = await import('../server/chat-tools41.js');
+const { offsetMin } = await import('../server/ai/chat/tools.js');
 function fakePower(url) {
   powerCalls.push(url);
   const m = url.match(/prices\/(\d{4})\/(\d{2})-(\d{2})_(NO[1-5])\.json$/);
@@ -72,9 +72,9 @@ sim.answer = (body) => {
 const { default: app } = await import('../server/index.js');
 const ai = await import('../server/ai-run.js');
 const gate = await import('../server/ai-gate.js');
-const opts = await import('../server/ollama-opts.js');
+const opts = await import('../server/ai/ollama-options.js');
 const web = await import('../server/web-search.js');
-const router = await import('../server/tool-router44.js');
+const router = await import('../server/ai/tool-router.js');
 const { OWNER } = await import('../server/db.js');
 
 async function login(username, password) {
@@ -409,7 +409,7 @@ test('tenkemodeller går direkte til Ollama som standard (Open WebUI sender ikke
   assert.match(b.note, /tenkemodell/);
   assert.equal(gate.chooseBackend({ kind: 'chat', model: 'llama3.2:3b', base: BASE }).backend, 'openwebui');
   assert.equal(gate.chooseBackend({ kind: 'chat', model: 'qwen3:8b', base: BASE, allowThink: true }).backend, 'openwebui');
-  const { kindOf41 } = await import('../server/chat41.js');
+  const { kindOf41 } = await import('../server/ai/chat/auto-model.js');
   assert.equal(kindOf41('hvem er statsminister i England'), 'text', '«England» er ikke en feilkode');
   assert.equal(kindOf41('docker gir ECONNREFUSED'), 'code');
 });

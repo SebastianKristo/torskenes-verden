@@ -25,7 +25,7 @@ delete process.env.MAC_OCR_URL;
 const { hashPassword } = await import('../server/auth/password.js');
 process.env.APP_PASSWORD_HASH = hashPassword('testpassord1');
 
-const { todayOslo45, addDays45 } = await import('../server/glimt45/dates.js');
+const { todayOslo45, addDays45 } = await import('../server/glimt/dates.js');
 const TODAY = todayOslo45();
 const D = addDays45(TODAY, -3);
 const DMY = `${D.slice(8, 10)}.${D.slice(5, 7)}.${D.slice(0, 4)}`;

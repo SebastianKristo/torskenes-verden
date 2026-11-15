@@ -27,7 +27,7 @@ const DATOER = vektorer('datoer'), ABONNEMENT = vektorer('abonnement'), SERVERAD
 
 const { hashPassword } = await import('../server/auth/password.js');
 process.env.APP_PASSWORD_HASH = hashPassword('testpassord1');
-const { whenOf45, todayOslo45 } = await import('../server/glimt45/dates.js');
+const { whenOf45, todayOslo45 } = await import('../server/glimt/dates.js');
 const { parseDay: serverParseDay } = await import('../server/parse-day35.js');
 const { parseDay: webParseDay } = await import('../public/js/parse-day35.js');
 const { parseQuick, osloTodayISO } = await import('../public/js/quick-time.js');
@@ -132,7 +132,7 @@ test('testvektorer: idag-fasiten er Oslo-datoen (Intl)', () => {
 
 const DATO_IMPL = [
   // [navn, bare dato?, (tekst, idag, naaMin, naa) → {dato, tid?}]
-  ['server glimt45/dates.js whenOf45', false, (v, idag, naaMin) => { const r = whenOf45(v.tekst, idag, { nowMin: naaMin }); return { dato: r.date, tid: r.start }; }],
+  ['server glimt/dates.js whenOf45', false, (v, idag, naaMin) => { const r = whenOf45(v.tekst, idag, { nowMin: naaMin }); return { dato: r.date, tid: r.start }; }],
   ['server parse-day35.js parseDay', true, (v, idag) => ({ dato: serverParseDay(v.tekst, idag)?.date ?? null })],
   ['server dates/quick.js parseQuick (Rask-avtaler)', false, (v, idag, naaMin) => { const r = serverQuick(v.tekst, idag, undefined, { nowMin: naaMin }); return { dato: r.date ?? null, tid: r.start ?? null }; }],
   ['server POST /api/dates/parse', false, (v) => { const r = parseDatesRequest({ text: v.tekst, now: v.naa }).body; return { dato: r.date, tid: r.time }; }],
@@ -193,7 +193,7 @@ for (const [impl, fn, gjelder = () => true] of ABO_IMPL) {
 /* ---------------- L3 «i dag» ---------------- */
 
 const IDAG_IMPL = [
-  ['server glimt45/dates.js todayOslo45', (ms) => todayOslo45(new RealDate(ms))],
+  ['server glimt/dates.js todayOslo45', (ms) => todayOslo45(new RealDate(ms))],
   ['server birthdays.js osloDate', (ms) => osloDate(ms)],
   ['server media/helpers.js ymd', (ms) => medfamYmd(ms)],
   ['server jul40.js osloYmd', (ms) => { const { y, m, d } = osloYmd(ms); return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`; }],

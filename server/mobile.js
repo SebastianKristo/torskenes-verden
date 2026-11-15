@@ -61,7 +61,7 @@ export function meOut(id) {
   const v = avatarV(id);
   // Prompt 43: Media-fanen vises for admin og brukere admin har gitt tilgang (samme nøkkel som mediaAllowed43 i media/arr.js).
   const media = isAdmin(id) || ((kv.get(OWNER, 'media43_access', {}) ?? {}).users ?? []).includes(id);
-  // Prompt 52: Glimt-figuren per bruker (eget valg → admins standard for brukeren → glimt). Samme regel som glimtSettingsOf (glimt35.js).
+  // Prompt 52: Glimt-figuren per bruker (eget valg → admins standard for brukeren → glimt). Samme regel som glimtSettingsOf (glimt/settings.js).
   const ownChar = kv.get(id, 'glimt35_settings', null)?.char, defChar = (kv.get(OWNER, 'glimt_char_defaults52', {}) ?? {})[id];
   const glimtChar = typeof ownChar === 'string' ? ownChar : typeof defChar === 'string' ? defChar : 'glimt';
   return { ...u, serverName: serverName(), avatarUrl: v ? `/api/me/avatar?v=${v}` : null, language: languageOf(id), media,

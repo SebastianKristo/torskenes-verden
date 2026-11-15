@@ -228,7 +228,7 @@ fun parseChatMsg27(o: JSONObject): ChatMsg27? {
     if (role == "system") return null
     val think52 = parseThink52(o) // prompt 52: tankegangen lagres på meldingen
     val content = stripThink52(o.optString("content", ""))
-    // Svarene har meta {model, tokensPerSec, ms, used, stopped} (server/chat.js).
+    // Svarene har meta {model, tokensPerSec, ms, used, stopped} (server/ai/chat/routes.js).
     val meta = o.optJSONObject("meta") ?: o
     val used = meta.optJSONArray("used").strs27().ifEmpty { o.optJSONArray("tools").strs27() }
     // Prompt 50: bildevedleggene vises som miniatyrer (files50), ikke som navnepiller.
