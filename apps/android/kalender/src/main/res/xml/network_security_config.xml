@@ -5,7 +5,7 @@
   og et lokalt navn må peke til en lokal adresse. Android kan ikke uttrykke IP-områder i denne fila. Alt annet må gå over https.
 
   S2 (Fase 5): brukerinstallerte CA-er godtas bare for lokale navn (.local, .lan, .home.arpa, .internal), slik at et selvsignert
-  sertifikat for homelab hjemme fortsatt virker. For alle andre verter (også os.smarthjemeksperten.no og home.kristo.no, som har
+  sertifikat for homelab hjemme fortsatt virker. For alle andre verter (også standardserveren og home.kristo.no, som har
   offentlige sertifikater) gjelder bare systemets CA-er, så en CA installert av MDM eller en angriper ikke kan lese trafikken.
   https mot en lokal IP-adresse med selvsignert sertifikat virker ikke lenger; bruk http:// på lokalt nett eller et .lan-navn.
 -->
