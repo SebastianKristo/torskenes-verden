@@ -2,7 +2,9 @@
 
 [← Til README](../README.md)
 
-Begrepene som skal brukes i grensesnittet på web, iPhone, Mac, Android og klokka. Grunnlaget er kartleggingen i [E-ia.md §6](opprydding/detaljer/E-ia.md) med beslutningene i [BESLUTNINGER.md](opprydding/BESLUTNINGER.md) (Q1–Q12) brukt. Navnene brukes i ny tekst fra Fase 1. Menyer og sider får de nye navnene i Fase 6.
+Begrepene som skal brukes i grensesnittet på web, iPhone, Mac, Android og klokka. Grunnlaget er kartleggingen i [E-ia.md §6](opprydding/detaljer/E-ia.md) med beslutningene i [BESLUTNINGER.md](opprydding/BESLUTNINGER.md) (Q1–Q12) brukt. Navnene brukes i ny tekst fra Fase 1. Menyer og sider har de nye navnene fra Fase 6.
+
+Navnene på modulene, undersidene, gruppene og sidene i Innstillinger står i [`shared/schemas/moduler.json`](../shared/schemas/moduler.json), og gruppene i Tilkoblinger i [`shared/schemas/tilkoblinger.json`](../shared/schemas/tilkoblinger.json). Klientene henter dem fra serveren (`GET /api/moduler`, se [api.md](api.md)). Endres et navn, endres det der og her.
 
 Når du finner et begrep som mangler eller brukes ulikt, legg det til her i samme endring som retter teksten.
 
@@ -50,3 +52,31 @@ Når du finner et begrep som mangler eller brukes ulikt, legg det til her i samm
 |---|---|---|
 | Domener / Sporing (mellomrom rundt skråstrek) | Domener/Sporing | Likt på alle plattformer |
 | Appens profil | Appprofil | Lettere å lese |
+
+## Avgjort i Fase 6 (modullisten)
+
+| Bruk | Ikke bruk | Merknad |
+|---|---|---|
+| Gruppene **I dag**, **Hjemme**, **Tid**, **Ute**, **Økonomi**, **Fritid og læring**, **Verksted**, **Drift** | – | Rekkefølgen i «Alle sider» og Mer (E-ia §4) |
+| **Alle sider ▾** (menyen i toppmenyen på desktop) | Mer ▾ (på desktop), Flere sider | Viser alle modulene gruppert (Q6). «Mer» brukes bare om fanen i bunnmenyen på mobil |
+| **Alle sider** (tittelen i Mer på mobil) | Snarveier (som tittel), Alle sider først etter snarveiene | Modulene først, eksterne snarveier nederst (O12) |
+| **Snarveier** (eksterne lenker, nederst i Mer) | – | |
+| **Smarthjem** (`#/hjem`) | Hjem | `#/smarthjem` virker også |
+| **Oversikt** (`#/oversikt`) | Dashboard, dashbordet | `#/dash` videresendes |
+| **Gjøremål** (`#/gjoremal`) | Huskeliste, huskelisten | `#/huskeliste` og `#/huske` videresendes (O6). Navnet på en liste brukeren selv har kalt «Huskeliste», endres ikke |
+| **Reise** med fanene **Avganger** og **Kart** (`#/reise`, `#/reise/kart`) | Ruter (som modulnavn), Kart (som egen modul) | `#/kart`, `#/avganger` og `#/ruter` videresendes (Q8, Q9) |
+| **Kart** (fane i Familie: posisjoner og soner, `#/familie/kart`) | Familie og kart | Q9 |
+| **Kalender** med filtrene **Alle**, **Familie**, **Bursdager** og **Skole** | Familiekalender | `#/kalender/familie` og `#/kalender/bursdager`; `#/familiekalender` og `#/bursdager` videresendes (Q5) |
+| Kalendervisningene **År**, **Måned**, **Uke**, **3 dager**, **Dag**, **Liste** (i den rekkefølgen) | Dag → År (motsatt rekkefølge) | Kort form **Mnd** og **3 d** bare der plassen ikke strekker til |
+| Media-fanene **Nå**, **Kommer**, **Bibliotek**, **Nedlastinger**, **Kilder** (NRK og Musikk) | Oversikt (i Media), Kalender (i Media) | «Kommer» er det som kommer ut snart. `#/media/kalender` virker fortsatt |
+| **Nyheter** (modulen og arket), **Nyhetslinje** (stripen) | Nyhetsleser, nyhetsbar, Siste nytt, SISTE NYTT, ticker | Stripen har etiketten «NYHETER» (Q10) |
+| **Brief** | Now Brief | Q7 |
+| **Tilpass Oversikt** (profilmenyen: kortene på Oversikt) | Rediger widgets | O4 |
+| **Utseende og faner** (profilmenyen: åpner Utseende) | Tilpass forside og meny | |
+| Innstillinger: **Konto og sikkerhet** · **Utseende** · **Varsler** · **Husstand** · **Glimt og AI** · **Tilkoblinger** · **Moduler** · **Enheter og widgets** · **Server** | Konto (alene), Brukere og familie, App (som side), Generelt (som gruppe) | Samme rekkefølge på alle plattformer (E-ia §4, Q12) |
+| **Enheter og widgets** (widgets på telefonen, API-tokens, logg inn på en annen enhet) | App, Mobilapper | O4. Navn og ikon på appen står under Utseende |
+| **Levering** (Varsler: haptikk, lyd og volum) | Haptikk (som varselgruppe), Varsellyd (som egen gruppe) | O9. Varselgruppene heter som modulene: Sporing, Økonomi, Familie, Reise, Kalender, Media |
+| Tilkoblinger-gruppene **Smarthjem**, **Kalender og e-post**, **Media**, **Økonomi**, **Reise og pakker**, **AI**, **Varsler**, **Nettverk**, **Generelt** | Hjem, Informasjon, Transport og pakker, Skole, Finans, Rom, Annet (som integrasjonsgruppe) | Én gruppering for `/api/integrations`, `/api/config` og appene (O8) |
+| **Server → System** (oppdateringer) | Nordlys OS · oppdatering | «Nordlys OS» bare om serverprogramvaren i teknisk tekst (Q2) |
+| Skjold Lab-kategoriene **Motstander**, **Kondensatorer**, **Dioder og LED**, **Transistorer**, **IC-er**, **Mikrokontrollere**, **Sensorer**, **Moduler**, **Kontakter**, **Kabler**, **Skruer og bolter**, **Mutre og skiver**, **Avstandsstykker**, **Brytere**, **Sikringer**, **Verktøy**, **Diverse** | LED, Kabel, Kabelsko, Skruer (som standardkategori) | Standardlisten (`server/skjold/kategorier.js`). Brukerens egne kategorier endres ikke |
+| **Helse (Husstand)** | Helse (Familie) | Innstillinger → Husstand → Helse |
