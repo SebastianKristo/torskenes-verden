@@ -189,6 +189,11 @@ test('layout: fanelinje (navn og ikon) og fargetema for ikonene', async () => {
   assert.equal(g.body.iconTheme, 'varm');
   assert.ok(g.body.tabBarDefault.items.length >= 4);
   assert.equal((await M('/me/layout', 'PUT', { tabBar: { items: [{ id: 'ukjent' }] } })).status, 400);
+  // Fase 6: modul-id-ene fra modullisten kan ligge i fanelinja (Studie og Skjold Lab også), og de gamle nøklene virker fortsatt.
+  const mod = await M('/me/layout', 'PUT', { tabBar: { items: [{ id: 'oversikt' }, { id: 'reise' }, { id: 'studie' }, { id: 'skjold' }, { id: 'mer' }] } });
+  assert.equal(mod.status, 200, mod.text);
+  assert.equal((await M('/me/layout', 'PUT', { tabBar: { items: [{ id: 'hjem' }, { id: 'avganger' }, { id: 'huske' }, { id: 'mer' }] } })).status, 200);
+  assert.deepEqual(g.body.tabBarDefault.items.map((x) => x.label).slice(0, 2), ['Oversikt', 'Økonomi']);
   assert.equal((await M('/me/layout', 'PUT', { tabBar: { items: Array.from({ length: 7 }, () => ({ id: 'hjem' })) } })).status, 400);
   assert.equal((await M('/me/layout', 'PUT', { iconTheme: 'neon' })).status, 400);
   const me = await M('/me');
