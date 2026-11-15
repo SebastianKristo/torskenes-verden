@@ -57,7 +57,7 @@ test('cache: /version.json, HTML no-cache med ?v=<build>, JS-importer versjonert
   const page = await A('/');
   assert.match(page.headers.get('cache-control'), /no-cache, must-revalidate/);
   assert.ok(page.text.includes(`/assets/js/app.js?v=${B}`), 'skript får ?v');
-  assert.ok(page.text.includes(`/assets/css/app.css?v=${B}`), 'stilark får ?v');
+  assert.ok(page.text.includes(`/assets/css/base.css?v=${B}`), 'stilark får ?v');
   assert.ok(page.text.includes(`<meta name="nordlys-build" content="${B}">`));
   assert.ok(!page.text.includes('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@500;600&display=swap?v='), 'eksterne lenker røres ikke');
   const js = await A('/assets/js/app.js');
@@ -67,8 +67,8 @@ test('cache: /version.json, HTML no-cache med ?v=<build>, JS-importer versjonert
   assert.equal((await app.request('/assets/js/app.js', { headers: { 'if-none-match': js.headers.get('etag') } })).status, 304);
   assert.match((await A(`/assets/js/app.js?v=${B}`)).headers.get('cache-control'), /max-age=31536000, immutable/);
   assert.equal((await A('/assets/js/app.js?v=gammel')).headers.get('cache-control'), 'no-cache');
-  assert.match((await A(`/assets/css/app.css?v=${B}`)).headers.get('cache-control'), /immutable/);
-  assert.equal((await A('/assets/css/app.css')).headers.get('cache-control'), 'no-cache');
+  assert.match((await A(`/assets/css/base.css?v=${B}`)).headers.get('cache-control'), /immutable/);
+  assert.equal((await A('/assets/css/base.css')).headers.get('cache-control'), 'no-cache');
   assert.match((await A('/sw.js')).headers.get('cache-control'), /no-cache, must-revalidate/);
   assert.match((await A('/finans/sw.js')).headers.get('cache-control'), /no-cache, must-revalidate/);
   assert.match((await A('/manifest.webmanifest')).headers.get('cache-control'), /no-cache/);

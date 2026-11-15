@@ -1,0 +1,27 @@
+/* /app-auth: godkjenning av innlogging i Kalender-appen når Homelab-appen ikke er installert. */
+
+/* ---------- /app-auth (Kalender-innlogging uten Homelab-appen) ---------- */
+.aa41-body{margin:0;min-height:100vh;min-height:100dvh;background:#f3efe6;color:#1b1a17;font-family:Manrope,system-ui,sans-serif;display:grid;place-items:center;padding:16px;box-sizing:border-box}
+.aa41{width:100%;display:grid;place-items:center}
+.aa41-card{width:min(420px,100%);box-sizing:border-box;background:#fffdf8;border-radius:28px;padding:28px 24px;display:flex;flex-direction:column;gap:12px;box-shadow:0 20px 50px -30px rgba(0,0,0,.35)}
+.aa41-ic{width:56px;height:56px;border-radius:14px;background:#fff;box-shadow:inset 0 0 0 1px #e3ddcf;display:grid;place-items:center;border-top:12px solid #b23a2a;box-sizing:border-box}
+.aa41-ic b{font:600 22px Newsreader,Georgia,serif}
+.aa41-k{font:600 11px 'IBM Plex Mono',ui-monospace,monospace;letter-spacing:.14em;color:#b23a2a}
+.aa41-t{font:500 28px/1.1 Newsreader,Georgia,serif}
+.aa41-s{font-size:14.5px;line-height:1.5;color:#6b665c}
+.aa41-who{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:16px;background:#f3efe6}
+.aa41-who i{flex:none;width:36px;height:36px;border-radius:18px;background:#1b1a17;color:#f3efe6;display:grid;place-items:center;font:700 13px Manrope,system-ui,sans-serif;font-style:normal}
+.aa41-who span{display:flex;flex-direction:column;min-width:0}.aa41-who small{color:#6f6a5f;font-size:12.5px}
+.aa41-acts{display:flex;gap:10px}
+.aa41-acts button{flex:1;height:50px;border-radius:25px;border:1px solid #d8d1c2;background:transparent;color:#1b1a17;cursor:pointer;font:700 15px Manrope,system-ui,sans-serif}
+.aa41-acts .aa41-ok{border:0;background:#1b1a17;color:#f3efe6}
+.aa41-acts button:disabled{opacity:.6;cursor:default}
+.aa41-err{font-size:13px;color:#b23a2a;min-height:1em}
+@media (prefers-color-scheme:dark){
+  .aa41-body{background:#161513;color:#efe9de}
+  .aa41-card{background:#211f1b;box-shadow:none}
+  .aa41-s{color:#a49d91}.aa41-k{color:#ec7a64}
+  .aa41-who{background:#2b2824}.aa41-who i{background:#efe9de;color:#161513}
+  .aa41-acts button{border-color:#3b3731;color:#efe9de}.aa41-acts .aa41-ok{background:#efe9de;color:#161513}
+  .aa41-ic{background:#2b2824;box-shadow:none}
+}

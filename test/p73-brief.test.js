@@ -185,7 +185,7 @@ test('web: Innstillinger → Glimt og ⚙-arket har INNHOLD I BRIEFEN med piler,
   assert.match(g, /settings73Html\(\)/);
   assert.match(g, /settings73Click\(e, redraw\)/);
   assert.doesNotMatch(g, /KORT I BRIEFEN/);
-  assert.match(src('public/css/web73-brief.css'), /\.b73-row\.off \.b73-t\{opacity:\.45\}/);
+  assert.match(src('public/css/pages/innstillinger.css'), /\.b73-row\.off \.b73-t\{opacity:\.45\}/);
 });
 
 test('web: briefen tegnes fra lista med cache per kort, skjelett i full høyde, 6 s og forhåndshenting', () => {
@@ -200,7 +200,7 @@ test('web: briefen tegnes fra lista med cache per kort, skjelett i full høyde, 
   assert.match(b, /Klarte ikke hente/);
   assert.match(b, /Prøv igjen/);
   assert.match(b, /min-height:\$\{H73\[key\]/);
-  assert.match(src('public/css/web73-brief.css'), /#e6dfd1/);
+  assert.match(src('public/css/pages/oversikt.css'), /#e6dfd1/);
   assert.match(p, /cards73Html\(/);
   assert.match(p, /onKeys73\(\)/);
   assert.match(p, /prefetch73\(\)/);

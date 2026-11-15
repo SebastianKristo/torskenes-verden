@@ -38,7 +38,7 @@ test('Familie/Media: snarveien settes etter fotovinduet, ikke oppå toppmenyen',
 });
 
 test('Sporing: fremdriften vises i mørk modus, og klokkeslettet kuttes ikke', () => {
-  const paper = read('css/paper.css');
+  const paper = read('css/overgang/sporing.css');
   assert.ok(paper.includes(`${DARK} .trk-step.dn i,${DARK} .trk-step.ln em{background:var(--ink)}`));
   assert.ok(paper.includes(`${DARK} .trk-step.cur i{background:var(--acc)}`));
   assert.ok(paper.includes(`${DARK} .trk-step.fin i,${DARK} .trk-step.fin.ln em{background:var(--pos)}`));
@@ -101,8 +101,8 @@ test('Ikoner: /api/icons/sets hentes én gang, ikke én gang per ikon', () => {
 });
 
 test('Domener og Varsler på mobil: pilleboksen og «Fra og til» brytes pent', () => {
-  const css = read('css/app.css');
-  assert.match(css, /\n\.dm-pills\{[^}]*flex-wrap:wrap;[^}]*border-radius:25px;/);
+  assert.match(read('css/pages/domener.css'), /\n\.dm-pills\{[^}]*flex-wrap:wrap;[^}]*border-radius:25px;/);
+  const css = read('css/pages/innstillinger.css');
   assert.match(css, /@media \(max-width:520px\)\{#settings \.set-body \.sg-row:has\(>\.nf-times\)\{flex-wrap:wrap\}/);
   assert.ok(css.includes(`${DARK} .nf-times input{color-scheme:dark}`));
 });

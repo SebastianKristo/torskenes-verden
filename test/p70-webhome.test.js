@@ -39,7 +39,7 @@ test('hjem-scroll-mens-ai: ingen fullskjerm-lag, trykk utenfor < 8 px, sveip fra
   assert.match(x, /if \(!e\.target\.closest\('\.gl-grab'\)\) return;/, 'bare fra grepet');
   assert.match(x, /dy > 60 && GL\.q/, 'dra ned åpner i Chat');
   assert.match(x, /Glimt svarte/);
-  const css = read('public/css/web38.css');
+  const css = read('public/css/pages/oversikt.css');
   assert.doesNotMatch(css, /\.gl-scrim\{/);
   assert.match(css, /\.gl-layer \.gl-ans\{[^}]*touch-action:pan-y/);
   assert.match(css, /\.gl-grab\{[^}]*height:30px;[^}]*touch-action:none/);
@@ -54,6 +54,6 @@ test('widget-storrelse-mobil: håndtak ↔, terskel 40 px, trykk bytter, sz lagr
   assert.match(h, /Math\.abs\(dx\) < 6\) \{ cur = !h0;/, 'trykk bytter');
   assert.match(h, /sz: \{ \.\.\.H\.sz \}/, 'pwa52hjem.sz lagres sammen med order og hidden');
   assert.match(h, /window\.addEventListener\('pointermove', mv\)/);
-  const css = read('public/css/web52.css');
+  const css = read('public/css/pages/oversikt.css');
   assert.match(css, /\.h52-rz button\{width:34px;height:34px;[^}]*touch-action:none/);
 });

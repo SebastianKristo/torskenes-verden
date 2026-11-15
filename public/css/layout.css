@@ -1,0 +1,488 @@
+/* Skallet: bakgrunn, topplinje med faner, profilmeny, fotovinduet (Papir), nyhetslinjen, bunnmenyen på mobil,
+   oppstart (skjelett) og Kalender.app-modus. Stil (Papir/Glass) × modus (lys/mørk) settes på <html> av hl-boot.js. */
+
+/* Bakgrunn med overtoning: to lag som veksler. */
+.bg{position:fixed;inset:0;z-index:-1;background:var(--page)}
+.bg-layer{position:absolute;inset:0;background-size:cover;background-position:center 30%;opacity:0;transition:opacity 1.2s ease}
+.bg-layer.on{opacity:1}
+.bg::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(7,8,11,.25),rgba(7,8,11,.75))}
+
+.shell{min-height:100vh;padding:20px var(--side) 48px;display:flex;flex-direction:column;gap:28px}
+
+/* Topplinje */
+.top{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.logo{width:44px;height:44px;border-radius:12px;background:#fff;color:var(--lock);display:grid;place-items:center;font-family:var(--mono);font-weight:500;flex:0 0 auto}
+.pillnav{margin-left:auto;display:flex;gap:4px;padding:5px;border:1px solid var(--line);border-radius:999px;background:var(--pill);flex-wrap:wrap;backdrop-filter:blur(12px)}
+.pillnav a{padding:8px 18px;border-radius:999px;font-size:15px;font-weight:500;color:var(--text)}
+.pillnav a[aria-current=page]{background:#fff;color:var(--lock)}
+.pill{display:flex;align-items:center;gap:8px;padding:10px 16px;border:1px solid var(--line);border-radius:999px;background:var(--pill);font-size:14px;backdrop-filter:blur(12px);color:var(--text)}
+.profile{position:relative}
+.profile-btn{display:flex;align-items:center;gap:8px;height:44px;padding:0 4px 0 14px;border-radius:999px;border:1px solid var(--line);background:var(--pill);color:var(--text)}
+.burger{display:flex;flex-direction:column;gap:3px}.burger i{width:14px;height:2px;border-radius:1px;background:var(--text)}
+.avatar{width:36px;height:36px;border-radius:50%;background:var(--blue);color:var(--lock);display:grid;place-items:center;font-weight:600}
+.menu{position:absolute;right:0;top:54px;z-index:20;min-width:220px;padding:6px;border-radius:18px;background:rgba(14,17,26,.97);backdrop-filter:blur(20px);border:1px solid var(--line);box-shadow:0 16px 40px rgba(0,0,0,.5);display:flex;flex-direction:column}
+.menu-head{padding:10px 14px 8px;font-size:13px;color:var(--muted)}
+.menu button,.menu a{display:flex;align-items:center;gap:10px;width:100%;padding:12px 14px;border:0;border-radius:12px;background:transparent;color:var(--text);font-size:15px;text-align:left}
+.menu button:hover,.menu a:hover{background:var(--row)}
+.menu hr{border:0;height:1px;background:var(--line);margin:4px 8px}
+.menu .danger{color:var(--red)}
+
+/* Kort og rutenett */
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,330px),1fr));gap:var(--gap)}
+
+.grid.eco{grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr))}
+
+.page-title{font-size:40px;font-weight:300}
+
+.page-title b{font-weight:700}
+
+.hscroll{display:flex;gap:12px;overflow-x:auto;margin:0 calc(-1 * var(--pad-card));padding:0 var(--pad-card)}
+
+/* Drag-and-drop */
+[data-dnd]>*{cursor:grab;transition:opacity .15s,transform .15s}
+[data-dnd]>.dragging{opacity:.55;cursor:grabbing;box-shadow:0 12px 30px -12px rgba(0,0,0,.5)}
+body.dnd-active,body.dnd-active *{user-select:none!important;-webkit-user-select:none!important;cursor:grabbing!important}
+[data-dnd]>.drop-target{outline:2px dashed var(--blue);outline-offset:4px}
+[data-dnd]>.lifted{transform:scale(.97);opacity:.7}
+
+.bottomnav{display:none}
+
+.mob-only{display:none}
+
+/* ---------- Mobil ---------- */
+@media (max-width:767px){:root{--r-card:28px;--pad-card:20px;--gap:14px;--side:16px}
+  body{background:#000}
+  .bg::after{background:linear-gradient(180deg,rgba(7,8,11,.2),rgba(7,8,11,.85) 60%)}
+  .shell{max-width:440px;margin:0 auto;padding:calc(env(safe-area-inset-top) + 20px) 16px calc(env(safe-area-inset-bottom) + 120px);gap:14px}
+  .top{justify-content:space-between;flex-wrap:nowrap}
+  .logo{width:40px;height:40px;font-size:13px}
+  .pillnav,.desk-only{display:none!important}
+  .mob-only{display:revert}
+  .top .pill{margin-left:auto;padding:0 14px;height:40px;font-size:13px}
+  .profile-btn{height:40px}
+  .avatar{width:32px;height:32px}
+  .grid,.grid.eco{display:flex;flex-direction:column}
+  .page-title{font-size:32px;padding:8px 4px}
+  .bottomnav{display:grid;position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom) + 16px);width:calc(100% - 32px);max-width:408px;grid-template-columns:repeat(4,1fr);gap:4px;padding:6px;border-radius:999px;background:rgba(10,12,18,.82);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid var(--line);z-index:6}
+  .bottomnav a{height:52px;border-radius:999px;display:grid;place-items:center;font-size:14px;font-weight:500}
+  .bottomnav a[aria-current=page]{background:#fff;color:var(--lock)}}
+
+.card.m-list{padding:12px;gap:8px}
+
+/* ---------- Prompt 03 ---------- */
+
+/* Header og faner kan omorganiseres; header bruker space-between når rekkefølgen kan endres. */
+.top{justify-content:space-between}
+.pillnav{margin-left:0}
+.top[data-dnd]>*,.pillnav[data-dnd]>*{cursor:pointer}
+
+/* Nyhetslinje */
+.ticker{display:flex;align-items:center;height:44px;border-radius:999px;border:1px solid var(--line);background:rgba(10,12,18,.72);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);overflow:hidden}
+.ticker-label{flex:0 0 auto;align-self:stretch;display:flex;align-items:center;padding:0 18px;background:#c8102e;color:#fff;font-weight:600;font-size:13px;letter-spacing:.06em}
+.ticker-view{flex:1;min-width:0;overflow:hidden;-webkit-mask-image:linear-gradient(90deg,transparent,#000 4%,#000 96%,transparent);mask-image:linear-gradient(90deg,transparent,#000 4%,#000 96%,transparent)}
+.ticker-track{display:flex;width:max-content;animation:ticker var(--news-dur,70s) linear infinite}
+.ticker:not(.no-pause):hover .ticker-track{animation-play-state:paused}
+.ticker-track a{display:flex;align-items:center;gap:10px;padding:0 28px;font-size:15px;flex:0 0 auto;white-space:nowrap}
+.ticker-src{font-size:11px;font-family:var(--mono);font-weight:500;padding:2px 7px;border-radius:5px;color:#fff}
+@keyframes ticker{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+@media (prefers-reduced-motion:reduce){.ticker-track{animation:none}.ticker-view{overflow-x:auto}}
+
+/* ---------- Prompt 04b: topplinje, Hjem, Matplan, Domener ---------- */
+
+.top{justify-content:flex-start;gap:var(--hl-head-gap,16px)}
+.pillnav{gap:var(--hl-tab-gap,2px)}
+.pillnav a{padding:8px var(--hl-tab-pad,12px)}
+.top-range{display:flex;align-items:center;gap:14px;font-size:14px}
+.top-range input{flex:1;accent-color:var(--blue)}
+.top-range span{width:56px;text-align:right}
+
+/* ---------- Topplinje: flytt elementer (prompt 05) ---------- */
+.top{position:relative;z-index:10}
+.top [data-hp]{position:relative}
+.hp-grip{position:absolute;inset:-5px;z-index:3;border:1.5px dashed var(--blue);border-radius:999px;cursor:move;touch-action:none;background:rgba(168,212,251,.08)}
+.top .logo>.hp-grip{border-radius:16px}
+.top.hp-edit .menu{display:none}
+.hp-bar{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:60;display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 8px 8px 18px;border-radius:999px;background:rgba(14,17,26,.96);border:1px solid #3a4560;box-shadow:0 16px 40px rgba(0,0,0,.5);font-size:14px;max-width:calc(100vw - 32px)}
+.hp-bar span{color:#b6bccb}
+.hp-btn{padding:8px 14px;border-radius:999px;border:1px solid #3a4560;background:transparent;color:var(--text);font-size:14px}
+.hp-btn.pri{border:0;background:var(--blue);color:var(--lock);font-weight:600;padding:8px 16px}
+.row-btns{display:flex;gap:8px;flex-wrap:wrap}
+.row-btns .btn{padding:9px 16px;font-size:14px}
+
+/* ---------- Topplinje: logo til venstre, resten samlet til høyre (standard) ---------- */
+@media (min-width:768px){.top.hp-right>[data-hp=logo]{margin-right:auto}}
+
+/* ---------- Bakgrunn og «Siste nytt» bare på dashboardet ---------- */
+body.not-dash .bg-layer{display:none}
+body.not-dash #ticker{display:none!important}
+/* Alle faner unntatt Dashboard bruker Matplan-fargene: nøytral mørk side, kort og felter uten blåstikk. */
+body.not-dash{--page:#111113;--lock:#111113;--card:#19191B;--row:#202022;--line:#262628;--field:#202022;--pill:#19191B;--glass:#19191B;background:#111113}
+body.not-dash .bg{background:#111113}
+body.not-dash .bg::after{display:none}
+body.not-dash .card,body.not-dash .dm-card{background:#19191B;border:1px solid #262628}
+body.not-dash .card.glass{backdrop-filter:none;-webkit-backdrop-filter:none}
+body.not-dash .pillnav,body.not-dash .pill,body.not-dash .profile-btn,body.not-dash .dm-pills,body.not-dash .dm-per{background:#19191B;border-color:#262628;backdrop-filter:none}
+body.not-dash .dm-per button[aria-pressed=true],body.not-dash .dm-chips span,body.not-dash .dm-bar .t,body.not-dash .dm-scale i{background:#202022}
+body.not-dash .dm-form input,body.not-dash .dm-form select{background:#202022;border-color:#262628}
+body.not-dash .dm-dns{border-color:#262628}
+body.not-dash .fx{--f-bg:#111113;--f-card:#19191B;--f-line:#262628;--f-in:#2E2E30;--f-sub:#202022}
+body.not-dash .sat-map{background:#141416}
+body.not-dash .bottomnav{background:rgba(25,25,27,.92);border-color:#262628}
+.ticker-speed{flex:0 0 auto;align-self:stretch;display:flex;align-items:center;gap:6px;padding:0 14px 0 12px;border:0;border-left:1px solid var(--line);background:transparent;color:var(--text-2);font-size:12px;cursor:pointer}
+.ticker-speed:hover{color:var(--text);background:rgba(255,255,255,.04)}
+
+/* Bakgrunn (bgsvc.js): uskarphet og mørklegging fra brukerens valg, scrim, regn/snø og Innstillinger → Utseende → Bakgrunn. */
+:root{--bg-blur:0px;--bg-dim:0}
+.bg-layer{filter:blur(var(--bg-blur));transform:scale(calc(1 + var(--bg-blur) / 400px))}
+.bg::before{content:'';position:absolute;inset:0;z-index:1;background:#000;opacity:var(--bg-dim);pointer-events:none}
+.bg::after{z-index:1}
+.bg.bg-light::after{background:linear-gradient(180deg,rgba(0,0,0,.25),transparent 35%,rgba(0,0,0,.45)),rgba(7,8,11,.35)}
+.bg-particles{position:absolute;inset:0;width:100%;height:100%;z-index:1;pointer-events:none}
+@media (prefers-reduced-motion:reduce){.bg-particles{display:none}}
+.bg-cards{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin-bottom:22px}
+.bgc{display:flex;flex-direction:column;gap:4px;min-width:0;padding:0;border:0;background:transparent;color:inherit;text-align:left;cursor:pointer;font:inherit}
+.bgc-img{position:relative;display:grid;place-items:center;aspect-ratio:4/3;border-radius:14px;border:2px solid #1f2736;background:#2a3346 center/cover no-repeat;overflow:hidden}
+.bgc-img em{font:500 12px var(--sans);font-style:normal;color:#fff;background:rgba(0,0,0,.45);padding:4px 8px;border-radius:999px}
+.bgc-img i{position:absolute;top:6px;right:6px;width:22px;height:22px;border-radius:50%;background:var(--blue);color:#0b0e15;font:700 13px/22px var(--sans);font-style:normal;text-align:center}
+.bgc[aria-pressed=true] .bgc-img{border-color:var(--blue)}
+.bgc:focus-visible .bgc-img{outline:2px solid var(--blue);outline-offset:2px}
+.bgc b{font-size:15px;font-weight:600;margin-top:4px}
+.bgc small{font-size:12.5px;color:var(--muted);line-height:1.3}
+.bg-chips{display:flex;gap:6px;flex-wrap:wrap}
+.bg-chips .chip{cursor:pointer}
+.bg-chips .chip[aria-pressed=true]{background:var(--blue);color:#0b0e15;border-color:var(--blue)}
+.bg-sub{min-height:0}
+.bg-range input[type=range]{flex:1 1 auto;min-width:80px;accent-color:var(--blue)}
+.bg-range .sg-txt{flex:0 0 130px}
+.bg-range .sg-v{flex:0 0 56px;text-align:right;font-variant-numeric:tabular-nums}
+.bg-oslo{flex-wrap:wrap;gap:8px;min-height:0}
+.bg-oslo-th{position:relative;width:72px;height:54px;border-radius:8px;background:#2a3346 center/cover}
+.bg-oslo-th button{position:absolute;top:2px;right:2px;width:22px;height:22px;border-radius:50%;border:0;background:rgba(0,0,0,.65);color:#fff;cursor:pointer;font:600 14px/22px var(--sans);padding:0}
+@media (max-width:760px){
+  .bg-cards{grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+  .bg-range .sg-txt{flex-basis:96px}
+}
+/* Prompt 21: utvidet avgang med holdeplasser (dash.js depPanel). Begge temaene; Papir-verdiene under. */
+.dx{--dx-ink:var(--text);--dx-mut:var(--text-2);--dx-lab:#f59a8f;--dx-card:#141a26;--dx-line:var(--line);display:grid;grid-template-rows:1fr;margin-top:10px}
+html[data-hl="2c"] .dx{--dx-ink:#1b1a17;--dx-mut:#6b665c;--dx-lab:#b23a2a;--dx-card:#fff;--dx-line:#e3ddcf;border-bottom:1px solid var(--dx-line);padding-bottom:12px}
+.dx.dx-in{animation:dx-open .2s ease-out}
+@keyframes dx-open{from{grid-template-rows:0fr;opacity:0}to{grid-template-rows:1fr;opacity:1}}
+.dx-in-w{min-height:0;overflow:hidden;display:flex;flex-direction:column;color:var(--dx-ink)}
+.dx-top{display:flex;align-items:flex-start;gap:12px}
+.dx-line{flex:none;min-width:32px;height:24px;padding:0 6px;box-sizing:border-box;border-radius:6px;display:grid;place-items:center;font:800 12.5px/1 var(--sans,inherit)}
+.dx-h{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.dx-h b{font-size:16px;font-weight:700;font-family:var(--sans,inherit)}
+.dx-h span{font-size:12.5px;color:var(--dx-mut)}
+.dx-late{color:var(--dx-lab)!important}
+.dx-m{flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:2px}
+.dx-m b{font:500 26px/1 'Newsreader',Georgia,serif}
+.dx-m span{font-size:12px;color:var(--dx-mut)}
+.dx-stops{display:flex;flex-direction:column;margin:8px 0 0 44px}
+.dx-stop{display:flex;align-items:center;gap:10px;min-height:30px;font-size:13.5px;font-weight:500;color:var(--dx-ink);background:none;border:0;padding:0;text-align:left;font-family:inherit}
+.dx-stop.end{font-weight:700}
+.dx-more{cursor:pointer;color:var(--dx-mut)}
+.dx-more:hover .dx-n{text-decoration:underline}
+.dx-rail{flex:none;width:10px;align-self:stretch;display:flex;flex-direction:column;align-items:center}
+.dx-rail .lt,.dx-rail .lb{flex:1;width:2px;background:var(--lc)}
+.dx-rail [hidden]{display:block!important;visibility:hidden}
+.dx-rail .dot{flex:none;width:9px;height:9px;border-radius:5px;border:2px solid var(--lc);background:var(--dx-card);box-sizing:border-box}
+.dx-rail .dot.fill{background:var(--lc)}
+.dx-rail .gap{flex:none;height:9px;width:2px;background:repeating-linear-gradient(var(--lc) 0 2px,transparent 2px 4px)}
+.dx-n{flex:1;min-width:0}
+.dx-n small{font-weight:500;color:var(--dx-mut);font-size:11.5px}
+.dx-t{font:600 13px 'IBM Plex Mono',var(--mono,monospace);color:var(--dx-mut);font-variant-numeric:tabular-nums}
+.dx-ruter{align-self:flex-start;margin:8px 0 0 44px;font:600 12.5px var(--sans,inherit);color:var(--dx-lab)!important;text-decoration:underline;text-underline-offset:2px}
+[data-dep-open]{cursor:pointer;border-radius:6px}
+[data-dep-open]:focus-visible{outline:2px solid var(--dx-lab,#f59a8f);outline-offset:2px}
+.p-dep.on,.dep.on{text-decoration:underline;text-underline-offset:4px}
+.trip-open{min-width:min(360px,100%)}
+@media (prefers-reduced-motion:reduce){.dx.dx-in{animation:none}}
+.sbar-g{flex:none;width:20px;height:20px;display:block}
+.card-head .card-link{margin-left:auto;font-size:12.5px;font-weight:600;color:var(--text-2);text-decoration:none;white-space:nowrap}.card-head .card-link:hover{color:var(--text)}
+.sg-fhelp{font-size:12px;color:var(--text-2);padding:0 16px 10px;line-height:1.45}
+
+/* ---------- Bakgrunnen: bildet vises bare i fotovinduet ---------- */
+html[data-hl="2c"] .bg{position:absolute;left:0;right:0;top:0;height:var(--pw-h);z-index:0;background:#8aa6c2;overflow:hidden}
+html[data-hl="2c"] .bg::after{background:linear-gradient(180deg,rgba(0,0,0,.18),rgba(0,0,0,0) 35%,rgba(0,0,0,.32))}
+html[data-hl="2c"] body:not(.pw-on) .bg,html[data-hl="2c"] body[data-route="rom"] .bg{display:none}
+html[data-hl="2c"] .shell{position:relative;z-index:1;padding:20px var(--side) 56px;gap:24px}
+html[data-hl="2c"] body.pw-on .shell{padding-top:0}
+
+/* ---------- Topplinje ---------- */
+html[data-hl="2c"] .top{justify-content:flex-start;gap:20px;flex-wrap:nowrap;padding:4px 0 16px;border-bottom:1px solid var(--rule)}
+html[data-hl="2c"] body.pw-on .top{position:absolute;z-index:5;top:24px;left:var(--side);right:var(--side);padding:0;border:0;color:#fff}
+html[data-hl="2c"] .top>[data-hp=logo]{margin-right:0}
+html[data-hl="2c"] .top>[data-hp=menu]{margin-left:auto}
+html[data-hl="2c"] .logo{width:auto;height:auto;background:none;border-radius:0;color:var(--ink);font:500 26px/1 var(--serif);letter-spacing:0;padding:0;white-space:nowrap}
+html[data-hl="2c"] body.pw-on .logo{color:#fff;text-shadow:0 1px 10px rgba(0,0,0,.35)}
+html[data-hl="2c"] .pillnav{margin-left:0;gap:2px;padding:4px;border:0;border-radius:999px;background:rgba(27,26,23,.06);backdrop-filter:none;flex-wrap:nowrap}
+html[data-hl="2c"] body.pw-on .pillnav{background:rgba(243,239,230,.94)}
+html[data-hl="2c"] .pillnav a{padding:7px var(--hl-tab-pad,12px);font:600 13px var(--sans);color:var(--ink);white-space:nowrap}
+html[data-hl="2c"] .pillnav a[aria-current=page]{background:var(--ink);color:var(--pp)}
+html[data-hl="2c"] .pill{background:#fff;border:1px solid var(--rule);color:var(--ink);font:500 13px var(--sans);backdrop-filter:none}
+html[data-hl="2c"] body.pw-on #wx-pill{display:none}
+html[data-hl="2c"] .profile-btn{height:40px;padding:0;border:0;background:transparent;color:var(--ink)}
+html[data-hl="2c"] .burger{display:none}
+html[data-hl="2c"] .avatar{width:40px;height:40px;background:var(--ink);color:var(--pp);font:700 14px var(--sans)}
+html[data-hl="2c"] .menu{background:var(--pp);border:1px solid var(--rule);border-radius:14px;box-shadow:0 18px 40px -12px rgba(0,0,0,.3);color:var(--ink)}
+html[data-hl="2c"] .menu-head{color:var(--ink3)}
+html[data-hl="2c"] .menu button,html[data-hl="2c"] .menu a{color:var(--ink);font:500 14px var(--sans);border-radius:8px}
+html[data-hl="2c"] .menu button:hover,html[data-hl="2c"] .menu a:hover{background:#ebe5d8;opacity:1}
+html[data-hl="2c"] .menu hr{background:var(--rule)}
+html[data-hl="2c"] .menu .danger{color:var(--acc)}
+
+/* ---------- Fotovinduet ---------- */
+html[data-hl="2c"] .pw{position:relative;height:var(--pw-h);margin:0 calc(-1 * var(--side));padding:24px var(--side) 34px;display:flex;flex-direction:column;color:#fff;text-shadow:0 2px 18px rgba(0,0,0,.35);overflow:hidden;box-sizing:border-box;background:transparent;border-radius:0;gap:0;min-width:0}
+html[data-hl="2c"] .pw-apod{position:absolute;inset:0;background:#0b1020 center/cover no-repeat;opacity:0;transition:opacity .6s}
+html[data-hl="2c"] .pw-apod.on{opacity:1}
+html[data-hl="2c"] .pw-apod.on::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.2),rgba(0,0,0,0) 40%,rgba(0,0,0,.45))}
+html[data-hl="2c"] .pw-dash .pw-apod{z-index:0}
+html[data-hl="2c"] .pw>*:not(.pw-apod){position:relative;z-index:1}
+html[data-hl="2c"] .pw-bgsel{position:absolute!important;top:24px;right:calc(var(--side) + 60px);display:flex;gap:2px;padding:4px;border-radius:999px;background:rgba(27,26,23,.55);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);text-shadow:none}
+html[data-hl="2c"] .pw-bgsel button{height:30px;padding:0 12px;border:0;border-radius:999px;background:transparent;color:#fff;font:600 12px var(--sans);cursor:pointer}
+html[data-hl="2c"] .pw-bgsel button[aria-pressed=true]{background:var(--pp);color:var(--ink)}
+html[data-hl="2c"] .pw-bottom{margin-top:auto;display:flex;justify-content:space-between;align-items:flex-end;gap:40px}
+html[data-hl="2c"] .pw-date{font:italic 400 22px/1.2 var(--serif)}
+html[data-hl="2c"] .pw-hello{font:500 clamp(44px,5.8vw,84px)/1 var(--serif);letter-spacing:-.02em;margin-top:6px}
+html[data-hl="2c"] .pw-wx{text-align:right;flex:none}
+html[data-hl="2c"] .pw-temp{font:400 clamp(72px,8.4vw,120px)/.85 var(--serif);letter-spacing:-.03em}
+html[data-hl="2c"] .pw-cond{font:500 15px var(--sans);margin-top:8px;font-variant-numeric:tabular-nums}
+html[data-hl="2c"] .pw-credit{position:absolute!important;left:var(--side);bottom:8px;font:400 11px var(--sans);opacity:.75;text-shadow:0 1px 4px rgba(0,0,0,.5);max-width:360px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html[data-hl="2c"] .pw-dash .pw-bottom{padding-bottom:6px}
+html[data-hl="2c"] .pw-rom{--pw-h:360px;background:#0b1020;padding-bottom:52px}
+html[data-hl="2c"] .pw-kicker{font:600 11px var(--pmono);letter-spacing:.14em}
+html[data-hl="2c"] .pw-title{font:500 clamp(40px,4.6vw,64px)/1.02 var(--serif);margin-top:8px}
+html[data-hl="2c"] .pw-rom .pw-date{font-size:18px;margin-top:8px}
+
+/* Nyhetsbaren som en linje med «SISTE NYTT ›» i aksentfarge. */
+html[data-hl="2c"] .ticker{height:auto;min-height:48px;margin:0;border:0;border-bottom:1px solid var(--rule);border-radius:0;background:transparent;backdrop-filter:none}
+html[data-hl="2c"] .ticker-label{background:transparent;color:var(--acc);font:600 11px var(--pmono);letter-spacing:.1em;padding:0 22px 0 0;cursor:pointer}
+html[data-hl="2c"] .ticker-label::after{content:' ›';white-space:pre}
+html[data-hl="2c"] .ticker-label:hover{text-decoration:underline}
+html[data-hl="2c"] .ticker-view{-webkit-mask-image:linear-gradient(90deg,#000 92%,transparent);mask-image:linear-gradient(90deg,#000 92%,transparent)}
+html[data-hl="2c"] .ticker-track a{font:400 13px var(--sans);color:var(--ink);padding:0 28px 0 0;gap:6px}
+html[data-hl="2c"] .ticker-src{background:transparent!important;color:var(--ink);font:700 13px var(--sans);padding:0}
+html[data-hl="2c"] .ticker-track .muted{color:var(--ink3)}
+html[data-hl="2c"] .ticker-speed{border-left:1px solid var(--rule);color:var(--ink2)}
+/* Nyhetsleseren åpnes også fra «SISTE NYTT» i dagens tema. */
+.ticker-label{cursor:pointer}
+
+/* ---------- Innlogging og førstegangsoppsett (3a) ---------- */
+html[data-hl="2c"] .lock{background:#e8e3d8}
+html[data-hl="2c"] .lock-box{position:relative;max-width:460px;gap:16px;padding:0 32px 28px;background:var(--pp);border:0;border-radius:20px;overflow:hidden;box-shadow:0 30px 80px -30px rgba(0,0,0,.35);color:var(--ink)}
+html[data-hl="2c"] .lock-box>.logo,html[data-hl="2c"] .lock-box>.lock-title,html[data-hl="2c"] .setup-top .logo{display:none}
+html[data-hl="2c"] .lock-pw{display:flex;flex-direction:column;justify-content:flex-end;height:260px;margin:0 -32px 12px;padding:24px 32px 46px;background:#8aa6c2 url('/assets/img/oslo.svg') center/cover;color:#fff;text-shadow:0 2px 18px rgba(0,0,0,.35);position:relative}
+html[data-hl="2c"] .lock-pw::before{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.05),rgba(0,0,0,.35))}
+html[data-hl="2c"] .lock-pw>*{position:relative}
+html[data-hl="2c"] .lock-pw-k{font:italic 400 18px var(--serif)}
+html[data-hl="2c"] .lock-pw-t{font:500 46px/1.05 var(--serif)}
+html[data-hl="2c"] .p-flab{display:block;font:600 11px var(--pmono);letter-spacing:.12em;color:var(--acc);margin-bottom:-12px}
+html[data-hl="2c"] .lock-box input:not([type=checkbox]){height:44px;padding:0;background:transparent;border:0;border-bottom:1px solid var(--ink);border-radius:0;color:var(--ink);font:400 19px var(--serif)}
+html[data-hl="2c"] .lock-box input:not([type=checkbox]):focus{border-bottom:2px solid var(--acc)}
+html[data-hl="2c"] .lock-box input::placeholder{color:var(--ink3)}
+html[data-hl="2c"] .lock-box input[type=password]{letter-spacing:.2em}
+html[data-hl="2c"] .lock-box input[type=password]::placeholder{letter-spacing:0}
+html[data-hl="2c"] .lock-box input.code{font:400 26px var(--serif);letter-spacing:.4em;text-align:left}
+html[data-hl="2c"] .remember{color:var(--ink);font:500 13px var(--sans)}
+html[data-hl="2c"] .remember input{accent-color:var(--ink);width:16px;height:16px}
+html[data-hl="2c"] .lock-btn{height:50px;padding:0;border-radius:999px;background:var(--ink);color:var(--pp);font:700 15px var(--sans);margin-top:4px}
+html[data-hl="2c"] .lock-hint{color:var(--ink2);font:400 14px/1.5 var(--sans)}
+html[data-hl="2c"] .lock-hint b{color:var(--ink)}
+html[data-hl="2c"] .lock-small{color:var(--ink3);font:400 12px var(--sans)}
+html[data-hl="2c"] .lock-back{color:var(--ink2);font:600 13px var(--sans)}
+html[data-hl="2c"] .lock-box .err,html[data-hl="2c"] #ob-err{color:var(--acc)}
+html[data-hl="2c"] .setup-box .lock-title{display:block;font:500 30px/1.15 var(--serif);color:var(--ink)}
+html[data-hl="2c"] .setup-box .lock-title b{font-weight:500;font-style:italic}
+html[data-hl="2c"] .setup-top .lock-small{font:600 11px var(--pmono);letter-spacing:.12em;color:var(--acc);text-transform:uppercase}
+html[data-hl="2c"] .setup-bar span{background:var(--rule);border-radius:0;height:2px}
+html[data-hl="2c"] .setup-bar span.on{background:var(--ink)}
+html[data-hl="2c"] .ob-field{font:600 11px var(--pmono);letter-spacing:.12em;color:var(--acc);text-transform:uppercase}
+
+@media (max-width:767px){html[data-hl="2c"]{--pw-h:340px}
+  html[data-hl="2c"] body,html[data-hl="2c"] body.not-dash{--side:16px;background:var(--pp)}
+  html[data-hl="2c"] .shell{max-width:none;padding-top:calc(env(safe-area-inset-top) + 16px);padding-left:16px;padding-right:16px}
+  html[data-hl="2c"] body.pw-on .shell{padding-top:0}
+  html[data-hl="2c"] .bg{height:calc(var(--pw-h) + env(safe-area-inset-top))}
+  html[data-hl="2c"] body.pw-on .top{top:calc(env(safe-area-inset-top) + 16px)}
+  html[data-hl="2c"] .pw{height:calc(var(--pw-h) + env(safe-area-inset-top));padding:calc(env(safe-area-inset-top) + 72px) 16px 28px}
+  html[data-hl="2c"] .pw-bgsel{top:auto;bottom:auto;right:auto;left:16px;top:calc(env(safe-area-inset-top) + 66px)}
+  html[data-hl="2c"] .pw-bottom{gap:16px}
+  html[data-hl="2c"] .pw-date{font-size:17px}
+  html[data-hl="2c"] .pw-hello{font-size:38px}
+  html[data-hl="2c"] .pw-temp{font-size:64px}
+  html[data-hl="2c"] .pw-cond{font-size:13px}
+  html[data-hl="2c"] .pw-credit{display:none}
+  html[data-hl="2c"] .pw-rom{--pw-h:300px}
+  html[data-hl="2c"] .pw-title{font-size:38px}
+  html[data-hl="2c"] .top{border-bottom:0;padding:0}
+  html[data-hl="2c"] .top .pill{margin-left:auto}
+  html[data-hl="2c"] body.pw-on .top>[data-hp=menu]{margin-left:auto}
+  html[data-hl="2c"] .lock{padding:0;place-items:stretch}
+  html[data-hl="2c"] .lock-box{max-width:none;border-radius:0;min-height:100vh;justify-content:flex-start;box-shadow:none}
+  html[data-hl="2c"] .lock-pw{height:calc(260px + env(safe-area-inset-top))}}
+
+html[data-hl="2c"] body.pw-on .top{pointer-events:none}
+
+html[data-hl="2c"] body.pw-on .top>*{pointer-events:auto}
+
+/* =====================================================================================================
+   Papir web, fullført (prompt 14): flytende side (maks 1440 px, sentrert), fotovindu øverst på alle sider,
+   topplinje som aldri skyves ut av siden, egen bakgrunnsvelger, og alle sider i avisstil.
+   ===================================================================================================== */
+html[data-hl="2c"]{--pw-h:clamp(320px,38vw,420px)}
+html[data-hl="2c"] body,html[data-hl="2c"] body.not-dash{--side:clamp(16px,3vw,44px);overflow-x:clip}
+html[data-hl="2c"] body.pw-low{--pw-h:240px}
+html[data-hl="2c"] .shell{max-width:1440px;margin:0 auto;box-sizing:border-box;width:100%}
+html[data-hl="2c"] .bg{display:none!important}
+
+/* Fotovinduet går kant i kant, mens innholdet står i samme spalte som resten av siden. */
+html[data-hl="2c"] .pw{height:var(--pw-h);margin:0 calc(50% - 50vw);padding:24px calc(50vw - 50%) 46px;background:#5d7690}
+html[data-hl="2c"] .pw-low{padding-bottom:30px}
+html[data-hl="2c"] .pw-img{position:absolute!important;inset:0;z-index:0!important;background:linear-gradient(170deg,#4a5a6a,#2a3440 60%,#1d242c) center 40%/cover no-repeat;transition:background-image .4s}
+html[data-hl="2c"] .pw-img::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.25),transparent 35%,rgba(0,0,0,.45))}
+html[data-hl="2c"] .pw-kick{font:italic 400 17px var(--serif)}
+html[data-hl="2c"] .pw-low .pw-title{font:500 clamp(36px,4.4vw,56px)/1 var(--serif);letter-spacing:-.02em;margin-top:6px}
+html[data-hl="2c"] .pw-wx{color:#fff;text-decoration:none}
+html[data-hl="2c"] .pw-wx:hover{opacity:.9}
+html[data-hl="2c"] .pw-fail{position:absolute!important;right:max(var(--side),calc((100vw - 1440px) / 2 + var(--side)));bottom:8px;border:0;background:rgba(27,26,23,.55);color:#fff;font:500 11.5px var(--sans);padding:4px 10px;border-radius:999px;cursor:pointer;text-shadow:none}
+html[data-hl="2c"] .pw-fail[hidden]{display:none}
+html[data-hl="2c"] .pw-credit{left:max(var(--side),calc((100vw - 1440px) / 2 + var(--side)))}
+
+/* Topplinjen: logo, faner (rulles sideveis ved behov), bakgrunnsvelger og profil. Ingen faste bredder. */
+html[data-hl="2c"] .top{display:flex;align-items:center;justify-content:flex-start;gap:14px;flex-wrap:nowrap;min-width:0}
+html[data-hl="2c"] .top>*{transform:none!important}
+html[data-hl="2c"] .top>[data-hp=logo]{flex:none}
+html[data-hl="2c"] .top .pillnav{flex:1 1 auto;min-width:0;max-width:max-content;overflow-x:auto;scrollbar-width:none;display:flex}
+html[data-hl="2c"] .top .pillnav::-webkit-scrollbar{display:none}
+html[data-hl="2c"] .top .pillnav a{flex:none}
+html[data-hl="2c"] #wx-pill{display:none}
+html[data-hl="2c"] .top>[data-hp=menu]{margin-left:0;flex:none}
+.hl-bgdd:empty{display:none}
+html[data-hl="2c"] .hl-bgdd{margin-left:auto;flex:none;position:relative}
+html[data-hl="2c"] .hl-bgdd-btn{height:36px;padding:0 14px;border-radius:999px;border:0;background:rgba(27,26,23,.55);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);color:#fff;cursor:pointer;font:600 12.5px var(--sans);white-space:nowrap}
+html[data-hl="2c"] body:not(.pw-on) .hl-bgdd-btn{background:#fff;color:var(--ink);border:1px solid var(--rule)}
+html[data-hl="2c"] .hl-bgdd-menu{position:absolute;top:46px;right:0;z-index:40;width:236px;padding:6px;border-radius:18px;background:#f3efe6;color:var(--ink);box-shadow:0 20px 40px -10px rgba(0,0,0,.45);display:flex;flex-direction:column;gap:2px;opacity:0;transform:scale(.96);transform-origin:top right;pointer-events:none;transition:opacity .14s,transform .14s,visibility 0s linear .14s;text-shadow:none;visibility:hidden}
+html[data-hl="2c"] .hl-bgdd-menu.open{opacity:1;transform:none;pointer-events:auto;visibility:visible;transition:opacity .14s,transform .14s,visibility 0s}
+html[data-hl="2c"] .hl-bgdd-menu button{display:flex;align-items:center;gap:10px;height:50px;padding:0 10px;border-radius:12px;border:0;background:transparent;color:var(--ink);cursor:pointer;text-align:left;font:600 14px var(--sans)}
+html[data-hl="2c"] .hl-bgdd-menu button[aria-checked=true]{background:#e6e0d2}
+html[data-hl="2c"] .hl-bgdd-menu button:hover{background:#ebe5d8}
+html[data-hl="2c"] .hl-bgdd-menu .th{flex:none;width:30px;height:30px;border-radius:8px;background:#5d7690 center/cover}
+html[data-hl="2c"] .hl-bgdd-menu .tx{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.2}
+html[data-hl="2c"] .hl-bgdd-menu small{font:500 11.5px var(--sans);color:var(--ink2)}
+html[data-hl="2c"] .hl-bgdd-up{display:block;padding:10px 12px;border-top:1px solid var(--rule);margin-top:4px;font:600 13px var(--sans);color:var(--acc);cursor:pointer;border-radius:0 0 12px 12px}
+html[data-hl="2c"] .hl-bgdd-up:hover{background:#ebe5d8}
+html[data-hl="2c"] .menu{right:0;width:220px;padding:6px;border-radius:18px;background:#f3efe6;border:0;box-shadow:0 20px 40px -10px rgba(0,0,0,.45);text-shadow:none}
+html[data-hl="2c"] .menu-head{padding:10px 12px;border-bottom:1px solid var(--rule);font:500 18px var(--serif);color:var(--ink)}
+html[data-hl="2c"] .menu [data-act="head-edit"],html[data-hl="2c"] .menu [data-act="reset-layout"]{display:none}
+html[data-hl="2c"] .menu .danger{color:var(--acc)}
+
+/* Sidetitlene står i fotovinduet, så de vanlige titlene skjules. */
+html[data-hl="2c"] body.pw-low #view>.os-title,html[data-hl="2c"] body.pw-low .trk-top .os-title,html[data-hl="2c"] body.pw-low #view .page-title:first-child{display:none}
+html[data-hl="2c"] .pw-low{margin-bottom:28px}
+html[data-hl="2c"] .trk-logo{padding:0}
+html[data-hl="2c"] .trk-ini:has(.trk-logo){background:#fff!important}
+html[data-hl="2c"] .trk-top{justify-content:flex-end;min-height:0}
+html[data-hl="2c"] .trk-sumtxt{color:var(--ink2);font:500 13px var(--sans)}
+
+/* ---------- Mobil ---------- */
+@media (max-width:767px){html[data-hl="2c"]{--pw-h:300px}
+  html[data-hl="2c"] body.pw-low{--pw-h:190px}
+  html[data-hl="2c"] .pw{padding-left:16px;padding-right:16px}
+  html[data-hl="2c"] .pw-low .pw-title{font-size:34px}
+  html[data-hl="2c"] .pw-kick{font-size:15px}
+  html[data-hl="2c"] .top .pillnav{display:none}
+  html[data-hl="2c"] .hl-bgdd-btn{height:34px;padding:0 12px;font-size:12px}
+  html[data-hl="2c"] .pw-fail{right:16px}}
+
+/* Huskeliste og Familie: fotovinduet har tittelen, så sidetittelen skjules. */
+html[data-hl="2c"] body.pw-low .tk-top,html[data-hl="2c"] body.pw-low .fam-top{display:none}
+
+/* Bakgrunn i Vindu og papir: uskarphet, mørklegging, litt dempet farge og papirtekstur over bildet. Teksten blir mørk
+   når bildet er lyst (theme_hint), med lys skygge for kontrast. */
+html[data-hl="2c"] .pw-img{filter:saturate(.75) blur(var(--bg-blur,0px));transform:scale(calc(1 + var(--bg-blur,0px) / 400px))}
+html[data-hl="2c"] .pw-img::before{content:'';position:absolute;inset:0;background:#000;opacity:var(--bg-dim,0)}
+html[data-hl="2c"] .pw::before{content:'';position:absolute;inset:0;z-index:1;pointer-events:none;opacity:.22;mix-blend-mode:multiply;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .55 0 0 0 0 .5 0 0 0 0 .42 0 0 0 .9 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E")}
+html[data-hl="2c"] .pw>.bg-particles{position:absolute;inset:0;z-index:1}
+html[data-hl="2c"] .pw>*:not(.pw-img):not(.bg-particles){position:relative;z-index:2}
+html[data-hl="2c"] .pw.pw-light{color:#1b1a17;text-shadow:0 1px 12px rgba(255,255,255,.55)}
+html[data-hl="2c"] .pw.pw-light .pw-img::after{background:linear-gradient(180deg,rgba(255,255,255,.35),transparent 35%,rgba(255,255,255,.4))}
+html[data-hl="2c"] .pw.pw-light .pw-wx{color:#1b1a17}
+html[data-hl="2c"] .pw-credit a{color:inherit;text-decoration:underline;text-underline-offset:2px}
+html[data-hl="2c"] .hl-bgdd-more{display:block;padding:10px 10px 8px;border-top:1px solid var(--rule);margin-top:4px;color:var(--ink2);font:500 13px var(--sans);text-decoration:none}
+html[data-hl="2c"] .hl-bgdd-more:hover{color:var(--ink)}
+html[data-hl="2c"] .bgc-img{border-color:var(--rule);border-radius:4px}
+html[data-hl="2c"] .bgc[aria-pressed=true] .bgc-img{border-color:var(--ink)}
+html[data-hl="2c"] .bgc-img i{background:var(--ink);color:var(--pp)}
+html[data-hl="2c"] .bgc small{color:var(--ink2)}
+html[data-hl="2c"] .bg-chips .chip[aria-pressed=true]{background:var(--ink);color:var(--pp);border-color:var(--ink)}
+html[data-hl="2c"] .bg-range input[type=range]{accent-color:var(--ink)}
+
+/* Prompt 27: «Planeter» på Dashboard: hele kloden, ~62 % av bredden, sentrert på svart (ikke cover). Andre bakgrunner uendret. */
+html[data-hl="2c"] body[data-route="dash"] .pw.pw-planet{background:#000}
+html[data-hl="2c"] body[data-route="dash"] .pw.pw-planet .pw-img{background-color:#000;background-size:62% auto;background-position:center 38%}
+html[data-hl="2c"] body[data-route="dash"] .pw.pw-planet .pw-img::after{background:linear-gradient(180deg,rgba(0,0,0,.2),transparent 35%,rgba(0,0,0,.35))}
+
+/* ---------- Oppstartsside (Nordlys Starter) når web mister kontakt ---------- */
+.ns36{position:fixed;inset:0;z-index:9999;overflow:auto;color:#fff;font-family:Manrope,system-ui,sans-serif;background:linear-gradient(160deg,#101a2e 0%,#1b2340 100%);display:flex;align-items:center;justify-content:center;padding:40px 20px}
+.ns36-aur{position:absolute;inset:-20%;pointer-events:none;z-index:0}
+.ns36-aur span{position:absolute;inset:0;background:radial-gradient(50% 40% at 80% 10%,oklch(0.62 0.17 300 / .7) 0%,transparent 70%),radial-gradient(50% 45% at 15% 90%,oklch(0.72 0.16 165 / .6) 0%,transparent 70%),radial-gradient(40% 35% at 90% 90%,oklch(0.6 0.19 30 / .5) 0%,transparent 70%);animation:ns36Aur 14s ease-in-out infinite;filter:blur(10px)}
+.ns36-in{position:relative;z-index:2;width:100%;max-width:440px;display:flex;flex-direction:column;align-items:center;gap:26px;text-align:center}
+.ns36-hero{position:relative;width:208px;height:208px;display:grid;place-items:center}
+.ns36-ring{position:absolute;inset:0;transform:rotate(-90deg)}
+.ns36-orb{position:absolute;inset:0;animation:ns36Orbit 9s linear infinite}
+.ns36-orb i{position:absolute;left:50%;top:50%;width:7px;height:7px;margin:-3.5px 0 0 -3.5px;border-radius:4px;box-shadow:0 0 10px currentColor}
+.ns36-fig{display:inline-block;line-height:0}
+.ns36-fig.fl{animation:ns36Float 3.2s ease-in-out infinite}
+.ns36-z{position:absolute;right:28px;top:30px;font-weight:800;color:#ffd9c2;opacity:0;animation:ns36Z 2.4s ease-out infinite}
+.ns36-pct{position:absolute;bottom:-6px;left:50%;transform:translateX(-50%);padding:3px 10px;border-radius:999px;background:rgba(16,26,46,.8);border:1px solid rgba(255,255,255,.18);font:600 12px 'IBM Plex Mono',ui-monospace,monospace}
+.ns36-t{display:flex;flex-direction:column;align-items:center;gap:8px}
+.ns36-k{font:600 11px 'IBM Plex Mono',ui-monospace,monospace;letter-spacing:.16em;color:#ffd9c2}
+.ns36-t b{font:800 40px/1 Manrope,system-ui,sans-serif;letter-spacing:-.02em}
+.ns36-t b span{font-weight:500;opacity:.75}
+.ns36-t b em{font-style:normal;background:linear-gradient(180deg,#fff 0%,#ffd9c2 45%,#ff8a5c 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.ns36-line{font:500 16px/1.45 Manrope,system-ui,sans-serif;color:rgba(255,255,255,.82);min-height:46px}
+.ns36-steps{width:100%;display:flex;flex-direction:column;border-radius:20px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);padding:6px 16px}
+.ns36-st{display:flex;align-items:center;gap:12px;min-height:44px;border-top:1px solid rgba(255,255,255,.1);transition:opacity .3s}
+.ns36-st:first-child{border-top:0}
+.ns36-st.w{opacity:.45}
+.ns36-ic{flex:none;width:22px;height:22px;display:grid;place-items:center}
+.ns36-n{flex:1;min-width:0;text-align:left;font:600 14.5px Manrope,system-ui,sans-serif}
+.ns36-ms{font:500 12px 'IBM Plex Mono',ui-monospace,monospace;color:rgba(255,255,255,.6)}
+.ns36-ok{animation:ns36Pop .35s cubic-bezier(.3,1.6,.5,1) both}
+.ns36-spin{display:block;width:18px;height:18px;border-radius:50%;border:2.5px solid rgba(255,255,255,.2);border-top-color:#ffd9c2;animation:ns36Spin .8s linear infinite}
+.ns36-wait{display:block;width:8px;height:8px;border-radius:4px;background:rgba(255,255,255,.3)}
+.ns36-foot{display:flex;flex-direction:column;align-items:center;gap:6px;font:500 13px Manrope,system-ui,sans-serif;color:rgba(255,255,255,.65)}
+.ns36-foot a{color:#ffd9c2;font-weight:700}
+@keyframes ns36Aur{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(4%,-3%) scale(1.08)}}
+@keyframes ns36Float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+@keyframes ns36Orbit{to{transform:rotate(360deg)}}
+@keyframes ns36Z{0%{opacity:0;transform:translate(0,0) scale(.6)}30%{opacity:1}100%{opacity:0;transform:translate(26px,-46px) scale(1.2)}}
+@keyframes ns36Pop{0%{transform:scale(.4);opacity:0}70%{transform:scale(1.15)}100%{transform:none;opacity:1}}
+@keyframes ns36Spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.ns36-orb,.ns36-fig.fl,.ns36-aur span{animation:none}.ns36-orb{display:none}.ns36-ok{animation:none}}
+
+/* ================= Oppstartssiden uten flimmer (overlegget i appen) ================= */
+/* Ingen filter: blur på animerte lag (rasteriseres hver frame i WebKit). Myke radialgradienter, eget lag, 18 s. */
+.ns36-aur span{filter:none!important;animation-duration:18s!important;will-change:transform;transform:translateZ(0);backface-visibility:hidden;
+  background:radial-gradient(50% 40% at 80% 10%,oklch(0.62 0.17 300 / .55) 0%,transparent 72%),radial-gradient(50% 45% at 15% 90%,oklch(0.72 0.16 165 / .5) 0%,transparent 72%),radial-gradient(40% 35% at 90% 90%,oklch(0.6 0.19 30 / .4) 0%,transparent 72%)!important}
+.ns36-steps{-webkit-backdrop-filter:none!important;backdrop-filter:none!important;background:rgba(255,255,255,.09)!important}
+.ns36{transition:opacity .3s ease}
+.ns36.out{opacity:0}
+@media (prefers-reduced-motion: reduce){.ns36-aur span,.ns36-orb,.ns36-fig.fl{animation:none!important}.ns36-ok{animation:none!important}}
+
+/* Oppstart uten cache: fanepillen som skjelett, ingen standardliste. */
+.pillnav .nav-skel52{display:inline-block;height:14px;margin:9px 8px;border-radius:999px;background:currentColor;opacity:.18;flex:none}
+html.boot52-nocache header.top .logo{color:transparent!important}
+.skel52{padding:24px 0}
+.skel52-h{height:44px;width:min(420px,70%);border-radius:14px;background:var(--row,rgba(127,127,127,.18));opacity:.5;margin:0 0 22px}
+.skel52-g{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
+.skel52-g>div{height:180px;border-radius:24px;background:var(--row,rgba(127,127,127,.18));opacity:.5}
+@media (max-width:767px){.skel52{padding:16px}.skel52-g{grid-template-columns:1fr 1fr;gap:12px}.skel52-g>div{height:130px}}
+
+/* «Vær nå»-bakgrunnen: toning etter tid på døgnet (morgen 5–9, dag 9–17, kveld 17–21, natt). Bildet velges etter værtype på serveren. */
+.pw[data-wx52] .pw-img{transition:filter .6s ease}
+.pw[data-wx52="morgen"] .pw-img{filter:sepia(.18) saturate(1.1) brightness(1.02)}
+.pw[data-wx52="kveld"] .pw-img{filter:sepia(.3) saturate(1.25) hue-rotate(-10deg) brightness(.82)}
+.pw[data-wx52="natt"] .pw-img{filter:saturate(.8) brightness(.72) hue-rotate(10deg)}
+@media (prefers-reduced-motion:reduce){.pw[data-wx52] .pw-img{transition:none}}

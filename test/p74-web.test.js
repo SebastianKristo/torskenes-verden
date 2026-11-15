@@ -18,7 +18,7 @@ test('hold inne: aldri wiggle fra søkefeltet, Glimt-svaret eller opptakskortet'
   assert.match(h, /getBoundingClientRect\(\)/, 'punktet sjekkes mot kortene (svarkortet ligger over flisene)');
   assert.match(h, /addEventListener\('scroll', \(\) => \{ if \(hold\) stopHold\(\); \}/, 'scroll avbryter hold inne');
   assert.match(h, /addEventListener\('selectionchange'/, 'tekstmarkering avbryter hold inne');
-  const css = read('public/css/web38.css');
+  const css = read('public/css/pages/oversikt.css');
   assert.match(css, /\.gl-layer \.gl-ans\{[^}]*-webkit-user-select:text;user-select:text;-webkit-touch-callout:default/, 'svaret kan markeres (Safari)');
   assert.match(read('public/js/voice54.js'), /\.v54-card\{[^}]*-webkit-user-select:text;user-select:text;-webkit-touch-callout:default\}/, 'opptakskortet kan markeres');
 });

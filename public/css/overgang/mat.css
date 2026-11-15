@@ -1,0 +1,9 @@
+/* Overgang (Fase 3): mat-reglene som lå i det gamle skallet (app.css, paper.css). De skal flyttes inn i
+   public/css/pages/mat.css når grenene for skallet og sidene slås sammen. Rekkefølgen i app.html bestemmer kaskaden:
+   denne fila lastes etter sidens egne filer, akkurat som før. */
+
+/* Mat (tidligere Matplan): varm mørk grunn som i design 2a. */
+html:not([data-hl="2c"]) body.not-dash[data-route="matplan"],html:not([data-hl="2c"]) body.not-dash[data-route="matplan"] .bg{background:#161513}
+
+/* ---------- Mat på papir (prompt 32): Matplan-modulen beholder sine egne farger (mørk varm grunn, radius 28) som et kort under fotovinduet. ---------- */
+html[data-hl="2c"] body[data-route="matplan"]{background:var(--pp)}

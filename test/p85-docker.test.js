@@ -48,7 +48,7 @@ test('statiske filer: 304 på If-Modified-Since når fila er uendret, 200 ellers
   assert.equal(junk.status, 200);
   await junk.arrayBuffer();
 
-  const css = await app.request('/assets/css/app.css', { headers: { 'if-modified-since': new Date(Date.now() + 60_000).toUTCString() } });
+  const css = await app.request('/assets/css/base.css', { headers: { 'if-modified-since': new Date(Date.now() + 60_000).toUTCString() } });
   assert.equal(css.status, 304);
   const missing = await app.request('/assets/finnes-ikke-85.png', { headers: { 'if-modified-since': lm } });
   assert.equal(missing.status, 404);

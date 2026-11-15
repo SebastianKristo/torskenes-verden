@@ -1,0 +1,65 @@
+/* Overgang (Fase 3): rom-reglene som lå i det gamle skallet (app.css, paper.css). De skal flyttes inn i
+   public/css/pages/rom.css når grenene for skallet og sidene slås sammen. Rekkefølgen i app.html bestemmer kaskaden:
+   denne fila lastes etter sidens egne filer, akkurat som før. */
+
+/* Rom */
+.space-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:24px}
+.stat{padding:16px;border-radius:18px;background:var(--row)}
+.stat b{display:block;font-size:44px;font-weight:300}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{padding:8px 14px;border-radius:999px;border:1px solid var(--line);background:var(--row);color:var(--text);font-size:13px}
+.chip[aria-pressed=true]{background:#fff;color:var(--lock)}
+.sat-map{width:100%;height:100%;min-height:380px;border-radius:20px;background:var(--field);display:block}
+.photo{display:block;aspect-ratio:4/3;border-radius:20px;background:var(--row) center/cover}
+.gal-item{flex:0 0 260px;display:flex;flex-direction:column;gap:6px}
+.gal-item div{aspect-ratio:4/3;border-radius:16px;background:var(--row) center/cover}
+.gal-item span{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* ---------- Rom ---------- */
+html[data-hl="2c"] .p-rom{display:flex;flex-direction:column;gap:0;margin-top:28px;min-width:0}
+html[data-hl="2c"] .p-rom>.card{min-width:0}
+html[data-hl="2c"] .p-gal{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0 28px}
+html[data-hl="2c"] .p-gal>.card{min-width:0}
+html[data-hl="2c"] .p-gal .card-title,html[data-hl="2c"] .p-rom .card-title{font:600 11px var(--pmono);letter-spacing:.12em;color:var(--acc);text-transform:uppercase}
+html[data-hl="2c"] .p-rom .stat{background:transparent;border-radius:0;padding:0}
+html[data-hl="2c"] .p-rom .stat b{font:400 64px/1 var(--serif);color:var(--ink)}
+html[data-hl="2c"] .p-rom .row{border-radius:0;padding:10px 0!important;font:400 14px var(--sans)!important}
+html[data-hl="2c"] .p-rom .chip{border-radius:999px;font:600 12px var(--sans)}
+html[data-hl="2c"] .p-rom .photo{border-radius:0}
+html[data-hl="2c"] .p-rom .sat-map{border-radius:0;background:#ebe5d8}
+html[data-hl="2c"] .p-rom [data-w="r_apod"] [style*="font-size:26px"]{font:500 26px var(--serif)!important}
+html[data-hl="2c"] .gal-item div{border-radius:0}
+html[data-hl="2c"] .gal-item span{color:var(--ink);font:500 12px var(--sans)}
+
+@media (max-width:900px){html[data-hl="2c"] .p-gal{grid-template-columns:1fr}}
+
+/* ---------- Rom ---------- */
+html[data-hl="2c"] .p-rom{display:flex;flex-direction:column;gap:36px;margin-top:0}
+html[data-hl="2c"] .p-rom .space-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr));gap:28px 40px;align-items:start;border-top:0!important;padding:0!important}
+html[data-hl="2c"] .p-sl,html[data-hl="2c"] .p-slmap{border-top:2px solid var(--ink);padding-top:10px;display:flex;flex-direction:column;gap:14px;min-width:0}
+html[data-hl="2c"] .p-sl-k{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+html[data-hl="2c"] .p-sl-n{font:400 clamp(52px,6vw,72px)/1 var(--serif)}
+html[data-hl="2c"] .p-cities{display:flex;gap:6px;flex-wrap:wrap}
+html[data-hl="2c"] .p-cities button{padding:6px 13px;border-radius:999px;font:600 12.5px var(--sans);background:transparent;color:var(--ink);border:1px solid var(--ink);cursor:pointer}
+html[data-hl="2c"] .p-cities button[aria-pressed=true]{background:var(--ink);color:var(--pp)}
+html[data-hl="2c"] .p-sat{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--rule2);font:400 13.5px var(--sans)}
+html[data-hl="2c"] .p-sat b{font:600 13px var(--pmono)}
+html[data-hl="2c"] .p-sat span{color:var(--ink2)}
+html[data-hl="2c"] .p-slmap .sat-map{width:100%;aspect-ratio:1.15;min-height:340px;height:auto;display:block;background:#ebe5d8;border-radius:0}
+html[data-hl="2c"] .p-leg{display:flex;gap:16px;flex-wrap:wrap;font:400 12px var(--sans);color:var(--ink2)}
+html[data-hl="2c"] .p-leg i{display:inline-block;width:8px;height:8px;border-radius:4px;margin-right:6px}
+html[data-hl="2c"] .p-rom [data-w="r_apod"]{border-top:2px solid var(--ink)!important;padding-top:10px!important}
+html[data-hl="2c"] .p-rom [data-w="r_apod"] .photo{aspect-ratio:4/3;height:auto;min-height:0;background-color:#e3ddcf;border-radius:0}
+html[data-hl="2c"] .p-rom [data-w="r_apod"] .mono{font:600 11px var(--pmono)!important;letter-spacing:.12em!important;color:var(--acc)!important}
+html[data-hl="2c"] .p-rom [data-w="r_apod"] [style*="font-size:26px"]{font:500 clamp(28px,3vw,40px)/1.05 var(--serif)!important}
+html[data-hl="2c"] .p-rom [data-w="r_apod"] .sub{font:400 16px/1.6 var(--serif)!important;color:#3a372f;max-height:280px!important}
+html[data-hl="2c"] .p-gal{display:flex;flex-direction:column;gap:32px}
+html[data-hl="2c"] .p-gal>.card{border-top:2px solid var(--ink);padding:10px 0 0}
+html[data-hl="2c"] .p-gal .hscroll{display:flex;gap:16px;overflow-x:auto;scrollbar-width:thin;margin-top:12px;padding-bottom:6px}
+html[data-hl="2c"] .p-gal .gal-item{flex:0 0 240px;display:flex;flex-direction:column;gap:6px;color:var(--ink)}
+html[data-hl="2c"] .p-gal .gal-item div{aspect-ratio:4/3;height:auto;width:100%;background:#e3ddcf center/cover;border-radius:0}
+html[data-hl="2c"] .p-gal .gal-item span:first-of-type{font:500 16px/1.2 var(--serif);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html[data-hl="2c"] .p-gal .gal-item span.mono{font:500 11px var(--pmono)!important;color:var(--ink3)}
+
+@media (max-width:767px){html[data-hl="2c"] .p-sl-n{font-size:52px}
+  html[data-hl="2c"] .p-slmap .sat-map{min-height:260px}}

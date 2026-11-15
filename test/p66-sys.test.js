@@ -125,10 +125,10 @@ test('settings-system.js: Programvare, Versjoner (mono-rader, Vis flere i etiket
   assert.match(SY, /if \(sys66Click\(e\)\) return true;/);
 });
 
-test('stil: egen CSS-fil lenket etter web65.css, farger for Papir, Papir mørk og Nåværende', () => {
+test('stil: Innstillinger-CSS er lenket i app.html, farger for Papir, Papir mørk og Nåværende', () => {
   const html = rd('public/app.html');
-  assert.ok(html.indexOf('/assets/css/web66-sys.css') > html.indexOf('/assets/css/web65.css'));
-  const css = rd('public/css/web66-sys.css');
+  assert.ok(html.includes('/assets/css/pages/innstillinger.css'));
+  const css = rd('public/css/pages/innstillinger.css');
   assert.match(css, /#settings \.sys66\{--bg:#f3efe6;--card:#fffdf8/);
   assert.match(css, /html\[data-mode="dark"\] #settings \.sys66\{--bg:/);
   assert.match(css, /html:not\(\[data-hl="2c"\]\) #settings \.sys66\{--bg:/);

@@ -1,0 +1,19 @@
+/* Overgang (Fase 3): Kalender.app for Mac (/kalender?app=mac, html[data-kal-app]). Må lastes etter kalender.css og
+   før kal39.css, som før. Flyttes inn i public/css/pages/kalender.css når grenene slås sammen. */
+
+/* ================= Kalender: Mac-appen (/kalender?app=mac) ================= */
+/* Bare kalenderen i hele vinduet: ingen Homelab-meny, nyhetslinje, bakgrunn eller bunnmeny. Papirtema som følger systemet. */
+html[data-kal-app]{background:#f3efe6}
+html[data-kal-app] body{background:#f3efe6;overflow:hidden}
+html[data-kal-app] header.top,html[data-kal-app] .ticker,html[data-kal-app] .bottomnav,html[data-kal-app] .bg,html[data-kal-app] .pw,html[data-kal-app] .upd-banner{display:none!important}
+html[data-kal-app] .shell{padding:0!important;max-width:none!important}
+html[data-kal-app] .kal{--k-ink:#1b1a17;--k-mut:#6b665c;--k-line:#ddd5c5;--k-lab:#b23a2a;--k-labt:#b23a2a;--k-card:#fffdf8;--k-bg:#f3efe6;--k-in:#f3efe6;--k-hero:#1b1a17;--k-herofg:#f3efe6;--k-shadow:0 10px 30px -18px rgba(0,0,0,.3)}
+html[data-kal-app] .k2.k2-fs{padding-top:6px}
+@media (prefers-color-scheme: dark){
+  html[data-kal-app],html[data-kal-app] body{background:#161513;color-scheme:dark}
+  html[data-kal-app] .kal{--k-ink:#efe9de;--k-mut:#a49d91;--k-line:#3b3731;--k-lab:#ec7a64;--k-labt:#ec7a64;--k-card:#211f1b;--k-bg:#161513;--k-in:#2b2824;--k-hero:#efe9de;--k-herofg:#161513;--k-shadow:0 10px 30px -14px rgba(0,0,0,.7)}
+  html[data-kal-app] .k2-ev{background:color-mix(in oklab,var(--c) 30%,#211f1b)}
+  html[data-kal-app] .k2-it{background:color-mix(in oklab,var(--c) 22%,#211f1b)}
+  html[data-kal-app] .k38-tiles{filter:invert(1) hue-rotate(180deg) brightness(.92) contrast(.88) saturate(.55)}
+  html[data-kal-app] .kq-layer{--k-ink:#efe9de;--k-bg:#211f1b}
+}

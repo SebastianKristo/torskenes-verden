@@ -1,7 +1,7 @@
 // Prompt 66 (prompt 50b, «fullfør utseendet», UTSYS): felles hjelpere for System- og Backup-sidene i Innstillinger.
 // Gjenbruker komponentene fra AI-siden (ui65 i ai-control.js: rad, kort, seksjonsetikett, banner, knapper, segment, bryter)
 // i en egen `.ac emb sys66`-rot. Fargene (--bg/--card/--line/--ink/--mut/--ok/--warn/--bad) settes per tema i
-// public/css/web66-sys.css (Papir, Papir mørk og Nåværende/mørkt glass), så samme mål og komponenter gjelder i alle temaer.
+// public/css/pages/innstillinger.css (Papir, Papir mørk og Nåværende/mørkt glass), så samme mål og komponenter gjelder i alle temaer.
 // Bare visningen: data og handlinger ligger fortsatt i ops51.js / obs51.js / settings-system.js.
 import { ui65 } from './ai-control.js';
 

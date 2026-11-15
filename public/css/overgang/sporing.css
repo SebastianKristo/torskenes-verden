@@ -1,0 +1,66 @@
+/* Overgang (Fase 3): sporing-reglene som lå i det gamle skallet (paper.css). De skal flyttes inn i
+   public/css/pages/sporing.css når grenene for skallet og sidene slås sammen. Rekkefølgen i app.html bestemmer kaskaden:
+   denne fila lastes etter sidens egne filer, akkurat som før. */
+
+/* ---------- Sporing på papir ---------- */
+html[data-hl="2c"] .trk{--text:#1b1a17;--muted:#6b665c;--green:#2f7a4f;--yellow:#9a6a0c;color:var(--ink)}
+html[data-hl="2c"] .p-trk-bar{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+html[data-hl="2c"] .p-trk-tabs{display:flex;gap:6px;flex-wrap:wrap}
+html[data-hl="2c"] .p-trk-tabs button{height:36px;padding:0 14px;border-radius:999px;border:1px solid var(--rule);background:transparent;color:var(--ink);cursor:pointer;font:600 13px var(--sans);white-space:nowrap}
+html[data-hl="2c"] .p-trk-tabs button span{opacity:.6}
+html[data-hl="2c"] .p-trk-tabs button.on{background:var(--ink);color:var(--pp);border-color:var(--ink)}
+html[data-hl="2c"] .p-trk-add{margin-left:auto;display:flex;gap:6px;min-width:min(100%,360px)}
+html[data-hl="2c"] .p-trk-add input{flex:1;min-width:0;height:40px;padding:0 14px;border-radius:999px;border:1px solid var(--rule);background:#fff;color:var(--ink);font:500 14px var(--sans)}
+html[data-hl="2c"] .p-trk-add .trk-go,html[data-hl="2c"] .trk-go{height:40px;padding:0 16px;border-radius:999px;border:0;background:var(--ink);color:var(--pp);font:700 13.5px var(--sans)}
+html[data-hl="2c"] .trk-guess{margin-top:6px}
+html[data-hl="2c"] .trk-hint{color:var(--ink2)}
+html[data-hl="2c"] .trk-chip{background:#fff;border-color:var(--rule);color:var(--ink)}
+html[data-hl="2c"] .trk-chip.on{border-color:var(--ink)}
+html[data-hl="2c"] .trk-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:16px;margin-top:18px}
+html[data-hl="2c"] .trk-card{background:#fff;border:0;border-radius:18px;color:var(--ink);box-shadow:none}
+html[data-hl="2c"] .trk-card.ready{outline:1.5px solid var(--acc);border:0}
+html[data-hl="2c"] .trk-head{color:var(--ink)}
+html[data-hl="2c"] .trk-tt b{font:500 19px var(--serif);color:var(--ink)}
+html[data-hl="2c"] .trk-tt small,html[data-hl="2c"] .trk-st small,html[data-hl="2c"] .trk-last,html[data-hl="2c"] .trk-last span{color:var(--ink2)}
+html[data-hl="2c"] .trk-st b{font:700 15px var(--sans)}
+html[data-hl="2c"] .trk-card.ready .trk-st b{color:var(--acc)!important}
+html[data-hl="2c"] .trk-src{background:transparent!important;border:1px solid var(--rule);color:var(--ink2)!important;border-radius:8px;font:600 10.5px var(--pmono)}
+html[data-hl="2c"] .trk-ini{border:1px solid var(--rule)}
+html[data-hl="2c"] .trk-step small{color:var(--ink3)}
+html[data-hl="2c"] .trk-step.cur small{color:var(--ink)}
+html[data-hl="2c"] .trk-step i{background:#e3ddcf}
+html[data-hl="2c"] .trk-step.dn i{background:var(--ink)}
+html[data-hl="2c"] .trk-step.cur i{background:var(--acc);box-shadow:0 0 0 4px rgba(178,58,42,.15)}
+html[data-hl="2c"] .trk-step.fin i,html[data-hl="2c"] .trk-step.fin.ln em{background:var(--pos)}
+html[data-hl="2c"] .trk-step em{background:#e3ddcf}
+html[data-hl="2c"] .trk-step.ln em{background:var(--ink)}
+/* Prompt 85: i mørk modus vant web44-dark.css (.trk-step i/em, samme spesifisitet, lastet senere) over reglene over,
+   så fullførte steg, gjeldende steg og «levert» så ut som steg som ikke er nådd. */
+html[data-mode="dark"][data-hl="2c"] .trk-step.dn i,html[data-mode="dark"][data-hl="2c"] .trk-step.ln em{background:var(--ink)}
+html[data-mode="dark"][data-hl="2c"] .trk-step.cur i{background:var(--acc)}
+html[data-mode="dark"][data-hl="2c"] .trk-step.fin i,html[data-mode="dark"][data-hl="2c"] .trk-step.fin.ln em{background:var(--pos)}
+html[data-hl="2c"] .trk-more{border-top-color:var(--rule2)}
+html[data-hl="2c"] .trk-btn{background:transparent;border:1px solid var(--ink);color:var(--ink)}
+html[data-hl="2c"] .trk-btn.del{color:var(--acc);border-color:var(--acc)}
+html[data-hl="2c"] .trk-ev-b b{color:var(--ink)}
+html[data-hl="2c"] .trk-ev-b span,html[data-hl="2c"] .trk-ev-b small{color:var(--ink2)}
+html[data-hl="2c"] .trk-ev-l i{background:var(--rule)}
+html[data-hl="2c"] .trk-ev.now .trk-ev-l i{background:var(--acc)}
+html[data-hl="2c"] .trk-ev-l em{background:var(--rule2)}
+html[data-hl="2c"] .trk-note{color:var(--ink2)}
+html[data-hl="2c"] .trk-empty{color:var(--ink2);padding:20px 0}
+html[data-hl="2c"] .p-trk-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:12px 40px;margin-top:28px}
+html[data-hl="2c"] .p-trk-cols .trk-panel{background:transparent;border:0;border-top:2px solid var(--ink);border-radius:0;padding:10px 0 0}
+html[data-hl="2c"] .trk-ph b{font:600 11px var(--pmono);letter-spacing:.12em;color:var(--acc)}
+html[data-hl="2c"] .trk-ph small{color:var(--ink2)}
+html[data-hl="2c"] .trk-link{color:var(--acc);background:transparent;border:0;font:600 12.5px var(--sans);cursor:pointer;padding:0}
+html[data-hl="2c"] .trk-tog,html[data-hl="2c"] .trk-conn{border-bottom:1px solid var(--rule2);border-top:0;padding:10px 0;background:transparent;color:var(--ink)}
+html[data-hl="2c"] .trk-tog b,html[data-hl="2c"] .trk-conn b{font:600 14.5px var(--sans);color:var(--ink)}
+html[data-hl="2c"] .trk-tog small,html[data-hl="2c"] .trk-conn small{color:var(--ink2)}
+html[data-hl="2c"] .trk-sw{background:#cfc8b9}
+html[data-hl="2c"] .trk-sw.on{background:var(--pos)}
+html[data-hl="2c"] .trk-conn em.miss{color:#9a6a0c}
+html[data-hl="2c"] .trk-conn em.ok{color:var(--pos)}
+html[data-hl="2c"] .trk-toast{background:var(--ink);color:var(--pp)}
+
+@media (max-width:767px){html[data-hl="2c"] .p-trk-add{margin-left:0;min-width:100%}}

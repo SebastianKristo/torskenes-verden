@@ -6,25 +6,27 @@ import { readFileSync } from 'node:fs';
 
 const rd = (p) => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8');
 const D = 'html[data-mode="dark"][data-hl="2c"]';
-const rule = (css, sel) => {
-  const i = css.indexOf(`${sel}{`);
+const PM = rd('public/css/papir-mork.css');
+// Siste forekomst: Dashboard-reglene står til slutt i papir-mork.css (etter den generelle mørke paletten).
+const rule = (css, sel, last = css === PM) => {
+  const i = last ? css.lastIndexOf(`${sel}{`) : css.indexOf(`${sel}{`);
   assert.ok(i >= 0, `fant ikke regelen ${sel}`);
   return css.slice(i + sel.length + 1, css.indexOf('}', i));
 };
 
-test('web88-dark.css lastes sist i app.html', () => {
+test('papir-mork.css lastes sist i app.html', () => {
   const html = rd('public/app.html');
-  const i = html.indexOf('/assets/css/web88-dark.css');
-  assert.ok(i > html.indexOf('/assets/css/web44-dark.css') && i > html.indexOf('/assets/css/web66-sys.css'));
+  const i = html.indexOf('/assets/css/papir-mork.css');
+  assert.ok(i > html.indexOf('/assets/css/pages/innstillinger.css') && i > html.lastIndexOf('<link rel="stylesheet" href="/assets/css/overgang/'));
 });
 
 test('temavariabler for mørk modus', () => {
-  const r = rule(rd('public/css/web88-dark.css'), D);
+  const r = rule(rd('public/css/papir-mork.css'), D);
   for (const v of ['--p-ink:#f3efe6', '--p-card:#1b1a17', '--p-line:#34312c']) assert.ok(r.includes(v), v);
 });
 
 test('«Vær ▾»: mørkt glass, lys tekst, 40 px, rund', () => {
-  const css = rd('public/css/web88-dark.css');
+  const css = rd('public/css/papir-mork.css');
   const r = rule(css, `${D} .hl-bgdd-btn`);
   for (const s of ['height:40px', 'border-radius:999px', 'border:1px solid var(--p88-edge)', 'background:var(--p88-glass)', 'backdrop-filter:blur(12px)', 'color:var(--p-ink)']) assert.ok(r.includes(s), s);
   assert.match(css, /--p88-glass:rgba\(20,19,17,\.55\);--p88-glass2:rgba\(20,19,17,\.7\);--p88-edge:rgba\(243,239,230,\.18\)/);
@@ -32,7 +34,7 @@ test('«Vær ▾»: mørkt glass, lys tekst, 40 px, rund', () => {
 });
 
 test('✦ AI og mikrofon: av = gjennomsiktig med lys kant, på = lys flate', () => {
-  const css = rd('public/css/web88-dark.css');
+  const css = rd('public/css/papir-mork.css');
   assert.match(css, /\.p-search \.sbar \.sq-ai-tog\{background:transparent;color:#e8e3d8;border:1px solid var\(--p88-edge2\)\}/);
   assert.match(css, /\.sq-ai-tog\[aria-pressed="true"\]\{background:var\(--p-ink\);color:var\(--p-card\);border-color:transparent\}/);
   assert.match(css, /\.sq-ai-tog:hover\{background:var\(--p88-hov\)\}/);
@@ -42,7 +44,7 @@ test('✦ AI og mikrofon: av = gjennomsiktig med lys kant, på = lys flate', () 
 });
 
 test('Kveldsbrief-arket: mørk flate også i toppen, demping bak', () => {
-  const css = rd('public/css/web88-dark.css');
+  const css = rd('public/css/papir-mork.css');
   assert.equal(rule(css, `${D} .gb-back`), 'background:rgba(0,0,0,.45)');
   assert.ok(rule(css, `${D} .gb-in`).startsWith('background:var(--p-card)'));
   const h = rule(css, `${D} .gb-head`);

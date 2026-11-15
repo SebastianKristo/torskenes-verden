@@ -10,7 +10,7 @@ const ST = read('public/js/settings-view.js');
 const SS = read('public/js/settings-search.js');
 const SY = read('public/js/settings-system.js');
 const SI = read('public/js/settings-integ.js');
-const CSS = read('public/css/web65.css');
+const CSS = read('public/css/pages/innstillinger.css');
 
 test('sidemenyen: gruppene og sidene fra samlet-md, i riktig rekkefølge', () => {
   assert.deepEqual(N.MENU65.map(([g]) => g), ['Generelt', 'Husstand', 'Glimt og AI', 'Tilkoblinger', 'Moduler', 'Server']);
@@ -148,7 +148,7 @@ test('søket: indeksen og stiene peker til de nye sidene', () => {
 });
 
 test('stil: meny 38 px / flis 26 px, grå mono-etiketter, oransje «FLYTTET FRA», 28 px radflis, sticky System-faner', () => {
-  assert.match(read('public/app.html'), /<link rel="stylesheet" href="\/assets\/css\/web65\.css">/);
+  assert.match(read('public/app.html'), /<link rel="stylesheet" href="\/assets\/css\/pages\/innstillinger\.css">/);
   assert.match(CSS, /\.set-nav65 \.set-tab\{height:38px/);
   assert.match(CSS, /\.set-ic\{width:26px!important;height:26px!important;border-radius:8px!important\}/);
   assert.match(CSS, /\.set-sec-t\{font:500 10\.5px[^}]*color:#8f897c/);

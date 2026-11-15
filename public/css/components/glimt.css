@@ -1,0 +1,100 @@
+/* Glimt: orben, figurene (drakter), GlimtInput og agentsvarene. */
+
+/* ---------- Glimt-drakter: Sherlock (Se etter oppdatering) og snekker (mens den oppdaterer) ---------- */
+.go36{line-height:0}
+.go36-scan{transform-origin:15% 85%;animation:sh36Scan 1.1s ease-in-out infinite}
+.go36-ham{transform-origin:20% 90%;animation:cp36Ham .62s cubic-bezier(.5,0,.75,0) infinite}
+.go36-chip{position:absolute;bottom:-2px;width:4px;height:3px;border-radius:1px;animation:cp36Chip .62s ease-out infinite}
+.go36-cp{animation:cp36Bob .62s ease-in-out infinite;transform-origin:50% 100%}
+.cp36-host{position:relative;overflow:visible!important;margin-top:40px}
+.cp36-host>span:not(.cp36){border-radius:3px}
+.cp36{position:absolute!important;bottom:5px;z-index:2;pointer-events:none;transition:left .4s ease;display:block!important;width:auto!important;height:auto!important;background:none!important;line-height:0}
+.sh36{position:fixed;z-index:10001;pointer-events:none;animation:sh36Fly 3.6s cubic-bezier(.45,.05,.3,1) both}
+.sh36-bob{position:relative;display:inline-block;animation:sh36Bob .45s ease-in-out infinite alternate}
+.sh36-bb{position:absolute;right:calc(100% + 14px);top:-14px;white-space:nowrap;padding:8px 12px;border-radius:14px;background:#fff;color:#1b1a17;font:700 13px Manrope,system-ui,sans-serif;line-height:1.3;box-shadow:0 10px 24px -12px rgba(0,0,0,.5);animation:sh36Talk 3.6s ease both}
+.sh36.sh36-rm{animation:sh36Fade 3.6s ease both}
+.sh36.sh36-rm .sh36-bob,.sh36.sh36-rm .go36-scan{animation:none}
+@keyframes sh36Fly{0%{transform:translate(340px,-260px) rotate(-28deg) scale(.45);opacity:0}12%{opacity:1}30%{transform:translate(0,0) rotate(8deg) scale(1)}38%{transform:translate(-30px,6px) rotate(-4deg) scale(1)}52%{transform:translate(-150px,-10px) rotate(-8deg) scale(1)}66%{transform:translate(-90px,14px) rotate(5deg) scale(1)}80%{transform:translate(-40px,0) rotate(0deg) scale(1)}90%{transform:translate(-40px,0) rotate(0deg) scale(1);opacity:1}100%{transform:translate(380px,-280px) rotate(24deg) scale(.45);opacity:0}}
+@keyframes sh36Fade{0%{opacity:0}15%,85%{opacity:1}100%{opacity:0}}
+@keyframes sh36Bob{from{transform:translateY(0)}to{transform:translateY(-7px)}}
+@keyframes sh36Scan{0%,100%{transform:rotate(-24deg) translate(0,0)}50%{transform:rotate(18deg) translate(-4px,-6px)}}
+@keyframes sh36Talk{0%,68%{opacity:0;transform:translateY(6px) scale(.9)}74%,92%{opacity:1;transform:none}100%{opacity:0}}
+@keyframes cp36Ham{0%{transform:rotate(-55deg)}55%{transform:rotate(-55deg)}82%{transform:rotate(18deg)}100%{transform:rotate(-55deg)}}
+@keyframes cp36Bob{0%,70%,100%{transform:translateY(0)}82%{transform:translateY(1.5px) scaleY(.97)}}
+@keyframes cp36Chip{0%,78%{opacity:0;transform:translate(0,0)}82%{opacity:1}100%{opacity:0;transform:translate(var(--cx),var(--cy)) rotate(160deg)}}
+@media (prefers-reduced-motion:reduce){.go36-ham,.go36-chip,.go36-cp,.go36-scan{animation:none}}
+/* TIDLIGERE VERSJONER */
+.ny-hist{display:flex;flex-direction:column;gap:8px;margin-top:22px}
+.ny-hist .ny-cap{font:500 11px 'IBM Plex Mono',ui-monospace,monospace;letter-spacing:.1em;opacity:.65}
+.ny-hl{display:flex;flex-direction:column}
+.ny-hr{border-top:1px solid var(--w30-line,#d8d1c2)}
+.ny-hr:last-child{border-bottom:1px solid var(--w30-line,#d8d1c2)}
+.ny-hb{display:flex;align-items:center;gap:12px;width:100%;min-height:52px;padding:8px 2px;border:0;background:transparent;color:inherit;cursor:pointer;text-align:left;font:inherit}
+.ny-hv{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.ny-hv b{font:600 14px 'IBM Plex Mono',ui-monospace,monospace}
+.ny-hv span{font-size:12.5px;opacity:.65}
+.ny-hi{font-size:12px;color:#2f7d4f;font-weight:600;white-space:nowrap}
+.ny-hf{font-size:12px;color:#fff;background:#b23a2a;border-radius:999px;padding:2px 8px;font-weight:700}
+.ny-chev{font-size:20px;opacity:.5;transition:transform .2s ease;line-height:1}
+.ny-hr.on .ny-chev{transform:rotate(90deg)}
+.ny-hn{padding:0 2px 12px}
+.ny-hn ul{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:4px;font-size:14px;line-height:1.45}
+.ny-more{align-self:flex-start;height:36px;padding:0 16px;border-radius:18px;border:1px solid var(--w30-line,#d8d1c2);background:transparent;color:inherit;cursor:pointer;font:700 13px Manrope,system-ui,sans-serif}
+
+/* ================= Glimt i prestedrakt (bibelvers i briefen) ================= */
+@keyframes go38Bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+@keyframes go38Halo{0%,100%{opacity:.65}50%{opacity:1}}
+.go38-pr{animation:go38Bob 3s ease-in-out infinite}
+.go38-halo{animation:go38Halo 2.8s ease-in-out infinite}
+@media (prefers-reduced-motion: reduce){.go38-pr,.go38-halo{animation:none}}
+.gb37-bv .gb38-pfig{position:absolute;top:10px;right:14px;z-index:1;line-height:0}
+.gb37-bv.gb38-hasfig .gb37-bh{padding-right:62px}
+
+/* ---------- Glimt-figurene: Glimt-innstillingen for 17. mai ---------- */
+.gs41-m17 .gs40-seg button{white-space:nowrap}
+
+/* ---------- Glimt-orben (orb43.js) ---------- */
+.w43-orb{--o:20px;position:relative;flex:none;display:inline-grid;place-items:center;width:var(--o);height:var(--o);border-radius:50%;
+  background:conic-gradient(from 0deg,#b23a2a,#e8794a,#f2c14e,#3fbf9a,#7a5ad6,#b23a2a);animation:w43spin 4s linear infinite}
+.w43-orbi{display:grid;place-items:center;width:calc(var(--o) - max(4px,var(--o) * .22));height:calc(var(--o) - max(4px,var(--o) * .22));border-radius:50%;background:#fbf6ea;animation:w43spin 4s linear infinite reverse}
+.w43-orbi svg{width:62%;height:62%;display:block}
+.w43-orb.busy,html.kq43-busy .k43-quick .w43-orb{animation-duration:1.1s}
+.w43-orb.busy .w43-orbi,html.kq43-busy .k43-quick .w43-orbi{animation-duration:1.1s}
+@keyframes w43spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.w43-orb,.w43-orbi{animation:none}}
+
+/* ---------- GlimtInput: spøkelsestekst, Tab-brikke og forslagsliste ---------- */
+.gi44-ghost{position:fixed;z-index:2147481000;pointer-events:none;white-space:pre;overflow:hidden;box-sizing:border-box;color:var(--c44-mut);opacity:.7;text-align:left}
+.gi44-ghost .gi44-v{visibility:hidden}
+.gi44-tab{position:fixed;z-index:2147481001;height:22px;padding:0 7px;border-radius:6px;border:1px solid var(--c44-line2);background:var(--c44-card);display:flex;align-items:center;font:600 10.5px 'IBM Plex Mono',ui-monospace,monospace;color:var(--c44-mut);pointer-events:none}
+.gi44-list{position:fixed;z-index:2147481002;border-radius:16px;background:var(--c44-card);border:1px solid var(--c44-line);box-shadow:var(--c44-sh);padding:6px;display:flex;flex-direction:column;box-sizing:border-box;max-width:calc(100vw - 16px)}
+.gi44-list button{display:flex;align-items:center;gap:10px;min-height:40px;padding:0 12px;border:0;border-radius:10px;background:transparent;text-align:left;cursor:pointer;font:500 14px Manrope,system-ui,sans-serif;color:var(--c44-ink)}
+.gi44-list button span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gi44-list button i{font-style:normal;color:var(--c44-lab);font-weight:800}
+.gi44-list button.on,.gi44-list button:hover{background:var(--c44-chip)}
+.gi44-foot{padding:6px 12px 4px;font:600 10px 'IBM Plex Mono',ui-monospace,monospace;letter-spacing:.08em;color:var(--c44-mut)}
+.gi44-list[hidden],.gi44-tab[hidden],.gi44-ghost[hidden]{display:none}
+
+/* ---------- Glimt-agenten: treff, oppfølgingsspørsmål og bekreftelse (glimt-agent45.js) ---------- */
+.ga45{display:flex;flex-direction:column;gap:10px;margin-top:10px;font-family:Manrope,system-ui,sans-serif;--ga-ink:#1b1a17;--ga-mut:#6b665c;--ga-card:#fffdf8;--ga-line:#e3ddcf;--ga-chip:#efe9dc}
+.ga45.dark{--ga-ink:#fff;--ga-mut:rgba(255,255,255,.66);--ga-card:rgba(255,255,255,.08);--ga-line:rgba(255,255,255,.16);--ga-chip:rgba(255,255,255,.12)}
+html[data-mode="dark"] .ga45:not(.dark){--ga-ink:#f3efe6;--ga-mut:#a39d90;--ga-card:#211e18;--ga-line:#3a352c;--ga-chip:#2b2720}
+.ga45-res{display:flex;flex-direction:column;border:1px solid var(--ga-line);border-radius:14px;overflow:hidden;background:var(--ga-card)}
+.ga45-r{display:flex;align-items:center;gap:10px;padding:9px 12px;border:0;border-top:1px solid var(--ga-line);background:transparent;color:var(--ga-ink);text-align:left;cursor:pointer;font:inherit;min-width:0}
+.ga45-r:first-child{border-top:0}
+.ga45-r:hover{background:var(--ga-chip)}
+.ga45-r>i{flex:none;width:8px;height:8px;border-radius:50%}
+.ga45-rt{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.ga45-rt b{font-size:13.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ga45-rt span{font-size:12px;color:var(--ga-mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ga45-amt{flex:none;font:600 13px 'IBM Plex Mono',ui-monospace,monospace}
+.ga45-k{flex:none;font:600 10px 'IBM Plex Mono',ui-monospace,monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--ga-mut)}
+.ga45-more{padding:6px 12px;font-size:12px;color:var(--ga-mut);border-top:1px solid var(--ga-line)}
+.ga45-ask,.ga45-cf{display:flex;flex-direction:column;gap:8px}
+.ga45-ask>b,.ga45-cf>b{font-size:14px;font-weight:700;color:var(--ga-ink)}
+.ga45-opts{display:flex;flex-wrap:wrap;gap:6px}
+.ga45-o{min-height:34px;padding:0 14px;border-radius:999px;border:1px solid var(--ga-line);background:var(--ga-card);color:var(--ga-ink);font:600 13px Manrope,system-ui,sans-serif;cursor:pointer}
+.ga45-o:hover{background:var(--ga-chip)}
+.ga45-o.danger{background:#b23a2a;border-color:#b23a2a;color:#fff}
+.ga45-o:disabled{opacity:.6;cursor:default}
+.ga45-err{font-size:13px;color:#e0705e}

@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 const rd = (p) => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8');
-const W65 = rd('public/css/web65.css');
+const W65 = rd('public/css/pages/innstillinger.css');
 const ACSS = rd('public/css/ai-control.css');
 const A = rd('public/js/ai-control.js');
 const SA = rd('public/js/settings-ai.js');

@@ -24,10 +24,7 @@ const KEY_OF = Object.fromEntries(Object.entries(B52_73).map(([k, v]) => [v, k])
 /** Kortets høyde i ferdig form (skjelettet tar samme plass). */
 const H73 = { vaer: 280, kal: 150, fokus: 190, gjore: 230, reise: 180, regn: 250, kveld: 146, nyheter: 760, pakker: 150, homelab: 200, domener: 200, klaer: 150, abo: 160, bibel: 260, familie: 120, skole: 160, bursdager: 140, nordlys: 100, aksjer: 130 };
 const TIMEOUT = 6000, PREFETCH = 5 * 60_000;
-// Stilarket lastes herfra (ingen endring i app.html).
-if (typeof document !== 'undefined' && !document.querySelector('link[data-b73-css]')) {
-  const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = '/assets/css/web73-brief.css'; l.dataset.b73Css = ''; document.head.appendChild(l);
-}
+// Stilene ligger i pages/oversikt.css og pages/innstillinger.css (lastes i app.html).
 
 const uid = () => { try { return localStorage.getItem('hl_uid') || ''; } catch { return ''; } };
 const lsGet = (k) => { try { const v = JSON.parse(localStorage.getItem(k) || 'null'); return v && v.uid === uid() ? v : null; } catch { return null; } };

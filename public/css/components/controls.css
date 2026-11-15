@@ -1,0 +1,30 @@
+/* Knapper og felt: .btn, .btn-lg, .btn-primary, lukkeknappen .x, arkknappene (SheetButton), .field og .bare. */
+
+.btn{border:0;border-radius:999px;padding:6px 14px;background:var(--row);color:var(--blue);font-size:13px}
+
+.btn-lg{padding:12px 20px;border-radius:999px;border:1px solid var(--line);background:var(--pill);color:var(--text);font-size:14px;display:inline-flex;align-items:center;gap:6px}
+
+.btn-primary{background:var(--blue);color:var(--lock);font-weight:600;border-color:transparent}
+
+.field{background:var(--field);border:1px solid var(--line);border-radius:10px;padding:8px;color:var(--text);outline:none;min-width:0}
+
+.field:focus{border-color:var(--blue)}
+
+.bare{background:none;border:0;color:var(--text);outline:none;padding:0;min-width:0;width:100%}
+
+.x{background:none;border:0;color:var(--faint);font-size:18px;padding:4px 6px}
+
+.x:hover{color:var(--red)}
+
+/* ---------- Prompt 30: felles SheetButton (Ferdig = pri, Lukk/Avbryt = sec, ‹ Tilbake = back) ---------- */
+:root{--sb-bg:#eef0f4;--sb-fg:#0c1119;--sb-bg2:rgba(255,255,255,.1);--sb-fg2:#eef0f4}
+html[data-hl="2c"]{--sb-bg:#1b1a17;--sb-fg:#f3efe6;--sb-bg2:rgba(27,26,23,.08);--sb-fg2:#1b1a17}
+.sb-dark{--sb-bg:#fff;--sb-fg:#17191e;--sb-bg2:rgba(255,255,255,.1);--sb-fg2:#fff}
+.sbtn{position:relative;flex:none;display:inline-flex;align-items:center;justify-content:center;gap:2px;height:36px;padding:0 16px;border-radius:18px;border:0;cursor:pointer;
+  font:700 14px/1 Manrope,Outfit,system-ui,sans-serif;white-space:nowrap;text-decoration:none;background:var(--sb-bg2);color:var(--sb-fg2);-webkit-tap-highlight-color:transparent;transition:filter .15s,transform .1s}
+.sbtn::before{content:'';position:absolute;inset:-4px -4px}
+.sbtn.pri{background:var(--sb-bg);color:var(--sb-fg)}
+.sbtn.back{padding:0 16px 0 10px}
+.sbtn:hover{filter:brightness(.94)}
+.sbtn:active{transform:scale(.97)}
+.sbtn:focus-visible{outline:2px solid currentColor;outline-offset:2px}

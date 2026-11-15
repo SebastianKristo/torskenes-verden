@@ -41,7 +41,7 @@ const propsOf = (body) => new Set([...body.matchAll(/([a-z-]+)\s*:/g)].map((x) =
 const OK = new Set(['transform', 'translate', 'rotate', 'scale', 'opacity']);
 // Unntak (fil → keyframes → begrunnelse). Hold lista kort.
 const ALLOW = {
-  'css/app.css': {
+  'css/layout.css': {
     'dx-open': 'Avgangsdetaljene folder seg ut (grid-template-rows 0fr→1fr, 200 ms, én gang): innholdet under skal skyves jevnt ned. Med transform ville det hoppe – utseendet skal ikke endres.',
   },
 };
@@ -73,7 +73,7 @@ test('hvitlista er oppdatert (hvert unntak finnes fortsatt og har begrunnelse)',
 
 test('skimmere flytter et ferdig lag med transform', () => {
   const css = (rel) => ALL.find((x) => x.rel === rel).text;
-  for (const [rel, name, sel] of [['css/media43.css', 'm43sk', '.m43-skel::after'], ['css/media70.css', 'm70sk', '.m70-skel::after'], ['css/web32.css', 'dm-shim', '.dm-sum-sk span::after'], ['css/web38.css', 'k38shim', '.k38-map-wait::after'], ['css/ai-control.css', 'acStripe', '.ac-stripe::after'], ['css/chat70.css', 'ch70Sh', '.ch70-shim']]) {
+  for (const [rel, name, sel] of [['css/media43.css', 'm43sk', '.m43-skel::after'], ['css/media70.css', 'm70sk', '.m70-skel::after'], ['css/pages/domener.css', 'dm-shim', '.dm-sum-sk span::after'], ['css/overgang/kalender.css', 'k38shim', '.k38-map-wait::after'], ['css/ai-control.css', 'acStripe', '.ac-stripe::after'], ['css/chat70.css', 'ch70Sh', '.ch70-shim']]) {
     const t = css(rel);
     const k = keyframes(t).find((x) => x.name === name);
     assert.ok(k, `${rel}: ${name}`);
@@ -85,19 +85,19 @@ test('skimmere flytter et ferdig lag med transform', () => {
 test('pulser og ringer er ferdige lag (::after) som skaleres/tones – ikke animert box-shadow', () => {
   const t = (rel) => ALL.find((x) => x.rel === rel).text;
   assert.match(t('js/voice54.js'), /\.v54-mic\.v54-on::after,\.ch-mic\.v54-on::after\{[^}]*animation:v54p/);
-  assert.match(t('css/web35.css'), /\.gb-ring::after\{[^}]*animation:gbRing/);
-  assert.match(t('css/web34.css'), /#settings \.hl-ring::after\{[^}]*animation:hlRing/);
+  assert.match(t('css/pages/oversikt.css'), /\.gb-ring::after\{[^}]*animation:gbRing/);
+  assert.match(t('css/pages/innstillinger.css'), /#settings \.hl-ring::after\{[^}]*animation:hlRing/);
   assert.match(t('js/memory63.js'), /\.m63-flash::after\{[^}]*animation:m63f/);
-  assert.match(t('css/web40.css'), /\.hl40-glow::after\{[^}]*mix-blend-mode:color-dodge[^}]*animation:hl40g/);
+  assert.match(t('css/overgang/familie.css'), /\.hl40-glow::after\{[^}]*mix-blend-mode:color-dodge[^}]*animation:hl40g/);
 });
 
 test('brytere glir med transform, ikke left', () => {
-  // Unntak: .cp36 (web36.css) er figuren som rir på fremdriftslinjen i Oppdateringer; plassen er prosent av linjen (left), og den
+  // Unntak: .cp36 (components/glimt.css) er figuren som rir på fremdriftslinjen i Oppdateringer; plassen er prosent av linjen (left), og den
   // flytter seg bare når prosenten endres (sjeldent), ikke per bilde.
   const bad = ALL.filter((f) => /\.css$/.test(f.rel)).flatMap((f) => [...f.text.matchAll(/([^{}]+)\{[^}]*transition:\s*left\b[^}]*\}/g)].map((m) => `${f.rel} ${m[1].trim()}`)).filter((x) => !/ \.cp36$/.test(x));
   assert.deepEqual(bad, []);
-  assert.match(ALL.find((x) => x.rel === 'css/web35.css').text, /\.gs-sw\.on i\{transform:translateX\(18px\)\}/);
-  assert.match(ALL.find((x) => x.rel === 'css/web65.css').text, /\.gs-sw\.on i\{transform:translateX\(14px\)\}/);
+  assert.match(ALL.find((x) => x.rel === 'css/pages/innstillinger.css').text, /\.gs-sw\.on i\{transform:translateX\(18px\)\}/);
+  assert.match(ALL.find((x) => x.rel === 'css/pages/innstillinger.css').text, /\.gs-sw\.on i\{transform:translateX\(14px\)\}/);
 });
 
 test('ark (Familie-kart og Kart på smal skjerm) glir med transform, ikke animert høyde', () => {
@@ -107,7 +107,7 @@ test('ark (Familie-kart og Kart på smal skjerm) glir med transform, ikke animer
   const famJs = ALL.find((x) => x.rel === 'js/family50.js').text;
   assert.match(famJs, /sh\.style\.transform = `translateY\(/);
   assert.doesNotMatch(famJs, /sh\.style\.height = `/);
-  const k46 = ALL.find((x) => x.rel === 'css/web46.css').text;
+  const k46 = ALL.find((x) => x.rel === 'css/pages/kart.css').text;
   assert.doesNotMatch(k46, /\.k46-pan\{[^}]*transition:height/);
   assert.match(ALL.find((x) => x.rel === 'js/kart46.js').text, /pan\.style\.transform = `translateY\(/);
 });
@@ -125,7 +125,7 @@ test('mikrofon-bølgeformen, Hjem-flisene og fanebyttet bruker animasjonsbilder 
   const pe = w.slice(w.indexOf('function pageEnter'), w.indexOf('/* ---------------- Ruter: buffer')).replace(/\/\/.*$/gm, '');
   assert.doesNotMatch(pe, /offsetWidth/);
   assert.match(pe, /\.animate\(/); // prompt 87: innholdet animeres, ikke hele visningen (fotovinduet står i ro)
-  assert.match(ALL.find((x) => x.rel === 'css/web52.css').text, /\.h52\.edit \.h52-i\{[^}]*will-change:rotate,translate/);
+  assert.match(ALL.find((x) => x.rel === 'css/pages/oversikt.css').text, /\.h52\.edit \.h52-i\{[^}]*will-change:rotate,translate/);
 });
 
 test('Glimt-orbene roterer et ferdig lag (ingen animert conic-gradient-vinkel/@property)', () => {
@@ -136,6 +136,6 @@ test('Glimt-orbene roterer et ferdig lag (ingen animert conic-gradient-vinkel/@p
 });
 
 test('«Reduser bevegelse»: ark og kort tones kort inn', () => {
-  const w = ALL.find((x) => x.rel === 'css/web52.css').text;
+  const w = ALL.find((x) => x.rel === 'css/components/accessibility.css').text;
   assert.match(w, /@media \(prefers-reduced-motion:reduce\)\{\.tk-sheet,\.k2-sheet,[^}]*animation:fade71 \.15s/);
 });
