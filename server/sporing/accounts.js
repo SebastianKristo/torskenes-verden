@@ -11,7 +11,8 @@
 // roterende refresh-token som lagres straks), refresh én gang ved 401/403 og skillet «logg inn på nytt» / «app-nøkkelen er byttet».
 //
 // Sikkerhet (kontrakten): tokens lagres kryptert (AES-256-GCM, seal i finans/db.js) per bruker i kv – aldri til frontend eller logg.
-// App-klient-ID-ene/secret er transportørenes egne app-verdier slik integrasjonene bruker dem; de sendes aldri til klientene.
+// App-klient-ID-ene/secret er transportørenes egne app-verdier slik integrasjonene bruker dem; de står i carrier-apps.js (Q22, kan
+// overstyres fra miljøet) og sendes aldri til klientene.
 // Ingen brukeroppgitte URL-er hentes: alle verter her er faste (account.postnord.com, api2.postnord.com, id.posten.no, login.bring.com,
 // api.posten.no). Innlimt redirect-URL leses bare for code/state.
 import { Hono } from 'hono';
@@ -23,6 +24,7 @@ import { userGuard, readJson, bad, MOCK } from '../homeos-common.js';
 import { upsertShipment, trk46, stagger41 } from './shipments.js';
 import { detect, normNo, configured, setAccountLookup46, canonical41 } from './carriers.js';
 import { dtf } from '../intl-format.js'; // gjenbrukte Intl.DateTimeFormat
+import { CARRIER_APPS } from './carrier-apps.js'; // Q22: app-verdiene for Posten, Bring og PostNord
 
 /* ---------------- Konstanter (fra const.py i integrasjonene) ---------------- */
 
@@ -30,18 +32,18 @@ export const PN46 = {
   authorize: 'https://account.postnord.com/auth',
   token: 'https://account.postnord.com/oauth2/token',
   tracking: 'https://api2.postnord.com/rest/customer/v2/receiverapp/tracking',
-  clientId: 'receiverappprod3gvTgY5ATtYWZZy',
+  clientId: CARRIER_APPS.postnord.clientId,
   redirect: 'com.postnord.app://redirect',
   scopes: ['openid', 'offline_access', 'https://api.postnord.com/scopes/shipment/eventsorterservice/recipient', 'https://api.postnord.com/scopes/receiverapp-bff/track',
     'https://api.postnord.com/scopes/trackedshipments/track', 'https://api.postnord.com/scopes/recipientinstructions/read', 'https://api.postnord.com/scopes/eta/livetracking',
     'https://api.postnord.com/scopes/preferences/recipient'],
   // Mottakerappens gateway-nøkkel: delt app-materiale, ikke en brukerhemmelighet. Avvist etter vellykket refresh = kompatibilitetsfeil.
-  apiKey: '1ecf161be47543b19fce03f953a6e8d2',
+  apiKey: CARRIER_APPS.postnord.apiKey,
   context: 'mobileapp',
 };
 const BRANDS46 = {
-  posten: { name: 'Posten', host: 'https://id.posten.no', clientId: 'f0ad2360e9f64a0986faafe66a9731e5', secret: 'b814595805d5859ebe1d69abd2e65b0d8f4b786478bb31b5bfeefb5dc5dc1b1be8dae22d83d4195f', redirect: 'posten://login' },
-  bring: { name: 'Bring', host: 'https://login.bring.com', clientId: 'ffb3cd07a5a043a5977b7e272a06bb8f', secret: '0b00ac6b4c474c0ea087552341f10a1446592b94dada40cbbdba97aa84cfe5bb41cba49339582', redirect: 'bring://login' },
+  posten: { name: 'Posten', host: 'https://id.posten.no', clientId: CARRIER_APPS.posten.clientId, secret: CARRIER_APPS.posten.secret, redirect: 'posten://login' },
+  bring: { name: 'Bring', host: 'https://login.bring.com', clientId: CARRIER_APPS.bring.clientId, secret: CARRIER_APPS.bring.secret, redirect: 'bring://login' },
 };
 export const POSTEN_INBOX46 = 'https://api.posten.no/parcel-api/v1/parcel';
 const INBOX_DAYS = 30, INBOX_PAGES = 25, MAX_UNAUTH_POLLS = 3, LOGIN_TTL = 15 * 60_000;
