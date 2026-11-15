@@ -88,3 +88,13 @@ Når du finner et begrep som mangler eller brukes ulikt, legg det til her i samm
 | Skjold Lab-kategoriene **Motstander**, **Kondensatorer**, **Dioder og LED**, **Transistorer**, **IC-er**, **Mikrokontrollere**, **Sensorer**, **Moduler**, **Kontakter**, **Kabler**, **Skruer og bolter**, **Mutre og skiver**, **Avstandsstykker**, **Brytere**, **Sikringer**, **Verktøy**, **Diverse** | LED, Kabel, Kabelsko, Skruer (som standardkategori) | Standardlisten (`server/skjold/kategorier.js`). Brukerens egne kategorier endres ikke |
 | **Helse (Husstand)** | Helse (Familie) | Innstillinger → Husstand → Helse |
 | **Brief** og **Bibel** i «Alle sider» og Mer (gruppene I dag og Fritid og læring) | – | Brief åpnes som ark (`#/brief`). Bibel åpner siden i Økonomi (`/finans/#/bibel`, `#/bibel` videresendes) |
+
+## Avgjort i Fase 6 (appene)
+
+| Bruk | Ikke bruk | Merknad |
+|---|---|---|
+| Økonomi-fanene **Oversikt**, **Transaksjoner**, **Budsjett**, **Faste betalinger** og **Mer** (også i appene) | Liste, Søk, Abonnementer (som fane) | Nøklene i `finNav` er `transaksjoner` og `faste`; `liste` og `abonnementer` er alias (Q3, Q4) |
+| **Glimt** (søket i Økonomi, i Mer) | Søk | |
+| **Hvem kjører?** (henting og bringing, under filteret Familie i Kalender) | Familiekalender | iOS: Mer og dyplenken `#/kalender/familie` (Q5) |
+| **‹ Økonomi** (tilbake til Økonomis Oversikt) og **‹ Oversikt** (tilbake til startsiden) | ‹ Finans, ‹ Hjem | Q1, Q2 |
+| **Homelab** på klokka, i widgetene og i systemtekstene (Innstillinger → Homelab, Helse → Apper → Homelab) | FinansHub | Q2. Widgeten med saldo heter **Økonomi** |
