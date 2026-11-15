@@ -12,6 +12,7 @@
 //             source:'transaksjoner'|'registrert'|'anslag'|'mangler', sources:[{date, name, amount}], note, missing?:string}
 import { kv } from './db.js';
 import { notifyUser } from '../notify.js';
+import { registerJob } from '../jobs/index.js';
 import { q51 as q, today51, kr51, krText51, ore51, str51, bad51 as bad, r2, tx51, csvCell51, esc51, dayLabel51 } from './planning-util.js';
 
 // Satser og grenser per inntektsår (kr). Anslag – kontroller alltid hos Skatteetaten. Ukjent år bruker siste kjente.
@@ -215,11 +216,5 @@ export async function taxReminderTick51(today = today51()) {
   }
   return n;
 }
-let timer51 = null;
-export function startTax51() {
-  if (timer51) return;
-  const tick = () => { taxReminderTick51().catch(() => {}); };
-  setTimeout(tick, 60_000).unref?.();
-  timer51 = setInterval(tick, 3 * 3600_000);
-  timer51.unref?.();
-}
+// Felles planlegger (server/jobs/): ikke i test eller sandkassen. Hver 3. time; hvert varsel sendes én gang per år (fin51_tax_sent).
+registerJob('finans.skattemelding', 3 * 3600_000, () => taxReminderTick51(), { note: 'Påminnelse om skattemeldingen (15. mars og 20. april)' });

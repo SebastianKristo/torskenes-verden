@@ -4,6 +4,7 @@
 // nede) markeres som sendt uten å sendes. Sendes med notifyUser (realtime + kø for appene + Web Push).
 import { db } from '../db.js';
 import { notifyUser } from '../notify.js';
+import { registerJob } from '../jobs/index.js';
 import { notificationsOf, trialOut } from './trials.js';
 import { addDaysISO } from '../../public/js/trial-parse.js';
 import { osloTodayISO } from '../../public/js/quick-time.js';
@@ -37,9 +38,5 @@ export async function trialTick(now = Date.now()) {
   return out;
 }
 
-let timer = null;
-export function startTrialScheduler() {
-  if (timer) return;
-  timer = setInterval(() => trialTick().catch((e) => console.warn('[prøveperioder]', e.message)), 60_000);
-  timer.unref?.();
-}
+// Felles planlegger (server/jobs/): ikke i test eller sandkassen.
+registerJob('finans.provetider', 60_000, () => trialTick(), { note: 'Varsler for gratis prøveperioder' });

@@ -3,7 +3,6 @@
 //   SMB: validering etter SMB-reglene, feiltype per kind, POST /api/smb/shares {host, user, pass}                       → finans/backup.js, smb-browse.js
 //   «Starter opp» bare ved ekte omstart: /api/health {restarting, updating, state} + X-Homelab-State                      → index.js, system-update.js
 //   2FA i appen: /api/auth/2fa/*                                                                                       → auth/two-factor.js (montert fra auth/login.js)
-//   Finans: added, PATCH alt + historikk, Les på nytt, POST /finans/api/search/ask                                    → finans/added.js, finans/tx-edit.js (+ routes.js txOut/receiptOut)
 //   Gjøremål-Glimt: flere punkter med rekkefølge, sted og person                                                      → tasks-glimt40.js (+ tasks-glimt37.js, tasks.js itemOut)
 //   Nyheter Glimt-side: /api/news/glimt, /api/news/glimt/sources, /api/glimt/news-digest                               → news40.js
 //   Julemodus: /api/glimt/settings jul*, julActive; brief.jul                                                         → jul40.js (+ glimt35.js), mellomvaren under
@@ -20,7 +19,6 @@ import { startHjemlys40 } from './hjemlys40.js';
 import { startHungSweeper } from './ai-run.js';
 import { sessionUser } from './auth/session.js';
 
-export { finans40Api } from './finans/tx-edit.js';
 export { news40Api, newsDigestApi } from './news40.js';
 export { hjemlys40Api } from './hjemlys40.js';
 

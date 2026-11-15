@@ -14,8 +14,6 @@ import { compressJson } from './http/compress.js';
 import { sessionUser, requireAuth, requireAdmin, userInfo, isAdmin, needsSetup, serverName } from './auth/session.js';
 import * as integrations from './integrations.js';
 import { cfg, publicConfig, updateConfig, runRequest, userCfgSet, runAsUser } from './settings.js';
-import finansApi from './finans/routes.js';
-import { receiptsAlias48 } from './finans/receipts/routes.js';
 import { db as fhDb } from './finans/db.js';
 import homeApi from './home.js';
 import { matApi, matCalendar, startMatScheduler } from './mat.js';
@@ -64,13 +62,12 @@ import { profilesApi, bibleApi, trackingKeysApi } from './api37.js'; // prompt 3
 import { bearerFallthrough46 } from './api-auth46.js'; // prompt 46 (SERVER46)
 import { brief38Api, startApi38 } from './api38.js'; // prompt 38 (SERVER38)
 import { rec39Api, week39Api } from './api39.js'; // prompt 39 (SERVER39)
-import { finans40Api, news40Api, newsDigestApi, hjemlys40Api, pages40Api, briefJul40, tasksAfter40, tasksCreate40, startApi40 } from './api40.js'; // prompt 40 (SERVER40)
+import { news40Api, newsDigestApi, hjemlys40Api, pages40Api, briefJul40, tasksAfter40, tasksCreate40, startApi40 } from './api40.js'; // prompt 40 (SERVER40)
 import { mountServer47 } from './server47.js'; // prompt 47 (SERVER47)
 import { hjemlys41Api, hjemlysGet41, hlPage41, ruter41Api, mai17Api, huske41Api, tracking41Api, weather41Api, brief41, weatherFull41 } from './api41.js'; // prompt 41 (SERVER41)
-import { finans42Api, abCalendarsMw42, abApi42, calendarsEvents42, abIcs42, tracking42Api, health42Api, familyHealthMw42, startHealth42, hjemlys42Api, tasks42Api } from './api42.js'; // prompt 42 (SERVER42)
-import fin51Api from './finans/planning.js'; // prompt 51 (FIN51): sparemål, faste utgifter-kalender, skattehjelp, prishistorikk, abonnementsjeger
-import { startTax51 } from './finans/tax.js'; // prompt 51 (FIN51): påminnelse før skattemeldingen
-import { widgets43Api, claudeImport43Api, aiMemory43Api, gscDomains43Api, gsc43Api, gscViewMw43, gscOverviewMw43, finans43Api, summaryMw43, transactionsMw43, tasks43Api, tasksOrderMw43 } from './api43.js'; // prompt 43 (SERVER43)
+import { tracking42Api, health42Api, familyHealthMw42, startHealth42, hjemlys42Api, tasks42Api } from './api42.js'; // prompt 42 (SERVER42)
+import { mountFinans, mountFinansAliases, mountTrialWidgets, mountSubsCalendar } from './finans/index.js'; // Økonomi: /finans/api, Boliger-aliasene, prøveperiode-widgets og kalenderen «Abonnementer»
+import { widgets43Api, claudeImport43Api, aiMemory43Api, gscDomains43Api, gsc43Api, gscViewMw43, gscOverviewMw43, tasks43Api, tasksOrderMw43 } from './api43.js'; // prompt 43 (SERVER43)
 import { mountMedia, startMedia } from './media/index.js'; // Media: alle /api/media-, /api/playback- og /api/medctl51-ruter
 import { mediaCalendarsMw43 } from './media/arr.js'; // kalenderkilden «Media»
 // Prompt 44 (SERVER44): Logger (Docker), Media (servere, søk som jobb, felles status), Avspilling, Studie-dokumenter, Kalender-deltakere,
@@ -106,10 +103,8 @@ import { kart46Api } from './kart46.js'; // prompt 46 (DATA46): Kart-API
 import { settingsApi as glimtSettingsApi, ttsApi, imgApi } from './glimt35.js'; // prompt 35: /api/glimt/settings, /api/tts, /api/img
 import weather35Api from './weather35.js'; // prompt 35: /api/weather/place?q=
 import briefApi from './brief34.js'; // prompt 34: Glimt-brief /api/brief (+ /widget, /settings) og daglig generering // prompt 34: AI-kontroll /api/ai/* (status, modeller, ruting, jobber, forbruk, nøkler, selvtest)
-import { startTrialScheduler } from './finans/trials-notify.js'; // prompt 31: varsler for gratis prøveperioder
 import { installCacheBust } from './cache-bust.js'; // prompt 32 (SERVER32)
 import searchHistoryApi from './search-history.js'; // prompt 32: søkehistorikk per bruker
-import trialWidgetsApi from './finans/trial-widgets.js'; // prompt 32
 import romApi, { startSpaceScheduler, spaceApi } from './space32.js'; // prompt 32
 import { domainGlimtApi, gscApi, startDomainGlimtScheduler } from './domains-glimt.js'; // prompt 32
 import { companionsOf } from './kalender/calendars.js'; // companion-tokens (Kalender) i /api/me/devices
@@ -243,20 +238,7 @@ app.get('/finans/manifest.webmanifest', async (c) => c.body(await page('finans/m
 // Prompt 51 (FIN51): Planlegging (sparemål, kalender, skatt, priser, abonnementsjeger) som egen side for PWA/mobil; desktop viser den i FinansHub.
 app.get('/finans/plan51', async (c) => (sessionUser(c) ? html(c, await page('finans/plan51.html')) : c.redirect('/login?next=/finans/plan51')));
 app.get('/finans/sw.js', async (c) => c.body(await page('finans/sw.js'), 200, { 'Content-Type': 'text/javascript', 'Cache-Control': 'no-cache' }));
-app.use('/finans/api/summary', summaryMw43); // prompt 43: spentMonth, day, daysInMonth (saldokortet)
-app.use('/finans/api/transactions', transactionsMw43); // prompt 43: months:[{month, label, count, net}]
-app.route('/finans/api', finans43Api); // prompt 43: /overview, /transactions/months
-app.route('/finans/api', fin51Api); // prompt 51 (FIN51): /fin51/* (egen tilgangskontroll, per bruker)
-app.route('/finans/api', finans42Api); // prompt 42: Glimt-søk (SQL før LLM, tankesteg), filter, avanserte oppgaver + PDF, Boliger web, import til bolig, aksje-logoer
-app.route('/finans/api', finans40Api); // prompt 40: added, PATCH alt + historikk, Les på nytt, POST /search/ask (før routes.js)
-app.route('/finans/api', finansApi);
-app.route('/api/receipts', receiptsAlias48(finansApi)); // prompt 48: alias POST /api/receipts/scan og GET /api/receipts/health
-// Del-mål for PWA-en: «Del → FinansHub» fra bilder-appen legger kvitteringen i køen.
-app.post('/finans/share', async (c) => {
-  if (!sessionUser(c)) return c.redirect('/login?next=/finans/');
-  const res = await finansApi.request('/receipts', { method: 'POST', headers: { cookie: c.req.header('cookie') ?? '', 'content-type': c.req.header('content-type') ?? '' }, body: await c.req.arrayBuffer() }, c.env);
-  return c.redirect(res.ok ? '/finans/#/skann' : '/finans/#/kv');
-});
+mountFinans(app); // server/finans/: lagene på /finans/api (overview → planning → glimt-routes → tx-edit → routes.js), /api/receipts/scan|health, /finans/share
 
 // Statiske filer revalideres alltid (304 når de er uendret), så en oppdatering slår inn med en gang.
 app.use('/assets/*', async (c, next) => {
@@ -675,26 +657,7 @@ app.route('/api/news', news40Api); // prompt 40: Nyheter · Glimt-siden
 app.route('/api/app/pages', pages40Api); // prompt 40: alle sider i Mer (fanelinja), før /api/app
 app.route('/api/app/android', appUpdateApi); // prompt 32: /latest og /apk/:version, sesjon eller app-token, alle brukere
 app.route('/api', notifyApi); // Varsler (/api/me/notify) og appnavn (/api/app) (prompt 17)
-// Boliger (prompt 17): skann rett inn i en bolig. Alias for FinansHub-rutene, samme tilgang (sesjon eller token).
-const toFinans = async (c, path) => {
-  const u = new URL(c.req.url);
-  u.pathname = `/finans/api${path}`;
-  return app.fetch(new Request(u, { method: 'POST', headers: c.req.raw.headers, body: await c.req.arrayBuffer() }), c.env);
-};
-// Prompt 30: del med brukere og rediger utgifter (samme tilgang som FinansHub-rutene).
-const toFinansAny = async (c, path) => {
-  const u = new URL(c.req.url);
-  u.pathname = `/finans/api${path}`;
-  const m = c.req.method;
-  return app.fetch(new Request(u, { method: m, headers: c.req.raw.headers, body: m === 'GET' || m === 'HEAD' ? undefined : await c.req.arrayBuffer() }), c.env);
-};
-app.get('/api/homes/:id{[0-9]+}/shareable', (c) => toFinansAny(c, `/folders/${c.req.param('id')}/shareable`));
-app.post('/api/homes/:id{[0-9]+}/members', (c) => toFinansAny(c, `/folders/${c.req.param('id')}/members`));
-// Prompt 42: Boliger-forsiden (2a) også under /api/boliger/oversikt.
-app.get('/api/boliger/oversikt', (c) => toFinansAny(c, '/boliger/oversikt'));
-app.patch('/api/homes/:id{[0-9]+}/expenses/:eid{[0-9]+}', (c) => toFinansAny(c, `/folders/${c.req.param('id')}/entries/${c.req.param('eid')}`));
-app.get('/api/homes/:id{[0-9]+}/expenses/:eid{[0-9]+}/history', (c) => toFinansAny(c, `/folders/${c.req.param('id')}/entries/${c.req.param('eid')}/history`));
-app.post('/api/homes/:id{[0-9]+}/expenses', (c) => toFinans(c, (c.req.header('content-type') ?? '').startsWith('multipart/') ? `/folders/${c.req.param('id')}/receipts` : `/folders/${c.req.param('id')}/entries`));
+mountFinansAliases(app); // server/finans/: Boliger under /api/homes/* og /api/boliger/oversikt (samme tilgang som /finans/api)
 app.route('/api/background', backgroundApi); // Bakgrunner (prompt 19): Vær, Planeter, Oslo, eget bilde
 // Prompt 24: Bursdager (per bruker, Google Kalender og Home Assistant), widget-svaret, alle integrasjoner (bare admin),
 // ✦ AI-søk i innstillingene og domene-pillen på Boliger (bare admin, cache 5 min). Sesjon eller app-token.
@@ -702,7 +665,7 @@ mountBirthdays(app); // server/kalender/: /api/birthdays (bilder først), /api/w
 app.route('/api/space', spaceApi); // prompt 32: /tle?group=, /apod?days=7, /mars (før authed sine /space-ruter)
 app.route('/api/rom', romApi); // prompt 32: Rom – APOD (7 dager), Mars-rovere, satellitter (SGP4), NASA-nøkkel på serveren
 app.route('/api/widgets', widgets43Api); // prompt 43: /media og /catalog
-app.route('/api/widgets/trials', trialWidgetsApi); // prompt 32: prøveperiode-widgets (GET kompakt, POST /:id «Avsluttet»)
+mountTrialWidgets(app); // server/finans/: /api/widgets/trials (GET kompakt, POST /:id «Avsluttet»)
 app.route('/api/integrations', integrationsStatusApi44); // prompt 44: GET /status (samme kilde som Media), før /:id
 app.route('/api/integrasjoner', integrationsStatusApi44);
 app.route('/api/integrations', integrationsApi);
@@ -713,11 +676,7 @@ app.route('/api/ruter', ruter41Api); // prompt 41: Min reise, skolesoner, «forl
 app.route('/api/huske', huske41Api); // prompt 41: POST /glimt-jobs
 app.use('/api/kalender/calendars', mediaCalendarsMw43); // prompt 43: innebygd kalender «Media» (Sonarr/Radarr)
 app.use('/api/kalender/calendars/*', mediaCalendarsMw43);
-app.use('/api/kalender/calendars', abCalendarsMw42); // prompt 42: innebygd kalender «Abonnementer» (trekkdatoer)
-app.use('/api/kalender/calendars/*', abCalendarsMw42);
-app.route('/api/kalender/abonnementer', abApi42);
-app.get('/api/kalender/abonnementer.ics', authOrToken, abIcs42);
-app.route('/api/calendars', calendarsEvents42); // GET /api/calendars/events?cal=ab
+mountSubsCalendar(app); // server/finans/: innebygd kalender «Abonnementer» (trekkdatoer) – etter Media-kalenderen, før mountKalender
 mountKalender(app); // server/kalender/: kalenderlista, hendelser, vær, widget, companion-token og /api/kalender
 app.route('/api/settings', settingsSearchApi);
 app.route('/api/settings', settingsAsk30Api); // prompt 30: GET /index og POST /ask (✦ AI-søk med indeks fra serveren)
@@ -796,12 +755,11 @@ app.get('/mat/calendar.ics', matCalendar);
 // (ingen varsler, e-post, backup, oppdateringer eller selvreparasjon). Bare HTTP-serveren og migreringene kjører.
 const BG51 = process.env.NODE_ENV !== 'test' && process.env.OPS51_SANDBOX !== '1';
 migrateLocalHosts86().catch((e) => console.warn('[localfetch]', e.message)); // prompt 86: én gang – lokale verter i administratorenes abonnementer godkjennes
-if (BG51) { startMatScheduler(); startTrackingWorker(); startRssWorker(); startBirthdayWorker(); startSystemBackupScheduler(); startUpdateScheduler(); startTrialScheduler(); startDomainGlimtScheduler(); startSpaceScheduler(); startApi38(); startApi40(); startHealth42(); startMedia(); startLogs44(); startLive89(); }
+if (BG51) { startMatScheduler(); startTrackingWorker(); startRssWorker(); startBirthdayWorker(); startSystemBackupScheduler(); startUpdateScheduler(); startDomainGlimtScheduler(); startSpaceScheduler(); startApi38(); startApi40(); startHealth42(); startMedia(); startLogs44(); startLive89(); }
 if (BG51) { startAccounts46(); startGphoto46(); } // prompt 46 (DATA46)
-if (BG51) startJobs(); // felles planlegger (server/jobs/): backup, brief, iCal, skolekalendere, Sjekk inn, «forlot»
+if (BG51) startJobs(); // felles planlegger (server/jobs/): backup, prøveperioder, skattemelding, brief, iCal, skolekalendere, Sjekk inn, «forlot»
 if (process.env.NODE_ENV !== 'test') startOps51(); // prompt 51 (OPS51): planlegger (backup, testet gjenoppretting, vedlikehold) og migrasjonslogg
 if (process.env.OPS51_SANDBOX !== '1') startObs51(); // prompt 51 (OBS51): samples, driftsvarsler og selvreparasjon (ikke i test)
-if (BG51) startTax51(); // prompt 51 (FIN51): påminnelse om skattemeldingen (15. mars og 20. april, én gang per år)
 if (BG51) startQa51(); // prompt 51 (QA51): sender krasjrapporter som ikke kom fram til GlitchTip
 if (BG51) startMedfam51(); // prompt 51 (MEDFAM51): påminnelser «hvem kjører?» og slettinger etter angrefristen
 if (BG51) import('./ai39.js').then((m) => m.startBest59()).catch((e) => console.warn('[ai39] beste modeller:', e?.message)); // prompt 59: de beste modellene (fra eval) settes én gang
