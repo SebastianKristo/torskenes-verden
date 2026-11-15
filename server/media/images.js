@@ -331,7 +331,10 @@ async function bildeAuth(c, next) {
     const want = Buffer.from(sig(c.req.param('type'), c.req.param('id'), c.req.param('variant'), q.v ?? '', q.uid)), got = Buffer.from(String(q.sig));
     if (want.length === got.length && timingSafeEqual(want, got) && mediaOk(q.uid)) { c.set('user', q.uid); return next(); }
   }
-  return authOrToken(c, () => M.mediaGuard43(c, next));
+  // authOrToken ignorerer det next() returnerer, så avslaget fra tilgangssjekken (403) må fanges her.
+  let denied = null;
+  const res = await authOrToken(c, async () => { const r = await M.mediaGuard43(c, next); if (r instanceof Response) denied = r; });
+  return denied ?? res;
 }
 async function bildeRoute(c) {
   const type = c.req.param('type'), id = +c.req.param('id'), variant = c.req.param('variant');

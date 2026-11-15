@@ -172,3 +172,10 @@ test('media-ruter: start av stoppet torrent svarer med samme felt', async () => 
   assert.equal(r.status, 200);
   assert.deepEqual(Object.keys(r.json).sort(), ['hash', 'message', 'ok', 'torrent']);
 });
+
+test('mediebilder: bruker uten Media-tilgang får 403, ikke tomt svar', async () => {
+  const r = await K('/api/media/bilde/serie/1/poster');
+  assert.equal(r.status, 403);
+  assert.equal(r.json?.restricted, true);
+  assert.equal((await N('/api/media/bilde/serie/1/poster')).status, 401);
+});
