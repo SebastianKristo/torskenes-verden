@@ -16,13 +16,13 @@
 //   «når er neste fysioterapi» · «når hadde jeg tannlege sist» · «alle prøver i november» / «hva skjer i desember».
 //   Ellers: spørsmålet + de neste 14 dagene til lokal Ollama (maks to setninger). Ingen sky.
 import { Hono } from 'hono';
-import { authOrToken } from './mobile.js';
-import { eventsFor, matchScore, normText } from './calendar.js';
-import { settings as fhSettings } from './finans/db.js';
-import { parseQuick, osloTodayISO } from './dates/quick.js'; // dato og tid fra den felles tolkeren
-import { run as aiRun } from './ai-run.js';
-import { parseDay } from './parse-day35.js'; // prompt 35
-import { fagAnswer, rememberCtx, FAG_LLM_MS } from './glimt39-fag.js'; // prompt 39: oppfølging, fag og 45 s
+import { authOrToken } from '../mobile.js';
+import { eventsFor, matchScore, normText } from './events.js';
+import { settings as fhSettings } from '../finans/db.js';
+import { parseQuick, osloTodayISO } from '../dates/quick.js'; // dato og tid fra den felles tolkeren
+import { run as aiRun } from '../ai-run.js';
+import { parseDay } from '../parse-day35.js'; // prompt 35
+import { fagAnswer, rememberCtx, FAG_LLM_MS } from '../glimt39-fag.js'; // prompt 39: oppfølging, fag og 45 s
 
 const MOCK = process.env.MOCK_DATA === '1';
 // Prompt 39: 12 s var for lite for en lokal modell som lastes fra disk. Første token innen 12 s, totalt 45 s (FAG_LLM_MS).
@@ -223,7 +223,7 @@ export async function askCalendar(user, q, today = osloTodayISO()) {
   const loc = localAnswer(q, events, today);
   if (loc) { rememberCtx(user, q, loc.items ?? []); return loc; }
   const ctx = [];
-  const prev = (await import('./glimt39-fag.js')).recallCtx(user);
+  const prev = (await import('../glimt39-fag.js')).recallCtx(user);
   if (prev?.events?.length) ctx.push(`Forrige svar gjaldt: ${prev.events.map((e) => `${e.date} ${e.title}`).join('; ')} (spørsmål: ${prev.q})`);
   for (let i = 0; i < 14; i++) { const d = addDays(today, i); dayList(events, d).sort(sortEv).forEach((e) => ctx.push(`${dLong(d)} ${hmOf(e) ? `${hmOf(e)}–${endHm(e)}` : 'hele dagen'} ${e.title}${e.room ? ` (${noUrl(e.room)})` : ''}`)); }
   try {

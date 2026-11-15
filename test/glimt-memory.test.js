@@ -20,7 +20,7 @@ globalThis.fetch = async () => { throw Object.assign(new TypeError('fetch failed
 test.after(() => { globalThis.fetch = realFetch; });
 
 const { default: app } = await import('../server/index.js');
-const quick = await import('../server/calendar-quick.js');
+const quick = await import('../server/kalender/quick.js');
 const assist = await import('../server/assist.js');
 const mem = await import('../server/glimt-memory.js');
 const { OWNER } = await import('../server/db.js');

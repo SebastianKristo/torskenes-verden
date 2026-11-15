@@ -19,7 +19,7 @@
 //   PATCH  /api/kalender/events/:id (samme felt, delvis), DELETE /api/kalender/events/:id – bare editable (ellers 403).
 //   POST   /api/kalender/events/:id/copy → kopi i Privat (skolens hendelser er skrivebeskyttet).
 // Regler (claude-code-kalender.md):
-//  - Gjentakelser (RRULE, RDATE, EXDATE, RECURRENCE-ID) utvides med egen kode (ical-expand.js) i lokal tid (Europe/Oslo).
+//  - Gjentakelser (RRULE, RDATE, EXDATE, RECURRENCE-ID) utvides med egen kode (ical.js) i lokal tid (Europe/Oslo).
 //    node-ical ble droppet: den slår sammen VEVENT-er med samme UID (skolesystemer gjenbruker UID per fag), så bare
 //    den siste hendelsen (ofte eksamen) ble igjen og ingen timer vistes.
 //  - Timer som ligger som enkelthendelser (uten RRULE) kjennes igjen på at samme tittel går igjen ≥ 3 ganger, eller «Lærer:».
@@ -32,17 +32,17 @@
 // brukes demokalenderen (merket mock). Andre brukere får bare demo når de har lagt inn en adresse selv.
 import { Hono } from 'hono';
 import { createHash, randomBytes } from 'node:crypto';
-import { OWNER, kv } from './db.js';
-import { userCfg, userCfgSet } from './settings.js';
-import { cached } from './cache.js';
-import { authOrToken, layoutOf } from './mobile.js';
-import { guardedFetch86 } from './localfetch86.js'; // prompt 86: SSRF-vern for iCal-adresser
+import { OWNER, kv } from '../db.js';
+import { userCfg, userCfgSet } from '../settings.js';
+import { cached } from '../cache.js';
+import { authOrToken, layoutOf } from '../mobile.js';
+import { guardedFetch86 } from '../localfetch86.js'; // prompt 86: SSRF-vern for iCal-adresser
 import { listFor as birthdaysOf, googleCalendarEvents, googleConnected, googleCalendarIds, googleEventWrite, googleCanWrite, googleConfOf } from './birthdays.js';
 /** Prompt 36b: ekstra Google-kalendere som vises som egne kalendere ({id:'g-…', calId, name, color, visible, hidMenu, writable}). */
 export const googleExtraOf = (user) => { const v = googleConfOf(user).extraCalendars; return Array.isArray(v) ? v : []; };
-import { parseIcs, expandIcs as expandCal } from './ical-expand.js';
-import { rememberShown, memorySuggestion } from './glimt-memory.js'; // prompt 33: «Glimt husker»
-import { trialCalendarItems } from './finans/trials.js'; // prompt 31: gratis prøveperioder som heldagshendelser i Privat
+import { parseIcs, expandIcs as expandCal } from './ical.js';
+import { rememberShown, memorySuggestion } from '../glimt-memory.js'; // prompt 33: «Glimt husker»
+import { trialCalendarItems } from '../finans/trials.js'; // prompt 31: gratis prøveperioder som heldagshendelser i Privat
 
 const MOCK = process.env.MOCK_DATA === '1';
 const TZ = 'Europe/Oslo';
@@ -145,7 +145,7 @@ let fetchImpl = null;
 /** Testene kan bytte ut henting: fn(url) → Response eller tekst. */
 export const _setCalendarFetch = (fn) => { fetchImpl = fn; };
 let mockIcs = null;
-const mockText = async (kind) => { mockIcs ??= await import('./mock.js'); return kind === 'canvas' ? mockIcs.mockCanvasIcs() : mockIcs.mockSchoolIcs(); };
+const mockText = async (kind) => { mockIcs ??= await import('../mock.js'); return kind === 'canvas' ? mockIcs.mockCanvasIcs() : mockIcs.mockSchoolIcs(); };
 
 async function fetchText(url) {
   const r = fetchImpl ? await fetchImpl(url) : await guardedFetch86(url, { signal: AbortSignal.timeout(15_000), headers: { 'user-agent': 'homelab-kalender/1.0', accept: 'text/calendar, */*' } });
@@ -153,7 +153,7 @@ async function fetchText(url) {
   if (!r.ok) throw new Error(`Kalenderen svarte ${r.status}`);
   return r.text();
 }
-/** iCal-tekst → kalender (ical-expand.js). Kaster hvis teksten ikke er iCal. */
+/** iCal-tekst → kalender (ical.js). Kaster hvis teksten ikke er iCal. */
 const parse = (text) => {
   if (!/BEGIN:VCALENDAR/i.test(text)) throw new Error('Adressen svarte, men det er ikke en iCal-kalender.');
   const cal = parseIcs(text);
@@ -401,7 +401,7 @@ export async function eventsFor(user, fromDate, toDate) {
       endDate: addDays(t.date, 1), desc: t.note, url: t.url, cal: 'privat', localId: t.id, origin: 'Abonnementer · prøveperiode' }, ctx));
     if (tr.length) { events.push(...tr); sources.push({ id: 'trials', name: 'Prøveperioder', configured: true, ok: true, count: tr.length }); }
   } catch (e) { console.warn('[kalender] prøveperioder:', e.message); }
-  // Prompt 35: ekstra kilder (iCal-abonnement og Home Assistant i kalender35.js).
+  // Prompt 35: ekstra kilder (iCal-abonnement og Home Assistant i external.js).
   for (const fn of extraSources) {
     try { const r = await fn(user, fromDate, toDate, from, to); if (r?.events) { events.push(...r.events); sources.push({ id: r.id, name: r.name, configured: true, ok: true, count: r.events.length }); } }
     catch (e) { console.warn('[kalender] ekstra kilde:', e.message); }
@@ -412,14 +412,14 @@ export async function eventsFor(user, fromDate, toDate) {
   for (const fn of decorators37) { try { fn(user, events); } catch (e) { console.warn('[kalender] dekorasjon:', e.message); } } // prompt 37: fagfarger, kind, adresse/kart
   return { events, sources, ctx };
 }
-// Prompt 33 (SERVER33): Kalender-appen setter appCalendar/appColor på hver hendelse (server/kalender33.js registrerer seg her).
+// Prompt 33 (SERVER33): Kalender-appen setter appCalendar/appColor på hver hendelse (server/kalender/calendars.js registrerer seg her).
 let decorator = null;
 const extraSources = [];
 /** Prompt 35: fn(user, fromDate, toDate, fromMs, toMs) → {id, name, events:[hendelse]} | null */
 export const addEventSource = (fn) => { extraSources.push(fn); };
 export const setEventDecorator = (fn) => { decorator = fn; };
 const decorators37 = [];
-/** Prompt 37: flere dekoratører etter app-kalenderne (kal37.js). */
+/** Prompt 37: flere dekoratører etter app-kalenderne (subjects.js). */
 export const addEventDecorator = (fn) => { decorators37.push(fn); };
 
 const minutes = (ms) => Math.max(0, Math.round(ms / 60_000));
@@ -781,7 +781,3 @@ api.post('/events/:id/copy', async (c) => {
   try { return c.json({ ok: true, event: await createEvent(user, r.value) }, 201); } catch (e) { return fail(c, e); }
 });
 export default api;
-
-export const widgetApi = new Hono();
-widgetApi.get('/', authOrToken, async (c) => c.json(await widgetOut(c.get('user'), nowParam(c))));
-

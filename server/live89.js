@@ -26,7 +26,7 @@ import { runAsUser } from './settings.js';
 import { mediaAllowed43, torrentsOut43, torrentAction43 } from './media43.js';
 import { nrkConf, nrkKall } from './nrkdl.js';
 import { now51, control51 } from './medctl51.js';
-import { eventsFor } from './calendar.js';
+import { eventsFor } from './kalender/events.js';
 import { trk42 } from './tracking.js';
 import { jobOut, smbTarget } from './system-backup.js';
 import { backupRunning51, getRun51, backupRuns51, LABEL as RESTIC_LABEL } from './backup51.js';

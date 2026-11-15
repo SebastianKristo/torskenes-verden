@@ -28,7 +28,7 @@ import { searchPlacesV2 } from './weather-places.js';
 import { appMeta } from './notify.js';
 import { nextTasks } from './tasks.js';
 import * as integrations from './integrations.js';
-import { widgetOut as birthdaysWidget } from './birthdays.js';
+import { widgetOut as birthdaysWidget } from './kalender/birthdays.js';
 import { osloDate } from './dates/oslo.js';
 
 const MOCK = process.env.MOCK_DATA === '1';

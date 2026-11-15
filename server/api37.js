@@ -2,7 +2,6 @@
 //   /api/profiles, /api/onboarding/link, /api/users/:id/profile, /api/profiles/settings  → profiles37.js
 //   /api/bible/*                                                                        → bible37.js
 //   /api/tracking/keys                                                                  → tracking-keys37.js (+ tracking37.js)
-//   /api/kalender/subjects, /api/kalender/geo                                           → kal37.js
 //   /api/tasks/* (Gjøremål, Glimt)                                                      → tasks.js + tasks-glimt37.js
 //   /finans/api/subscriptions/:id/members|leave                                         → finans/shared37.js
 //   «hvor er X» i /api/assist                                                           → where37.js
@@ -22,4 +21,3 @@ _setProfileHas({
 export { default as profilesApi } from './profiles37.js';
 export { default as bibleApi } from './bible37.js';
 export { default as trackingKeysApi } from './tracking-keys37.js';
-export { default as kal37Api } from './kal37.js';

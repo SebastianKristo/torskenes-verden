@@ -51,9 +51,9 @@ export const clockNow45 = () => ({ today: todayNow(), nowMin: minNow() });
 
 /* ---------------- Eksisterende svar (vær, avganger, pakker …) ---------------- */
 
-// var + funksjonsdeklarasjon: assist.js/kalender33.js kan registrere seg før denne modulen er ferdig evaluert (sirkulær import).
+// var + funksjonsdeklarasjon: assist.js/kalender/calendars.js kan registrere seg før denne modulen er ferdig evaluert (sirkulær import).
 var legacy; // eslint-disable-line no-var
-/** assist.js og kalender33.js registrerer de eksisterende svarene her (unngår sirkulær import). */
+/** assist.js og kalender/calendars.js registrerer de eksisterende svarene her (unngår sirkulær import). */
 export function registerLegacy45(h) { legacy = { ...(legacy ?? {}), ...h }; }
 
 /* ---------------- Logg uten personopplysninger ---------------- */

@@ -15,8 +15,8 @@
 import { Hono } from 'hono';
 import { kv, OWNER } from './db.js';
 import { cfg, updateConfig, userCfg, userCfgOverride, setUserCfg, runAsUser, SCHEMA } from './settings.js';
-import { testCalendars } from './calendar.js';
-import { calendarLinks } from './birthdays.js';
+import { testCalendars } from './kalender/events.js';
+import { calendarLinks } from './kalender/birthdays.js';
 import { isAdmin, sessionUser, userInfo } from './auth.js';
 import { bearerOk } from './finans/routes.js';
 import { authOrToken } from './mobile.js';
@@ -132,7 +132,7 @@ export const INTEGRATIONS = [
     F('t212Env', 'Miljø (live eller demo)', 'text', mirrored('t212_env', 't212Env', false, (v) => { const e = oneOf(['live', 'demo'])(v); if (!e) throw new Error('Miljø må være live eller demo'); return e; })),
   ] },
   // Prompt 44: SMTP for invitasjoner fra Kalender (sendes fra brukerens egen adresse).
-  { id: 'smtp', name: 'E-post (SMTP)', group: 'E-post', scope: P, test: async (u) => (await import('./kal44.js')).testSmtp44(u), fields: [
+  { id: 'smtp', name: 'E-post (SMTP)', group: 'E-post', scope: P, test: async (u) => (await import('./kalender/invites.js')).testSmtp44(u), fields: [
     F('smtp_host', 'SMTP-server', 'text', mine('smtp_host'), { required: true, help: 'For eksempel smtp.gmail.com' }),
     F('smtp_port', 'Port', 'text', mine('smtp_port'), { help: '587 (STARTTLS) eller 465 (TLS)' }),
     F('smtp_user', 'Brukernavn', 'text', mine('smtp_user'), { required: true, help: 'Vanligvis e-postadressen' }),

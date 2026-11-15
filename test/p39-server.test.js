@@ -24,9 +24,9 @@ test.after(() => { globalThis.fetch = realFetch; });
 
 const { default: app } = await import('../server/index.js');
 const { db, kv } = await import('../server/db.js');
-const k39 = await import('../server/kal39.js');
+const k39 = await import('../server/kalender/four-calendars.js');
 const fag = await import('../server/glimt39-fag.js');
-const k33 = await import('../server/kalender33.js');
+const k33 = await import('../server/kalender/calendars.js');
 const tg = await import('../server/tasks-glimt37.js');
 const w39 = await import('../server/weather39.js');
 const { osloTodayISO } = await import('../public/js/quick-time.js');

@@ -6,7 +6,7 @@ import { config } from './config.js';
 import { cached, fetchJson } from './cache.js';
 import { fetchWeather } from './weather.js';
 import { cfg, parseRoutes, groupOf, activeUser } from './settings.js';
-import { parseIcs, expandIcs } from './ical-expand.js';
+import { parseIcs, expandIcs } from './kalender/ical.js';
 
 // Personlige integrasjoner (ISO2): cfg() gir den innloggede brukerens verdier (se settings.js), og cachen deles bare per bruker.
 const mine = (k) => `${k}:${activeUser() ?? '-'}`;
@@ -243,7 +243,7 @@ export const getSchool = () => cached(mine('school'), 15 * 60_000, async () => {
   if (!icalUrl) return { configured: false, events: [] };
   const res = await fetch(icalUrl, { signal: AbortSignal.timeout(15_000) });
   if (!res.ok) throw new Error(`iCal svarte ${res.status}`);
-  // Samme iCal-leser og RRULE-utvider som /api/kalender (ical-expand.js): gjentakelser i Oslo-tid over sommertid, flyttede og avlyste
+  // Samme iCal-leser og RRULE-utvider som /api/kalender (kalender/ical.js): gjentakelser i Oslo-tid over sommertid, flyttede og avlyste
   // timer (RECURRENCE-ID), EXDATE og RDATE (F-logikk §2.7).
   const cal = parseIcs(await res.text());
   const now = Date.now();

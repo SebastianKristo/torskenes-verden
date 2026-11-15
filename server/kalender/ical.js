@@ -1,4 +1,4 @@
-// Egen iCal-leser og RRULE-utvidelse for Kalender (prompt 27). Erstatter node-ical i calendar.js fordi node-ical
+// Egen iCal-leser og RRULE-utvidelse for Kalender (prompt 27). Erstatter node-ical i events.js fordi node-ical
 // legger hendelsene i et objekt med UID som nøkkel: skolesystemer som gjenbruker samme UID på mange VEVENT-er
 // (én UID per fag/gruppe, uten RECURRENCE-ID) mistet alle timene unntatt den siste – ofte eksamen om flere måneder.
 // node-ical ignorerte også RDATE, flere RRULE-linjer, STATUS:CANCELLED på overstyringer, EXDATE;VALUE=DATE for timer
@@ -40,7 +40,7 @@ function windowsZone(name) {
   if (WINDOWS[name]) return WINDOWS[name];
   if (winZones === null) {
     try { winZones = JSON.parse(readFileSync(createRequire(import.meta.url).resolve('node-ical/windowsZones.json'), 'utf8')); }
-    catch { try { winZones = JSON.parse(readFileSync(new URL('../node_modules/node-ical/windowsZones.json', import.meta.url), 'utf8')); } catch { winZones = {}; } }
+    catch { try { winZones = JSON.parse(readFileSync(new URL('../../node_modules/node-ical/windowsZones.json', import.meta.url), 'utf8')); } catch { winZones = {}; } }
   }
   const hit = winZones[name]?.iana?.[0];
   return hit && isTz(hit) ? hit : null;

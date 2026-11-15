@@ -6,14 +6,14 @@
 //   PATCH /api/kalender/calendars/abonnementer {visible?, color?, hidMenu?, notify?:'off'|'day_before'|'trials_yearly', showInBrief?} → {calendar}
 //   GET   /api/kalender/abonnementer/events?from=&to= · GET /api/calendars/events?cal=ab&start=&end= → {calendar, events:[…]}
 //   GET   /api/kalender/abonnementer.ics → iCal-feed (innlogget / app-token)
-//   Hendelsene kommer også med i alle vanlige hendelseslister (calendar.js eventsFor via addEventSource), med appCalendar:'abonnementer'.
+//   Hendelsene kommer også med i alle vanlige hendelseslister (kalender/events.js eventsFor via addEventSource), med appCalendar:'abonnementer'.
 //   Hendelse: {id:'ab-<subId>-YYYYMMDD', title:'Netflix · 149 kr', allDay:true, date, kind:'trekk'|'trial'|'renewal', badge:'TREKK'|'PRØVE'|'ÅRLIG', subId, amount, currency,
 //              account, logo, interval:'Hver måned den 22.', deepLink:'finans://abonnement/<id>', openLabel:'Åpne i Finans ›', editable:false, note:'Endres i Finans → Abonnementer'}
 import { Hono } from 'hono';
 import { kv } from './db.js';
 import { db as fhDb, q } from './finans/db.js';
 import { authOrToken } from './mobile.js';
-import { addEventSource, addEventDecorator } from './calendar.js';
+import { addEventSource, addEventDecorator } from './kalender/events.js';
 import { broadcast } from './realtime.js';
 import { osloDate } from './dates/oslo.js';
 import { CYCLE_MONTHS, CYCLE_DAYS, INTERVAL_TEXT, chargesBetween, nextCharge, seriesOf } from './finans/cycles.js';

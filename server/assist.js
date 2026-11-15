@@ -46,7 +46,7 @@
 // Realtime «assist»: {jobId, state, steps[], fields[], progress, title, model, input, source, answer?, error?} (samme struktur
 // som «calendar-quick»).
 //
-// Prompt 33 (SERVER33): POST /api/assist {q, source:'calendar', context?:{eventId}} → Glimt i Kalender-appen (server/kalender33.js,
+// Prompt 33 (SERVER33): POST /api/assist {q, source:'calendar', context?:{eventId}} → Glimt i Kalender-appen (server/kalender/calendars.js,
 //   calendarAnswer): {text, bold, steps:[etiketter], events[], slots[], created?, summary?, weather?, intent, tools[], source:'Kalender', …}.
 //   Jobbens steps[] bruker etikettene ({key:'s1', label, state}). Fikk klienten 202, sendes realtime «assist»
 //   {jobId, state:'running', partial, done:false} med teksten ord for ord før svaret. Varsel: deepLink 'kalender://liste'.
@@ -61,19 +61,19 @@ import { authOrToken, homeDeparturesOf } from './mobile.js';
 import { runAsUser } from './settings.js';
 import { broadcast } from './realtime.js';
 import { notifyOf, notifyUser } from './notify.js';
-import { eventsFor, normText, findEvent } from './calendar.js';
+import { eventsFor, normText, findEvent } from './kalender/events.js';
 import { weatherFull, wmoText, iconOf, PLACES } from './weather-full.js';
 import { packagesFor } from './tracking.js';
 import { nextTasks } from './tasks.js';
 import { settings as fhSettings, ensureLedger } from './finans/db.js';
 import { createTrial, trialOut } from './finans/trials.js';
-import { startQuickJob } from './calendar-quick.js';
+import { startQuickJob } from './kalender/quick.js';
 import { parseQuick, osloTodayISO, quickLabel, senderOf } from './dates/quick.js'; // dato og tid fra den felles tolkeren
 import { aliasesOf, aliasPrompt, parseMemoryIntent, learnFromAssist, typeOfWord, eventHitsAlias, getContext, setContext } from './glimt-memory.js'; // prompt 33
 import { serviceOf, trialSentence, MONTHS, WEEKDAYS, addDaysISO, daysBetween } from '../public/js/trial-parse.js';
 import { parseTrialText as parseTrial } from './finans/trials.js'; // den ene prøvetolkeren på serveren
 import * as integrations from './integrations.js';
-import { calendarAnswer } from './kalender33.js'; // prompt 33: source:'calendar'
+import { calendarAnswer } from './kalender/calendars.js'; // prompt 33: source:'calendar'
 import { fagAnswer, rememberCtx } from './glimt39-fag.js'; // prompt 39: oppfølging og fag
 import { parseDay } from './parse-day35.js'; // prompt 35: felles dag-tolkning
 import { extractPlace, placeWeather, PlaceNotFound } from './weather35.js'; // prompt 35: været for et sted
@@ -85,8 +85,8 @@ import { webSearch, webPrompt, webMeta, webFact, PROVIDER_NAME } from './web-sea
 import { powerFact } from './power-price.js'; // prompt 44: strømpris
 import { isSunQuestion, daylight } from './sun36.js'; // prompt 36: dagslys lokalt
 import { whereIntent, whereAnswer } from './where37.js'; // prompt 37: «hvor er Ingrid?»
-import { parseIntent37, schoolTestAnswer } from './kal37.js'; // prompt 37: skoleprøve ≠ prøveperiode
-import { bareDay37 } from './kalender33.js'; // prompt 37: «i morgen?»
+import { parseIntent37, schoolTestAnswer } from './kalender/subjects.js'; // prompt 37: skoleprøve ≠ prøveperiode
+import { bareDay37 } from './kalender/calendars.js'; // prompt 37: «i morgen?»
 import { needsChatTools } from './chat-tools41.js'; // prompt 41: sammensatte faktaspørsmål går til chatten
 import { isWeekWeather41, weekAnswer41 } from './weather41.js'; // prompt 41: ukesvær med Ollama og 7 dager data
 import { isHuskeMessage41, startJob41 } from './tasks-glimt41.js'; // prompt 41: huskebeskjeder fra søkefeltet → Glimt i bakgrunnen

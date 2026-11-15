@@ -9,8 +9,8 @@
 //       iOS: {platform:'ios', selfUpdate:false, via:'TestFlight', text:'Oppdateres via TestFlight/IPA', testflightUrl:'itms-beta://'}
 //   GET /api/apps/kalender/:version/:file → fila strømmet gjennom serveren (Content-Length, X-Checksum-Sha256)
 import { Hono } from 'hono';
-import { ghFetch, parseSums, notesFromBody, VERSION_RE } from './app-update.js';
-import { parseChangelog, compareVersions } from './system-update.js';
+import { ghFetch, parseSums, notesFromBody, VERSION_RE } from '../app-update.js';
+import { parseChangelog, compareVersions } from '../system-update.js';
 
 const REPO = /^[\w.-]+\/[\w.-]+$/.test(process.env.UPDATE_REPO ?? '') ? process.env.UPDATE_REPO : 'SebastianKristo/torskenes-verden';
 const TTL = 10 * 60_000, ERR_TTL = 60_000;

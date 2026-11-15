@@ -15,11 +15,11 @@ import { bodyLimit } from 'hono/body-limit';
 import { readFile, writeFile, unlink, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { randomBytes } from 'node:crypto';
-import { config } from './config.js';
-import { db, q } from './db.js';
-import { authOrToken as authOrToken0 } from './mobile.js';
+import { config } from '../config.js';
+import { db, q } from '../db.js';
+import { authOrToken as authOrToken0 } from '../mobile.js';
 const authOrToken = (c, next) => authOrToken0(c, next); // sen binding (mobile.js kan være midt i lastingen)
-import { broadcast } from './realtime.js';
+import { broadcast } from '../realtime.js';
 
 const DIR = join(config.dataDir, 'birthday-photos');
 export const MAX_PHOTOS41 = 8, MAX_BYTES41 = 4 * 1024 * 1024, MAX_PX41 = 1600;

@@ -14,7 +14,7 @@ export const ALIASES = Object.freeze([
   { alias: '/api/domener/sammendrag', target: '/api/domains/summary', note: 'Norsk navn' },
   { alias: '/api/velfremme', target: '/api/hjemlys', note: 'Vel fremme (internt hjemlys), videresendes med app.fetch' },
   { alias: '/api/calendar/quick', target: '/api/kalender/quick', note: 'Samme calendarQuickApi' },
-  { alias: '/api/calendar/ask', method: 'POST', target: '/api/kalender/glimt/search', note: 'kalender41.js' },
+  { alias: '/api/calendar/ask', method: 'POST', target: '/api/kalender/glimt/search', note: 'kalender/glimt-search.js' },
   { alias: '/api/receipts/scan', method: 'POST', target: '/finans/api/receipts/scan', note: 'receipts48' },
   { alias: '/api/receipts/health', method: 'GET', target: '/finans/api/receipts/health', note: 'receipts48' },
   { alias: '/api/finans/kvitteringer', method: 'POST', target: '/finans/api/receipts/parsed', note: 'server47.js' },

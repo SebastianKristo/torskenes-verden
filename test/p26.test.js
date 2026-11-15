@@ -32,7 +32,7 @@ globalThis.fetch = async (url, init = {}) => {
 test.after(() => { globalThis.fetch = realFetch; });
 
 const { default: app } = await import('../server/index.js');
-const cal = await import('../server/calendar.js');
+const cal = await import('../server/kalender/events.js');
 const { upsertShipment } = await import('../server/tracking.js');
 
 /* ---------------- iCal-testdata ---------------- */

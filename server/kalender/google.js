@@ -13,8 +13,8 @@
 import { Hono } from 'hono';
 import { createHash } from 'node:crypto';
 import { googleConnected, googleConfOf, googleConfSet, googleCalendarList, calendarLinks } from './birthdays.js';
-import { clearCalendarCache, googleExtraOf } from './calendar.js';
-import { shades, PALETTE } from './kalender35.js';
+import { clearCalendarCache, googleExtraOf } from './events.js';
+import { shades, PALETTE } from './external.js';
 
 const COLOR = /^#[0-9a-f]{6}$/i;
 const MAX = 20;

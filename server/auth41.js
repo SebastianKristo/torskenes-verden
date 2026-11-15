@@ -27,7 +27,7 @@ import { kv, OWNER } from './db.js';
 import { config } from './config.js';
 import { sessionUser, userInfo, serverName, currentSessionId } from './auth.js';
 import { tokenAccessOf, issueToken, tokensById, revokeTokenOf, TOKEN_SCOPES } from './finans/routes.js';
-import { companionsOf, deviceName } from './kalender33.js';
+import { companionsOf, deviceName } from './kalender/calendars.js';
 import { buildInfo } from './cache-bust.js';
 import { issueRefresh44 } from './auth44.js'; // prompt 44: refresh-token (90 d glidende, 60 s grace)
 import { lanUrls46, dropInternal46, publicUrl46, originOf46 } from './public-url46.js'; // prompt 46: aldri container-IP (172.18.0.3) som serveradresse

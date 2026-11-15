@@ -245,7 +245,7 @@ async function vocab52(u, today) {
   try { for (const x of listUsers()) { const n = firstName(x.id); if (n) people.add(n); } } catch { /* */ }
   try { if (hasTable('birthdays')) for (const r of q('SELECT name FROM birthdays WHERE user_id=? LIMIT 400').all(u)) { const n = String(r.name).trim().split(/\s+/)[0]; if (n) people.add(n); } } catch { /* */ }
   try {
-    const { eventsFor } = await import('./calendar.js');
+    const { eventsFor } = await import('./kalender/events.js');
     const ev = await withTimeout(runAsUser(u, () => eventsFor(u, addDays(today, -120), addDays(today, 30))), 1500, { events: [] });
     for (const e of ev?.events ?? []) { const l = String(e.location || e.room || '').split(',')[0].trim(); if (l && l.length <= 40) places.add(l); }
   } catch { /* kalenderen er valgfri */ }
