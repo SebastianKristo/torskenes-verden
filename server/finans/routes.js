@@ -100,6 +100,18 @@ function access(c) {
   q('UPDATE fh_tokens SET last_used=? WHERE id=?').run(Date.now(), row.id);
   return { user: u.id, info: u, admin: u.role === 'admin', scopes: new Set(row.scopes.split(' ')), session: false, tokenId: row.id };
 }
+/** Tilstanden til app-tokenet i Authorization (for feilsvaret ved 401, server/http/errors.js). Endrer ingenting.
+ *  → 'none' (ingen header) | 'invalid' (ukjent/feil form/slettet bruker) | 'expired' | 'valid' */
+export function tokenStateOf(c) {
+  const h = c.req.header('authorization');
+  if (!h) return 'none';
+  const m = h.match(TOKEN_RE);
+  if (!m) return 'invalid';
+  const row = q('SELECT expires, user_id FROM fh_tokens WHERE id=?').get(tokenKey(m[1]));
+  if (!row) return 'invalid';
+  if (row.expires && row.expires < Date.now()) return 'expired';
+  return userInfo(row.user_id ?? OWNER) ? 'valid' : 'invalid';
+}
 const hasScope = (a, s) => a.scopes.has(s) || (IMPLIED[s] && a.scopes.has(IMPLIED[s]));
 
 // For andre moduler (Matplan, Domener) som vil godta mobilappens token: true når økt eller token med scope finnes.
