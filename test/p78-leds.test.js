@@ -23,7 +23,7 @@ process.env.APP_PASSWORD_HASH = hashPassword('testpassord1');
 
 const { default: app } = await import('../server/index.js');
 const auth = await import('../server/auth/session.js');
-const L = await import('../server/skjold76/leds78.js');
+const L = await import('../server/skjold/leds.js');
 const { TOOL45 } = await import('../server/glimt/tools.js');
 const { SENTENCES46 } = await import('../server/glimt/tools-weather-subs.js');
 const { db } = await import('../server/db.js');

@@ -12,7 +12,7 @@ import { bearerOk } from '../finans/routes.js';
 import { broadcast } from '../realtime.js';
 import { notifyUser } from '../notify.js';
 import { family50 as F, placesChanged50, deletePlace50, placesVersion50, areaOut50, setPlaceEventHook50 } from './positions.js';
-import { schoolPlaceOf50, ruterPlaceEvents50 } from '../ruter41.js';
+import { schoolPlaceOf50, ruterPlaceEvents50 } from '../reise/ruter.js';
 import { dtf } from '../intl-format.js'; // gjenbrukte Intl.DateTimeFormat
 import { registerJob } from '../jobs/index.js';
 import { osloDate } from '../dates/oslo.js';

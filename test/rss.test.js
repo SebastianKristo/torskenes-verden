@@ -14,7 +14,7 @@ const { hashPassword } = await import('../server/auth/password.js');
 process.env.APP_PASSWORD_HASH = hashPassword('testpassord1');
 const { default: fin } = await import('../server/finans/routes.js');
 const { default: mobile } = await import('../server/mobile.js');
-const { default: rss, parseFeed, mapCategory } = await import('../server/rss.js');
+const { default: rss, parseFeed, mapCategory } = await import('../server/nyheter/rss.js');
 
 const login = await fin.request('/login', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ password: 'testpassord1', device: 'test' }) });
 const { token } = await login.json();

@@ -23,7 +23,7 @@ globalThis.fetch = async () => { throw Object.assign(new TypeError('fetch failed
 test.after(() => { globalThis.fetch = realFetch; });
 
 const { default: app } = await import('../server/index.js');
-const rss = await import('../server/rss.js');
+const rss = await import('../server/nyheter/rss.js');
 const { kv, OWNER } = await import('../server/db.js');
 
 async function login(username, password) {

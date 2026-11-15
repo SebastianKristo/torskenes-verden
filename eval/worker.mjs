@@ -101,7 +101,7 @@ if (!cookie) throw new Error(`Innlogging feilet (${login.status})`);
 const USER = db.prepare("SELECT id FROM users WHERE username='sebastian'").pluck().get();
 // Prompt 55: miljøet (OCR) – står i resultatet, og run.mjs merker feil som skyldes det som «env» (ikke modellfeil).
 const env = { tesseract: false, macOcr: false, notes: [] };
-try { env.tesseract = await (await imp('server/study45.js')).tool45('tesseract'); } catch { env.tesseract = false; }
+try { env.tesseract = await (await imp('server/studie/extract.js')).tool45('tesseract'); } catch { env.tesseract = false; }
 if (macUrl && macKey) {
   try {
     const F = await imp('server/finans/db.js');

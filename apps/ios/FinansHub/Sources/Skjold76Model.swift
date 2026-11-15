@@ -4,7 +4,7 @@ import UIKit
 /* ---------------- Prompt 76 (SKJIOS): Skjold Lab – sorteringssystem for deler ----------------
  Kontrakt: CONTRACT76.md. Skap med sorteringsskuffer (Hovedskap 12 rader × 5 skuffer, Raaco 150-01), deler med bilde,
  antall, specs og plassering «Hovedskap · Rad 4 · Skuff 2 · Rom 1». Rad 1 er øverst og skuff 1 til venstre (kort «4-2»).
- Server (SKJSRV, server/skjold76), alt per bruker, under /api/skjold:
+ Server (SKJSRV, server/skjold), alt per bruker, under /api/skjold:
    GET /cabinets · POST /cabinets · PATCH/DELETE /cabinets/:id (409 med deler, ?move=<id|none>)
    POST /cabinets/:id/photo (multipart file) · PUT /cabinets/:id/corners {tl,tr,br,bl} · DELETE /cabinets/:id/photo
    GET /cabinets/:id/map · PUT /cabinets/:id/drawers/:row/:col {label,compartments,color}

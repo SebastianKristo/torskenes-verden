@@ -31,7 +31,7 @@ const bare = (h) => String(h ?? '').trim().toLowerCase().replace(/^\[|\]$/g, '')
 
 // news73.js lastes først ved bruk (den importerer mobile.js, som igjen importerer rss.js – unngår sirkulær last ved oppstart).
 let n73 = null;
-const news73 = () => (n73 ??= import('../news73.js'));
+const news73 = () => (n73 ??= import('../nyheter/saved.js'));
 
 let resolver = async (host) => (await dnsLookup(host, { all: true, verbatim: true })).map((x) => x.address);
 let transport = null;

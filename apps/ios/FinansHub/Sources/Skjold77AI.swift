@@ -4,7 +4,7 @@ import UIKit
 /* ---------------- Prompt 77 (SKJAIIOS): Skjold Lab med smarte forslag (bilde, navn, kategori) ----------------
  Kontrakt: CONTRACT77.md. Den lokale visjonsmodellen (via ai-run, oppgaven «skj») foreslår navn, kategori, specs og tags
  fra bilde og/eller tekst. Fargebånd, SMD- og kondensatorkoder regnes ut i kode på serveren (decoded).
- Server (SKJAISRV, server/skjold76/ai77.js og images77.js), per bruker, under /api/skjold:
+ Server (SKJAISRV, server/skjold/ai.js og image-search.js), per bruker, under /api/skjold:
    POST /ai/suggest {partId?|name?, description?, specs?, photo?} eller multipart (file + feltene)
         → {name, category, categoryNew, specs, tags, confidence, why, source:'bilde'|'tekst'|'begge', decoded?}
    POST /ai/images {q} → {items:[{id, thumbUrl, title, source, width, height}]} (id er signert og kortlivet, bildene går via proxy)

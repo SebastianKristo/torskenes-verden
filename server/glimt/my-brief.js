@@ -453,7 +453,7 @@ async function homelabOf52(u) {
   return { ok: services.filter((s) => s.state === 'running').length, down: services.filter((s) => s.state !== 'running').length, total: services.length, services: services.slice(0, 24) };
 }
 async function domainsOf52() {
-  const D = await import('../domains.js');
+  const D = await import('../domener/domains.js');
   const o = D.domainOverview();
   const items = o.items.slice(0, 8).map((x) => ({ name: x.name, up: x.up, ms: x.ms, ssl_days: o.expiringSoon.find((e) => e.name === x.name)?.days ?? null }));
   return { total: o.total, up: o.up, down: o.down, warn: o.expiringSoon.length + o.down, items, expiring: o.expiringSoon };
@@ -477,7 +477,7 @@ async function tonightOf52(today) {
   return { items, count: items.length, configured: up.configured !== false };
 }
 async function tripOf52(u) {
-  const { myTrip41 } = await import('../ruter41.js');
+  const { myTrip41 } = await import('../reise/ruter.js');
   const t = await withTimeout(myTrip41(u), 4000, null);
   if (!t || t.empty || !t.options?.length) return null;
   const now = Date.now();
@@ -545,7 +545,7 @@ export async function brief52(u, { t = Date.now(), only = null } = {}) {
 }
 
 /* 5. Butikklogoer for lister: se logos52.js (egen modul uten tunge avhengigheter, montert i finans/routes.js). */
-export { localLogo52, mountLogos52 } from '../logos52.js';
+export { localLogo52, mountLogos52 } from '../logos/local.js';
 
 /* =====================================================================================================================
    Ruter

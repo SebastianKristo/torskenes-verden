@@ -4,7 +4,7 @@ import UIKit
 /* ---------------- Prompt 79 (PICKIOS): plukkliste i Skjold Lab og «Feilsøk LED» ----------------
  Kontrakt: CONTRACT79.md. Brukeren velger flere deler med + (gul diode, ESP32, transistor …) og trykker «💡 Vis alle med LED»:
  hver del lyser i sin egen farge (første farge = skapets farge), og plukklista viser fargeprikken ved hver del.
- Server (PICKSRV, server/skjold76), per bruker, under /api/skjold:
+ Server (PICKSRV, server/skjold), per bruker, under /api/skjold:
    POST /locate {partIds:[…], colors:true} → {ok, lit:[{partId, cabinetId, row, col, index, color}], skipped:[{partId, reason}], untilMs}
      (maks 20 skuffer; to deler i samme skuff deler LED, første farge vinner)
    GET|PUT /picklist {items:[{partId, qty}]} (valgfri synk mellom enheter; 404 = bare lokalt)

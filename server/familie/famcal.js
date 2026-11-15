@@ -1,7 +1,7 @@
 // Prompt 51 (MEDFAM51): felles familiekalender med «hvem kjører?».
 // Hendelser er felles for alle i familien (alle brukere på serveren). En hendelse kan ha kjøreoppgaver (henting/bringing) som
 // tildeles et familiemedlem; den som får oppgaven varsles, uten sjåfør varsles alle når det nærmer seg, og sjåføren får en
-// påminnelse før avreise. Ruter-forslaget kommer fra ruter41.js (Entur) mellom hjemmet i Familie › Steder og stedet på hendelsen.
+// påminnelse før avreise. Ruter-forslaget kommer fra reise/ruter.js (Entur) mellom hjemmet i Familie › Steder og stedet på hendelsen.
 // Hendelsene vises også i Kalender (egen kilde «Familiekalender»). API-formene står i SERVER51-API.md (seksjon MEDFAM51).
 import { Hono } from 'hono';
 import { db, q, kv } from '../db.js';
@@ -10,7 +10,7 @@ import { authOrToken as authOrToken0 } from '../mobile.js';
 import { registerJob } from '../jobs/index.js';
 import { notifyUser } from '../notify.js';
 import { family50 as F } from './positions.js';
-import { tripBetween51 } from '../ruter41.js';
+import { tripBetween51 } from '../reise/ruter.js';
 import { addEventSource } from '../kalender/events.js';
 import { MIN, HOUR, DAY, clean, num, iso, hm, ymd, dayText, parseTime, osloAt, body, bad } from '../media/helpers.js';
 

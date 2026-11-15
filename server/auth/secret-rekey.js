@@ -9,9 +9,9 @@
 //     seal      «enc:…» i kv og tabeller (FinansHub-hemmeligheter, integrasjonsnøkler, backup51, Whisper/Fermion/oMLX/VoxCPM,
 //               sporing, bursdager)                                    finans/db.js: sha256('fh-secret:' + (SECRET_KEY || hemmelighet('dev')))
 //     settings  «enc1:…» i kv (integrasjonsinnstillinger, sporing37)  settings.js: scrypt(hemmelighet('homelab-os', live), 'hl-settings-v1')
-//     domains   hl_domains.token_enc (base64)                         domains.js: scrypt(hemmelighet('homelab-os', live), 'hl-domains-v1')
-//     gsc       «gsc1:…» i kv (Search Console-token per bruker)        domains-glimt.js: HKDF(SECRET_KEY || hemmelighet('dev'), 'gsc:'+bruker)
-//   Ikke med her: study44 (studiedokumenter, filer + text_enc) – må lastes opp på nytt hvis hemmeligheten er byttet.
+//     domains   hl_domains.token_enc (base64)                         domener/domains.js: scrypt(hemmelighet('homelab-os', live), 'hl-domains-v1')
+//     gsc       «gsc1:…» i kv (Search Console-token per bruker)        domener/glimt.js: HKDF(SECRET_KEY || hemmelighet('dev'), 'gsc:'+bruker)
+//   Ikke med her: Studie (studie/documents.js, studiedokumenter, filer + text_enc) – må lastes opp på nytt hvis hemmeligheten er byttet.
 //   HMAC (enveis) – kan ikke regnes om, må lages på nytt:
 //     gjenopprettingskoder for 2FA (users.recovery_hashes), app-tokens (fh_tokens.id), økter (sessions, aldri i backupen),
 //     enhetsnøkler/fingeravtrykk i sec51 og invitasjonskoder i webx51.

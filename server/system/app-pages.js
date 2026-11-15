@@ -1,7 +1,7 @@
 // Fanelinjen: alle sider i Mer og «Rediger fanelinjen» (GET /api/app/pages). Montert fra server/index.js før /api/app.
 import { Hono } from 'hono';
 import { authOrToken } from '../mobile.js';
-import { bibleEnabled } from '../bible37.js';
+import { bibleEnabled } from '../bibel/bible.js';
 
 // Én kilde for Mer-menyen og «Rediger fanelinjen» (fasit HNAV_ALL). key = nøkkelen i designet, id = nøkkelen i homeNav/tabBar (mobile.js TAB_IDS).
 // kind 'sheet' = åpnes som ark (Now Brief, Nyhetsleser), ellers navigeres det til route.

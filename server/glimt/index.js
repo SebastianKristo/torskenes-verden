@@ -2,7 +2,7 @@
 // /api/glimt/*-rutene (nyheter, kvalitet, 17. mai, oppskrifter, faste oppgaver) og før Chat. Rekkefølgen er bærende (Hono kjører
 // handlere og mellomvare i registreringsrekkefølge):
 //   – /api/glimt/memory: ryddingen (forslag, motstrid, ubrukte fakta) før «Glimt husker», som har /:id
-//   – /api/brief: etter julemodus- og sesongmellomvarene (jul40, brief41) i index.js, som legger til felt i svaret
+//   – /api/brief: briefExtras (ski, 17. mai, Min reise og jul, legges på det ferdige svaret) før briefApi
 //   – /api/glimt (glimtApi, sesjon eller app-token for hele /api/glimt/*) til sist, så de mer spesifikke rutene svarer først
 //   – /api/assist: Kalenderens lokale tolkning (local:{…}, kalender/invites.js) legges rundt Glimt-ruteren
 // Filene:
@@ -25,13 +25,14 @@ import { memoryApi63 } from './memory/hygiene-api.js';
 import assistApi from './assist.js';
 import { glimtApi } from '../ai/control.js';
 import { settingsApi, ttsApi, imgApi } from './settings.js';
-import briefApi from './brief.js';
+import briefApi, { briefExtras } from './brief.js';
 import { assistLocalMw44 } from '../kalender/invites.js';
 
 /** Alle Glimt-rutene: minnet, brief, innstillinger, motoren, entitetene, /api/glimt og /api/assist. */
 export function mountGlimt(app) {
   app.route('/api/glimt/memory', memoryApi63); // /pending, /conflicts, /stale, /hygiene (før «Glimt husker»-rutene)
   app.route('/api/glimt/memory', remember); // GET/POST/DELETE, POST /:id/apply (per bruker)
+  app.use('/api/brief', briefExtras); // ski, 17. mai, Min reise og jul på det ferdige svaret (før: briefJul40 og brief41 i index.js)
   app.route('/api/brief', briefApi); // Glimt-brief med kortene (pakker, familie, skole og jobb, bursdager, nordlys) + POST /gift
   app.route('/api/glimt/settings', settingsApi);
   app.route('/api/tts', ttsApi);
