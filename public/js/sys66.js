@@ -4,6 +4,7 @@
 // public/css/web66-sys.css (Papir, Papir mørk og Nåværende/mørkt glass), så samme mål og komponenter gjelder i alle temaer.
 // Bare visningen: data og handlinger ligger fortsatt i ops51.js / obs51.js / settings-system.js.
 import { ui65 } from './ai-control.js';
+import { pageCss } from './lib/page-css.js';
 
 export const { row, sec, btn, seg, swb, banner, ico, fld } = ui65;
 const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -78,7 +79,7 @@ export function root66(html, cls = '') {
 
 /** Stilen til komponentene (ai-control.css) lastes ellers først når AI-siden åpnes. */
 function css66() {
-  if (typeof document === 'undefined' || document.querySelector('link[data-ac-css]')) return;
-  const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = '/assets/css/ai-control.css?v=65'; l.dataset.acCss = ''; document.head.appendChild(l);
+  if (typeof document === 'undefined' || document.querySelector('link[data-page-css="ai-kontroll"]')) return;
+  pageCss('ai-kontroll');
   if (!document.querySelector('link[data-ac-fonts],link[data-hl-fonts]')) { const f = document.createElement('link'); f.rel = 'stylesheet'; f.dataset.acFonts = ''; f.href = 'https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500&family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@500;600&display=swap'; document.head.appendChild(f); }
 }

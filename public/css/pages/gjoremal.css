@@ -1,6 +1,8 @@
 /* Huskeliste (prompt 17). Mørk i «Nåværende», papir i «Vindu og papir» (html[data-hl="2c"]). */
-.tk{--t-ink:var(--text);--t-mut:var(--text-2);--t-line:var(--line);--t-lab:#f59a8f;--t-pos:#8fe0b0;--t-card:var(--card,#141a26);--t-chip:rgba(255,255,255,.06);--t-bg:var(--bg,#0b0e15);display:flex;flex-direction:column;gap:14px;color:var(--t-ink);max-width:860px}
-html[data-hl="2c"] .tk{--t-ink:#1b1a17;--t-mut:#6f6a5f;--t-line:#e3ddcf;--t-lab:#b23a2a;--t-pos:#2f7a4f;--t-card:#fff;--t-chip:#f3efe6;--t-bg:#f3efe6;font-family:Manrope,system-ui,sans-serif}
+/* Fargene er designtokens (tokens.css), så Gjøremål følger stil og modus. */
+.tk{--t-ink:var(--ds-text-primary);--t-mut:var(--ds-text-secondary);--t-line:var(--ds-line);--t-lab:var(--ds-accent);--t-pos:var(--ds-success);--t-card:var(--ds-surface-raised);
+  --t-chip:var(--ds-surface-sunken);--t-bg:var(--ds-surface);--t-sheet:var(--ds-surface);--t-in:var(--ds-surface-sunken);
+  display:flex;flex-direction:column;gap:14px;color:var(--t-ink);max-width:860px;font-family:var(--ds-font-sans)}
 .tk-top{display:flex;align-items:baseline;gap:16px;flex-wrap:wrap;margin-bottom:16px}
 .tk-sub{color:var(--text-2);font-size:13px}
 .tk-lists{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
@@ -21,6 +23,7 @@ html:not([data-hl="2c"]) .tk-add button{color:#1a0d0b}
 .tk-group{display:flex;flex-direction:column;gap:6px}
 .tk-gt{font:600 10.5px/1 'IBM Plex Mono',var(--mono,monospace);letter-spacing:.12em;padding:0 4px;color:var(--t-mut)}
 .tk-gt.late{color:var(--t-lab)}.tk-gt.pos{color:var(--t-pos)}
+/* !important: skallets generelle regler (app.css, paper.css, web*.css) har høyere spesifisitet for kort og knapper; fjernes når siden bruker felles komponenter. */
 .tk-card{padding:2px 14px!important;gap:0!important}
 html[data-hl="2c"] .tk-card{background:#fff;border-radius:20px;border:0}
 .tk-row{display:flex;align-items:center;gap:12px;min-height:54px}
@@ -38,20 +41,14 @@ html[data-hl="2c"] .tk-card{background:#fff;border-radius:20px;border:0}
 .tk-btn{margin-top:10px;height:36px;padding:0 16px;border-radius:18px;border:1px solid var(--t-line);background:transparent;color:var(--t-ink);font-weight:600;cursor:pointer}
 .tk-foot{font-size:12px;color:var(--t-mut);padding:4px}
 /* Prompt 21: eier, «Delt med …» og «Del liste». */
-.tk-own{display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:16px;background:var(--t-card)}
-.tk-own .tk-main{padding:0}
-.tk-own b{font-size:14px;font-weight:700}
-.tk-own .tk-btn{margin:0;flex:none}
-.tk-share{display:flex;flex-direction:column;gap:10px;padding:14px;border-radius:16px;border:1px solid var(--t-line);background:var(--t-card)}
 .tk-btn.pri{background:var(--t-ink);color:var(--t-bg);border-color:var(--t-ink)}
-.tk-share .tk-btn{margin:0}
-.tk-shd{font-size:11px;opacity:.65;margin-left:-2px}
 /* Prompt 22: synk med Home Assistant To-do (fasit Huskeliste.dc.html). */
 .tkha{display:flex;flex-direction:column;gap:6px;margin-top:6px}
 .tkha-head{display:flex;justify-content:space-between;align-items:baseline;padding:0 4px}
 .tkha-head .tk-gt{padding:0}
 .tkha-st{font-size:12px;color:var(--t-mut)}
 .tkha-st.err{color:var(--t-lab);font-weight:600}
+/* !important: skallets generelle regler (app.css, paper.css, web*.css) har høyere spesifisitet for kort og knapper; fjernes når siden bruker felles komponenter. */
 .tkha-card{display:block!important}
 .tkha-tgl,.tkha-row,.tkha-sync{width:100%;display:flex;align-items:center;gap:12px;border:0;background:transparent;color:var(--t-ink);cursor:pointer;text-align:left;font:inherit;padding:0}
 .tkha-tgl{min-height:56px}
@@ -86,10 +83,10 @@ html[data-hl="2c"] .tk-card{background:#fff;border-radius:20px;border:0}
 .tk-restore{flex:none;height:30px;padding:0 10px;border-radius:15px;border:1px solid var(--t-line);background:transparent;color:var(--t-ink);cursor:pointer;font:700 12px inherit;white-space:nowrap}
 .tk-restore:hover{border-color:var(--t-ink)}
 .tk-arc{display:grid;place-items:center;padding:0}
+/* !important: skallets generelle regler (app.css, paper.css, web*.css) har høyere spesifisitet for kort og knapper; fjernes når siden bruker felles komponenter. */
 html[data-hl="2c"] body .tk .card.tk-card{background:#fff;border:0;border-radius:20px;padding:2px 14px!important}
 /* Prompt 37: Gjøremål (fasit Huskeliste.dc.html) – avatarer på delte lister, infokort, Glimt-kortet, Glimt-tips, detaljark og listeark. */
-.tk{--t-sheet:#161b26;--t-in:rgba(255,255,255,.06)}
-html[data-hl="2c"] .tk{--t-sheet:#f3efe6;--t-in:#f3efe6}
+/* !important: skallets generelle regler (app.css, paper.css, web*.css) har høyere spesifisitet for kort og knapper; fjernes når siden bruker felles komponenter. */
 .tk-new{border:1.5px dashed var(--t-line)!important;background:transparent!important;color:var(--t-ink)}
 .tk-avs{display:inline-flex;align-items:center}
 .tk-avs i{width:var(--s);height:var(--s);border-radius:50%;margin-left:calc(var(--s) * -.32);box-shadow:0 0 0 1.5px var(--t-card);color:#fff;font:800 calc(var(--s) * .52)/var(--s) Manrope,system-ui,sans-serif;font-style:normal;text-align:center;display:inline-block}

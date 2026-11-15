@@ -17,10 +17,9 @@ import { S, sk, paintMain, cabById, locOf } from './skjold76.js';
 import { short76, long76 } from './skjold76-draw.js';
 import { diagBtn79, diagHtml79 } from './skjold79-pick.js'; // prompt 79: Feilsøk LED
 import { normLeds78, autoRows78, ledIndex78, ledTotal78, hostOk78, ledsBody78, secsLeft78, statusText78, PITCH60 } from './skjold78-logic.js';
+import { pageCss } from './lib/page-css.js';
 
-if (typeof document !== 'undefined' && !document.querySelector('link[data-sk78-css]')) {
-  const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = '/assets/css/skjold78.css'; l.dataset.sk78Css = ''; document.head.appendChild(l);
-}
+pageCss('skjold');
 
 /** cfg: LED-oppsett per skap · st: status per skap · lit: det som lyser nå · ed: skjemaet · wiz: kalibreringen. */
 export const M = { cfg: {}, loading: {}, st: {}, set: null, lit: null, ed: null, wiz: null, busy: false };

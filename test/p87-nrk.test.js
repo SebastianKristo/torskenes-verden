@@ -1,5 +1,5 @@
 // Prompt 87 (pakke 57): NRK-nedlasteren i Media – hele API-et under /api/media/nrk/* (server/media/nrk.js) mot en mocket nrk-dl,
-// og web-fanen (public/js/media-nrk.js, public/css/media-nrk.css). Fasit: «Media NRK.dc.html».
+// og web-fanen (public/js/media-nrk.js, public/css/pages/media.css). Fasit: «Media NRK.dc.html».
 //  - Token og adresse til nrk-dl kommer aldri ut. Bare NRK-lenker, type/kvalitet fra listene, id = 12 hex, komprimer = boolean.
 //  - Bibliotek-endepunktene finnes kanskje ikke i nrk-dl ennå: 404 uten {feil} → tilgjengelig:false, ikke en feil.
 //  - Plakater hentes bare fra NRK sine verter.
@@ -450,7 +450,7 @@ test('401 fra nrk-dl blir 502 med forklaring om tokenet (aldri «utlogget fra Ho
 /* ---------------- Web ---------------- */
 
 const web = readFileSync(new URL('../public/js/media-nrk.js', import.meta.url), 'utf8');
-const css = readFileSync(new URL('../public/css/media-nrk.css', import.meta.url), 'utf8');
+const css = readFileSync(new URL('../public/css/pages/media.css', import.meta.url), 'utf8');
 const m43 = readFileSync(new URL('../public/js/media43.js', import.meta.url), 'utf8');
 
 test('web: hele bredden – rutenettet fra designet, NRK øverst og Bibliotek i full bredde (pakke 58)', () => {

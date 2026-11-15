@@ -8,6 +8,7 @@
 // feiler NASA, står «Fikk ikke hentet bilder fra NASA akkurat nå · Prøv igjen». Kartet kan zoomes (1×–14×) og har Verden/Europa/Norge.
 import { esc, api } from './util.js';
 import { store } from './store.js';
+import { pageCss } from './lib/page-css.js';
 
 const CATS = [
   ['station', 'Romstasjoner', '#ffffff', /\b(ISS|ZARYA|TIANHE|CSS|TIANGONG|WENTIAN|MENGTIAN)\b/],
@@ -331,8 +332,7 @@ export function render() {
   return `<div id="rom" class="rom" role="region" aria-label="Rom"><div class="rom-bar"><b>Rom</b><a class="rom-x" href="#/dash" aria-label="Lukk" title="Lukk"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></a></div><div class="rom-c"></div></div>`;
 }
 function loadCss() {
-  if (document.querySelector('link[data-rom-css]')) return;
-  const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = '/assets/css/space.css'; l.dataset.romCss = ''; document.head.appendChild(l);
+  pageCss('rom');
 }
 loadCss();
 

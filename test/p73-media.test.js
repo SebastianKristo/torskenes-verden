@@ -185,7 +185,7 @@ test('Klar til å se: Plex + Kalender + nedlasting = ett kort med Plex-tittel, e
 
 test('Media-web: X-knapp i stedet for ⚙, plakatkjede overalt, lazy-lasting', () => {
   const src = readFileSync(new URL('../public/js/media70.js', import.meta.url), 'utf8');
-  const css = readFileSync(new URL('../public/css/media70.css', import.meta.url), 'utf8');
+  const css = readFileSync(new URL('../public/css/pages/media.css', import.meta.url), 'utf8');
   assert.ok(src.includes('class="m70-x" data-m43="close" aria-label="Lukk Media"'));
   assert.ok(!src.includes('data-m43="set"'), 'innstillinger-ikonet er borte fra headeren');
   assert.ok(!src.includes('img50('), 'alle plakater går via img73 (kjeden)');

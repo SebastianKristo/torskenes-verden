@@ -39,6 +39,7 @@ html[data-hl="2c"] .kal-seg-b{border-radius:0;font-family:var(--sans)}
 
 /* Prompt 36: kvittering for siste backup (mål, fullsti, verifisert) med «Åpne mappe ›» og «Vis logg». */
 .sg-row.bk-rcpt .sg-txt{gap:6px}
+/* !important: skallets generelle regler (app.css, paper.css, web*.css) har høyere spesifisitet for kort og knapper; fjernes når siden bruker felles komponenter. */
 .bk-rl{font-family:ui-monospace,'IBM Plex Mono',monospace;font-size:13px!important;font-weight:600;word-break:break-all;color:var(--bk-pos,#2f7d4f)}
 .bk-rcpt.bad .bk-rl{color:var(--bk-neg,#b23a2a)}
 .bk-rerr{color:var(--bk-neg,#b23a2a)}

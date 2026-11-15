@@ -1,8 +1,11 @@
+/* Nyheter (arket over siden og innstillingene). */
+
+/* ═══ Leseren og innstillingene ═══ */
 /* Nyhetsleser (prompt 13). Paletter fra design/Nyhetsleser.dc.html: web (mørk, Homelab v2), papir lys og papir mørk (2c). */
 .nw { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; padding: clamp(0px, 3vw, 40px); background: rgba(0, 0, 0, .45); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); outline: none; }
-.nw-web { --ink: #eef0f4; --bg: #11151d; --card: #181e29; --line: #262d3b; --lab: #a8d4fb; --mut: #8a93a6; --acc-ink: #11151d; }
-.nw-paper { --ink: #1b1a17; --bg: #f3efe6; --card: #fff; --line: #d8d1c2; --lab: #b23a2a; --mut: #6f6a5f; --acc-ink: #fff; }
-.nw-paperDark { --ink: #ece7dc; --bg: #14130f; --card: #211f19; --line: #34322a; --lab: #e8705c; --mut: #8a8578; --acc-ink: #fff; }
+/* Fargene er designtokens: news.js velger fortsatt nw-web/nw-paper/nw-paperDark etter temaet, men verdiene følger stil og modus
+   fra tokens.css. I Papir mørk var teksten på aksentknappene hvit på lys aksent; nå er den onAccent. */
+.nw-web, .nw-paper, .nw-paperDark { --ink: var(--ds-text-primary); --bg: var(--ds-surface); --card: var(--ds-surface-raised); --line: var(--ds-line); --lab: var(--ds-accent); --mut: var(--ds-text-secondary); --acc-ink: var(--ds-on-accent); }
 body.nw-open { overflow: hidden; }
 
 .nw-card { position: relative; width: min(1180px, 100%); height: min(860px, 100%); min-height: min(640px, 100%); background: var(--bg); color: var(--ink); font-family: Manrope, system-ui, sans-serif;
@@ -144,6 +147,7 @@ button.nw-it { width: 100%; border: 0; border-bottom: 1px solid var(--line); bac
 .nw-th img, .nw-hero img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
 
 /* Prompt 40: Glimt-siden i Nyhetsleseren (claude-code-nyheter-glimt-side.md, fasit Nyhetsleser.dc.html → gl) */
+/* !important: skallets generelle regler (app.css, paper.css, web*.css) har høyere spesifisitet for kort og knapper; fjernes når siden bruker felles komponenter. */
 .nw40-lead{display:flex!important;flex-direction:column;gap:8px;width:100%;padding:16px 18px!important;border-radius:20px;border:0;background:var(--card);color:var(--ink);cursor:pointer;text-align:left;font-family:inherit;box-shadow:0 0 0 1.5px var(--lab) inset}
 .nw40-lead:hover{box-shadow:0 0 0 2px var(--lab) inset}
 .nw40-lh{display:flex;align-items:center;justify-content:space-between;gap:10px}
@@ -159,6 +163,7 @@ button.nw-it { width: 100%; border: 0; border-bottom: 1px solid var(--line); bac
 .nw40-in{max-width:720px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
 .nw40-top{display:flex;flex-direction:column;gap:6px}
 .nw40-t{font:500 34px/1.05 Newsreader,Georgia,serif;letter-spacing:-.01em}
+/* !important: skallets generelle regler (app.css, paper.css, web*.css) har høyere spesifisitet for kort og knapper; fjernes når siden bruker felles komponenter. */
 .nw40-mut{color:var(--mut)!important}
 .nw40-cfg{display:flex;flex-direction:column;gap:12px;padding:16px;border-radius:20px;background:var(--card);border:1px solid var(--line)}
 .nw40-chips{display:flex;gap:6px;flex-wrap:wrap}
@@ -208,3 +213,80 @@ button.nw-it { width: 100%; border: 0; border-bottom: 1px solid var(--line); bac
 .nw40-sec figure,.nw40-img{width:100%}
 .nw41-src{display:inline-flex;align-items:center;height:20px;padding:0 8px;margin-left:4px;border-radius:10px;border:1px solid var(--line);background:transparent;color:var(--ink);cursor:pointer;font:700 11px Manrope,system-ui,sans-serif;vertical-align:middle}
 @media (max-width:420px){ .nw41-lt{display:none} .nw40-t{font-size:28px} }
+
+/* ═══ Kildene og AI-sammendraget ═══ */
+/* Prompt 73 (NEWS73): Lagret – fasit «Lagre og logo.dc.html» 1c (artikkel med lagre-knapp) og 1e (web · Lagret + lagre ved hover).
+   Papirfargene fra nyhetsleseren (--bg, --card, --ink, --line, --lab, --mut). Bare transform/opacity animeres. */
+.nw73-list { grid-column: 1 / -1; min-width: 0; }
+.nw73-q { display: flex; align-items: center; gap: 10px; height: 44px; max-width: 320px; margin: 2px 0 18px auto; padding: 0 16px; border-radius: 22px; border: 1px solid var(--line); background: var(--card); color: var(--mut); box-sizing: border-box; }
+.nw73-q input { flex: 1; min-width: 0; height: 100%; border: 0; outline: 0; background: transparent; color: var(--ink); font: 500 14px Manrope, system-ui, sans-serif; }
+.nw73-q:focus-within { border-color: var(--ink); }
+.nw73-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 22px; align-content: start; }
+.nw73-card { position: relative; display: flex; flex-direction: column; min-width: 0; border-radius: 18px; background: var(--card); border: 1px solid var(--line); overflow: hidden; }
+.nw73-open { display: flex; flex-direction: column; width: 100%; padding: 0; border: 0; background: transparent; color: inherit; cursor: pointer; text-align: left; font-family: inherit; }
+.nw73-open:hover .nw73-t { text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
+.nw73-open:focus-visible { outline: 2px solid var(--ink); outline-offset: -2px; border-radius: 18px; }
+.nw73-th { position: relative; display: grid; place-items: center; height: 150px; background: color-mix(in srgb, var(--line) 70%, var(--bg)); color: var(--mut); overflow: hidden; }
+.nw73-th b { font: 800 22px Manrope, system-ui, sans-serif; letter-spacing: .04em; opacity: .55; }
+.nw73-th img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.nw73-tx { display: flex; flex-direction: column; gap: 6px; padding: 14px 16px 16px; }
+.nw73-src, .nw73-lab { font: 600 10.5px 'IBM Plex Mono', ui-monospace, monospace; letter-spacing: .1em; color: var(--mut); }
+.nw73-lab { letter-spacing: .12em; color: var(--lab); }
+.nw73-t { font: 500 20px/1.2 Newsreader, Georgia, serif; color: var(--ink); text-wrap: pretty; }
+.nw73-st { display: flex; align-items: center; gap: 6px; font: 600 12.5px Manrope, system-ui, sans-serif; color: var(--st); }
+.nw73-st i { width: 7px; height: 7px; border-radius: 50%; background: var(--st); flex: none; }
+.nw73-rm { position: absolute; top: 12px; right: 12px; width: 40px; height: 40px; border-radius: 50%; border: 0; background: var(--ink); color: var(--bg); cursor: pointer; display: grid; place-items: center; }
+.nw73-rm:focus-visible, .nw73-bm:focus-visible, .nw73-ab:focus-visible { outline: 2px solid var(--lab); outline-offset: 2px; }
+.nw73-empty { display: flex; flex-direction: column; gap: 6px; max-width: 460px; margin: 40px auto; text-align: center; color: var(--mut); font: 400 14px/1.45 Manrope, system-ui, sans-serif; }
+.nw73-empty b { font: 500 24px Newsreader, Georgia, serif; color: var(--ink); }
+
+/* Bokmerke ved hover på artikkelkort (web) – alltid synlig på berøringsskjerm og når saken er lagret. */
+.nw73-w { position: relative; }
+.nw73-bm { position: absolute; top: 18px; right: 6px; width: 32px; height: 32px; box-shadow: 0 2px 8px rgba(27,26,23,.18); border-radius: 50%; border: 1px solid var(--line); background: var(--card); color: var(--ink); cursor: pointer; display: grid; place-items: center; opacity: 0; transform: scale(.9); transition: opacity .15s ease, transform .15s ease; }
+.nw73-bm.on { opacity: 1; transform: none; background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.nw73-w:hover .nw73-bm, .nw73-bm:focus-visible { opacity: 1; transform: none; }
+@media (hover: none) { .nw73-bm:not(.on) { display: none; } } /* berøringsskjerm: lagre fra artikkelvisningen */
+
+/* Artikkelvisningen (1c): runde knapper øverst og «Lagret 28. okt.»-banneret. */
+.nw73-ab { flex: none; width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--line); background: var(--card); color: var(--ink); cursor: pointer; display: grid; place-items: center; text-decoration: none; }
+.nw73-ab.on { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.nw73-ban { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 12px 14px; border-radius: 14px; background: var(--card); border: 1px solid var(--line); font: 400 14px/1.35 Manrope, system-ui, sans-serif; color: var(--ink); }
+.nw73-ban > span:nth-child(2) { flex: 1; min-width: 200px; }
+.nw73-ban > span:nth-child(2) span { color: var(--mut); }
+.nw73-ck { flex: none; width: 28px; height: 28px; border-radius: 50%; background: var(--ink); color: var(--bg); display: grid; place-items: center; font-size: 13px; font-weight: 700; }
+.nw73-ck.wait { background: var(--line); color: var(--ink); }
+.nw73-ban.warn .nw73-ck { background: #a86a12; color: #fff; }
+.nw73-in { gap: 14px; }
+.nw73-h1 { margin: 0; font: 500 32px/1.08 Newsreader, Georgia, serif; color: var(--ink); text-wrap: pretty; }
+.nw73-lead { margin: 0; font: 400 17px/1.45 Newsreader, Georgia, serif; color: var(--mut); text-wrap: pretty; }
+.nw73-hero { margin: 4px 0 0; border-radius: 16px; overflow: hidden; background: var(--line); }
+.nw73-hero img { display: block; width: 100%; height: auto; }
+.nw73-body { font: 400 18px/1.55 Newsreader, Georgia, serif; color: var(--ink); overflow-wrap: anywhere; }
+.nw73-body p { margin: 0 0 14px; text-wrap: pretty; }
+.nw73-body h2, .nw73-body h3, .nw73-body h4 { margin: 22px 0 10px; font: 600 21px/1.2 Newsreader, Georgia, serif; }
+.nw73-body blockquote { margin: 16px 0; padding: 2px 0 2px 16px; border-left: 3px solid var(--lab); font-style: italic; }
+.nw73-body ul, .nw73-body ol { margin: 0 0 14px; padding-left: 22px; }
+.nw73-body li { margin: 0 0 6px; }
+.nw73-body pre { margin: 0 0 14px; padding: 12px; border-radius: 10px; background: var(--card); font: 500 13px/1.45 'IBM Plex Mono', ui-monospace, monospace; white-space: pre-wrap; }
+.nw73-body figure { margin: 18px 0; }
+.nw73-body img { display: block; max-width: 100%; height: auto; border-radius: 12px; background: var(--line); }
+.nw73-body figcaption { margin-top: 6px; font: 400 13px/1.4 Manrope, system-ui, sans-serif; color: var(--mut); }
+.nw73-body a { color: inherit; text-underline-offset: 3px; }
+.nw73-orig { margin-top: 6px; }
+.nw73-rmline { align-self: center; height: 40px; padding: 0 16px; border-radius: 20px; border: 1px solid var(--line); background: transparent; color: var(--ink); cursor: pointer; font: 600 13.5px Manrope, system-ui, sans-serif; }
+.nw73-toast { position: absolute; left: 50%; bottom: 28px; z-index: 20; transform: translateX(-50%); padding: 12px 18px; border-radius: 22px; background: var(--ink); color: var(--bg); font: 600 14px Manrope, system-ui, sans-serif; white-space: nowrap; max-width: calc(100% - 32px); overflow: hidden; text-overflow: ellipsis; animation: nw73in .2s ease; pointer-events: none; }
+@keyframes nw73in { from { opacity: 0; transform: translate(-50%, 8px); } to { opacity: 1; transform: translateX(-50%); } }
+@media (prefers-reduced-motion: reduce) { .nw73-toast { animation: none; } .nw73-bm { transition: none; } }
+@media (max-width: 900px) { .nw73-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; } }
+@media (max-width: 640px) {
+  .nw73-q { max-width: none; margin: 0 0 12px; }
+  .nw73-grid { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  /* 1d: liste med tekst til venstre og 84 × 84-bilde til høyre på mobil */
+  .nw73-card { border: 0; border-bottom: 1px solid var(--line); border-radius: 0; background: transparent; }
+  .nw73-open { flex-direction: row-reverse; align-items: flex-start; gap: 14px; padding: 16px 52px 16px 0; }
+  .nw73-th { flex: none; width: 84px; height: 84px; border-radius: 12px; }
+  .nw73-tx { flex: 1; min-width: 0; padding: 0; }
+  .nw73-t { font-size: 19px; }
+  .nw73-rm { top: 16px; right: 0; width: 40px; height: 40px; background: transparent; color: var(--ink); border: 1px solid var(--line); }
+  .nw73-h1 { font-size: 30px; }
+}

@@ -8,7 +8,7 @@ import { readFileSync } from 'node:fs';
 
 const rd = (p) => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8');
 const A = rd('public/js/ai-control.js');
-const CSS = rd('public/css/ai-control.css');
+const CSS = rd('public/css/pages/ai-kontroll.css');
 const SA = rd('public/js/settings-ai.js');
 const G65 = rd('public/js/ai-glimt65.js');
 const O58 = rd('public/js/omlx58.js');

@@ -73,6 +73,6 @@ test('kilde: delsiden har «Sjekk ut» og «Brukt i», shell har Produkter, rute
   assert.ok(!/innerHTML\s*=\s*[^;]*\$\{(?!esc|sheetHtml|html)/.test(m), 'ingen urensket innerHTML');
   const pick = read('public/js/skjold79-pick.js');
   assert.ok(pick.includes('pickTargetHtml82()') && pick.includes('...to') && pick.includes("'/checkout/undo'"), 'plukklista: Til produkt + angre med undoToken');
-  const css = read('public/css/skjold82.css');
+  const css = read('public/css/pages/skjold.css');
   assert.ok(css.includes('@media (max-width:767px)') && css.includes('.sk82-sheet') && css.includes('focus-visible'));
 });

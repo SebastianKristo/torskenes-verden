@@ -1,7 +1,8 @@
-/* Bursdager (prompt 24, Bursdager.dc.html variant «web»). Mørk i «Nåværende», papir i «Vindu og papir» (html[data-hl="2c"]). */
-.bd{--b-ink:var(--text);--b-mut:var(--text-2);--b-line:var(--line);--b-lab:#e0604f;--b-labt:#f59a8f;--b-pos:#8fe0b0;--b-card:var(--card,#141a26);--b-bg:var(--bg,#0b0e15);--b-in:rgba(255,255,255,.04);
-  color:var(--b-ink);max-width:1200px;position:relative;font-family:Manrope,system-ui,sans-serif}
-html[data-hl="2c"] .bd{--b-ink:#1b1a17;--b-mut:#6f6a5f;--b-line:#d8d1c2;--b-lab:#b23a2a;--b-labt:#b23a2a;--b-pos:#2f7a4f;--b-card:#fff;--b-bg:#f3efe6;--b-in:#f3efe6}
+/* Bursdager (prompt 24, Bursdager.dc.html variant «web»). Fargene er designtokens, så siden følger stil og modus.
+   I Papir mørk var etikettene aksentrødt #b23a2a på mørk bunn (3,1:1, B-F5) og undertekstene den lyse gråfargen. */
+.bd{--b-ink:var(--ds-text-primary);--b-mut:var(--ds-text-secondary);--b-line:var(--ds-line);--b-lab:var(--ds-accent);--b-labt:var(--ds-accent);--b-pos:var(--ds-success);
+  --b-card:var(--ds-surface-raised);--b-bg:var(--ds-surface);--b-in:var(--ds-surface-sunken);
+  color:var(--b-ink);max-width:1200px;position:relative;font-family:var(--ds-font-sans)}
 .bd-top{display:flex;align-items:baseline;gap:16px;flex-wrap:wrap;margin-bottom:16px}
 .bd-tsub{color:var(--text-2);font-size:13px}
 html[data-hl="2c"] body.pw-low .bd-top{display:none}
@@ -22,8 +23,8 @@ html[data-hl="2c"] .bd-card{border:0}
 .mono{font-family:'IBM Plex Mono',var(--mono,monospace)}
 
 /* Neste bursdag */
-.bd-hero{text-align:left;border:0;cursor:pointer;color:#fff;border-radius:24px;padding:18px;background:var(--b-lab);display:flex;flex-direction:column;gap:12px;box-shadow:0 10px 30px -14px rgba(0,0,0,.4);width:100%}
-html:not([data-hl="2c"]) .bd-hero{background:#b23a2a}
+/* Neste bursdag: rødt kategorifyll med hvit tekst i alle moduser (aksenten er lys i mørk modus og ville gitt hvit på lyst). */
+.bd-hero{text-align:left;border:0;cursor:pointer;color:var(--ds-on-category);border-radius:24px;padding:18px;background:var(--ds-category-red);display:flex;flex-direction:column;gap:12px;box-shadow:0 10px 30px -14px rgba(0,0,0,.4);width:100%}
 .bd-hero-k{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font:600 10.5px 'IBM Plex Mono',monospace;letter-spacing:.12em;opacity:.9}
 .bd-hero-k span+span{font-size:10px;letter-spacing:.06em;opacity:.9}
 .bd-hero-m{display:flex;align-items:flex-end;justify-content:space-between;gap:12px}
@@ -127,6 +128,7 @@ html:not([data-hl="2c"]) .bd-sw.on{background:#2f7a4f}
 .bd-wr .bd-grow b{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .bd-wr .bd-grow span{font-size:11px;color:#6f6a5f;white-space:nowrap}
 .bd-wr .bd-ww{flex:none;font:500 14px Newsreader,Georgia,serif;color:#1b1a17}
+/* !important: skallets generelle regler (app.css, paper.css, web*.css) har høyere spesifisitet for kort og knapper; fjernes når siden bruker felles komponenter. */
 .bd-ww.soon{color:#b23a2a!important}
 .bd-wa{width:200px;border-radius:28px;background:#f4ddd8;color:#3b0f0a;padding:14px;gap:8px}
 .bd-wah{display:flex;justify-content:space-between;align-items:center}

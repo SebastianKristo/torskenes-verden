@@ -14,10 +14,9 @@
 // plakat (bilde fra serveren via bildeproxyen, kvadratisk for radio). Bibliotek er beholdt under (appene har det også);
 // en serie der åpner seriesiden i kort 1.
 import { esc } from './util.js';
+import { pageCss } from './lib/page-css.js';
 
-if (typeof document !== 'undefined' && !document.querySelector('link[data-nrk-css]')) {
-  const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = '/assets/css/media-nrk.css'; l.dataset.nrkCss = ''; document.head.appendChild(l);
-}
+pageCss('media');
 
 export const NRK_RE = /^https?:\/\/([a-z0-9-]+\.)*(nrk\.no|nrksuper\.no)(\/|$)/i;
 const BARE_NRK = 'Bare lenker fra nrk.no og nrksuper.no.';

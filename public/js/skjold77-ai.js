@@ -14,10 +14,9 @@ import { toast } from './toast.js';
 import { S, sk, paintMain, go, loadPart, refreshAll, photoUrls } from './skjold76.js';
 import { set77, loadSet77, saveSet77 } from './settings-skjold77.js';
 import { specsObj77, mergeSpecs77, mergeTags77, conf77, decodedLines77, suggRows77, tidyChanged77, tidyDefaultOn77, tidyRunning77 } from './skjold77-logic.js';
+import { pageCss } from './lib/page-css.js';
 
-if (typeof document !== 'undefined' && !document.querySelector('link[data-sk77-css]')) {
-  const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = '/assets/css/skjold77.css'; l.dataset.sk77Css = ''; document.head.appendChild(l);
-}
+pageCss('skjold');
 
 /** Tilstand utenfor skjemaet: menyen (⋯), ⚙-panelet og Rydd opp-jobben. */
 export const A = { menu: false, gear: false, tidy: null };

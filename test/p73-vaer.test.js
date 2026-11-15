@@ -112,7 +112,7 @@ test('Web: én vaerCloseButton – hovedsiden, alle ark, Steder, Yr mot Storm og
   assert.doesNotMatch(s, /data-wx-close="mp">Ferdig/, 'kartet har ikke «Ferdig»');
   assert.match(s, /\$\{xBtn\('mp', true\)\}/, 'kartet: mørk glass');
   assert.match(s, /\$\{vaerCloseButton\('data-wx="close"'\)\}/, 'hovedsiden bruker samme knapp');
-  const c = rd(join(ROOT, 'public/css/weather.css'));
+  const c = rd(join(ROOT, 'public/css/pages/vaer.css'));
   assert.match(c, /\.wxp-close\{flex:none;width:42px;height:42px;[^}]*background:rgba\(255,255,255,\.22\);[^}]*blur\(12px\)/);
   assert.match(c, /\.wxp-close\.dk\{background:rgba\(10,20,35,\.62\)\}/);
   assert.match(c, /\.wxp-close::after\{content:'';position:absolute;inset:-1px/, 'trykkflate 44 px');
