@@ -1,6 +1,6 @@
 // Mat (tidligere Matplan): retter med ingredienser og fremgangsmåte, ukeplan (AI eller tilfeldig), faste retter per ukedag,
 // kokker med «best på»-retter, HelloFresh-import, handleliste og ICS-kalender. Mapper, skanning og import fra
-// nettsider ligger i mat-recipes.js.
+// nettsider ligger i recipes.js.
 //
 // Prompt 36: Mat er ALLTID felles for husstanden (alle brukere på serveren). Den ene planen ligger i kv(HOUSEHOLD,'mat'),
 // matplan_fixed(user_id = HOUSEHOLD) og mat-recipes-tabellene med user_id = HOUSEHOLD (HOUSEHOLD = OWNER, der eierens plan
@@ -19,14 +19,14 @@
 //   shop:   { mandag: { done: [tekst i små bokstaver], extra: [{ id, text, price, done }] } }
 import { Hono } from 'hono';
 import { randomBytes, timingSafeEqual, createHash } from 'node:crypto';
-import { kv, OWNER, db } from './db.js';
-import { config } from './config.js';
-import { userInfo } from './auth/session.js';
-import { userGuard, readJson, bad, str, num, MOCK, aiJson } from './homeos-common.js';
-import { activeUser, runAsUser } from './settings.js';
-import { mountRecipes, ensureDefaultFolders, folders, folderById, guessFolderId, allLinks, linksFor, removeDishData, HOUSEHOLD } from './mat-recipes.js';
-import { broadcast } from './realtime.js';
-import { osloDate } from './dates/oslo.js';
+import { kv, OWNER, db } from '../db.js';
+import { config } from '../config.js';
+import { userInfo } from '../auth/session.js';
+import { userGuard, readJson, bad, str, num, MOCK, aiJson } from '../homeos-common.js';
+import { activeUser, runAsUser } from '../settings.js';
+import { mountRecipes, ensureDefaultFolders, folders, folderById, guessFolderId, allLinks, linksFor, removeDishData, HOUSEHOLD } from './recipes.js';
+import { broadcast } from '../realtime.js';
+import { osloDate } from '../dates/oslo.js';
 export { HOUSEHOLD };
 
 const DN = ['Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lørdag', 'Søndag'];
@@ -799,7 +799,7 @@ matApi.delete('/shopping/:id', (c) => {
 
 matApi.post('/calendar/rotate', (c) => { const s = state(); s.calKey = randomBytes(18).toString('base64url'); save(s); return c.json({ calendarUrl: `/mat/calendar.ics?key=${s.calKey}` }); });
 
-/* Mapper, oppskrifter fra nettsider og skanning, lenker og filer (mat-recipes.js) */
+/* Mapper, oppskrifter fra nettsider og skanning, lenker og filer (recipes.js) */
 
 // Ny rett fra import eller skanning. Finnes navnet fra før, får den nye retten «(2)» bak.
 function addDish(f) {

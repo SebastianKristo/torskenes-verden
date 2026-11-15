@@ -12,7 +12,7 @@ const { hashPassword } = await import('../server/auth/password.js');
 process.env.APP_PASSWORD_HASH = hashPassword('testpassord1');
 const { kv, OWNER, db } = await import('../server/db.js');
 const { default: fin } = await import('../server/finans/routes.js');
-const mat = await import('../server/mat.js');
+const mat = await import('../server/mat/plan.js');
 
 const login = await fin.request('/login', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ password: 'testpassord1', device: 'test' }) });
 const { token } = await login.json();

@@ -18,7 +18,8 @@ import finansApi from './finans/routes.js';
 import { receiptsAlias48 } from './receipts48/routes.js';
 import { db as fhDb } from './finans/db.js';
 import homeApi from './home.js';
-import { matApi, matCalendar, startMatScheduler } from './mat.js';
+import { startMatScheduler } from './mat/plan.js';
+import { mountMat } from './mat/index.js'; // Mat: /api/matplan, /mat/api og /mat/calendar.ics
 import domainsApi, { domainSummary } from './domains.js';
 import { startTrackingWorker, hasTrackingTest, testTracking } from './sporing/shipments.js';
 import { mountSporing } from './sporing/index.js'; // Sporing: /api/tracking (kontoer, feilsøking, nøkler, pakker)
@@ -641,7 +642,7 @@ app.route('/api/ui', uiApi);
 mountSporing(app); // server/sporing/: /api/tracking – kontoer, PostNord-helse, feilsøking, AliExpress, nøkler og pakkene
 app.route('/api/bg', gphoto46Api); // prompt 46 (DATA46): /api/bg/gphoto (før mobileApi sin /api/bg/:file)
 app.route('/api/kart', kart46Api); // prompt 46 (DATA46): holdeplasser, avganger, kjøretøy for valgte soner, soner og personer
-app.route('/api/matplan', matApi); // samme Matplan-API som /mat/api (prompt 10: Matplan hører til Homelab)
+mountMat(app); // server/mat/: /api/matplan og /mat/api (samme app) og /mat/calendar.ics
 // Profil, oppsett, søk, mobilforside og widgets: sesjon ELLER FinansHub-token (må stå før /api med requireAuth).
 app.get('/api/rss/favicon', faviconHandler46); // prompt 46: offentlig, bare domener fra kildelistene (news46.js)
 app.route('/api/rss', rssApi); // Nyhetsleser (prompt 13): RSS/Atom med ✦ AI-sammendrag og -kategorisering
@@ -776,9 +777,7 @@ setMobileApi44(mobileApi);
 app.route('/api', mobileApi);
 app.route('/api', authed);
 app.route('/home/api', homeApi);
-app.route('/mat/api', matApi);
 app.route('/domains/api', domainsApi);
-app.get('/mat/calendar.ics', matCalendar);
 // Prompt 51 (OPS51): OPS51_SANDBOX=1 = testet gjenoppretting / staging-kopi mot en kopi av databasen: ingen bakgrunnsjobber
 // (ingen varsler, e-post, backup, oppdateringer eller selvreparasjon). Bare HTTP-serveren og migreringene kjører.
 const BG51 = process.env.NODE_ENV !== 'test' && process.env.OPS51_SANDBOX !== '1';

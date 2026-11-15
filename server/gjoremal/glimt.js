@@ -238,7 +238,7 @@ export function mountGlimt37(api, T) {
   /* ---- matplan → Handel (punkt 3) ---- */
   async function matplan(u, t0) {
     const handel = listByWord(u, 'Handel') ?? listRow(defaultList(u));
-    const { weekIngredients37 } = await import('../mat.js');
+    const { weekIngredients37 } = await import('../mat/plan.js');
     let days = [];
     try { days = weekIngredients37(t0); } catch (e) { return { kind: 'action', intent: 'tasks.matplan', text: `Fikk ikke lest matplanen: ${e.message}`, items: [] }; }
     const have = new Set(openRows(u, handel?.id).map((r) => norm(r.title)));

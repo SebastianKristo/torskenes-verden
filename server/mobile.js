@@ -19,7 +19,7 @@ import { newsFor } from './rss.js';
 import finansApi, { bearerOk } from './finans/routes.js';
 import { signedImageUser46 } from './media/middleware.js'; // signerte bilde-URL-er i Media
 import { noteHere46, hereWeather46 } from './vaer/here.js'; // prompt 46 (SERVER46)
-import { matApi } from './mat.js';
+import { matApi } from './mat/plan.js';
 import { domainOverview } from './domains.js';
 import { readBg, weatherImages, weatherKind, planetsToday, osloImages, apodImage } from './bg.js';
 import { uiPrefs, saveUiPrefs } from './ui.js';

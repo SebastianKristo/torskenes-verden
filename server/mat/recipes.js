@@ -15,15 +15,15 @@ import { mkdirSync, writeFileSync, readFileSync, existsSync, unlinkSync } from '
 import { join, resolve } from 'node:path';
 import { lookup } from 'node:dns/promises';
 import { isIP } from 'node:net';
-import { db, OWNER } from './db.js';
-import { activeUser, runAsUser } from './settings.js';
-import { config } from './config.js';
-import { settings, secret } from './finans/db.js';
-import { sniffMime } from './finans/scan.js';
-import { readJson, bad, str, MOCK, aiJson } from './homeos-common.js';
-import { geminiFetch, hasGemini } from './finans/gemini-keys.js';
-import { ollamaContent, shortBody } from './ollama-opts.js';
-import { gatePost } from './ai-gate.js'; // prompt 43
+import { db, OWNER } from '../db.js';
+import { activeUser, runAsUser } from '../settings.js';
+import { config } from '../config.js';
+import { settings, secret } from '../finans/db.js';
+import { sniffMime } from '../finans/scan.js';
+import { readJson, bad, str, MOCK, aiJson } from '../homeos-common.js';
+import { geminiFetch, hasGemini } from '../finans/gemini-keys.js';
+import { ollamaContent, shortBody } from '../ollama-opts.js';
+import { gatePost } from '../ai-gate.js'; // prompt 43
 
 const ROOT = resolve(config.dataDir, 'mat');
 const rid = () => randomBytes(6).toString('hex');
@@ -42,7 +42,7 @@ for (const t of ['food_folder', 'dish_link', 'mat_file', 'mat_scan_job']) {
 }
 db.exec('CREATE INDEX IF NOT EXISTS food_folder_user ON food_folder(user_id)');
 // Prompt 36: Mat er alltid felles for husstanden (alle brukere på serveren). Radene lagres under husstanden (HOUSEHOLD = OWNER);
-// innlogging kreves fortsatt. Gamle rader fra andre brukere slås sammen av mergeHousehold36() i mat.js.
+// innlogging kreves fortsatt. Gamle rader fra andre brukere slås sammen av mergeHousehold36() i plan.js.
 export const HOUSEHOLD = OWNER;
 const mu = () => { const u = activeUser(); if (!u) throw Object.assign(new Error('Ikke innlogget'), { status: 401 }); return HOUSEHOLD; };
 
