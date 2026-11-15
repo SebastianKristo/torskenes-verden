@@ -1,0 +1,166 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "api/tasks.schema.json",
+  "title": "Gjøremål",
+  "description": "Lister og gjøremål for brukeren. createdAt/updatedAt er ms (eldre form), createdAtIso/updatedAtIso er de samme som ISO.",
+  "x-endpoint": "GET /api/tasks",
+  "type": "object",
+  "required": [
+    "lists",
+    "items",
+    "today"
+  ],
+  "properties": {
+    "lists": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "name"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "color": {
+            "type": "string"
+          },
+          "mine": {
+            "type": "boolean"
+          },
+          "shared": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/task"
+      }
+    },
+    "archivedCount": {
+      "type": "integer"
+    },
+    "today": {
+      "$ref": "../common/types.schema.json#/$defs/date"
+    },
+    "listOrder": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "$defs": {
+    "task": {
+      "type": "object",
+      "required": [
+        "id",
+        "title",
+        "list",
+        "done"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "../common/types.schema.json#/$defs/id"
+        },
+        "title": {
+          "type": "string"
+        },
+        "list": {
+          "type": "string"
+        },
+        "due": {
+          "anyOf": [
+            {
+              "$ref": "../common/types.schema.json#/$defs/date"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "time": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "done": {
+          "type": "boolean"
+        },
+        "doneAt": {
+          "type": [
+            "integer",
+            "string",
+            "null"
+          ]
+        },
+        "archived": {
+          "type": "boolean"
+        },
+        "urgent": {
+          "type": "boolean"
+        },
+        "prio": {
+          "type": "integer"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "subs": {
+          "type": "array"
+        },
+        "createdAt": {
+          "anyOf": [
+            {
+              "$ref": "../common/types.schema.json#/$defs/epochMs"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "updatedAt": {
+          "anyOf": [
+            {
+              "$ref": "../common/types.schema.json#/$defs/epochMs"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "createdAtIso": {
+          "anyOf": [
+            {
+              "$ref": "../common/types.schema.json#/$defs/timestamp"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "updatedAtIso": {
+          "anyOf": [
+            {
+              "$ref": "../common/types.schema.json#/$defs/timestamp"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    }
+  }
+}

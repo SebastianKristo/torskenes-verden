@@ -55,6 +55,7 @@ import { applyBriefCards73, guideFilter73 } from './brief73.js'; // prompt 73: b
 import { dtf } from './intl-format.js'; // gjenbrukte Intl.DateTimeFormat
 
 const MOCK = process.env.MOCK_DATA === '1';
+import { registerJob } from './jobs/index.js';
 const WX_EMOJI = { clear: '☀️', partly: '⛅', cloudy: '☁️', fog: '🌫️', drizzle: '🌦️', rain: '🌧️', sleet: '🌨️', snow: '❄️', thunder: '⛈️' };
 const TITLES = { morning: 'Morgenbrief', day: 'Dagsbrief', evening: 'Kveldsbrief', night: 'Nattbrief' };
 const GREET = { morning: 'God morgen', day: 'Hei', evening: 'God kveld', night: 'God natt' };
@@ -345,7 +346,7 @@ export async function pregenerate(u, b) {
   for (const g of b.guide ?? []) { try { await speak(u, { text: lang === 'en' ? g.textEn : g.text, character: g.char }); n++; } catch { break; } }
   return n;
 }
-if (process.env.NODE_ENV !== 'test') setInterval(() => { runWindow().catch(() => {}); }, 30_000).unref?.();
+registerJob('brief.generate', 30_000, () => runWindow().catch(() => {}), { note: 'Morgenbrief i brukerens tidsvindu (og varsel)' }); // felles planlegger: ikke i test/sandkasse
 
 /* ---------------- Ruter ---------------- */
 

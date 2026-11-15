@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "common/types.schema.json",
+  "title": "Felles typer",
+  "description": "Byggeklosser for endepunktskjemaene. Brukes med $ref: \"../common/types.schema.json#/$defs/date\". Konvensjonene står i shared/schemas/README.md.",
+  "$defs": {
+    "date": {
+      "title": "Dato",
+      "description": "Kalenderdato uten tid, YYYY-MM-DD, alltid Oslo-dato (Q20).",
+      "type": "string",
+      "format": "date"
+    },
+    "month": {
+      "title": "Måned",
+      "description": "YYYY-MM (Oslo).",
+      "type": "string",
+      "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"
+    },
+    "timestamp": {
+      "title": "Tidspunkt",
+      "description": "ISO 8601 med sone, f.eks. 2026-11-15T09:30:00.000Z eller 2026-11-15T10:30:00+01:00. Nye felt heter …At.",
+      "type": "string",
+      "format": "date-time"
+    },
+    "epochMs": {
+      "title": "Tidspunkt i ms (eldre)",
+      "description": "Millisekunder siden 1970 (UTC). Eldre form – finnes i mange svar (createdAt/updatedAt i Gjøremål, Familie, Sporing). Nye felt bruker timestamp.",
+      "type": "integer",
+      "minimum": 0
+    },
+    "ore": {
+      "title": "Beløp i øre",
+      "description": "Heltall i øre. Negativt = ut. Slik lagres alle beløp.",
+      "type": "integer"
+    },
+    "kroner": {
+      "title": "Beløp i kroner (eldre)",
+      "description": "Kroner som tall med desimaler (øre/100). Eldre form – de fleste beløp i /finans/api er slik i dag. Nye felt sendes i øre (…Ore) i tillegg.",
+      "type": "number"
+    },
+    "money": {
+      "title": "Penger",
+      "description": "Beløp som både øre (heltall, fasit) og kroner (tall, til visning). kroner = ore / 100.",
+      "type": "object",
+      "required": ["ore", "kroner"],
+      "properties": {
+        "ore": { "$ref": "#/$defs/ore" },
+        "kroner": { "$ref": "#/$defs/kroner" },
+        "currency": { "type": "string", "pattern": "^[A-Z]{3}$", "description": "Standard NOK." }
+      }
+    },
+    "page": {
+      "title": "Side",
+      "description": "Én side i en lang liste. nextCursor er null på siste side; send den som ?cursor= for neste side.",
+      "type": "object",
+      "required": ["items", "nextCursor"],
+      "properties": {
+        "items": { "type": "array" },
+        "nextCursor": { "type": ["string", "null"] }
+      }
+    },
+    "id": {
+      "title": "Id",
+      "description": "Id er tall eller tekst avhengig av tabellen.",
+      "type": ["integer", "string"]
+    },
+    "userId": { "type": "string", "minLength": 1 },
+    "color": { "type": "string", "pattern": "^#[0-9A-Fa-f]{3,8}$" },
+    "ok": {
+      "title": "Ok",
+      "type": "object",
+      "required": ["ok"],
+      "properties": { "ok": { "const": true } }
+    }
+  }
+}

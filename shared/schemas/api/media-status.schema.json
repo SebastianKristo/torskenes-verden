@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "api/media-status.schema.json",
+  "title": "Media-status",
+  "description": "Felles status for mediatjenestene (Sonarr, Radarr, qBittorrent …). Nøklene blir på serveren; svaret har aldri API-nøkler.",
+  "x-endpoint": "GET /api/media/status",
+  "type": "object",
+  "required": [
+    "services"
+  ],
+  "properties": {
+    "services": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "configured",
+          "state"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "service": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "configured": {
+            "type": "boolean"
+          },
+          "ok": {
+            "type": "boolean"
+          },
+          "connected": {
+            "type": "boolean"
+          },
+          "state": {
+            "type": "string"
+          },
+          "version": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "ms": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "lastOk": {
+            "anyOf": [
+              {
+                "$ref": "../common/types.schema.json#/$defs/timestamp"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "text": {
+            "type": "string"
+          },
+          "error": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "not": {
+          "anyOf": [
+            {
+              "required": [
+                "apiKey"
+              ]
+            },
+            {
+              "required": [
+                "key"
+              ]
+            },
+            {
+              "required": [
+                "password"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "admin": {
+      "type": "boolean"
+    },
+    "canEdit": {
+      "type": "boolean"
+    }
+  }
+}

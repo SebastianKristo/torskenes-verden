@@ -1,0 +1,124 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "api/finans-summary.schema.json",
+  "title": "Økonomi-oversikt",
+  "description": "Månedsoversikten i Økonomi. Beløp er kroner som tall (eldre form, øre/100); fasit er øre i databasen.",
+  "x-endpoint": "GET /finans/api/summary",
+  "type": "object",
+  "required": [
+    "month",
+    "from",
+    "to",
+    "inn",
+    "ut",
+    "budgetTotal",
+    "budgetUsed",
+    "left",
+    "balance",
+    "byCategory",
+    "budgets",
+    "recent"
+  ],
+  "properties": {
+    "month": {
+      "$ref": "../common/types.schema.json#/$defs/month"
+    },
+    "from": {
+      "$ref": "../common/types.schema.json#/$defs/date"
+    },
+    "to": {
+      "$ref": "../common/types.schema.json#/$defs/date"
+    },
+    "daysLeft": {
+      "type": "integer"
+    },
+    "inn": {
+      "$ref": "../common/types.schema.json#/$defs/kroner"
+    },
+    "ut": {
+      "$ref": "../common/types.schema.json#/$defs/kroner"
+    },
+    "budgetTotal": {
+      "$ref": "../common/types.schema.json#/$defs/kroner"
+    },
+    "budgetUsed": {
+      "$ref": "../common/types.schema.json#/$defs/kroner"
+    },
+    "left": {
+      "$ref": "../common/types.schema.json#/$defs/kroner"
+    },
+    "balance": {
+      "$ref": "../common/types.schema.json#/$defs/kroner"
+    },
+    "byCategory": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "category",
+          "amount"
+        ],
+        "properties": {
+          "categoryId": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "category": {
+            "type": "string"
+          },
+          "amount": {
+            "$ref": "../common/types.schema.json#/$defs/kroner"
+          },
+          "budget": {
+            "$ref": "../common/types.schema.json#/$defs/kroner"
+          }
+        }
+      }
+    },
+    "budgets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "category",
+          "budget",
+          "used"
+        ],
+        "properties": {
+          "categoryId": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "category": {
+            "type": "string"
+          },
+          "budget": {
+            "$ref": "../common/types.schema.json#/$defs/kroner"
+          },
+          "used": {
+            "$ref": "../common/types.schema.json#/$defs/kroner"
+          }
+        }
+      }
+    },
+    "recent": {
+      "type": "array",
+      "items": {
+        "$ref": "finans-transactions.schema.json#/$defs/transaction"
+      }
+    },
+    "spentMonth": {
+      "$ref": "../common/types.schema.json#/$defs/kroner"
+    },
+    "day": {
+      "type": "integer"
+    },
+    "daysInMonth": {
+      "type": "integer"
+    }
+  }
+}

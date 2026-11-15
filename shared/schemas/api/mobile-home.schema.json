@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "api/mobile-home.schema.json",
+  "title": "Oversikt (mobil)",
+  "description": "Startsiden i appene: hilsen, vær, snarveier, avganger, pakker. Feltene er mange og vokser; skjemaet krever bare kjernen.",
+  "x-endpoint": "GET /api/mobile/home",
+  "type": "object",
+  "required": [
+    "name",
+    "greeting"
+  ],
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "serverName": {
+      "type": "string"
+    },
+    "avatarUrl": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "greeting": {
+      "type": "string"
+    },
+    "weather": {
+      "anyOf": [
+        {
+          "type": "object",
+          "required": [],
+          "properties": {
+            "place": {
+              "type": "string"
+            },
+            "temp": {
+              "type": "number"
+            },
+            "hi": {
+              "type": "number"
+            },
+            "lo": {
+              "type": "number"
+            },
+            "sunrise": {
+              "anyOf": [
+                {
+                  "$ref": "../common/types.schema.json#/$defs/timestamp"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "sunset": {
+              "anyOf": [
+                {
+                  "$ref": "../common/types.schema.json#/$defs/timestamp"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "updated": {
+              "anyOf": [
+                {
+                  "$ref": "../common/types.schema.json#/$defs/timestamp"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "shortcuts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "url"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "packages": {
+      "type": "array"
+    }
+  }
+}

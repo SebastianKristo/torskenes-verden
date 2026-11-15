@@ -1,0 +1,237 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "api/kalender.schema.json",
+  "title": "Kalender",
+  "description": "Hendelser i et datoområde (?from&to, Oslo-datoer). start/end er ISO med sone, men YYYY-MM-DD for heldagshendelser (allDay, end eksklusiv); date er Oslo-datoen.",
+  "x-endpoint": "GET /api/kalender",
+  "type": "object",
+  "required": [
+    "from",
+    "to",
+    "today",
+    "events",
+    "calendars"
+  ],
+  "properties": {
+    "from": {
+      "$ref": "../common/types.schema.json#/$defs/date"
+    },
+    "to": {
+      "$ref": "../common/types.schema.json#/$defs/date"
+    },
+    "today": {
+      "$ref": "../common/types.schema.json#/$defs/date"
+    },
+    "events": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/event"
+      }
+    },
+    "calendars": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "name"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "color": {
+            "type": "string"
+          },
+          "writable": {
+            "type": "boolean"
+          },
+          "enabled": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "ok": {
+            "type": "boolean"
+          },
+          "count": {
+            "type": "integer"
+          },
+          "fetchedAt": {
+            "anyOf": [
+              {
+                "$ref": "../common/types.schema.json#/$defs/timestamp"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "updatedAt": {
+      "$ref": "../common/types.schema.json#/$defs/timestamp"
+    }
+  },
+  "$defs": {
+    "event": {
+      "type": "object",
+      "required": [
+        "id",
+        "title",
+        "start",
+        "allDay",
+        "date"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "start": {
+          "anyOf": [
+            {
+              "$ref": "../common/types.schema.json#/$defs/timestamp"
+            },
+            {
+              "$ref": "../common/types.schema.json#/$defs/date"
+            }
+          ]
+        },
+        "end": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "$ref": "../common/types.schema.json#/$defs/timestamp"
+                },
+                {
+                  "$ref": "../common/types.schema.json#/$defs/date"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "allDay": {
+          "type": "boolean"
+        },
+        "date": {
+          "$ref": "../common/types.schema.json#/$defs/date"
+        },
+        "time": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "type": {
+          "type": "string"
+        },
+        "color": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source": {
+          "type": "string"
+        },
+        "calendar": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "editable": {
+          "type": "boolean"
+        },
+        "recurring": {
+          "type": "boolean"
+        },
+        "appCalendar": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "note": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "etag": {
+          "type": "string"
+        }
+      },
+      "if": {
+        "properties": {
+          "allDay": {
+            "const": true
+          }
+        },
+        "required": [
+          "allDay"
+        ]
+      },
+      "then": {
+        "properties": {
+          "start": {
+            "$ref": "../common/types.schema.json#/$defs/date"
+          },
+          "end": {
+            "anyOf": [
+              {
+                "$ref": "../common/types.schema.json#/$defs/date"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "start": {
+            "$ref": "../common/types.schema.json#/$defs/timestamp"
+          },
+          "end": {
+            "anyOf": [
+              {
+                "$ref": "../common/types.schema.json#/$defs/timestamp"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      }
+    }
+  }
+}

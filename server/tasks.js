@@ -196,6 +196,7 @@ const listOut = (r, uid) => {
   return { id: r.id, name: r.name, color: r.color, owner: r.owner, ownerId: r.owner, ownerName: owner.name, mine: r.owner === uid, shared: mem.length > 0, private: mem.length === 0,
     household: !!r.household, kind: r.kind ?? null, members: [memberOut(r.owner, 'owner'), ...mem.map((m) => memberOut(m, 'member'))] };
 };
+const isoOf = (ms) => (Number.isFinite(ms) && ms > 0 ? new Date(ms).toISOString() : null);
 const parseArr = (v) => { try { const a = JSON.parse(v ?? '[]'); return Array.isArray(a) ? a : []; } catch { return []; } };
 const itemOut = (r) => {
   const tags = parseArr(r.tags).map(String), subs = parseArr(r.subs).map((x, i) => ({ id: String(x?.id ?? `s${i + 1}`), n: String(x?.n ?? ''), done: !!x?.done }));
@@ -204,7 +205,7 @@ const itemOut = (r) => {
     note: r.note, notes: r.note, done: !!r.done, doneAt: r.done_at ?? null, archived: !!r.archived_at, arch: !!r.archived_at, archivedAt: r.archived_at ?? null,
     urgent: !!r.urgent, rep: r.rep ?? 'none', early: r.early ?? 'none', prio: r.prio ?? 0, flag: !!r.flag, tags, subs, subsDone: subs.filter((x) => x.done).length,
     subsText: subs.length ? `${subs.filter((x) => x.done).length}/${subs.length}` : null, dl: r.dl ?? null, deadline: r.dl ?? null, dlOverdue: !!r.dl && !r.done && r.dl < today(), geo, // prompt 44
-    place: r.place ?? null, glimt: !!r.glimt, doneBy: r.done_by ?? null, createdBy: r.created_by ?? null, by: r.created_by ?? null, createdAt: r.created_at, updatedAt: r.updated_at, ...haInfo(r),
+    place: r.place ?? null, glimt: !!r.glimt, doneBy: r.done_by ?? null, createdBy: r.created_by ?? null, by: r.created_by ?? null, createdAt: r.created_at, updatedAt: r.updated_at, createdAtIso: isoOf(r.created_at), updatedAtIso: isoOf(r.updated_at), ...haInfo(r), // *Iso: kontrakten (ms → ISO)
     ...extraOut40(r), ...origin41(r) }; // prompt 40: placeName, after, mentions · prompt 41: origin {id, text, at, engine}
 };
 const lists = (uid) => listsOf(uid).map((l) => listOut(l, uid));

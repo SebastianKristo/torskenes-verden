@@ -39,3 +39,6 @@ tests/receipts/results/
 test/a11y51/out/
 test/visual51/out/
 __pycache__/
+
+# Midlertidige git-worktrees for agenter
+.claude/worktrees/

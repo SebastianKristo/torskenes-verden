@@ -14,6 +14,7 @@ import { notifyUser } from './notify.js';
 import { family50 as F, placesChanged50, deletePlace50, placesVersion50, areaOut50, setPlaceEventHook50 } from './family.js';
 import { schoolPlaceOf50, ruterPlaceEvents50 } from './ruter41.js';
 import { dtf } from './intl-format.js'; // gjenbrukte Intl.DateTimeFormat
+import { registerJob } from './jobs/index.js';
 
 const MIN = 60_000, HOUR = 3_600_000, DAY = 86_400_000;
 const FRESH = 15 * MIN;
@@ -457,7 +458,7 @@ export async function sweepCheckins50(now = Date.now()) {
   for (const id of old) { q('DELETE FROM family_checkin50_to WHERE checkin_id=?').run(id); q('DELETE FROM family_checkin50 WHERE id=?').run(id); }
   return due.length;
 }
-setInterval(() => { sweepCheckins50().catch((e) => console.warn('[sjekk inn] påminnelse:', e.message)); }, 30_000).unref?.();
+registerJob('familie.sjekk-inn', 30_000, sweepCheckins50, { note: 'Påminnelser for Sjekk inn og sletting av gamle' }); // felles planlegger: ikke i test/sandkasse
 
 /* ---------------- I dag ---------------- */
 

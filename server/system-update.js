@@ -826,8 +826,15 @@ export const FEATURES44 = ['logs', 'containers', 'study.documents', 'study.overv
   'zone.alerts', 'zone.icon', 'health.ha.mobileapp', 'ruter.recoCount', 'weather.here', 'tasks.ha.summary', 'settings.sections', 'notify.systemOnly',
   // Prompt 46 (SERVER46)
   'update.watchdog', 'update.retry', 'update.abort', 'update.prune'];
+// Q19: versjonssjekken for klientene. Appene (Fase 3–5) sammenligner sin egen versjon og den laveste serverversjonen de trenger
+// med svaret her, og viser «Oppdater serveren» (server for gammel) eller «Oppdater appen» (app eldre enn minClient).
+//   minClient: den eldste appversjonen (iOS, Android, Kalender, Watch/Wear) denne serveren fortsatt svarer riktig for.
+//              Heves bare når en eldre svarform eller rute faktisk fjernes. 4.0.0 = alle utgitte apper (ingen reserver fjernet ennå).
+//   contract:  versjonen av kontrakten i shared/schemas (README.md der). Øker når et skjema endres på en måte klientene merker.
+export const MIN_CLIENT = '4.0.0';
+export const CONTRACT_VERSION = 1;
 export const versionApi44 = new Hono();
-versionApi44.get('/', (c) => c.json({ version: ownVersion(), name: OS_NAME, codename: OS_CODENAME, shortName: shortName(ownVersion()), api: 44, dbSchema: DB_SCHEMA, features: FEATURES44 }, 200, { 'Cache-Control': 'no-store' }));
+versionApi44.get('/', (c) => c.json({ version: ownVersion(), minClient: MIN_CLIENT, contract: CONTRACT_VERSION, name: OS_NAME, codename: OS_CODENAME, shortName: shortName(ownVersion()), api: 44, dbSchema: DB_SCHEMA, features: FEATURES44 }, 200, { 'Cache-Control': 'no-store' }));
 
 export const _paths = { UPD, BACKUPS };
 export const _hasRequest = () => existsSync(join(UPD, 'request.json'));

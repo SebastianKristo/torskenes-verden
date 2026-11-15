@@ -7,7 +7,7 @@ import { createHmac, randomBytes, randomUUID } from 'node:crypto';
 import { readFile, writeFile, unlink, mkdir } from 'node:fs/promises';
 import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { db, q, OWNER, settings, saveSettings, secret, setSecret, secretSource, DEFAULT_SETTINGS, me, ensureLedger, SERVER_KEYS, PERSONAL_CFG, serverSettings } from './db.js';
+import { db, q, OWNER, TOKEN_SLIDE_MS, settings, saveSettings, secret, setSecret, secretSource, DEFAULT_SETTINGS, me, ensureLedger, SERVER_KEYS, PERSONAL_CFG, serverSettings } from './db.js';
 import { runAsUser, userCfg, setUserCfg } from '../settings.js';
 import { loadDemo } from './demo.js';
 import { extract, extractText, extractOcr, health, providerName, testEngine, testRoboflow, ENGINES, TASKS, aiLog, barcode, aiTimeoutsOf, cleanAiTimeouts, AI_TIMEOUT_DEFAULTS, TIMEOUT_STEPS, ON_TIMEOUT, _aiTest, aiLimits } from './ai.js';
@@ -97,8 +97,22 @@ function access(c) {
   if (row.expires && row.expires < Date.now()) return null;
   const u = userInfo(row.user_id ?? OWNER);
   if (!u) { q('DELETE FROM fh_tokens WHERE user_id=?').run(row.user_id); return null; } // brukeren er slettet
-  q('UPDATE fh_tokens SET last_used=? WHERE id=?').run(Date.now(), row.id);
+  // Q23: glidende utløp – hver bruk gir 180 nye dager (bare for tokens med sliding=1; fast utløp røres ikke).
+  const now = Date.now();
+  q('UPDATE fh_tokens SET last_used=?, expires=CASE WHEN sliding=1 THEN ? ELSE expires END WHERE id=?').run(now, now + TOKEN_SLIDE_MS, row.id);
   return { user: u.id, info: u, admin: u.role === 'admin', scopes: new Set(row.scopes.split(' ')), session: false, tokenId: row.id };
+}
+/** Tilstanden til app-tokenet i Authorization (for feilsvaret ved 401, server/http/errors.js). Endrer ingenting.
+ *  → 'none' (ingen header) | 'invalid' (ukjent/feil form/slettet bruker) | 'expired' | 'valid' */
+export function tokenStateOf(c) {
+  const h = c.req.header('authorization');
+  if (!h) return 'none';
+  const m = h.match(TOKEN_RE);
+  if (!m) return 'invalid';
+  const row = q('SELECT expires, user_id FROM fh_tokens WHERE id=?').get(tokenKey(m[1]));
+  if (!row) return 'invalid';
+  if (row.expires && row.expires < Date.now()) return 'expired';
+  return userInfo(row.user_id ?? OWNER) ? 'valid' : 'invalid';
 }
 const hasScope = (a, s) => a.scopes.has(s) || (IMPLIED[s] && a.scopes.has(IMPLIED[s]));
 
@@ -127,7 +141,7 @@ const accById = (u = me()) => new Map(q('SELECT * FROM fh_accounts WHERE user_id
 // names: Map id → fornavn som deles av alle radene i en liste («Lagt til … · Sebastian» slås opp én gang per bruker).
 function txOut(t, cats = catById(), accs = accById(), names = new Map()) {
   const cat = cats.get(t.category_id), acc = accs.get(t.account_id);
-  return { id: t.id, date: t.date, amount: t.amount / 100, description: t.description, merchant: t.merchant, note: t.note, source: t.source,
+  return { id: t.id, date: t.date, amount: t.amount / 100, amountOre: t.amount, description: t.description, merchant: t.merchant, note: t.note, source: t.source,
     categoryId: t.category_id, category: cat?.name ?? 'Ukategorisert', color: cat?.color ?? '#A0A0AA', kind: cat?.kind ?? 'expense',
     accountId: t.account_id, account: acc?.name ?? '–', receipt: t.receipt_status ?? null, receiptId: t.receipt_id ?? null,
     type: t.amount > 0 ? 'income' : 'expense', folderId: t.folder_id ?? null, hasBankRow: !!t.raw_bank_row, ...aiOf(t, cat?.name),
@@ -495,8 +509,10 @@ async function tokenLogin(c) {
   const token = newToken();
   // ISO2: alle roller har sitt eget regnskap, så alle får full tilgang til det (også finance:write).
   const scopes = SCOPES;
-  q('INSERT INTO fh_tokens(id,name,scopes,created,user_id) VALUES(?,?,?,?,?)').run(tokenKey(token), str(b.deviceName ?? b.device, 60) || 'Mobilapp', scopes.join(' '), Date.now(), r.user.id);
-  return c.json({ token, scopes, user: { id: r.user.id, username: r.user.username, role: r.user.role, name: r.user.name } });
+  // Q23: 180 dager glidende utløp (forlenges ved hver bruk).
+  const now = Date.now(), expires = now + TOKEN_SLIDE_MS;
+  q('INSERT INTO fh_tokens(id,name,scopes,created,user_id,expires,sliding) VALUES(?,?,?,?,?,?,1)').run(tokenKey(token), str(b.deviceName ?? b.device, 60) || 'Mobilapp', scopes.join(' '), now, r.user.id, expires);
+  return c.json({ token, scopes, user: { id: r.user.id, username: r.user.username, role: r.user.role, name: r.user.name }, expires, expiresAt: new Date(expires).toISOString(), sliding: true });
 }
 api.post('/auth/token', tokenLogin);
 api.post('/login', tokenLogin); // alias for mobilappene (Mobil v2)
@@ -1759,7 +1775,10 @@ api.post('/scan/barcode', R, async (c) => {
 });
 
 // Personlige tokens (fh_pat_…): bare hashen lagres, tokenet vises én gang. Hver bruker ser og trekker tilbake sine egne.
-const tokenOut = (t) => ({ id: t.id.slice(0, 12), name: t.name, scopes: t.scopes.split(' '), created: t.created, lastUsed: t.last_used, last_used: t.last_used, expires: t.expires, expired: !!t.expires && t.expires < Date.now() });
+// Tid: created/lastUsed/expires er ms (som før); *At-feltene er de samme tidspunktene som ISO 8601 (kontrakten, shared/schemas).
+const isoMs = (ms) => (ms ? new Date(ms).toISOString() : null);
+const tokenOut = (t) => ({ id: t.id.slice(0, 12), name: t.name, scopes: t.scopes.split(' '), created: t.created, lastUsed: t.last_used, last_used: t.last_used, expires: t.expires, expired: !!t.expires && t.expires < Date.now(),
+  sliding: !!t.sliding, createdAt: isoMs(t.created), lastUsedAt: isoMs(t.last_used), expiresAt: isoMs(t.expires) });
 // Økt i nettleseren, eller et token med finance:write (mobilappens innstillinger). Et token kan ikke lage tokens med mer tilgang enn det selv har.
 const tokenAdmin = async (c, next) => { const a = c.get('access'); if (!a.session && !a.scopes.has('finance:write')) return bad(c, 'Krever innlogging i nettleseren eller et token med finance:write', 403); await next(); };
 api.get('/tokens', tokenAdmin, (c) => c.json(q('SELECT * FROM fh_tokens WHERE COALESCE(user_id, ?)=? ORDER BY created DESC').all(OWNER, c.get('user')).map((t) => ({ ...tokenOut(t), current: t.id === c.get('access').tokenId }))));
@@ -1778,9 +1797,12 @@ api.post('/tokens', tokenAdmin, async (c) => {
 /** Tilgangen for forespørselen (økt eller fh_-token), eller null. → {user, info, admin, scopes:Set, session, tokenId?} */
 export const tokenAccessOf = (c) => access(c);
 /** Lager et token for userId. scopes må allerede være kontrollert (aldri bredere enn den som ber om det). → {token, ...tokenOut} */
-export function issueToken(userId, { name, scopes, expires = null }) {
+// Q23: uten fast utløp (expires null) får tokenet 180 dager glidende utløp. never:true gir et token som aldri utløper
+// (bare for nøkler brukeren selv styrer, som Glimt-API-nøklene).
+export function issueToken(userId, { name, scopes, expires = null, never = false }) {
   const token = newToken();
-  const row = q('INSERT INTO fh_tokens(id,name,scopes,created,user_id,expires) VALUES(?,?,?,?,?,?) RETURNING *').get(tokenKey(token), str(name, 60) || 'Token', scopes.join(' '), Date.now(), userId, expires);
+  const now = Date.now(), sliding = !expires && !never;
+  const row = q('INSERT INTO fh_tokens(id,name,scopes,created,user_id,expires,sliding) VALUES(?,?,?,?,?,?,?) RETURNING *').get(tokenKey(token), str(name, 60) || 'Token', scopes.join(' '), now, userId, sliding ? now + TOKEN_SLIDE_MS : (expires || null), sliding ? 1 : 0);
   return { token, fullId: row.id, ...tokenOut(row) };
 }
 /** Tokenradene (tokenOut-form + fullId) for userId med de fulle id-ene. */
@@ -1788,6 +1810,8 @@ export const tokensById = (userId, fullIds) => (fullIds.length ? q(`SELECT * FRO
 /** Trekker tilbake et token (full id) som tilhører userId. → antall slettet */
 export const revokeTokenOf = (userId, fullId) => q('DELETE FROM fh_tokens WHERE id=? AND COALESCE(user_id, ?)=?').run(fullId, OWNER, userId).changes;
 export { SCOPES as TOKEN_SCOPES };
+/** Bare for testene: nøkkelen (HMAC) et token lagres under. */
+export const _tokenKeyForTest = (t) => tokenKey(t);
 api.delete('/tokens/:id', tokenAdmin, (c) => { q('DELETE FROM fh_tokens WHERE substr(id,1,12)=? AND COALESCE(user_id, ?)=?').run(c.req.param('id'), OWNER, c.get('user')); return ok(c); });
 
 /* --- Subscription OS --- */
@@ -1797,7 +1821,7 @@ const CYCLES = { monthly: 1, yearly: 12, biennial: 24 };
 const cycleIn = (v) => ({ monthly: 'monthly', mnd: 'monthly', yearly: 'yearly', 'år': 'yearly', biennial: 'biennial', '2år': 'biennial' }[v] ?? null);
 const monthlyOre = (s) => s.price / (CYCLES[s.cycle] ?? 1);
 function subOut(s) {
-  return { id: s.id, name: s.name, plan: s.plan, price: s.price / 100, cycle: s.cycle, nextDate: s.next_date, usageNote: s.usage_note, lowUse: !!s.low_use,
+  return { id: s.id, name: s.name, plan: s.plan, price: s.price / 100, priceOre: s.price, cycle: s.cycle, nextDate: s.next_date, usageNote: s.usage_note, lowUse: !!s.low_use,
     active: !!s.active, domain: s.domain || domainFor(s.name), aiShort: s.ai_short || heuristic({ merchant: s.name, category: 'Abonnementer' }).short, txId: s.tx_id,
     monthly: Math.round(monthlyOre(s)) / 100, yearly: Math.round(monthlyOre(s) * 12) / 100, perLabel: { monthly: '/mnd', yearly: '/år', biennial: '/2 år' }[s.cycle] ?? '/mnd',
     cycleName: { monthly: 'Månedlig', yearly: 'Årlig', biennial: 'Hvert 2. år' }[s.cycle] ?? 'Månedlig',

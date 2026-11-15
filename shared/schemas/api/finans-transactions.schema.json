@@ -1,0 +1,146 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "api/finans-transactions.schema.json",
+  "title": "Transaksjoner",
+  "description": "Liste over transaksjoner (?limit, ?from, ?to, ?q …). amount er kroner (eldre form), amountOre er det samme beløpet i øre (heltall). Når YTELSE-delen av Fase 2 legger til ?cursor, kommer nextCursor (se common/types.schema.json#/$defs/page).",
+  "x-endpoint": "GET /finans/api/transactions",
+  "type": "object",
+  "required": [
+    "items"
+  ],
+  "properties": {
+    "items": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/transaction"
+      }
+    },
+    "count": {
+      "type": "integer"
+    },
+    "net": {
+      "$ref": "../common/types.schema.json#/$defs/kroner"
+    },
+    "nextCursor": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "months": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "month",
+          "count"
+        ],
+        "properties": {
+          "month": {
+            "$ref": "../common/types.schema.json#/$defs/month"
+          },
+          "count": {
+            "type": "integer"
+          },
+          "net": {
+            "$ref": "../common/types.schema.json#/$defs/kroner"
+          },
+          "inn": {
+            "$ref": "../common/types.schema.json#/$defs/kroner"
+          },
+          "ut": {
+            "$ref": "../common/types.schema.json#/$defs/kroner"
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "transaction": {
+      "type": "object",
+      "required": [
+        "id",
+        "date",
+        "amount",
+        "amountOre",
+        "description",
+        "kind"
+      ],
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "date": {
+          "$ref": "../common/types.schema.json#/$defs/date"
+        },
+        "amount": {
+          "$ref": "../common/types.schema.json#/$defs/kroner"
+        },
+        "amountOre": {
+          "$ref": "../common/types.schema.json#/$defs/ore"
+        },
+        "description": {
+          "type": "string"
+        },
+        "merchant": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "note": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source": {
+          "type": "string"
+        },
+        "categoryId": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "category": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "kind": {
+          "enum": [
+            "expense",
+            "income",
+            "transfer"
+          ]
+        },
+        "accountId": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "account": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "folderId": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "api/tokens.schema.json",
+  "title": "App-tokens",
+  "description": "Tokenene til brukeren (Innstillinger → Enheter/Tokens). created/lastUsed/expires er ms (eldre), …At er de samme tidspunktene som ISO.",
+  "x-endpoint": "GET /finans/api/tokens",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": [
+      "id",
+      "name",
+      "scopes",
+      "created",
+      "expires",
+      "expired"
+    ],
+    "properties": {
+      "id": {
+        "type": "string"
+      },
+      "name": {
+        "type": "string"
+      },
+      "scopes": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "created": {
+        "$ref": "../common/types.schema.json#/$defs/epochMs"
+      },
+      "lastUsed": {
+        "anyOf": [
+          {
+            "$ref": "../common/types.schema.json#/$defs/epochMs"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "last_used": {
+        "anyOf": [
+          {
+            "$ref": "../common/types.schema.json#/$defs/epochMs"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "expires": {
+        "anyOf": [
+          {
+            "$ref": "../common/types.schema.json#/$defs/epochMs"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "expired": {
+        "type": "boolean"
+      },
+      "sliding": {
+        "type": "boolean"
+      },
+      "createdAt": {
+        "anyOf": [
+          {
+            "$ref": "../common/types.schema.json#/$defs/timestamp"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "lastUsedAt": {
+        "anyOf": [
+          {
+            "$ref": "../common/types.schema.json#/$defs/timestamp"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "expiresAt": {
+        "anyOf": [
+          {
+            "$ref": "../common/types.schema.json#/$defs/timestamp"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "current": {
+        "type": "boolean"
+      }
+    }
+  }
+}

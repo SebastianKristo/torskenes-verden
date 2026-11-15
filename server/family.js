@@ -12,6 +12,7 @@ import { userInfo, listUsers, sessionUser } from './auth.js';
 import { bearerOk } from './finans/routes.js';
 import { broadcast } from './realtime.js';
 import { dtf } from './intl-format.js'; // gjenbrukte Intl.DateTimeFormat
+import { registerJob } from './jobs/index.js';
 
 const MOCK = process.env.MOCK_DATA === '1';
 const DAY = 86_400_000;
@@ -296,7 +297,7 @@ export function sweepLeaves50(now = Date.now()) {
   for (const [user, events] of by) { notifyLive(user, events); runPlaceHook(user, events); }
   return rows.length;
 }
-setInterval(() => { try { sweepLeaves50(); } catch (err) { console.warn('[family] forlot-sjekk:', err.message); } }, 30_000).unref?.();
+registerJob('familie.forlot', 30_000, sweepLeaves50, { note: '«Forlot»-hendelser og varsler for Steder' }); // felles planlegger: ikke i test/sandkasse
 /** Versjon for geofence-regionene (øker ved hver endring i Steder). */
 export const placesVersion50 = () => Number(kv.get(OWNER, 'places50_version', 0)) || 0;
 /** Etter endring i et sted: speil første område, ny versjon og sanntid {kind:'places'} til alle som ser stedet (oppdaterer regionene på enhetene). */
