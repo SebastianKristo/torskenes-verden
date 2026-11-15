@@ -202,7 +202,8 @@ test('integrasjonen: Media-gruppen, bare adresse, guide om format; ruten er mont
   assert.match(src, /YUBAL_AUDIO_FORMAT/);
   assert.match(src, /docker compose up -d --force-recreate/);
   const idx = readFileSync(new URL('../server/media/index.js', import.meta.url), 'utf8'); // mountMedia
-  assert.ok(idx.indexOf("app.route('/api/media/yubal', yubalApi)") < idx.indexOf('mountMedia50(app)'));
+  assert.ok(idx.indexOf("app.route('/api/media/yubal', yubalApi)") < idx.indexOf("app.route('/api/media', imagesApi)"));
+  assert.ok(idx.indexOf("app.route('/api/media/yubal', yubalApi)") < idx.indexOf("app.route('/api/media', media43Api)"));
   const web = readFileSync(new URL('../public/js/media-musikk.js', import.meta.url), 'utf8');
   assert.doesNotMatch(web, /10\.69\.|:8010/);
   assert.match(web, /\/api\/media\/yubal/);
