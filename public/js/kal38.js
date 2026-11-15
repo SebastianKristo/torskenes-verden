@@ -9,7 +9,7 @@
 // Selve kalenderen (data, visninger, ark) ligger i kalender.js, som gir denne modulen en kontekst med initKal38().
 import { esc, isMobile, haptic } from './util.js';
 import { glimt } from './glimt.js';
-import { preview, quickLabel, addQuick } from './kal-quick.js';
+import { preview, previewAsync, quickLabel, addQuick } from './kal-quick.js';
 import { agent, agentOn, agentExtras, agentText } from './glimt-agent45.js'; // prompt 45
 
 let C = null;
@@ -238,7 +238,7 @@ function loadWx() {
 export function glimtBar() {
   const v = G.bar, has = !!v.trim();
   return `<div class="k38-gbar" data-k38-gbar>
-    <div class="k38-gpv" data-k38-pv${has || G.sug ? '' : ' hidden'}>${barPreview()}</div>
+    <div class="k38-gpv" data-k38-pv${has || G.sug ? '' : ' hidden'}>${barPreview() ?? ''}</div>
     <div class="k38-grow">
       <div class="k38-gin"><button type="button" class="k38-gsp" data-k38-gopen aria-label="Åpne Glimt" title="Glimt">${glimt(22, 'klar')}</button>
         <input data-k38-bar value="${esc(v)}" placeholder="Spør Glimt eller skriv en hendelse …" autocomplete="off" enterkeyhint="send" aria-label="Spør Glimt eller skriv en hendelse">
@@ -250,7 +250,8 @@ function barPreview() {
   const v = G.bar.trim();
   if (!v) return G.sug ? `<div class="k38-sugs">${SUG.slice(0, 4).map((s, i) => `<button type="button" data-k38-sug="${i}">${esc(s)}</button>`).join('')}</div>` : '';
   if (isQ(v)) return `<button type="button" class="k38-pvq" data-k38-bsend>${glimt(20, 'klar')}<span class="k2-grow"><span class="k38-pvl">SPØR GLIMT</span><b data-no-i18n>${esc(v)}</b></span><span class="k38-pvk">Enter ›</span></button>`;
-  const p = preview(v);
+  const p = preview(v, () => { if (G.bar.trim() === v) paintBar(document.getElementById('kal')); });
+  if (p.pending) return null; // serverens tolkning kommer straks: behold det som vises
   if (!p.ok || !p.date) return `<button type="button" class="k38-pvq" data-k38-bsend>${glimt(20, 'klar')}<span class="k2-grow"><span class="k38-pvl">SPØR GLIMT</span><b data-no-i18n>${esc(v)}</b></span><span class="k38-pvk">Enter ›</span></button>`;
   const when = `${quickLabel({ date: p.date })}${p.start ? ` · ${p.start}–${p.end}` : ' · hele dagen'}`;
   return `<div class="k38-pva"><span class="k38-pvl">GLIMT FORSTÅR <i style="background:${esc(C.calById('privat').color)}"></i> Privat</span><b data-no-i18n>${esc(p.title || 'Hendelse')}</b><span>${esc(when)}${p.place ? ` · <span data-no-i18n>${esc(p.place)}</span>` : ''}</span><span>${p.start ? 'Varsel 1 time før' : 'Uten varsel'}</span>
@@ -259,17 +260,21 @@ function barPreview() {
 /** Oppdaterer bare forhåndsvisningen (feltet beholder fokus og markør). */
 export function paintBar(h) {
   const pv = h?.querySelector('[data-k38-pv]');
-  if (pv) { pv.innerHTML = barPreview(); pv.hidden = !(G.bar.trim() || G.sug); }
+  if (pv) { const html = barPreview(); if (html != null) pv.innerHTML = html; pv.hidden = !(G.bar.trim() || G.sug); }
   const s = h?.querySelector('.k38-gsend'); if (s) s.hidden = !G.bar.trim();
 }
 /** Enter / ↑ i feltet: et spørsmål går til Glimt, en hendelse legges til (i bakgrunnen, med Angre i banneret). */
 export function submitBar(force) {
   const v = G.bar.trim();
   if (!v) { openGlimt(); return; }
-  const p = isQ(v) || agentOn() ? null : preview(v); // prompt 45: med agenten tolkes alt på serveren (ingen lokal regex først)
-  if (force !== 'ask' && p?.ok && p.date) { G.bar = ''; G.sug = false; haptic(10); addQuick(v); C.paint(); return; }
-  G.bar = ''; G.sug = false; G.focusBar = false;
-  openGlimt(v);
+  const go = (p) => {
+    if (force !== 'ask' && p?.ok && p.date) { G.bar = ''; G.sug = false; haptic(10); addQuick(v); C.paint(); return; }
+    G.bar = ''; G.sug = false; G.focusBar = false;
+    openGlimt(v);
+  };
+  if (isQ(v) || agentOn()) return go(null); // prompt 45: med agenten tolkes alt på serveren (ingen lokal regex først)
+  const p = preview(v);
+  if (p.pending) previewAsync(v).then(go, () => go(null)); else go(p);
 }
 export function openGlimt(q) {
   G.open = true; G.focusGq = true; loadWx();
@@ -338,6 +343,7 @@ export async function send(q) {
   clearTimeout(glTimer); clearInterval(glType);
   G.msgs = G.msgs.map((m) => (m.r === 'a' ? { ...m, th: false, n: 1e9 } : m));
   if (agentOn() && await sendAgent(q)) return;
+  if (!isQ(q)) await previewAsync(q).catch(() => null); // serverens tolkning ligger da klar for ask()
   const local = ask(q), id = ++mid;
   const m = { id: `a${id}`, r: 'a', th: true, step: 0, full: local ?? { steps: ['Leser kalenderen', 'Spør Glimt på serveren'], txt: '' }, n: 0 };
   G.msgs.push({ id: `u${id}`, r: 'u', t: q }, m);

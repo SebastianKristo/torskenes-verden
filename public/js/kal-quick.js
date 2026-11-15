@@ -4,11 +4,14 @@
 //   (flere: «Legger til 2 timer …»). Status fra GET /api/kalender/quick/jobs hvert 2. s og sanntid «calendar-quick».
 // - Ferdig: banner «✓ Nina frisør · fre 25. sep · 14:30» med Angre (POST …/:id/undo) og Vis (hopper til dagen).
 // - Feilet: Kalender åpner skjemaet ferdig utfylt (hook fra kalender.js); andre steder banner med «Fyll ut ›».
-// - Eldre server uten køen (404): tolkes her med parseQuick og lagres med POST /api/kalender/events (Privat, varsel 1 t).
+// - Eldre server uten køen (404): tolkes med serverens /api/kalender/quick/parse (eller quick-time.js når heller ikke den finnes)
+//   og lagres med POST /api/kalender/events (Privat, varsel 1 t).
+// Fase 3: forhåndsvisningen er serverens tolkning (lib/dates.js, POST /api/kalender/quick/parse), ikke en egen tolkning her.
 // Laget (#kq-layer) ligger fast øverst over alt annet, også fullskjerm-kalenderen.
 import { esc } from './util.js';
 import { onLive } from './realtime.js';
 import { parseQuick, quickLabel } from './quick-time.js';
+import { quickParse, quickCached } from './lib/dates.js';
 import { aiStart, aiUpdate, aiDone } from './ai-jobs.js';
 import { loadMemory, memoryNow } from './glimt-memory.js';
 
@@ -21,8 +24,12 @@ let toastT = 0;
 export function setQuickHooks(h) { Object.assign(hooks, h); }
 
 const todayISO = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
-/** Tolker lokalt (for forhåndsvisning). Prompt 33: med brukerens «Glimt husker»-alias (hentes én gang). */
-export const preview = (text) => { if (!memoryNow().length) loadMemory(); return parseQuick(text, todayISO(), memoryNow()); };
+/** Serverens tolkning (for forhåndsvisning). Er den ikke hentet ennå: {ok:false, pending:true}, og onReady(svar) kalles når den kommer.
+ *  Serveren bruker brukerens «Glimt husker»-alias selv (prompt 33). */
+const PENDING = Object.freeze({ ok: false, pending: true });
+export const preview = (text, onReady) => quickCached(text, onReady) ?? PENDING;
+/** Samme som preview, men venter på svaret. Eldre server uten /quick/parse: quick-time.js med aliasene. */
+export const previewAsync = (text) => quickParse(text).catch(async () => { if (!memoryNow().length) await loadMemory().catch(() => {}); return parseQuick(text, todayISO(), memoryNow()); });
 
 async function call(path, method = 'GET', json) {
   const r = await fetch('/api' + path, { method, credentials: 'same-origin', cache: 'no-store', headers: json ? { 'Content-Type': 'application/json' } : {}, body: json ? JSON.stringify(json) : undefined });
@@ -89,7 +96,7 @@ async function localAdd(text, ai) {
   Q.mine.set(tmp, { id: tmp, state: 'running', text, ai });
   if (ai) aiUpdate(ai, { cancel: () => cancelQuick(tmp) });
   paint();
-  const p = preview(text);
+  const p = await previewAsync(text);
   if (!p.ok || !p.date) { Q.mine.delete(tmp); return finish({ id: tmp, state: 'failed', text, ai, error: p.why || 'Fant ikke dato.', found: p }); }
   const body = { title: p.title, allDay: !p.start, date: p.date, start: p.start || '', end: p.start ? p.end || '' : '', location: p.place || '', calendar: 'privat', repeat: 'none', reminder: p.start ? '1h' : 'day', note: text.length > 60 ? text : '' };
   const r = await call('/kalender/events', 'POST', body).catch((e) => ({ ok: false, status: 0, d: { error: e.message } }));

@@ -15,7 +15,7 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { isDeepStrictEqual } from 'node:util';
 
-// Implementasjonene som bruker prosessens tidssone (web parseDay, routes.js nextFor) regnes som i produksjon (Dockerfile: TZ=Europe/Oslo).
+// Implementasjonene som bruker prosessens tidssone (routes.js nextFor) regnes som i produksjon (Dockerfile: TZ=Europe/Oslo).
 process.env.TZ = 'Europe/Oslo';
 process.env.DATA_DIR = mkdtempSync(join(tmpdir(), 'hl-testvektorer-'));
 process.env.SESSION_SECRET = 'test-secret-test-secret-test-secret-tv1';
@@ -29,8 +29,7 @@ const { hashPassword } = await import('../server/auth/password.js');
 process.env.APP_PASSWORD_HASH = hashPassword('testpassord1');
 const { whenOf45, todayOslo45 } = await import('../server/glimt/dates.js');
 const { parseDay: serverParseDay } = await import('../server/dates/day.js');
-const { parseDay: webParseDay } = await import('../public/js/parse-day35.js');
-const { parseQuick, osloTodayISO } = await import('../public/js/quick-time.js');
+const { osloTodayISO } = await import('../public/js/quick-time.js');
 const { parseQuick: serverQuick } = await import('../server/dates/quick.js');
 const { parseDatesRequest } = await import('../server/dates/api.js');
 const { default: finansApi } = await import('../server/finans/routes.js');
@@ -66,7 +65,6 @@ function oslo(tidspunkt) {
   const p = Object.fromEntries(osloFmt.formatToParts(new RealDate(tidspunkt)).map((x) => [x.type, x.value]));
   return { idag: `${p.year}-${p.month}-${p.day}`, naaMin: +p.hour * 60 + +p.minute };
 }
-const lokalYmd = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 const kl12 = (idag) => RealDate.parse(`${idag}T11:00:00Z`); // midt på dagen i Oslo uansett sommertid
 
 const tally = new Map(); // implementasjon → {bestått, avvik, totalt}
@@ -136,8 +134,10 @@ const DATO_IMPL = [
   ['server dates/day.js parseDay', true, (v, idag) => ({ dato: serverParseDay(v.tekst, idag)?.date ?? null })],
   ['server dates/quick.js parseQuick (Rask-avtaler)', false, (v, idag, naaMin) => { const r = serverQuick(v.tekst, idag, undefined, { nowMin: naaMin }); return { dato: r.date ?? null, tid: r.start ?? null }; }],
   ['server POST /api/dates/parse', false, (v) => { const r = parseDatesRequest({ text: v.tekst, now: v.naa }).body; return { dato: r.date, tid: r.time }; }],
-  ['web js/parse-day35.js parseDay', true, (v) => { const r = webParseDay(v.tekst, new RealDate(v.naa)); return { dato: r ? lokalYmd(r.date) : null }; }],
-  ['web js/quick-time.js parseQuick', false, (v, idag) => { const r = parseQuick(v.tekst, idag); return { dato: r.date ?? null, tid: r.start ?? null }; }],
+  // Fase 3: web tolker ikke datoer selv lenger. js/parse-day35.js er fjernet (Kalender-søket spør POST /api/dates/parse), og
+  // forhåndsvisningene av raske avtaler (Kalender, søket på Dashboard, FinansHub mobil) viser POST /api/kalender/quick/parse,
+  // altså «server dates/quick.js parseQuick» over. quick-time.js parseQuick finner fortsatt tittel, type og sted for serveren,
+  // og er reserve bare mot en eldre server uten /quick; datoene den gir alene er derfor ikke lenger noe web viser.
 ];
 for (const [impl, bareDato, fn] of DATO_IMPL) {
   for (const v of DATOER.vektorer) {

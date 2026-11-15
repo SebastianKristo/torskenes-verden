@@ -10,7 +10,7 @@ import { esc, hlApi } from './core.js';
 import { m, draw, flash } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
 import { BD, bdLoad } from './mobile-p24.js';
-import { parseQuick } from '/assets/js/quick-time.js';
+import { quickParse, quickCached } from '/assets/js/lib/dates.js'; // Fase 3: dato og tid fra serveren (POST /api/kalender/quick/parse)
 import { LEARN_TYPES, typeName, loadMemory, memoryNow, addMemory, applyMemory, nameOfEvent, dinOf } from '/assets/js/glimt-memory.js'; // prompt 33
 import * as P29 from './mobile-p29.js';
 import { glimt } from './mobile-p31.js'; // prompt 32: Glimt-merket i søket og «Beskriv med Glimt»
@@ -329,7 +329,7 @@ async function fillAi() {
   const F = K.form; if (!F) return;
   const txt = String(F.ai ?? '').trim(); if (!txt || F.aiS?.busy) return;
   F.aiS = { busy: true }; draw();
-  let r = null; try { r = parseQuick(txt, key(new Date())); } catch {}
+  const r = await quickParse(txt).catch(() => null);
   if (r?.ok && r.date) { await new Promise((ok) => setTimeout(ok, 450)); }
   else {
     // Parseren fant ikke dato: spør serveren (lokal modell), POST /api/kalender/describe {text}.
@@ -401,8 +401,8 @@ const QCHIPS = ['Frisør', 'Lege', 'Tannlege', 'Fysio'];
 function qaPreview(txt) {
   const t = String(txt ?? '').trim();
   if (t.length <= 3) return '';
-  if (!memoryNow().length) loadMemory().then((l) => { if (l.length && K.qa) qaSet(K.qa.txt); });
-  const r = parseQuick(t, key(new Date()), memoryNow());
+  const r = quickCached(t, () => { if (K.qa && K.qa.txt.trim() === t) qaSet(K.qa.txt); }); // serveren bruker «Glimt husker»-aliasene selv
+  if (!r) return null; // kommer straks: behold det som vises
   if (!r.ok) return `<span class="k29-bad">${esc(r.why || 'Fant ikke dato. Skriv f.eks. «25.09» eller «tirsdag».')}</span>`;
   const d = ofKey(r.date), when = `${WD[d.getDay()]} ${d.getDate()}. ${MN[d.getMonth()]}${r.start ? ` · ${r.start}–${r.end}` : ' · hele dagen'}`;
   return `<div class="k29-pv"><span class="k29-pvb"></span><span class="m-grow"><b>${esc(r.title)}</b><span>${esc(when)}</span>${r.place ? `<span>${esc(r.place)}</span>` : ''}<small>Privat · varsel 1 time før</small></span></div>`;
@@ -413,7 +413,7 @@ function qaSheet() {
   return sheetWrap(`<span class="k29-grip" aria-hidden="true"></span><div class="k29-qh"><span class="m-grow"><span class="k27-lab">✦ AI · RASK TIME</span><b>Legg til time</b></span><button class="k27-cx" data-k27="shx" aria-label="Lukk">${svgP('M6 6l12 12M18 6L6 18', 14, 2.6)}</button></div>
     <form class="k29-qf" data-k27f="qa"><textarea id="k29-qt" rows="3" data-k27i="qa" placeholder="F.eks. «time hos Nina frisør 14.30 25.09» eller lim inn meldingen fra legekontoret">${esc(Q.txt)}</textarea>
       <div class="k29-chips"><button type="button" class="ink" data-k27="qpaste">${svgP('M9 4h6v3H9zM7 5H5v16h14V5h-2', 13, 2.2)}Lim inn melding</button>${QCHIPS.map((n) => `<button type="button" data-k27="qchip" data-v="${n}">${n}</button>`).join('')}</div>
-      <div id="k29-pvw">${qaPreview(Q.txt)}</div>
+      <div id="k29-pvw">${qaPreview(Q.txt) ?? ''}</div>
       <button type="submit" class="k29-go" id="k29-go" style="opacity:${has ? 1 : 0.45}">Legg til i kalenderen</button>
       <button type="button" class="k29-man" data-k27="qman">Fyll ut selv</button>
       <span class="k29-fn">Du kan lukke appen. Timen legges til i bakgrunnen.</span></form>`);
@@ -422,7 +422,7 @@ function qaOpen(txt = '') { K.qa = { txt }; K.sel = null; K.mini = false; draw()
 function qaSet(txt) {
   if (!K.qa) return; K.qa.txt = txt;
   const t = document.getElementById('k29-qt'); if (t && t.value !== txt) t.value = txt;
-  const w = document.getElementById('k29-pvw'); if (w) w.innerHTML = qaPreview(txt);
+  const w = document.getElementById('k29-pvw'), pv = w ? qaPreview(txt) : null; if (w && pv != null) w.innerHTML = pv;
   const g = document.getElementById('k29-go'); if (g) g.style.opacity = txt.trim() ? '1' : '0.45';
 }
 /** Åpner «Legg til time» (også fra del-mål/andre sider). */
@@ -731,7 +731,7 @@ export async function kalBind(e, t) {
     case 'new': qaOpen(''); return true; // Prompt 29: + åpner «Legg til time»
     case 'qchip': qaSet(`Time hos ${x.dataset.v.toLowerCase()} `); document.getElementById('k29-qt')?.focus(); return true;
     case 'qpaste': { try { const v = await navigator.clipboard.readText(); if (v) qaSet(v); else flash('Utklippstavlen er tom'); } catch { flash('Fikk ikke lese utklippstavlen. Lim inn med hold inne.'); document.getElementById('k29-qt')?.focus(); } return true; }
-    case 'qman': { const v = (K.qa?.txt ?? '').trim(), r = v ? parseQuick(v, key(new Date())) : null; K.qa = null; openForm(r ? { title: r.title || '', ...(r.date ? { date: r.date } : {}), ...(r.start ? { start: r.start, end: r.end } : {}), location: r.place || '', reminder: '1h', note: v.length > 60 ? v : '' } : {}); return true; }
+    case 'qman': { const v = (K.qa?.txt ?? '').trim(), r = v ? await quickParse(v).catch(() => null) : null; K.qa = null; openForm(r ? { title: r.title || '', ...(r.date ? { date: r.date } : {}), ...(r.start ? { start: r.start, end: r.end } : {}), location: r.place || '', reminder: '1h', note: v.length > 60 ? v : '' } : {}); return true; }
     case 'none': return true;
     case 'ev': {
       const id = x.dataset.id, ev = EVMAP.get(id);

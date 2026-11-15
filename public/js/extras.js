@@ -2,7 +2,7 @@
 import { esc, hm, api, backdropClick, haptic } from './util.js';
 import { store, on, emit } from './store.js';
 import { clearBtn, syncSearch, bindSearchFields } from './searchfield.js';
-import { addQuick, preview, quickLabel } from './kal-quick.js';
+import { addQuick, preview, previewAsync, quickLabel } from './kal-quick.js';
 import { aiParse52, waitParse52, apptText52, apptLabel52 } from './glimt52.js'; // prompt 52: kalenderkontekst med AI
 import { glimt, setGlimt } from './glimt.js';
 import { assist, boldHtml, wxRoute } from './assist.js';
@@ -116,12 +116,13 @@ function openEngMenu(btn) {
   m.querySelector('[aria-checked=true]')?.focus({ preventScroll: true });
 }
 
-/** Timen i feltet, hvis teksten ser ut som en avtale (dato + intensjon eller kjent type). */
-function apptOf(v) {
+/** Timen i feltet, hvis teksten ser ut som en avtale (dato + intensjon eller kjent type). Fase 3: tolkningen er serverens
+ *  (kal-quick preview); før den er hentet regnes teksten ikke som en avtale, og onReady tegner forslagene på nytt. */
+function apptOf(v, onReady) {
   v = String(v ?? '').trim();
   if (v.length <= 4 || isUrl(v)) return null;
   if (isQuestion(v)) return null; // prompt 36: spørsmål med dato er ikke en avtale
-  const p = preview(v);
+  const p = preview(v, onReady);
   return p.ok && p.isAppointment ? p : null;
 }
 // Prompt 41: huskebeskjeder i søket → «Legg i Huskeliste» (Glimt deler opp i bakgrunnen, samme animasjon som rask time).
@@ -184,7 +185,7 @@ function drawDrop(form) {
   const err = lv && !sq.items.length && sq.suggErr ? sq.suggErr : '';
   // Prompt 52: med Glimt som motor tolker AI-tilkoblingen beskjeden (minst 3 ord, 450 ms pause) og overstyrer regelparseren.
   const a52 = engine === 'ai' && lv && !isUrl(v.trim()) ? aiParse52(v, () => { if (form.q.value === v) drawDrop(form); }) : null;
-  let ap = apptOf(v), hu = huskeOf(v);
+  let ap = apptOf(v, () => { if (form.q.value === v) drawDrop(form); }), hu = huskeOf(v);
   if (a52?.type === 'kalender' && a52.title) { ap = { ...a52, ai52: true }; hu = null; }
   else if (a52?.type === 'huske') { ap = null; hu = hu || v.trim(); }
   else if (a52?.type) ap = null; // spørsmål/annet: vanlig svar
@@ -638,9 +639,14 @@ export function bindSearch() {
       return;
     }
     if (!it && sq.ap52 && !ag) { addAppt(e.target, q.trim()); return; } // prompt 70: med Glimt går avtaler til agenten (kort A)
-    if (!it && !ag && apptOf(q)) { addAppt(e.target, q.trim()); return; }
-    if (!it && !ag && huskeOf(q)) { addHuske(e.target, q.trim()); return; }
-    if (aiOn()) askAi(e.target, q); else runSearch(q);
+    const form = e.target;
+    const decide = () => {
+      if (!it && !ag && apptOf(q)) { addAppt(form, q.trim()); return; }
+      if (!it && !ag && huskeOf(q)) { addHuske(form, q.trim()); return; }
+      if (aiOn()) askAi(form, q); else runSearch(q);
+    };
+    // Fase 3: Enter rett etter siste tastetrykk: vent på serverens tolkning før det avgjøres om teksten er en avtale.
+    if (!it && !ag && q.trim().length > 4 && preview(q).pending) previewAsync(q).catch(() => null).then(decide); else decide();
   });
   // Søkemotor-menyen.
   document.addEventListener('click', (e) => {
