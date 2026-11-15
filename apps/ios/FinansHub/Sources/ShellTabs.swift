@@ -10,34 +10,9 @@ struct PaperTabItem: Codable, Hashable, Identifiable {
     var label: String
     var icon: String
 
-    /// Alle fanene som kan ligge i linjen.
-    static let all: [PaperTabItem] = [
-        PaperTabItem(id: "hjem", label: "Hjem", icon: "house"),
-        PaperTabItem(id: "finans", label: "Finans", icon: "creditcard"),
-        PaperTabItem(id: "mat", label: "Mat", icon: "fork.knife"),
-        PaperTabItem(id: "auto4", label: "Domener/Sporing", icon: "square.grid.2x2"),
-        PaperTabItem(id: "domener", label: "Domener", icon: "globe"),
-        PaperTabItem(id: "sporing", label: "Sporing", icon: "shippingbox"),
-        PaperTabItem(id: "familie", label: "Familie", icon: "person.2"),
-        PaperTabItem(id: "avg", label: "Avganger", icon: "tram"),
-        PaperTabItem(id: "vaer", label: "Vær", icon: "cloud.sun"),
-        PaperTabItem(id: "nyheter", label: "Nyheter", icon: "newspaper"),
-        PaperTabItem(id: "aksjer", label: "Aksjer", icon: "chart.line.uptrend.xyaxis"),
-        PaperTabItem(id: "boliger", label: "Boliger", icon: "building.2"),
-        PaperTabItem(id: "abo", label: "Abonnementer", icon: "repeat"),
-        PaperTabItem(id: "fsok", label: "Søk", icon: "magnifyingglass"),
-        // Prompt 27: Chat som valgbar fane (ChatPage.swift).
-        PaperTabItem(id: "chat", label: "Chat", icon: "bubble.left.and.bubble.right"),
-        // Prompt 40: alt fra Mer kan legges i fanelinja (claude-code-fanelinje-alle-sider.md), samme ikon som i Mer.
-        PaperTabItem(id: "huske", label: "Gjøremål", icon: "checklist"),
-        PaperTabItem(id: "kalender", label: "Kalender", icon: "calendar"),
-        PaperTabItem(id: "bursdag", label: "Bursdager", icon: "gift"),
-        PaperTabItem(id: "brief", label: "Now Brief", icon: "sparkles"),
-        PaperTabItem(id: "rss", label: "Nyhetsleser", icon: "dot.radiowaves.up.forward"),
-        PaperTabItem(id: "bibel", label: "Bibel", icon: "book"),
-        PaperTabItem(id: "nordlys", label: "Nordlys", icon: "sparkle"),
-        PaperTabItem(id: "innst", label: "Innstillinger", icon: "gearshape"),
-    ]
+    /// Alle fanene som kan ligge i linjen: modulene fra modullisten (navn, ikon og rekkefølge, ModulListe.swift) og snarveiene
+    /// til sider inne i en modul (ModulSider.snarveier). Fase 6: ingen egen håndskrevet liste.
+    @MainActor static var all: [PaperTabItem] { ModulListe.shared.faner }
 
     /// Prompt 40: det som kan velges under «Legg til» (Bibel bare for brukere med modulen).
     @MainActor static var selectable: [PaperTabItem] {
@@ -54,18 +29,22 @@ struct PaperTabItem: Codable, Hashable, Identifiable {
         default: return id
         }
     }
-    static func appId(_ id: String, label: String) -> String? {
+    /// Id-en i appen for en fane fra serveren (layout.tabBar). Eldre nøkler («rss», «avganger», «huskeliste») er alias for modulen.
+    @MainActor static func appId(_ id: String, label: String) -> String? {
         switch id {
         case "sok": return "fsok"
         case "avganger": return "avg"
         case "abonnementer": return "abo"
         case "domener": return label == "Domener/Sporing" ? "auto4" : "domener"
-        case "mer", "media": return nil
-        default: return all.contains { $0.id == id } ? id : nil
+        case "mer": return nil
+        default:
+            if all.contains(where: { (t: PaperTabItem) -> Bool in t.id == id }) { return id }
+            guard let side = ModulSider.appSide(id) else { return nil }
+            return all.contains(where: { (t: PaperTabItem) -> Bool in t.id == side }) ? side : nil
         }
     }
     static let defaultIds = ["hjem", "finans", "mat", "auto4", "fsok"]
-    static var defaults: [PaperTabItem] { defaultIds.compactMap { id in all.first { $0.id == id } } }
+    @MainActor static var defaults: [PaperTabItem] { defaultIds.compactMap { (id: String) -> PaperTabItem? in all.first { $0.id == id } } }
     static let icons = ["house", "creditcard", "fork.knife", "globe", "shippingbox", "person.2", "tram", "cloud.sun", "newspaper",
                         "magnifyingglass", "square.grid.2x2", "star", "heart", "bolt", "leaf", "map", "chart.bar", "bag", "cart", "calendar", "bubble.left.and.bubble.right"]
 
@@ -123,7 +102,13 @@ extension Store {
                 let icon = JS.str(d, "icon") ?? base.icon
                 return PaperTabItem(id: id, label: JS.str(d, "label") ?? base.label, icon: PaperTabIcon.isSymbol(icon) ? icon : base.icon)
             }
-            if !items.isEmpty && items != tabBarItems { tabBarItems = Array(items.prefix(5)) }
+            if !items.isEmpty, let moved = ModulListe.shared.flyttFaner(items) {
+                // Fase 6: engangsflytting til navnene i modullisten (Q1–Q12), lagres på serveren som et vanlig valg.
+                tabBarItems = Array(moved.prefix(5))
+                savePaperLayout(["tabBar": ["items": Store.tabBarBody(tabBarItems)]])
+            } else if !items.isEmpty && items != tabBarItems {
+                tabBarItems = Array(items.prefix(5))
+            }
         }
         if let v = JS.str(o, "iconTheme"), PaperIconTheme.themes.contains(where: { $0.0 == v }), v != iconTheme { iconTheme = v }
         // Prompt 25: fanelinje-stil (NavStyle.swift).
@@ -193,6 +178,10 @@ extension Store {
         case "chat": openChat()
         case "aksjer", "boliger": paperFinGo(id)
         case "domener": paperOpenDomains(from: "hjem")
+        // Fase 6: modulene fra modullisten som åpnes i fullskjerm (som i Mer).
+        case "media": Media43.shared.show()
+        case "studie": Study44.shared.show()
+        case "skjold": Skjold76.shared.show()
         default: paperGo(id)
         }
     }
@@ -248,7 +237,7 @@ enum ShellTabs {
     @MainActor static func symbol(_ id: String, _ icon: String) -> String {
         if PaperTabIcon.isSymbol(icon) { return icon }
         if let d = PaperTabItem.all.first(where: { (t: PaperTabItem) -> Bool in t.id == id }) { return d.icon }
-        return "square.grid.2x2"
+        return ModulListe.shared.ikon(id, "square.grid.2x2")
     }
 
     /// Fanen som er markert for siden som vises (en side som ikke har egen fane, markerer Mer).

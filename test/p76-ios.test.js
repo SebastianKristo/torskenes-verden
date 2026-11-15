@@ -37,7 +37,8 @@ test('menyen, fullskjermen og dyplenkene', () => {
   assert.match(code('Paper.swift'), /\.feat51Host\(p\)\s*\.skjold76Host\(p\)/);
   assert.match(code('SkjoldPage.swift'), /func skjold76Host\(_ p: PaperPalette\) -> some View \{ modifier\(Skjold76Host\(p: p\)\) \}/);
   const mer = code('MoreRows.swift');
-  assert.match(mer, /More28Row\(id: "skjold", name: "Skjold Lab", sub: Skjold76\.shared\.merSub, icon: "cabinet"\) \{ Skjold76\.shared\.show\(\) \}/);
+  // Fase 6: navnet kommer fra modullisten (ModulListe.swift), med «Skjold Lab» som reserve.
+  assert.match(mer, /More28Row\(id: "skjold", name: ml\.navn\("skjold", "Skjold Lab"\), sub: Skjold76\.shared\.merSub, icon: "cabinet"\) \{ Skjold76\.shared\.show\(\) \}/);
   const s = code('GlobalSearch.swift');
   assert.match(s, /case "skjold", "skjoldlab", "deler":\s*Skjold76\.shared\.link\(url\)/, 'finanshub://skjold');
   assert.match(s, /case "part", "skjold", "deler": Skjold76\.shared\.show\(part: ref\.isEmpty \? nil : ref\)/, 'felles søk: typen «Deler» (part)');

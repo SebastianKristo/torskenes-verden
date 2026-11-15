@@ -365,7 +365,7 @@ test('lenkene går via bryteren: KalLink33 åpner den innebygde Kalenderen før 
   assert.match(l, /guard KalGroup\.linked \|\| Kal84\.on, let a = store\.account/);
   // Hjem-kortet/-flisen, kalenderfanen og Mer, Chat-kort, briefen og widget-lenkene går via KalLink33 eller paperGo("kalender").
   assert.match(read('FinansHub/Sources/PaperStore.swift'), /if t == "kalender" && \(paperTab != "kalender" \|\| Kal84\.on\) && KalLink33\.today\(\) \{ return \}/);
-  assert.match(read('FinansHub/Sources/MoreRows.swift'), /More28Row\(id: "kalender", name: "Kalender"[^\n]*store\.paperGo\("kalender"\)/);
+  assert.match(read('FinansHub/Sources/MoreRows.swift'), /More28Row\(id: "kalender", name: ml\.navn\("kalender", "Kalender"\)[^\n]*store\.paperGo\("kalender"\)/);
   assert.match(read('FinansHub/Sources/HomeGrid.swift'), /KalLink33\.event\(e\) \{ return \}\n\s+store\.paperGo\("kalender"\)/);
   assert.match(read('FinansHub/Sources/HomelabKalenderHjemkort.swift'), /KalLink33\.day\(/);
   assert.match(read('FinansHub/Sources/AppWidgets.swift'), /KalLink33\.forward\(url\)/);

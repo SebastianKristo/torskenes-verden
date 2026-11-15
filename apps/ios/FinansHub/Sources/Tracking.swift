@@ -645,7 +645,7 @@ struct TrackingView: View {
         let sum = t.map { d in [d.activeCount > 0 ? "\(d.activeCount) på vei" : "Ingen på vei", d.pickupCount > 0 ? "\(d.pickupCount) klar for henting" : nil].compactMap { $0 }.joined(separator: " · ") } ?? "Pakker på vei"
         return HStack(spacing: 10) {
             VStack(alignment: .leading, spacing: 2) {
-                Text(store.hlName(.trk)).font(.dyn51(size: 30, weight: .bold)).lineLimit(1)
+                Text(store.hlName("trk", modul: "sporing", "Sporing")).font(.dyn51(size: 30, weight: .bold)).lineLimit(1)
                 Text(sum).font(.subheadline).foregroundStyle(Color.skinFg.opacity(0.7)).lineLimit(1)
             }
             Spacer()

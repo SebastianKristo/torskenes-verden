@@ -9,51 +9,72 @@ import CoreLocation
 enum More44Rows {
     static func rows(_ store: Store) -> [More28Row] {
         let inBar: Set<String> = Set(store.mainTabs(floating: store.fabMode == "float", onHome: true).map(\.0))
+        // Fase 6: navn og ikon fra modullisten (ModulListe.swift), og bare modulene brukeren har (admin-moduler bare for admin).
+        let ml: ModulListe = ModulListe.shared
         var out: [More28Row] = []
-        out.append(More28Row(id: "kalender", name: "Kalender", sub: "Timeplan, prøver og frister", icon: "calendar") { store.paperGo("kalender") })
-        out.append(More28Row(id: "huske", name: "Gjøremål", sub: "To-do for hele familien", icon: "checklist") { store.paperGo("huske") })
-        out.append(More28Row(id: "bursdag", name: "Bursdager", sub: "Hvem har bursdag snart", icon: "gift") { store.paperGo("bursdag") })
+        out.append(More28Row(id: "kalender", name: ml.navn("kalender", "Kalender"), sub: "Timeplan, prøver og frister", icon: ml.ikon("kalender", "calendar")) { store.paperGo("kalender") })
+        out.append(More28Row(id: "huske", name: ml.navn("gjoremal", "Gjøremål"), sub: "To-do for hele familien", icon: ml.ikon("gjoremal", "checklist")) { store.paperGo("huske") })
+        // Q5: Bursdager er et filter i Kalender; bursdagsadministrasjonen er egen visning der.
+        out.append(More28Row(id: "bursdag", name: "Bursdager", sub: "I Kalender · hvem har bursdag snart", icon: "gift") { store.paperGo("bursdag") })
         if !inBar.contains("familie") {
-            out.append(More28Row(id: "kart", name: "Familie og kart", sub: "Posisjon, soner og helse", icon: "mappin.and.ellipse") { store.paperGo("familie") })
+            out.append(More28Row(id: "kart", name: ml.navn("familie", "Familie"), sub: "Folk, kart, steder og helse", icon: ml.ikon("familie", "person.2")) { store.paperGo("familie") })
         }
-        // Prompt 46: Kart (holdeplasser, sanntid og soner) – side-nøkkel tkart (Familie bruker «kart»), KartPage.swift.
-        out.append(More28Row(id: "tkart", name: "Kart", sub: "Holdeplasser, sanntid og soner", icon: "map") { Kart46.shared.show(store) })
-        out.append(More28Row(id: "brief", name: "Now Brief", sub: Brief36Model.shared.merSub, icon: "sparkle") { Brief34Model.shared.show() })
-        out.append(More28Row(id: "chat", name: "Chat", sub: "Ollama lokalt, Gemini og Groq", icon: "bubble.left.and.bubble.right") { store.openChat() })
+        // Q8: Reise (avganger og kart for kollektiv). Kartet (holdeplasser, sanntid og soner) har side-nøkkel tkart, KartPage.swift.
+        if !inBar.contains("avg") && ml.har("reise") {
+            out.append(More28Row(id: "avg", name: ml.navn("reise", "Reise"), sub: "Avganger og reiseplan", icon: ml.ikon("reise", "tram")) { store.paperGo("avg") })
+        }
+        out.append(More28Row(id: "tkart", name: "Kart", sub: "Reise · holdeplasser, sanntid og soner", icon: "map") { Kart46.shared.show(store) })
+        out.append(More28Row(id: "brief", name: ml.navn("brief", "Brief"), sub: Brief36Model.shared.merSub, icon: ml.ikon("brief", "sun.horizon")) { Brief34Model.shared.show() })
+        out.append(More28Row(id: "chat", name: ml.navn("chat", "Chat"), sub: "Ollama lokalt, Gemini og Groq", icon: "bubble.left.and.bubble.right") { store.openChat() })
         if Media43.shared.allowed {
-            out.append(More28Row(id: "media", name: "Media", sub: mediaSub, icon: "play.rectangle") { Media43.shared.show() })
+            out.append(More28Row(id: "media", name: ml.navn("media", "Media"), sub: mediaSub, icon: ml.ikon("media", "play.rectangle")) { Media43.shared.show() })
             // Prompt 51 (IOSFEAT51): «Hva skal vi se i kveld?», Fortsett, Undertekster og Lagring (Kveld51*.swift).
             out.append(More28Row(id: "ikveld51", name: "Hva skal vi se i kveld?", sub: "Forslag fra eget bibliotek · lydbøker og podkaster", icon: "tv") { Kveld51.shared.show() })
         }
-        // Prompt 51 (IOSFEAT51): felles familiekalender med «hvem kjører?» (FamCal51.swift) og felles søk (GlobalSearch.swift).
-        out.append(More28Row(id: "famcal51", name: "Familiekalender", sub: FamCal51.shared.drivesText.isEmpty ? "Hvem kjører? Henting og bringing" : FamCal51.shared.drivesText, icon: "car") { FamCal51.shared.show() })
+        // Prompt 51 (IOSFEAT51): «hvem kjører?» for familien (FamCal51.swift), filteret Familie i Kalender (Q5), og felles søk.
+        out.append(More28Row(id: "famcal51", name: "Hvem kjører?", sub: FamCal51.shared.drivesText.isEmpty ? "Familie i Kalender · henting og bringing" : FamCal51.shared.drivesText, icon: "car") { FamCal51.shared.show() })
         out.append(More28Row(id: "sok51", name: "Søk i alt", sub: "Alle moduler med handlinger", icon: "magnifyingglass") { Search51.shared.show() })
         if !inBar.contains("hjem") {
-            out.append(More28Row(id: "hjem", name: "Hjem", sub: "Pakker, avganger og widgets", icon: "house") { store.paperGo("hjem") })
+            out.append(More28Row(id: "hjem", name: ml.navn("oversikt", "Oversikt"), sub: "Pakker, avganger og widgets", icon: ml.ikon("oversikt", "house")) { store.paperGo("hjem") })
         }
-        if !inBar.contains("sporing") {
+        if !inBar.contains("sporing") && ml.har("sporing") {
             let n: Int = store.paperOnWay
             let s: String = n > 0 ? (n == 1 ? "1 pakke på vei" : "\(n) pakker på vei") : "Pakker og sendinger"
-            out.append(More28Row(id: "sporing", name: "Sporing", sub: s, icon: "shippingbox") { store.paperGo("sporing") })
+            out.append(More28Row(id: "sporing", name: ml.navn("sporing", "Sporing"), sub: s, icon: ml.ikon("sporing", "shippingbox")) { store.paperGo("sporing") })
         }
-        if !inBar.contains("domener") {
-            out.append(More28Row(id: "domener", name: "Domener", sub: domainSub(store), icon: "globe") { store.paperOpenDomains(from: "mer") })
+        if !inBar.contains("domener") && ml.har("domener") {
+            out.append(More28Row(id: "domener", name: ml.navn("domener", "Domener"), sub: domainSub(store), icon: ml.ikon("domener", "globe")) { store.paperOpenDomains(from: "mer") })
         }
-        out.append(More28Row(id: "studie", name: "Studie", sub: Study44.shared.merSub, icon: "graduationcap") { Study44.shared.show() })
+        out.append(More28Row(id: "studie", name: ml.navn("studie", "Studie"), sub: Study44.shared.merSub, icon: ml.ikon("studie", "graduationcap")) { Study44.shared.show() })
         // Prompt 76 (SKJIOS): Skjold Lab – sorteringssystem for deler (Skjold76*.swift).
-        out.append(More28Row(id: "skjold", name: "Skjold Lab", sub: Skjold76.shared.merSub, icon: "cabinet") { Skjold76.shared.show() })
-        out.append(More28Row(id: "finans", name: "Finans", sub: "Oversikt, liste, Finn og mer", icon: "creditcard") { store.paperMainTab("finans") })
-        out.append(More28Row(id: "abo", name: "Subscription OS", sub: subsSub(store), icon: "arrow.triangle.2.circlepath") { store.paperGo("abo") })
+        out.append(More28Row(id: "skjold", name: ml.navn("skjold", "Skjold Lab"), sub: Skjold76.shared.merSub, icon: "cabinet") { Skjold76.shared.show() })
+        out.append(More28Row(id: "finans", name: ml.navn("finans", "Økonomi"), sub: "Oversikt, transaksjoner, budsjett og faste betalinger", icon: ml.ikon("finans", "creditcard")) { store.paperMainTab("finans") })
+        out.append(More28Row(id: "abo", name: "Faste betalinger", sub: subsSub(store), icon: "arrow.triangle.2.circlepath") { store.paperGo("abo") })
         if Bible37Model.shared.enabled {
-            out.append(More28Row(id: "bibel", name: "Bibel", sub: bibleSub, icon: "book") { store.paperGo("bibel") })
+            out.append(More28Row(id: "bibel", name: ml.navn("bibel", "Bibel"), sub: bibleSub, icon: ml.ikon("bibel", "book")) { store.paperGo("bibel") })
         }
         if !inBar.contains("nyheter") {
-            out.append(More28Row(id: "rss", name: "Nyhetsleser", sub: "RSS med AI-sammendrag", icon: "dot.radiowaves.up.forward") { store.openNews() })
+            // Q10: Nyheter er én modul (nøkkelen rss beholdes for lagret rekkefølge i Mer).
+            out.append(More28Row(id: "rss", name: ml.navn("nyheter", "Nyheter"), sub: "Kildene dine med AI-sammendrag", icon: ml.ikon("nyheter", "newspaper")) { store.openNews() })
         }
         // Prompt 46: snarvei til QR-skanneren («Logg inn på annen enhet», QrLoginApprove.swift).
-        out.append(More28Row(id: "qrlogin", name: "Logg inn på annen enhet", sub: "Skann QR-koden i Kalender eller Finans", icon: "qrcode.viewfinder") { Qr38Model.shared.show() })
-        out.append(More28Row(id: "innst", name: "Innstillinger", sub: "Tema, bakgrunn og konto", icon: "gearshape") { store.paperGo("innst") })
-        return out
+        out.append(More28Row(id: "qrlogin", name: "Logg inn på annen enhet", sub: "Skann QR-koden i Kalender eller Økonomi", icon: "qrcode.viewfinder") { Qr38Model.shared.show() })
+        out.append(More28Row(id: "innst", name: "Innstillinger", sub: "Konto og sikkerhet, utseende og varsler", icon: "gearshape") { store.paperGo("innst") })
+        return sortert(out)
+    }
+
+    /// Standardrekkefølgen følger modullisten (rader inne i en modul står ved modulen), verktøyene sist. Brukerens egen
+    /// rekkefølge i Mer (Mer28) gjelder foran denne.
+    static func sortert(_ rows: [More28Row]) -> [More28Row] {
+        let ml: ModulListe = ModulListe.shared
+        let forelder: [String: String] = ["bursdag": "kalender", "famcal51": "kalender", "tkart": "reise", "abo": "finans", "ikveld51": "media", "kart": "familie"]
+        var plass: [Int] = []
+        for r in rows {
+            let k: String = forelder[r.id] ?? r.id
+            plass.append(ModulSider.modulId(k) == nil ? 1000 : ml.plass(k))
+        }
+        let idx: [Int] = Array(rows.indices).sorted { (a: Int, b: Int) -> Bool in plass[a] != plass[b] ? plass[a] < plass[b] : a < b }
+        return idx.map { (i: Int) -> More28Row in rows[i] }
     }
 
     /// Henter det som mangler for de levende kortene (én gang, i bakgrunnen).
@@ -89,7 +110,7 @@ enum More44Rows {
     }
 
     static func subsSub(_ store: Store) -> String {
-        guard let m = store.subs?.monthly, m > 0 else { return "Abonnementer og faste trekk" }
+        guard let m = store.subs?.monthly, m > 0 else { return "Abonnementer, faste utgifter og planlagte trekk" }
         return More44Rows.thousands(Int(m.rounded())) + " kr/mnd"
     }
 

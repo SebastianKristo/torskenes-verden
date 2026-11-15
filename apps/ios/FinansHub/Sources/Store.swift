@@ -6,7 +6,8 @@ import Network
 
 /// Fanene i Finans. Mer samler resten av sidene fra nettsiden.
 enum Tab: String, CaseIterable, Identifiable {
-    case home = "Oversikt", list = "Liste", finn = "Finn", budget = "Budsjett", search = "Søk", more = "Mer"
+    // Fase 6 (Q3, ordlisten): «Transaksjoner» (ikke «Liste») og «Glimt» (ikke «Søk»). Nøklene (key) er uendret.
+    case home = "Oversikt", list = "Transaksjoner", finn = "Finn", budget = "Budsjett", search = "Glimt", more = "Mer"
     var id: String { rawValue }
     var icon: String {
         switch self {
@@ -35,7 +36,7 @@ enum Tab: String, CaseIterable, Identifiable {
 /// Skjermer som fyller hele vinduet: Homelab, sidene under Mer, modulene og innstillinger.
 enum Module: String, CaseIterable, Identifiable {
     case homelab = "Homelab", upload = "Kvitteringer", fast = "Faste utgifter", accounts = "Kontoer", stocks = "Aksjer", reports = "Rapporter", imports = "Import"
-    case mat = "Mat", domains = "Domener", sub = "Subscription OS", folders = "Boliger", settings = "Innstillinger", tracking = "Sporing"
+    case mat = "Mat", domains = "Domener", sub = "Abonnementer", folders = "Boliger", settings = "Innstillinger", tracking = "Sporing"
     var id: String { rawValue }
     var icon: String {
         switch self {
@@ -57,14 +58,6 @@ enum Module: String, CaseIterable, Identifiable {
     /// Sider under Mer: fanelinja for Finans vises, med Mer markert.
     var isFinance: Bool { [.upload, .fast, .accounts, .stocks, .reports, .imports, .sub, .folders].contains(self) }
     static let others: [Module] = [.mat, .domains]
-}
-
-/// Fanene på Homelab: Homelab, Finans, Mat, Sporing og Domener.
-enum HlTab: String, CaseIterable, Identifiable {
-    case hl, home, dom, mat, trk
-    var id: String { rawValue }
-    var label: String { switch self { case .hl: "Homelab"; case .home: "Finans"; case .dom: "Domener"; case .mat: "Mat"; case .trk: "Sporing" } }
-    var icon: String { switch self { case .hl: "square.grid.3x3.fill"; case .home: "banknote"; case .dom: "globe"; case .mat: "fork.knife"; case .trk: "shippingbox" } }
 }
 
 /// Hvor man er: en Finans-fane eller en hel side.
@@ -280,6 +273,8 @@ final class Store {
     var paperScanOpen = false
     /// Onboarding etter første innlogging (0–2), nil = vises ikke.
     var onboarding: Int?
+    /// Fase 6 (Q35): når siste dyplenke kom (Dyplenker.swift). Velkomststegene vises ikke rett etter en dyplenke.
+    @ObservationIgnored var deepLinkAt: Date = .distantPast
     /// Sporing i Papir: Aktive | Klar for henting | På vei | Registrert | Levert | Alle
     var trkTab = "Aktive"
     /// «Varsler og kilder» i Papir-sporing.
@@ -305,7 +300,8 @@ final class Store {
     /// Prompt 21: når redigeringsmodus ble slått på (et langt trykk). Navigasjon like etter blokkeres.
     @ObservationIgnored var paperEditAt: Date = .distantPast
     /// Finans-fanelinjen i Papir (opptil 4 av oversikt, liste, finn, sok, budsjett …). Mer er alltid sist.
-    var finNav: [String] = UserDefaults.standard.stringArray(forKey: "fh_fin_nav") ?? ["oversikt", "liste", "finn", "sok"] {
+    /// Fase 6: lagrede eldre nøkler (liste, abonnementer) leses med de nye navnene (transaksjoner, faste).
+    var finNav: [String] = UserDefaults.standard.stringArray(forKey: "fh_fin_nav").map(Store.finNavKeys) ?? Store.finNavStandard {
         didSet { UserDefaults.standard.set(finNav, forKey: "fh_fin_nav") }
     }
     /// Fjerde fane: auto (Domener, eller Sporing når pakker er på vei) | domener | sporing
@@ -523,7 +519,7 @@ final class Store {
         let ctx = LAContext()
         var err: NSError?
         guard ctx.canEvaluatePolicy(.deviceOwnerAuthentication, error: &err) else { locked = false; return }
-        ctx.evaluatePolicy(.deviceOwnerAuthentication, localizedReason: "Lås opp FinansHub") { ok, _ in
+        ctx.evaluatePolicy(.deviceOwnerAuthentication, localizedReason: "Lås opp Homelab") { ok, _ in
             Task { @MainActor in if ok { self.locked = false } }
         }
     }
@@ -553,7 +549,7 @@ final class Store {
             // Første innlogging på en ny installasjon: onboarding i tre steg (design, bakgrunn, tilgang).
             let firstEver = Store.freshInstall
             UserDefaults.standard.set(true, forKey: "fh_installed_before")
-            if firstEver && !UserDefaults.standard.bool(forKey: "fh_onboarded") { self.onboarding = 0 }
+            if firstEver && !UserDefaults.standard.bool(forKey: "fh_onboarded") && !self.deepLinkRecent { self.onboarding = 0 }
             Keychain.set("server", srv)
             let same = self.accounts.first { $0.server == srv && $0.username.lowercased() == r.username.lowercased() }
             // Prompt 89: ny konto på adressen fra tannhjulet → adressene derfra (samme lagring som Innstillinger → Server).
@@ -589,7 +585,7 @@ final class Store {
         pending = nil
         let firstEver = Store.freshInstall
         UserDefaults.standard.set(true, forKey: "fh_installed_before")
-        if firstEver && !UserDefaults.standard.bool(forKey: "fh_onboarded") { onboarding = 0 }
+        if firstEver && !UserDefaults.standard.bool(forKey: "fh_onboarded") && !deepLinkRecent { onboarding = 0 }
         Keychain.set("server", srv)
         let same = accounts.first { $0.server == srv && $0.username.lowercased() == username.lowercased() }
         let acc = LoginAccount(id: same?.id ?? UUID().uuidString, server: srv, username: username, name: name.isEmpty ? username : name,
@@ -886,7 +882,9 @@ final class Store {
     func goStart() { if financeStart { go(startTab) } else { open(.homelab) } }
 
     func tabName(_ t: Tab) -> String { layout.names["fin." + t.key] ?? t.rawValue }
-    func hlName(_ h: HlTab) -> String { layout.names["hl." + h.rawValue] ?? h.label }
+    /// Navnet på en Homelab-side: brukerens eget navn (layout.names «hl.<nøkkel>») eller navnet i modullisten.
+    /// Fase 6: Homelab-fanene inne i Økonomi (HlTab) er borte; modulene nås fra skallet.
+    func hlName(_ key: String, modul: String, _ reserve: String) -> String { layout.names["hl." + key] ?? ModulListe.shared.navn(modul, reserve) }
     func setBackStyle(_ b: String) { var l = layout; l.backStyle = b; saveLayout(l) }
     func setMatTheme(_ t: String) { var l = layout; l.matTheme = t; saveLayout(l) }
 
@@ -970,6 +968,8 @@ final class Store {
             homeError = e.status == 404 ? "Homelab-forsiden finnes ikke på serveren ennå. Oppdater homelab." : (e.status == 401 || e.status == 403) ? "Homelab godtar ikke app-tokenet ennå. Oppdater homelab-serveren." : e.message
         } catch { homeError = "Uventet svar fra Homelab." }
         if summary == nil { summary = try? await api.get("/summary", as: Summary.self) }
+        // Fase 6: modullisten (navn, ikon og rekkefølge) før oppsettet, så fanelinja kan flyttes til de nye navnene.
+        await ModulListe.shared.hent(self)
         if let d = try? await api.callAt("/api", "GET", "/me/layout") { applyPaperLayout(JS.obj(d)) }
         if UserDefaults.standard.string(forKey: layoutKey) == nil, let d = try? await api.callAt("/api", "GET", "/me/layout"), let l = HomeLayout.from(json: try? JSONSerialization.jsonObject(with: d)) {
             layout = l
@@ -1208,7 +1208,7 @@ final class Store {
     /// «Last ned»: lagres i appens mappe, som vises i Filer → På min iPhone → FinansHub.
     func saveToFiles(_ data: Data, name: String) {
         guard let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else { return }
-        do { try data.write(to: dir.appendingPathComponent(name)); flash("Lagret i Filer → FinansHub") } catch { message = error.localizedDescription }
+        do { try data.write(to: dir.appendingPathComponent(name)); flash("Lagret i Filer → Homelab") } catch { message = error.localizedDescription }
     }
 
     /* ---------- Mer ---------- */
@@ -1640,7 +1640,7 @@ final class Store {
         run {
             do { let list: [TokenInfo] = try await self.decodeList(self.api.call("GET", "/tokens")); self.tokens = list } catch let e as APIError {
                 self.tokens = []
-                self.tokenError = (e.status == 401 || e.status == 403) ? "Tokens kan bare administreres fra FinansHub i nettleseren for denne kontoen." : e.message
+                self.tokenError = (e.status == 401 || e.status == 403) ? "Tokens kan bare administreres fra Homelab i nettleseren for denne kontoen." : e.message
             }
         }
     }

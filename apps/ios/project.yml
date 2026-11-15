@@ -32,6 +32,10 @@ targets:
       # Ikke Kalender/Resources (bare AppIcon/AccentColor) og ikke SharedKal/Fonts: de samme fontene ligger i FinansHub/Resources/Fonts.
       - Kalender/Sources
       - SharedKal/Core
+      # Fase 6: modullisten (shared/schemas/moduler.json) som innebygd reserve når appen ikke har hentet /api/moduler ennå
+      # (ModulListe.swift). Samme fil som serveren leser, så det finnes ingen egen kopi i appen.
+      - path: ../../shared/schemas/moduler.json
+        buildPhase: resources
     dependencies:
       # Widgetene (WidgetKit) bygges som utvidelse og legges i FinansHub.app/PlugIns.
       - target: FinansHubWidgets
@@ -312,6 +316,8 @@ targets:
       - SharedKal/Core
       - SharedKal/Group
       - path: Kalender/Sources/KalQuick.swift
+      # Fase 6: hvilken side hver modul åpner (ren Foundation), sjekket mot shared/schemas/moduler.json (ModulerTests.swift).
+      - path: FinansHub/Sources/ModulSider.swift
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: no.kristo.homelab.tests
