@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import no.kristo.finanshub.*
+import no.kristo.finanshub.ui.designsystem.HomelabType
 
 /*
  * Prompt 23: ikoner på fanene i Nyhetsleser (Nyhetsleser.dc.html). SVG hentes via /api/icons/:prefix/:name.svg,
@@ -58,7 +59,7 @@ internal fun NewsTab23(vm: AppViewModel, c: NewsCategory, on: Boolean, p: PaperP
     Column(Modifier.width(IntrinsicSize.Max).clickable(role = androidx.compose.ui.semantics.Role.Tab, onClick = onClick).padding(top = 6.dp)) {
         Row(Modifier.padding(bottom = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             if (id != null) IconifyIcon(vm, id, fg, 16.dp)
-            Text(c.name, color = fg, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, maxLines = 1)
+            Text(c.name, color = fg, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize, maxLines = 1)
         }
         Box(Modifier.fillMaxWidth().height(2.dp).background(if (on) p.ink else Color.Transparent))
     }
@@ -72,15 +73,15 @@ internal fun NewsIconsSection23(vm: AppViewModel, p: PaperPal, cats: List<NewsCa
     val on = d?.icOn ?: true
     Row(verticalAlignment = Alignment.Bottom) {
         PLabel("Ikoner på fanene", p.lab, modifier = Modifier.weight(1f))
-        Text(if (s.icAiAllBusy) "✦ Velger …" else "✦ La AI velge alle", color = p.lab, fontWeight = FontWeight.Bold, fontSize = 12.5.sp,
+        Text(if (s.icAiAllBusy) "✦ Velger …" else "✦ La AI velge alle", color = p.lab, fontWeight = FontWeight.Bold, fontSize = HomelabType.footnote.fontSize,
             modifier = Modifier.clickable(enabled = !s.icAiAllBusy && d != null) { vm.aiPickAllIcons23(cats) })
     }
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(p.card)) {
         Row(Modifier.fillMaxWidth().clickable(enabled = d != null) { vm.saveNewsIcons23(d!!.ic, d.icSrc, !on) }.padding(14.dp, 12.dp),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Column(Modifier.weight(1f)) {
-                Text("Vis ikoner", color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 14.5.sp)
-                Text("Ved siden av navnet på hver fane", color = p.mut, fontSize = 12.5.sp)
+                Text("Vis ikoner", color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize)
+                Text("Ved siden av navnet på hver fane", color = p.mut, fontSize = HomelabType.footnote.fontSize)
             }
             Box(Modifier.size(46.dp, 28.dp).clip(CircleShape).background(if (on) p.ink else p.line).padding(3.dp), contentAlignment = if (on) Alignment.CenterEnd else Alignment.CenterStart) {
                 Box(Modifier.size(22.dp).clip(CircleShape).background(Color.White))
@@ -99,10 +100,10 @@ internal fun NewsIconsSection23(vm: AppViewModel, p: PaperPal, cats: List<NewsCa
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Box(Modifier.size(34.dp).clip(RoundedCornerShape(10.dp)).background(p.bg), contentAlignment = Alignment.Center) { IconifyIcon(vm, id, p.ink, 20.dp) }
                 Column(Modifier.weight(1f)) {
-                    Text(c.name, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 14.5.sp, maxLines = 1)
-                    Text(id ?: "ingen ikon", color = p.mut, fontFamily = PaperFonts.mono, fontWeight = FontWeight.Medium, fontSize = 11.5.sp, maxLines = 1)
+                    Text(c.name, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize, maxLines = 1)
+                    Text(id ?: "ingen ikon", color = p.mut, fontFamily = PaperFonts.mono, fontWeight = FontWeight.Medium, fontSize = HomelabType.caption.fontSize, maxLines = 1)
                 }
-                Text(src, color = if (src == "✦ AI") p.lab else p.mut, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                Text(src, color = if (src == "✦ AI") p.lab else p.mut, fontWeight = FontWeight.Bold, fontSize = HomelabType.footnote.fontSize)
                 Text("›", color = p.mut)
             }
         }
@@ -136,23 +137,23 @@ internal fun IconPicker23(vm: AppViewModel, p: PaperPal, cats: List<NewsCategory
                         PSerif(cat.name, 22.sp, p.ink, maxLines = 1)
                     }
                     Box(Modifier.align(Alignment.CenterEnd).size(38.dp).clip(CircleShape).background(p.card).border(1.dp, p.line, CircleShape).clickable { close() },
-                        contentAlignment = Alignment.Center) { Text("×", modifier = Modifier.semantics { contentDescription = "Fjern" }, color = p.ink, fontSize = 17.sp) }
+                        contentAlignment = Alignment.Center) { Text("×", modifier = Modifier.semantics { contentDescription = "Fjern" }, color = p.ink, fontSize = HomelabType.body.fontSize) }
                 }
                 Row(Modifier.fillMaxWidth().height(46.dp).clip(CircleShape).background(p.card).border(1.dp, p.line, CircleShape).padding(start = 14.dp, end = 6.dp),
                     verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     // Prompt 27: ✕ til venstre når det står tekst (fasit Nyhetsleser.dc.html, ikonsøk).
-                    SearchLead27(s.icQuery.isNotEmpty(), p.ink, p.mut, bg = p.line, idle = { Text("⌕", color = p.mut, fontSize = 18.sp) }) { s.icQuery = "" }
+                    SearchLead27(s.icQuery.isNotEmpty(), p.ink, p.mut, bg = p.line, idle = { Text("⌕", color = p.mut, fontSize = HomelabType.headline.fontSize) }) { s.icQuery = "" }
                     BasicTextField(
                         s.icQuery, { s.icQuery = it }, singleLine = true,
-                        textStyle = TextStyle(color = p.ink, fontSize = 15.sp, fontFamily = PaperFonts.sans, fontWeight = FontWeight.Medium),
+                        textStyle = TextStyle(color = p.ink, fontSize = HomelabType.callout.fontSize, fontFamily = PaperFonts.sans, fontWeight = FontWeight.Medium),
                         cursorBrush = SolidColor(p.lab),
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                         keyboardActions = KeyboardActions(onSearch = { vm.searchIcons23() }),
                         modifier = Modifier.weight(1f),
-                        decorationBox = { inner -> Box(contentAlignment = Alignment.CenterStart) { if (s.icQuery.isEmpty()) Text("Søk etter ikon (engelsk), f.eks. football", color = p.mut, fontSize = 15.sp, maxLines = 1); inner() } },
+                        decorationBox = { inner -> Box(contentAlignment = Alignment.CenterStart) { if (s.icQuery.isEmpty()) Text("Søk etter ikon (engelsk), f.eks. football", color = p.mut, fontSize = HomelabType.callout.fontSize, maxLines = 1); inner() } },
                     )
                     Box(Modifier.height(36.dp).clip(CircleShape).background(p.ink).clickable { vm.searchIcons23() }.padding(horizontal = 14.dp), contentAlignment = Alignment.Center) {
-                        Text("Søk", color = p.bg, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        Text("Søk", color = p.bg, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize)
                     }
                 }
                 Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -160,16 +161,16 @@ internal fun IconPicker23(vm: AppViewModel, p: PaperPal, cats: List<NewsCategory
                         val sel = s.icLib == k
                         Box(Modifier.height(32.dp).clip(CircleShape).background(if (sel) p.ink else p.card).border(1.dp, if (sel) p.ink else p.line, CircleShape)
                             .clickable { s.icLib = k; vm.searchIcons23(lib = k) }.padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
-                            Text(n, color = if (sel) p.bg else p.ink, fontWeight = FontWeight.SemiBold, fontSize = 12.5.sp, maxLines = 1)
+                            Text(n, color = if (sel) p.bg else p.ink, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.footnote.fontSize, maxLines = 1)
                         }
                     }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Box(Modifier.weight(1f).height(40.dp).clip(CircleShape).background(p.lab).clickable(enabled = !s.icAiBusy) { vm.aiPickIcon23(catId, cat.name) }, contentAlignment = Alignment.Center) {
-                        Text(if (s.icAiBusy) "✦ Velger …" else "✦ La AI velge", color = p.onLab, fontWeight = FontWeight.Bold, fontSize = 13.5.sp)
+                        Text(if (s.icAiBusy) "✦ Velger …" else "✦ La AI velge", color = p.onLab, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize)
                     }
                     Box(Modifier.height(40.dp).clip(CircleShape).background(p.card).border(1.dp, p.line, CircleShape).clickable { vm.pickNewsIcon23(catId, "", "pick") }.padding(horizontal = 16.dp),
-                        contentAlignment = Alignment.Center) { Text("Ingen ikon", color = p.ink, fontWeight = FontWeight.Bold, fontSize = 13.5.sp) }
+                        contentAlignment = Alignment.Center) { Text("Ingen ikon", color = p.ink, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize) }
                 }
                 val res = s.icResults
                 val st = when {
@@ -179,7 +180,7 @@ internal fun IconPicker23(vm: AppViewModel, p: PaperPal, cats: List<NewsCategory
                     res.isEmpty() -> "Ingen treff. Prøv et annet engelsk ord."
                     else -> "${res.size} av ${maxOf(s.icTotal, res.size)} treff · Iconify (Lucide, Material, Phosphor, Tabler, Font Awesome …)"
                 }
-                if (st.isNotEmpty()) Text(st, color = p.mut, fontSize = 12.sp)
+                if (st.isNotEmpty()) Text(st, color = p.mut, fontSize = HomelabType.footnote.fontSize)
             }
             LazyVerticalGrid(GridCells.Adaptive(56.dp), Modifier.weight(1f).fillMaxWidth(), contentPadding = PaddingValues(16.dp, 0.dp, 16.dp, 24.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {

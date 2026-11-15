@@ -81,6 +81,7 @@ import no.kristo.finanshub.*
 import no.kristo.finanshub.family.FamilyService
 import no.kristo.finanshub.family.HealthSync
 import org.json.JSONObject
+import no.kristo.finanshub.ui.designsystem.HomelabType
 
 /*
  * Prompt 22: Familie nøyaktig etter design/Familie.dc.html (og claude-code-familie-design.md), likt med iOS.
@@ -1220,8 +1221,8 @@ private fun Fam24DeviceRow(title: String, sub: String, on: Boolean, top: Boolean
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Column(Modifier.weight(1f)) {
-                Text(title, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(sub, color = p.mut, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, fontFamily = PaperFonts.mono)
+                Text(title, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(sub, color = p.mut, fontSize = HomelabType.footnote.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis, fontFamily = PaperFonts.mono)
             }
             Box(
                 Modifier.size(20.dp).clip(CircleShape).border(2.dp, if (on) p.ink else p.line, CircleShape).padding(4.dp).clip(CircleShape)
@@ -1263,7 +1264,7 @@ internal fun Family45Wide(
                     verticalArrangement = Arrangement.spacedBy(14.dp),
                 ) {
                     top()
-                    if (loading) Text("Henter familien …", color = p.mut, fontSize = 13.sp, modifier = Modifier.padding(horizontal = 4.dp))
+                    if (loading) Text("Henter familien …", color = p.mut, fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.padding(horizontal = 4.dp))
                     body()
                 }
             }
@@ -1272,7 +1273,7 @@ internal fun Family45Wide(
             Box(
                 Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 24.dp, start = 24.dp, end = 24.dp)
                     .shadow(12.dp, RoundedCornerShape(20.dp)).clip(RoundedCornerShape(20.dp)).background(p.ink).padding(18.dp, 11.dp),
-            ) { Text(t, color = p.bg, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, maxLines = 2, textAlign = TextAlign.Center) }
+            ) { Text(t, color = p.bg, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize, maxLines = 2, textAlign = TextAlign.Center) }
         }
     }
 }
@@ -1316,13 +1317,13 @@ internal fun ZoneAlertsCard45(vm: AppViewModel) {
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 Box(Modifier.size(30.dp).clip(androidx.compose.foundation.shape.CircleShape).background(m.color?.let { Color(it) } ?: p.mut), contentAlignment = Alignment.Center) {
-                    Text(m.initials.take(2), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 11.5.sp, maxLines = 1)
+                    Text(m.initials.take(2), color = Color.White, fontWeight = FontWeight.Bold, fontSize = HomelabType.caption.fontSize, maxLines = 1)
                 }
                 Box(Modifier.weight(1f)) { PToggle(m.name, null, m.on && z.on, top = false) { if (z.on) vm.setZoneAlert45(m.id, it) } }
             }
         }
         Text(
-            "Vis eksempel på varsel", color = p.lab, fontWeight = FontWeight.Bold, fontSize = 13.sp,
+            "Vis eksempel på varsel", color = p.lab, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize,
             modifier = Modifier.fillMaxWidth().clickable(role = androidx.compose.ui.semantics.Role.Button) { Haptics.tap(); vm.sampleZoneNotify45() }.padding(14.dp, 12.dp),
         )
     }

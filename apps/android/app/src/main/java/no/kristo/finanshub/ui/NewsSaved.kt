@@ -51,6 +51,7 @@ import java.time.OffsetDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import no.kristo.finanshub.ui.designsystem.HomelabType
 
 /*
  * Prompt 73 (NEWS73): lagre artikler offline (claude-code-nyheter-lagre-artikkel.md, fasit «Lagre og logo.dc.html» 1c og 1d).
@@ -253,14 +254,14 @@ internal fun News73Banner(vm: AppViewModel, sv: Saved73, p: PaperPal, words: Int
     ) {
         val markBg = when { pending -> p.line; ok -> p.ink; else -> Color(0xFFA86A12) }
         Box(Modifier.size(28.dp).clip(CircleShape).background(markBg), contentAlignment = Alignment.Center) {
-            Text(if (ok) "✓" else if (pending) "…" else "!", color = if (pending) p.ink else p.bg, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+            Text(if (ok) "✓" else if (pending) "…" else "!", color = if (pending) p.ink else p.bg, fontSize = HomelabType.subheadline.fontSize, fontWeight = FontWeight.Bold)
         }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(title, color = p.ink, fontSize = 14.sp, fontWeight = FontWeight.Bold, lineHeight = 19.sp)
-            Text(sub, color = p.mut, fontSize = 14.sp, lineHeight = 19.sp)
+            Text(title, color = p.ink, fontSize = HomelabType.callout.fontSize, fontWeight = FontWeight.Bold, lineHeight = 19.sp)
+            Text(sub, color = p.mut, fontSize = HomelabType.callout.fontSize, lineHeight = 19.sp)
             if (!ok && !pending) {
                 Box(Modifier.padding(top = 6.dp).height(32.dp).clip(CircleShape).border(1.dp, p.line, CircleShape).clickable { News73.retry(vm, sv.id) }.padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
-                    Text("Prøv å laste ned på nytt", color = p.ink, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                    Text("Prøv å laste ned på nytt", color = p.ink, fontSize = HomelabType.subheadline.fontSize, fontWeight = FontWeight.SemiBold)
                 }
             }
         }
@@ -274,7 +275,7 @@ internal fun News73Tab(vm: AppViewModel, p: PaperPal) {
     Column(Modifier.clickable(onClickLabel = "Lagret") { News73.showTab = true; vm.launch27b { News73.load(vm) } }.padding(top = 6.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             BookmarkGlyph73(if (on) p.ink else p.mut, true, 13)
-            Text("Lagret", color = if (on) p.ink else p.mut, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+            Text("Lagret", color = if (on) p.ink else p.mut, fontSize = HomelabType.callout.fontSize, fontWeight = FontWeight.SemiBold)
         }
         Spacer(Modifier.height(10.dp))
         Box(Modifier.width(62.dp).height(2.dp).background(if (on) p.ink else Color.Transparent))
@@ -291,19 +292,19 @@ internal fun News73List(vm: AppViewModel, p: PaperPal, modifier: Modifier) {
         item(key = "q73") {
             Row(Modifier.fillMaxWidth().height(44.dp).clip(CircleShape).background(p.card).border(1.dp, p.line, CircleShape).padding(horizontal = 16.dp),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text("⌕", color = p.mut, fontSize = 17.sp)
+                Text("⌕", color = p.mut, fontSize = HomelabType.body.fontSize)
                 Box(Modifier.weight(1f)) {
-                    if (News73.query.isEmpty()) Text("Søk i lagrede artikler", color = p.mut, fontSize = 15.sp, maxLines = 1)
+                    if (News73.query.isEmpty()) Text("Søk i lagrede artikler", color = p.mut, fontSize = HomelabType.callout.fontSize, maxLines = 1)
                     BasicTextField(News73.query, { News73.query = it }, singleLine = true, cursorBrush = SolidColor(p.ink),
-                        textStyle = TextStyle(color = p.ink, fontSize = 15.sp), modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Søk i lagrede artikler" })
+                        textStyle = TextStyle(color = p.ink, fontSize = HomelabType.callout.fontSize), modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Søk i lagrede artikler" })
                 }
             }
-            if (News73.offline) Text("Uten nett · viser kopiene på telefonen", color = p.mut, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
+            if (News73.offline) Text("Uten nett · viser kopiene på telefonen", color = p.mut, fontSize = HomelabType.footnote.fontSize, modifier = Modifier.padding(top = 8.dp))
         }
         if (News73.items.isEmpty()) item(key = "empty73") {
             Column(Modifier.fillMaxWidth().padding(vertical = 40.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 PSerif("Ingen lagrede artikler ennå", 22.sp, p.ink)
-                Text("Trykk på bokmerket i en sak, eller hold inne og velg «Lagre». Hele artikkelen lastes ned og kan leses uten nett.", color = p.mut, fontSize = 14.sp, lineHeight = 20.sp,
+                Text("Trykk på bokmerket i en sak, eller hold inne og velg «Lagre». Hele artikkelen lastes ned og kan leses uten nett.", color = p.mut, fontSize = HomelabType.callout.fontSize, lineHeight = 20.sp,
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center)
             }
         }
@@ -321,7 +322,7 @@ private fun SavedRow73(vm: AppViewModel, sv: Saved73, p: PaperPal) {
         enableDismissFromStartToEnd = false,
         backgroundContent = {
             Box(Modifier.fillMaxSize().background(Color(0xFFB23A2A)).padding(end = 20.dp), contentAlignment = Alignment.CenterEnd) {
-                Text("Fjern fra lagret", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                Text("Fjern fra lagret", color = Color.White, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize)
             }
         },
     ) {
@@ -333,7 +334,7 @@ private fun SavedRow73(vm: AppViewModel, sv: Saved73, p: PaperPal) {
                     PSerif(sv.title, 19.sp, p.ink, maxLines = 4)
                     Row(Modifier.padding(top = 3.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         Box(Modifier.size(7.dp).clip(CircleShape).background(sv.dot))
-                        Text(sv.statusText, color = sv.dot, fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold)
+                        Text(sv.statusText, color = sv.dot, fontSize = HomelabType.footnote.fontSize, fontWeight = FontWeight.SemiBold)
                     }
                 }
                 Thumb73(sv, p)
@@ -349,7 +350,7 @@ private fun Thumb73(sv: Saved73, p: PaperPal) {
     val bmp = remember(src) { bmp73(src) }
     Box(Modifier.size(84.dp).clip(RoundedCornerShape(12.dp)).background(newsColor27(sv.source)), contentAlignment = Alignment.Center) {
         if (bmp != null) Image(bmp.asImageBitmap(), null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
-        else Text(newsInitials27(sv.source.ifBlank { sv.host }), color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 14.sp, maxLines = 1)
+        else Text(newsInitials27(sv.source.ifBlank { sv.host }), color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = HomelabType.callout.fontSize, maxLines = 1)
     }
 }
 
@@ -368,29 +369,29 @@ internal fun News73Reader(vm: AppViewModel, p: PaperPal) {
         Column(Modifier.fillMaxSize()) {
             Row(Modifier.fillMaxWidth().padding(22.dp, 14.dp, 22.dp, 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Box(Modifier.height(44.dp).clip(CircleShape).border(1.dp, p.line, CircleShape).clickable(onClickLabel = "Tilbake") { Haptics.back(); News73.open = null }.padding(start = 12.dp, end = 16.dp),
-                    contentAlignment = Alignment.Center) { Text("‹ Lagret", color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 14.sp) }
+                    contentAlignment = Alignment.Center) { Text("‹ Lagret", color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize) }
                 Spacer(Modifier.weight(1f))
                 Box(Modifier.size(44.dp).clip(CircleShape).background(p.card).border(1.dp, p.line, CircleShape).clickable(onClickLabel = "Del") {
                     val send = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_SUBJECT, cur.title).putExtra(Intent.EXTRA_TEXT, cur.title + "\n" + cur.url)
                     runCatching { ctx.startActivity(Intent.createChooser(send, "Del saken").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
-                }, contentAlignment = Alignment.Center) { Text("↑", color = p.ink, fontSize = 17.sp, fontWeight = FontWeight.Bold) }
+                }, contentAlignment = Alignment.Center) { Text("↑", color = p.ink, fontSize = HomelabType.body.fontSize, fontWeight = FontWeight.Bold) }
             }
             Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(scroll).padding(22.dp, 8.dp, 22.dp, 40.dp).widthIn(max = 720.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 val d = doc
                 PLabel(listOf(cur.source, day73(d?.published)).filter { it.isNotBlank() }.joinToString(" · "), p.lab, 11.sp)
                 PSerif(cur.title, 32.sp, p.ink)
                 if (cur.lead.isNotBlank()) PSerif(cur.lead, 17.sp, p.mut, weight = FontWeight.Normal)
-                if (!d?.author.isNullOrBlank()) Text(d?.author.orEmpty(), color = p.mut, fontSize = 13.sp)
+                if (!d?.author.isNullOrBlank()) Text(d?.author.orEmpty(), color = p.mut, fontSize = HomelabType.subheadline.fontSize)
                 val hero = d?.image.orEmpty()
                 if (hero.isNotEmpty() && d?.blocks?.none { it.src == hero } == true) Image73(hero, "", p)
                 News73Banner(vm, cur, p, d?.item?.words)
-                if (busy && d == null) Text("Åpner den lagrede kopien …", color = p.mut, fontSize = 15.sp)
+                if (busy && d == null) Text("Åpner den lagrede kopien …", color = p.mut, fontSize = HomelabType.callout.fontSize)
                 d?.blocks?.forEach { b -> Block73View(b, p) }
                 Box(Modifier.fillMaxWidth().height(50.dp).clip(RoundedCornerShape(25.dp)).background(p.ink).clickable { openLink(ctx, cur.url) }, contentAlignment = Alignment.Center) {
-                    Text("Åpne original ↗", color = p.bg, fontWeight = FontWeight.Bold, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text("Åpne original ↗", color = p.bg, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
                 Box(Modifier.align(Alignment.CenterHorizontally).height(40.dp).clip(CircleShape).border(1.dp, p.line, CircleShape).clickable { News73.remove(vm, cur.id) }.padding(horizontal = 16.dp),
-                    contentAlignment = Alignment.Center) { Text("Fjern fra lagret", color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 13.5.sp) }
+                    contentAlignment = Alignment.Center) { Text("Fjern fra lagret", color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.subheadline.fontSize) }
             }
         }
     }
@@ -402,16 +403,16 @@ private fun Block73View(b: Block73, p: PaperPal) {
         "h" -> PSerif(b.x, 21.sp, p.ink, modifier = Modifier.padding(top = 6.dp))
         "quote" -> Row(Modifier.height(IntrinsicSize.Min)) {
             Box(Modifier.width(3.dp).fillMaxHeight().background(p.lab))
-            Text(b.x, color = p.ink, fontFamily = PaperFonts.serif, fontStyle = FontStyle.Italic, fontSize = 18.sp, lineHeight = 27.sp, modifier = Modifier.padding(start = 14.dp))
+            Text(b.x, color = p.ink, fontFamily = PaperFonts.serif, fontStyle = FontStyle.Italic, fontSize = HomelabType.headline.fontSize, lineHeight = 27.sp, modifier = Modifier.padding(start = 14.dp))
         }
         "li" -> Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("•", color = p.mut, fontFamily = PaperFonts.serif, fontSize = 18.sp, lineHeight = 27.sp)
-            Text(b.x, color = p.ink, fontFamily = PaperFonts.serif, fontSize = 18.sp, lineHeight = 27.sp, modifier = Modifier.weight(1f))
+            Text("•", color = p.mut, fontFamily = PaperFonts.serif, fontSize = HomelabType.headline.fontSize, lineHeight = 27.sp)
+            Text(b.x, color = p.ink, fontFamily = PaperFonts.serif, fontSize = HomelabType.headline.fontSize, lineHeight = 27.sp, modifier = Modifier.weight(1f))
         }
         "img" -> Image73(b.src, b.cap, p)
-        "pre" -> Text(b.x, color = p.ink, fontFamily = PaperFonts.mono, fontSize = 13.sp, lineHeight = 19.sp,
+        "pre" -> Text(b.x, color = p.ink, fontFamily = PaperFonts.mono, fontSize = HomelabType.subheadline.fontSize, lineHeight = 19.sp,
             modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(p.card).padding(12.dp))
-        else -> Text(b.x, color = p.ink, fontFamily = PaperFonts.serif, fontSize = 18.sp, lineHeight = 28.sp)
+        else -> Text(b.x, color = p.ink, fontFamily = PaperFonts.serif, fontSize = HomelabType.headline.fontSize, lineHeight = 28.sp)
     }
 }
 
@@ -420,6 +421,6 @@ private fun Image73(src: String, cap: String, p: PaperPal) {
     val bmp = remember(src) { bmp73(src) } ?: return
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Image(bmp.asImageBitmap(), cap.ifBlank { null }, contentScale = ContentScale.FillWidth, modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)))
-        if (cap.isNotBlank()) Text(cap, color = p.mut, fontSize = 13.sp, lineHeight = 18.sp)
+        if (cap.isNotBlank()) Text(cap, color = p.mut, fontSize = HomelabType.subheadline.fontSize, lineHeight = 18.sp)
     }
 }

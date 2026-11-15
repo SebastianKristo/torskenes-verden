@@ -26,6 +26,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import no.kristo.finanshub.*
+import no.kristo.finanshub.ui.designsystem.HomelabType
 
 /*
  * Prompt 29 (ANDROID29): Innstillinger → KONTO → Backup (Mobil Papir App, claude-code-backup.md). Bare admin.
@@ -51,7 +52,7 @@ internal fun Backup29Page(vm: AppViewModel) {
             PCard { PRow("Backup av hele systemet", "Serveren har ikke systembackup ennå. Oppdater Homelab-serveren.", "Ikke tilgjengelig", serif = false) }
             return@Column
         }
-        if (s.error.isNotBlank()) Text(s.error, color = p.lab, fontSize = 12.5.sp, modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp))
+        if (s.error.isNotBlank()) Text(s.error, color = p.lab, fontSize = HomelabType.footnote.fontSize, modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp))
         val st = s.settings
         val last = s.last
         // 1. STATUS
@@ -64,7 +65,7 @@ internal fun Backup29Page(vm: AppViewModel) {
             }
             PRow("Siste backup", lastSub, when { last == null -> ""; last.ok -> "✓ OK"; else -> "Feilet" }, valueColor = if (last?.ok != false) p.pos else p.lab, serif = false)
             if (last != null) BackupReceipt36(vm, last) // prompt 36: fullsti, verifisert, Åpne mappe og Vis logg
-            if (last != null && !last.ok && last.error.isNotBlank()) Text(last.error, color = p.lab, fontSize = 12.5.sp, modifier = Modifier.padding(start = 14.dp, end = 14.dp, bottom = 10.dp))
+            if (last != null && !last.ok && last.error.isNotBlank()) Text(last.error, color = p.lab, fontSize = HomelabType.footnote.fontSize, modifier = Modifier.padding(start = 14.dp, end = 14.dp, bottom = 10.dp))
             val pct = s.runPct
             if (pct != null) {
                 PRow("Tar backup … $pct %", "Du kan lukke appen, den fortsetter i bakgrunnen", "", serif = false, top = true)
@@ -98,7 +99,7 @@ internal fun Backup29Page(vm: AppViewModel) {
                 PRow(n, sub.ifBlank { null }, if (inc) "✓ Med" else "Ikke med", valueColor = if (inc) p.pos else p.mut, serif = false, top = true, onClick = click)
             }
         }
-        if (st.scope != "custom") Text("Modulene kan bare endres i Egendefinert.", color = p.mut, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 4.dp))
+        if (st.scope != "custom") Text("Modulene kan bare endres i Egendefinert.", color = p.mut, fontSize = HomelabType.footnote.fontSize, modifier = Modifier.padding(horizontal = 4.dp))
         // 4. HVOR
         PLabel("Hvor", modifier = Modifier.padding(start = 4.dp, top = 10.dp))
         PCard {
@@ -142,7 +143,7 @@ private fun Restore29Dialog(vm: AppViewModel, b: Bk29Item) {
         title = { PSerif("Gjenopprett backup", 22.sp) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text(listOf(bkWhen29(b.at), b.size, bkScopeName29(b.scope)).filter { it.isNotBlank() }.joinToString(" · "), color = p.mut, fontSize = 13.sp)
+                Text(listOf(bkWhen29(b.at), b.size, bkScopeName29(b.scope)).filter { it.isNotBlank() }.joinToString(" · "), color = p.mut, fontSize = HomelabType.subheadline.fontSize)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Chip29("Alt i backupen", s.restoreAll) { s.restoreAll = true }
                     Chip29("Velg moduler", !s.restoreAll) { s.restoreAll = false }
@@ -150,15 +151,15 @@ private fun Restore29Dialog(vm: AppViewModel, b: Bk29Item) {
                 if (!s.restoreAll) FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     mods.forEach { (k, n, _) -> Chip29(n, k in s.restoreMods) { s.restoreMods = if (k in s.restoreMods) s.restoreMods - k else s.restoreMods + k } }
                 }
-                Text("Nåværende data i valgte moduler overskrives. Serveren tar automatisk en sikkerhetskopi først.", color = p.lab, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                Text("Nåværende data i valgte moduler overskrives. Serveren tar automatisk en sikkerhetskopi først.", color = p.lab, fontSize = HomelabType.subheadline.fontSize, fontWeight = FontWeight.SemiBold)
                 Box(Modifier.fillMaxWidth().height(48.dp).clip(RoundedCornerShape(14.dp)).border(1.dp, p.line, RoundedCornerShape(14.dp)).background(p.card).padding(horizontal = 14.dp),
                     contentAlignment = Alignment.CenterStart) {
-                    if (s.restorePw.isEmpty()) Text("Passordet ditt", color = p.mut, fontSize = 15.sp)
+                    if (s.restorePw.isEmpty()) Text("Passordet ditt", color = p.mut, fontSize = HomelabType.callout.fontSize)
                     BasicTextField(s.restorePw, { s.restorePw = it; s.restoreErr = "" }, singleLine = true, visualTransformation = PasswordVisualTransformation(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                        textStyle = TextStyle(color = p.ink, fontSize = 15.sp, fontFamily = PaperFonts.sans), cursorBrush = SolidColor(p.ink), modifier = Modifier.fillMaxWidth())
+                        textStyle = TextStyle(color = p.ink, fontSize = HomelabType.callout.fontSize, fontFamily = PaperFonts.sans), cursorBrush = SolidColor(p.ink), modifier = Modifier.fillMaxWidth())
                 }
-                if (s.restoreErr.isNotBlank()) Text(s.restoreErr, color = p.lab, fontSize = 13.sp)
+                if (s.restoreErr.isNotBlank()) Text(s.restoreErr, color = p.lab, fontSize = HomelabType.subheadline.fontSize)
             }
         },
         confirmButton = {
@@ -181,9 +182,9 @@ private fun KeyDialog29(vm: AppViewModel, key: String) {
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text("Lagre nøkkelen et trygt sted (f.eks. passordbehandleren). Den vises bare denne ene gangen, og uten den kan krypterte backups ikke gjenopprettes andre steder.",
-                    color = p.ink, fontSize = 14.sp)
+                    color = p.ink, fontSize = HomelabType.callout.fontSize)
                 Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(p.card).padding(12.dp)) {
-                    Text(key, color = p.ink, fontFamily = PaperFonts.mono, fontSize = 13.sp)
+                    Text(key, color = p.ink, fontFamily = PaperFonts.mono, fontSize = HomelabType.subheadline.fontSize)
                 }
             }
         },
@@ -198,5 +199,5 @@ private fun Chip29(text: String, on: Boolean, onClick: () -> Unit) {
     Box(
         Modifier.height(34.dp).clip(CircleShape).border(1.dp, if (on) p.ink else p.line, CircleShape).background(if (on) p.ink else p.bg).press24(onClick = onClick).padding(horizontal = 12.dp),
         contentAlignment = Alignment.Center,
-    ) { Text(text, color = if (on) p.bg else p.ink, fontWeight = FontWeight.SemiBold, fontSize = 12.5.sp, maxLines = 1) }
+    ) { Text(text, color = if (on) p.bg else p.ink, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.footnote.fontSize, maxLines = 1) }
 }

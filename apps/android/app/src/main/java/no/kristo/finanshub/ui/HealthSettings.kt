@@ -24,6 +24,7 @@ import no.kristo.finanshub.*
 import no.kristo.finanshub.family.FamilyPrefs
 import no.kristo.finanshub.family.FamilyService
 import no.kristo.finanshub.family.HealthSync
+import no.kristo.finanshub.ui.designsystem.HomelabType
 
 /* ================= Prompt 20: Innstillinger → App → Helse og posisjon, og onboarding steg 3 ================= */
 
@@ -94,8 +95,8 @@ internal fun HealthPosPage(vm: AppViewModel) {
         HealthFamily42(vm, hc, keys) { ask(if (keys.isNotEmpty()) keys else HEALTH_ALL_KEYS) }
         PLabel("Helse · Health Connect", modifier = Modifier.padding(start = 4.dp, top = 6.dp))
         when (hc) {
-            1 -> Text("Health Connect må installeres eller oppdateres fra Play Butikk.", color = p.lab, fontSize = 13.sp, modifier = Modifier.padding(4.dp))
-            2 -> Text("Health Connect finnes ikke på denne telefonen.", color = p.mut, fontSize = 13.sp, modifier = Modifier.padding(4.dp))
+            1 -> Text("Health Connect må installeres eller oppdateres fra Play Butikk.", color = p.lab, fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.padding(4.dp))
+            2 -> Text("Health Connect finnes ikke på denne telefonen.", color = p.mut, fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.padding(4.dp))
         }
         PCard {
             PToggle("Del helsedata", "Familien ser skritt, puls, søvn og aktivitet", master) { on ->
@@ -135,7 +136,7 @@ internal fun HealthPosPage(vm: AppViewModel) {
             PRow("Åpne Android-innstillinger", "Apper → Homelab → Tillatelser", "↗", serif = false, top = true) { openAppSettings(ctx) }
         }
         Text("Health Connect sier ikke om appen får lese data. Viser Familie «Ingen data», sjekk tilgangen i Health Connect.",
-            color = p.mut, fontSize = 12.sp, modifier = Modifier.padding(4.dp))
+            color = p.mut, fontSize = HomelabType.footnote.fontSize, modifier = Modifier.padding(4.dp))
     }
 }
 

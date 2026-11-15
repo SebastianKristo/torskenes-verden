@@ -46,6 +46,7 @@ import no.kristo.finanshub.family.FamilyPrefs
 import org.json.JSONArray
 import org.json.JSONObject
 import java.time.LocalDate
+import no.kristo.finanshub.ui.designsystem.HomelabType
 
 /*
  * Huskeliste-widget (Glance, Material You-farger): de neste oppgavene med avkrysning rett i widgeten,
@@ -154,14 +155,14 @@ private fun TasksBody(ctx: Context, items: List<WTask>) {
     ) {
         Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text("Gjøremål", modifier = GlanceModifier.defaultWeight().clickable(actionStartActivity(open)),
-                style = TextStyle(color = c.onSurface, fontSize = 15.sp, fontWeight = FontWeight.Bold))
+                style = TextStyle(color = c.onSurface, fontSize = HomelabType.callout.fontSize, fontWeight = FontWeight.Bold))
             Box(GlanceModifier.size(30.dp).cornerRadius(15.dp).background(c.primary).clickable(actionStartActivity(add)), contentAlignment = Alignment.Center) {
-                Text("+", style = TextStyle(color = c.onPrimary, fontSize = 18.sp, fontWeight = FontWeight.Bold))
+                Text("+", style = TextStyle(color = c.onPrimary, fontSize = HomelabType.headline.fontSize, fontWeight = FontWeight.Bold))
             }
         }
         Spacer(GlanceModifier.height(6.dp))
         if (items.isEmpty()) {
-            Text("Ingen oppgaver. Trykk + for å legge til.", modifier = GlanceModifier.clickable(actionStartActivity(open)), style = TextStyle(color = c.onSurfaceVariant, fontSize = 13.sp))
+            Text("Ingen oppgaver. Trykk + for å legge til.", modifier = GlanceModifier.clickable(actionStartActivity(open)), style = TextStyle(color = c.onSurfaceVariant, fontSize = HomelabType.subheadline.fontSize))
         } else items.take(rows).forEach { t ->
             Row(GlanceModifier.fillMaxWidth().padding(vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
                 Box(
@@ -170,7 +171,7 @@ private fun TasksBody(ctx: Context, items: List<WTask>) {
                     contentAlignment = Alignment.Center,
                 ) { Box(GlanceModifier.size(18.dp).cornerRadius(9.dp).background(c.widgetBackground)) {} }
                 Spacer(GlanceModifier.width(10.dp))
-                Text(t.title, maxLines = 1, modifier = GlanceModifier.defaultWeight().clickable(actionStartActivity(open)), style = TextStyle(color = c.onSurface, fontSize = 14.sp))
+                Text(t.title, maxLines = 1, modifier = GlanceModifier.defaultWeight().clickable(actionStartActivity(open)), style = TextStyle(color = c.onSurface, fontSize = HomelabType.callout.fontSize))
                 val d = when {
                     t.due == null -> null
                     t.due < today -> "Forfalt"
@@ -178,7 +179,7 @@ private fun TasksBody(ctx: Context, items: List<WTask>) {
                     t.due == LocalDate.now().plusDays(1).toString() -> "I morgen"
                     else -> null
                 }
-                if (d != null) Text(d, style = TextStyle(color = if (d == "Forfalt") c.error else c.onSurfaceVariant, fontSize = 11.sp))
+                if (d != null) Text(d, style = TextStyle(color = if (d == "Forfalt") c.error else c.onSurfaceVariant, fontSize = HomelabType.caption.fontSize))
             }
         }
     }

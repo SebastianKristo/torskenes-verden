@@ -47,6 +47,7 @@ import kotlinx.coroutines.delay
 import no.kristo.finanshub.*
 import java.time.Instant
 import java.time.ZoneId
+import no.kristo.finanshub.ui.designsystem.HomelabType
 
 /*
  * Prompt 40 (ANDROID40) – Hjemlys-flyten (tillegget i kontrakten: alle tre, 1a + 1b + 1c, fasit Hjemme trygt Varianter.dc.html):
@@ -96,10 +97,10 @@ internal fun HjemlysPage40(vm: AppViewModel) {
             verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 val ink = if (night || late != null) NIGHT_INK else PaperPal.current.ink
-                Text(if (mine != null || late != null) "‹ Tilbake" else "Avbryt", color = ink, fontWeight = FontWeight.SemiBold, fontSize = 14.sp,
+                Text(if (mine != null || late != null) "‹ Tilbake" else "Avbryt", color = ink, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize,
                     modifier = Modifier.clip(CircleShape).clickable(role = Role.Button) { s.hlSheet = false; s.hlLateFor = null }.padding(8.dp, 6.dp))
                 Spacer(Modifier.weight(1f))
-                Text("Vel fremme", color = ink, fontFamily = PaperFonts.serif, fontSize = 20.sp)
+                Text("Vel fremme", color = ink, fontFamily = PaperFonts.serif, fontSize = HomelabType.headline.fontSize)
                 Spacer(Modifier.weight(1f))
                 Spacer(Modifier.width(60.dp))
             }
@@ -164,7 +165,7 @@ private fun RouteMap40(route: HlRoute40?, night: Boolean, progress: Float? = nul
             }
             drawCircle(Color(0xFF1B1A17), 11.dp.toPx(), pts.last())
         }
-        Text("KART", color = if (night) NIGHT_MUT else Color(0xFF7A7468), fontFamily = PaperFonts.mono, fontSize = 10.sp, modifier = Modifier.align(Alignment.TopEnd).padding(12.dp))
+        Text("KART", color = if (night) NIGHT_MUT else Color(0xFF7A7468), fontFamily = PaperFonts.mono, fontSize = HomelabType.caption.fontSize, modifier = Modifier.align(Alignment.TopEnd).padding(12.dp))
     }
 }
 
@@ -185,7 +186,7 @@ private fun StartDay40(vm: AppViewModel) {
     Suggest40(vm, false)
     RouteMap40(r, false)
     PLabel("SI FRA NÅR JEG ER HJEMME", p.mut)
-    if (r?.fromName != null) Text("Fra ${r.fromName}" + (r.km?.let { " · " + String.format(java.util.Locale("nb", "NO"), "%.1f km", it) } ?: ""), color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+    if (r?.fromName != null) Text("Fra ${r.fromName}" + (r.km?.let { " · " + String.format(java.util.Locale("nb", "NO"), "%.1f km", it) } ?: ""), color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize)
     if (r != null && r.options.isNotEmpty()) Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(p.card)) {
         r.options.forEachIndexed { i, o ->
             if (i > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
@@ -193,16 +194,16 @@ private fun StartDay40(vm: AppViewModel) {
             Row(Modifier.fillMaxWidth().clickable(role = Role.RadioButton) { s.hlMode = o.mode; custom = null }.padding(14.dp, 12.dp), verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Column(Modifier.weight(1f)) {
-                    Text(o.label.ifBlank { modeLabel40(o.mode) }, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 14.5.sp)
-                    if (o.legs.isNotEmpty()) Text(o.legs.joinToString(" · "), color = p.mut, fontSize = 12.sp)
+                    Text(o.label.ifBlank { modeLabel40(o.mode) }, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize)
+                    if (o.legs.isNotEmpty()) Text(o.legs.joinToString(" · "), color = p.mut, fontSize = HomelabType.footnote.fontSize)
                 }
-                Text("ca. " + (etaMs40(o.eta) ?: o.minutes?.let { System.currentTimeMillis() + it * 60_000L })?.let { clock40(it) }.orEmpty(), color = p.mut, fontSize = 13.sp)
+                Text("ca. " + (etaMs40(o.eta) ?: o.minutes?.let { System.currentTimeMillis() + it * 60_000L })?.let { clock40(it) }.orEmpty(), color = p.mut, fontSize = HomelabType.subheadline.fontSize)
                 if (on) Text("✓", color = p.pos, fontWeight = FontWeight.Bold)
             }
         }
     }
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(if (custom != null) "Egen tid · ${clock40(eta)}" else "Annen tid?", color = p.lab, fontWeight = FontWeight.SemiBold, fontSize = 13.5.sp,
+        Text(if (custom != null) "Egen tid · ${clock40(eta)}" else "Annen tid?", color = p.lab, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.subheadline.fontSize,
             modifier = Modifier.clip(CircleShape).clickable {
                 val z = Instant.ofEpochMilli(eta).atZone(OSLO_UI40)
                 android.app.TimePickerDialog(ctx, { _, hh, mm ->
@@ -213,10 +214,10 @@ private fun StartDay40(vm: AppViewModel) {
             }.padding(6.dp))
     }
     PLabel("FÅR BESKJED", p.mut)
-    Text(names40(recipients40(vm)), color = p.ink, fontSize = 14.sp)
+    Text(names40(recipients40(vm)), color = p.ink, fontSize = HomelabType.callout.fontSize)
     PLabel("HVIS DU IKKE SVARER PÅ «ALT OK?»", p.mut)
     Seg40(listOf("5" to "5 min", "10" to "10 min", "15" to "15 min", "30" to "30 min"), "$wait") { wait = it.toInt() }
-    Text("Tiden oppdateres etter hvor du er. Deler ingenting før du er sen, eller hvis du stopper svaret.", color = p.mut, fontSize = 12.5.sp, lineHeight = 17.sp)
+    Text("Tiden oppdateres etter hvor du er. Deler ingenting før du er sen, eller hvis du stopper svaret.", color = p.mut, fontSize = HomelabType.footnote.fontSize, lineHeight = 17.sp)
     PButton(if (s.hlBusy) "Starter …" else "Start · hjemme ca. ${clock40(eta)}", Modifier.fillMaxWidth(), kind = "lab", height = 52.dp) { go(eta, wait) }
 }
 
@@ -236,35 +237,35 @@ private fun StartNight40(vm: AppViewModel) {
     Suggest40(vm, true)
     Column(Modifier.fillMaxWidth().padding(top = 10.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
         HlDot40("onTheWay", 64.dp)
-        Text("Si fra når jeg er hjemme", color = NIGHT_INK, fontFamily = PaperFonts.serif, fontSize = 28.sp, textAlign = TextAlign.Center)
-        Text("Hjem · ca. ${clock40(eta)}" + (opt?.legs?.takeIf { it.isNotEmpty() }?.let { " · " + it.joinToString(" · ") } ?: ""), color = NIGHT_MUT, fontSize = 14.sp)
+        Text("Si fra når jeg er hjemme", color = NIGHT_INK, fontFamily = PaperFonts.serif, fontSize = HomelabType.title2.fontSize, textAlign = TextAlign.Center)
+        Text("Hjem · ca. ${clock40(eta)}" + (opt?.legs?.takeIf { it.isNotEmpty() }?.let { " · " + it.joinToString(" · ") } ?: ""), color = NIGHT_MUT, fontSize = HomelabType.callout.fontSize)
     }
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
         NightBtn40("− 5 min", Modifier.weight(1f)) { if (eta - 5 * 60_000L > System.currentTimeMillis() + 5 * 60_000L) add -= 5 }
         NightBtn40("+ 5 min", Modifier.weight(1f)) { add += 5 }
     }
-    Text("VENTETID FØR FAMILIEN FÅR BESKJED", color = NIGHT_MUT, fontFamily = PaperFonts.mono, fontSize = 10.5.sp, letterSpacing = 1.2.sp)
+    Text("VENTETID FØR FAMILIEN FÅR BESKJED", color = NIGHT_MUT, fontFamily = PaperFonts.mono, fontSize = HomelabType.caption.fontSize, letterSpacing = 1.2.sp)
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         listOf(5, 10, 15, 30).forEach { m ->
             val on = m == wait
             Box(Modifier.weight(1f).height(42.dp).clip(RoundedCornerShape(14.dp)).background(if (on) NIGHT_INK else NIGHT_CARD).clickable(role = Role.RadioButton) { wait = m },
-                contentAlignment = Alignment.Center) { Text("$m min", color = if (on) NIGHT_BG else NIGHT_INK, fontWeight = FontWeight.Bold, fontSize = 13.5.sp) }
+                contentAlignment = Alignment.Center) { Text("$m min", color = if (on) NIGHT_BG else NIGHT_INK, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize) }
         }
     }
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(NIGHT_CARD).padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text("HVA DELES", color = NIGHT_MUT, fontFamily = PaperFonts.mono, fontSize = 10.5.sp, letterSpacing = 1.2.sp)
-        Text("Nå: ingenting. ${names40(recipients40(vm))} ser bare at Vel fremme er på.", color = NIGHT_INK, fontSize = 13.5.sp)
-        Text("Hvis du er sen: siste posisjon, ruten, batteri og dekning, siste opplåsing og hvem du var med.", color = NIGHT_MUT, fontSize = 12.5.sp, lineHeight = 17.sp)
+        Text("HVA DELES", color = NIGHT_MUT, fontFamily = PaperFonts.mono, fontSize = HomelabType.caption.fontSize, letterSpacing = 1.2.sp)
+        Text("Nå: ingenting. ${names40(recipients40(vm))} ser bare at Vel fremme er på.", color = NIGHT_INK, fontSize = HomelabType.subheadline.fontSize)
+        Text("Hvis du er sen: siste posisjon, ruten, batteri og dekning, siste opplåsing og hvem du var med.", color = NIGHT_MUT, fontSize = HomelabType.footnote.fontSize, lineHeight = 17.sp)
     }
     Box(Modifier.fillMaxWidth().height(54.dp).clip(RoundedCornerShape(27.dp)).background(HL_GOLD).clickable(role = Role.Button) { go(eta, wait) }, contentAlignment = Alignment.Center) {
-        Text(if (s.hlBusy) "Starter …" else "Start · hjemme ca. ${clock40(eta)}", color = NIGHT_BG, fontWeight = FontWeight.Bold, fontSize = 15.5.sp)
+        Text(if (s.hlBusy) "Starter …" else "Start · hjemme ca. ${clock40(eta)}", color = NIGHT_BG, fontWeight = FontWeight.Bold, fontSize = HomelabType.body.fontSize)
     }
 }
 
 @Composable
 private fun NightBtn40(t: String, modifier: Modifier, onClick: () -> Unit) {
     Box(modifier.height(44.dp).clip(RoundedCornerShape(22.dp)).border(1.dp, NIGHT_MUT.copy(alpha = .5f), RoundedCornerShape(22.dp)).clickable(role = Role.Button) { onClick() },
-        contentAlignment = Alignment.Center) { Text(t, color = NIGHT_INK, fontWeight = FontWeight.Bold, fontSize = 14.sp) }
+        contentAlignment = Alignment.Center) { Text(t, color = NIGHT_INK, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize) }
 }
 
 /** 1b: Glimt foreslår («Kinoen er ferdig. Skal jeg si fra til …?») med «Ja, start» / «Ikke nå». */
@@ -279,17 +280,17 @@ internal fun Suggest40(vm: AppViewModel, night: Boolean) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             GlimtFig35("glimt", 34.dp, "talk")
             Column(Modifier.weight(1f)) {
-                Text("✦ GLIMT", color = HL_GOLD, fontFamily = PaperFonts.mono, fontSize = 10.5.sp, letterSpacing = 1.2.sp)
-                Text(sug.text ?: ((sug.reason?.let { "$it. " } ?: "") + "Skal jeg si fra til ${names40(sug.recipients.ifEmpty { recipients40(vm) })} når du er hjemme?"), color = ink, fontSize = 14.sp, lineHeight = 19.sp)
+                Text("✦ GLIMT", color = HL_GOLD, fontFamily = PaperFonts.mono, fontSize = HomelabType.caption.fontSize, letterSpacing = 1.2.sp)
+                Text(sug.text ?: ((sug.reason?.let { "$it. " } ?: "") + "Skal jeg si fra til ${names40(sug.recipients.ifEmpty { recipients40(vm) })} når du er hjemme?"), color = ink, fontSize = HomelabType.callout.fontSize, lineHeight = 19.sp)
             }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Box(Modifier.weight(1f).height(40.dp).clip(RoundedCornerShape(20.dp)).background(HL_GOLD).clickable(role = Role.Button) {
                 go(etaMs40(sug.eta)?.coerceAtLeast(System.currentTimeMillis() + 5 * 60_000L) ?: (System.currentTimeMillis() + 30 * 60_000L), 15)
-            }, contentAlignment = Alignment.Center) { Text("Ja, start", color = NIGHT_BG, fontWeight = FontWeight.Bold, fontSize = 14.sp) }
+            }, contentAlignment = Alignment.Center) { Text("Ja, start", color = NIGHT_BG, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize) }
             Box(Modifier.weight(1f).height(40.dp).clip(RoundedCornerShape(20.dp)).border(1.dp, ink.copy(alpha = .3f), RoundedCornerShape(20.dp)).clickable(role = Role.Button) {
                 snoozeSuggest40(ctx); s.hlSuggest = sug.copy(suggest = false)
-            }, contentAlignment = Alignment.Center) { Text("Ikke nå", color = ink, fontWeight = FontWeight.Bold, fontSize = 14.sp) }
+            }, contentAlignment = Alignment.Center) { Text("Ikke nå", color = ink, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize) }
         }
     }
 }
@@ -319,20 +320,21 @@ private fun ActiveView40(vm: AppViewModel, m: HlSession40, night: Boolean) {
             }
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 val a = kotlin.math.abs(left)
+                // Stort tall: bevisst over typeskalaen (largeTitle er 44 sp).
                 Text((if (late) "+" else "") + "%d:%02d".format(a / 60, a % 60), color = if (late) HL_RED else NIGHT_INK, fontFamily = PaperFonts.serif, fontSize = 52.sp)
-                Text(if (late) "over tiden" else "hjemme ca. ${eta?.let { clock40(it) } ?: "–"}", color = NIGHT_MUT, fontSize = 13.sp)
+                Text(if (late) "over tiden" else "hjemme ca. ${eta?.let { clock40(it) } ?: "–"}", color = NIGHT_MUT, fontSize = HomelabType.subheadline.fontSize)
             }
         }
     } else {
         RouteMap40(vm.p40.hlRoute, false, progress = pr, height = 150.dp)
         Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(p.card).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(if (late) "SEN · FAMILIEN HAR FÅTT BESKJED" else "PÅ VEI HJEM" + (etaMs40(m.startedAt)?.let { " · startet ${clock40(it)}" } ?: ""),
-                color = if (late) HL_RED else p.mut, fontFamily = PaperFonts.mono, fontSize = 10.5.sp, letterSpacing = 1.2.sp)
+                color = if (late) HL_RED else p.mut, fontFamily = PaperFonts.mono, fontSize = HomelabType.caption.fontSize, letterSpacing = 1.2.sp)
             Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text(eta?.let { clock40(it) } ?: "–", color = ink, fontFamily = PaperFonts.serif, fontSize = 44.sp)
-                Text(if (late) "${-left / 60} min over" else "om ${left / 60} min", color = if (late) HL_RED else HL_GREEN, fontWeight = FontWeight.Bold, fontSize = 15.sp, modifier = Modifier.padding(bottom = 8.dp))
+                Text(eta?.let { clock40(it) } ?: "–", color = ink, fontFamily = PaperFonts.serif, fontSize = HomelabType.largeTitle.fontSize)
+                Text(if (late) "${-left / 60} min over" else "om ${left / 60} min", color = if (late) HL_RED else HL_GREEN, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize, modifier = Modifier.padding(bottom = 8.dp))
             }
-            m.leg?.let { Text(it, color = p.mut, fontSize = 13.sp) }
+            m.leg?.let { Text(it, color = p.mut, fontSize = HomelabType.subheadline.fontSize) }
             Box(Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)).background(p.line)) {
                 Box(Modifier.fillMaxWidth(pr).fillMaxHeight().clip(RoundedCornerShape(3.dp)).background(if (late) HL_RED else HL_GREEN))
             }
@@ -347,7 +349,7 @@ private fun ActiveView40(vm: AppViewModel, m: HlSession40, night: Boolean) {
     if (late) Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(if (night) NIGHT_CARD else p.card).padding(12.dp), verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         GlimtFig35("glimt", 30.dp, "talk")
-        Text("✦ Alt OK? " + if (m.state == "late") "Familien har fått beskjed med posisjonen din." else "Svarer du ikke innen ${m.waitMin} min, får familien beskjed.", color = ink, fontSize = 13.5.sp, modifier = Modifier.weight(1f))
+        Text("✦ Alt OK? " + if (m.state == "late") "Familien har fått beskjed med posisjonen din." else "Svarer du ikke innen ${m.waitMin} min, får familien beskjed.", color = ink, fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.weight(1f))
     }
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         if (late) {
@@ -358,16 +360,16 @@ private fun ActiveView40(vm: AppViewModel, m: HlSession40, night: Boolean) {
             PButton("Jeg er hjemme", Modifier.weight(1f), kind = "lab", height = 48.dp) { vm.hjemlysAct40("home"); vm.p40.hlSheet = false }
         }
     }
-    Text("Avslutt", color = mut, fontSize = 13.sp, modifier = Modifier.clickable { vm.hjemlysAct40("end"); vm.p40.hlSheet = false }.padding(4.dp))
-    Text("Avsluttes av seg selv når du er innenfor 60 m av hjemmet.", color = mut, fontSize = 12.sp)
+    Text("Avslutt", color = mut, fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.clickable { vm.hjemlysAct40("end"); vm.p40.hlSheet = false }.padding(4.dp))
+    Text("Avsluttes av seg selv når du er innenfor 60 m av hjemmet.", color = mut, fontSize = HomelabType.footnote.fontSize)
     // 1b: familiens logg.
     val log = vm.p40.hlLog
     if (log.isNotEmpty()) {
-        Text("LOGG", color = mut, fontFamily = PaperFonts.mono, fontSize = 10.5.sp, letterSpacing = 1.2.sp)
+        Text("LOGG", color = mut, fontFamily = PaperFonts.mono, fontSize = HomelabType.caption.fontSize, letterSpacing = 1.2.sp)
         log.takeLast(8).forEach { l ->
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text(hlClock40(l.at) ?: "", color = mut, fontFamily = PaperFonts.mono, fontSize = 12.sp, modifier = Modifier.width(44.dp))
-                Text(l.text, color = ink, fontSize = 13.sp, modifier = Modifier.weight(1f))
+                Text(hlClock40(l.at) ?: "", color = mut, fontFamily = PaperFonts.mono, fontSize = HomelabType.footnote.fontSize, modifier = Modifier.width(44.dp))
+                Text(l.text, color = ink, fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.weight(1f))
             }
         }
     }
@@ -375,7 +377,7 @@ private fun ActiveView40(vm: AppViewModel, m: HlSession40, night: Boolean) {
 
 @Composable
 private fun KV40(k: String, v: String, ink: Color, mut: Color) {
-    Row { Text(k, color = mut, fontSize = 13.sp, modifier = Modifier.width(118.dp)); Text(v, color = ink, fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f)) }
+    Row { Text(k, color = mut, fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.width(118.dp)); Text(v, color = ink, fontSize = HomelabType.subheadline.fontSize, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f)) }
 }
 
 /* ---------- Mottaker: noen er sen ---------- */
@@ -389,9 +391,9 @@ private fun LateView40(vm: AppViewModel, m: HlMember40, night: Boolean) {
     val sh = m.share
     val ink = if (night) Color.White else p.ink
     val mut = if (night) Color.White.copy(alpha = .75f) else p.mut
-    Text(if (night) "MOTTAKER · VEL FREMME" else "${firstName37(vm.me?.name ?: "")} SER DETTE".trim().uppercase(), color = mut, fontFamily = PaperFonts.mono, fontSize = 10.5.sp, letterSpacing = 1.2.sp)
-    Text(if (night && mins != null) "$who er $mins min forsinket" else "$who er ikke hjemme ennå", color = ink, fontFamily = PaperFonts.serif, fontSize = 32.sp, lineHeight = 36.sp)
-    Text("Ventet ${hlClock40(m.eta) ?: "–"}" + (mins?.let { " · $it min over" } ?: "") + " · svarte ikke på «Alt OK?»", color = mut, fontSize = 14.sp)
+    Text(if (night) "MOTTAKER · VEL FREMME" else "${firstName37(vm.me?.name ?: "")} SER DETTE".trim().uppercase(), color = mut, fontFamily = PaperFonts.mono, fontSize = HomelabType.caption.fontSize, letterSpacing = 1.2.sp)
+    Text(if (night && mins != null) "$who er $mins min forsinket" else "$who er ikke hjemme ennå", color = ink, fontFamily = PaperFonts.serif, fontSize = HomelabType.title2.fontSize, lineHeight = 36.sp)
+    Text("Ventet ${hlClock40(m.eta) ?: "–"}" + (mins?.let { " · $it min over" } ?: "") + " · svarte ikke på «Alt OK?»", color = mut, fontSize = HomelabType.callout.fontSize)
     val pos = sh?.optJSONObject("pos")
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(if (night) Color.White.copy(alpha = .1f) else p.card).padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         fun s37(k: String) = sh?.optString(k)?.takeIf { it.isNotBlank() && it != "null" }
@@ -415,6 +417,6 @@ private fun LateView40(vm: AppViewModel, m: HlMember40, night: Boolean) {
     }
     if (night) Box(Modifier.fillMaxWidth().height(48.dp).clip(RoundedCornerShape(24.dp)).border(1.5.dp, Color.White, RoundedCornerShape(24.dp))
         .clickable(role = Role.Button) { runCatching { ctx.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:112")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } },
-        contentAlignment = Alignment.Center) { Text("Ring 112", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp) }
-    Text("Delingen stopper når $who er hjemme. Ruten slettes etter 24 timer.", color = mut, fontSize = 12.sp, fontStyle = FontStyle.Italic)
+        contentAlignment = Alignment.Center) { Text("Ring 112", color = Color.White, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize) }
+    Text("Delingen stopper når $who er hjemme. Ruten slettes etter 24 timer.", color = mut, fontSize = HomelabType.footnote.fontSize, fontStyle = FontStyle.Italic)
 }

@@ -76,6 +76,7 @@ import kotlin.math.cos
 import kotlin.math.roundToInt
 import no.kristo.finanshub.*
 import no.kristo.finanshub.Haptics
+import no.kristo.finanshub.ui.designsystem.HomelabType
 
 /*
  * Værsiden (prompt 22, fasit design/Vaer.dc.html): systemfont bare her, stor tynn temperatur, animert værbakgrunn,
@@ -211,7 +212,7 @@ private fun Modifier.glass(): Modifier = this.clip(cardShape).background(glassBg
 private fun CardLabel(icon: String, text: String, fill: Boolean = false, modifier: Modifier = Modifier) {
     Row(modifier.alpha(.7f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         WxIcon(icon, Color.White, 15.dp, stroke = 2f, fill = fill)
-        Text(text, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = .08.em, maxLines = 1)
+        Text(text, fontSize = HomelabType.footnote.fontSize, fontWeight = FontWeight.ExtraBold, letterSpacing = .08.em, maxLines = 1)
     }
 }
 
@@ -306,7 +307,7 @@ private fun WeatherBody(vm: AppViewModel, wide: Boolean) {
                     item { VaerEditButton41(vm) }
                     item {
                         val ctx = LocalContext.current
-                        Text("Data: MET Norge${if (w.mock) " (eksempeldata)" else ""} · Se også yr.no ↗", fontSize = 12.5.sp, textDecoration = TextDecoration.Underline,
+                        Text("Data: MET Norge${if (w.mock) " (eksempeldata)" else ""} · Se også yr.no ↗", fontSize = HomelabType.footnote.fontSize, textDecoration = TextDecoration.Underline,
                             textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().alpha(.85f).clickable { openLink(ctx, w.yrUrl ?: "https://www.yr.no/") }.padding(top = 4.dp))
                     }
                 }
@@ -337,8 +338,8 @@ private fun TopBar(vm: AppViewModel, w: WeatherFull?, compact: Boolean) {
         Spacer(Modifier.width(42.dp))
         Column(Modifier.weight(1f).alpha(cOp), horizontalAlignment = Alignment.CenterHorizontally) {
             if (w != null) {
-                Text(w.place, fontWeight = FontWeight.Bold, fontSize = 17.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text("${wxR(w.current.temp)} | ${wxDesc(w.current.code)}", fontSize = 13.sp, modifier = Modifier.alpha(.9f), maxLines = 1)
+                Text(w.place, fontWeight = FontWeight.Bold, fontSize = HomelabType.body.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text("${wxR(w.current.temp)} | ${wxDesc(w.current.code)}", fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.alpha(.9f), maxLines = 1)
             }
         }
         VaerCloseButton { Haptics.back(); vm.weatherOpen = false } // prompt 34: Vær ✕ med lett haptikk (prompt 40: felles VaerCloseButton)
@@ -350,15 +351,16 @@ private fun Header(w: WeatherFull, mine: Boolean, modifier: Modifier) {
     val sh = LocalTextStyle.current.copy(shadow = Shadow(Color(0x2E000000), Offset(0f, with(LocalDensity.current) { 2.dp.toPx() }), with(LocalDensity.current) { 20.dp.toPx() }))
     Column(modifier.fillMaxWidth().padding(top = 6.dp, bottom = 26.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         // Prompt 73: «MIN POSISJON» bare når Min posisjon er valgt (som iOS), ellers «VÆRET I».
-        Text(if (mine || w.placeId == "pos" || w.placeId == "__gps") "MIN POSISJON" else "VÆRET I", fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = .16.em, style = sh, modifier = Modifier.alpha(.85f))
-        Text(w.place, fontSize = 36.sp, fontWeight = FontWeight.Medium, lineHeight = 40.sp, style = sh, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(if (mine || w.placeId == "pos" || w.placeId == "__gps") "MIN POSISJON" else "VÆRET I", fontSize = HomelabType.footnote.fontSize, fontWeight = FontWeight.ExtraBold, letterSpacing = .16.em, style = sh, modifier = Modifier.alpha(.85f))
+        Text(w.place, fontSize = HomelabType.title2.fontSize, fontWeight = FontWeight.Medium, lineHeight = 40.sp, style = sh, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        // Stort tall: bevisst over typeskalaen (largeTitle er 44 sp).
         Text(wxR(w.current.temp), fontSize = 112.sp, fontWeight = FontWeight.ExtraLight, lineHeight = 112.sp, letterSpacing = (-.04).em, style = sh,
             modifier = Modifier.padding(start = 22.dp, top = 2.dp))
-        Text(wxDesc(w.current.code), fontSize = 19.sp, fontWeight = FontWeight.Bold, style = sh, modifier = Modifier.padding(top = 4.dp))
-        Text("H:${wxR(w.today.hi ?: w.days.firstOrNull()?.hi)}  L:${wxR(w.today.lo ?: w.days.firstOrNull()?.lo)}", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, style = sh, modifier = Modifier.alpha(.9f))
+        Text(wxDesc(w.current.code), fontSize = HomelabType.headline.fontSize, fontWeight = FontWeight.Bold, style = sh, modifier = Modifier.padding(top = 4.dp))
+        Text("H:${wxR(w.today.hi ?: w.days.firstOrNull()?.hi)}  L:${wxR(w.today.lo ?: w.days.firstOrNull()?.lo)}", fontSize = HomelabType.body.fontSize, fontWeight = FontWeight.SemiBold, style = sh, modifier = Modifier.alpha(.9f))
         // Prompt 32: kilden og tiden står under H/L (tidligere oppe til høyre).
         val src = if (w.mock) "Eksempeldata" else "MET Norway · yr.no" + (w.updatedAt?.let { u -> runCatching { " · " + java.time.Instant.parse(u).atZone(java.time.ZoneId.systemDefault()).toLocalTime().toString().take(5) }.getOrNull() } ?: "")
-        Text(src, fontSize = 11.5.sp, style = sh, modifier = Modifier.alpha(.7f).padding(top = 4.dp), maxLines = 1)
+        Text(src, fontSize = HomelabType.caption.fontSize, style = sh, modifier = Modifier.alpha(.7f).padding(top = 4.dp), maxLines = 1)
     }
 }
 
@@ -385,13 +387,13 @@ private fun DaysCard(w: WeatherFull, open: (Int) -> Unit) {
             // Prompt 73: hele raden er én trykkflate (min. 44 dp), med haptikk; robust mot scroll/hold-inne (wxDayTap73, ui/WeatherPage.kt).
             val lbl = if (k == 0) "I dag" else wxLd(d.date)?.let(::wxWd) ?: ""
             Row(Modifier.fillMaxWidth().heightIn(min = 44.dp).wxDayTap73(lbl) { open(k) }.padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(lbl, fontSize = 17.sp, fontWeight = FontWeight.Bold, modifier = Modifier.width(52.dp), maxLines = 1)
+                Text(lbl, fontSize = HomelabType.body.fontSize, fontWeight = FontWeight.Bold, modifier = Modifier.width(52.dp), maxLines = 1)
                 Column(Modifier.width(40.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(1.dp)) {
                     WxCodeIcon(wxKey(d.code, false), 24.dp)
                     val pp = d.precipProb?.roundToInt() ?: 0
-                    if (pp >= 30) Text("$pp %", fontSize = 10.5.sp, fontWeight = FontWeight.ExtraBold, color = wxPp, lineHeight = 12.sp)
+                    if (pp >= 30) Text("$pp %", fontSize = HomelabType.caption.fontSize, fontWeight = FontWeight.ExtraBold, color = wxPp, lineHeight = 12.sp)
                 }
-                Text(wxR(d.lo), fontSize = 17.sp, fontWeight = FontWeight.Bold, color = wxBlue, textAlign = TextAlign.End, modifier = Modifier.width(38.dp))
+                Text(wxR(d.lo), fontSize = HomelabType.body.fontSize, fontWeight = FontWeight.Bold, color = wxBlue, textAlign = TextAlign.End, modifier = Modifier.width(38.dp))
                 val l = (((d.lo ?: lo) - lo) / sp).toFloat()
                 val wd = (((d.hi ?: hi) - (d.lo ?: lo)) / sp).toFloat().coerceAtLeast(.08f)
                 val nowL = if (k == 0) w.current.temp?.let { ((it - lo) / sp).toFloat().coerceIn(0f, 1f) } else null
@@ -408,7 +410,7 @@ private fun DaysCard(w: WeatherFull, open: (Int) -> Unit) {
                         drawCircle(Color(0x99285A96), 5.dp.toPx(), c, style = Stroke(2.dp.toPx()))
                     }
                 }
-                Text(wxR(d.hi), fontSize = 17.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.End, modifier = Modifier.width(38.dp))
+                Text(wxR(d.hi), fontSize = HomelabType.body.fontSize, fontWeight = FontWeight.Bold, textAlign = TextAlign.End, modifier = Modifier.width(38.dp))
             }
         }
     }
@@ -453,11 +455,11 @@ internal fun CmpTableRow(r: CmpRow, line: Color, dayW: Dp, chipW: Dp) {
     Column {
         Box(Modifier.fillMaxWidth().height(1.dp).background(line))
         Row(Modifier.fillMaxWidth().padding(vertical = 9.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(r.d, fontSize = 15.sp, fontWeight = FontWeight.Bold, modifier = Modifier.width(dayW), maxLines = 1)
+            Text(r.d, fontSize = HomelabType.callout.fontSize, fontWeight = FontWeight.Bold, modifier = Modifier.width(dayW), maxLines = 1)
             CmpCell(r.yKey, r.yt, r.yp, Modifier.weight(1f))
             CmpCell(r.sKey, r.st, r.sp, Modifier.weight(1f))
             Box(Modifier.width(chipW), contentAlignment = Alignment.CenterEnd) {
-                Text(r.df, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1, modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(r.dbg).padding(7.dp, 3.dp))
+                Text(r.df, fontSize = HomelabType.footnote.fontSize, fontWeight = FontWeight.ExtraBold, maxLines = 1, modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(r.dbg).padding(7.dp, 3.dp))
             }
         }
     }
@@ -468,8 +470,8 @@ private fun CmpCell(key: String?, t: String, p: String, modifier: Modifier) {
     Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         if (key != null) WxCodeIcon(key, 22.dp) else Spacer(Modifier.size(22.dp))
         Column {
-            Text(t, fontSize = 14.5.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
-            Text(p, fontSize = 11.5.sp, color = wxPp, maxLines = 1, softWrap = false)
+            Text(t, fontSize = HomelabType.callout.fontSize, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
+            Text(p, fontSize = HomelabType.caption.fontSize, color = wxPp, maxLines = 1, softWrap = false)
         }
     }
 }
@@ -481,13 +483,13 @@ internal fun CmpHead(yr: Color, pent: Color, mut: Color, dayW: Dp, chipW: Dp, mo
         Spacer(Modifier.width(dayW))
         Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             if (logo != null) BrandLogo30("yr", logo)
-            Text("YR", color = yr, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = .08.em)
+            Text("YR", color = yr, fontSize = HomelabType.caption.fontSize, fontWeight = FontWeight.ExtraBold, letterSpacing = .08.em)
         }
         Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             if (logo != null) BrandLogo30("storm", logo)
-            Text("STORM", color = pent, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = .08.em)
+            Text("STORM", color = pent, fontSize = HomelabType.caption.fontSize, fontWeight = FontWeight.ExtraBold, letterSpacing = .08.em)
         }
-        Text("AVVIK", color = mut, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = .08.em, textAlign = TextAlign.End, modifier = Modifier.width(chipW))
+        Text("AVVIK", color = mut, fontSize = HomelabType.caption.fontSize, fontWeight = FontWeight.ExtraBold, letterSpacing = .08.em, textAlign = TextAlign.End, modifier = Modifier.width(chipW))
     }
 }
 
@@ -502,10 +504,10 @@ private fun CmpCard(vm: AppViewModel, w: WeatherFull, openIt: () -> Unit) {
                 BrandLogo30("storm", 30.dp, Modifier.offset(x = (-8).dp))
             }
             Column(Modifier.weight(1f)) {
-                Text("Yr og Storm", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                Text("Yr og Storm", fontSize = HomelabType.body.fontSize, fontWeight = FontWeight.Bold)
                 Row(Modifier.alpha(.85f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     Box(Modifier.size(8.dp).clip(CircleShape).background(v.agC))
-                    Text(v.agT, fontSize = 12.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(v.agT, fontSize = HomelabType.footnote.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
         }
@@ -513,11 +515,11 @@ private fun CmpCard(vm: AppViewModel, w: WeatherFull, openIt: () -> Unit) {
             CmpHead(Color(0xFF7FD6F5), Color(0xFFFFB27A), Color.White, 44.dp, 40.dp, Modifier.alpha(.8f).padding(bottom = 6.dp))
             v.rows.take(4).forEach { CmpTableRow(it, Color.White.copy(alpha = .18f), 44.dp, 40.dp) }
         }
-        if (vm.wxCmp22Busy) Text("Henter Storm …", fontSize = 13.sp, modifier = Modifier.alpha(.75f).padding(top = 8.dp, bottom = 10.dp))
+        if (vm.wxCmp22Busy) Text("Henter Storm …", fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.alpha(.75f).padding(top = 8.dp, bottom = 10.dp))
         Box(Modifier.fillMaxWidth().height(1.dp).background(Color.White.copy(alpha = .18f)))
         Row(Modifier.fillMaxWidth().heightIn(min = 44.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text("Time for time og hele uka", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-            Text("›", fontSize = 14.sp, modifier = Modifier.alpha(.7f))
+            Text("Time for time og hele uka", fontSize = HomelabType.callout.fontSize, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+            Text("›", fontSize = HomelabType.callout.fontSize, modifier = Modifier.alpha(.7f))
         }
     }
 }
@@ -529,8 +531,8 @@ private fun KvRows(rows: List<Pair<String, String>>) {
     rows.forEachIndexed { i, (a, b) ->
         if (i > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(Color.White.copy(alpha = .2f)))
         Row(Modifier.fillMaxWidth().padding(vertical = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(a, fontSize = 15.5.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f), maxLines = 1)
-            Text(b, fontSize = 15.5.sp, fontWeight = FontWeight.Bold, color = wxBlue, maxLines = 1, softWrap = false)
+            Text(a, fontSize = HomelabType.body.fontSize, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f), maxLines = 1)
+            Text(b, fontSize = HomelabType.body.fontSize, fontWeight = FontWeight.Bold, color = wxBlue, maxLines = 1, softWrap = false)
         }
     }
 }
@@ -609,7 +611,7 @@ private fun MoonCard(onClick: () -> Unit) {
                     drawCircle(Color.White, 9 * k, Offset(12 * k, 12 * k), style = Stroke(2 * k))
                     drawArc(Color.White, -90f, 180f, true, Offset(3 * k, 3 * k), Size(18 * k, 18 * k))
                 }
-                Text(wxMoonName(age).uppercase(wxNb), fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = .08.em, maxLines = 1)
+                Text(wxMoonName(age).uppercase(wxNb), fontSize = HomelabType.footnote.fontSize, fontWeight = FontWeight.ExtraBold, letterSpacing = .08.em, maxLines = 1)
             }
             KvRows(listOf("Belyst" to "${(ill * 100).roundToInt()} %", "Neste fullmåne" to if (toFull <= 0) "I dag" else "$toFull dager", "Neste nymåne" to "$toNew dager"))
         }
@@ -633,12 +635,12 @@ private fun Tile(modifier: Modifier, onClick: () -> Unit, gap: Dp = 4.dp, pad: B
 }
 
 @Composable
-private fun Big(t: String) = Text(t, fontSize = 32.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false, lineHeight = 36.sp)
+private fun Big(t: String) = Text(t, fontSize = HomelabType.title2.fontSize, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false, lineHeight = 36.sp)
 
 @Composable
 private fun ColumnScope.Bottom(t: String) {
     Spacer(Modifier.weight(1f))
-    Text(t, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, lineHeight = 19.sp)
+    Text(t, fontSize = HomelabType.callout.fontSize, fontWeight = FontWeight.SemiBold, lineHeight = 19.sp)
 }
 
 private fun hourOf(s: String?): Double? = wxLdt(s)?.let { it.hour + it.minute / 60.0 }
@@ -673,7 +675,7 @@ private fun SunTile(w: WeatherFull, modifier: Modifier, onClick: () -> Unit) {
             drawPath(p, Color.White.copy(alpha = .55f), style = Stroke(2.2.dp.toPx()))
             drawCircle(Color.White, 4.5.dp.toPx(), Offset((nh / 24 * 120).toFloat() * sx, yOf(nh) * sy))
         }
-        Text(if (afterSet || beforeRise) "Solnedgang: ${wxHm(set)}" else "Soloppgang: ${wxHm(rise)}", fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(horizontal = 16.dp))
+        Text(if (afterSet || beforeRise) "Solnedgang: ${wxHm(set)}" else "Soloppgang: ${wxHm(rise)}", fontSize = HomelabType.subheadline.fontSize, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(horizontal = 16.dp))
     }
 }
 
@@ -682,8 +684,8 @@ private fun UvTile(w: WeatherFull, modifier: Modifier, onClick: () -> Unit) {
     val uv = (w.current.uv ?: w.days.firstOrNull()?.uvMax ?: 0.0).roundToInt()
     Tile(modifier, onClick, gap = 6.dp) {
         CardLabel("M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M5 19l1.5-1.5M17.5 6.5L19 5", "UV-INDEKS")
-        Text("$uv", fontSize = 32.sp, fontWeight = FontWeight.Bold, lineHeight = 32.sp)
-        Text(when { uv < 3 -> "Lav"; uv < 6 -> "Moderat"; uv < 8 -> "Høy"; uv < 11 -> "Svært høy"; else -> "Ekstrem" }, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+        Text("$uv", fontSize = HomelabType.title2.fontSize, fontWeight = FontWeight.Bold, lineHeight = 32.sp)
+        Text(when { uv < 3 -> "Lav"; uv < 6 -> "Moderat"; uv < 8 -> "Høy"; uv < 11 -> "Svært høy"; else -> "Ekstrem" }, fontSize = HomelabType.headline.fontSize, fontWeight = FontWeight.Bold)
         Spacer(Modifier.weight(1f))
         Canvas(Modifier.fillMaxWidth().height(10.dp)) {
             val h = 6.dp.toPx()
@@ -693,7 +695,7 @@ private fun UvTile(w: WeatherFull, modifier: Modifier, onClick: () -> Unit) {
             drawCircle(Color.Black.copy(alpha = .15f), 7.dp.toPx(), c)
             drawCircle(Color.White, 5.dp.toPx(), c)
         }
-        Text(if (uv < 3) "Lave nivåer hele dagen." else "Bruk solkrem midt på dagen.", fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold)
+        Text(if (uv < 3) "Lave nivåer hele dagen." else "Bruk solkrem midt på dagen.", fontSize = HomelabType.subheadline.fontSize, fontWeight = FontWeight.SemiBold)
     }
 }
 
@@ -716,10 +718,10 @@ private fun YdTile(w: WeatherFull, modifier: Modifier, onClick: () -> Unit) {
         CardLabel("M3 20h18M5 16l4-4 3 3 7-7", "MOT I GÅR")
         Big(if (b == null) "–" else (if (yd >= 0) "+" else "−") + "${abs(yd.roundToInt())}°")
         Text(when { b == null -> "Mangler gårsdagen"; yd.roundToInt() == 0 -> "Like varmt som i går"; yd > 0 -> "Varmere enn i går"; else -> "Kaldere enn i går" },
-            fontSize = 14.sp, fontWeight = FontWeight.Bold, lineHeight = 18.sp)
+            fontSize = HomelabType.callout.fontSize, fontWeight = FontWeight.Bold, lineHeight = 18.sp)
         Spacer(Modifier.weight(1f))
-        Row { Text("I dag", fontSize = 13.5.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f).alpha(.7f)); Text("H:${wxR(a)}", fontSize = 13.5.sp, fontWeight = FontWeight.Bold) }
-        Row { Text("I går", fontSize = 13.5.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f).alpha(.7f)); Text("H:${wxR(b)}", fontSize = 13.5.sp, fontWeight = FontWeight.Bold) }
+        Row { Text("I dag", fontSize = HomelabType.subheadline.fontSize, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f).alpha(.7f)); Text("H:${wxR(a)}", fontSize = HomelabType.subheadline.fontSize, fontWeight = FontWeight.Bold) }
+        Row { Text("I går", fontSize = HomelabType.subheadline.fontSize, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f).alpha(.7f)); Text("H:${wxR(b)}", fontSize = HomelabType.subheadline.fontSize, fontWeight = FontWeight.Bold) }
     }
 }
 
@@ -730,7 +732,7 @@ private fun RainTile(w: WeatherFull, modifier: Modifier, onClick: () -> Unit) {
     Tile(modifier, onClick) {
         CardLabel(P_DROP, "NEDBØR", fill = true)
         Big("${wxF1(days.firstOrNull()?.precipSum ?: w.today.precipSum ?: 0.0)} mm")
-        Text("I dag", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+        Text("I dag", fontSize = HomelabType.headline.fontSize, fontWeight = FontWeight.Bold)
         Bottom(if (nx != null) "Neste ventet er ${wxF1(nx.precipSum)} mm ${wxLd(nx.date)?.let(::wxWd)?.lowercase(wxNb) ?: ""}." else "Ingen nedbør ventet de neste dagene.")
     }
 }
@@ -747,7 +749,7 @@ private fun VisTile(w: WeatherFull, modifier: Modifier, onClick: () -> Unit) {
                     drawCircle(Color.White, 3f, Offset(12f, 12f), style = Stroke(2f))
                 }
             }
-            Text("SIKT", fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = .08.em)
+            Text("SIKT", fontSize = HomelabType.footnote.fontSize, fontWeight = FontWeight.ExtraBold, letterSpacing = .08.em)
         }
         Big(if (km >= 30) "+${km.roundToInt()} km" else if (km >= 10) "${km.roundToInt()} km" else "${wxF1(km)} km")
         Bottom(if (km >= 20) "Helt klar sikt." else if (km >= 10) "God sikt." else if (km >= 4) "Moderat sikt." else "Dårlig sikt.")
@@ -778,7 +780,7 @@ private fun PresTile(w: WeatherFull, modifier: Modifier, onClick: () -> Unit) {
                 drawCircle(Color.White, 9 * k, Offset(12 * k, 12 * k), style = Stroke(2 * k))
                 drawLine(Color.White, Offset(12 * k, 12 * k), Offset(16 * k, 8 * k), 2 * k, StrokeCap.Round)
             }
-            Text("LUFTTRYKK", fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = .08.em)
+            Text("LUFTTRYKK", fontSize = HomelabType.footnote.fontSize, fontWeight = FontWeight.ExtraBold, letterSpacing = .08.em)
         }
         Canvas(Modifier.fillMaxWidth().height(118.dp)) {
             val k = minOf(size.width / 100f, size.height / 86f)
@@ -838,7 +840,7 @@ private fun WideWeather25(
                 }
             }
             val ctx = LocalContext.current
-            Text("Data: MET Norge${if (w.mock) " (eksempeldata)" else ""} · Se også yr.no ↗", fontSize = 12.5.sp, textDecoration = TextDecoration.Underline,
+            Text("Data: MET Norge${if (w.mock) " (eksempeldata)" else ""} · Se også yr.no ↗", fontSize = HomelabType.footnote.fontSize, textDecoration = TextDecoration.Underline,
                 textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().alpha(.85f).clickable { openLink(ctx, w.yrUrl ?: "https://www.yr.no/") }.padding(top = 4.dp))
         }
     }

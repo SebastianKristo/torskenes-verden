@@ -26,6 +26,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import no.kristo.finanshub.*
+import no.kristo.finanshub.ui.designsystem.HomelabType
 
 /*
  * Prompt 77 (SKJAIAND): smarte forslag i Skjold Lab – UI. Tilstand og API i SkjoldAI.kt.
@@ -41,7 +42,7 @@ private fun Thinking77(text: String = THINK77) {
     val p = PaperPal.current
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         CircularProgressIndicator(color = p.lab, strokeWidth = 2.dp, modifier = Modifier.size(16.dp))
-        Text(text, color = p.sub, fontSize = 13.sp)
+        Text(text, color = p.sub, fontSize = HomelabType.subheadline.fontSize)
     }
 }
 
@@ -51,7 +52,7 @@ private fun Check77(on: Boolean, desc: String, onClick: () -> Unit) {
     val p = PaperPal.current
     Box(Modifier.size(44.dp).clip(CircleShape).clickable(role = Role.Checkbox, onClick = onClick).semantics { contentDescription = desc }, contentAlignment = Alignment.Center) {
         Box(Modifier.size(24.dp).clip(RoundedCornerShape(7.dp)).background(if (on) p.ink else Color.Transparent).border(1.5.dp, if (on) p.ink else p.line, RoundedCornerShape(7.dp)),
-            contentAlignment = Alignment.Center) { if (on) Text("✓", color = p.bg, fontSize = 15.sp, fontWeight = FontWeight.Bold) }
+            contentAlignment = Alignment.Center) { if (on) Text("✓", color = p.bg, fontSize = HomelabType.callout.fontSize, fontWeight = FontWeight.Bold) }
     }
 }
 
@@ -65,11 +66,11 @@ internal fun SuggestBar77(vm: AppViewModel, d: SkjDraft76) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Box(Modifier.heightIn(min = 40.dp).clip(CircleShape).background(p.ink).clickable(role = Role.Button) { if (!s.sugBusy) vm.suggest77(d) }.padding(horizontal = 14.dp),
-                contentAlignment = Alignment.Center) { Text("✦ Foreslå", color = p.bg, fontWeight = FontWeight.SemiBold, fontSize = 13.sp) }
+                contentAlignment = Alignment.Center) { Text("✦ Foreslå", color = p.bg, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.subheadline.fontSize) }
             if (s.sugBusy) Thinking77()
-            else if (s.sug == null) Text("Navn, kategori og specs fra bildet og teksten", color = p.mut, fontSize = 12.sp, modifier = Modifier.weight(1f), maxLines = 2)
+            else if (s.sug == null) Text("Navn, kategori og specs fra bildet og teksten", color = p.mut, fontSize = HomelabType.footnote.fontSize, modifier = Modifier.weight(1f), maxLines = 2)
         }
-        s.sugErr?.let { Text(it, color = p.lab, fontSize = 13.sp) }
+        s.sugErr?.let { Text(it, color = p.lab, fontSize = HomelabType.subheadline.fontSize) }
         s.sug?.let { SuggestCard77(d, it) }
     }
 }
@@ -82,7 +83,7 @@ private fun SuggestCard77(d: SkjDraft76, g: SkjSug77) {
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(p.surf2).padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             PLabel("✦ Glimt foreslår", modifier = Modifier.weight(1f))
-            listOfNotNull(sourceText77(g.source), confText77(g.confidence)).joinToString(" · ").takeIf { it.isNotBlank() }?.let { Text(it, color = p.mut, fontSize = 12.sp, fontFamily = PaperFonts.mono) }
+            listOfNotNull(sourceText77(g.source), confText77(g.confidence)).joinToString(" · ").takeIf { it.isNotBlank() }?.let { Text(it, color = p.mut, fontSize = HomelabType.footnote.fontSize, fontFamily = PaperFonts.mono) }
             Text("✕", color = p.mut, modifier = Modifier.size(36.dp).clip(CircleShape).clickable { s.sug = null }.wrapContentSize().semantics { contentDescription = "Lukk forslaget" })
         }
         g.name?.let { SugLine77("Navn", it, null, "name" in s.used || d.name == it) { applySug77(d, "name") } }
@@ -94,8 +95,8 @@ private fun SuggestCard77(d: SkjDraft76, g: SkjSug77) {
             val have = d.tags.split(',').map { it.trim().lowercase() }.toSet()
             g.tags.forEach { t -> PChip(if ("tag:$t" in s.used || t.lowercase() in have) "✓ #$t" else "#$t", "tag:$t" in s.used || t.lowercase() in have) { applySug77(d, "tag:$t") } }
         }
-        if (g.decoded.isNotEmpty()) Text(g.decoded.joinToString("  ·  "), color = p.sub, fontSize = 12.5.sp, fontFamily = PaperFonts.mono)
-        g.why?.let { Text(it, color = p.mut, fontSize = 12.5.sp) }
+        if (g.decoded.isNotEmpty()) Text(g.decoded.joinToString("  ·  "), color = p.sub, fontSize = HomelabType.footnote.fontSize, fontFamily = PaperFonts.mono)
+        g.why?.let { Text(it, color = p.mut, fontSize = HomelabType.footnote.fontSize) }
         PButton("Bruk alle", Modifier.fillMaxWidth().padding(top = 4.dp), height = 44.dp) { applySug77(d) }
     }
 }
@@ -107,8 +108,8 @@ private fun SugLine77(label: String, value: String, badge: String?, done: Boolea
         Column(Modifier.weight(1f)) {
             PLabel(label, p.mut, 10.sp)
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(value, color = p.ink, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
-                badge?.let { Text(it, color = p.onLab, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(p.lab).padding(6.dp, 1.dp)) }
+                Text(value, color = p.ink, fontSize = HomelabType.callout.fontSize, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+                badge?.let { Text(it, color = p.onLab, fontSize = HomelabType.caption.fontSize, fontWeight = FontWeight.Bold, modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(p.lab).padding(6.dp, 1.dp)) }
             }
         }
         Check77(done, "Bruk $label: $value") { if (!done) onUse() }
@@ -132,11 +133,11 @@ internal fun ImagePicker77(vm: AppViewModel, d: SkjDraft76) {
         s.pendingImgs.forEach { im ->
             Box {
                 Img76(vm, im.thumbUrl, 300, Modifier.size(72.dp).clip(RoundedCornerShape(12.dp)))
-                Text("✕", color = Color.White, fontSize = 12.sp, modifier = Modifier.align(Alignment.TopEnd).padding(3.dp).size(24.dp).clip(CircleShape).background(Color.Black.copy(alpha = .55f))
+                Text("✕", color = Color.White, fontSize = HomelabType.footnote.fontSize, modifier = Modifier.align(Alignment.TopEnd).padding(3.dp).size(24.dp).clip(CircleShape).background(Color.Black.copy(alpha = .55f))
                     .clickable { s.pendingImgs = s.pendingImgs - im }.wrapContentSize().semantics { contentDescription = "Fjern bildet" })
             }
         }
-        Text("Lagres sammen med delen", color = p.mut, fontSize = 12.sp)
+        Text("Lagres sammen med delen", color = p.mut, fontSize = HomelabType.footnote.fontSize)
     }
     if (!s.imgOpen) return
     PCard(shadow = true) {
@@ -144,18 +145,18 @@ internal fun ImagePicker77(vm: AppViewModel, d: SkjDraft76) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     PLabel("Finn bilde")
-                    if (s.imgQ.isNotBlank()) Text("«${s.imgQ}»", color = p.ink, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    if (s.imgQ.isNotBlank()) Text("«${s.imgQ}»", color = p.ink, fontSize = HomelabType.callout.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
                 Text("✕", color = p.mut, modifier = Modifier.size(40.dp).clip(CircleShape).clickable { s.imgOpen = false; s.imgPick = null }.wrapContentSize().semantics { contentDescription = "Lukk bildesøket" })
             }
             if (s.imgBusy && s.imgPick == null) Thinking77("Søker etter bilder …")
-            s.imgErr?.let { Text(it, color = p.lab, fontSize = 13.sp) }
+            s.imgErr?.let { Text(it, color = p.lab, fontSize = HomelabType.subheadline.fontSize) }
             val pick = s.imgPick
             if (pick != null) {
                 // Forhåndsvisning før lagring.
                 Img76(vm, pick.previewUrl ?: pick.thumbUrl, 900, Modifier.fillMaxWidth().height(240.dp).clip(RoundedCornerShape(14.dp)), crop = false)
                 Text(listOfNotNull(pick.title, pick.source, if (pick.width != null && pick.height != null) "${pick.width} × ${pick.height}" else null).joinToString(" · "),
-                    color = p.mut, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    color = p.mut, fontSize = HomelabType.footnote.fontSize, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     PButton(if (s.imgBusy) "Lagrer …" else "Bruk bildet", Modifier.weight(1f)) { if (!s.imgBusy) vm.useImage77(d, pick) }
                     PButton("Tilbake", Modifier.weight(1f), kind = "line") { s.imgPick = null }
@@ -171,7 +172,7 @@ internal fun ImagePicker77(vm: AppViewModel, d: SkjDraft76) {
                     repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
                 }
             }
-            if (s.imgs.isNotEmpty() && pick == null) Text("Bildene hentes via serveren din. Trykk på et bilde for å se det større.", color = p.mut, fontSize = 12.sp)
+            if (s.imgs.isNotEmpty() && pick == null) Text("Bildene hentes via serveren din. Trykk på et bilde for å se det større.", color = p.mut, fontSize = HomelabType.footnote.fontSize)
         }
     }
 }
@@ -187,14 +188,14 @@ internal fun TidyScreen77(vm: AppViewModel) {
         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 170.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             item(key = "head") {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("Glimt går gjennom delene én om gangen og foreslår bedre navn, kategori og specs. Ingenting endres før du godtar det.", color = p.mut, fontSize = 13.sp)
+                    Text("Glimt går gjennom delene én om gangen og foreslår bedre navn, kategori og specs. Ingenting endres før du godtar det.", color = p.mut, fontSize = HomelabType.subheadline.fontSize)
                     if (running) {
                         Thinking77("$THINK77 ${progress77(s.tidyDone, s.tidyTotal)}")
                         if (s.tidyTotal > 0) Box(Modifier.fillMaxWidth().height(6.dp).clip(CircleShape).background(p.surf2)) {
                             Box(Modifier.fillMaxWidth((s.tidyDone.toFloat() / s.tidyTotal).coerceIn(0f, 1f)).fillMaxHeight().background(p.lab))
                         }
-                    } else if (s.tidyErr == null) Text("Ferdig · ${s.tidyItems.size} forslag", color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
-                    s.tidyErr?.let { Text(it, color = p.lab, fontSize = 13.sp) }
+                    } else if (s.tidyErr == null) Text("Ferdig · ${s.tidyItems.size} forslag", color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize)
+                    s.tidyErr?.let { Text(it, color = p.lab, fontSize = HomelabType.subheadline.fontSize) }
                 }
             }
             if (s.tidyItems.isNotEmpty()) item(key = "all") {
@@ -205,7 +206,7 @@ internal fun TidyScreen77(vm: AppViewModel) {
                     PChip("Ingen", s.tidySel.isEmpty()) { s.tidyTouched = s.tidyTouched + all; s.tidySel = emptySet() }
                 }
             }
-            if (!running && s.tidyItems.isEmpty() && s.tidyErr == null) item(key = "none") { Text("Alt ser ryddig ut – Glimt har ingen forslag.", color = p.mut, fontSize = 14.sp) }
+            if (!running && s.tidyItems.isEmpty() && s.tidyErr == null) item(key = "none") { Text("Alt ser ryddig ut – Glimt har ingen forslag.", color = p.mut, fontSize = HomelabType.callout.fontSize) }
             items(s.tidyItems, key = { "t" + it.partId }) { t -> TidyRow77(t) }
         }
         Column(Modifier.align(Alignment.BottomCenter).navigationBarsPadding().fillMaxWidth().background(p.bg).padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -225,19 +226,19 @@ private fun TidyRow77(t: SkjTidy77) {
             if (t.error == null) Check77(on, "Godta forslaget for ${t.beforeName}") { toggleTidy77(t.partId) } else Spacer(Modifier.width(44.dp))
             Column(Modifier.weight(1f).padding(top = 4.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                 val newName = t.after.name?.takeIf { it != t.beforeName }
-                Text(t.beforeName, color = if (newName != null) p.mut else p.ink, fontSize = 13.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                Text(t.beforeName, color = if (newName != null) p.mut else p.ink, fontSize = HomelabType.subheadline.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis,
                     textDecoration = if (newName != null) TextDecoration.LineThrough else null)
-                if (newName != null) Text("→ $newName", color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                if (newName != null) Text("→ $newName", color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 val newCat = t.after.category?.takeIf { it != t.beforeCat }
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text((t.beforeCat ?: "Uten kategori") + (newCat?.let { " → $it" } ?: ""), color = p.sub, fontSize = 12.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
-                    if (newCat != null && t.after.categoryNew) Text("ny", color = p.onLab, fontSize = 10.5.sp, fontWeight = FontWeight.Bold, modifier = Modifier.clip(RoundedCornerShape(5.dp)).background(p.lab).padding(5.dp, 1.dp))
+                    Text((t.beforeCat ?: "Uten kategori") + (newCat?.let { " → $it" } ?: ""), color = p.sub, fontSize = HomelabType.footnote.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+                    if (newCat != null && t.after.categoryNew) Text("ny", color = p.onLab, fontSize = HomelabType.caption.fontSize, fontWeight = FontWeight.Bold, modifier = Modifier.clip(RoundedCornerShape(5.dp)).background(p.lab).padding(5.dp, 1.dp))
                 }
-                if (t.after.specs.isNotEmpty()) Text(t.after.specs.joinToString(" · ") { "${it.first}: ${it.second}" }, color = p.mut, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                if (t.after.tags.isNotEmpty()) Text(t.after.tags.joinToString(" ") { "#$it" }, color = p.mut, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                t.error?.let { Text(it, color = p.lab, fontSize = 12.sp) }
+                if (t.after.specs.isNotEmpty()) Text(t.after.specs.joinToString(" · ") { "${it.first}: ${it.second}" }, color = p.mut, fontSize = HomelabType.footnote.fontSize, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                if (t.after.tags.isNotEmpty()) Text(t.after.tags.joinToString(" ") { "#$it" }, color = p.mut, fontSize = HomelabType.footnote.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                t.error?.let { Text(it, color = p.lab, fontSize = HomelabType.footnote.fontSize) }
             }
-            confText77(t.confidence)?.let { Text(it, color = p.mut, fontFamily = PaperFonts.mono, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp)) }
+            confText77(t.confidence)?.let { Text(it, color = p.mut, fontFamily = PaperFonts.mono, fontSize = HomelabType.footnote.fontSize, modifier = Modifier.padding(top = 6.dp)) }
         }
     }
 }
@@ -267,8 +268,8 @@ internal fun Menu77(vm: AppViewModel) {
 private fun MenuItem77(t: String, sub: String, onClick: () -> Unit) {
     val p = PaperPal.current
     Column(Modifier.fillMaxWidth().heightIn(min = 48.dp).clickable(role = Role.Button) { Haptics.tap(); onClick() }.padding(16.dp, 8.dp)) {
-        Text(t, color = p.ink, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-        Text(sub, color = p.mut, fontSize = 12.sp)
+        Text(t, color = p.ink, fontSize = HomelabType.callout.fontSize, fontWeight = FontWeight.SemiBold)
+        Text(sub, color = p.mut, fontSize = HomelabType.footnote.fontSize)
     }
 }
 
@@ -286,7 +287,7 @@ internal fun Settings77(vm: AppViewModel) {
             Toggle77("Finn bilder på nett", "Søk etter bilder av delen via SearXNG (Wikimedia Commons som reserve). Bildene hentes av serveren.", s.webImages) { vm.putAiSettings77(webImages = it) }
             Toggle77("Foreslå automatisk når jeg tar bilde", "Glimt foreslår navn, kategori og specs når delen får et bilde. Du godtar selv hva som brukes.", s.autoSuggest) { vm.putAiSettings77(autoSuggest = it) }
             LedSettings78(vm) // prompt 78: lys opp skuffen
-            Text("Gjenkjenningen kjører med den lokale modellen (AI-kontroll → Oppgaver → «Skjold Lab · gjenkjenning»).", color = p.mut, fontSize = 12.sp)
+            Text("Gjenkjenningen kjører med den lokale modellen (AI-kontroll → Oppgaver → «Skjold Lab · gjenkjenning»).", color = p.mut, fontSize = HomelabType.footnote.fontSize)
             PButton("Ferdig", Modifier.fillMaxWidth()) { s.settingsOpen = false }
         }
     }
@@ -297,8 +298,8 @@ private fun Toggle77(t: String, sub: String, on: Boolean, onChange: (Boolean) ->
     val p = PaperPal.current
     Row(Modifier.fillMaxWidth().clickable(role = Role.Switch) { onChange(!on) }.padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         Column(Modifier.weight(1f)) {
-            Text(t, color = p.ink, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-            Text(sub, color = p.mut, fontSize = 12.5.sp)
+            Text(t, color = p.ink, fontSize = HomelabType.callout.fontSize, fontWeight = FontWeight.SemiBold)
+            Text(sub, color = p.mut, fontSize = HomelabType.footnote.fontSize)
         }
         Switch(on, onChange)
     }

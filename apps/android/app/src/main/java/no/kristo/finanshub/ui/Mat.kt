@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import no.kristo.finanshub.*
 import java.time.LocalDate
+import no.kristo.finanshub.ui.designsystem.HomelabType
 
 /*
  * Mat (tidligere Matplan), design 2a i «Mat Varianter»: dagens rett på et limegrønt kort, uka som avisrader med
@@ -71,7 +72,7 @@ private fun owner(n: String) = if (n.endsWith("s")) "$n'" else "${n}s"
 
 @Composable
 private fun MLabel(text: String, color: Color, modifier: Modifier = Modifier) =
-    Text(text.uppercase(), color = color, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = 11.sp, letterSpacing = 1.3.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = modifier)
+    Text(text.uppercase(), color = color, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.caption.fontSize, letterSpacing = 1.3.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = modifier)
 
 @Composable
 private fun MSerif(text: String, size: Int, color: Color, modifier: Modifier = Modifier, maxLines: Int = 2) =
@@ -82,7 +83,7 @@ private fun MHead(label: String, right: String?, p: MatPalette) {
     Column(Modifier.fillMaxWidth().padding(top = 6.dp)) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 2.dp), verticalAlignment = Alignment.Bottom) {
             MLabel(label, p.label, Modifier.weight(1f).padding(bottom = 6.dp))
-            right?.let { Text(it, color = p.muted, fontSize = 12.sp, modifier = Modifier.padding(bottom = 6.dp)) }
+            right?.let { Text(it, color = p.muted, fontSize = HomelabType.footnote.fontSize, modifier = Modifier.padding(bottom = 6.dp)) }
         }
         Box(Modifier.fillMaxWidth().height(2.dp).background(p.text))
     }
@@ -99,7 +100,7 @@ internal fun MatSurface(vm: AppViewModel) {
         Modifier.fillMaxSize().background(Color.Transparent),
         contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 104.dp + navBottom), verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        vm.moduleError?.let { e -> item { Text(e, color = p.accent, fontSize = 13.sp) } }
+        vm.moduleError?.let { e -> item { Text(e, color = p.accent, fontSize = HomelabType.subheadline.fontSize) } }
         if (w == null || w.days.isEmpty()) {
             if (vm.moduleError == null) item { Box(Modifier.fillMaxWidth().padding(40.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = p.text) } }
         } else {
@@ -121,21 +122,21 @@ private fun TodayCard(vm: AppViewModel, d: Day, dish: Dish?, p: MatPalette, onCl
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("I DAG · ${longDay[dayIdx(d.date)].uppercase()}", color = p.onLime, fontWeight = FontWeight.ExtraBold, fontSize = 12.5.sp, modifier = Modifier.weight(1f))
-            dish?.time?.let { Text(it, color = p.onLime, fontWeight = FontWeight.ExtraBold, fontSize = 12.5.sp) }
+            Text("I DAG · ${longDay[dayIdx(d.date)].uppercase()}", color = p.onLime, fontWeight = FontWeight.ExtraBold, fontSize = HomelabType.footnote.fontSize, modifier = Modifier.weight(1f))
+            dish?.time?.let { Text(it, color = p.onLime, fontWeight = FontWeight.ExtraBold, fontSize = HomelabType.footnote.fontSize) }
             Box(
                 Modifier.padding(start = 8.dp).size(32.dp).clip(CircleShape).background(p.onLime.copy(alpha = .12f)).clickable(role = Role.Button) { vm.planDay(d.date) }
                     .semantics { contentDescription = "Foreslå en annen rett" },
                 contentAlignment = Alignment.Center,
             ) { Text("✦", color = p.onLime, fontWeight = FontWeight.Bold) }
         }
-        Text(d.name ?: "Ingen rett ennå", color = p.onLime, fontFamily = PaperFonts.sans, fontWeight = FontWeight.ExtraBold, fontSize = 34.sp, lineHeight = 34.sp, letterSpacing = (-1).sp)
+        Text(d.name ?: "Ingen rett ennå", color = p.onLime, fontFamily = PaperFonts.sans, fontWeight = FontWeight.ExtraBold, fontSize = HomelabType.title2.fontSize, lineHeight = 34.sp, letterSpacing = (-1).sp)
         val tag = when {
             d.tag == "best" -> d.bestCook?.let { "★ ${owner(it)} beste" }
             d.tag == "hellofresh" || d.source == "hellofresh" -> "HelloFresh"
             else -> null
         }
-        Text(listOfNotNull(d.cook?.let { "$it lager middag" } ?: "Ingen kokk ennå", tag).joinToString(" · "), color = p.onLime, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+        Text(listOfNotNull(d.cook?.let { "$it lager middag" } ?: "Ingen kokk ennå", tag).joinToString(" · "), color = p.onLime, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize)
     }
 }
 
@@ -147,7 +148,7 @@ private fun MatButton(text: String, p: MatPalette, modifier: Modifier = Modifier
         modifier.height(48.dp).clip(RoundedCornerShape(14.dp)).background(bg).then(if (outline) Modifier.border(1.dp, p.border, RoundedCornerShape(14.dp)) else Modifier)
             .clickable(role = Role.Button, onClick = onClick).padding(horizontal = 12.dp),
         contentAlignment = Alignment.Center,
-    ) { Text(text, color = fg, fontWeight = if (outline) FontWeight.SemiBold else FontWeight.Bold, fontSize = 14.sp, maxLines = 1) }
+    ) { Text(text, color = fg, fontWeight = if (outline) FontWeight.SemiBold else FontWeight.Bold, fontSize = HomelabType.callout.fontSize, maxLines = 1) }
 }
 
 /** Mappene som piller: Alle, mappene og «+ Ny mappe». Hold inne på en mappe for å gi nytt navn eller slette. */
@@ -175,7 +176,7 @@ private fun FolderChip(n: String, on: Boolean, p: MatPalette, onLong: (() -> Uni
         Modifier.height(36.dp).clip(CircleShape).background(if (on) p.text else p.card).border(1.dp, if (on) p.text else p.border, CircleShape)
             .combinedClickable(onLongClick = onLong, onClick = onClick).padding(horizontal = 14.dp),
         contentAlignment = Alignment.Center,
-    ) { Text(n, color = if (on) p.bg else p.text, fontWeight = FontWeight.SemiBold, fontSize = 13.5.sp, maxLines = 1) }
+    ) { Text(n, color = if (on) p.bg else p.text, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.subheadline.fontSize, maxLines = 1) }
 }
 
 @Composable
@@ -203,18 +204,18 @@ private fun ImportField(vm: AppViewModel, p: MatPalette, done: () -> Unit) {
         MLabel("Importer fra nettside", p.label)
         BasicTextField(
             url, { url = it }, singleLine = true,
-            textStyle = TextStyle(color = p.text, fontSize = 14.sp),
+            textStyle = TextStyle(color = p.text, fontSize = HomelabType.callout.fontSize),
             cursorBrush = SolidColor(p.accent),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Go),
             keyboardActions = KeyboardActions(onGo = { if (url.isNotBlank()) vm.importRecipe(url) }),
             modifier = Modifier.fillMaxWidth().height(44.dp).clip(RoundedCornerShape(12.dp)).border(1.dp, p.border, RoundedCornerShape(12.dp)).padding(horizontal = 12.dp),
-            decorationBox = { inner -> Box(contentAlignment = Alignment.CenterStart) { if (url.isEmpty()) Text("https://www.matprat.no/oppskrifter/…", color = p.muted, fontSize = 14.sp); inner() } },
+            decorationBox = { inner -> Box(contentAlignment = Alignment.CenterStart) { if (url.isEmpty()) Text("https://www.matprat.no/oppskrifter/…", color = p.muted, fontSize = HomelabType.callout.fontSize); inner() } },
         )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
             MatButton(if (vm.recipeBusy) "Henter …" else "Hent oppskrift", p, Modifier.weight(1f)) { if (url.isNotBlank() && !vm.recipeBusy) vm.importRecipe(url) }
             MatButton("Lukk", p, outline = true, onClick = done)
         }
-        Text("Navn, bilde, ingredienser og steg hentes fra siden. Du ser en forhåndsvisning før retten lagres.", color = p.muted, fontSize = 12.sp)
+        Text("Navn, bilde, ingredienser og steg hentes fra siden. Du ser en forhåndsvisning før retten lagres.", color = p.muted, fontSize = HomelabType.footnote.fontSize)
     }
 }
 
@@ -231,15 +232,15 @@ private fun RecipeJobs(vm: AppViewModel, p: MatPalette) {
                     else -> Text("✓", color = C.positive, fontWeight = FontWeight.Bold)
                 }
                 Column(Modifier.weight(1f)) {
-                    Text(j.name ?: if (j.active) "Leser oppskriften …" else "Oppskrift", color = p.text, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    j.error?.let { Text(it, color = C.red, fontSize = 12.sp, maxLines = 2) }
+                    Text(j.name ?: if (j.active) "Leser oppskriften …" else "Oppskrift", color = p.text, fontSize = HomelabType.callout.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    j.error?.let { Text(it, color = C.red, fontSize = HomelabType.footnote.fontSize, maxLines = 2) }
                 }
                 when {
-                    j.status == "error" -> Text("Prøv igjen", color = p.accent, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.clickable { vm.retryRecipeJob(j.id) })
-                    j.status == "done" && j.dishId != null -> Text("Åpne ›", color = p.accent, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.clickable { vm.matDay = null; vm.dishOpen = j.dishId })
+                    j.status == "error" -> Text("Prøv igjen", color = p.accent, fontSize = HomelabType.subheadline.fontSize, fontWeight = FontWeight.SemiBold, modifier = Modifier.clickable { vm.retryRecipeJob(j.id) })
+                    j.status == "done" && j.dishId != null -> Text("Åpne ›", color = p.accent, fontSize = HomelabType.subheadline.fontSize, fontWeight = FontWeight.SemiBold, modifier = Modifier.clickable { vm.matDay = null; vm.dishOpen = j.dishId })
                     else -> {}
                 }
-                if (!j.active) Text("×", color = p.muted, fontSize = 16.sp, modifier = Modifier.semantics { contentDescription = "Fjern" }.clickable { vm.removeRecipeJob(j.id) }.padding(4.dp))
+                if (!j.active) Text("×", color = p.muted, fontSize = HomelabType.body.fontSize, modifier = Modifier.semantics { contentDescription = "Fjern" }.clickable { vm.removeRecipeJob(j.id) }.padding(4.dp))
             }
         }
     }
@@ -263,9 +264,9 @@ private fun RecipePreviewDialog(vm: AppViewModel, r: RecipePreview, p: MatPalett
         text = {
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 RemoteImage(vm, r.image, Modifier.fillMaxWidth().height(160.dp).clip(RoundedCornerShape(14.dp)))
-                Text(listOfNotNull(r.time, r.servings?.let { "$it porsjoner" }, "${r.ingredients.size} ingredienser", "${r.steps.size} steg").joinToString(" · "), color = C.text2, fontSize = 13.sp)
-                r.method?.let { Text(when (it) { "jsonld" -> "Lest fra oppskriftsdata (JSON-LD)"; "microdata" -> "Lest fra microdata"; else -> "✦ Lest av AI" }, color = C.text2, fontSize = 12.sp) }
-                if (r.ingredients.isNotEmpty()) Text(r.ingredients.take(6).joinToString("\n") + if (r.ingredients.size > 6) "\n…" else "", fontSize = 13.sp)
+                Text(listOfNotNull(r.time, r.servings?.let { "$it porsjoner" }, "${r.ingredients.size} ingredienser", "${r.steps.size} steg").joinToString(" · "), color = C.text2, fontSize = HomelabType.subheadline.fontSize)
+                r.method?.let { Text(when (it) { "jsonld" -> "Lest fra oppskriftsdata (JSON-LD)"; "microdata" -> "Lest fra microdata"; else -> "✦ Lest av AI" }, color = C.text2, fontSize = HomelabType.footnote.fontSize) }
+                if (r.ingredients.isNotEmpty()) Text(r.ingredients.take(6).joinToString("\n") + if (r.ingredients.size > 6) "\n…" else "", fontSize = HomelabType.subheadline.fontSize)
                 MLabel("Mappe", p.label)
                 Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     (listOf<MatFolder?>(null) + vm.matFolders).forEach { f ->
@@ -297,7 +298,7 @@ private fun DishSheet(vm: AppViewModel, p: MatPalette) {
             day?.let { MLabel("${longDay[dayIdx(it.date)]} ${ddmm(it.date)}", p.label) }
             MSerif(dish?.name ?: day?.name ?: "Ingen rett ennå", 30, p.text, maxLines = 3)
             dish?.image?.let { RemoteImage(vm, it, Modifier.fillMaxWidth().height(180.dp).clip(RoundedCornerShape(16.dp))) }
-            Text(listOfNotNull(dish?.time, dish?.servings?.let { "$it porsjoner" }, if (dish?.src == "hellofresh") "HelloFresh" else null).joinToString(" · "), color = p.muted, fontSize = 13.sp)
+            Text(listOfNotNull(dish?.time, dish?.servings?.let { "$it porsjoner" }, if (dish?.src == "hellofresh") "HelloFresh" else null).joinToString(" · "), color = p.muted, fontSize = HomelabType.subheadline.fontSize)
             dish?.sourceUrl?.let { u -> Text("Original oppskrift ↗", color = p.accent, fontWeight = FontWeight.SemiBold, modifier = Modifier.clickable { openLink(ctx, u) }) }
             if (day != null) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -320,15 +321,15 @@ private fun DishSheet(vm: AppViewModel, p: MatPalette) {
                 }
                 val ing = dish.ing.ifEmpty { day?.ingredients ?: emptyList() }
                 MHead("Ingredienser", "${ing.size}", p)
-                if (ing.isEmpty()) Text("Ingen ingredienser lagt inn.", color = p.muted, fontSize = 14.sp)
-                ing.forEach { Text("· $it", color = p.text, fontSize = 15.sp) }
+                if (ing.isEmpty()) Text("Ingen ingredienser lagt inn.", color = p.muted, fontSize = HomelabType.callout.fontSize)
+                ing.forEach { Text("· $it", color = p.text, fontSize = HomelabType.callout.fontSize) }
                 if (ing.isNotEmpty()) MatButton("Legg i handlelisten", p, Modifier.fillMaxWidth()) { vm.addToShop(ing) }
                 if (dish.steps.isNotEmpty()) {
                     MHead("Slik gjør du", "${dish.steps.size} steg", p)
                     dish.steps.forEachIndexed { i, t ->
                         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             MSerif("${i + 1}", 18, p.accent)
-                            Text(t, color = p.text, fontSize = 15.sp, modifier = Modifier.weight(1f))
+                            Text(t, color = p.text, fontSize = HomelabType.callout.fontSize, modifier = Modifier.weight(1f))
                         }
                     }
                 }
@@ -340,13 +341,13 @@ private fun DishSheet(vm: AppViewModel, p: MatPalette) {
                         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
                         Box(Modifier.size(34.dp).clip(RoundedCornerShape(9.dp)).background(p.row), contentAlignment = Alignment.Center) {
-                            Text(when (l.kind) { "sheet" -> "▦"; "pdf" -> "PDF"; "video" -> "▶"; "doc" -> "¶"; "image" -> "▣"; else -> "↗" }, color = p.text, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            Text(when (l.kind) { "sheet" -> "▦"; "pdf" -> "PDF"; "video" -> "▶"; "doc" -> "¶"; "image" -> "▣"; else -> "↗" }, color = p.text, fontSize = HomelabType.caption.fontSize, fontWeight = FontWeight.Bold)
                         }
                         Column(Modifier.weight(1f)) {
-                            Text(l.title, color = p.text, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text(l.kindLabel, color = p.muted, fontSize = 12.sp)
+                            Text(l.title, color = p.text, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(l.kindLabel, color = p.muted, fontSize = HomelabType.footnote.fontSize)
                         }
-                        Text("×", color = p.muted, fontSize = 16.sp, modifier = Modifier.semantics { contentDescription = "Fjern" }.clickable { vm.removeDishLink(dish.id, l.id) }.padding(4.dp))
+                        Text("×", color = p.muted, fontSize = HomelabType.body.fontSize, modifier = Modifier.semantics { contentDescription = "Fjern" }.clickable { vm.removeDishLink(dish.id, l.id) }.padding(4.dp))
                     }
                 }
                 if (addLink) {
@@ -359,9 +360,9 @@ private fun DishSheet(vm: AppViewModel, p: MatPalette) {
                     MatButton("+ Lenke", p, Modifier.weight(1f), outline = true) { addLink = !addLink }
                     MatButton("+ Fil", p, Modifier.weight(1f), outline = true) { file.launch(arrayOf("*/*")) }
                 }
-                Text("Regneark, PDF, Word, bilder og video. Filene lagres med retten på serveren.", color = p.muted, fontSize = 12.sp)
+                Text("Regneark, PDF, Word, bilder og video. Filene lagres med retten på serveren.", color = p.muted, fontSize = HomelabType.footnote.fontSize)
             } else if (day != null) {
-                Text("Ingen rett denne dagen ennå. Trykk ✦ for et forslag.", color = p.muted, fontSize = 14.sp)
+                Text("Ingen rett denne dagen ennå. Trykk ✦ for et forslag.", color = p.muted, fontSize = HomelabType.callout.fontSize)
             }
         }
     }
@@ -391,7 +392,7 @@ private fun MatPaperSec(vm: AppViewModel, w: Week, k: String, p: MatPalette, lin
                 ) {
                     MLabel(shortDay[dayIdx(d.date)], if (i == ti) p.accent else p.muted, Modifier.width(36.dp))
                     MSerif(d.name ?: "Ingen rett ennå", 18, if (d.name == null) p.muted else p.text, Modifier.weight(1f), maxLines = 1)
-                    Text(listOfNotNull(d.cook, if (d.fixed) "fast" else null).joinToString(" · "), color = p.muted, fontSize = 12.sp, maxLines = 1)
+                    Text(listOfNotNull(d.cook, if (d.fixed) "fast" else null).joinToString(" · "), color = p.muted, fontSize = HomelabType.footnote.fontSize, maxLines = 1)
                 }
                 Box(Modifier.fillMaxWidth().height(1.dp).background(p.border))
             }
@@ -408,7 +409,7 @@ private fun MatPaperSec(vm: AppViewModel, w: Week, k: String, p: MatPalette, lin
             val sel = vm.matFolderSel
             val dishes = w.dishes.filter { (sel == null || it.folderId == sel) && dishHit27(it, dq) }
             MHead(if (sel == null) "Retter" else vm.matFolders.firstOrNull { it.id == sel }?.name ?: "Retter", "${dishes.size}", p)
-            if (dishes.isEmpty()) Text("Ingen retter i denne mappen ennå. Skann en oppskrift eller importer en lenke.", color = p.muted, fontSize = 14.sp, modifier = Modifier.padding(4.dp))
+            if (dishes.isEmpty()) Text("Ingen retter i denne mappen ennå. Skann en oppskrift eller importer en lenke.", color = p.muted, fontSize = HomelabType.callout.fontSize, modifier = Modifier.padding(4.dp))
             dishes.forEach { dish ->
                 Row(
                     Modifier.fillMaxWidth().clickable { vm.matDay = null; vm.dishOpen = dish.id }.padding(2.dp, 9.dp),
@@ -420,7 +421,7 @@ private fun MatPaperSec(vm: AppViewModel, w: Week, k: String, p: MatPalette, lin
                             vm.matFolders.firstOrNull { it.id == dish.folderId }?.name?.takeIf { sel == null },
                             if (dish.ing.isNotEmpty()) "${dish.ing.size} ingredienser" else null, dish.time,
                             if (dish.src == "hellofresh") "HelloFresh" else null, if (dish.links.isNotEmpty()) "${dish.links.size} vedlegg" else null,
-                        ).joinToString(" · "), color = p.muted, fontSize = 12.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        ).joinToString(" · "), color = p.muted, fontSize = HomelabType.footnote.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                     Text("›", color = p.muted)
                 }
@@ -437,7 +438,7 @@ private fun MatPaperSec(vm: AppViewModel, w: Week, k: String, p: MatPalette, lin
         }
         "m5" -> Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
             MHead("Handleliste", "${w.shopping.count { !it.done }} igjen", p)
-            if (w.shopping.isEmpty()) Text("Handlelisten er tom.", color = p.muted, fontSize = 14.sp, modifier = Modifier.padding(4.dp))
+            if (w.shopping.isEmpty()) Text("Handlelisten er tom.", color = p.muted, fontSize = HomelabType.callout.fontSize, modifier = Modifier.padding(4.dp))
             w.shopping.forEach { sh ->
                 Row(
                     Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).clickable(role = Role.Checkbox) { vm.toggleShop(sh.id) }.padding(vertical = 5.dp),
@@ -445,7 +446,7 @@ private fun MatPaperSec(vm: AppViewModel, w: Week, k: String, p: MatPalette, lin
                 ) {
                     Box(Modifier.size(24.dp).clip(RoundedCornerShape(7.dp)).background(if (sh.done) p.lime else Color.Transparent)
                         .border(1.5.dp, if (sh.done) p.lime else p.muted, RoundedCornerShape(7.dp)), contentAlignment = Alignment.Center) {
-                        if (sh.done) Text("✓", color = p.onLime, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        if (sh.done) Text("✓", color = p.onLime, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize)
                     }
                     Text(sh.text, color = if (sh.done) p.muted else p.text, textDecoration = if (sh.done) TextDecoration.LineThrough else null)
                 }
@@ -467,13 +468,13 @@ private fun DishSearch27(q: String, set: (String) -> Unit, p: MatPalette) {
     SearchField27(
         q, set, "Søk i retter og ingredienser",
         Modifier.fillMaxWidth().height(48.dp).clip(RoundedCornerShape(14.dp)).background(p.card).border(1.dp, p.border, RoundedCornerShape(14.dp)).padding(horizontal = 14.dp),
-        p.text, p.muted, fontSize = 15.sp, cursor = p.accent,
+        p.text, p.muted, fontSize = HomelabType.callout.fontSize, cursor = p.accent,
     )
 }
 
 /** «Felles for husstanden · Endret av Nina 18.42» (prompt 36). */
 @Composable
 private fun MealNote36(vm: AppViewModel, p: MatPalette) {
-    Text(vm.p36.mealNote ?: "Felles for husstanden", color = p.muted, fontSize = 12.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+    Text(vm.p36.mealNote ?: "Felles for husstanden", color = p.muted, fontSize = HomelabType.footnote.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis,
         modifier = Modifier.padding(start = 2.dp, top = 2.dp))
 }

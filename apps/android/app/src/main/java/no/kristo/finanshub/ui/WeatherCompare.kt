@@ -78,6 +78,7 @@ import org.json.JSONObject
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.roundToInt
+import no.kristo.finanshub.ui.designsystem.HomelabType
 
 /*
  * Prompt 39 (ANDROID39):
@@ -194,21 +195,21 @@ internal fun CmpSheet39(vm: AppViewModel, w: WeatherFull, close: () -> Unit) {
             // Tittelraden og kildeteksten er faste.
             Row(Modifier.fillMaxWidth().padding(start = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text("Yr mot Storm", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+                    Text("Yr mot Storm", color = Color.White, fontSize = HomelabType.title2.fontSize, fontWeight = FontWeight.Bold)
                     Text(listOfNotNull(w.place, w.updatedAt?.let { u -> wxLdt(u)?.let { "oppdatert %02d:%02d".format(it.hour, it.minute) } }).joinToString(" · "),
-                        color = Color.White.copy(alpha = .75f), fontSize = 13.5.sp)
+                        color = Color.White.copy(alpha = .75f), fontSize = HomelabType.subheadline.fontSize)
                 }
                 // Prompt 40 (claude-code-vaer-lukk-x.md): samme ✕ som på Vær-hovedsiden; «Ferdig» (hvit pille, 42 dp) bare mens man redigerer.
                 if (edit) Box(
                     Modifier.height(42.dp).clip(RoundedCornerShape(21.dp)).background(Color.White)
                         .clickable(role = Role.Button) { Haptics.select(); edit = false }.padding(horizontal = 18.dp),
                     contentAlignment = Alignment.Center,
-                ) { Text("Ferdig", color = Color(0xFF22395A), fontWeight = FontWeight.Bold, fontSize = 14.sp) }
+                ) { Text("Ferdig", color = Color(0xFF22395A), fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize) }
                 else VaerCloseButton { close() }
             }
-            if (edit) Text("Dra kortene for å flytte · − for å skjule", color = Color.White.copy(alpha = .8f), fontSize = 12.5.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
-            if (vm.wxCmp22Busy) Text("Henter Storm-data …", fontSize = 13.sp, color = Color.White.copy(alpha = .7f))
-            if (vm.wxCmp22 == null && vm.wxCmp22Failed) Text("Storm svarte ikke. Prøv igjen senere.", fontSize = 13.sp, color = Color.White.copy(alpha = .7f))
+            if (edit) Text("Dra kortene for å flytte · − for å skjule", color = Color.White.copy(alpha = .8f), fontSize = HomelabType.footnote.fontSize, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+            if (vm.wxCmp22Busy) Text("Henter Storm-data …", fontSize = HomelabType.subheadline.fontSize, color = Color.White.copy(alpha = .7f))
+            if (vm.wxCmp22 == null && vm.wxCmp22Failed) Text("Storm svarte ikke. Prøv igjen senere.", fontSize = HomelabType.subheadline.fontSize, color = Color.White.copy(alpha = .7f))
             vis.forEachIndexed { i, k -> key(k) {
                 val dragging = dragKey == k
                 val coords = remember { arrayOfNulls<androidx.compose.ui.layout.LayoutCoordinates>(1) }
@@ -273,7 +274,7 @@ internal fun CmpSheet39(vm: AppViewModel, w: WeatherFull, close: () -> Unit) {
                             Modifier.align(Alignment.TopStart).offset((-7).dp, (-7).dp).size(26.dp).shadow(6.dp, CircleShape).clip(CircleShape).background(Color(0xFF0F1B2B))
                                 .clickable(role = Role.Button, onClickLabel = "Skjul ${CMP_NAMES39[k]}") { Haptics.select(); update(lay.copy(hid = lay.hid + k), true) },
                             contentAlignment = Alignment.Center,
-                        ) { Text("−", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 17.sp) }
+                        ) { Text("−", color = Color.White, fontWeight = FontWeight.Bold, fontSize = HomelabType.body.fontSize) }
                     }
                 }
             } }
@@ -282,20 +283,20 @@ internal fun CmpSheet39(vm: AppViewModel, w: WeatherFull, close: () -> Unit) {
                 Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).border(1.5.dp, Color.White.copy(alpha = .35f), RoundedCornerShape(22.dp)).padding(14.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                Text("LEGG TIL KORT", color = Color.White.copy(alpha = .65f), fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                Text("LEGG TIL KORT", color = Color.White.copy(alpha = .65f), fontSize = HomelabType.caption.fontSize, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
                 hidden.forEach { k ->
                     Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable(role = Role.Button) {
                         Haptics.select()
                         val v = lay.ord.filter { it !in lay.hid } + k
                         update(CmpLayout39(v + lay.ord.filter { it in lay.hid && it != k }, lay.hid - k), true)
                     }.padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Box(Modifier.size(24.dp).clip(CircleShape).background(Color(0xFF2F9E5B)), contentAlignment = Alignment.Center) { Text("+", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp) }
-                        Text(CMP_NAMES39[k] ?: k, color = Color.White, fontSize = 14.5.sp, fontWeight = FontWeight.SemiBold)
+                        Box(Modifier.size(24.dp).clip(CircleShape).background(Color(0xFF2F9E5B)), contentAlignment = Alignment.Center) { Text("+", color = Color.White, fontWeight = FontWeight.Bold, fontSize = HomelabType.body.fontSize) }
+                        Text(CMP_NAMES39[k] ?: k, color = Color.White, fontSize = HomelabType.callout.fontSize, fontWeight = FontWeight.SemiBold)
                     }
                 }
             }
             Text("Yr er MET Norway (api.met.no). Storm (StormGeo) har ikke et åpent API, så Storm viser ECMWF-modellen fra Open-Meteo, som er nærmeste åpne kilde.",
-                fontSize = 12.sp, color = Color.White.copy(alpha = .6f), lineHeight = 17.sp, modifier = Modifier.padding(horizontal = 4.dp))
+                fontSize = HomelabType.footnote.fontSize, color = Color.White.copy(alpha = .6f), lineHeight = 17.sp, modifier = Modifier.padding(horizontal = 4.dp))
         }
     }
     DisposableEffect(Unit) { onDispose { edge = 0f } }
@@ -321,19 +322,21 @@ private fun Hero39(t: CmpD39?) {
     Row(Modifier.fillMaxWidth().glass39(26), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f).background(Brush.verticalGradient(listOf(SKY_Y39.copy(alpha = .18f), Color.Transparent))).padding(18.dp, 18.dp, 12.dp, 16.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) { BrandLogo30("yr", 20.dp); Text("YR", color = Color(0xFF9FE3FF), fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.2.sp) }
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) { BrandLogo30("yr", 20.dp); Text("YR", color = Color(0xFF9FE3FF), fontSize = HomelabType.footnote.fontSize, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.2.sp) }
+            // Stort tall: bevisst over typeskalaen (largeTitle er 44 sp).
             Text(deg39(t.yH), color = Color.White, fontSize = 52.sp, fontWeight = FontWeight.Light, lineHeight = 54.sp, maxLines = 1)
-            Text("${mm39(t.yP)} mm · ${ms39(t.yW)}", color = Color.White.copy(alpha = .8f), fontSize = 13.sp, maxLines = 1)
+            Text("${mm39(t.yP)} mm · ${ms39(t.yW)}", color = Color.White.copy(alpha = .8f), fontSize = HomelabType.subheadline.fontSize, maxLines = 1)
         }
         val d = if (t.sH != null && t.yH != null) (t.sH - t.yH).roundToInt() else null
         // Prompt 40: ingen fortegn, bare forskjellen («Δ 3°» / «likt»); hvem som er varmest vises med fargen/siden.
-        Text(d?.let { if (it == 0) "likt" else "Δ ${abs(it)}°" } ?: "–", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1,
+        Text(d?.let { if (it == 0) "likt" else "Δ ${abs(it)}°" } ?: "–", color = Color.White, fontSize = HomelabType.footnote.fontSize, fontWeight = FontWeight.ExtraBold, maxLines = 1,
             modifier = Modifier.clip(RoundedCornerShape(12.dp)).background(Color(0xFF2C4869)).border(1.dp, Color.White.copy(alpha = .14f), RoundedCornerShape(12.dp)).padding(9.dp, 5.dp))
         Column(Modifier.weight(1f).background(Brush.verticalGradient(listOf(SKY_S39.copy(alpha = .18f), Color.Transparent))).padding(12.dp, 18.dp, 18.dp, 16.dp),
             horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) { Text("STORM", color = Color(0xFFFFC79E), fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.2.sp); BrandLogo30("storm", 20.dp) }
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) { Text("STORM", color = Color(0xFFFFC79E), fontSize = HomelabType.footnote.fontSize, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.2.sp); BrandLogo30("storm", 20.dp) }
+            // Stort tall: bevisst over typeskalaen (largeTitle er 44 sp).
             Text(deg39(t.sH), color = Color.White, fontSize = 52.sp, fontWeight = FontWeight.Light, lineHeight = 54.sp, maxLines = 1)
-            Text("${mm39(t.sP)} mm · ${ms39(t.sW)}", color = Color.White.copy(alpha = .8f), fontSize = 13.sp, maxLines = 1)
+            Text("${mm39(t.sP)} mm · ${ms39(t.sW)}", color = Color.White.copy(alpha = .8f), fontSize = HomelabType.subheadline.fontSize, maxLines = 1)
         }
     }
 }
@@ -343,15 +346,15 @@ private fun Agree39(days: List<CmpD39>) {
     val n = days.count { it.ok }
     Column(Modifier.fillMaxWidth().glass39().padding(16.dp, 14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text("$n av ${days.size}", color = Color.White, fontSize = 34.sp, fontWeight = FontWeight.Light, lineHeight = 36.sp)
-            Text("dager der de er enige", color = Color.White.copy(alpha = .85f), fontSize = 14.sp, modifier = Modifier.padding(bottom = 4.dp))
+            Text("$n av ${days.size}", color = Color.White, fontSize = HomelabType.title2.fontSize, fontWeight = FontWeight.Light, lineHeight = 36.sp)
+            Text("dager der de er enige", color = Color.White.copy(alpha = .85f), fontSize = HomelabType.callout.fontSize, modifier = Modifier.padding(bottom = 4.dp))
         }
         Row(Modifier.fillMaxWidth()) {
             days.forEach { x ->
                 Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Box(Modifier.size(26.dp).clip(CircleShape).background(if (x.ok) Color.White else Color.Transparent).border(1.5.dp, if (x.ok) Color.White else Color(0xFFFFB3A6), CircleShape),
-                        contentAlignment = Alignment.Center) { Text(if (x.ok) "✓" else "≠", color = if (x.ok) Color(0xFF22395A) else Color(0xFFFFB3A6), fontSize = 12.sp, fontWeight = FontWeight.ExtraBold) }
-                    Text(if (x.d == "I dag") "I D" else x.d.take(1).uppercase(), color = Color.White.copy(alpha = .7f), fontSize = 10.5.sp, fontWeight = FontWeight.Bold)
+                        contentAlignment = Alignment.Center) { Text(if (x.ok) "✓" else "≠", color = if (x.ok) Color(0xFF22395A) else Color(0xFFFFB3A6), fontSize = HomelabType.footnote.fontSize, fontWeight = FontWeight.ExtraBold) }
+                    Text(if (x.d == "I dag") "I D" else x.d.take(1).uppercase(), color = Color.White.copy(alpha = .7f), fontSize = HomelabType.caption.fontSize, fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -375,7 +378,7 @@ private fun GlimtWhy39(days: List<CmpD39>) {
     }
     Row(Modifier.fillMaxWidth().glass39().padding(16.dp, 14.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         GlimtMark31(22.dp, GLIMT_FERDIG, dark = true)
-        Text(text, color = Color.White, fontSize = 14.sp, lineHeight = 21.sp, modifier = Modifier.weight(1f))
+        Text(text, color = Color.White, fontSize = HomelabType.callout.fontSize, lineHeight = 21.sp, modifier = Modifier.weight(1f))
     }
 }
 
@@ -388,23 +391,23 @@ private fun List39(days: List<CmpD39>) {
             listOf("t" to "Temp", "p" to "Nedbør", "w" to "Vind").forEach { (k, n) ->
                 Box(Modifier.weight(1f).height(34.dp).clip(RoundedCornerShape(11.dp)).background(if (tab == k) Color.White.copy(alpha = .22f) else Color.Transparent)
                     .clickable(role = Role.Tab) { Haptics.select(); tab = k }, contentAlignment = Alignment.Center) {
-                    Text(n, color = if (tab == k) Color.White else Color.White.copy(alpha = .7f), fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold)
+                    Text(n, color = if (tab == k) Color.White else Color.White.copy(alpha = .7f), fontSize = HomelabType.subheadline.fontSize, fontWeight = FontWeight.SemiBold)
                 }
             }
         }
         Column(Modifier.fillMaxWidth().glass39().padding(horizontal = 14.dp, vertical = 4.dp)) {
             Row(Modifier.fillMaxWidth().padding(top = 10.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Spacer(Modifier.width(44.dp))
-                Text("YR", color = Color(0xFF9FE3FF), fontSize = 10.5.sp, fontWeight = FontWeight.ExtraBold, textAlign = TextAlign.End, modifier = Modifier.width(54.dp))
+                Text("YR", color = Color(0xFF9FE3FF), fontSize = HomelabType.caption.fontSize, fontWeight = FontWeight.ExtraBold, textAlign = TextAlign.End, modifier = Modifier.width(54.dp))
                 // Størrelsesfiksen: «← Yr» og «Storm →» får hele bredden, aldri presset sammen.
                 Row(Modifier.weight(1f)) {
                     // Prompt 40: «← Yr varmere · Storm varmere →» (nedbør og vind: «← Yr mer» / «Storm mer →»).
                     val w40 = if (tab == "t") "varmere" else "mer"
-                    Text("← Yr $w40", color = Color(0xFF9FE3FF).copy(alpha = .85f), fontSize = 10.5.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1, softWrap = false)
+                    Text("← Yr $w40", color = Color(0xFF9FE3FF).copy(alpha = .85f), fontSize = HomelabType.caption.fontSize, fontWeight = FontWeight.ExtraBold, maxLines = 1, softWrap = false)
                     Spacer(Modifier.weight(1f))
-                    Text("Storm $w40 →", color = Color(0xFFFFC79E).copy(alpha = .85f), fontSize = 10.5.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1, softWrap = false)
+                    Text("Storm $w40 →", color = Color(0xFFFFC79E).copy(alpha = .85f), fontSize = HomelabType.caption.fontSize, fontWeight = FontWeight.ExtraBold, maxLines = 1, softWrap = false)
                 }
-                Text("STORM", color = Color(0xFFFFC79E), fontSize = 10.5.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.width(54.dp))
+                Text("STORM", color = Color(0xFFFFC79E), fontSize = HomelabType.caption.fontSize, fontWeight = FontWeight.ExtraBold, modifier = Modifier.width(54.dp))
                 Spacer(Modifier.width(12.dp))
             }
             days.forEachIndexed { i, x ->
@@ -417,24 +420,24 @@ private fun List39(days: List<CmpD39>) {
                     Box(Modifier.fillMaxWidth().height(1.dp).background(Color.White.copy(alpha = .1f)))
                     Row(Modifier.fillMaxWidth().clickable { Haptics.select(); open = if (open == i) -1 else i }.padding(top = 10.dp, bottom = 8.dp),
                         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text(x.d, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, modifier = Modifier.width(44.dp))
-                        Text(y, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.End, maxLines = 1, modifier = Modifier.width(54.dp))
+                        Text(x.d, color = Color.White, fontSize = HomelabType.callout.fontSize, fontWeight = FontWeight.SemiBold, maxLines = 1, modifier = Modifier.width(44.dp))
+                        Text(y, color = Color.White, fontSize = HomelabType.callout.fontSize, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.End, maxLines = 1, modifier = Modifier.width(54.dp))
                         DevBar39(df, scale, u, Modifier.weight(1f))
-                        Text(s, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, modifier = Modifier.width(54.dp))
-                        Text("›", color = Color.White.copy(alpha = .6f), fontSize = 14.sp, modifier = Modifier.width(12.dp).graphicsLayer { rotationZ = if (open == i) 90f else 0f })
+                        Text(s, color = Color.White, fontSize = HomelabType.callout.fontSize, fontWeight = FontWeight.SemiBold, maxLines = 1, modifier = Modifier.width(54.dp))
+                        Text("›", color = Color.White.copy(alpha = .6f), fontSize = HomelabType.callout.fontSize, modifier = Modifier.width(12.dp).graphicsLayer { rotationZ = if (open == i) 90f else 0f })
                     }
                     if (open == i) {
                         val rainDis = x.sP != null && wet(x.yP) != wet(x.sP)
                         val big = abs(x.dT ?: 0.0) >= 2
                         Text(if (x.ok) "Enige" else if (rainDis && big) "Uenige om regn og temperatur" else if (rainDis) "Uenige om regn" else "Uenige om temperatur",
-                            color = if (x.ok) Color(0xFF8FE3A8) else Color(0xFFFFB3A6), fontSize = 12.5.sp, fontWeight = FontWeight.Bold)
+                            color = if (x.ok) Color(0xFF8FE3A8) else Color(0xFFFFB3A6), fontSize = HomelabType.footnote.fontSize, fontWeight = FontWeight.Bold)
                         Row(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 14.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             listOf(Triple("YR", SKY_Y39, Triple("${deg39(x.yH)} / ${deg39(x.yL)}", "${mm39(x.yP)} mm · ${ms39(x.yW)}", Color(0xFF9FE3FF))),
                                 Triple("STORM", SKY_S39, Triple("${deg39(x.sH)} / ${deg39(x.sL)}", "${mm39(x.sP)} mm · ${ms39(x.sW)}", Color(0xFFFFC79E)))).forEach { (n, c, v) ->
                                 Column(Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).background(c.copy(alpha = .14f)).padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                    Text(n, color = v.third, fontSize = 10.5.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.sp)
-                                    Text(v.first, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Medium)
-                                    Text(v.second, color = Color.White.copy(alpha = .8f), fontSize = 12.5.sp)
+                                    Text(n, color = v.third, fontSize = HomelabType.caption.fontSize, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.sp)
+                                    Text(v.first, color = Color.White, fontSize = HomelabType.headline.fontSize, fontWeight = FontWeight.Medium)
+                                    Text(v.second, color = Color.White.copy(alpha = .8f), fontSize = HomelabType.footnote.fontSize)
                                 }
                             }
                         }
@@ -459,7 +462,7 @@ private fun DevBar39(df: Double, scale: Double, u: String, modifier: Modifier) {
         else -> mm39(abs(df)) + u
     }
     Box(modifier.height(30.dp)) {
-        if (label.isNotEmpty()) Text(label, color = if (yr) Color(0xFF9FE3FF) else Color(0xFFFFC79E), fontSize = 10.5.sp, fontWeight = FontWeight.ExtraBold,
+        if (label.isNotEmpty()) Text(label, color = if (yr) Color(0xFF9FE3FF) else Color(0xFFFFC79E), fontSize = HomelabType.caption.fontSize, fontWeight = FontWeight.ExtraBold,
             maxLines = 1, modifier = Modifier.align(Alignment.TopCenter))
         Canvas(Modifier.fillMaxWidth().height(14.dp).align(Alignment.BottomCenter)) {
             val cy = size.height / 2
@@ -480,12 +483,12 @@ private fun Chart39(vm: AppViewModel, w: WeatherFull) {
     val hrs = wxNext24(w)
     Column(Modifier.fillMaxWidth().glass39().padding(14.dp, 14.dp, 14.dp, 10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("NESTE 24 TIMER", color = Color.White.copy(alpha = .65f), fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp, modifier = Modifier.weight(1f))
-            Text("Yr", color = SKY_Y39, fontSize = 12.sp, fontWeight = FontWeight.Bold); Spacer(Modifier.width(10.dp))
-            Text("Storm", color = SKY_S39, fontSize = 12.sp, fontWeight = FontWeight.Bold); Spacer(Modifier.width(10.dp))
-            Text("Avvik", color = Color.White.copy(alpha = .75f), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            Text("NESTE 24 TIMER", color = Color.White.copy(alpha = .65f), fontSize = HomelabType.caption.fontSize, fontWeight = FontWeight.Bold, letterSpacing = 1.sp, modifier = Modifier.weight(1f))
+            Text("Yr", color = SKY_Y39, fontSize = HomelabType.footnote.fontSize, fontWeight = FontWeight.Bold); Spacer(Modifier.width(10.dp))
+            Text("Storm", color = SKY_S39, fontSize = HomelabType.footnote.fontSize, fontWeight = FontWeight.Bold); Spacer(Modifier.width(10.dp))
+            Text("Avvik", color = Color.White.copy(alpha = .75f), fontSize = HomelabType.footnote.fontSize, fontWeight = FontWeight.Bold)
         }
-        if (c == null || hrs.size < 2) { Text("Ingen timeverdier fra Storm ennå.", color = Color.White.copy(alpha = .7f), fontSize = 12.5.sp); return@Column }
+        if (c == null || hrs.size < 2) { Text("Ingen timeverdier fra Storm ennå.", color = Color.White.copy(alpha = .7f), fontSize = HomelabType.footnote.fontSize); return@Column }
         val ys = hrs.map { c.yrHours[it.t.take(13)] ?: it.temp }
         val ss = hrs.map { c.pentHours[it.t.take(13)] }
         val all = (ys + ss).filterNotNull()
@@ -514,7 +517,7 @@ private fun Chart39(vm: AppViewModel, w: WeatherFull) {
 private fun Rain39(days: List<CmpD39>) {
     val pMax = max(1.0, days.maxOf { max(it.yP, it.sP ?: 0.0) })
     Column(Modifier.fillMaxWidth().glass39().padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Text("NEDBØR PER DAG", color = Color.White.copy(alpha = .65f), fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+        Text("NEDBØR PER DAG", color = Color.White.copy(alpha = .65f), fontSize = HomelabType.caption.fontSize, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
         Row(Modifier.fillMaxWidth().height(90.dp), verticalAlignment = Alignment.Bottom) {
             days.forEach { x ->
                 Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -522,7 +525,7 @@ private fun Rain39(days: List<CmpD39>) {
                         Box(Modifier.width(9.dp).height(max(2.0, x.yP / pMax * 64).dp).clip(RoundedCornerShape(3.dp)).background(SKY_Y39))
                         Box(Modifier.width(9.dp).height(max(2.0, (x.sP ?: 0.0) / pMax * 64).dp).clip(RoundedCornerShape(3.dp)).background(SKY_S39))
                     }
-                    Text(if (x.d == "I dag") "I d" else x.d.take(2), color = Color.White.copy(alpha = .7f), fontSize = 10.5.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                    Text(if (x.d == "I dag") "I d" else x.d.take(2), color = Color.White.copy(alpha = .7f), fontSize = HomelabType.caption.fontSize, fontWeight = FontWeight.Bold, maxLines = 1)
                 }
             }
         }
@@ -565,7 +568,7 @@ internal fun WeekGlimt39(vm: AppViewModel, w: WeatherFull) {
     val cur = char ?: d.char
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(Color.White.copy(alpha = .12f)).border(1.dp, Color.White.copy(alpha = .08f), RoundedCornerShape(24.dp)).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text("GLIMT · UKAS VÆR", color = Color.White.copy(alpha = .7f), fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
+        Text("GLIMT · UKAS VÆR", color = Color.White.copy(alpha = .7f), fontSize = HomelabType.caption.fontSize, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             d.chars.forEach { (id, n, desc) ->
                 val on = id == cur
@@ -578,24 +581,24 @@ internal fun WeekGlimt39(vm: AppViewModel, w: WeatherFull) {
                     verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp, Alignment.CenterHorizontally)) {
                     // Prompt 40 (claude-code-vaer-topp-tekst.md): tre like brede knapper på egen rad, 32 dp høye, uten «…».
                     GlimtFig35(id, 20.dp, if (on) "glad" else "idle", still = !on)
-                    Text(n, color = Color.White, fontSize = 12.5.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
+                    Text(n, color = Color.White, fontSize = HomelabType.footnote.fontSize, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
                 }
             }
         }
-        Text(d.text, color = Color.White, fontSize = 15.sp, lineHeight = 22.sp, modifier = Modifier.graphicsLayer { alpha = if (busy) .6f else 1f })
+        Text(d.text, color = Color.White, fontSize = HomelabType.callout.fontSize, lineHeight = 22.sp, modifier = Modifier.graphicsLayer { alpha = if (busy) .6f else 1f })
         if (d.tiles.isNotEmpty()) Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             d.tiles.forEach { (l, v, s) ->
                 Column(Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).background(Color.White.copy(alpha = .08f)).padding(10.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text(l, color = Color.White.copy(alpha = .65f), fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
-                    Text(v, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
-                    Text(s, color = Color.White.copy(alpha = .7f), fontSize = 11.sp, lineHeight = 14.3.sp) // prompt 40: får gå over to linjer
+                    Text(l, color = Color.White.copy(alpha = .65f), fontSize = HomelabType.caption.fontSize, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                    Text(v, color = Color.White, fontSize = HomelabType.headline.fontSize, fontWeight = FontWeight.SemiBold, maxLines = 1)
+                    Text(s, color = Color.White.copy(alpha = .7f), fontSize = HomelabType.caption.fontSize, lineHeight = 14.3.sp) // prompt 40: får gå over to linjer
                 }
             }
         }
         d.highlights.forEach { (l, t) ->
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text(l, color = Color.White.copy(alpha = .7f), fontSize = 13.sp, modifier = Modifier.width(110.dp))
-                Text(t, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                Text(l, color = Color.White.copy(alpha = .7f), fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.width(110.dp))
+                Text(t, color = Color.White, fontSize = HomelabType.subheadline.fontSize, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
             }
         }
     }

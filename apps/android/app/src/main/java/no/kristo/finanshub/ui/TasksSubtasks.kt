@@ -44,6 +44,7 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import no.kristo.finanshub.*
 import java.time.LocalDate
+import no.kristo.finanshub.ui.designsystem.HomelabType
 
 /*
  * Prompt 44 – Gjøremål (fasit Huskeliste.dc.html):
@@ -73,7 +74,7 @@ internal fun SubAddBtn44(vm: AppViewModel, t: TaskItem) {
     val on = vm.p44.subOpen == t.id
     Box(Modifier.size(36.dp).clip(CircleShape).background(if (on) p.ink.copy(alpha = .08f) else Color.Transparent)
         .clickable(role = Role.Button, onClickLabel = "Legg til deloppgave") { Haptics.select(); vm.p44.subOpen = if (on) null else t.id }, contentAlignment = Alignment.Center) {
-        Text("↳+", color = p.mut, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+        Text("↳+", color = p.mut, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize)
     }
 }
 
@@ -88,12 +89,12 @@ internal fun SubRows44(vm: AppViewModel, t: TaskItem, color: Color) {
             Row(Modifier.fillMaxWidth().heightIn(min = 40.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Box(Modifier.size(20.dp).clip(RoundedCornerShape(6.dp)).background(if (sb.done) color else Color.Transparent).border(2.dp, color, RoundedCornerShape(6.dp))
                     .clickable(role = Role.Checkbox, onClickLabel = if (sb.done) "Ikke ferdig" else "Ferdig") { vm.toggleSub44(t.id, i) }, contentAlignment = Alignment.Center) {
-                    if (sb.done) Text("✓", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    if (sb.done) Text("✓", color = Color.White, fontSize = HomelabType.caption.fontSize, fontWeight = FontWeight.Bold)
                 }
-                Text(sb.n, color = if (sb.done) p.mut else p.ink, fontSize = 14.sp, modifier = Modifier.weight(1f), maxLines = 2, overflow = TextOverflow.Ellipsis,
+                Text(sb.n, color = if (sb.done) p.mut else p.ink, fontSize = HomelabType.callout.fontSize, modifier = Modifier.weight(1f), maxLines = 2, overflow = TextOverflow.Ellipsis,
                     textDecoration = if (sb.done) TextDecoration.LineThrough else null)
                 Box(Modifier.size(32.dp).clip(CircleShape).clickable(onClickLabel = "Slett deloppgave") { vm.delSub44(t.id, i) }, contentAlignment = Alignment.Center) {
-                    Text("✕", modifier = Modifier.semantics { contentDescription = "Slett deloppgave" }, color = p.mut, fontSize = 13.sp)
+                    Text("✕", modifier = Modifier.semantics { contentDescription = "Slett deloppgave" }, color = p.mut, fontSize = HomelabType.subheadline.fontSize)
                 }
             }
         }
@@ -111,11 +112,11 @@ private fun SubField44(focusNow: Boolean, hint: String = "Ny deloppgave …", on
     Row(Modifier.fillMaxWidth().heightIn(min = 44.dp).clip(RoundedCornerShape(12.dp)).border(1.dp, p.line, RoundedCornerShape(12.dp)).padding(start = 12.dp),
         verticalAlignment = Alignment.CenterVertically) {
         Box(Modifier.weight(1f)) {
-            if (v.isEmpty()) Text(hint, color = p.mut, fontSize = 14.sp)
-            BasicTextField(v, { v = it }, singleLine = true, textStyle = TextStyle(color = p.ink, fontSize = 14.sp), cursorBrush = SolidColor(p.lab),
+            if (v.isEmpty()) Text(hint, color = p.mut, fontSize = HomelabType.callout.fontSize)
+            BasicTextField(v, { v = it }, singleLine = true, textStyle = TextStyle(color = p.ink, fontSize = HomelabType.callout.fontSize), cursorBrush = SolidColor(p.lab),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done), keyboardActions = KeyboardActions(onDone = { go() }), modifier = Modifier.fillMaxWidth().focusRequester(fr))
         }
-        Text("Legg til", color = p.lab, fontWeight = FontWeight.Bold, fontSize = 13.sp, modifier = Modifier.heightIn(min = 44.dp).clip(CircleShape).clickable { go() }.padding(horizontal = 12.dp).wrapContentHeight())
+        Text("Legg til", color = p.lab, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.heightIn(min = 44.dp).clip(CircleShape).clickable { go() }.padding(horizontal = 12.dp).wrapContentHeight())
     }
 }
 
@@ -127,7 +128,7 @@ internal fun AskDone44(vm: AppViewModel) {
     val p = PaperPal.current
     AlertDialog(onDismissRequest = { vm.p44.askDone = null }, containerColor = p.bg,
         title = { PSerif("Fullfør «${t.title}» også?", 20.sp) },
-        text = { Text("Alle deloppgavene er krysset av.", color = p.mut, fontSize = 14.sp) },
+        text = { Text("Alle deloppgavene er krysset av.", color = p.mut, fontSize = HomelabType.callout.fontSize) },
         confirmButton = { TextButton({ vm.p44.askDone = null; vm.completeTask44(id) }) { Text("Fullfør", color = p.lab, fontWeight = FontWeight.Bold) } },
         dismissButton = { TextButton({ vm.p44.askDone = null }) { Text("Ikke nå", color = p.ink) } })
 }
@@ -139,8 +140,8 @@ internal fun TasksSyncPage44(vm: AppViewModel) {
     LaunchedEffect(Unit) { vm.loadTasksHa(); if (vm.tasks == null) vm.refreshTasks37() }
     val lists = vm.tasks?.lists?.ifEmpty { null } ?: TASK_LISTS_DEFAULT
     Column(Modifier.padding(top = 28.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        if (!vm.userIsAdmin) Text("Bare admin kan endre synken med Home Assistant.", color = p.mut, fontSize = 13.sp, modifier = Modifier.padding(horizontal = 4.dp))
-        else if (vm.tasksHa == null) Text("Synk med Home Assistant finnes ikke på serveren, eller Home Assistant er ikke koblet til under Integrasjoner.", color = p.mut, fontSize = 13.sp, modifier = Modifier.padding(horizontal = 4.dp))
+        if (!vm.userIsAdmin) Text("Bare admin kan endre synken med Home Assistant.", color = p.mut, fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.padding(horizontal = 4.dp))
+        else if (vm.tasksHa == null) Text("Synk med Home Assistant finnes ikke på serveren, eller Home Assistant er ikke koblet til under Integrasjoner.", color = p.mut, fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.padding(horizontal = 4.dp))
         TasksHaSection(vm, lists, pad = 0.dp)
     }
 }
@@ -171,7 +172,7 @@ internal fun TaskPage44(vm: AppViewModel) {
         Column(Modifier.fillMaxSize().statusBarsPadding().widthIn(max = 640.dp).align(Alignment.TopCenter)) {
             // Felles toppstripe: safe area + 12, høyde 42 (samme som Media og andre undersider).
             Row(Modifier.fillMaxWidth().padding(start = 8.dp, end = 16.dp, top = 12.dp).height(42.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text("‹ Tilbake", color = RED44, fontWeight = FontWeight.Bold, fontSize = 16.sp, maxLines = 1,
+                Text("‹ Tilbake", color = RED44, fontWeight = FontWeight.Bold, fontSize = HomelabType.body.fontSize, maxLines = 1,
                     modifier = Modifier.heightIn(min = 44.dp).clip(CircleShape).clickable(role = Role.Button) { vm.p44.taskPage = null }.padding(horizontal = 10.dp).wrapContentHeight())
                 Spacer(Modifier.weight(1f))
                 RoundBtn44(if (t.flag) "★" else "☆", if (t.flag) STAR44 else RED44, if (t.flag) "Fjern flagg" else "Flagg") { Haptics.select(); vm.patchTask37(t.id) { it.copy(flag = !it.flag) } }
@@ -192,8 +193,8 @@ internal fun TaskPage44(vm: AppViewModel) {
                     Row(Modifier.heightIn(min = 36.dp).clip(CircleShape).background(p.card).border(1.dp, p.line, CircleShape).clickable { listMenu = true }.padding(horizontal = 12.dp),
                         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         Box(Modifier.size(9.dp).clip(CircleShape).background(c))
-                        Text(l?.name ?: "Liste", color = p.ink, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                        Text("▼", color = p.mut, fontSize = 9.sp)
+                        Text(l?.name ?: "Liste", color = p.ink, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize)
+                        Text("▼", color = p.mut, fontSize = HomelabType.caption.fontSize)
                     }
                     DropdownMenu(listMenu, { listMenu = false }, containerColor = p.card) {
                         lists.forEach { x ->
@@ -207,9 +208,9 @@ internal fun TaskPage44(vm: AppViewModel) {
                 Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Box(Modifier.padding(top = 4.dp).size(30.dp).clip(CircleShape).background(if (t.done) c else Color.Transparent).border(2.5.dp, c, CircleShape)
                         .clickable(role = Role.Checkbox) { if (t.done) vm.toggleTask37(t.id) else vm.completeTask44(t.id) }, contentAlignment = Alignment.Center) {
-                        if (t.done) Text("✓", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                        if (t.done) Text("✓", color = Color.White, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize)
                     }
-                    BasicTextField(title, { title = it }, textStyle = TextStyle(color = if (t.done) p.mut else p.ink, fontFamily = PaperFonts.serif, fontSize = 30.sp, lineHeight = 34.sp,
+                    BasicTextField(title, { title = it }, textStyle = TextStyle(color = if (t.done) p.mut else p.ink, fontFamily = PaperFonts.serif, fontSize = HomelabType.title2.fontSize, lineHeight = 34.sp,
                         textDecoration = if (t.done) TextDecoration.LineThrough else null), cursorBrush = SolidColor(p.lab), modifier = Modifier.weight(1f))
                 }
                 // FRIST og NÅR.
@@ -219,7 +220,7 @@ internal fun TaskPage44(vm: AppViewModel) {
                         onPick = { pickDate44(ctx, t.dl ?: today.toString()) { d -> vm.patchTask37(t.id) { it.copy(dl = d) } } }, onClear = { vm.patchTask37(t.id) { it.copy(dl = null) } })
                     DateCard44("Når", t.due?.let { dueLabel37(it) }, null, false, Modifier.weight(1f).fillMaxHeight(),
                         onPick = { pickDate44(ctx, t.due ?: today.toString()) { d -> vm.patchTask37(t.id) { it.copy(due = d) } } }, onClear = { vm.patchTask37(t.id) { it.copy(due = null, time = null) } }) {
-                        if (t.due != null) Text(t.time ?: "Legg til tid", color = if (t.time != null) p.ink else p.mut, fontWeight = FontWeight.Bold, fontSize = 12.5.sp,
+                        if (t.due != null) Text(t.time ?: "Legg til tid", color = if (t.time != null) p.ink else p.mut, fontWeight = FontWeight.Bold, fontSize = HomelabType.footnote.fontSize,
                             modifier = Modifier.padding(top = 6.dp).clip(CircleShape).background(p.bg).clickable {
                                 val (h, m) = (t.time ?: "09:00").split(":").let { (it[0].toIntOrNull() ?: 9) to (it.getOrNull(1)?.toIntOrNull() ?: 0) }
                                 android.app.TimePickerDialog(ctx, { _, hh, mm -> vm.patchTask37(t.id) { it.copy(time = "%02d:%02d".format(hh, mm)) } }, h, m, true).show()
@@ -229,8 +230,8 @@ internal fun TaskPage44(vm: AppViewModel) {
                 // DETALJER.
                 Card44("Detaljer") {
                     Box(Modifier.fillMaxWidth().heightIn(min = 60.dp)) {
-                        if (notes.isEmpty()) Text("Legg til detaljer", color = p.mut, fontFamily = PaperFonts.serif, fontSize = 16.sp)
-                        BasicTextField(notes, { notes = it }, textStyle = TextStyle(color = p.ink, fontFamily = PaperFonts.serif, fontSize = 16.sp, lineHeight = 22.sp), cursorBrush = SolidColor(p.lab),
+                        if (notes.isEmpty()) Text("Legg til detaljer", color = p.mut, fontFamily = PaperFonts.serif, fontSize = HomelabType.body.fontSize)
+                        BasicTextField(notes, { notes = it }, textStyle = TextStyle(color = p.ink, fontFamily = PaperFonts.serif, fontSize = HomelabType.body.fontSize, lineHeight = 22.sp), cursorBrush = SolidColor(p.lab),
                             modifier = Modifier.fillMaxWidth())
                     }
                 }
@@ -242,9 +243,9 @@ internal fun TaskPage44(vm: AppViewModel) {
                     t.subs.forEachIndexed { i, sb ->
                         Row(Modifier.fillMaxWidth().heightIn(min = 44.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             Box(Modifier.size(22.dp).clip(CircleShape).background(if (sb.done) c else Color.Transparent).border(2.dp, c, CircleShape).clickable(role = Role.Checkbox) { vm.toggleSub44(t.id, i) },
-                                contentAlignment = Alignment.Center) { if (sb.done) Text("✓", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold) }
-                            Text(sb.n, color = if (sb.done) p.mut else p.ink, fontSize = 15.sp, modifier = Modifier.weight(1f), textDecoration = if (sb.done) TextDecoration.LineThrough else null)
-                            Box(Modifier.size(36.dp).clip(CircleShape).clickable(onClickLabel = "Slett") { vm.delSub44(t.id, i) }, contentAlignment = Alignment.Center) { Text("✕", modifier = Modifier.semantics { contentDescription = "Slett" }, color = p.mut, fontSize = 13.sp) }
+                                contentAlignment = Alignment.Center) { if (sb.done) Text("✓", color = Color.White, fontSize = HomelabType.caption.fontSize, fontWeight = FontWeight.Bold) }
+                            Text(sb.n, color = if (sb.done) p.mut else p.ink, fontSize = HomelabType.callout.fontSize, modifier = Modifier.weight(1f), textDecoration = if (sb.done) TextDecoration.LineThrough else null)
+                            Box(Modifier.size(36.dp).clip(CircleShape).clickable(onClickLabel = "Slett") { vm.delSub44(t.id, i) }, contentAlignment = Alignment.Center) { Text("✕", modifier = Modifier.semantics { contentDescription = "Slett" }, color = p.mut, fontSize = HomelabType.subheadline.fontSize) }
                         }
                     }
                     SubField44(focusNow = false, hint = "Legg til deloppgave") { vm.addSub44(t.id, it) }
@@ -260,7 +261,7 @@ internal fun TaskPage44(vm: AppViewModel) {
             // «Angre fullført» lukker ikke siden.
             .clickable(role = Role.Button) { if (t.done) vm.toggleTask37(t.id) else if (vm.p46.doneAnim == null) vm.finishFromPage46(t.id) }, contentAlignment = Alignment.Center) {
             val anim = vm.p46.doneAnim == t.id
-            Text(if (anim) "✓ Fullført" else if (t.done) "Angre fullført" else "Fullfør oppgaven", color = if (t.done && !anim) p.ink else Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+            Text(if (anim) "✓ Fullført" else if (t.done) "Angre fullført" else "Fullfør oppgaven", color = if (t.done && !anim) p.ink else Color.White, fontWeight = FontWeight.Bold, fontSize = HomelabType.body.fontSize)
         }
     }
 }
@@ -275,7 +276,7 @@ private fun RoundBtn44(icon: String, color: Color, label: String, onClick: () ->
     val p = PaperPal.current
     Box(Modifier.size(42.dp).shadow(3.dp, CircleShape).clip(CircleShape).background(p.card).border(1.dp, p.line, CircleShape)
         .clickable(role = Role.Button, onClickLabel = label, onClick = onClick), contentAlignment = Alignment.Center) {
-        Text(icon, color = color, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+        Text(icon, color = color, fontSize = HomelabType.headline.fontSize, fontWeight = FontWeight.Bold)
     }
 }
 
@@ -284,7 +285,7 @@ private fun Card44(label: String, right: String? = null, content: @Composable Co
     val p = PaperPal.current
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(p.card).border(1.dp, p.line, RoundedCornerShape(18.dp)).padding(14.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row { PLabel(label, color = p.mut, modifier = Modifier.weight(1f)); right?.let { Text(it, color = p.mut, fontFamily = PaperFonts.mono, fontSize = 11.5.sp) } }
+        Row { PLabel(label, color = p.mut, modifier = Modifier.weight(1f)); right?.let { Text(it, color = p.mut, fontFamily = PaperFonts.mono, fontSize = HomelabType.caption.fontSize) } }
         content()
     }
 }
@@ -296,10 +297,10 @@ private fun DateCard44(label: String, value: String?, badge: String?, red: Boole
         .clickable(role = Role.Button, onClickLabel = label) { onPick() }.padding(12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             PLabel(label, color = if (red) RED44 else p.mut, modifier = Modifier.weight(1f))
-            if (value != null) Box(Modifier.size(28.dp).clip(CircleShape).clickable(onClickLabel = "Fjern") { onClear() }, contentAlignment = Alignment.Center) { Text("✕", modifier = Modifier.semantics { contentDescription = "Fjern" }, color = p.mut, fontSize = 12.sp) }
+            if (value != null) Box(Modifier.size(28.dp).clip(CircleShape).clickable(onClickLabel = "Fjern") { onClear() }, contentAlignment = Alignment.Center) { Text("✕", modifier = Modifier.semantics { contentDescription = "Fjern" }, color = p.mut, fontSize = HomelabType.footnote.fontSize) }
         }
-        Text(value ?: "Legg til", color = if (value == null) p.mut else if (red) RED44 else p.ink, fontFamily = PaperFonts.serif, fontSize = 17.sp, lineHeight = 21.sp)
-        badge?.let { Text(it, color = RED44, fontWeight = FontWeight.Bold, fontSize = 11.5.sp) }
+        Text(value ?: "Legg til", color = if (value == null) p.mut else if (red) RED44 else p.ink, fontFamily = PaperFonts.serif, fontSize = HomelabType.body.fontSize, lineHeight = 21.sp)
+        badge?.let { Text(it, color = RED44, fontWeight = FontWeight.Bold, fontSize = HomelabType.caption.fontSize) }
         extra()
     }
 }
@@ -315,29 +316,29 @@ private fun Place44(vm: AppViewModel, t: TaskItem) {
     LaunchedEffect(q) { delay(350); hits = if (q.length >= 3) vm.geoSearch44(q) else emptyList() }
     Card44("Sted") {
         if (shown != null && !edit) Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("📍", fontSize = 16.sp)
-            Text(shown, color = p.ink, fontSize = 15.sp, modifier = Modifier.weight(1f).padding(start = 8.dp).clickable { edit = true; q = shown })
+            Text("📍", fontSize = HomelabType.body.fontSize)
+            Text(shown, color = p.ink, fontSize = HomelabType.callout.fontSize, modifier = Modifier.weight(1f).padding(start = 8.dp).clickable { edit = true; q = shown })
             Box(Modifier.size(32.dp).clip(CircleShape).clickable(onClickLabel = "Fjern sted") { vm.patchTask37(t.id) { it.copy(place = null, geo = null) } }, contentAlignment = Alignment.Center) {
-                Text("✕", modifier = Modifier.semantics { contentDescription = "Fjern sted" }, color = p.mut, fontSize = 12.sp)
+                Text("✕", modifier = Modifier.semantics { contentDescription = "Fjern sted" }, color = p.mut, fontSize = HomelabType.footnote.fontSize)
             }
         } else {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("📍", fontSize = 16.sp)
+                Text("📍", fontSize = HomelabType.body.fontSize)
                 Box(Modifier.weight(1f).padding(start = 8.dp)) {
-                    if (q.isEmpty()) Text("Legg til sted eller adresse", color = p.mut, fontSize = 15.sp)
-                    BasicTextField(q, { q = it }, singleLine = true, textStyle = TextStyle(color = p.ink, fontSize = 15.sp), cursorBrush = SolidColor(p.lab),
+                    if (q.isEmpty()) Text("Legg til sted eller adresse", color = p.mut, fontSize = HomelabType.callout.fontSize)
+                    BasicTextField(q, { q = it }, singleLine = true, textStyle = TextStyle(color = p.ink, fontSize = HomelabType.callout.fontSize), cursorBrush = SolidColor(p.lab),
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done), keyboardActions = KeyboardActions(onDone = {
                             if (q.isNotBlank()) { val v = q.trim(); vm.patchTask37(t.id) { it.copy(place = v, geo = null) }; edit = false; q = "" }
                         }), modifier = Modifier.fillMaxWidth())
                 }
             }
             hits.take(5).forEach { g ->
-                Text(g.label, color = p.ink, fontSize = 14.sp, maxLines = 2, modifier = Modifier.fillMaxWidth().heightIn(min = 44.dp).clickable {
+                Text(g.label, color = p.ink, fontSize = HomelabType.callout.fontSize, maxLines = 2, modifier = Modifier.fillMaxWidth().heightIn(min = 44.dp).clickable {
                     vm.patchTask37(t.id) { it.copy(place = g.label, geo = g.lat to g.lon) }; edit = false; q = ""; hits = emptyList()
                 }.wrapContentHeight())
             }
         }
-        if (shown != null && t.geo == null && !edit) Text("Finner stedet på kartet …", color = p.mut, fontSize = 12.sp)
+        if (shown != null && t.geo == null && !edit) Text("Finner stedet på kartet …", color = p.mut, fontSize = HomelabType.footnote.fontSize)
         t.geo?.let { (la, lo) ->
             MapTile44(vm, la, lo)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -366,7 +367,7 @@ private fun MapTile44(vm: AppViewModel, lat: Double, lon: Double) {
         bmp?.let { b -> Image(b.asImageBitmap(), "Kart", contentScale = ContentScale.Crop, modifier = Modifier.matchParentSize()) }
         val px = w * (xf - xf.toInt()).toFloat()
         val py = (w * (yf - yf.toInt()).toFloat() - top).coerceIn(12.dp, 198.dp)
-        Text("📍", fontSize = 24.sp, modifier = Modifier.offset(x = px - 12.dp, y = py - 26.dp))
-        Text("© OpenStreetMap", color = Color.Black.copy(alpha = .6f), fontSize = 9.sp, modifier = Modifier.align(Alignment.BottomEnd).padding(4.dp))
+        Text("📍", fontSize = HomelabType.title3.fontSize, modifier = Modifier.offset(x = px - 12.dp, y = py - 26.dp))
+        Text("© OpenStreetMap", color = Color.Black.copy(alpha = .6f), fontSize = HomelabType.caption.fontSize, modifier = Modifier.align(Alignment.BottomEnd).padding(4.dp))
     }
 }

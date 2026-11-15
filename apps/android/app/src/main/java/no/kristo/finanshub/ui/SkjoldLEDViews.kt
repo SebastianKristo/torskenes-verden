@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import no.kristo.finanshub.*
+import no.kristo.finanshub.ui.designsystem.HomelabType
 
 /*
  * Prompt 78 (LEDAND): LED over hver skuff – UI. Tilstand og API i SkjoldLED.kt.
@@ -57,11 +58,11 @@ internal fun LocateButton78(vm: AppViewModel, pt: SkjPart76) {
             PButton(if (s.locBusy) "Tenner …" else if (on) "💡 Lyser – slå av" else "💡 Vis i skapet", Modifier.fillMaxWidth().semantics { contentDescription = "Vis i skapet: lys opp skuffen" },
                 kind = if (on) "line" else "ink") { if (on) vm.locateOff78() else if (!s.locBusy) vm.locateParts78(listOf(pt.id)) }
             l?.let { ledIndex78(it, pt.loc.row!!, pt.loc.col!!) }?.let {
-                Text("LED $it over ${drawerText81(pt.loc.cabinetId, pt.loc.row!!, pt.loc.col!!)}", color = p.mut, fontSize = 12.sp, fontFamily = PaperFonts.mono)
+                Text("LED $it over ${drawerText81(pt.loc.cabinetId, pt.loc.row!!, pt.loc.col!!)}", color = p.mut, fontSize = HomelabType.footnote.fontSize, fontFamily = PaperFonts.mono)
             }
-        } else Text("💡 Sett opp LED for skapet, så lyser skuffen når du søker ›", color = p.sub, fontSize = 13.sp,
+        } else Text("💡 Sett opp LED for skapet, så lyser skuffen når du søker ›", color = p.sub, fontSize = HomelabType.subheadline.fontSize,
             modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).clickable(role = Role.Button) { vm.openLeds78(cabId) }.padding(vertical = 8.dp))
-        s.locErr?.let { Text(it, color = p.lab, fontSize = 13.sp) }
+        s.locErr?.let { Text(it, color = p.lab, fontSize = HomelabType.subheadline.fontSize) }
     }
 }
 
@@ -75,7 +76,7 @@ internal fun RowLed78(vm: AppViewModel, pt: SkjPart76) {
     Box(Modifier.size(40.dp).clip(CircleShape).background(if (on) hexColor78(drawerColor79(pt.loc.cabinetId, pt.loc.row!!, pt.loc.col!!) ?: s.leds[pt.loc.cabinetId]?.color ?: LED_COLOR78).copy(alpha = .25f) else Color.Transparent)
         .clickable(role = Role.Button) { if (on) vm.locateOff78() else vm.locateParts78(listOf(pt.id)) }
         .semantics { contentDescription = if (on) "Slå av lyset" else "Vis ${pt.name} i skapet" }, contentAlignment = Alignment.Center) {
-        Text("💡", fontSize = 17.sp, color = p.ink)
+        Text("💡", fontSize = HomelabType.body.fontSize, color = p.ink)
     }
 }
 
@@ -111,11 +112,11 @@ internal fun LitBar78(vm: AppViewModel, modifier: Modifier) {
         .background(p.ink).padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         LitDots79(col) // prompt 79: én prikk per farge
         Column(Modifier.weight(1f)) {
-            Text(litText78(s.lit.size, secs), color = p.bg, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
-            Text(s.lit.take(3).joinToString(" · ") { short76(it.row, it.col) + (it.index?.let { i -> " (LED $i)" } ?: "") }, color = p.bg.copy(alpha = .7f), fontSize = 12.sp,
+            Text(litText78(s.lit.size, secs), color = p.bg, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize)
+            Text(s.lit.take(3).joinToString(" · ") { short76(it.row, it.col) + (it.index?.let { i -> " (LED $i)" } ?: "") }, color = p.bg.copy(alpha = .7f), fontSize = HomelabType.footnote.fontSize,
                 fontFamily = PaperFonts.mono, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
-        Text("Slå av", color = p.bg, fontWeight = FontWeight.SemiBold, fontSize = 14.sp,
+        Text("Slå av", color = p.bg, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize,
             modifier = Modifier.heightIn(min = 44.dp).clip(CircleShape).border(1.dp, p.bg.copy(alpha = .5f), CircleShape).clickable(role = Role.Button) { vm.locateOff78() }.wrapContentHeight().padding(horizontal = 14.dp))
     }
 }
@@ -132,7 +133,7 @@ internal fun LedPill78(vm: AppViewModel, cab: SkjCab76) {
     Row(Modifier.heightIn(min = 40.dp).clip(CircleShape).border(1.dp, p.line, CircleShape).clickable(role = Role.Button) { vm.openLeds78(cab.id) }
         .semantics { contentDescription = "LED-oppsett. " + statusText78(st) }.padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         if (ledReady78(s.leds[cab.id])) Box(Modifier.size(8.dp).clip(CircleShape).background(if (st?.ok == true) Color(0xFF2E9D57) else if (st == null) p.mut else p.lab))
-        Text("💡 LED", color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+        Text("💡 LED", color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.subheadline.fontSize)
     }
 }
 
@@ -145,7 +146,7 @@ internal fun DrawerLed78(vm: AppViewModel, cab: SkjCab76, r: Int, c: Int) {
     if (!ledReady78(l)) return
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         PButton("💡 Lys opp skuffen", Modifier.weight(1f), kind = "line", height = 44.dp) { vm.locateDrawer78(cab.id, r, c) }
-        ledIndex78(l!!, r, c)?.let { Text("LED $it", color = p.mut, fontSize = 12.sp, fontFamily = PaperFonts.mono) }
+        ledIndex78(l!!, r, c)?.let { Text("LED $it", color = p.mut, fontSize = HomelabType.footnote.fontSize, fontFamily = PaperFonts.mono) }
     }
 }
 
@@ -159,11 +160,11 @@ internal fun StatusBadge78(vm: AppViewModel, cabId: String) {
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Box(Modifier.size(10.dp).clip(CircleShape).background(if (st?.ok == true) Color(0xFF2E9D57) else if (st == null) p.mut else p.lab))
         Column(Modifier.weight(1f).padding(vertical = 8.dp)) {
-            Text(statusText78(st), color = p.ink, fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
-            st?.version?.let { Text("WLED $it", color = p.mut, fontSize = 12.sp, fontFamily = PaperFonts.mono) }
+            Text(statusText78(st), color = p.ink, fontSize = HomelabType.subheadline.fontSize, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            st?.version?.let { Text("WLED $it", color = p.mut, fontSize = HomelabType.footnote.fontSize, fontFamily = PaperFonts.mono) }
         }
         if (s.statusBusy) CircularProgressIndicator(color = p.mut, strokeWidth = 2.dp, modifier = Modifier.size(16.dp))
-        Text("Sjekk", color = p.ink, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.heightIn(min = 44.dp).clip(CircleShape)
+        Text("Sjekk", color = p.ink, fontSize = HomelabType.subheadline.fontSize, fontWeight = FontWeight.SemiBold, modifier = Modifier.heightIn(min = 44.dp).clip(CircleShape)
             .clickable(role = Role.Button) { vm.refreshStatus78(cabId) }.wrapContentHeight().padding(horizontal = 12.dp))
     }
 }
@@ -183,8 +184,8 @@ private fun Toggle78(t: String, sub: String, on: Boolean, onChange: (Boolean) ->
     val p = PaperPal.current
     Row(Modifier.fillMaxWidth().clickable(role = Role.Switch) { onChange(!on) }.padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         Column(Modifier.weight(1f)) {
-            Text(t, color = p.ink, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-            Text(sub, color = p.mut, fontSize = 12.5.sp)
+            Text(t, color = p.ink, fontSize = HomelabType.callout.fontSize, fontWeight = FontWeight.SemiBold)
+            Text(sub, color = p.mut, fontSize = HomelabType.footnote.fontSize)
         }
         Switch(on, onChange)
     }
@@ -207,7 +208,7 @@ internal fun LedScreen78(vm: AppViewModel) {
     /** Test og kalibrering bruker det lagrede oppsettet: lagre først når noe er endret. */
     fun saved(then: () -> Unit) { if (dirty) vm.saveLeds78(then) else then() }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).imePadding().padding(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 140.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        Text(cab.name + " · ${cab.rows} rader × ${cab.cols} skuffer", color = p.mut, fontSize = 13.sp)
+        Text(cab.name + " · ${cab.rows} rader × ${cab.cols} skuffer", color = p.mut, fontSize = HomelabType.subheadline.fontSize)
         StatusBadge78(vm, cab.id)
         if (s.calOn) { Calibrate78(vm, cab, cur); return@Column }
         if (Skjold79.diagOn && Skjold79.diagCab == cab.id) { Diagnose79(vm); return@Column } // prompt 79: Feilsøk LED
@@ -215,7 +216,7 @@ internal fun LedScreen78(vm: AppViewModel) {
             Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Toggle78("LED i dette skapet", "Adresserbar stripe over hver rad, styrt av WLED (ESP32).", d.enabled) { d.enabled = it }
                 PField("WLED-adresse", d.host, { d.host = it.trim() }, placeholder = "192.168.1.50 eller wled-skap.local")
-                if (d.host.isNotBlank() && !hostLocal78(d.host)) Text("Bare adresser i hjemmenettet virker (192.168.x.x, 10.x.x.x, 172.16–31.x.x, .local, .lan).", color = p.lab, fontSize = 12.5.sp)
+                if (d.host.isNotBlank() && !hostLocal78(d.host)) Text("Bare adresser i hjemmenettet virker (192.168.x.x, 10.x.x.x, 172.16–31.x.x, .local, .lan).", color = p.lab, fontSize = HomelabType.footnote.fontSize)
                 PLabel("Farge", p.mut, 10.sp)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     LED_COLORS78.forEach { (hex, name) ->
@@ -236,14 +237,14 @@ internal fun LedScreen78(vm: AppViewModel) {
             }
         }
         PHead("Skuffene")
-        Text("Midten av skuff n = midten av første skuff + (n − 1) × skuffavstand, målt fra venstre kant. Raaco: 300 mm / 5 = 60 mm, første skuff 30 mm.", color = p.mut, fontSize = 12.5.sp)
+        Text("Midten av skuff n = midten av første skuff + (n − 1) × skuffavstand, målt fra venstre kant. Raaco: 300 mm / 5 = 60 mm, første skuff 30 mm.", color = p.mut, fontSize = HomelabType.footnote.fontSize)
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             PField("Skuffavstand (mm)", d.drawerPitch, { d.drawerPitch = it.take(7) }, Modifier.weight(1f), placeholder = num78(defPitch78(cab.kind)), keyboard = num)
             PField("Første skuff, midt (mm)", d.firstX, { d.firstX = it.take(7) }, Modifier.weight(1f), placeholder = "30", keyboard = num)
         }
         PField("LED-avstand (mm)", d.ledPitch, { d.ledPitch = it.take(7) }, placeholder = "16,667 (60 LED/m)", keyboard = num)
         PHead("Rader", "${ledTotal78(cur.rows)} LED")
-        Text("Hver rad har sin del av stripa. 60 LED/m gir 16,67 mm mellom LED-ene. «Baklengs» når stripa går fra høyre mot venstre.", color = p.mut, fontSize = 12.5.sp)
+        Text("Hver rad har sin del av stripa. 60 LED/m gir 16,67 mm mellom LED-ene. «Baklengs» når stripa går fra høyre mot venstre.", color = p.mut, fontSize = HomelabType.footnote.fontSize)
         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             PChip("Fyll ut: serpentine", false) { fillRows78(d, cab, serpentine = true) }
             PChip("Fyll ut: samme retning", false) { fillRows78(d, cab, serpentine = false) }
@@ -258,16 +259,16 @@ internal fun LedScreen78(vm: AppViewModel) {
         // prompt 79: får tilkobling men lyser ikke? Veiviseren tester vanlig farge mot enkelt-LED og gir et hint.
         PButton("🔧 Feilsøk LED", Modifier.fillMaxWidth().semantics { contentDescription = "Feilsøk LED: finn ut hvorfor stripa ikke lyser" }, kind = "line", height = 44.dp) { saved { vm.startDiag79(cab.id) } }
         PHead("Kalibrering", if (d.overrides.isEmpty()) null else "${d.overrides.size} skuffer")
-        Text("Én LED lyser om gangen. Trykk på skuffen som lyser, så husker Skjold Lab det. Bruk «Neste» for LED-er mellom skuffene.", color = p.mut, fontSize = 12.5.sp)
+        Text("Én LED lyser om gangen. Trykk på skuffen som lyser, så husker Skjold Lab det. Bruk «Neste» for LED-er mellom skuffene.", color = p.mut, fontSize = HomelabType.footnote.fontSize)
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             PButton("Start veiviseren", Modifier.weight(1f), kind = "line", height = 44.dp) { saved { vm.startCal78() } }
             if (d.overrides.isNotEmpty()) PButton("Fjern overstyringer", Modifier.weight(1f), kind = "line", height = 44.dp) { clearOverrides78() }
         }
         PHead("Lys opp")
         LedSettings78(vm)
-        s.ledsErr?.let { Text(it, color = p.lab, fontSize = 13.sp) }
+        s.ledsErr?.let { Text(it, color = p.lab, fontSize = HomelabType.subheadline.fontSize) }
         PButton(if (s.ledsBusy) "Lagrer …" else if (dirty) "Lagre" else "Lagret", Modifier.fillMaxWidth(), kind = if (dirty) "ink" else "line") { if (!s.ledsBusy) vm.saveLeds78() }
-        Text("Se tools/skjoldlab-led/README.md for innkjøpsliste, kobling og WLED-oppsett.", color = p.mut, fontSize = 12.sp)
+        Text("Se tools/skjoldlab-led/README.md for innkjøpsliste, kobling og WLED-oppsett.", color = p.mut, fontSize = HomelabType.footnote.fontSize)
     }
 }
 
@@ -277,9 +278,9 @@ private fun LedRow78(vm: AppViewModel, cab: SkjCab76, r: SkjLedRowDraft78, int: 
     PCard {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Rad ${r.row}", color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, modifier = Modifier.weight(1f))
+                Text("Rad ${r.row}", color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize, modifier = Modifier.weight(1f))
                 PChip(if (r.reverse) "← baklengs" else "fremover →", r.reverse) { r.reverse = !r.reverse }
-                Text("Test", color = p.ink, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.heightIn(min = 40.dp).clip(CircleShape).border(1.dp, p.line, CircleShape)
+                Text("Test", color = p.ink, fontSize = HomelabType.subheadline.fontSize, fontWeight = FontWeight.SemiBold, modifier = Modifier.heightIn(min = 40.dp).clip(CircleShape).border(1.dp, p.line, CircleShape)
                     .clickable(role = Role.Button) { onTest() }.wrapContentHeight().padding(horizontal = 12.dp).semantics { contentDescription = "Test rad ${r.row}" })
             }
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -308,8 +309,8 @@ private fun Calibrate78(vm: AppViewModel, cab: SkjCab76, cur: SkjLeds78) {
                 PSerif("LED ${s.calIndex} lyser", 22.sp, modifier = Modifier.weight(1f))
                 if (s.calBusy) CircularProgressIndicator(color = p.mut, strokeWidth = 2.dp, modifier = Modifier.size(16.dp))
             }
-            Text("Trykk på skuffen som lyser." + (guess?.let { " Beregnet: ${drawerText76(it.first, it.second)}." } ?: ""), color = p.sub, fontSize = 14.sp)
-            if (s.calDone.isNotEmpty()) Text("Satt nå: " + s.calDone.entries.joinToString(" · ") { "${it.key} = ${it.value}" }, color = p.mut, fontSize = 12.sp, fontFamily = PaperFonts.mono, maxLines = 3, overflow = TextOverflow.Ellipsis)
+            Text("Trykk på skuffen som lyser." + (guess?.let { " Beregnet: ${drawerText76(it.first, it.second)}." } ?: ""), color = p.sub, fontSize = HomelabType.callout.fontSize)
+            if (s.calDone.isNotEmpty()) Text("Satt nå: " + s.calDone.entries.joinToString(" · ") { "${it.key} = ${it.value}" }, color = p.mut, fontSize = HomelabType.footnote.fontSize, fontFamily = PaperFonts.mono, maxLines = 3, overflow = TextOverflow.Ellipsis)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 PButton("‹ Forrige", Modifier.weight(1f), kind = "line", height = 44.dp) { vm.calStep78(-1) }
                 PButton("Neste ›", Modifier.weight(1f), kind = "line", height = 44.dp) { vm.calStep78(1) }

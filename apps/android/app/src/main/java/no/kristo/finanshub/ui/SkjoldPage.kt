@@ -60,6 +60,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import no.kristo.finanshub.*
+import no.kristo.finanshub.ui.designsystem.HomelabType
 
 /*
  * Prompt 76 (SKJAND): Skjold Lab-siden (Mer → Skjold Lab, finanshub://skjold). Papir-design som resten av Homelab.
@@ -88,7 +89,7 @@ internal fun SkjoldPage76(vm: AppViewModel) {
             when {
                 s.missing -> Column(Modifier.fillMaxWidth().padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     PSerif("Skjold Lab finnes ikke på serveren ennå", 22.sp)
-                    Text("Oppdater Homelab for å få sorteringssystemet for deler.", color = p.mut, fontSize = 14.sp)
+                    Text("Oppdater Homelab for å få sorteringssystemet for deler.", color = p.mut, fontSize = HomelabType.callout.fontSize)
                     PButton("‹ Tilbake", kind = "line", height = 44.dp) { vm.closeSkjold76() }
                 }
                 else -> when (s.screen) {
@@ -133,7 +134,7 @@ private fun Header76(vm: AppViewModel) {
         if (s.screen == "edit") Pill76("⚙", on = false, Modifier.semantics { contentDescription = "Innstillinger for Glimt i Skjold Lab" }) { Skjold77.settingsOpen = true; vm.loadAiSettings77() }
     }
     if (s.offline) Text("Uten nett · viser lagret liste" + (s.cachedAt?.let { " fra " + java.text.SimpleDateFormat("d.M. HH:mm", java.util.Locale("nb", "NO")).format(java.util.Date(it)) } ?: "") + ". Endringer krever nett.",
-        color = p.ink, fontSize = 12.5.sp, modifier = Modifier.padding(horizontal = 16.dp).fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(p.tertiary).padding(10.dp, 6.dp))
+        color = p.ink, fontSize = HomelabType.footnote.fontSize, modifier = Modifier.padding(horizontal = 16.dp).fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(p.tertiary).padding(10.dp, 6.dp))
 }
 
 @Composable
@@ -141,7 +142,7 @@ private fun Pill76(t: String, on: Boolean, modifier: Modifier = Modifier, onClic
     val p = PaperPal.current
     Box(modifier.heightIn(min = 40.dp).clip(CircleShape).background(if (on) p.ink else Color.Transparent).border(1.dp, if (on) p.ink else p.line, CircleShape)
         .clickable(role = Role.Button) { Haptics.select(); onClick() }.padding(horizontal = 14.dp), contentAlignment = Alignment.Center) {
-        Text(t, color = if (on) p.bg else p.ink, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, maxLines = 1)
+        Text(t, color = if (on) p.bg else p.ink, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.subheadline.fontSize, maxLines = 1)
     }
 }
 
@@ -168,29 +169,29 @@ private fun ListScreen76(vm: AppViewModel) {
                 s.cabinets.forEach { c ->
                     PCard(Modifier.width(150.dp), shadow = true, onClick = { s.cabId = c.id; s.drawer = null; push76("cab"); vm.loadMap76(c.id) }) {
                         Box(Modifier.padding(10.dp).height(120.dp).fillMaxWidth(), contentAlignment = Alignment.Center) { MiniCab76(c, s.maps[c.id]) }
-                        Text(c.name, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(horizontal = 10.dp))
-                        Text("${c.rows} × ${c.cols} · ${c.parts} deler", color = p.mut, fontSize = 12.sp, modifier = Modifier.padding(start = 10.dp, end = 10.dp, bottom = 10.dp))
+                        Text(c.name, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(horizontal = 10.dp))
+                        Text("${c.rows} × ${c.cols} · ${c.parts} deler", color = p.mut, fontSize = HomelabType.footnote.fontSize, modifier = Modifier.padding(start = 10.dp, end = 10.dp, bottom = 10.dp))
                     }
                 }
                 NewPresetCard81() // prompt 81: «Skjold Lab-hylla (3D)»
                 PCard(Modifier.width(150.dp), onClick = { newCab76(vm, threeD = true) }) {
                     Column(Modifier.height(186.dp).fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("+", color = p.lab, fontSize = 28.sp)
-                        Text("Legg til skap", color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
-                        Text("f.eks. tilleggsskap (3D-print)", color = p.mut, fontSize = 12.sp, textAlign = TextAlign.Center)
+                        Text("+", color = p.lab, fontSize = HomelabType.title2.fontSize)
+                        Text("Legg til skap", color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize)
+                        Text("f.eks. tilleggsskap (3D-print)", color = p.mut, fontSize = HomelabType.footnote.fontSize, textAlign = TextAlign.Center)
                     }
                 }
             }
         }
         if (s.q.isBlank()) item(key = "projects") { ProjectsEntry82(vm) } // prompt 82: produkter
-        s.err?.let { e -> item(key = "err") { Text(e, color = p.lab, fontSize = 13.sp) } }
+        s.err?.let { e -> item(key = "err") { Text(e, color = p.lab, fontSize = HomelabType.subheadline.fontSize) } }
         val l = s.items
         if (l == null) item(key = "load") { Box(Modifier.fillMaxWidth().padding(30.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = p.ink) } }
         else {
             item(key = "head") { PHead(if (s.q.isBlank()) "Deler" else "Treff", "${s.total}") }
             item(key = "hitsled") { HitsLed78(vm) } // prompt 78: vis treffene i skapet
             if (l.isEmpty()) item(key = "none") {
-                Text(if (s.q.isBlank()) "Ingen deler ennå. Trykk «+ Ny del»." else "Ingen deler heter «${s.q.trim()}».", color = p.mut, fontSize = 14.sp, modifier = Modifier.padding(8.dp))
+                Text(if (s.q.isBlank()) "Ingen deler ennå. Trykk «+ Ny del»." else "Ingen deler heter «${s.q.trim()}».", color = p.mut, fontSize = HomelabType.callout.fontSize, modifier = Modifier.padding(8.dp))
             }
             items(l, key = { "p" + it.id }) { pt -> PartRow76(vm, pt) }
         }
@@ -204,10 +205,10 @@ private fun Search76(vm: AppViewModel) {
     Column(Modifier.fillMaxWidth()) {
         Row(Modifier.fillMaxWidth().heightIn(min = 50.dp).shadow(6.dp, RoundedCornerShape(25.dp)).clip(RoundedCornerShape(25.dp)).background(p.card).padding(horizontal = 16.dp),
             verticalAlignment = Alignment.CenterVertically) {
-            Text("⌕", color = p.mut, fontSize = 18.sp)
+            Text("⌕", color = p.mut, fontSize = HomelabType.headline.fontSize)
             Box(Modifier.weight(1f).padding(start = 8.dp)) {
-                if (s.q.isEmpty()) Text("Søk etter deler, f.eks. M3, 10k, ESP32", color = p.mut, fontSize = 15.sp, maxLines = 1)
-                BasicTextField(s.q, { vm.suggestSkjold76(it) }, singleLine = true, textStyle = TextStyle(color = p.ink, fontSize = 15.sp), cursorBrush = SolidColor(p.lab),
+                if (s.q.isEmpty()) Text("Søk etter deler, f.eks. M3, 10k, ESP32", color = p.mut, fontSize = HomelabType.callout.fontSize, maxLines = 1)
+                BasicTextField(s.q, { vm.suggestSkjold76(it) }, singleLine = true, textStyle = TextStyle(color = p.ink, fontSize = HomelabType.callout.fontSize), cursorBrush = SolidColor(p.lab),
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search), keyboardActions = KeyboardActions(onSearch = { s.suggest = emptyList(); vm.searchSkjold76(now = true) }),
                     modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Søk i Skjold Lab" })
             }
@@ -221,8 +222,8 @@ private fun Search76(vm: AppViewModel) {
                     s.suggest = emptyList()
                     if (id != null) vm.openPart76(id) else { s.q = t; vm.searchSkjold76(now = true) }
                 }.padding(16.dp, 10.dp)) {
-                    Text(t, color = p.ink, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    sub?.let { Text(it, color = p.mut, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+                    Text(t, color = p.ink, fontSize = HomelabType.callout.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    sub?.let { Text(it, color = p.mut, fontSize = HomelabType.footnote.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis) }
                 }
             }
         }
@@ -236,17 +237,17 @@ private fun PartRow76(vm: AppViewModel, pt: SkjPart76) {
         Row(Modifier.fillMaxWidth().padding(10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Img76(vm, pt.thumbUrl ?: pt.photos.firstOrNull(), 200, Modifier.size(56.dp).clip(RoundedCornerShape(12.dp)))
             Column(Modifier.weight(1f)) {
-                Text(pt.name, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(pt.name, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 val sp = pt.specs.joinToString(" · ") { it.second }
-                if (sp.isNotBlank() || pt.category != null) Text(listOfNotNull(pt.category, sp.takeIf { it.isNotBlank() }).joinToString(" · "), color = p.mut, fontSize = 12.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(pt.loc.text, color = if (pt.loc.placed) p.sub else p.lab, fontSize = 12.5.sp, fontFamily = PaperFonts.mono, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                if (sp.isNotBlank() || pt.category != null) Text(listOfNotNull(pt.category, sp.takeIf { it.isNotBlank() }).joinToString(" · "), color = p.mut, fontSize = HomelabType.footnote.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(pt.loc.text, color = if (pt.loc.placed) p.sub else p.lab, fontSize = HomelabType.footnote.fontSize, fontFamily = PaperFonts.mono, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             RowLed78(vm, pt) // prompt 78
             PickBtn79(vm, pt) // prompt 79: + / ✓ plukkliste
             Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text("${qtyText76(pt.qty)} ${pt.unit}", color = p.ink, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, maxLines = 1)
+                Text("${qtyText76(pt.qty)} ${pt.unit}", color = p.ink, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize, maxLines = 1)
                 if (pt.low) LowBadge76()
-                if (pt.loc.placed) Text(short76(pt.loc.row!!, pt.loc.col!!), color = p.bg, fontFamily = PaperFonts.mono, fontWeight = FontWeight.Bold, fontSize = 12.sp,
+                if (pt.loc.placed) Text(short76(pt.loc.row!!, pt.loc.col!!), color = p.bg, fontFamily = PaperFonts.mono, fontWeight = FontWeight.Bold, fontSize = HomelabType.footnote.fontSize,
                     modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(p.ink).padding(6.dp, 2.dp))
             }
         }
@@ -256,7 +257,7 @@ private fun PartRow76(vm: AppViewModel, pt: SkjPart76) {
 @Composable
 private fun LowBadge76() {
     val p = PaperPal.current
-    Text("Lavt", color = p.onLab, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(p.lab).padding(6.dp, 2.dp))
+    Text("Lavt", color = p.onLab, fontSize = HomelabType.caption.fontSize, fontWeight = FontWeight.Bold, modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(p.lab).padding(6.dp, 2.dp))
 }
 
 /** Bilde fra serveren (Img50: diskcache og token bare til egen server). Plassholder med skuff-ikon. */
@@ -270,7 +271,7 @@ internal fun Img76(vm: AppViewModel, url: String?, maxPx: Int, modifier: Modifie
     Box(modifier.background(p.surf2), contentAlignment = Alignment.Center) {
         val b = bmp
         if (b != null) Image(b.asImageBitmap(), null, contentScale = if (crop) ContentScale.Crop else ContentScale.Fit, modifier = Modifier.matchParentSize())
-        else Text("▤", color = p.mut, fontSize = 20.sp)
+        else Text("▤", color = p.mut, fontSize = HomelabType.headline.fontSize)
     }
 }
 
@@ -292,9 +293,9 @@ private fun PartScreen76(vm: AppViewModel) {
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             PSerif(pt.name, 26.sp)
             if (pt.category != null) PLabel(pt.category)
-            if (pt.specs.isNotEmpty()) Text(pt.specs.joinToString("  ·  ") { "${it.first}: ${it.second}" }, color = p.sub, fontSize = 14.sp)
-            pt.description?.let { Text(it, color = p.ink, fontSize = 14.sp) }
-            if (pt.tags.isNotEmpty()) Text(pt.tags.joinToString(" ") { "#$it" }, color = p.mut, fontSize = 13.sp)
+            if (pt.specs.isNotEmpty()) Text(pt.specs.joinToString("  ·  ") { "${it.first}: ${it.second}" }, color = p.sub, fontSize = HomelabType.callout.fontSize)
+            pt.description?.let { Text(it, color = p.ink, fontSize = HomelabType.callout.fontSize) }
+            if (pt.tags.isNotEmpty()) Text(pt.tags.joinToString(" ") { "#$it" }, color = p.mut, fontSize = HomelabType.subheadline.fontSize)
         }
         // Antall ±
         PCard(shadow = true) {
@@ -302,10 +303,10 @@ private fun PartScreen76(vm: AppViewModel) {
                 Column(Modifier.weight(1f)) {
                     PLabel("Antall")
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("${qtyText76(pt.qty)} ${pt.unit}", color = p.ink, fontFamily = PaperFonts.mono, fontWeight = FontWeight.Bold, fontSize = 22.sp)
+                        Text("${qtyText76(pt.qty)} ${pt.unit}", color = p.ink, fontFamily = PaperFonts.mono, fontWeight = FontWeight.Bold, fontSize = HomelabType.title3.fontSize)
                         if (pt.low) LowBadge76()
                     }
-                    pt.minQty?.let { Text("Min ${qtyText76(it)} ${pt.unit}", color = p.mut, fontSize = 12.sp) }
+                    pt.minQty?.let { Text("Min ${qtyText76(it)} ${pt.unit}", color = p.mut, fontSize = HomelabType.footnote.fontSize) }
                 }
                 Round76("−", "Én færre") { vm.qtySkjold76(pt, delta = -1.0) }
                 Round76("+", "Én mer") { vm.qtySkjold76(pt, delta = 1.0) }
@@ -315,12 +316,12 @@ private fun PartScreen76(vm: AppViewModel) {
         PCard(shadow = true) {
             Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 PLabel("Plassering")
-                Text(pt.loc.text, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
-                if (s.occupied.isNotEmpty()) Text("Obs: i samme skuff ligger også " + s.occupied.joinToString(", ") + ".", color = p.lab, fontSize = 13.sp)
+                Text(pt.loc.text, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.body.fontSize)
+                if (s.occupied.isNotEmpty()) Text("Obs: i samme skuff ligger også " + s.occupied.joinToString(", ") + ".", color = p.lab, fontSize = HomelabType.subheadline.fontSize)
                 val cabId = if (s.pick == "move") (s.cabId ?: pt.loc.cabinetId) else (pt.loc.cabinetId ?: s.cabId)
                 val cab = s.cabinets.firstOrNull { it.id == cabId }
                 if (s.pick == "move") {
-                    Text("Trykk på skuffen delen skal flyttes til.", color = p.mut, fontSize = 13.sp)
+                    Text("Trykk på skuffen delen skal flyttes til.", color = p.mut, fontSize = HomelabType.subheadline.fontSize)
                     CabChips76(vm)
                 }
                 if (cab != null) {
@@ -350,7 +351,7 @@ private fun PartScreen76(vm: AppViewModel) {
         if (s.pick == "move" && pt.loc.placed) PButton("Ta ut av skapet («Uten plass»)", Modifier.fillMaxWidth(), kind = "line") { vm.moveSkjold76(pt, null, null, null, null) }
         if (ask) PCard {
             Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text("Slette «${pt.name}»? Den kan hentes tilbake i 30 dager.", color = p.ink, fontSize = 14.sp)
+                Text("Slette «${pt.name}»? Den kan hentes tilbake i 30 dager.", color = p.ink, fontSize = HomelabType.callout.fontSize)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     PButton("Slett", Modifier.weight(1f), kind = "lab") { ask = false; vm.deleteSkjold76(pt) }
                     PButton("Avbryt", Modifier.weight(1f), kind = "line") { ask = false }
@@ -367,7 +368,7 @@ private fun PartScreen76(vm: AppViewModel) {
         if (pt.history.isNotEmpty()) {
             PHead("Historikk")
             pt.history.take(12).forEach { h ->
-                Text(listOfNotNull(h.at.take(16).replace('T', ' '), h.action, listOfNotNull(h.from, h.to).joinToString(" → ").takeIf { it.isNotBlank() }).joinToString(" · "), color = p.mut, fontSize = 12.5.sp)
+                Text(listOfNotNull(h.at.take(16).replace('T', ' '), h.action, listOfNotNull(h.from, h.to).joinToString(" → ").takeIf { it.isNotBlank() }).joinToString(" · "), color = p.mut, fontSize = HomelabType.footnote.fontSize)
             }
         }
     }
@@ -377,7 +378,7 @@ private fun PartScreen76(vm: AppViewModel) {
 private fun Round76(t: String, desc: String, onClick: () -> Unit) {
     val p = PaperPal.current
     Box(Modifier.size(48.dp).clip(CircleShape).background(p.ink).clickable(role = Role.Button, onClickLabel = desc, onClick = onClick).semantics { contentDescription = desc },
-        contentAlignment = Alignment.Center) { Text(t, color = p.bg, fontSize = 22.sp, fontWeight = FontWeight.Bold) }
+        contentAlignment = Alignment.Center) { Text(t, color = p.bg, fontSize = HomelabType.title3.fontSize, fontWeight = FontWeight.Bold) }
 }
 
 @Composable
@@ -451,7 +452,7 @@ internal fun CabView76(vm: AppViewModel, cab: SkjCab76, hl: Pair<Int, Int>?, max
         if (canPhoto && s.view == "photo") CabPhoto76(vm, cab, cab.corners!!, hlA, maxH, tapA)
         else CabDrawing76(cab, s.maps[cab.id], hlA, maxH, tapA)
         if (hlA != null) Text(drawerText81(cab.id, hlA.first, hlA.second) + "  (" + short76(hlA.first, hlA.second) + ")" + (s.maps[cab.id]?.at(hlA.first, hlA.second)?.label?.let { " · $it" } ?: ""),
-            color = p.lab, fontFamily = PaperFonts.mono, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+            color = p.lab, fontFamily = PaperFonts.mono, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize)
     }
 }
 
@@ -472,13 +473,13 @@ private fun CabDrawing76(cab: SkjCab76, m: SkjMap76?, hl: Pair<Int, Int>?, maxH:
             // Skuffnummer (kolonner) over tegningen.
             Row(Modifier.padding(start = labelW + frameDp, end = frameDp).width(w - frameDp * 2)) {
                 for (c in 1..cols) Text("$c", Modifier.weight(1f), color = if (hc != null && c in hc.col until hc.col + hc.spanC) p.lab else p.mut, fontWeight = if (hc != null && c in hc.col until hc.col + hc.spanC) FontWeight.Bold else FontWeight.Normal,
-                    fontFamily = PaperFonts.mono, fontSize = 11.sp, textAlign = TextAlign.Center)
+                    fontFamily = PaperFonts.mono, fontSize = HomelabType.caption.fontSize, textAlign = TextAlign.Center)
             }
             Row {
                 // Radnummer til venstre.
                 Column(Modifier.width(labelW).height(h).padding(vertical = frameDp)) {
                     for (r in 1..rows) Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                        Text("$r", color = if (hc != null && r in hc.row until hc.row + hc.spanR) p.lab else p.mut, fontWeight = if (hc != null && r in hc.row until hc.row + hc.spanR) FontWeight.Bold else FontWeight.Normal, fontFamily = PaperFonts.mono, fontSize = 10.5.sp)
+                        Text("$r", color = if (hc != null && r in hc.row until hc.row + hc.spanR) p.lab else p.mut, fontWeight = if (hc != null && r in hc.row until hc.row + hc.spanR) FontWeight.Bold else FontWeight.Normal, fontFamily = PaperFonts.mono, fontSize = HomelabType.caption.fontSize)
                     }
                 }
                 Box(Modifier.size(w, h).pointerInput(rows, cols) {
@@ -582,7 +583,7 @@ private fun CabScreen76(vm: AppViewModel) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 PSerif(cab.name, 24.sp, maxLines = 1)
-                Text("${cab.rows} rader × ${cab.cols} skuffer · ${if (cab.kind == "3d") "3D-print" else "kjøpt"} · ${cab.parts} deler i ${cab.used} skuffer", color = p.mut, fontSize = 12.5.sp)
+                Text("${cab.rows} rader × ${cab.cols} skuffer · ${if (cab.kind == "3d") "3D-print" else "kjøpt"} · ${cab.parts} deler i ${cab.used} skuffer", color = p.mut, fontSize = HomelabType.footnote.fontSize)
             }
             Pill76("Oppsett", on = false) { s.corners = null; push76("setup") }
             Spacer(Modifier.width(6.dp))
@@ -591,7 +592,7 @@ private fun CabScreen76(vm: AppViewModel) {
         CabView76(vm, cab, s.drawer) { r, c -> s.drawer = if (s.drawer == (r to c)) null else r to c; s.pulse++ }
         s.drawer?.let { (r, c) -> DrawerCard76(vm, cab, m?.at(r, c), r, c) }
         s.drawer?.let { (r, c) -> DrawerLed78(vm, cab, r, c) } // prompt 78
-        if (s.drawer == null) Text("Trykk på en skuff for å se hva som ligger der.", color = p.mut, fontSize = 13.sp)
+        if (s.drawer == null) Text("Trykk på en skuff for å se hva som ligger der.", color = p.mut, fontSize = HomelabType.subheadline.fontSize)
     }
 }
 
@@ -608,21 +609,21 @@ private fun DrawerCard76(vm: AppViewModel, cab: SkjCab76, d: SkjDrawer76?, r: In
                     PLabel(drawerText81(cab.id, r, c) + " · " + short76(r, c))
                     PSerif(d?.label ?: defLabel76(r, c), 20.sp, maxLines = 1)
                 }
-                Text("${d?.count ?: 0} deler", color = p.mut, fontSize = 13.sp)
+                Text("${d?.count ?: 0} deler", color = p.mut, fontSize = HomelabType.subheadline.fontSize)
             }
             val parts = d?.parts.orEmpty()
-            if (parts.isEmpty()) Text("Tom skuff.", color = p.mut, fontSize = 13.sp)
+            if (parts.isEmpty()) Text("Tom skuff.", color = p.mut, fontSize = HomelabType.subheadline.fontSize)
             parts.forEach { mp ->
                 Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable { vm.openPart76(mp.id) }.padding(4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Img76(vm, mp.thumbUrl, 160, Modifier.size(40.dp).clip(RoundedCornerShape(10.dp)))
-                    Text(mp.name, color = p.ink, fontSize = 14.5.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Text(qtyText76(mp.qty), color = p.mut, fontFamily = PaperFonts.mono, fontSize = 13.sp)
+                    Text(mp.name, color = p.ink, fontSize = HomelabType.callout.fontSize, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(qtyText76(mp.qty), color = p.mut, fontFamily = PaperFonts.mono, fontSize = HomelabType.subheadline.fontSize)
                 }
             }
             PButton("+ Ny del i denne skuffen", Modifier.fillMaxWidth(), kind = "line") { vm.newPart76() }
             PField("Etikett", label, { label = it }, placeholder = defLabel76(r, c))
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("Rom", color = p.mut, fontSize = 13.sp)
+                Text("Rom", color = p.mut, fontSize = HomelabType.subheadline.fontSize)
                 (1..4).forEach { n -> PChip("$n", comps == n) { comps = n } }
             }
             if (label != (d?.label ?: "") || comps != (d?.compartments ?: 1)) PButton("Lagre skuffen", Modifier.fillMaxWidth()) { vm.putDrawer76(cab.id, r, c, label, comps) }
@@ -665,7 +666,7 @@ private fun SetupScreen76(vm: AppViewModel) {
                     PChip("Kjøpt", kind != "3d") { kind = "kjøpt" }
                     PChip("3D-print", kind == "3d") { kind = "3d"; if (cab.parts == 0) { rows = "12"; cols = suggestCols76(270).toString() } }
                 }
-                if (kind == "3d") Text("Tilleggsskap til ca. 27 cm: 12 rader × ${suggestCols76(270)} skuffer à ~60 mm (se tools/skjoldlab3d). Mål ditt eget skap først.", color = p.mut, fontSize = 12.5.sp)
+                if (kind == "3d") Text("Tilleggsskap til ca. 27 cm: 12 rader × ${suggestCols76(270)} skuffer à ~60 mm (se tools/skjoldlab3d). Mål ditt eget skap først.", color = p.mut, fontSize = HomelabType.footnote.fontSize)
                 PButton("Lagre", Modifier.fillMaxWidth()) {
                     vm.saveCab76(cab.id, name, rows.toIntOrNull() ?: cab.rows, cols.toIntOrNull() ?: cab.cols, kind)
                 }
@@ -683,7 +684,7 @@ private fun SetupScreen76(vm: AppViewModel) {
         }
         if (s.busy) CircularProgressIndicator(color = p.ink, modifier = Modifier.align(Alignment.CenterHorizontally))
         if (cab.photoUrl != null) {
-            Text("Dra de fire hjørnene til hjørnene på skapet. Rutenettet viser hvor skuffene havner.", color = p.mut, fontSize = 13.sp)
+            Text("Dra de fire hjørnene til hjørnene på skapet. Rutenettet viser hvor skuffene havner.", color = p.mut, fontSize = HomelabType.subheadline.fontSize)
             val c = s.corners ?: cab.corners ?: listOf(.08f to .06f, .92f to .06f, .92f to .94f, .08f to .94f)
             CornerEditor76(vm, cab, c, (rows.toIntOrNull() ?: cab.rows).coerceIn(1, 40), (cols.toIntOrNull() ?: cab.cols).coerceIn(1, 20)) { s.corners = it }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -747,7 +748,7 @@ private fun CabDeleteAsk76(vm: AppViewModel, c: SkjCab76) {
         PCard(Modifier.padding(24.dp).widthIn(max = 420.dp), shadow = true) {
             Column(Modifier.padding(16.dp).clickable(enabled = false) {}, verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 PSerif("«${c.name}» har deler", 20.sp)
-                Text("Hvor skal delene flyttes før skapet slettes?", color = p.mut, fontSize = 14.sp)
+                Text("Hvor skal delene flyttes før skapet slettes?", color = p.mut, fontSize = HomelabType.callout.fontSize)
                 s.cabinets.filter { it.id != c.id }.forEach { o -> PButton("Flytt til ${o.name}", Modifier.fillMaxWidth(), kind = "line") { vm.deleteCab76(c, o.id) } }
                 PButton("Uten plass", Modifier.fillMaxWidth(), kind = "line") { vm.deleteCab76(c, "none") }
                 PButton("Avbryt", Modifier.fillMaxWidth()) { s.cabDeleteAsk = null }
@@ -802,7 +803,7 @@ private fun EditScreen76(vm: AppViewModel) {
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { UNITS76.forEach { u -> PChip(u, d.unit == u) { d.unit = u } } }
         PField("Tags (komma mellom)", d.tags, { d.tags = it }, placeholder = "rustfritt, DIN 912")
         PHead("Plassering")
-        Text(locText81(d.cabinetId, s.cabinets.firstOrNull { it.id == d.cabinetId }?.name ?: "Skap", d.row, d.col, d.compartment), color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+        Text(locText81(d.cabinetId, s.cabinets.firstOrNull { it.id == d.cabinetId }?.name ?: "Skap", d.row, d.col, d.compartment), color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             PButton("Foreslå ledig", Modifier.weight(1f)) { vm.suggestFree76(d) }
             PButton("Uten plass", Modifier.weight(1f), kind = "line") { d.cabinetId = null; d.row = null; d.col = null; d.compartment = null }
@@ -810,7 +811,7 @@ private fun EditScreen76(vm: AppViewModel) {
         CabChips76(vm)
         val cab = s.cabinets.firstOrNull { it.id == (s.cabId ?: d.cabinetId) }
         if (cab != null) {
-            Text("Trykk på skuffen i tegningen.", color = p.mut, fontSize = 13.sp)
+            Text("Trykk på skuffen i tegningen.", color = p.mut, fontSize = HomelabType.subheadline.fontSize)
             val hl = if (d.cabinetId == cab.id && d.row != null && d.col != null) d.row!! to d.col!! else null
             CabView76(vm, cab, hl, maxH = 380.dp) { r, c -> d.cabinetId = cab.id; d.row = r; d.col = c; d.compartment = null; s.pulse++ }
             val comps = if (d.row != null && d.col != null) s.maps[cab.id]?.at(d.row!!, d.col!!)?.compartments ?: 1 else 1
@@ -822,11 +823,11 @@ private fun EditScreen76(vm: AppViewModel) {
             existing.forEachIndexed { i, u ->
                 Box {
                     Img76(vm, u, 400, Modifier.size(96.dp).clip(RoundedCornerShape(14.dp)))
-                    Text("✕", color = Color.White, fontSize = 13.sp, modifier = Modifier.align(Alignment.TopEnd).padding(4.dp).size(28.dp).clip(CircleShape).background(Color.Black.copy(alpha = .55f))
+                    Text("✕", color = Color.White, fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.align(Alignment.TopEnd).padding(4.dp).size(28.dp).clip(CircleShape).background(Color.Black.copy(alpha = .55f))
                         .clickable { val pp = s.part; d.id?.let { vm.deletePartPhoto76(it, pp?.photoNs?.getOrNull(i) ?: i) } }.wrapContentSize().semantics { contentDescription = "Slett bildet" })
                 }
             }
-            d.newPhotos.forEach { _ -> Box(Modifier.size(96.dp).clip(RoundedCornerShape(14.dp)).background(p.surf2), contentAlignment = Alignment.Center) { Text("Nytt bilde", color = p.mut, fontSize = 12.sp) } }
+            d.newPhotos.forEach { _ -> Box(Modifier.size(96.dp).clip(RoundedCornerShape(14.dp)).background(p.surf2), contentAlignment = Alignment.Center) { Text("Nytt bilde", color = p.mut, fontSize = HomelabType.footnote.fontSize) } }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             PButton("Ta bilde", Modifier.weight(1f), kind = "line") {
@@ -856,9 +857,9 @@ private fun UndoBar76(vm: AppViewModel, modifier: Modifier) {
     val p = PaperPal.current
     Row(modifier.navigationBarsPadding().padding(16.dp).fillMaxWidth().widthIn(max = 560.dp).shadow(14.dp, RoundedCornerShape(18.dp)).clip(RoundedCornerShape(18.dp)).background(p.ink)
         .padding(start = 16.dp, end = 6.dp, top = 6.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text(u.text, color = p.bg, fontSize = 14.sp, modifier = Modifier.weight(1f), maxLines = 2, overflow = TextOverflow.Ellipsis)
+        Text(u.text, color = p.bg, fontSize = HomelabType.callout.fontSize, modifier = Modifier.weight(1f), maxLines = 2, overflow = TextOverflow.Ellipsis)
         Box(Modifier.heightIn(min = 44.dp).clip(RoundedCornerShape(12.dp)).clickable(role = Role.Button) { Haptics.tap(); vm.runUndo76() }.padding(horizontal = 14.dp), contentAlignment = Alignment.Center) {
-            Text("Angre", color = p.bg, fontWeight = FontWeight.Bold, fontSize = 14.sp, textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline)
+            Text("Angre", color = p.bg, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize, textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline)
         }
     }
 }
@@ -868,6 +869,6 @@ private fun UndoBar76(vm: AppViewModel, modifier: Modifier) {
 internal fun GlimtSkjold76(vm: AppViewModel, uri: String) {
     Box(Modifier.height(32.dp).clip(CircleShape).background(Color.White.copy(alpha = .14f)).clickable(role = Role.Button) { vm.skjoldLink76(Uri.parse(uri)) }.padding(horizontal = 14.dp),
         contentAlignment = Alignment.Center) {
-        Text("Åpne i Skjold Lab ›", color = Color.White, fontFamily = PaperFonts.sans, fontWeight = FontWeight.Bold, fontSize = 12.5.sp, maxLines = 1)
+        Text("Åpne i Skjold Lab ›", color = Color.White, fontFamily = PaperFonts.sans, fontWeight = FontWeight.Bold, fontSize = HomelabType.footnote.fontSize, maxLines = 1)
     }
 }

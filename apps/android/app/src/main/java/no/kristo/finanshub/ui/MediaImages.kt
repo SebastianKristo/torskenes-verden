@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.flow.distinctUntilChanged
 import no.kristo.finanshub.*
+import no.kristo.finanshub.ui.designsystem.HomelabType
 
 /*
  * Prompt 50 (MEDAND50): Media på Android.
@@ -108,15 +109,15 @@ internal fun Track50Line(vm: AppViewModel, t: MTrack50, onManual: (() -> Unit)?,
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             if (busy) CircularProgressIndicator(Modifier.size(13.dp), color = c, strokeWidth = 2.dp)
             else Box(Modifier.size(8.dp).clip(CircleShape).background(c))
-            Text(t.text, color = if (t.tone == "mut") p.ink else c, fontWeight = FontWeight.Bold, fontSize = 13.sp, modifier = Modifier.weight(1f))
+            Text(t.text, color = if (t.tone == "mut") p.ink else c, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.weight(1f))
         }
-        t.detail?.takeIf { it.isNotBlank() }?.let { Text(it, color = p.mut, fontSize = 12.sp, lineHeight = 16.sp) }
+        t.detail?.takeIf { it.isNotBlank() }?.let { Text(it, color = p.mut, fontSize = HomelabType.footnote.fontSize, lineHeight = 16.sp) }
         if (t.state == "downloading" && t.progress != null) Box(Modifier.fillMaxWidth().height(3.dp).clip(CircleShape).background(p.line)) {
             Box(Modifier.fillMaxHeight().fillMaxWidth(t.progress.coerceIn(0f, 1f)).background(c))
         }
         // Diagnostikken som serveren kjørte selv etter 60 s uten grab: det leddet som feilet.
         t.steps.filter { it.state == "fail" || it.state == "warn" }.take(2).forEach { st ->
-            Text(listOfNotNull("${st.n?.let { "$it. " } ?: ""}${st.title}: ${st.text}", st.hint).joinToString(" – "), color = if (st.state == "fail") RED43 else WARN43, fontSize = 12.sp, lineHeight = 16.sp)
+            Text(listOfNotNull("${st.n?.let { "$it. " } ?: ""}${st.title}: ${st.text}", st.hint).joinToString(" – "), color = if (st.state == "fail") RED43 else WARN43, fontSize = HomelabType.footnote.fontSize, lineHeight = 16.sp)
         }
         val acts = t.actions.filter { a -> when (a.optString("id")) { "manual" -> onManual != null; "start", "settings", "retry" -> true; else -> false } }
         if (acts.isNotEmpty()) Row(Modifier.padding(top = 2.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -145,13 +146,13 @@ internal fun MediaDiag50(vm: AppViewModel) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         PLabel("Diagnostikk", modifier = Modifier.padding(start = 4.dp, top = 6.dp))
         Text("Kjører kjeden Sonarr/Radarr → indeksere → grab → nedlastingsklient → qBittorrent og viser hvor den stopper. Nøkler og passord vises aldri.",
-            color = p.mut, fontSize = 12.5.sp, lineHeight = 17.sp, modifier = Modifier.padding(horizontal = 4.dp))
+            color = p.mut, fontSize = HomelabType.footnote.fontSize, lineHeight = 17.sp, modifier = Modifier.padding(horizontal = 4.dp))
         PButton(if (Med50.diagBusy) "Kjører diagnostikk …" else if (d == null) "Kjør diagnostikk" else "Kjør på nytt", Modifier.fillMaxWidth(), kind = if (d == null) "ink" else "line") {
             if (!Med50.diagBusy) vm.runDiag50()
         }
-        Med50.diagErr?.let { Text(it, color = RED43, fontSize = 13.sp, modifier = Modifier.padding(horizontal = 4.dp)) }
+        Med50.diagErr?.let { Text(it, color = RED43, fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.padding(horizontal = 4.dp)) }
         if (d != null) PCard {
-            d.summary?.let { Text(it, color = if (d.ok) OK43 else RED43, fontWeight = FontWeight.Bold, fontSize = 13.5.sp, modifier = Modifier.padding(14.dp, 12.dp, 14.dp, 4.dp)) }
+            d.summary?.let { Text(it, color = if (d.ok) OK43 else RED43, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.padding(14.dp, 12.dp, 14.dp, 4.dp)) }
             d.steps.forEachIndexed { i, st ->
                 if (i > 0 || d.summary != null) Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
                 DiagStep50(vm, st)
@@ -167,17 +168,17 @@ private fun DiagStep50(vm: AppViewModel, st: MStep50) {
     Column(Modifier.fillMaxWidth().padding(14.dp, 10.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Box(Modifier.size(10.dp).clip(CircleShape).background(c))
-            Text("${st.n?.let { "$it. " } ?: ""}${st.title}", color = p.ink, fontWeight = FontWeight.Bold, fontSize = 13.5.sp, modifier = Modifier.weight(1f))
-            st.ms?.let { Text("$it ms", color = p.mut, fontFamily = PaperFonts.mono, fontSize = 11.sp) }
+            Text("${st.n?.let { "$it. " } ?: ""}${st.title}", color = p.ink, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.weight(1f))
+            st.ms?.let { Text("$it ms", color = p.mut, fontFamily = PaperFonts.mono, fontSize = HomelabType.caption.fontSize) }
         }
-        if (st.text.isNotBlank()) Text(st.text, color = if (st.state == "fail") RED43 else p.mut, fontSize = 12.5.sp, lineHeight = 17.sp, modifier = Modifier.padding(start = 20.dp))
-        st.hint?.let { Text(it, color = p.ink, fontSize = 12.5.sp, lineHeight = 17.sp, modifier = Modifier.padding(start = 20.dp)) }
+        if (st.text.isNotBlank()) Text(st.text, color = if (st.state == "fail") RED43 else p.mut, fontSize = HomelabType.footnote.fontSize, lineHeight = 17.sp, modifier = Modifier.padding(start = 20.dp))
+        st.hint?.let { Text(it, color = p.ink, fontSize = HomelabType.footnote.fontSize, lineHeight = 17.sp, modifier = Modifier.padding(start = 20.dp)) }
         // Ledd 5: nedlastingsklientene (vert, port, kategori, starttilstand, passord satt/ikke satt).
         st.raw.optJSONArray("clients")?.let { a ->
             for (i in 0 until a.length()) a.optJSONObject(i)?.let { cl ->
                 val line = listOfNotNull(cl.s43("name"), listOfNotNull(cl.s43("host"), cl.i43("port")?.toString()).joinToString(":").ifBlank { null },
                     cl.s43("category")?.let { "kategori $it" }, cl.s43("initialState")?.let { "start: $it" }, cl.s43("password")?.let { "passord $it" }).joinToString(" · ")
-                Text(line, color = if (cl.optBoolean("ok", true)) p.mut else RED43, fontFamily = PaperFonts.mono, fontSize = 11.5.sp, modifier = Modifier.padding(start = 20.dp))
+                Text(line, color = if (cl.optBoolean("ok", true)) p.mut else RED43, fontFamily = PaperFonts.mono, fontSize = HomelabType.caption.fontSize, modifier = Modifier.padding(start = 20.dp))
             }
         }
         // Ledd 6: torrents som står stoppet/fast – stoppede kan startes herfra.
@@ -185,7 +186,7 @@ private fun DiagStep50(vm: AppViewModel, st: MStep50) {
             for (i in 0 until minOf(a.length(), 6)) a.optJSONObject(i)?.let { tr ->
                 val hash = tr.s43("hash")
                 Row(Modifier.padding(start = 20.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(listOfNotNull(tr.s43("name"), tr.s43("state")).joinToString(" · "), color = p.mut, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                    Text(listOfNotNull(tr.s43("name"), tr.s43("state")).joinToString(" · "), color = p.mut, fontSize = HomelabType.footnote.fontSize, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                     if (hash != null && tr.optJSONObject("action") != null) {
                         val on = Med50.started[hash] == true
                         Btn43(if (on) "Startet" else "Start", dark = true, enabled = !on) { vm.startTorrent50(hash, null) }

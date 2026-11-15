@@ -33,6 +33,7 @@ import java.time.OffsetDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import no.kristo.finanshub.ui.designsystem.HomelabType
 
 /*
  * Prompt 27 (ANDROID-B): Nyhetsleser med bilde ved hver sak (76 × 76, kildefarge + initialer uten bilde) og artikkelvisning i appen
@@ -89,13 +90,13 @@ internal fun NewsArticle27(vm: AppViewModel, p: PaperPal, cats: List<NewsCategor
         Column(Modifier.fillMaxSize()) {
             Row(Modifier.fillMaxWidth().padding(18.dp, 14.dp, 18.dp, 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Box(Modifier.height(40.dp).clip(CircleShape).border(1.dp, p.line, CircleShape).clickable(onClickLabel = "Tilbake") { Haptics.back(); vm.closeArticle27() }.padding(start = 12.dp, end = 16.dp),
-                    contentAlignment = Alignment.Center) { Text("‹ Siste nytt", color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 13.5.sp) }
+                    contentAlignment = Alignment.Center) { Text("‹ Siste nytt", color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.subheadline.fontSize) }
                 Spacer(Modifier.weight(1f))
                 News73Bookmark(vm, x, p) // prompt 73: lagre hele artikkelen for lesing uten nett
                 Box(Modifier.height(40.dp).clip(CircleShape).border(1.dp, p.line, CircleShape).clickable(onClickLabel = "Del") {
                     val send = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_SUBJECT, a?.title ?: x.title).putExtra(Intent.EXTRA_TEXT, (a?.title ?: x.title) + "\n" + (a?.url ?: x.url))
                     runCatching { ctx.startActivity(Intent.createChooser(send, "Del saken").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
-                }.padding(horizontal = 16.dp), contentAlignment = Alignment.Center) { Text("Del", color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 13.5.sp) }
+                }.padding(horizontal = 16.dp), contentAlignment = Alignment.Center) { Text("Del", color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.subheadline.fontSize) }
             }
             Column(
                 Modifier.weight(1f).fillMaxWidth().verticalScroll(scroll).padding(18.dp, 4.dp, 18.dp, 36.dp).widthIn(max = 720.dp),
@@ -104,32 +105,32 @@ internal fun NewsArticle27(vm: AppViewModel, p: PaperPal, cats: List<NewsCategor
                 NewsImage27(vm, a?.image ?: x.image, src, Modifier.fillMaxWidth().aspectRatio(16f / 9f), 18.dp, 28)
                 PLabel("$cat · $src", p.lab)
                 PSerif(a?.title ?: x.title, 28.sp, p.ink)
-                articleMeta27(a?.published ?: x.published, a?.readMin ?: x.readMin).takeIf { it.isNotBlank() }?.let { Text(it, color = p.mut, fontSize = 13.sp) }
+                articleMeta27(a?.published ?: x.published, a?.readMin ?: x.readMin).takeIf { it.isNotBlank() }?.let { Text(it, color = p.mut, fontSize = HomelabType.subheadline.fontSize) }
                 News73.itemFor(x.url)?.let { sv -> News73Banner(vm, sv, p) } // prompt 73: «Lagret 28. okt.»
                 Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(p.card).padding(18.dp, 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     PLabel("✦ AI-sammendrag", p.lab)
                     val sum = a?.summary
                     val pts = a?.points ?: emptyList()
                     when {
-                        s.articleBusy -> Text("Leser saken …", color = p.mut, fontSize = 15.sp)
+                        s.articleBusy -> Text("Leser saken …", color = p.mut, fontSize = HomelabType.callout.fontSize)
                         sum != null -> {
                             PSerif(sum, 19.sp, p.ink, weight = FontWeight.Normal)
                             if (pts.isNotEmpty()) {
                                 Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
                                 pts.forEachIndexed { i, t ->
                                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                        Text("${i + 1}", color = p.lab, fontWeight = FontWeight.ExtraBold, fontSize = 14.5.sp)
-                                        Text(t, color = p.ink, fontSize = 14.5.sp, lineHeight = 21.sp, modifier = Modifier.weight(1f))
+                                        Text("${i + 1}", color = p.lab, fontWeight = FontWeight.ExtraBold, fontSize = HomelabType.callout.fontSize)
+                                        Text(t, color = p.ink, fontSize = HomelabType.callout.fontSize, lineHeight = 21.sp, modifier = Modifier.weight(1f))
                                     }
                                 }
                             }
                         }
-                        else -> Text(s.articleError ?: x.excerpt ?: "Fant ikke noe sammendrag for denne saken.", color = p.mut, fontSize = 14.5.sp, lineHeight = 21.sp)
+                        else -> Text(s.articleError ?: x.excerpt ?: "Fant ikke noe sammendrag for denne saken.", color = p.mut, fontSize = HomelabType.callout.fontSize, lineHeight = 21.sp)
                     }
-                    if (!s.articleBusy && sum != null) Text(a?.aiNote ?: "✦ Laget av AI fra saken. Kan inneholde feil.", color = p.mut, fontSize = 12.sp)
+                    if (!s.articleBusy && sum != null) Text(a?.aiNote ?: "✦ Laget av AI fra saken. Kan inneholde feil.", color = p.mut, fontSize = HomelabType.footnote.fontSize)
                 }
                 Box(Modifier.fillMaxWidth().height(50.dp).clip(RoundedCornerShape(25.dp)).background(p.ink).clickable { openLink(ctx, a?.url ?: x.url) }, contentAlignment = Alignment.Center) {
-                    Text("Les hele saken hos $src ↗", color = p.bg, fontWeight = FontWeight.Bold, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text("Les hele saken hos $src ↗", color = p.bg, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
                 val rel = a?.related ?: vm.news?.items?.filter { it.url != x.url && it.category == x.category }?.take(4) ?: emptyList()
                 if (rel.isNotEmpty()) {
@@ -139,8 +140,8 @@ internal fun NewsArticle27(vm: AppViewModel, p: PaperPal, cats: List<NewsCategor
                         rel.forEach { r ->
                             Row(Modifier.fillMaxWidth().clickable { vm.openArticle27(r) }.padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                                    Text(r.title, color = p.ink, fontSize = 15.sp, lineHeight = 20.sp, maxLines = 3, overflow = TextOverflow.Ellipsis)
-                                    Text(listOf(r.feed, newsTime(r.published)).filter(String::isNotBlank).joinToString(" · "), color = p.mut, fontSize = 12.sp)
+                                    Text(r.title, color = p.ink, fontSize = HomelabType.callout.fontSize, lineHeight = 20.sp, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                                    Text(listOf(r.feed, newsTime(r.published)).filter(String::isNotBlank).joinToString(" · "), color = p.mut, fontSize = HomelabType.footnote.fontSize)
                                 }
                                 NewsImage27(vm, r.image, r.feed, Modifier.size(64.dp), 12.dp, 12)
                             }

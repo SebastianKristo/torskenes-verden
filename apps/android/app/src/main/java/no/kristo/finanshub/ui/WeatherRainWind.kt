@@ -37,6 +37,7 @@ import no.kristo.finanshub.*
 import java.time.LocalDate
 import java.time.LocalDateTime
 import kotlin.math.roundToInt
+import no.kristo.finanshub.ui.designsystem.HomelabType
 
 /*
  * Prompt 32 (ANDROID32): Vær → «Forhold» med egne visninger for nedbør og vind (claude-code-vaer-forhold-moduser.md, Vaer.dc.html isT/isR/isW).
@@ -69,22 +70,22 @@ internal fun HourCard32b(vm: AppViewModel, w: WeatherFull, forhold: () -> Unit) 
     Column(Modifier.fillMaxWidth().glass32b().padding(top = 14.dp, bottom = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f).clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = forhold)) {
-                Box(Modifier.height(20.dp), contentAlignment = Alignment.CenterStart) { Text("Forhold ›", fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1) }
+                Box(Modifier.height(20.dp), contentAlignment = Alignment.CenterStart) { Text("Forhold ›", fontSize = HomelabType.body.fontSize, fontWeight = FontWeight.Bold, maxLines = 1) }
                 Box(Modifier.height(17.dp), contentAlignment = Alignment.CenterStart) {
-                    Text(when (mode) { "rain" -> "Nedbør (mm) · Sjanse"; "wind" -> "Vind (m/s) · Kast"; else -> "Temperatur (°C)" }, fontSize = 12.5.sp, color = wxPp,
+                    Text(when (mode) { "rain" -> "Nedbør (mm) · Sjanse"; "wind" -> "Vind (m/s) · Kast"; else -> "Temperatur (°C)" }, fontSize = HomelabType.footnote.fontSize, color = wxPp,
                         maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
             // Prompt 46 (claude-code-vaer-modusvelger-liquid-glass.md): glassdråpe som glir og kan dras (ui/Ui46.kt).
             LiquidSeg46(listOf("temp" to WX_IC.getValue("part"), "rain" to DROP32B, "wind" to WINDP32B), listOf("Temperatur", "Nedbør", "Vind"), mode) { vm.p32b.wxMode = it }
         }
-        if (hrs.isEmpty()) Text("Ingen timevarsel.", fontSize = 13.sp, modifier = Modifier.padding(horizontal = 16.dp).alpha(.75f))
+        if (hrs.isEmpty()) Text("Ingen timevarsel.", fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.padding(horizontal = 16.dp).alpha(.75f))
         Row(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 8.dp)) {
             hrs.forEachIndexed { k, h ->
                 val hh = wxLdt(h.t)?.hour ?: 0
                 val pp = h.precipProb?.roundToInt() ?: 0
                 Column(Modifier.width(56.dp).height(142.dp).padding(vertical = 4.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(if (k == 0) "Nå" else wxPad(hh), fontSize = 14.sp, fontWeight = if (k == 0) FontWeight.ExtraBold else FontWeight.Bold)
+                    Text(if (k == 0) "Nå" else wxPad(hh), fontSize = HomelabType.callout.fontSize, fontWeight = if (k == 0) FontWeight.ExtraBold else FontWeight.Bold)
                     when (mode) {
                         "rain" -> {
                             val f = ((h.precip ?: 0.0) / 3.0).toFloat().coerceIn(0f, 1f)
@@ -94,13 +95,13 @@ internal fun HourCard32b(vm: AppViewModel, w: WeatherFull, forhold: () -> Unit) 
                                 listOf(1f / 3f, 2f / 3f).forEach { y -> drawLine(Color.White.copy(alpha = .28f), Offset(0f, size.height * y), Offset(size.width, size.height * y), 1.dp.toPx(), pathEffect = dash) }
                                 if (f > 0f) drawRoundRect(RAIN32B, Offset(0f, size.height * (1 - f)), Size(size.width, size.height * f), CornerRadius(if (f > .9f) 9.dp.toPx() else 3.dp.toPx()))
                             }
-                            Text(mm32b(h.precip), fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.heightIn(min = 16.dp), lineHeight = 16.sp)
-                            Text("$pp %", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = wxPp, lineHeight = 15.sp)
+                            Text(mm32b(h.precip), fontSize = HomelabType.subheadline.fontSize, fontWeight = FontWeight.Bold, modifier = Modifier.heightIn(min = 16.dp), lineHeight = 16.sp)
+                            Text("$pp %", fontSize = HomelabType.subheadline.fontSize, fontWeight = FontWeight.Bold, color = wxPp, lineHeight = 15.sp)
                         }
                         "wind" -> {
-                            Text("${(h.wind ?: 0.0).roundToInt()}", fontSize = 20.sp, fontWeight = FontWeight.Bold, lineHeight = 22.sp, modifier = Modifier.padding(top = 4.dp))
-                            Text("m/s", fontSize = 11.5.sp, fontWeight = FontWeight.Bold, color = wxPp, lineHeight = 12.sp, modifier = Modifier.offset(y = (-6).dp))
-                            Text("kast ${(h.gust ?: h.wind ?: 0.0).roundToInt()}", fontSize = 11.sp, fontWeight = FontWeight.Bold, lineHeight = 13.sp, modifier = Modifier.alpha(.7f).offset(y = (-6).dp))
+                            Text("${(h.wind ?: 0.0).roundToInt()}", fontSize = HomelabType.headline.fontSize, fontWeight = FontWeight.Bold, lineHeight = 22.sp, modifier = Modifier.padding(top = 4.dp))
+                            Text("m/s", fontSize = HomelabType.caption.fontSize, fontWeight = FontWeight.Bold, color = wxPp, lineHeight = 12.sp, modifier = Modifier.offset(y = (-6).dp))
+                            Text("kast ${(h.gust ?: h.wind ?: 0.0).roundToInt()}", fontSize = HomelabType.caption.fontSize, fontWeight = FontWeight.Bold, lineHeight = 13.sp, modifier = Modifier.alpha(.7f).offset(y = (-6).dp))
                             // Sammenhengende linje over timene: hver celle tegner sin bit fra midt mellom naboene.
                             val prev = hrs.getOrNull(k - 1) ?: h
                             val next = hrs.getOrNull(k + 1) ?: h
@@ -123,10 +124,10 @@ internal fun HourCard32b(vm: AppViewModel, w: WeatherFull, forhold: () -> Unit) 
                         }
                         else -> {
                             WxCodeIcon(wxKey(h.code, !h.isDay), 28.dp)
-                            Text(if (pp >= 20) "$pp %" else "", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = wxPp, modifier = Modifier.heightIn(min = 13.dp), lineHeight = 13.sp)
-                            Text(wxR(h.temp), fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                            Text(if (pp >= 20) "$pp %" else "", fontSize = HomelabType.caption.fontSize, fontWeight = FontWeight.Bold, color = wxPp, modifier = Modifier.heightIn(min = 13.dp), lineHeight = 13.sp)
+                            Text(wxR(h.temp), fontSize = HomelabType.body.fontSize, fontWeight = FontWeight.Bold)
                             val pt = pent[h.t.take(13)]
-                            Text(pt?.let { "${it.roundToInt()}°" } ?: "", fontSize = 12.5.sp, fontWeight = FontWeight.Bold, color = Color(0xFFFFB27A), modifier = Modifier.heightIn(min = 15.dp), lineHeight = 15.sp)
+                            Text(pt?.let { "${it.roundToInt()}°" } ?: "", fontSize = HomelabType.footnote.fontSize, fontWeight = FontWeight.Bold, color = Color(0xFFFFB27A), modifier = Modifier.heightIn(min = 15.dp), lineHeight = 15.sp)
                         }
                     }
                 }
@@ -155,7 +156,7 @@ internal fun DaysCard32b(vm: AppViewModel, w: WeatherFull, temp: @Composable () 
             // Prompt 73: hele raden er én trykkflate (min. 44 dp) med haptikk (wxDayTap73, ui/WeatherPage.kt).
             val lbl = if (k == 0) "I dag" else date?.let(::wxWd) ?: ""
             Row(Modifier.fillMaxWidth().heightIn(min = 44.dp).wxDayTap73(lbl) { open(k) }.padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text(lbl, fontSize = 17.sp, fontWeight = FontWeight.Bold, modifier = Modifier.width(52.dp), maxLines = 1)
+                Text(lbl, fontSize = HomelabType.body.fontSize, fontWeight = FontWeight.Bold, modifier = Modifier.width(52.dp), maxLines = 1)
                 if (mode == "rain") {
                     val bars = (0 until 12).map { b -> hs.filter { it.first / 2 == b }.sumOf { it.second.precip ?: 0.0 } }
                     val nowBar = if (k == 0) now.hour / 2 else -1
@@ -170,12 +171,12 @@ internal fun DaysCard32b(vm: AppViewModel, w: WeatherFull, temp: @Composable () 
                         }
                     }
                     val tot = if (hs.isNotEmpty()) hs.sumOf { it.second.precip ?: 0.0 } else d.precipSum ?: 0.0
-                    Text(if (tot < 0.05) "0 mm" else wxF1(tot) + " mm", fontSize = 16.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.End,
+                    Text(if (tot < 0.05) "0 mm" else wxF1(tot) + " mm", fontSize = HomelabType.body.fontSize, fontWeight = FontWeight.Bold, textAlign = TextAlign.End,
                         color = if (tot < 0.05) Color.White.copy(alpha = .5f) else Color.White, modifier = Modifier.width(62.dp), maxLines = 1)
                     val pp = d.precipProb?.roundToInt() ?: hs.maxOfOrNull { it.second.precipProb ?: 0.0 }?.roundToInt() ?: 0
                     Row(Modifier.width(58.dp), horizontalArrangement = Arrangement.spacedBy(3.dp, Alignment.End), verticalAlignment = Alignment.CenterVertically) {
                         if (pp >= 30) WxIcon(DROP32B, RAIN32B, 13.dp, fill = true)
-                        Text("$pp %", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = if (pp >= 30) wxPp else Color.White.copy(alpha = .5f), maxLines = 1)
+                        Text("$pp %", fontSize = HomelabType.body.fontSize, fontWeight = FontWeight.Bold, color = if (pp >= 30) wxPp else Color.White.copy(alpha = .5f), maxLines = 1)
                     }
                 } else {
                     val sp = (0 until 24).map { h -> hs.firstOrNull { it.first == h }?.second?.wind }
@@ -218,7 +219,7 @@ internal fun DaysCard32b(vm: AppViewModel, w: WeatherFull, temp: @Composable () 
                     val gl = gs.filterNotNull()
                     val lo = gl.minOrNull() ?: d.windMax
                     val hi2 = gl.maxOrNull() ?: d.windMax
-                    Text(if (lo == null || hi2 == null) "–" else "${lo.roundToInt()}–${hi2.roundToInt()} m/s", fontSize = 15.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.End,
+                    Text(if (lo == null || hi2 == null) "–" else "${lo.roundToInt()}–${hi2.roundToInt()} m/s", fontSize = HomelabType.callout.fontSize, fontWeight = FontWeight.Bold, textAlign = TextAlign.End,
                         modifier = Modifier.width(88.dp), maxLines = 1)
                 }
             }

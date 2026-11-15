@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.sp
 import no.kristo.finanshub.MapCountry
 import kotlin.math.ln
 import kotlin.math.max
+import no.kristo.finanshub.ui.designsystem.HomelabType
 
 /** Kartfargene fra domener-kart.html: logaritmisk skala fra mørk til lys rosa. */
 private val MAP_LO = Color(0xFF4A2433)
@@ -100,8 +101,8 @@ internal fun WorldMap(countries: List<MapCountry>, values: Map<Int, Pair<String,
         if (c != null) {
             val v = values[c.id]
             Column(Modifier.align(Alignment.TopStart).padding(6.dp).clip(RoundedCornerShape(14.dp)).background(Color(0xE6201619)).padding(12.dp, 8.dp)) {
-                Text(v?.first?.takeIf { it.isNotBlank() } ?: c.name, color = Color(0xFFFFD9E2), fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
-                Text(v?.let { "${count(it.second)} besøk" } ?: "Ingen besøk", color = Color(0xFFFFD9E2).copy(alpha = .75f), fontSize = 12.sp)
+                Text(v?.first?.takeIf { it.isNotBlank() } ?: c.name, color = Color(0xFFFFD9E2), fontWeight = FontWeight.SemiBold, fontSize = HomelabType.subheadline.fontSize)
+                Text(v?.let { "${count(it.second)} besøk" } ?: "Ingen besøk", color = Color(0xFFFFD9E2).copy(alpha = .75f), fontSize = HomelabType.footnote.fontSize)
             }
         }
     }

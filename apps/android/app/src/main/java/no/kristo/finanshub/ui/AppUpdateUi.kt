@@ -39,6 +39,7 @@ import no.kristo.finanshub.openUnknownSources32
 import no.kristo.finanshub.resumeAppUpd32
 import no.kristo.finanshub.retryAppUpd32
 import no.kristo.finanshub.startAppUpd32
+import no.kristo.finanshub.ui.designsystem.HomelabType
 
 /*
  * Prompt 32 (APKUPD): oppdatering av selve appen. Logikken ligger i AppUpdate.kt.
@@ -118,12 +119,12 @@ private fun AppUpdCard32(vm: AppViewModel, home: Boolean) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             if (home) Box(Modifier.size(40.dp).clip(CircleShape).background(if (s.phase == "failed") p.ink else p.lab), contentAlignment = Alignment.Center) {
-                if (s.phase == "failed") Text("!", color = p.bg, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp)
+                if (s.phase == "failed") Text("!", color = p.bg, fontWeight = FontWeight.ExtraBold, fontSize = HomelabType.headline.fontSize)
                 else WxIcon(IC_DL30, p.onLab, 18.dp, stroke = 2.4f)
             }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                Text(title, color = p.ink, fontFamily = PaperFonts.sans, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                Text(text, color = p.mut, fontFamily = PaperFonts.sans, fontSize = 12.5.sp, lineHeight = 17.sp)
+                Text(title, color = p.ink, fontFamily = PaperFonts.sans, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize)
+                Text(text, color = p.mut, fontFamily = PaperFonts.sans, fontSize = HomelabType.footnote.fontSize, lineHeight = 17.sp)
             }
             if (home && s.phase == "avail") Box(
                 Modifier.align(Alignment.Top).size(30.dp).clip(CircleShape).background(p.line)
@@ -170,8 +171,8 @@ private fun AppUpdNotes32(notes: List<String>) {
     ) {
         list.take(20).forEach { n ->
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("•", color = p.lab, fontSize = 13.sp)
-                Text(n, color = p.ink, fontFamily = PaperFonts.sans, fontSize = 13.sp, lineHeight = 18.sp)
+                Text("•", color = p.lab, fontSize = HomelabType.subheadline.fontSize)
+                Text(n, color = p.ink, fontFamily = PaperFonts.sans, fontSize = HomelabType.subheadline.fontSize, lineHeight = 18.sp)
             }
         }
     }

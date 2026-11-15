@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import kotlinx.coroutines.withTimeoutOrNull
 import no.kristo.finanshub.*
+import no.kristo.finanshub.ui.designsystem.HomelabType
 
 /*
  * Prompt 56 (AND56): mikrofonen i Glimt-chatten og Glimt-søket (logikken i VoiceInput.kt).
@@ -113,16 +114,16 @@ internal fun VoiceBar56(vm: AppViewModel, target: String, ink: Color, mut: Color
     if (!on && note == null) return
     Row(modifier.fillMaxWidth().heightIn(min = 44.dp).padding(horizontal = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         if (!on) {
-            Text(note ?: "", color = mut, fontFamily = font, fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+            Text(note ?: "", color = mut, fontFamily = font, fontSize = HomelabType.subheadline.fontSize, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
             return@Row
         }
         val rec = v.phase == "rec"
         Box(Modifier.size(9.dp).clip(CircleShape).background(if (rec) MIC56_ON else mut))
         Column(Modifier.weight(1f)) {
-            Text(if (rec) "Lytter … ${v.secs} s" else "Skriver ned …", color = ink, fontFamily = font, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, maxLines = 1)
+            Text(if (rec) "Lytter … ${v.secs} s" else "Skriver ned …", color = ink, fontFamily = font, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize, maxLines = 1)
             Text(
                 if (!rec) (if (v.onDevice) "På telefonen" else "På serveren i huset") else if (v.hold) "Slipp for å sende" else "Trykk på mikrofonen igjen for å stoppe",
-                color = mut, fontFamily = font, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                color = mut, fontFamily = font, fontSize = HomelabType.footnote.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis,
             )
         }
         if (rec) Wave56(v.level, MIC56_ON)
@@ -130,7 +131,7 @@ internal fun VoiceBar56(vm: AppViewModel, target: String, ink: Color, mut: Color
             .padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                 WxIcon(X56, ink, 10.dp, stroke = 3f)
-                Text("Avbryt", color = ink, fontFamily = font, fontWeight = FontWeight.Bold, fontSize = 12.5.sp, maxLines = 1)
+                Text("Avbryt", color = ink, fontFamily = font, fontWeight = FontWeight.Bold, fontSize = HomelabType.footnote.fontSize, maxLines = 1)
             }
         }
     }
@@ -160,6 +161,6 @@ internal fun VoiceSettings56(vm: AppViewModel) {
                 Haptics.select(); Voice56.saveMode(ctx, "device")
             }
         }
-        Text(status, color = p.mut, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 8.dp))
+        Text(status, color = p.mut, fontSize = HomelabType.footnote.fontSize, modifier = Modifier.padding(horizontal = 8.dp))
     }
 }

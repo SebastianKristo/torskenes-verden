@@ -53,6 +53,7 @@ import no.kristo.finanshub.*
 import org.json.JSONObject
 import java.time.LocalDate
 import java.time.LocalTime
+import no.kristo.finanshub.ui.designsystem.HomelabType
 
 /*
  * Prompt 37 (ANDROID37): Gjøremål (tidligere Huskeliste; intern nøkkel «huske»), fasit Huskeliste.dc.html + Mobil Papir App.dc.html.
@@ -145,7 +146,7 @@ internal fun TasksScreen37(vm: AppViewModel) {
     // 1c: lister i egen kolonne (210 på Fold, 250 på bredere skjerm), «+ Ny liste» sist; oppgavene til høyre.
     if (split43) Column(Modifier.width(listW43).fillMaxHeight().background(p.card).statusBarsPadding().verticalScroll(rememberScrollState())
         .padding(start = 12.dp, end = 12.dp, top = 12.dp, bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text("‹ Hjem", color = p.ink, fontWeight = FontWeight.Bold, fontSize = 13.5.sp, modifier = Modifier.heightIn(min = 44.dp).clip(CircleShape).clickable { vm.closeTasksHome40() }.wrapContentHeight())
+        Text("‹ Hjem", color = p.ink, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.heightIn(min = 44.dp).clip(CircleShape).clickable { vm.closeTasksHome40() }.wrapContentHeight())
         PSerif("To-do for hele familien", 13.sp, p.mut, italic = true, weight = FontWeight.Normal, maxLines = 2)
         PSerif("Gjøremål", 28.sp, maxLines = 1)
         PLabel("Lister", modifier = Modifier.padding(top = 6.dp))
@@ -172,7 +173,7 @@ internal fun TasksScreen37(vm: AppViewModel) {
             // Prompt 41: «Glimt deler opp beskjeden …» (bakgrunnsjobber) og «✓ Glimt lagde N punkter».
             if (vm.p41.glimtJobs.isNotEmpty() || vm.p41.glimtDone != null) item { Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) { GlimtJobs41(vm) } }
             // Prompt 43: «Laget med Glimt» ligger nå som pille i raden over (GlimtSourcesChip43).
-            vm.tasksError?.let { e -> item { Text(e, color = p.lab, fontSize = 13.sp, modifier = Modifier.padding(horizontal = 18.dp)) } }
+            vm.tasksError?.let { e -> item { Text(e, color = p.lab, fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.padding(horizontal = 18.dp)) } }
             if (t == null && vm.tasksError == null) item { Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = p.ink) } }
             // Glimt-kortene fra serveren (like, forfalte, butikk, pakkeliste fra kalenderen); eldre server: like og forfalte lokalt.
             s.cards?.let { cs ->
@@ -200,7 +201,7 @@ internal fun TasksScreen37(vm: AppViewModel) {
             group37(vm, "I dag og forfalt", now, lists, users, today)
             group37(vm, "Senere", later, lists, users, today)
             group37(vm, "Ferdig", done.take(30), lists, users, today, archive = { ids -> vm.archiveDone32b(ids) })
-            if (t != null && all.isEmpty()) item { Text("Ingen gjøremål her ennå. Skriv et nytt nederst, eller trykk ✦ og spør Glimt.", color = p.mut, fontSize = 13.sp, modifier = Modifier.padding(horizontal = 18.dp)) }
+            if (t != null && all.isEmpty()) item { Text("Ingen gjøremål her ennå. Skriv et nytt nederst, eller trykk ✦ og spør Glimt.", color = p.mut, fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.padding(horizontal = 18.dp)) }
             // Prompt 45: «ikke vis synk med Home Assistant i Gjøremål» – synken ligger bare i Innstillinger → Gjøremål.
         }
         // Dokken (felt + ✦) skjules i Arkivert og mens et ark er åpent.
@@ -231,9 +232,9 @@ private fun ListChip37(l: TaskList, on: Boolean, count: Int, users: List<TaskMem
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Box(Modifier.size(9.dp).clip(CircleShape).background(Color(l.color)))
-        Text(l.name, color = if (on) p.bg else p.ink, fontWeight = FontWeight.Bold, fontSize = 13.sp, maxLines = 1)
+        Text(l.name, color = if (on) p.bg else p.ink, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize, maxLines = 1)
         if (l.isShared37()) Avatars37(l.members.map { m -> (m.name.ifBlank { users.firstOrNull { it.id == m.id }?.name ?: "?" }) to (m.color ?: users.firstOrNull { it.id == m.id }?.color) }, ring = if (on) p.ink else p.card)
-        Text("$count", color = (if (on) p.bg else p.ink).copy(alpha = .6f), fontWeight = FontWeight.Bold, fontSize = 13.sp)
+        Text("$count", color = (if (on) p.bg else p.ink).copy(alpha = .6f), fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize)
     }
 }
 
@@ -249,11 +250,11 @@ private fun ListInfo37(vm: AppViewModel, l: TaskList, users: List<TaskMember>) {
     Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp).clip(RoundedCornerShape(16.dp)).background(p.card).padding(start = 14.dp, end = 8.dp, top = 10.dp, bottom = 10.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         Column(Modifier.weight(1f)) {
-            Text(if (shared) "Delt med ${names37(others).ifBlank { "husstanden" }}" else "Bare du ser denne listen", color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 13.5.sp, maxLines = 2)
-            Text(if (shared) "Alle i listen kan legge til, endre og krysse av." else "Privat. Del den for å gjøre den felles.", color = if (shared) p.pos else p.mut, fontSize = 12.sp, maxLines = 2)
+            Text(if (shared) "Delt med ${names37(others).ifBlank { "husstanden" }}" else "Bare du ser denne listen", color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.subheadline.fontSize, maxLines = 2)
+            Text(if (shared) "Alle i listen kan legge til, endre og krysse av." else "Privat. Del den for å gjøre den felles.", color = if (shared) p.pos else p.mut, fontSize = HomelabType.footnote.fontSize, maxLines = 2)
         }
         Box(Modifier.height(36.dp).clip(CircleShape).background(p.ink).clickable(role = Role.Button) { Haptics.select(); vm.p37.listSheet = l.id }.padding(horizontal = 14.dp), contentAlignment = Alignment.Center) {
-            Text(if (shared) "Administrer" else "Del", color = p.bg, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+            Text(if (shared) "Administrer" else "Del", color = p.bg, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize)
         }
     }
 }
@@ -265,16 +266,16 @@ private fun GlimtCard37(title: String, sub: String, actions: List<Pair<String, (
     Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp).clip(RoundedCornerShape(18.dp)).background(p.card).border(1.dp, p.line, RoundedCornerShape(18.dp)).padding(14.dp, 12.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("✦", color = RED37, fontWeight = FontWeight.ExtraBold, fontSize = 15.sp)
-            Text(title, color = p.ink, fontWeight = FontWeight.Bold, fontSize = 14.5.sp, modifier = Modifier.weight(1f), maxLines = 2, overflow = TextOverflow.Ellipsis)
-            Box(Modifier.size(28.dp).clip(CircleShape).clickable(role = Role.Button, onClickLabel = "Ikke nå") { Haptics.select(); onClose() }, contentAlignment = Alignment.Center) { Text("✕", modifier = Modifier.semantics { contentDescription = "Ikke nå" }, color = p.mut, fontSize = 13.sp) }
+            Text("✦", color = RED37, fontWeight = FontWeight.ExtraBold, fontSize = HomelabType.callout.fontSize)
+            Text(title, color = p.ink, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize, modifier = Modifier.weight(1f), maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Box(Modifier.size(28.dp).clip(CircleShape).clickable(role = Role.Button, onClickLabel = "Ikke nå") { Haptics.select(); onClose() }, contentAlignment = Alignment.Center) { Text("✕", modifier = Modifier.semantics { contentDescription = "Ikke nå" }, color = p.mut, fontSize = HomelabType.subheadline.fontSize) }
         }
-        Text(sub, color = p.mut, fontSize = 12.5.sp)
+        Text(sub, color = p.mut, fontSize = HomelabType.footnote.fontSize)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             actions.forEachIndexed { i, (l, go) ->
                 Box(Modifier.height(34.dp).clip(CircleShape).background(if (i == 0) p.ink else Color.Transparent).border(1.dp, if (i == 0) p.ink else p.line, CircleShape)
                     .clickable(role = Role.Button) { go() }.padding(horizontal = 14.dp), contentAlignment = Alignment.Center) {
-                    Text(l, color = if (i == 0) p.bg else p.ink, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    Text(l, color = if (i == 0) p.bg else p.ink, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize)
                 }
             }
         }
@@ -311,13 +312,13 @@ private fun Row37(vm: AppViewModel, t: TaskItem, lists: List<TaskList>, users: L
                 Modifier.size(24.dp).clip(CircleShape).background(if (t.done) p.pos else Color.Transparent).border(2.dp, if (t.done) p.pos else if (t.urgent) RED37 else ring, CircleShape)
                     .clickable(role = Role.Checkbox, onClickLabel = if (t.done) "Ikke ferdig" else "Ferdig") { vm.toggleTask37(t.id) },
                 contentAlignment = Alignment.Center,
-            ) { if (t.done) Text("✓", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold) }
+            ) { if (t.done) Text("✓", color = Color.White, fontSize = HomelabType.subheadline.fontSize, fontWeight = FontWeight.Bold) }
             Column(Modifier.weight(1f).clickable(onClickLabel = "Detaljer") { Haptics.select(); vm.p44.taskPage = t.id }) { // prompt 44: infosiden
                 Text(buildAnnotatedString {
                     if (t.flag) withStyle(SpanStyle(color = ORANGE37)) { append("⚑ ") }
                     if (t.prio > 0) withStyle(SpanStyle(color = RED37, fontWeight = FontWeight.ExtraBold)) { append("!".repeat(t.prio) + " ") }
                     append(t.title)
-                }, color = if (t.done) p.mut else p.ink, fontSize = 15.sp, fontWeight = FontWeight.Medium, maxLines = 2, overflow = TextOverflow.Ellipsis,
+                }, color = if (t.done) p.mut else p.ink, fontSize = HomelabType.callout.fontSize, fontWeight = FontWeight.Medium, maxLines = 2, overflow = TextOverflow.Ellipsis,
                     textDecoration = if (t.done) TextDecoration.LineThrough else null)
                 val meta = listOfNotNull(
                     t.due?.let { dueLabel37(it) + (t.time?.let { tm -> " $tm" } ?: "") },
@@ -328,11 +329,11 @@ private fun Row37(vm: AppViewModel, t: TaskItem, lists: List<TaskList>, users: L
                     t.place?.takeIf { it.isNotBlank() && it != "store" && it != "home" },
                     afterLabel40(vm, t),
                 ) + t.tags.map { "#$it" }
-                if (meta.isNotEmpty()) Text(meta.joinToString(" · "), color = if (!t.done && t.due != null && t.due < today) p.lab else p.mut, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                if (meta.isNotEmpty()) Text(meta.joinToString(" · "), color = if (!t.done && t.due != null && t.due < today) p.lab else p.mut, fontSize = HomelabType.footnote.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             if (t.done) {
                 ArchiveBtn32b { vm.archiveTask32b(t.id) }
-                Box(Modifier.size(32.dp).clip(CircleShape).clickable(onClickLabel = "Slett") { vm.deleteTask37(t.id) }, contentAlignment = Alignment.Center) { Text("×", modifier = Modifier.semantics { contentDescription = "Slett" }, color = p.mut, fontSize = 20.sp) }
+                Box(Modifier.size(32.dp).clip(CircleShape).clickable(onClickLabel = "Slett") { vm.deleteTask37(t.id) }, contentAlignment = Alignment.Center) { Text("×", modifier = Modifier.semantics { contentDescription = "Slett" }, color = p.mut, fontSize = HomelabType.headline.fontSize) }
             } else SubAddBtn44(vm, t) // prompt 44: ↳+ legg til deloppgave
         }
         SubRows44(vm, t, l?.let { Color(it.color) } ?: p.mut) // prompt 44: deloppgaver innrykket under oppgaven
@@ -365,12 +366,12 @@ private fun Dock37(title: String, setTitle: (String) -> Unit, focus: FocusReques
         ) {
             BasicTextField(
                 title, setTitle, singleLine = true,
-                textStyle = TextStyle(color = p.ink, fontSize = 16.sp, fontWeight = FontWeight.Medium, fontFamily = PaperFonts.sans),
+                textStyle = TextStyle(color = p.ink, fontSize = HomelabType.body.fontSize, fontWeight = FontWeight.Medium, fontFamily = PaperFonts.sans),
                 cursorBrush = SolidColor(p.lab),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                 keyboardActions = KeyboardActions(onDone = { onEnter() }),
                 modifier = Modifier.fillMaxWidth().focusRequester(focus),
-                decorationBox = { inner -> Box(contentAlignment = Alignment.CenterStart) { if (title.isEmpty()) Text("Ny oppgave …", color = p.mut, fontSize = 16.sp, fontWeight = FontWeight.Medium, fontFamily = PaperFonts.sans); inner() } },
+                decorationBox = { inner -> Box(contentAlignment = Alignment.CenterStart) { if (title.isEmpty()) Text("Ny oppgave …", color = p.mut, fontSize = HomelabType.body.fontSize, fontWeight = FontWeight.Medium, fontFamily = PaperFonts.sans); inner() } },
             )
         }
         Box(
@@ -419,13 +420,13 @@ private fun GlimtSheet37(vm: AppViewModel, lists: List<TaskList>) {
                     val rot = rememberInfiniteTransition(label = "g37").animateFloat(0f, 360f, infiniteRepeatable(tween(1200, easing = LinearEasing)), label = "r")
                     Box(Modifier.graphicsLayer { rotationZ = rot.value }) { WxIcon(STAR37, RED37, 16.dp, fill = true) }
                 }
-                BasicTextField(q, { q = it }, textStyle = TextStyle(color = p.ink, fontSize = 15.5.sp, fontFamily = PaperFonts.sans), cursorBrush = SolidColor(p.lab), maxLines = 6,
+                BasicTextField(q, { q = it }, textStyle = TextStyle(color = p.ink, fontSize = HomelabType.body.fontSize, fontFamily = PaperFonts.sans), cursorBrush = SolidColor(p.lab), maxLines = 6,
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send), keyboardActions = KeyboardActions(onSend = { if (q.isNotBlank()) { vm.glimt37(q); q = "" } }),
                     modifier = Modifier.weight(1f).padding(vertical = 14.dp),
-                    decorationBox = { inner -> Box { if (q.isEmpty()) Text("Spør Glimt eller skriv en oppgave …", color = p.mut, fontSize = 15.5.sp); inner() } })
+                    decorationBox = { inner -> Box { if (q.isEmpty()) Text("Spør Glimt eller skriv en oppgave …", color = p.mut, fontSize = HomelabType.body.fontSize); inner() } })
                 Box(Modifier.size(40.dp).clip(CircleShape).clickable(role = Role.Button, onClickLabel = "Bilde av handlelapp eller oppskrift") {
                     pick.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
-                }, contentAlignment = Alignment.Center) { Text("📷", fontSize = 18.sp) }
+                }, contentAlignment = Alignment.Center) { Text("📷", fontSize = HomelabType.headline.fontSize) }
                 Box(Modifier.size(40.dp).clip(CircleShape).background(if (q.isNotBlank()) p.ink else p.line).clickable(enabled = q.isNotBlank() && !s.glimtBusy, role = Role.Button, onClickLabel = "Send") {
                     vm.glimt37(q); q = ""
                 }, contentAlignment = Alignment.Center) { WxIcon("M5 12h14M13 6l6 6-6 6", p.bg, 16.dp, stroke = 2.6f) }
@@ -435,13 +436,13 @@ private fun GlimtSheet37(vm: AppViewModel, lists: List<TaskList>) {
             }
             // Prompt 40: «Forstår hva du mener …» med Glimt-animasjonen mens Glimt deler opp setningen.
             if (s.glimtBusy) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                GlimtFig35("glimt", 30.dp, "talk"); Text("Forstår hva du mener …", color = p.mut, fontSize = 13.5.sp)
+                GlimtFig35("glimt", 30.dp, "talk"); Text("Forstår hva du mener …", color = p.mut, fontSize = HomelabType.subheadline.fontSize)
             }
             s.glimt?.let { g ->
                 Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(p.card).padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(buildAnnotatedString {
                         boldParts31(g.text).forEach { (tx, b) -> if (b) withStyle(SpanStyle(fontWeight = FontWeight.ExtraBold)) { append(tx) } else append(tx) }
-                    }, color = p.ink, fontSize = 15.sp, lineHeight = 21.sp)
+                    }, color = p.ink, fontSize = HomelabType.callout.fontSize, lineHeight = 21.sp)
                     g.items.forEach { it0 ->
                         val ln = lists.firstOrNull { it.id == it0.list }
                         // Prompt 40 (claude-code-huskeliste-glimt-forstar.md): to linjer per punkt – tittel, og under: steg
@@ -449,22 +450,22 @@ private fun GlimtSheet37(vm: AppViewModel, lists: List<TaskList>) {
                         Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             Box(Modifier.padding(top = 6.dp).size(8.dp).clip(CircleShape).background(ln?.let { Color(it.color) } ?: p.mut))
                             Column(Modifier.weight(1f)) {
-                                Text(it0.title, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                                Text(it0.title, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize, maxLines = 2, overflow = TextOverflow.Ellipsis)
                                 val multi = g.items.size > 1 && g.items.any { x -> x.step > 0 || x.after != null }
                                 val stepTxt = if (!multi) null else if (it0.after == null) "${it0.step.coerceAtLeast(1)} · først" else "${it0.step.coerceAtLeast(2)} · etter «${it0.after}»"
                                 val m2 = listOfNotNull(stepTxt, ln?.name, it0.due?.let { d -> dueLabel37(d) + (it0.time?.let { tm -> " kl. $tm" } ?: "") } ?: it0.time,
                                     it0.place, it0.who?.let { w -> "@$w" }) + it0.tags.map { "#$it" }
-                                if (m2.isNotEmpty()) Text(m2.joinToString(" · "), color = p.mut, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                                if (m2.isNotEmpty()) Text(m2.joinToString(" · "), color = p.mut, fontSize = HomelabType.footnote.fontSize, maxLines = 2, overflow = TextOverflow.Ellipsis)
                             }
                         }
                     }
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("✦ " + if (g.local) "Glimt · tolket på telefonen" else "Glimt", color = p.mut, fontSize = 11.5.sp, modifier = Modifier.weight(1f))
+                        Text("✦ " + if (g.local) "Glimt · tolket på telefonen" else "Glimt", color = p.mut, fontSize = HomelabType.caption.fontSize, modifier = Modifier.weight(1f))
                         if (g.undo != null || g.localIds.isNotEmpty()) Box(Modifier.height(32.dp).clip(CircleShape).border(1.dp, p.line, CircleShape).clickable(role = Role.Button) { vm.undoGlimt37() }.padding(horizontal = 14.dp),
-                            contentAlignment = Alignment.Center) { Text("Angre", color = p.ink, fontWeight = FontWeight.Bold, fontSize = 12.5.sp) }
+                            contentAlignment = Alignment.Center) { Text("Angre", color = p.ink, fontWeight = FontWeight.Bold, fontSize = HomelabType.footnote.fontSize) }
                         if (g.kind == "question") Box(Modifier.padding(start = 6.dp).height(32.dp).clip(CircleShape).border(1.dp, p.line, CircleShape)
                             .clickable(role = Role.Button) { s.glimtOpen = false; vm.closeTasks(); vm.openChat(g.text) }.padding(horizontal = 14.dp),
-                            contentAlignment = Alignment.Center) { Text("Chat ›", color = p.ink, fontWeight = FontWeight.Bold, fontSize = 12.5.sp) }
+                            contentAlignment = Alignment.Center) { Text("Chat ›", color = p.ink, fontWeight = FontWeight.Bold, fontSize = HomelabType.footnote.fontSize) }
                     }
                 }
             }
@@ -497,22 +498,22 @@ private fun DetailSheet37(vm: AppViewModel, t: TaskItem, lists: List<TaskList>, 
             verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Box(Modifier.size(36.dp).clip(CircleShape).background(p.card).border(1.dp, p.line, CircleShape).clickable(role = Role.Button, onClickLabel = "Lukk") { close() },
-                    contentAlignment = Alignment.Center) { Text("✕", modifier = Modifier.semantics { contentDescription = "Lukk" }, color = p.ink, fontSize = 14.sp) }
+                    contentAlignment = Alignment.Center) { Text("✕", modifier = Modifier.semantics { contentDescription = "Lukk" }, color = p.ink, fontSize = HomelabType.callout.fontSize) }
                 PSerif("Detaljer", 22.sp, modifier = Modifier.weight(1f), maxLines = 1)
                 Box(Modifier.height(36.dp).clip(CircleShape).background(p.ink).clickable(role = Role.Button) { Haptics.success(); close() }.padding(horizontal = 18.dp), contentAlignment = Alignment.Center) {
-                    Text("Ferdig", color = p.bg, fontWeight = FontWeight.Bold, fontSize = 13.5.sp)
+                    Text("Ferdig", color = p.bg, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize)
                 }
             }
             // Kort 1: tittel og notater (lenker blir klikkbare under).
             Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(p.card).padding(16.dp, 14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                BasicTextField(d.title, { d = d.copy(title = it) }, textStyle = TextStyle(color = p.ink, fontSize = 22.sp, fontFamily = PaperFonts.serif), cursorBrush = SolidColor(p.lab),
+                BasicTextField(d.title, { d = d.copy(title = it) }, textStyle = TextStyle(color = p.ink, fontSize = HomelabType.title3.fontSize, fontFamily = PaperFonts.serif), cursorBrush = SolidColor(p.lab),
                     modifier = Modifier.fillMaxWidth())
                 Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
-                BasicTextField(d.notes ?: "", { d = d.copy(notes = it) }, textStyle = TextStyle(color = p.ink, fontSize = 14.5.sp, fontFamily = PaperFonts.sans), cursorBrush = SolidColor(p.lab),
+                BasicTextField(d.notes ?: "", { d = d.copy(notes = it) }, textStyle = TextStyle(color = p.ink, fontSize = HomelabType.callout.fontSize, fontFamily = PaperFonts.sans), cursorBrush = SolidColor(p.lab),
                     modifier = Modifier.fillMaxWidth().heightIn(min = 44.dp),
-                    decorationBox = { inner -> Box { if ((d.notes ?: "").isEmpty()) Text("Notater og lenke", color = p.mut, fontSize = 14.5.sp); inner() } })
+                    decorationBox = { inner -> Box { if ((d.notes ?: "").isEmpty()) Text("Notater og lenke", color = p.mut, fontSize = HomelabType.callout.fontSize); inner() } })
                 Regex("https?://\\S+").findAll(d.notes ?: "").map { it.value }.toList().take(3).forEach { u ->
-                    Text(u, color = Color(0xFF2B5D8A), fontSize = 13.sp, textDecoration = TextDecoration.Underline, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    Text(u, color = Color(0xFF2B5D8A), fontSize = HomelabType.subheadline.fontSize, textDecoration = TextDecoration.Underline, maxLines = 1, overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.clickable(role = Role.Button) { openLink(ctx, u) })
                 }
             }
@@ -523,13 +524,13 @@ private fun DetailSheet37(vm: AppViewModel, t: TaskItem, lists: List<TaskList>, 
                     g.s37("tag")?.let { "#$it" }, g.s37("place")?.let { "påminn ved butikk" })
                 if (parts.isNotEmpty()) Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(p.card).border(1.dp, p.line, RoundedCornerShape(16.dp)).padding(12.dp, 10.dp),
                     verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text("✦ Glimt foreslår: " + parts.joinToString(" · "), color = p.ink, fontSize = 13.sp, modifier = Modifier.weight(1f))
+                    Text("✦ Glimt foreslår: " + parts.joinToString(" · "), color = p.ink, fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.weight(1f))
                     Box(Modifier.height(32.dp).clip(CircleShape).background(p.ink).clickable(role = Role.Button) {
                         Haptics.success()
                         d = d.copy(list = g.s37("list") ?: d.list, assignee = g.s37("assignee") ?: d.assignee, place = g.s37("place") ?: d.place,
                             tags = (d.tags + listOfNotNull(g.s37("tag"))).distinct())
                         hideGuess = true
-                    }.padding(horizontal = 14.dp), contentAlignment = Alignment.Center) { Text("Bruk", color = p.bg, fontWeight = FontWeight.Bold, fontSize = 12.5.sp) }
+                    }.padding(horizontal = 14.dp), contentAlignment = Alignment.Center) { Text("Bruk", color = p.bg, fontWeight = FontWeight.Bold, fontSize = HomelabType.footnote.fontSize) }
                 }
             }
             PLabel("DATO OG TID", p.mut, modifier = Modifier.padding(start = 4.dp, top = 4.dp))
@@ -545,55 +546,55 @@ private fun DetailSheet37(vm: AppViewModel, t: TaskItem, lists: List<TaskList>, 
                     d = if (on) d.copy(time = d.time ?: "09:00", due = d.due ?: today) else d.copy(time = null)
                 }
                 DRow37("M12 3a6 6 0 0 1 6 6v4l2 3H4l2-3V9a6 6 0 0 1 6-6zM10 19a2 2 0 0 0 4 0", Color(0xFFC2477A), "Viktig", null, d.urgent, top = true) { on -> d = d.copy(urgent = on) }
-                Text("Viktige oppgaver ringer som en alarm, også i Ikke forstyrr og stille-modus.", color = p.mut, fontSize = 12.sp, modifier = Modifier.padding(start = 56.dp, end = 14.dp, bottom = 12.dp))
+                Text("Viktige oppgaver ringer som en alarm, også i Ikke forstyrr og stille-modus.", color = p.mut, fontSize = HomelabType.footnote.fontSize, modifier = Modifier.padding(start = 56.dp, end = 14.dp, bottom = 12.dp))
             }
             ChipSec37("GJENTA", REP37.map { it.first to it.second }, d.rep) { d = d.copy(rep = it) }
             ChipSec37("TIDLIG PÅMINNELSE", EARLY37.map { it.first to it.second }, d.early) { d = d.copy(early = it) }
             ChipSec37("PÅMINN PÅ STED", PLACE37.map { it.first to it.second }, d.place) { d = d.copy(place = it) }
             PLabel("ORGANISERING", p.mut, modifier = Modifier.padding(start = 4.dp, top = 4.dp))
             Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(p.card).padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("Liste", color = p.mut, fontSize = 12.5.sp)
+                Text("Liste", color = p.mut, fontSize = HomelabType.footnote.fontSize)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     lists.forEach { l ->
                         val on = d.list == l.id
                         Row(Modifier.height(32.dp).clip(CircleShape).background(if (on) p.ink else Color.Transparent).border(1.dp, if (on) p.ink else p.line, CircleShape)
                             .clickable { Haptics.select(); d = d.copy(list = l.id) }.padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             Box(Modifier.size(8.dp).clip(CircleShape).background(Color(l.color)))
-                            Text(l.name, color = if (on) p.bg else p.ink, fontWeight = FontWeight.SemiBold, fontSize = 12.5.sp)
+                            Text(l.name, color = if (on) p.bg else p.ink, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.footnote.fontSize)
                         }
                     }
                 }
-                Text("Ansvarlig", color = p.mut, fontSize = 12.5.sp)
+                Text("Ansvarlig", color = p.mut, fontSize = HomelabType.footnote.fontSize)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     who.forEach { m -> PChip(firstName37(m.name).ifBlank { "Uten navn" }, d.assignee == m.id) { d = d.copy(assignee = m.id) } }
                     PChip("Ingen", d.assignee == null) { d = d.copy(assignee = null) }
                 }
-                Text("Prioritet", color = p.mut, fontSize = 12.5.sp)
+                Text("Prioritet", color = p.mut, fontSize = HomelabType.footnote.fontSize)
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     PRIO37.forEach { (k, n) -> PChip(if (k == 0) n else "${"!".repeat(k)} $n", d.prio == k) { d = d.copy(prio = k) } }
                 }
                 Row(Modifier.fillMaxWidth().clickable(role = Role.Switch) { Haptics.select(); d = d.copy(flag = !d.flag) }, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Box(Modifier.size(30.dp).clip(RoundedCornerShape(9.dp)).background(ORANGE37), contentAlignment = Alignment.Center) { Text("⚑", color = Color.White, fontSize = 14.sp) }
-                    Text("Flagg", color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 14.5.sp, modifier = Modifier.weight(1f))
+                    Box(Modifier.size(30.dp).clip(RoundedCornerShape(9.dp)).background(ORANGE37), contentAlignment = Alignment.Center) { Text("⚑", color = Color.White, fontSize = HomelabType.callout.fontSize) }
+                    Text("Flagg", color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize, modifier = Modifier.weight(1f))
                     Toggle37(d.flag)
                 }
-                Text("Tagger", color = p.mut, fontSize = 12.5.sp)
+                Text("Tagger", color = p.mut, fontSize = HomelabType.footnote.fontSize)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     d.tags.forEach { tg -> PChip("#$tg ×", true) { d = d.copy(tags = d.tags - tg) } }
-                    BasicTextField(newTag, { v -> newTag = v.replace(" ", "") }, singleLine = true, textStyle = TextStyle(color = p.ink, fontSize = 13.5.sp, fontFamily = PaperFonts.sans), cursorBrush = SolidColor(p.lab),
+                    BasicTextField(newTag, { v -> newTag = v.replace(" ", "") }, singleLine = true, textStyle = TextStyle(color = p.ink, fontSize = HomelabType.subheadline.fontSize, fontFamily = PaperFonts.sans), cursorBrush = SolidColor(p.lab),
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done), keyboardActions = KeyboardActions(onDone = {
                             val tg = newTag.trim().removePrefix("#")
                             if (tg.isNotEmpty()) d = d.copy(tags = (d.tags + tg).distinct())
                             newTag = ""
                         }),
                         modifier = Modifier.widthIn(min = 90.dp).height(32.dp).clip(CircleShape).border(1.dp, p.line, CircleShape).padding(horizontal = 12.dp, vertical = 7.dp),
-                        decorationBox = { inner -> Box { if (newTag.isEmpty()) Text("#tagg", color = p.mut, fontSize = 13.5.sp); inner() } })
+                        decorationBox = { inner -> Box { if (newTag.isEmpty()) Text("#tagg", color = p.mut, fontSize = HomelabType.subheadline.fontSize); inner() } })
                 }
             }
             // Deloppgaver.
             Row(Modifier.padding(start = 4.dp, end = 4.dp, top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                 PLabel("DELOPPGAVER", p.mut, modifier = Modifier.weight(1f))
-                if (d.subs.isNotEmpty()) Text("${d.subs.count { it.done }} / ${d.subs.size}", color = p.mut, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
+                if (d.subs.isNotEmpty()) Text("${d.subs.count { it.done }} / ${d.subs.size}", color = p.mut, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.footnote.fontSize)
             }
             Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(p.card)) {
                 d.subs.forEachIndexed { i, sb ->
@@ -601,32 +602,32 @@ private fun DetailSheet37(vm: AppViewModel, t: TaskItem, lists: List<TaskList>, 
                     Row(Modifier.fillMaxWidth().padding(14.dp, 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         Box(Modifier.size(22.dp).clip(CircleShape).background(if (sb.done) p.pos else Color.Transparent).border(2.dp, if (sb.done) p.pos else p.mut, CircleShape)
                             .clickable(role = Role.Checkbox) { Haptics.select(); d = d.copy(subs = d.subs.mapIndexed { j, x -> if (j == i) x.copy(done = !x.done) else x }) }, contentAlignment = Alignment.Center) {
-                            if (sb.done) Text("✓", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            if (sb.done) Text("✓", color = Color.White, fontSize = HomelabType.caption.fontSize, fontWeight = FontWeight.Bold)
                         }
-                        Text(sb.n, color = if (sb.done) p.mut else p.ink, fontSize = 14.5.sp, textDecoration = if (sb.done) TextDecoration.LineThrough else null, modifier = Modifier.weight(1f))
+                        Text(sb.n, color = if (sb.done) p.mut else p.ink, fontSize = HomelabType.callout.fontSize, textDecoration = if (sb.done) TextDecoration.LineThrough else null, modifier = Modifier.weight(1f))
                         Box(Modifier.size(28.dp).clip(CircleShape).clickable(onClickLabel = "Fjern") { d = d.copy(subs = d.subs.filterIndexed { j, _ -> j != i }) }, contentAlignment = Alignment.Center) {
-                            Text("×", modifier = Modifier.semantics { contentDescription = "Fjern" }, color = p.mut, fontSize = 18.sp)
+                            Text("×", modifier = Modifier.semantics { contentDescription = "Fjern" }, color = p.mut, fontSize = HomelabType.headline.fontSize)
                         }
                     }
                 }
                 if (d.subs.isNotEmpty()) Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
-                BasicTextField(newSub, { newSub = it }, singleLine = true, textStyle = TextStyle(color = p.ink, fontSize = 14.5.sp, fontFamily = PaperFonts.sans), cursorBrush = SolidColor(p.lab),
+                BasicTextField(newSub, { newSub = it }, singleLine = true, textStyle = TextStyle(color = p.ink, fontSize = HomelabType.callout.fontSize, fontFamily = PaperFonts.sans), cursorBrush = SolidColor(p.lab),
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done), keyboardActions = KeyboardActions(onDone = {
                         if (newSub.isNotBlank()) d = d.copy(subs = d.subs + TaskSub37(newSub.trim(), false))
                         newSub = ""
                     }),
                     modifier = Modifier.fillMaxWidth().padding(16.dp, 14.dp),
-                    decorationBox = { inner -> Box { if (newSub.isEmpty()) Text("+ Ny deloppgave", color = p.lab, fontWeight = FontWeight.SemiBold, fontSize = 14.5.sp); inner() } })
+                    decorationBox = { inner -> Box { if (newSub.isEmpty()) Text("+ Ny deloppgave", color = p.lab, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize); inner() } })
             }
             val busy = vm.p37.splitBusy == t.id
             Box(Modifier.fillMaxWidth().height(44.dp).clip(RoundedCornerShape(22.dp)).border(1.dp, p.line, RoundedCornerShape(22.dp)).clickable(enabled = !busy, role = Role.Button) {
                 vm.patchTask37(t.id) { cur -> d.copy(done = cur.done, doneAt = cur.doneAt) }; vm.split37(t.id)
-            }, contentAlignment = Alignment.Center) { Text(if (busy) "✦ Glimt deler opp …" else "✦ Del opp med Glimt", color = p.ink, fontWeight = FontWeight.Bold, fontSize = 13.5.sp) }
+            }, contentAlignment = Alignment.Center) { Text(if (busy) "✦ Glimt deler opp …" else "✦ Del opp med Glimt", color = p.ink, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize) }
             // Deloppgavene fra Glimt kommer inn i oppgaven: oppdater utkastet.
             val fresh = vm.tasks?.items?.firstOrNull { it.id == t.id }
             LaunchedEffect(fresh?.subs, busy) { if (fresh != null && fresh.subs.size > d.subs.size && !busy) d = d.copy(subs = fresh.subs) }
             Box(Modifier.fillMaxWidth().height(48.dp).clickable(role = Role.Button) { if (sure) vm.deleteTask37(t.id) else { sure = true; Haptics.select() } }, contentAlignment = Alignment.Center) {
-                Text(if (sure) "Trykk igjen for å slette" else "Slett oppgave", color = RED37, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                Text(if (sure) "Trykk igjen for å slette" else "Slett oppgave", color = RED37, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize)
             }
         }
     }
@@ -641,8 +642,8 @@ private fun DRow37(icon: String, c: Color, title: String, value: String?, on: Bo
         Row(Modifier.fillMaxWidth().heightIn(min = 54.dp).padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Box(Modifier.size(30.dp).clip(RoundedCornerShape(9.dp)).background(c), contentAlignment = Alignment.Center) { WxIcon(icon, Color.White, 16.dp, stroke = 2.2f) }
             Column(Modifier.weight(1f).clickable(enabled = on && onValue != null, role = Role.Button) { onValue?.invoke() }) {
-                Text(title, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 14.5.sp)
-                if (on && value != null) Text(value, color = Color(0xFF2B5D8A), fontSize = 12.5.sp)
+                Text(title, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize)
+                if (on && value != null) Text(value, color = Color(0xFF2B5D8A), fontSize = HomelabType.footnote.fontSize)
             }
             Box(Modifier.clickable(role = Role.Switch, onClickLabel = title) { Haptics.select(); onToggle(!on) }) { Toggle37(on) }
         }
@@ -680,18 +681,18 @@ private fun ListSheet37(vm: AppViewModel, l: TaskList?, users: List<TaskMember>)
             verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Box(Modifier.size(36.dp).clip(CircleShape).background(p.card).border(1.dp, p.line, CircleShape).clickable(role = Role.Button, onClickLabel = "Lukk") { close() },
-                    contentAlignment = Alignment.Center) { Text("✕", modifier = Modifier.semantics { contentDescription = "Lukk" }, color = p.ink, fontSize = 14.sp) }
+                    contentAlignment = Alignment.Center) { Text("✕", modifier = Modifier.semantics { contentDescription = "Lukk" }, color = p.ink, fontSize = HomelabType.callout.fontSize) }
                 PSerif(if (l == null) "Ny liste" else "Liste", 22.sp, modifier = Modifier.weight(1f), maxLines = 1)
                 if (owner) Box(Modifier.height(36.dp).clip(CircleShape).background(if (name.isNotBlank()) p.ink else p.line).clickable(enabled = name.isNotBlank() && !s.listBusy, role = Role.Button) {
                     vm.saveList37(l?.id, name, color, (picked + listOfNotNull(me)).toList())
                 }.padding(horizontal = 18.dp), contentAlignment = Alignment.Center) {
-                    Text(if (s.listBusy) "Lagrer …" else if (l == null) "Opprett" else "Lagre", color = p.bg, fontWeight = FontWeight.Bold, fontSize = 13.5.sp)
+                    Text(if (s.listBusy) "Lagrer …" else if (l == null) "Opprett" else "Lagre", color = p.bg, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize)
                 }
             }
             Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(p.card).padding(16.dp, 14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                BasicTextField(name, { if (owner) name = it.take(40) }, singleLine = true, readOnly = !owner, textStyle = TextStyle(color = p.ink, fontSize = 22.sp, fontFamily = PaperFonts.serif),
+                BasicTextField(name, { if (owner) name = it.take(40) }, singleLine = true, readOnly = !owner, textStyle = TextStyle(color = p.ink, fontSize = HomelabType.title3.fontSize, fontFamily = PaperFonts.serif),
                     cursorBrush = SolidColor(p.lab), modifier = Modifier.fillMaxWidth(),
-                    decorationBox = { inner -> Box { if (name.isEmpty()) Text("Navn på listen", color = p.mut, fontSize = 22.sp, fontFamily = PaperFonts.serif); inner() } })
+                    decorationBox = { inner -> Box { if (name.isEmpty()) Text("Navn på listen", color = p.mut, fontSize = HomelabType.title3.fontSize, fontFamily = PaperFonts.serif); inner() } })
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     LIST_COLORS37.forEach { c ->
                         Box(Modifier.size(30.dp).clip(CircleShape).background(Color(c)).border(if (c == color) 3.dp else 0.dp, p.ink, CircleShape)
@@ -701,7 +702,7 @@ private fun ListSheet37(vm: AppViewModel, l: TaskList?, users: List<TaskMember>)
             }
             PLabel("DEL MED", p.mut, modifier = Modifier.padding(start = 4.dp, top = 4.dp))
             Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(p.card)) {
-                if (users.isEmpty()) Text("Henter husstanden …", color = p.mut, fontSize = 13.sp, modifier = Modifier.padding(14.dp))
+                if (users.isEmpty()) Text("Henter husstanden …", color = p.mut, fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.padding(14.dp))
                 users.forEachIndexed { i, u ->
                     val self = u.id == me
                     val on = self || u.id in picked
@@ -709,18 +710,18 @@ private fun ListSheet37(vm: AppViewModel, l: TaskList?, users: List<TaskMember>)
                     Row(Modifier.fillMaxWidth().heightIn(min = 54.dp).clickable(enabled = owner && !self, role = Role.Switch) { Haptics.select(); picked = if (on) picked - u.id else picked + u.id }
                         .padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         Avatars37(listOf(u.name to u.color), size = 30.dp)
-                        Text(u.name.ifBlank { "Uten navn" } + if (self) " (deg)" else "", color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 14.5.sp, modifier = Modifier.weight(1f))
+                        Text(u.name.ifBlank { "Uten navn" } + if (self) " (deg)" else "", color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize, modifier = Modifier.weight(1f))
                         Box(Modifier.alpha(if (owner && !self) 1f else .55f)) { Toggle37(on) }
                     }
                 }
             }
             val others = picked.count { it != me }
             Text(if (others == 0) "Privat: bare du ser listen." else "Delt: alle i listen kan legge til, endre og krysse av. Bare eieren kan endre navn, farge og medlemmer.",
-                color = p.mut, fontSize = 12.5.sp, modifier = Modifier.padding(horizontal = 4.dp))
+                color = p.mut, fontSize = HomelabType.footnote.fontSize, modifier = Modifier.padding(horizontal = 4.dp))
             if (l != null) Box(Modifier.fillMaxWidth().height(48.dp).clickable(role = Role.Button) {
                 if (!owner) vm.leaveList37(l.id) else if (sure) vm.deleteList37(l.id) else { sure = true; Haptics.select() }
             }, contentAlignment = Alignment.Center) {
-                Text(if (!owner) "Forlat listen" else if (sure) "Trykk igjen: sletter listen og oppgavene" else "Slett listen", color = RED37, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                Text(if (!owner) "Forlat listen" else if (sure) "Trykk igjen: sletter listen og oppgavene" else "Slett listen", color = RED37, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize)
             }
         }
     }

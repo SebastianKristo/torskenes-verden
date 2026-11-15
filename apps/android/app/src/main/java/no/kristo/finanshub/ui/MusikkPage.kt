@@ -43,6 +43,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import kotlinx.coroutines.delay
 import no.kristo.finanshub.*
+import no.kristo.finanshub.ui.designsystem.HomelabType
 
 /*
  * Prompt 88 (AND88): Media → Musikk (yubal). Én kolonne: Last ned musikk → Køen → Spillelister du følger.
@@ -133,9 +134,9 @@ private fun MuLastNed88(vm: AppViewModel) {
         Row(Modifier.fillMaxWidth().heightIn(min = 50.dp).clip(RoundedCornerShape(14.dp)).background(p.bg).border(1.dp, ramme, RoundedCornerShape(14.dp)).padding(start = 14.dp, end = 4.dp),
             verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
-                if (m.url.isEmpty()) Text("Album, spilleliste eller sang fra music.youtube.com", color = p.mut, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                if (m.url.isEmpty()) Text("Album, spilleliste eller sang fra music.youtube.com", color = p.mut, fontSize = HomelabType.callout.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 BasicTextField(m.url, { m.url = it.take(2000); m.ferr = null; m.pv = null }, singleLine = true,
-                    textStyle = TextStyle(color = p.ink, fontSize = 15.sp, fontFamily = PaperFonts.sans), cursorBrush = SolidColor(p.lab),
+                    textStyle = TextStyle(color = p.ink, fontSize = HomelabType.callout.fontSize, fontFamily = PaperFonts.sans), cursorBrush = SolidColor(p.lab),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, capitalization = KeyboardCapitalization.None, imeAction = ImeAction.Go),
                     keyboardActions = KeyboardActions(onGo = { vm.muForhandsvis88() }), modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Lenke fra YouTube Music" })
             }
@@ -145,10 +146,10 @@ private fun MuLastNed88(vm: AppViewModel) {
                 if (tekst.isNullOrEmpty()) vm.p43.toast = "Utklippstavlen er tom"
                 else { m.url = ytDelt88(tekst) ?: tekst.take(2000); m.ferr = null; m.pv = null; Haptics.select() }
             }.padding(horizontal = 10.dp), contentAlignment = Alignment.Center) {
-                Text("Lim inn", color = p.ink, fontWeight = FontWeight.Bold, fontSize = 13.sp, maxLines = 1)
+                Text("Lim inn", color = p.ink, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize, maxLines = 1)
             }
         }
-        m.ferr?.let { Text(it, color = p.lab, fontSize = 14.sp) }
+        m.ferr?.let { Text(it, color = p.lab, fontSize = HomelabType.callout.fontSize) }
         if (m.pv == null) Btn43(if (m.laster) "Henter …" else "Forhåndsvis", dark = true,
             modifier = Modifier.fillMaxWidth().alpha(if (ytLenke88(m.url) != null && !m.laster) 1f else .4f), enabled = !m.laster) { vm.muForhandsvis88() }
         m.pv?.let { Forhandsvisning88(vm, it) }
@@ -166,9 +167,9 @@ private fun Forhandsvisning88(vm: AppViewModel, pv: MuInfo88) {
         Omslag88(vm, pv.thumbnail, pv.title, 96.dp, 10.dp)
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
             PLabel(muKind88(pv.kind), color = p.mut)
-            Text(pv.title, color = p.ink, fontFamily = PaperFonts.serif, fontWeight = FontWeight.Medium, fontSize = 21.sp, lineHeight = 25.sp, maxLines = 3, overflow = TextOverflow.Ellipsis)
-            muMeta88(pv.artist, pv.year, pv.trackCount).takeIf { it.isNotEmpty() }?.let { Text(it, color = p.mut, fontSize = 13.5.sp) }
-            muKilde88(pv.codec, pv.bitrate)?.let { Text(it, color = p.mut, fontFamily = PaperFonts.mono, fontSize = 11.5.sp) }
+            Text(pv.title, color = p.ink, fontFamily = PaperFonts.serif, fontWeight = FontWeight.Medium, fontSize = HomelabType.title3.fontSize, lineHeight = 25.sp, maxLines = 3, overflow = TextOverflow.Ellipsis)
+            muMeta88(pv.artist, pv.year, pv.trackCount).takeIf { it.isNotEmpty() }?.let { Text(it, color = p.mut, fontSize = HomelabType.subheadline.fontSize) }
+            muKilde88(pv.codec, pv.bitrate)?.let { Text(it, color = p.mut, fontFamily = PaperFonts.mono, fontSize = HomelabType.caption.fontSize) }
         }
     }
     if (mange) {
@@ -178,22 +179,22 @@ private fun Forhandsvisning88(vm: AppViewModel, pv: MuInfo88) {
         }
         if (m.typ == "max") Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             BasicTextField(m.maxN, { v -> m.maxN = v.filter { it.isDigit() }.take(5) }, singleLine = true,
-                textStyle = TextStyle(color = p.ink, fontSize = 15.sp, fontFamily = PaperFonts.mono), cursorBrush = SolidColor(p.lab),
+                textStyle = TextStyle(color = p.ink, fontSize = HomelabType.callout.fontSize, fontFamily = PaperFonts.mono), cursorBrush = SolidColor(p.lab),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
                 modifier = Modifier.width(96.dp).heightIn(min = 48.dp).clip(RoundedCornerShape(12.dp)).background(p.bg).border(1.dp, p.line, RoundedCornerShape(12.dp))
                     .padding(horizontal = 12.dp, vertical = 13.dp).semantics { contentDescription = "Antall spor" })
-            Text("spor (1–10000)", color = p.mut, fontSize = 13.sp)
+            Text("spor (1–10000)", color = p.mut, fontSize = HomelabType.subheadline.fontSize)
         }
     }
     if (liste) Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).toggleable(value = m.folg, role = Role.Switch) { m.folg = it; Haptics.select() }
         .semantics(mergeDescendants = true) { stateDescription = if (m.folg) "På" else "Av" }, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text("Følg spillelisten (nye sanger lastes ned automatisk)", color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 14.5.sp, modifier = Modifier.weight(1f))
+        Text("Følg spillelisten (nye sanger lastes ned automatisk)", color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize, modifier = Modifier.weight(1f))
         Box(Modifier.size(44.dp, 26.dp).clip(CircleShape).background(if (m.folg) tone88("ok") else p.line).padding(3.dp), contentAlignment = if (m.folg) Alignment.CenterEnd else Alignment.CenterStart) {
             Box(Modifier.size(20.dp).clip(CircleShape).background(Color.White))
         }
     }
     Btn43(if (m.starter) "Legger til …" else if (liste && m.folg) "Følg og last ned" else "Last ned", dark = true, modifier = Modifier.fillMaxWidth(), enabled = !m.starter) { vm.muStart88() }
-    Text("Lagres som ${m.format} i musikkbiblioteket (Navidrome)", color = p.mut, fontSize = 12.5.sp)
+    Text("Lagres som ${m.format} i musikkbiblioteket (Navidrome)", color = p.mut, fontSize = HomelabType.footnote.fontSize)
     Knapp87("Avbryt", color = p.mut) { m.pv = null }
 }
 
@@ -209,8 +210,8 @@ private fun MuKo88(vm: AppViewModel) {
             PSerif("Køen", 26.sp, modifier = Modifier.weight(1f))
             if (jobs.any { muFerdig88(it.status) }) Knapp87("Fjern ferdige") { vm.muHandling88("rydd") }
         }
-        m.err?.let { Text(it, color = p.lab, fontSize = 14.sp) }
-        m.aerr?.let { Text(it, color = p.lab, fontSize = 14.sp) }
+        m.err?.let { Text(it, color = p.lab, fontSize = HomelabType.callout.fontSize) }
+        m.aerr?.let { Text(it, color = p.lab, fontSize = HomelabType.callout.fontSize) }
         if (jobs.isEmpty()) Mut87("Ingenting i køen.", 15f)
         else jobs.forEachIndexed { i, j -> key(j.id) { if (i > 0) Skille87(); MuJobb88(vm, j) } }
     }
@@ -226,15 +227,15 @@ private fun MuJobb88(vm: AppViewModel, j: MuJob88) {
         Omslag88(vm, j.info?.thumbnail, tittel, 52.dp)
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(7.dp)) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text(tittel, color = p.ink, fontWeight = FontWeight.Bold, fontSize = 15.sp, lineHeight = 20.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                Text(tittel, color = p.ink, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize, lineHeight = 20.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                 Chip87(chip, c)
             }
             if (muLinje88(j.status)) Box(Modifier.fillMaxWidth().height(6.dp).clip(CircleShape).background(p.line).semantics { contentDescription = "Fremdrift ${Math.round(j.progress)} %" }) {
                 Box(Modifier.fillMaxHeight().fillMaxWidth((j.progress / 100.0).toFloat().coerceIn(0f, 1f)).clip(CircleShape).background(c))
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(muTall88(j.status, j.info?.trackCount, j.ok, j.feilet, j.hoppet), color = p.mut, fontFamily = PaperFonts.mono, fontSize = 12.sp, modifier = Modifier.weight(1f))
-                Text(if (j.source == "scheduler") "Automatisk" else "Manuell", color = p.mut, fontFamily = PaperFonts.mono, fontSize = 12.sp)
+                Text(muTall88(j.status, j.info?.trackCount, j.ok, j.feilet, j.hoppet), color = p.mut, fontFamily = PaperFonts.mono, fontSize = HomelabType.footnote.fontSize, modifier = Modifier.weight(1f))
+                Text(if (j.source == "scheduler") "Automatisk" else "Manuell", color = p.mut, fontFamily = PaperFonts.mono, fontSize = HomelabType.footnote.fontSize)
             }
             if (muFerdig88(j.status)) Knapp87("Fjern", color = p.mut) { vm.muHandling88("fjern", j.id) }
             else Knapp87("Avbryt", color = p.lab) { vm.muHandling88("avbryt", j.id) }
@@ -256,7 +257,7 @@ private fun MuSubs88(vm: AppViewModel) {
             if (subs.isNotEmpty()) Knapp87(if (m.sy == "alle") "Synker …" else "Synk alle", enabled = m.sy == null) { vm.muHandling88("synkalle") }
         }
         m.planPaa?.let { paa ->
-            Text(muPlan88(paa, m.planNeste?.let { muNar88(it, now, java.util.TimeZone.getDefault()) }, subs.count { it.enabled }, subs.size), color = p.mut, fontSize = 12.5.sp)
+            Text(muPlan88(paa, m.planNeste?.let { muNar88(it, now, java.util.TimeZone.getDefault()) }, subs.count { it.enabled }, subs.size), color = p.mut, fontSize = HomelabType.footnote.fontSize)
         }
         if (subs.isEmpty()) Mut87("Du følger ingen spillelister.", 15f)
         else subs.forEachIndexed { i, x -> key(x.id) { if (i > 0) Skille87(); MuRad88(vm, x, now) } }
@@ -274,10 +275,10 @@ private fun MuRad88(vm: AppViewModel, x: MuSub88, now: Long) {
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Omslag88(vm, x.thumbnail, x.name, 52.dp)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(x.name, color = p.ink, fontWeight = FontWeight.Bold, fontSize = 15.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                Text(muSubSub88(x.synket, x.max, now), color = p.mut, fontSize = 12.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(x.name, color = p.ink, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text(muSubSub88(x.synket, x.max, now), color = p.mut, fontSize = HomelabType.footnote.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
-            Text("›", color = p.mut, fontSize = 22.sp, modifier = Modifier.rotate(if (apen) 90f else 0f))
+            Text("›", color = p.mut, fontSize = HomelabType.title3.fontSize, modifier = Modifier.rotate(if (apen) 90f else 0f))
         }
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             Bryter88(x.enabled, if (x.enabled) "Slå av automatisk synk" else "Slå på automatisk synk", enabled = m.tog == null) { vm.muHandling88("tog", x.id) }
@@ -295,11 +296,11 @@ private fun Spor88(vm: AppViewModel, x: MuSub88) {
     val d = c?.d
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         if (d == null) {
-            Text(c?.feil ?: "Henter sangene …", color = if (c?.feil != null) p.lab else p.mut, fontFamily = PaperFonts.mono, fontSize = 12.sp)
+            Text(c?.feil ?: "Henter sangene …", color = if (c?.feil != null) p.lab else p.mut, fontFamily = PaperFonts.mono, fontSize = HomelabType.footnote.fontSize)
             if (c?.feil != null) Knapp87("Prøv igjen") { vm.loadMuSpor88(x.id, true) }
         } else {
             val sum = if (d.available && d.tracks.isNotEmpty()) muSporSum88(d.tracks.map { it.status }) else muSynkSum88(d.total, d.synket, d.ok, d.feilet, d.hoppet, d.fantes)
-            Text(sum, color = p.mut, fontFamily = PaperFonts.mono, fontSize = 12.sp)
+            Text(sum, color = p.mut, fontFamily = PaperFonts.mono, fontSize = HomelabType.footnote.fontSize)
             if (d.tracks.isEmpty()) Mut87(d.message ?: "Sanglista er ikke tilgjengelig fra yubal", 14f)
             else LazyColumn(Modifier.fillMaxWidth().heightIn(max = 420.dp).clip(RoundedCornerShape(12.dp)).border(1.dp, p.line, RoundedCornerShape(12.dp))) {
                 items(d.tracks.size, key = { "t$it" }) { i ->
@@ -308,12 +309,12 @@ private fun Spor88(vm: AppViewModel, x: MuSub88) {
                         if (i > 0) Skille87()
                         Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).padding(horizontal = 12.dp, vertical = 8.dp).semantics(mergeDescendants = true) {},
                             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            Text("${i + 1}", color = p.mut, fontFamily = PaperFonts.mono, fontSize = 11.5.sp, modifier = Modifier.width(26.dp))
+                            Text("${i + 1}", color = p.mut, fontFamily = PaperFonts.mono, fontSize = HomelabType.caption.fontSize, modifier = Modifier.width(26.dp))
                             Column(Modifier.weight(1f)) {
-                                Text(t.title, color = p.ink, fontWeight = FontWeight.Bold, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                t.artist?.let { Text(it, color = p.mut, fontSize = 12.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+                                Text(t.title, color = p.ink, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                t.artist?.let { Text(it, color = p.mut, fontSize = HomelabType.footnote.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis) }
                             }
-                            muMmss88(t.duration).takeIf { it.isNotEmpty() }?.let { Text(it, color = p.mut, fontFamily = PaperFonts.mono, fontSize = 11.5.sp) }
+                            muMmss88(t.duration).takeIf { it.isNotEmpty() }?.let { Text(it, color = p.mut, fontFamily = PaperFonts.mono, fontSize = HomelabType.caption.fontSize) }
                             muSporChip88(t.status)?.let { (tx, tn) -> Chip87(tx, tone88(tn)) }
                         }
                     }

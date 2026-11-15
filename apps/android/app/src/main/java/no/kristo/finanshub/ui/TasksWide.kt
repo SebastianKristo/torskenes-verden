@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import no.kristo.finanshub.*
 import java.time.LocalDate
+import no.kristo.finanshub.ui.designsystem.HomelabType
 
 /*
  * Prompt 45 – Gjøremål:
@@ -47,7 +48,7 @@ internal fun TaskHero45(vm: AppViewModel) {
                 Modifier.height(36.dp).clip(CircleShape).background(p.card).border(1.dp, p.line, CircleShape)
                     .clickable(role = Role.Button, onClickLabel = "Til Hjem") { Haptics.select(); vm.closeTasksHome40() }.padding(start = 12.dp, end = 14.dp),
                 contentAlignment = Alignment.Center,
-            ) { Text("‹ Hjem", color = p.ink, fontWeight = FontWeight.Bold, fontSize = 13.5.sp, maxLines = 1) }
+            ) { Text("‹ Hjem", color = p.ink, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize, maxLines = 1) }
             Spacer(Modifier.weight(1f))
             Box(
                 Modifier.size(40.dp).shadow(6.dp, CircleShape).clip(CircleShape).background(p.card).border(1.dp, p.line, CircleShape)
@@ -98,7 +99,7 @@ internal fun TaskFilters45(vm: AppViewModel, users: List<TaskMember>) {
                 Modifier.height(36.dp).clip(CircleShape).background(if (on) p.ink else p.card).border(1.dp, if (on) p.ink else p.line, CircleShape)
                     .clickable(role = Role.Tab, onClickLabel = n) { Haptics.select(); s.taskWhen = if (on) "alle" else k }.padding(horizontal = 14.dp),
                 contentAlignment = Alignment.Center,
-            ) { Text(n, color = if (on) p.bg else p.ink, fontWeight = FontWeight.Bold, fontSize = 13.sp, maxLines = 1) }
+            ) { Text(n, color = if (on) p.bg else p.ink, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize, maxLines = 1) }
         }
         if (users.size > 1) {
             Spacer(Modifier.width(8.dp))
@@ -111,7 +112,7 @@ internal fun TaskFilters45(vm: AppViewModel, users: List<TaskMember>) {
                         .clickable(role = Role.Button, onClickLabel = u.name) { Haptics.select(); s.taskWho = if (on) null else u.id }
                         .semantics { contentDescription = u.name },
                     contentAlignment = Alignment.Center,
-                ) { Text(u.name.take(1).uppercase(), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp) }
+                ) { Text(u.name.take(1).uppercase(), color = Color.White, fontWeight = FontWeight.Bold, fontSize = HomelabType.footnote.fontSize) }
             }
         }
     }

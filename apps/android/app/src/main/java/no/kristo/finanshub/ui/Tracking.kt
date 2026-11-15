@@ -53,6 +53,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 import no.kristo.finanshub.*
+import no.kristo.finanshub.ui.designsystem.HomelabType
 
 /* ---------------- Felles ---------------- */
 
@@ -121,12 +122,12 @@ internal fun TrkEventLines(s: Shipment) {
     val p = PaperPal.current
     s.lastEvent?.let { e ->
         Text(listOfNotNull(e.text, e.place?.takeIf { it.isNotBlank() }, trkTime(e.time).takeIf { it.isNotBlank() }).joinToString(" · "),
-            color = p.ink.copy(alpha = .8f), fontSize = 12.5.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            color = p.ink.copy(alpha = .8f), fontSize = HomelabType.footnote.fontSize, maxLines = 2, overflow = TextOverflow.Ellipsis)
     }
     s.updateError?.let { e ->
         val retry = clockOf(e.retryAt)
         Text("Kunne ikke oppdatere" + (if (retry.isNotBlank()) " · prøver igjen $retry" else "") + (e.text.takeIf { it.isNotBlank() && it.length < 60 }?.let { " · $it" } ?: ""),
-            color = p.lab, fontSize = 11.5.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            color = p.lab, fontSize = HomelabType.caption.fontSize, maxLines = 2, overflow = TextOverflow.Ellipsis)
     }
 }
 
@@ -152,9 +153,9 @@ internal fun TrkTimeline(s: Shipment) {
                     if (i < s.steps.size - 1) Box(Modifier.width(2.dp).height(22.dp).background(if (reached(i + 1)) p.ink else p.line))
                 }
                 Column(Modifier.weight(1f).padding(bottom = 6.dp)) {
-                    Text(label, color = if (on) p.ink else p.mut, fontWeight = if (cur) FontWeight.Bold else FontWeight.Medium, fontSize = 13.5.sp)
+                    Text(label, color = if (on) p.ink else p.mut, fontWeight = if (cur) FontWeight.Bold else FontWeight.Medium, fontSize = HomelabType.subheadline.fontSize)
                     val t = info?.get(i)?.at?.let(::trkTime) ?: if (cur) trkTime(lastTime) else ""
-                    if (t.isNotBlank() && (cur || info != null)) Text(t, color = p.mut, fontSize = 11.5.sp, fontFamily = PaperFonts.mono)
+                    if (t.isNotBlank() && (cur || info != null)) Text(t, color = p.mut, fontSize = HomelabType.caption.fontSize, fontFamily = PaperFonts.mono)
                 }
             }
         }
@@ -162,12 +163,12 @@ internal fun TrkTimeline(s: Shipment) {
             PLabel("Hendelser", modifier = Modifier.padding(top = 6.dp, bottom = 4.dp))
             s.events.take(6).forEach { e ->
                 Row(Modifier.padding(vertical = 3.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text(trkTime(e.at?.toString() ?: e.raw), color = p.mut, fontSize = 11.5.sp, fontFamily = PaperFonts.mono, modifier = Modifier.width(78.dp))
-                    Text(listOf(e.status, e.location).filter { it.isNotBlank() }.joinToString(" · "), color = p.ink, fontSize = 12.5.sp, modifier = Modifier.weight(1f))
+                    Text(trkTime(e.at?.toString() ?: e.raw), color = p.mut, fontSize = HomelabType.caption.fontSize, fontFamily = PaperFonts.mono, modifier = Modifier.width(78.dp))
+                    Text(listOf(e.status, e.location).filter { it.isNotBlank() }.joinToString(" · "), color = p.ink, fontSize = HomelabType.footnote.fontSize, modifier = Modifier.weight(1f))
                 }
             }
         }
-        Text("Åpne hos ${s.carrierName} ↗", color = p.lab, fontWeight = FontWeight.SemiBold, fontSize = 13.sp,
+        Text("Åpne hos ${s.carrierName} ↗", color = p.lab, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.subheadline.fontSize,
             modifier = Modifier.padding(top = 8.dp).clip(CircleShape).clickable { openLink(ctx, s.url.ifBlank { carrierTrackUrl(s.carrier, s.trackingNo) }) }.padding(vertical = 4.dp))
     }
 }
@@ -189,7 +190,7 @@ private fun CarChip26(text: String, on: Boolean, dark: Boolean, onClick: () -> U
         Modifier.height(32.dp).clip(RoundedCornerShape(16.dp)).background(bg).border(1.dp, bd, RoundedCornerShape(16.dp))
             .clickable(role = Role.RadioButton, onClickLabel = text, onClick = onClick).padding(horizontal = 12.dp),
         contentAlignment = Alignment.Center,
-    ) { Text(text, color = fg, fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold, maxLines = 1) }
+    ) { Text(text, color = fg, fontSize = HomelabType.footnote.fontSize, fontWeight = FontWeight.SemiBold, maxLines = 1) }
 }
 
 /** Valgene ved ny pakke (vannrett rad): null = automatisk. */
@@ -212,7 +213,7 @@ internal fun TrkSporVia26(vm: AppViewModel, list: List<Shipment>) {
     val ov = vm.trkOverride26(s)
     val auto = s.carrierDetectedName ?: s.carrierDetected?.let(::trkCarName26) ?: if (ov == null) s.carrierName else trkGuessName26(s.trackingNo)
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(p.ink).padding(14.dp, 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text("SPOR VIA", color = p.bg.copy(alpha = .75f), fontSize = 10.5.sp, fontWeight = FontWeight.SemiBold, fontFamily = PaperFonts.mono, letterSpacing = 1.2.sp)
+        Text("SPOR VIA", color = p.bg.copy(alpha = .75f), fontSize = HomelabType.caption.fontSize, fontWeight = FontWeight.SemiBold, fontFamily = PaperFonts.mono, letterSpacing = 1.2.sp)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             CarChip26("Auto ($auto)", ov == null, dark = true) { if (ov != null) vm.trkSetOverride26(s, null) }
             TRK26_CARS.forEach { (k, n) -> CarChip26(n, ov == k, dark = true) { if (ov != k) vm.trkSetOverride26(s, k) } }

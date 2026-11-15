@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.withTimeoutOrNull
 import no.kristo.finanshub.*
+import no.kristo.finanshub.ui.designsystem.HomelabType
 
 /*
  * Prompt 41 (claude-code-vaer-rediger-ski-julfigur.md, fasit Vaer.dc.html voVals/skiVals):
@@ -71,7 +72,7 @@ internal fun VaerWrap41(vm: AppViewModel, index: Int, content: @Composable () ->
 @Composable
 internal fun VaerEditButton41(vm: AppViewModel) {
     Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-        Text("Rediger kort", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.5.sp,
+        Text("Rediger kort", color = Color.White, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize,
             modifier = Modifier.clip(CircleShape).background(GLASS41).clickable(role = Role.Button) { Haptics.tap(); vm.p41.vaerEdit = true }.padding(16.dp, 9.dp))
     }
 }
@@ -87,7 +88,7 @@ internal fun VaerEditSheet41(vm: AppViewModel) {
         Column(Modifier.fillMaxWidth().heightIn(max = 560.dp).verticalScroll(rememberScrollState()).navigationBarsPadding().padding(18.dp, 0.dp, 18.dp, 24.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 PSerif("Rediger Vær", 24.sp, modifier = Modifier.weight(1f))
-                Text("Ferdig", color = p.bg, fontWeight = FontWeight.Bold, fontSize = 13.5.sp,
+                Text("Ferdig", color = p.bg, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize,
                     modifier = Modifier.clip(CircleShape).background(p.ink).clickable(role = Role.Button) { vm.p41.vaerEdit = false }.padding(14.dp, 8.dp))
             }
             PCard {
@@ -97,8 +98,8 @@ internal fun VaerEditSheet41(vm: AppViewModel) {
                     val on = if (k == "ski") l.ski && k !in l.hid else k !in l.hid
                     Row(Modifier.fillMaxWidth().padding(12.dp, 9.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Column(Modifier.weight(1f)) {
-                            Text(n, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 14.5.sp)
-                            if (sub.isNotBlank()) Text(sub, color = p.mut, fontSize = 12.sp, maxLines = 2)
+                            Text(n, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize)
+                            if (sub.isNotBlank()) Text(sub, color = p.mut, fontSize = HomelabType.footnote.fontSize, maxLines = 2)
                         }
                         Arrow41("↑", i > 0) { set(l.copy(ord = l.ord.toMutableList().also { m -> m[i] = m[i - 1]; m[i - 1] = k })) }
                         Arrow41("↓", i < l.ord.size - 1) { set(l.copy(ord = l.ord.toMutableList().also { m -> m[i] = m[i + 1]; m[i + 1] = k })) }
@@ -124,7 +125,7 @@ internal fun VaerEditSheet41(vm: AppViewModel) {
 private fun Arrow41(t: String, on: Boolean, onClick: () -> Unit) {
     val p = PaperPal.current
     Box(Modifier.size(32.dp).clip(CircleShape).border(1.dp, p.line, CircleShape).clickable(enabled = on, role = Role.Button, onClick = onClick), contentAlignment = Alignment.Center) {
-        Text(t, color = if (on) p.ink else p.line, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+        Text(t, color = if (on) p.ink else p.line, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize)
     }
 }
 
@@ -139,30 +140,30 @@ internal fun SkiCard41(vm: AppViewModel) {
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(GLASS41).border(1.dp, GLASS41, RoundedCornerShape(24.dp)).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("SKIFØRE · NORDMARKA", color = Color.White.copy(alpha = .75f), fontWeight = FontWeight.ExtraBold, fontSize = 11.5.sp, letterSpacing = 1.2.sp, modifier = Modifier.weight(1f))
-            Text("oppdatert %02d:%02d".format(at.hour, at.minute), color = Color.White.copy(alpha = .6f), fontSize = 11.5.sp)
+            Text("SKIFØRE · NORDMARKA", color = Color.White.copy(alpha = .75f), fontWeight = FontWeight.ExtraBold, fontSize = HomelabType.caption.fontSize, letterSpacing = 1.2.sp, modifier = Modifier.weight(1f))
+            Text("oppdatert %02d:%02d".format(at.hour, at.minute), color = Color.White.copy(alpha = .6f), fontSize = HomelabType.caption.fontSize)
         }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             GlimtFig35("spire", 54.dp, "glad")
             Column(Modifier.weight(1f)) {
-                Text("✦ GLIMT ANBEFALER", color = Color(0xFFFFC7B8), fontWeight = FontWeight.ExtraBold, fontSize = 10.5.sp, letterSpacing = 1.2.sp)
-                Text(wax, color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 20.sp, lineHeight = 24.sp)
+                Text("✦ GLIMT ANBEFALER", color = Color(0xFFFFC7B8), fontWeight = FontWeight.ExtraBold, fontSize = HomelabType.caption.fontSize, letterSpacing = 1.2.sp)
+                Text(wax, color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.headline.fontSize, lineHeight = 24.sp)
             }
         }
-        Text(txt, color = Color.White.copy(alpha = .9f), fontSize = 14.sp, lineHeight = 19.sp)
+        Text(txt, color = Color.White.copy(alpha = .9f), fontSize = HomelabType.callout.fontSize, lineHeight = 19.sp)
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf("Snødybde" to "${Math.round(x.depth * 100)} cm", "Ny snø" to "${Math.round(x.fresh)} cm", "Temp." to "${Math.round(x.t)}°", "Fukt" to "${Math.round(x.rh)} %").forEach { (l, v) ->
                 Column(Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).background(Color.White.copy(alpha = .08f)).padding(8.dp)) {
-                    Text(l, color = Color.White.copy(alpha = .65f), fontSize = 11.sp, maxLines = 1)
-                    Text(v, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp, maxLines = 1)
+                    Text(l, color = Color.White.copy(alpha = .65f), fontSize = HomelabType.caption.fontSize, maxLines = 1)
+                    Text(v, color = Color.White, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize, maxLines = 1)
                 }
             }
         }
         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             listOf("Feste: $kick", "Glid: $glide").forEach { c ->
-                Text(c, color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 12.5.sp, modifier = Modifier.clip(CircleShape).background(Color.White.copy(alpha = .14f)).padding(12.dp, 6.dp))
+                Text(c, color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.footnote.fontSize, modifier = Modifier.clip(CircleShape).background(Color.White.copy(alpha = .14f)).padding(12.dp, 6.dp))
             }
-            Text("Løyper ↗", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.5.sp,
+            Text("Løyper ↗", color = Color.White, fontWeight = FontWeight.Bold, fontSize = HomelabType.footnote.fontSize,
                 modifier = Modifier.clip(CircleShape).border(1.dp, Color.White.copy(alpha = .3f), CircleShape).clickable { openLink(ctx, "https://skisporet.no/") }.padding(12.dp, 6.dp))
         }
     }
@@ -177,13 +178,13 @@ internal fun BriefSki41(text: String, items: List<String>) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             GlimtFig35("spire", 40.dp, "glad")
             Column(Modifier.weight(1f)) {
-                Text("Skiføre", color = p.ink, fontFamily = PaperFonts.serif, fontWeight = FontWeight.Medium, fontSize = 22.sp)
-                Text("NORDMARKA", color = p.lab, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = 11.sp)
+                Text("Skiføre", color = p.ink, fontFamily = PaperFonts.serif, fontWeight = FontWeight.Medium, fontSize = HomelabType.title3.fontSize)
+                Text("NORDMARKA", color = p.lab, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.caption.fontSize)
             }
         }
-        Text(text, color = p.ink, fontSize = 14.5.sp, lineHeight = 20.sp)
+        Text(text, color = p.ink, fontSize = HomelabType.callout.fontSize, lineHeight = 20.sp)
         if (items.isNotEmpty()) FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            items.take(4).forEach { c -> Text(c, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 12.5.sp, modifier = Modifier.clip(CircleShape).border(1.dp, p.line, CircleShape).padding(12.dp, 6.dp)) }
+            items.take(4).forEach { c -> Text(c, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.footnote.fontSize, modifier = Modifier.clip(CircleShape).border(1.dp, p.line, CircleShape).padding(12.dp, 6.dp)) }
         }
     }
 }

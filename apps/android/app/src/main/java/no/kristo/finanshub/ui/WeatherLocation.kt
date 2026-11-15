@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import no.kristo.finanshub.*
 import no.kristo.finanshub.family.FamilyService
+import no.kristo.finanshub.ui.designsystem.HomelabType
 
 /*
  * Prompt 45 (claude-code-vaer-min-posisjon-popup.md, fasit Vaer.dc.html): kortet «MIN POSISJON» øverst i Vær – været der telefonen er
@@ -70,12 +71,12 @@ internal fun HereCard45(vm: AppViewModel, w: WeatherFull?) {
     val glass = Color.White.copy(alpha = .14f)
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(glass).padding(16.dp, 14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text("➤", color = Color.White, fontSize = 11.sp)
-            Text("MIN POSISJON", color = Color.White.copy(alpha = .85f), fontWeight = FontWeight.Bold, fontSize = 11.5.sp, letterSpacing = 1.2.sp)
+            Text("➤", color = Color.White, fontSize = HomelabType.caption.fontSize)
+            Text("MIN POSISJON", color = Color.White.copy(alpha = .85f), fontWeight = FontWeight.Bold, fontSize = HomelabType.caption.fontSize, letterSpacing = 1.2.sp)
         }
         when {
             s.hereState == "denied" || !granted -> {
-                Text("Slå på posisjon for å se været der du er", color = Color.White, fontSize = 15.sp)
+                Text("Slå på posisjon for å se været der du er", color = Color.White, fontSize = HomelabType.callout.fontSize)
                 Box(
                     Modifier.padding(top = 6.dp).height(36.dp).clip(CircleShape).background(Color.White)
                         .clickable(role = Role.Button) {
@@ -84,16 +85,16 @@ internal fun HereCard45(vm: AppViewModel, w: WeatherFull?) {
                         }
                         .padding(horizontal = 16.dp),
                     contentAlignment = Alignment.Center,
-                ) { Text("Tillat", color = Color(0xFF1B1A17), fontWeight = FontWeight.Bold, fontSize = 13.5.sp) }
+                ) { Text("Tillat", color = Color(0xFF1B1A17), fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize) }
             }
-            h == null -> Text(if (s.hereState == "error") "Fant ikke posisjonen din ennå." else "Henter været der du er …", color = Color.White.copy(alpha = .85f), fontSize = 14.sp)
+            h == null -> Text(if (s.hereState == "error") "Fant ikke posisjonen din ennå." else "Henter været der du er …", color = Color.White.copy(alpha = .85f), fontSize = HomelabType.callout.fontSize)
             else -> Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Column(Modifier.weight(1f)) {
-                    Text(h.place, color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 20.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(h.place, color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.headline.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Text(listOfNotNull(h.text, h.hi?.let { "H: ${Math.round(it)}°" }, h.lo?.let { "L: ${Math.round(it)}°" }).joinToString("  "),
-                        color = Color.White.copy(alpha = .9f), fontSize = 13.sp, maxLines = 1)
+                        color = Color.White.copy(alpha = .9f), fontSize = HomelabType.subheadline.fontSize, maxLines = 1)
                 }
-                h.temp?.let { Text("${Math.round(it)}°", color = Color.White, fontWeight = FontWeight.Light, fontSize = 44.sp, maxLines = 1) }
+                h.temp?.let { Text("${Math.round(it)}°", color = Color.White, fontWeight = FontWeight.Light, fontSize = HomelabType.largeTitle.fontSize, maxLines = 1) }
             }
         }
     }

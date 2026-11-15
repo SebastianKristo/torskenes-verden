@@ -55,6 +55,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import kotlinx.coroutines.delay
 import no.kristo.finanshub.*
+import no.kristo.finanshub.ui.designsystem.HomelabType
 
 /*
  * Prompt 87 (NRKAND): Media → NRK (claude-code-media-nrk-nedlaster.md, fasit Media NRK.dc.html).
@@ -114,7 +115,7 @@ internal fun Kort87(content: @Composable ColumnScope.() -> Unit) {
 
 @Composable
 internal fun Chip87(text: String, c: Color) {
-    Text(text, color = c, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = 11.sp, letterSpacing = .4.sp, maxLines = 1,
+    Text(text, color = c, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.caption.fontSize, letterSpacing = .4.sp, maxLines = 1,
         modifier = Modifier.clip(CircleShape).background(c.copy(alpha = .13f)).padding(horizontal = 10.dp, vertical = 4.dp))
 }
 
@@ -124,7 +125,7 @@ internal fun Knapp87(text: String, color: Color? = null, fylt: Boolean = false, 
     val p = PaperPal.current
     Box(Modifier.heightIn(min = 48.dp).alpha(if (enabled) 1f else .5f).clickable(enabled = enabled, role = Role.Button, onClickLabel = text, onClick = onClick), contentAlignment = Alignment.Center) {
         Box(Modifier.height(34.dp).clip(CircleShape).background(if (fylt) p.ink else Color.Transparent).border(1.dp, if (fylt) p.ink else p.line, CircleShape).padding(horizontal = 13.dp), contentAlignment = Alignment.Center) {
-            Text(text, color = if (fylt) p.bg else color ?: p.ink, fontWeight = if (fylt) FontWeight.Bold else FontWeight.SemiBold, fontSize = 13.sp, maxLines = 1)
+            Text(text, color = if (fylt) p.bg else color ?: p.ink, fontWeight = if (fylt) FontWeight.Bold else FontWeight.SemiBold, fontSize = HomelabType.subheadline.fontSize, maxLines = 1)
         }
     }
 }
@@ -217,7 +218,7 @@ internal fun Vpn87(st: NrkStatus87) {
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
         Box(Modifier.size(7.dp).clip(CircleShape).background(c))
         Text(if (st.vpnOk) listOfNotNull("VPN", st.land ?: "NO", st.ip).joinToString(" · ") else "VPN stoppet · køen venter",
-            color = c, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            color = c, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.footnote.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 
@@ -236,11 +237,11 @@ internal fun KvalKomp87(vm: AppViewModel) {
             .semantics(mergeDescendants = true) { stateDescription = if (on) "På" else "Av" },
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Box(Modifier.size(22.dp).clip(RoundedCornerShape(6.dp)).background(if (on) p.ink else Color.Transparent).border(1.5.dp, if (on) p.ink else p.line, RoundedCornerShape(6.dp)), contentAlignment = Alignment.Center) {
-                if (on) Text("✓", color = p.bg, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                if (on) Text("✓", color = p.bg, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize)
             }
             Column(Modifier.weight(1f)) {
-                Text("Komprimer (H.265, ca. halv størrelse)", color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 14.5.sp)
-                Text(nrkKompSub87(k.standard, k.crf, k.preset), color = p.mut, fontSize = 12.sp)
+                Text("Komprimer (H.265, ca. halv størrelse)", color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize)
+                Text(nrkKompSub87(k.standard, k.crf, k.preset), color = p.mut, fontSize = HomelabType.footnote.fontSize)
             }
         }
     }
@@ -259,8 +260,8 @@ private fun LastNed87(vm: AppViewModel) {
         Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).clickable(role = Role.Button, onClickLabel = if (apen) "Skjul lenkefeltet" else "Last ned fra NRK med en lenke") {
             n.sok.lenkeApen = !apen; Haptics.select()
         }, verticalAlignment = Alignment.CenterVertically) {
-            Text("Har du en lenke?", color = p.ink, fontWeight = FontWeight.Bold, fontSize = 17.sp, modifier = Modifier.weight(1f))
-            Text(if (apen) "▾" else "▸", color = p.mut, fontSize = 16.sp)
+            Text("Har du en lenke?", color = p.ink, fontWeight = FontWeight.Bold, fontSize = HomelabType.body.fontSize, modifier = Modifier.weight(1f))
+            Text(if (apen) "▾" else "▸", color = p.mut, fontSize = HomelabType.body.fontSize)
         }
         if (apen) {
             // Lenkefeltet med «Lim inn». Rød ramme når lenken ikke er fra NRK.
@@ -268,9 +269,9 @@ private fun LastNed87(vm: AppViewModel) {
             Row(Modifier.fillMaxWidth().heightIn(min = 50.dp).clip(RoundedCornerShape(14.dp)).background(p.bg).border(1.dp, ramme, RoundedCornerShape(14.dp)).padding(start = 14.dp, end = 4.dp),
                 verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
-                    if (n.url.isEmpty()) Text("https://tv.nrk.no/serie/…", color = p.mut, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    if (n.url.isEmpty()) Text("https://tv.nrk.no/serie/…", color = p.mut, fontSize = HomelabType.callout.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     BasicTextField(n.url, { n.url = it.take(2000); n.err = null }, singleLine = true,
-                        textStyle = TextStyle(color = p.ink, fontSize = 15.sp, fontFamily = PaperFonts.sans), cursorBrush = SolidColor(p.lab),
+                        textStyle = TextStyle(color = p.ink, fontSize = HomelabType.callout.fontSize, fontFamily = PaperFonts.sans), cursorBrush = SolidColor(p.lab),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, capitalization = KeyboardCapitalization.None, imeAction = ImeAction.Go),
                         keyboardActions = KeyboardActions(onGo = { vm.addNrk87() }), modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Lenke fra NRK" })
                 }
@@ -280,10 +281,10 @@ private fun LastNed87(vm: AppViewModel) {
                     if (tekst.isNullOrEmpty()) vm.p43.toast = "Utklippstavlen er tom"
                     else { n.url = nrkDelt87(tekst) ?: tekst.take(2000); n.err = null; Haptics.select() }
                 }.padding(horizontal = 10.dp), contentAlignment = Alignment.Center) {
-                    Text("Lim inn", color = p.ink, fontWeight = FontWeight.Bold, fontSize = 13.sp, maxLines = 1)
+                    Text("Lim inn", color = p.ink, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize, maxLines = 1)
                 }
             }
-            n.err?.let { Text(it, color = p.lab, fontSize = 14.sp) }
+            n.err?.let { Text(it, color = p.lab, fontSize = HomelabType.callout.fontSize) }
             Btn43(if (n.busy) "Legger i køen …" else "Last ned", dark = true, modifier = Modifier.fillMaxWidth().alpha(if (nrkLenke87(n.url) != null && !n.busy) 1f else .4f), enabled = !n.busy) { vm.addNrk87() }
 
             PLabel("Type", color = p.mut)
@@ -292,7 +293,7 @@ private fun LastNed87(vm: AppViewModel) {
             Skille87()
             Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
                 for (l in listOf("tv/Serie/Season 01/Serie - S01E02 - Tittel.mkv", "movies/Tittel/Tittel.mkv", "podcast/Serie/2026-11-13 - Tittel.m4a"))
-                    Text(l, color = p.mut, fontFamily = PaperFonts.mono, fontSize = 11.5.sp, lineHeight = 17.sp)
+                    Text(l, color = p.mut, fontFamily = PaperFonts.mono, fontSize = HomelabType.caption.fontSize, lineHeight = 17.sp)
             }
         }
     }
@@ -312,7 +313,7 @@ private fun Ko87(vm: AppViewModel) {
             PSerif("Køen", 26.sp, modifier = Modifier.weight(1f))
             if (jobber.orEmpty().any { it.status == "ferdig" || it.status == "avbrutt" }) Knapp87("Fjern ferdige") { vm.nrkRydd87() }
         }
-        if (!vpnOk) Text("Venter på VPN: tunnelen er ikke i Norge. Køen står stille.", color = p.lab, fontWeight = FontWeight.SemiBold, fontSize = 14.sp,
+        if (!vpnOk) Text("Venter på VPN: tunnelen er ikke i Norge. Køen står stille.", color = p.lab, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize,
             modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(p.lab.copy(alpha = .10f)).padding(14.dp, 12.dp))
         when {
             jobber == null -> Mut87("Henter køen …", 15f)
@@ -334,7 +335,7 @@ private fun Jobb87(vm: AppViewModel, j: NrkJobb87, vpnOk: Boolean) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             // Tittelen åpner programmet hos NRK (bare NRK-lenker åpnes).
             val lenke = nrkLenke87(j.url)
-            Text(j.tittel, color = p.ink, fontWeight = FontWeight.Bold, fontSize = 16.sp, lineHeight = 21.sp,
+            Text(j.tittel, color = p.ink, fontWeight = FontWeight.Bold, fontSize = HomelabType.body.fontSize, lineHeight = 21.sp,
                 modifier = Modifier.weight(1f).then(if (lenke != null) Modifier.clickable(role = Role.Button, onClickLabel = "Åpne på NRK") { runCatching { uri.openUri(lenke) } } else Modifier))
             Chip87(chip, c)
         }
@@ -349,16 +350,16 @@ private fun Jobb87(vm: AppViewModel, j: NrkJobb87, vpnOk: Boolean) {
             val komp = nrkKomprimerer87(j.status, j.melding)
             val fart = if (komp) listOfNotNull("H.265", n.status?.komp?.crf?.let { "crf $it" }).joinToString(" · ") else nrkFart87(j.fart)
             val deler = listOf("${Math.round(pr)} %", fart, nrkEta87(j.eta), if (j.av != null && j.nr != null) "${j.nr} av ${j.av}" else "").filter { it.isNotEmpty() }
-            Text(deler.joinToString("   "), color = p.mut, fontFamily = PaperFonts.mono, fontSize = 12.sp)
+            Text(deler.joinToString("   "), color = p.mut, fontFamily = PaperFonts.mono, fontSize = HomelabType.footnote.fontSize)
         }
-        nrkSpart87(j.spart)?.takeIf { j.status == "ferdig" }?.let { Text(it, color = tone87("ok"), fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = 12.sp) }
+        nrkSpart87(j.spart)?.takeIf { j.status == "ferdig" }?.let { Text(it, color = tone87("ok"), fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.footnote.fontSize) }
         if (j.filer.isNotEmpty()) {
             val open = j.id in n.filerOpen
             val lbl = (if (open) "Skjul" else "Vis") + " lagrede filer (${j.filer.size})"
-            Text(lbl, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 13.sp,
+            Text(lbl, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.subheadline.fontSize,
                 modifier = Modifier.heightIn(min = 44.dp).clickable(role = Role.Button, onClickLabel = lbl) { n.filerOpen = if (open) n.filerOpen - j.id else n.filerOpen + j.id }.wrapContentHeight())
             if (open) Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                j.filer.forEach { f -> Text(f, color = p.mut, fontFamily = PaperFonts.mono, fontSize = 11.5.sp, lineHeight = 17.sp) }
+                j.filer.forEach { f -> Text(f, color = p.mut, fontFamily = PaperFonts.mono, fontSize = HomelabType.caption.fontSize, lineHeight = 17.sp) }
             }
         }
         val knapper = nrkKnapper87(j.status, j.type)
@@ -390,7 +391,7 @@ private fun Folger87(vm: AppViewModel) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Top) {
                     FolgPlakat88(vm, f)
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                        Text(f.tittel, color = p.ink, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        Text(f.tittel, color = p.ink, fontWeight = FontWeight.Bold, fontSize = HomelabType.body.fontSize)
                         Mut87(nrkFolgSub87(f.sjekket, f.siste, f.kvalitet, now), 13f)
                         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             Knapp87(if (n.sjekker == f.id) "Sjekker …" else "Sjekk nå", enabled = n.sjekker == null) { vm.nrkSjekk87(f.id) }
@@ -413,9 +414,9 @@ private fun Plakat87(vm: AppViewModel, e: NrkElem87, modifier: Modifier, merke: 
     Box(modifier.aspectRatio(2f / 3f).clip(RoundedCornerShape(12.dp)).background(flate87(e.tittel))) {
         val b = bmp
         if (b != null) Image(b.asImageBitmap(), e.tittel, contentScale = ContentScale.Crop, modifier = Modifier.matchParentSize())
-        else Text(e.tittel, color = Color(0xFFF3EFE6), fontFamily = PaperFonts.serif, fontWeight = FontWeight.Medium, fontSize = 18.sp, lineHeight = 20.sp, maxLines = 4,
+        else Text(e.tittel, color = Color(0xFFF3EFE6), fontFamily = PaperFonts.serif, fontWeight = FontWeight.Medium, fontSize = HomelabType.headline.fontSize, lineHeight = 20.sp, maxLines = 4,
             overflow = TextOverflow.Ellipsis, modifier = Modifier.align(Alignment.BottomStart).padding(12.dp))
-        if (merke != null) Text(merke, color = Color(0xFFF3EFE6), fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = 11.sp, maxLines = 1,
+        if (merke != null) Text(merke, color = Color(0xFFF3EFE6), fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.caption.fontSize, maxLines = 1,
             modifier = Modifier.align(Alignment.TopEnd).padding(8.dp).clip(CircleShape).background(Color(0x8C0E0D0B)).padding(horizontal = 8.dp, vertical = 3.dp))
     }
 }
@@ -434,8 +435,8 @@ private fun Rute87(vm: AppViewModel, e: NrkElem87, modifier: Modifier) {
     val sid = if (e.type == "tv" && vm.nrk87.sokMulig88()) nrkSerieId88(e.url) else null
     Column(modifier.clip(RoundedCornerShape(12.dp)).clickable(role = Role.Button, onClickLabel = "Åpne ${e.tittel}") { if (sid != null) vm.apneSerie88(sid, e.tittel) else vm.openNrkElem87(e) }, verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Plakat87(vm, e, Modifier.fillMaxWidth(), merke = when (e.type) { "film" -> "FILM"; "radio" -> "RADIO"; else -> "${e.sesonger.size} S" })
-        Text(e.tittel, color = p.ink, fontWeight = FontWeight.Bold, fontSize = 14.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
-        Text(sub, color = p.mut, fontSize = 12.sp, maxLines = 1)
+        Text(e.tittel, color = p.ink, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        Text(sub, color = p.mut, fontSize = HomelabType.footnote.fontSize, maxLines = 1)
         Box(Modifier.fillMaxWidth().height(4.dp).clip(CircleShape).background(p.line)) {
             val andel = if (total > 0) har.toFloat() / total else 0f
             Box(Modifier.fillMaxHeight().fillMaxWidth(andel.coerceIn(0f, 1f)).background(tone87(if (total > 0 && har >= total) "ok" else "dl")))
@@ -503,7 +504,7 @@ private fun LazyListScope.detalj87(vm: AppViewModel, e: NrkElem87) {
                     e.meta?.let { Mut87(it) }
                 }
             }
-            e.beskrivelse?.let { Text(it, color = p.ink, fontSize = 15.sp, lineHeight = 22.sp) }
+            e.beskrivelse?.let { Text(it, color = p.ink, fontSize = HomelabType.callout.fontSize, lineHeight = 22.sp) }
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 when {
                     film && filmStatus87(e) == "mangler" -> Knapp87("Last ned", fylt = true) { vm.nrkHent87(e, eps.filter { it.status == "mangler" }, "Lagt i køen") }
@@ -553,8 +554,8 @@ private fun Episode87(vm: AppViewModel, e: NrkElem87, ep: NrkEp87?, nr: String, 
         if (strek) Skille87()
         Row(Modifier.fillMaxWidth().padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(listOfNotNull(nr, sub).joinToString(" · "), color = p.mut, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = 12.sp, maxLines = 1)
-                Text(tittel, color = p.ink, fontWeight = FontWeight.Bold, fontSize = 15.sp, lineHeight = 20.sp)
+                Text(listOfNotNull(nr, sub).joinToString(" · "), color = p.mut, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.footnote.fontSize, maxLines = 1)
+                Text(tittel, color = p.ink, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize, lineHeight = 20.sp)
             }
             Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Chip87(chip, tone87(tone))

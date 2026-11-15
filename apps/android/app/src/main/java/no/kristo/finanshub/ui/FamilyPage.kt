@@ -76,6 +76,7 @@ import no.kristo.finanshub.family.FamilyService
 import no.kristo.finanshub.family.HealthSync
 import no.kristo.finanshub.uiErr73
 import org.json.JSONObject
+import no.kristo.finanshub.ui.designsystem.HomelabType
 
 /* ---------------- Familie og kart ---------------- */
 
@@ -126,7 +127,7 @@ private fun PrivacySheet(vm: AppViewModel, startSharing: () -> Unit) {
     ModalBottomSheet(onDismissRequest = { vm.famPrivacy = false }, containerColor = p.bg, contentColor = p.ink) {
         Column(Modifier.fillMaxWidth().padding(18.dp, 0.dp, 18.dp, 34.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             PSerif("Personvern", 26.sp)
-            Text("De andre ser at delingen er pauset eller av. Posisjoner lagres i 7 dager, helse i 30 dager.", color = p.mut, fontSize = 13.sp)
+            Text("De andre ser at delingen er pauset eller av. Posisjoner lagres i 7 dager, helse i 30 dager.", color = p.mut, fontSize = HomelabType.subheadline.fontSize)
             PLabel("Deling")
             PCard {
                 PRow("Del posisjonen", "Også i bakgrunnen, med varsel i statuslinjen", if (me?.sharing == "on") "✓" else "", p.pos, serif = false) { startSharing() }
@@ -140,9 +141,9 @@ private fun PrivacySheet(vm: AppViewModel, startSharing: () -> Unit) {
             }
             PLabel("Helse (Health Connect)")
             when (hcStatus) {
-                -1 -> Text("Sjekker Health Connect …", color = p.mut, fontSize = 13.sp)
-                2 -> Text("Health Connect finnes ikke på denne telefonen.", color = p.mut, fontSize = 13.sp)
-                1 -> Text("Health Connect må installeres eller oppdateres fra Play Butikk.", color = p.lab, fontSize = 13.sp)
+                -1 -> Text("Sjekker Health Connect …", color = p.mut, fontSize = HomelabType.subheadline.fontSize)
+                2 -> Text("Health Connect finnes ikke på denne telefonen.", color = p.mut, fontSize = HomelabType.subheadline.fontSize)
+                1 -> Text("Health Connect må installeres eller oppdateres fra Play Butikk.", color = p.lab, fontSize = HomelabType.subheadline.fontSize)
                 else -> {
                     PCard {
                         HEALTH_KEYS.forEachIndexed { i, (k, n) ->
@@ -154,7 +155,7 @@ private fun PrivacySheet(vm: AppViewModel, startSharing: () -> Unit) {
                         if (perms.isEmpty()) vm.famSetHealth(health)
                         else try { vm.healthAskedNow(); hcPerm.launch(perms) } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { vm.message = "Fikk ikke åpnet Health Connect: ${uiErr73(e, "ukjent feil")}" }
                     }
-                    Text("Bare det du velger, sendes til serveren, som et sammendrag hvert 15. minutt.", color = p.mut, fontSize = 12.sp)
+                    Text("Bare det du velger, sendes til serveren, som et sammendrag hvert 15. minutt.", color = p.mut, fontSize = HomelabType.footnote.fontSize)
                 }
             }
         }
@@ -860,7 +861,7 @@ private fun Sted50(vm: AppViewModel) {
         }
         Column(Modifier.padding(20.dp, 14.dp, 20.dp, 10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             if (canEdit) BasicTextField(name, { name = it.take(60) }, singleLine = true, cursorBrush = SolidColor(p.ink),
-                textStyle = TextStyle(color = p.ink, fontSize = 32.sp, fontFamily = PaperFonts.serif, fontWeight = FontWeight.Medium))
+                textStyle = TextStyle(color = p.ink, fontSize = HomelabType.title2.fontSize, fontFamily = PaperFonts.serif, fontWeight = FontWeight.Medium))
             else T50(name, 32.sp, p.ink, FontWeight.Medium, PaperFonts.serif)
             val n = areas.size
             T50(
@@ -965,7 +966,7 @@ private fun AreaDialog50(e: AreaEdit50, onDismiss: () -> Unit, onSave: (String, 
             T50(if (e.areaId == null) "Nytt område" else "Endre område", 24.sp, p.ink, FontWeight.Medium, PaperFonts.serif)
             Lab50("NAVN", p.sub)
             BasicTextField(name, { name = it.take(60) }, singleLine = true, cursorBrush = SolidColor(p.ink),
-                textStyle = TextStyle(color = p.ink, fontSize = 16.sp, fontFamily = PaperFonts.sans, fontWeight = FontWeight.SemiBold),
+                textStyle = TextStyle(color = p.ink, fontSize = HomelabType.body.fontSize, fontFamily = PaperFonts.sans, fontWeight = FontWeight.SemiBold),
                 modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(p.card).padding(14.dp, 12.dp))
             Lab50("RADIUS · ${r.toInt()} M", p.sub)
             Slider(r, { v -> r = (Math.round(v / 5f) * 5).toFloat().coerceIn(25f, 1000f) }, valueRange = 25f..1000f,
@@ -1212,7 +1213,7 @@ private fun Form50(vm: AppViewModel, c: FamCheckinTab50) {
                 }
             }
             BasicTextField(custom, { custom = it.take(80) }, singleLine = true, cursorBrush = SolidColor(p.ink),
-                textStyle = TextStyle(color = p.ink, fontSize = 14.sp, fontFamily = PaperFonts.sans),
+                textStyle = TextStyle(color = p.ink, fontSize = HomelabType.callout.fontSize, fontFamily = PaperFonts.sans),
                 modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(p.bg).padding(12.dp, 10.dp),
                 decorationBox = { inner -> if (custom.isEmpty()) T50("Skriv et sted eller en adresse", 14.sp, p.mut); inner() })
         }
@@ -1226,7 +1227,7 @@ private fun Form50(vm: AppViewModel, c: FamCheckinTab50) {
                 Chip50("Egen tekst", ownOn, null) { ownOn = true }
             }
             if (ownOn) BasicTextField(own, { own = it.take(200) }, cursorBrush = SolidColor(p.ink),
-                textStyle = TextStyle(color = p.ink, fontSize = 14.sp, fontFamily = PaperFonts.sans),
+                textStyle = TextStyle(color = p.ink, fontSize = HomelabType.callout.fontSize, fontFamily = PaperFonts.sans),
                 modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(p.bg).padding(12.dp, 10.dp),
                 decorationBox = { inner -> if (own.isEmpty()) T50("Skriv hva du vil si", 14.sp, p.mut); inner() })
         }
@@ -1328,24 +1329,24 @@ internal fun School50(vm: AppViewModel) {
     if (s.schoolMissing) { Zones41(vm); return }
     val sc = s.school
     PLabel(sc?.title ?: "SKOLE · FRA FAMILIE › STEDER", p.mut)
-    if (sc == null) { Text("Henter skolen …", color = p.mut, fontSize = 12.5.sp); return }
+    if (sc == null) { Text("Henter skolen …", color = p.mut, fontSize = HomelabType.footnote.fontSize); return }
     if (sc.placeId == null) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(sc.emptyText ?: "Ingen skole valgt", color = p.mut, fontSize = 13.sp, modifier = Modifier.weight(1f))
-            Text(sc.emptyAction ?: "Legg til i Steder ›", color = p.ink, fontWeight = FontWeight.Bold, fontSize = 13.sp,
+            Text(sc.emptyText ?: "Ingen skole valgt", color = p.mut, fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.weight(1f))
+            Text(sc.emptyAction ?: "Legg til i Steder ›", color = p.ink, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize,
                 modifier = Modifier.clip(CircleShape).clickable(role = Role.Button) { vm.openSteder50(null, "skole") }.padding(8.dp, 6.dp))
         }
         return
     }
     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         sc.areas.forEach { a ->
-            Text(a.label, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 12.5.sp,
+            Text(a.label, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.footnote.fontSize,
                 modifier = Modifier.clip(CircleShape).border(1.dp, p.line, CircleShape).padding(12.dp, 7.dp))
         }
     }
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Text("Når du forlater alle områdene (ute i 2 min, hverdager 07–18) vises Min reise.", color = p.mut, fontSize = 12.sp, lineHeight = 16.sp, modifier = Modifier.weight(1f))
-        Text(sc.editLabel ?: "Endre i Steder ›", color = p.ink, fontWeight = FontWeight.Bold, fontSize = 13.sp,
+        Text("Når du forlater alle områdene (ute i 2 min, hverdager 07–18) vises Min reise.", color = p.mut, fontSize = HomelabType.footnote.fontSize, lineHeight = 16.sp, modifier = Modifier.weight(1f))
+        Text(sc.editLabel ?: "Endre i Steder ›", color = p.ink, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize,
             modifier = Modifier.clip(CircleShape).clickable(role = Role.Button) { vm.openSteder50(sc.placeId) }.padding(8.dp, 6.dp))
     }
 }

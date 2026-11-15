@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import no.kristo.finanshub.*
 import java.time.LocalDate
+import no.kristo.finanshub.ui.designsystem.HomelabType
 
 /*
  * Prompt 24 (A): Bursdager (design/Bursdager.dc.html, variant «mobile»), åpnes fra Mer → Bursdager, Hjem-kortet og widgetene.
@@ -81,8 +82,8 @@ private fun BdToggle(title: String, sub: String, on: Boolean, onClick: () -> Uni
         Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
         Row(Modifier.fillMaxWidth().press24(onClick = onClick).padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Column(Modifier.weight(1f)) {
-                Text(title, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
-                Text(sub, color = p.mut, fontSize = 12.sp)
+                Text(title, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize)
+                Text(sub, color = p.mut, fontSize = HomelabType.footnote.fontSize)
             }
             Box(Modifier.size(46.dp, 28.dp).clip(RoundedCornerShape(14.dp)).background(if (on) p.pos else p.line).padding(3.dp), contentAlignment = if (on) Alignment.CenterEnd else Alignment.CenterStart) {
                 Box(Modifier.size(22.dp).clip(CircleShape).background(Color.White))
@@ -95,8 +96,8 @@ private fun BdToggle(title: String, sub: String, on: Boolean, onClick: () -> Uni
 private fun BdLabel(text: String, right: String? = null) {
     val p = PaperPal.current
     Row(Modifier.fillMaxWidth().padding(start = 4.dp, end = 4.dp, top = 4.dp)) {
-        Text(text, color = p.lab, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = 10.5.sp, letterSpacing = 1.3.sp, modifier = Modifier.weight(1f))
-        if (right != null) Text(right, color = p.mut, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = 10.5.sp, letterSpacing = 1.3.sp)
+        Text(text, color = p.lab, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.caption.fontSize, letterSpacing = 1.3.sp, modifier = Modifier.weight(1f))
+        if (right != null) Text(right, color = p.mut, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.caption.fontSize, letterSpacing = 1.3.sp)
     }
 }
 
@@ -144,14 +145,14 @@ internal fun BirthdaysScreen24(vm: AppViewModel) {
             item { Column(Modifier.padding(horizontal = 16.dp)) { BdHero(vm, all ?: emptyList()) } }
             item { Column(Modifier.padding(horizontal = 16.dp)) { BdSearch(vm) } }
             if (s.adding) item { Column(Modifier.padding(horizontal = 16.dp)) { BdFormCard(vm) } }
-            s.error?.let { e -> item { Text(e, color = p.lab, fontSize = 13.sp, modifier = Modifier.padding(horizontal = 20.dp)) } }
+            s.error?.let { e -> item { Text(e, color = p.lab, fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.padding(horizontal = 20.dp)) } }
             if (s.localOnly) item {
-                Text("Serveren har ikke Bursdager ennå, så bursdagene lagres bare på denne telefonen.", color = p.mut, fontSize = 12.5.sp, modifier = Modifier.padding(horizontal = 20.dp))
+                Text("Serveren har ikke Bursdager ennå, så bursdagene lagres bare på denne telefonen.", color = p.mut, fontSize = HomelabType.footnote.fontSize, modifier = Modifier.padding(horizontal = 20.dp))
             }
             if (all == null && s.error == null) item { Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = p.ink) } }
             if (all != null && list.isEmpty()) item {
                 PCard(Modifier.padding(horizontal = 16.dp)) {
-                    Text(if (q.isEmpty()) "Ingen bursdager ennå. Trykk «+ Legg til»." else "Ingen treff.", color = p.mut, fontSize = 14.sp, modifier = Modifier.padding(16.dp))
+                    Text(if (q.isEmpty()) "Ingen bursdager ennå. Trykk «+ Legg til»." else "Ingen treff.", color = p.mut, fontSize = HomelabType.callout.fontSize, modifier = Modifier.padding(16.dp))
                 }
             }
             groups.forEach { (t, items) ->
@@ -170,13 +171,13 @@ internal fun BirthdaysScreen24(vm: AppViewModel) {
                     BdLabel("WIDGETS PÅ TELEFONEN")
                     Text("Hold inne på hjemskjermen → Widgets → Homelab: «Bursdager» viser de tre neste, og + legger til en ny." +
                         (if (no.kristo.finanshub.widget.S24.isSamsung) " På Samsung finnes også «Bursdager · Samsung» i samme størrelse som Samsungs egne widgets." else ""),
-                        color = p.mut, fontSize = 12.sp, lineHeight = 17.sp, modifier = Modifier.padding(horizontal = 4.dp))
+                        color = p.mut, fontSize = HomelabType.footnote.fontSize, lineHeight = 17.sp, modifier = Modifier.padding(horizontal = 4.dp))
                 }
             }
         }
         vm.message?.let { m ->
             Box(Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 8.dp).shadow(12.dp, CircleShape).clip(CircleShape).background(p.ink).padding(16.dp, 10.dp)) {
-                Text(m, color = p.bg, fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold, maxLines = 2)
+                Text(m, color = p.bg, fontSize = HomelabType.subheadline.fontSize, fontWeight = FontWeight.SemiBold, maxLines = 2)
             }
         }
     }
@@ -195,22 +196,23 @@ private fun BdHero(vm: AppViewModel, all: List<Bd24>) {
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
-            Text(if (h.daysLeft == 0) "BURSDAG I DAG" else "NESTE BURSDAG", color = fg.copy(alpha = .9f), fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = 10.5.sp, letterSpacing = 1.3.sp, modifier = Modifier.weight(1f))
-            if (same.size == 1) Text(BD_SRC[h.source] ?: "LOKAL", color = fg.copy(alpha = .8f), fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = 10.sp, letterSpacing = .6.sp)
+            Text(if (h.daysLeft == 0) "BURSDAG I DAG" else "NESTE BURSDAG", color = fg.copy(alpha = .9f), fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.caption.fontSize, letterSpacing = 1.3.sp, modifier = Modifier.weight(1f))
+            if (same.size == 1) Text(BD_SRC[h.source] ?: "LOKAL", color = fg.copy(alpha = .8f), fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.caption.fontSize, letterSpacing = .6.sp)
         }
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Column(Modifier.weight(1f)) {
-                Text(same.joinToString(" og ") { it.name }, color = fg, fontFamily = PaperFonts.serif, fontWeight = FontWeight.Medium, fontSize = 34.sp, lineHeight = 36.sp)
-                Text((if (same.size == 1 && h.age != null) "Fyller ${h.age} · " else "") + bdLong(h.next), color = fg.copy(alpha = .92f), fontSize = 14.sp, modifier = Modifier.padding(top = 4.dp))
+                Text(same.joinToString(" og ") { it.name }, color = fg, fontFamily = PaperFonts.serif, fontWeight = FontWeight.Medium, fontSize = HomelabType.title2.fontSize, lineHeight = 36.sp)
+                Text((if (same.size == 1 && h.age != null) "Fyller ${h.age} · " else "") + bdLong(h.next), color = fg.copy(alpha = .92f), fontSize = HomelabType.callout.fontSize, modifier = Modifier.padding(top = 4.dp))
             }
             Column(horizontalAlignment = Alignment.End) {
+                // Stort tall: bevisst over typeskalaen (largeTitle er 44 sp).
                 Text(if (h.daysLeft == 0) "I dag" else "${h.daysLeft}", color = fg, fontFamily = PaperFonts.serif, fontWeight = FontWeight.Normal, fontSize = 48.sp, lineHeight = 48.sp, maxLines = 1)
-                if (h.daysLeft > 0) Text(if (h.daysLeft == 1) "dag igjen" else "dager igjen", color = fg.copy(alpha = .88f), fontSize = 12.5.sp)
+                if (h.daysLeft > 0) Text(if (h.daysLeft == 1) "dag igjen" else "dager igjen", color = fg.copy(alpha = .88f), fontSize = HomelabType.footnote.fontSize)
             }
         }
         if (nxt.isNotEmpty()) Column {
             Box(Modifier.fillMaxWidth().height(1.dp).background(fg.copy(alpha = .28f)))
-            Text("Deretter: " + nxt.joinToString(" · ") { "${it.name} ${it.next.dayOfMonth}. ${BD_MS[it.next.monthValue - 1]}" }, color = fg.copy(alpha = .92f), fontSize = 13.sp, modifier = Modifier.padding(top = 10.dp))
+            Text("Deretter: " + nxt.joinToString(" · ") { "${it.name} ${it.next.dayOfMonth}. ${BD_MS[it.next.monthValue - 1]}" }, color = fg.copy(alpha = .92f), fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.padding(top = 10.dp))
         }
         // Prompt 41: jenka-toget med Glimt, trompet og konfetti inne i toppkortet når noen har bursdag i dag (ui/Ui41.kt).
         if (h.daysLeft == 0) Jenka41()
@@ -226,13 +228,13 @@ private fun BdSearch(vm: AppViewModel) {
             // Prompt 27: ✕ til venstre når det står tekst.
             SearchLead27(s.q.isNotEmpty(), p.ink, p.mut, bg = p.line, idle = { Icon(Icons.Filled.Search, null, tint = p.mut, modifier = Modifier.size(18.dp)) }) { s.q = "" }
             BasicTextField(
-                s.q, { s.q = it }, singleLine = true, textStyle = TextStyle(color = p.ink, fontSize = 15.sp, fontWeight = FontWeight.Medium, fontFamily = PaperFonts.sans),
+                s.q, { s.q = it }, singleLine = true, textStyle = TextStyle(color = p.ink, fontSize = HomelabType.callout.fontSize, fontWeight = FontWeight.Medium, fontFamily = PaperFonts.sans),
                 cursorBrush = SolidColor(p.lab), modifier = Modifier.weight(1f),
-                decorationBox = { inner -> Box { if (s.q.isEmpty()) Text("Søk etter navn", color = p.mut, fontSize = 15.sp, fontWeight = FontWeight.Medium); inner() } },
+                decorationBox = { inner -> Box { if (s.q.isEmpty()) Text("Søk etter navn", color = p.mut, fontSize = HomelabType.callout.fontSize, fontWeight = FontWeight.Medium); inner() } },
             )
         }
         Box(Modifier.height(46.dp).clip(CircleShape).background(p.ink).press24 { Haptics.select(); s.adding = !s.adding; s.editId = null }.padding(horizontal = 18.dp), contentAlignment = Alignment.Center) {
-            Text(if (s.adding) "Lukk" else "+ Legg til", color = p.bg, fontWeight = FontWeight.Bold, fontSize = 14.sp, maxLines = 1)
+            Text(if (s.adding) "Lukk" else "+ Legg til", color = p.bg, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize, maxLines = 1)
         }
     }
 }
@@ -243,11 +245,11 @@ private fun BdInput(value: String, onChange: (String) -> Unit, placeholder: Stri
     val p = PaperPal.current
     BasicTextField(
         value, onChange, singleLine = true,
-        textStyle = TextStyle(color = p.ink, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, fontFamily = if (mono) PaperFonts.mono else PaperFonts.sans),
+        textStyle = TextStyle(color = p.ink, fontSize = HomelabType.callout.fontSize, fontWeight = FontWeight.SemiBold, fontFamily = if (mono) PaperFonts.mono else PaperFonts.sans),
         keyboardOptions = if (numeric) KeyboardOptions(keyboardType = KeyboardType.Number) else KeyboardOptions.Default,
         cursorBrush = SolidColor(p.lab),
         modifier = modifier.height(44.dp).clip(RoundedCornerShape(14.dp)).background(p.bg).border(1.dp, p.line, RoundedCornerShape(14.dp)).padding(horizontal = 14.dp),
-        decorationBox = { inner -> Box(Modifier.fillMaxHeight(), contentAlignment = Alignment.CenterStart) { if (value.isEmpty()) Text(placeholder, color = p.mut, fontSize = 15.sp, fontWeight = FontWeight.SemiBold); inner() } },
+        decorationBox = { inner -> Box(Modifier.fillMaxHeight(), contentAlignment = Alignment.CenterStart) { if (value.isEmpty()) Text(placeholder, color = p.mut, fontSize = HomelabType.callout.fontSize, fontWeight = FontWeight.SemiBold); inner() } },
     )
 }
 
@@ -261,11 +263,11 @@ private fun BdSelect(label: String, options: List<Pair<Int, String>>, onPick: (I
             Modifier.fillMaxWidth().height(44.dp).clip(RoundedCornerShape(14.dp)).background(p.bg).border(1.dp, p.line, RoundedCornerShape(14.dp)).press24 { open = true }.padding(horizontal = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(label, color = p.ink, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-            Text("▾", color = p.mut, fontSize = 12.sp)
+            Text(label, color = p.ink, fontSize = HomelabType.callout.fontSize, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+            Text("▾", color = p.mut, fontSize = HomelabType.footnote.fontSize)
         }
         DropdownMenu(open, { open = false }, Modifier.heightIn(max = 320.dp).background(p.card)) {
-            options.forEach { (v, n) -> DropdownMenuItem(text = { Text(n, color = p.ink, fontSize = 15.sp) }, onClick = { onPick(v); open = false }) }
+            options.forEach { (v, n) -> DropdownMenuItem(text = { Text(n, color = p.ink, fontSize = HomelabType.callout.fontSize) }, onClick = { onPick(v); open = false }) }
         }
     }
 }
@@ -303,16 +305,16 @@ private fun BdFormCard(vm: AppViewModel) {
             BdSelect(BD_MN[month - 1], (1..12).map { it to BD_MN[it - 1] }, { month = it }, Modifier.weight(1f))
             BdInput(year, { year = it.filter(Char::isDigit).take(4) }, "År", Modifier.width(92.dp), mono = true, numeric = true)
         }
-        Text("Hvem", color = p.mut, fontSize = 12.5.sp)
+        Text("Hvem", color = p.mut, fontSize = HomelabType.footnote.fontSize)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             BD_RELS.forEach { (k, n) -> BdChip(n, rel == k) { rel = k } }
         }
-        Text("Påminnelse", color = p.mut, fontSize = 12.5.sp)
+        Text("Påminnelse", color = p.mut, fontSize = HomelabType.footnote.fontSize)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             BD_REMS.forEach { (v, n) -> BdChip(n, rem == v) { rem = v } }
         }
         if (edit == null) {
-            Text("Lagre i", color = p.mut, fontSize = 12.5.sp)
+            Text("Lagre i", color = p.mut, fontSize = HomelabType.footnote.fontSize)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 dests.forEach { (k, n) -> BdChip(n, dest == k) { dest = k } }
             }
@@ -320,15 +322,15 @@ private fun BdFormCard(vm: AppViewModel) {
                 "google" -> "Lagres som årlig heldagshendelse i «${s.gCals.firstOrNull { it.id == s.google.calendarId }?.name ?: s.google.calendarId ?: "Bursdager"}»" + (s.google.email?.let { " på $it" } ?: "") + "."
                 "ha" -> "Lagres i ${s.ha.entityId} via Home Assistant."
                 else -> "Lagres bare i Homelab. Koble til en kalender for å synke."
-            }, color = p.mut, fontSize = 12.sp, lineHeight = 17.sp)
+            }, color = p.mut, fontSize = HomelabType.footnote.fontSize, lineHeight = 17.sp)
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Box(Modifier.weight(1f).height(44.dp).clip(RoundedCornerShape(22.dp)).border(1.dp, p.line, RoundedCornerShape(22.dp)).press24 { s.adding = false; s.editId = null }, contentAlignment = Alignment.Center) {
-                Text("Avbryt", color = p.ink, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                Text("Avbryt", color = p.ink, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize)
             }
             Box(Modifier.weight(1f).height(44.dp).clip(RoundedCornerShape(22.dp)).background(p.ink).press24(enabled = s.busy != "save") { vm.saveBirthday24(BdForm24(name, day, month, year, rel, rem, dest)) },
                 contentAlignment = Alignment.Center) {
-                Text(if (s.busy == "save") "Lagrer …" else "Lagre", color = p.bg, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                Text(if (s.busy == "save") "Lagrer …" else "Lagre", color = p.bg, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize)
             }
         }
     }
@@ -350,19 +352,19 @@ private fun BdRow(vm: AppViewModel, b: Bd24, top: Boolean) {
         ) {
             Box { BdAvatar(vm, b, 42); if (b.avatarUrl.isNullOrBlank()) BdPlus41(42) } // Prompt 41: «+» uten bilde
             Column(Modifier.weight(1f)) {
-                Text(b.name, color = p.ink, fontWeight = FontWeight.Bold, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(b.short + (b.age?.let { " · fyller $it" } ?: "") + " · " + b.relLabel, color = p.mut, fontSize = 12.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(b.name, color = p.ink, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(b.short + (b.age?.let { " · fyller $it" } ?: "") + " · " + b.relLabel, color = p.mut, fontSize = HomelabType.footnote.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                Text(b.whenText, color = if (b.daysLeft <= 7) p.lab else p.ink, fontFamily = PaperFonts.serif, fontWeight = FontWeight.Medium, fontSize = 17.sp, maxLines = 1)
-                Text(BD_SRC[b.source] ?: "LOKAL", color = p.mut, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = 9.5.sp, letterSpacing = .6.sp)
+                Text(b.whenText, color = if (b.daysLeft <= 7) p.lab else p.ink, fontFamily = PaperFonts.serif, fontWeight = FontWeight.Medium, fontSize = HomelabType.body.fontSize, maxLines = 1)
+                Text(BD_SRC[b.source] ?: "LOKAL", color = p.mut, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.caption.fontSize, letterSpacing = .6.sp)
             }
         }
         if (open) Column(Modifier.fillMaxWidth().padding(start = 54.dp, bottom = 14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             BdPhotoActions41(vm, b) // Prompt 41: last opp / bytt / fjern bilde
             val det = bdLong(b.next).replaceFirstChar { it.uppercase() } + (b.year?.let { " · født $it" } ?: "") + " · " + if (b.daysLeft == 0) "har bursdag i dag" else "om ${b.daysLeft} dager"
-            Text(det, color = p.ink, fontSize = 13.5.sp)
-            Text("Påminnelse", color = p.mut, fontSize = 12.5.sp)
+            Text(det, color = p.ink, fontSize = HomelabType.subheadline.fontSize)
+            Text("Påminnelse", color = p.mut, fontSize = HomelabType.footnote.fontSize)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 BD_REMS.forEach { (v, n) -> BdChip(n, b.reminderDays == v, height = 30.dp) { vm.setReminder24(b, v) } }
             }
@@ -379,7 +381,7 @@ private fun BdRow(vm: AppViewModel, b: Bd24, top: Boolean) {
 private fun BdAction(text: String, color: Color, onClick: () -> Unit) {
     val p = PaperPal.current
     Box(Modifier.height(36.dp).clip(RoundedCornerShape(18.dp)).border(1.dp, p.line, RoundedCornerShape(18.dp)).press24(onClick = onClick).padding(horizontal = 14.dp), contentAlignment = Alignment.Center) {
-        Text(text, color = color, fontWeight = FontWeight.Bold, fontSize = 13.sp, maxLines = 1)
+        Text(text, color = color, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize, maxLines = 1)
     }
 }
 
@@ -401,7 +403,7 @@ internal fun BdCalendars(vm: AppViewModel, ctx: android.content.Context) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Box(Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(Color.White).border(1.dp, p.line, RoundedCornerShape(12.dp)), contentAlignment = Alignment.Center) { GoogleG(20) }
             Column(Modifier.weight(1f)) {
-                Text("Google Kalender", color = p.ink, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                Text("Google Kalender", color = p.ink, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize)
                 Text(when {
                     s.localOnly -> "Trenger en nyere Homelab-server"
                     !g.configured -> "Ikke satt opp · Integrasjoner → Google Kalender"
@@ -409,7 +411,7 @@ internal fun BdCalendars(vm: AppViewModel, ctx: android.content.Context) {
                     g.connected -> listOfNotNull(g.email, g.syncedAt?.let { "synket ${clock24(it)}" } ?: "kobler til …").joinToString(" · ")
                     s.authAt != 0L -> "Venter på innlogging i nettleseren …"
                     else -> "Ikke koblet til"
-                }, color = if (g.connected) p.pos else p.mut, fontSize = 12.5.sp)
+                }, color = if (g.connected) p.pos else p.mut, fontSize = HomelabType.footnote.fontSize)
             }
         }
         if (!g.connected) {
@@ -418,15 +420,15 @@ internal fun BdCalendars(vm: AppViewModel, ctx: android.content.Context) {
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally),
             ) {
                 GoogleG(18)
-                Text(if (s.authAt != 0L) "Kobler til …" else "Logg inn med Google", color = Color(0xFF1F1F1F), fontWeight = FontWeight.SemiBold, fontSize = 14.5.sp)
+                Text(if (s.authAt != 0L) "Kobler til …" else "Logg inn med Google", color = Color(0xFF1F1F1F), fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize)
             }
         } else {
             // Prompt 35: velg flere kalendere som hentes (g.cals); den første er der nye bursdager skrives.
             val cals = s.gCals.ifEmpty { listOfNotNull(g.calendarId?.let { BdCal24(it, it) }) }
             val sel = g.calendarIds.ifEmpty { listOfNotNull(g.calendarId) }
             Row(Modifier.fillMaxWidth()) {
-                Text("Kalendere som hentes (velg flere)", color = p.mut, fontSize = 12.5.sp, modifier = Modifier.weight(1f))
-                Text("${sel.size} valgt", color = p.mut, fontSize = 12.5.sp)
+                Text("Kalendere som hentes (velg flere)", color = p.mut, fontSize = HomelabType.footnote.fontSize, modifier = Modifier.weight(1f))
+                Text("${sel.size} valgt", color = p.mut, fontSize = HomelabType.footnote.fontSize)
             }
             FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 cals.forEach { c -> val on = c.id in sel; BdChip((if (on) "✓ " else "") + c.name, on) { vm.toggleGoogleCal35(c.id) } }
@@ -439,17 +441,17 @@ internal fun BdCalendars(vm: AppViewModel, ctx: android.content.Context) {
             GoogleCals36(vm)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Box(Modifier.weight(1f).height(40.dp).clip(RoundedCornerShape(20.dp)).border(1.dp, p.line, RoundedCornerShape(20.dp)).press24 { vm.googleSync24() }, contentAlignment = Alignment.Center) {
-                    Text(if (s.busy == "sync") "Synker …" else "↻ Synk nå", color = p.lab, fontWeight = FontWeight.Bold, fontSize = 13.5.sp)
+                    Text(if (s.busy == "sync") "Synker …" else "↻ Synk nå", color = p.lab, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize)
                 }
                 Box(Modifier.height(40.dp).clip(RoundedCornerShape(20.dp)).border(1.dp, p.line, RoundedCornerShape(20.dp)).press24 { vm.googleLogout24() }.padding(horizontal = 16.dp), contentAlignment = Alignment.Center) {
-                    Text("Logg ut", color = p.ink, fontWeight = FontWeight.Bold, fontSize = 13.5.sp)
+                    Text("Logg ut", color = p.ink, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize)
                 }
             }
         }
         if (s.ha.allowed) BdHaPart(vm)
     }
     Text("Nye bursdager lagres som årlige heldagshendelser. Endringer i Google Kalender og Home Assistant hentes inn automatisk.",
-        color = p.mut, fontSize = 12.sp, lineHeight = 17.sp, modifier = Modifier.padding(horizontal = 4.dp))
+        color = p.mut, fontSize = HomelabType.footnote.fontSize, lineHeight = 17.sp, modifier = Modifier.padding(horizontal = 4.dp))
 }
 
 /** Home Assistant-delen av Kalendere (bare administrator). */
@@ -466,24 +468,24 @@ private fun BdHaPart(vm: AppViewModel) {
                 Icon(Icons.Filled.Home, null, tint = Color.White, modifier = Modifier.size(20.dp))
             }
             Column(Modifier.weight(1f)) {
-                Text("Home Assistant", color = p.ink, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                Text("Home Assistant", color = p.ink, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize)
                 Text(when {
                     s.localOnly -> "Trenger en nyere Homelab-server"
                     ha.error != null -> ha.error
                     ha.entityId != null -> ha.entityId + (ha.syncedAt?.let { " · importert ${clock24(it)}" } ?: "")
                     else -> "Velg kalender og importer"
-                }, color = if (ha.syncedAt != null) p.pos else p.mut, fontSize = 12.5.sp)
+                }, color = if (ha.syncedAt != null) p.pos else p.mut, fontSize = HomelabType.footnote.fontSize)
             }
         }
         if (s.haCals.isNotEmpty()) {
-            Text("Kalender i Home Assistant", color = p.mut, fontSize = 12.5.sp)
+            Text("Kalender i Home Assistant", color = p.mut, fontSize = HomelabType.footnote.fontSize)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 s.haCals.forEach { c -> BdChip(c.id, ha.entityId == c.id, mono = true) { vm.haSettings24(entityId = c.id) } }
             }
         }
         if (ha.entityId != null) Column { BdToggle("Synk to veier", "Nye bursdager her legges også i Home Assistant", ha.twoWay) { vm.haSettings24(twoWay = !ha.twoWay) } }
         Box(Modifier.fillMaxWidth().height(42.dp).clip(RoundedCornerShape(21.dp)).background(p.ink).press24(enabled = !s.localOnly) { vm.haImport24() }, contentAlignment = Alignment.Center) {
-            Text(when { s.busy == "ha" -> "Importerer …"; ha.syncedAt != null -> "↻ Importer på nytt"; else -> "Importer fra Home Assistant" }, color = p.bg, fontWeight = FontWeight.Bold, fontSize = 13.5.sp)
+            Text(when { s.busy == "ha" -> "Importerer …"; ha.syncedAt != null -> "↻ Importer på nytt"; else -> "Importer fra Home Assistant" }, color = p.bg, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize)
         }
     }
 }
@@ -509,19 +511,19 @@ internal fun HomeBirthdaysCard24(vm: AppViewModel) {
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
-            Text("BURSDAGER · " + if (l.firstOrNull()?.daysLeft == 0) "I DAG" else "NESTE", color = p.lab, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = 10.5.sp,
+            Text("BURSDAGER · " + if (l.firstOrNull()?.daysLeft == 0) "I DAG" else "NESTE", color = p.lab, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.caption.fontSize,
                 letterSpacing = 1.3.sp, modifier = Modifier.weight(1f))
-            Text("alle ›", color = p.mut, fontSize = 12.sp)
+            Text("alle ›", color = p.mut, fontSize = HomelabType.footnote.fontSize)
         }
-        if (l.isEmpty()) Text(if (vm.bd24.items == null) "Henter bursdager …" else "Ingen bursdager ennå. Trykk for å legge til.", color = p.mut, fontSize = 13.sp)
+        if (l.isEmpty()) Text(if (vm.bd24.items == null) "Henter bursdager …" else "Ingen bursdager ennå. Trykk for å legge til.", color = p.mut, fontSize = HomelabType.subheadline.fontSize)
         l.forEach { b ->
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 BdAvatar(vm, b, 30)
                 Column(Modifier.weight(1f)) {
-                    Text(b.name, color = p.ink, fontWeight = FontWeight.Bold, fontSize = 14.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Text(b.short + (b.age?.let { " · fyller $it" } ?: ""), color = p.mut, fontSize = 12.sp, maxLines = 1)
+                    Text(b.name, color = p.ink, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(b.short + (b.age?.let { " · fyller $it" } ?: ""), color = p.mut, fontSize = HomelabType.footnote.fontSize, maxLines = 1)
                 }
-                Text(b.whenText, color = if (b.daysLeft <= 7) p.lab else p.ink, fontFamily = PaperFonts.serif, fontWeight = FontWeight.Medium, fontSize = 18.sp, maxLines = 1)
+                Text(b.whenText, color = if (b.daysLeft <= 7) p.lab else p.ink, fontFamily = PaperFonts.serif, fontWeight = FontWeight.Medium, fontSize = HomelabType.headline.fontSize, maxLines = 1)
             }
         }
     }
