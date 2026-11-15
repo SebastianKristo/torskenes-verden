@@ -11,6 +11,7 @@ import { TR, trkLoad, trkPrefs, setTrkPref, badge, carOf, stepOf, isDone, isRead
 import { edBlocks, finnWay } from './mobile-paper3.js';
 import { ppTi } from './mobile-p20.js';
 import * as P26 from './mobile-p26.js';
+import { appendChunks } from '/assets/js/lib/chunks.js';
 
 const lab = (t, r = '') => `<div class="pp-sec"><span>${esc(t)}</span>${r ? `<span>${r}</span>` : ''}</div>`;
 const kr = (v) => `${n0(v)} kr`;
@@ -20,6 +21,11 @@ const sw = (on) => `<span class="pp-sw${on ? ' on' : ''}"><i></i></span>`;
 /* ---------- Finans → Liste ---------- */
 
 const PL = { cat: 'Alle' };
+// Lange lister i porsjoner (lib/chunks.js), som på desktop: første tegning tar med hele måneder til minst PL_FIRST rader, resten
+// av månedene legges til ved scroll eller når nettleseren er ledig. Hvor mange måneder som er tegnet, huskes til listen eller
+// filteret endres, så en ny tegning (mobilen tegner hele siden på nytt) beholder scrollposisjonen.
+const PL_FIRST = 80;
+const PLC = { src: null, cat: null, shown: 0, rest: [], html: null };
 export function paperList() {
   const items = S.tx?.items ?? null, q = S.ui?.q ?? '';
   const count = new Map();
@@ -38,10 +44,29 @@ export function paperList() {
   const mName = (k, short) => { const [y, mo] = k.split('-').map(Number); if (!y || !mo) return ''; const d = new Date(y, mo - 1, 15); return (short ? d.toLocaleDateString('nb-NO', { month: 'short' }).replace('.', '') : d.toLocaleDateString('nb-NO', { month: 'long' })).toUpperCase(); };
   const head = (g) => { const net = g.L.reduce((a, t) => a + (Number(t.amount) || 0), 0), lbl = PL.cat === 'Alle' ? `${mName(g.k)} · ${g.L.length}` : `${PL.cat.toUpperCase()} · ${mName(g.k, true)} · ${g.L.length}`;
     return `<div class="p43-mh"><span class="p43-mhl">${esc(lbl)}</span><span class="p43-mhn">Netto ${net < 0 ? '−' : '+'}${n2(Math.abs(net))} kr</span></div>`; };
+  const section = (g) => `<section class="p43-mg">${head(g)}<div class="pp-rows">${g.L.map(txRow).join('')}</div></section>`;
+  PLC.html = section;
   return `<form class="pp-search" data-msearch role="search"><span aria-hidden="true">⌕</span><input class="m-input" id="m-txq" name="q" type="search" value="${esc(q)}" enterkeyhint="search" placeholder="Søk i transaksjoner og kvitteringer" aria-label="Søk i transaksjoner" autocomplete="off"><button type="button" class="p43-gpill" data-p43="lglimt" aria-label="Spør Glimt i Finans → Søk">${glimtOrb(20, 'chip')}Glimt</button></form>
     <div class="pp-chips">${cats.map((n) => `<button class="pp-fchip" data-ppl="cat" data-k="${esc(n)}" aria-pressed="${PL.cat === n}">${esc(n)}</button>`).join('')}</div>
-    ${items === null ? '<div class="m-spin"></div>' : groups.map((g) => `<section class="p43-mg">${head(g)}<div class="pp-rows">${g.L.map(txRow).join('')}</div></section>`).join('')}
+    ${items === null ? '<div class="m-spin"></div>' : `<div class="pp-mgs" data-pl-list>${groups.slice(0, shownGroups(groups, items)).map(section).join('')}</div>`}
     ${items === null || L.length ? '' : `${head({ k: S.summary?.month ?? '', L: [] })}<div class="pp-mut" style="padding:16px 4px;font-size:14px">Ingen treff. Trykk Glimt og spør fritt, for eksempel «hvor mye brukte jeg på mat i september».</div>`}`;
+}
+
+/** Hvor mange måneder første tegning tar med (hele måneder til minst PL_FIRST rader), og resten til listAfterDraw(). */
+function shownGroups(groups, items) {
+  if (items !== PLC.src || PL.cat !== PLC.cat) {
+    PLC.src = items; PLC.cat = PL.cat; PLC.shown = 0;
+    for (let rows = 0; PLC.shown < groups.length && rows < PL_FIRST; PLC.shown++) rows += groups[PLC.shown].L.length;
+  }
+  PLC.rest = groups.slice(PLC.shown);
+  return PLC.shown;
+}
+/** Etter tegningen av Finans → Liste: resten av månedene i porsjoner. */
+export function listAfterDraw() {
+  const box = document.querySelector('[data-pl-list]'), rest = PLC.rest, html = PLC.html;
+  if (!box || !rest.length || !html) return;
+  PLC.rest = [];
+  appendChunks(box, rest.length, (from, n) => { PLC.shown += n; return rest.slice(from, from + n).map(html).join(''); }, { step: 2 });
 }
 
 /* ---------- Finans → Mer ---------- */

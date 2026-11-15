@@ -5915,6 +5915,8 @@ html.h40-ov,html.h40-ov body{overflow:hidden}
 .m .p43-salm b{font:500 26px/1.05 Newsreader,serif}
 
 /* Finans → Liste: månedstopp med rød etikett, «Netto …» og 2 pt strek */
+/* Beholderen for månedene i Liste (porsjoner, mobile-paper2.js) skal ikke påvirke oppsettet. */
+.m .pp-mgs{display:contents}
 .m .p43-mg{display:flex;flex-direction:column}
 .m .p43-mg+.p43-mg{margin-top:14px}
 .m .p43-mh{position:sticky;top:calc(env(safe-area-inset-top) + 0px);z-index:2;display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:8px 2px 6px;border-bottom:2px solid var(--pp-ink);background:var(--pp-bg)}

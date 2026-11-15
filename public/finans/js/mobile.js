@@ -20,7 +20,7 @@ import { TR, trkView, trkLoad, trkBind, trkWatch } from './mobile-track.js';
 import { haptic } from './mobile-haptics.js';
 import { subsBind, soDown, soMove, soUp } from './mobile-subs.js';
 import { paper, paperDark, paperHero, paperNav, paperScanSheet, paperHome, paperFin, paperMer, mediaView, mediaLoad, newsView, newsLoad, paperBind, photoLoad, takeDesign, paperState, paperDown, paperUp, paperMove } from './mobile-paper.js';
-import { paperList, paperFinn, paperFinnSheet, paperFinnLoad, paperFinnBind, paperTrk, paperTrkSheet, paperTrkBind } from './mobile-paper2.js';
+import { paperList, listAfterDraw, paperFinn, paperFinnSheet, paperFinnLoad, paperFinnBind, paperTrk, paperTrkSheet, paperTrkBind } from './mobile-paper2.js';
 import { take15, edDown, edMove, edUp, edClick, edReset, paperSearch, fsBind, paperTx, txLoad, txBind15, TX, finMerGrid, fmerLoad, rcCount, recentLoad, newShipSheet, nsBind, navSetBind, fabStyle } from './mobile-paper3.js';
 import { wxView, wxLoad, wxBind, wxBindScroll, WX, wxAfterDraw, wxPlaces } from './mobile-wx.js';
 import { wx22Down, wx22Move, wx22Up } from './mobile-vaer-kart-og-steder.js';
@@ -442,6 +442,7 @@ export function draw() {
   document.querySelector('meta[name=theme-color]')?.setAttribute('content', pp ? (m.light ? '#f3efe6' : '#14130f') : th === 'ios' ? '#07070A' : getComputedStyle(root().firstElementChild).backgroundColor || '#19120E');
   hlAfterDraw(); pageAfterDraw(); if (scr === 'dom') modAfterDraw(th); if (scr === 'fam') { if (pp) P22.famAfterDraw22(); else famAfterDraw(); } wxAfterDraw(); P22.afterDraw(scr, pp);
   if (fad) P23.finnAdAfterDraw();
+  listAfterDraw(); P23.kvAfterDraw(); // Finans → Liste og Kvitteringer: resten av radene i porsjoner
   P23.arrive(vk, vkChanged);
   P25.afterDraw();
   P27.afterDraw27(); P28.afterDraw28(); P32.afterDraw32(); P30.afterDraw30(); P30B.hlAfter(); P34.afterDraw34(); P36.afterDraw36(); P37.afterDraw37(); P37B.afterDraw37b(); P39.afterDraw39(); P40?.afterDraw40(); P41?.afterDraw41(); P42?.afterDraw42(); P43?.afterDraw43(); P44?.afterDraw44(); P45?.afterDraw45(); P46?.afterDraw46(); P50F?.afterDraw50(); P52?.afterDraw52();
