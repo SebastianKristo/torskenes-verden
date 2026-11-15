@@ -263,7 +263,7 @@ struct FlexDate: Decodable, Hashable {
         else { date = nil }
     }
 }
-private func parseIsoDay(_ s: String) -> Date? { let f = DateFormatter(); f.locale = Locale(identifier: "en_US_POSIX"); f.dateFormat = "yyyy-MM-dd"; return f.date(from: String(s.prefix(10))) }
+private func parseIsoDay(_ s: String) -> Date? { return isoDayFormatter.date(from: String(s.prefix(10))) }
 
 /* ---------- Bruker og moduler ---------- */
 
@@ -715,9 +715,16 @@ final class Privacy {
 }
 
 private let nb = Locale(identifier: "nb_NO")
-private func fmt(_ v: Double, _ d: Int) -> String {
-    let f = NumberFormatter()
+/// Fase 4: beløpsformattererne bufres (før ble det laget en ny NumberFormatter for hvert beløp som ble tegnet).
+private let amountFormatter0: NumberFormatter = makeAmountFormatter(0)
+private let amountFormatter2: NumberFormatter = makeAmountFormatter(2)
+private func makeAmountFormatter(_ d: Int) -> NumberFormatter {
+    let f: NumberFormatter = NumberFormatter()
     f.locale = nb; f.numberStyle = .decimal; f.minimumFractionDigits = d; f.maximumFractionDigits = d
+    return f
+}
+private func fmt(_ v: Double, _ d: Int) -> String {
+    let f: NumberFormatter = d == 0 ? amountFormatter0 : (d == 2 ? amountFormatter2 : makeAmountFormatter(d))
     return (f.string(from: NSNumber(value: abs(v))) ?? "\(v)").replacingOccurrences(of: "\u{00a0}", with: " ").replacingOccurrences(of: "\u{202f}", with: " ")
 }
 private let mask = "•••"
@@ -737,16 +744,25 @@ func ddmm(_ d: String?) -> String {
     let c = Array(d)
     return "\(c[8])\(c[9]).\(c[5])\(c[6])"
 }
-private func date(_ s: String) -> Date? { let f = DateFormatter(); f.dateFormat = "yyyy-MM-dd"; f.locale = nb; return f.date(from: s) }
+/// Fase 4: bufrede datoformatterere i Oslo-tid (Q20), samme tidssone for tolking og visning.
+private func osloFormatter(_ format: String) -> DateFormatter {
+    let f: DateFormatter = DateFormatter()
+    f.locale = nb
+    f.timeZone = OsloDate.timeZone
+    f.dateFormat = format
+    return f
+}
+private let dayLabelFormatter: DateFormatter = osloFormatter("EEEE d. MMM")
+private let monthLabelFormatter: DateFormatter = osloFormatter("LLLL")
+private let longDateFormatter: DateFormatter = osloFormatter("EEEE d. MMMM")
+private func date(_ s: String) -> Date? { isoDayFormatter.date(from: s) }
 func dayLabel(_ s: String) -> String {
     guard let d = date(s) else { return s }
-    let f = DateFormatter(); f.locale = nb; f.dateFormat = "EEEE d. MMM"
-    return f.string(from: d).capitalized(with: nb)
+    return dayLabelFormatter.string(from: d).capitalized(with: nb)
 }
 func monthLabel(_ m: String) -> String {
     guard let d = date(m + "-15") else { return m }
-    let f = DateFormatter(); f.locale = nb; f.dateFormat = "LLLL"
-    return f.string(from: d).capitalized(with: nb)
+    return monthLabelFormatter.string(from: d).capitalized(with: nb)
 }
 func initial(_ s: String) -> String { s.first(where: { $0.isLetter || $0.isNumber }).map { String($0).uppercased() } ?? "•" }
 
@@ -1083,6 +1099,5 @@ func ddmmyyyy(_ d: String?) -> String {
 }
 
 func longDate(_ d: Date = Date()) -> String {
-    let f = DateFormatter(); f.locale = Locale(identifier: "nb_NO"); f.dateFormat = "EEEE d. MMMM"
-    return f.string(from: d).capitalized(with: Locale(identifier: "nb_NO"))
+    return longDateFormatter.string(from: d).capitalized(with: nb)
 }

@@ -126,6 +126,7 @@ struct TxList: View {
             ForEach(Array(items.enumerated()), id: \.element.id) { i, t in
                 if i > 0 { Divider().overlay(Color.skinFg.opacity(0.12)) }
                 TxRow(tx: t, selected: store.selectedTx == t.id).onTapGesture { store.selectedTx = t.id }
+                    .accessibilityAddTraits(store.selectedTx == t.id ? AccessibilityTraits([.isButton, .isSelected]) : AccessibilityTraits.isButton)
             }
         }
         .glass(24)
@@ -307,6 +308,7 @@ struct BudgetView: View {
                     .padding(16).glass(22)
                     .overlay(RoundedRectangle(cornerRadius: 22).stroke(store.selectedBudget == b.categoryId ? Color.accent : .clear, lineWidth: 1.5))
                     .onTapGesture { store.selectedBudget = b.categoryId; if store.txs == nil { store.search() } }
+                    .accessibilityAddTraits(store.selectedBudget == b.categoryId ? AccessibilityTraits([.isButton, .isSelected]) : AccessibilityTraits.isButton)
                 }
             }
             .padding(.horizontal, 18).padding(.bottom, 110)
@@ -603,8 +605,8 @@ struct ConfirmView: View {
 }
 
 // Prompt 85: fast locale – ellers skrives f.eks. år 2569 (buddhistisk kalender på telefonen) til serveren.
-private func iso(_ d: Date) -> String { let f = DateFormatter(); f.locale = Locale(identifier: "en_US_POSIX"); f.dateFormat = "yyyy-MM-dd"; return f.string(from: d) }
-private func parseIso(_ s: String) -> Date? { let f = DateFormatter(); f.locale = Locale(identifier: "en_US_POSIX"); f.dateFormat = "yyyy-MM-dd"; return f.date(from: s) }
+private func iso(_ d: Date) -> String { isoDayFormatter.string(from: d) }
+private func parseIso(_ s: String) -> Date? { return isoDayFormatter.date(from: s) }
 
 /// Kategorivalg som brytes over flere linjer.
 struct FlowChips: View {
@@ -830,4 +832,4 @@ struct ShoppingList: View {
     }
 }
 
-private func isoToday() -> String { let f = DateFormatter(); f.locale = Locale(identifier: "en_US_POSIX"); f.dateFormat = "yyyy-MM-dd"; return f.string(from: Date()) }
+private func isoToday() -> String { OsloDate.today() }

@@ -311,7 +311,7 @@ struct Sal52Sheet: View {
                 .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(on ? p.lab : p.line, lineWidth: on ? 2 : 1))
                 .overlay(alignment: .topTrailing) {
                     if on {
-                        Text("✓").font(PF.ui(12, .bold)).foregroundStyle(Color.white).frame(width: 22, height: 22).background(p.lab, in: Circle())
+                        Image(systemName: "checkmark").accessibilityHidden(true).font(PF.ui(12, .bold)).foregroundStyle(Color.white).frame(width: 22, height: 22).background(p.lab, in: Circle())
                             .offset(x: 6, y: -6)
                     }
                 }

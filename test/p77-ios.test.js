@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const SRC = join(ROOT, 'apps/ios/FinansHub/Sources');
 const NEW = ['Skjold77AI.swift', 'Skjold77Views.swift'];
-const TOUCHED = ['Skjold76Model.swift', 'Skjold76Page.swift', 'Skjold76Edit.swift', 'Paper17.swift'];
+const TOUCHED = ['Skjold76Model.swift', 'Skjold76Page.swift', 'Skjold76Edit.swift', 'PaperAppSettings.swift'];
 const read = (f) => readFileSync(join(SRC, f), 'utf8');
 /** Kode uten kommentarer. */
 const code = (f) => read(f).replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
@@ -28,8 +28,8 @@ function balanced(src) {
 
 test('filene finnes og klammene går opp', () => {
   for (const f of [...NEW, ...TOUCHED]) assert.ok(existsSync(join(SRC, f)), f);
-  // Paper17.swift har strenger grovsjekken ikke tåler (også før prompt 77), så den sjekkes ikke her.
-  for (const f of [...NEW, ...TOUCHED.filter((x) => x !== 'Paper17.swift')]) assert.ok(balanced(code(f)), `klammer i ${f}`);
+  // PaperAppSettings.swift har strenger grovsjekken ikke tåler (også før prompt 77), så den sjekkes ikke her.
+  for (const f of [...NEW, ...TOUCHED.filter((x) => x !== 'PaperAppSettings.swift')]) assert.ok(balanced(code(f)), `klammer i ${f}`);
 });
 
 test('API-kontrakten: suggest, images, from-search, tidy og settings under /api/skjold', () => {
@@ -103,7 +103,7 @@ test('innstillingene: ⚙ i Skjold Lab og Innstillinger → Moduler → Skjold L
   const v = code('Skjold77Views.swift');
   assert.match(v, /toggle\("Finn bilder på nett"/);
   assert.match(v, /toggle\("Foreslå automatisk når jeg tar bilde"/);
-  assert.match(code('Paper17.swift'), /PaperLinkRow\(name: "Skjold Lab", [^\n]*\{ Skjold77\.shared\.openSettings\(\) \}/);
+  assert.match(code('PaperAppSettings.swift'), /PaperLinkRow\(name: "Skjold Lab", [^\n]*\{ Skjold77\.shared\.openSettings\(\) \}/);
   assert.match(code('Skjold77AI.swift'), /m\.sheet = \.ai/);
 });
 

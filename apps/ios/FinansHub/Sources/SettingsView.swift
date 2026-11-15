@@ -7,7 +7,7 @@ private let groups: [(String, [(String, String, String)])] = [
     ("Finans", [("ai", "AI og tolkning", "sparkles"), ("cats", "Kategorier og budsjett", "tag"), ("rules", "Regler", "list.bullet.rectangle"),
                 ("bank", "Bankimport", "building.columns"), ("stocks", "Aksjer · Trading 212", "chart.line.uptrend.xyaxis"), ("backup", "Backup og data", "externaldrive")]),
     ("App", [("look", "Utseende", "paintpalette"), ("scan", "Skanning og AI", "doc.viewfinder"), ("notify", "Varsler", "bell"), ("haptics", "Haptikk", "hand.tap"), ("widgets", "Widgets", "square.grid.2x2")]),
-    // Prompt 67: Glimt-sidene som på web (Glimt67Pages.swift, Glimt67Tasks.swift).
+    // Prompt 67: Glimt-sidene som på web (GlimtSettingsPages.swift, GlimtLearning.swift).
     ("Glimt og AI", [("g67husker", "Glimt husker", "brain"), ("g67ent", "Entitetsregister", "person.text.rectangle"), ("g67laerer", "Glimt lærer", "graduationcap"),
                      ("g67faste", "Faste oppgaver", "clock.arrow.circlepath"), ("g67kvalitet", "Kvalitet", "checkmark.seal")]),
     ("System", [("server", "Server og synk", "server.rack"), ("data", "Data og lagring", "internaldrive"), ("about", "Om FinansHub", "info.circle")]),
@@ -16,10 +16,17 @@ private let groups: [(String, [(String, String, String)])] = [
 private let allScopes = [("receipts:write", "Last opp kvitteringer"), ("read:transactions", "Les transaksjoner"), ("read:summary", "Les sammendrag"),
                          ("read:budget", "Les budsjett"), ("write:transactions", "Endre transaksjoner"), ("finance:read", "Les alt i FinansHub")]
 
+/// Fase 4: bufret i stedet for en ny DateFormatter per rad.
+private let stampFormatter: DateFormatter = {
+    let f: DateFormatter = DateFormatter()
+    f.locale = Locale(identifier: "nb_NO")
+    f.dateFormat = "dd.MM.yyyy HH:mm"
+    return f
+}()
+
 private func stamp(_ d: Date?) -> String {
     guard let d else { return "–" }
-    let f = DateFormatter(); f.locale = Locale(identifier: "nb_NO"); f.dateFormat = "dd.MM.yyyy HH:mm"
-    return f.string(from: d)
+    return stampFormatter.string(from: d)
 }
 
 /// Innstillinger i appen: profilkort øverst og gruppene Konto, App og System.
@@ -138,7 +145,7 @@ private struct Card<C: View>: View {
 private struct Row: View {
     let label: String
     let value: String
-    /// Prompt 36: ikonbrikke i Papir (Settings36.swift).
+    /// Prompt 36: ikonbrikke i Papir (SettingsAvatar.swift).
     var icon: String? = nil
     var body: some View {
         HStack(spacing: 14) {
@@ -153,7 +160,7 @@ private struct Switch: View {
     let label: String
     var sub: String? = nil
     @Binding var on: Bool
-    /// Prompt 36: ikonbrikke i Papir (Settings36.swift).
+    /// Prompt 36: ikonbrikke i Papir (SettingsAvatar.swift).
     var icon: String? = nil
     var body: some View {
         Toggle(isOn: $on) {
@@ -208,7 +215,7 @@ private struct AccountsPage: View {
     var body: some View {
         VStack(spacing: 12) {
             if PaperSkin.palette != nil {
-                // Prompt 36: profilbildet øverst i Konto, raden Profilbilde med miniatyr og knappene under (Settings36.swift).
+                // Prompt 36: profilbildet øverst i Konto, raden Profilbilde med miniatyr og knappene under (SettingsAvatar.swift).
                 Konto36Head(photo: $photo, camera: $camera, files: $files)
             } else {
                 // Prompt 28: etiketten ligger i innholdet under toppbildet (24 pt luft), aldri oppå bildet.
@@ -252,6 +259,7 @@ private struct AccountsPage: View {
                     }
                     .padding(.horizontal, 16).padding(.vertical, 10).contentShape(Rectangle())
                     .onTapGesture { if !active { store.switchTo(a.id) } }
+                    .accessibilityAddTraits(active ? AccessibilityTraits.isSelected : AccessibilityTraits.isButton)
                 }
             }
             // Prompt 28: primærknapp i aksent (lab) med onLab-tekst i Papir – aldri hvit på lys rosa.
@@ -304,7 +312,7 @@ private struct SecurityPage: View {
             }
             Card { Switch(label: "Skjul beløp i appveksleren", sub: "Uskarpt bilde i oversikten over åpne apper", on: $s.hideSwitcher, icon: "eye.slash") }
             SectionLabel(text: "Tofaktor (2FA)")
-            // Prompt 40: hele oppsettet skjer i appen (Tfa40.swift), aldri i Safari.
+            // Prompt 40: hele oppsettet skjer i appen (TwoFactorSetup.swift), aldri i Safari.
             Card { Tfa40Row() }
             Note(text: "Bruk Passord-appen (iOS 17+), 1Password, Aegis eller Google Authenticator på denne telefonen. Du får reservekoder til slutt.")
             SectionLabel(text: "Pålitelige enheter")
@@ -314,7 +322,7 @@ private struct SecurityPage: View {
                 link("Administrer i Homelab") { if let u = URL(string: store.base + "/") { openURL(u) } }
             }
             Note(text: "Appen bruker et eget token. Fra internett kreves alltid passord, og 2FA hvis det er på.")
-            // Prompt 51 (SEC51): innlogginger fra nye enheter godkjennes her med Face ID (FHSec51.swift).
+            // Prompt 51 (SEC51): innlogginger fra nye enheter godkjennes her med Face ID (DeviceApproval.swift).
             SectionLabel(text: "Nye enheter")
             Card { Sec51ApprovalsCard() }
             Note(text: "En ny enhet som logger inn fra internett får ikke tilgang før den er godkjent fra en enhet som allerede er logget inn, eller av en administrator.")
@@ -563,7 +571,7 @@ private struct ServerPage: View {
                     Button { store.testConnection(local.isEmpty ? external : local) } label: { Text("Test tilkobling").frame(maxWidth: .infinity, minHeight: 44) }
                         .buttonStyle(.plain).glass(22)
                 }
-                // Prompt 47: «Tilbakestill til standard» (Server47.swift).
+                // Prompt 47: «Tilbakestill til standard» (ServerDefaults.swift).
                 Button {
                     local = Server47.defaultLocal
                     external = Server47.defaultExternal

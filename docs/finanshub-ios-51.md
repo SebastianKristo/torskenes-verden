@@ -14,4 +14,4 @@
 - Krasjrapportene ser admin på web under Innstillinger › System › Kvalitet › Krasjrapporter, eller i GlitchTip.
 
 ## Filer
-`apps/ios/FinansHub/Sources/FHDevice51.swift` (nøkler), `FHSec51.swift` (godkjenning, varsel og rot-verten), `FHQa51.swift` (flagg og «Nytt»), `FHCrash51.swift` (krasj).
+`apps/ios/FinansHub/Sources/DeviceKeys.swift` (nøkler), `DeviceApproval.swift` (godkjenning, varsel og rot-verten), `FeatureFlags.swift` (flagg og «Nytt»), `CrashReports.swift` (krasj).

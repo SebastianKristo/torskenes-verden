@@ -13,11 +13,11 @@ extension Store {
             KalShared41.clear()
             return
         }
-        // Prompt 41: delt enhets-token for «Fortsett som» i Kalender (AppAuth41.swift).
+        // Prompt 41: delt enhets-token for «Fortsett som» i Kalender (AppAuth.swift).
         AppAuth41.shareDevice(self)
-        // Prompt 33: eget app-token for Kalender-appen i App Group-en (KalLink33.swift).
+        // Prompt 33: eget app-token for Kalender-appen i App Group-en (KalenderLink.swift).
         KalCompanion33.sync(self)
-        // Prompt 85: offline-køen følger kontoen, ikke enheten (Offline51.bind i Plat51Shared.swift).
+        // Prompt 85: offline-køen følger kontoen, ikke enheten (Offline51.bind i PlatformShared.swift).
         Offline51.bind(a.username.trimmingCharacters(in: .whitespaces).lowercased() + "|" + API.normalize(a.server).lowercased())
         let changed = WidgetShared.token != a.token || WidgetShared.bases.first != (base.isEmpty ? a.server : base)
         WidgetShared.save(server: base.isEmpty ? a.server : base, external: a.external, local: a.local, token: a.token)
@@ -40,7 +40,7 @@ extension Store {
         // Prompt 26: finanshub://kalender[/<id>] åpner Kalender (og detaljkortet for timen).
         // Prompt 33: kalender-login fra Kalender-appen, og widget-lenkene videre til Kalender-appen når den er installert.
         if page == "kalender-login" { KalCompanion33.loginLink(self); return }
-        // Prompt 51 (IOSFEAT51): planlegging, familiekalender, ikveld, sok (Feat51Links i Search51.swift).
+        // Prompt 51 (IOSFEAT51): planlegging, familiekalender, ikveld, sok (Feat51Links i GlobalSearch.swift).
         if Feat51Links.handle(page, sub, url, self) { return }
         // Prompt 34: finanshub://brief (Glimt-brief-widgetene) åpner briefen i fullskjerm.
         if page == "brief" { paperGo("hjem"); Brief34Model.shared.show(); return }

@@ -26,7 +26,7 @@ struct PaperTabItem: Codable, Hashable, Identifiable {
         PaperTabItem(id: "boliger", label: "Boliger", icon: "building.2"),
         PaperTabItem(id: "abo", label: "Abonnementer", icon: "repeat"),
         PaperTabItem(id: "fsok", label: "Søk", icon: "magnifyingglass"),
-        // Prompt 27: Chat som valgbar fane (Chat27Page.swift).
+        // Prompt 27: Chat som valgbar fane (ChatPage.swift).
         PaperTabItem(id: "chat", label: "Chat", icon: "bubble.left.and.bubble.right"),
         // Prompt 40: alt fra Mer kan legges i fanelinja (claude-code-fanelinje-alle-sider.md), samme ikon som i Mer.
         PaperTabItem(id: "huske", label: "Gjøremål", icon: "checklist"),
@@ -126,7 +126,7 @@ extension Store {
             if !items.isEmpty && items != tabBarItems { tabBarItems = Array(items.prefix(5)) }
         }
         if let v = JS.str(o, "iconTheme"), PaperIconTheme.themes.contains(where: { $0.0 == v }), v != iconTheme { iconTheme = v }
-        // Prompt 25: fanelinje-stil (NavStyle25.swift).
+        // Prompt 25: fanelinje-stil (NavStyle.swift).
         if let v = JS.str(o, "navStyle"), NavStyle25.ids.contains(v), v != navStyle25 { navStyle25 = v }
     }
 

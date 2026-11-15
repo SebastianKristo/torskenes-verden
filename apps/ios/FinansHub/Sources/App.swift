@@ -8,7 +8,7 @@ struct FinansHubApp: App {
     @Environment(\.scenePhase) private var phase
 
     init() {
-        // Prompt 51 (QA51): krasjrapporter – håndtererne først, forrige krasj legges i køen (FHCrash51.swift).
+        // Prompt 51 (QA51): krasjrapporter – håndtererne først, forrige krasj legges i køen (CrashReports.swift).
         Crash51.install()
         // Opprydding H2: tokenene som lå i klartekst i App Group-UserDefaults (w.token, kal.hl.token, hl41.device, og
         // kal.token fra den innebygde Kalenderen) flyttes til Nøkkelringen og slettes fra UserDefaults (Nokkelring.swift).
@@ -18,7 +18,7 @@ struct FinansHubApp: App {
         HealthSync.registerBackground()
         // Prompt 20: HealthKit vekker appen ved nye skritt og puls (enableBackgroundDelivery, hver time).
         HealthObserver20.shared.start()
-        // Prompt 31: varselkategorier (Glimt-svar, prøveperioder) og bakgrunnshenting av /api/notify/pending (Notify31.swift).
+        // Prompt 31: varselkategorier (Glimt-svar, prøveperioder) og bakgrunnshenting av /api/notify/pending (BackgroundNotifications.swift).
         Notify31.setup()
         // Trykk på et varsel som starter appen: delegaten må være satt før appen er ferdig startet.
         UNUserNotificationCenter.current().delegate = NotifyDelegate.shared
@@ -29,18 +29,18 @@ struct FinansHubApp: App {
             RootView()
                 // Prompt 38: fullskjermen «Logg inn på ny enhet» (må ligge innenfor .environment(store)).
                 .qr38Host()
-                // Prompt 41: «Logge inn i Kalender?» (homelab://app-auth og universal link /app-auth), AppAuth41.swift.
+                // Prompt 41: «Logge inn i Kalender?» (homelab://app-auth og universal link /app-auth), AppAuth.swift.
                 .appAuth41Host()
-                // Prompt 51: «Ny enhet vil logge inn», «Nytt i denne versjonen», feature flags og krasjkøen (FHSec51.swift).
+                // Prompt 51: «Ny enhet vil logge inn», «Nytt i denne versjonen», feature flags og krasjkøen (DeviceApproval.swift).
                 .fh51Host()
-                // Prompt 51 (IOSPLAT51): offline-køen, Live Activities og Apple Watch-innloggingen (Plat51Host.swift).
+                // Prompt 51 (IOSPLAT51): offline-køen, Live Activities og Apple Watch-innloggingen (PlatformHost.swift).
                 .plat51Host()
-                // Prompt 89 (IOS89): Live Activities fra /api/live (polling mens appen er aktiv, push-tokens), Live89Host.swift.
+                // Prompt 89 (IOS89): Live Activities fra /api/live (polling mens appen er aktiv, push-tokens), LiveActivitiesHost.swift.
                 .live89Host()
                 .environment(store)
-                // Prompt 84: den innebygde Kalender-appen (Kal84Embed.swift) får Homelab-kontoen.
+                // Prompt 84: den innebygde Kalender-appen (KalenderInApp.swift) får Homelab-kontoen.
                 .kal84Host(store)
-                // Prompt 38: homelab://login?c=… (QR-innlogging på ny enhet, QrLogin38.swift) før de vanlige dyplenkene.
+                // Prompt 38: homelab://login?c=… (QR-innlogging på ny enhet, QrLoginApprove.swift) før de vanlige dyplenkene.
                 .onOpenURL { (u: URL) in
                     // Prompt 84: lenker til Homelab mens den innebygde Kalenderen er åpen (f.eks. «Bursdager ›») lukker den først.
                     if Kal84Host.shared.closeFirst(u, { openLink84(u) }) { return }
@@ -55,14 +55,14 @@ struct FinansHubApp: App {
                     }
                 }
                 .task {
-                    // Prompt 42: Klassisk (Liquid Glass / Material) er slettet – flytt til Papir (Design42.swift).
+                    // Prompt 42: Klassisk (Liquid Glass / Material) er slettet – flytt til Papir (ClassicDesignMigration.swift).
                     store.migrateClassic42(server: false)
-                    // Prompt 39: nytt standard app-ikon – valget i appen følger ikonet iOS viser (Settings39.swift).
+                    // Prompt 39: nytt standard app-ikon – valget i appen følger ikonet iOS viser (SettingsCustomize.swift).
                     Task { await AppMeta.sync39() }
                     if store.locked { store.unlock() }
                     if store.loggedIn { try? await store.reload() }
                     if store.loggedIn { await familyWake() }
-                    // Prompt 38: Domener lastes på forhånd, så tallene står klare når siden åpnes (Nav38.swift).
+                    // Prompt 38: Domener lastes på forhånd, så tallene står klare når siden åpnes (NavSubsBack.swift).
                     if store.loggedIn { await store.dom38Preload() }
                 }
         }
@@ -74,12 +74,12 @@ struct FinansHubApp: App {
     /// Dyplenkene (homelab://, finanshub://, papir://, magnet:).
     @MainActor private func openLink84(_ u: URL) {
         if AppAuth41.shared.handle(u, store) { return }
-        // Prompt 51 (IOSFEAT51): papir://join?i=…&c=…&srv=… – invitasjon for nye familiemedlemmer (Onboard51.swift).
+        // Prompt 51 (IOSFEAT51): papir://join?i=…&c=…&srv=… – invitasjon for nye familiemedlemmer (OnboardingInvite.swift).
         if Onboard51.shared.handleURL(u, store) { return }
         if Qr38Model.shared.handle(u, store) { return }
         // Prompt 43: magnet:-lenker og homelab://magnet?url=… åpner «Legg til magnet-lenke» i Media.
         if Media43.shared.handleURL(u, store) { return }
-        // Prompt 89: «Vis rute» fra Live Activity (homelab://live89/rute?id=…), Live89Host.swift.
+        // Prompt 89: «Vis rute» fra Live Activity (homelab://live89/rute?id=…), LiveActivitiesHost.swift.
         if Live89Link.handle(u, store) { return }
         store.openDeepLink(u)
     }

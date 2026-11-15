@@ -7,13 +7,13 @@ import UIKit
 
 @main
 struct FinansHubWidgetBundle: WidgetBundle {
-    // Prompt 32: delt i to grupper (maks 10 per WidgetBundleBuilder-blokk), nå med Prøveperioder (TrialsWidget32b.swift).
+    // Prompt 32: delt i to grupper (maks 10 per WidgetBundleBuilder-blokk), nå med Prøveperioder (TrialsWidget.swift).
     var body: some Widget {
         FinansHubWidgetsA().body
         FinansHubWidgetsB().body
         // Prompt 40: egen gruppe for Hjemlys (Live Activity), så A og B holder seg under 10.
         FinansHubWidgetsC().body
-        // Prompt 51 (IOSPLAT51): Planlegging-saldo, Sjekk inn, pakker og avganger + Live Activities (Plat51Widgets.swift, Plat51Live.swift).
+        // Prompt 51 (IOSPLAT51): Planlegging-saldo, Sjekk inn, pakker og avganger + Live Activities (PlatformWidgets.swift, PlatformLiveActivity.swift).
         FinansHubWidgetsD().body
     }
 }
@@ -32,11 +32,11 @@ struct FinansHubWidgetsD: WidgetBundle {
 /// Gruppe 3: Hjemlys og Media (4 av maks 10).
 struct FinansHubWidgetsC: WidgetBundle {
     var body: some Widget {
-        // Prompt 40: Hjemlys – Dynamic Island, låseskjerm og StandBy (HjemlysLive40.swift).
+        // Prompt 40: Hjemlys – Dynamic Island, låseskjerm og StandBy (HjemlysLiveActivity.swift).
         HjemlysLive40()
-        // Prompt 40 (Felles): Hjem-widgeten med «Start for meg» (HjemlysWidget40.swift).
+        // Prompt 40 (Felles): Hjem-widgeten med «Start for meg» (HjemlysWidget.swift).
         HjemlysWidget40()
-        // Prompt 43: Media (liten, medium, stor med Pause alt) og Media · låseskjerm (MediaWidget43.swift).
+        // Prompt 43: Media (liten, medium, stor med Pause alt) og Media · låseskjerm (MediaWidget.swift).
         MediaWidget43()
         MediaLockWidget43()
     }
@@ -45,7 +45,7 @@ struct FinansHubWidgetsC: WidgetBundle {
 /// Gruppe 1: økonomi og hjem (10 widgets – full; nye widgets går i gruppe 2 eller en ny gruppe).
 struct FinansHubWidgetsA: WidgetBundle {
     var body: some Widget {
-        // Prompt 34: Glimt-brief (liten, medium, stor og låseskjerm), BriefWidget34.swift.
+        // Prompt 34: Glimt-brief (liten, medium, stor og låseskjerm), BriefWidget.swift.
         BriefWidget34()
         WeatherWidget()
         PackagesWidget()
@@ -68,11 +68,11 @@ struct FinansHubWidgetsB: WidgetBundle {
         PositionWidget()
         BirthdaysWidget()
         CalendarWidget26()
-        // Prompt 27: Ruter-avganger (liten, medium, stor og låseskjerm), RuterWidget27.swift.
+        // Prompt 27: Ruter-avganger (liten, medium, stor og låseskjerm), RuterWidget.swift.
         RuterWidget27()
         // Prompt 32: Prøveperioder (liten, medium med ✓ Avsluttet, låseskjerm rund og rektangel).
         TrialsWidget32b()
-        // Prompt 37: Dagens bibelvers (liten, medium og låseskjerm), BibleWidget37.swift. Gruppen har nå 9 av maks 10.
+        // Prompt 37: Dagens bibelvers (liten, medium og låseskjerm), BibleWidget.swift. Gruppen har nå 9 av maks 10.
         BibleWidget37()
     }
 }
@@ -436,7 +436,7 @@ private struct FinanceView: View {
                         HStack {
                             Text(d.toReview == 1 ? "1 kvittering til gjennomgang" : "\(d.toReview) kvitteringer til gjennomgang").font(.system(size: 13.5))
                             Spacer()
-                            Text("›")
+                            Image(systemName: "chevron.right").accessibilityHidden(true)
                         }
                         .padding(.horizontal, 12).padding(.vertical, 10)
                         .background(accent.opacity(0.22), in: RoundedRectangle(cornerRadius: 14))

@@ -28,7 +28,7 @@ enum PaperIconTheme {
 }
 
 /// Google-logoen i søkefeltet (den firefargede «G»-en).
-/// Prompt 22: de offisielle banene fra google-g.svg (48 × 48, #EA4335 / #4285F4 / #FBBC05 / #34A853), se Glyphs22.swift.
+/// Prompt 22: de offisielle banene fra google-g.svg (48 × 48, #EA4335 / #4285F4 / #FBBC05 / #34A853), se DesignGlyphs.swift.
 struct GoogleG: View {
     var size: CGFloat = 18
     var body: some View {
@@ -171,12 +171,12 @@ struct PaperLookSettings: View {
                 PaperLinkRow(name: "Papir · lys", sub: "Lyst papir og svart fanelinje", value: store.paperMode == "lys" ? "✓" : "", valueColor: p.pos, icon: "sun.max") { store.setPaperMode("lys") },
                 PaperLinkRow(name: "Papir · mørk", sub: "Kveldspapir og lys fanelinje", value: store.paperMode == "mork" ? "✓" : "", valueColor: p.pos, icon: "moon") { store.setPaperMode("mork") },
                 PaperLinkRow(name: "Følg systemet", sub: "Lys om dagen, mørk i mørk modus", value: store.paperMode == "auto" ? "✓" : "", valueColor: p.pos, icon: "circle.lefthalf.filled") { store.setPaperMode("auto") },
-                // Prompt 51 (IOSFEAT51): automatisk etter solnedgang eller klokkeslett, synket mellom enheter (Theme51.swift).
+                // Prompt 51 (IOSFEAT51): automatisk etter solnedgang eller klokkeslett, synket mellom enheter (ThemeSync.swift).
                 PaperLinkRow(name: "Automatisk", sub: "Etter solnedgang eller klokkeslett", value: store.paperMode.hasPrefix(Theme51.autoPrefix) ? "✓" : "›", valueColor: p.pos, icon: "sunset") { Theme51.shared.sheet = true },
-                // Prompt 50: Liquid Glass (Glass50.swift) – slår også på flisene på Hjem.
+                // Prompt 50: Liquid Glass (GlassTheme.swift) – slår også på flisene på Hjem.
                 PaperLinkRow(name: "Liquid Glass", sub: "Mørkt glass, fargeskyer og fliser på Hjem", value: store.glass50 ? "✓" : "", valueColor: p.pos, icon: "drop") { store.setGlass50() },
             ])
-            // Prompt 50: «Hjem som fliser» (papir_home_tiles, Home50Tiles.swift).
+            // Prompt 50: «Hjem som fliser» (papir_home_tiles, HomeTiles.swift).
             Home50TilesToggle().padding(.top, 8)
             PLabel(text: "Bakgrunn på Hjem").padding(.leading, 4).padding(.top, 14)
             bgGrid
@@ -194,7 +194,7 @@ struct PaperLookSettings: View {
                             }
                             Text(t.1).font(PF.ui(15, .semibold)).foregroundStyle(p.ink)
                             Spacer()
-                            if store.iconTheme == t.0 { Text("✓").font(PF.ui(14, .bold)).foregroundStyle(p.pos) }
+                            if store.iconTheme == t.0 { Image(systemName: "checkmark").accessibilityLabel("Valgt").font(PF.ui(14, .bold)).foregroundStyle(p.pos) }
                         }
                         .padding(.horizontal, 14).padding(.vertical, 12)
                         .contentShape(Rectangle())
@@ -204,7 +204,7 @@ struct PaperLookSettings: View {
             }
             .background(p.card, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
             .padding(.top, 8)
-            // Prompt 32: FANELINJE og FANELINJE · ANDRE SIDER (Nav32.swift).
+            // Prompt 32: FANELINJE og FANELINJE · ANDRE SIDER (NavTabEditor.swift).
             Nav32bSettingsGroup()
         }
         .onChange(of: pick) { _, v in
@@ -266,7 +266,7 @@ struct PaperLookSettings: View {
                         Text(sub).font(PF.ui(11.5)).foregroundStyle(p.mut).lineLimit(1)
                     }
                     Spacer(minLength: 0)
-                    if on { Text("✓").font(PF.ui(14, .bold)).foregroundStyle(p.pos) }
+                    if on { Image(systemName: "checkmark").accessibilityLabel("Valgt").font(PF.ui(14, .bold)).foregroundStyle(p.pos) }
                 }
             }
             .padding(8)
@@ -298,7 +298,7 @@ struct CarrierMark: View {
     static func known(_ c: String) -> Bool { logo(c) != nil || ["dhl", "posten", "postnord", "helthjem", "bring"].contains(Carrier42.id(c)) }
 
     var body: some View {
-        // Prompt 42: «PostNord AB», «POSTNORD», «postnord_no» … → postnord (Carrier42.swift).
+        // Prompt 42: «PostNord AB», «POSTNORD», «postnord_no» … → postnord (CarrierLogos.swift).
         let c = Carrier42.id(carrier)
         ZStack {
             if let img = CarrierMark.logo(c) {

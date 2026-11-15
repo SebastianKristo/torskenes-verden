@@ -115,7 +115,7 @@ test('Nøkkelring: delt tilgangsgruppe med reserve til appens egen Nøkkelring (
   // Én hjelper, i en mappe uten nummer, med i alle målene.
   assert.ok(existsSync(join(IOS, 'SharedKeychain/Nokkelring.swift')));
   const yml = raw('project.yml');
-  for (const t of ['FinansHub', 'FinansHubWidgets', 'Kalender', 'KalenderWidgets', 'KalenderMac', 'KalenderMacWidgets', 'FinansHubWatch51']) {
+  for (const t of ['FinansHub', 'FinansHubWidgets', 'Kalender', 'KalenderWidgets', 'KalenderMac', 'KalenderMacWidgets', 'HomelabWatch']) {
     const i = yml.indexOf(`\n  ${t}:\n`);
     assert.ok(i >= 0, t);
     const rest = yml.slice(i + 1);
@@ -165,14 +165,14 @@ test('S2: WebSocket med Authorization-header, ikke ?token= i URL-en', () => {
     assert.doesNotMatch(s, /\/api\/ws\?token/, relative(IOS, f));
     assert.doesNotMatch(s, /webSocketTask\(with: url\)/, relative(IOS, f));
   }
-  for (const f of ['FinansHub/Sources/Paper17.swift', 'KalenderMac/Sources/MacSystem.swift']) {
+  for (const f of ['FinansHub/Sources/PaperAppSettings.swift', 'KalenderMac/Sources/MacSystem.swift']) {
     const s = code(f);
     assert.match(s, /URL\(string: [a-z]+ \+ "\/api\/ws"\)/, f);
     assert.match(s, /req\.setValue\("Bearer " \+ token, forHTTPHeaderField: "Authorization"\)/, f);
     assert.match(s, /webSocketTask\(with: req\)/, f);
   }
   // Nytt token → ny forbindelse (nøkkelen har med et fingeravtrykk av tokenet, ikke tokenet selv).
-  assert.match(code('FinansHub/Sources/Paper17.swift'), /let k = url\.absoluteString \+ "#" \+ KalGroup\.fingerprint\(token\)/);
+  assert.match(code('FinansHub/Sources/PaperAppSettings.swift'), /let k = url\.absoluteString \+ "#" \+ KalGroup\.fingerprint\(token\)/);
 });
 
 /* ---------- Serveren: /api/ws godtar Authorization-header og (eldre apper) ?token= ---------- */

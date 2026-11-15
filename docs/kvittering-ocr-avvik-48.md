@@ -207,7 +207,7 @@ Køen, bankmatchen, `classify39`, `verify39`, sammendraget og «Til godkjenning�
 ## 4. Hvor serveren og Ollama kjører
 
 - Serveren er **én Node-container i Docker** (`docker-compose.yml:2-18`). Porten bindes `${BIND_ADDR:-127.0.0.1}:3000` (`:16`). Docker kjøres i en Proxmox-LXC (`README.md:38`, `DECISIONS.md:5`, `deploy/proxmox/update.sh:4` nevner `CTID=106`).
-- Klientenes lokale standardadresse er `http://10.69.1.39:3000` (`server/server47.js:20`, `P47.kt:26`, `Server47.swift:21`). Ekstern adresse: `https://os.smarthjemexperten.no`.
+- Klientenes lokale standardadresse er `http://10.69.1.39:3000` (`server/server47.js:20`, `P47.kt:26`, `ServerDefaults.swift:21`). Ekstern adresse: `https://os.smarthjemexperten.no`.
 - Ollama er en **annen maskin**, en Mac mini M4 med 16 GB (`server/aihw38.js:1-16`, `ai-gate.js:15`, `docs/glimt-dataflyt.md:64`). Adressen er `settings.ollamaUrl` = `OLLAMA_URL` eller standarden `http://192.168.1.30:11434` (`server/finans/db.js:337`, `.env.example:63`). Merk at `.env.example` også bruker `192.168.1.30` for Pi-hole, så standarden er trolig en plassholder. Den faktiske adressen ligger i innstillingene i databasen (admin, `SERVER_KEYS` db.js:364). Den lokale `.env` har ingen `OLLAMA_*`-linjer.
 - **Konklusjon: en Mac-OCR-tjeneste på `127.0.0.1:8765` kan ikke nås fra serveren.** Inne i containeren er `127.0.0.1` containeren selv, og Mac mini-en er en annen vert. Tjenesten må:
   1. lytte på Mac mini-ens LAN-adresse (eller `0.0.0.0` med brannmur),

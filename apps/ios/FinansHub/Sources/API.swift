@@ -2,7 +2,7 @@ import Foundation
 import Security
 
 /// Fase 4: Homelab-appens feiltype er den felles HomelabError (SharedNet/HomelabError.swift). Navnet APIError beholdes for de
-/// mange stedene som fanger den. Godkjenning av ny enhet (403 DEVICE_APPROVAL_REQUIRED) leses fra feilkroppen (FHDevice51.swift).
+/// mange stedene som fanger den. Godkjenning av ny enhet (403 DEVICE_APPROVAL_REQUIRED) leses fra feilkroppen (DeviceKeys.swift).
 typealias APIError = HomelabError
 
 struct LoginResult { let token: String; let username: String; let name: String; let role: String }
@@ -19,7 +19,7 @@ struct API {
     static let badURL85: URL = URL(string: "ugyldig://adresse") ?? URL(fileURLWithPath: "/ugyldig-adresse")
 
     /// Konteksten for APIClient: adresse, token og (prompt 51, SEC51) den faste enhetsnøkkelen, så serveren kjenner igjen en
-    /// godkjent enhet (FHDevice51.swift).
+    /// godkjent enhet (DeviceKeys.swift).
     var context: APIContext { APIContext(base: base, token: token, headers: ["X-Device-Key": Device51.key]) }
 
     private func url(_ path: String, prefix: String = "/finans/api") -> URL {
@@ -31,7 +31,7 @@ struct API {
             return try await APIClient.shared.data(for: req, context: context, timeout: timeout)
         } catch let e as HomelabError where e.neverSent {
             // Prompt 51 (IOSPLAT51): forespørselen nådde aldri serveren → skrivinger som tåler å vente (gjøremål, handleliste,
-            // Sjekk inn) legges i offline-køen og sendes når nettet er tilbake (Plat51Host.swift). Aldri ved tidsavbrudd.
+            // Sjekk inn) legges i offline-køen og sendes når nettet er tilbake (PlatformHost.swift). Aldri ved tidsavbrudd.
             var r: URLRequest = req
             r.timeoutInterval = timeout
             if r.value(forHTTPHeaderField: "Accept") == nil { r.setValue("application/json", forHTTPHeaderField: "Accept") }

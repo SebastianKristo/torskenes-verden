@@ -10,7 +10,7 @@ private func pkr(_ v: Double) -> String { "\(neg0(v)) kr" }
 struct PaperHome: View {
     @Environment(Store.self) private var store
     @Environment(\.paper) private var p
-    /// Prompt 45: iPad/brettet (1c) – kortene for én fane i høyre kolonne (layout.pages["fold-…"], Home45Wide.swift).
+    /// Prompt 45: iPad/brettet (1c) – kortene for én fane i høyre kolonne (layout.pages["fold-…"], HomeWide.swift).
     var page45: String? = nil
 
     var body: some View {
@@ -21,7 +21,7 @@ struct PaperHome: View {
                 phone
             }
         }
-        // Prompt 70: trykk utenfor søkefeltet og Glimt-kortet lukker et ferdig svar – uten lag over Hjem (Home70Assist.swift).
+        // Prompt 70: trykk utenfor søkefeltet og Glimt-kortet lukker et ferdig svar – uten lag over Hjem (HomeAssistScroll.swift).
         .assist70Tap()
         // Prompt 46: Min posisjon (standard) holdes fersk for Vær-kortet på Hjem (Vaer46.swift).
         .vaer46Keeper()
@@ -35,10 +35,10 @@ struct PaperHome: View {
     @ViewBuilder private var phone: some View {
         // Prompt 30: oppdateringsbanneret øverst, over søkefeltet (bare admin, ✕ skjuler i 24 t). Update30.swift.
         Update30Banner(home: true)
-        // Prompt 41: 17. mai – eget Hjem på dagen med bryteren «17. mai-design» (Mai17Home41.swift).
+        // Prompt 41: 17. mai – eget Hjem på dagen med bryteren «17. mai-design» (NationalDayHome.swift).
         Mai17Home41()
         // Hold inne et kort for å flytte eller skjule det (Søk, Pakker, Avganger, Snarveier og Siste nytt).
-        // Prompt 52 (IOS52B): med fliser er Hjem et 2-kolonners rutenett (3a), og de fem flisene er egne kort (Home52Grid.swift).
+        // Prompt 52 (IOS52B): med fliser er Hjem et 2-kolonners rutenett (3a), og de fem flisene er egne kort (HomeGrid.swift).
         let tiles52: Bool = Home50Tiles.shared.on
         PaperCardStack(page: "hjem", cards: tiles52 ? Home52.asTiles(homeCards) + Home52.tileCards() : homeCards + [shortcuts46],
                        fullWidth: ["h1", "h5", "h12", "h13", "h14", "h16"], twoColumns: true,
@@ -48,7 +48,7 @@ struct PaperHome: View {
         homeErrorText
     }
 
-    /// Prompt 70: halve kort etter brukerens valg (↔ i redigering), med Home52.half som standard (Home70Grid.swift).
+    /// Prompt 70: halve kort etter brukerens valg (↔ i redigering), med Home52.half som standard (HomeWidgetSize.swift).
     private var half70: Set<String> { Home70Size.shared.half(Home52.half) }
 
     @ViewBuilder private var homeErrorText: some View {
@@ -73,9 +73,9 @@ struct PaperHome: View {
     }
 
     /// Prompt 46: Søk (h1) og Snarveier (h16: Finans · Mat · Domener) er to egne kort på mobil – hvert med egen «–» og plass.
-    /// Eksisterende oppsett får h16 rett etter h1 (pageCards i Paper15.swift), så ingenting flytter seg.
+    /// Eksisterende oppsett får h16 rett etter h1 (pageCards i PaperLayout.swift), så ingenting flytter seg.
     private var shortcuts46: PaperCardDef {
-        // Prompt 50: «Hjem som fliser» (standard) – flisene ligger i h16 i stedet for minikortene (Home50Tiles.swift).
+        // Prompt 50: «Hjem som fliser» (standard) – flisene ligger i h16 i stedet for minikortene (HomeTiles.swift).
         let label: String = Home50Tiles.shared.on ? "Fliser" : "Snarveier (Finans, Mat, Domener)"
         return PaperCardDef(key: "h16", label: label, view: AnyView(Home50TilesSlot(minis: AnyView(minis))))
     }
@@ -83,9 +83,9 @@ struct PaperHome: View {
     /// Kortene på Hjem. Prompt 37: «Dagens bibelvers» (h13) finnes bare for brukere med modulen (Bible37Views.swift).
     private var homeCards: [PaperCardDef] {
         var out: [PaperCardDef] = [
-                // Prompt 34: Glimt-brief øverst (blått kort med figuren), flyttes og skjules i wiggle-modus (Brief34Page.swift).
-                PaperCardDef(key: "h12", label: "Glimt-brief", view: AnyView(Brief36SwipeCard())), // prompt 36: sveip bort (Brief36.swift)
-                // Prompt 29: søkefelt med søkemotor-meny (System-AI/Google/DuckDuckGo) og timer til kalenderen (HomeSearch29.swift).
+                // Prompt 34: Glimt-brief øverst (blått kort med figuren), flyttes og skjules i wiggle-modus (BriefCards.swift).
+                PaperCardDef(key: "h12", label: "Glimt-brief", view: AnyView(Brief36SwipeCard())), // prompt 36: sveip bort (BriefSwipe.swift)
+                // Prompt 29: søkefelt med søkemotor-meny (System-AI/Google/DuckDuckGo) og timer til kalenderen (HomeSearch.swift).
                 PaperCardDef(key: "h1", label: "Søk", view: AnyView(HomeSearch29())), // prompt 46: Snarveier er eget kort (h16)
                 PaperCardDef(key: "h2", label: "Pakker", view: AnyView(packages)),
                 // Prompt 43: Media (nedlastinger og det som kommer), Media43Home.swift. Nøkkelen h12 er Glimt-brief på iOS.
@@ -99,7 +99,7 @@ struct PaperHome: View {
                 // Prompt 26: KALENDER etter Avganger (med lagret oppsett legger pageCards den nederst).
                 PaperCardDef(key: "h10", label: "Kalender", view: AnyView(Cal26HomeCard())),
                 PaperCardDef(key: "h4", label: "Lenker", view: AnyView(shortcuts)), // prompt 46: «Snarveier» er nå h16
-                // Prompt 52: hele Siste nytt-kortet åpner nyhetsleseren, med haptikk (Home52Grid.swift).
+                // Prompt 52: hele Siste nytt-kortet åpner nyhetsleseren, med haptikk (HomeGrid.swift).
                 PaperCardDef(key: "h5", label: "Siste nytt", view: AnyView(Home52NewsTile())),
                 PaperCardDef(key: "h6", label: "Gjøremål", view: AnyView(PaperTasksCard())),
                 PaperCardDef(key: "h7", label: "Posisjon", view: AnyView(PaperFamilyCard())),
@@ -131,7 +131,7 @@ struct PaperHome: View {
     }
 
     /// Prompt 24: Pakker vises også uten aktive pakker («Ingen aktive pakker · Legg til et sporingsnummer»), med mindre
-    /// «Vis bare når det er pakker» er på (prompt 37). Prompt 37: 2 eller 3 pakker når det er valgt i «Rediger widget» (Pkg37.swift).
+    /// «Vis bare når det er pakker» er på (prompt 37). Prompt 37: 2 eller 3 pakker når det er valgt i «Rediger widget» (HomePackages.swift).
     @ViewBuilder private var packages: some View {
         let n: Int = Wopt37.shared.h2N
         let list: [Shipment] = Pkg37.sorted(store)
@@ -277,73 +277,6 @@ struct PaperHome: View {
             }
             .padding(.top, 4)
         }
-    }
-}
-
-/// Søkefeltet («⌕ Søk på Google») med forslag og historikk.
-struct PaperSearch: View {
-    @Environment(Store.self) private var store
-    @Environment(\.paper) private var p
-    @State private var q = ""
-    @FocusState private var focused: Bool
-
-    var body: some View {
-        let empty = q.trimmingCharacters(in: .whitespaces).isEmpty
-        let items = empty ? Array(store.history.prefix(5)) : Array(store.suggestions.prefix(6))
-        VStack(spacing: 0) {
-            HStack(spacing: 10) {
-                // Prompt 27: ✕ til venstre (SearchField27) og ✦ AI til høyre, som åpner Chat med teksten (store.openChat(prompt:), Chat27Model.swift).
-                SearchField27(text: $q, placeholder: "Søk på Google", font: PF.ui(14.5), keyboard: .webSearch, autocap: .never,
-                              focus: $focused, onClear: { store.suggestions = [] }, onSubmit: { go(q) }, lead: {
-                    GoogleG(size: 17)
-                })
-                .onChange(of: q) { _, v in store.suggest(v) }
-                Button { askAi27() } label: {
-                    Text("✦ AI").font(PF.ui(12.5, .bold)).foregroundStyle(p.ink).lineLimit(1).fixedSize()
-                        .padding(.horizontal, 12).frame(height: 34)
-                        .background(p.bg, in: Capsule())
-                        .contentShape(Capsule())
-                }
-                .buttonStyle(.plain)
-                .padding(.trailing, -10)
-                .accessibilityLabel("Spør AI")
-            }
-            .padding(.horizontal, 16).frame(height: 46)
-            if focused && !items.isEmpty {
-                Rectangle().fill(p.line).frame(height: 1)
-                ForEach(items, id: \.self) { s in
-                    Button { go(s) } label: {
-                        HStack(spacing: 10) {
-                            Image(systemName: empty ? "clock.arrow.circlepath" : "magnifyingglass").font(.system(size: 13)).foregroundStyle(p.mut)
-                            Text(s).font(PF.ui(14)).foregroundStyle(p.ink).lineLimit(1)
-                            Spacer()
-                        }
-                        .padding(.horizontal, 16).padding(.vertical, 9).contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-        }
-        .background(p.card, in: RoundedRectangle(cornerRadius: 23, style: .continuous))
-        .shadow(color: .black.opacity(0.18), radius: 15, y: 10)
-        .animation(.easeOut(duration: 0.15), value: focused)
-    }
-
-    /// ✦ AI: ny chat med teksten i feltet (tomt felt åpner bare Chat).
-    private func askAi27() {
-        Haptics.shared.tap()
-        let t: String = q
-        focused = false
-        q = ""
-        store.suggestions = []
-        store.openChat(prompt: t)
-    }
-
-    private func go(_ s: String) {
-        guard let u = store.googleURL(s) else { return }
-        focused = false
-        q = ""
-        store.openURL(u)
     }
 }
 
@@ -544,7 +477,8 @@ private func shortDate(_ iso: String) -> String {
 
 /// Liste med rader og pil («Domener ›»).
 struct PaperLinkRow: Identifiable {
-    let id = UUID()
+    /// Fase 4: stabil id (før UUID(), som ga hver rad ny identitet hver gang lista ble tegnet).
+    var id: String { name + "\u{1F}" + sub }
     let name: String
     let sub: String
     var value: String = "›"
@@ -587,7 +521,7 @@ struct PaperLinkList: View {
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                // Prompt 25: «Ta meg dit →» scroller hit og fremhever raden (Settings25.swift).
+                // Prompt 25: «Ta meg dit →» scroller hit og fremhever raden (SettingsSearch.swift).
                 .set25Highlight(r.name)
             }
         }
@@ -774,7 +708,8 @@ struct PaperTrackSettings: View {
     }
 
     private struct Row: Identifiable {
-        let id = UUID()
+        /// Fase 4: stabil id (navnet er unikt i hver gruppe) i stedet for UUID() per tegning.
+        var id: String { n }
         let n: String
         let s: String
         let on: Bool
@@ -843,6 +778,7 @@ struct PaperShipmentCard: View {
         .onLongPressGesture(minimumDuration: 0.5) {
             if TrackSelect.shared.active { TrackSelect.shared.toggle(s.id) } else { TrackSelect.shared.start(s.id) }
         }
+        .accessibilityAddTraits(.isButton)
     }
 
     private var picked: Bool { TrackSelect.shared.ids.contains(s.id) }
@@ -896,169 +832,7 @@ struct PaperShipmentCard: View {
 
 /* ---------- Mer ---------- */
 
-struct PaperMore: View {
-    @Environment(Store.self) private var store
-    var body: some View {
-        // Den modulen som ikke står i fanelinjen (Domener eller Sporing), ligger her.
-        let fourth = store.paperTab4
-        var rows: [PaperLinkRow] = []
-        let inBar = Set(store.mainTabs(floating: store.fabMode == "float", onHome: true).map(\.0))
-        if fourth != "domener" || !inBar.contains("domener") { rows.append(PaperLinkRow(name: "Domener", sub: "Trafikk, besøk og oppetid", icon: "globe") { store.paperOpenDomains(from: "mer") }) }
-        if fourth != "sporing" || !inBar.contains("sporing") { rows.append(PaperLinkRow(name: "Sporing", sub: store.paperOnWay > 0 ? "\(store.paperOnWay) på vei" : "Pakker, varsler og kilder", icon: "shippingbox") { store.paperGo("sporing") }) }
-        rows.append(PaperLinkRow(name: "Gjøremål", sub: TasksModel.shared.openCount > 0 ? "\(TasksModel.shared.openCount) åpne oppgaver" : "Oppgaver og widgets", icon: "checklist") { store.paperGo("huske") })
-        rows.append(PaperLinkRow(name: "Familie og kart", sub: "Posisjon, soner og helse", icon: "person.2") { store.paperGo("familie") })
-        rows.append(PaperLinkRow(name: "Avganger", sub: "Ruter i sanntid", icon: "tram") { store.paperGo("avg") })
-        rows.append(PaperLinkRow(name: "Aksjer", sub: "Trading 212", icon: "chart.line.uptrend.xyaxis") { store.paperFinGo("aksjer") })
-        rows.append(PaperLinkRow(name: "Abonnementer", sub: "Subscription OS", icon: "repeat") { store.paperGo("abo") })
-        rows.append(PaperLinkRow(name: "Boliger", sub: "Utgifter, prosjekter og regninger", icon: "building.2") { store.paperFinGo("boliger") })
-        rows.append(PaperLinkRow(name: "Finn", sub: "Kjøp og salg", icon: "arrow.left.arrow.right") { store.paperGo("finn") })
-        rows.append(PaperLinkRow(name: "Værmelding", sub: "Timer, 7 dager og egne steder", icon: "cloud.sun") { store.openWeather() })
-        rows.append(PaperLinkRow(name: "Nyhetsleser", sub: "RSS med ✦ AI-sammendrag", icon: "newspaper") { store.openNews() })
-        rows.append(PaperLinkRow(name: "Innstillinger", sub: "Profil, tema, fanelinje og konto", icon: "gearshape") { store.paperGo("innst") })
-        return PaperLinkList(rows: rows).padding(.top, -8)
-    }
-}
-
 /* ---------- Innstillinger ---------- */
-
-struct PaperSettings: View {
-    @Environment(Store.self) private var store
-    @Environment(\.paper) private var p
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            profileCard
-            group("Utseende", [
-                PaperLinkRow(name: "Tema og bakgrunn", sub: themeSub, icon: "paintpalette") { store.paperGo("innst-ut") },
-                PaperLinkRow(name: "Fanelinje", sub: "Fjern faner, endre navn og bytt ikon · eller hold inne på linja", icon: "dock.rectangle") { store.tabBarEditing = true },
-                PaperLinkRow(name: "Skanneknapp", sub: store.fabMode == "float" ? "Flyter over linjen, søk ligger i linjen" : "Ligger i linjen som +",
-                             value: store.fabMode == "float" ? "Flytende ›" : "I linjen ›", icon: "doc.viewfinder") { store.setFabMode(store.fabMode == "float" ? "inline" : "float") },
-                PaperLinkRow(name: "Fjerde fane", sub: fourthSub, value: fourthName + " ›", icon: "square.grid.2x2") { cycleFourth() },
-            ])
-            finNavGroup
-            group("Moduler", [
-                PaperLinkRow(name: "Familie og helse", sub: "Deling av posisjon, personvern og Apple Helse", icon: "person.2") { store.paperGo("innst-fam") },
-                PaperLinkRow(name: "Nyhetsleser", sub: "Kilder, kategorier og AI", value: "Åpne ›", icon: "newspaper") { store.openNews() },
-                PaperLinkRow(name: "Værsteder", sub: "Legg til, fjern og søk etter steder", value: "Åpne ›", icon: "cloud.sun") { store.openWeather() },
-                PaperLinkRow(name: "Avganger", sub: "Stopp fra Ruter og Entur", value: "Åpne ›", icon: "tram") { store.paperGo("avg") },
-                PaperLinkRow(name: "Aksjer · Trading 212", sub: "Nøkkel, miljø og synk", icon: "chart.line.uptrend.xyaxis") { store.paperOpen(.settings); store.settingsPage = "stocks" },
-            ])
-            group("Sikkerhet", [
-                PaperLinkRow(name: "Lås appen", sub: "Face ID / kode", value: store.lockEnabled ? "På" : "Av", valueColor: store.lockEnabled ? p.pos : p.mut, icon: "faceid") { store.lockEnabled.toggle() },
-                PaperLinkRow(name: "Avanserte innstillinger", sub: "Sikkerhet, varsler, skanning, haptikk, widgets og server", icon: "gearshape.2") { store.paperOpen(.settings) },
-                PaperLinkRow(name: "Logg ut", sub: "Du må logge inn igjen med 2FA", value: "Logg ut", valueColor: p.lab, icon: "rectangle.portrait.and.arrow.right") { store.logout() },
-            ])
-        }
-    }
-
-    private var themeSub: String {
-        let m = store.paperModeName50 // prompt 50: også «Liquid Glass»
-        let t = PaperIconTheme.themes.first { $0.0 == store.iconTheme }?.1 ?? "Standard"
-        return "\(m) · \(photoName) · ikoner: \(t)"
-    }
-
-    private var profileCard: some View {
-        Button { store.paperGo("profil") } label: {
-            HStack(spacing: 14) {
-                ZStack {
-                    Circle().fill(p.popSel)
-                    if let a = store.avatar {
-                        Image(uiImage: a).resizable().scaledToFill().clipShape(Circle())
-                    } else {
-                        Text(String(store.displayName.prefix(1)).uppercased()).font(PF.serif(22, medium: true)).foregroundStyle(p.ink)
-                    }
-                }
-                .frame(width: 54, height: 54)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(store.displayName.isEmpty ? "Konto" : store.displayName).font(PF.serif(20, medium: true)).foregroundStyle(p.ink).lineLimit(1)
-                    Text(accountSub).font(PF.ui(12.5)).foregroundStyle(p.mut)
-                }
-                Spacer()
-                Text("Profil ›").font(PF.ui(13, .semibold)).foregroundStyle(p.mut)
-            }
-            .padding(14)
-            .background(p.card, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-        }
-        .buttonStyle(.plain)
-        .padding(.top, 8)
-    }
-
-    private var fourthName: String {
-        switch store.fourthTab {
-        case "domener": return "Domener"
-        case "sporing": return "Sporing"
-        default: return "Automatisk"
-        }
-    }
-
-    private var fourthSub: String {
-        switch store.fourthTab {
-        case "domener": return "Alltid Domener"
-        case "sporing": return "Alltid Sporing"
-        default: return "Domener, eller Sporing når pakker er på vei (nå: " + (store.paperTab4 == "sporing" ? "Sporing, \(store.paperOnWay) på vei" : "Domener") + ")"
-        }
-    }
-
-    private func cycleFourth() {
-        let order = ["auto", "domener", "sporing"]
-        let i = order.firstIndex(of: store.fourthTab) ?? 0
-        store.setFourthTab(order[(i + 1) % order.count])
-    }
-
-    /// «Finans · fanelinje og Mer»: opptil 4 faner. Trykk for å legge til eller flytte til venstre.
-    private var finNavGroup: some View {
-        let nav = store.finNav
-        var rows: [PaperLinkRow] = Store.finNavAll.map { f in
-            let i = nav.firstIndex(of: f.id)
-            let sub = i.map { "I fanelinjen, plass \($0 + 1)" + ($0 > 0 ? " · trykk for å flytte til venstre" : "") } ?? "Ligger i Mer"
-            let value = i.map { $0 > 0 ? "◂ Fane \($0 + 1)" : "Fane 1" } ?? "+ Legg til"
-            return PaperLinkRow(name: f.name, sub: sub, value: value, valueColor: i == nil ? p.lab : p.pos) { toggleFin(f.id) }
-        }
-        let last = nav.last.flatMap { id in Store.finNavAll.first { $0.id == id }?.name } ?? "–"
-        rows.append(PaperLinkRow(name: "Fjern fra fanelinjen", sub: "Flytter siste fane til Mer", value: nav.count > 1 ? "Fjern \(last)" : "–", valueColor: p.lab) {
-            if nav.count > 1 { store.setFinNav(Array(nav.dropLast())) }
-        })
-        rows.append(PaperLinkRow(name: "Tilbakestill", sub: "Oversikt, Liste, Finn, Søk", value: "Nullstill") { store.setFinNav(["oversikt", "liste", "finn", "sok"]) })
-        return group("Finans · fanelinje og Mer", rows)
-    }
-
-    private func toggleFin(_ id: String) {
-        var nav = store.finNav
-        if let i = nav.firstIndex(of: id) {
-            guard i > 0 else { return }
-            nav.swapAt(i - 1, i)
-            store.setFinNav(nav)
-        } else {
-            guard nav.count < 4 else { store.flash("Maks 4 faner. Fjern en først."); return }
-            nav.append(id)
-            store.setFinNav(nav)
-        }
-    }
-
-    private var photoName: String {
-        switch store.photo {
-        case "cur": "Nåværende"
-        case "weather": "Vær nå"
-        case "planets": "Planeter"
-        case "custom": "Eget bilde"
-        case "gphoto": "Google Photos" // prompt 46
-        default: "Oslo"
-        }
-    }
-
-    private var accountSub: String {
-        let u = store.account?.username ?? ""
-        let r = (store.me?.role ?? store.account?.role ?? "") == "admin" ? "Admin" : "Bruker"
-        return u.isEmpty ? r : "@\(u) · \(r)"
-    }
-
-    private func group(_ t: String, _ rows: [PaperLinkRow]) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
-            PLabel(text: t).padding(.top, 10).padding(.leading, 4)
-            PaperLinkList(rows: rows)
-        }
-    }
-}
 
 
 /// Butikklogo i Papir: favicon via serveren (/finans/api/logo, åpen og bufret) på hvit flate, ellers forbokstav på kategorifargen.

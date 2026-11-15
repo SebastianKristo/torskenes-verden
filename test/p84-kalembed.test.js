@@ -235,12 +235,12 @@ test('@main: KalApp bare uten KAL_EMBED – Homelab-målet har nøyaktig én @ma
   // Rotvisningen som begge bruker.
   assert.match(kalApp, /struct KalAppRoot: View \{/);
   assert.match(kalApp, /WindowGroup \{\n\s+KalAppRoot\(\)\n\s+\}/);
-  assert.match(read('FinansHub/Sources/Kal84Embed.swift'), /KalAppRoot\(\)/);
+  assert.match(read('FinansHub/Sources/KalenderInApp.swift'), /KalAppRoot\(\)/);
 });
 
 test('én AppShortcutsProvider i Homelab, App Intents i Kalender bak #if !KAL_EMBED', () => {
   const prov = ALL_FH.filter((f) => /:\s*AppShortcutsProvider\b/.test(code(f, true)));
-  assert.deepEqual(prov, ['FinansHub/Sources/Quick29Intent.swift']);
+  assert.deepEqual(prov, ['FinansHub/Sources/QuickAddIntent.swift']);
   assert.match(code('Kalender/Sources/KalIntent.swift', false), /struct KalShortcuts: AppShortcutsProvider/);
   assert.doesNotMatch(code('Kalender/Sources/KalIntent.swift', true), /struct|: AppIntent|AppShortcut/);
 });
@@ -318,10 +318,10 @@ test('Homelabs extension-medlemmer på systemtyper brukes ikke av Kalender-koden
 });
 
 test('UserDefaults-nøkler: Kalender bruker kal*-nøkler; felles nøkler med Homelab betyr det samme (kal41.* fra Server41)', () => {
-  // Kal84Embed.swift er selve innbyggingen og skriver Kalenders kal.noAuto med vilje (samme betydning).
+  // KalenderInApp.swift er selve innbyggingen og skriver Kalenders kal.noAuto med vilje (samme betydning).
   const keys = (dirs) => {
     const s = new Set();
-    for (const f of dirs.flatMap(swiftFiles).filter((x) => !x.endsWith('/Kal84Embed.swift'))) {
+    for (const f of dirs.flatMap(swiftFiles).filter((x) => !x.endsWith('/KalenderInApp.swift'))) {
       // Som kompilert i Homelab (iOS, KAL_EMBED); KVC-parametre (CIFilter setValue(_:forKey:)) er ikke innstillinger.
       const txt = rawpp(f, true).split('\n').filter((l) => !/\.setValue\(/.test(l)).join('\n');
       for (const m of txt.matchAll(/(?:forKey: *"([^"]+)"|AppStorage\("([^"]+)"|(?:let|var) \w*[kK]ey\w*(?:: String)? = "([^"]+)")/g)) s.add(m[1] ?? m[2] ?? m[3]);
@@ -334,7 +334,7 @@ test('UserDefaults-nøkler: Kalender bruker kal*-nøkler; felles nøkler med Hom
   const shared = [...a].filter((k) => b.has(k)).sort();
   assert.deepEqual(shared, ['kal41.auto', 'kal41.external', 'kal41.local', 'kal41.now']);
   assert.deepEqual([...a].filter((k) => !/^kal/.test(k)), [], 'alle Kalender-nøkler starter med kal');
-  assert.ok(!b.has('kal84_embed') || /AppStorage\("kal84_embed"\)/.test(read('FinansHub/Sources/Kal84Embed.swift')));
+  assert.ok(!b.has('kal84_embed') || /AppStorage\("kal84_embed"\)/.test(read('FinansHub/Sources/KalenderInApp.swift')));
   // Bildekatalogen: Kalender-koden bruker ingen navngitte bilder/farger (bare AppIcon/AccentColor i KalAssets).
   const kal = KAL_DIRS.flatMap(swiftFiles).map((f) => read(f)).join('\n');
   assert.doesNotMatch(kal, /Image\("|Color\("|UIImage\(named/);
@@ -342,7 +342,7 @@ test('UserDefaults-nøkler: Kalender bruker kal*-nøkler; felles nøkler med Hom
 
 /* ---------- Bryter, lenker og tilbake ---------- */
 
-const emb = () => read('FinansHub/Sources/Kal84Embed.swift');
+const emb = () => read('FinansHub/Sources/KalenderInApp.swift');
 
 test('Innstillinger → «Kalender i appen» (kal84_embed, standard på) med forklaringen', () => {
   const s = emb();
@@ -351,13 +351,13 @@ test('Innstillinger → «Kalender i appen» (kal84_embed, standard på) med for
   assert.match(s, /static let key: String = "kal84_embed"/);
   assert.match(s, /Text\("Kalender i appen"\)/);
   assert.match(s, /"Bruk hele Kalender-appen inni Homelab\. Nyttig når du sideloader og bare har plass til én app\."/);
-  assert.match(read('FinansHub/Sources/Paper17.swift'), /group\(g\.title, g\.offset, g\.rows\)\n\s+\}\n\s+\/\/ Prompt 84[^\n]*\n\s+Kal84Settings\(\)/);
-  assert.match(read('FinansHub/Sources/Settings50Wide.swift'), /if query\.isEmpty \{ Kal84Settings\(\) \}/);
-  assert.match(read('FinansHub/Sources/Settings24.swift'), /add\("kal84", "Kalender i appen"/);
+  assert.match(read('FinansHub/Sources/PaperAppSettings.swift'), /group\(g\.title, g\.offset, g\.rows\)\n\s+\}\n\s+\/\/ Prompt 84[^\n]*\n\s+Kal84Settings\(\)/);
+  assert.match(read('FinansHub/Sources/SettingsWide.swift'), /if query\.isEmpty \{ Kal84Settings\(\) \}/);
+  assert.match(read('FinansHub/Sources/SettingsSearch.swift'), /add\("kal84", "Kalender i appen"/);
 });
 
 test('lenkene går via bryteren: KalLink33 åpner den innebygde Kalenderen før Kalender-appen', () => {
-  const l = read('FinansHub/Sources/KalLink33.swift');
+  const l = read('FinansHub/Sources/KalenderLink.swift');
   const open = l.slice(l.indexOf('static func open('), l.indexOf('static func enc('));
   assert.ok(open.indexOf('if Kal84.on') > 0 && open.indexOf('if Kal84.on') < open.indexOf('installed else'), 'bryteren først');
   assert.match(open, /Kal84Host\.shared\.show\(e\)\n\s+return true/);
@@ -365,13 +365,13 @@ test('lenkene går via bryteren: KalLink33 åpner den innebygde Kalenderen før 
   assert.match(l, /guard KalGroup\.linked \|\| Kal84\.on, let a = store\.account/);
   // Hjem-kortet/-flisen, kalenderfanen og Mer, Chat-kort, briefen og widget-lenkene går via KalLink33 eller paperGo("kalender").
   assert.match(read('FinansHub/Sources/PaperStore.swift'), /if t == "kalender" && \(paperTab != "kalender" \|\| Kal84\.on\) && KalLink33\.today\(\) \{ return \}/);
-  assert.match(read('FinansHub/Sources/More44Rows.swift'), /More28Row\(id: "kalender", name: "Kalender"[^\n]*store\.paperGo\("kalender"\)/);
-  assert.match(read('FinansHub/Sources/Home52Grid.swift'), /KalLink33\.event\(e\) \{ return \}\n\s+store\.paperGo\("kalender"\)/);
+  assert.match(read('FinansHub/Sources/MoreRows.swift'), /More28Row\(id: "kalender", name: "Kalender"[^\n]*store\.paperGo\("kalender"\)/);
+  assert.match(read('FinansHub/Sources/HomeGrid.swift'), /KalLink33\.event\(e\) \{ return \}\n\s+store\.paperGo\("kalender"\)/);
   assert.match(read('FinansHub/Sources/HomelabKalenderHjemkort.swift'), /KalLink33\.day\(/);
   assert.match(read('FinansHub/Sources/AppWidgets.swift'), /KalLink33\.forward\(url\)/);
-  assert.match(read('FinansHub/Sources/Notify31.swift'), /case "kalender":\n\s+store\.paperGo\("kalender"\)/);
+  assert.match(read('FinansHub/Sources/BackgroundNotifications.swift'), /case "kalender":\n\s+store\.paperGo\("kalender"\)/);
   // Ingen andre steder i Homelab åpner kalender:// direkte.
-  const direct = swiftFiles('FinansHub/Sources').filter((f) => f !== 'FinansHub/Sources/KalLink33.swift' && /UIApplication\.shared\.open\([^)]*kalender/.test(strip(read(f))));
+  const direct = swiftFiles('FinansHub/Sources').filter((f) => f !== 'FinansHub/Sources/KalenderLink.swift' && /UIApplication\.shared\.open\([^)]*kalender/.test(strip(read(f))));
   assert.deepEqual(direct, []);
 });
 
@@ -390,7 +390,7 @@ test('fullskjerm med «‹ Homelab» øverst (ikke over innholdet) som lukker og
   // Homelab-lenker fra Kalender (Bursdager ›, Kontoer og synk) og varsler om annet lukker Kalender først.
   assert.match(read('FinansHub/Sources/App.swift'), /if Kal84Host\.shared\.closeFirst\(u, \{ openLink84\(u\) \}\) \{ return \}/);
   assert.match(read('FinansHub/Sources/App.swift'), /\.kal84Host\(store\)/);
-  assert.match(read('FinansHub/Sources/Notify31.swift'), /if go != "kalender" \{ Kal84Host\.shared\.close\(\) \}/);
+  assert.match(read('FinansHub/Sources/BackgroundNotifications.swift'), /if go != "kalender" \{ Kal84Host\.shared\.close\(\) \}/);
 });
 
 test('innlogging: samme konto som Homelab uten egen innloggingsskjerm (enhets-token → device-exchange, ellers companion)', () => {
@@ -401,17 +401,17 @@ test('innlogging: samme konto som Homelab uten egen innloggingsskjerm (enhets-to
   assert.match(s, /await KalCompanion33\.ensure84\(st\)/);
   assert.match(s, /KalStore\.shared\.adoptHomelab\(\)/);
   assert.match(s, /UserDefaults\.standard\.set\(false, forKey: "kal\.noAuto"\)/);
-  assert.match(read('FinansHub/Sources/KalLink33.swift'), /static func ensure84\(_ store: Store\) async \{/);
+  assert.match(read('FinansHub/Sources/KalenderLink.swift'), /static func ensure84\(_ store: Store\) async \{/);
   // «Logg inn med Homelab-appen» innebygd → Homelab logger inn selv (ikke homelab://app-auth til seg selv).
   assert.match(read('Kalender/Sources/KalLogin41.swift'), /func viaApp\(\) \{\n[^\n]*\n\s+if let h = KalEmbed84\.shared\.login \{\n\s+h\(\)\n\s+return\n\s+\}/);
   assert.match(s, /e\.login = \{ Kal84Host\.shared\.login\(force: true\) \}/);
 });
 
 test('nye/endrede Swift-filer: klammene går opp (begge varianter av #if)', () => {
-  const files = ['FinansHub/Sources/Kal84Embed.swift', 'Kalender/Sources/KalEmbed84.swift', 'Kalender/Sources/KalApp.swift', 'Kalender/Sources/KalIntent.swift',
+  const files = ['FinansHub/Sources/KalenderInApp.swift', 'Kalender/Sources/KalEmbed84.swift', 'Kalender/Sources/KalApp.swift', 'Kalender/Sources/KalIntent.swift',
     'Kalender/Sources/KalBg44.swift', 'Kalender/Sources/KalNotify.swift', 'Kalender/Sources/KalWidgets70.swift', 'Kalender/Sources/KalSettings35.swift',
-    'Kalender/Sources/KalLogin41.swift', 'Kalender/Sources/KalStore.swift', 'SharedKal/Core/KalSec51Core.swift', 'FinansHub/Sources/KalLink33.swift',
-    'FinansHub/Sources/App.swift', 'FinansHub/Sources/Notify31.swift', 'FinansHub/Sources/Paper17.swift', 'FinansHub/Sources/Settings50Wide.swift'];
+    'Kalender/Sources/KalLogin41.swift', 'Kalender/Sources/KalStore.swift', 'SharedKal/Core/KalSec51Core.swift', 'FinansHub/Sources/KalenderLink.swift',
+    'FinansHub/Sources/App.swift', 'FinansHub/Sources/BackgroundNotifications.swift', 'FinansHub/Sources/PaperAppSettings.swift', 'FinansHub/Sources/SettingsWide.swift'];
   for (const f of files) {
     assert.ok(existsSync(join(IOS, f)), f);
     assert.ok(balanced(code(f, true)), `klammer med KAL_EMBED i ${f}`);

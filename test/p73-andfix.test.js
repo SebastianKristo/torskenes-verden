@@ -80,8 +80,8 @@ test('ingen dobbel oppstart: refresh() er én jobb, og avbrutt nettbytte starter
 
 test('Hjem: faste høyder fra tabell (prompt 80: 101 / 212 = 2 × 101 + 10)', () => {
   // Fasit: iOS-flisene.
-  const ios50 = readFileSync(join(IOS, 'Home50Tiles.swift'), 'utf8');
-  const ios52 = readFileSync(join(IOS, 'Home52Grid.swift'), 'utf8');
+  const ios50 = readFileSync(join(IOS, 'HomeTiles.swift'), 'utf8');
+  const ios52 = readFileSync(join(IOS, 'HomeGrid.swift'), 'utf8');
   assert.match(ios50, /minHeight: 212/, 'Avgang 212 på iOS');
   assert.ok((ios52.match(/minHeight: 150/g) || []).length >= 4, 'små fliser 150 på iOS');
   const h = code('ui/Home70.kt');

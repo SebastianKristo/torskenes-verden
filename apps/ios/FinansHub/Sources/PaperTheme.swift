@@ -78,6 +78,10 @@ extension PaperPalette {
 }
 
 extension Color {
+    /// Fase 4 (bølge 2): en DS-token i stilen som er valgt nå (Papir/Glass) der en `Color` trengs (ternærer, statiske farger,
+    /// parametre). Lys/mørk og økt kontrast velges av miljøet (asset-katalogen). Ellers: `DSFyll(_:)`.
+    static func ds(_ farge: DS.Farge) -> Color { DS.color(farge, stil: PaperTheme.shared.stil) }
+
     /// Tekstfarge i de klassiske skjermene: blekk (eller lys blekk i mørk Papir).
     static var skinFg: Color { PaperSkin.palette?.ink ?? DS.fixed(.textPrimary, stil: .papir, dark: false) }
 }
