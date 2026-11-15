@@ -3,7 +3,7 @@ import UIKit
 
 /* ---------------- Prompt 82 (CHKIOS): Skjold Lab – sjekk ut deler til et produkt (og sjekk inn igjen) ----------------
  Kontrakt: CONTRACT82.md. Når deler brukes i noe man bygger, sjekkes de ut: lageret trekkes fra, og appen husker hvilket
- produkt de gikk til. Server (CHKSRV, server/skjold76/projects82.js), per bruker, under /api/skjold:
+ produkt de gikk til. Server (CHKSRV, server/skjold/projects.js), per bruker, under /api/skjold:
    GET /projects → [{id, name, status 'aktiv'|'ferdig', notes, parts, units, cost|null, updated}] (aktive først)
    POST /projects {name, notes?} · PATCH /projects/:id {name?, notes?, status?} · DELETE /projects/:id (409 med aktive utsjekkinger)
    GET /projects/:id → prosjekt + items:[{usageId, partId, name, thumbUrl, qty, returnedQty, at, loc, unit, price}]

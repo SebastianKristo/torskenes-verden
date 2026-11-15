@@ -3,7 +3,7 @@ import UIKit
 
 /* ---------------- Prompt 78 (LEDIOS): Skjold Lab med LED over hver skuff («vis meg hvor delen ligger») ----------------
  Kontrakt: CONTRACT78.md. En adresserbar stripe (WS2812B/SK6812) over hver skuffrad, styrt av en ESP32 med WLED.
- Appen snakker aldri med WLED selv: alt går via Homelab-serveren (LEDSRV, server/skjold76/leds78.js), per bruker, under /api/skjold:
+ Appen snakker aldri med WLED selv: alt går via Homelab-serveren (LEDSRV, server/skjold/leds.js), per bruker, under /api/skjold:
    GET|PUT /cabinets/:id/leds {host, enabled, color, durationS, blink, brightness, rows:[{row,start,count,reverse,pitchMm,offsetMm}],
                                overrides:{"r-c": index}, drawerPitchMm, firstDrawerXmm}
    POST /cabinets/:id/leds/test {mode:'all'|'row'|'index', row?, index?} (lyser i 5 s)

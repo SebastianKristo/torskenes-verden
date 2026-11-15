@@ -7,7 +7,7 @@ import UniformTypeIdentifiers
 /* ---------------- Prompt 44: Studie → Dokumenter (vitnemål, karakterutskrift …), Glimt leser og analyserer ----------------
  Fasit: design/Studie Dokumenter.dc.html og claude-code-studie-dokumenter.md. Mer → Studie åpner fullskjerm.
  Opplasting: Velg fil (PDF, JPG, PNG, HEIC), bilde fra biblioteket og «Ta bilde» (dokumentskanner, VisionKit).
- Server (SERVER44, server/study44.js), bare eieren ser dokumentene, lagres kryptert:
+ Server (SERVER44, server/studie/documents.js), bare eieren ser dokumentene, lagres kryptert:
    POST /api/study/documents (multipart file) → {doc:{id, kind, kindLabel, title, institution, program, date, emner:[{kode, navn, sp,
         karakter, tone}], snitt:{letter, value, text}, snittVgs:{text}, sp, spText, found:[…], summary, steps:[{label, ms, ok}], compare?}}
    GET  /api/study/documents → {items, kpi:{sp, snitt, snittVgs, count}} · DELETE …/:id
