@@ -127,3 +127,23 @@ test('Q29: bruken telles i kv og vises for admin på /api/admin/aliases', async 
   assert.ok((kv.get(OWNER, KV_KEY, {}) ?? {})['/api/integrasjoner'].n >= 1);
   assert.equal((await req('/api/admin/aliases')).status, 401);
 });
+
+const jobs = await import('../server/jobs/index.js');
+
+test('Bakgrunnsjobber: de seks med sideeffekter er registrert i planleggeren og starter ikke i test eller sandkasse', async () => {
+  const names = jobs.listJobs().map((j) => j.name).sort();
+  for (const n of ['brief.generate', 'familie.forlot', 'familie.sjekk-inn', 'finans.smb-backup', 'kalender.ical', 'kalender.skole']) assert.ok(names.includes(n), n);
+  assert.equal(jobs.jobsStarted(), false);
+  assert.ok(jobs.listJobs().every((j) => !j.active));
+  assert.equal(jobs.jobsAllowed({ NODE_ENV: 'test' }), false);
+  assert.equal(jobs.jobsAllowed({ NODE_ENV: 'production', OPS51_SANDBOX: '1' }), false);
+  assert.equal(jobs.jobsAllowed({ NODE_ENV: 'production' }), true);
+  assert.equal(jobs.startJobs({ NODE_ENV: 'production', OPS51_SANDBOX: '1' }), 0);
+  assert.equal(jobs.jobsStarted(), false);
+  // En jobb som feiler, stopper ikke planleggeren, og feilen vises.
+  let n = 0;
+  jobs.registerJob('test.feiler', 60_000, () => { n++; throw new Error('bom'); });
+  assert.equal(await jobs.runJobNow('test.feiler'), false);
+  assert.equal(n, 1);
+  assert.equal(jobs.listJobs().find((j) => j.name === 'test.feiler').lastError, 'bom');
+});

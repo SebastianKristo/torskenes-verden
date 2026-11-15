@@ -15,6 +15,7 @@ import { db, kv, OWNER, settings, saveSettings, secret, me, SERVER_KEYS } from '
 import { config } from '../config.js';
 import { writeXlsx, readXlsxSheets, fromSerial } from './xlsx.js';
 import { cachedStocks } from './stocks.js';
+import { registerJob } from '../jobs/index.js';
 
 const q = (sql) => db.prepare(sql);
 const DATA = resolve(config.dataDir);
@@ -678,7 +679,8 @@ function due(now = new Date()) {
   if (st.smbSchedule === 'weekly') while (slot.getDay() !== 0) slot.setDate(slot.getDate() - 1);
   return last.at < slot.getTime();
 }
-setInterval(() => { try { if (due()) runBackup('tidsplan'); } catch (e) { console.warn('[backup] tidsplan', e.message); } }, 5 * 60_000).unref?.();
+// Planlagt SMB-backup: registrert i den felles planleggeren, så den aldri kjører i test eller sandkassen (OPS51_SANDBOX).
+registerJob('finans.smb-backup', 5 * 60_000, () => { if (due()) runBackup('tidsplan'); }, { note: 'SMB-backup etter tidsplanen i Innstillinger' });
 
 export const needsFirstRun = (u = me()) => !kv.get(u, 'fh_firstrun', null)?.done && !q('SELECT 1 FROM fh_transactions WHERE user_id=? LIMIT 1').get(u) && !q('SELECT 1 FROM fh_accounts WHERE user_id=? LIMIT 1').get(u);
 export const finishFirstRun = (via, u = me()) => kv.set(u, 'fh_firstrun', { done: true, at: Date.now(), via });

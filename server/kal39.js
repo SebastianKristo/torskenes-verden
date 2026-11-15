@@ -35,6 +35,7 @@ import { calendarsOut, appCalendarsOf, eventKey, LEGACY_ALIAS, _setKal39 } from 
 import { fagKey } from './kal37.js';
 import { parseIcs, expandIcs } from './ical-expand.js';
 import { osloTodayISO } from '../public/js/quick-time.js';
+import { registerJob } from './jobs/index.js';
 
 const pad = (n) => String(n).padStart(2, '0');
 const addDays = (s, n) => { const [y, m, d] = s.split('-').map(Number); return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10); };
@@ -348,7 +349,7 @@ export async function refreshSchools(now = Date.now()) {
   }
   return n;
 }
-if (process.env.NODE_ENV !== 'test') setInterval(() => { refreshSchools().catch((e) => console.warn('[kalender39]', e.message)); }, 5 * 60_000).unref?.();
+registerJob('kalender.skole', 5 * 60_000, refreshSchools, { note: 'Skolekalendere etter valgt intervall' }); // felles planlegger: ikke i test/sandkasse
 
 /* ---------------- Google-velgeren (1d) ---------------- */
 

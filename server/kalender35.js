@@ -28,6 +28,7 @@ import { parseIcs, expandIcs } from './ical-expand.js';
 import { guardedFetch86, approveIfAdmin86 } from './localfetch86.js'; // prompt 86: SSRF-vern, lokale verter må være godkjent av admin
 
 const MOCK = () => process.env.MOCK_DATA === '1';
+import { registerJob } from './jobs/index.js';
 export const PALETTE = ['#b23a2a', '#e8794a', '#a8661a', '#c9a227', '#2f7a4f', '#3d7f8a', '#2b5d8a', '#5b4fc4', '#8a3fa0', '#c2477a', '#6b665c', '#1b1a17'];
 const COLOR = /^#[0-9a-f]{6}$/i;
 const BUILTIN_COLORS = ['#b23a2a', '#2b5d8a', '#2f7a4f', '#a8661a', '#3d7f8a', '#8a3fa0']; // innebygde i kalender33.js
@@ -263,7 +264,7 @@ export async function refreshAllIcal() {
   for (const { id } of db.prepare('SELECT id FROM users').all()) for (const x of store(id).ical) { await refreshIcal(id, x.id); n++; }
   return n;
 }
-if (process.env.NODE_ENV !== 'test') setInterval(() => { refreshAllIcal().catch((e) => console.warn('[kalender35]', e.message)); }, 3600_000).unref?.();
+registerJob('kalender.ical', 3600_000, refreshAllIcal, { note: 'iCal-abonnementer hentes på nytt' }); // felles planlegger: ikke i test/sandkasse
 
 /* ---------------- Ruter ---------------- */
 
