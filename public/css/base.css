@@ -1,12 +1,15 @@
 /* Grunnlaget for Homelab på web: standardpaletten for Glass («cur»), Papir-paletten (html[data-hl="2c"]),
-   nullstilling, skrift og hjelpeklasser. Fargene skal over tid komme fra tokens.css (--ds-*). Lastes rett etter tokens.css. */
+   nullstilling, skrift og hjelpeklasser. Lastes rett etter tokens.css.
+   Palettene under er de gamle navnene (--text, --ink, --w30-* …) som side-CSS-en fortsatt bruker. De peker til tokens.css (--ds-*),
+   så tokens.css velger verdien per stil og modus (Papir lys, Papir mørk, Glass) og papir-mork.css slipper å sette dem på nytt.
+   Verdiene som står som hex her, har ikke noe token ennå (Glass-nyanser og pyntefarger); de er samlet her og ikke i komponentene. */
 
 :root{
-  --page:#1a1d25; --lock:#07080b;
-  --card:rgba(18,25,38,.86); --row:#1d2738; --line:#232938; --field:#0b0e15;
-  --glass:rgba(40,44,52,.55); --pill:rgba(10,12,18,.7);
-  --text:#eef0f4; --text-2:#b6bccb; --muted:#8a93a6; --faint:#6b7385;
-  --blue:#a8d4fb; --green:#8fe0b0; --red:#f59a8f; --yellow:#f3d38a; --pink:#e8a6d8; --purple:#9fb4ff;
+  --page:#1a1d25; --lock:var(--ds-surface);
+  --card:var(--ds-surface-overlay); --row:#1d2738; --line:var(--ds-line-subtle); --field:var(--ds-surface-field);
+  --glass:var(--ds-surface-raised); --pill:rgba(10,12,18,.7);
+  --text:var(--ds-text-primary); --text-2:#b6bccb; --muted:var(--ds-text-secondary); --faint:#6b7385;
+  --blue:var(--ds-info); --green:#8fe0b0; --red:var(--ds-danger); --yellow:#f3d38a; --pink:#e8a6d8; --purple:#9fb4ff;
   --r-card:32px; --pad-card:26px; --gap:20px; --side:36px;
   --mono:'JetBrains Mono',ui-monospace,monospace;
   color-scheme:dark;
@@ -29,16 +32,17 @@ button{cursor:pointer}
 
 
 html[data-hl="2c"]{
-  --pp:#f3efe6; --ink:#1b1a17; --ink2:#6b665c; --ink3:#6f6a5f; --rule:#d8d1c2; --rule2:#e3ddcf; --acc:#b23a2a; --pos:#2f7a4f;
+  --pp:var(--ds-surface); --ink:var(--ds-text-primary); --ink2:var(--ds-text-secondary); --ink3:var(--ds-text-secondary);
+  --rule:var(--ds-line); --rule2:var(--ds-line-subtle); --acc:var(--ds-accent); --pos:var(--ds-success);
   --serif:'Newsreader',Georgia,'Times New Roman',serif; --sans:'Manrope',system-ui,sans-serif; --pmono:'IBM Plex Mono',ui-monospace,monospace;
   --pw-h:420px;
   color-scheme:light;
   background:var(--pp);
 }
 html[data-hl="2c"] body,html[data-hl="2c"] body.not-dash{
-  --page:#f3efe6; --lock:#1b1a17; --card:transparent; --row:#ebe5d8; --line:#d8d1c2; --field:#fff;
-  --glass:transparent; --pill:#fff; --text:#1b1a17; --text-2:#6b665c; --muted:#6f6a5f; --faint:#a39d90;
-  --blue:#2f5d8a; --green:#2f7a4f; --red:#b23a2a; --yellow:#9a6a0c; --pink:#a03c8a; --purple:#4b5fc8;
+  --page:var(--ds-surface); --lock:var(--ds-text-primary); --card:transparent; --row:var(--ds-surface-chip); --line:var(--ds-line); --field:var(--ds-surface-field);
+  --glass:transparent; --pill:var(--ds-surface-raised); --text:var(--ds-text-primary); --text-2:var(--ds-text-secondary); --muted:var(--ds-text-secondary); --faint:#a39d90;
+  --blue:var(--ds-info); --green:var(--ds-success); --red:var(--ds-accent); --yellow:var(--ds-warning); --pink:#a03c8a; --purple:#4b5fc8;
   --mono:'IBM Plex Mono',ui-monospace,monospace; --side:44px; --r-card:0; --gap:0px;
   background:var(--pp); color:var(--ink); font-family:var(--sans);
 }
@@ -52,12 +56,12 @@ html[data-hl="2c"] :focus-visible{outline-color:var(--acc)}
    Lastes etter app.css og paper.css. «Nåværende» (mørkt) er standard; html[data-hl="2c"] er Vindu og papir. */
 
 :root{
-  --w30-bg:#0c1119; --w30-side:#0f1520; --w30-ink:#eef0f4; --w30-mut:#8a93a6; --w30-line:#1f2736; --w30-hov:#1a2231; --w30-card:#111723;
-  --w30-acc:#f26b5e; --w30-field:#0c1119; --w30-chip:rgba(255,255,255,.08);
+  --w30-bg:#0c1119; --w30-side:#0f1520; --w30-ink:var(--ds-text-primary); --w30-mut:var(--ds-text-secondary); --w30-line:var(--ds-line-subtle); --w30-hov:#1a2231; --w30-card:#111723;
+  --w30-acc:#f26b5e; --w30-field:#0c1119; --w30-chip:var(--ds-surface-chip);
 }
 html[data-hl="2c"]{
-  --w30-bg:#f3efe6; --w30-side:#f3efe6; --w30-ink:#1b1a17; --w30-mut:#67625a; --w30-line:#d8d1c2; --w30-hov:#ece6da; --w30-card:#fbf8f1;
-  --w30-acc:#b23a2a; --w30-field:#fff; --w30-chip:#ece6da;
+  --w30-bg:var(--ds-surface); --w30-side:var(--ds-surface); --w30-ink:var(--ds-text-primary); --w30-mut:var(--ds-text-secondary); --w30-line:var(--ds-line); --w30-hov:var(--ds-surface-chip); --w30-card:var(--ds-surface-raised);
+  --w30-acc:var(--ds-accent); --w30-field:var(--ds-surface-field); --w30-chip:var(--ds-surface-chip);
 }
 
 /* ---------- Ingen synlig scrollbar (claude-code-innst-web-skjul-scrollbar.md): Innstillinger, Chat, Kalender ---------- */

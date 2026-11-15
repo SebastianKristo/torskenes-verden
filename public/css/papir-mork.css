@@ -81,9 +81,8 @@ html[data-mode="dark"][data-hl="2c"] .fam{--f-card:#211e18;--f-bg:#16140f}
 /* news.css */
 :where(html[data-mode="dark"][data-hl="2c"]) .nw-sw span{background:var(--ds-surface-raised)}
 /* paper.css */
-html[data-mode="dark"][data-hl="2c"]{--pp:#16140f;--ink:#f3efe6;--ink2:#a39d90;--ink3:#938d80;--rule:#3a352c;--rule2:#3a352c}
 html[data-mode="dark"][data-hl="2c"] .bdw-all,html[data-mode="dark"][data-hl="2c"] .bdw-t span,html[data-mode="dark"][data-hl="2c"] .bdw-e{color:var(--ds-text-secondary)}
-html[data-mode="dark"][data-hl="2c"] body,html[data-mode="dark"][data-hl="2c"] body.not-dash{--page:#16140f;--lock:#f3efe6;--row:#2a261f;--line:#3a352c;--field:#211e18;--pill:#211e18;--text:#f3efe6;--text-2:#a39d90;--muted:#938d80;--red:#e0705e;--green:#5fb383;--hl40-amb:#c98a1b}
+html[data-mode="dark"][data-hl="2c"] body,html[data-mode="dark"][data-hl="2c"] body.not-dash{--hl40-amb:#c98a1b}
 html[data-mode="dark"][data-hl="2c"] .pillnav{background:rgba(243,239,230,.06)}
 html[data-mode="dark"][data-hl="2c"] body.pw-on .pillnav{background:rgba(22,20,15,.94)}
 html[data-mode="dark"][data-hl="2c"] .pill{background:var(--ds-surface-raised)}
@@ -178,7 +177,6 @@ html[data-mode="dark"][data-hl="2c"] .trk-err{color:var(--ds-accent)}
 :where(html[data-mode="dark"][data-hl="2c"]) .wxp-layers button.on{background:var(--ds-surface-raised)}
 :where(html[data-mode="dark"][data-hl="2c"]) .wxp-wgr i{background:var(--ds-surface-raised)}
 /* web30.css */
-html[data-mode="dark"][data-hl="2c"]{--w30-bg:#16140f;--w30-side:#16140f;--w30-ink:#f3efe6;--w30-mut:#a39d90;--w30-line:#3a352c;--w30-hov:#2a261f;--w30-card:#211e18;--w30-field:#211e18;--w30-chip:#2a261f}
 html[data-mode="dark"][data-hl="2c"] #settings .set-q{box-shadow:0 1px 0 #3a352c}
 :where(html[data-mode="dark"][data-hl="2c"]) .cfg-test-msg.ok{color:var(--ds-success)}
 :where(html[data-mode="dark"][data-hl="2c"]) .cfg-guide{background:rgba(243,239,230,.45)}
