@@ -12,6 +12,7 @@ import { haptic } from './mobile-haptics.js';
 import { HK } from './mobile-p17.js';
 import * as P37 from './mobile-p37.js';
 import { glimtOrb } from './mobile-orb43.js';
+import { vw, vh } from '/assets/js/lib/viewport.js'; // vindusstørrelsen uten tvungen layout
 
 let MED = null; // mobile-p43m.js
 export const media = () => MED;
@@ -238,7 +239,7 @@ async function ciCommit(memOnly) {
    5. Stor skjerm (iPad og Fold)
    ===================================================================== */
 // iPad (≥ 768) liggende og stående; Fold og smalere nettbrett (600–767) bare når bredden er ≥ 0,9 × høyden (stående Fold = mobil, bredere spalte).
-export const bigOn = () => innerWidth >= 768 || (innerWidth >= 600 && innerWidth >= innerHeight * 0.9);
+export const bigOn = () => vw() >= 768 || (vw() >= 600 && vw() >= vh() * 0.9);
 
 /* =====================================================================
    Krokene fra mobile.js
@@ -248,7 +249,7 @@ export function afterDraw43() {
   const r = document.querySelector('#app > .m'); if (!r) return;
   const big = bigOn();
   r.classList.toggle('p43-big', big);
-  r.classList.toggle('p43-fold', big && innerWidth < 1000);
+  r.classList.toggle('p43-fold', big && vw() < 1000);
   r.classList.toggle('p43-huske', m.screen === 'huske');
   MED?.afterDraw43m?.();
 }

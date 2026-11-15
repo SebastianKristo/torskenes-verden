@@ -9,6 +9,7 @@ import { m, draw } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
 import { IG, integLoad24 } from './mobile-p24.js';
 import * as P31 from './mobile-p31.js';
+import { vw } from '/assets/js/lib/viewport.js'; // vindusstørrelsen uten tvungen layout
 
 /* ---------- Faste lister (reserve når serveren ikke svarer) ---------- */
 const LOC0 = [['llama3.1:8b', 'Llama 3.1', '8B · 4,9 GB', 'Tekst'], ['gemma3:12b', 'Gemma 3', '12B · 8,1 GB', 'Tekst og bilde'], ['qwen2.5vl:7b', 'Qwen 2.5 VL', '7B · 6,0 GB', 'Leser bilder og kvitteringer'], ['deepseek-r1:8b', 'DeepSeek R1', '8B · 5,2 GB', 'Tenker før den svarer']];
@@ -386,7 +387,7 @@ const IC = {
   plus: 'M12 5v14M5 12h14', web: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18', db: 'M4 6c0-1.7 3.6-3 8-3s8 1.3 8 3-3.6 3-8 3-8-1.3-8-3zM4 6v6c0 1.7 3.6 3 8 3s8-1.3 8-3V6M4 12v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6',
   mic: 'M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3zM5 11a7 7 0 0 0 14 0M12 18v3', up: 'M12 19V5M5 12l7-7 7 7', folder: 'M3 6h6l2 2h10v11H3z', search: 'M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-3.6-3.6',
 };
-const wide = () => innerWidth >= 600;
+const wide = () => vw() >= 600;
 const pad2 = (n) => String(n).padStart(2, '0');
 function rel(t) {
   const sod = new Date(new Date().toDateString()).getTime(), d = new Date(t);

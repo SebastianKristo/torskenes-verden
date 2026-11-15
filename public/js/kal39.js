@@ -397,16 +397,22 @@ function monthView() {
   return { st: first, end: new Date(first.getFullYear(), first.getMonth() + 1, 0, 12), html: `<div class="k39-mo">${head}<div class="k39-mog">${rows}</div></div>` };
 }
 /** Så mange hendelser som får plass i hver rute (MacMonthCellMath.chips), resten som «+N». */
+// Fase 3 (B §3 P3): tre runder i stedet for les/skriv per rute (42 tvungne layouter): nullstill alle, mål alle, skriv alle.
+// Rutene har fast høyde (flex: 1, min-height: 0, overflow: hidden), så høyden avhenger ikke av hvor mange som vises.
 export function fitMonth(h) {
-  for (const c of h.querySelectorAll('.k39-moc')) {
+  const cells = [...h.querySelectorAll('.k39-moc')].map((c) => {
     const list = c.querySelector('.k39-mol'), chips = [...list.querySelectorAll('.k39-chip')];
     list.querySelector('.k39-more')?.remove();
     chips.forEach((x) => { x.hidden = false; });
-    if (chips.length <= Math.max(1, Math.floor((c.clientHeight - 30) / 19))) continue;
-    const max = Math.max(1, Math.min(40, Math.floor((c.clientHeight - 45) / 19))); // plass til «+N» under
+    return { c, list, chips };
+  });
+  const H = cells.map((x) => (x.chips.length > 1 ? x.c.clientHeight : 0)); // én layout for alle (én eller ingen brikke får alltid plass)
+  cells.forEach(({ list, chips }, i) => {
+    if (chips.length <= Math.max(1, Math.floor((H[i] - 30) / 19))) return;
+    const max = Math.max(1, Math.min(40, Math.floor((H[i] - 45) / 19))); // plass til «+N» under
     chips.slice(max).forEach((x) => { x.hidden = true; });
     const m = document.createElement('span'); m.className = 'k39-more'; m.textContent = `+${chips.length - max}`; list.appendChild(m);
-  }
+  });
 }
 
 /* ---------------- År (MacYearView) ---------------- */

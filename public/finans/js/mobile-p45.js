@@ -15,6 +15,7 @@ import { HK, tasksLoad } from './mobile-p17.js';
 import * as P31 from './mobile-p31.js';
 import * as P37 from './mobile-p37.js';
 import * as PA3 from './mobile-paper3.js';
+import { vw } from '/assets/js/lib/viewport.js'; // vindusstørrelsen uten tvungen layout
 
 const ls = {
   get: (k, d = null) => { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch { return d; } },
@@ -34,9 +35,9 @@ const STAR = '<svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"
    0. LayoutMode (claude-code-ipad-brettoppsett.md): én felles kilde
    ===================================================================== */
 /** Brett: tilgjengelig vindusbredde ≥ 700 px (Fold utbrettet, iPad, også Split View når vinduet er bredt nok). */
-export const wide = () => innerWidth >= 700;
+export const wide = () => vw() >= 700;
 /** Navbaren står loddrett til venstre fra 600 px (CSS i mobile.css), som før. */
-const railOn = () => innerWidth >= 600;
+const railOn = () => vw() >= 600;
 
 /* =====================================================================
    1. Glimt-agenten (POST /api/glimt/agent)
@@ -188,8 +189,10 @@ export function huskeRail(navFn) { return railOn() && paper() ? navFn() : ''; }
 let kbT = 0;
 function kbSync() {
   const vv = window.visualViewport, root = document.querySelector('#app > .m'); if (!vv || !root) return;
-  const kb = Math.max(0, Math.round(innerHeight - vv.height - vv.offsetTop));
-  const ae = document.activeElement, inPanel = !!ae?.closest?.('.p41-fmain'), on = kb > 80 && inPanel;
+  // Fase 3 (B §3 P3): tastaturhøyden leses bare når et felt i panelet har fokus. Før ble innerHeight lest etter hver tegning
+  // (afterDraw45), og det ga en tvungen layout hver gang (32 per oppstart på mobil).
+  const ae = document.activeElement, inPanel = !!ae?.closest?.('.p41-fmain');
+  const kb = inPanel ? Math.max(0, Math.round(innerHeight - vv.height - vv.offsetTop)) : 0, on = kb > 80 && inPanel;
   root.style.setProperty('--p45kb', `${on ? kb : 0}px`);
   root.classList.toggle('p45-kb', on);
   if (on) { cancelAnimationFrame(kbT); kbT = requestAnimationFrame(() => { if (window.scrollY) window.scrollTo(0, 0); }); }

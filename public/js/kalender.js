@@ -808,8 +808,11 @@ function paint() {
   const glb = h.querySelector('[data-k38-glb]')?.scrollTop ?? null;
   applyFull();
   h.classList.toggle('k38-nowk', !!K.noWeeks); h.classList.toggle('k38-noside', !!K.noSide);
+  // Fase 3 (B §3 P3): toppen leses sammen med scrollposisjonene over, før innholdet byttes (den avhenger ikke av innholdet),
+  // så tegningen tvinger ikke fram en egen layout for den.
+  const top = topOf(h);
   h.innerHTML = body();
-  fitHeight();
+  fitHeight(top);
   k39.fitMonth(h);
   k38.applyZoom(h);
   k44.afterPaint(h); // prompt 44
@@ -832,12 +835,13 @@ function applyFull() {
   document.body.classList.toggle('kal-fs', on);
 }
 /** Med toppmeny: høyden er vinduet minus det som ligger over kalenderen (toppmenyen), minst 620 px. */
-function fitHeight() {
+const topOf = (h) => (h.classList.contains('k39-fs') || isMobile() ? null : Math.max(0, Math.round(h.getBoundingClientRect().top + window.scrollY)));
+function fitHeight(top) {
   const h = host();
   if (!h) return;
-  if (h.classList.contains('k39-fs') || isMobile()) { h.style.removeProperty('--k2-top'); return; }
-  const top = Math.max(0, Math.round(h.getBoundingClientRect().top + window.scrollY));
-  h.style.setProperty('--k2-top', `${top}px`);
+  if (top === undefined) top = topOf(h);
+  if (top == null) { h.style.removeProperty('--k2-top'); return; }
+  if (h.style.getPropertyValue('--k2-top') !== `${top}px`) h.style.setProperty('--k2-top', `${top}px`);
 }
 function closeCal() {
   if (k38.appMode()) return; // Mac-appen: vinduet lukkes med den røde knappen, ikke her

@@ -14,6 +14,7 @@ import { parseQuick } from '/assets/js/quick-time.js';
 import { LEARN_TYPES, typeName, loadMemory, memoryNow, addMemory, applyMemory, nameOfEvent, dinOf } from '/assets/js/glimt-memory.js'; // prompt 33
 import * as P29 from './mobile-p29.js';
 import { glimt } from './mobile-p31.js'; // prompt 32: Glimt-merket i søket og «Beskriv med Glimt»
+import { vw } from '/assets/js/lib/viewport.js'; // vindusstørrelsen uten tvungen layout
 
 const MN = ['januar', 'februar', 'mars', 'april', 'mai', 'juni', 'juli', 'august', 'september', 'oktober', 'november', 'desember'], MS = MN.map((x) => x.slice(0, 3));
 const WD = ['søndag', 'mandag', 'tirsdag', 'onsdag', 'torsdag', 'fredag', 'lørdag'], WS = ['MAN', 'TIR', 'ONS', 'TOR', 'FRE', 'LØR', 'SØN'];
@@ -191,7 +192,7 @@ export function kalWidget() {
 
 /* ---------- Kalender v2: tegning ---------- */
 const curD = () => (K.cur ? ofKey(K.cur) : d0(new Date()));
-const wide = () => innerWidth >= 600;
+const wide = () => vw() >= 600;
 const svgP = (d, s = 19, w = 1.9) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`;
 const evAttr = (e) => `data-k27="ev" data-id="${esc(e.id)}" data-k="${e.k}"`;
 let EVMAP = new Map(); // id → hendelse (for detaljer), fylles ved tegning

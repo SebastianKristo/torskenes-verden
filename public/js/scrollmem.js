@@ -8,28 +8,50 @@ const NO_STATE = () => (history.state && typeof history.state === 'object' ? his
 export function scrollMemory({ el = () => document.scrollingElement || document.documentElement } = {}) {
   try { history.scrollRestoration = 'manual'; } catch { /* eldre nettlesere */ }
   const mem = new Map(); // løpenummer → scrollTop
-  let cur = null, lastY = 0, seq = 0, timer = 0, userMoved = false;
+  let cur = null, lastY = 0, seq = 0, userMoved = false;
   const target = () => el();
-  const track = () => { lastY = target().scrollTop; };
   const scroller = target() === document.scrollingElement || target() === document.documentElement ? window : target();
-  scroller.addEventListener('scroll', track, { passive: true });
-  const stop = () => { userMoved = true; };
-  for (const ev of ['wheel', 'touchstart', 'keydown', 'mousedown']) window.addEventListener(ev, stop, { passive: true });
+  const stop = () => { userMoved = true; guard = null; };
+  for (const ev of ['wheel', 'touchstart', 'touchmove', 'keydown', 'mousedown', 'pointerdown']) window.addEventListener(ev, stop, { passive: true });
 
-  // Innholdet lastes ofte etter tegningen, så siden kan være for kort i starten. Prøv igjen en liten stund.
-  function restore(y) {
-    clearTimeout(timer);
-    userMoved = false;
-    const t0 = Date.now();
-    const step = () => {
-      const s = target();
-      s.scrollTop = y;
-      lastY = s.scrollTop;
-      if (userMoved || Math.abs(s.scrollTop - y) < 2 || Date.now() - t0 > 1500) return;
-      timer = setTimeout(step, 50);
-    };
-    step();
+  // Fase 3 (B §3 P3/B6): før ble scrollTop lest og satt hvert 50.–60. ms i 1,5 s etter hver navigasjon (15–25 tvungne layouter per
+  // rutebytte). Nå settes posisjonen én gang, og den rettes bare når noe faktisk flytter den: en scroll-hendelse som ikke kom fra
+  // brukeren, eller at innholdet vokser (ResizeObserver, som kjører etter layout). Brukerinput (hjul, berøring, tast, mus) avbryter.
+  //   keep: true  – hold posisjonen hele perioden (ny side øverst: deler som lastes etterpå skal ikke trekke den ned)
+  //   keep: false – ferdig så snart posisjonen er nådd (tilbake: siden kan være for kort til innholdet er lastet)
+  let guard = null;
+  const ro = typeof ResizeObserver === 'function' ? new ResizeObserver(() => fix()) : null;
+  function fix() {
+    const g = guard;
+    if (!g) return;
+    if (userMoved || Date.now() - g.t0 > 1500) { guard = null; ro?.disconnect(); return; }
+    const s = target();
+    if (Math.abs(s.scrollTop - g.y) >= (g.keep ? 1 : 2)) s.scrollTop = g.y;
+    lastY = s.scrollTop;
+    if (!g.keep && Math.abs(s.scrollTop - g.y) < 2) { guard = null; ro?.disconnect(); }
   }
+  function hold(y, keep) {
+    userMoved = false;
+    guard = { y, keep, t0: Date.now() };
+    const s = target();
+    if (Math.abs(s.scrollTop - y) >= 1) s.scrollTop = y;
+    lastY = s.scrollTop;
+    if (!keep && Math.abs(s.scrollTop - y) < 2) { guard = null; return; }
+    if (ro) {
+      ro.disconnect();
+      const box = s === document.documentElement || s === document.scrollingElement ? document.body : s;
+      for (const c of box?.children ?? []) ro.observe(c);
+    }
+    setTimeout(fix, 1550); // slipper vakten selv om ingenting skjer
+  }
+  // Rettingen etter en scroll-hendelse venter til neste bilde (én gang per bilde, uansett hvor mange hendelser som kommer).
+  let fixQ = 0;
+  const later = (fn) => (typeof requestAnimationFrame === 'function' ? requestAnimationFrame(fn) : setTimeout(fn, 16));
+  const track = () => { lastY = target().scrollTop; if (guard && !fixQ) fixQ = later(() => { fixQ = 0; fix(); }); };
+  scroller.addEventListener('scroll', track, { passive: true });
+
+  // Innholdet lastes ofte etter tegningen, så siden kan være for kort i starten. Prøv igjen når innholdet vokser.
+  function restore(y) { hold(y, false); }
 
   // Prompt 50 (claude-code-web-fanebytte-scroll-topp.md): ny fane/side starter alltid øverst – også når deler som lastes etterpå
   // (Matplan, Media, Kart) monteres og trekker posisjonen ned, eller nettleseren klemmer den mot bunnen av en kortere side.
@@ -37,20 +59,8 @@ export function scrollMemory({ el = () => document.scrollingElement || document.
   // Prompt 87 (claude-code-web-navigasjon-uten-reload.md): y er 0 for en ny modul, og min(nåværende, heroHøyde) for en ny side i samme
   // modul (FinansHub: Oversikt → Boliger), så sidemenyen og toppen står der de er og innholdet starter øverst i innholdsområdet.
   function pinTop(y = 0) {
-    clearTimeout(timer);
-    userMoved = false;
-    const t0 = Date.now();
-    const s0 = target();
-    if (Math.abs(s0.scrollTop - y) >= 1) s0.scrollTop = y;
-    lastY = y;
-    if (scroller === window && y === 0) { try { window.scrollTo(0, 0); } catch { /* */ } }
-    const step = () => {
-      if (userMoved || Date.now() - t0 > 1500) return;
-      const s = target();
-      if (Math.abs(s.scrollTop - y) >= 1) { s.scrollTop = y; lastY = s.scrollTop; }
-      timer = setTimeout(step, 60);
-    };
-    timer = setTimeout(step, 30);
+    hold(y, true);
+    if (scroller === window && y === 0 && target().scrollTop !== 0) { try { window.scrollTo(0, 0); } catch { /* */ } }
   }
 
   return {

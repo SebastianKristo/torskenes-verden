@@ -522,9 +522,11 @@ const keepFocus = (el, fn) => {
   fn();
   if (n) { const f = el.querySelector(`[name="${n}"]`); if (f) { f.focus({ preventScroll: true }); try { f.setSelectionRange(pos, pos); } catch { /* */ } } }
 };
-function paintMain() {
+// Fase 3 (B §3 P3): scrollposisjonene leses før noe skrives (paint() leser alle først), og 0 skrives ikke tilbake –
+// før ga hver tegning 15 + 8 tvungne layouter (les etter skriv).
+function paintMain(y) {
   const c = root?.querySelector('[data-m43-main]'); if (!c) return;
-  const y = c.scrollTop;
+  if (y == null) y = c.scrollTop;
   keepFocus(c, () => { c.innerHTML = `<div class="m43-in-w m70-w">${mainHtml()}</div>`; });
   const slot = c.querySelector('[data-pb44-slot]');
   if (slot) { if (!pbHost) pbHost = document.createElement('div'); slot.replaceWith(pbHost); mountPlayback(pbHost); }
@@ -532,26 +534,36 @@ function paintMain() {
   if (ns) { if (!nrkHost) nrkHost = document.createElement('div'); ns.replaceWith(nrkHost); mountNrk(nrkHost); }
   const ms = c.querySelector('[data-musikk-slot]');
   if (ms) { if (!musikkHost) musikkHost = document.createElement('div'); ms.replaceWith(musikkHost); mountMusikk(musikkHost); }
-  c.scrollTop = y;
+  if (y) c.scrollTop = y;
 }
 function paintTop() { const t = root?.querySelector('[data-m43-top]'); if (t) { keepFocus(t, () => { t.innerHTML = topHtml(); }); centerTab87(t); } }
 /** Prompt 87: på mobil ruller fanelinja sidelengs – hold den valgte fanen midt i linja (topplinja tegnes på nytt hver gang). */
-function centerTab87(t) {
-  const tab = t.querySelector('.m70-tab.on'), bar = tab?.parentElement;
-  if (!bar || bar.scrollWidth <= bar.clientWidth + 1) return;
-  const a = tab.getBoundingClientRect(), b = bar.getBoundingClientRect();
-  bar.scrollLeft += a.left - b.left - (b.width - a.width) / 2;
+// Målingen venter til neste bilde (før det tegnes), så den slås sammen med layouten nettleseren uansett gjør.
+let centerRaf = 0;
+function centerTab87() {
+  cancelAnimationFrame(centerRaf);
+  centerRaf = requestAnimationFrame(() => {
+    const tab = root?.querySelector('[data-m43-top] .m70-tab.on'), bar = tab?.parentElement;
+    if (!bar || bar.scrollWidth <= bar.clientWidth + 1) return;
+    const a = tab.getBoundingClientRect(), b = bar.getBoundingClientRect();
+    bar.scrollLeft += a.left - b.left - (b.width - a.width) / 2;
+  });
 }
 function paintGl() { const g = root?.querySelector('[data-m43-gl]'); if (g) g.innerHTML = glHtml(); }
-function paintSheet() {
+function paintSheet(sc) {
   const s = root?.querySelector('[data-m43-sh]'); if (!s) return;
-  const sc = s.querySelector('.m43-sh')?.scrollTop ?? 0;
+  if (sc == null) sc = s.querySelector('.m43-sh')?.scrollTop ?? 0;
   keepFocus(s, () => { s.innerHTML = sheetHtml(); });
-  const n = s.querySelector('.m43-sh'); if (n) n.scrollTop = sc;
+  const n = s.querySelector('.m43-sh'); if (n && sc) n.scrollTop = sc;
   document.body.classList.toggle('m43-modal', !!M.sh);
 }
 function paintToast() { const t = root?.querySelector('[data-m43-toast]'); if (t) t.innerHTML = M.undo ? `<div class="m43-toast" role="status"><span>${esc(M.undo.text)}</span><button type="button" class="m44-undo" data-m44="undo">Angre</button></div>` : M.toast ? `<div class="m43-toast" role="status">${esc(M.toast)}</div>` : ''; }
-function paint() { if (paintRaf) { cancelAnimationFrame(paintRaf); paintRaf = 0; } if (!root?.isConnected) return; paintTop(); paintGl(); paintMain(); paintSheet(); paintToast(); }
+function paint() {
+  if (paintRaf) { cancelAnimationFrame(paintRaf); paintRaf = 0; }
+  if (!root?.isConnected) return;
+  const y = root.querySelector('[data-m43-main]')?.scrollTop ?? 0, sc = root.querySelector('[data-m43-sh] .m43-sh')?.scrollTop ?? 0; // les først
+  paintTop(); paintGl(); paintMain(y); paintSheet(sc); paintToast();
+}
 
 /* ---------------- Handlinger ---------------- */
 

@@ -5,6 +5,7 @@ import { api, esc, hlApi } from './core.js';
 import { m, draw, flash, startScr } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
 import * as P34 from './mobile-p34.js'; // prompt 34: mål-id, scrollTo og pulserende ring
+import { vw } from '/assets/js/lib/viewport.js'; // vindusstørrelsen uten tvungen layout
 
 const LS = 'fh_p25';
 const L = (() => { try { return JSON.parse(localStorage.getItem(LS) || '{}') || {}; } catch { return {}; } })();
@@ -210,7 +211,7 @@ export function jobTick(J) {
    5. Værsiden på Fold (≥ 700 px): værkartet rett på siden
    ===================================================================== */
 
-export const wxFold = () => innerWidth >= 700;
+export const wxFold = () => vw() >= 700;
 const LAYERS = [['rain', 'Nedbør'], ['temp', 'Temperatur'], ['wind', 'Vind'], ['clouds', 'Skyer']];
 export function wxMapCard(P, layer) {
   const la = (+P?.lat || 59.91).toFixed(3), lo = (+P?.lon || 10.75).toFixed(3);
@@ -227,7 +228,7 @@ let bp = null;
 export function boot() {
   limitsLoad().catch(() => {});
   // Bytt layout uten å laste på nytt når Fold åpnes og lukkes (600: sidelinje, 700: værsiden i to kolonner).
-  const cls = () => (innerWidth >= 700 ? 2 : innerWidth >= 600 ? 1 : 0);
+  const cls = () => (vw() >= 700 ? 2 : vw() >= 600 ? 1 : 0);
   bp = cls();
   addEventListener('resize', () => { const c = cls(); if (c !== bp) { bp = c; if (document.documentElement.dataset.ui === 'mobile') draw(); } });
 }

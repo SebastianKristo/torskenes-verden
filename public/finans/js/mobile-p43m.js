@@ -7,6 +7,7 @@ import { esc, hlApi } from './core.js';
 import { m, draw, flash } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
 import { glimtOrb } from './mobile-orb43.js';
+import { vw } from '/assets/js/lib/viewport.js'; // vindusstørrelsen uten tvungen layout
 
 /* =====================================================================
    Tilstand, hjelpere og API
@@ -54,8 +55,8 @@ const IC = {
 };
 const PLAY = '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg>';
 const nbN = (n) => Number(n ?? 0).toLocaleString('nb-NO');
-const wideOn = () => innerWidth >= 600; // stor skjerm (iPad, Fold): plakatvegg + valgt serie/film i høyre kolonne
-const webCols = () => innerWidth >= 900; // Kommer snart som 7 kolonner (som web)
+const wideOn = () => vw() >= 600; // stor skjerm (iPad, Fold): plakatvegg + valgt serie/film i høyre kolonne
+const webCols = () => vw() >= 900; // Kommer snart som 7 kolonner (som web)
 
 // Prompt 44: ?server= på alle Media-kall (felles sted for Sonarr, Radarr, qBittorrent og Prowlarr). Mangler valgt sted en
 // tjeneste, brukes standardstedet (serverne sier fra med 'fallback' i svaret, eller vi ser det i /servers-lista).

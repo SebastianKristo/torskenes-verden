@@ -23,6 +23,7 @@ import * as P31 from './mobile-p31.js';
 import { grp } from './mobile-p17.js';
 import * as B from './mobile-p41b.js';
 import { DEF47, defaults47, probe47, canTry47 } from '/assets/js/settings-srv47.js'; // prompt 47: standard serveradresser
+import { vw } from '/assets/js/lib/viewport.js'; // vindusstørrelsen uten tvungen layout
 
 const lsGet = (k, d = null) => { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch { return d; } };
 const lsSet = (k, v) => { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, JSON.stringify(v)); } catch {} };
@@ -58,7 +59,7 @@ export function osloSlot(d = new Date()) {
 }
 /** Listen for nå: innenfor tidsrommet byttes bildet hver hele time (time % antall). Dag-settet er reserve. */
 export function osloList(d = new Date()) {
-  const L = OSLO[osloSlot(d)], start = d.getHours() % L.length, w = Math.min(2000, Math.max(1280, Math.round((innerWidth || 400) * Math.min(2, devicePixelRatio || 1) * 1.4)));
+  const L = OSLO[osloSlot(d)], start = d.getHours() % L.length, w = Math.min(2000, Math.max(1280, Math.round((vw() || 400) * Math.min(2, devicePixelRatio || 1) * 1.4)));
   const order = L.map((_, i) => L[(start + i) % L.length]);
   const reserve = OSLO.dag.filter((f) => !order.includes(f));
   return [...order.map((f) => FP(f, w)), ...order.slice(0, 1).map((f) => FP(f, 1280)), ...reserve.map((f) => FP(f, 1280))];
@@ -105,7 +106,7 @@ export function scanRow(sheet = false) {
    ===================================================================== */
 const FTABS = [['na', 'Nå'], ['idag', 'I dag'], ['hjemme', 'Hjemme'], ['okonomi', 'Økonomi']];
 const FMAP = { na: ['h15', 'h3', 'h8', 'h6', 'h14', 'h5'], idag: ['h10', 'h9', 'h11', 'h8', 'h13'], hjemme: ['h7', 'h2', 'h4', 'h6'], okonomi: ['h4', 'h11', 'h2'] };
-export const foldOn = () => innerWidth >= 600 && !globalThis.P41?.maiActive?.();
+export const foldOn = () => vw() >= 600 && !globalThis.P41?.maiActive?.();
 const foldTab = () => (FTABS.some(([k]) => k === lsGet('papir_fold_tab')) ? lsGet('papir_fold_tab') : 'na');
 export function foldHome() {
   const tab = foldTab(), A = PAPER.homeBlocks(), keep = FMAP[tab];
@@ -570,7 +571,7 @@ export function boot41() {
   document.addEventListener('pointermove', (e) => { if (WXL.lp && (Math.abs(e.clientX - WXL.lp.x) > 8 || Math.abs(e.clientY - WXL.lp.y) > 8)) wxCancel(); }, true);
   document.addEventListener('pointerup', wxCancel, true); document.addEventListener('pointercancel', wxCancel, true);
   document.addEventListener('scroll', wxCancel, { capture: true, passive: true });
-  addEventListener('resize', () => { const f = innerWidth >= 600; if (f !== boot41.f) { boot41.f = f; if (m.screen === 'hl') draw(); } });
-  boot41.f = innerWidth >= 600;
+  addEventListener('resize', () => { const f = vw() >= 600; if (f !== boot41.f) { boot41.f = f; if (m.screen === 'hl') draw(); } });
+  boot41.f = vw() >= 600;
   B.boot41b();
 }

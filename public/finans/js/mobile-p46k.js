@@ -14,6 +14,7 @@ import { m, draw } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
 import { setTiles } from './mobile-p20.js';
 import { paperDark } from './mobile-paper.js';
+import { vw } from '/assets/js/lib/viewport.js'; // vindusstørrelsen uten tvungen layout
 
 const MD = { bus: { n: 'Buss', c: '#c8372d', p: 'M6 4h12a2 2 0 0 1 2 2v10H4V6a2 2 0 0 1 2-2zM4 11h16M7 20v-4M17 20v-4' }, metro: { n: 'T-bane', c: '#d9661f', p: 'M5 5h14M12 5v15' }, tram: { n: 'Trikk', c: '#2b6fb3', p: 'M7 7h10v9H7zM9 3h6M12 3v4M8 21l2-5M16 21l-2-5' }, rail: { n: 'Tog', c: '#2f7a4f', p: 'M7 3h10v12H7zM7 10h10M9 19l-2 2M15 19l2 2' }, water: { n: 'Båt', c: '#5b4bb5', p: 'M3 16c2 1.5 4 1.5 6 0s4-1.5 6 0 4 1.5 6 0M6 13l1-5h10l1 5M12 4v4' } };
 const MK = ['bus', 'metro', 'tram', 'rail', 'water'];
@@ -21,7 +22,7 @@ const nm = (x) => { const s = String(x ?? '').toLowerCase(); return s === 'coach
 const svg = (d, s = 16, w = 2, c = 'currentColor') => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`;
 const hav = (a, b, c, d) => { const R = 6371e3, p = Math.PI / 180, x = Math.sin(((c - a) * p) / 2) ** 2 + Math.cos(a * p) * Math.cos(c * p) * Math.sin(((d - b) * p) / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(x)); };
 const reduce = () => { try { return matchMedia('(prefers-reduced-motion: reduce)').matches; } catch { return false; } };
-const wideK = () => innerWidth >= 900;
+const wideK = () => vw() >= 900;
 const hm = (d) => d.toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit' });
 // Reserve når serveren ikke svarer (fasit DST): et utvalg holdeplasser i Oslo sentrum.
 const DST = [['NSR:StopPlace:58404', 'Nationaltheatret', 59.9147, 10.7317, ['metro', 'tram', 'rail', 'bus']], ['NSR:StopPlace:58405', 'Stortinget', 59.9131, 10.7426, ['metro']], ['NSR:StopPlace:58366', 'Jernbanetorget', 59.9118, 10.7499, ['metro', 'tram', 'bus']], ['NSR:StopPlace:58381', 'Majorstuen', 59.9296, 10.7150, ['metro', 'tram', 'bus']], ['NSR:StopPlace:6488', 'Bislett', 59.9254, 10.7329, ['tram']], ['NSR:StopPlace:6505', 'Holbergs plass', 59.9196, 10.7340, ['tram', 'bus']], ['NSR:StopPlace:6452', 'Frogner plass', 59.9223, 10.7062, ['tram']], ['NSR:StopPlace:6562', 'Aker brygge', 59.9106, 10.7280, ['water', 'bus']], ['NSR:StopPlace:6274', 'Schous plass', 59.9201, 10.7595, ['tram']], ['NSR:StopPlace:58195', 'Carl Berners plass', 59.9256, 10.7779, ['metro', 'bus']], ['NSR:StopPlace:337', 'Oslo S', 59.9105, 10.7530, ['rail']], ['NSR:StopPlace:58227', 'Ullevål stadion', 59.9483, 10.7340, ['metro', 'tram']], ['NSR:StopPlace:58193', 'Forskningsparken', 59.9431, 10.7179, ['metro', 'tram']], ['NSR:StopPlace:6435', 'Adamstuen', 59.9339, 10.7356, ['tram']], ['NSR:StopPlace:6213', 'Alexander Kiellands plass', 59.9283, 10.7517, ['bus', 'tram']], ['NSR:StopPlace:6334', 'Stensgata', 59.9282, 10.7271, ['bus']], ['NSR:StopPlace:6431', 'Welhavens gate', 59.9227, 10.7313, ['bus']], ['NSR:StopPlace:6503', 'Pilestredet', 59.9206, 10.7350, ['bus']]].map(([id, n, la, lo, md]) => ({ id, n, la, lo, m: md }));
