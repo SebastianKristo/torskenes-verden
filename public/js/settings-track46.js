@@ -1,7 +1,7 @@
 // Prompt 46 (claude-code-sporing-posten-postnord-fiks.md §7): Innstillinger → Integrasjoner → Sporing · kontoer.
 // Posten/Bring («Logg inn med Posten» / «Logg inn med Bring»), PostNord «Spor med nummer» (alltid på) og «Logg inn med PostNord».
 // Status per kilde fra serveren: «Tilkoblet · 4 pakker · oppdatert 14:02» / «Må logge inn på nytt» / «PostNord har endret app-nøkkelen …».
-// DATA46 (server/tracking46.js): GET /api/tracking/sources46, POST /api/tracking/accounts/:src/{start,finish,sync}, DELETE …/:src.
+// DATA46 (server/sporing/accounts.js): GET /api/tracking/sources46, POST /api/tracking/accounts/:src/{start,finish,sync}, DELETE …/:src.
 // Innlogging på web: transportørens side åpnes i ny fane; redirecten (com.postnord.app://redirect?code=… / posten://login?code=…)
 // kan ikke åpne Homelab, så brukeren limer inn adressen (kort guide fra serveren). Tokens blir på serveren, kryptert.
 import { api, esc } from './util.js';

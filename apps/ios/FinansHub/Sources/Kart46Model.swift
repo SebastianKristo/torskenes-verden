@@ -4,7 +4,7 @@ import MapKit
 
 /* ---------------- Prompt 46: Kart – holdeplasser, kjøretøy i sanntid, mine soner og personer (modell) ----------------
  Spesifikasjon: claude-code-kart-side.md. Fasit: Kart.dc.html (bred ≥ 900 pt = iPad, smalere = mobil).
- Server (DATA46, server/kart46.js) – alle Entur-kall går via serveren med ET-Client-Name:
+ Server (DATA46, server/familie/map.js) – alle Entur-kall går via serveren med ET-Client-Name:
    GET  /api/kart → {prefs:{z,c,show,md,vz}, zones, people, modes, source, sourceText, tiles:{url,minZoom,maxZoom}}
    GET  /api/kart/stops?bbox=minLat,minLon,maxLat,maxLon → {source, stops:[{id,name,lat,lon,modes}], tooBig?}
    GET  /api/kart/stops/:id/departures → {stop, calls:[{line,mode,to,platform,expected,minutes,delayMin,realtime}]}
