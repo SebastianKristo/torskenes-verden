@@ -436,9 +436,9 @@ body[data-route="media"]{overflow:hidden}
 .m43 .t-ok{color:var(--ok)}.m43 .t-warn{color:var(--warn)}.m43 .t-bad{color:var(--bad)}.m43 .t-mut{color:var(--mt)}
 .m43-row{display:flex;align-items:center;gap:10px;min-width:0}
 .m43-row.sb{justify-content:space-between}.m43-row.xwrap{flex-wrap:wrap}.m43-row.xtop{align-items:flex-start}.m43-row.base{align-items:baseline}
-.m43-row.g6{gap:6px}.m43-row.g8{gap:8px}.m43-row.g10{gap:10px}.m43-row.g12{gap:12px}.m43-row.g14{gap:14px}.m43-row.g16{gap:16px}.m43-row.g5x{gap:5px 8px}
+.m43-row.g6{gap:6px}.m43-row.g8{gap:8px}.m43-row.g10{gap:10px}.m43-row.g12{gap:12px}.m43-row.g16{gap:16px}.m43-row.g5x{gap:5px 8px}
 .m43-col{display:flex;flex-direction:column;min-width:0}
-.m43-col.g2{gap:2px}.m43-col.g3{gap:3px}.m43-col.g4{gap:4px}.m43-col.g5{gap:5px}.m43-col.g6{gap:6px}.m43-col.g7{gap:7px}.m43-col.g8{gap:8px}.m43-col.g12{gap:12px}
+.m43-col.g2{gap:2px}.m43-col.g3{gap:3px}.m43-col.g4{gap:4px}.m43-col.g6{gap:6px}.m43-col.g7{gap:7px}.m43-col.g8{gap:8px}.m43-col.g12{gap:12px}
 .m43 .grow{flex:1;min-width:0}.m43 .grow2{flex:2;min-width:0}.m43 .mw0{min-width:0}
 .m43-sm{font-size:12.5px}.m43-13{font-size:13px}.m43-14{font-size:14px}.m43-15{font-size:15px}
 .m43-pad{padding:14px}
@@ -461,7 +461,6 @@ body[data-route="media"]{overflow:hidden}
 .m43-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:44px;padding:0 18px;border-radius:22px;border:1px solid transparent;background:transparent;color:var(--k);font:700 14px Manrope,system-ui,sans-serif;cursor:pointer;white-space:nowrap;text-decoration:none}
 .m43-btn.ink{background:var(--k);color:var(--b);font-weight:800}
 .m43-btn.line{border-color:var(--ln)}
-.m43-btn.ink-b{border-color:var(--k);font-weight:800}
 .m43-btn.inv{background:var(--b);color:var(--k);font-weight:800;height:38px;padding:0 16px}
 .m43-btn.alt{border:1.5px solid color-mix(in srgb,var(--b) 40%,transparent);color:var(--b);font-weight:800}
 .m43-btn.alt.on{background:#b23a2a;border-color:var(--b)}
@@ -494,20 +493,6 @@ body[data-route="media"]{overflow:hidden}
 .m43-sw.on{background:#2f6b4a;justify-content:flex-end}
 .m43-sw i{width:22px;height:22px;border-radius:11px;background:#fff}
 
-/* Topplinja (1b: pille-faner), full bredde, 32 px marg */
-.m43-top{flex:none;padding:22px 32px 12px}
-.m43-tl{width:100%;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
-.m43-h{font:500 32px/1 Newsreader,Georgia,serif;margin-right:6px}
-.m43-tabs{display:flex;gap:4px;padding:4px;border-radius:999px;background:var(--cd);border:1px solid var(--ln);max-width:100%;overflow-x:auto;scrollbar-width:none}
-.m43-tabs::-webkit-scrollbar{display:none}
-.m43-tab{flex:none;height:38px;padding:0 16px;border-radius:999px;border:0;background:transparent;color:var(--k);font:700 14px Manrope,system-ui,sans-serif;cursor:pointer;white-space:nowrap}
-.m43-tab.on{background:var(--k);color:var(--b)}
-.m43-gl{flex:1 1 260px;max-width:440px;margin:0 0 0 auto;height:44px;border-radius:22px;background:var(--cd);border:1px solid var(--ln);display:flex;align-items:center;gap:10px;padding:0 16px 0 12px}
-.m43-gl input{flex:1;min-width:0;border:0;background:transparent;outline:none;font:500 14px Manrope,system-ui,sans-serif;color:var(--k)}
-.m43-gl input::placeholder{color:var(--mt)}
-.m43-gl:focus-within{border-color:var(--k)}
-.m43-glo{display:flex}
-
 /* Glimt-panelet */
 .m43-glp{flex:none;padding:0 32px 12px}
 .m43-glc{display:flex;flex-direction:column;gap:10px;padding:14px 16px}
@@ -526,8 +511,6 @@ body[data-route="media"]{overflow:hidden}
 .m43-main{flex:1;min-height:0;overflow-y:auto;scrollbar-width:none;padding:6px 32px 40px}
 .m43-main::-webkit-scrollbar{display:none}
 .m43-in-w{width:100%;display:flex;flex-direction:column;gap:18px}
-.m43-h1{font:500 40px/1 Newsreader,Georgia,serif}
-.m43-h3{font:500 22px Newsreader,Georgia,serif}
 .m43-art{flex:none;border-radius:8px;background-size:cover;background-position:center}
 .m43-art.xs{width:26px;height:38px;border-radius:4px}
 .m43-art.sm{width:48px;height:72px;border-radius:6px}
@@ -542,48 +525,9 @@ body[data-route="media"]{overflow:hidden}
 .m43-q{flex:none;padding:3px 8px;border-radius:6px;background:var(--k);color:var(--b);font-size:12px;font-weight:700;white-space:nowrap}
 .m43-rel{font:500 12.5px/1.35 'IBM Plex Mono',ui-monospace,monospace;word-break:break-all}
 
-/* Kommer snart: 7 kolonner */
-.m43-week{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:12px;align-items:start}
-.m43-day{display:flex;flex-direction:column;gap:10px;min-width:0}
-.m43-dh{display:flex;justify-content:space-between;align-items:baseline;padding-bottom:6px;border-bottom:1.5px solid var(--ln);color:var(--mt)}
-.m43-dh b{font-size:14px}
-.m43-dh .mono{font-size:10.5px;font-weight:600;color:var(--mt)}
-.m43-dh.has{border-color:var(--k);color:var(--k)}
-.m43-dh.today{border-color:var(--lb);color:var(--lb)}
-.m43-ki{display:flex;flex-direction:column;gap:5px;border:0;background:transparent;padding:0;text-align:left;color:var(--k);cursor:pointer;min-width:0}
-.m43-kp{position:relative;width:100%;height:150px;border-radius:10px;background-size:cover;background-position:center;overflow:hidden;display:flex;align-items:flex-end;padding:10px}
-.m43-kp::after,.m43-lp::after{content:"";position:absolute;inset:40% 0 0;background:linear-gradient(transparent,rgba(0,0,0,.55));pointer-events:none}
-.m43-kp b,.m43-lp b{position:relative;z-index:1;font:500 17px/1.1 Newsreader,Georgia,serif;color:#fff;text-wrap:pretty}
-.m43-kp .m43-dot{position:absolute;top:8px;left:8px;z-index:1;box-shadow:0 0 0 2px rgba(255,255,255,.9)}
-.m43-ke{font-size:12.5px}
-.m43-kdh{display:flex;align-items:baseline;gap:10px;padding-bottom:6px;border-bottom:1.5px solid var(--k)}
-.m43-kdh b{font:500 19px Newsreader,Georgia,serif}
-.m43-kmi{display:flex;gap:12px;align-items:center;padding:10px;border-radius:18px;background:var(--cd);border:1px solid var(--ln);text-align:left;color:var(--k);cursor:pointer}
-.m43-kmi b{font-size:15px}
-.m43-kmi .t-mut{font-size:13px}
-.m43-kmi .m43-s{font-size:12.5px}
-.m43-kmi .mono{font-size:12px;font-weight:600}
-.m43-strip{display:flex;align-items:center;gap:20px;flex-wrap:wrap;padding:14px 16px;border-radius:18px;background:var(--k);color:var(--b)}
-.m43-sgo{flex:none;border:0;background:transparent;color:inherit;padding:0;font:500 20px Newsreader,Georgia,serif;cursor:pointer}
-.m43-sit{flex:1 1 180px;min-width:0;display:flex;align-items:center;gap:10px}
-.m43-sit .ell{font-size:13px}
-.m43-sbar{height:3px;border-radius:2px;background:color-mix(in srgb,var(--b) 25%,transparent);overflow:hidden}
-.m43-sbar i{display:block;height:100%;background:var(--b)}
-
-/* Bibliotek */
-.m43-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:18px 14px}
-.m43-lc{display:flex;flex-direction:column;gap:5px;min-width:0;border:0;background:transparent;padding:0;text-align:left;color:var(--k);cursor:pointer}
-.m43-lp{position:relative;aspect-ratio:2/3;border-radius:10px;background-size:cover;background-position:center;display:flex;align-items:flex-end;padding:10px;overflow:hidden}
-.m43-lp .m43-dot{position:absolute;top:8px;right:8px;z-index:1;box-shadow:0 0 0 2px rgba(255,255,255,.9)}
-.m43-lm{font-size:12.5px;color:var(--mt)}
-.m43-lc .m43-s{font-size:12.5px}
-.m43-lc:hover .m43-lp,.m43-ki:hover .m43-kp{filter:brightness(1.06)}
-
 /* Serie-/filmside */
-.m43-back{align-self:flex-start;height:40px;padding:0;border:0;background:transparent;color:var(--lb);font:700 15px Manrope,system-ui,sans-serif;cursor:pointer}
 .m43-dh2{display:flex;gap:24px;align-items:flex-end;flex-wrap:wrap}
 .m43-dh2>.m43-col{flex:1 1 240px}
-.m43-dt{font:500 44px/1.05 Newsreader,Georgia,serif;text-wrap:pretty}
 .m43-srt{font:500 38px/1.05 Newsreader,Georgia,serif;text-wrap:pretty}
 .m43-dchip{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:9px 14px;min-height:52px;border-radius:14px;border:1px solid var(--ln);background:var(--cd);color:var(--k);cursor:pointer;text-align:left}
 .m43-dchip .m43-lab{font-size:10px;letter-spacing:.1em}
@@ -609,25 +553,6 @@ body[data-route="media"]{overflow:hidden}
 .m43-rr .m43-row{font-size:13px}
 .m43-grab{flex:none;width:44px;height:44px;border-radius:22px;border:0;background:var(--k);color:var(--b);display:grid;place-items:center;cursor:pointer;font-weight:800;padding:0}
 .m43-grab.done{background:#2f6b4a;color:#fff;opacity:1}
-
-/* qBittorrent */
-.m43-qs{border-radius:20px;background:var(--k);color:var(--b);padding:18px;display:flex;flex-wrap:wrap;gap:14px;align-items:center;justify-content:space-between}
-.m43-sp{font:500 32px/1 Newsreader,Georgia,serif}
-.m43-qsb{flex:1 1 240px;max-width:400px}
-.m43-tgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(400px,1fr));gap:12px}
-.m43-tc{display:flex;gap:12px;padding:12px;border-radius:18px;background:var(--cd);border:1px solid var(--ln);min-width:0}
-.m43-pct{flex:none;font:500 26px/1 Newsreader,Georgia,serif}
-.m43-bar{height:5px;border-radius:3px;background:var(--sf);overflow:hidden}
-.m43-bar.thin{height:6px}
-.m43-bar i{display:block;height:100%;background:var(--k)}
-.m43-bar i.b-ok{background:var(--ok)}.m43-bar i.b-warn{background:var(--warn2)}.m43-bar i.b-mut{background:var(--gr)}.m43-bar i.b-bad{background:#b23a2a}.m43-bar i.b-ink{background:var(--k)}
-
-/* Prowlarr */
-.m43-psum{font:500 30px/1.05 Newsreader,Georgia,serif}
-.m43-ixs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 24px;padding:4px 16px}
-.m43-ix{display:flex;align-items:center;gap:12px;min-height:62px;border-bottom:1px solid var(--sf)}
-.m43-ix b{font-size:15px}
-.m43-ix .m43-btn{min-width:84px}
 
 /* Ark */
 .m43-shb{position:absolute;inset:0;z-index:20;background:rgba(20,18,14,.42);display:flex;align-items:center;justify-content:center;padding:24px}
@@ -666,34 +591,19 @@ body[data-route="media"]{overflow:hidden}
 .m43-toast{position:absolute;left:50%;bottom:28px;transform:translateX(-50%);z-index:30;width:max-content;max-width:calc(100% - 32px);padding:12px 18px;border-radius:16px;background:var(--k);color:var(--b);font-size:14px;font-weight:700;line-height:1.4;box-shadow:0 12px 30px rgba(0,0,0,.25)}
 
 /* Smalere vindu */
-@media (max-width:1240px){.m43-week{grid-template-columns:repeat(4,minmax(0,1fr))}}
+
 @media (max-width:900px){
-  .m43-top{padding:14px 16px 6px}
-  .m43-tl{gap:8px}
-  .m43-h{order:1;flex:1 1 auto;font-size:34px}
-  .m43-tl>[data-m43="set"]{order:2}
-  .m43-tl>[data-m43="close"]{order:3}
-  .m43-gl{order:4;flex:1 1 100%;max-width:none;margin:0;height:46px}
-  .m43-tabs{order:5;flex:1 1 100%;padding:0;border:0;background:transparent;border-radius:0;margin:0 -16px;padding:2px 16px 4px;max-width:none;width:calc(100% + 32px)}
-  .m43-tab{height:40px;padding:0 14px;border:1px solid var(--ln);background:var(--cd)}
-  .m43-tab.on{border-color:var(--k)}
   .m43-glp{padding:4px 16px 4px}
   .m43-main{padding:14px 16px 28px}
-  .m43-h1{font-size:28px}
-  .m43-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:14px 10px}
-  .m43-lp b,.m43-kp b{font-size:14px}
-  .m43-tgrid{grid-template-columns:minmax(0,1fr)}
-  .m43-ixs{grid-template-columns:minmax(0,1fr)}
   .m43-art.dp{width:104px}
   .m43-art.sp{width:56px}
   .m43-dh2{gap:16px}
-  .m43-dt{font-size:30px}
   .m43-srt{font-size:26px}
   .m43-shb{align-items:flex-end;padding:0}
   .m43-sh{width:100%;max-height:88%;border-radius:24px 24px 0 0;padding-bottom:calc(20px + env(safe-area-inset-bottom,12px))}
   .m43-toast{bottom:calc(24px + env(safe-area-inset-bottom,0px))}
 }
-@media (max-width:560px){.m43-strip{gap:12px}.m43-qsb{max-width:none}}
+
 .m43-sh>*{flex-shrink:0}
 body[data-route="media"] header.top,body[data-route="media"] .ticker,body[data-route="media"] .bottomnav{display:none!important}
 
@@ -735,7 +645,6 @@ body[data-route="media"] header.top,body[data-route="media"] .ticker,body[data-r
 .m70 [data-m43-top]{flex:none}
 .m70-top{padding:28px 32px 24px}
 .m70-tl{max-width:1400px;margin:0 auto;display:flex;flex-wrap:nowrap;align-items:center;gap:16px;min-width:0}
-/* Prompt 88 (claude-code-media-header-lukk.md): én linje uansett antall faner – fanelinja scroller, Glimt-søket krymper, X helt til høyre. */
 /* Prompt 89: varsler-pillen er borte. Rekkefølge: Tilbake · Media · faner · Glimt (vokser) · Hjemme ▾ · ✕. */
 .m70-tl>.m70-back,.m70-tl>.m70-h,.m70-tl>.m44-srv{flex:none;white-space:nowrap}
 .m70-tl>.m70-x{margin-left:auto}
@@ -995,7 +904,6 @@ button.m70-rt:hover{text-decoration:underline;text-underline-offset:3px}
 /* Smal skjerm: én kolonne */
 @media (max-width:900px){
   .m70-top{padding:14px 16px 12px}
-  /* Prompt 88/89: rutenett på smal skjerm – Tilbake · Media · X alltid på første linje, resten under i full bredde. */
   /* Tittel og knapper krymper aldri (auto-spor). Varsler-pillen er fjernet (prompt 89). */
   .m70-tl{display:grid;grid-template-columns:auto auto minmax(0,1fr) auto;gap:10px}
   .m70-back{grid-area:1/1;height:40px}

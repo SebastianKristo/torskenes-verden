@@ -29,9 +29,7 @@ body.kal-fs .bottomnav{display:none}
 .k2 *{box-sizing:border-box}
 .k2 button,.k2 a,.k2 input,.k2 textarea{font-family:inherit}
 .k2-grow{flex:1;min-width:0}
-.k2-msg{margin:auto;padding:24px;text-align:center;color:var(--k-mut);font-size:14px;line-height:1.6}
 .k2-lab{font:600 10.5px 'IBM Plex Mono',var(--mono,monospace);letter-spacing:.12em;color:var(--k-labt)}
-.k2-toast{position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:30;padding:10px 16px;border-radius:999px;background:var(--k-ink);color:var(--k-bg);font-size:13.5px;font-weight:600;box-shadow:0 10px 24px -10px rgba(0,0,0,.5);white-space:nowrap}
 
 /* Ark */
 .k2-sheet-bg{position:absolute;inset:0;z-index:20;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;padding:16px 16px calc(16px + var(--k38-kb,0px))}
@@ -80,17 +78,6 @@ textarea.k2-in{height:auto;padding:12px 16px;resize:vertical}
 .k2-sw i::after{content:'';position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:10px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:transform .15s}
 .k2-sw[aria-checked=true] i{background:var(--k-ink)}
 .k2-sw[aria-checked=true] i::after{transform:translateX(18px)}
-.k2-srow{display:flex;align-items:center;gap:8px}
-.k2-sf{flex:1;height:48px;padding:0 14px;border-radius:999px;background:var(--k-card);color:var(--k-ink)}
-.k2-sf input{border:0;outline:none;background:transparent;color:var(--k-ink);font:500 15px Manrope,system-ui,sans-serif;height:100%}
-.k2-sres{border-radius:16px;background:var(--k-card);overflow:hidden}
-.k2-sr{display:flex;align-items:center;gap:12px;width:100%;min-height:56px;padding:8px 14px;border:0;background:transparent;color:var(--k-ink);cursor:pointer;text-align:left}
-.k2-sr+.k2-sr{border-top:1px solid var(--k-line)}
-.k2-sr:hover{background:color-mix(in oklab,var(--k-ink) 4%,transparent)}
-.k2-sr .k2-strip{width:6px;height:34px;align-self:center}
-.k2-sr .k2-grow{display:flex;flex-direction:column;gap:1px}
-.k2-sr b{font-size:14.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.k2-sr .k2-grow>span{font-size:12px;color:var(--k-mut)}
 
 /* «Legg til time» (✦ AI · RASK TIME) */
 .k2-qa{padding-top:8px}
@@ -118,8 +105,6 @@ textarea.k2-in{height:auto;padding:12px 16px;resize:vertical}
 .kq-layer{position:fixed;z-index:45;left:0;right:0;top:calc(env(safe-area-inset-top) + 14px);display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none;padding:0 12px;font-family:Manrope,system-ui,sans-serif}
 .kq-layer[hidden]{display:none}
 .kq-layer>*{pointer-events:auto}
-.kq-pill{display:flex;align-items:center;gap:8px;height:36px;padding:0 14px;border-radius:18px;background:var(--k-ink);color:var(--k-bg);font:600 13px Manrope,system-ui,sans-serif;white-space:nowrap;box-shadow:0 10px 24px -10px rgba(0,0,0,.45)}
-.kq-pill span{color:#f08a76}
 .kq-toast{width:100%;max-width:440px;display:flex;align-items:center;gap:10px;padding:10px 10px 10px 14px;border-radius:18px;background:var(--k-ink);color:var(--k-bg);box-shadow:0 14px 30px -10px rgba(0,0,0,.5)}
 .kq-tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
 .kq-tx b{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -130,34 +115,13 @@ textarea.k2-in{height:auto;padding:12px 16px;resize:vertical}
 html[data-hl="2c"] .kq-toast.err .kq-tx b{color:#f59a8f}
 html:not([data-hl="2c"]) .kq-layer{--k-ink:#f3efe6;--k-bg:#141a26}
 
-.k2-new .k2-sm{display:none}
-@media (max-width:1199px){
-  .k2-tabs button{padding:0 11px}
-  .k2-new .k2-lg{display:none}
-  .k2-new .k2-sm{display:inline}
-  .k2-title>span:first-child{font-size:26px}
-}
 @media (max-width:767px){
   .k2{height:calc(100dvh - 200px);min-height:520px;border-radius:20px;margin:0;border:1px solid var(--k-line);padding-top:0}
   .k2-top{flex-wrap:nowrap}
-  .k2-qbtn{width:40px;padding:0;font-size:16px}
-  .k2-now-c{margin:0 8px 8px;gap:10px;padding:8px 12px 10px 10px}
-  .k2-now-t b{font-size:18px}
-  .k2-now-r b{font-size:20px}
-  .k2-mtabs{gap:4px;padding:0 8px 8px}
-  .k2-mtabs .k2-nav{gap:4px;margin:0}
-  .k2-mtabs .k2-circ{width:32px;height:32px;font-size:16px}
-  .k2-mtabs .k2-tabs{flex:1;min-width:0}
-  .k2-mtabs .k2-tabs button{flex:1 1 auto;min-width:0;padding:0 6px;font-size:12.5px}
   .k2-top{padding:4px 6px 4px 8px}
-  .k2-title>span:first-child{font-size:24px}
-  .k2-new{width:40px;padding:0;font-size:22px;font-weight:500}
-  .k2-ic{width:40px}
   /* Arket nedenfra over tastaturet (det web38.css ga før, da denne fila lastes etter den) */
   .k2-sheet-bg{align-items:flex-end;padding:0 0 var(--k38-kb,0px)}
   .k2-sheet{max-width:none;border-radius:24px 24px 0 0;max-height:92%;padding-bottom:calc(22px + env(safe-area-inset-bottom))}
-  .k2-dhd b{width:28px;height:28px;font-size:14px}
-  .k2-ev b{font-size:10.5px}
 }
 .kal-wp{flex:none;padding:3px 8px;border-radius:999px;background:rgba(0,0,0,.07);color:inherit;font-size:10.5px;font-weight:800}
 .kal-wp.soon{background:#b23a2a;color:#fff}
@@ -188,7 +152,6 @@ html[data-hl="2c"] .p-sec .kal.kal-hw{background:#fff}
 .kal-hw-x .kal-wp{background:var(--k-in)}
 .kal-hw-x .kal-wp.soon{background:#b23a2a}
 .kal-hw-e{font-size:13px;color:var(--k-mut)}
-
 
 /* ---------- Prompt 32: Spotlight-søk med Glimt (claude-code-kalender-sok-glimt.md, fasit sr) ---------- */
 .k3-sr-bg{position:fixed;inset:0;z-index:120;background:rgba(20,18,14,.46);transform:translateZ(0);display:flex;align-items:flex-start;justify-content:center;padding:10vh 24px 24px;box-sizing:border-box}
@@ -286,7 +249,6 @@ html:not([data-hl="2c"]) .k3-fa-err{color:#f59a8f}
    MacCalendars35, MacGrid, MacViews) – 1 pt på Mac = 1 px her. Samme fonter som Mac-appen (Newsreader, Manrope,
    IBM Plex Mono – fra Google Fonts, CSP tillater bare fonts.gstatic.com). Tema følger systemet (lyst/mørkt), som Mac-vinduet. */
 
-
 /* MacTheme.light / MacTheme.darkTheme */
 #kal.k39{--bg:#f3efe6;--ink:#1b1a17;--card:#fffdf8;--chip:#e9e2d3;--line:#ddd5c5;--line2:#e6dfd1;--mut:#6b665c;--mut2:#716b5e;--ink2:#3d3a33;
   --acc:#b23a2a;--red:#b23a2a;--sun:#b23a2a;--dim:rgba(20,18,14,.46);--glass:rgba(255,253,248,.94);--tint:16%;--tint-all:18%;--today:rgba(178,58,42,.035);--today-m:rgba(178,58,42,.06);
@@ -333,8 +295,6 @@ html:not([data-hl="2c"]) .k3-fa-err{color:#f59a8f}
 .k39-quick{padding:0 13px;border:1px solid var(--line);background:var(--card);color:var(--ink)}
 .k39-new{padding:0 14px;border:0;background:var(--ink);color:var(--bg)}
 .k39-sm{display:none}
-
-/* ---------- «NESTE» / «NÅ» (MacNextBanner) ---------- */
 
 /* ---------- Hoveddel ---------- */
 .k39-main{flex:1;min-height:0;display:flex;position:relative}
