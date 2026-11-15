@@ -21,6 +21,10 @@ for (const hlTheme of ['2c', 'cur']) {
     const errors = watchErrors(page);
     await page.goto(`${BASE}/#/skjold`);
     await page.waitForSelector('.nav-more:not([hidden])', { timeout: 15_000 });
+    // Menyen måles på nytt når noe i topplinjen endrer bredde etter første tegning (skrift, profil, «Vær ▾»).
+    // Vent til fanefordelingen har stått stille i 400 ms, ellers kan målingen og «Mer»-menyen komme fra hver sin runde.
+    const state = () => page.evaluate(() => [...document.querySelectorAll('.pillnav > a[data-r]')].map((a) => `${a.dataset.r}:${a.classList.contains('nav-ovf')}`).join());
+    for (let prev = '', i = 0; i < 20; i++) { const cur = await state(); if (cur === prev) break; prev = cur; await page.waitForTimeout(400); }
     const s = await page.evaluate(() => {
       const nav = document.querySelector('.pillnav');
       const all = [...nav.querySelectorAll(':scope > a[data-r]')].filter((a) => !a.hidden);
