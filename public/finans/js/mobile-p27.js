@@ -114,7 +114,7 @@ export function aiSections() {
       <button class="opt-row p17-row" data-p27="audit" aria-expanded="${AUD.open}"><span class="m-grow p17-rt"><b>AI-logg</b><small>Hva som er sendt til hvilken motor</small></span><span class="p17-chev" aria-hidden="true">${AUD.open ? '⌄' : '›'}</span></button>${aud}</div>
     <div class="snote">Av «Finn logo med Gemini» = logoen finnes fra Brønnøysundregistrene, Wikidata og nettstedet, uten AI.</div>
     <span class="pp-lab p17-gl">CHAT</span><div class="list p17-list p27-set">
-      ${tgRow('chat', 'chat_my_data', 'Chat kan lese mine data', 'Finans, Kalender og Huskeliste når «Mine data» er på', false)}
+      ${tgRow('chat', 'chat_my_data', 'Chat kan lese mine data', 'Økonomi, Kalender og Gjøremål når «Mine data» er på', false)}
       ${tgRow('chat', 'chat_ask_cloud', 'Spør før sky-modeller får data', 'Gemini og Groq må godkjennes per samtale', true)}
       <a class="opt-row p17-row" href="#/chat" data-p27="openchat"><span class="m-grow p17-rt"><b>Åpne chat</b><small>Historikk, modeller og kunnskapsbase</small></span><span class="p17-chev" aria-hidden="true">›</span></a></div>`;
 }
@@ -247,7 +247,7 @@ async function shotRead(f) {
   try { SH.thumb = await new Promise((ok) => { const rd = new FileReader(); rd.onload = () => ok(rd.result); rd.onerror = () => ok(null); rd.readAsDataURL(f); }); } catch { SH.thumb = null; }
   draw();
   try { const fd = new FormData(); fd.append('image', f, f.name || 'skjermbilde.png'); SH.r = await api('/subscriptions/from-screenshot', { method: 'POST', body: fd }); }
-  catch (e) { SH.err = e.status === 404 ? 'Serveren kan ikke lese skjermbilder ennå. Oppdater FinansHub, eller legg til manuelt.' : e.message; }
+  catch (e) { SH.err = e.status === 404 ? 'Serveren kan ikke lese skjermbilder ennå. Oppdater Homelab, eller legg til manuelt.' : e.message; }
   SH.busy = false; draw();
 }
 const subBody = (r) => ({ name: r.tjeneste, plan: r.plan || undefined, price: r.pris != null ? r.pris / 100 : undefined, cycle: r.syklus === 'år' ? 'yearly' : 'monthly', nextDate: r.neste_trekk || undefined, category: r.kategori || undefined, domain: r.domain || undefined, logoUrl: r.logoUrl || undefined });

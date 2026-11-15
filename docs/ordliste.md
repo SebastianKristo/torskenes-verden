@@ -37,6 +37,13 @@ Når du finner et begrep som mangler eller brukes ulikt, legg det til her i samm
 | **Helligdag** (offentlig høytidsdag, fri), **Merkedag** (Palmesøndag, Julaften, Nyttårsaften: ikke fri) | Offentlig høytidsdag (som type), Høytid | `type` i kalenderen og `/api/dates/holidays` (Q18) |
 | **Ukentlig**, **Hver 2. uke**, **Månedlig**, **Kvartalsvis**, **Halvårlig**, **Årlig**, **Hvert 2. år** | Annenhver uke, Kvartalvis, Halvårig (som syklusnavn) | Syklusnavnene serveren sender (`cycleName`, Q40) |
 | **venter: 1 234 kr** (bolig) | Brukt (om poster som venter) | Poster til gjennomgang telles ikke som brukt (Q21) |
+| **Faste utgifter** (filter i Faste betalinger) | Faste trekk, Abonnementer og regninger | Husleie, forsikring og andre faste trekk som ikke er abonnementer (Fase 6) |
+| **Planlagte trekk** (filter i Faste betalinger) | Kalender (i Planlegging), Faste trekk | Trekkene de neste dagene med saldoprognose (Fase 6) |
+| **Sparing og planer** (side i Økonomi) | Planlegging | Sparemål, skatt, priser og abonnementsjeger (Fase 6) |
+| **Kontoer og aksjer** (side i Økonomi) | Kontoer, Aksjer (som egne sider i menyen) | Aksjer er en fane på siden (Fase 6) |
+| **Import** (Økonomi → Innstillinger → Import) | Import (som egen side i menyen) | Import har ett hjem (O3) |
+| **‹ Homelab** (veien tilbake fra Økonomi) | ‹ Hjem, ‹ Finans | Går til Homelab-skallet (Q1, Q3) |
+| **Flytt til nye kategorier** (admin-handling i Økonomi → Innstillinger → Kategorier) | Migrering, Migrer (i UI) | Forhåndsvisning, bekreft, angre (Q11) |
 
 ## Skrivemåte
 

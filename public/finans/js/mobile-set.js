@@ -101,8 +101,8 @@ function main() {
   return `${paper() ? paperTop() : ''}${G('', [profile(true)])}
     ${G('Konto', [nav('konto', 'Kontoer og brukere', '1 på enheten', 'users', '#5E8BFF'), nav('sik', 'Sikkerhet', m.me?.totp ? '2FA på' : '', 'shield', '#34C759'), nav('tok', 'API-tokens', T.tokens ? `${T.tokens.length} aktive` : '', 'key', '#FF9F0A')])}
     ${G('App', [nav('look', 'Utseende', '', 'look', '#BF5AF2'), nav('scan', 'Skanning og AI', pref('scanTap') === 'cam' ? 'Kamera' : 'Vis valg', 'cam', '#FF7A3D'), nav('notif', 'Varsler', st.nRc ? 'På' : '', 'bell', '#FF453A'), nav('hap', 'Haptikk', hpref('hap') ? 'På' : 'Av', 'vib', '#FF2D55'), nav('sokbar', 'Søkebar', 'Google', 'search', '#0A84FF'), nav('widgets', 'Widgets', 'Slik legger du til', 'list', '#30D158'), nav('kalapp', 'Kalender-appen', 'iPhone · Android', 'down', '#b23a2a')])}
-    ${G('Finans', [nav('fai', 'AI-motor', !canSrv() ? ADMIN_NOTE : 'Lokal AI', 'ai', '#FF7A3D'), nav('kat', 'Kategorier', String((S.boot?.categories ?? []).length), 'cat', '#30D158'), nav('regel', 'Regler', String((S.boot?.rules ?? []).length), 'rule', '#5E5CE6'), nav('bank', 'Bank og import', st.csvProfile ?? '', 'bank', '#0A84FF'), nav('t212', 'Aksjer · Trading 212', st.t212Set ? (st.t212Env === 'demo' ? 'Demo' : 'Live') : 'Ikke koblet', 'aks', '#64D2FF'), nav('bk', 'Backup og data', '', 'backup', '#8E8E93')])}
-    ${G('System', [nav('srv', 'Server og synk', '', 'srv', '#64D2FF'), nav('data', 'Data og lagring', '', 'db', '#8E8E93'), nav('om', 'Om FinansHub', VERSION, 'info', '#8E8E93')])}
+    ${G('Økonomi', [nav('fai', 'AI-motor', !canSrv() ? ADMIN_NOTE : 'Lokal AI', 'ai', '#FF7A3D'), nav('kat', 'Kategorier', String((S.boot?.categories ?? []).length), 'cat', '#30D158'), nav('regel', 'Regler', String((S.boot?.rules ?? []).length), 'rule', '#5E5CE6'), nav('bank', 'Bank og import', st.csvProfile ?? '', 'bank', '#0A84FF'), nav('t212', 'Aksjer · Trading 212', st.t212Set ? (st.t212Env === 'demo' ? 'Demo' : 'Live') : 'Ikke koblet', 'aks', '#64D2FF'), nav('bk', 'Backup og data', '', 'backup', '#8E8E93')])}
+    ${G('System', [nav('srv', 'Server og synk', '', 'srv', '#64D2FF'), nav('data', 'Data og lagring', '', 'db', '#8E8E93'), nav('om', 'Om Økonomi', VERSION, 'info', '#8E8E93')])}
 `; // Prompt 38: Logg ut ligger under Konto → Økt
 }
 
@@ -117,7 +117,7 @@ const PAGE = {
       <span class="pp-lab p17-gl">IKONFARGER</span>${iconThemeRow()}
       ${grp('BAKGRUNN', [row('#/set/bakgrunn', 'Bakgrunn på Hjem', 'Toppbilde, vær, planeter eller eget bilde', PHOTO_N[pref('photo')] ?? 'Ingen', 'look', 'bakgrunn')])}
       ${globalThis.P41?.holidayGroup?.() ?? '' /* prompt 41: HØYTIDER · 17. mai */}
-      ${G('Forside', [chips('startL', 'Startside', [['homelab', 'Homelab'], ['fin-hjem', 'Finans · Hjem'], ['fin-liste', 'Finans · Liste'], ['fin-budsjett', 'Finans · Budsjett']], st)], st === 'homelab' ? 'Appen åpner på Homelab.' : 'Appen åpner i Finans, og hjem-knappen går til Finans.')}
+      ${G('Forside', [chips('startL', 'Startside', [['homelab', 'Homelab'], ['fin-hjem', 'Økonomi · Oversikt'], ['fin-liste', 'Økonomi · Transaksjoner'], ['fin-budsjett', 'Finans · Budsjett']], st)], st === 'homelab' ? 'Appen åpner på Homelab.' : 'Appen åpner i Finans, og hjem-knappen går til Finans.')}
       <span class="pp-lab p17-gl">FANELINJE · FLERE VALG</span>${P32.secNavSettings()}`;
   },
   // Prompt 39 (claude-code-innst-appprofil-underside.md): PROFIL-gruppen er flyttet hit fra toppen av Innstillinger.
@@ -185,7 +185,7 @@ const PAGE = {
         <button class="mini" data-sact="navmv" data-k="${key}" data-i="${i}" data-j="${i - 1}" aria-label="Flytt ${esc(def0)} opp" ${i ? '' : 'disabled style="opacity:.3"'}>▲</button><button class="mini" data-sact="navmv" data-k="${key}" data-i="${i}" data-j="${i + 1}" aria-label="Flytt ${esc(def0)} ned" ${i < a.length - 1 ? '' : 'disabled style="opacity:.3"'}>▼</button>
         ${fixed.includes(id) ? '<span class="sval" style="width:51px;text-align:center">Alltid</span>' : `<button class="swb" data-sact="navtog" data-id="${id}" role="switch" aria-checked="${!hid}" aria-label="Vis ${esc(def0)}"><span class="sw" aria-checked="${!hid}"></span></button>`}</div>`;
     }).join('');
-    return `${G('Homelab', [rows('hlTabs', HLTABS, FIXED_HL, 'hl')])}${G('Finans', [rows('finTabs', FINTABS, FIXED_FIN, 'fin')], 'Et tomt navn gir standardnavnet. Endringene gjelder iPhone, Android og brettbar, og lagres på kontoen din.')}
+    return `${G('Homelab', [rows('hlTabs', HLTABS, FIXED_HL, 'hl')])}${G('Økonomi', [rows('finTabs', FINTABS, FIXED_FIN, 'fin')], 'Et tomt navn gir standardnavnet. Endringene gjelder iPhone, Android og brettbar, og lagres på kontoen din.')}
       ${G('', [btn('Tilbakestill navigasjon', 'navreset', '#FF8A80')])}`;
   },
 
@@ -217,7 +217,7 @@ const PAGE = {
 
   data: () => `${G('Lagring', [val('Hurtigbuffer', T.usage != null ? `${n0(T.usage / 1e6)} MB` : '–'), btn('Tøm hurtigbuffer', 'clearcache')])}
     ${G('Synk', [btn('Synk nå', 'sync'), `<a class="opt-row" href="/finans/api/transactions.csv" download><span class="m-grow" style="color:var(--m-acc);font-weight:500">Eksporter som CSV</span></a>`],
-      'Full backup og Excel-database lages i FinansHub på PC under Innstillinger → Backup og data.')}`,
+      'Full backup og Excel-database lages i Økonomi på PC under Innstillinger → Backup og data.')}`,
 
   sokbar: () => {
     const x = T.srch;

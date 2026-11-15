@@ -193,7 +193,7 @@ function prisView(d) {
     return `<li class="p51-pr${open ? ' open' : ''}"><button type="button" class="p51-prb" data-p51="pris-open" data-k="${esc(i.key)}" aria-expanded="${open}"><span><b>${esc(i.name)}</b><small>${nf(i.last.price, 2)} kr/${esc(i.unit)} · ${esc(i.last.store)} · ${i.count} kjøp</small></span>
       <span class="p51-prr"><span class="${i.changePct >= 1 ? 'neg' : i.changePct <= -1 ? 'pos' : 'p51-mut'}">${esc(i.changeText)}</span>${i.cheapest ? `<small>Billigst: ${esc(i.cheapest.store)} ${nf(i.cheapest.price, 2)} kr (−${i.cheapest.savingPct} %)</small>` : ''}</span></button>${det}</li>`;
   }).join('');
-  return `${head}${card(`${tools}${rows ? `<ul class="p51-prices">${rows}</ul>` : `<div class="p51-note">${P.ui.q ? 'Ingen varer passer søket.' : 'Ingen varelinjer ennå. Skann kvitteringer med varelinjer, så følger FinansHub prisene for deg.'}</div>`}`)}`;
+  return `${head}${card(`${tools}${rows ? `<ul class="p51-prices">${rows}</ul>` : `<div class="p51-note">${P.ui.q ? 'Ingen varer passer søket.' : 'Ingen varelinjer ennå. Skann kvitteringer med varelinjer, så følger Økonomi prisene for deg.'}</div>`}`)}`;
 }
 
 /* --- Abonnementsjeger --- */

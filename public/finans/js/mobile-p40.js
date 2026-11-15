@@ -464,13 +464,13 @@ export async function searchAsk(q) {
   if (k === 'sub') {
     let L = await api('/subscriptions').catch(() => null); L = Array.isArray(L) ? L : L?.items ?? [];
     L = L.filter((s) => s && s.active !== false && s.status !== 'cancelled');
-    if (!L.length) return { text: 'Fant ingen aktive abonnementer.', source: 'fra Subscription OS', kpis: [], cards: [], open: { label: 'Åpne Subscription OS ›', href: '#/sub' } };
+    if (!L.length) return { text: 'Fant ingen aktive abonnementer.', source: 'fra Abonnementer', kpis: [], cards: [], open: { label: 'Åpne Abonnementer ›', href: '#/fast/abonnementer' } };
     const items = L.map((s) => ({ kind: 'sub', id: s.id, name: s.name ?? s.service ?? 'Abonnement', amount: Math.abs(+s.amount || +s.price || 0), cycle: s.interval ?? s.cycle ?? 'monthly', next: s.nextDate ?? s.next_date ?? s.nextCharge ?? null, logo: s.logo ?? s.logoUrl ?? null, color: s.color ?? null }))
       .sort((a, b) => String(a.next ?? '9').localeCompare(String(b.next ?? '9')));
     const pm = items.reduce((a, x) => a + perMonth(x.amount, x.cycle), 0), nx = items.find((x) => x.next);
     const dn = nx ? daysTo(nx.next) : null;
     return { text: `Du har ${items.length} abonnement${items.length === 1 ? '' : 'er'}. Til sammen ${kr(pm)} i måneden.${nx ? ` Neste trekk er ${nx.name} ${dn === 0 ? 'i dag' : dn === 1 ? 'i morgen' : `om ${dn} dager`}.` : ''}`,
-      source: 'fra Subscription OS', kpis: [{ label: 'PER MÅNED', value: kr(pm) }, { label: 'PER ÅR', value: kr(pm * 12) }, ...(nx ? [{ label: 'NESTE TREKK', value: dShort(nx.next), sub: `${nx.name} · ${kr(nx.amount)}` }] : [])], cards: items, open: { label: 'Åpne Subscription OS ›', href: '#/sub' } };
+      source: 'fra Abonnementer', kpis: [{ label: 'PER MÅNED', value: kr(pm) }, { label: 'PER ÅR', value: kr(pm * 12) }, ...(nx ? [{ label: 'NESTE TREKK', value: dShort(nx.next), sub: `${nx.name} · ${kr(nx.amount)}` }] : [])], cards: items, open: { label: 'Åpne Subscription OS ›', href: '#/sub' } };
   }
   return null; // resten: vanlig AI-søk
 }

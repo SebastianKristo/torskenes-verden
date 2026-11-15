@@ -105,13 +105,13 @@ function mer() {
     ['konto', 'Kontoer', kr(accs().reduce((a, x) => a + (x.balance ?? 0), 0)), 'konto2'],
     ['aks', 'Aksjer', st ? `${n0(st.value ?? st.total)} ${stockCur()}` : PG.stocks?.configured === false ? 'Ikke koblet til' : '…', 'aks'],
     ['rap', 'Rapporter', 'Måned og år', 'rap'],
-    ['sub', 'Subscription OS', PG.sub ? `${kr(PG.sub.monthly ?? 0)}/mnd` : '…', 'sub2'],
+    ['sub', 'Abonnementer', PG.sub ? `${kr(PG.sub.monthly ?? 0)}/mnd` : '…', 'sub2'],
     ['dir', 'Boliger', PG.dirs ? `${PG.dirs.length} ${PG.dirs.length === 1 ? 'bolig' : 'boliger'}` : '…', 'dir2'],
     ...(LAY().hide.finn ? [['finn', 'Finn-handler', PG.finn ? `${PG.finn.ongoing ?? 0} pågående` : '…', 'finn2']] : []),
     ['imp', 'Import', 'CSV, XLSX, tekst', 'imp'],
     ['sok', 'AI-søk', 'Spør om alt', 'ai'],
   ].map(([k, l, s, ic, badge]) => ({ href: '#/' + k, l: navName(k, l), s, ic, badge }));
-  return page({ title: 'Mer', sub: 'Alt fra FinansHub på nettsiden', tiles,
+  return page({ title: 'Mer', sub: 'Alt i Økonomi', tiles,
     groups: [G('✦ Spør AI', [`<form data-pa="merai" class="opt-row col"><span style="font-size:13px;opacity:.7">Søker i transaksjoner, kvitteringer og varelinjer</span><input class="sinp" id="m-merq" type="search" enterkeyhint="search" placeholder="Hvor mye brukte jeg på kaffe?" value="${esc(PG.ai.q)}"></form>`, R.btn('Spør', 'data-pa="merask"')])] });
 }
 

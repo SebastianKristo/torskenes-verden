@@ -1,7 +1,7 @@
 {
-  "name": "FinansHub",
-  "short_name": "FinansHub",
-  "description": "Privatøkonomi – budsjett, transaksjoner og kvitteringsskanning",
+  "name": "Økonomi · Homelab",
+  "short_name": "Økonomi",
+  "description": "Økonomi i Homelab – budsjett, transaksjoner, faste betalinger og kvitteringsskanning",
   "lang": "nb",
   "id": "/finans/",
   "start_url": "/finans/",

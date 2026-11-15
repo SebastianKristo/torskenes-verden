@@ -158,12 +158,12 @@ export function taxHtml51(s, who = '') {
   const rows = s.items.map((i) => `<tr><td><b>${esc51(i.title)}</b><div class="n">${esc51(i.note)}</div>${i.orgs?.length ? `<div class="n">${i.orgs.map((o) => `${esc51(o.org)}: ${money(o.amount)}${o.counts ? '' : ' (under grensen)'}`).join(' · ')}</div>` : ''}</td>
     <td>${esc51(i.kind)}</td><td class="r">${money(i.basis)}</td><td class="r">${money(i.deduction)}</td><td class="r">${money(i.value)}</td><td>${esc51(i.source)}</td></tr>`).join('');
   const src = s.items.filter((i) => i.sources?.length).map((i) => `<h3>${esc51(i.title)}</h3><table><tr><th>Dato</th><th>Tekst</th><th class="r">Beløp</th></tr>${i.sources.map((t) => `<tr><td>${esc51(t.date)}</td><td>${esc51(t.name)}</td><td class="r">${money(t.amount)}</td></tr>`).join('')}</table>`).join('');
-  return `<!doctype html><html lang="nb"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Skattehjelp ${s.year} – FinansHub</title>
+  return `<!doctype html><html lang="nb"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Skattehjelp ${s.year} – Økonomi</title>
 <style>body{font:14px/1.45 system-ui,-apple-system,Segoe UI,sans-serif;color:#1c1b19;background:#fff;margin:32px auto;max-width:860px;padding:0 20px}h1{font:400 30px Georgia,serif;margin:0 0 4px}
 h2{font-size:16px;margin:28px 0 8px}h3{font-size:14px;margin:18px 0 6px}table{width:100%;border-collapse:collapse;margin:8px 0}th,td{border-bottom:1px solid #e2ddd2;padding:7px 6px;text-align:left;vertical-align:top}
 th{font-size:12px;color:#5c5850;font-weight:600}.r{text-align:right;white-space:nowrap}.n{color:#5c5850;font-size:12px;margin-top:2px}.sum td{font-weight:700;border-top:2px solid #1c1b19}
 .box{background:#f4f1ea;border:1px solid #e2ddd2;border-radius:10px;padding:12px 14px;margin:16px 0;font-size:13px}.mut{color:#8a8478;font-size:12px}@media print{body{margin:0}.noprint{display:none}}</style></head>
-<body><h1>Skattehjelp for ${s.year}</h1><div class="mut">FinansHub · ${esc51(who)} · laget ${esc51(dayLabel51(today51()))} ${today51().slice(0, 4)}</div>
+<body><h1>Skattehjelp for ${s.year}</h1><div class="mut">Økonomi · ${esc51(who)} · laget ${esc51(dayLabel51(today51()))} ${today51().slice(0, 4)}</div>
 <p class="noprint mut">Skriv ut siden, eller velg «Lagre som PDF» i utskriftsvinduet.</p>
 <div class="box"><b>Forbehold:</b> ${esc51(s.disclaimer)}${s.ratesNote ? ` ${esc51(s.ratesNote)}` : ''}</div>
 <h2>Fradragsposter</h2><table><tr><th>Post</th><th>Type</th><th class="r">Grunnlag</th><th class="r">Fradrag</th><th class="r">Skatteverdi</th><th>Kilde</th></tr>${rows}
@@ -209,8 +209,8 @@ export async function taxReminderTick51(today = today51()) {
     sent[tag] = Date.now();
     kv.set(u, 'fin51_tax_sent', sent);
     const s = taxSummary51(u, { year: y - 1, today });
-    const body = kind === 'frist' ? `Fristen for skattemeldingen er 30. april. FinansHub fant fradrag med anslått skatteverdi ${krText51(Math.round(s.total.value))}.`
-      : `Skattemeldingen for ${y - 1} er klar. Sjekk fradragene FinansHub har samlet (anslått skatteverdi ${krText51(Math.round(s.total.value))}).`;
+    const body = kind === 'frist' ? `Fristen for skattemeldingen er 30. april. Økonomi fant fradrag med anslått skatteverdi ${krText51(Math.round(s.total.value))}.`
+      : `Skattemeldingen for ${y - 1} er klar. Sjekk fradragene Økonomi har samlet (anslått skatteverdi ${krText51(Math.round(s.total.value))}).`;
     await notifyUser(u, { title: 'Skattemeldingen', body, url: '/finans/plan51#skatt', tag: `fin51-tax-${tag}`, category: 'finans' }).catch(() => {});
     n++;
   }

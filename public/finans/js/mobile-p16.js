@@ -43,12 +43,12 @@ export function setTabBar(items, push = true) {
 // Faner som kan ligge i hovedlinja. «auto» er fjerde fane (Domener, eller Sporing når pakker er på vei).
 // Id-ene er de samme som serveren bruker i /api/me/layout.tabBar.
 export const TB = {
-  hjem: ['hl', 'Hjem', '⌂'], finans: ['hjem', 'Finans', 'kr'], mat: ['mat', 'Mat', '◐'], auto: [null, 'Domener / Sporing', '◎'],
+  hjem: ['hl', 'Hjem', '⌂'], finans: ['hjem', 'Økonomi', 'kr'], mat: ['mat', 'Mat', '◐'], auto: [null, 'Domener / Sporing', '◎'],
   domener: ['dom', 'Domener', '◎'], sporing: ['spor', 'Sporing', '▣'], sok: ['sok', 'Søk', '⌕'], boliger: ['dir', 'Boliger', '⌂'],
   avganger: ['avg', 'Avganger', '⇆'], familie: ['fam', 'Familie', '◉'], vaer: ['vaer', 'Vær', '☼'], nyheter: ['nyheter', 'Nyheter', '▤'],
   aksjer: ['aks', 'Aksjer', '↗'], abonnementer: ['sub', 'Abonnementer', '↻'], media: ['media', 'Media', '♪'], huske: ['huske', 'Gjøremål', '☑'], chat: ['chat', 'Chat', '✦'],
   // Prompt 40 (claude-code-fanelinje-alle-sider.md): alt som finnes i Mer kan legges i fanelinja.
-  kalender: ['kal', 'Kalender', '▦'], bursdager: ['bd', 'Bursdager', '✿'], brief: ['brief', 'Now Brief', '✧'], bibel: ['bibel', 'Bibel', '✝'],
+  kalender: ['kal', 'Kalender', '▦'], bursdager: ['bd', 'Bursdager', '✿'], brief: ['brief', 'Brief', '✧'], bibel: ['bibel', 'Bibel', '✝'],
   nordlys: ['nordlys', 'Nordlys', '◇'], innstillinger: ['set', 'Innstillinger', '⚙'], mer: ['mer', 'Mer', '⋯'],
 };
 // Bibel bare for brukere med modulen (lest lat, så importrekkefølgen ikke endres).

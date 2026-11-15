@@ -48,7 +48,7 @@ export function setNavHome(v, push = true) {
 export function take42(r) { const k = normNh(r?.homeButton ?? r?.home_button); if (k && k !== navHome()) { lsSet('papir_navhome', k); return true; } return false; }
 
 // Modulvelgeren (1d): Hjem (rød) og alle modulene i et rutenett med tre kolonner.
-const MODN = [['hl', 'Hjem', '⌂'], ['hjem', 'Finans', 'kr'], ['mat', 'Mat', '◐'], ['spor', 'Sporing', '▣'], ['dom', 'Domener', '◎'], ['fam', 'Familie', '◉'], ['dir', 'Boliger', '⌂'], ['sub', 'Abonnement', '↻'], ['kal', 'Kalender', '▦'], ['huske', 'Huskeliste', '☐'], ['chat', 'Chat', '✉'], ['mer', 'Alle', '⋯']];
+const MODN = [['hl', 'Hjem', '⌂'], ['hjem', 'Økonomi', 'kr'], ['mat', 'Mat', '◐'], ['spor', 'Sporing', '▣'], ['dom', 'Domener', '◎'], ['fam', 'Familie', '◉'], ['dir', 'Boliger', '⌂'], ['sub', 'Abonnement', '↻'], ['kal', 'Kalender', '▦'], ['huske', 'Huskeliste', '☐'], ['chat', 'Chat', '✉'], ['mer', 'Alle', '⋯']];
 const domOk = () => (m.me?.role ? m.me.role === 'admin' : true);
 function curMod(scr) {
   if (scr === 'hl') return 'hl';
