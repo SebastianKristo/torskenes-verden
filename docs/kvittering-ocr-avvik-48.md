@@ -14,33 +14,33 @@ Dette var en ren lesejobb. Ingen filer i repoet er endret. Alle stier er relativ
 ## 1. iOS (FinansHub-appen)
 
 ### Hvordan flyten er i dag
-- Dokumentskanneren `VNDocumentCameraViewController` (automatisk beskjæring og perspektivretting) brukes når enheten støtter den. Ellers brukes vanlig kamera. Se `apps/ios/FinansHub/Sources/Receipts23.swift:195-206` og `:598-620`.
-- Flere sider er én kvittering: `Receipts23.swift:209-215`.
-- Vision-OCR og tolking på telefonen kjører **bare** når bryteren «Tolk kvitteringer på iPhone» er på. Den er av som standard (`Receipt47Engine.swift:77-96`, `Store.swift:1241-1253`).
-- Er Foundation Models utilgjengelig eller feiler, går *bildet* til `/receipts` via `Receipt47Views.swift:50-66`, og OCR-teksten kastes. **iOS kaller aldri `/receipts/ocr-text`.** Serveren godtar `ios-vision` der (`server/finans/receipts-device.js:32`), men ingen klient bruker det.
-- Vision-oppsett (`Receipt47Engine.swift:256-272`):
+- Dokumentskanneren `VNDocumentCameraViewController` (automatisk beskjæring og perspektivretting) brukes når enheten støtter den. Ellers brukes vanlig kamera. Se `apps/ios/FinansHub/Sources/KvitteringerSide.swift:195-206` og `:598-620`.
+- Flere sider er én kvittering: `KvitteringerSide.swift:209-215`.
+- Vision-OCR og tolking på telefonen kjører **bare** når bryteren «Tolk kvitteringer på iPhone» er på. Den er av som standard (`KvitteringTolking.swift:77-96`, `Store.swift:1241-1253`).
+- Er Foundation Models utilgjengelig eller feiler, går *bildet* til `/receipts` via `KvitteringBekreft.swift:50-66`, og OCR-teksten kastes. **iOS kaller aldri `/receipts/ocr-text`.** Serveren godtar `ios-vision` der (`server/finans/receipts-device.js:32`), men ingen klient bruker det.
+- Vision-oppsett (`KvitteringTolking.swift:256-272`):
   - `recognitionLevel = .accurate` og `usesLanguageCorrection = true`.
   - Språk: `nb-NO, no-NO, nn-NO, da-DK, sv-SE, en-US`, filtrert mot `supportedRecognitionLanguages()`, med `en-US` som reserve.
   - Orienteringen fra `UIImage` sendes videre (`:241-253`).
-- Radgrupperingen (`Receipt47Engine.swift:275-295`):
+- Radgrupperingen (`KvitteringTolking.swift:275-295`):
   - Rekkefølgen sorteres på `midY` synkende (koden tar hensyn til at Vision har origo nede til venstre, `:282`).
   - En ny bit havner i en rad når `|midY − første bit i raden| < 0,5·maks(h)`.
   - Bitene sorteres på `minX` og slås sammen med **TAB**. Sider skilles med `\n\n` (`:237`).
   - `boundingBox` og `confidence` leses, men kastes.
-- Det som sendes er multipart `POST /finans/api/receipts/parsed` med `data` (JSON), `file` og `thumb` (`Receipt47Views.swift:88-96`). Bygges i `Receipt47Engine.swift:173-192` med **norske feltnavn**: `source:"apple-fm"`, `tolketAv`, `butikk`, `dato`, `totalsum`, `valuta`, `mva` (ett tall), `varelinjer[{navn, pris, antall?}]`, `kategori`, `betalingsmiddel` og `ocrText`.
-- Kontroll på telefonen (`Receipt47Engine.swift:117-152`):
+- Det som sendes er multipart `POST /finans/api/receipts/parsed` med `data` (JSON), `file` og `thumb` (`KvitteringBekreft.swift:88-96`). Bygges i `KvitteringTolking.swift:173-192` med **norske feltnavn**: `source:"apple-fm"`, `tolketAv`, `butikk`, `dato`, `totalsum`, `valuta`, `mva` (ett tall), `varelinjer[{navn, pris, antall?}]`, `kategori`, `betalingsmiddel` og `ocrText`.
+- Kontroll på telefonen (`KvitteringTolking.swift:117-152`):
   - butikk må finnes
   - datoen må være gyldig, ≥ 2000-01-01 og ikke i fremtiden
   - total > 0
   - linjesummen må stemme med totalen innenfor ±1 kr
-- Køen når appen er uten nett: `UploadQueue18.swift`. Filen ligger i Application Support, og `parsed47` følger med i køen. `flushPending` sender til `/receipts/parsed` og faller tilbake til `/receipts` ved 404/405 (`:55-71`, `:76-118`). Køen tar seg også av «Venter på Wi-Fi» (`Store.swift:1254-1273`).
+- Køen når appen er uten nett: `KvitteringOpplasting.swift`. Filen ligger i Application Support, og `parsed47` følger med i køen. `flushPending` sender til `/receipts/parsed` og faller tilbake til `/receipts` ved 404/405 (`:55-71`, `:76-118`). Køen tar seg også av «Venter på Wi-Fi» (`Store.swift:1254-1273`).
 - Vanlig opplasting: `file` (original eller 1600 px), `scan` (1600 px JPEG 85 %) og `thumb` (240 px) via `Store.swift:1321-1328`.
 
 ### OCR-format: målfelt mot dagens iOS-kode
 
 | Felt i målformatet | Hva som finnes i dag | Avvik | Hva som må til |
 |---|---|---|---|
-| `source: "ios_vision"` | `"apple-fm"` / `tolketAv:"apple-on-device"` (Receipt47Engine.swift:174). `ios-vision` godtas av serveren, men sendes aldri. | Feil verdi og bindestrek i stedet for understrek. OCR-tekst sendes aldri for seg. | Sende `ios_vision` alltid, også når FM ikke er tilgjengelig. |
+| `source: "ios_vision"` | `"apple-fm"` / `tolketAv:"apple-on-device"` (KvitteringTolking.swift:174). `ios-vision` godtas av serveren, men sendes aldri. | Feil verdi og bindestrek i stedet for understrek. OCR-tekst sendes aldri for seg. | Sende `ios_vision` alltid, også når FM ikke er tilgjengelig. |
 | `lines[].text` | `topCandidates(1).first.string` (:278) | Brukes bare til å bygge en streng | Ta vare på hver observasjon |
 | `lines[].confidence` | Ikke lest | Mangler | `candidate.confidence` (0–1) |
 | `lines[].bbox [x,y,w,h]` 0–1, origo øverst til venstre | `boundingBox` lest (:279), men kastet. Origo nede til venstre. | Mangler, og må konverteres | `[minX, 1−maxY, width, height]`. Orienteringen er allerede sendt inn i handleren, så koordinatene er relative til det oppreiste bildet. |
@@ -50,11 +50,11 @@ Dette var en ren lesejobb. Ingen filer i repoet er endret. Alle stier er relativ
 | `ms` | Ikke målt | Mangler | Ta tiden rundt `handler.perform` |
 | Flere sider | Slått sammen til én tekst | Målformatet sier ikke noe om sider | Avgjøre: én OCR per side eller en `pages[]`-liste |
 | Språk | nb/no/nn/da/sv/en, filtrert (:256-261) | OK | Vurder `usesLanguageCorrection=false` for tall/beløp (bør testes) |
-| Forbehandling | VNDocumentCamera: beskjæring og perspektiv (Receipts23.swift:598-620). Ikke for bilder fra galleriet. | OK for kamera | Eventuelt `VNDetectDocumentSegmentation`/`CIPerspectiveCorrection` for bilder fra galleriet |
+| Forbehandling | VNDocumentCamera: beskjæring og perspektiv (KvitteringerSide.swift:598-620). Ikke for bilder fra galleriet. | OK for kamera | Eventuelt `VNDetectDocumentSegmentation`/`CIPerspectiveCorrection` for bilder fra galleriet |
 
 ### Kvitteringsformat (`device_parse`): målfelt mot iOS-payload
 
-| Målfelt | iOS i dag (Receipt47Engine.swift:173-192, 303-331) | Avvik | Hva som må til |
+| Målfelt | iOS i dag (KvitteringTolking.swift:173-192, 303-331) | Avvik | Hva som må til |
 |---|---|---|---|
 | `merchant` | `butikk` | Norsk navn (serveren godtar begge, receipts-device.js:75) | Engelsk feltnavn |
 | `org_number` | Finnes ikke | Mangler | Legg til i `@Generable` og valider mod11 |
@@ -248,7 +248,7 @@ Anbefaling:
 - Regler: `DEFAULT_RULES` (`:331-332`), for eksempel REMA* → Mat og dagligvarer.
 - Listen er **per bruker og kan endres** (`fh_categories.user_id`). Kvitteringskøen bruker brukerens `kind='expense'`-kategorier (`routes.js:352`).
 - `classify39` (`receipt-lines.js:119+`) kan **lage nye** kategorier fra `MERCHANT_TYPES` (`:100+`), for eksempel «Skole og studier», «Drivstoff», «Helse og apotek», «Elektronikk», «Klær og sko».
-- Konklusjon: `category_suggestion` må velges fra **brukerens egen liste**, hentet fra serveren. iOS-listen med 8 kategorier (`Receipt47Engine.swift:78`) stemmer ikke.
+- Konklusjon: `category_suggestion` må velges fra **brukerens egen liste**, hentet fra serveren. iOS-listen med 8 kategorier (`KvitteringTolking.swift:78`) stemmer ikke.
 
 ---
 

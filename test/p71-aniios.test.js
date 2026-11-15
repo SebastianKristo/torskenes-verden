@@ -16,7 +16,7 @@ const code = (f) => read(f).replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm
 const FH = 'FinansHub/Sources/';
 const TOUCHED = [
   FH + 'Anim71.swift',
-  FH + 'Fin43.swift',
+  FH + 'OkonomiListe.swift',
   FH + 'Glimt31.swift',
   FH + 'Home70Mic.swift',
   FH + 'WiggleList43.swift',
@@ -60,7 +60,7 @@ test('evig repeatForever er alltid avgrenset til Ã©n egenskap (ikke .animation(â
 });
 
 test('orb: TimelineView(.animation) i full takt, ferdig ringlag med drawingGroup, Reduser bevegelse', () => {
-  const o = code(FH + 'Fin43.swift');
+  const o = code(FH + 'OkonomiListe.swift');
   assert.match(o, /TimelineView\(\.animation\(minimumInterval: nil, paused: reduceMotion\)\)/);
   assert.match(o, /struct Orb43Ring: View[\s\S]*?\.drawingGroup\(\)/);
   assert.doesNotMatch(o, /@State private var spin/);

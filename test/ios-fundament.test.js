@@ -48,7 +48,7 @@ test('logikk: ingen egen trekkdato, påske, Time44-tolker eller Open-Meteo direk
   }
   assert.match(raw('FinansHub/Sources/QuickDates.swift'), /\/api\/dates\/parse/);
   assert.match(raw('SharedKal/Core/KalCals39.swift'), /\/api\/dates\/holidays\?year=/);
-  assert.match(raw('FinansHub/Sources/Trial31.swift'), /dedupeKey/);
+  assert.match(raw('FinansHub/Sources/Proveperioder.swift'), /dedupeKey/);
 });
 
 test('design: PF skalerer med Dynamic Type, paletten settes ikke under body, ingen tvunget mørk stil', () => {

@@ -20,4 +20,4 @@ Kort veiledning for det som er nytt i kvitteringsskjemaet i FinansHub på web/PW
 ## For utviklere
 - Feltene: `merchant_source`, `merchant_label`, `ocr_raw` på kvitteringen; læring med `POST /finans/api/receipts/:id/merchant {merchant, org_number?}` (eldre server: `PATCH merchant`).
 - Web: `public/finans/js/kvittering-kilde.js` + `public/css/pages/kvitteringer.css` (brukes i `desktop.js` og `mobile-p23.js`).
-- iPhone: `apps/ios/FinansHub/Sources/Receipt51Raw.swift`. Android: `Receipt51.kt` og `ui/Receipt51Ui.kt`.
+- iPhone: `apps/ios/FinansHub/Sources/KvitteringRetting.swift`. Android: `Receipt51.kt` og `ui/Receipt51Ui.kt`.

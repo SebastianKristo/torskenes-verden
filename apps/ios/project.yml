@@ -62,7 +62,7 @@ targets:
         # BGTask, varsel-delegat/-kategorier, krasjfanger, kalender://, widget-reload). Kal84Embed.swift / KalEmbed84.swift.
         SWIFT_ACTIVE_COMPILATION_CONDITIONS: "$(inherited) KAL_EMBED"
         # Prompt 47: FoundationModels (iOS 26) lenkes svakt, så appen starter på iOS 17/18. Bare med iOS 26-SDK (Xcode 26);
-        # Xcode 16 har ikke rammeverket, og koden er bak #if canImport(FoundationModels) (Receipt47Engine.swift).
+        # Xcode 16 har ikke rammeverket, og koden er bak #if canImport(FoundationModels) (KvitteringTolking.swift).
         "OTHER_LDFLAGS[sdk=iphoneos26*]": "$(inherited) -weak_framework FoundationModels"
         "OTHER_LDFLAGS[sdk=iphonesimulator26*]": "$(inherited) -weak_framework FoundationModels"
         GENERATE_INFOPLIST_FILE: YES
