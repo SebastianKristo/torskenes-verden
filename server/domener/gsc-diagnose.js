@@ -8,9 +8,9 @@
 //      → nattjobben tar igjen dagen (glimt.js), eiendommen velges automatisk ved diagnosen, «Hent nå» (POST …/gsc/refresh).
 //   3. Datoene: endDate = i dag − 2 ga tomme siste dager; nå i dag − 3 (LAG), dataState:'all', type:'web' og searchconsole.googleapis.com.
 //
-//   GET  /api/domains/:domain/gsc (mellomvare) → som før + ved tomt: {empty:true, reason, message, site, permissionLevel, fetchedAt, dataTo}
+//   GET  /api/domains/:domain/gsc (explainGscView, kalt fra glimt.js) → som før + ved tomt: {empty:true, reason, message, site, permissionLevel, fetchedAt, dataTo}
 //        reason: 'unverified' | 'noaccess' | 'scope' | 'token' | 'pending' | 'nosource' | 'noimpressions'
-//   GET  /api/domains/overview (mellomvare)    → gsc får de samme feltene når den ikke har tall
+//   GET  /api/domains/overview (explainGscOverview) → gsc får de samme feltene når den ikke har tall
 //   POST /api/domains/:domain/gsc/refresh {period?} → «Hent nå»: {ok, domain, site, rows, dataTo, fetchedAt, ms} | {ok:false, reason, error}
 //   GET|POST /api/domains/:domain/gsc/test    → diagnose per eiendom: {ok, domain, siteUrl, permissionLevel, scope, scopeOk, refreshToken,
 //        lastFetch, dataTo, rows28, impressions28, clicks28, reason, message, steps:[{t, ok, ms, detail}], error?}
@@ -110,34 +110,31 @@ const adminGuard = async (c, next) => {
 const normD = (d) => String(d ?? '').trim().toLowerCase().replace(/^www\./, '');
 const periodOf = (v) => ({ 7: 7, 28: 28, 90: 90, '7d': 7, '28d': 28, '3m': 90 }[v ?? '28'] ?? 28);
 
-/** Mellomvare på GET /api/domains/:domain/gsc: tomt → empty:true + årsak. */
-export async function gscViewMw43(c, next) {
-  await next();
-  if (c.req.method !== 'GET' || c.res.status !== 200 || !/\/gsc\/?$/.test(c.req.path)) return;
+/**
+ * GET /api/domains/:domain/gsc (glimt.js): er visningen tom, får den empty:true + årsaken. rawDomain = :domain slik den kom inn.
+ * → nytt svar, eller null når svaret står som det er.
+ */
+export async function explainGscView(u, rawDomain, period, j) {
   try {
-    const u = c.get('user'), d = normD(c.req.param('domain'));
-    if (!u || d === '*') return;
-    const j = await c.res.clone().json();
-    if (j.connected && !j.loading && !j.needsSite && (j.series ?? []).length && (j.kpi?.impressions?.value ?? 0) > 0) return;
-    if (!j.connected && !j.reconnect) return;
-    const why = await gscDiagnose43(u, d, periodOf(c.req.query('period')));
-    if (!why) return;
-    c.res = c.json({ ...j, ...(j.reconnect ? {} : { connected: true }), empty: true, ...why }, 200);
-  } catch { /* svaret står */ }
+    const d = normD(rawDomain);
+    if (!u || d === '*') return null;
+    if (j.connected && !j.loading && !j.needsSite && (j.series ?? []).length && (j.kpi?.impressions?.value ?? 0) > 0) return null;
+    if (!j.connected && !j.reconnect) return null;
+    const why = await gscDiagnose43(u, d, periodOf(period));
+    if (!why) return null;
+    return { ...j, ...(j.reconnect ? {} : { connected: true }), empty: true, ...why };
+  } catch { return null; } // svaret står
 }
-/** Mellomvare på GET /api/domains/overview: gsc uten tall får årsaken (uten nettkall). */
-export async function gscOverviewMw43(c, next) {
-  await next();
-  if (c.req.method !== 'GET' || c.res.status !== 200) return;
+/** GET /api/domains/overview (glimt.js): gsc uten tall får årsaken (uten nettkall). rawDomain = ?domain=. → nytt svar eller null. */
+export async function explainGscOverview(u, rawDomain, j) {
   try {
-    const u = c.get('user') ?? sessionUser(c), d = normD(c.req.query('domain') ?? '*');
-    if (!u || d === '*') return;
-    const j = await c.res.clone().json();
-    if (!j.gsc || (j.gsc.kpi && (j.gsc.kpi.impressions?.value ?? 0) > 0)) return;
-    if (!G.connected(u)) return;
+    const d = normD(rawDomain ?? '*');
+    if (!u || d === '*') return null;
+    if (!j.gsc || (j.gsc.kpi && (j.gsc.kpi.impressions?.value ?? 0) > 0)) return null;
+    if (!G.connected(u)) return null;
     const why = await gscDiagnose43(u, d, 28, { network: false });
-    if (why) c.res = c.json({ ...j, gsc: { ...j.gsc, empty: true, ...why } }, 200, { 'Cache-Control': 'private, max-age=60' });
-  } catch { /* svaret står */ }
+    return why ? { ...j, gsc: { ...j.gsc, empty: true, ...why } } : null;
+  } catch { return null; } // svaret står
 }
 
 async function testSite(u, domain, siteUrl0) {

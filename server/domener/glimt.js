@@ -40,6 +40,7 @@ import { registerJob } from '../jobs/index.js';
 import { summaryFacts, domainNames, domainsOverview, PER_RANGE, addDomain39, cloudflareZones39, cloudflareTxt39 } from './domains.js';
 import { run as aiRun } from '../ai-run.js';
 import { once } from '../ai-gate.js'; // prompt 43: single-flight for oppsummeringen
+import { explainGscView, explainGscOverview } from './gsc-diagnose.js'; // prompt 43: årsak når Google Søk er tomt (sirkulær import, brukes bare i handlerne)
 
 const MOCK = process.env.MOCK_DATA === '1';
 const TZ = 'Europe/Oslo';
@@ -667,7 +668,9 @@ domainGlimtApi.get('/overview', adminGuard, async (c) => {
       return one ? [x.name, { ...one, summary: sr ? sumOut(sr, x.name) : null, summaryUrl: `/api/domains/${encodeURIComponent(x.name)}/summary` }] : null;
     }))).filter(Boolean));
   }
-  return c.json({ ...o, ...(byDomain ? { byDomain } : {}), gsc, summary: row ? sumOut(row, d === '*' ? 'Alle domener' : d) : null, summaryUrl: `/api/domains/${encodeURIComponent(d)}/summary` }, 200, { 'Cache-Control': 'private, max-age=60' });
+  const out = { ...o, ...(byDomain ? { byDomain } : {}), gsc, summary: row ? sumOut(row, d === '*' ? 'Alle domener' : d) : null, summaryUrl: `/api/domains/${encodeURIComponent(d)}/summary` };
+  // Prompt 43: Google Søk uten tall får årsaken (gsc-diagnose.js). Domenet tolkes der som før, fra ?domain= slik det kom inn.
+  return c.json((await explainGscOverview(u, c.req.query('domain') ?? '*', out)) ?? out, 200, { 'Cache-Control': 'private, max-age=60' });
 });
 domainGlimtApi.post('/:domain/summary', adminGuard, async (c) => {
   const u = c.get('user'), d = normDomain(c.req.param('domain'));
@@ -682,8 +685,10 @@ domainGlimtApi.get('/:domain/gsc', adminGuard, async (c) => {
   const p = { 7: 7, 28: 28, 90: 90, '7d': 7, '28d': 28, '3m': 90 }[c.req.query('period') ?? '28'] ?? 28;
   let v = gscView(u, d, p);
   if (v.connected && v.loading) { try { await syncGsc(u, d); } catch (e) { setConf(u, { error: e.message }); } v = gscView(u, d, p); }
-  if (v.connected && v.needsSite && !(conf(u).siteList ?? []).length) { try { await loadSites(u); } catch (e) { return c.json({ connected: false, reconnect: true, error: e.message }); } v = gscView(u, d, p); }
-  return c.json(v);
+  // Prompt 43: tomt svar (også «koble til på nytt») får empty:true + årsaken (gsc-diagnose.js).
+  const explain = async (j) => c.json((await explainGscView(u, c.req.param('domain'), c.req.query('period'), j)) ?? j, 200);
+  if (v.connected && v.needsSite && !(conf(u).siteList ?? []).length) { try { await loadSites(u); } catch (e) { return explain({ connected: false, reconnect: true, error: e.message }); } v = gscView(u, d, p); }
+  return explain(v);
 });
 
 /* ---------------- Planlegger: 06:00 GSC, 07:00 oppsummering ---------------- */

@@ -4,8 +4,7 @@
 // slutt i index.js, men ingen rute eller mellomvare mellom de to plassene svarer på /domains/api/*, så svarene er de samme.
 // Rekkefølgen innenfor er bærende:
 //   1. domene-pillen (/api/domains/summary og aliaset /api/domener/sammendrag) og «Test token» før de generelle /api/domains-rutene
-//   2. mellomvarene i gsc-diagnose.js som legger årsaken på tomme Search Console-svar, før handlerne i glimt.js
-//   3. «Hent nå» og diagnosen (gsc-diagnose.js) før glimt.js sine /:domain-ruter; /api/gsc/test før koblingen i glimt.js
+//   2. «Hent nå» og diagnosen (gsc-diagnose.js) før glimt.js sine /:domain-ruter; /api/gsc/test før koblingen i glimt.js
 // Oppsettet med servicekonto og normaliseringen av eiendommen (gsc-service-account.js) monteres i api45.js (mountApi45), tidligere
 // i index.js. Hentingen kl. 06 og oppsummeringene kl. 07 går via server/jobs/ (domener.daglig).
 // Filene:
@@ -17,7 +16,7 @@ import { isAdmin } from '../auth/session.js';
 import { authOrToken } from '../mobile.js';
 import domainsApi, { domainSummary } from './domains.js';
 import { domainGlimtApi, gscApi } from './glimt.js';
-import { gscDomains43Api, gsc43Api, gscViewMw43, gscOverviewMw43 } from './gsc-diagnose.js';
+import { gscDomains43Api, gsc43Api } from './gsc-diagnose.js';
 
 const domainPill = async (c) => {
   if (!isAdmin(c.get('user'))) return c.json({ error: 'Bare administratorer har tilgang', restricted: true }, 403);
@@ -29,8 +28,6 @@ export function mountDomener(app) {
   // Test token i Innstillinger → Domener (samme tilgang som /domains/api: bare admin).
   app.post('/api/domains/token/verify', async (c) => { const u = new URL(c.req.url); u.pathname = '/domains/api/token/verify'; return app.fetch(new Request(u, { method: 'POST', headers: c.req.raw.headers, body: await c.req.arrayBuffer() }), c.env); });
   app.get('/api/domener/sammendrag', authOrToken, domainPill);
-  app.use('/api/domains/overview', gscOverviewMw43); // Google Søk uten tall → årsak
-  app.use('/api/domains/:domain/gsc', gscViewMw43);
   app.route('/api/domains', gscDomains43Api); // /:domain/gsc/refresh (Hent nå) og /:domain/gsc/test
   app.route('/api/domains', domainGlimtApi); // /:domain/summary (Glimt), /overview, /import og /:domain/gsc, bare admin
   app.route('/api/gsc', gsc43Api); // /test (diagnose per eiendom)
