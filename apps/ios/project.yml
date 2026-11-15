@@ -153,7 +153,7 @@ targets:
         # Prompt 33: canOpenURL(kalender://) – åpne Kalender-appen når den er installert, ellers Homelabs egen kalender.
         # Prompt 84: finanshub/homelab – den innebygde Kalenderen sjekker canOpenURL før lenker til Homelab (Bursdager ›, Glimt …).
         LSApplicationQueriesSchemes: [kalender, finanshub, homelab]
-        # Prompt 45: sonevarsler som Communication Notifications (soneikonet stort, app-ikonet som merke), Zone45.swift.
+        # Prompt 45: sonevarsler som Communication Notifications (soneikonet stort, app-ikonet som merke), ZoneAlerts.swift.
         # Selve rettigheten (com.apple.developer.usernotifications.communication) legges til når appen signeres med egen Team ID.
         NSUserActivityTypes: [INSendMessageIntent]
         # Prompt 41: tilgangsgruppen for det delte enhets-tokenet (KalShared41, SharedKal/Group). Tom prefiks uten Team ID → ignoreres.

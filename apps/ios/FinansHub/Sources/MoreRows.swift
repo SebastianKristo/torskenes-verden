@@ -16,7 +16,7 @@ enum More44Rows {
         if !inBar.contains("familie") {
             out.append(More28Row(id: "kart", name: "Familie og kart", sub: "Posisjon, soner og helse", icon: "mappin.and.ellipse") { store.paperGo("familie") })
         }
-        // Prompt 46: Kart (holdeplasser, sanntid og soner) – side-nøkkel tkart (Familie bruker «kart»), Kart46Views.swift.
+        // Prompt 46: Kart (holdeplasser, sanntid og soner) – side-nøkkel tkart (Familie bruker «kart»), KartPage.swift.
         out.append(More28Row(id: "tkart", name: "Kart", sub: "Holdeplasser, sanntid og soner", icon: "map") { Kart46.shared.show(store) })
         out.append(More28Row(id: "brief", name: "Now Brief", sub: Brief36Model.shared.merSub, icon: "sparkle") { Brief34Model.shared.show() })
         out.append(More28Row(id: "chat", name: "Chat", sub: "Ollama lokalt, Gemini og Groq", icon: "bubble.left.and.bubble.right") { store.openChat() })

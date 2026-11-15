@@ -61,7 +61,7 @@ extension Store {
     /// Fanelinja vises (samme regel som i PaperShell): ikke i Nyheter, en rett, Ruter i fullskjerm, Chat/Kalender,
     /// Innstillinger, Gjøremål, Bibel og Bursdager.
     var nav42BarShown: Bool {
-        // Prompt 50: Familie skjuler fanelinja på Kart, Personside og Sted (Family50Model.swift).
+        // Prompt 50: Familie skjuler fanelinja på Kart, Personside og Sted (FamilyData.swift).
         !newsOpen && dishSel == nil && !ruter24Full && !full27 && !inSettings32b && !inTasks37 && !inBible39 && !inBirthdays41 && !fam50HideBar
     }
 

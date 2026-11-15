@@ -1,7 +1,7 @@
 import SwiftUI
 
 /* ---------------- Prompt 36: Innstillinger → Kalendere → Google Kalender – Hovedkalender og «Vis også i Kalender» ----------------
-   Vises når Google er koblet til (BirthdayCalendars24, Birthdays24Home.swift).
+   Vises når Google er koblet til (BirthdayCalendars24, BirthdaysHomeCard.swift).
    GET /api/kalender/calendars/google → {connected, configured, email, main:{id,name}|null,
        calendars:[{id:'primary'|'<id>', googleId, name, primary, color, writable, access, main, shown, appId}]}
    PUT /api/kalender/calendars/google {main?:'primary'|'<googleId>', show?:[googleId…]} → samme form (400 hvis main ikke er skrivbar).

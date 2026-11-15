@@ -206,7 +206,7 @@ struct PaperShell: View {
             PaperWeatherView().vaer46Keeper().edgeSwipeClose30 { store.weatherOpen = false }
         }
         .dismissHaptic30(store.weatherOpen)
-        // Prompt 31: System-siden «Nordlys OS» i fullskjerm, varsel-trykk og prøve-varsler (System31.swift).
+        // Prompt 31: System-siden «Nordlys OS» i fullskjerm, varsel-trykk og prøve-varsler (SystemPage.swift).
         .system31Host(p)
         // Prompt 34: AI-kontroll i fullskjerm (AiControlPage.swift) og Glimt-briefen (BriefCards.swift).
         .aiCtl34Host(p)
@@ -215,9 +215,9 @@ struct PaperShell: View {
         .glimt35Host(p)
         // Prompt 40: Hjemlys – start (1a/1c), mottakerskjerm når noen er sen, og Glimt-samtalen (1b).
         .hjemlys40Host(p)
-        // Prompt 43: Media i fullskjerm (Mer → Media, Hjem-kortet, widgetene og magnet:-lenker), Media43Views.swift.
+        // Prompt 43: Media i fullskjerm (Mer → Media, Hjem-kortet, widgetene og magnet:-lenker), MediaPage.swift.
         .media43Host(p)
-        // Prompt 46: Kart i fullskjerm (Mer → Kart, side-nøkkel tkart), Kart46Views.swift.
+        // Prompt 46: Kart i fullskjerm (Mer → Kart, side-nøkkel tkart), KartPage.swift.
         .kart46Host(p, store)
         // Prompt 43: Innstillinger → Widgets (galleriet), WidgetGallery.swift.
         .widgets43Host(p)
@@ -227,7 +227,7 @@ struct PaperShell: View {
         .feat51Host(p)
         // Prompt 76 (SKJIOS): Skjold Lab – deler, skuffer og skap i fullskjerm (Skjold76*.swift).
         .skjold76Host(p)
-        // Prompt 52 (IOS52B): Ruter-avgangene forhåndshentes for alle stopp og bufres i App Group (Ruter52.swift).
+        // Prompt 52 (IOS52B): Ruter-avgangene forhåndshentes for alle stopp og bufres i App Group (DeparturesPrefetch.swift).
         .ruter52Prefetch(store)
         .task(id: store.account?.id) {
             Realtime.shared.connect(store)
@@ -299,7 +299,7 @@ struct PaperShell: View {
                 .animation(.timingCurve(0.2, 0.8, 0.2, 1, duration: 0.24), value: Kb32b.shared.frame)
                 .transition(.opacity)
             }
-            // Prompt 45: iPad – «Ny oppgave …» og ✦ nederst i oppgavekolonnen (Tasks43Wide.swift).
+            // Prompt 45: iPad – «Ny oppgave …» og ✦ nederst i oppgavekolonnen (TasksWide.swift).
             if wide && store.inTasks37 && TaskDock22.shared.cur != Tasks32b.archId && !Tasks37UI.shared.anySheet {
                 Tasks45WideDock(width: g.size.width, kb: kb28, safeBottom: g.safeAreaInsets.bottom)
             }
@@ -374,7 +374,7 @@ struct PaperShell: View {
         } else if store.ruter24Full {
             RuterView24()
         } else if store.fam50Full {
-            // Prompt 50: Familie i nytt design – fullskjerm med egen fanelinje (Family50Views.swift).
+            // Prompt 50: Familie i nytt design – fullskjerm med egen fanelinje (FamilyPage.swift).
             Family50Page().environment(\.colorScheme, p.dark ? .dark : .light)
         } else if store.full27 {
             // Prompt 27: Kalender v2 og Chat i fullskjerm (Calendar27Page.swift, ChatPage.swift).
@@ -703,7 +703,7 @@ struct PaperPage: View {
         if wide && store.paperTab == "hjem" {
             Color.clear // prompt 46: Hjem ligger alltid under (wide46)
         } else if wide && store.paperTab == "familie" {
-            // Prompt 45: Familie på iPad – kartet står stille til venstre, bare høyre kolonne scroller (Family16.swift).
+            // Prompt 45: Familie på iPad – kartet står stille til venstre, bare høyre kolonne scroller (FamilyModel.swift).
             VStack(spacing: 0) {
                 PaperHero(home: false)
                 FamilyView()
@@ -724,9 +724,9 @@ struct PaperPage: View {
 
     @ViewBuilder private var scrollPage: some View {
         let home = store.paperTab == "hjem"
-        // Prompt 43: Gjøremål på iPad bruker hele bredden (tre kolonner, Tasks43Wide.swift).
-        // Prompt 45: Familie på brettet skjerm har ingen maksbredde (Family16.swift, wideBody45).
-        // Prompt 46: Bibel på iPad bruker maks 1100 pt (to kolonner, Bible46.swift).
+        // Prompt 43: Gjøremål på iPad bruker hele bredden (tre kolonner, TasksWide.swift).
+        // Prompt 45: Familie på brettet skjerm har ingen maksbredde (FamilyModel.swift, wideBody45).
+        // Prompt 46: Bibel på iPad bruker maks 1100 pt (to kolonner, BiblePage.swift).
         let maxW: CGFloat = wide ? (home ? 960 : (store.paperTab == "huske" || store.paperTab == "finans" || store.paperTab == "familie" ? 1500 : (store.paperTab == "bibel" ? 1100 : 720))) : .infinity
         VStack(spacing: 0) {
             PaperHero(home: home)
@@ -856,7 +856,7 @@ struct PaperPage: View {
         case "innst-appprofil": AppProfile39Page()
         case "innst-fam": FamilySettingsView()
         case "innst-helse": HealthPosSettings20()
-        // Prompt 42: Innstillinger → Helse (Familie) → Home Assistant · Mobilapp (Health42.swift).
+        // Prompt 42: Innstillinger → Helse (Familie) → Home Assistant · Mobilapp (HealthHomeAssistant.swift).
         case "innst-hahelse": HaHealthPage42()
         case let t where t.hasPrefix("innst-"): PaperSettingsSub(key: String(t.dropFirst(6)))
         default: PaperHome()

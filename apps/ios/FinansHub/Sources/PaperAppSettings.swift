@@ -585,7 +585,7 @@ final class Realtime: NSObject {
                 LocalNotify.post("Familie", "\(JS.str(o, "fromName") ?? "Noen") vil finne telefonen din", id: "ping-\(Date().timeIntervalSince1970)", group: nil)
                 return
             }
-            // Prompt 50: steder endret (geofence-regioner, Steder, Ruter-skolen) og innsjekker (Family50Notify.swift).
+            // Prompt 50: steder endret (geofence-regioner, Steder, Ruter-skolen) og innsjekker (FamilyGeofence.swift).
             if Fam50Notify.realtime(o, store) { return }
             Task { await FamilyModel.shared.load(store); await FamilyModel.shared.pollEvents(store.api) }
         case "tracking": Task { try? await store.loadTracking() }
@@ -596,7 +596,7 @@ final class Realtime: NSObject {
             Quick29Model.shared.poke(store)
         // Prompt 31: Glimt-svar (POST /api/assist som serverjobb, Assist.swift).
         case "assist": Assist31.shared.realtime(JS.dict(o, "data") ?? o, store)
-        // Prompt 36: felles matplan endret av noen i husstanden (Mat36.swift).
+        // Prompt 36: felles matplan endret av noen i husstanden (MatPage.swift).
         case "meal:changed", "meal": Mat36.changed(JS.dict(o, "data") ?? o, store)
         default:
             // Prompt 39: fremdrift for «✦ På nytt» på kvitteringer ({jobId, step, pct, msg}), samme kanal som køen (Receipt39.swift).
@@ -651,7 +651,7 @@ struct PaperSettings17: View {
             // Prompt 84: «Kalender i appen» (hele Kalender-appen inni Homelab, KalenderInApp.swift).
             Kal84Settings()
             if Update28Model.isAdmin(store) {
-                // Prompt 30: PROGRAMVARE (Oppdater ›, automatiske oppdateringer, varsle om nye versjoner). Update30.swift.
+                // Prompt 30: PROGRAMVARE (Oppdater ›, automatiske oppdateringer, varsle om nye versjoner). UpdateBanner.swift.
                 Update30Software()
                 AppUpd32Row(label: false) // prompt 32: appens versjon og «Last ned IPA» (AppUpdate.swift)
                 // Prompt 32: raden «Oppdatering» under SYSTEM er fjernet. PROGRAMVARE → Nordlys OS er eneste sted å oppdatere

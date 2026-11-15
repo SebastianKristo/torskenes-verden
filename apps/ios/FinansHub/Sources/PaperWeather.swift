@@ -303,7 +303,7 @@ struct PaperWeatherView: View {
     @State private var comparing: Bool = false
     @State private var places: Bool = false
     @State private var map: Bool = false
-    /// Prompt 25: to kolonner og sidepanel når bredden er minst 700 pt (Weather25.swift).
+    /// Prompt 25: to kolonner og sidepanel når bredden er minst 700 pt (WeatherWide.swift).
     @State private var wide: Bool = false
 
     var body: some View {
@@ -313,7 +313,7 @@ struct PaperWeatherView: View {
         GeometryReader { g in
             let isWide: Bool = g.size.width >= 700
             ZStack(alignment: .top) {
-                // Prompt 28: ny himmel og væranimasjon (Weather28Fx.swift / Weather28Sim.swift).
+                // Prompt 28: ny himmel og væranimasjon (WeatherEffects.swift / WeatherSimulation.swift).
                 WxSky28(code: code, night: night).ignoresSafeArea()
                 fx(w, code: code, night: night)
                 // Prompt 40: snøfall i julemodus når det snør eller er minus («Snø i Vær og brief»).
@@ -401,7 +401,7 @@ struct PaperWeatherView: View {
     }
 
     @ViewBuilder private func content(_ w: WeatherFull) -> some View {
-        // Prompt 41: kortene i brukerens rekkefølge, skjulte kort borte, og Skiføre når det er snø (Vaer41.swift).
+        // Prompt 41: kortene i brukerens rekkefølge, skjulte kort borte, og Skiføre når det er snø (WeatherSki.swift).
         // Hold inne et kort (0,6 s) eller «Rediger kort» nederst for å redigere. Scroll virker hele tiden.
         ForEach(Array(Vaer41.shared.visible.enumerated()), id: \.element) { (pair: (offset: Int, element: String)) in
             card41(pair.element, w).vaer41Wiggle(pair.offset)
@@ -428,7 +428,7 @@ struct PaperWeatherView: View {
         case "vind": WxWindCard22(w: w).onTapGesture { open("wind") }.accessibilityAddTraits(.isButton)
         case "mane": WxMoonCard22(w: w).onTapGesture { open("moon") }.accessibilityAddTraits(.isButton)
         case "detaljer": WxTileGrid22(w: w) { k in open(k) }
-        // Prompt 39: Glimt-personlighetene oppsummerer ukas vær og sammenligner med forrige uke (WxWeek39.swift).
+        // Prompt 39: Glimt-personlighetene oppsummerer ukas vær og sammenligner med forrige uke (WeatherWeek.swift).
         case "glimtuka": WxWeek39Card(w: w)
         default: EmptyView()
         }

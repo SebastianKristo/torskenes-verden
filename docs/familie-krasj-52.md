@@ -26,7 +26,7 @@ Sjekket uten funn (allerede trygt):
 
 ## iOS (IOS52A)
 
-**Mest sannsynlige rotårsak:** profilbildet i kartnålene (`Fam50Avatar`, `Family50Model.swift`) leste `@Environment(Store.self)`.
+**Mest sannsynlige rotårsak:** profilbildet i kartnålene (`Fam50Avatar`, `FamilyData.swift`) leste `@Environment(Store.self)`.
 Folk-fanen, som vises først når Familie åpnes, har kartstripa med én nål per person (`Fam50MapStrip` → MapKit `Annotation`).
 Innholdet i en `Annotation` tegnes av MapKit i egne vertsvisninger, og miljøobjektet følger ikke alltid med dit. Mangler det,
 er det en fatal feil i SwiftUI («No Observable object of type Store found») – appen avsluttes med en gang, og bare når minst
@@ -34,7 +34,7 @@ er det en fatal feil i SwiftUI («No Observable object of type Store found») �
 
 Rettet:
 - `Fam50Avatar` bruker ikke lenger `@Environment(Store.self)`. Butikken hentes fra `Fam50Model.storeRef` (satt ved første henting).
-- **NaN/ugyldige posisjoner** (`Family52Guard.swift`, `Fam52Geo`): `Fam50Person.coord` er `nil` for NaN, ±inf, utenfor ±90/±180 og
+- **NaN/ugyldige posisjoner** (`FamilyGuard.swift`, `Fam52Geo`): `Fam50Person.coord` er `nil` for NaN, ±inf, utenfor ±90/±180 og
   0,0 – da tegnes ingen nål. Alle områder som går til MapKit (`Fam50Geo.region`, `Fam22MapCtl.go/fit`, områdekartet i Steder) klemmes
   til et gyldig område. `MKMapView` kaster `NSInvalidArgumentException` («Invalid Region») på ugyldige områder.
 - `Int(NaN)` er en fatal feil i Swift: pila i kantmerkelappene på kartet (`Fam50Geo.arrow`) og merkelappene sjekker at tallene er endelige,

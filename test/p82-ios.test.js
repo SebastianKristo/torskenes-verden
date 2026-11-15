@@ -8,8 +8,8 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const SRC = join(ROOT, 'apps/ios/FinansHub/Sources');
-const NEW = ['Skjold82Projects.swift', 'Skjold82Views.swift'];
-const TOUCHED = ['Skjold76Model.swift', 'Skjold76Page.swift', 'Skjold76Detail.swift', 'Skjold79Pick.swift', 'Skjold79Views.swift'];
+const NEW = ['SkjoldProjects.swift', 'SkjoldProjectsViews.swift'];
+const TOUCHED = ['SkjoldModel.swift', 'SkjoldPage.swift', 'SkjoldDetail.swift', 'SkjoldPick.swift', 'SkjoldPickViews.swift'];
 const raw = (f) => readFileSync(join(SRC, f), 'utf8');
 const code = (f) => raw(f).replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
 
@@ -24,8 +24,8 @@ function balanced(src) {
   return Object.values(n).every((v) => v === 0);
 }
 
-const mdl = code('Skjold82Projects.swift');
-const v = code('Skjold82Views.swift');
+const mdl = code('SkjoldProjects.swift');
+const v = code('SkjoldProjectsViews.swift');
 
 test('filene finnes og klammene går opp', () => {
   for (const f of [...NEW, ...TOUCHED]) {
@@ -62,7 +62,7 @@ test('svarene: prosjekt-feltene, linjene (flate eller gruppert) og usedIn fra GE
   assert.match(mdl, /JS\.list\(it, "lines"\)/);
   assert.match(mdl, /var left: Double \{ Swift\.max\(0, qty - returnedQty\) \}/);
   assert.match(mdl, /\$0\.qty > 0/);
-  assert.match(code('Skjold76Model.swift'), /Skjold82\.shared\.takeUsed\(id, o\)/);
+  assert.match(code('SkjoldModel.swift'), /Skjold82\.shared\.takeUsed\(id, o\)/);
 });
 
 test('regler: navn maks 80, antall 1 … lager, toast-tekstene', () => {
@@ -99,7 +99,7 @@ test('delsiden: «Sjekk ut»-arket (±, produktvalg med «Nytt produkt …», no
   assert.match(v, /PLabel\(text: "Notat \(valgfritt\)"\)/);
   assert.match(v, /Skjold82\.clamp\(qty \+ d, stock: x\.qty\)/);
   assert.match(v, /k\.checkout\(\[take\], to: t, note: n, store\)/);
-  const det = code('Skjold76Detail.swift');
+  const det = code('SkjoldDetail.swift');
   assert.match(det, /Skj82CheckoutButton\(part: x\)/);
   assert.match(det, /Skj82UsedIn\(id: x\.id, unit: x\.unit\)/);
 });
@@ -116,12 +116,12 @@ test('Produkter: liste, produktside med stykkliste, «Sjekk inn», «Marker som 
   assert.match(v, /k\.rename\(id, n, store\)/);
   assert.match(v, /k\.delete\(id, store\)/);
   assert.match(v, /\.disabled\(locked\)/);
-  const md = code('Skjold76Model.swift');
+  const md = code('SkjoldModel.swift');
   assert.match(md, /case checkout\(String\)/);
   assert.match(md, /case projects\b/);
   assert.match(md, /case project\(String\)/);
   assert.match(md, /case \.projects: return "projects"/);
-  const pg = code('Skjold76Page.swift');
+  const pg = code('SkjoldPage.swift');
   assert.match(pg, /case \.checkout\(let id\): Skj82Checkout\(partId: id\)/);
   assert.match(pg, /case \.projects: Skj82ProjectsSheet\(\)/);
   assert.match(pg, /case \.project\(let id\): Skj82ProjectSheet\(id: id\)/);
@@ -134,8 +134,8 @@ test('plukklista: «Til produkt: [velg/ingen]» og «Ta ut av lager» sjekker ut
   assert.match(v, /struct Skj82PickTarget/);
   assert.match(v, /"Til produkt:"/);
   assert.match(v, /Button\("Ingen"\) \{ k\.pickTarget = nil \}/);
-  assert.match(code('Skjold79Views.swift'), /Skj82PickTarget\(\)/);
-  const pick = code('Skjold79Pick.swift');
+  assert.match(code('SkjoldPickViews.swift'), /Skj82PickTarget\(\)/);
+  const pick = code('SkjoldPick.swift');
   assert.match(pick, /if let t = Skjold82\.shared\.pickTarget, t\.valid \{/);
   assert.match(pick, /Skjold82\.shared\.checkout\(takes, to: t, note: "Fra plukklista", store\)/);
   // Uten produkt: som før.

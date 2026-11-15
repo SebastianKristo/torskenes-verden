@@ -112,7 +112,7 @@ extension Store {
     /// Bytter Papir-fane. Data lastes som i den klassiske appen.
     func paperGo(_ t: String) {
         if paperTapBlocked { return }
-        // Prompt 32: den gamle oppdateringssiden finnes ikke lenger; lenker dit åpner Nordlys OS (System31.swift).
+        // Prompt 32: den gamle oppdateringssiden finnes ikke lenger; lenker dit åpner Nordlys OS (SystemPage.swift).
         if t == "innst-oppdatering" { System31Model.shared.show(); return }
         // Prompt 46: Kart (Mer → Kart, Glimt «vis bussene rundt hjemme» → tkart / tkart:<sone>) i fullskjerm.
         if t == "tkart" || t.hasPrefix("tkart:") { Kart46.shared.show(self, zone: t.hasPrefix("tkart:") ? String(t.dropFirst(6)) : nil); return }
@@ -153,7 +153,7 @@ extension Store {
         case "kvitt": break
         case "boliger": Task { await self.loadBoligerList() }
         case "familie":
-            // Prompt 50: Familie åpnes på roten (Folk) når du kommer fra en annen side (Family50Model.swift).
+            // Prompt 50: Familie åpnes på roten (Folk) når du kommer fra en annen side (FamilyData.swift).
             if paperTab != "familie" { Fam50Nav.shared.reset() }
             Task { await FamilyModel.shared.load(self) }
         case "avg": Task { await RuterModel.shared.load(self) }
@@ -340,7 +340,7 @@ extension Store {
         if let cached = Store.cachedBg(kind) { photoImage = cached }
         // Prompt 41: Oslo = frie Commons-bilder fra lufta som skifter gjennom dagen (BackgroundOslo.swift), med mindre serveren har egne.
         if kind == "oslo", await Oslo41.shared.load(self) { return }
-        // Prompt 52: «Vær nå» velger bilde etter værtype × tid på døgnet (Wx52Bg.swift).
+        // Prompt 52: «Vær nå» velger bilde etter værtype × tid på døgnet (WeatherBackground.swift).
         if kind == "weather", await Wx52Bg.shared.load(self) { return }
         // Prompt 46: delt Google Photos-album (serveren henter og cacher, BackgroundGooglePhotos.swift).
         if kind == "gphoto" { if !(await GPhoto46.shared.load(self)) { photoFailed = true }; return }
@@ -420,7 +420,7 @@ extension Store {
     func loadNews() async {
         newsBusy = true
         defer { newsBusy = false }
-        // Prompt 46: «For deg» og egne kategorier som serveren ikke kjenner → Siste (80 saker) filtrert her (News46.swift).
+        // Prompt 46: «For deg» og egne kategorier som serveren ikke kjenner → Siste (80 saker) filtrert her (NewsSummary.swift).
         let local: Bool = News46.shared.isLocal(newsCat)
         let c0: String = local ? "siste" : newsCat
         let cat = c0.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? c0

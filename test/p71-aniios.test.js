@@ -21,11 +21,11 @@ const TOUCHED = [
   FH + 'HomeMic.swift',
   FH + 'WiggleList.swift',
   FH + 'WiggleToolbar.swift',
-  FH + 'Vaer41.swift',
-  FH + 'Departures16.swift',
+  FH + 'WeatherSki.swift',
+  FH + 'DeparturesModel.swift',
   FH + 'Conversations.swift',
-  FH + 'Media44Banner.swift',
-  FH + 'Family50Views.swift',
+  FH + 'MediaBanner.swift',
+  FH + 'FamilyPage.swift',
   FH + 'HomeSearch.swift',
   FH + 'HomeAssistScroll.swift',
   'Kalender/Sources/KalSpark.swift',
@@ -79,7 +79,7 @@ test('orb: TimelineView(.animation) i full takt, ferdig ringlag med drawingGroup
   for (const f of TOUCHED) {
     assert.doesNotMatch(code(f), /\.blur\(radius:[^)\n]*(?:phase|wave|ctx\.date|timeInterval)/, f);
   }
-  assert.match(code(FH + 'Media44Banner.swift'), /\.animation\(nil\) \{ \$0\.blur\(radius:/);
+  assert.match(code(FH + 'MediaBanner.swift'), /\.animation\(nil\) \{ \$0\.blur\(radius:/);
 });
 
 test('wiggle: fast fase per flis (nøkkelen), stabile id-er, bare rotasjonen animeres', () => {
@@ -91,11 +91,11 @@ test('wiggle: fast fase per flis (nøkkelen), stabile id-er, bare rotasjonen ani
   assert.match(w, /\.id\("card37-" \+ k\)/);
   assert.doesNotMatch(w, /\.id\((?:UUID|Date)\(/);
   assert.match(code(FH + 'WiggleToolbar.swift'), /\.wiggle71\(on, up: phase/);
-  assert.match(code(FH + 'Vaer41.swift'), /\.wiggle71\(v\.editing, up: on/);
+  assert.match(code(FH + 'WeatherSki.swift'), /\.wiggle71\(v\.editing, up: on/);
 });
 
 test('ark og fade: designets fjær, Reduser bevegelse gir fade', () => {
-  assert.match(code(FH + 'Family50Views.swift'), /withAnimation\(Anim71\.sheet\)/);
+  assert.match(code(FH + 'FamilyPage.swift'), /withAnimation\(Anim71\.sheet\)/);
   assert.match(code(FH + 'HomeSearch.swift'), /reduce71 \? AnyTransition\.opacity :/);
   assert.match(code(FH + 'HomeAssistScroll.swift'), /reduce \? AnyTransition\.opacity :/);
 });

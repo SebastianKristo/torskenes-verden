@@ -39,7 +39,7 @@ final class Nav32b {
         "kart": Sec32bDef(title: "FAMILIE", all: [PaperTabItem(id: "kart", label: "Folk", icon: "◎"), PaperTabItem(id: "soner", label: "Steder", icon: "fam46:soner"),
                                                   // Prompt 46: nye SVG-ikoner for Soner og Helse (PaperTabIcon.svg46).
                                                   PaperTabItem(id: "helse", label: "Helse", icon: "fam46:helse"),
-                                                  // Prompt 41: Hjemlys som egen fane i Familie (Hjemlys41Views.swift). Prompt 42: heter Vel fremme.
+                                                  // Prompt 41: Hjemlys som egen fane i Familie (HjemlysSharingViews.swift). Prompt 42: heter Vel fremme.
                                                   PaperTabItem(id: "hjemlys", label: "Sjekk inn", icon: "☼")]),
     ]
 

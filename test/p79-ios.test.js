@@ -9,8 +9,8 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const SRC = join(ROOT, 'apps/ios/FinansHub/Sources');
-const NEW = ['Skjold79Pick.swift', 'Skjold79Views.swift'];
-const TOUCHED = ['Skjold76Model.swift', 'Skjold76Page.swift', 'Skjold76Detail.swift', 'Skjold78LED.swift', 'Skjold78Views.swift'];
+const NEW = ['SkjoldPick.swift', 'SkjoldPickViews.swift'];
+const TOUCHED = ['SkjoldModel.swift', 'SkjoldPage.swift', 'SkjoldDetail.swift', 'SkjoldLED.swift', 'SkjoldLEDViews.swift'];
 const read = (f) => readFileSync(join(SRC, f), 'utf8');
 const code = (f) => read(f).replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
 
@@ -33,7 +33,7 @@ test('filene finnes og klammene går opp', () => {
 });
 
 test('locate med farger: {partIds, colors:true}, maks 20, partId og color leses per skuff', () => {
-  const led = code('Skjold78LED.swift');
+  const led = code('SkjoldLED.swift');
   assert.match(led, /func locateMany\(_ ids: \[Any\], colors: Bool, _ store: Store\) async -> \[String: Any\]/);
   assert.match(led, /body\["colors"\] = true/);
   assert.match(led, /\.prefix\(20\)/);
@@ -42,7 +42,7 @@ test('locate med farger: {partIds, colors:true}, maks 20, partId og color leses 
   assert.match(led, /var color: String = ""/);
   assert.match(led, /x\.partId = JS\.str\(o, "partId"\)/);
   assert.match(led, /JS\.str\(o, "color"\)/);
-  const pick = code('Skjold79Pick.swift');
+  const pick = code('SkjoldPick.swift');
   assert.match(pick, /maxLit: Int = 20/);
   assert.match(pick, /\.prefix\(Skjold79\.maxLit\)/);
   assert.match(pick, /l\.locateMany\(ids, colors: true, store\)/);
@@ -56,7 +56,7 @@ test('locate med farger: {partIds, colors:true}, maks 20, partId og color leses 
 });
 
 test('plukklista: +/✓ på rad og detalj, linja nederst, arket med ±, Fjern, Tøm og Ta ut av lager med angre', () => {
-  const v = code('Skjold79Views.swift');
+  const v = code('SkjoldPickViews.swift');
   for (const s of ['struct Skj79AddButton', 'struct Skj79DetailButton', 'struct Skj79Bar', 'struct Skj79Sheet', 'struct Skj79Line', 'struct Skj79Dot'])
     assert.ok(v.includes(s), s);
   assert.match(v, /on \? "checkmark" : "plus"/);
@@ -69,7 +69,7 @@ test('plukklista: +/✓ på rad og detalj, linja nederst, arket med ±, Fjern, T
   assert.match(v, /"Slå av"/);
   assert.match(v, /l\.secondsLeft/);
   assert.match(v, /Skj79Dot\(hex: k\.color\(item\.partId\)/);
-  const pick = code('Skjold79Pick.swift');
+  const pick = code('SkjoldPick.swift');
   assert.match(pick, /Haptics\.shared\.success\(\)/);
   assert.match(pick, /m\.offerUndo\(text\)/);
   assert.match(pick, /m\.offerUndo\("Tømte plukklista"\)/);
@@ -78,21 +78,21 @@ test('plukklista: +/✓ på rad og detalj, linja nederst, arket med ±, Fjern, T
   assert.match(pick, /adjust\(x\.partId, -Double\(x\.take\), store\)/);
   assert.match(pick, /adjust\(x\.partId, Double\(x\.take\), store\)/);
 
-  const pg = code('Skjold76Page.swift');
+  const pg = code('SkjoldPage.swift');
   assert.match(pg, /Skj79AddButton\(part: part\)/);
   assert.match(pg, /Skj79Bar\(\)/);
   assert.match(pg, /case \.pick: Skj79Sheet\(\)/);
   assert.match(pg, /case \.diagnose\(let c\): Skj79Diagnose\(cabinetId: c\)/);
   assert.match(pg, /await Skjold79\.shared\.load\(store\)/);
-  assert.match(code('Skjold76Detail.swift'), /Skj79DetailButton\(part: x\)/);
-  const md = code('Skjold76Model.swift');
+  assert.match(code('SkjoldDetail.swift'), /Skj79DetailButton\(part: x\)/);
+  const md = code('SkjoldModel.swift');
   assert.match(md, /case pick\b/);
   assert.match(md, /case diagnose\(String\)/);
   assert.match(md, /case \.pick: return "pick"/);
 });
 
 test('lagring: lokalt per konto og GET|PUT /picklist {items:[{partId, qty}]}, 404 = bare lokalt', () => {
-  const pick = code('Skjold79Pick.swift');
+  const pick = code('SkjoldPick.swift');
   assert.match(pick, /"skj79\.pick\." \+ s/);
   assert.match(pick, /AcctScope\.current/);
   assert.match(pick, /UserDefaults\.standard\.set\(/);
@@ -105,18 +105,18 @@ test('lagring: lokalt per konto og GET|PUT /picklist {items:[{partId, qty}]}, 40
 });
 
 test('Feilsøk LED: knapp i oppsettet, POST /cabinets/:id/leds/diagnose, Ja/Nei-spørsmål og hint etter kontrakten', () => {
-  const sv = code('Skjold78Views.swift');
+  const sv = code('SkjoldLEDViews.swift');
   assert.match(sv, /"Feilsøk LED"/);
   assert.match(sv, /m\.sheet = \.diagnose\(id\)/);
-  const led = code('Skjold78LED.swift');
+  const led = code('SkjoldLED.swift');
   assert.match(led, /"\/cabinets\/\\\(id\)\/leds\/diagnose"/);
-  const v = code('Skjold79Views.swift');
+  const v = code('SkjoldPickViews.swift');
   assert.match(v, /"Lyste stripa rødt\?"/);
   assert.match(v, /"Lyste én LED blått\?"/);
   assert.match(v, /choice\("Ja", true, b\)/);
   assert.match(v, /choice\("Nei", false, b\)/);
   assert.match(v, /JS\.dict\(o, "hints"\)/);
-  const pick = read('Skjold79Pick.swift');
+  const pick = read('SkjoldPick.swift');
   assert.match(pick, /JS\.list\(o, "steps"\)/);
   for (const k of ['"name"', '"ok"', '"detail"']) assert.ok(pick.includes(k), k);
   // Hint-reglene: ingen lyser → maskinvare; bare rødt → feil hos oss; begge → kalibrering.

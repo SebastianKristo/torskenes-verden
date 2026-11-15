@@ -23,7 +23,7 @@ struct PaperHome: View {
         }
         // Prompt 70: trykk utenfor søkefeltet og Glimt-kortet lukker et ferdig svar – uten lag over Hjem (HomeAssistScroll.swift).
         .assist70Tap()
-        // Prompt 46: Min posisjon (standard) holdes fersk for Vær-kortet på Hjem (Vaer46.swift).
+        // Prompt 46: Min posisjon (standard) holdes fersk for Vær-kortet på Hjem (WeatherLocation.swift).
         .vaer46Keeper()
         .update30Sheet()
         // Prompt 37: arket med hele bibelverset, og modulen lastes (avgjør om h13 finnes).
@@ -33,7 +33,7 @@ struct PaperHome: View {
     }
 
     @ViewBuilder private var phone: some View {
-        // Prompt 30: oppdateringsbanneret øverst, over søkefeltet (bare admin, ✕ skjuler i 24 t). Update30.swift.
+        // Prompt 30: oppdateringsbanneret øverst, over søkefeltet (bare admin, ✕ skjuler i 24 t). UpdateBanner.swift.
         Update30Banner(home: true)
         // Prompt 41: 17. mai – eget Hjem på dagen med bryteren «17. mai-design» (NationalDayHome.swift).
         Mai17Home41()
@@ -80,7 +80,7 @@ struct PaperHome: View {
         return PaperCardDef(key: "h16", label: label, view: AnyView(Home50TilesSlot(minis: AnyView(minis))))
     }
 
-    /// Kortene på Hjem. Prompt 37: «Dagens bibelvers» (h13) finnes bare for brukere med modulen (Bible37Views.swift).
+    /// Kortene på Hjem. Prompt 37: «Dagens bibelvers» (h13) finnes bare for brukere med modulen (BibleCards.swift).
     private var homeCards: [PaperCardDef] {
         var out: [PaperCardDef] = [
                 // Prompt 34: Glimt-brief øverst (blått kort med figuren), flyttes og skjules i wiggle-modus (BriefCards.swift).
@@ -88,10 +88,10 @@ struct PaperHome: View {
                 // Prompt 29: søkefelt med søkemotor-meny (System-AI/Google/DuckDuckGo) og timer til kalenderen (HomeSearch.swift).
                 PaperCardDef(key: "h1", label: "Søk", view: AnyView(HomeSearch29())), // prompt 46: Snarveier er eget kort (h16)
                 PaperCardDef(key: "h2", label: "Pakker", view: AnyView(packages)),
-                // Prompt 43: Media (nedlastinger og det som kommer), Media43Home.swift. Nøkkelen h12 er Glimt-brief på iOS.
+                // Prompt 43: Media (nedlastinger og det som kommer), MediaHomeCard.swift. Nøkkelen h12 er Glimt-brief på iOS.
                 PaperCardDef(key: "h15", label: "Media", view: AnyView(Media43HomeCard())),
-                // Prompt 27: «Velg stopp» og én gruppe per stopp (RuterHome27.swift).
-                // Prompt 41: Min reise over (eller i stedet for) Avganger når du har forlatt skolen (MinReise41Views.swift).
+                // Prompt 27: «Velg stopp» og én gruppe per stopp (DeparturesHomeCard.swift).
+                // Prompt 41: Min reise over (eller i stedet for) Avganger når du har forlatt skolen (MinReiseViews.swift).
                 PaperCardDef(key: "h3", label: "Avganger", view: AnyView(MinReise41HomeSlot())),
                 // Prompt 32: Prøveperioder under Avganger (Trials32App.swift). Flyttes og skjules i wiggle-modus.
                 // Prompt 46: vises bare med minst én aktiv prøveperiode (eller i wiggle, så det kan flyttes/skjules) – se trials46.
@@ -564,7 +564,7 @@ struct PaperTracking: View {
         let list = all.filter { PaperTracking.inTab($0, store.trkTab) }.sorted { a, b in a.ready != b.ready ? a.ready : a.step > b.step }
         VStack(spacing: 10) {
             if TrackSelect.shared.active { TrackSelectBar(all: list, inArchive: store.trkTab == "Arkiv") }
-            // Prompt 26: én pakke valgt → SPOR VIA (Track26.swift).
+            // Prompt 26: én pakke valgt → SPOR VIA (TrackCarriers.swift).
             if TrackSelect.shared.active && TrackSelect.shared.ids.count == 1, let one = all.first(where: { TrackSelect.shared.ids.contains($0.id) }) {
                 TrackSporVia26(s: one)
             }
@@ -581,7 +581,7 @@ struct PaperTracking: View {
                 PLineButton(title: store.trkChecking ? "Sjekker …" : "Sjekk nå", height: 44, full: true) { Task { await store.refreshTracking22() } }
                 PLineButton(title: "⚙ Kilder", height: 44, full: true) { store.trkSettings = true }
             }
-            // Prompt 37: «Bruker husstandens ParcelsApp-nøkkel · 17 oppslag igjen» (TrackKeys37.swift).
+            // Prompt 37: «Bruker husstandens ParcelsApp-nøkkel · 17 oppslag igjen» (TrackKeys.swift).
             TrackKeys37Line()
             // Pakkevarslene ligger samlet under Innstillinger → Varsler.
             Button { store.paperGo("innst-varsler") } label: {
@@ -758,7 +758,7 @@ struct PaperShipmentCard: View {
                 .buttonStyle(.plain)
                 .accessibilityLabel(open ? "Skjul hendelser" : "Vis hendelser")
             }
-            // Prompt 22: siste hendelse, feiltekst og tidslinje med faktisk status (Track22.swift).
+            // Prompt 22: siste hendelse, feiltekst og tidslinje med faktisk status (TrackCarriers.swift).
             PaperShipmentStatus22(s: s)
             if open { timeline }
         }

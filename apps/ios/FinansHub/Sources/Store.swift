@@ -319,7 +319,7 @@ final class Store {
     /// Værappen (trykk på temperaturen på Hjem).
     var weatherOpen = false
     var weatherFull: WeatherFull?
-    // Prompt 46: standard er Min posisjon («__gps», Vaer46.swift), ikke Oslo.
+    // Prompt 46: standard er Min posisjon («__gps», WeatherLocation.swift), ikke Oslo.
     var weatherPlace = UserDefaults.standard.string(forKey: "fh_wx_place") ?? "__gps" {
         didSet { UserDefaults.standard.set(weatherPlace, forKey: "fh_wx_place") }
     }
@@ -959,7 +959,7 @@ final class Store {
             mobileHome = try JSONDecoder().decode(MobileHome.self, from: d)
             let raw = JS.obj(d)
             homeWeather = JS.dict(raw, "weather").map(WeatherX.init)
-            // Prompt 46: Min posisjon – temperaturen på Hjem fra været der telefonen er (Vaer46.swift).
+            // Prompt 46: Min posisjon – temperaturen på Hjem fra været der telefonen er (WeatherLocation.swift).
             if weatherPlace == Vaer46.gpsId, let w = weatherFull, w.placeId == Vaer46.gpsId, var h = homeWeather {
                 h.place = w.placeName; h.temp = w.temp; h.text = w.text; h.hi = w.hi; h.lo = w.lo; homeWeather = h
             }

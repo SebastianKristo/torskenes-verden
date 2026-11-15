@@ -20,7 +20,7 @@ import os
  3. Tilstand. Subscription OS har én `wig`/`editing` for hele siden. Hjem hadde `@State wig` per kort, startet i onAppear.
  4. Animasjon. Begge bruker rotationEffect, men Hjem flyttet kortet med `.offset` + zIndex per finger-punkt (layout per bilde).
  5. Mat: «Dagens middag» og radene i ukeplanen hadde `.contextMenu`. iOS gir holdet til kontekstmenyen før kortets
-    hold-gest, så Mat kom aldri i redigeringsmodus fra de kortene (fjernet i MatMobile.swift, menyen er nå en ⋯-knapp).
+    hold-gest, så Mat kom aldri i redigeringsmodus fra de kortene (fjernet i MatPage.swift, menyen er nå en ⋯-knapp).
 
  Nå: hold 0,5 s = redigering (haptikk), alle kort vugger (én tilstand for siden, av med «Reduser bevegelse»), sveip = scroll,
  hold på et kort i redigering = systemet løfter det (dra-og-slipp), de andre glir unna mens du drar, slipp = lagre én gang.
