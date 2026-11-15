@@ -284,6 +284,7 @@ export function searchParts76(user, { q: text = '', category = null, cabinet = n
 }
 
 /* ---------------- Demodata (mock-serveren) ---------------- */
+// Kategoriene er fra standardlisten (kategorier.js), så demodata og AI-forslag bruker samme navn. Gjelder bare nye demobrukere.
 
 export const DEMO76 = [
   ['Motstand 10 kΩ', 'Motstander', { verdi: '10kΩ', toleranse: '1%', pakke: '0805' }, 200, 50, 1, 1, ['smd', 'motstand']],
@@ -293,19 +294,19 @@ export const DEMO76 = [
   ['Keramisk kondensator 100 nF', 'Kondensatorer', { verdi: '100nF', spenning: '50V', pakke: '0805' }, 150, 30, 2, 1, ['avkobling']],
   ['Elektrolytt 100 µF 25 V', 'Kondensatorer', { verdi: '100µF', spenning: '25V' }, 25, 10, 2, 2, ['elko']],
   ['Elektrolytt 1000 µF 16 V', 'Kondensatorer', { verdi: '1000µF', spenning: '16V' }, 6, 5, 2, 3, ['elko']],
-  ['LED rød 5 mm', 'LED', { farge: 'rød', diameter: '5 mm', spenning: '2V' }, 60, 20, 3, 1, ['led']],
-  ['LED grønn 5 mm', 'LED', { farge: 'grønn', diameter: '5 mm' }, 45, 20, 3, 2, ['led']],
-  ['WS2812B LED-stripe', 'LED', { type: 'WS2812B', tetthet: '60/m' }, 2.5, 1, 3, 3, ['neopixel', 'adresserbar']],
+  ['LED rød 5 mm', 'Dioder og LED', { farge: 'rød', diameter: '5 mm', spenning: '2V' }, 60, 20, 3, 1, ['led']],
+  ['LED grønn 5 mm', 'Dioder og LED', { farge: 'grønn', diameter: '5 mm' }, 45, 20, 3, 2, ['led']],
+  ['WS2812B LED-stripe', 'Dioder og LED', { type: 'WS2812B', tetthet: '60/m' }, 2.5, 1, 3, 3, ['neopixel', 'adresserbar']],
   ['ESP32 DevKitC', 'Mikrokontrollere', { brikke: 'ESP32-WROOM-32', flash: '4MB' }, 4, 2, 5, 1, ['wifi', 'bluetooth']],
   ['ESP32-C3 SuperMini', 'Mikrokontrollere', { brikke: 'ESP32-C3', flash: '4MB' }, 1, 2, 5, 2, ['wifi']],
   ['Arduino Nano', 'Mikrokontrollere', { brikke: 'ATmega328P' }, 3, null, 5, 3, []],
-  ['M3 × 10 skruer', 'Skruer', { gjenge: 'M3', lengde: '10 mm', hode: 'unbrako' }, 50, 20, 4, 2, ['skrue', 'm3']],
-  ['M3 mutter', 'Skruer', { gjenge: 'M3' }, 120, 30, 4, 3, ['mutter', 'm3']],
-  ['M2.5 × 6 skruer', 'Skruer', { gjenge: 'M2.5', lengde: '6 mm' }, 35, 10, 4, 4, ['skrue']],
-  ['Kabelsko 6,3 mm hun', 'Kabelsko', { størrelse: '6,3 mm', farge: 'blå', tverrsnitt: '1,5–2,5 mm²' }, 70, 25, 6, 1, ['krympesko']],
-  ['Ringkabelsko M5', 'Kabelsko', { hull: 'M5', farge: 'rød' }, 40, 10, 6, 2, ['krympesko']],
-  ['Krympestrømpe sortiment', 'Kabel', { diameter: '2–10 mm' }, 1, null, 7, 1, ['krymp']],
-  ['Silikonledning 22 AWG svart', 'Kabel', { tverrsnitt: '22 AWG', farge: 'svart' }, 10, 2, null, null, ['ledning']],
+  ['M3 × 10 skruer', 'Skruer og bolter', { gjenge: 'M3', lengde: '10 mm', hode: 'unbrako' }, 50, 20, 4, 2, ['skrue', 'm3']],
+  ['M3 mutter', 'Mutre og skiver', { gjenge: 'M3' }, 120, 30, 4, 3, ['mutter', 'm3']],
+  ['M2.5 × 6 skruer', 'Skruer og bolter', { gjenge: 'M2.5', lengde: '6 mm' }, 35, 10, 4, 4, ['skrue']],
+  ['Kabelsko 6,3 mm hun', 'Kontakter', { størrelse: '6,3 mm', farge: 'blå', tverrsnitt: '1,5–2,5 mm²' }, 70, 25, 6, 1, ['krympesko']],
+  ['Ringkabelsko M5', 'Kontakter', { hull: 'M5', farge: 'rød' }, 40, 10, 6, 2, ['krympesko']],
+  ['Krympestrømpe sortiment', 'Kabler', { diameter: '2–10 mm' }, 1, null, 7, 1, ['krymp']],
+  ['Silikonledning 22 AWG svart', 'Kabler', { tverrsnitt: '22 AWG', farge: 'svart' }, 10, 2, null, null, ['ledning']],
 ];
 export function seedDemo76(user) {
   const cab = cabinetRows76(user)[0] ?? insertCabinet76(user, { name: 'Hovedskap', rows: 12, cols: 5, kind: 'kjøpt' });

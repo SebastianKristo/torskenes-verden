@@ -6,6 +6,8 @@
 //   - Kategorier: velg blant brukerens egne (synonymgrupper), ellers standardlisten; ny bare når ingen passer.
 // Modellen regner aldri ut verdier: den oppgir fargene/koden, og verdien regnes ut her.
 
+import { KATEGORIER, SYNONYMER } from './kategorier.js'; // én standardliste (Fase 6)
+
 /* ---------------- Tall og prefiks ---------------- */
 
 /** Norsk tallformat: maks 4 gjeldende sifre, komma som desimaltegn, ingen eksponent. */
@@ -280,8 +282,8 @@ export function normText77(s, kind = null) {
 
 /* ---------------- Typer og kategorier ---------------- */
 
-export const DEFAULT_CATEGORIES77 = ['Motstander', 'Kondensatorer', 'Dioder og LED', 'Transistorer', 'IC-er', 'Mikrokontrollere', 'Sensorer', 'Moduler',
-  'Kontakter', 'Kabler', 'Skruer og bolter', 'Mutre og skiver', 'Avstandsstykker', 'Brytere', 'Sikringer', 'Verktøy', 'Diverse'];
+/** Standardkategoriene (én liste i kategorier.js, som demodataene og /api/skjold/categories også bruker). */
+export const DEFAULT_CATEGORIES77 = KATEGORIER;
 
 // [kanonisk type, standardkategori, verdi-type, regex over foldet tekst (type/navn)]
 const TYPES = [
@@ -320,15 +322,8 @@ export function typeOf77(text) {
   return null;
 }
 
-// Synonymgrupper for kategorier: en eksisterende kategori «Skruer» passer til «Skruer og bolter», «LED» til «Dioder og LED» osv.
-const CAT_GROUPS = [
-  ['motstand', 'motstander', 'resistor', 'resistorer', 'resistors', 'potensiometer'], ['kondensator', 'kondensatorer', 'capacitor', 'capacitors', 'elko', 'elektrolytt'],
-  ['dioder og led', 'diode', 'dioder', 'led', 'leder', 'lysdioder', 'leds'], ['transistor', 'transistorer', 'mosfet', 'transistors'], ['ic', 'ic-er', 'icer', 'kretser', 'integrerte kretser', 'chips'],
-  ['mikrokontroller', 'mikrokontrollere', 'microcontrollers', 'mcu', 'utviklingskort', 'dev boards'], ['sensor', 'sensorer', 'sensors'], ['modul', 'moduler', 'modules', 'breakout'],
-  ['kontakt', 'kontakter', 'connectors', 'kabelsko', 'plugger', 'terminaler'], ['kabel', 'kabler', 'ledning', 'ledninger', 'cables', 'wire'], ['skrue', 'skruer', 'skruer og bolter', 'bolter', 'screws'],
-  ['mutter', 'mutre', 'mutre og skiver', 'skiver', 'muttere', 'nuts'], ['avstandsstykke', 'avstandsstykker', 'standoffs', 'distanser'], ['bryter', 'brytere', 'switcher', 'knapper', 'switches'],
-  ['sikring', 'sikringer', 'fuses'], ['verktoy', 'tools'], ['diverse', 'annet', 'misc', 'ukjent'],
-];
+// Synonymgrupper for kategorier (kategorier.js): en eksisterende kategori «Skruer» passer til «Skruer og bolter», «LED» til «Dioder og LED» osv.
+const CAT_GROUPS = SYNONYMER;
 const catKey = (s) => fold(s).replace(/[^a-z0-9\- ]/g, '').replace(/\s+/g, ' ').trim();
 const groupOf = (s) => { const k = catKey(s); const i = CAT_GROUPS.findIndex((g) => g.includes(k)); return i < 0 ? null : i; };
 /** Finner kategorien blant listen (eksakt, så synonymgruppe, så prefiks). → kategorinavnet fra listen | null */

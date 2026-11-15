@@ -1,5 +1,6 @@
 // Prompt 76 (SKJSRV): /api/skjold – Skjold Lab (sorteringsskap). Sesjon eller app-token, alt per bruker (admin ser bare sine egne).
 // Se $S/CONTRACT76.md og $S/P76-NOTES.md for formen på svarene.
+import { KATEGORIER } from './kategorier.js'; // standardkategoriene (Fase 6)
 import { Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import { authOrToken } from '../mobile.js';
@@ -431,7 +432,7 @@ skjoldApi76.get('/categories', (c) => {
   const u = c.get('user');
   const rows = q("SELECT COALESCE(NULLIF(category,''), NULL) AS name, count(*) AS count, sum(CASE WHEN min_qty IS NOT NULL AND qty<=min_qty THEN 1 ELSE 0 END) AS low FROM skj_parts WHERE user_id=? AND deleted_at IS NULL GROUP BY lower(COALESCE(category,'')) ORDER BY name IS NULL, name COLLATE NOCASE").all(u);
   return c.json({ items: rows.filter((r) => r.name).map((r) => ({ name: r.name, count: r.count, low: r.low })), uncategorized: rows.find((r) => !r.name)?.count ?? 0,
-    total: rows.reduce((s, r) => s + r.count, 0), low: rows.reduce((s, r) => s + r.low, 0) }, 200, NS);
+    total: rows.reduce((s, r) => s + r.count, 0), low: rows.reduce((s, r) => s + r.low, 0), standard: KATEGORIER }, 200, NS); // standard: den kanoniske listen (kategorier.js)
 });
 skjoldApi76.get('/suggest', (c) => {
   const u = c.get('user'), text = str(c.req.query('q') ?? '', 100);
