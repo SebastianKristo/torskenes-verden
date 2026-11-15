@@ -116,6 +116,9 @@ import no.kristo.finanshub.openKal26
 import no.kristo.finanshub.startService52
 import org.json.JSONArray
 import org.json.JSONObject
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 
 /* ======================= Brief-kortet: sveip mot høyre ======================= */
 
@@ -1066,7 +1069,7 @@ internal fun GlimtSettingsRow35(vm: AppViewModel) {
             Text("Figur, brief, stemme og venner · ${Fig35.name(set.char)}", color = p.mut, fontSize = 12.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         GlimtFig35(set.char, 28.dp, still = true)
-        Text("›", color = p.mut, fontSize = 13.sp)
+        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = p.mut, modifier = Modifier.size(16.dp))
     }
 }
 

@@ -21,6 +21,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import no.kristo.finanshub.*
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 
 /* ======================= Skanneknapp på Hjem ======================= */
 
@@ -35,7 +38,7 @@ internal fun ScanHomeRow41(vm: AppViewModel, top: Boolean = false) {
             Modifier.fillMaxWidth().clickable(role = Role.Switch) { vm.setScanHome41(!on) }.padding(14.dp, 12.dp),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Box(Modifier.size(30.dp).clip(RoundedCornerShape(9.dp)).background(p.lab), contentAlignment = Alignment.Center) { Text("+", color = p.onLab, fontSize = 18.sp, fontWeight = FontWeight.Bold) }
+            Box(Modifier.size(30.dp).clip(RoundedCornerShape(9.dp)).background(p.lab), contentAlignment = Alignment.Center) { Icon(Icons.Filled.Add, contentDescription = "Legg til", tint = p.onLab, modifier = Modifier.size(22.dp)) }
             Column(Modifier.weight(1f)) {
                 Text("Skanneknapp på Hjem", color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 14.5.sp, maxLines = 1)
                 Text(if (on) "Vises på Hjem" else "Skjult på Hjem · vises i de andre fanene", color = p.mut, fontSize = 12.5.sp, maxLines = 2)

@@ -38,6 +38,9 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import kotlinx.coroutines.withTimeoutOrNull
 import no.kristo.finanshub.*
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 
 /* ======================= Mer: hold inne for å flytte og skjule ======================= */
 
@@ -234,7 +237,7 @@ internal fun MerRowNormal28(vm: AppViewModel, r: MerItem28, top: Boolean, onLong
                 PSerif(r.title, 19.sp, maxLines = 1)
                 Text(r.sub, color = p.mut, fontSize = 12.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
-            Text("›", color = p.mut, fontSize = 17.sp)
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = p.mut, modifier = Modifier.size(20.dp))
         }
     }
 }

@@ -66,3 +66,12 @@ test('B2: periodisk henting fra composables stopper ved ON_STOP (GjentaMensSynli
   assert.match(code('ui/GlobaleLag.kt'), /GjentaMensSynlig\(s\.journey\?\.leftAt\) \{ while \(s\.journey != null\) \{ vm\.loadTrip41\(\); delay\(30_000\) \} \}/);
   assert.match(code('ui/domene/Familie.kt'), /GjentaMensSynlig \{ while \(true\) \{ kotlinx\.coroutines\.delay\(30_000\); vm\.loadHjemlys40\(force = true\) \} \}/);
 });
+
+test('tegn som ikon: › ✓ + ‹ ⋯ er Icon(Icons…) i skallets filer', () => {
+  const filer = ['ui/Konto.kt', 'ui/Mer.kt', 'ui/Chat.kt', 'ui/Paper14.kt', 'ui/Paper.kt', 'ui/Fanelinje.kt', 'ui/ChatArk.kt', 'ui/Cards31.kt',
+    'ui/Paper17.kt', 'ui/Memory33Ui.kt', 'ui/AiCtl34.kt', 'ui/MerListe.kt', 'ui/Innstillinger.kt', 'ui/HjemDeler.kt',
+    'ui/Glimt.kt', 'ui/Brief.kt', 'ui/Bakgrunn.kt'];
+  for (const f of filer) assert.doesNotMatch(code(f), /Text\("(›|‹|✓|\+|⋯)"/, f);
+  assert.match(code('ui/Chat.kt'), /\.ch27Label\("Tilbake"\), contentAlignment = Alignment\.Center\) \{ Icon\(Icons\.AutoMirrored\.Filled\.KeyboardArrowLeft, contentDescription = null/);
+  assert.match(code('ui/Mer.kt'), /Icon\(Icons\.Filled\.Check, contentDescription = "Valgt"/);
+});

@@ -91,6 +91,10 @@ import androidx.compose.ui.window.DialogProperties
 import kotlinx.coroutines.delay
 import no.kristo.finanshub.*
 import no.kristo.finanshub.ChatFact41
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.filled.MoreHoriz
 
 /* ======================= Chat → Legg ved ======================= */
 
@@ -336,7 +340,7 @@ private fun Ch27Side(vm: AppViewModel, v: ChatV27, wide: Boolean, modifier: Modi
     val s = vm.chat27
     Column(modifier.clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {}) {
         Row(Modifier.fillMaxWidth().padding(start = if (wide) 6.dp else 16.dp, top = 8.dp, end = 10.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            if (wide) Box(Modifier.size(40.dp).clip(CircleShape).press24 { vm.closeChatAll27() }.ch27Label("Tilbake"), contentAlignment = Alignment.Center) { Text("‹", color = v.ink, fontSize = 28.sp) }
+            if (wide) Box(Modifier.size(40.dp).clip(CircleShape).press24 { vm.closeChatAll27() }.ch27Label("Tilbake"), contentAlignment = Alignment.Center) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = null, tint = v.ink, modifier = Modifier.size(34.dp)) }
             Text("Chat", color = v.ink, fontFamily = v.head, fontWeight = FontWeight.Medium, fontSize = 25.sp, modifier = Modifier.weight(1f))
             Ch27IconBtn(ChIc27.NEW, v, "Ny chat", 42.dp) { vm.newChat27() }
         }
@@ -427,7 +431,7 @@ private fun Ch27ChatRow(vm: AppViewModel, v: ChatV27, r: ChatRow27) {
                 maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         Box(Modifier.size(40.dp).clip(CircleShape).press24 { s.menuId = r.id; s.rn = r.title; s.delArm = false; s.nf = ""; s.sheet = "menu" }.ch27Label("Valg for samtalen"),
-            contentAlignment = Alignment.Center) { Text("⋯", color = v.mut, fontSize = 18.sp) }
+            contentAlignment = Alignment.Center) { Icon(Icons.Filled.MoreHoriz, contentDescription = "Mer", tint = v.mut, modifier = Modifier.size(22.dp)) }
     }
 }
 
@@ -440,7 +444,7 @@ private fun Ch27Main(vm: AppViewModel, v: ChatV27, wide: Boolean, modifier: Modi
     Column(modifier.statusBarsPadding()) {
         Row(Modifier.fillMaxWidth().padding(start = 10.dp, top = 6.dp, end = 10.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             if (!wide) {
-                Box(Modifier.size(44.dp).clip(CircleShape).press24 { vm.closeChatAll27() }.ch27Label("Tilbake"), contentAlignment = Alignment.Center) { Text("‹", color = v.ink, fontSize = 28.sp) }
+                Box(Modifier.size(44.dp).clip(CircleShape).press24 { vm.closeChatAll27() }.ch27Label("Tilbake"), contentAlignment = Alignment.Center) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = null, tint = v.ink, modifier = Modifier.size(34.dp)) }
                 Ch27IconBtn(ChIc27.MENU, v, "Historikk") { s.drawer = true }
             }
             // Prompt 39 (claude-code-android-chat-modell.md): før delte modellknappen (weight 1, fill = false) og Spaceren (weight 1)

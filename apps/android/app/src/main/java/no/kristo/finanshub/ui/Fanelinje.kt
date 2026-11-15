@@ -50,6 +50,9 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import no.kristo.finanshub.*
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
 
 /* ======================= «Rediger fanelinjen» ======================= */
 
@@ -378,7 +381,7 @@ private fun NavHomeCard42(vm: AppViewModel, k: String, n: String, d: String, mod
                 Text(n, color = p.ink, fontWeight = FontWeight.Bold, fontSize = if (compact) 13.sp else 14.5.sp, maxLines = 2, lineHeight = 17.sp)
                 Text(d, color = p.mut, fontSize = 12.sp, maxLines = if (compact) 3 else 2, lineHeight = 15.sp, overflow = TextOverflow.Ellipsis)
             }
-            if (on) Text("✓", color = p.ink, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+            if (on) Icon(Icons.Filled.Check, contentDescription = "Valgt", tint = p.ink, modifier = Modifier.size(18.dp))
         }
     }
 }
@@ -450,7 +453,7 @@ internal fun PaperRail25(vm: AppViewModel, bar: String, float: Boolean, modifier
         Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             tabs.forEach { t -> RailTab25(t.label, t.icon, cur == t.key, style) { if (cur == t.key) vm.tabReselect26(bar, t) else t.go(); Haptics.select() } }
         }
-        if (!float && !noScanHere(vm)) ScanPress(vm, bar, Modifier, 56.dp, RoundedCornerShape(18.dp), onTap, onHold) { Text("+", color = p.onLab, fontSize = 22.sp) }
+        if (!float && !noScanHere(vm)) ScanPress(vm, bar, Modifier, 56.dp, RoundedCornerShape(18.dp), onTap, onHold) { Icon(Icons.Filled.Add, contentDescription = null, tint = p.onLab, modifier = Modifier.size(26.dp)) }
     }
 }
 
@@ -540,7 +543,7 @@ private fun NavPreview25(tabs: List<Pair<String, String>>, style: String, big: B
         ) {
             tabs.forEachIndexed { i, (n, ic) -> PaperTab24(n, ic, i == 0, p.navInk, p.navActInk, p.navAct, style = style) {} }
             Box(Modifier.padding(start = 4.dp).size(46.dp).clip(CircleShape).background(p.lab), contentAlignment = Alignment.Center) {
-                Text("+", color = p.onLab, fontSize = 22.sp)
+                Icon(Icons.Filled.Add, contentDescription = null, tint = p.onLab, modifier = Modifier.size(26.dp))
             }
         }
     } else {

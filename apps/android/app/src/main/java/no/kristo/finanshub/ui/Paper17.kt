@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.sp
 import java.time.LocalDate
 import kotlinx.coroutines.delay
 import no.kristo.finanshub.*
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 
 /* ================= Innstillinger i Papir (design: Mobil Papir App → side «innst») ================= */
 
@@ -169,7 +170,7 @@ internal fun androidx.compose.foundation.lazy.LazyListScope.profileCard17(vm: Ap
                     Text(listOf(roleName(vm.me?.role ?: vm.account?.role), "Se konto ›").filter { it.isNotBlank() }.joinToString(" · "), color = p.mut, fontSize = 13.sp, maxLines = 1)
                     Text(vm.base.substringAfter("://").ifBlank { vm.account?.server?.substringAfter("://") ?: "" }, color = p.mut, fontSize = 12.sp, maxLines = 1, fontFamily = PaperFonts.mono)
                 }
-                Text("›", color = p.mut, fontSize = 18.sp)
+                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = p.mut, modifier = Modifier.size(22.dp))
             }
         }
     }
@@ -279,7 +280,7 @@ private fun NotifySub(vm: AppViewModel) {
                         }
                         if (k == "egen" && n.customSound) Text("Bytt", color = p.lab, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
                             modifier = Modifier.clip(CircleShape).clickable { pick.launch(arrayOf("audio/*")) }.padding(8.dp, 4.dp))
-                        if (on) Text("✓", color = p.ink, fontWeight = FontWeight.Bold)
+                        if (on) Icon(Icons.Filled.Check, contentDescription = "Valgt", tint = p.ink, modifier = Modifier.size(19.dp))
                     }
                 }
             }

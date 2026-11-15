@@ -98,6 +98,9 @@ import androidx.compose.ui.viewinterop.AndroidView
 import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
 import no.kristo.finanshub.*
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
 
 /* ======================= Konto: profilbildet ======================= */
 
@@ -227,7 +230,7 @@ internal fun Onboard37(vm: AppViewModel) {
                             Row(Modifier.fillMaxWidth().heightIn(min = 58.dp).clip(RoundedCornerShape(18.dp)).border(2.dp, if (s.obNew) ink else line, RoundedCornerShape(18.dp))
                                 .clickable(role = Role.Button) { s.obNew = true; s.obSel = null }.padding(14.dp, 10.dp),
                                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                Box(Modifier.size(44.dp).clip(CircleShape).background(Color(0xFFE9E2D3)), contentAlignment = Alignment.Center) { Text("+", color = ink, fontWeight = FontWeight.ExtraBold, fontSize = 20.sp) }
+                                Box(Modifier.size(44.dp).clip(CircleShape).background(Color(0xFFE9E2D3)), contentAlignment = Alignment.Center) { Icon(Icons.Filled.Add, contentDescription = "Legg til", tint = ink, modifier = Modifier.size(24.dp)) }
                                 Column(Modifier.weight(1f)) {
                                     Text("Jeg er ny i husstanden", color = ink, fontWeight = FontWeight.Bold, fontSize = 15.sp)
                                     Text("Lag en ny profil for meg", color = mut, fontSize = 12.5.sp)
@@ -314,7 +317,7 @@ private fun ProfileRow37(pr: Profile37, on: Boolean, taken: Boolean, sub: String
             Text(has, color = Color(0xFF6B665C), fontSize = 12.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         Box(Modifier.size(24.dp).clip(CircleShape).border(2.dp, if (on) ink else Color(0xFFDDD5C5), CircleShape).background(if (on) ink else Color.Transparent), contentAlignment = Alignment.Center) {
-            if (on) Text("✓", color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 12.sp)
+            if (on) Icon(Icons.Filled.Check, contentDescription = "Valgt", tint = Color.White, modifier = Modifier.size(14.dp))
         }
     }
 }
@@ -352,7 +355,7 @@ private fun SesRow38(icon: ImageVector, tint: Color, title: String, sub: String?
                 Text(title, color = if (red) RED38 else p.ink, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, maxLines = 1)
                 if (!sub.isNullOrBlank()) Text(sub, color = p.mut, fontSize = 12.5.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
             }
-            if (!red) Text("›", color = p.mut, fontSize = 16.sp)
+            if (!red) Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = p.mut, modifier = Modifier.size(19.dp))
         }
     }
 }
@@ -487,7 +490,7 @@ private fun TfOption40(title: String, sub: String, badge: String?, enabled: Bool
             }
             Text(sub, color = p.mut, fontSize = 12.5.sp, lineHeight = 17.sp)
         }
-        Text("›", color = p.mut, fontSize = 18.sp)
+        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = p.mut, modifier = Modifier.size(22.dp))
     }
 }
 
@@ -599,7 +602,7 @@ private fun TfCodes40(vm: AppViewModel, ctx: Context, final: Boolean) {
     if (final) {
         Row(Modifier.fillMaxWidth().clickable(role = Role.Checkbox) { saved = !saved }.padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Box(Modifier.size(24.dp).clip(RoundedCornerShape(7.dp)).background(if (saved) p.pos else Color.Transparent).border(2.dp, if (saved) p.pos else p.line, RoundedCornerShape(7.dp)),
-                contentAlignment = Alignment.Center) { if (saved) Text("✓", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp) }
+                contentAlignment = Alignment.Center) { if (saved) Icon(Icons.Filled.Check, contentDescription = "Valgt", tint = Color.White, modifier = Modifier.size(16.dp)) }
             Text("Jeg har lagret reservekodene", color = p.ink, fontSize = 14.5.sp, fontWeight = FontWeight.SemiBold)
         }
         PButton("Fullfør", Modifier.fillMaxWidth().graphicsLayer { alpha = if (saved) 1f else .45f }) { if (saved) { vm.p40.tfStep = 4; Haptics.success() } }
@@ -610,7 +613,7 @@ private fun TfCodes40(vm: AppViewModel, ctx: Context, final: Boolean) {
 private fun TfDone40(vm: AppViewModel) {
     val p = PaperPal.current
     Column(Modifier.fillMaxWidth().padding(top = 30.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Box(Modifier.size(72.dp).clip(CircleShape).background(p.posSoft), contentAlignment = Alignment.Center) { Text("✓", color = p.pos, fontSize = 34.sp, fontWeight = FontWeight.Bold) }
+        Box(Modifier.size(72.dp).clip(CircleShape).background(p.posSoft), contentAlignment = Alignment.Center) { Icon(Icons.Filled.Check, contentDescription = "Ferdig", tint = p.pos, modifier = Modifier.size(41.dp)) }
         PSerif("Totrinnsbekreftelse er på", 28.sp)
         Text("Denne telefonen er merket som pålitelig enhet. Fra internett ber Homelab om koden når du logger inn.", color = p.mut, fontSize = 14.sp, textAlign = TextAlign.Center)
         PButton("Ferdig", Modifier.fillMaxWidth()) { vm.p40.tfOpen = false; vm.loadTf40() }

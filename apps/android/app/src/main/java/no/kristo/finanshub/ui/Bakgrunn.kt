@@ -24,6 +24,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import no.kristo.finanshub.*
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 
 /* ======================= Bakgrunn: kreditering i Tilpass ======================= */
 
@@ -67,7 +70,7 @@ internal fun GphotoRow46(vm: AppViewModel) {
                 else -> "Delt album som bakgrunn"
             }, color = if (g?.error != null && on) p.lab else p.mut, fontSize = 11.5.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
-        if (on) Text("✓", color = p.ink, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+        if (on) Icon(Icons.Filled.Check, contentDescription = "Valgt", tint = p.ink, modifier = Modifier.size(16.dp))
     }
 }
 

@@ -86,6 +86,7 @@ import java.util.Date
 import java.util.Locale
 import kotlinx.coroutines.delay
 import no.kristo.finanshub.*
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 
 /* ---------------- Markering i Innstillinger ---------------- */
 
@@ -1132,7 +1133,7 @@ private fun IntegRow26(vm: AppViewModel, id: String, badge: String, color: Long,
                 if (!sub.isNullOrBlank()) Text(sub, color = p.mut, fontSize = 12.5.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
             }
             if (value.isNotEmpty()) Text(value, color = valueColor, fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.widthIn(max = 150.dp))
-            if (chev) Text("›", color = p.mut, fontSize = 17.sp)
+            if (chev) Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = p.mut, modifier = Modifier.size(20.dp))
         }
     }
 }

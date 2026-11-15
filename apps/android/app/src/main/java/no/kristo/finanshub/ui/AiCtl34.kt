@@ -49,6 +49,9 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import no.kristo.finanshub.*
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 
 /*
  * Prompt 34 (ANDROID34): AI-kontroll i fullskjerm (AI Kontroll.dc.html, variant mobile, theme papir/mørk).
@@ -206,7 +209,7 @@ private fun AcOverview34(vm: AppViewModel, T: AcT34) {
             Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 when (r.ok) {
                     null -> if (s.aiSelfBusy) AcSpin34(T) else Box(Modifier.size(18.dp).border(1.5.dp, T.line, CircleShape))
-                    true -> Box(Modifier.size(18.dp).clip(CircleShape).background(T.ok), contentAlignment = Alignment.Center) { Text("✓", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold) }
+                    true -> Box(Modifier.size(18.dp).clip(CircleShape).background(T.ok), contentAlignment = Alignment.Center) { Icon(Icons.Filled.Check, contentDescription = "Valgt", tint = Color.White, modifier = Modifier.size(14.dp)) }
                     false -> Box(Modifier.size(18.dp).clip(CircleShape).background(T.bad), contentAlignment = Alignment.Center) { Text("!", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold) }
                 }
                 Column(Modifier.weight(1f)) {
@@ -517,7 +520,7 @@ private fun AcJobs34(vm: AppViewModel, T: AcT34) {
                     when (j.st) {
                         "run" -> AcSpin34(T)
                         "queue" -> Box(Modifier.size(18.dp).border(1.5.dp, T.mut, CircleShape))
-                        "done" -> Box(Modifier.size(18.dp).clip(CircleShape).background(T.ok), contentAlignment = Alignment.Center) { Text("✓", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold) }
+                        "done" -> Box(Modifier.size(18.dp).clip(CircleShape).background(T.ok), contentAlignment = Alignment.Center) { Icon(Icons.Filled.Check, contentDescription = "Valgt", tint = Color.White, modifier = Modifier.size(14.dp)) }
                         else -> Box(Modifier.size(18.dp).clip(CircleShape).background(T.bad), contentAlignment = Alignment.Center) { Text("!", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold) }
                     }
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {

@@ -104,6 +104,8 @@ import no.kristo.finanshub.pickHome67
 import no.kristo.finanshub.quickJob31
 import no.kristo.finanshub.retryHome34
 import no.kristo.finanshub.stopHome67
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 
 /* ======================= «Hvor er …» ======================= */
 
@@ -594,6 +596,6 @@ internal fun DomGlimtRow43(vm: no.kristo.finanshub.AppViewModel) {
             Text("GLIMT · $up", color = Color(0xFFE8A593), fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = 9.5.sp, letterSpacing = 1.2.sp, maxLines = 1)
             Text("Oppsummering av $low", color = Color.White, fontFamily = PaperFonts.sans, fontWeight = FontWeight.Bold, fontSize = 14.5.sp, maxLines = 1)
         }
-        Text("›", color = Color.White, fontSize = 20.sp)
+        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = Color.White, modifier = Modifier.size(24.dp))
     }
 }

@@ -43,6 +43,10 @@ import java.time.temporal.ChronoUnit
 import no.kristo.finanshub.*
 import org.json.JSONArray
 import org.json.JSONObject
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Check
 
 /** Manrope 600 12,5 med linjehøyde 12,5 og uten fontpadding, så teksten står på samme høyde som ikonet. */
 internal val TAB_TEXT24: TextStyle = TextStyle(
@@ -99,7 +103,7 @@ private fun MerRow24(vm: AppViewModel, i: Int, icon: String, title: String, sub:
                 PSerif(title, 19.sp, maxLines = 1)
                 Text(sub, color = p.mut, fontSize = 12.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
-            Text("›", color = p.mut, fontSize = 17.sp)
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = p.mut, modifier = Modifier.size(20.dp))
         }
     }
 }
@@ -462,7 +466,7 @@ private fun PickBoxSheet45(vm: AppViewModel, i: Int, rows: List<MerItem28>) {
                             Text(r.title, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, maxLines = 1)
                             Text(liveSub44(vm, r.key, r.sub), color = p.mut, fontSize = 12.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
-                        if (r.key == cur) Text("✓", color = p.pos, fontWeight = FontWeight.Bold, fontSize = 17.sp)
+                        if (r.key == cur) Icon(Icons.Filled.Check, contentDescription = "Valgt", tint = p.pos, modifier = Modifier.size(20.dp))
                     }
                 }
             }
@@ -580,7 +584,7 @@ private fun FinMerRow45(t: FinTile, top: Boolean, onLong: () -> Unit) {
                 Text(t.value, color = if (t.pos) p.pos else p.mut, fontSize = 12.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             t.badge?.let { b -> Box(Modifier.clip(CircleShape).background(p.lab).padding(8.dp, 2.dp)) { Text(b, color = p.onLab, fontSize = 11.sp, fontWeight = FontWeight.Bold) } }
-            Text("›", color = p.mut, fontSize = 17.sp)
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = p.mut, modifier = Modifier.size(20.dp))
         }
     }
 }

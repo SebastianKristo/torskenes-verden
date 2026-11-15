@@ -53,6 +53,9 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import no.kristo.finanshub.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Check
 
 /*
  * Papir, prompt 14: Finans med egen fanelinje (Oversikt · Liste · Finn · Mer), Finn som rutenett,
@@ -482,7 +485,7 @@ internal fun PaperTracking(vm: AppViewModel, navBottom: Dp) {
                             Text("Varsler for pakker", color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 14.5.sp)
                             Text("Ligger i Innstillinger → Varsler", color = p.mut, fontSize = 12.5.sp)
                         }
-                        Text("›", color = p.mut)
+                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = p.mut, modifier = Modifier.size(19.dp))
                     }
                 }
                 "s5" -> if (t != null) TrkCarriers(vm, t)
@@ -553,7 +556,7 @@ private fun TrkShipments(vm: AppViewModel, items: List<Shipment>) {
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     if (vm.trkPicking) Box(Modifier.size(22.dp).clip(CircleShape).background(if (picked) p.ink else Color.Transparent).border(2.dp, if (picked) p.ink else p.mut, CircleShape), contentAlignment = Alignment.Center) {
-                        if (picked) Text("✓", color = p.bg, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        if (picked) Icon(Icons.Filled.Check, contentDescription = "Valgt", tint = p.bg, modifier = Modifier.size(14.dp))
                     }
                     // Prompt 21: butikklogo med fraktmerke (felles PackageLogo), tittel uten sporingsnummer.
                     PackageLogo(vm, s, 44)
@@ -749,7 +752,7 @@ internal fun PaperOnboarding(vm: AppViewModel) {
                                     PSerif(n, 20.sp, maxLines = 1)
                                     Text(sub, color = p.mut, fontSize = 12.5.sp)
                                 }
-                                if (cur == k) Text("✓", color = p.ink, fontWeight = FontWeight.Bold)
+                                if (cur == k) Icon(Icons.Filled.Check, contentDescription = "Valgt", tint = p.ink, modifier = Modifier.size(19.dp))
                             }
                         }
                     }

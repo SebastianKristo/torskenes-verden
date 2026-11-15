@@ -57,6 +57,9 @@ import org.json.JSONObject
 import java.time.LocalDate
 import java.time.format.TextStyle as JTextStyle
 import java.util.Locale
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 
 /*
  * Prompt 52 (AND52A) – grensesnittet (fasit Homelab.dc.html og prompt-52-pakken):
@@ -413,7 +416,7 @@ private fun SalSheet52(vm: AppViewModel, saldo: Double, spent: Double) {
                                 SaldoBody52(k, saldo, spent, Modifier, small = true)
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Text(n, color = p.ink, fontWeight = FontWeight.Bold, fontSize = 13.5.sp, modifier = Modifier.weight(1f))
-                                    if (on) Text("✓", color = p.lab, fontWeight = FontWeight.ExtraBold, fontSize = 15.sp)
+                                    if (on) Icon(Icons.Filled.Check, contentDescription = "Valgt", tint = p.lab, modifier = Modifier.size(18.dp))
                                 }
                             }
                         }

@@ -37,6 +37,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import no.kristo.finanshub.*
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.filled.Check
 
 @Composable
 internal fun Ch27Sheets(vm: AppViewModel, v: ChatV27, wide: Boolean) {
@@ -77,7 +79,7 @@ internal fun Ch27Sheets(vm: AppViewModel, v: ChatV27, wide: Boolean) {
                     Row(Modifier.fillMaxWidth().heightIn(min = 56.dp).background(v.card).press24 { vm.toggleKbDoc27(d) }.padding(horizontal = 14.dp, vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         Box(Modifier.size(22.dp).clip(RoundedCornerShape(6.dp)).border(1.5.dp, if (on) v.ink else v.line, RoundedCornerShape(6.dp)).background(if (on) v.ink else Color.Transparent),
-                            contentAlignment = Alignment.Center) { if (on) Text("✓", color = v.bg, fontSize = 13.sp, fontWeight = FontWeight.Bold) }
+                            contentAlignment = Alignment.Center) { if (on) Icon(Icons.Filled.Check, contentDescription = "Valgt", tint = v.bg, modifier = Modifier.size(16.dp)) }
                         Column(Modifier.weight(1f)) {
                             Text(d.name, color = v.ink, fontFamily = v.sans, fontWeight = FontWeight.SemiBold, fontSize = 14.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             if (d.sub.isNotBlank()) Text(d.sub, color = v.mut, fontFamily = v.sans, fontSize = 12.sp, maxLines = 1)
@@ -427,7 +429,7 @@ internal fun ChatSettings27(vm: AppViewModel) {
                     Text(m.label, color = PaperPal.current.ink, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, modifier = Modifier.weight(1f, fill = false))
                     Ch27Badge(m.sky)
                     Spacer(Modifier.weight(1f))
-                    if (m.id == s.defModel) Text("✓", color = PaperPal.current.ink, fontWeight = FontWeight.Bold)
+                    if (m.id == s.defModel) Icon(Icons.Filled.Check, contentDescription = "Valgt", tint = PaperPal.current.ink, modifier = Modifier.size(19.dp))
                 }
             }
             SetRow(vm, 2, Icons.Filled.AutoAwesome, "Åpne chat", "Historikk, modeller og kunnskapsbase", top = true) { vm.openChat() }
