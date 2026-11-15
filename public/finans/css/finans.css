@@ -749,3 +749,39 @@ html[data-v3]{--accf-check:var(--card2);--accf-check-ink:var(--card2-ink)}
 @keyframes rc-pulse{50%{box-shadow:0 0 0 6px rgba(255,210,63,.55)}}
 @media (prefers-reduced-motion:reduce){.rc-hlr.pulse,.rc-box.pulse{animation:none}}
 .rc-hlin{position:relative}
+
+/* Fase 3 (Økonomi): mobile.css lastes ikke lenger på desktop (main.js slår den på bare for mobilvisningen). Desktop brukte
+   likevel noen av de generelle mobilreglene, som overstyrte reglene over: KPI-kortene, segmentvelgeren, forklaringen og stabelen
+   i Oversikt, initialene og logoene i listene, slippflaten for kvitteringer, sjekkmerket i abonnementene og originalvisningen.
+   De står her med samme spesifisitet (:where) og etter resten av fila, så desktop ser ut som før. Mobil har sine egne i mobile.css. */
+:where(html[data-ui=desktop]) .m-ini{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font-weight:700;flex:none}
+:where(html[data-ui=desktop]) .m-ell{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* Logoflaten er hvit med vilje (fysisk farge): merkevarelogoene er laget for hvit bakgrunn i alle temaer. */
+:where(html[data-ui=desktop]) .m-logo{display:grid;place-items:center;background:#fff;overflow:hidden;position:relative}
+:where(html[data-ui=desktop]) .m-logo img{object-fit:contain}
+:where(html[data-ui=desktop]) .m-logo i{display:none;font-style:normal;font-weight:700}
+:where(html[data-ui=desktop]) .m-logo.err{background:rgba(255,255,255,.12)}
+:where(html[data-ui=desktop]) .m-logo.err i{display:block}
+:where(html[data-ui=desktop]) .pill{display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:22px;font-size:14px;color:inherit;text-decoration:none}
+:where(html[data-ui=desktop]) .drop{display:flex;flex-direction:column;align-items:center;gap:8px;padding:28px 20px;border-radius:24px;text-align:center;cursor:pointer;border:1.5px dashed rgba(255,255,255,.25)}
+:where(html[data-ui=desktop]) .drop span:not(.n){font-size:13px;opacity:.7;max-width:280px}
+:where(html[data-ui=desktop]) .chk{width:22px;height:22px;border-radius:7px;border:1.5px solid rgba(255,255,255,.35);display:grid;place-items:center;font-size:13px;flex:none}
+:where(html[data-ui=desktop]) .seg{display:grid;grid-template-columns:1fr 1fr;padding:4px;border-radius:14px;background:rgba(255,255,255,.08)}
+:where(html[data-ui=desktop]) .set-ic{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;flex:none;background:rgba(255,255,255,.1)}
+:where(html[data-ui=desktop]) .set-ic.fill{color:var(--ds-on-category)}
+:where(html[data-ui=desktop]) .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px}
+:where(html[data-ui=desktop]) .kpi{padding:14px;border-radius:20px;display:flex;flex-direction:column;gap:4px}
+:where(html[data-ui=desktop]) .kpi span{font-size:12px;opacity:.7}
+:where(html[data-ui=desktop]) .kpi b{font-size:18px;font-weight:600;white-space:nowrap}
+:where(html[data-ui=desktop]) .stack{display:flex;height:12px;border-radius:6px;overflow:hidden;gap:2px}
+:where(html[data-ui=desktop]) .stack i{display:block;height:100%}
+:where(html[data-ui=desktop]) .legend{display:flex;flex-wrap:wrap;gap:12px;font-size:13px}
+:where(html[data-ui=desktop]) .legend span{display:inline-flex;align-items:center;gap:6px}
+:where(html[data-ui=desktop]) .legend i{width:10px;height:10px;border-radius:3px;display:inline-block}
+:where(html[data-ui=desktop]) .kpi small{font-size:12px;opacity:.6}
+/* Originalvisningen (kvitteringsbilde/PDF) har mørk ramme rundt bildet og hvitt ark bak PDF-en, som papir (fysiske farger). */
+:where(html[data-ui=desktop]) .orig-img{border-radius:18px;overflow:auto;background:#111;flex:1;min-height:0;display:flex;align-items:flex-start;justify-content:center;cursor:zoom-in}
+:where(html[data-ui=desktop]) .orig-img img{width:100%;height:auto;display:block}
+:where(html[data-ui=desktop]) .orig-img.zoom{cursor:zoom-out}
+:where(html[data-ui=desktop]) .orig-img.zoom img{width:220%;max-width:none}
+:where(html[data-ui=desktop]) .orig-pdf{flex:1;width:100%;min-height:60vh;border:0;border-radius:18px;background:#fff}

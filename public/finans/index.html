@@ -43,7 +43,9 @@ html[data-fhl="dark"] #fh-load .fhl-sub{color:#8a8478}
 </style>
 <link rel="stylesheet" href="/assets/css/tokens.css">
 <link rel="stylesheet" href="/assets/finans/css/finans.css">
-<link rel="stylesheet" href="/assets/finans/css/mobile.css">
+<!-- Mobilvisningens stiler: main.js setter href (fra data-href, som får ?v av serveren) først når mobil velges, så desktop
+     laster dem ikke. loader.js forhåndslaster dem på mobil. Plassen her bestemmer rekkefølgen i kaskaden. -->
+<link rel="stylesheet" id="fh-mobile-css" data-href="/assets/finans/css/mobile.css">
 <link rel="stylesheet" href="/assets/finans/css/felles.css">
 <link rel="stylesheet" href="/assets/finans/css/boliger.css">
 <link rel="stylesheet" href="/assets/finans/css/planlegging.css">
