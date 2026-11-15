@@ -17,7 +17,7 @@ Object.assign(ICONS, {
   aks: 'M3 17l6-6 4 4 8-8M15 7h6v6',
 });
 
-export const MODULE_PAGES = [['aks', 'Aksjer'], ['sub', 'Abonnementer'], ['trekk', 'Planlagte trekk'], ['plan', 'Sparing og planer'], ['dir', 'Boliger'], ['finn', 'Finn'], ['imp', 'Import']];
+export const MODULE_PAGES = [['aks', 'Aksjer'], ['sub', 'Abonnementer'], ['trekk', 'Planlagte trekk'], ['plan', 'Sparing og planer'], ['dir', 'Boliger'], ['finn', 'Finn-handler'], ['imp', 'Import']];
 ICONS.plan = PLAN51_ICON; // prompt 51 (FIN51)
 export const MODULE_SUB = { fast: 'Abonnementer, faste utgifter og planlagte trekk', konto: 'Kontoer, sparemål og aksjer (Trading 212)', finn: 'Trygg betaling, Fiks ferdig, Tillit', imp: 'CSV, XLSX og tekst', plan: 'Sparemål, skatt, priser og abonnementsjeger' };
 const u = S.ui;
@@ -287,7 +287,7 @@ export function backupTab() {
   return `<div style="display:flex;flex-direction:column;gap:18px">
     <div class="bk-status" style="background:${stBg};border-color:${stBd}"><span class="dot" style="width:10px;height:10px;background:${stDot}"></span><div class="grow"><div style="font-weight:600;color:var(--text)">${esc(stTitle)}</div><div class="sub" style="font-size:12.5px">${esc(stSub)}</div></div><button class="btn pri" data-mact="bk-run" ${b.running ? 'disabled' : ''}>${b.running ? 'Kjører …' : 'Ta backup nå'}</button></div>
     <div class="mod-box"><div class="set-label">Last ned</div><div style="display:flex;gap:10px;flex-wrap:wrap"><a class="btn" href="/finans/api/backup/export?format=json">Full backup (.json)</a><a class="btn" href="/finans/api/backup/export?format=xlsx">Excel-database (.xlsx)</a><a class="btn" href="/finans/api/transactions.csv">Bare transaksjoner (CSV)</a></div>
-      <div class="note" style="font-size:12.5px;line-height:1.5">JSON-filen er den komplette backupen av FinansHub og brukes til gjenoppretting. Excel-filen har ett ark per tabell (Info, Kontoer, Kategorier, Transaksjoner, Kvitteringer, Varelinjer, Budsjett, Faste_utgifter, Aksjer, Utbytte, Ordre, Regler og modulene) med ID-kolonner som kobler arkene sammen, filter på overskriftene og beløp som tall. CSV-en bruker semikolon og UTF-8 med BOM.</div></div>
+      <div class="note" style="font-size:12.5px;line-height:1.5">JSON-filen er den komplette backupen av Økonomi og brukes til gjenoppretting. Excel-filen har ett ark per tabell (Info, Kontoer, Kategorier, Transaksjoner, Kvitteringer, Varelinjer, Budsjett, Faste_utgifter, Aksjer, Utbytte, Ordre, Regler og modulene) med ID-kolonner som kobler arkene sammen, filter på overskriftene og beløp som tall. CSV-en bruker semikolon og UTF-8 med BOM.</div></div>
     <form class="mod-box" data-mform="smb"><div class="card-h"><div class="set-label">SMB-share</div><button type="button" class="tog-inline" data-mact="smb-on"><span class="toggle" role="switch" aria-checked="${!!c.on}"></span>${c.on ? 'På' : 'Av'}</button></div>
       ${b.smbclient ? '' : '<div class="err-msg">smbclient er ikke installert på serveren. Docker-imaget har det fra denne versjonen; på andre installasjoner: apt install smbclient.</div>'}
       <div class="smb-wiz-row"><div class="grow"><div style="font-weight:600;color:var(--text)">${c.share ? esc(`${c.share}${c.dir ? '/' + c.dir : ''}`) : 'Ingen nettverksdisk satt opp'}</div><div class="sub" style="font-size:12.5px">${c.share ? esc(`${c.user ? c.user : 'Gjest'} · SMB ${c.version}${c.pwSet ? ' · passord lagret' : ''}`) : 'Finn NAS-en på nettverket, logg inn og velg mappe – uten å skrive stier for hånd.'}</div></div><button type="button" class="btn pri" data-mact="smb-wiz">Sett opp med veiviser</button></div>
@@ -313,7 +313,7 @@ export function backupTab() {
 }
 
 const downloadBox = () => `<div class="mod-box"><div class="set-label">Last ned</div><div style="display:flex;gap:10px;flex-wrap:wrap"><a class="btn" href="/finans/api/backup/export?format=json">Full backup (.json)</a><a class="btn" href="/finans/api/backup/export?format=xlsx">Excel-database (.xlsx)</a><a class="btn" href="/finans/api/transactions.csv">Bare transaksjoner (CSV)</a></div>
-      <div class="note" style="font-size:12.5px;line-height:1.5">JSON-filen er den komplette backupen av ditt regnskap i FinansHub og brukes til gjenoppretting. Excel-filen har ett ark per tabell med ID-kolonner som kobler arkene sammen. CSV-en bruker semikolon og UTF-8 med BOM.</div></div>`;
+      <div class="note" style="font-size:12.5px;line-height:1.5">JSON-filen er den komplette backupen av ditt regnskap i Økonomi og brukes til gjenoppretting. Excel-filen har ett ark per tabell med ID-kolonner som kobler arkene sammen. CSV-en bruker semikolon og UTF-8 med BOM.</div></div>`;
 function ownBackupTab() {
   return `<div style="display:flex;flex-direction:column;gap:18px">
     ${downloadBox()}

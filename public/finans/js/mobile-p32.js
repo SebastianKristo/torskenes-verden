@@ -19,7 +19,7 @@ const lsSet = (k, v) => { try { if (v == null) localStorage.removeItem(k); else 
    ===================================================================== */
 export const SECN = {
   dom: { t: 'DOMENER', all: [['dom', 'Oversikt', '◎'], ['pub', 'Publikum', '◍'], ['ytl', 'Ytelse', '⚡'], ['inf', 'Infra', '▤']] },
-  abo: { t: 'ABONNEMENT', all: [['home', 'Hjem', '⌂'], ['ins', 'Innsikt', '◔'], ['hist', 'Historikk', '↺']] },
+  abo: { t: 'ABONNEMENTER', all: [['home', 'Oversikt', '⌂'], ['ins', 'Innsikt', '◔'], ['hist', 'Historikk', '↺']] },
   kart: { t: 'FAMILIE', all: [['kart', 'Kart', '◎'], ['soner', 'Soner', '◌'], ['helse', 'Helse', '♡'], ['hjemlys', 'Vel fremme', '◉']] }, // prompt 41: Vel fremme i Familie
 };
 const SEC_OF = { dom: 'dom', sub: 'abo', fam: 'kart' };
@@ -113,7 +113,7 @@ function hsCycle() {
 const NAV = [
   [/oppdater|nordlys|ny versjon|versjon/, '#/nordlys', 'Nordlys OS · oppdatering'], [/kalender|timeplan/, '#/kal', 'Kalender'],
   [/v(æ|ae)ret? (side|app)|værside|åpne vær/, '#/vaer', 'Vær'], [/innstilling/, '#/set', 'Innstillinger'], [/pakke|sporing|sending/, '#/spor', 'Sporing'],
-  [/budsjett/, '#/budsjett', 'Budsjett'], [/kvittering/, '#/kv', 'Kvitteringer'], [/finans|økonomi|saldo|konto/, '#/hjem', 'Finans'],
+  [/budsjett/, '#/budsjett', 'Budsjett'], [/kvittering/, '#/kv', 'Kvitteringer'], [/finans|økonomi|saldo|konto/, '#/hjem', 'Økonomi'],
   [/abonnement|prøveperiode/, '#/sub', 'Abonnement'], [/domene/, '#/dom', 'Domener'], [/familie|posisjon|hvor er/, '#/fam', 'Familie'],
   [/middag|matplan|oppskrift|\bmat\b/, '#/mat', 'Mat'], [/huskeliste|handleliste|to-?do|gjøremål/, '#/huske', 'Gjøremål'], [/bursdag/, '#/bd', 'Bursdager'], [/\bchat\b/, '#/chat', 'Chat'],
 ];

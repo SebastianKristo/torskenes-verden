@@ -20,7 +20,7 @@ Object.assign(ICONS, { sins: 'M4 20V10M10 20V4M16 20v-7M22 20H2', shist: 'M12 21
 
 export const SB = { d: null, err: '', tab: 'home', sheet: false, mode: null, f: { name: '', price: '', day: '', cycle: 'monthly' }, cand: null, candErr: '', busy: false, mon: null, done: null };
 const TABS = [['home', 'Hjem', 'shome'], ['ins', 'Innsikt', 'sins'], ['hist', 'Historikk', 'shist']];
-const TITLE = { home: 'Abonnementer', ins: 'Innsikt', hist: 'Historikk' };
+const TITLE = { home: 'Abonnementer', ins: 'Innsikt', hist: 'Historikk' }; // Fase 6: en del av Faste betalinger
 const CAT_C = { Underholdning: '#FF7A3D', Produktivitet: '#7AA7FF', 'Lagring og sky': '#F2C14E', 'Helse og trening': '#5FD3A8', Transport: '#B79CFF', Annet: '#A0A0AA' };
 const CAT_RE = [['Underholdning', /netflix|spotify|hbo|max\b|viaplay|disney|youtube|storytel|tv ?2|apple tv|tidal|audible|nrk|discovery|amazon prime|xbox|playstation|nintendo/i],
   ['Produktivitet', /chatgpt|openai|microsoft|office|adobe|notion|github|1password|claude|anthropic|canva|figma|slack|zoom|todoist/i],
@@ -330,7 +330,7 @@ async function saveEditor() {
 }
 
 export function subsView() {
-  if (SB.err && !SB.d) return `${head()}<div class="m-empty">Subscription OS er ikke tilgjengelig: ${esc(SB.err)}</div>`;
+  if (SB.err && !SB.d) return `${head()}<div class="m-empty">Abonnementer er ikke tilgjengelig: ${esc(SB.err)}</div>`;
   if (!SB.d) return `<div class="sb">${head()}<div class="m-spin"></div></div>`;
   return `<div class="sb">${head()}${sheet()}${SB.tab === 'ins' ? insights() : SB.tab === 'hist' ? history() : home()}</div>${editor()}`;
 }
@@ -340,7 +340,7 @@ export function subsView() {
 async function loadCand() {
   SB.cand = null; SB.candErr = ''; draw();
   try { const r = await api('/subscriptions/candidates'); SB.cand = Array.isArray(r) ? r : r?.items ?? []; }
-  catch (e) { SB.candErr = /404|Not Found/i.test(e.message) ? 'Serveren finner ikke faste trekk ennå. Oppdater FinansHub, eller legg til manuelt.' : e.message; }
+  catch (e) { SB.candErr = /404|Not Found/i.test(e.message) ? 'Serveren finner ikke faste trekk ennå. Oppdater Homelab, eller legg til manuelt.' : e.message; }
   draw();
 }
 

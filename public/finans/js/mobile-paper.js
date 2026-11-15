@@ -148,15 +148,15 @@ export function classicBand() {
 /* ---------- Skall: fotovindu og fanelinje ---------- */
 
 const PAGE = {
-  hjem: ['Finans', () => { const s = S.summary; return s ? `${cap(new Date(s.month + '-15').toLocaleDateString('nb-NO', { month: 'long' }))} · ${s.daysLeft} dager igjen` : 'Denne måneden'; }],
-  liste: ['Liste', 'Alle kontoer'], budsjett: ['Budsjett', 'Denne måneden'], sok: ['Søk', '✦ Med Glimt'], fmer: ['Mer', 'Alt fra FinansHub på nettsiden'],
+  hjem: ['Økonomi', () => { const s = S.summary; return s ? `${cap(new Date(s.month + '-15').toLocaleDateString('nb-NO', { month: 'long' }))} · ${s.daysLeft} dager igjen` : 'Denne måneden'; }],
+  liste: ['Transaksjoner', 'Alle kontoer'], budsjett: ['Budsjett', 'Denne måneden'], sok: ['Glimt', '✦ Spør om økonomien'], fmer: ['Mer', 'Alt i Økonomi'],
   mat: ['Mat', () => { const t = matToday(); return t?.week ? `Uke ${t.week}` : 'Ukeplan og oppskrifter'; }],
   spor: ['Sporing', 'Pakker og sendinger'],
   mer: ['Mer', 'Alle moduler'], set: ['Innstillinger', 'Konto og utseende'], media: ['Media', 'Plex · Jellyfin'],
   dom: ['Domener', 'Trafikk, besøk og oppetid'], 'dom/pub': ['Publikum', 'Kart, land og enheter'], 'dom/ytl': ['Ytelse', 'Statuskoder, fart og sikkerhet'], 'dom/inf': ['Infrastruktur', 'Oppetid, DNS og domeneinfo'], 'dom/admin': ['Domener', 'Legg til og fjern'],
-  aks: ['Aksjer', 'Trading 212'], sub: ['Abonnementer', 'Subscription OS'], dir: ['Boliger', 'Utgifter, prosjekter og kvitteringer'], finn: ['Finn', 'Kjøp og salg'],
+  aks: ['Aksjer', 'Kontoer og aksjer · Trading 212'], sub: ['Faste betalinger', 'Abonnementer'], dir: ['Boliger', 'Utgifter, prosjekter og kvitteringer'], finn: ['Finn', 'Kjøp og salg'],
   avg: ['Avganger', 'Ruter · sanntid fra Entur'], fam: ['Familie', 'Posisjon, soner og helse'], huske: ['Gjøremål', 'To-do for hele familien'], bibel: ['Bibel', 'Dagens vers og leseplan'],
-  bd: ['Bursdager', 'Familie og venner'], studie: ['Studie', 'Vitnemål, karakterer og bevis'], avspilling: ['Avspilling', 'Plex · Jellyfin'] /* prompt 44 */, kal: ['Kalender', 'Skole og familie'], kv: ['Kvitteringer', 'Til gjennomgang'], fast: ['Faste trekk', 'Neste 30 dager'], konto: ['Kontoer', 'Saldo'], rap: ['Rapporter', 'Måned og år'], imp: ['Import', 'Bank, Excel og Finn'],
+  bd: ['Bursdager', 'Familie og venner'], studie: ['Studie', 'Vitnemål, karakterer og bevis'], avspilling: ['Avspilling', 'Plex · Jellyfin'] /* prompt 44 */, kal: ['Kalender', 'Skole og familie'], kv: ['Kvitteringer', 'Til gjennomgang'], fast: ['Faste betalinger', 'Faste utgifter'], konto: ['Kontoer og aksjer', 'Saldo'], rap: ['Rapporter', 'Måned og år'], imp: ['Import', 'Bank, Excel og Finn'],
   skann: ['Kvittering', 'Bekreft'], opp: ['Kø', 'Kvitteringer'], hl: ['', ''],
 };
 const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
@@ -165,12 +165,14 @@ export const FIN_MAIN = ['hjem', 'liste', 'finn', 'fmer'];
 export const FIN_SUB = ['budsjett', 'kv', 'fast', 'konto', 'aks', 'sub', 'dir', 'imp', 'rap', 'sok', 'skann', 'opp'];
 export const ctxOf = (scr) => (scr === 'dom' ? 'dom' : FIN_MAIN.includes(scr) || FIN_SUB.includes(scr) ? 'fin' : 'main');
 const ABO_BACK = { mer: 'Mer', hl: 'Hjem', hjem: 'Oversikt', fmer: 'Mer', liste: 'Liste', finn: 'Finn', sok: 'Søk', set: 'Innstillinger', brief: 'Brief', huske: 'Gjøremål', kal: 'Kalender' };
-const NAMES = { hl: 'Hjem', mer: 'Mer', fmer: 'Mer', hjem: 'Oversikt', liste: 'Liste', finn: 'Finn', mat: 'Mat', spor: 'Sporing', set: 'Innstillinger', sok: 'Søk', dom: 'Domener' };
+const NAMES = { hl: 'Homelab', mer: 'Mer', fmer: 'Mer', hjem: 'Oversikt', liste: 'Transaksjoner', finn: 'Finn', mat: 'Mat', spor: 'Sporing', set: 'Innstillinger', sok: 'Søk', dom: 'Domener' };
 // Hvor pila øverst til venstre går: Finans-fanene og de andre hovedfanene går hjem, undersider til forelderen.
 // Prompt 24: i profilene Finans + Boliger og Boliger-profil er Boliger roten. Finans-fanene og Finans → Mer har ingen
 // tilbake-knapp, og all «tilbake til Hjem» går til Boliger (også fra Domener).
 function parentOf(scr) {
-  const r = parentOf0(scr);
+  const r0 = parentOf0(scr);
+  // Fase 6 (Q3): «tilbake til Hjem» fra Økonomi er Homelab-skallet (/), ikke Homelab-siden inne i /finans/.
+  const r = r0[0] === 'hl' ? ['/', 'Homelab'] : r0;
   if (!P24.profRoot()) return r;
   if ((finScreens().includes(scr) || scr === 'fmer') && !(m.detail && ['liste', 'sok', 'hjem'].includes(scr)) && !(scr === 'dir' && m.sub) && !(scr === 'finn' && m.sub)) return [null, ''];
   return r[0] === 'hl' && scr !== 'hl' ? ['dir', 'Boliger'] : r;
@@ -188,7 +190,8 @@ function parentOf0(scr) {
   if (scr === 'aks' && m.sub) return ['aks', 'Aksjer'];
   if (scr === 'dir' && m.sub) return ['dir', 'Boliger'];
   if (['avg', 'fam', 'vaer', 'huske'].includes(scr)) return ['hl', 'Hjem'];
-  if (finScreens().includes(scr) || scr === 'fmer') return ['hl', 'Hjem'];
+  if (scr === 'imp') return ['set', 'Innstillinger']; // O3: Import bor i Innstillinger
+  if (finScreens().includes(scr) || scr === 'fmer' || scr === 'hjem') return ['hl', 'Homelab'];
   // Prompt 38: Abonnement går tilbake dit det ble åpnet fra (Mer, Hjem, Oversikt, Finans → Mer, Innstillinger, brief).
   if (scr === 'sub' && m.aboFrom && m.aboFrom !== 'sub' && ABO_BACK[m.aboFrom]) return [m.aboFrom, ABO_BACK[m.aboFrom]];
   if (FIN_SUB.includes(scr)) return ['fmer', 'Mer'];
@@ -197,18 +200,25 @@ function parentOf0(scr) {
   return ['hl', 'Hjem'];
 }
 
+/** Fase 6 (Q4): filtrene øverst på Faste betalinger (Abonnementer = sub, Faste utgifter = fast, Planlagte trekk = egen side med saldoprognose). */
+export function fbChips(scr) {
+  const F = [['abonnementer', 'sub', 'Abonnementer'], ['faste', 'fast', 'Faste utgifter'], ['planlagte', null, 'Planlagte trekk']];
+  return `<nav class="fb-chips" aria-label="Faste betalinger">${F.map(([id, s, n]) => `<a class="fb-chip${s === scr ? ' on' : ''}" href="${s ? `#/fast/${id}` : '/finans/plan51#kal'}"${s === scr ? ' aria-current="page"' : ''}>${n}</a>`).join('')}</nav>`;
+}
+// Stilene ligger i css/mobile.css (Fase 6).
+
 export function paperHero(scr) {
   const home = scr === 'hl', kind = photoKind();
   const key = scr === 'dom' && m.sub ? `dom/${m.sub}` : scr;
   const [title, kick] = (m.detail && ['liste', 'sok', 'hjem'].includes(scr) && ['Detaljer', 'Transaksjon']) || (scr === 'mat' && matTitle()) || (scr === 'dir' && m.sub && bolTitle()) || (scr === 'aks' && m.sub && aksTitle(m.sub)) || (scr === 'set' && m.sub && setTitle(m.sub) && [setTitle(m.sub), 'Innstillinger'])
-    || (scr === 'sub' && SB.tab !== 'home' && [SB.tab === 'ins' ? 'Innsikt' : 'Historikk', 'Subscription OS']) || (PAGE[key] ?? PAGE[scr] ?? [cap(scr), '']);
+    || (scr === 'sub' && SB.tab !== 'home' && [SB.tab === 'ins' ? 'Innsikt' : 'Historikk', 'Faste betalinger · Abonnementer']) || (PAGE[key] ?? PAGE[scr] ?? [cap(scr), '']);
   const kicker = home ? cap(new Date().toLocaleDateString('nb-NO', { weekday: 'long', day: 'numeric', month: 'long' })) : typeof kick === 'function' ? kick() : kick;
   // Hilsen etter tid på døgnet, alltid på to linjer: «God ettermiddag,» og navnet. Lange hilsener skaleres ned i stedet for å brytes.
   const ttl = home ? `<span class="pp-gl">${esc(greet())},</span><span class="pp-gl">${esc(meName().split(' ')[0])}</span>` : esc(title);
   const [pk, pl] = parentOf(scr);
   const w = hlData()?.weather;
   const backBtn = home ? `<span class="pp-brand">${esc(appName())}</span>` : !pk ? ''
-    : ['txback', 'back'].includes(pk) ? `<button class="pp-pill pp-back" data-mact="${pk}">‹ ${esc(pl)}</button>` : `<a class="pp-pill pp-back${pk === 'hl' || pk === startScr() ? ' to-home' : ''}" href="#/${pk}">‹ ${esc(pl)}</a>`;
+    : ['txback', 'back'].includes(pk) ? `<button class="pp-pill pp-back" data-mact="${pk}">‹ ${esc(pl)}</button>` : `<a class="pp-pill pp-back${pk === 'hl' || pk === '/' || pk === startScr() ? ' to-home' : ''}" href="${pk === '/' ? '/' : `#/${pk}`}">‹ ${esc(pl)}</a>`;
   const failNote = home && P.fail[kind] ? '<button class="pp-pill pp-fail" data-pp="retry">Fikk ikke lastet bildet · trykk for å prøve igjen</button>' : '';
   // Bakgrunnsvelgeren ligger under Innstillinger → Bakgrunn. Profilbildet åpner Innstillinger → Profil.
   // Prompt 30: bare profilbildet (38 px) – ingen @brukernavn-pille i toppen (brukernavnet står under Innstillinger → Konto).
@@ -264,10 +274,10 @@ export function paperNav(scr) {
   const ctx = ctxOf(scr), flyt = fabStyle() === 'float';
   let tabs, cur, plus;
   if (ctx === 'fin') {
-    const fk = finKeys(), FTN = { oversikt: ['hjem', 'Oversikt', '◎'], liste: ['liste', 'Liste', '≡'], finn: ['finn', 'Finn', '⇄'], sok: ['sok', 'Søk', '⌕'], budsjett: ['budsjett', 'Budsjett', '◔'], kvitteringer: ['kv', 'Kvitteringer', '▢'], aksjer: ['aks', 'Aksjer', '↗'], abonnementer: ['sub', 'Abonnementer', '↻'], kontoer: ['konto', 'Kontoer', '▤'], boliger: ['dir', 'Boliger', '⌂'], chat: ['chat', 'Chat', '✦'] };
+    const fk = finKeys(), FTN = { oversikt: ['hjem', 'Oversikt', '◎'], liste: ['liste', 'Transaksjoner', '≡'], finn: ['finn', 'Finn', '⇄'], sok: ['sok', 'Søk', '⌕'], budsjett: ['budsjett', 'Budsjett', '◔'], kvitteringer: ['kv', 'Kvitteringer', '▢'], aksjer: ['aks', 'Aksjer', '↗'], abonnementer: ['fast', 'Faste betalinger', '↻'], kontoer: ['konto', 'Kontoer', '▤'], boliger: ['dir', 'Boliger', '⌂'], chat: ['chat', 'Chat', '✦'] };
     // Prompt 26: egne navn og ikoner fra «Rediger fanelinjen» (maks 5 faner + Mer).
     tabs = fk.map((k) => P26.finTab(k, FTN[k])).filter(Boolean);
-    if (flyt && tabs.length < 5 && !tabs.some(([k]) => k === 'sok')) tabs.push(['sok', 'Søk', '⌕']);
+    if (flyt && tabs.length < 4 && !tabs.some(([k]) => k === 'sok')) tabs.push(['sok', 'Glimt', '⌕']); // Glimt ligger ellers i Mer
     tabs.push(['fmer', 'Mer', '⋯']);
     cur = tabs.some(([k]) => k === scr) ? scr : 'fmer'; plus = scanCtx() === 'bol' ? ['Legg kvittering i boligen', 'bol'] : ['Legg til kvittering', 'fin'];
   } else if (ctx === 'dom') {
@@ -297,7 +307,7 @@ export function paperNav(scr) {
   const domG = ctx === 'dom' && m.sub !== 'admin';
   const gBtn = (cls) => `<button type="button" class="${cls} p38-domg" data-p38="domg" aria-label="Glimt · oppsummering av domenene" title="Glimt · oppsummering av domenene"><svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5l2.3 6.4 6.7.6-5.1 4.4 1.6 6.6L12 17l-5.5 3.5 1.6-6.6L3 9.5l6.7-.6z" fill="currentColor"/></svg></button>`;
   const fab = domG ? (flyt ? gBtn('pp-fab') : '') : flyt && !noPlus ? `<button class="pp-fab${P.press ? ' down' : ''}" data-ppplus="${plus[1]}" aria-label="${plus[0]}${plus[1] === 'spor' || plus[1] === 'dom' ? '' : ' (trykk for kamera, hold inne for valg)'}" title="${esc(plus[0])}"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${fabIc}"/></svg></button>` : '';
-  return `<div class="pp-navbg" aria-hidden="true"></div><nav class="pp-nav${flyt ? ' flyt' : ''}" data-ctx="${ctx}" aria-label="Faner${ctx === 'main' || ctx === 'dom' ? ' (hold inne for å redigere)' : ''}">${tabs.map(([k, n, ic]) => `<a href="#/${k}" data-tab="${k}" ${cur === k ? 'aria-current="page"' : ''}><i>${ic}</i><span>${n}</span></a>`).join('')}
+  return `<div class="pp-navbg" aria-hidden="true"></div><nav class="pp-nav${flyt ? ' flyt' : ''}" data-ctx="${ctx}" aria-label="Faner${ctx === 'main' || ctx === 'dom' ? ' (hold inne for å redigere)' : ''}">${tabs.map(([k, n, ic]) => `<a href="#/${k}" data-tab="${k}" ${cur === k ? 'aria-current="page"' : ''}><i>${ic}</i><span>${ctx === 'fin' ? String(n).replace('Transaksjoner', 'Trans\u00adaksjoner') : n}</span></a>`).join('')}
     ${domG && !flyt ? gBtn('pp-scan') : flyt || noPlus ? '' : `<button class="pp-scan${P.press ? ' down' : ''}" data-ppplus="${plus[1]}" aria-label="${plus[0]} (trykk for kamera, hold inne for valg)" title="Trykk for kamera · hold inne for valg">+</button>`}</nav>${fab}
     <input class="m-file" id="pp-cam" type="file" accept="image/*" capture="environment" data-ppquick="${['spor', 'dom', 'main'].includes(plus[1]) ? 'fin' : plus[1]}">
     ${P.hint ? `<div class="pp-hint" role="status">${esc(P.hint)}</div>` : ''}`;
@@ -481,9 +491,9 @@ export function paperMer() {
   // fanelinja tas ut. I profilene Finans + Boliger og Boliger-profil står Hjem øverst.
   const n = onWay(), inBar = new Set(mainTabs('mer').map(([k]) => k)); // inBar: bare for valget Sporing/Domener under
   const mod = inBar.has('spor') ? (domOk() ? ['dom', 'Domener', 'Trafikk, besøk og oppetid'] : null) : ['spor', 'Sporing', n ? `${n} pakke${n === 1 ? '' : 'r'} på vei` : 'Pakker og sendinger'];
-  const rows = [...(P24.profRoot() ? [['hl', 'Hjem', 'Pakker, avganger og widgets']] : []), ['brief', 'Now Brief', P36.briefMerSub()], ...(P37B.bibleOn() ? [['bibel', 'Bibel', 'Dagens vers, rekke og leseplan']] : []), // prompt 37: bare med bibelvers-modulen // prompt 36: Now Brief øverst i Mer
+  const rows = [...(P24.profRoot() ? [['hl', 'Hjem', 'Pakker, avganger og widgets']] : []), ['brief', 'Brief', P36.briefMerSub()], ...(P37B.bibleOn() ? [['bibel', 'Bibel', 'Dagens vers, rekke og leseplan']] : []), // prompt 37: bare med bibelvers-modulen // prompt 36: Now Brief øverst i Mer
      ...(mod ? [mod] : []), ['kal', 'Kalender', 'Timeplan, prøver og frister'], ['bd', 'Bursdager', 'Hvem har bursdag snart'], ['huske', 'Gjøremål', 'To-do for hele familien'], ['fam', 'Familie og kart', 'Posisjon, soner og helse'], ['tkart', 'Kart', 'Holdeplasser, sanntid og soner'] /* prompt 46 */,
-    ['chat', 'Chat', 'Ollama, Gemini og Groq · historikk'], ['media', 'Media', 'Sonarr, Radarr og nedlastinger'], ['hjem', 'Finans', 'Oversikt, liste, Finn og mer'], ['sub', 'Subscription OS', 'Abonnementer og faste trekk'], ['nyheter', 'Nyhetsleser', 'RSS med AI-sammendrag'], ['studie', 'Studie', 'Vitnemål, karakterer og snitt med Glimt'], ['avspilling', 'Avspilling', 'Plex og Jellyfin · spilles nå og historikk'] /* prompt 44 */, ['set', 'Innstillinger', 'Tema, bakgrunn og konto']]
+    ['chat', 'Chat', 'Ollama, Gemini og Groq · historikk'], ['media', 'Media', 'Sonarr, Radarr og nedlastinger'], ['hjem', 'Økonomi', 'Oversikt, transaksjoner, Finn og mer'], ['sub', 'Subscription OS', 'Abonnementer og faste trekk'], ['nyheter', 'Nyhetsleser', 'RSS med AI-sammendrag'], ['studie', 'Studie', 'Vitnemål, karakterer og snitt med Glimt'], ['avspilling', 'Avspilling', 'Plex og Jellyfin · spilles nå og historikk'] /* prompt 44 */, ['set', 'Innstillinger', 'Tema, bakgrunn og konto']]
     ; // prompt 40 (claude-code-fanelinje-alle-sider.md): faner i fanelinja vises fortsatt i Mer
   // Prompt 25: ikon til venstre (40-boks med strekikon i fargene fra ikonpaletten).
   // Prompt 28: hold inne for å flytte og skjule (lagres per konto), Subscription OS etter Finans.

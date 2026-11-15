@@ -254,12 +254,7 @@ function subNav() {
   if (g === 'konto') return `<nav class="fb-filters" aria-label="Kontoer og aksjer">${[['konto', '#/konto', 'Kontoer'], ['aks', '#/konto/aksjer', 'Aksjer']].map(([p, h, n]) => `<a class="fb-filter${u.page === p ? ' on' : ''}" href="${h}" ${u.page === p ? 'aria-current="page"' : ''}><b>${n}</b></a>`).join('')}</nav>`;
   return '';
 }
-if (!document.getElementById('fb-filters-css')) {
-  const st = document.createElement('style'); st.id = 'fb-filters-css';
-  st.textContent = `.fb-filters{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 16px}.fb-filter{display:flex;flex-direction:column;gap:2px;min-height:44px;justify-content:center;padding:8px 16px;border:1px solid var(--sep);border-radius:14px;background:var(--card);color:var(--text);text-decoration:none}
-.fb-filter .note{font-size:12px}.fb-filter.on{border-color:var(--text);box-shadow:inset 0 0 0 1px var(--text)}.fb-filter:focus-visible{outline:2px solid var(--acc);outline-offset:2px}`;
-  document.head.appendChild(st);
-}
+// Stilene ligger i css/finans.css (.fb-filters).
 
 /* ===================== Glimt (egen side) ===================== */
 
@@ -875,12 +870,12 @@ function settingsPage() {
   if (t === 'imp') body = `<div style="display:flex;flex-direction:column;gap:14px">${homeRulesBox()}${finnImportBox()}${impPage()}${bankPart}</div>`;
   else if (t === 'varsel') body = `<div style="display:flex;flex-direction:column;gap:8px">${[['autoCat', 'Auto-kategorisering', 'Bruk regler og AI-forslag'], ['aiSummaries', '✦ AI-sammendrag', 'Kort og lang beskrivelse av hver post, laget i bakgrunnen'], ['n80', 'Varsel ved 80 % av budsjett', 'Per kategori'], ['n100', 'Varsel når budsjett er brukt opp', 'Per kategori'], ['nRc', 'Ny kvittering til gjennomgang', 'Vises som merke i menyen'], ['nFast', 'Påminnelse om faste trekk', 'Dagen før trekkdato']]
     .map(([k2, n, s2]) => `<button class="tog-row" data-tog="${k2}"><span class="grow"><b style="font-weight:500">${n}</b><br><span class="note" style="font-size:12.5px">${s2}</span></span><span class="toggle" role="switch" aria-checked="${!!st[k2]}"></span></button>`).join('')}
-    <div class="note" style="font-size:12.5px">Varsler vises i FinansHub og i mobilappen. Push-varsler krever at appen er installert på hjemskjermen.</div></div>`;
+    <div class="note" style="font-size:12.5px">Varsler vises i Økonomi og i mobilappen. Push-varsler krever at appen er installert på hjemskjermen.</div></div>`;
   else if (t === 'mobil') {
     const when = (ms) => (ms ? new Date(ms).toLocaleDateString('nb-NO', { day: 'numeric', month: 'short', year: 'numeric' }) : null);
     body = `<div style="display:flex;flex-direction:column;gap:12px">
     <div class="sub" style="font-size:13px">Mobilappen åpnes på <b class="mono">/finans/</b> eller i de native appene, og logger inn med brukernavn og passord (og 2FA-kode hvis det er på).</div>
-    <div class="sub" style="font-size:13px">Personlige tokens gir tilgang til FinansHub-API-et uten innlogging, f.eks. for iOS-snarveien som laster opp kvitteringer (<span class="mono">POST /finans/api/receipts</span>), Home Assistant, Excel Power Query eller skript (<span class="mono">Authorization: Bearer fh_pat_…</span>). De gir aldri tilgang til resten av homelab. Bare hashen lagres.</div>
+    <div class="sub" style="font-size:13px">Personlige tokens gir tilgang til Økonomi-API-et uten innlogging, f.eks. for iOS-snarveien som laster opp kvitteringer (<span class="mono">POST /finans/api/receipts</span>), Home Assistant, Excel Power Query eller skript (<span class="mono">Authorization: Bearer fh_pat_…</span>). De gir aldri tilgang til resten av homelab. Bare hashen lagres.</div>
     ${(S.tokens ?? []).map((tk) => `<div class="edit-row"><span class="grow"><b style="font-weight:500">${esc(tk.name)}</b>${tk.expired ? ' <span class="pill" style="background:var(--warn-soft);color:var(--acc-l)">utløpt</span>' : ''}<br><span class="note mono" style="font-size:12px">${tk.scopes.join(' · ')}</span><br><span class="note" style="font-size:12px">Laget ${when(tk.created)} · ${tk.lastUsed ? 'sist brukt ' + when(tk.lastUsed) : 'aldri brukt'} · ${tk.expires ? (tk.expired ? 'utløp ' : 'utløper ') + when(tk.expires) : 'utløper aldri'}</span></span><button class="btn sm danger" data-del-token="${tk.id}">Trekk tilbake</button></div>`).join('') || '<div class="note">Ingen tokens.</div>'}
     <form data-form="token" class="box" style="flex-direction:column;align-items:stretch;gap:12px;padding:16px"><b style="font-weight:600">Nytt token</b>
       <div class="form-grid"><label class="f">Navn<input class="inp" name="name" placeholder="F.eks. iPhone-snarvei" required></label>
@@ -925,7 +920,7 @@ function origModal(m, close) {
   } else if (o) {
     const b = o.bankRow;
     const rows = (pairs) => pairs.filter(([, v]) => v != null && v !== '').map(([k2, v]) => `<div class="kv-line"><span class="sub">${k2}</span><span class="mono" style="text-align:right;word-break:break-word">${esc(v)}</span></div>`).join('');
-    body = !b ? `<div class="empty">${t?.source === 'receipt' ? 'Transaksjonen ble laget fra en kvittering og har ingen bankrad.' : 'Ingen bankrad lagret. Transaksjonen er lagt inn manuelt eller importert før FinansHub tok vare på bankradene.'}</div>`
+    body = !b ? `<div class="empty">${t?.source === 'receipt' ? 'Transaksjonen ble laget fra en kvittering og har ingen bankrad.' : 'Ingen bankrad lagret. Transaksjonen er lagt inn manuelt eller importert før Økonomi tok vare på bankradene.'}</div>`
       : `<div class="orig-bank">${rows([['Dato', b.bookingDate], ['Rentedato', b.valueDate], ['Forklaring', b.description], [b.amount < 0 ? 'Ut' : 'Inn', n2(Math.abs(b.amount)) + ' kr'], ['Konto', b.account], ['Bank', b.bank], ['Arkivref.', b.archiveReference], ['Kilde', [b.source, b.file].filter(Boolean).join(' · ')], ['Importert', b.importedAt ? new Date(b.importedAt).toLocaleString('nb-NO', { dateStyle: 'short', timeStyle: 'short' }) : null]])}</div>
         <details class="orig-raw"><summary>Rådata (JSON)</summary><pre class="mono">${esc(JSON.stringify({ bookingDate: b.bookingDate, valueDate: b.valueDate, description: b.description, amount: b.amount, account: b.account, archiveReference: b.archiveReference, source: b.source, raw: b.raw }, null, 2))}</pre></details>`;
   }

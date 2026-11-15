@@ -1,5 +1,6 @@
-// Mobil-PWA (prompt 06). Tema: iOS Liquid Glass på iPhone/iPad, ellers Android Material 3 Expressive (med Material You-farger).
-// Appen åpner på Homelab. Finans er et «annet OS» med fanene Oversikt, Liste, Finn, Søk og Mer (Budsjett øverst i Mer); Matplan og Domener fyller hele skjermen.
+// Økonomi på mobil (/finans/, PWA). Fase 6 (Q3): Økonomi er en modul i Homelab, ikke et eget Homelab-skall. Appen åpner på
+// Økonomi → Oversikt, fanelinja er Økonomis egen undermeny (Oversikt, Transaksjoner, Budsjett, Faste betalinger, Mer), og «‹ Homelab»
+// går til Homelab-skallet (/). Homelab-sidene som også finnes i skallet (Oversikt, Sporing, Mat …) sendes dit (HL_WEB under).
 // ≥ 600 px (åpen brettbar): navigasjonsrail + to paneler for Finans (liste/detalj).
 import {
   S, api, esc, n0, n2, sgn, neg, dd, dWeek, today, monthName, cap, ini, greet, parseAmount,
@@ -19,7 +20,7 @@ import { finnView, finnLoad, finnBind } from './mobile-finn.js';
 import { TR, trkView, trkLoad, trkBind, trkWatch } from './mobile-track.js';
 import { haptic } from './mobile-haptics.js';
 import { subsBind, soDown, soMove, soUp } from './mobile-subs.js';
-import { paper, paperDark, paperHero, paperNav, paperScanSheet, paperHome, paperFin, paperMer, mediaView, mediaLoad, newsView, newsLoad, paperBind, photoLoad, takeDesign, paperState, paperDown, paperUp, paperMove } from './mobile-paper.js';
+import { fbChips, paper, paperDark, paperHero, paperNav, paperScanSheet, paperHome, paperFin, paperMer, mediaView, mediaLoad, newsView, newsLoad, paperBind, photoLoad, takeDesign, paperState, paperDown, paperUp, paperMove } from './mobile-paper.js';
 import { paperList, listAfterDraw, paperFinn, paperFinnSheet, paperFinnLoad, paperFinnBind, paperTrk, paperTrkSheet, paperTrkBind } from './mobile-paper2.js';
 import { take15, edDown, edMove, edUp, edClick, edReset, paperSearch, fsBind, paperTx, txLoad, txBind15, TX, finMerGrid, fmerLoad, rcCount, recentLoad, newShipSheet, nsBind, navSetBind, fabStyle } from './mobile-paper3.js';
 import { wxView, wxLoad, wxBind, wxBindScroll, WX, wxAfterDraw, wxPlaces } from './mobile-wx.js';
@@ -63,7 +64,7 @@ import { nårTemaEndres } from './tema.js';
 
 const u = S.ui;
 export const m = {
-  screen: 'hl', sub: '', sel: null, budSel: null, rc: null, filter: '', toast: '', menu: false, jobs: [], uploading: 0, detail: false,
+  screen: 'hjem', sub: '', sel: null, budSel: null, rc: null, filter: '', toast: '', menu: false, jobs: [], uploading: 0, detail: false,
   sheet: false, min: false, tabIdx: 0, reveal: false, offline: [], me: null, edit: null, orig: null, pdet: null, txCache: {}, light: false,
 };
 const root = () => document.getElementById('app');
@@ -80,8 +81,8 @@ export const amtC = (v, th) => (v > 0 ? '#9FE3C6' : th === 'and' ? c3('#F0DFD7')
 // Faner kan skjules og flyttes i «Rediger forsiden» (LAY.hlTabs / LAY.finTabs).
 // ISO2: Domener er fortsatt bare for admin. Rollen fra /api/me, ellers canEditServer fra /bootstrap (= admin).
 export const domOk = () => (m.me?.role ? m.me.role === 'admin' : S.boot?.canEditServer !== false);
-export const HLTABS = { hl: ['hl', 'Homelab', 'hlhome'], home: ['hjem', 'Finans', 'fin'], trk: ['spor', 'Sporing', 'box'], dom: ['dom', 'Domener', 'globe'], mat: ['mat', 'Mat', 'mat'] };
-export const FINTABS = { home: ['hjem', 'Oversikt', 'home'], list: ['liste', 'Liste', 'list'], finn: ['finn', 'Finn', 'finn'], bud: ['budsjett', 'Budsjett', 'bud'], ai: ['sok', 'Søk', 'ai'], mer: ['mer', 'Mer', 'mer'] };
+export const HLTABS = { hl: ['hl', 'Homelab', 'hlhome'], home: ['hjem', 'Økonomi', 'fin'], trk: ['spor', 'Sporing', 'box'], dom: ['dom', 'Domener', 'globe'], mat: ['mat', 'Mat', 'mat'] };
+export const FINTABS = { home: ['hjem', 'Oversikt', 'home'], list: ['liste', 'Transaksjoner', 'list'], finn: ['finn', 'Finn', 'finn'], bud: ['budsjett', 'Budsjett', 'bud'], ai: ['sok', 'Søk', 'ai'], mer: ['mer', 'Mer', 'mer'] };
 export const FIXED_HL = ['hl', 'home'], FIXED_FIN = ['home', 'mer'];
 const FINMODS = ['sub', 'dir', 'finn'];
 export const FIN = ['hjem', 'liste', 'budsjett', 'sok', 'skann', 'opp', ...PAGES, ...FINMODS];
@@ -114,7 +115,9 @@ const START = { homelab: 'hl', 'fin-hjem': 'hjem', 'fin-liste': 'liste', 'fin-bu
 // Adressen appen ble åpnet med: har den en rute (#/kv, #/tx …), er det en dyp lenke (Q35).
 let temaBundet = false;
 const DYP_LENKE = /^#\/[a-z]/i.test(location.hash);
-export const startScr = () => P24.profStart() ?? START[LAY().start] ?? (['hl', 'hjem', 'liste', 'budsjett'].includes(pref('start')) ? pref('start') : 'hl');
+// Fase 6 (Q3): /finans/ er Økonomi. Et gammelt valg om å starte på Homelab gir Økonomi → Oversikt (Homelab er /).
+const startOf = (v) => (['hjem', 'liste', 'budsjett'].includes(v) ? v : null);
+export const startScr = () => startOf(P24.profStart()) ?? startOf(START[LAY().start]) ?? startOf(pref('start')) ?? 'hjem';
 export const startFin = () => startScr() !== 'hl';
 // Prompt 14: «Knapp i linjen» er fjernet. Pila øverst til venstre går alltid til startsiden.
 export const backStyle = () => 'arrow';
@@ -129,7 +132,7 @@ export function backTop(scr = m.screen) {
   if (startFin() && (scr === 'hl' || scr === 'spor')) return true;
   return false;
 }
-const homeLbl = () => (startFin() ? 'Finans' : 'Homelab');
+const homeLbl = () => 'Økonomi';
 function topRow(th) {
   return `<div class="toprow"><a class="${th === 'ios' ? 'gtop' : 'atop'}" href="#/${startScr()}" aria-label="Tilbake til ${homeLbl()}">${th === 'ios' ? icon('chev', 18, 'currentColor', 2.6) : '←'}<span>${homeLbl()}</span></a><span class="m-grow"></span>${avatar('topav')}</div>`;
 }
@@ -356,7 +359,7 @@ function menuSheet(th) {
     <div class="m-row" style="gap:12px"><span class="m-av${avatarUrl() ? ' img' : ''}">${avInner()}</span><div class="m-grow"><b>${esc(meName())}</b><div style="font-size:13px;opacity:.65">${who}</div></div><button class="mini" data-mact="menu" aria-label="Lukk">${icon('close', 18)}</button></div>
     ${(() => {
       // Startsiden står øverst; resten ligger under «Andre OS».
-      const hl = row('#/hl', 'hlhome', 'Homelab', 'Dashbord, søk og snarveier', scr === 'hl'), fin = row(`#/${startFin() ? startScr() : 'hjem'}`, 'wallet', 'Finans', 'Hjem, liste, budsjett og mer', FIN.includes(scr));
+      const hl = row('#/hl', 'hlhome', 'Homelab', 'Dashbord, søk og snarveier', scr === 'hl'), fin = row(`#/${startFin() ? startScr() : 'hjem'}`, 'wallet', 'Økonomi', 'Hjem, liste, budsjett og mer', FIN.includes(scr));
       const rest = others.map(([k, n, s2, ic]) => row('#/' + k, ic, n, s2, scr === k)).join('');
       return `<div class="list ${th === 'ios' ? 'glass2' : ''}">${startFin() ? fin : hl}</div><div class="sec">Andre OS</div><div class="list ${th === 'ios' ? 'glass2' : ''}">${startFin() ? hl : fin}${rest}</div>`;
     })()}
@@ -435,7 +438,7 @@ export function draw() {
   // Bevar fokus og markør i et felt når skjermen tegnes på nytt (f.eks. søk mens forslag kommer inn).
   const ae = document.activeElement, keep = ae?.id && root().contains(ae) ? { id: ae.id, s: ae.selectionStart, e: ae.selectionEnd } : null;
   root().innerHTML = `<div class="m ${th}${fad ? ' p23-fad' : ''}${rv ? ' p24-rvm' : ''}${fsx ? ' p27-fs' : ''}${pp ? ` papir ${m.light ? 'pl' : 'pd'}${hero ? ' ph' : ''}${fabStyle() === 'float' ? ' flyt' : ''}` : ''}${scr === 'nyheter' ? ' news' : ''}${scr === 'vaer' ? ' vaer' : ''}${scr === 'mer' ? ' p28-mer' : ''}${scr === 'bibel' ? ' p39-bib' : ''}${scr === 'nordlys' ? ' n31-pg' : ''}${scr === 'aictl' ? ' p34-aipg' : ''}${scr === 'brief' ? ' p34-brpg' : ''}${scr === 'glimt' ? ' p35-glpg' : ''}${pp && scr === 'set' ? ' p32-nonav' : ''}${wide ? ' two' : ''}${twoPane ? '' : ' full'}${dom ? ' dom' : ''}${scr === 'mat' ? ` matp ${matDark() ? 'mdark' : 'mlight'}` : ''}${th === 'and' && pref('pageColors') !== 'per' ? ' same' : ''}${scr === 'hl' ? ' hlp' : ''}${fold41 ? ' p41-fold' : ''}${scr === 'bd' ? ' p41-bdpg' : ''}${bt ? ' backtop' : ''}${n.none && !pp ? ' nobar' : ''}${m.light ? ' light' : ''}${th === 'ios' && !iosBg() ? ' nobg' : ''}${m.blur ? ' blurred' : ''}">${th === 'ios' && iosBg() ? '<div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>' : ''}
-    ${hero ? paperHero(scr) : ''}<div class="m-scroll">${bt ? topRow(th) : ''}${main}</div><div class="m-detail">${twoPane ? detail(th) : ''}</div>${nav}
+    ${hero ? paperHero(scr) : ''}<div class="m-scroll">${bt ? topRow(th) : ''}${pp && (scr === 'fast' || scr === 'sub') && !m.detail && !m.edit ? fbChips(scr) : ''}${main}</div><div class="m-detail">${twoPane ? detail(th) : ''}</div>${nav}
     ${menuSheet(th)}${scanSheet(th)}${pp ? paperScanSheet() + paperFinnSheet() + paperTrkSheet() + newShipSheet() + tabSheet() + P26.sheets26() + P27.sheets27() : ''}${avgSheet()}${pp ? "" : famSheet()}${p17Sheets()}${updSheet()}${p21Sheets(HK)}${P22.p22Sheets()}${pp ? P24.sheets24() : ''}${origOverlay(th)}${pp ? P29.searchLayer() : ''}${P29.sheets29()}${P29.quickLayer()}${pp ? P32.sheets32() : ''}${P31.aiLayer()}${P36.layer36()}${P37.layer37()}${P37B.layer37b(P37B.H2.pk ?? 0)}${P38.layer38()}${P39.layer39()}${P40 ? P40.layer40() : ''}${P41 ? P41.layer41() : ''}${P42 ? P42.layer42() : ''}${P43 ? P43.layer43() + (P43.media()?.layer43m() ?? '') : ''}${P44 ? P44.layer44() : ''}${P45 ? P45.layer45() : ''}${P46 ? P46.layer46() : ''}${P31.bannerHtml()}${P30.sysBottom()}${P30.sheets30()}<div class="p30-edge" aria-hidden="true"></div>${m.toast ? P31.hintToast(m.toast) ?? `<div class="m-toast" role="status">${esc(m.toast)}</div>` : ''}
     <input class="m-file" id="m-capture" type="file" accept="image/*" capture="environment" data-mupload data-confirm></div>`;
   if (keep) { const el = document.getElementById(keep.id); if (el) { el.focus({ preventScroll: true }); try { el.setSelectionRange(keep.s, keep.e); } catch {} } }
@@ -524,7 +527,8 @@ async function load() {
     if (!m.me) jobs.push(loadMe().catch(() => { m.me = { name: S.boot?.settings?.name }; }));
     await Promise.all(jobs);
   } catch (e) { flash(e.message); }
-  if (m.me && paper()) P37B.obCheck().catch(() => {}); // Prompt 37: onboarding – koble brukeren til en profil
+  // Prompt 37: onboarding – koble brukeren til en profil. Q35: ikke over en dyp lenke (den vises neste gang appen åpnes vanlig).
+  if (m.me && paper() && !DYP_LENKE) P37B.obCheck().catch(() => {});
   draw();
   poll();
 }
@@ -560,10 +564,24 @@ export function route() {
   const h = parts[0];
   // Prompt 51 (FIN51): Planlegging (sparemål, kalender, skatt, priser, abonnementsjeger) er en egen side i PWA-en.
   if (h === 'plan' || h === 'plan51' || h === 'sparemal') { location.replace(`/finans/plan51${parts[1] ? `#${parts[1]}` : ''}`); return; }
+  // Fase 6 (Q3): Homelab-sidene ligger i Homelab-skallet. Gamle lenker og snarveier hit (#/hl, #/spor …) sendes dit, så alt finnes
+  // ett sted. Sidene uten egen side i skallet ennå (Avganger, Brief, Nyhetsleser, Bibel, Glimt, AI-kontroll, System) åpnes fortsatt her.
+  const HL_WEB = { hl: '/', homelab: '/', mer: '/#/mer', spor: '/#/sporing', sporing: '/#/sporing', trk: '/#/sporing', mat: '/#/matplan', matplan: '/#/matplan',
+    dom: '/#/domener', domener: '/#/domener', media: '/#/media', vaer: '/#/vaer', fam: '/#/familie', huske: '/#/gjoremal', bd: '/#/bursdager', bursdager: '/#/bursdager',
+    bursdag: '/#/bursdager', birthdays: '/#/bursdager', kal: '/#/kalender', kalender: '/#/kalender', calendar: '/#/kalender', timeplan: '/#/kalender', chat: '/#/chat', ollama: '/#/chat',
+    tkart: '/#/kart', kart: '/#/kart', map: '/#/kart', studie: '/#/studie', avspilling: '/#/media/avspilling', plex: '/#/media/avspilling', jellyfin: '/#/media/avspilling' };
+  if (HL_WEB[h] && !P24.profRoot()) { location.replace(HL_WEB[h]); return; }
+  // Fase 6 (Q4): Faste betalinger har filtrene Abonnementer (sub), Faste utgifter (fast) og Planlagte trekk (/finans/plan51#kal).
+  if (h === 'fast' && parts[1] === 'planlagte') { location.replace('/finans/plan51#kal'); return; }
+  if (h === 'fast' && parts[1] === 'abonnementer') { parts.splice(0, 2, 'sub'); }
+  else if (h === 'fast' && parts[1] === 'faste') parts.splice(1, 1);
+  if (h === 'konto' && parts[1] === 'aksjer') parts.splice(0, 2, 'aks');
+  if (h === 'inn' && parts[1] === 'imp') parts.splice(0, 2, 'imp');
   // Desktop- og eldre lenker
   const map = { ov: 'hjem', tx: 'liste', bud: 'budsjett', inn: 'set', meg: 'set', homelab: 'hl', ai: 'sok', matplan: 'mat', domener: 'dom', aksjer: 'aks', abonnement: 'sub', mapper: 'dir', sporing: 'spor', trk: 'spor', news: 'nyheter', nyhetsleser: 'nyheter', rss: 'nyheter', bursdager: 'bd', bursdag: 'bd', birthdays: 'bd', ruter: 'avg', avganger: 'avg', kalender: 'kal', calendar: 'kal', timeplan: 'kal', ollama: 'chat', plex: 'avspilling', jellyfin: 'avspilling', kart: 'tkart', map: 'tkart' /* prompt 46 */, logger: 'set', system: 'nordlys', nordlysos: 'nordlys', programvare: 'nordlys' };
   const start = startScr();
-  let next = map[h] ?? (ALL.includes(h) ? h : start);
+  const h2 = parts[0];
+  let next = map[h2] ?? (ALL.includes(h2) ? h2 : start);
   if (next === 'fmer' && !paper()) next = 'mer';
   if (!domOk() && (next === 'dom' || (next === 'set' && parts[1] === 'dom'))) { next = next === 'dom' ? 'hl' : 'set'; if (location.hash !== `#/${next}`) { history.replaceState(null, '', `#/${next}`); parts.length = 1; } }
   const sub = parts.slice(1).join('/');
