@@ -69,7 +69,7 @@ IP-en leses fra tilkoblingen, eller fra `CF-Connecting-IP` bak Cloudflare. Den l
   | `read:transactions`, `read:summary`, `read:budget` | Smal lesetilgang |
   | `write:transactions` | Smal skrivetilgang |
 
-  Utløp: 30 d, 90 d, 1 år eller aldri. Listen viser når tokenet sist ble brukt og har «Trekk tilbake». Et token kan aldri gi seg selv flere tilganger enn det har, og det gir aldri tilgang til resten av homelab utenom Hjem, Matplan og Domener for admin.
+  Utløp: 30 d, 90 d, 1 år eller aldri for tokens laget i Innstillinger. Tokens fra app-innlogging (mobil, Kalender, QR, invitasjon) utløper etter 180 dager uten bruk (Q23): hver bruk gir 180 nye dager, og et utløpt token gir 401 `TOKEN_EXPIRED`. Listen viser når tokenet sist ble brukt og har «Trekk tilbake». Et token kan aldri gi seg selv flere tilganger enn det har, og det gir aldri tilgang til resten av homelab utenom Hjem, Matplan og Domener for admin.
 
 ## Hemmeligheter
 
