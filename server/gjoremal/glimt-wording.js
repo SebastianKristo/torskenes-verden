@@ -1,4 +1,5 @@
-// Prompt 46 (GLIMT46): bedre norsk i Gjøremål (claude-code-gjoremal-glimt-norsk.md).
+// Prompt 46 (GLIMT46): bedre norsk i Gjøremål (claude-code-gjoremal-glimt-norsk.md). Krokene her erstatter prompt og tolking i
+// glimt-jobs.js/glimt-split.js (installTaskHooks46, kalt fra Glimt-motoren).
 // Rotårsak: modellen fikk skrive om brukerens tekst («Hvert gjøremål starter med et verb i imperativ», «Rett åpenbare skrivefeil»),
 // og en 8–12B-modell skriver dårligere norsk enn brukeren. Nå plukker modellen ut deler av teksten (tegnposisjoner + den ordrette
 // teksten), og koden klipper titlene ut av originalen. Bare fyllord i starten («husk å», «jeg må», «minn meg på å» …) og dato/tid
@@ -127,8 +128,8 @@ let installed = false;
 export async function installTaskHooks46() {
   if (installed) return; installed = true;
   try {
-    const m41 = await import('../gjoremal/glimt-jobs.js');
-    await import('../gjoremal/glimt-split.js'); // 42 setter sine kroker først; våre erstatter prompt og tolking
+    const m41 = await import('./glimt-jobs.js');
+    await import('./glimt-split.js'); // 42 setter sine kroker først; våre erstatter prompt og tolking
     const prev = m41._hooks42.normalize;
     Object.assign(m41._hooks42, { prompt: prompt46, normalize: (j, text) => normalize46(j, text, prev), verbatim: keepUserWords46 });
   } catch (e) { console.warn('[glimt46] gjøremål-kroker:', e.message); }

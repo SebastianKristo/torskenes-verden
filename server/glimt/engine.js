@@ -22,7 +22,7 @@ import { personalityOf, quipFor } from './personality.js';
 import { nowLine47 } from './context.js';
 import { SENTENCES46, FAIL_TEXT46 } from './tools-weather-subs.js'; // prompt 46: vær, abonnementer, faste utgifter, avslutningsfrist
 import { weatherCompare46 } from './weather.js';
-import { installTaskHooks46 } from './tasks.js';
+import { installTaskHooks46 } from '../gjoremal/glimt-wording.js';
 import { installPosterDecorator46 } from './calendar.js';
 // Prompt 59 (prompt 49 del 4): svar-cache, strømming (status + tekstbiter), parallelle verktøy – hver for seg av/på (fast59/settings.js).
 import { fast59 } from '../fast59/settings.js';

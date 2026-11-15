@@ -9,6 +9,7 @@
 //   glimt-sentences.js – Glimt forstår setninger (flere punkter, rekkefølge, sted og person), placeName/after, «Nå kan du: …»
 //   glimt-jobs.js      – Glimt deler opp lange beskjeder i bakgrunnen (/glimt/jobs, /glimt/sources) og /api/huske/glimt-jobs
 //   glimt-split.js     – liste-kontrakten, lengdevakt og lokal forhåndsdeling, og loggen (/glimt/log)
+//   glimt-wording.js   – bedre norsk: titlene klippes ut av brukerens egne ord (kroker for glimt-jobs/-split, brukt av Glimt-motoren)
 import tasksApi from './routes.js';
 import { haSummaryApi } from './ha.js';
 import { listOrderApi } from './order.js';
