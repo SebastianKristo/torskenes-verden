@@ -19,7 +19,7 @@
     h.setAttribute('data-theme', d);
     h.setAttribute('data-v3', '');
     var m = document.querySelector('meta[name=theme-color]');
-    if (m) m.setAttribute('content', { lys: '#f4f1ea', mork: '#121210', glod: '#16110e' }[d]);
+    if (m) m.setAttribute('content', { lys: '#f4f1ea', mork: '#121210', glod: '#07080b' }[d]);
   }
   if (mobile) {
     // mobile.css (stor) står avslått i index.html og slås på av main.js. Forhåndslast den med en gang, med samme ?v som lenken.

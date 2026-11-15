@@ -39,17 +39,27 @@ html[data-ui=desktop][data-theme=mork]{
   --rev-bg:#6fbf8e; --rev-line:#6fbf8e; --rev-ink:#121210; --rev-mute:#24402f;
   --font-ui:Geist,system-ui,sans-serif; --font-d:'Instrument Serif',serif; --dw:400; --mono:'Geist Mono',ui-monospace,monospace; --r:18px; --r2:12px;
 }
+/* Glass (Homelab-stilen «cur», Q13 og Q15): bygget på Homelabs glass-tokens (tokens.css, :root[data-theme="glod"]) i stedet for den
+   gamle «Glød»-paletten (brun bunn, ravgul aksent, Bricolage). Kortene er ugjennomsiktige blandinger av de samme tokenene, fordi
+   desktop-Økonomi ikke har bakgrunnsbildet som glassflatene i Homelab ligger over (og ark/menyer ikke skal vise innholdet under). */
 html[data-ui=desktop][data-theme=glod]{
-  --bg:#16110e; --side:#120e0b; --card:#221a15; --inner:#2c221c; --line:#2c221c; --line2:#3a2d25; --sep:#2c221c; --line3:#4a3a30;
-  --text:#f3ebe3; --text2:#b3a597; --muted:#9c8f84; --dim:#b3a597;
-  --acc:#ffb547; --acc-l:#ff8f73; --acc-ink:#16110e; --acc-h:#ffc56e; --pos:#7ee2a8; --warn:#ff7a59; --neg:#ff8f73; --note:#ffb547; --ok:#7ee2a8;
-  --blue:#8fb6ff; --blue-l:#8fb6ff; --blue-t:#8fb6ff; --blue-soft:#1c2634; --purple:#c3a8ff; --purple-soft:#271d33;
-  --pos-bg:#16271d; --pos-soft:#16271d; --pos-line:#24402f; --warn-soft:#3a2418; --gold:#ffb547;
-  --link:#ffb547; --link-h:#ffc56e; --hover:#2c221c; --warm:#3a2418; --warm2:#3a2418; --warm-line:#4a3020; --warm-line2:#6a4028;
-  --deep:#16110e; --pop:#2c221c; --skel:#3a2d25; --tag-t:#b3a597; --nav-act:#2c221c; --badge-ink:#16110e; --av:#ffcfa8;
-  --card2:#ff7a59; --card2-ink:#16110e; --card2-mute:#4a2618;
-  --rev-bg:#ffb547; --rev-line:#ffb547; --rev-ink:#16110e; --rev-mute:#4a3510;
-  --font-ui:'Bricolage Grotesque',system-ui,sans-serif; --font-d:'Bricolage Grotesque',system-ui,sans-serif; --dw:600; --mono:'DM Mono',ui-monospace,monospace; --r:24px; --r2:16px;
+  color-scheme:dark;
+  --bg:var(--ds-surface); --side:color-mix(in oklab,var(--ds-text-primary) 3%,var(--ds-surface));
+  --card:color-mix(in oklab,var(--ds-text-primary) 8%,var(--ds-surface)); --inner:color-mix(in oklab,var(--ds-text-primary) 13%,var(--ds-surface));
+  --line:var(--ds-line); --line2:color-mix(in oklab,var(--ds-text-primary) 18%,transparent); --sep:var(--ds-line); --line3:color-mix(in oklab,var(--ds-text-primary) 26%,transparent);
+  --text:var(--ds-text-primary); --text2:var(--ds-text-secondary); --muted:var(--ds-text-secondary); --dim:var(--ds-text-secondary);
+  --acc:var(--ds-accent); --acc-l:var(--ds-danger); --acc-ink:var(--ds-on-accent); --acc-h:color-mix(in oklab,var(--ds-accent) 80%,white);
+  --pos:var(--ds-success); --warn:var(--ds-danger); --neg:var(--ds-danger); --note:var(--ds-warning); --ok:var(--ds-success);
+  --blue:var(--ds-focus); --blue-l:var(--ds-focus); --blue-t:var(--ds-focus); --blue-soft:color-mix(in oklab,var(--ds-focus) 14%,var(--ds-surface));
+  --purple:color-mix(in oklab,var(--ds-category-purple) 45%,white); --purple-soft:color-mix(in oklab,var(--ds-category-purple) 24%,var(--ds-surface));
+  --pos-bg:color-mix(in oklab,var(--ds-success) 14%,var(--ds-surface)); --pos-soft:var(--pos-bg); --pos-line:color-mix(in oklab,var(--ds-success) 30%,var(--ds-surface));
+  --warn-soft:color-mix(in oklab,var(--ds-danger) 14%,var(--ds-surface)); --gold:var(--ds-warning);
+  --link:var(--ds-accent); --link-h:var(--acc-h); --hover:var(--inner);
+  --warm:color-mix(in oklab,var(--ds-accent) 14%,var(--ds-surface)); --warm2:var(--warm); --warm-line:color-mix(in oklab,var(--ds-accent) 26%,var(--ds-surface)); --warm-line2:color-mix(in oklab,var(--ds-accent) 40%,var(--ds-surface));
+  --deep:var(--ds-surface); --pop:var(--inner); --skel:var(--inner); --tag-t:var(--ds-text-secondary); --nav-act:var(--inner); --badge-ink:var(--ds-on-accent); --av:color-mix(in oklab,var(--ds-accent) 45%,white);
+  --card2:var(--ds-accent); --card2-ink:var(--ds-on-accent); --card2-mute:color-mix(in oklab,var(--ds-on-accent) 70%,var(--ds-accent));
+  --rev-bg:var(--ds-accent); --rev-line:var(--ds-accent); --rev-ink:var(--ds-on-accent); --rev-mute:color-mix(in oklab,var(--ds-on-accent) 70%,var(--ds-accent));
+  --font-ui:var(--ds-font-sans); --font-d:var(--ds-font-sans); --dw:600; --mono:var(--ds-font-mono); --r:var(--ds-radius-xl); --r2:var(--ds-radius-lg);
 }
 *{box-sizing:border-box}
 html,body{margin:0}
@@ -644,7 +654,7 @@ html[data-v3] .review .rq{background:color-mix(in srgb,var(--rev-ink) 9%,transpa
 html[data-v3] .review .rq:hover{background:color-mix(in srgb,var(--rev-ink) 14%,transparent)}
 html[data-v3] .review .rq .note,html[data-v3] .review .rq .muted{color:var(--rev-mute)!important}
 html[data-v3] .search{width:280px;flex:0 1 280px}
-html[data-theme=lys]{--rev-warn:#f7cbbd}html[data-theme=mork]{--rev-warn:#7a2814}html[data-theme=glod]{--rev-warn:#8a2a10}
+html[data-theme=lys]{--rev-warn:#f7cbbd}html[data-theme=mork]{--rev-warn:#7a2814}html[data-theme=glod]{--rev-warn:color-mix(in oklab,var(--ds-danger) 40%,var(--ds-surface))}
 html[data-v3] .review .rq [style*="--pos"],html[data-v3] .review .rq [style*="--blue-l"]{color:var(--rev-mute)!important}
 html[data-v3] .review .rq [style*="--acc-l"]{color:var(--rev-warn)!important}
 html[data-v3] .so-prog i{background:var(--acc)}

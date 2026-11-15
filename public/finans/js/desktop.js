@@ -157,7 +157,8 @@ const suggList = (r) => (Array.isArray(r) ? r : r?.items ?? []);
 export const THEMES = {
   lys: { name: 'Papir · lys', desc: 'Papirtone, grønn aksent, serif-tall', bg: '#f4f1ea', side: '#ece7dc', surf: '#faf8f3', line: '#e2ddd2', ink: '#1c1b19', faint: '#8a8478', acc: '#1f4d3a', warn: '#c8553d', d: "'Instrument Serif',serif", dw: 400, rs: '6px', meta: '#f4f1ea' },
   mork: { name: 'Papir · mørk', desc: 'Samme oppsett i mørkt, mintgrønn aksent', bg: '#121210', side: '#0d0d0c', surf: '#1a1a17', line: '#2a2925', ink: '#ece8df', faint: '#8a8478', acc: '#6fbf8e', warn: '#e07a5f', d: "'Instrument Serif',serif", dw: 400, rs: '6px', meta: '#121210' },
-  glod: { name: 'Glass', desc: 'Varm mørk, ravgul aksent, myke kort', bg: '#16110e', side: '#120e0b', surf: '#221a15', line: '#2c221c', ink: '#f3ebe3', faint: '#9c8f84', acc: '#ffb547', warn: '#ff7a59', d: "'Bricolage Grotesque',sans-serif", dw: 600, rs: '8px', meta: '#16110e' },
+  // Glass: forhåndsvisningen viser Homelabs glass-tokens (tokens.css), som finans.css bruker for data-theme=glod.
+  glod: { name: 'Glass', desc: 'Mørkt glass, oransje aksent, som Homelab', bg: '#07080b', side: '#0c0d10', surf: '#191b20', line: '#25272c', ink: '#eef0f4', faint: '#8a93a6', acc: '#ff7a3d', warn: '#f59a8f', d: 'Outfit,sans-serif', dw: 600, rs: '8px', meta: '#07080b' },
 };
 const lsGet = (k) => { try { return localStorage.getItem(k); } catch { return null; } };
 const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch {} };
