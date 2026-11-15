@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "api/finans-faste-betalinger.schema.json",
+  "title": "Faste betalinger (samlet)",
+  "description": "Siden Faste betalinger i Økonomi (Q4): abonnementer og faste utgifter i én form (items), og planlagte trekk de neste dagene (planned). Serveren regner nextDate (Oslo), daysLeft, monthly, yearly, label og trekkdagene i måneden (chargeDays); klientene viser dem. For delte abonnementer er beløpet din del. En fast utgift for samme tjeneste som et aktivt abonnement har duplicateOf og telles ikke i summene.",
+  "x-endpoint": "GET /finans/api/faste-betalinger",
+  "type": "object",
+  "required": ["today", "month", "filters", "items", "monthly", "yearly", "chargeDays", "planned"],
+  "properties": {
+    "today": { "$ref": "../common/types.schema.json#/$defs/date" },
+    "month": { "$ref": "../common/types.schema.json#/$defs/month" },
+    "filters": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "count"],
+        "properties": {
+          "id": { "enum": ["abonnementer", "faste", "planlagte"] },
+          "name": { "type": "string" },
+          "count": { "type": "integer" },
+          "active": { "type": "integer" },
+          "monthly": { "$ref": "../common/types.schema.json#/$defs/kroner" },
+          "total": { "$ref": "../common/types.schema.json#/$defs/kroner" },
+          "days": { "type": "integer" }
+        }
+      }
+    },
+    "items": { "type": "array", "items": { "$ref": "#/$defs/betaling" } },
+    "monthly": { "$ref": "../common/types.schema.json#/$defs/kroner" },
+    "yearly": { "$ref": "../common/types.schema.json#/$defs/kroner" },
+    "chargeDays": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["day", "count", "names"],
+        "properties": { "day": { "type": "integer" }, "count": { "type": "integer" }, "names": { "type": "array", "items": { "type": "string" } } }
+      }
+    },
+    "planned": {
+      "type": "object",
+      "required": ["days", "from", "to", "items", "total"],
+      "properties": {
+        "days": { "type": "integer" },
+        "from": { "$ref": "../common/types.schema.json#/$defs/date" },
+        "to": { "$ref": "../common/types.schema.json#/$defs/date" },
+        "total": { "$ref": "../common/types.schema.json#/$defs/kroner" },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["date", "label", "kind", "name", "amount"],
+            "properties": {
+              "date": { "$ref": "../common/types.schema.json#/$defs/date" },
+              "label": { "type": "string" },
+              "kind": { "enum": ["abonnement", "fast", "funnet"] },
+              "id": { "type": ["integer", "null"] },
+              "name": { "type": "string" },
+              "amount": { "$ref": "../common/types.schema.json#/$defs/kroner" },
+              "account": { "type": ["string", "null"] },
+              "source": { "type": "string" }
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "betaling": {
+      "type": "object",
+      "required": ["key", "kind", "id", "name", "amount", "monthly", "yearly", "cycle", "cycleName", "perLabel", "nextDate", "nextLabel", "daysLeft", "label", "active", "source", "href", "duplicateOf"],
+      "properties": {
+        "key": { "type": "string" },
+        "kind": { "enum": ["abonnement", "fast"] },
+        "id": { "type": "integer" },
+        "name": { "type": "string" },
+        "plan": { "type": ["string", "null"] },
+        "amount": { "$ref": "../common/types.schema.json#/$defs/kroner" },
+        "monthly": { "$ref": "../common/types.schema.json#/$defs/kroner" },
+        "yearly": { "$ref": "../common/types.schema.json#/$defs/kroner" },
+        "cycle": { "type": "string" },
+        "cycleName": { "type": "string" },
+        "perLabel": { "type": "string" },
+        "nextDate": { "anyOf": [{ "$ref": "../common/types.schema.json#/$defs/date" }, { "type": "null" }] },
+        "nextLabel": { "type": ["string", "null"] },
+        "daysLeft": { "type": ["integer", "null"] },
+        "label": { "type": "string" },
+        "active": { "type": "boolean" },
+        "category": { "type": ["string", "null"] },
+        "color": { "type": ["string", "null"] },
+        "source": { "type": "string" },
+        "href": { "type": "string", "description": "Dyplenke i Økonomi på web (#/fast/<filter>/<id>)." },
+        "duplicateOf": { "type": ["string", "null"] }
+      }
+    }
+  }
+}

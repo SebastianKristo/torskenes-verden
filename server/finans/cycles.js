@@ -32,6 +32,21 @@ const ALIAS = {
   weekly: 'weekly', week: 'weekly', uke: 'weekly', ukentlig: 'weekly',
   biweekly: 'biweekly', fortnightly: 'biweekly', '2uker': 'biweekly', '2 uker': 'biweekly', 'annenhver uke': 'biweekly', 'hver 2. uke': 'biweekly',
 };
+/**
+ * Neste trekk (≥ today, Oslo) for en fast utgift (fh_recurring: interval monthly | yearly | weekly, day, month).
+ * Månedlig: dagen i måneden (31. → siste dag i kortere måneder). Årlig: dag og måned. Ukentlig: ukedagen day % 7 (0 = søndag).
+ */
+export function recurringNextDate(r, today = osloToday()) {
+  const day = Math.min(31, Math.max(1, +r.day || 1)), y = +today.slice(0, 4), m = +today.slice(5, 7);
+  if (r.interval === 'weekly') return addDays(today, ((day % 7) - new Date(`${today}T12:00:00Z`).getUTCDay() + 7) % 7);
+  if (r.interval === 'yearly') {
+    const bm = Math.min(12, Math.max(1, +r.month || 1)), x = clampDate(y, bm, day);
+    return x >= today ? x : clampDate(y + 1, bm, day);
+  }
+  const x = clampDate(y, m, day);
+  return x >= today ? x : clampDate(y, m + 1, day);
+}
+
 /** Syklus fra det klienten sender (engelsk nøkkel eller norsk ord), eller null. */
 export const cycleIn = (v) => ALIAS[String(v ?? '').trim().toLowerCase()] ?? null;
 export const isCycle = (v) => Object.hasOwn(PER_YEAR, v);

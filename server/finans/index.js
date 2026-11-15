@@ -20,6 +20,7 @@ import { sessionUser } from '../auth/session.js';
 import finansApi from './routes.js';
 import { finans43Api } from './overview.js';
 import fin51Api from './planning.js';
+import fasteBetalingerApi from './faste-betalinger.js';
 import { finans42Api } from './glimt-routes.js';
 import { finans40Api } from './tx-edit.js';
 import { receiptsAlias48 } from './receipts/routes.js';
@@ -33,6 +34,7 @@ export { registerLegacyReceipts, legacyReceiptOwner } from './legacy-receipts.js
 export function mountFinans(app) {
   app.route('/finans/api', finans43Api); // /overview, /transactions/months
   app.route('/finans/api', fin51Api); // /fin51/* (egen tilgangskontroll, per bruker)
+  app.route('/finans/api', fasteBetalingerApi); // /faste-betalinger: abonnementer, faste utgifter og planlagte trekk i én form (Q4)
   app.route('/finans/api', finans42Api); // Glimt-søk (SQL før LLM, tankesteg), filter, avanserte oppgaver + PDF, Boliger web, import til bolig, aksje-logoer
   app.route('/finans/api', finans40Api); // added, PATCH alt + historikk, Les på nytt, POST /search/ask (før routes.js)
   app.route('/finans/api', finansApi);

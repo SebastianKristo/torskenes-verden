@@ -83,6 +83,12 @@
     },
     {
       "method": "GET",
+      "path": "/finans/api/faste-betalinger",
+      "schema": "api/finans-faste-betalinger.schema.json",
+      "auth": "session|token"
+    },
+    {
+      "method": "GET",
       "path": "/api/media/status",
       "schema": "api/media-status.schema.json",
       "auth": "session|token"
