@@ -1,11 +1,11 @@
-// Prompt 51 (WEBX51): tilgjengelighetssjekk for hovedsidene i lys og mørk (npm run a11y). Egne, axe-lignende regler i nettleseren
+// Tilgjengelighetssjekk for hovedsidene i temaene fra common.mjs (npm run a11y). Egne, axe-lignende regler i nettleseren
 // (ingen nye npm-pakker): kontrast (WCAG 2.1 AA: 4,5:1, stor tekst 3:1), bilder uten alt, knapper/lenker uten navn, skjemafelt uten
 // etikett, lang på <html>, sidetittel, dupliserte id-er som aria-attributter peker på, og berøringsflater under 24 × 24 px (WCAG 2.2).
 //
 //   npm run a11y                       – sjekker alt, skriver test/a11y51/out/report.{json,md} og feiler bare på NYE brudd
 //   npm run a11y -- --update-baseline  – lagrer dagens brudd som grunnlinje (test/a11y51/baseline.json)
 //   npm run a11y -- --strict           – feiler på alle brudd (ikke bare nye)
-//   A11Y51_PAGES=hjem,finans           – bare noen sider
+//   A11Y51_PAGES=oversikt,finans-oversikt – bare noen sider
 import { mkdirSync, writeFileSync, readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { start51, context51, open51, PAGES51, THEMES51, VIEWPORTS51, ROOT, args51 } from './common.mjs';
@@ -110,16 +110,16 @@ const only = (process.env.A11Y51_PAGES || '').split(',').filter(Boolean);
 const results = [];
 try {
   for (const p of PAGES51.filter((x) => !only.length || only.includes(x.name))) {
-    for (const theme of THEMES51) {
+    for (const theme of THEMES51.filter((t) => !p.themes || p.themes.includes(t.name))) {
       for (const vp of VIEWPORTS51) {
         const ctx = await context51(env, { viewport: vp, theme, auth: p.auth !== false });
         try {
           const { page } = await open51(ctx, p);
           const found = await page.evaluate(audit);
-          results.push({ page: p.name, theme, viewport: vp.name, violations: found });
+          results.push({ page: p.name, theme: theme.name, viewport: vp.name, violations: found });
           const s = found.filter((x) => x.impact === 'serious').length;
-          console.log(`${p.name.padEnd(16)} ${theme.padEnd(4)} ${vp.name.padEnd(4)}  ${String(found.length).padStart(3)} brudd (${s} alvorlige)`);
-        } catch (e) { results.push({ page: p.name, theme, viewport: vp.name, error: e.message.split('\n')[0], violations: [] }); console.log(`${p.name} ${theme} ${vp.name}: feil – ${e.message.split('\n')[0]}`); }
+          console.log(`${p.name.padEnd(22)} ${theme.name.padEnd(10)} ${vp.name.padEnd(4)}  ${String(found.length).padStart(3)} brudd (${s} alvorlige)`);
+        } catch (e) { results.push({ page: p.name, theme: theme.name, viewport: vp.name, error: e.message.split('\n')[0], violations: [] }); console.log(`${p.name} ${theme.name} ${vp.name}: feil – ${e.message.split('\n')[0]}`); }
         await ctx.close();
       }
     }

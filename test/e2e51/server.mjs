@@ -20,6 +20,19 @@ const { hashPassword } = await import('../../server/auth/password.js');
 if (process.env.E2E_FRESH === '1') delete process.env.APP_PASSWORD_HASH;
 else process.env.APP_PASSWORD_HASH = hashPassword(process.env.E2E_PASSWORD || 'testpassord1');
 
+// E2E_CLOCK=<ISO-tid>: serverens klokke starter der og går 1000 ganger saktere enn vanlig (de visuelle testene fryser
+// klokka i nettleseren på samme tidspunkt, så avganger, nedtellinger og «i dag» blir like fra kjøring til kjøring).
+// Den står ikke helt stille, så kode som venter på at tiden skal gå, kommer seg videre.
+if (process.env.E2E_CLOCK) {
+  const RealDate = Date, t0 = RealDate.now(), start = new RealDate(process.env.E2E_CLOCK).getTime();
+  const now = () => start + Math.floor((RealDate.now() - t0) / 1000);
+  class ClockDate extends RealDate {
+    constructor(...a) { if (a.length === 0) super(now()); else super(...a); }
+    static now() { return now(); }
+  }
+  globalThis.Date = ClockDate;
+}
+
 const local = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?\//;
 const realFetch = globalThis.fetch;
 globalThis.fetch = async (url, opt) => {

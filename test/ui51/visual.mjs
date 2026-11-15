@@ -1,11 +1,11 @@
-// Prompt 51 (WEBX51): visuelle regresjonstester (npm run test:visual). Skjermbilder av hovedsidene på 1440 og 390 px i lys og mørk,
-// sammenlignet med lagrede referanser i test/visual51/ref/. Sammenligningen skjer i nettleseren (canvas), så ingen nye npm-pakker.
+// Visuelle regresjonstester (npm run test:visual). Skjermbilder av hovedsidene på 1440 og 390 px i Papir lys, Papir mørk og Glass
+// (test/ui51/common.mjs), sammenlignet med lagrede referanser i test/visual51/ref/. Sammenligningen skjer i nettleseren (canvas), så ingen nye npm-pakker.
 //
 //   npm run test:visual                 – sammenligner; skriver test/visual51/out/ (bilder, diff, report.html) og feiler over terskelen
 //   npm run test:visual -- --update     – lagrer dagens skjermbilder som nye referanser
 //   VISUAL51_THRESHOLD=0.01             – største andel ulike piksler før det regnes som endret (standard 1 %)
 //   VISUAL51_PIXEL=40                   – hvor stor fargeforskjell (0–255 per kanal) som teller som en ulik piksel (standard 40)
-//   VISUAL51_PAGES=hjem,finans          – bare noen sider
+//   VISUAL51_PAGES=oversikt,finans-oversikt – bare noen sider
 // Mangler en referanse, regnes visningen som «ny» (ikke feil) og skjermbildet ligger i out/ – kjør med --update for å lagre den.
 import { mkdirSync, writeFileSync, readFileSync, existsSync, copyFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -40,7 +40,7 @@ async function compare(page, a, b) {
   }, { a, b, PIXEL });
 }
 
-const env = await start51();
+const env = await start51({ clock: true });
 if (!env) process.exit(0);
 const only = (process.env.VISUAL51_PAGES || '').split(',').filter(Boolean);
 const rows = [];
@@ -49,7 +49,7 @@ try {
   const cmpPage = await cmpCtx.newPage();
   for (const p of PAGES51.filter((x) => !only.length || only.includes(x.name))) {
     for (const vp of VIEWPORTS51) {
-      for (const theme of THEMES51) {
+      for (const theme of THEMES51.filter((t) => !p.themes || p.themes.includes(t.name))) {
         const name = slug51(p, vp, theme);
         const ctx = await context51(env, { viewport: vp, theme, auth: p.auth !== false, freeze: true });
         try {
@@ -76,7 +76,7 @@ try {
 } finally { await env.close(); }
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-const html = `<!doctype html><html lang="nb"><meta charset="utf-8"><title>Visuelle tester · prompt 51</title>
+const html = `<!doctype html><html lang="nb"><meta charset="utf-8"><title>Visuelle tester</title>
 <style>body{font:15px/1.4 system-ui,sans-serif;margin:24px;background:#f3efe6;color:#17150f}h1{font-size:22px}table{border-collapse:collapse}td,th{padding:6px 10px;border-bottom:1px solid #ccc;text-align:left}
 .endret,.feil{color:#a8231a;font-weight:700}.ny{color:#7a5a00}figure{display:inline-block;margin:0 12px 12px 0;vertical-align:top}figure img{max-width:420px;border:1px solid #bbb}figcaption{font-size:12px}</style>
 <h1>Visuelle tester</h1><p>Terskel ${(THRESHOLD * 100).toFixed(1)} % piksler · pikselgrense ${PIXEL} · ${new Date().toLocaleString('nb-NO')}</p>
