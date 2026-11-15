@@ -8,8 +8,12 @@ import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -22,6 +26,7 @@ import androidx.compose.runtime.saveable.SaveableStateHolder
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -30,6 +35,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.layer.drawLayer
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalGraphicsContext
@@ -37,24 +44,11 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
+import no.kristo.finanshub.*
 import no.kristo.finanshub.AppViewModel
 import no.kristo.finanshub.Haptics
 import no.kristo.finanshub.Screen
-
-/*
- * Prompt 23 (NAV): navigasjonsrammen i appen.
- *
- * Appen har ingen NavHost: siden som vises bestemmes av tilstand i AppViewModel (screen, paperPage, selectedTx …),
- * og vm.back() endrer den. Derfor:
- *  - Sveip tilbake (Predictive Back, Android 14+): vm.previewBack() kjører back() på prøve i et Compose-snapshot som
- *    kastes, så vi vet hvilken side tilbake fører til. Den siden ble tegnet sist den var åpen (skjermbilde av hele
- *    skjermen, tatt med en GraphicsLayer). Under sveipet ligger den bak: skalering 0,9 → 1, parallakse −30 % → 0 og et
- *    slør fra 10 % til 0. Siden som lukkes følger fingeren med skygge på kanten. Aldri svart: bak alt ligger papirfargen.
- *    Systemet avgjør om sveipet fullføres (terskel og fart); vi gir haptikk når halve bredden passeres.
- *  - Scrollposisjonen per side: hver side har sin egen SaveableStateProvider. rememberScrollState og
- *    rememberLazyListState lagres der. Tilbake gjenoppretter forrige side; siden man gikk tilbake fra glemmes.
- *    En ny side (ikke tilbake) åpner alltid øverst.
- */
 
 /** Minne for navigasjonen: skjermbilder per side (de 5 siste), forrige nøkkel og scrollmålere for toppklippet. */
 internal class Nav23 {
@@ -232,4 +226,94 @@ internal fun Modifier.pullUp(d: androidx.compose.ui.unit.Dp): Modifier = this.la
     val h = if (c.hasBoundedHeight) c.maxHeight + px else c.maxHeight
     val pl = m.measure(c.copy(minHeight = minOf(c.minHeight + px, h), maxHeight = h))
     layout(pl.width, (pl.height - px).coerceAtLeast(0)) { pl.place(0, -px) }
+}
+
+/* ---------------- Aktiv fane ---------------- */
+
+/** Lukker undersider og lag inne i en fane (detaljer, valgt pakke, innstillingsside …). */
+private fun AppViewModel.clearLayers26() {
+    original = null; editing = null; detail = null; detailTx = null; selectedTx = null; editHome = false
+    finnSel = null; finnDetail = null; trkSel = null; matFull = false; dishOpen = null; folder = null; selectedReceipt = null
+    stockScreen = "ov"; stockSel = null; stockFrom = null; domainManager = false
+    settingsPage = null; b26.kalFrom = null
+    if (trkPicking) trkPickDone()
+}
+
+/** Trykk på fanen som allerede er markert: til fanens rot, eller til toppen når man allerede står der. */
+internal fun AppViewModel.tabReselect26(bar: String, t: NavTab) {
+    val before = navShotKey(this)
+    clearLayers26()
+    when {
+        bar == "main" && t.key == "mer" -> {
+            if (paperFromMer || paperFromFinMer || screen !in setOf(Screen.Homelab, Screen.Home, Screen.Mat, Screen.Tracking)) go(Screen.Homelab)
+            paperPage = "mer"
+        }
+        bar == "main" && t.key == "hjem" -> { paperPage = null; go(Screen.Homelab) }
+        bar == "fin" && t.key == "fmer" -> { if (paperFromFinMer) go(Screen.Home); paperFinTab("fmer") }
+        else -> t.go()
+    }
+    if (navShotKey(this) == before) b26.topSeq++
+}
+
+/** Kalles i PaperApp før siden tegnes: etter et nytt trykk på aktiv fane glemmes scrollposisjonen, så siden står øverst. */
+internal fun topReset26(vm: AppViewModel, nav: Nav23, holder: SaveableStateHolder, key: String) {
+    val b = vm.b26
+    if (b.topSeq == b.topDone) return
+    b.topDone = b.topSeq
+    holder.removeState(key)
+    nav.meters.remove(key)
+}
+
+/**
+ * Hold inne (500 ms) på fanelinja: som longPressEdit, men resten av trykket tas her (consume til fingeren slippes),
+ * så fanen under ikke får et klikk. Hvert nytt trykk starter på nytt, så det neste trykket virker som vanlig.
+ */
+internal fun Modifier.longPressEdit26(enabled: Boolean, key: Any?, onLong: () -> Unit): Modifier = if (!enabled) this else this.pointerInput(key) {
+    awaitEachGesture {
+        val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+        val ended = withTimeoutOrNull(500L) {
+            while (true) {
+                val ev = awaitPointerEvent(PointerEventPass.Initial)
+                val ch = ev.changes.firstOrNull { it.id == down.id } ?: break
+                if (!ch.pressed) break
+                if ((ch.position - down.position).getDistance() > viewConfiguration.touchSlop) break
+            }
+            true
+        }
+        if (ended == null) {
+            onLong()
+            while (true) {
+                val ev = awaitPointerEvent(PointerEventPass.Initial)
+                ev.changes.forEach { it.consume() }
+                if (ev.changes.none { it.pressed }) break
+            }
+        }
+    }
+}
+
+/* ---------------- Finans: «Rediger fanelinjen» ---------------- */
+
+internal fun finIcon26(k: String) = when (k) {
+    "oversikt" -> "◎"; "liste" -> "≡"; "finn" -> "⇄"; "sok" -> "⌕"; "budsjett" -> "◔"; "kvitt" -> "▤"; "aksjer" -> "↗"; "abo" -> "↻"; "kontoer" -> "▥"; "boliger" -> "⌂"; "chat" -> "✦"; else -> "•"
+}
+
+private fun finName26(k: String) = FIN_TABS.firstOrNull { it.first == k }?.second ?: k
+
+/** Ikonene en Finans-fane kan få (Hjem-ikonene og Finans-tegnene). */
+private val FIN_ICONS26 = (listOf("◎", "≡", "⇄", "⌕", "◔", "▤", "↗", "↻", "▥", "⌂", "kr") + TAB_ICONS).distinct()
+
+/**
+ * Samme editor som for Hjem (design: FINANS · FANELINJE): navn, ikon, flytt (↑), fjern (−), stil med forhåndsvisning,
+ * legg til (maks 5, Mer står alltid sist) og «Tilbakestill til standard». Lagres når arket lukkes eller med Ferdig.
+ */
+@Composable
+internal fun FinTabBarEditor26(vm: AppViewModel) {
+    // Prompt 32: det felles arket (ui/Ui32b.kt) med Ferdig som Papir-pille og uten «Mer»-rad.
+    fun current() = vm.paperFinTabs.map { NavEd32b(it, vm.finTabLabel26(it, finName26(it)), vm.finTabIcon26(it, finIcon26(it))) }
+    NavEditor32b(
+        vm, "Finans", current(), FIN_TABS.map { (k, n) -> NavEd32b(k, n, finIcon26(k)) }, 5, mer = true, icons = FIN_ICONS26,
+        onSave = { l -> vm.saveFinNav26(l.map { FinItem26(it.key, it.label, it.icon) }, ::finName26, ::finIcon26) },
+        onReset = { vm.resetFinNav26(); current() },
+        onClose = { vm.b26.finEdit = false },
+    )
 }

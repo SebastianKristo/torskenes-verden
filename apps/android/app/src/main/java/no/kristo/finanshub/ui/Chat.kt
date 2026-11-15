@@ -1,17 +1,39 @@
 package no.kristo.finanshub.ui
 
+import android.app.Activity
+import android.content.ClipboardManager
+import android.content.Context
+import android.content.ContextWrapper
+import android.graphics.Bitmap
+import android.net.Uri
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.draganddrop.dragAndDropTarget
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -20,16 +42,34 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draganddrop.DragAndDropEvent
+import androidx.compose.ui.draganddrop.DragAndDropTarget
+import androidx.compose.ui.draganddrop.toAndroidDragEvent
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.semantics
@@ -40,19 +80,165 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import kotlinx.coroutines.delay
 import no.kristo.finanshub.*
+import no.kristo.finanshub.ChatFact41
 
-/*
- * Prompt 27 (ANDROID-A): Chat i fullskjerm (Mobil Papir App.dc.html, side «chat»). Telefon: historikken i en skuff (☰).
- * Fold / bredde ≥ 600 dp: fast sidepanel (288 dp). Tema Papir (appens farger og Newsreader) eller Nøytral (mørk, systemfont).
- * Arkene (modell, ⚙, ⋯, «Sende til …?», vedlegg, kunnskapsbase, modeller) ligger i Chat27Sheets.kt.
+/* ======================= Chat → Legg ved ======================= */
+
+/** «Legg ved»: grep-strek, tittel + ✕ på samme linje, tre fliser (Kamera · Bilder · Filer), kunnskapsbase-rad og fotnote. */
+@Composable
+internal fun ChatAttach28(vm: AppViewModel, v: ChatV27, close: () -> Unit, camera: () -> Unit, images: () -> Unit, files: () -> Unit, kb: () -> Unit) {
+    val s = vm.chat27
+    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { Box(Modifier.size(36.dp, 5.dp).clip(RoundedCornerShape(3.dp)).background(v.line)) }
+    Row(Modifier.fillMaxWidth().padding(horizontal = 2.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Text("Legg ved", color = v.ink, fontFamily = v.head, fontWeight = FontWeight.Medium, fontSize = 24.sp, lineHeight = 26.sp, modifier = Modifier.weight(1f), maxLines = 1)
+        Box(Modifier.size(36.dp).clip(CircleShape).background(v.card).press24(onClick = close).ch27Label("Lukk"), contentAlignment = Alignment.Center) {
+            WxIcon(IC_X28, v.ink, 14.dp, stroke = 2.6f)
+        }
+    }
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        listOf(
+            Triple("Kamera", "M4 8h3l2-3h6l2 3h3v11H4zM12 16.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z", camera),
+            Triple("Bilder", "M4 5h16v14H4zM4 15l4-4 4 4 3-3 5 5M15.5 9h.01", images),
+            Triple("Filer", "M7 3h7l5 5v13H7zM14 3v5h5M10 13h6M10 17h6", files),
+        ).forEach { (n, ic, go) ->
+            Column(
+                Modifier.weight(1f).clip(RoundedCornerShape(18.dp)).background(v.card).press24(onClick = go).ch27Label(n).padding(start = 6.dp, end = 6.dp, top = 16.dp, bottom = 14.dp),
+                horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Box(Modifier.size(46.dp).clip(RoundedCornerShape(14.dp)).background(v.bg), contentAlignment = Alignment.Center) { WxIcon(ic, v.ink, 23.dp, stroke = 1.8f) }
+                Text(n, color = v.ink, fontFamily = v.sans, fontWeight = FontWeight.Bold, fontSize = 14.sp, maxLines = 1)
+            }
+        }
+    }
+    Row(
+        Modifier.fillMaxWidth().heightIn(min = 64.dp).clip(RoundedCornerShape(18.dp)).background(v.card).press24(onClick = kb).padding(start = 9.dp, top = 9.dp, end = 14.dp, bottom = 9.dp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Box(Modifier.size(46.dp).clip(RoundedCornerShape(14.dp)).background(v.bg), contentAlignment = Alignment.Center) {
+            WxIcon("M5 4.5A1.5 1.5 0 0 1 6.5 3H19v15H6.5A1.5 1.5 0 0 0 5 19.5zM5 19.5A1.5 1.5 0 0 0 6.5 21H19v-3M9 7.5h6", v.ink, 23.dp, stroke = 1.8f)
+        }
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text("Fra kunnskapsbasen", color = v.ink, fontFamily = v.sans, fontWeight = FontWeight.Bold, fontSize = 15.sp, maxLines = 1)
+            Text(s.kb?.let { "${it.size} dokumenter" } ?: "Dokumenter på serveren", color = v.mut, fontFamily = v.sans, fontSize = 12.5.sp, maxLines = 1)
+        }
+        WxIcon(IC_CHEV28, v.mut, 16.dp, stroke = 2.2f)
+    }
+    Text("Bilder leses av en bildemodell, f.eks. qwen2.5vl. Filer kan være PDF, Word, tekst eller CSV.", color = v.mut, fontFamily = v.sans, fontSize = 12.sp, lineHeight = 17.sp,
+        modifier = Modifier.padding(horizontal = 4.dp))
+}
+
+/* ---------------- Chat: «Kvitteringer og skanninger» ---------------- */
+
+/** Mappen øverst under MAPPER: rødt kvitteringsikon, antall og «· N til godkjenning». Lukket som standard; kan ikke slettes eller gis nytt navn. */
+@Composable
+internal fun ScanFolderRow34(vm: AppViewModel, ink: Color, sans: androidx.compose.ui.text.font.FontFamily, row: @Composable (ChatRow27) -> Unit) {
+    val f = vm.p34.scanFolder ?: return
+    val s = vm.chat27
+    val open = s.folderOpen[f.id] ?: false
+    Row(Modifier.fillMaxWidth().heightIn(min = 40.dp).clip(RoundedCornerShape(12.dp)).press24 { Haptics.select(); s.folderOpen = s.folderOpen + (f.id to !open) }.padding(horizontal = 10.dp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(if (open) "▾" else "▸", color = ink.copy(alpha = .6f), fontSize = 11.sp, modifier = Modifier.width(12.dp))
+        WxIcon("M6 2h12v20l-3-2-3 2-3-2-3 2zM9 7h6M9 11h6M9 15h4", Color(0xFFB23A2A), 17.dp, stroke = 1.9f)
+        val rv = vm.p34.scanReview
+        Text("${f.name} · ${f.chats.size}" + if (rv > 0) " · $rv til godkjenning" else "", color = ink, fontFamily = sans, fontWeight = FontWeight.Bold, fontSize = 14.sp,
+            maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+    if (open) f.chats.forEach { row(it) }
+}
+
+/* ======================= Chat: modellknappen ======================= */
+
+/** ‹ · ☰ · [Modellnavn] [LOKAL/SKY] ▾ – minst 112 dp, navnet forkortes med «…», «· laster …» / rød prikk. */
+@Composable
+internal fun ChatModelPill39(vm: AppViewModel, v: ChatV27) {
+    LaunchedEffect(Unit) { vm.loadChatRoute39() }
+    val s = vm.chat27
+    val m = vm.chatModelShow39()
+    val label = m?.label ?: if (s.unavailable) "Ikke satt opp" else "Velg modell"
+    Row(
+        Modifier.widthIn(min = 112.dp).height(40.dp).clip(CircleShape).press24 { s.sheet = "model" }.padding(horizontal = 12.dp)
+            .semantics { contentDescription = "Valgt modell: $label" },
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(label, color = v.ink, fontFamily = v.sans, fontWeight = FontWeight.Bold, fontSize = 16.sp,
+            maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+        if (m != null) {
+            if (m.state == "laster") Text("laster …", color = v.mut, fontFamily = v.sans, fontSize = 12.sp, maxLines = 1)
+            Ch27Badge(m.sky)
+            if (m.state == "feil") Box(Modifier.size(7.dp).clip(CircleShape).background(Color(0xFFB23A2A)))
+        }
+        Text("▼", color = v.mut, fontSize = 11.sp)
+    }
+}
+
+/** Under meldingsfeltet: «Svarer med Gemma 4 · lokal» (sky: hvor meldingen sendes). Trykk = modellvelgeren. */
+@Composable
+internal fun ChatAnswersWith39(vm: AppViewModel, v: ChatV27, m: ChatModel27?, modifier: Modifier) {
+    val sh = vm.chatModelShow39() ?: return
+    val where = if (sh.sky) "sky · sendes til ${if (m?.provider == "groq" || sh.label.contains("groq", true)) "Groq" else "Google"}" else "lokal"
+    Text("Svarer med ${sh.label} · $where", color = v.mut, fontFamily = v.sans, fontSize = 11.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+        modifier = modifier.clip(RoundedCornerShape(8.dp)).clickable(role = Role.Button) { vm.chat27.sheet = "model" }.padding(horizontal = 8.dp, vertical = 2.dp))
+}
+
+/* ======================= Søkepillen vokser inn i Chat ======================= */
+
+/** Starter animasjonen fra pillens ramme (p38.ansRect). Uten ramme: rett til Chat. */
+internal fun AppViewModel.growToChat41(q: String) {
+    val r = p38.ansRect
+    if (r == null) { openChatWith41(q); return }
+    p41.grow = r to q
+}
+
+/**
+ * Pillen vokser fra sin egen ramme til fullskjerm på 0,4 s (hjørner 26 → 0, mørk glass → appens bakgrunn). Pilleinnholdet tones ut
+ * på 0,15 s, Chat-innholdet (Glimt-tittel, spørsmålet som din boble, «skriver»-prikker) tones inn etter 0,12 s. Ved 0,4 s: ekte Chat.
+ * Redusert bevegelse: 0,2 s krysstoning.
  */
+@Composable
+internal fun PillGrow41(vm: AppViewModel) {
+    val g = vm.p41.grow ?: return
+    val p = PaperPal.current
+    val reduce = reduceMotion31()
+    val t = remember(g) { androidx.compose.animation.core.Animatable(0f) }
+    LaunchedEffect(g) {
+        t.animateTo(1f, tween(if (reduce) 200 else 400, easing = androidx.compose.animation.core.CubicBezierEasing(.2f, .8f, .2f, 1f)))
+        vm.openChatWith41(g.second)
+        delay(80)
+        vm.p41.grow = null
+    }
+    val dens = androidx.compose.ui.platform.LocalDensity.current.density
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        val W = constraints.maxWidth.toFloat(); val H = constraints.maxHeight.toFloat()
+        val k = if (reduce) 1f else t.value
+        val r = g.first
+        val l = r.left * (1 - k); val tp = r.top * (1 - k); val w = r.width + (W - r.width) * k; val h = r.height + (H - r.height) * k
+        val bg = androidx.compose.ui.graphics.lerp(Color(0xF0161412), p.bg, k)
+        Box(Modifier.offset(x = (l / dens).dp, y = (tp / dens).dp).size((w / dens).dp, (h / dens).dp)
+            .graphicsLayer { alpha = if (reduce) t.value else 1f }
+            .clip(RoundedCornerShape((26f * (1 - k)).dp)).background(bg)) {
+            Text("Åpner i Chat …", color = Color.White.copy(alpha = (1f - t.value / .375f).coerceIn(0f, 1f)), fontWeight = FontWeight.SemiBold, fontSize = 15.sp,
+                modifier = Modifier.padding(18.dp))
+            val inA = ((t.value - .3f) / .7f).coerceIn(0f, 1f)
+            Column(Modifier.fillMaxSize().statusBarsPadding().padding(18.dp).graphicsLayer { alpha = inA }, verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                Text("✦ Glimt", color = p.ink, fontFamily = PaperFonts.serif, fontSize = 22.sp)
+                Box(Modifier.align(Alignment.End).clip(RoundedCornerShape(18.dp)).background(p.ink).padding(14.dp, 10.dp)) {
+                    Text(g.second, color = p.bg, fontSize = 15.sp)
+                }
+                Text("• • •", color = p.mut, fontSize = 18.sp)
+            }
+        }
+    }
+}
 
 /** Fargene i Chat: Papir eller Nøytral (designets --cb, --cc, --ci, --cm, --cl, --ca, --cs, --cub, --cuI). */
 internal class ChatV27(
@@ -599,4 +785,293 @@ private fun SendBtn43(v: ChatV27, on: Boolean, onSend: () -> Unit) {
             .then(if (on) Modifier.press24 { onSend() } else Modifier.semantics { disabled() }).ch27Label("Send"),
         contentAlignment = Alignment.Center,
     ) { WxIcon(ChIc27.SEND, fg, 19.dp, stroke = 2.2f) }
+}
+
+/** Prompt 41: faktakort under Glimt-svaret i Papir-stil (mono-etikett, verdien, kilden). */
+@Composable
+internal fun ChatFacts41(v: ChatV27, facts: List<ChatFact41>) {
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        facts.forEach { f ->
+            val shape = RoundedCornerShape(12.dp)
+            Column(
+                Modifier.fillMaxWidth().clip(shape).background(v.card).border(1.dp, if (f.failed) v.line.copy(alpha = .6f) else v.line, shape)
+                    .padding(horizontal = 12.dp, vertical = 9.dp)
+                    .semantics { contentDescription = listOf(f.headLine, f.label, f.source).filter { it.isNotBlank() }.joinToString(", ") },
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                Text(f.headLine.uppercase(), color = v.acc, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = 10.sp,
+                    letterSpacing = 1.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(f.label, color = if (f.failed) v.mut else v.ink, fontFamily = v.sans, fontWeight = if (f.failed) FontWeight.Medium else FontWeight.SemiBold,
+                    fontSize = 14.sp, lineHeight = 19.sp)
+                if (f.source.isNotBlank()) Text(f.source, color = v.mut, fontFamily = PaperFonts.mono, fontWeight = FontWeight.Medium, fontSize = 10.sp)
+            }
+        }
+    }
+}
+
+@Composable
+private fun rememberChatImg50(vm: AppViewModel, url: String?, maxPx: Int, local: Bitmap? = null): Bitmap? {
+    val ctx = LocalContext.current.applicationContext
+    var bmp by remember(url) { mutableStateOf(local ?: Img50.cached(vm.base, url)) }
+    LaunchedEffect(url) { if (url != null && (bmp == null || bmp === local)) Img50.load(ctx, vm.base, vm.account?.token, url, maxPx)?.let { bmp = it } }
+    return bmp
+}
+
+private fun ext50(n: String): String = Regex("\\.(\\w{1,5})$").find(n)?.groupValues?.get(1)?.uppercase() ?: "FIL"
+
+/* ---------------- Vedlegg i feltet ---------------- */
+
+@Composable
+internal fun ChatAttRow50(vm: AppViewModel, v: ChatV27) {
+    val s = vm.chat27
+    if (s.att.isEmpty()) return
+    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(start = 4.dp, top = 8.dp, end = 8.dp, bottom = 2.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        s.att.forEachIndexed { i, a ->
+            Column(Modifier.width(64.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Box {
+                    Box(Modifier.size(64.dp).clip(RoundedCornerShape(12.dp)).background(v.bg).border(1.dp, v.line, RoundedCornerShape(12.dp)), contentAlignment = Alignment.Center) {
+                        val bmp = if (a.kind == "img") rememberChatImg50(vm, a.thumb, 256, Chat50.previews[a.key]) else null
+                        if (bmp != null) Image(bmp.asImageBitmap(), a.name, contentScale = ContentScale.Crop, modifier = Modifier.matchParentSize())
+                        else Text(if (a.kind == "doc") "KB" else ext50(a.name), color = v.mut, fontFamily = PaperFonts.mono, fontWeight = FontWeight.Bold, fontSize = 12.sp, letterSpacing = .7.sp)
+                        if (a.up) Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(3.dp).background(Color.Black.copy(alpha = .12f))) {
+                            Box(Modifier.fillMaxHeight().fillMaxWidth((Chat50.pct[a.key] ?: .02f).coerceIn(.02f, 1f)).background(CH27_SKY))
+                        }
+                    }
+                    Box(Modifier.align(Alignment.TopEnd).offset(x = 6.dp, y = (-6).dp).size(22.dp).clip(CircleShape).background(v.ink)
+                        .press24 { s.att = s.att.filterIndexed { j, _ -> j != i }; Chat50.previews.remove(a.key) }.ch27Label("Fjern ${a.name}"), contentAlignment = Alignment.Center) {
+                        Text("✕", color = v.bg, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+                if (a.kind != "img") Text(a.name, color = v.mut, fontFamily = v.sans, fontSize = 10.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+        }
+    }
+}
+
+/** «Lim inn bilde» når utklippstavlen har et bilde (telefon). */
+@Composable
+internal fun ChatPaste50(vm: AppViewModel, v: ChatV27) {
+    val ctx = LocalContext.current
+    val cm = remember { ctx.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager }
+    var has by remember { mutableStateOf(false) }
+    fun check() { has = runCatching { cm?.primaryClipDescription?.let { d -> (0 until d.mimeTypeCount).any { d.getMimeType(it).startsWith("image/") } } == true }.getOrDefault(false) }
+    DisposableEffect(cm) {
+        check()
+        val l = ClipboardManager.OnPrimaryClipChangedListener { check() }
+        runCatching { cm?.addPrimaryClipChangedListener(l) }
+        onDispose { runCatching { cm?.removePrimaryClipChangedListener(l) } }
+    }
+    LaunchedEffect(vm.chat27.input.isEmpty(), vm.chat27.att.size) { check() }
+    if (!has) return
+    Row(Modifier.padding(start = 4.dp, top = 4.dp).height(32.dp).clip(CircleShape).border(1.dp, v.line, CircleShape).press24 {
+        val clip = runCatching { cm?.primaryClip }.getOrNull()
+        val uris = (0 until (clip?.itemCount ?: 0)).mapNotNull { clip?.getItemAt(it)?.uri }
+        if (uris.isEmpty()) vm.chatToast27("Fant ikke bildet i utklippstavlen") else vm.addChat50(uris)
+        has = false
+    }.padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text("▣", color = v.mut, fontSize = 12.sp)
+        Text("Lim inn bilde", color = v.ink, fontFamily = v.sans, fontWeight = FontWeight.SemiBold, fontSize = 12.5.sp)
+    }
+}
+
+/* ---------------- Bilder i meldingene ---------------- */
+
+@Composable
+internal fun ChatBubbleImgs50(vm: AppViewModel, v: ChatV27, files: List<ChatFile50>) {
+    val imgs = files.filter { it.isImage }
+    if (imgs.isEmpty()) return
+    if (imgs.size == 1) {
+        val f = imgs[0]
+        val bmp = rememberChatImg50(vm, f.thumb ?: f.url, 720)
+        val ratio = (bmp?.let { it.width.toFloat() / it.height } ?: f.w?.let { w -> f.h?.let { h -> w.toFloat() / h } } ?: 1f).coerceIn(.4f, 2.5f)
+        val w = if (ratio >= 1f) 240.dp else 240.dp * ratio
+        val h = if (ratio >= 1f) 240.dp / ratio else 240.dp
+        Box(Modifier.size(w, h).clip(RoundedCornerShape(16.dp)).background(v.card).press24 { Chat50.lightbox = imgs to 0 }.ch27Label("Åpne ${f.name}")) {
+            bmp?.let { Image(it.asImageBitmap(), f.name, contentScale = ContentScale.Crop, modifier = Modifier.matchParentSize()) }
+        }
+    } else Column(verticalArrangement = Arrangement.spacedBy(4.dp), horizontalAlignment = Alignment.End) {
+        imgs.chunked(2).forEachIndexed { r, row ->
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                row.forEachIndexed { c, f ->
+                    val bmp = rememberChatImg50(vm, f.thumb ?: f.url, 360)
+                    Box(Modifier.size(120.dp).clip(RoundedCornerShape(12.dp)).background(v.card).press24 { Chat50.lightbox = imgs to (r * 2 + c) }.ch27Label("Åpne ${f.name}")) {
+                        bmp?.let { Image(it.asImageBitmap(), f.name, contentScale = ContentScale.Crop, modifier = Modifier.matchParentSize()) }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** Filpillen ved svaret: liten miniatyr (28, radius 6) + filnavn; trykk åpner lysboksen. */
+@Composable
+internal fun ChatFilePill50(vm: AppViewModel, v: ChatV27, all: List<ChatFile50>, i: Int) {
+    val f = all[i]
+    val bmp = rememberChatImg50(vm, f.thumb ?: f.url, 96)
+    Row(Modifier.height(28.dp).widthIn(max = 220.dp).clip(CircleShape).border(1.dp, v.line, CircleShape).press24 { Chat50.lightbox = all to i }.padding(end = 10.dp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Box(Modifier.size(28.dp).clip(RoundedCornerShape(6.dp)).background(v.card)) { bmp?.let { Image(it.asImageBitmap(), null, contentScale = ContentScale.Crop, modifier = Modifier.matchParentSize()) } }
+        Text(f.name, color = v.mut, fontFamily = v.sans, fontWeight = FontWeight.SemiBold, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+}
+
+/** «Lest med gemma3:12b fordi gpt-oss ikke kan se bilder» / «Lest med lokal OCR» under svaret. */
+@Composable
+internal fun ChatReadWith50(v: ChatV27, label: String?) {
+    if (label.isNullOrBlank()) return
+    Text(label, color = v.mut, fontFamily = v.sans, fontSize = 12.sp, lineHeight = 16.sp)
+}
+
+/** «Legg i Finans ›» under kvitteringstabellen. */
+@Composable
+internal fun ChatFinBtn50(vm: AppViewModel, v: ChatV27, key: String, url: String?) {
+    if (url.isNullOrBlank()) return
+    val st = Chat50.fin[key]
+    Box(Modifier.height(36.dp).clip(CircleShape).border(1.dp, v.ink, CircleShape).then(if (st == null) Modifier.press24 { vm.finans50(key, url) } else Modifier).padding(horizontal = 14.dp),
+        contentAlignment = Alignment.Center) {
+        Text(when (st) { "ok" -> "Lagt i Finans ✓"; "busy" -> "Legger i Finans …"; else -> "Legg i Finans ›" }, color = v.ink.copy(alpha = if (st == null) 1f else .6f),
+            fontFamily = v.sans, fontWeight = FontWeight.Bold, fontSize = 13.5.sp)
+    }
+}
+
+/** «Ser bilder» i modellvelgeren (vision fra Ollama /api/show → capabilities). */
+@Composable
+internal fun ChatVisionBadge50(v: ChatV27) {
+    Box(Modifier.clip(RoundedCornerShape(6.dp)).border(1.dp, v.line, RoundedCornerShape(6.dp)).padding(horizontal = 6.dp, vertical = 2.dp)) {
+        Text("SER BILDER", color = v.mut, fontFamily = PaperFonts.mono, fontWeight = FontWeight.Bold, fontSize = 9.5.sp, letterSpacing = .6.sp, maxLines = 1)
+    }
+}
+
+/* ---------------- Tabeller (kvittering i chat) ---------------- */
+
+internal fun isTableLine50(l: String): Boolean = l.trimStart().startsWith("|") && l.count { it == '|' } >= 2
+
+private fun cells50(l: String): List<String> = l.trim().removePrefix("|").removeSuffix("|").split('|').map { it.trim() }
+
+private fun cell50(t: String, bold: Boolean): AnnotatedString = buildAnnotatedString {
+    t.replace("`", "").split("**").forEachIndexed { i, x -> if (i % 2 == 1 || bold) withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append(x) } else append(x) }
+}
+
+@Composable
+internal fun ChatTable50(v: ChatV27, lines: List<String>) {
+    val rows = lines.map(::cells50)
+    val sepAt = rows.indexOfFirst { r -> r.isNotEmpty() && r.all { Regex("^:?-{2,}:?$").matches(it) } }
+    val right = if (sepAt >= 0) rows[sepAt].map { it.endsWith(":") } else emptyList()
+    val head = if (sepAt == 1) rows[0] else null
+    val body = rows.filterIndexed { i, _ -> i != sepAt && !(head != null && i == 0) }
+    val n = rows.maxOf { it.size }
+    @Composable
+    fun line(r: List<String>, bold: Boolean) {
+        Row(Modifier.fillMaxWidth().drawBehind { drawLine(v.line, androidx.compose.ui.geometry.Offset(0f, size.height), androidx.compose.ui.geometry.Offset(size.width, size.height), 1.dp.toPx()) }
+            .padding(vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            for (c in 0 until n) {
+                val r0 = right.getOrElse(c) { false }
+                Text(cell50(r.getOrElse(c) { "" }, bold), color = v.ink, fontFamily = v.sans, fontSize = 14.sp, lineHeight = 19.sp, textAlign = if (r0) TextAlign.End else TextAlign.Start,
+                    modifier = Modifier.weight(if (c == 0) 2.2f else 1f))
+            }
+        }
+    }
+    Column(Modifier.fillMaxWidth()) {
+        head?.let { line(it, true) }
+        body.forEach { line(it, false) }
+    }
+}
+
+/* ---------------- Lysboks ---------------- */
+
+@Composable
+internal fun ChatLightbox50(vm: AppViewModel) {
+    val lb = Chat50.lightbox ?: return
+    val (list, start) = lb
+    val close = { Chat50.lightbox = null }
+    Dialog(onDismissRequest = close, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        val pager = rememberPagerState(initialPage = start.coerceIn(0, (list.size - 1).coerceAtLeast(0)), pageCount = { list.size })
+        val limit = with(LocalDensity.current) { 90.dp.toPx() }
+        var dy by remember { mutableStateOf(0f) }
+        Box(Modifier.fillMaxSize().background(Color(0xF00A0A0A))) {
+            HorizontalPager(pager, Modifier.fillMaxSize()) { i ->
+                val f = list[i]
+                val small = Img50.cached(vm.base, f.thumb)
+                val bmp = rememberChatImg50(vm, f.url ?: f.thumb, 2048, small)
+                Box(Modifier.fillMaxSize().pointerInput(i) {
+                    detectVerticalDragGestures(onDragEnd = { if (dy > limit) close() else dy = 0f }, onDragCancel = { dy = 0f }) { _, d -> dy = (dy + d).coerceAtLeast(0f) }
+                }.graphicsLayer { translationY = if (pager.currentPage == i) dy else 0f; alpha = 1f - (dy / (limit * 4)).coerceIn(0f, .5f) }, contentAlignment = Alignment.Center) {
+                    bmp?.let { Image(it.asImageBitmap(), f.name, contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize()) }
+                }
+            }
+            val cur = list.getOrNull(pager.currentPage)
+            Row(Modifier.fillMaxWidth().statusBarsPadding().padding(16.dp, 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(cur?.name ?: "", color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                LbBtn50("Del") { cur?.let { vm.shareChatFile50(it) } }
+                LbBtn50("Lukk", close)
+            }
+            if (list.size > 1) Text("${pager.currentPage + 1} av ${list.size}", color = Color.White.copy(alpha = .7f), fontSize = 12.sp,
+                modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 12.dp))
+        }
+    }
+}
+
+@Composable
+private fun LbBtn50(t: String, onClick: () -> Unit) {
+    Box(Modifier.height(40.dp).clip(CircleShape).background(Color.White.copy(alpha = .08f)).border(1.dp, Color.White.copy(alpha = .3f), CircleShape).press24(onClick = onClick)
+        .padding(horizontal = 16.dp), contentAlignment = Alignment.Center) {
+        Text(t, color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+    }
+}
+
+/* ---------------- Dra og slipp ---------------- */
+
+private fun Context.activity50(): Activity? {
+    var c: Context? = this
+    while (c is ContextWrapper) { if (c is Activity) return c; c = c.baseContext }
+    return null
+}
+
+private fun okMime50(m: String) = m.startsWith("image/") || m == "application/pdf" || m.startsWith("text/") || m.startsWith("application/")
+
+/** Hele chatten tar imot filer som dras inn fra andre apper (Fold/nettbrett). Tekst uten fil legges i feltet. */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+internal fun Modifier.chatDrop50(vm: AppViewModel): Modifier {
+    val ctx = LocalContext.current
+    val target = remember(vm) {
+        object : DragAndDropTarget {
+            override fun onEntered(event: DragAndDropEvent) { Chat50.dragging = true }
+            override fun onExited(event: DragAndDropEvent) { Chat50.dragging = false }
+            override fun onEnded(event: DragAndDropEvent) { Chat50.dragging = false }
+            override fun onDrop(event: DragAndDropEvent): Boolean {
+                Chat50.dragging = false
+                val de = event.toAndroidDragEvent()
+                runCatching { ctx.activity50()?.requestDragAndDropPermissions(de) }
+                val clip = de.clipData ?: return false
+                val uris = ArrayList<Uri>()
+                val text = StringBuilder()
+                for (i in 0 until clip.itemCount) {
+                    val it = clip.getItemAt(i)
+                    if (it.uri != null) uris.add(it.uri) else it.text?.let { t -> text.append(t) }
+                }
+                if (uris.isNotEmpty()) { vm.addChat50(uris.take(Chat50.MAX_FILES)); return true }
+                if (text.isNotEmpty()) { vm.chat27.input = (vm.chat27.input + " " + text).trim(); return true }
+                return false
+            }
+        }
+    }
+    return this.dragAndDropTarget(shouldStartDragAndDrop = { e ->
+        val d = runCatching { e.toAndroidDragEvent().clipDescription }.getOrNull()
+        d != null && (0 until d.mimeTypeCount).any { okMime50(d.getMimeType(it)) }
+    }, target = target)
+}
+
+/** Laget mens man drar: papirfarge 92 %, stiplet ramme 2 dp (radius 24, innfelt 16) og «Slipp for å legge ved». */
+@Composable
+internal fun ChatDropLayer50(v: ChatV27) {
+    if (!Chat50.dragging) return
+    Box(Modifier.fillMaxSize().background(v.bg.copy(alpha = .92f)).padding(16.dp).drawBehind {
+        drawRoundRect(v.ink, cornerRadius = CornerRadius(24.dp.toPx()), style = Stroke(2.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(10.dp.toPx(), 7.dp.toPx()))))
+    }, contentAlignment = Alignment.Center) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text("Slipp for å legge ved", color = v.ink, fontFamily = PaperFonts.serif, fontWeight = FontWeight.Medium, fontSize = 28.sp)
+            Text("Bilder, PDF, tekst · maks 20 MB", color = v.mut, fontFamily = v.sans, fontSize = 14.sp)
+        }
+    }
 }

@@ -38,11 +38,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import no.kristo.finanshub.*
 
-/*
- * Prompt 27 (ANDROID-A): arkene i Chat (Mobil Papir App.dc.html → chat: model, params, menu, guard, plus, kb, mods) og
- * gruppen CHAT i Innstillinger → AI og tolkning.
- */
-
 @Composable
 internal fun Ch27Sheets(vm: AppViewModel, v: ChatV27, wide: Boolean) {
     val s = vm.chat27

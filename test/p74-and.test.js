@@ -33,7 +33,7 @@ test('wiggle: Søk-widgeten (h1) har hold = false, og søkefelt/svar sjekkes i t
 });
 
 test('tekstmarkering: svaret og opptakskortet ligger i SelectionContainer, søkefeltets ramme ryddes', () => {
-  assert.match(code('ui/Glimt31.kt'), /else androidx\.compose\.foundation\.text\.selection\.SelectionContainer \{ Text\(\s*buildAnnotatedString \{\s*boldParts31\(a\.text\)/);
+  assert.match(code('ui/Glimt.kt'), /else androidx\.compose\.foundation\.text\.selection\.SelectionContainer \{ Text\(\s*buildAnnotatedString \{\s*boldParts31\(a\.text\)/);
   assert.match(code('ui/Mic70.kt'), /SelectionContainer\(Modifier\.weight\(1f, fill = false\)\) \{ Text\(/);
   assert.match(code('ui/Home29Ui.kt'), /DisposableEffect\(Unit\) \{ onDispose \{ Ans70\.searchRect = null \} \}/);
 });

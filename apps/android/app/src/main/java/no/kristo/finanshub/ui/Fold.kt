@@ -1,5 +1,12 @@
 package no.kristo.finanshub.ui
 
+import android.content.Context
+import android.graphics.Bitmap
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
+import android.os.Build
 import android.provider.Settings
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.CubicBezierEasing
@@ -12,7 +19,10 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
@@ -25,9 +35,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
@@ -38,18 +52,183 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import java.time.LocalDate
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import no.kristo.finanshub.*
 
+/** Hjem på Fold: [cards] er kortlista for valgt fane (bygges i PaperHome med foldKeys41). */
+@Composable
+internal fun FoldHome41(vm: AppViewModel, mode: FoldMode43, cards: @Composable (Modifier) -> Unit) {
+    LaunchedEffect(Unit) { vm.initP41() }
+    // 12 dp + statuslinje, pluss de 23 dp innholdsboksen ligger oppe i (underNav34 i Paper.kt), så fanene står på linje med kortet.
+    val top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 12.dp + 23.dp
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+    // Prompt 43: før valgte vi «stående» med maxHeight > maxWidth her. Denne boksen er 112 dp smalere (sidelinja) og 23 dp høyere
+    // (underNav34) enn vinduet, så utbrettet Fold (ca. 832 × 750 dp) ble 720 × 773 → stablet og klemt. Nå bestemmer vinduet (Fold43.kt).
+    if (mode == FoldMode43.TABLETOP) {
+        // Halvbrettet: Glimt-kortet over hengselen (midt i vinduet), fanene og kortene under den.
+        val hinge = (maxHeight - 23.dp) / 2 + 23.dp
+        Column(Modifier.fillMaxSize().padding(end = 16.dp)) {
+            Spacer(Modifier.height(top))
+            FoldMain41(vm, Modifier.fillMaxWidth().height((hinge - top - 12.dp).coerceAtLeast(160.dp)), compact = true)
+            Spacer(Modifier.height(24.dp))
+            Column(Modifier.fillMaxWidth().weight(1f)) { FoldTabs41(vm); Spacer(Modifier.height(10.dp)); cards(Modifier.weight(1f)) }
+        }
+    } else {
+        // 1c: Glimt-kort venstre (fyller høyden, scroller ikke), faner høyre (bare denne kolonnen scroller).
+        // Prompt 45 (claude-code-fold-sok-over-tastatur.md): bare venstre Glimt-kort følger tastaturet (WindowInsets.ime, som
+        // animeres sammen med IME-en), så søkefeltet ligger rett over tastaturet. Høyre kolonne flytter seg ikke.
+        val lift45 = (imeBottom45() - 12.dp).coerceAtLeast(0.dp)
+        Row(Modifier.fillMaxSize().padding(top = top, end = 16.dp, bottom = 12.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            FoldMain41(vm, Modifier.weight(1f).fillMaxHeight().padding(bottom = lift45))
+            Column(Modifier.weight(1f).fillMaxHeight()) { FoldTabs41(vm); Spacer(Modifier.height(10.dp)); cards(Modifier.weight(1f)) }
+        }
+    }
+    }
+}
+
+/** Fanene som piller (36 høy, radius 18, Manrope 700 13): valgt = blekk, ellers strek. Sveip venstre/høyre bytter fane. */
+@Composable
+private fun FoldTabs41(vm: AppViewModel) {
+    val p = PaperPal.current
+    val cur = vm.p41.foldTab
+    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        FOLD_TABS41.forEach { (k, n) ->
+            val on = cur == k
+            Box(
+                Modifier.height(36.dp).clip(RoundedCornerShape(18.dp)).background(if (on) p.ink else Color.Transparent)
+                    .border(1.dp, if (on) p.ink else p.line, RoundedCornerShape(18.dp)).clickable(role = Role.Tab, onClickLabel = n) { vm.setFoldTab41(k) }.padding(horizontal = 15.dp),
+                contentAlignment = Alignment.Center,
+            ) { Text(n, color = if (on) p.bg else p.ink, fontFamily = PaperFonts.sans, fontWeight = FontWeight.Bold, fontSize = 13.sp, maxLines = 1) }
+        }
+    }
+}
+
+/** Sveip mellom fanene på kortlista (horisontalt drag > 60 dp). */
+internal fun Modifier.foldSwipe41(vm: AppViewModel): Modifier = this.pointerInput(Unit) {
+    var dx = 0f
+    detectHorizontalDragGestures(onDragStart = { dx = 0f }, onDragEnd = {
+        val keys = FOLD_TABS41.map { it.first }
+        val i = keys.indexOf(vm.p41.foldTab).coerceAtLeast(0)
+        val lim = 60.dp.toPx()
+        if (dx < -lim && i < keys.size - 1) vm.setFoldTab41(keys[i + 1]) else if (dx > lim && i > 0) vm.setFoldTab41(keys[i - 1])
+    }) { _, d -> dx += d }
+}
+
+/** Det store Glimt-kortet (26 dp hjørner, fyller høyden). [compact] = halvbrettet: hilsen til venstre, Brief og søk til høyre. */
+@Composable
+private fun FoldMain41(vm: AppViewModel, modifier: Modifier, compact: Boolean = false) {
+    val bmp: Bitmap? = if (vm.photoKind == "cur" || vm.photoKind == "none") null else vm.photo
+    val shape = RoundedCornerShape(26.dp)
+    Box(modifier.clip(shape).background(Color(0xFF2A3440))) {
+        BgLayer(vm, bmp)
+        Box(Modifier.matchParentSize().background(Brush.verticalGradient(0f to Color.Black.copy(alpha = .15f), .3f to Color.Transparent, .72f to Color(0xE0101C2C))))
+        if (compact) Row(Modifier.fillMaxSize().padding(18.dp, 18.dp, 18.dp, 16.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            Column(Modifier.weight(1f).fillMaxHeight().clipToBounds(), verticalArrangement = Arrangement.spacedBy(10.dp)) { FoldGreeting43(vm, 30.sp) }
+            Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.Bottom)) { FoldBriefSearch43(vm) }
+        }
+        else Column(Modifier.fillMaxSize().padding(18.dp, 18.dp, 18.dp, 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            // Prompt 43: toppen får plassen som er igjen (klippes heller enn å klemme Brief-kortet ved stor skrift);
+            // Brief-kortet og søkefeltet har alltid sin egen høyde nederst.
+            // Prompt 45: mens man skriver tones hilsen og temperatur ut, og Brief-kortet glir bort, så svaret får plass over feltet.
+            val typing45 = imeBottom45() > 80.dp
+            val greetA by androidx.compose.animation.core.animateFloatAsState(if (typing45) 0f else 1f, androidx.compose.animation.core.tween(200), label = "greet45")
+            Column(Modifier.fillMaxWidth().weight(1f).clipToBounds().graphicsLayer { alpha = greetA }, verticalArrangement = Arrangement.spacedBy(12.dp)) { FoldGreeting43(vm, 38.sp) }
+            FoldBriefSearch43(vm, typing45)
+        }
+    }
+}
+
+/** Homelab + profilbilde, dato, hilsen og temperatur. */
+@Composable
+private fun ColumnScope.FoldGreeting43(vm: AppViewModel, greet: androidx.compose.ui.unit.TextUnit) {
+    val first = vm.displayName.split(' ').firstOrNull().orEmpty().ifBlank { "du" }
+    val w = vm.mobileHome?.weather
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        PSerif(vm.appName, 22.sp, Color.White, Modifier.weight(1f), maxLines = 1)
+        GlimtAvatar46(vm) { vm.openPaperPage("set") } // prompt 46: Glimt-ring, ingen firkantet flate rundt bildet på Fold
+    }
+    PSerif(longDate(LocalDate.now()), 16.sp, Color.White.copy(alpha = .92f), italic = true, weight = FontWeight.Normal, maxLines = 1)
+    AutoSerif("${greetingFor()},\n$first", greet, Color.White, min = 22.sp)
+    if (w?.temp != null) Row(
+        Modifier.clip(RoundedCornerShape(12.dp)).clickable(onClickLabel = "Åpne Vær") { Haptics.tap(); vm.openWeather() },
+        verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        PSerif("${Math.round(w.temp)}°", 64.sp, Color.White, weight = FontWeight.Light, maxLines = 1)
+        Text("${w.text ?: w.place} ›", color = Color.White.copy(alpha = .92f), fontSize = 13.5.sp, maxLines = 1, modifier = Modifier.padding(bottom = 12.dp))
+    }
+}
+
+/** Brief-kortet (egen høyde, min. 148 dp, ikke klippet utenfra så Glimt-figuren vises hel) og søkefeltet med ✦ AI under. */
+@Composable
+private fun FoldBriefSearch43(vm: AppViewModel, typing: Boolean = false) {
+    androidx.compose.animation.AnimatedVisibility(
+        visible = !typing,
+        enter = androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(220)) + androidx.compose.animation.expandVertically(androidx.compose.animation.core.tween(220)),
+        exit = androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(180)) + androidx.compose.animation.shrinkVertically(androidx.compose.animation.core.tween(220)),
+    ) { HomeBrief34(vm, Modifier.heightIn(min = 148.dp)) }
+    // Prompt 45: svar og forslag over feltet (claude-code-fold-skannikon-og-sokefelt.md).
+    PaperSearch29(vm, above45 = true)
+}
+
 /*
- * Prompt 45 (ANDROID45) – Fold/brett (claude-code-ipad-brettoppsett.md og claude-code-fold-*.md):
- *  - Én felles LayoutMode: brettoppsett når vinduet er ≥ 700 dp bredt (LocalWide45). Brukes av skallet, Hjem, Familie og Gjøremål.
- *  - Sidelinja (PaperRail45): rød Hjem-knapp med jevn animasjon (ut: skala 1 → 0,55 + uttoning 200 ms, høyden kollapser; sidebyttet
- *    starter etter 190 ms; inn: skala 0,6 → 1 med lett fjæring 320 ms), skann-knappen (46, aksent, skann-ikon) nederst, og
- *    wiggle-knappene (＋ Legg til widget med antall skjulte, ↺ Tilbakestill når endret, ✓ Ferdig) i stedet for knapperaden øverst.
- *  - Sidelinja kan også tegnes i fullskjermsflatene (Gjøremål, Familie) med [onLeave], som lukker flaten før man navigerer.
+ * Prompt 43 (claude-code-fold-delt-hjem-fiks.md): hvilket oppsett Hjem (og de andre sidene) skal ha på store skjermer.
+ *
+ * Den egentlige feilen: Fold41 valgte «stående» ut fra boksen innholdet ligger i, ikke ut fra vinduet. Den boksen er
+ * 112 dp smalere enn vinduet (plass til sidelinja) og 23 dp høyere (underNav34 legger innholdet opp under kanten).
+ * På Galaxy Z Fold utbrettet (ca. 832 × 750 dp) ble boksen ca. 720 × 773 dp, altså «høyere enn bred», så Hjem ble
+ * stablet: Glimt-kortet fikk 46 % av høyden, Brief-kortet ble klemt til en stripe og søkefeltet falt utenfor.
+ *
+ * Nå velges oppsettet av vinduet (LocalConfiguration, oppdateres med en gang ved bretting fordi aktiviteten håndterer
+ * screenSize/screenLayout selv):
+ *  - SPLIT: bredde ≥ 600 dp og bredde ≥ 0,9 × høyde (utbrettet, iPad/nettbrett liggende og stående nesten kvadratisk).
+ *  - TABLETOP: halvbrettet (hengselvinkel 30–160°) med hengselen vannrett (vinduet høyere enn bredt) → øvre/nedre halvdel.
+ *  - STACK: alt annet (sammenbrettet, dekselskjerm, smal portrett, Split View under 600) → vanlig mobiloppsett.
+ * Hengselen leses fra plattformsensoren TYPE_HINGE_ANGLE (API 30+), uten nye avhengigheter (ikke androidx.window).
  */
+internal enum class FoldMode43 { SPLIT, TABLETOP, STACK }
+
+/** Oppsettet for vinduet nå. [wide] er WindowWidthSizeClass ≠ Compact (≥ 600 dp) fra MainActivity. */
+@Composable
+internal fun foldMode43(wide: Boolean): FoldMode43 {
+    val cfg = LocalConfiguration.current
+    val w = cfg.screenWidthDp
+    val h = cfg.screenHeightDp
+    val half = hingeHalfOpen43()
+    return foldModeFor43(wide, w, h, half)
+}
+
+/** Ren regel (testbar): se kommentaren øverst. */
+internal fun foldModeFor43(wide: Boolean, widthDp: Int, heightDp: Int, halfOpen: Boolean): FoldMode43 = when {
+    !wide -> FoldMode43.STACK
+    halfOpen && heightDp > widthDp -> FoldMode43.TABLETOP
+    widthDp >= 600 && widthDp >= heightDp * 0.9f -> FoldMode43.SPLIT
+    else -> FoldMode43.STACK
+}
+
+/** true når telefonen står halvbrettet (hengselvinkel mellom 30° og 160°). Uten hengselsensor: alltid false. */
+@Composable
+internal fun hingeHalfOpen43(): Boolean {
+    val ctx = LocalContext.current
+    var half by remember { mutableStateOf(false) }
+    DisposableEffect(ctx) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return@DisposableEffect onDispose { }
+        val sm = ctx.getSystemService(Context.SENSOR_SERVICE) as? SensorManager
+        val sensor = sm?.getDefaultSensor(Sensor.TYPE_HINGE_ANGLE)
+        if (sm == null || sensor == null) return@DisposableEffect onDispose { }
+        val l = object : SensorEventListener {
+            override fun onSensorChanged(e: SensorEvent) {
+                val a = e.values.firstOrNull() ?: return
+                half = a in 30f..160f
+            }
+            override fun onAccuracyChanged(s: Sensor?, accuracy: Int) {}
+        }
+        sm.registerListener(l, sensor, SensorManager.SENSOR_DELAY_NORMAL)
+        onDispose { sm.unregisterListener(l) }
+    }
+    return half
+}
 
 /** Felles LayoutMode (Fold utbrettet, nettbrett): true når vinduet er bredt nok til brettoppsett. */
 internal val LocalWide45 = compositionLocalOf { false }
@@ -73,12 +252,17 @@ internal fun reduceMotion45(): Boolean {
 
 /** Skann-ikonet: fire hjørner og strek i midten (samme som den flytende skanneknappen på telefon). */
 internal const val SCAN45 = "M4 8V4h4M16 4h4v4M20 16v4h-4M8 20H4v-4M4 12h16"
+
 private const val RESET45 = "M3 12a9 9 0 1 0 3-6.7M3 4v5h5"
+
 private const val CHECK45 = "M5 12.5l4.5 4.5L19 7.5"
+
 private const val PLUS45 = "M12 5v14M5 12h14"
+
 private const val HOUSE45 = "M4 11l8-7 8 7M6 10v10h12V10"
 
 private val EASE_OUT45 = CubicBezierEasing(.4f, 0f, .2f, 1f)
+
 private val SPRING45 = CubicBezierEasing(.2f, .9f, .25f, 1.15f)
 
 /** Sider uten skann-knapp i sidelinja (i tillegg til noScanHere): Kart (Familie), Bibelvers, Nordlys, Innstillinger, Mer. */

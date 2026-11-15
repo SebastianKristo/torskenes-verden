@@ -24,6 +24,11 @@ test('blandingsfilene er delt opp: ingen P25–P52B, P73Brief, ui/Ui20–Ui52B, 
   const files = ktFiles(APP);
   const gamle = files.filter((f) => /^(P(2[5-9]|3\d|4\d|52B?)b?\.kt|P73Brief\.kt|ui\/Ui\d+[bB]?\.kt|ui\/P25Ui\.kt|Mod2\dB?\.kt|Models(13|19|22)\.kt)$/.test(f));
   assert.deepEqual(gamle, []);
+  // Familiene i skallet er slått sammen til én fil hver.
+  const familier = files.filter((f) => /^(ui\/(Fold4\d|Mer(24|44|45)|Nav(23|26B)|Settings(\d+B?|Ui)|Chat\d+(Ui|Sheets)?|Glimt\d+(Ui)?|GlimtFigs35|Brief\d+(Ui)?)|Chat\d+)\.kt$/.test(f));
+  assert.deepEqual(familier, []);
+  for (const f of ['ui/Fold.kt', 'ui/Mer.kt', 'ui/Navigasjon.kt', 'ui/Innstillinger.kt', 'Chat.kt', 'ui/Chat.kt', 'ui/ChatArk.kt', 'ui/Glimt.kt',
+    'ui/GlimtSvar.kt', 'ui/GlimtFigurer.kt', 'ui/Brief.kt']) assert.ok(existsSync(join(APP, f)), f);
   // P50Fam og P50Med eies av MODULER og er ikke rørt her.
   assert.ok(existsSync(join(APP, 'P50Fam.kt')) && existsSync(join(APP, 'P50Med.kt')));
 });

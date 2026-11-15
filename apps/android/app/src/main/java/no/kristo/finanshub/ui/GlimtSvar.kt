@@ -28,14 +28,6 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import no.kristo.finanshub.*
 
-/*
- * Prompt 67 (ANDSET67): sidene under Innstillinger → Glimt (tilstand og API i G67.kt), i samme Papir-stil som resten av Innstillinger.
- *  - Glimt67Page: Glimt-siden (figur/brief/stemme, «Send til Chat etter», og radene til undersidene).
- *  - G67MemPage: Glimt husker (listen fra prompt 33) + Forslag, Motstrid og Ikke brukt på lenge, med valgene for nattjobben.
- *  - G67EntPage: Entitetsregister. G67RecPage: Glimt lærer. G67SchPage: Faste oppgaver med «Lag fra tekst». G67QPage: Kvalitet.
- * Ingen side har egen LazyColumn (de står som item i Innstillinger-listen i Paper17.kt).
- */
-
 /* ---------------- Byggeklosser ---------------- */
 
 @Composable
@@ -707,6 +699,7 @@ private val QFIELDS68 = listOf(
 )
 
 private fun qBool68(m: Map<String, Any>, k: String): Boolean = m[k] as? Boolean ?: true
+
 private fun qInt68(m: Map<String, Any>, k: String): Int? = m[k] as? Int
 
 @Composable

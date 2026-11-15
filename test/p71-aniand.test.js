@@ -18,11 +18,11 @@ const code = (f) => read(f).replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm
 /** Filene prompt 71 har rørt (animasjoner). */
 const TOUCHED = [
   'ui/Anim71.kt', 'ui/Home70.kt', 'ui/Paper15.kt', 'ui/Paper14.kt', 'ui/Paper16.kt', 'ui/Vaer41.kt', 'ui/Weather39.kt', 'ui/Weather22.kt',
-  'ui/Glimt31.kt', 'ui/Glimt43.kt', 'ui/Glimt36.kt', 'ui/Mic70.kt', 'ui/Convo67Ui.kt', 'ui/Chat27Ui.kt', 'ui/Voice56Ui.kt',
-  'ui/Brief35.kt', 'ui/Tasks37.kt', 'ui/AiCtl34.kt',
+  'ui/Glimt.kt', 'ui/GlimtFigurer.kt', 'ui/Mic70.kt', 'ui/Convo67Ui.kt', 'ui/Chat.kt', 'ui/Voice56Ui.kt',
+  'ui/Brief.kt', 'ui/Tasks37.kt', 'ui/AiCtl34.kt',
   // Fase 5: Ui34/38/46/52B er delt opp etter funksjon.
-  'ui/GlobaleLag.kt', 'ui/Innlogging.kt', 'ui/Konto.kt', 'ui/GlimtFigurer.kt', 'ui/Brief.kt', 'ui/AiKontroll.kt', 'ui/Komponenter.kt',
-  'ui/HjemDeler.kt', 'ui/Fanelinje.kt', 'ui/Innstillinger.kt', 'ui/ChatDeler.kt', 'ui/Effekter.kt', 'ui/HjemFliser.kt',
+  'ui/GlobaleLag.kt', 'ui/Innlogging.kt', 'ui/Konto.kt', 'ui/AiKontroll.kt', 'ui/Komponenter.kt',
+  'ui/HjemDeler.kt', 'ui/Fanelinje.kt', 'ui/Innstillinger.kt', 'ui/Effekter.kt', 'ui/HjemFliser.kt',
   'ui/domene/Domener.kt', 'ui/domene/Familie.kt', 'ui/domene/Media.kt', 'ui/domene/Gjoremal.kt', 'ui/domene/Vaer.kt',
   'ui/domene/Avganger.kt', 'ui/domene/Drift.kt', 'ui/domene/Okonomi.kt',
 ];
@@ -85,11 +85,11 @@ test('wiggle: vinkelen er State og leses i graphicsLayer (Hjem, Tilpass siden, V
 });
 
 test('Glimt-orben og -merket: ringen er et ferdig lag som roteres (rememberInfiniteTransition + graphicsLayer)', () => {
-  const o = code('ui/Glimt43.kt');
+  const o = code('ui/Glimt.kt');
   assert.match(o, /rememberInfiniteTransition\(label = "orb43"\)/);
   assert.match(o, /Canvas\(Modifier\.matchParentSize\(\)\.graphicsLayer \{ rotationZ = deg \}\)/);
   assert.doesNotMatch(o, /rotate\(deg/);
-  const m = code('ui/Glimt31.kt');
+  const m = code('ui/Glimt.kt');
   assert.match(m, /if \(!done\) Canvas\(Modifier\.matchParentSize\(\)\.graphicsLayer \{ rotationZ = if \(reduce\) 0f else rot \}\)/);
   assert.doesNotMatch(m, /rotate\(if \(reduce\) 0f else rot/);
   assert.match(code('ui/Konto.kt'), /rotate\(110f \+ \(spin\?\.value \?: 0f\)\)/, 'profilringen leser vinkelen i drawBehind');
@@ -100,16 +100,16 @@ test('Glimt-svaret og mikrofonen: dra, inngang, prikker, markør og bølge uten 
   const box = u.slice(u.indexOf('fun AnsBox38'));
   assert.match(box, /derivedStateOf \{ if \(hasPull41 && drag > 0f\)/, 'pull41 er derivedStateOf');
   assert.match(box, /size\(80\.dp, 4\.dp\)\.drawBehind \{/, 'håndtaket tegnes i tegnefasen');
-  const g = code('ui/Glimt31.kt');
+  const g = code('ui/Glimt.kt');
   assert.match(g, /Modifier\.offset \{ IntOffset\(0, \(-3 \* v\)\.dp\.roundToPx\(\)\) \}/);
   assert.match(g, /val g = grow\.value; scaleX = g; scaleY = g/);
   assert.match(code('ui/Mic70.kt'), /graphicsLayer \{ alpha = if \(\(a\?\.value \?: 1f\) > \.5f\) 1f else 0f \}/);
   const a = code('ui/Anim71.kt');
   assert.match(a, /internal fun WaveBars71\(level: Float, color: Color, label: String\)/);
   assert.match(a, /drawRoundRect\(color/);
-  assert.match(code('ui/Chat27Ui.kt'), /private fun Ch27Wave\(rms: Float\) = WaveBars71\(rms, CH27_SKY, "wave"\)/);
+  assert.match(code('ui/Chat.kt'), /private fun Ch27Wave\(rms: Float\) = WaveBars71\(rms, CH27_SKY, "wave"\)/);
   assert.match(code('ui/Voice56Ui.kt'), /internal fun Wave56\(level: Float, color: Color\) = WaveBars71\(level, color, "w56"\)/);
-  assert.doesNotMatch(code('ui/Brief35.kt'), /fillMaxHeight\(v\.value\)/);
+  assert.doesNotMatch(code('ui/Brief.kt'), /fillMaxHeight\(v\.value\)/);
 });
 
 test('stabile typer for Hjem-radene', () => {
@@ -131,7 +131,7 @@ test('Baseline Profile: profileinstaller uten ny Gradle-plugin, baseline-prof.tx
   const f = join(APP, 'src/main/baseline-prof.txt');
   assert.ok(existsSync(f));
   const p = readFileSync(f, 'utf8');
-  for (const c of ['MainActivity', 'ui/Home70Kt', 'ui/PaperKt', 'ui/Glimt31Kt', 'ui/GlobaleLagKt', 'ui/Chat27UiKt', 'androidx/compose/material3/ModalBottomSheet']) {
+  for (const c of ['MainActivity', 'ui/Home70Kt', 'ui/PaperKt', 'ui/GlimtKt', 'ui/GlobaleLagKt', 'ui/ChatKt', 'androidx/compose/material3/ModalBottomSheet']) {
     assert.match(p, new RegExp(`^HSPL[\\w/]*${c.replace(/\//g, '\\/')}\\*;->\\*\\*\\(\\*\\*\\)\\*\\*$`, 'm'), c);
   }
   // Hver regel er på formen HSPL<klasse>*;->**(**)** eller L<klasse>*; (kommentarer med #).

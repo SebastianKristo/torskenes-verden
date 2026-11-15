@@ -53,7 +53,7 @@ test('filene finnes, og Skjold Lab er koblet inn i Mer, sidene, tilbake, dyplenk
   assert.ok(existsSync(join(SRC, 'ui/Skjold76Ui.kt')));
   assert.match(code('ui/Paper.kt'), /if \(Skjold76\.open\) PgIn52 \{ SkjoldPage76\(vm\) \}/);
   assert.match(code('ui/Effekter.kt'), /no\.kristo\.finanshub\.Skjold76\.open,\s*\)\.count \{ it \}/);
-  assert.match(code('ui/Mer24.kt'), /row\("skjold", "Skjold Lab", "Deler, skuffer og skap"\) \{ vm\.openSkjold76\(\) \}/);
+  assert.match(code('ui/Mer.kt'), /row\("skjold", "Skjold Lab", "Deler, skuffer og skap"\) \{ vm\.openSkjold76\(\) \}/);
   assert.match(code('ui/MerListe.kt'), /"skjold" to "M4 3h16v18H4z/, 'ikon: skuffeskap');
   assert.match(code('AppViewModel.kt'), /"skjold", "deler" -> skjoldLink76\(uri\)/);
   const nav = code('Glimt.kt');
@@ -61,7 +61,7 @@ test('filene finnes, og Skjold Lab er koblet inn i Mer, sidene, tilbake, dyplenk
   assert.ok(nav.indexOf('"skjold", "Skjold Lab"') < nav.indexOf('"kart", "Familie"'), 'Skjold-snarveien før Familie');
   assert.match(nav, /navShortcut32b\(t\)\?\.takeIf \{ it\.second != "kart" \|\| !skjoldKnows76\(t\) \}/, '«hvor er M3-skruene?» går til Glimt');
   assert.match(nav, /glimtAnswered76\(t, r\.open, r\.card, r\.tool, r\.intent, r\.results\)/);
-  assert.match(code('ui/Glimt31.kt'), /glimtSkj76\?\.takeIf \{ it\.first == a\.q \}\?\.let \{ \(_, u\) -> GlimtSkjold76\(vm, u\) \}/);
+  assert.match(code('ui/Glimt.kt'), /glimtSkj76\?\.takeIf \{ it\.first == a\.q \}\?\.let \{ \(_, u\) -> GlimtSkjold76\(vm, u\) \}/);
   const s51 = code('ui/Search51Ui.kt');
   assert.match(s51, /"part", "skjold", "deler" -> dl\("finanshub:\/\/skjold\/del\/\$ref"\)/);
   assert.match(s51, /"skjold" -> vm\.openSkjold76\(\)/);

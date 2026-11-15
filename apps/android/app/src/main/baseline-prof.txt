@@ -43,10 +43,12 @@ HSPLno/kristo/finanshub/ui/PSec*;->**(**)**
 Lno/kristo/finanshub/ui/PSec*;
 HSPLno/kristo/finanshub/ui/Anim71Kt*;->**(**)**
 Lno/kristo/finanshub/ui/Anim71Kt*;
-HSPLno/kristo/finanshub/ui/Glimt31Kt*;->**(**)**
-Lno/kristo/finanshub/ui/Glimt31Kt*;
-HSPLno/kristo/finanshub/ui/Glimt43Kt*;->**(**)**
-Lno/kristo/finanshub/ui/Glimt43Kt*;
+HSPLno/kristo/finanshub/ui/GlimtKt*;->**(**)**
+Lno/kristo/finanshub/ui/GlimtKt*;
+HSPLno/kristo/finanshub/ui/GlimtSvarKt*;->**(**)**
+Lno/kristo/finanshub/ui/GlimtSvarKt*;
+HSPLno/kristo/finanshub/ui/GlimtFigurerKt*;->**(**)**
+Lno/kristo/finanshub/ui/GlimtFigurerKt*;
 HSPLno/kristo/finanshub/ui/GlobaleLagKt*;->**(**)**
 Lno/kristo/finanshub/ui/GlobaleLagKt*;
 HSPLno/kristo/finanshub/ui/KontoKt*;->**(**)**
@@ -75,16 +77,14 @@ HSPLno/kristo/finanshub/Voice56*;->**(**)**
 Lno/kristo/finanshub/Voice56*;
 
 # Chat
-HSPLno/kristo/finanshub/ui/Chat27UiKt*;->**(**)**
-Lno/kristo/finanshub/ui/Chat27UiKt*;
-HSPLno/kristo/finanshub/ui/Chat27SheetsKt*;->**(**)**
-Lno/kristo/finanshub/ui/Chat27SheetsKt*;
+HSPLno/kristo/finanshub/ui/ChatKt*;->**(**)**
+Lno/kristo/finanshub/ui/ChatKt*;
+HSPLno/kristo/finanshub/ui/ChatArkKt*;->**(**)**
+Lno/kristo/finanshub/ui/ChatArkKt*;
 HSPLno/kristo/finanshub/ui/Cards31Kt*;->**(**)**
 Lno/kristo/finanshub/ui/Cards31Kt*;
-HSPLno/kristo/finanshub/ui/Chat50UiKt*;->**(**)**
-Lno/kristo/finanshub/ui/Chat50UiKt*;
-HSPLno/kristo/finanshub/Chat27Kt*;->**(**)**
-Lno/kristo/finanshub/Chat27Kt*;
+HSPLno/kristo/finanshub/ChatKt*;->**(**)**
+Lno/kristo/finanshub/ChatKt*;
 
 # Ark (ModalBottomSheet i Material3 og appens ark-innhold)
 HSPLandroidx/compose/material3/ModalBottomSheet*;->**(**)**
