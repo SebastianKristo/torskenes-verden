@@ -78,7 +78,7 @@ test('Tidligere versjoner: «10.11.2026» er 10. november, ikke 11. oktober', ()
 });
 
 test('Studie og Kontoer: bare én henting om gangen mens skjermen tegnes flere ganger', async () => {
-  for (const [file, name] of [['public/finans/js/mobile-p44s.js', 'studieLoad'], ['public/finans/js/mobile-p44.js', 'usersLoad']]) {
+  for (const [file, name] of [['public/finans/js/mobile-studie.js', 'studieLoad'], ['public/finans/js/mobile-p44.js', 'usersLoad']]) {
     const code = src(file), busy = name === 'studieLoad' ? 'studieBusy' : 'usersBusy';
     const wrap = pick(code, `let ${busy} = null;`, `return (${busy} = p);\n}`).replace('export ', '');
     let calls = 0, release;

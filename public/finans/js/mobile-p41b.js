@@ -12,7 +12,7 @@ import { m, draw, flash } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
 import { BD, bdLoad } from './mobile-p24.js';
 import { swAdd } from './mobile-p39.js';
-import * as HM from './mobile-p40h.js';
+import * as HM from './mobile-vel-fremme.js';
 import { AV } from './mobile-p16.js'; // prompt 46: Ruter-redigering (wiggle)
 
 const pad = (n) => String(n).padStart(2, '0');
@@ -51,7 +51,7 @@ async function zonesLoad(force = false) {
   try { const [z, s] = await Promise.all([hlApi('/ruter/school-zones'), hlApi('/ruter/settings').catch(() => null)]); RT.zones = z?.zones ?? []; if (s) RT.set = s; } catch { RT.zones ??= []; }
 }
 // Prompt 50 (FAMWEB50): skolen kommer fra Familie › Steder (GET /api/ruter/school50). Bare visning her; «Endre i Steder ›».
-// Eldre server (404): de gamle skolesonene med ✕ og + Sone som før. RT.s50 nullstilles av WebSocket family {kind:'places'} (mobile-p50f.js).
+// Eldre server (404): de gamle skolesonene med ✕ og + Sone som før. RT.s50 nullstilles av WebSocket family {kind:'places'} (mobile-familie.js).
 async function s50Load() {
   if (RT.s50miss) return;
   try { RT.s50 = await hlApi('/ruter/school50'); } catch (e) { if (e.status === 404 || e.status === 405) RT.s50miss = true; RT.s50 ??= false; }

@@ -445,5 +445,5 @@ export function boot45() {
   hlApi('/me/layout').then((r) => { if (r?.pages) { globalThis.P44?.merTake45?.(r.pages); if (m.screen === 'mer' || m.screen === 'fmer') draw(); } }).catch(() => {});
   // Når appen kommer tilbake i forgrunnen: oppdater «Min posisjon» (maks hvert 10. min).
   document.addEventListener('visibilitychange', () => { if (!document.hidden && m.screen === 'vaer' && HERE.st === 'on') hereFetch(null); });
-  import('./mobile-p45h.js').then((x) => { globalThis.P45H = x; x.boot(); if (document.documentElement.dataset.ui === 'mobile') draw(); }).catch((err) => console.warn('mobile-p45h', err));
+  import('./mobile-helse.js').then((x) => { globalThis.P45H = x; x.boot(); if (document.documentElement.dataset.ui === 'mobile') draw(); }).catch((err) => console.warn('mobile-helse', err));
 }

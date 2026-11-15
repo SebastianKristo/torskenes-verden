@@ -3,7 +3,7 @@
 //     «Rediger fanelinjen». «‹ Hjem» øverst følger valget (claude-code-navbar-hjem-knapp.md, fasit Mobil Papir App
 //     navHome()/nhVals()/nhHide(), nøkkel papir_navhome; synk: /api/me/layout.homeButton)
 //   · Innstillinger → HELSE (FAMILIE): Apple Health, Health Connect, Home Assistant og hva som deles (claude-code-familie-helsekilder-innstillinger.md)
-//   · Vel fremme: statuslinja på Kart (via mobile-p40h.js) (claude-code-familie-fjern-hjemlys-kort.md)
+//   · Vel fremme: statuslinja på Kart (via mobile-vel-fremme.js) (claude-code-familie-fjern-hjemlys-kort.md)
 //   · Gjøremål-Glimt: lokal forhåndsdeling når serveren ikke deler opp (claude-code-huskeliste-glimt-del-opp.md, punkt 4)
 //   · «Vis mer» i bibelvers-arket (claude-code-bibel-ark-knapp-alltid.md)
 // Soner uten kart og ikonsøk ligger i mobile-p22.js, PostNord-logoen i mobile-track.js, bibelvers-arket i mobile-p37b.js.
@@ -13,7 +13,7 @@ import { m, draw, flash, startScr, two, FIN } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
 import { BB } from './mobile-p37b.js';
 import { FM, famLoad } from './mobile-p16.js';
-import * as HM from './mobile-p40h.js';
+import * as HM from './mobile-vel-fremme.js';
 
 const lsGet = (k, d = null) => { try { const v = localStorage.getItem(k); return v == null ? d : v; } catch { return d; } };
 const lsSet = (k, v) => { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch {} };

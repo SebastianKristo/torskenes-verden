@@ -1,7 +1,7 @@
 // Papir (prompt 15): tilpassbare sider (hold inne → vugging, ▲ ▼ og −), fanelinja (fjerde fane, flytende skann og Søk),
 // Finans-fanelinja og Mer-rutenettet, Finans → Søk med ✦ AI, transaksjonsdetaljer med original kvittering,
 // kvitteringsbanneret, Finn «På vei» og arket «Ny sending» i Sporing. Valgene lagres per bruker i /api/me/layout.
-import * as P30B from './mobile-p30b.js';
+import * as P30B from './mobile-boliger-deling.js';
 import { rcCard52, slip52 } from './kvitteringskort.js'; // prompt 52: felles kvitteringskort (Finans og Boliger)
 import { logoBtn73 } from './endre-logo.js'; // prompt 73: trykk på logoen → «Endre logo»
 import { glimtOrb } from './mobile-orb.js'; // prompt 43

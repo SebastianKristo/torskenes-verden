@@ -6,7 +6,7 @@
 //   #/fam/steder     Steder · /steder/<id> · /steder/ny/<type>  (4b: flere områder)
 //   #/fam/helse      Helse · /helse/<id> (5b)    #/fam/sjekk         Sjekk inn · /sjekk/<id> (6b)
 // Fullskjerm med egen fanelinje (som Media/Kalender): ingen bunnmeny, ingen skanneknapp. «‹ Hjem» går til Hjem.
-// «På vei hjem» åpner dagens Vel fremme-ark (mobile-p40h.js, data-p40="hjopen").
+// «På vei hjem» åpner dagens Vel fremme-ark (mobile-vel-fremme.js, data-p40="hjopen").
 import { hlApi } from './core.js';
 import { m, draw } from './mobile.js';
 

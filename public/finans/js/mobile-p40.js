@@ -7,7 +7,7 @@
 //   4. Finans: «Lagt til …»-linja, «✦ La Glimt lese kvitteringen på nytt», «Rediger alt», søk med Glimt-kort
 //      (claude-code-finans-lagt-til.md, -les-pa-nytt-rediger.md, -sok-glimt-kort.md)
 //   5. Brief → Bibel (trykk på verset) og Nyheter → Glimt-siden (claude-code-brief-bibel-trykk.md, -nyheter-glimt-side.md)
-//   6. Vel fremme: Familie-kortet og Hjem-kortet; hele flyten (1a + 1b + 1c) i mobile-p40h.js (claude-code-hjemlys.md)
+//   6. Vel fremme: Familie-kortet og Hjem-kortet; hele flyten (1a + 1b + 1c) i mobile-vel-fremme.js (claude-code-hjemlys.md)
 // Lastes med dynamisk import fra mobile.js (ingen statisk import herfra endrer evalueringsrekkefølgen). Andre moduler når
 // funksjonene via globalThis.P40. Alle API-er (kontrakt 40, SERVER40) tåler 404: da brukes lokal reserve.
 import { S, esc, api, hlApi, n0, n2 } from './core.js';
@@ -595,7 +595,7 @@ function ngTalk() {
 }
 
 /* =====================================================================
-   6. Vel fremme: hele flyten (1a + 1b + 1c) ligger i mobile-p40h.js (lastes lat ved oppstart)
+   6. Vel fremme: hele flyten (1a + 1b + 1c) ligger i mobile-vel-fremme.js (lastes lat ved oppstart)
    ===================================================================== */
 let HM = null;
 export const hjemlysFam = () => HM?.famCard?.() ?? '';
@@ -712,6 +712,6 @@ export function boot40() {
   kbTrack();
   hlApi('/glimt/settings').then(julTake).then(() => draw()).catch(() => {});
   // Bakgrunn → tilbake: oppdater Vel fremme.
-  import('./mobile-p40h.js').then((x) => { HM = x; if (['fam', 'hl'].includes(m.screen)) draw(); }).catch((err) => console.warn('mobile-p40h', err));
+  import('./mobile-vel-fremme.js').then((x) => { HM = x; if (['fam', 'hl'].includes(m.screen)) draw(); }).catch((err) => console.warn('mobile-vel-fremme', err));
   document.addEventListener('visibilitychange', () => { if (!document.hidden) HM?.visible?.(); });
 }

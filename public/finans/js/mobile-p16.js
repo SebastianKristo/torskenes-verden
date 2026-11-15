@@ -1,7 +1,7 @@
 // Papir (prompt 16): redigerbar fanelinje (hold inne på linja, eller Innstillinger → Fanelinje), fargetema for ikonene
 // i Innstillinger, Avganger (egen side i nyhetsleser-stil med flere stopp fra Entur og sanntid), Familie og kart
 // (OpenStreetMap via Leaflet, soner, personvern) og Boliger i full mobilversjon. Valgene lagres per bruker i /api/me/layout.
-import * as P30B from './mobile-p30b.js';
+import * as P30B from './mobile-boliger-deling.js';
 import { FT, famTabs, personCard, healthView } from './mobile-p17.js';
 const famTop = () => (paper() ? '' : famTabs()); // Papir: fanene ligger i fanelinja nederst
 import { api, esc, n0, ini, hlApi, dd, today, cap } from './core.js';
