@@ -482,6 +482,7 @@ final class Fam50Nav {
     nonisolated static func tabKey(_ barId: String) -> String {
         switch barId {
         case "soner": return "steder"
+        case "fkart": return "kart"
         case "helse": return "helse"
         case "hjemlys": return "sjekk"
         default: return "folk"

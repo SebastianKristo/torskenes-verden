@@ -247,12 +247,14 @@ struct MacToolbar: View {
     @Bindable var win: MacWin
     @Bindable var store: MacStore = MacStore.shared
 
+    /// Fase 6: samme navn og rekkefølge som kalendervisningene i modullisten (shared/schemas/moduler.json, kalender.undersider,
+    /// sjekket av test/ios-moduler.test.js). Hurtigtastene følger visningen som før.
     static let views: [MacViewTab] = [
-        MacViewTab(id: "dag", name: "Dag", key: "⌘1"),
-        MacViewTab(id: "3d", name: "3 dager", key: "⌘2"),
-        MacViewTab(id: "uke", name: "Uke", key: "⌘3"),
-        MacViewTab(id: "mnd", name: "Måned", key: "⌘4"),
         MacViewTab(id: "ar", name: "År", key: "⌘5"),
+        MacViewTab(id: "mnd", name: "Måned", key: "⌘4"),
+        MacViewTab(id: "uke", name: "Uke", key: "⌘3"),
+        MacViewTab(id: "3d", name: "3 dager", key: "⌘2"),
+        MacViewTab(id: "dag", name: "Dag", key: "⌘1"),
         MacViewTab(id: "liste", name: "Liste", key: "⌘6"),
     ]
 

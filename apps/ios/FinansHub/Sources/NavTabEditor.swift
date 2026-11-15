@@ -33,10 +33,12 @@ final class Nav32b {
     static let defs: [String: Sec32bDef] = [
         "dom": Sec32bDef(title: "DOMENER", all: [PaperTabItem(id: "dom", label: "Oversikt", icon: "◎"), PaperTabItem(id: "pub", label: "Publikum", icon: "◍"),
                                                   PaperTabItem(id: "ytl", label: "Ytelse", icon: "⚡"), PaperTabItem(id: "inf", label: "Infra", icon: "▤")]),
-        "abo": Sec32bDef(title: "ABONNEMENT", all: [PaperTabItem(id: "home", label: "Hjem", icon: "house"), PaperTabItem(id: "ins", label: "Innsikt", icon: "chart.bar"),
+        "abo": Sec32bDef(title: "ABONNEMENTER", all: [PaperTabItem(id: "home", label: "Oversikt", icon: "house"), PaperTabItem(id: "ins", label: "Innsikt", icon: "chart.bar"),
                                                      PaperTabItem(id: "hist", label: "Historikk", icon: "clock")]),
         // Prompt 50: Folk · Steder · Helse · Sjekk inn (samme id-er som før, så lagrede valg og PWA-synk virker).
-        "kart": Sec32bDef(title: "FAMILIE", all: [PaperTabItem(id: "kart", label: "Folk", icon: "◎"), PaperTabItem(id: "soner", label: "Steder", icon: "fam46:soner"),
+        // Fase 6 (Q9): Kart er en egen fane i Familie (posisjoner og soner), som i modullisten (familie.undersider).
+        "kart": Sec32bDef(title: "FAMILIE", all: [PaperTabItem(id: "kart", label: "Folk", icon: "◎"), PaperTabItem(id: "fkart", label: "Kart", icon: "map"),
+                                                  PaperTabItem(id: "soner", label: "Steder", icon: "fam46:soner"),
                                                   // Prompt 46: nye SVG-ikoner for Soner og Helse (PaperTabIcon.svg46).
                                                   PaperTabItem(id: "helse", label: "Helse", icon: "fam46:helse"),
                                                   // Prompt 41: Hjemlys som egen fane i Familie (HjemlysSharingViews.swift). Prompt 42: heter Vel fremme.
@@ -75,6 +77,12 @@ final class Nav32b {
             let n: String = ["Hjemlys", "Kart", "Soner", "Vel fremme"].contains(n0) ? "" : n0
             let ic: String = (o["ic"] as? String) ?? ""
             out.append(PaperTabItem(id: key, label: n.isEmpty ? d.label : n, icon: ic.isEmpty ? d.icon : ic))
+        }
+        // Fase 6: Kart-fanen er ny i Familie. Et lagret oppsett uten den får den én gang, rett etter Folk.
+        if k == "kart" && !out.isEmpty && !out.contains(where: { (t: PaperTabItem) -> Bool in t.id == "fkart" }),
+           !UserDefaults.standard.bool(forKey: AcctScope.key("papir_nav_kart_fkart")), let kart = def.all.first(where: { (t: PaperTabItem) -> Bool in t.id == "fkart" }) {
+            UserDefaults.standard.set(true, forKey: AcctScope.key("papir_nav_kart_fkart"))
+            out.insert(kart, at: Swift.min(1, out.count))
         }
         return out.isEmpty ? def.all : Array(out.prefix(def.all.count))
     }
@@ -180,9 +188,9 @@ struct TabEditor32b: View {
                 TabEditorHead32b(kicker: kicker) { dismiss() }
                 Text(countText).font(PF.ui(12.5)).foregroundStyle(p.mut)
                 TabEditorRows32b(rows: $rows, iconFor: $iconFor, all: all, icons: icons, max: max)
-                NavStylePicker25(items: rows, showMore: hasMore, hidePlus41: kicker.hasPrefix("HJEM") && !Scan41.shared.onHome).padding(.top, 6)
+                NavStylePicker25(items: rows, showMore: hasMore, hidePlus41: kicker.hasPrefix("OVERSIKT") && !Scan41.shared.onHome).padding(.top, 6)
                 // Prompt 41: «Skanneknapp på Hjem» under stilvalgene (samme innstilling som i Tilpass → Fanelinje).
-                if kicker.hasPrefix("HJEM") { Scan41Row() }
+                if kicker.hasPrefix("OVERSIKT") { Scan41Row() }
                 // Prompt 42: HJEM-KNAPP · FORHÅNDSVISNING (samme innstilling som Tilpass → Fanelinje → Hjem-knapp).
                 if hasMore { NavHomePicker42().padding(.top, 6) }
                 TabEditorAdds32b(rows: $rows, all: all, max: max)
@@ -391,7 +399,7 @@ struct HomeTabEditor32b: View {
     @Environment(Store.self) private var store
 
     var body: some View {
-        TabEditor32b(kicker: "HJEM · FANELINJE", max: 5, hasMore: true, all: PaperTabItem.selectable, defaults: PaperTabItem.defaults,
+        TabEditor32b(kicker: "OVERSIKT · FANELINJE", max: 5, hasMore: true, all: PaperTabItem.selectable, defaults: PaperTabItem.defaults,
                      icons: PaperTabItem.icons, initial: store.mainTabItems,
                      save: { (rows: [PaperTabItem]) in store.setTabBar(rows) },
                      reset: { store.resetTabBar() })
@@ -422,7 +430,7 @@ struct FinTabEditor32b: View {
     }
 
     var body: some View {
-        TabEditor32b(kicker: "FINANS · FANELINJE", max: 5, hasMore: true, all: all, defaults: defaults,
+        TabEditor32b(kicker: "ØKONOMI · FANELINJE", max: 5, hasMore: true, all: all, defaults: defaults,
                      icons: FinNav26.icons, initial: initial,
                      save: { (rows: [PaperTabItem]) in
                          FinNav26.shared.save(rows.map { (r: PaperTabItem) -> FinNavRow26 in FinNavRow26(id: r.id, label: r.label, icon: r.icon) }, store)
@@ -443,13 +451,13 @@ struct Nav32bSettingsGroup: View {
         VStack(alignment: .leading, spacing: 4) {
             PLabel(text: "Fanelinje").padding(.leading, 4).padding(.top, 14)
             PaperLinkList(rows: [
-                PaperLinkRow(name: "Hjem", sub: store.mainTabItems.map(\.label).joined(separator: " · "), value: "Rediger ›", valueColor: p.lab, icon: "dock.rectangle") { store.tabBarEditing = true },
-                PaperLinkRow(name: "Finans", sub: store.finNavItems.map(\.name).joined(separator: " · "), value: "Rediger ›", valueColor: p.lab, icon: "creditcard") { FinNav26.shared.editing = true },
+                PaperLinkRow(name: "Oversikt", sub: store.mainTabItems.map(\.label).joined(separator: " · "), value: "Rediger ›", valueColor: p.lab, icon: "dock.rectangle") { store.tabBarEditing = true },
+                PaperLinkRow(name: "Økonomi", sub: store.finNavItems.map(\.name).joined(separator: " · "), value: "Rediger ›", valueColor: p.lab, icon: "creditcard") { FinNav26.shared.editing = true },
             ])
             PLabel(text: "Fanelinje · andre sider").padding(.leading, 4).padding(.top, 14)
             PaperLinkList(rows: [
                 PaperLinkRow(name: "Domener", sub: names("dom"), value: "Rediger ›", valueColor: p.lab, icon: "globe") { n.editing = "dom" },
-                PaperLinkRow(name: "Abonnement", sub: names("abo"), value: "Rediger ›", valueColor: p.lab, icon: "repeat") { n.editing = "abo" },
+                PaperLinkRow(name: "Abonnementer", sub: names("abo"), value: "Rediger ›", valueColor: p.lab, icon: "repeat") { n.editing = "abo" },
                 PaperLinkRow(name: "Familie", sub: names("kart"), value: "Rediger ›", valueColor: p.lab, icon: "person.2") { n.editing = "kart" },
             ])
             Text("Hold inne på fanelinjen på siden for å åpne det samme arket. Stilen (tekst eller ikoner) er felles for hele appen.")

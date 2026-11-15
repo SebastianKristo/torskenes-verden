@@ -52,11 +52,13 @@ struct Fam50Phone: View {
     }
 }
 
-/// Fanene: Folk (start), Steder, Helse og Sjekk inn.
+/// Fanene: Folk (start), Kart, Steder, Helse og Sjekk inn.
 struct Fam50RootTab: View {
     var body: some View {
         switch Fam50Nav.tabKey(FamilyModel.shared.tab) {
         case "steder": Fam50PlacesList()
+        // Fase 6 (Q9): kartet med posisjoner og soner som egen fane (samme kart som «Vis kart» fra Folk).
+        case "kart": Fam50KartView(embedded: true)
         case "helse": Fam50HealthList()
         case "sjekk": Fam50CheckinTab()
         default: Fam50Folk()

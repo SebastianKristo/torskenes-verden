@@ -140,6 +140,7 @@ struct KalViewOpt: Identifiable, Hashable {
 struct KalViewPicker: View {
     @Environment(\.kal) private var t
     @MainActor private var s: KalStore { KalStore.shared }
+    /// Fase 6: kortnavnene og rekkefølgen fra kalendervisningene i modullisten (kalender.undersider, test/ios-moduler.test.js).
     static let views: [KalViewOpt] = [KalViewOpt(id: "ar", name: "År"), KalViewOpt(id: "mnd", name: "Mnd"), KalViewOpt(id: "uke", name: "Uke"),
                                       KalViewOpt(id: "3d", name: "3 d"), KalViewOpt(id: "dag", name: "Dag"), KalViewOpt(id: "liste", name: "Liste")]
 

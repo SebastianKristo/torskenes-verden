@@ -60,9 +60,11 @@ struct Cal27Slot: Identifiable {
 final class Cal27Model {
     static let shared = Cal27Model()
 
-    /// (id, navn, hurtigtast) i fanelinjen nederst.
-    nonisolated static let views: [(String, String, String)] = [("dag", "Dag", "calendar.day.timeline.left"), ("3dager", "3 dager", "rectangle.split.3x1"),
-                                                                ("uke", "Uke", "calendar"), ("maaned", "Måned", "square.grid.3x3"), ("liste", "Liste", "list.bullet")]
+    /// (id, navn, ikon) i fanelinjen nederst. Fase 6: samme navn og rekkefølge som kalendervisningene i modullisten
+    /// (kalender.undersider: Måned, Uke, 3 dager, Dag, Liste; År finnes bare i Kalender-appen), sjekket av test/ios-moduler.test.js.
+    nonisolated static let views: [(String, String, String)] = [("maaned", "Måned", "square.grid.3x3"), ("uke", "Uke", "calendar"),
+                                                                ("3dager", "3 dager", "rectangle.split.3x1"), ("dag", "Dag", "calendar.day.timeline.left"),
+                                                                ("liste", "Liste", "list.bullet")]
     nonisolated static let reminders: [(String, String)] = [("none", "Ingen"), ("15m", "15 min"), ("1h", "1 time"), ("day", "Dagen før")]
     nonisolated static let repeats: [(String, String)] = [("none", "Ingen"), ("daily", "Hver dag"), ("weekly", "Hver uke"), ("monthly", "Hver måned")]
 
