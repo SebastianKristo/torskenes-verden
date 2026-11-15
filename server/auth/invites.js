@@ -25,7 +25,7 @@ import { blocked51, fail51, clear51 } from './rate-limit.js';
 import { gate51, afterLogin51 } from './security.js';
 import { issueToken, SCOPES as FH_SCOPES } from '../finans/routes.js';
 import { fold42 } from '../finans/search-db.js';
-import { setShare51 } from '../system/search.js'; // delingsvalgene (posisjon, helse, kalender) eies av Familie/webx51
+import { setShare51 } from '../familie/sharing.js'; // delingsvalgene (posisjon, helse, kalender) eies av Familie
 
 db.exec(`CREATE TABLE IF NOT EXISTS onboard51_invites (id TEXT PRIMARY KEY, code_hash TEXT NOT NULL, name TEXT NOT NULL, username TEXT, share TEXT NOT NULL DEFAULT '{}',
   note TEXT, created INTEGER NOT NULL, created_by TEXT NOT NULL, expires INTEGER NOT NULL, used_at INTEGER, user_id TEXT, revoked_at INTEGER);`);

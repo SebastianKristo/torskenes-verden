@@ -17,6 +17,7 @@
 //   search.js            felles søk over alle moduler
 //   theme.js             tema per bruker (synket, etter sola eller klokka)
 //   offline-conflicts.js konfliktvarselet for offline-køen (X-Offline51-Base)
+//   (delingsvalgene /api/me/share51 ligger i familie/sharing.js og monteres her sammen med søket og temaet)
 //   flags-crashes.js     feature flags, krasjrapporter (GlitchTip) og «Nytt i denne versjonen»; whatsnew.js gjør punktene lesbare
 //   model-flags.js       flagg for lokale modeller (PÅ som standard)
 //   docker-logs.js       Docker-logger, containere, feilsøking og omstartsvarselet
@@ -29,7 +30,10 @@
 import { mountServer47 } from './server-urls.js';
 import { mountObs51 } from './observability/index.js';
 import { mountQa51 } from './flags-crashes.js';
-import { mountWebx51 } from './search.js';
+import { searchApi } from './search.js';
+import { themeApi } from './theme.js';
+import { offlineApi, offlineMw } from './offline-conflicts.js';
+import { shareApi } from '../familie/sharing.js';
 import settingsSearchApi from './settings-search.js';
 import ops51Api from './ops.js';
 import systemBackupApi from './backup.js';
@@ -46,7 +50,13 @@ export function mountSystemEarly(app) {
   mountServer47(app); // GET /api/config/servers {publicUrl, localUrl etter innlogging} + /api/finans/kvitteringer-aliasene
   mountObs51(app); // /api/system/obs51/* (admin) og /api/me/ntfy51 (alle)
   mountQa51(app); // /api/flags, /api/crash, /api/whatsnew, /api/admin/flags51, /api/admin/crashes51
-  mountWebx51(app); // /api/search51, /api/me/theme51, /api/me/share51, /api/offline51
+  // Konfliktvarselet for offline-køen ligger utenpå handlerne for gjøremål og familiekalenderen (før dem).
+  app.use('/api/tasks/*', offlineMw);
+  app.use('/api/famcal51/*', offlineMw);
+  app.route('/api', searchApi); // /api/search51, /api/search51/types, /api/search51/recent
+  app.route('/api', themeApi); // /api/me/theme51
+  app.route('/api', shareApi); // /api/me/share51 (delingsvalgene i Familie)
+  app.route('/api', offlineApi); // /api/offline51/versions
 }
 
 /** Intern videresending til en annen sti med samme innlogging (samme tilgang som målet). */

@@ -1,38 +1,31 @@
-// Prompt 51 (WEBX51): felles søk over alle moduler, onboarding for nye familiemedlemmer, tema per bruker (synket mellom enheter,
-// automatisk etter sola/klokka) og konfliktvarsel for offline-køen. API-formene står i SERVER51-API.md (seksjon WEBX51) og i
-// docs/web-51.md.
+// Felles søk over alle moduler (gjøremål, handleliste, familiekalender, steder, personer, pakker, kvitteringer og transaksjoner,
+// studiedokumenter, Chat, bursdager, lagrede artikler, Skjold Lab-deler, sider og hurtighandlinger). Før i webx51.js; montert fra
+// system/index.js (mountSystemEarly). API-formene står i docs/web-51.md.
 //
 //   GET    /api/search51?q=&types=&limit=      → {q, ms, engine, results:[Result], groups:[{type,label,count}], recent?}
 //   GET    /api/search51/types                 → {types:[{type,label,icon}]}
 //   POST   /api/search51/recent {q} · DELETE /api/search51/recent
-//   Onboarding (/api/onboard51/*, /join/:token) ligger i server/auth/invites.js.
-//   GET/PUT /api/me/share51 · GET/PUT /api/me/theme51
-//   GET    /api/offline51/versions?tasks=1,2&events=3
-//   Mellomvare: X-Offline51-Base på PATCH/DELETE /api/tasks/:id og PATCH /api/famcal51/events/:id → X-Offline51-Conflict
 //
 // Sikkerhet: søket ser bare det brukeren selv har tilgang til (samme regler som modulene).
 import { Hono } from 'hono';
 import { db, q, kv, OWNER } from '../db.js';
-import { config } from '../config.js';
 import { authOrToken } from '../mobile.js';
-import { userInfo, listUsers, isAdmin } from '../auth/session.js';
-import { broadcast } from '../realtime.js';
+import { userInfo, isAdmin } from '../auth/session.js';
 import { family50 as F } from '../familie/positions.js';
 import { ensureIndex42, norm42, fold42, synonymsOf42 } from '../finans/search-db.js';
 import { settings as fhSettings } from '../finans/db.js';
 import { gateEmbed } from '../ai/gate.js';
-import { sunTime } from '../vaer/met.js';
 import { savedDocs73, savedSig73 } from '../news73.js'; // prompt 73 (NEWS73): lagrede artikler i felles søk
 import { partDocs76, partSig76, partResult76 } from '../skjold76/glimt.js'; // prompt 76 (SKJSRV): Skjold Lab-deler i felles søk
 import { osloDate } from '../dates/oslo.js';
 import { dtf } from '../intl-format.js'; // gjenbrukte Intl.DateTimeFormat
+import { themeOf, computeTheme } from './theme.js'; // hurtighandlingen «Mørk/lys modus»
 
-const MIN = 60_000, HOUR = 3_600_000, DAY = 86_400_000;
+const DAY = 86_400_000;
 const NO_STORE = { 'Cache-Control': 'no-store' };
 const clean = (v, n) => String(v ?? '').replace(/[\u0000-\u001f<>]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, n);
 const body = async (c) => { const b = await c.req.json().catch(() => ({})); return b && typeof b === 'object' && !Array.isArray(b) ? b : {}; };
 const bad = (c, error, status = 400, extra = {}) => c.json({ error, ...extra }, status, NO_STORE);
-const isoOf = (t) => (t ? new Date(t).toISOString() : null);
 const nameOf = (id) => { const u = userInfo(id); return u?.displayName ?? u?.name ?? u?.username ?? null; };
 const hasTable = (t) => !!q("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(t);
 const hasCol = (t, col) => hasTable(t) && q(`PRAGMA table_info(${t})`).all().some((x) => x.name === col);
@@ -437,212 +430,24 @@ export async function search51(u, qtext, { types = null, limit = 20 } = {}) {
 const recentOf = (u) => (Array.isArray(kv.get(u, 'search51_recent', [])) ? kv.get(u, 'search51_recent', []) : []).filter((x) => typeof x === 'string').slice(0, 10);
 
 /* =====================================================================================================================
-   Tema per bruker
-   ===================================================================================================================== */
-
-const MODES = ['light', 'dark', 'system', 'auto'];
-const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
-const DEF_THEME = { mode: 'system', auto: { by: 'sun', lightAt: '07:00', darkAt: '21:00', place: null }, palette: 'papir', updatedAt: 0 };
-export function themeOf(u) {
-  const s = kv.get(u, 'theme51', null);
-  if (s && typeof s === 'object') return { ...DEF_THEME, ...s, auto: { ...DEF_THEME.auto, ...(s.auto ?? {}) } };
-  // Fra før: web_theme (prompt 44) light/dark/system.
-  const web = kv.get(u, 'layout', {})?.web_theme;
-  return { ...DEF_THEME, mode: ['light', 'dark', 'system'].includes(web) ? web : DEF_THEME.mode };
-}
-/** Klokkeslett «HH:MM» i Oslo på dagen ymd → ms. */
-function osloAt(ymd, hhmm) {
-  const [h, m] = hhmm.split(':').map(Number);
-  const guess = Date.parse(`${ymd}T${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:00Z`);
-  const local = Date.parse(new Date(guess).toLocaleString('sv-SE', { timeZone: 'Europe/Oslo' }).replace(' ', 'T') + 'Z');
-  return guess - (local - guess);
-}
-function placeFor(u, t) {
-  try {
-    const p = F.lastRaw(u);
-    if (p && Number.isFinite(p.lat) && Number.isFinite(p.lon)) return { lat: Math.round(p.lat * 100) / 100, lon: Math.round(p.lon * 100) / 100, name: 'Din posisjon', source: 'family' };
-  } catch { /* */ }
-  const m = t.auto?.place;
-  if (m && Number.isFinite(m.lat) && Number.isFinite(m.lon)) return { lat: m.lat, lon: m.lon, name: m.name ?? 'Valgt sted', source: 'manual' };
-  return { lat: 59.91, lon: 10.75, name: 'Oslo', source: 'default' };
-}
-/** Beregner effektivt tema nå + neste bytte. */
-export function computeTheme(u, t = themeOf(u), now = Date.now()) {
-  if (t.mode === 'light' || t.mode === 'dark') return { effective: t.mode, next: null, sun: null };
-  if (t.mode === 'system') return { effective: null, next: null, sun: null };
-  const today = ymdOslo(now), tomorrow = ymdOslo(now + DAY);
-  if (t.auto.by === 'time') {
-    const l = osloAt(today, t.auto.lightAt), d = osloAt(today, t.auto.darkAt);
-    const light = l < d ? now >= l && now < d : !(now >= d && now < l);
-    const cands = [l, d, osloAt(tomorrow, t.auto.lightAt), osloAt(tomorrow, t.auto.darkAt)].filter((x) => x > now).sort((a, b) => a - b);
-    const nx = cands[0];
-    return { effective: light ? 'light' : 'dark', next: nx ? { at: isoOf(nx), mode: [osloAt(today, t.auto.lightAt), osloAt(tomorrow, t.auto.lightAt)].includes(nx) ? 'light' : 'dark' } : null, sun: null };
-  }
-  const p = placeFor(u, t);
-  const rise = sunTime(today, p.lat, p.lon, -0.833, true), set = sunTime(today, p.lat, p.lon, -0.833, false);
-  const riseMs = rise ? +new Date(rise) : null, setMs = set ? +new Date(set) : null;
-  if (!riseMs || !setMs) {
-    // Midnattssol eller mørketid: deklinasjonen avgjør (samme formel som vaer/sun.js).
-    const rad = Math.PI / 180, n = Math.round((Date.parse(`${today}T12:00:00Z`) - Date.UTC(2000, 0, 1, 12)) / DAY) - p.lon / 360;
-    const M = (357.5291 + 0.98560028 * n) % 360, C = 1.9148 * Math.sin(M * rad) + 0.02 * Math.sin(2 * M * rad);
-    const L = (M + C + 180 + 102.9372) % 360, decl = Math.asin(Math.sin(L * rad) * Math.sin(23.4397 * rad));
-    const polar = Math.sign(p.lat) === Math.sign(decl) ? 'midnattssol' : 'mørketid';
-    return { effective: polar === 'midnattssol' ? 'light' : 'dark', next: null, sun: { sunrise: null, sunset: null, polar, place: p.name } };
-  }
-  const light = now >= riseMs && now < setMs;
-  let next = null;
-  if (now < riseMs) next = { at: isoOf(riseMs), mode: 'light' };
-  else if (now < setMs) next = { at: isoOf(setMs), mode: 'dark' };
-  else { const r2 = sunTime(tomorrow, p.lat, p.lon, -0.833, true); if (r2) next = { at: isoOf(+new Date(r2)), mode: 'light' }; }
-  return { effective: light ? 'light' : 'dark', next, sun: { sunrise: isoOf(riseMs), sunset: isoOf(setMs), polar: null, place: p.name } };
-}
-const themeOut = (u, t = themeOf(u)) => {
-  const { place, ...auto } = t.auto ?? {};
-  return { mode: t.mode, auto: { ...auto, place: place ?? null }, palette: t.palette, updatedAt: t.updatedAt || 0, ...computeTheme(u, t) };
-};
-function themeIn(b, cur) {
-  const next = { ...cur, auto: { ...cur.auto } };
-  if (b.mode !== undefined) { if (!MODES.includes(b.mode)) return 'mode må være light, dark, system eller auto'; next.mode = b.mode; }
-  if (b.palette !== undefined) { if (!['papir', 'noytral'].includes(b.palette)) return 'palette må være papir eller noytral'; next.palette = b.palette; }
-  if (b.auto !== undefined) {
-    const a = b.auto;
-    if (!a || typeof a !== 'object' || Array.isArray(a)) return 'auto må være et objekt';
-    if (a.by !== undefined) { if (!['sun', 'time'].includes(a.by)) return 'auto.by må være sun eller time'; next.auto.by = a.by; }
-    for (const k of ['lightAt', 'darkAt']) if (a[k] !== undefined) { if (!HHMM.test(String(a[k]))) return `auto.${k} må være HH:MM`; next.auto[k] = a[k]; }
-    if (a.lightAt !== undefined || a.darkAt !== undefined) if (next.auto.lightAt === next.auto.darkAt) return 'Lys og mørk kan ikke starte samtidig';
-    if (a.place !== undefined) {
-      if (a.place === null) next.auto.place = null;
-      else {
-        const lat = Number(a.place?.lat), lon = Number(a.place?.lon);
-        if (!Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180) return 'auto.place må ha lat og lon';
-        // Avrundet: temaet trenger ikke mer enn ~1 km.
-        next.auto.place = { lat: Math.round(lat * 100) / 100, lon: Math.round(lon * 100) / 100, name: clean(a.place.name, 60) || 'Valgt sted' };
-      }
-    }
-  }
-  return next;
-}
-
-/* =====================================================================================================================
-   Deling (onboarding og etterpå)
-   ===================================================================================================================== */
-
-const HEALTH_SHARE = { steps: true, restingHr: true, hr: false, sleep: true, activeKcal: true, week: true };
-export function shareOf51(u) {
-  const p = kv.get(u, 'family_prefs', {}) ?? {};
-  const s = kv.get(u, 'share51', {}) ?? {};
-  return { location: p.sharing === 'on', health: p.sharing === 'on' && Object.entries(p.shareHealth ?? {}).some(([k, v]) => k !== 'week' && v), calendar: s.calendar === true };
-}
-export function setShare51(u, b) {
-  const cur = shareOf51(u);
-  const next = { location: typeof b.location === 'boolean' ? b.location : cur.location, health: typeof b.health === 'boolean' ? b.health : cur.health, calendar: typeof b.calendar === 'boolean' ? b.calendar : cur.calendar };
-  // Familie har én delingsbryter (familie/positions.js): helse deles bare når deling med familien er på. Personvern først – uten posisjon
-  // deles heller ikke helse (klientene viser «Helse deles sammen med posisjon»).
-  if (!next.location) next.health = false;
-  const p = { ...(kv.get(u, 'family_prefs', {}) ?? {}) };
-  p.sharing = next.location ? 'on' : (p.sharing === 'paused' ? 'paused' : 'off');
-  p.shareHealth = next.health ? (cur.health ? { ...(p.shareHealth ?? {}) } : { ...HEALTH_SHARE }) : Object.fromEntries(Object.keys(HEALTH_SHARE).map((k) => [k, false]));
-  kv.set(u, 'family_prefs', p);
-  kv.set(u, 'share51', { ...(kv.get(u, 'share51', {}) ?? {}), calendar: next.calendar, location: next.location, health: next.health, at: Date.now() });
-  try { broadcast('family', { kind: 'prefs', userId: u }, listUsers().map((x) => x.id)); } catch { /* */ }
-  return shareOf51(u);
-}
-
-/* =====================================================================================================================
-   Offline-kø: konfliktvarsel (siste skriving vinner)
-   ===================================================================================================================== */
-
-const VERSIONED = [
-  [/^\/api\/tasks\/(\d+)$/, ['PATCH', 'DELETE'], (id) => q('SELECT updated_at FROM hl_tasks WHERE id=?').pluck().get(Number(id)) ?? null],
-  [/^\/api\/famcal51\/events\/(\d+)$/, ['PATCH', 'DELETE'], (id) => (hasTable('famcal51_event') ? q('SELECT updated FROM famcal51_event WHERE id=?').pluck().get(Number(id)) ?? null : null)],
-];
-const tsOf = (v) => { const s = String(v ?? '').trim(); if (/^\d{10,14}$/.test(s)) return Number(s.length <= 10 ? Number(s) * 1000 : s); const t = Date.parse(s); return Number.isFinite(t) ? t : null; };
-async function offlineMw(c, next) {
-  const base = c.req.header('x-offline51-base');
-  const queued = c.req.header('x-offline51-queued');
-  if (!base && !queued) return next();
-  const path = c.req.path;
-  const hit = VERSIONED.find(([re, methods]) => re.test(path) && methods.includes(c.req.method));
-  let before = null;
-  if (hit) { try { before = hit[2](path.match(hit[0])[1]); } catch { before = null; } }
-  await next();
-  if (!hit || !c.res) return;
-  // Uten Base (klienten vet ikke hvilken versjon den så): endret etter at skrivingen ble gjort offline = konflikt.
-  const b = tsOf(base) ?? tsOf(queued);
-  if (c.res.status < 400) {
-    let after = null; try { after = hit[2](path.match(hit[0])[1]); } catch { /* */ }
-    if (after != null) c.res.headers.set('X-Offline51-Updated', String(after));
-    if (b != null && before != null && before > b + 1000) {
-      c.res.headers.set('X-Offline51-Conflict', '1');
-      c.res.headers.set('X-Offline51-Server-Updated', String(before));
-    }
-  }
-  c.res.headers.set('Access-Control-Expose-Headers', 'X-Offline51-Conflict, X-Offline51-Server-Updated, X-Offline51-Updated');
-}
-
-/* =====================================================================================================================
    Ruter
    ===================================================================================================================== */
 
-export const webx51Api = new Hono();
+export const searchApi = new Hono();
 
-webx51Api.get('/search51', authOrToken, async (c) => {
+searchApi.get('/search51', authOrToken, async (c) => {
   const u = c.get('user');
   const types = (c.req.query('types') ?? '').split(',').map((x) => x.trim()).filter((x) => TYPES51[x]);
   const r = await search51(u, c.req.query('q') ?? '', { types: types.length ? types : null, limit: c.req.query('limit') });
   if (!r.q) r.recent = recentOf(u);
   return c.json(r, 200, NO_STORE);
 });
-webx51Api.get('/search51/types', authOrToken, (c) => c.json({ types: Object.entries(TYPES51).map(([type, [label, icon]]) => ({ type, label, icon })) }, 200, NO_STORE));
-webx51Api.post('/search51/recent', authOrToken, async (c) => {
+searchApi.get('/search51/types', authOrToken, (c) => c.json({ types: Object.entries(TYPES51).map(([type, [label, icon]]) => ({ type, label, icon })) }, 200, NO_STORE));
+searchApi.post('/search51/recent', authOrToken, async (c) => {
   const u = c.get('user'), t = clean((await body(c)).q, 100);
   if (t.length < 2) return bad(c, 'q mangler');
   kv.set(u, 'search51_recent', [t, ...recentOf(u).filter((x) => fold42(x) !== fold42(t))].slice(0, 10));
   return c.json({ ok: true }, 200, NO_STORE);
 });
-webx51Api.delete('/search51/recent', authOrToken, (c) => { kv.set(c.get('user'), 'search51_recent', []); return c.json({ ok: true }, 200, NO_STORE); });
+searchApi.delete('/search51/recent', authOrToken, (c) => { kv.set(c.get('user'), 'search51_recent', []); return c.json({ ok: true }, 200, NO_STORE); });
 
-/* ---------------- Tema og deling ---------------- */
-
-webx51Api.get('/me/theme51', authOrToken, (c) => c.json(themeOut(c.get('user')), 200, NO_STORE));
-webx51Api.put('/me/theme51', authOrToken, async (c) => {
-  const u = c.get('user'), b = await body(c), cur = themeOf(u);
-  const at = b.updatedAt != null ? Number(b.updatedAt) : Date.now();
-  if (!Number.isFinite(at)) return bad(c, 'updatedAt må være et tall (ms)');
-  if (cur.updatedAt && at < cur.updatedAt) return c.json({ error: 'En nyere endring finnes allerede', theme: themeOut(u, cur) }, 409, NO_STORE);
-  const next = themeIn(b, cur);
-  if (typeof next === 'string') return bad(c, next);
-  next.updatedAt = Math.min(at, Date.now() + 5 * MIN);
-  kv.set(u, 'theme51', next);
-  // Bakoverkompatibelt: eldre web-kode leser web_theme fra /api/me/layout.
-  if (['light', 'dark', 'system'].includes(next.mode)) kv.set(u, 'layout', { ...(kv.get(u, 'layout', {}) ?? {}), web_theme: next.mode });
-  const out = themeOut(u, next);
-  try { broadcast('theme51', { theme: out }, [u]); } catch { /* */ }
-  return c.json(out, 200, NO_STORE);
-});
-webx51Api.get('/me/share51', authOrToken, (c) => c.json(shareOf51(c.get('user')), 200, NO_STORE));
-webx51Api.put('/me/share51', authOrToken, async (c) => c.json(setShare51(c.get('user'), await body(c)), 200, NO_STORE));
-
-/* ---------------- Offline ---------------- */
-
-webx51Api.get('/offline51/versions', authOrToken, (c) => {
-  const u = c.get('user');
-  const ids = (k) => (c.req.query(k) ?? '').split(',').map(Number).filter((x) => Number.isInteger(x) && x > 0).slice(0, 200);
-  const tasks = {};
-  for (const id of ids('tasks')) {
-    const t = q('SELECT id, list, created_by, updated_at FROM hl_tasks WHERE id=?').get(id);
-    if (!t) { tasks[id] = null; continue; }
-    const visible = t.list ? !!q('SELECT 1 FROM hl_task_lists WHERE id=? AND (owner=? OR id IN (SELECT list_id FROM hl_task_list_members WHERE user_id=?))').get(t.list, u, u) || (t.created_by === u && !q('SELECT 1 FROM hl_task_lists WHERE id=?').get(t.list)) : t.created_by === u;
-    if (visible) tasks[id] = t.updated_at ?? null;
-  }
-  const events = {};
-  if (hasTable('famcal51_event')) for (const id of ids('events')) events[id] = q('SELECT updated FROM famcal51_event WHERE id=?').pluck().get(id) ?? null;
-  return c.json({ tasks, events }, 200, NO_STORE);
-});
-
-/** Monteres i index.js (etter secureHeaders, før modulrutene). */
-export function mountWebx51(app) {
-  app.use('/api/tasks/*', offlineMw);
-  app.use('/api/famcal51/*', offlineMw);
-  app.route('/api', webx51Api);
-}
