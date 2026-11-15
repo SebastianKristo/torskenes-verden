@@ -2,6 +2,8 @@ package no.kristo.finanshub
 
 import no.kristo.felles.nett.openSikker
 import no.kristo.felles.nett.ServerAdresse
+import no.kristo.felles.navigasjon.Tilbakestabel
+import no.kristo.felles.navigasjon.Tilbakesteg
 
 import android.app.Application
 import android.content.Context
@@ -622,48 +624,58 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (!navDry) launch { loadFor(s) }
     }
 
+    /**
+     * Tilbakestabelen (Fase 5, :felles Tilbakestabel): lagene i rekkefølge fra øverst til nederst. Tilbake lukker det første som
+     * er åpent. Ingen åpne lag (Hjem uten forrige side) = rotsiden, og back() gir false. Samme rekkefølge og handlinger som den
+     * gamle when-kjeden i back(); hvert steg har et navn (rute-id) som skallet og testene bruker.
+     */
+    private val tilbakestabel: Tilbakestabel by lazy {
+        Tilbakestabel(listOf(
+            // Prompt 27: en åpen sak lukkes først (artikkelvisningen i Nyhetsleser).
+            Tilbakesteg("nyheter", { newsOpen }) { if (b27.articleFor != null) closeArticle27() else if (newsSettings) newsSettings = false else newsOpen = false },
+            Tilbakesteg("original", { original != null }) { original = null },
+            Tilbakesteg("redigering", { editing != null }) { editing = null },
+            Tilbakesteg("detalj", { detail != null }) { detail = null; detailTx = null },
+            Tilbakesteg("rediger-hjem", { editHome }) { editHome = false },
+            Tilbakesteg("innstillinger-underside", { screen == Screen.Settings && settingsPage != null }) { settingsBack26() },
+            Tilbakesteg("papir-innstillinger-underside", { paperPage == "set" && settingsPage != null }) { settingsBack26() },
+            Tilbakesteg("gjoremal", { tasksOpen }) { closeTasks() },
+            Tilbakesteg("chat", { chat27.open }) { closeChat27() },
+            Tilbakesteg("kalender", { kal26.open }) { closeKal26() },
+            Tilbakesteg("bursdager", { bd24.open }) { closeBirthdays24() },
+            Tilbakesteg("sammenlign", { compareOpen }) { compareOpen = false },
+            Tilbakesteg("bolig", { screen == Screen.Folders && folder != null }) { folder = null },
+            Tilbakesteg("kvittering", { screen == Screen.Scan && selectedReceipt != null }) { selectedReceipt = null },
+            Tilbakesteg("finn-annonse", { screen == Screen.Finn && finnSel != null }) { finnSel = null; finnDetail = null },
+            Tilbakesteg("sporing-pakke", { screen == Screen.Tracking && trkSel != null }) { trkSel = null },
+            Tilbakesteg("aksje", { screen == Screen.Stocks && stockScreen != "ov" }) { stockScreen = if (stockScreen == "det" && stockFrom == "tx") "tx" else "ov"; stockFrom = null },
+            Tilbakesteg("transaksjon", { selectedTx != null }) { selectedTx = null },
+            Tilbakesteg("domenebehandler", { screen == Screen.Domains && domainManager }) { domainManager = false },
+            Tilbakesteg("mat-full", { screen == Screen.Mat && matFull }) { matFull = false },
+            Tilbakesteg("rett", { screen == Screen.Mat && dishOpen != null }) { dishOpen = null },
+            Tilbakesteg("finans-mer", { paperPage == "fmer" }) { paperPage = null; navigate(Screen.Homelab, null) },
+            Tilbakesteg("fra-finans-mer", { paperFromFinMer }) { navigate(Screen.Home, null); paperFin = true; paperPage = "fmer" },
+            Tilbakesteg("finans-sok", { paperPage == "fsok" }) { paperPage = null; navigate(Screen.Homelab, null) },
+            Tilbakesteg("finans-fane", { paperFin && screen in PAPER_FIN_SCREENS }) { navigate(Screen.Homelab, null) },
+            // Domener i Papir: pila og kantsveipet går alltid til Hjem, også når siden ble åpnet fra Mer.
+            Tilbakesteg("domener", { screen == Screen.Domains }) { domAll = false; navigate(Screen.Homelab, null) },
+            Tilbakesteg("mer-underside", { paperPage != null && paperPage != "mer" }) { paperPage = "mer" },
+            Tilbakesteg("mer", { paperPage == "mer" }) { paperPage = null; navigate(Screen.Homelab, null) },
+            Tilbakesteg("fra-mer", { paperFromMer }) { paperFromMer = false; paperPage = "mer" },
+            Tilbakesteg("til-hjem", { screen != Screen.Homelab && backTo == null }) { navigate(Screen.Homelab, null) },
+            Tilbakesteg("forrige", { backTo != null }) { navigate(backTo ?: Screen.Homelab, null) },
+        ))
+    }
+
+    /** Rute-id for laget tilbake lukker nå («rot» på Hjem). Brukes av skallet (HomelabSkall) og forhåndsvisningen av tilbake. */
+    val tilbakeRute: String get() = tilbakestabel.rute()
+
     /** Tilbake: lukker det som er åpent, ellers til forrige side (undersider av Mer → Mer, Finans og moduler → Homelab). */
     fun back(): Boolean {
         if (!navDry) navBackSeq++
         // Prompt 34: lett haptikk på all tilbake (knapp, sveip, systemets tilbake). Ikke når forhåndsvisningen prøvekjører.
         if (!navDry) Haptics.back()
-        when {
-            // Prompt 27: en åpen sak lukkes først (artikkelvisningen i Nyhetsleser).
-            newsOpen -> { if (b27.articleFor != null) closeArticle27() else if (newsSettings) newsSettings = false else newsOpen = false }
-            original != null -> original = null
-            editing != null -> editing = null
-            detail != null -> { detail = null; detailTx = null }
-            editHome -> editHome = false
-            screen == Screen.Settings && settingsPage != null -> settingsBack26()
-            paperPage == "set" && settingsPage != null -> settingsBack26()
-            tasksOpen -> closeTasks()
-            chat27.open -> closeChat27()
-            kal26.open -> closeKal26()
-            bd24.open -> closeBirthdays24()
-            compareOpen -> compareOpen = false
-            screen == Screen.Folders && folder != null -> folder = null
-            screen == Screen.Scan && selectedReceipt != null -> selectedReceipt = null
-            screen == Screen.Finn && finnSel != null -> { finnSel = null; finnDetail = null }
-            screen == Screen.Tracking && trkSel != null -> trkSel = null
-            screen == Screen.Stocks && stockScreen != "ov" -> { stockScreen = if (stockScreen == "det" && stockFrom == "tx") "tx" else "ov"; stockFrom = null }
-            selectedTx != null -> selectedTx = null
-            screen == Screen.Domains && domainManager -> domainManager = false
-            screen == Screen.Mat && matFull -> matFull = false
-            screen == Screen.Mat && dishOpen != null -> dishOpen = null
-            paperPage == "fmer" -> { paperPage = null; navigate(Screen.Homelab, null) }
-            paperFromFinMer -> { navigate(Screen.Home, null); paperFin = true; paperPage = "fmer" }
-            paperPage == "fsok" -> { paperPage = null; navigate(Screen.Homelab, null) }
-            paperFin && screen in PAPER_FIN_SCREENS -> navigate(Screen.Homelab, null)
-            // Domener i Papir: pila og kantsveipet går alltid til Hjem, også når siden ble åpnet fra Mer.
-            screen == Screen.Domains -> { domAll = false; navigate(Screen.Homelab, null) }
-            paperPage != null && paperPage != "mer" -> paperPage = "mer"
-            paperPage == "mer" -> { paperPage = null; navigate(Screen.Homelab, null) }
-            paperFromMer -> { paperFromMer = false; paperPage = "mer" }
-            screen == Screen.Homelab && backTo == null -> return false
-            screen != Screen.Homelab && backTo == null -> navigate(Screen.Homelab, null)
-            else -> navigate(backTo ?: Screen.Homelab, null)
-        }
-        return true
+        return tilbakestabel.tilbake()
     }
 
     suspend fun loadTx() {

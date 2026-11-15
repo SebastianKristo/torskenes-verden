@@ -102,6 +102,25 @@ test('tema: FinansTheme gir tokenene (LocalDsColors, typografi fra tokens) uten 
   assert.match(raw(join(APP, 'ui/designsystem/DesignTokens.kt')), /^\/\/ GENERERT av scripts\/design-tokens\.mjs/);
 });
 
+test('navigasjon: back() bruker tilbakestabelen med navngitte steg i fast rekkefølge, og skallet har innfelling på ett sted', () => {
+  const vm = strip(raw(join(APP, 'AppViewModel.kt')));
+  const back = vm.slice(vm.indexOf('fun back(): Boolean {'), vm.indexOf('fun back(): Boolean {') + 400);
+  assert.match(back, /return tilbakestabel\.tilbake\(\)/);
+  assert.ok(!/when \{/.test(back), 'ingen when-kjede i back()');
+  const tab = vm.slice(vm.indexOf('private val tilbakestabel: Tilbakestabel by lazy {'), vm.indexOf('val tilbakeRute: String'));
+  const navn = [...tab.matchAll(/Tilbakesteg\("([a-z-]+)"/g)].map((m) => m[1]);
+  // Rekkefølgen er den samme som den gamle when-kjeden: ark og detaljer øverst, sider og faner nederst, «forrige» sist.
+  assert.deepEqual(navn.slice(0, 5), ['nyheter', 'original', 'redigering', 'detalj', 'rediger-hjem']);
+  assert.deepEqual(navn.slice(-4), ['mer', 'fra-mer', 'til-hjem', 'forrige']);
+  assert.equal(navn.length, 31);
+  assert.equal(new Set(navn).size, navn.length);
+  assert.match(tab, /Tilbakesteg\("forrige", \{ backTo != null \}\) \{ navigate\(backTo \?: Screen\.Homelab, null\) \}/);
+  const skall = strip(raw(join(APP, 'ui/HomelabSkall.kt')));
+  assert.match(skall, /contentWindowInsets = Innfelling\.trygg/);
+  assert.match(skall, /val trygg: WindowInsets\s*@Composable get\(\) = WindowInsets\.safeDrawing/);
+  assert.ok(existsSync(join(AND, 'felles/src/test/kotlin/no/kristo/felles/TilbakestabelTest.kt')));
+});
+
 test('B3: CSV-eksporten hentes fra serveren og bygges aldri på Main', () => {
   const vm = strip(raw(join(APP, 'AppViewModel.kt')));
   const f = vm.slice(vm.indexOf('fun exportCsv()'), vm.indexOf('private fun localCsv('));
