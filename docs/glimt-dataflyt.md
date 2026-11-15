@@ -14,7 +14,7 @@ Kartlagt i koden før endringene. Kjeden: tekst → Ollama → intensjon → ver
 | Gjøremål | `POST /api/tasks/glimt` (`tasks-glimt37/40/41/42.js`) | Fire lag: lokal tolker (37), «forstår setninger» (40), bakgrunnsjobb (41), JSON-kontrakt (42) – hver med egen prompt | `insertTask` |
 | Finans | `POST /finans/api/search/ask` (`finans/search-db.js`) | `parseQuery42` (regex) → SQL/FTS → LLM bare for teksten | – |
 | `POST /api/glimt` | `server/ai/control.js` | Egen prompt («maks to korte setninger») | – |
-| Alle | `server/kal44.js` `assistLocalMw44` | Legger `parseQuick(text)` på **alle** `/api/assist`-svar med dato/tid, også spørsmål | – |
+| Alle | `server/kalender-deltakere.js` `assistLocalMw44` | Legger `parseQuick(text)` på **alle** `/api/assist`-svar med dato/tid, også spørsmål | – |
 | Modellkall | `server/ai-run.js` `run()` → `server/ai-gate.js` | `format:'json'`/skjema, ingen `tools` | – |
 
 Altså: minst **8 ulike prompts og 6 ulike parsere/handlingssystemer** for samme slags forespørsel, avhengig av hvor brukeren skrev den.

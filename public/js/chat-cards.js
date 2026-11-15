@@ -4,7 +4,7 @@
 // Huskeliste). Huskeliste-punktene kan krysses av direkte i kortet (PATCH /api/tasks/:id).
 // card.k: weather|wx · calendar|cal · departures · packages · finance · tasks. Formen tåles løst (serveren og reserven
 // i assist.js kan bruke litt ulike feltnavn).
-import { cal70Html } from './cal70.js'; // prompt 70: card.k 'cal70' = kort A
+import { cal70Html } from './glimt-kalenderkort.js'; // prompt 70: card.k 'cal70' = kort A
 const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ESC[c]);
 const WD3 = ['SØN', 'MAN', 'TIR', 'ONS', 'TOR', 'FRE', 'LØR'], MN = ['januar', 'februar', 'mars', 'april', 'mai', 'juni', 'juli', 'august', 'september', 'oktober', 'november', 'desember'];

@@ -10,7 +10,7 @@ import { toast } from './toast.js';
 import { isQuestion } from './ask36.js';
 import { isHuske41, addFromSearch41 } from './tasks41.js'; // prompt 41: huskebeskjeder fra søket
 import { agent, agentOn, agentExtras, agentText, isPlain, resultHref } from './glimt-agent45.js'; // prompt 45: felles Glimt-agent
-import { cal70Of } from './cal70.js'; // prompt 70: kort A erstatter svarteksten når Glimt har lagt inn en avtale
+import { cal70Of } from './glimt-kalenderkort.js'; // prompt 70: kort A erstatter svarteksten når Glimt har lagt inn en avtale
 import { thumbs61Html } from './recipes61.js'; // prompt 61: tommel opp/ned på Glimt-svaret
 import { agentLive59, cacheNote59 } from './stream59.js'; // prompt 59: strømming (ord for ord, statuslinje, Stopp)
 import { homeConv60, resetHomeConv60 } from './convo60.js'; // prompt 60: Glimt-søket er en kortlevd samtale («og i Bergen?»)

@@ -8,7 +8,7 @@
 // - Synk med Home Assistant er flyttet til Innstillinger → Gjøremål; i lista står en rad som åpner den.
 // Felter: frist = dl (siste dag), når = due + time, sted = pl + geo {lat, lon}. Lagres fortløpende (PATCH /api/tasks/:id).
 import { esc } from './util.js';
-import { attachGeo, geoSearch, miniMap, mapLinks } from './geo44.js';
+import { attachGeo, geoSearch, miniMap, mapLinks } from './geo-adresse.js';
 
 let C = null; // kontekst fra tasks.js: {S, patchItem, tick, del, paint, createItem, flash, colorOf, listOf, tList, tTitle, tNotes, tWho, nameOf, people, REP, EARLY, PRIO, PLACE, openEd, today}
 export function setup44(ctx) { C = ctx; }

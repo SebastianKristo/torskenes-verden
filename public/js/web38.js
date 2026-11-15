@@ -1,8 +1,8 @@
 // Prompt 38 (WEB38): små ting i skallet.
-// - Kalender.app for Mac (/kalender?app=mac, html[data-kal-app]): kalender.js/kal38.js gjør kalenderen. Her: fanetittel «Kalender»,
+// - Kalender.app for Mac (/kalender?app=mac, html[data-kal-app]): kalender.js/kalender-mac.js gjør kalenderen. Her: fanetittel «Kalender»,
 //   lenker til andre Homelab-sider og eksterne sider åpnes i nettleseren (melding open {url} til appen), og 401 fra API-et
 //   gir meldingen logout (appen viser sin egen innlogging) i stedet for å gå til /login inne i vinduet.
-import { toNative } from './kal38.js';
+import { toNative } from './kalender-mac.js';
 import { logout } from './usercache.js';
 import { esc } from './util.js';
 

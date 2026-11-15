@@ -602,7 +602,7 @@ html[data-kal-app] #kal.k39{margin:0}
 .sq-ai-h .glm{margin-right:6px}
 .ai-job .glm{flex:none}
 
-/* ---------- Kalender: kalenderstyring fra sidemenyen (kal-manage35.js) ---------- */
+/* ---------- Kalender: kalenderstyring fra sidemenyen (kalender-kalendere.js) ---------- */
 .km35{position:fixed;inset:0;z-index:160}
 .km35-back{position:absolute;inset:0;background:rgba(27,26,23,.38);animation:gbFadeIn .2s ease both}
 .km35-panel{position:absolute;top:0;right:0;bottom:0;width:min(520px,100%);background:#fffdf8;color:#1b1a17;box-shadow:-20px 0 60px -20px rgba(0,0,0,.4);animation:hlBrIn .3s cubic-bezier(.2,.8,.2,1) both;overflow-y:auto;font-family:var(--gb-sans);color-scheme:light}
@@ -845,7 +845,7 @@ html:not([data-hl="2c"]) .k38-tiles{filter:invert(1) hue-rotate(180deg) brightne
 @media (max-width:820px){.kg39-grid,.kg39-cards{grid-template-columns:1fr}.kg39-box{padding:18px}}
 .gs-dim{opacity:.45}
 
-/* ---------- Kalender på web: Auto / Mørk / Lys (claude-code-kalender-web-tema.md, kal-theme40.js) ---------- */
+/* ---------- Kalender på web: Auto / Mørk / Lys (claude-code-kalender-web-tema.md, kalender-tema.js) ---------- */
 html[data-kal-theme="mork"] #kal.k39{--bg:#161513;--ink:#efe9de;--card:#211f1b;--chip:#2b2824;--line:#3b3731;--line2:#2e2b26;--mut:#a49d91;--mut2:#8c867b;--ink2:#d6cfc2;
   --acc:#ec7a64;--red:#cf5540;--sun:#ec7a64;--dim:rgba(0,0,0,.55);--glass:rgba(33,31,27,.94);--tint:32%;--tint-all:30%;--k-shadow:0 10px 30px -14px rgba(0,0,0,.7);color-scheme:dark}
 html[data-kal-theme="mork"] #kal.k39 .k39-ev,html[data-kal-theme="mork"] #kal.k39 .k39-chip.all{color:var(--lt)}
@@ -931,7 +931,7 @@ html[data-hl="2c"] .kal42-seg button[aria-pressed=true]{background:#1b1a17;borde
 .k43-lh>i.k43-nob{display:none}
 @media (min-width:1100px){#kal.k39 .k43-lh>i.k43-nob{display:block;visibility:hidden}}
 
-/* ---------- Kalender (kal44.js): I dag-ikon, deltakere, Media ---------- */
+/* ---------- Kalender (kalender-deltakere.js): I dag-ikon, deltakere, Media ---------- */
 .k39-today.k44-td{width:36px;height:36px}
 .k39-today.k44-td>span{display:none}
 .k44-today{display:block}

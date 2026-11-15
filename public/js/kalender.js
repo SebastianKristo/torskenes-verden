@@ -22,10 +22,10 @@ import { addQuick, preview, previewAsync, quickLabel, setQuickHooks } from './ka
 import { glimt } from './glimt.js';
 import { LEARN_TYPES, typeName, addMemory, applyMemory, nameOfEvent, loadMemory, dinOf } from './glimt-memory.js'; // prompt 33
 import { agent, agentOn, agentFull } from './glimt-agent45.js'; // prompt 45
-import * as k38 from './kal38.js'; // prompt 38: zoom, Glimt-assistenten, kart, ark/tastatur, app-modus (Mac)
-import * as k42 from './kal42.js'; // prompt 42: Abonnementer (trekkdatoer fra Finans)
-import * as k39 from './kal39.js'; // prompt 39: hele oppsettet er en kopi av Kalender.app for Mac (fire kalendere)
-import * as k44 from './kal44.js'; // prompt 44: deltakere, adresse med forslag, Media-status, I dag-ikon
+import * as k38 from './kalender-mac.js'; // prompt 38: zoom, Glimt-assistenten, kart, ark/tastatur, app-modus (Mac)
+import * as k42 from './kalender-abonnementer.js'; // prompt 42: Abonnementer (trekkdatoer fra Finans)
+import * as k39 from './kalender-oppsett.js'; // prompt 39: hele oppsettet er en kopi av Kalender.app for Mac (fire kalendere)
+import * as k44 from './kalender-deltakere.js'; // prompt 44: deltakere, adresse med forslag, Media-status, I dag-ikon
 /** Prompt 31 (Kalender.dc.html): «Pilestredet park 35 U2005 https://link.mazemap.com/…» → «Pilestredet park 35 U2005». */
 export const noUrl = (t) => String(t ?? '').replace(/\s*https?:\/\/\S+/g, '').trim();
 const urlIn = (t) => String(t ?? '').match(/https?:\/\/\S+/)?.[0] ?? '';
@@ -277,7 +277,7 @@ function ensureRange(a, b) {
 
 /* ---------------- Hjelpere ---------------- */
 
-// Prompt 39: kalenderne er de fire (+ egne) fra kal39.js; gamle id-er (privat, timeplan …) slås opp via aliasene der.
+// Prompt 39: kalenderne er de fire (+ egne) fra kalender-oppsett.js; gamle id-er (privat, timeplan …) slås opp via aliasene der.
 const calList = () => k39.cals();
 const calById = (id) => { const c = k39.calById(k39.cal4({ calendar: id })); return { ...c, src: c.sourceLabel ?? '', writable: c.id === 'personlig' || !!c.own }; };
 const shownCal = (id) => k39.shown(id); // prompt 39: de fire kalenderne (e.ac)
@@ -323,7 +323,7 @@ function wgModel(now, today) {
   };
 }
 
-/* Prompt 39: NESTE-banneret, sidemenyen og alle visningene tegnes av kal39.js (kopi av Kalender.app for Mac). */
+/* Prompt 39: NESTE-banneret, sidemenyen og alle visningene tegnes av kalender-oppsett.js (kopi av Kalender.app for Mac). */
 
 /* ---------------- Ark: detaljer, skjema, søk ---------------- */
 
@@ -1129,8 +1129,8 @@ function bind(h) {
     if ('kDrawer' in d) { K.drawer = !K.drawer; return paint(); }
     if (d.kWk) { K.drawer = false; K.miniOff = 0; return setView('uke', d.kWk); }
     if ('kRetry' in d) { ensureKal(true); return; }
-    // Prompt 35: farger, vis/skjul, skjul fra menyen, + iCal og + Home Assistant (kal-manage35.js).
-    if ('kSet' in d) { import('./kal-manage35.js').then((m) => m.openCalManager({ onChange: () => ensureKal(true).then(paint) })).catch(() => openSettings('kal')); return; }
+    // Prompt 35: farger, vis/skjul, skjul fra menyen, + iCal og + Home Assistant (kalender-kalendere.js).
+    if ('kSet' in d) { import('./kalender-kalendere.js').then((m) => m.openCalManager({ onChange: () => ensureKal(true).then(paint) })).catch(() => openSettings('kal')); return; }
     if ('kReconnect' in d) { K.form = null; paint(); openSettings('kal'); return; }
     if (d.kView) return setView(d.kView, d.kView === 'liste' ? key(d0(new Date())) : undefined, e);
     if (d.kNav) return shift(+d.kNav);
@@ -1232,7 +1232,7 @@ function startTick() {
   }, 30_000);
 }
 
-/* Prompt 38: kontekst til kal38.js og window.kalApp for Mac-appen (⌘N, ⌘T, ⌘1–5, ⌘F, ⌘,). */
+/* Prompt 38: kontekst til kalender-mac.js og window.kalApp for Mac-appen (⌘N, ⌘T, ⌘1–5, ⌘F, ⌘,). */
 k38.initKal38({ K, evOn, col, short, key, add, d0, mm, hmM, fromKey, curD, calById, noUrl, longDate: dLong,
   paint: () => paint(), openDay, setView, openForm, askServer, ensureKal, findEv, // prompt 45: agenten laster på nytt etter endringer
   ensureNow: async () => { const td = d0(new Date()); ensureRange(key(add(td, -31)), key(add(td, 121))); if (K.loading) await K.loading.catch(() => {}); } });
@@ -1265,7 +1265,7 @@ function appCmd(c) {
     case 'glimt': closeSheets(); k38.openGlimt(b || undefined); return true;
     case 'sidebar': K.noSide = !K.noSide; try { localStorage.setItem('kal_side38', K.noSide ? '0' : '1'); } catch { /* */ } paint(); return true;
     case 'weeks': K.noWeeks = b === '0' ? true : b === '1' ? false : !K.noWeeks; try { localStorage.setItem('kal_weeks38', K.noWeeks ? '0' : '1'); } catch { /* */ } paint(); return true;
-    case 'newcal': closeSheets(); import('./kal-manage35.js').then((m) => m.openCalManager({ onChange: () => ensureKal(true).then(paint) })).catch(() => openSettings('kal')); return true;
+    case 'newcal': closeSheets(); import('./kalender-kalendere.js').then((m) => m.openCalManager({ onChange: () => ensureKal(true).then(paint) })).catch(() => openSettings('kal')); return true;
     case 'prev': shift(-1); return true;
     case 'next': shift(1); return true;
     case 'refresh': ensureKal(true); return true;

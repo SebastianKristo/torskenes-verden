@@ -6,8 +6,8 @@ import { store } from './store.js';
 import { integById } from './settings-integ.js';
 import { mountBdCalendars, bdCalSummary } from './birthdays.js';
 import { ensureKal, subjectColors, setSubjectColor, webLayout, setWebLayout } from './kalender.js';
-import { cals as kalCals, st39, loadCals, patchCal, SWATCHES } from './kal39.js';
-import { NOTIFY, abNotify, setAbNotify } from './kal42.js'; // prompt 42
+import { cals as kalCals, st39, loadCals, patchCal, SWATCHES } from './kalender-oppsett.js';
+import { NOTIFY, abNotify, setAbNotify } from './kalender-abonnementer.js'; // prompt 42
 
 const CFG_GROUP = 'Kalender / timeplan';
 
@@ -115,7 +115,7 @@ export function kalClick(e, rerender) {
   if (op) { e.preventDefault(); openCal40 = openCal40 === op.dataset.kal40Open ? '' : op.dataset.kal40Open; rerender(); return true; }
   const cb = e.target.closest('[data-kal40-col]');
   if (cb) { e.preventDefault(); patchCal(cb.dataset.id, { color: cb.dataset.kal40Col }); document.dispatchEvent(new Event('hl:kal39')); rerender(); return true; }
-  if (e.target.closest('[data-kal-gpick]')) { e.preventDefault(); import('./kal-google39.js').then((m) => m.openGooglePicker({ onSaved: () => { ensureKal(true); loadCals().then(rerender); } })); return true; }
+  if (e.target.closest('[data-kal-gpick]')) { e.preventDefault(); import('./kalender-google.js').then((m) => m.openGooglePicker({ onSaved: () => { ensureKal(true); loadCals().then(rerender); } })); return true; }
   const lb = e.target.closest('[data-kal-layout]');
   if (lb) { e.preventDefault(); setWebLayout(lb.dataset.kalLayout).then(rerender); return true; }
   const r = e.target.closest('[data-kal-subj-reset]');

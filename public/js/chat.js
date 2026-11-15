@@ -13,7 +13,7 @@ import { glimt, glimtDots } from './glimt.js';
 import { assist, looksLikeTool, normAnswer } from './assist.js';
 import { agentStream59, cacheNote59 } from './stream59.js'; // prompt 59: Glimt-svar strømmes (ord for ord, statuslinje, Stopp)
 import { agentText, isPlain, agentConfirm } from './glimt-agent45.js';
-import { cal70Of } from './cal70.js'; // prompt 70
+import { cal70Of } from './glimt-kalenderkort.js'; // prompt 70
 import { chatConv60, bindConv60, rekeyConv60, newChatConv60, forgetConv60, choicePick60, followsGlimt60 } from './convo60.js'; // prompt 60: samtale-id, valgknapper
 import { thumbs61Html } from './recipes61.js'; // prompt 61: tommel opp/ned på Glimt-svar
 import { preview62, schedCard62Html, yesLabel62, done62, schedDone62Html } from './sched62.js'; // prompt 62: kortet for en fast oppgave + kvittering

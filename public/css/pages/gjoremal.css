@@ -417,7 +417,7 @@ html[data-mode="dark"][data-hl="2c"] .tk{--t-chip:var(--ds-surface);--t-in:var(-
 .tk44-more{margin-top:12px;height:40px;border-radius:20px;border:1px solid var(--c44-line);background:transparent;color:var(--c44-ink);cursor:pointer;font:700 13px Manrope,system-ui,sans-serif}
 .tk44-keys{margin-top:14px}
 @media (max-width:860px){.tk44-pg{grid-template-columns:1fr;overflow-y:auto}.tk44-pl,.tk44-pr{overflow:visible}.tk44-pr{border-left:0;border-top:1px solid var(--c44-line)}.tk44-pl{padding:20px 18px}.tk44-pr{padding:16px 18px 40px}.tk44-ti{font-size:30px}.tk44-ph{padding:12px 16px}}
-/* Adresseforslag (geo44.js) */
+/* Adresseforslag (geo-adresse.js) */
 .geo44{position:fixed;z-index:2147481200;display:flex;flex-direction:column;border-radius:16px;background:var(--c44-card);border:1px solid var(--c44-line);box-shadow:var(--c44-sh);padding:6px;box-sizing:border-box;max-width:calc(100vw - 16px);max-height:min(420px,60vh);overflow:auto}
 .geo44 button{flex:none;display:flex;align-items:center;gap:10px;min-height:48px;padding:6px 10px;border:0;border-radius:10px;background:transparent;color:var(--c44-ink);text-align:left;cursor:pointer;font-family:Manrope,system-ui,sans-serif}
 .geo44 button.on,.geo44 button:hover{background:var(--c44-chip)}

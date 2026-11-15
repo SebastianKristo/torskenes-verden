@@ -3,12 +3,12 @@
 //   reserve /api/users), «E-post til andre» + Legg til, rader med status (Ikke sendt / Invitert / Ja / Kanskje / Nei) og ✕,
 //   rød «Send invitasjon (N)» → POST /api/kalender/events/:id/invite → «✓ Sendt · send på nytt». Deltakerne lagres på hendelsen
 //   (PATCH /api/kalender/events/:id {attendees:[{userId|email, name, status}]}).
-// - «Sted eller adresse» med forslag (geo44.js) i Ny/Rediger hendelse; koordinatene lagres (geo:{lat, lon}).
+// - «Sted eller adresse» med forslag (geo-adresse.js) i Ny/Rediger hendelse; koordinatene lagres (geo:{lat, lon}).
 // - Media-kalenderen: status fra Media og «Åpne i Media» i detaljpanelet.
 // - I dag-ikonet (claude-code-kalender-idag-ikon.md): ramme, rød topp, dagens tall midtstilt. Oppdateres ved midnatt.
 import { esc, initials } from './util.js';
 import { store } from './store.js';
-import { attachGeo } from './geo44.js';
+import { attachGeo } from './geo-adresse.js';
 
 const A = { id: null, list: [], add: '', err: '', busy: false, sent: false, dir: null, dirAt: 0 };
 const ST = { invited: 'Invitert', accepted: 'Ja', declined: 'Nei', tentative: 'Kanskje', maybe: 'Kanskje', pending: 'Ikke sendt', none: 'Ikke sendt' };

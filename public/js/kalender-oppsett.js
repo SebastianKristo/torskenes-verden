@@ -3,12 +3,12 @@
 // MacGrid, MacViews) og vedlegg/mac-kalender-fasit*.png. Samme mål (pt = px), fonter, farger, radier og fagfarger som Mac.
 // Bare fire kalendere (claude-code-kalendere-fire-google.md): Personlig · Bursdager · Skole · Helligdager + brukerens egne.
 // Gamle Jobb/Familie/Helse/Privat-hendelser vises i Personlig, Timeplan/Prøver/Studie i Skole (til serveren har migrert).
-// Data, ark (detaljer, ny/rediger, søk, ✦ Skriv time) og Glimt-panelet ligger fortsatt i kalender.js / kal38.js.
-import { themeBtn } from './kal-theme40.js';
+// Data, ark (detaljer, ny/rediger, søk, ✦ Skriv time) og Glimt-panelet ligger fortsatt i kalender.js / kalender-mac.js.
+import { themeBtn } from './kalender-tema.js';
 import { orb43 } from './orb43.js'; // prompt 43: Glimt-orben på «Skriv time» og «Dagen din»
 import { esc, isMobile } from './util.js';
-import { AB_CAL, groupSubs, chipInner, bindLogos, krTxt, badge as abBadge, logo as abLogo } from './kal42.js'; // prompt 42: Abonnementer
-import { todayIcon } from './kal44.js'; // prompt 44: nytt I dag-ikon
+import { AB_CAL, groupSubs, chipInner, bindLogos, krTxt, badge as abBadge, logo as abLogo } from './kalender-abonnementer.js'; // prompt 42: Abonnementer
+import { todayIcon } from './kalender-deltakere.js'; // prompt 44: nytt I dag-ikon
 
 let C = null;
 /** kalender.js: { K, evOn, key, add, d0, mm, fromKey, curD, paint, setView, openForm, openGlimt, findEv } */

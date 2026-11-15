@@ -12,7 +12,7 @@
 // Klikkene håndteres her (document-delegert) og sendes tilbake til feltet via callbacks registrert med agentExtras(a, cb).
 import { normChoices60, choicePick60, convBody60 } from './convo60.js';
 import { preview62, schedCard62Html, yesLabel62, done62, schedDone62Html } from './sched62.js'; // prompt 62: bekreftelseskort for faste oppgaver
-import { cal70Of, cal70Html, datePick70 } from './cal70.js'; // prompt 70: kort A (lagt i kalenderen, bytt kalender i kortet, Angre)
+import { cal70Of, cal70Html, datePick70 } from './glimt-kalenderkort.js'; // prompt 70: kort A (lagt i kalenderen, bytt kalender i kortet, Angre)
 
 const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ESC[c]);

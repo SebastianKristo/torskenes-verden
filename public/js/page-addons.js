@@ -2,7 +2,7 @@
 // Kalles fra app.js (initPageAddons ved oppstart, afterPageAddons etter hver side). Slått sammen fra web44.js, web45.js og web46.js.
 // - Oppstart: Lys · Mørk · Følg systemet (mode44.js), felles GlimtInput med Tab og forslag (glimt-input44.js), «Logg inn som»
 //   (as44.js), den felles Glimt-agenten (glimt-agent45.js) og Innstillinger → Nyheter (settings46.js).
-// - Per side: Gjøremål (tasks44.js), Kalender (kal44.js), Media (media-slett.js), Vær (weather45.js), Familie (family45.js)
+// - Per side: Gjøremål (tasks44.js), Kalender (kalender-deltakere.js), Media (media-slett.js), Vær (weather45.js), Familie (family45.js)
 //   og Kart (kart46.js, skallet tegnes med en gang og kartet monteres etterpå).
 // - Frem/tilbake i nettleseren: Media bruker pushState (media-side.js); Innstillinger og Kalender hadde det fra før.
 import { initMode } from './mode44.js';
@@ -32,7 +32,7 @@ const mountKart = (m) => ({ after46: (view) => { const h = view.querySelector('#
 const ADDONS = {
   huskeliste: [[() => import('./tasks44.js'), 'after44']],
   gjoremal: [[() => import('./tasks44.js'), 'after44']],
-  kalender: [[() => import('./kal44.js'), 'after44']],
+  kalender: [[() => import('./kalender-deltakere.js'), 'after44']],
   media: [[() => import('./media-slett.js'), 'after45']],
   vaer: [[() => import('./weather45.js'), 'after45']],
   familie: [[() => import('./family45.js'), 'after45']],
