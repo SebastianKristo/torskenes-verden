@@ -54,6 +54,7 @@ import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 import no.kristo.finanshub.*
 import no.kristo.finanshub.ui.designsystem.HomelabType
+import no.kristo.finanshub.ui.designsystem.HomelabTheme
 
 /* ---------------- Felles ---------------- */
 
@@ -119,22 +120,22 @@ internal fun trkEtaText(s: Shipment): String {
 /** Siste hendelse («Ankommet terminal · Oslo · 18.10 06:12») og feilteksten («Kunne ikke oppdatere · prøver igjen 20:15»). */
 @Composable
 internal fun TrkEventLines(s: Shipment) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     s.lastEvent?.let { e ->
         Text(listOfNotNull(e.text, e.place?.takeIf { it.isNotBlank() }, trkTime(e.time).takeIf { it.isNotBlank() }).joinToString(" · "),
-            color = p.ink.copy(alpha = .8f), fontSize = HomelabType.footnote.fontSize, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            color = p.textPrimary.copy(alpha = .8f), fontSize = HomelabType.footnote.fontSize, maxLines = 2, overflow = TextOverflow.Ellipsis)
     }
     s.updateError?.let { e ->
         val retry = clockOf(e.retryAt)
         Text("Kunne ikke oppdatere" + (if (retry.isNotBlank()) " · prøver igjen $retry" else "") + (e.text.takeIf { it.isNotBlank() && it.length < 60 }?.let { " · $it" } ?: ""),
-            color = p.lab, fontSize = HomelabType.caption.fontSize, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            color = p.accent, fontSize = HomelabType.caption.fontSize, maxLines = 2, overflow = TextOverflow.Ellipsis)
     }
 }
 
 /** Tidslinjen (Registrert · Hentet · I transport · Hentested · Levert) med dato og klokkeslett under siste nådde steg. */
 @Composable
 internal fun TrkTimeline(s: Shipment) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val ctx = LocalContext.current
     val info = s.stepInfo.takeIf { it.size == s.steps.size }
     val reached: (Int) -> Boolean = { i -> info?.get(i)?.done ?: (i <= s.step) }
@@ -147,15 +148,15 @@ internal fun TrkTimeline(s: Shipment) {
             Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Box(
-                        Modifier.size(14.dp).clip(CircleShape).background(if (on && !cur) p.ink else if (cur) (if (s.done) p.pos else p.lab) else Color.Transparent)
+                        Modifier.size(14.dp).clip(CircleShape).background(if (on && !cur) p.textPrimary else if (cur) (if (s.done) p.success else p.accent) else Color.Transparent)
                             .border(2.dp, if (on || cur) Color.Transparent else p.line, CircleShape),
                     )
-                    if (i < s.steps.size - 1) Box(Modifier.width(2.dp).height(22.dp).background(if (reached(i + 1)) p.ink else p.line))
+                    if (i < s.steps.size - 1) Box(Modifier.width(2.dp).height(22.dp).background(if (reached(i + 1)) p.textPrimary else p.line))
                 }
                 Column(Modifier.weight(1f).padding(bottom = 6.dp)) {
-                    Text(label, color = if (on) p.ink else p.mut, fontWeight = if (cur) FontWeight.Bold else FontWeight.Medium, fontSize = HomelabType.subheadline.fontSize)
+                    Text(label, color = if (on) p.textPrimary else p.textTertiary, fontWeight = if (cur) FontWeight.Bold else FontWeight.Medium, fontSize = HomelabType.subheadline.fontSize)
                     val t = info?.get(i)?.at?.let(::trkTime) ?: if (cur) trkTime(lastTime) else ""
-                    if (t.isNotBlank() && (cur || info != null)) Text(t, color = p.mut, fontSize = HomelabType.caption.fontSize, fontFamily = PaperFonts.mono)
+                    if (t.isNotBlank() && (cur || info != null)) Text(t, color = p.textTertiary, fontSize = HomelabType.caption.fontSize, fontFamily = PaperFonts.mono)
                 }
             }
         }
@@ -163,12 +164,12 @@ internal fun TrkTimeline(s: Shipment) {
             PLabel("Hendelser", modifier = Modifier.padding(top = 6.dp, bottom = 4.dp))
             s.events.take(6).forEach { e ->
                 Row(Modifier.padding(vertical = 3.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text(trkTime(e.at?.toString() ?: e.raw), color = p.mut, fontSize = HomelabType.caption.fontSize, fontFamily = PaperFonts.mono, modifier = Modifier.width(78.dp))
-                    Text(listOf(e.status, e.location).filter { it.isNotBlank() }.joinToString(" · "), color = p.ink, fontSize = HomelabType.footnote.fontSize, modifier = Modifier.weight(1f))
+                    Text(trkTime(e.at?.toString() ?: e.raw), color = p.textTertiary, fontSize = HomelabType.caption.fontSize, fontFamily = PaperFonts.mono, modifier = Modifier.width(78.dp))
+                    Text(listOf(e.status, e.location).filter { it.isNotBlank() }.joinToString(" · "), color = p.textPrimary, fontSize = HomelabType.footnote.fontSize, modifier = Modifier.weight(1f))
                 }
             }
         }
-        Text("Åpne hos ${s.carrierName} ↗", color = p.lab, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.subheadline.fontSize,
+        Text("Åpne hos ${s.carrierName} ↗", color = p.accent, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.subheadline.fontSize,
             modifier = Modifier.padding(top = 8.dp).clip(CircleShape).clickable { openLink(ctx, s.url.ifBlank { carrierTrackUrl(s.carrier, s.trackingNo) }) }.padding(vertical = 4.dp))
     }
 }
@@ -182,10 +183,10 @@ internal fun TrkTimeline(s: Shipment) {
 
 @Composable
 private fun CarChip26(text: String, on: Boolean, dark: Boolean, onClick: () -> Unit) {
-    val p = PaperPal.current
-    val bg = when { on && dark -> p.bg; on -> p.ink; else -> Color.Transparent }
-    val fg = when { on && dark -> p.ink; on -> p.bg; dark -> p.bg; else -> p.ink }
-    val bd = when { on && dark -> p.bg; on -> p.ink; dark -> Color.White.copy(alpha = .35f); else -> p.line }
+    val p = HomelabTheme.colors
+    val bg = when { on && dark -> p.surface; on -> p.textPrimary; else -> Color.Transparent }
+    val fg = when { on && dark -> p.textPrimary; on -> p.surface; dark -> p.surface; else -> p.textPrimary }
+    val bd = when { on && dark -> p.surface; on -> p.textPrimary; dark -> Color.White.copy(alpha = .35f); else -> p.line }
     Box(
         Modifier.height(32.dp).clip(RoundedCornerShape(16.dp)).background(bg).border(1.dp, bd, RoundedCornerShape(16.dp))
             .clickable(role = Role.RadioButton, onClickLabel = text, onClick = onClick).padding(horizontal = 12.dp),
@@ -207,13 +208,13 @@ internal fun CarrierChips26(no: String, selected: String?, onPick: (String?) -> 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun TrkSporVia26(vm: AppViewModel, list: List<Shipment>) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     if (vm.trkPicked.size != 1) return
     val s = list.firstOrNull { it.id in vm.trkPicked } ?: return
     val ov = vm.trkOverride26(s)
     val auto = s.carrierDetectedName ?: s.carrierDetected?.let(::trkCarName26) ?: if (ov == null) s.carrierName else trkGuessName26(s.trackingNo)
-    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(p.ink).padding(14.dp, 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text("SPOR VIA", color = p.bg.copy(alpha = .75f), fontSize = HomelabType.caption.fontSize, fontWeight = FontWeight.SemiBold, fontFamily = PaperFonts.mono, letterSpacing = 1.2.sp)
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(p.textPrimary).padding(14.dp, 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text("SPOR VIA", color = p.surface.copy(alpha = .75f), fontSize = HomelabType.caption.fontSize, fontWeight = FontWeight.SemiBold, fontFamily = PaperFonts.mono, letterSpacing = 1.2.sp)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             CarChip26("Auto ($auto)", ov == null, dark = true) { if (ov != null) vm.trkSetOverride26(s, null) }
             TRK26_CARS.forEach { (k, n) -> CarChip26(n, ov == k, dark = true) { if (ov != k) vm.trkSetOverride26(s, k) } }

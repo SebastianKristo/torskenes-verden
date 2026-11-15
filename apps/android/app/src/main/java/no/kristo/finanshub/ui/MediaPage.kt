@@ -59,6 +59,8 @@ import no.kristo.finanshub.uiErr73
 import org.json.JSONArray
 import org.json.JSONObject
 import no.kristo.finanshub.ui.designsystem.HomelabType
+import no.kristo.finanshub.ui.designsystem.HomelabTheme
+import no.kristo.finanshub.ui.designsystem.DsPalette
 
 /*
  * Prompt 43 (claude-code-media-arr.md, fasit Media.dc.html 2a variant «mobile»): Media i fullskjerm fra Mer.
@@ -70,16 +72,16 @@ import no.kristo.finanshub.ui.designsystem.HomelabType
 
 internal val OK43 = Color(0xFF2F6B4A)
 internal val WARN43 = Color(0xFFA0671A)
-internal val RED43 = Color(0xFFB23A2A)
+internal val RED43 = DsPalette.PapirLys.accent
 private val MEDIA_TABS43 = listOf("snart" to "Kommer snart", "sonarr" to "Sonarr", "radarr" to "Radarr", "qbit" to "qBittorrent", "prowlarr" to "Prowlarr", "nrk" to "NRK", "musikk" to "Musikk", "spill" to "Avspilling") // prompt 44: Avspilling etter Prowlarr · prompt 87: NRK mellom Prowlarr og Avspilling · prompt 88: Musikk etter NRK
 
 @Composable
 // Prompt 45 (claude-code-media-mer-farger.md): Lastes ned blå, Venter gul, Ferdig grønn, Mangler rød, Uovervåket grå.
-internal fun stColor43(k: String): Color = when (k) { "ok" -> OK43; "dl" -> Color(0xFF3D7DD6); "warn" -> WARN43; "missing", "err" -> RED43; else -> PaperPal.current.mut }
+internal fun stColor43(k: String): Color = when (k) { "ok" -> OK43; "dl" -> Color(0xFF3D7DD6); "warn" -> WARN43; "missing", "err" -> RED43; else -> HomelabTheme.colors.textTertiary }
 
 @Composable
 internal fun MediaScreen43(vm: AppViewModel) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val s = vm.p43
     // Prompt 50: tilbake (knapp og sveip) lukker først Glimt-panelet, så utgivelser/detalj (closeMedia43), og forlater Media sist.
     BackHandler { if (s.glimtOpen) s.glimtOpen = false else vm.closeMedia43() }
@@ -88,7 +90,7 @@ internal fun MediaScreen43(vm: AppViewModel) {
     LaunchedEffect(s.tab, s.mediaOpen) { while (s.tab == "qbit" && s.mediaOpen) { delay(2000); vm.loadTorrents43() } }
     LaunchedEffect(s.toast) { if (s.toast != null) { delay(2600); s.toast = null } }
     val navB = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-    BoxWithConstraints(Modifier.fillMaxSize().background(p.bg)) {
+    BoxWithConstraints(Modifier.fillMaxSize().background(p.surface)) {
         val wide = maxWidth >= 600.dp
         Column(Modifier.fillMaxSize().statusBarsPadding()) {
             // Prompt 50 (claude-code-media-topp-som-nyheter.md): topplinje som i Nyheter – «‹ Tilbake», kicker + «Media» på samme rad,
@@ -139,15 +141,15 @@ internal fun MediaScreen43(vm: AppViewModel) {
                 // Detalj: fullskjerm på telefon, panel fra høyre (360) på stor skjerm.
                 s.detail?.let { d ->
                     if (wide) Box(Modifier.align(Alignment.CenterEnd).width(360.dp).fillMaxHeight().padding(end = 8.dp, bottom = 8.dp)
-                        .shadow(18.dp, RoundedCornerShape(22.dp)).clip(RoundedCornerShape(22.dp)).background(p.card)) { Detail43(vm, d, PaddingValues(16.dp, 14.dp, 16.dp, 24.dp + navB)) }
-                    else Box(Modifier.fillMaxSize().background(p.bg)) { Detail43(vm, d, pad) }
+                        .shadow(18.dp, RoundedCornerShape(22.dp)).clip(RoundedCornerShape(22.dp)).background(p.surfaceRaised)) { Detail43(vm, d, PaddingValues(16.dp, 14.dp, 16.dp, 24.dp + navB)) }
+                    else Box(Modifier.fillMaxSize().background(p.surface)) { Detail43(vm, d, pad) }
                 }
-                if (s.relFor != null) Box(Modifier.fillMaxSize().background(p.bg)) { Releases43(vm, pad, wide) }
+                if (s.relFor != null) Box(Modifier.fillMaxSize().background(p.surface)) { Releases43(vm, pad, wide) }
             }
         }
         s.toast?.let { t ->
-            Box(Modifier.align(Alignment.BottomCenter).padding(bottom = navB + 18.dp, start = 16.dp, end = 16.dp).clip(RoundedCornerShape(14.dp)).background(p.ink).padding(14.dp, 10.dp)) {
-                Text(t, color = p.bg, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.subheadline.fontSize, maxLines = 2)
+            Box(Modifier.align(Alignment.BottomCenter).padding(bottom = navB + 18.dp, start = 16.dp, end = 16.dp).clip(RoundedCornerShape(14.dp)).background(p.textPrimary).padding(14.dp, 10.dp)) {
+                Text(t, color = p.surface, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.subheadline.fontSize, maxLines = 2)
             }
         }
         Undo44(vm) // prompt 44: «Angre» etter Slett fil
@@ -165,34 +167,34 @@ internal fun MediaScreen43(vm: AppViewModel) {
 
 @Composable
 internal fun Pill43(text: String, on: Boolean, count: Int? = null, onClick: () -> Unit) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     Row(
         Modifier.heightIn(min = 44.dp).clickable(role = Role.Tab, onClickLabel = text) { Haptics.select(); onClick() }, verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(Modifier.height(36.dp).clip(CircleShape).background(if (on) p.ink else p.card).border(1.dp, if (on) p.ink else p.line, CircleShape).padding(horizontal = 14.dp),
+        Row(Modifier.height(36.dp).clip(CircleShape).background(if (on) p.textPrimary else p.surfaceRaised).border(1.dp, if (on) p.textPrimary else p.line, CircleShape).padding(horizontal = 14.dp),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text(text, color = if (on) p.bg else p.ink, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize, maxLines = 1)
-            if (count != null) Text("$count", color = (if (on) p.bg else p.ink).copy(alpha = .6f), fontWeight = FontWeight.Bold, fontSize = HomelabType.footnote.fontSize)
+            Text(text, color = if (on) p.surface else p.textPrimary, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize, maxLines = 1)
+            if (count != null) Text("$count", color = (if (on) p.surface else p.textPrimary).copy(alpha = .6f), fontWeight = FontWeight.Bold, fontSize = HomelabType.footnote.fontSize)
         }
     }
 }
 
 @Composable
 internal fun Btn43(text: String, dark: Boolean = false, color: Color? = null, modifier: Modifier = Modifier, enabled: Boolean = true, onClick: () -> Unit) {
-    val p = PaperPal.current
-    val bg = color ?: if (dark) p.ink else Color.Transparent
+    val p = HomelabTheme.colors
+    val bg = color ?: if (dark) p.textPrimary else Color.Transparent
     Box(modifier.heightIn(min = 44.dp).clip(CircleShape).background(bg).border(1.dp, if (color != null || dark) bg else p.line, CircleShape)
         .clickable(enabled = enabled, role = Role.Button) { onClick() }.padding(horizontal = 16.dp), contentAlignment = Alignment.Center) {
-        Text(text, color = if (color != null) Color.White else if (dark) p.bg else p.ink, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize, maxLines = 1)
+        Text(text, color = if (color != null) Color.White else if (dark) p.surface else p.textPrimary, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize, maxLines = 1)
     }
 }
 
 @Composable
 internal fun Note43(text: String, red: Boolean = false, onClose: (() -> Unit)? = null) {
-    val p = PaperPal.current
-    Row(Modifier.fillMaxWidth().padding(16.dp, 8.dp, 16.dp, 0.dp).clip(RoundedCornerShape(14.dp)).background(p.card).padding(12.dp, 10.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text(text, color = if (red) RED43 else p.mut, fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.weight(1f))
-        if (onClose != null) Text("✕", color = p.mut, modifier = Modifier.size(36.dp).clip(CircleShape).clickable(onClick = onClose).wrapContentSize())
+    val p = HomelabTheme.colors
+    Row(Modifier.fillMaxWidth().padding(16.dp, 8.dp, 16.dp, 0.dp).clip(RoundedCornerShape(14.dp)).background(p.surfaceRaised).padding(12.dp, 10.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(text, color = if (red) RED43 else p.textTertiary, fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.weight(1f))
+        if (onClose != null) Text("✕", color = p.textTertiary, modifier = Modifier.size(36.dp).clip(CircleShape).clickable(onClick = onClose).wrapContentSize())
     }
 }
 
@@ -204,11 +206,11 @@ internal fun Poster43(vm: AppViewModel, url: String?, color: Long?, title: Strin
 
 @Composable
 internal fun Field43(value: String, hint: String, password: Boolean = false, onDone: (() -> Unit)? = null, onChange: (String) -> Unit) {
-    val p = PaperPal.current
-    Box(Modifier.fillMaxWidth().heightIn(min = 50.dp).clip(RoundedCornerShape(14.dp)).background(p.card).border(1.dp, p.line, RoundedCornerShape(14.dp)).padding(horizontal = 14.dp),
+    val p = HomelabTheme.colors
+    Box(Modifier.fillMaxWidth().heightIn(min = 50.dp).clip(RoundedCornerShape(14.dp)).background(p.surfaceRaised).border(1.dp, p.line, RoundedCornerShape(14.dp)).padding(horizontal = 14.dp),
         contentAlignment = Alignment.CenterStart) {
-        if (value.isEmpty()) Text(hint, color = p.mut, fontSize = HomelabType.callout.fontSize, maxLines = 1)
-        BasicTextField(value, onChange, singleLine = true, textStyle = TextStyle(color = p.ink, fontSize = HomelabType.callout.fontSize, fontFamily = PaperFonts.sans), cursorBrush = SolidColor(p.lab),
+        if (value.isEmpty()) Text(hint, color = p.textTertiary, fontSize = HomelabType.callout.fontSize, maxLines = 1)
+        BasicTextField(value, onChange, singleLine = true, textStyle = TextStyle(color = p.textPrimary, fontSize = HomelabType.callout.fontSize, fontFamily = PaperFonts.sans), cursorBrush = SolidColor(p.accent),
             visualTransformation = if (password) PasswordVisualTransformation() else androidx.compose.ui.text.input.VisualTransformation.None,
             keyboardOptions = KeyboardOptions(imeAction = if (onDone != null) ImeAction.Search else ImeAction.Done),
             keyboardActions = KeyboardActions(onSearch = { onDone?.invoke() }, onDone = { onDone?.invoke() }), modifier = Modifier.fillMaxWidth())
@@ -218,8 +220,8 @@ internal fun Field43(value: String, hint: String, password: Boolean = false, onD
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun Sheet43(onClose: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
-    val p = PaperPal.current
-    ModalBottomSheet(onDismissRequest = onClose, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true), containerColor = p.bg, contentColor = p.ink,
+    val p = HomelabTheme.colors
+    ModalBottomSheet(onDismissRequest = onClose, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true), containerColor = p.surface, contentColor = p.textPrimary,
         dragHandle = { BottomSheetDefaults.DragHandle(width = 36.dp, height = 5.dp, color = p.line) }) {
         // Stor skjerm: arket er et sentrert vindu på maks 560 (claude-code-stor-skjerm-alle-sider.md).
         Column(Modifier.fillMaxWidth().wrapContentWidth().widthIn(max = 560.dp).fillMaxWidth().heightIn(max = 720.dp).verticalScroll(rememberScrollState())
@@ -229,13 +231,13 @@ internal fun Sheet43(onClose: () -> Unit, content: @Composable ColumnScope.() ->
 
 @Composable
 internal fun Toggle43(title: String, sub: String?, on: Boolean, onChange: (Boolean) -> Unit) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).clickable { onChange(!on) }, verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
-            Text(title, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize)
-            if (sub != null) Text(sub, color = p.mut, fontSize = HomelabType.footnote.fontSize)
+            Text(title, color = p.textPrimary, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize)
+            if (sub != null) Text(sub, color = p.textTertiary, fontSize = HomelabType.footnote.fontSize)
         }
-        Switch(on, onChange, colors = SwitchDefaults.colors(checkedThumbColor = p.bg, checkedTrackColor = p.ink, uncheckedThumbColor = p.mut, uncheckedTrackColor = p.line, uncheckedBorderColor = p.line))
+        Switch(on, onChange, colors = SwitchDefaults.colors(checkedThumbColor = p.surface, checkedTrackColor = p.textPrimary, uncheckedThumbColor = p.textTertiary, uncheckedTrackColor = p.line, uncheckedBorderColor = p.line))
     }
 }
 
@@ -250,18 +252,18 @@ private fun Choice43(options: List<Pair<String, String>>, cur: String?, onPick: 
 
 @Composable
 private fun Upcoming43(vm: AppViewModel, pad: PaddingValues) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val s = vm.p43
     val list = s.upcoming
     val today = java.time.LocalDate.now().toString()
     val nb = java.util.Locale("nb", "NO")
     LazyColumn(Modifier.fillMaxSize(), contentPadding = pad, verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        if (list == null && !s.missing) item { Box(Modifier.fillMaxWidth().padding(30.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = p.ink) } }
-        else if (list.isNullOrEmpty()) item { Text("Ingenting kommer de neste 7 dagene.", color = p.mut, fontSize = HomelabType.subheadline.fontSize) }
+        if (list == null && !s.missing) item { Box(Modifier.fillMaxWidth().padding(30.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = p.textPrimary) } }
+        else if (list.isNullOrEmpty()) item { Text("Ingenting kommer de neste 7 dagene.", color = p.textTertiary, fontSize = HomelabType.subheadline.fontSize) }
         // Mørk stripe «Lastes ned ›» med de aktive og Pause alt (som på web).
         val active = list.orEmpty().filter { status43(it.status).second == "dl" }
         if (active.isNotEmpty()) item {
-            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Color(0xFF1B1A17)).clickable { s.tab = "qbit" }.padding(14.dp, 10.dp),
+            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(DsPalette.PapirLys.textPrimary).clickable { s.tab = "qbit" }.padding(14.dp, 10.dp),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text("Lastes ned · ${active.size} ›", color = Color.White, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.weight(1f))
                 Text("Pause alt", color = Color.White, fontWeight = FontWeight.Bold, fontSize = HomelabType.footnote.fontSize,
@@ -277,12 +279,12 @@ private fun Upcoming43(vm: AppViewModel, pad: PaddingValues) {
                     d != null -> d.dayOfWeek.getDisplayName(java.time.format.TextStyle.FULL, nb).replaceFirstChar { it.uppercase() } + " ${d.dayOfMonth}."
                     else -> day
                 }
-                PLabel(label, color = if (day == today) p.lab else p.mut, modifier = Modifier.padding(top = 6.dp))
+                PLabel(label, color = if (day == today) p.accent else p.textTertiary, modifier = Modifier.padding(top = 6.dp))
             }
             items.forEach { u ->
                 item(key = "u-" + u.key) {
                     val (st, c) = status43(u.status, u.progress)
-                    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(p.card).clickable {
+                    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(p.surfaceRaised).clickable {
                         val lib = if (u.kind == "tv") s.series else s.movies
                         val hit = lib?.firstOrNull { it.id == u.refId } ?: u.refId?.let { id -> MItem43(id, u.kind, u.title, null, null, null, false, true, null, null, 0, 0, 0, u.poster, u.color, true, null, null, null, false, null, null, null, null, null, posterImg = u.posterImg) }
                         if (hit != null) { s.tab = if (u.kind == "tv") "sonarr" else "radarr"; vm.openItem43(hit) }
@@ -290,13 +292,13 @@ private fun Upcoming43(vm: AppViewModel, pad: PaddingValues) {
                         Poster43(vm, u.poster, u.color, u.title, 52.dp, 78.dp, img = u.posterImg)
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                             PSerif(u.title, 17.sp, maxLines = 1)
-                            Text(listOfNotNull(u.code, u.epTitle).joinToString(" · ").ifBlank { "Film" }, color = p.ink, fontSize = HomelabType.subheadline.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(listOfNotNull(u.code, u.epTitle).joinToString(" · ").ifBlank { "Film" }, color = p.textPrimary, fontSize = HomelabType.subheadline.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 Box(Modifier.size(7.dp).clip(CircleShape).background(stColor43(c)))
                                 Text(st, color = stColor43(c), fontWeight = FontWeight.SemiBold, fontSize = HomelabType.footnote.fontSize)
                             }
                         }
-                        u.time?.let { Text(it, color = p.mut, fontFamily = PaperFonts.mono, fontSize = HomelabType.footnote.fontSize) }
+                        u.time?.let { Text(it, color = p.textTertiary, fontFamily = PaperFonts.mono, fontSize = HomelabType.footnote.fontSize) }
                     }
                 }
             }
@@ -308,7 +310,7 @@ private fun Upcoming43(vm: AppViewModel, pad: PaddingValues) {
 
 @Composable
 private fun Library43(vm: AppViewModel, kind: String, pad: PaddingValues, wide: Boolean) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val s = vm.p43
     val all = if (kind == "tv") s.series else s.movies
     val filters = if (kind == "tv") listOf("alle" to "Alle", "mangler" to "Mangler", "fortsetter" to "Fortsetter", "avsluttet" to "Avsluttet")
@@ -338,7 +340,7 @@ private fun Library43(vm: AppViewModel, kind: String, pad: PaddingValues, wide: 
                 }
             }
         }
-        if (all == null && !s.missing) item(span = { GridItemSpan(maxLineSpan) }) { Box(Modifier.fillMaxWidth().padding(30.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = p.ink) } }
+        if (all == null && !s.missing) item(span = { GridItemSpan(maxLineSpan) }) { Box(Modifier.fillMaxWidth().padding(30.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = p.textPrimary) } }
         if (all != null && list.isEmpty() && q44.isNotBlank()) item(span = { GridItemSpan(maxLineSpan) }) { LibNoHit44(vm, kind) }
         list.forEach { it ->
             item(key = "${kind}-${it.id}") {
@@ -352,8 +354,8 @@ private fun Library43(vm: AppViewModel, kind: String, pad: PaddingValues, wide: 
                             Text("✓", color = Color.White, fontSize = HomelabType.caption.fontSize, fontWeight = FontWeight.Bold)
                         }
                     }
-                    Text(it.title, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.footnote.fontSize, maxLines = 2, overflow = TextOverflow.Ellipsis, lineHeight = 15.sp)
-                    Text(listOfNotNull(it.year?.toString(), if (kind == "tv") "${it.have}/${it.total}" else it.profile).joinToString(" · "), color = p.mut, fontSize = HomelabType.caption.fontSize, maxLines = 1)
+                    Text(it.title, color = p.textPrimary, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.footnote.fontSize, maxLines = 2, overflow = TextOverflow.Ellipsis, lineHeight = 15.sp)
+                    Text(listOfNotNull(it.year?.toString(), if (kind == "tv") "${it.have}/${it.total}" else it.profile).joinToString(" · "), color = p.textTertiary, fontSize = HomelabType.caption.fontSize, maxLines = 1)
                 }
             }
         }
@@ -362,7 +364,7 @@ private fun Library43(vm: AppViewModel, kind: String, pad: PaddingValues, wide: 
 
 @Composable
 private fun Detail43(vm: AppViewModel, d: MItem43, pad: PaddingValues) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val s = vm.p43
     val ctx = LocalContext.current
     val app = if (d.kind == "tv") "sonarr" else "radarr"
@@ -406,8 +408,8 @@ private fun Detail43(vm: AppViewModel, d: MItem43, pad: PaddingValues) {
             Track50Line(vm, t, if (d.kind == "tv") null else ({ vm.openRelease43(d.title, listOfNotNull(d.year?.toString(), d.profile?.let { "Profil $it" }).joinToString(" · "), "movieId=${d.id}") }))
         } }
         if (delAsk) item {
-            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(p.card).padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Slette ${d.title} fra ${if (d.kind == "tv") "Sonarr" else "Radarr"}?", color = p.ink, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize)
+            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(p.surfaceRaised).padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Slette ${d.title} fra ${if (d.kind == "tv") "Sonarr" else "Radarr"}?", color = p.textPrimary, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Btn43("Behold filene") { vm.deleteItem43(d, false) }
                     Btn43("Slett med filene", color = RED43) { vm.deleteItem43(d, true) }
@@ -417,9 +419,9 @@ private fun Detail43(vm: AppViewModel, d: MItem43, pad: PaddingValues) {
         }
         if (d.kind == "film" && d.hasFile) item { MovieFileBtns44(vm, d) } // prompt 44: last ned på nytt / slett fil
         if (d.kind == "film") d.fileLine?.takeIf { it.isNotBlank() }?.let { f -> item {
-            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(p.card).padding(14.dp)) { PLabel("Fil"); Text(f, color = p.ink, fontSize = HomelabType.subheadline.fontSize, fontFamily = PaperFonts.mono) }
+            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(p.surfaceRaised).padding(14.dp)) { PLabel("Fil"); Text(f, color = p.textPrimary, fontSize = HomelabType.subheadline.fontSize, fontFamily = PaperFonts.mono) }
         } }
-        d.overview?.let { o -> item { Text(o, color = p.mut, fontSize = HomelabType.subheadline.fontSize, lineHeight = 18.sp, maxLines = 5, overflow = TextOverflow.Ellipsis) } }
+        d.overview?.let { o -> item { Text(o, color = p.textTertiary, fontSize = HomelabType.subheadline.fontSize, lineHeight = 18.sp, maxLines = 5, overflow = TextOverflow.Ellipsis) } }
         if (d.kind == "tv") seasons43(vm, d)
     }
 }
@@ -427,38 +429,38 @@ private fun Detail43(vm: AppViewModel, d: MItem43, pad: PaddingValues) {
 private fun LazyListScope.seasons43(vm: AppViewModel, d: MItem43) {
     val s = vm.p43
     val ss = s.seasons
-    if (ss == null) { item { Box(Modifier.fillMaxWidth().padding(20.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = PaperPal.current.ink) } }; return }
+    if (ss == null) { item { Box(Modifier.fillMaxWidth().padding(20.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = HomelabTheme.colors.textPrimary) } }; return }
     ss.forEach { se ->
         item(key = "se-${se.n}") {
-            val p = PaperPal.current
+            val p = HomelabTheme.colors
             val miss = se.eps.count { !it.hasFile && it.status == "missing" }
-            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(p.card).clickable { s.openSeason = if (s.openSeason == se.n) null else se.n }.padding(start = 4.dp, end = 10.dp),
+            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(p.surfaceRaised).clickable { s.openSeason = if (s.openSeason == se.n) null else se.n }.padding(start = 4.dp, end = 10.dp),
                 verticalAlignment = Alignment.CenterVertically) {
-                Text(if (se.monitored) "▮" else "▯", color = if (se.monitored) p.ink else p.mut, fontSize = HomelabType.headline.fontSize,
+                Text(if (se.monitored) "▮" else "▯", color = if (se.monitored) p.textPrimary else p.textTertiary, fontSize = HomelabType.headline.fontSize,
                     modifier = Modifier.size(44.dp).clip(CircleShape).clickable(onClickLabel = if (se.monitored) "Slutt å overvåke sesongen" else "Overvåk sesongen") { vm.monitorSeason43(se.n, !se.monitored) }.wrapContentSize())
                 Column(Modifier.weight(1f).padding(vertical = 10.dp)) {
                     PSerif(if (se.n == 0) "Spesialepisoder" else "Sesong ${se.n}", 17.sp, maxLines = 1)
-                    Text("${se.eps.count { it.hasFile }} av ${se.eps.size}" + if (miss > 0) " · $miss mangler" else "", color = if (miss > 0) WARN43 else p.mut, fontSize = HomelabType.footnote.fontSize)
+                    Text("${se.eps.count { it.hasFile }} av ${se.eps.size}" + if (miss > 0) " · $miss mangler" else "", color = if (miss > 0) WARN43 else p.textTertiary, fontSize = HomelabType.footnote.fontSize)
                 }
-                if (miss > 0) Text("Søk sesong", color = p.lab, fontWeight = FontWeight.Bold, fontSize = HomelabType.footnote.fontSize,
+                if (miss > 0) Text("Søk sesong", color = p.accent, fontWeight = FontWeight.Bold, fontSize = HomelabType.footnote.fontSize,
                     modifier = Modifier.heightIn(min = 44.dp).clip(CircleShape).clickable { vm.command43("sonarr", "SeasonSearch", JSONObject().put("seriesId", d.id).put("seasonNumber", se.n), "Søker i sesong ${se.n} …") }.padding(horizontal = 8.dp).wrapContentHeight())
-                Text(if (s.openSeason == se.n) "▴" else "▾", color = p.mut, fontSize = HomelabType.callout.fontSize, modifier = Modifier.padding(start = 6.dp))
+                Text(if (s.openSeason == se.n) "▴" else "▾", color = p.textTertiary, fontSize = HomelabType.callout.fontSize, modifier = Modifier.padding(start = 6.dp))
             }
         }
         if (s.openSeason == se.n) se.eps.forEach { e ->
             item(key = "ep-${e.id}-${se.n}-${e.n}") {
-                val p = PaperPal.current
+                val p = HomelabTheme.colors
                 val (st, c) = status43(if (!e.monitored && !e.hasFile) "unmonitored" else e.status)
                 val needs = !e.hasFile && (e.status == "missing" || e.status == "stalled")
                 Column(Modifier.fillMaxWidth().padding(horizontal = 4.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(if (e.monitored) "▮" else "▯", color = if (e.monitored) p.ink else p.mut, fontSize = HomelabType.callout.fontSize,
+                        Text(if (e.monitored) "▮" else "▯", color = if (e.monitored) p.textPrimary else p.textTertiary, fontSize = HomelabType.callout.fontSize,
                             modifier = Modifier.size(44.dp).clip(CircleShape).clickable(onClickLabel = "Overvåk episoden") { vm.monitorEp43(e, !e.monitored) }.wrapContentSize())
-                        Text("E%02d".format(e.n), color = p.mut, fontFamily = PaperFonts.mono, fontSize = HomelabType.footnote.fontSize, modifier = Modifier.width(40.dp))
+                        Text("E%02d".format(e.n), color = p.textTertiary, fontFamily = PaperFonts.mono, fontSize = HomelabType.footnote.fontSize, modifier = Modifier.width(40.dp))
                         Column(Modifier.weight(1f)) {
-                            Text(e.title.ifBlank { "Episode ${e.n}" }, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(e.title.ifBlank { "Episode ${e.n}" }, color = p.textPrimary, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             // På mobil står statusen i undertittelen når knappene vises.
-                            Text(listOfNotNull(e.air, if (needs) st else null).joinToString(" · "), color = if (needs) stColor43(c) else p.mut, fontSize = HomelabType.footnote.fontSize, maxLines = 1)
+                            Text(listOfNotNull(e.air, if (needs) st else null).joinToString(" · "), color = if (needs) stColor43(c) else p.textTertiary, fontSize = HomelabType.footnote.fontSize, maxLines = 1)
                         }
                         if (!needs) Text(st, color = stColor43(c), fontWeight = FontWeight.SemiBold, fontSize = HomelabType.caption.fontSize, maxLines = 1,
                             modifier = Modifier.clip(CircleShape).background(stColor43(c).copy(alpha = .12f)).padding(horizontal = 8.dp, vertical = 3.dp))
@@ -486,7 +488,7 @@ private val AVAIL43 = listOf("announced" to "Annonsert", "inCinemas" to "På kin
 
 @Composable
 private fun OptSheet43(vm: AppViewModel, o: String) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val s = vm.p43
     val d = s.detail
     val close = { s.optSheet = null }
@@ -494,18 +496,18 @@ private fun OptSheet43(vm: AppViewModel, o: String) {
         when (o) {
             "settings" -> {
                 PSerif("Media", 24.sp)
-                Text("Tjenestenøklene ligger bare på serveren. Appen snakker med Homelab, som er proxy til tjenestene.", color = p.mut, fontSize = HomelabType.subheadline.fontSize)
-                if (s.services.isEmpty()) Text(if (s.missing) "Media er ikke på serveren ennå." else "Henter status …", color = p.mut, fontSize = HomelabType.subheadline.fontSize)
+                Text("Tjenestenøklene ligger bare på serveren. Appen snakker med Homelab, som er proxy til tjenestene.", color = p.textTertiary, fontSize = HomelabType.subheadline.fontSize)
+                if (s.services.isEmpty()) Text(if (s.missing) "Media er ikke på serveren ennå." else "Henter status …", color = p.textTertiary, fontSize = HomelabType.subheadline.fontSize)
                 s.services.forEach { x ->
-                    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(p.card).padding(14.dp, 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(p.surfaceRaised).padding(14.dp, 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         // Prompt 44: samme status som Innstillinger → Integrasjoner (én kilde); «Ikke satt opp» bare når begge sier det.
                         val integ = vm.integOk44(x.key)
                         val conf = x.configured || integ == true
                         Box(Modifier.size(9.dp).clip(CircleShape).background(if (!conf) p.line else if (x.ok || (!x.configured && integ == true)) OK43 else RED43))
                         Column(Modifier.weight(1f)) {
-                            Text(x.name, color = p.ink, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize)
+                            Text(x.name, color = p.textPrimary, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize)
                             Text(if (!conf) "Ikke satt opp · Integrasjoner → MEDIA" else if (!x.configured) "Koblet til (Integrasjoner)" else listOfNotNull(x.version?.let { "v$it" }, x.ms?.let { "$it ms" }, x.error?.let { "Svarer ikke: $it" }).joinToString(" · "),
-                                color = if (x.error != null) RED43 else p.mut, fontSize = HomelabType.footnote.fontSize)
+                                color = if (x.error != null) RED43 else p.textTertiary, fontSize = HomelabType.footnote.fontSize)
                         }
                     }
                 }
@@ -517,7 +519,7 @@ private fun OptSheet43(vm: AppViewModel, o: String) {
                 s.profiles[app].orEmpty().forEach { pr ->
                     Btn43(pr.name, dark = pr.id == d?.profileId, modifier = Modifier.fillMaxWidth()) { vm.saveItem43(JSONObject().put("qualityProfileId", pr.id)); close() }
                 }
-                if (s.profiles[app].isNullOrEmpty()) Text("Ingen profiler fra ${if (app == "sonarr") "Sonarr" else "Radarr"} ennå.", color = p.mut, fontSize = HomelabType.subheadline.fontSize)
+                if (s.profiles[app].isNullOrEmpty()) Text("Ingen profiler fra ${if (app == "sonarr") "Sonarr" else "Radarr"} ennå.", color = p.textTertiary, fontSize = HomelabType.subheadline.fontSize)
             }
             "monitor" -> {
                 PSerif("Overvåking", 22.sp)
@@ -539,7 +541,7 @@ private fun OptSheet43(vm: AppViewModel, o: String) {
 
 @Composable
 private fun AddSheet43(vm: AppViewModel) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val s = vm.p43
     val kind = s.add ?: return
     val app = if (kind == "tv") "sonarr" else "radarr"
@@ -550,19 +552,19 @@ private fun AddSheet43(vm: AppViewModel) {
             PSerif(if (kind == "tv") "Legg til serie" else "Legg til film", 24.sp)
             Field43(s.addQ, if (kind == "tv") "Søk etter serie …" else "Søk etter film …", onDone = { vm.lookup43(kind, s.addQ) }) { s.addQ = it }
             Btn43("Søk", dark = true, modifier = Modifier.fillMaxWidth()) { vm.lookup43(kind, s.addQ) }
-            if (s.addBusy) CircularProgressIndicator(color = p.ink, modifier = Modifier.align(Alignment.CenterHorizontally))
+            if (s.addBusy) CircularProgressIndicator(color = p.textPrimary, modifier = Modifier.align(Alignment.CenterHorizontally))
             s.addRes?.let { res ->
-                if (res.isEmpty()) Text("Fant ingenting.", color = p.mut, fontSize = HomelabType.subheadline.fontSize)
+                if (res.isEmpty()) Text("Fant ingenting.", color = p.textTertiary, fontSize = HomelabType.subheadline.fontSize)
                 res.forEach { r ->
-                    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(p.card).clickable {
+                    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(p.surfaceRaised).clickable {
                         if (r.exists) { close(); vm.openItem43(r) } else s.addPick = r
                     }.padding(10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         Poster43(vm, r.poster, r.color, r.title, 46.dp, 69.dp, img = r.posterImg)
                         Column(Modifier.weight(1f)) {
                             PSerif(r.title, 17.sp, maxLines = 2)
-                            Text(listOfNotNull(r.year?.toString(), r.network).joinToString(" · "), color = p.mut, fontSize = HomelabType.footnote.fontSize)
+                            Text(listOfNotNull(r.year?.toString(), r.network).joinToString(" · "), color = p.textTertiary, fontSize = HomelabType.footnote.fontSize)
                         }
-                        Text(if (r.exists) "Finnes ›" else "Velg ›", color = if (r.exists) p.mut else p.lab, fontWeight = FontWeight.Bold, fontSize = HomelabType.footnote.fontSize)
+                        Text(if (r.exists) "Finnes ›" else "Velg ›", color = if (r.exists) p.textTertiary else p.accent, fontWeight = FontWeight.Bold, fontSize = HomelabType.footnote.fontSize)
                     }
                 }
             }
@@ -575,17 +577,17 @@ private fun AddSheet43(vm: AppViewModel) {
             var avail by remember(pick) { mutableStateOf("released") }
             var root by remember(pick) { mutableStateOf(roots.firstOrNull()?.path) }
             var search by remember(pick) { mutableStateOf(true) }
-            Text("‹ Tilbake til søket", color = p.ink, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.heightIn(min = 44.dp).clickable { s.addPick = null }.wrapContentHeight())
+            Text("‹ Tilbake til søket", color = p.textPrimary, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.heightIn(min = 44.dp).clickable { s.addPick = null }.wrapContentHeight())
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Poster43(vm, pick.poster, pick.color, pick.title, 64.dp, 96.dp, img = pick.posterImg)
                 Column(Modifier.weight(1f)) {
                     PSerif(pick.title, 22.sp, maxLines = 2)
-                    Text(listOfNotNull(pick.year?.toString(), pick.network).joinToString(" · "), color = p.mut, fontSize = HomelabType.footnote.fontSize)
-                    pick.overview?.let { Text(it, color = p.mut, fontSize = HomelabType.footnote.fontSize, maxLines = 3, overflow = TextOverflow.Ellipsis) }
+                    Text(listOfNotNull(pick.year?.toString(), pick.network).joinToString(" · "), color = p.textTertiary, fontSize = HomelabType.footnote.fontSize)
+                    pick.overview?.let { Text(it, color = p.textTertiary, fontSize = HomelabType.footnote.fontSize, maxLines = 3, overflow = TextOverflow.Ellipsis) }
                 }
             }
             PLabel("Kvalitetsprofil")
-            if (profiles.isEmpty()) Text("Henter profiler …", color = p.mut, fontSize = HomelabType.footnote.fontSize)
+            if (profiles.isEmpty()) Text("Henter profiler …", color = p.textTertiary, fontSize = HomelabType.footnote.fontSize)
             Choice43(profiles.map { it.id.toString() to it.name }, prof?.toString()) { prof = it.toIntOrNull() }
             if (kind == "tv") {
                 PLabel("Overvåking"); Choice43(MONITOR43, mon) { mon = it }
@@ -605,7 +607,7 @@ private fun AddSheet43(vm: AppViewModel) {
 
 @Composable
 private fun Releases43(vm: AppViewModel, pad: PaddingValues, wide: Boolean) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val s = vm.p43
     val (title, sub, q) = s.relFor ?: return
     val app = if (q.startsWith("movieId")) "radarr" else "sonarr"
@@ -623,43 +625,43 @@ private fun Releases43(vm: AppViewModel, pad: PaddingValues, wide: Boolean) {
             BackCircle45("Tilbake") { s.relFor = null; s.rel = null } // prompt 45
             PLabel("Interaktivt søk")
             PSerif(title, 22.sp, maxLines = 2)
-            Text(sub, color = p.mut, fontSize = HomelabType.subheadline.fontSize, maxLines = 2)
+            Text(sub, color = p.textTertiary, fontSize = HomelabType.subheadline.fontSize, maxLines = 2)
             Spacer(Modifier.height(6.dp))
             s.rel?.let { r -> Text("${r.items.size} treff" + (r.indexers?.let { " fra $it indeksere" } ?: "") + (r.ms?.let { " · " + String.format(java.util.Locale("nb", "NO"), "%.1f s", it / 1000.0) } ?: ""),
-                color = p.mut, fontFamily = PaperFonts.mono, fontSize = HomelabType.caption.fontSize) }
+                color = p.textTertiary, fontFamily = PaperFonts.mono, fontSize = HomelabType.caption.fontSize) }
             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 listOf("alle" to "Alle", "1080" to "1080p", "2160" to "2160p", "norsk" to "Norsk tekst", "seed" to "Flest seedere").forEach { (k, n) -> Pill43(n, s.relFilter == k) { s.relFilter = k } }
             }
             RelStatus44(vm) // prompt 44: status per indekser, Avbryt, cache
-            Box(Modifier.fillMaxWidth().height(2.dp).background(p.ink))
+            Box(Modifier.fillMaxWidth().height(2.dp).background(p.textPrimary))
         }
-        if (s.relBusy && list.isEmpty()) item { Box(Modifier.fillMaxWidth().padding(30.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = p.ink) } }
-        else if (list.isEmpty() && !vm.p44.relFailAll) item { Text("Ingen utgivelser funnet.", color = p.mut, fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.padding(top = 12.dp)) }
+        if (s.relBusy && list.isEmpty()) item { Box(Modifier.fillMaxWidth().padding(30.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = p.textPrimary) } }
+        else if (list.isEmpty() && !vm.p44.relFailAll) item { Text("Ingen utgivelser funnet.", color = p.textTertiary, fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.padding(top = 12.dp)) }
         // Prompt 85: to treff med samme guid fra samme indekser (eller uten guid) ga like nøkler, og LazyColumn krasjer på det.
         relKeys85(list.map { it.guid + it.indexer }).forEachIndexed { i85, k85 ->
             val r = list[i85]
             item(key = k85) {
                 // Seedere: grønn ≥ 50 % av høyeste i søket, rød < 10 % (og alltid ved 0).
-                val seedC = when { r.seeders == 0 -> RED43; max > 0 && r.seeders >= max * .5 -> OK43; max > 0 && r.seeders < max * .1 -> RED43; else -> p.ink }
+                val seedC = when { r.seeders == 0 -> RED43; max > 0 && r.seeders >= max * .5 -> OK43; max > 0 && r.seeders < max * .1 -> RED43; else -> p.textPrimary }
                 val got = r.guid in s.grabbed
                 val shortTitle = r.title.removePrefix(title.replace(Regex("[^A-Za-z0-9]+"), ".")).trimStart('.').ifBlank { r.title }
                 Column(Modifier.fillMaxWidth()) {
                     Row(Modifier.fillMaxWidth().padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                             if (r.best) Text("Best treff for profilen", color = OK43, fontWeight = FontWeight.Bold, fontSize = HomelabType.caption.fontSize)
-                            Text(shortTitle, color = p.ink, fontFamily = PaperFonts.mono, fontSize = HomelabType.footnote.fontSize, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                            Text(shortTitle, color = p.textPrimary, fontFamily = PaperFonts.mono, fontSize = HomelabType.footnote.fontSize, maxLines = 2, overflow = TextOverflow.Ellipsis)
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Text(r.quality, color = p.bg, fontWeight = FontWeight.Bold, fontSize = HomelabType.caption.fontSize, modifier = Modifier.clip(RoundedCornerShape(5.dp)).background(p.ink).padding(horizontal = 6.dp, vertical = 2.dp))
-                                Text(size43(r.size), color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.footnote.fontSize)
+                                Text(r.quality, color = p.surface, fontWeight = FontWeight.Bold, fontSize = HomelabType.caption.fontSize, modifier = Modifier.clip(RoundedCornerShape(5.dp)).background(p.textPrimary).padding(horizontal = 6.dp, vertical = 2.dp))
+                                Text(size43(r.size), color = p.textPrimary, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.footnote.fontSize)
                                 Text("▲ ${r.seeders}/${r.peers}", color = seedC, fontWeight = FontWeight.Bold, fontSize = HomelabType.footnote.fontSize)
-                                Text(r.indexer, color = p.mut, fontSize = HomelabType.footnote.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+                                Text(r.indexer, color = p.textTertiary, fontSize = HomelabType.footnote.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
                             }
                             val lang = listOfNotNull(r.langs.ifBlank { null }, r.subs.ifBlank { null }?.let { "Tekst: $it" }, r.age).joinToString(" · ")
-                            if (lang.isNotBlank()) Text(lang, color = p.mut, fontSize = HomelabType.caption.fontSize, maxLines = 1)
+                            if (lang.isNotBlank()) Text(lang, color = p.textTertiary, fontSize = HomelabType.caption.fontSize, maxLines = 1)
                             if (r.rejected.isNotEmpty()) Text(r.rejected.joinToString(" · "), color = RED43, fontSize = HomelabType.caption.fontSize, maxLines = 2)
                         }
-                        Box(Modifier.size(44.dp).clip(CircleShape).background(if (got) OK43 else p.ink).clickable(enabled = !got, onClickLabel = "Last ned") { vm.grab43(r, app) },
-                            contentAlignment = Alignment.Center) { Text(if (got) "✓" else "↓", color = if (got) Color.White else p.bg, fontWeight = FontWeight.Bold, fontSize = HomelabType.body.fontSize) }
+                        Box(Modifier.size(44.dp).clip(CircleShape).background(if (got) OK43 else p.textPrimary).clickable(enabled = !got, onClickLabel = "Last ned") { vm.grab43(r, app) },
+                            contentAlignment = Alignment.Center) { Text(if (got) "✓" else "↓", color = if (got) Color.White else p.surface, fontWeight = FontWeight.Bold, fontSize = HomelabType.body.fontSize) }
                     }
                     Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
                 }
@@ -672,7 +674,7 @@ private fun Releases43(vm: AppViewModel, pad: PaddingValues, wide: Boolean) {
 
 @Composable
 private fun Torrents43(vm: AppViewModel, pad: PaddingValues) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val s = vm.p43
     val all = s.torrents
     fun kind(t: MTor43) = when (t.state) { // status-koder fra SERVER43 (P43.kt normaliserer rå qBittorrent-state)
@@ -688,13 +690,13 @@ private fun Torrents43(vm: AppViewModel, pad: PaddingValues) {
     LazyColumn(Modifier.fillMaxSize(), contentPadding = pad, verticalArrangement = Arrangement.spacedBy(10.dp)) {
         item {
             // Mørkt sammendragskort (fra 1b).
-            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(Color(0xFF1B1A17)).padding(18.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(DsPalette.PapirLys.textPrimary).padding(18.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text("QBITTORRENT", color = Color(0xFFE8A593), fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.caption.fontSize, letterSpacing = 1.3.sp)
                 PSerif("↓ " + speed43(tr?.dl ?: all.orEmpty().sumOf { it.dl }), 32.sp, Color.White, maxLines = 1)
                 Text("${all.orEmpty().count { kind(it) == "aktiv" }} aktive · ↑ ${speed43(tr?.ul ?: 0)}" + (tr?.queued?.let { " · $it i køen" } ?: ""), color = Color.White.copy(alpha = .75f), fontSize = HomelabType.footnote.fontSize)
                 Row(Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Box(Modifier.heightIn(min = 44.dp).clip(CircleShape).background(Color.White).clickable { vm.torAll43(!allPaused) }.padding(horizontal = 16.dp), contentAlignment = Alignment.Center) {
-                        Text(if (allPaused) "Fortsett alt" else "Pause alt", color = Color(0xFF1B1A17), fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize)
+                        Text(if (allPaused) "Fortsett alt" else "Pause alt", color = DsPalette.PapirLys.textPrimary, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize)
                     }
                     val alt = tr?.alt == true
                     Box(Modifier.heightIn(min = 44.dp).clip(CircleShape).background(if (alt) RED43 else Color.White.copy(alpha = .14f)).clickable { vm.altSpeed43() }.padding(horizontal = 16.dp), contentAlignment = Alignment.Center) {
@@ -711,19 +713,19 @@ private fun Torrents43(vm: AppViewModel, pad: PaddingValues) {
                 }
             }
         }
-        if (all == null && !s.missing) item { Box(Modifier.fillMaxWidth().padding(30.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = p.ink) } }
-        else if (list.isEmpty()) item { Text("Ingen nedlastinger her.", color = p.mut, fontSize = HomelabType.subheadline.fontSize) }
+        if (all == null && !s.missing) item { Box(Modifier.fillMaxWidth().padding(30.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = p.textPrimary) } }
+        else if (list.isEmpty()) item { Text("Ingen nedlastinger her.", color = p.textTertiary, fontSize = HomelabType.subheadline.fontSize) }
         list.forEach { t ->
             item(key = "t-" + t.hash) {
                 val k = kind(t)
                 val pct = (t.progress * 100).toInt()
-                val c = when (k) { "ferdig" -> OK43; "fast" -> WARN43; "pauset" -> p.mut; else -> RED43 }
-                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(p.card).padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                val c = when (k) { "ferdig" -> OK43; "fast" -> WARN43; "pauset" -> p.textTertiary; else -> RED43 }
+                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(p.surfaceRaised).padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
                         Poster43(vm, t.poster, t.color, t.name, 40.dp, 60.dp, img = t.posterImg)
                         Column(Modifier.weight(1f)) {
-                            Text(t.name, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.subheadline.fontSize, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                            Text(listOfNotNull(t.sub, t.size?.let { size43(it) } ?: "størrelse ukjent").joinToString(" · "), color = p.mut, fontSize = HomelabType.footnote.fontSize, maxLines = 1)
+                            Text(t.name, color = p.textPrimary, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.subheadline.fontSize, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                            Text(listOfNotNull(t.sub, t.size?.let { size43(it) } ?: "størrelse ukjent").joinToString(" · "), color = p.textTertiary, fontSize = HomelabType.footnote.fontSize, maxLines = 1)
                         }
                         PSerif("$pct %", 24.sp, c, maxLines = 1)
                     }
@@ -747,13 +749,13 @@ private fun Torrents43(vm: AppViewModel, pad: PaddingValues) {
         // Diskplass per mappe (fra rotmappene), varsel under 1 TB.
         val disks = s.disk.ifEmpty { (s.roots["sonarr"].orEmpty() + s.roots["radarr"].orEmpty()).distinctBy { it.path } }
         if (disks.isNotEmpty()) item {
-            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(p.card).padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(p.surfaceRaised).padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 PLabel("Diskplass")
                 disks.forEach { d ->
                     val low = (d.free ?: Long.MAX_VALUE) < (1L shl 40)
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(listOfNotNull(d.label, d.path).joinToString(" · "), color = p.ink, fontFamily = PaperFonts.mono, fontSize = HomelabType.footnote.fontSize, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text((d.free?.let { size43(it) + " ledig" } ?: "–"), color = if (low) RED43 else p.mut, fontSize = HomelabType.footnote.fontSize, fontWeight = if (low) FontWeight.Bold else FontWeight.Normal)
+                        Text(listOfNotNull(d.label, d.path).joinToString(" · "), color = p.textPrimary, fontFamily = PaperFonts.mono, fontSize = HomelabType.footnote.fontSize, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text((d.free?.let { size43(it) + " ledig" } ?: "–"), color = if (low) RED43 else p.textTertiary, fontSize = HomelabType.footnote.fontSize, fontWeight = if (low) FontWeight.Bold else FontWeight.Normal)
                     }
                 }
             }
@@ -765,15 +767,15 @@ private fun eta43(s: Long): String = when { s >= 3600 -> "${s / 3600} t ${(s % 3
 
 @Composable
 private fun TorBtn43(icon: String, label: String, onClick: () -> Unit) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     Box(Modifier.size(44.dp).clip(CircleShape).border(1.dp, p.line, CircleShape).clickable(role = Role.Button, onClickLabel = label, onClick = onClick), contentAlignment = Alignment.Center) {
-        Text(icon, color = p.ink, fontSize = HomelabType.subheadline.fontSize, fontWeight = FontWeight.Bold)
+        Text(icon, color = p.textPrimary, fontSize = HomelabType.subheadline.fontSize, fontWeight = FontWeight.Bold)
     }
 }
 
 @Composable
 private fun TorMenu43(vm: AppViewModel, hash: String) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val s = vm.p43
     val t = s.torrents?.firstOrNull { it.hash == hash }
     val close = { s.torMenu = null; s.files = null }
@@ -791,13 +793,13 @@ private fun TorMenu43(vm: AppViewModel, hash: String) {
         Btn43("Sjekk filene på nytt", modifier = Modifier.fillMaxWidth()) { vm.torAct43(hash, "recheck"); close() }
         PLabel("Filer")
         val files = s.files
-        if (files == null) Text("Henter filene …", color = p.mut, fontSize = HomelabType.subheadline.fontSize)
+        if (files == null) Text("Henter filene …", color = p.textTertiary, fontSize = HomelabType.subheadline.fontSize)
         else files.forEach { f ->
             Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).clickable { vm.setFile43(hash, f, !f.on) }, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Checkbox(f.on, { vm.setFile43(hash, f, it) }, colors = CheckboxDefaults.colors(checkedColor = p.ink, uncheckedColor = p.mut, checkmarkColor = p.bg))
+                Checkbox(f.on, { vm.setFile43(hash, f, it) }, colors = CheckboxDefaults.colors(checkedColor = p.textPrimary, uncheckedColor = p.textTertiary, checkmarkColor = p.surface))
                 Column(Modifier.weight(1f)) {
-                    Text(f.name.substringAfterLast('/'), color = if (f.on) p.ink else p.mut, fontSize = HomelabType.subheadline.fontSize, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                    Text(size43(f.size) + " · ${(f.progress * 100).toInt()} %", color = p.mut, fontSize = HomelabType.caption.fontSize)
+                    Text(f.name.substringAfterLast('/'), color = if (f.on) p.textPrimary else p.textTertiary, fontSize = HomelabType.subheadline.fontSize, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    Text(size43(f.size) + " · ${(f.progress * 100).toInt()} %", color = p.textTertiary, fontSize = HomelabType.caption.fontSize)
                 }
             }
         }
@@ -818,7 +820,7 @@ private fun TorDelete43(vm: AppViewModel, hash: String) {
 
 @Composable
 private fun Magnet43(vm: AppViewModel) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val s = vm.p43
     val ctx = LocalContext.current
     var cat by remember { mutableStateOf<String?>(null) }
@@ -836,11 +838,11 @@ private fun Magnet43(vm: AppViewModel) {
         if (err != null) Text(err, color = RED43, fontSize = HomelabType.subheadline.fontSize)
         if (name != null) Column {
             Text(name, color = OK43, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize, maxLines = 2)
-            info?.let { Text(it, color = p.mut, fontFamily = PaperFonts.mono, fontSize = HomelabType.caption.fontSize) }
+            info?.let { Text(it, color = p.textTertiary, fontFamily = PaperFonts.mono, fontSize = HomelabType.caption.fontSize) }
         }
         PLabel("Kategori")
         Choice43(listOf("" to "Ingen", "tv-sonarr" to "tv-sonarr", "radarr" to "radarr"), cat ?: "") { cat = it.ifBlank { null } }
-        Text(when (cat) { "tv-sonarr" -> "Lagres i /data/downloads/tv"; "radarr" -> "Lagres i /data/downloads/film"; else -> "Lagres i /data/downloads" }, color = p.mut, fontSize = HomelabType.footnote.fontSize)
+        Text(when (cat) { "tv-sonarr" -> "Lagres i /data/downloads/tv"; "radarr" -> "Lagres i /data/downloads/film"; else -> "Lagres i /data/downloads" }, color = p.textTertiary, fontSize = HomelabType.footnote.fontSize)
         Toggle43("Start pauset", null, paused) { paused = it }
         Toggle43("Sekvensiell nedlasting", null, seq) { seq = it }
         Toggle43("Første og siste del først", null, fl) { fl = it }
@@ -852,33 +854,33 @@ private fun Magnet43(vm: AppViewModel) {
 
 @Composable
 private fun Prowlarr43(vm: AppViewModel, pad: PaddingValues) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val s = vm.p43
     val list = s.indexers
     LazyColumn(Modifier.fillMaxSize(), contentPadding = pad, verticalArrangement = Arrangement.spacedBy(10.dp)) {
         item {
-            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(p.card).padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(p.surfaceRaised).padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 PLabel("Prowlarr")
                 val ok = list.orEmpty().count { it.ok }
                 PSerif("$ok av ${list?.size ?: 0} indeksere svarer", 22.sp, maxLines = 2)
-                Text("${list.orEmpty().sumOf { it.queries ?: 0 }} søk · ${list.orEmpty().sumOf { it.grabs ?: 0 }} hentet i dag", color = p.mut, fontSize = HomelabType.footnote.fontSize)
+                Text("${list.orEmpty().sumOf { it.queries ?: 0 }} søk · ${list.orEmpty().sumOf { it.grabs ?: 0 }} hentet i dag", color = p.textTertiary, fontSize = HomelabType.footnote.fontSize)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Btn43("Test alle", dark = true) { vm.testAll43() }
                     Btn43("+ Legg til indekser") { s.idxAdd = true; s.schemaPick = null; s.idxErr = null; vm.loadSchema43() }
                 }
             }
         }
-        if (list == null && !s.missing) item { Box(Modifier.fillMaxWidth().padding(30.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = p.ink) } }
+        if (list == null && !s.missing) item { Box(Modifier.fillMaxWidth().padding(30.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = p.textPrimary) } }
         list.orEmpty().forEach { x ->
             item(key = "i-${x.id}") {
                 val res = s.testRes[x.id]
                 val testing = x.id in s.testing
-                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(p.card).padding(start = 14.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
+                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(p.surfaceRaised).padding(start = 14.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
                     verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Box(Modifier.size(9.dp).clip(CircleShape).background(if (x.ok) OK43 else RED43))
                     Column(Modifier.weight(1f)) {
-                        Text(x.name, color = p.ink, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize)
-                        Text(listOfNotNull(x.ms?.let { "$it ms" }, x.queries?.let { "$it søk" }, x.grabs?.let { "$it hentet i dag" }).joinToString(" · "), color = p.mut, fontSize = HomelabType.footnote.fontSize)
+                        Text(x.name, color = p.textPrimary, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize)
+                        Text(listOfNotNull(x.ms?.let { "$it ms" }, x.queries?.let { "$it søk" }, x.grabs?.let { "$it hentet i dag" }).joinToString(" · "), color = p.textTertiary, fontSize = HomelabType.footnote.fontSize)
                         x.error?.let { Text(it, color = RED43, fontSize = HomelabType.footnote.fontSize) }
                         if (res != null) Text(res, color = if (res.startsWith("OK")) OK43 else RED43, fontSize = HomelabType.footnote.fontSize, fontWeight = FontWeight.SemiBold)
                     }
@@ -887,11 +889,11 @@ private fun Prowlarr43(vm: AppViewModel, pad: PaddingValues) {
             }
         }
         if (s.apps.isNotEmpty()) item {
-            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(p.card).padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(p.surfaceRaised).padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 PLabel("Apper")
                 s.apps.forEach { a ->
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(a.name, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize, modifier = Modifier.weight(1f))
+                        Text(a.name, color = p.textPrimary, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize, modifier = Modifier.weight(1f))
                         Btn43("Synk nå") { vm.syncApp43(a) }
                     }
                 }
@@ -902,7 +904,7 @@ private fun Prowlarr43(vm: AppViewModel, pad: PaddingValues) {
 
 @Composable
 private fun IdxAdd43(vm: AppViewModel) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val s = vm.p43
     var q by remember { mutableStateOf("") }
     var f by remember { mutableStateOf("alle") }
@@ -913,18 +915,18 @@ private fun IdxAdd43(vm: AppViewModel) {
             Field43(q, "Søk blant indekserne …") { q = it }
             Choice43(listOf("alle" to "Alle", "public" to "Offentlig", "private" to "Privat", "semiPrivate" to "Semi-privat", "usenet" to "Usenet"), f) { f = it }
             val all = s.schema
-            if (all == null) Text(if (s.missing) "Prowlarr er ikke på serveren ennå." else "Henter katalogen …", color = p.mut, fontSize = HomelabType.subheadline.fontSize)
+            if (all == null) Text(if (s.missing) "Prowlarr er ikke på serveren ennå." else "Henter katalogen …", color = p.textTertiary, fontSize = HomelabType.subheadline.fontSize)
             all.orEmpty().filter { x -> (q.isBlank() || x.name.contains(q, true)) && (f == "alle" || (f == "usenet" && x.protocol == "usenet") || (f != "usenet" && x.privacy == f && x.protocol != "usenet")) }
                 .take(80).forEach { x ->
                     val (lbl, col) = when { x.protocol == "usenet" -> "Usenet" to Color(0xFF7A5AD6); x.privacy == "private" -> "Privat" to RED43; x.privacy == "semiPrivate" -> "Semi" to WARN43; else -> "Offentlig" to OK43 }
-                    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(p.card).clickable(enabled = !x.added) { s.schemaPick = x; s.idxErr = null }.padding(12.dp, 10.dp),
+                    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(p.surfaceRaised).clickable(enabled = !x.added) { s.schemaPick = x; s.idxErr = null }.padding(12.dp, 10.dp),
                         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         Text(lbl, color = Color.White, fontWeight = FontWeight.Bold, fontSize = HomelabType.caption.fontSize, modifier = Modifier.clip(RoundedCornerShape(5.dp)).background(col).padding(horizontal = 6.dp, vertical = 2.dp))
                         Column(Modifier.weight(1f)) {
-                            Text(x.name, color = if (x.added) p.mut else p.ink, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize)
-                            Text(listOfNotNull(x.categories, x.language, if (x.protocol == "usenet") "Usenet" else "Torrent").joinToString(" · "), color = p.mut, fontSize = HomelabType.footnote.fontSize, maxLines = 1)
+                            Text(x.name, color = if (x.added) p.textTertiary else p.textPrimary, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize)
+                            Text(listOfNotNull(x.categories, x.language, if (x.protocol == "usenet") "Usenet" else "Torrent").joinToString(" · "), color = p.textTertiary, fontSize = HomelabType.footnote.fontSize, maxLines = 1)
                         }
-                        if (x.added) Text("Lagt til", color = p.mut, fontSize = HomelabType.footnote.fontSize)
+                        if (x.added) Text("Lagt til", color = p.textTertiary, fontSize = HomelabType.footnote.fontSize)
                     }
                 }
         } else {
@@ -932,7 +934,7 @@ private fun IdxAdd43(vm: AppViewModel) {
             var prio by remember(pick) { mutableStateOf(25) }
             var sonarr by remember(pick) { mutableStateOf(true) }
             var radarr by remember(pick) { mutableStateOf(true) }
-            Text("‹ Alle indeksere", color = p.ink, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.heightIn(min = 44.dp).clickable { s.schemaPick = null }.wrapContentHeight())
+            Text("‹ Alle indeksere", color = p.textPrimary, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.heightIn(min = 44.dp).clickable { s.schemaPick = null }.wrapContentHeight())
             PSerif(pick.name, 24.sp)
             when (pick.login) {
                 "user" -> {
@@ -941,19 +943,19 @@ private fun IdxAdd43(vm: AppViewModel) {
                 }
                 "key" -> {
                     Field43(vals["apiKey"] ?: "", "API-nøkkel", password = true) { vals["apiKey"] = it }
-                    Text("Finnes under Profil → Sikkerhet / API hos ${pick.name}.", color = p.mut, fontSize = HomelabType.footnote.fontSize)
+                    Text("Finnes under Profil → Sikkerhet / API hos ${pick.name}.", color = p.textTertiary, fontSize = HomelabType.footnote.fontSize)
                 }
                 "cookie" -> {
                     Field43(vals["cookie"] ?: "", "Cookie", password = true) { vals["cookie"] = it }
-                    Text("Logg inn i nettleseren, åpne utviklerverktøy → Nettverk og kopier Cookie-verdien.", color = p.mut, fontSize = HomelabType.footnote.fontSize)
+                    Text("Logg inn i nettleseren, åpne utviklerverktøy → Nettverk og kopier Cookie-verdien.", color = p.textTertiary, fontSize = HomelabType.footnote.fontSize)
                 }
-                else -> Text("Ingen innlogging trengs.", color = p.mut, fontSize = HomelabType.subheadline.fontSize)
+                else -> Text("Ingen innlogging trengs.", color = p.textTertiary, fontSize = HomelabType.subheadline.fontSize)
             }
             PLabel("Prioritet")
             Choice43(listOf(1, 10, 25, 40, 50).map { it.toString() to it.toString() }, prio.toString()) { prio = it.toInt() }
             Toggle43("Sonarr", "Serier", sonarr) { sonarr = it }
             Toggle43("Radarr", "Filmer", radarr) { radarr = it }
-            Text("Passord og nøkler lagres bare i Prowlarr, aldri i appen.", color = p.mut, fontSize = HomelabType.footnote.fontSize)
+            Text("Passord og nøkler lagres bare i Prowlarr, aldri i appen.", color = p.textTertiary, fontSize = HomelabType.footnote.fontSize)
             s.idxErr?.let { Text(it, color = RED43, fontSize = HomelabType.subheadline.fontSize) }
             Btn43(if (s.idxBusy) "Tester …" else "Test og lagre", dark = true, enabled = !s.idxBusy, modifier = Modifier.fillMaxWidth()) { vm.addIndexer43(pick, vals.toMap(), prio, sonarr, radarr) }
         }
@@ -964,10 +966,10 @@ private fun IdxAdd43(vm: AppViewModel) {
 
 @Composable
 private fun MediaGlimt43(vm: AppViewModel) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val s = vm.p43
     var q by remember { mutableStateOf("") }
-    Column(Modifier.fillMaxWidth().padding(16.dp, 10.dp, 16.dp, 0.dp).clip(RoundedCornerShape(20.dp)).background(Color(0xFF1B1A17)).padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(Modifier.fillMaxWidth().padding(16.dp, 10.dp, 16.dp, 0.dp).clip(RoundedCornerShape(20.dp)).background(DsPalette.PapirLys.textPrimary).padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             GlimtOrb43(28.dp, busy = s.glimtBusy)
             Box(Modifier.weight(1f).heightIn(min = 44.dp), contentAlignment = Alignment.CenterStart) {
@@ -997,14 +999,14 @@ private fun MediaGlimt43(vm: AppViewModel) {
                             color = if (rel != null) Color(0xFF9FD3B4) else Color.White.copy(alpha = .7f), fontSize = HomelabType.footnote.fontSize, maxLines = 2)
                     }
                     r.optJSONObject("action")?.let { a -> Box(Modifier.heightIn(min = 40.dp).clip(CircleShape).background(Color.White).clickable { vm.glimtAct43(a) }.padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
-                        Text(a.s43("label") ?: "Velg", color = Color(0xFF1B1A17), fontWeight = FontWeight.Bold, fontSize = HomelabType.footnote.fontSize)
+                        Text(a.s43("label") ?: "Velg", color = DsPalette.PapirLys.textPrimary, fontWeight = FontWeight.Bold, fontSize = HomelabType.footnote.fontSize)
                     } }
                 }
             }
             if (g.actions.isNotEmpty()) Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 g.actions.forEach { a ->
                     Box(Modifier.heightIn(min = 44.dp).clip(CircleShape).background(Color.White).clickable { vm.glimtAct43(a) }.padding(horizontal = 14.dp), contentAlignment = Alignment.Center) {
-                        Text(a.s43("label") ?: "OK", color = Color(0xFF1B1A17), fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize)
+                        Text(a.s43("label") ?: "OK", color = DsPalette.PapirLys.textPrimary, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize)
                     }
                 }
             }
@@ -1020,7 +1022,7 @@ private fun MediaGlimt43(vm: AppViewModel) {
  */
 @Composable
 internal fun HomeMedia43(vm: AppViewModel) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val s = vm.p43
     LaunchedEffect(vm.account?.id) { vm.loadTorrents43(); vm.loadUpcoming43() }
     val dls = s.torrents.orEmpty().filter { it.progress < 1f && it.state != "seed" }.take(3)
@@ -1029,32 +1031,32 @@ internal fun HomeMedia43(vm: AppViewModel) {
         Column(Modifier.padding(16.dp, 14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 PLabel(if (dls.isNotEmpty()) "Media · lastes ned" else "Media", modifier = Modifier.weight(1f))
-                Text("alle ›", color = p.mut, fontSize = HomelabType.footnote.fontSize)
+                Text("alle ›", color = p.textTertiary, fontSize = HomelabType.footnote.fontSize)
             }
-            if (s.torrents == null && s.upcoming == null) Text("Henter …", color = p.mut, fontSize = HomelabType.subheadline.fontSize)
+            if (s.torrents == null && s.upcoming == null) Text("Henter …", color = p.textTertiary, fontSize = HomelabType.subheadline.fontSize)
             dls.forEach { t ->
                 val stalled = t.state == "stall" || t.state == "error"
                 Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(t.name, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.subheadline.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                        Text(if (stalled) "står fast" else "${(t.progress * 100).toInt()} %", color = if (stalled) WARN43 else p.ink, fontWeight = FontWeight.Bold, fontSize = HomelabType.footnote.fontSize)
+                        Text(t.name, color = p.textPrimary, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.subheadline.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                        Text(if (stalled) "står fast" else "${(t.progress * 100).toInt()} %", color = if (stalled) WARN43 else p.textPrimary, fontWeight = FontWeight.Bold, fontSize = HomelabType.footnote.fontSize)
                     }
-                    t.sub?.let { Text(it, color = p.mut, fontSize = HomelabType.caption.fontSize, maxLines = 1) }
+                    t.sub?.let { Text(it, color = p.textTertiary, fontSize = HomelabType.caption.fontSize, maxLines = 1) }
                     Box(Modifier.fillMaxWidth().height(3.dp).clip(CircleShape).background(p.line)) {
                         Box(Modifier.fillMaxHeight().fillMaxWidth(t.progress.coerceIn(0f, 1f)).background(if (stalled) WARN43 else RED43))
                     }
                 }
             }
             if (dls.isNotEmpty() && ups.isNotEmpty()) Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
-            if (ups.isNotEmpty()) PLabel("Kommer", color = p.mut)
+            if (ups.isNotEmpty()) PLabel("Kommer", color = p.textTertiary)
             ups.forEach { u ->
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Poster43(vm, u.poster, u.color, u.title, 26.dp, 38.dp, img = u.posterImg)
                     Column(Modifier.weight(1f)) {
-                        Text(u.title, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.subheadline.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(u.title, color = p.textPrimary, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.subheadline.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         val d = runCatching { java.time.LocalDate.parse(u.day) }.getOrNull()
                         val wd = d?.dayOfWeek?.getDisplayName(java.time.format.TextStyle.SHORT, java.util.Locale("nb", "NO"))?.trimEnd('.')
-                        Text(listOfNotNull(u.code, listOfNotNull(wd, u.time).joinToString(" ").ifBlank { null }).joinToString(" · "), color = p.mut, fontSize = HomelabType.footnote.fontSize)
+                        Text(listOfNotNull(u.code, listOfNotNull(wd, u.time).joinToString(" ").ifBlank { null }).joinToString(" · "), color = p.textTertiary, fontSize = HomelabType.footnote.fontSize)
                     }
                 }
             }
@@ -1089,16 +1091,16 @@ private val JF44 = Color(0xFF7A5AD6)
 /** «Server: Hjemme ›» (bare når det finnes flere steder) og brikken «Hytta mangler qBittorrent». */
 @Composable
 internal fun ServerRow44(vm: AppViewModel) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val t = vm.p44
     if (vm.p43.tab == "spill") return
     val sel = t.servers.firstOrNull { it.id == t.serverId }
     if (t.servers.size < 2 && t.serverNote == null) return
     Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        if (t.servers.size >= 2) Row(Modifier.heightIn(min = 44.dp).clip(CircleShape).background(p.card).border(1.dp, p.line, CircleShape)
+        if (t.servers.size >= 2) Row(Modifier.heightIn(min = 44.dp).clip(CircleShape).background(p.surfaceRaised).border(1.dp, p.line, CircleShape)
             .clickable(role = Role.Button, onClickLabel = "Velg server") { t.serverSheet = true }.padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(8.dp).clip(CircleShape).background(OK43))
-            Text("  Server: ${sel?.name ?: "Standard"} ›", color = p.ink, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize, maxLines = 1)
+            Text("  Server: ${sel?.name ?: "Standard"} ›", color = p.textPrimary, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize, maxLines = 1)
         }
         t.serverNote?.let { n ->
             Text(n, color = WARN43, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.footnote.fontSize, maxLines = 2, modifier = Modifier.weight(1f, fill = false)
@@ -1110,7 +1112,7 @@ internal fun ServerRow44(vm: AppViewModel) {
 
 @Composable
 private fun ServerSheet44(vm: AppViewModel) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val t = vm.p44
     val tab = vm.p43.tab.let { if (it == "snart") "sonarr" else it }
     Sheet43({ t.serverSheet = false }) {
@@ -1118,14 +1120,14 @@ private fun ServerSheet44(vm: AppViewModel) {
         t.servers.forEach { s ->
             val on = s.id == t.serverId
             val has = s.svc[tab] != false
-            Row(Modifier.fillMaxWidth().heightIn(min = 56.dp).clip(RoundedCornerShape(14.dp)).background(p.card).clickable { vm.pickServer44(s.id) }.padding(horizontal = 14.dp),
+            Row(Modifier.fillMaxWidth().heightIn(min = 56.dp).clip(RoundedCornerShape(14.dp)).background(p.surfaceRaised).clickable { vm.pickServer44(s.id) }.padding(horizontal = 14.dp),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Box(Modifier.size(9.dp).clip(CircleShape).background(if (has) OK43 else p.line))
                 Column(Modifier.weight(1f)) {
-                    Text(s.name + if (s.def) " · standard" else "", color = p.ink, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize)
-                    Text(s.svc.entries.joinToString(" · ") { (k, v) -> svcName44(k) + if (v) "" else " (mangler)" }, color = p.mut, fontSize = HomelabType.footnote.fontSize, maxLines = 2)
+                    Text(s.name + if (s.def) " · standard" else "", color = p.textPrimary, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize)
+                    Text(s.svc.entries.joinToString(" · ") { (k, v) -> svcName44(k) + if (v) "" else " (mangler)" }, color = p.textTertiary, fontSize = HomelabType.footnote.fontSize, maxLines = 2)
                 }
-                if (on) Text("✓", color = p.ink, fontWeight = FontWeight.Bold, fontSize = HomelabType.body.fontSize)
+                if (on) Text("✓", color = p.textPrimary, fontWeight = FontWeight.Bold, fontSize = HomelabType.body.fontSize)
             }
         }
         Btn43("+ Legg til server (Integrasjoner)", modifier = Modifier.fillMaxWidth()) { t.serverSheet = false; vm.p43.mediaOpen = false; vm.openIntegrations43() }
@@ -1149,21 +1151,21 @@ internal fun ErrActions44(vm: AppViewModel) {
 /** Søkefelt over filterpillene (Serier/Filmer). */
 @Composable
 internal fun LibSearch44(vm: AppViewModel, kind: String, total: Int) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val t = vm.p44
     Box(Modifier.fillMaxWidth().widthIn(max = 420.dp)) {
         Field43(t.libQ, if (kind == "tv") "Søk i $total serier" else "Søk i $total filmer") { t.libQ = it }
-        if (t.libQ.isNotEmpty()) Text("✕", color = p.mut, fontSize = HomelabType.body.fontSize, modifier = Modifier.align(Alignment.CenterEnd).size(44.dp).clip(CircleShape)
+        if (t.libQ.isNotEmpty()) Text("✕", color = p.textTertiary, fontSize = HomelabType.body.fontSize, modifier = Modifier.align(Alignment.CenterEnd).size(44.dp).clip(CircleShape)
             .clickable(onClickLabel = "Tøm søket") { t.libQ = "" }.wrapContentSize())
     }
 }
 
 @Composable
 internal fun LibNoHit44(vm: AppViewModel, kind: String) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val q = vm.p44.libQ.trim()
     Column(Modifier.fillMaxWidth().padding(vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text("Ingen ${if (kind == "tv") "serier" else "filmer"} i biblioteket som heter «$q».", color = p.mut, fontSize = HomelabType.subheadline.fontSize)
+        Text("Ingen ${if (kind == "tv") "serier" else "filmer"} i biblioteket som heter «$q».", color = p.textTertiary, fontSize = HomelabType.subheadline.fontSize)
         Btn43("Søk etter «$q» for å legge til", dark = true) {
             val s = vm.p43
             s.add = kind; s.addPick = null; vm.lookup43(kind, q)
@@ -1174,7 +1176,7 @@ internal fun LibNoHit44(vm: AppViewModel, kind: String) {
 /** Status mens søket går: tid, én rad per indekser, Avbryt; etterpå cache-linje og feilkort når alle feilet. */
 @Composable
 internal fun RelStatus44(vm: AppViewModel) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val s = vm.p43; val t = vm.p44
     var now by remember { mutableStateOf(System.currentTimeMillis()) }
     LaunchedEffect(s.relBusy) { while (s.relBusy) { now = System.currentTimeMillis(); delay(1000) } }
@@ -1182,32 +1184,32 @@ internal fun RelStatus44(vm: AppViewModel) {
         if (s.relBusy) {
             val sec = ((now - t.relStarted) / 1000).coerceAtLeast(0)
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                CircularProgressIndicator(color = p.ink, strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
-                Text("Søker i ${t.relIdx.size.takeIf { it > 0 } ?: "alle"} indeksere … $sec s", color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.weight(1f))
+                CircularProgressIndicator(color = p.textPrimary, strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
+                Text("Søker i ${t.relIdx.size.takeIf { it > 0 } ?: "alle"} indeksere … $sec s", color = p.textPrimary, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.weight(1f))
                 Btn43("Avbryt") { vm.cancelRelease44() }
             }
-            if (sec > 20 && t.relIdx.isEmpty()) Text("Sonarr/Radarr spør alle indekserne. Det kan ta opptil 2 minutter.", color = p.mut, fontSize = HomelabType.footnote.fontSize)
+            if (sec > 20 && t.relIdx.isEmpty()) Text("Sonarr/Radarr spør alle indekserne. Det kan ta opptil 2 minutter.", color = p.textTertiary, fontSize = HomelabType.footnote.fontSize)
         }
         t.relIdx.forEach { x ->
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(when (x.state) { "ok" -> "✓"; "fail" -> "✕"; else -> "⟳" }, color = when (x.state) { "ok" -> OK43; "fail" -> RED43; else -> p.mut }, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.width(18.dp))
-                Text(x.name, color = p.ink, fontSize = HomelabType.footnote.fontSize, modifier = Modifier.weight(1f), maxLines = 1)
+                Text(when (x.state) { "ok" -> "✓"; "fail" -> "✕"; else -> "⟳" }, color = when (x.state) { "ok" -> OK43; "fail" -> RED43; else -> p.textTertiary }, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.width(18.dp))
+                Text(x.name, color = p.textPrimary, fontSize = HomelabType.footnote.fontSize, modifier = Modifier.weight(1f), maxLines = 1)
                 Text(when (x.state) {
                     "ok" -> listOfNotNull(x.count?.let { "$it treff" }, x.ms?.let { String.format(java.util.Locale("nb", "NO"), "%.1f s", it / 1000.0) }).joinToString(" · ")
                     "fail" -> x.error ?: "svarte ikke"
                     else -> "søker …"
-                }, color = if (x.state == "fail") RED43 else p.mut, fontFamily = PaperFonts.mono, fontSize = HomelabType.caption.fontSize, maxLines = 1)
+                }, color = if (x.state == "fail") RED43 else p.textTertiary, fontFamily = PaperFonts.mono, fontSize = HomelabType.caption.fontSize, maxLines = 1)
             }
         }
         t.relFromCache?.let { at ->
             val min = ((System.currentTimeMillis() - at) / 60_000).toInt()
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(if (min < 1) "Hentet nå nettopp" else "Hentet for $min min siden", color = p.mut, fontSize = HomelabType.footnote.fontSize, modifier = Modifier.weight(1f))
-                Text("Søk igjen", color = p.lab, fontWeight = FontWeight.Bold, fontSize = HomelabType.footnote.fontSize, modifier = Modifier.heightIn(min = 44.dp).clip(CircleShape)
+                Text(if (min < 1) "Hentet nå nettopp" else "Hentet for $min min siden", color = p.textTertiary, fontSize = HomelabType.footnote.fontSize, modifier = Modifier.weight(1f))
+                Text("Søk igjen", color = p.accent, fontWeight = FontWeight.Bold, fontSize = HomelabType.footnote.fontSize, modifier = Modifier.heightIn(min = 44.dp).clip(CircleShape)
                     .clickable { s.relFor?.let { (a, b, c) -> vm.openRelease44(a, b, c, force = true) } }.padding(horizontal = 8.dp).wrapContentHeight())
             }
         }
-        if (!s.relBusy && t.relFailAll) Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(p.card).padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        if (!s.relBusy && t.relFailAll) Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(p.surfaceRaised).padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("Ingen indeksere svarte. Sjekk Prowlarr → Helse.", color = RED43, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Btn43("Prøv igjen", dark = true) { s.relFor?.let { (a, b, c) -> vm.openRelease44(a, b, c, force = true) } }
@@ -1244,9 +1246,9 @@ internal fun MovieFileBtns44(vm: AppViewModel, d: MItem43) {
 
 @Composable
 private fun Confirm44(text: String, ok: String, cancel: () -> Unit, go: () -> Unit) {
-    val p = PaperPal.current
-    Column(Modifier.fillMaxWidth().padding(vertical = 6.dp).clip(RoundedCornerShape(14.dp)).background(p.card).padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(text, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.subheadline.fontSize)
+    val p = HomelabTheme.colors
+    Column(Modifier.fillMaxWidth().padding(vertical = 6.dp).clip(RoundedCornerShape(14.dp)).background(p.surfaceRaised).padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(text, color = p.textPrimary, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.subheadline.fontSize)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { Btn43(ok, color = RED43, onClick = go); Btn43("Avbryt", onClick = cancel) }
     }
 }
@@ -1254,13 +1256,13 @@ private fun Confirm44(text: String, ok: String, cancel: () -> Unit, go: () -> Un
 /** Toast med «Angre» i 5 s. */
 @Composable
 internal fun BoxScope.Undo44(vm: AppViewModel) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val u = vm.p44.undo ?: return
     LaunchedEffect(u) { delay(5000); if (vm.p44.undo === u) vm.p44.undo = null }
     val navB = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-    Row(Modifier.align(Alignment.BottomCenter).padding(bottom = navB + 18.dp, start = 16.dp, end = 16.dp).clip(RoundedCornerShape(14.dp)).background(p.ink).padding(start = 14.dp, end = 4.dp),
+    Row(Modifier.align(Alignment.BottomCenter).padding(bottom = navB + 18.dp, start = 16.dp, end = 16.dp).clip(RoundedCornerShape(14.dp)).background(p.textPrimary).padding(start = 14.dp, end = 4.dp),
         verticalAlignment = Alignment.CenterVertically) {
-        Text(u.first, color = p.bg, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.weight(1f, fill = false))
+        Text(u.first, color = p.surface, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.weight(1f, fill = false))
         Text("Angre", color = PLEX44, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.heightIn(min = 44.dp).clip(CircleShape)
             .clickable { u.second(); vm.p44.undo = null }.padding(horizontal = 12.dp).wrapContentHeight())
     }
@@ -1299,7 +1301,7 @@ private val PLAY_TABS44 = listOf("now" to "Spilles nå", "hist" to "Historikk", 
 
 @Composable
 internal fun Playback44(vm: AppViewModel, pad: PaddingValues) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val t = vm.p44
     val ctx = LocalContext.current
     LaunchedEffect(t.playTab, t.playSrv) { vm.loadPlayback44() }
@@ -1321,18 +1323,18 @@ internal fun Playback44(vm: AppViewModel, pad: PaddingValues) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Box(Modifier.heightIn(min = 44.dp).clip(CircleShape).background(PLEX44).clickable(enabled = !t.plexBusy, role = Role.Button) { vm.plexLogin44 { openLink(ctx, it) } }
                     .padding(horizontal = 16.dp), contentAlignment = Alignment.Center) {
-                    Text(if (t.plexBusy) "Venter på godkjenning …" else "Logg inn med Plex", color = Color(0xFF1B1A17), fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize)
+                    Text(if (t.plexBusy) "Venter på godkjenning …" else "Logg inn med Plex", color = DsPalette.PapirLys.textPrimary, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize)
                 }
-                t.plexPin?.let { Text("kode $it", color = p.ink, fontFamily = PaperFonts.mono, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize) }
+                t.plexPin?.let { Text("kode $it", color = p.textPrimary, fontFamily = PaperFonts.mono, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize) }
             }
         }
         t.playErr?.let { e -> item { Text(e, color = RED43, fontSize = HomelabType.subheadline.fontSize) } }
-        if (t.playMissing) item { Text("Avspilling finnes ikke på serveren ennå. Oppdater Homelab.", color = p.mut, fontSize = HomelabType.subheadline.fontSize) }
+        if (t.playMissing) item { Text("Avspilling finnes ikke på serveren ennå. Oppdater Homelab.", color = p.textTertiary, fontSize = HomelabType.subheadline.fontSize) }
         when (t.playTab) {
             "now" -> {
                 val l = t.sessions
-                if (l == null && !t.playMissing) item { Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = p.ink) } }
-                else if (l.isNullOrEmpty()) item { Text("Ingen spiller noe akkurat nå.", color = p.mut, fontSize = HomelabType.subheadline.fontSize) }
+                if (l == null && !t.playMissing) item { Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = p.textPrimary) } }
+                else if (l.isNullOrEmpty()) item { Text("Ingen spiller noe akkurat nå.", color = p.textTertiary, fontSize = HomelabType.subheadline.fontSize) }
                 l.orEmpty().forEach { x -> item(key = "ps-" + x.id) { Session44(vm, x) } }
             }
             "hist" -> {
@@ -1344,34 +1346,34 @@ internal fun Playback44(vm: AppViewModel, pad: PaddingValues) {
                         users.forEach { u -> Pill43(u, t.histUser == u) { t.histUser = u; vm.loadPlayback44() } }
                     }
                 }
-                if (t.history?.isEmpty() == true) item { Text("Ingen historikk ennå.", color = p.mut, fontSize = HomelabType.subheadline.fontSize) }
+                if (t.history?.isEmpty() == true) item { Text("Ingen historikk ennå.", color = p.textTertiary, fontSize = HomelabType.subheadline.fontSize) }
                 t.history.orEmpty().forEachIndexed { i, h -> item(key = "ph-$i") { Hist44(vm, h) } }
             }
             "stats" -> {
                 item {
                     Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         t.stats.orEmpty().forEach { k ->
-                            Column(Modifier.widthIn(min = 120.dp).clip(RoundedCornerShape(16.dp)).background(p.card).padding(14.dp)) {
-                                PLabel(k.label, color = p.mut); PSerif(k.value, 28.sp, maxLines = 1)
+                            Column(Modifier.widthIn(min = 120.dp).clip(RoundedCornerShape(16.dp)).background(p.surfaceRaised).padding(14.dp)) {
+                                PLabel(k.label, color = p.textTertiary); PSerif(k.value, 28.sp, maxLines = 1)
                             }
                         }
                     }
                 }
                 t.statLists.forEach { (n, rows) ->
                     item {
-                        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(p.card).padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(p.surfaceRaised).padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             PLabel(n)
-                            rows.forEachIndexed { i, r -> Text("${i + 1}. $r", color = p.ink, fontSize = HomelabType.subheadline.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+                            rows.forEachIndexed { i, r -> Text("${i + 1}. $r", color = p.textPrimary, fontSize = HomelabType.subheadline.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis) }
                         }
                     }
                 }
             }
             else -> t.libs.orEmpty().forEachIndexed { i, l ->
                 item(key = "pl-$i") {
-                    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(p.card).padding(14.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(p.surfaceRaised).padding(14.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                         PSerif(l.name, 19.sp, maxLines = 1)
-                        Text(listOfNotNull(l.count?.let { "$it titler" }, l.size?.let { size43(it) }, l.hours?.let { "$it t spilt" }).joinToString(" · "), color = p.ink, fontSize = HomelabType.subheadline.fontSize)
-                        l.last?.let { Text("Sist lagt til: $it", color = p.mut, fontSize = HomelabType.footnote.fontSize, maxLines = 1) }
+                        Text(listOfNotNull(l.count?.let { "$it titler" }, l.size?.let { size43(it) }, l.hours?.let { "$it t spilt" }).joinToString(" · "), color = p.textPrimary, fontSize = HomelabType.subheadline.fontSize)
+                        l.last?.let { Text("Sist lagt til: $it", color = p.textTertiary, fontSize = HomelabType.footnote.fontSize, maxLines = 1) }
                     }
                 }
             }
@@ -1381,35 +1383,35 @@ internal fun Playback44(vm: AppViewModel, pad: PaddingValues) {
 
 @Composable
 private fun Session44(vm: AppViewModel, x: PSess44) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val acc = if (x.server == "jellyfin") JF44 else PLEX44
-    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(p.card).padding(12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(p.surfaceRaised).padding(12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         Poster43(vm, x.poster, null, x.title, 64.dp, 96.dp)
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
             Text(if (x.direct) "Direkte avspilling" else "Omkoder", color = Color.White, fontWeight = FontWeight.Bold, fontSize = HomelabType.caption.fontSize,
                 modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(if (x.direct) OK43 else RED43).padding(horizontal = 6.dp, vertical = 2.dp))
             PSerif(x.title, 17.sp, maxLines = 1)
-            x.sub?.let { Text(it, color = p.ink, fontSize = HomelabType.footnote.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis) }
-            if (x.tech.isNotEmpty()) Text(x.tech.joinToString(" · "), color = p.mut, fontFamily = PaperFonts.mono, fontSize = HomelabType.caption.fontSize, maxLines = 2)
+            x.sub?.let { Text(it, color = p.textPrimary, fontSize = HomelabType.footnote.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+            if (x.tech.isNotEmpty()) Text(x.tech.joinToString(" · "), color = p.textTertiary, fontFamily = PaperFonts.mono, fontSize = HomelabType.caption.fontSize, maxLines = 2)
             Box(Modifier.fillMaxWidth().height(4.dp).clip(CircleShape).background(p.line)) {
                 Box(Modifier.fillMaxWidth(x.progress.coerceIn(0f, 1f)).fillMaxHeight().background(acc))
             }
-            Text(listOfNotNull(x.user.ifBlank { null }, x.device, x.left?.let { if (it.contains("igjen")) it else "$it igjen" }).joinToString(" · "), color = p.mut, fontSize = HomelabType.footnote.fontSize, maxLines = 1)
+            Text(listOfNotNull(x.user.ifBlank { null }, x.device, x.left?.let { if (it.contains("igjen")) it else "$it igjen" }).joinToString(" · "), color = p.textTertiary, fontSize = HomelabType.footnote.fontSize, maxLines = 1)
         }
     }
 }
 
 @Composable
 private fun Hist44(vm: AppViewModel, h: PHist44) {
-    val p = PaperPal.current
-    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(p.card).padding(10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+    val p = HomelabTheme.colors
+    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(p.surfaceRaised).padding(10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         Poster43(vm, h.poster, null, h.title, 40.dp, 60.dp)
         Column(Modifier.weight(1f)) {
-            Text(h.title, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(listOfNotNull(h.sub, h.user.ifBlank { null }, h.device).joinToString(" · "), color = p.mut, fontSize = HomelabType.footnote.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(listOfNotNull(h.at.take(16).replace('T', ' ').ifBlank { null }, h.duration).joinToString(" · "), color = p.mut, fontFamily = PaperFonts.mono, fontSize = HomelabType.caption.fontSize, maxLines = 1)
+            Text(h.title, color = p.textPrimary, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(listOfNotNull(h.sub, h.user.ifBlank { null }, h.device).joinToString(" · "), color = p.textTertiary, fontSize = HomelabType.footnote.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(listOfNotNull(h.at.take(16).replace('T', ' ').ifBlank { null }, h.duration).joinToString(" · "), color = p.textTertiary, fontFamily = PaperFonts.mono, fontSize = HomelabType.caption.fontSize, maxLines = 1)
         }
-        h.pct?.let { Text("$it %", color = if (it >= 90) OK43 else p.ink, fontWeight = FontWeight.Bold, fontSize = HomelabType.footnote.fontSize) }
+        h.pct?.let { Text("$it %", color = if (it >= 90) OK43 else p.textPrimary, fontWeight = FontWeight.Bold, fontSize = HomelabType.footnote.fontSize) }
     }
 }
 
@@ -1432,28 +1434,28 @@ internal val MEDIA_COLORS45: Map<String, Long> = mapOf(
 /** Systemets tilbakeknapp: rund 40 dp glass-knapp med ‹ (treffflate 44 dp). */
 @Composable
 internal fun BackCircle45(label: String = "Tilbake", modifier: Modifier = Modifier, onClick: () -> Unit) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     Box(modifier.size(44.dp).clickable(role = Role.Button, onClickLabel = label) { Haptics.select(); onClick() }.semantics { contentDescription = label }, contentAlignment = Alignment.Center) {
         Box(
             Modifier.size(40.dp).shadow(6.dp, CircleShape, ambientColor = Color.Black.copy(alpha = .2f), spotColor = Color.Black.copy(alpha = .2f))
-                .clip(CircleShape).background(p.card.copy(alpha = .92f)).border(1.dp, p.line, CircleShape),
+                .clip(CircleShape).background(p.surfaceRaised.copy(alpha = .92f)).border(1.dp, p.line, CircleShape),
             contentAlignment = Alignment.Center,
-        ) { WxIcon(IC_BACK30, p.ink, 18.dp, stroke = 2.4f) }
+        ) { WxIcon(IC_BACK30, p.textPrimary, 18.dp, stroke = 2.4f) }
     }
 }
 
 /** Fanepille i tjenestens farge når den er valgt (ellers som Pill43). */
 @Composable
 internal fun MediaTab45(key: String, text: String, on: Boolean, onClick: () -> Unit) {
-    val p = PaperPal.current
-    val c = MEDIA_COLORS45[key]?.let { Color(it) } ?: p.ink
+    val p = HomelabTheme.colors
+    val c = MEDIA_COLORS45[key]?.let { Color(it) } ?: p.textPrimary
     Row(Modifier.heightIn(min = 44.dp).clickable(role = Role.Tab, onClickLabel = text) { Haptics.select(); onClick() }, verticalAlignment = Alignment.CenterVertically) {
         Row(
-            Modifier.height(36.dp).clip(CircleShape).background(if (on) c.copy(alpha = .16f) else p.card).border(1.5.dp, if (on) c else p.line, CircleShape).padding(horizontal = 12.dp),
+            Modifier.height(36.dp).clip(CircleShape).background(if (on) c.copy(alpha = .16f) else p.surfaceRaised).border(1.5.dp, if (on) c else p.line, CircleShape).padding(horizontal = 12.dp),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp),
         ) {
             Box(Modifier.size(8.dp).clip(CircleShape).background(c))
-            Text(text, color = p.ink, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize, maxLines = 1)
+            Text(text, color = p.textPrimary, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize, maxLines = 1)
         }
     }
 }
@@ -1462,16 +1464,16 @@ internal fun MediaTab45(key: String, text: String, on: Boolean, onClick: () -> U
 @Composable
 internal fun MediaMenu45(vm: AppViewModel) {
     var open by remember { mutableStateOf(false) }
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     Box {
         RoundBtn50("⋯", "Flere valg") { open = true } // prompt 50: rund 40 dp som ⋯ i Nyheter
-        DropdownMenu(open, { open = false }, containerColor = p.card) {
-            DropdownMenuItem({ Text("Innstillinger for Media", color = p.ink) }, {
+        DropdownMenu(open, { open = false }, containerColor = p.surfaceRaised) {
+            DropdownMenuItem({ Text("Innstillinger for Media", color = p.textPrimary) }, {
                 open = false; vm.closeMedia43(); vm.openPaperPage("set"); vm.settingsPage = "media"
             })
             if (vm.userIsAdmin) {
-                DropdownMenuItem({ Text("Rydd uovervåkede episoder (Sonarr)", color = p.ink) }, { open = false; vm.openUnmon45("sonarr", null) })
-                DropdownMenuItem({ Text("Rydd uovervåkede filmer (Radarr)", color = p.ink) }, { open = false; vm.openUnmon45("radarr", null) })
+                DropdownMenuItem({ Text("Rydd uovervåkede episoder (Sonarr)", color = p.textPrimary) }, { open = false; vm.openUnmon45("sonarr", null) })
+                DropdownMenuItem({ Text("Rydd uovervåkede filmer (Radarr)", color = p.textPrimary) }, { open = false; vm.openUnmon45("radarr", null) })
             }
         }
     }
@@ -1555,17 +1557,17 @@ private fun AppViewModel.undoUnmon45() {
 @Composable
 internal fun UnmonSheet45(vm: AppViewModel) {
     val u = UnmonState45
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     if (u.service != null) Sheet43({ u.service = null }) {
         PSerif(if (u.service == "radarr") "Slett uovervåkede filmer" else "Slett uovervåkede episoder", 22.sp)
         val items = u.items
         when {
-            items == null -> Text("Finner filer som ikke er overvåket …", color = p.mut, fontSize = HomelabType.subheadline.fontSize)
+            items == null -> Text("Finner filer som ikke er overvåket …", color = p.textTertiary, fontSize = HomelabType.subheadline.fontSize)
             u.error != null -> Text(u.error!!, color = RED43, fontSize = HomelabType.subheadline.fontSize)
-            items.isEmpty() -> Text("Ingen filer uten overvåking. Alt er ryddig.", color = p.mut, fontSize = HomelabType.subheadline.fontSize)
+            items.isEmpty() -> Text("Ingen filer uten overvåking. Alt er ryddig.", color = p.textTertiary, fontSize = HomelabType.subheadline.fontSize)
             else -> {
-                Text(u.text ?: "Slette ${items.size} filer som ikke er overvåket?", color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize)
-                Column(Modifier.fillMaxWidth().heightIn(max = 360.dp).verticalScroll(rememberScrollState()).clip(RoundedCornerShape(14.dp)).background(p.card)) {
+                Text(u.text ?: "Slette ${items.size} filer som ikke er overvåket?", color = p.textPrimary, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize)
+                Column(Modifier.fillMaxWidth().heightIn(max = 360.dp).verticalScroll(rememberScrollState()).clip(RoundedCornerShape(14.dp)).background(p.surfaceRaised)) {
                     items.forEachIndexed { i, x ->
                         if (i > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
                         val on = x.fileId in u.sel
@@ -1576,24 +1578,24 @@ internal fun UnmonSheet45(vm: AppViewModel) {
                             Box(Modifier.size(22.dp).clip(RoundedCornerShape(6.dp)).background(if (on) RED43 else Color.Transparent).border(1.5.dp, if (on) RED43 else p.line, RoundedCornerShape(6.dp)),
                                 contentAlignment = Alignment.Center) { if (on) Text("✓", color = Color.White, fontSize = HomelabType.footnote.fontSize, fontWeight = FontWeight.Bold) }
                             Column(Modifier.weight(1f)) {
-                                Text(listOfNotNull(x.code, x.title.ifBlank { null }).joinToString(" · "), color = p.ink, fontSize = HomelabType.subheadline.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                x.series?.let { Text(it, color = p.mut, fontSize = HomelabType.footnote.fontSize, maxLines = 1) }
+                                Text(listOfNotNull(x.code, x.title.ifBlank { null }).joinToString(" · "), color = p.textPrimary, fontSize = HomelabType.subheadline.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                x.series?.let { Text(it, color = p.textTertiary, fontSize = HomelabType.footnote.fontSize, maxLines = 1) }
                             }
-                            x.sizeText?.let { Text(it, color = p.mut, fontSize = HomelabType.footnote.fontSize) }
+                            x.sizeText?.let { Text(it, color = p.textTertiary, fontSize = HomelabType.footnote.fontSize) }
                         }
                     }
                 }
                 Btn43(if (u.busy) "Sletter …" else "Slett filer (${u.sel.size})", color = RED43, modifier = Modifier.fillMaxWidth(), enabled = !u.busy && u.sel.isNotEmpty()) { vm.deleteUnmon45() }
-                Text("Filene slettes fra disken etter 8 sekunder. Du kan angre til da.", color = p.mut, fontSize = HomelabType.footnote.fontSize)
+                Text("Filene slettes fra disken etter 8 sekunder. Du kan angre til da.", color = p.textTertiary, fontSize = HomelabType.footnote.fontSize)
             }
         }
     }
     if (u.undo != null) Box(Modifier.fillMaxSize().navigationBarsPadding().padding(bottom = 70.dp), contentAlignment = Alignment.BottomCenter) {
-        Row(Modifier.clip(RoundedCornerShape(14.dp)).background(p.ink).padding(start = 14.dp, end = 6.dp, top = 6.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text("Sletter uovervåkede filer …", color = p.bg, fontSize = HomelabType.subheadline.fontSize, fontWeight = FontWeight.SemiBold)
+        Row(Modifier.clip(RoundedCornerShape(14.dp)).background(p.textPrimary).padding(start = 14.dp, end = 6.dp, top = 6.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text("Sletter uovervåkede filer …", color = p.surface, fontSize = HomelabType.subheadline.fontSize, fontWeight = FontWeight.SemiBold)
             Spacer(Modifier.width(10.dp))
-            Box(Modifier.height(34.dp).clip(CircleShape).background(p.bg).clickable(role = Role.Button) { vm.undoUnmon45() }.padding(horizontal = 14.dp), contentAlignment = Alignment.Center) {
-                Text("Angre", color = p.ink, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize)
+            Box(Modifier.height(34.dp).clip(CircleShape).background(p.surface).clickable(role = Role.Button) { vm.undoUnmon45() }.padding(horizontal = 14.dp), contentAlignment = Alignment.Center) {
+                Text("Angre", color = p.textPrimary, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize)
             }
         }
     }
@@ -1604,23 +1606,23 @@ internal fun UnmonSheet45(vm: AppViewModel) {
 /** Innstillinger → Media (flyttet fra ⚙ i Media): status per tjeneste fra serveren og lenke til Integrasjoner. */
 @Composable
 internal fun MediaSettings45(vm: AppViewModel) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val s = vm.p43
     LaunchedEffect(Unit) { vm.loadStatus43() }
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Text("Tjenestenøklene ligger bare på serveren. Appen snakker med Homelab, som er proxy til tjenestene.", color = p.mut, fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.padding(horizontal = 4.dp))
+        Text("Tjenestenøklene ligger bare på serveren. Appen snakker med Homelab, som er proxy til tjenestene.", color = p.textTertiary, fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.padding(horizontal = 4.dp))
         PCard {
-            if (s.services.isEmpty()) Text(if (s.missing) "Media er ikke på serveren ennå." else "Henter status …", color = p.mut, fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.padding(14.dp))
+            if (s.services.isEmpty()) Text(if (s.missing) "Media er ikke på serveren ennå." else "Henter status …", color = p.textTertiary, fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.padding(14.dp))
             s.services.forEachIndexed { i, x ->
                 if (i > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
                 val integ = vm.integOk44(x.key)
                 val conf = x.configured || integ == true
                 Row(Modifier.fillMaxWidth().padding(14.dp, 11.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Box(Modifier.size(10.dp).clip(CircleShape).background(MEDIA_COLORS45[x.key]?.let { Color(it) } ?: p.mut))
+                    Box(Modifier.size(10.dp).clip(CircleShape).background(MEDIA_COLORS45[x.key]?.let { Color(it) } ?: p.textTertiary))
                     Column(Modifier.weight(1f)) {
-                        Text(x.name, color = p.ink, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize)
+                        Text(x.name, color = p.textPrimary, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize)
                         Text(if (!conf) "Ikke satt opp · Integrasjoner → MEDIA" else if (!x.configured) "Koblet til (Integrasjoner)" else listOfNotNull(x.version?.let { "v$it" }, x.ms?.let { "$it ms" }, x.error?.let { "Svarer ikke: $it" }).joinToString(" · "),
-                            color = if (x.error != null) RED43 else p.mut, fontSize = HomelabType.footnote.fontSize)
+                            color = if (x.error != null) RED43 else p.textTertiary, fontSize = HomelabType.footnote.fontSize)
                     }
                     Box(Modifier.size(9.dp).clip(CircleShape).background(if (!conf) p.line else if (x.ok || (!x.configured && integ == true)) OK43 else RED43))
                 }

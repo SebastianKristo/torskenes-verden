@@ -40,6 +40,7 @@ import no.kristo.finanshub.resumeAppUpd32
 import no.kristo.finanshub.retryAppUpd32
 import no.kristo.finanshub.startAppUpd32
 import no.kristo.finanshub.ui.designsystem.HomelabType
+import no.kristo.finanshub.ui.designsystem.HomelabTheme
 
 /*
  * Prompt 32 (APKUPD): oppdatering av selve appen. Logikken ligger i AppUpdate.kt.
@@ -64,10 +65,10 @@ internal fun AppUpd32Effects(vm: AppViewModel) {
 @Composable
 internal fun AppUpdateBanner32(vm: AppViewModel, modifier: Modifier = Modifier) {
     if (!vm.appUpd32OnHome()) return
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     Column(
         modifier.fillMaxWidth().shadow(14.dp, RoundedCornerShape(22.dp), ambientColor = Color.Black.copy(alpha = .35f), spotColor = Color.Black.copy(alpha = .35f))
-            .clip(RoundedCornerShape(22.dp)).background(p.card).padding(start = 16.dp, top = 14.dp, end = 14.dp, bottom = 14.dp),
+            .clip(RoundedCornerShape(22.dp)).background(p.surfaceRaised).padding(start = 16.dp, top = 14.dp, end = 14.dp, bottom = 14.dp),
     ) { AppUpdCard32(vm, home = true) }
 }
 
@@ -75,7 +76,7 @@ internal fun AppUpdateBanner32(vm: AppViewModel, modifier: Modifier = Modifier) 
 @Composable
 internal fun AppUpdateRow32(vm: AppViewModel) {
     AppUpd32Effects(vm)
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val s: AppUpd32State = AppUpd32.s
     val cur: String = s.current.ifBlank { "–" }
     val nv: String = s.latest?.version ?: ""
@@ -89,7 +90,7 @@ internal fun AppUpdateRow32(vm: AppViewModel) {
     }
     val busy: Boolean = s.phase != "none"
     Column {
-        PRow("Homelab-appen $cur", sub, if (busy) "›" else if (s.loaded) "✓" else "›", if (busy) p.lab else p.pos, serif = false) {
+        PRow("Homelab-appen $cur", sub, if (busy) "›" else if (s.loaded) "✓" else "›", if (busy) p.accent else p.success, serif = false) {
             if (!busy) vm.checkAppUpd32(force = true)
         }
         if (busy) Column(Modifier.fillMaxWidth().padding(start = 14.dp, end = 14.dp, bottom = 14.dp)) { AppUpdCard32(vm, home = false) }
@@ -99,7 +100,7 @@ internal fun AppUpdateRow32(vm: AppViewModel) {
 /** Innholdet i kortet: tittel, tekst, fremdrift, «Hva er nytt» og knappene. */
 @Composable
 private fun AppUpdCard32(vm: AppViewModel, home: Boolean) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val s: AppUpd32State = AppUpd32.s
     val nv: String = s.latest?.version ?: "ny versjon"
     val title: String = when (s.phase) {
@@ -118,19 +119,19 @@ private fun AppUpdCard32(vm: AppViewModel, home: Boolean) {
     }
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            if (home) Box(Modifier.size(40.dp).clip(CircleShape).background(if (s.phase == "failed") p.ink else p.lab), contentAlignment = Alignment.Center) {
-                if (s.phase == "failed") Text("!", color = p.bg, fontWeight = FontWeight.ExtraBold, fontSize = HomelabType.headline.fontSize)
-                else WxIcon(IC_DL30, p.onLab, 18.dp, stroke = 2.4f)
+            if (home) Box(Modifier.size(40.dp).clip(CircleShape).background(if (s.phase == "failed") p.textPrimary else p.accent), contentAlignment = Alignment.Center) {
+                if (s.phase == "failed") Text("!", color = p.surface, fontWeight = FontWeight.ExtraBold, fontSize = HomelabType.headline.fontSize)
+                else WxIcon(IC_DL30, p.onAccent, 18.dp, stroke = 2.4f)
             }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                Text(title, color = p.ink, fontFamily = PaperFonts.sans, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize)
-                Text(text, color = p.mut, fontFamily = PaperFonts.sans, fontSize = HomelabType.footnote.fontSize, lineHeight = 17.sp)
+                Text(title, color = p.textPrimary, fontFamily = PaperFonts.sans, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize)
+                Text(text, color = p.textTertiary, fontFamily = PaperFonts.sans, fontSize = HomelabType.footnote.fontSize, lineHeight = 17.sp)
             }
             if (home && s.phase == "avail") Box(
                 Modifier.align(Alignment.Top).size(30.dp).clip(CircleShape).background(p.line)
                     .clickable(role = Role.Button, onClickLabel = "Skjul i 24 timer") { Haptics.dismiss(); vm.hideAppUpd32() },
                 contentAlignment = Alignment.Center,
-            ) { WxIcon(IC_X30, p.ink, 10.dp, stroke = 3.4f) }
+            ) { WxIcon(IC_X30, p.textPrimary, 10.dp, stroke = 3.4f) }
         }
         if (s.phase == "dl") AppUpdBar32(s.pct)
         if (s.notesOpen && (s.phase == "avail" || s.phase == "failed")) AppUpdNotes32(s.latest?.notes ?: emptyList())
@@ -154,25 +155,25 @@ private fun AppUpdCard32(vm: AppViewModel, home: Boolean) {
 
 @Composable
 private fun AppUpdBar32(pct: Int) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val f: Float = (pct.coerceIn(0, 100) / 100f).coerceAtLeast(.02f)
     Box(Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)).background(p.line)) {
-        Box(Modifier.fillMaxWidth(f).height(6.dp).clip(RoundedCornerShape(3.dp)).background(p.lab))
+        Box(Modifier.fillMaxWidth(f).height(6.dp).clip(RoundedCornerShape(3.dp)).background(p.accent))
     }
 }
 
 @Composable
 private fun AppUpdNotes32(notes: List<String>) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val list: List<String> = notes.ifEmpty { listOf("Feilrettinger og forbedringer.") }
     Column(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(p.bg).padding(12.dp, 10.dp),
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(p.surface).padding(12.dp, 10.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         list.take(20).forEach { n ->
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("•", color = p.lab, fontSize = HomelabType.subheadline.fontSize)
-                Text(n, color = p.ink, fontFamily = PaperFonts.sans, fontSize = HomelabType.subheadline.fontSize, lineHeight = 18.sp)
+                Text("•", color = p.accent, fontSize = HomelabType.subheadline.fontSize)
+                Text(n, color = p.textPrimary, fontFamily = PaperFonts.sans, fontSize = HomelabType.subheadline.fontSize, lineHeight = 18.sp)
             }
         }
     }

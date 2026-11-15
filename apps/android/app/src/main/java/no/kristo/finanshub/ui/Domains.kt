@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import no.kristo.finanshub.*
 import no.kristo.finanshub.ui.designsystem.HomelabType
+import no.kristo.finanshub.ui.designsystem.HomelabTheme
 
 /**
  * Domener (Cloudflare-statistikk) i rosa tonal palett. Fanelinja er byttet ut med
@@ -36,6 +37,7 @@ import no.kristo.finanshub.ui.designsystem.HomelabType
  */
 @Composable
 internal fun DomainsScreen(vm: AppViewModel, twoPane: Boolean, section: String? = null) {
+    val farger = HomelabTheme.colors
     val a = vm.analytics
     Page {
         // Papir har egen fanelinje (Oversikt, Publikum, Ytelse og Infra) og et hvitt toppkort med domenevelger og periode.
@@ -44,11 +46,11 @@ internal fun DomainsScreen(vm: AppViewModel, twoPane: Boolean, section: String? 
         if (section == "oversikt" && vm.p38.domSumOpen && !vm.domAll) item { DomGlimt38(vm) }
         else if (section == null || section == "oversikt") item { DomainHeader(vm) }
         if (twoPane && section == null) item {
-            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(P.card).padding(4.dp)) {
+            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(farger.surfaceRaised).padding(4.dp)) {
                 DomTab.entries.forEach { t ->
                     val on = vm.domTab == t
-                    Box(Modifier.weight(1f).clip(RoundedCornerShape(24.dp)).background(if (on) P.hero else Color.Transparent).clickable { vm.domTab = t }.padding(12.dp), contentAlignment = Alignment.Center) {
-                        Text(t.label, color = if (on) P.onHero else P.text2, fontWeight = FontWeight.SemiBold)
+                    Box(Modifier.weight(1f).clip(RoundedCornerShape(24.dp)).background(if (on) farger.surfaceChip else Color.Transparent).clickable { vm.domTab = t }.padding(12.dp), contentAlignment = Alignment.Center) {
+                        Text(t.label, color = if (on) farger.textPrimary else farger.textSecondary, fontWeight = FontWeight.SemiBold)
                     }
                 }
             }
@@ -56,16 +58,16 @@ internal fun DomainsScreen(vm: AppViewModel, twoPane: Boolean, section: String? 
         vm.moduleError?.let { e -> item { Empty(e) } }
         if (vm.domains?.isEmpty() == true) item {
             Column(Modifier.fillMaxWidth().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                Text("Ingen domener ennå.", color = P.text2)
-                Button(onClick = { vm.domainManager = true }, shape = RoundedCornerShape(24.dp), colors = ButtonDefaults.buttonColors(containerColor = P.hero, contentColor = P.onHero)) {
+                Text("Ingen domener ennå.", color = farger.textSecondary)
+                Button(onClick = { vm.domainManager = true }, shape = RoundedCornerShape(24.dp), colors = ButtonDefaults.buttonColors(containerColor = farger.surfaceChip, contentColor = farger.textPrimary)) {
                     Icon(Icons.Filled.Add, null); Spacer(Modifier.width(8.dp)); Text("Legg til domene", fontWeight = FontWeight.SemiBold)
                 }
             }
         }
         if (vm.domAll) { allDomains(vm); return@Page }
-        if (a == null && vm.moduleError == null && vm.domains?.isEmpty() != true) item { Box(Modifier.fillMaxWidth().padding(40.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = P.accent) } }
+        if (a == null && vm.moduleError == null && vm.domains?.isEmpty() != true) item { Box(Modifier.fillMaxWidth().padding(40.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = farger.textPrimary) } }
         if (a != null) {
-            if (a.mock) item { Text("Eksempeldata – legg inn Cloudflare-token i Homelab for ekte tall.", color = P.text2, fontSize = HomelabType.footnote.fontSize, modifier = Modifier.padding(start = 8.dp)) }
+            if (a.mock) item { Text("Eksempeldata – legg inn Cloudflare-token i Homelab for ekte tall.", color = farger.textSecondary, fontSize = HomelabType.footnote.fontSize, modifier = Modifier.padding(start = 8.dp)) }
             when (section) {
                 "oversikt" -> traffic(vm, a, withCard = false, ranges = false)
                 "publikum" -> visits(vm, a)
@@ -85,27 +87,28 @@ internal fun DomainsScreen(vm: AppViewModel, twoPane: Boolean, section: String? 
 /** Overskrift: domenevelgeren (bare ikonet, med statusprikk) og Oppdater står ved siden av profilbildet. */
 @Composable
 private fun DomainHeader(vm: AppViewModel) {
+    val farger = HomelabTheme.colors
     var pick by remember { mutableStateOf(false) }
     ModuleHeader(vm, "Domener", actions = {
         Box {
             IconButton(onClick = { pick = true }) {
                 Box {
-                    Icon(Icons.Filled.Public, "Velg domene${vm.domain?.let { " (nå $it)" } ?: ""}", tint = P.accent)
-                    Box(Modifier.align(Alignment.TopEnd).size(8.dp).clip(CircleShape).background(when (vm.analytics?.status) { null, "active" -> C.positive; "pending", "unknown" -> tc(0xFFF2C14E); else -> P.red }))
+                    Icon(Icons.Filled.Public, "Velg domene${vm.domain?.let { " (nå $it)" } ?: ""}", tint = farger.textPrimary)
+                    Box(Modifier.align(Alignment.TopEnd).size(8.dp).clip(CircleShape).background(when (vm.analytics?.status) { null, "active" -> farger.success; "pending", "unknown" -> tc(0xFFF2C14E); else -> farger.danger }))
                 }
             }
             DropdownMenu(expanded = pick, onDismissRequest = { pick = false }) {
                 vm.domains?.forEach { d ->
-                    DropdownMenuItem(text = { Column { Text(d.name, fontWeight = if (d.name == vm.domain) FontWeight.SemiBold else FontWeight.Normal); Text(sourceName(d.source), fontSize = HomelabType.footnote.fontSize, color = C.text2) } },
-                        leadingIcon = { if (d.name == vm.domain) Icon(Icons.Filled.Check, null, tint = P.accent) else Spacer(Modifier.size(24.dp)) },
+                    DropdownMenuItem(text = { Column { Text(d.name, fontWeight = if (d.name == vm.domain) FontWeight.SemiBold else FontWeight.Normal); Text(sourceName(d.source), fontSize = HomelabType.footnote.fontSize, color = farger.textSecondary) } },
+                        leadingIcon = { if (d.name == vm.domain) Icon(Icons.Filled.Check, null, tint = farger.textPrimary) else Spacer(Modifier.size(24.dp)) },
                         onClick = { pick = false; vm.pickDomain(d.name) })
                 }
                 HorizontalDivider()
-                DropdownMenuItem(text = { Text("Administrer domener", color = P.accent, fontWeight = FontWeight.SemiBold) }, leadingIcon = { Icon(Icons.Filled.Add, null, tint = P.accent) },
+                DropdownMenuItem(text = { Text("Administrer domener", color = farger.textPrimary, fontWeight = FontWeight.SemiBold) }, leadingIcon = { Icon(Icons.Filled.Add, null, tint = farger.textPrimary) },
                     onClick = { pick = false; vm.domainManager = true })
             }
         }
-        IconButton(onClick = { vm.reloadDomain() }) { Icon(Icons.Filled.Refresh, "Oppdater", tint = P.accent) }
+        IconButton(onClick = { vm.reloadDomain() }) { Icon(Icons.Filled.Refresh, "Oppdater", tint = farger.textPrimary) }
     })
 }
 
@@ -124,27 +127,29 @@ private fun bytes(b: Double): String = when {
 
 @Composable
 private fun PinkCard(modifier: Modifier = Modifier.fillMaxWidth(), shape: RoundedCornerShape = RoundedCornerShape(24.dp), content: @Composable ColumnScope.() -> Unit) =
-    Column(modifier.clip(shape).background(P.card).padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp), content = content)
+    Column(modifier.clip(shape).background(HomelabTheme.colors.surfaceRaised).padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp), content = content)
 
 @Composable
 private fun Stat(label: String, value: String, modifier: Modifier, shape: RoundedCornerShape = RoundedCornerShape(20.dp)) {
-    Column(modifier.clip(shape).background(P.card).padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(label, color = P.text2, fontSize = HomelabType.footnote.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        Text(value, fontFamily = Mono, fontSize = HomelabType.headline.fontSize, fontWeight = FontWeight.SemiBold, color = P.onHero, maxLines = 1, softWrap = false)
+    val farger = HomelabTheme.colors
+    Column(modifier.clip(shape).background(farger.surfaceRaised).padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(label, color = farger.textSecondary, fontSize = HomelabType.footnote.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(value, fontFamily = Mono, fontSize = HomelabType.headline.fontSize, fontWeight = FontWeight.SemiBold, color = farger.textPrimary, maxLines = 1, softWrap = false)
     }
 }
 
 @Composable
-private fun Title(text: String) = Text(text, color = P.accent, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 8.dp, top = 8.dp))
+private fun Title(text: String) = Text(text, color = HomelabTheme.colors.textPrimary, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 8.dp, top = 8.dp))
 
 @Composable
-private fun Bars(rows: List<Named>, unit: String = "", color: Color = P.accent) {
-    if (rows.isEmpty()) { Text("Ingen data", color = P.text2, fontSize = HomelabType.subheadline.fontSize); return }
+private fun Bars(rows: List<Named>, unit: String = "", color: Color = HomelabTheme.colors.textPrimary) {
+    val farger = HomelabTheme.colors
+    if (rows.isEmpty()) { Text("Ingen data", color = farger.textSecondary, fontSize = HomelabType.subheadline.fontSize); return }
     val max = rows.maxOf { it.value }.coerceAtLeast(1.0)
     rows.take(8).forEach { r ->
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Row { Text(r.name, Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis, fontSize = HomelabType.callout.fontSize); Text(if (unit == "%") pct(r.value) else count(r.value) + unit, fontFamily = Mono, fontSize = HomelabType.subheadline.fontSize, color = P.text2) }
-            Box(Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)).background(P.card2)) {
+            Row { Text(r.name, Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis, fontSize = HomelabType.callout.fontSize); Text(if (unit == "%") pct(r.value) else count(r.value) + unit, fontFamily = Mono, fontSize = HomelabType.subheadline.fontSize, color = farger.textSecondary) }
+            Box(Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)).background(farger.line)) {
                 Box(Modifier.fillMaxWidth((r.value / max).toFloat().coerceIn(0.02f, 1f)).fillMaxHeight().clip(RoundedCornerShape(3.dp)).background(color))
             }
         }
@@ -153,7 +158,8 @@ private fun Bars(rows: List<Named>, unit: String = "", color: Color = P.accent) 
 
 /** Kurve med fylt område under (sparkline / historikk). */
 @Composable
-private fun Area(values: List<Double>, second: List<Double> = emptyList(), height: Int = 90, color: Color = P.accent) {
+private fun Area(values: List<Double>, second: List<Double> = emptyList(), height: Int = 90, color: Color = HomelabTheme.colors.textPrimary) {
+    val farger = HomelabTheme.colors
     Canvas(Modifier.fillMaxWidth().height(height.dp)) {
         fun path(v: List<Double>, fill: Boolean): Path? {
             if (v.size < 2) return null
@@ -169,25 +175,27 @@ private fun Area(values: List<Double>, second: List<Double> = emptyList(), heigh
         }
         path(values, true)?.let { drawPath(it, Brush.verticalGradient(listOf(color.copy(alpha = .35f), Color.Transparent))) }
         path(values, false)?.let { drawPath(it, color, style = Stroke(2.5.dp.toPx(), cap = StrokeCap.Round)) }
-        path(second, false)?.let { drawPath(it, P.text2.copy(alpha = .6f), style = Stroke(1.5.dp.toPx())) }
+        path(second, false)?.let { drawPath(it, farger.textSecondary.copy(alpha = .6f), style = Stroke(1.5.dp.toPx())) }
     }
 }
 
 @Composable
 private fun RangeChips(vm: AppViewModel, options: List<Pair<String, String>>) {
+    val farger = HomelabTheme.colors
     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         options.forEach { (k, n) ->
             FilterChip(selected = vm.domRange == k, onClick = { vm.setRange(k) }, label = { Text(n) },
-                colors = FilterChipDefaults.filterChipColors(selectedContainerColor = P.hero, selectedLabelColor = P.onHero, containerColor = P.card, labelColor = P.text2))
+                colors = FilterChipDefaults.filterChipColors(selectedContainerColor = farger.surfaceChip, selectedLabelColor = farger.textPrimary, containerColor = farger.surfaceRaised, labelColor = farger.textSecondary))
         }
     }
 }
 
 @Composable
 private fun KV(k: String, v: String, good: Boolean? = null) {
+    val farger = HomelabTheme.colors
     Row(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-        Text(k, Modifier.weight(1f), color = P.text2)
-        Text(v, fontWeight = FontWeight.Medium, color = when (good) { true -> C.positive; false -> P.red; null -> P.onHero })
+        Text(k, Modifier.weight(1f), color = farger.textSecondary)
+        Text(v, fontWeight = FontWeight.Medium, color = when (good) { true -> farger.success; false -> farger.danger; null -> farger.textPrimary })
     }
 }
 
@@ -195,18 +203,19 @@ private fun KV(k: String, v: String, good: Boolean? = null) {
 
 private fun androidx.compose.foundation.lazy.LazyListScope.traffic(vm: AppViewModel, a: Analytics, withCard: Boolean = true, ranges: Boolean = true) {
     item {
+        val farger = HomelabTheme.colors
         // Ca. 20 % lavere enn før: mindre polstring, tall og kurve.
-        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp, 28.dp, 28.dp, 10.dp)).background(P.hero).padding(18.dp, 14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp, 28.dp, 28.dp, 10.dp)).background(farger.surfaceChip).padding(18.dp, 14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Box(Modifier.size(8.dp).clip(CircleShape).background(C.positive))
-                Text("Live · ${vm.domain ?: "akkurat nå"}", color = P.onHero, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Box(Modifier.size(8.dp).clip(CircleShape).background(farger.success))
+                Text("Live · ${vm.domain ?: "akkurat nå"}", color = farger.textPrimary, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             Row(verticalAlignment = Alignment.Bottom) {
-                Text(count(a.liveVisitors), color = P.onHero, fontFamily = Mono, fontSize = HomelabType.title2.fontSize, fontWeight = FontWeight.SemiBold, lineHeight = 38.sp)
-                Text(" besøkende", color = P.onHero.copy(alpha = .75f), modifier = Modifier.padding(bottom = 5.dp))
+                Text(count(a.liveVisitors), color = farger.textPrimary, fontFamily = Mono, fontSize = HomelabType.title2.fontSize, fontWeight = FontWeight.SemiBold, lineHeight = 38.sp)
+                Text(" besøkende", color = farger.textPrimary.copy(alpha = .75f), modifier = Modifier.padding(bottom = 5.dp))
             }
-            Text("${count(a.liveRequests)} forespørsler · ${String.format(java.util.Locale("nb", "NO"), "%.1f", a.liveMb)} MB", color = P.onHero.copy(alpha = .8f), fontSize = HomelabType.subheadline.fontSize)
-            Area(a.liveSpark.ifEmpty { a.series.map { it.visitors } }, height = 42, color = P.onHero)
+            Text("${count(a.liveRequests)} forespørsler · ${String.format(java.util.Locale("nb", "NO"), "%.1f", a.liveMb)} MB", color = farger.textPrimary.copy(alpha = .8f), fontSize = HomelabType.subheadline.fontSize)
+            Area(a.liveSpark.ifEmpty { a.series.map { it.visitors } }, height = 42, color = farger.textPrimary)
         }
     }
     if (ranges) item { RangeChips(vm, listOf("24h" to "Siste 24 t", "today" to "I dag")) }
@@ -226,10 +235,11 @@ private fun androidx.compose.foundation.lazy.LazyListScope.traffic(vm: AppViewMo
     item { Title("Historikk") }
     if (ranges) item { RangeChips(vm, listOf("7d" to "7 d", "30d" to "30 d", "90d" to "90 d", "1y" to "1 år")) }
     item {
+        val farger = HomelabTheme.colors
         PinkCard {
-            Row { Text("Forespørsler", Modifier.weight(1f), color = P.onHero); Text("bufret ${pct(a.cachedPct)}", color = P.text2, fontSize = HomelabType.subheadline.fontSize) }
+            Row { Text("Forespørsler", Modifier.weight(1f), color = farger.textPrimary); Text("bufret ${pct(a.cachedPct)}", color = farger.textSecondary, fontSize = HomelabType.subheadline.fontSize) }
             Area(a.series.map { it.requests }, a.series.map { it.cached }, height = 120)
-            if (a.series.size >= 2) Row { Text(a.series.first().t.take(10), color = P.text2, fontSize = HomelabType.caption.fontSize, modifier = Modifier.weight(1f)); Text(a.series.last().t.take(10), color = P.text2, fontSize = HomelabType.caption.fontSize) }
+            if (a.series.size >= 2) Row { Text(a.series.first().t.take(10), color = farger.textSecondary, fontSize = HomelabType.caption.fontSize, modifier = Modifier.weight(1f)); Text(a.series.last().t.take(10), color = farger.textSecondary, fontSize = HomelabType.caption.fontSize) }
         }
     }
 }
@@ -261,16 +271,17 @@ private fun androidx.compose.foundation.lazy.LazyListScope.infra(vm: AppViewMode
     item { DomainCard(vm, a) }
     item { Title("DNS-poster") }
     item {
+        val farger = HomelabTheme.colors
         PinkCard {
-            if (a.dns.isEmpty()) Text("Ingen DNS-poster hentet", color = P.text2, fontSize = HomelabType.subheadline.fontSize)
+            if (a.dns.isEmpty()) Text("Ingen DNS-poster hentet", color = farger.textSecondary, fontSize = HomelabType.subheadline.fontSize)
             a.dns.take(30).forEach { r ->
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text(r.type, fontFamily = Mono, fontSize = HomelabType.footnote.fontSize, color = P.accent, modifier = Modifier.width(52.dp))
+                    Text(r.type, fontFamily = Mono, fontSize = HomelabType.footnote.fontSize, color = farger.textPrimary, modifier = Modifier.width(52.dp))
                     Column(Modifier.weight(1f)) {
-                        Text(r.name, fontSize = HomelabType.subheadline.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis, color = P.onHero)
-                        Text(r.content, fontFamily = Mono, fontSize = HomelabType.footnote.fontSize, color = P.text2, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(r.name, fontSize = HomelabType.subheadline.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis, color = farger.textPrimary)
+                        Text(r.content, fontFamily = Mono, fontSize = HomelabType.footnote.fontSize, color = farger.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
-                    if (r.proxied) Text("Proxy", color = C.positive, fontSize = HomelabType.caption.fontSize)
+                    if (r.proxied) Text("Proxy", color = farger.success, fontSize = HomelabType.caption.fontSize)
                 }
             }
         }
@@ -280,14 +291,15 @@ private fun androidx.compose.foundation.lazy.LazyListScope.infra(vm: AppViewMode
 private fun androidx.compose.foundation.lazy.LazyListScope.uptime(a: Analytics) {
     item { Title("Oppetid siste 90 dager") }
     item {
+        val farger = HomelabTheme.colors
         PinkCard {
             val days = a.uptime90.takeLast(90)
-            Text(if (a.uptimePct > 0) pct(a.uptimePct) else "–", fontFamily = Mono, fontSize = HomelabType.title3.fontSize, color = P.onHero)
+            Text(if (a.uptimePct > 0) pct(a.uptimePct) else "–", fontFamily = Mono, fontSize = HomelabType.title3.fontSize, color = farger.textPrimary)
             Row(Modifier.fillMaxWidth().height(28.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                days.forEach { u -> Box(Modifier.weight(1f).fillMaxHeight().clip(RoundedCornerShape(1.dp)).background(if (u < 0) P.card2 else if (u >= 0.999) C.positive else if (u >= 0.98) tc(0xFFF2C14E) else P.red)) }
+                days.forEach { u -> Box(Modifier.weight(1f).fillMaxHeight().clip(RoundedCornerShape(1.dp)).background(if (u < 0) farger.line else if (u >= 0.999) farger.success else if (u >= 0.98) tc(0xFFF2C14E) else farger.danger)) }
             }
-            if (days.isNotEmpty()) Row { Text("${days.size} dager siden", color = P.text2, fontSize = HomelabType.caption.fontSize, modifier = Modifier.weight(1f)); Text("I dag", color = P.text2, fontSize = HomelabType.caption.fontSize) }
-            if (days.isEmpty()) Text("Ingen målinger ennå", color = P.text2, fontSize = HomelabType.subheadline.fontSize)
+            if (days.isNotEmpty()) Row { Text("${days.size} dager siden", color = farger.textSecondary, fontSize = HomelabType.caption.fontSize, modifier = Modifier.weight(1f)); Text("I dag", color = farger.textSecondary, fontSize = HomelabType.caption.fontSize) }
+            if (days.isEmpty()) Text("Ingen målinger ennå", color = farger.textSecondary, fontSize = HomelabType.subheadline.fontSize)
         }
     }
 }
@@ -313,36 +325,38 @@ private fun androidx.compose.foundation.lazy.LazyListScope.perf(a: Analytics, wi
         }
     }
     item { Title("Protokoll") }
-    item { PinkCard { Bars(a.http, "%"); HorizontalDivider(color = P.card2); Bars(a.tls, "%") } }
+    item { PinkCard { Bars(a.http, "%"); HorizontalDivider(color = HomelabTheme.colors.line); Bars(a.tls, "%") } }
     if (withUptime) uptime(a)
 }
 
 private fun androidx.compose.foundation.lazy.LazyListScope.security(a: Analytics) {
     item {
-        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(32.dp, 32.dp, 10.dp, 32.dp)).background(P.hero).padding(20.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text("Trusler stoppet", color = P.onHero.copy(alpha = .8f))
-            Text(count(a.threatsTotal), color = P.onHero, fontFamily = Mono, fontSize = HomelabType.largeTitle.fontSize, fontWeight = FontWeight.SemiBold)
+        val farger = HomelabTheme.colors
+        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(32.dp, 32.dp, 10.dp, 32.dp)).background(farger.surfaceChip).padding(20.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text("Trusler stoppet", color = farger.textPrimary.copy(alpha = .8f))
+            Text(count(a.threatsTotal), color = farger.textPrimary, fontFamily = Mono, fontSize = HomelabType.largeTitle.fontSize, fontWeight = FontWeight.SemiBold)
         }
     }
     item { Title("Hva ble stoppet") }
     item { PinkCard { Bars(a.threatTypes) } }
     item { Title("Siste hendelser") }
     item {
+        val farger = HomelabTheme.colors
         PinkCard {
-            if (a.events.isEmpty()) Text("Ingen hendelser", color = P.text2, fontSize = HomelabType.subheadline.fontSize)
+            if (a.events.isEmpty()) Text("Ingen hendelser", color = farger.textSecondary, fontSize = HomelabType.subheadline.fontSize)
             a.events.take(10).forEach { e ->
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Chip(e.action, bg = if (e.action == "Blokkert") tc(0xFF4A1F25) else tc(0xFF4A3A1F), fg = if (e.action == "Blokkert") P.red else tc(0xFFF2C14E))
+                    Chip(e.action, bg = if (e.action == "Blokkert") tc(0xFF4A1F25) else tc(0xFF4A3A1F), fg = if (e.action == "Blokkert") farger.danger else tc(0xFFF2C14E))
                     Column(Modifier.weight(1f)) {
                         Text(e.path.ifBlank { "/" }, fontFamily = Mono, fontSize = HomelabType.subheadline.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text("${flag(e.country)} ${e.ip} · ${e.time.takeLast(8).take(5)}", color = P.text2, fontSize = HomelabType.footnote.fontSize)
+                        Text("${flag(e.country)} ${e.ip} · ${e.time.takeLast(8).take(5)}", color = farger.textSecondary, fontSize = HomelabType.footnote.fontSize)
                     }
                 }
             }
         }
     }
     item { Title("Trusler per land") }
-    item { PinkCard { Bars(a.countries.filter { it.threats > 0 }.sortedByDescending { it.threats }.map { Named(flag(it.iso2) + " " + it.name, it.threats) }, color = P.red) } }
+    item { PinkCard { Bars(a.countries.filter { it.threats > 0 }.sortedByDescending { it.threats }.map { Named(flag(it.iso2) + " " + it.name, it.threats) }, color = HomelabTheme.colors.danger) } }
     item { Title("Innstillinger") }
     item {
         PinkCard {
@@ -356,17 +370,18 @@ private fun androidx.compose.foundation.lazy.LazyListScope.security(a: Analytics
     }
     item { Title("DNS-poster") }
     item {
+        val farger = HomelabTheme.colors
         PinkCard {
-            if (a.dns.isEmpty()) Text("Ingen DNS-poster", color = P.text2, fontSize = HomelabType.subheadline.fontSize)
+            if (a.dns.isEmpty()) Text("Ingen DNS-poster", color = farger.textSecondary, fontSize = HomelabType.subheadline.fontSize)
             a.dns.forEachIndexed { i, r ->
-                if (i > 0) HorizontalDivider(color = P.card2)
+                if (i > 0) HorizontalDivider(color = farger.line)
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text(r.type, fontFamily = Mono, fontSize = HomelabType.footnote.fontSize, fontWeight = FontWeight.Bold, color = P.accent, modifier = Modifier.width(52.dp))
+                    Text(r.type, fontFamily = Mono, fontSize = HomelabType.footnote.fontSize, fontWeight = FontWeight.Bold, color = farger.textPrimary, modifier = Modifier.width(52.dp))
                     Column(Modifier.weight(1f)) {
-                        Text(r.name, fontSize = HomelabType.callout.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis, color = P.onHero)
-                        Text(r.content, fontFamily = Mono, fontSize = HomelabType.footnote.fontSize, color = P.text2, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                        Text(r.name, fontSize = HomelabType.callout.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis, color = farger.textPrimary)
+                        Text(r.content, fontFamily = Mono, fontSize = HomelabType.footnote.fontSize, color = farger.textSecondary, maxLines = 2, overflow = TextOverflow.Ellipsis)
                     }
-                    Chip(if (r.proxied) "Proxy" else "Kun DNS", bg = if (r.proxied) P.hero else P.card2, fg = if (r.proxied) P.onHero else P.text2)
+                    Chip(if (r.proxied) "Proxy" else "Kun DNS", bg = if (r.proxied) farger.surfaceChip else farger.line, fg = if (r.proxied) farger.textPrimary else farger.textSecondary)
                 }
             }
         }
@@ -376,22 +391,23 @@ private fun androidx.compose.foundation.lazy.LazyListScope.security(a: Analytics
 /** Trafikk → «Domene»: status, kilde, registrar, fornyelse, sertifikat, navnetjenere, IP, TLS og DNSSEC. */
 @Composable
 private fun DomainCard(vm: AppViewModel, a: Analytics) {
+    val farger = HomelabTheme.colors
     val src = vm.domains?.firstOrNull { it.name == vm.domain }?.source ?: a.source
     val left = daysLeft(a.certExpires ?: a.sslExpires)
     PinkCard {
-        Text("DOMENE", color = P.accent, fontSize = HomelabType.footnote.fontSize, fontWeight = FontWeight.SemiBold, letterSpacing = 0.8.sp)
+        Text("DOMENE", color = farger.textPrimary, fontSize = HomelabType.footnote.fontSize, fontWeight = FontWeight.SemiBold, letterSpacing = 0.8.sp)
         KV("Status", statusText[a.status ?: "unknown"] ?: a.status ?: "–", when (a.status) { "active" -> true; "down" -> false; else -> null })
         KV("Statistikkilde", sourceName(src))
         KV("Registrar", a.registrar ?: "–")
         KV("Fornyes", a.renews?.let { ddmm(it) + "." + it.take(4) } ?: "–")
         Row(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-            Text("SSL-sertifikat", Modifier.weight(1f), color = P.text2)
-            Text(left?.let { "$it dager igjen" } ?: "–", fontWeight = FontWeight.Medium, color = when { left == null -> P.onHero; left < 30 -> tc(0xFFF2C14E); else -> C.positive })
+            Text("SSL-sertifikat", Modifier.weight(1f), color = farger.textSecondary)
+            Text(left?.let { "$it dager igjen" } ?: "–", fontWeight = FontWeight.Medium, color = when { left == null -> farger.textPrimary; left < 30 -> tc(0xFFF2C14E); else -> farger.success })
         }
         Row(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-            Text("Navnetjenere", Modifier.weight(1f), color = P.text2)
+            Text("Navnetjenere", Modifier.weight(1f), color = farger.textSecondary)
             Column(horizontalAlignment = Alignment.End) {
-                a.nameServers.ifEmpty { listOf("–") }.forEach { Text(it, fontFamily = Mono, fontSize = HomelabType.subheadline.fontSize, color = P.onHero, maxLines = 1) }
+                a.nameServers.ifEmpty { listOf("–") }.forEach { Text(it, fontFamily = Mono, fontSize = HomelabType.subheadline.fontSize, color = farger.textPrimary, maxLines = 1) }
             }
         }
         KV("IP", a.dns.firstOrNull { it.type == "A" }?.content ?: "–")
@@ -403,20 +419,21 @@ private fun DomainCard(vm: AppViewModel, a: Analytics) {
 /** Besøk → verdenskart. Landene lastes én gang (fra serveren, ellers jsDelivr). */
 @Composable
 private fun VisitsMap(vm: AppViewModel, a: Analytics) {
+    val farger = HomelabTheme.colors
     LaunchedEffect(Unit) { vm.loadWorldMap() }
     val map = vm.worldMap
     val values = remember(a) { a.countries.mapNotNull { c -> c.iso3n?.let { it to (c.name to c.visitors) } }.toMap() }
     PinkCard {
-        Text("BESØK PER LAND", color = P.accent, fontSize = HomelabType.footnote.fontSize, fontWeight = FontWeight.SemiBold, letterSpacing = 0.8.sp)
+        Text("BESØK PER LAND", color = farger.textPrimary, fontSize = HomelabType.footnote.fontSize, fontWeight = FontWeight.SemiBold, letterSpacing = 0.8.sp)
         when {
-            map == null -> Box(Modifier.fillMaxWidth().height(120.dp), contentAlignment = Alignment.Center) { Text("Laster kartet …", color = P.text2, fontSize = HomelabType.subheadline.fontSize) }
-            map.isEmpty() -> Box(Modifier.fillMaxWidth().height(120.dp), contentAlignment = Alignment.Center) { Text("Kartet kunne ikke lastes.", color = P.text2, fontSize = HomelabType.subheadline.fontSize) }
+            map == null -> Box(Modifier.fillMaxWidth().height(120.dp), contentAlignment = Alignment.Center) { Text("Laster kartet …", color = farger.textSecondary, fontSize = HomelabType.subheadline.fontSize) }
+            map.isEmpty() -> Box(Modifier.fillMaxWidth().height(120.dp), contentAlignment = Alignment.Center) { Text("Kartet kunne ikke lastes.", color = farger.textSecondary, fontSize = HomelabType.subheadline.fontSize) }
             else -> {
                 WorldMap(map, values)
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("Få", color = P.text2, fontSize = HomelabType.caption.fontSize)
+                    Text("Få", color = farger.textSecondary, fontSize = HomelabType.caption.fontSize)
                     Box(Modifier.weight(1f).height(6.dp).clip(CircleShape).background(Brush.horizontalGradient(listOf(Color(0xFF4A2433), Color(0xFFFFB1C8)))))
-                    Text("Mange", color = P.text2, fontSize = HomelabType.caption.fontSize)
+                    Text("Mange", color = farger.textSecondary, fontSize = HomelabType.caption.fontSize)
                 }
             }
         }
@@ -427,40 +444,41 @@ private fun VisitsMap(vm: AppViewModel, a: Analytics) {
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 internal fun DomainManagerSheet(vm: AppViewModel) {
+    val farger = HomelabTheme.colors
     var name by remember { mutableStateOf("") }
     var source by remember { mutableStateOf("cloudflare") }
-    ModalBottomSheet(onDismissRequest = { vm.domainManager = false }, containerColor = P.card) {
+    ModalBottomSheet(onDismissRequest = { vm.domainManager = false }, containerColor = farger.surfaceRaised) {
         Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(20.dp, 0.dp, 20.dp, 32.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("Administrer domener", style = MaterialTheme.typography.titleLarge, color = P.onHero)
+            Text("Administrer domener", style = MaterialTheme.typography.titleLarge, color = farger.textPrimary)
             val list = vm.domains ?: emptyList()
             Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                if (list.isEmpty()) Text("Ingen domener ennå.", color = P.text2)
+                if (list.isEmpty()) Text("Ingen domener ennå.", color = farger.textSecondary)
                 list.forEachIndexed { i, d ->
-                    Row(Modifier.fillMaxWidth().clip(itemShape(i, list.size)).background(P.card2).padding(16.dp, 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Icon(Icons.Filled.Language, null, tint = P.accent)
+                    Row(Modifier.fillMaxWidth().clip(itemShape(i, list.size)).background(farger.line).padding(16.dp, 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Icon(Icons.Filled.Language, null, tint = farger.textPrimary)
                         Column(Modifier.weight(1f)) {
-                            Text(d.name, fontWeight = FontWeight.SemiBold, color = P.onHero, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text(sourceName(d.source), fontSize = HomelabType.footnote.fontSize, color = P.text2)
+                            Text(d.name, fontWeight = FontWeight.SemiBold, color = farger.textPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(sourceName(d.source), fontSize = HomelabType.footnote.fontSize, color = farger.textSecondary)
                         }
-                        TextButton(onClick = { vm.removeDomain(d) }) { Text("Fjern", color = P.red, fontWeight = FontWeight.SemiBold) }
+                        TextButton(onClick = { vm.removeDomain(d) }) { Text("Fjern", color = farger.danger, fontWeight = FontWeight.SemiBold) }
                     }
                 }
             }
-            Text("Legg til domene", color = P.accent, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 8.dp))
+            Text("Legg til domene", color = farger.textPrimary, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 8.dp))
             OutlinedTextField(name, { name = it }, label = { Text("Domene") }, placeholder = { Text("eksempel.no") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
                 keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Uri),
-                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = P.accent, focusedLabelColor = P.accent, cursorColor = P.accent))
-            Text("Statistikkilde", color = P.text2, fontSize = HomelabType.subheadline.fontSize)
+                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = farger.textPrimary, focusedLabelColor = farger.textPrimary, cursorColor = farger.textPrimary))
+            Text("Statistikkilde", color = farger.textSecondary, fontSize = HomelabType.subheadline.fontSize)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 DOMAIN_SOURCES.forEach { (k, n) ->
                     FilterChip(selected = source == k, onClick = { source = k }, label = { Text(n) },
-                        colors = FilterChipDefaults.filterChipColors(selectedContainerColor = P.hero, selectedLabelColor = P.onHero, containerColor = P.card2, labelColor = P.text2))
+                        colors = FilterChipDefaults.filterChipColors(selectedContainerColor = farger.surfaceChip, selectedLabelColor = farger.textPrimary, containerColor = farger.line, labelColor = farger.textSecondary))
                 }
             }
             Button(onClick = { vm.addDomain(name, source); name = "" }, enabled = name.isNotBlank(), modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(26.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = P.accent, contentColor = Color(0xFF3F0D1F))) { Text("Legg til domene", fontWeight = FontWeight.Bold) }
+                colors = ButtonDefaults.buttonColors(containerColor = farger.textPrimary, contentColor = Color(0xFF3F0D1F))) { Text("Legg til domene", fontWeight = FontWeight.Bold) }
             Text(if (source in DOMAIN_NEEDS_TOKEN) "Plausible og Umami trenger API-token. Legg det inn i Homelab på web etterpå."
-                else "API-token (Cloudflare) legges inn i Homelab på web. Uten eget token brukes standard-tokenet.", color = P.text2, fontSize = HomelabType.footnote.fontSize)
+                else "API-token (Cloudflare) legges inn i Homelab på web. Uten eget token brukes standard-tokenet.", color = farger.textSecondary, fontSize = HomelabType.footnote.fontSize)
         }
     }
 }
@@ -482,15 +500,15 @@ private fun flag(iso2: String): String {
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 internal fun PaperDomTop(vm: AppViewModel) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val list = vm.domains ?: emptyList()
     val state = androidx.compose.foundation.lazy.rememberLazyListState()
     PCard(shadow = true) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 PLabel("Domene · ${list.size}", modifier = Modifier.weight(1f))
-                Text("⟳", color = p.ink, fontSize = HomelabType.body.fontSize, modifier = Modifier.clip(CircleShape).clickable { vm.reloadDomain() }.padding(8.dp, 2.dp))
-                Text("+ Legg til", color = p.lab, fontSize = HomelabType.footnote.fontSize, fontWeight = FontWeight.SemiBold, modifier = Modifier.clip(CircleShape).clickable { vm.domainManager = true }.padding(8.dp, 4.dp))
+                Text("⟳", color = p.textPrimary, fontSize = HomelabType.body.fontSize, modifier = Modifier.clip(CircleShape).clickable { vm.reloadDomain() }.padding(8.dp, 2.dp))
+                Text("+ Legg til", color = p.accent, fontSize = HomelabType.footnote.fontSize, fontWeight = FontWeight.SemiBold, modifier = Modifier.clip(CircleShape).clickable { vm.domainManager = true }.padding(8.dp, 4.dp))
             }
             androidx.compose.foundation.lazy.LazyRow(
                 state = state, flingBehavior = androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior(state),
@@ -507,8 +525,8 @@ internal fun PaperDomTop(vm: AppViewModel) {
             Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).border(1.dp, p.line, RoundedCornerShape(12.dp)).padding(3.dp)) {
                 listOf("1h" to "1t", "24h" to "24t", "7d" to "7d", "30d" to "30d").forEach { (k, n) ->
                     val on = vm.domRange == k
-                    Box(Modifier.weight(1f).height(34.dp).clip(RoundedCornerShape(9.dp)).background(if (on) p.ink else Color.Transparent).clickable { Haptics.select(); vm.setRangePaper(k) },
-                        contentAlignment = Alignment.Center) { Text(n, color = if (on) p.bg else p.ink, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.subheadline.fontSize) }
+                    Box(Modifier.weight(1f).height(34.dp).clip(RoundedCornerShape(9.dp)).background(if (on) p.textPrimary else Color.Transparent).clickable { Haptics.select(); vm.setRangePaper(k) },
+                        contentAlignment = Alignment.Center) { Text(n, color = if (on) p.surface else p.textPrimary, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.subheadline.fontSize) }
                 }
             }
             // Prompt 43 (claude-code-domener-glimt-i-kortet.md): Glimt-raden nederst i kortet (orben, ikke figuren), følger perioden.
@@ -519,13 +537,13 @@ internal fun PaperDomTop(vm: AppViewModel) {
 
 @Composable
 private fun DomChip(kicker: String, name: String, on: Boolean, onClick: () -> Unit) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     Column(
-        Modifier.width(156.dp).clip(RoundedCornerShape(14.dp)).background(if (on) p.ink else p.surf2).clickable(onClick = onClick).padding(12.dp, 10.dp),
+        Modifier.width(156.dp).clip(RoundedCornerShape(14.dp)).background(if (on) p.textPrimary else p.surfaceSunken).clickable(onClick = onClick).padding(12.dp, 10.dp),
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
-        Text(kicker.uppercase(), color = if (on) p.bg.copy(alpha = .7f) else p.mut, fontFamily = PaperFonts.mono, fontSize = HomelabType.caption.fontSize, maxLines = 1)
-        Text(name, color = if (on) p.bg else p.ink, fontFamily = PaperFonts.serif, fontSize = HomelabType.callout.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(kicker.uppercase(), color = if (on) p.surface.copy(alpha = .7f) else p.textTertiary, fontFamily = PaperFonts.mono, fontSize = HomelabType.caption.fontSize, maxLines = 1)
+        Text(name, color = if (on) p.surface else p.textPrimary, fontFamily = PaperFonts.serif, fontSize = HomelabType.callout.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 
@@ -535,25 +553,25 @@ private fun androidx.compose.foundation.lazy.LazyListScope.allDomains(vm: AppVie
     items(list.size) { i ->
         val d = list[i]
         val a = vm.domAllStats[d.name]
-        val p = PaperPal.current
+        val p = HomelabTheme.colors
         PCard(onClick = { vm.pickDomainPaper(d.name) }) {
             Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
                         PSerif(d.name, 18.sp, maxLines = 1)
-                        Text(sourceName(d.source), color = p.mut, fontSize = HomelabType.footnote.fontSize)
+                        Text(sourceName(d.source), color = p.textTertiary, fontSize = HomelabType.footnote.fontSize)
                     }
                     val st = a?.status ?: if (vm.domAllStats.containsKey(d.name)) "unknown" else null
-                    if (st != null) Box(Modifier.clip(CircleShape).background(if (st == "active") p.pos.copy(alpha = .15f) else p.lab.copy(alpha = .15f)).padding(10.dp, 3.dp)) {
-                        Text(statusText[st] ?: st, color = if (st == "active") p.pos else p.lab, fontSize = HomelabType.caption.fontSize, fontWeight = FontWeight.SemiBold)
+                    if (st != null) Box(Modifier.clip(CircleShape).background(if (st == "active") p.success.copy(alpha = .15f) else p.accent.copy(alpha = .15f)).padding(10.dp, 3.dp)) {
+                        Text(statusText[st] ?: st, color = if (st == "active") p.success else p.accent, fontSize = HomelabType.caption.fontSize, fontWeight = FontWeight.SemiBold)
                     }
                 }
-                if (a == null) Text(if (vm.domAllStats.containsKey(d.name)) "Fikk ikke hentet tall." else "Henter …", color = p.mut, fontSize = HomelabType.footnote.fontSize)
+                if (a == null) Text(if (vm.domAllStats.containsKey(d.name)) "Fikk ikke hentet tall." else "Henter …", color = p.textTertiary, fontSize = HomelabType.footnote.fontSize)
                 else {
                     Row(Modifier.fillMaxWidth()) {
                         listOf("Forespørsler" to count(a.requests), "Besøkende" to count(a.visitors), "Oppetid" to if (a.uptimePct > 0) pct(a.uptimePct) else "–").forEach { (k, v) ->
                             Column(Modifier.weight(1f)) {
-                                Text(k, color = p.mut, fontSize = HomelabType.caption.fontSize, maxLines = 1)
+                                Text(k, color = p.textTertiary, fontSize = HomelabType.caption.fontSize, maxLines = 1)
                                 PSerif(v, 19.sp, maxLines = 1)
                             }
                         }
@@ -561,8 +579,8 @@ private fun androidx.compose.foundation.lazy.LazyListScope.allDomains(vm: AppVie
                     Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
                     val ssl = daysLeft(a.certExpires ?: a.sslExpires)
                     Row {
-                        Text("Bufret ${pct(a.cachedPct)}", color = p.mut, fontSize = HomelabType.footnote.fontSize, modifier = Modifier.weight(1f))
-                        Text(ssl?.let { "SSL utløper om $it d" } ?: "SSL –", color = if ((ssl ?: 99) < 14) p.lab else p.mut, fontSize = HomelabType.footnote.fontSize)
+                        Text("Bufret ${pct(a.cachedPct)}", color = p.textTertiary, fontSize = HomelabType.footnote.fontSize, modifier = Modifier.weight(1f))
+                        Text(ssl?.let { "SSL utløper om $it d" } ?: "SSL –", color = if ((ssl ?: 99) < 14) p.accent else p.textTertiary, fontSize = HomelabType.footnote.fontSize)
                     }
                 }
             }

@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import no.kristo.finanshub.*
 import no.kristo.finanshub.ui.designsystem.HomelabType
+import no.kristo.finanshub.ui.designsystem.HomelabTheme
 
 /*
  * Prompt 82 (CHKAND): sjekk ut deler til et produkt – UI. Tilstand og API i SkjoldProjects.kt.
@@ -39,17 +40,17 @@ import no.kristo.finanshub.ui.designsystem.HomelabType
 
 @Composable
 internal fun ProjectsEntry82(vm: AppViewModel) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val l = Skjold82.projects.orEmpty()
     val active = l.count { !it.done }
     PCard(shadow = true, onClick = { vm.openProjects82() }) {
         Row(Modifier.fillMaxWidth().heightIn(min = 52.dp).padding(horizontal = 14.dp, vertical = 10.dp).semantics { contentDescription = "Produkter, $active aktive" },
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Column(Modifier.weight(1f)) {
-                Text("Produkter", color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize)
-                Text(if (l.isEmpty()) "Sjekk ut deler til det du bygger" else "$active aktive · ${l.size - active} ferdige", color = p.mut, fontSize = HomelabType.footnote.fontSize, maxLines = 1)
+                Text("Produkter", color = p.textPrimary, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize)
+                Text(if (l.isEmpty()) "Sjekk ut deler til det du bygger" else "$active aktive · ${l.size - active} ferdige", color = p.textTertiary, fontSize = HomelabType.footnote.fontSize, maxLines = 1)
             }
-            Text("›", color = p.ink, fontSize = HomelabType.title3.fontSize, fontWeight = FontWeight.Bold)
+            Text("›", color = p.textPrimary, fontSize = HomelabType.title3.fontSize, fontWeight = FontWeight.Bold)
         }
     }
 }
@@ -65,13 +66,13 @@ internal fun CheckoutBtn82(vm: AppViewModel, pt: SkjPart76) {
 
 @Composable
 internal fun UsedIn82(vm: AppViewModel, pt: SkjPart76) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val used = usedIn82(pt)
     if (used.isEmpty()) return
     PHead("Brukt i", "${used.size}")
     PCard {
         used.forEachIndexed { i, u ->
-            PRow(u.name, statusText82(u.status), "${qtyText76(u.qty)} ${pt.unit} ›", p.ink, serif = false, top = i > 0) { vm.openProject82(u.projectId) }
+            PRow(u.name, statusText82(u.status), "${qtyText76(u.qty)} ${pt.unit} ›", p.textPrimary, serif = false, top = i > 0) { vm.openProject82(u.projectId) }
         }
     }
 }
@@ -82,7 +83,7 @@ internal fun UsedIn82(vm: AppViewModel, pt: SkjPart76) {
 internal fun CheckoutSheet82(vm: AppViewModel) {
     val s = Skjold82
     val c = s.sheet ?: return
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val pt = c.part
     val max = maxOut82(pt.qty)
     val active = s.projects.orEmpty().filter { !it.done }
@@ -90,12 +91,12 @@ internal fun CheckoutSheet82(vm: AppViewModel) {
         PCard(Modifier.fillMaxWidth().widthIn(max = 560.dp).imePadding().navigationBarsPadding().padding(12.dp), shadow = true) {
             Column(Modifier.clickable(enabled = false) {}.verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 PSerif("Sjekk ut", 22.sp)
-                Text(pt.name, color = p.sub, fontSize = HomelabType.callout.fontSize, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text(pt.name, color = p.textSecondary, fontSize = HomelabType.callout.fontSize, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Column(Modifier.weight(1f)) {
                         PLabel("Antall")
-                        Text("${c.qty} ${pt.unit}", color = p.ink, fontFamily = PaperFonts.mono, fontWeight = FontWeight.Bold, fontSize = HomelabType.title3.fontSize)
-                        Text("Maks $max (på lager)", color = p.mut, fontSize = HomelabType.footnote.fontSize)
+                        Text("${c.qty} ${pt.unit}", color = p.textPrimary, fontFamily = PaperFonts.mono, fontWeight = FontWeight.Bold, fontSize = HomelabType.title3.fontSize)
+                        Text("Maks $max (på lager)", color = p.textTertiary, fontSize = HomelabType.footnote.fontSize)
                     }
                     Step82("−", "Én færre", c.qty > 1) { s.sheet = c.copy(qty = clampOut82(c.qty - 1, pt.qty)); Haptics.select() }
                     Step82("+", "Én mer", c.qty < max) { s.sheet = c.copy(qty = clampOut82(c.qty + 1, pt.qty)); Haptics.select() }
@@ -119,10 +120,10 @@ internal fun CheckoutSheet82(vm: AppViewModel) {
 
 @Composable
 private fun Step82(t: String, desc: String, enabled: Boolean, onClick: () -> Unit) {
-    val p = PaperPal.current
-    Box(Modifier.size(48.dp).clip(CircleShape).background(if (enabled) p.ink else p.line).clickable(enabled = enabled, role = Role.Button, onClickLabel = desc, onClick = onClick)
+    val p = HomelabTheme.colors
+    Box(Modifier.size(48.dp).clip(CircleShape).background(if (enabled) p.textPrimary else p.line).clickable(enabled = enabled, role = Role.Button, onClickLabel = desc, onClick = onClick)
         .semantics { contentDescription = desc }, contentAlignment = Alignment.Center) {
-        Text(t, color = if (enabled) p.bg else p.mut, fontSize = HomelabType.title3.fontSize, fontWeight = FontWeight.Bold)
+        Text(t, color = if (enabled) p.surface else p.textTertiary, fontSize = HomelabType.title3.fontSize, fontWeight = FontWeight.Bold)
     }
 }
 
@@ -131,19 +132,19 @@ private fun Step82(t: String, desc: String, enabled: Boolean, onClick: () -> Uni
 @Composable
 internal fun ProjectsScreen82(vm: AppViewModel) {
     val s = Skjold82
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     var newName by remember { mutableStateOf<String?>(null) }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).imePadding().padding(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 140.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text("Når du bruker deler i noe du bygger, sjekker du dem ut fra delsiden eller plukklista. Da trekkes de fra lageret, og du ser her hva hvert produkt inneholder.",
-            color = p.mut, fontSize = HomelabType.subheadline.fontSize)
-        s.projErr?.let { Text(it, color = p.lab, fontSize = HomelabType.subheadline.fontSize) }
+            color = p.textTertiary, fontSize = HomelabType.subheadline.fontSize)
+        s.projErr?.let { Text(it, color = p.accent, fontSize = HomelabType.subheadline.fontSize) }
         val l = s.projects
         when {
-            l == null -> Box(Modifier.fillMaxWidth().padding(30.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = p.ink) }
+            l == null -> Box(Modifier.fillMaxWidth().padding(30.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = p.textPrimary) }
             l.isEmpty() && s.projErr == null -> PCard {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     PSerif("Ingen produkter ennå", 20.sp)
-                    Text("Trykk «Sjekk ut til produkt» på en del, eller lag et produkt her.", color = p.sub, fontSize = HomelabType.callout.fontSize)
+                    Text("Trykk «Sjekk ut til produkt» på en del, eller lag et produkt her.", color = p.textSecondary, fontSize = HomelabType.callout.fontSize)
                 }
             }
             else -> {
@@ -169,32 +170,32 @@ internal fun ProjectsScreen82(vm: AppViewModel) {
 
 @Composable
 private fun ProjectRow82(vm: AppViewModel, pr: SkjProject82) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     PCard(shadow = !pr.done, onClick = { vm.openProject82(pr.id) }) {
         Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(pr.name, color = if (pr.done) p.sub else p.ink, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                Text(projSub82(pr), color = p.mut, fontSize = HomelabType.footnote.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(pr.name, color = if (pr.done) p.textSecondary else p.textPrimary, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text(projSub82(pr), color = p.textTertiary, fontSize = HomelabType.footnote.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             StatusTag82(pr.status)
-            Text("›", color = p.ink, fontSize = HomelabType.headline.fontSize, fontWeight = FontWeight.Bold)
+            Text("›", color = p.textPrimary, fontSize = HomelabType.headline.fontSize, fontWeight = FontWeight.Bold)
         }
     }
 }
 
 @Composable
 private fun StatusTag82(status: String) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val done = status == "ferdig"
-    Text(statusText82(status), color = if (done) p.mut else p.bg, fontSize = HomelabType.caption.fontSize, fontWeight = FontWeight.Bold,
-        modifier = Modifier.clip(CircleShape).background(if (done) Color.Transparent else p.ink).border(1.dp, if (done) p.line else p.ink, CircleShape).padding(horizontal = 10.dp, vertical = 3.dp))
+    Text(statusText82(status), color = if (done) p.textTertiary else p.surface, fontSize = HomelabType.caption.fontSize, fontWeight = FontWeight.Bold,
+        modifier = Modifier.clip(CircleShape).background(if (done) Color.Transparent else p.textPrimary).border(1.dp, if (done) p.line else p.textPrimary, CircleShape).padding(horizontal = 10.dp, vertical = 3.dp))
 }
 
 @Composable
 internal fun ProjectScreen82(vm: AppViewModel) {
     val s = Skjold82
-    val p = PaperPal.current
-    val pr = s.current ?: run { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = p.ink) }; return }
+    val p = HomelabTheme.colors
+    val pr = s.current ?: run { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = p.textPrimary) }; return }
     val lines = s.lines
     val bom = lines?.let { bom82(it) }
     val units = bom?.sumOf { it.net } ?: pr.units
@@ -205,12 +206,12 @@ internal fun ProjectScreen82(vm: AppViewModel) {
         }
         Text(listOfNotNull("${qtyText76(units)} stk", "${bom?.size ?: pr.parts} ${if ((bom?.size ?: pr.parts) == 1) "del" else "deler"}",
             (bom?.let { b -> b.filter { it.price != null }.takeIf { it.isNotEmpty() }?.sumOf { it.net * (it.price ?: 0.0) } } ?: pr.cost)?.let { costText82(it) }).joinToString(" · "),
-            color = p.mut, fontSize = HomelabType.subheadline.fontSize)
-        pr.notes?.takeIf { it.isNotBlank() }?.let { Text(it, color = p.ink, fontSize = HomelabType.callout.fontSize) }
+            color = p.textTertiary, fontSize = HomelabType.subheadline.fontSize)
+        pr.notes?.takeIf { it.isNotBlank() }?.let { Text(it, color = p.textPrimary, fontSize = HomelabType.callout.fontSize) }
         PHead("Stykkliste", bom?.size?.toString())
         when {
-            bom == null -> Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = p.ink) }
-            bom.isEmpty() -> Text("Ingen deler er sjekket ut til dette produktet.", color = p.mut, fontSize = HomelabType.callout.fontSize)
+            bom == null -> Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = p.textPrimary) }
+            bom.isEmpty() -> Text("Ingen deler er sjekket ut til dette produktet.", color = p.textTertiary, fontSize = HomelabType.callout.fontSize)
             else -> bom.forEach { BomRow82(vm, it) }
         }
         Spacer(Modifier.height(4.dp))
@@ -224,7 +225,7 @@ internal fun ProjectScreen82(vm: AppViewModel) {
         if (s.renameAsk) RenameCard82(vm, pr)
         if (s.deleteAsk) PCard {
             Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text("Slette «${pr.name}»?", color = p.ink, fontSize = HomelabType.callout.fontSize)
+                Text("Slette «${pr.name}»?", color = p.textPrimary, fontSize = HomelabType.callout.fontSize)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     PButton("Slett", Modifier.weight(1f), kind = "lab") { vm.deleteProject82() }
                     PButton("Avbryt", Modifier.weight(1f), kind = "line") { s.deleteAsk = false }
@@ -251,7 +252,7 @@ private fun RenameCard82(vm: AppViewModel, pr: SkjProject82) {
 @Composable
 private fun BomRow82(vm: AppViewModel, b: SkjBom82) {
     val s = Skjold82
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val ret = s.returning?.takeIf { it.first == b.partId }
     val max = maxOut82(b.net).coerceAtLeast(1)
     PCard(shadow = true, onClick = { Haptics.tap(); vm.openPart76(b.partId) }) {
@@ -259,24 +260,24 @@ private fun BomRow82(vm: AppViewModel, b: SkjBom82) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Img76(vm, b.thumbUrl, 200, Modifier.size(56.dp).clip(RoundedCornerShape(12.dp)))
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text(b.name, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                    Text(b.loc.ifBlank { "Uten plass" }, color = p.sub, fontSize = HomelabType.footnote.fontSize, fontFamily = PaperFonts.mono, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    b.price?.let { Text(costText82(it * b.net), color = p.mut, fontSize = HomelabType.footnote.fontSize) }
+                    Text(b.name, color = p.textPrimary, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    Text(b.loc.ifBlank { "Uten plass" }, color = p.textSecondary, fontSize = HomelabType.footnote.fontSize, fontFamily = PaperFonts.mono, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    b.price?.let { Text(costText82(it * b.net), color = p.textTertiary, fontSize = HomelabType.footnote.fontSize) }
                 }
                 Column(horizontalAlignment = Alignment.End) {
-                    Text(qtyText76(b.net), color = p.ink, fontFamily = PaperFonts.mono, fontWeight = FontWeight.Bold, fontSize = HomelabType.headline.fontSize)
-                    Text(b.unit, color = p.mut, fontSize = HomelabType.caption.fontSize)
+                    Text(qtyText76(b.net), color = p.textPrimary, fontFamily = PaperFonts.mono, fontWeight = FontWeight.Bold, fontSize = HomelabType.headline.fontSize)
+                    Text(b.unit, color = p.textTertiary, fontSize = HomelabType.caption.fontSize)
                 }
             }
-            if (ret == null) Text("Sjekk inn", color = p.sub, fontSize = HomelabType.subheadline.fontSize, fontWeight = FontWeight.SemiBold,
+            if (ret == null) Text("Sjekk inn", color = p.textSecondary, fontSize = HomelabType.subheadline.fontSize, fontWeight = FontWeight.SemiBold,
                 modifier = Modifier.heightIn(min = 40.dp).clip(RoundedCornerShape(8.dp)).clickable(role = Role.Button) { s.returning = b.partId to max; Haptics.tap() }
                     .semantics { contentDescription = "Sjekk inn ${b.name} til lageret" }.wrapContentHeight().padding(horizontal = 4.dp))
             else Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Step82("−", "Én færre", ret.second > 1) { s.returning = b.partId to (ret.second - 1).coerceAtLeast(1); Haptics.select() }
-                Text("${ret.second}", color = p.ink, fontFamily = PaperFonts.mono, fontWeight = FontWeight.Bold, fontSize = HomelabType.headline.fontSize, modifier = Modifier.widthIn(min = 28.dp), textAlign = TextAlign.Center)
+                Text("${ret.second}", color = p.textPrimary, fontFamily = PaperFonts.mono, fontWeight = FontWeight.Bold, fontSize = HomelabType.headline.fontSize, modifier = Modifier.widthIn(min = 28.dp), textAlign = TextAlign.Center)
                 Step82("+", "Én mer", ret.second < max) { s.returning = b.partId to (ret.second + 1).coerceAtMost(max); Haptics.select() }
                 PButton(if (s.busy) "…" else "Sjekk inn", Modifier.weight(1f)) { if (!s.busy) vm.returnPart82(b, ret.second) }
-                Text("✕", color = p.mut, modifier = Modifier.size(40.dp).clip(CircleShape).clickable { s.returning = null }.wrapContentSize().semantics { contentDescription = "Avbryt" })
+                Text("✕", color = p.textTertiary, modifier = Modifier.size(40.dp).clip(CircleShape).clickable { s.returning = null }.wrapContentSize().semantics { contentDescription = "Avbryt" })
             }
         }
     }
@@ -289,7 +290,7 @@ private fun BomRow82(vm: AppViewModel, b: SkjBom82) {
 @Composable
 internal fun PickProject82() {
     val s = Skjold82
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val active = s.projects.orEmpty().filter { !it.done }
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         PLabel("Til produkt")
@@ -300,6 +301,6 @@ internal fun PickProject82() {
         }
         s.pickNew?.let { n -> PField("Navn på produktet", n, { s.pickNew = it.take(MAX_NAME82) }, placeholder = "Værstasjon") }
         val to = s.pickProject?.let { id -> active.firstOrNull { it.id == id }?.name } ?: s.pickNew?.let { projectName82(it) }
-        Text(if (to != null) "Delene sjekkes ut til «$to» – alt eller ingenting." else "Uten produkt trekkes delene bare fra lageret.", color = p.mut, fontSize = HomelabType.footnote.fontSize)
+        Text(if (to != null) "Delene sjekkes ut til «$to» – alt eller ingenting." else "Uten produkt trekkes delene bare fra lageret.", color = p.textTertiary, fontSize = HomelabType.footnote.fontSize)
     }
 }

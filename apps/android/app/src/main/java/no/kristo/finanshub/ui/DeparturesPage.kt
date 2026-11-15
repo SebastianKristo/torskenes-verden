@@ -44,6 +44,8 @@ import no.kristo.finanshub.*
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import no.kristo.finanshub.ui.designsystem.HomelabType
+import no.kristo.finanshub.ui.designsystem.HomelabTheme
+import no.kristo.finanshub.ui.designsystem.DsPalette
 
 /*
  * Prompt 24 (A): Ruter-visningen lik på iOS og Android (claude-code-ruter-lik.md, fasit «av» i Mobil Papir App.dc.html).
@@ -67,14 +69,14 @@ private fun onLine(c: Long, given: Long?): Color = lineInk28(c) // Prompt 28: al
 /** Mørk pille over bildet (36 høy, rgba(27,26,23,.55)). */
 @Composable
 private fun GlassPill(text: String, label: String, onClick: () -> Unit) {
-    Box(Modifier.height(36.dp).clip(CircleShape).background(Color(0x8C1B1A17)).clickable(onClickLabel = label, onClick = onClick).padding(start = 12.dp, end = 14.dp), contentAlignment = Alignment.Center) {
+    Box(Modifier.height(36.dp).clip(CircleShape).background(DsPalette.PapirLys.textPrimary.copy(alpha = .55f)).clickable(onClickLabel = label, onClick = onClick).padding(start = 12.dp, end = 14.dp), contentAlignment = Alignment.Center) {
         Text(text, color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.subheadline.fontSize, fontFamily = PaperFonts.sans, maxLines = 1)
     }
 }
 
 @Composable
 internal fun RuterScreen24(vm: AppViewModel) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     BackHandler { if (vm.stopEdit) vm.stopEdit = false else vm.closeRuter() }
     LaunchedEffect(Unit) { vm.loadRuterPhoto() }
     val sel = vm.myStops.firstOrNull { it.id == vm.stopSel } ?: vm.myStops.firstOrNull()
@@ -89,7 +91,7 @@ internal fun RuterScreen24(vm: AppViewModel) {
     val sub = modes.map { it.second }.let { l -> if (l.isEmpty()) "Holdeplass" else l.mapIndexed { i, n -> if (i == 0) n else n.lowercase() }.let { x -> if (x.size == 1) x[0] else x.dropLast(1).joinToString(", ") + " og " + x.last() } }
     val alert = deps.firstNotNullOfOrNull { it.situation }
     val top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
-    Box(Modifier.fillMaxSize().background(p.bg)) {
+    Box(Modifier.fillMaxSize().background(p.surface)) {
         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 40.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding())) {
             item {
                 Box(Modifier.fillMaxWidth().background(Brush.verticalGradient(*HERO_FALLBACK))) {
@@ -114,32 +116,32 @@ internal fun RuterScreen24(vm: AppViewModel) {
                     if (!vm.stopEdit) StopPills24(vm, sel?.id) else MyStops24(vm)
                     MinReise41(vm, home = false) // Prompt 41: MIN REISE · SEBASTIAN over transportfilteret (bare med forhåndsruter)
                     when {
-                        vm.stopsError != null -> Text(vm.stopsError ?: "", color = p.lab, fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.padding(horizontal = 4.dp))
-                        sel == null -> Text("Legg til en holdeplass med «+ Stopp».", color = p.mut, fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.padding(horizontal = 4.dp))
-                        sd == null -> Text("Henter sanntid fra Entur …", color = p.mut, fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.padding(horizontal = 4.dp))
-                        deps.isEmpty() -> Text("Fikk ikke kontakt med Entur. Trykk ↻ for å prøve igjen.", color = p.lab, fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.padding(horizontal = 4.dp))
+                        vm.stopsError != null -> Text(vm.stopsError ?: "", color = p.accent, fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.padding(horizontal = 4.dp))
+                        sel == null -> Text("Legg til en holdeplass med «+ Stopp».", color = p.textTertiary, fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.padding(horizontal = 4.dp))
+                        sd == null -> Text("Henter sanntid fra Entur …", color = p.textTertiary, fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.padding(horizontal = 4.dp))
+                        deps.isEmpty() -> Text("Fikk ikke kontakt med Entur. Trykk ↻ for å prøve igjen.", color = p.accent, fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.padding(horizontal = 4.dp))
                     }
-                    if (modes.isNotEmpty()) Row(Modifier.fillMaxWidth().clip(CircleShape).background(p.card).padding(4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    if (modes.isNotEmpty()) Row(Modifier.fillMaxWidth().clip(CircleShape).background(p.surfaceRaised).padding(4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                         (listOf("alle" to "Alle") + modes).forEach { (k, n) ->
                             val on = filter == k
-                            Box(Modifier.weight(1f).height(34.dp).clip(CircleShape).background(if (on) p.ink else Color.Transparent).press24 { Haptics.select(); filter = k }, contentAlignment = Alignment.Center) {
-                                Text(n, color = if (on) p.bg else p.ink, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.footnote.fontSize, maxLines = 1)
+                            Box(Modifier.weight(1f).height(34.dp).clip(CircleShape).background(if (on) p.textPrimary else Color.Transparent).press24 { Haptics.select(); filter = k }, contentAlignment = Alignment.Center) {
+                                Text(n, color = if (on) p.surface else p.textPrimary, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.footnote.fontSize, maxLines = 1)
                             }
                         }
                     }
                     alert?.let { a ->
-                        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(p.card).border(1.dp, p.line, RoundedCornerShape(16.dp)).padding(14.dp, 12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            Text("!", color = p.lab, fontWeight = FontWeight.ExtraBold, fontSize = HomelabType.callout.fontSize)
-                            Text(a, color = p.ink, fontSize = HomelabType.subheadline.fontSize, lineHeight = 19.sp)
+                        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(p.surfaceRaised).border(1.dp, p.line, RoundedCornerShape(16.dp)).padding(14.dp, 12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Text("!", color = p.accent, fontWeight = FontWeight.ExtraBold, fontSize = HomelabType.callout.fontSize)
+                            Text(a, color = p.textPrimary, fontSize = HomelabType.subheadline.fontSize, lineHeight = 19.sp)
                         }
                     }
-                    if (shown.isNotEmpty()) Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(p.card)) {
+                    if (shown.isNotEmpty()) Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(p.surfaceRaised)) {
                         shown.forEachIndexed { i, d ->
                             val id = "${d.line}|${d.to}|${d.aimed ?: i}"
                             DepRow24(d, sel?.name, vm.depOpen == id, top = i > 0) { vm.depOpen = if (vm.depOpen == id) null else id }
                         }
-                    } else if (deps.isNotEmpty()) Text("Ingen avganger av denne typen den neste timen.", color = p.mut, fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.padding(horizontal = 4.dp))
-                    Text("Sanntid fra Entur/Ruter når tilkoblet. Trykk på en avgang for å se stoppene.", color = p.mut, fontSize = HomelabType.footnote.fontSize, lineHeight = 17.sp, modifier = Modifier.padding(horizontal = 4.dp))
+                    } else if (deps.isNotEmpty()) Text("Ingen avganger av denne typen den neste timen.", color = p.textTertiary, fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.padding(horizontal = 4.dp))
+                    Text("Sanntid fra Entur/Ruter når tilkoblet. Trykk på en avgang for å se stoppene.", color = p.textTertiary, fontSize = HomelabType.footnote.fontSize, lineHeight = 17.sp, modifier = Modifier.padding(horizontal = 4.dp))
                 }
             }
         }
@@ -149,7 +151,7 @@ internal fun RuterScreen24(vm: AppViewModel) {
 /** Stopp-piller i én vannrett rad (ikke i et kort). Hold inne = «Mine stopp». «+ Stopp» med stiplet kant. */
 @Composable
 private fun StopPills24(vm: AppViewModel, selId: String?) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     Row(
         Modifier.fillMaxWidth().longPressEdit(true) { Haptics.tap(); vm.stopEdit = true }.horizontalScroll(rememberScrollState()).padding(vertical = 2.dp),
         horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -157,28 +159,28 @@ private fun StopPills24(vm: AppViewModel, selId: String?) {
         vm.myStops.forEach { st ->
             val on = st.id == selId
             Box(
-                Modifier.height(36.dp).clip(CircleShape).background(if (on) p.ink else p.card).border(1.dp, if (on) p.ink else p.line, CircleShape)
+                Modifier.height(36.dp).clip(CircleShape).background(if (on) p.textPrimary else p.surfaceRaised).border(1.dp, if (on) p.textPrimary else p.line, CircleShape)
                     .press24 { Haptics.select(); vm.stopSel = st.id }.padding(horizontal = 14.dp),
                 contentAlignment = Alignment.Center,
-            ) { Text(st.name, color = if (on) p.bg else p.ink, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.subheadline.fontSize, maxLines = 1, softWrap = false) }
+            ) { Text(st.name, color = if (on) p.surface else p.textPrimary, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.subheadline.fontSize, maxLines = 1, softWrap = false) }
         }
         Box(
-            Modifier.height(36.dp).clip(CircleShape).background(p.card).dashedEdge(p.mut, 18.dp).press24 { vm.stopEdit = true }.padding(horizontal = 14.dp),
+            Modifier.height(36.dp).clip(CircleShape).background(p.surfaceRaised).dashedEdge(p.textTertiary, 18.dp).press24 { vm.stopEdit = true }.padding(horizontal = 14.dp),
             contentAlignment = Alignment.Center,
-        ) { Text("+ Stopp", color = p.ink, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize, maxLines = 1, softWrap = false) }
+        ) { Text("+ Stopp", color = p.textPrimary, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize, maxLines = 1, softWrap = false) }
     }
 }
 
 /** «Mine stopp»: liste med ↑ ↓ og −, søk i Entur og «+ Legg til». */
 @Composable
 private fun MyStops24(vm: AppViewModel) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     var q by remember { mutableStateOf("") }
-    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(p.card).padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(p.surfaceRaised).padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             PSerif("Mine stopp", 20.sp, modifier = Modifier.weight(1f))
-            Box(Modifier.height(34.dp).clip(RoundedCornerShape(17.dp)).background(p.ink).press24 { Haptics.success(); vm.stopEdit = false }.padding(horizontal = 16.dp), contentAlignment = Alignment.Center) {
-                Text("Ferdig", color = p.bg, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize)
+            Box(Modifier.height(34.dp).clip(RoundedCornerShape(17.dp)).background(p.textPrimary).press24 { Haptics.success(); vm.stopEdit = false }.padding(horizontal = 16.dp), contentAlignment = Alignment.Center) {
+                Text("Ferdig", color = p.surface, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize)
             }
         }
         Column {
@@ -186,50 +188,50 @@ private fun MyStops24(vm: AppViewModel) {
                 Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
                 Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Column(Modifier.weight(1f)) {
-                        Text(st.name, color = p.ink, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text(st.locality.ifBlank { vm.stopDeps[st.id]?.departures?.firstOrNull()?.let { "${it.line} ${it.to}" } ?: "Holdeplass" }, color = p.mut, fontSize = HomelabType.footnote.fontSize, maxLines = 1)
+                        Text(st.name, color = p.textPrimary, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(st.locality.ifBlank { vm.stopDeps[st.id]?.departures?.firstOrNull()?.let { "${it.line} ${it.to}" } ?: "Holdeplass" }, color = p.textTertiary, fontSize = HomelabType.footnote.fontSize, maxLines = 1)
                     }
                     StopBtn("↑", i > 0, border = true) { vm.moveStop(st.id, -1) }
                     StopBtn("↓", i < vm.myStops.size - 1, border = true) { vm.moveStop(st.id, 1) }
-                    StopBtn("−", true, border = false, color = p.lab) { vm.removeStop(st.id) }
+                    StopBtn("−", true, border = false, color = p.accent) { vm.removeStop(st.id) }
                 }
             }
         }
         Row(
-            Modifier.fillMaxWidth().height(44.dp).clip(RoundedCornerShape(14.dp)).background(p.bg).border(1.dp, p.line, RoundedCornerShape(14.dp)).padding(horizontal = 14.dp),
+            Modifier.fillMaxWidth().height(44.dp).clip(RoundedCornerShape(14.dp)).background(p.surface).border(1.dp, p.line, RoundedCornerShape(14.dp)).padding(horizontal = 14.dp),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             // Prompt 27: ✕ til venstre tømmer søket og avbryter det som venter.
-            SearchLead27(q.isNotEmpty(), p.ink, p.mut, bg = p.line, idle = { Text("⌕", color = p.mut, fontSize = HomelabType.callout.fontSize) }) { q = ""; vm.searchStops("") }
+            SearchLead27(q.isNotEmpty(), p.textPrimary, p.textTertiary, bg = p.line, idle = { Text("⌕", color = p.textTertiary, fontSize = HomelabType.callout.fontSize) }) { q = ""; vm.searchStops("") }
             BasicTextField(
-                q, { q = it; vm.searchStops(it) }, singleLine = true, textStyle = TextStyle(color = p.ink, fontSize = HomelabType.callout.fontSize, fontWeight = FontWeight.Medium, fontFamily = PaperFonts.sans),
-                cursorBrush = SolidColor(p.lab), modifier = Modifier.weight(1f),
-                decorationBox = { inner -> Box { if (q.isEmpty()) Text("Søk etter holdeplass", color = p.mut, fontSize = HomelabType.callout.fontSize, fontWeight = FontWeight.Medium); inner() } },
+                q, { q = it; vm.searchStops(it) }, singleLine = true, textStyle = TextStyle(color = p.textPrimary, fontSize = HomelabType.callout.fontSize, fontWeight = FontWeight.Medium, fontFamily = PaperFonts.sans),
+                cursorBrush = SolidColor(p.accent), modifier = Modifier.weight(1f),
+                decorationBox = { inner -> Box { if (q.isEmpty()) Text("Søk etter holdeplass", color = p.textTertiary, fontSize = HomelabType.callout.fontSize, fontWeight = FontWeight.Medium); inner() } },
             )
         }
-        if (vm.stopSearchBusy) Text("Søker i Entur …", color = p.mut, fontSize = HomelabType.footnote.fontSize)
-        else if (q.trim().length >= 2 && vm.stopSearch.isEmpty()) Text("Fant ingen holdeplasser.", color = p.mut, fontSize = HomelabType.footnote.fontSize)
+        if (vm.stopSearchBusy) Text("Søker i Entur …", color = p.textTertiary, fontSize = HomelabType.footnote.fontSize)
+        else if (q.trim().length >= 2 && vm.stopSearch.isEmpty()) Text("Fant ingen holdeplasser.", color = p.textTertiary, fontSize = HomelabType.footnote.fontSize)
         if (vm.stopSearch.isNotEmpty() && q.trim().length >= 2) Column {
             vm.stopSearch.take(8).forEachIndexed { i, s ->
                 val added = vm.myStops.any { it.id == s.id }
                 if (i > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
                 Row(Modifier.fillMaxWidth().press24(enabled = !added) { vm.addStop(s); q = "" }.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Column(Modifier.weight(1f)) {
-                        Text(s.name, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(s.name, color = p.textPrimary, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         val modes = s.modes.mapNotNull { depModeName(it) }.joinToString(", ")
-                        listOf(s.locality, modes).filter { it.isNotBlank() }.joinToString(" · ").takeIf { it.isNotBlank() }?.let { Text(it, color = p.mut, fontSize = HomelabType.footnote.fontSize, maxLines = 1) }
+                        listOf(s.locality, modes).filter { it.isNotBlank() }.joinToString(" · ").takeIf { it.isNotBlank() }?.let { Text(it, color = p.textTertiary, fontSize = HomelabType.footnote.fontSize, maxLines = 1) }
                     }
-                    Text(if (added) "Lagt til" else "+ Legg til", color = if (added) p.mut else p.lab, fontWeight = FontWeight.Bold, fontSize = HomelabType.footnote.fontSize)
+                    Text(if (added) "Lagt til" else "+ Legg til", color = if (added) p.textTertiary else p.accent, fontWeight = FontWeight.Bold, fontSize = HomelabType.footnote.fontSize)
                 }
             }
         }
-        Text("Hold inne på stoppene for å komme hit.", color = p.mut, fontSize = HomelabType.caption.fontSize)
+        Text("Hold inne på stoppene for å komme hit.", color = p.textTertiary, fontSize = HomelabType.caption.fontSize)
     }
 }
 
 @Composable
-private fun StopBtn(t: String, enabled: Boolean, border: Boolean, color: Color = PaperPal.current.ink, onClick: () -> Unit) {
-    val p = PaperPal.current
+private fun StopBtn(t: String, enabled: Boolean, border: Boolean, color: Color = HomelabTheme.colors.textPrimary, onClick: () -> Unit) {
+    val p = HomelabTheme.colors
     Box(
         Modifier.size(36.dp).clip(CircleShape).then(if (border) Modifier.border(1.dp, p.line, CircleShape) else Modifier)
             .press24(enabled = enabled) { Haptics.select(); onClick() },
@@ -243,7 +245,7 @@ private fun StopBtn(t: String, enabled: Boolean, border: Boolean, color: Color =
  */
 @Composable
 private fun DepRow24(d: Dep, from: String?, open: Boolean, top: Boolean, onToggle: () -> Unit) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val ctx = LocalContext.current
     val c = d.color ?: modeFallback(d.mode, d.line)
     val lineColor = Color(c)
@@ -261,17 +263,17 @@ private fun DepRow24(d: Dep, from: String?, open: Boolean, top: Boolean, onToggl
                 Text(d.line, color = onLine(c, d.textColor?.takeIf { d.color != null }), fontWeight = FontWeight.ExtraBold, fontSize = HomelabType.subheadline.fontSize, maxLines = 1)
             }
             Column(Modifier.weight(1f)) {
-                Text(d.to, color = if (d.cancelled) p.mut else p.ink, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(d.to, color = if (d.cancelled) p.textTertiary else p.textPrimary, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 val parts = listOfNotNull(depModeName(d.mode), d.platform?.takeIf { it.isNotBlank() && it != "–" }?.let { "plattform $it" }, if (d.cancelled) "innstilt" else status)
-                if (parts.isNotEmpty()) Text(parts.joinToString(" · "), color = if (late || d.cancelled) p.lab else p.mut, fontSize = HomelabType.footnote.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                if (parts.isNotEmpty()) Text(parts.joinToString(" · "), color = if (late || d.cancelled) p.accent else p.textTertiary, fontSize = HomelabType.footnote.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             Column(horizontalAlignment = Alignment.End) {
                 Text(
                     if (d.cancelled) "Innstilt" else d.minutes?.let { if (it <= 0) "nå" else "$it min" } ?: depClock(d.expected ?: d.aimed),
-                    color = if (d.cancelled) p.lab else p.ink, fontFamily = PaperFonts.serif, fontWeight = FontWeight.Medium, fontSize = HomelabType.title3.fontSize, lineHeight = 24.sp, maxLines = 1,
+                    color = if (d.cancelled) p.accent else p.textPrimary, fontFamily = PaperFonts.serif, fontWeight = FontWeight.Medium, fontSize = HomelabType.title3.fontSize, lineHeight = 24.sp, maxLines = 1,
                     textDecoration = if (d.cancelled) TextDecoration.LineThrough else null,
                 )
-                depClock(d.expected ?: d.aimed).takeIf { it.isNotBlank() }?.let { Text(it, color = p.mut, fontSize = HomelabType.caption.fontSize) }
+                depClock(d.expected ?: d.aimed).takeIf { it.isNotBlank() }?.let { Text(it, color = p.textTertiary, fontSize = HomelabType.caption.fontSize) }
             }
         }
         AnimatedVisibility(
@@ -279,9 +281,9 @@ private fun DepRow24(d: Dep, from: String?, open: Boolean, top: Boolean, onToggl
             enter = expandVertically(tween(320, easing = FastOutSlowInEasing), expandFrom = Alignment.Top) + fadeIn(tween(220)),
             exit = shrinkVertically(tween(320, easing = FastOutSlowInEasing), shrinkTowards = Alignment.Top) + fadeOut(tween(180)),
         ) { Column(Modifier.fillMaxWidth().padding(start = 60.dp, end = 14.dp, top = 2.dp, bottom = 14.dp)) {
-            if (d.stops.isEmpty()) Text("Stoppene på turen kommer når serveren har dem.", color = p.mut, fontSize = HomelabType.footnote.fontSize, modifier = Modifier.padding(vertical = 4.dp))
+            if (d.stops.isEmpty()) Text("Stoppene på turen kommer når serveren har dem.", color = p.textTertiary, fontSize = HomelabType.footnote.fontSize, modifier = Modifier.padding(vertical = 4.dp))
             else Stops24(d.stops, lineColor)
-            Text("Åpne i Ruter ›", color = p.lab, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.footnote.fontSize, textDecoration = TextDecoration.Underline,
+            Text("Åpne i Ruter ›", color = p.accent, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.footnote.fontSize, textDecoration = TextDecoration.Underline,
                 modifier = Modifier.padding(top = 8.dp).clip(RoundedCornerShape(6.dp)).clickable { openLink(ctx, d.ruterUrl ?: ruterPlanner24(from, d.to)) }.padding(vertical = 4.dp))
         } }
     }
@@ -296,7 +298,7 @@ private fun ruterPlanner24(from: String?, to: String?): String {
 /** Stopplisten: linje i linjefargen, fylt første sirkel, hule ellers; første og siste i fet. Mer enn 6: 2 + «· · · N stopp» + 2. */
 @Composable
 private fun Stops24(stops: List<DepStop>, lineColor: Color) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     var all by remember(stops) { mutableStateOf(false) }
     val n = stops.size
     val collapsed = n > 6 && !all
@@ -306,7 +308,7 @@ private fun Stops24(stops: List<DepStop>, lineColor: Color) {
         if (e == null) {
             Row(Modifier.fillMaxWidth().heightIn(min = 30.dp).clickable { all = true }, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Box(Modifier.width(10.dp).height(30.dp), contentAlignment = Alignment.Center) { Box(Modifier.width(2.dp).fillMaxHeight().background(lineColor)) }
-                Text("· · · ${n - 4} stopp", color = p.mut, fontSize = HomelabType.subheadline.fontSize, fontWeight = FontWeight.SemiBold)
+                Text("· · · ${n - 4} stopp", color = p.textTertiary, fontSize = HomelabType.subheadline.fontSize, fontWeight = FontWeight.SemiBold)
             }
             return@forEach
         }
@@ -317,12 +319,12 @@ private fun Stops24(stops: List<DepStop>, lineColor: Color) {
             Box(Modifier.width(10.dp).height(30.dp), contentAlignment = Alignment.Center) {
                 Column(Modifier.fillMaxHeight(), horizontalAlignment = Alignment.CenterHorizontally) {
                     Box(Modifier.width(2.dp).weight(1f).background(if (first) Color.Transparent else lineColor))
-                    Box(Modifier.size(9.dp).clip(CircleShape).background(if (first) lineColor else p.card).border(2.dp, lineColor, CircleShape))
+                    Box(Modifier.size(9.dp).clip(CircleShape).background(if (first) lineColor else p.surfaceRaised).border(2.dp, lineColor, CircleShape))
                     Box(Modifier.width(2.dp).weight(1f).background(if (last) Color.Transparent else lineColor))
                 }
             }
-            Text(s.name, color = p.ink, fontSize = HomelabType.subheadline.fontSize, fontWeight = if (first || last) FontWeight.Bold else FontWeight.Normal, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-            Text(depClock(s.time ?: s.expected ?: s.aimed), color = p.mut, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.subheadline.fontSize)
+            Text(s.name, color = p.textPrimary, fontSize = HomelabType.subheadline.fontSize, fontWeight = if (first || last) FontWeight.Bold else FontWeight.Normal, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+            Text(depClock(s.time ?: s.expected ?: s.aimed), color = p.textTertiary, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.subheadline.fontSize)
         }
     }
 }

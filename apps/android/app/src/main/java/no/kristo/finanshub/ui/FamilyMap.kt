@@ -44,6 +44,7 @@ import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Overlay
 import java.util.concurrent.atomic.AtomicBoolean
 import no.kristo.finanshub.ui.designsystem.HomelabType
+import no.kristo.finanshub.ui.designsystem.HomelabTheme
 
 /*
  * Prompt 20: kartet i Familie uten krasj.
@@ -239,11 +240,11 @@ internal fun FamilyMapSafe(
 
 @Composable
 private fun MapFallback(modifier: Modifier, detail: String, retry: () -> Unit) {
-    val p = PaperPal.current
-    Box(modifier.background(p.surf2), contentAlignment = Alignment.Center) {
+    val p = HomelabTheme.colors
+    Box(modifier.background(p.surfaceSunken), contentAlignment = Alignment.Center) {
         Column(Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("Kartet kunne ikke lastes", color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize)
-            Text(detail.take(120), color = p.mut, fontSize = HomelabType.caption.fontSize, textAlign = TextAlign.Center, maxLines = 2)
+            Text("Kartet kunne ikke lastes", color = p.textPrimary, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize)
+            Text(detail.take(120), color = p.textTertiary, fontSize = HomelabType.caption.fontSize, textAlign = TextAlign.Center, maxLines = 2)
             PButton("Prøv igjen", height = 40.dp, kind = "line") { retry() }
         }
     }

@@ -207,10 +207,10 @@ test('én kolonne i rekkefølgen Last ned → Køen → Serier → Bibliotek, me
 test('farger fra designet: blå = laster ned, grønn = ferdig/VPN, rød = feil, dempet = i kø', () => {
   const u = code('ui/NrkPage.kt');
   const t = body(u, 'private fun tone87(');
-  assert.match(t, /"ok" -> if \(dark\) Color\(0xFF[0-9A-F]{6}\) else Color\(0xFF2F7A4F\)/);
-  assert.match(t, /"dl" -> if \(dark\) Color\(0xFF[0-9A-F]{6}\) else Color\(0xFF2B5D8A\)/);
-  assert.match(t, /"err" -> p\.lab/);
-  assert.match(t, /else -> p\.mut/);
+  assert.match(t, /"ok" -> if \(dark\) Color\(0xFF[0-9A-F]{6}\) else DsPalette\.PapirLys\.success/); // #2F7A4F
+  assert.match(t, /"dl" -> if \(dark\) Color\(0xFF[0-9A-F]{6}\) else DsPalette\.Category\.blue/); // #2B5D8A
+  assert.match(t, /"err" -> p\.accent/);
+  assert.match(t, /else -> p\.textTertiary/);
 });
 
 /* ======================= Lenkefeltet, Lim inn og deling ======================= */
@@ -224,7 +224,7 @@ test('«Lim inn» fyller bare feltet, og teksten ligger i modellen (overlever at
   assert.match(lim, /n\.url = nrkDelt87\(tekst\) \?: tekst\.take\(2000\)/, 'lenken plukkes ut av teksten');
   assert.ok(!/addNrk87|hlPost|nrkHent87/.test(lim), 'innliming starter ingen nedlasting');
   assert.match(k, /BasicTextField\(n\.url, \{ n\.url = it\.take\(2000\); n\.err = null \}/, 'feltet er bundet til vm.nrk87.url');
-  assert.match(k, /val ramme = if \(n\.err != null\) p\.lab else p\.line/, 'rød ramme ved feil');
+  assert.match(k, /val ramme = if \(n\.err != null\) p\.accent else p\.line/, 'rød ramme ved feil');
   assert.match(code('NrkModel.kt'), /class Nrk87State \{[\s\S]*?var url by mutableStateOf\(""\)/);
   assert.match(code('AppViewModel.kt'), /val nrk87 = Nrk87State\(\)/);
 });

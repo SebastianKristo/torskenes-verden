@@ -45,6 +45,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import no.kristo.finanshub.*
 import no.kristo.finanshub.ui.designsystem.HomelabType
+import no.kristo.finanshub.ui.designsystem.HomelabTheme
+import no.kristo.finanshub.ui.designsystem.DsPalette
 
 /*
  * Prompt 88 (AND88): kortet «NRK» øverst i NRK-fanen (fasit public/js/media-nrk.js og «Media NRK.dc.html», mobil = én kolonne).
@@ -70,7 +72,7 @@ internal fun NettBilde88(vm: AppViewModel, url: String?, modifier: Modifier, px:
 @Composable
 private fun Flate88(vm: AppViewModel, url: String?, tittel: String, modifier: Modifier, tekst: Float = 14f, px: Int = 640) {
     Box(modifier.background(flate87(tittel))) {
-        Text(tittel, color = Color(0xFFF3EFE6), fontFamily = PaperFonts.serif, fontWeight = FontWeight.Medium, fontSize = tekst.sp, lineHeight = (tekst * 1.15f).sp, maxLines = 3,
+        Text(tittel, color = DsPalette.PapirLys.surface, fontFamily = PaperFonts.serif, fontWeight = FontWeight.Medium, fontSize = tekst.sp, lineHeight = (tekst * 1.15f).sp, maxLines = 3,
             overflow = TextOverflow.Ellipsis, modifier = Modifier.align(Alignment.BottomStart).padding(8.dp))
         NettBilde88(vm, url, Modifier.matchParentSize(), px)
     }
@@ -78,7 +80,7 @@ private fun Flate88(vm: AppViewModel, url: String?, tittel: String, modifier: Mo
 
 @Composable
 private fun Merke88(text: String, modifier: Modifier, tone: Color? = null) {
-    Text(text, color = Color(0xFFF3EFE6), fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.caption.fontSize, maxLines = 1,
+    Text(text, color = DsPalette.PapirLys.surface, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.caption.fontSize, maxLines = 1,
         modifier = modifier.padding(6.dp).clip(CircleShape).background(tone ?: Color(0x8C0E0D0B)).padding(horizontal = 8.dp, vertical = 3.dp))
 }
 
@@ -98,54 +100,54 @@ internal fun LazyListScope.nrkKort88(vm: AppViewModel, cols: Int) {
     if (sid != null) { serie88(vm, sid); return }
     val treff = s.treff.orEmpty()
     item("nrk-sum") {
-        val p = PaperPal.current
-        Column(Modifier.fillMaxWidth().kort87(p.card, p.line, topp = false, bunn = false).padding(20.dp, 4.dp, 20.dp, 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(nrkSokSum88(n.sokMulig88(), s.sokLaster, s.sokQ, treff.size), color = p.mut, fontFamily = PaperFonts.mono, fontSize = HomelabType.footnote.fontSize)
-            s.sokErr?.let { Text(it, color = p.lab, fontSize = HomelabType.callout.fontSize) }
+        val p = HomelabTheme.colors
+        Column(Modifier.fillMaxWidth().kort87(p.surfaceRaised, p.line, topp = false, bunn = false).padding(20.dp, 4.dp, 20.dp, 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(nrkSokSum88(n.sokMulig88(), s.sokLaster, s.sokQ, treff.size), color = p.textTertiary, fontFamily = PaperFonts.mono, fontSize = HomelabType.footnote.fontSize)
+            s.sokErr?.let { Text(it, color = p.accent, fontSize = HomelabType.callout.fontSize) }
             if (s.sokQ.isNotEmpty() && !s.sokLaster && s.sokErr == null && treff.isEmpty() && n.sokMulig88()) Mut87("Ingen treff på «${s.sokQ}».", 15f)
         }
     }
     val rader = treff.chunked(cols)
     items(rader.size, key = { "nrk-tr-" + rader[it].first().url }) { i ->
-        val p = PaperPal.current
-        Row(Modifier.fillMaxWidth().kort87(p.card, p.line, topp = false, bunn = false).padding(20.dp, 0.dp, 20.dp, 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        val p = HomelabTheme.colors
+        Row(Modifier.fillMaxWidth().kort87(p.surfaceRaised, p.line, topp = false, bunn = false).padding(20.dp, 0.dp, 20.dp, 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             for (t in rader[i]) key(t.url) { Treff88(vm, t, Modifier.weight(1f)) }
             repeat(cols - rader[i].size) { Spacer(Modifier.weight(1f)) }
         }
     }
-    item("nrk-bunn") { val p = PaperPal.current; Box(Modifier.fillMaxWidth().height(14.dp).kort87(p.card, p.line, topp = false)) }
+    item("nrk-bunn") { val p = HomelabTheme.colors; Box(Modifier.fillMaxWidth().height(14.dp).kort87(p.surfaceRaised, p.line, topp = false)) }
 }
 
 @Composable
 private fun Topp88(vm: AppViewModel) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val n = vm.nrk87
     val s = n.sok
     val mulig = n.sokMulig88()
-    Column(Modifier.fillMaxWidth().kort87(p.card, p.line, bunn = false).padding(20.dp, 20.dp, 20.dp, 8.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(Modifier.fillMaxWidth().kort87(p.surfaceRaised, p.line, bunn = false).padding(20.dp, 20.dp, 20.dp, 8.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             PSerif("NRK", 30.sp, modifier = Modifier.weight(1f))
             n.status?.let { Vpn87(it) }
         }
         // Søkefeltet. Uten katalog i nrk-dl er det dempet, og lenkefeltet under står åpent.
-        Row(Modifier.fillMaxWidth().heightIn(min = 50.dp).clip(RoundedCornerShape(14.dp)).background(p.bg).border(1.dp, p.line, RoundedCornerShape(14.dp))
+        Row(Modifier.fillMaxWidth().heightIn(min = 50.dp).clip(RoundedCornerShape(14.dp)).background(p.surface).border(1.dp, p.line, RoundedCornerShape(14.dp))
             .alpha(if (mulig) 1f else .5f).padding(start = 14.dp, end = 2.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            val ink = p.mut
+            val ink = p.textTertiary
             Box(Modifier.size(18.dp).drawBehind {
                 val w = 2.dp.toPx()
                 drawCircle(ink, radius = size.width * .32f, center = Offset(size.width * .45f, size.height * .45f), style = Stroke(w))
                 drawLine(ink, Offset(size.width * .7f, size.height * .7f), Offset(size.width * .95f, size.height * .95f), w, cap = StrokeCap.Round)
             })
             Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
-                if (s.q.isEmpty()) Text("Søk i NRK TV og NRK Radio", color = p.mut, fontSize = HomelabType.callout.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                if (s.q.isEmpty()) Text("Søk i NRK TV og NRK Radio", color = p.textTertiary, fontSize = HomelabType.callout.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 BasicTextField(s.q, { s.q = it.take(100); if (s.ser != null) s.ser = null }, enabled = mulig, singleLine = true,
-                    textStyle = TextStyle(color = p.ink, fontSize = HomelabType.callout.fontSize, fontFamily = PaperFonts.sans), cursorBrush = SolidColor(p.lab),
+                    textStyle = TextStyle(color = p.textPrimary, fontSize = HomelabType.callout.fontSize, fontFamily = PaperFonts.sans), cursorBrush = SolidColor(p.accent),
                     keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.None, imeAction = ImeAction.Search),
                     keyboardActions = KeyboardActions(onSearch = { s.ser = null; vm.nrkSok88() }), modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Søk i NRK" })
             }
             if (s.q.isNotEmpty()) Box(Modifier.size(48.dp).clip(CircleShape).clickable(role = Role.Button, onClickLabel = "Tøm søk") { vm.nrkTomSok88() }
                 .semantics { contentDescription = "Tøm søk" }, contentAlignment = Alignment.Center) {
-                Text("×", color = p.mut, fontSize = HomelabType.title3.fontSize)
+                Text("×", color = p.textTertiary, fontSize = HomelabType.title3.fontSize)
             }
         }
         KvalKomp87(vm)
@@ -155,7 +157,7 @@ private fun Topp88(vm: AppViewModel) {
 /** Ett søketreff: 16:9-bilde med merke, tittel og beskrivelse. Serie → seriesiden; ellers «Last ned» (krever trykk). */
 @Composable
 private fun Treff88(vm: AppViewModel, t: NrkTreff88, modifier: Modifier) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val n = vm.nrk87
     val sid = if (t.art == "serie") nrkSerieId88(t.url) else null
     val iKo = sid == null && n.aktiv88(t.url)
@@ -167,8 +169,8 @@ private fun Treff88(vm: AppViewModel, t: NrkTreff88, modifier: Modifier) {
             if (iKo) Merke88("I KØ", Modifier.align(Alignment.TopEnd), tone88("ok"))
             else if (!t.tilgjengelig) Merke88("IKKE TILGJENGELIG", Modifier.align(Alignment.TopEnd))
         }
-        Text(t.tittel, color = p.ink, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize, lineHeight = 18.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
-        t.beskrivelse?.let { Text(it, color = p.mut, fontSize = HomelabType.footnote.fontSize, lineHeight = 16.sp, maxLines = 2, overflow = TextOverflow.Ellipsis) }
+        Text(t.tittel, color = p.textPrimary, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize, lineHeight = 18.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        t.beskrivelse?.let { Text(it, color = p.textTertiary, fontSize = HomelabType.footnote.fontSize, lineHeight = 16.sp, maxLines = 2, overflow = TextOverflow.Ellipsis) }
         if (sid == null) Knapp87(if (iKo) "I køen" else "Last ned", fylt = !iKo, enabled = t.tilgjengelig && !iKo && !n.sok.lbusy) { vm.nrkTreffLastNed88(t) }
     }
 }
@@ -183,8 +185,8 @@ private fun LazyListScope.serie88(vm: AppViewModel, sid: String) {
     val navn = x?.let { nrkSesong88(it.sesonger.map { z -> z.navn to z.tilgjengelig }, s.si[sid]) }
     val eps = navn?.let { s.sesData["$sid/$it"] }
     item("ser-topp") {
-        val p = PaperPal.current
-        Column(Modifier.fillMaxWidth().kort87(p.card, p.line, topp = false, bunn = false).padding(20.dp, 4.dp, 20.dp, 8.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        val p = HomelabTheme.colors
+        Column(Modifier.fillMaxWidth().kort87(p.surfaceRaised, p.line, topp = false, bunn = false).padding(20.dp, 4.dp, 20.dp, 8.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             val tittel = x?.tittel ?: s.serTittel.ifBlank { sid }
             Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(RoundedCornerShape(14.dp))) {
                 Box(Modifier.matchParentSize().background(flate87(tittel)))
@@ -192,30 +194,30 @@ private fun LazyListScope.serie88(vm: AppViewModel, sid: String) {
                 Box(Modifier.matchParentSize().background(Brush.verticalGradient(0f to Color.Transparent, .45f to Color.Transparent, 1f to Color(0xD90E0D0B))))
                 Box(Modifier.align(Alignment.TopStart).padding(6.dp).heightIn(min = 48.dp).clip(CircleShape).clickable(role = Role.Button, onClickLabel = "Tilbake til søket") { s.ser = null; s.serr = null }
                     .padding(4.dp), contentAlignment = Alignment.Center) {
-                    Text("‹ Søk", color = Color(0xFFF3EFE6), fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize,
+                    Text("‹ Søk", color = DsPalette.PapirLys.surface, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize,
                         modifier = Modifier.clip(CircleShape).background(Color(0x8C0E0D0B)).padding(horizontal = 12.dp, vertical = 7.dp))
                 }
                 Column(Modifier.align(Alignment.BottomStart).padding(14.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     val kat = x?.let { nrkKat88(it.kategori, it.sesonger.count { z -> z.tilgjengelig }) }.orEmpty()
-                    if (kat.isNotEmpty()) Text(kat, color = Color(0xFFF3EFE6).copy(alpha = .85f), fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.caption.fontSize, maxLines = 1)
-                    Text(tittel, color = Color(0xFFF3EFE6), fontFamily = PaperFonts.serif, fontWeight = FontWeight.Medium, fontSize = HomelabType.title3.fontSize, lineHeight = 29.sp, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                    if (kat.isNotEmpty()) Text(kat, color = DsPalette.PapirLys.surface.copy(alpha = .85f), fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.caption.fontSize, maxLines = 1)
+                    Text(tittel, color = DsPalette.PapirLys.surface, fontFamily = PaperFonts.serif, fontWeight = FontWeight.Medium, fontSize = HomelabType.title3.fontSize, lineHeight = 29.sp, maxLines = 3, overflow = TextOverflow.Ellipsis)
                 }
             }
             when {
                 x == null && last?.feil != null -> {
-                    Text(last.feil, color = p.lab, fontSize = HomelabType.callout.fontSize)
+                    Text(last.feil, color = p.accent, fontSize = HomelabType.callout.fontSize)
                     Knapp87("Prøv igjen") { vm.loadSerie88(sid) }
                 }
                 x == null -> Mut87("Henter serien fra NRK …", 15f)
                 else -> {
-                    x.beskrivelse?.let { Text(it, color = p.ink, fontSize = HomelabType.callout.fontSize, lineHeight = 22.sp) }
+                    x.beskrivelse?.let { Text(it, color = p.textPrimary, fontSize = HomelabType.callout.fontSize, lineHeight = 22.sp) }
                     if (x.sesonger.isNotEmpty()) Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         for (z in x.sesonger) key(z.navn) { Pille88(nrkSesNavn88(z.navn, z.tittel), z.navn == navn, z.tilgjengelig) { vm.velgSesong88(z.navn) } }
                     }
                     when {
                         navn == null -> Mut87("Ingen episoder tilgjengelig hos NRK akkurat nå.", 15f)
                         eps == null -> Mut87("Henter episodene …", 15f)
-                        eps.feil != null -> Text(eps.feil, color = p.lab, fontSize = HomelabType.callout.fontSize)
+                        eps.feil != null -> Text(eps.feil, color = p.accent, fontSize = HomelabType.callout.fontSize)
                         eps.data.isNullOrEmpty() -> Mut87("Ingen episoder i denne sesongen.", 15f)
                     }
                 }
@@ -224,26 +226,26 @@ private fun LazyListScope.serie88(vm: AppViewModel, sid: String) {
     }
     val liste = eps?.data.orEmpty()
     items(liste.size, key = { "ser-ep-$sid-$navn-" + liste[it].id }) { i ->
-        val p = PaperPal.current
-        Box(Modifier.fillMaxWidth().kort87(p.card, p.line, topp = false, bunn = false).padding(horizontal = 20.dp)) { Ep88(vm, liste[i], x?.tittel ?: sid) }
+        val p = HomelabTheme.colors
+        Box(Modifier.fillMaxWidth().kort87(p.surfaceRaised, p.line, topp = false, bunn = false).padding(horizontal = 20.dp)) { Ep88(vm, liste[i], x?.tittel ?: sid) }
     }
-    item("ser-bunn") { val p = PaperPal.current; Box(Modifier.fillMaxWidth().height(18.dp).kort87(p.card, p.line, topp = false)) }
+    item("ser-bunn") { val p = HomelabTheme.colors; Box(Modifier.fillMaxWidth().height(18.dp).kort87(p.surfaceRaised, p.line, topp = false)) }
 }
 
 /** Pille (valg, sesongfane): 48 dp trykkflate, «valgt» for skjermleser. Dempet og uten trykk når [enabled] er false (tomme sesonger). */
 @Composable
 internal fun Pille88(text: String, on: Boolean, enabled: Boolean = true, onClick: () -> Unit) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     Box(Modifier.heightIn(min = 48.dp).alpha(if (enabled) 1f else .4f).selectable(selected = on, enabled = enabled, role = Role.Tab) { Haptics.select(); onClick() }, contentAlignment = Alignment.Center) {
-        Text(text, color = if (on) p.bg else p.ink, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize, maxLines = 1,
-            modifier = Modifier.clip(CircleShape).background(if (on) p.ink else p.card).border(1.dp, if (on) p.ink else p.line, CircleShape).padding(horizontal = 14.dp, vertical = 9.dp))
+        Text(text, color = if (on) p.surface else p.textPrimary, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize, maxLines = 1,
+            modifier = Modifier.clip(CircleShape).background(if (on) p.textPrimary else p.surfaceRaised).border(1.dp, if (on) p.textPrimary else p.line, CircleShape).padding(horizontal = 14.dp, vertical = 9.dp))
     }
 }
 
 /** Én episode: avkrysning, bilde, tittel og «5. jan. 2026 · 42 min». */
 @Composable
 private fun Ep88(vm: AppViewModel, e: NrkSesEp88, serie: String) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val n = vm.nrk87
     val iKo = e.iKo || n.aktiv88(e.url)
     val ok = nrkKanVelges88(e.kan, e.lastetNed, iKo)
@@ -256,14 +258,14 @@ private fun Ep88(vm: AppViewModel, e: NrkSesEp88, serie: String) {
             .semantics(mergeDescendants = true) { contentDescription = listOfNotNull(e.tittel, sub.ifEmpty { null }, merke?.first).joinToString(", ") }
             .alpha(if (ok) 1f else .6f).padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             val har = e.lastetNed
-            Box(Modifier.size(22.dp).clip(RoundedCornerShape(6.dp)).background(if (on) p.ink else if (har) tone88("ok").copy(alpha = .15f) else Color.Transparent)
-                .border(1.5.dp, if (on) p.ink else if (har) tone88("ok") else p.line, RoundedCornerShape(6.dp)), contentAlignment = Alignment.Center) {
-                if (on || har) Text("✓", color = if (on) p.bg else tone88("ok"), fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize)
+            Box(Modifier.size(22.dp).clip(RoundedCornerShape(6.dp)).background(if (on) p.textPrimary else if (har) tone88("ok").copy(alpha = .15f) else Color.Transparent)
+                .border(1.5.dp, if (on) p.textPrimary else if (har) tone88("ok") else p.line, RoundedCornerShape(6.dp)), contentAlignment = Alignment.Center) {
+                if (on || har) Text("✓", color = if (on) p.surface else tone88("ok"), fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize)
             }
             Flate88(vm, e.bilde, "", Modifier.width(72.dp).aspectRatio(16f / 9f).clip(RoundedCornerShape(6.dp)).background(flate87(serie)), px = 240)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(e.tittel, color = p.ink, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize, lineHeight = 19.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                if (sub.isNotEmpty()) Text(sub, color = p.mut, fontFamily = PaperFonts.mono, fontSize = HomelabType.caption.fontSize, maxLines = 1)
+                Text(e.tittel, color = p.textPrimary, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize, lineHeight = 19.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                if (sub.isNotEmpty()) Text(sub, color = p.textTertiary, fontFamily = PaperFonts.mono, fontSize = HomelabType.caption.fontSize, maxLines = 1)
             }
             merke?.let { (t, c) -> Chip87(t, tone88(c)) }
         }
@@ -273,7 +275,7 @@ private fun Ep88(vm: AppViewModel, e: NrkSesEp88, serie: String) {
 /** Bunnlinja på seriesiden: ligger fast nederst over lista. */
 @Composable
 internal fun SerieBunn88(vm: AppViewModel, modifier: Modifier) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val n = vm.nrk87
     val s = n.sok
     val sid = s.ser ?: return
@@ -285,14 +287,14 @@ internal fun SerieBunn88(vm: AppViewModel, modifier: Modifier) {
     val folger = n.folgAv88(sid) != null
     val navB = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     Column(modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, bottom = navB + 10.dp).shadow(14.dp, RoundedCornerShape(20.dp)).clip(RoundedCornerShape(20.dp))
-        .background(p.card).border(1.dp, p.line, RoundedCornerShape(20.dp)).padding(14.dp, 10.dp, 14.dp, 12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        .background(p.surfaceRaised).border(1.dp, p.line, RoundedCornerShape(20.dp)).padding(14.dp, 10.dp, 14.dp, 12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             Knapp87(nrkVelgAlle88(valgte, ok.size), enabled = ok.isNotEmpty()) { vm.nrkVelgAlle88(ok.map { it.id }) }
             Knapp87(if (folger) "✓ Følger serien" else "Følg serien", color = if (folger) tone88("ok") else null, enabled = !s.fbusy) { vm.nrkFolgSerie88() }
         }
         Btn43(if (s.lbusy) "Legger i køen …" else nrkHentTekst88(valgte), dark = true, modifier = Modifier.fillMaxWidth().alpha(if (valgte > 0 && !s.lbusy) 1f else .4f),
             enabled = valgte > 0 && !s.lbusy) { vm.nrkHentValgte88() }
-        s.serr?.let { Text(it, color = p.lab, fontSize = HomelabType.subheadline.fontSize) }
-        Text("Følg serien laster ned nye episoder fremover (de to nyeste sesongene), ikke hele arkivet.", color = p.mut, fontSize = HomelabType.footnote.fontSize, lineHeight = 16.sp)
+        s.serr?.let { Text(it, color = p.accent, fontSize = HomelabType.subheadline.fontSize) }
+        Text("Følg serien laster ned nye episoder fremover (de to nyeste sesongene), ikke hele arkivet.", color = p.textTertiary, fontSize = HomelabType.footnote.fontSize, lineHeight = 16.sp)
     }
 }

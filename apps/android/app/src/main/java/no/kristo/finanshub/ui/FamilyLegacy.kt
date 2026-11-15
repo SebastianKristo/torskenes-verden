@@ -82,6 +82,8 @@ import no.kristo.finanshub.family.FamilyService
 import no.kristo.finanshub.family.HealthSync
 import org.json.JSONObject
 import no.kristo.finanshub.ui.designsystem.HomelabType
+import no.kristo.finanshub.ui.designsystem.HomelabTheme
+import no.kristo.finanshub.ui.designsystem.DsPalette
 
 /*
  * Prompt 22: Familie nøyaktig etter design/Familie.dc.html (og claude-code-familie-design.md), likt med iOS.
@@ -255,7 +257,8 @@ private fun Fam22Text(
 /** Etikett: IBM Plex Mono 600, 10,5, sperring 0,12 em, lab. */
 @Composable
 private fun Fam22Label(text: String) {
-    Fam22Text(text, 10.5.sp, PaperPal.current.lab, FontWeight.SemiBold, PaperFonts.mono, Modifier.padding(horizontal = 4.dp), maxLines = 1, spacing = 1.26.sp)
+    val farger = HomelabTheme.colors
+    Fam22Text(text, 10.5.sp, farger.accent, FontWeight.SemiBold, PaperFonts.mono, Modifier.padding(horizontal = 4.dp), maxLines = 1, spacing = 1.26.sp)
 }
 
 /** Ikonet fra designet med strek (round cap/join) i en boks på size × size. */
@@ -288,7 +291,7 @@ private fun Fam22Avatar(photo: Bitmap?, color: Color, initials: String, size: Dp
  */
 @Composable
 internal fun Family22Screen(vm: AppViewModel, startSharing: () -> Unit, askLocation: () -> Unit) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     val clip = LocalClipboardManager.current
@@ -459,7 +462,7 @@ internal fun Family22Screen(vm: AppViewModel, startSharing: () -> Unit, askLocat
                             vm.famTab = "soner"
                         }
                         if (placing) Box(
-                            Modifier.align(Alignment.TopCenter).padding(12.dp).fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Color(0xFF1B1A17)).padding(14.dp, 10.dp),
+                            Modifier.align(Alignment.TopCenter).padding(12.dp).fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(DsPalette.PapirLys.textPrimary).padding(14.dp, 10.dp),
                             contentAlignment = Alignment.Center,
                         ) { Fam22Text("Trykk på kartet der sonen skal være", 13.sp, Color.White, FontWeight.SemiBold, align = TextAlign.Center) }
                         Column(Modifier.align(Alignment.BottomEnd).padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -472,8 +475,8 @@ internal fun Family22Screen(vm: AppViewModel, startSharing: () -> Unit, askLocat
                             Modifier.align(Alignment.BottomStart).padding(10.dp).clip(RoundedCornerShape(12.dp)).background(Color.White.copy(alpha = .92f)).padding(10.dp, 6.dp),
                             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp),
                         ) {
-                            Box(Modifier.size(8.dp).clip(CircleShape).background(if (live) Color(0xFF2F7A4F) else Color(0xFFD9A400)))
-                            Fam22Text(if (live) "Sanntid · din GPS er på" else "Sanntid · du deler ikke", 11.sp, Color(0xFF1B1A17), FontWeight.SemiBold, maxLines = 1)
+                            Box(Modifier.size(8.dp).clip(CircleShape).background(if (live) DsPalette.PapirLys.success else Color(0xFFD9A400)))
+                            Fam22Text(if (live) "Sanntid · din GPS er på" else "Sanntid · du deler ikke", 11.sp, DsPalette.PapirLys.textPrimary, FontWeight.SemiBold, maxLines = 1)
                         }
                     }
                     }
@@ -496,7 +499,7 @@ internal fun Family22Screen(vm: AppViewModel, startSharing: () -> Unit, askLocat
                             Fam22DraftCard(d, { draft = it }, { draft = null }, { nd -> saveDraft(nd) }) { cur, set -> colorDlg = cur to set }
                         }
                         if (f != null && zones.isEmpty() && draft == null) Fam22Text("Ingen soner ennå. Trykk «+ Ny sone på kartet» og velg et sted, f.eks. Hjem eller Skole.",
-                            13.sp, p.mut, modifier = Modifier.padding(horizontal = 4.dp))
+                            13.sp, p.textTertiary, modifier = Modifier.padding(horizontal = 4.dp))
                         zones.forEach { z ->
                             Fam22ZoneCard(
                                 z, fam22ZoneIcon(ctx, acc, z), members, meId, photos, ::colorOf, zEd == z.id,
@@ -515,7 +518,7 @@ internal fun Family22Screen(vm: AppViewModel, startSharing: () -> Unit, askLocat
                                 onCustomColor = { cur, set -> colorDlg = cur to set },
                             )
                         }
-                        Fam22Text("Trykk på en person i en sone for å slå varsel av eller på når de kommer og går.", 12.sp, p.mut,
+                        Fam22Text("Trykk på en person i en sone for å slå varsel av eller på når de kommer og går.", 12.sp, p.textTertiary,
                             modifier = Modifier.padding(horizontal = 4.dp), lineHeight = 17.4.sp)
                     }
                     "velfremme" -> VelFremmeTab42(vm)
@@ -523,12 +526,12 @@ internal fun Family22Screen(vm: AppViewModel, startSharing: () -> Unit, askLocat
                 }
     }
     val top45: @Composable () -> Unit = {
-                vm.familyError?.let { e -> Fam22Text(e, 13.sp, p.lab, modifier = Modifier.padding(horizontal = 4.dp)) }
+                vm.familyError?.let { e -> Fam22Text(e, 13.sp, p.accent, modifier = Modifier.padding(horizontal = 4.dp)) }
                 if (tab == "soner") Box(
-                    Modifier.height(42.dp).clip(RoundedCornerShape(21.dp)).background(p.ink).clickable(role = Role.Button) { placing = !placing; if (!placing) draft = null }
+                    Modifier.height(42.dp).clip(RoundedCornerShape(21.dp)).background(p.textPrimary).clickable(role = Role.Button) { placing = !placing; if (!placing) draft = null }
                         .padding(horizontal = 18.dp),
                     contentAlignment = Alignment.Center,
-                ) { Fam22Text(if (placing || draft != null) "Avbryt ny sone" else "+ Ny sone på kartet", 14.sp, p.bg, FontWeight.Bold, maxLines = 1) }
+                ) { Fam22Text(if (placing || draft != null) "Avbryt ny sone" else "+ Ny sone på kartet", 14.sp, p.surface, FontWeight.Bold, maxLines = 1) }
                 if (tab == "kart") VelFremmeStatus42(vm) // Prompt 42: liten statuslinje når en Vel fremme-økt pågår
     }
     if (LocalWide45.current) {
@@ -536,7 +539,7 @@ internal fun Family22Screen(vm: AppViewModel, startSharing: () -> Unit, askLocat
         colorDlg?.let { (cur, set) -> Fam22ColorDialog(cur, { set(it); colorDlg = null }) { colorDlg = null } }
         return
     }
-    Box(Modifier.fillMaxSize().background(p.bg)) {
+    Box(Modifier.fillMaxSize().background(p.surface)) {
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
             Fam22Hero(vm)
             Column(
@@ -546,7 +549,7 @@ internal fun Family22Screen(vm: AppViewModel, startSharing: () -> Unit, askLocat
             ) {
                 top45()
                 if (showMap) mapView45(Modifier.fillMaxWidth().height(420.dp))
-                if (f == null && vm.familyError == null) Fam22Text("Henter familien …", 13.sp, p.mut, modifier = Modifier.padding(horizontal = 4.dp))
+                if (f == null && vm.familyError == null) Fam22Text("Henter familien …", 13.sp, p.textTertiary, modifier = Modifier.padding(horizontal = 4.dp))
                 tabBody45()
             }
             Spacer(Modifier.height(PAPER_BAR + barBottom + 4.dp))
@@ -555,8 +558,8 @@ internal fun Family22Screen(vm: AppViewModel, startSharing: () -> Unit, askLocat
         vm.message?.let { t ->
             Box(
                 Modifier.align(Alignment.BottomCenter).padding(bottom = barBottom + 98.dp, start = 24.dp, end = 24.dp)
-                    .shadow(12.dp, RoundedCornerShape(20.dp)).clip(RoundedCornerShape(20.dp)).background(p.ink).padding(18.dp, 11.dp),
-            ) { Fam22Text(t, 14.sp, p.bg, FontWeight.SemiBold, maxLines = 2, align = TextAlign.Center) }
+                    .shadow(12.dp, RoundedCornerShape(20.dp)).clip(RoundedCornerShape(20.dp)).background(p.textPrimary).padding(18.dp, 11.dp),
+            ) { Fam22Text(t, 14.sp, p.surface, FontWeight.SemiBold, maxLines = 2, align = TextAlign.Center) }
         }
     }
     colorDlg?.let { (cur, set) -> Fam22ColorDialog(cur, { set(it); colorDlg = null }) { colorDlg = null } }
@@ -576,7 +579,7 @@ private fun Fam22Hero(vm: AppViewModel) {
         Column(Modifier.fillMaxSize().padding(top = statusTop + 8.dp, start = 22.dp, end = 22.dp, bottom = HERO_PB50)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
-                    Modifier.height(34.dp).clip(CircleShape).background(Color(0x8C1B1A17)).clickable(onClickLabel = "Tilbake til Hjem") { vm.closeFamily() }
+                    Modifier.height(34.dp).clip(CircleShape).background(DsPalette.PapirLys.textPrimary.copy(alpha = .55f)).clickable(onClickLabel = "Tilbake til Hjem") { vm.closeFamily() }
                         .padding(start = 10.dp, end = 14.dp),
                     contentAlignment = Alignment.Center,
                 ) { Fam22Text("‹ Hjem", 13.sp, Color.White, FontWeight.SemiBold, maxLines = 1) }
@@ -619,23 +622,23 @@ private fun Fam22TabBar(vm: AppViewModel, tab: String, modifier: Modifier) {
 
 @Composable
 private fun Fam22Toolbar(placing: Boolean, onPlace: () -> Unit, onFit: () -> Unit, onRefresh: () -> Unit) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Box(
-            Modifier.height(42.dp).clip(RoundedCornerShape(21.dp)).background(p.ink).clickable(role = Role.Button, onClick = onPlace).padding(horizontal = 18.dp),
+            Modifier.height(42.dp).clip(RoundedCornerShape(21.dp)).background(p.textPrimary).clickable(role = Role.Button, onClick = onPlace).padding(horizontal = 18.dp),
             contentAlignment = Alignment.Center,
-        ) { Fam22Text(if (placing) "Avbryt plassering" else "+ Ny sone på kartet", 14.sp, p.bg, FontWeight.Bold, maxLines = 1) }
+        ) { Fam22Text(if (placing) "Avbryt plassering" else "+ Ny sone på kartet", 14.sp, p.surface, FontWeight.Bold, maxLines = 1) }
         Spacer(Modifier.weight(1f))
         Box(
-            Modifier.height(42.dp).clip(RoundedCornerShape(21.dp)).background(p.card).border(1.dp, p.line, RoundedCornerShape(21.dp))
+            Modifier.height(42.dp).clip(RoundedCornerShape(21.dp)).background(p.surfaceRaised).border(1.dp, p.line, RoundedCornerShape(21.dp))
                 .clickable(role = Role.Button, onClick = onFit).padding(horizontal = 18.dp),
             contentAlignment = Alignment.Center,
-        ) { Fam22Text("Vis alle", 14.sp, p.ink, FontWeight.Bold, maxLines = 1) }
+        ) { Fam22Text("Vis alle", 14.sp, p.textPrimary, FontWeight.Bold, maxLines = 1) }
         Box(
-            Modifier.size(42.dp).clip(CircleShape).background(p.card).border(1.dp, p.line, CircleShape)
+            Modifier.size(42.dp).clip(CircleShape).background(p.surfaceRaised).border(1.dp, p.line, CircleShape)
                 .clickable(role = Role.Button, onClickLabel = "Oppdater", onClick = onRefresh),
             contentAlignment = Alignment.Center,
-        ) { Fam22Refresh(p.ink) }
+        ) { Fam22Refresh(p.textPrimary) }
     }
 }
 
@@ -655,7 +658,7 @@ private fun Fam22MapBtn(label: String, size: TextUnit, desc: String, onClick: ()
         Modifier.size(40.dp).shadow(6.dp, RoundedCornerShape(12.dp), ambientColor = Color.Black.copy(alpha = .18f), spotColor = Color.Black.copy(alpha = .18f))
             .clip(RoundedCornerShape(12.dp)).background(Color.White.copy(alpha = .95f)).clickable(role = Role.Button, onClickLabel = desc, onClick = onClick),
         contentAlignment = Alignment.Center,
-    ) { Fam22Text(label, size, Color(0xFF1B1A17), maxLines = 1) }
+    ) { Fam22Text(label, size, DsPalette.PapirLys.textPrimary, maxLines = 1) }
 }
 
 /* ---------------- Kart-fanen ---------------- */
@@ -666,26 +669,26 @@ private fun Fam22PersonCard(
     vm: AppViewModel, m: FamMember, isMe: Boolean, color: Long, photo: Bitmap?, zones: List<FamZone>,
     onPhoto: () -> Unit, onClose: () -> Unit, onShareLink: (String) -> Unit,
 ) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val ctx = LocalContext.current
     val l = m.last
-    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(p.card).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(p.surfaceRaised).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Box(Modifier.size(48.dp).clickable(onClickLabel = "Bytt profilbilde", onClick = onPhoto)) {
                 Fam22Avatar(photo, Color(color), m.name.take(2), 48.dp, 16.sp)
                 Box(
-                    Modifier.align(Alignment.BottomEnd).offset(3.dp, 3.dp).size(20.dp).clip(CircleShape).background(p.card).padding(2.dp).clip(CircleShape).background(p.ink),
+                    Modifier.align(Alignment.BottomEnd).offset(3.dp, 3.dp).size(20.dp).clip(CircleShape).background(p.surfaceRaised).padding(2.dp).clip(CircleShape).background(p.textPrimary),
                     contentAlignment = Alignment.Center,
-                ) { Fam22Text("✎", 11.sp, p.bg, maxLines = 1, lineHeight = 11.sp) }
+                ) { Fam22Text("✎", 11.sp, p.surface, maxLines = 1, lineHeight = 11.sp) }
             }
             Column(Modifier.weight(1f)) {
-                Fam22Text(if (isMe) "Deg" else m.name, 22.sp, p.ink, FontWeight.Medium, PaperFonts.serif, maxLines = 1, lineHeight = 24.2.sp)
-                Fam22Text(fam22Where(zones, m) + (l?.let { " · oppdatert " + fam22Ago(it.ts, false) } ?: ""), 12.5.sp, p.mut, maxLines = 2)
+                Fam22Text(if (isMe) "Deg" else m.name, 22.sp, p.textPrimary, FontWeight.Medium, PaperFonts.serif, maxLines = 1, lineHeight = 24.2.sp)
+                Fam22Text(fam22Where(zones, m) + (l?.let { " · oppdatert " + fam22Ago(it.ts, false) } ?: ""), 12.5.sp, p.textTertiary, maxLines = 2)
             }
             Box(
                 Modifier.size(36.dp).clip(CircleShape).border(1.dp, p.line, CircleShape).clickable(role = Role.Button, onClickLabel = "Lukk", onClick = onClose),
                 contentAlignment = Alignment.Center,
-            ) { Fam22Text("×", 16.sp, p.ink, maxLines = 1) }
+            ) { Fam22Text("×", 16.sp, p.textPrimary, maxLines = 1) }
         }
         if (l != null && m.sharing == "on") {
             val v = fam22Kmh(l.speed)
@@ -700,9 +703,9 @@ private fun Fam22PersonCard(
             tiles.chunked(3).forEach { row ->
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     row.forEach { (lab, value, warn) ->
-                        Column(Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).background(p.bg).padding(10.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                            Fam22Text(lab, 11.sp, p.mut, maxLines = 1)
-                            Fam22Text(value, 14.sp, if (warn) p.lab else p.ink, FontWeight.SemiBold, PaperFonts.mono, maxLines = 1)
+                        Column(Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).background(p.surface).padding(10.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Fam22Text(lab, 11.sp, p.textTertiary, maxLines = 1)
+                            Fam22Text(value, 14.sp, if (warn) p.accent else p.textPrimary, FontWeight.SemiBold, PaperFonts.mono, maxLines = 1)
                         }
                     }
                 }
@@ -712,18 +715,18 @@ private fun Fam22PersonCard(
             val url = String.format(java.util.Locale.US, "https://www.google.com/maps/dir/?api=1&destination=%.6f,%.6f", l.lat, l.lon)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Box(
-                    Modifier.weight(1f).height(42.dp).clip(RoundedCornerShape(21.dp)).background(p.ink).clickable(role = Role.Button) { openLink(ctx, url) },
+                    Modifier.weight(1f).height(42.dp).clip(RoundedCornerShape(21.dp)).background(p.textPrimary).clickable(role = Role.Button) { openLink(ctx, url) },
                     contentAlignment = Alignment.Center,
-                ) { Fam22Text("Veibeskrivelse", 13.5.sp, p.bg, FontWeight.Bold, maxLines = 1) }
+                ) { Fam22Text("Veibeskrivelse", 13.5.sp, p.surface, FontWeight.Bold, maxLines = 1) }
                 Box(
                     Modifier.weight(1f).height(42.dp).clip(RoundedCornerShape(21.dp)).border(1.dp, p.line, RoundedCornerShape(21.dp))
                         .clickable(role = Role.Button) { if (isMe) onShareLink(url) else vm.famPing(m.userId, m.name.split(' ').first()) },
                     contentAlignment = Alignment.Center,
-                ) { Fam22Text(if (isMe) "Del min posisjon" else "Spill av lyd", 13.5.sp, p.ink, FontWeight.Bold, maxLines = 1) }
+                ) { Fam22Text(if (isMe) "Del min posisjon" else "Spill av lyd", 13.5.sp, p.textPrimary, FontWeight.Bold, maxLines = 1) }
             }
         } else {
             val first = m.name.split(' ').first()
-            Fam22Text(when (m.sharing) { "paused" -> "$first har satt delingen på pause."; "on" -> "Ingen posisjon ennå."; else -> "$first deler ikke posisjonen." }, 13.sp, p.mut)
+            Fam22Text(when (m.sharing) { "paused" -> "$first har satt delingen på pause."; "on" -> "Ingen posisjon ennå."; else -> "$first deler ikke posisjonen." }, 13.sp, p.textTertiary)
         }
     }
 }
@@ -731,10 +734,10 @@ private fun Fam22PersonCard(
 /** Tom tilstand: deling er av som standard, så ingen ser hverandre før de selv slår det på. */
 @Composable
 private fun Fam22Nobody() {
-    val p = PaperPal.current
-    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(p.card).padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Fam22Text("Ingen deler posisjon med deg ennå", 15.sp, p.ink, FontWeight.Bold)
-        Fam22Text("Deling er av som standard. Du ser bare dem som selv har slått på deling, og de ser deg bare når du deler.", 12.5.sp, p.mut, lineHeight = 18.sp)
+    val p = HomelabTheme.colors
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(p.surfaceRaised).padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Fam22Text("Ingen deler posisjon med deg ennå", 15.sp, p.textPrimary, FontWeight.Bold)
+        Fam22Text("Deling er av som standard. Du ser bare dem som selv har slått på deling, og de ser deg bare når du deler.", 12.5.sp, p.textTertiary, lineHeight = 18.sp)
     }
 }
 
@@ -743,13 +746,13 @@ private fun Fam22Nobody() {
 private fun Fam22People(
     members: List<FamMember>, meId: String?, zones: List<FamZone>, photos: Map<String, Bitmap>, colorOf: (FamMember) -> Long, onPick: (FamMember) -> Unit,
 ) {
-    val p = PaperPal.current
-    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(p.card).padding(horizontal = 16.dp, vertical = 4.dp)) {
+    val p = HomelabTheme.colors
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(p.surfaceRaised).padding(horizontal = 16.dp, vertical = 4.dp)) {
         members.forEachIndexed { i, m ->
             val l = m.last
             val ok = m.sharing == "on"
             val age = fam22AgeMin(l?.ts)
-            val dot = when { !ok || l == null -> Color(0xFF9A9488); age != null && age <= 15 -> Color(0xFF2F7A4F); else -> Color(0xFFD9A400) }
+            val dot = when { !ok || l == null -> Color(0xFF9A9488); age != null && age <= 15 -> DsPalette.PapirLys.success; else -> Color(0xFFD9A400) }
             if (i > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
             Row(
                 Modifier.fillMaxWidth().clickable { onPick(m) }.padding(vertical = 12.dp),
@@ -757,16 +760,16 @@ private fun Fam22People(
             ) {
                 Box(Modifier.size(42.dp)) {
                     Fam22Avatar(photos[m.userId], Color(colorOf(m)), m.name.take(2), 42.dp, 14.sp)
-                    Box(Modifier.align(Alignment.BottomEnd).offset(1.dp, 1.dp).size(12.dp).clip(CircleShape).background(p.card).padding(2.dp).clip(CircleShape).background(dot))
+                    Box(Modifier.align(Alignment.BottomEnd).offset(1.dp, 1.dp).size(12.dp).clip(CircleShape).background(p.surfaceRaised).padding(2.dp).clip(CircleShape).background(dot))
                 }
                 Column(Modifier.weight(1f)) {
-                    Fam22Text(if (m.userId == meId) "${m.name} (deg)" else m.name, 15.sp, p.ink, FontWeight.Bold, maxLines = 1)
+                    Fam22Text(if (m.userId == meId) "${m.name} (deg)" else m.name, 15.sp, p.textPrimary, FontWeight.Bold, maxLines = 1)
                     // Prompt 24: én person = én oppføring, også med flere enheter («Hjem · 2 enheter»).
-                    Fam22Text(fam22Where(zones, m) + fam24DevicesSuffix(m), 12.5.sp, p.mut, maxLines = 1)
+                    Fam22Text(fam22Where(zones, m) + fam24DevicesSuffix(m), 12.5.sp, p.textTertiary, maxLines = 1)
                 }
                 Column(horizontalAlignment = Alignment.End) {
-                    Fam22Text(fam22Battery(l), 12.5.sp, if ((l?.battery ?: 100) < 20) p.lab else p.ink, FontWeight.SemiBold, PaperFonts.mono, maxLines = 1)
-                    Fam22Text(if (ok) fam22Ago(l?.ts, true) else "–", 11.5.sp, p.mut, maxLines = 1)
+                    Fam22Text(fam22Battery(l), 12.5.sp, if ((l?.battery ?: 100) < 20) p.accent else p.textPrimary, FontWeight.SemiBold, PaperFonts.mono, maxLines = 1)
+                    Fam22Text(if (ok) fam22Ago(l?.ts, true) else "–", 11.5.sp, p.textTertiary, maxLines = 1)
                 }
             }
         }
@@ -776,12 +779,12 @@ private fun Fam22People(
 /** HENDELSER: prikk i personens farge, tekst 13,5 og klokkeslett (Plex Mono 12). */
 @Composable
 private fun Fam22Events(f: Family, colorOf: (FamMember) -> Long) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val fmt = remember { DateTimeFormatter.ofPattern("HH:mm") }
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Fam22Label("HENDELSER")
-        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(p.card).padding(horizontal = 16.dp, vertical = 4.dp)) {
-            if (f.events.isEmpty()) Fam22Text("Ingen hendelser ennå.", 13.5.sp, p.mut, modifier = Modifier.padding(vertical = 10.dp))
+        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(p.surfaceRaised).padding(horizontal = 16.dp, vertical = 4.dp)) {
+            if (f.events.isEmpty()) Fam22Text("Ingen hendelser ennå.", 13.5.sp, p.textTertiary, modifier = Modifier.padding(vertical = 10.dp))
             f.events.take(6).forEachIndexed { i, e ->
                 val m = f.members.firstOrNull { it.userId == e.userId }
                 val who = m?.name?.split(' ')?.firstOrNull() ?: "Noen"
@@ -789,9 +792,9 @@ private fun Fam22Events(f: Family, colorOf: (FamMember) -> Long) {
                 val at = runCatching { Instant.parse(e.ts!!).atZone(ZoneId.systemDefault()).format(fmt) }.getOrDefault("")
                 if (i > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
                 Row(Modifier.fillMaxWidth().padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Box(Modifier.size(8.dp).clip(CircleShape).background(m?.let { Color(colorOf(it)) } ?: p.mut))
-                    Fam22Text(if (e.kind == "leave") "$who forlot $zone" else "$who kom til $zone", 13.5.sp, p.ink, modifier = Modifier.weight(1f), maxLines = 1)
-                    Fam22Text(at, 12.sp, p.mut, FontWeight.Medium, PaperFonts.mono, maxLines = 1)
+                    Box(Modifier.size(8.dp).clip(CircleShape).background(m?.let { Color(colorOf(it)) } ?: p.textTertiary))
+                    Fam22Text(if (e.kind == "leave") "$who forlot $zone" else "$who kom til $zone", 13.5.sp, p.textPrimary, modifier = Modifier.weight(1f), maxLines = 1)
+                    Fam22Text(at, 12.sp, p.textTertiary, FontWeight.Medium, PaperFonts.mono, maxLines = 1)
                 }
             }
         }
@@ -801,7 +804,7 @@ private fun Fam22Events(f: Family, colorOf: (FamMember) -> Long) {
 /** «Min deling»: Del min posisjon, Presisjon og Sensorer fra mobilen. */
 @Composable
 private fun Fam22MySharing(vm: AppViewModel, me: FamMe, startSharing: () -> Unit, askLocation: () -> Unit) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val ctx = LocalContext.current
     val gps = remember(me.sharing) { FamilyService.hasLocation(ctx) }
     val rows = listOf(
@@ -811,14 +814,14 @@ private fun Fam22MySharing(vm: AppViewModel, me: FamMe, startSharing: () -> Unit
         listOf("Presisjon", if (me.precision == "approx") "Omtrentlig, rundt 1 km" else "Nøyaktig punkt", (if (me.precision == "approx") "Omtrentlig" else "Nøyaktig") + " ›"),
         listOf("Sensorer fra mobilen", "Batteri, aktivitet og fart", if (gps) "GPS på" else "Be om tilgang ›"),
     )
-    val colors = listOf(if (me.sharing == "on") p.pos else p.lab, p.mut, if (gps) p.pos else p.lab)
+    val colors = listOf(if (me.sharing == "on") p.success else p.accent, p.textTertiary, if (gps) p.success else p.accent)
     val actions = listOf<() -> Unit>(
         { if (me.sharing == "on") vm.famSetSharing("paused") else startSharing() },
         { vm.famSetPrecision(if (me.precision == "approx") "exact" else "approx") },
         { if (gps) vm.flash("GPS er på") else askLocation() },
     )
-    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(p.card).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Fam22Text("Min deling", 20.sp, p.ink, FontWeight.Medium, PaperFonts.serif, maxLines = 1)
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(p.surfaceRaised).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Fam22Text("Min deling", 20.sp, p.textPrimary, FontWeight.Medium, PaperFonts.serif, maxLines = 1)
         Column {
             rows.forEachIndexed { i, r ->
                 if (i > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
@@ -827,15 +830,15 @@ private fun Fam22MySharing(vm: AppViewModel, me: FamMe, startSharing: () -> Unit
                     verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     Column(Modifier.weight(1f)) {
-                        Fam22Text(r[0], 14.sp, p.ink, FontWeight.Bold, maxLines = 1)
-                        Fam22Text(r[1], 12.sp, p.mut, maxLines = 2)
+                        Fam22Text(r[0], 14.sp, p.textPrimary, FontWeight.Bold, maxLines = 1)
+                        Fam22Text(r[1], 12.sp, p.textTertiary, maxLines = 2)
                     }
                     Fam22Text(r[2], 13.sp, colors[i], FontWeight.Bold, maxLines = 1)
                 }
             }
         }
         Fam22Text("Deling er av til hver enkelt slår den på i appen. Hver person kan pause eller slå av når som helst, og de andre ser det.",
-            12.sp, p.mut, lineHeight = 17.4.sp)
+            12.sp, p.textTertiary, lineHeight = 17.4.sp)
     }
 }
 
@@ -855,7 +858,7 @@ private fun Fam22IconGrid(selected: String, accent: Color, min: Dp, iconSize: Dp
 /** 10 farger og regnbuerunding (fri fargevelger), med hex i Plex Mono. Ytre 3 dp kant (valgt = ink), 2 dp ring i kortfarge. */
 @Composable
 private fun Fam22ColorRow(cur: String, size: Dp, onPick: (String) -> Unit, onCustom: () -> Unit) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val custom = FAM22_PAL.none { it.equals(cur, true) }
     @Composable
     fun Swatch(sel: Boolean, fill: (Modifier) -> Modifier, desc: String, onClick: () -> Unit) {
@@ -863,8 +866,8 @@ private fun Fam22ColorRow(cur: String, size: Dp, onPick: (String) -> Unit, onCus
             Modifier.size(size).clip(CircleShape).then(fill(Modifier)).clickable(role = Role.Button, onClickLabel = desc, onClick = onClick)
                 .semantics { contentDescription = desc },
         ) {
-            Box(Modifier.matchParentSize().border(3.dp, if (sel) p.ink else Color.Transparent, CircleShape))
-            Box(Modifier.matchParentSize().padding(3.dp).border(2.dp, p.card, CircleShape))
+            Box(Modifier.matchParentSize().border(3.dp, if (sel) p.textPrimary else Color.Transparent, CircleShape))
+            Box(Modifier.matchParentSize().padding(3.dp).border(2.dp, p.surfaceRaised, CircleShape))
         }
     }
     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -876,13 +879,13 @@ private fun Fam22ColorRow(cur: String, size: Dp, onPick: (String) -> Unit, onCus
                 }
             }
         }, "Velg egen farge", onCustom)
-        Box(Modifier.height(size), contentAlignment = Alignment.Center) { Fam22Text(cur.lowercase(), 12.sp, p.mut, FontWeight.SemiBold, PaperFonts.mono, maxLines = 1) }
+        Box(Modifier.height(size), contentAlignment = Alignment.Center) { Fam22Text(cur.lowercase(), 12.sp, p.textTertiary, FontWeight.SemiBold, PaperFonts.mono, maxLines = 1) }
     }
 }
 
 @Composable
 private fun Fam22Slider(value: Float, accent: Color, onChange: (Float) -> Unit, onDone: () -> Unit) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     Slider(
         value, onChange, Modifier.fillMaxWidth().height(28.dp), valueRange = 50f..2000f, steps = 77, onValueChangeFinished = onDone,
         colors = SliderDefaults.colors(thumbColor = accent, activeTrackColor = accent, inactiveTrackColor = p.line, activeTickColor = Color.Transparent, inactiveTickColor = Color.Transparent),
@@ -891,14 +894,14 @@ private fun Fam22Slider(value: Float, accent: Color, onChange: (Float) -> Unit, 
 
 @Composable
 private fun Fam22Field(value: String, onChange: (String) -> Unit, height: Dp, radius: Dp, pad: Dp, size: TextUnit, placeholder: String?) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     BasicTextField(
         value, onChange, singleLine = true,
-        textStyle = TextStyle(color = p.ink, fontSize = size, fontWeight = FontWeight.SemiBold, fontFamily = PaperFonts.sans), cursorBrush = SolidColor(p.lab),
-        modifier = Modifier.fillMaxWidth().height(height).clip(RoundedCornerShape(radius)).background(p.bg).border(1.dp, p.line, RoundedCornerShape(radius)),
+        textStyle = TextStyle(color = p.textPrimary, fontSize = size, fontWeight = FontWeight.SemiBold, fontFamily = PaperFonts.sans), cursorBrush = SolidColor(p.accent),
+        modifier = Modifier.fillMaxWidth().height(height).clip(RoundedCornerShape(radius)).background(p.surface).border(1.dp, p.line, RoundedCornerShape(radius)),
         decorationBox = { inner ->
             Box(Modifier.fillMaxSize().padding(horizontal = pad), contentAlignment = Alignment.CenterStart) {
-                if (value.isEmpty() && placeholder != null) Fam22Text(placeholder, size, p.mut, FontWeight.SemiBold, maxLines = 1)
+                if (value.isEmpty() && placeholder != null) Fam22Text(placeholder, size, p.textTertiary, FontWeight.SemiBold, maxLines = 1)
                 inner()
             }
         },
@@ -908,13 +911,13 @@ private fun Fam22Field(value: String, onChange: (String) -> Unit, height: Dp, ra
 /** Av/på for deling av sonen (brukerskille: sonen er privat til eieren deler den). */
 @Composable
 private fun Fam22SharedRow(on: Boolean, onChange: (Boolean) -> Unit) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     Row(Modifier.fillMaxWidth().clickable { onChange(!on) }.padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
-            Fam22Text("Del med familien", 13.sp, p.ink, FontWeight.SemiBold, maxLines = 1)
-            Fam22Text(if (on) "Alle i familien ser sonen" else "Bare du ser sonen", 12.sp, p.mut, maxLines = 1)
+            Fam22Text("Del med familien", 13.sp, p.textPrimary, FontWeight.SemiBold, maxLines = 1)
+            Fam22Text(if (on) "Alle i familien ser sonen" else "Bare du ser sonen", 12.sp, p.textTertiary, maxLines = 1)
         }
-        Box(Modifier.size(42.dp, 24.dp).clip(CircleShape).background(if (on) p.pos else p.line).padding(3.dp), contentAlignment = if (on) Alignment.CenterEnd else Alignment.CenterStart) {
+        Box(Modifier.size(42.dp, 24.dp).clip(CircleShape).background(if (on) p.success else p.line).padding(3.dp), contentAlignment = if (on) Alignment.CenterEnd else Alignment.CenterStart) {
             Box(Modifier.size(18.dp).clip(CircleShape).background(Color.White))
         }
     }
@@ -923,33 +926,33 @@ private fun Fam22SharedRow(on: Boolean, onChange: (Boolean) -> Unit) {
 /** «Ny sone»: kant 1,5 lab, navn, radius, ikon, farge og Avbryt / Lagre sone. */
 @Composable
 private fun Fam22DraftCard(d: Fam22Draft, onChange: (Fam22Draft) -> Unit, onCancel: () -> Unit, onSave: (Fam22Draft) -> Unit, onCustom: (String, (String) -> Unit) -> Unit) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     var r by remember(d.lat, d.lon) { mutableFloatStateOf(d.r.toFloat()) }
     Column(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(p.card).border(1.5.dp, p.lab, RoundedCornerShape(22.dp)).padding(16.dp),
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(p.surfaceRaised).border(1.5.dp, p.accent, RoundedCornerShape(22.dp)).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Fam22Text("Ny sone", 20.sp, p.ink, FontWeight.Medium, PaperFonts.serif, maxLines = 1)
+        Fam22Text("Ny sone", 20.sp, p.textPrimary, FontWeight.Medium, PaperFonts.serif, maxLines = 1)
         Fam22Field(d.name, { onChange(d.copy(name = it)) }, 44.dp, 14.dp, 14.dp, 15.sp, "Navn, f.eks. Trening")
         Row(Modifier.fillMaxWidth()) {
-            Fam22Text("Radius", 13.sp, p.mut, modifier = Modifier.weight(1f))
-            Fam22Text(fam22Radius(r.toDouble()), 13.sp, p.ink, FontWeight.SemiBold, PaperFonts.mono)
+            Fam22Text("Radius", 13.sp, p.textTertiary, modifier = Modifier.weight(1f))
+            Fam22Text(fam22Radius(r.toDouble()), 13.sp, p.textPrimary, FontWeight.SemiBold, PaperFonts.mono)
         }
-        Fam22Slider(r, Color(0xFFB23A2A), { r = it }) { onChange(d.copy(r = r.toDouble())) }
-        Fam22Text("Ikon", 13.sp, p.mut)
+        Fam22Slider(r, DsPalette.PapirLys.accent, { r = it }) { onChange(d.copy(r = r.toDouble())) }
+        Fam22Text("Ikon", 13.sp, p.textTertiary)
         Fam22IconGrid(d.icon ?: fam22DefaultIcon(d.name), Color(color(d.color)), 40.dp, 20.dp) { onChange(d.copy(icon = it)) }
-        Fam22Text("Farge", 13.sp, p.mut)
+        Fam22Text("Farge", 13.sp, p.textTertiary)
         Fam22ColorRow(d.color, 32.dp, { onChange(d.copy(color = it)) }) { onCustom(d.color) { c -> onChange(d.copy(color = c)) } }
         Fam22SharedRow(d.shared) { onChange(d.copy(shared = it)) }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Box(
                 Modifier.weight(1f).height(44.dp).clip(RoundedCornerShape(22.dp)).border(1.dp, p.line, RoundedCornerShape(22.dp)).clickable(role = Role.Button, onClick = onCancel),
                 contentAlignment = Alignment.Center,
-            ) { Fam22Text("Avbryt", 14.sp, p.ink, FontWeight.Bold, maxLines = 1) }
+            ) { Fam22Text("Avbryt", 14.sp, p.textPrimary, FontWeight.Bold, maxLines = 1) }
             Box(
-                Modifier.weight(1f).height(44.dp).clip(RoundedCornerShape(22.dp)).background(p.ink).clickable(role = Role.Button) { onSave(d.copy(r = r.toDouble())) },
+                Modifier.weight(1f).height(44.dp).clip(RoundedCornerShape(22.dp)).background(p.textPrimary).clickable(role = Role.Button) { onSave(d.copy(r = r.toDouble())) },
                 contentAlignment = Alignment.Center,
-            ) { Fam22Text("Lagre sone", 14.sp, p.bg, FontWeight.Bold, maxLines = 1) }
+            ) { Fam22Text("Lagre sone", 14.sp, p.surface, FontWeight.Bold, maxLines = 1) }
         }
     }
 }
@@ -961,29 +964,29 @@ private fun Fam22ZoneCard(
     onShow: () -> Unit, onEdit: () -> Unit, onRemove: () -> Unit, onChange: (FamZone, Boolean) -> Unit, onIcon: (String) -> Unit,
     onNotify: (String, Boolean) -> Unit, onCustomColor: (String, (String) -> Unit) -> Unit,
 ) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val zc = Color(z.color)
     val here = members.filter { m -> m.sharing == "on" && m.last?.let { l -> fam22InZone(listOf(z), l.lat, l.lon) != null } == true }
         .joinToString(", ") { if (it.userId == meId) "deg" else it.name.split(' ').first() }.ifBlank { "ingen der nå" }
     val owner = if (!z.mine) " · delt av ${z.ownerName ?: members.firstOrNull { it.userId == z.owner }?.name?.split(' ')?.first() ?: "familien"}" else ""
     var r by remember(z.id, z.radius) { mutableFloatStateOf(z.radius.toFloat()) }
-    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(p.card).padding(horizontal = 16.dp, vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(p.surfaceRaised).padding(horizontal = 16.dp, vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Box(Modifier.size(42.dp).clip(CircleShape).background(zc).clickable(role = Role.Button, onClickLabel = "Vis på kartet", onClick = onShow), contentAlignment = Alignment.Center) {
                 Fam22Icon(icon, 21.dp, 2f, Color.White)
             }
             Column(Modifier.weight(1f)) {
-                Fam22Text(z.name, 15.sp, p.ink, FontWeight.Bold, maxLines = 1)
-                Fam22Text("${fam22Radius(r.toDouble())} radius · $here$owner", 12.5.sp, p.mut, maxLines = 2)
+                Fam22Text(z.name, 15.sp, p.textPrimary, FontWeight.Bold, maxLines = 1)
+                Fam22Text("${fam22Radius(r.toDouble())} radius · $here$owner", 12.5.sp, p.textTertiary, maxLines = 2)
             }
             if (z.mine) {
                 Box(
-                    Modifier.size(34.dp).clip(CircleShape).background(if (editing) p.bg else Color.Transparent).border(1.dp, p.line, CircleShape)
+                    Modifier.size(34.dp).clip(CircleShape).background(if (editing) p.surface else Color.Transparent).border(1.dp, p.line, CircleShape)
                         .clickable(role = Role.Button, onClickLabel = "Rediger sone", onClick = onEdit),
                     contentAlignment = Alignment.Center,
-                ) { Fam22Text("✎", 14.sp, p.ink, maxLines = 1) }
+                ) { Fam22Text("✎", 14.sp, p.textPrimary, maxLines = 1) }
                 Box(Modifier.size(34.dp).clip(CircleShape).clickable(role = Role.Button, onClickLabel = "Slett sone", onClick = onRemove), contentAlignment = Alignment.Center) {
-                    Fam22Text("−", 20.sp, p.lab, maxLines = 1)
+                    Fam22Text("−", 20.sp, p.accent, maxLines = 1)
                 }
             }
         }
@@ -996,8 +999,8 @@ private fun Fam22ZoneCard(
                     onCustomColor(fam22Hex(z.color)) { c -> onChange(z.copy(color = color(c)), false) }
                 }
                 Row(Modifier.fillMaxWidth()) {
-                    Fam22Text("Radius", 13.sp, p.mut, modifier = Modifier.weight(1f))
-                    Fam22Text(fam22Radius(r.toDouble()), 13.sp, p.ink, FontWeight.SemiBold, PaperFonts.mono)
+                    Fam22Text("Radius", 13.sp, p.textTertiary, modifier = Modifier.weight(1f))
+                    Fam22Text(fam22Radius(r.toDouble()), 13.sp, p.textPrimary, FontWeight.SemiBold, PaperFonts.mono)
                 }
                 Fam22Slider(r, zc, { r = it }) { onChange(z.copy(radius = r.toDouble()), false) }
                 Fam22SharedRow(z.shared) { onChange(z.copy(shared = it), false) }
@@ -1011,12 +1014,12 @@ private fun Fam22ZoneCard(
                     val on = cur != null && (cur.first || cur.second)
                     val first = m.name.split(' ').first()
                     Row(
-                        Modifier.height(32.dp).clip(RoundedCornerShape(16.dp)).background(if (on) p.bg else Color.Transparent)
-                            .border(1.dp, if (on) p.ink else p.line, RoundedCornerShape(16.dp)).clickable { onNotify(m.userId, !on) }.padding(start = 4.dp, end = 10.dp),
+                        Modifier.height(32.dp).clip(RoundedCornerShape(16.dp)).background(if (on) p.surface else Color.Transparent)
+                            .border(1.dp, if (on) p.textPrimary else p.line, RoundedCornerShape(16.dp)).clickable { onNotify(m.userId, !on) }.padding(start = 4.dp, end = 10.dp),
                         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp),
                     ) {
                         Fam22Avatar(photos[m.userId], Color(colorOf(m)), m.name.take(2), 24.dp, 10.sp)
-                        Fam22Text(if (on) "$first · varsel på" else first, 12.sp, p.ink, FontWeight.SemiBold, maxLines = 1)
+                        Fam22Text(if (on) "$first · varsel på" else first, 12.sp, p.textPrimary, FontWeight.SemiBold, maxLines = 1)
                     }
                 }
             }
@@ -1027,7 +1030,7 @@ private fun Fam22ZoneCard(
 /** Fri fargevelger: metning/lysstyrke-felt, fargetone-stripe og hex. Brukes av regnbuerundingen. */
 @Composable
 private fun Fam22ColorDialog(initial: String, onPick: (String) -> Unit, onDismiss: () -> Unit) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val hsv0 = remember(initial) { FloatArray(3).also { android.graphics.Color.colorToHSV(color(initial).toInt(), it) } }
     var h by remember { mutableFloatStateOf(hsv0[0]) }
     var s by remember { mutableFloatStateOf(hsv0[1]) }
@@ -1036,8 +1039,8 @@ private fun Fam22ColorDialog(initial: String, onPick: (String) -> Unit, onDismis
     val hex = String.format("#%06x", argb and 0xFFFFFF)
     var text by remember(hex) { mutableStateOf(hex) }
     Dialog(onDismissRequest = onDismiss) {
-        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(p.card).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Fam22Text("Velg egen farge", 20.sp, p.ink, FontWeight.Medium, PaperFonts.serif)
+        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(p.surfaceRaised).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Fam22Text("Velg egen farge", 20.sp, p.textPrimary, FontWeight.Medium, PaperFonts.serif)
             val hue = Color(android.graphics.Color.HSVToColor(floatArrayOf(h, 1f, 1f)))
             var svSize by remember { mutableStateOf(Size.Zero) }
             Box(
@@ -1084,11 +1087,11 @@ private fun Fam22ColorDialog(initial: String, onPick: (String) -> Unit, onDismis
                 Box(
                     Modifier.weight(1f).height(44.dp).clip(RoundedCornerShape(22.dp)).border(1.dp, p.line, RoundedCornerShape(22.dp)).clickable(role = Role.Button, onClick = onDismiss),
                     contentAlignment = Alignment.Center,
-                ) { Fam22Text("Avbryt", 14.sp, p.ink, FontWeight.Bold, maxLines = 1) }
+                ) { Fam22Text("Avbryt", 14.sp, p.textPrimary, FontWeight.Bold, maxLines = 1) }
                 Box(
-                    Modifier.weight(1f).height(44.dp).clip(RoundedCornerShape(22.dp)).background(p.ink).clickable(role = Role.Button) { onPick(hex) },
+                    Modifier.weight(1f).height(44.dp).clip(RoundedCornerShape(22.dp)).background(p.textPrimary).clickable(role = Role.Button) { onPick(hex) },
                     contentAlignment = Alignment.Center,
-                ) { Fam22Text("Bruk farge", 14.sp, p.bg, FontWeight.Bold, maxLines = 1) }
+                ) { Fam22Text("Bruk farge", 14.sp, p.surface, FontWeight.Bold, maxLines = 1) }
             }
         }
     }
@@ -1100,7 +1103,7 @@ private fun fam22IsApple(m: FamMember): Boolean = m.last?.device?.let { it.conta
 
 @Composable
 private fun Fam22Health(vm: AppViewModel, members: List<FamMember>, meId: String?, photos: Map<String, Bitmap>, colorOf: (FamMember) -> Long) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val ctx = LocalContext.current
     // Prompt 42 (claude-code-familie-helsekilder-innstillinger.md): kildekortene (Apple Health / Health Connect) ligger nå i
     // Innstillinger → Helse og posisjon → HELSE (FAMILIE). Fanen starter rett med personene.
@@ -1108,15 +1111,15 @@ private fun Fam22Health(vm: AppViewModel, members: List<FamMember>, meId: String
         val h = m.health
         val on = h != null
         val src = if (fam22IsApple(m)) "Apple Health" else "Health Connect"
-        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(p.card).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(p.surfaceRaised).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Fam22Avatar(photos[m.userId], Color(colorOf(m)), m.name.take(2), 40.dp, 13.sp)
                 Column(Modifier.weight(1f)) {
-                    Fam22Text(if (m.userId == meId) "${m.name} (deg)" else m.name, 15.sp, p.ink, FontWeight.Bold, maxLines = 1)
-                    Fam22Text("$src · " + if (on) "synket " + fam22Ago(h?.updatedAt, false).let { if (it == "–") "i dag" else it } else "ikke synket", 12.sp, p.mut, maxLines = 1)
+                    Fam22Text(if (m.userId == meId) "${m.name} (deg)" else m.name, 15.sp, p.textPrimary, FontWeight.Bold, maxLines = 1)
+                    Fam22Text("$src · " + if (on) "synket " + fam22Ago(h?.updatedAt, false).let { if (it == "–") "i dag" else it } else "ikke synket", 12.sp, p.textTertiary, maxLines = 1)
                 }
-                Box(Modifier.clip(RoundedCornerShape(10.dp)).background(p.bg).padding(10.dp, 4.dp)) {
-                    Fam22Text(if (on) "Deler" else "Deler ikke", 11.5.sp, if (on) p.pos else p.mut, FontWeight.Bold, maxLines = 1)
+                Box(Modifier.clip(RoundedCornerShape(10.dp)).background(p.surface).padding(10.dp, 4.dp)) {
+                    Fam22Text(if (on) "Deler" else "Deler ikke", 11.5.sp, if (on) p.success else p.textTertiary, FontWeight.Bold, maxLines = 1)
                 }
             }
             if (h != null) {
@@ -1132,8 +1135,8 @@ private fun Fam22Health(vm: AppViewModel, members: List<FamMember>, meId: String
                         drawArc(pc, -90f, 360f * (steps.toFloat() / goal).coerceIn(0f, 1f), false, tl, Size(r * 2, r * 2), style = Stroke(7 * k, cap = StrokeCap.Round))
                     }
                     Column(Modifier.weight(1f)) {
-                        Fam22Text(n0(steps.toDouble()), 28.sp, p.ink, FontWeight.Medium, PaperFonts.serif, maxLines = 1, lineHeight = 28.sp)
-                        Fam22Text("skritt · mål ${n0(goal.toDouble())}", 12.5.sp, p.mut, maxLines = 1)
+                        Fam22Text(n0(steps.toDouble()), 28.sp, p.textPrimary, FontWeight.Medium, PaperFonts.serif, maxLines = 1, lineHeight = 28.sp)
+                        Fam22Text("skritt · mål ${n0(goal.toDouble())}", 12.5.sp, p.textTertiary, maxLines = 1)
                     }
                 }
                 val tiles = listOf(
@@ -1145,10 +1148,10 @@ private fun Fam22Health(vm: AppViewModel, members: List<FamMember>, meId: String
                 tiles.chunked(2).forEach { row ->
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         row.forEach { (l, v, sub) ->
-                            Column(Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).background(p.bg).padding(12.dp, 10.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                Fam22Text(l, 11.5.sp, p.mut, maxLines = 1)
-                                Fam22Text(v, 15.sp, p.ink, FontWeight.SemiBold, PaperFonts.mono, maxLines = 1)
-                                Fam22Text(sub, 11.sp, p.mut, maxLines = 1)
+                            Column(Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).background(p.surface).padding(12.dp, 10.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                Fam22Text(l, 11.5.sp, p.textTertiary, maxLines = 1)
+                                Fam22Text(v, 15.sp, p.textPrimary, FontWeight.SemiBold, PaperFonts.mono, maxLines = 1)
+                                Fam22Text(sub, 11.sp, p.textTertiary, maxLines = 1)
                             }
                         }
                     }
@@ -1164,13 +1167,13 @@ private fun Fam22Health(vm: AppViewModel, members: List<FamMember>, meId: String
                     }
                 }
             } else {
-                Fam22Text("Deler ikke helsedata. ${m.name.split(' ').first()} kan slå det på i sin app.", 13.sp, p.mut)
+                Fam22Text("Deler ikke helsedata. ${m.name.split(' ').first()} kan slå det på i sin app.", 13.sp, p.textTertiary)
             }
         }
     }
     Fam22Text(
         "Apple Health og Health Connect kan bare leses av appen på telefonen. Homelab-appen sender et sammendrag hit hvert 15. minutt, og bare det personen har valgt å dele.",
-        12.sp, p.mut, modifier = Modifier.padding(horizontal = 4.dp), lineHeight = 17.4.sp,
+        12.sp, p.textTertiary, modifier = Modifier.padding(horizontal = 4.dp), lineHeight = 17.4.sp,
     )
 }
 
@@ -1196,11 +1199,11 @@ private fun fam24Ago(iso: String?): String {
 
 @Composable
 internal fun Fam24Devices(vm: AppViewModel, m: FamMember, isMe: Boolean) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val auto = m.sourceDevice == null
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         PLabel("Enheter · ${fam24Count(m)}")
-        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(p.bg)) {
+        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(p.surface)) {
             if (isMe) Fam24DeviceRow("Automatisk", "Nyeste og mest nøyaktige posisjon", auto, top = false) { if (!auto) vm.b24SetSource(null) }
             m.devices.forEachIndexed { i, d ->
                 val sub = listOfNotNull(d.battery?.let { "$it %" }, fam24Ago(d.lastSeen), if (d.isSource) "kilde" else null).joinToString(" · ")
@@ -1213,7 +1216,7 @@ internal fun Fam24Devices(vm: AppViewModel, m: FamMember, isMe: Boolean) {
 
 @Composable
 private fun Fam24DeviceRow(title: String, sub: String, on: Boolean, top: Boolean, onClick: (() -> Unit)?) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     Column {
         if (top) Box(Modifier.fillMaxWidth().padding(start = 12.dp).height(1.dp).background(p.line))
         Row(
@@ -1221,12 +1224,12 @@ private fun Fam24DeviceRow(title: String, sub: String, on: Boolean, top: Boolean
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Column(Modifier.weight(1f)) {
-                Text(title, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(sub, color = p.mut, fontSize = HomelabType.footnote.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis, fontFamily = PaperFonts.mono)
+                Text(title, color = p.textPrimary, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(sub, color = p.textTertiary, fontSize = HomelabType.footnote.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis, fontFamily = PaperFonts.mono)
             }
             Box(
-                Modifier.size(20.dp).clip(CircleShape).border(2.dp, if (on) p.ink else p.line, CircleShape).padding(4.dp).clip(CircleShape)
-                    .background(if (on) p.ink else Color.Transparent),
+                Modifier.size(20.dp).clip(CircleShape).border(2.dp, if (on) p.textPrimary else p.line, CircleShape).padding(4.dp).clip(CircleShape)
+                    .background(if (on) p.textPrimary else Color.Transparent),
             )
         }
     }
@@ -1245,16 +1248,16 @@ internal fun Family45Wide(
     vm: AppViewModel, tab: String, loading: Boolean,
     top: @Composable () -> Unit, map: @Composable (Modifier) -> Unit, body: @Composable () -> Unit,
 ) {
-    val p = PaperPal.current
-    Box(Modifier.fillMaxSize().background(p.bg)) {
+    val p = HomelabTheme.colors
+    Box(Modifier.fillMaxSize().background(p.surface)) {
         Row(Modifier.fillMaxSize()) {
             FamRail45(vm, tab, Modifier.statusBarsPadding().navigationBarsPadding().padding(start = 12.dp, top = 12.dp, bottom = 12.dp))
             Spacer(Modifier.width(24.dp))
             Row(Modifier.weight(1f).fillMaxHeight().statusBarsPadding().navigationBarsPadding().padding(top = 12.dp, end = 16.dp, bottom = 12.dp)) {
                 Column(Modifier.weight(1.3f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Column {
-                        PSerif("Posisjon, soner og helse", 15.sp, p.mut, italic = true, weight = FontWeight.Normal, maxLines = 1)
-                        PSerif("Familie", 34.sp, p.ink, maxLines = 1)
+                        PSerif("Posisjon, soner og helse", 15.sp, p.textTertiary, italic = true, weight = FontWeight.Normal, maxLines = 1)
+                        PSerif("Familie", 34.sp, p.textPrimary, maxLines = 1)
                     }
                     map(Modifier.fillMaxWidth().weight(1f).heightIn(min = 300.dp))
                 }
@@ -1264,7 +1267,7 @@ internal fun Family45Wide(
                     verticalArrangement = Arrangement.spacedBy(14.dp),
                 ) {
                     top()
-                    if (loading) Text("Henter familien …", color = p.mut, fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.padding(horizontal = 4.dp))
+                    if (loading) Text("Henter familien …", color = p.textTertiary, fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.padding(horizontal = 4.dp))
                     body()
                 }
             }
@@ -1272,8 +1275,8 @@ internal fun Family45Wide(
         vm.message?.let { t ->
             Box(
                 Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 24.dp, start = 24.dp, end = 24.dp)
-                    .shadow(12.dp, RoundedCornerShape(20.dp)).clip(RoundedCornerShape(20.dp)).background(p.ink).padding(18.dp, 11.dp),
-            ) { Text(t, color = p.bg, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize, maxLines = 2, textAlign = TextAlign.Center) }
+                    .shadow(12.dp, RoundedCornerShape(20.dp)).clip(RoundedCornerShape(20.dp)).background(p.textPrimary).padding(18.dp, 11.dp),
+            ) { Text(t, color = p.surface, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize, maxLines = 2, textAlign = TextAlign.Center) }
         }
     }
 }
@@ -1306,7 +1309,7 @@ private fun FamRail45(vm: AppViewModel, tab: String, modifier: Modifier) {
  */
 @Composable
 internal fun ZoneAlertsCard45(vm: AppViewModel) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     androidx.compose.runtime.LaunchedEffect(vm.account?.id) { vm.loadZoneAlerts45() }
     val z = vm.p45.zoneAlerts ?: return
     PCard {
@@ -1316,14 +1319,14 @@ internal fun ZoneAlertsCard45(vm: AppViewModel) {
                 Modifier.fillMaxWidth().padding(start = 14.dp, end = 4.dp).alpha(if (z.on) 1f else .45f),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                Box(Modifier.size(30.dp).clip(androidx.compose.foundation.shape.CircleShape).background(m.color?.let { Color(it) } ?: p.mut), contentAlignment = Alignment.Center) {
+                Box(Modifier.size(30.dp).clip(androidx.compose.foundation.shape.CircleShape).background(m.color?.let { Color(it) } ?: p.textTertiary), contentAlignment = Alignment.Center) {
                     Text(m.initials.take(2), color = Color.White, fontWeight = FontWeight.Bold, fontSize = HomelabType.caption.fontSize, maxLines = 1)
                 }
                 Box(Modifier.weight(1f)) { PToggle(m.name, null, m.on && z.on, top = false) { if (z.on) vm.setZoneAlert45(m.id, it) } }
             }
         }
         Text(
-            "Vis eksempel på varsel", color = p.lab, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize,
+            "Vis eksempel på varsel", color = p.accent, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize,
             modifier = Modifier.fillMaxWidth().clickable(role = androidx.compose.ui.semantics.Role.Button) { Haptics.tap(); vm.sampleZoneNotify45() }.padding(14.dp, 12.dp),
         )
     }

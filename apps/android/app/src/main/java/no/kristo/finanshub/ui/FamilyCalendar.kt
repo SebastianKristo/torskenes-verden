@@ -21,6 +21,7 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import no.kristo.finanshub.ui.designsystem.HomelabType
+import no.kristo.finanshub.ui.designsystem.HomelabTheme
 
 /*
  * Prompt 51 (ANDFEAT51): felles familiekalender med «hvem kjører?» – MEDFAM51 /api/famcal51 ($S/SERVER51-API.md), fasit
@@ -40,13 +41,14 @@ private fun who51(p: JSONObject?): String = p?.let { if (it.optBoolean("self")) 
 
 @Composable
 internal fun FamCal51Page(vm: AppViewModel) {
+    val farger = HomelabTheme.colors
     LaunchedEffect(vm.activeId) { vm.load51("famDrives"); vm.load51("famSettings") }
     Page51("Familiekalender", "Familie", onRefresh = { FAMRELOAD51.forEach { vm.load51(it, force = true) } }) {
         Keyed51(vm, "famEvents") { ev ->
             val members = ev.arr51("members")
             val drives = F51.data["famDrives"]
             Text(drives?.str51("text").orEmpty() + if (ev.obj51("home") == null) " · Legg inn et sted med type hjem i Familie › Steder for Ruter-forslag" else "",
-                color = PaperPal.current.mut, fontSize = HomelabType.subheadline.fontSize)
+                color = farger.textTertiary, fontSize = HomelabType.subheadline.fontSize)
             Cols51(
                 left = { Events51(vm, ev, members) },
                 right = {
@@ -61,13 +63,13 @@ internal fun FamCal51Page(vm: AppViewModel) {
 
 @Composable
 private fun Events51(vm: AppViewModel, ev: JSONObject, members: List<JSONObject>) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val events = ev.arr51("events")
     Card51 {
         PSerif("Kommende", 20.sp)
-        if (events.isEmpty()) Text("Ingen hendelser de neste fire ukene.", color = p.mut, fontSize = HomelabType.subheadline.fontSize)
+        if (events.isEmpty()) Text("Ingen hendelser de neste fire ukene.", color = p.textTertiary, fontSize = HomelabType.subheadline.fontSize)
         events.groupBy { it.str51("date") }.forEach { (d, list) ->
-            PLabel(dayTitle51(d), p.mut, modifier = Modifier.padding(top = 8.dp))
+            PLabel(dayTitle51(d), p.textTertiary, modifier = Modifier.padding(top = 8.dp))
             list.forEach { e -> key(e.str51("id")) { Event51(vm, e, members) } }
         }
     }
@@ -75,19 +77,19 @@ private fun Events51(vm: AppViewModel, ev: JSONObject, members: List<JSONObject>
 
 @Composable
 private fun Event51(vm: AppViewModel, e: JSONObject, members: List<JSONObject>) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val id = e.str51("id")
     var askDel by remember(id) { mutableStateOf(false) }
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 4.dp)) {
             hex51(e.s43("color"))?.let { Box(Modifier.size(10.dp).clip(RoundedCornerShape(5.dp)).background(it)) }
-            Text(e.str51("title"), color = p.ink, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize, modifier = Modifier.weight(1f))
+            Text(e.str51("title"), color = p.textPrimary, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize, modifier = Modifier.weight(1f))
         }
         val place = e.obj51("place")?.s43("name") ?: e.s43("place")
         val sub = listOfNotNull(if (e.optBoolean("allDay")) "Hele dagen" else e.s43("time"), place, e.obj51("createdBy")?.let { "lagt inn av ${who51(it)}" }).joinToString(" · ")
-        if (sub.isNotBlank()) Text(sub, color = p.mut, fontSize = HomelabType.footnote.fontSize)
-        e.s43("note")?.let { Text(it, color = p.mut, fontSize = HomelabType.footnote.fontSize) }
+        if (sub.isNotBlank()) Text(sub, color = p.textTertiary, fontSize = HomelabType.footnote.fontSize)
+        e.s43("note")?.let { Text(it, color = p.textTertiary, fontSize = HomelabType.footnote.fontSize) }
         e.arr51("tasks").forEach { t -> key(t.str51("id")) { Task51(vm, t, members) } }
         FlowRow51 {
             Btn51("+ Bringing") { vm.act51("addtask", "POST", Api.HOMELAB, "/famcal51/events/$id/tasks", JSONObject().put("kind", "bringing"), ok = "Bringing lagt til", reload = FAMRELOAD51) }
@@ -102,7 +104,7 @@ private fun Event51(vm: AppViewModel, e: JSONObject, members: List<JSONObject>) 
 
 @Composable
 private fun Task51(vm: AppViewModel, t: JSONObject, members: List<JSONObject>) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val id = t.str51("id")
     val status = t.str51("status")
     val mine = t.optBoolean("mine")
@@ -111,15 +113,15 @@ private fun Task51(vm: AppViewModel, t: JSONObject, members: List<JSONObject>) {
     var askDel by remember(id) { mutableStateOf(false) }
     var ruter by remember(id) { mutableStateOf<JSONObject?>(null) }
     Column(
-        Modifier.fillMaxWidth().padding(top = 4.dp).clip(RoundedCornerShape(14.dp)).background(p.surf2)
-            .then(if (focus) Modifier.border(2.dp, p.lab, RoundedCornerShape(14.dp)) else Modifier).padding(12.dp),
+        Modifier.fillMaxWidth().padding(top = 4.dp).clip(RoundedCornerShape(14.dp)).background(p.surfaceSunken)
+            .then(if (focus) Modifier.border(2.dp, p.accent, RoundedCornerShape(14.dp)) else Modifier).padding(12.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        Text("${t.str51("kindLabel")} ${t.str51("atText")}" + (t.obj51("for")?.let { " · ${who51(it)}" } ?: ""), color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize)
+        Text("${t.str51("kindLabel")} ${t.str51("atText")}" + (t.obj51("for")?.let { " · ${who51(it)}" } ?: ""), color = p.textPrimary, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize)
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Tag51(t.str51("statusText"), if (status == "open") "warn" else "ok")
-            t.s43("note")?.let { Text(it, color = p.mut, fontSize = HomelabType.footnote.fontSize) }
-            if (t.optBoolean("overdue")) Text("Passert", color = p.lab, fontSize = HomelabType.footnote.fontSize)
+            t.s43("note")?.let { Text(it, color = p.textTertiary, fontSize = HomelabType.footnote.fontSize) }
+            if (t.optBoolean("overdue")) Text("Passert", color = p.accent, fontSize = HomelabType.footnote.fontSize)
         }
         FlowRow51 {
             if (status != "done" && !mine) Btn51("Jeg kjører", "ink") { vm.act51("claim", "POST", Api.HOMELAB, "/famcal51/tasks/$id/claim", ok = "Du kjører", reload = FAMRELOAD51) }
@@ -141,13 +143,13 @@ private fun Task51(vm: AppViewModel, t: JSONObject, members: List<JSONObject>) {
             }
         }
         ruter?.let { r ->
-            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(p.card).padding(10.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                Text(r.str51("text"), color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.subheadline.fontSize)
+            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(p.surfaceRaised).padding(10.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Text(r.str51("text"), color = p.textPrimary, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.subheadline.fontSize)
                 r.arr51("options").take(3).forEach { o ->
-                    Text(listOf(o.str51("depLabel"), o.str51("arrLabel"), o.str51("strip")).filter { it.isNotBlank() }.joinToString(" · "), color = p.mut, fontSize = HomelabType.footnote.fontSize)
+                    Text(listOf(o.str51("depLabel"), o.str51("arrLabel"), o.str51("strip")).filter { it.isNotBlank() }.joinToString(" · "), color = p.textTertiary, fontSize = HomelabType.footnote.fontSize)
                 }
-                r.s43("error")?.let { Text(it, color = p.lab, fontSize = HomelabType.footnote.fontSize) }
-                Text("Kilde: ${r.str51("source")}", color = p.mut, fontSize = HomelabType.caption.fontSize)
+                r.s43("error")?.let { Text(it, color = p.accent, fontSize = HomelabType.footnote.fontSize) }
+                Text("Kilde: ${r.str51("source")}", color = p.textTertiary, fontSize = HomelabType.caption.fontSize)
             }
         }
     }
@@ -158,19 +160,19 @@ private fun Task51(vm: AppViewModel, t: JSONObject, members: List<JSONObject>) {
 
 @Composable
 private fun Drives51(vm: AppViewModel, d: JSONObject) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val tasks = d.arr51("tasks")
     Card51 {
         PSerif("Hvem kjører?", 20.sp)
-        if (tasks.isEmpty()) Text(d.str51("text", "Ingen kjøring de neste dagene"), color = p.mut, fontSize = HomelabType.subheadline.fontSize)
+        if (tasks.isEmpty()) Text(d.str51("text", "Ingen kjøring de neste dagene"), color = p.textTertiary, fontSize = HomelabType.subheadline.fontSize)
         tasks.forEachIndexed { i, t ->
             if (i > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
             Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 val a = t.obj51("assignee")
                 Ini51(a?.str51("name") ?: "?", hex51(a?.s43("color")))
                 Column(Modifier.weight(1f)) {
-                    Text(t.str51("title"), color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize, maxLines = 2)
-                    Text("${t.str51("atText")} · ${t.str51("statusText")}", color = if (t.str51("status") == "open") p.lab else p.mut, fontSize = HomelabType.footnote.fontSize)
+                    Text(t.str51("title"), color = p.textPrimary, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize, maxLines = 2)
+                    Text("${t.str51("atText")} · ${t.str51("statusText")}", color = if (t.str51("status") == "open") p.accent else p.textTertiary, fontSize = HomelabType.footnote.fontSize)
                 }
                 if (t.str51("status") == "open" && !t.optBoolean("mine")) Btn51("Jeg kjører", "ink") {
                     vm.act51("claim", "POST", Api.HOMELAB, "/famcal51/tasks/${t.str51("id")}/claim", ok = "Du kjører", reload = FAMRELOAD51)
@@ -182,7 +184,7 @@ private fun Drives51(vm: AppViewModel, d: JSONObject) {
 
 @Composable
 private fun NewEvent51(vm: AppViewModel, members: List<JSONObject>) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     var open by remember { mutableStateOf(F51.ui.remove("fam.new") != null) } // «Ny hendelse i familiekalenderen» fra søket
     if (!open) { PButton("+ Ny hendelse", Modifier.fillMaxWidth(), kind = "line", height = 52.dp) { open = true }; return }
     var title by remember { mutableStateOf("") }
@@ -203,7 +205,7 @@ private fun NewEvent51(vm: AppViewModel, members: List<JSONObject>) {
         }
         PField("Sted", place, { place = it.take(120) }, placeholder = "Hallen")
         if (members.isNotEmpty()) {
-            Text("Gjelder", color = p.mut, fontSize = HomelabType.footnote.fontSize)
+            Text("Gjelder", color = p.textTertiary, fontSize = HomelabType.footnote.fontSize)
             Choice51(listOf("" to "Ingen bestemt") + members.map { it.str51("userId") to if (it.optBoolean("self")) "${it.str51("name")} (deg)" else it.str51("name") }, forU) { forU = it }
         }
         PToggle("Trenger bringing", null, bring) { bring = it }
@@ -241,7 +243,7 @@ private fun InCal51(vm: AppViewModel) {
 /** Kortet i Familie → Folk: «Familiekalender · 1 uten sjåfør ›». */
 @Composable
 internal fun FamCalEntry51(vm: AppViewModel) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     LaunchedEffect(vm.activeId) { vm.load51("famDrives") }
     val d = F51.data["famDrives"]
     val open = d?.i43("open") ?: 0
@@ -249,10 +251,10 @@ internal fun FamCalEntry51(vm: AppViewModel) {
         PCard(onClick = { vm.open51("famcal"); vm.load51("famEvents", true); vm.load51("famDrives", true) }) {
             Row(Modifier.fillMaxWidth().heightIn(min = 56.dp).padding(16.dp, 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Column(Modifier.weight(1f)) {
-                    Text("Familiekalender", color = p.ink, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize)
-                    Text(d?.s43("text") ?: "Hvem kjører? Henting og bringing", color = if (open > 0) p.lab else p.mut, fontSize = HomelabType.subheadline.fontSize)
+                    Text("Familiekalender", color = p.textPrimary, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize)
+                    Text(d?.s43("text") ?: "Hvem kjører? Henting og bringing", color = if (open > 0) p.accent else p.textTertiary, fontSize = HomelabType.subheadline.fontSize)
                 }
-                Text("›", color = p.mut, fontSize = HomelabType.headline.fontSize)
+                Text("›", color = p.textTertiary, fontSize = HomelabType.headline.fontSize)
             }
         }
     }

@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.sp
 import no.kristo.finanshub.*
 import org.json.JSONObject
 import no.kristo.finanshub.ui.designsystem.HomelabType
+import no.kristo.finanshub.ui.designsystem.HomelabTheme
 
 /*
  * Prompt 51 (ANDFEAT51): Media – MEDFAM51 /api/media51 ($S/SERVER51-API.md), fasit public/js/mediakveld-familiekalender.js (#/mediakveld).
@@ -51,7 +52,7 @@ private fun MediaTabs51(vm: AppViewModel, cur: String) {
 
 @Composable
 internal fun Tonight51Page(vm: AppViewModel) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     Page51("Hva skal vi se i kveld?", "Media", onRefresh = { vm.load51("tonight", force = true) }) {
         MediaTabs51(vm, "kveld")
         Choice51(listOf("60" to "Under 1 t", "90" to "Under 1,5 t", "120" to "Under 2 t", "600" to "Uansett lengde"), F51.opt("kv.min", "120")) { F51.ui["kv.min"] = it; vm.load51("tonight", force = true) }
@@ -68,20 +69,20 @@ internal fun Tonight51Page(vm: AppViewModel) {
                 items.isEmpty() -> Empty51("Ingen forslag", d.s43("empty") ?: "Prøv en annen lengde, type eller sjanger.")
                 else -> TonightGrid51(vm, items)
             }
-            d.optJSONArray("errors").strs51().forEach { Text(it, color = p.lab, fontSize = HomelabType.footnote.fontSize) }
-            if (d.optBoolean("phrased")) Text("Teksten er formulert av en lokal modell" + (d.s43("model")?.let { " ($it)" } ?: "") + ". Fakta og rekkefølge er de samme.", color = p.mut, fontSize = HomelabType.footnote.fontSize)
+            d.optJSONArray("errors").strs51().forEach { Text(it, color = p.accent, fontSize = HomelabType.footnote.fontSize) }
+            if (d.optBoolean("phrased")) Text("Teksten er formulert av en lokal modell" + (d.s43("model")?.let { " ($it)" } ?: "") + ". Fakta og rekkefølge er de samme.", color = p.textTertiary, fontSize = HomelabType.footnote.fontSize)
         }
     }
 }
 
 @Composable
 private fun Who51(vm: AppViewModel, who: JSONObject?) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     who ?: return
     val people = who.arr51("people")
     val sel = F51.ui["kv.who"]?.split(',')?.filter { it.isNotBlank() }?.toSet()
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(who.s43("note") ?: "Hvem ser på?", color = p.mut, fontSize = HomelabType.footnote.fontSize)
+        Text(who.s43("note") ?: "Hvem ser på?", color = p.textTertiary, fontSize = HomelabType.footnote.fontSize)
         if (people.isNotEmpty()) Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             people.forEach { pe ->
                 val id = pe.str51("userId")
@@ -113,20 +114,20 @@ private fun TonightGrid51(vm: AppViewModel, items: List<JSONObject>) {
 
 @Composable
 private fun Suggestion51(vm: AppViewModel, s: JSONObject) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val title = s.str51("title")
     Card51(onClick = { openInMedia51(vm, s) }) {
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             NetImg51(vm, s.s43("poster"), null, Modifier.size(64.dp, 96.dp).clip(RoundedCornerShape(10.dp))) {
-                Box(Modifier.fillMaxSize().background(p.surf2), contentAlignment = Alignment.Center) { Text(title.take(1), color = p.mut, fontWeight = FontWeight.Bold, fontSize = HomelabType.title3.fontSize) }
+                Box(Modifier.fillMaxSize().background(p.surfaceSunken), contentAlignment = Alignment.Center) { Text(title.take(1), color = p.textTertiary, fontWeight = FontWeight.Bold, fontSize = HomelabType.title3.fontSize) }
             }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                 PSerif(title, 18.sp, maxLines = 2)
                 val meta = listOfNotNull(s.i43("year")?.toString(), s.s43("runtimeText"), s.optJSONArray("genres").strs51().take(2).joinToString(", ").ifBlank { null },
                     if (s.str51("kind") == "series") "Serie" else "Film").joinToString(" · ")
-                Text(meta, color = p.mut, fontSize = HomelabType.footnote.fontSize, maxLines = 2)
-                s.obj51("next")?.s43("code")?.let { Text("Neste: $it", color = p.ink, fontSize = HomelabType.footnote.fontSize, fontWeight = FontWeight.SemiBold) }
-                Text(s.s43("text") ?: s.str51("reason"), color = p.ink, fontSize = HomelabType.subheadline.fontSize, maxLines = 4, overflow = TextOverflow.Ellipsis)
+                Text(meta, color = p.textTertiary, fontSize = HomelabType.footnote.fontSize, maxLines = 2)
+                s.obj51("next")?.s43("code")?.let { Text("Neste: $it", color = p.textPrimary, fontSize = HomelabType.footnote.fontSize, fontWeight = FontWeight.SemiBold) }
+                Text(s.s43("text") ?: s.str51("reason"), color = p.textPrimary, fontSize = HomelabType.subheadline.fontSize, maxLines = 4, overflow = TextOverflow.Ellipsis)
             }
         }
     }
@@ -146,7 +147,7 @@ private fun openInMedia51(vm: AppViewModel, s: JSONObject) {
 
 @Composable
 internal fun Audio51Page(vm: AppViewModel) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val ctx = LocalContext.current
     Page51("Fortsett der du slapp", "Lydbøker og podkaster", onRefresh = { vm.load51("audio", force = true) }) {
         MediaTabs51(vm, "lyd")
@@ -160,13 +161,13 @@ internal fun Audio51Page(vm: AppViewModel) {
                     key(a.str51("id") + a.str51("episodeId")) {
                         Card51(onClick = a.s43("openUrl")?.let { u -> { openLink(ctx, if (u.startsWith("/")) vm.base.trimEnd('/') + u else u) } }) {
                             Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                                NetImg51(vm, a.s43("coverUrl"), null, Modifier.size(64.dp).clip(RoundedCornerShape(10.dp))) { Box(Modifier.fillMaxSize().background(p.surf2)) }
+                                NetImg51(vm, a.s43("coverUrl"), null, Modifier.size(64.dp).clip(RoundedCornerShape(10.dp))) { Box(Modifier.fillMaxSize().background(p.surfaceSunken)) }
                                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                                     PSerif(a.str51("title"), 17.sp, maxLines = 2)
-                                    Text(listOfNotNull(a.s43("episodeTitle"), a.s43("author"), if (a.str51("kind") == "podcast") "Podkast" else "Lydbok").joinToString(" · "), color = p.mut, fontSize = HomelabType.footnote.fontSize, maxLines = 2)
+                                    Text(listOfNotNull(a.s43("episodeTitle"), a.s43("author"), if (a.str51("kind") == "podcast") "Podkast" else "Lydbok").joinToString(" · "), color = p.textTertiary, fontSize = HomelabType.footnote.fontSize, maxLines = 2)
                                     val prog = a.num51("progress").let { if (it <= 1.0) it * 100 else it }
-                                    Bar51(prog, p.ink, "${num51(prog)} prosent hørt")
-                                    Text(listOfNotNull(a.s43("progressText"), a.s43("remainingText")).joinToString(" · "), color = p.ink, fontSize = HomelabType.footnote.fontSize)
+                                    Bar51(prog, p.textPrimary, "${num51(prog)} prosent hørt")
+                                    Text(listOfNotNull(a.s43("progressText"), a.s43("remainingText")).joinToString(" · "), color = p.textPrimary, fontSize = HomelabType.footnote.fontSize)
                                 }
                             }
                         }
@@ -179,10 +180,11 @@ internal fun Audio51Page(vm: AppViewModel) {
 
 @Composable
 private fun AbsUser51(vm: AppViewModel, text: String?) {
+    val farger = HomelabTheme.colors
     var u by remember { mutableStateOf("") }
     Card51 {
         PSerif("Koble til Audiobookshelf", 20.sp)
-        Text(text ?: "Skriv brukernavnet ditt i Audiobookshelf, så vises lydbøkene og podkastene dine her.", color = PaperPal.current.mut, fontSize = HomelabType.subheadline.fontSize)
+        Text(text ?: "Skriv brukernavnet ditt i Audiobookshelf, så vises lydbøkene og podkastene dine her.", color = farger.textTertiary, fontSize = HomelabType.subheadline.fontSize)
         PField("Brukernavn i Audiobookshelf", u, { u = it.take(80) })
         Btn51("Lagre", "ink", busy = F51.acting == "absuser") {
             if (u.isBlank()) return@Btn51
@@ -195,17 +197,17 @@ private fun AbsUser51(vm: AppViewModel, text: String?) {
 
 @Composable
 internal fun Subs51Page(vm: AppViewModel) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     Page51("Norske undertekster", "Media · Bazarr", onRefresh = { vm.load51("subsStatus", true); vm.load51("subsWanted", true) }) {
         MediaTabs51(vm, "subs")
         Keyed51(vm, "subsStatus") { st ->
             Card51 {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Tag51(if (st.optBoolean("reachable")) "Tilkoblet" else if (st.optBoolean("configured")) "Svarer ikke" else "Ikke satt opp", if (st.optBoolean("reachable")) "ok" else "warn")
-                    st.s43("version")?.let { Text("Bazarr $it", color = p.mut, fontSize = HomelabType.footnote.fontSize) }
+                    st.s43("version")?.let { Text("Bazarr $it", color = p.textTertiary, fontSize = HomelabType.footnote.fontSize) }
                 }
-                Text(st.str51("text"), color = p.ink, fontSize = HomelabType.subheadline.fontSize)
-                st.obj51("whisper")?.s43("text")?.let { Text(it, color = p.mut, fontSize = HomelabType.footnote.fontSize) }
+                Text(st.str51("text"), color = p.textPrimary, fontSize = HomelabType.subheadline.fontSize)
+                st.obj51("whisper")?.s43("text")?.let { Text(it, color = p.textTertiary, fontSize = HomelabType.footnote.fontSize) }
             }
             if (st.optBoolean("configured")) Keyed51(vm, "subsWanted") { w ->
                 val items = w.arr51("items")
@@ -234,16 +236,16 @@ internal fun Subs51Page(vm: AppViewModel) {
 
 @Composable
 internal fun Storage51(vm: AppViewModel, d: JSONObject) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     var del by remember { mutableStateOf<JSONObject?>(null) }
     var empty by remember { mutableStateOf(false) }
     Cols51(
         left = {
             Card51 {
                 PSerif("Forslag til sletting", 20.sp)
-                Text(d.str51("recommendText"), color = p.mut, fontSize = HomelabType.subheadline.fontSize)
+                Text(d.str51("recommendText"), color = p.textTertiary, fontSize = HomelabType.subheadline.fontSize)
                 val recs = d.arr51("recommendations")
-                if (recs.isEmpty()) Text("Ingen store, sette titler å foreslå.", color = p.mut, fontSize = HomelabType.subheadline.fontSize)
+                if (recs.isEmpty()) Text("Ingen store, sette titler å foreslå.", color = p.textTertiary, fontSize = HomelabType.subheadline.fontSize)
                 recs.forEachIndexed { i, r ->
                     key(r.str51("kind") + r.str51("id")) {
                         Column {
@@ -274,9 +276,9 @@ internal fun Storage51(vm: AppViewModel, d: JSONObject) {
                 PSerif("Disker", 20.sp)
                 d.arr51("disks").forEachIndexed { i, k ->
                     if (i > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
-                    Text(k.s43("label") ?: k.str51("path"), color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize)
-                    Bar51(k.num51("usedPct"), if (k.optBoolean("warn")) p.lab else p.ink, "${num51(k.num51("usedPct"))} prosent brukt")
-                    Text("${k.str51("freeText")} ledig av ${k.str51("totalText")}", color = if (k.optBoolean("warn")) p.lab else p.mut, fontSize = HomelabType.footnote.fontSize)
+                    Text(k.s43("label") ?: k.str51("path"), color = p.textPrimary, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize)
+                    Bar51(k.num51("usedPct"), if (k.optBoolean("warn")) p.accent else p.textPrimary, "${num51(k.num51("usedPct"))} prosent brukt")
+                    Text("${k.str51("freeText")} ledig av ${k.str51("totalText")}", color = if (k.optBoolean("warn")) p.accent else p.textTertiary, fontSize = HomelabType.footnote.fontSize)
                 }
                 d.obj51("services")?.let { sv ->
                     listOf("sonarr" to "Serier", "radarr" to "Filmer", "qbit" to "qBittorrent").forEach { (k, n) ->
@@ -287,11 +289,11 @@ internal fun Storage51(vm: AppViewModel, d: JSONObject) {
             d.obj51("trash")?.let { t ->
                 Card51 {
                     PSerif("Papirkurven", 20.sp)
-                    Text(t.str51("text"), color = p.mut, fontSize = HomelabType.subheadline.fontSize)
+                    Text(t.str51("text"), color = p.textTertiary, fontSize = HomelabType.subheadline.fontSize)
                     if (t.optBoolean("configured")) Btn51("Tøm (eldre enn 24 t) …") { empty = true }
                 }
             }
-            d.optJSONArray("errors").strs51().forEach { Text(it, color = p.lab, fontSize = HomelabType.footnote.fontSize) }
+            d.optJSONArray("errors").strs51().forEach { Text(it, color = p.accent, fontSize = HomelabType.footnote.fontSize) }
         },
     )
     del?.let { r ->

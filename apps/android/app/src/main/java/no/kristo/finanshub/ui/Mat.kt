@@ -43,6 +43,7 @@ import androidx.compose.ui.unit.sp
 import no.kristo.finanshub.*
 import java.time.LocalDate
 import no.kristo.finanshub.ui.designsystem.HomelabType
+import no.kristo.finanshub.ui.designsystem.HomelabTheme
 
 /*
  * Mat (tidligere Matplan), design 2a i «Mat Varianter»: dagens rett på et limegrønt kort, uka som avisrader med
@@ -57,11 +58,13 @@ internal data class MatPalette(
 )
 
 @Composable
-internal fun matPalette(@Suppress("UNUSED_PARAMETER") vm: AppViewModel): MatPalette = MatPalette(
-    dark = !Tone.light, bg = C.bg, text = C.text, sub = C.text2, muted = C.outline, card = C.surface1, accent = Color(0xFFFF8A4C),
-    lime = Color(0xFFD4F25A), onLime = Color(0xFF141A06), border = C.surface3, black = C.primary, onBlack = C.onPrimary, row = C.surface2,
-    label = PaperPal.current.lab,
-)
+internal fun matPalette(@Suppress("UNUSED_PARAMETER") vm: AppViewModel): MatPalette = HomelabTheme.colors.let { c ->
+    MatPalette(
+        dark = c.isDark, bg = c.surface, text = c.textPrimary, sub = c.textSecondary, muted = c.textTertiary, card = c.surfaceRaised,
+        accent = Color(0xFFFF8A4C), lime = Color(0xFFD4F25A), onLime = Color(0xFF141A06), // Mat-designets egne aksenter (lime og oransje)
+        border = c.line, black = c.textPrimary, onBlack = c.surface, row = c.surfaceSunken, label = c.accent,
+    )
+}
 
 private val shortDay = listOf("MAN", "TIR", "ONS", "TOR", "FRE", "LØR", "SØN")
 private val longDay = listOf("Mandag", "Tirsdag", "Onsdag", "Torsdag", "Fredag", "Lørdag", "Søndag")
@@ -181,6 +184,7 @@ private fun FolderChip(n: String, on: Boolean, p: MatPalette, onLong: (() -> Uni
 
 @Composable
 private fun NameDialog(title: String, initial: String, ok: String, dismiss: () -> Unit, onDelete: (() -> Unit)? = null, save: (String) -> Unit) {
+    val farger = HomelabTheme.colors
     var name by remember { mutableStateOf(initial) }
     AlertDialog(
         onDismissRequest = dismiss,
@@ -189,7 +193,7 @@ private fun NameDialog(title: String, initial: String, ok: String, dismiss: () -
         confirmButton = { TextButton(onClick = { if (name.isNotBlank()) save(name) }) { Text(ok) } },
         dismissButton = {
             Row {
-                if (onDelete != null) TextButton(onClick = onDelete) { Text("Slett mappen", color = C.red) }
+                if (onDelete != null) TextButton(onClick = onDelete) { Text("Slett mappen", color = farger.danger) }
                 TextButton(onClick = dismiss) { Text("Avbryt") }
             }
         },
@@ -222,18 +226,19 @@ private fun ImportField(vm: AppViewModel, p: MatPalette, done: () -> Unit) {
 /** Skannekøen for oppskrifter: «✦ Gemini leser …», ferdig eller feil (prøv igjen). */
 @Composable
 private fun RecipeJobs(vm: AppViewModel, p: MatPalette) {
+    val farger = HomelabTheme.colors
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(p.card).padding(14.dp, 10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         MLabel("Skann oppskrift · ✦ Gemini leser i bakgrunnen", p.label)
         vm.recipeJobs.take(5).forEach { j ->
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 when {
                     j.active -> CircularProgressIndicator(Modifier.size(16.dp), color = p.accent, strokeWidth = 2.dp)
-                    j.status == "error" -> Text("!", color = C.red, fontWeight = FontWeight.Bold)
-                    else -> Text("✓", color = C.positive, fontWeight = FontWeight.Bold)
+                    j.status == "error" -> Text("!", color = farger.danger, fontWeight = FontWeight.Bold)
+                    else -> Text("✓", color = farger.success, fontWeight = FontWeight.Bold)
                 }
                 Column(Modifier.weight(1f)) {
                     Text(j.name ?: if (j.active) "Leser oppskriften …" else "Oppskrift", color = p.text, fontSize = HomelabType.callout.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    j.error?.let { Text(it, color = C.red, fontSize = HomelabType.footnote.fontSize, maxLines = 2) }
+                    j.error?.let { Text(it, color = farger.danger, fontSize = HomelabType.footnote.fontSize, maxLines = 2) }
                 }
                 when {
                     j.status == "error" -> Text("Prøv igjen", color = p.accent, fontSize = HomelabType.subheadline.fontSize, fontWeight = FontWeight.SemiBold, modifier = Modifier.clickable { vm.retryRecipeJob(j.id) })
@@ -256,6 +261,7 @@ private fun RemoteImage(vm: AppViewModel, path: String?, modifier: Modifier) {
 /** Forhåndsvisning før lagring: bilde, tid, porsjoner, antall ingredienser og steg, og hvilken mappe retten skal i. */
 @Composable
 private fun RecipePreviewDialog(vm: AppViewModel, r: RecipePreview, p: MatPalette) {
+    val farger = HomelabTheme.colors
     val sugg = vm.matFolders.firstOrNull { it.name.equals(r.folderSuggestion, true) }?.id
     var folder by remember(r) { mutableStateOf(sugg) }
     AlertDialog(
@@ -264,8 +270,8 @@ private fun RecipePreviewDialog(vm: AppViewModel, r: RecipePreview, p: MatPalett
         text = {
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 RemoteImage(vm, r.image, Modifier.fillMaxWidth().height(160.dp).clip(RoundedCornerShape(14.dp)))
-                Text(listOfNotNull(r.time, r.servings?.let { "$it porsjoner" }, "${r.ingredients.size} ingredienser", "${r.steps.size} steg").joinToString(" · "), color = C.text2, fontSize = HomelabType.subheadline.fontSize)
-                r.method?.let { Text(when (it) { "jsonld" -> "Lest fra oppskriftsdata (JSON-LD)"; "microdata" -> "Lest fra microdata"; else -> "✦ Lest av AI" }, color = C.text2, fontSize = HomelabType.footnote.fontSize) }
+                Text(listOfNotNull(r.time, r.servings?.let { "$it porsjoner" }, "${r.ingredients.size} ingredienser", "${r.steps.size} steg").joinToString(" · "), color = farger.textSecondary, fontSize = HomelabType.subheadline.fontSize)
+                r.method?.let { Text(when (it) { "jsonld" -> "Lest fra oppskriftsdata (JSON-LD)"; "microdata" -> "Lest fra microdata"; else -> "✦ Lest av AI" }, color = farger.textSecondary, fontSize = HomelabType.footnote.fontSize) }
                 if (r.ingredients.isNotEmpty()) Text(r.ingredients.take(6).joinToString("\n") + if (r.ingredients.size > 6) "\n…" else "", fontSize = HomelabType.subheadline.fontSize)
                 MLabel("Mappe", p.label)
                 Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {

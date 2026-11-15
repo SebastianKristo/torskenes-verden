@@ -25,6 +25,7 @@ import no.kristo.finanshub.family.FamilyPrefs
 import no.kristo.finanshub.family.FamilyService
 import no.kristo.finanshub.family.HealthSync
 import no.kristo.finanshub.ui.designsystem.HomelabType
+import no.kristo.finanshub.ui.designsystem.HomelabTheme
 
 /* ================= Prompt 20: Innstillinger → App → Helse og posisjon, og onboarding steg 3 ================= */
 
@@ -55,7 +56,7 @@ private fun granted(ctx: Context, perm: String) = ContextCompat.checkSelfPermiss
 /** Hovedbryter, «Be om tilgang», bryter per type, posisjonsvalgene og snarveier til Health Connect og Android-innstillingene. */
 @Composable
 internal fun HealthPosPage(vm: AppViewModel) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val ctx = LocalContext.current
     val hc by produceState(-1) { value = HealthSync.statusIo(ctx) }
     var keys by remember { mutableStateOf(FamilyPrefs.health(ctx)) }
@@ -95,8 +96,8 @@ internal fun HealthPosPage(vm: AppViewModel) {
         HealthFamily42(vm, hc, keys) { ask(if (keys.isNotEmpty()) keys else HEALTH_ALL_KEYS) }
         PLabel("Helse · Health Connect", modifier = Modifier.padding(start = 4.dp, top = 6.dp))
         when (hc) {
-            1 -> Text("Health Connect må installeres eller oppdateres fra Play Butikk.", color = p.lab, fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.padding(4.dp))
-            2 -> Text("Health Connect finnes ikke på denne telefonen.", color = p.mut, fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.padding(4.dp))
+            1 -> Text("Health Connect må installeres eller oppdateres fra Play Butikk.", color = p.accent, fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.padding(4.dp))
+            2 -> Text("Health Connect finnes ikke på denne telefonen.", color = p.textTertiary, fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.padding(4.dp))
         }
         PCard {
             PToggle("Del helsedata", "Familien ser skritt, puls, søvn og aktivitet", master) { on ->
@@ -136,7 +137,7 @@ internal fun HealthPosPage(vm: AppViewModel) {
             PRow("Åpne Android-innstillinger", "Apper → Homelab → Tillatelser", "↗", serif = false, top = true) { openAppSettings(ctx) }
         }
         Text("Health Connect sier ikke om appen får lese data. Viser Familie «Ingen data», sjekk tilgangen i Health Connect.",
-            color = p.mut, fontSize = HomelabType.footnote.fontSize, modifier = Modifier.padding(4.dp))
+            color = p.textTertiary, fontSize = HomelabType.footnote.fontSize, modifier = Modifier.padding(4.dp))
     }
 }
 

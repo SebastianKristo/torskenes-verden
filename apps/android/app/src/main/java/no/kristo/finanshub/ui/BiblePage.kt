@@ -57,6 +57,8 @@ import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.ui.graphics.asImageBitmap
 import no.kristo.finanshub.ui.designsystem.HomelabType
+import no.kristo.finanshub.ui.designsystem.HomelabTheme
+import no.kristo.finanshub.ui.designsystem.DsPalette
 
 /*
  * Prompt 37 (ANDROID37): dagens bibelvers (claude-code-bibelvers.md, Bibelvers.dc.html) – bare for brukere med modulen (standard sebastian).
@@ -74,8 +76,8 @@ private val NIGHT_PAGE37 = Brush.linearGradient(listOf(Color(0xFF2B2350), Color(
 private class VerseLook37(val bg: Brush, val fg: Color, val lab: Color, val mut: Color, val chip: Color, val glow: Color, val kick: String)
 
 private fun look37(period: String): VerseLook37 = if (period == "morning")
-    VerseLook37(MORN_BG37, Color(0xFF3B2A1A), Color(0xFFB23A2A), Color(0xFF8A6A4A), Color(0x143B2A1A), Color(0x66FFFFFF), "MORGENVERS · GLIMT")
-else VerseLook37(EVE_BG37, Color(0xFFF3EFE6), Color(0xFFFFD9C2), Color(0x99F3EFE6), Color(0x1FFFFFFF), Color(0x40FFC878), "KVELDSVERS · GLIMT")
+    VerseLook37(MORN_BG37, Color(0xFF3B2A1A), DsPalette.PapirLys.accent, Color(0xFF8A6A4A), Color(0x143B2A1A), Color(0x66FFFFFF), "MORGENVERS · GLIMT")
+else VerseLook37(EVE_BG37, DsPalette.PapirLys.surface, Color(0xFFFFD9C2), DsPalette.PapirLys.surface.copy(alpha = .6f), Color(0x1FFFFFFF), Color(0x40FFC878), "KVELDSVERS · GLIMT")
 
 private val WD37 = listOf("Mandag", "Tirsdag", "Onsdag", "Torsdag", "Fredag", "Lørdag", "Søndag")
 private val MS37 = listOf("januar", "februar", "mars", "april", "mai", "juni", "juli", "august", "september", "oktober", "november", "desember")
@@ -126,7 +128,7 @@ internal fun BriefBible37(vm: AppViewModel, period: String) {
 /** «DAGENS BIBELVERS» på Hjem: les-måling, sveip bort (venstre → høyre) og trykk → Bibel-siden. */
 @Composable
 internal fun BibleHome37(vm: AppViewModel) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val s = vm.p37
     val v = s.verse ?: return
     if (!vm.bibleAllowed37()) return
@@ -149,12 +151,12 @@ internal fun BibleHome37(vm: AppViewModel) {
             val b = c.boundsInWindow()
             val h = c.size.height.toFloat().coerceAtLeast(1f)
             vis = (b.height / h).coerceIn(0f, 1f)
-        }.clip(RoundedCornerShape(22.dp)).background(p.card).padding(18.dp, 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        }.clip(RoundedCornerShape(22.dp)).background(p.surfaceRaised).padding(18.dp, 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("DAGENS BIBELVERS", color = p.lab, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.caption.fontSize, letterSpacing = 1.5.sp, modifier = Modifier.weight(1f))
-                Text(v.ref, color = p.mut, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.caption.fontSize, maxLines = 1)
+                Text("DAGENS BIBELVERS", color = p.accent, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.caption.fontSize, letterSpacing = 1.5.sp, modifier = Modifier.weight(1f))
+                Text(v.ref, color = p.textTertiary, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.caption.fontSize, maxLines = 1)
             }
-            Text("«${v.text}»", color = p.ink, fontFamily = PaperFonts.serif, fontStyle = FontStyle.Italic, fontSize = HomelabType.headline.fontSize, lineHeight = 26.sp)
+            Text("«${v.text}»", color = p.textPrimary, fontFamily = PaperFonts.serif, fontStyle = FontStyle.Italic, fontSize = HomelabType.headline.fontSize, lineHeight = 26.sp)
         }
     }
 }
@@ -175,7 +177,7 @@ internal fun SwipeAway37(enabled: Boolean, title: (Boolean, Boolean) -> String, 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun BibleSheet37(vm: AppViewModel) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val ctx = LocalContext.current
     val v = vm.shownVerse37() ?: return
     val close = { vm.p37.bibleSheet = false }
@@ -187,7 +189,7 @@ internal fun BibleSheet37(vm: AppViewModel) {
     val before = if (more) v.before else v.before.takeLast(3)
     val after = if (more) v.after else v.after.take(3)
     val hidden = v.before.size - before.size + v.after.size - after.size
-    ModalBottomSheet(onDismissRequest = close, containerColor = p.bg, contentColor = p.ink, shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+    ModalBottomSheet(onDismissRequest = close, containerColor = p.surface, contentColor = p.textPrimary, shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         dragHandle = { BottomSheetDefaults.DragHandle(width = 36.dp, height = 5.dp, color = p.line) }) {
         Column(Modifier.fillMaxWidth()) {
@@ -197,26 +199,26 @@ internal fun BibleSheet37(vm: AppViewModel) {
             }
             Column(Modifier.weight(1f, fill = false).fillMaxWidth().verticalScroll(rememberScrollState()).padding(start = 18.dp, end = 18.dp, bottom = 14.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                before.forEach { Text(it, color = p.mut, fontFamily = PaperFonts.serif, fontSize = HomelabType.body.fontSize, lineHeight = 23.sp) }
-                Text("«${v.text}»", color = p.ink, fontFamily = PaperFonts.serif, fontStyle = FontStyle.Italic, fontSize = HomelabType.title3.fontSize, lineHeight = 29.sp)
-                after.forEach { Text(it, color = p.mut, fontFamily = PaperFonts.serif, fontSize = HomelabType.body.fontSize, lineHeight = 23.sp) }
-                if (hidden > 0) Text("Vis mer", color = p.lab, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize,
+                before.forEach { Text(it, color = p.textTertiary, fontFamily = PaperFonts.serif, fontSize = HomelabType.body.fontSize, lineHeight = 23.sp) }
+                Text("«${v.text}»", color = p.textPrimary, fontFamily = PaperFonts.serif, fontStyle = FontStyle.Italic, fontSize = HomelabType.title3.fontSize, lineHeight = 29.sp)
+                after.forEach { Text(it, color = p.textTertiary, fontFamily = PaperFonts.serif, fontSize = HomelabType.body.fontSize, lineHeight = 23.sp) }
+                if (hidden > 0) Text("Vis mer", color = p.accent, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize,
                     modifier = Modifier.clip(CircleShape).clickable(role = Role.Button) { more = true }.padding(vertical = 4.dp))
-                if (v.before.isEmpty() && v.after.isEmpty()) Text("Sammenhengen hentes fra serveren når den har bibelteksten.", color = p.mut, fontSize = HomelabType.footnote.fontSize)
+                if (v.before.isEmpty() && v.after.isEmpty()) Text("Sammenhengen hentes fra serveren når den har bibelteksten.", color = p.textTertiary, fontSize = HomelabType.footnote.fontSize)
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     PButton("Del", Modifier.weight(1f), kind = "line") {
                         runCatching { ctx.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, "«${v.text}» ${v.ref}"), "Del verset").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
                     }
                     PButton(if (copied) "Kopiert" else "Kopier", Modifier.weight(1f)) { copy37(ctx, v); copied = true; Haptics.select() }
                 }
-                Text("Tekst: Bibelen 1930 (fri bruk).", color = p.mut, fontSize = HomelabType.caption.fontSize)
+                Text("Tekst: Bibelen 1930 (fri bruk).", color = p.textTertiary, fontSize = HomelabType.caption.fontSize)
             }
             // Fast bunn: samme bakgrunn som arket, med en svak skygge over så det synes at innholdet scroller under.
             Box(Modifier.fillMaxWidth().drawBehind {
                 drawRect(Brush.verticalGradient(listOf(Color.Transparent, Color(0x2E1B1A17))), topLeft = Offset(0f, -16.dp.toPx()), size = androidx.compose.ui.geometry.Size(size.width, 16.dp.toPx()))
-            }.background(p.bg).navigationBarsPadding().padding(start = 24.dp, end = 24.dp, top = 12.dp, bottom = 12.dp)) {
+            }.background(p.surface).navigationBarsPadding().padding(start = 24.dp, end = 24.dp, top = 12.dp, bottom = 12.dp)) {
                 Box(
-                    Modifier.fillMaxWidth().height(56.dp).clip(CircleShape).background(Color(0xFF1B1A17))
+                    Modifier.fillMaxWidth().height(56.dp).clip(CircleShape).background(DsPalette.PapirLys.textPrimary)
                         .clickable(role = Role.Button, onClickLabel = "Åpne Bibel-siden") { Haptics.tap(); close(); vm.p37.biblePage = true },
                     contentAlignment = Alignment.Center,
                 ) { Text("Åpne Bibel-siden ›", color = Color.White, fontFamily = PaperFonts.sans, fontWeight = FontWeight.Bold, fontSize = HomelabType.headline.fontSize, maxLines = 1) }
@@ -229,7 +231,7 @@ internal fun BibleSheet37(vm: AppViewModel) {
 
 @Composable
 internal fun BiblePage37(vm: AppViewModel) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val s = vm.p37
     val ctx = LocalContext.current
     BackHandler { s.biblePage = false }
@@ -243,7 +245,7 @@ internal fun BiblePage37(vm: AppViewModel) {
     val best = maxOf(s.best, n)
     var copied by remember { mutableStateOf(false) }
     LaunchedEffect(copied) { if (copied) { delay(1600); copied = false } }
-    Box(Modifier.fillMaxSize().background(p.bg).clickable(remember { MutableInteractionSource() }, null) {}) {
+    Box(Modifier.fillMaxSize().background(p.surface).clickable(remember { MutableInteractionSource() }, null) {}) {
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).navigationBarsPadding()) {
             // Prompt 40 (claude-code-bibel-kort-opp-i-hero.md): toppbilde som de andre sidene; rekke-kortet går 36 dp opp i bildet.
             BibleHero40(vm) { s.biblePage = false }
@@ -264,15 +266,15 @@ internal fun BiblePage37(vm: AppViewModel) {
                         Box(Modifier.size(54.dp).graphicsLayer { if (readToday) { rotationZ = wob.value; val k = 1f + abs(wob.value) * .018f; scaleX = k; scaleY = k } }.clip(RoundedCornerShape(18.dp))
                             .background(if (readToday) Brush.linearGradient(listOf(Color(0xFFFFB067), Color(0xFFE8573A))) else Brush.linearGradient(listOf(Color(0x1FF3EFE6), Color(0x1FF3EFE6)))),
                             contentAlignment = Alignment.Center) {
-                            WxIcon("M12 2c1 4 5 6 5 11a5 5 0 0 1-10 0c0-2 1-3.5 2-4.5 0 2 1 3 2 3 0-3-1-6 1-9.5z", if (readToday) Color.White else Color(0x99F3EFE6), 28.dp, fill = true)
+                            WxIcon("M12 2c1 4 5 6 5 11a5 5 0 0 1-10 0c0-2 1-3.5 2-4.5 0 2 1 3 2 3 0-3-1-6 1-9.5z", if (readToday) Color.White else DsPalette.PapirLys.surface.copy(alpha = .6f), 28.dp, fill = true)
                         }
                         Column(Modifier.weight(1f)) {
-                            Text("$n", color = Color(0xFFF3EFE6), fontFamily = PaperFonts.serif, fontWeight = FontWeight.Medium, fontSize = HomelabType.largeTitle.fontSize, lineHeight = 40.sp)
+                            Text("$n", color = DsPalette.PapirLys.surface, fontFamily = PaperFonts.serif, fontWeight = FontWeight.Medium, fontSize = HomelabType.largeTitle.fontSize, lineHeight = 40.sp)
                             Text(if (n == 1) "dag på rad" else "dager på rad", color = Color(0xCCF3EFE6), fontWeight = FontWeight.SemiBold, fontSize = HomelabType.subheadline.fontSize)
                         }
                         Column(horizontalAlignment = Alignment.End) {
-                            Text("LENGSTE", color = Color(0x99F3EFE6), fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.caption.fontSize, letterSpacing = 1.2.sp)
-                            Text("$best dager", color = Color(0xFFF3EFE6), fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize)
+                            Text("LENGSTE", color = DsPalette.PapirLys.surface.copy(alpha = .6f), fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.caption.fontSize, letterSpacing = 1.2.sp)
+                            Text("$best dager", color = DsPalette.PapirLys.surface, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize)
                         }
                     }
                     val mon = today.minusDays((today.dayOfWeek.value - 1).toLong())
@@ -282,7 +284,7 @@ internal fun BiblePage37(vm: AppViewModel) {
                             val on = d.toString() in s.readDays
                             val isT = d == today
                             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                                Text(wl, color = if (isT) Color(0xFFFFD9C2) else Color(0x99F3EFE6), fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.caption.fontSize)
+                                Text(wl, color = if (isT) Color(0xFFFFD9C2) else DsPalette.PapirLys.surface.copy(alpha = .6f), fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.caption.fontSize)
                                 Box(Modifier.size(30.dp).clip(CircleShape).background(if (on) Color(0xFFFFD9C2) else Color.Transparent)
                                     .border(1.5.dp, if (on || isT) Color(0xFFFFD9C2) else Color(0x40F3EFE6), CircleShape), contentAlignment = Alignment.Center) {
                                     if (on) Text("✓", color = Color(0xFF2B2350), fontWeight = FontWeight.ExtraBold, fontSize = HomelabType.subheadline.fontSize)
@@ -310,8 +312,8 @@ internal fun BiblePage37(vm: AppViewModel) {
                 Text(v.ref, color = l.fg, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize)
                 val saved = s.saved.any { it.first == v.ref }
                 Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Box(Modifier.height(38.dp).clip(RoundedCornerShape(19.dp)).background(if (readToday) Color(0xFF2F7A4F) else l.fg).clickable(role = Role.Button) { vm.markBibleRead37() }.padding(horizontal = 16.dp),
-                        contentAlignment = Alignment.Center) { Text(if (readToday) "✓ Lest i dag" else "Jeg har lest", color = if (readToday) Color.White else if (period == "morning") Color.White else Color(0xFF1B1A17), fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize) }
+                    Box(Modifier.height(38.dp).clip(RoundedCornerShape(19.dp)).background(if (readToday) DsPalette.PapirLys.success else l.fg).clickable(role = Role.Button) { vm.markBibleRead37() }.padding(horizontal = 16.dp),
+                        contentAlignment = Alignment.Center) { Text(if (readToday) "✓ Lest i dag" else "Jeg har lest", color = if (readToday) Color.White else if (period == "morning") Color.White else DsPalette.PapirLys.textPrimary, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize) }
                     Chip37(if (saved) "♥ Lagret" else "♡ Lagre", l) { vm.toggleSaved37(v) }
                     Chip37("✦ Forklar", l) { vm.explainVerse37(v) }
                     Chip37(if (copied) "Kopiert" else "Kopier", l) { copy37(ctx, v); copied = true; Haptics.select() }
@@ -326,28 +328,28 @@ internal fun BiblePage37(vm: AppViewModel) {
         }
         val right46: @Composable () -> Unit = {
             // Leseplan.
-            PLabel("LESEPLAN", p.mut, modifier = Modifier.padding(start = 4.dp, top = 4.dp))
+            PLabel("LESEPLAN", p.textTertiary, modifier = Modifier.padding(start = 4.dp, top = 4.dp))
             val plan = PLANS37.firstOrNull { it.first == s.plan } ?: PLANS37.first()
             val pdone = s.planDone == today.toString()
             val pd = (if (pdone) s.planDay else s.planDay + 1).coerceIn(1, plan.third)
             val (chap, url) = planChapter37(plan.first, pd)
-            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(p.card).padding(18.dp, 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(p.surfaceRaised).padding(18.dp, 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(verticalAlignment = Alignment.Bottom) {
                     PSerif(plan.second, 22.sp, modifier = Modifier.weight(1f), maxLines = 1)
-                    Text("Dag $pd av ${plan.third}", color = p.mut, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.footnote.fontSize)
+                    Text("Dag $pd av ${plan.third}", color = p.textTertiary, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.footnote.fontSize)
                 }
                 Box(Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)).background(p.line)) {
-                    Box(Modifier.fillMaxWidth((s.planDay.toFloat() / plan.third).coerceIn(0f, 1f)).fillMaxHeight().clip(RoundedCornerShape(3.dp)).background(Color(0xFFB23A2A)))
+                    Box(Modifier.fillMaxWidth((s.planDay.toFloat() / plan.third).coerceIn(0f, 1f)).fillMaxHeight().clip(RoundedCornerShape(3.dp)).background(DsPalette.PapirLys.accent))
                 }
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Column(Modifier.weight(1f)) {
-                        Text("I DAG", color = Color(0xFFB23A2A), fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.caption.fontSize, letterSpacing = 1.2.sp)
-                        Text(chap, color = p.ink, fontWeight = FontWeight.Bold, fontSize = HomelabType.body.fontSize)
-                        Text(if (pdone) "Fullført i dag · neste i morgen" else "Ca. 5 minutter", color = p.mut, fontSize = HomelabType.footnote.fontSize)
+                        Text("I DAG", color = DsPalette.PapirLys.accent, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.caption.fontSize, letterSpacing = 1.2.sp)
+                        Text(chap, color = p.textPrimary, fontWeight = FontWeight.Bold, fontSize = HomelabType.body.fontSize)
+                        Text(if (pdone) "Fullført i dag · neste i morgen" else "Ca. 5 minutter", color = p.textTertiary, fontSize = HomelabType.footnote.fontSize)
                     }
                     Box(Modifier.height(36.dp).clip(RoundedCornerShape(18.dp)).border(1.dp, p.line, RoundedCornerShape(18.dp)).clickable(role = Role.Button) { openLink(ctx, url) }.padding(horizontal = 14.dp),
-                        contentAlignment = Alignment.Center) { Text("Les ›", color = p.ink, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize) }
-                    Box(Modifier.height(36.dp).clip(RoundedCornerShape(18.dp)).background(if (pdone) Color(0xFF2F7A4F) else p.ink).clickable(role = Role.Button) { vm.planDoneToday37() }.padding(horizontal = 14.dp),
+                        contentAlignment = Alignment.Center) { Text("Les ›", color = p.textPrimary, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize) }
+                    Box(Modifier.height(36.dp).clip(RoundedCornerShape(18.dp)).background(if (pdone) DsPalette.PapirLys.success else p.textPrimary).clickable(role = Role.Button) { vm.planDoneToday37() }.padding(horizontal = 14.dp),
                         contentAlignment = Alignment.Center) { Text(if (pdone) "✓ Lest" else "Ferdig", color = Color.White, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize) }
                 }
                 Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -357,31 +359,31 @@ internal fun BiblePage37(vm: AppViewModel) {
             // Statistikk.
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf("DAGER LEST" to "${s.readDays.size}", "LAGREDE" to "${s.saved.size}", "LESEPLAN" to "${Math.round(s.planDay * 100f / plan.third)} %").forEach { (k, x) ->
-                    Column(Modifier.weight(1f).clip(RoundedCornerShape(18.dp)).background(p.card).padding(14.dp, 12.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Text(k, color = p.mut, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.caption.fontSize, letterSpacing = 1.1.sp, maxLines = 1)
+                    Column(Modifier.weight(1f).clip(RoundedCornerShape(18.dp)).background(p.surfaceRaised).padding(14.dp, 12.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text(k, color = p.textTertiary, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.caption.fontSize, letterSpacing = 1.1.sp, maxLines = 1)
                         PSerif(x, 24.sp, maxLines = 1)
                     }
                 }
             }
             // Lagrede vers.
-            PLabel("LAGREDE VERS · ${s.saved.size}", p.mut, modifier = Modifier.padding(start = 4.dp, top = 4.dp))
-            if (s.saved.isEmpty()) Text("Trykk «Lagre» på et vers for å samle det her.", color = p.mut, fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.padding(horizontal = 6.dp))
+            PLabel("LAGREDE VERS · ${s.saved.size}", p.textTertiary, modifier = Modifier.padding(start = 4.dp, top = 4.dp))
+            if (s.saved.isEmpty()) Text("Trykk «Lagre» på et vers for å samle det her.", color = p.textTertiary, fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.padding(horizontal = 6.dp))
             s.saved.forEach { (ref, text) ->
-                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(p.card).padding(16.dp, 14.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(p.surfaceRaised).padding(16.dp, 14.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text("«$text»", color = p.ink, fontFamily = PaperFonts.serif, fontStyle = FontStyle.Italic, fontSize = HomelabType.body.fontSize, lineHeight = 23.sp)
-                        Text(ref, color = p.ink, fontWeight = FontWeight.Bold, fontSize = HomelabType.footnote.fontSize)
+                        Text("«$text»", color = p.textPrimary, fontFamily = PaperFonts.serif, fontStyle = FontStyle.Italic, fontSize = HomelabType.body.fontSize, lineHeight = 23.sp)
+                        Text(ref, color = p.textPrimary, fontWeight = FontWeight.Bold, fontSize = HomelabType.footnote.fontSize)
                     }
                     Box(Modifier.size(30.dp).clip(CircleShape).clickable(role = Role.Button, onClickLabel = "Fjern $ref") { Haptics.select(); vm.removeSaved37(ref) }, contentAlignment = Alignment.Center) {
-                        Text("×", modifier = Modifier.semantics { contentDescription = "Fjern" }, color = p.mut, fontSize = HomelabType.headline.fontSize)
+                        Text("×", modifier = Modifier.semantics { contentDescription = "Fjern" }, color = p.textTertiary, fontSize = HomelabType.headline.fontSize)
                     }
                 }
             }
             // Daglig påminnelse.
-            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(p.card)) {
+            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(p.surfaceRaised)) {
                 PToggle("Daglig påminnelse", if (s.remind) "Kl. 07:00 · «Dagens vers er klart»" else "Av", s.remind) { on -> vm.putBibleSet37 { it.copy(notify = on) } }
             }
-            Text("Tekst: Bibelen 1930 (fri bruk). «Les ›» åpner kapitlet på bibel.no.", color = p.mut, fontSize = HomelabType.caption.fontSize, modifier = Modifier.padding(horizontal = 6.dp))
+            Text("Tekst: Bibelen 1930 (fri bruk). «Les ›» åpner kapitlet på bibel.no.", color = p.textTertiary, fontSize = HomelabType.caption.fontSize, modifier = Modifier.padding(horizontal = 6.dp))
         }
         Column(Modifier.widthIn(max = 1100.dp).fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 30.dp)) {
             if (two46) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(18.dp), verticalAlignment = Alignment.Top) {
@@ -412,7 +414,7 @@ private fun BibleHero40(vm: AppViewModel, back: () -> Unit) {
         }
         Column(Modifier.fillMaxSize().padding(top = top + 8.dp, start = 22.dp, end = 22.dp, bottom = BIBLE_OVERLAP40 + 12.dp + 16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.height(34.dp).clip(CircleShape).background(Color(0x8C1B1A17)).clickable(role = Role.Button, onClickLabel = "Tilbake") { back() }.padding(start = 10.dp, end = 14.dp),
+                Box(Modifier.height(34.dp).clip(CircleShape).background(DsPalette.PapirLys.textPrimary.copy(alpha = .55f)).clickable(role = Role.Button, onClickLabel = "Tilbake") { back() }.padding(start = 10.dp, end = 14.dp),
                     contentAlignment = Alignment.Center) { Text("‹ Tilbake", color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.subheadline.fontSize, maxLines = 1) }
                 Spacer(Modifier.weight(1f))
             }
@@ -439,12 +441,12 @@ private fun Chip37(t: String, l: VerseLook37, onClick: () -> Unit) {
 /** Bare for brukere med modulen: på/av, morgen- og kveldsbrief, varsel kl. 07:00, oversettelse. */
 @Composable
 internal fun BibleSettings37(vm: AppViewModel) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val s = vm.p37
     LaunchedEffect(vm.account?.id) { vm.loadBible37() }
     if (!vm.bibleAllowed37() && !s.bibleSet.enabled) return
     val st = s.bibleSet
-    Text("BIBELVERS", color = Color(0xFFA39D90), fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.caption.fontSize, letterSpacing = 1.3.sp, modifier = Modifier.padding(top = 4.dp, start = 4.dp))
+    Text("BIBELVERS", color = DsPalette.PapirMork.textSecondary, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.caption.fontSize, letterSpacing = 1.3.sp, modifier = Modifier.padding(top = 4.dp, start = 4.dp))
     PCard {
         PToggle("Dagens bibelvers", "I Now Brief, på Hjem og i widgets", st.enabled || vm.bibleAllowed37()) { on -> vm.putBibleSet37 { it.copy(enabled = on) }; if (on) vm.loadBible37(force = true) }
         PToggle("I morgenbriefen", "05–11", st.morning, top = true) { on -> vm.putBibleSet37 { it.copy(morning = on) } }

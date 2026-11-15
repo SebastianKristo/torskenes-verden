@@ -52,6 +52,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import no.kristo.finanshub.ui.designsystem.HomelabType
+import no.kristo.finanshub.ui.designsystem.DsPalette
 
 /*
  * Prompt 73 (NEWS73): lagre artikler offline (claude-code-nyheter-lagre-artikkel.md, fasit «Lagre og logo.dc.html» 1c og 1d).
@@ -66,7 +67,7 @@ internal data class Saved73(
     val statusText: String, val savedAt: String?, val updatedAt: String, val words: Int, val images: Int,
 ) {
     val host: String get() = runCatching { java.net.URI(url).host.orEmpty().removePrefix("www.") }.getOrDefault("")
-    val dot: Color get() = when (status) { "ok" -> Color(0xFF3D7A4F); "pending" -> Color(0xFF8F897C); else -> Color(0xFFA86A12) }
+    val dot: Color get() = when (status) { "ok" -> Color(0xFF3D7A4F); "pending" -> DsPalette.PapirLys.textTertiary; else -> Color(0xFFA86A12) }
 }
 
 internal data class Block73(val t: String, val x: String, val src: String, val cap: String)
@@ -321,7 +322,7 @@ private fun SavedRow73(vm: AppViewModel, sv: Saved73, p: PaperPal) {
         state = state,
         enableDismissFromStartToEnd = false,
         backgroundContent = {
-            Box(Modifier.fillMaxSize().background(Color(0xFFB23A2A)).padding(end = 20.dp), contentAlignment = Alignment.CenterEnd) {
+            Box(Modifier.fillMaxSize().background(DsPalette.PapirLys.accent).padding(end = 20.dp), contentAlignment = Alignment.CenterEnd) {
                 Text("Fjern fra lagret", color = Color.White, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize)
             }
         },

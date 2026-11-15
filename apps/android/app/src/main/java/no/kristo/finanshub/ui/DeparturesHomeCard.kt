@@ -28,6 +28,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import kotlinx.coroutines.delay
 import no.kristo.finanshub.*
 import no.kristo.finanshub.ui.designsystem.HomelabType
+import no.kristo.finanshub.ui.designsystem.HomelabTheme
 
 /*
  * Prompt 27 (ANDROID-B): Ruter-kortet på Hjem (claude-code-ruter-hjem.md, fasit «av.home» i Mobil Papir App.dc.html).
@@ -49,7 +50,7 @@ internal fun homeRuter27(vm: AppViewModel): Boolean {
 
 @Composable
 internal fun RuterHome27(vm: AppViewModel, modifier: Modifier = Modifier) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val s = vm.b27
     val life = LocalLifecycleOwner.current.lifecycle
     // Sanntid: nye tider hvert 30. sekund mens Hjem er synlig (ikke når Avganger ligger over eller appen er i bakgrunnen).
@@ -68,11 +69,11 @@ internal fun RuterHome27(vm: AppViewModel, modifier: Modifier = Modifier) {
         Column(Modifier.padding(16.dp, 14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 PLabel(title, modifier = Modifier.weight(1f))
-                Text("sanntid ›", color = p.mut, fontSize = HomelabType.footnote.fontSize)
+                Text("sanntid ›", color = p.textTertiary, fontSize = HomelabType.footnote.fontSize)
             }
             val rows = if (multi) shown.mapNotNull { st -> (s.homeDeps[st.id]?.departures ?: emptyList()).firstOrNull { !it.cancelled } }
                 else shown.firstOrNull()?.let { st -> (s.homeDeps[st.id]?.departures ?: emptyList()).filter { !it.cancelled }.take(s.homeDep.n) } ?: emptyList()
-            if (rows.isEmpty()) Text(if (shown.any { s.homeDeps.containsKey(it.id) }) "Ingen avganger nå." else "Henter avganger …", color = p.mut, fontSize = HomelabType.subheadline.fontSize)
+            if (rows.isEmpty()) Text(if (shown.any { s.homeDeps.containsKey(it.id) }) "Ingen avganger nå." else "Henter avganger …", color = p.textTertiary, fontSize = HomelabType.subheadline.fontSize)
             rows.forEach { d -> DepRow27(d) }
         }
     }
@@ -80,17 +81,17 @@ internal fun RuterHome27(vm: AppViewModel, modifier: Modifier = Modifier) {
 
 @Composable
 private fun DepRow27(d: Dep) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val c = d.color ?: ruterModeColor(d.mode, d.line)
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         Box(Modifier.widthIn(min = 30.dp).height(24.dp).clip(RoundedCornerShape(6.dp)).background(Color(c)).padding(horizontal = 5.dp), contentAlignment = Alignment.Center) {
             // Prompt 28: tekstfarge etter luminans på linjefargen (lys → mørk tekst, mørk → hvit).
             Text(d.line, color = lineInk28(c), fontSize = HomelabType.footnote.fontSize, fontWeight = FontWeight.ExtraBold, maxLines = 1)
         }
-        Text(d.to, color = p.ink, fontSize = HomelabType.callout.fontSize, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+        Text(d.to, color = p.textPrimary, fontSize = HomelabType.callout.fontSize, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
         val m = d.minutes
         PSerif(m?.let { if (it <= 0) "nå" else "$it" } ?: (d.expected ?: d.aimed)?.let(::hm27) ?: "–", 22.sp, maxLines = 1)
-        Text(if (m != null && m > 0) "min" else "", color = p.mut, fontSize = HomelabType.footnote.fontSize, modifier = Modifier.width(26.dp))
+        Text(if (m != null && m > 0) "min" else "", color = p.textTertiary, fontSize = HomelabType.footnote.fontSize, modifier = Modifier.width(26.dp))
     }
 }
 
@@ -100,13 +101,13 @@ private fun hm27(t: String): String = Regex("""(\d{2}:\d{2})""").find(t)?.value 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun VelgStopp27(vm: AppViewModel) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val s = vm.b27
     val ctx = LocalContext.current
     val state = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val stops = s.homeStops ?: emptyList()
     val sel = s.homeDep.stops.filter { id -> stops.any { it.id == id } }.ifEmpty { stops.take(1).map { it.id } }
-    ModalBottomSheet(onDismissRequest = { s.homeSheet = false }, sheetState = state, containerColor = p.bg, contentColor = p.ink,
+    ModalBottomSheet(onDismissRequest = { s.homeSheet = false }, sheetState = state, containerColor = p.surface, contentColor = p.textPrimary,
         dragHandle = { Box(Modifier.padding(top = 10.dp).size(40.dp, 5.dp).clip(RoundedCornerShape(3.dp)).background(p.line)) }) {
         Column(
             Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).navigationBarsPadding().padding(16.dp, 8.dp, 16.dp, 30.dp),
@@ -117,13 +118,13 @@ private fun VelgStopp27(vm: AppViewModel) {
                     PLabel("Hjem · Ruter-kortet")
                     PSerif("Velg stopp", 24.sp)
                 }
-                Box(Modifier.height(36.dp).clip(CircleShape).background(p.ink).clickable { s.homeSheet = false }.padding(horizontal = 16.dp), contentAlignment = Alignment.Center) {
-                    Text("Ferdig", color = p.bg, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize)
+                Box(Modifier.height(36.dp).clip(CircleShape).background(p.textPrimary).clickable { s.homeSheet = false }.padding(horizontal = 16.dp), contentAlignment = Alignment.Center) {
+                    Text("Ferdig", color = p.surface, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize)
                 }
             }
-            Text("Velg opptil 3 stopp. Rekkefølgen følger Mine stopp.", color = p.mut, fontSize = HomelabType.subheadline.fontSize)
-            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(p.card)) {
-                if (stops.isEmpty()) Text("Ingen egne stopp ennå. Legg til en holdeplass under.", color = p.mut, fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.padding(14.dp))
+            Text("Velg opptil 3 stopp. Rekkefølgen følger Mine stopp.", color = p.textTertiary, fontSize = HomelabType.subheadline.fontSize)
+            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(p.surfaceRaised)) {
+                if (stops.isEmpty()) Text("Ingen egne stopp ennå. Legg til en holdeplass under.", color = p.textTertiary, fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.padding(14.dp))
                 stops.forEachIndexed { i, st ->
                     val on = st.id in sel
                     if (i > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
@@ -136,13 +137,13 @@ private fun VelgStopp27(vm: AppViewModel) {
                         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
                         Box(
-                            Modifier.size(24.dp).clip(RoundedCornerShape(8.dp)).background(if (on) p.ink else Color.Transparent).border(1.5.dp, if (on) p.ink else p.line, RoundedCornerShape(8.dp)),
+                            Modifier.size(24.dp).clip(RoundedCornerShape(8.dp)).background(if (on) p.textPrimary else Color.Transparent).border(1.5.dp, if (on) p.textPrimary else p.line, RoundedCornerShape(8.dp)),
                             contentAlignment = Alignment.Center,
-                        ) { Text("✓", color = if (on) p.bg else Color.Transparent, fontSize = HomelabType.subheadline.fontSize, fontWeight = FontWeight.ExtraBold) }
+                        ) { Text("✓", color = if (on) p.surface else Color.Transparent, fontSize = HomelabType.subheadline.fontSize, fontWeight = FontWeight.ExtraBold) }
                         Column(Modifier.weight(1f)) {
-                            Text(st.name, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(st.name, color = p.textPrimary, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             val sub = st.locality.ifBlank { s.homeDeps[st.id]?.departures?.firstOrNull()?.let { "${it.line} ${it.to}" } ?: "Holdeplass" }
-                            Text(sub, color = p.mut, fontSize = HomelabType.footnote.fontSize, maxLines = 1)
+                            Text(sub, color = p.textTertiary, fontSize = HomelabType.footnote.fontSize, maxLines = 1)
                         }
                     }
                 }
@@ -152,16 +153,16 @@ private fun VelgStopp27(vm: AppViewModel) {
                 (1..4).forEach { k ->
                     val on = s.homeDep.n == k
                     Box(
-                        Modifier.weight(1f).height(42.dp).clip(RoundedCornerShape(14.dp)).background(if (on) p.ink else p.card)
+                        Modifier.weight(1f).height(42.dp).clip(RoundedCornerShape(14.dp)).background(if (on) p.textPrimary else p.surfaceRaised)
                             .clickable(role = Role.RadioButton) { Haptics.select(); vm.setHomeDep27(s.homeDep.copy(n = k), ctx) },
                         contentAlignment = Alignment.Center,
-                    ) { Text("$k", color = if (on) p.bg else p.ink, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize) }
+                    ) { Text("$k", color = if (on) p.surface else p.textPrimary, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize) }
                 }
             }
             Box(
                 Modifier.fillMaxWidth().height(46.dp).clip(RoundedCornerShape(23.dp)).border(1.dp, p.line, RoundedCornerShape(23.dp)).clickable { vm.manageStops27() },
                 contentAlignment = Alignment.Center,
-            ) { Text("Legg til eller fjern stopp ›", color = p.ink, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize) }
+            ) { Text("Legg til eller fjern stopp ›", color = p.textPrimary, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize) }
         }
     }
 }

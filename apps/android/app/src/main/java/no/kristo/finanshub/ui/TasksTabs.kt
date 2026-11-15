@@ -33,6 +33,7 @@ import no.kristo.finanshub.*
 import org.json.JSONArray
 import kotlin.math.roundToInt
 import no.kristo.finanshub.ui.designsystem.HomelabType
+import no.kristo.finanshub.ui.designsystem.HomelabTheme
 
 /*
  * Prompt 43 (claude-code-gjoremal-faner-rekkefolge.md): pillene i Gjøremål.
@@ -93,38 +94,38 @@ internal fun Modifier.pressOrHold43(label: String, onClick: () -> Unit, onHold: 
 /** «Laget med Glimt»-pillen i raden (bare når det finnes minst én beskjed). */
 @Composable
 internal fun GlimtSourcesChip43(vm: AppViewModel, onHold: () -> Unit) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     LaunchedEffect(vm.account?.id, vm.tasks) { if (vm.p41.sources == null || vm.p41.glimtJobs.isEmpty()) vm.loadSources41() }
     val n = vm.p41.sources?.size ?: 0
     if (n == 0) return
     Row(
-        Modifier.height(38.dp).clip(CircleShape).background(p.card).pressOrHold43("Laget med Glimt", { Haptics.select(); vm.p41.srcOpen = true }, onHold).padding(horizontal = 14.dp),
+        Modifier.height(38.dp).clip(CircleShape).background(p.surfaceRaised).pressOrHold43("Laget med Glimt", { Haptics.select(); vm.p41.srcOpen = true }, onHold).padding(horizontal = 14.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Box(Modifier.size(8.dp).clip(CircleShape).background(p.lab))
-        Text("Laget med Glimt", color = p.ink, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize, maxLines = 1)
-        Text("$n", color = p.ink.copy(alpha = .6f), fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize)
+        Box(Modifier.size(8.dp).clip(CircleShape).background(p.accent))
+        Text("Laget med Glimt", color = p.textPrimary, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize, maxLines = 1)
+        Text("$n", color = p.textPrimary.copy(alpha = .6f), fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize)
     }
 }
 
 /** «+ Ny liste»: card-flate, ink-tekst (700, 13), 1,5 dp stiplet kant i ink 40 %. */
 @Composable
 internal fun NewListChip43(onClick: () -> Unit) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     Box(
-        Modifier.height(38.dp).clip(CircleShape).background(p.card).drawBehind {
-            drawRoundRect(p.ink.copy(alpha = .4f), cornerRadius = CornerRadius(size.height / 2),
+        Modifier.height(38.dp).clip(CircleShape).background(p.surfaceRaised).drawBehind {
+            drawRoundRect(p.textPrimary.copy(alpha = .4f), cornerRadius = CornerRadius(size.height / 2),
                 style = Stroke(1.5.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(5.dp.toPx(), 4.dp.toPx()))))
         }.clickable(role = Role.Button, onClickLabel = "Ny liste") { onClick() }.padding(horizontal = 14.dp),
         contentAlignment = Alignment.Center,
-    ) { Text("+ Ny liste", color = p.ink, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize, maxLines = 1) }
+    ) { Text("+ Ny liste", color = p.textPrimary, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize, maxLines = 1) }
 }
 
 /** Arket «Rekkefølge på lister». [items] = (nøkkel, navn, farge). Endringer vises med en gang i raden bak. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun TabOrderSheet43(vm: AppViewModel, items: List<Triple<String, String, Color>>, listKeys: List<String>) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val cur = TaskOrder43.sorted(listKeys)
     val byKey = items.associateBy { it.first }
     val rows = cur.mapNotNull { byKey[it] }
@@ -143,20 +144,20 @@ internal fun TabOrderSheet43(vm: AppViewModel, items: List<Triple<String, String
     }
     ModalBottomSheet(
         onDismissRequest = { TaskOrder43.sheet = false }, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        containerColor = p.bg, contentColor = p.ink, dragHandle = { BottomSheetDefaults.DragHandle(width = 36.dp, height = 5.dp, color = p.line) },
+        containerColor = p.surface, contentColor = p.textPrimary, dragHandle = { BottomSheetDefaults.DragHandle(width = 36.dp, height = 5.dp, color = p.line) },
     ) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(18.dp, 0.dp, 18.dp, 22.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 PSerif("Rekkefølge på lister", 24.sp, modifier = Modifier.weight(1f), maxLines = 1)
-                Text("Tilbakestill", color = p.lab, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize,
+                Text("Tilbakestill", color = p.accent, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize,
                     modifier = Modifier.clip(CircleShape).clickable { Haptics.select(); TaskOrder43.save(vm, null) }.padding(10.dp, 8.dp))
             }
-            Text("Dra i ≡ eller bruk pilene. «+ Ny liste» ligger alltid sist.", color = p.mut, fontSize = HomelabType.subheadline.fontSize)
-            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(p.card)) {
+            Text("Dra i ≡ eller bruk pilene. «+ Ny liste» ligger alltid sist.", color = p.textTertiary, fontSize = HomelabType.subheadline.fontSize)
+            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(p.surfaceRaised)) {
                 rows.forEachIndexed { i, (k, name, color) ->
                     val dragging = dragKey == k
                     Row(
-                        Modifier.fillMaxWidth().height(rowH).then(if (dragging) Modifier.offset { IntOffset(0, dragY.roundToInt()) }.background(p.bg) else Modifier)
+                        Modifier.fillMaxWidth().height(rowH).then(if (dragging) Modifier.offset { IntOffset(0, dragY.roundToInt()) }.background(p.surface) else Modifier)
                             .padding(start = 6.dp, end = 8.dp),
                         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
@@ -174,21 +175,21 @@ internal fun TabOrderSheet43(vm: AppViewModel, items: List<Triple<String, String
                                 }
                             },
                             contentAlignment = Alignment.Center,
-                        ) { Text("≡", color = p.mut, fontSize = HomelabType.headline.fontSize) }
+                        ) { Text("≡", color = p.textTertiary, fontSize = HomelabType.headline.fontSize) }
                         Box(Modifier.size(9.dp).clip(CircleShape).background(color))
-                        Text(name, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize, maxLines = 1, modifier = Modifier.weight(1f))
-                        Text("▲", color = if (i > 0) p.ink else p.line, fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.size(40.dp).clip(CircleShape)
+                        Text(name, color = p.textPrimary, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize, maxLines = 1, modifier = Modifier.weight(1f))
+                        Text("▲", color = if (i > 0) p.textPrimary else p.line, fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.size(40.dp).clip(CircleShape)
                             .clickable(enabled = i > 0, onClickLabel = "Flytt opp") { move(k, i - 1) }.wrapContentSize())
-                        Text("▼", color = if (i < rows.size - 1) p.ink else p.line, fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.size(40.dp).clip(CircleShape)
+                        Text("▼", color = if (i < rows.size - 1) p.textPrimary else p.line, fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.size(40.dp).clip(CircleShape)
                             .clickable(enabled = i < rows.size - 1, onClickLabel = "Flytt ned") { move(k, i + 1) }.wrapContentSize())
                     }
                     if (i < rows.size - 1) Box(Modifier.fillMaxWidth().padding(start = 50.dp).height(1.dp).background(p.line))
                 }
             }
             Box(
-                Modifier.fillMaxWidth().height(50.dp).clip(CircleShape).background(p.ink).clickable { TaskOrder43.sheet = false },
+                Modifier.fillMaxWidth().height(50.dp).clip(CircleShape).background(p.textPrimary).clickable { TaskOrder43.sheet = false },
                 contentAlignment = Alignment.Center,
-            ) { Text("Ferdig", color = p.bg, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize) }
+            ) { Text("Ferdig", color = p.surface, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize) }
         }
     }
 }

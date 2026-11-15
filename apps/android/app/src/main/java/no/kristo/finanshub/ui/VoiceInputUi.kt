@@ -42,6 +42,8 @@ import androidx.core.content.ContextCompat
 import kotlinx.coroutines.withTimeoutOrNull
 import no.kristo.finanshub.*
 import no.kristo.finanshub.ui.designsystem.HomelabType
+import no.kristo.finanshub.ui.designsystem.HomelabTheme
+import no.kristo.finanshub.ui.designsystem.DsPalette
 
 /*
  * Prompt 56 (AND56): mikrofonen i Glimt-chatten og Glimt-søket (logikken i VoiceInput.kt).
@@ -53,7 +55,7 @@ import no.kristo.finanshub.ui.designsystem.HomelabType
 
 internal const val MIC56 = "M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3zM5 11a7 7 0 0 0 14 0M12 18v3"
 private const val X56 = "M6 6l12 12M18 6L6 18"
-internal val MIC56_ON = Color(0xFFB23A2A)
+internal val MIC56_ON = DsPalette.PapirLys.accent
 
 internal fun micOk56(ctx: Context): Boolean = ContextCompat.checkSelfPermission(ctx, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
 
@@ -140,7 +142,7 @@ internal fun VoiceBar56(vm: AppViewModel, target: String, ink: Color, mut: Color
 /** Innstillinger → AI og tolkning: hvor talen skrives ned. Lagres på telefonen. */
 @Composable
 internal fun VoiceSettings56(vm: AppViewModel) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val ctx = LocalContext.current
     LaunchedEffect(Unit) { Voice56.loadMode(ctx); vm.voice56Refresh(force = true) }
     val info = Voice56.info
@@ -154,13 +156,13 @@ internal fun VoiceSettings56(vm: AppViewModel) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         PLabel("Tale til tekst", modifier = Modifier.padding(start = 4.dp, top = 10.dp))
         PCard {
-            PRow("Serveren (anbefalt)", "NB-Whisper, Voz eller Phonon i huset. Lyden lagres ikke.", if (Voice56.mode == "server") "✓" else "", valueColor = p.ink, serif = false) {
+            PRow("Serveren (anbefalt)", "NB-Whisper, Voz eller Phonon i huset. Lyden lagres ikke.", if (Voice56.mode == "server") "✓" else "", valueColor = p.textPrimary, serif = false) {
                 Haptics.select(); Voice56.saveMode(ctx, "server")
             }
-            PRow("På enheten", "Talegjenkjenningen på telefonen (norsk).", if (Voice56.mode == "device") "✓" else "", valueColor = p.ink, serif = false, top = true) {
+            PRow("På enheten", "Talegjenkjenningen på telefonen (norsk).", if (Voice56.mode == "device") "✓" else "", valueColor = p.textPrimary, serif = false, top = true) {
                 Haptics.select(); Voice56.saveMode(ctx, "device")
             }
         }
-        Text(status, color = p.mut, fontSize = HomelabType.footnote.fontSize, modifier = Modifier.padding(horizontal = 8.dp))
+        Text(status, color = p.textTertiary, fontSize = HomelabType.footnote.fontSize, modifier = Modifier.padding(horizontal = 8.dp))
     }
 }

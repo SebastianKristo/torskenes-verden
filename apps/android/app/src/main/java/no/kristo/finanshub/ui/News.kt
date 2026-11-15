@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import no.kristo.finanshub.*
 import no.kristo.finanshub.ui.designsystem.HomelabType
+import no.kristo.finanshub.ui.designsystem.DsPalette
 
 /*
  * Nyhetsleser (Nyhetsleser.dc.html, variant mobil): morgenavis med kategorifaner, ✦ AI-sammendrag øverst og
@@ -214,7 +215,7 @@ internal fun NewsToggle(title: String, sub: String, on: Boolean, p: PaperPal, to
             Text(title, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize)
             Text(sub, color = p.mut, fontSize = HomelabType.footnote.fontSize, lineHeight = 17.sp)
         }
-        Box(Modifier.size(46.dp, 28.dp).clip(CircleShape).background(if (on) Color(0xFF2F7A4F) else Color(0xFF9A958A)).padding(3.dp), contentAlignment = if (on) Alignment.CenterEnd else Alignment.CenterStart) {
+        Box(Modifier.size(46.dp, 28.dp).clip(CircleShape).background(if (on) DsPalette.PapirLys.success else Color(0xFF9A958A)).padding(3.dp), contentAlignment = if (on) Alignment.CenterEnd else Alignment.CenterStart) {
             Box(Modifier.size(22.dp).clip(CircleShape).background(Color.White))
         }
     }

@@ -61,6 +61,8 @@ import kotlin.math.hypot
 import kotlin.math.roundToInt
 import kotlin.math.sin
 import no.kristo.finanshub.ui.designsystem.HomelabType
+import no.kristo.finanshub.ui.designsystem.HomelabTheme
+import no.kristo.finanshub.ui.designsystem.DsPalette
 
 /*
  * Prompt 46: Kart (claude-code-kart-side.md, fasit Kart.dc.html). Kartverket gråtone (WMTS webmercator) i osmdroid (finnes fra før),
@@ -205,7 +207,7 @@ private class KOverlay46(ctx: Context) : Overlay() {
 @Composable
 internal fun KartPage46(vm: AppViewModel) {
     val k = vm.p46.kart
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     BackHandler { vm.closeKart46() }
     BoxWithConstraints(Modifier.fillMaxSize().background(Color(0xFFE9E7E2)).clickable(remember { androidx.compose.foundation.interaction.MutableInteractionSource() }, null) {}) {
         val wide = maxWidth >= 900.dp
@@ -213,7 +215,7 @@ internal fun KartPage46(vm: AppViewModel) {
         if (k.missing) {
             Column(Modifier.align(Alignment.Center).padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 PSerif("Kart finnes ikke på serveren ennå", 22.sp)
-                Text("Oppdater Homelab for å få holdeplasser, sanntid og soner.", color = p.mut, fontSize = HomelabType.callout.fontSize)
+                Text("Oppdater Homelab for å få holdeplasser, sanntid og soner.", color = p.textTertiary, fontSize = HomelabType.callout.fontSize)
                 PButton("‹ Tilbake", kind = "line", height = 44.dp) { vm.closeKart46() }
             }
             return@BoxWithConstraints
@@ -222,12 +224,12 @@ internal fun KartPage46(vm: AppViewModel) {
         // Topp: «‹ Mer» først i chip-raden, deretter transportmidlene; kilden under.
         Column(Modifier.fillMaxWidth().statusBarsPadding().padding(start = if (wide) 388.dp else 12.dp, end = 12.dp, top = 8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                KChip46("‹ Mer", true, Color(0xFF1B1A17)) { vm.closeKart46() }
+                KChip46("‹ Mer", true, DsPalette.PapirLys.textPrimary) { vm.closeKart46() }
                 MODES46.forEach { m -> KChip46(MODE_NAME46[m] ?: m, m in k.prefs.md, Color(MODE_COLOR46[m] ?: 0xFF1B1A17L)) { vm.kartMode46(m) } }
             }
-            Text(k.sourceText, color = if (k.demo) Color(0xFFB23A2A) else Color(0xFF2F7A4F), fontFamily = PaperFonts.mono, fontWeight = FontWeight.Bold, fontSize = HomelabType.caption.fontSize,
+            Text(k.sourceText, color = if (k.demo) DsPalette.PapirLys.accent else DsPalette.PapirLys.success, fontFamily = PaperFonts.mono, fontWeight = FontWeight.Bold, fontSize = HomelabType.caption.fontSize,
                 modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(Color.White.copy(alpha = .9f)).padding(8.dp, 3.dp))
-            k.stopsNote?.let { Text(it, color = Color(0xFF1B1A17), fontSize = HomelabType.footnote.fontSize, modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(Color.White.copy(alpha = .9f)).padding(8.dp, 3.dp)) }
+            k.stopsNote?.let { Text(it, color = DsPalette.PapirLys.textPrimary, fontSize = HomelabType.footnote.fontSize, modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(Color.White.copy(alpha = .9f)).padding(8.dp, 3.dp)) }
         }
         // Zoom og «Min posisjon» til høyre.
         val sheetH = when (k.sheet) { "full" -> h * .86f; "half" -> h * .52f; else -> 228.dp }
@@ -237,11 +239,11 @@ internal fun KartPage46(vm: AppViewModel) {
             KMapBtn46("➤", "Min posisjon") { k.people.firstOrNull { it.self }?.let { vm.kartFly46(it.lat, it.lon, 16.0) } ?: run { vm.message = "Fant ikke posisjonen din. Slå på deling i Familie." } }
         }
         if (wide) Box(Modifier.align(Alignment.TopStart).fillMaxHeight().width(372.dp).statusBarsPadding().padding(12.dp)) {
-            Column(Modifier.fillMaxSize().shadow(16.dp, RoundedCornerShape(24.dp)).clip(RoundedCornerShape(24.dp)).background(p.bg).padding(16.dp)) { KPanel46(vm, Modifier.weight(1f)) }
+            Column(Modifier.fillMaxSize().shadow(16.dp, RoundedCornerShape(24.dp)).clip(RoundedCornerShape(24.dp)).background(p.surface).padding(16.dp)) { KPanel46(vm, Modifier.weight(1f)) }
         } else {
             val ah by animateDpAsState(sheetH, spring(dampingRatio = .85f, stiffness = 380f), label = "sheet46")
             Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(ah).shadow(18.dp, RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
-                .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)).background(p.bg).navigationBarsPadding()) {
+                .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)).background(p.surface).navigationBarsPadding()) {
                 // Håndtak: trykk bytter høyde, dra opp/ned velger neste/forrige.
                 Box(Modifier.fillMaxWidth().height(28.dp).clickable(onClickLabel = "Bytt høyde på panelet") {
                     k.sheet = when (k.sheet) { "peek" -> "half"; "half" -> "full"; else -> "peek" }; Haptics.select()
@@ -262,14 +264,14 @@ internal fun KartPage46(vm: AppViewModel) {
 @Composable
 private fun KChip46(t: String, on: Boolean, col: Color, onClick: () -> Unit) {
     Box(Modifier.height(34.dp).shadow(4.dp, CircleShape).clip(CircleShape).background(if (on) col else Color.White).clickable(role = Role.Button, onClick = onClick).padding(horizontal = 14.dp),
-        contentAlignment = Alignment.Center) { Text(t, color = if (on) Color.White else Color(0xFF1B1A17), fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize, maxLines = 1) }
+        contentAlignment = Alignment.Center) { Text(t, color = if (on) Color.White else DsPalette.PapirLys.textPrimary, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize, maxLines = 1) }
 }
 
 @Composable
 private fun KMapBtn46(t: String, desc: String, onClick: () -> Unit) {
     Box(Modifier.size(44.dp).shadow(6.dp, RoundedCornerShape(12.dp)).clip(RoundedCornerShape(12.dp)).background(Color.White.copy(alpha = .96f))
         .clickable(role = Role.Button, onClickLabel = desc) { Haptics.select(); onClick() }, contentAlignment = Alignment.Center) {
-        Text(t, color = Color(0xFF1B1A17), fontWeight = FontWeight.Bold, fontSize = HomelabType.headline.fontSize)
+        Text(t, color = DsPalette.PapirLys.textPrimary, fontWeight = FontWeight.Bold, fontSize = HomelabType.headline.fontSize)
     }
 }
 
@@ -351,17 +353,17 @@ private fun KMap46(vm: AppViewModel, modifier: Modifier) {
 @Composable
 private fun KPanel46(vm: AppViewModel, modifier: Modifier) {
     val k = vm.p46.kart
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     Column(modifier.fillMaxWidth().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Row(Modifier.fillMaxWidth().height(44.dp).clip(RoundedCornerShape(22.dp)).background(p.card).border(1.dp, p.line, RoundedCornerShape(22.dp)).padding(horizontal = 14.dp),
+        Row(Modifier.fillMaxWidth().height(44.dp).clip(RoundedCornerShape(22.dp)).background(p.surfaceRaised).border(1.dp, p.line, RoundedCornerShape(22.dp)).padding(horizontal = 14.dp),
             verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.weight(1f)) {
-                if (k.q.isEmpty()) Text("Søk etter holdeplass", color = p.mut, fontSize = HomelabType.callout.fontSize)
-                BasicTextField(k.q, { vm.kartSearch46(it) }, singleLine = true, textStyle = TextStyle(color = p.ink, fontSize = HomelabType.callout.fontSize), cursorBrush = SolidColor(p.lab), modifier = Modifier.fillMaxWidth())
+                if (k.q.isEmpty()) Text("Søk etter holdeplass", color = p.textTertiary, fontSize = HomelabType.callout.fontSize)
+                BasicTextField(k.q, { vm.kartSearch46(it) }, singleLine = true, textStyle = TextStyle(color = p.textPrimary, fontSize = HomelabType.callout.fontSize), cursorBrush = SolidColor(p.accent), modifier = Modifier.fillMaxWidth())
             }
-            if (k.q.isNotEmpty()) Text("✕", color = p.mut, modifier = Modifier.semantics { contentDescription = "Tøm søket" }.clickable { vm.kartSearch46("") }.padding(6.dp))
+            if (k.q.isNotEmpty()) Text("✕", color = p.textTertiary, modifier = Modifier.semantics { contentDescription = "Tøm søket" }.clickable { vm.kartSearch46("") }.padding(6.dp))
         }
-        if (k.hits.isNotEmpty()) Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(p.card)) {
+        if (k.hits.isNotEmpty()) Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(p.surfaceRaised)) {
             k.hits.forEachIndexed { i, hit ->
                 if (i > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
                 Row(Modifier.fillMaxWidth().clickable {
@@ -370,68 +372,68 @@ private fun KPanel46(vm: AppViewModel, modifier: Modifier) {
                 }.padding(12.dp, 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     ModeDots46(hit.modes)
                     Column(Modifier.weight(1f)) {
-                        Text(hit.name, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize, maxLines = 1)
-                        Text(hit.label, color = p.mut, fontSize = HomelabType.footnote.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(hit.name, color = p.textPrimary, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize, maxLines = 1)
+                        Text(hit.label, color = p.textTertiary, fontSize = HomelabType.footnote.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                 }
             }
         }
         val sel = k.sel
         if (sel != null) { StopPanel46(vm, sel); return@Column }
-        Row(Modifier.fillMaxWidth().clip(CircleShape).background(p.card).padding(4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(Modifier.fillMaxWidth().clip(CircleShape).background(p.surfaceRaised).padding(4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             listOf("lag" to "Lag", "soner" to "Soner", "personer" to "Personer").forEach { (key, n) ->
-                Box(Modifier.weight(1f).height(34.dp).clip(CircleShape).background(if (k.tab == key) p.ink else Color.Transparent).clickable { Haptics.select(); k.tab = key },
-                    contentAlignment = Alignment.Center) { Text(n, color = if (k.tab == key) p.bg else p.ink, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.subheadline.fontSize) }
+                Box(Modifier.weight(1f).height(34.dp).clip(CircleShape).background(if (k.tab == key) p.textPrimary else Color.Transparent).clickable { Haptics.select(); k.tab = key },
+                    contentAlignment = Alignment.Center) { Text(n, color = if (k.tab == key) p.surface else p.textPrimary, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.subheadline.fontSize) }
             }
         }
         when (k.tab) {
             "soner" -> {
-                if (k.zones.isEmpty()) Text("Ingen soner ennå. Lag soner i Familie → Soner.", color = p.mut, fontSize = HomelabType.subheadline.fontSize)
+                if (k.zones.isEmpty()) Text("Ingen soner ennå. Lag soner i Familie → Soner.", color = p.textTertiary, fontSize = HomelabType.subheadline.fontSize)
                 k.zones.forEach { z ->
-                    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(p.card).clickable { vm.kartFly46(z.lat, z.lon, zoneZoom46(z.radius)) }.padding(12.dp, 10.dp),
+                    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(p.surfaceRaised).clickable { vm.kartFly46(z.lat, z.lon, zoneZoom46(z.radius)) }.padding(12.dp, 10.dp),
                         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         Box(Modifier.size(12.dp).clip(CircleShape).background(Color(z.color ?: 0xFF2E6F75L)))
                         Column(Modifier.weight(1f)) {
-                            Text(z.name, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize, maxLines = 1)
-                            Text("${z.radius.roundToInt()} m" + if (z.live) " · sanntid på" else "", color = p.mut, fontSize = HomelabType.footnote.fontSize)
+                            Text(z.name, color = p.textPrimary, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize, maxLines = 1)
+                            Text("${z.radius.roundToInt()} m" + if (z.live) " · sanntid på" else "", color = p.textTertiary, fontSize = HomelabType.footnote.fontSize)
                         }
-                        Box(Modifier.height(32.dp).clip(CircleShape).background(if (z.live) Color(0xFF2F7A4F) else p.bg).border(1.dp, p.line, CircleShape)
+                        Box(Modifier.height(32.dp).clip(CircleShape).background(if (z.live) DsPalette.PapirLys.success else p.surface).border(1.dp, p.line, CircleShape)
                             .clickable(role = Role.Button) { vm.kartLive46(z) }.padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
-                            Text(if (z.live) "LIVE" else "Sanntid", color = if (z.live) Color.White else p.ink, fontWeight = FontWeight.Bold, fontSize = HomelabType.footnote.fontSize)
+                            Text(if (z.live) "LIVE" else "Sanntid", color = if (z.live) Color.White else p.textPrimary, fontWeight = FontWeight.Bold, fontSize = HomelabType.footnote.fontSize)
                         }
                     }
                 }
             }
             "personer" -> {
-                if (k.people.isEmpty()) Text("Ingen deler posisjon med deg akkurat nå.", color = p.mut, fontSize = HomelabType.subheadline.fontSize)
+                if (k.people.isEmpty()) Text("Ingen deler posisjon med deg akkurat nå.", color = p.textTertiary, fontSize = HomelabType.subheadline.fontSize)
                 k.people.forEach { m ->
-                    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(p.card).clickable { vm.kartFly46(m.lat, m.lon, 16.0) }.padding(12.dp, 10.dp),
+                    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(p.surfaceRaised).clickable { vm.kartFly46(m.lat, m.lon, 16.0) }.padding(12.dp, 10.dp),
                         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         Box(Modifier.size(30.dp).clip(CircleShape).background(Color(m.color ?: 0xFF2B5D8AL)), contentAlignment = Alignment.Center) {
                             Text(if (m.self) "Du" else m.name.take(1).uppercase(), color = Color.White, fontWeight = FontWeight.Bold, fontSize = HomelabType.caption.fontSize)
                         }
                         Column(Modifier.weight(1f)) {
-                            Text(m.name, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize, maxLines = 1)
-                            Text(listOfNotNull(m.zone, m.updatedAt?.let { ago46(it) }).joinToString(" · ").ifBlank { "Posisjon delt" }, color = p.mut, fontSize = HomelabType.footnote.fontSize, maxLines = 1)
+                            Text(m.name, color = p.textPrimary, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize, maxLines = 1)
+                            Text(listOfNotNull(m.zone, m.updatedAt?.let { ago46(it) }).joinToString(" · ").ifBlank { "Posisjon delt" }, color = p.textTertiary, fontSize = HomelabType.footnote.fontSize, maxLines = 1)
                         }
                     }
                 }
             }
-            else -> Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(p.card)) {
+            else -> Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(p.surfaceRaised)) {
                 listOf("stops" to "Holdeplasser", "vehicles" to "Kjøretøy i sanntid", "zones" to "Mine soner", "people" to "Personer").forEachIndexed { i, (key, n) ->
                     if (i > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
                     Row(Modifier.fillMaxWidth().padding(14.dp, 6.dp), verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
-                            Text(n, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize)
-                            if (key == "vehicles") Text(if (k.prefs.vz.isEmpty()) "Velg «Sanntid» på en sone under Soner" else "${k.prefs.vz.size} soner · oppdateres hvert 10. s", color = p.mut, fontSize = HomelabType.footnote.fontSize)
-                            if (key == "stops") Text("Fra zoom 14 · navn fra zoom 16", color = p.mut, fontSize = HomelabType.footnote.fontSize)
+                            Text(n, color = p.textPrimary, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize)
+                            if (key == "vehicles") Text(if (k.prefs.vz.isEmpty()) "Velg «Sanntid» på en sone under Soner" else "${k.prefs.vz.size} soner · oppdateres hvert 10. s", color = p.textTertiary, fontSize = HomelabType.footnote.fontSize)
+                            if (key == "stops") Text("Fra zoom 14 · navn fra zoom 16", color = p.textTertiary, fontSize = HomelabType.footnote.fontSize)
                         }
-                        Switch(k.prefs.show[key] != false, { vm.kartLayer46(key, it) }, colors = SwitchDefaults.colors(checkedTrackColor = p.ink))
+                        Switch(k.prefs.show[key] != false, { vm.kartLayer46(key, it) }, colors = SwitchDefaults.colors(checkedTrackColor = p.textPrimary))
                     }
                 }
             }
         }
-        Text(k.attribution + " · Entur", color = p.mut, fontSize = HomelabType.caption.fontSize)
+        Text(k.attribution + " · Entur", color = p.textTertiary, fontSize = HomelabType.caption.fontSize)
     }
 }
 
@@ -449,29 +451,29 @@ private fun ago46(iso: String): String? = runCatching {
 @Composable
 private fun StopPanel46(vm: AppViewModel, s: KStop46) {
     val k = vm.p46.kart
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val d = k.deps
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         Column(Modifier.weight(1f)) {
             PSerif(d?.stop?.name ?: s.name, 22.sp, maxLines = 2)
-            Text((d?.stop?.modes ?: s.modes).joinToString(" · ") { MODE_NAME46[it] ?: it }, color = p.mut, fontSize = HomelabType.footnote.fontSize)
+            Text((d?.stop?.modes ?: s.modes).joinToString(" · ") { MODE_NAME46[it] ?: it }, color = p.textTertiary, fontSize = HomelabType.footnote.fontSize)
         }
-        Text("✕", color = p.mut, fontSize = HomelabType.headline.fontSize, modifier = Modifier.semantics { contentDescription = "Lukk holdeplass" }.clip(CircleShape).clickable(onClickLabel = "Lukk holdeplass") { k.sel = null; k.deps = null }.padding(8.dp))
+        Text("✕", color = p.textTertiary, fontSize = HomelabType.headline.fontSize, modifier = Modifier.semantics { contentDescription = "Lukk holdeplass" }.clip(CircleShape).clickable(onClickLabel = "Lukk holdeplass") { k.sel = null; k.deps = null }.padding(8.dp))
     }
-    if (k.depsBusy) Text("Henter avganger …", color = p.mut, fontSize = HomelabType.subheadline.fontSize)
-    if (d != null && d.calls.isEmpty()) Text("Ingen avganger de neste to timene.", color = p.mut, fontSize = HomelabType.subheadline.fontSize)
+    if (k.depsBusy) Text("Henter avganger …", color = p.textTertiary, fontSize = HomelabType.subheadline.fontSize)
+    if (d != null && d.calls.isEmpty()) Text("Ingen avganger de neste to timene.", color = p.textTertiary, fontSize = HomelabType.subheadline.fontSize)
     d?.calls?.forEach { c ->
-        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(p.card).padding(10.dp, 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(p.surfaceRaised).padding(10.dp, 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Box(Modifier.widthIn(min = 38.dp).height(26.dp).clip(RoundedCornerShape(7.dp)).background(Color(MODE_COLOR46[c.mode] ?: 0xFFC8372DL)).padding(horizontal = 6.dp), contentAlignment = Alignment.Center) {
                 Text(c.line.ifBlank { "–" }, color = Color.White, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize, maxLines = 1)
             }
             Column(Modifier.weight(1f)) {
-                Text(c.to, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(c.to, color = p.textPrimary, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(listOfNotNull(c.platform?.let { "Plattform $it" }, c.time, if (c.delayMin > 0) "+${c.delayMin} min" else null).joinToString(" · "),
-                    color = if (c.delayMin >= 3) Color(0xFFC0392B) else p.mut, fontSize = HomelabType.footnote.fontSize, maxLines = 1)
+                    color = if (c.delayMin >= 3) Color(0xFFC0392B) else p.textTertiary, fontSize = HomelabType.footnote.fontSize, maxLines = 1)
             }
-            Text(if (c.minutes <= 0) "nå" else "${c.minutes} min", color = p.ink, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize)
+            Text(if (c.minutes <= 0) "nå" else "${c.minutes} min", color = p.textPrimary, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize)
         }
     }
-    if (d?.demo == true) Text("DEMO-DATA · Entur svarer ikke", color = Color(0xFFB23A2A), fontFamily = PaperFonts.mono, fontSize = HomelabType.caption.fontSize)
+    if (d?.demo == true) Text("DEMO-DATA · Entur svarer ikke", color = DsPalette.PapirLys.accent, fontFamily = PaperFonts.mono, fontSize = HomelabType.caption.fontSize)
 }

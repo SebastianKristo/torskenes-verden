@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.sp
 import no.kristo.finanshub.*
 import no.kristo.finanshub.family.FamilyService
 import no.kristo.finanshub.ui.designsystem.HomelabType
+import no.kristo.finanshub.ui.designsystem.DsPalette
 
 /*
  * Prompt 45 (claude-code-vaer-min-posisjon-popup.md, fasit Vaer.dc.html): kortet «MIN POSISJON» øverst i Vær – været der telefonen er
@@ -85,7 +86,7 @@ internal fun HereCard45(vm: AppViewModel, w: WeatherFull?) {
                         }
                         .padding(horizontal = 16.dp),
                     contentAlignment = Alignment.Center,
-                ) { Text("Tillat", color = Color(0xFF1B1A17), fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize) }
+                ) { Text("Tillat", color = DsPalette.PapirLys.textPrimary, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize) }
             }
             h == null -> Text(if (s.hereState == "error") "Fant ikke posisjonen din ennå." else "Henter været der du er …", color = Color.White.copy(alpha = .85f), fontSize = HomelabType.callout.fontSize)
             else -> Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(12.dp)) {

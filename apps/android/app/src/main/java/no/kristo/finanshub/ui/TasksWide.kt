@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.sp
 import no.kristo.finanshub.*
 import java.time.LocalDate
 import no.kristo.finanshub.ui.designsystem.HomelabType
+import no.kristo.finanshub.ui.designsystem.HomelabTheme
 
 /*
  * Prompt 45 – Gjøremål:
@@ -41,24 +42,24 @@ import no.kristo.finanshub.ui.designsystem.HomelabType
 /** Toppen på Gjøremål (telefon og smal brettvisning): Papir-bakgrunn, «‹ Hjem», kicker og «Gjøremål», S-knapp. */
 @Composable
 internal fun TaskHero45(vm: AppViewModel) {
-    val p = PaperPal.current
-    Column(Modifier.fillMaxWidth().background(p.bg).statusBarsPadding().padding(18.dp, 10.dp, 18.dp, 8.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    val p = HomelabTheme.colors
+    Column(Modifier.fillMaxWidth().background(p.surface).statusBarsPadding().padding(18.dp, 10.dp, 18.dp, 8.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
-                Modifier.height(36.dp).clip(CircleShape).background(p.card).border(1.dp, p.line, CircleShape)
+                Modifier.height(36.dp).clip(CircleShape).background(p.surfaceRaised).border(1.dp, p.line, CircleShape)
                     .clickable(role = Role.Button, onClickLabel = "Til Hjem") { Haptics.select(); vm.closeTasksHome40() }.padding(start = 12.dp, end = 14.dp),
                 contentAlignment = Alignment.Center,
-            ) { Text("‹ Hjem", color = p.ink, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize, maxLines = 1) }
+            ) { Text("‹ Hjem", color = p.textPrimary, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize, maxLines = 1) }
             Spacer(Modifier.weight(1f))
             Box(
-                Modifier.size(40.dp).shadow(6.dp, CircleShape).clip(CircleShape).background(p.card).border(1.dp, p.line, CircleShape)
+                Modifier.size(40.dp).shadow(6.dp, CircleShape).clip(CircleShape).background(p.surfaceRaised).border(1.dp, p.line, CircleShape)
                     .clickable(onClickLabel = "Innstillinger") { vm.closeTasks(); vm.openPaperPage("set") }.semantics { contentDescription = "Innstillinger" },
                 contentAlignment = Alignment.Center,
-            ) { AvatarImage(vm, 40, p.card, p.ink) }
+            ) { AvatarImage(vm, 40, p.surfaceRaised, p.textPrimary) }
         }
         Column {
-            PSerif("To-do for hele familien", 15.sp, p.mut, italic = true, weight = FontWeight.Normal, maxLines = 1)
-            PSerif("Gjøremål", 34.sp, p.ink, maxLines = 1)
+            PSerif("To-do for hele familien", 15.sp, p.textTertiary, italic = true, weight = FontWeight.Normal, maxLines = 1)
+            PSerif("Gjøremål", 34.sp, p.textPrimary, maxLines = 1)
         }
     }
 }
@@ -87,7 +88,7 @@ internal fun taskFilter45(vm: AppViewModel, items: List<TaskItem>, today: String
 /** Pillene og personvelgeren (avatarer med ring på valgt). */
 @Composable
 internal fun TaskFilters45(vm: AppViewModel, users: List<TaskMember>) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val s = vm.p45
     Row(
         Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 2.dp),
@@ -96,18 +97,18 @@ internal fun TaskFilters45(vm: AppViewModel, users: List<TaskMember>) {
         WHEN45.forEach { (k, n) ->
             val on = s.taskWhen == k
             Box(
-                Modifier.height(36.dp).clip(CircleShape).background(if (on) p.ink else p.card).border(1.dp, if (on) p.ink else p.line, CircleShape)
+                Modifier.height(36.dp).clip(CircleShape).background(if (on) p.textPrimary else p.surfaceRaised).border(1.dp, if (on) p.textPrimary else p.line, CircleShape)
                     .clickable(role = Role.Tab, onClickLabel = n) { Haptics.select(); s.taskWhen = if (on) "alle" else k }.padding(horizontal = 14.dp),
                 contentAlignment = Alignment.Center,
-            ) { Text(n, color = if (on) p.bg else p.ink, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize, maxLines = 1) }
+            ) { Text(n, color = if (on) p.surface else p.textPrimary, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize, maxLines = 1) }
         }
         if (users.size > 1) {
             Spacer(Modifier.width(8.dp))
             users.take(6).forEach { u ->
                 val on = s.taskWho == u.id
-                val c = u.color?.let { Color(it) } ?: p.mut
+                val c = u.color?.let { Color(it) } ?: p.textTertiary
                 Box(
-                    Modifier.size(34.dp).clip(CircleShape).border(if (on) 2.dp else 0.dp, if (on) p.ink else Color.Transparent, CircleShape).padding(3.dp)
+                    Modifier.size(34.dp).clip(CircleShape).border(if (on) 2.dp else 0.dp, if (on) p.textPrimary else Color.Transparent, CircleShape).padding(3.dp)
                         .clip(CircleShape).background(c)
                         .clickable(role = Role.Button, onClickLabel = u.name) { Haptics.select(); s.taskWho = if (on) null else u.id }
                         .semantics { contentDescription = u.name },

@@ -15,6 +15,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import no.kristo.finanshub.ui.designsystem.HomelabType
+import no.kristo.finanshub.ui.designsystem.DsPalette
 
 /** Health Connect viser denne når brukeren spør hvorfor FinansHub vil lese helsedata. */
 class HealthRationaleActivity : ComponentActivity() {
@@ -23,15 +24,15 @@ class HealthRationaleActivity : ComponentActivity() {
         setContent {
             // Prompt 85: kant-til-kant er påtvunget fra Android 15 – hold innholdet unna systemfeltene, og la siden rulle så
             // «Lukk» kan nås med stor skrift.
-            Column(Modifier.fillMaxSize().background(Color(0xFFF3EFE6)).systemBarsPadding().verticalScroll(rememberScrollState()).padding(24.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            Column(Modifier.fillMaxSize().background(DsPalette.PapirLys.surface).systemBarsPadding().verticalScroll(rememberScrollState()).padding(24.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 Spacer(Modifier.height(40.dp))
-                Text("Helse i Homelab", color = Color(0xFF1B1A17), fontSize = HomelabType.title2.fontSize, fontWeight = FontWeight.Medium)
+                Text("Helse i Homelab", color = DsPalette.PapirLys.textPrimary, fontSize = HomelabType.title2.fontSize, fontWeight = FontWeight.Medium)
                 Text(
                     "FinansHub leser bare de typene du slår på under Innstillinger → App → Helse og posisjon: skritt, puls og hvilepuls, " +
                         "søvn, og aktivitet og trening (aktive kalorier og treningsøkter), for i dag og de siste 7 dagene. Et sammendrag sendes " +
                         "til din egen homelab-server hvert 15. minutt, og vises bare for familien på serveren. Ingenting sendes til andre. " +
                         "Slår du av «Del helsedata», stopper synken og serveren sletter helsedataene dine.",
-                    color = Color(0xFF1B1A17), fontSize = HomelabType.callout.fontSize,
+                    color = DsPalette.PapirLys.textPrimary, fontSize = HomelabType.callout.fontSize,
                 )
                 Button(onClick = { finish() }) { Text("Lukk") }
             }

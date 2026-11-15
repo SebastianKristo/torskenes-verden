@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.withTimeoutOrNull
 import no.kristo.finanshub.*
 import no.kristo.finanshub.ui.designsystem.HomelabType
+import no.kristo.finanshub.ui.designsystem.HomelabTheme
 
 /*
  * Prompt 41 (claude-code-vaer-rediger-ski-julfigur.md, fasit Vaer.dc.html voVals/skiVals):
@@ -80,16 +81,16 @@ internal fun VaerEditButton41(vm: AppViewModel) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun VaerEditSheet41(vm: AppViewModel) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     val l = vm.vaerLay41()
     fun set(n: VaerLay41) { vm.setVaerLay41(n); Haptics.select() }
-    ModalBottomSheet(onDismissRequest = { vm.p41.vaerEdit = false }, containerColor = p.bg, contentColor = p.ink, scrimColor = Color.Black.copy(alpha = .25f),
+    ModalBottomSheet(onDismissRequest = { vm.p41.vaerEdit = false }, containerColor = p.surface, contentColor = p.textPrimary, scrimColor = Color.Black.copy(alpha = .25f),
         dragHandle = { BottomSheetDefaults.DragHandle(width = 36.dp, height = 5.dp, color = p.line) }) {
         Column(Modifier.fillMaxWidth().heightIn(max = 560.dp).verticalScroll(rememberScrollState()).navigationBarsPadding().padding(18.dp, 0.dp, 18.dp, 24.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 PSerif("Rediger Vær", 24.sp, modifier = Modifier.weight(1f))
-                Text("Ferdig", color = p.bg, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize,
-                    modifier = Modifier.clip(CircleShape).background(p.ink).clickable(role = Role.Button) { vm.p41.vaerEdit = false }.padding(14.dp, 8.dp))
+                Text("Ferdig", color = p.surface, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize,
+                    modifier = Modifier.clip(CircleShape).background(p.textPrimary).clickable(role = Role.Button) { vm.p41.vaerEdit = false }.padding(14.dp, 8.dp))
             }
             PCard {
                 l.ord.forEachIndexed { i, k ->
@@ -98,12 +99,12 @@ internal fun VaerEditSheet41(vm: AppViewModel) {
                     val on = if (k == "ski") l.ski && k !in l.hid else k !in l.hid
                     Row(Modifier.fillMaxWidth().padding(12.dp, 9.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Column(Modifier.weight(1f)) {
-                            Text(n, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize)
-                            if (sub.isNotBlank()) Text(sub, color = p.mut, fontSize = HomelabType.footnote.fontSize, maxLines = 2)
+                            Text(n, color = p.textPrimary, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize)
+                            if (sub.isNotBlank()) Text(sub, color = p.textTertiary, fontSize = HomelabType.footnote.fontSize, maxLines = 2)
                         }
                         Arrow41("↑", i > 0) { set(l.copy(ord = l.ord.toMutableList().also { m -> m[i] = m[i - 1]; m[i - 1] = k })) }
                         Arrow41("↓", i < l.ord.size - 1) { set(l.copy(ord = l.ord.toMutableList().also { m -> m[i] = m[i + 1]; m[i + 1] = k })) }
-                        Box(Modifier.size(42.dp, 24.dp).clip(CircleShape).background(if (on) p.pos else p.line)
+                        Box(Modifier.size(42.dp, 24.dp).clip(CircleShape).background(if (on) p.success else p.line)
                             .clickable(role = Role.Switch) {
                                 if (k == "ski") set(l.copy(ski = !on, hid = l.hid - k)) else set(l.copy(hid = if (on) l.hid + k else l.hid - k))
                             }.padding(3.dp), contentAlignment = if (on) Alignment.CenterEnd else Alignment.CenterStart) {
@@ -123,9 +124,9 @@ internal fun VaerEditSheet41(vm: AppViewModel) {
 
 @Composable
 private fun Arrow41(t: String, on: Boolean, onClick: () -> Unit) {
-    val p = PaperPal.current
+    val p = HomelabTheme.colors
     Box(Modifier.size(32.dp).clip(CircleShape).border(1.dp, p.line, CircleShape).clickable(enabled = on, role = Role.Button, onClick = onClick), contentAlignment = Alignment.Center) {
-        Text(t, color = if (on) p.ink else p.line, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize)
+        Text(t, color = if (on) p.textPrimary else p.line, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize)
     }
 }
 
@@ -173,18 +174,18 @@ internal fun SkiCard41(vm: AppViewModel) {
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun BriefSki41(text: String, items: List<String>) {
-    val p = PaperPal.current
-    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(p.card).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    val p = HomelabTheme.colors
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(p.surfaceRaised).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             GlimtFig35("spire", 40.dp, "glad")
             Column(Modifier.weight(1f)) {
-                Text("Skiføre", color = p.ink, fontFamily = PaperFonts.serif, fontWeight = FontWeight.Medium, fontSize = HomelabType.title3.fontSize)
-                Text("NORDMARKA", color = p.lab, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.caption.fontSize)
+                Text("Skiføre", color = p.textPrimary, fontFamily = PaperFonts.serif, fontWeight = FontWeight.Medium, fontSize = HomelabType.title3.fontSize)
+                Text("NORDMARKA", color = p.accent, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.caption.fontSize)
             }
         }
-        Text(text, color = p.ink, fontSize = HomelabType.callout.fontSize, lineHeight = 20.sp)
+        Text(text, color = p.textPrimary, fontSize = HomelabType.callout.fontSize, lineHeight = 20.sp)
         if (items.isNotEmpty()) FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            items.take(4).forEach { c -> Text(c, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.footnote.fontSize, modifier = Modifier.clip(CircleShape).border(1.dp, p.line, CircleShape).padding(12.dp, 6.dp)) }
+            items.take(4).forEach { c -> Text(c, color = p.textPrimary, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.footnote.fontSize, modifier = Modifier.clip(CircleShape).border(1.dp, p.line, CircleShape).padding(12.dp, 6.dp)) }
         }
     }
 }
