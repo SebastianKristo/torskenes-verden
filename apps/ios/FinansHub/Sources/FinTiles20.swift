@@ -63,34 +63,3 @@ enum FinTileOrder20 {
         return out
     }
 }
-
-/// «Ferdig» og «Tilbakestill» over flisene i redigeringsmodus. Prompt 21: en egen hvit Papir-pille med skygge
-/// (kortbakgrunn), så den er lesbar over toppbildet i lyst og mørkt tema.
-struct FinTileEditBar20: View {
-    @Environment(\.paper) private var p
-    let done: () -> Void
-    let reset: () -> Void
-
-    var body: some View {
-        HStack(spacing: 8) {
-            Text("Dra for å flytte").font(PF.ui(13, .semibold)).foregroundStyle(p.ink).lineLimit(1).minimumScaleFactor(0.8)
-                .padding(.leading, 6)
-            Spacer(minLength: 4)
-            Button(action: reset) {
-                Text("Tilbakestill").font(PF.ui(13, .semibold)).foregroundStyle(p.ink)
-                    .padding(.horizontal, 12).frame(height: 32)
-                    .background(p.bg, in: Capsule())
-            }
-            .buttonStyle(.plain)
-            Button(action: done) {
-                Text("Ferdig").font(PF.ui(13, .bold)).foregroundStyle(p.bg)
-                    .padding(.horizontal, 14).frame(height: 32)
-                    .background(p.ink, in: Capsule())
-            }
-            .buttonStyle(.plain)
-        }
-        .padding(.horizontal, 6).padding(.vertical, 6)
-        .background(p.card, in: Capsule())
-        .shadow(color: .black.opacity(0.18), radius: 12, y: 6)
-    }
-}

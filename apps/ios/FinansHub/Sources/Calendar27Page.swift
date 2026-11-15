@@ -279,39 +279,6 @@ struct Cal27CalChip: View {
     }
 }
 
-/// NESTE / NÅ: neste hendelse med klokkeslett (time først) med «om 58 min» eller «25 min igjen».
-struct Cal27NextStrip: View {
-    @Environment(\.paper) private var p
-    @MainActor private var m: Cal27Model { Cal27Model.shared }
-    let now: Date
-
-    var body: some View {
-        let n: Cal27Model.Next = m.next(now)
-        Button { if let e = n.event { m.open(e) } } label: {
-            HStack(spacing: 10) {
-                RoundedRectangle(cornerRadius: 2).fill(Color(hex: n.hex)).frame(width: 4, height: 32)
-                if !n.kicker.isEmpty {
-                    Text(n.kicker).font(PF.mono(10.5)).tracking(1.2).foregroundStyle(Color(hex: "#ff9c8c"))
-                }
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(n.title).font(PF.ui(14.5, .bold)).foregroundStyle(p.bg).lineLimit(1)
-                    Text(n.sub).font(PF.ui(12)).foregroundStyle(p.bg.opacity(0.75)).lineLimit(1)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                if !n.when.isEmpty {
-                    Text(n.when).font(PF.serif(18, medium: true)).foregroundStyle(p.bg).lineLimit(1).fixedSize()
-                }
-            }
-            .padding(.horizontal, 14).padding(.vertical, 6)
-            .frame(minHeight: 46)
-            .background(p.ink, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .padding(.horizontal, 12).padding(.bottom, 8)
-    }
-}
-
 /* ---------- Fanelinjen nederst ---------- */
 
 struct Cal27BottomBar: View {
