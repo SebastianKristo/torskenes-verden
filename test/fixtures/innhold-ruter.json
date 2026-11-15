@@ -1,0 +1,3392 @@
+{
+ "GET /api/skjold": {
+  "status": "200 200 200 401",
+  "A": {
+   "cabinets": [
+    {
+     "cols": "",
+     "corners": "",
+     "counts": "{}",
+     "created": "",
+     "id": "",
+     "kind": "",
+     "leds": "{}",
+     "name": "",
+     "notes": "",
+     "photoUrl": "",
+     "rows": "",
+     "sort": "",
+     "thumbUrl": "",
+     "updated": ""
+    }
+   ],
+   "kinds": [
+    ""
+   ],
+   "low": "",
+   "parts": "",
+   "units": [
+    ""
+   ],
+   "unplaced": ""
+  },
+  "I": {
+   "cabinets": [
+    {
+     "cols": "",
+     "corners": "",
+     "counts": "{}",
+     "created": "",
+     "id": "",
+     "kind": "",
+     "leds": "{}",
+     "name": "",
+     "notes": "",
+     "photoUrl": "",
+     "rows": "",
+     "sort": "",
+     "thumbUrl": "",
+     "updated": ""
+    }
+   ],
+   "kinds": [
+    ""
+   ],
+   "low": "",
+   "parts": "",
+   "units": [
+    ""
+   ],
+   "unplaced": ""
+  }
+ },
+ "GET /api/skjold/ai/settings": {
+  "status": "200 200 200 401",
+  "A": {
+   "autoSuggestOnPhoto": "",
+   "searxng": "",
+   "webImages": ""
+  },
+  "I": {
+   "autoSuggestOnPhoto": "",
+   "searxng": "",
+   "webImages": ""
+  }
+ },
+ "GET /api/skjold/cabinets": {
+  "status": "200 200 200 401",
+  "A": [
+   {
+    "cols": "",
+    "corners": "",
+    "counts": {
+     "drawers": "",
+     "parts": "",
+     "usedDrawers": ""
+    },
+    "created": "",
+    "id": "",
+    "kind": "",
+    "leds": {
+     "configured": "",
+     "enabled": ""
+    },
+    "name": "",
+    "notes": "",
+    "photoUrl": "",
+    "rows": "",
+    "sort": "",
+    "thumbUrl": "",
+    "updated": ""
+   }
+  ],
+  "I": [
+   {
+    "cols": "",
+    "corners": "",
+    "counts": {
+     "drawers": "",
+     "parts": "",
+     "usedDrawers": ""
+    },
+    "created": "",
+    "id": "",
+    "kind": "",
+    "leds": {
+     "configured": "",
+     "enabled": ""
+    },
+    "name": "",
+    "notes": "",
+    "photoUrl": "",
+    "rows": "",
+    "sort": "",
+    "thumbUrl": "",
+    "updated": ""
+   }
+  ]
+ },
+ "GET /api/skjold/categories": {
+  "status": "200 200 200 401",
+  "A": {
+   "items": [
+    {
+     "count": "",
+     "low": "",
+     "name": ""
+    }
+   ],
+   "low": "",
+   "total": "",
+   "uncategorized": ""
+  },
+  "I": {
+   "items": [
+    {
+     "count": "",
+     "low": "",
+     "name": ""
+    }
+   ],
+   "low": "",
+   "total": "",
+   "uncategorized": ""
+  }
+ },
+ "GET /api/skjold/export.csv": {
+  "status": "200 200 200 401",
+  "A": "text/csv",
+  "I": "text/csv"
+ },
+ "GET /api/skjold/free": {
+  "status": "200 200 200 401",
+  "A": {
+   "cabinets": [
+    {
+     "cols": "",
+     "free": "[]",
+     "freeCount": "",
+     "id": "",
+     "name": "",
+     "rows": ""
+    }
+   ],
+   "first": {
+    "cabinet": "",
+    "cabinetId": "",
+    "col": "",
+    "row": "",
+    "short": "",
+    "text": ""
+   }
+  },
+  "I": {
+   "cabinets": [
+    {
+     "cols": "",
+     "free": "[]",
+     "freeCount": "",
+     "id": "",
+     "name": "",
+     "rows": ""
+    }
+   ],
+   "first": {
+    "cabinet": "",
+    "cabinetId": "",
+    "col": "",
+    "row": "",
+    "short": "",
+    "text": ""
+   }
+  }
+ },
+ "GET /api/skjold/history": {
+  "status": "200 200 200 401",
+  "A": {
+   "items": [
+    {
+     "action": "",
+     "at": "",
+     "from": "",
+     "id": "",
+     "name": "",
+     "partId": "",
+     "to": "{}"
+    }
+   ]
+  },
+  "I": {
+   "items": [
+    {
+     "action": "",
+     "at": "",
+     "from": "",
+     "id": "",
+     "name": "",
+     "partId": "",
+     "to": "{}"
+    }
+   ]
+  }
+ },
+ "GET /api/skjold/labels": {
+  "status": "200 200 200 401",
+  "A": "text/html",
+  "I": "text/html"
+ },
+ "GET /api/skjold/leds/settings": {
+  "status": "200 200 200 401",
+  "A": {
+   "autoLocateGlimt": "",
+   "autoLocateOpen": ""
+  },
+  "I": {
+   "autoLocateGlimt": "",
+   "autoLocateOpen": ""
+  }
+ },
+ "GET /api/skjold/leds/status": {
+  "status": "200 200 200 401",
+  "A": {
+   "code": "",
+   "configured": "",
+   "error": "",
+   "items": [],
+   "ok": ""
+  },
+  "I": {
+   "code": "",
+   "configured": "",
+   "error": "",
+   "items": [],
+   "ok": ""
+  }
+ },
+ "GET /api/skjold/parts": {
+  "status": "200 200 200 401",
+  "A": {
+   "items": [
+    {
+     "cabinet_id": "",
+     "category": "",
+     "col": "",
+     "compartment": "",
+     "created": "",
+     "description": "",
+     "id": "",
+     "location": "{}",
+     "low": "",
+     "minQty": "",
+     "min_qty": "",
+     "name": "",
+     "photos": "[]",
+     "price": "",
+     "qty": "",
+     "row": "",
+     "specs": "{}",
+     "supplier": "",
+     "tags": "[]",
+     "thumbUrl": "",
+     "unit": "",
+     "updated": "",
+     "url": ""
+    }
+   ],
+   "limit": "",
+   "offset": "",
+   "total": ""
+  },
+  "I": {
+   "items": [
+    {
+     "cabinet_id": "",
+     "category": "",
+     "col": "",
+     "compartment": "",
+     "created": "",
+     "description": "",
+     "id": "",
+     "location": "{}",
+     "low": "",
+     "minQty": "",
+     "min_qty": "",
+     "name": "",
+     "photos": "[]",
+     "price": "",
+     "qty": "",
+     "row": "",
+     "specs": "{}",
+     "supplier": "",
+     "tags": "[]",
+     "thumbUrl": "",
+     "unit": "",
+     "updated": "",
+     "url": ""
+    }
+   ],
+   "limit": "",
+   "offset": "",
+   "total": ""
+  }
+ },
+ "GET /api/skjold/picklist": {
+  "status": "200 200 200 401",
+  "A": {
+   "items": [],
+   "updatedAt": ""
+  },
+  "I": {
+   "items": [],
+   "updatedAt": ""
+  }
+ },
+ "GET /api/skjold/presets": {
+  "status": "200 200 200 401",
+  "A": [
+   {
+    "description": "",
+    "id": "",
+    "name": "",
+    "options": {
+     "etasjer": "[]"
+    }
+   }
+  ],
+  "I": [
+   {
+    "description": "",
+    "id": "",
+    "name": "",
+    "options": {
+     "etasjer": "[]"
+    }
+   }
+  ]
+ },
+ "GET /api/skjold/projects": {
+  "status": "200 200 200 401",
+  "A": [],
+  "I": []
+ },
+ "GET /api/skjold/suggest?q=motstand": {
+  "status": "200 200 200 401",
+  "A": {
+   "items": [
+    {
+     "id": "",
+     "kind": "",
+     "qty": "",
+     "short": "",
+     "sub": "",
+     "text": "",
+     "thumbUrl": "",
+     "unit": ""
+    }
+   ],
+   "q": ""
+  },
+  "I": {
+   "items": [
+    {
+     "id": "",
+     "kind": "",
+     "qty": "",
+     "short": "",
+     "sub": "",
+     "text": "",
+     "thumbUrl": "",
+     "unit": ""
+    }
+   ],
+   "q": ""
+  }
+ },
+ "GET /api/skjold/trash": {
+  "status": "200 200 200 401",
+  "A": {
+   "items": []
+  },
+  "I": {
+   "items": []
+  }
+ },
+ "GET /api/skjold/parts?q=M3": {
+  "status": "200 200 200 401",
+  "A": {
+   "items": [
+    {
+     "cabinet_id": "",
+     "category": "",
+     "col": "",
+     "compartment": "",
+     "created": "",
+     "description": "",
+     "id": "",
+     "location": "{}",
+     "low": "",
+     "minQty": "",
+     "min_qty": "",
+     "name": "",
+     "photos": "[]",
+     "price": "",
+     "qty": "",
+     "row": "",
+     "specs": "{}",
+     "supplier": "",
+     "tags": "[]",
+     "thumbUrl": "",
+     "unit": "",
+     "updated": "",
+     "url": ""
+    }
+   ],
+   "limit": "",
+   "offset": "",
+   "total": ""
+  },
+  "I": {
+   "items": [
+    {
+     "cabinet_id": "",
+     "category": "",
+     "col": "",
+     "compartment": "",
+     "created": "",
+     "description": "",
+     "id": "",
+     "location": "{}",
+     "low": "",
+     "minQty": "",
+     "min_qty": "",
+     "name": "",
+     "photos": "[]",
+     "price": "",
+     "qty": "",
+     "row": "",
+     "specs": "{}",
+     "supplier": "",
+     "tags": "[]",
+     "thumbUrl": "",
+     "unit": "",
+     "updated": "",
+     "url": ""
+    }
+   ],
+   "limit": "",
+   "offset": "",
+   "total": ""
+  }
+ },
+ "GET /api/space/tle": {
+  "status": "200 200 200 401",
+  "A": {
+   "fetched": "",
+   "fetchedAt": "",
+   "group": "",
+   "mock": "",
+   "text": ""
+  },
+  "I": {
+   "fetched": "",
+   "fetchedAt": "",
+   "group": "",
+   "mock": "",
+   "text": ""
+  }
+ },
+ "GET /api/space/apod": {
+  "status": "502 502 401 401",
+  "A": {
+   "code": "",
+   "error": ""
+  },
+  "I": {
+   "code": "",
+   "error": ""
+  }
+ },
+ "GET /api/space/apod?days=7": {
+  "status": "200 200 200 401",
+  "A": {
+   "items": [
+    {
+     "copyright": "",
+     "date": "",
+     "explanation": "",
+     "media_type": "",
+     "thumbnail_url": "",
+     "title": "",
+     "url": ""
+    }
+   ],
+   "mock": "",
+   "source": ""
+  },
+  "I": {
+   "items": [
+    {
+     "copyright": "",
+     "date": "",
+     "explanation": "",
+     "media_type": "",
+     "thumbnail_url": "",
+     "title": "",
+     "url": ""
+    }
+   ],
+   "mock": "",
+   "source": ""
+  }
+ },
+ "GET /api/space/mars": {
+  "status": "200 200 200 401",
+  "A": {
+   "checkedAt": "",
+   "mock": "",
+   "rovers": [
+    {
+     "cameras": "[]",
+     "count": "",
+     "earthDate": "",
+     "key": "",
+     "label": "",
+     "name": "",
+     "photos": "[]",
+     "sol": "",
+     "status": ""
+    }
+   ]
+  },
+  "I": {
+   "checkedAt": "",
+   "mock": "",
+   "rovers": [
+    {
+     "cameras": "[]",
+     "count": "",
+     "earthDate": "",
+     "key": "",
+     "label": "",
+     "name": "",
+     "photos": "[]",
+     "sol": "",
+     "status": ""
+    }
+   ]
+  }
+ },
+ "GET /api/rom/apod": {
+  "status": "200 200 200 401",
+  "A": {
+   "cachedAt": "",
+   "days": [
+    {
+     "copyright": "",
+     "date": "",
+     "explanation": "",
+     "hdurl": "",
+     "mediaType": "",
+     "thumb": "",
+     "title": "",
+     "url": ""
+    }
+   ],
+   "mock": "",
+   "source": "",
+   "today": {
+    "copyright": "",
+    "date": "",
+    "explanation": "",
+    "hdurl": "",
+    "mediaType": "",
+    "thumb": "",
+    "title": "",
+    "url": ""
+   }
+  },
+  "I": {
+   "cachedAt": "",
+   "days": [
+    {
+     "copyright": "",
+     "date": "",
+     "explanation": "",
+     "hdurl": "",
+     "mediaType": "",
+     "thumb": "",
+     "title": "",
+     "url": ""
+    }
+   ],
+   "mock": "",
+   "source": "",
+   "today": {
+    "copyright": "",
+    "date": "",
+    "explanation": "",
+    "hdurl": "",
+    "mediaType": "",
+    "thumb": "",
+    "title": "",
+    "url": ""
+   }
+  }
+ },
+ "GET /api/rom/mars": {
+  "status": "200 200 200 401",
+  "A": {
+   "checkedAt": "",
+   "mock": "",
+   "rovers": [
+    {
+     "archive": "",
+     "cameras": "[]",
+     "earthDate": "",
+     "id": "",
+     "label": "",
+     "name": "",
+     "newPhotos": "",
+     "photos": "[]",
+     "sol": "",
+     "source": "",
+     "status": ""
+    }
+   ]
+  },
+  "I": {
+   "checkedAt": "",
+   "mock": "",
+   "rovers": [
+    {
+     "archive": "",
+     "cameras": "[]",
+     "earthDate": "",
+     "id": "",
+     "label": "",
+     "name": "",
+     "newPhotos": "",
+     "photos": "[]",
+     "sol": "",
+     "source": "",
+     "status": ""
+    }
+   ]
+  }
+ },
+ "GET /api/rom/satellites": {
+  "status": "200 200 200 401",
+  "A": {
+   "categories": [
+    {
+     "color": "",
+     "count": "",
+     "id": "",
+     "name": ""
+    }
+   ],
+   "city": {
+    "id": "",
+    "lat": "",
+    "lon": "",
+    "name": ""
+   },
+   "count": "",
+   "fetchedAt": "",
+   "group": "",
+   "iss": {
+    "altKm": "",
+    "azimuthDeg": "",
+    "dir": "",
+    "elevationDeg": "",
+    "lat": "",
+    "lon": "",
+    "name": "",
+    "speedKmS": "",
+    "track": [
+     "…"
+    ],
+    "visible": ""
+   },
+   "mock": "",
+   "now": "",
+   "overhead": [
+    {
+     "altKm": "",
+     "azimuthDeg": "",
+     "cat": "",
+     "dir": "",
+     "elevationDeg": "",
+     "name": ""
+    }
+   ]
+  },
+  "I": {
+   "categories": [
+    {
+     "color": "",
+     "count": "",
+     "id": "",
+     "name": ""
+    }
+   ],
+   "city": {
+    "id": "",
+    "lat": "",
+    "lon": "",
+    "name": ""
+   },
+   "count": "",
+   "fetchedAt": "",
+   "group": "",
+   "iss": {
+    "altKm": "",
+    "azimuthDeg": "",
+    "dir": "",
+    "elevationDeg": "",
+    "lat": "",
+    "lon": "",
+    "name": "",
+    "speedKmS": "",
+    "track": [
+     "…"
+    ],
+    "visible": ""
+   },
+   "mock": "",
+   "now": "",
+   "overhead": [
+    {
+     "altKm": "",
+     "azimuthDeg": "",
+     "cat": "",
+     "dir": "",
+     "elevationDeg": "",
+     "name": ""
+    }
+   ]
+  }
+ },
+ "GET /api/rom/settings": {
+  "status": "200 200 200 401",
+  "A": {
+   "marsNotify": ""
+  },
+  "I": {
+   "marsNotify": ""
+  }
+ },
+ "GET /api/rom/tle": {
+  "status": "200 200 200 401",
+  "A": "text/plain",
+  "I": "text/plain"
+ },
+ "GET /api/space/gallery/hubble": {
+  "status": "502 502 401 401",
+  "A": {
+   "code": "",
+   "error": ""
+  },
+  "I": {
+   "code": "",
+   "error": ""
+  }
+ },
+ "GET /api/study/documents": {
+  "status": "200 200 200 401",
+  "A": {
+   "items": [],
+   "kpi": {
+    "count": "",
+    "snitt": "",
+    "snittVgs": "",
+    "sp": ""
+   }
+  },
+  "I": {
+   "items": [],
+   "kpi": {
+    "count": "",
+    "snitt": "",
+    "snittVgs": "",
+    "sp": ""
+   }
+  }
+ },
+ "GET /api/study/overview": {
+  "status": "200 200 200 401",
+  "A": {
+   "date": "",
+   "deadlines": [],
+   "documents": [],
+   "grades": {
+    "avg": "",
+    "avgText": "",
+    "higher": "",
+    "items": [
+     "…"
+    ]
+   },
+   "heading": "",
+   "next": {
+    "label": "",
+    "room": "",
+    "start": "",
+    "startsIn": "",
+    "title": ""
+   },
+   "now": "",
+   "tip": "",
+   "today": {
+    "blocks": [],
+    "end": "",
+    "nowMin": "",
+    "start": ""
+   },
+   "week": "",
+   "weekday": ""
+  },
+  "I": {
+   "date": "",
+   "deadlines": [],
+   "documents": [],
+   "grades": {
+    "avg": "",
+    "avgText": "",
+    "higher": "",
+    "items": []
+   },
+   "heading": "",
+   "next": "",
+   "now": "",
+   "tip": "",
+   "today": {
+    "blocks": [],
+    "end": "",
+    "nowMin": "",
+    "start": ""
+   },
+   "week": "",
+   "weekday": ""
+  }
+ },
+ "GET /api/studie/docs": {
+  "status": "200 200 200 401",
+  "A": {
+   "items": [],
+   "kpi": {
+    "count": "",
+    "snitt": "",
+    "snittVgs": "",
+    "sp": ""
+   }
+  },
+  "I": {
+   "items": [],
+   "kpi": {
+    "count": "",
+    "snitt": "",
+    "snittVgs": "",
+    "sp": ""
+   }
+  }
+ },
+ "GET /api/study/documents/999999/file": {
+  "status": "404 404 404 401",
+  "A": {
+   "code": "",
+   "error": ""
+  },
+  "I": {
+   "code": "",
+   "error": ""
+  }
+ },
+ "GET /api/rss": {
+  "status": "200 200 200 401",
+  "A": {
+   "categories": [
+    {
+     "id": "",
+     "name": ""
+    }
+   ],
+   "categoryOptions": [
+    {
+     "id": "",
+     "name": ""
+    }
+   ],
+   "customCategories": [],
+   "digest": "",
+   "feedHint": "",
+   "feeds": [
+    {
+     "category": "",
+     "color": "",
+     "count": "",
+     "domain": "",
+     "enabled": "",
+     "favErr": "",
+     "favicon": "",
+     "id": "",
+     "lastError": "",
+     "lastFetch": "",
+     "name": "",
+     "url": ""
+    }
+   ],
+   "iconDefaults": {
+    "kultur": "",
+    "norge": "",
+    "okonomi": "",
+    "siste": "",
+    "sport": "",
+    "teknologi": "",
+    "verden": ""
+   },
+   "interests": [],
+   "items": [
+    {
+     "ai": "",
+     "category": "",
+     "color": "",
+     "excerpt": "",
+     "feed": "",
+     "feedId": "",
+     "id": "",
+     "image": "",
+     "published": "",
+     "readMin": "",
+     "title": "",
+     "topics": "[]",
+     "url": ""
+    }
+   ],
+   "settings": {
+    "aiCategorize": "",
+    "aiSummary": "",
+    "catSummary": "",
+    "ic": {},
+    "icOn": "",
+    "icSrc": {}
+   },
+   "tabs": [
+    {
+     "glyph": "",
+     "icon": "",
+     "id": "",
+     "kind": "",
+     "name": ""
+    }
+   ],
+   "updatedAt": ""
+  },
+  "I": {
+   "categories": [
+    {
+     "id": "",
+     "name": ""
+    }
+   ],
+   "categoryOptions": [
+    {
+     "id": "",
+     "name": ""
+    }
+   ],
+   "customCategories": [],
+   "digest": "",
+   "feedHint": "",
+   "feeds": [
+    {
+     "category": "",
+     "color": "",
+     "count": "",
+     "domain": "",
+     "enabled": "",
+     "favErr": "",
+     "favicon": "",
+     "id": "",
+     "lastError": "",
+     "lastFetch": "",
+     "name": "",
+     "url": ""
+    }
+   ],
+   "iconDefaults": {
+    "kultur": "",
+    "norge": "",
+    "okonomi": "",
+    "siste": "",
+    "sport": "",
+    "teknologi": "",
+    "verden": ""
+   },
+   "interests": [],
+   "items": [
+    {
+     "ai": "",
+     "category": "",
+     "color": "",
+     "excerpt": "",
+     "feed": "",
+     "feedId": "",
+     "id": "",
+     "image": "",
+     "published": "",
+     "readMin": "",
+     "title": "",
+     "topics": "[]",
+     "url": ""
+    }
+   ],
+   "settings": {
+    "aiCategorize": "",
+    "aiSummary": "",
+    "catSummary": "",
+    "ic": {},
+    "icOn": "",
+    "icSrc": {}
+   },
+   "tabs": [
+    {
+     "glyph": "",
+     "icon": "",
+     "id": "",
+     "kind": "",
+     "name": ""
+    }
+   ],
+   "updatedAt": ""
+  }
+ },
+ "GET /api/rss/categories": {
+  "status": "200 200 200 401",
+  "A": {
+   "custom": [],
+   "forYou": {
+    "glyph": "",
+    "icon": "",
+    "id": "",
+    "name": ""
+   },
+   "hint": "",
+   "interests": [],
+   "options": [
+    {
+     "id": "",
+     "name": ""
+    }
+   ],
+   "standard": [
+    {
+     "id": "",
+     "name": ""
+    }
+   ],
+   "tabs": [
+    {
+     "glyph": "",
+     "icon": "",
+     "id": "",
+     "kind": "",
+     "name": ""
+    }
+   ]
+  },
+  "I": {
+   "custom": [],
+   "forYou": {
+    "glyph": "",
+    "icon": "",
+    "id": "",
+    "name": ""
+   },
+   "hint": "",
+   "interests": [],
+   "options": [
+    {
+     "id": "",
+     "name": ""
+    }
+   ],
+   "standard": [
+    {
+     "id": "",
+     "name": ""
+    }
+   ],
+   "tabs": [
+    {
+     "glyph": "",
+     "icon": "",
+     "id": "",
+     "kind": "",
+     "name": ""
+    }
+   ]
+  }
+ },
+ "GET /api/rss/foryou": {
+  "status": "200 200 200 401",
+  "A": {
+   "empty": "",
+   "interests": [],
+   "items": [],
+   "ranked": "",
+   "suggestions": []
+  },
+  "I": {
+   "empty": "",
+   "interests": [],
+   "items": [],
+   "ranked": "",
+   "suggestions": []
+  }
+ },
+ "GET /api/rss/interests": {
+  "status": "200 200 200 401",
+  "A": {
+   "interests": [],
+   "suggestions": []
+  },
+  "I": {
+   "interests": [],
+   "suggestions": []
+  }
+ },
+ "GET /api/rss/settings": {
+  "status": "200 200 200 401",
+  "A": {
+   "categories": {
+    "custom": [],
+    "forYou": {
+     "glyph": "",
+     "icon": "",
+     "id": "",
+     "name": ""
+    },
+    "hint": "",
+    "interests": [],
+    "options": [
+     "…"
+    ],
+    "standard": [
+     "…"
+    ],
+    "tabs": [
+     "…"
+    ]
+   },
+   "deepLink": {
+    "app": "",
+    "web": ""
+   },
+   "feeds": [
+    {
+     "category": "",
+     "color": "",
+     "count": "",
+     "domain": "",
+     "enabled": "",
+     "favErr": "",
+     "favicon": "",
+     "id": "",
+     "lastError": "",
+     "lastFetch": "",
+     "name": "",
+     "url": ""
+    }
+   ],
+   "interests": [],
+   "settings": {
+    "aiCategorize": "",
+    "aiSummary": "",
+    "catSummary": "",
+    "ic": {},
+    "icOn": "",
+    "icSrc": {}
+   }
+  },
+  "I": {
+   "categories": {
+    "custom": [],
+    "forYou": {
+     "glyph": "",
+     "icon": "",
+     "id": "",
+     "name": ""
+    },
+    "hint": "",
+    "interests": [],
+    "options": [
+     "…"
+    ],
+    "standard": [
+     "…"
+    ],
+    "tabs": [
+     "…"
+    ]
+   },
+   "deepLink": {
+    "app": "",
+    "web": ""
+   },
+   "feeds": [
+    {
+     "category": "",
+     "color": "",
+     "count": "",
+     "domain": "",
+     "enabled": "",
+     "favErr": "",
+     "favicon": "",
+     "id": "",
+     "lastError": "",
+     "lastFetch": "",
+     "name": "",
+     "url": ""
+    }
+   ],
+   "interests": [],
+   "settings": {
+    "aiCategorize": "",
+    "aiSummary": "",
+    "catSummary": "",
+    "ic": {},
+    "icOn": "",
+    "icSrc": {}
+   }
+  }
+ },
+ "GET /api/rss/summary?cat=siste": {
+  "status": "200 200 200 401",
+  "A": {
+   "cat": "",
+   "generating": "",
+   "hidden": "",
+   "pending": "",
+   "skeleton": ""
+  },
+  "I": {
+   "cat": "",
+   "generating": "",
+   "hidden": "",
+   "pending": "",
+   "skeleton": ""
+  }
+ },
+ "GET /api/rss/favicon?domain=nrk.no": {
+  "status": "404 404 404 404",
+  "A": {
+   "code": "",
+   "error": ""
+  },
+  "I": {
+   "code": "",
+   "error": ""
+  }
+ },
+ "GET /api/rss/article?url=https%3A%2F%2Fukjent.example%2Fa": {
+  "status": "404 404 404 401",
+  "A": {
+   "code": "",
+   "error": ""
+  },
+  "I": {
+   "code": "",
+   "error": ""
+  }
+ },
+ "GET /api/news": {
+  "status": "200 200 401 401",
+  "A": {
+   "items": [
+    {
+     "color": "",
+     "date": "",
+     "src": "",
+     "title": "",
+     "url": ""
+    }
+   ]
+  },
+  "I": {
+   "items": [
+    {
+     "color": "",
+     "date": "",
+     "src": "",
+     "title": "",
+     "url": ""
+    }
+   ]
+  }
+ },
+ "GET /api/news/glimt/prefs": {
+  "status": "200 200 200 401",
+  "A": {
+   "length": "",
+   "period": "",
+   "sources": [],
+   "topics": []
+  },
+  "I": {
+   "length": "",
+   "period": "",
+   "sources": [],
+   "topics": []
+  }
+ },
+ "GET /api/news/glimt/sources": {
+  "status": "200 200 200 401",
+  "A": {
+   "prefs": {
+    "length": "",
+    "period": "",
+    "sources": [],
+    "topics": []
+   },
+   "sources": [
+    {
+     "count": "",
+     "id": "",
+     "name": "",
+     "on": ""
+    }
+   ],
+   "topics": [
+    {
+     "count": "",
+     "id": "",
+     "name": "",
+     "on": ""
+    }
+   ]
+  },
+  "I": {
+   "prefs": {
+    "length": "",
+    "period": "",
+    "sources": [],
+    "topics": []
+   },
+   "sources": [
+    {
+     "count": "",
+     "id": "",
+     "name": "",
+     "on": ""
+    }
+   ],
+   "topics": [
+    {
+     "count": "",
+     "id": "",
+     "name": "",
+     "on": ""
+    }
+   ]
+  }
+ },
+ "GET /api/news/saved": {
+  "status": "200 200 200 401",
+  "A": {
+   "count": "",
+   "items": []
+  },
+  "I": {
+   "count": "",
+   "items": []
+  }
+ },
+ "GET /api/news/saved/finnesikke": {
+  "status": "404 404 404 401",
+  "A": {
+   "code": "",
+   "error": ""
+  },
+  "I": {
+   "code": "",
+   "error": ""
+  }
+ },
+ "GET /api/ruter": {
+  "status": "200 200 401 401",
+  "A": {
+   "trips": [
+    {
+     "deps": "[]",
+     "from": "",
+     "to": "",
+     "url": ""
+    }
+   ],
+   "updated": ""
+  },
+  "I": {
+   "trips": [
+    {
+     "deps": "[]",
+     "from": "",
+     "to": "",
+     "url": ""
+    }
+   ],
+   "updated": ""
+  }
+ },
+ "GET /api/ruter/my-routes": {
+  "status": "200 200 200 401",
+  "A": {
+   "homeCard": "",
+   "preset": "",
+   "routes": [
+    {
+     "allow_lines": "[]",
+     "dir": "",
+     "from": "",
+     "id": "",
+     "legs": "[]",
+     "name": "",
+     "prefer_lines": "[]",
+     "to": "",
+     "via": ""
+    }
+   ]
+  },
+  "I": {
+   "homeCard": "",
+   "preset": "",
+   "routes": []
+  }
+ },
+ "GET /api/ruter/my-trip": {
+  "status": "200 200 200 401",
+  "A": {
+   "dir": "",
+   "from": "",
+   "homeCard": "",
+   "label": "",
+   "options": [
+    {
+     "arr": "",
+     "arrLabel": "",
+     "badges": "[]",
+     "dep": "",
+     "depLabel": "",
+     "id": "",
+     "legs": "[]",
+     "minutes": "",
+     "preferred": "",
+     "strip": "",
+     "via": ""
+    }
+   ],
+   "recoCount": "",
+   "recommended": [
+    {
+     "arr": "",
+     "arrLabel": "",
+     "badges": "[]",
+     "dep": "",
+     "depLabel": "",
+     "id": "",
+     "legs": "[]",
+     "minutes": "",
+     "preferred": "",
+     "strip": "",
+     "via": ""
+    }
+   ],
+   "source": "",
+   "to": "",
+   "updatedAt": ""
+  },
+  "I": {
+   "dir": "",
+   "empty": "",
+   "from": "",
+   "homeCard": "",
+   "label": "",
+   "options": [],
+   "recoCount": "",
+   "recommended": [],
+   "text": "",
+   "to": "",
+   "updatedAt": ""
+  }
+ },
+ "GET /api/ruter/school-zones": {
+  "status": "200 200 200 401",
+  "A": {
+   "place": {
+    "id": "",
+    "mine": "",
+    "name": ""
+   },
+   "source": "",
+   "zones": [
+    {
+     "id": "",
+     "label": "",
+     "lat": "",
+     "lon": "",
+     "name": "",
+     "radius_m": ""
+    }
+   ]
+  },
+  "I": {
+   "place": "",
+   "source": "",
+   "zones": []
+  }
+ },
+ "GET /api/ruter/school50": {
+  "status": "200 200 200 401",
+  "A": {
+   "areas": [
+    {
+     "id": "",
+     "label": "",
+     "lat": "",
+     "lon": "",
+     "name": "",
+     "radius_m": ""
+    }
+   ],
+   "chips": "",
+   "edit": {
+    "label": "",
+    "placeId": "",
+    "tab": "",
+    "url": ""
+   },
+   "empty": "",
+   "place": {
+    "color": "",
+    "icon": "",
+    "id": "",
+    "mine": "",
+    "name": "",
+    "shared": ""
+   },
+   "readOnly": "",
+   "title": ""
+  },
+  "I": {
+   "areas": [],
+   "chips": "",
+   "edit": "",
+   "empty": {
+    "action": "",
+    "newType": "",
+    "tab": "",
+    "text": "",
+    "url": ""
+   },
+   "place": "",
+   "readOnly": "",
+   "title": ""
+  }
+ },
+ "GET /api/ruter/journey": {
+  "status": "200 200 200 401",
+  "A": {
+   "journey": {
+    "active": "",
+    "expiresAt": "",
+    "hidden": "",
+    "homeCard": "",
+    "leftSchoolAt": "",
+    "title": ""
+   }
+  },
+  "I": {
+   "journey": {
+    "active": "",
+    "expiresAt": "",
+    "hidden": "",
+    "homeCard": "",
+    "leftSchoolAt": "",
+    "title": ""
+   }
+  }
+ },
+ "GET /api/ruter/settings": {
+  "status": "200 200 200 401",
+  "A": {
+   "homeCard": "",
+   "push": "",
+   "recoCount": ""
+  },
+  "I": {
+   "homeCard": "",
+   "push": "",
+   "recoCount": ""
+  }
+ },
+ "GET /api/bible/today": {
+  "status": "200 403 403 401",
+  "A": {
+   "context": {
+    "after": [
+     "…"
+    ],
+    "before": []
+   },
+   "count": "",
+   "date": "",
+   "dateLabel": "",
+   "enabled": "",
+   "id": "",
+   "index": "",
+   "kicker": "",
+   "period": "",
+   "read": "",
+   "ref": "",
+   "saved": "",
+   "short": "",
+   "text": "",
+   "translation": "",
+   "translationName": "",
+   "url": ""
+  },
+  "I": {
+   "code": "",
+   "enabled": "",
+   "error": ""
+  }
+ },
+ "GET /api/bible/next": {
+  "status": "200 403 403 401",
+  "A": {
+   "context": {
+    "after": [
+     "…"
+    ],
+    "before": [
+     "…"
+    ]
+   },
+   "count": "",
+   "date": "",
+   "dateLabel": "",
+   "enabled": "",
+   "id": "",
+   "index": "",
+   "kicker": "",
+   "offset": "",
+   "period": "",
+   "read": "",
+   "ref": "",
+   "saved": "",
+   "short": "",
+   "text": "",
+   "translation": "",
+   "translationName": "",
+   "url": ""
+  },
+  "I": {
+   "code": "",
+   "enabled": "",
+   "error": ""
+  }
+ },
+ "GET /api/bible/plan": {
+  "status": "200 403 403 401",
+  "A": {
+   "day": "",
+   "dayLabel": "",
+   "doneToday": "",
+   "finished": "",
+   "id": "",
+   "name": "",
+   "options": [
+    {
+     "id": "",
+     "name": "",
+     "total": ""
+    }
+   ],
+   "pct": "",
+   "today": {
+    "label": "",
+    "url": ""
+   },
+   "total": ""
+  },
+  "I": {
+   "code": "",
+   "enabled": "",
+   "error": ""
+  }
+ },
+ "GET /api/bible/saved": {
+  "status": "200 403 403 401",
+  "A": {
+   "saved": []
+  },
+  "I": {
+   "code": "",
+   "enabled": "",
+   "error": ""
+  }
+ },
+ "GET /api/bible/settings": {
+  "status": "200 403 403 401",
+  "A": {
+   "allowed": "",
+   "enabled": "",
+   "evening": "",
+   "morning": "",
+   "notify": "",
+   "translation": "",
+   "translations": [
+    ""
+   ]
+  },
+  "I": {
+   "allowed": "",
+   "code": "",
+   "enabled": "",
+   "error": ""
+  }
+ },
+ "GET /api/bible/stats": {
+  "status": "200 403 403 401",
+  "A": {
+   "best": "",
+   "hint": "",
+   "plan": {
+    "day": "",
+    "dayLabel": "",
+    "doneToday": "",
+    "finished": "",
+    "id": "",
+    "name": "",
+    "options": [
+     "…"
+    ],
+    "pct": "",
+    "today": {
+     "label": "",
+     "url": ""
+    },
+    "total": ""
+   },
+   "readDays": [
+    ""
+   ],
+   "readToday": "",
+   "reminder": "",
+   "saved": [],
+   "streak": "",
+   "totals": {
+    "days": "",
+    "planPct": "",
+    "saved": ""
+   },
+   "week": [
+    {
+     "date": "",
+     "future": "",
+     "read": "",
+     "today": "",
+     "wd": ""
+    }
+   ]
+  },
+  "I": {
+   "code": "",
+   "enabled": "",
+   "error": ""
+  }
+ },
+ "GET /api/bible/users": {
+  "status": "200 403 403 401",
+  "A": {
+   "users": [
+    {
+     "allowed": "",
+     "enabled": "",
+     "id": "",
+     "name": "",
+     "username": ""
+    }
+   ]
+  },
+  "I": {
+   "code": "",
+   "error": ""
+  }
+ },
+ "GET /api/domains/summary": {
+  "status": "200 403 403 401",
+  "A": {
+   "domains": "",
+   "down": "",
+   "expiringSoon": "",
+   "failed": "",
+   "mock": "",
+   "status": "",
+   "up": "",
+   "updatedAt": "",
+   "visitsToday": ""
+  },
+  "I": {
+   "code": "",
+   "error": "",
+   "restricted": ""
+  }
+ },
+ "GET /api/domener/sammendrag": {
+  "status": "200 403 403 401",
+  "A": {
+   "domains": "",
+   "down": "",
+   "expiringSoon": "",
+   "failed": "",
+   "mock": "",
+   "status": "",
+   "up": "",
+   "updatedAt": "",
+   "visitsToday": ""
+  },
+  "I": {
+   "code": "",
+   "error": "",
+   "restricted": ""
+  }
+ },
+ "GET /api/domains/overview": {
+  "status": "200 403 403 401",
+  "A": {
+   "browsers": [
+    {
+     "name": "",
+     "pct": ""
+    }
+   ],
+   "countries": [
+    {
+     "iso2": "",
+     "iso3n": "",
+     "name": "",
+     "threats": "",
+     "visitors": ""
+    }
+   ],
+   "devices": [
+    {
+     "name": "",
+     "pct": ""
+    }
+   ],
+   "domains": [
+    {
+     "hasToken": "",
+     "id": "",
+     "mock": "",
+     "name": "",
+     "source": ""
+    }
+   ],
+   "errors": [],
+   "gsc": "",
+   "kpi": {
+    "bytes": "",
+    "cachedPct": "",
+    "change": {
+     "requests": "",
+     "threats": "",
+     "visitors": ""
+    },
+    "liveVisitors": "",
+    "pageviews": "",
+    "requests": "",
+    "threats": "",
+    "ttfbP50": "",
+    "uptimePct": "",
+    "visitors": ""
+   },
+   "label": "",
+   "mock": "",
+   "ms": "",
+   "per": "",
+   "perDomain": [
+    {
+     "cachedPct": "",
+     "change": "",
+     "live": "",
+     "mock": "",
+     "name": "",
+     "renews": "",
+     "requests": "",
+     "source": "",
+     "spark": "[]",
+     "sslExpires": "",
+     "status": "",
+     "threats": "",
+     "up": "",
+     "uptimePct": "",
+     "visitors": ""
+    }
+   ],
+   "range": "",
+   "referrers": [
+    {
+     "count": "",
+     "name": ""
+    }
+   ],
+   "selected": "",
+   "series": [
+    {
+     "cached": "",
+     "requests": "",
+     "t": "",
+     "visitors": ""
+    }
+   ],
+   "statusCodes": {
+    "2xx": "",
+    "3xx": "",
+    "4xx": "",
+    "5xx": ""
+   },
+   "summary": "",
+   "summaryUrl": "",
+   "threatTypes": [
+    {
+     "count": "",
+     "name": ""
+    }
+   ],
+   "topPages": [
+    {
+     "count": "",
+     "path": ""
+    }
+   ],
+   "updatedAt": "",
+   "uptime": {
+    "days": [
+     "…"
+    ],
+    "pct": ""
+   }
+  },
+  "I": {
+   "code": "",
+   "error": "",
+   "restricted": ""
+  }
+ },
+ "GET /api/domains/overview?domain=kristo.no": {
+  "status": "200 403 403 401",
+  "A": {
+   "browsers": [
+    {
+     "name": "",
+     "pct": ""
+    }
+   ],
+   "countries": [
+    {
+     "iso2": "",
+     "iso3n": "",
+     "name": "",
+     "threats": "",
+     "visitors": ""
+    }
+   ],
+   "detail": {
+    "browsers": [
+     "…"
+    ],
+    "bytes": "",
+    "cachedPct": "",
+    "countries": [
+     "…"
+    ],
+    "devices": [
+     "…"
+    ],
+    "dns": [
+     "…"
+    ],
+    "errorPct": "",
+    "http": [
+     "…"
+    ],
+    "id": "",
+    "live": {
+     "mb": "",
+     "requests": "",
+     "spark": "[]",
+     "visitors": ""
+    },
+    "mock": "",
+    "name": "",
+    "nameServers": [
+     "…"
+    ],
+    "originMs": "",
+    "pageviews": "",
+    "plan": "",
+    "prev": {
+     "bytes": "",
+     "cachedPct": "",
+     "requests": "",
+     "threats": "",
+     "visitors": ""
+    },
+    "referrers": [
+     "…"
+    ],
+    "registrar": "",
+    "renews": "",
+    "requests": "",
+    "security": {
+     "alwaysHttps": "",
+     "botFight": "",
+     "certExpires": "",
+     "dnssec": "",
+     "minTls": "",
+     "sslMode": ""
+    },
+    "series": [
+     "…"
+    ],
+    "source": "",
+    "sslExpires": "",
+    "status": "",
+    "statusCodes": {
+     "2xx": "",
+     "3xx": "",
+     "4xx": "",
+     "5xx": ""
+    },
+    "threats": {
+     "events": "[]",
+     "total": "",
+     "types": "[]"
+    },
+    "tls": [
+     "…"
+    ],
+    "topPages": [
+     "…"
+    ],
+    "ttfb": {
+     "p50": "",
+     "p95": ""
+    },
+    "updated": "",
+    "uptime90": [
+     "…"
+    ],
+    "uptimePct": "",
+    "visitors": ""
+   },
+   "devices": [
+    {
+     "name": "",
+     "pct": ""
+    }
+   ],
+   "domains": [
+    {
+     "hasToken": "",
+     "id": "",
+     "mock": "",
+     "name": "",
+     "source": ""
+    }
+   ],
+   "errors": [],
+   "gsc": {
+    "connected": "",
+    "loading": "",
+    "needsSite": ""
+   },
+   "kpi": {
+    "bytes": "",
+    "cachedPct": "",
+    "change": {
+     "requests": "",
+     "threats": "",
+     "visitors": ""
+    },
+    "liveVisitors": "",
+    "pageviews": "",
+    "requests": "",
+    "threats": "",
+    "ttfbP50": "",
+    "uptimePct": "",
+    "visitors": ""
+   },
+   "label": "",
+   "mock": "",
+   "ms": "",
+   "per": "",
+   "perDomain": [
+    {
+     "cachedPct": "",
+     "change": "",
+     "live": "",
+     "mock": "",
+     "name": "",
+     "renews": "",
+     "requests": "",
+     "source": "",
+     "spark": "[]",
+     "sslExpires": "",
+     "status": "",
+     "threats": "",
+     "up": "",
+     "uptimePct": "",
+     "visitors": ""
+    }
+   ],
+   "range": "",
+   "referrers": [
+    {
+     "count": "",
+     "name": ""
+    }
+   ],
+   "selected": "",
+   "series": [
+    {
+     "cached": "",
+     "requests": "",
+     "t": "",
+     "visitors": ""
+    }
+   ],
+   "statusCodes": {
+    "2xx": "",
+    "3xx": "",
+    "4xx": "",
+    "5xx": ""
+   },
+   "summary": "",
+   "summaryUrl": "",
+   "threatTypes": [
+    {
+     "count": "",
+     "name": ""
+    }
+   ],
+   "topPages": [
+    {
+     "count": "",
+     "path": ""
+    }
+   ],
+   "updatedAt": "",
+   "uptime": {
+    "days": [
+     "…"
+    ],
+    "pct": ""
+   }
+  },
+  "I": {
+   "code": "",
+   "error": "",
+   "restricted": ""
+  }
+ },
+ "GET /api/domains/gsc/sites": {
+  "status": "200 403 403 401",
+  "A": {
+   "configured": "",
+   "connectUrl": "",
+   "connected": "",
+   "count": "",
+   "redirectUri": "",
+   "scope": "",
+   "sites": [],
+   "steps": [
+    {
+     "n": "",
+     "t": "",
+     "url": ""
+    }
+   ]
+  },
+  "I": {
+   "code": "",
+   "error": "",
+   "restricted": ""
+  }
+ },
+ "GET /api/domains/import": {
+  "status": "200 403 403 401",
+  "A": {
+   "cloudflare": {
+    "connected": "",
+    "items": [
+     "…"
+    ]
+   },
+   "gsc": {
+    "connected": "",
+    "items": []
+   },
+   "newInAccount": [],
+   "title": ""
+  },
+  "I": {
+   "code": "",
+   "error": "",
+   "restricted": ""
+  }
+ },
+ "GET /api/domains/kristo.no/gsc": {
+  "status": "200 403 403 401",
+  "A": {
+   "configured": "",
+   "connectUrl": "",
+   "connected": "",
+   "scope": "",
+   "scopeNote": "",
+   "steps": [
+    {
+     "n": "",
+     "t": ""
+    }
+   ]
+  },
+  "I": {
+   "code": "",
+   "error": "",
+   "restricted": ""
+  }
+ },
+ "GET /api/domains/kristo.no/summary": {
+  "status": "200 403 403 401",
+  "A": {
+   "ai": "",
+   "createdAt": "",
+   "daily": "",
+   "date": "",
+   "domain": "",
+   "gsc": "",
+   "head": "",
+   "label": "",
+   "manual": "",
+   "meta": "",
+   "model": "",
+   "pts": [
+    {
+     "color": "",
+     "t": "",
+     "tone": ""
+    }
+   ]
+  },
+  "I": {
+   "code": "",
+   "error": "",
+   "restricted": ""
+  }
+ },
+ "GET /api/domains/kristo.no/gsc/test": {
+  "status": "200 403 403 401",
+  "A": {
+   "clicks28": "",
+   "dataTo": "",
+   "domain": "",
+   "error": "",
+   "impressions28": "",
+   "lastFetch": "",
+   "message": "",
+   "ok": "",
+   "permission": "",
+   "permissionLevel": "",
+   "reason": "",
+   "refreshToken": "",
+   "rows28": "",
+   "scope": "",
+   "scopeOk": "",
+   "siteUrl": "",
+   "steps": []
+  },
+  "I": {
+   "code": "",
+   "error": "",
+   "restricted": ""
+  }
+ },
+ "GET /api/gsc": {
+  "status": "200 403 403 401",
+  "A": {
+   "auth": "",
+   "configured": "",
+   "connected": "",
+   "dataState": "",
+   "email": "",
+   "error": "",
+   "lagDays": "",
+   "reason": "",
+   "scope": "",
+   "selected": {},
+   "serviceAccount": "",
+   "sites": []
+  },
+  "I": {
+   "code": "",
+   "error": "",
+   "restricted": ""
+  }
+ },
+ "GET /api/gsc/test?domain=kristo.no": {
+  "status": "200 403 403 401",
+  "A": {
+   "clicks28": "",
+   "dataTo": "",
+   "domain": "",
+   "error": "",
+   "impressions28": "",
+   "lastFetch": "",
+   "message": "",
+   "ok": "",
+   "permission": "",
+   "permissionLevel": "",
+   "reason": "",
+   "refreshToken": "",
+   "rows28": "",
+   "scope": "",
+   "scopeOk": "",
+   "siteUrl": "",
+   "steps": []
+  },
+  "I": {
+   "code": "",
+   "error": "",
+   "restricted": ""
+  }
+ },
+ "GET /domains/api/domains": {
+  "status": "200 403 403 401",
+  "A": [
+   {
+    "hasToken": "",
+    "id": "",
+    "mock": "",
+    "name": "",
+    "source": ""
+   }
+  ],
+  "I": {
+   "error": ""
+  }
+ },
+ "GET /domains/api/vendor/nordic.json": {
+  "status": "200 200 200 401",
+  "A": {
+   "countries": [
+    {
+     "id": "",
+     "name": "",
+     "rings": "[]"
+    }
+   ]
+  },
+  "I": {
+   "countries": [
+    {
+     "id": "",
+     "name": "",
+     "rings": "[]"
+    }
+   ]
+  }
+ },
+ "GET /api/bg/gphoto": {
+  "status": "200 200 200 401",
+  "A": {
+   "configured": "",
+   "url": ""
+  },
+  "I": {
+   "configured": "",
+   "url": ""
+  }
+ },
+ "GET /api/background/gphoto": {
+  "status": "404 404 404 401",
+  "A": {
+   "code": "",
+   "error": ""
+  },
+  "I": {
+   "code": "",
+   "error": ""
+  }
+ },
+ "GET /finans/api/logos52/match?q=Rema%201000": {
+  "status": "200 200 200 401",
+  "A": {
+   "color": "",
+   "id": "",
+   "initial": "",
+   "source": "",
+   "url": ""
+  },
+  "I": {
+   "color": "",
+   "id": "",
+   "initial": "",
+   "source": "",
+   "url": ""
+  }
+ },
+ "GET /finans/api/logos/registry": {
+  "status": "200 200 200 200",
+  "A": {
+   "items": [
+    {
+     "alias": "[]",
+     "domene": "",
+     "farge": "",
+     "hasFile": "",
+     "id": "",
+     "kategori": "",
+     "manual": "",
+     "navn": ""
+    }
+   ],
+   "version": ""
+  },
+  "I": {
+   "items": [
+    {
+     "alias": "[]",
+     "domene": "",
+     "farge": "",
+     "hasFile": "",
+     "id": "",
+     "kategori": "",
+     "manual": "",
+     "navn": ""
+    }
+   ],
+   "version": ""
+  }
+ },
+ "POST /api/skjold/cabinets": {
+  "status": "201",
+  "A": {
+   "cols": "",
+   "corners": "",
+   "counts": {
+    "drawers": "",
+    "parts": "",
+    "usedDrawers": ""
+   },
+   "created": "",
+   "id": "",
+   "kind": "",
+   "leds": {
+    "configured": "",
+    "enabled": ""
+   },
+   "name": "",
+   "notes": "",
+   "photoUrl": "",
+   "rows": "",
+   "sort": "",
+   "thumbUrl": "",
+   "updated": ""
+  }
+ },
+ "POST /api/skjold/parts": {
+  "status": "201",
+  "A": {
+   "cabinet_id": "",
+   "category": "",
+   "col": "",
+   "compartment": "",
+   "created": "",
+   "description": "",
+   "id": "",
+   "location": {
+    "cabinet": "",
+    "cabinetId": "",
+    "col": "",
+    "compartment": "",
+    "label": "",
+    "row": "",
+    "short": "",
+    "text": ""
+   },
+   "low": "",
+   "minQty": "",
+   "min_qty": "",
+   "name": "",
+   "occupied": [],
+   "photos": [],
+   "price": "",
+   "qty": "",
+   "row": "",
+   "specs": {},
+   "supplier": "",
+   "tags": [],
+   "thumbUrl": "",
+   "unit": "",
+   "updated": "",
+   "url": ""
+  }
+ },
+ "PATCH /api/skjold/parts/:id": {
+  "status": "200",
+  "A": {
+   "cabinet_id": "",
+   "category": "",
+   "col": "",
+   "compartment": "",
+   "created": "",
+   "description": "",
+   "id": "",
+   "location": {
+    "cabinet": "",
+    "cabinetId": "",
+    "col": "",
+    "compartment": "",
+    "label": "",
+    "row": "",
+    "short": "",
+    "text": ""
+   },
+   "low": "",
+   "minQty": "",
+   "min_qty": "",
+   "name": "",
+   "occupied": [],
+   "photos": [],
+   "price": "",
+   "qty": "",
+   "row": "",
+   "specs": {},
+   "supplier": "",
+   "tags": [],
+   "thumbUrl": "",
+   "unit": "",
+   "updated": "",
+   "url": ""
+  }
+ },
+ "GET /api/skjold/parts/:id": {
+  "status": "200",
+  "A": {
+   "cabinet_id": "",
+   "category": "",
+   "col": "",
+   "compartment": "",
+   "created": "",
+   "description": "",
+   "history": [
+    {
+     "action": "",
+     "at": "",
+     "from": "{}",
+     "id": "",
+     "partId": "",
+     "to": "{}"
+    }
+   ],
+   "id": "",
+   "location": {
+    "cabinet": "",
+    "cabinetId": "",
+    "col": "",
+    "compartment": "",
+    "label": "",
+    "row": "",
+    "short": "",
+    "text": ""
+   },
+   "low": "",
+   "minQty": "",
+   "min_qty": "",
+   "name": "",
+   "occupied": [],
+   "photos": [],
+   "price": "",
+   "qty": "",
+   "row": "",
+   "specs": {},
+   "supplier": "",
+   "tags": [],
+   "thumbUrl": "",
+   "unit": "",
+   "updated": "",
+   "url": "",
+   "usedIn": []
+  }
+ },
+ "GET /api/skjold/parts/:id (annen bruker)": {
+  "status": "404",
+  "A": {
+   "code": "",
+   "error": ""
+  }
+ },
+ "PUT /api/skjold/picklist": {
+  "status": "200",
+  "A": {
+   "items": [
+    {
+     "addedAt": "",
+     "partId": "",
+     "qty": "",
+     "take": ""
+    }
+   ],
+   "updatedAt": ""
+  }
+ },
+ "POST /api/skjold/projects": {
+  "status": "201",
+  "A": {
+   "cost": "",
+   "created": "",
+   "id": "",
+   "name": "",
+   "notes": "",
+   "parts": "",
+   "status": "",
+   "units": "",
+   "updated": ""
+  }
+ },
+ "POST /api/skjold/checkout": {
+  "status": "200",
+  "A": {
+   "created": "",
+   "ok": "",
+   "parts": [
+    {
+     "after": "",
+     "before": "",
+     "low": "",
+     "name": "",
+     "partId": "",
+     "unit": ""
+    }
+   ],
+   "project": {
+    "cost": "",
+    "created": "",
+    "id": "",
+    "name": "",
+    "notes": "",
+    "parts": "",
+    "status": "",
+    "units": "",
+    "updated": ""
+   },
+   "undoToken": "",
+   "undoUntil": "",
+   "usages": [
+    {
+     "at": "",
+     "deleted": "",
+     "loc": "",
+     "name": "",
+     "net": "",
+     "note": "",
+     "partId": "",
+     "price": "",
+     "qty": "",
+     "returnedQty": "",
+     "thumbUrl": "",
+     "unit": "",
+     "usageId": ""
+    }
+   ]
+  }
+ },
+ "POST /api/skjold/ai/suggest": {
+  "status": "400",
+  "A": {
+   "code": "",
+   "error": ""
+  }
+ },
+ "DELETE /api/skjold/parts/:id": {
+  "status": "200",
+  "A": {
+   "deletedAt": "",
+   "id": "",
+   "ok": "",
+   "purgeAt": "",
+   "undo": {
+    "method": "",
+    "url": ""
+   }
+  }
+ },
+ "PUT /api/rom/settings": {
+  "status": "200",
+  "A": {
+   "marsNotify": ""
+  }
+ },
+ "PUT /api/rom/settings (ugyldig)": {
+  "status": "400",
+  "A": {
+   "code": "",
+   "error": ""
+  }
+ },
+ "POST /api/study/documents": {
+  "status": "201",
+  "A": {
+   "doc": {
+    "appliedAt": "",
+    "checks": "",
+    "completeness": {
+     "complete": "",
+     "found": "",
+     "missing": "[]",
+     "ocrRows": ""
+    },
+    "createdAt": "",
+    "date": "",
+    "edit": {
+     "method": "",
+     "path": ""
+    },
+    "emner": [
+     "…"
+    ],
+    "fields": {
+     "date": "",
+     "institution": "",
+     "program": "",
+     "snitt": "",
+     "sp": "",
+     "student": ""
+    },
+    "file": {
+     "download": "",
+     "kind": "",
+     "mime": "",
+     "thumb": "",
+     "url": ""
+    },
+    "filename": "",
+    "format": "",
+    "found": [
+     "…"
+    ],
+    "how": "",
+    "id": "",
+    "institution": "",
+    "kind": "",
+    "kindLabel": "",
+    "method": "",
+    "mime": "",
+    "missing": [
+     "…"
+    ],
+    "notes": [],
+    "program": "",
+    "retry": {
+     "method": "",
+     "path": ""
+    },
+    "size": "",
+    "snitt": {
+     "letter": "",
+     "scale": "",
+     "text": "",
+     "value": ""
+    },
+    "snittVgs": "",
+    "sp": "",
+    "spText": "",
+    "status": "",
+    "statusText": "",
+    "steps": [
+     "…"
+    ],
+    "student": "",
+    "summary": "",
+    "title": "",
+    "updatedAt": ""
+   }
+  }
+ },
+ "GET /api/study/documents/:id": {
+  "status": "200",
+  "A": {
+   "doc": {
+    "appliedAt": "",
+    "checks": "",
+    "completeness": {
+     "complete": "",
+     "found": "",
+     "missing": "[]",
+     "ocrRows": ""
+    },
+    "createdAt": "",
+    "date": "",
+    "edit": {
+     "method": "",
+     "path": ""
+    },
+    "emner": [
+     "…"
+    ],
+    "fields": {
+     "date": "",
+     "institution": "",
+     "program": "",
+     "snitt": "",
+     "sp": "",
+     "student": ""
+    },
+    "file": {
+     "download": "",
+     "kind": "",
+     "mime": "",
+     "thumb": "",
+     "url": ""
+    },
+    "filename": "",
+    "format": "",
+    "found": [
+     "…"
+    ],
+    "how": "",
+    "id": "",
+    "institution": "",
+    "kind": "",
+    "kindLabel": "",
+    "method": "",
+    "mime": "",
+    "missing": [
+     "…"
+    ],
+    "notes": [],
+    "program": "",
+    "retry": {
+     "method": "",
+     "path": ""
+    },
+    "size": "",
+    "snitt": {
+     "letter": "",
+     "scale": "",
+     "text": "",
+     "value": ""
+    },
+    "snittVgs": "",
+    "sp": "",
+    "spText": "",
+    "status": "",
+    "statusText": "",
+    "steps": [
+     "…"
+    ],
+    "student": "",
+    "summary": "",
+    "title": "",
+    "updatedAt": ""
+   }
+  }
+ },
+ "GET /api/study/documents/:id (annen bruker)": {
+  "status": "404",
+  "A": {
+   "code": "",
+   "error": ""
+  }
+ },
+ "PUT /api/study/documents/:id/courses": {
+  "status": "200",
+  "A": {
+   "doc": {
+    "appliedAt": "",
+    "checks": "",
+    "completeness": {
+     "complete": "",
+     "found": "",
+     "missing": "[]",
+     "ocrRows": ""
+    },
+    "createdAt": "",
+    "date": "",
+    "edit": {
+     "method": "",
+     "path": ""
+    },
+    "edited": "",
+    "editedAt": "",
+    "emner": [
+     "…"
+    ],
+    "fields": {
+     "date": "",
+     "institution": "",
+     "program": "",
+     "snitt": "",
+     "sp": "",
+     "student": ""
+    },
+    "file": {
+     "download": "",
+     "kind": "",
+     "mime": "",
+     "thumb": "",
+     "url": ""
+    },
+    "filename": "",
+    "format": "",
+    "found": [
+     "…"
+    ],
+    "how": "",
+    "id": "",
+    "institution": "",
+    "kind": "",
+    "kindLabel": "",
+    "method": "",
+    "mime": "",
+    "missing": [
+     "…"
+    ],
+    "notes": [],
+    "program": "",
+    "retry": {
+     "method": "",
+     "path": ""
+    },
+    "size": "",
+    "snitt": {
+     "letter": "",
+     "scale": "",
+     "text": "",
+     "value": ""
+    },
+    "snittVgs": "",
+    "sp": "",
+    "spText": "",
+    "status": "",
+    "statusText": "",
+    "steps": [
+     "…"
+    ],
+    "student": "",
+    "summary": "",
+    "title": "",
+    "updatedAt": ""
+   }
+  }
+ },
+ "GET /api/study/documents/:id/file": {
+  "status": "200",
+  "A": "text/plain csp=default-src 'none'; sandbox; frame-ancestors 'self' xfo=SAMEORIGIN"
+ },
+ "DELETE /api/study/documents/:id": {
+  "status": "200",
+  "A": {
+   "id": "",
+   "ok": ""
+  }
+ },
+ "POST /api/rss/categories": {
+  "status": "201",
+  "A": {
+   "categories": {
+    "custom": [
+     "…"
+    ],
+    "forYou": {
+     "glyph": "",
+     "icon": "",
+     "id": "",
+     "name": ""
+    },
+    "hint": "",
+    "interests": [],
+    "options": [
+     "…"
+    ],
+    "standard": [
+     "…"
+    ],
+    "tabs": [
+     "…"
+    ]
+   },
+   "category": {
+    "created": "",
+    "icon": "",
+    "id": "",
+    "keywords": [
+     "…"
+    ],
+    "name": "",
+    "order": ""
+   }
+  }
+ },
+ "POST /api/rss/interests": {
+  "status": "201",
+  "A": {
+   "interests": [
+    ""
+   ],
+   "suggestions": []
+  }
+ },
+ "PUT /api/rss/settings": {
+  "status": "200",
+  "A": {
+   "aiCategorize": "",
+   "aiSummary": "",
+   "catSummary": "",
+   "ic": {},
+   "icOn": "",
+   "icSrc": {}
+  }
+ },
+ "POST /api/rss/feeds (ugyldig)": {
+  "status": "400",
+  "A": {
+   "code": "",
+   "error": ""
+  }
+ },
+ "POST /api/news/glimt": {
+  "status": "200",
+  "A": {
+   "cached": "",
+   "engine": "",
+   "foot": "",
+   "images": [
+    {
+     "alt": "",
+     "caption": "",
+     "ref": "",
+     "src": "",
+     "url": ""
+    }
+   ],
+   "kicker": "",
+   "lead": "",
+   "meta": {
+    "count": "",
+    "date": "",
+    "length": "",
+    "period": "",
+    "sourceCount": ""
+   },
+   "refs": [
+    {
+     "category": "",
+     "id": "",
+     "image": "",
+     "imageUrl": "",
+     "n": "",
+     "source": "",
+     "time": "",
+     "timeLabel": "",
+     "title": "",
+     "url": ""
+    }
+   ],
+   "sections": [
+    {
+     "h": "",
+     "image": "{}",
+     "refs": "[]",
+     "sentences": "[]",
+     "text": "",
+     "topic": ""
+    }
+   ],
+   "selection": {
+    "ids": [],
+    "length": "",
+    "period": "",
+    "sources": [],
+    "topics": []
+   },
+   "sources": [
+    {
+     "count": "",
+     "id": "",
+     "name": "",
+     "on": ""
+    }
+   ],
+   "title": "",
+   "topics": [
+    {
+     "count": "",
+     "id": "",
+     "name": "",
+     "on": ""
+    }
+   ],
+   "updatedAt": ""
+  }
+ },
+ "POST /api/glimt/news-digest": {
+  "status": "200",
+  "A": {
+   "cached": "",
+   "engine": "",
+   "foot": "",
+   "images": [
+    {
+     "alt": "",
+     "caption": "",
+     "ref": "",
+     "src": "",
+     "url": ""
+    }
+   ],
+   "kicker": "",
+   "lead": "",
+   "meta": {
+    "count": "",
+    "date": "",
+    "length": "",
+    "period": "",
+    "sourceCount": ""
+   },
+   "refs": [
+    {
+     "category": "",
+     "id": "",
+     "image": "",
+     "imageUrl": "",
+     "n": "",
+     "source": "",
+     "time": "",
+     "timeLabel": "",
+     "title": "",
+     "url": ""
+    }
+   ],
+   "sections": [
+    {
+     "h": "",
+     "image": "{}",
+     "refs": "[]",
+     "sentences": "[]",
+     "text": "",
+     "topic": ""
+    }
+   ],
+   "selection": {
+    "ids": [],
+    "length": "",
+    "period": "",
+    "sources": [],
+    "topics": []
+   },
+   "sources": [
+    {
+     "count": "",
+     "id": "",
+     "name": "",
+     "on": ""
+    }
+   ],
+   "title": "",
+   "topics": [
+    {
+     "count": "",
+     "id": "",
+     "name": "",
+     "on": ""
+    }
+   ],
+   "updatedAt": ""
+  }
+ },
+ "PUT /api/news/glimt/prefs": {
+  "status": "200",
+  "A": {
+   "length": "",
+   "period": "",
+   "sources": [],
+   "topics": []
+  }
+ },
+ "POST /api/news/saved (privat adresse)": {
+  "status": "201",
+  "A": {
+   "id": "",
+   "item": {
+    "author": "",
+    "id": "",
+    "image": "",
+    "images": "",
+    "lead": "",
+    "published": "",
+    "reason": "",
+    "savedAt": "",
+    "source": "",
+    "status": "",
+    "statusText": "",
+    "title": "",
+    "updatedAt": "",
+    "url": "",
+    "via": "",
+    "words": ""
+   },
+   "status": ""
+  }
+ },
+ "PUT /api/ruter/settings": {
+  "status": "200",
+  "A": {
+   "homeCard": "",
+   "push": "",
+   "recoCount": ""
+  }
+ },
+ "POST /api/ruter/journey/hide": {
+  "status": "200",
+  "A": {
+   "journey": {
+    "active": "",
+    "expiresAt": "",
+    "hidden": "",
+    "homeCard": "",
+    "leftSchoolAt": "",
+    "title": ""
+   },
+   "toast": ""
+  }
+ },
+ "PUT /api/bible/settings": {
+  "status": "403",
+  "A": {
+   "allowed": "",
+   "code": "",
+   "enabled": "",
+   "error": ""
+  }
+ },
+ "POST /api/bible/read": {
+  "status": "403",
+  "A": {
+   "code": "",
+   "enabled": "",
+   "error": ""
+  }
+ },
+ "PUT /api/bible/users/:id (bruker)": {
+  "status": "403",
+  "A": {
+   "code": "",
+   "error": ""
+  }
+ },
+ "POST /api/domains/token/verify (bruker)": {
+  "status": "403",
+  "A": {
+   "code": "",
+   "error": ""
+  }
+ },
+ "POST /api/domains/token/verify (admin)": {
+  "status": "200",
+  "A": {
+   "active": "",
+   "message": "",
+   "mock": "",
+   "ok": "",
+   "okCount": "",
+   "permissions": [
+    {
+     "name": "",
+     "ok": ""
+    }
+   ],
+   "total": ""
+  }
+ },
+ "POST /api/gsc/site (admin, ugyldig)": {
+  "status": "400",
+  "A": {
+   "code": "",
+   "error": "",
+   "reason": ""
+  }
+ },
+ "POST /api/gsc/site (bruker)": {
+  "status": "403",
+  "A": {
+   "code": "",
+   "error": "",
+   "restricted": ""
+  }
+ },
+ "POST /api/gsc/service-account (admin, ugyldig)": {
+  "status": "400",
+  "A": {
+   "code": "",
+   "error": "",
+   "reason": ""
+  }
+ },
+ "POST /api/domains/:domain/gsc/refresh (admin)": {
+  "status": "409",
+  "A": {
+   "code": "",
+   "error": "",
+   "ok": "",
+   "reason": ""
+  }
+ },
+ "POST /domains/api/domains (bruker)": {
+  "status": "403",
+  "A": {
+   "error": ""
+  }
+ },
+ "POST /finans/api/logos52/batch": {
+  "status": "200",
+  "A": {
+   "items": {
+    "Kiwi": {
+     "color": "",
+     "id": "",
+     "initial": "",
+     "source": "",
+     "url": ""
+    },
+    "Rema 1000": {
+     "color": "",
+     "id": "",
+     "initial": "",
+     "source": "",
+     "url": ""
+    },
+    "Ukjent butikk": {
+     "color": "",
+     "id": "",
+     "initial": "",
+     "url": ""
+    }
+   }
+  }
+ }
+}
