@@ -205,7 +205,7 @@ extension Store {
         guard let t = nav26BackTarget() else { return nil }
         if t == "innst-integ" { return "Integrasjoner" }
         if t == "innst-glimt" { return "Glimt" }
-        if t == "innst-finans67" { return "Finans" }
+        if t == "innst-finans67" { return "Økonomi" }
         if t == Users68.key { return Users68.name }
         if t == "bursdag" { return "Bursdager" }
         if t == "kalender" { return "Kalender" }

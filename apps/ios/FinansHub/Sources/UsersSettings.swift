@@ -12,7 +12,8 @@ import SwiftUI
 
 enum Users68 {
     static let key: String = "innst-brukere"
-    static let name: String = "Brukere og familie"
+    /// Fase 6 (E-ia §4): siden heter Husstand i Innstillinger på alle plattformer.
+    static let name: String = "Husstand"
     static let sub: String = "Logg inn som, figur per bruker, familie, helse og posisjon"
 
     /// Siste ledd etter /innstillinger/ som betyr denne siden (som ALIAS65 på web).

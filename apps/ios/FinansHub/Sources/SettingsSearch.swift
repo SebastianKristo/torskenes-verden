@@ -37,13 +37,13 @@ final class Set24Model {
         "nøkkel": ["API-tokens", "Mybring", "PostNord", "ParcelsApp"], "pakk": ["Mybring", "PostNord", "ParcelsApp"], "post": ["Mybring", "PostNord"],
         "bring": ["Mybring"], "spor": ["Mybring", "ParcelsApp"], "buss": ["Entur"], "trikk": ["Entur"], "ruter": ["Entur"], "avgang": ["Entur"],
         "kalend": ["Google Kalender"], "bursdag": ["Google Kalender"], "google": ["Google Kalender"], "gemini": ["AI og tolkning", "AI"],
-        "ai": ["AI og tolkning", "AI"], "aksje": ["Aksjer · Trading 212", "Trading 212"], "bank": ["Bankimport", "Bank"],
+        "ai": ["AI og tolkning", "AI"], "aksje": ["Aksjer · Trading 212", "Trading 212"], "bank": ["Import", "Bank"], "import": ["Import"],
         "budsjett": ["Kategorier og budsjett"], "kategori": ["Kategorier og budsjett"], "regel": ["Regler"], "home": ["Home Assistant"],
         "ha": ["Home Assistant"], "domene": ["Cloudflare"], "cloudflare": ["Cloudflare"], "vær": ["MET"], "yr": ["MET"], "kart": ["Kart", "Helse og posisjon"],
         "posisjon": ["Helse og posisjon"], "helse": ["Helse og posisjon"], "skritt": ["Helse og posisjon"], "kvitter": ["IMAP", "Skanning"],
-        "epost": ["IMAP"], "mail": ["IMAP"], "finn": ["Finn"], "profil": ["Standard", "Finans + Boliger", "Boliger-profil"], "fane": ["Fanelinje i Hjem", "Fanelinje og Mer i Finans"],
-        "widget": ["Widgets"], "modul": ["Moduler"], "bruker": ["Brukere og familie", "Kontoer og brukere"],
-        "familie": ["Brukere og familie", "Familie og helse"], "husstand": ["Brukere og familie"], "barn": ["Brukere og familie"], "rolle": ["Brukere og familie"], "bilde": ["Unsplash/Pexels", "Utseende og fanelinje"],
+        "epost": ["IMAP"], "mail": ["IMAP"], "finn": ["Finn"], "profil": ["Standard", "Økonomi + Boliger", "Boliger-profil"], "fane": ["Fanelinjen", "Fanelinje og Mer i Økonomi"],
+        "widget": ["Widgets"], "modul": ["Moduler"], "bruker": ["Husstand", "Kontoer og brukere"],
+        "familie": ["Husstand", "Familie og helse"], "husstand": ["Husstand"], "barn": ["Husstand"], "rolle": ["Husstand"], "bilde": ["Unsplash/Pexels", "Utseende og fanelinje"],
     ]
 
     static let stop: Set<String> = ["hvor", "hvordan", "kan", "jeg", "du", "meg", "min", "mitt", "mine", "en", "et", "den", "det", "på", "i", "til",
@@ -60,28 +60,30 @@ final class Set24Model {
         // Prompt 68: Brukere og familie (UsersSettings.swift) – brukere, Logg inn som, eier, figur per bruker, Familie og helse.
         add("brukere68", Users68.name, "Brukere, roller, Logg inn som, familie, husstand, barn, helse og posisjon", "Husstand", Users68.key)
         add("konto.bilde", "Profilbilde", "Vises i menyer og hilsener", "Kontoer og brukere", "innst-konto")
-        add("sik", "Sikkerhet", "2FA, Face ID og pålitelige enheter", "Konto", "innst-sik")
+        // Fase 6 (Q12): én side for konto og sikkerhet.
+        add("kontosik", "Konto og sikkerhet", "Profil, server, kontoer, 2FA, Face ID og økter", "Innstillinger", "innst-kontosik")
+        add("sik", "Sikkerhet", "2FA, Face ID og pålitelige enheter", "Konto og sikkerhet", "innst-sik")
         add("sik.2fa", "Totrinnsbekreftelse", "Autentiseringsapp", "Sikkerhet", "innst-sik")
         add("sik.face", "Face ID", "Lås opp appen", "Sikkerhet", "innst-sik")
         add("sik.okter", "Aktive økter", "Enheter som er logget inn", "Sikkerhet", "innst-sik")
         add("sik.nye51", "Nye enheter", "Godkjenn innlogging på en ny enhet", "Sikkerhet", "innst-sik") // prompt 51
         add("api", "API-tokens", "Snarveier og integrasjoner", "Konto", "innst-api")
-        add("ai", "AI og tolkning", "Gemini · Groq · Roboflow · Ollama · tidsgrenser", "Finans", "innst-ai")
-        add("kat", "Kategorier og budsjett", "Farger og budsjett per måned", "Finans", "innst-kat")
-        add("regler", "Regler", "Tekst inneholder … → kategori", "Finans", "innst-regler")
-        add("bank", "Bankimport", "DNB · CSV · ✦ AI", "Finans", "imports")
-        add("aksjer", "Aksjer · Trading 212", "Nøkkel, miljø og synk", "Finans", "innst-aksjer")
-        add("fin", "Fanelinje og Mer i Finans", "Fanene i Finans", "Finans", "innst-fin")
-        add("abo", "Subscription OS", "Abonnementer og AI-sparing", "Finans", "abo")
+        add("ai", "AI og tolkning", "Gemini · Groq · Roboflow · Ollama · tidsgrenser", "Økonomi", "innst-ai")
+        add("kat", "Kategorier og budsjett", "Farger og budsjett per måned", "Økonomi", "innst-kat")
+        add("regler", "Regler", "Tekst inneholder … → kategori", "Økonomi", "innst-regler")
+        add("bank", "Import", "Bank, CSV, Excel og Finn · ✦ AI", "Økonomi", "imports")
+        add("aksjer", "Aksjer · Trading 212", "Nøkkel, miljø og synk", "Økonomi", "innst-aksjer")
+        add("fin", "Fanelinje og Mer i Økonomi", "Fanene i Økonomi", "Økonomi", "innst-fin")
+        add("abo", "Faste betalinger", "Abonnementer, faste utgifter og planlagte trekk", "Økonomi", "abo")
         add("navn", "Navn på appen", AppMeta.shared.name, AppMeta.shared.name, "naming")
         add("ikon", "App-ikon", AppMeta.shared.iconName, AppMeta.shared.name, "icon")
-        add("tabbar", "Fanelinje i Hjem", "Fjern, flytt, gi nytt navn og ikon", AppMeta.shared.name, "tabbar")
+        add("tabbar", "Fanelinjen", "Fjern, flytt, gi nytt navn og ikon", AppMeta.shared.name, "tabbar")
         add("navstil", "Fanelinje-stil", "Tekst, bare ikoner eller ikoner + navn på valgt", "Tilpass", "innst-tilpass")
-        add("hl", "Moduler", "Sporing, Domener, Mat, Familie, Avganger og Vær", AppMeta.shared.name, "innst-hl")
-        add("news", "Nyhetsleser", "Kilder, AI og ikoner på fanene", AppMeta.shared.name, "news")
+        add("hl", "Moduler", "Sporing, Domener, Mat, Familie, Reise og Vær", AppMeta.shared.name, "innst-hl")
+        add("news", "Nyheter", "Kilder, AI og ikoner på fanene", AppMeta.shared.name, "news")
         // Prompt 39: «tema», «farge», «ikon», «navn», «fanelinje», «bakgrunn», «tilpass» og «utseende» → Tilpass.
         add("ut", "Tilpass", "Utseende: navn, ikon, tema, farger, bakgrunn og fanelinje", AppMeta.shared.name, "innst-tilpass")
-        add("appprofil", "Appprofil", "Profil og oppsett: Standard, Finans + Boliger, Boliger-profil", "App", "innst-appprofil")
+        add("appprofil", "Appprofil", "Profil og oppsett: Standard, Økonomi + Boliger, Boliger-profil", "App", "innst-appprofil")
         add("varsler", "Varsler og haptikk", "Lyd, stille timer, grupper og Bursdager", "App", "innst-varsler")
         add("haptikk", "Haptikk", "Vibrasjon og styrke", "Varsler og haptikk", "innst-haptikk")
         add("trk", "Pakkevarsler", "Sporing og kvitteringer", "Varsler og haptikk", "innst-trk")
