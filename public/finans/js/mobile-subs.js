@@ -3,6 +3,7 @@
 // én grep-strek, liste med Skjermbilde ✦ AI · Kvittering ✦ AI · Fra transaksjon · Skriv inn selv, farger fra aktivt tema.
 // Data fra /finans/api/subscriptions. Feltene categories, byMonth, health, savings og upcoming kommer fra FINANS;
 // mangler de (eldre server), regnes et enklere bilde ut her fra abonnementene.
+import { sykluser, syklus, erUkesyklus, kjentTrekk, osloMåned } from './sykluser.js';
 import { api, hlApi, esc, n0, dd, today, icon, ICONS, logo, parseAmount, navName } from './core.js';
 import { m, draw, flash, avatar, backBtn, theme } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
@@ -25,7 +26,7 @@ const CAT_RE = [['Underholdning', /netflix|spotify|hbo|max\b|viaplay|disney|yout
   ['Produktivitet', /chatgpt|openai|microsoft|office|adobe|notion|github|1password|claude|anthropic|canva|figma|slack|zoom|todoist/i],
   ['Lagring og sky', /icloud|google one|dropbox|proton|onedrive|backblaze|mega\b|pcloud/i],
   ['Helse og trening', /sats|strava|elixia|fresh fitness|evo|garmin|whoop|headspace|calm/i], ['Transport', /ruter|vy\b|bolt|voi|tier|entur|kolumbus|skyss|atb/i]];
-const CYC = { monthly: ['Månedlig', '/mnd'], yearly: ['Årlig', '/år'], biennial: ['Hvert 2. år', '/2 år'] };
+// Syklusene og navnene kommer fra serveren (sykluser.js); ukentlige og kvartalsvise vises som de er.
 const MND = ['jan', 'feb', 'mar', 'apr', 'mai', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'des'];
 const kr = (v) => `${n0(v)} kr`;
 const isI = () => theme() === 'ios';
@@ -167,7 +168,7 @@ function sheet() {
   } else if (mode === 'tx') {
     body = `<div class="s28-list s28-cand">${SB.cand === null ? (SB.candErr ? `<div class="s28-pad">${esc(SB.candErr)}</div>` : '<div class="m-spin"></div>') : SB.cand.length ? SB.cand.map((c, i) => {
       const have = items().some((x) => x.name.toLowerCase() === String(c.merchant).toLowerCase());
-      return `<div class="sb-row">${lg({ name: c.merchant, domain: c.domain })}<span class="m-grow" style="min-width:0"><b class="m-ell">${esc(c.merchant)}</b><span class="s28-od m-ell">${esc(`${CYC[c.cycle]?.[0] ?? 'Fast'} · ${n0(c.amount)} kr · sett ${c.count} ganger${c.lastDate ? ` · sist ${dd(c.lastDate)}` : ''}`)}</span></span><button class="sb-add${have ? ' have' : ''}" data-sb="cand" data-i="${i}" ${have ? 'disabled' : ''}>${have ? '✓ Lagt til' : '+ Legg til'}</button></div>`;
+      return `<div class="sb-row">${lg({ name: c.merchant, domain: c.domain })}<span class="m-grow" style="min-width:0"><b class="m-ell">${esc(c.merchant)}</b><span class="s28-od m-ell">${esc(`${c.cycle ? syklus(SB.d, c.cycle).name : 'Fast'} · ${n0(c.amount)} kr · sett ${c.count} ganger${c.lastDate ? ` · sist ${dd(c.lastDate)}` : ''}`)}</span></span><button class="sb-add${have ? ' have' : ''}" data-sb="cand" data-i="${i}" ${have ? 'disabled' : ''}>${have ? '✓ Lagt til' : '+ Legg til'}</button></div>`;
     }).join('') : '<div class="s28-pad">Fant ingen nye faste trekk i transaksjonene.</div>'}</div>`;
   } else if (mode === 'sk') {
     body = P27.SH.r ? P27.shotView() : `<div class="s28-shot">${sh?.thumb ? `<span class="s28-thumb" style="background-image:url('${sh.thumb}')"></span>` : ''}<div class="m-grow">${sh?.busy
@@ -222,7 +223,7 @@ function home() {
     next7: `<div class="${cls('next7')} sb-card ${isI() ? 'glass2' : ''}" ${soAttr('next7')}><div class="sb-wk"><div><span class="sb-dim">Neste 7 dager</span><b class="sb-wkv">${kr(wk)}</b><span class="sb-dim">${up.length} trekk</span></div><div class="sb-bars" aria-hidden="true">${bars.map((v, i) => `<i style="height:${v ? Math.max(8, (v / bmx) * 56) : 4}px" class="${v ? 'on' : ''}${i % 2 ? ' gap' : ''}"></i>`).join('')}</div></div></div>`,
     check: `<div class="${cls('check')} sb-card ${isI() ? 'glass2' : ''}" ${soAttr('check')}><div class="sb-chk"><span class="sb-crown">♛</span><div class="m-grow"><b>Abonnementssjekk</b><span class="sb-dim">Gå gjennom før fornyelse</span></div></div><div class="sb-chk2">${low.length ? `<span><b>${low.length} abonnement${low.length > 1 ? 'er' : ''}</b> trenger en titt · spar opptil <span class="sb-acc">${kr(low.reduce((a, x) => a + per(x), 0))}</span></span><span class="sb-avs">${low.slice(0, 4).map((x) => lg(x, 26)).join('')}</span>` : '<span>Alt ser bra ut · ingen trenger en titt</span>'}</div></div>`,
     list: `<div class="${cls('list')} sb-lblk" ${soAttr('list')}><div class="sec">Alle abonnementer · ${kr(act().reduce((a, x) => a + P37B.myShare(x), 0) || (SB.d?.monthly ?? 0))}/mnd</div>
-    ${card(all.map((x) => { const [n, c] = ST[statusOf(x)] ?? ST.active, [cl, pr] = CYC[x.cycle] ?? CYC.monthly;
+    ${card(all.map((x) => { const [n, c] = ST[statusOf(x)] ?? ST.active, cl = x.cycleName ?? syklus(SB.d, x.cycle).name, pr = x.perLabel ?? syklus(SB.d, x.cycle).perLabel;
       return row(x, `<span class="sb-r"><b class="m-mono">${n0(x.price)} kr<small class="sb-dim">${pr}</small></b><button class="stchip ${c}" data-subtog="${x.id}" aria-label="${x.active ? 'Si opp' : 'Gjenoppta'} ${esc(x.name)}">${x.active ? (c === 'ok' ? 'Aktiv' : 'Si opp') : 'Sagt opp'}</button></span>`, `${cl}${x.nextDate ? ` · neste ${dd(x.nextDate)}` : ''} · ${catOf(x)}${c !== 'ok' && x.active ? ` · ${n.replace(/^\W+ /, '')}` : ''}`);
     }).join('') || '<div class="m-empty">Ingen abonnementer ennå. Trykk + for å legge til.</div>')}
     <div class="snote" style="text-align:center">Trykk på status for å si opp eller gjenoppta · hold inne på et kort for å flytte det.</div></div>`,
@@ -286,8 +287,10 @@ const THEN = { monthly: 'deretter hver måned', yearly: 'deretter hvert år', bi
 function whenText(e, day, mon) {
   const x = e.id ? items().find((s) => String(s.id) === String(e.id)) : null;
   const same = x?.nextDate && x.cycle === e.cycle && +(x.billDay ?? x.chargeDay ?? 0) === day && (e.cycle === 'monthly' || +(x.billMonth ?? 0) === mon);
-  if (same) { const nd = new Date(x.nextDate + 'T12:00'); return `Neste trekk ${nd.getDate()}. ${MNL[nd.getMonth()]}, ${THEN[e.cycle] ?? THEN.monthly}`; }
-  return e.cycle === 'monthly' ? `Trekkes den ${day}. hver måned` : `Trekkes ${day}. ${MNL[mon - 1]} ${e.cycle === 'yearly' ? 'hvert år' : 'hvert 2. år'}`;
+  if (same) { if (x.nextCharge?.label) return x.nextCharge.label; const nd = new Date(x.nextDate + 'T12:00'); return `Neste trekk ${nd.getDate()}. ${MNL[nd.getMonth()]}, ${THEN[e.cycle] ?? `deretter ${syklus(SB.d, e.cycle).name.toLowerCase()}`}`; }
+  if (e.cycle === 'monthly') return `Trekkes den ${day}. hver måned`;
+  if (e.cycle === 'yearly' || e.cycle === 'biennial') return `Trekkes ${day}. ${MNL[mon - 1]} ${e.cycle === 'yearly' ? 'hvert år' : 'hvert 2. år'}`;
+  return `${erUkesyklus(e.cycle) ? 'Første trekk' : 'Trekkes'} ${day}. ${MNL[mon - 1]}, deretter ${syklus(SB.d, e.cycle).name.toLowerCase()}`;
 }
 function editor() {
   const e = SB.ed;
@@ -301,7 +304,7 @@ function editor() {
     <div class="sb-erow">${lgBox}<div class="m-grow"><span class="sb-dim sm">Logo</span><div class="schips"><label class="chip">↑ Last opp<input class="m-file" type="file" accept="image/*" data-sblogo></label><button type="button" class="chip" data-sbx="ailogo" ${e.busy ? 'disabled' : ''}>${e.busy === 'logo' ? '✦ Leter …' : '✦ Finn logo med AI'}</button>${e.logoUrl || e.file ? '<button type="button" class="chip" data-sbx="nologo">Fjern</button>' : ''}</div></div></div>
     <div class="sb-two"><label class="sb-lab">Navn<input class="sinp" id="m-sbe-name" data-sbe="name" value="${esc(e.name)}" placeholder="F.eks. HBO Max" autocomplete="off"></label><label class="sb-lab">Pris (kr)<input class="sinp m-mono" id="m-sbe-price" data-sbe="price" value="${esc(e.price)}" inputmode="decimal" placeholder="149"></label></div>
     <div class="sb-two"><label class="sb-lab">Plan<input class="sinp" id="m-sbe-plan" data-sbe="plan" value="${esc(e.plan)}" placeholder="Standard" autocomplete="off"></label><label class="sb-lab">Kategori<select class="sinp" data-sbe="category">${Object.keys(CAT_C).map((c) => `<option ${c === e.category ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></label></div>
-    <div class="sb-lab">Hvor ofte<div class="schips">${Object.entries(CYC).map(([k, [n]]) => chip(`data-sbx="cyc" data-v="${k}"`, e.cycle === k, n)).join('')}</div></div>
+    <div class="sb-lab">Hvor ofte<div class="schips">${sykluser(SB.d).map((c) => chip(`data-sbx="cyc" data-v="${c.id}"`, e.cycle === c.id, c.name)).join('')}</div></div>
     <div class="sb-lab">Faktureringsdato<div class="sb-two"><select class="sinp" data-sbe="day" aria-label="Dag">${Array.from({ length: 31 }, (_, i) => `<option value="${i + 1}" ${day === i + 1 ? 'selected' : ''}>${i + 1}.</option>`).join('')}</select><select class="sinp" data-sbe="mon" aria-label="Måned">${MNL.map((n, i) => `<option value="${i + 1}" ${mon === i + 1 ? 'selected' : ''}>${n.charAt(0).toUpperCase() + n.slice(1)}</option>`).join('')}</select></div><span class="sb-dim sm">${esc(when)}</span></div>
     ${P37B.shareSection(e, e.ppl ?? [{ id: String(m.me?.id ?? ''), name: m.me?.name ?? 'Meg' }], e.price)}
     <div class="sb-lab">Status<div class="schips">${STS.map(([k, n]) => chip(`data-sbx="st" data-v="${k}"`, e.status === k, n)).join('')}</div></div>
@@ -313,7 +316,7 @@ async function saveEditor() {
   const e = SB.ed, price = parseAmount(e.price);
   if (!e.name.trim() || !(price >= 0) || price === null) { haptic('err'); flash('Fyll inn navn og pris'); return; }
   const day = Math.min(31, Math.max(1, parseInt(e.day, 10) || 1)), mon = Math.min(12, Math.max(1, parseInt(e.mon, 10) || 1));
-  const body = { name: e.name.trim(), plan: e.plan.trim(), price, cycle: e.cycle, billDay: day, billMonth: mon, chargeDay: day, // serveren regner nextDate
+  const body = { name: e.name.trim(), plan: e.plan.trim(), price, cycle: e.cycle, billDay: day, billMonth: mon, chargeDay: day, ...(erUkesyklus(e.cycle) ? { startDate: kjentTrekk(day, mon) } : {}), // serveren regner nextDate
     category: e.category, status: e.status, active: e.status !== 'cancelled', logoUrl: e.file ? undefined : e.logoUrl ?? null, domain: e.domain ?? undefined };
   e.busy = 'save'; draw();
   try {
@@ -410,13 +413,13 @@ export async function subsBind(e, t) {
   if (e.type === 'submit' && d('[data-sbform]')) {
     e.preventDefault();
     const f = SB.f, p0 = parseAmount(f.price), day = Math.min(31, Math.max(1, parseInt(f.day, 10) || 0));
-    // Serveren kjenner ikke ukentlige abonnementer: regnes om til månedlig (× 52 / 12) med «Ukentlig» som plan.
-    const wk = f.cycle === 'weekly', price = wk && p0 ? Math.round(((p0 * 52) / 12) * 100) / 100 : p0;
+    // Q40: serveren kjenner ukentlige abonnementer. Prisen lagres per trekk og syklusen som den er (før ble ukentlig regnet om til månedlig).
+    const price = p0, wk = erUkesyklus(f.cycle);
     if (!f.name.trim() || !price) { haptic('err'); flash('Skriv tjeneste og beløp'); return true; }
     SB.busy = true; draw();
     try {
       // Fase 3: bare trekkdagen sendes; serveren regner neste trekk (før regnet appen det selv og sendte nextDate).
-      await api('/subscriptions', { method: 'POST', json: { name: f.name.trim(), price, cycle: wk ? 'monthly' : f.cycle, chargeDay: day || undefined, ...(wk ? { plan: `Ukentlig · ${n0(p0)} kr/uke` } : {}) } });
+      await api('/subscriptions', { method: 'POST', json: { name: f.name.trim(), price, cycle: f.cycle, ...(wk ? (day ? { startDate: kjentTrekk(day, osloMåned()) } : {}) : { chargeDay: day || undefined }) } });
       SB.f = { name: '', price: '', day: '', cycle: 'monthly' }; SB.sheet = false; SB.mode = null;
       await subsLoad(); flash(`${f.name.trim()} er lagt til`);
     } finally { SB.busy = false; draw(); }

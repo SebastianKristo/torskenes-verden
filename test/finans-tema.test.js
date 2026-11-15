@@ -1,5 +1,5 @@
-// Økonomi følger Homelab-temaet (Q15, B-F1): public/finans/js/tema.js og loader.js (første tegning),.
-// Kjøres uten nettleser: document, localStorage og matchMedia er enkle stubber.
+// Økonomi følger Homelab-temaet (Q15, B-F1): public/finans/js/tema.js og loader.js (første tegning), og abonnementssyklusene
+// som serveren sender (sykluser.js, Q40). Kjøres uten nettleser: document, localStorage og matchMedia er enkle stubber.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -80,4 +80,22 @@ test('loader.js velger samme tema som tema.js før første tegning', () => {
   assert.equal(run({ hl_theme: '2c', papir_web_mode: 'system' }, true), 'mork');
   assert.equal(run({ hl_theme: 'cur' }), 'glod');
   assert.equal(run({ fh_design: 'mork' }), 'mork', 'ukjent Homelab-modus: gammelt valg');
+});
+
+test('sykluser: serverens liste brukes, ukesykluser får et kjent trekk i Oslo-året', async () => {
+  const S = await import('../public/finans/js/sykluser.js');
+  const d = { cycles: [{ id: 'weekly', name: 'Ukentlig', perLabel: '/uke' }, { id: 'monthly', name: 'Månedlig', perLabel: '/mnd' }, { id: 'quarterly', name: 'Kvartalsvis', perLabel: '/kvartal' }] };
+  assert.deepEqual(S.sykluser(d).map((c) => c.id), ['weekly', 'monthly', 'quarterly']);
+  assert.equal(S.syklus(d, 'quarterly').perLabel, '/kvartal');
+  assert.equal(S.syklusRang(d, 'weekly') < S.syklusRang(d, 'quarterly'), true);
+  assert.deepEqual(S.sykluser(null).map((c) => c.id), ['monthly', 'yearly', 'biennial'], 'reserve mot eldre servere');
+  assert.equal(S.erUkesyklus('biweekly'), true);
+  assert.equal(S.erUkesyklus('quarterly'), false);
+  assert.match(S.kjentTrekk(31, 2), /^\d{4}-02-(28|29)$/, 'dagen kappes til månedens lengde');
+});
+
+test('Abonnementer i appen gjør ikke ukentlig om til månedlig', () => {
+  const src = readFileSync(new URL('../public/finans/js/mobile-subs.js', import.meta.url), 'utf8');
+  assert.doesNotMatch(src, /\* 52\) \/ 12/);
+  assert.doesNotMatch(src, /cycle: wk \? 'monthly'/);
 });
