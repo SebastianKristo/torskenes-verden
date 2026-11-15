@@ -1,9 +1,10 @@
 import SwiftUI
 import UIKit
 
-/* ---------------- Prompt 33: Kalender – innlogging ---------------- */
-// Serveradresse + brukernavn + passord (+ 2FA-kode) → app-token via /finans/api/login (samme flyt som Homelab-appen),
-// eller «Logg inn med Homelab-appen»: token fra App Group (kal.hl.*), eller finanshub://kalender-login som lager det.
+/* ---------------- Kalender (iPhone/iPad) – innloggingen ---------------- */
+// KalAuth: brukernavn + passord (+ 2FA-kode) → app-token via /finans/api/login (samme flyt som Homelab-appen).
+// Skjermen er KalLogin41View (uten serverfelt, prompt 41) med tannhjulet og arket «Server» (prompt 89) nederst i fila.
+// Fase 4: den gamle skjermen med serverfelt (KalLoginView, prompt 33) ble aldri vist og er fjernet.
 
 enum KalAuth {
     static func isLocal(_ host: String) -> Bool {
@@ -73,136 +74,6 @@ enum KalAuth {
         let user: [String: Any] = (obj["user"] as? [String: Any]) ?? [:]
         let name: String = (user["name"] as? String) ?? (user["username"] as? String) ?? u
         return Result(token: token, user: name)
-    }
-}
-
-struct KalLoginView: View {
-    @Environment(\.kal) private var t
-    @MainActor private var s: KalStore { KalStore.shared }
-    @State private var server: String = UserDefaults.standard.string(forKey: "kal.lastServer") ?? ""
-    @State private var user: String = ""
-    @State private var pass: String = ""
-    @State private var code: String = ""
-    @State private var needsCode: Bool = false
-    @State private var busy: Bool = false
-    @State private var error: String = ""
-    /// Prompt 38: «Logg inn med QR fra mobilen» (nyttig på iPad).
-    @State private var qrMode: Bool = false
-
-    private var homelabReady: Bool { KalGroup.homelabToken != nil }
-    private var homelabInstalled: Bool {
-        guard let u = URL(string: "finanshub://kalender-login") else { return false }
-        return UIApplication.shared.canOpenURL(u)
-    }
-
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 14) {
-                KalAppIconView(size: 72).padding(.top, 40)
-                Text("Kalender").font(KalFont.serif(40)).foregroundStyle(t.ink)
-                Text("Logg inn med Homelab-kontoen din. Kalender deler kalendere, hendelser, bursdager og frister med Homelab.")
-                    .font(KalFont.ui(14)).foregroundStyle(t.mut).fixedSize(horizontal: false, vertical: true)
-                if homelabReady || homelabInstalled { homelabButton }
-                field("Serveradresse", text: $server, keyboard: .URL)
-                if qrMode {
-                    KalQRLogin38Panel(base: KalAuth.normalize(server), onPassword: { qrMode = false })
-                } else {
-                    passwordForm
-                }
-                if !KalGroup.linked {
-                    Text("App Group er ikke tilgjengelig i denne installasjonen (vanlig ved sideloading). Logg inn her, så virker appen – widgetene trenger App Group-en.")
-                        .font(KalFont.ui(12)).foregroundStyle(t.mut2).fixedSize(horizontal: false, vertical: true)
-                }
-            }
-            .padding(.horizontal, 24)
-            .padding(.bottom, 40)
-        }
-        .scrollDismissesKeyboard(.interactively)
-        .background(t.bg.ignoresSafeArea())
-    }
-
-    private var hasServer: Bool { !server.trimmingCharacters(in: .whitespaces).isEmpty }
-
-    @ViewBuilder private var passwordForm: some View {
-        field("Brukernavn", text: $user, keyboard: .default)
-        SecureField("Passord", text: $pass)
-            .font(KalFont.ui(16, .medium)).foregroundStyle(t.ink)
-            .padding(.horizontal, 14).frame(height: 50)
-            .background(RoundedRectangle(cornerRadius: 16).fill(t.card))
-            .overlay(RoundedRectangle(cornerRadius: 16).strokeBorder(t.line, lineWidth: 1))
-        if needsCode { field("Kode (6 sifre)", text: $code, keyboard: .numberPad) }
-        if !error.isEmpty {
-            Text(error).font(KalFont.ui(13)).foregroundStyle(t.acc).fixedSize(horizontal: false, vertical: true)
-        }
-        Button(action: { submit() }) {
-            HStack {
-                if busy { ProgressView().tint(t.bg) }
-                Text(busy ? "Logger inn …" : "Logg inn").font(KalFont.ui(15, .bold))
-            }
-            .foregroundStyle(t.bg)
-            .frame(maxWidth: .infinity).frame(height: 50)
-            .background(Capsule().fill(canSubmit ? t.ink : t.mut2))
-        }
-        .buttonStyle(.plain)
-        .disabled(!canSubmit || busy)
-        Button(action: { qrMode = true }) {
-            Text("Logg inn med QR fra mobilen").font(KalFont.ui(14, .semibold)).foregroundStyle(hasServer ? t.acc : t.mut2)
-        }
-        .buttonStyle(.plain)
-        .disabled(!hasServer)
-    }
-
-    private var canSubmit: Bool { !server.trimmingCharacters(in: .whitespaces).isEmpty && !pass.isEmpty }
-
-    private var homelabButton: some View {
-        Button(action: {
-            KalHaptic.tap()
-            if !s.adoptHomelab(), let u = URL(string: "finanshub://kalender-login") {
-                UIApplication.shared.open(u)
-            }
-        }) {
-            HStack(spacing: 10) {
-                Image(systemName: "house.fill").font(.system(size: 16, weight: .semibold))
-                Text("Logg inn med Homelab-appen").font(KalFont.ui(15, .bold))
-            }
-            .foregroundStyle(t.ink)
-            .frame(maxWidth: .infinity).frame(height: 50)
-            .overlay(Capsule().strokeBorder(t.ink, lineWidth: 1.5))
-        }
-        .buttonStyle(.plain)
-    }
-
-    private func field(_ title: String, text: Binding<String>, keyboard: UIKeyboardType) -> some View {
-        TextField(title, text: text)
-            .font(KalFont.ui(16, .medium)).foregroundStyle(t.ink)
-            .keyboardType(keyboard)
-            .textInputAutocapitalization(.never)
-            .autocorrectionDisabled(true)
-            .padding(.horizontal, 14).frame(height: 50)
-            .background(RoundedRectangle(cornerRadius: 16).fill(t.card))
-            .overlay(RoundedRectangle(cornerRadius: 16).strokeBorder(t.line, lineWidth: 1))
-    }
-
-    private func submit() {
-        let base: String = KalAuth.normalize(server)
-        busy = true
-        error = ""
-        Task {
-            do {
-                let r: KalAuth.Result = try await KalAuth.login(base: base, username: user, password: pass, code: code)
-                UserDefaults.standard.set(base, forKey: "kal.lastServer")
-                busy = false
-                pass = ""
-                s.didLogin(bases: [base], token: r.token, user: r.user)
-            } catch let f as KalAuth.Failure {
-                busy = false
-                error = f.message
-                if f.needsCode { needsCode = true }
-            } catch {
-                busy = false
-                self.error = error.localizedDescription
-            }
-        }
     }
 }
 

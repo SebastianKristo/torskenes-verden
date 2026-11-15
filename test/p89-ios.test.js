@@ -93,7 +93,8 @@ test('domenet: ingen gammel stavemåte igjen i iOS-appene; ny standard i konstan
   assert.match(yml, /HomelabLocal47: http:\/\/10\.69\.1\.39:3000/);
   // ATS: bare lokalt nett (ikke slått av globalt).
   assert.doesNotMatch(yml, /NSAllowsArbitraryLoads/);
-  assert.match(raw('KalenderMac/Sources/MacLogin.swift'), /os\.smarthjemeksperten\.no eller 10\.69\.1\.39:3000/);
+  // Fase 4: Mac-skjermen med serverfelt (og hjelpeteksten med begge adressene) var død og er fjernet; standarden står i
+  // KalAuth41Core (over) og vises i «Server: …»-linja på innloggingen.
   // Ingen nye targets.
   assert.doesNotMatch(yml, /89/);
 });
@@ -208,18 +209,22 @@ test('Kalender (iOS): tannhjul og arket «Server» med samme lagring som Innstil
   assert.match(l, /m\.gear89 = true/);
 });
 
-test('Kalender for Mac: tannhjul og arket «Server», feltet fylles med standarden', () => {
+test('Kalender for Mac: tannhjul og arket «Server» på innloggingen som vises (MacLogin41View)', () => {
   const v = code('KalenderMac/Sources/MacLogin.swift');
   assert.match(v, /Image\(systemName: "gearshape"\)/);
   assert.match(v, /\.frame\(width: 44, height: 44\)/);
   assert.match(v, /"Test tilkobling"/);
   assert.match(v, /MacPill\(title: "Tilbakestill til standard"/);
   assert.match(v, /MacPill\(title: "Avbryt"/);
-  assert.match(v, /return v\.isEmpty \? KalSrv89\.external : v/);
+  // Tannhjulet og «Server: …» ligger i skjermen som faktisk vises (MacLogin41View), ikke i den døde MacLoginView.
   const l = code('KalenderMac/Sources/MacLogin.swift');
-  assert.match(l, /@State private var server: String = MacLogin89\.initialServer/);
-  assert.match(l, /MacLogin89Gear \{ serverSheet = true \}/);
-  assert.match(l, /Text\("Server: " \+ KalSrv89\.host/);
+  assert.doesNotMatch(l, /struct MacLoginView/);
+  const view = l.slice(l.indexOf('struct MacLogin41View'));
+  assert.match(view, /MacLogin89Gear \{ serverSheet = true \}/);
+  assert.match(view, /MacLogin89Sheet\(onSave:/);
+  assert.match(view, /Text\("Server: " \+ serverHost\)/);
+  assert.match(view, /@State private var serverHost: String = KalSrv89\.displayHost/);
+  assert.equal((view.match(/^\s+serverLine$/gm) || []).length, 2);
   // Mac-nøkkelen ligger i Mac-målet (SharedKal\/Core har bare kal*-nøkler, se p84).
   assert.doesNotMatch(code('SharedKal/Core/KalServerCore.swift'), /mac\./);
 });

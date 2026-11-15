@@ -34,36 +34,6 @@ struct MacSidebar: View {
     }
 }
 
-struct MacCalRow: View {
-    @Environment(\.mk) private var t
-    let cal: KalCal
-    let toggle: () -> Void
-    @State private var hover: Bool = false
-
-    var body: some View {
-        Button(action: toggle) {
-            HStack(spacing: 10) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 5).fill(cal.on ? t.calColor(cal) : Color.clear)
-                    RoundedRectangle(cornerRadius: 5).strokeBorder(t.calColor(cal), lineWidth: 1.5)
-                    if cal.on { Text("✓").font(.system(size: 10, weight: .heavy)).foregroundColor(Color.white) }
-                }
-                .frame(width: 18, height: 18)
-                Text(cal.name).font(MacFont.ui(13.5, .semibold)).foregroundColor(t.ink).lineLimit(1)
-                Spacer(minLength: 4)
-                if cal.count > 0 { Text(String(cal.count)).font(MacFont.mono(10.5)).foregroundColor(t.mut2) }
-            }
-            .padding(.horizontal, 8)
-            .frame(height: 32)
-            .background(RoundedRectangle(cornerRadius: 10).fill(hover ? t.card : Color.clear))
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .onHover { (h: Bool) in hover = h }
-        .accessibilityLabel(cal.name + (cal.on ? ", vises" : ", skjult"))
-    }
-}
-
 /// Minimåned (sidemenyen og menylinja). Ukenummer-kolonne, søndag i rødt, i dag med rød sirkel, prikk for dager med hendelser.
 struct MacMiniMonth: View {
     @Environment(\.mk) private var t
