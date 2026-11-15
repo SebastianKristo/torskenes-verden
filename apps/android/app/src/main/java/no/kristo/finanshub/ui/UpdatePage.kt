@@ -84,5 +84,3 @@ internal fun upd28WebUrl(vm: AppViewModel): String {
     val b: String = vm.base.ifBlank { vm.account?.server ?: "" }.trimEnd('/')
     return "$b/#/innstillinger/system"
 }
-
-    else "Trykk «Oppdater ›» og skriv passordet ditt på nytt. Serveren tar backup av databasen og starter på nytt (vanligvis 2–5 minutter)."
