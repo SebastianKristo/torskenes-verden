@@ -244,8 +244,8 @@ async function kalenderSummary(u) {
 }
 function huskeSummary(u) {
   const t = nextTasks(u, 10);
-  if (!t.length) return 'Huskeliste: ingenting som venter.';
-  return `Huskeliste (${t.length}): ${t.map((x) => `${x.title}${x.due ? ` (frist ${x.due.slice(8, 10)}.${x.due.slice(5, 7)}${x.overdue ? ', forfalt' : ''})` : ''}`).join('; ')}.`;
+  if (!t.length) return 'Gjøremål: ingenting som venter.';
+  return `Gjøremål (${t.length}): ${t.map((x) => `${x.title}${x.due ? ` (frist ${x.due.slice(8, 10)}.${x.due.slice(5, 7)}${x.overdue ? ', forfalt' : ''})` : ''}`).join('; ')}.`;
 }
 /** Korte sammendrag fra egne funksjoner (ikke rå tabeller ut til modellen), per bruker. */
 export async function myData(u) {
@@ -253,8 +253,8 @@ export async function myData(u) {
   const [finans, kalender, huske] = await Promise.all([safe(() => finansSummary(u, 30), 'Finans: ikke tilgjengelig.'), safe(() => kalenderSummary(u), 'Kalender: ikke tilgjengelig.'), safe(() => huskeSummary(u), 'Huskeliste: ikke tilgjengelig.')]);
   return { finans, kalender, huske };
 }
-const LEAVES = { finans: 'Sammendrag av Finans (siste 30 dager)', kalender: 'Sammendrag av Kalender (neste 7 dager)', huske: 'Sammendrag av Huskeliste' };
-const USED = { finans: 'Finans', kalender: 'Kalender', huske: 'Huskeliste' };
+const LEAVES = { finans: 'Sammendrag av Finans (siste 30 dager)', kalender: 'Sammendrag av Kalender (neste 7 dager)', huske: 'Sammendrag av Gjøremål' };
+const USED = { finans: 'Finans', kalender: 'Kalender', huske: 'Gjøremål' };
 
 /** Språket brukeren har valgt (SERVER-A eier feltet; vi leser de stedene det kan ligge). */
 function langOf(u) {
@@ -415,7 +415,7 @@ function mockAnswer(text, data, facts = null) {
   const t = String(text ?? '').toLowerCase();
   if (facts?.length) return factsAnswer(facts); // prompt 41: svar på alle delene ut fra faktaene
   if (data && /mat|brukte|penger|kr|finans|økonomi/.test(t)) return `Ut fra Finans-dataene dine: ${data.finans.split('. ').slice(0, 2).join('. ')}. Vil du at jeg setter opp et forslag til matbudsjett for neste måned?`;
-  if (/hei|hallo/.test(t)) return 'Hei! Jeg er Homelab-assistenten. Jeg kan hjelpe med økonomi, kalender, huskelisten eller oppsett av serveren. Hva lurer du på?';
+  if (/hei|hallo/.test(t)) return 'Hei! Jeg er Homelab-assistenten. Jeg kan hjelpe med økonomi, kalender, gjøremål eller oppsett av serveren. Hva lurer du på?';
   return 'Her er et kort svar: Docker Compose samler tjenestene dine i én fil, så du kan starte alt med `docker compose up -d`. '
     + 'Legg Ollama og Open WebUI på samme nettverk, og bruk et volum for modellene, så slipper du å laste dem ned på nytt. Si fra hvis du vil ha et eksempel.';
 }

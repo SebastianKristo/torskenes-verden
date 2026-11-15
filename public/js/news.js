@@ -87,7 +87,7 @@ function reader(opts = {}) {
     el.className = `nw nw-${theme}`;
     el.setAttribute('role', 'dialog');
     el.setAttribute('aria-modal', 'true');
-    el.setAttribute('aria-label', 'Nyhetsleser');
+    el.setAttribute('aria-label', 'Nyheter');
     el.tabIndex = -1;
     document.body.append(el);
     document.body.classList.add('nw-open');
@@ -310,7 +310,7 @@ function reader(opts = {}) {
     const rel = (Array.isArray(d.related) && d.related.length ? d.related : (st.data?.items ?? []).filter((y) => y.category === x.category && y.url !== x.url)).slice(0, 5);
     a.rel = rel;
     return `<div class="nw-art" role="document">
-      <div class="nw-art-h"><button class="nw-back" data-act="art-close">‹ Siste nytt</button><span class="nw-sp"></span>${artBtn73(x)}<button class="nw-back" data-act="art-share">${a.shared ? 'Lenke kopiert' : 'Del'}</button></div>
+      <div class="nw-art-h"><button class="nw-back" data-act="art-close">‹ Nyheter</button><span class="nw-sp"></span>${artBtn73(x)}<button class="nw-back" data-act="art-share">${a.shared ? 'Lenke kopiert' : 'Del'}</button></div>
       <div class="nw-art-body"><div class="nw-art-in">
         <div class="nw-hero" style="background-color:${esc(x.color || '#5c5850')}">${esc(ini(x))}${imgTag(img)}</div>
         <span class="nw-lab">${esc(cat)}${cat ? ' · ' : ''}<span data-no-i18n>${esc(src.toUpperCase())}</span></span>

@@ -260,7 +260,7 @@ for (const mode of ['openwebui', 'ollama']) {
     const evs = sse(r.text);
     const done = evs.find((e) => e.event === 'done')?.data;
     assert.ok(done, r.text);
-    assert.deepEqual(done.used, ['Nettsøk'], 'ikke Finans, Kalender eller Huskeliste');
+    assert.deepEqual(done.used, ['Nettsøk'], 'ikke Finans, Kalender eller Gjøremål');
     assert.deepEqual(done.tools, ['web']);
     assert.equal(done.backend, mode);
     assert.equal(done.web.provider, 'openwebui');
@@ -377,14 +377,14 @@ test('Mine data: bare de delene rutingen valgte (Finans for forbruk, Kalender fo
   assert.deepEqual(x.done.tools, ['finans']);
   assert.match(x.sys, /Brukerens egne data/);
   assert.match(x.sys, /Finans/);
-  assert.ok(!/Kalender neste 7 dager|Huskeliste/.test(x.sys), x.sys);
+  assert.ok(!/Kalender neste 7 dager|Gjøremål/.test(x.sys), x.sys);
   x = await ask('Hva har jeg i kalenderen i morgen?');
   assert.deepEqual(x.done.tools, ['kalender']);
   assert.match(x.sys, /Kalender neste 7 dager/);
-  assert.ok(!/Finans|Huskeliste/.test(x.sys.split('Brukerens egne data')[1] ?? ''));
+  assert.ok(!/Finans|Gjøremål/.test(x.sys.split('Brukerens egne data')[1] ?? ''));
   x = await ask('Hva står på huskelista?');
   assert.deepEqual(x.done.tools, ['huske']);
-  assert.match(x.sys, /Huskeliste/);
+  assert.match(x.sys, /Gjøremål/);
   x = await ask('Hei, hva kan du?');
   assert.deepEqual(x.done.tools, ['none']);
   assert.ok(!/Brukerens egne data/.test(x.sys));

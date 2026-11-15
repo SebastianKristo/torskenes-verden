@@ -43,7 +43,7 @@ export function briefAccess52() {
 }
 export const isChild52 = (u) => briefAccess52().children.includes(u);
 const mediaOk52 = async (u) => { try { const { mediaAllowed43 } = await import('../media/arr.js'); return mediaAllowed43(u); } catch { return isAdmin(u); } };
-const CARDS52 = [['focus', '1b', 'Dagens fokus'], ['trip', '3b', 'Min reise'], ['todo', '4a', 'Huskeliste'], ['bills', '2a', 'Regninger'], ['clothes', '9b', 'Klær'],
+const CARDS52 = [['focus', '1b', 'Dagens fokus'], ['trip', '3b', 'Min reise'], ['todo', '4a', 'Gjøremål'], ['bills', '2a', 'Regninger'], ['clothes', '9b', 'Klær'],
   ['tonight', '5b', 'Nytt i kveld'], ['homelab', '6a', 'Homelab'], ['domains', '7a', 'Domener'], ['stocks', '8b', 'Aksjer']];
 /** Hvilke kort brukeren får. → {allowed:Set, hidden:[{id, reason}]} */
 export async function briefCardsFor52(u) {

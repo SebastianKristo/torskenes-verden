@@ -24,7 +24,7 @@ function form() {
 function render() {
   document.title = `${cv.name} · CV`;
   root.innerHTML = editing ? form() : view();
-  tools.innerHTML = (canEdit ? `<a class="btn" href="/">← Dashboard</a><button class="btn dark" data-a="toggle">${editing ? 'Ferdig' : 'Rediger CV'}</button>${editing ? '<button class="btn" data-a="reset">Tilbakestill</button>' : ''}` : '')
+  tools.innerHTML = (canEdit ? `<a class="btn" href="/">← Oversikt</a><button class="btn dark" data-a="toggle">${editing ? 'Ferdig' : 'Rediger CV'}</button>${editing ? '<button class="btn" data-a="reset">Tilbakestill</button>' : ''}` : '')
     + (editing ? '' : '<button class="btn" data-a="pdf">Last ned som PDF</button>');
 }
 

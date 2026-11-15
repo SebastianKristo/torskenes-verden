@@ -275,7 +275,7 @@ test('Gjøremål-Glimt: person lenket til brukeren (liste dere begge ser), dato 
   assert.equal(it.time, '17:00');
   const [y, m, d] = it.due.split('-').map(Number);
   assert.equal(new Date(Date.UTC(y, m - 1, d)).getUTCDay(), 5, 'fredag');
-  assert.ok(db.prepare("SELECT 1 FROM notify_queue WHERE user_id=? AND title='Sebastian nevnte deg i Huskeliste'").get(ingridId));
+  assert.ok(db.prepare("SELECT 1 FROM notify_queue WHERE user_id=? AND title='Sebastian nevnte deg i Gjøremål'").get(ingridId));
   const two = await A('/api/tasks/glimt', 'POST', { q: 'Hent pakke på Kiwi i morgen. Deretter kjøre til hytta' });
   const [p1, p2] = two.body.items;
   assert.equal(p1.title, 'Hent pakke på Kiwi');

@@ -195,7 +195,7 @@ export async function multiAdd40(T, u, text, listId, today, { people = [] } = {}
   })();
   const out = rows.map((r, i) => ({ ...T.itemOut(T.byId(r.id)), who: items[i].who ? { userId: items[i].who.userId, name: items[i].who.name } : null, step: { n: i + 1, label: stepLabel(items[i], items) } }));
   for (const [i, it] of items.entries()) {
-    if (it.who && it.who.userId !== u) { try { await notifyUser(it.who.userId, { title: `${userInfo(u)?.displayName?.split(' ')[0] ?? 'Noen'} nevnte deg i Huskeliste`, body: rows[i].title, url: '/#/huske', category: 'familie', tag: `task-mention-${rows[i].id}` }); } catch { /* best effort */ } }
+    if (it.who && it.who.userId !== u) { try { await notifyUser(it.who.userId, { title: `${userInfo(u)?.displayName?.split(' ')[0] ?? 'Noen'} nevnte deg i Gjøremål`, body: rows[i].title, url: '/#/huske', category: 'familie', tag: `task-mention-${rows[i].id}` }); } catch { /* best effort */ } }
   }
   const place = [...new Set(items.map((x) => x.place).filter(Boolean))];
   const ordered = items.some((x) => x.after !== null && x.after !== undefined);

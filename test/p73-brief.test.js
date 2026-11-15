@@ -63,7 +63,7 @@ test('brief-cards: standard utvalg og rekkefølge som i fasiten (BK0), 8 av 11 p
   for (const k of ['pakker', 'homelab', 'domener']) assert.equal(d[k], false, k);
   assert.equal(r.body.cards.slice(0, 11).filter((c) => c.on).length, 8);
   assert.match(r.body.count, /^\d+ av \d+ på$/);
-  assert.equal(r.body.cards.find((c) => c.key === 'gjore').title, 'Huskeliste · 3 viktigste');
+  assert.equal(r.body.cards.find((c) => c.key === 'gjore').title, 'Gjøremål · 3 viktigste');
   assert.equal(r.body.cards.find((c) => c.key === 'reise').sub, 'Ruter: neste avgang og når du må gå');
 });
 
@@ -179,7 +179,7 @@ test('web: Innstillinger → Glimt og ⚙-arket har INNHOLD I BRIEFEN med piler,
   const b = src('public/js/brief-innhold.js'), g = src('public/js/glimt-settings.js');
   assert.match(b, /INNHOLD I BRIEFEN/);
   assert.match(b, /av \$\{L\.length\} på/);
-  assert.match(b, /Velg hvilke kort som er med og rekkefølgen de vises i\. Gjelder Now Brief på mobil, web og widgets\./);
+  assert.match(b, /Velg hvilke kort som er med og rekkefølgen de vises i\. Gjelder Brief på mobil, web og widgets\./);
   assert.match(b, /data-b73-mv/); assert.match(b, /data-b73-tog/); assert.match(b, /Tilbakestill/);
   assert.match(b, /\/brief-cards\/reset/);
   assert.match(g, /settings73Html\(\)/);

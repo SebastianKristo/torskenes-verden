@@ -114,7 +114,7 @@ export const MODULES = [
   { id: 'familie', name: 'Familie', desc: 'Posisjoner, soner, helse, bilder', table: (t) => /^family_/.test(t), kv: like('family_*', 'fam_*'), dirs: ['family-photos'] },
   { id: 'mat', name: 'Mat', desc: 'Matplan, oppskrifter, skanninger', table: (t) => /^(mat_|matplan_)/.test(t) || ['dish_link', 'food_folder'].includes(t), kv: like('mat', 'mat_*'), dirs: ['mat'] },
   { id: 'sporing', name: 'Sporing', desc: 'Pakker og hendelser', table: (t) => /^hl_shipment/.test(t), kv: like('trk_*', 'parcelsapp_usage'), dirs: [] },
-  { id: 'huske', name: 'Huskeliste', desc: 'Lister og oppgaver', table: (t) => /^(hl_task|huske_)/.test(t), kv: like('huske_*', 'huske_ha', 'tasks_seeded'), dirs: [] },
+  { id: 'huske', name: 'Gjøremål', desc: 'Lister og oppgaver', table: (t) => /^(hl_task|huske_)/.test(t), kv: like('huske_*', 'huske_ha', 'tasks_seeded'), dirs: [] },
   { id: 'bursdager', name: 'Bursdager', desc: 'Personer og påminnelser', table: (t) => t === 'birthdays', kv: like('bd_*'), dirs: [] },
   { id: 'chat', name: 'Chat', desc: 'Samtaler og kunnskapsbase', table: (t) => /^hl_chat/.test(t), kv: like('chat_*'), dirs: ['chat'] },
   { id: 'domener', name: 'Domener', desc: 'Domener og oppetid', table: (t) => ['hl_domains', 'hl_uptime'].includes(t), kv: like('hl_domains*'), dirs: [] },

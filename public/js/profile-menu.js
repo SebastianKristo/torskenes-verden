@@ -28,8 +28,8 @@ function label(k) {
   if (k === 'sprak') return lang() === 'en' ? 'Language: English → Norsk' : 'Språk: Norsk → English';
   if (k === 'sokebar') return store.me?.hideSearch ? 'Vis søkebar' : 'Skjul søkebar';
   if (k === 'nyhetslinje') return store.me?.hideNews ? 'Vis nyhetslinje' : 'Skjul nyhetslinje';
-  if (k === 'tilpass') return 'Tilpass forside og meny';
-  if (k === 'widgets') return 'Rediger widgets';
+  if (k === 'tilpass') return 'Utseende og faner';
+  if (k === 'widgets') return 'Tilpass Oversikt'; // O4: kortene på Oversikt (widgets er telefonens)
   if (k === 'cv') return 'CV ↗';
   return 'Lås skjermen';
 }

@@ -11,7 +11,7 @@ import { brief52State } from './brief-kort-bruker.js';
 /** [key, tittel, kilde, på som standard] – reserve når serveren ikke svarer (samme som server/glimt/brief-content.js CATALOG73). */
 export const CAT73 = [
   ['vaer', 'Vær', 'Nå, i dag og varsel', 1], ['kal', 'Kalender', 'Første avtale og resten av dagen', 1], ['fokus', 'Dagens fokus', 'Det viktigste i dag, valgt av Glimt', 1],
-  ['gjore', 'Huskeliste · 3 viktigste', 'Fra Gjøremål', 1], ['reise', 'Min reise', 'Ruter: neste avgang og når du må gå', 1], ['regn', 'Regninger denne uka', 'Fra Finans', 1],
+  ['gjore', 'Gjøremål · 3 viktigste', 'Fra Gjøremål', 1], ['reise', 'Min reise', 'Ruter: neste avgang og når du må gå', 1], ['regn', 'Regninger denne uka', 'Fra Finans', 1],
   ['kveld', 'Nytt i kveld', 'Nye episoder og filmer fra Media', 1], ['nyheter', 'Nyheter', 'Sammendrag fra Nyheter', 1], ['pakker', 'Pakker', 'Sporing på vei', 0],
   ['homelab', 'Homelab-status', 'Varsler fra serveren', 0], ['domener', 'Domener og SSL', 'Utløper snart', 0],
   ['klaer', 'Klær i dag', 'Hva du bør ha på deg, fra Vær', 1], ['abo', 'Prøveperioder', 'Fra Abonnementer', 1], ['bibel', 'Bibelvers', 'Dagens vers', 1],
@@ -82,7 +82,7 @@ export function settings73Html() {
 }
 function set73Inner(L, on) {
   return `<div class="b73-sh" data-hl="glimt-innhold"><span class="gs-h">INNHOLD I BRIEFEN</span><span class="b73-cnt">${on} av ${L.length} på</span></div>
-    <p class="gs-note b73-note">Velg hvilke kort som er med og rekkefølgen de vises i. Gjelder Now Brief på mobil, web og widgets.</p>
+    <p class="gs-note b73-note">Velg hvilke kort som er med og rekkefølgen de vises i. Gjelder Brief på mobil, web og widgets.</p>
     <div class="b73-list" role="list">${L.map((c, i) => `<div class="b73-row${c.on ? '' : ' off'}" role="listitem" data-b73-key="${esc(c.key)}">
       <span class="b73-mv"><button type="button" data-b73-mv="${esc(c.key)}:-1" aria-label="Flytt ${esc(c.title)} opp"${i ? '' : ' disabled'}>${UP}</button><button type="button" data-b73-mv="${esc(c.key)}:1" aria-label="Flytt ${esc(c.title)} ned"${i < L.length - 1 ? '' : ' disabled'}>${DN}</button></span>
       <button type="button" class="b73-t" data-b73-tog="${esc(c.key)}"><b>${esc(c.title)}</b><span>${esc(c.sub ?? '')}</span></button>

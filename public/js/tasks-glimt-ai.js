@@ -150,28 +150,28 @@ export function isHuske41(q) {
   if (/^(husk|påminn meg|legg til i huskeliste(n)?|ny oppgave)\b/i.test(s)) return true;
   return s.split(/\s+/).length >= 6 && /\b(må|skal|huske)\b/i.test(s) && /\b(vi|jeg|meg|oss)\b/i.test(s);
 }
-const STEPS41 = ['Leser beskjeden', 'Deler opp i punkter', 'Finner rekkefølge og steder', 'Lagrer i Huskeliste'];
-/** Legg i Huskeliste med samme Glimt-animasjon som rask time. Bakgrunnsjobb på serveren (origin home_search). */
+const STEPS41 = ['Leser beskjeden', 'Deler opp i punkter', 'Finner rekkefølge og steder', 'Lagrer i Gjøremål'];
+/** Legg i Gjøremål med samme Glimt-animasjon som rask time. Bakgrunnsjobb på serveren (origin home_search). */
 export async function addFromSearch41(q) {
-  const id = aiStart({ title: 'Legger til i Huskeliste', toast: 'Glimt deler opp beskjeden …', model: 'Glimt', input: q, steps: STEPS41, fields: { Beskjed: q.length > 80 ? `${q.slice(0, 80)} …` : q, Liste: 'Huskeliste', Original: 'Lagres i «Laget med Glimt»' }, dur: 4200 });
+  const id = aiStart({ title: 'Legger til i Gjøremål', toast: 'Glimt deler opp beskjeden …', model: 'Glimt', input: q, steps: STEPS41, fields: { Beskjed: q.length > 80 ? `${q.slice(0, 80)} …` : q, Liste: 'Huskeliste', Original: 'Lagres i «Laget med Glimt»' }, dur: 4200 });
   let shown = true;
   const slow = setTimeout(() => { if (shown) { shown = false; aiDone(id, { text: '✦ Glimt deler opp i bakgrunnen …' }); } }, 6000);
   const done = (text, ok = true) => {
     clearTimeout(slow);
     if (shown) { shown = false; aiDone(id, { text, ok }); return; }
-    const id2 = aiStart({ title: 'Huskeliste', toast: text, input: q, dur: 300 }); aiDone(id2, { text, ok });
+    const id2 = aiStart({ title: 'Gjøremål', toast: text, input: q, dur: 300 }); aiDone(id2, { text, ok });
   };
   try {
     const r = await startJob41(q, { origin: 'home_search' });
     if (r.ok && !r.sync) {
       const job = J.jobs.find((x) => x.q === q);
-      if (job) job.onDone = (d) => { const n = d?.count ?? d?.items?.length ?? 0; if (shown && d?.items?.length) aiUpdate(id, { fields: d.items.slice(0, 6).map((x, i) => [`${i + 1}.`, x.title ?? x.n ?? '']) }); done(d?.status === 'failed' ? 'Glimt fikk ikke delt opp beskjeden' : `✓ Glimt lagde ${n || 'nye'} ${n === 1 ? 'punkt' : 'punkter'} i Huskeliste`, d?.status !== 'failed'); };
+      if (job) job.onDone = (d) => { const n = d?.count ?? d?.items?.length ?? 0; if (shown && d?.items?.length) aiUpdate(id, { fields: d.items.slice(0, 6).map((x, i) => [`${i + 1}.`, x.title ?? x.n ?? '']) }); done(d?.status === 'failed' ? 'Glimt fikk ikke delt opp beskjeden' : `✓ Glimt lagde ${n || 'nye'} ${n === 1 ? 'punkt' : 'punkter'} i Gjøremål`, d?.status !== 'failed'); };
       return;
     }
-    if (r.ok && r.sync) { const n = r.sync.items?.length ?? 0; done(`✓ Glimt lagde ${n || 'nye'} ${n === 1 ? 'punkt' : 'punkter'} i Huskeliste`); return; }
+    if (r.ok && r.sync) { const n = r.sync.items?.length ?? 0; done(`✓ Glimt lagde ${n || 'nye'} ${n === 1 ? 'punkt' : 'punkter'} i Gjøremål`); return; }
     // Eldre server: del opp lokalt og legg inn med vanlig POST /api/tasks.
     const P = splitLocal41(q), at = new Date().toISOString();
     for (const p of P) await api('/tasks', { method: 'POST', json: { title: p.n, ...(p.note ? { notes: p.note } : {}), origin: { text: q, at, engine: 'lokal' } } });
-    done(`✓ Glimt lagde ${P.length} ${P.length === 1 ? 'punkt' : 'punkter'} i Huskeliste`);
-  } catch (e) { done(`Fikk ikke lagt i Huskeliste: ${e.message}`, false); }
+    done(`✓ Glimt lagde ${P.length} ${P.length === 1 ? 'punkt' : 'punkter'} i Gjøremål`);
+  } catch (e) { done(`Fikk ikke lagt i Gjøremål: ${e.message}`, false); }
 }

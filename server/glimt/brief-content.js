@@ -20,7 +20,7 @@ export const CATALOG73 = [
   ['vaer', 'Vær', 'Nå, i dag og varsel', true, null, 'weather'],
   ['kal', 'Kalender', 'Første avtale og resten av dagen', true, null, 'calendar'],
   ['fokus', 'Dagens fokus', 'Det viktigste i dag, valgt av Glimt', true, 'focus', null],
-  ['gjore', 'Huskeliste · 3 viktigste', 'Fra Gjøremål', true, 'todo', 'todos'],
+  ['gjore', 'Gjøremål · 3 viktigste', 'Fra Gjøremål', true, 'todo', 'todos'],
   ['reise', 'Min reise', 'Ruter: neste avgang og når du må gå', true, 'trip', null],
   ['regn', 'Regninger denne uka', 'Fra Finans', true, 'bills', null],
   ['kveld', 'Nytt i kveld', 'Nye episoder og filmer fra Media', true, 'tonight', null],
