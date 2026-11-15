@@ -32,7 +32,7 @@ const IMG = await import('../server/skjold/images.js');
 const CSV = await import('../server/skjold/csv.js');
 const GL = await import('../server/skjold/glimt.js');
 const P = await import('../server/glimt/plan.js');
-const { magick50 } = await import('../server/img50.js');
+const { magick50 } = await import('../server/bilder/convert.js');
 
 let ipN = 10;
 async function req(path, { method = 'GET', headers = {}, body, raw } = {}) {
@@ -340,7 +340,7 @@ test('bilder: opplasting, skalering, EXIF/GPS fjernet, eier-sjekk og signerte UR
     assert.equal(big.headers.get('content-type'), 'image/jpeg');
     assert.ok(!big.buf.includes(Buffer.from('Exif')), 'EXIF fjernet');
     assert.ok(!big.buf.includes(Buffer.from('GPS:59.9139')), 'GPS-kommentar fjernet');
-    const { imageSize50 } = await import('../server/img50.js');
+    const { imageSize50 } = await import('../server/bilder/convert.js');
     const s = imageSize50(big.buf), t = imageSize50((await A(r.body.thumbUrl)).buf);
     assert.equal(Math.max(s.w, s.h), 1600);
     assert.equal(Math.max(t.w, t.h), 320);

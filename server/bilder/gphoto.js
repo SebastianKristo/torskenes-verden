@@ -20,9 +20,10 @@ import { createHash } from 'node:crypto';
 import { inflateSync } from 'node:zlib';
 import { mkdir, readFile, writeFile, rm, stat } from 'node:fs/promises';
 import { join } from 'node:path';
-import { config } from './config.js';
-import { db, kv } from './db.js';
-import { userGuard, readJson, bad, MOCK } from './homeos-common.js';
+import { config } from '../config.js';
+import { db, kv } from '../db.js';
+import { registerJob } from '../jobs/index.js';
+import { userGuard, readJson, bad, MOCK } from '../homeos-common.js';
 
 export const GP_MAX_IMAGES = 200, GP_MAX_BYTES = 15 * 1024 * 1024, GP_MAX_HTML = 10 * 1024 * 1024, GP_TIMEOUT = 15_000;
 const ALBUM_HOSTS = ['photos.app.goo.gl', 'photos.google.com'];
@@ -322,14 +323,10 @@ gphoto46Api.get('/gphoto/img/:file', async (c) => {
 
 /* ---------------- Daglig oppdatering ---------------- */
 
-let timer = null;
-export function startGphoto46() {
-  if (timer || process.env.NODE_ENV === 'test') return;
-  timer = setInterval(async () => {
-    for (const { user } of db.prepare('SELECT user FROM kv WHERE key=?').all(KEY)) {
-      const a = albumOf(user);
-      if (a?.url && Date.now() - (a.fetched_at ?? 0) > 24 * HOUR) await refreshAlbum46(user, a.url).catch(() => {});
-    }
-  }, HOUR);
-  timer.unref?.();
-}
+// Hver time via den felles planleggeren (ikke i test/sandkasse): album som er eldre enn ett døgn, hentes på nytt.
+registerJob('bilder.gphoto', HOUR, async () => {
+  for (const { user } of db.prepare('SELECT user FROM kv WHERE key=?').all(KEY)) {
+    const a = albumOf(user);
+    if (a?.url && Date.now() - (a.fetched_at ?? 0) > 24 * HOUR) await refreshAlbum46(user, a.url).catch(() => {});
+  }
+}, { note: 'Bakgrunn: delte Google Photos-album hentes på nytt etter ett døgn' });

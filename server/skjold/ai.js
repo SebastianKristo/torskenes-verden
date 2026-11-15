@@ -10,7 +10,7 @@ import { randomBytes } from 'node:crypto';
 import { db, q, kv } from '../db.js';
 import { partRow76, partOut76, updatePart76, addHistory76 } from './store.js';
 import { readImage76, saveImage76 } from './images.js';
-import { magick50, toJpeg50 } from '../img50.js';
+import { magick50, toJpeg50 } from '../bilder/convert.js';
 import { finalize77, heuristic77, colorOf77, DEFAULT_CATEGORIES77 } from './decode.js';
 import { searchImages77, proxyImage77, downloadImage77, searxngConfigured77 } from './image-search.js';
 

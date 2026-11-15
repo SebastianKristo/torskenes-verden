@@ -26,7 +26,7 @@ const webp = (w, h) => { const b = Buffer.alloc(40); b.write('RIFF', 0, 'latin1'
 const jpeg = (w, h, pad = 64) => Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xc0, 0x00, 0x11, 0x08, h >> 8, h & 255, w >> 8, w & 255, 3]), Buffer.alloc(pad, 9)]);
 const BIG = jpeg(4032, 3024, 600_000); // «full oppløsning»
 const magickCalls = [];
-const img50 = await import('../server/img50.js');
+const img50 = await import('../server/bilder/convert.js');
 img50._setImg50({ cmd: 'convert', run: (args) => { magickCalls.push(args); const size = args[args.indexOf('-resize') + 1]; const max = parseInt(size, 10); return args.at(-1) === 'webp:-' ? webp(480, 360) : jpeg(max, Math.round(max * 0.75), 2000); } });
 
 /* ---------- Falskt nett ---------- */

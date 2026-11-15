@@ -544,8 +544,8 @@ export async function brief52(u, { t = Date.now(), only = null } = {}) {
   return { user: { id: u, name: firstName(u), first: name, admin, child }, greeting: `${GREET52[kind]}${name ? `, ${name}` : ''}`, kind, date: today, date_label: longDate(today), glimt_char: gs.char, cards, hidden, order, fetched_at: new Date().toISOString() };
 }
 
-/* 5. Butikklogoer for lister: se logos52.js (egen modul uten tunge avhengigheter, montert i finans/routes.js). */
-export { localLogo52, mountLogos52 } from './logos52.js';
+/* 5. Butikklogoer for lister: se logos/local.js (egen modul uten tunge avhengigheter, montert i finans/routes.js). */
+export { localLogo52, mountLogos52 } from './logos/local.js';
 
 /* =====================================================================================================================
    Ruter

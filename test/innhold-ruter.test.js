@@ -179,3 +179,10 @@ test('Skjold Lab, Rom, Studie, Nyheter, Reise, Bibel, Domener og logoer: status 
   assert.deepEqual(Object.keys(snap), Object.keys(want));
   for (const k of Object.keys(want)) assert.deepEqual(snap[k], want[k], k);
 });
+
+test('bakgrunnsjobbene i Rom, Nyheter, Domener og Bilder går via den felles planleggeren (ikke aktive i test)', async () => {
+  const { listJobs } = await import('../server/jobs/index.js');
+  const jobs = listJobs().filter((j) => /^(rom|nyheter|domener|bilder)\./.test(j.name));
+  assert.deepEqual(jobs.map((j) => [j.name, j.everyMs]).sort(), [['bilder.gphoto', 3_600_000], ['domener.daglig', 60_000], ['nyheter.rss', 600_000], ['rom.mars', 21_600_000]]);
+  assert.ok(jobs.every((j) => !j.active));
+});

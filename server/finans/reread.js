@@ -11,7 +11,7 @@
 // Fiks: nedskaler til lengste side 2048 px (JPEG 85, rotert etter EXIF; «Les mindre versjon» = 1280 px) før modellen, svar alltid som
 // jobb når klienten ber om det (og etter maks SYNC_MAX_MS ellers), og tydelige feilkoder:
 //   404 bilde_mangler · 503 modell_utilgjengelig · 504 tidsavbrudd · 422 ulesbar · 400 gemini_mangler · 409 opptatt · 500 ukjent.
-import { toJpeg50 } from '../img50.js';
+import { toJpeg50 } from '../bilder/convert.js';
 
 export const REREAD50 = { maxPx: 2048, smallPx: 1280, quality: 85, syncMaxMs: Number(process.env.REANALYZE_SYNC_MAX_MS ?? 25_000) };
 export const _reread50 = REREAD50; // tester

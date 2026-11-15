@@ -11,7 +11,7 @@
 //   - Feil fra Ollama vises aldri rått: friendlyError51 gir en norsk tekst.
 import { readFile } from 'node:fs/promises';
 import { db, q } from '../../db.js';
-import { toJpeg50 } from '../../img50.js';
+import { toJpeg50 } from '../../bilder/convert.js';
 
 export const VISION_PREFERRED51 = ['qwen2.5vl:7b', 'qwen2.5vl', 'qwen2.5vl:latest'];
 

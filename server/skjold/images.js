@@ -1,5 +1,5 @@
 // Prompt 76 (SKJSRV): bilder i Skjold Lab (deler og skap). JPEG/PNG/WebP/HEIC inn (maks 10 MB) → JPEG maks 1600 px + miniatyr 320 px,
-// rotert etter EXIF og uten metadata (-strip fjerner GPS). ImageMagick via img50.js (samme som chat/kvitteringer). Uten ImageMagick:
+// rotert etter EXIF og uten metadata (-strip fjerner GPS). ImageMagick via bilder/convert.js (samme som chat/kvitteringer). Uten ImageMagick:
 // JPEG/PNG/WebP lagres som de er (HEIC avvises). Filene ligger i DATA_DIR/skjold76 og serveres bare til eieren (skj_files).
 import { mkdirSync, writeFileSync, readFileSync, existsSync, unlinkSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -7,7 +7,7 @@ import { randomBytes, createHmac, timingSafeEqual } from 'node:crypto';
 import { config } from '../config.js';
 import { sessionSecret86 } from '../auth/server-secret.js'; // prompt 86
 import { db, q } from '../db.js';
-import { toJpeg50, sniffImage50, magick50 } from '../img50.js';
+import { toJpeg50, sniffImage50, magick50 } from '../bilder/convert.js';
 import { now76, thumbOf76 } from './store.js';
 
 export const MAX_IN76 = 10 * 1024 * 1024;

@@ -24,7 +24,7 @@ globalThis.fetch = async () => { throw new TypeError('fetch failed'); };
 test.after(() => { globalThis.fetch = realFetch; });
 
 const { default: app } = await import('../server/index.js');
-const G = await import('../server/gphoto46.js');
+const G = await import('../server/bilder/gphoto.js');
 const HTML = readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'fixtures', 'p46', 'gphoto-album.html'), 'utf8');
 
 let ipN = 60;

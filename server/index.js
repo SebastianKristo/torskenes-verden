@@ -81,7 +81,7 @@ import { mountLive89, startLive89 } from './live89.js'; // prompt 89 (SRV89): Li
 import { mountWebx51 } from './webx51.js'; // prompt 51 (WEBX51): felles søk, onboarding, tema per bruker, offline-konfliktvarsel
 import { mountSrv52 } from './srv52.js'; // prompt 52 (SRV52): Glimt «sist jeg var på», kalenderkontekst, brief-kort, Glimt-figur per bruker
 import { mountDal53 } from './dal53/index.js'; // prompt 53 (DAL53): Desert Ant Labs-modellene (Eye, Redact, Gist, Tongue, Emo, Moderator, Clear, Voz)
-import { gphoto46Api, startGphoto46 } from './gphoto46.js'; // prompt 46 (DATA46): Google Photos-album som bakgrunn
+import { mountBilder } from './bilder/index.js'; // Bilder: Google Photos-album som bakgrunn (/api/bg/gphoto)
 import { mountVaer } from './vaer/index.js'; // Vær: /here, /week-summary, /place, /layout og ski i /full
 import { installCacheBust } from './cache-bust.js'; // prompt 32 (SERVER32)
 import searchHistoryApi from './search-history.js'; // prompt 32: søkehistorikk per bruker
@@ -546,7 +546,7 @@ authed.get('/space/gallery/:key', proxy((c) => {
 
 app.route('/api/ui', uiApi);
 mountSporing(app); // server/sporing/: /api/tracking – kontoer, PostNord-helse, feilsøking, AliExpress, nøkler og pakkene
-app.route('/api/bg', gphoto46Api); // prompt 46 (DATA46): /api/bg/gphoto (før mobileApi sin /api/bg/:file)
+mountBilder(app); // server/bilder/: /api/bg/gphoto (før mobileApi sin /api/bg/:file)
 mountMat(app); // server/mat/: /api/matplan og /mat/api (samme app) og /mat/calendar.ics
 // Profil, oppsett, søk, mobilforside og widgets: sesjon ELLER FinansHub-token (må stå før /api med requireAuth).
 mountNyheter(app); // server/nyheter/: /api/rss (favicon offentlig), /api/news/saved, /api/news og /api/glimt/news-digest
@@ -624,7 +624,6 @@ app.route('/home/api', homeApi);
 const BG51 = process.env.NODE_ENV !== 'test' && process.env.OPS51_SANDBOX !== '1';
 migrateLocalHosts86().catch((e) => console.warn('[localfetch]', e.message)); // prompt 86: én gang – lokale verter i administratorenes abonnementer godkjennes
 if (BG51) { startTrackingWorker(); startNyheter(); startBirthdayWorker(); startSystemBackupScheduler(); startUpdateScheduler(); startRom(); startApi40(); startMedia(); startLogs44(); startLive89(); }
-if (BG51) { startGphoto46(); } // prompt 46 (DATA46)
 if (BG51) startJobs(); // felles planlegger (server/jobs/): backup, prøveperioder, skattemelding, brief, iCal, skolekalendere, Sjekk inn, «forlot»
 if (process.env.NODE_ENV !== 'test') startOps51(); // prompt 51 (OPS51): planlegger (backup, testet gjenoppretting, vedlikehold) og migrasjonslogg
 if (process.env.OPS51_SANDBOX !== '1') startObs51(); // prompt 51 (OBS51): samples, driftsvarsler og selvreparasjon (ikke i test)

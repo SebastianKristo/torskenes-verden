@@ -4,9 +4,9 @@
 //   GET  /finans/api/logos52/match?q=           → ett slikt objekt
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { db, q } from './db.js';
-import { config } from './config.js';
-import { matchMerchant, filePath as libraryFile } from './logos/match.js';
+import { db, q } from '../db.js';
+import { config } from '../config.js';
+import { matchMerchant, filePath as libraryFile } from './match.js';
 
 const hasTable = (t) => !!q("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(t);
 const clean = (v, n) => String(v ?? '').replace(/[\u0000-\u001f<>]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, n);

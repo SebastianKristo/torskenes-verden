@@ -26,7 +26,7 @@ import { Hono } from 'hono';
 import { authOrToken } from '../mobile.js';
 import { mediaAllowed43 } from './arr.js';
 import { cfg } from '../settings.js';
-import { guardedGet46 } from '../gphoto46.js';
+import { guardedGet46 } from '../bilder/gphoto.js';
 
 const IKKE_SATT = 'Musikk er ikke satt opp. Innstillinger → Integrasjoner → Musikk (yubal).';
 const BARE_YT = 'Bare lenker fra music.youtube.com, youtube.com eller youtu.be.';

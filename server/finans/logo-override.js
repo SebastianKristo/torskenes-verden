@@ -25,7 +25,7 @@ import { db, q } from './db.js';
 import { cleanName, LOGO_DIR, logoFileUrl, isLogoFile } from './logo-lookup.js';
 import { registry, normalize, hasFile, itemById } from '../logos/match.js';
 import { ocrTools } from '../ocr-fallback.js';
-import { setLogoOverride52 } from '../logos52.js';
+import { setLogoOverride52 } from '../logos/local.js';
 
 const run = promisify(execFile);
 const bad = (c, msg, code = 400) => c.json({ error: msg }, code);
