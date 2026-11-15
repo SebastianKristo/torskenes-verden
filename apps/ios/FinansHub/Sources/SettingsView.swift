@@ -252,6 +252,7 @@ private struct AccountsPage: View {
                     }
                     .padding(.horizontal, 16).padding(.vertical, 10).contentShape(Rectangle())
                     .onTapGesture { if !active { store.switchTo(a.id) } }
+                    .accessibilityAddTraits(active ? AccessibilityTraits.isSelected : AccessibilityTraits.isButton)
                 }
             }
             // Prompt 28: primærknapp i aksent (lab) med onLab-tekst i Papir – aldri hvit på lys rosa.

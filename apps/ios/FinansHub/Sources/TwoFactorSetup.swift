@@ -568,7 +568,7 @@ struct Tfa40Method: View {
                     Text(sub).font(PF.ui(12.5)).foregroundStyle(p.mut).fixedSize(horizontal: false, vertical: true)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                if busy { ProgressView() } else { Text("›").font(PF.ui(18)).foregroundStyle(p.mut) }
+                if busy { ProgressView() } else { Image(systemName: "chevron.right").accessibilityHidden(true).font(PF.ui(18)).foregroundStyle(p.mut) }
             }
             .padding(14)
             .background(p.card, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
@@ -767,7 +767,7 @@ struct Tfa40Manage: View {
                 Text(n).font(PF.ui(15, .semibold)).foregroundStyle(c)
                 Spacer()
                 if !v.isEmpty { Text(v).font(PF.ui(13)).foregroundStyle(p.mut) }
-                Text("›").font(PF.ui(16)).foregroundStyle(p.mut)
+                Image(systemName: "chevron.right").accessibilityHidden(true).font(PF.ui(16)).foregroundStyle(p.mut)
             }
             .padding(.horizontal, 14).frame(minHeight: 52)
             .overlay(alignment: .top) { if !first { Rectangle().fill(p.line).frame(height: 1) } }

@@ -252,7 +252,7 @@ struct PaperCategorySheet: View {
                                 Circle().fill(Color(hex: c.color)).frame(width: 10, height: 10)
                                 Text(c.name).font(PF.ui(14.5, .medium)).foregroundStyle(p.ink)
                                 Spacer()
-                                if c.name == detail.category { Text("✓").font(PF.ui(13, .bold)).foregroundStyle(p.pos) }
+                                if c.name == detail.category { Image(systemName: "checkmark").accessibilityLabel("Valgt").font(PF.ui(13, .bold)).foregroundStyle(p.pos) }
                             }
                             .padding(.horizontal, 14).frame(height: 46)
                             .contentShape(Rectangle())
@@ -367,7 +367,7 @@ struct PaperFinSearch: View {
             // Prompt 27: ✕ til venstre (SearchField27).
             SearchField27(text: $q, placeholder: aiOn ? "Spør Glimt, f.eks. «abonnementer»" : "Søk i navn, kategori og varelinjer", font: PF.ui(14.5),
                           focus: $focused, onClear: { clear27() }, onSubmit: { lastPicked27 = q; sug.close(suppress: true); go(q) }, lead: {
-                Text("⌕").font(PF.ui(17)).foregroundStyle(p.mut)
+                Image(systemName: "magnifyingglass").accessibilityHidden(true).font(PF.ui(17)).foregroundStyle(p.mut)
             })
             .padding(.leading, 16)
             // Prompt 43: [orb] Glimt – rød fylt når på, rød kant når av (Fin43.swift). Orben går raskere mens Glimt svarer.

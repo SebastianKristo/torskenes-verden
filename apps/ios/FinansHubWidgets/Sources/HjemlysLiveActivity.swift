@@ -88,7 +88,7 @@ struct Hjemlys40CompactTime: View {
                 Text(Hjemlys40Look.clock(st.homeDate ?? Date())).font(.system(size: 14, weight: .bold)).monospacedDigit()
                     .foregroundStyle(Hjemlys40Look.gold)
             } else if st.state == "home" {
-                Text("✓").font(.system(size: 14, weight: .heavy)).foregroundStyle(Hjemlys40Look.gold)
+                Image(systemName: "checkmark").accessibilityHidden(true).font(.system(size: 14, weight: .heavy)).foregroundStyle(Hjemlys40Look.gold)
             } else if st.eta <= 0 {
                 Text("…").font(.system(size: 14, weight: .bold)).foregroundStyle(Hjemlys40Look.green)
             } else if st.state == "late" {

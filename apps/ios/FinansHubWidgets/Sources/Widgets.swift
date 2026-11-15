@@ -436,7 +436,7 @@ private struct FinanceView: View {
                         HStack {
                             Text(d.toReview == 1 ? "1 kvittering til gjennomgang" : "\(d.toReview) kvitteringer til gjennomgang").font(.system(size: 13.5))
                             Spacer()
-                            Text("›")
+                            Image(systemName: "chevron.right").accessibilityHidden(true)
                         }
                         .padding(.horizontal, 12).padding(.vertical, 10)
                         .background(accent.opacity(0.22), in: RoundedRectangle(cornerRadius: 14))

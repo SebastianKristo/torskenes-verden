@@ -152,7 +152,7 @@ struct GPhoto46Row: View {
                         }
                     }
                     Spacer(minLength: 0)
-                    if store.photo == "gphoto" { Text("✓").font(PF.ui(14, .bold)).foregroundStyle(p.ink) }
+                    if store.photo == "gphoto" { Image(systemName: "checkmark").accessibilityLabel("Valgt").font(PF.ui(14, .bold)).foregroundStyle(p.ink) }
                 }
                 .padding(.horizontal, 10).frame(minHeight: 44)
                 .contentShape(Rectangle())

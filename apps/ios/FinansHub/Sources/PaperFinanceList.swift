@@ -332,6 +332,7 @@ struct PaperFinnCard: View {
         .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(editing ? p.lab : Color.clear, lineWidth: 2))
         .contentShape(Rectangle())
         .onTapGesture { openAd() }
+        .accessibilityAddTraits(.isButton)
     }
 
     private var tint: Color {

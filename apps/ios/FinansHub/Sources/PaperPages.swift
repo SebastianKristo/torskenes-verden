@@ -776,6 +776,7 @@ struct PaperShipmentCard: View {
         .onLongPressGesture(minimumDuration: 0.5) {
             if TrackSelect.shared.active { TrackSelect.shared.toggle(s.id) } else { TrackSelect.shared.start(s.id) }
         }
+        .accessibilityAddTraits(.isButton)
     }
 
     private var picked: Bool { TrackSelect.shared.ids.contains(s.id) }

@@ -192,7 +192,7 @@ struct Profile37LinkView: View {
                         .font(PF.ui(12.5)).foregroundStyle(p.mut).lineLimit(1)
                 }
                 Spacer(minLength: 6)
-                if on { Text("✓").font(PF.ui(16, .bold)).foregroundStyle(p.ink) }
+                if on { Image(systemName: "checkmark").accessibilityLabel("Valgt").font(PF.ui(16, .bold)).foregroundStyle(p.ink) }
             }
             .padding(12)
             .background(p.card, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
@@ -215,7 +215,7 @@ struct Profile37LinkView: View {
                     .overlay(Circle().stroke(p.line, style: StrokeStyle(lineWidth: 1.2, dash: [4, 3])))
                 Text("Jeg er ny i husstanden").font(PF.ui(15.5, .semibold)).foregroundStyle(p.ink)
                 Spacer(minLength: 6)
-                if m.isNew { Text("✓").font(PF.ui(16, .bold)).foregroundStyle(p.ink) }
+                if m.isNew { Image(systemName: "checkmark").accessibilityLabel("Valgt").font(PF.ui(16, .bold)).foregroundStyle(p.ink) }
             }
             .padding(12)
             .background(p.card, in: RoundedRectangle(cornerRadius: 18, style: .continuous))

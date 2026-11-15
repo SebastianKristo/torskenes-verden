@@ -425,8 +425,8 @@ struct PaperWeatherView: View {
         case "timer": WxHourCard22(w: w, mode: $mode) { openDay(0) }
         case "dager10": WxDaysCard22(w: w, mode: mode) { i in openDay(i) }
         case "yrstorm": WxCompareCard22(w: w) { openCompare() }
-        case "vind": WxWindCard22(w: w).onTapGesture { open("wind") }
-        case "mane": WxMoonCard22(w: w).onTapGesture { open("moon") }
+        case "vind": WxWindCard22(w: w).onTapGesture { open("wind") }.accessibilityAddTraits(.isButton)
+        case "mane": WxMoonCard22(w: w).onTapGesture { open("moon") }.accessibilityAddTraits(.isButton)
         case "detaljer": WxTileGrid22(w: w) { k in open(k) }
         // Prompt 39: Glimt-personlighetene oppsummerer ukas vær og sammenligner med forrige uke (WxWeek39.swift).
         case "glimtuka": WxWeek39Card(w: w)

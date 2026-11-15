@@ -456,7 +456,7 @@ struct More44ToolRowContent: View {
                 Text(sub).font(PF.ui(12.5)).foregroundStyle(p.mut).lineLimit(1)
             }
             Spacer(minLength: 6)
-            Text("›").font(PF.ui(17)).foregroundStyle(p.mut)
+            Image(systemName: "chevron.right").accessibilityHidden(true).font(PF.ui(17)).foregroundStyle(p.mut)
         }
     }
 
@@ -487,7 +487,7 @@ struct More44Settings: View {
                     Text(row.sub).font(PF.ui(12.5)).foregroundStyle(p.mut).lineLimit(1)
                 }
                 Spacer(minLength: 6)
-                Text("›").font(PF.ui(17)).foregroundStyle(p.mut)
+                Image(systemName: "chevron.right").accessibilityHidden(true).font(PF.ui(17)).foregroundStyle(p.mut)
             }
             .padding(.horizontal, 14).frame(maxWidth: .infinity, minHeight: 60)
             .background(More44.chipBg(p), in: RoundedRectangle(cornerRadius: 20, style: .continuous))

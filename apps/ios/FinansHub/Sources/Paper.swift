@@ -577,7 +577,7 @@ struct PaperBgMenu: View {
             Rectangle().fill(p.line).frame(height: 1).padding(.horizontal, 8).padding(.vertical, 2)
             PhotosPicker(selection: $item, matching: .images) {
                 HStack(spacing: 10) {
-                    Text("+").font(PF.ui(15, .semibold)).foregroundStyle(p.mut)
+                    Image(systemName: "plus").accessibilityHidden(true).font(PF.ui(15, .semibold)).foregroundStyle(p.mut)
                         .frame(width: 30, height: 30)
                         .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(p.mut, style: StrokeStyle(lineWidth: 1.5, dash: [3, 3])))
                     Text("Eget bilde").font(PF.ui(14, .semibold)).foregroundStyle(p.ink)
@@ -606,7 +606,7 @@ struct PaperBgMenu: View {
                     Text(subtitle(kind, sel)).font(PF.ui(11.5, .medium)).foregroundStyle(sel && store.photoFailed ? p.lab : p.mut).lineLimit(2)
                 }
                 Spacer(minLength: 4)
-                if sel { Text("✓").font(PF.ui(13, .bold)).foregroundStyle(p.pos) }
+                if sel { Image(systemName: "checkmark").accessibilityLabel("Valgt").font(PF.ui(13, .bold)).foregroundStyle(p.pos) }
             }
             .padding(.horizontal, 10).frame(minHeight: 50)
             .background(sel ? p.popSel : Color.clear, in: RoundedRectangle(cornerRadius: 12, style: .continuous))

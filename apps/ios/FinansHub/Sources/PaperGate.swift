@@ -260,7 +260,7 @@ struct PaperOnboardingView: View {
                     Text(s).font(PF.ui(12.5)).foregroundStyle(p.mut)
                 }
                 Spacer()
-                if on { Text("✓").font(PF.ui(15, .bold)).foregroundStyle(p.ink) }
+                if on { Image(systemName: "checkmark").accessibilityLabel("Valgt").font(PF.ui(15, .bold)).foregroundStyle(p.ink) }
             }
             .padding(12)
             .background(p.card, in: RoundedRectangle(cornerRadius: 18, style: .continuous))

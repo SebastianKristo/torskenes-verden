@@ -425,7 +425,7 @@ struct Chat27History: View {
             }
             .buttonStyle(.plain)
             Button { s.openMenu(r) } label: {
-                Text("⋯").font(c.ui(17, .bold)).foregroundStyle(c.mut).frame(width: 36, height: 40)
+                Image(systemName: "ellipsis").font(c.ui(17, .bold)).foregroundStyle(c.mut).frame(width: 36, height: 40)
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Valg for samtalen")

@@ -63,7 +63,7 @@ struct Chat27Head: View {
             }
             Spacer(minLength: 4)
             Button { s.sheet = nil } label: {
-                Text("✕").font(c.ui(14)).foregroundStyle(c.ink).frame(width: 40, height: 40)
+                Image(systemName: "xmark").font(c.ui(14)).foregroundStyle(c.ink).frame(width: 40, height: 40)
                     .background(c.card, in: Circle())
             }
             .buttonStyle(.plain)
@@ -142,7 +142,7 @@ struct Chat27ModelSheet: View {
                             .fixedSize(horizontal: false, vertical: true)
                     }
                     Spacer(minLength: 4)
-                    if a.id == s.model { Text("✓").font(c.ui(16, .bold)).foregroundStyle(c.ink) }
+                    if a.id == s.model { Image(systemName: "checkmark").accessibilityLabel("Valgt").font(c.ui(16, .bold)).foregroundStyle(c.ink) }
                 }
                 .padding(.vertical, 11).padding(.horizontal, 14)
                 .background(c.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
@@ -178,7 +178,7 @@ struct Chat27ModelSheet: View {
                             Text(detail(m)).font(c.ui(12.5)).foregroundStyle(c.mut).lineLimit(1)
                         }
                         Spacer(minLength: 4)
-                        if m.id == s.model { Text("✓").font(c.ui(16, .bold)).foregroundStyle(c.ink) }
+                        if m.id == s.model { Image(systemName: "checkmark").accessibilityLabel("Valgt").font(c.ui(16, .bold)).foregroundStyle(c.ink) }
                     }
                     .padding(.vertical, 11)
                     .contentShape(Rectangle())
@@ -398,7 +398,7 @@ struct Chat27PlusSheet: View {
                     Text(sub).font(c.ui(12.5)).foregroundStyle(c.mut).lineLimit(1)
                 }
                 Spacer(minLength: 4)
-                Text("›").font(c.ui(17)).foregroundStyle(c.mut)
+                Image(systemName: "chevron.right").accessibilityHidden(true).font(c.ui(17)).foregroundStyle(c.mut)
             }
             .padding(.vertical, 10)
             .contentShape(Rectangle())
@@ -427,7 +427,7 @@ struct Chat27KbSheet: View {
                 let on: Bool = s.attach.contains { $0.kind == "doc" && $0.fileId == d.id }
                 Button { s.toggleDoc(d) } label: {
                     HStack(spacing: 12) {
-                        Text("✓").font(c.ui(13, .bold)).foregroundStyle(on ? c.bg : Color.clear)
+                        Image(systemName: "checkmark").accessibilityHidden(true).font(c.ui(13, .bold)).foregroundStyle(on ? c.bg : Color.clear)
                             .frame(width: 24, height: 24)
                             .background(on ? c.ink : Color.clear, in: RoundedRectangle(cornerRadius: 7, style: .continuous))
                             .overlay(RoundedRectangle(cornerRadius: 7, style: .continuous).stroke(on ? c.ink : c.line, lineWidth: 1.5))

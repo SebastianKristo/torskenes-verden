@@ -229,7 +229,7 @@ struct Onboard51Button: View {
                     Text("Skann QR-koden fra familien – ferdig på ett minutt").font(PF.ui(12.5)).foregroundStyle(p.mut)
                 }
                 Spacer(minLength: 4)
-                Text("›").font(PF.ui(18, .bold)).foregroundStyle(p.mut).accessibilityHidden(true)
+                Image(systemName: "chevron.right").font(PF.ui(18, .bold)).foregroundStyle(p.mut).accessibilityHidden(true)
             }
             .padding(.horizontal, 14).padding(.vertical, 12)
             .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(p.line, lineWidth: 1))

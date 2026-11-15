@@ -450,7 +450,7 @@ struct Chat27Composer: View {
                         Chat52AttachIcon(a: a, c: c)
                         Text(a.name).font(c.ui(12.5, .semibold)).foregroundStyle(c.ink).lineLimit(1)
                         Button { s.removeAttach(a) } label: {
-                            Text("✕").font(c.ui(11)).foregroundStyle(c.mut).frame(width: 26, height: 26)
+                            Image(systemName: "xmark").font(c.ui(11)).foregroundStyle(c.mut).frame(width: 26, height: 26)
                         }
                         .buttonStyle(.plain)
                         .accessibilityLabel("Fjern vedlegg")

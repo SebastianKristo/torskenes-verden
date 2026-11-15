@@ -406,7 +406,7 @@ struct Qr38KontoRow: View {
                     Text("Kalender på Mac, iPhone, Android eller Finans – skann QR-koden").font(PF.ui(12)).foregroundStyle(p.mut)
                 }
                 Spacer(minLength: 6)
-                Text("›").font(PF.ui(17)).foregroundStyle(p.mut)
+                Image(systemName: "chevron.right").accessibilityHidden(true).font(PF.ui(17)).foregroundStyle(p.mut)
             }
             .padding(.horizontal, 14).frame(minHeight: 56)
             .background(p.card, in: RoundedRectangle(cornerRadius: 18, style: .continuous))

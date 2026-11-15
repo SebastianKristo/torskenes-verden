@@ -25,6 +25,7 @@ struct Temp36Press: View {
             Haptics.shared.tap()
             store.openWeather()
         }
+        .accessibilityAddTraits(.isButton)
         .onLongPressGesture(minimumDuration: 0.55, maximumDistance: 20, perform: {
             held = true
             Haptics.shared.success()

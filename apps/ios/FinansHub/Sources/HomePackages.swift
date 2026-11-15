@@ -173,7 +173,7 @@ struct Pkg37ListCard: View {
                 if !sub.isEmpty { Text(sub).font(PF.ui(12)).foregroundStyle(p.mut).lineLimit(1) }
             }
             Spacer(minLength: 4)
-            Text("›").font(PF.ui(13)).foregroundStyle(p.mut)
+            Image(systemName: "chevron.right").accessibilityHidden(true).font(PF.ui(13)).foregroundStyle(p.mut)
         }
         .padding(.vertical, 7)
         .overlay(alignment: .top) { if !first { Rectangle().fill(p.line).frame(height: 1) } }

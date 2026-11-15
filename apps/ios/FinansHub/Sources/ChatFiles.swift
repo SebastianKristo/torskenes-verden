@@ -343,7 +343,7 @@ struct Chat50AttachRow: View {
                     .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(a.err.isEmpty ? c.line : Color(hex: "#b23a2a"), lineWidth: a.err.isEmpty ? 1 : 2))
                     .overlay(alignment: .bottom) { if a.uploading { progress(a.pct) } }
                 Button { s.removeAttach(a) } label: {
-                    Text("✕").font(.dyn51(size: 11, weight: .bold)).foregroundStyle(c.bg)
+                    Image(systemName: "xmark").font(.dyn51(size: 11, weight: .bold)).foregroundStyle(c.bg)
                         .frame(width: 22, height: 22)
                         .background(c.ink, in: Circle())
                         .frame(width: 32, height: 32)

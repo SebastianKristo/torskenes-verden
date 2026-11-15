@@ -239,7 +239,7 @@ struct PaperNoPackagesCard24: View {
                     Text("Legg til et sporingsnummer").font(PF.ui(12.5)).foregroundStyle(p.mut).lineLimit(1)
                 }
                 Spacer(minLength: 4)
-                Text("›").font(PF.ui(13)).foregroundStyle(p.mut)
+                Image(systemName: "chevron.right").accessibilityHidden(true).font(PF.ui(13)).foregroundStyle(p.mut)
             }
             .padding(.horizontal, 14).padding(.vertical, 12)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)

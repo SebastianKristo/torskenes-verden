@@ -282,7 +282,7 @@ struct TabEditorRows32b: View {
                 .disabled(i == 0)
                 .accessibilityLabel("Flytt " + r.label + " til venstre")
                 Button { remove(i) } label: {
-                    Text("−").font(PF.ui(20, .bold)).foregroundStyle(rows.count > 1 ? p.lab : p.line)
+                    Image(systemName: "minus").font(PF.ui(20, .bold)).foregroundStyle(rows.count > 1 ? p.lab : p.line)
                         .frame(width: 32, height: 40)
                 }
                 .buttonStyle(.plain)

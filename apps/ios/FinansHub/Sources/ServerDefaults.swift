@@ -210,7 +210,7 @@ struct Server47Row: View {
             Spacer(minLength: 8)
             Text(value.isEmpty ? "Ikke satt" : Server47.short(value)).font(PF.mono(12.5, bold: false)).foregroundStyle(p.mut)
                 .lineLimit(1).truncationMode(.middle)
-            Text("›").font(PF.ui(16)).foregroundStyle(p.mut)
+            Image(systemName: "chevron.right").accessibilityHidden(true).font(PF.ui(16)).foregroundStyle(p.mut)
         }
         .contentShape(Rectangle())
     }

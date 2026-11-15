@@ -61,7 +61,7 @@ struct PaperBoliger: View {
             Spacer(minLength: 6)
             VStack(alignment: .trailing, spacing: 2) {
                 Text(bkr(f.total ?? f.yearTotal ?? 0)).font(PF.serif(17, medium: true)).foregroundStyle(p.ink)
-                Text("›").font(PF.ui(15)).foregroundStyle(p.mut)
+                Image(systemName: "chevron.right").accessibilityHidden(true).font(PF.ui(15)).foregroundStyle(p.mut)
             }
         }
         .padding(14)

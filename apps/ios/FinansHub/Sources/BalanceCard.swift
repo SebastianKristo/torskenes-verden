@@ -123,10 +123,10 @@ struct Sal52Card: View {
             Text("SALDO · ALLE KONTOER").font(PF.mono(10.5 * Swift.max(0.7, k))).tracking(1.4 * k).foregroundStyle(l.label).lineLimit(1)
             Spacer(minLength: 2)
             if circle {
-                Text("›").font(PF.ui(15 * Swift.max(0.7, k), .bold)).foregroundStyle(l.ink)
+                Image(systemName: "chevron.right").accessibilityHidden(true).font(PF.ui(15 * Swift.max(0.7, k), .bold)).foregroundStyle(l.ink)
                     .frame(width: 30 * k, height: 30 * k).background(l.hole, in: Circle())
             } else {
-                Text("›").font(PF.ui(17 * Swift.max(0.7, k), .bold)).foregroundStyle(l.mut)
+                Image(systemName: "chevron.right").accessibilityHidden(true).font(PF.ui(17 * Swift.max(0.7, k), .bold)).foregroundStyle(l.mut)
             }
         }
     }
@@ -311,7 +311,7 @@ struct Sal52Sheet: View {
                 .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(on ? p.lab : p.line, lineWidth: on ? 2 : 1))
                 .overlay(alignment: .topTrailing) {
                     if on {
-                        Text("✓").font(PF.ui(12, .bold)).foregroundStyle(Color.white).frame(width: 22, height: 22).background(p.lab, in: Circle())
+                        Image(systemName: "checkmark").accessibilityHidden(true).font(PF.ui(12, .bold)).foregroundStyle(Color.white).frame(width: 22, height: 22).background(p.lab, in: Circle())
                             .offset(x: 6, y: -6)
                     }
                 }

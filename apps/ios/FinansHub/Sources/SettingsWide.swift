@@ -279,7 +279,7 @@ struct Settings50Profile: View {
                     Text(URL(string: store.api.base)?.host ?? store.api.base).font(PF.mono(12, bold: false)).foregroundStyle(p.mut).lineLimit(1)
                 }
                 Spacer()
-                Text("›").font(PF.ui(18)).foregroundStyle(p.mut)
+                Image(systemName: "chevron.right").accessibilityHidden(true).font(PF.ui(18)).foregroundStyle(p.mut)
             }
             .padding(16)
             .background(p.card, in: RoundedRectangle(cornerRadius: 22, style: .continuous))

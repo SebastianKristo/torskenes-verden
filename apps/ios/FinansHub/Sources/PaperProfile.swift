@@ -194,7 +194,7 @@ struct PaperLookSettings: View {
                             }
                             Text(t.1).font(PF.ui(15, .semibold)).foregroundStyle(p.ink)
                             Spacer()
-                            if store.iconTheme == t.0 { Text("✓").font(PF.ui(14, .bold)).foregroundStyle(p.pos) }
+                            if store.iconTheme == t.0 { Image(systemName: "checkmark").accessibilityLabel("Valgt").font(PF.ui(14, .bold)).foregroundStyle(p.pos) }
                         }
                         .padding(.horizontal, 14).padding(.vertical, 12)
                         .contentShape(Rectangle())
@@ -266,7 +266,7 @@ struct PaperLookSettings: View {
                         Text(sub).font(PF.ui(11.5)).foregroundStyle(p.mut).lineLimit(1)
                     }
                     Spacer(minLength: 0)
-                    if on { Text("✓").font(PF.ui(14, .bold)).foregroundStyle(p.pos) }
+                    if on { Image(systemName: "checkmark").accessibilityLabel("Valgt").font(PF.ui(14, .bold)).foregroundStyle(p.pos) }
                 }
             }
             .padding(8)

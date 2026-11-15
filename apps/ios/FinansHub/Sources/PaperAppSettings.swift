@@ -479,7 +479,7 @@ struct PaperNotifySettings: View {
                     Button { importing = true } label: { Text("Bytt").font(PF.ui(12.5, .semibold)).foregroundStyle(p.lab) }.buttonStyle(.plain)
                     Button { n.removeCustom(store) } label: { Text("Fjern").font(PF.ui(12.5, .semibold)).foregroundStyle(p.mut) }.buttonStyle(.plain)
                 }
-                if on { Text("✓").font(PF.ui(14, .bold)).foregroundStyle(p.pos) }
+                if on { Image(systemName: "checkmark").accessibilityLabel("Valgt").font(PF.ui(14, .bold)).foregroundStyle(p.pos) }
             }
             .padding(.horizontal, 14).padding(.vertical, 11)
             .contentShape(Rectangle())
@@ -773,7 +773,7 @@ struct PaperSettings17: View {
                     Text(serverHost).font(PF.ui(11.5)).foregroundStyle(p.mut).lineLimit(1)
                 }
                 Spacer()
-                Text("›").font(PF.ui(17)).foregroundStyle(p.mut)
+                Image(systemName: "chevron.right").accessibilityHidden(true).font(PF.ui(17)).foregroundStyle(p.mut)
             }
             .padding(14)
             .background(p.card, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
@@ -1296,7 +1296,7 @@ struct AppIconSheet: View {
                                 Text(ic.0 == "monogram" ? "Standard" : "Alternativt ikon").font(PF.ui(12.5)).foregroundStyle(p.mut)
                             }
                             Spacer()
-                            if AppMeta.shared.icon == ic.0 { Text("✓").font(PF.ui(16, .bold)).foregroundStyle(p.pos) }
+                            if AppMeta.shared.icon == ic.0 { Image(systemName: "checkmark").accessibilityLabel("Valgt").font(PF.ui(16, .bold)).foregroundStyle(p.pos) }
                         }
                         .padding(12)
                         .background(p.card, in: RoundedRectangle(cornerRadius: 18, style: .continuous))

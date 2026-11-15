@@ -181,7 +181,7 @@ struct NavHomeCard42: View {
                 HStack(alignment: .firstTextBaseline, spacing: 4) {
                     Text(name).font(PF.ui(13, .bold)).foregroundStyle(p.ink).lineLimit(1).minimumScaleFactor(0.8)
                     Spacer(minLength: 2)
-                    if on { Text("✓").font(PF.ui(13, .bold)).foregroundStyle(p.ink) }
+                    if on { Image(systemName: "checkmark").accessibilityLabel("Valgt").font(PF.ui(13, .bold)).foregroundStyle(p.ink) }
                 }
                 Text(sub).font(PF.ui(11.5)).foregroundStyle(p.mut).lineLimit(2).fixedSize(horizontal: false, vertical: true)
             }

@@ -473,7 +473,7 @@ struct AiTestDot34: View {
             switch st {
             case "ok":
                 Circle().fill(p.pos)
-                Text("✓").font(PF.ui(10, .heavy)).foregroundStyle(Color.white)
+                Image(systemName: "checkmark").accessibilityHidden(true).font(PF.ui(10, .heavy)).foregroundStyle(Color.white)
             case "fail":
                 Circle().fill(p.lab)
                 Text("!").font(PF.ui(11, .heavy)).foregroundStyle(Color.white)

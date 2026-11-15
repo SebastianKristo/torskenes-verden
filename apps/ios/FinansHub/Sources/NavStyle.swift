@@ -113,7 +113,7 @@ struct NavPreview25: View {
                     .layoutPriority(i == 0 && style != "icons" ? 1 : 0)
             }
             if plus {
-                Text("+").font(.system(size: 24, weight: .regular)).foregroundStyle(p.onLab)
+                Image(systemName: "plus").accessibilityHidden(true).font(.system(size: 24, weight: .regular)).foregroundStyle(p.onLab)
                     .frame(width: 46, height: 46)
                     .background(p.lab, in: Circle())
                     .padding(.leading, 4)

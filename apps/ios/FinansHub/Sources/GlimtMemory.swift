@@ -351,7 +351,7 @@ struct Memory33SettingsGroup: View {
                                     Text("Navn på avsender og hva det er").font(PF.ui(12.5)).foregroundStyle(p.mut)
                                 }
                                 Spacer()
-                                Text("+").font(PF.ui(18)).foregroundStyle(p.mut)
+                                Image(systemName: "plus").accessibilityHidden(true).font(PF.ui(18)).foregroundStyle(p.mut)
                             }
                             .padding(.horizontal, 14).padding(.vertical, 11).contentShape(Rectangle())
                         }

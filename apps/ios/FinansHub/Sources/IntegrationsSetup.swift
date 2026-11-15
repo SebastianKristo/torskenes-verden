@@ -351,7 +351,7 @@ struct Int24Group: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 Text(f.shown).font(PF.ui(13, .semibold)).foregroundStyle(f.isSet ? p.ink : p.lab).lineLimit(1).truncationMode(.middle)
                     .frame(maxWidth: 170, alignment: .trailing)
-                Text("›").font(PF.ui(17)).foregroundStyle(p.mut)
+                Image(systemName: "chevron.right").accessibilityHidden(true).font(PF.ui(17)).foregroundStyle(p.mut)
             }
             .padding(.horizontal, 14).padding(.vertical, 10)
             .frame(minHeight: 56)

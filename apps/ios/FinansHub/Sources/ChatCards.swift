@@ -323,7 +323,7 @@ struct Chat31Calendar: View {
                 Text(sub).font(c.ui(12.5)).foregroundStyle(c.mut).lineLimit(1)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            Text("›").font(c.ui(16)).foregroundStyle(c.mut)
+            Image(systemName: "chevron.right").accessibilityHidden(true).font(c.ui(16)).foregroundStyle(c.mut)
         }
         .padding(.horizontal, 16).padding(.vertical, 12)
         .overlay(alignment: .bottom) { Rectangle().fill(c.line).frame(height: 1) }
