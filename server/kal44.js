@@ -24,6 +24,7 @@ import { userCfg } from './settings.js';
 import { notifyUser } from './notify.js';
 import { addEventDecorator, addEventSource, findEvent } from './calendar.js';
 import { NOMINATIM_UA } from './family.js';
+import { dtf } from './intl-format.js'; // gjenbrukte Intl.DateTimeFormat
 
 const MOCK = () => process.env.MOCK_DATA === '1';
 const TZ = 'Europe/Oslo';
@@ -208,8 +209,8 @@ export const outbox44 = (u) => q('SELECT id, to_addr AS "to", subject, via, stat
 
 const fmtWhen = (ev) => {
   const d = new Date(`${ev.date}T12:00:00Z`);
-  const day = new Intl.DateTimeFormat('nb-NO', { timeZone: 'UTC', weekday: 'short', day: 'numeric', month: 'short' }).format(d);
-  return ev.allDay ? day : `${day} ${new Intl.DateTimeFormat('nb-NO', { timeZone: TZ, hour: '2-digit', minute: '2-digit' }).format(new Date(ev.start))}`;
+  const day = dtf('nb-NO', { timeZone: 'UTC', weekday: 'short', day: 'numeric', month: 'short' }).format(d);
+  return ev.allDay ? day : `${day} ${dtf('nb-NO', { timeZone: TZ, hour: '2-digit', minute: '2-digit' }).format(new Date(ev.start))}`;
 };
 const snap = (ev) => ({ title: ev.title, date: ev.date, start: ev.start, end: ev.end, allDay: !!ev.allDay, endDate: ev.endDate ?? null, room: ev.room ?? ev.location ?? '', note: ev.note ?? '', geo: ev.geo ?? null, time: ev.time ?? null, inAllDayRow: !!ev.allDay, type: 'invite', color: '#2b5d8a' });
 export async function invite44(u, id, body = {}) {

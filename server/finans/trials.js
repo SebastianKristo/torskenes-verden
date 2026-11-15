@@ -13,6 +13,7 @@
 import { db, q } from '../db.js';
 import { parseTrial, trialSchedule, trialTitle, trialBody, trialBadge, trialPreview, cancelUrlFor, CANCEL_LINKS, REMIND_OPTIONS, DEFAULT_OFFSETS, daysBetween, addDaysISO } from '../../public/js/trial-parse.js';
 import { osloTodayISO } from '../../public/js/quick-time.js';
+import { dtf } from '../intl-format.js'; // gjenbrukte Intl.DateTimeFormat
 
 db.exec(`CREATE TABLE IF NOT EXISTS trials (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -42,7 +43,7 @@ export function osloMs(date, hm) {
   const [y, m, d] = date.split('-').map(Number), [h, mi] = hm.split(':').map(Number);
   for (const off of [1, 2]) {
     const t = Date.UTC(y, m - 1, d, h - off, mi);
-    const p = Object.fromEntries(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Oslo', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
+    const p = Object.fromEntries(dtf('en-GB', { timeZone: 'Europe/Oslo', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
       .formatToParts(new Date(t)).map((x) => [x.type, x.value]));
     if (`${p.year}-${p.month}-${p.day}` === date && `${p.hour}:${p.minute}` === `${pad(h)}:${pad(mi)}`) return t;
   }

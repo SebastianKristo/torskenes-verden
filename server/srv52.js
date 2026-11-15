@@ -21,6 +21,7 @@ import { parseQuick, osloTodayISO } from '../public/js/quick-time.js';
 import { CHARS, glimtSettingsOf, cleanGlimtPatch, saveGlimtSettings, charDefaultOf52, setCharDefault52, CHAR_META52 } from './glimt35.js';
 import { matchMerchant, filePath as libraryFile } from './logos/match.js';
 import { brief73Api, rawCards73, B52_OF73, KEY_OF_B52 } from './brief73.js'; // prompt 73: Innhold i briefen (rekkefølge og av/på)
+import { dtf } from './intl-format.js'; // gjenbrukte Intl.DateTimeFormat
 
 const DAY = 86_400_000;
 const NO_STORE = { 'Cache-Control': 'no-store' };
@@ -42,7 +43,7 @@ const addDays = (ymd, n) => new Date(dOf(ymd).getTime() + n * DAY).toISOString()
 const daysBetween = (a, b) => Math.round((dOf(b) - dOf(a)) / DAY);
 const longDate = (ymd) => { const d = dOf(ymd); return `${WD[d.getUTCDay()]} ${d.getUTCDate()}. ${MON[d.getUTCMonth()]}`; };
 const shortDate = (ymd) => { const d = dOf(ymd); return `${WD_S[d.getUTCDay()]} ${d.getUTCDate()}. ${MON_S[d.getUTCMonth()]}`; };
-const osloHm = (t = Date.now()) => new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Oslo', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(t));
+const osloHm = (t = Date.now()) => dtf('en-GB', { timeZone: 'Europe/Oslo', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(t));
 
 /* =====================================================================================================================
    1. Kvitteringer: migrering av lagrede valg (Gemini er tatt helt ut av kvitteringslesingen)
@@ -398,7 +399,7 @@ export async function briefCardsFor52(u) {
   }
   return { allowed, hidden, admin, child };
 }
-const kindNow52 = (t = Date.now()) => { const h = +new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Oslo', hour: '2-digit', hourCycle: 'h23' }).format(new Date(t)); return h < 5 ? 'night' : h < 11 ? 'morning' : h < 17 ? 'day' : h < 22 ? 'evening' : 'night'; };
+const kindNow52 = (t = Date.now()) => { const h = +dtf('en-GB', { timeZone: 'Europe/Oslo', hour: '2-digit', hourCycle: 'h23' }).format(new Date(t)); return h < 5 ? 'night' : h < 11 ? 'morning' : h < 17 ? 'day' : h < 22 ? 'evening' : 'night'; };
 const GREET52 = { morning: 'God morgen', day: 'Hei', evening: 'God kveld', night: 'God natt' };
 
 function clothesOf52(w) {

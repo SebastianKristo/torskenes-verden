@@ -26,6 +26,7 @@ import { readFileSync } from 'node:fs';
 import { db, q } from './db.js';
 import { userInfo, listUsers, isAdmin } from './auth.js';
 import { authOrToken } from './mobile.js';
+import { dtf } from './intl-format.js'; // gjenbrukte Intl.DateTimeFormat
 
 const MOCK = process.env.MOCK_DATA === '1';
 const load = (f) => JSON.parse(readFileSync(new URL(`./data/${f}`, import.meta.url), 'utf8'));
@@ -43,7 +44,7 @@ const F = 'bible_verse';
 
 const pad = (n) => String(n).padStart(2, '0');
 const osloNow = (t = Date.now()) => {
-  const p = Object.fromEntries(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Oslo', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', hourCycle: 'h23' }).formatToParts(new Date(t)).map((x) => [x.type, x.value]));
+  const p = Object.fromEntries(dtf('en-GB', { timeZone: 'Europe/Oslo', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', hourCycle: 'h23' }).formatToParts(new Date(t)).map((x) => [x.type, x.value]));
   return { date: `${p.year}-${p.month}-${p.day}`, h: +p.hour };
 };
 const addDays = (s, n) => { const [y, m, d] = s.split('-').map(Number); return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10); };

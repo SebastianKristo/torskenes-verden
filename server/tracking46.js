@@ -22,6 +22,7 @@ import { runAsUser, activeUser } from './settings.js';
 import { userGuard, readJson, bad, MOCK } from './homeos-common.js';
 import { upsertShipment, trk46, stagger41 } from './tracking.js';
 import { detect, normNo, configured, setAccountLookup46, canonical41 } from './tracking-carriers.js';
+import { dtf } from './intl-format.js'; // gjenbrukte Intl.DateTimeFormat
 
 /* ---------------- Konstanter (fra const.py i integrasjonene) ---------------- */
 
@@ -379,7 +380,7 @@ export async function postenAccountFetch46(u) {
 const cache46 = new Map(); // bruker → { postnord: Map(nr → result), posten: Map }
 const cacheFor = (u, src) => { if (!cache46.has(u)) cache46.set(u, {}); const c = cache46.get(u); c[src] ??= { at: 0, map: new Map() }; return c[src]; };
 const SRC_NAME = { posten: 'Posten', postnord: 'PostNord' };
-const hhmm = (t) => new Intl.DateTimeFormat('nb-NO', { timeZone: 'Europe/Oslo', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(t));
+const hhmm = (t) => dtf('nb-NO', { timeZone: 'Europe/Oslo', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(t));
 
 const MOCK_POSTEN = () => [{ parcelNumber: 'CV900000001NO', status: 'underway', direction: 'receive', sender: { name: 'Demo-butikk' }, events: [{ type: 'pre_notified', date: new Date(Date.now() - 86400_000).toISOString(), description: 'Sendingen er registrert' }] }];
 const MOCK_PN = () => [{ shipmentId: '00370000000000000046', status: 'EN_ROUTE', consignor: { name: 'Demo-butikk' }, statusText: { header: 'Underveis' }, items: [{ events: [{ status: 'EN_ROUTE', eventCode: '20', eventTime: new Date(Date.now() - 3600_000).toISOString(), eventDescription: 'Ankommet terminal' }] }] }];
@@ -468,7 +469,7 @@ export function sourcesOut46(u) {
 
 /* ---------------- Polling (som integrasjonene) ---------------- */
 
-const osloHour = (t = Date.now()) => +new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Oslo', hour: '2-digit', hourCycle: 'h23' }).format(new Date(t));
+const osloHour = (t = Date.now()) => +dtf('en-GB', { timeZone: 'Europe/Oslo', hour: '2-digit', hourCycle: 'h23' }).format(new Date(t));
 /** Hvert 15. min når en kontopakke er ute for levering eller har leveringsvindu innen 1 t, ellers hvert 45. min. Stille 00–06. */
 export function accountInterval46(u, src, t = Date.now()) {
   const rows = q("SELECT status, eta FROM hl_shipments WHERE user_id=? AND via=? AND archived=0 AND status NOT IN ('delivered','returned')").all(u, `${src}-konto`);

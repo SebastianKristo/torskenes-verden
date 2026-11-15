@@ -40,6 +40,7 @@ import { gateEmbed } from './ai-gate.js';
 import { sunTime } from './weather.js';
 import { savedDocs73, savedSig73 } from './news73.js'; // prompt 73 (NEWS73): lagrede artikler i felles søk
 import { partDocs76, partSig76, partResult76 } from './skjold76/glimt.js'; // prompt 76 (SKJSRV): Skjold Lab-deler i felles søk
+import { dtf } from './intl-format.js'; // gjenbrukte Intl.DateTimeFormat
 
 const MIN = 60_000, HOUR = 3_600_000, DAY = 86_400_000;
 const NO_STORE = { 'Cache-Control': 'no-store' };
@@ -310,7 +311,7 @@ function resultOf(h, u, qtext) {
     case 'list': return { ...base, subtitle: SHOP_RE.test(m.name ?? '') ? 'Handleliste' : 'Liste', link: { web: `/#/gjoremal?list=${encodeURIComponent(h.ref)}`, app: appLink('list', h.ref), route: 'huske', ref: h.ref }, actions: [open('Åpne listen')] };
     case 'event': {
       const d = m.start ? ymdOslo(m.start) : null;
-      const time = m.start && !m.allDay ? new Intl.DateTimeFormat('nb-NO', { timeZone: 'Europe/Oslo', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(m.start)) : null;
+      const time = m.start && !m.allDay ? dtf('nb-NO', { timeZone: 'Europe/Oslo', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(m.start)) : null;
       return { ...base, subtitle: [dayLabel(d), time, m.place, m.needsDriver ? 'trenger sjåfør' : null].filter(Boolean).join(' · '), date: d,
         link: { web: `/#/familiekalender?event=${h.ref}`, app: appLink('event', h.ref), route: 'famcal', ref: h.ref }, actions: [open()] };
     }

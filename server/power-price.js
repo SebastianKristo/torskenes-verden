@@ -8,6 +8,7 @@
 // MOCK_DATA=1 (uten injisert fetch) gir faste priser.
 import { cfg } from './settings.js';
 import { cached } from './cache.js';
+import { dtf } from './intl-format.js'; // gjenbrukte Intl.DateTimeFormat
 
 const MOCK = () => process.env.MOCK_DATA === '1';
 let F = null;
@@ -38,7 +39,7 @@ export function homeZone() {
 }
 const pad = (n) => String(n).padStart(2, '0');
 const osloDate = (t = Date.now()) => new Date(t).toLocaleDateString('sv-SE', { timeZone: 'Europe/Oslo' });
-const osloHour = (t) => +new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Oslo', hour: '2-digit', hourCycle: 'h23' }).format(new Date(t));
+const osloHour = (t) => +dtf('en-GB', { timeZone: 'Europe/Oslo', hour: '2-digit', hourCycle: 'h23' }).format(new Date(t));
 const r1 = (v) => Math.round(v * 10) / 10;
 const nbn = (v) => String(r1(v)).replace('.', ',');
 export const hasVat = (zone) => zone !== 'NO4';

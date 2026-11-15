@@ -109,3 +109,12 @@ test('indekser: fremmednøkler og bruker-kolonner får indeks, idempotent, og ma
   const plan = db.prepare('EXPLAIN QUERY PLAN SELECT * FROM t_barn WHERE user_id=?').all('x').map((r) => r.detail).join(' ');
   assert.match(plan, /USING INDEX ix_t_barn_user_id/);
 });
+
+test('dtf: samme Intl.DateTimeFormat gjenbrukes, og ugyldig tidssone kaster som før', async () => {
+  const { dtf } = await import('../server/intl-format.js');
+  const a = dtf('nb-NO', { timeZone: 'Europe/Oslo', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+  assert.equal(a, dtf('nb-NO', { timeZone: 'Europe/Oslo', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }));
+  assert.equal(a.format(new Date('2026-07-01T10:05:00Z')), '12:05');
+  assert.notEqual(a, dtf('nb-NO', { timeZone: 'UTC', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }));
+  assert.throws(() => dtf('en', { timeZone: 'Ikke/Sone' }), RangeError);
+});

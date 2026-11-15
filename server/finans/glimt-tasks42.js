@@ -19,6 +19,7 @@ import { config } from '../config.js';
 import { subscriptionSources } from './subs-ask32.js';
 import { Pdf42, A4 } from './pdf42.js';
 import { parsePeriod42 } from './search42.js';
+import { dtf } from '../intl-format.js'; // gjenbrukte Intl.DateTimeFormat
 
 db.exec(`CREATE TABLE IF NOT EXISTS glimt_jobs (
   id TEXT PRIMARY KEY, user_id TEXT NOT NULL, kind TEXT NOT NULL, title TEXT NOT NULL, params TEXT NOT NULL DEFAULT '{}',
@@ -225,7 +226,7 @@ function cleanCategories(u) {
 /** Bare for tester: (prompt, data) → tekst. null = Glimt-kjeden (6 s, faller tilbake til malen). */
 export const _taskLlm42 = { impl: null, ms: 6000, delayMs: 0 };
 const parseJ = (s, d) => { try { return s ? JSON.parse(s) : d; } catch { return d; } };
-const hhmm = (t) => new Intl.DateTimeFormat('nb-NO', { timeZone: 'Europe/Oslo', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(t));
+const hhmm = (t) => dtf('nb-NO', { timeZone: 'Europe/Oslo', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(t));
 const isoT = (t) => (t ? new Date(t).toISOString() : null);
 const row = (id) => q('SELECT * FROM glimt_jobs WHERE id=?').get(id);
 const listeners = new Map(); // jobId → Set(fn)

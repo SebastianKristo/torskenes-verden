@@ -26,6 +26,7 @@ import { insertTask, mineListOf } from './tasks.js';
 import { notifyUser } from './notify.js';
 import { cached } from './cache.js';
 import { cardsOf, cardOn, auroraNotifyOf } from './cards38.js';
+import { dtf } from './intl-format.js'; // gjenbrukte Intl.DateTimeFormat
 
 const MOCK = process.env.MOCK_DATA === '1';
 const TZ = 'Europe/Oslo';
@@ -33,8 +34,8 @@ const WD = ['søn', 'man', 'tir', 'ons', 'tor', 'fre', 'lør'];
 const MS = ['jan', 'feb', 'mar', 'apr', 'mai', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'des'];
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const osloDate = (t = Date.now()) => new Intl.DateTimeFormat('sv-SE', { timeZone: TZ }).format(new Date(t));
-const osloHour = (t = Date.now()) => +new Intl.DateTimeFormat('en-GB', { timeZone: TZ, hour: '2-digit', hourCycle: 'h23' }).format(new Date(t));
-const osloHm = (iso) => new Intl.DateTimeFormat('en-GB', { timeZone: TZ, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(iso));
+const osloHour = (t = Date.now()) => +dtf('en-GB', { timeZone: TZ, hour: '2-digit', hourCycle: 'h23' }).format(new Date(t));
+const osloHm = (iso) => dtf('en-GB', { timeZone: TZ, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(iso));
 const addDays = (s, n) => { const [y, m, d] = s.split('-').map(Number); return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10); };
 const diffDays = (a, b) => Math.round((Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / 86_400_000);
 export const dayLabel = (d) => { const x = new Date(`${d}T12:00:00Z`); return `${WD[x.getUTCDay()]} ${x.getUTCDate()}. ${MS[x.getUTCMonth()]}`; };
@@ -230,7 +231,7 @@ export function addGiftTask(u, name, date, today = osloDate()) {
 
 /** Kalles hvert minutt. Mellom 20:00 og 20:15 (Oslo): én push per bruker per dag når Kp ≥ 4 og skydekke < 40 %. → antall sendt */
 export async function auroraPushTick(t = Date.now(), { force = false } = {}) {
-  const hm = new Intl.DateTimeFormat('en-GB', { timeZone: TZ, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(t));
+  const hm = dtf('en-GB', { timeZone: TZ, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(t));
   if (!force && !(hm >= '20:00' && hm < '20:15')) return 0;
   const day = osloDate(t);
   let n = 0;

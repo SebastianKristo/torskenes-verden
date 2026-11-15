@@ -23,6 +23,7 @@ import { authOrToken } from './mobile.js';
 import { isAdmin, userInfo } from './auth.js';
 import * as M from './media43.js';
 import { rgbaToThumbHash50, thumbHashB64_50 } from './thumbhash50.js';
+import { dtf } from './intl-format.js'; // gjenbrukte Intl.DateTimeFormat
 
 const MOCK = () => process.env.MOCK_DATA === '1';
 const TZ = 'Europe/Oslo';
@@ -370,7 +371,7 @@ let noGrabMs = NO_GRAB_MS;
 export const _setNoGrabMs50 = (ms) => { noGrabMs = ms ?? NO_GRAB_MS; };
 export const _tracks50 = TRACKS;
 const ints = (v) => (Array.isArray(v) ? v : v == null ? [] : [v]).map(Number).filter((n) => Number.isInteger(n) && n > 0).slice(0, 500);
-const osloHm = (t) => new Intl.DateTimeFormat('nb-NO', { timeZone: TZ, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(t));
+const osloHm = (t) => dtf('nb-NO', { timeZone: TZ, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(t));
 const short = (s, n = 160) => { const t = String(s ?? '').replace(/\s+/g, ' ').trim(); return t.length > n ? `${t.slice(0, n - 1)}…` : t; };
 const tlog = (t, ledd, msg) => console.log(`media.track id=${t.id.slice(0, 8)} svc=${t.svc} ${t.episodeIds.length ? `episodeIds=${t.episodeIds.slice(0, 5).join(',')}` : `movieIds=${t.movieIds.slice(0, 5).join(',')}`} ledd=${ledd} ${msg}`);
 
@@ -582,7 +583,7 @@ export async function diagnose50({ service = null, episodeId = null, movieId = n
     const recs = (Array.isArray(h.v) ? h.v : h.v?.records ?? []).filter((r) => r.eventType === 'grabbed' || r.eventType === 1).sort((a, b) => Date.parse(b.date) - Date.parse(a.date));
     const g = recs[0];
     const gAge = g ? Date.now() - Date.parse(g.date) : Infinity;
-    steps.push(step(`${svc}:grab`, 4, 'Grab', h.e ? 'fail' : !g ? 'warn' : 'ok', h.e ? h.e.message : g ? `Siste grab ${new Intl.DateTimeFormat('nb-NO', { timeZone: TZ, day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(g.date))}: ${short(g.sourceTitle, 80)}${gAge > 7 * 86400_000 ? ' (over en uke siden)' : ''}` : `Ingen grab i historikken${episodeId || movieId ? ' for denne' : ''} – feilen ligger før qBittorrent`, { ms: h.ms }));
+    steps.push(step(`${svc}:grab`, 4, 'Grab', h.e ? 'fail' : !g ? 'warn' : 'ok', h.e ? h.e.message : g ? `Siste grab ${dtf('nb-NO', { timeZone: TZ, day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(g.date))}: ${short(g.sourceTitle, 80)}${gAge > 7 * 86400_000 ? ' (over en uke siden)' : ''}` : `Ingen grab i historikken${episodeId || movieId ? ' for denne' : ''} – feilen ligger før qBittorrent`, { ms: h.ms }));
     // Ledd 5: nedlastingsklienten i Sonarr/Radarr.
     const dc = await timed(() => M.arr43(svc, 'GET', '/downloadclient'));
     const clients = (Array.isArray(dc.v) ? dc.v : []).filter((x) => /qbittorrent/i.test(x.implementation ?? x.implementationName ?? ''));

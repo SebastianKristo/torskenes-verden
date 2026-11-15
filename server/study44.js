@@ -186,6 +186,7 @@ export const _setStudyAi44 = (fn) => { aiImpl = fn; };
 // strengt JSON-skjema når kalleren gir et – før kuttet 4096/900 lange dokumenter, og fag manglet.
 import { completeness47, retryMissing47, completenessText47 } from './glimt45/document47.js'; // prompt 47
 import { clean55 } from './study55.js'; // prompt 55
+import { dtf } from './intl-format.js'; // gjenbrukte Intl.DateTimeFormat
 const ai = () => aiImpl ?? (MOCK() ? null : async (prompt, user, schema = null) => { const { run: aiRun } = await import('./ai-run.js'); const out = await aiRun('glimt', { user, prompt, json: true, ...(schema ? { schema } : {}), step: 'document', localOnly: true, title: 'Glimt · les dokument', background: true }); return out.data ?? JSON.parse(String(out.text).match(/\{[\s\S]*\}/)?.[0] ?? '{}'); });
 async function analyse(user, buf, mime, name) {
   const steps = [];
@@ -340,7 +341,7 @@ function apply(u, r) {
 
 /* ---------------- Studie-oversikt (ny web) ---------------- */
 
-const OSLO = (t) => Object.fromEntries(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Oslo', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23', weekday: 'long' }).formatToParts(new Date(t)).map((x) => [x.type, x.value]));
+const OSLO = (t) => Object.fromEntries(dtf('en-GB', { timeZone: 'Europe/Oslo', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23', weekday: 'long' }).formatToParts(new Date(t)).map((x) => [x.type, x.value]));
 const WDN = { Monday: 'MANDAG', Tuesday: 'TIRSDAG', Wednesday: 'ONSDAG', Thursday: 'TORSDAG', Friday: 'FREDAG', Saturday: 'LØRDAG', Sunday: 'SØNDAG' };
 const MON = ['JANUAR', 'FEBRUAR', 'MARS', 'APRIL', 'MAI', 'JUNI', 'JULI', 'AUGUST', 'SEPTEMBER', 'OKTOBER', 'NOVEMBER', 'DESEMBER'];
 const isoWeek = (d) => { const t = new Date(`${d}T12:00:00Z`); const day = (t.getUTCDay() + 6) % 7; t.setUTCDate(t.getUTCDate() - day + 3); const f = new Date(Date.UTC(t.getUTCFullYear(), 0, 4)); return 1 + Math.round(((t - f) / 86400_000 - 3 + ((f.getUTCDay() + 6) % 7)) / 7); };

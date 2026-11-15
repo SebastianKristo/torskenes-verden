@@ -11,6 +11,7 @@ import { db, q, kv, OWNER } from './db.js';
 import { userInfo, listUsers, sessionUser } from './auth.js';
 import { bearerOk } from './finans/routes.js';
 import { broadcast } from './realtime.js';
+import { dtf } from './intl-format.js'; // gjenbrukte Intl.DateTimeFormat
 
 const MOCK = process.env.MOCK_DATA === '1';
 const DAY = 86_400_000;
@@ -465,7 +466,7 @@ export function initials(name) {
 }
 function clock(ts, now = Date.now()) {
   const tz = 'Europe/Oslo';
-  const p = Object.fromEntries(new Intl.DateTimeFormat('nb-NO', { timeZone: tz, day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
+  const p = Object.fromEntries(dtf('nb-NO', { timeZone: tz, day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
     .formatToParts(new Date(ts)).map((x) => [x.type, x.value]));
   const day = (t) => new Intl.DateTimeFormat('sv-SE', { timeZone: tz }).format(new Date(t));
   return day(ts) === day(now) ? `${p.hour}:${p.minute}` : `${p.day}.${p.month}. ${p.hour}:${p.minute}`;
@@ -787,7 +788,7 @@ function hhmm50(v) {
   if (typeof v === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(v)) return v;
   const t = typeof v === 'number' ? (v < 1e12 ? v * 1000 : v) : Date.parse(String(v ?? ''));
   if (!Number.isFinite(t) || v == null || v === '') return null;
-  return new Intl.DateTimeFormat('nb-NO', { timeZone: 'Europe/Oslo', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(t));
+  return dtf('nb-NO', { timeZone: 'Europe/Oslo', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(t));
 }
 const hi = (col) => `CASE WHEN excluded.${col} IS NULL THEN ${col} WHEN ${col} IS NULL THEN excluded.${col} ELSE MAX(${col}, excluded.${col}) END`;
 api.post('/health', async (c) => {

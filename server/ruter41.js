@@ -26,6 +26,7 @@ import { Hono } from 'hono';
 import { db, q, kv, OWNER } from './db.js';
 import { authOrToken as authOrToken0 } from './mobile.js';
 import { family50 as F50, placesChanged50, areaOut50 } from './family.js'; // prompt 50 (SRVFAM50): skolen kommer fra Familie › Steder
+import { dtf } from './intl-format.js'; // gjenbrukte Intl.DateTimeFormat
 const authOrToken = (c, next) => authOrToken0(c, next); // sen binding (mobile.js kan være midt i lastingen)
 
 db.exec(`CREATE TABLE IF NOT EXISTS school_zones (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT NOT NULL, name TEXT NOT NULL, lat REAL NOT NULL, lon REAL NOT NULL, radius_m INTEGER NOT NULL, created INTEGER NOT NULL);
@@ -38,7 +39,7 @@ const HOME_CARDS = ['over', 'instead', 'off'];
 const pad = (n) => String(n).padStart(2, '0');
 const hm = (t) => new Date(t).toLocaleTimeString('nb-NO', { timeZone: 'Europe/Oslo', hour: '2-digit', minute: '2-digit' });
 const iso = (t) => (t ? new Date(t).toISOString() : null);
-const osloParts = (t = Date.now()) => { const p = Object.fromEntries(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Oslo', weekday: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date(t)).map((x) => [x.type, x.value])); return { wd: p.weekday, h: +p.hour, m: +p.minute }; };
+const osloParts = (t = Date.now()) => { const p = Object.fromEntries(dtf('en-GB', { timeZone: 'Europe/Oslo', weekday: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date(t)).map((x) => [x.type, x.value])); return { wd: p.weekday, h: +p.hour, m: +p.minute }; };
 const kmText = (m) => `${String(Math.round(m / 100) / 10).replace('.', ',')} km`;
 
 /* ---------------- Forhåndsruter ---------------- */

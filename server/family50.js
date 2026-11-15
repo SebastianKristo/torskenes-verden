@@ -13,6 +13,7 @@ import { broadcast } from './realtime.js';
 import { notifyUser } from './notify.js';
 import { family50 as F, placesChanged50, deletePlace50, placesVersion50, areaOut50, setPlaceEventHook50 } from './family.js';
 import { schoolPlaceOf50, ruterPlaceEvents50 } from './ruter41.js';
+import { dtf } from './intl-format.js'; // gjenbrukte Intl.DateTimeFormat
 
 const MIN = 60_000, HOUR = 3_600_000, DAY = 86_400_000;
 const FRESH = 15 * MIN;
@@ -24,7 +25,7 @@ setPlaceEventHook50((u, events) => ruterPlaceEvents50(u, events));
 
 const fmtInt = (n) => (n == null ? null : new Intl.NumberFormat('nb-NO').format(Math.round(n)).replace(/\s/g, ' '));
 const dec1 = (n) => String(Math.round(n * 10) / 10).replace('.', ',');
-const hm = (t) => new Intl.DateTimeFormat('nb-NO', { timeZone: 'Europe/Oslo', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(t));
+const hm = (t) => dtf('nb-NO', { timeZone: 'Europe/Oslo', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(t));
 const ymdOslo = (t = Date.now()) => new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Oslo' }).format(new Date(t));
 /** Midnatt i Oslo (ms) for dagen t ligger i. */
 export function osloMidnight50(t = Date.now()) {

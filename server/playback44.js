@@ -19,6 +19,7 @@ import { isAdmin } from './auth.js';
 import { authOrToken } from './mobile.js';
 import { userCfg, setUserCfg } from './settings.js';
 import { mediaAllowed43, mediaSource43 } from './media43.js';
+import { dtf } from './intl-format.js'; // gjenbrukte Intl.DateTimeFormat
 
 const MOCK = () => process.env.MOCK_DATA === '1';
 db.exec(`CREATE TABLE IF NOT EXISTS plays44 (id INTEGER PRIMARY KEY AUTOINCREMENT, server TEXT NOT NULL, skey TEXT NOT NULL, user TEXT NOT NULL DEFAULT '', item TEXT NOT NULL DEFAULT '',
@@ -186,7 +187,7 @@ export function startPlayback44() {
 /* ---------------- Historikk, statistikk og biblioteker ---------------- */
 
 const WD = ['søn', 'man', 'tir', 'ons', 'tor', 'fre', 'lør'];
-const whenText = (t, now = Date.now()) => { const d = new Date(t), hm = new Intl.DateTimeFormat('nb-NO', { timeZone: 'Europe/Oslo', hour: '2-digit', minute: '2-digit' }).format(d); const days = Math.floor((now - t) / 86400_000); return days < 1 ? `i dag ${hm}` : days < 2 ? `i går ${hm}` : days < 7 ? `${WD[d.getDay()]} ${hm}` : new Intl.DateTimeFormat('nb-NO', { timeZone: 'Europe/Oslo', day: 'numeric', month: 'short' }).format(d); };
+const whenText = (t, now = Date.now()) => { const d = new Date(t), hm = dtf('nb-NO', { timeZone: 'Europe/Oslo', hour: '2-digit', minute: '2-digit' }).format(d); const days = Math.floor((now - t) / 86400_000); return days < 1 ? `i dag ${hm}` : days < 2 ? `i går ${hm}` : days < 7 ? `${WD[d.getDay()]} ${hm}` : dtf('nb-NO', { timeZone: 'Europe/Oslo', day: 'numeric', month: 'short' }).format(d); };
 export function history44({ q: qs = '', user = '', server = '', page = 1 } = {}) {
   if (demo()) seedDemo();
   const where = [], args = [];
