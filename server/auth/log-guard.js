@@ -1,7 +1,7 @@
 // Prompt 51 (SEC51): vakt mot nøkler i loggene.
 // 1. console.log/info/warn/error/debug formateres som før (util.format), men kjente hemmeligheter (verdiene fra sec51-inventaret:
 //    API-nøkler, SESSION_SECRET …) og app-tokens (fh_pat_…, hlr_…, hdt_…) byttes ut med «••••» før linjen skrives.
-// 2. De siste linjene (etter maskering) ligger i en ringbuffer i minnet, som logg-skanneren i sec51.js sjekker.
+// 2. De siste linjene (etter maskering) ligger i en ringbuffer i minnet, som logg-skanneren i security.js sjekker.
 // Andre moduler kan melde inn egne ringbuffere med registerRing51(navn, () => [tekst | objekt]) – skanneren leser dem også.
 import { format } from 'node:util';
 
@@ -18,7 +18,7 @@ export const TOKEN_PATTERNS51 = [
   [/\bhdt_[A-Za-z0-9_-]{20,}/g, 'hdt_••••'],
 ];
 
-/** fn() → [{label, value}] – kjente hemmeligheter (settes av sec51.js). */
+/** fn() → [{label, value}] – kjente hemmeligheter (settes av security.js). */
 export function setSecretProvider51(fn) { provider = fn; valuesAt = 0; }
 export const _refreshNow51 = () => { valuesAt = 0; refresh(); };
 function refresh() {

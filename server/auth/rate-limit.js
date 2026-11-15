@@ -2,7 +2,7 @@
 // Per IP og per konto, eksponentiell: når antall feil når terskelen, sperres nøkkelen i base · 2^(feil − terskel), opp til et tak.
 // Feiltelleren nullstilles etter vellykket innlogging, eller av seg selv når det ikke har vært feil på DECAY_MS.
 // Tilstanden ligger i SQLite (sec51_limits), så en omstart ikke åpner for nye forsøk. Vises (og kan låses opp) i Innstillinger →
-// Sikkerhet → Sperrer (bare admin, sec51.js). Avhenger bare av db.js, så auth.js kan bruke den uten sirkulær import.
+// Sikkerhet → Sperrer (bare admin, security.js). Avhenger bare av db.js, så auth.js kan bruke den uten sirkulær import.
 import { db } from '../db.js';
 
 db.exec(`CREATE TABLE IF NOT EXISTS sec51_limits (key TEXT PRIMARY KEY, scope TEXT NOT NULL, kind TEXT NOT NULL, subject TEXT NOT NULL,

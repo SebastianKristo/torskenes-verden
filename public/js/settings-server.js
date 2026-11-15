@@ -2,11 +2,11 @@
 // Lokal og ekstern adresse lagres per bruker på serveren (GET/PUT /api/me/server {local, external, auto}) og synkes til
 // mobilappene og Kalender. «Bytt automatisk»: lokal når den svarer innen 300 ms, ellers ekstern. Eldre server (404): bare lokalt.
 // Adressene er ikke hemmelige (GET /api/discovery viser dem uinnlogget), men nettsiden selv bruker alltid adressen den er åpnet fra.
-// Prompt 47 (claude-code-standard-serveradresser.md): forhåndsutfylt med standardadressene (settings-srv47.js, env-overstyrt via
+// Prompt 47 (claude-code-standard-serveradresser.md): forhåndsutfylt med standardadressene (serveradresser.js, env-overstyrt via
 // /api/config), status «Svarer · 34 ms» / «Svarer ikke» og «Test» under hver adresse, og «Tilbakestill til standard».
 // En https-side prøver aldri en http-adresse.
 import { api, esc, sheetBtn } from './util.js';
-import { defaults47, probe47, tone47 } from './settings-srv47.js';
+import { defaults47, probe47, tone47 } from './serveradresser.js';
 
 const S = { d: null, loaded: false, missing: false, now: null, sheet: null, test: null, msg: '', busy: false, def: null, st: {} };
 let rerender = () => {};

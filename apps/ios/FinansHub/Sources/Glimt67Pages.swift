@@ -1,7 +1,7 @@
 import SwiftUI
 
 /* ---------------- Prompt 67 (IOSSET67): sidene under Innstillinger → Glimt ----------------
- Som web (settings65.js · glimtView65): Glimt-siden samler figur/brief/stemme (fullskjermen fra prompt 35), «Send til Chat
+ Som web (settings-meny.js · glimtView65): Glimt-siden samler figur/brief/stemme (fullskjermen fra prompt 35), «Send til Chat
  etter», Forstår samtaler, og radene til Glimt husker (+ Forslag/Motstrid/Gamle), Entitetsregister, Glimt lærer,
  Faste oppgaver og Kvalitet. Undersidene er rutene innst-glimt:<side> (tilbake går til Glimt, Integrations26.nav26BackTarget).
  Byggeklosser og Glimt-siden, Glimt husker og Entitetsregister her; Glimt lærer, Faste oppgaver og Kvalitet i Glimt67Tasks.swift.

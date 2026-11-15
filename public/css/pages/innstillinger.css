@@ -888,7 +888,7 @@ html:not([data-hl="2c"]) .m43i-n{background:#eef0f4;color:#0c1119}
 .m43i-how{margin-top:8px}
 .m43i-how .m43i-steps{padding:16px}
 
-/* ---------- Innstillinger → App → Widgets (widgets43.js, fasit Widget Galleri.dc.html) ---------- */
+/* ---------- Innstillinger → App → Widgets (widgets.js, fasit Widget Galleri.dc.html) ---------- */
 .wg43{--k:#1b1a17;--b:#f3efe6;--cd:#fffdf8;--ln:#d8d1c2;--lb:#b23a2a;--mt:#6b665c;display:flex;flex-direction:column;gap:18px;margin:0 0 22px;color:var(--k);font-family:Manrope,system-ui,sans-serif}
 html:not([data-hl="2c"]) .wg43{--k:#eef0f4;--b:#0c1119;--cd:#141a26;--ln:#1f2736;--lb:#f59a8f;--mt:#8a93a6}
 .wg43-mut{font-size:13.5px;line-height:1.5;color:var(--mt)}
@@ -1051,7 +1051,7 @@ html[data-mode="dark"] .lg44-box,html[data-hl="cur"] .lg44-box{background:#0e0d0
 .lg44-toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);z-index:90;padding:11px 18px;border-radius:14px;background:#1b1a17;color:#f3efe6;font:700 13.5px Manrope,system-ui,sans-serif;box-shadow:0 12px 30px rgba(0,0,0,.25);max-width:calc(100vw - 32px)}
 @media (max-width:640px){.lg44-r{grid-template-columns:62px minmax(0,1fr);row-gap:0}.lg44-r .l{display:none}.lg44-r .c{grid-column:2}.lg44-r .m{grid-column:1/-1;padding-left:0}.lg44-box{height:360px}}
 
-/* ---------- Innstillinger samlet (settings45.js): segmentvalg, sonevarsler ---------- */
+/* ---------- Innstillinger samlet (settings-moduler.js): segmentvalg, sonevarsler ---------- */
 .s45-seg{flex:none;display:inline-flex;gap:3px;padding:3px;border-radius:14px;background:color-mix(in srgb,currentColor 9%,transparent)}
 .s45-seg button{min-width:44px;height:34px;padding:0 14px;border:0;border-radius:11px;background:transparent;color:inherit;font:700 13.5px Manrope,system-ui,sans-serif;cursor:pointer}
 .s45-seg button[aria-checked=true]{background:var(--s45-on,#fffdf8);color:#1b1a17;box-shadow:0 1px 3px rgba(0,0,0,.14)}
@@ -1067,7 +1067,7 @@ html[data-mode="dark"] .s45-seg button[aria-checked=true]{background:#f3efe6}
 .s45-zext span{font-size:13.5px;color:#3d3a33}
 .s45-zexn{align-self:flex-start;font-size:12px;color:#6b665c}
 
-/* ---------- Logger: Docker settes opp automatisk (logger44.js, prompt 45) ---------- */
+/* ---------- Logger: Docker settes opp automatisk (logger.js, prompt 45) ---------- */
 .lg45-setup{align-items:flex-start;text-align:left}
 .lg45-ic{width:40px;height:40px;border-radius:12px;background:#3d4a5c url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 12h18M5 8h3v4H5zM9 8h3v4H9zM13 8h3v4h-3zM9 4h3v4H9zM4 12c0 5 4 7 8 7s7-3 8-7'/%3E%3C/svg%3E") center/22px no-repeat}
 .lg45-ic.run{animation:lg45p 1.2s ease-in-out infinite}.lg45-ic.bad{background-color:#b23a2a}
@@ -1077,7 +1077,7 @@ html[data-mode="dark"] .s45-seg button[aria-checked=true]{background:#f3efe6}
 .lg44-b.ghost{background:transparent}
 .lg45-det{max-width:100%;overflow:auto;white-space:pre-wrap;font-size:12px;padding:12px;border-radius:12px;background:rgba(127,127,127,.12);margin:0}
 
-/* ---------- Innstillinger → Familie → Home Assistant (settings-familie42.js, prompt 45) ---------- */
+/* ---------- Innstillinger → Familie → Home Assistant (settings-helse.js, prompt 45) ---------- */
 .ha45-st{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:18px;background:color-mix(in srgb,currentColor 6%,transparent);margin-bottom:12px}
 
 .ha45-st>i{flex:none;width:10px;height:10px;border-radius:5px;background:#2f7a4f;box-shadow:0 0 0 4px rgba(47,122,79,.18)}
@@ -1275,7 +1275,7 @@ html[data-mode="dark"][data-hl="2c"] #settings{--s65-card:#1f1c17;--s65-line:#3a
 #settings .set-body .sg-v{font:500 11.5px 'IBM Plex Mono',ui-monospace,monospace;color:var(--s65-mut);max-width:42%}
 #settings .set-body .sg-row.danger b,#settings .set-body b.si36-dt{color:var(--s65-bad)}
 @media (min-width:768px){
-  /* Én linje med ellipsis på web (hele teksten ligger i title, se settings-icons36.js). */
+  /* Én linje med ellipsis på web (hele teksten ligger i title, se settings-ikoner.js). */
   #settings .set-body .sg-row>.sg-txt>span:first-of-type:not([role]),#settings .set-body .gs-row .gs-os{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 }
 
@@ -1492,7 +1492,7 @@ html:not([data-hl="2c"]) #settings .sys66 .ac-b.ink{background:var(--ink);color:
 #settings .sys66-key{display:block;padding:10px 12px;border-radius:10px;background:var(--bg);font:500 12px 'IBM Plex Mono',ui-monospace,monospace;word-break:break-all;user-select:all}
 #settings .sys66-foot{display:flex;justify-content:flex-end}
 
-/* ---------- «Tidligere versjoner» (settings44.js) som samme seksjon + kort + rad ---------- */
+/* ---------- «Tidligere versjoner» (settings-utseende-logger.js) som samme seksjon + kort + rad ---------- */
 #settings .sys66 .rb44{gap:7px;padding:0}
 #settings .sys66 .rb44-cap{font:500 10.5px 'IBM Plex Mono',ui-monospace,monospace;letter-spacing:.12em;color:var(--mut);border:0;padding:0 2px}
 #settings .sys66 .rb44-list{background:var(--card);border-radius:14px;padding:0 14px}

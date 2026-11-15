@@ -8,10 +8,10 @@
 import { esc, initials } from './util.js';
 import { store } from './store.js';
 import { MODE_CARDS, webMode, setMode } from './mode44.js';
-import { mountLogger } from './logger44.js';
+import { mountLogger } from './logger.js';
 import { mountHa } from './tasks-ha.js';
 import { U, watch, loadUpdate } from './sysupdate.js';
-import { startAs, asState } from './as44.js';
+import { startAs, asState } from './logg-inn-som.js';
 
 const admin = () => store.me?.me?.role === 'admin';
 const meId = () => store.me?.me?.id;

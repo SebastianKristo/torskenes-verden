@@ -3,7 +3,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import * as N from '../public/js/settings65.js';
+import * as N from '../public/js/settings-meny.js';
 
 const read = (p) => readFileSync(p, 'utf8');
 const ST = read('public/js/settings-view.js');
@@ -77,9 +77,9 @@ test('System: faner (Oversikt · Oppdateringer · Ytelse · Selvreparasjon · Me
   assert.equal((bar.match(/<svg width="15" height="15"/g) ?? []).length, 5, '15 px strek-ikon på hver fane');
   // Kvalitet/Brief og figur/Lokale modeller hekter seg ikke lenger på System-siden.
   assert.doesNotMatch(read('public/js/qa51.js'), /set-body\[data-key\^="system/);
-  assert.doesNotMatch(read('public/js/people55.js'), /set-body\[data-key\^="system/);
+  assert.doesNotMatch(read('public/js/brief-figur-per-bruker.js'), /set-body\[data-key\^="system/);
   assert.doesNotMatch(read('public/js/dal53.js'), /set-body\[data-key\^="system/);
-  assert.match(read('public/js/people55.js'), /window\.hlPeople55 = openPeople55;/);
+  assert.match(read('public/js/brief-figur-per-bruker.js'), /window\.hlPeople55 = openPeople55;/);
 });
 
 test('samlede sider: én side av flere visninger med hver sin monterte modul og «FLYTTET FRA …»', () => {

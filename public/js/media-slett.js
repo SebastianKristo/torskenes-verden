@@ -4,7 +4,7 @@
 //     GET  /api/media/unmonitored?service=sonarr|radarr&seriesId=&season=&server=  → {items:[{fileId,title,code,series,sizeText}], count, sizeText, text}
 //     POST /api/media/unmonitored/delete {service, fileIds, confirm:true} → 202 {pendingId, undo:{path}, message}
 //     DELETE /api/media/unmonitored/pending/:id → Angre
-// - Innstillinger for Media ligger nå i Innstillinger → Media (settings45.js); tannhjulet åpner den siden.
+// - Innstillinger for Media ligger nå i Innstillinger → Media (settings-moduler.js); tannhjulet åpner den siden.
 const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ESC[c]);
 const U = { open: false, busy: false, err: '', d: null, sel: {}, q: null, done: null };

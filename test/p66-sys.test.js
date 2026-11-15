@@ -41,15 +41,15 @@ globalThis.fetch = async (url) => {
 
 const { store } = await import('../public/js/store.js');
 store.me = { me: { role: 'admin', username: 'sebastian' } };
-const S66 = await import('../public/js/sys66.js');
-const ops = await import('../public/js/ops51.js');
-const obs = await import('../public/js/obs51.js');
+const S66 = await import('../public/js/system-felles.js');
+const ops = await import('../public/js/backup-oppdatering.js');
+const obs = await import('../public/js/drift.js');
 const tick = () => new Promise((r) => setTimeout(r, 30));
 
 test('felles komponenter: System/Backup bruker ui65 fra AI-siden (ingen nye komponenter)', () => {
-  const src = rd('public/js/sys66.js');
+  const src = rd('public/js/system-felles.js');
   assert.match(src, /import \{ ui65 \} from '\.\/ai-control\.js'/);
-  for (const f of ['settings-system.js', 'ops51.js', 'obs51.js']) assert.match(rd(`public/js/${f}`), /from '\.\/sys66\.js'/, f);
+  for (const f of ['settings-system.js', 'backup-oppdatering.js', 'drift.js']) assert.match(rd(`public/js/${f}`), /from '\.\/system-felles\.js'/, f);
   const r = S66.row66({ ic: 'db', dot: 'ok', t: 'Integritet', s: 'OK', right: S66.btn('Sjekk', 'data-x') });
   assert.match(r, /class="ac-r[^"]*ctl/); assert.match(r, /class="ac-ic"/); assert.match(r, /ac-icd ok/);
   assert.equal((r.match(/class="ac-ic"/g) ?? []).length, 1, 'én ikonflis per rad');

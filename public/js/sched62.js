@@ -7,7 +7,7 @@
 //   DELETE /api/glimt/schedules/:id             → {ok, removed}
 //   POST   /api/glimt/schedules/:id/run-now     → {ok, run, item}   (409 «Kjører allerede»)
 //   GET/PUT /api/glimt/schedules/settings {scope, enabled?, conditions?, quiet?, zone?}
-// Fire deler: (1) siden Innstillinger → Faste oppgaver (mountSched62 i [data-mount-host] fra settings62.js), (2) brytere i
+// Fire deler: (1) siden Innstillinger → Faste oppgaver (mountSched62 i [data-mount-host] fra settings-faste-oppgaver.js), (2) brytere i
 // AI-kontroll → Valg som fyller [data-sched62] (samme stil som «Glimt lærer»), (3) bekreftelseskortet for en ny/endret/stoppet
 // oppgave i Chat og Glimt-søket (schedCard62Html, brukt av glimt-agent45.js og chat.js med de vanlige Ja/Avbryt-knappene fra
 // del 3), (4) kvitteringen etter «Ja» (schedDone62Html) med lenke til siden. Eldre server (404): «Oppdater serveren» / ingenting.

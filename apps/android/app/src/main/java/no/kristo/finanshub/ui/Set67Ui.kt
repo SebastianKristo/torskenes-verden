@@ -11,7 +11,7 @@ import androidx.compose.ui.unit.dp
 import no.kristo.finanshub.*
 
 /*
- * Prompt 67 (ANDSET67, prompt 50b/66 – settings65.js på web): Innstillinger gruppert som på web.
+ * Prompt 67 (ANDSET67, prompt 50b/66 – settings-meny.js på web): Innstillinger gruppert som på web.
  *   GENERELT    Konto · Sikkerhet · API-tokens · Utseende · Varsler · App
  *   HUSSTAND    Brukere og familie (prompt 68: brukerne og Logg inn som, Glimt-figur per bruker, Familie, helse og posisjon – ui/Users68Ui.kt)
  *   GLIMT OG AI Glimt (figur/brief/stemme, Glimt husker, Entitetsregister, Glimt lærer, Faste oppgaver, Kvalitet) · AI

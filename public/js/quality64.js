@@ -6,7 +6,7 @@
 //   GET  /weekly[?week=2026-W44]    → Weekly (egne tall, admin får også system)
 //   GET/PUT /settings {scope:'user', weekly} | {scope:'server', nightly?, weekly?, runs?, maxMinutes?, interactiveWaitSec?, keepDays?}
 // Selvstendig modul (lett å flytte når Innstillinger omorganiseres): (1) siden Innstillinger → Kvalitet (mountQuality64 i en
-// [data-mount-host]-plass, se settings64.js): ukerapporten (inneværende og tidligere uker) og – for admin – nattlige eval-kjøringer
+// [data-mount-host]-plass, se settings-kvalitet.js): ukerapporten (inneværende og tidligere uker) og – for admin – nattlige eval-kjøringer
 // med status, bestått, svartid p50/p90, regresjoner, rapporten og «Kjør nå»/«Avbryt». (2) Brytere i AI-kontroll → Valg som fyller
 // [data-q64set]. (3) Lenkene fra pushene (#/innstillinger/kvalitet/run/<id> og …/uke/<uke>) åpner siden på riktig kjøring/uke.
 // Eldre server (404): siden sier «Oppdater serveren», og ingenting vises i AI-kontroll.
@@ -294,7 +294,7 @@ function repaint() {
   for (const el of document.querySelectorAll('[data-q64set]')) el.innerHTML = settingsHtml64();
   if (Q.want) reveal();
 }
-/** Siden Innstillinger → Kvalitet tegnes i plassen fra settings64.js. */
+/** Siden Innstillinger → Kvalitet tegnes i plassen fra settings-kvalitet.js. */
 export function mountQuality64(slot) {
   css();
   L.slot = slot;
@@ -359,7 +359,7 @@ function takeRoute() {
 }
 
 if (typeof document !== 'undefined') {
-  takeRoute(); // før settings.js leser adressen (denne modulen importeres av settings64.js og evalueres først)
+  takeRoute(); // før settings.js leser adressen (denne modulen importeres av settings-kvalitet.js og evalueres først)
   window.addEventListener('hashchange', takeRoute); // registreres før settings.js sin lytter
   document.addEventListener('click', (e) => {
     const t = e.target.closest?.('[data-q64-open],[data-q64-md],[data-q64-all],[data-q64-run],[data-q64-abort],[data-q64-week],[data-q64-user],[data-q64-server],[data-q64-par],[data-q64-go]');

@@ -47,8 +47,8 @@
   }
 })();
 
-// Prompt 44 (as44.js): «Logg inn som X». Mens X-tokenet finnes, legges det på alle egne API-kall (før appen starter),
-// og endringer (PUT/POST/PATCH/DELETE) telles for stripa. 401 på tokenet = utløpt → as44.js går ut.
+// Prompt 44 (logg-inn-som.js): «Logg inn som X». Mens X-tokenet finnes, legges det på alle egne API-kall (før appen starter),
+// og endringer (PUT/POST/PATCH/DELETE) telles for stripa. 401 på tokenet = utløpt → logg-inn-som.js går ut.
 (function () {
   var a = null;
   try { a = JSON.parse(sessionStorage.getItem('hl_as44') || 'null'); } catch (e) { /* privat modus */ }

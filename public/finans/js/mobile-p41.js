@@ -22,7 +22,7 @@ import { hlData } from './mobile-hl.js';
 import * as P31 from './mobile-p31.js';
 import { grp } from './mobile-p17.js';
 import * as B from './mobile-p41b.js';
-import { DEF47, defaults47, probe47, canTry47 } from '/assets/js/settings-srv47.js'; // prompt 47: standard serveradresser
+import { DEF47, defaults47, probe47, canTry47 } from '/assets/js/serveradresser.js'; // prompt 47: standard serveradresser
 import { vw } from '/assets/js/lib/viewport.js'; // vindusstørrelsen uten tvungen layout
 
 const lsGet = (k, d = null) => { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch { return d; } };
@@ -274,7 +274,7 @@ export async function huskeFromHome(t) {
    ===================================================================== */
 // Prompt 47 (claude-code-standard-serveradresser.md): forhåndsutfylt med standardadressene (env-overstyrt via /api/config),
 // status «Svarer · 34 ms» / «Svarer ikke» og «Test» under hver adresse, «Tilbakestill til standard». En https-side prøver
-// aldri http-adressen (blandet innhold) – da brukes den eksterne. Testene går via settings-srv47.js (CSP: bare eget opphav
+// aldri http-adressen (blandet innhold) – da brukes den eksterne. Testene går via serveradresser.js (CSP: bare eget opphav
 // med fetch, andre https-adresser som bilde).
 const SV = { d: null, t: 0, miss: false, sheet: null, f: { local: '', external: '' }, test: '', busy: false, now: '', def: { ...DEF47 }, st: {}, rst: false };
 async function srvLoad(force = false) {

@@ -1,5 +1,5 @@
 // Sporing: pakker fra Finn-handler, e-post og manuelt innlimte nummer. Data og status kommer fra /api/tracking.
-import { quotaLine, trackKeys, loadTrackKeys } from './settings-track37.js';
+import { quotaLine, trackKeys, loadTrackKeys } from './settings-sporing-nokler.js';
 import { pkgLogo, pkgTitle } from './pkglogo.js';
 import { api, esc, hm } from './util.js';
 import { openSettings } from './settings.js';
@@ -11,7 +11,7 @@ const SEGS = ['Aktive', 'Klar for henting', 'Utgående', 'Levert', 'Arkiv'];
 // Vindu og papir har flere faner (som i «Homelab Papir Web»).
 const SEGS_2C = ['Aktive', 'Klar for henting', 'På vei', 'Registrert', 'Levert', 'Arkiv', 'Alle'];
 const segs = () => (is2c() ? SEGS_2C : SEGS);
-// Prompt 70: transportørene (og hva hver trenger) vises i Innstillinger → Moduler → Sporing (settings-track70.js).
+// Prompt 70: transportørene (og hva hver trenger) vises i Innstillinger → Moduler → Sporing (settings-sporing.js).
 // Prompt 26: overstyr sporingstjenesten (carrierOverride, null = auto) ved ny pakke og under «Spor via» på en pakke.
 const OVR = [['posten', 'Posten'], ['bring', 'Bring'], ['postnord', 'PostNord'], ['dhl', 'DHL'], ['helthjem', 'Helthjem'], ['ups', 'UPS'], ['budbee', 'Budbee'], ['instabox', 'Instabox'], ['parcelsapp', 'ParcelsApp']];
 const OVR_EXTRA = { parcelsapp: { color: '#4B5BD6', fg: '#fff', ini: 'PA' } };

@@ -367,7 +367,7 @@ export function sessionUser(c) {
   return null;
 }
 
-// Prompt 51 (SEC51): revisjonsloggen får beskjed når en pålitelig enhet logges inn automatisk (sec51.js setter kroken).
+// Prompt 51 (SEC51): revisjonsloggen får beskjed når en pålitelig enhet logges inn automatisk (security.js setter kroken).
 let authHook51 = null;
 export const setAuthHook51 = (fn) => { authHook51 = fn; };
 

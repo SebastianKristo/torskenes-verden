@@ -666,7 +666,7 @@ struct PaperSettings17: View {
 
     /// Alle radgruppene i Innstillinger (tittel, fargeforskyvning, rader). Brukes av telefonlisten og venstre kolonne på Fold/iPad.
     @MainActor static func groups50(_ store: Store, _ p: PaperPalette) -> [Settings50Group] {
-        // Prompt 67 (prompt 50b/66, settings65.js MENU65): gruppert som på web – Generelt · Brukere og familie · Glimt og AI ·
+        // Prompt 67 (prompt 50b/66, settings-meny.js MENU65): gruppert som på web – Generelt · Brukere og familie · Glimt og AI ·
         // Tilkoblinger · Moduler · Server. Ingen side er fjernet, bare flyttet; Finans-radene ligger under Moduler → Finans.
         var out: [Settings50Group] = []
         out.append(Settings50Group(title: "Generelt", offset: 0, rows: generalRows67(store)))

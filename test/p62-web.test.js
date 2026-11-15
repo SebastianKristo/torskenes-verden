@@ -11,7 +11,7 @@ const X = rd('public/js/extras.js');
 const G = rd('public/js/glimt-agent45.js');
 const A = rd('public/js/ai-control.js');
 const ST = rd('public/js/settings-view.js');
-const S62 = rd('public/js/settings62.js');
+const S62 = rd('public/js/settings-faste-oppgaver.js');
 const AS = rd('public/js/assist.js');
 const R = rd('public/js/sched62.js');
 
@@ -140,7 +140,7 @@ test('Glimt-søket og Chat bruker kortet med de vanlige Ja/Avbryt-knappene fra d
 });
 
 test('Innstillinger → Faste oppgaver (/#/innstillinger/faste-oppgaver) under Glimt', () => {
-  assert.match(ST, /import \{ TABS62, ALIAS62, fasteView62 \} from '\.\/settings62\.js'/);
+  assert.match(ST, /import \{ TABS62, ALIAS62, fasteView62 \} from '\.\/settings-faste-oppgaver\.js'/);
   assert.match(ST, /\['glimt', 'Glimt', [^\n]*\n {2}\.\.\.TABS62,/);
   assert.match(ST, /'faste-oppgaver': \(\) => fasteView62\(H\)/);
   assert.match(ST, /\.\.\.ALIAS51, \.\.\.ALIAS62 \}/);

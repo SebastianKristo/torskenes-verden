@@ -1,7 +1,7 @@
 import SwiftUI
 
 /* ---------------- Prompt 68: Innstillinger → Brukere og familie ----------------
- Som web (settings65.js, siden «users» i gruppa Husstand, og settings.js usersView65): én side som samler det appen har fra før.
+ Som web (settings-meny.js, siden «users» i gruppa Husstand, og settings.js usersView65): én side som samler det appen har fra før.
  Rekkefølgen følger web:
  – Familie · Logg inn som (bare admin) og Server · Eier (Konto44Sections), flyttet hit fra Konto
  – Brief og Glimt-figur: Standardfigur per bruker (Glimt52AdminDefaults, bare admin), flyttet hit fra Glimt-innstillingene

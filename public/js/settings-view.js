@@ -15,38 +15,38 @@ import { toggleHeadEdit, resetHead, setHeadLock, setHeadAlign, headAlign, saveUi
 import { loginView, loadLogin, loginClick, loginSubmit, loginChange, loginData, roleName } from './settings-login.js';
 import { domainsPane, loadDomains, domainsClick, domainsChange, domainsSubmit, domainCount, domainsEsc } from './settings-domains.js';
 import { loadNotify, notifyView, notifyClick, notifyChange, notifyInput } from './settings-notify.js';
-import { loadFam42, fam42View, fam42Click, fam42Change } from './settings-familie42.js'; // prompt 42: Familie → Helse (Familie)
+import { loadFam42, fam42View, fam42Click, fam42Change } from './settings-helse.js'; // prompt 42: Familie → Helse (Familie)
 import { loadApp, appView, appClick, appInput, appKey } from './settings-app.js';
 import { loadInteg, integRows, integSub, integClick, integChange, integCount } from './settings-integ.js';
 import { mediaRows43, mediaNote43, isMedia43, cfgStatus43, cfgGuide43, mediaSub43, mediaClick43, mediaSubmit43 } from './settings-integ-media.js'; // prompt 43: MEDIA-gruppen
-import { myProfile, profilesLoaded, hasProfiles, loadProfiles } from './onboard37.js'; // prompt 37: profil i husstanden
-import { loadTrackKeys, trackGroup, trackSub, trackClick, trackChange } from './settings-track37.js'; // prompt 37: delte sporingsnøkler
-import { loadTrack46, trackGroup46, trackSub46, trackClick46, trackSubmit46, trackInput46 } from './settings-track46.js'; // prompt 46: Posten/Bring og PostNord-konto
+import { myProfile, profilesLoaded, hasProfiles, loadProfiles } from './onboarding.js'; // prompt 37: profil i husstanden
+import { loadTrackKeys, trackGroup, trackSub, trackClick, trackChange } from './settings-sporing-nokler.js'; // prompt 37: delte sporingsnøkler
+import { loadTrack46, trackGroup46, trackSub46, trackClick46, trackSubmit46, trackInput46 } from './settings-sporing-kontoer.js'; // prompt 46: Posten/Bring og PostNord-konto
 import { themeCards, setHlTheme, hlTheme, THEMES, uploadCustomPhoto } from './hltheme.js';
 import { kalView, kalClick, kalChange } from './settings-kal.js';
 import { loadAi, aiView, aiClick, aiChange, aiSubmit, setAiTab } from './settings-ai.js';
 import * as SAI65 from './settings-ai.js'; // prompt 65: glimtAiView() (Glimt-delen av AI-siden, only='glimt') når SETAI har den
-import { MENU65, PARENT65, ALIAS65, SUB65, combine65, moved65, movedGroup65, movedTitle65, sysTabOf65 } from './settings65.js'; // prompt 65: ny meny og samlede sider
-import { ops51PartHtml } from './ops51.js'; // prompt 65: kopier/gjenoppretting/database på Backup-siden
+import { MENU65, PARENT65, ALIAS65, SUB65, combine65, moved65, movedGroup65, movedTitle65, sysTabOf65 } from './settings-meny.js'; // prompt 65: ny meny og samlede sider
+import { ops51PartHtml } from './backup-oppdatering.js'; // prompt 65: kopier/gjenoppretting/database på Backup-siden
 import { clearBtn, glassIcon } from './searchfield.js';
 import { loadSystem, systemView, systemClick, systemInput, systemSubmit, systemEsc } from './settings-system.js';
-import { setObs51Render, obs51Click, obs51Change, obs51Input, obs51Submit } from './obs51.js'; // prompt 51 (OBS51): drift i System, ntfy i Varsler
-import { ops51Click, ops51Submit } from './ops51.js'; // prompt 51 (OPS51): backup og oppdateringer i System
+import { setObs51Render, obs51Click, obs51Change, obs51Input, obs51Submit } from './drift.js'; // prompt 51 (OBS51): drift i System, ntfy i Varsler
+import { ops51Click, ops51Submit } from './backup-oppdatering.js'; // prompt 51 (OPS51): backup og oppdateringer i System
 import { loadBackup, backupView, backupClick, backupChange, backupInput, backupSubmit, backupEsc } from './settings-backup.js';
-import { decorateRows } from './settings-icons36.js';
-import { kontoAvatar, avatarRow } from './avatar36.js'; // prompt 36: profilbilde i Konto // prompt 36: ikon på hver rad
+import { decorateRows } from './settings-ikoner.js';
+import { kontoAvatar, avatarRow } from './avatar.js'; // prompt 36: profilbilde i Konto // prompt 36: ikon på hver rad
 import { TAB_IC, icBox, loadIndex, sideResults, wantsAi, ask, resetAsk, byId, routeOf, topHit, SQ, ANCHORS, anchorOf, anchorFor, routeForAnchor, setNormTab65 } from './settings-search.js';
 import { sheetBtn } from './util.js';
-import { loadServer41, serverGroup41 } from './settings-server41.js'; // prompt 41: Konto → Server (lokal/ekstern adresse)
+import { loadServer41, serverGroup41 } from './settings-server.js'; // prompt 41: Konto → Server (lokal/ekstern adresse)
 import { glimtSettingsHtml, loadGlimt, glimtClick, glimtChange, glimtSubmit } from './glimt35.js'; // prompt 35: GLIMT → Glimt
-import { TABS44, modeGroup44, loggerView44, huskeView44, usersGroups44, click44 } from './settings44.js'; // prompt 44
-import { TABS46, ALIAS46, nyheterView46, gphotoBox46 } from './settings46.js'; // prompt 46: Innstillinger → Nyheter
-import { TABS51, ALIAS51, sikkerhetView51 } from './sec51.js'; // prompt 51 (SEC51): Innstillinger → Sikkerhet
-import { TABS62, ALIAS62, fasteView62 } from './settings62.js'; // prompt 62 (prompt 49 del 2): Innstillinger → Faste oppgaver
-import { TABS64, ALIAS64, kvalitetView64 } from './settings64.js'; // prompt 64 (prompt 49 del 7): Innstillinger → Kvalitet
-import { TABS70, ALIAS70, sporView70, click70 } from './settings-track70.js'; // prompt 70: Moduler → Sporing (kilder og transportører)
+import { TABS44, modeGroup44, loggerView44, huskeView44, usersGroups44, click44 } from './settings-utseende-logger.js'; // prompt 44
+import { TABS46, ALIAS46, nyheterView46, gphotoBox46 } from './settings-nyheter.js'; // prompt 46: Innstillinger → Nyheter
+import { TABS51, ALIAS51, sikkerhetView51 } from './sikkerhet.js'; // prompt 51 (SEC51): Innstillinger → Sikkerhet
+import { TABS62, ALIAS62, fasteView62 } from './settings-faste-oppgaver.js'; // prompt 62 (prompt 49 del 2): Innstillinger → Faste oppgaver
+import { TABS64, ALIAS64, kvalitetView64 } from './settings-kvalitet.js'; // prompt 64 (prompt 49 del 7): Innstillinger → Kvalitet
+import { TABS70, ALIAS70, sporView70, click70 } from './settings-sporing.js'; // prompt 70: Moduler → Sporing (kilder og transportører)
 import { TABS77, ALIAS77, skjView77, clickSkj77 } from './settings-skjold.js'; // prompt 77: Moduler → Skjold Lab (Glimt-forslag og bilder)
-import { TABS45, ALIAS45, mediaView45, ruterView45, zoneGroups45, click45, setRender45, huskeTips45, vaerView45, studieView45, finansView45 } from './settings45.js'; // prompt 45: Media, Ruter, sonevarsler
+import { TABS45, ALIAS45, mediaView45, ruterView45, zoneGroups45, click45, setRender45, huskeTips45, vaerView45, studieView45, finansView45 } from './settings-moduler.js'; // prompt 45: Media, Ruter, sonevarsler
 
 const modal = () => document.getElementById('settings');
 
@@ -96,7 +96,7 @@ const box = (t, inner, n = '') => `<section class="sg">${t ? `<h3 class="sg-t">$
 
 // [id, navn, undertekst, seksjon, ikon, bare admin]. Prompt 65 (claude-code-innstillinger-samlet.md): Startside, Familie, Gjøremål og
 // Sikkerhet er ikke egne sider lenger (innholdet står på Utseende/App, Brukere og familie, Kalender og gjøremål og Konto, se ALIAS65).
-// Rekkefølgen og gruppene i sidemenyen står i MENU65 (settings65.js); Faste oppgaver og Kvalitet er undersider av Glimt (PARENT65).
+// Rekkefølgen og gruppene i sidemenyen står i MENU65 (settings-meny.js); Faste oppgaver og Kvalitet er undersider av Glimt (PARENT65).
 const TABS = [
   ['konto', 'Konto', 'Profil, passord, 2FA, økter, enheter og passkeys.', 'Generelt', P.user],
   ['look', 'Utseende', 'Tema, bakgrunn, widgets og rekkefølge på forsiden, nyhetsbar og søkebar.', 'Generelt', P.look],

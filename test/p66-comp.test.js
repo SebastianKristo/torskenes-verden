@@ -10,7 +10,7 @@ const W65 = rd('public/css/pages/innstillinger.css');
 const ACSS = rd('public/css/pages/ai-kontroll.css');
 const A = rd('public/js/ai-control.js');
 const SA = rd('public/js/settings-ai.js');
-const IC = rd('public/js/settings-icons36.js');
+const IC = rd('public/js/settings-ikoner.js');
 
 test('punkt 1: kort og rad er ikke lenger bare for Papir – tokens per tema og felles regler uten html[data-hl="2c"]', () => {
   // Fargene som variabler: Nåværende (standard), Vindu og papir, papir i mørk modus, og AI-variablene inni .ac
@@ -63,7 +63,7 @@ test('punkt 5: ikonflis på hver rad – også Glimt-radene og kalenderradene (p
   assert.match(IC, /:is\(\.gs-row,\.gs40-snd,\.gs-seg-w,\.gs-opt\):not\(\[data-si36\]\)/);
   assert.match(IC, /\.sg-row\.kal-sc:not\(\[data-si66\]\)/);
   assert.match(W65, /\.si36>\.kal-sc-dot\{position:absolute;right:-3px;bottom:-3px;width:9px;height:9px/);
-  const { iconFor } = await import('../public/js/settings-icons36.js');
+  const { iconFor } = await import('../public/js/settings-ikoner.js');
   assert.equal(iconFor('Les opp'), 'audio-lines');
   assert.equal(iconFor('Tempo'), 'timer');
   assert.equal(iconFor('Morgenbrief'), 'sunrise');

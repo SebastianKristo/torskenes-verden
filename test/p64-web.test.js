@@ -7,7 +7,7 @@ import { readFileSync } from 'node:fs';
 
 const rd = (p) => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8');
 const Q = rd('public/js/quality64.js');
-const S64 = rd('public/js/settings64.js');
+const S64 = rd('public/js/settings-kvalitet.js');
 const ST = rd('public/js/settings-view.js');
 const A = rd('public/js/ai-control.js');
 const SS = rd('public/js/settings-search.js');
@@ -95,7 +95,7 @@ test('kildene: endepunktene, Kjør nå/Avbryt, rapporten som tekst og at eval-de
 test('plassering: egen fane Innstillinger → Kvalitet (selvstendig modul) og bryterne i AI-kontroll → Valg', () => {
   assert.match(S64, /export const TABS64 = \[\['kvalitet', 'Kvalitet', [^\]]*'Glimt', P64\]\]/);
   assert.match(S64, /mount: \(slot\) => mountQuality64\(slot\)/);
-  assert.match(ST, /import \{ TABS64, ALIAS64, kvalitetView64 \} from '\.\/settings64\.js';/);
+  assert.match(ST, /import \{ TABS64, ALIAS64, kvalitetView64 \} from '\.\/settings-kvalitet\.js';/);
   assert.match(ST, /\.\.\.TABS62, [^\n]*\n {2}\.\.\.TABS64,/);
   assert.match(ST, /Object\.assign\(ALIAS, ALIAS64\);/);
   assert.match(ST, /kvalitet: \(\) => kvalitetView64\(H\)/);

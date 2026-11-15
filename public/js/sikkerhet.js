@@ -6,7 +6,7 @@
 // (GET|PUT /api/admin/local-fetch-hosts).
 // Data: /api/security51/* (SERVER51-API.md, SEC51). Monteres i settings.js som egen side (data-mount-host).
 import { esc } from './util.js';
-import { decodeOptions51, encodeCredential51, passkeySupported51 } from './sec51-login.js';
+import { decodeOptions51, encodeCredential51, passkeySupported51 } from './sikkerhet-innlogging.js';
 
 export const P51 = 'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6zM9 12l2 2 4-4';
 /** [id, navn, undertekst, seksjon, ikon] – settes inn i TABS i settings.js. */

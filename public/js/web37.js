@@ -1,6 +1,6 @@
 // Prompt 37 (web): små ting i skallet.
 // - Vær åpnet fra briefen (brief35.js → openVaer): ✕ øverst til høyre på Vær-siden går tilbake til briefen på samme scroll-posisjon.
-// - Onboarding med profil (onboard37.js) når den innloggede brukeren ikke er koblet til en profil.
+// - Onboarding med profil (onboarding.js) når den innloggede brukeren ikke er koblet til en profil.
 const BACK = 'gb37_back';
 
 function backInfo() {
@@ -34,5 +34,5 @@ export function initWeb37() {
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && document.getElementById('gb37-vback') && !document.querySelector('.modal:not([hidden]), .tk-layer, .gb-layer')) { e.preventDefault(); goBack(); } });
   vaerBack();
   // Onboarding etter at siden er tegnet (ikke i veien for første visning).
-  setTimeout(() => import('./onboard37.js').then((m) => m.maybeOnboard()).catch(() => {}), 1200);
+  setTimeout(() => import('./onboarding.js').then((m) => m.maybeOnboard()).catch(() => {}), 1200);
 }

@@ -4,8 +4,8 @@
 //   Varsler: ntfy-emner per enhet (/api/me/ntfy51).
 import { esc } from './util.js';
 import { store } from './store.js';
-import { row66, sec, btn, seg, swb, banner, val66, bar66, kpis66, tone66, fld } from './sys66.js'; // prompt 66: samme komponenter som AI-siden
-import { backupKpi66 } from './ops51.js'; // prompt 66: Backup-cellen i KPI-stripen
+import { row66, sec, btn, seg, swb, banner, val66, bar66, kpis66, tone66, fld } from './system-felles.js'; // prompt 66: samme komponenter som AI-siden
+import { backupKpi66 } from './backup-oppdatering.js'; // prompt 66: Backup-cellen i KPI-stripen
 
 let R = () => {};
 export const setObs51Render = (fn) => { if (typeof fn === 'function') R = fn; };
@@ -30,7 +30,7 @@ function loadAll(force = false) {
 }
 
 /* ---------------- Visning: System ---------------- */
-// Prompt 66 (prompt 50b «fullfør utseendet»): samme komponenter som AI-siden (sys66.js → ui65): helse-banner, KPI-stripe,
+// Prompt 66 (prompt 50b «fullfør utseendet»): samme komponenter som AI-siden (system-felles.js → ui65): helse-banner, KPI-stripe,
 // rader med ikonflis og statusmerke, 4 px stolper. Erstatter de grå flisene og de store kortene. Data og handlinger er de samme.
 
 const ago = (iso) => { const s = Math.round((Date.now() - Date.parse(iso)) / 1000); return s < 60 ? 'nå' : s < 3600 ? `${Math.round(s / 60)} min siden` : s < 86400 ? `${Math.round(s / 3600)} t siden` : `${Math.round(s / 86400)} d siden`; };

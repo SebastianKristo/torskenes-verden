@@ -1,10 +1,10 @@
 // Prompt 51 (OPS51): Backup og oppdateringer i Innstillinger → System (bare admin).
 //   Grønt/gult/rødt kort for restic-backupen (3-2-1 og testet gjenoppretting), databasen (WAL, integritet, VACUUM) og
 //   oppdateringer (staging-kanal og tilbakerulling med ett trykk). Oppsett av mål (lokal disk, NAS, offsite) og repo-passordet.
-//   API: /api/ops51/* (server/ops51.js, $S/SERVER51-API.md → OPS51). Nøkler sendes bare inn, aldri ut.
+//   API: /api/ops51/* (server/backup-oppdatering.js, $S/SERVER51-API.md → OPS51). Nøkler sendes bare inn, aldri ut.
 import { esc } from './util.js';
 import { store } from './store.js';
-import { row66, sec, btn, swb, banner, fld, xrow66, tone66, lnk66, root66, setR66 } from './sys66.js'; // prompt 66: samme komponenter som AI-siden
+import { row66, sec, btn, swb, banner, fld, xrow66, tone66, lnk66, root66, setR66 } from './system-felles.js'; // prompt 66: samme komponenter som AI-siden
 
 let R = () => {};
 const admin = () => store.me?.me?.role === 'admin';
@@ -32,7 +32,7 @@ function schedulePoll() {
   if (live) O.poll = setTimeout(() => { if (document.querySelector('[data-sys66]')) load(true); }, 3000);
 }
 
-// Prompt 66 (prompt 50b «fullfør utseendet»): samme komponenter som AI-siden (sys66.js → ui65). Backup-siden: banner med
+// Prompt 66 (prompt 50b «fullfør utseendet»): samme komponenter som AI-siden (system-felles.js → ui65). Backup-siden: banner med
 // 3-2-1-status + Oppsett, Kopier, Gjenoppretting (5 steg som prikk-rader, «Test nå») og Database (Integritet, VACUUM).
 // Oppdateringer: Staging som utvidbar rad med røyktest-sjekkene. De store kortene med fargekant er fjernet.
 const when = (t) => { if (!t) return 'aldri'; const s = Math.round((Date.now() - t) / 1000); return s < 60 ? 'nå nettopp' : s < 3600 ? `${Math.round(s / 60)} min siden` : s < 86400 ? `${Math.round(s / 3600)} t siden` : `${Math.round(s / 86400)} d siden`; };

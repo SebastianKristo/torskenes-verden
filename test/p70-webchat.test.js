@@ -4,7 +4,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
-import * as N from '../public/js/settings65.js';
+import * as N from '../public/js/settings-meny.js';
 
 const read = (p) => readFileSync(p, 'utf8');
 const BOOT = read('public/js/chat70-boot.js');
@@ -14,7 +14,7 @@ const CSS = read('public/css/pages/chat.css');
 const APP = read('public/app.html');
 const TRK = read('public/js/tracking.js');
 const SET = read('public/js/settings-view.js');
-const SP = read('public/js/settings-track70.js');
+const SP = read('public/js/settings-sporing.js');
 const SS = read('public/js/settings-search.js');
 
 /** Kjører chat70-boot.js i en liten falsk nettleser. Returnerer {win, view}. */

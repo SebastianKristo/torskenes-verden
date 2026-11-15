@@ -8,7 +8,7 @@ import { loadAppIdentity } from './appicon.js';
 import { initI18n, setLang, lang } from './i18n.js';
 import { noteUser } from './usercache.js';
 import { initQr, showQr } from './login-qr38.js'; // prompt 38: QR-innlogging fra mobilen
-import { initPasskey51, waitApproval51 } from './sec51-login.js'; // prompt 51: passkey og godkjenning av ny enhet
+import { initPasskey51, waitApproval51 } from './sikkerhet-innlogging.js'; // prompt 51: passkey og godkjenning av ny enhet
 import { scene89 } from './login-scene89.js'; // prompt 89: animert Oslo-scene i toppbildet
 
 const $ = (id) => document.getElementById(id);

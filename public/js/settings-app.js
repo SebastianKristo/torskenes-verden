@@ -4,7 +4,7 @@ import { esc } from './util.js';
 import { store } from './store.js';
 import { ICONS, iconSvg, appName, appIcon, saveAppIdentity, loadAppIdentity } from './appicon.js';
 import { RELEASES, WIDGET_STEPS, WIDGET_NOTE, KAL_APP } from './widget-help.js';
-import { widgetsGallery43 } from './widgets43.js'; // prompt 43: Widgets-galleriet
+import { widgetsGallery43 } from './widgets.js'; // prompt 43: Widgets-galleriet
 
 const SUGGEST = ['Homelab', 'Torskenes Verden'];
 const S = { draft: null, msg: '', err: '', busy: false, loaded: false };
@@ -22,7 +22,7 @@ const preview = (k, name) => `<span class="ai-prev">${iconSvg(k, name)}</span>`;
 const steps = (l) => `<ol class="wh-steps">${l.map((t) => `<li>${esc(t)}</li>`).join('')}</ol>`;
 // Prompt 33: «Slik legger du til widget» (iPhone, Samsung, Android) og «Kalender-appen» (forklaring + lenke til release).
 function widgetsView(h) {
-  // Prompt 43: galleriet med alle widgets øverst (widgets43.js), stegene per plattform under.
+  // Prompt 43: galleriet med alle widgets øverst (widgets.js), stegene per plattform under.
   return { title: 'Widgets', sub: 'App · Alle widgets på iPhone, Android og Samsung', pre: widgetsGallery43(), groups: [
     ...WIDGET_STEPS.map(([, n, l], i) => h.group(n, [steps(l)], i === WIDGET_STEPS.length - 1 ? WIDGET_NOTE : '')),
   ] };

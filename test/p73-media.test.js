@@ -194,6 +194,6 @@ test('Media-web: X-knapp i stedet for ⚙, plakatkjede overalt, lazy-lasting', (
   assert.match(css, /--p-ln:#E3DED3/);
   assert.match(css, /--p-card:#FCFBF7/);
   // Media-innstillingene finnes i appens Innstillinger.
-  const s45 = readFileSync(new URL('../public/js/settings45.js', import.meta.url), 'utf8');
+  const s45 = readFileSync(new URL('../public/js/settings-moduler.js', import.meta.url), 'utf8');
   assert.ok(s45.includes('data-s45-mpref="notifyDone"'));
 });
