@@ -8,16 +8,17 @@
 // /api/auth/qr*, /api/auth/app-session, /api/auth/logout-all, GET /api/me/sessions, GET /l/:code, /.well-known/* → qr-login.js
 // GET  /api/setup/status, POST /api/setup                             → førstegangsoppsettet (bare når det ikke finnes brukere)
 // POST /api/logout                                                    → økta slettes, enheten låses, og Kalender-tokenene som ble
-//                                                                       gitt fra denne økta trekkes tilbake (mellomvare i app-login.js)
+//                                                                       gitt fra denne økta trekkes tilbake
 //
 // Mellomvaren i security.js (revisjon, godkjenning av nye enheter) står foran disse rutene, se mountAuthSecurity i index.js.
 import { kv } from '../db.js';
 import { meOut, layoutOf, authOrToken } from '../mobile.js';
-import { createSession, destroySession, rememberDevice, pauseDevice, forgetDevice, clientIp, verifyLogin, createTicket, redeemTicket,
+import { createSession, destroySession, sessionUser, rememberDevice, pauseDevice, forgetDevice, currentSessionId, clientIp, verifyLogin, createTicket, redeemTicket,
   needsSetup, setupServer, loginBlocked, loginFailed } from './session.js';
 import { twofa40Api } from './two-factor.js';
 import { reauthHandler } from './reauth.js';
 import { qrAuthApi, meSessionsApi, qrLinkHandler, preAuthTicket, qrAfter2fa, assetLinksHandler, appleAssociationHandler } from './qr-login.js';
+import { revokeCompanions41 } from './app-login.js';
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -66,8 +67,16 @@ async function setup(c) {
   } catch (e) { loginFailed(ip); return c.json({ error: e.message }, e.status ?? 400); }
 }
 
-// Utlogging: økta slettes og enheten låses («Lås» skal faktisk låse). Kalender-tokenene trekkes tilbake i mellomvaren i app-login.js.
-function logout(c) { pauseDevice(c); destroySession(c); return c.json({ ok: true }); }
+// Utlogging: økta slettes og enheten låses («Lås» skal faktisk låse). Kalender-tokenene som ble gitt fra denne økta
+// (parent = sid:…) trekkes tilbake. Før Fase 2b gjorde en egen mellomvare i auth41.js det rundt denne handleren.
+function logout(c) {
+  const u = sessionUser(c);
+  const sid = u ? currentSessionId(c) : null;
+  pauseDevice(c);
+  destroySession(c);
+  if (u && sid) { try { revokeCompanions41(u, { parent: `sid:${sid.slice(0, 24)}` }); } catch { /* */ } }
+  return c.json({ ok: true });
+}
 
 export function mountLogin(app) {
   app.post('/api/auth/login', passwordLogin);

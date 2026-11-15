@@ -15,7 +15,7 @@
 //        isDefault, updatedAt, updatedBy}  (per bruker, synkes til Kalender og andre enheter; prompt 47: reset/defaults)
 // Web: GET /app-auth?client=kalender&redirect=…&state=…&cc=… → godkjenningssiden (public/app-auth.html når den finnes, ellers – eller med &basic=1 – en enkel side uten skript)
 //      POST /app-auth (skjema fra den enkle siden: approve/deny) → 302 til redirect med code&state (eller error=access_denied&state)
-// Utlogging: POST /api/logout og POST /finans/api/auth/logout (Homelab-appen) tilbakekaller Kalender-tokenene (companion-tokens) til brukeren.
+// Utlogging: POST /api/logout (login.js) og POST /finans/api/auth/logout (Homelab-appen) tilbakekaller Kalender-tokenene (companion-tokens) til brukeren.
 // /.well-known (qr38.js): APPLE_TEAM_ID/APPLE_APP_ID og ANDROID_CERT_SHA256 fra miljøet, tomt/404 når de ikke er satt.
 import { createHash, randomBytes } from 'node:crypto';
 import { existsSync } from 'node:fs';
@@ -199,13 +199,8 @@ h1{font-size:22px;margin:0 0 8px}p{color:#4a463e}button{display:block;width:100%
     return c.redirect(createCode({ user: u, scopes: [...TOKEN_SCOPES], expires: null, tokenId: null, sessionId: currentSessionId(c) }, v).redirectUrl);
   });
 
-  // Utlogging tilbakekaller Kalender-tokenene.
-  app.use('/api/logout', async (c, next) => {
-    const u = c.req.method === 'POST' ? sessionUser(c) : null;
-    const sid = u ? currentSessionId(c) : null;
-    await next();
-    if (u && sid) { try { revokeCompanions41(u, { parent: `sid:${sid.slice(0, 24)}` }); } catch { /* */ } }
-  });
+  // Utlogging fra Homelab-appen tilbakekaller Kalender-tokenene som ble gitt fra det tokenet (POST /api/logout gjør det samme for
+  // økta, i login.js). /finans/api/auth/logout er Økonomi sin rute, så her er det fortsatt en mellomvare rundt den.
   app.use('/finans/api/auth/logout', async (c, next) => {
     const a = c.req.method === 'POST' ? tokenAccessOf(c) : null;
     const isCompanion = a?.tokenId ? !!cq('SELECT 1 FROM fh_companion_tokens WHERE token_id=?').get(a.tokenId) : false;

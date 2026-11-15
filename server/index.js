@@ -193,8 +193,8 @@ app.use('*', anonBodyCap85);
 // (mellomvare rundt innloggingsrutene – må stå før dem). /api/security51/* og /api/auth/passkey/*.
 mountAuthSecurity(app);
 app.route('/api/version', versionApi44); // prompt 44: {version, features} uten innlogging
-// Prompt 41: /api/discovery, /api/me/server, Kalender-innlogging (device-token/-exchange, app-code, token, /app-auth) og utlogging som
-// tilbakekaller Kalender-tokenene (må stå før /api/logout og /finans/api).
+// Prompt 41: /api/discovery, /api/me/server, Kalender-innlogging (device-token/-exchange, app-code, token, /app-auth) og mellomvaren
+// som tilbakekaller Kalender-tokenene ved utlogging fra Homelab-appen (må stå før /finans/api). server/auth/app-login.js.
 mountAppAuth(app);
 mountServer47(app); // prompt 47 (SERVER47): GET /api/config/servers {publicUrl, localUrl etter innlogging} + /api/finans/kvitteringer-aliasene
 mountObs51(app); // prompt 51 (OBS51): /api/system/obs51/* (admin) og /api/me/ntfy51 (alle)
