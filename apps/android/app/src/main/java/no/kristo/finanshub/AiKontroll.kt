@@ -314,7 +314,7 @@ fun AppViewModel.pullModel34(name0: String) {
                 s.aiPulls = s.aiPulls + (name to p.copy(mbs = mbs))
                 !(ev == "done" || s34(o, "status") == "success" || b34(o, "done") == true)
             }
-        } catch (e: CancellationException) { throw e } catch (e: Exception) { err = e.message ?: "Nedlastingen stoppet" }
+        } catch (e: CancellationException) { throw e } catch (e: Exception) { err = uiErr73(e, "Nedlastingen stoppet") }
         s.pullJobs.remove(name)
         s.aiPulls = s.aiPulls - name
         if (err != null) { aiToast34("Fikk ikke lastet ned $name: $err"); Haptics.error() }
@@ -676,7 +676,7 @@ fun AppViewModel.runSelftest34(auto: Boolean = false) {
             if (auto && n > 0 && inBackground29) Notify.post(appCtx34, "AI-kontroll", "$n AI-funksjoner virker ikke. Åpne AI-kontroll.", "ai34-self", "ai")
         } catch (e: CancellationException) { throw e } catch (e: Exception) {
             if (e is ApiException && (e.status == 404 || e.status == 405)) s.aiSelf = s.aiSelf?.map { it.copy(ok = false, error = "Serveren har ikke selvtest ennå") }
-            else s.aiSelf = s.aiSelf?.map { if (it.ok == null) it.copy(ok = false, error = e.message ?: "Fikk ikke kontakt") else it }
+            else s.aiSelf = s.aiSelf?.map { if (it.ok == null) it.copy(ok = false, error = uiErr73(e, "Fikk ikke kontakt")) else it }
         } finally { s.aiSelfBusy = false }
     }
 }

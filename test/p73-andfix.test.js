@@ -60,7 +60,7 @@ test('avbrudd: catch (e: Exception) med e.message i coroutines har CancellationE
     'Memory33.kt', 'Birthdays24.kt', 'Calendar26.kt', 'Chat27.kt', 'ui/Family16.kt', 'ui/Update28.kt',
     'ui/Search51Ui.kt', 'ui/Health20.kt', 'upload/PendingUploads.kt', 'Onboard51.kt', 'AppViewModel.kt',
     // Fase 5: P30/31/41/46, Mod28B og ui/Ui41 er delt opp etter funksjon.
-    'Glimt.kt', 'Oppstart.kt', 'Varsler.kt', 'Nordlys.kt', 'Hjem.kt', 'Serveradresse.kt', 'Innlogging.kt', 'Bakgrunn.kt',
+    'Glimt.kt', 'Oppstart.kt', 'Varsler.kt', 'Nordlys.kt', 'Hjem.kt', 'AiKontroll.kt', 'Serveradresse.kt', 'Innlogging.kt', 'Bakgrunn.kt',
     'Chat.kt', 'Hoytider.kt', 'MerListe.kt', 'domene/Drift.kt', 'domene/Okonomi.kt', 'domene/Media.kt', 'domene/Gjoremal.kt',
     'domene/Vaer.kt', 'domene/Hjemlys.kt', 'domene/Avganger.kt', 'domene/Bursdager.kt', 'domene/Familie.kt',
     'ui/GlobaleLag.kt', 'ui/HjemDeler.kt', 'ui/Serveradresse.kt', 'ui/Innlogging.kt', 'ui/Bakgrunn.kt', 'ui/AiKontroll.kt', 'ui/Hoytider.kt',
