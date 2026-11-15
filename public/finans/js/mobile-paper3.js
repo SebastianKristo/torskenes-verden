@@ -262,11 +262,11 @@ export async function fmerLoad() {
   FM.d = { rec, sub, dirs, stocks };
   await rcCount();
 }
-const monthly = (r) => (r.interval === 'yearly' ? r.amount / 12 : r.interval === 'weekly' ? (r.amount * 52) / 12 : r.amount);
+const monthly = (r) => r.monthly ?? 0; // beløpet per måned regnes ut av serveren (/finans/api/recurring)
 export function finMerGrid() {
   const s = S.summary, D = FM.d ?? {}, inTabs = finScreens(), rv = rcNum();
   const rec = (Array.isArray(D.rec) ? D.rec : D.rec?.items ?? []).filter((r) => r.active !== false);
-  const recNext = rec.reduce((a, r) => a + monthly(Math.abs(r.amount ?? 0) ? r : { ...r, amount: 0 }), 0);
+  const recNext = rec.reduce((a, r) => a + monthly(r), 0);
   const bal = (S.boot?.accounts ?? []).reduce((a, x) => a + (x.balance ?? 0), 0);
   const st = D.stocks?.summary, chg = st?.changePct ?? st?.dayPct ?? null;
   const dirs = Array.isArray(D.dirs) ? D.dirs : D.dirs?.items ?? null;

@@ -540,7 +540,7 @@ function recurring() {
   const list = S.recurring;
   if (!list) return skel(300);
   const act = list.filter((r) => r.active);
-  const monthly = act.reduce((a, r) => a + (r.interval === 'yearly' ? r.amount / 12 : r.interval === 'weekly' ? (r.amount * 52) / 12 : r.amount), 0);
+  const monthly = act.reduce((a, r) => a + (r.monthly ?? 0), 0); // per måned fra serveren
   const now = new Date(), y = now.getFullYear(), m = now.getMonth();
   const first = (new Date(y, m, 1).getDay() + 6) % 7, dim = new Date(y, m + 1, 0).getDate();
   const days = new Set(act.filter((r) => r.interval === 'monthly' || (r.interval === 'yearly' && r.month === m + 1)).map((r) => Math.min(r.day, dim)));

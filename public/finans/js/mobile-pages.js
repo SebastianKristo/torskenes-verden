@@ -89,7 +89,7 @@ async function loadRep() { PG.rep = await api(`/reports?mode=${PG.repMode}&month
 
 /* ---------- Sider ---------- */
 
-const monthly = (r) => (r.interval === 'yearly' ? r.amount / 12 : r.interval === 'weekly' ? (r.amount * 52) / 12 : r.amount);
+const monthly = (r) => r.monthly ?? 0; // beløpet per måned regnes ut av serveren (/finans/api/recurring)
 const recWhen = (r) => (r.interval === 'yearly' ? `${r.day}.${String(r.month ?? 1).padStart(2, '0')} hvert år` : r.interval === 'weekly' ? 'Hver uke' : `Den ${r.day}. hver måned`);
 const stockCur = () => { const c = PG.stocks?.summary?.currency; return !c || c === 'NOK' ? 'kr' : c; };
 
