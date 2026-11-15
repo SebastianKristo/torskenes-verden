@@ -101,9 +101,9 @@ private fun hm50(t: String?): String = t?.let { Regex("""(\d{2}:\d{2})""").find(
 /** Fliser på Hjem (widget «hm»). */
 @Composable
 internal fun HomeTiles50(vm: AppViewModel) {
-    LaunchedEffect(Unit) { while (true) { vm.loadPositions(); delay(60_000) } }
+    GjentaMensSynlig { while (true) { vm.loadPositions(); delay(60_000) } }
     // Sanntid hvert 30. sekund mens Hjem er synlig (som Avganger-kortet).
-    LaunchedEffect(Unit) { while (true) { delay(30_000); if (!vm.ruterOpen && vm.b27.homeStops?.isNotEmpty() == true) runCatching { vm.refreshHomeDeps27() } } }
+    GjentaMensSynlig { while (true) { delay(30_000); if (!vm.ruterOpen && vm.b27.homeStops?.isNotEmpty() == true) runCatching { vm.refreshHomeDeps27() } } }
     val deps = tileDeps50(vm)
     BoxWithConstraints(Modifier.fillMaxWidth()) {
         val wide = maxWidth >= 600.dp

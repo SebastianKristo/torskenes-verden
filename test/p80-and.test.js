@@ -58,7 +58,7 @@ test('B: tabellen – liten 101, høy 212 = 2 × 101 + 10, gap 10', () => {
   assert.equal(gap, 10);
   assert.equal(tall, 212);
   assert.equal(2 * small + gap, tall, 'Avgang slutter på linje med bunnen av flisen under');
-  assert.match(code('ui/Ui52B.kt'), /private val TILE_H52 = 101\.dp/);
+  assert.match(code('ui/HjemFliser.kt'), /private val TILE_H52 = 101\.dp/);
   // Speiler avH73 / fixedH73 / tileH80.
   const HALF = new Set(['h7', 'h9', 'h10', 'h11', 'h52av', 'h52fi', 'h52ma', 'h52fa', 'h52do']);
   const avH = (nx) => (nx >= 2 ? small * 2 + gap : tall);
@@ -97,7 +97,7 @@ test('B: innholdet får plass i 101 / 212 dp og festes riktig', () => {
   assert.match(mat, /TileLabel50\("Middag", t\.matLab\)\s*PSerif\(vm\.todayMeal/, 'MIDDAG + rett øverst');
   const fin = fn(t, 'FinTile50');
   assert.match(fin, /kvitteringer/);
-  const u = code('ui/Ui52B.kt');
+  const u = code('ui/HjemFliser.kt');
   assert.match(fn(u, 'KalTile52'), /PSerif\(w\.title, 20\.sp, p\.ink, maxLines = 1\)/);
   assert.match(fn(u, 'BdTile52'), /Modifier\.padding\(start = \(i \* 16\)\.dp\)\.size\(24\.dp\)/);
   assert.match(fn(u, 'TrialTile52'), /PSerif\(if \(d == 0\) "I dag" else "\$d", 30\.sp/);

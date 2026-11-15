@@ -1,8 +1,5 @@
 package no.kristo.finanshub.ui
 
-import androidx.compose.animation.core.spring
-import androidx.compose.foundation.layout.Box
-
 import android.content.ClipboardManager
 import android.content.Context
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -12,17 +9,20 @@ import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.rememberTransformableState
 import androidx.compose.foundation.gestures.transformable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyRow
@@ -31,9 +31,6 @@ import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyGridScope
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
-import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.ui.zIndex
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -47,7 +44,6 @@ import androidx.compose.material.icons.automirrored.filled.ShowChart
 import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Autorenew
-import androidx.compose.material.icons.filled.Savings
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.DocumentScanner
 import androidx.compose.material.icons.filled.FileUpload
@@ -55,6 +51,7 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.PieChart
 import androidx.compose.material.icons.filled.Receipt
 import androidx.compose.material.icons.filled.Repeat
+import androidx.compose.material.icons.filled.Savings
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Storefront
@@ -81,18 +78,13 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.PointerEventPass
-import androidx.compose.ui.input.pointer.positionChange
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChangeIgnoreConsumed
-import androidx.compose.foundation.gestures.awaitEachGesture
-import androidx.compose.foundation.gestures.awaitFirstDown
-import kotlinx.coroutines.withTimeoutOrNull
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
@@ -109,8 +101,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.zIndex
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import no.kristo.finanshub.*
 
 /*
@@ -234,32 +228,6 @@ internal class DragTrack {
     var applied = 0f
     /** Kortets øverste kant på skjermen nå (med flytting), regnet ut direkte fra koordinatene. */
     fun top(): Float = coords?.takeIf { it.isAttached }?.localToRoot(Offset.Zero)?.y ?: visualTop
-}
-
-/** Linja øverst i redigeringsmodus: «Ferdig» og «Skjult: + Budsjett …» for å hente tilbake skjulte kort. */
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-internal fun PageEditBar(vm: AppViewModel, page: String, secs: List<PSec>) {
-    val p = PaperPal.current
-    val keys = secs.map { it.key }
-    val hid = vm.pageHidden(page)
-    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(p.lab).padding(14.dp, 10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("Dra eller flytt med ▲ ▼, skjul med −", color = p.onLab, fontWeight = FontWeight.SemiBold, fontSize = 13.5.sp, modifier = Modifier.weight(1f))
-            Box(Modifier.clip(CircleShape).background(p.onLab).clickable { Haptics.success(); vm.editPage = null }.padding(14.dp, 6.dp)) {
-                Text("Ferdig", color = p.lab, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-            }
-        }
-        val hidden = secs.filter { it.key in hid }
-        if (hidden.isNotEmpty()) FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text("Skjult:", color = p.onLab.copy(alpha = .85f), fontSize = 12.5.sp, modifier = Modifier.padding(top = 6.dp))
-            hidden.forEach { s ->
-                Box(Modifier.clip(CircleShape).border(1.dp, p.onLab.copy(alpha = .6f), CircleShape).clickable { vm.showPageItem(page, keys, s.key) }.padding(10.dp, 5.dp)) {
-                    Text("+ ${s.label}", color = p.onLab, fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold)
-                }
-            }
-        }
-    }
 }
 
 @Composable

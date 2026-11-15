@@ -1,24 +1,20 @@
 package no.kristo.finanshub.ui
 
 import android.net.Uri
-import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.automirrored.filled.ShowChart
 import androidx.compose.material.icons.filled.*
@@ -38,8 +34,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
-import no.kristo.finanshub.*
 import java.io.File
+import no.kristo.finanshub.*
 
 /** Ikon per skjerm (faner, rail og meny). */
 internal fun screenIcon(s: Screen): ImageVector = when (s) {
@@ -63,10 +59,10 @@ internal fun screenIcon(s: Screen): ImageVector = when (s) {
     Screen.Settings -> Icons.Filled.Settings
     Screen.Tracking -> Icons.Filled.LocalShipping
 }
-internal fun moduleIcon(s: Screen): ImageVector = screenIcon(s)
 
 /** Toppraden «‹ Homelab»/«‹ Finans» vises; da står profilbildet der og ikke i overskriften under. */
 internal val LocalTopRow = staticCompositionLocalOf { false }
+
 private val LocalInTopRow = staticCompositionLocalOf { false }
 
 /** Skanneknappen: trykk = kamera med en gang, hold inne = valg (kan byttes i Innstillinger → Skanning). */

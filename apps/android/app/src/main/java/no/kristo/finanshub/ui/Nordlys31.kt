@@ -8,20 +8,20 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
-import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -71,8 +71,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import no.kristo.finanshub.*
 import java.time.LocalDate
+import no.kristo.finanshub.*
 
 /*
  * Prompt 31 (ANDROID31): System-siden «Nordlys OS» (Mobil Papir App.dc.html, side «nordlys»): ren visning uten bakgrunnsbilde,
@@ -82,6 +82,7 @@ import java.time.LocalDate
  */
 
 private val BLUE31 = Color(0xFF2B5D8A)
+
 private val GREEN31 = Color(0xFF2F7D4F)
 
 @Composable
@@ -461,40 +462,6 @@ private fun TrialField31(label: String, value: String, ph: String, kb: KeyboardT
     }
 }
 
-/** Subscription OS: aktive prøver med «Prøve · 12 dager igjen», Behold og Avslutt. */
-@Composable
-internal fun TrialsCard31(vm: AppViewModel, card: Color, fg: Color, mut: Color) {
-    val ctx = LocalContext.current
-    val l = vm.p31.trials.filter { it.status == "active" }
-    if (l.isEmpty()) return
-    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(card).padding(16.dp, 14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Text("PRØVEPERIODER", color = Color(0xFFB23A2A), fontFamily = PaperFonts.sans, fontWeight = FontWeight.ExtraBold, fontSize = 11.5.sp, letterSpacing = 1.4.sp)
-        l.sortedBy { it.endsAt }.forEach { t ->
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Column(Modifier.weight(1f)) {
-                    Text(t.service, color = fg, fontFamily = PaperFonts.sans, fontWeight = FontWeight.Bold, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Text("Slutter ${dShort31(t.endsAt)}" + (t.priceAfter.takeIf { it.isNotBlank() }?.let { " · deretter $it" } ?: ""), color = mut, fontFamily = PaperFonts.sans, fontSize = 12.5.sp, maxLines = 1)
-                }
-                Box(Modifier.clip(CircleShape).background(Color(0xFFB23A2A).copy(alpha = .14f)).padding(horizontal = 9.dp, vertical = 3.dp)) {
-                    Text(trialLeft31(t), color = Color(0xFFB23A2A), fontFamily = PaperFonts.sans, fontWeight = FontWeight.Bold, fontSize = 11.5.sp, maxLines = 1)
-                }
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Box(Modifier.height(32.dp).clip(CircleShape).background(fg).clickable(role = Role.Button) { Haptics.select(); t.cancelUrl?.let { openLink(ctx, it) } ?: vm.flash("Fant ingen oppsigelsesside for ${t.service}") }.padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
-                    Text("Avslutt nå", color = card, fontFamily = PaperFonts.sans, fontWeight = FontWeight.Bold, fontSize = 12.5.sp)
-                }
-                Box(Modifier.height(32.dp).clip(CircleShape).border(1.dp, mut.copy(alpha = .5f), CircleShape).clickable(role = Role.Button) { Haptics.select(); vm.patchTrial31(t.id, "kept") }.padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
-                    Text("Behold", color = fg, fontFamily = PaperFonts.sans, fontWeight = FontWeight.Bold, fontSize = 12.5.sp)
-                }
-                // Sagt opp: ingen flere varsler.
-                Box(Modifier.height(32.dp).clip(CircleShape).border(1.dp, mut.copy(alpha = .5f), CircleShape).clickable(role = Role.Button) { Haptics.success(); vm.patchTrial31(t.id, "cancelled") }.padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
-                    Text("Avsluttet ✓", color = fg, fontFamily = PaperFonts.sans, fontWeight = FontWeight.Bold, fontSize = 12.5.sp)
-                }
-            }
-        }
-    }
-}
-
 /** Innstillinger → Varsler: «AI-svar i bakgrunnen» (følger hovedbryteren). */
 @Composable
 internal fun AiBgToggle31(vm: AppViewModel) {
@@ -504,4 +471,3 @@ internal fun AiBgToggle31(vm: AppViewModel) {
         if (on) vm.setAiBg31(it)
     }
 }
-

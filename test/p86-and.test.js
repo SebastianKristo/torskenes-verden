@@ -189,8 +189,8 @@ test('B: brukeren får teksten, og konfigurasjonen har ingen hardkodet adresse',
   assert.match(code('Api.kt'), /catch \(e: UsikretHttp\) \{\s*throw ApiException\(LokaltNett\.MSG\)[\s\S]*?catch \(e: IOException\)/, 'Api: før den generelle nettverksfeilen');
   assert.match(code('WearApi51.kt', WEAR), /catch \(e: UsikretHttp\) \{\s*throw WearApiError51\(LokaltNett\.MSG\)[\s\S]*?catch \(e: IOException\)/);
   assert.match(code('KalApi.kt', KAL), /catch \(e: IOException\) \{\s*throw KalApiException\(e\.message \?: "Nettverksfeil"\)/, 'Kalender viser meldingen fra unntaket');
-  assert.match(code('P47.kt'), /fun cleartextBlocked47\(u: String\): Boolean = !LokaltNett\.ok\(u\)/, 'innstillingene bruker samme regel');
-  for (const f of ['P47.kt', 'ui/Ui47.kt', 'Ntfy51.kt']) assert.ok(!/tillater bare http/.test(code(f)), `${f}: gammel tekst om én fast adresse`);
+  assert.match(code('Serveradresse.kt'), /fun cleartextBlocked47\(u: String\): Boolean = !LokaltNett\.ok\(u\)/, 'innstillingene bruker samme regel');
+  for (const f of ['Serveradresse.kt', 'ui/Serveradresse.kt', 'Ntfy51.kt']) assert.ok(!/tillater bare http/.test(code(f)), `${f}: gammel tekst om én fast adresse`);
 
   for (const m of ['app', 'kalender', 'wear']) {
     const xml = raw(join(AND, m, 'src/main/res/xml/network_security_config.xml')).replace(/<!--[\s\S]*?-->/g, '');
@@ -367,7 +367,7 @@ test('C: lenker utenfra som endrer noe, spør først – appens egne varsler og 
   assert.match(ui, /val l = vm\.link86 \?: return/);
   assert.match(ui, /TextButton\(\{ vm\.link86 = null; vm\.deepLink\(l\.first\) \}\) \{ Text\("Utfør"/);
   assert.match(ui, /TextButton\(\{ vm\.link86 = null \}\) \{ Text\("Avbryt"/);
-  assert.match(code('ui/Ui41.kt'), /Link86Dialog\(vm\)/, 'tegnes globalt');
+  assert.match(code('ui/GlobaleLag.kt'), /Link86Dialog\(vm\)/, 'tegnes globalt');
 
   // Egne varsler, widgeter og den dynamiske snarveien bærer markøren (og PendingIntent oppdateres, så den følger med).
   assert.match(code('Hjemlys40.kt'), /finanshub:\/\/hjemlys\/start"[\s\S]{0,200}?\.intern86\(ctx\), PendingIntent\.FLAG_IMMUTABLE or PendingIntent\.FLAG_UPDATE_CURRENT\)/, '«Ja, start»');

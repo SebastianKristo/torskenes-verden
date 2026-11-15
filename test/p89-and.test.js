@@ -54,9 +54,9 @@ test('domenet: ingen gammel stavemåte noe sted i apps/android (bare den oppdelt
 });
 
 test('domenet: standardverdiene er os.smarthjemeksperten.no, lokal uendret http://10.69.1.39:3000', () => {
-  assert.match(code(APP, 'P47.kt'), /const val DEFAULT_EXTERNAL47 = "https:\/\/os\.smarthjemeksperten\.no"/);
-  assert.match(code(APP, 'P47.kt'), /const val DEFAULT_LOCAL47 = "http:\/\/10\.69\.1\.39:3000"/);
-  assert.match(code(APP, 'P41.kt'), /const val DEFAULT_SERVER41 = DEFAULT_EXTERNAL47/);
+  assert.match(code(APP, 'Serveradresse.kt'), /const val DEFAULT_EXTERNAL47 = "https:\/\/os\.smarthjemeksperten\.no"/);
+  assert.match(code(APP, 'Serveradresse.kt'), /const val DEFAULT_LOCAL47 = "http:\/\/10\.69\.1\.39:3000"/);
+  assert.match(code(APP, 'Serveradresse.kt'), /const val DEFAULT_SERVER41 = DEFAULT_EXTERNAL47/);
   assert.match(code(FELLES, 'ServerAdresse.kt'), /const val STANDARD: String = "https:\/\/os\.smarthjemeksperten\.no"/);
   assert.match(code(APP, 'Regel89.kt'), /const val EXTERNAL = ServerAdresse\.STANDARD/);
   assert.match(code(KAL, 'Kal41.kt'), /const val DEFAULT_BASE = "https:\/\/os\.smarthjemeksperten\.no"/);

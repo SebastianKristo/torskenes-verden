@@ -73,6 +73,9 @@ import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
 import java.time.temporal.IsoFields
 import java.util.Locale
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
 
 /*
  * Mobildesign «Papir» (Mobil Papir App + Mobil Nytt Design 2a): fotovindu øverst med hilsen, klokke og vær,
@@ -604,7 +607,7 @@ private fun PhotoMenu(vm: AppViewModel, modifier: Modifier, own: () -> Unit) {
                     Text(photoName(k), color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, maxLines = 1)
                     Text(photoSub(vm, k), color = if (failed) p.lab else p.mut, fontSize = 11.5.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 }
-                if (on) Text("✓", color = p.ink, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                if (on) Icon(Icons.Filled.Check, contentDescription = "Valgt", tint = p.ink, modifier = Modifier.size(16.dp))
                 else if (failed) Text("!", color = p.lab, fontSize = 13.sp, fontWeight = FontWeight.Bold)
             }
         }
@@ -616,10 +619,10 @@ private fun PhotoMenu(vm: AppViewModel, modifier: Modifier, own: () -> Unit) {
         ) {
             Box(Modifier.size(30.dp).clip(RoundedCornerShape(8.dp)).border(1.5.dp, p.line, RoundedCornerShape(8.dp)), contentAlignment = Alignment.Center) {
                 vm.photoThumbs["custom"]?.let { Image(it.asImageBitmap(), null, contentScale = ContentScale.Crop, modifier = Modifier.matchParentSize().clip(RoundedCornerShape(8.dp))) }
-                    ?: Text("+", color = p.mut)
+                    ?: Icon(Icons.Filled.Add, contentDescription = "Legg til", tint = p.mut, modifier = Modifier.size(19.dp))
             }
             Text("+ Eget bilde", color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, modifier = Modifier.weight(1f))
-            if (vm.photoKind == "custom") Text("✓", color = p.ink, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+            if (vm.photoKind == "custom") Icon(Icons.Filled.Check, contentDescription = "Valgt", tint = p.ink, modifier = Modifier.size(16.dp))
         }
         GphotoRow46(vm) // prompt 46: Google Photos-album (ui/Ui46b.kt)
         // Prompt 36: krediteringen (fotograf · lisens · kilde) står her, ikke over bildet.

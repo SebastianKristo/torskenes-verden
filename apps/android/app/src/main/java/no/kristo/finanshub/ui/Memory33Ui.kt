@@ -27,6 +27,9 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import no.kristo.finanshub.*
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 
 /*
  * Prompt 33 (GLIMT-MEMORY): grensesnittet for «Glimt husker» (tilstand og API i Memory33.kt).
@@ -171,7 +174,7 @@ internal fun Memory33Settings(vm: AppViewModel) {
                         Text("Legg til", color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
                         Text("Navn på avsender og hva det er", color = p.mut, fontSize = 12.5.sp)
                     }
-                    Text("+", color = p.mut, fontSize = 18.sp)
+                    Icon(Icons.Filled.Add, contentDescription = "Legg til", tint = p.mut, modifier = Modifier.size(22.dp))
                 }
             }
         }

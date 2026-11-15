@@ -159,7 +159,7 @@ test('Musikk er egen fane etter NRK, med farge, lasting, lenke (finanshub://medi
   assert.match(m, /"musikk" -> Musikk88\(vm, pad\)/);
   assert.match(m, /if \(s\.tab != "nrk" && s\.tab != "musikk"\) \{/, 'servervalget for Sonarr/Radarr vises ikke');
   assert.match(code('ui/Media45.kt'), /"musikk" to 0xFF[0-9A-F]{6}/);
-  assert.match(code('P43.kt'), /"musikk" -> loadMusikk88\(\)/);
+  assert.match(code('domene/Media.kt'), /"musikk" -> loadMusikk88\(\)/);
   const a = code('AppViewModel.kt');
   assert.match(a, /setOf\("snart", "sonarr", "radarr", "qbit", "prowlarr", "nrk", "musikk"\)/);
   assert.match(a, /val musikk88 = Musikk88State\(\)/);
@@ -234,7 +234,7 @@ test('seriesiden: bilde, tittel, beskrivelse, sesonger (tomme dempet), avkrysnin
   assert.match(u, /if \(n\.sok\.ser != null && n\.configured != false && !n\.gammel\) SerieBunn88\(vm, Modifier\.align\(Alignment\.BottomCenter\)\)/);
   assert.match(u, /if \(n\.sok\.ser != null\) item\("ser-luft"\)/, 'luft under lista så bunnlinja ikke skjuler siste episode');
   // Tilbake lukker seriesiden før den lukker Media.
-  const p = body(code('P43.kt'), 'fun AppViewModel.closeMedia43(');
+  const p = body(code('domene/Media.kt'), 'fun AppViewModel.closeMedia43(');
   assert.ok(p.indexOf('nrk87.sok.ser != null') >= 0 && p.indexOf('nrk87.sok.ser != null') < p.indexOf('else -> s.mediaOpen = false'));
 });
 

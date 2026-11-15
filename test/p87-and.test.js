@@ -174,7 +174,7 @@ test('fanen «NRK» ligger mellom Prowlarr og Avspilling, og viser NRK-skjermen'
   // Prompt 88: Musikk står mellom NRK og Avspilling (test/p88-and.test.js).
   assert.match(m, /"prowlarr" to "Prowlarr", "nrk" to "NRK", (?:"musikk" to "Musikk", )?"spill" to "Avspilling"\)/);
   assert.match(m, /"nrk" -> Nrk87\(vm, pad\)/);
-  assert.match(code('P43.kt'), /"nrk" -> loadNrk87\(\)/, 'fanen laster status, kø og bibliotek');
+  assert.match(code('domene/Media.kt'), /"nrk" -> loadNrk87\(\)/, 'fanen laster status, kø og bibliotek');
   assert.match(code('ui/Media45.kt'), /"nrk" to 0xFF2B5D8A/, 'egen fanefarge');
   assert.match(code('AppViewModel.kt'), /setOf\("snart", "sonarr", "radarr", "qbit", "prowlarr", "nrk"(?:, "musikk")?\)/, 'finanshub://media/nrk åpner fanen');
 });
@@ -333,7 +333,7 @@ test('bibliotek: rutenett, detalj med sesonger og episoder, og tilbake lukker de
   const h = body(code('Nrk87.kt'), 'fun AppViewModel.nrkHent87(');
   assert.match(h, /\.distinct\(\)\.take\(200\)/, 'maks 200 episoder per kall');
   assert.match(h, /if \(urls\.isNotEmpty\(\)\) body\.put\("episoder", JSONArray\(urls\)\)/);
-  assert.match(code('P43.kt'), /s\.tab == "nrk" && nrk87\.valgt != null -> nrk87\.valgt = null/);
+  assert.match(code('domene/Media.kt'), /s\.tab == "nrk" && nrk87\.valgt != null -> nrk87\.valgt = null/);
 });
 
 test('brukerskille: NRK-tilstanden (også lenken i feltet) tømmes ved kontobytte og utlogging', () => {

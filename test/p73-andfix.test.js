@@ -56,9 +56,15 @@ test('avbrudd: filteret kjenner igjen «StandaloneCoroutine was cancelled» og r
 });
 
 test('avbrudd: catch (e: Exception) med e.message i coroutines har CancellationException foran og ingen rå tekst', () => {
-  const files = ['Offline51Plat.kt', 'Calendar29.kt', 'P46.kt', 'Car51Plat.kt', 'Calendar27.kt', 'Backup29.kt', 'G67.kt', 'Smb30.kt', 'Feat51.kt',
-    'Mod28B.kt', 'Memory33.kt', 'P41.kt', 'Birthdays24.kt', 'P30.kt', 'P31.kt', 'Calendar26.kt', 'Chat27.kt', 'ui/Family16.kt', 'ui/Update28.kt',
-    'ui/Search51Ui.kt', 'ui/Ui41.kt', 'ui/Health20.kt', 'upload/PendingUploads.kt', 'Onboard51.kt', 'AppViewModel.kt'];
+  const files = ['Offline51Plat.kt', 'Calendar29.kt', 'Car51Plat.kt', 'Calendar27.kt', 'Backup29.kt', 'G67.kt', 'Smb30.kt', 'Feat51.kt',
+    'Memory33.kt', 'Birthdays24.kt', 'Calendar26.kt', 'Chat.kt', 'ui/Family16.kt', 'ui/Update28.kt',
+    'ui/Search51Ui.kt', 'ui/Health20.kt', 'upload/PendingUploads.kt', 'Onboard51.kt', 'AppViewModel.kt',
+    // Fase 5: P30/31/41/46, Mod28B og ui/Ui41 er delt opp etter funksjon.
+    'Glimt.kt', 'Oppstart.kt', 'Varsler.kt', 'Nordlys.kt', 'Hjem.kt', 'AiKontroll.kt', 'Serveradresse.kt', 'Innlogging.kt', 'Bakgrunn.kt',
+    'Chat.kt', 'Hoytider.kt', 'MerListe.kt', 'domene/Drift.kt', 'domene/Okonomi.kt', 'domene/Media.kt', 'domene/Gjoremal.kt',
+    'domene/Vaer.kt', 'domene/Hjemlys.kt', 'domene/Avganger.kt', 'domene/Bursdager.kt', 'domene/Familie.kt',
+    'ui/GlobaleLag.kt', 'ui/HjemDeler.kt', 'ui/Serveradresse.kt', 'ui/Innlogging.kt', 'ui/Bakgrunn.kt', 'ui/AiKontroll.kt', 'ui/Hoytider.kt',
+    'ui/Chat.kt', 'ui/domene/Hjemlys.kt', 'ui/domene/Avganger.kt', 'ui/domene/Gjoremal.kt', 'ui/domene/Okonomi.kt', 'ui/domene/Bursdager.kt'];
   for (const f of files) {
     const s = code(f);
     assert.doesNotMatch(s, /catch \((\w+): (?:Exception|Throwable)\) \{[^{}]*\b\1\.message \?: "/, `${f}: rå e.message ?: "…" i catch`);
@@ -110,7 +116,7 @@ test('Hjem: tekst med tak 1,15, uten fontpadding og med eksplisitt linjehøyde; 
   assert.match(h, /LocalDensity provides Density\(d\.density, d\.fontScale\.coerceAtMost\(FONT_MAX73\)\)/);
   assert.match(h, /lineHeight = 1\.35\.em/);
   assert.match(h, /platformStyle = TAB_TEXT24\.platformStyle/);
-  assert.match(code('ui/Mer24.kt'), /internal val TAB_TEXT24: TextStyle = TextStyle\([\s\S]*?platformStyle = PlatformTextStyle\(includeFontPadding = false\)/);
+  assert.match(code('ui/Mer.kt'), /internal val TAB_TEXT24: TextStyle = TextStyle\([\s\S]*?platformStyle = PlatformTextStyle\(includeFontPadding = false\)/);
   assert.match(h, /HomeText73 \{ if \(k in TILE_KEYS52 \|\| k in HALF52 \|\| k == "h5"\) Tile52\(vm, k, Dp\.Unspecified, body\) else body\(k\) \}/);
   const res = join(ROOT, 'apps/android/app/src/main/res/font');
   for (const f of ['newsreader_regular.ttf', 'newsreader_medium.ttf', 'newsreader_italic.ttf', 'manrope_regular.ttf', 'manrope_medium.ttf', 'manrope_semibold.ttf', 'manrope_bold.ttf']) {

@@ -2,11 +2,6 @@ package no.kristo.finanshub.widget
 
 import android.content.Context
 import android.content.Intent
-import android.graphics.Bitmap
-import android.graphics.Canvas
-import android.graphics.Paint
-import android.graphics.RectF
-import android.graphics.SweepGradient
 import android.net.Uri
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -52,6 +47,9 @@ import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
+import java.time.LocalDate
+import java.time.LocalTime
+import java.time.ZoneId
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import no.kristo.finanshub.Api
@@ -65,9 +63,6 @@ import no.kristo.finanshub.briefTitle34
 import no.kristo.finanshub.parseBrief34
 import org.json.JSONArray
 import org.json.JSONObject
-import java.time.LocalDate
-import java.time.LocalTime
-import java.time.ZoneId
 
 /*
  * Prompt 34 (ANDROID34): Glimt-brief-widgets (claude-code-glimt-brief.md, Glimt Brief.dc.html mode android | samsung).
@@ -162,60 +157,8 @@ object Brief34Widgets {
 
 /* ---------------- Figuren som bitmap ---------------- */
 
-private val fig34 = HashMap<Int, Bitmap>()
-
 /** Positurene til figuren i widgeten: 0 ro, 1 armen opp, 2 armen ned (vinking), 3 blunk, 4 snakker. */
 object GlimtPose34 { const val IDLE = 0; const val UP = 1; const val DOWN = 2; const val BLINK = 3; const val TALK = 4 }
-
-/** Glimt-figuren som bitmap, 96 × 108 px, i valgt positur. */
-internal fun glimtBitmap34(pose: Int = GlimtPose34.IDLE): Bitmap {
-    fig34[pose]?.let { return it }
-    val S = 96f
-    val bmp = Bitmap.createBitmap(S.toInt() + 16, (S * 1.12f).toInt() + 4, Bitmap.Config.ARGB_8888)
-    val c = Canvas(bmp)
-    c.translate(8f, 4f)
-    val p = Paint(Paint.ANTI_ALIAS_FLAG)
-    val ink = 0xFF1B1A17.toInt()
-    // Armene.
-    p.color = ink
-    val armDeg = when (pose) { GlimtPose34.UP -> 58f; GlimtPose34.DOWN -> 22f; else -> -10f }
-    c.save(); c.rotate(armDeg, -S * .06f + S * .22f * .9f, S * .61f)
-    c.drawRoundRect(RectF(-S * .06f, S * .56f, -S * .06f + S * .22f, S * .66f), S * .05f, S * .05f, p); c.restore()
-    c.save(); c.rotate(12f, S + S * .06f - S * .1f, S * .65f)
-    c.drawRoundRect(RectF(S + S * .06f - S * .2f, S * .6f, S + S * .06f, S * .7f), S * .05f, S * .05f, p); c.restore()
-    // Regnbueringen.
-    val ringW = S * .07f
-    val cx = S / 2; val cy = S * .14f + S / 2
-    p.style = Paint.Style.STROKE; p.strokeWidth = ringW
-    p.shader = SweepGradient(cx, cy, intArrayOf(0xFFB23A2A.toInt(), 0xFFE8794A.toInt(), 0xFFF2C14E.toInt(), 0xFF3FBF9A.toInt(), 0xFF7A5AD6.toInt(), 0xFFB23A2A.toInt()), null)
-    c.drawCircle(cx, cy, S / 2 - ringW / 2, p)
-    p.shader = null; p.style = Paint.Style.FILL
-    // Fjeset.
-    val fx = S * .08f; val fy = S * .22f; val fs = S * .84f
-    p.color = 0xFFFFFDF8.toInt(); c.drawCircle(fx + fs / 2, fy + fs / 2, fs / 2, p)
-    p.color = ink
-    val ew = S * .1f; val eh = if (pose == GlimtPose34.BLINK) S * .025f else S * .14f
-    val ey = if (pose == GlimtPose34.BLINK) fy + fs * .36f + S * .06f else fy + fs * .36f
-    c.drawRoundRect(RectF(fx + fs * .27f, ey, fx + fs * .27f + ew, ey + eh), S * .06f, S * .06f, p)
-    c.drawRoundRect(RectF(fx + fs - fs * .27f - ew, ey, fx + fs - fs * .27f, ey + eh), S * .06f, S * .06f, p)
-    p.color = 0x59E8794A
-    c.drawOval(RectF(fx + fs * .16f, fy + fs * .56f, fx + fs * .16f + S * .1f, fy + fs * .56f + S * .06f), p)
-    c.drawOval(RectF(fx + fs - fs * .16f - S * .1f, fy + fs * .56f, fx + fs - fs * .16f, fy + fs * .56f + S * .06f), p)
-    p.color = 0xFFB23A2A.toInt()
-    val mw = S * .22f; val mh = if (pose == GlimtPose34.TALK || pose == GlimtPose34.UP) S * .19f else S * .12f; val mx = fx + fs / 2 - mw / 2; val my = fy + fs * .6f
-    c.drawArc(RectF(mx, my - mh, mx + mw, my + mh), 0f, 180f, true, p)
-    // Stjernen.
-    p.color = 0xFFFF7A52.toInt()
-    val st = S * .2f; val sx = S / 2 - st / 2; val sy = -S * .02f; val k = st / 24f
-    val path = android.graphics.Path().apply {
-        moveTo(sx + 12 * k, sy + 1.5f * k); cubicTo(sx + 12.6f * k, sy + 6.4f * k, sx + 16.6f * k, sy + 10.4f * k, sx + 21.5f * k, sy + 11 * k); lineTo(sx + 21.5f * k, sy + 13 * k)
-        cubicTo(sx + 16.6f * k, sy + 13.6f * k, sx + 12.6f * k, sy + 17.6f * k, sx + 12 * k, sy + 22.5f * k); cubicTo(sx + 11.4f * k, sy + 17.6f * k, sx + 7.4f * k, sy + 13.6f * k, sx + 2.5f * k, sy + 13 * k)
-        lineTo(sx + 2.5f * k, sy + 11 * k); cubicTo(sx + 7.4f * k, sy + 10.4f * k, sx + 11.4f * k, sy + 6.4f * k, sx + 12 * k, sy + 1.5f * k); close()
-    }
-    c.drawPath(path, p)
-    fig34[pose] = bmp
-    return bmp
-}
 
 /* ---------------- Trykk på Glimt: vinker og sier det viktigste akkurat nå ---------------- */
 
@@ -266,8 +209,11 @@ class GlimtPoke34 : ActionCallback {
 
 /* Prompt 35: de fire størrelsene. Glance velger den største som får plass. */
 private val W22 = DpSize(110.dp, 110.dp)
+
 private val W41 = DpSize(250.dp, 50.dp)
+
 private val W42 = DpSize(250.dp, 110.dp)
+
 private val W44 = DpSize(250.dp, 250.dp)
 
 /** kind: m (Material You) eller s (Samsung). */
@@ -289,17 +235,26 @@ abstract class BriefW34(private val kind: String) : GlanceAppWidget() {
         }
     }
 }
+
 class BriefWidget34 : BriefW34("m")
+
 class S34BriefWidget : BriefW34("s")
+
 /** Prompt 35: Samsung har egne oppføringer per størrelse i widgetvelgeren (samme responsive innhold). */
 class S35Brief22Widget : BriefW34("s")
+
 class S35Brief41Widget : BriefW34("s")
+
 class S35Brief44Widget : BriefW34("s")
 
 class BriefReceiver34 : Receiver24() { override val glanceAppWidget: GlanceAppWidget = BriefWidget34() }
+
 class S34BriefReceiver : Receiver24() { override val glanceAppWidget: GlanceAppWidget = S34BriefWidget() }
+
 class S35Brief22Receiver : Receiver24() { override val glanceAppWidget: GlanceAppWidget = S35Brief22Widget() }
+
 class S35Brief41Receiver : Receiver24() { override val glanceAppWidget: GlanceAppWidget = S35Brief41Widget() }
+
 class S35Brief44Receiver : Receiver24() { override val glanceAppWidget: GlanceAppWidget = S35Brief44Widget() }
 
 private fun openBrief34(ctx: Context): Action = actionStartActivity(
@@ -498,8 +453,11 @@ private fun MBrief34(b: Brief34?, pose: Int, say: String?) {
 /* ---------------- Samsung One UI (hvit 78 %, radius 26) ---------------- */
 
 private const val S_BG35 = 0xC7FFFFFF
+
 private const val S_INK35 = 0xFF1B1A17
+
 private const val S_SUB35 = 0xFF3D3A33
+
 private const val S_BLUE35 = 0xFF2B5D8A
 
 /** 2 × 2: figur, temperatur, tittel og neste. */

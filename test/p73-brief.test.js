@@ -230,13 +230,13 @@ test('iOS: BriefContentSettings.swift – innstillinger (piler, bryter, dra, Til
 /* ---------------- Android ---------------- */
 
 test('Android: Brief73Ui.kt/P73Brief.kt – innstillinger, dra-for-å-flytte, parallell henting 6 s og cache', () => {
-  const u = src('apps/android/app/src/main/java/no/kristo/finanshub/ui/Brief73Ui.kt');
-  const p = src('apps/android/app/src/main/java/no/kristo/finanshub/P73Brief.kt');
+  const u = src('apps/android/app/src/main/java/no/kristo/finanshub/ui/Brief.kt');
+  const p = src('apps/android/app/src/main/java/no/kristo/finanshub/Brief.kt');
   for (const re of [/INNHOLD I BRIEFEN/, /detectDragGesturesAfterLongPress/, /"Tilbakestill"/, /alpha = if \(it\.on\) 1f else \.45f/, /fun Skeleton73/, /Oppdatert kl\. /, /Klarte ikke hente/]) assert.match(u, re);
   for (const re of [/withTimeoutOrNull\(6_000L\)/, /async \{ id to fetchOne73\(id\) \}/, /getSharedPreferences\("brief73"/, /catch \(e: CancellationException\) \{ throw e \}/, /5 \* 60_000L/, /\/brief-cards\/reset/]) assert.match(p, re);
-  const b = src('apps/android/app/src/main/java/no/kristo/finanshub/ui/Brief35.kt');
+  const b = src('apps/android/app/src/main/java/no/kristo/finanshub/ui/Brief.kt');
   assert.match(b, /BriefStack73\(vm, b, kind, trials, pos, ring\)/);
   assert.match(b, /Brief73Settings\(vm\)/);
-  assert.match(src('apps/android/app/src/main/java/no/kristo/finanshub/ui/Brief34.kt'), /prefetchBrief73\(\)/);
-  assert.match(src('apps/android/app/src/main/java/no/kristo/finanshub/P34.kt'), /timeout = 6_000/);
+  assert.match(src('apps/android/app/src/main/java/no/kristo/finanshub/ui/Brief.kt'), /prefetchBrief73\(\)/);
+  assert.match(src('apps/android/app/src/main/java/no/kristo/finanshub/Brief.kt'), /timeout = 6_000/);
 });

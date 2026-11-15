@@ -80,7 +80,7 @@ test('PWA: dagradene er knapper (data-wx="day") og gir haptikk', () => {
 /* ---------------- 3. Felles ✕ ---------------- */
 
 test('Android: én VaerCloseButton (42 dp, 44 dp trykkflate), ingen egne varianter eller «Ferdig» i arkene', () => {
-  const u = kt('ui/Ui40.kt');
+  const u = kt('ui/domene/Vaer.kt');
   assert.match(u, /internal fun VaerCloseButton\(dark: Boolean = false, onClick: \(\) -> Unit\)/);
   assert.match(u, /Modifier\.size\(44\.dp\)/);
   assert.match(u, /size\(42\.dp\)\.clip\(CircleShape\)\.background\(if \(dark\) Color\(0x9E0A1423\) else Color\.White\.copy\(alpha = \.22f\)\)/);
@@ -131,8 +131,8 @@ test('PWA: alle Vær-ark bruker samme ✕ (w32-x, 42 px), mørk over kartet', ()
 /* ---------------- 4. Pille-streken på Android ---------------- */
 
 test('Android: modus-pillen har glansen inni, hårfin kant og ingen skygge/strek', () => {
-  const u = kt('ui/Ui46.kt');
-  const seg = u.slice(u.indexOf('fun LiquidSeg46'), u.indexOf('fun TripLocNote46'));
+  const u = kt('ui/domene/Vaer.kt');
+  const seg = u.slice(u.indexOf('fun LiquidSeg46'), u.indexOf('fun LiquidTextSeg52'));
   assert.match(seg, /\.graphicsLayer \{ scaleX = 1f \+ \.18f \* st; scaleY = 1f - \.12f \* st \}\s*\.vaerPillGlass73\(\)/, 'glansen skalerer med pillen');
   assert.doesNotMatch(seg, /\.shadow\(/, 'ingen elevation/skygge');
   assert.doesNotMatch(seg, /drawLine\(/, 'ingen egen strek');

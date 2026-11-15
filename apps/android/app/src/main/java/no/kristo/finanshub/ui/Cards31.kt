@@ -46,6 +46,9 @@ import no.kristo.finanshub.openKal26
 import no.kristo.finanshub.openKalApp33
 import org.json.JSONObject
 import java.time.LocalDate
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 
 /*
  * Prompt 31 (ANDROID31): kortene under verktøysvar i Chat (chToolRun() + chCardVals() i Mobil Papir App.dc.html).
@@ -169,7 +172,7 @@ private fun CalendarCard31(vm: AppViewModel, o: JSONObject, v: ChatV27) {
                 Text(o.c31("t", "title", "label") ?: "I dag", color = v.ink, fontFamily = PaperFonts.sans, fontWeight = FontWeight.Bold, fontSize = 15.sp, maxLines = 1)
                 Text(o.c31("sub") ?: "${items.size} hendelser", color = v.mut, fontFamily = PaperFonts.sans, fontSize = 12.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
-            Text("›", color = v.mut, fontSize = 18.sp)
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = v.mut, modifier = Modifier.size(22.dp))
         }
         if (items.isEmpty()) Text("Ingenting i kalenderen.", color = v.mut, fontFamily = PaperFonts.sans, fontSize = 13.5.sp)
         items.take(8).forEachIndexed { i, x ->
@@ -196,7 +199,7 @@ private fun ListCard31(v: ChatV27, o: JSONObject, title: String, onClick: () -> 
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(o.c31("title", "stop", "t") ?: title, color = v.ink, fontFamily = PaperFonts.sans, fontWeight = FontWeight.Bold, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-            Text("›", color = v.mut, fontSize = 18.sp)
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = v.mut, modifier = Modifier.size(22.dp))
         }
         if (items.isEmpty()) Text(if (title == "Pakker") "Ingen aktive pakker." else "Ingen avganger nå.", color = v.mut, fontFamily = PaperFonts.sans, fontSize = 13.5.sp)
         items.take(6).forEachIndexed { i, x ->
@@ -266,7 +269,7 @@ private fun TasksCard31(vm: AppViewModel, v: ChatV27, o: JSONObject) {
     ) {
         Row(Modifier.fillMaxWidth().clickable { Haptics.select(); vm.openTasks() }.padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(o.c31("title", "list") ?: "Gjøremål", color = v.ink, fontFamily = PaperFonts.sans, fontWeight = FontWeight.Bold, fontSize = 15.sp, modifier = Modifier.weight(1f))
-            Text("›", color = v.mut, fontSize = 18.sp)
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = v.mut, modifier = Modifier.size(22.dp))
         }
         if (items.isEmpty()) Text("Ingenting på lista.", color = v.mut, fontFamily = PaperFonts.sans, fontSize = 13.5.sp)
         items.take(8).forEach { x ->

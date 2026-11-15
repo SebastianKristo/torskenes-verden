@@ -1,18 +1,11 @@
 package no.kristo.finanshub.ui
 
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
@@ -22,8 +15,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -62,92 +56,7 @@ internal fun Kpi(label: String, value: String, modifier: Modifier, shape: Rounde
 internal fun Chip(text: String, bg: Color = C.surface2, fg: Color = C.text2) =
     Text(text, fontSize = 12.sp, color = fg, maxLines = 1, modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(bg).padding(8.dp, 4.dp))
 
-private val fieldColors: TextFieldColors @Composable get() = TextFieldDefaults.colors(focusedContainerColor = C.surface2, unfocusedContainerColor = C.surface2, focusedIndicatorColor = C.primary, focusedLabelColor = C.primary)
-
-@Composable
-private fun Field(label: String, value: String, modifier: Modifier = Modifier.fillMaxWidth(), number: Boolean = false, onChange: (String) -> Unit) {
-    TextField(value, onChange, label = { Text(label) }, singleLine = true, modifier = modifier, shape = RoundedCornerShape(16.dp, 16.dp, 4.dp, 4.dp), colors = fieldColors,
-        keyboardOptions = KeyboardOptions(keyboardType = if (number) KeyboardType.Decimal else KeyboardType.Text))
-}
-
 /* ---------------- Subscription OS ---------------- */
-
-private val cycles = listOf("monthly" to "Månedlig", "yearly" to "Årlig", "biennial" to "Hvert 2. år")
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-internal fun SubScreen(vm: AppViewModel) {
-    val s = vm.subs
-    var adding by remember { mutableStateOf(false) }
-    Page {
-        item { ModuleHeader(vm, "Subscription OS", actions = { IconButton(onClick = { adding = !adding }) { Icon(if (adding) Icons.Filled.Close else Icons.Filled.Add, "Legg til abonnement") } }) }
-        vm.moduleError?.let { e -> item { Empty(e) } }
-        if (s == null && vm.moduleError == null) item { Box(Modifier.fillMaxWidth().padding(30.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = C.primary) } }
-        if (s != null) {
-            item {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Kpi("Per måned", "${n0(s.monthly)} kr", Modifier.weight(1f), RoundedCornerShape(28.dp, 8.dp, 8.dp, 28.dp))
-                    Kpi("Per år", "${n0(s.yearly)} kr", Modifier.weight(1f), RoundedCornerShape(8.dp, 28.dp, 28.dp, 8.dp))
-                }
-            }
-            item { Kpi("Lite brukt, kan sies opp", "${n0(s.lowUse)} kr/mnd", Modifier.fillMaxWidth(), RoundedCornerShape(28.dp), tc(0xFF3A2416), C.accentLight) }
-        }
-        if (adding) item {
-            var name by remember { mutableStateOf("") }
-            var plan by remember { mutableStateOf("") }
-            var price by remember { mutableStateOf("") }
-            var cycle by remember { mutableStateOf("monthly") }
-            var next by remember { mutableStateOf("") }
-            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(C.surface1).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text("Nytt abonnement", style = MaterialTheme.typography.titleMedium)
-                Field("Tjeneste", name) { name = it }
-                Field("Plan", plan) { plan = it }
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Field("kr per trekk", price, Modifier.weight(1f), number = true) { price = it }
-                    Field("Neste trekk (dd.mm)", next, Modifier.weight(1f)) { next = it }
-                }
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    cycles.forEach { (k, n) -> FilterChip(selected = cycle == k, onClick = { cycle = k }, label = { Text(n) }, colors = FilterChipDefaults.filterChipColors(selectedContainerColor = C.container, selectedLabelColor = C.onContainer)) }
-                }
-                val p = price.replace(" ", "").replace(',', '.').toDoubleOrNull()
-                if (p != null) Text(when (cycle) { "yearly" -> "= ${n0(p / 12)} kr/mnd · ${n0(p)} kr/år"; "biennial" -> "= ${n0(p / 24)} kr/mnd · ${n0(p / 2)} kr/år"; else -> "= ${n0(p)} kr/mnd · ${n0(p * 12)} kr/år" }, color = C.text2, fontSize = 13.sp)
-                Button(onClick = { vm.addSub(name, plan, price, cycle, next); adding = false }, enabled = name.isNotBlank() && p != null, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(26.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = C.primary, contentColor = C.onPrimary)) { Text("Legg til", fontWeight = FontWeight.Bold) }
-                Text("Fra kvittering eller transaksjoner: bruk FinansHub på PC.", color = C.text2, fontSize = 12.sp)
-            }
-        }
-        if (s != null) {
-            if (s.items.isEmpty()) item { Empty("Ingen abonnementer ennå.") }
-            item {
-                Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                    s.items.forEachIndexed { i, sub ->
-                        var menu by remember { mutableStateOf(false) }
-                        Row(Modifier.fillMaxWidth().clip(itemShape(i, s.items.size)).background(C.surface1).clickable { menu = true }.padding(16.dp, 12.dp),
-                            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Logo(vm, sub.domain, sub.name, 0xFFFF7A3D, 36)
-                            Column(Modifier.weight(1f)) {
-                                Text(sub.name + (sub.plan?.let { " · $it" } ?: ""), fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                Text(listOfNotNull(sub.nextDate?.let { "Neste ${ddmm(it)}" }, sub.usageNote, cycles.firstOrNull { it.first == sub.cycle }?.second).joinToString(" · "),
-                                    color = if (sub.lowUse) C.accentLight else C.text2, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                AiLine(sub.aiShort)
-                            }
-                            Column(horizontalAlignment = Alignment.End) {
-                                Text(n0(sub.price), fontFamily = Mono, fontWeight = FontWeight.SemiBold)
-                                Chip(if (!sub.active) "Sagt opp" else if (sub.lowUse) "Si opp" else "Aktiv",
-                                    bg = if (!sub.active) C.surface3 else if (sub.lowUse) tc(0xFF3A2416) else C.positiveBg,
-                                    fg = if (!sub.active) C.text2 else if (sub.lowUse) C.accentLight else C.positive)
-                            }
-                            DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                                if (sub.active) DropdownMenuItem(text = { Text("Marker som sagt opp") }, onClick = { menu = false; vm.setSubActive(sub, false) })
-                                else DropdownMenuItem(text = { Text("Aktiver igjen") }, onClick = { menu = false; vm.setSubActive(sub, true) })
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
 
 /* ---------------- Boliger (delte mapper) ---------------- */
 
@@ -234,14 +143,5 @@ internal fun ShoppingList(vm: AppViewModel, w: Week) {
                 Text(sh.text, color = if (sh.done) C.text2 else C.text)
             }
         }
-    }
-}
-
-@Composable
-internal fun ShoppingPane(vm: AppViewModel) {
-    val w = vm.week ?: return Empty("Laster …")
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text("Handleliste", style = MaterialTheme.typography.headlineMedium)
-        if (w.shopping.isEmpty()) Empty("Handlelisten er tom.") else ShoppingList(vm, w)
     }
 }

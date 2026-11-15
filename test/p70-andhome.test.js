@@ -24,7 +24,7 @@ test('flishøyde: Hjem på telefon er et eget rutenett uten fast høyde', () => 
   assert.match(h, /Constraints\.fixed\(cw, h\)/);
   assert.match(h, /PairRow70\([^\n]*212\.dp/, 'Avgang minst 212 dp');
   assert.match(h, /Tile52\(vm, k, Dp\.Unspecified, body\)/);
-  const t = code('ui/Ui52B.kt');
+  const t = code('ui/HjemFliser.kt');
   assert.match(t, /if \(h == Dp\.Unspecified\) Modifier\.fillMaxWidth\(\)\.fillMaxHeight\(\)/);
   assert.match(code('ui/Tiles50.kt'), /\.padding\(16\.dp, if \(pad\) 16\.dp else 14\.dp\)/, '16 dp sider, 14 dp topp/bunn');
 });
@@ -44,7 +44,7 @@ test('wiggle: gesten ligger på beholderen, løft etter 0,3 s, live flytting og 
 });
 
 test('størrelse ↔: sz lagres i pages.hjem og beholdes ved flytting/skjuling', () => {
-  const m = code('Models15.kt');
+  const m = code('Hjem.kt');
   assert.match(m, /val sz: Map<String, String> = emptyMap\(\)/);
   assert.match(m, /o\.put\("sz", JSONObject\(sz\)\)/);
   assert.match(m, /parseSz70\(v\.optJSONObject\("sz"\)\)/);
@@ -62,7 +62,7 @@ test('scroll mens Glimt svarer: ikke noe lag over Hjem, sveip bare fra grepet', 
   const p = code('ui/Paper.kt');
   assert.doesNotMatch(p, /AnsScrim38\(vm\)/);
   assert.match(p, /\.ansTapOutside70\(vm\)/);
-  const u = code('ui/Ui38.kt');
+  const u = code('ui/GlobaleLag.kt');
   const box = u.slice(u.indexOf('fun AnsBox38'));
   assert.doesNotMatch(box.slice(0, box.indexOf('Column {')), /detectVerticalDragGestures/);
   assert.match(box, /gripHit70\(down\.type, down\.position\.y, size\.height, gripPx\)/);
