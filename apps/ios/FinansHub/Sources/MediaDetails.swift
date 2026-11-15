@@ -254,20 +254,3 @@ final class Media46Images {
         return img
     }
 }
-
-struct Media46PosterImage: View {
-    @Environment(Store.self) private var store
-    let url: String
-    @State private var img: UIImage? = nil
-
-    var body: some View {
-        ZStack {
-            if let img { Image(uiImage: img).resizable().scaledToFill().transition(.opacity) } else { Color.clear }
-        }
-        .task(id: url) {
-            if let c = Media46Images.shared.cached(url) { img = c; return }
-            let i: UIImage? = await Media46Images.shared.load(url, store)
-            withAnimation(.easeOut(duration: 0.2)) { img = i }
-        }
-    }
-}

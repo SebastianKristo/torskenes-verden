@@ -2,7 +2,7 @@ import SwiftUI
 import UIKit
 
 /* ---------------- Prompt 45: Media – tilbakeknapp, farger, avspillingsstatistikk og «Slett uovervåkede» ----------------
- – claude-code-media-tilbakeknapp.md: systemets runde 40 pt tilbakeknapp med ‹ (Back45) i stedet for «‹ Tilbake»-tekst.
+ – claude-code-media-tilbakeknapp.md: runde tilbakeknapp. Den egne typen Back45 ble aldri brukt og er fjernet (død kode).
  – claude-code-media-mer-farger.md: hver tjeneste har sin farge (ikon, aktiv fane, prikker): Sonarr #35c5f4, Radarr #ffc230,
    qBittorrent #3d7dd6, Prowlarr #e66001, Plex #e5a00d, Jellyfin #aa5cc3. Statuspiller: Lastes ned blå, Venter gul, Ferdig grønn,
    Mangler rød, Uovervåket grå. Papir-bakgrunnen beholdes, farge brukes som aksent.
@@ -52,30 +52,6 @@ enum Media45 {
         case "unmonitored": return Color(hex: "#8f897c")
         default: return nil
         }
-    }
-}
-
-/// Systemets tilbakeknapp: rund 40 pt med ‹, kort med tynn kant og liten skygge (samme som Kalender, Gjøremål og Innstillinger).
-struct Back45: View {
-    @Environment(\.paper) private var p
-    var label: String = "Tilbake"
-    let action: () -> Void
-
-    var body: some View {
-        Button {
-            Haptic34.back()
-            action()
-        } label: {
-            Image(systemName: "chevron.left").font(.system(size: 16, weight: .bold)).foregroundStyle(p.ink)
-                .frame(width: 40, height: 40)
-                .background(p.card, in: Circle())
-                .overlay(Circle().stroke(p.line, lineWidth: 1))
-                .shadow(color: Color.black.opacity(0.1), radius: 6, y: 3)
-                .frame(width: 44, height: 44)
-                .contentShape(Circle())
-        }
-        .buttonStyle(Press45Style())
-        .accessibilityLabel(label)
     }
 }
 

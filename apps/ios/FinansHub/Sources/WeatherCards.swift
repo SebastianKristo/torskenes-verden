@@ -70,7 +70,7 @@ struct WxTopBar22: View {
     }
 }
 
-// Prompt 28: de runde knappene (WxBottomButtons22) er erstattet av bunnlinjen WxBottomBar28 (WeatherPlaces.swift).
+// Prompt 28: de runde knappene (WxBottomButtons22) ble erstattet av bunnlinjen WxBottomBar28, som senere er fjernet (død kode).
 
 /* ---------- Toppteksten ---------- */
 

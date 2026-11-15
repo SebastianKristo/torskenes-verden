@@ -59,21 +59,6 @@ struct Task37ListChip: View {
     }
 }
 
-/// «+ Ny liste» (stiplet kant).
-struct Task37NewListChip: View {
-    @Environment(\.paper) private var p
-    let act: () -> Void
-
-    var body: some View {
-        Button(action: act) {
-            Text("+ Ny liste").font(PF.ui(13, .bold)).foregroundStyle(p.ink)
-                .padding(.horizontal, 14).frame(height: 38)
-                .overlay(Capsule().stroke(p.line, style: StrokeStyle(lineWidth: 1.2, dash: [4, 3])))
-        }
-        .buttonStyle(.plain)
-    }
-}
-
 /// Infokortet under chipsene for valgt liste.
 struct Task37ListInfo: View {
     @Environment(Store.self) private var store

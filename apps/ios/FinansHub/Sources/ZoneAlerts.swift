@@ -16,22 +16,6 @@ import Intents
    ved som bilde i varselet i stedet.
  – Lagres per bruker (mottakeren) på serveren: GET/PUT /api/family/zone-alerts (SERVER45). Eldre server (404): lokalt per konto. */
 
-struct Zone45Person: Identifiable, Hashable {
-    var id: String
-    var name: String
-    var initials: String
-    var color: String
-    var on: Bool
-}
-
-struct Zone45Zone: Identifiable, Hashable {
-    var id: String
-    var name: String
-    var icon: String
-    var color: String
-    var on: Bool
-}
-
 @MainActor
 @Observable
 final class Zone45 {

@@ -573,21 +573,3 @@ struct FamilyEmptyShare21: View {
         .background(p.card, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
     }
 }
-
-/// Bryteren «Del med familien» i sone-arket. Av som standard: da ser bare du sonen.
-struct FamilyZoneShareRow21: View {
-    @Environment(\.paper) private var p
-    @Binding var on: Bool
-
-    var body: some View {
-        Toggle(isOn: $on) {
-            VStack(alignment: .leading, spacing: 1) {
-                Text("Del med familien").font(PF.ui(14.5, .semibold)).foregroundStyle(p.ink)
-                Text(on ? "Familien ser sonen og kan få varsler" : "Bare du ser sonen").font(PF.ui(12)).foregroundStyle(p.mut)
-            }
-        }
-        .tint(p.pos)
-        .padding(.horizontal, 14).padding(.vertical, 10)
-        .background(p.card, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-    }
-}

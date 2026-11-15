@@ -254,51 +254,6 @@ struct Tasks44SubField: View {
 
 /* ---------- Synk med Home Assistant: rad i Gjøremål og Innstillinger → Gjøremål ---------- */
 
-/// «⇄ Synk med Home Assistant · Synket 20:41 · endres i Innstillinger → Gjøremål ›» (erstatter det store kortet).
-struct Tasks44SyncRow: View {
-    @Environment(Store.self) private var store
-    @Environment(\.paper) private var p
-    @State private var st: TaskHAState22? = nil
-
-    var body: some View {
-        Group {
-            if let s = st {
-                Button { store.paperGo("innst-huske") } label: { label(s) }
-                    .buttonStyle(.plain)
-            }
-        }
-        .task { await load() }
-    }
-
-    private func label(_ s: TaskHAState22) -> some View {
-        HStack(spacing: 10) {
-            Text("⇄").font(PF.ui(16, .bold)).foregroundStyle(p.mut)
-            VStack(alignment: .leading, spacing: 1) {
-                Text("Synk med Home Assistant · " + Tasks44SyncRow.status(s)).font(PF.ui(13.5, .semibold)).foregroundStyle(p.ink).lineLimit(1)
-                Text("endres i Innstillinger → Gjøremål").font(PF.ui(12)).foregroundStyle(p.mut).lineLimit(1)
-            }
-            Spacer(minLength: 6)
-            Text("›").font(PF.ui(17)).foregroundStyle(p.mut)
-        }
-        .padding(.horizontal, 14).frame(minHeight: 54)
-        .background(p.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .contentShape(Rectangle())
-        .padding(.top, 6)
-    }
-
-    static func status(_ s: TaskHAState22) -> String {
-        if !s.enabled { return "Av" }
-        if s.status == "error" { return "Feil" }
-        return s.syncedAt.map { "Synket " + JS.fmt($0, "HH:mm") } ?? "På"
-    }
-
-    private func load() async {
-        let admin: Bool = (store.me?.role ?? store.account?.role ?? "") == "admin"
-        guard admin, let d = try? await store.api.callAt("/api", "GET", "/tasks/ha", timeout: 15) else { st = nil; return }
-        st = TaskHAState22(JS.obj(d))
-    }
-}
-
 /// Innstillinger → Gjøremål: SYNK MED HOME ASSISTANT (samme lagring som før, så ingenting må kobles på nytt).
 struct Tasks44SyncPage: View {
     @Environment(\.paper) private var p

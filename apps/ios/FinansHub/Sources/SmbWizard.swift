@@ -195,42 +195,6 @@ struct Smb30Shares: View {
 
 /* ---------- Steg 4: Velg mappe ---------- */
 
-struct Smb30Folders: View {
-    @Environment(Store.self) private var store
-    @Environment(\.paper) private var p
-    @MainActor private var m: Smb30Model { Smb30Model.shared }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Smb30Crumbs()
-            HStack(spacing: 8) {
-                Smb30Mini(title: "‹ Opp", enabled: !m.path.isEmpty && !m.busy) {
-                    let up: [String] = Array(m.path.dropLast())
-                    Task { await m.openDir(up, store) }
-                }
-                Smb30Mini(title: "+ Ny mappe", enabled: !m.busy) { m.showNewDir.toggle() }
-            }
-            if m.showNewDir { Smb30NewDir() }
-            Smb30List { dirRows }
-        }
-    }
-
-    @ViewBuilder private var dirRows: some View {
-        if m.busy && m.dirs == nil {
-            Smb30Wait(text: "Henter mapper …")
-        } else if (m.dirs ?? []).isEmpty {
-            Smb30Empty(text: "Ingen undermapper her. Velg denne mappen, eller lag en ny.")
-        } else {
-            ForEach(m.dirs ?? [], id: \.self) { d in
-                Smb30Row(title: d, sub: "") {
-                    let next: [String] = m.path + [d]
-                    Task { await m.openDir(next, store) }
-                }
-            }
-        }
-    }
-}
-
 struct Smb30Crumbs: View {
     @Environment(Store.self) private var store
     @Environment(\.paper) private var p
