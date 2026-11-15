@@ -24,7 +24,7 @@ struct PaperIntegrations23: View {
             }
             Text("Adresse og long-lived token legges inn i nettleseren under Innstillinger → Integrasjoner → Home Assistant. Tokenet lagres kryptert på serveren.")
                 .font(PF.ui(12)).foregroundStyle(p.mut).padding(.horizontal, 6).padding(.top, 6).fixedSize(horizontal: false, vertical: true)
-            // Samme seksjon som nederst i Huskeliste (Tasks22.swift): bryter, én rad per liste og «↻ Synk nå».
+            // Samme seksjon som nederst i Huskeliste (TasksDock.swift): bryter, én rad per liste og «↻ Synk nå».
             TaskHASection22().padding(.top, 8)
             if st == nil, let failed {
                 Text(failed).font(PF.ui(12.5)).foregroundStyle(p.mut).padding(.horizontal, 6).padding(.top, 6).fixedSize(horizontal: false, vertical: true)

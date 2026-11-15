@@ -240,7 +240,7 @@ struct Int26List: View {
                 PLabel(text: g.0).padding(.leading, 4).padding(.top, 12)
                 Int26Card(rows: g.1)
             }
-            // Prompt 37: sporingsnøklene er delt i husstanden (maskert, bare admin endrer), TrackKeys37.swift.
+            // Prompt 37: sporingsnøklene er delt i husstanden (maskert, bare admin endrer), TrackKeys.swift.
             TrackKeys37Card()
         }
     }
@@ -375,7 +375,7 @@ struct Int26Detail: View {
 
     @ViewBuilder private func content(_ it: Int24Item) -> some View {
         Int26Head(item: it)
-        // Prompt 41: PostNord uten konto og uten nøkkel (Track41PostNord.swift).
+        // Prompt 41: PostNord uten konto og uten nøkkel (TrackKeys.swift).
         if it.id == "postnord" { Track41PostNordCard().padding(.top, 10) }
         if !it.fields.isEmpty {
             PLabel(text: "Oppsett").padding(.leading, 4).padding(.top, 14)

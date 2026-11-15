@@ -143,7 +143,7 @@ final class Search29Model {
             Quick29Model.shared.submit(t, store)
             return
         }
-        // Prompt 41: huskebeskjeder («vi må huske å …») går til Huskeliste via Glimt (Tasks41Glimt.swift).
+        // Prompt 41: huskebeskjeder («vi må huske å …») går til Huskeliste via Glimt (TasksGlimt.swift).
         if !question36 && Tasks41Glimt.isHuske(t) {
             Tasks41Glimt.shared.fromHome(t, store)
             return

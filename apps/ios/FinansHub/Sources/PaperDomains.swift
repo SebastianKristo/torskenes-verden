@@ -127,7 +127,7 @@ struct PaperDomTop: View {
             }
             .padding(3)
             .overlay(Capsule().stroke(p.line, lineWidth: 1))
-            // Prompt 43: Glimt-raden nederst i kortet (Domains43.swift), følger valgt periode.
+            // Prompt 43: Glimt-raden nederst i kortet (Domains.swift), følger valgt periode.
             Domains43GlimtRow()
         }
         .padding(14)

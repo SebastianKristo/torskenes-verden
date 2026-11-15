@@ -253,7 +253,7 @@ struct PaperMore28: View {
         if !inBar.contains("domener") {
             out.append(More28Row(id: "domener", name: "Domener", sub: "Trafikk, besøk og oppetid", icon: "globe") { store.paperOpenDomains(from: "mer") })
         }
-        // Prompt 43: Media (Sonarr, Radarr, qBittorrent og Prowlarr), fullskjerm (Media43Views.swift). Bare med modulen «media».
+        // Prompt 43: Media (Sonarr, Radarr, qBittorrent og Prowlarr), fullskjerm (MediaPage.swift). Bare med modulen «media».
         if Media43.shared.allowed {
             let n: Int = Media43.shared.torrents.filter { !$0.done }.count
             out.append(More28Row(id: "media", name: "Media", sub: n > 0 ? "\(n) lastes ned · Sonarr, Radarr og mer" : "Kommer snart, serier, filmer og nedlastinger", icon: "play.rectangle") { Media43.shared.show() })

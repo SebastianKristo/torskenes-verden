@@ -538,7 +538,7 @@ struct Brief35NewsCard: View {
             HStack(alignment: .firstTextBaseline) {
                 Text("Nyheter").font(PF.serif(22, medium: true)).foregroundStyle(Brief34C.ink)
                 Spacer(minLength: 6)
-                // Prompt 40: lukker briefen og åpner Nyhetsleseren rett på Glimt-siden (News40Glimt.swift).
+                // Prompt 40: lukker briefen og åpner Nyhetsleseren rett på Glimt-siden (NewsGlimt.swift).
                 Button { News40Model.shared.openFromBrief(store) } label: {
                     Text("✦ Glimt-sammendrag ›").font(PF.ui(12.5, .bold)).foregroundStyle(Brief34C.red)
                         .frame(height: 30).contentShape(Rectangle())

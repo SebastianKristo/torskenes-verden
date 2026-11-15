@@ -225,7 +225,7 @@ struct PaperFamilyCard: View {
     private var content: some View {
         VStack(alignment: .leading, spacing: 12) {
             header
-            // Prompt 41: aktiv Hjemlys øverst i kortet (Hjemlys41Views.swift).
+            // Prompt 41: aktiv Hjemlys øverst i kortet (HjemlysSharingViews.swift).
             if Hjemlys41PosRow.any(Hjemlys40Model.shared) { Hjemlys41PosRow() }
             if m.people.isEmpty {
                 Text(m.loaded ? "Ingen i familien ennå." : "Henter familien …").font(PF.ui(14)).foregroundStyle(p.mut)

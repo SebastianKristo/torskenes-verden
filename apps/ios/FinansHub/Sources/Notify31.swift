@@ -37,9 +37,9 @@ enum Notify31 {
         let snooze = UNNotificationAction(identifier: actSnooze, title: "Minn meg i morgen", options: [])
         let trial = UNNotificationCategory(identifier: trialCategory, actions: [cancel, keep, snooze], intentIdentifiers: [], options: [])
         let ai = UNNotificationCategory(identifier: aiCategory, actions: [], intentIdentifiers: [], options: [])
-        // Prompt 40 (1b): Glimt foreslår Hjemlys – «Ja, start» / «Ikke nå» (Hjemlys40Glimt.swift).
-        // Prompt 41: «Drar du nå?» (Ja / + 15 min) for Hjemlys «Drar snart» (Hjemlys41.swift).
-        // Prompt 50: Sjekk inn – 👍 / Ring / Hent, «👍 Alt bra» / Sjekk inn og Hent / Ring på «Hent meg» (Family50Notify.swift).
+        // Prompt 40 (1b): Glimt foreslår Hjemlys – «Ja, start» / «Ikke nå» (HjemlysChat.swift).
+        // Prompt 41: «Drar du nå?» (Ja / + 15 min) for Hjemlys «Drar snart» (HjemlysSharing.swift).
+        // Prompt 50: Sjekk inn – 👍 / Ring / Hent, «👍 Alt bra» / Sjekk inn og Hent / Ring på «Hent meg» (FamilyGeofence.swift).
         UNUserNotificationCenter.current().setNotificationCategories(Set<UNNotificationCategory>([trial, ai, Hjemlys40Glimt.makeCategory(), Hjemlys41.makeCategory()] + Fam50Notify.categories()))
         BGTaskScheduler.shared.register(forTaskWithIdentifier: taskId, using: nil) { (task: BGTask) in
             Notify31.schedule()
@@ -135,7 +135,7 @@ enum Notify31 {
         let id: String = JS.str(it, "jobId") ?? JS.str(it, "id") ?? UUID().uuidString
         if delivered(id) { return }
         markDelivered(id)
-        // Prompt 50: Sjekk inn med handlinger (👍 / Ring / Hent) og «Hent meg» som tidskritisk varsel (Family50Notify.swift).
+        // Prompt 50: Sjekk inn med handlinger (👍 / Ring / Hent) og «Hent meg» som tidskritisk varsel (FamilyGeofence.swift).
         if Fam50Notify.wants(it["data"] as? [String: Any]) { Fam50Notify.postPending(it); return }
         let cat: String = (JS.str(it, "category") ?? JS.str(it, "kind") ?? "").lowercased()
         if !NotifyModel.allowed(nil) { return }
