@@ -1,8 +1,15 @@
 // Leses synkront i <head> før siden tegnes: Homelab-temaet («cur» eller «2c» = Vindu og papir) fra forrige besøk,
 // så innlogging og forside ikke blinker i feil tema. Det lagrede valget hentes fra serveren etterpå (hltheme.js).
 (function () {
-  var t = 'cur';
-  try { t = localStorage.getItem('hl_theme') === '2c' ? '2c' : 'cur'; } catch (e) { /* privat modus */ }
+  // Serveren skriver brukerens lagrede valg på <html> (data-hl-user, data-web-mode-user). Det vinner over localStorage, så en ny
+  // enhet, en privat fane eller et valg gjort på en annen enhet tegnes riktig fra første bilde (B-B4: ingen bytte etter lasting).
+  var de0 = document.documentElement, su = de0.getAttribute('data-hl-user'), sm = de0.getAttribute('data-web-mode-user');
+  var t = su === '2c' ? '2c' : 'cur';
+  try {
+    if (su === '2c' || su === 'cur') localStorage.setItem('hl_theme', su);
+    else t = localStorage.getItem('hl_theme') === '2c' ? '2c' : 'cur';
+    if (sm === 'light' || sm === 'dark' || sm === 'system') localStorage.setItem('papir_web_mode', sm);
+  } catch (e) { /* privat modus */ }
   // Prompt 38: /kalender?app=mac er Kalender.app for Mac (WKWebView): bare kalenderen i hele vinduet, uten Homelab-menyen,
   // papirtema som følger systemets lyse/mørke modus. Adressen får #/kalender så appen ruter rett dit.
   try {
@@ -23,7 +30,7 @@
   // Prompt 44 (claude-code-web-lys-mork-modus.md): Lys (standard) · Mørk · Følg systemet. Settes før første tegning,
   // så siden ikke blinker hvit. web44.js henter valget fra brukeren (web_theme) og lytter på systemet etterpå.
   try {
-    var wm = localStorage.getItem('papir_web_mode'); if (wm !== 'dark' && wm !== 'system') wm = 'light';
+    var wm = sm || localStorage.getItem('papir_web_mode'); if (wm !== 'dark' && wm !== 'system') wm = 'light';
     var dm = wm === 'dark' || (wm === 'system' && matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
     if (!document.documentElement.hasAttribute('data-kal-app')) { document.documentElement.setAttribute('data-mode', dm); document.documentElement.setAttribute('data-web-mode', wm); }
   } catch (e) { /* privat modus */ }

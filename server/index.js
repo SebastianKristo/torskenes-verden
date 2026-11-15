@@ -165,7 +165,15 @@ function health40(b) {
 }
 const html = (c, body) => c.html(body, 200, { 'Cache-Control': 'no-store' });
 
-app.get('/', async (c) => sessionUser(c) ? html(c, await page('app.html')) : c.redirect('/login'));
+/** Brukerens stil (Papir/Glass) og modus (lys/mørk/system) skrives på <html>, så hl-boot.js tegner riktig tema fra første bilde
+ *  også på en ny enhet eller i en privat fane (B-B4: før startet siden i Glass og byttet når /api/me/layout svarte). */
+const withTheme = (body, u) => {
+  const d = designOf(u), wm = layoutOf(u)?.web_theme;
+  const attrs = ` data-hl-user="${d.hlTheme === '2c' ? '2c' : 'cur'}"${['light', 'dark', 'system'].includes(wm) ? ` data-web-mode-user="${wm}"` : ''}`;
+  return body.replace('<html lang="nb">', `<html lang="nb"${attrs}>`);
+};
+
+app.get('/', async (c) => { const u = sessionUser(c); return u ? html(c, withTheme(await page('app.html'), u)) : c.redirect('/login'); });
 // /login viser førstegangsoppsettet når det ikke finnes noen brukere (login.js spør /api/setup/status).
 app.get('/login', async (c) => sessionUser(c) ? c.redirect('/') : html(c, await page('login.html')));
 app.get('/cv', async (c) => html(c, await page('cv.html')));
@@ -177,7 +185,7 @@ app.get('/gjoremal', (c) => c.redirect(sessionUser(c) ? '/#/gjoremal' : '/login?
 app.get('/kalender', async (c) => {
   const appQ = c.req.query('app');
   if (!sessionUser(c)) return c.redirect(`/login?next=${encodeURIComponent(appQ ? `/kalender?app=${encodeURIComponent(appQ)}` : '/kalender')}`);
-  return appQ && /^[a-z]{2,12}$/.test(appQ) ? html(c, await page('app.html')) : c.redirect('/#/kalender');
+  return appQ && /^[a-z]{2,12}$/.test(appQ) ? html(c, withTheme(await page('app.html'), sessionUser(c))) : c.redirect('/#/kalender');
 });
 // FinansHub: egen fullskjerm-app (desktop og mobil/PWA). API-et har egen tilgangskontroll (sesjon eller token).
 app.get('/finans', (c) => c.redirect('/finans/'));
