@@ -75,17 +75,17 @@ import { startTax51 } from './finans/fin51-tax.js'; // prompt 51 (FIN51): påmin
 import { media43Api, mediaCalendarsMw43, startMediaWatch43, widgets43Api, claudeImport43Api, aiMemory43Api, gscDomains43Api, gsc43Api, gscViewMw43, gscOverviewMw43, kalUpdate43Api, finans43Api, summaryMw43, transactionsMw43, tasks43Api, tasksOrderMw43 } from './api43.js'; // prompt 43 (SERVER43)
 // Prompt 44 (SERVER44): Logger (Docker), Media (servere, søk som jobb, felles status), Avspilling, Studie-dokumenter, Kalender-deltakere,
 // Logg inn som / andres oppsett / overfør eier.
-import { media44Api, mediaSiteMw44, librarySearchMw44, legacyMedia44, integrationsStatusApi44 } from './media44.js';
+import { media44Api, mediaSiteMw44, librarySearchMw44, legacyMedia44, integrationsStatusApi44 } from './media/servers.js';
 import { logs44Api, startLogs44 } from './logs44.js';
 import { impersonation44, admin44Api, layoutLockMw44, setMobileApi44 } from './admin44.js';
 import { kal44Api, kalEventsMw44, assistLocalMw44 } from './kal44.js';
 import { study44Api } from './study44.js';
 import { auth44Api } from './auth44.js';
-import { playback44Api, startPlayback44 } from './playback44.js';
+import { playback44Api, startPlayback44 } from './media/playback.js';
 import { mountApi45 } from './api45.js'; // prompt 45 (SERVER45)
-import { nrkApi } from './nrkdl.js'; // NRK-nedlaster: /api/media/nrk/* (nrk-dl bak norsk VPN)
-import { yubalApi } from './yubal.js'; // Musikk: /api/media/yubal/* (yubal, YouTube Music → musikkbiblioteket)
-import { mountMedia50, startMedia50 } from './media50.js'; // prompt 50 (SRVMEDIA50): bilder med diskcache, sporing etter søk, diagnostikk
+import { nrkApi } from './media/nrk.js'; // NRK-nedlaster: /api/media/nrk/* (nrk-dl bak norsk VPN)
+import { yubalApi } from './media/yubal.js'; // Musikk: /api/media/yubal/* (yubal, YouTube Music → musikkbiblioteket)
+import { mountMedia50, startMedia50 } from './media/images.js'; // prompt 50 (SRVMEDIA50): bilder med diskcache, sporing etter søk, diagnostikk
 import { mountSec51 } from './sec51.js'; // prompt 51 (SEC51): sikkerhet
 import { mountFamily50 } from './family50.js'; // prompt 50 (SRVFAM50): Steder med områder, Folk, Helse, I dag, Sjekk inn
 import { traceObs51, mountObs51, startObs51 } from './obs51/index.js'; // prompt 51 (OBS51): helsedashbord, selvreparasjon, spor, ntfy
@@ -97,7 +97,7 @@ import { startJobs, listJobs, jobsStarted } from './jobs/index.js'; // én planl
 import { badInput85 } from './badinput85.js'; // prompt 85 (SRVSEC85): feil i kroppen fra klienten → 400, ikke 500
 import { anonBodyCap85 } from './anonbody85.js'; // prompt 85 (SRVSEC85): store kropper bare fra innloggede klienter
 import { mountMedfam51, startMedfam51 } from './medfam51/index.js'; // prompt 51 (MEDFAM51): familiekalender med «hvem kjører?», «I kveld», undertekster, lagring, lydbøker
-import { mountMedctl51 } from './medctl51.js'; // prompt 51 (MEDCTL51): mediekontroll for Plex/Jellyfin, Audiobookshelf-fremdrift
+import { mountMedctl51 } from './media/control.js'; // prompt 51 (MEDCTL51): mediekontroll for Plex/Jellyfin, Audiobookshelf-fremdrift
 import { mountLive89, startLive89 } from './live89.js'; // prompt 89 (SRV89): Live Activities / Live Updates (/api/live/*) og APNs-push
 import { mountWebx51 } from './webx51.js'; // prompt 51 (WEBX51): felles søk, onboarding, tema per bruker, offline-konfliktvarsel
 import { mountSrv52 } from './srv52.js'; // prompt 52 (SRV52): Glimt «sist jeg var på», kalenderkontekst, brief-kort, Glimt-figur per bruker
@@ -752,7 +752,7 @@ authed.get('/news', proxy(api.getNews));
 // Plex og Jellyfin: «Spilles nå» (30 s) og «Nylig lagt til» (10 min). Plakater hentes via serveren så tokenet aldri når nettleseren.
 // Hver bruker ser sin egen Plex/Jellyfin (ISO2).
 // Prompt 44: valgt sted (?server= eller brukerens valg) for hele /api/media, søk i biblioteket, og serverens Plex/Jellyfin for alle med
-// tilgang som ikke har egne verdier (den ekte årsaken til «ikke logget inn» på mobil, se media44.js).
+// tilgang som ikke har egne verdier (den ekte årsaken til «ikke logget inn» på mobil, se media/servers.js).
 // Prompt 46 (SERVER46): hvert Media-kall logges (GET /api/media/diag), 401 får code:'HOMELAB_AUTH', bilde-URL-er signeres.
 app.use('/api/media/*', mediaDiag46, homelabAuthCode46, signImages46);
 app.use('/api/playback/*', mediaDiag46, homelabAuthCode46, signImages46);

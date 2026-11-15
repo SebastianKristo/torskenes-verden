@@ -12,13 +12,13 @@
 // (id-en fra klienten er bare en peker – eierskap og evner avgjøres her). Rate limit per bruker (12 per 10 s, 60 per minutt).
 // Feil: 400 ugyldig, 403 ikke din avspilling, 404 avspillingen er borte, 409 avspilleren kan ikke fjernstyres, 429 for mange, 502 Plex/Jellyfin.
 import { Hono } from 'hono';
-import { kv, OWNER } from './db.js';
-import { isAdmin, userInfo, listUsers } from './auth.js';
-import { authOrToken as authOrToken0 } from './mobile.js';
-import { mediaAllowed43 } from './media43.js';
-import { pb44 } from './playback44.js';
-import { absConf51, absOn51 } from './medfam51/audio.js';
-import { getJson as mfGet, errText } from './medfam51/common.js';
+import { kv, OWNER } from '../db.js';
+import { isAdmin, userInfo, listUsers } from '../auth.js';
+import { authOrToken as authOrToken0 } from '../mobile.js';
+import { mediaAllowed43 } from './arr.js';
+import { pb44 } from './playback.js';
+import { absConf51, absOn51 } from '../medfam51/audio.js';
+import { getJson as mfGet, errText } from '../medfam51/common.js';
 
 const MOCK = () => process.env.MOCK_DATA === '1';
 export const ACTIONS51 = ['play', 'pause', 'toggle', 'stop', 'next', 'previous', 'seek', 'volume'];

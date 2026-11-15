@@ -59,7 +59,7 @@ export function meOut(id) {
   const u = userInfo(id);
   if (!u) return null;
   const v = avatarV(id);
-  // Prompt 43: Media-fanen vises for admin og brukere admin har gitt tilgang (samme nøkkel som mediaAllowed43 i media43.js).
+  // Prompt 43: Media-fanen vises for admin og brukere admin har gitt tilgang (samme nøkkel som mediaAllowed43 i media/arr.js).
   const media = isAdmin(id) || ((kv.get(OWNER, 'media43_access', {}) ?? {}).users ?? []).includes(id);
   // Prompt 52: Glimt-figuren per bruker (eget valg → admins standard for brukeren → glimt). Samme regel som glimtSettingsOf (glimt35.js).
   const ownChar = kv.get(id, 'glimt35_settings', null)?.char, defChar = (kv.get(OWNER, 'glimt_char_defaults52', {}) ?? {})[id];

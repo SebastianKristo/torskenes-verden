@@ -1,4 +1,4 @@
-// Musikk i Media: server/yubal.js er eneste vei inn til yubal (som ikke har innlogging). Adressen blir på serveren, alt
+// Musikk i Media: server/media/yubal.js er eneste vei inn til yubal (som ikke har innlogging). Adressen blir på serveren, alt
 // valideres her, og 409 «køen er full» kommer frem som norsk tekst.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -21,7 +21,7 @@ test.after(() => { globalThis.fetch = realFetch; });
 const { default: app } = await import('../server/index.js');
 const { updateConfig } = await import('../server/settings.js');
 const { OWNER } = await import('../server/db.js');
-const y = await import('../server/yubal.js');
+const y = await import('../server/media/yubal.js');
 const { INTEGRATIONS } = await import('../server/integrations-api.js');
 
 async function req(path, { method = 'GET', headers = {}, body } = {}) {

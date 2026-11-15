@@ -41,11 +41,11 @@
 //   seriens katalogsvar (plakat, ellers bilde) eller fra søketreffet da serien ble fulgt, og huskes per følg-id i kv
 //   (OWNER, «nrk_folg_bilder»), så det ikke hentes på nytt hver gang.
 import { Hono } from 'hono';
-import { authOrToken } from './mobile.js';
-import { mediaAllowed43 } from './media43.js';
-import { cfg } from './settings.js';
-import { guardedGet46 } from './gphoto46.js';
-import { kv, OWNER } from './db.js';
+import { authOrToken } from '../mobile.js';
+import { mediaAllowed43 } from './arr.js';
+import { cfg } from '../settings.js';
+import { guardedGet46 } from '../gphoto46.js';
+import { kv, OWNER } from '../db.js';
 
 const ID = /^[a-f0-9]{12}$/;
 const NRK_HOST = /(^|\.)(nrk\.no|nrksuper\.no)$/i;

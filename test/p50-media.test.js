@@ -24,9 +24,9 @@ globalThis.fetch = async () => { throw new TypeError('fetch failed'); };
 test.after(() => { globalThis.fetch = realFetch; });
 
 const { default: app } = await import('../server/index.js');
-const m43 = await import('../server/media43.js');
-const m50 = await import('../server/media50.js');
-const { rgbaToThumbHash50 } = await import('../server/thumbhash50.js');
+const m43 = await import('../server/media/arr.js');
+const m50 = await import('../server/media/images.js');
+const { rgbaToThumbHash50 } = await import('../server/media/thumbhash.js');
 const { thumbHashToRGBA50, thumbHashAverage50, b64ToBytes50 } = await import('../public/js/thumbhash50.js');
 
 let ipN = 10;

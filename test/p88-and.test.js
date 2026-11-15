@@ -146,8 +146,8 @@ fun main() {
 test('regelfila er ren Kotlin (ingen Android-typer), og YouTube-regelen er serverens liste', () => {
   const r = raw('NrkRegel88.kt');
   assert.ok(!/^import\s+(android|androidx|org\.json)/m.test(r), 'ingen Android-/JSON-import i regelfila');
-  assert.ok(r.includes('(music\\\\.youtube\\\\.com|youtube\\\\.com|www\\\\.youtube\\\\.com|m\\\\.youtube\\\\.com|youtu\\\\.be)'), 'samme verter som server/yubal.js');
-  const srv = readFileSync(join(ROOT, 'server/yubal.js'), 'utf8');
+  assert.ok(r.includes('(music\\\\.youtube\\\\.com|youtube\\\\.com|www\\\\.youtube\\\\.com|m\\\\.youtube\\\\.com|youtu\\\\.be)'), 'samme verter som server/media/yubal.js');
+  const srv = readFileSync(join(ROOT, 'server/media/yubal.js'), 'utf8');
   assert.match(srv, /new Set\(\['music\.youtube\.com', 'youtube\.com', 'www\.youtube\.com', 'm\.youtube\.com', 'youtu\.be'\]\)/);
 });
 

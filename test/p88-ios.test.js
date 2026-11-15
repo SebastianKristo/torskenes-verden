@@ -1,5 +1,5 @@
 // Prompt 88 (IOS88): Media → NRK (søk, serieside, plakater på «Serier du følger») og Media → Musikk (yubal) i Homelab-appen (iOS).
-// Fasit: server/nrkdl.js, server/yubal.js, public/js/media-nrk.js, public/js/media-musikk.js og pakke 58 (Media NRK/Musikk.dc.html).
+// Fasit: server/media/nrk.js, server/media/yubal.js, public/js/media-nrk.js, public/js/media-musikk.js og pakke 58 (Media NRK/Musikk.dc.html).
 // Ingen Swift-kompilator i sandkassen: kildesjekker (struktur, tekster, API-stier, trykkflater og reglene for handlinger).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -95,7 +95,7 @@ test('alle kall går via Homelab-serveren (Media46.call) – ingen adresser, tok
   for (const p of ['"/sok?q=" + Nrk88.enc(text)', '"/serie/" + sid', '"/serie/" + sid + "/sesong/" + name', '"POST", "/jobber"', '"POST", "/folger"', '"DELETE", "/folger/" + f.id']) {
     assert.ok(nrk.includes(p), p);
   }
-  // Musikk: alle rutene fra server/yubal.js.
+  // Musikk: alle rutene fra server/media/yubal.js.
   for (const p of ['"/jobs"', '"/subscriptions"', '"/status"', '"/info?url=" + Musikk88.enc(u)', '"/jobs/" + j.id + "/cancel"', '"DELETE", "/jobs/" + j.id',
     '"DELETE", "/jobs")', '"PATCH", "/subscriptions/" + s.id', '"/subscriptions/" + s.id + "/sync"', '"/subscriptions/sync"',
     '"DELETE", "/subscriptions/" + s.id', '"/subscriptions/" + id + "/tracks"', '"/subscriptions/" + id + "/sync"']) {

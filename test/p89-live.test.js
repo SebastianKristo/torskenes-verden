@@ -342,7 +342,7 @@ test('APNs: uten oppsett ingen push; ES256-JWT, headere og payload mot mock-http
 });
 
 test('NRK-jobb: kjører → pause (avbryt i nrk-dl) → fortsett (igjen); tokenet til nrk-dl aldri i svaret', async () => {
-  const nrk = await import('../server/nrkdl.js');
+  const nrk = await import('../server/media/nrk.js');
   updateConfig({ nrk_url: 'http://nrk.p89:8020', nrk_token: 'nrk-hemmelig-89' }, OWNER);
   let state = 'kjorer';
   const kall = [];

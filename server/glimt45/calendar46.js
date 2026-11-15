@@ -139,7 +139,7 @@ export async function movieOf46(title) {
   let out = null;
   try {
     // Samme oppslag som Media bruker (Radarr /movie/lookup → TMDB). Ikke satt opp → kaster → null.
-    const m = await import('../media43.js');
+    const m = await import('../media/arr.js');
     const list = await Promise.race([m.arr43('radarr', 'GET', '/movie/lookup', { query: { term: title }, timeout: 3000 }), new Promise((r) => setTimeout(() => r(null), 3000))]);
     // Bare eksakt tittel: «Dune» skal ikke få spilletiden til «Dune: Part Three».
     const x = (Array.isArray(list) ? list : []).find((y) => fold(y.title) === k) ?? null;

@@ -14,11 +14,11 @@ process.env.NODE_ENV = 'test';
 delete process.env.MOCK_DATA;
 
 const { kv, OWNER } = await import('../server/db.js');
-const m43 = await import('../server/media43.js');
-const m44 = await import('../server/media44.js');
+const m43 = await import('../server/media/arr.js');
+const m44 = await import('../server/media/servers.js');
 
 const web = readFileSync(new URL('../public/js/media43.js', import.meta.url), 'utf8');
-const srv = readFileSync(new URL('../server/media44.js', import.meta.url), 'utf8');
+const srv = readFileSync(new URL('../server/media/servers.js', import.meta.url), 'utf8');
 
 const json = (o, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { 'content-type': 'application/json' } });
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));

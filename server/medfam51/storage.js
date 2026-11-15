@@ -9,7 +9,7 @@
 import { readdir, rename, rm, stat, mkdir } from 'node:fs/promises';
 import { join, resolve, basename, sep } from 'node:path';
 import { db, q } from '../db.js';
-import * as M from '../media43.js';
+import * as M from '../media/arr.js';
 import { HOUR, DAY, GB, iso, sizeText, minText, errText } from './common.js';
 
 db.exec(`CREATE TABLE IF NOT EXISTS media51_deletion (id INTEGER PRIMARY KEY AUTOINCREMENT, kind TEXT NOT NULL, arr_id INTEGER NOT NULL, title TEXT NOT NULL, size INTEGER NOT NULL DEFAULT 0,

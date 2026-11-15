@@ -1,9 +1,9 @@
 // Prompt 43 (SERVER43): innebygd Sonarr, Radarr, qBittorrent og Prowlarr for MOCK_DATA=1 (ingen nett).
 // Etterligner de ekte API-ene (Sonarr/Radarr v3, qBittorrent v2, Prowlarr v1) bak en falsk fetch, så den ekte koden
-// i media43.js (normalisering, kø-kobling, Glimt) kjøres også i demo og tester. Dataene er de samme som i Media.dc.html.
+// i media/arr.js (normalisering, kø-kobling, Glimt) kjøres også i demo og tester. Dataene er de samme som i Media.dc.html.
 // Vertene er http://mock-sonarr, http://mock-radarr, http://mock-qbit og http://mock-prowlarr.
 import { createHash } from 'node:crypto';
-import { osloDate } from './dates/oslo.js';
+import { osloDate } from '../dates/oslo.js';
 
 const GB = 1024 ** 3, MB = 1024 ** 2;
 const DAY = 86400_000;

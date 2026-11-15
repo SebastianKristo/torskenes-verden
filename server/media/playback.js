@@ -14,12 +14,12 @@
 //   Jobb: hvert minutt leses sesjonene og lagres i tabellen plays44 (historikken forsvinner ikke når Plex/Jellyfin glemmer den).
 import { Hono } from 'hono';
 import { randomUUID } from 'node:crypto';
-import { db, q, kv, OWNER } from './db.js';
-import { isAdmin } from './auth.js';
-import { authOrToken } from './mobile.js';
-import { userCfg, setUserCfg } from './settings.js';
-import { mediaAllowed43, mediaSource43 } from './media43.js';
-import { dtf } from './intl-format.js'; // gjenbrukte Intl.DateTimeFormat
+import { db, q, kv, OWNER } from '../db.js';
+import { isAdmin } from '../auth.js';
+import { authOrToken } from '../mobile.js';
+import { userCfg, setUserCfg } from '../settings.js';
+import { mediaAllowed43, mediaSource43 } from './arr.js';
+import { dtf } from '../intl-format.js'; // gjenbrukte Intl.DateTimeFormat
 
 const MOCK = () => process.env.MOCK_DATA === '1';
 db.exec(`CREATE TABLE IF NOT EXISTS plays44 (id INTEGER PRIMARY KEY AUTOINCREMENT, server TEXT NOT NULL, skey TEXT NOT NULL, user TEXT NOT NULL DEFAULT '', item TEXT NOT NULL DEFAULT '',
@@ -262,5 +262,5 @@ playback44Api.get('/stats', ...G, H((c) => stats44(c.req.query('range'))));
 playback44Api.get('/libraries', ...G, H(() => libraries44()));
 playback44Api.get('/status', ...G, (c) => c.json(serversOut()));
 
-// Prompt 51 (MEDCTL51): mediekontrollen (server/medctl51.js) leser sesjonene med de samme hjelperne og samme test-fetch.
+// Prompt 51 (MEDCTL51): mediekontrollen (media/control.js) leser sesjonene med de samme hjelperne og samme test-fetch.
 export const pb44 = { plexConf, jfConf, plexOn, jfOn, demo, PLEX_HDR, plexGet, jfGet, plexSession, jfSession, DEMO_SESS, fetch: (url, o) => (fx ?? fetch)(url, o) };

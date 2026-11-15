@@ -20,7 +20,7 @@ process.env.APP_PASSWORD_HASH = hashPassword('testpassord1');
 const { default: app } = await import('../server/index.js');
 const { updateConfig } = await import('../server/settings.js');
 const { OWNER, kv } = await import('../server/db.js');
-const nrk = await import('../server/nrkdl.js');
+const nrk = await import('../server/media/nrk.js');
 
 const TOKEN = 'hemmelig-token-88u', ADR = 'http://nrk.p88u:8020';
 const LAN = { incoming: { socket: { remoteAddress: '192.168.1.20' } } };

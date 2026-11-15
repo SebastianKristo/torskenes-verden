@@ -8,7 +8,7 @@
 //   GET  /api/media/track/:id → Track · GET /api/media/track?episodeId=|movieId= → Track (siste for elementet)  (G)
 //   POST /api/media/torrents/:hash/start → {ok, torrent, message}  (qBittorrent 5.x /start, reserve /resume for 4.x)  (G)
 //   GET  /api/media/diagnostics[?service=sonarr|radarr] · POST {episodeId?|movieId?} → Diagnostikk (bare admin)
-//   POST /api/media/command og /api/media/glimt (media43.js) får `track` i svaret (mellomvare her).
+//   POST /api/media/command og /api/media/glimt (media/arr.js) får `track` i svaret (mellomvare her).
 // Sikkerhet: tjenestenøkler og passord logges aldri og sendes aldri ut (nedlastingsklienten vises som «passord satt/ikke satt»).
 // Bilder: bare id-er fra eget bibliotek, kilden er den konfigurerte Sonarr/Radarr (MediaCover) eller image.tmdb.org – aldri en
 // adresse fra klienten (SSRF). Bilder skaleres med ImageMagick; uten ImageMagick sendes originalen (og ingen hash).
@@ -17,13 +17,13 @@ import { createHash, createHmac, randomBytes, randomUUID, timingSafeEqual } from
 import { spawn } from 'node:child_process';
 import { mkdir, readFile, writeFile, rename, readdir, unlink, stat } from 'node:fs/promises';
 import { join } from 'node:path';
-import { config } from './config.js';
-import { sessionSecret86 } from './secret86.js'; // prompt 86
-import { authOrToken } from './mobile.js';
-import { isAdmin, userInfo } from './auth.js';
-import * as M from './media43.js';
-import { rgbaToThumbHash50, thumbHashB64_50 } from './thumbhash50.js';
-import { dtf } from './intl-format.js'; // gjenbrukte Intl.DateTimeFormat
+import { config } from '../config.js';
+import { sessionSecret86 } from '../secret86.js'; // prompt 86
+import { authOrToken } from '../mobile.js';
+import { isAdmin, userInfo } from '../auth.js';
+import * as M from './arr.js';
+import { rgbaToThumbHash50, thumbHashB64_50 } from './thumbhash.js';
+import { dtf } from '../intl-format.js'; // gjenbrukte Intl.DateTimeFormat
 
 const MOCK = () => process.env.MOCK_DATA === '1';
 const TZ = 'Europe/Oslo';
@@ -292,7 +292,7 @@ function signUrl(url, uid) {
   const v = new URLSearchParams(m[4]).get('v') ?? '';
   return `${url}&uid=${encodeURIComponent(uid)}&sig=${sig(m[1], m[2], m[3], v, uid)}`;
 }
-/** posterImg/fanartImg for en bilde-URL fra media43.js. */
+/** posterImg/fanartImg for en bilde-URL fra media/arr.js. */
 function imgObj(url, uid, variant) {
   const m = String(url).match(BILDE_RE);
   if (!m) return null;

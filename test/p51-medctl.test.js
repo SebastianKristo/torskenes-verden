@@ -27,8 +27,8 @@ test.after(() => { globalThis.fetch = realFetch; });
 const { default: app } = await import('../server/index.js');
 const { kv, OWNER } = await import('../server/db.js');
 const { setUserCfg } = await import('../server/settings.js');
-const PB = await import('../server/playback44.js');
-const MC = await import('../server/medctl51.js');
+const PB = await import('../server/media/playback.js');
+const MC = await import('../server/media/control.js');
 const MF = await import('../server/medfam51/common.js');
 
 let ipN = 10;

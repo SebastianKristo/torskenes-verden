@@ -12,7 +12,7 @@
 //     en rute som bare finnes for nettleseren → 401 {code:'SESSION_REQUIRED'} (ikke «utlogget»). Ingen/ugyldig innlogging → 401
 //     {error:'Ikke innlogget', code:'HOMELAB_AUTH', reason:'none'|'invalid'}.
 //   - homelabAuthCode46: alle 401 fra /api/media/* og /api/playback/* får code:'HOMELAB_AUTH' (feil fra Sonarr/Radarr er 502
-//     {code:'UPSTREAM_AUTH', service}, se media43.js). Appene viser «Utlogget» BARE ved HOMELAB_AUTH.
+//     {code:'UPSTREAM_AUTH', service}, se media/arr.js). Appene viser «Utlogget» BARE ved HOMELAB_AUTH.
 //   - Signerte bilde-URL-er: /api/media/cover?… og /api/media/poster?… i JSON-svarene får &uid=…&exp=…&sig=… (HMAC, 24 t), så
 //     bilder lastes uten header. authOrToken (mobile.js) godtar signaturen bare for GET på disse stiene.
 //   - mediaDiag46: hvert Media-kall logges (metode, sti uten query, status, auth: bearer|cookie|sig|none, token-alder, ms) i en

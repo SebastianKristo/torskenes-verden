@@ -67,7 +67,7 @@ function nrkLenke(rawUrl) {
 }
 
 test('NRK-lenker: fasiten holder for regelen (speil i JS), og alt som godtas er en lenke serveren også godtar', () => {
-  // Serverens regel (server/nrkdl.js): https + vert som slutter på nrk.no / nrksuper.no.
+  // Serverens regel (server/media/nrk.js): https + vert som slutter på nrk.no / nrksuper.no.
   const serverOk = (v) => { try { const u = new URL(v); return /^https?:$/.test(u.protocol) && /(^|\.)(nrk\.no|nrksuper\.no)$/i.test(u.hostname); } catch { return false; } };
   for (const [inn, ut] of GODTAS) {
     assert.equal(nrkLenke(inn), ut, inn);

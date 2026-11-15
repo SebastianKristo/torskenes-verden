@@ -1,23 +1,23 @@
 // Prompt 43 (SERVER43): Media – Sonarr, Radarr, qBittorrent og Prowlarr (claude-code-media-arr.md, Media.dc.html 2a).
 // Serveren er proxy: tjenestenøklene (API-nøkler, qBittorrent-passord, Jellyfin/Plex-token) er serverhemmeligheter, settes bare
 // av admin (Innstillinger → Integrasjoner → MEDIA) og sendes aldri til klienten. Med MOCK_DATA=1 og en tjeneste uten oppsett
-// brukes den innebygde demoen (media43-mock.js) bak samme kode.
+// brukes den innebygde demoen (media/mock.js) bak samme kode.
 //
 // Tilgang: sesjon eller app-token (skriving krever finance:write) + modulen «media» (admin alltid, andre når admin gir tilgang,
 // PUT /api/media/access). Bare admin kan slette, endre profiler/overvåking, legge til indeksere og velge bort filer.
 // Ruter under /api/media (svarformene står i rapporten for prompt 43 og i kommentarene ved hver rute).
-import { normTitle43, parseEpisodeAsk43 } from './glimt45/media47.js'; // prompt 47
+import { normTitle43, parseEpisodeAsk43 } from '../glimt45/media47.js'; // prompt 47
 import { Hono } from 'hono';
 import { randomBytes, createHash } from 'node:crypto';
 import { AsyncLocalStorage } from 'node:async_hooks';
-import { kv, OWNER } from './db.js';
-import { userCfg, userCfgSet } from './settings.js';
-import { authOrToken } from './mobile.js';
-import { isAdmin, listUsers, userInfo, isLan } from './auth.js';
-import { notifyUser } from './notify.js';
-import { addEventSource } from './calendar.js';
-import { mockFetch43, mockArt43 } from './media43-mock.js';
-import { dtf } from './intl-format.js'; // gjenbrukte Intl.DateTimeFormat
+import { kv, OWNER } from '../db.js';
+import { userCfg, userCfgSet } from '../settings.js';
+import { authOrToken } from '../mobile.js';
+import { isAdmin, listUsers, userInfo, isLan } from '../auth.js';
+import { notifyUser } from '../notify.js';
+import { addEventSource } from '../calendar.js';
+import { mockFetch43, mockArt43 } from './mock.js';
+import { dtf } from '../intl-format.js'; // gjenbrukte Intl.DateTimeFormat
 
 const MOCK = () => process.env.MOCK_DATA === '1';
 const TZ = 'Europe/Oslo';
@@ -56,12 +56,12 @@ export function mediaSource43(id) {
 }
 export const _resetMediaSource43 = () => { adminSrc = { at: 0, map: new Map() }; };
 /* Prompt 44: steder («Hjemme», «Hytta») med hver sin Sonarr/Radarr/qBittorrent/Prowlarr. Valget gjelder hele forespørselen
-   (?server= eller brukerens lagrede valg), satt av media44.js med runMediaSite43(). Standardstedet er oppsettet over. */
+   (?server= eller brukerens lagrede valg), satt av media/servers.js med runMediaSite43(). Standardstedet er oppsettet over. */
 const siteCtx = new AsyncLocalStorage();
 export const runMediaSite43 = (site, fn) => siteCtx.run({ site: site || null }, fn);
 export const mediaSite43 = () => siteCtx.getStore()?.site ?? null;
 let siteConf = null;
-/** media44.js: (siteId, serviceId) → {url, key, user} | null for et annet sted enn standard. */
+/** media/servers.js: (siteId, serviceId) → {url, key, user} | null for et annet sted enn standard. */
 export const _setSiteConf43 = (fn) => { siteConf = fn; };
 /** Oppsettet for en tjeneste. vals = egne verdier (Test tilkobling før lagring); ellers stedet som er valgt, eller serverens oppsett. */
 export function svcConf43(id, vals = null) {
@@ -203,7 +203,7 @@ const stOut = (status, progress = null) => ({ status, statusText: (status === 'd
 
 /* Prompt 50 (SRVMEDIA50, claude-code-media-bilder-raskt.md): årsaken til at plakatene var trege – posterOf ga TVDB/TMDB-adressen
    (remoteUrl, 1–3 MB i full størrelse rett fra internett) eller /cover (full størrelse gjennom serveren uten diskcache). For
-   serier og filmer i biblioteket peker plakaten nå på /api/media/bilde/{serie|film}/{id}/{variant}?w=&v= (media50.js): lokal
+   serier og filmer i biblioteket peker plakaten nå på /api/media/bilde/{serie|film}/{id}/{variant}?w=&v= (media/images.js): lokal
    MediaCover fra Sonarr/Radarr (eller image.tmdb.org), skalert ned til WebP og lagret på disk. v = versjon av kilden (lastWrite). */
 const bildeVer43 = (p) => createHash('sha1').update(`${p?.url ?? ''}|${p?.remoteUrl ?? ''}`).digest('hex').slice(0, 10);
 const BILDE_W43 = { poster: 320, fanart: 1280, banner: 1280 };
@@ -1402,7 +1402,7 @@ media43Api.get('/ekstern', ...G, async (c) => {
   } catch { return c.body(null, 502); }
 });
 
-// Prompt 44 (SERVER44): byggeklosser for media44.js (servere per sted, søk som jobb, slett fil, felles status).
+// Prompt 44 (SERVER44): byggeklosser for media/servers.js (servere per sted, søk som jobb, slett fil, felles status).
 export { normTitle43, parseEpisodeAsk43 };
 export { arr as arr43, qb as qb43, cached as cached43, indexersRaw as indexersRaw43, posterOf as posterOf43, fanartOf as fanartOf43, epCode as epCode43,
   rawFetch as rawFetch43, qbVerb as qbVerb43, queues as queues43, torrentsRaw as torrentsRaw43, seriesList as seriesList43, movieList as movieList43, TSTATE as TSTATE43, bildeVer43, // prompt 50

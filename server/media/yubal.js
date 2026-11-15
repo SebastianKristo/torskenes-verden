@@ -23,10 +23,10 @@
 //
 // Format og kvalitet er felles for hele yubal-containeren (YUBAL_AUDIO_FORMAT / YUBAL_AUDIO_QUALITY), ikke per jobb.
 import { Hono } from 'hono';
-import { authOrToken } from './mobile.js';
-import { mediaAllowed43 } from './media43.js';
-import { cfg } from './settings.js';
-import { guardedGet46 } from './gphoto46.js';
+import { authOrToken } from '../mobile.js';
+import { mediaAllowed43 } from './arr.js';
+import { cfg } from '../settings.js';
+import { guardedGet46 } from '../gphoto46.js';
 
 const IKKE_SATT = 'Musikk er ikke satt opp. Innstillinger → Integrasjoner → Musikk (yubal).';
 const BARE_YT = 'Bare lenker fra music.youtube.com, youtube.com eller youtu.be.';

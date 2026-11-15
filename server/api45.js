@@ -3,7 +3,7 @@
 import { docker45Api, dockerSetupMw45 } from './docker45.js';
 import { gsc45Api, gscInfoMw45 } from './gsc45.js';
 import { aiImport45Api } from './ai-import45.js';
-import { media45Api, playback45Api } from './media45.js';
+import { media45Api, playback45Api } from './media/unmonitored.js';
 import { zone45Api } from './zone45.js';
 import { haHealthMw45 } from './health45.js';
 import { weather45Api, tasks45Api, settings45Api } from './misc45.js';

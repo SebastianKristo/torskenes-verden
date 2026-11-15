@@ -3,7 +3,7 @@
 Media har en egen fane **Musikk** (`#/media/musikk`). Lim inn et album, en spilleliste eller en sang fra YouTube Music, se en forhåndsvisning, og legg det i køen. [yubal](https://github.com/guillevc/yubal) laster ned med metadata, omslag og sangtekster til musikkbiblioteket (`/music` = `/srv/musikk` på verten), som Navidrome, SUB/WAVE-radioene og Unraid leser.
 
 ```
-Nettleser / app ──▶ Homelab OS  /api/media/yubal/*  (server/yubal.js, samme tilgang som Media)
+Nettleser / app ──▶ Homelab OS  /api/media/yubal/*  (server/media/yubal.js, samme tilgang som Media)
                           │  adressen blir på serveren
                           ▼
                     yubal :8010 (arr-containeren, CT 106) ──▶ hoved-Gluetun (Proton VPN) ──▶ YouTube Music
