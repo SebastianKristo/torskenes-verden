@@ -47,6 +47,9 @@ import java.time.LocalDate
 import no.kristo.finanshub.ui.designsystem.HomelabType
 import no.kristo.finanshub.ui.designsystem.HomelabTheme
 import no.kristo.finanshub.ui.designsystem.DsPalette
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.Icon
 
 /*
  * Prompt 44 – Gjøremål (fasit Huskeliste.dc.html):
@@ -96,7 +99,7 @@ internal fun SubRows44(vm: AppViewModel, t: TaskItem, color: Color) {
                 Text(sb.n, color = if (sb.done) p.textTertiary else p.textPrimary, fontSize = HomelabType.callout.fontSize, modifier = Modifier.weight(1f), maxLines = 2, overflow = TextOverflow.Ellipsis,
                     textDecoration = if (sb.done) TextDecoration.LineThrough else null)
                 Box(Modifier.size(32.dp).clip(CircleShape).clickable(onClickLabel = "Slett deloppgave") { vm.delSub44(t.id, i) }, contentAlignment = Alignment.Center) {
-                    Text("✕", modifier = Modifier.semantics { contentDescription = "Slett deloppgave" }, color = p.textTertiary, fontSize = HomelabType.subheadline.fontSize)
+                    Icon(Icons.Filled.Close, contentDescription = "Slett deloppgave", tint = p.textTertiary, modifier = Modifier.size(14.dp))
                 }
             }
         }
@@ -247,7 +250,7 @@ internal fun TaskPage44(vm: AppViewModel) {
                             Box(Modifier.size(22.dp).clip(CircleShape).background(if (sb.done) c else Color.Transparent).border(2.dp, c, CircleShape).clickable(role = Role.Checkbox) { vm.toggleSub44(t.id, i) },
                                 contentAlignment = Alignment.Center) { if (sb.done) Text("✓", color = Color.White, fontSize = HomelabType.caption.fontSize, fontWeight = FontWeight.Bold) }
                             Text(sb.n, color = if (sb.done) p.textTertiary else p.textPrimary, fontSize = HomelabType.callout.fontSize, modifier = Modifier.weight(1f), textDecoration = if (sb.done) TextDecoration.LineThrough else null)
-                            Box(Modifier.size(36.dp).clip(CircleShape).clickable(onClickLabel = "Slett") { vm.delSub44(t.id, i) }, contentAlignment = Alignment.Center) { Text("✕", modifier = Modifier.semantics { contentDescription = "Slett" }, color = p.textTertiary, fontSize = HomelabType.subheadline.fontSize) }
+                            Box(Modifier.size(36.dp).clip(CircleShape).clickable(onClickLabel = "Slett") { vm.delSub44(t.id, i) }, contentAlignment = Alignment.Center) { Icon(Icons.Filled.Close, contentDescription = "Slett", tint = p.textTertiary, modifier = Modifier.size(14.dp)) }
                         }
                     }
                     SubField44(focusNow = false, hint = "Legg til deloppgave") { vm.addSub44(t.id, it) }
@@ -299,7 +302,7 @@ private fun DateCard44(label: String, value: String?, badge: String?, red: Boole
         .clickable(role = Role.Button, onClickLabel = label) { onPick() }.padding(12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             PLabel(label, color = if (red) RED44 else p.textTertiary, modifier = Modifier.weight(1f))
-            if (value != null) Box(Modifier.size(28.dp).clip(CircleShape).clickable(onClickLabel = "Fjern") { onClear() }, contentAlignment = Alignment.Center) { Text("✕", modifier = Modifier.semantics { contentDescription = "Fjern" }, color = p.textTertiary, fontSize = HomelabType.footnote.fontSize) }
+            if (value != null) Box(Modifier.size(28.dp).clip(CircleShape).clickable(onClickLabel = "Fjern") { onClear() }, contentAlignment = Alignment.Center) { Icon(Icons.Filled.Close, contentDescription = "Fjern", tint = p.textTertiary, modifier = Modifier.size(14.dp)) }
         }
         Text(value ?: "Legg til", color = if (value == null) p.textTertiary else if (red) RED44 else p.textPrimary, fontFamily = PaperFonts.serif, fontSize = HomelabType.body.fontSize, lineHeight = 21.sp)
         badge?.let { Text(it, color = RED44, fontWeight = FontWeight.Bold, fontSize = HomelabType.caption.fontSize) }
@@ -321,7 +324,7 @@ private fun Place44(vm: AppViewModel, t: TaskItem) {
             Text("📍", fontSize = HomelabType.body.fontSize)
             Text(shown, color = p.textPrimary, fontSize = HomelabType.callout.fontSize, modifier = Modifier.weight(1f).padding(start = 8.dp).clickable { edit = true; q = shown })
             Box(Modifier.size(32.dp).clip(CircleShape).clickable(onClickLabel = "Fjern sted") { vm.patchTask37(t.id) { it.copy(place = null, geo = null) } }, contentAlignment = Alignment.Center) {
-                Text("✕", modifier = Modifier.semantics { contentDescription = "Fjern sted" }, color = p.textTertiary, fontSize = HomelabType.footnote.fontSize)
+                Icon(Icons.Filled.Close, contentDescription = "Fjern sted", tint = p.textTertiary, modifier = Modifier.size(14.dp))
             }
         } else {
             Row(verticalAlignment = Alignment.CenterVertically) {

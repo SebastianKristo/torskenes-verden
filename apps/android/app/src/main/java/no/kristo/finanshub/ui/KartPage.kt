@@ -63,6 +63,9 @@ import kotlin.math.sin
 import no.kristo.finanshub.ui.designsystem.HomelabType
 import no.kristo.finanshub.ui.designsystem.HomelabTheme
 import no.kristo.finanshub.ui.designsystem.DsPalette
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.Icon
 
 /*
  * Prompt 46: Kart (claude-code-kart-side.md, fasit Kart.dc.html). Kartverket gråtone (WMTS webmercator) i osmdroid (finnes fra før),
@@ -361,7 +364,7 @@ private fun KPanel46(vm: AppViewModel, modifier: Modifier) {
                 if (k.q.isEmpty()) Text("Søk etter holdeplass", color = p.textTertiary, fontSize = HomelabType.callout.fontSize)
                 BasicTextField(k.q, { vm.kartSearch46(it) }, singleLine = true, textStyle = TextStyle(color = p.textPrimary, fontSize = HomelabType.callout.fontSize), cursorBrush = SolidColor(p.accent), modifier = Modifier.fillMaxWidth())
             }
-            if (k.q.isNotEmpty()) Text("✕", color = p.textTertiary, modifier = Modifier.semantics { contentDescription = "Tøm søket" }.clickable { vm.kartSearch46("") }.padding(6.dp))
+            if (k.q.isNotEmpty()) Icon(Icons.Filled.Close, contentDescription = "Tøm søket", tint = p.textTertiary, modifier = Modifier.clickable { vm.kartSearch46("") }.padding(6.dp).size(16.dp))
         }
         if (k.hits.isNotEmpty()) Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(p.surfaceRaised)) {
             k.hits.forEachIndexed { i, hit ->
@@ -458,7 +461,7 @@ private fun StopPanel46(vm: AppViewModel, s: KStop46) {
             PSerif(d?.stop?.name ?: s.name, 22.sp, maxLines = 2)
             Text((d?.stop?.modes ?: s.modes).joinToString(" · ") { MODE_NAME46[it] ?: it }, color = p.textTertiary, fontSize = HomelabType.footnote.fontSize)
         }
-        Text("✕", color = p.textTertiary, fontSize = HomelabType.headline.fontSize, modifier = Modifier.semantics { contentDescription = "Lukk holdeplass" }.clip(CircleShape).clickable(onClickLabel = "Lukk holdeplass") { k.sel = null; k.deps = null }.padding(8.dp))
+        Icon(Icons.Filled.Close, contentDescription = "Lukk holdeplass", tint = p.textTertiary, modifier = Modifier.clip(CircleShape).clickable(onClickLabel = "Lukk holdeplass") { k.sel = null; k.deps = null }.padding(8.dp).size(20.dp))
     }
     if (k.depsBusy) Text("Henter avganger …", color = p.textTertiary, fontSize = HomelabType.subheadline.fontSize)
     if (d != null && d.calls.isEmpty()) Text("Ingen avganger de neste to timene.", color = p.textTertiary, fontSize = HomelabType.subheadline.fontSize)

@@ -27,6 +27,9 @@ import androidx.compose.ui.unit.sp
 import no.kristo.finanshub.*
 import no.kristo.finanshub.ui.designsystem.HomelabType
 import no.kristo.finanshub.ui.designsystem.HomelabTheme
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.Icon
 
 /*
  * Prompt 82 (CHKAND): sjekk ut deler til et produkt – UI. Tilstand og API i SkjoldProjects.kt.
@@ -277,7 +280,7 @@ private fun BomRow82(vm: AppViewModel, b: SkjBom82) {
                 Text("${ret.second}", color = p.textPrimary, fontFamily = PaperFonts.mono, fontWeight = FontWeight.Bold, fontSize = HomelabType.headline.fontSize, modifier = Modifier.widthIn(min = 28.dp), textAlign = TextAlign.Center)
                 Step82("+", "Én mer", ret.second < max) { s.returning = b.partId to (ret.second + 1).coerceAtMost(max); Haptics.select() }
                 PButton(if (s.busy) "…" else "Sjekk inn", Modifier.weight(1f)) { if (!s.busy) vm.returnPart82(b, ret.second) }
-                Text("✕", color = p.textTertiary, modifier = Modifier.size(40.dp).clip(CircleShape).clickable { s.returning = null }.wrapContentSize().semantics { contentDescription = "Avbryt" })
+                Icon(Icons.Filled.Close, contentDescription = "Avbryt", tint = p.textTertiary, modifier = Modifier.size(40.dp).clip(CircleShape).clickable { s.returning = null }.wrapContentSize().size(16.dp))
             }
         }
     }

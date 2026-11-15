@@ -28,6 +28,9 @@ import androidx.compose.ui.unit.sp
 import no.kristo.finanshub.*
 import no.kristo.finanshub.ui.designsystem.HomelabType
 import no.kristo.finanshub.ui.designsystem.HomelabTheme
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.Icon
 
 /*
  * Prompt 77 (SKJAIAND): smarte forslag i Skjold Lab – UI. Tilstand og API i SkjoldAI.kt.
@@ -85,7 +88,7 @@ private fun SuggestCard77(d: SkjDraft76, g: SkjSug77) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             PLabel("✦ Glimt foreslår", modifier = Modifier.weight(1f))
             listOfNotNull(sourceText77(g.source), confText77(g.confidence)).joinToString(" · ").takeIf { it.isNotBlank() }?.let { Text(it, color = p.textTertiary, fontSize = HomelabType.footnote.fontSize, fontFamily = PaperFonts.mono) }
-            Text("✕", color = p.textTertiary, modifier = Modifier.size(36.dp).clip(CircleShape).clickable { s.sug = null }.wrapContentSize().semantics { contentDescription = "Lukk forslaget" })
+            Icon(Icons.Filled.Close, contentDescription = "Lukk forslaget", tint = p.textTertiary, modifier = Modifier.size(36.dp).clip(CircleShape).clickable { s.sug = null }.wrapContentSize().size(16.dp))
         }
         g.name?.let { SugLine77("Navn", it, null, "name" in s.used || d.name == it) { applySug77(d, "name") } }
         g.category?.let { SugLine77("Kategori", it, if (g.categoryNew) "ny" else null, "category" in s.used || d.category == it) { applySug77(d, "category") } }
@@ -134,8 +137,8 @@ internal fun ImagePicker77(vm: AppViewModel, d: SkjDraft76) {
         s.pendingImgs.forEach { im ->
             Box {
                 Img76(vm, im.thumbUrl, 300, Modifier.size(72.dp).clip(RoundedCornerShape(12.dp)))
-                Text("✕", color = Color.White, fontSize = HomelabType.footnote.fontSize, modifier = Modifier.align(Alignment.TopEnd).padding(3.dp).size(24.dp).clip(CircleShape).background(Color.Black.copy(alpha = .55f))
-                    .clickable { s.pendingImgs = s.pendingImgs - im }.wrapContentSize().semantics { contentDescription = "Fjern bildet" })
+                Icon(Icons.Filled.Close, contentDescription = "Fjern bildet", tint = Color.White, modifier = Modifier.align(Alignment.TopEnd).padding(3.dp).size(24.dp).clip(CircleShape).background(Color.Black.copy(alpha = .55f))
+                    .clickable { s.pendingImgs = s.pendingImgs - im }.wrapContentSize().size(14.dp))
             }
         }
         Text("Lagres sammen med delen", color = p.textTertiary, fontSize = HomelabType.footnote.fontSize)
@@ -148,7 +151,7 @@ internal fun ImagePicker77(vm: AppViewModel, d: SkjDraft76) {
                     PLabel("Finn bilde")
                     if (s.imgQ.isNotBlank()) Text("«${s.imgQ}»", color = p.textPrimary, fontSize = HomelabType.callout.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
-                Text("✕", color = p.textTertiary, modifier = Modifier.size(40.dp).clip(CircleShape).clickable { s.imgOpen = false; s.imgPick = null }.wrapContentSize().semantics { contentDescription = "Lukk bildesøket" })
+                Icon(Icons.Filled.Close, contentDescription = "Lukk bildesøket", tint = p.textTertiary, modifier = Modifier.size(40.dp).clip(CircleShape).clickable { s.imgOpen = false; s.imgPick = null }.wrapContentSize().size(16.dp))
             }
             if (s.imgBusy && s.imgPick == null) Thinking77("Søker etter bilder …")
             s.imgErr?.let { Text(it, color = p.accent, fontSize = HomelabType.subheadline.fontSize) }

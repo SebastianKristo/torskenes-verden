@@ -56,6 +56,8 @@ import java.time.LocalTime
 import no.kristo.finanshub.ui.designsystem.HomelabType
 import no.kristo.finanshub.ui.designsystem.HomelabTheme
 import no.kristo.finanshub.ui.designsystem.DsPalette
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 
 /*
  * Prompt 37 (ANDROID37): Gjøremål (tidligere Huskeliste; intern nøkkel «huske»), fasit Huskeliste.dc.html + Mobil Papir App.dc.html.
@@ -270,7 +272,7 @@ private fun GlimtCard37(title: String, sub: String, actions: List<Pair<String, (
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("✦", color = RED37, fontWeight = FontWeight.ExtraBold, fontSize = HomelabType.callout.fontSize)
             Text(title, color = p.textPrimary, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize, modifier = Modifier.weight(1f), maxLines = 2, overflow = TextOverflow.Ellipsis)
-            Box(Modifier.size(28.dp).clip(CircleShape).clickable(role = Role.Button, onClickLabel = "Ikke nå") { Haptics.select(); onClose() }, contentAlignment = Alignment.Center) { Text("✕", modifier = Modifier.semantics { contentDescription = "Ikke nå" }, color = p.textTertiary, fontSize = HomelabType.subheadline.fontSize) }
+            Box(Modifier.size(28.dp).clip(CircleShape).clickable(role = Role.Button, onClickLabel = "Ikke nå") { Haptics.select(); onClose() }, contentAlignment = Alignment.Center) { Icon(Icons.Filled.Close, contentDescription = "Ikke nå", tint = p.textTertiary, modifier = Modifier.size(14.dp)) }
         }
         Text(sub, color = p.textTertiary, fontSize = HomelabType.footnote.fontSize)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -500,7 +502,7 @@ private fun DetailSheet37(vm: AppViewModel, t: TaskItem, lists: List<TaskList>, 
             verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Box(Modifier.size(36.dp).clip(CircleShape).background(p.surfaceRaised).border(1.dp, p.line, CircleShape).clickable(role = Role.Button, onClickLabel = "Lukk") { close() },
-                    contentAlignment = Alignment.Center) { Text("✕", modifier = Modifier.semantics { contentDescription = "Lukk" }, color = p.textPrimary, fontSize = HomelabType.callout.fontSize) }
+                    contentAlignment = Alignment.Center) { Icon(Icons.Filled.Close, contentDescription = "Lukk", tint = p.textPrimary, modifier = Modifier.size(16.dp)) }
                 PSerif("Detaljer", 22.sp, modifier = Modifier.weight(1f), maxLines = 1)
                 Box(Modifier.height(36.dp).clip(CircleShape).background(p.textPrimary).clickable(role = Role.Button) { Haptics.success(); close() }.padding(horizontal = 18.dp), contentAlignment = Alignment.Center) {
                     Text("Ferdig", color = p.surface, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize)
@@ -683,7 +685,7 @@ private fun ListSheet37(vm: AppViewModel, l: TaskList?, users: List<TaskMember>)
             verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Box(Modifier.size(36.dp).clip(CircleShape).background(p.surfaceRaised).border(1.dp, p.line, CircleShape).clickable(role = Role.Button, onClickLabel = "Lukk") { close() },
-                    contentAlignment = Alignment.Center) { Text("✕", modifier = Modifier.semantics { contentDescription = "Lukk" }, color = p.textPrimary, fontSize = HomelabType.callout.fontSize) }
+                    contentAlignment = Alignment.Center) { Icon(Icons.Filled.Close, contentDescription = "Lukk", tint = p.textPrimary, modifier = Modifier.size(16.dp)) }
                 PSerif(if (l == null) "Ny liste" else "Liste", 22.sp, modifier = Modifier.weight(1f), maxLines = 1)
                 if (owner) Box(Modifier.height(36.dp).clip(CircleShape).background(if (name.isNotBlank()) p.textPrimary else p.line).clickable(enabled = name.isNotBlank() && !s.listBusy, role = Role.Button) {
                     vm.saveList37(l?.id, name, color, (picked + listOfNotNull(me)).toList())

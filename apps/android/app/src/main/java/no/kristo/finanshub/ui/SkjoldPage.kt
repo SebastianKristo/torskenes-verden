@@ -63,6 +63,9 @@ import no.kristo.finanshub.*
 import no.kristo.finanshub.ui.designsystem.HomelabType
 import no.kristo.finanshub.ui.designsystem.HomelabTheme
 import no.kristo.finanshub.ui.designsystem.DsPalette
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.Icon
 
 /*
  * Prompt 76 (SKJAND): Skjold Lab-siden (Mer → Skjold Lab, finanshub://skjold). Papir-design som resten av Homelab.
@@ -215,8 +218,8 @@ private fun Search76(vm: AppViewModel) {
                     modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Søk i Skjold Lab" })
             }
             if (s.busy) CircularProgressIndicator(color = p.textTertiary, strokeWidth = 2.dp, modifier = Modifier.size(16.dp))
-            if (s.q.isNotEmpty()) Text("✕", color = p.textTertiary, modifier = Modifier.semantics { contentDescription = "Tøm søket" }.size(40.dp).clip(CircleShape)
-                .clickable { s.q = ""; s.suggest = emptyList(); vm.searchSkjold76(now = true) }.wrapContentSize())
+            if (s.q.isNotEmpty()) Icon(Icons.Filled.Close, contentDescription = "Tøm søket", tint = p.textTertiary, modifier = Modifier.size(40.dp).clip(CircleShape)
+                .clickable { s.q = ""; s.suggest = emptyList(); vm.searchSkjold76(now = true) }.wrapContentSize().size(16.dp))
         }
         if (s.suggest.isNotEmpty()) Column(Modifier.fillMaxWidth().padding(top = 4.dp).shadow(8.dp, RoundedCornerShape(16.dp)).clip(RoundedCornerShape(16.dp)).background(p.surfaceOverlay)) {
             s.suggest.forEach { (t, id, sub) ->
@@ -789,8 +792,8 @@ private fun EditScreen76(vm: AppViewModel) {
             Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 PField("Felt", k, { t -> d.specs = d.specs.mapIndexed { j, o -> if (j == i) t to o.second else o } }, Modifier.weight(.42f))
                 PField("Verdi", v, { t -> d.specs = d.specs.mapIndexed { j, o -> if (j == i) o.first to t else o } }, Modifier.weight(.58f), placeholder = if (k == "verdi") "10k" else "")
-                Text("✕", color = p.textTertiary, modifier = Modifier.size(40.dp).clip(CircleShape).clickable { d.specs = d.specs.filterIndexed { j, _ -> j != i } }.wrapContentSize()
-                    .semantics { contentDescription = "Fjern feltet" })
+                Icon(Icons.Filled.Close, contentDescription = "Fjern feltet", tint = p.textTertiary, modifier = Modifier.size(40.dp).clip(CircleShape).clickable { d.specs = d.specs.filterIndexed { j, _ -> j != i } }.wrapContentSize()
+                    .size(16.dp))
             }
         }
         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -825,8 +828,8 @@ private fun EditScreen76(vm: AppViewModel) {
             existing.forEachIndexed { i, u ->
                 Box {
                     Img76(vm, u, 400, Modifier.size(96.dp).clip(RoundedCornerShape(14.dp)))
-                    Text("✕", color = Color.White, fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.align(Alignment.TopEnd).padding(4.dp).size(28.dp).clip(CircleShape).background(Color.Black.copy(alpha = .55f))
-                        .clickable { val pp = s.part; d.id?.let { vm.deletePartPhoto76(it, pp?.photoNs?.getOrNull(i) ?: i) } }.wrapContentSize().semantics { contentDescription = "Slett bildet" })
+                    Icon(Icons.Filled.Close, contentDescription = "Slett bildet", tint = Color.White, modifier = Modifier.align(Alignment.TopEnd).padding(4.dp).size(28.dp).clip(CircleShape).background(Color.Black.copy(alpha = .55f))
+                        .clickable { val pp = s.part; d.id?.let { vm.deletePartPhoto76(it, pp?.photoNs?.getOrNull(i) ?: i) } }.wrapContentSize().size(14.dp))
                 }
             }
             d.newPhotos.forEach { _ -> Box(Modifier.size(96.dp).clip(RoundedCornerShape(14.dp)).background(p.surfaceSunken), contentAlignment = Alignment.Center) { Text("Nytt bilde", color = p.textTertiary, fontSize = HomelabType.footnote.fontSize) } }
