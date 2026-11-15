@@ -25,7 +25,7 @@ button{cursor:pointer}
 :focus-visible{outline:2px solid var(--blue);outline-offset:2px}
 .mono{font-family:var(--mono)}
 .muted{color:var(--muted)} .sub{color:var(--text-2)} .green{color:var(--green)} .red{color:var(--red)}
-[hidden]{display:none!important}
+[hidden]{display:none!important} /* !important: [hidden] skal skjule også elementer som har egen display-regel */
 
 /* Homelab-tema «Vindu og papir» (2c + 3a). Alt er scopet til html[data-hl="2c"], så «Nåværende» er uendret.
    Et bredt fotovindu øverst (Dashboard og Rom), resten på lyst papir i avisspalter: ingen kort, bare spaltelinjer. */
@@ -73,5 +73,6 @@ html[data-hl="2c"]{
 :root{--gb-serif:'Newsreader',Georgia,'Times New Roman',serif;--gb-sans:'Manrope',system-ui,sans-serif;--gb-mono:'IBM Plex Mono',ui-monospace,monospace}
 
 /* ---------- Skjul scroll-streken overalt på web (claude-code-innst-web-skjul-scrollbar.md) ---------- */
+/* !important: rullefeltet skjules overalt, også i komponenter som setter sitt eget (Innstillinger, Chat, Kalender). */
 *{scrollbar-width:none!important;-ms-overflow-style:none!important}
 *::-webkit-scrollbar{width:0!important;height:0!important;display:none!important}

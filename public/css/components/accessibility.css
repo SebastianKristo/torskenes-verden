@@ -40,4 +40,5 @@ html[data-mode="dark"][data-hl="2c"] #settings .set-badge{color:var(--ds-on-acce
 @keyframes pgIn{from{opacity:0;transform:translate3d(0,10px,0)}to{opacity:1;transform:none}}
 /* Prompt 71 (ANIWEB71): «Reduser bevegelse» – ark og kort som ellers glir/skaleres inn, tones i stedet kort inn (150 ms). */
 @keyframes fade71{from{opacity:0}to{opacity:1}}
+/* !important: «Reduser bevegelse» skal vinne over animasjonene arkene setter selv. */
 @media (prefers-reduced-motion:reduce){.tk-sheet,.k2-sheet,.wxp-sheet,.gb-sheet,.ub-sheet,.gl-ans:not(.gl71-still),.v54-card{animation:fade71 .15s ease-out both!important}}

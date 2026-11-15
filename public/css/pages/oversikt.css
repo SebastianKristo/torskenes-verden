@@ -117,7 +117,7 @@ body.not-dash .tile:hover{background:#262628}
 .menu-head{display:flex;flex-direction:column;gap:2px;color:var(--text);font-size:14px;font-weight:600}
 .menu-head span{font-size:12px;font-weight:400;color:var(--muted)}
 .menu-head:empty{display:none}
-.pillnav a[hidden],.bottomnav a[hidden],.grid>[hidden]{display:none!important}
+.pillnav a[hidden],.bottomnav a[hidden],.grid>[hidden]{display:none!important} /* !important: skjulte faner/kort skal være skjult selv om de har display:flex/grid */
 .sbar{position:relative}
 .sbar:focus-within{z-index:40}
 .sq-drop{position:absolute;left:0;right:0;top:calc(100% + 8px);z-index:30;padding:8px 0;border-radius:24px;background:rgba(18,25,38,.97);color:#eef0f4;border:1px solid #232938;box-shadow:0 18px 40px rgba(0,0,0,.4);text-align:left;backdrop-filter:blur(16px)}
@@ -554,6 +554,7 @@ html[data-hl="2c"] .dg36 .dg36-it .card{border-top:0;padding:0}
 html[data-hl="2c"] .dg36-edit .dg36-wig{background:rgba(255,255,255,.55)}
 @keyframes wg36A{0%,100%{transform:rotate(-.45deg)}50%{transform:rotate(.45deg)}}
 @keyframes wg36B{0%,100%{transform:rotate(.4deg)}50%{transform:rotate(-.4deg)}}
+/* !important: «Reduser bevegelse» stopper vuggingen i redigeringsmodus. */
 @media (prefers-reduced-motion:reduce){.dg36-edit .dg36-wig{animation:none!important;outline:1.5px dashed rgba(178,58,42,.55);outline-offset:2px}}
 .dg36-ctl{position:absolute;inset:0;z-index:3;pointer-events:none}
 .dg36-ctl>*{pointer-events:auto}
@@ -761,6 +762,8 @@ html[data-hl="2c"] .ticker.t38-stop .ticker-view{overflow-x:auto;scrollbar-width
 .dg40 [data-dg="d_eco"]{--wc:#B23A2A;--wic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3a9 9 0 1 0 9 9h-9z'/%3E%3C/svg%3E")}
 .dg40{--c40-card:#fffdf8;--c40-ink:#1b1a17;--c40-mut:#6b665c;--c40-line:#ece5d8;--c40-chip:#f1ece2;gap:var(--dgg)}
 html:not([data-hl="2c"]) .dg40{--c40-card:#211f1b;--c40-ink:#efe9de;--c40-mut:#a49d91;--c40-line:#3b3731;--c40-chip:#2b2824}
+/* !important i .dg40-reglene under: kortene i Oversikt-rutenettet tegner modulenes eget innhold (Kalender, Avganger, Posisjon …),
+   som har egne kortstiler med høyere spesifisitet. Her skal rutenettets ramme, farge (--wc) og luft vinne. */
 html[data-hl="2c"] .dg36.dg40 .dg36-it.p-col,.dg40 .dg36-it{padding:0!important;border:0!important;margin:0!important}
 .dg40 .dg36-it>.dg36-wig{border-radius:20px;background:var(--c40-card);color:var(--c40-ink);box-shadow:0 1px 0 rgba(0,0,0,.04);
   --ink:var(--c40-ink);--ink2:var(--c40-mut);--ink3:var(--c40-mut);--rule:var(--c40-line);--rule2:var(--c40-line);--acc:var(--wc);--pp:var(--c40-card);

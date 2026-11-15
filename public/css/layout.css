@@ -40,6 +40,7 @@
 /* Drag-and-drop */
 [data-dnd]>*{cursor:grab;transition:opacity .15s,transform .15s}
 [data-dnd]>.dragging{opacity:.55;cursor:grabbing;box-shadow:0 12px 30px -12px rgba(0,0,0,.5)}
+/* !important: under dra og slipp skal markøren og «ingen markering» gjelde alle elementer, også knapper og lenker med egen cursor. */
 body.dnd-active,body.dnd-active *{user-select:none!important;-webkit-user-select:none!important;cursor:grabbing!important}
 [data-dnd]>.drop-target{outline:2px dashed var(--blue);outline-offset:4px}
 [data-dnd]>.lifted{transform:scale(.97);opacity:.7}
@@ -420,10 +421,12 @@ html[data-hl="2c"] body[data-route="dash"] .pw.pw-planet .pw-img::after{backgrou
 .ns36-steps{-webkit-backdrop-filter:none!important;backdrop-filter:none!important;background:rgba(255,255,255,.09)!important}
 .ns36{transition:opacity .3s ease}
 .ns36.out{opacity:0}
+/* !important: «Reduser bevegelse» skal stoppe animasjonene uansett hvor de er satt. */
 @media (prefers-reduced-motion: reduce){.ns36-aur span,.ns36-orb,.ns36-fig.fl{animation:none!important}.ns36-ok{animation:none!important}}
 
 /* Oppstart uten cache: fanepillen som skjelett, ingen standardliste. */
 .pillnav .nav-skel52{display:inline-block;height:14px;margin:9px 8px;border-radius:999px;background:currentColor;opacity:.18;flex:none}
+/* !important: logoteksten skjules til faneoppsettet er lest (nav-boot.js), også når temaet setter farge med høyere spesifisitet. */
 html.boot52-nocache header.top .logo{color:transparent!important}
 .skel52{padding:24px 0}
 .skel52-h{height:44px;width:min(420px,70%);border-radius:14px;background:var(--row,rgba(127,127,127,.18));opacity:.5;margin:0 0 22px}
