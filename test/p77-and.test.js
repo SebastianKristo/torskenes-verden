@@ -37,9 +37,9 @@ const progress = (d, t) => t <= 0 ? 'Starter …' : `${d} av ${t}`;
 const finished = (s) => ['done', 'ferdig', 'finished', 'completed', 'error', 'failed', 'feil', 'cancelled', 'avbrutt'].includes(s);
 
 test('filene finnes og er koblet inn i Skjold Lab (skjema, liste, tilbake, innstillinger)', () => {
-  assert.ok(existsSync(join(SRC, 'Skjold77.kt')));
-  assert.ok(existsSync(join(SRC, 'ui/Skjold77Ui.kt')));
-  const ui = code('ui/Skjold76Ui.kt');
+  assert.ok(existsSync(join(SRC, 'SkjoldAI.kt')));
+  assert.ok(existsSync(join(SRC, 'ui/SkjoldAIViews.kt')));
+  const ui = code('ui/SkjoldPage.kt');
   assert.match(ui, /"tidy" -> TidyScreen77\(vm\)/);
   assert.match(ui, /Menu77\(vm\)/);
   assert.match(ui, /Settings77\(vm\)/);
@@ -48,7 +48,7 @@ test('filene finnes og er koblet inn i Skjold Lab (skjema, liste, tilbake, innst
   assert.match(ui, /ImagePicker77\(vm, d\)/);
   assert.match(ui, /Pill76\("⋯"/);
   assert.match(ui, /Pill76\("⚙"/);
-  const m = code('Skjold76.kt');
+  const m = code('SkjoldModel.kt');
   assert.match(m, /photoAdded77\(d, uri, null\)/, 'auto-forslag for ny del');
   assert.match(m, /photoAdded77\(d, null, p\)/, 'auto-forslag etter opplasting');
   assert.match(m, /savePending77\(id\)/, 'bilder fra søket lagres etter ny del');
@@ -59,7 +59,7 @@ test('filene finnes og er koblet inn i Skjold Lab (skjema, liste, tilbake, innst
 });
 
 test('API-kallene følger CONTRACT77', () => {
-  const k = code('Skjold77.kt');
+  const k = code('SkjoldAI.kt');
   assert.match(k, /AI77 = "\$API76\/ai"/);
   assert.match(k, /"\$AI77\/suggest"/, 'multipart file for ny del');
   assert.match(k, /post77\("\/suggest", fields/);
@@ -80,8 +80,8 @@ test('API-kallene følger CONTRACT77', () => {
 });
 
 test('UI-tekstene: Glimt tenker, ny-merke, Bruk alle, Godta valgte, Hopp over, innstillingene', () => {
-  const u = readFileSync(join(SRC, 'ui/Skjold77Ui.kt'), 'utf8');
-  const k = readFileSync(join(SRC, 'Skjold77.kt'), 'utf8');
+  const u = readFileSync(join(SRC, 'ui/SkjoldAIViews.kt'), 'utf8');
+  const k = readFileSync(join(SRC, 'SkjoldAI.kt'), 'utf8');
   assert.match(k, /THINK77 = "Glimt tenker …"/);
   for (const t of ['✦ Foreslå', 'Bruk alle', '"ny"', 'Finn bilde', 'Bruk bildet', 'Godta valgte', 'Hopp over', '✦ Rydd opp med Glimt',
     'Finn bilder på nett', 'Foreslå automatisk når jeg tar bilde']) assert.ok(u.includes(t), t);
@@ -131,7 +131,7 @@ test('bildesøk: bare miniatyrer via egen server, søketekst fra forslaget', () 
 });
 
 test('Kotlin-funksjonene som speiles her finnes', () => {
-  const k = code('Skjold77.kt');
+  const k = code('SkjoldAI.kt');
   for (const f of ['conf01_77', 'confText77', 'mergeSpecs77', 'mergeTags77', 'tidyDefault77', 'ownThumb77', 'imgQuery77', 'progress77', 'tidyFinished77', 'sugDiffers77'])
     assert.match(k, new RegExp(`internal fun ${f}\\(`), f);
 });

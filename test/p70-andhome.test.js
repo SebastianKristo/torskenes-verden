@@ -83,7 +83,7 @@ test('mikrofon: nytt ikon og opptakskort, motoren er fortsatt Voice56 (serveren)
   assert.match(m, /Color\(0xFFC8633F\)/);
   assert.match(m, /delay\(90\)/, 'bølgeformen har egen timer');
   assert.doesNotMatch(m, /MIC56_ON/, 'ingen rød knapp');
-  const v = code('Voice56.kt');
+  const v = code('VoiceInput.kt');
   assert.match(v, /if \(Voice56\.autoSend\) \{ Voice56\.autoSend = false; Voice56\.sendTick\+\+ \}/);
   assert.match(v, /upload\("\/voice53\/transcribe"/, 'serveren skriver ned som før');
 });

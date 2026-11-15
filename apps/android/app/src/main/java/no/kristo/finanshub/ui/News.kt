@@ -61,7 +61,7 @@ internal fun NewsReader(vm: AppViewModel) {
     // Prompt 46: gamle lenker til «Kilder og AI» går til Innstillinger → Nyheter (ingen innstillinger på Nyheter-siden).
     LaunchedEffect(vm.newsSettings) { if (vm.newsSettings) vm.openNewsSettings46() }
     val tabs = vm.newsTabs46(cats)
-    // Prompt 73 (NEWS73): lagrede artikler (News73.kt) – lista og offline-kopiene hentes når leseren åpnes.
+    // Prompt 73 (NEWS73): lagrede artikler (NewsSaved.kt) – lista og offline-kopiene hentes når leseren åpnes.
     LaunchedEffect(Unit) { News73.load(vm) }
     Box(Modifier.fillMaxSize().background(p.bg).clickable(remember { MutableInteractionSource() }, null) {}.statusBarsPadding()) {
         Column(Modifier.fillMaxSize()) {

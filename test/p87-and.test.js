@@ -78,7 +78,7 @@ test('NRK-lenker: fasiten holder for regelen (speil i JS), og alt som godtas er 
 });
 
 test('regelfila er ren Kotlin (ingen Android-typer) og har samme lenkeregel som speilet', () => {
-  const r = raw('NrkRegel87.kt');
+  const r = raw('MediaRegel.kt');
   assert.ok(!/^import\s+(android|androidx|org\.json)/m.test(r), 'ingen Android-/JSON-import i regelfila');
   assert.ok(r.includes('Regex("^https://([a-z0-9-]+\\\\.)*(nrk\\\\.no|nrksuper\\\\.no)(:443)?([/?#].*)?$", RegexOption.IGNORE_CASE)'), 'lenkeregelen');
   for (const f of ['nrkLenke87', 'nrkDelt87', 'nrkFart87', 'nrkEta87', 'nrkSpart87', 'nrkSiden87', 'nrkFolgSub87', 'nrkChip87', 'nrkKnapper87', 'nrkEpChip87', 'nrkEpNr87', 'nrkSum87', 'nrkPause87', 'nrkKompSub87', 'tabScroll87'])
@@ -155,7 +155,7 @@ fun main() {
     const env = { ...process.env };
     delete env.JAVA_TOOL_OPTIONS;
     const opt = { encoding: 'utf8', env, timeout: 180_000, stdio: ['ignore', 'pipe', 'pipe'] };
-    const kc = spawnSync('java', ['-cp', cp, 'org.jetbrains.kotlin.cli.jvm.K2JVMCompiler', '-no-stdlib', '-nowarn', '-cp', stdlib, '-d', join(dir, 'out'), join(SRC, 'NrkRegel87.kt'), join(dir, 'Fasit.kt')], opt);
+    const kc = spawnSync('java', ['-cp', cp, 'org.jetbrains.kotlin.cli.jvm.K2JVMCompiler', '-no-stdlib', '-nowarn', '-cp', stdlib, '-d', join(dir, 'out'), join(SRC, 'MediaRegel.kt'), join(dir, 'Fasit.kt')], opt);
     if (kc.status !== 0) {
       const log = String(kc.stdout ?? '') + String(kc.stderr ?? '');
       // Feil i kilden skal felle testen; en kompilator som ikke lar seg starte på denne maskinen, skal ikke.
@@ -170,17 +170,17 @@ fun main() {
 /* ======================= Fanen ======================= */
 
 test('fanen «NRK» ligger mellom Prowlarr og Avspilling, og viser NRK-skjermen', () => {
-  const m = code('ui/Media43.kt');
+  const m = code('ui/MediaPage.kt');
   // Prompt 88: Musikk står mellom NRK og Avspilling (test/p88-and.test.js).
   assert.match(m, /"prowlarr" to "Prowlarr", "nrk" to "NRK", (?:"musikk" to "Musikk", )?"spill" to "Avspilling"\)/);
   assert.match(m, /"nrk" -> Nrk87\(vm, pad\)/);
   assert.match(code('P43.kt'), /"nrk" -> loadNrk87\(\)/, 'fanen laster status, kø og bibliotek');
-  assert.match(code('ui/Media45.kt'), /"nrk" to 0xFF2B5D8A/, 'egen fanefarge');
+  assert.match(code('ui/MediaPage.kt'), /"nrk" to 0xFF2B5D8A/, 'egen fanefarge');
   assert.match(code('AppViewModel.kt'), /setOf\("snart", "sonarr", "radarr", "qbit", "prowlarr", "nrk"(?:, "musikk")?\)/, 'finanshub://media/nrk åpner fanen');
 });
 
 test('fanelinja ruller den valgte fanen inn i midten', () => {
-  const m = code('ui/Media43.kt');
+  const m = code('ui/MediaPage.kt');
   assert.match(m, /val tabScroll = rememberScrollState\(\)/);
   assert.match(m, /\.onSizeChanged \{ tabView = it\.width \}\.horizontalScroll\(tabScroll\)/, 'synsfeltet måles');
   assert.match(m, /onSizeChanged \{ if \(tabW\[i\] != it\.width\) \{ tabW\[i\] = it\.width; tabMalt\+\+ \} \}/, 'hver fane måles');
@@ -188,7 +188,7 @@ test('fanelinja ruller den valgte fanen inn i midten', () => {
 });
 
 test('én kolonne i rekkefølgen Last ned → Køen → Serier → Bibliotek, med tomtilstand', () => {
-  const u = code('ui/Nrk87Ui.kt');
+  const u = code('ui/NrkPage.kt');
   const liste = body(u, 'internal fun Nrk87(');
   const rekke = ['item("ny") { LastNed87(vm) }', 'item("ko") { Ko87(vm) }', 'item("folg") { Folger87(vm) }', 'bibliotek87(vm, cols)'].map((x) => liste.indexOf(x));
   assert.ok(rekke.every((i) => i >= 0), 'alle fire kortene');
@@ -201,11 +201,11 @@ test('én kolonne i rekkefølgen Last ned → Køen → Serier → Bibliotek, me
     'Fjern ferdige', 'Avbryt', 'Prøv igjen', 'Se etter nye', 'Fjern', 'Sjekk nå', 'Sjekker …', 'Slutt å følge', '‹ Bibliotek', 'Åpne på NRK', 'som mangler',
     'Biblioteket krever en nyere versjon av nrk-dl.', 'Finn ut selv', 'Beste', '1080p', '720p', '540p', 'Serier', 'Filmer', 'Radio',
     'tv/Serie/Season 01/Serie - S01E02 - Tittel.mkv', 'movies/Tittel/Tittel.mkv', 'podcast/Serie/2026-11-13 - Tittel.m4a']) assert.ok(u.includes(`"${t}`) || u.includes(`${t}"`) || u.includes(t), t);
-  assert.ok(raw('Nrk87.kt').includes('"Bare lenker fra nrk.no og nrksuper.no."') && raw('Nrk87.kt').includes('"Lenken ligger allerede i køen."'), 'feiltekstene fra designet');
+  assert.ok(raw('NrkModel.kt').includes('"Bare lenker fra nrk.no og nrksuper.no."') && raw('NrkModel.kt').includes('"Lenken ligger allerede i køen."'), 'feiltekstene fra designet');
 });
 
 test('farger fra designet: blå = laster ned, grønn = ferdig/VPN, rød = feil, dempet = i kø', () => {
-  const u = code('ui/Nrk87Ui.kt');
+  const u = code('ui/NrkPage.kt');
   const t = body(u, 'private fun tone87(');
   assert.match(t, /"ok" -> if \(dark\) Color\(0xFF[0-9A-F]{6}\) else Color\(0xFF2F7A4F\)/);
   assert.match(t, /"dl" -> if \(dark\) Color\(0xFF[0-9A-F]{6}\) else Color\(0xFF2B5D8A\)/);
@@ -216,7 +216,7 @@ test('farger fra designet: blå = laster ned, grønn = ferdig/VPN, rød = feil, 
 /* ======================= Lenkefeltet, Lim inn og deling ======================= */
 
 test('«Lim inn» fyller bare feltet, og teksten ligger i modellen (overlever at Media tegnes på nytt)', () => {
-  const u = code('ui/Nrk87Ui.kt');
+  const u = code('ui/NrkPage.kt');
   const k = body(u, 'private fun LastNed87(');
   assert.match(k, /onClickLabel = "Lim inn lenke"/);
   assert.match(k, /CLIPBOARD_SERVICE\) as\? ClipboardManager\)\?\.primaryClip\?\.getItemAt\(0\)\?\.coerceToText\(ctx\)/);
@@ -225,7 +225,7 @@ test('«Lim inn» fyller bare feltet, og teksten ligger i modellen (overlever at
   assert.ok(!/addNrk87|hlPost|nrkHent87/.test(lim), 'innliming starter ingen nedlasting');
   assert.match(k, /BasicTextField\(n\.url, \{ n\.url = it\.take\(2000\); n\.err = null \}/, 'feltet er bundet til vm.nrk87.url');
   assert.match(k, /val ramme = if \(n\.err != null\) p\.lab else p\.line/, 'rød ramme ved feil');
-  assert.match(code('Nrk87.kt'), /class Nrk87State \{[\s\S]*?var url by mutableStateOf\(""\)/);
+  assert.match(code('NrkModel.kt'), /class Nrk87State \{[\s\S]*?var url by mutableStateOf\(""\)/);
   assert.match(code('AppViewModel.kt'), /val nrk87 = Nrk87State\(\)/);
 });
 
@@ -233,7 +233,7 @@ test('Del → Homelab med en NRK-lenke åpner NRK-fanen med lenken utfylt – ut
   const a = code('MainActivity.kt');
   assert.match(a, /val nrk = nrkDelt87\(txt\)\s*\n\s*if \(nrk != null\) vm\.shareNrk87\(nrk\)\s*\n\s*else vm\.shareText29\(/, 'eksisterende delingsmottak (ACTION_SEND text/*)');
   assert.match(a, /if \(fresh85\) handleShare\(intent\)/, 'delingen behandles bare én gang (prompt 85)');
-  const s = body(code('Nrk87.kt'), 'fun AppViewModel.shareNrk87(');
+  const s = body(code('NrkModel.kt'), 'fun AppViewModel.shareNrk87(');
   assert.match(s, /n\.url = url/);
   assert.match(s, /p43\.tab = "nrk"/);
   assert.match(s, /openMedia43\(\)/);
@@ -244,7 +244,7 @@ test('Del → Homelab med en NRK-lenke åpner NRK-fanen med lenken utfylt – ut
 });
 
 test('en lenke blir bare til en jobb når brukeren trykker (Last ned / knappene i biblioteket)', () => {
-  const n = code('Nrk87.kt');
+  const n = code('NrkModel.kt');
   // Alle POST til /jobber ligger i addNrk87 og nrkHent87.
   const poster = [...n.matchAll(/hlPost\("\/media\/nrk\/jobber"/g)].length;
   assert.equal(poster, 2);
@@ -253,7 +253,7 @@ test('en lenke blir bare til en jobb når brukeren trykker (Last ned / knappene 
   // Lasting (åpne fanen, oppdatering, deling) bruker bare GET.
   for (const f of ['fun AppViewModel.loadNrk87(', 'fun AppViewModel.loadNrkStatus87(', 'fun AppViewModel.loadNrkKo87(', 'fun AppViewModel.tickNrk87(', 'fun AppViewModel.loadNrkLib87(', 'fun AppViewModel.openNrkElem87('])
     assert.ok(!/hlPost|hlDelete|hlPut/.test(body(n, f)), f);
-  const u = code('ui/Nrk87Ui.kt');
+  const u = code('ui/NrkPage.kt');
   // addNrk87 kalles bare fra «Last ned»-knappen og tastaturets «Gå» i lenkefeltet.
   assert.equal([...u.matchAll(/vm\.addNrk87\(\)/g)].length, 2);
   assert.ok(!/LaunchedEffect[^\n]*\{[^\n]*(addNrk87|nrkHent87|nrkJobb87)/.test(u), 'ingen handling fra en effekt');
@@ -262,9 +262,9 @@ test('en lenke blir bare til en jobb når brukeren trykker (Last ned / knappene 
 /* ======================= API og sikkerhet ======================= */
 
 test('alle kall går via Api til /api/media/nrk (http-regelen openSikker gjelder), og ingen adresse eller nøkkel til nrk-dl i appen', () => {
-  const n = code('Nrk87.kt');
-  const u = code('ui/Nrk87Ui.kt');
-  for (const src of [n, u, code('NrkRegel87.kt')]) {
+  const n = code('NrkModel.kt');
+  const u = code('ui/NrkPage.kt');
+  for (const src of [n, u, code('MediaRegel.kt')]) {
     assert.ok(!/openConnection|HttpURLConnection|OkHttpClient|Request\.Builder|java\.net\.URL\b/.test(src), 'ingen egen HTTP-klient');
     assert.ok(!/10\.69\.|:8020|NRK_DL_|nrk_token|Bearer/.test(src), 'ingen adresse/token til nrk-dl');
   }
@@ -276,7 +276,7 @@ test('alle kall går via Api til /api/media/nrk (http-regelen openSikker gjelder
   for (const p of ['get87("/status")', 'get87("/jobber")', 'get87("/bibliotek"', 'get87("/serie?url=" + URLEncoder.encode(e.url, "UTF-8")']) assert.ok(n.includes(p), p);
   assert.match(code('Api.kt'), /private fun url\(|\.openSikker\(\)/, 'Api bruker openSikker()');
   // Plakater: bare vår egen bildeproxy (relativ sti).
-  assert.match(raw('Nrk87.kt'), /o\.txt87\("bilde"\)\?\.takeIf \{ it\.startsWith\("\/"\) && !it\.startsWith\("\/\/"\) \}/);
+  assert.match(raw('NrkModel.kt'), /o\.txt87\("bilde"\)\?\.takeIf \{ it\.startsWith\("\/"\) && !it\.startsWith\("\/\/"\) \}/);
   // Lenker som åpnes i nettleseren, er alltid validerte NRK-lenker.
   for (const m of u.matchAll(/uri\.openUri\((\w+)\)/g)) assert.ok(['lenke', 'l'].includes(m[1]), m[1]);
   assert.match(u, /val lenke = nrkLenke87\(j\.url\)/);
@@ -284,43 +284,43 @@ test('alle kall går via Api til /api/media/nrk (http-regelen openSikker gjelder
 });
 
 test('komprimer sendes bare når brukeren har endret den fra serverens standard, og boksen vises bare når serveren støtter det', () => {
-  const n = code('Nrk87.kt');
+  const n = code('NrkModel.kt');
   const k = body(n, 'private fun JSONObject.komp87(');
   assert.match(k, /val std = n\.status\?\.komp\?\.standard \?: return this/);
   assert.match(k, /val k = n\.komp \?: return this/);
   assert.match(k, /if \(k != std\) put\("komprimer", k\) else this/);
-  assert.match(code('ui/Nrk87Ui.kt'), /st\?\.komp\?\.let \{ k ->\s*\n\s*val on = n\.komp \?: k\.standard/);
+  assert.match(code('ui/NrkPage.kt'), /st\?\.komp\?\.let \{ k ->\s*\n\s*val on = n\.komp \?: k\.standard/);
   assert.match(body(n, 'fun AppViewModel.addNrk87('), /\.put\("folg", n\.folg\)\.komp87\(n\)/);
 });
 
 test('tåler at felt mangler: eldre server (404), ikke satt opp, og nrk-dl uten bibliotek', () => {
-  const n = code('Nrk87.kt');
+  const n = code('NrkModel.kt');
   assert.match(body(n, 'private suspend fun AppViewModel.get87('), /if \(e\.status == 404\) \{ nrk87\.gammel = true; null \} else throw e/);
   assert.match(body(n, 'fun AppViewModel.loadNrkStatus87('), /if \(o\.optBoolean\("configured", true\)\)/);
   assert.match(body(n, 'fun AppViewModel.loadNrkLib87('), /if \(o\.has\("tilgjengelig"\) && !o\.optBoolean\("tilgjengelig", true\)\) \{ n\.libOk = false/);
   assert.match(body(n, 'fun AppViewModel.loadNrkLib87('), /\.distinctBy \{ it\.id \}/, 'like id-er gir ikke like nøkler i lista');
   assert.match(body(n, 'internal fun parseNrkStatus87('), /val k = o\.optJSONObject\("komprimer"\)/);
-  assert.match(code('ui/Nrk87Ui.kt'), /n\.libOk == false -> "Biblioteket krever en nyere versjon av nrk-dl\."/);
+  assert.match(code('ui/NrkPage.kt'), /n\.libOk == false -> "Biblioteket krever en nyere versjon av nrk-dl\."/);
   // Feiltekster fra serveren (502 med norsk tekst) vises som de er; 409 = allerede i køen.
   assert.match(body(n, 'fun AppViewModel.addNrk87('), /if \(e\.status == 409\) "Lenken ligger allerede i køen\."/);
 });
 
 test('oppdatering 2 s / 10 s som stopper når fanen ikke vises eller appen ligger i bakgrunnen, og ett kall om gangen', () => {
-  const u = code('ui/Nrk87Ui.kt');
+  const u = code('ui/NrkPage.kt');
   const f = body(u, 'internal fun Nrk87(');
   assert.match(f, /val pause = nrkPause87\(n\.jobber\.orEmpty\(\)\.map \{ it\.status \}\)/);
   assert.match(f, /LaunchedEffect\(synlig, pause, s\.mediaOpen\) \{\s*\n\s*if \(synlig && s\.mediaOpen\) while \(true\) \{ delay\(pause\); vm\.tickNrk87\(\) \}/);
   assert.match(f, /Lifecycle\.Event\.ON_STOP\) synlig = false/);
-  assert.match(code('NrkRegel87.kt'), /fun nrkPause87\(statuser: List<String>\): Long = if \(statuser\.any \{ it == "ko" \|\| it == "kjorer" \}\) 2000L else 10_000L/);
-  const k = body(code('Nrk87.kt'), 'fun AppViewModel.loadNrkKo87(');
+  assert.match(code('MediaRegel.kt'), /fun nrkPause87\(statuser: List<String>\): Long = if \(statuser\.any \{ it == "ko" \|\| it == "kjorer" \}\) 2000L else 10_000L/);
+  const k = body(code('NrkModel.kt'), 'fun AppViewModel.loadNrkKo87(');
   assert.match(k, /if \(n\.henter\) return/);
   assert.match(k, /finally \{ n\.henter = false \}/);
   // Skjermen (og dermed løkka) finnes bare mens NRK-fanen er valgt.
-  assert.match(code('ui/Media43.kt'), /when \(s\.tab\) \{[\s\S]*?"nrk" -> Nrk87\(vm, pad\)/);
+  assert.match(code('ui/MediaPage.kt'), /when \(s\.tab\) \{[\s\S]*?"nrk" -> Nrk87\(vm, pad\)/);
 });
 
 test('bibliotek: rutenett, detalj med sesonger og episoder, og tilbake lukker detaljen først', () => {
-  const u = code('ui/Nrk87Ui.kt');
+  const u = code('ui/NrkPage.kt');
   assert.match(u, /modifier\.aspectRatio\(2f \/ 3f\)/, 'plakat 2:3');
   assert.match(u, /\(\(inne \+ 12\.dp\) \/ \(150\.dp \+ 12\.dp\)\)\.toInt\(\)\.coerceIn\(2, 8\)/, 'minst 150 bred, minst to i bredden');
   assert.match(u, /"film" -> "FILM"; "radio" -> "RADIO"; else -> "\$\{e\.sesonger\.size\} S"/, 'merket på plakaten');
@@ -330,7 +330,7 @@ test('bibliotek: rutenett, detalj med sesonger og episoder, og tilbake lukker de
   assert.match(d, /else -> Knapp87\("Se etter nye", fylt = true\)/);
   assert.match(d, /if \(e\.type == "radio"\) "\$\{s\.nr\}" else "Sesong \$\{s\.nr\}"/, 'sesong-piller (år for podkast)');
   assert.match(body(u, 'private fun Episode87('), /if \(status == "mangler" && ep\?\.url != null && nrkLenke87\(ep\.url\) != null\) Knapp87\("Last ned"\)/);
-  const h = body(code('Nrk87.kt'), 'fun AppViewModel.nrkHent87(');
+  const h = body(code('NrkModel.kt'), 'fun AppViewModel.nrkHent87(');
   assert.match(h, /\.distinct\(\)\.take\(200\)/, 'maks 200 episoder per kall');
   assert.match(h, /if \(urls\.isNotEmpty\(\)\) body\.put\("episoder", JSONArray\(urls\)\)/);
   assert.match(code('P43.kt'), /s\.tab == "nrk" && nrk87\.valgt != null -> nrk87\.valgt = null/);
@@ -338,6 +338,6 @@ test('bibliotek: rutenett, detalj med sesonger og episoder, og tilbake lukker de
 
 test('brukerskille: NRK-tilstanden (også lenken i feltet) tømmes ved kontobytte og utlogging', () => {
   assert.match(body(code('AppViewModel.kt'), 'private fun clearData('), /nrk87\.reset\(\)/);
-  const r = body(code('Nrk87.kt'), 'fun reset(');
+  const r = body(code('NrkModel.kt'), 'fun reset(');
   for (const f of ['configured = null', 'jobber = null', 'folger = emptyList()', 'url = ""', 'lib = null', 'valgt = null', 'status = null']) assert.ok(r.includes(f), f);
 });

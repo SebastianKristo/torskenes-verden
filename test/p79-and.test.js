@@ -32,29 +32,29 @@ const hint = (red, blue) => {
 };
 
 test('filene finnes og er koblet inn', () => {
-  assert.ok(existsSync(join(SRC, 'Skjold79.kt')));
-  assert.ok(existsSync(join(SRC, 'ui/Skjold79Ui.kt')));
-  const ui = code('ui/Skjold76Ui.kt');
+  assert.ok(existsSync(join(SRC, 'SkjoldPick.kt')));
+  assert.ok(existsSync(join(SRC, 'ui/SkjoldPickViews.kt')));
+  const ui = code('ui/SkjoldPage.kt');
   assert.match(ui, /"pick" -> PickScreen79\(vm\)/, 'plukklista som egen skjerm');
   assert.match(ui, /"pick" -> "Plukkliste"/);
   assert.match(ui, /PickBtn79\(vm, pt\)/, '+ på hvert treff');
   assert.match(ui, /PickBtn79\(vm, pt, big = true\)/, '+ på detaljsiden');
   assert.match(ui, /PickBar79\(vm, Modifier\.align\(Alignment\.BottomCenter\)\)/, 'linja nederst');
-  const u78 = code('ui/Skjold78Ui.kt');
+  const u78 = code('ui/SkjoldLEDViews.kt');
   assert.match(u78, /if \(pickBarOn79\(\)\) return/, 'LitBar78 viker for plukklistelinja');
   assert.match(u78, /LitDots79\(col\)/, 'én prikk per farge');
   assert.match(u78, /drawerColor79\(/, 'fargen per del i trefflista');
   assert.match(u78, /Diagnose79\(vm\)/, 'veiviseren i LED-oppsettet');
   assert.match(u78, /Feilsøk LED/);
   assert.match(u78, /vm\.startDiag79\(cab\.id\)/);
-  const m = code('Skjold76.kt');
+  const m = code('SkjoldModel.kt');
   assert.match(m, /Skjold79\.reset\(\)/);
   assert.match(m, /Skjold79\.diagOn -> stopDiag79\(\)/, 'tilbake lukker feilsøkingen');
   assert.match(m, /loadPick79\(\)/, 'plukklista lastes når Skjold Lab åpnes');
 });
 
 test('API-kallene følger CONTRACT79', () => {
-  const k = code('Skjold79.kt');
+  const k = code('SkjoldPick.kt');
   assert.match(k, /post79\("\/locate", JSONObject\(\)\.put\("partIds", JSONArray\(\)[\s\S]*?\.put\("colors", true\)/, 'partIds + colors:true');
   assert.match(k, /MAX_LIT79 = 20/, 'maks 20 skuffer');
   assert.match(k, /get79\("\/picklist"\)/);
@@ -69,7 +69,7 @@ test('API-kallene følger CONTRACT79', () => {
   assert.match(k, /\/leds\/diagnose", JSONObject\(\)\)/, 'diagnose');
   assert.match(k, /normColor78\(j\.s43\("color"\)\) \?: pickColor79\(/, 'serverens farge, ellers paletten');
   assert.doesNotMatch(k, /json\/state|json\/info/, 'appen snakker aldri med WLED direkte');
-  const k78 = code('Skjold78.kt');
+  const k78 = code('SkjoldLED.kt');
   assert.match(k78, /take\(MAX_LIT79\)/, 'Vis treffene: også maks 20');
 });
 
@@ -82,7 +82,7 @@ test('farger: første er skapets egen, så lett skillbare farger uten gjentak', 
   assert.equal(pickColor(2, '#00C853'), '#FFD000');
   const ten = Array.from({ length: 10 }, (_, i) => pickColor(i, '#FF1744'));
   assert.equal(new Set(ten).size, 10, 'ti deler, ti farger');
-  const k = code('Skjold79.kt');
+  const k = code('SkjoldPick.kt');
   for (const c of PALETTE) assert.ok(k.includes(`"${c}"`), c);
   // Samme palett som serveren (PICKSRV), når den finnes.
   let srv;
@@ -114,8 +114,8 @@ test('feilsøk: hint ut fra svarene', () => {
   assert.equal(hint(true, false), 'oss');
   assert.equal(hint(true, true), 'kal');
   assert.equal(hint(false, true), 'strøm');
-  assert.match(code('Skjold79.kt'), /hints\[it\]/, 'serverens hint for utfallet brukes når det finnes');
-  const k = code('Skjold79.kt');
+  assert.match(code('SkjoldPick.kt'), /hints\[it\]/, 'serverens hint for utfallet brukes når det finnes');
+  const k = code('SkjoldPick.kt');
   assert.match(k, /GPIO/);
   assert.match(k, /WS2812B/);
   assert.match(k, /felles jord/);
@@ -126,7 +126,7 @@ test('feilsøk: hint ut fra svarene', () => {
 });
 
 test('UI-tekstene og tilgjengelighet', () => {
-  const u = code('ui/Skjold79Ui.kt');
+  const u = code('ui/SkjoldPickViews.kt');
   assert.match(u, /💡 Vis alle med LED/);
   assert.match(u, /"Ta ut av lager"/);
   assert.match(u, /"Tøm"/);
@@ -137,5 +137,5 @@ test('UI-tekstene og tilgjengelighet', () => {
   assert.match(u, /"Ja" to|to "Ja"/);
   assert.match(u, /contentDescription = /);
   assert.match(u, /if \(on\) "✓" else "\+"/);
-  assert.match(code('Skjold79.kt'), /"Plukkliste \(\$n\)"/);
+  assert.match(code('SkjoldPick.kt'), /"Plukkliste \(\$n\)"/);
 });

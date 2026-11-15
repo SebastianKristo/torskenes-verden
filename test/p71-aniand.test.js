@@ -17,9 +17,9 @@ const code = (f) => read(f).replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm
 
 /** Filene prompt 71 har rørt (animasjoner). */
 const TOUCHED = [
-  'ui/Anim71.kt', 'ui/Home70.kt', 'ui/Paper15.kt', 'ui/Paper14.kt', 'ui/Paper16.kt', 'ui/Vaer41.kt', 'ui/Weather39.kt', 'ui/Weather22.kt',
-  'ui/Glimt31.kt', 'ui/Glimt43.kt', 'ui/Glimt36.kt', 'ui/Mic70.kt', 'ui/Convo67Ui.kt', 'ui/Chat27Ui.kt', 'ui/Voice56Ui.kt', 'ui/Ui38.kt',
-  'ui/Ui46.kt', 'ui/Ui34.kt', 'ui/Ui52B.kt', 'ui/Brief35.kt', 'ui/Tasks37.kt', 'ui/AiCtl34.kt',
+  'ui/Anim71.kt', 'ui/Home70.kt', 'ui/Paper15.kt', 'ui/Paper14.kt', 'ui/Paper16.kt', 'ui/WeatherEdit.kt', 'ui/WeatherCompare.kt', 'ui/WeatherSheets.kt',
+  'ui/Glimt31.kt', 'ui/Glimt43.kt', 'ui/Glimt36.kt', 'ui/Mic70.kt', 'ui/Convo67Ui.kt', 'ui/Chat27Ui.kt', 'ui/VoiceInputUi.kt', 'ui/Ui38.kt',
+  'ui/Ui46.kt', 'ui/Ui34.kt', 'ui/Ui52B.kt', 'ui/Brief35.kt', 'ui/TasksPage.kt', 'ui/AiCtl34.kt',
 ];
 
 /** Navn på animerte verdier i fila (State/Animatable/delegater fra animasjonsmotoren, klokker og vugging). */
@@ -71,10 +71,10 @@ test('wiggle: vinkelen er State og leses i graphicsLayer (Hjem, Tilpass siden, V
   assert.match(h, /\} else rotationZ = angle\.value/);
   assert.match(h, /remember\(vis, sz\) \{ rows70\(vis, sz\) \}/, 'radene huskes');
   assert.match(code('ui/Paper15.kt'), /rotationZ = angle\.value; translationY/);
-  assert.match(code('ui/Vaer41.kt'), /graphicsLayer \{ rotationZ = angle\.value \}/);
-  assert.match(code('ui/Weather39.kt'), /rotationZ = angle\.value/);
+  assert.match(code('ui/WeatherEdit.kt'), /graphicsLayer \{ rotationZ = angle\.value \}/);
+  assert.match(code('ui/WeatherCompare.kt'), /rotationZ = angle\.value/);
   assert.match(code('ui/Paper16.kt'), /rotationZ = angle\.value \* 3f/);
-  for (const f of ['ui/Home70.kt', 'ui/Paper15.kt', 'ui/Vaer41.kt', 'ui/Weather39.kt', 'ui/Paper16.kt']) {
+  for (const f of ['ui/Home70.kt', 'ui/Paper15.kt', 'ui/WeatherEdit.kt', 'ui/WeatherCompare.kt', 'ui/Paper16.kt']) {
     assert.doesNotMatch(code(f).replace(/internal fun wobbleAngle[^\n]*/, ''), /wobbleAngle\(/, `${f} bruker wobble71`);
   }
 });
@@ -103,7 +103,7 @@ test('Glimt-svaret og mikrofonen: dra, inngang, prikker, markør og bølge uten 
   assert.match(a, /internal fun WaveBars71\(level: Float, color: Color, label: String\)/);
   assert.match(a, /drawRoundRect\(color/);
   assert.match(code('ui/Chat27Ui.kt'), /private fun Ch27Wave\(rms: Float\) = WaveBars71\(rms, CH27_SKY, "wave"\)/);
-  assert.match(code('ui/Voice56Ui.kt'), /internal fun Wave56\(level: Float, color: Color\) = WaveBars71\(level, color, "w56"\)/);
+  assert.match(code('ui/VoiceInputUi.kt'), /internal fun Wave56\(level: Float, color: Color\) = WaveBars71\(level, color, "w56"\)/);
   assert.doesNotMatch(code('ui/Brief35.kt'), /fillMaxHeight\(v\.value\)/);
 });
 

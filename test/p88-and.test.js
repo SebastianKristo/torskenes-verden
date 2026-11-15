@@ -132,7 +132,7 @@ fun main() {
     const env = { ...process.env };
     delete env.JAVA_TOOL_OPTIONS;
     const opt = { encoding: 'utf8', env, timeout: 180_000, stdio: ['ignore', 'pipe', 'pipe'] };
-    const kc = spawnSync('java', ['-cp', cp, 'org.jetbrains.kotlin.cli.jvm.K2JVMCompiler', '-no-stdlib', '-nowarn', '-cp', stdlib, '-d', join(dir, 'out'), join(SRC, 'NrkRegel88.kt'), join(dir, 'Fasit.kt')], opt);
+    const kc = spawnSync('java', ['-cp', cp, 'org.jetbrains.kotlin.cli.jvm.K2JVMCompiler', '-no-stdlib', '-nowarn', '-cp', stdlib, '-d', join(dir, 'out'), join(SRC, 'MediaRegel.kt'), join(dir, 'Fasit.kt')], opt);
     if (kc.status !== 0) {
       const log = String(kc.stdout ?? '') + String(kc.stderr ?? '');
       if (/(NrkRegel88|Fasit)\.kt:\d+:\d+: error:/.test(log)) assert.fail(log.slice(0, 3000));
@@ -144,7 +144,7 @@ fun main() {
 });
 
 test('regelfila er ren Kotlin (ingen Android-typer), og YouTube-regelen er serverens liste', () => {
-  const r = raw('NrkRegel88.kt');
+  const r = raw('MediaRegel.kt');
   assert.ok(!/^import\s+(android|androidx|org\.json)/m.test(r), 'ingen Android-/JSON-import i regelfila');
   assert.ok(r.includes('(music\\\\.youtube\\\\.com|youtube\\\\.com|www\\\\.youtube\\\\.com|m\\\\.youtube\\\\.com|youtu\\\\.be)'), 'samme verter som server/media/yubal.js');
   const srv = readFileSync(join(ROOT, 'server/media/yubal.js'), 'utf8');
@@ -154,31 +154,31 @@ test('regelfila er ren Kotlin (ingen Android-typer), og YouTube-regelen er serve
 /* ======================= Fanene ======================= */
 
 test('Musikk er egen fane etter NRK, med farge, lasting, lenke (finanshub://media/musikk) og brukerskille', () => {
-  const m = code('ui/Media43.kt');
+  const m = code('ui/MediaPage.kt');
   assert.match(m, /"nrk" to "NRK", "musikk" to "Musikk", "spill" to "Avspilling"\)/);
   assert.match(m, /"musikk" -> Musikk88\(vm, pad\)/);
   assert.match(m, /if \(s\.tab != "nrk" && s\.tab != "musikk"\) \{/, 'servervalget for Sonarr/Radarr vises ikke');
-  assert.match(code('ui/Media45.kt'), /"musikk" to 0xFF[0-9A-F]{6}/);
+  assert.match(code('ui/MediaPage.kt'), /"musikk" to 0xFF[0-9A-F]{6}/);
   assert.match(code('P43.kt'), /"musikk" -> loadMusikk88\(\)/);
   const a = code('AppViewModel.kt');
   assert.match(a, /setOf\("snart", "sonarr", "radarr", "qbit", "prowlarr", "nrk", "musikk"\)/);
   assert.match(a, /val musikk88 = Musikk88State\(\)/);
   assert.match(body(a, 'private fun clearData('), /musikk88\.reset\(\)/);
-  const r = body(code('Musikk88.kt'), 'fun reset(');
+  const r = body(code('MusikkModel.kt'), 'fun reset(');
   for (const f of ['configured = null', 'jobs = null', 'subs = null', 'url = ""', 'pv = null', 'open = null', 'spor = emptyMap()']) assert.ok(r.includes(f), f);
-  assert.match(body(code('Nrk87.kt'), 'fun reset('), /sok\.reset\(\)/, 'søket og seriesiden tømmes også');
-  for (const f of ['q = ""', 'treff = null', 'ser = null', 'pick = emptySet()', 'opt = emptyMap()']) assert.ok(body(code('Nrk88.kt'), 'fun reset(').includes(f), f);
+  assert.match(body(code('NrkModel.kt'), 'fun reset('), /sok\.reset\(\)/, 'søket og seriesiden tømmes også');
+  for (const f of ['q = ""', 'treff = null', 'ser = null', 'pick = emptySet()', 'opt = emptyMap()']) assert.ok(body(code('NrkSearchModel.kt'), 'fun reset(').includes(f), f);
 });
 
 /* ======================= NRK: kortet, søket og seriesiden ======================= */
 
 test('NRK-kortet ligger øverst: søk, Kvalitet/Komprimer og VPN; «Har du en lenke?» er sekundært under', () => {
-  const u = code('ui/Nrk87Ui.kt');
+  const u = code('ui/NrkPage.kt');
   const liste = body(u, 'internal fun Nrk87(');
   const rekke = ['nrkKort88(vm,', 'item("ny") { LastNed87(vm) }', 'item("ko") { Ko87(vm) }', 'item("folg") { Folger87(vm) }', 'bibliotek87(vm, cols)'].map((x) => liste.indexOf(x));
   assert.ok(rekke.every((i) => i >= 0), 'alle kortene');
   assert.deepEqual([...rekke].sort((a, b) => a - b), rekke, 'NRK → lenke → Køen → Serier → Bibliotek');
-  const k = code('ui/Nrk88Ui.kt');
+  const k = code('ui/NrkSearchCard.kt');
   const topp = body(k, 'private fun Topp88(');
   assert.match(topp, /PSerif\("NRK"/);
   assert.match(topp, /n\.status\?\.let \{ Vpn87\(it\) \}/);
@@ -192,14 +192,14 @@ test('NRK-kortet ligger øverst: søk, Kvalitet/Komprimer og VPN; «Har du en le
   const l = body(u, 'private fun LastNed87(');
   assert.match(l, /"Har du en lenke\?"/);
   assert.match(l, /val apen = n\.sok\.lenkeApen \|\| !n\.sokMulig88\(\)/, 'åpen når søket ikke finnes');
-  assert.match(code('Nrk88.kt'), /fun Nrk87State\.sokMulig88\(\): Boolean = sok\.mulig && status\?\.bibliotek != false/);
-  assert.match(body(code('Nrk87.kt'), 'fun AppViewModel.shareNrk87('), /n\.sok\.lenkeApen = true/, 'delingsmottaket åpner lenkefeltet');
+  assert.match(code('NrkSearchModel.kt'), /fun Nrk87State\.sokMulig88\(\): Boolean = sok\.mulig && status\?\.bibliotek != false/);
+  assert.match(body(code('NrkModel.kt'), 'fun AppViewModel.shareNrk87('), /n\.sok\.lenkeApen = true/, 'delingsmottaket åpner lenkefeltet');
   // Søket kjøres 350 ms etter siste tastetrykk (bare GET).
   assert.match(liste, /LaunchedEffect\(n\.sok\.q\) \{ if \(n\.sok\.q\.trim\(\) != n\.sok\.sokQ\) \{ delay\(350\); vm\.nrkSok88\(\) \} \}/);
 });
 
 test('treff: 16:9-bilde med merke; serie åpner seriesiden, alt annet har «Last ned» som krever trykk', () => {
-  const k = code('ui/Nrk88Ui.kt');
+  const k = code('ui/NrkSearchCard.kt');
   const t = body(k, 'private fun Treff88(');
   assert.match(t, /\.aspectRatio\(16f \/ 9f\)/);
   assert.match(t, /Merke88\(nrkArtMerke88\(t\.art\)/);
@@ -208,11 +208,11 @@ test('treff: 16:9-bilde med merke; serie åpner seriesiden, alt annet har «Last
   assert.match(t, /if \(sid == null\) Knapp87\(if \(iKo\) "I køen" else "Last ned", fylt = !iKo, enabled = t\.tilgjengelig && !iKo && !n\.sok\.lbusy\) \{ vm\.nrkTreffLastNed88\(t\) \}/);
   assert.equal([...k.matchAll(/nrkTreffLastNed88\(/g)].length, 1, 'bare fra knappen');
   assert.match(k, /items\(rader\.size, key = \{ "nrk-tr-" \+ rader\[it\]\.first\(\)\.url \}\)/, 'nøkler i lista');
-  assert.match(code('Nrk88.kt'), /\.distinctBy \{ it\.url \}/, 'like lenker gir ikke like nøkler');
+  assert.match(code('NrkSearchModel.kt'), /\.distinctBy \{ it\.url \}/, 'like lenker gir ikke like nøkler');
 });
 
 test('seriesiden: bilde, tittel, beskrivelse, sesonger (tomme dempet), avkrysning og merker, og fast bunnlinje', () => {
-  const k = code('ui/Nrk88Ui.kt');
+  const k = code('ui/NrkSearchCard.kt');
   const s = body(k, 'private fun LazyListScope.serie88(');
   assert.match(s, /NettBilde88\(vm, x\?\.bilde/);
   assert.match(s, /x\.beskrivelse\?\.let/);
@@ -230,7 +230,7 @@ test('seriesiden: bilde, tittel, beskrivelse, sesonger (tomme dempet), avkrysnin
   assert.match(b, /nrkHentTekst88\(valgte\)/);
   assert.match(b, /enabled = valgte > 0 && !s\.lbusy\) \{ vm\.nrkHentValgte88\(\) \}/);
   assert.ok(b.includes('Følg serien laster ned nye episoder fremover (de to nyeste sesongene), ikke hele arkivet.'));
-  const u = code('ui/Nrk87Ui.kt');
+  const u = code('ui/NrkPage.kt');
   assert.match(u, /if \(n\.sok\.ser != null && n\.configured != false && !n\.gammel\) SerieBunn88\(vm, Modifier\.align\(Alignment\.BottomCenter\)\)/);
   assert.match(u, /if \(n\.sok\.ser != null\) item\("ser-luft"\)/, 'luft under lista så bunnlinja ikke skjuler siste episode');
   // Tilbake lukker seriesiden før den lukker Media.
@@ -239,24 +239,24 @@ test('seriesiden: bilde, tittel, beskrivelse, sesonger (tomme dempet), avkrysnin
 });
 
 test('en serie i Bibliotek åpner den nye seriesiden', () => {
-  const r = body(code('ui/Nrk87Ui.kt'), 'private fun Rute87(');
+  const r = body(code('ui/NrkPage.kt'), 'private fun Rute87(');
   assert.match(r, /val sid = if \(e\.type == "tv" && vm\.nrk87\.sokMulig88\(\)\) nrkSerieId88\(e\.url\) else null/);
   assert.match(r, /if \(sid != null\) vm\.apneSerie88\(sid, e\.tittel\) else vm\.openNrkElem87\(e\)/);
 });
 
 test('«Serier du følger»: plakat 48×72, radio 72×72, reserveflate med tittelen, bilde bare fra bildeproxyen', () => {
-  const k = code('ui/Nrk88Ui.kt');
+  const k = code('ui/NrkSearchCard.kt');
   assert.match(body(k, 'internal fun FolgPlakat88('), /Modifier\.size\(if \(f\.radio\) 72\.dp else 48\.dp, 72\.dp\)\.clip\(RoundedCornerShape\(8\.dp\)\)/);
   assert.match(body(k, 'private fun Flate88('), /background\(flate87\(tittel\)\)[\s\S]*fontFamily = PaperFonts\.serif/);
-  assert.match(body(code('ui/Nrk87Ui.kt'), 'private fun Folger87('), /FolgPlakat88\(vm, f\)/);
-  assert.match(code('Nrk87.kt'), /egetBilde88\(o\.txt87\("bilde"\)\), o\.bool87\("radio"\) == true/);
-  assert.match(raw('Nrk88.kt'), /internal fun egetBilde88\(v: String\?\): String\? = v\?\.takeIf \{ it\.startsWith\("\/api\/"\) && !it\.startsWith\("\/\/"\) \}/);
+  assert.match(body(code('ui/NrkPage.kt'), 'private fun Folger87('), /FolgPlakat88\(vm, f\)/);
+  assert.match(code('NrkModel.kt'), /egetBilde88\(o\.txt87\("bilde"\)\), o\.bool87\("radio"\) == true/);
+  assert.match(raw('NrkSearchModel.kt'), /internal fun egetBilde88\(v: String\?\): String\? = v\?\.takeIf \{ it\.startsWith\("\/api\/"\) && !it\.startsWith\("\/\/"\) \}/);
   // Bildene hentes med samme innlogging som andre Media-bilder (Img50 + token), mot valgt server.
   assert.match(body(k, 'internal fun NettBilde88('), /Img50\.load\(ctx, vm\.base, vm\.account\?\.token, url, px\)/);
 });
 
 test('NRK: søk, serie og sesong er bare GET; jobb og følg krever trykk', () => {
-  const n = code('Nrk88.kt');
+  const n = code('NrkSearchModel.kt');
   for (const f of ['fun AppViewModel.nrkSok88(', 'fun AppViewModel.apneSerie88(', 'fun AppViewModel.loadSerie88(', 'fun AppViewModel.loadSes88(', 'fun AppViewModel.velgSesong88(', 'fun AppViewModel.nrkSerieOppdater88(', 'fun AppViewModel.nrkVelg88(', 'fun AppViewModel.nrkVelgAlle88('])
     assert.ok(!/hlPost|hlDelete|hlPut|request\(/.test(body(n, f)), f);
   const stier = [...n.matchAll(/hl(Get|Post|Delete)\("([^"]+)/g)].map((m) => `${m[1]} ${m[2]}`);
@@ -267,8 +267,8 @@ test('NRK: søk, serie og sesong er bare GET; jobb og følg krever trykk', () =>
   assert.match(h, /\.put\("episoder", JSONArray\(valgte\.map \{ it\.url \}\)\)\.komp88\(n\)/);
   assert.match(body(n, 'fun AppViewModel.nrkFolgSerie88('), /hlPost\("\/media\/nrk\/folger", JSONObject\(\)\.put\("url", x\.url\)\.put\("type", "tv"\)/);
   for (const p of ['get88("/sok?q=" + URLEncoder.encode(q, "UTF-8"))', 'get88("/serie/" + URLEncoder.encode(sid, "UTF-8"))', '"/sesong/" + URLEncoder.encode(navn, "UTF-8")']) assert.ok(n.includes(p), p);
-  const k = code('ui/Nrk88Ui.kt');
-  assert.ok(!/LaunchedEffect[^\n]*\{[^\n]*(nrkTreffLastNed88|nrkHentValgte88|nrkFolgSerie88)/.test(k + code('ui/Nrk87Ui.kt')), 'ingen handling fra en effekt');
+  const k = code('ui/NrkSearchCard.kt');
+  assert.ok(!/LaunchedEffect[^\n]*\{[^\n]*(nrkTreffLastNed88|nrkHentValgte88|nrkFolgSerie88)/.test(k + code('ui/NrkPage.kt')), 'ingen handling fra en effekt');
   assert.equal([...k.matchAll(/vm\.nrkHentValgte88\(\)/g)].length, 1);
   assert.equal([...k.matchAll(/vm\.nrkFolgSerie88\(\)/g)].length, 1);
 });
@@ -276,7 +276,7 @@ test('NRK: søk, serie og sesong er bare GET; jobb og følg krever trykk', () =>
 /* ======================= Musikk ======================= */
 
 test('Musikk: én kolonne Last ned musikk → Køen → Spillelister du følger, med tomtilstand', () => {
-  const u = code('ui/Musikk88Ui.kt');
+  const u = code('ui/MusikkPage.kt');
   const f = body(u, 'internal fun Musikk88(');
   const rekke = ['item("mu-ny") { MuLastNed88(vm) }', 'item("mu-ko") { MuKo88(vm) }', 'item("mu-subs") { MuSubs88(vm) }'].map((x) => f.indexOf(x));
   assert.ok(rekke.every((i) => i >= 0));
@@ -289,7 +289,7 @@ test('Musikk: én kolonne Last ned musikk → Køen → Spillelister du følger,
 });
 
 test('Musikk: forhåndsvisning viser omslag, tittel, artist, år, type, antall spor og kildekvalitet; «Følg» bare for spillelister', () => {
-  const u = code('ui/Musikk88Ui.kt');
+  const u = code('ui/MusikkPage.kt');
   const p = body(u, 'private fun Forhandsvisning88(');
   assert.match(p, /Omslag88\(vm, pv\.thumbnail, pv\.title/);
   assert.match(p, /muKind88\(pv\.kind\)/);
@@ -299,7 +299,7 @@ test('Musikk: forhåndsvisning viser omslag, tittel, artist, år, type, antall s
   assert.match(p, /if \(liste\) Row\(/);
   assert.match(p, /"Lagres som \$\{m\.format\} i musikkbiblioteket \(Navidrome\)"/);
   assert.match(p, /Btn43\([^\n]*\{ vm\.muStart88\(\) \}/);
-  const n = code('Musikk88.kt');
+  const n = code('MusikkModel.kt');
   const s = body(n, 'fun AppViewModel.muStart88(');
   assert.match(s, /val max = if \(p\.kind != "track" && m\.typ == "max"\) muMax88\(m\.maxN\) else null/);
   assert.match(s, /if \(p\.kind == "playlist" && m\.folg\) \{/);
@@ -315,7 +315,7 @@ test('Musikk: forhåndsvisning viser omslag, tittel, artist, år, type, antall s
 });
 
 test('Musikk: køen og spillelistene (status, fremdrift, tall, kilde, av/på, synk, sanger – én åpen om gangen)', () => {
-  const u = code('ui/Musikk88Ui.kt');
+  const u = code('ui/MusikkPage.kt');
   const j = body(u, 'private fun MuJobb88(');
   for (const x of ['muChip88(j.status)', 'muLinje88(j.status)', 'muTall88(j.status, j.info?.trackCount, j.ok, j.feilet, j.hoppet)', 'if (j.source == "scheduler") "Automatisk" else "Manuell"', 'vm.muHandling88("fjern", j.id)', 'vm.muHandling88("avbryt", j.id)'])
     assert.ok(j.includes(x), x);
@@ -331,13 +331,13 @@ test('Musikk: køen og spillelistene (status, fremdrift, tall, kilde, av/på, sy
   assert.match(sp, /heightIn\(max = 420\.dp\)/);
   assert.match(sp, /items\(d\.tracks\.size, key = \{ "t\$it" \}\)/);
   assert.match(sp, /muSporChip88\(t\.status\)/);
-  const n = code('Musikk88.kt');
+  const n = code('MusikkModel.kt');
   assert.match(body(n, 'fun AppViewModel.muApne88('), /m\.open = if \(m\.open == id\) null else id/, 'én åpen om gangen');
   assert.match(body(n, 'fun AppViewModel.loadMuSpor88('), /System\.currentTimeMillis\(\) - c\.at < 60_000L/, 'huskes i 60 s');
 });
 
 test('Musikk: alle kall via Api til /api/media/yubal, id-er sjekkes, og handlinger bare fra trykk', () => {
-  const n = code('Musikk88.kt');
+  const n = code('MusikkModel.kt');
   const stier = [...n.matchAll(/(hlGet|hlPost|hlDelete|request\("PATCH", |muGet88)\(?"([^"]+)/g)].map((m) => `${m[1].replace(/\($/, '').trim()} ${m[2]}`);
   assert.deepEqual([...new Set(stier)].sort(), [
     'hlDelete /media/yubal/jobs', 'hlDelete /media/yubal/jobs/$i', 'hlDelete /media/yubal/subscriptions/$i', 'hlGet /media/yubal$path',
@@ -348,22 +348,22 @@ test('Musikk: alle kall via Api til /api/media/yubal, id-er sjekkes, og handling
   assert.match(body(n, 'fun AppViewModel.muHandling88('), /if \(handling != "rydd" && handling != "synkalle" && \(id == null \|\| !UUID88\.matches\(id\)\)\) return/);
   for (const f of ['fun AppViewModel.loadMusikk88(', 'fun AppViewModel.muForhandsvis88(', 'fun AppViewModel.loadMuSpor88(', 'fun AppViewModel.muApne88('])
     assert.ok(!/hlPost|hlDelete|hlPut|request\(/.test(body(n, f)), f);
-  const u = code('ui/Musikk88Ui.kt');
+  const u = code('ui/MusikkPage.kt');
   assert.ok(!/LaunchedEffect[^\n]*\{[^\n]*(muStart88|muHandling88)/.test(u), 'ingen handling fra en effekt');
   assert.equal([...u.matchAll(/vm\.muStart88\(\)/g)].length, 1, 'bare «Last ned»-knappen');
-  for (const src of [n, u, code('Nrk88.kt'), code('ui/Nrk88Ui.kt'), code('NrkRegel88.kt')]) {
+  for (const src of [n, u, code('NrkSearchModel.kt'), code('ui/NrkSearchCard.kt'), code('MediaRegel.kt')]) {
     assert.ok(!/openConnection|HttpURLConnection|OkHttpClient|Request\.Builder|java\.net\.URL\b/.test(src), 'ingen egen HTTP-klient');
     assert.ok(!/10\.69\.|:8010|:8020|YUBAL_URL|NRK_DL_|yubal_url|nrk_token|Bearer/.test(src), 'ingen adresse/token til tjenestene');
   }
-  assert.match(code('Musikk88.kt'), /egetBilde88\(o\.s88\("thumbnail"\)\)/, 'omslag bare fra bildeproxyen');
+  assert.match(code('MusikkModel.kt'), /egetBilde88\(o\.s88\("thumbnail"\)\)/, 'omslag bare fra bildeproxyen');
 });
 
 test('Musikk: oppdatering 2 s / 10 s som stopper når fanen ikke vises eller appen er i bakgrunnen, og ett kall om gangen', () => {
-  const f = body(code('ui/Musikk88Ui.kt'), 'internal fun Musikk88(');
+  const f = body(code('ui/MusikkPage.kt'), 'internal fun Musikk88(');
   assert.match(f, /val pause = muPause88\(m\.jobs\.orEmpty\(\)\.map \{ it\.status \}\)/);
   assert.match(f, /LaunchedEffect\(synlig, pause, s\.mediaOpen\) \{\s*\n\s*if \(synlig && s\.mediaOpen\) while \(true\) \{ delay\(pause\); vm\.tickMusikk88\(\) \}/);
   assert.match(f, /Lifecycle\.Event\.ON_STOP\) synlig = false/);
-  const l = body(code('Musikk88.kt'), 'fun AppViewModel.loadMusikk88(');
+  const l = body(code('MusikkModel.kt'), 'fun AppViewModel.loadMusikk88(');
   assert.match(l, /if \(m\.henter\) return/);
   assert.match(l, /finally \{ m\.henter = false \}/);
   assert.match(l, /System\.currentTimeMillis\(\) - m\.stAt > 60_000L/, 'status høyst hvert minutt');
@@ -374,12 +374,12 @@ test('Musikk: oppdatering 2 s / 10 s som stopper når fanen ikke vises eller app
 /* ======================= Tilgjengelighet ======================= */
 
 test('trykkflater på minst 48 dp og etiketter for skjermleser i de nye skjermene', () => {
-  const u87 = code('ui/Nrk87Ui.kt');
+  const u87 = code('ui/NrkPage.kt');
   assert.match(body(u87, 'internal fun Knapp87('), /heightIn\(min = 48\.dp\)/);
   assert.match(body(u87, 'internal fun Valg87('), /Pille88\(/);
-  const k = code('ui/Nrk88Ui.kt');
+  const k = code('ui/NrkSearchCard.kt');
   assert.match(body(k, 'internal fun Pille88('), /heightIn\(min = 48\.dp\)[\s\S]*selectable\(selected = on, enabled = enabled, role = Role\.Tab\)/);
-  const u = code('ui/Musikk88Ui.kt');
+  const u = code('ui/MusikkPage.kt');
   assert.match(body(u, 'private fun Bryter88('), /size\(56\.dp, 48\.dp\)[\s\S]*toggleable\(value = on, enabled = enabled, role = Role\.Switch\)[\s\S]*contentDescription = label/);
   for (const [src, lbl] of [[k, 'contentDescription = "Søk i NRK"'], [k, 'contentDescription = "Tøm søk"'], [u, 'contentDescription = "Lenke fra YouTube Music"'], [u, 'contentDescription = "Antall spor"'], [u87, 'contentDescription = "Lenke fra NRK"']])
     assert.ok(src.includes(lbl), lbl);

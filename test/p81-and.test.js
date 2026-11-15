@@ -90,9 +90,9 @@ function fasit(etasjer) {
 }
 
 test('filene finnes og er koblet inn (tegning, kart, tilbake, oppsett)', () => {
-  assert.ok(existsSync(join(SRC, 'Skjold81.kt')));
-  assert.ok(existsSync(join(SRC, 'ui/Skjold81Ui.kt')));
-  const m = code('Skjold76.kt');
+  assert.ok(existsSync(join(SRC, 'SkjoldSpan.kt')));
+  assert.ok(existsSync(join(SRC, 'ui/SkjoldSpanViews.kt')));
+  const m = code('SkjoldModel.kt');
   assert.match(m, /val spanR: Int = 1, val spanC: Int = 1, val coveredBy: String\? = null/, 'skuffen har spenn og coveredBy');
   assert.match(m, /d\.i76\("spanR"\)[\s\S]*?d\.i76\("spanC"\)[\s\S]*?d\.s43\("coveredBy"\)/, 'leses fra kartet');
   assert.match(m, /Skjold81\.reset\(\)/);
@@ -100,7 +100,7 @@ test('filene finnes og er koblet inn (tegning, kart, tilbake, oppsett)', () => {
   assert.match(m, /loadPresets81\(\)/);
   assert.match(m, /locText81\(cabId,/, 'angre-teksten viser spenn');
   assert.match(m, /cellOf81\(m, m\.rows, m\.cols, r, c\)\.let \{ it\.row == r && it\.col == c && cellCount81\(m, it\) == 0 \}/, 'ledig skuff: bare ankre');
-  const ui = code('ui/Skjold76Ui.kt');
+  const ui = code('ui/SkjoldPage.kt');
   assert.match(ui, /for \(cell in cells81\(rows, cols, m\)\)/, 'tegningen: ett felt per skuff');
   assert.match(ui, /Size\(fw, fh\)/);
   assert.match(ui, /anchor81\(s\.maps\[cab\.id\], r, c\)\.let \{ a -> onTap\(a\.first, a\.second\) \}/, 'trykk på dekket rute = ankeret');
@@ -117,7 +117,7 @@ test('filene finnes og er koblet inn (tegning, kart, tilbake, oppsett)', () => {
 });
 
 test('API-kallene følger CONTRACT81', () => {
-  const k = code('Skjold81.kt');
+  const k = code('SkjoldSpan.kt');
   assert.match(k, /PRESET_ID81 = "skjoldlab3d"/);
   assert.match(k, /PRESET_NAME81 = "Skjold Lab-hylla \(3D-print\)"/);
   assert.match(k, /put81\("\/cabinets\/\$cabId\/drawers\/\$row\/\$col", JSONObject\(\)\.put\("spanR", spanR\.coerceIn\(1, 4\)\)\.put\("spanC", spanC\.coerceIn\(1, 4\)\)\)/);
@@ -126,7 +126,7 @@ test('API-kallene følger CONTRACT81', () => {
   assert.match(k, /get81\("\/presets"\)/);
   assert.match(k, /optJSONArray\("etasjer"\)/, 'options.etasjer');
   assert.match(k, /Kunne ikke lagre: \$\{e\.message/, '409 viser serverens forklaring');
-  const u = code('ui/Skjold81Ui.kt');
+  const u = code('ui/SkjoldSpanViews.kt');
   assert.match(u, /"Bruk \$PRESET_NAME81"/, 'knappen «Bruk Skjold Lab-hylla (3D-print)»');
   assert.match(u, /presetSummary81\(et\)/, 'bekreftelse');
   assert.match(u, /Text\("Bredde"/);
@@ -144,7 +144,7 @@ test('plassering i tekst: stor, bred og vanlig skuff', () => {
   assert.deepEqual(parseShort('4-1'), [4, 1]);
   assert.equal(parseShort(null), null);
   assert.equal(parseShort('x'), null);
-  const k = code('Skjold81.kt');
+  const k = code('SkjoldSpan.kt');
   assert.match(k, /"Rad \$r · Skuff \$c"/);
   assert.match(k, /"\$row–\$\{row \+ spanR - 1\}"/);
 });
@@ -161,7 +161,7 @@ test('tegningen av fasiten: 4 etasjer = 8 store, 10 brede, 69 vanlige; 5 etasjer
   }
   assert.equal(presetSummary(4), 'Skapet blir 11 × 11 med 8 store og 10 brede skuffer');
   assert.equal(presetSummary(5), 'Skapet blir 13 × 11 med 10 store og 10 brede skuffer');
-  assert.match(code('Skjold81.kt'), /Triple\(13, 10, 10\) else Triple\(11, 8, 10\)/);
+  assert.match(code('SkjoldSpan.kt'), /Triple\(13, 10, 10\) else Triple\(11, 8, 10\)/);
 });
 
 test('trykk på dekket rute gir ankeret; antall på ankeret; eldre kart uten coveredBy', () => {
@@ -192,5 +192,5 @@ test('slå sammen / dele: innenfor skapet og ingen overlapp (klientsjekk før PU
 });
 
 test('ikke rørt: Hjem-filene (annen agent)', () => {
-  for (const f of ['Skjold81.kt', 'ui/Skjold81Ui.kt']) assert.doesNotMatch(code(f), /Home70|Ui52B|Tiles50/);
+  for (const f of ['SkjoldSpan.kt', 'ui/SkjoldSpanViews.kt']) assert.doesNotMatch(code(f), /Home70|Ui52B|Tiles50/);
 });

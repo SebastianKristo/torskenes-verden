@@ -49,8 +49,8 @@ function homography(src, dst) {
 }
 
 test('filene finnes, og Skjold Lab er koblet inn i Mer, sidene, tilbake, dyplenker, snarveier, felles søk og Glimt', () => {
-  assert.ok(existsSync(join(SRC, 'Skjold76.kt')));
-  assert.ok(existsSync(join(SRC, 'ui/Skjold76Ui.kt')));
+  assert.ok(existsSync(join(SRC, 'SkjoldModel.kt')));
+  assert.ok(existsSync(join(SRC, 'ui/SkjoldPage.kt')));
   assert.match(code('ui/Paper.kt'), /if \(Skjold76\.open\) PgIn52 \{ SkjoldPage76\(vm\) \}/);
   assert.match(code('ui/Ui52B.kt'), /no\.kristo\.finanshub\.Skjold76\.open,\s*\)\.count \{ it \}/);
   assert.match(code('ui/Mer24.kt'), /row\("skjold", "Skjold Lab", "Deler, skuffer og skap"\) \{ vm\.openSkjold76\(\) \}/);
@@ -68,7 +68,7 @@ test('filene finnes, og Skjold Lab er koblet inn i Mer, sidene, tilbake, dyplenk
 });
 
 test('API-kontrakten: alle rutene under /api/skjold brukes', () => {
-  const k = code('Skjold76.kt');
+  const k = code('SkjoldModel.kt');
   assert.match(k, /const val API76 = "\/skjold"/);
   for (const r of [
     /get76\("\/cabinets"\)/, /post76\("\/cabinets", body\)/, /patch76\("\/cabinets\/\$id", body\)/, /del76\("\/cabinets\/\$\{c\.id\}" \+ \(move\?\.let \{ "\?move="/,
@@ -83,15 +83,15 @@ test('API-kontrakten: alle rutene under /api/skjold brukes', () => {
   assert.match(k, /internal const val FILES76 = "\/api\/skjold\/files\/"/);
   // 409 ved sletting av skap med deler → spør om flytting (?move=<id>|none).
   assert.match(k, /if \(e\.status == 409\) \{ s\.cabDeleteAsk = c; return@act76 \}/);
-  assert.match(code('ui/Skjold76Ui.kt'), /vm\.deleteCab76\(c, "none"\)/);
+  assert.match(code('ui/SkjoldPage.kt'), /vm\.deleteCab76\(c, "none"\)/);
   // Flytt: occupied gir advarsel, og angre i 10 s.
   assert.match(k, /s\.occupied = objs34\(o\?\.optJSONArray\("occupied"\)\)/);
   assert.match(k, /delay\(10_000\); if \(s\.undo\?\.seq == seq\) s\.undo = null/);
 });
 
 test('kamera/bilder, perspektiv med setPolyToPoly, puls bare med opacity, offline-buffer', () => {
-  const u = code('ui/Skjold76Ui.kt');
-  const k = code('Skjold76.kt');
+  const u = code('ui/SkjoldPage.kt');
+  const k = code('SkjoldModel.kt');
   assert.match(u, /ActivityResultContracts\.TakePicture\(\)/);
   assert.match(u, /ActivityResultContracts\.PickVisualMedia\(\)/);
   assert.match(u, /m\.setPolyToPoly\(src, 0, dst, 0, 4\)/);
@@ -137,10 +137,10 @@ test('plassering, tegning og tilleggsskap', () => {
   assert.deepEqual(cellAt(1.5, 3.2, 12, 5), [4, 2], 'rad 1 øverst, skuff 1 til venstre');
   assert.equal(cellAt(5, 0, 12, 5), null);
   assert.equal(suggestCols(270), 4, '27 cm → 4 skuffer à ~60 mm');
-  const k = code('Skjold76.kt');
+  const k = code('SkjoldModel.kt');
   assert.match(k, /internal fun short76\(row: Int, col: Int\): String = "\$row-\$col"/);
   assert.match(k, /internal fun defLabel76\(row: Int, col: Int\): String = "R\$row·S\$col"/);
-  assert.match(code('ui/Skjold76Ui.kt'), /"Tilleggsskap \(3D-print\)" else "Nytt skap", 12, if \(threeD\) suggestCols76\(270\) else 5/);
+  assert.match(code('ui/SkjoldPage.kt'), /"Tilleggsskap \(3D-print\)" else "Nytt skap", 12, if \(threeD\) suggestCols76\(270\) else 5/);
 });
 
 test('perspektiv: 4 hjørner gir projektiv (ikke affin) avbildning av rutenettet', () => {
@@ -162,7 +162,7 @@ test('Glimt: «hvor er M3-skruene?» blir et delsøk, ikke Familie', () => {
   assert.equal(match(['M3 × 10 skruer'], whereQ('hvor er M3-skruene?')), true);
   assert.equal(whereQ('hvor finner jeg motstandene'), 'motstand');
   assert.equal(match(['Motstand 10kΩ'], whereQ('hvor er Ingrid')), false);
-  const k = code('Skjold76.kt');
+  const k = code('SkjoldModel.kt');
   assert.match(k, /if \(pid != null\) return "finanshub:\/\/skjold\/del\/"/);
   assert.match(k, /return "finanshub:\/\/skjold\/skap\/\$cab\/\$\{short76\(r, c\)\}"/);
 });
