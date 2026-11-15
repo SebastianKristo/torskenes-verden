@@ -231,7 +231,7 @@ export async function notifyUser(user, { title, body = '', url = null, tag = nul
   // Prompt 50 (SRVFAM50): «Hent meg» (data.priority 'high') går gjennom stille timer og sendes med høy prioritet.
   const high = item.data?.priority === 'high';
   if (inQuiet(n, now) && !high) return { id, realtime, pushed: 0, skipped: 'stille timer' };
-  // Prompt 51 (OBS51): samme varsel til brukerens ntfy-emner (obs51/ntfy.js), i bakgrunnen.
+  // Prompt 51 (OBS51): samme varsel til brukerens ntfy-emner (system/observability/ntfy.js), i bakgrunnen.
   if (notifyHook51) Promise.resolve().then(() => notifyHook51(user, item)).catch(() => {});
   const subs = db.prepare('SELECT * FROM push_subscriptions WHERE user_id=?').all(user);
   let pushed = 0;

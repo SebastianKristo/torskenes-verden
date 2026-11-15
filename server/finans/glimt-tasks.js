@@ -289,7 +289,7 @@ async function runTask(id, now) {
       if (_taskLlm42.impl || process.env.NODE_ENV !== 'test') {
         try {
           const prompt = `Skriv et kort sammendrag (2–3 setninger, norsk) av forbruket. Bruk bare disse tallene og ikke finn på nye.\n${JSON.stringify({ periode: d.period.label, brukt: d.spent, forrige: d.prevSpent, endring_pst: d.change, kategorier: d.categories.slice(0, 5).map((c) => [c.name, c.sum]), abonnementer_mnd: d.subsMonthly })}`;
-          const text = await Promise.race([_taskLlm42.impl ? Promise.resolve(_taskLlm42.impl(prompt, d)) : import('../ai-run.js').then(({ run }) => run('glimt', { user: u, prompt, numPredict: 220, timeoutMs: _taskLlm42.ms, background: true, title: 'Glimt · forbruksrapport' }).then((x) => x.text)),
+          const text = await Promise.race([_taskLlm42.impl ? Promise.resolve(_taskLlm42.impl(prompt, d)) : import('../ai/run.js').then(({ run }) => run('glimt', { user: u, prompt, numPredict: 220, timeoutMs: _taskLlm42.ms, background: true, title: 'Glimt · forbruksrapport' }).then((x) => x.text)),
             sleep(_taskLlm42.ms).then(() => null)]);
           if (text && String(text).trim()) { d.summary = String(text).replace(/\s+/g, ' ').trim().slice(0, 600); d.summaryBy = 'glimt'; }
         } catch { /* malen står */ }

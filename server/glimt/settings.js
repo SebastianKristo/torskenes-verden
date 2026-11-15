@@ -34,7 +34,7 @@ import { authOrToken } from '../mobile.js';
 import { isAdmin } from '../auth/session.js';
 import { secret } from '../finans/db.js';
 import { broadcast } from '../realtime.js';
-import * as ai from '../ai-run.js';
+import * as ai from '../ai/run.js';
 import { cardsOf, cleanCards, saveCards, auroraNotifyOf, setAuroraNotify } from './brief-card-settings.js'; // prompt 38: kortene i Now Brief
 import { julActive, cleanJul, JUL_DEFAULTS } from './jul.js'; // prompt 40: julemodus
 import { mai17Active, cleanMai17, MAI17_DEFAULTS } from '../mai17-41.js'; // prompt 41: 17. mai

@@ -30,7 +30,7 @@ const { db: fhDb, setSecret } = await import('../server/finans/db.js');
 const carriers = await import('../server/sporing/carriers.js');
 const trk = await import('../server/sporing/shipments.js');
 const tg41 = await import('../server/gjoremal/glimt-jobs.js');
-const ruter = await import('../server/ruter41.js');
+const ruter = await import('../server/reise/ruter.js');
 const chat41 = await import('../server/ai/chat/auto-model.js');
 const wx41 = await import('../server/vaer/week-glimt.js');
 const ai41 = await import('../server/ai/job-times.js');
@@ -487,7 +487,7 @@ test('AI-jobber: createdAt/startedAt/endedAt og timeLabel («startet 17:31», «
   assert.equal(ai41.clock41(Date.parse('2026-10-19T19:14:00Z'), now), 'i går 21:14');
   assert.equal(ai41.clock41(Date.parse('2026-10-18T19:14:00Z'), now), '18.10 21:14');
   assert.equal(ai41.groupTimes41([{ endedAt: '2026-10-20T14:02:00Z' }, { endedAt: '2026-10-20T15:20:00Z' }], now).timeRange, '16:02–17:20');
-  const { jobStart, jobEnd } = await import('../server/ai-run.js');
+  const { jobStart, jobEnd } = await import('../server/ai/run.js');
   jobEnd(jobStart({ user: sebId, task: 'sok', title: 'Test 41' }));
   const jobs = (await A('/api/ai/jobs')).body;
   const all = [...jobs.running, ...jobs.queued, ...jobs.recent];

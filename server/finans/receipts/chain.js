@@ -51,7 +51,7 @@ async function visionParse55({ image, mime, categories, feedback, signal, engine
     return { data: r.data, model: r.model, ocrText: r.rows.join('\n') };
   }
   if (visionImpl55) return visionImpl55({ image, mime, prompt, system: VISION_SYSTEM55, schema: modelFormat48(), feedback });
-  const { run: aiRun } = await import('../../ai-run.js');
+  const { run: aiRun } = await import('../../ai/run.js');
   const out = await aiRun('rc', { images: [image], system: VISION_SYSTEM55, prompt, schema: modelFormat48(), localOnly: true, temperature: 0, numCtx: 8192, numPredict: 3072, title: 'Kvittering · visjonsmodell (ingen OCR)', signal });
   return { data: out.data ?? JSON.parse(String(out.text ?? '').match(/\{[\s\S]*\}/)?.[0] ?? 'null'), model: out.model };
 }

@@ -1,4 +1,4 @@
-// Prompt 41 (SERVER41): klokkeslett i AI-innstillinger → Jobber (claude-code-ai-jobber-klokkeslett.md). Brukes av ai-run.js jobOut og jobGroups.
+// Prompt 41 (SERVER41): klokkeslett i AI-innstillinger → Jobber (claude-code-ai-jobber-klokkeslett.md). Brukes av ai/run.js jobOut og jobGroups.
 //   Kjører: «startet 17:31» · I kø: «lagt i kø 17:33» (eller «planlagt 18:00») · Ferdig/feilet: «17:29» + «4 min siden» / «2 t siden»;
 //   eldre enn i dag: «i går 21:14» / «18.10 21:14». Alt i Europe/Oslo (brukerens tidssone). Klienten oppdaterer «… siden» hvert minutt fra endedAt.
 const TZ = 'Europe/Oslo';

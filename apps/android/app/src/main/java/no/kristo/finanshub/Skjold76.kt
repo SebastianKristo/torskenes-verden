@@ -24,7 +24,7 @@ import java.util.Locale
 
 /*
  * Prompt 76 (SKJAND, CONTRACT76): Skjold Lab – sorteringssystem for deler i skuffeskap (Raaco 150-01: 12 rader × 5 skuffer).
- * Alt går via /api/skjold (server/skjold76, per bruker): skap, kart over skuffene, deler med FTS-søk, flytt/antall/historikk,
+ * Alt går via /api/skjold (server/skjold, per bruker): skap, kart over skuffene, deler med FTS-søk, flytt/antall/historikk,
  * bilder (servert med eier-sjekk), hjørner for perspektiv-overlegget, ledige skuffer og etiketter for utskrift.
  *  - Nummerering: rad 1 øverst, skuff 1 til venstre. «Rad 4 · Skuff 2», kort «4-2».
  *  - Offline: siste liste (og skapene) lagres i filesDir per konto, så søk virker uten nett. Endringer krever nett (tydelig melding).

@@ -23,7 +23,7 @@ test.after(() => { globalThis.fetch = realFetch; });
 
 const { default: app } = await import('../server/index.js');
 const auth = await import('../server/auth/session.js');
-const { ANON_BODY_MAX85 } = await import('../server/anonbody85.js');
+const { ANON_BODY_MAX85 } = await import('../server/http/anon-body-limit.js');
 
 const LAN = { incoming: { socket: { remoteAddress: '192.168.1.20' } } };
 const raw = (path, method, body, headers = {}) => app.request(path, { method, headers: { 'content-type': 'application/json', ...headers }, body }, LAN);
@@ -67,7 +67,7 @@ test('innlogget: ugyldig JSON og kropp som ikke er et objekt gir 400 med forklar
 });
 
 test('badInput85: ekte serverfeil er fortsatt 500', async () => {
-  const { badInput85 } = await import('../server/badinput85.js');
+  const { badInput85 } = await import('../server/http/bad-input.js');
   const ctx = (method, text, ct = 'application/json') => ({ req: { method, bodyCache: text === undefined ? {} : { text: Promise.resolve(text) }, header: () => ct }, json: (b, s) => ({ b, s }) });
   assert.equal(await badInput85(new TypeError('x is not a function'), ctx('POST', '{"a":1}')), null, 'gyldig objekt + TypeError = serverfeil');
   assert.equal(await badInput85(new Error('db'), ctx('POST', 'null')), null, 'andre feiltyper = serverfeil');

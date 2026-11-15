@@ -4,13 +4,13 @@
 //   GET /api/app/android/apk/:version  → selve APK-en, strømmet gjennom serveren (telefonen trenger ikke nå github.com,
 //                                         og private repoer virker med GITHUB_TOKEN)
 //
-// Kilden er siste GitHub-release (UPDATE_REPO, samme standard som system-update.js) med `FinansHub-X.Y.Z.apk` og
+// Kilden er siste GitHub-release (UPDATE_REPO, samme standard som system/update.js) med `FinansHub-X.Y.Z.apk` og
 // `SHA256SUMS.txt` (se .github/workflows/release.yml). Svaret caches i 30 min (feil prøves igjen etter 1 min).
 // Endringslisten tas fra CHANGELOG-seksjonen for versjonen (ved taggen), ellers punktene under «## Endringer» i
 // release-teksten. Tilgang: sesjon eller app-token (finance:read), alle brukere.
 import { Hono } from 'hono';
 import { authOrToken } from './mobile.js';
-import { parseChangelog, compareVersions } from './system-update.js';
+import { parseChangelog, compareVersions } from './system/update.js';
 
 const REPO = /^[\w.-]+\/[\w.-]+$/.test(process.env.UPDATE_REPO ?? '') ? process.env.UPDATE_REPO : 'SebastianKristo/torskenes-verden';
 const TTL = 30 * 60_000, ERR_TTL = 60_000, MAX_REDIRECTS = 5;

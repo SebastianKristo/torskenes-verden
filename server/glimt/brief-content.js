@@ -5,7 +5,7 @@
 //   PUT  /api/brief-cards {cards:[{key, on}]}   → samme form (ukjente nøkler gir 400; kort uten tilgang beholdes som de var)
 //   POST /api/brief-cards/reset      → standard utvalg og rekkefølge
 //
-// Kort brukeren ikke har tilgang til (Homelab, Domener, Aksjer, Regninger/Media for barn – srv52.js briefCardsFor52) er ikke med i lista.
+// Kort brukeren ikke har tilgang til (Homelab, Domener, Aksjer, Regninger/Media for barn – briefCardsFor52 i glimt/my-brief.js) er ikke med i lista.
 // Briefen bygges fra lista: GET /api/brief (glimt/brief.js, oppsummering, guide-runde, widgets) tar bare med kort som er på, og
 // GET /api/brief52 gir bare kortene som er på, i lagret rekkefølge (+ order:[key] for hele briefen).
 // Lista speiles til brief38_cards (brief-card-settings.js), så nordlysvarselet og eldre klienter følger samme valg.
@@ -65,7 +65,7 @@ export const onKeys73 = (u) => rawCards73(u).filter((x) => x.on).map((x) => x.ke
 /** Nøkler brukeren ikke har tilgang til (fra srv52: Homelab/Domener/Aksjer/Regninger/Nytt i kveld). */
 async function blocked73(u) {
   try {
-    const { briefCardsFor52 } = await import('../srv52.js');
+    const { briefCardsFor52 } = await import('./my-brief.js');
     const { hidden } = await briefCardsFor52(u);
     return new Set(hidden.filter((h) => h.reason !== 'none').map((h) => KEY_OF_B52[h.id]).filter(Boolean));
   } catch { return new Set(); }

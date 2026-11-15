@@ -80,7 +80,7 @@ export async function engine53(raw, m, ctx) {
 }
 
 /**
- * Wrapper rundt ai-run.js run(task, o) for kall som KAN gå til en sky-modell (o.localOnly er ikke satt): brukerteksten (o.prompt)
+ * Wrapper rundt ai/run.js run(task, o) for kall som KAN gå til en sky-modell (o.localOnly er ikke satt): brukerteksten (o.prompt)
  * får plassholdere før kallet, og svaret (text) får originalene tilbake. Går kallet til Ollama likevel (reserve), er plassholderne
  * også gjenopprettet. localOnly, flagget av eller Redact ikke klar → uendret kall.
  */

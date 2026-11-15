@@ -27,7 +27,7 @@
 //             startedAt, ms, tokens:{in,out}, costKr, error, fallbackFrom, ref, retryable, cancellable}
 // POST /jobs/:id/cancel → {ok, status} · POST /jobs/:id/retry → {ok, jobId} · DELETE /jobs → {ok, removed} (Tøm historikk)
 // POST /queue/pause {paused} → {paused} (admin; gjelder bakgrunnsjobber, interaktive kall går alltid)
-// GET  /usage?days=1|7|30[&all=1] → se usage() i ai-run.js
+// GET  /usage?days=1|7|30[&all=1] → se usage() i ai/run.js
 // GET  /keys               → {providers:[{id, name, set, tail, source?, url?, model?, keys?, link}]}
 // PUT  /keys/:provider {key?, url?, model?} → samme (admin). key:'' fjerner. Svaret har aldri nøkkelen.
 // POST /keys/:provider/test → {ok, state, ms, model, error}
@@ -41,8 +41,8 @@ import { isAdmin } from '../auth/session.js';
 import { db, OWNER } from '../db.js';
 import { settings as fhSettings, saveSettings, secret, setSecret, secretSource } from '../finans/db.js';
 import { geminiKeys } from '../finans/gemini-keys.js';
-import * as ai from '../ai-run.js';
-import { gateLoad, gateUnload, loadedModels, gateState, keepAliveFor, GateError, backendConfig, thinkLeaks, clearThinkLeak, testOpenWebuiModels, maskSecrets } from '../ai-gate.js'; // prompt 43/44: alle AI-kall via gaten
+import * as ai from './run.js';
+import { gateLoad, gateUnload, loadedModels, gateState, keepAliveFor, GateError, backendConfig, thinkLeaks, clearThinkLeak, testOpenWebuiModels, maskSecrets } from './gate.js'; // prompt 43/44: alle AI-kall via gaten
 import { updateConfig } from '../settings.js';
 import { webSearch, webSettings, clearWebCache, PROVIDERS as WEB_PROVIDERS, PROVIDER_NAME as WEB_NAME } from '../web-search.js'; // prompt 44
 import { getAzureRegion, setAzureRegion } from '../glimt/settings.js'; // prompt 35: Azure-region for TTS

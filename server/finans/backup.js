@@ -201,7 +201,7 @@ export function restoreTables(tables, settingsPatch, u = me()) {
 }
 
 /* ---------------- Arkiv: tar + gzip + AES-256-GCM ---------------- */
-// tarHeader, untar, encryptStream og decryptFile brukes også av systembackupen (server/system-backup.js, prompt 29).
+// tarHeader, untar, encryptStream og decryptFile brukes også av systembackupen (server/system/backup.js, prompt 29).
 
 const MAGIC = Buffer.from('FHBK1\n');
 export function tarHeader(name, size, mtime) {
@@ -312,7 +312,7 @@ export async function buildArchive(c, phrase) {
 }
 
 /* ---------------- SMB ---------------- */
-// Felles for FinansHub-backupen, systembackupen (server/system-backup.js) og SMB-veiviseren (server/smb-browse.js).
+// Felles for FinansHub-backupen, systembackupen (server/system/backup.js) og SMB-veiviseren (server/smb-browse.js).
 // smbclient kjøres alltid med execFile (ingen skall), brukernavn/passord i en midlertidig auth-fil (0600) og alt som går inn i
 // smbclients lille kommandospråk (-c) er validert mot SMB_SEG først (ingen anførselstegn, semikolon, skråstreker eller kontrolltegn).
 

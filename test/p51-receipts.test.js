@@ -89,14 +89,14 @@ test.after(() => { globalThis.fetch = realFetch; });
 
 // Bilder: chat-vedleggene skaleres av img50 (ImageMagick erstattes).
 const jpeg = (w, h, pad = 64) => Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xc0, 0x00, 0x11, 0x08, h >> 8, h & 255, w >> 8, w & 255, 3]), Buffer.alloc(pad, 9)]);
-const img50 = await import('../server/img50.js');
+const img50 = await import('../server/bilder/convert.js');
 const webp = (w, h) => { const b = Buffer.alloc(40); b.write('RIFF', 0, 'latin1'); b.writeUInt32LE(32, 4); b.write('WEBPVP8X', 8, 'latin1'); b.writeUInt32LE(10, 16); b.writeUIntLE(w - 1, 24, 3); b.writeUIntLE(h - 1, 27, 3); return b; };
 img50._setImg50({ cmd: 'convert', run: (args) => (args.at(-1) === 'webp:-' ? webp(480, 360) : jpeg(1600, 1200, 1000)) });
 
 const { default: app } = await import('../server/index.js');
-const gate = await import('../server/ai-gate.js');
+const gate = await import('../server/ai/gate.js');
 gate._gateTest.backoffMs = [5, 5];
-const aiRun = await import('../server/ai-run.js');
+const aiRun = await import('../server/ai/run.js');
 const fdb = await import('../server/finans/db.js');
 const ai = await import('../server/finans/ai.js');
 const chain = await import('../server/finans/receipts/chain.js');

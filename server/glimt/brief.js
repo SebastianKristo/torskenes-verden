@@ -41,15 +41,15 @@ import { db, kv } from '../db.js';
 import { authOrToken } from '../mobile.js';
 import { eventsFor } from '../kalender/events.js';
 import { weatherFull, wmoText, iconOf } from '../vaer/full.js';
-import { newsFor } from '../rss.js';
+import { newsFor } from '../nyheter/rss.js';
 import { packagesFor } from '../sporing/shipments.js';
 import { notifyUser } from '../notify.js';
-import { run as aiRun } from '../ai-run.js';
-import { once, inFlight } from '../ai-gate.js'; // prompt 43: én LLM-oppsummering per bruker/brief/dato om gangen
+import { run as aiRun } from '../ai/run.js';
+import { once, inFlight } from '../ai/gate.js'; // prompt 43: én LLM-oppsummering per bruker/brief/dato om gangen
 import { glimtSettingsOf, cleanGlimtPatch, saveGlimtSettings, hostOf, charName, proxied, engineReady, speak } from './settings.js'; // prompt 35
 import { trialCompact } from '../finans/trial-widgets.js'; // prompt 35: prøveperioder i briefen
 import { todosForBrief } from '../gjoremal/glimt.js'; // prompt 37: Gjøremål-kortet
-import { bibleForBrief } from '../bible37.js'; // prompt 37: dagens bibelvers (bare med modulen)
+import { bibleForBrief } from '../bibel/bible.js'; // prompt 37: dagens bibelvers (bare med modulen)
 import { profileName } from '../familie/profiles.js'; // prompt 37: profilnavnet i hilsenen
 import { applyBriefCards73, guideFilter73 } from './brief-content.js'; // prompt 73: bare kortene som er på (Innhold i briefen)
 import { dtf } from '../intl-format.js'; // gjenbrukte Intl.DateTimeFormat
@@ -57,6 +57,11 @@ import { withBriefCards, addGiftTask } from './brief-cards.js'; // prompt 38: de
 
 const MOCK = process.env.MOCK_DATA === '1';
 import { registerJob } from '../jobs/index.js';
+import { sessionUser } from '../auth/session.js';
+import { ski41 } from '../vaer/week-glimt.js'; // skiføre i briefen
+import { mai17Active, mai17Day41 } from '../mai17-41.js'; // 17. mai i briefen
+import { journeyOf41 } from '../reise/ruter.js'; // Min reise («forlot skolen») i briefen
+import { julBrief } from './jul.js'; // julemodus i briefen
 const WX_EMOJI = { clear: '☀️', partly: '⛅', cloudy: '☁️', fog: '🌫️', drizzle: '🌦️', rain: '🌧️', sleet: '🌨️', snow: '❄️', thunder: '⛈️' };
 const TITLES = { morning: 'Morgenbrief', day: 'Dagsbrief', evening: 'Kveldsbrief', night: 'Nattbrief' };
 const GREET = { morning: 'God morgen', day: 'Hei', evening: 'God kveld', night: 'God natt' };
@@ -403,3 +408,41 @@ api.post('/trials/:id{[0-9]+}/done', (c) => {
 });
 
 export default api;
+
+/* ---------------- Felt som legges på det ferdige svaret ---------------- */
+// Før to mellomvarer i index.js (briefJul40 i api40.js og brief41 i api41.js), nå én, montert i mountGlimt rett før briefApi:
+//   ski:{text, chip:'Ski: blå', …, places[]}  når skiføret er relevant (vaer/week-glimt.js; skiføre i /api/weather/full ligger i vaer/layout.js)
+//   mai17:{title, text, items, active, greeting} på 17. mai (mai17-41.js)
+//   minReise:{leftSchoolAt, title, homeCard}  når «forlot skolen» er aktiv (reise/ruter.js)
+//   jul:{phase, label, outfit, countdown, countdownText, luke:{n, text}|null, aaret?, snow}  når julemodus er på (glimt/jul.js)
+const BRIEF = /^\/api\/brief\/?$/;
+const AARET = { title: 'Året ditt', text: 'Glimt oppsummerer året ditt: økonomi, trening, serier og steder.' };
+
+/** Ski, 17. mai og Min reise. Feiler én del, legges ingenting av disse til (som før). */
+async function seasonal(u) {
+  const out = {};
+  const ski = await ski41(u);
+  if (ski) out.ski = ski;
+  const s = glimtSettingsOf(u), m = mai17Active(s, Date.now(), u);
+  if (m.day) { const d = await mai17Day41(u, s); out.mai17 = { ...d.brief, active: m, greeting: d.greeting }; }
+  const j = journeyOf41(u);
+  if (j.showOnHome) out.minReise = { leftSchoolAt: j.leftSchoolAt, title: j.title, homeCard: j.homeCard };
+  return out;
+}
+
+export async function briefExtras(c, next) {
+  await next();
+  if (c.req.method !== 'GET' || c.res.status !== 200 || !BRIEF.test(c.req.path)) return;
+  let u, j;
+  try {
+    u = c.get('user') ?? sessionUser(c);
+    if (!u) return;
+    j = await c.res.clone().json();
+  } catch { return; } // svaret står
+  let add = {};
+  try { add = await seasonal(u); } catch { add = {}; }
+  let jul = null;
+  try { jul = julBrief(glimtSettingsOf(u), Date.now(), { aaret: AARET }); } catch { jul = null; }
+  if (!Object.keys(add).length && !jul) return;
+  c.res = c.json({ ...j, ...add, ...(jul ? { jul } : {}) }, 200, { 'Cache-Control': 'no-store' });
+}

@@ -86,7 +86,7 @@ test('farger: første er skapets egen, så lett skillbare farger uten gjentak', 
   for (const c of PALETTE) assert.ok(k.includes(`"${c}"`), c);
   // Samme palett som serveren (PICKSRV), når den finnes.
   let srv;
-  try { srv = readFileSync(join(ROOT, 'server/skjold76/leds78.js'), 'utf8'); } catch { return; }
+  try { srv = readFileSync(join(ROOT, 'server/skjold/leds.js'), 'utf8'); } catch { return; }
   const m = srv.match(/PALETTE79 = \[([^\]]+)\]/);
   if (m) assert.deepEqual(m[1].match(/#[0-9A-F]{6}/gi).map((x) => x.toUpperCase()), PALETTE, 'samme palett som serveren');
 });

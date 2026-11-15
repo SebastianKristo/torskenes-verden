@@ -29,7 +29,7 @@ import { auth42 } from './glimt-routes.js';
 import { recurringFromTx42 } from './glimt-routes.js';
 import { sniffMime } from './scan.js';
 import { userInfo } from '../auth/session.js';
-import { run as aiRun } from '../ai-run.js';
+import { run as aiRun } from '../ai/run.js';
 import { mountTax51 } from './tax.js';
 import { mountPrices51 } from './prices.js';
 import {

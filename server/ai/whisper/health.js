@@ -3,7 +3,7 @@
 //   GET {url}/health  med Authorization: Bearer <nøkkel>  (tools/nb-whisper/nbwhisper.py)
 //   → 200 {status:'ok', model, engine, languages, device, version}  ·  503 {status:'starting'|'error'}  ·  401/403 feil nøkkel/IP
 import { nbConf54, nbConfAll54 } from './config.js';
-import { defineFlagOn53, flagDefault53, flagOn53 } from '../../flags53.js';
+import { defineFlagOn53, flagDefault53, flagOn53 } from '../../system/model-flags.js';
 import { currentUser } from '../../settings.js';
 
 export const FLAG_NB54 = 'whisper_nb54';

@@ -27,7 +27,7 @@ const { db: fhDb } = await import('../server/finans/db.js');
 const totp = await import('../server/auth/totp.js');
 const jul = await import('../server/glimt/jul.js');
 const hj = await import('../server/familie/hjemlys.js');
-const news = await import('../server/news40.js');
+const news = await import('../server/nyheter/glimt.js');
 const tg40 = await import('../server/gjoremal/glimt-sentences.js');
 const { osloTodayISO } = await import('../public/js/quick-time.js');
 const TODAY = osloTodayISO();
@@ -68,7 +68,7 @@ test('/api/health: restarting bare når serveren faktisk starter eller oppdatere
   assert.equal(boot.headers.get('x-homelab-state'), 'ready');
   assert.ok(!('restarting' in boot.body), 'starting.html beholder den gamle formen');
   // Mens serveren starter: 503 + X-Homelab-State: starting og restarting:true.
-  const boot36 = await import('../server/boot36.js');
+  const boot36 = await import('../server/system/boot.js');
   boot36._resetBoot();
   const st = await req('/api/health');
   assert.deepEqual([st.status, st.headers.get('x-homelab-state'), st.body.restarting, st.body.state], [503, 'starting', true, 'starting']);

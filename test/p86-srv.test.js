@@ -56,7 +56,7 @@ test.after(() => { globalThis.fetch = realFetch; });
 const { default: app } = await import('../server/index.js');
 const auth = await import('../server/auth/session.js');
 const { db, kv, OWNER } = await import('../server/db.js');
-const L = await import('../server/localfetch86.js');
+const L = await import('../server/net/local-fetch.js');
 const DNS = { 'offentlig.example.no': ['93.184.216.34'], 'snu.example.no': ['93.184.216.35'], 'snu2.example.no': ['93.184.216.36'], 'videre.example.no': ['93.184.216.37'],
   'intern.example.no': ['192.168.1.10'], 'blandet.example.no': ['93.184.216.40', '10.0.0.9'], 'v6.example.no': ['fd00::1'] };
 L._setNet86({ resolve: async (host) => { if (!DNS[host]) throw Object.assign(new Error('ENOTFOUND'), { code: 'ENOTFOUND' }); return DNS[host]; } });

@@ -103,7 +103,7 @@ function startLive() {
 }
 
 /* ---------- Prompt 32: Glimt-oppsummering (claude-code-domener-ai-oppsummering.md, fasit sumVals/sumLocal) ---------- */
-// Serveren (SERVER32, server/domains-glimt.js) lager oppsummeringen daglig kl. 07:00 og på forespørsel, lagret per domene/bruker:
+// Serveren (SERVER32, server/domener/glimt.js) lager oppsummeringen daglig kl. 07:00 og på forespørsel, lagret per domene/bruker:
 //   GET  /api/domains/:domain/summary  (:domain = navn eller «*») → lages nå hvis det ikke finnes en for i dag
 //   POST /api/domains/:domain/summary  «↻ Lag ny» → {domain, label, date, createdAt, manual, head, pts:[{t, tone, color}], meta, model}
 // Mangler endepunktet (404), lages samme format her ut fra statistikken (regelbasert, som sumLocal i designet).
@@ -184,7 +184,7 @@ function paintSum() {
 }
 
 /* ---------- Prompt 32: Google Søk (claude-code-domener-search-console.md, fasit gscVals) ---------- */
-// SERVER32 (server/domains-glimt.js):
+// SERVER32 (server/domener/glimt.js):
 //   GET    /api/domains/:domain/gsc?period=7|28|90 → ikke koblet {connected:false, configured, steps, connectUrl} · velg eiendom
 //          {connected:true, needsSite:true, candidates:[siteUrl]} · utløpt {connected:false, reconnect:true, error} · ok {connected, site,
 //          account, dataTo, fetchedAt, kpi:{clicks|impressions|ctr|position:{value, prev, changePct}}, series[], queries[], pages[], footer}

@@ -13,8 +13,8 @@ import { hasGemini, geminiFetch } from './gemini-keys.js';
 import { audit } from './ai-audit.js';
 import { ocrTools } from '../ocr-fallback.js';
 import { shortBody, stripThink, noteCapabilities } from '../ai/ollama-options.js';
-import { gatePost } from '../ai-gate.js'; // prompt 43: alle Ollama-kall via gaten
-import { routing as aiRouting, jobStart, jobEnd, jobUpdate } from '../ai-run.js';
+import { gatePost } from '../ai/gate.js'; // prompt 43: alle Ollama-kall via gaten
+import { routing as aiRouting, jobStart, jobEnd, jobUpdate } from '../ai/run.js';
 const OWNER_ID = 'owner';
 import { SUB_CATEGORIES, categoryFor } from './subs.js';
 import { domainFor } from './enrich.js';

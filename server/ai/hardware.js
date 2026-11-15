@@ -1,5 +1,5 @@
 // Prompt 38 (SERVER38): AI-maskinen (Ollama-verten) – Mac mini M4 · 16 GB samlet minne · 2 TB ekstern disk – i stedet for
-// det hardkodede «RTX 2080». Brukes av /api/ai/status, /api/ai/models, /api/ai/library og ai-run.js (tidsavbrudd).
+// det hardkodede «RTX 2080». Brukes av /api/ai/status, /api/ai/models, /api/ai/library og ai/run.js (tidsavbrudd).
 //
 // server.hw = {model:'Mac mini M4', chip:'Apple M4', memGb:16, gpuBudgetGb:10.7, unified:true,
 //              disk:{name, totalGb, freeGb|null, usedGb, external:true, mounted:true}, source:'host'|'env'|'standard', warnings:[…]}

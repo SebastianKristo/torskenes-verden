@@ -4,7 +4,7 @@
 //                         så Desert Ant-modellene (desertant/: /api/admin/dal53/*, /api/emo53, /api/voice53, Moderator-mellomvarene)
 //   mountAi(app)        – /api/ai: AI-minnet, ✦ Glimt anbefaler modeller (recommend.js) og AI-kontrollen, i den rekkefølgen
 //   mountChat(app)      – /api/chat: Claude-importen før Chat
-// Alle AI-kall går fortsatt gjennom server/ai-gate.js og server/ai-run.js (kø, ruting, nøkler); filene her bruker dem.
+// Alle AI-kall går fortsatt gjennom server/ai/gate.js og server/ai/run.js (kø, ruting, nøkler); filene her bruker dem.
 // Filene:
 //   control.js        – AI-kontrollen (/api/ai: status, modeller, ruting, jobber, forbruk, nøkler, selvtest) og POST /api/glimt
 //   memory.js         – AI-minnet per bruker (/api/ai/memory)
@@ -12,7 +12,7 @@
 //   claude-import.js  – Claude-importen i Chat (/api/chat/import/claude); claude-memory.js – minne-eksporten (.md-filer)
 //   recommend.js      – ✦ Glimt anbefaler modeller (/api/ai/recommend*) og de beste modellene fra eval ved oppstart
 //   hardware.js       – AI-maskinen (Mac mini M4 · 16 GB): minne, GPU-budsjett, disk, «passer» og tidsavbrudd
-//   job-times.js      – klokkeslett og «… siden» i Jobber (ai-run.js)
+//   job-times.js      – klokkeslett og «… siden» i Jobber (run.js)
 //   desertant/        – de lokale modellene fra Desert Ant Labs (Eye, Redact, Gist, Tongue, Emo, Moderator, Clear, Voz):
 //                       /api/admin/dal53/*, /api/emo53/suggest, /api/voice53/* og Moderator foran /api/chat/files og /api/img
 //   ollama-options.js – felles Ollama-valg for korte oppgaver (think:false, lite kontekstvindu)

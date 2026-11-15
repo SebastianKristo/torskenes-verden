@@ -29,7 +29,7 @@ const auth = await import('../server/auth/session.js');
 const { _qr38 } = await import('../server/auth/qr-login.js');
 const b38 = await import('../server/glimt/brief-cards.js');
 const hw38 = await import('../server/ai/hardware.js');
-const ai = await import('../server/ai-run.js');
+const ai = await import('../server/ai/run.js');
 
 const UA_MAC = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15';
 const UA_PHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148';

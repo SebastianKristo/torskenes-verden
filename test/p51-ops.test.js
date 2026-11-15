@@ -92,9 +92,9 @@ test.after(() => { globalThis.fetch = realFetch; });
 
 const { default: app } = await import('../server/index.js');
 const { db, kv, OWNER } = await import('../server/db.js');
-const m = await import('../server/dbmaint51.js');
-const b51 = await import('../server/backup51.js');
-const ops = await import('../server/ops51.js');
+const m = await import('../server/system/db-maintenance.js');
+const b51 = await import('../server/system/restic-backup.js');
+const ops = await import('../server/system/ops.js');
 const DATA = resolve(process.env.DATA_DIR);
 
 let ipN = 10;
@@ -287,7 +287,7 @@ test('offsite slått på: B2-nøkkelen bare i miljøet til offsite; feil på ett
 
 test('3-2-1: den eldre systembackupen til nettverksdisken (verifisert siste døgn) teller som NAS-kopi', async () => {
   const { db } = await import('../server/db.js');
-  await import('../server/system-backup.js'); // lager backup_jobs
+  await import('../server/system/backup.js'); // lager backup_jobs
   const s0 = b51.backupSettings51();
   const nasWas = s0.targets.nas.enabled;
   await A('/api/ops51/backup/settings', 'PUT', { targets: { nas: { enabled: false } } });

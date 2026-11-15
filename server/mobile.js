@@ -15,12 +15,12 @@ import { broadcast as rtBroadcast } from './realtime.js';
 import { aiJson } from './homeos-common.js';
 import { sessionUser, userInfo, serverName, isAdmin, installKind } from './auth/session.js';
 import { packagesFor } from './sporing/shipments.js';
-import { newsFor } from './rss.js';
+import { newsFor } from './nyheter/rss.js';
 import finansApi, { bearerOk } from './finans/routes.js';
 import { signedImageUser46 } from './media/middleware.js'; // signerte bilde-URL-er i Media
 import { noteHere46, hereWeather46 } from './vaer/here.js'; // prompt 46 (SERVER46)
 import { matApi } from './mat/plan.js';
-import { domainOverview } from './domains.js';
+import { domainOverview } from './domener/domains.js';
 import { readBg, weatherImages, weatherKind, planetsToday, osloImages, apodImage } from './bg.js';
 import { uiPrefs, saveUiPrefs } from './ui.js';
 import { weatherFull, searchPlaces, DEFAULT_PLACES, weatherCompare, PLACES as WX_PLACES } from './vaer/full.js';
@@ -258,7 +258,7 @@ const SUB_HOME_CARDS = ['ai', 'next7', 'check', 'list'];
 export const NAV_STYLES = ['text', 'icons', 'icons_active_label'];
 const BG_TYPES = ['weather', 'planets', 'oslo', 'custom', 'none', 'cur', 'gphoto']; // prompt 46 (DATA46): gphoto = delt Google Photos-album
 export const TAB_IDS = ['hjem', 'finans', 'mat', 'sporing', 'domener', 'sok', 'mer', 'vaer', 'nyheter', 'familie', 'avganger', 'aksjer', 'boliger', 'abonnementer', 'media', 'huske', 'chat',
-  // Prompt 40: alt fra Mer kan ligge i fanelinja (GET /api/app/pages, api40.js PAGES40) – nye id-er og designnøklene (HNAV_ALL).
+  // Prompt 40: alt fra Mer kan ligge i fanelinja (GET /api/app/pages, system/app-pages.js PAGES40) – nye id-er og designnøklene (HNAV_ALL).
   'kalender', 'bursdager', 'brief', 'nyhetsleser', 'bibel', 'nordlys', 'innstillinger', 'abo', 'kart', 'fsok', 'bursdag', 'rss', 'innst', 'gjoremal'];
 export const TAB_BAR_DEFAULT = { items: [{ id: 'hjem', label: 'Hjem', icon: 'house' }, { id: 'finans', label: 'Finans', icon: 'wallet' }, { id: 'mat', label: 'Mat', icon: 'fork.knife' }, { id: 'domener', label: 'Domener', icon: 'globe' }, { id: 'sok', label: 'Søk', icon: 'magnifyingglass' }, { id: 'mer', label: 'Mer', icon: 'ellipsis' }] };
 const ICON_THEMES = ['standard', 'varm', 'kjolig', 'mono', 'fargerik'];
@@ -940,10 +940,10 @@ api.get('/photo-window', authOrToken, async (c) => {
     if (apod) return c.json(photoOut(kind, [apod, ...planetsToday()], { credit: `NASA APOD · ${a.title ?? ''}${a.copyright ? ` · © ${String(a.copyright).trim()}` : ''}`.trim(), gradient: SPACE_GRADIENT }));
     return c.json(photoOut(kind, planetsToday(), { credit: a?.media_type === 'video' ? 'Planeter · dagens APOD er en video' : 'Planeter', gradient: SPACE_GRADIENT }));
   }
-  // Prompt 46: Google Photos-albumet (DATA46, gphoto46.js) – samme innlogging, bildet som gjelder denne timen.
+  // Prompt 46: Google Photos-albumet (DATA46, bilder/gphoto.js) – samme innlogging, bildet som gjelder denne timen.
   if (kind === 'gphoto') {
     try {
-      const { gphoto46Api } = await import('./gphoto46.js');
+      const { gphoto46Api } = await import('./bilder/gphoto.js');
       const r = await gphoto46Api.request('/gphoto', { headers: c.req.raw.headers });
       const a = r.ok ? await r.json() : null;
       if (a?.current) return c.json(photoOut(kind, [a.current.mobile ?? a.current.large, a.current.large, ...osloImages()].filter(Boolean), { credit: 'Google Photos-album', gradient: CUR_GRADIENT, textColor: a.current.textColor, next: a.next ?? null, nextChangeAt: a.nextChangeAt }));

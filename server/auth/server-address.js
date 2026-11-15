@@ -14,7 +14,7 @@ import { kv, OWNER } from '../db.js';
 import { config } from '../config.js';
 import { buildInfo } from '../cache-bust.js';
 import { serverName } from './session.js';
-import { serverUrls47 } from '../server47.js'; // prompt 47: standardadresser og «Tilbakestill til standard»
+import { serverUrls47 } from '../system/server-urls.js'; // prompt 47: standardadresser og «Tilbakestill til standard»
 import { normalizeServerUrl } from '../net/server-url.js';
 
 // Samme normalisering som appene (shared/testvektorer/serveradresse.json): uten skjema → http for lokale verter, ellers https;

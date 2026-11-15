@@ -84,9 +84,9 @@ globalThis.fetch = async (url, init = {}) => {
 test.after(() => { globalThis.fetch = realFetch; });
 
 const { default: app } = await import('../server/index.js');
-const gate = await import('../server/ai-gate.js');
+const gate = await import('../server/ai/gate.js');
 gate._gateTest.backoffMs = [5, 5];
-const aiRun = await import('../server/ai-run.js');
+const aiRun = await import('../server/ai/run.js');
 const fdb = await import('../server/finans/db.js');
 const ai = await import('../server/finans/ai.js');
 const schema = await import('../server/finans/receipts/schema.js');

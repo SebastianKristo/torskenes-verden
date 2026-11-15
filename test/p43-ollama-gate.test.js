@@ -26,8 +26,8 @@ globalThis.fetch = (u, i) => (String(u).startsWith('http://ollama.sim') ? sim.fe
 test.after(() => { globalThis.fetch = realFetch; });
 
 const { default: app } = await import('../server/index.js');
-const ai = await import('../server/ai-run.js');
-const gate = await import('../server/ai-gate.js');
+const ai = await import('../server/ai/run.js');
+const gate = await import('../server/ai/gate.js');
 const opts = await import('../server/ai/ollama-options.js');
 const brief = await import('../server/glimt/brief.js');
 const { OWNER } = await import('../server/db.js');

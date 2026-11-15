@@ -1,6 +1,6 @@
 // Prompt 30: SMB-veiviser («Sett opp nettverksdisk»). Montert under /api/smb. Serveroppsett: bare admin.
 //
-// Tilgang (samme mønster som system-backup.js / system-update.js):
+// Tilgang (samme mønster som system/backup.js / system/update.js):
 //   - Alle ruter er POST og krever admin: økt i nettleseren (med JSON-kropp) ELLER app-token med finance:write fra en admin.
 //   - Passordet til NAS-en sendes med hvert kall fra klienten (holdes bare i minnet i veiviseren), går til smbclient via en
 //     midlertidig auth-fil (0600, slettes etterpå) og sendes aldri ut igjen. Det lagres kryptert (setSecret) først ved /save.
@@ -38,7 +38,7 @@ import { bearerOk } from './finans/routes.js';
 import { saveSettings, setSecret, settings as fhSettings } from './finans/db.js';
 import { smbRun, smbCmdError, smbErrorText, smbConfig, parseSmbLs, localArg, SMB_SEG, SMB_SHARE, SMB_HOST, normShare, smbNameError } from './finans/backup.js';
 import { streamSSE } from 'hono/streaming';
-import { setSmbTarget, smbTarget } from './system-backup.js';
+import { setSmbTarget, smbTarget } from './system/backup.js';
 import { MOCK_NAS } from './smb-mock.js';
 
 const MOCK = process.env.MOCK_DATA === '1';

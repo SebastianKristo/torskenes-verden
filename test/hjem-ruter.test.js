@@ -61,6 +61,9 @@ function merge(a, b) {
   }
   return typeof a === 'object' || (a && !b) ? a : b; // objekt/liste vinner over tom verdi (null)
 }
+// Lister med bare «…» eller enkle verdier (innholdet er ikke del av formen) og tomme lister er samme form: om dagens bibelvers har vers før
+// seg, eller om «I kveld» har noen titler, avhenger av data og dato, ikke av koden.
+const loose = (v) => Array.isArray(v) ? (v.every((x) => x === '…' || x === '') ? [] : v.map(loose)) : v && typeof v === 'object' ? Object.fromEntries(Object.entries(v).map(([k, x]) => [k, loose(x)])) : v;
 function shape(v, depth = 2) {
   if (Array.isArray(v)) return v.length ? [v.map((x) => (depth > 0 ? shape(x, depth - 1) : '…')).reduce(merge)] : [];
   if (v && typeof v === 'object') {
@@ -139,7 +142,7 @@ test('Familie, Sporing, Vær, Gjøremål og Mat: status og svarform er uendret',
   if (process.env.HJEM_RUTER_SKRIV === '1') { writeFileSync(FIX, JSON.stringify(snap, null, 1) + '\n'); return; }
   const want = JSON.parse(readFileSync(FIX, 'utf8'));
   assert.deepEqual(Object.keys(snap), Object.keys(want));
-  for (const k of Object.keys(want)) assert.deepEqual(snap[k], want[k], k);
+  for (const k of Object.keys(want)) assert.deepEqual(loose(snap[k]), loose(want[k]), k);
 });
 
 test('bakgrunnsjobbene i Familie går via den felles planleggeren (ikke aktive i test)', async () => {

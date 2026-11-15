@@ -38,7 +38,7 @@ test.after(() => { globalThis.fetch = realFetch; });
 
 const { default: app } = await import('../server/index.js');
 const brief = await import('../server/glimt/brief.js');
-const ask = await import('../server/settings-ask30.js');
+const ask = await import('../server/system/settings-search.js');
 
 async function login(username, password) {
   const r = await app.request('/api/login', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ username, password }) });

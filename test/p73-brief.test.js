@@ -166,7 +166,7 @@ test('brief-cards: uten lagret liste brukes av/på fra prompt 38-valget; nye kor
 });
 
 test('brief52: hvert kort har 6 s tidsavbrudd og hentes samtidig (kilde)', () => {
-  const s = src('server/srv52.js');
+  const s = src('server/glimt/my-brief.js');
   assert.match(s, /withTimeout\(fn\(\), 6000/);
   assert.match(s, /Promise\.all\(ids\.map/);
   assert.match(s, /'Klarte ikke hente'/);

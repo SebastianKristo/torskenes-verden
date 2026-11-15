@@ -30,9 +30,9 @@ const { default: app } = await import('../server/index.js');
 const { db, kv, OWNER } = await import('../server/db.js');
 const m43 = await import('../server/media/arr.js');
 const m44 = await import('../server/media/servers.js');
-const logs = await import('../server/logs44.js');
+const logs = await import('../server/system/docker-logs.js');
 const kal = await import('../server/kalender/invites.js');
-const upd = await import('../server/system-update.js');
+const upd = await import('../server/system/update.js');
 const { parseQuick } = await import('../public/js/quick-time.js');
 
 let ipN = 40;

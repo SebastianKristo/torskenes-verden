@@ -13,7 +13,7 @@
 //   Boliger + import rett til Boliger                      → boliger-web.js
 //   GET  /stocks (mellomvare): hver posisjon får logo:{url, issuer, domain}, monogram, tickerBadge, exchange, subtitle:'VUAG · London · USD', instrument
 //   GET  /aksjer/logo/:key                                 → bildet (Cache-Control 30 d) eller 404 (klienten viser monogram)
-import { lastVisitSpecial52 } from '../srv52.js'; // prompt 52
+import { lastVisitSpecial52 } from '../glimt/last-visit.js'; // prompt 52
 import { Hono } from 'hono';
 import { streamSSE } from 'hono/streaming';
 import { db, q, settings, ensureLedger } from './db.js';
@@ -29,8 +29,8 @@ import { mountHomes42, homeSearch42, homesOf42 } from './boliger-web.js';
 import { logo as faviconLogo, validDomain } from './enrich.js';
 import { itemForDomain, filePath as logoFile } from '../logos/match.js';
 import { readFile } from 'node:fs/promises';
-import { gateLoad } from '../ai-gate.js'; // prompt 43
-import { modelFor } from '../ai-run.js';
+import { gateLoad } from '../ai/gate.js'; // prompt 43
+import { modelFor } from '../ai/run.js';
 import { osloDate, addDays } from '../dates/oslo.js';
 
 const bad = (c, msg, code = 400) => c.json({ error: msg }, code);

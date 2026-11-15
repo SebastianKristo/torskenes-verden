@@ -5,7 +5,7 @@
 import { db, q, settings, secret, me, addUserCol } from './db.js';
 import { geminiFetch, hasGemini } from './gemini-keys.js';
 import { textJson, aiTimeoutsOf, AiCancelled } from './ai.js';
-import { gateEmbed } from '../ai-gate.js'; // prompt 43: alle Ollama-kall via gaten
+import { gateEmbed } from '../ai/gate.js'; // prompt 43: alle Ollama-kall via gaten
 import { stripMarkers } from './subs-ask.js';
 import { externalBlocked48 } from './receipts/settings.js'; // prompt 48: «Finansdata forlater aldri huset» gjelder også embeddings
 

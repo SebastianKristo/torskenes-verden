@@ -409,7 +409,7 @@ function folderOf(u, name) {
 async function indexMemory(u, items, src) {
   if (!items.length) return 0;
   try {
-    const { embed } = await import('../ai-run.js');
+    const { embed } = await import('./run.js');
     const r = await embed(items.map((m) => m.text), { user: u, title: `Glimt-minne · import fra ${src}`, background: true });
     const ins = q('INSERT OR REPLACE INTO ai_memory45_vec(memory_id, user_id, model, vec, src, created) VALUES(?,?,?,?,?,?)');
     db.transaction(() => { items.forEach((m, i) => { if (Array.isArray(r.vectors?.[i])) ins.run(m.id, u, r.model, JSON.stringify(r.vectors[i]), src, Date.now()); }); })();

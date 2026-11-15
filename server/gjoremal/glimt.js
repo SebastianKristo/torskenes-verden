@@ -331,7 +331,7 @@ export function mountGlimt37(api, T) {
     let names = null, example = false;
     if (!(MOCK && !process.env.OLLAMA_URL)) {
       try {
-        const { run } = await import('../ai-run.js');
+        const { run } = await import('../ai/run.js');
         const out = await run('glimt', { user: u, prompt: 'Les varene på handlelappen eller ingrediensene i oppskriften. Svar KUN med JSON {"items":["Melk","Egg"]} på norsk.', images: [String(image).replace(/^data:[^,]+,/, '')], json: true, localOnly: true, numPredict: 300, title: 'Glimt · handlelapp' });
         const j = out.data ?? JSON.parse(String(out.text).match(/\{[\s\S]*\}/)?.[0] ?? '{}');
         if (Array.isArray(j.items)) names = j.items.map((x) => cap(String(x).trim().slice(0, 80))).filter(Boolean).slice(0, 40);
@@ -490,7 +490,7 @@ export function mountGlimt37(api, T) {
     let subs = null, source = 'mal';
     if (!(MOCK && !process.env.OLLAMA_URL)) {
       try {
-        const { run } = await import('../ai-run.js');
+        const { run } = await import('../ai/run.js');
         const out = await run('glimt', { user: u, prompt: `Del opp gjøremålet «${cur.title}» i 3–6 korte, konkrete deloppgaver på norsk bokmål. Svar KUN med JSON {"subs":["…"]}.`, json: true, localOnly: true, numPredict: 200, title: 'Glimt · del opp', background: true });
         const j = out.data ?? JSON.parse(String(out.text).match(/\{[\s\S]*\}/)?.[0] ?? '{}');
         if (Array.isArray(j.subs) && j.subs.length >= 2) { subs = j.subs.slice(0, 6).map((x) => cap(String(x).trim().slice(0, 120))).filter(Boolean); source = 'glimt'; }

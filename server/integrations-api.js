@@ -574,7 +574,7 @@ settingsSearchApi.post('/ai-search', readAuth, async (c) => {
   const items = b.items.slice(0, 400).map((x) => ({ id: String(x?.id ?? '').slice(0, 80), title: String(x?.title ?? '').slice(0, 120), path: String(x?.path ?? '').slice(0, 200), ...(typeof x?.anchor === 'string' ? { anchor: x.anchor.slice(0, 40) } : {}) })).filter((x) => x.id && x.title);
   const known = new Set(items.map((x) => x.id));
   // Prompt 34: mål for markering. Klientens anchor, ellers serverindeksen (/api/settings/index) med samme id, ellers beste nøkkelordtreff der.
-  const { SETTINGS_INDEX, keywordMatch } = await import('./settings-ask30.js');
+  const { SETTINGS_INDEX, keywordMatch } = await import('./system/settings-search.js');
   const idx = SETTINGS_INDEX.filter((x) => isAdmin(c.get('user')) || !x.admin);
   const targetOf = (id) => {
     const own = items.find((x) => x.id === id);

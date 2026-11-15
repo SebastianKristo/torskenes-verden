@@ -321,7 +321,7 @@ test('brief: natt, 7 nyheter med signerte bilder, prøver innen 7 dager, guide m
 });
 
 test('brief: nyheter med bilde via signert /api/img, toppsak først', async () => {
-  const { default: rss } = await import('../server/rss.js').then((m) => ({ default: m }));
+  const { default: rss } = await import('../server/nyheter/rss.js').then((m) => ({ default: m }));
   void rss;
   db.prepare("INSERT OR IGNORE INTO rss_feed (user, name, url, enabled, category) VALUES ('owner', 'Test', 'https://test.example/rss', 1, 'auto')").run();
   const fid = db.prepare("SELECT id FROM rss_feed WHERE user='owner' AND url='https://test.example/rss'").get()?.id;

@@ -40,7 +40,7 @@ const { db, OWNER } = await import('../server/db.js');
 const trk = await import('../server/sporing/shipments.js');
 const E = await import('../server/glimt/engine.js');
 const P = await import('../server/glimt/plan.js');
-const ruter = await import('../server/ruter41.js');
+const ruter = await import('../server/reise/ruter.js');
 
 const r0 = await app.request('/api/login', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ username: 'sebastian', password: 'testpassord1' }) });
 assert.equal(r0.status, 200);

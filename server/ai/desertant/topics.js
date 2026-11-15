@@ -1,4 +1,4 @@
-// Prompt 53 (DAL53): emnene fra Gist per nyhetssak – bare databasen (ingen modell), så rss.js og news46.js kan importere uten sykler.
+// Prompt 53 (DAL53): emnene fra Gist per nyhetssak – bare databasen (ingen modell), så nyheter/rss.js og nyheter/categories.js kan importere uten sykler.
 import { db, q } from '../../db.js';
 
 db.exec(`CREATE TABLE IF NOT EXISTS news_topics53 (
@@ -47,7 +47,7 @@ let get = null;
 export function topicsOf53(itemId) {
   try { get ??= getStmt(); const r = get.get(itemId); return r ? { topics: JSON.parse(r.topics), top: r.top, category: r.category } : null; } catch { return null; }
 }
-/** Kategori fra emnet (til rss.js catOf), eller null. */
+/** Kategori fra emnet (til nyheter/rss.js catOf), eller null. */
 export const gistCategory53 = (itemId) => topicsOf53(itemId)?.category ?? null;
 /** Slugs for saken (til «For deg»). */
 export const topicSlugs53 = (itemId) => (topicsOf53(itemId)?.topics ?? []).map((t) => t.slug);

@@ -46,7 +46,7 @@ import { storeLines, receiptLines, matchLines, annotateSearch } from './highligh
 import { shareableUsers, logEntryChange, entryHistory } from './boliger-sharing.js';
 import { broadcast } from '../realtime.js';
 import { classify39, verify39, createAiCategory, categoryOut39, confirmOnBook39, nameSim, stepsOut39 } from './receipt-lines.js'; // prompt 39: kategori, sumkontroll, «✦ På nytt» med fremdrift
-import { jobStart as aiJobStart, jobUpdate as aiJobUpdate, jobEnd as aiJobEnd } from '../ai-run.js'; // prompt 34: AI-kontroll → Jobber
+import { jobStart as aiJobStart, jobUpdate as aiJobUpdate, jobEnd as aiJobEnd } from '../ai/run.js'; // prompt 34: AI-kontroll → Jobber
 import { upsertScanChat, scanChatFor } from '../ai/chat/scans.js'; // prompt 34: Chat-mappen «Kvitteringer og skanninger»
 import { mailAddress42 } from './boliger-web.js'; // prompt 42
 import { mountReceipts47, preParsed47, textKind47, ocrTextOf47 } from './receipts-device.js'; // prompt 47 (SERVER47): OCR-tekst og ferdig tolket kvittering fra enheten
@@ -55,7 +55,7 @@ import { ocrRaw51, crossCheck51 } from './receipts/ocr-raw.js'; // prompt 51 (RC
 import { merchantOut51 } from './receipts/brreg.js'; // prompt 48 (SERVER48): /receipts/scan (kjeden A→B→C→Tesseract→D), /receipts/health, rettelser
 import { cleanMacOcrUrl, cleanReceipts48 } from './receipts/settings.js';
 import { correctionOnBook48 } from './receipts/corrections.js';
-import { mountLogos52 } from '../logos52.js'; // prompt 52
+import { mountLogos52 } from '../logos/local.js'; // prompt 52
 import { warnCloudReceipt52, RECEIPT_SOURCE_LABEL52, RECEIPT_ENGINE_NOTE52 } from './receipts/cloud-guard.js'; // prompt 52: kvitteringer bare lokalt
 import { bolApi, catTree, catOptions, entryCat, linkLegacy, assignCategory, catById as bolCat, catPair, colorOf, noticesFor, layoutFor, upcomingOf, backgroundOf, validBackground } from './boliger.js';
 import { osloDate, osloToUtc, clampDate, addDays } from '../dates/oslo.js';

@@ -2,7 +2,7 @@ import SwiftUI
 import UIKit
 
 /* ---------------- Prompt 81 (SPANIOS): forhåndsoppsett «Skjold Lab-hylla (3D-print)» ----------------
- Server (SPANSRV, server/skjold76/layout81.js), samme algoritme som tools/skjoldlab3d/skjoldlab_ledvegg.scad:
+ Server (SPANSRV, server/skjold/layout.js), samme algoritme som tools/skjoldlab3d/skjoldlab_ledvegg.scad:
    GET /presets → [{id:'skjoldlab3d', name, options:{etasjer:[4,5]}, description}]
    POST /cabinets/:id/preset {id:'skjoldlab3d', etasjer:4|5} → oppdatert skap (11 eller 13 rader × 11, store og brede
    skuffer og LED-geometrien; host/enabled/farge røres ikke). Deler utenfor nye grenser → 409 med forklaring.

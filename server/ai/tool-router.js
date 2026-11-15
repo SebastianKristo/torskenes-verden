@@ -101,7 +101,7 @@ export async function routeTools(text, { user = null, forceWeb = false, useLlm =
   if (loc.confident || forceWeb || !useLlm || (process.env.MOCK_DATA === '1' && !routerLlm && !process.env.OLLAMA_URL)) return done(loc, 'regel');
   const call = routerLlm ? Promise.resolve().then(() => routerLlm(text))
     : (async () => {
-      const { run } = await import('../ai-run.js');
+      const { run } = await import('./run.js');
       const r = await run('sok', { user, system: ROUTER_SYSTEM, prompt: `${osloNowLine()}\nSpørsmål: ${String(text).slice(0, 400)}`, json: true, temperature: 0, numPredict: 60, timeoutMs: ROUTER_MS,
         localOnly, title: 'Glimt · ruting', noRetry: true, signal });
       return r.data ?? null;

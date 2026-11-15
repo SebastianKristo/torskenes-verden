@@ -2,7 +2,7 @@
 // /api/glimt/*-rutene (nyheter, kvalitet, 17. mai, oppskrifter, faste oppgaver) og før Chat. Rekkefølgen er bærende (Hono kjører
 // handlere og mellomvare i registreringsrekkefølge):
 //   – /api/glimt/memory: ryddingen (forslag, motstrid, ubrukte fakta) før «Glimt husker», som har /:id
-//   – /api/brief: etter julemodus- og sesongmellomvarene (briefJul40 i api40.js med glimt/jul.js, brief41) i index.js, som legger til felt i svaret
+//   – /api/brief: briefExtras (ski, 17. mai, Min reise og jul, legges på det ferdige svaret) før briefApi
 //   – /api/glimt (glimtApi, sesjon eller app-token for hele /api/glimt/*) til sist, så de mer spesifikke rutene svarer først
 //   – /api/assist: Kalenderens lokale tolkning (local:{…}, kalender/invites.js) legges rundt Glimt-ruteren
 // Filene:
@@ -18,7 +18,7 @@
 //   schedules/           – planlagte oppgaver («Faste oppgaver»): tolkning, lagring, verktøyene schedule.*, kjøring og tikket
 //   jul.js               – julemodus (Auto/Av/På, faser, dagens luke) for Glimt-innstillingene og briefen
 //   brief-card-settings.js – rekkefølge og av/på for kortene (Innstillinger → Glimt → Brief) og bryteren for nordlysvarselet
-//   brief-content.js     – «Innhold i briefen» (/api/brief-cards, montert fra srv52.js) og filteret på GET /api/brief
+//   brief-content.js     – «Innhold i briefen» (/api/brief-cards, montert i mountGlimtEarly) og filteret på GET /api/brief
 //   brief.js             – Glimt-brief (morgen/dag/kveld), widget og innstillinger; brief-cards.js – kortene i briefen og nordlysvarselet
 //   settings.js          – Glimt-innstillinger, opplesning (/api/tts) og bildeproxy (/api/img)
 //   assist.js            – /api/assist (Glimt-ruteren fra Hjem-søket og Chat, serverjobb)
@@ -30,10 +30,29 @@ import { memoryApi63 } from './memory/hygiene-api.js';
 import assistApi from './assist.js';
 import { glimtApi } from '../ai/control.js';
 import { settingsApi, ttsApi, imgApi } from './settings.js';
-import briefApi from './brief.js';
+import briefApi, { briefExtras } from './brief.js';
 import { assistLocalMw44 } from '../kalender/invites.js';
 import { recipesApi61 } from './recipes/api.js';
 import { schedulesApi62 } from './schedules/api.js';
+import { authOrToken } from '../mobile.js';
+import { glimtAgentMw52 } from './last-visit.js';
+import { quickParseApi } from './quick-parse.js';
+import { myBriefApi } from './my-brief.js';
+import { characterApi } from './character.js';
+import { brief73Api } from './brief-content.js';
+
+/**
+ * Tidlig i index.js (før /api-rutene med requireAuth og før Glimt-motoren): mellomvaren «sist jeg var på X» foran
+ * POST /api/glimt/agent, hurtigtolkingen og de lærte ordene, brief-kortene per bruker, Glimt-figuren og «Innhold i briefen».
+ * Der mountSrv52 (den gamle srv52.js) sto.
+ */
+export function mountGlimtEarly(app) {
+  app.post('/api/glimt/agent', authOrToken, glimtAgentMw52);
+  app.route('/api', quickParseApi); // /api/glimt/quickparse52, /api/glimt/lex52
+  app.route('/api', myBriefApi); // /api/brief52, /api/brief52/homelab/:id/start, /api/admin/brief52/access
+  app.route('/api', characterApi); // /api/me/glimt-char52, /api/admin/glimt-char52
+  app.route('/api', brief73Api); // GET/PUT /api/brief-cards, POST /api/brief-cards/reset
+}
 
 /** Alle Glimt-rutene: Glimt lærer, planlagte oppgaver, minnet, brief, innstillinger, motoren, entitetene, /api/glimt og /api/assist. */
 export function mountGlimt(app) {
@@ -41,6 +60,7 @@ export function mountGlimt(app) {
   app.route('/api/glimt/schedules', schedulesApi62); // planlagte oppgaver, «Faste oppgaver» (per bruker); tikket går i server/jobs/
   app.route('/api/glimt/memory', memoryApi63); // /pending, /conflicts, /stale, /hygiene (før «Glimt husker»-rutene)
   app.route('/api/glimt/memory', remember); // GET/POST/DELETE, POST /:id/apply (per bruker)
+  app.use('/api/brief', briefExtras); // ski, 17. mai, Min reise og jul på det ferdige svaret (før: briefJul40 og brief41 i index.js)
   app.route('/api/brief', briefApi); // Glimt-brief med kortene (pakker, familie, skole og jobb, bursdager, nordlys) + POST /gift
   app.route('/api/glimt/settings', settingsApi);
   app.route('/api/tts', ttsApi);

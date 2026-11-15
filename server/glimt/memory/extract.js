@@ -157,7 +157,7 @@ async function modelFacts(user, snippets) {
   let data;
   if (modelImpl) data = await modelImpl(prompt, list);
   else {
-    const { run } = await import('../../ai-run.js');
+    const { run } = await import('../../ai/run.js');
     const r = await run('glimt', { user, system: SYSTEM63, prompt, schema: SCHEMA63, json: true, localOnly: true, background: true, think: false, temperature: 0, numPredict: 500, noRetry: true,
       timeoutMs: 120_000, title: 'Glimt · nattlig oppsummering av minnet' });
     data = r.data;

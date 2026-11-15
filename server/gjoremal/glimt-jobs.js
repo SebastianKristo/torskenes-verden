@@ -150,7 +150,7 @@ export function prompt41(text, { lists = [], people = [], today }) {
 }
 async function askAi(u, prompt, attempt) {
   if (_ai41.impl) return _ai41.impl(prompt, { attempt });
-  const { run } = await import('../ai-run.js');
+  const { run } = await import('../ai/run.js');
   const r = await run('glimt', { user: u, prompt, json: true, numPredict: 700, temperature: 0.1, timeoutMs: _ai41.ms ?? AI_MS41, title: 'Glimt · deler opp beskjed', background: true });
   return { ...(r.data ?? JSON.parse(String(r.text).match(/\{[\s\S]*\}/)?.[0] ?? '{}')), _engine: `${r.provider === 'ollama' ? 'Ollama' : r.provider === 'gemini' ? 'Gemini' : r.provider === 'groq' ? 'Groq' : r.provider} · ${r.model}` };
 }

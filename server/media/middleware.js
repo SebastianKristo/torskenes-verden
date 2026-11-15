@@ -1,5 +1,5 @@
 // Mellomvare for hele /api/media/* og /api/playback/* (fra prompt 46, SERVER46: «Utlogget» i Media på mobil). Monteres først i
-// mountMedia (server/media/index.js), før alle Media-rutene. Bakgrunnen står i server/api-auth46.js (bearerFallthrough46).
+// mountMedia (server/media/index.js), før alle Media-rutene. Bakgrunnen står i server/auth/bearer-fallthrough.js (bearerFallthrough46).
 //   - homelabAuthCode46: alle 401 fra /api/media/* og /api/playback/* får code:'HOMELAB_AUTH' (feil fra Sonarr/Radarr er 502
 //     {code:'UPSTREAM_AUTH', service}, se media/arr.js). Appene viser «Utlogget» BARE ved HOMELAB_AUTH.
 //   - Signerte bilde-URL-er: /api/media/cover?… og /api/media/poster?… i JSON-svarene får &uid=…&exp=…&sig=… (HMAC, 24 t), så

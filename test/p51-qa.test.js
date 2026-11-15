@@ -24,7 +24,7 @@ globalThis.fetch = async () => { throw new TypeError('fetch failed'); };
 test.after(() => { globalThis.fetch = realFetch; });
 
 const { default: app } = await import('../server/index.js');
-const qa = await import('../server/qa51.js');
+const qa = await import('../server/system/flags-crashes.js');
 const { db } = await import('../server/db.js');
 
 let ipN = 10;

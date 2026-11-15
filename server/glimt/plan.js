@@ -24,7 +24,7 @@ const INTENT_OF_TOOL = { 'calendar.create': 'create', 'tasks.create': 'create', 
 // Prompt 62 (del 2): lokal plan for planlagte oppgaver (schedules/tools.js registrerer seg; modellen nede / hint til planleggeren).
 let localHook62 = null;
 export const registerLocalPlan62 = (fn) => { localHook62 = typeof fn === 'function' ? fn : null; };
-// Prompt 76: Skjold Lab («hvor er M3-skruene?») – server/skjold76/glimt.js registrerer seg; får brukeren (sjekker treff i egne deler).
+// Prompt 76: Skjold Lab («hvor er M3-skruene?») – server/skjold/glimt.js registrerer seg; får brukeren (sjekker treff i egne deler).
 let localHook76 = null;
 export const registerLocalPlan76 = (fn) => { localHook76 = typeof fn === 'function' ? fn : null; };
 export const intentOfCalls45 = (calls) => (calls.length > 1 ? 'multi' : INTENT_OF_TOOL[calls[0]?.tool] ?? 'chat');
@@ -53,7 +53,7 @@ export function toolModeFor45(model, backend = 'ollama') {
 const markNoTools = (model) => { try { kv.set(OWNER, NOTOOLS, { ...(kv.get(OWNER, NOTOOLS, {}) ?? {}), [model]: Date.now() }); } catch { /* */ } };
 
 async function defaultModel(o) {
-  const ai = await import('../ai-run.js');
+  const ai = await import('../ai/run.js');
   const out = await ai.run('glimt', { user: o.user, system: o.system, prompt: o.prompt, ...(o.mode === 'tools' ? { ollamaTools: o.tools } : { schema: o.schema }), temperature: 0, numPredict: 320,
     localOnly: true, background: false, title: 'Glimt · forstår', timeoutMs: 45_000, noRetry: true });
   return { toolCalls: out.toolCalls ?? null, text: out.text, data: out.data, model: out.model };
@@ -64,8 +64,8 @@ export async function modelInfo45(user) {
   // Prompt 47: planleggeren bruker JSON-skjema (Ollama format) som standard; tools-modus bare når en test tvinger den.
   if (!modelAvailable45()) return { model: null, mode: 'json' };
   try {
-    const ai = await import('../ai-run.js');
-    const { backendConfig } = await import('../ai-gate.js');
+    const ai = await import('../ai/run.js');
+    const { backendConfig } = await import('../ai/gate.js');
     const r = await ai.resolveTask('glimt', { user, localOnly: true });
     const c = r.list.find((x) => x.provider === 'ollama');
     return { model: c?.id ?? null, mode: toolModeFor45(c?.id, backendConfig().effective) };

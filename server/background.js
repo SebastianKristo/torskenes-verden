@@ -25,7 +25,7 @@ import { kv, OWNER } from './db.js';
 import { cfg } from './settings.js';
 import { isAdmin } from './auth/session.js';
 import { authOrToken, designOf, layoutOf } from './mobile.js';
-import { albumOut46 } from './gphoto46.js'; // prompt 46 (DATA46)
+import { albumOut46 } from './bilder/gphoto.js'; // prompt 46 (DATA46)
 import { CATALOG, PLANETS, PLANET_NAME, PLANET_FILES, KNOWN_CREDITS, bundledPath, filePathUrl, infoUrl, pageUrl, creditFromInfo } from './backgrounds/catalog.js';
 import { osloDate } from './dates/oslo.js';
 

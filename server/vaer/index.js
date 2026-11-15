@@ -1,5 +1,5 @@
 // Vær: monterer rutene under /api/weather som ikke ligger i mobile.js. server/index.js kaller mountVaer(app) der de gamle
-// monteringene sto (før mobileApi, som har /weather/full, /compare, /places og /search, og før api36 med /weather/places/summary).
+// monteringene sto (før mobileApi, som har /weather/full, /compare, /places og /search).
 // Rekkefølgen er bærende: skiMw må stå før handleren for /api/weather/full i mobile.js, fordi den legger på ski etter next().
 // Filene:
 //   met.js          – værmeldingen fra MET (Locationforecast, Nowcast, Sunrise), buildWeather er ren og testbar, sunTime
@@ -11,10 +11,12 @@
 //   week-glimt.js   – ukesvær med ekte ukesdata til Glimt og Chat, og skiføre (ski41)
 //   layout.js       – Rediger Vær (/api/weather/layout) og skiføre i /api/weather/full
 //   sun.js          – dagslys, soloppgang og solnedgang regnet lokalt
+//   places-summary.js – alle lagrede steder i ett kall (/api/weather/places/summary, Vær-sidepanelet)
 import { weather45Api } from './here.js';
 import { week39Api } from './week-summary.js';
 import placeApi from './place.js';
 import { layoutApi, skiMw } from './layout.js';
+import placesSummaryApi from './places-summary.js';
 
 export function mountVaer(app) {
   app.route('/api/weather', weather45Api); // GET /here (Min posisjon)
@@ -22,4 +24,5 @@ export function mountVaer(app) {
   app.route('/api/weather/place', placeApi); // været for et sted
   app.use('/api/weather/full', skiMw); // ski i værappen (før handleren i mobile.js)
   app.route('/api/weather', layoutApi); // GET/PUT /layout (Rediger Vær)
+  app.route('/api/weather', placesSummaryApi); // GET /places/summary (alle stedene i ett kall, før /places i mobile.js)
 }

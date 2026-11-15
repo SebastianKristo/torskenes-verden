@@ -102,7 +102,7 @@ test('indeksen: pitch, offset, retning, serpentine og overstyring (som serveren)
 
 test('indeksen stemmer med serverens autoIndex78 når den finnes', async () => {
   let srv;
-  try { srv = readFileSync(join(ROOT, 'server/skjold76/leds78.js'), 'utf8'); } catch { return; }
+  try { srv = readFileSync(join(ROOT, 'server/skjold/leds.js'), 'utf8'); } catch { return; }
   assert.match(srv, /firstDrawerXmm \+ \(col - 1\) \* cfg\.drawerPitchMm/, 'samme midtpunkt-regel');
   assert.match(srv, /offsetMm: Math\.round\(\(cfg\.ledPitchMm \/ 2\) \* 1000\) \/ 1000/, 'samme standard-offset');
 });

@@ -23,7 +23,7 @@ test.after(() => { globalThis.fetch = realFetch; });
 
 const { default: app } = await import('../server/index.js');
 const quick = await import('../server/kalender/quick.js');
-const sb = await import('../server/system-backup.js');
+const sb = await import('../server/system/backup.js');
 const { db, kv, OWNER } = await import('../server/db.js');
 
 async function login(username, password) {

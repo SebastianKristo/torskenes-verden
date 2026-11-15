@@ -44,7 +44,7 @@ import { Hono } from 'hono';
 import { authOrToken } from '../mobile.js';
 import { mediaAllowed43 } from './arr.js';
 import { cfg } from '../settings.js';
-import { guardedGet46 } from '../gphoto46.js';
+import { guardedGet46 } from '../bilder/gphoto.js';
 import { kv, OWNER } from '../db.js';
 
 const ID = /^[a-f0-9]{12}$/;

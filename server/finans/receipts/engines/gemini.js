@@ -1,9 +1,9 @@
 // Prompt 52: steg D er fjernet (geminiParse48 kaster alltid). Opprinnelig (prompt 48): Gemini Flash med bildet og OCR-teksten, bare når
 // «Finansdata forlater aldri huset» er av (sjekkes her og i geminiJson48). Kallet går via AI-gaten: denne modulen
-// registrerer backenden «gemini48» med gatens eksisterende registerBackend (ai-gate.js er ikke endret) og kaller
+// registrerer backenden «gemini48» med gatens eksisterende registerBackend (ai/gate.js er ikke endret) og kaller
 // gateChat({backend:'gemini48', noQueue:true}) – sky-kall venter ikke i Ollama-køen. Selve HTTP-kallet, nøkkelrotasjonen
 // og modellvalget gjenbrukes fra finans/ai.js (geminiJson48).
-import { registerBackend, GateError } from '../../../ai-gate.js';
+import { registerBackend, GateError } from '../../../ai/gate.js';
 import { geminiJson48 } from '../../ai.js';
 import { modelFormat48 } from '../schema.js';
 import { blockCloudReceipt52 } from '../cloud-guard.js'; // prompt 52

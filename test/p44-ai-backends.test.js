@@ -70,8 +70,8 @@ sim.answer = (body) => {
 };
 
 const { default: app } = await import('../server/index.js');
-const ai = await import('../server/ai-run.js');
-const gate = await import('../server/ai-gate.js');
+const ai = await import('../server/ai/run.js');
+const gate = await import('../server/ai/gate.js');
 const opts = await import('../server/ai/ollama-options.js');
 const web = await import('../server/web-search.js');
 const router = await import('../server/ai/tool-router.js');

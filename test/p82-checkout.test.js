@@ -20,8 +20,8 @@ process.env.APP_PASSWORD_HASH = hashPassword('testpassord1');
 
 const { default: app } = await import('../server/index.js');
 const auth = await import('../server/auth/session.js');
-const P82 = await import('../server/skjold76/projects82.js');
-const G = await import('../server/skjold76/glimt.js');
+const P82 = await import('../server/skjold/projects.js');
+const G = await import('../server/skjold/glimt.js');
 test.after(() => { try { rmSync(DATA, { recursive: true, force: true }); } catch { /* */ } });
 
 let ipN = 10;

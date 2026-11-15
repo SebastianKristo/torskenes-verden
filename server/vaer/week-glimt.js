@@ -104,7 +104,7 @@ const SYSTEM = 'Du er Glimt, en værassistent. Svar kort på norsk bokmål (1–
 async function askLlm(u, question, table, place) {
   const prompt = `Værdata for ${place} de neste 7 dagene (Open-Meteo):\n${table}\n\nSpørsmål: ${question}`;
   if (llm) return { text: await llm({ prompt, system: SYSTEM }), model: 'test' };
-  const { run } = await import('../ai-run.js');
+  const { run } = await import('../ai/run.js');
   const r = await run('sok', { user: u, prompt, system: SYSTEM, localOnly: true, numPredict: 220, temperature: 0.2, timeoutMs: WEEK_LLM_MS, title: 'Glimt · ukas vær' });
   return { text: r.text, model: r.model };
 }

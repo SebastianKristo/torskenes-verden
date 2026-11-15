@@ -266,7 +266,7 @@ const PLAN_SYSTEM = 'Du deler et spørsmål i deloppgaver for verktøy. Svar KUN
 async function planWithLlm(text, { user, localOnly = true, today }) {
   const call = planLlm ? Promise.resolve().then(() => planLlm(text))
     : (async () => {
-      const { run } = await import('../../ai-run.js');
+      const { run } = await import('../run.js');
       const r = await run('chat', { user, system: PLAN_SYSTEM, prompt: `I dag er ${today}.\nSpørsmål: ${String(text).slice(0, 500)}`, json: true, temperature: 0, numPredict: 300, timeoutMs: PLAN_LLM_MS, localOnly, title: 'Glimt · planlegger fakta', noRetry: true });
       return r.data ?? null;
     })();

@@ -9,7 +9,7 @@
 import { Hono } from 'hono';
 import { authOrToken } from '../../mobile.js';
 import { isAdmin } from '../../auth/session.js';
-import { gateChat, maskSecrets } from '../../ai-gate.js';
+import { gateChat, maskSecrets } from '../gate.js';
 import './backend.js'; // registrerer backend «omlx» i gaten
 import { confOut58, saveConf58, omlxConf58 } from './config.js';
 import { omlxModels58, invalidate58, resolveModel58, omlxFetch58 } from './health.js';
@@ -59,7 +59,7 @@ omlx58Api.put('/admin/omlx58/config', async (c) => {
   const r = saveConf58(await body(c));
   if (!r.ok) return c.json({ error: r.error }, 400);
   invalidate58();
-  try { (await import('../../ai-run.js')).invalidateStatus(); } catch { /* */ }
+  try { (await import('../run.js')).invalidateStatus(); } catch { /* */ }
   return c.json(confOut58());
 });
 omlx58Api.post('/admin/omlx58/test', async (c) => { const b = await body(c); return c.json(await testOmlx58({ model: typeof b.model === 'string' ? b.model : null })); });

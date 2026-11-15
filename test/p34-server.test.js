@@ -61,7 +61,7 @@ globalThis.fetch = fakeFetch;
 test.after(() => { globalThis.fetch = realFetch; });
 
 const { default: app } = await import('../server/index.js');
-const ai = await import('../server/ai-run.js');
+const ai = await import('../server/ai/run.js');
 const assist = await import('../server/glimt/assist.js');
 const { saveSettings, setSecret } = await import('../server/finans/db.js');
 const { OWNER, kv } = await import('../server/db.js');

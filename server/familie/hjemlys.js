@@ -194,7 +194,7 @@ export async function start40(u, b = {}, now = Date.now()) {
 async function goHome(s, now = Date.now(), why = 'manual') {
   const n = touch(s.id, { state: 'home', home_at: now, ended_at: now });
   await emit(n, 'home');
-  if (!isPlaceTrip(s)) { try { (await import('../ruter41.js')).arrivedHome41(s.user_id, now); } catch { /* Min reise er valgfri */ } } // prompt 41: Min reise forsvinner når du er hjemme
+  if (!isPlaceTrip(s)) { try { (await import('../reise/ruter.js')).arrivedHome41(s.user_id, now); } catch { /* Min reise er valgfri */ } } // prompt 41: Min reise forsvinner når du er hjemme
   for (const r of parse(s.recipients, [])) { try { await notifyUser(r, { title: 'Hjemlys', body: isPlaceTrip(s) ? `${first(s.user_id)} er fremme · ${s.dest_name ?? 'målet'} ${hhmm(now)}` : `${first(s.user_id)} er hjemme ${hhmm(now)}`, url: '/#/familie', category: 'familie', tag: `hjemlys-${s.id}`, data: { kind: 'hjemlys.home', sessionId: s.id, why } }); } catch { /* */ } }
   return n;
 }

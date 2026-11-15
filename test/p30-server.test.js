@@ -25,9 +25,9 @@ globalThis.fetch = async () => { throw Object.assign(new TypeError('fetch failed
 test.after(() => { globalThis.fetch = realFetch; });
 
 const { default: app } = await import('../server/index.js');
-const su = await import('../server/system-update.js');
-const ask = await import('../server/settings-ask30.js');
-const dom = await import('../server/domains.js');
+const su = await import('../server/system/update.js');
+const ask = await import('../server/system/settings-search.js');
+const dom = await import('../server/domener/domains.js');
 const fr = await import('../server/finans/routes.js');
 const { db, kv, OWNER } = await import('../server/db.js');
 const { validate } = await import('../server/finans/ai.js');

@@ -3,7 +3,7 @@ import UIKit
 
 /* ---------------- Prompt 46: bakgrunn fra et delt Google Photos-album ----------------
  Spesifikasjon: claude-code-bakgrunn-google-photos-album.md. Fasit: Mobil Papir App.dc.html → bakgrunnsmenyen (gp).
- Server (DATA46, server/gphoto46.js – henting, SSRF-vern og cache skjer der, aldri i appen):
+ Server (DATA46, server/bilder/gphoto.js – henting, SSRF-vern og cache skjer der, aldri i appen):
    GET    /api/bg/gphoto → {configured, url, count, error, rowText, current:{large, mobile, thumb, textColor}, next, nextChangeAt}
    POST   /api/bg/gphoto {url} → samme (400 invalid_url «Må være en delt album-lenke fra Google Photos», 502 fetch_failed)
    POST   /api/bg/gphoto/refresh · POST /api/bg/gphoto/next · DELETE /api/bg/gphoto

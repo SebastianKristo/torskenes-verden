@@ -23,7 +23,7 @@ test.after(() => { globalThis.fetch = realFetch; });
 
 const { default: app } = await import('../server/index.js');
 const { db } = await import('../server/db.js');
-const W = await import('../server/webx51.js');
+const W = await import('../server/system/theme.js');
 
 let ipN = 10;
 async function req(path, { method = 'GET', headers = {}, body } = {}) {

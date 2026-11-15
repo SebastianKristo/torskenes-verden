@@ -24,10 +24,10 @@ import { SENTENCES46, FAIL_TEXT46 } from './tools-weather-subs.js'; // prompt 46
 import { weatherCompare46 } from './weather.js';
 import { installTaskHooks46 } from '../gjoremal/glimt-wording.js';
 import { installPosterDecorator46 } from './calendar.js';
-// Prompt 59 (prompt 49 del 4): svar-cache, strømming (status + tekstbiter), parallelle verktøy – hver for seg av/på (fast59/settings.js).
-import { fast59 } from '../fast59/settings.js';
-import { cacheKindOf59, legacyKindOf59, planKey59, legacyKey59, cacheGet59, cachePut59 } from '../fast59/cache.js';
-import { toolStatus59, legacyStatus59, PLAN_STATUS59, ANSWER_STATUS59, CACHE_STATUS59 } from '../fast59/status.js';
+// Prompt 59 (prompt 49 del 4): svar-cache, strømming (status + tekstbiter), parallelle verktøy – hver for seg av/på (glimt/fast/settings.js).
+import { fast59 } from './fast/settings.js';
+import { cacheKindOf59, legacyKindOf59, planKey59, legacyKey59, cacheGet59, cachePut59 } from './fast/cache.js';
+import { toolStatus59, legacyStatus59, PLAN_STATUS59, ANSWER_STATUS59, CACHE_STATUS59 } from './fast/status.js';
 // Prompt 60 (prompt 49 del 3): samtaletilstand, entitetsregister og konkrete valg – krokene ligger i glimt/convo/engine.js.
 import { begin60, ctx60, facts60, afterPlan60, adjust60, finish60, confirmed60, convoTrace60 } from './convo/engine.js';
 // Prompt 61 (prompt 49 del 1): oppskrifter som lærer av bruk – krokene ligger i recipes/engine.js.
@@ -426,7 +426,7 @@ export function hintOf47(local, legacyIntent) {
 async function plannerCall47(o) {
   const impl = _glimtModel45();
   if (impl) return impl(o);
-  const ai = await import('../ai-run.js');
+  const ai = await import('../ai/run.js');
   const sp = STEP47[o.step] ?? STEP47.planner;
   // Prompt 55: tidsgrensen gjelder selve svaret – en kald modell (modellbytte) får lastetiden i tillegg (deadlineAfterLoad i gaten).
   const out = await ai.run('glimt', { user: o.user, system: o.system, prompt: o.prompt, ...(o.mode === 'tools' && o.tools ? { ollamaTools: o.tools } : { schema: o.schema }), step: o.step,
@@ -439,7 +439,7 @@ let answerImpl47 = null;
 export const _setAnswerModel47 = (fn) => { answerImpl47 = fn ?? null; };
 async function answerCall47(o) {
   if (answerImpl47) { const r = await answerImpl47(o); return { text: r?.text ?? '', model: r?.model ?? 'test' }; }
-  const ai = await import('../ai-run.js');
+  const ai = await import('../ai/run.js');
   const out = await ai.run('glimt', { user: o.user, system: o.system, prompt: o.prompt, step: 'answer', localOnly: true, background: !!o.background, title: o.background ? 'Glimt · planlagt oppgave' : 'Glimt · svarer', timeoutMs: STEP47.answer.timeoutMs, noRetry: true, retries: 0,
     ...(o.onToken ? { onToken: o.onToken } : {}), ...(o.signal ? { signal: o.signal } : {}) }); // prompt 59: strømming og Stopp
   return { text: out.text, model: out.model, tokens: out.tokens, params: out.params, timing: out.timing ?? null };

@@ -1,8 +1,8 @@
 // Prompt 48 (SERVER48): lokal tekstmodell (standard qwen3:8b) som gjør OCR-radene om til felles kvitteringsformat.
-// Kallet går via AI-gaten (server/ai-gate.js: kø med interaktiv prioritet, gruppering per modell, strømming):
+// Kallet går via AI-gaten (server/ai/gate.js: kø med interaktiv prioritet, gruppering per modell, strømming):
 // temperature 0, think false, num_ctx 16384, `format` = JSON-schema (modelFormat48), tre norske eksempler (dagligvare med
 // pant og rabatt, restaurant med tips, bensinstasjon). Modellen får `rows` (vare og pris på samme rad), aldri bildet.
-import { gateChat } from '../../../ai-gate.js';
+import { gateChat } from '../../../ai/gate.js';
 import { modelFormat48 } from '../schema.js';
 
 export const LLM_OPTIONS48 = Object.freeze({ temperature: 0, num_ctx: 16384, num_predict: 4096 });
