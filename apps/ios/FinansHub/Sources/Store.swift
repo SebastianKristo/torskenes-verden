@@ -1683,8 +1683,19 @@ struct ItemsWrap<T: Decodable>: Decodable { let items: [T] }
 /// nil blir JSON null.
 func orNull(_ v: Any?) -> Any { v ?? NSNull() }
 
-func isoDay(_ d: Date) -> String { let f = DateFormatter(); f.locale = Locale(identifier: "en_US_POSIX"); f.dateFormat = "yyyy-MM-dd"; return f.string(from: d) }
-func parseDay(_ s: String) -> Date? { let f = DateFormatter(); f.locale = Locale(identifier: "en_US_POSIX"); f.dateFormat = "yyyy-MM-dd"; return f.date(from: String(s.prefix(10))) }
+/// Fase 4: én bufret formatterer i stedet for en ny DateFormatter per kall (brukes i lister og kropper), og datoen er
+/// alltid Oslo-datoen (Q20, OsloDate i SharedNet) – også når telefonen står i en annen tidssone.
+let isoDayFormatter: DateFormatter = {
+    let f: DateFormatter = DateFormatter()
+    f.locale = Locale(identifier: "en_US_POSIX")
+    f.calendar = Calendar(identifier: .gregorian)
+    f.timeZone = OsloDate.timeZone
+    f.dateFormat = "yyyy-MM-dd"
+    return f
+}()
+
+func isoDay(_ d: Date) -> String { isoDayFormatter.string(from: d) }
+func parseDay(_ s: String) -> Date? { isoDayFormatter.date(from: String(s.prefix(10))) }
 
 extension UIImage {
     /// Tegner bildet på nytt, noe som også retter orienteringen fra kameraet.

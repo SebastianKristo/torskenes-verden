@@ -477,7 +477,8 @@ private func shortDate(_ iso: String) -> String {
 
 /// Liste med rader og pil («Domener ›»).
 struct PaperLinkRow: Identifiable {
-    let id = UUID()
+    /// Fase 4: stabil id (før UUID(), som ga hver rad ny identitet hver gang lista ble tegnet).
+    var id: String { name + "\u{1F}" + sub }
     let name: String
     let sub: String
     var value: String = "›"
@@ -707,7 +708,8 @@ struct PaperTrackSettings: View {
     }
 
     private struct Row: Identifiable {
-        let id = UUID()
+        /// Fase 4: stabil id (navnet er unikt i hver gruppe) i stedet for UUID() per tegning.
+        var id: String { n }
         let n: String
         let s: String
         let on: Bool

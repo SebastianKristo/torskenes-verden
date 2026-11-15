@@ -16,10 +16,17 @@ private let groups: [(String, [(String, String, String)])] = [
 private let allScopes = [("receipts:write", "Last opp kvitteringer"), ("read:transactions", "Les transaksjoner"), ("read:summary", "Les sammendrag"),
                          ("read:budget", "Les budsjett"), ("write:transactions", "Endre transaksjoner"), ("finance:read", "Les alt i FinansHub")]
 
+/// Fase 4: bufret i stedet for en ny DateFormatter per rad.
+private let stampFormatter: DateFormatter = {
+    let f: DateFormatter = DateFormatter()
+    f.locale = Locale(identifier: "nb_NO")
+    f.dateFormat = "dd.MM.yyyy HH:mm"
+    return f
+}()
+
 private func stamp(_ d: Date?) -> String {
     guard let d else { return "–" }
-    let f = DateFormatter(); f.locale = Locale(identifier: "nb_NO"); f.dateFormat = "dd.MM.yyyy HH:mm"
-    return f.string(from: d)
+    return stampFormatter.string(from: d)
 }
 
 /// Innstillinger i appen: profilkort øverst og gruppene Konto, App og System.

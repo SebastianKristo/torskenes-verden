@@ -1046,8 +1046,15 @@ struct PaperHero: View {
         }
     }
 
+    /// Fase 4: bufret (klokka i værlinja tegnes på nytt ofte).
+    private static let clockFormatter: DateFormatter = {
+        let f: DateFormatter = DateFormatter()
+        f.dateFormat = "HH:mm"
+        return f
+    }()
+
     private var clock: String {
-        let f = DateFormatter(); f.dateFormat = "HH:mm"; return f.string(from: Date())
+        return PaperHero.clockFormatter.string(from: Date())
     }
 
     private var kicker: String {
@@ -1124,9 +1131,17 @@ func greetingWord(_ d: Date = Date()) -> String {
     }
 }
 
+/// Fase 4: bufret, i Oslo-tid (Q20).
+private let monthNameFormatter: DateFormatter = {
+    let f: DateFormatter = DateFormatter()
+    f.locale = Locale(identifier: "nb_NO")
+    f.timeZone = OsloDate.timeZone
+    f.dateFormat = "LLLL"
+    return f
+}()
+
 func monthName(_ d: Date = Date()) -> String {
-    let f = DateFormatter(); f.locale = Locale(identifier: "nb_NO"); f.dateFormat = "LLLL"
-    return f.string(from: d).capitalized(with: Locale(identifier: "nb_NO"))
+    return monthNameFormatter.string(from: d).capitalized(with: Locale(identifier: "nb_NO"))
 }
 
 /// Systemets lys/mørk-valg (scenePhase gjør at det leses på nytt når appen blir aktiv).
