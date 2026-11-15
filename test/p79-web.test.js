@@ -70,7 +70,7 @@ test('modulen: API-kontrakten, tekster og sikkerhet', () => {
   assert.match(js, /haptic\(/, 'haptikk på + der det finnes');
   assert.match(js, /aria-modal="true"/); assert.match(js, /e\.key === 'Escape'/);
   assert.doesNotMatch(js, /\son(error|load|click|input)="[a-z]/, 'CSP: ingen inline hendelser');
-  const css = read('public/css/skjold79.css');
+  const css = read('public/css/pages/skjold.css');
   assert.match(css, /prefers-reduced-motion/);
   assert.match(css, /\.sk79-bar\{position:sticky/, 'linja er sticky nederst');
   assert.match(css, /\.sk76\.sk79-port\{display:contents\}/, 'arket ligger over mobilmenyen');

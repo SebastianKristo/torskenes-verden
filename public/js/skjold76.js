@@ -18,10 +18,9 @@ import { pickBtn79, pickShellHtml79, click79, key79, route79, loadPick79 } from 
 import { anchor81, longAt81, normSel81, spanFieldsHtml81 } from './skjold81-span.js'; // prompt 81: store/brede skuffer
 import { route82, isView82, start82, html82, headBtn82, partBtn82, usedInHtml82, click82, submit82 } from './skjold82-projects.js'; // prompt 82: produkter – sjekk ut/inn
 import { historyText82 } from './skjold82-logic.js';
+import { pageCss } from './lib/page-css.js';
 
-if (typeof document !== 'undefined' && !document.querySelector('link[data-sk76-css]')) {
-  const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = '/assets/css/skjold76.css'; l.dataset.sk76Css = ''; document.head.appendChild(l);
-}
+pageCss('skjold');
 
 export const S = {
   cabs: null, cabId: null, maps: {}, cats: [], items: [], total: 0, parts: {}, q: '', cat: '', low: false,

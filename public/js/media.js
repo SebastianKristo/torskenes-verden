@@ -2,6 +2,7 @@
 import { esc, NOT_SET_UP } from './util.js';
 import { store, widget, refresh, errBox, on, load } from './store.js';
 import { poll } from './lib/poll.js';
+import { pageCss } from './lib/page-css.js';
 
 const SRC = { plex: { name: 'Plex', bg: '#e5a00d', fg: '#1a1200', domain: 'plex.tv' }, jellyfin: { name: 'Jellyfin', bg: '#7b4fd6', fg: '#fff', domain: 'jellyfin.org' } };
 const TINTS = ['#3b4a6b', '#5a3b6b', '#3b6b5e', '#6b4f3b', '#3b5a6b', '#6b3b48'];
@@ -9,11 +10,7 @@ const tint = (t) => TINTS[[...String(t)].reduce((a, c) => a + c.charCodeAt(0), 0
 const ini = (t) => String(t).trim().charAt(0).toUpperCase() || '•';
 
 // Egen stil (scopet til .media-*), lastes én gang.
-if (!document.querySelector('link[data-media-css]')) {
-  const l = document.createElement('link');
-  l.rel = 'stylesheet'; l.href = '/assets/css/media.css'; l.dataset.mediaCss = '';
-  document.head.appendChild(l);
-}
+pageCss('media');
 
 const left = (ms) => {
   const m = Math.round(ms / 60_000);

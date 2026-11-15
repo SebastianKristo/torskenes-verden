@@ -53,7 +53,7 @@ test('Kveldsbrief-arket: mørk flate også i toppen, demping bak', () => {
 });
 
 test('Media-headeren: én linje på PC, X helt til høyre', () => {
-  const css = rd('public/css/media70.css');
+  const css = rd('public/css/pages/media.css');
   const tl = rule(css, '.m70-tl');
   assert.ok(tl.includes('flex-wrap:nowrap') && tl.includes('gap:16px'));
   assert.match(css, /\.m70-tl>\.m70-back,\.m70-tl>\.m70-h,\.m70-tl>\.m44-srv\{flex:none;white-space:nowrap\}/); // prompt 89: uten varsler-pillen
@@ -65,11 +65,11 @@ test('Media-headeren: én linje på PC, X helt til høyre', () => {
 });
 
 test('Media-headeren på smal skjerm: Tilbake · Media · X på første rad, tittelen kappes ikke', () => {
-  const css = rd('public/css/media70.css');
+  const css = rd('public/css/pages/media.css').split('/* ═══ Media-siden i nytt design')[1]; // delen fra media70.css
   const m = css.slice(css.indexOf('@media (max-width:900px)'));
   assert.match(m, /\.m70-tl\{display:grid;grid-template-columns:auto auto minmax\(0,1fr\) auto;/); // prompt 89: uten varsler-kolonnen
   assert.match(m, /\.m70-h\{grid-area:1\/2;font-size:30px;white-space:nowrap\}/);
   assert.match(m, /\.m70-tl>\.m70-x\{grid-area:1\/4;/);
   assert.doesNotMatch(m.slice(0, m.indexOf('.m70-tabs{order:7')), /text-overflow:ellipsis/);
-  assert.match(rd('public/css/media-nrk.css'), /@media \(max-width:420px\)\{\.m43\.m70 \.m70-tab\{padding:9px 11px\}\}/);
+  assert.match(rd('public/css/pages/media.css'), /@media \(max-width:420px\)\{\.m43\.m70 \.m70-tab\{padding:9px 11px\}\}/);
 });

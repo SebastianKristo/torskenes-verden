@@ -10,7 +10,7 @@ const read = (p) => readFileSync(p, 'utf8');
 const BOOT = read('public/js/chat70-boot.js');
 const CH = read('public/js/chat.js');
 const C70 = read('public/js/chat70.js');
-const CSS = read('public/css/chat70.css');
+const CSS = read('public/css/pages/chat.css');
 const APP = read('public/app.html');
 const TRK = read('public/js/tracking.js');
 const SET = read('public/js/settings-view.js');
@@ -36,7 +36,7 @@ test('chat-laster: statisk skjelett i app.html før JS-bunten, egen css', () => 
   const iBoot = APP.indexOf('/assets/js/chat70-boot.js'), iMain = APP.indexOf('<main id="view">');
   assert.ok(iBoot > iMain, 'skriptet kjøres etter <main id="view">');
   assert.ok(!/chat70-boot\.js"[^>]*(type="module"|defer|async)/.test(APP), 'vanlig synkront skript');
-  assert.match(APP, /\/assets\/css\/chat70\.css/);
+  assert.match(APP, /\/assets\/css\/pages\/chat\.css/);
   const { view } = runBoot();
   assert.match(view.innerHTML, /id="chat" class="ch ch-fs papir"/);
   for (const t of ['Laster Chat …', 'Henter samtalene dine og gjør klar Glimt.', 'Kobler til Homelab', 'Henter samtaler', 'Laster modell', 'Velger modell …', 'FESTET', 'SISTE 7 DAGER', 'Spør Glimt om hva som helst …']) assert.ok(view.innerHTML.includes(t), t);

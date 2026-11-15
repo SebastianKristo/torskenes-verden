@@ -15,6 +15,7 @@
 //   POST /api/ai/import/:id/commit · POST /api/ai/import/:id/undo · GET /api/ai/import/:id?q=
 //   Feil gir faktisk årsak {error, reason, detail}. Eldre server (404): Claude via /api/chat/import/claude som før.
 
+import { pageCss } from './lib/page-css.js';
 const MAX = 1024 * 1024 * 1024, MAX_OLD = 200 * 1024 * 1024, CHUNK = 8 * 1024 * 1024, CHUNK_FROM = 40 * 1024 * 1024;
 const ST = { src: 'claude', legacy: false, st: 'start', err: '', memTxt: '', q: '', sel: {}, msel: {}, oChats: true, oMem: true, oSkip: true, drag: false, steps: [], file: '', D: null, res: null, pi: 0, pn: 0, busy: false };
 let root = null, opts = {};
@@ -272,7 +273,7 @@ function bind(el) {
 /** Monterer importen i host. Samme element gjenbrukes når AI-kontroll tegner på nytt (tilstanden ligger i modulen). */
 export function mountClaudeImport(host, o = {}) {
   opts = o;
-  if (!document.querySelector('link[data-ci43-css]')) { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = '/assets/css/claude-import43.css'; l.dataset.ci43Css = ''; document.head.appendChild(l); }
+  pageCss('claude-import');
   if (!root) { root = document.createElement('div'); root.className = 'ci43'; root.dataset.ci43Root = ''; bind(root); }
   root.classList.toggle('mob', o.variant === 'mobile');
   loadSources();

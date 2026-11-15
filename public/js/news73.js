@@ -3,11 +3,11 @@
 // og i artikkelvisningen, og egen leservisning med «Åpne original». Data: /api/news/saved (per bruker, synkes med mobil).
 // Artikkelteksten kommer sanert fra serveren og saneres én gang til her (hvitliste via <template>, aldri rå innerHTML).
 import { api, esc } from './util.js';
+import { pageCss } from './lib/page-css.js';
 
 const CSS_ID = 'news73-css';
 const ensureCss = () => {
-  if (document.getElementById(CSS_ID)) return;
-  document.head.append(Object.assign(document.createElement('link'), { id: CSS_ID, rel: 'stylesheet', href: '/assets/css/news73.css' }));
+  pageCss('nyheter');
 };
 const MON = ['jan.', 'feb.', 'mars', 'apr.', 'mai', 'juni', 'juli', 'aug.', 'sep.', 'okt.', 'nov.', 'des.'];
 const dayMon = (iso) => { const d = new Date(iso); return Number.isNaN(+d) ? '' : `${d.getDate()}. ${MON[d.getMonth()]}`; };

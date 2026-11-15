@@ -70,7 +70,7 @@ test('modulen: API-kontrakten, tekster og sikkerhet', () => {
   assert.match(js, /status === 429/, 'rate limit gir en forståelig melding');
   assert.match(js, /slice\(0, 20\)/, 'maks 20 treff samtidig (prompt 79)');
   assert.doesNotMatch(js, /\son(error|load|click|input)="[a-z]/, 'CSP: ingen inline hendelser');
-  const css = read('public/css/skjold78.css');
+  const css = read('public/css/pages/skjold.css');
   assert.match(css, /prefers-reduced-motion/);
   assert.match(css, /\.sk78-tw\{position:relative;overflow-x:auto/, 'radtabellen ruller innenfor kortet på mobil');
 });

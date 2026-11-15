@@ -11,7 +11,7 @@ const read = (p) => readFileSync(join(ROOT, 'public', p), 'utf8');
 const DARK = 'html[data-mode="dark"][data-hl="2c"]';
 
 test('Mat: mørk papirmodus har egne tokens som vinner over de lyse standardverdiene', () => {
-  const css = read('css/mat.css');
+  const css = read('css/pages/mat.css');
   const i = css.indexOf(`${DARK} .mat{`);
   assert.ok(i > 0, 'mørk regel for .mat mangler i mat.css');
   const rule = css.slice(i, css.indexOf('}', i));
@@ -22,7 +22,7 @@ test('Mat: mørk papirmodus har egne tokens som vinner over de lyse standardverd
 });
 
 test('Chat: sidepanelet (--cs) er mørkt i mørk papirmodus, og Nøytral-temaet beholder sitt', () => {
-  const css = read('css/chat.css');
+  const css = read('css/pages/chat.css');
   const m = css.match(/:where\(html\[data-mode="dark"\]\[data-hl="2c"\]\) \.ch\{--cs:(#[0-9a-f]{6})\}/);
   assert.ok(m, 'mørk --cs mangler');
   assert.ok(parseInt(m[1].slice(1, 3), 16) < 0x40, 'sidepanelet skal være mørkt');
@@ -42,11 +42,11 @@ test('Sporing: fremdriften vises i mørk modus, og klokkeslettet kuttes ikke', (
   assert.ok(paper.includes(`${DARK} .trk-step.dn i,${DARK} .trk-step.ln em{background:var(--ink)}`));
   assert.ok(paper.includes(`${DARK} .trk-step.cur i{background:var(--acc)}`));
   assert.ok(paper.includes(`${DARK} .trk-step.fin i,${DARK} .trk-step.fin.ln em{background:var(--pos)}`));
-  assert.match(read('css/tracking.css'), /\.trk-step time\{white-space:normal\}/);
+  assert.match(read('css/pages/sporing.css'), /\.trk-step time\{white-space:normal\}/);
 });
 
 test('Familie: zoomknappene på kartet er lesbare i mørk modus', () => {
-  const css = read('css/family50.css');
+  const css = read('css/pages/familie.css');
   assert.match(css, /html\[data-mode="dark"\] \.f50 \.leaflet-bar a \{[^}]*background-color: #211e18;[^}]*color: #f3efe6/);
 });
 

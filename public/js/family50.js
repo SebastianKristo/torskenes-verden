@@ -9,6 +9,7 @@
 // /checkin(…), /api/ruter/school50. Eldre: /api/family (Min deling), /family/me, /family/zones/:id/notify, /api/velfremme (På vei hjem).
 // Personvern håndheves på serveren; her vises bare det den sender. Posisjonen sendes bare med selve innsjekken.
 import { ZIC42, IFY42 } from './icons42.js';
+import { pageCss } from './lib/page-css.js';
 
 const NB = new Intl.NumberFormat('nb-NO');
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -947,7 +948,7 @@ export function live50(msg) {
 
 /* ---------------- Montering ---------------- */
 function ensureCss() {
-  if (!document.querySelector('link[data-f50css]')) { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = '/assets/css/family50.css'; l.dataset.f50css = '1'; document.head.appendChild(l); }
+  pageCss('familie');
   if (!document.querySelector('link[data-f50fonts], link[data-hl-fonts], link[href*="Newsreader"]')) {
     const l = document.createElement('link'); l.rel = 'stylesheet'; l.dataset.f50fonts = '1';
     l.href = 'https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500&family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@500;600&display=swap';

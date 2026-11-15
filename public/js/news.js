@@ -8,12 +8,12 @@ import { glimt } from './glimt.js';
 import { speak57, stop57, aiTag57 } from './voices57.js'; // prompt 57: «Les opp» med valgt stemme (POST /api/tts), nettleseren som reserve
 // Prompt 73 (NEWS73): fanen «Lagret», bokmerke på kort og i artikkelvisningen, lagret artikkel offline (news73.js).
 import { TAB73, TAB_ICON73, bind73, load73, label73, listHtml73, cardBtn73, artBtn73, artBanner73, readerHtml73, toastHtml73, click73, input73, key73, openSaved73 } from './news73.js';
+import { pageCss } from './lib/page-css.js';
 
 const CSS_ID = 'news-css';
 const ensureCss = () => {
   if (document.getElementById(CSS_ID)) return;
-  const l = Object.assign(document.createElement('link'), { id: CSS_ID, rel: 'stylesheet', href: '/assets/css/news.css' });
-  document.head.append(l);
+  pageCss('nyheter').id = CSS_ID;
   if (!document.querySelector('link[data-news-fonts]')) {
     const f = Object.assign(document.createElement('link'), { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=Manrope:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap' });
     f.dataset.newsFonts = '1';

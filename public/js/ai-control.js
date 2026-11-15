@@ -18,6 +18,7 @@
 // Nøkler, modeller og serverstandarden kan bare endres av admin; alle ser status, jobber og forbruk og kan velge egne
 // modeller for Chat, AI-søk, Glimt og brief.
 
+import { pageCss } from './lib/page-css.js';
 const THEMES = {
   papir: { bg: '#f3efe6', card: '#fffdf8', fld: '#ece6da', line: '#ddd5c5', ink: '#1b1a17', mut: '#6b665c', acc: '#b23a2a', ok: '#2f7a4f', warn: '#a8661a', bad: '#b23a2a', hf: 'Newsreader,Georgia,serif' },
   mork: { bg: '#161513', card: '#211f1b', fld: '#2b2824', line: '#3b3731', ink: '#efe9de', mut: '#a49d91', acc: '#ec7a64', ok: '#6fc28f', warn: '#e0a85a', bad: '#ec7a64', hf: 'Newsreader,Georgia,serif' },
@@ -1393,7 +1394,7 @@ export function openAiControl(o = {}) {
 export const runSelftest = () => selftest(true);
 
 function injectCss() {
-  if (document.querySelector('link[data-ac-css]')) return;
-  const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = '/assets/css/ai-control.css?v=65'; l.dataset.acCss = ''; document.head.appendChild(l);
+  if (document.querySelector('link[data-page-css="ai-kontroll"]')) return;
+  pageCss('ai-kontroll');
   if (!document.querySelector('link[data-ac-fonts],link[data-hl-fonts]')) { const f = document.createElement('link'); f.rel = 'stylesheet'; f.dataset.acFonts = ''; f.href = 'https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500&family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@500;600&display=swap'; document.head.appendChild(f); }
 }

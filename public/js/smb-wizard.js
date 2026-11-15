@@ -7,6 +7,7 @@
 //   import { openSmbWizard } from '/assets/js/smb-wizard.js';
 //   openSmbWizard({ use: ['system'], encrypted: false, onDone: (r) => … });   r = svaret fra /api/smb/save
 
+import { pageCss } from './lib/page-css.js';
 const BASE = '/api/smb';
 const STEPS = ['Finn server', 'Logg inn', 'Velg delt mappe', 'Velg mappe', 'Test og lagre'];
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -42,10 +43,7 @@ let root = null;
 let lastFocus = null;
 
 function css() {
-  if (document.getElementById('smbw-css')) return;
-  const l = document.createElement('link');
-  l.id = 'smbw-css'; l.rel = 'stylesheet'; l.href = '/assets/css/smb-wizard.css';
-  document.head.appendChild(l);
+  pageCss('smb-veiviser');
 }
 
 async function req(path, body) {

@@ -4,10 +4,9 @@
 // state:'ok'|'warn'|'fail'|'skip', text, hint?, torrents?}]}. Stoppede torrenter kan startes herfra (POST …/torrents/:hash/start).
 import { esc } from './util.js';
 import { toast } from './toast.js';
+import { pageCss } from './lib/page-css.js';
 
-if (typeof document !== 'undefined' && !document.querySelector('link[data-m50-css]')) {
-  const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = '/assets/css/media50.css'; l.dataset.m50Css = ''; document.head.appendChild(l);
-}
+pageCss('media');
 const DG = { d: null, busy: false, err: '' };
 const IC = { ok: '✓', warn: '!', fail: '✕', skip: '–' };
 async function j(path, opt = {}) {

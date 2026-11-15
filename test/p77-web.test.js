@@ -87,7 +87,7 @@ test('koblet inn i Skjold Lab, skjemaet og Innstillinger', () => {
   assert.match(s, /skjold: \(\) => skjView77\(H/);
   assert.match(s, /clickSkj77\(e, render\)/);
   assert.match(read('public/js/settings65.js'), /'studie', 'vaer', 'skjold'\]/);
-  const css = read('public/css/skjold77.css');
+  const css = read('public/css/pages/skjold.css');
   assert.match(css, /prefers-reduced-motion:reduce/);
   assert.doesNotMatch(css, /transition:[^;}]*(width|height|top|left|margin|background)/);
 });

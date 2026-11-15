@@ -4,10 +4,9 @@
 // så lenkefeltet ikke mister teksten. Fasit: «Media Musikk.dc.html» (pakke 58), sanger i spillelister du følger:
 // «claude-code-musikk-spilleliste-sanger.md». Hvert kort tegnes på nytt bare når innholdet faktisk er endret.
 import { esc } from './util.js';
+import { pageCss } from './lib/page-css.js';
 
-if (typeof document !== 'undefined' && !document.querySelector('link[data-musikk-css]')) {
-  const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = '/assets/css/media-musikk.css'; l.dataset.musikkCss = ''; document.head.appendChild(l);
-}
+pageCss('media');
 
 export const YT_RE = /^https?:\/\/(music\.youtube\.com|youtube\.com|www\.youtube\.com|m\.youtube\.com|youtu\.be)\//i;
 const BARE_YT = 'Bare lenker fra music.youtube.com, youtube.com eller youtu.be.';

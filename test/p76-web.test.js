@@ -42,7 +42,7 @@ test('tegning: 12 × 5 skuffer, valgt skuff uthevet med puls, rad og kolonne mer
 });
 
 test('animasjon: bare opacity/transform, 2 s puls, redusert bevegelse respekteres', () => {
-  const css = read('public/css/skjold76.css');
+  const css = read('public/css/pages/skjold.css');
   assert.match(css, /animation:sk76pulse \.5s ease-in-out 4 alternate/);
   assert.match(css, /@keyframes sk76pulse\{from\{opacity:[\d.]+\}to\{opacity:[\d.]+\}\}/);
   assert.doesNotMatch(css, /transition:[^;}]*(width|height|top|left|margin|background)/);
