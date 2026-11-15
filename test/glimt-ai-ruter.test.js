@@ -135,6 +135,13 @@ test('glimt-ai-ruter: /api/brief har kortene fra begge lagene (grunnbriefen og d
     assert.ok(Array.isArray(r.json.cards));
   }
   assert.equal((await N('/api/brief')).status, 401);
+  // «+ Gave til … i Gjøremål»
+  assert.equal((await N('/api/brief/gift', 'POST', { name: 'Ola', date: '2026-12-01' })).status, 401);
+  assert.equal((await A('/api/brief/gift', 'POST', {})).status, 400);
+  const g = await I('/api/brief/gift', 'POST', { name: 'Ola', date: '2026-12-01' });
+  assert.equal(g.status, 201, g.text);
+  assert.deepEqual(Object.keys(g.json.item), ['id', 'title', 'due', 'list', 'tags']);
+  assert.equal((await I('/api/brief/gift', 'POST', { name: 'Ola', date: '2026-12-01' })).json.created, false);
   assert.equal((await A('/api/brief?kind=morning')).json.kind, 'morning');
 });
 
