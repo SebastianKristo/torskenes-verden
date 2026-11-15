@@ -15,6 +15,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import no.kristo.kalender.ui.designsystem.DsColors
+import no.kristo.kalender.ui.designsystem.DsPalette
 import java.lang.ref.WeakReference
 
 /*
@@ -24,29 +26,62 @@ import java.lang.ref.WeakReference
  * avhengighet i prosjektet), så systemvinduer og vindusbakgrunnen følger valget.
  */
 
+/**
+ * Fargerollene i Kalender-appen. Verdiene kommer fra designtokenene (shared/design/tokens.json → ui/designsystem/DesignTokens.kt,
+ * Papir lys/mørk); KTok gir bare de gamle kortnavnene som skjermene bruker. Direkte tilgang til alle roller: [ds].
+ *
+ * | KTok | token |                          | KTok  | token |
+ * |------|-------|                          |-------|-------|
+ * | bg   | surface                  |       | mut   | textSecondary |
+ * | card | surfaceRaised            |       | mut2  | textTertiary |
+ * | chip | surfaceChip              |       | ink   | textPrimary |
+ * | line | line                     |       | ink2  | textPrimary 85 % |
+ * | line2| lineSubtle               |       | acc / sun | accent |
+ * | glass| surfaceRaised 82–84 %    |       | dim   | scrim |
+ */
 @Immutable
-data class KTok(
-    val bg: Color, val ink: Color, val card: Color, val chip: Color, val line: Color, val line2: Color,
-    val mut: Color, val mut2: Color, val ink2: Color, val acc: Color, val glass: Color, val dim: Color, val dark: Boolean,
-) {
+data class KTok(val ds: DsColors) {
+    val dark: Boolean get() = ds.isDark
+    val bg: Color get() = ds.surface
+    val ink: Color get() = ds.textPrimary
+    val card: Color get() = ds.surfaceRaised
+    val chip: Color get() = ds.surfaceChip
+    val line: Color get() = ds.line
+    val line2: Color get() = ds.lineSubtle
+    val mut: Color get() = ds.textSecondary
+    val mut2: Color get() = ds.textTertiary
+    val ink2: Color get() = ds.textPrimary.copy(alpha = .85f)
+    val acc: Color get() = ds.accent
+    val glass: Color get() = ds.surfaceRaised.copy(alpha = if (ds.isDark) .84f else .82f)
+    val dim: Color get() = ds.scrim
     /** Søndag og i dag-tekst. */
-    val sun: Color get() = if (dark) Color(0xFFEC7A64) else Color(0xFFB23A2A)
+    val sun: Color get() = ds.accent
 }
 
-val KLight = KTok(
-    bg = Color(0xFFF3EFE6), ink = Color(0xFF1B1A17), card = Color(0xFFFFFDF8), chip = Color(0xFFE9E2D3), line = Color(0xFFDDD5C5), line2 = Color(0xFFE6DFD1),
-    mut = Color(0xFF6B665C), mut2 = Color(0xFFA39D90), ink2 = Color(0xFF3D3A33), acc = Color(0xFFB23A2A), glass = Color(0xD1FFFDF8), dim = Color(0x521B1A17), dark = false,
-)
-val KDark = KTok(
-    bg = Color(0xFF161513), ink = Color(0xFFEFE9DE), card = Color(0xFF211F1B), chip = Color(0xFF2B2824), line = Color(0xFF3B3731), line2 = Color(0xFF2E2B26),
-    mut = Color(0xFFA49D91), mut2 = Color(0xFF7A746A), ink2 = Color(0xFFD6CFC2), acc = Color(0xFFEC7A64), glass = Color(0xD6211F1B), dim = Color(0x8C000000), dark = true,
-)
+val KLight = KTok(DsPalette.PapirLys)
+val KDark = KTok(DsPalette.PapirMork)
 
 val LocalK = staticCompositionLocalOf { KLight }
 
-/** Den røde aksenten som alltid er #b23a2a (pluss-knappen, i dag-sirkelen, nå-linjen). */
-val Red = Color(0xFFB23A2A)
-val Green = Color(0xFF2F7A4F)
+/** Den røde aksenten som alltid er Papir lys-aksenten (pluss-knappen, i dag-sirkelen, nå-linjen), også i mørk modus. */
+val Red: Color = DsPalette.PapirLys.accent
+val Green: Color = DsPalette.Category.green
+
+/**
+ * Illustrasjonsfarger som ikke finnes i tokensettet ennå: Glimt-stjernen og -ringen, konfettien og festhatten på bursdagskortet.
+ * De er samlet her i stedet for spredt i skjermene. Når tokens.json får en Glimt-gradient, byttes de ut (meldt i Fase 5-rapporten).
+ */
+object Illustrasjon {
+    val glimtOransje = Color(0xFFE8794A)
+    val glimtLilla = Color(0xFF7A5AD6)
+    val glimtGronn = Color(0xFF3FBF9A)
+    val glimtGul = Color(0xFFF2C14E)
+    val stjerneLys = Color(0xFFFFB38A)
+    val stjerneMork = Color(0xFFFF5A3C)
+    val gnist = Color(0xFFFFD9C2)
+    val konfettiBla = Color(0xFFA8D4FB)
+    val konfettiRosa = Color(0xFFFFD2C2)
+}
 
 val Newsreader = FontFamily(
     Font(no.kristo.kalender.R.font.newsreader_regular, FontWeight.Normal),

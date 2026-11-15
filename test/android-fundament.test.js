@@ -52,7 +52,7 @@ test('B4: kryptert lagring åpnes bare via SikkerLagring, som gjenoppretter i st
   }
   assert.match(raw(join(APP, 'Accounts.kt')), /SikkerLagring\.prefs\(ctx, "finanshub"\)/);
   assert.match(raw(join(KAL, 'KalApi.kt')), /SikkerLagring\.prefs\(ctx, FILE, gammelKlartekst = FILE \+ "_plain"\)/);
-  assert.match(raw(join(WEAR, 'WearApi51.kt')), /SikkerLagring\.prefs\(ctx, "wear51", gammelKlartekst = "wear51_plain"\)/);
+  assert.match(raw(join(WEAR, 'WearApi.kt')), /SikkerLagring\.prefs\(ctx, "wear51", gammelKlartekst = "wear51_plain"\)/);
   assert.ok(existsSync(join(AND, 'felles-android/src/main/AndroidManifest.xml')));
 });
 
@@ -79,7 +79,7 @@ test('D §6: appen viser det serveren regner (neste trekk, neste forekomst), lok
   assert.match(strip(raw(join(APP, 'domene/Gjoremal.kt'))), /val next = it0\.nextDue \?: nextDue37\(it0\.due, it0\.rep\)/);
   assert.match(strip(raw(join(APP, 'domene/Gjoremal.kt'))), /val next = before\.nextDue \?: nextDue37\(before\.due, before\.rep\)/);
   assert.match(strip(raw(join(APP, 'domene/Gjoremal.kt'))), /nextDue = t\.optStr\("nextDue"\)\?\.take\(10\)/);
-  assert.match(strip(raw(join(APP, 'Calendar29.kt'))), /fun parseQuickLocal29\(txt: String, today: LocalDate = no\.kristo\.felles\.tid\.OsloDato\.iDag\(\)\)/);
+  assert.match(strip(raw(join(APP, 'RaskTime.kt'))), /fun parseQuickLocal29\(txt: String, today: LocalDate = no\.kristo\.felles\.tid\.OsloDato\.iDag\(\)\)/);
   // Kalenders lokale hurtigtolking har felles fasit (JUnit i :kalender, kjørt av «Mobilapper»).
   const t = raw(join(AND, 'kalender/src/test/java/no/kristo/kalender/HurtigtolkingTest.kt'));
   assert.match(t, /shared\/testvektorer\/datoer\.json/);

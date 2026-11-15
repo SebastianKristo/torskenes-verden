@@ -59,8 +59,8 @@ HSPLno/kristo/finanshub/ui/VoiceInputUiKt*;->**(**)**
 Lno/kristo/finanshub/ui/VoiceInputUiKt*;
 HSPLno/kristo/finanshub/ui/Convo67UiKt*;->**(**)**
 Lno/kristo/finanshub/ui/Convo67UiKt*;
-HSPLno/kristo/finanshub/ui/Cal70CardKt*;->**(**)**
-Lno/kristo/finanshub/ui/Cal70CardKt*;
+HSPLno/kristo/finanshub/ui/GlimtKalenderkortKt*;->**(**)**
+Lno/kristo/finanshub/ui/GlimtKalenderkortKt*;
 HSPLno/kristo/finanshub/P31*;->**(**)**
 Lno/kristo/finanshub/P31*;
 HSPLno/kristo/finanshub/GlimtKt*;->**(**)**

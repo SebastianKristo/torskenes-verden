@@ -88,6 +88,7 @@ import no.kristo.kalender.hm
 import no.kristo.kalender.jsDay
 import no.kristo.kalender.reduceMotion
 import no.kristo.kalender.today
+import no.kristo.kalender.Illustrasjon
 
 /*
  * Prompt 33: Glimt i Kalender (fasit: spark(), orb(), glimt-panelet i Kalender App.dc.html).
@@ -96,8 +97,8 @@ import no.kristo.kalender.today
  * «Reduser bevegelse»: ingen rotasjon/skalering, bare fade.
  */
 
-private val RING = listOf(Color(0xFFB23A2A), Color(0xFFE8794A), Color(0xFF7A5AD6), Color(0xFF3FBF9A), Color(0xFFB23A2A))
-private val GLOW = listOf(Color(0xFFB23A2A), Color(0xFFE8794A), Color(0xFFF2C14E), Color(0xFF3FBF9A), Color(0xFF7A5AD6), Color(0xFFB23A2A))
+private val RING = listOf(Red, Illustrasjon.glimtOransje, Illustrasjon.glimtLilla, Illustrasjon.glimtGronn, Red)
+private val GLOW = listOf(Red, Illustrasjon.glimtOransje, Illustrasjon.glimtGul, Illustrasjon.glimtGronn, Illustrasjon.glimtLilla, Red)
 private const val STAR = "M12 1.5c.6 4.9 4.6 8.9 9.5 9.5v2c-4.9.6-8.9 4.6-9.5 9.5h-0c-.6-4.9-4.6-8.9-9.5-9.5v-2C7.4 10.4 11.4 6.4 12 1.5z"
 
 /** Glimt-stjernen i ring: ringen spinner (3,2 s, raskt 1 s), stjernen pulser (1,8 s / 0,9 s), to gnister blinker. */
@@ -121,14 +122,14 @@ fun Spark(size: Dp, fast: Boolean) {
         rotate(ang, c) {
             translate(c.x - 12f * k, c.y - 12f * k) {
                 scale(k, k, Offset.Zero) {
-                    drawPath(star, Brush.linearGradient(listOf(Color(0xFFFFB38A), Color(0xFFFF5A3C)), Offset.Zero, Offset(24f, 24f)), alpha = .85f + .15f * pulse)
+                    drawPath(star, Brush.linearGradient(listOf(Illustrasjon.stjerneLys, Illustrasjon.stjerneMork), Offset.Zero, Offset(24f, 24f)), alpha = .85f + .15f * pulse)
                 }
             }
         }
         val a1 = if (reduce) .7f else tw1
         val a2 = if (reduce) .7f else tw2
-        drawCircle(Color(0xFFFFD9C2), 2.dp.toPx() * (.4f + .6f * a1), Offset(s - 1.dp.toPx(), 1.dp.toPx()), alpha = a1)
-        drawCircle(Color(0xFFFFD9C2), 1.5.dp.toPx() * (.4f + .6f * a2), Offset(0f, s - 1.dp.toPx()), alpha = a2)
+        drawCircle(Illustrasjon.gnist, 2.dp.toPx() * (.4f + .6f * a1), Offset(s - 1.dp.toPx(), 1.dp.toPx()), alpha = a1)
+        drawCircle(Illustrasjon.gnist, 1.5.dp.toPx() * (.4f + .6f * a2), Offset(0f, s - 1.dp.toPx()), alpha = a2)
     }
 }
 
@@ -161,7 +162,7 @@ private fun Shimmer(text: String) {
     val x by inf.animateFloat(2f, -1f, infiniteRepeatable(tween(1400, easing = LinearEasing)), label = "x")
     val w = 220f
     val brush = if (reduce) SolidColor(k.mut) else Brush.linearGradient(listOf(k.mut, k.mut, Red, k.mut, k.mut), Offset(x * w - w, 0f), Offset(x * w + w, 0f))
-    Tx(text, man(14.sp, FontWeight.Bold).copy(brush = brush))
+    Tx(text, man(KType.callout, FontWeight.Bold).copy(brush = brush))
 }
 
 /** Rød markør mens teksten strømmer. */
@@ -200,16 +201,16 @@ fun GlimtPanel(vm: KalVm) {
         ) {
             Orb(42.dp, vm.thinking)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                Tx("Glimt", news(24.sp, k.ink, 26.sp))
-                Tx(if (vm.thinking) "TENKER …" else "KALENDER-ASSISTENT · LOKALT + GEMINI", mono(10.sp, k.mut2, .12f))
+                Tx("Glimt", news(KType.title3, k.ink, 26.sp))
+                Tx(if (vm.thinking) "TENKER …" else "KALENDER-ASSISTENT · LOKALT + GEMINI", mono(KType.caption, k.mut2, .12f))
             }
             InkPill("Ferdig", { vm.closeGlimt() })
         }
         if (vm.gm.isEmpty()) {
             Column(Modifier.weight(1f).fillMaxWidth().padding(horizontal = 22.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp, Alignment.CenterVertically)) {
                 Orb(92.dp, vm.thinking)
-                Tx("Hva lurer du på?", news(26.sp, k.ink).copy(textAlign = TextAlign.Center))
-                Tx("Spør om kalenderen din, finn ledig tid, eller lim inn en melding, så legger jeg den inn.", man(13.5.sp, FontWeight.Medium, k.mut, 19.sp).copy(textAlign = TextAlign.Center),
+                Tx("Hva lurer du på?", news(KType.title3, k.ink).copy(textAlign = TextAlign.Center))
+                Tx("Spør om kalenderen din, finn ledig tid, eller lim inn en melding, så legger jeg den inn.", man(KType.subheadline, FontWeight.Medium, k.mut, 19.sp).copy(textAlign = TextAlign.Center),
                     Modifier.widthIn(max = 280.dp), maxLines = 4)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     KalAsk.SUG.forEach { s -> Chip(s, false, { vm.glSend(s) }, bgOff = k.bg) }
@@ -236,8 +237,8 @@ fun GlimtPanel(vm: KalVm) {
             ) {
                 Spark(20.dp, vm.thinking || vm.gq.isNotBlank())
                 Box(Modifier.weight(1f)) {
-                    if (vm.gq.isEmpty()) Tx("Spør Glimt …", man(16.sp, FontWeight.Medium, k.mut2))
-                    BasicTextField(vm.gq, { vm.gq = it }, Modifier.fillMaxWidth().semantics { contentDescription = "Spør Glimt" }, textStyle = man(16.sp, FontWeight.Medium, k.ink),
+                    if (vm.gq.isEmpty()) Tx("Spør Glimt …", man(KType.body, FontWeight.Medium, k.mut2))
+                    BasicTextField(vm.gq, { vm.gq = it }, Modifier.fillMaxWidth().semantics { contentDescription = "Spør Glimt" }, textStyle = man(KType.body, FontWeight.Medium, k.ink),
                         singleLine = true, cursorBrush = SolidColor(Red), keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send), keyboardActions = KeyboardActions(onSend = { vm.glSend(vm.gq) }))
                 }
                 Box(Modifier.size(38.dp).clip(RoundedCornerShape(14.dp)).background(if (vm.gq.isNotBlank()) k.ink else k.mut2).tap("Send") { vm.glSend(vm.gq) }, contentAlignment = Alignment.Center) {
@@ -253,7 +254,7 @@ private fun UserMsg(t: String) {
     val k = LocalK.current
     Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
         Box(Modifier.widthIn(max = 300.dp).clip(RoundedCornerShape(18.dp, 18.dp, 4.dp, 18.dp)).background(k.ink).padding(horizontal = 14.dp, vertical = 10.dp)) {
-            Tx(t, man(14.5.sp, FontWeight.Medium, k.bg, 20.sp), maxLines = 20)
+            Tx(t, man(KType.callout, FontWeight.Medium, k.bg, 20.sp), maxLines = 20)
         }
     }
 }
@@ -275,19 +276,19 @@ private fun AsstMsg(vm: KalVm, m: KGMsg) {
                             Modifier.size(14.dp).clip(CircleShape).background(if (dn) Green else Color.Transparent)
                                 .then(if (dn) Modifier else Modifier.border(if (ac) 2.dp else 1.5.dp, if (ac) Red else k.line, CircleShape)),
                             contentAlignment = Alignment.Center,
-                        ) { if (dn) Tx("✓", man(8.sp, FontWeight.ExtraBold, Color.White)) }
-                        Tx(n, man(12.5.sp, if (ac) FontWeight.Bold else FontWeight.Medium, if (dn || ac) k.ink else k.mut2))
+                        ) { if (dn) Tx("✓", man(8.sp, /* hake i en liten boks, under typeskjemaet */ FontWeight.ExtraBold, Color.White)) }
+                        Tx(n, man(KType.footnote, if (ac) FontWeight.Bold else FontWeight.Medium, if (dn || ac) k.ink else k.mut2))
                     }
                 }
             } else {
                 val w = m.words
                 Row(verticalAlignment = Alignment.Bottom) {
-                    Tx(w.take(m.shown).joinToString(" "), man(14.5.sp, FontWeight.Medium, k.ink, 22.sp), Modifier.weight(1f, fill = false), maxLines = 40)
+                    Tx(w.take(m.shown).joinToString(" "), man(KType.callout, FontWeight.Medium, k.ink, 22.sp), Modifier.weight(1f, fill = false), maxLines = 40)
                     if (!m.done) Cursor()
                 }
             }
             if (m.done) {
-                m.c70?.let { KalCal70Card(vm, it) } // prompt 70: kort C (KalCal70Ui.kt)
+                m.c70?.let { KalCal70Card(vm, it) } // prompt 70: kort C (GlimtKalenderkort.kt)
                 m.ask70?.let { KalCal70Ask(vm, it) }
                 m.cards.forEach { e -> Card(vm, vm.find(e.id) ?: e) }
                 if (m.slots.isNotEmpty()) FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -296,9 +297,9 @@ private fun AsstMsg(vm: KalVm, m: KGMsg) {
                             Modifier.height(34.dp).clip(RoundedCornerShape(17.dp)).border(1.5.dp, Green, RoundedCornerShape(17.dp)).tap("Ny hendelse " + hm(sl.s)) { vm.slot(sl) }.padding(horizontal = 13.dp),
                             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp),
                         ) {
-                            val g = if (k.dark) Color(0xFF8FD4A8) else Color(0xFF235C3B)
+                            val g = k.ds.success
                             Svg(Ic.PLUS, 12.dp, g, 3f)
-                            Tx(hm(sl.s) + "–" + hm(sl.e), mono(12.5.sp, g))
+                            Tx(hm(sl.s) + "–" + hm(sl.e), mono(KType.footnote, g))
                         }
                     }
                 }
@@ -306,7 +307,7 @@ private fun AsstMsg(vm: KalVm, m: KGMsg) {
                 if (uid != null && vm.find(uid) != null) LinePill("Angre", { vm.glUndo(m) }, h = 30.dp)
                 // Prompt 34: Glimt fikk ikke svar → Prøv igjen og Åpne AI-kontroll (ikke bare hjelpeteksten).
                 if (m.err) Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    InkPill("Prøv igjen", { vm.glRetry(m) }, h = 30.dp, padH = 14.dp, fs = 12.5.sp)
+                    InkPill("Prøv igjen", { vm.glRetry(m) }, h = 30.dp, padH = 14.dp, fs = KType.footnote)
                     LinePill("Åpne AI-kontroll", { vm.openAiCtl() }, h = 30.dp)
                 }
             }
@@ -328,10 +329,10 @@ private fun Card(vm: KalVm, e: KEv) {
     ) {
         Box(Modifier.width(4.dp).fillMaxHeight().clip(RoundedCornerShape(2.dp)).background(c.col))
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Tx(e.t, man(14.sp, FontWeight.Bold, k.ink))
-            Tx(sub, man(12.sp, FontWeight.Medium, k.mut))
+            Tx(e.t, man(KType.callout, FontWeight.Bold, k.ink))
+            Tx(sub, man(KType.footnote, FontWeight.Medium, k.mut))
         }
-        Tx(if (e.all) "Hele dagen" else hm(e.s ?: 0), mono(11.5.sp, k.ink))
+        Tx(if (e.all) "Hele dagen" else hm(e.s ?: 0), mono(KType.caption, k.ink))
     }
     // Prompt 37: minikart med adressen når Glimt la til hendelsen.
     GlimtMap37(vm, e)

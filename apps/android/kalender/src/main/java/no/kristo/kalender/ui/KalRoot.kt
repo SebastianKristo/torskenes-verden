@@ -194,9 +194,9 @@ private fun KalApp(vm: KalVm, onBackToHomelab: () -> Unit) {
                 Modifier.shadow(12.dp, RoundedCornerShape(50)).clip(RoundedCornerShape(50)).background(k.ink).padding(start = 16.dp, end = 10.dp, top = 10.dp, bottom = 10.dp),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                Tx(t?.t ?: "", man(13.sp, FontWeight.SemiBold, k.bg), Modifier.weight(1f, fill = false))
+                Tx(t?.t ?: "", man(KType.subheadline, FontWeight.SemiBold, k.bg), Modifier.weight(1f, fill = false))
                 if (t?.undo != null) Box(Modifier.height(28.dp).clip(RoundedCornerShape(14.dp)).background(k.bg).tap("Angre") { vm.undoToast() }.padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
-                    Tx("Angre", man(12.sp, FontWeight.Bold, k.ink))
+                    Tx("Angre", man(KType.footnote, FontWeight.Bold, k.ink))
                 }
             }
         }
@@ -284,13 +284,13 @@ private fun TopBar(vm: KalVm, onBackToHomelab: () -> Unit) {
         // Android: «◀ Homelab» når appen ble åpnet fra Homelab (iOS viser systemets tilbake-til-app selv).
         if (vm.back) Row(Modifier.height(30.dp).clip(RoundedCornerShape(15.dp)).tap("Tilbake til Homelab", onClick = onBackToHomelab).padding(end = 8.dp),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            Svg("M15 5l-7 7 7 7", 14.dp, Color(0xFF2B5D8A), 2.6f)
-            Tx("Homelab", man(13.sp, FontWeight.SemiBold, Color(0xFF2B5D8A)))
+            Svg("M15 5l-7 7 7 7", 14.dp, k.ds.info, 2.6f)
+            Tx("Homelab", man(KType.subheadline, FontWeight.SemiBold, k.ds.info))
         }
         // Prompt 44: tittelen krymper aldri. Plassen hentes fra knappene: «I dag» blir kalender-ikonet med dagens tall, og er det
         // fortsatt for trangt (smal telefon, Fold lukket, delt skjerm), legges tittelen på egen rad over knappene. Målt på faktisk bredde.
         val tm = androidx.compose.ui.text.rememberTextMeasurer()
-        val titleW = with(LocalDensity.current) { tm.measure(hd.t, news(32.sp, k.ink, 33.sp)).size.width.toDp() }
+        val titleW = with(LocalDensity.current) { tm.measure(hd.t, news(KType.title2, k.ink, 33.sp)).size.width.toDp() }
         BoxWithConstraints(Modifier.fillMaxWidth()) {
         val btnW = (if (vm.v != "liste") 76.dp else 0.dp) + 38.dp + 40.dp
         val pillW = if (hd.inT) 0.dp else 84.dp
@@ -298,14 +298,14 @@ private fun TopBar(vm: KalVm, onBackToHomelab: () -> Unit) {
         val ownRow = titleW + btnW + (if (hd.inT) 0.dp else 44.dp) + 4.dp > maxWidth
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         if (ownRow) Column(Modifier.tap("Zoom ut") { vm.titleTap() }.padding(start = 44.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-            Tx(hd.k, mono(10.5.sp, k.acc, .12f))
-            Text(hd.t, style = news(32.sp, k.ink, 33.sp), maxLines = 1, softWrap = false)
+            Tx(hd.k, mono(KType.caption, k.acc, .12f))
+            Text(hd.t, style = news(KType.title2, k.ink, 33.sp), maxLines = 1, softWrap = false)
         }
         Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             Box(Modifier.align(Alignment.CenterVertically).padding(end = 0.dp)) { RoundBtn("Kalendere", no.kristo.kalender.ui.Ic.MENU, { no.kristo.kalender.Hap.tick(); vm.cs = true }, bg = Color.Transparent, icon = 20.dp, stroke = 2.2f) }
             if (!ownRow) Column(Modifier.wrapContentWidth().tap("Zoom ut") { vm.titleTap() }.padding(horizontal = 2.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                Tx(hd.k, mono(10.5.sp, k.acc, .12f))
-                Text(hd.t, style = news(32.sp, k.ink, 33.sp), maxLines = 1, softWrap = false)
+                Tx(hd.k, mono(KType.caption, k.acc, .12f))
+                Text(hd.t, style = news(KType.title2, k.ink, 33.sp), maxLines = 1, softWrap = false)
             }
             Spacer(Modifier.weight(1f))
             // Prompt 35 (FEIL: «I dag» viste «…»): knappegruppen krymper aldri.
@@ -314,7 +314,7 @@ private fun TopBar(vm: KalVm, onBackToHomelab: () -> Unit) {
                 if (!hd.inT && (iconToday || ownRow)) TodayBtn44 { vm.goToday() }
                 else if (!hd.inT) Box(Modifier.height(44.dp).padding(end = 4.dp).tap("I dag") { vm.goToday() }, contentAlignment = Alignment.Center) {
                     Box(Modifier.height(34.dp).clip(RoundedCornerShape(17.dp)).background(k.ink).padding(horizontal = 13.dp), contentAlignment = Alignment.Center) {
-                        Text("I dag", style = man(12.5.sp, FontWeight.Bold, k.bg), maxLines = 1, softWrap = false)
+                        Text("I dag", style = man(KType.footnote, FontWeight.Bold, k.bg), maxLines = 1, softWrap = false)
                     }
                 }
                 if (vm.v != "liste") {
@@ -334,7 +334,7 @@ private fun TopBar(vm: KalVm, onBackToHomelab: () -> Unit) {
                     Modifier.weight(1f).height(36.dp).then(if (on) Modifier.shadow(1.5.dp, RoundedCornerShape(50)) else Modifier).clip(RoundedCornerShape(50))
                         .background(if (on) k.card else Color.Transparent).tap(n, androidx.compose.ui.semantics.Role.Tab) { vm.setView(key) },
                     contentAlignment = Alignment.Center,
-                ) { Tx(n, man(12.5.sp, FontWeight.Bold, if (on) k.ink else k.mut)) }
+                ) { Tx(n, man(KType.footnote, FontWeight.Bold, if (on) k.ink else k.mut)) }
             }
         }
     }
@@ -362,16 +362,16 @@ private fun Composer(vm: KalVm, modifier: Modifier) {
         Box(Modifier.fillMaxWidth().height(1.dp).background(k.line2))
         Column(Modifier.padding(start = 12.dp, end = 12.dp, top = 6.dp, bottom = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             if (isQ) Row(
-                Modifier.fillMaxWidth().shadow(10.dp, RoundedCornerShape(20.dp), ambientColor = Color(0x1A1B1A17), spotColor = Color(0x1A1B1A17)).clip(RoundedCornerShape(20.dp))
+                Modifier.fillMaxWidth().shadow(10.dp, RoundedCornerShape(20.dp), ambientColor = KLight.ink.copy(alpha = .1f), spotColor = KLight.ink.copy(alpha = .1f)).clip(RoundedCornerShape(20.dp))
                     .background(k.card).border(1.dp, k.line, RoundedCornerShape(20.dp)).tap("Spør Glimt") { send() }.padding(horizontal = 14.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 Spark(22.dp, true)
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                    Tx("SPØR GLIMT", mono(10.sp, k.acc, .14f))
-                    Tx(vm.ct.trim(), man(14.sp, FontWeight.Bold, k.ink))
+                    Tx("SPØR GLIMT", mono(KType.caption, k.acc, .14f))
+                    Tx(vm.ct.trim(), man(KType.callout, FontWeight.Bold, k.ink))
                 }
-                Tx("Enter ›", man(11.5.sp, FontWeight.Medium, k.mut2))
+                Tx("Enter ›", man(KType.caption, FontWeight.Medium, k.mut2))
             }
             if (vm.cf && vm.ct.isBlank()) Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 no.kristo.kalender.KalAsk.SUG.take(4).forEach { s -> Chip(s, false, { vm.ct = ""; focus.clearFocus(); vm.glSend(s) }, h = 32.dp, bgOff = k.card) }
@@ -379,26 +379,26 @@ private fun Composer(vm: KalVm, modifier: Modifier) {
             if (pv != null) {
                 val c = vm.cal(pv.cal)
                 Column(
-                    Modifier.fillMaxWidth().shadow(10.dp, RoundedCornerShape(20.dp), ambientColor = Color(0x1A1B1A17), spotColor = Color(0x1A1B1A17)).clip(RoundedCornerShape(20.dp))
+                    Modifier.fillMaxWidth().shadow(10.dp, RoundedCornerShape(20.dp), ambientColor = KLight.ink.copy(alpha = .1f), spotColor = KLight.ink.copy(alpha = .1f)).clip(RoundedCornerShape(20.dp))
                         .background(k.card).border(1.dp, k.line, RoundedCornerShape(20.dp)).padding(horizontal = 14.dp, vertical = 12.dp),
                     verticalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Tx("GLIMT FORSTÅR", mono(10.sp, k.acc, .14f))
+                        Tx("GLIMT FORSTÅR", mono(KType.caption, k.acc, .14f))
                         Spacer(Modifier.width(8.dp))
                         RaskBadge46(mg?.second?.third == true)
                         Spacer(Modifier.weight(1f))
                         Box(Modifier.size(8.dp).clip(CircleShape).background(c.col))
                         Spacer(Modifier.width(5.dp))
-                        Tx(c.n, man(12.sp, FontWeight.Bold, c.fg(k)))
+                        Tx(c.n, man(KType.footnote, FontWeight.Bold, c.fg(k)))
                     }
-                    Tx(pv.t, news(22.sp, k.ink, 25.sp))
-                    Tx(dl(pv.d) + if (pv.all) " · hele dagen" else " · " + hm(pv.s ?: 0) + "–" + hm(pv.e ?: 0), man(13.5.sp, FontWeight.SemiBold, k.ink))
-                    Tx((if (pv.all) "Heldags" else "Varsel " + remL(pv.rem)) + " · " + c.n, man(12.5.sp, FontWeight.Medium, k.mut))
+                    Tx(pv.t, news(KType.title3, k.ink, 25.sp))
+                    Tx(dl(pv.d) + if (pv.all) " · hele dagen" else " · " + hm(pv.s ?: 0) + "–" + hm(pv.e ?: 0), man(KType.subheadline, FontWeight.SemiBold, k.ink))
+                    Tx((if (pv.all) "Heldags" else "Varsel " + remL(pv.rem)) + " · " + c.n, man(KType.footnote, FontWeight.Medium, k.mut))
                     RaskPlace46(mg?.second?.first.orEmpty(), mg?.second?.second.orEmpty())
                     Row(Modifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Tx("Enter for å legge til", man(11.5.sp, FontWeight.Medium, k.mut2), Modifier.weight(1f))
-                        InkPill("Legg til", { send() }, h = 34.dp, padH = 16.dp, fs = 13.sp)
+                        Tx("Enter for å legge til", man(KType.caption, FontWeight.Medium, k.mut2), Modifier.weight(1f))
+                        InkPill("Legg til", { send() }, h = 34.dp, padH = 16.dp, fs = KType.subheadline)
                     }
                 }
             }
@@ -409,10 +409,10 @@ private fun Composer(vm: KalVm, modifier: Modifier) {
                 ) {
                     Box(Modifier.tap("Åpne Glimt") { vm.openGlimt() }) { Spark(20.dp, vm.thinking || pv != null || isQ) }
                     Box(Modifier.weight(1f)) {
-                        if (vm.ct.isEmpty()) Tx("Spør Glimt eller skriv en hendelse …", man(16.sp, FontWeight.Medium, k.mut2))
+                        if (vm.ct.isEmpty()) Tx("Spør Glimt eller skriv en hendelse …", man(KType.body, FontWeight.Medium, k.mut2))
                         BasicTextField(
                             vm.ct, { vm.ct = it }, Modifier.fillMaxWidth().focusRequester(fr).onFocusChanged { vm.cf = it.isFocused }.semantics { contentDescription = "Spør Glimt eller skriv en hendelse" },
-                            textStyle = man(16.sp, FontWeight.Medium, k.ink), singleLine = true, cursorBrush = SolidColor(Red),
+                            textStyle = man(KType.body, FontWeight.Medium, k.ink), singleLine = true, cursorBrush = SolidColor(Red),
                             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send), keyboardActions = KeyboardActions(onSend = { send() }),
                         )
                     }

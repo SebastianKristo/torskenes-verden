@@ -113,13 +113,13 @@ fun MonthView(vm: KalVm) {
     Column(Modifier.fillMaxSize().padding(start = 6.dp, end = 6.dp, bottom = 4.dp)) {
         Row(Modifier.fillMaxWidth().padding(bottom = 5.dp)) {
             // Prompt 35: ukenummer tydeligere – IBM Plex Mono 800, full tekstfarge, uten brikke; kolonnen 26 dp.
-            if (vm.sw) Box(Modifier.width(26.dp), contentAlignment = Alignment.Center) { Tx("U", monoX(10.5.sp, k.ink)) }
-            wl.forEachIndexed { i, l -> Box(Modifier.weight(1f), contentAlignment = Alignment.Center) { Tx(l, man(11.sp, FontWeight.Bold, if (i == (if (sun) 0 else 6)) k.sun else k.mut)) } }
+            if (vm.sw) Box(Modifier.width(26.dp), contentAlignment = Alignment.Center) { Tx("U", monoX(KType.caption, k.ink)) }
+            wl.forEachIndexed { i, l -> Box(Modifier.weight(1f), contentAlignment = Alignment.Center) { Tx(l, man(KType.caption, FontWeight.Bold, if (i == (if (sun) 0 else 6)) k.sun else k.mut)) } }
         }
         for (w in 0 until nw) {
             val d0 = st.plusDays(7L * w)
             Row(Modifier.fillMaxWidth().weight(1f).drawBehind { drawLine(k.line, Offset(0f, 0f), Offset(size.width, 0f), 1.dp.toPx()) }) {
-                if (vm.sw) Box(Modifier.width(26.dp).padding(top = 6.dp), contentAlignment = Alignment.TopCenter) { Tx("${no.kristo.kalender.wkNo35(d0, sun)}", monoX(12.5.sp, k.ink)) }
+                if (vm.sw) Box(Modifier.width(26.dp).padding(top = 6.dp), contentAlignment = Alignment.TopCenter) { Tx("${no.kristo.kalender.wkNo35(d0, sun)}", monoX(KType.footnote, k.ink)) }
                 for (i in 0 until 7) {
                     val d = d0.plusDays(i.toLong())
                     // Prompt 42: tre eller flere trekk samme dag blir én chip «3 trekk · 627 kr».
@@ -138,13 +138,13 @@ fun MonthView(vm: KalVm) {
                             // Prompt 43: valgt dag i «Full skjerm» (dagspanelet til høyre) har svart ring.
                             Box(Modifier.size(22.dp).clip(CircleShape).background(if (td) Red else Color.Transparent)
                                 .then(if (vm.full43 && d == A && !td) Modifier.border(1.5.dp, k.ink, CircleShape) else Modifier), contentAlignment = Alignment.Center) {
-                                Tx("${d.dayOfMonth}", man(12.sp, FontWeight.Bold, if (td) Color.White else if (d.jsDay == 0) k.sun else k.ink))
+                                Tx("${d.dayOfMonth}", man(KType.footnote, FontWeight.Bold, if (td) Color.White else if (d.jsDay == 0) k.sun else k.ink))
                             }
                             if (wx != null && inM) WxIcon(wx, 12.dp)
                         }
                         // Prompt 44: trykk på en hendelse i måneden åpner detaljarket (ikke uke).
                         L.take(cut).forEach { (e, _) -> EvChip(vm, e, 9.5f) { if (!vm.swRecent44) vm.openEv(e) } }
-                        if (L.size > mx) Tx("+${L.size - cut}", man(9.5.sp, FontWeight.Bold, k.mut), Modifier.padding(horizontal = 4.dp))
+                        if (L.size > mx) Tx("+${L.size - cut}", man(KType.caption, FontWeight.Bold, k.mut), Modifier.padding(horizontal = 4.dp))
                     }
                 }
             }
@@ -213,19 +213,19 @@ fun GridView(vm: KalVm) {
         Row(Modifier.fillMaxWidth().padding(end = 6.dp, bottom = 6.dp)) {
             // Prompt 35: «U43» i 800 / --ink (12 sp).
             Box(Modifier.width(40.dp).align(Alignment.Bottom).padding(bottom = 4.dp), contentAlignment = Alignment.Center) {
-                if (vm.sw) Tx("U${no.kristo.kalender.wkNo35(no.kristo.kalender.wkStart35(st, vm.sun), vm.sun)}", monoX(12.sp, k.ink))
+                if (vm.sw) Tx("U${no.kristo.kalender.wkNo35(no.kristo.kalender.wkStart35(st, vm.sun), vm.sun)}", monoX(KType.footnote, k.ink))
             }
             days.forEach { d ->
                 val td = d == T
                 val wx = vm.wxOf(d)
                 // Zoom inn: Uke → 3 dager fra dagen, 3 dager → Dag.
                 Column(Modifier.weight(1f).then(if (N > 1) Modifier.tap(longDate(d)) { vm.openDay(d) } else Modifier), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Tx(WS[d.jsDay].uppercase(), mono(9.5.sp, if (td) Red else if (d.jsDay == 0) k.sun else k.mut, .06f))
+                    Tx(WS[d.jsDay].uppercase(), mono(KType.caption, if (td) Red else if (d.jsDay == 0) k.sun else k.mut, .06f))
                     Box(Modifier.size(28.dp).clip(CircleShape).background(if (td) Red else Color.Transparent), contentAlignment = Alignment.Center) {
-                        Tx("${d.dayOfMonth}", man(15.sp, FontWeight.Bold, if (td) Color.White else k.ink))
+                        Tx("${d.dayOfMonth}", man(KType.callout, FontWeight.Bold, if (td) Color.White else k.ink))
                     }
                     if (wx != null) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                        WxIcon(wx, 12.dp); Tx("${wx.hi}°", mono(10.sp, k.mut))
+                        WxIcon(wx, 12.dp); Tx("${wx.hi}°", mono(KType.caption, k.mut))
                     }
                 }
             }
@@ -233,7 +233,7 @@ fun GridView(vm: KalVm) {
         Box(Modifier.fillMaxWidth().height(1.dp).background(k.line))
         if (hasAll) {
             Row(Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 4.dp, end = 6.dp)) {
-                Tx("hele", mono(9.sp, k.mut2), Modifier.width(40.dp).padding(top = 3.dp).semantics { contentDescription = "Hele dagen" })
+                Tx("hele", mono(KType.caption, k.mut2), Modifier.width(40.dp).padding(top = 3.dp).semantics { contentDescription = "Hele dagen" })
                 days.forEach { d ->
                     Column(Modifier.weight(1f).padding(horizontal = 1.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         by[d].orEmpty().filter { it.first.all }.forEach { (e, _) -> EvChip(vm, e, 10f) { vm.openEv(e) } }
@@ -246,7 +246,7 @@ fun GridView(vm: KalVm) {
             Row(Modifier.fillMaxWidth().height(H * 24).padding(end = 6.dp)) {
                 // Timene 01–23.
                 Box(Modifier.width(40.dp).fillMaxHeight()) {
-                    for (i in 1..23) Tx(i.toString().padStart(2, '0'), mono(9.5.sp, k.mut2), Modifier.align(Alignment.TopEnd).offset(x = (-6).dp, y = H * i - 6.dp))
+                    for (i in 1..23) Tx(i.toString().padStart(2, '0'), mono(KType.caption, k.mut2), Modifier.align(Alignment.TopEnd).offset(x = (-6).dp, y = H * i - 6.dp))
                 }
                 days.forEach { d ->
                     val td = d == T
@@ -273,7 +273,7 @@ fun GridView(vm: KalVm) {
                                 verticalArrangement = Arrangement.spacedBy(1.dp),
                             ) {
                                 Tx(no.kristo.kalender.Kal41.listTitle(e, c.n), man(fs.sp, FontWeight.Bold, c.fg(k), (fs * 1.25f).sp), maxLines = 3)
-                                if (hh >= 36.dp && N < 7) Tx(hm(s) + "–" + hm(en), mono(9.5.sp, c.fg(k).copy(alpha = .85f)))
+                                if (hh >= 36.dp && N < 7) Tx(hm(s) + "–" + hm(en), mono(KType.caption, c.fg(k).copy(alpha = .85f)))
                             }
                         }
                         if (td) {
@@ -302,7 +302,7 @@ fun YearView(vm: KalVm) {
                 val f = LocalDate.of(Y, mi + 1, 1)
                 val off = if (vm.sun) f.jsDay else (f.jsDay + 6) % 7
                 Column(Modifier.weight(1f).tap(cap(MN[mi])) { vm.openMonth(f) }, verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                    Tx(cap(MN[mi]), news(17.sp, if (Y == T.year && mi + 1 == T.monthValue) Red else k.ink))
+                    Tx(cap(MN[mi]), news(KType.body, if (Y == T.year && mi + 1 == T.monthValue) Red else k.ink))
                     val cells = List(off) { 0 } + (1..f.lengthOfMonth()).toList()
                     cells.chunked(7).forEach { wk ->
                         Row(Modifier.fillMaxWidth().padding(bottom = 2.dp)) {
@@ -311,6 +311,7 @@ fun YearView(vm: KalVm) {
                                 val dd = if (n > 0) f.withDayOfMonth(n) else null
                                 val td = dd == T
                                 Box(Modifier.weight(1f).height(15.dp).clip(RoundedCornerShape(8.dp)).background(if (td) Red else Color.Transparent), contentAlignment = Alignment.Center) {
+                                    // Årsvisningen: 12 måneder på én skjerm, derfor under typeskjemaet (8,5 sp).
                                     if (n > 0) Tx("$n", man(8.5.sp, FontWeight.SemiBold, if (td) Color.White else if (dd!!.jsDay == 0) k.sun else k.ink))
                                 }
                             }
@@ -336,18 +337,18 @@ fun EvRow(vm: KalVm, e: KEv, cont: Boolean = false, twoTimes: Boolean = true) {
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Column(Modifier.width(46.dp), verticalArrangement = Arrangement.spacedBy(1.dp)) {
-            Tx(if (e.all) "Hele" else hm(e.s ?: 0), mono(11.5.sp, k.ink))
-            if (twoTimes) Tx(if (e.all) "dagen" else hm(e.e ?: 0), mono(11.5.sp, k.mut2))
+            Tx(if (e.all) "Hele" else hm(e.s ?: 0), mono(KType.caption, k.ink))
+            if (twoTimes) Tx(if (e.all) "dagen" else hm(e.e ?: 0), mono(KType.caption, k.mut2))
         }
         Box(Modifier.width(4.dp).fillMaxHeight().clip(RoundedCornerShape(2.dp)).background(c.col))
         // Prompt 42: trekk fra Abonnementer – logo, navn, merke TREKK / PRØVE / ÅRLIG og beløp høyrejustert.
         if (e.ab != null) AbRowBody42(vm, e, Modifier.weight(1f)) else
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Tx(no.kristo.kalender.Kal41.listTitle(e, c.n), man(14.5.sp, FontWeight.Bold, k.ink), Modifier.weight(1f, fill = false))
+                Tx(no.kristo.kalender.Kal41.listTitle(e, c.n), man(KType.callout, FontWeight.Bold, k.ink), Modifier.weight(1f, fill = false))
                 if (tag != null) Tag(tag, c.col.copy(alpha = .133f), c.fg(k))
             }
-            Tx(listOfNotNull(e.loc, c.n).joinToString(" · "), man(12.5.sp, FontWeight.Medium, k.mut))
+            Tx(listOfNotNull(e.loc, c.n).joinToString(" · "), man(KType.footnote, FontWeight.Medium, k.mut))
         }
     }
 }
@@ -370,9 +371,9 @@ fun ListView(vm: KalVm) {
             ) {
                 Spark(26.dp, false)
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                    Tx("GLIMT · DAGEN DIN", mono(10.sp, k.acc, .14f))
-                    Tx(sum, man(13.5.sp, FontWeight.Medium, k.ink, 19.5.sp), maxLines = 6)
-                    Tx("Spør Glimt ›", man(12.sp, FontWeight.Bold, k.acc))
+                    Tx("GLIMT · DAGEN DIN", mono(KType.caption, k.acc, .14f))
+                    Tx(sum, man(KType.subheadline, FontWeight.Medium, k.ink, 19.5.sp), maxLines = 6)
+                    Tx("Spør Glimt ›", man(KType.footnote, FontWeight.Bold, k.acc))
                 }
             }
         }
@@ -384,22 +385,22 @@ fun ListView(vm: KalVm) {
             val L = by[d].orEmpty()
             val wx = vm.wxOf(d)
             val idx = daysBetweenSafe(T, d)
-            if (showWk) item("wk$w-$d") { Tx("UKE $w", monoX(12.sp, k.ink, .12f), Modifier.padding(start = 2.dp, top = 14.dp, bottom = 2.dp)) }
+            if (showWk) item("wk$w-$d") { Tx("UKE $w", monoX(KType.footnote, k.ink, .12f), Modifier.padding(start = 2.dp, top = 14.dp, bottom = 2.dp)) }
             stickyHeader("h$d") {
                 Row(
                     Modifier.fillMaxWidth().background(k.bg).drawBehind { drawLine(k.line, Offset(0f, size.height), Offset(size.width, size.height), 1.dp.toPx()) }
                         .padding(start = 2.dp, end = 2.dp, top = 10.dp, bottom = 6.dp),
                     verticalAlignment = Alignment.Bottom,
                 ) {
-                    Tx(when (idx) { 0 -> "I dag"; 1 -> "I morgen"; else -> cap(WD[d.jsDay]) }, news(20.sp, if (idx == 0) Red else k.ink))
+                    Tx(when (idx) { 0 -> "I dag"; 1 -> "I morgen"; else -> cap(WD[d.jsDay]) }, news(KType.headline, if (idx == 0) Red else k.ink))
                     Spacer(Modifier.width(8.dp))
-                    Tx("${d.dayOfMonth}. ${MN[d.monthValue - 1]}", man(12.5.sp, FontWeight.Medium, k.mut), Modifier.weight(1f).padding(bottom = 2.dp))
+                    Tx("${d.dayOfMonth}. ${MN[d.monthValue - 1]}", man(KType.footnote, FontWeight.Medium, k.mut), Modifier.weight(1f).padding(bottom = 2.dp))
                     if (wx != null) Row(Modifier.padding(bottom = 2.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        WxIcon(wx, 14.dp); Tx("${wx.hi}° / ${wx.lo}°", mono(11.sp, k.mut))
+                        WxIcon(wx, 14.dp); Tx("${wx.hi}° / ${wx.lo}°", mono(KType.caption, k.mut))
                     }
                 }
             }
-            if (L.isEmpty()) item("e$d") { Tx("Ingenting planlagt", man(13.sp, FontWeight.Medium, k.mut2), Modifier.padding(horizontal = 2.dp, vertical = 10.dp)) }
+            if (L.isEmpty()) item("e$d") { Tx("Ingenting planlagt", man(KType.subheadline, FontWeight.Medium, k.mut2), Modifier.padding(horizontal = 2.dp, vertical = 10.dp)) }
             items(L, key = { "r$d-" + it.first.id }) { (e, cont) -> EvRow(vm, e, cont) }
         }
         item("end") { Spacer(Modifier.height(12.dp)) }
@@ -437,9 +438,9 @@ fun SearchView(vm: KalVm) {
                 Svg(Ic.SEARCH, 16.dp, k.mut, 2.3f)
                 Box(Modifier.weight(1f)) {
                     // Prompt 41: «Søk, eller spør Glimt» – Enter på en setning går til Glimt (Ollama).
-                    if (vm.q.isEmpty()) Tx("Søk, eller spør Glimt: «når er neste tannlege?»", man(16.sp, FontWeight.Medium, k.mut2))
+                    if (vm.q.isEmpty()) Tx("Søk, eller spør Glimt: «når er neste tannlege?»", man(KType.body, FontWeight.Medium, k.mut2))
                     BasicTextField(vm.q, { vm.q = it }, Modifier.fillMaxWidth().focusRequester(fr).semantics { contentDescription = "Søk i hendelser" },
-                        textStyle = man(16.sp, FontWeight.Medium, k.ink), singleLine = true, cursorBrush = SolidColor(Red),
+                        textStyle = man(KType.body, FontWeight.Medium, k.ink), singleLine = true, cursorBrush = SolidColor(Red),
                         keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Search),
                         keyboardActions = androidx.compose.foundation.text.KeyboardActions(onSearch = { vm.k41.aiSubmit(vm.q) }))
                 }
@@ -462,12 +463,12 @@ fun SearchView(vm: KalVm) {
                 item("g$d") {
                     val t = (if (d == T) "I DAG · " else if (d.isBefore(T)) "TIDLIGERE · " else "") +
                         (cap(WD[d.jsDay]) + " " + d.dayOfMonth + ". " + MN[d.monthValue - 1] + (if (d.year != T.year) " ${d.year}" else "")).uppercase()
-                    Tx(t, mono(10.5.sp, if (d == T) Red else k.mut, .12f), Modifier.padding(start = 2.dp, top = 12.dp, bottom = 4.dp))
+                    Tx(t, mono(KType.caption, if (d == T) Red else k.mut, .12f), Modifier.padding(start = 2.dp, top = 12.dp, bottom = 4.dp))
                 }
                 items(l, key = { "s$d-" + it.id }) { e -> EvRow(vm, e, twoTimes = false) }
             }
             if ((ql.isNotEmpty() || vm.sf != null) && groups.isEmpty()) item("none") {
-                Tx("Ingen treff. Prøv et navn, et sted eller en kalender.", man(14.sp, FontWeight.Medium, k.mut), Modifier.padding(horizontal = 2.dp, vertical = 24.dp), maxLines = 3)
+                Tx("Ingen treff. Prøv et navn, et sted eller en kalender.", man(KType.callout, FontWeight.Medium, k.mut), Modifier.padding(horizontal = 2.dp, vertical = 24.dp), maxLines = 3)
             }
             item("pad") { Spacer(Modifier.height(20.dp)) }
         }

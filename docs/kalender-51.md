@@ -27,7 +27,7 @@
 
 ## For utviklere
 - iOS og Mac: `apps/ios/SharedKal/Core/KalSecurityCore.swift` inneholder logikken, `Kalender/Sources/KalSecurity.swift` og `KalenderMac/Sources/MacSecurity.swift` visningene.
-- Android: `apps/android/kalender/.../Kal51.kt` inneholder logikken, `ui/Kal51Ui.kt` visningene.
+- Android: `apps/android/kalender/.../SikkerhetOgDrift.kt` inneholder logikken, `ui/Enhetsgodkjenning.kt` og `ui/NyttIVersjonen.kt` visningene.
 - Bruk flagg i koden:
   - iOS/Mac: `KalFlags51.on("navn")`
   - Android: `Kal51Flags.on(ctx, "navn")`

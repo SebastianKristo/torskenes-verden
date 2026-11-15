@@ -66,7 +66,7 @@ test('iOS/Mac: Innstillinger → Widgets og kortet én gang etter oppdateringen'
 });
 
 test('Android: Material You (Glance) og One UI med samme mottakere', () => {
-  const w = code(`${KT}/widget/KalWidgets70.kt`);
+  const w = code(`${KT}/widget/UkeOgManedWidgets.kt`);
   assert.match(w, /GlanceTheme\.colors/, 'dynamiske farger');
   assert.match(w, /Build\.MANUFACTURER\.equals\("samsung", ignoreCase = true\)/);
   assert.match(w, /0xFF1259C3/, 'One UI-blå');
@@ -92,10 +92,10 @@ test('Android: Material You (Glance) og One UI med samme mottakere', () => {
 });
 
 test('Android: Innstillinger → Widgets og introkortet', () => {
-  const s = code(`${KT}/ui/Kal35Ui.kt`);
+  const s = code(`${KT}/ui/Innstillinger.kt`);
   assert.match(s, /Label\("WIDGETS"[^\n]*\)\s*Widgets70Section\(vm\)/);
   assert.doesNotMatch(s, /LinkRow35\("Widgets"/, 'den gamle toast-raden er borte');
-  const u = code(`${KT}/ui/Kal70Ui.kt`);
+  const u = code(`${KT}/ui/WidgetInnstillinger.kt`);
   assert.match(u, /"Skjul fullførte i dag"/);
   assert.match(u, /"Kalender på hjemskjermen"/);
   assert.match(u, /if \(seen \|\| vm\.k51\.news != null\) return/);

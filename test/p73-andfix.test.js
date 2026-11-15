@@ -56,8 +56,8 @@ test('avbrudd: filteret kjenner igjen «StandaloneCoroutine was cancelled» og r
 });
 
 test('avbrudd: catch (e: Exception) med e.message i coroutines har CancellationException foran og ingen rå tekst', () => {
-  const files = ['Offline51Plat.kt', 'Calendar29.kt', 'Car51Plat.kt', 'Calendar27.kt', 'BackupModel.kt', 'G67.kt', 'SmbModel.kt', 'Feat51.kt',
-    'Memory33.kt', 'BirthdaysModel.kt', 'Calendar26.kt', 'Chat.kt', 'ui/FamilyPage.kt', 'ui/UpdatePage.kt',
+  const files = ['Offline51Plat.kt', 'RaskTime.kt', 'Car51Plat.kt', 'Kalender.kt', 'BackupModel.kt', 'G67.kt', 'SmbModel.kt', 'Feat51.kt',
+    'Memory33.kt', 'BirthdaysModel.kt', 'Kalender.kt', 'Chat.kt', 'ui/FamilyPage.kt', 'ui/UpdatePage.kt',
     'ui/Search51Ui.kt', 'ui/HealthSettings.kt', 'upload/PendingUploads.kt', 'Onboard51.kt', 'AppViewModel.kt',
     // Fase 5: P30/31/41/46, Mod28B og ui/Ui41 er delt opp etter funksjon.
     'Glimt.kt', 'Oppstart.kt', 'Varsler.kt', 'Nordlys.kt', 'Hjem.kt', 'AiKontroll.kt', 'Serveradresse.kt', 'Innlogging.kt', 'Bakgrunn.kt',

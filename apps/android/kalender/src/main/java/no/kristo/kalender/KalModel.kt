@@ -25,7 +25,7 @@ data class KEv(
     val subjectHex: Long? = null, val address: String? = null, val lat: Double? = null, val lon: Double? = null,
     /** Prompt 42: trekk fra Abonnementer (Finans): beløp, konto, logo, merke TREKK / PRØVE / ÅRLIG. null for alle andre. */
     val ab: KAb42? = null,
-    /** Prompt 44: Media-status, deltakere, gjentakelse og etag (Kal44.kt). null for de fleste. */
+    /** Prompt 44: Media-status, deltakere, gjentakelse og etag (OktOgHendelser.kt). null for de fleste. */
     val x44: KX44? = null,
 ) {
     val all: Boolean get() = s == null
@@ -167,13 +167,6 @@ fun hexIn(s: String?): Long? {
     }
 }
 fun hexOut(c: Long): String = "#%06x".format(c and 0xFFFFFF)
-
-/** Mørkere tekstfarge (tx) og lysere variant (lt) for egne kalendere fra serveren. */
-fun shade(c: Long, f: Float): Long {
-    val r = ((c shr 16) and 0xFF).toInt(); val g = ((c shr 8) and 0xFF).toInt(); val b = (c and 0xFF).toInt()
-    fun ch(v: Int) = if (f < 1f) (v * f).toInt().coerceIn(0, 255) else (v + (255 - v) * (f - 1f)).toInt().coerceIn(0, 255)
-    return 0xFF000000L or (ch(r).toLong() shl 16) or (ch(g).toLong() shl 8) or ch(b).toLong()
-}
 
 fun JSONObject.optStrOrNull(k: String): String? = if (!has(k) || isNull(k)) null else optString(k).takeIf { it.isNotBlank() && it != "null" }
 fun JSONObject.optIntOrNull(k: String): Int? = if (!has(k) || isNull(k)) null else opt(k).let { v -> when (v) { is Number -> v.toInt(); is String -> v.toIntOrNull(); else -> null } }
