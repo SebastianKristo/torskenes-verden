@@ -101,8 +101,6 @@ internal fun BriefToast36(vm: AppViewModel, modifier: Modifier = Modifier) {
 
 /* ======================= Brief: nye kort ======================= */
 
-private val CARD_IDS38 = listOf("packages", "family", "school", "birthdays", "aurora")
-
 @Composable
 private fun BxCard38(title: String, kick: String, content: @Composable ColumnScope.() -> Unit) {
     val p = PaperPal.current
@@ -190,30 +188,6 @@ internal fun BriefCard38One(vm: AppViewModel, id: String, kind: String) {
         "school" -> x?.school?.let { BxSchool38(vm, it) }
         "birthdays" -> BxBirthdays38(vm, x?.birthdays ?: vm.localBirthdays38())
         "aurora" -> x?.aurora?.let { BxAurora38(it) }
-    }
-}
-
-/** De nye kortene (etter Abonnementer, før Nyheter), i rekkefølgen fra Innstillinger → Glimt → Brief. */
-@Composable
-internal fun BriefCards38(vm: AppViewModel, kind: String) {
-    val s = vm.p38
-    LaunchedEffect(vm.account?.id) { vm.loadBriefCards38() }
-    val x = s.bx
-    val cards = x?.cards?.takeIf { it.isNotEmpty() } ?: s.cards
-    val order = if (cards.isEmpty()) CARD_IDS38 else cards.filter { it.second }.map { it.first }.filter { it in CARD_IDS38 } +
-        CARD_IDS38.filter { id -> cards.none { it.first == id } }
-    order.forEach { id ->
-        when (id) {
-            "packages" -> x?.packages?.takeIf { it.isNotEmpty() }?.let { BxPackages38(vm, it, x.pkLabel) }
-            "family" -> x?.family?.takeIf { it.isNotEmpty() }?.let { BxFamily38(it, x.famLabel) }
-            "school" -> x?.school?.takeIf { it.isNotEmpty() }?.let { BxSchool38(vm, it) }
-            "birthdays" -> (x?.birthdays ?: vm.localBirthdays38()).takeIf { it.isNotEmpty() }?.let { BxBirthdays38(vm, it) }
-            "aurora" -> x?.aurora?.let { a ->
-                val h = LocalTime.now(OSLO38).hour
-                val evening = kind == "evening" || kind == "night" || h >= 15 || h < 4
-                if (a.show && evening && (a.kp ?: 0.0) >= 3.0) BxAurora38(a)
-            }
-        }
     }
 }
 

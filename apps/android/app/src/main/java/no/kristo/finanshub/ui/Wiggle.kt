@@ -75,9 +75,6 @@ import no.kristo.finanshub.Haptics
 /** Pillene ligger 31 dp ned i innholdsområdet (8 dp under kanten som klippes når siden scrolles); listene får like mye luft øverst. */
 internal val WIGGLE_TOP28 = 31.dp
 
-/** Luft øverst i listene i redigeringsmodus, så pillene ikke dekker første kort. */
-internal val WIGGLE_SPACE28 = 74.dp
-
 @Composable
 private fun Pill28(label: String, primary: Boolean, onClick: () -> Unit, content: @Composable RowScope.(Color) -> Unit) {
     val p = PaperPal.current

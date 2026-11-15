@@ -22,24 +22,6 @@ import no.kristo.finanshub.*
 /* ======================= Konto → SERVER ======================= */
 
 @Composable
-internal fun Server41(vm: AppViewModel) {
-    val p = PaperPal.current
-    val s = vm.p41
-    LaunchedEffect(vm.account?.id) { vm.loadServer41() }
-    val a = vm.account ?: return
-    val srv = s.srv ?: Srv41(a.local, a.external.ifBlank { a.server }, vm.flag(AppPrefs.USE_LOCAL, true))
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        PLabel("Server", modifier = Modifier.padding(start = 4.dp, top = 10.dp))
-        PCard {
-            PRow("Lokal adresse", "Brukes når du er hjemme på Wi-Fi", srv.local.ifBlank { DEFAULT_LOCAL47 }.removePrefix("http://").removePrefix("https://") + " ›", serif = false) { s.srvTest = null; s.srvSheet = "local" }
-            PRow("Ekstern adresse", "Når du er borte", srv.external.ifBlank { DEFAULT_SERVER41 }.removePrefix("https://").removePrefix("http://") + " ›", serif = false, top = true) { s.srvTest = null; s.srvSheet = "external" }
-            PToggle("Bytt automatisk", "Lokal når den svarer raskt, ellers ekstern · nå: ${vm.route}", srv.auto, top = true) { vm.saveServer41(srv.local, srv.external, it) }
-        }
-        Text("Lagres på kontoen din og brukes også av Kalender-appen.", color = p.mut, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 4.dp))
-    }
-}
-
-@Composable
 internal fun ServerSheet41(vm: AppViewModel, which: String) {
     val p = PaperPal.current
     val s = vm.p41

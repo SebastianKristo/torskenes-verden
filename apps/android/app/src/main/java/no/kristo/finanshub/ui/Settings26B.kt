@@ -269,22 +269,3 @@ internal fun KalSettings26(vm: AppViewModel) {
         GuideCard26((cals ?: Integ24("calendars", "Kalendere", null, "missing", emptyList(), false)).let { integMeta26(it).guide })
     }
 }
-
-/** Bursdager: lenkeraden «Kalendere · Google … · HA … · Innstillinger ›» (oppsettet ligger i Innstillinger → Kalendere). */
-@Composable
-internal fun BdCalLink26(vm: AppViewModel) {
-    val p = PaperPal.current
-    val s = vm.bd24
-    val sub = (if (s.google.connected) "Google: ${s.google.email ?: "koblet til"}" else "Google ikke koblet") + " · " +
-        (if (s.ha.entityId != null && s.ha.syncedAt != null) "HA: ${s.ha.entityId}" else "Home Assistant ikke importert")
-    Row(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(p.card).clickable(role = Role.Button) { vm.openKalSettings26("bd") }.padding(16.dp, 14.dp),
-        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Column(Modifier.weight(1f)) {
-            Text("Kalendere", color = p.ink, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-            Text(sub, color = p.mut, fontSize = 12.5.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
-        }
-        Text("Innstillinger ›", color = p.mut, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-    }
-}

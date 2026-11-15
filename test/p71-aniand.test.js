@@ -78,7 +78,7 @@ test('wiggle: vinkelen er State og leses i graphicsLayer (Hjem, Tilpass siden, V
   assert.match(code('ui/Paper15.kt'), /rotationZ = angle\.value; translationY/);
   assert.match(code('ui/Vaer41.kt'), /graphicsLayer \{ rotationZ = angle\.value \}/);
   assert.match(code('ui/Weather39.kt'), /rotationZ = angle\.value/);
-  assert.match(code('ui/Paper16.kt'), /rotationZ = angle\.value \* 3f/);
+  // Fase 5: RuterPage i Paper16 var død kode (aldri kalt) og er slettet; Ruter-skjermen har ikke wiggle.
   for (const f of ['ui/Home70.kt', 'ui/Paper15.kt', 'ui/Vaer41.kt', 'ui/Weather39.kt', 'ui/Paper16.kt']) {
     assert.doesNotMatch(code(f).replace(/internal fun wobbleAngle[^\n]*/, ''), /wobbleAngle\(/, `${f} bruker wobble71`);
   }

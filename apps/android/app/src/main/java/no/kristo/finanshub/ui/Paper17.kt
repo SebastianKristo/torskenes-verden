@@ -1,7 +1,5 @@
 package no.kristo.finanshub.ui
 
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.contentDescription
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -9,21 +7,12 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
-import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.automirrored.filled.ShowChart
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -31,27 +20,22 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import java.time.LocalDate
 import kotlinx.coroutines.delay
 import no.kristo.finanshub.*
-import java.time.LocalDate
 
 /* ================= Innstillinger i Papir (design: Mobil Papir App → side «innst») ================= */
 
@@ -349,50 +333,6 @@ private fun TimeChips(label: String, cur: String, opts: List<String>, onPick: (S
 
 /* ---------------- Navn på appen og App-ikon ---------------- */
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun AppNameSheet(vm: AppViewModel) {
-    val p = PaperPal.current
-    var name by remember { mutableStateOf(vm.appName) }
-    ModalBottomSheet(onDismissRequest = { vm.appNameEdit = false }, containerColor = p.bg, contentColor = p.ink) {
-        Column(Modifier.fillMaxWidth().imePadding().padding(18.dp, 0.dp, 18.dp, 30.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            PSerif("Navn på appen", 24.sp)
-            Text("Vises på Hjem, i innloggingen, i varsler og i nettleserfanen på web.", color = p.mut, fontSize = 13.sp)
-            PField("Navn", name, { name = it.take(40) }, placeholder = "Homelab", onDone = { vm.saveAppName(name); vm.appNameEdit = false })
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf("Homelab", "Torskenes Verden").forEach { s -> PChip(s, name == s) { name = s } }
-            }
-            PButton("Lagre", Modifier.fillMaxWidth(), height = 50.dp) { vm.saveAppName(name); vm.appNameEdit = false }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun AppIconSheet(vm: AppViewModel) {
-    val p = PaperPal.current
-    ModalBottomSheet(onDismissRequest = { vm.appIconEdit = false }, containerColor = p.bg, contentColor = p.ink) {
-        Column(Modifier.fillMaxWidth().padding(18.dp, 0.dp, 18.dp, 30.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            PSerif("App-ikon", 24.sp)
-            Text("Tre ikoner. Alle har eget monokromt lag, så «Tematiske ikoner» i Material You farger dem som resten av hjemskjermen.", color = p.mut, fontSize = 13.sp)
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                APP_ICONS.forEach { (k, name, _) ->
-                    val on = vm.appInfo.icon == k
-                    Column(
-                        Modifier.weight(1f).clip(RoundedCornerShape(18.dp)).border(if (on) 2.dp else 1.dp, if (on) p.ink else p.line, RoundedCornerShape(18.dp))
-                            .clickable { vm.setAppIcon(k) }.padding(10.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        AppIconPreview(k, vm.appName, Modifier.size(64.dp))
-                        Text(name, color = p.ink, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-                        if (on) Text("✓ I bruk", color = p.pos, fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold)
-                    }
-                }
-            }
-        }
-    }
-}
-
 /** Forhåndsvisning av app-ikonene (samme former som de adaptive ikonene i res/drawable). */
 @Composable
 internal fun AppIconPreview(key: String, appName: String, modifier: Modifier) {
@@ -440,180 +380,6 @@ internal fun AppIconPreview(key: String, appName: String, modifier: Modifier) {
 
 /* ================= Huskeliste (ny fane) ================= */
 
-/**
- * Huskeliste: listene Alle, Hjem, Handel, Hytta og Jobb. Oppgaver med navn, liste, forfall (I dag, I morgen, Neste uke
- * eller uten dato) og hvem som skal gjøre den, gruppert i «I dag og forfalt», «Senere» og «Ferdig». Delt i familien.
- */
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-internal fun TasksScreen(vm: AppViewModel) {
-    val p = PaperPal.current
-    BackHandler { if (vm.taskEditId != null) vm.taskEditId = null else vm.closeTasks() }
-    val t = vm.tasks
-    val lists = t?.lists?.ifEmpty { null } ?: TASK_LISTS_DEFAULT
-    val members = t?.members ?: emptyList()
-    val today = LocalDate.now().toString()
-    // Prompt 32: arkiverte oppgaver telles ikke og vises bare under «Arkivert».
-    val archIds = vm.p32b.archived?.map { it.id }?.toSet() ?: emptySet()
-    val arch = vm.p32b.taskArch
-    LaunchedEffect(vm.account?.id) { vm.loadArchived32b() }
-    val all = (t?.items ?: emptyList()).filter { it.id !in archIds && (vm.taskFilter == "alle" || it.list == vm.taskFilter) }
-    val now = all.filter { !it.done && it.due != null && it.due <= today }
-    val later = all.filter { !it.done && (it.due == null || it.due > today) }.sortedBy { it.due ?: "9999" }
-    val done = all.filter { it.done }
-    var title by remember { mutableStateOf("") }
-    var due by remember { mutableStateOf<String?>(today) }
-    var who by remember { mutableStateOf<String?>(null) }
-    val focus = remember { FocusRequester() }
-    LaunchedEffect(vm.taskFocus) { if (vm.taskFocus) { delay(300); runCatching { focus.requestFocus() }; vm.taskFocus = false } }
-    val add = {
-        if (title.isNotBlank()) {
-            vm.addTask(title, vm.taskFilter.takeIf { it != "alle" } ?: lists.first().id, due, who)
-            title = ""
-        }
-    }
-    Box(Modifier.fillMaxSize().background(p.bg)) {
-        LaunchedEffect(Unit) { vm.loadTasksHa() }
-        LazyColumn(Modifier.fillMaxSize().imePadding(), contentPadding = PaddingValues(0.dp, 0.dp, 0.dp, 120.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            item { ModuleHero("Dine lister og lister delt med deg", "Huskeliste", "‹ Hjem") { vm.closeTasks() } }
-            item {
-                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    TaskListChip("Alle", null, !arch && vm.taskFilter == "alle", (t?.items ?: emptyList()).count { !it.done && it.id !in archIds }) { vm.p32b.taskArch = false; vm.taskFilter = "alle" }
-                    lists.forEach { l -> TaskListChip(l.name, l.color, !arch && vm.taskFilter == l.id, (t?.items ?: emptyList()).count { !it.done && it.list == l.id && it.id !in archIds }) { vm.p32b.taskArch = false; vm.taskFilter = l.id } }
-                    // Prompt 32: «Arkivert · N» sist i listevelgeren.
-                    TaskListChip("Arkivert", null, arch, vm.p32b.archived?.size ?: 0) { Haptics.select(); vm.p32b.taskArch = true; vm.p32b.archClearArm = false; vm.loadArchived32b() }
-                }
-            }
-            // Prompt 21: eier og «Delt med …» for valgt liste, med «Del liste» (bare eieren kan dele).
-            if (arch) {
-                item { ArchivedList32b(vm, lists) }
-                return@LazyColumn
-            }
-            lists.firstOrNull { it.id == vm.taskFilter }?.let { cur -> item { ListShareRow(vm, cur, members) } }
-            // Frist og person for nye oppgaver (prompt 22: fylte chips når valgt). Feltet ligger fast nederst, over fanelinjen.
-            item {
-                FlowRow(Modifier.padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    dueOptions(today).forEach { (k, n) -> TaskChip(n, due == k) { due = k } }
-                    if (members.isNotEmpty()) {
-                        TaskChip("Alle", who == null) { who = null }
-                        members.forEach { m -> TaskChip(m.name.split(' ').first(), who == m.id) { who = m.id } }
-                    }
-                }
-            }
-            vm.tasksError?.let { e -> item { Text(e, color = p.lab, fontSize = 13.sp, modifier = Modifier.padding(horizontal = 18.dp)) } }
-            if (t == null && vm.tasksError == null) item { Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = p.ink) } }
-            taskGroup(vm, "I dag og forfalt", now, lists, members, today)
-            taskGroup(vm, "Senere", later, lists, members, today)
-            taskGroup(vm, "Ferdig", done.take(30), lists, members, today, archive = { ids -> vm.archiveDone32b(ids) })
-            if (t != null && all.isEmpty()) item { Text("Ingen oppgaver her ennå.", color = p.mut, fontSize = 13.sp, modifier = Modifier.padding(horizontal = 18.dp)) }
-            // Prompt 22: synk med Home Assistant To-do (bare admin).
-            if (vm.userIsAdmin && vm.tasksHa != null) item { TasksHaSection(vm, lists) }
-        }
-        // Prompt 32: feltet «Ny oppgave» skjules i Arkivert.
-        if (!arch) TaskDock(title, { title = it }, focus, Modifier.align(Alignment.BottomCenter)) { if (title.isBlank()) runCatching { focus.requestFocus() } else add() }
-    }
-    vm.taskEditId?.let { id -> (t?.items ?: emptyList()).firstOrNull { it.id == id }?.let { TaskSheet(vm, it, lists, members, today) } }
-    vm.shareListId?.let { id -> lists.firstOrNull { it.id == id }?.let { ShareListSheet(vm, it) } }
-}
-
-private fun firstName(n: String) = n.split(' ').first()
-
-/** «Eier: Du · Delt med Ingrid og Pål» med knappen «Del liste» for eieren. */
-@Composable
-private fun ListShareRow(vm: AppViewModel, l: TaskList, members: List<TaskMember>) {
-    val p = PaperPal.current
-    fun nameOf(m: TaskMember) = m.name.ifBlank { members.firstOrNull { it.id == m.id }?.name ?: "" }.ifBlank { "en person" }
-    val owner = if (l.mine) "Du" else l.ownerName ?: members.firstOrNull { it.id == l.owner }?.name?.let(::firstName) ?: "en annen"
-    val shared = l.members.filter { it.id != l.owner }.map { firstName(nameOf(it)) }
-    val sharedText = when (shared.size) { 0 -> "Ikke delt"; 1 -> "Delt med ${shared[0]}"; else -> "Delt med " + shared.dropLast(1).joinToString(", ") + " og " + shared.last() }
-    Row(
-        Modifier.fillMaxWidth().padding(horizontal = 16.dp).clip(RoundedCornerShape(16.dp)).background(p.card).padding(start = 14.dp, end = 8.dp, top = 10.dp, bottom = 10.dp),
-        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        Box(Modifier.size(10.dp).clip(CircleShape).background(Color(l.color)))
-        Column(Modifier.weight(1f)) {
-            Text("Eier: $owner", color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 13.5.sp, maxLines = 1)
-            Text(sharedText, color = if (shared.isEmpty()) p.mut else p.pos, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
-        }
-        if (l.mine) Box(Modifier.height(36.dp).clip(CircleShape).background(p.ink).clickable { Haptics.select(); vm.openShareList(l.id) }.padding(horizontal = 14.dp), contentAlignment = Alignment.Center) {
-            Text("Del liste", color = p.bg, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-        }
-    }
-}
-
-/** «Del liste»: velg personene listen skal deles med. Medlemmer kan legge til, endre og fullføre oppgaver. */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun ShareListSheet(vm: AppViewModel, l: TaskList) {
-    val p = PaperPal.current
-    var picked by remember(l.id) { mutableStateOf(l.members.map { it.id }.filter { it != l.owner }.toSet()) }
-    ModalBottomSheet(onDismissRequest = { vm.shareListId = null }, containerColor = p.bg, contentColor = p.ink) {
-        Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(18.dp, 0.dp, 18.dp, 30.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            PSerif("Del «${l.name}»", 24.sp)
-            Text("De du velger, ser listen og kan legge til, endre og fullføre oppgaver. Bare du kan dele eller slette den.", color = p.mut, fontSize = 13.sp)
-            val users = vm.taskUsers
-            if (users.isEmpty()) Text("Henter personer …", color = p.mut, fontSize = 13.sp)
-            else PCard {
-                users.forEachIndexed { i, u ->
-                    PToggle(u.name.ifBlank { "Uten navn" }, null, u.id in picked, top = i > 0) { on -> picked = if (on) picked + u.id else picked - u.id }
-                }
-            }
-            PButton(if (vm.shareBusy) "Lagrer …" else "Lagre deling", Modifier.fillMaxWidth()) { if (!vm.shareBusy) vm.shareList(l.id, picked.toList()) }
-        }
-    }
-}
-
-private fun dueOptions(today: String): List<Pair<String?, String>> {
-    val d = LocalDate.parse(today)
-    return listOf(today to "I dag", d.plusDays(1).toString() to "I morgen", d.plusWeeks(1).toString() to "Neste uke", null to "Uten dato")
-}
-
-private fun androidx.compose.foundation.lazy.LazyListScope.taskGroup(vm: AppViewModel, title: String, items: List<TaskItem>, lists: List<TaskList>, members: List<TaskMember>, today: String,
-    archive: ((List<String>) -> Unit)? = null) {
-    if (items.isEmpty()) return
-    item {
-        // Prompt 32: FERDIG har «Arkiver alle».
-        Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 16.dp, top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-            PLabel("$title · ${items.size}", modifier = Modifier.weight(1f))
-            if (archive != null) ArchiveAll32b { archive(items.map { it.id }) }
-        }
-    }
-    item {
-        PCard(Modifier.padding(horizontal = 16.dp)) {
-            items.forEachIndexed { i, it -> TaskRow(vm, it, lists, members, today, top = i > 0) }
-        }
-    }
-}
-
-@Composable
-private fun TaskRow(vm: AppViewModel, t: TaskItem, lists: List<TaskList>, members: List<TaskMember>, today: String, top: Boolean) {
-    val p = PaperPal.current
-    val l = lists.firstOrNull { it.id == t.list }
-    val who = members.firstOrNull { it.id == t.assignee }?.name?.split(' ')?.first()
-    Column {
-        if (top) Box(Modifier.fillMaxWidth().padding(start = 52.dp).height(1.dp).background(p.line))
-        Row(Modifier.fillMaxWidth().clickable { vm.taskEditId = t.id }.padding(14.dp, 11.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Box(
-                Modifier.size(24.dp).clip(CircleShape).background(if (t.done) p.pos else Color.Transparent).border(2.dp, if (t.done) p.pos else p.mut, CircleShape)
-                    .clickable { vm.toggleTask(t.id) },
-                contentAlignment = Alignment.Center,
-            ) { if (t.done) Text("✓", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold) }
-            Column(Modifier.weight(1f)) {
-                Text(t.title, color = if (t.done) p.mut else p.ink, fontSize = 15.sp, fontWeight = FontWeight.Medium, maxLines = 2, overflow = TextOverflow.Ellipsis,
-                    textDecoration = if (t.done) TextDecoration.LineThrough else null)
-                val meta = listOfNotNull(l?.name, dueText(t.due, today), who).joinToString(" · ")
-                if (meta.isNotBlank()) Text(meta, color = if (!t.done && t.due != null && t.due < today) p.lab else p.mut, fontSize = 12.sp, maxLines = 1)
-            }
-            if (l != null) Box(Modifier.size(8.dp).clip(CircleShape).background(Color(l.color)))
-            // Prompt 32: fullførte oppgaver kan arkiveres (boks ved siden av ×).
-            if (t.done) {
-                ArchiveBtn32b { vm.archiveTask32b(t.id) }
-                Box(Modifier.size(32.dp).clip(CircleShape).clickable(onClickLabel = "Slett") { vm.deleteTask(t.id) }, contentAlignment = Alignment.Center) { Text("×", modifier = Modifier.semantics { contentDescription = "Slett" }, color = p.mut, fontSize = 20.sp) }
-            }
-        }
-    }
-}
-
 private fun dueText(due: String?, today: String): String? {
     if (due == null) return null
     val d = runCatching { LocalDate.parse(due) }.getOrNull() ?: return due
@@ -624,40 +390,6 @@ private fun dueText(due: String?, today: String): String? {
         d == t.plusDays(1) -> "I morgen"
         d.isBefore(t.plusDays(7)) -> d.dayOfWeek.getDisplayName(java.time.format.TextStyle.FULL, NB16).replaceFirstChar { it.uppercase() }
         else -> "${d.dayOfMonth}.${d.monthValue}."
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
-@Composable
-private fun TaskSheet(vm: AppViewModel, t: TaskItem, lists: List<TaskList>, members: List<TaskMember>, today: String) {
-    val p = PaperPal.current
-    var title by remember(t.id) { mutableStateOf(t.title) }
-    var list by remember(t.id) { mutableStateOf(t.list) }
-    var due by remember(t.id) { mutableStateOf(t.due) }
-    var who by remember(t.id) { mutableStateOf(t.assignee) }
-    var sure by remember(t.id) { mutableStateOf(false) }
-    ModalBottomSheet(onDismissRequest = { vm.taskEditId = null }, containerColor = p.bg, contentColor = p.ink) {
-        Column(Modifier.fillMaxWidth().imePadding().verticalScroll(rememberScrollState()).padding(18.dp, 0.dp, 18.dp, 30.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            PSerif("Oppgave", 24.sp)
-            PField("Navn", title, { title = it })
-            PLabel("Liste")
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) { lists.forEach { l -> PChip(l.name, list == l.id) { list = l.id } } }
-            PLabel("Forfall")
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) { dueOptions(today).forEach { (k, n) -> PChip(n, due == k) { due = k } } }
-            if (members.isNotEmpty()) {
-                PLabel("Hvem")
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    PChip("Alle", who == null) { who = null }
-                    members.forEach { m -> PChip(m.name.split(' ').first(), who == m.id) { who = m.id } }
-                }
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                PButton(if (sure) "Trykk igjen for å slette" else "Slett", Modifier.weight(1f), kind = "line") {
-                    if (sure) { vm.deleteTask(t.id); vm.taskEditId = null } else sure = true
-                }
-                PButton("Lagre", Modifier.weight(1f)) { vm.updateTask(t.id, title, list, due, who); vm.taskEditId = null }
-            }
-        }
     }
 }
 
@@ -743,6 +475,7 @@ internal fun CompareScreen(vm: AppViewModel) {
 }
 
 private fun deg(v: Double?) = v?.let { "${Math.round(it)}°" } ?: "–"
+
 private fun dayName(d: String) = runCatching {
     val x = LocalDate.parse(d.take(10))
     if (x == LocalDate.now()) "I dag" else x.dayOfWeek.getDisplayName(java.time.format.TextStyle.SHORT, NB16).replaceFirstChar { it.uppercase() } + " ${x.dayOfMonth}."

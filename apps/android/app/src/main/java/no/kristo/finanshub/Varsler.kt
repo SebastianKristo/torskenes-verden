@@ -82,13 +82,6 @@ fun AppViewModel.loadAiIn39() {
     }
 }
 
-fun AppViewModel.setAiIn39(on: Boolean) {
-    p39.aiIn = on
-    prefs.set(aiInKey39(), on)
-    Haptics.select()
-    launch39 { runCatching { api39 { hlPut("/me/notify", notifyPrefs.toJson().put("ai_bg_notify", p31.aiBg).put("n_ai_in", on)) } } }
-}
-
 /* ---------- Varsler (/api/me/notify) ---------- */
 
 data class NotifyPrefs(

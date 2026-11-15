@@ -1,7 +1,5 @@
 package no.kristo.finanshub.ui
 
-import androidx.activity.compose.BackHandler
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -11,19 +9,11 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.keyframes
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -42,10 +32,6 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.translate
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.positionInParent
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -54,10 +40,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kotlinx.coroutines.delay
 import no.kristo.finanshub.*
-import java.time.LocalDate
-import java.time.ZoneId
 
 /*
  * Prompt 34 (ANDROID34): Glimt-brief (Glimt Brief.dc.html, mode page | card) og Glimt-figuren (fig()):
@@ -67,9 +50,13 @@ import java.time.ZoneId
  */
 
 private val INK34 = Color(0xFF1B1A17)
+
 private val CREAM34 = Color(0xFFFFFDF8)
+
 private val RED34 = Color(0xFFB23A2A)
+
 private val BLUE34 = Color(0xFF22476B)
+
 private val RING34 = listOf(Color(0xFFB23A2A), Color(0xFFE8794A), Color(0xFFF2C14E), Color(0xFF3FBF9A), Color(0xFF7A5AD6), Color(0xFFB23A2A))
 
 /** Glimt-figuren. size = bredden (høyden er 1,12 × size). mood: idle | talk | point | wave. lean: helning i grader. */
@@ -190,195 +177,6 @@ internal fun HomeBrief34(vm: AppViewModel, modifier: Modifier = Modifier) { // p
 }
 
 /* ---------------- Brief-siden (fullskjerm) ---------------- */
-
-private data class Step34(val target: String?, val text: String, val next: String)
-
-private fun steps34(b: Brief34): List<Step34> {
-    val w = b.wx
-    val n = b.next
-    val today = LocalDate.now(ZoneId.of("Europe/Oslo"))
-    val cap = { s: String -> s.replaceFirstChar { it.uppercase() } }
-    return listOf(
-        Step34(null, "Hei! Jeg er Glimt. Vil du at jeg viser deg dagen din?", "Vis meg"),
-        Step34("vaer", if (w != null) "Først været. ${cap(w.cond)}, ${w.now?.let { "$it°" } ?: ""} nå og ${w.rainSoon}. Søylene viser nedbøren time for time." else "Jeg har ikke fått været ennå.", "Neste"),
-        Step34("kal", if (n != null) "I kalenderen: ${n.title} ${if (n.date == today) "i dag" else "i morgen"}" + (n.start?.let { " kl. $it" } ?: "") + ". Trykk på en avtale for å åpne Kalender." else "Kalenderen din er fri.", "Neste"),
-        Step34("nyh", if (b.news.isNotEmpty()) "Og ${if (b.news.size == 3) "tre" else b.news.size.toString()} saker fra nyhetene. Trykk for å lese hele." else "Ingen nyheter akkurat nå.", "Neste"),
-        Step34(null, "Det var alt for nå. Trykk på meg når du vil ha en ny runde.", "Takk, Glimt"),
-    )
-}
-
-@Composable
-internal fun BriefPage34(vm: AppViewModel) {
-    val s = vm.p34
-    val p = PaperPal.current
-    val ctx = LocalContext.current
-    val dens = LocalDensity.current
-    BackHandler { vm.closeBrief34() }
-    LaunchedEffect(Unit) {
-        vm.loadBrief34()
-        // Guide-runden starter automatisk første gang briefen åpnes (kan slås av nederst).
-        if (vm.tourAuto34() && !vm.tourWasSeen34()) { delay(900); if (s.tour == 0) { s.tour = 1; vm.tourSeen34() } }
-    }
-    val b = s.brief
-    val scroll = rememberScrollState()
-    val pos = remember { mutableStateMapOf<String, Float>() }
-    val step = if (s.tour in 1..5) s.tour - 1 else -1
-    val st = b?.let { steps34(it) }
-    val cur = if (step >= 0) st?.getOrNull(step) else null
-    LaunchedEffect(s.tour, s.tourSeq) {
-        val tg = cur?.target ?: return@LaunchedEffect
-        delay(60)
-        pos[tg]?.let { y -> scroll.animateScrollTo((y - with(dens) { 90.dp.toPx() }).toInt().coerceAtLeast(0)) }
-    }
-    val ring = { k: String -> cur?.target == k }
-    val dark = Tone.paperDark
-    Box(Modifier.fillMaxSize().background(if (dark) Brush.verticalGradient(listOf(p.bg, p.bg)) else Brush.verticalGradient(0f to Color(0xFFE6ECEF), .46f to p.bg))
-        .clickable(remember { MutableInteractionSource() }, null) {}) {
-        Column(
-            Modifier.fillMaxSize().verticalScroll(scroll).statusBarsPadding().padding(start = 18.dp, end = 18.dp, top = 14.dp, bottom = 170.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            val kind = b?.kind ?: briefKind34()
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("GLIMT · " + briefTitle34(kind).uppercase(), color = p.lab, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = 10.5.sp, letterSpacing = 1.5.sp, modifier = Modifier.weight(1f))
-                Box(Modifier.height(36.dp).clip(RoundedCornerShape(18.dp)).background(p.ink).clickable(role = Role.Button) { vm.closeBrief34() }.padding(horizontal = 18.dp),
-                    contentAlignment = Alignment.Center) { Text("Ferdig", color = p.bg, fontFamily = PaperFonts.sans, fontWeight = FontWeight.Bold, fontSize = 13.5.sp) }
-            }
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(briefTitle34(kind), color = p.ink, fontFamily = PaperFonts.serif, fontWeight = FontWeight.Medium, fontSize = 40.sp, lineHeight = 41.sp)
-                Text(b?.summary ?: if (s.briefBusy) "Glimt lager briefen …" else "Fikk ikke laget briefen.", color = if (dark) p.ink else Color(0xFF3D3A33),
-                    fontFamily = PaperFonts.serif, fontSize = 17.sp, lineHeight = 24.5.sp)
-            }
-            if (b == null) return@Column
-            // Vær (blått kort).
-            b.wx?.let { w ->
-                Column(
-                    Modifier.fillMaxWidth().onGloballyPositioned { pos["vaer"] = it.positionInParent().y }.ring34(ring("vaer"), 24.dp)
-                        .clip(RoundedCornerShape(24.dp)).background(BLUE34).padding(18.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    val k = wxKind34(w.code)
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                        WxIcon(WX_PATH34[k] ?: WX_PATH34.getValue("delvis"), if (k == "sol") Color(0xFFFFD27A) else if (k == "regn") Color(0xFF9CC8FF) else Color(0xFFE6EEF7), 44.dp)
-                        Column(Modifier.weight(1f)) {
-                            Text(w.now?.let { "$it°" } ?: "–", color = Color.White, fontFamily = PaperFonts.serif, fontWeight = FontWeight.Medium, fontSize = 38.sp, lineHeight = 38.sp)
-                            Text("${w.place} · ${w.cond}", color = Color.White.copy(alpha = .85f), fontSize = 13.sp, maxLines = 1)
-                        }
-                        Text("↑${w.hi ?: "–"}° ↓${w.lo ?: "–"}°", color = Color.White.copy(alpha = .9f), fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = 12.5.sp)
-                    }
-                    if (w.rain.isNotEmpty()) {
-                        val mx = maxOf(.6, w.rain.maxOrNull() ?: 0.0)
-                        Row(Modifier.fillMaxWidth().height(46.dp), verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                            w.rain.forEach { r ->
-                                Box(Modifier.weight(1f).fillMaxHeight((r / mx).toFloat().coerceIn(.06f, 1f)).clip(RoundedCornerShape(topStart = 3.dp, topEnd = 3.dp))
-                                    .background(Color.White.copy(alpha = if (r >= .2) .9f else .3f)))
-                            }
-                        }
-                        Row(Modifier.fillMaxWidth()) {
-                            listOf("nå", "nedbør neste 12 t", "+12 t").forEachIndexed { i, l ->
-                                Text(l, color = Color.White.copy(alpha = .75f), fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = 10.5.sp,
-                                    modifier = Modifier.weight(1f), textAlign = when (i) { 0 -> androidx.compose.ui.text.style.TextAlign.Start; 1 -> androidx.compose.ui.text.style.TextAlign.Center; else -> androidx.compose.ui.text.style.TextAlign.End })
-                            }
-                        }
-                    }
-                    val notes = listOfNotNull(w.vsYesterday?.let { "Sammenlignet med i går" to it }, w.sunset?.let { "Solnedgang" to "Sola går ned $it" })
-                    if (notes.isNotEmpty()) {
-                        Box(Modifier.fillMaxWidth().height(1.dp).background(Color.White.copy(alpha = .18f)))
-                        notes.forEach { (k2, v) ->
-                            Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                                Text(k2, color = Color.White.copy(alpha = .75f), fontSize = 12.sp)
-                                Text(v, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                            }
-                        }
-                    }
-                }
-            }
-            // Kalender.
-            Column(
-                Modifier.fillMaxWidth().onGloballyPositioned { pos["kal"] = it.positionInParent().y }.ring34(ring("kal"), 24.dp)
-                    .clip(RoundedCornerShape(24.dp)).background(p.card).padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                Row(verticalAlignment = Alignment.Bottom) {
-                    Text("Kalender", color = p.ink, fontFamily = PaperFonts.serif, fontWeight = FontWeight.Medium, fontSize = 22.sp, modifier = Modifier.weight(1f))
-                    Text(b.nextLabel(), color = p.lab, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = 11.sp)
-                }
-                if (b.events.isEmpty()) Text("Ingenting i dag eller i morgen.", color = p.mut, fontSize = 13.5.sp)
-                val today = LocalDate.now(ZoneId.of("Europe/Oslo"))
-                b.events.forEach { e ->
-                    Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
-                    Row(
-                        Modifier.fillMaxWidth().height(IntrinsicSize.Min).clickable(role = Role.Button) { Haptics.tap(); if (!vm.openKalApp33(e.id, e.date)) vm.openKal26(e.id) }.padding(vertical = 9.dp),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    ) {
-                        Column(Modifier.width(46.dp)) {
-                            Text(e.start ?: "Hele", color = p.ink, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = 11.5.sp)
-                            Text(if (e.date == today) "i dag" else if (e.date == today.plusDays(1)) "i morgen" else e.date.dayOfMonth.toString() + ".", color = p.mut, fontFamily = PaperFonts.mono, fontSize = 11.5.sp)
-                        }
-                        Box(Modifier.width(4.dp).fillMaxHeight().clip(RoundedCornerShape(2.dp)).background(e.color?.let { Color(it) } ?: RED34))
-                        Column(Modifier.weight(1f)) {
-                            Text(e.title, color = p.ink, fontWeight = FontWeight.Bold, fontSize = 14.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            e.loc?.let { Text(it, color = p.mut, fontSize = 12.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis) }
-                        }
-                    }
-                }
-            }
-            // Nyheter.
-            Column(
-                Modifier.fillMaxWidth().onGloballyPositioned { pos["nyh"] = it.positionInParent().y }.ring34(ring("nyh"), 24.dp)
-                    .clip(RoundedCornerShape(24.dp)).background(p.card).padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                Text("Nyheter", color = p.ink, fontFamily = PaperFonts.serif, fontWeight = FontWeight.Medium, fontSize = 22.sp)
-                if (b.news.isEmpty()) Text("Ingen saker ennå. Legg til kilder i Nyhetsleser.", color = p.mut, fontSize = 13.5.sp)
-                b.news.forEach { n ->
-                    Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
-                    Row(Modifier.fillMaxWidth().clickable(role = Role.Button, enabled = n.url != null) { n.url?.let { openLink(ctx, it) } }.padding(vertical = 9.dp),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Text(n.src.take(4).uppercase(), color = p.lab, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = 11.sp, modifier = Modifier.width(34.dp))
-                        Text(n.title, color = p.ink, fontFamily = PaperFonts.serif, fontWeight = FontWeight.Medium, fontSize = 15.5.sp, lineHeight = 20.sp, modifier = Modifier.weight(1f))
-                        n.time?.let { Text(it, color = p.mut, fontFamily = PaperFonts.mono, fontSize = 11.sp) }
-                    }
-                }
-            }
-            Text("Laget av Glimt ${b.generatedAt ?: ""} · Vær: MET / Open-Meteo · Nyheter: ${b.news.map { it.src }.distinct().filter { it.isNotBlank() }.ifEmpty { listOf("NRK", "VG", "E24") }.joinToString(", ")}",
-                color = p.mut, fontSize = 12.sp, modifier = Modifier.fillMaxWidth(), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-            b.note?.let { Text(it, color = p.mut, fontSize = 11.5.sp, modifier = Modifier.fillMaxWidth(), textAlign = androidx.compose.ui.text.style.TextAlign.Center) }
-            PCard {
-                var auto by remember { mutableStateOf(vm.tourAuto34()) }
-                var notify by remember { mutableStateOf(vm.briefNotify34()) }
-                PToggle("Guide-runde første gang", "Glimt viser deg briefen når du åpner den", auto) { auto = it; vm.setTourAuto34(it) }
-                PToggle("Varsel «Morgenbrief er klar»", "Kl. 06:30, sammen med widgetene", notify, top = true) { notify = it; vm.setBriefNotify34(it) }
-            }
-        }
-        // Figuren og boblen nederst til høyre.
-        Row(
-            Modifier.align(Alignment.BottomEnd).fillMaxWidth().navigationBarsPadding().padding(start = 16.dp, end = 16.dp, bottom = 28.dp),
-            verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.End),
-        ) {
-            AnimatedVisibility(cur != null, Modifier.weight(1f, fill = false), enter = fadeIn(tween(280)) + slideInVertically(tween(280)) { it / 6 }, exit = fadeOut(tween(160))) {
-                var last by remember { mutableStateOf(cur) }
-                if (cur != null) last = cur
-                val c = last ?: return@AnimatedVisibility
-                Column(
-                    Modifier.widthIn(max = 280.dp).clip(RoundedCornerShape(18.dp, 18.dp, 4.dp, 18.dp)).background(INK34).padding(14.dp, 12.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                ) {
-                    Text(c.text, color = Color(0xFFF3EFE6), fontFamily = PaperFonts.sans, fontSize = 14.sp, lineHeight = 20.sp)
-                    Row(Modifier.align(Alignment.End), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        if (step in 1..3) Box(Modifier.height(30.dp).clip(RoundedCornerShape(15.dp)).clickable(role = Role.Button) { Haptics.select(); s.tour = 99 }.padding(horizontal = 12.dp),
-                            contentAlignment = Alignment.Center) { Text("Hopp over", color = Color(0xFFC9C1B1), fontWeight = FontWeight.Bold, fontSize = 12.sp) }
-                        Box(Modifier.height(30.dp).clip(RoundedCornerShape(15.dp)).background(Color(0xFFF3EFE6)).clickable(role = Role.Button) { vm.tourNext34() }.padding(horizontal = 14.dp),
-                            contentAlignment = Alignment.Center) { Text(c.next, color = INK34, fontWeight = FontWeight.Bold, fontSize = 12.sp, maxLines = 1) }
-                    }
-                }
-            }
-            Box(Modifier.clip(CircleShape).clickable(role = Role.Button, onClickLabel = "Glimt") { vm.tourTap34() }) {
-                GlimtFigure34(76.dp, if (cur != null) "talk" else "idle", if (cur?.target != null) -8f else 0f)
-            }
-        }
-    }
-}
 
 /** Pulserende rød ring rundt kortet Glimt peker på (gbRing 1,3 s). */
 internal fun Modifier.ring34(on: Boolean, radius: Dp): Modifier = if (!on) this else this.ringAnim34(radius)

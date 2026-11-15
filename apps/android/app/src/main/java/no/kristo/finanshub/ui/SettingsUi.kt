@@ -1,22 +1,17 @@
 package no.kristo.finanshub.ui
 
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.PickVisualMediaRequest
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ShowChart
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
@@ -25,12 +20,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import no.kristo.finanshub.*
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import no.kristo.finanshub.*
 
 private val when_ = SimpleDateFormat("dd.MM.yyyy HH:mm", Locale("nb", "NO"))
+
 private fun time(t: Long?) = t?.let { when_.format(Date(it)) } ?: "–"
 
 // Prompt 42: den klassiske Innstillinger-skjermen (Material You) er slettet. Papir viser sidene under fra PaperSettings17.
@@ -263,34 +259,6 @@ internal fun HapticsPage(vm: AppViewModel) = Pages {
 }
 
 @Composable
-internal fun ServerPage(vm: AppViewModel) = Pages {
-    val a = vm.account
-    var local by remember(a?.id) { mutableStateOf(a?.local ?: "") }
-    var external by remember(a?.id) { mutableStateOf(a?.let { it.external.ifBlank { it.server } } ?: "") }
-    Section("Adresser") {
-        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(C.surface1).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            OutlinedTextField(local, { local = it }, label = { Text("Lokal adresse") }, placeholder = { Text("192.168.1.20:3000") }, singleLine = true, modifier = Modifier.fillMaxWidth(), keyboardOptions = ServerKeyboard, shape = RoundedCornerShape(16.dp))
-            OutlinedTextField(external, { external = it }, label = { Text("Ekstern adresse") }, placeholder = { Text("os.dittdomene.no") }, singleLine = true, modifier = Modifier.fillMaxWidth(), keyboardOptions = ServerKeyboard, shape = RoundedCornerShape(16.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = { vm.updateAddresses(local, external) }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(24.dp), colors = ButtonDefaults.buttonColors(containerColor = C.primary, contentColor = C.onPrimary)) { Text("Lagre") }
-                OutlinedButton(onClick = { vm.testConnection(local.ifBlank { external }) }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(24.dp)) { Text("Test tilkobling") }
-            }
-            Note("Eksternt går trafikken via Cloudflare Tunnel. Hjemme brukes den lokale adressen når den svarer.")
-        }
-    }
-    Group {
-        Toggle("Bruk lokal adresse hjemme", "Bytter automatisk når serveren svarer på lokal adresse", vm.flag(AppPrefs.USE_LOCAL, true)) { vm.setPref(AppPrefs.USE_LOCAL, it); vm.refresh() }
-    }
-    Section("Status") {
-        Group {
-            Info("Aktiv vei", "${vm.route} · ${host(vm.base)}")
-            Info("Siste synk", time(vm.lastSync))
-            Info("Serverversjon", vm.me?.version ?: "–")
-        }
-    }
-}
-
-@Composable
 internal fun DataPage(vm: AppViewModel) = Pages {
     Group {
         Row(Modifier.fillMaxWidth().clickable { vm.clearCache() }.padding(16.dp, 14.dp)) { Text("Tøm hurtigbuffer", Modifier.weight(1f)); Text("Logoer og bilder", color = C.text2, fontSize = 13.sp) }
@@ -320,7 +288,6 @@ internal fun AboutPage(vm: AppViewModel) = Pages {
         Note("NB-Whisper fra Nasjonalbiblioteket (Apache-2.0): tale til tekst på norsk og engelsk. Finjustert fra OpenAI Whisper (MIT).")
     }
 }
-
 
 /* ---------------- Finans ---------------- */
 

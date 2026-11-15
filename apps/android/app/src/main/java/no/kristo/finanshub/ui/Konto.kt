@@ -166,13 +166,6 @@ private fun AvBtn36(text: String, fg: Color, onClick: () -> Unit) {
         contentAlignment = Alignment.Center) { Text(text, color = fg, fontWeight = FontWeight.Bold, fontSize = 13.sp, maxLines = 1) }
 }
 
-/** Miniatyr (40 dp rund) til høyre på raden «Profilbilde». */
-@Composable
-internal fun AvatarThumb36(vm: AppViewModel) {
-    val b = vm.avatar ?: return
-    Image(b.asImageBitmap(), null, contentScale = ContentScale.Crop, modifier = Modifier.size(40.dp).clip(CircleShape))
-}
-
 /* ======================= Onboarding: koble bruker til profil ======================= */
 
 private val OB_LINKS37 = listOf(

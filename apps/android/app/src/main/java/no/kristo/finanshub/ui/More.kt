@@ -46,12 +46,12 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import java.io.File
+import java.time.LocalDate
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import no.kristo.finanshub.*
-import java.io.File
-import java.time.LocalDate
 
 /* ---------------- Byggeklosser for Mer-sidene ---------------- */
 
@@ -111,7 +111,6 @@ private fun PrimaryButton(text: String, enabled: Boolean = true, onClick: () -> 
         colors = ButtonDefaults.buttonColors(containerColor = C.primary, contentColor = C.onPrimary)) { Text(text, fontWeight = FontWeight.Bold) }
 
 private fun kr(v: Double) = "${n0(v)} kr"
-private fun sgn(v: Double) = if (v < 0) "−" else "+"
 
 /* ---------------- Mer ---------------- */
 
@@ -176,6 +175,7 @@ internal fun MoreScreen(vm: AppViewModel) {
 /* ---------------- Søk (✦ AI og vanlig søk) ---------------- */
 
 private val AI_SUGGESTIONS = listOf("Hvor mye har jeg brukt på kaffe?", "Når kjøpte jeg lyspærer?", "Mat i oktober", "Hva har jeg betalt for lading?")
+
 /** Forslag før søk når serveren ikke har /search/suggestions. */
 private val FALLBACK_GROUPS = listOf(
     SuggestGroup("Butikker", listOf("Sist jeg var på Rema 1000", "Sist jeg var på Biltema")),
@@ -373,92 +373,6 @@ internal fun AccountsScreen(vm: AppViewModel) {
 }
 
 /* ---------------- Aksjer (Trading 212) ---------------- */
-
-private val PERIODS = listOf("1D" to 2, "1U" to 7, "1M" to 31, "1Å" to 366, "Alt" to Int.MAX_VALUE)
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-internal fun StocksScreen(vm: AppViewModel) {
-    val s = vm.stocks
-    Page {
-        item { ModuleHeader(vm, "Aksjer", actions = { IconButton(onClick = { vm.syncStocks() }) { Icon(Icons.Filled.Sync, "Synk nå", tint = C.primary) } }) }
-        item { SubText("Trading 212 · ${s?.status ?: "Invest"}") }
-        vm.moduleError?.let { e -> item { Empty(e) } }
-        if (s == null && vm.moduleError == null) item { Loading() }
-        if (s != null && !s.configured && !s.mock) item {
-            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(C.surface1).padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Ikke satt opp · Sett opp under Integrasjoner", fontWeight = FontWeight.SemiBold)
-                Text("Lag en API-nøkkel hos Trading 212 under Innstillinger → API (Beta). Gi bare lesetilgang (account, portfolio, history:orders, history:dividends), og lås den gjerne til IP-en til homelaben. Legg nøkkel og secret inn under Innstillinger → Integrasjoner → Trading 212. De er dine egne og lagres kryptert på serveren.",
-                    color = C.text2, fontSize = 13.sp)
-            }
-        }
-        val sm = s?.summary
-        if (s != null && sm != null) {
-            val days = PERIODS.firstOrNull { it.first == vm.stockPeriod }?.second ?: 31
-            val hist = s.history.takeLast(days.coerceAtMost(s.history.size)).map { it.second }
-            item {
-                PageHero("Porteføljeverdi", kr(sm.value), "${sgn(sm.result)}${kr(kotlin.math.abs(sm.result))}${if (sm.invested > 0) " (${pct(sm.result / sm.invested * 100)})" else ""} totalt") {
-                    if (hist.size > 1) Spark(hist, C.onPrimary, Modifier.fillMaxWidth().height(56.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        PERIODS.forEach { (k, _) ->
-                            val on = vm.stockPeriod == k
-                            Text(k, color = if (on) C.primary else C.onPrimary, fontWeight = FontWeight.SemiBold, fontSize = 13.sp,
-                                modifier = Modifier.clip(RoundedCornerShape(12.dp)).background(if (on) C.onPrimary else C.onPrimary.copy(alpha = .14f)).clickable { vm.stockPeriod = k }.padding(10.dp, 4.dp))
-                        }
-                    }
-                }
-            }
-            val day = s.positions.sumOf { it.value * it.dayPct / 100 }
-            val divYear = s.dividends.filter { it.date.startsWith(LocalDate.now().year.toString()) }
-            item {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Kpi("I dag", "${sgn(day)}${kr(kotlin.math.abs(day))}", Modifier.weight(1f), RoundedCornerShape(28.dp, 8.dp, 8.dp, 8.dp), fg = if (day < 0) C.accentLight else C.positive, sub = "Siden åpning")
-                        Kpi("Kontanter", kr(sm.cash), Modifier.weight(1f), RoundedCornerShape(8.dp, 28.dp, 8.dp, 8.dp), sub = "Ledig å investere")
-                    }
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Kpi("Utbytte i år", kr(divYear.sumOf { it.amount }), Modifier.weight(1f), RoundedCornerShape(8.dp, 8.dp, 8.dp, 28.dp), sub = "${divYear.size} utbetalinger")
-                        Kpi("Avkastning", "${sgn(sm.result)}${kr(kotlin.math.abs(sm.result))}", Modifier.weight(1f), RoundedCornerShape(8.dp, 8.dp, 28.dp, 8.dp), fg = if (sm.result < 0) C.accentLight else C.positive, sub = "Siden kjøp")
-                    }
-                }
-            }
-            if (s.positions.isNotEmpty()) item {
-                Group("Posisjoner") {
-                    s.positions.forEachIndexed { i, p ->
-                        ItemRow(vm, i, s.positions.size, p.name, "${fmtQty(p.quantity)} stk · snitt ${n0(p.avg)} · kurs ${n0(p.price)}", kr(p.value),
-                            trailing = { Text("${sgn(p.plPct)}${pct(kotlin.math.abs(p.plPct))}", color = if (p.plPct < 0) C.accentLight else C.positive, fontSize = 12.sp) },
-                            onClick = {
-                                vm.openDetail(DetailInfo(p.name, "${p.symbol} · Trading 212", kr(p.value), "${sgn(p.pl)}${kr(kotlin.math.abs(p.pl))} (${sgn(p.plPct)}${pct(kotlin.math.abs(p.plPct))}) siden kjøp", listOf(
-                                    "Posisjon" to listOf("Antall" to "${fmtQty(p.quantity)} stk", "Snittkurs" to "${n2(p.avg)} kr", "Kurs nå" to "${n2(p.price)} kr", "Kostpris" to kr(p.quantity * p.avg),
-                                        "Andel av portefølje" to if (sm.value > 0) "${(p.value / sm.value * 100).toInt()} %" else "–"),
-                                    "Utvikling" to listOf("I dag" to "${sgn(p.dayPct)}${pct(kotlin.math.abs(p.dayPct))}", "Totalt" to "${sgn(p.plPct)}${pct(kotlin.math.abs(p.plPct))}",
-                                        "Utbytte i år" to kr(divYear.filter { it.symbol == p.symbol }.sumOf { it.amount })))))
-                            })
-                    }
-                }
-            }
-            if (s.positions.isNotEmpty() && sm.value > 0) item {
-                Group("Fordeling") { s.positions.sortedByDescending { it.value }.forEach { p -> BarRow(p.name, "${(p.value / sm.value * 100).toInt()} %", p.value / sm.value, C.primary) } }
-            }
-            if (s.orders.isNotEmpty()) item {
-                Group("Ordrer") {
-                    s.orders.take(20).forEachIndexed { i, o ->
-                        ItemRow(vm, i, minOf(20, s.orders.size), "${o.side} ${o.symbol}", "${ddmmyyyy(o.date)} · ${fmtQty(o.quantity)} stk à ${n2(o.price)}", kr(o.value), onClick = null)
-                    }
-                }
-            }
-            if (s.dividends.isNotEmpty()) item {
-                Group("Utbytte") {
-                    s.dividends.forEachIndexed { i, d -> ItemRow(vm, i, s.dividends.size, d.symbol, ddmmyyyy(d.date), "+${n2(d.amount)}", C.positive, onClick = null) }
-                }
-            }
-            item { PrimaryButton("Synk nå") { vm.syncStocks() } }
-            item { SubText("API-nøkkel og secret ligger på serveren. Endres i FinansHub på PC under Innstillinger → Aksjer · Trading 212.") }
-        }
-    }
-}
-
-private fun fmtQty(q: Double) = if (q == kotlin.math.floor(q)) q.toLong().toString() else String.format(java.util.Locale("nb", "NO"), "%.4f", q).trimEnd('0').trimEnd(',')
 
 @Composable
 internal fun Spark(values: List<Double>, color: Color, modifier: Modifier) {

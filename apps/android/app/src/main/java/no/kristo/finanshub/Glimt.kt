@@ -228,17 +228,10 @@ fun plain31(t: String): String = t.replace("**", "").trim()
 
 private val WD31 = listOf("man", "tir", "ons", "tor", "fre", "lør", "søn")
 
-private val WDL31 = listOf("mandag", "tirsdag", "onsdag", "torsdag", "fredag", "lørdag", "søndag")
-
 private val MN31 = listOf("jan", "feb", "mar", "apr", "mai", "jun", "jul", "aug", "sep", "okt", "nov", "des")
-
-private val MNL31 = listOf("januar", "februar", "mars", "april", "mai", "juni", "juli", "august", "september", "oktober", "november", "desember")
 
 /** «lør 1. nov» */
 fun dShort31(d: LocalDate): String = "${WD31[d.dayOfWeek.value - 1]} ${d.dayOfMonth}. ${MN31[d.monthValue - 1]}"
-
-/** «lørdag 1. november» */
-fun dLong31(d: LocalDate): String = "${WDL31[d.dayOfWeek.value - 1]} ${d.dayOfMonth}. ${MNL31[d.monthValue - 1]}"
 
 internal val OSLO31: ZoneId = ZoneId.of("Europe/Oslo")
 
@@ -1372,13 +1365,6 @@ fun AppViewModel.awaitQp52(text: String, then: () -> Unit) {
         while (qpPending52(text) && System.currentTimeMillis() - t0 < 2_500L) delay(50)
         then()
     }
-}
-
-/** Læring: rettet navn/sted (bekreftelsesarket eller skjemaet) → brukerens ordforråd på serveren. */
-fun AppViewModel.learnLex52(from: String, to: String, kind: String? = null) {
-    val f = from.trim(); val t = to.trim()
-    if (f.isEmpty() || t.isEmpty() || f.equals(t, ignoreCase = false)) return
-    launch52b { runCatching { api52b { hlPost("/glimt/lex52", JSONObject().put("from", f).put("to", t).apply { kind?.let { put("kind", it) } }) } } }
 }
 
 /* ======================= Glimt-figur per bruker ======================= */

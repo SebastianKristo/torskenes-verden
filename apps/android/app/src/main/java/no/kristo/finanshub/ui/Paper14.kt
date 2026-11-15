@@ -1,11 +1,9 @@
 package no.kristo.finanshub.ui
 
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.animation.core.FastOutSlowInEasing
-
 import android.graphics.Bitmap
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -21,7 +19,6 @@ import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -34,14 +31,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.input.pointer.PointerEventPass
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
@@ -163,42 +160,6 @@ internal fun ServerImage(vm: AppViewModel, path: String?, modifier: Modifier, pl
 private fun kr(v: Double) = "${n0(v)} kr"
 
 /* ---------------- Finans → Mer ---------------- */
-
-@Composable
-internal fun PaperFinMore(vm: AppViewModel, navBottom: Dp) {
-    val review = vm.boot?.reviewCount ?: vm.summary?.review?.size ?: 0
-    val groups: List<Pair<String, List<Triple<String, String, () -> Unit>>>> = listOf(
-        "Penger" to listOf(
-            Triple("Budsjett", "Per kategori") { vm.openFromFinMer(Screen.Budget) },
-            Triple("Kvitteringer", if (review > 0) "$review til gjennomgang" else "Kø og bokført") { vm.openFromFinMer(Screen.Scan) },
-            Triple("Faste trekk", "Neste 30 dager") { vm.openFromFinMer(Screen.Fast) },
-            Triple("Kontoer", "Saldo og sparemål") { vm.openFromFinMer(Screen.Accounts) },
-        ),
-        "Moduler" to listOf(
-            Triple("Aksjer", "Trading 212") { vm.openFromFinMer(Screen.Stocks) },
-            Triple("Abonnementer", "Subscription OS") { vm.openFromFinMer(Screen.Sub) },
-            Triple("Boliger", "Utgifter, prosjekter og regninger") { vm.openFromFinMer(Screen.Folders) },
-        ),
-        "Data" to listOf(
-            Triple("Import", "Bank, Excel og Finn") { vm.openFromFinMer(Screen.Import) },
-            Triple("Rapporter", "Måned og år") { vm.openFromFinMer(Screen.Reports) },
-            Triple("Innstillinger", "Tema, kategorier og regler") { vm.settingsPage = null; vm.openFromFinMer(Screen.Settings) },
-        ),
-    )
-    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp, 0.dp, 16.dp, PAPER_BAR + 16.dp + navBottom), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        groups.forEach { (t, rows) ->
-            item { PLabel(t, modifier = Modifier.padding(start = 4.dp, top = 10.dp)) }
-            item {
-                PCard(shadow = t == "Penger") {
-                    rows.forEachIndexed { i, (n, sub, go) ->
-                        val v = if (n == "Kvitteringer" && review > 0) "$review" else "›"
-                        PRow(n, sub, v, if (v == "›") PaperPal.current.mut else PaperPal.current.lab, top = i > 0, onClick = go)
-                    }
-                }
-            }
-        }
-    }
-}
 
 /* ---------------- Finans → Liste ---------------- */
 
@@ -456,13 +417,6 @@ private fun FinnEditPanel(vm: AppViewModel, d: FinnDeal) {
 
 /* ---------------- Sporing ---------------- */
 
-/** Et kort som kan flyttes: langt trykk (500 ms) gir redigeringsmodus, der kortene vugger og får ▲/▼. */
-@Composable
-internal fun ReorderCard(vm: AppViewModel, id: String, title: String, index: Int, count: Int, content: @Composable () -> Unit) {
-    val p = PaperPal.current
-    ReorderWrap(vm, id, title, index, count, p.ink, p.bg, content)
-}
-
 /** Fargene på linja med ▲/▼ sendes inn. */
 @Composable
 internal fun ReorderWrap(vm: AppViewModel, id: String, title: String, index: Int, count: Int, barBg: Color, barFg: Color, content: @Composable () -> Unit) {
@@ -485,18 +439,6 @@ internal fun ReorderWrap(vm: AppViewModel, id: String, title: String, index: Int
                 TextButton(onClick = { vm.moveTrk(id, 1) }, enabled = index < count - 1) { Text("▼", color = if (index < count - 1) barFg else barFg.copy(alpha = .3f)) }
             }
             content()
-        }
-    }
-}
-
-/** «Ferdig»-linja øverst i redigeringsmodus. */
-@Composable
-internal fun ReorderDoneBar(vm: AppViewModel) {
-    val p = PaperPal.current
-    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(p.lab).padding(14.dp, 10.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text("Flytt kortene med ▲ og ▼", color = p.onLab, fontWeight = FontWeight.SemiBold, fontSize = 13.5.sp, modifier = Modifier.weight(1f))
-        Box(Modifier.clip(CircleShape).background(p.onLab).clickable { Haptics.success(); vm.trkEdit = false }.padding(14.dp, 6.dp)) {
-            Text("Ferdig", color = p.lab, fontWeight = FontWeight.Bold, fontSize = 13.sp)
         }
     }
 }
@@ -635,16 +577,6 @@ private fun TrkShipments(vm: AppViewModel, items: List<Shipment>) {
                 TrkEventLines(s)
                 if (expanded == s.id && !vm.trkPicking) TrkTimeline(s)
             }
-        }
-    }
-}
-
-@Composable
-private fun TrkNotify(vm: AppViewModel, t: TrackingData) {
-    PCard {
-        Column {
-            PLabel("Varsler", modifier = Modifier.padding(14.dp, 12.dp, 14.dp, 2.dp))
-            PAPER_TRK_PREFS.forEachIndexed { i, (k, n, sub) -> PToggle(n, sub, t.prefs[k] ?: true, top = i > 0) { vm.setTrackingPref(k, it) } }
         }
     }
 }

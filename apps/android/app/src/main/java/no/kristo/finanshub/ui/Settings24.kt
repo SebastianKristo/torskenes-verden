@@ -120,6 +120,7 @@ private val SYN24: Map<String, List<String>> = mapOf(
     "haptikk" to listOf("haptic"), "vibrer" to listOf("haptic"), "stille" to listOf("quiet"), "2fa" to listOf("2fa"), "totrinn" to listOf("2fa"),
     "modell" to listOf("ai-mod"), "ollama" to listOf("ai-mod"), "backup" to listOf("bk-now", "bk-auto"), "bakgrunn" to listOf("bg"), "unsplash" to listOf("integ:photos"), "pexels" to listOf("integ:photos"),
 )
+
 private val STOP24 = Regex("^(hvor|hvordan|kan|jeg|du|meg|min|mitt|mine|en|et|den|det|på|i|til|for|å|og|er|med|endre|bytte|bytter|skru|slå|av|finner|finne|legge|sette|hva|vil)$")
 
 private fun score24(items: List<SetItem24>, q0: String, ai: Boolean): List<SetItem24> {
@@ -324,62 +325,6 @@ internal fun LazyListScope.profileGroup24(vm: AppViewModel) {
 }
 
 /* ---------------- Integrasjoner ---------------- */
-
-@Composable
-internal fun IntegrationsPage24(vm: AppViewModel) {
-    val p = PaperPal.current
-    val s = vm.b24
-    LaunchedEffect(Unit) { vm.b24LoadIntegrations() }
-    // ISO2: «Dine integrasjoner» (personlige, alle roller) først, «Server (administrator)» under og bare for admin.
-    val all = s.integ ?: emptyList()
-    val mine = all.filter { it.personal }
-    val server = if (vm.userIsAdmin) all.filter { !it.personal } else emptyList()
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        s.integError?.let { Text(it, color = if (s.integLegacy) p.mut else p.lab, fontSize = 12.5.sp, modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp)) }
-        if (s.integ == null) Text("Henter integrasjonene …", color = p.mut, fontSize = 13.sp, modifier = Modifier.padding(4.dp))
-        if (mine.isNotEmpty()) {
-            Text("Dine integrasjoner", color = p.ink, fontWeight = FontWeight.Bold, fontSize = 17.sp, modifier = Modifier.padding(start = 4.dp, top = 8.dp))
-            Text("Bare du ser og bruker disse. Kalender, media, Trading 212, sporing, e-post, bank og Finn.", color = p.mut, fontSize = 12.5.sp, modifier = Modifier.padding(horizontal = 4.dp))
-            mine.forEach { i -> IntegCard24(vm, i) }
-        }
-        if (server.isNotEmpty()) {
-            Text("Server (administrator)", color = p.ink, fontWeight = FontWeight.Bold, fontSize = 17.sp, modifier = Modifier.padding(start = 4.dp, top = 18.dp))
-            Text("Felles oppsett for alle brukere på serveren.", color = p.mut, fontSize = 12.5.sp, modifier = Modifier.padding(horizontal = 4.dp))
-            server.forEach { i -> IntegCard24(vm, i) }
-        }
-        if (s.integ != null) Text("Hemmelige verdier lagres kryptert på serveren og vises aldri i appen.", color = p.mut, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 4.dp, vertical = 6.dp))
-        // Synk med Home Assistant (Huskeliste) som før. Serveroppsett: bare for admin.
-        if (vm.userIsAdmin) IntegrationsPage23(vm)
-    }
-}
-
-@Composable
-private fun IntegCard24(vm: AppViewModel, i: Integ24) {
-    val p = PaperPal.current
-    val s = vm.b24
-    val missing = i.fields.filter { !it.saved && it.value.isNullOrBlank() }
-    PLabel(i.name, modifier = Modifier.padding(start = 4.dp, top = 10.dp))
-    PCard(Modifier.hl25(vm, "integ:${i.id}")) {
-        val (stTxt, stCol) = when (i.status) { "ok" -> "Tilkoblet" to p.pos; "error" -> "Feil" to p.lab; else -> "Ikke koblet" to p.mut }
-        IRow24(vm, 0, Icons.Filled.Extension, "Status", if (missing.isEmpty()) "Alle felt er fylt ut" else "Mangler " + missing.joinToString(", ") { it.label.lowercase() }, stTxt, stCol, top = false, onClick = null)
-        i.fields.forEach { f ->
-            val editing = s.integEdit == (i.id to f.key)
-            val shown = when {
-                f.type == "secret" && f.saved -> "•••• lagret"
-                !f.value.isNullOrBlank() -> f.value
-                f.saved -> "•••• lagret"
-                else -> "Ikke satt"
-            }
-            IRow24(vm, -1, null, f.label, f.help, "$shown ›", if (f.saved || !f.value.isNullOrBlank()) p.ink else p.lab, top = true) {
-                s.integEdit = if (editing) null else i.id to f.key
-            }
-            if (editing) IntegEditor24(vm, i, f)
-        }
-        if (i.canTest) IRow24(vm, -1, null, if (s.integBusy == i.id) "Tester …" else "Test tilkobling", null, "", p.lab, top = true, titleColor = p.lab) {
-            if (s.integBusy == null) vm.b24TestIntegration(i)
-        }
-    }
-}
 
 @Composable
 internal fun IntegEditor24(vm: AppViewModel, i: Integ24, f: IntegField24) {

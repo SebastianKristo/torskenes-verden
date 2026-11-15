@@ -38,13 +38,9 @@ internal const val IC_PEN28 = "M4 20h4L19 9l-4-4L4 16v4z"
 
 internal const val IC_X28 = "M6 6l12 12M18 6L6 18"
 
-private const val IC_LOCK28 = "M6 11h12v9H6zM8.5 11V8a3.5 3.5 0 0 1 7 0v3"
-
 internal const val IC_GRIP28 = "M4 8h16M4 12h16M4 16h16"
 
 internal const val IC_CHEV28 = "M9 6l6 6-6 6"
-
-private const val IC_BACK28 = "M15 18l-6-6 6-6"
 
 /** Tekst på et linjemerke: mørk på lys linjefarge (relativ luminans > 0,4), ellers hvit. */
 internal fun lineInk28(c: Long): Color = if (Color(0xFF000000 or (c and 0xFFFFFF)).luminance() > 0.4f) Color(0xFF1B1A17) else Color.White
@@ -58,8 +54,6 @@ internal const val IC_X30 = "M6 6l12 12M18 6L6 18"
 internal const val IC_BACK30 = "M15 18l-6-6 6-6"
 
 internal const val IC_PLUS30 = "M12 5v14M5 12h14"
-
-internal const val IC_MINUS30 = "M5 12h14"
 
 internal const val IC_LOCK30 = "M6 11h12v9H6zM9 11V8a3 3 0 0 1 6 0v3"
 

@@ -400,8 +400,6 @@ fun briefNext36(h: Int = LocalTime.now(OSLO36).hour): String = when { h < 11 -> 
 
 private fun AppViewModel.briefHideKey36() = "glimt_brief_hide36_" + (account?.id ?: "")
 
-private fun AppViewModel.briefHintKey36() = "glimt_brief_swhint36_" + (account?.id ?: "")
-
 fun AppViewModel.loadBriefHide36() {
     val s = p36
     val k = briefHideKey36()
@@ -424,14 +422,6 @@ fun AppViewModel.undoBrief36() {
     p36.briefHidden = null
     prefs.set(briefHideKey36(), "")
     p36.briefToast = 0
-}
-
-/** Hintet («Sveip → for å skjule») de 2 første gangene Hjem åpnes. */
-fun AppViewModel.takeBriefHint36(): Boolean {
-    val n = prefs.int(briefHintKey36(), 0)
-    if (n >= 2) return false
-    prefs.set(briefHintKey36(), n + 1)
-    return true
 }
 
 /* ======================= Modeller ======================= */
@@ -601,8 +591,6 @@ fun AppViewModel.loadBrief52(force: Boolean = false) {
         finally { s.briefBusy = false }
     }
 }
-
-fun AppViewModel.hasBriefTodo52(): Boolean = p52b.brief?.cards?.any { it.id == "todo" } == true
 
 /** Homelab-kortet: Start (stoppet) eller omstart (unhealthy) via serverens trygge handling. Bare admin. */
 fun AppViewModel.startService52(id: String) {

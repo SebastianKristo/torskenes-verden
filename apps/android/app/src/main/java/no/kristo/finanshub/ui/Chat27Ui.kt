@@ -1,18 +1,11 @@
 package no.kristo.finanshub.ui
 
-import android.Manifest
-import android.content.pm.PackageManager
 import androidx.activity.compose.BackHandler
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
@@ -34,7 +27,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
@@ -53,7 +45,6 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.content.ContextCompat
 import kotlinx.coroutines.delay
 import no.kristo.finanshub.*
 
@@ -77,6 +68,7 @@ internal fun chatV27(theme: String): ChatV27 {
 }
 
 internal val CH27_LOCAL = Color(0xFF2F7A4F)
+
 internal val CH27_SKY = Color(0xFFB23A2A)
 
 internal object ChIc27 {
@@ -592,9 +584,6 @@ private fun Ch27Toggle(v: ChatV27, ic: String, label: String, on: Boolean, modif
 /** Lydbølgen mens mikrofonen lytter: sju streker som følger lydnivået. */
 @Composable
 private fun Ch27Wave(rms: Float) = WaveBars71(rms, CH27_SKY, "wave") // prompt 71: én Canvas, pulsen leses i tegnefasen (ui/Anim71.kt)
-
-/* Brukes av Hjem og Mer (rad «Chat»). */
-internal const val CHAT27_MER_ICON = "M4 5h16v11H9l-5 4zM9 10.5h6"
 
 /**
  * Prompt 43 (claude-code-chat-send-knapp-tom.md): Send-knappen. Tom: lys flate (line 70 % + card 30 %), pil i mut, 1,5 dp innvendig
