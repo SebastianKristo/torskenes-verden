@@ -1,5 +1,5 @@
 {
-  "updated": "2026-11-15T10:54:23.694Z",
+  "updated": "2026-11-15T13:23:59.714Z",
   "counts": {
     "login|papir-lys|1440": {},
     "login|papir-lys|390": {},
@@ -8,7 +8,6 @@
     "oversikt|papir-mork|1440": {},
     "oversikt|papir-mork|390": {},
     "oversikt|glass|1440": {
-      "kontrast": 7,
       "beroringsflate": 4
     },
     "oversikt|glass|390": {
@@ -19,7 +18,6 @@
     "sok|papir-mork|1440": {},
     "sok|papir-mork|390": {},
     "sok|glass|1440": {
-      "kontrast": 7,
       "beroringsflate": 4
     },
     "sok|glass|390": {
@@ -34,7 +32,6 @@
       "kontrast": 1
     },
     "nyheter|glass|1440": {
-      "kontrast": 7,
       "beroringsflate": 4
     },
     "nyheter|glass|390": {
@@ -224,18 +221,10 @@
     "vaer|glass|390": {
       "beroringsflate": 2
     },
-    "domener|papir-lys|1440": {
-      "kontrast": 3
-    },
-    "domener|papir-lys|390": {
-      "kontrast": 3
-    },
-    "domener|papir-mork|1440": {
-      "kontrast": 7
-    },
-    "domener|papir-mork|390": {
-      "kontrast": 7
-    },
+    "domener|papir-lys|1440": {},
+    "domener|papir-lys|390": {},
+    "domener|papir-mork|1440": {},
+    "domener|papir-mork|390": {},
     "domener|glass|1440": {},
     "domener|glass|390": {},
     "rom|papir-lys|1440": {},
@@ -246,50 +235,28 @@
     "rom|glass|390": {},
     "bursdager|papir-lys|1440": {},
     "bursdager|papir-lys|390": {},
-    "bursdager|papir-mork|1440": {
-      "kontrast": 13
-    },
-    "bursdager|papir-mork|390": {
-      "kontrast": 13
-    },
+    "bursdager|papir-mork|1440": {},
+    "bursdager|papir-mork|390": {},
     "bursdager|glass|1440": {},
     "bursdager|glass|390": {},
     "smarthjem|papir-lys|1440": {},
     "smarthjem|papir-lys|390": {},
-    "smarthjem|papir-mork|1440": {
-      "kontrast": 5
-    },
-    "smarthjem|papir-mork|390": {
-      "kontrast": 4
-    },
-    "smarthjem|glass|1440": {
-      "kontrast": 4
-    },
-    "smarthjem|glass|390": {
-      "kontrast": 4
-    },
-    "innst-utseende|papir-lys|1440": {
-      "kontrast": 15
-    },
-    "innst-utseende|papir-lys|390": {
-      "kontrast": 9
-    },
+    "smarthjem|papir-mork|1440": {},
+    "smarthjem|papir-mork|390": {},
+    "smarthjem|glass|1440": {},
+    "smarthjem|glass|390": {},
+    "innst-utseende|papir-lys|1440": {},
+    "innst-utseende|papir-lys|390": {},
     "innst-utseende|papir-mork|1440": {},
     "innst-utseende|papir-mork|390": {},
     "innst-utseende|glass|1440": {
-      "kontrast": 8,
       "beroringsflate": 4
     },
     "innst-utseende|glass|390": {
-      "kontrast": 1,
       "beroringsflate": 4
     },
-    "innst-integrasjoner|papir-lys|1440": {
-      "kontrast": 33
-    },
-    "innst-integrasjoner|papir-lys|390": {
-      "kontrast": 27
-    },
+    "innst-integrasjoner|papir-lys|1440": {},
+    "innst-integrasjoner|papir-lys|390": {},
     "innst-integrasjoner|papir-mork|1440": {
       "kontrast": 8
     },
@@ -297,40 +264,28 @@
       "kontrast": 8
     },
     "innst-integrasjoner|glass|1440": {
-      "kontrast": 16,
+      "kontrast": 8,
       "beroringsflate": 4
     },
     "innst-integrasjoner|glass|390": {
-      "kontrast": 9,
+      "kontrast": 8,
       "beroringsflate": 4
     },
-    "innst-konto|papir-lys|1440": {
-      "kontrast": 22
-    },
-    "innst-konto|papir-lys|390": {
-      "kontrast": 16
-    },
-    "innst-konto|papir-mork|1440": {
-      "kontrast": 1
-    },
-    "innst-konto|papir-mork|390": {
-      "kontrast": 1
-    },
+    "innst-konto|papir-lys|1440": {},
+    "innst-konto|papir-lys|390": {},
+    "innst-konto|papir-mork|1440": {},
+    "innst-konto|papir-mork|390": {},
     "innst-konto|glass|1440": {
-      "kontrast": 9,
       "beroringsflate": 4
     },
     "innst-konto|glass|390": {
-      "kontrast": 2,
       "beroringsflate": 4
     },
     "innst-backup|papir-lys|1440": {
-      "kontrast": 12,
       "beroringsflate": 1,
       "etikett": 2
     },
     "innst-backup|papir-lys|390": {
-      "kontrast": 6,
       "beroringsflate": 1,
       "etikett": 2
     },
@@ -343,21 +298,15 @@
       "etikett": 2
     },
     "innst-backup|glass|1440": {
-      "kontrast": 8,
       "beroringsflate": 5,
       "etikett": 2
     },
     "innst-backup|glass|390": {
-      "kontrast": 1,
       "beroringsflate": 5,
       "etikett": 2
     },
-    "innst-varsler|papir-lys|1440": {
-      "kontrast": 15
-    },
-    "innst-varsler|papir-lys|390": {
-      "kontrast": 9
-    },
+    "innst-varsler|papir-lys|1440": {},
+    "innst-varsler|papir-lys|390": {},
     "innst-varsler|papir-mork|1440": {
       "kontrast": 1
     },
@@ -365,35 +314,29 @@
       "kontrast": 1
     },
     "innst-varsler|glass|1440": {
-      "kontrast": 9,
-      "beroringsflate": 4
-    },
-    "innst-varsler|glass|390": {
-      "kontrast": 2,
-      "beroringsflate": 4
-    },
-    "innst-reise|papir-lys|1440": {
-      "kontrast": 8
-    },
-    "innst-reise|papir-lys|390": {
-      "kontrast": 2
-    },
-    "innst-reise|papir-mork|1440": {},
-    "innst-reise|papir-mork|390": {},
-    "innst-reise|glass|1440": {
-      "kontrast": 8,
-      "beroringsflate": 4
-    },
-    "innst-reise|glass|390": {
       "kontrast": 1,
       "beroringsflate": 4
     },
+    "innst-varsler|glass|390": {
+      "kontrast": 1,
+      "beroringsflate": 4
+    },
+    "innst-reise|papir-lys|1440": {},
+    "innst-reise|papir-lys|390": {},
+    "innst-reise|papir-mork|1440": {},
+    "innst-reise|papir-mork|390": {},
+    "innst-reise|glass|1440": {
+      "beroringsflate": 4
+    },
+    "innst-reise|glass|390": {
+      "beroringsflate": 4
+    },
     "innst-nyheter|papir-lys|1440": {
-      "kontrast": 11,
+      "kontrast": 1,
       "beroringsflate": 1
     },
     "innst-nyheter|papir-lys|390": {
-      "kontrast": 5,
+      "kontrast": 1,
       "beroringsflate": 1
     },
     "innst-nyheter|papir-mork|1440": {
@@ -405,11 +348,11 @@
       "beroringsflate": 1
     },
     "innst-nyheter|glass|1440": {
-      "kontrast": 9,
+      "kontrast": 1,
       "beroringsflate": 5
     },
     "innst-nyheter|glass|390": {
-      "kontrast": 2,
+      "kontrast": 1,
       "beroringsflate": 5
     },
     "finans-oversikt|papir-lys|1440": {},
