@@ -33,7 +33,7 @@ import { news73Api } from './news73.js'; // prompt 73 (NEWS73)
 import iconsApi from './icons.js';
 import familyApi from './family.js';
 import tilesApi, { hasMapTest, testMap } from './tiles.js';
-import tasksApi from './gjoremal/routes.js';
+import { mountGjoremal } from './gjoremal/index.js'; // Gjøremål: /api/tasks og /api/huske
 import notifyApi, { appMeta } from './notify.js';
 import { attachRealtime } from './realtime.js';
 import { revokeUserTokens } from './finans/routes.js';
@@ -65,13 +65,13 @@ import { profilesApi, bibleApi } from './api37.js'; // prompt 37 (SERVER37)
 import { bearerFallthrough46 } from './api-auth46.js'; // prompt 46 (SERVER46)
 import { brief38Api, startApi38 } from './api38.js'; // prompt 38 (SERVER38)
 import { rec39Api } from './api39.js'; // prompt 39 (SERVER39)
-import { finans40Api, news40Api, newsDigestApi, hjemlys40Api, pages40Api, briefJul40, tasksAfter40, tasksCreate40, startApi40 } from './api40.js'; // prompt 40 (SERVER40)
+import { finans40Api, news40Api, newsDigestApi, hjemlys40Api, pages40Api, briefJul40, startApi40 } from './api40.js'; // prompt 40 (SERVER40)
 import { mountServer47 } from './server47.js'; // prompt 47 (SERVER47)
-import { hjemlys41Api, hjemlysGet41, hlPage41, ruter41Api, mai17Api, huske41Api, brief41 } from './api41.js'; // prompt 41 (SERVER41)
-import { finans42Api, abCalendarsMw42, abApi42, calendarsEvents42, abIcs42, health42Api, familyHealthMw42, startHealth42, hjemlys42Api, tasks42Api } from './api42.js'; // prompt 42 (SERVER42)
+import { hjemlys41Api, hjemlysGet41, hlPage41, ruter41Api, mai17Api, brief41 } from './api41.js'; // prompt 41 (SERVER41)
+import { finans42Api, abCalendarsMw42, abApi42, calendarsEvents42, abIcs42, health42Api, familyHealthMw42, startHealth42, hjemlys42Api } from './api42.js'; // prompt 42 (SERVER42)
 import fin51Api from './finans/fin51.js'; // prompt 51 (FIN51): sparemål, faste utgifter-kalender, skattehjelp, prishistorikk, abonnementsjeger
 import { startTax51 } from './finans/fin51-tax.js'; // prompt 51 (FIN51): påminnelse før skattemeldingen
-import { widgets43Api, claudeImport43Api, aiMemory43Api, gscDomains43Api, gsc43Api, gscViewMw43, gscOverviewMw43, finans43Api, summaryMw43, transactionsMw43, tasks43Api, tasksOrderMw43 } from './api43.js'; // prompt 43 (SERVER43)
+import { widgets43Api, claudeImport43Api, aiMemory43Api, gscDomains43Api, gsc43Api, gscViewMw43, gscOverviewMw43, finans43Api, summaryMw43, transactionsMw43 } from './api43.js'; // prompt 43 (SERVER43)
 import { mountMedia, startMedia } from './media/index.js'; // Media: alle /api/media-, /api/playback- og /api/medctl51-ruter
 import { mediaCalendarsMw43 } from './media/arr.js'; // kalenderkilden «Media»
 // Prompt 44 (SERVER44): Logger (Docker), Media (servere, søk som jobb, felles status), Avspilling, Studie-dokumenter, Kalender-deltakere,
@@ -654,13 +654,7 @@ mountFamily50(app); // prompt 50 (SRVFAM50): /api/family/places…, /people50, /
 app.route('/api/family/health/ha', health42Api); // prompt 42: helse fra Home Assistant
 app.use('/api/family/*', familyHealthMw42); // prompt 42: health.source/sourceDevice/limited/stale
 app.route('/api/family', familyApi); // Familie og kart (prompt 16): posisjon, soner, varsler og helse
-app.use('/api/tasks', tasksOrderMw43); // prompt 43: listOrder
-app.use('/api/tasks/lists', tasksOrderMw43);
-app.route('/api/tasks', tasks43Api); // prompt 43: GET/PUT /lists/order
-app.route('/api/tasks', tasks42Api); // prompt 42: /glimt/log
-app.use('/api/tasks/:id{[0-9]+}', tasksAfter40); // prompt 40: «Nå kan du: …» når punktet før er gjort, placeName/after i PATCH
-app.use('/api/tasks', tasksCreate40); // prompt 40: POST /api/tasks godtar placeName og after
-app.route('/api/tasks', tasksApi); // Huskeliste (prompt 17): delt i familien, sanntid via /api/ws
+mountGjoremal(app); // server/gjoremal/: /api/tasks (synk-raden, listerekkefølge, Glimt-logg, Huskeliste) og /api/huske
 app.route('/api/hjemlys', hjemlys42Api); // prompt 42: admin kan avslutte andres Vel fremme-økt
 // Prompt 42: Hjemlys heter nå Vel fremme – /api/velfremme/* er et alias for /api/hjemlys/*.
 app.all('/api/velfremme/*', async (c) => { const u = new URL(c.req.url); u.pathname = u.pathname.replace(/^\/api\/velfremme/, '/api/hjemlys'); const m = c.req.method; return app.fetch(new Request(u, { method: m, headers: c.req.raw.headers, body: m === 'GET' || m === 'HEAD' ? undefined : await c.req.arrayBuffer() }), c.env); });
@@ -707,7 +701,6 @@ app.route('/api/integrasjoner', integrationsApi); // prompt 26: samme liste unde
 // Prompt 26: Kalender (skolens iCal, Canvas, Bursdager og Google) og kompakt widget-svar. Sesjon eller app-token, per bruker.
 mountKalenderFront(app); // server/kalender/: invitasjoner, Glimt-søk, beskriv, rask time, HA, fag (før /api/kalender og de innebygde kalenderne)
 app.route('/api/ruter', ruter41Api); // prompt 41: Min reise, skolesoner, «forlot skolen»
-app.route('/api/huske', huske41Api); // prompt 41: POST /glimt-jobs
 app.use('/api/kalender/calendars', mediaCalendarsMw43); // prompt 43: innebygd kalender «Media» (Sonarr/Radarr)
 app.use('/api/kalender/calendars/*', mediaCalendarsMw43);
 app.use('/api/kalender/calendars', abCalendarsMw42); // prompt 42: innebygd kalender «Abonnementer» (trekkdatoer)

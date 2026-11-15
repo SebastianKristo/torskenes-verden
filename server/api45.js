@@ -6,7 +6,7 @@ import { gsc45Api, gscInfoMw45 } from './gsc45.js';
 import { aiImport45Api } from './ai-import45.js';
 import { zone45Api } from './zone45.js';
 import { haHealthMw45 } from './health45.js';
-import { tasks45Api, settings45Api } from './misc45.js';
+import { settings45Api } from './misc45.js';
 
 export function mountApi45(app) {
   // Docker-logger uten oppsett: «Sett opp nå» + tomtilstand med setup.state.
@@ -20,7 +20,6 @@ export function mountApi45(app) {
   // Familie: sonevarsler + soneikon; HA-helse bare mobile_app.
   app.route('/api/family', zone45Api);
   app.use('/api/family/health/ha', haHealthMw45);
-  // Gjøremål-synkraden, Innstillinger samlet. (Vær «Min posisjon» monteres i server/vaer/.)
-  app.route('/api/tasks', tasks45Api);
+  // Innstillinger samlet. (Vær «Min posisjon» og Gjøremål-synkraden monteres i server/vaer/ og server/gjoremal/.)
   app.route('/api/settings', settings45Api);
 }

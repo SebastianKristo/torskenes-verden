@@ -19,6 +19,8 @@
 // så den lokale tolkeren splitLocal41 (forstår «før vi skal», «hvor vi må», «og så», «siden/fordi» → note). Korte enkeltoppgaver
 // går lokalt med en gang. Data: huske_glimt_src (id, user_id, text, created_at, engine, item_ids, …), hl_tasks.src_id. Siste 60 per bruker.
 import { randomBytes } from 'node:crypto';
+import { Hono } from 'hono';
+import { authOrToken as authOrToken0 } from '../mobile.js';
 import { db, q } from '../db.js';
 import { userInfo, listUsers } from '../auth/session.js';
 import { broadcast } from '../realtime.js';
@@ -349,3 +351,13 @@ export function mountGlimt41(api, helpers) {
     return c.json({ ok: true });
   });
 }
+
+/* ---------------- Huskeliste-alias ---------------- */
+// POST /api/huske/glimt-jobs {text, list?, origin?:'huske'|'home_search'} → 202 {job_id, jobId, placeholder}
+const authOrToken = (c, next) => authOrToken0(c, next); // sen binding
+export const huskeApi = new Hono();
+huskeApi.post('/glimt-jobs', authOrToken, async (c) => {
+  const b = await c.req.json().catch(() => ({})) ?? {};
+  try { const j = startJob41(c.get('user'), String(b.text ?? b.q ?? ''), { list: b.list ?? null, origin: b.origin ?? 'huske' }); return c.json({ job_id: j.jobId, ...j }, 202); }
+  catch (e) { return c.json({ error: e.message }, e.status ?? 400); }
+});

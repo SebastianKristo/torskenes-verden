@@ -6,7 +6,9 @@
 // - Logg per beskjed: input_len, model, tasks_count, parse_ok, path (local|ai) → kv 'huske42_log' (GET /api/tasks/glimt/log).
 import { _hooks42, splitLocal41, title41 } from './glimt-jobs.js';
 import { parseTask37 } from './glimt.js';
+import { Hono } from 'hono';
 import { kv } from '../db.js';
+import { authOrToken as authOrToken0 } from '../mobile.js';
 import { osloDate } from '../dates/oslo.js';
 
 export const TASK_SCHEMA42 = { type: 'object', properties: { tasks: { type: 'array', items: { type: 'object', properties: { title: { type: 'string' }, note: { type: ['string', 'null'] }, due: { type: ['string', 'null'] },
@@ -122,3 +124,8 @@ export const log42 = (u, row) => { try { const l = kv.get(u, 'huske42_log', []) 
 export const glimtLog42 = (u) => kv.get(u, 'huske42_log', []) ?? [];
 
 Object.assign(_hooks42, { prompt: prompt42, normalize: normalize42, guard: guard42, local: splitLocal42, log: log42 });
+
+/** GET /api/tasks/glimt/log → {items:[{at, input_len, model, tasks_count, parse_ok, path}]} (sesjon eller app-token) */
+const authOrToken = (c, next) => authOrToken0(c, next); // sen binding
+export const glimtLogApi = new Hono();
+glimtLogApi.get('/glimt/log', authOrToken, (c) => c.json({ items: glimtLog42(c.get('user')) }));

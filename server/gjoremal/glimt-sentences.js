@@ -219,3 +219,35 @@ export async function afterDone40(doneId, by) {
   return n;
 }
 export const extraOut40 = (r) => { let m = []; try { m = JSON.parse(r?.mentions ?? '[]'); } catch { m = []; } return { placeName: r?.place_name ?? null, after: r?.after_id ?? null, mentions: Array.isArray(m) ? m : [] }; };
+
+/* ---------------- placeName og after i POST/PATCH /api/tasks ---------------- */
+// Registreres først i routes.js, før innloggingen, slik de sto som egne lag foran /api/tasks i server/index.js:
+// ugyldig placeName/after gir 400 før noe annet, og svaret {item} får placeName og after etter at oppgaven er lagret.
+// «Nå kan du: …» (afterDone40) når punktet før er gjort.
+export async function tasksAfter40(c, next) {
+  let b = null;
+  if (c.req.method === 'PATCH') { try { b = await c.req.json(); } catch { b = null; } }
+  if (b && (('placeName' in b && b.placeName !== null && typeof b.placeName !== 'string') || ('after' in b && b.after !== null && !Number.isInteger(b.after)))) return c.json({ error: 'placeName må være tekst og after en oppgave-id' }, 400);
+  await next();
+  if (c.res.status !== 200 || !b) return;
+  const id = +c.req.param('id');
+  if ('placeName' in b || 'after' in b) await setExtra40(c, id, b);
+  if (b.done === true) { try { await afterDone40(id, c.get('user')); } catch { /* best effort */ } }
+}
+/** placeName (fritt sted) og after (oppgave-id som må gjøres først) på en oppgave; svaret {item} oppdateres. */
+async function setExtra40(c, id, b) {
+  migrate40();
+  const after = 'after' in b ? (b.after && b.after !== id && db.prepare('SELECT 1 FROM hl_tasks WHERE id=?').get(b.after) ? b.after : null) : undefined;
+  if ('placeName' in b) db.prepare('UPDATE hl_tasks SET place_name=? WHERE id=?').run(b.placeName ? String(b.placeName).replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, 80) || null : null, id);
+  if (after !== undefined) db.prepare('UPDATE hl_tasks SET after_id=? WHERE id=?').run(after, id);
+  try { const j = await c.res.clone().json(); if (j?.item) { const r = db.prepare('SELECT place_name, after_id FROM hl_tasks WHERE id=?').get(id); c.res = c.json({ ...j, item: { ...j.item, placeName: r?.place_name ?? null, after: r?.after_id ?? null } }, c.res.status); } } catch { /* */ }
+}
+/** POST /api/tasks godtar også placeName og after. */
+export async function tasksCreate40(c, next) {
+  let b = null;
+  if (c.req.method === 'POST') { try { b = await c.req.json(); } catch { b = null; } }
+  if (b && (('placeName' in b && b.placeName !== null && typeof b.placeName !== 'string') || ('after' in b && b.after !== null && !Number.isInteger(b.after)))) return c.json({ error: 'placeName må være tekst og after en oppgave-id' }, 400);
+  await next();
+  if (!b || ![200, 201].includes(c.res.status) || !('placeName' in b || 'after' in b)) return;
+  try { const j = await c.res.clone().json(); if (j?.item?.id) await setExtra40(c, j.item.id, b); } catch { /* */ }
+}

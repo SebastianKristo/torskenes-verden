@@ -18,7 +18,8 @@
 //     early: none|5m|15m|30m|1h|1d|2d|1w · prio 0–3 · place: store|home|leave|work|cabin|null
 //   Sanntid: {type:'todo:changed', action, …} i tillegg til {type:'tasks', …} (bare til dem med tilgang).
 //   Glimt (11 funksjoner): se glimt.js.
-import { extraOut40 } from './glimt-sentences.js'; // prompt 40
+import { extraOut40, tasksAfter40, tasksCreate40 } from './glimt-sentences.js'; // prompt 40
+import { tabOrder43 } from './order.js'; // rekkefølgen på listene (listOrder)
 import { Hono } from 'hono';
 import { randomBytes } from 'node:crypto';
 import { db, q, kv, OWNER } from '../db.js';
@@ -320,6 +321,9 @@ initHa({ listRow, canSeeList, audienceOfTask, send, itemOut, userInfo, isAdmin }
 /* ---------------- API (/api/tasks) ---------------- */
 
 const api = new Hono();
+// placeName og after (glimt-sentences.js) står før innloggingen, som da de var egne lag i server/index.js.
+api.patch('/:id{[0-9]+}', tasksAfter40);
+api.post('/', tasksCreate40);
 api.use('*', async (c, next) => {
   let id = sessionUser(c);
   if (!id && bearerOk(c, 'finance:read')) id = c.get('user');
@@ -355,7 +359,7 @@ api.get('/', (c) => {
   } else rows = q(`SELECT * FROM hl_tasks WHERE ${VISIBLE}`).all({ u });
   rows = rows.filter((r) => (arch ? r.archived_at != null : r.archived_at == null));
   const items = arch ? rows.map(itemOut).sort((a, b) => b.archivedAt - a.archivedAt) : sortItems(rows.map(itemOut));
-  return c.json({ lists: lists(u), items, archivedCount: archivedCount(u), members: members(u), today: today() });
+  return c.json({ lists: lists(u), items, archivedCount: archivedCount(u), members: members(u), today: today(), listOrder: tabOrder43(u).ids });
 });
 api.post('/archive-done', async (c) => {
   const u = c.get('user'), b = await body(c);
@@ -518,7 +522,7 @@ import('../glimt45/tools.js').then((m) => m.setTaskHelpers45({ q, listRow, canSe
 mountGlimt37(api, { q, db, listRow, canSeeList, canSeeTask, listsOf, lists, listOut, itemOut, byId, cleanTask, insertTask, send, audienceOfTask, defaultList, mineOf, VISIBLE, today, haLocal, parseArr, members });
 
 /* Lister */
-api.get('/lists', (c) => c.json({ lists: lists(c.get('user')), members: members(c.get('user')) }));
+api.get('/lists', (c) => c.json({ lists: lists(c.get('user')), members: members(c.get('user')), listOrder: tabOrder43(c.get('user')).ids }));
 api.post('/lists', async (c) => {
   const u = c.get('user'), b = await body(c), name = str(b.name, 40);
   if (b.members === undefined && Array.isArray(b.userIds)) b.members = b.userIds; // prompt 37: appene sender begge

@@ -1,31 +1,10 @@
-// Prompt 45 (SERVER45): små serverdeler – Gjøremål-synk som rad (Innstillinger → Gjøremål) og Innstillinger samlet.
-// (Vær «Min posisjon», GET /api/weather/here, ligger i server/vaer/here.js.)
-//   GET /api/tasks/ha/summary → {enabled, linked, lists, syncedAt, syncedText, text, settings, canEdit}  (alle innloggede; endring fortsatt bare admin)
+// Prompt 45 (SERVER45): Innstillinger samlet. (Vær «Min posisjon» ligger i server/vaer/here.js og Gjøremål-synkraden,
+// GET /api/tasks/ha/summary, i server/gjoremal/ha.js.)
 //   GET /api/settings/sections → {sections:[{id, title, icon, color, route, items, api}]}  (én seksjon per modul, admin-sider skjult for andre)
 import { Hono } from 'hono';
-import { db, q, kv, OWNER } from './db.js';
 import { authOrToken } from './mobile.js';
 import { isAdmin } from './auth/session.js';
 import { indexFor } from './settings-ask30.js';
-
-const MOCK = () => process.env.MOCK_DATA === '1';
-
-/* ---------------- Gjøremål: synk-raden ---------------- */
-
-const hm = (t) => new Date(t).toLocaleTimeString('nb-NO', { timeZone: 'Europe/Oslo', hour: '2-digit', minute: '2-digit' });
-export function tasksHaSummary45(u) {
-  const conf = { enabled: false, syncedAt: null, ...(kv.get(OWNER, 'huske_ha', {}) ?? {}) };
-  let rows = [];
-  try { rows = q(`SELECT m.list_id, m.entity_id, l.name FROM huske_ha_map m LEFT JOIN hl_task_lists l ON l.id = m.list_id WHERE l.owner=? OR l.id IN (SELECT list_id FROM hl_task_list_members WHERE user_id=?) OR ?`).all(u, u, isAdmin(u) ? 1 : 0); } catch { rows = []; }
-  const synced = conf.syncedAt ? Number(conf.syncedAt) || Date.parse(conf.syncedAt) : null;
-  const sameDay = synced && new Date(synced).toLocaleDateString('sv-SE', { timeZone: 'Europe/Oslo' }) === new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Oslo' });
-  const syncedText = synced ? `Synket ${sameDay ? hm(synced) : new Date(synced).toLocaleDateString('nb-NO', { timeZone: 'Europe/Oslo', day: 'numeric', month: 'short' })}` : conf.enabled ? 'Ikke synket ennå' : 'Av';
-  return { enabled: !!conf.enabled, linked: rows.length, lists: rows.map((r) => ({ listId: r.list_id, name: r.name ?? null, entityId: r.entity_id })), syncedAt: synced ? new Date(synced).toISOString() : null, syncedText,
-    text: `Synk med Home Assistant · ${conf.enabled ? syncedText : 'av'}`, hint: 'endres i Innstillinger → Gjøremål', settings: { web: '#/innstillinger/gjoremal', mobile: '#/set/huske', detail: 'huske', event: 'papir-open-settings' }, canEdit: isAdmin(u),
-    integrationText: rows.length ? `Gjøremål: ${rows.length} ${rows.length === 1 ? 'liste' : 'lister'} koblet` : 'Gjøremål: ingen lister koblet' };
-}
-export const tasks45Api = new Hono();
-tasks45Api.get('/ha/summary', authOrToken, (c) => c.json(tasksHaSummary45(c.get('user'))));
 
 /* ---------------- Innstillinger samlet ---------------- */
 
