@@ -36,27 +36,28 @@ struct MacLoginField: View {
 // «Fortsett som …» via delt Nøkkelring på Mac (krever Team ID + keychain-access-groups), «Logg inn med Homelab-appen»
 // (homelab://app-auth når Homelab finnes på Mac-en, ellers godkjenning på web-siden <server>/app-auth i nettleseren; svaret
 // kommer tilbake som kalender://auth?code=…&state=…) og «Bruk brukernavn og passord». Ingen adresse spørres om.
-// ObservableObject (macOS 13). Ingen tilstand skrives under tegning – bare fra knapper og ferdige nettkall.
+// @Observable (macOS 14, Fase 4). Ingen tilstand skrives under tegning – bare fra knapper og ferdige nettkall.
 
 @MainActor
-final class MacLogin41Model: ObservableObject {
+@Observable
+final class MacLogin41Model {
     static let shared: MacLogin41Model = MacLogin41Model()
 
     /// start | wait | err | pw
-    @Published var phase: String = "start"
-    @Published var error: String = ""
-    @Published var step: Int = 0
-    @Published var busy: Bool = false
-    @Published var needsCode: Bool = false
-    @Published var offerServer: Bool = false
-    @Published var serverOpen: Bool = false
+    var phase: String = "start"
+    var error: String = ""
+    var step: Int = 0
+    var busy: Bool = false
+    var needsCode: Bool = false
+    var offerServer: Bool = false
+    var serverOpen: Bool = false
     /// Prompt 51: ny enhet venter på godkjenning (fase «approve51»). pollKey vises aldri.
-    @Published var approval51: KalApproval51? = nil
-    private var waitId: Int = 0
+    var approval51: KalApproval51? = nil
+    @ObservationIgnored private var waitId: Int = 0
 
     /// Prompt 43: leses fra bufferen (KalShared41 leser aldri Nøkkelringen på hovedtråden på Mac). `quickTick` tegner på nytt
     /// når bakgrunnslesingen er ferdig.
-    @Published private(set) var quickTick: Int = 0
+    private(set) var quickTick: Int = 0
 
     init() {
         Task { @MainActor in
@@ -260,7 +261,7 @@ final class MacLogin41Model: ObservableObject {
 
 struct MacLogin41View: View {
     @Environment(\.mk) private var t
-    @ObservedObject var m: MacLogin41Model = MacLogin41Model.shared
+    @Bindable var m: MacLogin41Model = MacLogin41Model.shared
     @State private var user: String = UserDefaults.standard.string(forKey: "mac.lastUser") ?? ""
     @State private var pass: String = ""
     @State private var code: String = ""

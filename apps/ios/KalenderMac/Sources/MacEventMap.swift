@@ -15,7 +15,7 @@ private enum MacOpen37 {
 
 struct MacGlimtMap37: View {
     @Environment(\.mk) private var t
-    @ObservedObject private var geo: KalGeo37 = KalGeo37.shared
+    @Bindable private var geo: KalGeo37 = KalGeo37.shared
     let e: KalEvent
 
     var body: some View {
@@ -43,7 +43,7 @@ enum KalGlimtEvMac37 {
 
 struct MacDetailMap37: View {
     @Environment(\.mk) private var t
-    @ObservedObject private var geo: KalGeo37 = KalGeo37.shared
+    @Bindable private var geo: KalGeo37 = KalGeo37.shared
     let e: KalEvent
 
     var body: some View {

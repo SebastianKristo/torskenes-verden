@@ -6,13 +6,14 @@ import UniformTypeIdentifiers
 /* ---------------- Prompt 34: Kalender for Mac (no.kristo.kalender.mac) ---------------- */
 // Fasit: design/Kalender Mac.dc.html (skrivebord, menylinje-kalender, Dock-ikon, DMG-vindu og varsel). Innholdet i vinduet er
 // samme web-kalender (Kalender.dc.html, variant web, full). Gjenbruker SharedKal (modeller, nett, tolking via KalQuick).
-// macOS 13+, universal (arm64 + x86_64). Ingen nye avhengigheter (ingen Sparkle): oppdatering via lenke til siste release.
+// macOS 14+ (Q28), universal (arm64 + x86_64). Ingen nye avhengigheter (ingen Sparkle): oppdatering via lenke til siste release.
 
 @main
 struct MacApp: App {
     @NSApplicationDelegateAdaptor(MacAppDelegate.self) private var delegate
-    // Ikke @StateObject på hele MacStore her: da bygges alle scener og menyer på nytt ved hver dataendring, og på macOS 26/27
-    // gikk det i en uendelig løkke (AppGraph.sceneList → MacCommands → … → stabeloverflyt ved oppstart). Bare menylinje-valget observeres.
+    // Ikke observer hele MacStore i scenen: da bygges alle scener og menyer på nytt ved hver dataendring, og på macOS 26/27
+    // gikk det i en uendelig løkke (AppGraph.sceneList → MacCommands → … → stabeloverflyt ved oppstart). Bare menylinje-valget
+    // observeres. Fase 4 (@Observable): scenen og MacCommands leser bare loggedIn fra MacStore (endres ved inn-/utlogging).
     @AppStorage("mac.mb") private var menuBarOn: Bool = true
 
     /// Fanget fra et vindu eller menylinje-panelet, så varsler og menylinja kan åpne hovedvinduet.

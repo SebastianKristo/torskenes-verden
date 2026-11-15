@@ -2,7 +2,7 @@ import SwiftUI
 import AppKit
 
 /* ---------------- Prompt 34: Kalender for Mac – data (samme konto og backend som web og iPhone) ---------------- */
-// Sannheten ligger på Homelab-serveren (/api/kalender). macOS 13: ObservableObject (ikke @Observable, som krever macOS 14).
+// Sannheten ligger på Homelab-serveren (/api/kalender). Fase 4 (Q28): macOS 14 og @Observable, som KalStore på iOS.
 // Visning (view/anchor) ligger per vindu i MacWin; her ligger dataene, innloggingen og innstillingene som deles av alle vinduer.
 
 struct MacToast: Equatable {
@@ -24,110 +24,111 @@ struct MacNewForm: Equatable {
 }
 
 @MainActor
-final class MacStore: ObservableObject {
+@Observable
+final class MacStore {
     static let shared: MacStore = MacStore()
 
     /* ---------- Innlogging ---------- */
     // Prompt 43: fra UserDefaults (adressene), ikke Nøkkelringen – tokenet leses i bakgrunnen (bootstrap43).
-    @Published var loggedIn: Bool = MacSession.hasLogin
-    @Published var userName: String = MacSession.user
+    var loggedIn: Bool = MacSession.hasLogin
+    var userName: String = MacSession.user
 
     /* ---------- Data ---------- */
-    @Published var cals: [KalCal] = KalCals.defaults
-    @Published var serverCals: Bool = false
-    @Published var events: [KalEvent] = []
-    @Published var wx: [String: KalWxDay] = [:]
-    @Published var loading: Bool = false
-    @Published var lastError: String = ""
+    var cals: [KalCal] = KalCals.defaults
+    var serverCals: Bool = false
+    var events: [KalEvent] = []
+    var wx: [String: KalWxDay] = [:]
+    var loading: Bool = false
+    var lastError: String = ""
     /// Prompt 43: serveren svarer ikke – «Ikke tilkoblet home.kristo.no · viser lagret kalender».
-    @Published var offline43: Bool = false
-    @Published var updated: Date? = nil
-    @Published private(set) var byDay: [String: [KalEvent]] = [:]
-    @Published private(set) var all: [KalEvent] = []
-    @Published var toast: MacToast? = nil
+    var offline43: Bool = false
+    var updated: Date? = nil
+    private(set) var byDay: [String: [KalEvent]] = [:]
+    private(set) var all: [KalEvent] = []
+    var toast: MacToast? = nil
     /// Endres ved midnatt og hvert minutt, så «i dag» og nå-linja oppdateres.
-    @Published var tick: Int = 0
+    var tick: Int = 0
 
     /* ---------- Innstillinger (Kalender → Innstillinger …) ---------- */
-    @Published var showWeeks: Bool = MacStore.boolPref("mac.sw", true) { didSet { MacStore.setPref("mac.sw", showWeeks) } }
-    @Published var showWx: Bool = MacStore.boolPref("mac.swx", true) { didSet { MacStore.setPref("mac.swx", showWx) } }
+    var showWeeks: Bool = MacStore.boolPref("mac.sw", true) { didSet { MacStore.setPref("mac.sw", showWeeks) } }
+    var showWx: Bool = MacStore.boolPref("mac.swx", true) { didSet { MacStore.setPref("mac.swx", showWx) } }
     /// system | light | dark
-    @Published var theme: String = UserDefaults.standard.string(forKey: "mac.theme") ?? "system" {
+    var theme: String = UserDefaults.standard.string(forKey: "mac.theme") ?? "system" {
         didSet {
             UserDefaults.standard.set(theme, forKey: "mac.theme")
             MacApp.applyTheme(theme)
         }
     }
     /// Menylinje-kalenderen av/på og hva den viser: icon | date | next.
-    @Published var menuBarOn: Bool = MacStore.boolPref("mac.mb", true) { didSet { MacStore.setPref("mac.mb", menuBarOn) } }
-    @Published var menuBarMode: String = UserDefaults.standard.string(forKey: "mac.mbMode") ?? "next" {
+    var menuBarOn: Bool = MacStore.boolPref("mac.mb", true) { didSet { MacStore.setPref("mac.mb", menuBarOn) } }
+    var menuBarMode: String = UserDefaults.standard.string(forKey: "mac.mbMode") ?? "next" {
         didSet { UserDefaults.standard.set(menuBarMode, forKey: "mac.mbMode") }
     }
     /// Prompt 38: hovedvinduet kunne vise web-kalenderen (<server>/kalender?app=mac).
     /// Prompt 39: den innebygde (native) kalenderen er fasit igjen – web-visningen er bare et valg, av som standard.
-    @Published var useWeb38: Bool = MacStore.web39Pref() {
+    var useWeb38: Bool = MacStore.web39Pref() {
         didSet {
             MacStore.setPref("mac.web38", useWeb38)
             MacWeb38Model.prefChanged()
         }
     }
     /// Antall hendelser i dag som merke på Dock-ikonet.
-    @Published var dockBadge: Bool = MacStore.boolPref("mac.badge", true) { didSet { MacStore.setPref("mac.badge", dockBadge); MacDock.refresh() } }
+    var dockBadge: Bool = MacStore.boolPref("mac.badge", true) { didSet { MacStore.setPref("mac.badge", dockBadge); MacDock.refresh() } }
     /// Standardvarsel (minutter, -1 = ingen).
-    @Published var defRemRaw: Int = (UserDefaults.standard.object(forKey: "mac.drem") as? Int) ?? 60 {
+    var defRemRaw: Int = (UserDefaults.standard.object(forKey: "mac.drem") as? Int) ?? 60 {
         didSet { UserDefaults.standard.set(defRemRaw, forKey: "mac.drem") }
     }
     var defRem: Int? { defRemRaw < 0 ? nil : defRemRaw }
     /// Prompt 46: standardkalenderen (profilens prefs.defaultCalendar). "" = ikke valgt.
-    @Published var defCal46: String = UserDefaults.standard.string(forKey: "mac46.defCal") ?? "" {
+    var defCal46: String = UserDefaults.standard.string(forKey: "mac46.defCal") ?? "" {
         didSet { UserDefaults.standard.set(defCal46, forKey: "mac46.defCal") }
     }
     var defCalId46: String { KalDef46.pick(cals, preferred: defCal46) }
 
     /* ---------- Prompt 35: samme valg som iPhone-appen (profilen /api/kalender/calendars/prefs) ---------- */
     /// mon | sun – måned, år, uke, ukenummer og minikalenderen.
-    @Published var weekStart: String = KalWeek35.raw { didSet { KalWeek35.set(weekStart) } }
+    var weekStart: String = KalWeek35.raw { didSet { KalWeek35.set(weekStart) } }
     /// Visningen nye vinduer åpner i: mnd | uke | 3d | dag | liste.
-    @Published var openView: String = UserDefaults.standard.string(forKey: "mac.openView") ?? "mnd" {
+    var openView: String = UserDefaults.standard.string(forKey: "mac.openView") ?? "mnd" {
         didSet { UserDefaults.standard.set(openView, forKey: "mac.openView") }
     }
     /// Standard varighet (min) for nye hendelser.
-    @Published var defDur: Int = (UserDefaults.standard.object(forKey: "mac.defDur") as? Int) ?? 60 {
+    var defDur: Int = (UserDefaults.standard.object(forKey: "mac.defDur") as? Int) ?? 60 {
         didSet { UserDefaults.standard.set(defDur, forKey: "mac.defDur") }
     }
     /// Tidslinje starter: now | 06 | 08
-    @Published var tlStart: String = UserDefaults.standard.string(forKey: "mac.tlStart") ?? "now" {
+    var tlStart: String = UserDefaults.standard.string(forKey: "mac.tlStart") ?? "now" {
         didSet { UserDefaults.standard.set(tlStart, forKey: "mac.tlStart") }
     }
-    @Published var nBd: Bool = MacStore.boolPref("mac.nBd", true) { didSet { MacStore.setPref("mac.nBd", nBd) } }
+    var nBd: Bool = MacStore.boolPref("mac.nBd", true) { didSet { MacStore.setPref("mac.nBd", nBd) } }
     /// Prompt 43: Innstillinger → Generelt → Varsler (av = ingen lokale varsler fra Kalender).
-    @Published var notify43: Bool = MacStore.boolPref("mac43.notify", true) {
+    var notify43: Bool = MacStore.boolPref("mac43.notify", true) {
         didSet {
             MacStore.setPref("mac43.notify", notify43)
             rebuild()
         }
     }
     /// Prompt 43: Innstillinger → Generelt → Glimt i menylinjen (skrivefeltet i menyen).
-    @Published var mbGlimt43: Bool = MacStore.boolPref("mac43.mbGlimt", true) { didSet { MacStore.setPref("mac43.mbGlimt", mbGlimt43) } }
-    @Published var nFr: Bool = MacStore.boolPref("mac.nFr", true) { didSet { MacStore.setPref("mac.nFr", nFr) } }
+    var mbGlimt43: Bool = MacStore.boolPref("mac43.mbGlimt", true) { didSet { MacStore.setPref("mac43.mbGlimt", mbGlimt43) } }
+    var nFr: Bool = MacStore.boolPref("mac.nFr", true) { didSet { MacStore.setPref("mac.nFr", nFr) } }
     /// Lokale valg til serveren har bekreftet dem.
-    var hidMenuLocal: [String: Bool] = (UserDefaults.standard.dictionary(forKey: "mac.hidMenu") as? [String: Bool]) ?? [:]
-    var colLocal: [String: String] = (UserDefaults.standard.dictionary(forKey: "mac.calCol") as? [String: String]) ?? [:]
+    @ObservationIgnored var hidMenuLocal: [String: Bool] = (UserDefaults.standard.dictionary(forKey: "mac.hidMenu") as? [String: Bool]) ?? [:]
+    @ObservationIgnored var colLocal: [String: String] = (UserDefaults.standard.dictionary(forKey: "mac.calCol") as? [String: String]) ?? [:]
 
     /* ---------- Lokale tillegg ---------- */
-    private var pending: [KalEvent] = MacStore.loadList("mac.pending")
-    private var hiddenIds: Set<String> = Set(UserDefaults.standard.stringArray(forKey: "mac.del") ?? [])
-    private var remOverride: [String: Int] = (UserDefaults.standard.dictionary(forKey: "mac.rem") as? [String: Int]) ?? [:]
-    private var calOverride: [String: String] = (UserDefaults.standard.dictionary(forKey: "mac.calOf") as? [String: String]) ?? [:]
-    private var srcOf: [String: String] = (UserDefaults.standard.dictionary(forKey: "mac.src") as? [String: String]) ?? [:]
-    private var calOn: [String: Bool] = (UserDefaults.standard.dictionary(forKey: "mac.calOn") as? [String: Bool]) ?? [:]
-    private var toastSeq: Int = 0
-    private var noRetry: Set<String> = []
-    private var poll: Timer? = nil
-    private var minuteTimer: Timer? = nil
-    private var loadedFrom: String = ""
-    private var loadedTo: String = ""
-    private var lastDay: String = KalD.todayKey()
+    @ObservationIgnored private var pending: [KalEvent] = MacStore.loadList("mac.pending")
+    @ObservationIgnored private var hiddenIds: Set<String> = Set(UserDefaults.standard.stringArray(forKey: "mac.del") ?? [])
+    @ObservationIgnored private var remOverride: [String: Int] = (UserDefaults.standard.dictionary(forKey: "mac.rem") as? [String: Int]) ?? [:]
+    @ObservationIgnored private var calOverride: [String: String] = (UserDefaults.standard.dictionary(forKey: "mac.calOf") as? [String: String]) ?? [:]
+    @ObservationIgnored private var srcOf: [String: String] = (UserDefaults.standard.dictionary(forKey: "mac.src") as? [String: String]) ?? [:]
+    @ObservationIgnored private var calOn: [String: Bool] = (UserDefaults.standard.dictionary(forKey: "mac.calOn") as? [String: Bool]) ?? [:]
+    @ObservationIgnored private var toastSeq: Int = 0
+    @ObservationIgnored private var noRetry: Set<String> = []
+    @ObservationIgnored private var poll: Timer? = nil
+    @ObservationIgnored private var minuteTimer: Timer? = nil
+    @ObservationIgnored private var loadedFrom: String = ""
+    @ObservationIgnored private var loadedTo: String = ""
+    @ObservationIgnored private var lastDay: String = KalD.todayKey()
 
     init() {
         // Prompt 89: den gamle feilstavede standardadressen → os.smarthjemeksperten.no (KalServerCore.swift, MacLogin.swift).

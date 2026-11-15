@@ -2,7 +2,7 @@ import Foundation
 import Security
 import LocalAuthentication
 import UserNotifications
-import Combine
+import Observation
 
 /* ---------------- Prompt 51 (KAL51): Kalender – ny enhet godkjennes, krasjrapporter, feature flags, «Nytt i denne versjonen» ---------------- */
 // Felles for Kalender (iPhone/iPad) og Kalender for Mac (SharedKal/Core). Widgetene kompilerer fila, men bruker den ikke:
@@ -471,18 +471,19 @@ struct KalPendingDev51: Identifiable, Equatable {
 }
 
 @MainActor
-final class KalSec51Model: ObservableObject {
+@Observable
+final class KalSec51Model {
     static let shared: KalSec51Model = KalSec51Model()
 
-    @Published var pending: [KalPendingDev51] = []
-    @Published var whatsNew: KalWhatsNew51? = nil
+    var pending: [KalPendingDev51] = []
+    var whatsNew: KalWhatsNew51? = nil
     /// Id-en som behandles nå (knappene viser fremdrift).
-    @Published var busyId: String = ""
-    @Published var message: String = ""
-    @Published var loadedOnce: Bool = false
+    var busyId: String = ""
+    var message: String = ""
+    var loadedOnce: Bool = false
 
-    private var lastRefresh: Date = Date.distantPast
-    private var loop: Task<Void, Never>? = nil
+    @ObservationIgnored private var lastRefresh: Date = Date.distantPast
+    @ObservationIgnored private var loop: Task<Void, Never>? = nil
 
     /// Er det et token? (Mac: bufferen, aldri Nøkkelringen på hovedtråden.)
     private var hasToken: Bool { !(KalNet.session().1 ?? "").isEmpty }

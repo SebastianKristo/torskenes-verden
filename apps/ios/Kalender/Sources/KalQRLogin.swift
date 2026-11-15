@@ -9,7 +9,7 @@ import LocalAuthentication
 
 struct KalQRLogin38Panel: View {
     @Environment(\.kal) private var t
-    @StateObject private var m: KalQR38Model = KalQR38Model()
+    @State private var m: KalQR38Model = KalQR38Model()
     let base: String
     let onPassword: () -> Void
 

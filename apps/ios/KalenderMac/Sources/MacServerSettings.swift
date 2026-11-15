@@ -6,7 +6,7 @@ import SwiftUI
 
 struct MacSrv47Section: View {
     @Environment(\.mk) private var t
-    @ObservedObject private var m: KalSrv47Model = KalSrv47Model.shared
+    @Bindable private var m: KalSrv47Model = KalSrv47Model.shared
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {

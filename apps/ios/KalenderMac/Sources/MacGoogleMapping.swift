@@ -10,7 +10,7 @@ import AppKit
 struct MacGoogleMap39Sheet: View {
     @Environment(\.mk) private var t
     @Binding var open: Bool
-    @ObservedObject var store: MacStore = MacStore.shared
+    @Bindable var store: MacStore = MacStore.shared
     @State private var m: KalGMap39? = nil
     @State private var busy: Bool = false
     @State private var error: String = ""

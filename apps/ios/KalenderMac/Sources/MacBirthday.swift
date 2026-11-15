@@ -3,17 +3,18 @@ import AppKit
 
 /* ---------------- Prompt 41: Kalender for Mac (native) – bursdagskort og kake i lister (søk med Glimt: MacGlimtSearch.swift) ---------------- */
 // Samme mønster som iPhone (Kalender/Sources/KalBirthday.swift, KalGlimtSearch.swift) og fasiten Kalender App.dc.html (R.dt.bd, sAi).
-// Logikken er delt i SharedKal/Core (KalBd41, KalAi41). macOS 13: ObservableObject (ikke @Observable).
+// Logikken er delt i SharedKal/Core (KalBd41, KalAi41). macOS 14: @Observable (Fase 4).
 // Ingen oppdateringsløkker: modellene endres bare fra knapper og ferdige nettkall, aldri under tegning; ingen scene/kommando-tilstand.
 
 @MainActor
-final class MacBdPeople41: ObservableObject {
+@Observable
+final class MacBdPeople41 {
     static let shared: MacBdPeople41 = MacBdPeople41()
 
-    @Published private(set) var people: [KalBdPerson41] = MacBdPeople41.loadCache()
-    @Published private(set) var images: [Int: NSImage] = [:]
-    private var loadedAt: Date = Date.distantPast
-    private var asked: Set<Int> = []
+    private(set) var people: [KalBdPerson41] = MacBdPeople41.loadCache()
+    private(set) var images: [Int: NSImage] = [:]
+    @ObservationIgnored private var loadedAt: Date = Date.distantPast
+    @ObservationIgnored private var asked: Set<Int> = []
 
     private static func loadCache() -> [KalBdPerson41] {
         guard let d = UserDefaults.standard.data(forKey: "mac41.bdPeople") else { return [] }
@@ -71,7 +72,7 @@ enum MacBdText41 {
 
 struct MacBdCard41: View {
     @Environment(\.accessibilityReduceMotion) private var reduce
-    @ObservedObject var people: MacBdPeople41 = MacBdPeople41.shared
+    @Bindable var people: MacBdPeople41 = MacBdPeople41.shared
     let e: KalEvent
     let color: Color
 

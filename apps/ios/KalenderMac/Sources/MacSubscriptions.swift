@@ -6,10 +6,11 @@ import AppKit
 // beløp i Liste, og et eget ark (logo, beløp, konto, intervall, neste trekk, Åpne i Finans ›, Si opp …). Ikke redigerbart her.
 
 @MainActor
-final class MacAbLogos42: ObservableObject {
+@Observable
+final class MacAbLogos42 {
     static let shared: MacAbLogos42 = MacAbLogos42()
-    @Published var images: [String: NSImage] = [:]
-    private var busy: Set<String> = []
+    var images: [String: NSImage] = [:]
+    @ObservationIgnored private var busy: Set<String> = []
 
     func load(_ path: String) {
         if path.isEmpty || images[path] != nil || busy.contains(path) { return }
@@ -34,7 +35,7 @@ final class MacAbLogos42: ObservableObject {
 
 struct MacAbLogo42: View {
     @Environment(\.mk) private var t
-    @ObservedObject var logos: MacAbLogos42 = MacAbLogos42.shared
+    @Bindable var logos: MacAbLogos42 = MacAbLogos42.shared
     let e: KalEvent
     var size: CGFloat = 12
 

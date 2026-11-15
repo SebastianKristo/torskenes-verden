@@ -1,5 +1,5 @@
 import Foundation
-import Combine
+import Observation
 import CoreImage
 
 /* ---------------- Prompt 38: logg inn med QR fra mobilen (delt av Kalender for Mac og iPhone/iPad) ---------------- */
@@ -11,31 +11,32 @@ import CoreImage
 // Alt går i én egen URLSession (ephemeral), så cookiene følger QR-økta og ikke lekker til annet.
 
 @MainActor
-final class KalQR38Model: ObservableObject {
+@Observable
+final class KalQR38Model {
     /// idle | loading | pending | scanned | twofa | denied | error | done
-    @Published private(set) var state: String = "idle"
-    @Published private(set) var image: CGImage? = nil
-    @Published private(set) var secondsLeft: Int = 60
-    @Published private(set) var match: String = ""
-    @Published private(set) var scannedBy: String = ""
-    @Published private(set) var error: String = ""
-    @Published var code: String = ""
-    @Published private(set) var busy: Bool = false
+    private(set) var state: String = "idle"
+    private(set) var image: CGImage? = nil
+    private(set) var secondsLeft: Int = 60
+    private(set) var match: String = ""
+    private(set) var scannedBy: String = ""
+    private(set) var error: String = ""
+    var code: String = ""
+    private(set) var busy: Bool = false
 
-    private var base: String = ""
+    @ObservationIgnored private var base: String = ""
     /// Enhetsnavnet som vises på mobilen («Kalender (MacBook)»).
-    private var device: String = "Kalender"
+    @ObservationIgnored private var device: String = "Kalender"
     /// Enheten i companion-tokenet: «Mac», «iPad», «iPhone» (samme app + enhet erstatter det gamle tokenet).
-    var companionDevice: String = "Mac"
+    @ObservationIgnored var companionDevice: String = "Mac"
     /// Kalles når innloggingen er ferdig: (server, app-token, navn). Mac: MacStore.didLogin, iOS: KalStore.didLogin.
-    var onLogin: (@MainActor (String, String, String) -> Void)? = nil
-    private var sid: String = ""
-    private var nonce: String = ""
-    private var expires: Date = Date()
-    private var session: URLSession = KalQR38Model.makeSession()
-    private var sseTask: Task<Void, Never>? = nil
-    private var tickTask: Task<Void, Never>? = nil
-    private var gen: Int = 0
+    @ObservationIgnored var onLogin: (@MainActor (String, String, String) -> Void)? = nil
+    @ObservationIgnored private var sid: String = ""
+    @ObservationIgnored private var nonce: String = ""
+    @ObservationIgnored private var expires: Date = Date()
+    @ObservationIgnored private var session: URLSession = KalQR38Model.makeSession()
+    @ObservationIgnored private var sseTask: Task<Void, Never>? = nil
+    @ObservationIgnored private var tickTask: Task<Void, Never>? = nil
+    @ObservationIgnored private var gen: Int = 0
 
     nonisolated private static func makeSession() -> URLSession {
         let cfg: URLSessionConfiguration = URLSessionConfiguration.ephemeral

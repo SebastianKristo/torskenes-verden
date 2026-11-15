@@ -19,7 +19,7 @@ extension MacWin {
 
 /// Innstillinger → Standardkalender (skrivbare kalendere, lagres i profilen).
 struct MacDefCal46Picker: View {
-    @ObservedObject var store: MacStore = MacStore.shared
+    @Bindable var store: MacStore = MacStore.shared
 
     private var list: [KalCal] { store.cals.filter { (c: KalCal) -> Bool in KalDef46.usable(c) } }
 

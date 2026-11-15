@@ -36,20 +36,21 @@ final class MacWeb38Box {
 }
 
 @MainActor
-final class MacWeb38Model: NSObject, ObservableObject, WKNavigationDelegate, WKUIDelegate {
+@Observable
+final class MacWeb38Model: NSObject, WKNavigationDelegate, WKUIDelegate {
     private static var boxes: [MacWeb38Box] = []
 
-    @Published private(set) var phase: MacWeb38Phase = .idle
-    @Published private(set) var message: String = ""
+    private(set) var phase: MacWeb38Phase = .idle
+    private(set) var message: String = ""
 
-    private(set) var webView: WKWebView? = nil
-    private var proxy: MacWeb38Proxy? = nil
-    private var pending: [String] = []
-    private var retried: Bool = false
-    private var base: String = ""
-    private var startTask: Task<Void, Never>? = nil
-    private var changeTask: Task<Void, Never>? = nil
-    private var generation: Int = 0
+    @ObservationIgnored private(set) var webView: WKWebView? = nil
+    @ObservationIgnored private var proxy: MacWeb38Proxy? = nil
+    @ObservationIgnored private var pending: [String] = []
+    @ObservationIgnored private var retried: Bool = false
+    @ObservationIgnored private var base: String = ""
+    @ObservationIgnored private var startTask: Task<Void, Never>? = nil
+    @ObservationIgnored private var changeTask: Task<Void, Never>? = nil
+    @ObservationIgnored private var generation: Int = 0
 
     /// Web-visningen er i bruk (ellers vises den innebygde reservekalenderen).
     var active: Bool { MacStore.shared.useWeb38 && MacStore.shared.loggedIn && phase != .failed }
@@ -168,7 +169,7 @@ final class MacWeb38Model: NSObject, ObservableObject, WKNavigationDelegate, WKU
         // Ingen hvit blink i mørkt tema før siden er tegnet.
         wv.setValue(false, forKey: "drawsBackground")
         #if DEBUG
-        if #available(macOS 13.3, *) { wv.isInspectable = true }
+        wv.isInspectable = true
         #endif
         webView = wv
         return wv
@@ -550,7 +551,7 @@ struct MacWeb38View: NSViewRepresentable {
 /// Hovedinnholdet i web-modus: web-kalenderen, med «Kobler til …» til siden er klar.
 struct MacWeb38Host: View {
     @Environment(\.mk) private var t
-    @ObservedObject var model: MacWeb38Model
+    @Bindable var model: MacWeb38Model
 
     var body: some View {
         ZStack {
@@ -578,7 +579,7 @@ struct MacWeb38Host: View {
 /// Stripe over den innebygde reservekalenderen når web-kalenderen ikke kunne lastes.
 struct MacWeb38Banner: View {
     @Environment(\.mk) private var t
-    @ObservedObject var model: MacWeb38Model
+    @Bindable var model: MacWeb38Model
 
     var body: some View {
         HStack(spacing: 10) {

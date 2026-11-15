@@ -7,7 +7,7 @@ import SwiftUI
 
 struct KalSrv47Sheet: View {
     @Environment(\.kal) private var t
-    @ObservedObject private var m: KalSrv47Model = KalSrv47Model.shared
+    @Bindable private var m: KalSrv47Model = KalSrv47Model.shared
 
     var body: some View {
         ScrollView {

@@ -6,8 +6,8 @@ import SwiftUI
 
 struct MacSidebar: View {
     @Environment(\.mk) private var t
-    @ObservedObject var win: MacWin
-    @ObservedObject var store: MacStore = MacStore.shared
+    @Bindable var win: MacWin
+    @Bindable var store: MacStore = MacStore.shared
 
     var body: some View {
         ScrollView {
@@ -37,7 +37,7 @@ struct MacSidebar: View {
 /// Minimåned (sidemenyen og menylinja). Ukenummer-kolonne, søndag i rødt, i dag med rød sirkel, prikk for dager med hendelser.
 struct MacMiniMonth: View {
     @Environment(\.mk) private var t
-    @ObservedObject var store: MacStore = MacStore.shared
+    @Bindable var store: MacStore = MacStore.shared
     let month: Date
     let selected: String
     let compact: Bool
@@ -108,7 +108,7 @@ struct MacMiniMonth: View {
 
 struct MacMiniDay: View {
     @Environment(\.mk) private var t
-    @ObservedObject var store: MacStore = MacStore.shared
+    @Bindable var store: MacStore = MacStore.shared
     let day: Date
     let month: Int
     let selected: String
@@ -147,8 +147,8 @@ struct MacMiniDay: View {
 /// «Glimt · dagen din» – trykk åpner Glimt.
 struct MacDayCard: View {
     @Environment(\.mk) private var t
-    @ObservedObject var win: MacWin
-    @ObservedObject var store: MacStore = MacStore.shared
+    @Bindable var win: MacWin
+    @Bindable var store: MacStore = MacStore.shared
 
     var body: some View {
         Button(action: { win.glimtOpen = true }) {

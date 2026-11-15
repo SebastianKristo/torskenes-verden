@@ -106,7 +106,7 @@ struct KalWGuide70: View {
 struct KalWIntro70Host: View {
     @Environment(\.kal) private var t
     @MainActor private var s: KalStore { KalStore.shared }
-    @ObservedObject private var m: KalSec51Model = KalSec51Model.shared
+    @Bindable private var m: KalSec51Model = KalSec51Model.shared
     @State private var seen: Bool = KalWPrefs70.introSeen
     @State private var guide: Bool = false
 

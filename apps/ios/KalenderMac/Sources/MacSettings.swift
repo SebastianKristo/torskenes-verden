@@ -10,8 +10,8 @@ import AppKit
 /// Kalender → Se etter oppdateringer … åpner fanen Oppdateringer (MacPrefsTab43).
 struct MacSettingsView: View {
     @Environment(\.mk) private var t
-    @ObservedObject var store: MacStore = MacStore.shared
-    @ObservedObject var tab: MacPrefsTab43 = MacPrefsTab43.shared
+    @Bindable var store: MacStore = MacStore.shared
+    @Bindable var tab: MacPrefsTab43 = MacPrefsTab43.shared
     @State private var loginItem: Bool = false
     @State private var loginError: String = ""
 

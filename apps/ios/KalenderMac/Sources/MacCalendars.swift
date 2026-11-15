@@ -8,8 +8,8 @@ import AppKit
 
 struct MacCalendars35: View {
     @Environment(\.mk) private var t
-    @ObservedObject var win: MacWin
-    @ObservedObject var store: MacStore = MacStore.shared
+    @Bindable var win: MacWin
+    @Bindable var store: MacStore = MacStore.shared
     @State private var editing: Bool = false
     @State private var showHidden: Bool = false
 
@@ -73,7 +73,7 @@ struct MacCalendars35: View {
 
 struct MacCalRow35: View {
     @Environment(\.mk) private var t
-    @ObservedObject var store: MacStore = MacStore.shared
+    @Bindable var store: MacStore = MacStore.shared
     let cal: KalCal
     let editing: Bool
     /// Prompt 39: «Endre kobling …» for Google-kalenderne.
@@ -193,7 +193,7 @@ struct MacSwatches35: View {
 struct MacAddCal35Sheet: View {
     @Environment(\.mk) private var t
     @Binding var open: Bool
-    @ObservedObject var store: MacStore = MacStore.shared
+    @Bindable var store: MacStore = MacStore.shared
     @State private var tab: String = "ics"
     @State private var url: String = ""
     @State private var name: String = ""

@@ -7,7 +7,7 @@ import AppKit
 
 struct MacGoogle36Section: View {
     @Environment(\.mk) private var t
-    @ObservedObject var store: MacStore = MacStore.shared
+    @Bindable var store: MacStore = MacStore.shared
     @State private var g: KalGoogle36? = nil
     @State private var busy: Bool = false
     @State private var error: String = ""

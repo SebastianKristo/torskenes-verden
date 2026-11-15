@@ -6,7 +6,7 @@ import AppKit
 /// «Farge for MEK1300» (bare Studie-hendelser med fag).
 struct MacFagPick37: View {
     @Environment(\.mk) private var t
-    @ObservedObject var store: MacStore = MacStore.shared
+    @Bindable var store: MacStore = MacStore.shared
     let e: KalEvent
     @State private var picking: Bool = false
 
@@ -38,13 +38,14 @@ struct MacFagSwatches37: View {
         VStack(alignment: .leading, spacing: 10) {
             MacSwatches35(selected: KalFag37.hex(key)) { (h: String) in
                 KalFag37.set(key, h)
-                MacStore.shared.objectWillChange.send()
+                // Fase 4 (@Observable): fagfargen ligger utenfor MacStore; rebuild() setter all/byDay på nytt, så visningene tegnes.
+                MacStore.shared.rebuild(sideEffects: false)
                 done()
             }
             if KalFag37.own(key) != nil {
                 MacPill(title: "Standard fagfarge", filled: false, height: 26) {
                     KalFag37.set(key, nil)
-                    MacStore.shared.objectWillChange.send()
+                    MacStore.shared.rebuild(sideEffects: false)
                     done()
                 }
             }
@@ -55,7 +56,7 @@ struct MacFagSwatches37: View {
 /// Innstillinger → Studie → Fag: alle fag med fargeprikk. Klikk gir fargevelger.
 struct MacFagSettings37: View {
     @Environment(\.mk) private var t
-    @ObservedObject var store: MacStore = MacStore.shared
+    @Bindable var store: MacStore = MacStore.shared
 
     var body: some View {
         let rows: [KalFagRow37] = KalFag37.rows(store.all, cal: { (id: String) -> KalCal? in store.cal(id) })

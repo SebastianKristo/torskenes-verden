@@ -362,7 +362,7 @@ struct KalLinkRow35: View {
 /// Prompt 47: arket Innstillinger → Server (egen visning, så KalSettings35View ikke trenger å observere modellen).
 struct KalSrv47Host<Content: View>: View {
     @Environment(\.kal) private var t
-    @ObservedObject private var m: KalSrv47Model = KalSrv47Model.shared
+    @Bindable private var m: KalSrv47Model = KalSrv47Model.shared
     @ViewBuilder let content: () -> Content
 
     var body: some View {

@@ -8,12 +8,13 @@ import SwiftUI
 // Treff lagres permanent; bomtreff {fail} prøves igjen etter 1 t. Uten treff: bare tekst, intet kart.
 
 @MainActor
-final class KalGeo37: ObservableObject {
+@Observable
+final class KalGeo37 {
     static let shared: KalGeo37 = KalGeo37()
 
     /// Økes når et oppslag er ferdig (visningene tegnes på nytt).
-    @Published var rev: Int = 0
-    private var inFlight: Set<String> = []
+    var rev: Int = 0
+    @ObservationIgnored private var inFlight: Set<String> = []
 
     /// Stedet som slås opp for hendelsen (full adresse når serveren har den).
     static func place(_ e: KalEvent) -> String {
@@ -132,16 +133,9 @@ struct KalMap37View: View {
             .accessibilityHidden(true)
     }
 
-    @ViewBuilder private var core: some View {
-        #if os(macOS)
-        if #available(macOS 14.0, *) {
-            KalMap37Modern(la: la, lo: lo)
-        } else {
-            KalMap37Legacy(la: la, lo: lo)
-        }
-        #else
+    // Fase 4: Mac krever macOS 14, så SwiftUI-kartet brukes overalt (MKMapView-reserven for macOS 13 er fjernet).
+    private var core: some View {
         KalMap37Modern(la: la, lo: lo)
-        #endif
     }
 }
 
@@ -159,28 +153,3 @@ struct KalMap37Modern: View {
     }
 }
 
-#if os(macOS)
-/// macOS 13: MKMapView (SwiftUI-kartet med Marker krever macOS 14).
-struct KalMap37Legacy: NSViewRepresentable {
-    let la: Double
-    let lo: Double
-
-    func makeNSView(context: Context) -> MKMapView {
-        let m: MKMapView = MKMapView()
-        m.isZoomEnabled = false
-        m.isScrollEnabled = false
-        m.isRotateEnabled = false
-        m.isPitchEnabled = false
-        return m
-    }
-
-    func updateNSView(_ m: MKMapView, context: Context) {
-        let c: CLLocationCoordinate2D = CLLocationCoordinate2D(latitude: la, longitude: lo)
-        m.setRegion(MKCoordinateRegion(center: c, latitudinalMeters: 700, longitudinalMeters: 700), animated: false)
-        m.removeAnnotations(m.annotations)
-        let p: MKPointAnnotation = MKPointAnnotation()
-        p.coordinate = c
-        m.addAnnotation(p)
-    }
-}
-#endif

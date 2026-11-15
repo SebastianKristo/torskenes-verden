@@ -11,7 +11,7 @@ enum KalGlimtEv37 {
 struct KalGlimtMap37: View {
     @Environment(\.kal) private var t
     @Environment(\.openURL) private var openURL
-    @ObservedObject private var geo: KalGeo37 = KalGeo37.shared
+    @Bindable private var geo: KalGeo37 = KalGeo37.shared
     let e: KalEvent
 
     var body: some View {
@@ -39,7 +39,7 @@ struct KalGlimtMap37: View {
 struct KalDetailMap37: View {
     @Environment(\.kal) private var t
     @Environment(\.openURL) private var openURL
-    @ObservedObject private var geo: KalGeo37 = KalGeo37.shared
+    @Bindable private var geo: KalGeo37 = KalGeo37.shared
     let e: KalEvent
 
     var body: some View {

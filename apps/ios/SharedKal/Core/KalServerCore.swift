@@ -1,5 +1,5 @@
 import Foundation
-import Combine
+import Observation
 
 /* ---------------- Prompt 46: serveradressen appen er logget inn med (Mac-oppdatering, interne Docker-adresser) ---------------- */
 // Spesifikasjon: claude-code-mac-oppdatering-intern-ip.md.
@@ -208,17 +208,18 @@ enum KalSrv47 {
 
 /// Feltene og statusen i Innstillinger → Server.
 @MainActor
-final class KalSrv47Model: ObservableObject {
+@Observable
+final class KalSrv47Model {
     static let shared: KalSrv47Model = KalSrv47Model()
 
-    @Published var sheetOpen: Bool = false
-    @Published var external: String = ""
-    @Published var local: String = ""
+    var sheetOpen: Bool = false
+    var external: String = ""
+    var local: String = ""
     /// nil = ikke testet, -1 = tester, 0 = svarer ikke, ellers ms.
-    @Published var extMs: Int? = nil
-    @Published var locMs: Int? = nil
-    @Published var message: String = ""
-    @Published var busy: Bool = false
+    var extMs: Int? = nil
+    var locMs: Int? = nil
+    var message: String = ""
+    var busy: Bool = false
 
     /// Fyller feltene (standardverdiene ved første oppstart) og tester begge.
     func load() {

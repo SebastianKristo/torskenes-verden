@@ -9,13 +9,14 @@ struct MacAiHit41: Identifiable, Hashable {
 }
 
 @MainActor
-final class MacAi41: ObservableObject {
-    @Published var on: Bool = false
-    @Published var busy: Bool = false
-    @Published var answer: String = ""
-    @Published var hits: [MacAiHit41] = []
-    @Published var local: Bool = false
-    private var seq: Int = 0
+@Observable
+final class MacAi41 {
+    var on: Bool = false
+    var busy: Bool = false
+    var answer: String = ""
+    var hits: [MacAiHit41] = []
+    var local: Bool = false
+    @ObservationIgnored private var seq: Int = 0
 
     func go(_ q: String) {
         let text: String = q.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -65,7 +66,7 @@ final class MacAi41: ObservableObject {
 
 struct MacAiCard41: View {
     @Environment(\.mk) private var t
-    @ObservedObject var ai: MacAi41
+    @Bindable var ai: MacAi41
     let open: (KalEvent) -> Void
 
     var body: some View {

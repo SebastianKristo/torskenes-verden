@@ -24,8 +24,8 @@ struct MacCard<Content: View>: View {
 struct MacDetailSheet: View {
     @Environment(\.mk) private var t
     let e: KalEvent
-    @ObservedObject var win: MacWin
-    @ObservedObject var store: MacStore = MacStore.shared
+    @Bindable var win: MacWin
+    @Bindable var store: MacStore = MacStore.shared
 
     var body: some View {
         let c: KalCal? = KalFag37.tint(store.cal(e.cal), e)
@@ -152,8 +152,8 @@ struct MacInfoRow: View {
 
 struct MacNewSheet: View {
     @Environment(\.mk) private var t
-    @ObservedObject var win: MacWin
-    @ObservedObject var store: MacStore = MacStore.shared
+    @Bindable var win: MacWin
+    @Bindable var store: MacStore = MacStore.shared
     @State private var f: MacNewForm
     @FocusState private var titleFocus: Bool
 
@@ -286,7 +286,7 @@ struct MacNewSheet: View {
 /// Ett felt for alt: hendelse («frisør 14.30 25.10») med forhåndsvisning «GLIMT FORSTÅR», eller spørsmål → Glimt-panelet.
 struct MacComposer: View {
     @Environment(\.mk) private var t
-    @ObservedObject var store: MacStore = MacStore.shared
+    @Bindable var store: MacStore = MacStore.shared
     @Binding var text: String
     var compact: Bool = false
     /// Spørsmål: åpne Glimt med teksten.
@@ -380,7 +380,7 @@ struct MacComposer: View {
 
 struct MacQuickSheet: View {
     @Environment(\.mk) private var t
-    @ObservedObject var win: MacWin
+    @Bindable var win: MacWin
     @State private var text: String = ""
 
     var body: some View {
@@ -415,7 +415,7 @@ struct MacQuickSheet: View {
 
 struct MacGotoSheet: View {
     @Environment(\.mk) private var t
-    @ObservedObject var win: MacWin
+    @Bindable var win: MacWin
     @State private var d: Date = Date()
 
     var body: some View {

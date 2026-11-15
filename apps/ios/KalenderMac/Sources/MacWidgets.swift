@@ -55,7 +55,7 @@ enum MacWidgets41 {
 
 struct MacWidgets70Section: View {
     @Environment(\.mk) private var t
-    @ObservedObject var store: MacStore = MacStore.shared
+    @Bindable var store: MacStore = MacStore.shared
     @State private var off: Set<String> = KalWPrefs70.off
     @State private var hideDone: Bool = KalWPrefs70.hideDone
 

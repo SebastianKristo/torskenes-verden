@@ -38,30 +38,31 @@ enum MacUpdPhase43: String {
 }
 
 @MainActor
-final class MacUpdater43: ObservableObject {
+@Observable
+final class MacUpdater43 {
     static let shared: MacUpdater43 = MacUpdater43()
 
-    @Published var phase: MacUpdPhase43 = .idle
-    @Published var rel: MacRelease43? = nil
-    @Published var got: Int64 = 0
-    @Published var total: Int64 = 0
+    var phase: MacUpdPhase43 = .idle
+    var rel: MacRelease43? = nil
+    var got: Int64 = 0
+    var total: Int64 = 0
     /// Byte per sekund.
-    @Published var speed: Double = 0
-    @Published var message: String = ""
+    var speed: Double = 0
+    var message: String = ""
     /// Serveren har ikke endepunktet (404): «Åpne siste release» på GitHub.
-    @Published var noServer: Bool = false
+    var noServer: Bool = false
     /// Prompt 46: domenet som sjekkes («home.kristo.no») og «Vis detaljer» (URL, feilkode).
-    @Published var checkHost46: String = ""
-    @Published var detail46: String = ""
-    @Published var lastCheck: Double = UserDefaults.standard.double(forKey: "mac43.updLast")
-    @Published var auto: Bool = (UserDefaults.standard.object(forKey: "mac43.updAuto") as? Bool) ?? true {
+    var checkHost46: String = ""
+    var detail46: String = ""
+    var lastCheck: Double = UserDefaults.standard.double(forKey: "mac43.updLast")
+    var auto: Bool = (UserDefaults.standard.object(forKey: "mac43.updAuto") as? Bool) ?? true {
         didSet { UserDefaults.standard.set(auto, forKey: "mac43.updAuto") }
     }
-    @Published var autoDl: Bool = (UserDefaults.standard.object(forKey: "mac43.updAutoDl") as? Bool) ?? true {
+    var autoDl: Bool = (UserDefaults.standard.object(forKey: "mac43.updAutoDl") as? Bool) ?? true {
         didSet { UserDefaults.standard.set(autoDl, forKey: "mac43.updAutoDl") }
     }
     /// stabil | beta
-    @Published var channel: String = UserDefaults.standard.string(forKey: "mac43.updCh") ?? "stabil" {
+    var channel: String = UserDefaults.standard.string(forKey: "mac43.updCh") ?? "stabil" {
         didSet {
             UserDefaults.standard.set(channel, forKey: "mac43.updCh")
             if oldValue != channel && phase != .dl && phase != .inst { phase = .idle }
@@ -70,12 +71,12 @@ final class MacUpdater43: ObservableObject {
 
     static let releasesPage: String = "https://github.com/SebastianKristo/torskenes-verden/releases/latest"
 
-    private var session: URLSession? = nil
-    private var task: URLSessionDownloadTask? = nil
-    private var startedAt: Date = Date()
+    @ObservationIgnored private var session: URLSession? = nil
+    @ObservationIgnored private var task: URLSessionDownloadTask? = nil
+    @ObservationIgnored private var startedAt: Date = Date()
     /// Nedlastingen som gjelder (svar fra en avbrutt, eldre nedlasting ignoreres).
-    private var gen: Int = 0
-    private(set) var dmg: URL? = nil
+    @ObservationIgnored private var gen: Int = 0
+    @ObservationIgnored private(set) var dmg: URL? = nil
 
     init() {
         // Etter en installasjon: stemmer versjonen med den vi installerte?
@@ -523,7 +524,7 @@ final class MacUpdDelegate43: NSObject, URLSessionDownloadDelegate, @unchecked S
 
 struct MacUpdate43View: View {
     @Environment(\.mk) private var t
-    @ObservedObject var u: MacUpdater43 = MacUpdater43.shared
+    @Bindable var u: MacUpdater43 = MacUpdater43.shared
 
     private let green: Color = Color(kalHex: "#2f6b4a")
 
@@ -800,10 +801,11 @@ struct MacAbout43View: View {
 
 /// Fanen Innstillinger-vinduet åpner på (Kalender → Se etter oppdateringer … → Oppdateringer).
 @MainActor
-final class MacPrefsTab43: ObservableObject {
+@Observable
+final class MacPrefsTab43 {
     static let shared: MacPrefsTab43 = MacPrefsTab43()
     /// gen | acc | upd
-    @Published var tab: String = "gen"
+    var tab: String = "gen"
 }
 
 /// Prompt 46: «Vis detaljer» under feilmeldingen (URL og feilkode).

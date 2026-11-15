@@ -57,7 +57,7 @@ struct KalApprove51Wait: View {
 
 struct KalSec51Section: View {
     @Environment(\.kal) private var t
-    @ObservedObject private var m: KalSec51Model = KalSec51Model.shared
+    @Bindable private var m: KalSec51Model = KalSec51Model.shared
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -93,7 +93,7 @@ struct KalSec51Section: View {
 
 struct KalSec51Row: View {
     @Environment(\.kal) private var t
-    @ObservedObject private var m: KalSec51Model = KalSec51Model.shared
+    @Bindable private var m: KalSec51Model = KalSec51Model.shared
     let p: KalPendingDev51
 
     private var sub: String {
@@ -132,7 +132,7 @@ struct KalSec51Row: View {
 /// Legges over hele appen (KalSchemeReader). Tegner ingenting når det ikke er noe å vise.
 struct KalNew51Host: View {
     @Environment(\.kal) private var t
-    @ObservedObject private var m: KalSec51Model = KalSec51Model.shared
+    @Bindable private var m: KalSec51Model = KalSec51Model.shared
 
     var body: some View {
         ZStack {

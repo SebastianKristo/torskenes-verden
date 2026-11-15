@@ -16,9 +16,9 @@ struct MacThemed<Content: View>: View {
 }
 
 struct MacMainWindow: View {
-    @StateObject private var win: MacWin = MacWin()
+    @State private var win: MacWin = MacWin()
     /// Prompt 38: web-kalenderen i dette vinduet (WKWebView mot <server>/kalender?app=mac).
-    @StateObject private var web: MacWeb38Model = MacWeb38Model()
+    @State private var web: MacWeb38Model = MacWeb38Model()
     @Environment(\.openWindow) private var openWindow
 
     var body: some View {
@@ -42,9 +42,9 @@ struct MacMainWindow: View {
 
 struct MacRoot: View {
     @Environment(\.mk) private var t
-    @ObservedObject var win: MacWin
-    @ObservedObject var web: MacWeb38Model
-    @ObservedObject var store: MacStore = MacStore.shared
+    @Bindable var win: MacWin
+    @Bindable var web: MacWeb38Model
+    @Bindable var store: MacStore = MacStore.shared
 
     var body: some View {
         ZStack {
@@ -228,8 +228,8 @@ struct MacToastView: View {
 
 struct MacToolbar: View {
     @Environment(\.mk) private var t
-    @ObservedObject var win: MacWin
-    @ObservedObject var store: MacStore = MacStore.shared
+    @Bindable var win: MacWin
+    @Bindable var store: MacStore = MacStore.shared
 
     static let views: [MacViewTab] = [
         MacViewTab(id: "dag", name: "Dag", key: "⌘1"),
@@ -348,7 +348,7 @@ struct MacNewButton43: View {
 /// Prompt 43: uten kontakt med serveren – lagret kalender vises, ingen frysing.
 struct MacOffline43: View {
     @Environment(\.mk) private var t
-    @ObservedObject var store: MacStore = MacStore.shared
+    @Bindable var store: MacStore = MacStore.shared
 
     var body: some View {
         if store.offline43 {
