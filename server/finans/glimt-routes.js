@@ -20,6 +20,7 @@ import { db, q, settings, ensureLedger } from './db.js';
 import { runAsUser } from '../settings.js';
 import { tokenAccessOf, txOutList42, TX_SELECT42 } from './routes.js';
 import { decodeTxCursor, isAfterTxCursor, pageOf } from './tx-cursor.js';
+import { withMonths43 } from './month-fields.js'; // months:[…] i lista, som routes.js
 import { financeAsk40 } from './tx-edit.js';
 import { subscriptionSources } from './subs-ask.js';
 import { ask42, searchLog42, merchantKey42, filterFromText42, weekRange42, fold42 } from './search-db.js';
@@ -208,7 +209,7 @@ finans42Api.get('/transactions', R, async (c, next) => {
   const out = txOutList42();
   const items = r.rows.map((t) => { const o = out(t); return { ...o, receiptLabel: o.receiptId ? 'Kvittering ›' : 'Ingen kvittering' }; });
   const homes = homesOf42(u).map((h) => ({ id: h.id, name: h.name }));
-  return c.json({ items, count: r.total, net: r.net, sum: r.sum, nextCursor: r.nextCursor, filter: { ...f, categories: f.categories.map((x) => x.id) }, chips: chipsOf(f, homes), text: `${r.total} treff` });
+  return c.json(withMonths43(u, c.req.query(), { items, count: r.total, net: r.net, sum: r.sum, nextCursor: r.nextCursor, filter: { ...f, categories: f.categories.map((x) => x.id) }, chips: chipsOf(f, homes), text: `${r.total} treff` }), 200, { 'Cache-Control': 'no-store' });
 });
 const logoOfName = (name) => {
   const mk = merchantKey42(name);

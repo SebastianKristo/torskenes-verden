@@ -8,7 +8,8 @@
 // registerLegacyReceipts(authed, {upload, saveFile, removeFile}) (legacy-receipts.js).
 //
 // Lagene på /finans/api, i rekkefølge (alle har egen tilgangskontroll: økt eller token med finance:read / finance:write):
-//   overview.js      – /overview og /transactions/months
+//   overview.js      – /overview og /transactions/months (feltene til saldokortet og månedstoppen ligger i month-fields.js og
+//                      legges på av handlerne for /summary og /transactions selv)
 //   planning.js      – /fin51/*: sparemål, faste utgifter-kalender, skattehjelp (tax.js), prishistorikk (prices.js), abonnementsjeger
 //   glimt-routes.js  – Glimt-søk (/search/ask), filter, avanserte oppgaver (glimt-tasks.js), Boliger web (boliger-web.js), aksje-logoer
 //   tx-edit.js       – «Lagt til», rediger alt med historikk, «Les på nytt» (før routes.js; mellomvarer som slipper videre)
@@ -17,7 +18,7 @@
 import { authOrToken } from '../mobile.js';
 import { sessionUser } from '../auth/session.js';
 import finansApi from './routes.js';
-import { finans43Api, summaryMw43, transactionsMw43 } from './overview.js';
+import { finans43Api } from './overview.js';
 import fin51Api from './planning.js';
 import { finans42Api } from './glimt-routes.js';
 import { finans40Api } from './tx-edit.js';
@@ -30,8 +31,6 @@ export { registerLegacyReceipts, legacyReceiptOwner } from './legacy-receipts.js
 
 /** /finans/api med lagene før routes.js, aliasene /api/receipts/scan og /health, og del-målet /finans/share. */
 export function mountFinans(app) {
-  app.use('/finans/api/summary', summaryMw43); // spentMonth, day, daysInMonth (saldokortet)
-  app.use('/finans/api/transactions', transactionsMw43); // months:[{month, label, count, net}]
   app.route('/finans/api', finans43Api); // /overview, /transactions/months
   app.route('/finans/api', fin51Api); // /fin51/* (egen tilgangskontroll, per bruker)
   app.route('/finans/api', finans42Api); // Glimt-søk (SQL før LLM, tankesteg), filter, avanserte oppgaver + PDF, Boliger web, import til bolig, aksje-logoer

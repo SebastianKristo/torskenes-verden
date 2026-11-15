@@ -1,6 +1,7 @@
 // FinansHub-API: /finans/api/*. Tilgang med innlogget sesjon (nettleser) eller API-token med finans-scope (mobil/snarvei).
 import { addedOf40, tagsOf40, applyRereadTx40 } from './added.js'; // prompt 40
 import { decodeTxCursor, TX_AFTER_SQL, txAfterParams, pageOf } from './tx-cursor.js';
+import { withSaldo43, withMonths43 } from './month-fields.js'; // saldokortet og månedstoppen i Liste
 import { Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import { createHmac, randomBytes, randomUUID } from 'node:crypto';
@@ -680,7 +681,8 @@ api.get('/summary', need('read:summary', 'read:budget'), (c) => {
   const names = new Map();
   const recent = q(`${TX_SELECT} WHERE t.user_id=? ORDER BY t.date DESC, t.id DESC LIMIT 8`).all(u).map((t) => txOut(t, cats, accs, names));
   const review = q(`SELECT * FROM fh_receipts WHERE status IN ('pending','processing','needs_review') AND ${RC_VISIBLE} ORDER BY created DESC`).all(c.get('user')).map((r) => receiptOut(r, cats, accs));
-  return c.json({
+  // Saldokortet (spentMonth, day, daysInMonth, monthName, spentLabel, ring, dayText) kommer med i samme svar (month-fields.js).
+  return c.json(withSaldo43({
     month, from, to, daysLeft,
     inn: cur.inn / 100, ut: cur.ut / 100, prevInn: prev.inn / 100, prevUt: prev.ut / 100,
     budgetTotal: budTotal / 100, budgetUsed: budUsed / 100, left: (budTotal - budUsed) / 100,
@@ -699,7 +701,7 @@ api.get('/summary', need('read:summary', 'read:budget'), (c) => {
       const rows = q('SELECT date, SUM(-amount) s FROM fh_transactions t LEFT JOIN fh_categories c ON c.id=t.category_id WHERE t.user_id=? AND amount<0 AND COALESCE(c.kind,\'expense\')<>\'transfer\' AND date>=? AND date<? GROUP BY date').all(u, from, to);
       return rows.map((r) => ({ date: r.date, amount: r.s / 100 }));
     })(),
-  });
+  }), 200, { 'Cache-Control': 'no-store' });
 });
 
 /* --- Transaksjoner --- */
@@ -728,7 +730,8 @@ api.get('/transactions', need('read:transactions'), (c) => {
   const { rows, nextCursor } = pageOf(fetched, limit);
   const total = q(`SELECT COUNT(*) n, COALESCE(SUM(amount),0) s FROM fh_transactions t ${where}`).get(...params);
   const cats = catById(), accs = accById(), names = new Map();
-  return c.json({ items: rows.map((t) => txOut(t, cats, accs, names)), count: total.n, net: total.s / 100, nextCursor });
+  // months: netto per måned for månedene på siden (månedstoppen i Liste, month-fields.js).
+  return c.json(withMonths43(c.get('user'), c.req.query(), { items: rows.map((t) => txOut(t, cats, accs, names)), count: total.n, net: total.s / 100, nextCursor }), 200, { 'Cache-Control': 'no-store' });
 });
 
 // Beløp: med type ('expense' | 'income') er beløpet positivt og fortegnet kommer fra typen; uten type brukes fortegnet som det er.

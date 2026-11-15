@@ -201,3 +201,18 @@ test('okonomi-jobber: backup, prøveperioder og skattemeldingen går via den fel
   assert.deepEqual(jobs.map((j) => [j.name, j.everyMs]).sort(), [['finans.provetider', 60_000], ['finans.skattemelding', 3 * 3600_000], ['finans.smb-backup', 5 * 60_000]]);
   assert.ok(jobs.every((j) => !j.active));
 });
+
+test('okonomi-ruter: saldokortet og månedstoppen kommer i samme svar, uten mellomlagring', async () => {
+  for (const path of ['/finans/api/summary', '/finans/api/transactions?limit=5', '/finans/api/transactions?merchant=REMA%201000']) {
+    const r = await A(path);
+    assert.equal(r.status, 200, path);
+    assert.equal(r.headers.get('cache-control'), 'no-store', path);
+  }
+  const s = (await A('/finans/api/summary')).json;
+  assert.equal(typeof s.spentLabel, 'string');
+  assert.ok(s.ring >= 0 && s.ring <= 1);
+  const t = (await A('/finans/api/transactions?limit=5')).json;
+  assert.ok(Array.isArray(t.months) && t.months.length >= 1 && t.months.every((m) => typeof m.netText === 'string'));
+  const f = (await A('/finans/api/transactions?merchant=REMA%201000')).json;
+  assert.ok(Array.isArray(f.chips) && Array.isArray(f.months));
+});
