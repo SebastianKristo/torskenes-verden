@@ -386,12 +386,16 @@ html[data-mode="dark"] .sk78-cell,html:not([data-hl="2c"]) .sk78-cell{color:#f3e
 /* ═══ Lageret: deler, skap, skuffer og tegningen ═══ */
 /* Prompt 76 (SKJWEB): Skjold Lab – papirdesign som resten av Homelab (Newsreader/Manrope/IBM Plex Mono, papir #f3efe6, aksent #b23a2a).
    Lys og mørk via html[data-mode="dark"] / klassisk tema. Bare transform/opacity animeres (pulsen på valgt skuff). */
-.sk76{--s-bg:#f3efe6;--s-card:#fffdf8;--s-ink:#1b1a17;--s-mut:#6b665c;--s-line:#ddd5c5;--s-line2:#e9e2d3;--s-fld:#fff;--s-acc:#b23a2a;--s-acc-ink:#fff;--s-ok:#2f7a4f;--s-warn:#a8661a;
-  --s-frame:#24252a;--s-frame2:#3a3c42;--s-drawer:#e8ecef;--s-drawer-l:#c9d0d6;--s-handle:#9aa3ab;--s-num:#6b665c;
-  --s-serif:Newsreader,Georgia,serif;--s-sans:Manrope,system-ui,sans-serif;--s-mono:'IBM Plex Mono',ui-monospace,monospace;
+.sk76{
+  /* Fargene er designtokens (tokens.css), så Skjold Lab følger stil og modus. */
+  --s-bg:var(--ds-surface);--s-card:var(--ds-surface-raised);--s-ink:var(--ds-text-primary);--s-mut:var(--ds-text-secondary);--s-line:var(--ds-line);
+  --s-line2:color-mix(in srgb,var(--ds-line) 50%,var(--ds-surface-raised));--s-fld:var(--ds-surface-raised);--s-acc:var(--ds-accent);--s-acc-ink:var(--ds-on-accent);
+  --s-ok:var(--ds-success);--s-warn:var(--ds-warning);--s-num:var(--ds-text-secondary);
+  /* Tegningen av skapet (ramme, skuffer, håndtak) er en illustrasjon av ekte metall og plast, ikke en flate i temaet. */
+  --s-frame:#24252a;--s-frame2:#3a3c42;--s-drawer:#e8ecef;--s-drawer-l:#c9d0d6;--s-handle:#9aa3ab;
+  --s-serif:var(--ds-font-serif);--s-sans:var(--ds-font-sans);--s-mono:var(--ds-font-mono);
   display:flex;flex-direction:column;gap:14px;max-width:1280px;margin:0 auto;padding:4px 0 32px;color:var(--s-ink);font:500 14px/1.45 var(--s-sans);box-sizing:border-box;min-width:0}
-html[data-mode="dark"] .sk76,html:not([data-hl="2c"]) .sk76{--s-bg:#16140f;--s-card:#211e18;--s-ink:#f3efe6;--s-mut:#a39d90;--s-line:#3a352c;--s-line2:#2c2821;--s-fld:#1a1813;--s-acc:#ec7a64;--s-acc-ink:#1b1a17;--s-ok:#6fc28f;--s-warn:#e0a85a;
-  --s-frame:#0d0e10;--s-frame2:#2a2c31;--s-drawer:#3b4046;--s-drawer-l:#565c63;--s-handle:#7d868e;--s-num:#a39d90}
+html[data-mode="dark"] .sk76,html:not([data-hl="2c"]) .sk76{--s-frame:#0d0e10;--s-frame2:#2a2c31;--s-drawer:#3b4046;--s-drawer-l:#565c63;--s-handle:#7d868e}
 .sk76 *,.sk76 *::before,.sk76 *::after{box-sizing:border-box}
 .sk76[aria-busy="true"]{min-height:50vh}
 .sk76-kick{display:block;font:600 10.5px var(--s-mono);letter-spacing:.12em;color:var(--s-acc)}
@@ -448,7 +452,7 @@ html[data-mode="dark"] .sk76,html:not([data-hl="2c"]) .sk76{--s-bg:#16140f;--s-c
 .sk76-item:hover{border-color:var(--s-ink)}
 .sk76-th{position:relative;display:grid;place-items:center;width:56px;height:56px;border-radius:12px;overflow:hidden;background:var(--s-line2);color:var(--s-mut);flex:none}
 .sk76-th.sm{width:34px;height:34px;border-radius:8px}
-.sk76-th b{font:800 15px var(--s-sans);letter-spacing:.04em;opacity:.7}
+.sk76-th b{font:800 15px var(--s-sans);letter-spacing:.04em}
 .sk76-th.sm b{font-size:11px}
 .sk76-th img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .sk76-it{display:flex;flex-direction:column;gap:2px;min-width:0}
