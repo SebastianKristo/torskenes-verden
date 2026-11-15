@@ -10,7 +10,7 @@
 //   L  Prompt 72 (av som standard, layoutStep72): LFM2.5-VL-3B leser layouten, og Mac-OCR-linjene ordnes etter den (kolonner/rader i
 //      lesefølge) før qwen3:8b. Består ikke L, kjøres C som før.
 //   Prompt 72: V kan bruke LFM3-VL-2B (lfm3vl) eller LFM2.5-VL-3B layout + qwen3:8b (lfm25layout) i stedet for qwen2.5vl (visionEngine72,
-//      standard qwen25vl). Samme schema og validering. Alt via ai-run/ai-gate til Ollama eller oMLX i huset (server/receipts48/lfm72.js).
+//      standard qwen25vl). Samme schema og validering. Alt via ai-run/ai-gate til Ollama eller oMLX i huset (server/finans/receipts/lfm.js).
 // Hvert steg kan slås av (settings.receipts48). Finnes både device-OCR og Mac-OCR, sammenlignes totalen: avvik → resultatet
 // som består sumsjekken brukes, ellers merkes totalen som usikker. Består ingen, brukes det beste forsøket (færrest feil).
 import { checkOcr48, modelFormat48 } from './schema.js';
@@ -21,8 +21,8 @@ import { parseRows48 } from './engines/llm.js';
 import { macOcr48 } from './engines/mac-vision.js';
 import { tesseractOcr48 } from './engines/tesseract.js';
 import { macHealth48 } from './engines/mac-vision.js';
-import { resolveMerchant51 } from './brreg51.js'; // prompt 51: butikknavn via org.nr. → kjent butikk → modellen
-import { lfm3Read72, lfm25Read72, lfm25Layout72, orderOcrByLayout72, ENGINE_LABELS72 } from './lfm72.js'; // prompt 72: LFM-motorene (av som standard)
+import { resolveMerchant51 } from './brreg.js'; // prompt 51: butikknavn via org.nr. → kjent butikk → modellen
+import { lfm3Read72, lfm25Read72, lfm25Layout72, orderOcrByLayout72, ENGINE_LABELS72 } from './lfm.js'; // prompt 72: LFM-motorene (av som standard)
 
 export const STEP_NAMES48 = { A: 'Tolket på enheten', B: 'Enhetens OCR + lokal modell', C: 'Mac Vision + lokal modell', T: 'Tesseract + lokal modell', V: 'Visjonsmodell (ingen OCR)', L: 'Mac Vision + layout (LFM2.5) + lokal modell' };
 export const VISION_LABEL55 = 'visjonsmodell (ingen OCR)';
@@ -51,7 +51,7 @@ async function visionParse55({ image, mime, categories, feedback, signal, engine
     return { data: r.data, model: r.model, ocrText: r.rows.join('\n') };
   }
   if (visionImpl55) return visionImpl55({ image, mime, prompt, system: VISION_SYSTEM55, schema: modelFormat48(), feedback });
-  const { run: aiRun } = await import('../ai-run.js');
+  const { run: aiRun } = await import('../../ai-run.js');
   const out = await aiRun('rc', { images: [image], system: VISION_SYSTEM55, prompt, schema: modelFormat48(), localOnly: true, temperature: 0, numCtx: 8192, numPredict: 3072, title: 'Kvittering · visjonsmodell (ingen OCR)', signal });
   return { data: out.data ?? JSON.parse(String(out.text ?? '').match(/\{[\s\S]*\}/)?.[0] ?? 'null'), model: out.model };
 }

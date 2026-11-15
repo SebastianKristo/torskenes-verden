@@ -15,7 +15,7 @@ import { sessionUser, requireAuth, requireAdmin, userInfo, isAdmin, needsSetup, 
 import * as integrations from './integrations.js';
 import { cfg, publicConfig, updateConfig, runRequest, userCfgSet, runAsUser } from './settings.js';
 import finansApi from './finans/routes.js';
-import { receiptsAlias48 } from './receipts48/routes.js';
+import { receiptsAlias48 } from './finans/receipts/routes.js';
 import { db as fhDb } from './finans/db.js';
 import homeApi from './home.js';
 import { matApi, matCalendar, startMatScheduler } from './mat.js';
@@ -106,10 +106,10 @@ import { kart46Api } from './kart46.js'; // prompt 46 (DATA46): Kart-API
 import { settingsApi as glimtSettingsApi, ttsApi, imgApi } from './glimt35.js'; // prompt 35: /api/glimt/settings, /api/tts, /api/img
 import weather35Api from './weather35.js'; // prompt 35: /api/weather/place?q=
 import briefApi from './brief34.js'; // prompt 34: Glimt-brief /api/brief (+ /widget, /settings) og daglig generering // prompt 34: AI-kontroll /api/ai/* (status, modeller, ruting, jobber, forbruk, nøkler, selvtest)
-import { startTrialScheduler } from './trials-notify.js'; // prompt 31: varsler for gratis prøveperioder
+import { startTrialScheduler } from './finans/trials-notify.js'; // prompt 31: varsler for gratis prøveperioder
 import { installCacheBust } from './cache-bust.js'; // prompt 32 (SERVER32)
 import searchHistoryApi from './search-history.js'; // prompt 32: søkehistorikk per bruker
-import trialWidgetsApi from './trial-widgets.js'; // prompt 32
+import trialWidgetsApi from './finans/trial-widgets.js'; // prompt 32
 import romApi, { startSpaceScheduler, spaceApi } from './space32.js'; // prompt 32
 import { domainGlimtApi, gscApi, startDomainGlimtScheduler } from './domains-glimt.js'; // prompt 32
 import { companionsOf } from './kalender/calendars.js'; // companion-tokens (Kalender) i /api/me/devices

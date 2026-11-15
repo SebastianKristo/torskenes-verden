@@ -9,7 +9,7 @@
 //
 // Bruk andre steder (alle med stille reserve når modellen ikke er klar):
 //   chat.js:   engine53 rundt runEngine (Tongue + Redact for sky), webSearch53 (Redact på søkeordene), eyeIntent53 (veien for bilder)
-//   receipts48/preprocess51.js: eyeRotation53 før Tesseract · receipts48/routes.js: eyeKind53 (advarsel når bildet er et foto)
+//   finans/receipts/preprocess.js: eyeRotation53 før Tesseract · finans/receipts/routes.js: eyeKind53 (advarsel når bildet er et foto)
 //   rss.js / news46.js: gistCategory53 / topicSlugs53 · index.js: chatUploadMw53 og childImageMw53 (Moderator for barn)
 import { Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';

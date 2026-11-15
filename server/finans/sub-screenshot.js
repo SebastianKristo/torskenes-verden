@@ -18,7 +18,7 @@ import { routing as aiRouting, jobStart, jobEnd, jobUpdate } from '../ai-run.js'
 const OWNER_ID = 'owner';
 import { SUB_CATEGORIES, categoryFor } from './subs.js';
 import { domainFor } from './enrich.js';
-import { externalBlocked48 } from '../receipts48/settings.js'; // prompt 48: «Finansdata forlater aldri huset»
+import { externalBlocked48 } from './receipts/settings.js'; // prompt 48: «Finansdata forlater aldri huset»
 
 let fx = null;
 export const _setScreenshotFetch = (fn) => { fx = fn; visionCache.clear(); };

@@ -37,7 +37,7 @@ const trk42 = await import('../server/tracking42.js');
 const tk42 = await import('../server/tasks-glimt42.js');
 const tg41 = await import('../server/tasks-glimt41.js');
 const hl42 = await import('../server/health42.js');
-const sc42 = await import('../server/subs-cal42.js');
+const sc42 = await import('../server/finans/subs-calendar.js');
 
 let ipN = 20;
 async function req(path, { method = 'GET', headers = {}, body } = {}) {

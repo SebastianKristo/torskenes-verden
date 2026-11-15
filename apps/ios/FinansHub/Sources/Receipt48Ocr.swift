@@ -5,7 +5,7 @@ import CoreImage
 
 // ---------------- Prompt 48: OCR på iPhonen i felles OCR-format (shared/schemas/receipt-ocr.schema.json) ----------------
 // ReceiptOcrScanner.extractText(from:) → ReceiptOcrResult {source:"ios_vision", lines[{text, confidence, bbox}], rows, full_text,
-// image_size, ms}. Samme regler som Mac-tjenesten (tools/vision-ocr) og serveren (server/receipts48/normalize.js rows48):
+// image_size, ms}. Samme regler som Mac-tjenesten (tools/vision-ocr) og serveren (server/finans/receipts/normalize.js rows48):
 // – bbox = [x, y, w, h] normalisert 0–1 med origo ØVERST til venstre (Vision har origo nede til venstre: y = 1 − maxY).
 // – rows: linjer med overlappende y-intervall (overlapp ≥ 50 % av den laveste linjens høyde), sortert på x, slått sammen med
 //   ett mellomrom. Linjer uten bbox blir egne rader til slutt.

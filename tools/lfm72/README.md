@@ -22,7 +22,7 @@ sky-modell eller en Ollama-modell med `:cloud`, avvises i innstillingene og stop
 
 ## 1. Hent modellene
 
-Navnene under er standardene i `server/receipts48/lfm72.js`. **Sjekk at navnet stemmer på Hugging Face** (<https://huggingface.co/LiquidAI>)
+Navnene under er standardene i `server/finans/receipts/lfm.js`. **Sjekk at navnet stemmer på Hugging Face** (<https://huggingface.co/LiquidAI>)
 før du henter. `./install.sh --check` gjør det for deg.
 
 ### Ollama (standard)
@@ -122,5 +122,5 @@ og tid. Du kan for eksempel bruke LFM3 i V, som bare brukes når ingen OCR svare
   - Komma som desimalskille. Schemaet krever punktum, men modellen må lese «29,90» riktig.
   - Datoformatet DD.MM.ÅÅÅÅ.
   - Norske totalord (TOTALT, Å BETALE, SUM).
-- **Layoutprompten:** `LAYOUT_PROMPT72` i `lfm72.js` er skrevet ut fra dokumentasjonen. Sjekk ordlyden mot modellkortet til LFM2.5-VL-3B.
+- **Layoutprompten:** `LAYOUT_PROMPT72` i `lfm.js` er skrevet ut fra dokumentasjonen. Sjekk ordlyden mot modellkortet til LFM2.5-VL-3B.
   Layoutmodusen kan være trent på en bestemt formulering.

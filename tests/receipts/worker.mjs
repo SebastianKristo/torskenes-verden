@@ -1,5 +1,5 @@
 // EVALRCPT48: én kvittering i en egen prosess – fersk DATA_DIR, klokka satt til fasitens «today» (ellers ekte tid),
-// nettet bevoktet (lib/net.mjs), og hver vei kjørt SEPARAT gjennom serverens egen kjede (server/receipts48/chain.js:
+// nettet bevoktet (lib/net.mjs), og hver vei kjørt SEPARAT gjennom serverens egen kjede (server/finans/receipts/chain.js:
 // runChain48) med bare det ene steget slått på i innstillingene. Deretter reservetestene (bare på én kvittering).
 // Startes av run.mjs: node tests/receipts/worker.mjs <resultat.json>   (oppsettet kommer som JSON på stdin)
 import { mkdtempSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
@@ -64,9 +64,9 @@ const net = installNet48({ ollamaHost: hostOf(cfg.ollamaUrl), macHost: hostOf(cf
 const imp = (p) => import(pathToFileURL(join(REPO, p)).href);
 const fdb = await imp('server/finans/db.js');
 const ai = await imp('server/ai-run.js');
-const chain = await imp('server/receipts48/chain.js');
-const tess = await imp('server/receipts48/engines/tesseract.js');
-const llm = await imp('server/receipts48/engines/llm.js');
+const chain = await imp('server/finans/receipts/chain.js');
+const tess = await imp('server/finans/receipts/engines/tesseract.js');
+const llm = await imp('server/finans/receipts/engines/llm.js');
 ai._setAiFetch?.((u, i) => globalThis.fetch(u, i));
 if (cfg.mock) tess._setTesseract48(fakeTesseract48({ ocr: mockOcr }));
 ai.migrateOnce?.();

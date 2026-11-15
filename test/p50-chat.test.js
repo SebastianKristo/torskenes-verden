@@ -78,7 +78,7 @@ const chat = await import('../server/chat.js');
 chat._setChatFetch(fake);
 const chat50 = await import('../server/chat50.js');
 const fdb = await import('../server/finans/db.js');
-const tess = await import('../server/receipts48/engines/tesseract.js');
+const tess = await import('../server/finans/receipts/engines/tesseract.js');
 const aiRun = await import('../server/ai-run.js');
 const { _reread50 } = await import('../server/finans/reread.js');
 const { _resetAi } = await import('../server/finans/ai.js');

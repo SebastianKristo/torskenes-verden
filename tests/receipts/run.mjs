@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // EVALRCPT48: kvitterings-eval (make eval-receipts / npm run eval:receipts). Kjører hver kvittering i tests/receipts/fixtures/
 // (syntetiske) og tests/receipts/real/ (dine egne, i .gitignore) gjennom hver vei SEPARAT via serverens egen kjede
-// (server/receipts48/chain.js) med ekte modell, og rapporterer per vei og per felt. Se tests/receipts/README.md.
+// (server/finans/receipts/chain.js) med ekte modell, og rapporterer per vei og per felt. Se tests/receipts/README.md.
 import { spawn, execFileSync } from 'node:child_process';
 import { readdirSync, readFileSync, writeFileSync, mkdirSync, mkdtempSync, existsSync, rmSync } from 'node:fs';
 import { join, dirname, resolve, extname, basename } from 'node:path';

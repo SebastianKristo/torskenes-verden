@@ -6,9 +6,9 @@ import { execFile } from 'node:child_process';
 import { writeFile, mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { ocrTools } from '../../ocr-fallback.js';
+import { ocrTools } from '../../../ocr-fallback.js';
 import { rows48 } from '../normalize.js';
-import { preprocess51 } from '../preprocess51.js'; // prompt 51: original, EXIF, perspektiv, aldri under 2000 px
+import { preprocess51 } from '../preprocess.js'; // prompt 51: original, EXIF, perspektiv, aldri under 2000 px
 
 const EXT = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif', 'image/tiff': 'tif', 'image/bmp': 'bmp', 'image/heic': 'heic', 'image/heif': 'heif' };
 const execRun = (cmd, args, { timeout = 60_000 } = {}) => new Promise((resolve, reject) => {

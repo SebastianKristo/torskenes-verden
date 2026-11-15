@@ -6,9 +6,9 @@
 //                          prompt 72 (LFM72, av som standard): visionEngine72 ('qwen25vl' | 'lfm3vl' | 'lfm25layout') for steg V,
 //                          crossCheck72 ('off' | 'lfm3vl' | 'lfm25layout') for den ekstra totalkontrollen i crossCheck51,
 //                          layoutStep72 (steg L: LFM2.5-layout ordner Mac-OCR-linjene før qwen3:8b), lfmBackend72 ('ollama' | 'omlx'),
-//                          lfm3Model72 / lfm25Model72 (tom = standard for motoren, se lfm72.js). Bare admin (receipts48 er i SERVER_KEYS).}
-import { settings, secret } from '../finans/db.js';
-import { routing, budgetState } from '../ai-run.js';
+//                          lfm3Model72 / lfm25Model72 (tom = standard for motoren, se lfm.js). Bare admin (receipts48 er i SERVER_KEYS).}
+import { settings, secret } from '../db.js';
+import { routing, budgetState } from '../../ai-run.js';
 
 export const MAC_OCR_DEFAULT_URL = 'http://10.69.1.173:8765';
 // Prompt 52 (SRV52): steget «gemini» er fjernet (kvitteringer leses bare lokalt). Lagrede/innsendte gemini-verdier ignoreres.

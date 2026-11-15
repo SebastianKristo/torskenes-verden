@@ -89,13 +89,13 @@ gate._gateTest.backoffMs = [5, 5];
 const aiRun = await import('../server/ai-run.js');
 const fdb = await import('../server/finans/db.js');
 const ai = await import('../server/finans/ai.js');
-const schema = await import('../server/receipts48/schema.js');
-const norm = await import('../server/receipts48/normalize.js');
-const val = await import('../server/receipts48/validate.js');
-const chain = await import('../server/receipts48/chain.js');
-const tess = await import('../server/receipts48/engines/tesseract.js');
-const llmMod = await import('../server/receipts48/engines/llm.js');
-const corr = await import('../server/receipts48/corrections.js');
+const schema = await import('../server/finans/receipts/schema.js');
+const norm = await import('../server/finans/receipts/normalize.js');
+const val = await import('../server/finans/receipts/validate.js');
+const chain = await import('../server/finans/receipts/chain.js');
+const tess = await import('../server/finans/receipts/engines/tesseract.js');
+const llmMod = await import('../server/finans/receipts/engines/llm.js');
+const corr = await import('../server/finans/receipts/corrections.js');
 
 let ipN = 10;
 async function req(path, { method = 'GET', headers = {}, body } = {}) {
@@ -518,7 +518,7 @@ test('innstillinger: macOcrUrl (standard 10.69.1.173:8765), macOcrKey kryptert o
   assert.equal((await K('/finans/api/settings', 'PUT', { macOcrUrl: 'http://10.0.0.1:8765' })).status, 403);
   assert.equal((await K('/finans/api/settings', 'PUT', { macOcrKey: 'x' })).status, 403);
   assert.equal((await K('/finans/api/settings')).body.server.macOcrUrl, undefined, 'skjult for vanlige brukere');
-  const { MAC_OCR_DEFAULT_URL } = await import('../server/receipts48/settings.js');
+  const { MAC_OCR_DEFAULT_URL } = await import('../server/finans/receipts/settings.js');
   assert.equal(MAC_OCR_DEFAULT_URL, 'http://10.69.1.173:8765');
   assert.equal(fdb.DEFAULT_SETTINGS.macOcrUrl, 'http://10.69.1.173:8765');
 });

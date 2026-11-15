@@ -19,7 +19,7 @@ import kotlin.math.roundToInt
  *  - lines: hver ML Kit-linje med tekst, confidence (0–1 eller null) og bbox [x, y, w, h] normalisert til 0–1 med origo øverst
  *    til venstre (ML Kit gir piksler i bildet vi sendte inn, som allerede er rotert etter EXIF – så bbox gjelder det oppreiste bildet).
  *  - rows: linjer med overlappende y-intervall (overlapp ≥ 50 % av den laveste linjens høyde), sortert på x og slått sammen med
- *    ett mellomrom – samme regel som serveren (server/receipts48/normalize.js rows48) og Mac-tjenesten. Linjer uten bbox til slutt.
+ *    ett mellomrom – samme regel som serveren (server/finans/receipts/normalize.js rows48) og Mac-tjenesten. Linjer uten bbox til slutt.
  *  - full_text = rows med \n, image_size = [bredde, høyde] etter forbehandling, ms = tid for selve tekstgjenkjenningen.
  *  - source = "android_mlkit" (understrek; prompt 47 brukte bindestrek).
  * Forbehandling: EXIF-rotasjon, så nedskalering til ca. 2000 px på lengste side (lange kvitteringer beholder minst 1000 px bredde,

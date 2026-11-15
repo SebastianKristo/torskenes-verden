@@ -10,7 +10,7 @@
     "serie": "Trekkene er anker + k × syklus (k = 0, 1, 2 …). Neste trekk er det første i serien som er lik eller senere enn i dag. Et trekk i dag er neste trekk.",
     "maanedsdag": "For månedssykluser er dagen alltid ankerdagen, men aldri etter siste dag i måneden: 31. januar gir 28. februar (29. i skuddår), og deretter 31. mars. Dagen glir ikke.",
     "uke": "weekly = +7 dager, biweekly = +14 dager fra ankeret.",
-    "bankdag": "Datoen er avtaledatoen. Flytting til neste virkedag (helg) er en egen visning (subs-cal42 bankDay42) og er ikke med her."
+    "bankdag": "Datoen er avtaledatoen. Flytting til neste virkedag (helg) er en egen visning (finans/subs-calendar.js bankDay42) og er ikke med her."
   },
   "vektorer": [
     { "id": "a01", "syklus": "monthly", "anker": "2026-01-15", "idag": "2026-11-14", "neste": "2026-11-15" },

@@ -3,7 +3,7 @@
 // dine egne kvitteringer (bilde + <navn>.json-fasit ved siden av) – bildene og fasiten ligger aldri i repoet. Repoet har bare de
 // syntetiske eksemplene i eval/fixtures/receipts72/. Se tools/lfm72/README.md.
 //
-// Kombinasjonene (samme kjede som serveren: server/receipts48/chain.js og ocr-raw51.js, alle modellkall via ai-run/ai-gate):
+// Kombinasjonene (samme kjede som serveren: server/finans/receipts/chain.js og ocr-raw.js, alle modellkall via ai-run/ai-gate):
 //   C        dagens kjede: Apple Vision OCR (Mac-OCR) + qwen3:8b
 //   V-qwen   steg V med qwen2.5vl (ingen OCR)
 //   V-lfm3   steg V med LFM3-VL-2B (ingen tenking)
@@ -38,7 +38,7 @@ const HELP = `Kvitterings-eval for LFM (prompt 72)
   --lfm-backend ollama|omlx
                           Motor for LFM-modellene (standard ollama). omlx = oMLX bak vakten (--omlx, --omlx-key).
   --omlx URL              oMLX (standard $OMLX_URL eller http://127.0.0.1:18040). Nøkkel: $OMLX_API_KEY (anbefalt) eller --omlx-key KEY.
-  --lfm3 M / --lfm25 M    Modellnavn (standard: se server/receipts48/lfm72.js – hf.co/LiquidAI/… for Ollama, mlx-community/… for oMLX).
+  --lfm3 M / --lfm25 M    Modellnavn (standard: se server/finans/receipts/lfm.js – hf.co/LiquidAI/… for Ollama, mlx-community/… for oMLX).
   --text-model M          Tekstmodellen (standard qwen3:8b). --vision-model M: visjonsmodellen for V-qwen (standard qwen2.5vl:7b).
   --mac-url URL           Mac-OCR (standard $MAC_OCR_URL, ellers config.json på Mac-en, ellers http://10.69.1.173:8765).
   --mac-key-file FIL      vision-ocr sin config.json (standard ~/Library/Application Support/vision-ocr/config.json på Mac-en),
@@ -140,9 +140,9 @@ globalThis.fetch = async (input, init = {}) => {
 const imp = (p) => import(pathToFileURL(join(REPO, p)).href);
 const fdb = await imp('server/finans/db.js');
 const ai = await imp('server/ai-run.js');
-const chain = await imp('server/receipts48/chain.js');
-const ocr51 = await imp('server/receipts48/ocr-raw51.js');
-const lfm = await imp('server/receipts48/lfm72.js');
+const chain = await imp('server/finans/receipts/chain.js');
+const ocr51 = await imp('server/finans/receipts/ocr-raw.js');
+const lfm = await imp('server/finans/receipts/lfm.js');
 ai._setAiFetch?.((u, i) => globalThis.fetch(u, i));
 ai.migrateOnce?.();
 const OWNER = fdb.OWNER;

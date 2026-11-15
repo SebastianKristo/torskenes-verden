@@ -2,11 +2,11 @@
 // Tidspunkter: kl. 09:00 Europe/Oslo på ends_at − offset (standard 1 dag før), «Minn meg i morgen» kl. 09:00, og siste
 // varsel kl. 18:00 på sluttdagen hvis prøven fortsatt er aktiv. Varsler som er mer enn 12 timer forsinket (serveren var
 // nede) markeres som sendt uten å sendes. Sendes med notifyUser (realtime + kø for appene + Web Push).
-import { db } from './db.js';
-import { notifyUser } from './notify.js';
-import { notificationsOf, trialOut } from './finans/trials.js';
-import { addDaysISO } from '../public/js/trial-parse.js';
-import { osloTodayISO } from '../public/js/quick-time.js';
+import { db } from '../db.js';
+import { notifyUser } from '../notify.js';
+import { notificationsOf, trialOut } from './trials.js';
+import { addDaysISO } from '../../public/js/trial-parse.js';
+import { osloTodayISO } from '../../public/js/quick-time.js';
 
 const LATE_MS = 12 * 3600_000;
 

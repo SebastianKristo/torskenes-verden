@@ -215,7 +215,7 @@ export function dropImages50(history) { for (const m of history) if (m.images) d
 
 /** Leser teksten i bildene med Tesseract (lokalt). → {text, ok, error?} */
 export async function ocrImages50(rows) {
-  const { tesseractOcr48 } = await import('./receipts48/engines/tesseract.js');
+  const { tesseractOcr48 } = await import('./finans/receipts/engines/tesseract.js');
   const parts = [];
   let err = null;
   for (const r of rows.slice(0, 4)) {
@@ -249,7 +249,7 @@ export function receiptTable50(rc) {
  * → {ok, markdown, meta:{receipt, label, engine, model, confidence, fileId, action}} | {ok:false, error}
  */
 export async function receiptChat50(u, row, { signal = null, text = '' } = {}) {
-  const { runChain48 } = await import('./receipts48/chain.js');
+  const { runChain48 } = await import('./finans/receipts/chain.js');
   let buf;
   try { buf = await readFile(row.path); } catch { return { ok: false, error: 'Fant ikke bildet' }; }
   const small = await toJpeg50(buf, 2048).catch(() => null);

@@ -35,7 +35,7 @@ import { validDomain } from './enrich.js';
 import { matchMerchant, filePath as libraryFile, itemForDomain, normalize as libNorm } from '../logos/match.js';
 import { ocrTools } from '../ocr-fallback.js';
 import { run as aiRun } from '../ai-run.js';
-import { externalBlocked48 } from '../receipts48/settings.js'; // prompt 48: «Finansdata forlater aldri huset»
+import { externalBlocked48 } from './receipts/settings.js'; // prompt 48: «Finansdata forlater aldri huset»
 
 const run = promisify(execFile);
 export const LOGO_DIR = resolve(config.dataDir, 'logos');

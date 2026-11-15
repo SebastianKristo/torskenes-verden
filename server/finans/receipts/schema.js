@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const DIR = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'shared', 'schemas');
+const DIR = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', 'shared', 'schemas');
 const load = (f) => JSON.parse(readFileSync(join(DIR, f), 'utf8'));
 export const OCR_SCHEMA48 = load('receipt-ocr.schema.json');
 export const RECEIPT_SCHEMA48 = load('receipt.schema.json');

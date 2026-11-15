@@ -61,7 +61,7 @@ export function documentNote51(ocr, engine) {
 
 /** Leser teksten i bildefilene (chat-vedlegg) med OCR-kjeden. → {ok, ocr, engine, error?} */
 export async function readDocument51(rows, { signal = null, log = () => {} } = {}) {
-  const { bestOcr51 } = await import('./receipts48/chain.js');
+  const { bestOcr51 } = await import('./finans/receipts/chain.js');
   const all = [];
   let engine = null, err = null, size = null;
   for (const r of rows.slice(0, 4)) {

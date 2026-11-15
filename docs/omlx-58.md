@@ -115,7 +115,7 @@ npm run eval -- --backend omlx --url http://127.0.0.1:18040 --key "$KEY" --ollam
 - Med `--backend omlx` går oppgavene glimt, sok, brief, dom, fsok og rc til oMLX. Tekst er `mlx-community/Qwen3-8B-4bit`
   og bilde `mlx-community/Qwen2.5-VL-7B-Instruct-4bit`. `--model` og `--vision-model` overstyrer MLX-ID-ene.
 - Ollama-reserven er **av** i eval, så tallene er rene oMLX. `--omlx-fallback` slår den på.
-- Disse delene bruker fortsatt Ollama: Chat (case 17–19), kvitteringenes tekststeg (`receipts48/engines/llm.js`, case 11) og
+- Disse delene bruker fortsatt Ollama: Chat (case 17–19), kvitteringenes tekststeg (`finans/receipts/engines/llm.js`, case 11) og
   embeddings. De går ikke gjennom rutingen i `ai-run.run()`. Uten `--ollama-url` får de status «env: trenger Ollama». Kjør
   `--case 01,02,03,04,05,06,07,08,09,10,12,13,14,15,16` for en ren oMLX-sammenligning.
 - `/api/ps`-sjekken gjelder Ollama. Med oMLX ser eval etter lastede modeller i `/v1/models`, når oMLX oppgir det, og på

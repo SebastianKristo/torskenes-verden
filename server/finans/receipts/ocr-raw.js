@@ -3,14 +3,14 @@
 // ocr_raw: {engine, engine_label, rows, image_size, ms, preprocess}.
 // Den gamle kjeden leser bildet med en visjonsmodell (qwen2.5vl). Den skal aldri være eneste kilde: crossCheck51 leser originalen med
 // Tesseract (forbehandlet) og sammenligner totalen; avvik eller manglende OCR gir lav sikkerhet og «til gjennomgang».
-import { db, q } from '../finans/db.js';
+import { db, q } from '../db.js';
 import { tesseractOcr48 } from './engines/tesseract.js';
 import { totalCandidates48 } from './validate.js';
 import { ocrText48 } from './normalize.js';
-import { resolveMerchant51 } from './brreg51.js';
+import { resolveMerchant51 } from './brreg.js';
 import { r48Settings } from './settings.js';
 import { ocrStore } from './routes.js';
-import { lfmTotal72, ENGINE_LABELS72 } from './lfm72.js'; // prompt 72: ekstra totalkontroll med LFM (crossCheck72, av som standard)
+import { lfmTotal72, ENGINE_LABELS72 } from './lfm.js'; // prompt 72: ekstra totalkontroll med LFM (crossCheck72, av som standard)
 
 const parse = (s) => { try { return s ? JSON.parse(s) : null; } catch { return null; } };
 export const ENGINE_LABELS51 = { mac_vision: 'Mac Vision', tesseract: 'Tesseract', ios_vision: 'iPhone (Vision)', android_mlkit: 'Android (ML Kit)' };

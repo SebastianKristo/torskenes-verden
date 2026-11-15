@@ -1,7 +1,7 @@
 # Kvitterings-eval (`make eval-receipts`)
 
 Måler kvitteringskjeden fra prompt 48 på ekte og syntetiske norske kvitteringer. Hver kvittering kjøres gjennom **hver vei
-for seg** via serverens egen kjede (`server/receipts48/chain.js` → `runChain48`, samme validering, samme modellkall via
+for seg** via serverens egen kjede (`server/finans/receipts/chain.js` → `runChain48`, samme validering, samme modellkall via
 AI-gaten, samme Mac-OCR- og Tesseract-klient som i produksjon). Bare det ene steget er slått på i innstillingene per vei.
 
 | Vei | Hva | Kilde |

@@ -185,8 +185,8 @@ async function ollama51() {
 async function macOcr51() {
   try {
     if (deps.macHealth) return await deps.macHealth();
-    const { r48Settings, macOcrKey48 } = await import('../receipts48/settings.js');
-    const { macHealth48 } = await import('../receipts48/engines/mac-vision.js');
+    const { r48Settings, macOcrKey48 } = await import('../finans/receipts/settings.js');
+    const { macHealth48 } = await import('../finans/receipts/engines/mac-vision.js');
     return await runAsUser(OWNER, async () => { const s = r48Settings(); if (!s.macOcr) return { enabled: false, ok: false, error: 'Slått av' }; return { enabled: true, ...(await macHealth48({ url: s.macOcrUrl, key: macOcrKey48(), timeoutMs: 2000 })) }; });
   } catch (e) { return { ok: false, error: e.message }; }
 }

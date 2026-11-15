@@ -56,7 +56,7 @@ test('tomt bilde og ett bånd', () => {
 
 test('resultatet følger shared/schemas/receipt-ocr.schema.json', async (t) => {
   let schema;
-  try { schema = await import('../../../server/receipts48/schema.js'); } catch { t.skip('server/receipts48/schema.js finnes ikke'); return; }
+  try { schema = await import('../../../server/finans/receipts/schema.js'); } catch { t.skip('server/finans/receipts/schema.js finnes ikke'); return; }
   for (const c of fx('merge-cases.json')) {
     const bands = c.bands.map(([top, height]) => ({ top, height }));
     const perBand = c.per_band.map((lines, i) => lines.map(toLine).map((l) => ({ ...l, bbox: L.bandToGlobal(l.bbox, bands[i], c.image_height) })));

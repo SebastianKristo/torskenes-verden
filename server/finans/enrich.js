@@ -8,7 +8,7 @@ import { config } from '../config.js';
 import { settings, me } from './db.js';
 import { runAsUser } from '../settings.js';
 import { askJson } from './ai.js';
-import { externalBlocked48 } from '../receipts48/settings.js'; // prompt 48: «Finansdata forlater aldri huset»
+import { externalBlocked48 } from './receipts/settings.js'; // prompt 48: «Finansdata forlater aldri huset»
 import { matchMerchant, fileForDomain, isManualDomain } from '../logos/match.js';
 
 

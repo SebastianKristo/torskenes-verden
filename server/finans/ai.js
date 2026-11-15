@@ -10,8 +10,8 @@ import { modelFor, routing as aiRouting, budgetState } from '../ai-run.js';
 const AI_TASK_OF = { search: 'fsok', categorize: 'kat', receipts: 'rc', barcode: 'bar', text: 'sok', test: 'sok', summary: 'fsok', mat: 'sok', rss: 'sok', finn: 'fsok', import: 'fsok' }; // prompt 48: import = bankimport (finansdata)
 import { ocrEnabled, ocrReceipt, cropImage, decodeBarcodes, ocrTools } from '../ocr-fallback.js';
 import { RULES39, normalizeLines39, extras39, verify39 } from './receipt-lines.js'; // prompt 39: varelinjer og sumkontroll
-import { blockCloudReceipt52, warnCloudReceipt52, RECEIPT_ENGINE_NOTE52 } from '../receipts48/cloud-guard52.js'; // prompt 52: kvitteringer bare lokalt
-import { externalBlocked48 } from '../receipts48/settings.js'; // prompt 48: sperren for eksterne tjenester i kvitteringskjeden
+import { blockCloudReceipt52, warnCloudReceipt52, RECEIPT_ENGINE_NOTE52 } from './receipts/cloud-guard.js'; // prompt 52: kvitteringer bare lokalt
+import { externalBlocked48 } from './receipts/settings.js'; // prompt 48: sperren for eksterne tjenester i kvitteringskjeden
 
 export const PROMPT = (cats) => `Du leser en norsk kvittering. Returner KUN JSON etter skjemaet.
 - Beløp i kroner som tall med punktum som desimalskille (386.50).
@@ -371,7 +371,7 @@ async function geminiGenerate(parts, { schema, timeout, temperature, model, star
 }
 
 /**
- * Prompt 48: Gemini for den nye kvitteringskjeden (steg D, via AI-gaten som backend «gemini48», se receipts48/engines/gemini.js).
+ * Prompt 48: Gemini for den nye kvitteringskjeden (steg D, via AI-gaten som backend «gemini48», se finans/receipts/engines/gemini.js).
  * Samme nøkkelrotasjon og modellvalg som resten. Sjekker selv sperren, så ingenting sendes ut når den er på.
  */
 export async function geminiJson48(parts, schema, { timeout = 30_000, signal = null, temperature = 0 } = {}) {

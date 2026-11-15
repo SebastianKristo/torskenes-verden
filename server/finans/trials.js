@@ -8,7 +8,7 @@
 //   POST  /finans/api/subscriptions/trials/parse  {text, today?} → parseTrial + preview
 //   PATCH /finans/api/subscriptions/trials/:id    {status:'active'|'cancelled'|'kept'} | {snooze:'tomorrow'} | felt
 //         status 'kept' gjør prøven om til et vanlig abonnement (pris etterpå, neste trekk = sluttdato) → {…trial, subscription}
-// Varslene sendes av server/trials-notify.js (kl. 09:00 Oslo ends_at − offset, siste varsel 18:00 på sluttdagen).
+// Varslene sendes av server/finans/trials-notify.js (kl. 09:00 Oslo ends_at − offset, siste varsel 18:00 på sluttdagen).
 // Kalender: prøvene vises som heldagshendelser i Privat (virtuell kilde «trials», se trialCalendarItems).
 import { db, q } from '../db.js';
 import { parseTrial, trialSchedule, trialTitle, trialBody, trialBadge, trialPreview, cancelUrlFor, CANCEL_LINKS, REMIND_OPTIONS, DEFAULT_OFFSETS, daysBetween, addDaysISO } from '../../public/js/trial-parse.js';

@@ -160,7 +160,7 @@ export function findStore(text) {
   return first ? tidy(first) : null;
 }
 
-// Brønnøysundregistrene (åpent API): org.nr. → navn. Prompt 51: brukes ikke lenger av kvitteringene (lokal kopi i receipts48/brreg51.js).
+// Brønnøysundregistrene (åpent API): org.nr. → navn. Prompt 51: brukes ikke lenger av kvitteringene (lokal kopi i finans/receipts/brreg.js).
 const brregCache = new Map();
 export async function brregName(org) {
   if (!org || !/^\d{9}$/.test(org)) return null;
@@ -215,7 +215,7 @@ export async function ocrReceipt(image, mime, { lookup = true } = {}) {
     let input = src;
     if (tl.magick && mime !== 'application/pdf') {
       // Prompt 51: samme forbehandling som kjeden (EXIF-rotasjon, perspektiv/beskjæring, lengste side minst 2000 px, gråtoner, skjevhet).
-      const { preprocess51 } = await import('./receipts48/preprocess51.js');
+      const { preprocess51 } = await import('./finans/receipts/preprocess.js');
       const pre = await preprocess51(image, mime, { tools: tl }).catch(() => null);
       if (pre) { input = join(dir, 'pre51.png'); await writeFile(input, pre.buf); }
       else {
@@ -233,7 +233,7 @@ export async function ocrReceipt(image, mime, { lookup = true } = {}) {
     // Gyldig org.nr.: navnet fra den LOKALE kopien av Enhetsregisteret (prompt 51 – aldri nettkall per kvittering, uansett sperren).
     // Bare når den lokale kopien ikke finnes ennå og sperren er av (lookup), brukes det åpne API-et som før.
     if (out.org_number) {
-      const { brregLookup51, brregStatus51 } = await import('./receipts48/brreg51.js');
+      const { brregLookup51, brregStatus51 } = await import('./finans/receipts/brreg.js');
       const hit = brregLookup51(out.org_number);
       if (hit?.display_name) { out.merchant = hit.display_name; out.confidence.merchant = 0.85; }
       else if (lookup && !brregStatus51().count && !CHAINS.some(([re, n]) => n && re.test(text))) {

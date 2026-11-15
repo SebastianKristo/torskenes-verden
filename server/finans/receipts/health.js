@@ -1,14 +1,14 @@
 // Prompt 48 (SERVER48): GET /finans/api/receipts/health – status for hvert steg i kjeden: Mac-OCR, lokal modell,
 // og Tesseract (prompt 52: Gemini er fjernet fra kvitteringene), pluss kategorilisten appene skal
 // velge category_suggestion fra. Adressene vises bare for admin; nøkkelen sendes aldri ut.
-import { RECEIPT_SOURCE_LABEL52, RECEIPT_LOCAL_TEXT52 } from './cloud-guard52.js'; // prompt 52
-import { ocrTools } from '../ocr-fallback.js';
+import { RECEIPT_SOURCE_LABEL52, RECEIPT_LOCAL_TEXT52 } from './cloud-guard.js'; // prompt 52
+import { ocrTools } from '../../ocr-fallback.js';
 import { r48Settings, macOcrKey48, externalBlocked48 } from './settings.js';
 import { macHealth48 } from './engines/mac-vision.js';
 import { macState51 } from './chain.js';
-import { brregStatus51 } from './brreg51.js';
-import { MIN_PX51 } from './preprocess51.js';
-import { lfmModel72, ENGINE_LABELS72, LFM_NOTE72 } from './lfm72.js'; // prompt 72
+import { brregStatus51 } from './brreg.js';
+import { MIN_PX51 } from './preprocess.js';
+import { lfmModel72, ENGINE_LABELS72, LFM_NOTE72 } from './lfm.js'; // prompt 72
 
 let F = (u, i) => fetch(u, i);
 export const _setHealthFetch48 = (fn) => { F = fn ?? ((u, i) => fetch(u, i)); };

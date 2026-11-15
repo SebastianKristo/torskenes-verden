@@ -538,7 +538,7 @@ test('Subscription: logg over fakturaer og prøveperioder (gruppert per måned, 
   const n1 = (await T('/finans/api/subscriptions/log?months=24')).body.months.flatMap((m) => m.items).length;
   assert.equal((await T('/finans/api/subscriptions/log?months=24')).body.months.flatMap((m) => m.items).length, n1);
   // Glimt-hjelperne.
-  const sl = await import('../server/subs-log46.js');
+  const sl = await import('../server/finans/subs-log.js');
   assert.ok(sl.subsLog46('owner', { service: sub.name, types: ['charge'] }).length >= 2);
   assert.deepEqual([sl.trialSavings46('owner').count, sl.trialSavings46('owner').saved], [1, 99]);
 });

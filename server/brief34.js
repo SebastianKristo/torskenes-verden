@@ -47,7 +47,7 @@ import { notifyUser } from './notify.js';
 import { run as aiRun } from './ai-run.js';
 import { once, inFlight } from './ai-gate.js'; // prompt 43: én LLM-oppsummering per bruker/brief/dato om gangen
 import { glimtSettingsOf, cleanGlimtPatch, saveGlimtSettings, hostOf, charName, proxied, engineReady, speak } from './glimt35.js'; // prompt 35
-import { trialCompact } from './trial-widgets.js'; // prompt 35: prøveperioder i briefen
+import { trialCompact } from './finans/trial-widgets.js'; // prompt 35: prøveperioder i briefen
 import { todosForBrief } from './tasks-glimt37.js'; // prompt 37: Gjøremål-kortet
 import { bibleForBrief } from './bible37.js'; // prompt 37: dagens bibelvers (bare med modulen)
 import { profileName } from './profiles37.js'; // prompt 37: profilnavnet i hilsenen

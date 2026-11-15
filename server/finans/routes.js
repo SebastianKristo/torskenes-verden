@@ -37,7 +37,7 @@ import * as subsOs from './subs.js';
 import { mountP27, mountP27Public } from './forslag-routes.js';
 import { mountLogo73 } from './logo-override.js'; // prompt 73: «Endre logo» (søk i logobiblioteket, overstyr per butikk)
 import { mountTrials, trialsFor } from './trials.js'; // prompt 31: gratis prøveperioder
-import { mountSubsLog46, trialsVisible46 } from '../subs-log46.js'; // prompt 46 (SERVER46)
+import { mountSubsLog46, trialsVisible46 } from './subs-log.js'; // prompt 46 (SERVER46)
 import { mountShared37, visibleSubs, decorateSub, asShare, editableSub } from './shared-subs.js'; // prompt 37: delte abonnementer
 import { subscriptionAnswer, mountSubsAsk } from './subs-ask.js'; // prompt 32: AI-søk med abonnementer
 import { findLogo } from './logo-lookup.js';
@@ -49,13 +49,13 @@ import { jobStart as aiJobStart, jobUpdate as aiJobUpdate, jobEnd as aiJobEnd } 
 import { upsertScanChat, scanChatFor } from '../chat-scans.js'; // prompt 34: Chat-mappen «Kvitteringer og skanninger»
 import { mailAddress42 } from './boliger-web.js'; // prompt 42
 import { mountReceipts47, preParsed47, textKind47, ocrTextOf47 } from './receipts-device.js'; // prompt 47 (SERVER47): OCR-tekst og ferdig tolket kvittering fra enheten
-import { mountReceipts48, preScanned48, setMerchant51 } from '../receipts48/routes.js';
-import { ocrRaw51, crossCheck51 } from '../receipts48/ocr-raw51.js'; // prompt 51 (RCPTSRV51): rådata per kvittering, OCR-kontroll av den gamle kjeden
-import { merchantOut51 } from '../receipts48/brreg51.js'; // prompt 48 (SERVER48): /receipts/scan (kjeden A→B→C→Tesseract→D), /receipts/health, rettelser
-import { cleanMacOcrUrl, cleanReceipts48 } from '../receipts48/settings.js';
-import { correctionOnBook48 } from '../receipts48/corrections.js';
+import { mountReceipts48, preScanned48, setMerchant51 } from './receipts/routes.js';
+import { ocrRaw51, crossCheck51 } from './receipts/ocr-raw.js'; // prompt 51 (RCPTSRV51): rådata per kvittering, OCR-kontroll av den gamle kjeden
+import { merchantOut51 } from './receipts/brreg.js'; // prompt 48 (SERVER48): /receipts/scan (kjeden A→B→C→Tesseract→D), /receipts/health, rettelser
+import { cleanMacOcrUrl, cleanReceipts48 } from './receipts/settings.js';
+import { correctionOnBook48 } from './receipts/corrections.js';
 import { mountLogos52 } from '../logos52.js'; // prompt 52
-import { warnCloudReceipt52, RECEIPT_SOURCE_LABEL52, RECEIPT_ENGINE_NOTE52 } from '../receipts48/cloud-guard52.js'; // prompt 52: kvitteringer bare lokalt
+import { warnCloudReceipt52, RECEIPT_SOURCE_LABEL52, RECEIPT_ENGINE_NOTE52 } from './receipts/cloud-guard.js'; // prompt 52: kvitteringer bare lokalt
 import { bolApi, catTree, catOptions, entryCat, linkLegacy, assignCategory, catById as bolCat, catPair, colorOf, noticesFor, layoutFor, upcomingOf, backgroundOf, validBackground } from './boliger.js';
 import { osloDate, osloToUtc, clampDate, addDays } from '../dates/oslo.js';
 import { CYCLES, CYCLE_DAYS, CYCLE_NAME, PER_LABEL, THEN_TEXT, cycleIn, perMonth, nextCharge, seriesOf, seriesFrom } from './cycles.js';
@@ -560,7 +560,7 @@ function mockDemo(u) {
 }
 const R = need('finance:read'), W = need('finance:write');
 mountSubsAsk(api, { R, W }); // prompt 32: /subscriptions/knowledge (før /subscriptions/:id)
-mountSubsLog46(api, { R, W }); // prompt 46: /subscriptions/log (+ .csv) – fakturaer og prøveperioder (server/subs-log46.js)
+mountSubsLog46(api, { R, W }); // prompt 46: /subscriptions/log (+ .csv) – fakturaer og prøveperioder (server/finans/subs-log.js)
 mountLogo73(api, { R, W }); // prompt 73 (LOGO73): /logos?q=, /merchants/:id/logo, /merchants/logo/upload, /merchants/logo-overrides
 mountP27(api, { R, W }); // prompt 27: /forslag, /ai-audit, /merchants/logo, /receipts/:id/logo/ai, /subscriptions/from-screenshot
 // Prompt 31: /subscriptions/trials (før /subscriptions/:id). «Behold» gjør prøven om til et vanlig abonnement.
@@ -996,7 +996,7 @@ export async function ingestReceipt({ buffer, mime, name, meta, target = null, s
 api.post('/receipts', need('receipts:write'), upload, (c) => receiptUpload(c));
 // Prompt 47: POST /receipts/ocr-text og /receipts/parsed (receipts-device.js) – samme kø, samme datamodell og samme Til godkjenning.
 mountReceipts47(api, { W: need('receipts:write'), enqueue: (id) => { queue.push({ id }); runQueue(); }, out: (id) => { const r = origSelect.get(id); return { ...receiptOut(r), jobs: [jobOut(r)] }; } });
-// Prompt 48: POST /receipts/scan, GET /receipts/health, /receipts/schemas/:kind og rettelser (server/receipts48/) – samme kø og datamodell.
+// Prompt 48: POST /receipts/scan, GET /receipts/health, /receipts/schemas/:kind og rettelser (server/finans/receipts/) – samme kø og datamodell.
 mountReceipts48(api, { W: need('receipts:write', 'finance:write'), R: need('finance:read', 'receipts:write'), adminOnly, sessionOnly, enqueue: (id) => { queue.push({ id }); runQueue(); }, out: (id) => { const r = origSelect.get(id); return { ...receiptOut(r), jobs: [jobOut(r)] }; } });
 mountLogos52(api, { R }); // prompt 52 (SRV52): butikklogoer for lister, bare lokal cache (/logos52/batch, /logos52/match)
 // Legg ved kvittering på en eksisterende transaksjon. AI-en leser den, og den bekreftes i gjennomgangskøen som vanlig.

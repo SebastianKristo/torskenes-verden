@@ -161,8 +161,8 @@ export const registerTrialLog46 = (fn) => { logHook = fn ?? null; };
 async function logTrial(user, row) {
   try {
     if (logHook) return void await logHook(user, row);
-    // Subscription-loggen (SERVER46, server/subs-log46.js) lager trial_start fra trials-tabellen; synk med en gang så loggen er oppdatert.
-    const m = await import('../subs-log46.js').catch(() => null);
+    // Subscription-loggen (SERVER46, server/finans/subs-log.js) lager trial_start fra trials-tabellen; synk med en gang så loggen er oppdatert.
+    const m = await import('../finans/subs-log.js').catch(() => null);
     if (m?.syncSubsLog46) m.syncSubsLog46(user);
   } catch (e) { console.warn('[glimt46] abonnementslogg:', e.message); }
 }

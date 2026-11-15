@@ -9,12 +9,12 @@
 // (server/omlx58, bak vakten på Mac mini-en). Aldri sky: et modellnavn som ikke er lokalt, stoppes av cloud-guard52.
 // Strukturerte kall tenker aldri: think:false (Ollama) / chat_template_kwargs.enable_thinking=false (oMLX, via THINKING_RE «lfm3»).
 // <think>-blokker fjernes alltid før JSON leses.
-import { stripThink } from '../ollama-opts.js';
+import { stripThink } from '../../ollama-opts.js';
 import { modelFormat48 } from './schema.js';
 import { rows48 } from './normalize.js';
 import { totalCandidates48 } from './validate.js';
 import { parseRows48 } from './engines/llm.js';
-import { blockCloudReceipt52 } from './cloud-guard52.js';
+import { blockCloudReceipt52 } from './cloud-guard.js';
 import { CLOUD_MODEL72 } from './settings.js';
 
 /** Standard modellnavn per motor. Sjekk navnene på Hugging Face før du henter dem (tools/lfm72/README.md). */
@@ -42,7 +42,7 @@ export const _setLfmRun72 = (fn) => { runImpl = fn ?? null; };
 export const _setLfmText72 = (fn) => { textImpl = fn ?? null; };
 async function aiRun(task, o) {
   if (runImpl) return runImpl(task, o);
-  const { run } = await import('../ai-run.js');
+  const { run } = await import('../../ai-run.js');
   return run(task, o);
 }
 

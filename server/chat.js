@@ -55,7 +55,7 @@ import { jobStart, jobUpdate, jobEnd } from './ai-run.js'; // prompt 44: Chat i 
 import { memoryPrompt43 } from './ai-memory43.js'; // prompt 43: AI-minne i systemprompten
 import { saveFile50, deleteFile50, desc50, mountFiles50, visionCaps50, bestVision50, prepareHistory50, stored50, dropImages50, ocrImages50, ocrNote50, receiptChat50, attIds50, RECEIPT_RE50, LIMITS50, kindOf50 } from './chat50.js'; // prompt 50 (SRVCHAT50): vedlegg, miniatyr, vision, kvittering i chat
 import { rankFor41 } from './chat41.js';
-import { externalBlocked48, r48Settings } from './receipts48/settings.js';
+import { externalBlocked48, r48Settings } from './finans/receipts/settings.js';
 import { imageIntent51, looksLikeDocument51, documentNote51, readDocument51, visionModel51, textModel51, isMultimodalError51, markNoVision51, friendlyError51, owuiVision51 } from './chat51.js'; // prompt 51 (RCPTSRV51): bilder i chatten
 import { engine53, webSearch53, eyeIntent53 } from './dal53/index.js'; // prompt 53 (DAL53): Tongue/Redact rundt motoren, Redact på søkeord, Eye for bilder
 import { osloDate } from './dates/oslo.js';

@@ -19,10 +19,10 @@ import { bodyLimit } from 'hono/body-limit';
 import { randomUUID } from 'node:crypto';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
-import { db, q } from '../finans/db.js';
-import { config } from '../config.js';
-import { scanLog, sniffMime } from '../finans/scan.js';
-import { validate } from '../finans/ai.js';
+import { db, q } from '../db.js';
+import { config } from '../../config.js';
+import { scanLog, sniffMime } from '../scan.js';
+import { validate } from '../ai.js';
 import { OCR_SCHEMA48, RECEIPT_SCHEMA48, checkReceipt48 } from './schema.js';
 import { toLegacy48, itemBoxes48, normalizeReceipt48 } from './normalize.js';
 import { runChain48, deviceOcr48 } from './chain.js';
@@ -30,8 +30,8 @@ import { health48 } from './health.js';
 import { macHealth48 } from './engines/mac-vision.js';
 import { r48Settings, macOcrKey48 } from './settings.js';
 import { recordCorrection48, listCorrections48, exportCorrections48 } from './corrections.js';
-import { todayOslo45 } from '../glimt45/dates.js';
-import { MERCHANT_LABELS51, brregStatus51, brregLookup51, updateBrreg51, learnMerchant51, mod11Ok } from './brreg51.js'; // prompt 51: Enhetsregisteret (lokal kopi)
+import { todayOslo45 } from '../../glimt45/dates.js';
+import { MERCHANT_LABELS51, brregStatus51, brregLookup51, updateBrreg51, learnMerchant51, mod11Ok } from './brreg.js'; // prompt 51: Enhetsregisteret (lokal kopi)
 
 const DIR = resolve(config.dataDir, 'receipts');
 // Additiv migrasjon: det beste OCR-resultatet (felles format) for kvitteringer fra /receipts/scan.
@@ -173,7 +173,7 @@ export function mountReceipts48(api, { W, R, adminOnly, sessionOnly, enqueue, ou
     const id = randomUUID();
     // Prompt 53 (DAL53): Eye sier hva slags bilde det er (og rotasjonen brukes før Tesseract). Et foto som ikke er en kvittering gir en
     // advarsel – kjeden kjører likevel (bare lokalt, aldri Gemini). Uten Eye: som før.
-    const eye53 = await import('../dal53/index.js').then((m) => m.eyeKind53(buf)).catch(() => null);
+    const eye53 = await import('../../dal53/index.js').then((m) => m.eyeKind53(buf)).catch(() => null);
     if (eye53?.kind) log('eye', `${eye53.kind}${eye53.confidence != null ? ` (${Math.round(eye53.confidence * 100)} %)` : ''}${eye53.rotation ? ` · rotert ${eye53.rotation}°` : ''}`);
     if (eye53?.route === 'photo' && (eye53.confidence ?? 0) >= 0.6) warnings.push('Bildet ser ut som et vanlig foto, ikke en kvittering. Sjekk at du valgte riktig bilde.');
     const res = await runChain48({ image: buf, mime, smallImage: scanImg, deviceOcr, deviceParse, client, categories: expenseCats(u), log, user: u, receiptId: id });

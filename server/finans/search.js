@@ -7,7 +7,7 @@ import { geminiFetch, hasGemini } from './gemini-keys.js';
 import { textJson, aiTimeoutsOf, AiCancelled } from './ai.js';
 import { gateEmbed } from '../ai-gate.js'; // prompt 43: alle Ollama-kall via gaten
 import { stripMarkers } from './subs-ask.js';
-import { externalBlocked48 } from '../receipts48/settings.js'; // prompt 48: «Finansdata forlater aldri huset» gjelder også embeddings
+import { externalBlocked48 } from './receipts/settings.js'; // prompt 48: «Finansdata forlater aldri huset» gjelder også embeddings
 
 db.exec(`CREATE VIRTUAL TABLE IF NOT EXISTS fh_fts USING fts5(kind UNINDEXED, ref UNINDEXED, text, tokenize = 'unicode61 remove_diacritics 2');
 CREATE TABLE IF NOT EXISTS fh_embed (kind TEXT NOT NULL, ref TEXT NOT NULL, model TEXT NOT NULL, hash TEXT NOT NULL, vec BLOB NOT NULL, PRIMARY KEY (kind, ref, model));`);

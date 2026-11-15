@@ -31,7 +31,7 @@ const NEWS = await import('../server/dal53/news.js');
 const ASR = await import('../server/dal53/asr.js');
 const MOD = await import('../server/dal53/moderate.js');
 const D = await import('../server/dal53/index.js');
-const pre = await import('../server/receipts48/preprocess51.js');
+const pre = await import('../server/finans/receipts/preprocess.js');
 
 let ipN = 40;
 async function req(path, { method = 'GET', headers = {}, body } = {}) {

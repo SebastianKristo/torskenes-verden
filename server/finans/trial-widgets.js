@@ -10,12 +10,12 @@
 // POST /api/widgets/trials/:id {action?:'done'|'kept'} eller {status:'cancelled'|'kept'}  (standard 'done' = «Avsluttet»: status cancelled, påminnelsene stopper;
 //      'kept' = «Behold» via PATCH-logikken i FinansHub) → samme svar som GET (oppdatert widget). 404 for andres/ukjente prøver.
 import { Hono } from 'hono';
-import { db, q } from './db.js';
-import { authOrToken } from './mobile.js';
-import { osloTodayISO } from '../public/js/quick-time.js';
-import { domainFor } from './finans/enrich.js';
-import { cancelUrlFor, daysBetween, addDaysISO } from '../public/js/trial-parse.js';
-import { notificationsOf } from './finans/trials.js';
+import { db, q } from '../db.js';
+import { authOrToken } from '../mobile.js';
+import { osloTodayISO } from '../../public/js/quick-time.js';
+import { domainFor } from './enrich.js';
+import { cancelUrlFor, daysBetween, addDaysISO } from '../../public/js/trial-parse.js';
+import { notificationsOf } from './trials.js';
 
 const WDS = ['søn', 'man', 'tir', 'ons', 'tor', 'fre', 'lør'];
 const MNS = ['jan', 'feb', 'mar', 'apr', 'mai', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'des'];
@@ -61,7 +61,7 @@ api.post('/:id{[0-9]+}', async (c) => {
   if (action === 'done') q("UPDATE trials SET status='cancelled', updated=? WHERE id=?").run(Date.now(), id);
   else {
     // Samme logikk som appen (PATCH /finans/api/subscriptions/trials/:id {status:'kept'}): blir et vanlig abonnement.
-    const { default: finansApi } = await import('./finans/routes.js');
+    const { default: finansApi } = await import('./routes.js');
     const r = await finansApi.request(`/subscriptions/trials/${id}`, { method: 'PATCH', headers: { cookie: c.req.header('cookie') ?? '', authorization: c.req.header('authorization') ?? '', 'content-type': 'application/json' }, body: JSON.stringify({ status: 'kept' }) }, c.env);
     if (!r.ok) return c.json(await r.json().catch(() => ({ error: 'Kunne ikke beholde prøven' })), r.status);
   }

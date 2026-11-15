@@ -210,7 +210,7 @@ def render(rid, rows, typos, font_path):
 
 
 def rows_of(lines):
-    """Samme radregel som server/receipts48/normalize.js (rows48): overlappende y, sortert på x."""
+    """Samme radregel som server/finans/receipts/normalize.js (rows48): overlappende y, sortert på x."""
     items = sorted(lines, key=lambda l: l["bbox"][1])
     groups = []
     for l in items:
