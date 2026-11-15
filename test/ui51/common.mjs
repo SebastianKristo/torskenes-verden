@@ -31,7 +31,7 @@ export const PAGES51 = [
   HL('media-musikk', 'media/musikk'),
   HL('familie', 'familie'),
   HL('familie-kart', 'familie/kart'),
-  HL('reise', 'reise'),
+  HL('reise', 'reise', { mask: ['#trips'] }), // avgangene i mock-dataene kommer i ulik rekkefølge
   HL('reise-kart', 'reise/kart'),
   HL('mat', 'matplan'),
   HL('gjoremal', 'gjoremal'),

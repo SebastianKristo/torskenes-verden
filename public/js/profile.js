@@ -58,7 +58,7 @@ export const FIXED_TABS = ['oversikt'];
 // De gamle fanene før Fase 6, i den gamle rekkefølgen. Bare til å flytte en lagret rekkefølge (indekser i denne lista) og lagrede
 // navn/skjulte faner over til modul-id-ene (migrateNav6). Ikke bruk den til noe annet.
 const OLD_TABS = ['dash', 'vaer', 'chat', 'studie', 'rom', 'okonomi', 'hjem', 'matplan', 'sporing', 'familie', 'domener', 'nettverk', 'huskeliste', 'bursdager', 'kalender', 'media', 'kart', 'skjold'];
-const OLD_ID = { dash: 'oversikt', hjem: 'smarthjem', matplan: 'mat', huskeliste: 'gjoremal', gjoremal: 'gjoremal', bursdager: 'kalender', kart: 'reise' };
+const OLD_ID = { okonomi: 'finans', dash: 'oversikt', hjem: 'smarthjem', matplan: 'mat', huskeliste: 'gjoremal', gjoremal: 'gjoremal', bursdager: 'kalender', kart: 'reise' };
 const newId = (k) => OLD_ID[k] ?? k;
 
 const layout = () => (store.me.layout ??= {});

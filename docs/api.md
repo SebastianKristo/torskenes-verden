@@ -93,7 +93,7 @@ eget valg (rekkefølge, skjulte faner, egne navn) ligger i layouten (`/api/me/la
 | `grupper[]` | `{id, navn}` i fast rekkefølge: I dag, Hjemme, Tid, Ute, Økonomi, Fritid og læring, Verksted, Drift. Bare grupper med moduler |
 | `toppmeny[]` | Modul-id-ene som står fast i toppmenyen på desktop (Q6). Resten ligger under «Alle sider ▾» |
 | `bunnmeny[]` | Fanene i bunnmenyen på mobil (web), i tillegg til «Mer» |
-| `moduler[].id` | Fast id, lik på alle plattformer (`oversikt`, `smarthjem`, `gjoremal`, `reise`, `okonomi` …). Innstillingssiden for modulen har samme id |
+| `moduler[].id` | Fast id, lik på alle plattformer (`oversikt`, `smarthjem`, `gjoremal`, `reise`, `finans` …). Innstillingssiden for modulen har samme id |
 | `moduler[].navn` | Navnet i UI (Q1–Q12, se [ordlisten](ordliste.md)) |
 | `moduler[].gruppe` | Id i `grupper` |
 | `moduler[].ikon` | `{tegn, sf, material}`: tegn til web og reserve, SF Symbol (Apple) og Material Symbols-navn (Android) |

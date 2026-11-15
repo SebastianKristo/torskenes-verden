@@ -80,3 +80,4 @@ Når du finner et begrep som mangler eller brukes ulikt, legg det til her i samm
 | **Server → System** (oppdateringer) | Nordlys OS · oppdatering | «Nordlys OS» bare om serverprogramvaren i teknisk tekst (Q2) |
 | Skjold Lab-kategoriene **Motstander**, **Kondensatorer**, **Dioder og LED**, **Transistorer**, **IC-er**, **Mikrokontrollere**, **Sensorer**, **Moduler**, **Kontakter**, **Kabler**, **Skruer og bolter**, **Mutre og skiver**, **Avstandsstykker**, **Brytere**, **Sikringer**, **Verktøy**, **Diverse** | LED, Kabel, Kabelsko, Skruer (som standardkategori) | Standardlisten (`server/skjold/kategorier.js`). Brukerens egne kategorier endres ikke |
 | **Helse (Husstand)** | Helse (Familie) | Innstillinger → Husstand → Helse |
+| **Brief** og **Bibel** i «Alle sider» og Mer (gruppene I dag og Fritid og læring) | – | Brief åpnes som ark (`#/brief`). Bibel åpner siden i Økonomi (`/finans/#/bibel`, `#/bibel` videresendes) |

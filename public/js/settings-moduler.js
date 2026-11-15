@@ -32,7 +32,7 @@ export const TABS45 = [
   ['ruter', 'Reise', 'Strekninger, anbefalte reiser og avganger.', 'Moduler', P45.ruter], // Fase 6 (Q8): modulen heter Reise (id reise er et alias)
   ['vaer', 'Vær', 'Steder, Min posisjon og værkortet på Hjem.', 'Moduler', P45.vaer],
   ['studie', 'Studie', 'Timeplan, Canvas og dokumenter (vitnemål, karakterutskrifter).', 'Moduler', P45.studie],
-  ['finans', 'Økonomi', 'Kategorier og regler, bank og import, aksjer.', 'Moduler', P45.finans], // Q2: modulen heter Økonomi (id okonomi er et alias)
+  ['finans', 'Økonomi', 'Kategorier og regler, bank og import, aksjer.', 'Moduler', P45.finans], // Q2: modulen heter Økonomi (samme id som modulen: finans)
 ];
 export const ALIAS45 = { weather: 'vaer', 'vær': 'vaer', study: 'studie', okonomi: 'finans', finance: 'finans',  sonarr: 'media', radarr: 'media', plex: 'media', jellyfin: 'media', qbittorrent: 'media', prowlarr: 'media', reise: 'ruter', avganger: 'ruter', kollektiv: 'ruter' };
 

@@ -84,11 +84,12 @@ test('Homelab: fanene er hash-lenker (klientruting) – ingen target, reload ell
     assert.doesNotMatch(tag, /target=/, `fanen ${r} skal ikke ha target`);
     const href = /href="([^"]+)"/.exec(tag)[1];
     // Økonomi er FinansHub – en egen app under /finans/ (dokumentert unntak, se docs/navigasjon-uten-reload.md).
-    if (r === 'okonomi') assert.equal(href, '/finans/'); else assert.match(href, /^#\//, `fanen ${r} skal være en hash-lenke`);
+    // Fase 6: Bibel åpner siden i Økonomi (/finans/#/bibel) til den får en egen side i Homelab.
+    if (r === 'finans') assert.equal(href, '/finans/'); else if (r === 'bibel') assert.equal(href, '/finans/#/bibel'); else assert.match(href, /^#\//, `fanen ${r} skal være en hash-lenke`);
   }
   const app = noComments(read('js/app.js'));
   assert.doesNotMatch(app, /location\.reload\(/);
-  assert.equal((app.match(/location\.(replace|assign)\(/g) ?? []).length, 1, 'bare omdirigeringen fra den gamle #/okonomi-lenken');
+  assert.equal((app.match(/location\.(replace|assign)\(/g) ?? []).length, 1, 'bare omdirigeringen fra aliasene som peker ut av skallet (#/okonomi, #/bibel)');
 });
 
 test('Homelab: fotovinduet hører til skallet – visningen byttes med swapView, ikke view.innerHTML rett i ruteren', () => {

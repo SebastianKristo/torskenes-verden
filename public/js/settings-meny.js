@@ -12,7 +12,7 @@ const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '
 // Fase 6 (E-ia §4, Q12, O4): samme rekkefølge som innstillingene i modullisten (shared/schemas/moduler.json) og i appene:
 // Konto og sikkerhet · Utseende · Varsler · Husstand · Glimt og AI · Tilkoblinger · Moduler · Enheter og widgets · Server.
 // Sider som står alene, har ingen gruppeoverskrift (''). Modulsidene bruker web-nøklene dom/finans/ruter; modul-id-ene
-// (domener, okonomi, reise) er aliaser til dem (ALIAS i settings-view.js), så #/innstillinger/<modul-id> virker for alle moduler.
+// (domener, reise) er aliaser til dem (ALIAS i settings-view.js), så #/innstillinger/<modul-id> virker for alle moduler.
 export const MENU65 = [
   ['', ['konto', 'look', 'varsel', 'users']],
   ['Glimt og AI', ['glimt', 'ai']],

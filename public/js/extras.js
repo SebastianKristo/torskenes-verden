@@ -267,7 +267,7 @@ const NAV = [
   [/budsjett/, 'Budsjett', '/finans/#/budsjett'],
   [/kvittering/, 'Kvitteringer', '/finans/#/kv'],
   [/abonnement|prøveperiode|faste betalinger/, 'Faste betalinger', '/finans/#/abonnement'],
-  [/finans|økonomi|saldo/, 'okonomi'],
+  [/finans|økonomi|saldo/, 'finans'],
   [/domene/, 'domener'],
   [/familie|posisjon|hvor er/, 'familie'],
   [/middag|matplan|oppskrift|^mat$|\bmat\b/, 'mat'],

@@ -13,7 +13,7 @@ import { modul } from './moduler.js'; // Fase 6: gruppene heter som modulene
 export const SOUNDS = [['klokke', 'Klokke'], ['pling', 'Pling'], ['papir', 'Papir'], ['dobbel', 'Dobbel'], ['dyp', 'Dyp'], ['egen', 'Egen lyd'], ['stille', 'Stille']];
 // Fase 6 (O9): én gruppe per modul (navnet fra modullisten), og haptikk og lyd under «Levering» (det er måten varselet kommer på,
 // ikke en gruppe). [nøkkel på serveren (/api/me/notify groups), modul-id, undertekst]. Mangler modulen for brukeren, vises ikke raden.
-const GROUPS = [['pakker', 'sporing', 'Ny pakke, klar for henting, ute for levering og levert'], ['finans', 'okonomi', 'Kvitteringer til gjennomgang, faste trekk og boliger'],
+const GROUPS = [['pakker', 'sporing', 'Ny pakke, klar for henting, ute for levering og levert'], ['finans', 'finans', 'Kvitteringer til gjennomgang, faste trekk og boliger'],
   ['familie', 'familie', 'Når noen kommer til eller forlater en sone'], ['reise', 'reise', 'Avvik på avganger og farevarsler fra Vær'], ['birthdays', 'kalender', 'Bursdager: påminnelse kl. 09:00'],
   ['media', 'media', 'Nye episoder og filmer, ferdige nedlastinger']];
 const PKG = [['found', 'Ny pakke funnet', 'Fra Finn eller e-post'], ['pickup', 'Klar for henting', 'Med hentested og frist'], ['out', 'Ute for levering', 'Når budet er på vei'],

@@ -18,7 +18,7 @@
   "additionalProperties": false,
   "$defs": {
     "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
-    "rute": { "type": "string", "pattern": "^(#/[a-z0-9æøå/-]*|/[a-z0-9/-]*)$" },
+    "rute": { "type": "string", "pattern": "^(#/[a-z0-9æøå/-]*|/[a-z0-9/-]*(#/[a-z0-9/-]*)?)$" },
     "gruppe": {
       "type": "object",
       "required": ["id", "navn"],

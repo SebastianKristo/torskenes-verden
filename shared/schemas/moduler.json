@@ -12,8 +12,8 @@
     { "id": "verksted", "navn": "Verksted" },
     { "id": "drift", "navn": "Drift" }
   ],
-  "toppmeny": ["oversikt", "kalender", "okonomi", "media", "familie", "mat", "gjoremal", "skjold"],
-  "bunnmeny": ["oversikt", "studie", "okonomi"],
+  "toppmeny": ["oversikt", "kalender", "finans", "media", "familie", "mat", "gjoremal", "skjold"],
+  "bunnmeny": ["oversikt", "studie", "finans"],
   "moduler": [
     {
       "id": "oversikt", "navn": "Oversikt", "gruppe": "idag",
@@ -32,8 +32,8 @@
     {
       "id": "brief", "navn": "Brief", "gruppe": "idag",
       "ikon": { "tegn": "✧", "sf": "sun.horizon", "material": "wb_twilight" },
-      "plattformer": ["ios", "android"], "adminOnly": false, "type": "ark",
-      "rute": null, "aliaser": [],
+      "plattformer": ["web", "ios", "android"], "adminOnly": false, "type": "ark",
+      "rute": "#/brief", "aliaser": [],
       "undersider": []
     },
     {
@@ -113,7 +113,7 @@
       "undersider": []
     },
     {
-      "id": "okonomi", "navn": "Økonomi", "gruppe": "okonomi",
+      "id": "finans", "navn": "Økonomi", "gruppe": "okonomi",
       "ikon": { "tegn": "kr", "sf": "creditcard", "material": "account_balance_wallet" },
       "plattformer": ["web", "ios", "android"], "adminOnly": false,
       "rute": "/finans/", "aliaser": ["#/okonomi", "#/finans"],
@@ -157,8 +157,8 @@
     {
       "id": "bibel", "navn": "Bibel", "gruppe": "fritid", "tilgang": "bibel",
       "ikon": { "tegn": "✝", "sf": "book.closed", "material": "menu_book" },
-      "plattformer": ["ios", "android"], "adminOnly": false,
-      "rute": null, "aliaser": [],
+      "plattformer": ["web", "ios", "android"], "adminOnly": false,
+      "rute": "/finans/#/bibel", "aliaser": ["#/bibel"],
       "undersider": []
     },
     {

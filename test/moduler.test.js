@@ -27,7 +27,7 @@ test('moduler.json: unike id-er, kjente grupper og faste faner som finnes', () =
   assert.deepEqual(M.grupper.map((g) => g.navn), ['I dag', 'Hjemme', 'Tid', 'Ute', 'Økonomi', 'Fritid og læring', 'Verksted', 'Drift']);
   for (const id of [...M.toppmeny, ...M.bunnmeny]) assert.ok(ids.includes(id), `${id} i toppmeny/bunnmeny finnes ikke`);
   // Q6: de faste fanene på desktop, i rekkefølge.
-  assert.deepEqual(M.toppmeny, ['oversikt', 'kalender', 'okonomi', 'media', 'familie', 'mat', 'gjoremal', 'skjold']);
+  assert.deepEqual(M.toppmeny, ['oversikt', 'kalender', 'finans', 'media', 'familie', 'mat', 'gjoremal', 'skjold']);
   for (const m of M.moduler) {
     const sub = m.undersider.map((u) => u.id);
     assert.equal(new Set(sub).size, sub.length, `${m.id}: undersidene har unike id-er`);
@@ -53,7 +53,7 @@ test('moduler.json: navnene fra Q1–Q12, og ingen «Ikke bruk»-former fra ordl
   const navn = Object.fromEntries(M.moduler.map((m) => [m.id, m.navn]));
   assert.equal(navn.oversikt, 'Oversikt'); // Q1
   assert.equal(navn.smarthjem, 'Smarthjem'); // Q1
-  assert.equal(navn.okonomi, 'Økonomi'); // Q2
+  assert.equal(navn.finans, 'Økonomi'); // Q2
   assert.equal(navn.brief, 'Brief'); // Q7
   assert.equal(navn.reise, 'Reise'); // Q8
   assert.equal(navn.nyheter, 'Nyheter'); // Q10
@@ -147,7 +147,7 @@ test('GET /api/moduler?plattform= tar bare med moduler for den plattformen, i st
   assert.ok(web.moduler.every((m) => m.plattformer.includes('web')));
   assert.ok(ios.moduler.every((m) => m.plattformer.includes('ios')));
   assert.ok(!ios.moduler.some((m) => m.id === 'rom'));
-  assert.ok(!web.moduler.some((m) => m.id === 'bibel'));
+  assert.ok(web.moduler.some((m) => m.id === 'brief'), 'Brief har en vei inn på web (#/brief)');
   const order = M.moduler.map((m) => m.id);
   assert.deepEqual(web.moduler.map((m) => m.id), order.filter((id) => web.moduler.some((m) => m.id === id)));
 });

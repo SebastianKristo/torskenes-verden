@@ -21,13 +21,13 @@
   "toppmeny": [
     "oversikt",
     "kalender",
-    "okonomi",
+    "finans",
     "media"
   ],
   "bunnmeny": [
     "oversikt",
     "studie",
-    "okonomi"
+    "finans"
   ],
   "moduler": [
     {
@@ -81,12 +81,13 @@
         "material": "wb_twilight"
       },
       "plattformer": [
+        "web",
         "ios",
         "android"
       ],
       "adminOnly": false,
       "type": "ark",
-      "rute": null,
+      "rute": "#/brief",
       "aliaser": [],
       "undersider": []
     },

@@ -98,3 +98,15 @@ test('Innstillinger: samme sider og rekkefølge som lista, og Tilkoblinger grupp
   assert.match(view, new RegExp(`const CAT_ORDER = ${JSON.stringify(T.grupper.map((g) => g.navn)).replace(/"/g, "'").replace(/,/g, ', ').replace(/[[\]]/g, '\\$&')}`));
   assert.match(read('public/js/profile-menu.js'), /'Tilpass Oversikt'/, 'O4: «Rediger widgets» heter «Tilpass Oversikt»');
 });
+
+test('rutene Økonomi sender gamle /finans/-lenker til, virker i skallet (direkte eller via alias)', () => {
+  const known = new Set(['dash', 'studie', 'rom', 'hjem', 'matplan', 'sporing', 'familie', 'gjoremal', 'vaer', 'bursdager', 'kalender', 'chat', 'media', 'reise', 'kart', 'familiekalender', 'mediakveld', 'skjold', 'domener', 'nettverk', 'mer']);
+  for (const h of ['#/sporing', '#/matplan', '#/domener', '#/gjoremal', '#/bursdager', '#/kalender', '#/kart', '#/familie']) {
+    const to = mod.aliasTil(h) ?? h;
+    assert.ok(known.has(mod.viewOf(to)), `${h} → ${to}`);
+  }
+  // Brief og Bibel har en vei inn fra Homelab (Alle sider og Mer); Avganger ligger i Reise.
+  const ids = mod.gruppert().flatMap((g) => g.moduler.map((m) => m.id));
+  for (const id of ['brief', 'bibel', 'reise']) assert.ok(ids.includes(id), id);
+  assert.equal(mod.aliasTil('#/bibel'), '/finans/#/bibel');
+});
