@@ -1,49 +1,536 @@
 {
-  "updated": "2026-10-25T10:21:51.379Z",
+  "updated": "2026-11-15T10:54:23.694Z",
   "counts": {
-    "login|lys|1440": {},
-    "login|lys|390": {},
-    "login|mork|1440": {},
-    "login|mork|390": {},
-    "hjem|lys|1440": {},
-    "hjem|lys|390": {},
-    "hjem|mork|1440": {},
-    "hjem|mork|390": {},
-    "gjoremal|lys|1440": {},
-    "gjoremal|lys|390": {},
-    "gjoremal|mork|1440": {},
-    "gjoremal|mork|390": {},
-    "kalender|lys|1440": {},
-    "kalender|lys|390": {},
-    "kalender|mork|1440": {},
-    "kalender|mork|390": {},
-    "familie|lys|1440": {},
-    "familie|lys|390": {},
-    "familie|mork|1440": {},
-    "familie|mork|390": {},
-    "familiekalender|lys|1440": {},
-    "familiekalender|lys|390": {},
-    "familiekalender|mork|1440": {},
-    "familiekalender|mork|390": {},
-    "media|lys|1440": {},
-    "media|lys|390": {},
-    "media|mork|1440": {},
-    "media|mork|390": {},
-    "innstillinger|lys|1440": {},
-    "innstillinger|lys|390": {},
-    "innstillinger|mork|1440": {},
-    "innstillinger|mork|390": {},
-    "finans|lys|1440": {},
-    "finans|lys|390": {},
-    "finans|mork|1440": {},
-    "finans|mork|390": {},
-    "planlegging|lys|1440": {},
-    "planlegging|lys|390": {},
-    "planlegging|mork|1440": {},
-    "planlegging|mork|390": {},
-    "sok|lys|1440": {},
-    "sok|lys|390": {},
-    "sok|mork|1440": {},
-    "sok|mork|390": {}
+    "login|papir-lys|1440": {},
+    "login|papir-lys|390": {},
+    "oversikt|papir-lys|1440": {},
+    "oversikt|papir-lys|390": {},
+    "oversikt|papir-mork|1440": {},
+    "oversikt|papir-mork|390": {},
+    "oversikt|glass|1440": {
+      "kontrast": 7,
+      "beroringsflate": 4
+    },
+    "oversikt|glass|390": {
+      "beroringsflate": 4
+    },
+    "sok|papir-lys|1440": {},
+    "sok|papir-lys|390": {},
+    "sok|papir-mork|1440": {},
+    "sok|papir-mork|390": {},
+    "sok|glass|1440": {
+      "kontrast": 7,
+      "beroringsflate": 4
+    },
+    "sok|glass|390": {
+      "beroringsflate": 4
+    },
+    "nyheter|papir-lys|1440": {},
+    "nyheter|papir-lys|390": {},
+    "nyheter|papir-mork|1440": {
+      "kontrast": 1
+    },
+    "nyheter|papir-mork|390": {
+      "kontrast": 1
+    },
+    "nyheter|glass|1440": {
+      "kontrast": 7,
+      "beroringsflate": 4
+    },
+    "nyheter|glass|390": {
+      "beroringsflate": 4
+    },
+    "kalender|papir-lys|1440": {},
+    "kalender|papir-lys|390": {},
+    "kalender|papir-mork|1440": {},
+    "kalender|papir-mork|390": {},
+    "kalender|glass|1440": {},
+    "kalender|glass|390": {},
+    "familiekalender|papir-lys|1440": {},
+    "familiekalender|papir-lys|390": {},
+    "familiekalender|papir-mork|1440": {},
+    "familiekalender|papir-mork|390": {},
+    "familiekalender|glass|1440": {},
+    "familiekalender|glass|390": {},
+    "media|papir-lys|1440": {
+      "beroringsflate": 3
+    },
+    "media|papir-lys|390": {
+      "beroringsflate": 3
+    },
+    "media|papir-mork|1440": {
+      "beroringsflate": 3
+    },
+    "media|papir-mork|390": {
+      "beroringsflate": 3
+    },
+    "media|glass|1440": {
+      "beroringsflate": 3
+    },
+    "media|glass|390": {
+      "beroringsflate": 3
+    },
+    "media-kalender|papir-lys|1440": {},
+    "media-kalender|papir-lys|390": {
+      "beroringsflate": 6
+    },
+    "media-kalender|papir-mork|1440": {},
+    "media-kalender|papir-mork|390": {
+      "beroringsflate": 6
+    },
+    "media-kalender|glass|1440": {},
+    "media-kalender|glass|390": {
+      "beroringsflate": 6
+    },
+    "media-bibliotek|papir-lys|1440": {},
+    "media-bibliotek|papir-lys|390": {},
+    "media-bibliotek|papir-mork|1440": {},
+    "media-bibliotek|papir-mork|390": {},
+    "media-bibliotek|glass|1440": {},
+    "media-bibliotek|glass|390": {},
+    "media-nedlastinger|papir-lys|1440": {
+      "beroringsflate": 7
+    },
+    "media-nedlastinger|papir-lys|390": {
+      "beroringsflate": 7
+    },
+    "media-nedlastinger|papir-mork|1440": {
+      "beroringsflate": 7
+    },
+    "media-nedlastinger|papir-mork|390": {
+      "beroringsflate": 7
+    },
+    "media-nedlastinger|glass|1440": {
+      "beroringsflate": 7
+    },
+    "media-nedlastinger|glass|390": {
+      "beroringsflate": 7
+    },
+    "media-avspilling|papir-lys|1440": {
+      "kontrast": 2
+    },
+    "media-avspilling|papir-lys|390": {
+      "kontrast": 2
+    },
+    "media-avspilling|papir-mork|1440": {
+      "kontrast": 2
+    },
+    "media-avspilling|papir-mork|390": {
+      "kontrast": 2
+    },
+    "media-avspilling|glass|1440": {
+      "kontrast": 2
+    },
+    "media-avspilling|glass|390": {
+      "kontrast": 2
+    },
+    "media-nrk|papir-lys|1440": {},
+    "media-nrk|papir-lys|390": {},
+    "media-nrk|papir-mork|1440": {},
+    "media-nrk|papir-mork|390": {},
+    "media-nrk|glass|1440": {},
+    "media-nrk|glass|390": {},
+    "media-musikk|papir-lys|1440": {},
+    "media-musikk|papir-lys|390": {},
+    "media-musikk|papir-mork|1440": {},
+    "media-musikk|papir-mork|390": {},
+    "media-musikk|glass|1440": {},
+    "media-musikk|glass|390": {},
+    "familie|papir-lys|1440": {},
+    "familie|papir-lys|390": {},
+    "familie|papir-mork|1440": {},
+    "familie|papir-mork|390": {},
+    "familie|glass|1440": {
+      "kontrast": 2
+    },
+    "familie|glass|390": {},
+    "mat|papir-lys|1440": {
+      "kontrast": 8,
+      "beroringsflate": 5,
+      "etikett": 2
+    },
+    "mat|papir-lys|390": {
+      "kontrast": 8,
+      "beroringsflate": 5,
+      "etikett": 2
+    },
+    "mat|papir-mork|1440": {
+      "kontrast": 5,
+      "beroringsflate": 5,
+      "etikett": 2
+    },
+    "mat|papir-mork|390": {
+      "kontrast": 5,
+      "beroringsflate": 5,
+      "etikett": 2
+    },
+    "mat|glass|1440": {
+      "kontrast": 5,
+      "beroringsflate": 5,
+      "etikett": 2
+    },
+    "mat|glass|390": {
+      "kontrast": 5,
+      "beroringsflate": 5,
+      "etikett": 2
+    },
+    "gjoremal|papir-lys|1440": {},
+    "gjoremal|papir-lys|390": {},
+    "gjoremal|papir-mork|1440": {},
+    "gjoremal|papir-mork|390": {},
+    "gjoremal|glass|1440": {},
+    "gjoremal|glass|390": {},
+    "skjold|papir-lys|1440": {},
+    "skjold|papir-lys|390": {},
+    "skjold|papir-mork|1440": {},
+    "skjold|papir-mork|390": {},
+    "skjold|glass|1440": {},
+    "skjold|glass|390": {},
+    "studie|papir-lys|1440": {
+      "kontrast": 1,
+      "beroringsflate": 2
+    },
+    "studie|papir-lys|390": {
+      "kontrast": 1,
+      "beroringsflate": 2
+    },
+    "studie|papir-mork|1440": {
+      "beroringsflate": 2
+    },
+    "studie|papir-mork|390": {
+      "beroringsflate": 2
+    },
+    "studie|glass|1440": {
+      "beroringsflate": 2
+    },
+    "studie|glass|390": {
+      "beroringsflate": 2
+    },
+    "vaer|papir-lys|1440": {
+      "beroringsflate": 2
+    },
+    "vaer|papir-lys|390": {
+      "beroringsflate": 2
+    },
+    "vaer|papir-mork|1440": {
+      "beroringsflate": 2
+    },
+    "vaer|papir-mork|390": {
+      "beroringsflate": 2
+    },
+    "vaer|glass|1440": {
+      "beroringsflate": 2
+    },
+    "vaer|glass|390": {
+      "beroringsflate": 2
+    },
+    "domener|papir-lys|1440": {
+      "kontrast": 3
+    },
+    "domener|papir-lys|390": {
+      "kontrast": 3
+    },
+    "domener|papir-mork|1440": {
+      "kontrast": 7
+    },
+    "domener|papir-mork|390": {
+      "kontrast": 7
+    },
+    "domener|glass|1440": {},
+    "domener|glass|390": {},
+    "rom|papir-lys|1440": {},
+    "rom|papir-lys|390": {},
+    "rom|papir-mork|1440": {},
+    "rom|papir-mork|390": {},
+    "rom|glass|1440": {},
+    "rom|glass|390": {},
+    "bursdager|papir-lys|1440": {},
+    "bursdager|papir-lys|390": {},
+    "bursdager|papir-mork|1440": {
+      "kontrast": 13
+    },
+    "bursdager|papir-mork|390": {
+      "kontrast": 13
+    },
+    "bursdager|glass|1440": {},
+    "bursdager|glass|390": {},
+    "smarthjem|papir-lys|1440": {},
+    "smarthjem|papir-lys|390": {},
+    "smarthjem|papir-mork|1440": {
+      "kontrast": 5
+    },
+    "smarthjem|papir-mork|390": {
+      "kontrast": 4
+    },
+    "smarthjem|glass|1440": {
+      "kontrast": 4
+    },
+    "smarthjem|glass|390": {
+      "kontrast": 4
+    },
+    "innst-utseende|papir-lys|1440": {
+      "kontrast": 15
+    },
+    "innst-utseende|papir-lys|390": {
+      "kontrast": 9
+    },
+    "innst-utseende|papir-mork|1440": {},
+    "innst-utseende|papir-mork|390": {},
+    "innst-utseende|glass|1440": {
+      "kontrast": 8,
+      "beroringsflate": 4
+    },
+    "innst-utseende|glass|390": {
+      "kontrast": 1,
+      "beroringsflate": 4
+    },
+    "innst-integrasjoner|papir-lys|1440": {
+      "kontrast": 33
+    },
+    "innst-integrasjoner|papir-lys|390": {
+      "kontrast": 27
+    },
+    "innst-integrasjoner|papir-mork|1440": {
+      "kontrast": 8
+    },
+    "innst-integrasjoner|papir-mork|390": {
+      "kontrast": 8
+    },
+    "innst-integrasjoner|glass|1440": {
+      "kontrast": 16,
+      "beroringsflate": 4
+    },
+    "innst-integrasjoner|glass|390": {
+      "kontrast": 9,
+      "beroringsflate": 4
+    },
+    "innst-konto|papir-lys|1440": {
+      "kontrast": 22
+    },
+    "innst-konto|papir-lys|390": {
+      "kontrast": 16
+    },
+    "innst-konto|papir-mork|1440": {
+      "kontrast": 1
+    },
+    "innst-konto|papir-mork|390": {
+      "kontrast": 1
+    },
+    "innst-konto|glass|1440": {
+      "kontrast": 9,
+      "beroringsflate": 4
+    },
+    "innst-konto|glass|390": {
+      "kontrast": 2,
+      "beroringsflate": 4
+    },
+    "innst-backup|papir-lys|1440": {
+      "kontrast": 12,
+      "beroringsflate": 1,
+      "etikett": 2
+    },
+    "innst-backup|papir-lys|390": {
+      "kontrast": 6,
+      "beroringsflate": 1,
+      "etikett": 2
+    },
+    "innst-backup|papir-mork|1440": {
+      "beroringsflate": 1,
+      "etikett": 2
+    },
+    "innst-backup|papir-mork|390": {
+      "beroringsflate": 1,
+      "etikett": 2
+    },
+    "innst-backup|glass|1440": {
+      "kontrast": 8,
+      "beroringsflate": 5,
+      "etikett": 2
+    },
+    "innst-backup|glass|390": {
+      "kontrast": 1,
+      "beroringsflate": 5,
+      "etikett": 2
+    },
+    "innst-varsler|papir-lys|1440": {
+      "kontrast": 15
+    },
+    "innst-varsler|papir-lys|390": {
+      "kontrast": 9
+    },
+    "innst-varsler|papir-mork|1440": {
+      "kontrast": 1
+    },
+    "innst-varsler|papir-mork|390": {
+      "kontrast": 1
+    },
+    "innst-varsler|glass|1440": {
+      "kontrast": 9,
+      "beroringsflate": 4
+    },
+    "innst-varsler|glass|390": {
+      "kontrast": 2,
+      "beroringsflate": 4
+    },
+    "innst-reise|papir-lys|1440": {
+      "kontrast": 8
+    },
+    "innst-reise|papir-lys|390": {
+      "kontrast": 2
+    },
+    "innst-reise|papir-mork|1440": {},
+    "innst-reise|papir-mork|390": {},
+    "innst-reise|glass|1440": {
+      "kontrast": 8,
+      "beroringsflate": 4
+    },
+    "innst-reise|glass|390": {
+      "kontrast": 1,
+      "beroringsflate": 4
+    },
+    "innst-nyheter|papir-lys|1440": {
+      "kontrast": 11,
+      "beroringsflate": 1
+    },
+    "innst-nyheter|papir-lys|390": {
+      "kontrast": 5,
+      "beroringsflate": 1
+    },
+    "innst-nyheter|papir-mork|1440": {
+      "kontrast": 1,
+      "beroringsflate": 1
+    },
+    "innst-nyheter|papir-mork|390": {
+      "kontrast": 1,
+      "beroringsflate": 1
+    },
+    "innst-nyheter|glass|1440": {
+      "kontrast": 9,
+      "beroringsflate": 5
+    },
+    "innst-nyheter|glass|390": {
+      "kontrast": 2,
+      "beroringsflate": 5
+    },
+    "finans-oversikt|papir-lys|1440": {},
+    "finans-oversikt|papir-lys|390": {
+      "beroringsflate": 3
+    },
+    "finans-oversikt|papir-mork|1440": {
+      "kontrast": 5
+    },
+    "finans-oversikt|papir-mork|390": {
+      "beroringsflate": 3
+    },
+    "finans-oversikt|glass|1440": {
+      "kontrast": 5
+    },
+    "finans-oversikt|glass|390": {
+      "beroringsflate": 3
+    },
+    "finans-transaksjoner|papir-lys|1440": {},
+    "finans-transaksjoner|papir-lys|390": {},
+    "finans-transaksjoner|papir-mork|1440": {},
+    "finans-transaksjoner|papir-mork|390": {},
+    "finans-transaksjoner|glass|1440": {},
+    "finans-transaksjoner|glass|390": {},
+    "finans-budsjett|papir-lys|1440": {},
+    "finans-budsjett|papir-lys|390": {},
+    "finans-budsjett|papir-mork|1440": {},
+    "finans-budsjett|papir-mork|390": {},
+    "finans-budsjett|glass|1440": {},
+    "finans-budsjett|glass|390": {},
+    "finans-abonnementer|papir-lys|1440": {
+      "kontrast": 11,
+      "beroringsflate": 9
+    },
+    "finans-abonnementer|papir-lys|390": {},
+    "finans-abonnementer|papir-mork|1440": {
+      "kontrast": 5,
+      "beroringsflate": 9
+    },
+    "finans-abonnementer|papir-mork|390": {},
+    "finans-abonnementer|glass|1440": {
+      "kontrast": 5,
+      "beroringsflate": 9
+    },
+    "finans-abonnementer|glass|390": {},
+    "finans-faste|papir-lys|1440": {
+      "kontrast": 4
+    },
+    "finans-faste|papir-lys|390": {},
+    "finans-faste|papir-mork|1440": {
+      "kontrast": 4
+    },
+    "finans-faste|papir-mork|390": {},
+    "finans-faste|glass|1440": {
+      "kontrast": 4
+    },
+    "finans-faste|glass|390": {},
+    "finans-kvitteringer|papir-lys|1440": {
+      "kontrast": 6
+    },
+    "finans-kvitteringer|papir-lys|390": {},
+    "finans-kvitteringer|papir-mork|1440": {
+      "kontrast": 2
+    },
+    "finans-kvitteringer|papir-mork|390": {},
+    "finans-kvitteringer|glass|1440": {
+      "kontrast": 2
+    },
+    "finans-kvitteringer|glass|390": {},
+    "finans-boliger|papir-lys|1440": {
+      "beroringsflate": 1
+    },
+    "finans-boliger|papir-lys|390": {},
+    "finans-boliger|papir-mork|1440": {
+      "kontrast": 1,
+      "beroringsflate": 1
+    },
+    "finans-boliger|papir-mork|390": {},
+    "finans-boliger|glass|1440": {
+      "kontrast": 1,
+      "beroringsflate": 1
+    },
+    "finans-boliger|glass|390": {},
+    "finans-aksjer|papir-lys|1440": {
+      "kontrast": 7
+    },
+    "finans-aksjer|papir-lys|390": {
+      "beroringsflate": 1
+    },
+    "finans-aksjer|papir-mork|1440": {
+      "kontrast": 3
+    },
+    "finans-aksjer|papir-mork|390": {
+      "beroringsflate": 1
+    },
+    "finans-aksjer|glass|1440": {
+      "kontrast": 3
+    },
+    "finans-aksjer|glass|390": {
+      "beroringsflate": 1
+    },
+    "finans-import|papir-lys|1440": {
+      "kontrast": 2,
+      "etikett": 2
+    },
+    "finans-import|papir-lys|390": {},
+    "finans-import|papir-mork|1440": {
+      "kontrast": 5,
+      "etikett": 2
+    },
+    "finans-import|papir-mork|390": {},
+    "finans-import|glass|1440": {
+      "kontrast": 5,
+      "etikett": 2
+    },
+    "finans-import|glass|390": {},
+    "finans-planlegging|papir-lys|1440": {},
+    "finans-planlegging|papir-lys|390": {},
+    "finans-planlegging|papir-mork|1440": {},
+    "finans-planlegging|papir-mork|390": {},
+    "finans-planlegging|glass|1440": {},
+    "finans-planlegging|glass|390": {}
   }
 }
