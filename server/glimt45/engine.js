@@ -4,7 +4,7 @@
 //   6 kontroller (les tilbake fra datakilden) · 7 svar (kort og sant, ett spørsmål når noe mangler, personlighet til slutt).
 // Destruktive verktøy krever bekreftelse (token). Verktøyvalg logges uten personopplysninger.
 import { createHash, randomBytes } from 'node:crypto';
-import { db, kv } from '../db.js';
+import { db, q, kv } from '../db.js';
 import { TOOL45, setCtx45, ctxOf45, kr45, eventLabel45 } from './tools.js';
 import { localPlan45, modelAvailable45, modelInfo45, intentOfCalls45, _glimtModel45 } from './plan.js';
 import { modelPlan47, planGap47 } from './plan47.js';
@@ -38,7 +38,6 @@ installTaskHooks46(); installPosterDecorator46(); // Gjøremål: plukk ut, ikke 
 
 db.exec(`CREATE TABLE IF NOT EXISTS glimt45_requests (user_id TEXT NOT NULL, key TEXT NOT NULL, state TEXT NOT NULL, response TEXT, created INTEGER NOT NULL, PRIMARY KEY (user_id, key));
 CREATE TABLE IF NOT EXISTS glimt45_confirm (token TEXT PRIMARY KEY, user_id TEXT NOT NULL, payload TEXT NOT NULL, created INTEGER NOT NULL, used INTEGER NOT NULL DEFAULT 0);`);
-const q = (sql) => db.prepare(sql);
 const IMPLICIT_MS = 30_000;
 const CONFIRM_MS = 10 * 60_000;
 const LOG_KEY = 'glimt45_log';

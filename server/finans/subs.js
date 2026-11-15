@@ -1,11 +1,10 @@
 // Subscription OS: kategorier, månedsgraf, abonnementshelse, AI-sparing, kommende trekk,
 // «Pris økt» fra banktransaksjonene og kandidater (faste trekk som ikke er registrert ennå).
 // Alt regnes ut fra fh_subscriptions og fh_transactions; ingenting her endrer data unntatt priceCheck().
-import { db, me } from './db.js';
+import { db, q, me } from './db.js';
 import { CYCLE_MONTHS, perMonth, seriesOf, chargesBetween } from './cycles.js';
 import { osloDate } from '../dates/oslo.js';
 
-const q = (sql) => db.prepare(sql);
 export { CYCLE_MONTHS }; // syklustabellen ligger i cycles.js
 
 // Kategorier i grafen og kalenderen. Rekkefølgen er fargerekkefølgen i grensesnittet.

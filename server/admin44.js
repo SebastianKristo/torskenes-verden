@@ -23,7 +23,7 @@
 import { Hono } from 'hono';
 import { createHash } from 'node:crypto';
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
-import { db, kv, OWNER } from './db.js';
+import { db, q, kv, OWNER } from './db.js';
 import { userInfo, isAdmin, listUsers, checkPassword, clientIp, loginBlocked, loginFailed, loginSucceeded, cookieSecure, sessionUser } from './auth.js';
 import { issueToken, revokeTokenOf, tokenAccessOf } from './finans/routes.js';
 import { consumeReauth } from './reauth.js';
@@ -35,7 +35,6 @@ db.exec(`CREATE TABLE IF NOT EXISTS imp44 (tok_hash TEXT PRIMARY KEY, token_id T
   expires INTEGER NOT NULL, renewed INTEGER NOT NULL, ended INTEGER, changes INTEGER NOT NULL DEFAULT 0);
 CREATE TABLE IF NOT EXISTS owner44_transfer (id INTEGER PRIMARY KEY AUTOINCREMENT, from_user TEXT NOT NULL, to_user TEXT NOT NULL, by_user TEXT NOT NULL, created INTEGER NOT NULL,
   expires INTEGER NOT NULL, status TEXT NOT NULL DEFAULT 'pending', decided INTEGER);`);
-const q = (sql) => db.prepare(sql);
 
 export const IMP_TTL_MS = 30 * 60_000;
 const IMP_COOKIE = 'hl_imp';

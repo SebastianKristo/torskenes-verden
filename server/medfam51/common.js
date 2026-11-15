@@ -1,4 +1,5 @@
 // Prompt 51 (MEDFAM51): felles hjelpere for Familie og Media (fase 4). Se server/medfam51/index.js for oversikten.
+import { dtf } from '../intl-format.js'; // gjenbrukte Intl.DateTimeFormat
 export const MOCK = () => process.env.MOCK_DATA === '1';
 export const MIN = 60_000, HOUR = 3_600_000, DAY = 86_400_000;
 export const GB = 1024 ** 3, MB = 1024 ** 2, TB = 1024 ** 4;
@@ -9,14 +10,14 @@ export const num = (v, lo, hi) => { const x = typeof v === 'string' && v.trim() 
 export const body = async (c) => { const b = await c.req.json().catch(() => ({})); return b && typeof b === 'object' && !Array.isArray(b) ? b : {}; };
 export const bad = (c, error, status = 400, extra = {}) => c.json({ error, ...extra }, status);
 export const iso = (t) => (t ? new Date(t).toISOString() : null);
-export const hm = (t) => new Intl.DateTimeFormat('nb-NO', { timeZone: TZ, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(t));
+export const hm = (t) => dtf('nb-NO', { timeZone: TZ, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(t));
 export const ymd = (t = Date.now()) => new Intl.DateTimeFormat('sv-SE', { timeZone: TZ }).format(new Date(t));
 const nb1 = (n) => String(Math.round(n * 10) / 10).replace('.', ',');
 export const sizeText = (b) => (!b ? '0 GB' : b < GB ? `${Math.max(1, Math.round(b / MB))} MB` : b >= TB ? `${nb1(b / TB)} TB` : `${nb1(b / GB)} GB`);
 export const minText = (m) => { m = Math.max(0, Math.round(m)); return m < 60 ? `${m} min` : m % 60 ? `${Math.floor(m / 60)} t ${m % 60} min` : `${m / 60} t`; };
 export const dayText = (t, now = Date.now()) => {
   const d = ymd(t), today = ymd(now), tomorrow = ymd(now + DAY);
-  const wd = new Intl.DateTimeFormat('nb-NO', { timeZone: TZ, weekday: 'long', day: 'numeric', month: 'long' }).format(new Date(t));
+  const wd = dtf('nb-NO', { timeZone: TZ, weekday: 'long', day: 'numeric', month: 'long' }).format(new Date(t));
   return d === today ? 'i dag' : d === tomorrow ? 'i morgen' : wd;
 };
 /** Oslo-tid «YYYY-MM-DDTHH:MM» eller ISO → ms. */

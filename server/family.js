@@ -7,10 +7,11 @@ import { readFile, writeFile, mkdir, unlink } from 'node:fs/promises';
 import { join } from 'node:path';
 import { bodyLimit } from 'hono/body-limit';
 import { config } from './config.js';
-import { db, kv, OWNER } from './db.js';
+import { db, q, kv, OWNER } from './db.js';
 import { userInfo, listUsers, sessionUser } from './auth.js';
 import { bearerOk } from './finans/routes.js';
 import { broadcast } from './realtime.js';
+import { dtf } from './intl-format.js'; // gjenbrukte Intl.DateTimeFormat
 import { registerJob } from './jobs/index.js';
 import { osloDate } from './dates/oslo.js';
 
@@ -54,7 +55,6 @@ if (!db.prepare('PRAGMA table_info(family_zone)').all().some((c) => c.name === '
   db.exec('ALTER TABLE family_zone ADD COLUMN icon TEXT');
 }
 
-const q = (sql) => db.prepare(sql);
 const HEALTH_KEYS = ['steps', 'restingHr', 'hr', 'sleep', 'activeKcal', 'week'];
 const ACTIVITIES = ['still', 'walking', 'running', 'cycling', 'driving'];
 const COLOR = /^#[0-9a-f]{6}$/i;
@@ -468,7 +468,7 @@ export function initials(name) {
 }
 function clock(ts, now = Date.now()) {
   const tz = 'Europe/Oslo';
-  const p = Object.fromEntries(new Intl.DateTimeFormat('nb-NO', { timeZone: tz, day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
+  const p = Object.fromEntries(dtf('nb-NO', { timeZone: tz, day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
     .formatToParts(new Date(ts)).map((x) => [x.type, x.value]));
   const day = (t) => new Intl.DateTimeFormat('sv-SE', { timeZone: tz }).format(new Date(t));
   return day(ts) === day(now) ? `${p.hour}:${p.minute}` : `${p.day}.${p.month}. ${p.hour}:${p.minute}`;
@@ -790,7 +790,7 @@ function hhmm50(v) {
   if (typeof v === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(v)) return v;
   const t = typeof v === 'number' ? (v < 1e12 ? v * 1000 : v) : Date.parse(String(v ?? ''));
   if (!Number.isFinite(t) || v == null || v === '') return null;
-  return new Intl.DateTimeFormat('nb-NO', { timeZone: 'Europe/Oslo', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(t));
+  return dtf('nb-NO', { timeZone: 'Europe/Oslo', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(t));
 }
 const hi = (col) => `CASE WHEN excluded.${col} IS NULL THEN ${col} WHEN ${col} IS NULL THEN excluded.${col} ELSE MAX(${col}, excluded.${col}) END`;
 api.post('/health', async (c) => {

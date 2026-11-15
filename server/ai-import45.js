@@ -20,14 +20,13 @@ import { join, resolve } from 'node:path';
 import { createInflateRaw } from 'node:zlib';
 import { StringDecoder } from 'node:string_decoder';
 import { config } from './config.js';
-import { db, kv } from './db.js';
+import { db, q, kv } from './db.js';
 import { authOrToken } from './mobile.js';
 import { addMemory43, removeMemory43, splitMemory43 } from './ai-memory43.js';
 import { messageText43, memoryFrom43 } from './claude-import43.js';
 // Prompt 46 (SERVER46): minne-eksporten fra Claude (claude-memory-<dato>/areas/*.md) – se claude-memory46.js.
 import { isMemoryMd46, parseMemoryMd46, areasPreview46, importAreas46, undoAreas46, embedAreas46, LIMITS46 } from './claude-memory46.js';
 
-const q = (sql) => db.prepare(sql);
 export const LIMITS45 = { upload: 1024 ** 3, chunk: 16 * 1024 ** 2, unzipped: 2 * 1024 ** 3, entry: 1024 ** 3, entries: 20_000, smallFile: 64 * 1024 ** 2, conversations: 50_000, msgChars: 200_000 };
 const TTL = 60 * 60_000;
 const DIR = () => resolve(config.dataDir, 'ai-import45');

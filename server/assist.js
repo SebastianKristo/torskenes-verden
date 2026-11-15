@@ -56,7 +56,7 @@
 // og kallet logges i ai_audit.
 import { Hono } from 'hono';
 import { randomBytes, randomUUID } from 'node:crypto';
-import { db, kv } from './db.js';
+import { db, q, kv } from './db.js';
 import { authOrToken, homeDeparturesOf } from './mobile.js';
 import { runAsUser } from './settings.js';
 import { broadcast } from './realtime.js';
@@ -124,7 +124,6 @@ db.exec(`CREATE TABLE IF NOT EXISTS assist_jobs (
 );
 CREATE INDEX IF NOT EXISTS assist_jobs_user ON assist_jobs(user_id, created);`);
 try { db.exec('ALTER TABLE assist_jobs ADD COLUMN handoff INTEGER NOT NULL DEFAULT 0'); } catch { /* finnes */ } // prompt 32
-const q = (sql) => db.prepare(sql);
 
 /* ---------------- Tekst ---------------- */
 

@@ -6,13 +6,12 @@
 //   1. faste mønstre i kode («Kari er søsteren min», «middag med Kari, søsteren min», «min søster Kari», «Frisør hos Nina»),
 //   2. den lokale modellen via gaten (bakgrunnsprioritet, think:false, JSON-schema, localOnly – «finansdata forlater aldri huset»).
 // Kjente fakta, åpne forslag og tidligere avviste forslag foreslås aldri på nytt.
-import { db, kv } from '../db.js';
+import { db, q, kv } from '../db.js';
 import { hasWord47, words47 } from '../glimt45/words47.js';
 import { normName } from '../../public/js/quick-time.js';
 import { DIN, typeOfWord } from '../glimt-memory.js';
 import { memRows63, keyOf63, pendingByKey63, classify63 } from './store.js';
 
-const q = (sql) => db.prepare(sql);
 const DAY = 86400_000;
 export const MAX_SNIPPETS63 = 40, MAX_PROPOSALS63 = 10;
 const clip = (s, n = 300) => { const t = String(s ?? '').replace(/\s+/g, ' ').trim(); return t.length > n ? `${t.slice(0, n)} …` : t; };

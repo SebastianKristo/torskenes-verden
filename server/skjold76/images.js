@@ -6,14 +6,13 @@ import { join, resolve } from 'node:path';
 import { randomBytes, createHmac, timingSafeEqual } from 'node:crypto';
 import { config } from '../config.js';
 import { sessionSecret86 } from '../secret86.js'; // prompt 86
-import { db } from '../db.js';
+import { db, q } from '../db.js';
 import { toJpeg50, sniffImage50, magick50 } from '../img50.js';
 import { now76, thumbOf76 } from './store.js';
 
 export const MAX_IN76 = 10 * 1024 * 1024;
 export const DIR76 = resolve(config.dataDir, 'skjold76');
 mkdirSync(DIR76, { recursive: true });
-const q = (sql) => db.prepare(sql);
 export const NAME_RE76 = /^[0-9a-f]{20}(?:_t)?\.(?:jpg|png|webp)$/;
 const EXT = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
 export const MIME76 = { jpg: 'image/jpeg', png: 'image/png', webp: 'image/webp' };

@@ -7,10 +7,9 @@
 import { randomBytes } from 'node:crypto';
 import { mkdirSync, readFileSync, writeFileSync, existsSync, rmSync, readdirSync, renameSync, statSync } from 'node:fs';
 import { join } from 'node:path';
-import { db } from '../db.js';
+import { db, q } from '../db.js';
 import { config } from '../config.js';
 
-const q = (sql) => db.prepare(sql);
 db.exec(`CREATE TABLE IF NOT EXISTS quality64_runs (id TEXT PRIMARY KEY, started_at INTEGER NOT NULL, finished_at INTEGER, status TEXT NOT NULL,
   trigger TEXT NOT NULL DEFAULT 'schedule', user_id TEXT, data TEXT NOT NULL DEFAULT '{}');
 CREATE INDEX IF NOT EXISTS quality64_runs_started ON quality64_runs(started_at);

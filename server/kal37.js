@@ -13,13 +13,13 @@
 // PUT  /api/kalender/subjects/:key {color|null} → lagrer i layout.subjectColors (samme felt som appene)
 // GET  /api/kalender/geo?q=Hoffsveien 4 → {found, address, label, lat, lon, map} (cache permanent, bom prøves igjen etter 1 t)
 import { Hono } from 'hono';
-import { db, kv } from './db.js';
+import { db, q, kv } from './db.js';
 import { authOrToken, layoutOf } from './mobile.js';
 import { addEventDecorator } from './calendar.js';
 import { NOMINATIM_UA } from './family.js';
+import { dtf } from './intl-format.js'; // gjenbrukte Intl.DateTimeFormat
 
 const MOCK = process.env.MOCK_DATA === '1';
-const q = (sql) => db.prepare(sql);
 db.exec(`CREATE TABLE IF NOT EXISTS study_subject_colors (user_id TEXT NOT NULL, key TEXT NOT NULL, color TEXT NOT NULL, created INTEGER NOT NULL, PRIMARY KEY (user_id, key));
 CREATE TABLE IF NOT EXISTS geo37_cache (q TEXT PRIMARY KEY, result TEXT, fail INTEGER, ts INTEGER NOT NULL);`);
 
@@ -166,7 +166,7 @@ export function parseIntent37(text) {
 }
 const WD = ['søndag', 'mandag', 'tirsdag', 'onsdag', 'torsdag', 'fredag', 'lørdag'];
 const MON = ['jan.', 'feb.', 'mars', 'apr.', 'mai', 'juni', 'juli', 'aug.', 'sep.', 'okt.', 'nov.', 'des.'];
-const hm = (iso) => new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Oslo', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(iso)).replace(':', ':');
+const hm = (iso) => dtf('en-GB', { timeZone: 'Europe/Oslo', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(iso)).replace(':', ':');
 const dayTxt = (d) => `${WD[new Date(d + 'T00:00:00Z').getUTCDay()]} ${+d.slice(8)}. ${MON[+d.slice(5, 7) - 1]}`;
 const diff = (a, b) => Math.round((Date.parse(b + 'T00:00:00Z') - Date.parse(a + 'T00:00:00Z')) / 86_400_000);
 const isTrialEv = (e) => e.source === 'trials' || e.kind === 'trial' || /-prøven slutter/i.test(e.title);

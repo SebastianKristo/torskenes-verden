@@ -10,11 +10,12 @@
 //         status 'kept' gjør prøven om til et vanlig abonnement (pris etterpå, neste trekk = sluttdato) → {…trial, subscription}
 // Varslene sendes av server/trials-notify.js (kl. 09:00 Oslo ends_at − offset, siste varsel 18:00 på sluttdagen).
 // Kalender: prøvene vises som heldagshendelser i Privat (virtuell kilde «trials», se trialCalendarItems).
-import { db } from '../db.js';
+import { db, q } from '../db.js';
 import { parseTrial, trialSchedule, trialTitle, trialBody, trialBadge, trialPreview, cancelUrlFor, CANCEL_LINKS, REMIND_OPTIONS, DEFAULT_OFFSETS, daysBetween, addDaysISO } from '../../public/js/trial-parse.js';
 import { osloTodayISO } from '../../public/js/quick-time.js';
 import { osloToUtc } from '../dates/oslo.js';
 import { parseDate } from '../dates/parse.js';
+import { dtf } from '../intl-format.js'; // gjenbrukte Intl.DateTimeFormat
 
 db.exec(`CREATE TABLE IF NOT EXISTS trials (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -33,7 +34,6 @@ db.exec(`CREATE TABLE IF NOT EXISTS trials (
   subscription_id INTEGER
 );
 CREATE INDEX IF NOT EXISTS trials_user ON trials(user_id, status, ends_at);`);
-const q = (sql) => db.prepare(sql);
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const validDate = (s) => DATE.test(s) && new Date(s + 'T00:00:00Z').toISOString().slice(0, 10) === s;

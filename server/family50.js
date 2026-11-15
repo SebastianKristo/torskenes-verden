@@ -6,17 +6,17 @@
 // Personvern: samme regler som family.js (posisjon og helse bare når personen deler med deg). Sjekk inn deler posisjonen BARE i selve
 // innsjekken, og bare med mottakerne (og avsenderen). Ingen kontinuerlig deling. Eldre /api/family-endepunkter er urørt.
 import { Hono } from 'hono';
-import { db, kv } from './db.js';
+import { db, q, kv } from './db.js';
 import { userInfo, sessionUser } from './auth.js';
 import { bearerOk } from './finans/routes.js';
 import { broadcast } from './realtime.js';
 import { notifyUser } from './notify.js';
 import { family50 as F, placesChanged50, deletePlace50, placesVersion50, areaOut50, setPlaceEventHook50 } from './family.js';
 import { schoolPlaceOf50, ruterPlaceEvents50 } from './ruter41.js';
+import { dtf } from './intl-format.js'; // gjenbrukte Intl.DateTimeFormat
 import { registerJob } from './jobs/index.js';
 import { osloDate } from './dates/oslo.js';
 
-const q = (sql) => db.prepare(sql);
 const MIN = 60_000, HOUR = 3_600_000, DAY = 86_400_000;
 const FRESH = 15 * MIN;
 
@@ -27,7 +27,7 @@ setPlaceEventHook50((u, events) => ruterPlaceEvents50(u, events));
 
 const fmtInt = (n) => (n == null ? null : new Intl.NumberFormat('nb-NO').format(Math.round(n)).replace(/\s/g, ' '));
 const dec1 = (n) => String(Math.round(n * 10) / 10).replace('.', ',');
-const hm = (t) => new Intl.DateTimeFormat('nb-NO', { timeZone: 'Europe/Oslo', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(t));
+const hm = (t) => dtf('nb-NO', { timeZone: 'Europe/Oslo', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(t));
 const ymdOslo = (t = Date.now()) => osloDate(t);
 /** Midnatt i Oslo (ms) for dagen t ligger i. */
 export function osloMidnight50(t = Date.now()) {

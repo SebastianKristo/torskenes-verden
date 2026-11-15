@@ -2,7 +2,7 @@
 // Hvert verktøy: {name, module, description, destructive, parameters (JSON-skjema), validate(args, ctx) → {args}|{ask}|{error},
 // run(args, ctx) → {status:'done'|'failed', result, cards, facts}, verify?(result, ctx) → bool}.
 // Verktøyene ser bare den innloggede brukerens data (runAsUser + user_id i alle spørringer). Boliger/Matplan røres ikke her.
-import { db, kv } from '../db.js';
+import { db, q, kv } from '../db.js';
 import { runAsUser } from '../settings.js';
 import { broadcast } from '../realtime.js';
 import { eventsFor, createEvent, updateEvent, deleteEvent, findEvent, eventInput, normText } from '../calendar.js';
@@ -11,14 +11,14 @@ import { ensureIndex42, merchantKey42, synonymsOf42, stem42, fold42, norm42 } fr
 import { ensureLedger, settings as fhSettings } from '../finans/db.js';
 import { inOriginal46 } from './tasks46.js';
 import { whenOf45, parsePeriod45, parseAmount45, parseDate45, parseTime45, isIsoDate45, isHm45, addDays45, addMin45, todayOslo45, longDate45, relDate45, mondayOf45, MON45 } from './dates.js';
+import { dtf } from '../intl-format.js'; // gjenbrukte Intl.DateTimeFormat
 
-const q = (sql) => db.prepare(sql);
 const pad = (n) => String(n).padStart(2, '0');
 const cap = (s) => String(s ?? '').replace(/^\s*(.)/, (m, c) => c.toUpperCase());
 const str = (v, n = 200) => (typeof v === 'string' ? v.replace(/[\u0000-\u001f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, n) : '');
 const krN = (v) => { const r = Math.round(Math.abs(+v) * 100) / 100; return (Number.isInteger(r) ? r.toLocaleString('nb-NO') : r.toLocaleString('nb-NO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })).replace(/\s/g, ' '); };
 export const kr45 = (v) => `${krN(v)} kr`;
-const osloHm = (iso) => { const p = Object.fromEntries(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Oslo', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date(iso)).map((x) => [x.type, x.value])); return `${p.hour}:${p.minute}`; };
+const osloHm = (iso) => { const p = Object.fromEntries(dtf('en-GB', { timeZone: 'Europe/Oslo', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date(iso)).map((x) => [x.type, x.value])); return `${p.hour}:${p.minute}`; };
 const hmOfEv = (e) => (e.allDay ? null : (isHm45(e.s) ? e.s : osloHm(e.start)));
 const endHmOfEv = (e) => (e.allDay ? null : osloHm(e.end));
 const durMin = (e) => (e.allDay ? 0 : Math.max(15, Math.round((Date.parse(e.end) - Date.parse(e.start)) / 60000)));

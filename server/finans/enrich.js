@@ -3,7 +3,7 @@
 // Sammendrag: heuristikk straks, AI fyller inn kort og lang tekst i bakgrunnen.
 import { mkdir, readFile, writeFile, stat } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
-import { db, OWNER, kv } from '../db.js';
+import { db, q, OWNER, kv } from '../db.js';
 import { config } from '../config.js';
 import { settings, me } from './db.js';
 import { runAsUser } from '../settings.js';
@@ -11,7 +11,6 @@ import { askJson } from './ai.js';
 import { externalBlocked48 } from '../receipts48/settings.js'; // prompt 48: «Finansdata forlater aldri huset»
 import { matchMerchant, fileForDomain, isManualDomain } from '../logos/match.js';
 
-const q = (sql) => db.prepare(sql);
 
 const DOMAINS = {
   ruter: 'ruter.no', 'lånekass': 'lanekassen.no', lanekass: 'lanekassen.no', vipps: 'vipps.no', akademika: 'akademika.no', proton: 'proton.me',

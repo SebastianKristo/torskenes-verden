@@ -3,13 +3,12 @@
 //   «Ukerapport»   – kind 'weekly', én rad per bruker, søndag kl. 20:00
 // De synes i «Faste oppgaver», kan pauses (ikke slettes/endres), og en pauset oppgave settes aldri på igjen automatisk.
 // sched62/run.js kaller computeSystem64 for kind 'quality'/'weekly'. Nattevalen startes og går i bakgrunnen (scheduleren venter ikke).
-import { db } from '../db.js';
+import { db, q } from '../db.js';
 import { quality64, serverQuality64 } from './settings.js';
 import { startEval64 } from './evalrun.js';
 import { weeklyPush64, ingest64 } from './weekly.js';
 import { adminUsers64 } from './notify64.js';
 
-const q = (sql) => db.prepare(sql);
 export const SYSTEM64 = Object.freeze({
   quality: { title: 'Nattlig eval', what: 'kjør eval-testene mot den lokale modellen og varsle hvis noe grønt har blitt rødt', time: '02:00', freq: 'DAILY', byday: [],
     text: 'hver natt kl. 02', label: 'Hver natt kl. 02:00',

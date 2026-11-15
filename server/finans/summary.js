@@ -1,9 +1,8 @@
 // Prompt 27: kort tekstsammendrag av Finans for Chat («Mine data»). Bare tall og navn på butikker/kategorier for brukeren selv,
 // ingen kontonumre, kortdata eller varelinjer. Brukes av /api/chat/mydata og systemprompten når «Mine data» er på.
-import { db, me } from './db.js';
+import { db, q, me } from './db.js';
 import { perMonthSql } from './cycles.js';
 
-const q = (sql) => db.prepare(sql);
 const kr = (ore) => `${new Intl.NumberFormat('nb-NO', { maximumFractionDigits: 0 }).format(Math.round(Math.abs(ore) / 100)).replace(/\s/g, ' ')} kr`;
 const dd = (d) => `${d.slice(8, 10)}.${d.slice(5, 7)}`;
 

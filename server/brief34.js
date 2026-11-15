@@ -52,6 +52,7 @@ import { todosForBrief } from './tasks-glimt37.js'; // prompt 37: Gjøremål-kor
 import { bibleForBrief } from './bible37.js'; // prompt 37: dagens bibelvers (bare med modulen)
 import { profileName } from './profiles37.js'; // prompt 37: profilnavnet i hilsenen
 import { applyBriefCards73, guideFilter73 } from './brief73.js'; // prompt 73: bare kortene som er på (Innhold i briefen)
+import { dtf } from './intl-format.js'; // gjenbrukte Intl.DateTimeFormat
 
 const MOCK = process.env.MOCK_DATA === '1';
 import { registerJob } from './jobs/index.js';
@@ -62,7 +63,7 @@ const WINDOWS = [['morning', 6, 30], ['day', 11, 0], ['evening', 17, 0]];
 const OSLO = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Oslo', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
 const osloParts = (t = Date.now()) => { const p = Object.fromEntries(OSLO.formatToParts(new Date(t)).map((x) => [x.type, x.value])); return { date: `${p.year}-${p.month}-${p.day}`, h: +p.hour, m: +p.minute }; };
 // Open-Meteo/MET gir lokal tid uten sone («2026-10-19T18:04»): den brukes som den er. Med sone (Z/+02:00) regnes den om til Oslo.
-const HM = (iso) => (!iso ? null : /^\d{4}-\d\d-\d\dT\d\d:\d\d(:\d\d)?$/.test(String(iso)) ? String(iso).slice(11, 16) : new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Oslo', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(iso)));
+const HM = (iso) => (!iso ? null : /^\d{4}-\d\d-\d\dT\d\d:\d\d(:\d\d)?$/.test(String(iso)) ? String(iso).slice(11, 16) : dtf('en-GB', { timeZone: 'Europe/Oslo', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(iso)));
 const addDays = (s, n) => { const [y, m, d] = s.split('-').map(Number); return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10); };
 const r0 = (v) => (v == null || !Number.isFinite(+v) ? null : Math.round(+v));
 const lc = (s) => String(s ?? '').toLowerCase();

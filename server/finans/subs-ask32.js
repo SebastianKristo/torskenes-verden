@@ -15,13 +15,12 @@
 //   Andre AI-svar: «[n]»/«[1]»-markører fjernes fra answer (search.js), og vektortreff under 0,70 likhet kuttes.
 // GET /finans/api/subscriptions/knowledge → {items:[{service, includes:[], categories:[]}], custom:[…]}
 // PUT /finans/api/subscriptions/knowledge {items:[{service, includes:[], categories:[]}]} → samme (egne rader per bruker)
-import { db, me } from './db.js';
+import { db, q, me } from './db.js';
 import { kv } from '../db.js';
 import { osloTodayISO } from '../../public/js/quick-time.js';
 import { osloDate } from '../dates/oslo.js';
 import { PER_LABEL, perMonth, nextCharge, seriesOf } from './cycles.js';
 
-const q = (sql) => db.prepare(sql);
 const fold = (s) => String(s ?? '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').normalize('NFC');
 
 // Kategorier: nøkkel → ord i spørsmålet som peker på den.

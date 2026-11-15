@@ -4,11 +4,10 @@
 //   GET  /presets                       → [{id, name, options:{etasjer:[4,5]}, description}]
 //   POST /cabinets/:id/preset {id, etasjer} → oppdatert skap (409 med deler utenfor nye grenser)
 //   PUT  /cabinets/:id/drawers/:row/:col {spanR, spanC} (håndteres i api.js, logikken er her: setSpan81)
-import { db } from '../db.js';
+import { db, q } from '../db.js';
 import { cabinetRow76, drawerRows76, setDrawer76, updatePart76, addHistory76, locSnap76, partRow76, reindexDrawer76, updateCabinet76, coverMap81, drawerRow76, now76 } from './store.js';
 import { ledsOf78 } from './leds78.js';
 
-const q = (sql) => db.prepare(sql);
 
 const deling = (n, m, i) => Math.floor(n / m) + (i < n % m ? 1 : 0);
 const sumDeling = (n, m, i) => { let s = 0; for (let k = 0; k < i; k++) s += deling(n, m, k); return s; };

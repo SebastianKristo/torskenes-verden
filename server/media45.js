@@ -8,12 +8,11 @@
 // mediaSiteMw44 (stedet huskes for den utsatte slettingen).
 import { Hono } from 'hono';
 import { randomBytes } from 'node:crypto';
-import { db } from './db.js';
+import { db, q } from './db.js';
 import { authOrToken } from './mobile.js';
 import * as M from './media43.js';
 import { stats44 } from './playback44.js';
 
-const q = (sql) => db.prepare(sql);
 const fail = (c, e) => M.mediaFail43(c, e instanceof M.MediaError ? e : Object.assign(new M.MediaError(e.message, e.status ?? 500)));
 const A = [authOrToken, M.mediaGuard43, M.mediaAdmin43];
 

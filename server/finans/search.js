@@ -2,14 +2,13 @@
 // 1) Hybrid gjenfinning: BM25 (SQLite FTS5) + valgfri vektor-likhet (embeddings fra Ollama eller Gemini), slått sammen med RRF.
 // 2) Svar: språkmodellen får treffene og ferdig utregnede summer, og må vise til treffene. Tall i svaret som ikke finnes
 //    i grunnlaget gjør at svaret forkastes og det regelbaserte sammendraget brukes i stedet – modellen får ikke finne på tall.
-import { db, settings, secret, me, addUserCol } from './db.js';
+import { db, q, settings, secret, me, addUserCol } from './db.js';
 import { geminiFetch, hasGemini } from './gemini-keys.js';
 import { textJson, aiTimeoutsOf, AiCancelled } from './ai.js';
 import { gateEmbed } from '../ai-gate.js'; // prompt 43: alle Ollama-kall via gaten
 import { stripMarkers } from './subs-ask32.js';
 import { externalBlocked48 } from '../receipts48/settings.js'; // prompt 48: «Finansdata forlater aldri huset» gjelder også embeddings
 
-const q = (sql) => db.prepare(sql);
 db.exec(`CREATE VIRTUAL TABLE IF NOT EXISTS fh_fts USING fts5(kind UNINDEXED, ref UNINDEXED, text, tokenize = 'unicode61 remove_diacritics 2');
 CREATE TABLE IF NOT EXISTS fh_embed (kind TEXT NOT NULL, ref TEXT NOT NULL, model TEXT NOT NULL, hash TEXT NOT NULL, vec BLOB NOT NULL, PRIMARY KEY (kind, ref, model));`);
 // ISO2: søket er per bruker. Indeksen (avledet data, bygges på nytt fra tabellene) har brukeren i en egen kolonne, og

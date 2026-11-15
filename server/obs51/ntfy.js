@@ -8,14 +8,13 @@
 // iOS: upstream-base-url er AV som standard (se docs/drift-51.md). Slås den på, sender ntfy bare en poll-forespørsel med emne-hash til
 // ntfy.sh – aldri innhold.
 import { randomBytes, randomUUID } from 'node:crypto';
-import { db } from '../db.js';
+import { db, q } from '../db.js';
 
 db.exec(`CREATE TABLE IF NOT EXISTS obs51_ntfy_topics (
   id TEXT PRIMARY KEY, user_id TEXT NOT NULL, device TEXT NOT NULL, topic TEXT NOT NULL UNIQUE, created INTEGER NOT NULL, last_ok INTEGER, fails INTEGER NOT NULL DEFAULT 0
 )`);
 db.exec('CREATE INDEX IF NOT EXISTS obs51_ntfy_user ON obs51_ntfy_topics(user_id)');
 
-const q = (s) => db.prepare(s);
 let F = (u, i) => fetch(u, i);
 export const _setNtfyFetch51 = (fn) => { F = fn ?? ((u, i) => fetch(u, i)); };
 

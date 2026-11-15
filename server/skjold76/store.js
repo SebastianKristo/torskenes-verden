@@ -1,9 +1,8 @@
 // Prompt 76 (SKJSRV): Skjold Lab – database for sorteringsskapet (skap, skuffer, deler, historikk) og FTS5-søket.
 // Alt er per bruker (user_id). Additiv migrering: tabellene opprettes hvis de mangler, kolonner som mangler legges til.
 // Nummerering: rad 1 øverst, skuff (kolonne) 1 til venstre. Visning «Rad 4 · Skuff 2», kort «4-2».
-import { db, kv } from '../db.js';
+import { db, q, kv } from '../db.js';
 
-const q = (sql) => db.prepare(sql);
 db.exec(`CREATE TABLE IF NOT EXISTS skj_cabinets (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT NOT NULL, name TEXT NOT NULL, rows INTEGER NOT NULL DEFAULT 12,
   cols INTEGER NOT NULL DEFAULT 5, kind TEXT NOT NULL DEFAULT 'kjøpt', sort INTEGER NOT NULL DEFAULT 0, photo TEXT, photo_corners TEXT, notes TEXT,
   created INTEGER NOT NULL, updated INTEGER NOT NULL);

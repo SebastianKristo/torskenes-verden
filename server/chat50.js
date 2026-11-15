@@ -21,11 +21,10 @@ import { randomUUID } from 'node:crypto';
 import { readFile, writeFile, mkdir, unlink } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { config } from './config.js';
-import { db } from './db.js';
+import { db, q } from './db.js';
 import { db as fdb } from './finans/db.js';
 import { toJpeg50, thumbWebp50, sniffImage50, imageSize50 } from './img50.js';
 
-const q = (sql) => db.prepare(sql);
 export const FILES50 = resolve(config.dataDir, 'chat', 'files');
 export const LIMITS50 = { maxBytes: 20 * 1024 * 1024, maxFiles: 10, modelPx: 1600, thumbPx: 480, hydrateMessages: 3 };
 

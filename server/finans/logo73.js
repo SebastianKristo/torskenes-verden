@@ -21,14 +21,13 @@ import { randomBytes } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { bodyLimit } from 'hono/body-limit';
-import { db } from './db.js';
+import { db, q } from './db.js';
 import { cleanName, LOGO_DIR, logoFileUrl, isLogoFile } from './logo-lookup.js';
 import { registry, normalize, hasFile, itemById } from '../logos/match.js';
 import { ocrTools } from '../ocr-fallback.js';
 import { setLogoOverride52 } from '../logos52.js';
 
 const run = promisify(execFile);
-const q = (sql) => db.prepare(sql);
 const bad = (c, msg, code = 400) => c.json({ error: msg }, code);
 const str = (v, max = 200) => String(v ?? '').trim().slice(0, max);
 const libUrl = (id) => `/finans/api/logos/file/${encodeURIComponent(id)}`;

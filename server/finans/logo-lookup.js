@@ -27,7 +27,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { config } from '../config.js';
 import { userBool } from '../settings.js';
-import { db, me, settings } from './db.js';
+import { db, q, me, settings } from './db.js';
 import { geminiFetch, hasGemini } from './gemini-keys.js';
 import { aiTimeoutsOf, GEMINI_DEFAULT } from './ai.js';
 import { audit } from './ai-audit.js';
@@ -38,7 +38,6 @@ import { run as aiRun } from '../ai-run.js';
 import { externalBlocked48 } from '../receipts48/settings.js'; // prompt 48: «Finansdata forlater aldri huset»
 
 const run = promisify(execFile);
-const q = (sql) => db.prepare(sql);
 export const LOGO_DIR = resolve(config.dataDir, 'logos');
 const RECHECK_MS = 90 * 86400_000;
 const NONE_RECHECK_MS = 7 * 86400_000;

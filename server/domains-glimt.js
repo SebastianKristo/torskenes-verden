@@ -28,7 +28,7 @@
 //   Cron 06:00: henter de siste 3 dagene på nytt (GSC reviderer) til gsc_daily / gsc_query / gsc_page. Første gang: 16 måneder.
 import { Hono } from 'hono';
 import { createCipheriv, createDecipheriv, createHash, createSign, randomBytes, hkdfSync } from 'node:crypto';
-import { db, kv } from './db.js';
+import { db, q, kv } from './db.js';
 import { cfg } from './settings.js';
 import { config } from './config.js';
 import { sessionSecret86 } from './secret86.js'; // prompt 86
@@ -42,7 +42,6 @@ import { once } from './ai-gate.js'; // prompt 43: single-flight for oppsummerin
 
 const MOCK = process.env.MOCK_DATA === '1';
 const TZ = 'Europe/Oslo';
-const q = (sql) => db.prepare(sql);
 const pad = (n) => String(n).padStart(2, '0');
 const MON = ['jan', 'feb', 'mar', 'apr', 'mai', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'des'];
 

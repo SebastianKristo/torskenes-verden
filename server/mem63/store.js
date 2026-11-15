@@ -5,12 +5,11 @@
 // «Sist brukt» er den eksisterende kolonnen glimt_memory.used_at (prompt 33) – nå satt der minnet faktisk brukes (kontekst/planlegger).
 // Alt er per bruker; spørringene har alltid user_id.
 import { randomBytes } from 'node:crypto';
-import { db } from '../db.js';
+import { db, q } from '../db.js';
 import { ensureMemory47, TYPE_SYNONYMS47 } from '../glimt45/memory47.js';
 import { typeOfWord, DIN, MEMORY_TYPES } from '../glimt-memory.js';
 import { niceCase, normName } from '../../public/js/quick-time.js';
 
-const q = (sql) => db.prepare(sql);
 db.exec(`CREATE TABLE IF NOT EXISTS glimt_memory_pending (id TEXT PRIMARY KEY, user_id TEXT NOT NULL, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL,
   status TEXT NOT NULL DEFAULT 'pending', subject TEXT NOT NULL, predicate TEXT NOT NULL DEFAULT 'er', object TEXT NOT NULL, kind TEXT NOT NULL DEFAULT 'fact', type TEXT,
   aliases TEXT NOT NULL DEFAULT '[]', source TEXT NOT NULL DEFAULT 'conversation', evidence TEXT NOT NULL DEFAULT '[]', reason TEXT, conflict_id TEXT, memory_id INTEGER,

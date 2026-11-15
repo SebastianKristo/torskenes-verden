@@ -5,11 +5,10 @@
 //   Nøkler: 'alle', liste-id-er, 'arkivert', 'glimt' (Laget med Glimt). Ukjente/slettede fjernes, nye lister havner sist (før de spesielle).
 //   GET /api/tasks og /api/tasks/lists (mellomvare) får listOrder:[nøkkel].
 import { Hono } from 'hono';
-import { db, kv } from './db.js';
+import { db, q, kv } from './db.js';
 import { authOrToken } from './mobile.js';
 import { broadcast } from './realtime.js';
 
-const q = (sql) => db.prepare(sql);
 const SPECIAL = [['alle', 'Alle'], ['arkivert', 'Arkivert'], ['glimt', 'Laget med Glimt']];
 const listsOf = (u) => q(`SELECT id, name, color FROM hl_task_lists WHERE owner=? OR id IN (SELECT list_id FROM hl_task_list_members WHERE user_id=?) ORDER BY owner<>?, sort, created`).all(u, u, u);
 export function tabOrder43(u) {

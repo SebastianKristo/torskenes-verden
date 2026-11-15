@@ -14,7 +14,7 @@
 // Lagring: tabell search_history(id, user_id, q, engine, device, created_at), indeks (user_id, created_at DESC).
 // Beholder 90 dager og maks 200 per bruker. Passord, koder, kortnummer og personnummer lagres aldri.
 import { Hono } from 'hono';
-import { db } from './db.js';
+import { db, q } from './db.js';
 import { authOrToken, searchSettings, histOf, setHist } from './mobile.js'; // syklisk import: brukes bare inne i funksjoner
 
 db.exec(`CREATE TABLE IF NOT EXISTS search_history (
@@ -26,7 +26,6 @@ db.exec(`CREATE TABLE IF NOT EXISTS search_history (
   created_at INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS search_history_user ON search_history(user_id, created_at DESC);`);
-const q = (sql) => db.prepare(sql);
 const KEEP_MS = 90 * 86400_000, KEEP_N = 200;
 
 /** Ser teksten ut som noe hemmelig? (kortnummer, personnummer, passord/koder) */

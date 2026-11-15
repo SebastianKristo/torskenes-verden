@@ -13,10 +13,9 @@ import { Readable } from 'node:stream';
 import { existsSync, renameSync, rmSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { config } from '../config.js';
-import { db } from '../finans/db.js';
+import { db, q } from '../finans/db.js';
 import { mod11Ok } from '../ocr-fallback.js';
 
-const q = (sql) => db.prepare(sql);
 db.exec(`CREATE TABLE IF NOT EXISTS fh_merchants51 (
   user_id TEXT NOT NULL, org_number TEXT NOT NULL, name TEXT NOT NULL, source TEXT NOT NULL DEFAULT 'user', count INTEGER NOT NULL DEFAULT 1,
   receipt_id TEXT, updated INTEGER NOT NULL, PRIMARY KEY (user_id, org_number));`);

@@ -17,13 +17,14 @@ import { connect as netConnect } from 'node:net';
 import { connect as tlsConnect } from 'node:tls';
 import { randomBytes, createHash } from 'node:crypto';
 import { parseQuick, osloTodayISO } from './dates/quick.js'; // dato og tid fra den felles tolkeren
-import { db, kv } from './db.js';
+import { db, q, kv } from './db.js';
 import { userInfo, listUsers } from './auth.js';
 import { authOrToken } from './mobile.js';
 import { userCfg } from './settings.js';
 import { notifyUser } from './notify.js';
 import { addEventDecorator, addEventSource, findEvent } from './calendar.js';
 import { NOMINATIM_UA } from './family.js';
+import { dtf } from './intl-format.js'; // gjenbrukte Intl.DateTimeFormat
 
 const MOCK = () => process.env.MOCK_DATA === '1';
 const TZ = 'Europe/Oslo';
@@ -31,7 +32,6 @@ db.exec(`CREATE TABLE IF NOT EXISTS geo44_cache (q TEXT PRIMARY KEY, result TEXT
 CREATE TABLE IF NOT EXISTS kal44_invites (id INTEGER PRIMARY KEY AUTOINCREMENT, organizer TEXT NOT NULL, event_id TEXT NOT NULL, attendee TEXT NOT NULL, snapshot TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'invited', created INTEGER NOT NULL, updated INTEGER NOT NULL, UNIQUE(organizer, event_id, attendee));
 CREATE TABLE IF NOT EXISTS mail44_outbox (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT NOT NULL, to_addr TEXT NOT NULL, subject TEXT NOT NULL, via TEXT NOT NULL, status TEXT NOT NULL, error TEXT, ics TEXT, created INTEGER NOT NULL);`);
-const q = (sql) => db.prepare(sql);
 const baseId = (id) => String(id ?? '').split('~')[0].replace(/-\d{8}(T\d{4})?$/, '');
 const EMAIL = /^[^\s@<>()",;]{1,64}@[^\s@<>()",;]{1,190}\.[a-z]{2,24}$/i;
 const STATUSES = ['invited', 'accepted', 'declined', 'tentative', 'pending'];
@@ -209,8 +209,8 @@ export const outbox44 = (u) => q('SELECT id, to_addr AS "to", subject, via, stat
 
 const fmtWhen = (ev) => {
   const d = new Date(`${ev.date}T12:00:00Z`);
-  const day = new Intl.DateTimeFormat('nb-NO', { timeZone: 'UTC', weekday: 'short', day: 'numeric', month: 'short' }).format(d);
-  return ev.allDay ? day : `${day} ${new Intl.DateTimeFormat('nb-NO', { timeZone: TZ, hour: '2-digit', minute: '2-digit' }).format(new Date(ev.start))}`;
+  const day = dtf('nb-NO', { timeZone: 'UTC', weekday: 'short', day: 'numeric', month: 'short' }).format(d);
+  return ev.allDay ? day : `${day} ${dtf('nb-NO', { timeZone: TZ, hour: '2-digit', minute: '2-digit' }).format(new Date(ev.start))}`;
 };
 const snap = (ev) => ({ title: ev.title, date: ev.date, start: ev.start, end: ev.end, allDay: !!ev.allDay, endDate: ev.endDate ?? null, room: ev.room ?? ev.location ?? '', note: ev.note ?? '', geo: ev.geo ?? null, time: ev.time ?? null, inAllDayRow: !!ev.allDay, type: 'invite', color: '#2b5d8a' });
 export async function invite44(u, id, body = {}) {

@@ -6,7 +6,7 @@ import { createHash } from 'node:crypto';
 import { authOrToken } from '../mobile.js';
 import { isAdmin } from '../auth.js';
 import { runAsUser } from '../settings.js';
-import { db } from '../db.js';
+import { db, q } from '../db.js';
 import { recipes61, serverRecipes61, userRecipes61, saveRecipes61, anyOn61, LABELS61, HELP61 } from './settings.js';
 import { T61, STATUS61, rowOf61, rowsOf61, publicRecipe61, publicRun61, publicNegative61, parse61, log61 } from './store.js';
 import { slotsOf61, templateOf61, fillPlan61, sim61, varsIn61, readable61, READ_TOOLS61, VARS61 } from './template.js';
@@ -17,7 +17,6 @@ import { INTENTS47, INTENT_TOOLS47 } from '../glimt45/plan47.js';
 
 export const recipesApi61 = new Hono();
 recipesApi61.use('*', authOrToken);
-const q = (sql) => db.prepare(sql);
 const RID = /^r[0-9a-f]{14}$/;
 const TID = /^t[0-9a-f]{18}$/;
 const settingsOut = (u) => ({ settings: recipes61(u), server: serverRecipes61(), user: userRecipes61(u), admin: isAdmin(u), labels: LABELS61, help: HELP61, thresholds: { ...T61 } });

@@ -4,12 +4,11 @@
 //   GET /finans/api/transactions/months?category=&account=&type=&from=&to= → {months:[{month, label, labelShort, count, net, inn, ut, netText}]}
 //   GET /finans/api/transactions (mellomvare) → får months:[…] for månedene i svaret (samme filter på kategori/konto/type)
 import { Hono } from 'hono';
-import { db } from './db.js';
+import { db, q } from './db.js';
 import { auth42 } from './finans42.js';
 import finansApi from './routes.js';
 import { osloDate } from '../dates/oslo.js';
 
-const q = (sql) => db.prepare(sql);
 const MONTHS = ['januar', 'februar', 'mars', 'april', 'mai', 'juni', 'juli', 'august', 'september', 'oktober', 'november', 'desember'];
 const today = () => osloDate();
 const kr = (v) => `${v < 0 ? '−' : v > 0 ? '+' : ''}${Math.abs(v).toLocaleString('nb-NO', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).replace(/\s/g, ' ')} kr`;

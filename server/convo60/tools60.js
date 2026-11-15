@@ -3,12 +3,11 @@
 // og verktøyet er DESTRUKTIVT: motoren lagrer planen og ber alltid om bekreftelse (confirm.token) – aldri utført på en gjetning.
 // Utført = abonnementet markeres som sagt opp i Subscription OS (fh_subscriptions.active=0). Selve oppsigelsen hos leverandøren må
 // brukeren gjøre selv; svaret sier det.
-import { db } from '../db.js';
+import { db, q } from '../db.js';
 import { TOOLS45, TOOL45, kr45 } from '../glimt45/tools.js';
 import { SENTENCES46, FAIL_TEXT46 } from '../glimt45/tools46.js';
 import { findService46, serviceInText46, subscriptions46 } from '../glimt45/subs46.js';
 
-const q = (sql) => db.prepare(sql);
 const str = (v, n = 200) => (typeof v === 'string' ? v.replace(/[\u0000-\u001f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, n) : '');
 const S = (props, required = []) => ({ type: 'object', properties: props, required, additionalProperties: false });
 const sTxt = (d) => ({ type: 'string', description: d });

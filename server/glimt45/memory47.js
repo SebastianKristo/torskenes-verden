@@ -10,12 +10,11 @@
 //   3. slått sammen, deduplisert, maks 10.
 // Hvert fakta har `why` (hvorfor det matchet) – det står i tracen.
 // expandTerms47(facts) gir søketermene verktøyene bruker: «Nina» → ["Nina", "frisør", "frisørtime", "klipp", …].
-import { db } from '../db.js';
+import { db, q } from '../db.js';
 import { listMemory, addMemory, typeOfWord, MEMORY_TYPES } from '../glimt-memory.js';
 import { niceCase, normName, aliasTitle } from '../../public/js/quick-time.js';
 import { hasWord47, words47, lev47 } from './words47.js';
 
-const q = (sql) => db.prepare(sql);
 let migrated = false;
 export function ensureMemory47() {
   if (migrated) return;

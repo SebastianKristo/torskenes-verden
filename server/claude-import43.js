@@ -14,12 +14,11 @@
 import { Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import { randomBytes, randomUUID } from 'node:crypto';
-import { db, kv } from './db.js';
+import { db, q, kv } from './db.js';
 import { authOrToken } from './mobile.js';
 import { unzip } from './finans/xlsx.js';
 import { addMemory43, removeMemory43, splitMemory43 } from './ai-memory43.js';
 
-const q = (sql) => db.prepare(sql);
 const MAX_BYTES = 200 * 1024 * 1024;
 const TTL = 60 * 60_000;
 const imports = new Map(); // importId → {user, at, convs, projects, memory, files}

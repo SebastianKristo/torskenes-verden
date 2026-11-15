@@ -11,14 +11,13 @@
 //              account, logo, interval:'Hver måned den 22.', deepLink:'finans://abonnement/<id>', openLabel:'Åpne i Finans ›', editable:false, note:'Endres i Finans → Abonnementer'}
 import { Hono } from 'hono';
 import { kv } from './db.js';
-import { db as fhDb } from './finans/db.js';
+import { db as fhDb, q } from './finans/db.js';
 import { authOrToken } from './mobile.js';
 import { addEventSource, addEventDecorator } from './calendar.js';
 import { broadcast } from './realtime.js';
 import { osloDate } from './dates/oslo.js';
 import { CYCLE_MONTHS, CYCLE_DAYS, INTERVAL_TEXT, chargesBetween, nextCharge, seriesOf } from './finans/cycles.js';
 
-const q = (sql) => fhDb.prepare(sql);
 export const AB42 = { id: 'abonnementer', key: 'ab', name: 'Abonnementer', color: '#3d7f8a', textColor: '#2a5c64', lightColor: '#8fcdd6' };
 const NOTIFY = { off: 'Av', day_before: 'Dagen før', trials_yearly: 'Prøveperioder og årlige' };
 const NS = { av: 'off', 'dagen-for': 'day_before', 'prove-arlige': 'trials_yearly' };

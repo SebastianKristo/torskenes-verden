@@ -28,7 +28,7 @@ import { randomUUID, randomBytes } from 'node:crypto';
 import { unlink } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { config } from './config.js';
-import { db, kv } from './db.js';
+import { db, q, kv } from './db.js';
 import { authOrToken, layoutOf } from './mobile.js';
 import { isAdmin } from './auth.js';
 import { cfg, userCfg, userBool, setUserCfg } from './settings.js';
@@ -60,7 +60,6 @@ import { imageIntent51, looksLikeDocument51, documentNote51, readDocument51, vis
 import { engine53, webSearch53, eyeIntent53 } from './dal53/index.js'; // prompt 53 (DAL53): Tongue/Redact rundt motoren, Redact på søkeord, Eye for bilder
 import { osloDate } from './dates/oslo.js';
 
-const q = (sql) => db.prepare(sql);
 const isMock = () => process.env.MOCK_DATA === '1' && !fx;
 
 db.exec(`

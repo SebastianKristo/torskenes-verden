@@ -13,13 +13,14 @@ import { addDays45, longDate45 } from './dates.js';
 import { anyWord47, hasWord47, words47 } from './words47.js';
 import { recallFacts47, expandTerms47, saveFact47 } from './memory47.js';
 import { parseEpisodeAsk43 } from './media47.js';
+import { dtf } from '../intl-format.js'; // gjenbrukte Intl.DateTimeFormat
 
 const ask = (question, options = null, field = null) => ({ ask: { question, ...(options ? { options } : {}), ...(field ? { field } : {}) } });
 const str = (v, n = 200) => (typeof v === 'string' ? v.replace(/[\u0000-\u001f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, n) : '');
 const S = (props, required = []) => ({ type: 'object', properties: props, required, additionalProperties: false });
 const sTxt = (d) => ({ type: 'string', description: d });
 const cap = (s) => String(s ?? '').replace(/^./, (c) => c.toUpperCase());
-const osloHm = (iso) => { const p = Object.fromEntries(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Oslo', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date(iso)).map((x) => [x.type, x.value])); return `${p.hour}:${p.minute}`; };
+const osloHm = (iso) => { const p = Object.fromEntries(dtf('en-GB', { timeZone: 'Europe/Oslo', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date(iso)).map((x) => [x.type, x.value])); return `${p.hour}:${p.minute}`; };
 
 /* ---------------- Kalendersøk ---------------- */
 
@@ -56,7 +57,7 @@ export function osloMs47(today, nowMin) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(today ?? '') || !Number.isFinite(nowMin)) return null;
   const [y, m, d] = today.split('-').map(Number);
   const guess = Date.UTC(y, m - 1, d, Math.floor(nowMin / 60), nowMin % 60);
-  const p = Object.fromEntries(new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Oslo', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
+  const p = Object.fromEntries(dtf('en-CA', { timeZone: 'Europe/Oslo', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
     .formatToParts(new Date(guess)).map((x) => [x.type, x.value]));
   const shown = Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute);
   return guess - (shown - guess);

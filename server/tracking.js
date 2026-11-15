@@ -8,7 +8,7 @@
 //   transportørnøkler (cfg i brukerens kontekst) og e-postskanning er brukerens egne. Sanntid sendes bare til eieren.
 //   Ekte push er ikke bygget: appene og nettsiden viser varslene lokalt når de henter /api/tracking.
 import { Hono } from 'hono';
-import { db, kv, OWNER } from './db.js';
+import { db, q, kv, OWNER } from './db.js';
 import { runAsUser } from './settings.js';
 import { config } from './config.js'; // prompt 41: fast forskyvning per installasjon
 import { sessionUser } from './auth.js';
@@ -20,6 +20,7 @@ import { CARRIERS, CARRIER, detect, normNo, trackUrl, findTrackingNumbers, normS
 import { broadcast } from './realtime.js';
 import { matchMerchant, itemForDomain, filePath as logoFile, isManual } from './logos/match.js';
 import { osloDate } from './dates/oslo.js';
+import { dtf } from './intl-format.js'; // gjenbrukte Intl.DateTimeFormat
 
 db.exec(`
 CREATE TABLE IF NOT EXISTS hl_shipments (
@@ -93,7 +94,6 @@ for (const [col, type] of [['source_date', 'INTEGER'], ['ok_at', 'INTEGER'], ['p
   db.exec('CREATE INDEX IF NOT EXISTS hl_shipments_user ON hl_shipments(user_id, archived, updated_at)');
 }
 
-const q = (sql) => db.prepare(sql);
 const now = () => Date.now();
 
 /* ---------------- Overstyrt transportør (prompt 26) ---------------- */
@@ -135,7 +135,7 @@ export function nextCheckAt(r, t = Date.now()) {
   if (iv == null || r.archived) return null;
   return r.checked_at ? r.checked_at + iv + stagger41() : t;
 }
-const osloHour41 = (t = now()) => +new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Oslo', hour: '2-digit', hourCycle: 'h23' }).format(new Date(t));
+const osloHour41 = (t = now()) => +dtf('en-GB', { timeZone: 'Europe/Oslo', hour: '2-digit', hourCycle: 'h23' }).format(new Date(t));
 const osloDay41 = (t = now()) => osloDate(t);
 /** Stille vindu 00–06: false bortsett fra én runde etter midnatt (ankeret). Kl. 06 går det som vanlig igjen. */
 export function pollAllowed41(u, t = now()) {
@@ -226,8 +226,8 @@ export function packageTitle(r) {
 
 // Hendelser vi har laget selv (ikke fra transportøren). De vises i listen, men ikke som «siste hendelse».
 const LOCAL_EVENT = /^(Lagt til i Sporing|Funnet i e-post|Funnet i Finn-handel)$|· Oppdatert fra (Finn-handelen|e-post)$|^Ikke funnet hos transportøren|^Spores (nå )?via /;
-const hhmm = (t) => new Intl.DateTimeFormat('nb-NO', { timeZone: 'Europe/Oslo', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(t));
-const ddmm = (t) => { const p = Object.fromEntries(new Intl.DateTimeFormat('nb-NO', { timeZone: 'Europe/Oslo', day: '2-digit', month: '2-digit' }).formatToParts(new Date(t)).map((x) => [x.type, x.value])); return `${p.day}.${p.month}`; };
+const hhmm = (t) => dtf('nb-NO', { timeZone: 'Europe/Oslo', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(t));
+const ddmm = (t) => { const p = Object.fromEntries(dtf('nb-NO', { timeZone: 'Europe/Oslo', day: '2-digit', month: '2-digit' }).formatToParts(new Date(t)).map((x) => [x.type, x.value])); return `${p.day}.${p.month}`; };
 /** Siste hendelse fra transportøren: {text, place, time, line} – «Ankommet terminal · Oslo · 18.10 06:12». */
 function lastEventOf(events) {
   const e = events.find((x) => x.raw === 'api' || (x.raw == null && !LOCAL_EVENT.test(x.status)));

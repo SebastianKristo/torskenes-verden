@@ -10,10 +10,9 @@
 //   - Avviser modellen bildet likevel («does not support multimodal»), byttes vei automatisk og evnen lagres som «ingen vision».
 //   - Feil fra Ollama vises aldri rått: friendlyError51 gir en norsk tekst.
 import { readFile } from 'node:fs/promises';
-import { db } from './db.js';
+import { db, q } from './db.js';
 import { toJpeg50 } from './img50.js';
 
-const q = (sql) => db.prepare(sql);
 export const VISION_PREFERRED51 = ['qwen2.5vl:7b', 'qwen2.5vl', 'qwen2.5vl:latest'];
 
 const DOC_RE = /\b(faktura\w*|regning\w*|vitnem[åa]l\w*|karakterutskrift\w*|attest\w*|dokument\w*|brev(?:et)?|skjema\w*|kontrakt\w*|avtale\w*|l[øo]nnsslipp\w*|kontoutskrift\w*|skattemelding\w*|resept\w*|billett\w*|invoice|document|les (?:teksten|av)|skriv av|transkriber\w*|ocr)\b/i;

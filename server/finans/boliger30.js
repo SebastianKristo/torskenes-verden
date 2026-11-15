@@ -7,10 +7,9 @@
 //   PATCH /finans/api/folders/:id/entries/:eid {merchant|description, amount, date, category|categoryId, …}
 //        Endringer logges i fh_folder_entry_history («endret av»). GET …/entries/:eid/history → [{at, by, changes}].
 //   Alias under /api/homes/:id/… i server/index.js (members, shareable, expenses/:eid).
-import { db } from './db.js';
+import { db, q } from './db.js';
 import { listUsers } from '../auth.js';
 
-const q = (sql) => db.prepare(sql);
 
 db.exec(`CREATE TABLE IF NOT EXISTS fh_folder_entry_history (
   id INTEGER PRIMARY KEY AUTOINCREMENT, entry_id INTEGER NOT NULL, folder_id INTEGER NOT NULL, user_id TEXT, by_name TEXT NOT NULL,

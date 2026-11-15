@@ -11,7 +11,7 @@
 // Trend: ledig plass samples hvert 15. min (tabellen obs51_samples, 30 dager). Lineær regresjon over 7 dager → «Disken er full om 9 dager».
 import { statfsSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { db, kv, OWNER } from '../db.js';
+import { db, q, kv, OWNER } from '../db.js';
 import { config } from '../config.js';
 import { runAsUser, sealSecret, openSecret } from '../settings.js';
 import { docker51, dockerAvailable44 } from '../logs44.js';
@@ -25,7 +25,6 @@ db.exec('CREATE INDEX IF NOT EXISTS obs51_samples_key ON obs51_samples(key, ts)'
 const MOCK = () => process.env.MOCK_DATA === '1';
 const DAY = 86_400_000;
 const GB = 1e9;
-const q = (s) => db.prepare(s);
 let F = (u, i) => fetch(u, i);
 export const _setObsFetch51 = (fn) => { F = fn ?? ((u, i) => fetch(u, i)); };
 const deps = { macHealth: null }; // tester: erstatt Mac-OCR-sjekken

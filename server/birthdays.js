@@ -19,7 +19,7 @@
 import { Hono } from 'hono';
 import { createHash, randomBytes } from 'node:crypto';
 import WebSocket from 'ws';
-import { db, kv } from './db.js';
+import { db, q, kv } from './db.js';
 import { cfg } from './settings.js';
 import { sessionUser, userInfo, listUsers, isAdmin } from './auth.js';
 import { bearerOk } from './finans/routes.js';
@@ -30,7 +30,6 @@ import { photoUrl41 } from './birthdays41.js'; // prompt 41: bilder av personer
 import { osloDate } from './dates/oslo.js';
 
 const MOCK = process.env.MOCK_DATA === '1';
-const q = (sql) => db.prepare(sql);
 const DAY = 86_400_000;
 const TZ = 'Europe/Oslo';
 

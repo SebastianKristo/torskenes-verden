@@ -1,9 +1,8 @@
 // Skannekjeden: gjenkjenning av filtype og logg per steg for hver kvittering.
 // Nettlesere og apper sender ofte feil eller tom filtype (HEIC fra Filer-appen, «application/octet-stream»,
 // «image/jpg»), så typen leses fra de første bytene i filen.
-import { db } from './db.js';
+import { db, q } from './db.js';
 
-const q = (sql) => db.prepare(sql);
 if (!q('PRAGMA table_info(fh_receipts)').all().some((c) => c.name === 'scan_log')) db.exec('ALTER TABLE fh_receipts ADD COLUMN scan_log TEXT');
 // Kandidat fra «Analyser på nytt med Gemini» som venter på at brukeren velger hvilket resultat som beholdes.
 if (!q('PRAGMA table_info(fh_receipts)').all().some((c) => c.name === 'candidate')) db.exec('ALTER TABLE fh_receipts ADD COLUMN candidate TEXT');

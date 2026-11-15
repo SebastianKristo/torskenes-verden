@@ -9,11 +9,10 @@
 //   trials            – gratis prøveperioder (finans/trials.js): ends_at, price_after, status active|cancelled|kept, subscription_id.
 // trials får to nye kolonner (additivt): cancel_by (avslutningsfristen brukeren oppga) og ends_kind ('trial_end' = ends_at er når
 // prøven faktisk slutter, 'cancel_by' = ends_at er bare fristen brukeren ga Glimt, prøveslutten er ukjent).
-import { db } from '../db.js';
+import { db, q } from '../db.js';
 import { addDays45, todayOslo45 } from './dates.js';
 import { PER_YEAR } from '../finans/cycles.js';
 
-const q = (sql) => db.prepare(sql);
 const cols = (t) => { try { return q(`PRAGMA table_info(${t})`).all().map((c) => c.name); } catch { return []; } };
 let trialCols = null;
 function ensureTrialCols() {

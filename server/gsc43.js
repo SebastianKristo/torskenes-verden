@@ -16,13 +16,12 @@
 //        lastFetch, dataTo, rows28, impressions28, clicks28, reason, message, steps:[{t, ok, ms, detail}], error?}
 //   GET|POST /api/gsc/test?siteUrl=|domain=   → samme for en eiendom (Innstillinger → Domener → Google Search Console → Test)
 import { Hono } from 'hono';
-import { db } from './db.js';
+import { db, q } from './db.js';
 import { sessionUser, userInfo, isAdmin } from './auth.js';
 import { bearerOk } from './finans/routes.js';
 import { domainNames } from './domains.js';
 import { _gsc43 as G, syncGsc, gscView } from './domains-glimt.js';
 
-const q = (sql) => db.prepare(sql);
 const OK_LEVELS = new Set(['siteOwner', 'siteFullUser', 'siteRestrictedUser']);
 const PERM = { siteOwner: 'eier', siteFullUser: 'full', siteRestrictedUser: 'begrenset', siteUnverifiedUser: 'ikke bekreftet' };
 export const GSC_REASONS43 = {

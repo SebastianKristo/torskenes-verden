@@ -5,11 +5,10 @@
 // (choices) og de siste turene (historikk for akkurat denne samtalen). Lagres bare lokalt (tabell glimt60_convo), aldri i sky.
 // Planleggeren får en kort tekst (stateText60) i den dynamiske delen av prompten; koden fyller inn manglende argumenter (fill60).
 import { randomBytes } from 'node:crypto';
-import { db } from '../db.js';
+import { db, q } from '../db.js';
 
 db.exec(`CREATE TABLE IF NOT EXISTS glimt60_convo (user_id TEXT NOT NULL, conv_id TEXT NOT NULL, kind TEXT NOT NULL, state TEXT NOT NULL, updated INTEGER NOT NULL, PRIMARY KEY (user_id, conv_id));
 CREATE INDEX IF NOT EXISTS glimt60_convo_upd ON glimt60_convo(updated);`);
-const q = (sql) => db.prepare(sql);
 export const TTL60 = { search: 30 * 60_000, chat: 12 * 3600_000 };
 export const CONV_RE60 = /^[A-Za-z0-9_.:-]{1,80}$/;
 const TURNS = 6;

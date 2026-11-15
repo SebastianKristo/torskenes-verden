@@ -22,14 +22,13 @@ import { bodyLimit } from 'hono/body-limit';
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { db, kv } from './db.js';
+import { db, q, kv } from './db.js';
 import { authOrToken } from './mobile.js';
 import { isAdmin, userInfo, listUsers, currentDeviceId, sessionUser, clientIp } from './auth.js';
 import { parseChangelog } from './system-update.js';
 import { whatsNewExtra52 } from './whatsnew52.js'; // prompt 52 (SRV52)
 import { isLocalHost } from './net/server-url.js';
 
-const q = (sql) => db.prepare(sql);
 
 /* =====================================================================================================================
    Tabeller (additive)

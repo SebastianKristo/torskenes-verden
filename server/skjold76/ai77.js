@@ -7,14 +7,13 @@
 // Modellen svarer strukturert (JSON-schema, tenker aldri) og valideres i kode; ugyldig svar gir ett nytt forsøk, så norsk feil.
 // Verdier fra fargebånd og koder regnes ut i decode77.js – modellen oppgir bare fargene/koden. Ingenting endres uten godkjenning.
 import { randomBytes } from 'node:crypto';
-import { db, kv } from '../db.js';
+import { db, q, kv } from '../db.js';
 import { partRow76, partOut76, updatePart76, addHistory76 } from './store.js';
 import { readImage76, saveImage76 } from './images.js';
 import { magick50, toJpeg50 } from '../img50.js';
 import { finalize77, heuristic77, colorOf77, DEFAULT_CATEGORIES77 } from './decode77.js';
 import { searchImages77, proxyImage77, downloadImage77, searxngConfigured77 } from './images77.js';
 
-const q = (sql) => db.prepare(sql);
 const NS = { 'Cache-Control': 'no-store' };
 const J = (s, d) => { if (s == null) return d; try { return JSON.parse(s) ?? d; } catch { return d; } };
 export const TIMEOUT_IMAGE77 = 60_000;

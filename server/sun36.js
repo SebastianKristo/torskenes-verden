@@ -1,13 +1,14 @@
 // Prompt 36: dagslys, soloppgang og solnedgang for en dato og et sted, regnet lokalt (NOAA/suncalc-formelen i weather.js,
 // ingen ny avhengighet og ingen nettkall). Brukes av Glimt (assist.js) for «hvor mange timer med dagslys er det 29.06.2027».
 import { sunTime } from './weather.js';
+import { dtf } from './intl-format.js'; // gjenbrukte Intl.DateTimeFormat
 
 const MONTHS = ['januar', 'februar', 'mars', 'april', 'mai', 'juni', 'juli', 'august', 'september', 'oktober', 'november', 'desember'];
 /** Gjelder spørsmålet sola/dagslyset? */
 export const SUN_RE = /dagslys|soloppgang|solnedgang|sola?\s+(går|gå|står)\s+(opp|ned)|når\s+(går|står)\s+sola|lyse\s+timer|lys(t)?\s+ute|daylight|sunrise|sunset/i;
 export const isSunQuestion = (t) => SUN_RE.test(String(t ?? ''));
 
-const hm = (d, tz) => new Intl.DateTimeFormat('nb-NO', { timeZone: tz, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(d).replace('.', ':');
+const hm = (d, tz) => dtf('nb-NO', { timeZone: tz, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(d).replace('.', ':');
 const longDate = (iso) => { const [y, m, d] = iso.split('-').map(Number); return `${d}. ${MONTHS[m - 1]} ${y}`; };
 
 /**

@@ -5,11 +5,10 @@
 //   anslått prompt-lengde, prompt_eval_count/eval_count fra Ollama, trimmet?), svar, tid per steg.
 // Konsollen får fortsatt bare verktøyvalg uten tekst (engine.logChoice). Tracen er bare synlig for brukeren selv og admin.
 import { randomBytes } from 'node:crypto';
-import { db } from '../db.js';
+import { db, q } from '../db.js';
 
 db.exec(`CREATE TABLE IF NOT EXISTS glimt47_trace (id TEXT PRIMARY KEY, user_id TEXT NOT NULL, created INTEGER NOT NULL, data TEXT NOT NULL);
 CREATE INDEX IF NOT EXISTS glimt47_trace_user ON glimt47_trace(user_id, created);`);
-const q = (sql) => db.prepare(sql);
 export const TRACE_TTL47 = 3 * 86400_000;
 export const TRACE_MAX47 = 100;
 const clip = (v, n = 600) => { const s = typeof v === 'string' ? v : JSON.stringify(v ?? null); return s && s.length > n ? `${s.slice(0, n)} …` : s; };

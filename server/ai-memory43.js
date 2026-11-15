@@ -6,7 +6,7 @@
 //   PATCH  /api/ai/memory/:id {text}       → {item}
 //   DELETE /api/ai/memory/:id              → {ok}
 import { Hono } from 'hono';
-import { db } from './db.js';
+import { db, q } from './db.js';
 import { authOrToken } from './mobile.js';
 import { areasOf46 } from './claude-memory46.js'; // prompt 46 (SERVER46)
 
@@ -15,7 +15,6 @@ db.exec(`CREATE TABLE IF NOT EXISTS ai_memory43 (
   created INTEGER NOT NULL, updated INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS ai_memory43_user ON ai_memory43(user_id);`);
-const q = (sql) => db.prepare(sql);
 const MAX = 500, MAX_LEN = 1000;
 const norm = (s) => String(s ?? '').toLowerCase().replace(/\s+/g, ' ').trim();
 const clean = (s) => String(s ?? '').replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, '').replace(/^\s*(?:[-*•·]|\d+[.)])\s+/, '').replace(/\s+/g, ' ').trim().slice(0, MAX_LEN);

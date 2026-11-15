@@ -8,7 +8,7 @@
 //      filene blir liggende i papirkurven til admin tømmer den med {confirm:'SLETT'} (bare elementer eldre enn 24 t).
 import { readdir, rename, rm, stat, mkdir } from 'node:fs/promises';
 import { join, resolve, basename, sep } from 'node:path';
-import { db } from '../db.js';
+import { db, q } from '../db.js';
 import * as M from '../media43.js';
 import { HOUR, DAY, GB, iso, sizeText, minText, errText } from './common.js';
 
@@ -16,7 +16,6 @@ db.exec(`CREATE TABLE IF NOT EXISTS media51_deletion (id INTEGER PRIMARY KEY AUT
   mode TEXT NOT NULL, src_path TEXT, trash_path TEXT, was_monitored INTEGER NOT NULL DEFAULT 1, created_by TEXT NOT NULL, created INTEGER NOT NULL, undo_until INTEGER NOT NULL,
   status TEXT NOT NULL DEFAULT 'pending', done_at INTEGER, error TEXT);
 CREATE INDEX IF NOT EXISTS media51_deletion_status ON media51_deletion(status, undo_until);`);
-const q = (sql) => db.prepare(sql);
 export const UNDO_MS51 = 24 * HOUR;
 const bigBytes = () => Math.max(1, Number(process.env.MEDFAM51_BIG_GB) || 8) * GB;
 const norm = (s) => String(s ?? '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/^the\s+/, '').replace(/[^a-z0-9æøå]+/g, '');

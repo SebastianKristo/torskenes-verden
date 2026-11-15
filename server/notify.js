@@ -14,6 +14,7 @@ import { sessionUser, userInfo, isAdmin } from './auth.js';
 import { bearerOk } from './finans/routes.js';
 import { broadcast } from './realtime.js';
 import { vapidPublicKey, sendPush, validEndpoint } from './webpush.js';
+import { dtf } from './intl-format.js'; // gjenbrukte Intl.DateTimeFormat
 
 const SOUNDS_DIR = join(config.dataDir, 'sounds');
 await mkdir(SOUNDS_DIR, { recursive: true });
@@ -191,7 +192,7 @@ const GROUP_OF = { pakker: 'pakker', tracking: 'pakker', finans: 'finans', abonn
 const hmMin = (hm) => { const [h, m] = hm.split(':').map(Number); return h * 60 + m; };
 function inQuiet(n, now = Date.now()) {
   if (!n.quietOn) return false;
-  const p = Object.fromEntries(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Oslo', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date(now)).map((x) => [x.type, x.value]));
+  const p = Object.fromEntries(dtf('en-GB', { timeZone: 'Europe/Oslo', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date(now)).map((x) => [x.type, x.value]));
   const t = Number(p.hour) * 60 + Number(p.minute), a = hmMin(n.quietFrom), b = hmMin(n.quietTo);
   return a === b ? false : a < b ? t >= a && t < b : t >= a || t < b;
 }

@@ -17,6 +17,7 @@ import { isAdmin, listUsers, userInfo, isLan } from './auth.js';
 import { notifyUser } from './notify.js';
 import { addEventSource } from './calendar.js';
 import { mockFetch43, mockArt43 } from './media43-mock.js';
+import { dtf } from './intl-format.js'; // gjenbrukte Intl.DateTimeFormat
 
 const MOCK = () => process.env.MOCK_DATA === '1';
 const TZ = 'Europe/Oslo';
@@ -181,7 +182,7 @@ export const speedText43 = (bps) => (bps >= MB ? `${nb1(bps / MB)} MB/s` : bps >
 export const etaText43 = (s) => (!Number.isFinite(s) || s <= 0 || s >= 8640000 ? '∞' : s < 60 ? 'under 1 min' : s < 3600 ? `${Math.ceil(s / 60)} min` : `${Math.floor(s / 3600)} t ${Math.round((s % 3600) / 60)} min`);
 const pad = (n) => String(n).padStart(2, '0');
 const epCode = (s, e) => `S${pad(s)}E${pad(e)}`;
-const osloParts = (t) => Object.fromEntries(new Intl.DateTimeFormat('en-GB', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23', weekday: 'short' }).formatToParts(new Date(t)).map((x) => [x.type, x.value]));
+const osloParts = (t) => Object.fromEntries(dtf('en-GB', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23', weekday: 'short' }).formatToParts(new Date(t)).map((x) => [x.type, x.value]));
 const osloDate = (t = Date.now()) => { const p = osloParts(t); return `${p.year}-${p.month}-${p.day}`; };
 const osloHm = (t) => { const p = osloParts(t); return `${p.hour}:${p.minute}`; };
 const addDays = (s, n) => { const [y, m, d] = s.split('-').map(Number); return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10); };

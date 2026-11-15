@@ -4,13 +4,12 @@
 //     i stedet for standarden «norge». Gist kan ikke skille innenriks og utenriks, så norge/verden kommer fortsatt fra kilden/AI.
 //   - «For deg»: en interesse treffer også når den matcher et emne (f.eks. «fotball» → sport, «aksjer» → økonomi).
 // Reserve: uten Gist er alt som før (nøkkelord, kilde og AI-kategorisering).
-import { db } from '../db.js';
+import { db, q } from '../db.js';
 import { categoryOfTopic53 } from './topics.js';
 import { use53, ready53 } from './models.js';
 import { on53 } from './flags.js';
 
 export { categoryOfTopic53, interestMatchesTopics53, topicsOf53, gistCategory53, topicSlugs53 } from './topics.js';
-const q = (sql) => db.prepare(sql);
 
 /** Merk opptil n saker som mangler emner. → antall merket. */
 export async function tagPending53({ limit = 60 } = {}) {

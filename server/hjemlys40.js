@@ -20,7 +20,7 @@
 // Jobb hvert minutt (tick40): eta passert → «Alt OK?» til deg; eta + waitMin passert → late + varsel med delingsdata til mottakerne.
 import { Hono } from 'hono';
 import { randomUUID } from 'node:crypto';
-import { db, kv } from './db.js';
+import { db, q, kv } from './db.js';
 import { authOrToken } from './mobile.js';
 import { userInfo, listUsers } from './auth.js';
 import { notifyUser } from './notify.js';
@@ -45,7 +45,6 @@ const ACTIVE = ['onTheWay', 'late'];
 const MODES = ['walk', 'transit', 'car', 'bike', 'other'];
 // Prompt 40 (tillegg 1a): reisemåtene i startarket heter kollektiv | gå | sykkel.
 const MODE_ALIAS = { kollektiv: 'transit', 'gå': 'walk', ga: 'walk', sykkel: 'bike', bil: 'car' };
-const q = (s) => db.prepare(s);
 const parse = (s, d) => { try { return s ? JSON.parse(s) : d; } catch { return d; } };
 const nameOf = (id) => { const u = userInfo(id); return u?.displayName || u?.name || u?.username || 'Ukjent'; };
 const first = (id) => String(nameOf(id)).split(/\s+/)[0];

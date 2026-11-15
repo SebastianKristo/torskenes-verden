@@ -16,7 +16,7 @@ import { readFile, writeFile, unlink, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { randomBytes } from 'node:crypto';
 import { config } from './config.js';
-import { db } from './db.js';
+import { db, q } from './db.js';
 import { authOrToken as authOrToken0 } from './mobile.js';
 const authOrToken = (c, next) => authOrToken0(c, next); // sen binding (mobile.js kan være midt i lastingen)
 import { broadcast } from './realtime.js';
@@ -26,7 +26,6 @@ export const MAX_PHOTOS41 = 8, MAX_BYTES41 = 4 * 1024 * 1024, MAX_PX41 = 1600;
 db.exec(`CREATE TABLE IF NOT EXISTS birthday_photos (id TEXT PRIMARY KEY, birthday_id INTEGER NOT NULL, user_id TEXT NOT NULL, file TEXT NOT NULL, mime TEXT NOT NULL,
   width INTEGER, height INTEGER, is_primary INTEGER NOT NULL DEFAULT 0, created INTEGER NOT NULL);
 CREATE INDEX IF NOT EXISTS birthday_photos_b ON birthday_photos(birthday_id, created);`);
-const q = (s) => db.prepare(s);
 
 /** Type og størrelse fra filhodet. → {mime, width, height} | null */
 export function imageInfo41(b) {

@@ -2,10 +2,9 @@
 // (`recipe_negatives`). Additiv migrering: tabellene opprettes hvis de mangler, og kolonner som mangler legges til (aldri endret/slettet).
 // Alt er per bruker og bare lokalt (SQLite); ingenting sendes noe sted.
 import { randomBytes } from 'node:crypto';
-import { db, kv } from '../db.js';
+import { db, q, kv } from '../db.js';
 import { readable61, readableSteps61, varsIn61, writes61 } from './template.js';
 
-const q = (sql) => db.prepare(sql);
 db.exec(`CREATE TABLE IF NOT EXISTS recipes (id TEXT PRIMARY KEY, user_id TEXT NOT NULL, created_at INTEGER NOT NULL, last_used_at INTEGER,
   use_count INTEGER NOT NULL DEFAULT 0, success_count INTEGER NOT NULL DEFAULT 0, fail_count INTEGER NOT NULL DEFAULT 0,
   example_query TEXT NOT NULL, query_template TEXT NOT NULL, intent TEXT, plan TEXT NOT NULL, slots TEXT NOT NULL DEFAULT '{}', embedding BLOB,

@@ -21,12 +21,11 @@
 import http from 'node:http';
 import net from 'node:net';
 import { lookup as dnsLookup } from 'node:dns/promises';
-import { db, kv } from '../db.js';
+import { db, q, kv } from '../db.js';
 import { cabinetRow76, cabinetRows76, partRow76, anchorOf81 } from './store.js';
 import { findTool76 } from './glimt.js';
 import { SENTENCES46 } from '../glimt45/tools46.js';
 
-const q = (sql) => db.prepare(sql);
 if (!q('PRAGMA table_info(skj_cabinets)').all().some((c) => c.name === 'leds')) db.exec('ALTER TABLE skj_cabinets ADD COLUMN leds TEXT');
 
 const NS = { 'Cache-Control': 'no-store' };

@@ -9,14 +9,13 @@ import { randomBytes } from 'node:crypto';
 import { mkdir, readFile, writeFile, unlink, rmdir } from 'node:fs/promises';
 import { join, resolve, extname } from 'node:path';
 import { simpleParser } from 'mailparser';
-import { db, settings, secret, me } from './db.js';
+import { db, q, settings, secret, me } from './db.js';
 // ISO2: Finn-handlene er per bruker (fh_finn.user_id). Underliggende tabeller (annonse, filer, e-poster) nås bare via en handel brukeren eier.
 import { config } from '../config.js';
 import { askJson } from './ai.js';
 import { parseFinnEmail } from './finn.js';
 import { osloDate } from '../dates/oslo.js';
 
-const q = (sql) => db.prepare(sql);
 const MOCK = process.env.MOCK_DATA === '1';
 const ROOT = resolve(config.dataDir, 'finn');
 const bad = (c, msg, code = 400) => c.json({ error: msg }, code);

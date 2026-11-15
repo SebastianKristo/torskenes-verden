@@ -19,7 +19,7 @@ import { bodyLimit } from 'hono/body-limit';
 import { randomUUID } from 'node:crypto';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
-import { db } from '../finans/db.js';
+import { db, q } from '../finans/db.js';
 import { config } from '../config.js';
 import { scanLog, sniffMime } from '../finans/scan.js';
 import { validate } from '../finans/ai.js';
@@ -34,7 +34,6 @@ import { todayOslo45 } from '../glimt45/dates.js';
 import { MERCHANT_LABELS51, brregStatus51, brregLookup51, updateBrreg51, learnMerchant51, mod11Ok } from './brreg51.js'; // prompt 51: Enhetsregisteret (lokal kopi)
 
 const DIR = resolve(config.dataDir, 'receipts');
-const q = (sql) => db.prepare(sql);
 // Additiv migrasjon: det beste OCR-resultatet (felles format) for kvitteringer fra /receipts/scan.
 if (!q('PRAGMA table_info(fh_receipts)').all().some((c) => c.name === 'ocr48')) db.exec('ALTER TABLE fh_receipts ADD COLUMN ocr48 TEXT');
 const bad = (c, error, status = 400, extra = {}) => c.json({ error, ...extra }, status);

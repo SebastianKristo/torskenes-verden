@@ -5,14 +5,13 @@
 //   - Stille timer 23–07 for oppgaver uten eget klokkeslett (store.nextOf62 flytter til 07:00).
 //   - Neste kjøring settes FØR kjøringen (sammenlign-og-bytt på next_run_at), så en jobb aldri kjøres to ganger.
 //   - Enkeltkjøringer og regler med passert sluttdato blir «ended».
-import { db } from '../db.js';
+import { db, q } from '../db.js';
 import { nextOf62, rowOf62, updateSchedule62, ruleOfRow62 } from './store.js';
 import { runOnce62, logSkip62, compute62 } from './run.js';
 import { sched62, serverSched62 } from './settings.js';
 import { nextRun62, osloParts62 } from '../glimt45/dates.js';
 
 export const T62 = Object.freeze({ tickMs: 60_000, prepMs: 15 * 60_000, missMs: 2 * 3600_000, retryMs: 30 * 60_000, retryUntilHour: 21, staleMs: 30 * 60_000, maxMissLogs: 10 });
-const q = (sql) => db.prepare(sql);
 const prepared = new Map(); // id → {plannedAt, out, at}
 const running = new Set();
 let clock = null;

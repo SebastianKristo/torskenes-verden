@@ -6,11 +6,10 @@
 //   split, payerId, ownerId, mine, canEdit, myShare (kr per trekk), myShareMonthly (kr/mnd), shareLabel:'Delt · din del 400 kr/mnd'
 // PUT  /finans/api/subscriptions/:id/members {members:[userId], split?, payerId?} (eier/betaler) → abonnementet
 // POST /finans/api/subscriptions/:id/leave (medlem) → {ok}
-import { db } from './db.js';
+import { db, q } from './db.js';
 import { userInfo } from '../auth.js';
 import { perMonth } from './cycles.js';
 
-const q = (sql) => db.prepare(sql);
 db.exec('CREATE TABLE IF NOT EXISTS subscription_members (sub_id INTEGER NOT NULL, user_id TEXT NOT NULL, added INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (sub_id, user_id))');
 const cols = q('PRAGMA table_info(fh_subscriptions)').all().map((c) => c.name);
 if (!cols.includes('split')) db.exec("ALTER TABLE fh_subscriptions ADD COLUMN split TEXT NOT NULL DEFAULT 'equal'");

@@ -18,11 +18,10 @@
 //   GET  /subscriptions/log.csv?filter=… → text/csv (semikolon, UTF-8 med BOM): Dato;Tjeneste;Type;Beløp
 //   POST /subscriptions/log {service, type, amount, date, account?, subscriptionId?} (W) → 201 {event} (manuelle/Glimt-hendelser)
 // Glimt (GLIMT46): subsLog46(user, {service?, from?, to?, types?}) og trialSavings46(user) – se SERVER46-API.md.
-import { db } from './finans/db.js';
+import { db, q } from './finans/db.js';
 import { domainFor } from './finans/enrich.js';
 import { osloDate } from './dates/oslo.js';
 
-const q = (sql) => db.prepare(sql);
 db.exec(`CREATE TABLE IF NOT EXISTS subscription_events (
   id INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT NOT NULL, subscription_id INTEGER, service TEXT NOT NULL, type TEXT NOT NULL,
   amount INTEGER NOT NULL DEFAULT 0, old_amount INTEGER, currency TEXT NOT NULL DEFAULT 'NOK', date TEXT NOT NULL, account TEXT,

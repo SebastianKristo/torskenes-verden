@@ -12,11 +12,10 @@
 // - Sanntid til klientene går via tasks.js sin send(), dvs. bare til dem som har tilgang til listen.
 // - MOCK_DATA=1 uten HA-token: en innebygd HA i minnet (todo.handleliste, todo.huskeliste), så klientene kan utvikles uten HA.
 import WebSocket from 'ws';
-import { db, kv, OWNER } from './db.js';
+import { db, q, kv, OWNER } from './db.js';
 import { cfg } from './settings.js';
 import { broadcast } from './realtime.js';
 
-const q = (sql) => db.prepare(sql);
 const hasCol = (t, col) => q(`PRAGMA table_info(${t})`).all().some((c) => c.name === col);
 const RETRY_MS = Number(process.env.HA_SYNC_RETRY_MS) || 30_000;
 const FULL_MS = Number(process.env.HA_SYNC_FULL_MS) || 5 * 60_000;

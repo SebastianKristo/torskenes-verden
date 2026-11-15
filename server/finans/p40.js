@@ -14,7 +14,7 @@
 // POST  /finans/api/transactions/:id/reset     → varelinjene tilbake slik Glimt leste dem («Tilbakestill»)
 // POST  /finans/api/search/ask {q}             → {text, source, sourceLabel, cards:[{kind:'sub'|'tx'|'receipt'|'budget'|'stat', …}], items, total?, open?, intent}
 import { Hono } from 'hono';
-import { db } from './db.js';
+import { db, q } from './db.js';
 import { sessionUser } from '../auth.js';
 import { bearerOk } from './routes.js';
 import { subscriptionSources, subIntent } from './subs-ask32.js';
@@ -23,7 +23,6 @@ import { addedOf40, markCreated40, historyOf40, recordChange40, tagsOf40, applyR
 import { osloTodayISO } from '../../public/js/quick-time.js';
 import { PER_TEXT, perMonth } from './cycles.js';
 
-const q = (sql) => db.prepare(sql);
 const who = (c) => sessionUser(c) ?? (bearerOk(c, 'finance:read') ? c.get('user') : null);
 const str = (v, n = 200) => (typeof v === 'string' ? v.replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, n) : '');
 

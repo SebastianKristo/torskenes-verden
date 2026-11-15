@@ -11,14 +11,14 @@ import { Readable, Writable, Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { createGzip, createGunzip } from 'node:zlib';
 import { createCipheriv, createDecipheriv, randomBytes, scryptSync, randomUUID } from 'node:crypto';
-import { db, kv, OWNER, settings, saveSettings, secret, me, SERVER_KEYS } from './db.js';
+import { db, q, kv, OWNER, settings, saveSettings, secret, me, SERVER_KEYS } from './db.js';
+import { kvMemoReset } from '../db.js';
 import { config } from '../config.js';
 import { writeXlsx, readXlsxSheets, fromSerial } from './xlsx.js';
 import { cachedStocks } from './stocks.js';
 import { registerJob } from '../jobs/index.js';
 import { osloDate } from '../dates/oslo.js';
 
-const q = (sql) => db.prepare(sql);
 const DATA = resolve(config.dataDir);
 const WORK = join(DATA, 'backups');
 mkdirSync(WORK, { recursive: true });
@@ -625,6 +625,7 @@ export async function restore(stageId, u = me(), { mainAdmin = u === OWNER } = {
       }
     }
     result.receipt_files = files;
+    kvMemoReset(); // kv kan være skrevet direkte (settings.json, hele databasen)
     kv.set(OWNER, 'fh_firstrun', { done: true, at: Date.now(), via: 'restore' });
   }
   if (s.dir) rmSync(s.dir, { recursive: true, force: true });
