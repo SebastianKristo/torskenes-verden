@@ -24,7 +24,8 @@ import { userGuard, readJson, bad, MOCK } from '../homeos-common.js';
 import { upsertShipment, trk46, stagger41 } from './shipments.js';
 import { detect, normNo, configured, setAccountLookup46, canonical41 } from './carriers.js';
 import { dtf } from '../intl-format.js'; // gjenbrukte Intl.DateTimeFormat
-import { CARRIER_APPS } from './carrier-apps.js'; // Q22: app-verdiene for Posten, Bring og PostNord
+import { CARRIER_APPS } from './carrier-apps.js';
+import { registerJob } from '../jobs/index.js'; // Q22: app-verdiene for Posten, Bring og PostNord
 
 /* ---------------- Konstanter (fra const.py i integrasjonene) ---------------- */
 
@@ -485,16 +486,11 @@ export function accountDue46(u, src, t = Date.now()) {
   const last = Math.max(a.lastSync ?? 0, a.lastTry ?? 0);
   return !last || t >= last + accountInterval46(u, src, t) + stagger41();
 }
-let timer46 = null;
-export function startAccounts46() {
-  if (timer46 || process.env.NODE_ENV === 'test') return;
-  timer46 = setInterval(async () => {
-    for (const row of q(`SELECT user FROM kv WHERE key=?`).all(ACC)) {
-      for (const src of SOURCES) if (accountDue46(row.user, src)) await syncAccount46(row.user, src).catch(() => {});
-    }
-  }, 5 * 60_000);
-  timer46.unref?.();
-}
+registerJob('sporing.kontoer', 5 * 60_000, async () => {
+  for (const row of q(`SELECT user FROM kv WHERE key=?`).all(ACC)) {
+    for (const src of SOURCES) if (accountDue46(row.user, src)) await syncAccount46(row.user, src).catch(() => {});
+  }
+}, { note: 'Sporing: innboksen fra Posten/Bring- og PostNord-kontoene' }); // felles planlegger: ikke i test/sandkasse
 
 /* ---------------- API (/api/tracking/…) ---------------- */
 

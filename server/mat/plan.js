@@ -27,6 +27,7 @@ import { activeUser, runAsUser } from '../settings.js';
 import { mountRecipes, ensureDefaultFolders, folders, folderById, guessFolderId, allLinks, linksFor, removeDishData, HOUSEHOLD } from './recipes.js';
 import { broadcast } from '../realtime.js';
 import { osloDate } from '../dates/oslo.js';
+import { registerJob } from '../jobs/index.js';
 export { HOUSEHOLD };
 
 const DN = ['Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lørdag', 'Søndag'];
@@ -831,23 +832,21 @@ export function matCalendar(c) {
 
 /* ---------------- Automatisk plan søndag kl. 18 ---------------- */
 
-export function startMatScheduler() {
-  // Husstandens felles plan (prompt 36). AI-uka tar hensyn til alle kokkene.
-  const tickFor = async (u) => {
-    const today = day(new Date());
-    const s = state(u);
-    if (!s.auto || s.lastAuto === today) return;
-    s.lastAuto = today; save(s, u);
-    try { const s2 = state(u); await generate(s2, weekDates(addDays(today, 1)), 'ai'); s2.lastAuto = today; save(s2, u); }
-    catch (e) { console.error('[mat]', e.message); }
-  };
-  const tick = async () => {
-    const now = new Date();
-    if (now.getDay() !== 0 || now.getHours() < 18) return;
-    await runAsUser(HOUSEHOLD, () => tickFor(HOUSEHOLD)).catch(() => {}); // én felles plan (prompt 36)
-  };
-  setInterval(tick, 10 * 60_000).unref();
+// Søndag fra kl. 18: neste ukes plan med AI når «auto» er på. Husstandens felles plan (prompt 36); AI-uka tar hensyn til alle kokkene.
+async function autoWeekFor(u) {
+  const today = day(new Date());
+  const s = state(u);
+  if (!s.auto || s.lastAuto === today) return;
+  s.lastAuto = today; save(s, u);
+  try { const s2 = state(u); await generate(s2, weekDates(addDays(today, 1)), 'ai'); s2.lastAuto = today; save(s2, u); }
+  catch (e) { console.error('[mat]', e.message); }
 }
+async function autoWeekTick() {
+  const now = new Date();
+  if (now.getDay() !== 0 || now.getHours() < 18) return;
+  await runAsUser(HOUSEHOLD, () => autoWeekFor(HOUSEHOLD)).catch(() => {}); // én felles plan (prompt 36)
+}
+registerJob('mat.ukeplan', 10 * 60_000, autoWeekTick, { note: 'Mat: neste ukes plan søndag kveld (auto)' }); // felles planlegger: ikke i test/sandkasse
 
 /** Prompt 37: rettene og ingrediensene i ukas matplan (felles plan), for Glimt i Gjøremål («Legg ukas matplan i handlelisten»). */
 export function weekIngredients37(date = day(new Date())) {

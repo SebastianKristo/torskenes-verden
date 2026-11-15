@@ -148,3 +148,10 @@ test('bakgrunnsjobbene i Familie går via den felles planleggeren (ikke aktive i
   assert.deepEqual(jobs.map((j) => [j.name, j.everyMs]).sort(), [['familie.forlot', 30_000], ['familie.helse-ha', 900_000], ['familie.kjoring', 300_000], ['familie.sjekk-inn', 30_000], ['familie.vel-fremme', 60_000]]);
   assert.ok(jobs.every((j) => !j.active));
 });
+
+test('bakgrunnsjobbene i Sporing og Mat går via den felles planleggeren (ikke aktive i test)', async () => {
+  const { listJobs } = await import('../server/jobs/index.js');
+  const jobs = listJobs().filter((j) => /^(sporing|mat)\./.test(j.name));
+  assert.deepEqual(jobs.map((j) => [j.name, j.everyMs]).sort(), [['mat.ukeplan', 600_000], ['sporing.kontoer', 300_000], ['sporing.status', 900_000]]);
+  assert.ok(jobs.every((j) => !j.active));
+});

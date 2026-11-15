@@ -18,7 +18,6 @@ import finansApi from './finans/routes.js';
 import { receiptsAlias48 } from './receipts48/routes.js';
 import { db as fhDb } from './finans/db.js';
 import homeApi from './home.js';
-import { startMatScheduler } from './mat/plan.js';
 import { mountMat } from './mat/index.js'; // Mat: /api/matplan, /mat/api og /mat/calendar.ics
 import domainsApi, { domainSummary } from './domains.js';
 import { startTrackingWorker, hasTrackingTest, testTracking } from './sporing/shipments.js';
@@ -100,7 +99,6 @@ import { mountDal53 } from './dal53/index.js'; // prompt 53 (DAL53): Desert Ant 
 import { mountWhisper54 } from './whisper54/index.js'; // prompt 54 (WHISPER54): NB-Whisper på Mac mini-en (admin: /api/admin/whisper54/*), norsk tale til tekst i /api/voice53/*
 import { mountVoxcpm57 } from './voxcpm57/index.js'; // prompt 57 (VOX57): VoxCPM2 på Mac mini-en – /api/voices57 (stemmer per bruker) og /api/admin/voxcpm57/*
 import { mountOmlx58 } from './omlx58/index.js'; // prompt 58 (OMLX58): oMLX på Mac mini-en som motor bak AI-gaten (admin: /api/admin/omlx58/*)
-import { startAccounts46 } from './sporing/accounts.js'; // prompt 46 (DATA46): Posten/Bring- og PostNord-konto
 import { gphoto46Api, startGphoto46 } from './gphoto46.js'; // prompt 46 (DATA46): Google Photos-album som bakgrunn
 import { settingsApi as glimtSettingsApi, ttsApi, imgApi } from './glimt35.js'; // prompt 35: /api/glimt/settings, /api/tts, /api/img
 import { mountVaer } from './vaer/index.js'; // Vær: /here, /week-summary, /place, /layout og ski i /full
@@ -768,8 +766,8 @@ app.route('/domains/api', domainsApi);
 // (ingen varsler, e-post, backup, oppdateringer eller selvreparasjon). Bare HTTP-serveren og migreringene kjører.
 const BG51 = process.env.NODE_ENV !== 'test' && process.env.OPS51_SANDBOX !== '1';
 migrateLocalHosts86().catch((e) => console.warn('[localfetch]', e.message)); // prompt 86: én gang – lokale verter i administratorenes abonnementer godkjennes
-if (BG51) { startMatScheduler(); startTrackingWorker(); startRssWorker(); startBirthdayWorker(); startSystemBackupScheduler(); startUpdateScheduler(); startTrialScheduler(); startDomainGlimtScheduler(); startSpaceScheduler(); startApi38(); startApi40(); startMedia(); startLogs44(); startLive89(); }
-if (BG51) { startAccounts46(); startGphoto46(); } // prompt 46 (DATA46)
+if (BG51) { startTrackingWorker(); startRssWorker(); startBirthdayWorker(); startSystemBackupScheduler(); startUpdateScheduler(); startTrialScheduler(); startDomainGlimtScheduler(); startSpaceScheduler(); startApi38(); startApi40(); startMedia(); startLogs44(); startLive89(); }
+if (BG51) { startGphoto46(); } // prompt 46 (DATA46)
 if (BG51) startJobs(); // felles planlegger (server/jobs/): backup, brief, iCal, skolekalendere, Sjekk inn, «forlot»
 if (process.env.NODE_ENV !== 'test') startOps51(); // prompt 51 (OPS51): planlegger (backup, testet gjenoppretting, vedlikehold) og migrasjonslogg
 if (process.env.OPS51_SANDBOX !== '1') startObs51(); // prompt 51 (OBS51): samples, driftsvarsler og selvreparasjon (ikke i test)

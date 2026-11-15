@@ -9,6 +9,7 @@
 //   Ekte push er ikke bygget: appene og nettsiden viser varslene lokalt når de henter /api/tracking.
 import { Hono } from 'hono';
 import { db, q, kv, OWNER } from '../db.js';
+import { registerJob } from '../jobs/index.js';
 import { runAsUser } from '../settings.js';
 import { config } from '../config.js'; // prompt 41: fast forskyvning per installasjon
 import { sessionUser } from '../auth/session.js';
@@ -540,12 +541,10 @@ export async function checkAll({ force = false, user } = {}) {
   return total;
 }
 
-let timer = null;
+registerJob('sporing.status', 15 * 60_000, () => checkAll().catch(() => {}), { note: 'Sporing: status fra transportørene for aktive pakker' }); // felles planlegger: ikke i test/sandkasse
+/** Første runde 20 s etter oppstart (ellers først etter ett intervall). Bare når bakgrunnsjobber er lov. */
 export function startTrackingWorker() {
-  if (timer) return;
   if (MOCK) seedMock(OWNER);
-  timer = setInterval(() => { checkAll().catch(() => {}); }, 15 * 60_000);
-  timer.unref?.();
   setTimeout(() => checkAll().catch(() => {}), 20_000).unref?.();
 }
 
