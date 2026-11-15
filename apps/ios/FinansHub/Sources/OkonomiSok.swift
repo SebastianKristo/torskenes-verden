@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /* ---------------- Prompt 40: Finans → Søk – Glimt gir ryddige svar med kort ----------------
    prompts/prompt-40-pakke/claude-code-finans-sok-glimt-kort.md, fasit Mobil Papir App.dc.html → Finans → Søk (fs, subI, G).
@@ -50,12 +51,6 @@ struct Fin40Card: Hashable, Identifiable {
 
     /// Månedsbeløp (årlige delt på 12).
     var monthly: Double { (amount ?? 0) / (yearly ? 12 : 1) }
-
-    var logoURL: URL? {
-        if logo.hasPrefix("http"), let u = URL(string: logo) { return u }
-        let dom: String = domain.isEmpty ? name.lowercased().replacingOccurrences(of: " ", with: "") + ".no" : domain
-        return URL(string: "https://www.google.com/s2/favicons?sz=64&domain=" + dom)
-    }
 }
 
 struct Fin40Answer: Hashable {
@@ -142,13 +137,17 @@ final class Fin40Ask {
 extension Fin40Card {
     /// «25. okt».
     static func day(_ d: Date) -> String {
-        let f: DateFormatter = DateFormatter()
-        f.locale = Locale(identifier: "nb_NO")
-        f.dateFormat = "d. MMM"
-        var s: String = f.string(from: d)
+        var s: String = dayFormat.string(from: d)
         if s.hasSuffix(".") { s.removeLast() }
         return s
     }
+
+    private static let dayFormat: DateFormatter = {
+        let f: DateFormatter = DateFormatter()
+        f.locale = Locale(identifier: "nb_NO")
+        f.dateFormat = "d. MMM"
+        return f
+    }()
 }
 
 /// Glimt-kortet i Finans-søket.
@@ -223,6 +222,7 @@ struct Fin40CardRow: View {
     @Environment(\.paper) private var p
     let c: Fin40Card
     let first: Bool
+    @State private var logoImage: UIImage? = nil
 
     var body: some View {
         Button { open() } label: {
@@ -230,7 +230,7 @@ struct Fin40CardRow: View {
                 logo
                 VStack(alignment: .leading, spacing: 1) {
                     Text(c.name).font(PF.ui(14.5, .semibold)).foregroundStyle(p.ink).lineLimit(1)
-                    Text(subline).font(PF.ui(12)).foregroundStyle(soon ? Color(hex: "#b23a2a") : p.mut).lineLimit(1)
+                    Text(subline).font(PF.ui(12)).foregroundStyle(soon ? DS.fixed(.accent, stil: .papir, dark: false) : p.mut).lineLimit(1)
                 }
                 Spacer(minLength: 4)
                 VStack(alignment: .trailing, spacing: 1) {
@@ -262,11 +262,22 @@ struct Fin40CardRow: View {
         ZStack {
             RoundedRectangle(cornerRadius: 10, style: .continuous).fill(p.card)
             Text(String(c.name.prefix(1)).uppercased()).font(PF.ui(13, .heavy)).foregroundStyle(p.ink)
-            if let u = c.logoURL {
-                AsyncImage(url: u) { (img: Image) in img.resizable().scaledToFit().padding(6) } placeholder: { Color.clear }
+            if let img = logoImage {
+                Image(uiImage: img).resizable().scaledToFit().padding(6)
             }
         }
         .frame(width: 36, height: 36)
+        .task(id: c.id) { await loadLogo() }
+    }
+
+    /// Fase 4: logoen hentes via serveren og appens logobuffer (Store.logo / Store.image), som Logo-komponenten,
+    /// i stedet for AsyncImage uten buffer rett mot Googles favicon-tjeneste.
+    private func loadLogo() async {
+        if c.logo.hasPrefix("http") || c.logo.hasPrefix("/") {
+            if let i = await store.image(c.logo) { logoImage = i; return }
+        }
+        let dom: String = c.domain.isEmpty ? c.name.lowercased().replacingOccurrences(of: " ", with: "") + ".no" : c.domain
+        logoImage = await store.logo(dom)
     }
 
     private func open() {
@@ -403,7 +414,7 @@ struct FinSuggestList27: View {
             }
             .buttonStyle(.plain)
             Button { fill(s) } label: {
-                Text("↖").font(.system(size: 17)).foregroundStyle(p.mut).frame(width: 44, height: 44).contentShape(Circle())
+                Image(systemName: "arrow.up.left").font(PF.ui(17)).foregroundStyle(p.mut).frame(width: 44, height: 44).contentShape(Circle())
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Fyll inn i søket")

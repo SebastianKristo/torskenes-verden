@@ -84,7 +84,7 @@ struct LogoThumb73: View {
             if let img {
                 Image(uiImage: img).resizable().scaledToFit().padding(size * 0.16)
             } else {
-                Text(String(name.prefix(1)).uppercased()).font(PF.serif(size * 0.45, medium: true)).foregroundStyle(Color(hex: "#1b1a17"))
+                Text(String(name.prefix(1)).uppercased()).font(PF.serif(size * 0.45, medium: true)).foregroundStyle(DS.fixed(.textPrimary, stil: .papir, dark: false))
             }
         }
         .frame(width: size, height: size)
@@ -120,12 +120,12 @@ struct LogoSheet73: View {
     @State private var errorText: String = ""
     @State private var searchTask: Task<Void, Never>? = nil
 
-    private let bg = Color(hex: "#f3efe6")
-    private let ink = Color(hex: "#1b1a17")
-    private let line = Color(hex: "#d8d1c2")
+    private let bg = DS.fixed(.surface, stil: .papir, dark: false)
+    private let ink = DS.fixed(.textPrimary, stil: .papir, dark: false)
+    private let line = DS.fixed(.line, stil: .papir, dark: false)
     private let soft = Color(hex: "#e6e0d3")
-    private let mut = Color(hex: "#8f897c")
-    private let acc = Color(hex: "#b23a2a")
+    private let mut = DS.fixed(.textTertiary, stil: .papir, dark: false)
+    private let acc = DS.fixed(.accent, stil: .papir, dark: false)
 
     var body: some View {
         VStack(spacing: 0) {
@@ -171,7 +171,7 @@ struct LogoSheet73: View {
             Spacer(minLength: 8)
             LogoThumb73(url: preview, name: name, size: 44, radius: 12)
             Button { dismiss() } label: {
-                Image(systemName: "xmark").font(.system(size: 14, weight: .semibold)).foregroundStyle(ink)
+                Image(systemName: "xmark").font(PF.ui(14, .semibold)).foregroundStyle(ink)
                     .frame(width: 44, height: 44)
                     .background(Circle().fill(Color.white))
                     .overlay(Circle().stroke(line, lineWidth: 1))
@@ -184,15 +184,15 @@ struct LogoSheet73: View {
 
     private var searchField: some View {
         HStack(spacing: 12) {
-            Image(systemName: "magnifyingglass").font(.system(size: 16, weight: .semibold)).foregroundStyle(mut)
+            Image(systemName: "magnifyingglass").font(PF.ui(16, .semibold)).foregroundStyle(mut)
             TextField("Søk etter butikk", text: $q)
                 .font(PF.ui(16)).foregroundStyle(ink)
                 .textInputAutocapitalization(.never).autocorrectionDisabled(true)
                 .submitLabel(.search)
             if !q.isEmpty {
                 Button { q = "" } label: {
-                    Image(systemName: "xmark").font(.system(size: 10, weight: .bold)).foregroundStyle(ink)
-                        .frame(width: 28, height: 28).background(Circle().fill(Color(hex: "#ebe5d8")))
+                    Image(systemName: "xmark").font(PF.ui(10, .bold)).foregroundStyle(ink)
+                        .frame(width: 28, height: 28).background(Circle().fill(DS.fixed(.surfaceSunken, stil: .papir, dark: false)))
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Tøm")
@@ -233,7 +233,7 @@ struct LogoSheet73: View {
                 }
                 Spacer(minLength: 4)
                 if on {
-                    Image(systemName: "checkmark").font(.system(size: 11, weight: .bold)).foregroundStyle(bg)
+                    Image(systemName: "checkmark").font(PF.ui(11, .bold)).foregroundStyle(bg)
                         .frame(width: 24, height: 24).background(Circle().fill(ink))
                 }
             }

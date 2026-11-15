@@ -9,8 +9,8 @@ import UIKit
 
 enum Cal32b {
     static let purple: Color = Color(hex: "#7a5ad6")
-    static let green: Color = Color(hex: "#2f7a4f")
-    static let red: Color = Color(hex: "#b23a2a")
+    static let green: Color = DS.fixed(.success, stil: .papir, dark: false)
+    static let red: Color = DS.fixed(.accent, stil: .papir, dark: false)
 
     /// Hjemindikatoren (safe area nederst) i nøkkelvinduet.
     @MainActor static var bottomInset: CGFloat {

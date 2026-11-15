@@ -344,11 +344,7 @@ final class Dom24Summary {
 
     /// «48 597» med mellomrom som tusenskille (besøk er ikke beløp og skjules aldri).
     nonisolated static func format(_ v: Double) -> String {
-        let f: NumberFormatter = NumberFormatter()
-        f.locale = Locale(identifier: "nb_NO")
-        f.numberStyle = .decimal
-        f.maximumFractionDigits = 0
-        return f.string(from: NSNumber(value: v)) ?? String(Int(v))
+        dom24Number.string(from: NSNumber(value: v)) ?? String(Int(v))
     }
 
     func load(_ store: Store, force: Bool = false) async {
@@ -415,7 +411,7 @@ struct Dom24Pill: View {
         }
         .foregroundStyle(Color.white)
         .padding(.horizontal, 12).padding(.vertical, 7)
-        .background(Capsule().fill(Color(hex: "#1b1a17").opacity(0.55)))
+        .background(Capsule().fill(DS.fixed(.textPrimary, stil: .papir, dark: false).opacity(0.55)))
         .overlay(Capsule().strokeBorder(Color.white.opacity(0.18), lineWidth: 1))
         .fixedSize()
     }
@@ -703,7 +699,7 @@ struct Bol47SharedRow: View {
                 }
                 .padding(.leading, 2)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                Text("›").font(PF.ui(17)).foregroundStyle(p.mut)
+                Image(systemName: "chevron.right").font(PF.ui(17)).imageScale(.small).foregroundStyle(p.mut).accessibilityHidden(true)
             }
             .padding(.horizontal, 16).padding(.vertical, 14)
             .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).strokeBorder(p.line, lineWidth: 1))
@@ -743,7 +739,7 @@ struct Bol47AccessPage: View {
                 Haptics.shared.select()
                 m.tab = "ov"
             } label: {
-                Text("‹ Oversikt").font(PF.ui(13.5, .bold)).foregroundStyle(p.ink)
+                Label("Oversikt", systemImage: "chevron.left").labelStyle(.titleAndIcon).font(PF.ui(13.5, .bold)).foregroundStyle(p.ink)
                     .padding(.horizontal, 16).frame(height: 40)
                     .background(Capsule().fill(p.card))
                     .contentShape(Capsule())
@@ -753,3 +749,13 @@ struct Bol47AccessPage: View {
         }
     }
 }
+
+/// Tallformat for Dom24Summary.format. Lages én gang (formatering er trådsikker så lenge formatteren ikke endres),
+/// utenfor aktøren så nonisolated-funksjonen kan bruke den.
+private let dom24Number: NumberFormatter = {
+    let f: NumberFormatter = NumberFormatter()
+    f.locale = Locale(identifier: "nb_NO")
+    f.numberStyle = .decimal
+    f.maximumFractionDigits = 0
+    return f
+}()

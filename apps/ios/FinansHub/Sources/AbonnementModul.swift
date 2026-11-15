@@ -412,21 +412,23 @@ struct SubsMobileView: View {
 
     private func subRow(_ s: SubItem) -> some View {
         let pill: (String, Color) = !s.active ? ("Sagt opp", .white.opacity(0.6)) : s.status == "price_up" ? ("▲ Pris økt", Color(hex: "#FF8A80")) : s.status == "low_use" ? ("⚠ Lite brukt", .accentLight) : ("Aktiv", .positive)
-        return HStack(spacing: 12) {
-            Logo(domain: s.domain, name: s.name, color: "#FF7A3D", size: 36, logoUrl: s.logoUrl)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(s.name + (s.plan.isEmpty ? "" : " · \(s.plan)")).fontWeight(.medium).lineLimit(1)
-                Text([s.cycleName, s.nextDate.isEmpty ? nil : "Neste \(ddmm(s.nextDate))", s.category].compactMap { $0 }.joined(separator: " · ")).font(.footnote).foregroundStyle(Color.skinFg.opacity(0.6)).lineLimit(1)
-                AiLine(text: s.aiShort)
+        return Button { Haptics.shared.tap(); store.subEdit = s } label: {
+            HStack(spacing: 12) {
+                Logo(domain: s.domain, name: s.name, color: "#FF7A3D", size: 36, logoUrl: s.logoUrl)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(s.name + (s.plan.isEmpty ? "" : " · \(s.plan)")).fontWeight(.medium).lineLimit(1)
+                    Text([s.cycleName, s.nextDate.isEmpty ? nil : "Neste \(ddmm(s.nextDate))", s.category].compactMap { $0 }.joined(separator: " · ")).font(.footnote).foregroundStyle(Color.skinFg.opacity(0.6)).lineLimit(1)
+                    AiLine(text: s.aiShort)
+                }
+                Spacer(minLength: 6)
+                VStack(alignment: .trailing, spacing: 4) {
+                    Text(n0(s.price)).font(.system(.body, design: .monospaced).weight(.semibold))
+                    Pill(text: pill.0, color: pill.1)
+                }
             }
-            Spacer(minLength: 6)
-            VStack(alignment: .trailing, spacing: 4) {
-                Text(n0(s.price)).font(.system(.body, design: .monospaced).weight(.semibold))
-                Pill(text: pill.0, color: pill.1)
-            }
+            .padding(.horizontal, 16).padding(.vertical, 12).contentShape(Rectangle())
         }
-        .padding(.horizontal, 16).padding(.vertical, 12).contentShape(Rectangle())
-        .onTapGesture { Haptics.shared.tap(); store.subEdit = s }
+        .buttonStyle(.plain)
         .contextMenu {
             Button("Endre") { store.subEdit = s }
             if s.active { Button("Marker som sagt opp") { store.setSubItemActive(s, false) } } else { Button("Aktiver igjen") { store.setSubItemActive(s, true) } }

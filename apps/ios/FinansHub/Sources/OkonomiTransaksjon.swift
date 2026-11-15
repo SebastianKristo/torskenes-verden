@@ -61,12 +61,16 @@ struct Fin40Meta: Hashable {
     static func when(_ iso: String) -> String {
         let d: Date? = Hjemlys40Session.date(iso)
         guard let d else { return String(iso.prefix(10)) }
+        return Fin40Meta.stamp.string(from: d)
+    }
+
+    private static let stamp: DateFormatter = {
         let f: DateFormatter = DateFormatter()
         f.locale = Locale(identifier: "nb_NO")
         f.timeZone = TimeZone(identifier: "Europe/Oslo") ?? TimeZone.current
         f.dateFormat = "dd.MM.yyyy 'kl.' HH.mm"
-        return f.string(from: d)
-    }
+        return f
+    }()
 }
 
 /// Den dempede, sentrerte linja nederst.
@@ -147,11 +151,7 @@ final class Fin40Reread {
 
     nonisolated static func money(_ v: Double?) -> String {
         guard let v else { return "–" }
-        let f: NumberFormatter = NumberFormatter()
-        f.locale = Locale(identifier: "nb_NO")
-        f.numberStyle = .decimal
-        f.minimumFractionDigits = v == v.rounded() ? 0 : 2
-        f.maximumFractionDigits = 2
+        let f: NumberFormatter = v == v.rounded() ? fin40MoneyWhole : fin40MoneyOre
         return (f.string(from: NSNumber(value: abs(v))) ?? "\(v)") + " kr"
     }
 
@@ -256,7 +256,7 @@ struct Fin40RereadSheet: View {
                     .background(p.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                     if m.sumMismatch {
                         Text("Summen av linjene stemmer ikke med totalen. Sjekk i «Rediger alt».")
-                            .font(PF.ui(13, .semibold)).foregroundStyle(Color(hex: "#b23a2a")).fixedSize(horizontal: false, vertical: true)
+                            .font(PF.ui(13, .semibold)).foregroundStyle(DS.fixed(.accent, stil: .papir, dark: false)).fixedSize(horizontal: false, vertical: true)
                     }
                     HStack(spacing: 8) {
                         Tfa40Secondary(title: "Behold som før") { m.apply(store, keepNew: false, txId: txId) }
@@ -350,7 +350,7 @@ struct Fin40EditSheet: View {
                 }
                 linesBox
                 if !err.isEmpty {
-                    Text(err).font(PF.ui(13, .semibold)).foregroundStyle(Color(hex: "#b23a2a"))
+                    Text(err).font(PF.ui(13, .semibold)).foregroundStyle(DS.fixed(.accent, stil: .papir, dark: false))
                 }
                 if !d.lines.isEmpty {
                     Button { resetLines() } label: {
@@ -404,7 +404,7 @@ struct Fin40EditSheet: View {
                         TextField("0", text: l.price).keyboardType(.decimalPad).multilineTextAlignment(.trailing)
                             .font(PF.mono(14)).foregroundStyle(p.ink).frame(width: 90)
                         Button { remove(l.wrappedValue.id) } label: {
-                            Text("×").font(PF.ui(18, .bold)).foregroundStyle(p.mut).frame(width: 30, height: 36)
+                            Image(systemName: "xmark").font(PF.ui(14, .bold)).foregroundStyle(p.mut).frame(width: 44, height: 44).contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
                         .accessibilityLabel("Fjern linje")
@@ -422,7 +422,7 @@ struct Fin40EditSheet: View {
             if !lines.isEmpty {
                 let ok: Bool = abs(sumLines - (Fin40EditSheet.num(amount) ?? 0)) < 0.01
                 Text("Sum linjer " + Fin40Reread.money(sumLines) + (ok ? " · stemmer" : " · stemmer ikke med beløpet"))
-                    .font(PF.ui(13, .semibold)).foregroundStyle(ok ? Color(hex: "#2f7a4f") : Color(hex: "#b23a2a"))
+                    .font(PF.ui(13, .semibold)).foregroundStyle(ok ? DS.fixed(.success, stil: .papir, dark: false) : DS.fixed(.accent, stil: .papir, dark: false))
             }
         }
     }
@@ -536,4 +536,18 @@ struct Fin50RereadError: View {
             }
         }
     }
+}
+
+/// Beløpsformattere for Fin40Reread.money (hele kroner / med øre). Lages én gang (formatering er trådsikker så lenge
+/// formatteren ikke endres), utenfor aktøren så nonisolated-funksjonen kan bruke dem.
+private let fin40MoneyWhole: NumberFormatter = fin40MoneyFormatter(minDigits: 0)
+private let fin40MoneyOre: NumberFormatter = fin40MoneyFormatter(minDigits: 2)
+
+private func fin40MoneyFormatter(minDigits: Int) -> NumberFormatter {
+    let f: NumberFormatter = NumberFormatter()
+    f.locale = Locale(identifier: "nb_NO")
+    f.numberStyle = .decimal
+    f.minimumFractionDigits = minDigits
+    f.maximumFractionDigits = 2
+    return f
 }

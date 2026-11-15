@@ -26,8 +26,9 @@ struct Cal27CloseButton: View {
 
     var body: some View {
         Button(action: close) {
-            Text("✕").font(PF.ui(14)).foregroundStyle(p.ink).frame(width: 40, height: 40)
+            Image(systemName: "xmark").font(PF.ui(13, .semibold)).foregroundStyle(p.ink).frame(width: 40, height: 40)
                 .background(p.card, in: Circle())
+                .frame(width: 44, height: 44).contentShape(Circle())
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Lukk")
@@ -121,7 +122,7 @@ struct Cal27Detail: View {
             if e.editable {
                 HStack(spacing: 8) {
                     bigButton("Rediger", bg: p.ink, fg: p.bg) { editLater() }
-                    bigButton(m.delArm ? "Trykk igjen" : "Slett", bg: Color(hex: "#b23a2a"), fg: Color.white) { m.delete(e, store) }
+                    bigButton(m.delArm ? "Trykk igjen" : "Slett", bg: DS.fixed(.accent, stil: .papir, dark: false), fg: Color.white) { m.delete(e, store) }
                 }
             }
             HStack(spacing: 8) {
@@ -262,7 +263,7 @@ struct Cal27FormSheet: View {
                 VStack(alignment: .leading, spacing: 12) {
                 let err: String = m.form?.error ?? ""
                 if !err.isEmpty {
-                    Text(err).font(PF.ui(13, .semibold)).foregroundStyle(Color(hex: "#b23a2a")).fixedSize(horizontal: false, vertical: true)
+                    Text(err).font(PF.ui(13, .semibold)).foregroundStyle(DS.fixed(.accent, stil: .papir, dark: false)).fixedSize(horizontal: false, vertical: true)
                 }
                 if m.reconnect {
                     Button {

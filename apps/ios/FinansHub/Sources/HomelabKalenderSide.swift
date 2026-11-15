@@ -122,7 +122,7 @@ struct Cal27TopBar: View {
         let t: (String, String) = m.title
         HStack(spacing: 4) {
             Button { Nav27.back(store) } label: {
-                Text("‹").font(PF.ui(28)).foregroundStyle(p.ink).frame(width: 40, height: 44)
+                Image(systemName: "chevron.left").font(PF.ui(20, .semibold)).foregroundStyle(p.ink).frame(width: 44, height: 44)
             }
             .buttonStyle(.plain)
             .padding(.leading, -6)

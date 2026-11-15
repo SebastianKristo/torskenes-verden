@@ -153,7 +153,7 @@ struct Cal26NavRow: View {
             Button { m.goToday() } label: {
                 Text("I dag").font(PF.ui(13, .bold)).foregroundStyle(n.isToday ? p.mut : Color.white)
                     .padding(.horizontal, 14).frame(height: 38)
-                    .background(n.isToday ? p.card : Color(hex: "#b23a2a"), in: Capsule())
+                    .background(n.isToday ? p.card : DS.fixed(.accent, stil: .papir, dark: false), in: Capsule())
             }
             .buttonStyle(.plain)
         }
@@ -250,8 +250,9 @@ struct Cal26DetailCard: View {
                 RoundedRectangle(cornerRadius: 3).fill(c).frame(width: 6)
             }
             Button { m.sel = nil } label: {
-                Text("×").font(PF.ui(16)).foregroundStyle(p.ink).frame(width: 34, height: 34)
+                Image(systemName: "xmark").font(PF.ui(13, .semibold)).foregroundStyle(p.ink).frame(width: 34, height: 34)
                     .overlay(Circle().stroke(p.line, lineWidth: 1))
+                    .frame(width: 44, height: 44).contentShape(Circle())
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Lukk")
@@ -485,7 +486,7 @@ struct Cal26MonthCell: View {
                 Text("\(Cal26.cal.component(.day, from: d))").font(PF.serif(16, medium: true))
                     .foregroundStyle(isT ? Color.white : (weekday ? p.ink : p.mut))
                     .frame(width: 28, height: 28)
-                    .background(isT ? Color(hex: "#b23a2a") : Color.clear, in: Circle())
+                    .background(isT ? DS.fixed(.accent, stil: .papir, dark: false) : Color.clear, in: Circle())
                 HStack(spacing: 3) {
                     ForEach(Array(dots.enumerated()), id: \.offset) { _, h in
                         Circle().fill(h == "line" ? p.line : Color(hex: h)).frame(width: 6, height: 6)
@@ -591,7 +592,7 @@ struct Cal26WeekHead: View {
                 Text("\(Cal26.cal.component(.day, from: d))").font(PF.serif(17, medium: true))
                     .foregroundStyle(isT ? Color.white : p.ink)
                     .frame(width: 30, height: 30)
-                    .background(isT ? Color(hex: "#b23a2a") : Color.clear, in: Circle())
+                    .background(isT ? DS.fixed(.accent, stil: .papir, dark: false) : Color.clear, in: Circle())
             }
             .frame(maxWidth: .infinity)
         }
@@ -642,7 +643,7 @@ struct Cal26WeekColumn: View {
         let s0: Int = Cal26WeekView.s0
         ZStack(alignment: .top) {
             RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(isT ? Color(hex: "#b23a2a").opacity(0.06) : Color.clear)
+                .fill(isT ? DS.fixed(.accent, stil: .papir, dark: false).opacity(0.06) : Color.clear)
             ForEach(Array(8...16), id: \.self) { h in
                 Rectangle().fill(p.line.opacity(0.6)).frame(height: 1)
                     .offset(y: CGFloat(h * 60 - s0) / 60 * hH)
@@ -652,8 +653,8 @@ struct Cal26WeekColumn: View {
             }
             if isT && nm >= s0 && nm <= Cal26WeekView.s1 {
                 ZStack(alignment: .leading) {
-                    Rectangle().fill(Color(hex: "#b23a2a")).frame(height: 2)
-                    Circle().fill(Color(hex: "#b23a2a")).frame(width: 8, height: 8).offset(x: -3)
+                    Rectangle().fill(DS.fixed(.accent, stil: .papir, dark: false)).frame(height: 2)
+                    Circle().fill(DS.fixed(.accent, stil: .papir, dark: false)).frame(width: 8, height: 8).offset(x: -3)
                 }
                 .offset(y: CGFloat(nm - s0) / 60 * hH - 1)
                 .allowsHitTesting(false)

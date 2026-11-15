@@ -134,12 +134,7 @@ final class Subs46Log {
         return lines.joined(separator: "\n") + "\n"
     }
 
-    nonisolated static func iso(_ d: Date) -> String {
-        let f: DateFormatter = DateFormatter()
-        f.calendar = Calendar(identifier: .gregorian)
-        f.dateFormat = "yyyy-MM-dd"
-        return f.string(from: d)
-    }
+    nonisolated static func iso(_ d: Date) -> String { subs46IsoFormat.string(from: d) }
 
     nonisolated static func monthName(_ ym: String) -> String {
         let names: [String] = ["januar", "februar", "mars", "april", "mai", "juni", "juli", "august", "september", "oktober", "november", "desember"]
@@ -304,3 +299,11 @@ struct Subs46Row: View {
         }
     }
 }
+
+/// Lages én gang (formatering er trådsikker så lenge formatteren ikke endres), utenfor aktøren så nonisolated-funksjonene kan bruke den.
+private let subs46IsoFormat: DateFormatter = {
+    let f: DateFormatter = DateFormatter()
+    f.calendar = Calendar(identifier: .gregorian)
+    f.dateFormat = "yyyy-MM-dd"
+    return f
+}()

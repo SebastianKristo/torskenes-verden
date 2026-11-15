@@ -16,17 +16,22 @@ struct SubTok23 {
     let on: Color
     let onFg: Color
 
-    static let light: SubTok23 = SubTok23(dark: false, bg: Color(hex: "#f3efe6"), card: Color(hex: "#ffffff"), card2: Color(hex: "#f6f2ea"),
-                                          fg: Color(hex: "#1b1a17"), mut: Color(hex: "#6b665c"), bd: Color(hex: "#ddd6c7"), chip: Color(hex: "#ece6da"),
-                                          neg: Color(hex: "#b23a2a"), on: Color(hex: "#1b1a17"), onFg: Color(hex: "#f3efe6"))
-    static let night: SubTok23 = SubTok23(dark: true, bg: Color(hex: "#14130f"), card: Color(hex: "#211f19"), card2: Color(hex: "#1a1814"),
-                                          fg: Color(hex: "#ece7dc"), mut: Color(hex: "#a39d90"), bd: Color(hex: "#3a372e"), chip: Color(hex: "#2a2821"),
-                                          neg: Color(hex: "#f08a76"), on: Color(hex: "#ece7dc"), onFg: Color(hex: "#14130f"))
+    /// Fase 4: fra DS-tokenene for Papir (shared/design/tokens.json) i fast lys eller mørk modus, i stedet for egne hex-verdier.
+    /// Kortet er surfaceRaised og kort nr. 2 surfaceSunken; «på»-knappen er blekk med papir som tekst.
+    static func tokens(dark: Bool) -> SubTok23 {
+        func c(_ f: DS.Farge) -> Color { DS.fixed(f, stil: .papir, dark: dark) }
+        return SubTok23(dark: dark, bg: c(.surface), card: c(.surfaceRaised), card2: c(.surfaceSunken),
+                        fg: c(.textPrimary), mut: c(.textSecondary), bd: c(.line), chip: c(.surfaceChip),
+                        neg: c(.danger), on: c(.textPrimary), onFg: c(.surface))
+    }
+
+    static let light: SubTok23 = SubTok23.tokens(dark: false)
+    static let night: SubTok23 = SubTok23.tokens(dark: true)
 
     static func of(_ p: PaperPalette) -> SubTok23 { p.dark ? SubTok23.night : SubTok23.light }
 
     /// Faste farger i designet (like i lys og mørk).
-    static let orange: Color = Color(hex: "#FF7A3D")
+    static let orange: Color = DS.fixed(.accent, stil: .glass, dark: true)
     static let orangeDark: Color = Color(hex: "#C85A26")
     static let peach: Color = Color(hex: "#FFB08A")
     static let off: Color = Color(hex: "#2A2A32")
@@ -103,7 +108,7 @@ enum SubCalc23 {
 
     static func catColors(_ name: String) -> (Color, Color) {
         switch name {
-        case "Underholdning": return (Color(hex: "#FF7A3D"), Color(hex: "#C85A26"))
+        case "Underholdning": return (DS.fixed(.accent, stil: .glass, dark: true), Color(hex: "#C85A26"))
         case "Produktivitet": return (Color(hex: "#7AA7FF"), Color(hex: "#4F78D0"))
         case "Lagring og sky": return (Color(hex: "#F2C14E"), Color(hex: "#BD9330"))
         case "Helse og trening": return (Color(hex: "#5FD3A8"), Color(hex: "#3A9F7B"))
@@ -462,6 +467,7 @@ struct SubOrderBar23: View {
 struct SubHome23: View {
     @Environment(Store.self) private var store
     @Environment(\.paper) private var p
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let x: SubsX
     @State private var order: [String] = SubHomeOrder23.load()
     /// Prompt 37: skjulte kort (− i wiggle-modus), ＋ henter dem tilbake.
@@ -510,7 +516,7 @@ struct SubHome23: View {
         case "trials": Sub37TrialsCard(editing: editing)
         case "ai": SubAiCard23(x: x) { act { store.subTab = "hist" } }
         case "next7": SubNextCard23(x: x)
-        case "check": SubCheckCard23(x: x).contentShape(Rectangle()).onTapGesture { act { store.subTab = "hist" } }
+        case "check": Button { act { store.subTab = "hist" } } label: { SubCheckCard23(x: x).contentShape(Rectangle()) }.buttonStyle(.plain)
         default: SubListCard23(x: x) { s in act { store.subEdit = s } }
         }
     }
@@ -567,7 +573,8 @@ struct SubHome23: View {
         Haptics.shared.tick()
         withAnimation(.easeOut(duration: 0.15)) { editing = true }
         wig = false
-        withAnimation(.easeInOut(duration: 0.3).repeatForever(autoreverses: true)) { wig = true }
+        // Reduser bevegelse: ingen vugging, bare rediger-modus.
+        if !reduceMotion { withAnimation(.easeInOut(duration: 0.3).repeatForever(autoreverses: true)) { wig = true } }
     }
 
     private func stopEditing() {

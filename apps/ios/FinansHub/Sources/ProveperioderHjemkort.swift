@@ -157,7 +157,7 @@ struct Trial32bMain: View {
         VStack(alignment: .leading, spacing: 10) {
             Button { store.paperGo("abo") } label: {
                 HStack(spacing: 12) {
-                    LogoBox32b(domain: Trials32b.domain(t.name), letter: t.initial, color: Color(hex: "#b23a2a"), size: 40, radius: 12, logoSize: 24)
+                    LogoBox32b(domain: Trials32b.domain(t.name), letter: t.initial, color: DS.fixed(.accent, stil: .papir, dark: false), size: 40, radius: 12, logoSize: 24)
                     VStack(alignment: .leading, spacing: 1) {
                         Text(t.name).font(PF.serif(20, medium: true)).foregroundStyle(p.ink).lineLimit(1)
                         Text("Avslutt før " + t.endShort + " · deretter " + t.priceText).font(PF.ui(12.5)).foregroundStyle(p.mut).lineLimit(1)

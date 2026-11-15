@@ -369,7 +369,7 @@ struct Konto44PersonRow: View {
                     Text("Logg inn som \(u.name) · uten passord").font(PF.ui(12.5)).foregroundStyle(p.mut).lineLimit(1)
                 }
                 Spacer(minLength: 6)
-                Text("›").font(PF.ui(17)).foregroundStyle(p.mut)
+                Image(systemName: "chevron.right").font(PF.ui(17)).imageScale(.small).foregroundStyle(p.mut).accessibilityHidden(true)
             }
             .padding(.horizontal, 14).frame(minHeight: 60)
             .contentShape(Rectangle())
@@ -413,7 +413,7 @@ struct Konto44PersonSheet: View {
         Button { k.loginAs(u, store) } label: {
             Text(k.busy ? "Logger inn …" : "Logg inn som \(u.name)").font(PF.ui(16, .bold)).foregroundStyle(Color.white)
                 .frame(maxWidth: .infinity, minHeight: 52)
-                .background(Color(hex: "#b23a2a"), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .background(DS.fixed(.accent, stil: .papir, dark: false), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         }
         .buttonStyle(.plain)
         .disabled(k.busy)
@@ -454,7 +454,7 @@ struct Konto44SheetRows: View {
                     Text(sub).font(PF.ui(12.5)).foregroundStyle(p.mut)
                 }
                 Spacer(minLength: 6)
-                Text("›").font(PF.ui(17)).foregroundStyle(p.mut)
+                Image(systemName: "chevron.right").font(PF.ui(17)).imageScale(.small).foregroundStyle(p.mut).accessibilityHidden(true)
             }
             .padding(.horizontal, 14).frame(minHeight: 60)
             .contentShape(Rectangle())

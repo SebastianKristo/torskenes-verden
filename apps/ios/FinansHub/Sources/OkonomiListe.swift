@@ -35,17 +35,17 @@ struct Orb43: View {
     /// Perioden som gjelder fra t0 (byttes sammen med t0/deg0, så det aldri blir et bilde med feil vinkel).
     @State private var per: Double = 0
 
-    static let colors: [Color] = [Color(hex: "#b23a2a"), Color(hex: "#e8794a"), Color(hex: "#f2c14e"), Color(hex: "#3fbf9a"), Color(hex: "#7a5ad6"), Color(hex: "#b23a2a")]
+    static let colors: [Color] = [DS.fixed(.accent, stil: .papir, dark: false), Color(hex: "#e8794a"), Color(hex: "#f2c14e"), Color(hex: "#3fbf9a"), Color(hex: "#7a5ad6"), DS.fixed(.accent, stil: .papir, dark: false)]
 
     var body: some View {
         let ring: CGFloat = Swift.max(2, size * 0.12)
         ZStack {
-            Circle().fill(Color(hex: "#f3efe6"))
+            Circle().fill(DS.fixed(.surface, stil: .papir, dark: false))
             TimelineView(.animation(minimumInterval: nil, paused: reduceMotion)) { (ctx: TimelineViewDefaultContext) in
                 Orb43Ring(ring: ring)
                     .rotationEffect(.degrees(angle(ctx.date.timeIntervalSinceReferenceDate)))
             }
-            Star43().fill(Color(hex: "#b23a2a")).frame(width: size * 0.5, height: size * 0.5)
+            Star43().fill(DS.fixed(.accent, stil: .papir, dark: false)).frame(width: size * 0.5, height: size * 0.5)
         }
         .frame(width: size, height: size)
         .onAppear { t0 = Date.timeIntervalSinceReferenceDate; deg0 = 0; per = Orb43.period(busy) }
@@ -141,12 +141,14 @@ struct Fin43Saldo: View {
         .accessibilityHint("Åpner Kontoer. Hold inne for å velge utseende.")
     }
 
-    static func month(_ d: Date) -> String {
+    static func month(_ d: Date) -> String { monthFormat.string(from: d) }
+
+    private static let monthFormat: DateFormatter = {
         let f: DateFormatter = DateFormatter()
         f.locale = Locale(identifier: "nb_NO")
         f.dateFormat = "LLLL"
-        return f.string(from: d)
-    }
+        return f
+    }()
 }
 
 /// Én måned i Finans → Liste.
@@ -207,14 +209,18 @@ struct Fin43MonthHead: View {
 
     static func kr(_ v: Double) -> String {
         if Privacy.shared.hidden { return neg0(v) + " kr" }
+        let s: String = krFormat.string(from: NSNumber(value: abs(v))) ?? String(format: "%.2f", abs(v))
+        return (v < 0 ? "−" : "") + s + " kr"
+    }
+
+    private static let krFormat: NumberFormatter = {
         let f: NumberFormatter = NumberFormatter()
         f.locale = Locale(identifier: "nb_NO")
         f.numberStyle = .decimal
         f.minimumFractionDigits = 2
         f.maximumFractionDigits = 2
-        let s: String = f.string(from: NSNumber(value: abs(v))) ?? String(format: "%.2f", abs(v))
-        return (v < 0 ? "−" : "") + s + " kr"
-    }
+        return f
+    }()
 }
 
 /* ---------------- Prompt 52 (IOS52A): Finans → Liste – avrundet månedslinje når den er festet ----------------

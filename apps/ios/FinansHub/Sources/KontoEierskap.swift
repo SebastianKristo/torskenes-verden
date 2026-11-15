@@ -45,9 +45,9 @@ struct Konto44Owner: View {
     private var transferRow: some View {
         Button { Haptics.shared.tap(); k.transferOpen = true } label: {
             HStack {
-                Text("Overfør eierskap").font(PF.ui(15, .bold)).foregroundStyle(Color(hex: "#b23a2a"))
+                Text("Overfør eierskap").font(PF.ui(15, .bold)).foregroundStyle(DS.fixed(.accent, stil: .papir, dark: false))
                 Spacer()
-                Text("›").font(PF.ui(17)).foregroundStyle(Color(hex: "#b23a2a"))
+                Image(systemName: "chevron.right").font(PF.ui(17)).imageScale(.small).foregroundStyle(DS.fixed(.accent, stil: .papir, dark: false)).accessibilityHidden(true)
             }
             .padding(.horizontal, 14).frame(minHeight: 54)
             .contentShape(Rectangle())
@@ -126,7 +126,7 @@ struct Konto44TransferSheet: View {
         Button { go(u) } label: {
             Text(busy ? "Overfører …" : "Overfør til \(u.name)").font(PF.ui(16, .bold)).foregroundStyle(Color.white)
                 .frame(maxWidth: .infinity, minHeight: 52)
-                .background(Color(hex: "#b23a2a").opacity(match ? 1 : 0.35), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .background(DS.fixed(.accent, stil: .papir, dark: false).opacity(match ? 1 : 0.35), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         }
         .buttonStyle(.plain)
         .disabled(!match || busy || (needPassword && password.isEmpty))

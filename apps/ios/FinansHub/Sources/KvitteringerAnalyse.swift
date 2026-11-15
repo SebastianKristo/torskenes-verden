@@ -48,13 +48,17 @@ struct Receipt34Ai: Identifiable, Equatable {
     }
 
     static func kr(_ v: Double) -> String {
+        return krFormat.string(from: NSNumber(value: v)) ?? String(format: "%.2f", v)
+    }
+
+    private static let krFormat: NumberFormatter = {
         let f: NumberFormatter = NumberFormatter()
         f.locale = Locale(identifier: "nb_NO")
         f.numberStyle = .decimal
         f.minimumFractionDigits = 2
         f.maximumFractionDigits = 2
-        return f.string(from: NSNumber(value: v)) ?? String(format: "%.2f", v)
-    }
+        return f
+    }()
 
     /// Steget som tall: fra «step» (tall eller tekst) eller fremdriften.
     static func stepOf(_ o: [String: Any], progress: Int) -> Int {

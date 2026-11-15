@@ -319,13 +319,17 @@ struct Bol30AmountDate: View {
     }()
 
     static func format(_ v: Double) -> String {
+        amount.string(from: NSNumber(value: v)) ?? String(v)
+    }
+
+    private static let amount: NumberFormatter = {
         let f: NumberFormatter = NumberFormatter()
         f.locale = Locale(identifier: "nb_NO")
         f.minimumFractionDigits = 0
         f.maximumFractionDigits = 2
         f.usesGroupingSeparator = false
-        return f.string(from: NSNumber(value: v)) ?? String(v)
-    }
+        return f
+    }()
 
     static func parse(_ s: String) -> Double? {
         let t: String = s.replacingOccurrences(of: " ", with: "").replacingOccurrences(of: "\u{00a0}", with: "").replacingOccurrences(of: ",", with: ".")

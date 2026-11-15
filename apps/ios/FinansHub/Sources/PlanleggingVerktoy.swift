@@ -246,7 +246,7 @@ struct Plan51Pris: View {
                     Button(o.1) { m.sort = o.0; Task { await m.reload(store) } }
                 }
             } label: {
-                Image(systemName: "arrow.up.arrow.down").font(.system(size: 15, weight: .semibold)).foregroundStyle(p.ink).round50()
+                Image(systemName: "arrow.up.arrow.down").font(PF.ui(15, .semibold)).foregroundStyle(p.ink).round50()
             }
             .accessibilityLabel("Sorter")
         }

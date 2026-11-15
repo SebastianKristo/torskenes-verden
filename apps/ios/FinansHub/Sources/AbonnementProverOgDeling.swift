@@ -39,8 +39,8 @@ enum Subs37 {
     }
 
     static let orange: Color = Color(hex: "#C85A26")
-    static let yellow: Color = Color(hex: "#a8661a")
-    static let green: Color = Color(hex: "#2f7a4f")
+    static let yellow: Color = DS.fixed(.warning, stil: .papir, dark: false)
+    static let green: Color = DS.fixed(.success, stil: .papir, dark: false)
 }
 
 /* ---------- Gratis prøveperioder (kort øverst på Oversikt) ---------- */

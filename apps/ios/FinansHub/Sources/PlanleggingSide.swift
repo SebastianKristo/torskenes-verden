@@ -265,7 +265,7 @@ struct Plan51GoalForm: View {
     @State private var saved: String = ""
     @State private var hasDeadline: Bool = false
     @State private var deadline: Date = Date().addingTimeInterval(180 * 86_400)
-    @State private var color: Color = Color(hex: "#2f7a4f")
+    @State private var color: Color = DS.fixed(.success, stil: .papir, dark: false)
     @State private var accountId: Int? = nil
     @State private var saving: Bool = false
 

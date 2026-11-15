@@ -188,11 +188,15 @@ struct PendingUploadsList: View {
         }
     }
 
-    private func sub(_ p: PendingUpload) -> String {
+    fileprivate static let queuedFormat: DateFormatter = {
         let f = DateFormatter()
         f.locale = Locale(identifier: "nb_NO")
         f.dateFormat = "d. MMM HH:mm"
-        var s = "Lagt i kø " + f.string(from: p.created)
+        return f
+    }()
+
+    private func sub(_ p: PendingUpload) -> String {
+        var s = "Lagt i kø " + PendingUploadsList.queuedFormat.string(from: p.created)
         if p.attempts > 0 { s += " · \(p.attempts) forsøk" }
         if let e = p.lastError, !e.isEmpty { s += " · " + e }
         return s

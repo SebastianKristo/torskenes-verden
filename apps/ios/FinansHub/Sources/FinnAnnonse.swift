@@ -341,7 +341,7 @@ struct FinnAdCarousel23: View {
         let h: CGFloat = Swift.min(w, UIScreen.main.bounds.height * 0.62)
         let n: Int = Swift.max(1, slides.count)
         return ZStack {
-            Color(hex: "#1b1a17")
+            DS.fixed(.textPrimary, stil: .papir, dark: false)
             TabView(selection: $ix) {
                 ForEach(Array(slides.enumerated()), id: \.offset) { i, path in
                     FinnAdSlide23(path: path, tint: tint(i), initials: initials, label: "Bilde \(i + 1)").tag(i)
@@ -351,19 +351,21 @@ struct FinnAdCarousel23: View {
             VStack {
                 HStack {
                     Button(action: close) {
-                        Text("‹ Finn").font(PF.ui(13.5, .semibold)).foregroundStyle(.white)
+                        Label("Finn", systemImage: "chevron.left").labelStyle(.titleAndIcon).font(PF.ui(13.5, .semibold)).foregroundStyle(.white)
                             .padding(.leading, 10).padding(.trailing, 14).frame(height: 38)
                             .background(.ultraThinMaterial, in: Capsule())
-                            .background(Color(hex: "#1b1a17").opacity(0.6), in: Capsule())
+                            .background(DS.fixed(.textPrimary, stil: .papir, dark: false).opacity(0.6), in: Capsule())
                     }
                     .buttonStyle(.plain)
                     Spacer()
                     Button(action: edit) {
-                        Text("✎").font(.system(size: 14)).foregroundStyle(.white).frame(width: 38, height: 38)
+                        Image(systemName: "pencil").font(PF.ui(14, .semibold)).foregroundStyle(.white).frame(width: 38, height: 38)
                             .background(.ultraThinMaterial, in: Circle())
-                            .background(Color(hex: "#1b1a17").opacity(0.6), in: Circle())
+                            .background(DS.fixed(.textPrimary, stil: .papir, dark: false).opacity(0.6), in: Circle())
+                            .frame(width: 44, height: 44).contentShape(Circle())
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel("Rediger annonsen")
                     .accessibilityLabel("Rediger")
                 }
                 .padding(.horizontal, 14).padding(.top, topInset + 6)
@@ -378,7 +380,7 @@ struct FinnAdCarousel23: View {
                         Spacer()
                         Text("\(ix + 1) / \(n)").font(PF.ui(11.5, .bold)).foregroundStyle(.white)
                             .padding(.horizontal, 9).padding(.vertical, 3)
-                            .background(Color(hex: "#1b1a17").opacity(0.65), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                            .background(DS.fixed(.textPrimary, stil: .papir, dark: false).opacity(0.65), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                     }
                     .padding(.trailing, 12)
                 }
@@ -668,7 +670,7 @@ struct FinnAdChat23: View {
                 .background(p.card, in: Capsule())
                 .overlay(Capsule().stroke(p.line, lineWidth: 1))
             Button(action: send) {
-                Text("↑").font(.system(size: 16, weight: .semibold)).foregroundStyle(p.bg).frame(width: 44, height: 44).background(p.ink, in: Circle())
+                Image(systemName: "arrow.up").font(PF.ui(16, .semibold)).foregroundStyle(p.bg).frame(width: 44, height: 44).background(p.ink, in: Circle())
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Send")

@@ -63,9 +63,9 @@ struct Rc52Head<Extra: View>: View {
     }
 
     private var penBadge73: some View {
-        Image(systemName: "pencil").font(.system(size: 9, weight: .bold)).foregroundStyle(Color(hex: "#f3efe6"))
+        Image(systemName: "pencil").font(PF.ui(9, .bold)).foregroundStyle(DS.fixed(.surface, stil: .papir, dark: false))
             .frame(width: 20, height: 20)
-            .background(Circle().fill(Color(hex: "#1b1a17")))
+            .background(Circle().fill(DS.fixed(.textPrimary, stil: .papir, dark: false)))
             .overlay(Circle().stroke(p.card, lineWidth: 2))
             .offset(x: 5, y: 5)
     }
@@ -128,11 +128,11 @@ struct Rc52Paper: View {
         let ink: Color = Color(hex: "#2a2620")
         Button(action: open) {
             VStack(spacing: 6) {
-                Text(merchant.uppercased()).font(.system(size: 14, weight: .bold, design: .monospaced)).foregroundStyle(ink).multilineTextAlignment(.center)
-                Text(Rc52Paper.dmy(date) + " · KVITTERING").font(.system(size: 11, design: .monospaced)).foregroundStyle(ink.opacity(0.7))
+                Text(merchant.uppercased()).font(PF.mono(14)).foregroundStyle(ink).multilineTextAlignment(.center)
+                Text(Rc52Paper.dmy(date) + " · KVITTERING").font(PF.mono(11, bold: false)).foregroundStyle(ink.opacity(0.7))
                 dashed(ink)
                 if lines.isEmpty {
-                    Text(hasFile ? "Trykk for å se originalen" : "Ingen varelinjer lest ennå").font(.system(size: 12, design: .monospaced)).foregroundStyle(ink.opacity(0.7))
+                    Text(hasFile ? "Trykk for å se originalen" : "Ingen varelinjer lest ennå").font(PF.mono(12, bold: false)).foregroundStyle(ink.opacity(0.7))
                 }
                 // Prompt 30: linjene som matcher søket markeres gult (KvitteringTreff.swift).
                 ForEach(Array(lines.prefix(40).enumerated()), id: \.offset) { (pair: (offset: Int, element: Rc52Line)) in
@@ -140,9 +140,9 @@ struct Rc52Paper: View {
                 }
                 dashed(ink)
                 HStack {
-                    Text("TOTAL").font(.system(size: 13, weight: .bold, design: .monospaced))
+                    Text("TOTAL").font(PF.mono(13))
                     Spacer()
-                    Text(n2(abs(total))).font(.system(size: 13, weight: .bold, design: .monospaced))
+                    Text(n2(abs(total))).font(PF.mono(13))
                 }
                 .foregroundStyle(ink)
                 if hasFile {
@@ -269,7 +269,7 @@ struct Bol52Original: View {
                 ProgressView().tint(.white).frame(maxWidth: .infinity, maxHeight: .infinity)
             }
             Button(action: close) {
-                Text("✕").font(PF.ui(16, .bold)).foregroundStyle(.white).frame(width: 44, height: 44)
+                Image(systemName: "xmark").font(PF.ui(15, .bold)).foregroundStyle(.white).frame(width: 44, height: 44)
                     .background(Color.white.opacity(0.15), in: Circle())
             }
             .buttonStyle(.plain)

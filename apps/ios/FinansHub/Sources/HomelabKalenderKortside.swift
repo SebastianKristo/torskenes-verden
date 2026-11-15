@@ -160,7 +160,7 @@ struct Cal26EditableCard<C: View>: View {
         HStack(spacing: 4) {
             ctl("▲", "Flytt opp", bg: p.ink, fg: p.bg, dim: index == 0) { m.moveCard(key, -1) }
             ctl("▼", "Flytt ned", bg: p.ink, fg: p.bg, dim: index >= count - 1) { m.moveCard(key, 1) }
-            ctl("−", "Skjul kortet", bg: Color(hex: "#b23a2a"), fg: Color.white, dim: false) { m.hideCard(key) }
+            ctl("−", "Skjul kortet", bg: DS.fixed(.accent, stil: .papir, dark: false), fg: Color.white, dim: false) { m.hideCard(key) }
         }
     }
 
@@ -352,7 +352,7 @@ struct Cal26ExamRow: View {
                 Spacer(minLength: 4)
                 Text(x.inText).font(PF.ui(11.5, .bold)).foregroundStyle(x.red ? Color.white : p.ink).lineLimit(1)
                     .padding(.horizontal, 9).padding(.vertical, 4)
-                    .background(x.red ? Color(hex: "#b23a2a") : p.bg, in: Capsule())
+                    .background(x.red ? DS.fixed(.accent, stil: .papir, dark: false) : p.bg, in: Capsule())
             }
             .padding(.vertical, 8)
             .frame(minHeight: 58)

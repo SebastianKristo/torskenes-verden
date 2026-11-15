@@ -103,11 +103,11 @@ struct Konto38Session: View {
             Qr38KontoRow()
             PLabel(text: "Økt").padding(.top, 8).padding(.leading, 4)
             VStack(spacing: 0) {
-                Konto38Row(icon: "lock.fill", tint: Color(hex: "#2b5d8a"), name: "Lås skjermen", sub: "Krever Face ID eller kode for å fortsette",
+                Konto38Row(icon: "lock.fill", tint: DS.fixed(.info, stil: .papir, dark: false), name: "Lås skjermen", sub: "Krever Face ID eller kode for å fortsette",
                            red: false, first: true) { m.lock(store) }
-                Konto38Row(icon: "rectangle.portrait.and.arrow.right", tint: Color(hex: "#b23a2a"), name: "Logg ut", sub: "Bare denne enheten",
+                Konto38Row(icon: "rectangle.portrait.and.arrow.right", tint: DS.fixed(.accent, stil: .papir, dark: false), name: "Logg ut", sub: "Bare denne enheten",
                            red: true, first: false) { confirmLogout = true }
-                Konto38Row(icon: "iphone.and.arrow.forward", tint: Color(hex: "#b23a2a"), name: "Logg ut av alle enheter", sub: allSub,
+                Konto38Row(icon: "iphone.and.arrow.forward", tint: DS.fixed(.accent, stil: .papir, dark: false), name: "Logg ut av alle enheter", sub: allSub,
                            red: true, first: false) { confirmAll = true }
             }
             .background(p.card, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
@@ -158,7 +158,7 @@ struct Konto38Row: View {
                         .frame(width: 30, height: 30)
                         .background(tint.opacity(0.12), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
                     VStack(alignment: .leading, spacing: 1) {
-                        Text(name).font(PF.ui(14.5, .bold)).foregroundStyle(red ? Color(hex: "#b23a2a") : p.ink)
+                        Text(name).font(PF.ui(14.5, .bold)).foregroundStyle(red ? DS.fixed(.accent, stil: .papir, dark: false) : p.ink)
                         Text(sub).font(PF.ui(12)).foregroundStyle(p.mut).lineLimit(1)
                     }
                     Spacer(minLength: 6)

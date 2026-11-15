@@ -153,13 +153,17 @@ enum Receipt47 {
     }
 
     static func kr(_ v: Double) -> String {
+        return (krFormat.string(from: NSNumber(value: v)) ?? String(format: "%.2f", v)) + " kr"
+    }
+
+    private static let krFormat: NumberFormatter = {
         let f: NumberFormatter = NumberFormatter()
         f.locale = Locale(identifier: "nb_NO")
         f.numberStyle = .decimal
         f.minimumFractionDigits = 2
         f.maximumFractionDigits = 2
-        return (f.string(from: NSNumber(value: v)) ?? String(format: "%.2f", v)) + " kr"
-    }
+        return f
+    }()
 
     /// Tall fra et tekstfelt («1 234,50» → 1234.5).
     static func number(_ s: String) -> Double? {
@@ -418,10 +422,6 @@ enum Rc47FM {
                           lines: extra ?? k.varelinjer.map { (v: Varelinje47) in Rc47FM.line(v) }, category: cat, payment: k.betalingsmiddel)
     }
 }
-#endif
-
-#if canImport(FoundationModels)
-import FoundationModels
 #endif
 
 // ---------------- Prompt 48: strukturering med Apple Foundation Models (device_parse) ----------------

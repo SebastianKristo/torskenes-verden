@@ -92,7 +92,7 @@ struct Cal26HomeCardBody: View {
                 Spacer(minLength: 4)
                 Text(x.inText).font(PF.ui(10.5, .heavy)).foregroundStyle(x.red ? Color.white : p.ink).lineLimit(1)
                     .padding(.horizontal, 8).padding(.vertical, 3)
-                    .background(x.red ? Color(hex: "#b23a2a") : p.bg, in: Capsule())
+                    .background(x.red ? DS.fixed(.accent, stil: .papir, dark: false) : p.bg, in: Capsule())
                     .fixedSize()
             }
         }

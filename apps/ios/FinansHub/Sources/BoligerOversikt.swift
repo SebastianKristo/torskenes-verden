@@ -60,7 +60,7 @@ struct Bol24Actions: View {
                 tile("Last opp", red: false) { Image(systemName: "square.and.arrow.up").font(.dyn51(size: 16, weight: .semibold)) }
             }
             .buttonStyle(.plain)
-            Button(action: add) { tile("Ny utgift", red: false) { Text("+").font(.dyn51(size: 20)) } }.buttonStyle(.plain)
+            Button(action: add) { tile("Ny utgift", red: false) { Image(systemName: "plus").font(.dyn51(size: 18, weight: .semibold)) } }.buttonStyle(.plain)
         }
         .onChange(of: photos) { _, items in
             guard !items.isEmpty else { return }
@@ -169,7 +169,7 @@ struct Bol24Review: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 Text(e.pending ? "…" : bol24kr(e.amount)).font(PF.mono(15)).foregroundStyle(p.ink).lineLimit(1).fixedSize()
-                Text("›").font(PF.ui(17)).foregroundStyle(p.mut)
+                Image(systemName: "chevron.right").font(PF.ui(17)).imageScale(.small).foregroundStyle(p.mut).accessibilityHidden(true)
             }
             // Prompt 30: hele toppraden (miniatyr · butikk · forslag · beløp · ›) åpner detaljarket, også mens AI leser.
             .contentShape(Rectangle())

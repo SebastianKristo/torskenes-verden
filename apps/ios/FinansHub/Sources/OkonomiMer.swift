@@ -260,14 +260,14 @@ struct Fin45Search: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            Image(systemName: "magnifyingglass").font(.system(size: 15, weight: .semibold)).foregroundStyle(p.mut)
+            Image(systemName: "magnifyingglass").font(PF.ui(15, .semibold)).foregroundStyle(p.mut)
             TextField("Søk i moduler", text: Binding<String>(get: { n.query }, set: { n.query = $0 }))
                 .font(PF.ui(15, .medium)).foregroundStyle(p.ink)
                 .submitLabel(.search)
                 .autocorrectionDisabled()
             if !n.query.isEmpty {
                 Button { n.query = "" } label: {
-                    Image(systemName: "xmark.circle.fill").font(.system(size: 16)).foregroundStyle(p.mut)
+                    Image(systemName: "xmark.circle.fill").font(PF.ui(16)).foregroundStyle(p.mut)
                         .frame(width: 32, height: 32).contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
@@ -402,13 +402,13 @@ struct Fin45SettingsRow: View {
     var body: some View {
         Button { if !editing { row.act() } } label: {
             HStack(spacing: 12) {
-                Image(systemName: "gearshape").font(.system(size: 16, weight: .semibold)).foregroundStyle(p.ink)
+                Image(systemName: "gearshape").font(PF.ui(16, .semibold)).foregroundStyle(p.ink)
                 VStack(alignment: .leading, spacing: 1) {
                     Text("Innstillinger").font(PF.ui(14.5, .bold)).foregroundStyle(p.ink)
                     Text(row.sub).font(PF.ui(12.5)).foregroundStyle(p.mut).lineLimit(1)
                 }
                 Spacer(minLength: 6)
-                Text("›").font(PF.ui(17)).foregroundStyle(p.mut)
+                Image(systemName: "chevron.right").font(PF.ui(17)).imageScale(.small).foregroundStyle(p.mut).accessibilityHidden(true)
             }
             .padding(.horizontal, 14).frame(maxWidth: .infinity, minHeight: 60)
             .background(More44.chipBg(p), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
@@ -437,9 +437,15 @@ struct Fin45Empty: View {
     @Environment(\.paper) private var p
     let query: String
 
+    /// Fase 4: systemets tomtilstand for søk (ContentUnavailableView), med norsk tekst og Papir-fargene.
     var body: some View {
-        Text("Ingen moduler heter «\(query)».").font(PF.ui(13.5)).foregroundStyle(p.mut)
-            .frame(maxWidth: .infinity).padding(.vertical, 14)
+        ContentUnavailableView {
+            Label("Ingen treff", systemImage: "magnifyingglass")
+        } description: {
+            Text("Ingen moduler heter «\(query)».")
+        }
+        .foregroundStyle(p.mut)
+        .frame(maxWidth: .infinity)
     }
 }
 
@@ -456,7 +462,7 @@ struct Fin52ToolRowContent: View {
                 Text(row.sub).font(PF.ui(12.5)).foregroundStyle(p.mut).lineLimit(1)
             }
             Spacer(minLength: 6)
-            Text("›").font(PF.ui(17)).foregroundStyle(p.mut)
+            Image(systemName: "chevron.right").font(PF.ui(17)).imageScale(.small).foregroundStyle(p.mut).accessibilityHidden(true)
         }
     }
 }

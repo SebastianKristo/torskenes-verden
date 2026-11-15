@@ -123,10 +123,10 @@ struct Sal52Card: View {
             Text("SALDO · ALLE KONTOER").font(PF.mono(10.5 * Swift.max(0.7, k))).tracking(1.4 * k).foregroundStyle(l.label).lineLimit(1)
             Spacer(minLength: 2)
             if circle {
-                Text("›").font(PF.ui(15 * Swift.max(0.7, k), .bold)).foregroundStyle(l.ink)
+                Image(systemName: "chevron.right").font(PF.ui(15 * Swift.max(0.7, k), .bold)).imageScale(.small).foregroundStyle(l.ink).accessibilityHidden(true)
                     .frame(width: 30 * k, height: 30 * k).background(l.hole, in: Circle())
             } else {
-                Text("›").font(PF.ui(17 * Swift.max(0.7, k), .bold)).foregroundStyle(l.mut)
+                Image(systemName: "chevron.right").font(PF.ui(17 * Swift.max(0.7, k), .bold)).imageScale(.small).foregroundStyle(l.mut).accessibilityHidden(true)
             }
         }
     }
@@ -299,7 +299,7 @@ struct Sal52Sheet: View {
                 ZStack {
                     // Glass trenger noe bak seg for å vises riktig i forhåndsvisningen.
                     if id == "glass" {
-                        LinearGradient(colors: [Color(hex: "#2b5d8a"), Color(hex: "#b23a2a"), Color(hex: "#a0671a")], startPoint: .topLeading, endPoint: .bottomTrailing)
+                        LinearGradient(colors: [DS.fixed(.info, stil: .papir, dark: false), DS.fixed(.accent, stil: .papir, dark: false), Color(hex: "#a0671a")], startPoint: .topLeading, endPoint: .bottomTrailing)
                             .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                     }
                     Sal52Card(style: id, data: Sal52Data.sample, mini: true).padding(id == "glass" ? 8 : 0)

@@ -45,12 +45,14 @@ private func sortKey(_ d: String?) -> String {
 }
 
 /// «O», «N», «D» … under månedsstolpene.
-private func narrowMonth(_ d: Date) -> String {
+private func narrowMonth(_ d: Date) -> String { narrowMonthFormat.string(from: d).uppercased() }
+
+private let narrowMonthFormat: DateFormatter = {
     let f = DateFormatter()
     f.locale = nb
     f.dateFormat = "LLLLL"
-    return f.string(from: d).uppercased()
-}
+    return f
+}()
 
 /// «pdf», «jpg» … (tomt uten filendelse).
 private func fileExt(_ name: String) -> String {
@@ -72,7 +74,7 @@ private struct FinnImage: View {
             if let img {
                 Image(uiImage: img).resizable().scaledToFill()
             } else {
-                Text(initials(label)).font(.system(size: ini, weight: .bold)).foregroundStyle(Color.skinFg.opacity(0.2))
+                Text(initials(label)).font(PF.ui(ini, .bold)).foregroundStyle(Color.skinFg.opacity(0.2))
             }
         }
         .clipped()
@@ -96,7 +98,7 @@ private struct TrackPoints: View {
                             .overlay { if cur { Circle().stroke(Color.accent.opacity(0.35), lineWidth: 3).padding(-3) } }
                         Rectangle().fill(j == 3 ? Color.clear : (j + 1 < lvl ? Color.white : dim)).frame(height: big ? 3 : 2)
                     }
-                    Text(t).font(.system(size: big ? 11.5 : 11, weight: cur ? .semibold : .regular))
+                    Text(t).font(PF.ui(big ? 11.5 : 11, cur ? .semibold : .regular))
                         .foregroundStyle(done ? Color.white : text2.opacity(0.6)).lineLimit(1)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -110,7 +112,7 @@ private struct FinnPill: View {
     let bg: Color
     let fg: Color
     var body: some View {
-        Text(text).font(.system(size: 12, weight: .semibold)).foregroundStyle(fg).lineLimit(1)
+        Text(text).font(PF.ui(12, .semibold)).foregroundStyle(fg).lineLimit(1)
             .padding(.horizontal, 10).padding(.vertical, 4).background(bg, in: RoundedRectangle(cornerRadius: 12))
     }
 }
@@ -132,10 +134,10 @@ struct FinnView: View {
                 HStack(spacing: 10) {
                     // Åpnet fra Mer (Finn er skjult som fane): tilbake til Mer.
                     if !store.finTabs.contains(.finn) { GlassBack { store.back() } }
-                    Text(store.tabName(.finn)).font(.system(size: 34, weight: .bold)).lineLimit(1).minimumScaleFactor(0.7)
+                    Text(store.tabName(.finn)).font(PF.ui(34, .bold)).lineLimit(1).minimumScaleFactor(0.7)
                     Spacer()
                     Button { qOpen.toggle(); q = "" } label: {
-                        Image(systemName: qOpen ? "xmark" : "magnifyingglass").font(.system(size: 16, weight: .semibold)).foregroundStyle(Color.skinFg).frame(width: 44, height: 44).contentShape(Circle())
+                        Image(systemName: qOpen ? "xmark" : "magnifyingglass").font(PF.ui(16, .semibold)).foregroundStyle(Color.skinFg).frame(width: 44, height: 44).contentShape(Circle())
                     }
                     .buttonStyle(GlassPress()).glassRound().accessibilityLabel(qOpen ? "Lukk søk" : "Søk i handler")
                     Avatar()
@@ -152,7 +154,7 @@ struct FinnView: View {
                     let act = vis.filter { !$0.finished }
                     if !act.isEmpty {
                         HStack(alignment: .lastTextBaseline) {
-                            Text("\(act.count) på vei").font(.system(size: 20, weight: .semibold))
+                            Text("\(act.count) på vei").font(PF.ui(20, .semibold))
                             Spacer()
                             if act.count > 1 { Text("Sveip for flere").font(.footnote).foregroundStyle(text2) }
                         }
@@ -166,7 +168,7 @@ struct FinnView: View {
                         ForEach(["Alle", "Kjøpt", "Solgt", "Fullført"], id: \.self) { n in
                             let on = seg == n
                             Button { seg = n } label: {
-                                Text(n).font(.system(size: 13.5, weight: .medium)).lineLimit(1).foregroundStyle(on ? Color.ink : text2)
+                                Text(n).font(PF.ui(13.5, .medium)).lineLimit(1).foregroundStyle(on ? Color.ink : text2)
                                     .frame(maxWidth: .infinity, minHeight: 40).background(on ? Color.white : .clear, in: RoundedRectangle(cornerRadius: 12)).contentShape(Rectangle())
                             }
                             .buttonStyle(.plain)
@@ -210,16 +212,16 @@ private struct FinnSummary: View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .bottom) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Netto i år").font(.system(size: 14)).foregroundStyle(Color(hex: "#9C9CA6"))
-                    Text((net >= 0 ? "+" : "−") + n0(net) + " kr").font(.system(size: 32, weight: .semibold, design: .monospaced))
+                    Text("Netto i år").font(PF.ui(14)).foregroundStyle(Color(hex: "#9C9CA6"))
+                    Text((net >= 0 ? "+" : "−") + n0(net) + " kr").font(PF.mono(32))
                         .foregroundStyle(net >= 0 ? sellC : Color(hex: "#F4F4F6")).lineLimit(1).minimumScaleFactor(0.6)
                 }
                 Spacer()
                 HStack(alignment: .bottom, spacing: 4) {
                     ForEach(Array(months.enumerated()), id: \.offset) { k, m in
                         VStack(spacing: 4) {
-                            RoundedRectangle(cornerRadius: 4).fill(k == 3 ? Color(hex: "#FF7A3D") : Color(hex: "#33343C")).frame(width: 12, height: m.1 / top * 30 + 4)
-                            Text(m.0).font(.system(size: 9.5)).foregroundStyle(text2)
+                            RoundedRectangle(cornerRadius: 4).fill(k == 3 ? DS.fixed(.accent, stil: .glass, dark: true) : Color(hex: "#33343C")).frame(width: 12, height: m.1 / top * 30 + 4)
+                            Text(m.0).font(PF.ui(9.5)).foregroundStyle(text2)
                         }
                     }
                 }
@@ -237,8 +239,8 @@ private struct FinnSummary: View {
 
     private func share(_ l: String, _ v: Double, _ mx: Double, _ c: Color) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(l).font(.system(size: 12.5)).foregroundStyle(Color(hex: "#9C9CA6"))
-            Text(n0(v) + " kr").font(.system(size: 16, weight: .bold, design: .monospaced)).lineLimit(1).minimumScaleFactor(0.7)
+            Text(l).font(PF.ui(12.5)).foregroundStyle(Color(hex: "#9C9CA6"))
+            Text(n0(v) + " kr").font(PF.mono(16)).lineLimit(1).minimumScaleFactor(0.7)
             GeometryReader { g in
                 ZStack(alignment: .leading) {
                     Capsule().fill(Color(hex: "#22222A"))
@@ -261,10 +263,10 @@ private struct OnTheWayCard: View {
                     .overlay(alignment: .topLeading) { FinnPill(text: d.roleName, bg: .black.opacity(0.5), fg: d.col).padding(12) }
                     .overlay(alignment: .topTrailing) { FinnPill(text: d.valueText, bg: .black.opacity(0.5), fg: .white).padding(12) }
                 VStack(alignment: .leading, spacing: 12) {
-                    Text(d.title).font(.system(size: 16, weight: .semibold)).lineLimit(1)
+                    Text(d.title).font(PF.ui(16, .semibold)).lineLimit(1)
                     TrackPoints(d: d)
                     Divider().overlay(Color.skinFg.opacity(0.15))
-                    Text("Neste: \(d.nextText)").font(.system(size: 13)).lineLimit(2).multilineTextAlignment(.leading)
+                    Text("Neste: \(d.nextText)").font(PF.ui(13)).lineLimit(2).multilineTextAlignment(.leading)
                 }
                 .padding(.horizontal, 16).padding(.top, 14).padding(.bottom, 16)
             }
@@ -290,10 +292,10 @@ private struct GridCard: View {
                         FinnPill(text: d.status, bg: d.finished ? Color.black.opacity(0.55) : Color.accent, fg: d.finished ? Color.skinFg.opacity(0.85) : Color.ink).padding(10)
                     }
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(d.valueText).font(.system(size: 15, weight: .bold, design: .monospaced)).foregroundStyle(d.col).lineLimit(1).minimumScaleFactor(0.7)
-                    Text(d.title).font(.system(size: 13.5)).lineLimit(1)
-                    Text("\(d.roleName) · \(ddmm(sortKey(d.date)))").font(.system(size: 12)).foregroundStyle(text2).lineLimit(1)
-                    if let s = d.summary, !s.isEmpty { Text(s).font(.system(size: 11)).foregroundStyle(text2.opacity(0.8)).lineLimit(1) }
+                    Text(d.valueText).font(PF.mono(15)).foregroundStyle(d.col).lineLimit(1).minimumScaleFactor(0.7)
+                    Text(d.title).font(PF.ui(13.5)).lineLimit(1)
+                    Text("\(d.roleName) · \(ddmm(sortKey(d.date)))").font(PF.ui(12)).foregroundStyle(text2).lineLimit(1)
+                    if let s = d.summary, !s.isEmpty { Text(s).font(PF.ui(11)).foregroundStyle(text2.opacity(0.8)).lineLimit(1) }
                 }
                 .padding(.horizontal, 12).padding(.top, 11).padding(.bottom, 13)
             }
@@ -334,12 +336,12 @@ private struct FinnDealView: View {
                 carousel(d, imgs)
                 VStack(alignment: .leading, spacing: 6) {
                     FinnPill(text: d.roleName + (d.code.map { " · Finn-kode \($0)" } ?? ""), bg: d.col.opacity(0.14), fg: d.col)
-                    Text(d.title).font(.system(size: 26, weight: .semibold))
+                    Text(d.title).font(PF.ui(26, .semibold))
                     HStack(alignment: .lastTextBaseline) {
                         Text([d.counterpart.map { (d.sold ? "Til " : "Fra ") + $0.replacingOccurrences(of: #"^(selger|kjøper)\s+"#, with: "", options: [.regularExpression, .caseInsensitive]) }, ddmm(sortKey(d.date))].compactMap { $0 }.joined(separator: " · "))
                             .font(.subheadline).foregroundStyle(text2).lineLimit(1)
                         Spacer()
-                        Text(d.valueText).font(.system(size: 22, weight: .bold, design: .monospaced)).foregroundStyle(d.col).lineLimit(1).fixedSize()
+                        Text(d.valueText).font(PF.mono(22)).foregroundStyle(d.col).lineLimit(1).fixedSize()
                     }
                 }
                 status(d)
@@ -349,7 +351,7 @@ private struct FinnDealView: View {
                 if !det.photos.isEmpty { photos(det.photos, d) }
                 paper(d, det)
                 timeline(d, det)
-                if let s = det.summary, !s.isEmpty { Text("✦ " + s).font(.system(size: 12.5)).foregroundStyle(text2).padding(.leading, 8) }
+                if let s = det.summary, !s.isEmpty { Text("✦ " + s).font(PF.ui(12.5)).foregroundStyle(text2).padding(.leading, 8) }
             }
             .padding(.horizontal, 18).padding(.top, 6).padding(.bottom, 110)
         }
@@ -410,13 +412,13 @@ private struct FinnDealView: View {
         .overlay(alignment: .top) {
             HStack {
                 Button { store.back() } label: {
-                    Image(systemName: "chevron.left").font(.system(size: 17, weight: .semibold)).foregroundStyle(Color.skinFg).frame(width: 44, height: 44)
+                    Image(systemName: "chevron.left").font(PF.ui(17, .semibold)).foregroundStyle(Color.skinFg).frame(width: 44, height: 44)
                         .background(.black.opacity(0.45), in: Circle()).contentShape(Circle())
                 }
                 .buttonStyle(GlassPress()).accessibilityLabel("Tilbake til Finn")
                 Spacer()
                 if n > 1 {
-                    Text("\(cur + 1) / \(n)").font(.system(size: 13)).foregroundStyle(Color.skinFg).padding(.horizontal, 14).padding(.vertical, 12).background(.black.opacity(0.45), in: Capsule())
+                    Text("\(cur + 1) / \(n)").font(PF.ui(13)).foregroundStyle(Color.skinFg).padding(.horizontal, 14).padding(.vertical, 12).background(.black.opacity(0.45), in: Capsule())
                 }
             }
             .padding(14)
@@ -437,8 +439,8 @@ private struct FinnDealView: View {
     private func status(_ d: FinnDeal) -> some View {
         VStack(alignment: .leading, spacing: 14) {
             VStack(alignment: .leading, spacing: 2) {
-                Text("STATUS").font(.system(size: 13)).tracking(1).foregroundStyle(Color.accentLight)
-                Text(d.status).font(.system(size: 26, weight: .semibold))
+                Text("STATUS").font(PF.ui(13)).tracking(1).foregroundStyle(Color.accentLight)
+                Text(d.status).font(PF.ui(26, .semibold))
                 Text(d.finished ? "Alt er i orden, og kvitteringen er lagret." : d.nextText).font(.subheadline).foregroundStyle(text2)
             }
             TrackPoints(d: d, big: true)
@@ -469,9 +471,9 @@ private struct FinnDealView: View {
 
     private func tile(_ icon: String, _ title: String, _ sub: String, _ subColor: Color) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            Image(systemName: icon).font(.system(size: 18)).foregroundStyle(Color.skinFg)
-            Text(title).font(.system(size: 13.5, weight: .semibold)).foregroundStyle(Color.skinFg).lineLimit(1)
-            Text(sub).font(.system(size: 12)).foregroundStyle(subColor).lineLimit(1)
+            Image(systemName: icon).font(PF.ui(18)).foregroundStyle(Color.skinFg)
+            Text(title).font(PF.ui(13.5, .semibold)).foregroundStyle(Color.skinFg).lineLimit(1)
+            Text(sub).font(PF.ui(12)).foregroundStyle(subColor).lineLimit(1)
         }
         .padding(.horizontal, 12).padding(.vertical, 14).frame(maxWidth: .infinity, alignment: .leading).glass(18)
     }
@@ -481,11 +483,11 @@ private struct FinnDealView: View {
             HStack(alignment: .lastTextBaseline) {
                 Text(ad.title ?? d.title).fontWeight(.semibold)
                 Spacer()
-                Text(n0(ad.price ?? d.amount ?? 0) + " kr").font(.system(size: 14, design: .monospaced))
+                Text(n0(ad.price ?? d.amount ?? 0) + " kr").font(PF.mono(14, bold: false))
             }
             let meta = [ad.place, ad.saved.map { s in "lagret " + (ddmm(sortKey(s)) == "–" ? s : ddmm(sortKey(s))) }].compactMap { $0 }
-            if !meta.isEmpty { Text(meta.joined(separator: " · ")).font(.system(size: 12.5)).foregroundStyle(text2) }
-            if let t = ad.description, !t.isEmpty { Text(t).font(.system(size: 14)).lineSpacing(4) }
+            if !meta.isEmpty { Text(meta.joined(separator: " · ")).font(PF.ui(12.5)).foregroundStyle(text2) }
+            if let t = ad.description, !t.isEmpty { Text(t).font(PF.ui(14)).lineSpacing(4) }
         }
         .padding(16).frame(maxWidth: .infinity, alignment: .leading).glass(20)
     }
@@ -496,12 +498,12 @@ private struct FinnDealView: View {
                 if k > 0 { Divider().overlay(Color.skinFg.opacity(0.12)) }
                 HStack(spacing: 12) {
                     Text(fileExt(r.name))
-                        .font(.system(size: 10.5, weight: .bold)).foregroundStyle(Color.accentLight)
+                        .font(PF.ui(10.5, .bold)).foregroundStyle(Color.accentLight)
                         .frame(width: 34, height: 34).background(Color.skinFg.opacity(0.1), in: RoundedRectangle(cornerRadius: 10))
-                    Text(r.name).font(.system(size: 14)).lineLimit(1)
+                    Text(r.name).font(PF.ui(14)).lineLimit(1)
                     Spacer()
                     Button { store.finnRemove("receipts", r.id) } label: {
-                        Image(systemName: "xmark").font(.system(size: 12, weight: .semibold)).foregroundStyle(text2).frame(width: 32, height: 32).background(Color.skinFg.opacity(0.1), in: Circle())
+                        Image(systemName: "xmark").font(PF.ui(12, .semibold)).foregroundStyle(text2).frame(width: 32, height: 32).background(Color.skinFg.opacity(0.1), in: Circle())
                     }
                     .buttonStyle(.plain).accessibilityLabel("Fjern \(r.name)")
                 }
@@ -519,7 +521,7 @@ private struct FinnDealView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 14))
                         .overlay(alignment: .topTrailing) {
                             Button { store.finnRemove("photos", p.id) } label: {
-                                Image(systemName: "xmark").font(.system(size: 10, weight: .bold)).foregroundStyle(Color.skinFg).frame(width: 22, height: 22).background(.black.opacity(0.55), in: Circle())
+                                Image(systemName: "xmark").font(PF.ui(10, .bold)).foregroundStyle(Color.skinFg).frame(width: 22, height: 22).background(.black.opacity(0.55), in: Circle())
                             }
                             .buttonStyle(.plain).padding(4).accessibilityLabel("Fjern bildet")
                         }
@@ -534,21 +536,21 @@ private struct FinnDealView: View {
         let total = det.total ?? (det.lines.isEmpty ? (d.amount ?? 0) : lines.map(\.amount).reduce(0, +))
         let ink = Color(hex: "#1C1B19")
         let rule = Color(hex: "#CFC9BD")
-        let mono = Font.system(size: 14, design: .monospaced)
+        let mono = PF.mono(14, bold: false)
         return VStack(alignment: .leading, spacing: 10) {
             HStack {
                 Text("KVITTERING" + (d.code.map { " · \($0)" } ?? ""))
                 Spacer()
                 Text(String((d.date ?? "").prefix(10)))
             }
-            .font(.system(size: 12, design: .monospaced)).foregroundStyle(Color(hex: "#77736B"))
+            .font(PF.mono(12, bold: false)).foregroundStyle(Color(hex: "#77736B"))
             Rectangle().fill(rule).frame(height: 1)
             ForEach(Array(lines.enumerated()), id: \.offset) { _, l in
                 HStack { Text(l.label).foregroundStyle(Color(hex: "#55524C")); Spacer(); Text(n0(l.amount) + " kr").foregroundStyle(ink) }.font(mono)
             }
             Rectangle().fill(rule).frame(height: 1)
             HStack { Text(det.totalLabel ?? (d.sold ? "Utbetalt" : "Betalt")); Spacer(); Text(n0(total) + " kr") }
-                .font(.system(size: 17, weight: .bold, design: .monospaced)).foregroundStyle(ink)
+                .font(PF.mono(17)).foregroundStyle(ink)
         }
         .padding(.horizontal, 20).padding(.vertical, 18).frame(maxWidth: .infinity, alignment: .leading)
         .background(Color(hex: "#F4F1EA"), in: RoundedRectangle(cornerRadius: 22))
@@ -565,16 +567,16 @@ private struct FinnDealView: View {
         let tl = (steps + mails + track).sorted { sortKey($0.date) > sortKey($1.date) }
         return VStack(alignment: .leading, spacing: 0) {
             HStack {
-                Text("Tidslinje").font(.system(size: 16, weight: .semibold))
+                Text("Tidslinje").font(PF.ui(16, .semibold))
                 Spacer()
                 Button { pickKind = "emails"; picking = true } label: {
-                    Text(store.finnBusy == "emails" ? "Legger ved …" : "+ Legg ved e-post").font(.system(size: 12.5)).foregroundStyle(Color.accentLight)
+                    Text(store.finnBusy == "emails" ? "Legger ved …" : "+ Legg ved e-post").font(PF.ui(12.5)).foregroundStyle(Color.accentLight)
                 }
                 .buttonStyle(.plain)
             }
             .padding(.bottom, 12)
             if tl.isEmpty {
-                Text("Ingen steg eller e-poster ennå. E-poster fra FINN, Posten og motparten kobles til automatisk.").font(.system(size: 13)).foregroundStyle(text2).padding(.bottom, 14)
+                Text("Ingen steg eller e-poster ennå. E-poster fra FINN, Posten og motparten kobles til automatisk.").font(PF.ui(13)).foregroundStyle(text2).padding(.bottom, 14)
             }
             ForEach(Array(tl.enumerated()), id: \.element.id) { j, e in
                 HStack(alignment: .top, spacing: 14) {
@@ -587,13 +589,13 @@ private struct FinnDealView: View {
                     .frame(width: 14)
                     VStack(alignment: .leading, spacing: 2) {
                         HStack(alignment: .firstTextBaseline) {
-                            Text(e.title).font(.system(size: 14, weight: e.mail ? .regular : .semibold)).lineLimit(1)
+                            Text(e.title).font(PF.ui(14, e.mail ? .regular : .semibold)).lineLimit(1)
                             Spacer()
-                            if let dt = e.date { Text(ddmm(sortKey(dt))).font(.system(size: 12, design: .monospaced)).foregroundStyle(text2) }
+                            if let dt = e.date { Text(ddmm(sortKey(dt))).font(PF.mono(12, bold: false)).foregroundStyle(text2) }
                         }
-                        Text(e.sub).font(.system(size: 12.5)).foregroundStyle(text2).lineLimit(1)
+                        Text(e.sub).font(PF.ui(12.5)).foregroundStyle(text2).lineLimit(1)
                         if open == e.id, let b = e.body {
-                            Text(b).font(.system(size: 13.5)).lineSpacing(4).padding(.horizontal, 12).padding(.vertical, 10)
+                            Text(b).font(PF.ui(13.5)).lineSpacing(4).padding(.horizontal, 12).padding(.vertical, 10)
                                 .frame(maxWidth: .infinity, alignment: .leading).background(.black.opacity(0.35), in: RoundedRectangle(cornerRadius: 12)).padding(.top, 8)
                         }
                     }
@@ -601,6 +603,7 @@ private struct FinnDealView: View {
                 }
                 .contentShape(Rectangle())
                 .onTapGesture { if e.body != nil { withAnimation { open = open == e.id ? nil : e.id } } }
+                .accessibilityAddTraits(e.body != nil ? AccessibilityTraits.isButton : AccessibilityTraits())
             }
         }
         .padding(.horizontal, 16).padding(.top, 18).padding(.bottom, 4).frame(maxWidth: .infinity, alignment: .leading).glass(22)
