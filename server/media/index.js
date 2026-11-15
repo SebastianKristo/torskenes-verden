@@ -5,7 +5,8 @@
 //   servers.js     sted (?server=) for hele /api/media, søk i biblioteket, flere servere, søk som jobb, slett fil
 //   nrk.js         NRK-nedlaster (/api/media/nrk/*)
 //   yubal.js       Musikk (/api/media/yubal/*)
-//   images.js      /bilde (diskcache, ThumbHash), sporing etter søk, diagnostikk, start stoppede torrenter
+//   images.js      /bilde (diskcache, ThumbHash), posterImg/fanartImg i listene, plakater på nytt etter webhook
+//   tracking.js    sporing etter søk, diagnostikk, start stoppede torrenter, `track` i svaret fra /command og /glimt
 //   unmonitored.js uovervåkede filer (/api/media/unmonitored*)
 //   playback.js    Avspilling: Plex/Jellyfin, PIN-flyt, historikk, statistikk, sammendrag
 //   arr.js         Sonarr, Radarr, qBittorrent, Prowlarr, Glimt, webhooks, varsler, kalenderkilden «Media»
@@ -23,7 +24,8 @@ import { homelabAuthCode46, signImages46, mediaDiag46, mediaDiagOut46 } from './
 import { media44Api, mediaSiteMw44, librarySearchMw44, legacyMedia44 } from './servers.js';
 import { nrkApi } from './nrk.js';
 import { yubalApi } from './yubal.js';
-import { mountMedia50, startMedia50 } from './images.js';
+import { imagesApi, bilde50Mw, hookMw, startMedia50 } from './images.js';
+import { trackingApi, trackMw } from './tracking.js';
 import { media45Api } from './unmonitored.js';
 import { playback44Api, logPlays44 } from './playback.js';
 import { media43Api, mediaWatch43 } from './arr.js';
@@ -45,7 +47,14 @@ export function mountMedia(app, plex) {
   app.use('/api/media/movies', librarySearchMw44);
   app.route('/api/media/nrk', nrkApi); // før arr.js, som eier resten av /api/media
   app.route('/api/media/yubal', yubalApi);
-  mountMedia50(app); // /bilde, /track, /diagnostics, /torrents/:hash/start + posterImg/track i svarene (før de eldre rutene)
+  // Bilder og sporing (fra prompt 50): mellomvarene legger posterImg/track i svarene fra de eldre rutene, så de står før dem.
+  app.use('/api/media/*', bilde50Mw);
+  app.use('/api/widgets/media', bilde50Mw);
+  app.use('/api/media/command', trackMw);
+  app.use('/api/media/glimt', trackMw);
+  app.use('/api/media/hook/*', hookMw);
+  app.route('/api/media', imagesApi); // /bilde
+  app.route('/api/media', trackingApi); // /track, /torrents/:hash/start, /diagnostics
   app.route('/api/media', media45Api); // uovervåkede filer
   // Plex/Jellyfin («Spilles nå», «Nylig lagt til», historikk): serverens oppsett for alle med tilgang som ikke har egne verdier.
   app.get('/api/media/now', authOrToken, legacyMedia44(plex.now));
