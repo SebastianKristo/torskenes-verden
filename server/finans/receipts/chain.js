@@ -36,7 +36,7 @@ Regler:
 - Beløp i kroner som tall med punktum som desimalskille (1299.00). total = beløpet ved TOTAL / Å BETALE / SUM / BETALT.
 - date = kjøpsdatoen som ÅÅÅÅ-MM-DD. time = TT:MM. org_number = bare sifre. vat = mva per sats (25, 15 eller 12) slik det står.
 - category_suggestion = én kategori fra listen brukeren gir.`;
-export const visionPrompt55 = (categories = [], feedback = null) => `Kategorier: ${categories.length ? categories.join(', ') : 'Mat og dagligvarer, Restaurant og kafé, Transport og lading, Bolig, Hjem, Fritid og hobby, Abonnementer, Skole, Annet'}\n\nLes kvitteringen i bildet.${feedback ? `\n\n${feedback}` : ''}`;
+export const visionPrompt55 = (categories = [], feedback = null) => `Kategorier: ${categories.length ? categories.join(', ') : 'Mat og dagligvarer, Restaurant og kafé, Transport og lading, Bolig, Hjem og interiør, Fritid og hobby, Skole, Annet'}\n\nLes kvitteringen i bildet.${feedback ? `\n\n${feedback}` : ''}`;
 export { VISION_SYSTEM55 };
 /**
  * Visjonsmodellen via ai-run (ruten «rc», bare lokalt). → {data, model, ocrText?}
