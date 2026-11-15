@@ -186,6 +186,10 @@ final class Skjold76 {
     var category: String = ""
     var lowOnly: Bool = false
     var categories: [Skj76Cat] = []
+    /// Fase 6: standardkategoriene fra serveren (feltet standard i /categories), bufret for bruk uten nett.
+    var standardCategories: [String] = UserDefaults.standard.stringArray(forKey: "skjold_standard_kategorier") ?? [] {
+        didSet { UserDefaults.standard.set(standardCategories, forKey: "skjold_standard_kategorier") }
+    }
     var loading: Bool = false
     var offline: Bool = false
     var missing: Bool = false
@@ -296,6 +300,8 @@ final class Skjold76 {
         categories = Skjold76.rows(d, "items").map { (o: [String: Any]) -> Skj76Cat in
             Skj76Cat(id: JS.str(o, "category") ?? JS.str(o, "name") ?? "", count: JS.int(o, "count") ?? JS.int(o, "n") ?? 0)
         }.filter { !$0.id.isEmpty }
+        let std: [String] = JS.strings(JS.obj(d), "standard")
+        if !std.isEmpty && std != standardCategories { standardCategories = std }
     }
 
     /* ---------- Søk ---------- */

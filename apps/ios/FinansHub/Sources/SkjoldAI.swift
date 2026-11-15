@@ -98,9 +98,8 @@ final class Skjold77 {
     @ObservationIgnored private var pollTask: Task<Void, Never>? = nil
     @ObservationIgnored private var suggestTask: Task<Void, Never>? = nil
 
-    nonisolated static let defaultCategories: [String] = ["Motstander", "Kondensatorer", "Dioder og LED", "Transistorer", "IC-er",
-        "Mikrokontrollere", "Sensorer", "Moduler", "Kontakter", "Kabler", "Skruer og bolter", "Mutre og skiver", "Avstandsstykker",
-        "Brytere", "Sikringer", "Verktøy", "Diverse"]
+    // Fase 6: standardkategoriene kommer fra serveren (GET /api/skjold/categories → standard, server/skjold/kategorier.js),
+    // Skjold76.standardCategories. Appen har ingen egen liste.
     nonisolated static let thinkingText: String = "Glimt tenker …"
     nonisolated static let photoTimeout: TimeInterval = 65
     nonisolated static let textTimeout: TimeInterval = 35

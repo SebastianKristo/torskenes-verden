@@ -334,9 +334,9 @@ struct Skj76FormFields: View {
     private var categoryMenu: some View {
         Menu {
             ForEach(m.categories) { (c: Skj76Cat) in Button(c.id) { f.category = c.id } }
-            // Prompt 77: standardlisten når brukeren ikke har kategorier ennå.
+            // Prompt 77 / Fase 6: standardlisten fra serveren når brukeren ikke har kategorier ennå.
             if m.categories.isEmpty {
-                ForEach(Skjold77.defaultCategories, id: \.self) { (c: String) in Button(c) { f.category = c } }
+                ForEach(m.standardCategories, id: \.self) { (c: String) in Button(c) { f.category = c } }
             }
         } label: {
             Image(systemName: "list.bullet").font(.dyn51(size: 15, weight: .semibold)).foregroundStyle(p.ink)

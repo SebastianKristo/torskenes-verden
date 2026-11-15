@@ -108,7 +108,12 @@ test('innstillingene: ⚙ i Skjold Lab og Innstillinger → Moduler → Skjold L
 });
 
 test('standard kategoriliste når brukeren ikke har noen', () => {
-  const s = code('SkjoldAI.swift');
-  for (const c of ['Motstander', 'Kondensatorer', 'Dioder og LED', 'Skruer og bolter', 'Mutre og skiver', 'Avstandsstykker', 'Diverse']) assert.ok(s.includes(`"${c}"`), c);
-  assert.match(code('SkjoldEdit.swift'), /if m\.categories\.isEmpty \{/);
+  // Fase 6: den ene standardlisten ligger på serveren (server/skjold/kategorier.js) og kommer som «standard» i
+  // GET /api/skjold/categories. Appen bufrer den (Skjold76.standardCategories) og har ingen egen liste.
+  const k = readFileSync(join(ROOT, 'server', 'skjold', 'kategorier.js'), 'utf8');
+  for (const c of ['Motstander', 'Kondensatorer', 'Dioder og LED', 'Skruer og bolter', 'Mutre og skiver', 'Avstandsstykker', 'Diverse']) assert.ok(k.includes(`'${c}'`), c);
+  assert.match(code('SkjoldModel.swift'), /let std: \[String\] = JS\.strings\(JS\.obj\(d\), "standard"\)/);
+  assert.match(code('SkjoldModel.swift'), /UserDefaults\.standard\.stringArray\(forKey: "skjold_standard_kategorier"\)/);
+  assert.match(code('SkjoldEdit.swift'), /if m\.categories\.isEmpty \{\s*ForEach\(m\.standardCategories, id: \\\.self\)/);
+  assert.doesNotMatch(code('SkjoldAI.swift'), /"Dioder og LED"/);
 });
