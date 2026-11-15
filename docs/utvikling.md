@@ -99,6 +99,75 @@ DTO-ene i `apps/ios/SharedNet/APIModels.swift`. Eksemplene lages på nytt med `n
 (`test/kontrakt-eksempler.test.js` sjekker at de følger skjemaene). Lokalt: `xcodegen` i `apps/ios/`, så
 `xcodebuild test -scheme HomelabTests -destination 'platform=iOS Simulator,name=iPhone 16'`.
 
+**Android-enhetstester** (Fase 5, Q25): `./gradlew :felles:test :kalender:testDebugUnitTest` i `apps/android` (CI-steget
+«Enhetstester (JUnit)» i «Mobilapper»). `:felles` er ren Kotlin og kjører `serveradresse.json`, `idag.json` og
+`shared/schemas/eksempler` uten Android SDK; `:kalender` kjører `datoer.json` mot den lokale hurtigtolkingen (ikke streng, se under).
+
+## Android: API for bølge 2
+
+Fase 5 bølge 1 la grunnmuren. Skjermene flyttes over til den én og én i bølge 2; de gamle API-ene (`C.*`, `P.*`,
+`PaperPal.current`, `tc()`/`Tone.map()`, `paperType`) virker som tynne adaptere til alle skjermene er flyttet.
+
+**Moduler** (`apps/android/settings.gradle.kts`, versjoner i `gradle/libs.versions.toml`):
+
+| Modul | Hva | Bruk |
+|---|---|---|
+| `:felles` (ren Kotlin, `no.kristo.felles`) | `nett/LokaltNett`, `URL.openSikker()`, `UsikretHttp`, `Klartekstvakt` (http bare hjemme, S3) · `nett/ServerAdresse` (normalisering, lokal, «pålitelig enhet») · `nett/Feilsvar`, `HttpFeil`, `Nettfeil` (feilform og norske tekster) · `nett/HttpKlient` · `kontrakt/Bruker`, `Innlogging` (tokenutløp), `Serverversjon` · `tid/OsloDato` · `navigasjon/Tilbakestabel` | Alle tre appene. Ny ren regel (uten Android) legges her, med JUnit-test mot `shared/testvektorer` |
+| `:felles-android` (`no.kristo.felles.android`) | `SikkerLagring.prefs(ctx, navn, gammelKlartekst?)`: kryptert lagring som tåler ødelagt Keystore (B4), aldri ukryptert | Alle tokens og hemmeligheter. Ikke kall `EncryptedSharedPreferences.create` direkte |
+
+**Nettverk.** Alle HTTP-kall går via `URL.openSikker()` (eller `Api` i `:app`, `HttpKlient` i Wear/Kalender), alltid fra en
+bakgrunnstråd (`withContext(Dispatchers.IO)`), og JSON-tolking av store svar på `Dispatchers.Default`. Feil leses med
+`Feilsvar.fra(body, status)`; `tokenUgyldig(401)` (HOMELAB_AUTH/TOKEN_EXPIRED) betyr logg ut. Brukeren ser `Nettfeil.melding(e, vert)`,
+aldri rå unntakstekst. Serveradressen normaliseres med `ServerAdresse.normaliser` (samme fasit som iOS).
+
+**Logikk på serveren.** Vis feltene serveren sender i stedet for å regne: `nextDate`/`label` (abonnement, og
+`GET /finans/api/subscriptions/next-charge` i skjemaet), `nextDue` (gjøremål), `monthly`, `daysLeft`, `spent`.
+Hurtigtolking: serveren først (`POST /api/kalender/quick/parse`, Glimt), lokal tolking bare som reserve uten nett. En lokal reserve
+skal ha felles testvektor (`HurtigtolkingTest` stemmer i dag med 44 av 63 i `datoer.json`; tallet heves når avvik rettes).
+«I dag» er `OsloDato.iDag()`, aldri `LocalDate.now()` uten sone.
+
+**Tema** (`ui/designsystem/HomelabTheme.kt`, satt av `FinansTheme`). Stil × modus kommer fra appvalget (`dsStil`, `dsDark`; Glass er
+alltid mørk, Q13). Dynamic color forblir av (Q16).
+
+| Før | Etter |
+|---|---|
+| `PaperPal.current.ink` / `.bg` / `.card` / `.line` | `HomelabTheme.colors.textPrimary` / `.surface` / `.surfaceRaised` / `.line` |
+| `.sub` / `.mut` | `.textSecondary` / `.textTertiary` |
+| `.lab` / `.onLab` | `.accent` / `.onAccent` |
+| `.pos` / `.posSoft` | `.success` / `.successSoft` |
+| `.surf2` / `.container` / `.pop` | `.surfaceSunken` / `.surfaceChip` / `.surfaceOverlay` |
+| `C.red`, `P.red` | `.danger` (bakgrunn `.dangerSoft`) |
+| `tc(0x…)`, `Color(0x…)` | En rolle fra `HomelabTheme.colors` eller `.category.*`. Mangler rollen: legg den i `shared/design/tokens.json` + `npm run tokens` (rediger aldri `DesignTokens.kt`) |
+| `Tone.glass` | `HomelabTheme.isGlass` |
+| `16.dp`, `12.dp` … | `HomelabTheme.space.lg`, `.md` … og `HomelabTheme.radius.*` |
+
+Fargene er ikke helt like overalt (for eksempel `mut` 7A7468 mot `textTertiary` 8F897C i Papir lys); sjekk kontrasten og beskriv
+endringen når en skjerm flyttes.
+
+**Typografi.** `MaterialTheme.typography` er `HomelabTypography` (tokenstilene med Papir-fontene Manrope/Newsreader). For stilene
+uten M3-rolle: `HomelabType.caption … largeTitle`, `label`, `labelSmall`, `mono`. Erstatt `fontSize = N.sp` slik (fet skrift med
+`.copy(fontWeight = …)`, aldri ny størrelse):
+
+| `fontSize` i dag | Stil |
+|---|---|
+| ≤ 11.5 sp | `HomelabType.caption` (`labelSmall`) |
+| 12–12.5 sp | `HomelabType.footnote` (`bodySmall`) |
+| 13–13.5 sp | `HomelabType.subheadline` |
+| 14–15 sp | `HomelabType.callout` (`bodyMedium`), knapper `HomelabType.label` (`labelLarge`) |
+| 15.5–17 sp | `HomelabType.body` (`bodyLarge`) |
+| 18–20 sp | `HomelabType.headline` (`titleMedium`) |
+| 21–26 sp | `HomelabType.title3` (`titleLarge`) |
+| 28–36 sp | `HomelabType.title2` (`headlineMedium`) |
+| ≥ 38 sp | `HomelabType.largeTitle` (`displaySmall`); større tall (52, 104 sp) med `.copy(fontSize = …)` og en kommentar |
+
+**Navigasjon og skall** (`ui/HomelabSkall.kt`). Skjermene styres fortsatt av tilstand i `AppViewModel`. Tilbake går alltid via
+`vm.back()`, som bruker tilbakestabelen (`Tilbakestabel` med 31 navngitte `Tilbakesteg` i `AppViewModel`, øverst = ligger over alt).
+Et nytt ark eller en ny underside får et nytt steg på riktig plass, ikke en egen `BackHandler`. `vm.tilbakeRute` er rute-id-en for
+laget tilbake lukker («rot» på Hjem). Prediktiv tilbake (`PredictiveBackHandler` i `Nav23Back`) kjører `back()` på prøve og virker for
+alle stegene. En skjerm som flyttes, pakkes i `HomelabSkall(toppfelt, bunnlinje) { innfelling -> … }` (Scaffold med
+`WindowInsets.safeDrawing`) og legger ikke på `statusBarsPadding`/`navigationBarsPadding` selv. Trykkflater er minst
+`HomelabTheme.minTouch` (48 dp), og ikoner er `Icon(Icons.…, contentDescription)` i `IconButton`, ikke `Text("✕")`.
+
 ## Skjermbilder til dokumentasjonen
 
 Bildene i `docs/images/` er tatt med Playwright mot en server med `MOCK_DATA=1`, i 1440×900 for desktop og i iPhone-, Pixel- og Pixel Fold-størrelse for mobil. De er lagret som WebP.

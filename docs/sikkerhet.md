@@ -79,6 +79,18 @@ IP-en leses fra tilkoblingen, eller fra `CF-Connecting-IP` bak Cloudflare. Den l
 - **Tredjeparts-JS:** CSP-en (`script-src 'self'`) blokkerer inline-skript og tredjeparts-JS.
 - **Serverens hemmelighet:** `SESSION_SECRET` i `.env`. Er den ikke satt på en ny installasjon, lager serveren 48 tilfeldige byte og lagrer dem i `data/session-secret` (0600). En eldre installasjon uten `SESSION_SECRET` bruker fortsatt en fast reservenøkkel fra kildekoden og gir et varsel til administrator under **Innstillinger → Sikkerhet**: sett `SESSION_SECRET` i `.env` (`openssl rand -hex 32`) og start på nytt. Da blir alle logget ut, og lagrede integrasjonsnøkler må legges inn på nytt.
 
+## Android-appene på nettet
+
+- **Klartekst bare hjemme:** `http://` og `ws://` godtas bare til lokalt nett (`:felles`, `LokaltNett`, samme fasit som
+  `shared/testvektorer/serveradresse.json`). Et lokalt *navn* (`nas.lan`, `homelab`) må i tillegg peke til en lokal adresse når
+  forbindelsen åpnes (`Klartekstvakt`), så falsk DNS på et offentlig nett ikke får tokenet i klartekst. OkHttp sjekker adressen
+  den faktisk koblet til.
+- **Sertifikater:** brukerinstallerte CA-er godtas bare for `.local`, `.lan`, `.home.arpa` og `.internal` (selvsignert sertifikat
+  for homelab hjemme). Alle andre verter må ha et offentlig sertifikat, så en CA fra MDM eller en angriper ikke kan lese trafikken.
+  https mot en lokal IP-adresse med selvsignert sertifikat virker derfor ikke; bruk http på lokalt nett eller et `.lan`-navn.
+- **Tokens på enheten:** kryptert med Android Keystore (`:felles-android`, `SikkerLagring`). Er nøkkelen eller fila ødelagt,
+  nullstilles lagringen og brukeren logger inn igjen; tokens skrives aldri ukryptert.
+
 ## Lokale adresser i RSS og iCal
 
 RSS-kilder, artikkelsider og iCal-abonnementer hentes av serveren. For at en bruker ikke skal kunne bruke dem til å lese tjenester på hjemmenettet, hentes bare offentlige adresser: private, loopback-, link-local- og metadata-adresser (også når et navn peker dit via DNS, og etter omdirigering) avvises med «Lokale adresser må godkjennes av en administrator (Innstillinger → Sikkerhet).»
