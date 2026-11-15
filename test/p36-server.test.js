@@ -28,7 +28,7 @@ const boot = await import('../server/system/boot.js');
 const su = await import('../server/system/update.js');
 const assist = await import('../server/glimt/assist.js');
 const sun = await import('../server/vaer/sun.js');
-const api36 = await import('../server/api36.js');
+const placesSummary = await import('../server/vaer/places-summary.js');
 const qt = await import('../public/js/quick-time.js');
 
 async function login(username, password) {
@@ -211,11 +211,11 @@ test('GET /api/weather/places/summary: alle lagrede steder i ett kall med temper
     assert.equal(typeof p.temp, 'number');
     assert.ok(p.hi >= p.lo);
     assert.equal(typeof p.text, 'string');
-    assert.ok(api36.CARD_BG[p.kind]);
-    assert.equal(p.cardBg, api36.CARD_BG[p.kind]);
+    assert.ok(placesSummary.CARD_BG[p.kind]);
+    assert.equal(p.cardBg, placesSummary.CARD_BG[p.kind]);
   }
   // Ren funksjon: regnsjanse ≥ 60 % de neste 4 dagene, og lokal tid når tidssonen er en annen.
-  const row = api36.summaryRow({ id: 'ny', name: 'New York', lat: 40.7, lon: -74 }, { current: { temperature_2m: 12.4, weather_code: 61, is_day: 1 }, timezone: 'America/New_York', utc_offset_seconds: -4 * 3600,
+  const row = placesSummary.summaryRow({ id: 'ny', name: 'New York', lat: 40.7, lon: -74 }, { current: { temperature_2m: 12.4, weather_code: 61, is_day: 1 }, timezone: 'America/New_York', utc_offset_seconds: -4 * 3600,
     daily: { time: ['2026-10-19', '2026-10-20', '2026-10-21', '2026-10-22'], temperature_2m_max: [14, 15, 16, 17], temperature_2m_min: [8, 9, 9, 10], precipitation_probability_max: [10, 20, 30, 85] } }, Date.parse('2026-10-19T19:49:00Z'));
   assert.equal(row.temp, 12);
   assert.equal(row.rainNote, '85 % sjanse for regn på torsdag');

@@ -17,6 +17,7 @@
 //   map.js              Kart: holdeplasser, avganger og kjøretøy (Entur) for valgte soner, soner og personer
 //   famcal.js           familiekalenderen med «hvem kjører?»
 //   hjemlys.js          Vel fremme: økta, posisjon, ok/hjemme/avslutt (også admin), tokens, forslag, «Si fra»-beskjeder i GET /
+//   colors.js           fargene til medlemmene inn i Gjøremål, Økonomi og profilene
 //   hjemlys-notices.js  «Si fra» (Sjekket inn · Drar snart · Drar nå · Fremme), tur til et valgfritt mål og den offentlige statussiden
 import { zone45Api } from './zone-alerts.js';
 import { haHealthMw45 } from './health-ha-devices.js';
@@ -27,6 +28,7 @@ import { kart46Api } from './map.js';
 import { famcal51Api, sweepFamcal51 } from './famcal.js';
 import { hjemlys40Api } from './hjemlys.js';
 import { hjemlys41Api } from './hjemlys-notices.js';
+import './colors.js'; // fargene til Gjøremål, Økonomi og profilene
 
 export { hlPage41 } from './hjemlys-notices.js';
 

@@ -37,12 +37,11 @@ import { revokeUserTokens } from './finans/routes.js';
 import { startBirthdayWorker } from './kalender/birthdays.js';
 import { mountBirthdays, mountKalenderFront, mountKalender } from './kalender/index.js'; // Kalender og Bursdager (server/kalender/)
 import integrationsApi, { settingsSearchApi, testByIdOrName, integrationScope } from './integrations-api.js';
-import settingsAsk30Api from './system/settings-search.js';
+import { mountSystemEarly, mountSystemAdmin, mountAdminRoutes } from './system/index.js'; // System og drift: admin, logger, helse, backup, oppdatering, flagg, krasj, kvalitet, søk (server/system/)
 import { mountAi, mountAiEngines, mountChat } from './ai/index.js'; // AI: /api/ai, Chat og motorene på Mac mini-en (server/ai/)
 import appUpdateApi from './app-update.js'; // prompt 32: Android-appen oppdaterer seg selv (GitHub-release via serveren)
-import systemUpdateApi, { updateNow, versionApi44 } from './system/update.js'; // Oppdater fra appen: data/update/ ↔ updater-containeren
-import systemBackupApi from './system/backup.js'; // prompt 29: systembackup (bare admin)
-import ops51Api, { logMigrationsAtStartup } from './system/ops.js'; // prompt 51 (OPS51): restic-backup 3-2-1, testet gjenoppretting, staging/tilbakerulling, DB-vedlikehold
+import { updateNow, versionApi44 } from './system/update.js'; // Oppdater fra appen: data/update/ ↔ updater-containeren
+import { logMigrationsAtStartup } from './system/ops.js'; // migrasjonsloggen ved oppstart
 import smbBrowseApi from './smb-browse.js'; // prompt 30: SMB-veiviser (finn server, shares, mapper, test, lagre) – bare admin
 import { mountGlimt } from './glimt/index.js'; // Glimt: motoren, minnet, brief, innstillingene og /api/assist (server/glimt/)
 import { recipesApi61 } from './recipes61/api.js'; // prompt 61 (prompt 49 del 1): Glimt lærer (oppskrifter)
@@ -50,36 +49,38 @@ import { schedulesApi62 } from './sched62/api.js'; // prompt 62 (prompt 49 del 2
 import { skjoldApi76 } from './skjold76/api.js'; // prompt 76 (SKJSRV): Skjold Lab – sorteringsskapet (deler, skuffer, bilder, søk)
 import { startScheduler62 } from './sched62/scheduler.js'; // prompt 62: scheduler (tikk hvert minutt, ikke i test)
 import { startMem63 } from './glimt/memory/nightly.js'; // prompt 63: systemoppgaven kl. 03 (ikke i test); morgenvarselet går via server/jobs/
-import { qualityApi64 } from './system/quality/api.js'; // prompt 64 (prompt 49 del 7): kvalitet over tid (nattlig eval, ukerapport)
-import api36 from './api36.js'; // prompt 36 (SERVER36)
-import { profilesApi, bibleApi } from './api37.js'; // prompt 37 (SERVER37)
+import dashboardLayoutApi from './system/dashboard-layout.js'; // widget-oppsettet på Oversikt per enhetsklasse
+import profilesApi from './profiles37.js'; // profiler og onboarding
+import bibleApi from './bible37.js'; // dagens bibelvers
 import { bearerFallthrough46 } from './auth/bearer-fallthrough.js'; // prompt 46 (SERVER46)
-import { news40Api, newsDigestApi, pages40Api, briefJul40 } from './api40.js'; // prompt 40 (SERVER40)
-import { mountServer47 } from './system/server-urls.js'; // prompt 47 (SERVER47)
-import { ruter41Api, mai17Api, brief41 } from './api41.js'; // prompt 41 (SERVER41)
+import { news40Api, newsDigestApi } from './news40.js'; // Nyheter · Glimt-siden
+import { pages40Api } from './system/app-pages.js'; // alle sider i Mer (fanelinja)
+import { mountBriefExtras } from './glimt/brief-extras.js'; // ski, 17. mai, Min reise og jul i GET /api/brief
+import { ruter41Api } from './ruter41.js'; // Min reise, skolesoner, «forlot skolen»
+import { mai17Api } from './mai17-41.js'; // 17. mai
 import { mountFamilie, startFamilie, hlPage41 } from './familie/index.js'; // Familie: /api/family, /api/kart, /api/famcal51, /api/hjemlys (+ /api/velfremme)
 import { mountFinans, mountFinansAliases, mountTrialWidgets, mountSubsCalendar, registerLegacyReceipts, legacyReceiptOwner } from './finans/index.js'; // Økonomi: /finans/api, Boliger-aliasene, prøveperiode-widgets og kalenderen «Abonnementer»
-import { widgets43Api, gscDomains43Api, gsc43Api, gscViewMw43, gscOverviewMw43 } from './api43.js'; // prompt 43 (SERVER43)
+import { widgets43Api } from './widgets43.js'; // /api/widgets/media og /catalog
+import { gscDomains43Api, gsc43Api, gscViewMw43, gscOverviewMw43 } from './gsc43.js'; // Google Search Console: årsak, «Hent nå», test
+import { gsc45Api, gscInfoMw45 } from './gsc45.js'; // Search Console: servicekonto, normalisert eiendom, auth-type
+import { aiImport45Api } from './ai/import.js'; // AI-import (Claude · ChatGPT · Gemini)
 import { mountMedia, startMedia } from './media/index.js'; // Media: alle /api/media-, /api/playback- og /api/medctl51-ruter
 import { mediaCalendarsMw43 } from './media/arr.js'; // kalenderkilden «Media»
 // Prompt 44 (SERVER44): Logger (Docker), Media (servere, søk som jobb, felles status), Avspilling, Studie-dokumenter, Kalender-deltakere,
 // Logg inn som / andres oppsett / overfør eier.
 import { integrationsStatusApi44 } from './media/servers.js'; // felles status for Integrasjoner og Media
-import { logs44Api } from './system/docker-logs.js';
-import { impersonation44, admin44Api, layoutLockMw44, setMobileApi44 } from './system/admin.js';
+import { impersonation44 } from './system/admin.js'; // «Logg inn som»: X-tokenet fornyes, sperrer og logg
 import { study44Api } from './study44.js';
 import { mountAuthSecurity, mountAppAuth, mountAuthInvites, mountAuthRefresh, mountAuth, registerAccountRoutes } from './auth/index.js'; // innlogging og sikkerhet
-import { mountApi45 } from './api45.js'; // prompt 45 (SERVER45)
-import { traceObs51, mountObs51 } from './system/observability/index.js'; // prompt 51 (OBS51): helsedashbord, selvreparasjon, spor, ntfy
-import { mountQa51, reportServerError51 } from './system/flags-crashes.js'; // prompt 51 (QA51): feature flags, krasjrapporter (GlitchTip), «Nytt i denne versjonen»
+import { traceObs51 } from './system/observability/index.js'; // spor for trege forespørsler
+import { reportServerError51 } from './system/flags-crashes.js'; // krasjrapporter (GlitchTip)
 import { errorShape, API_PREFIXES, serverError } from './http/errors.js'; // felles feilform {error, code} for /api og /finans/api
 import { tokenStateOf } from './finans/routes.js';
 import { aliasCounter } from './http/aliases.js';
-import { startJobs, listJobs, jobsStarted } from './jobs/index.js'; // én planlegger for bakgrunnsjobber med sideeffekter (ikke i test/sandkasse) // Q29: eldre API-aliaser samlet i én tabell, bruken telles
+import { startJobs } from './jobs/index.js'; // én planlegger for bakgrunnsjobber med sideeffekter (ikke i test/sandkasse) // Q29: eldre API-aliaser samlet i én tabell, bruken telles
 import { badInput85 } from './http/bad-input.js'; // prompt 85 (SRVSEC85): feil i kroppen fra klienten → 400, ikke 500
 import { anonBodyCap85 } from './http/anon-body-limit.js'; // prompt 85 (SRVSEC85): store kropper bare fra innloggede klienter
 import { mountLive89, startLive89 } from './live89.js'; // prompt 89 (SRV89): Live Activities / Live Updates (/api/live/*) og APNs-push
-import { mountWebx51 } from './system/search.js'; // prompt 51 (WEBX51): felles søk, onboarding, tema per bruker, offline-konfliktvarsel
 import { mountSrv52 } from './glimt/my-brief.js'; // prompt 52 (SRV52): Glimt «sist jeg var på», kalenderkontekst, brief-kort, Glimt-figur per bruker
 import { mountDal53 } from './dal53/index.js'; // prompt 53 (DAL53): Desert Ant Labs-modellene (Eye, Redact, Gist, Tongue, Emo, Moderator, Clear, Voz)
 import { gphoto46Api, startGphoto46 } from './gphoto46.js'; // prompt 46 (DATA46): Google Photos-album som bakgrunn
@@ -166,10 +167,7 @@ app.route('/api/version', versionApi44); // prompt 44: {version, features} uten 
 // Prompt 41: /api/discovery, /api/me/server, Kalender-innlogging (device-token/-exchange, app-code, token, /app-auth) og mellomvaren
 // som tilbakekaller Kalender-tokenene ved utlogging fra Homelab-appen (må stå før /finans/api). server/auth/app-login.js.
 mountAppAuth(app);
-mountServer47(app); // prompt 47 (SERVER47): GET /api/config/servers {publicUrl, localUrl etter innlogging} + /api/finans/kvitteringer-aliasene
-mountObs51(app); // prompt 51 (OBS51): /api/system/obs51/* (admin) og /api/me/ntfy51 (alle)
-mountQa51(app); // prompt 51 (QA51): /api/flags, /api/crash, /api/whatsnew, /api/admin/flags51, /api/admin/crashes51
-mountWebx51(app); // prompt 51 (WEBX51): /api/search51, /api/me/theme51, /api/me/share51, /api/offline51
+mountSystemEarly(app); // server/system/: serveradresser, helse/spor/ntfy, flagg, krasj, «Nytt i versjonen», felles søk, tema, offline-konflikter
 mountAuthInvites(app); // onboarding for nye familiemedlemmer: /api/onboard51/*, /join/:token (server/auth/invites.js)
 mountSrv52(app); // prompt 52 (SRV52): /api/glimt/quickparse52, /api/glimt/lex52, /api/brief52, /api/me/glimt-char52, admin; mellomvare foran POST /api/glimt/agent
 mountAiEngines(app); // server/ai/: /api/admin/{fermion53,whisper54,voxcpm57,omlx58}/* (bare admin) og /api/voices57*
@@ -547,7 +545,9 @@ authed.get('/news', proxy(api.getNews));
 // integrasjonsklienten her (ekte eller mock) og de personlige verdiene (ISO2), og den som har tilgang til Media uten egne verdier
 // får serverens oppsett (se media/servers.js).
 mountMedia(app, { now: personal('media', proxy(api.getMediaNow)), recent: personal('media', proxy(api.getMediaRecent)), history: personal('media', proxy(api.getMediaHistory)), poster: (src, id) => api.getMediaPoster(src, id) });
-mountApi45(app); // prompt 45 (SERVER45): Docker-oppsett, Search Console, AI-import, sonevarsler, HA-helse, Vær, Gjøremål, Innstillinger
+app.use('/api/gsc', gscInfoMw45); // Search Console: servicekonto, normalisert eiendom, auth-type (før de eldre /api/gsc-rutene)
+app.route('/api/gsc', gsc45Api);
+app.route('/api/ai/import', aiImport45Api); // AI-import (Claude · ChatGPT · Gemini), før mountAi
 authed.get('/space/tle', proxy(api.getTle));
 authed.get('/space/apod', proxy(api.getApod));
 authed.get('/space/gallery/:key', proxy((c) => {
@@ -595,22 +595,12 @@ app.use('/api/kalender/calendars/*', mediaCalendarsMw43);
 mountSubsCalendar(app); // server/finans/: innebygd kalender «Abonnementer» (trekkdatoer) – etter Media-kalenderen, før mountKalender
 mountKalender(app); // server/kalender/: kalenderlista, hendelser, vær, widget, companion-token og /api/kalender
 app.route('/api/settings', settingsSearchApi);
-app.route('/api/settings', settingsAsk30Api); // prompt 30: GET /index og POST /ask (✦ AI-søk med indeks fra serveren)
 app.route('/api/smb', smbBrowseApi); // prompt 30: bare admin; økt (JSON) eller admin-token med finance:write
-app.route('/api/ops51', ops51Api); // prompt 51 (OPS51): bare admin; /smoke bare i sandkassen (OPS51_SANDBOX=1)
-app.route('/api/backup', systemBackupApi); // prompt 29: bare admin; endringer krever økt eller admin-token, gjenoppretting passordet
-app.route('/api/system/update', systemUpdateApi);
-app.route('/api/update', systemUpdateApi); // prompt 44: /api/update/versions, /api/update/rollback {version, restoreBackup, pauseAutoDays}, /api/update/status
-app.route('/api/system', logs44Api); // prompt 44: /api/system/containers, /api/system/logs (bare admin) // bare admin; start/rollback krever passordet og økt eller admin-token (finance:write)
-// Prompt 30: kort versjonssvar for oppdateringsbanneret (samme tilgang som /api/system/update).
-app.get('/api/system/version', (c) => { const u = new URL(c.req.url); u.pathname = '/api/system/update/version'; return app.fetch(new Request(u, { headers: c.req.raw.headers }), c.env); });
-app.get('/api/system/changelog', (c) => { const u = new URL(c.req.url); u.pathname = '/api/system/update/changelog'; return app.fetch(new Request(u, { headers: c.req.raw.headers }), c.env); }); // prompt 36
+mountSystemAdmin(app); // server/system/: Innstillinger-søket, /api/ops51, /api/backup, /api/system/update, Docker-oppsett, logger, /api/glimt/quality
 app.route('/api/glimt/news-digest', newsDigestApi); // prompt 40: samme som POST /api/news/glimt
-app.route('/api/glimt/quality', qualityApi64); // prompt 64: /runs, /runs/:id, /run-now, /abort, /weekly, /settings
 app.route('/api/search-history', searchHistoryApi); // prompt 32: søkehistorikk per bruker (mobil logger, web viser)
 mountAi(app); // server/ai/: /api/ai/memory, ✦ modellanbefalingene og AI-kontrollen (/api/ai)
-app.use('/api/brief', briefJul40);
-app.use('/api/brief', brief41); // prompt 41: ski, mai17, minReise // prompt 40: brief.jul i julemodus
+mountBriefExtras(app); // server/glimt/brief-extras.js: ski, 17. mai, Min reise og jul i GET /api/brief (før mountGlimt)
 app.route('/api/glimt/mai17', mai17Api); // prompt 41: 17. mai (program, design-bryter, hurra)
 mountVaer(app); // server/vaer/: /api/weather/here, /week-summary, /place, ski i /full og /layout (før mobileApi sine værruter)
 app.route('/api/glimt/recipes', recipesApi61); // prompt 61: oppskrifter som lærer av bruk (per bruker)
@@ -636,15 +626,12 @@ app.route('/api/domains', gscDomains43Api); // prompt 43: /:domain/gsc/refresh (
 app.route('/api/domains', domainGlimtApi); // prompt 32: /:domain/summary (Glimt) og /:domain/gsc (Google Search Console), bare admin
 app.route('/api/gsc', gsc43Api); // prompt 43: /test (diagnose per eiendom)
 app.route('/api/gsc', gscApi); // prompt 32: Google Search Console-kobling per bruker (webmasters.readonly)
-app.route('/api', api36); // prompt 36: /dashboard/layout og /weather/places/summary (før mobileApi)
+app.route('/api', dashboardLayoutApi); // /dashboard/layout (før mobileApi); /weather/places/summary ligger i mountVaer
 app.route('/api/bible', bibleApi); // prompt 37: dagens bibelvers (bare med modulen)
 app.route('/api', profilesApi); // prompt 37: profiler og onboarding
 app.route('/api', study44Api); // prompt 44: /study/documents, /study/overview
-app.get('/api/admin/jobs', authOrToken, (c) => (isAdmin(c.get('user')) ? c.json({ started: jobsStarted(), jobs: listJobs() }) : c.json({ error: 'Bare administratorer har tilgang', restricted: true }, 403))); // bakgrunnsjobbene (server/jobs/)
 app.get('/api/admin/aliases', authOrToken, (c) => (isAdmin(c.get('user')) ? c.json({ aliases: aliases.usage() }) : c.json({ error: 'Bare administratorer har tilgang', restricted: true }, 403))); // Q29
-app.route('/api', admin44Api); // prompt 44: /admin/impersonate, /users/:id/layout, /server/owner
-app.use('/api/me/layout', layoutLockMw44); // prompt 44: låst oppsett
-setMobileApi44(mobileApi);
+mountAdminRoutes(app, { mobileApi }); // server/system/: /api/admin/jobs, «Logg inn som», andres oppsett, servereier og låst oppsett foran /api/me/layout
 app.route('/api', mobileApi);
 app.route('/api', authed);
 app.route('/home/api', homeApi);

@@ -1,24 +1,8 @@
-// Prompt 40 (SERVER40): kobler sammen modulene for prompt 40 (montert i index.js).
-//   AI-selvtester (to tidsgrenser, oppvarming, én modell om gangen, minnesjekk, helsesjekk, vakthund), Jobber-gruppering  → ai-run.js, ai/control.js, ai39.js
-//   SMB: validering etter SMB-reglene, feiltype per kind, POST /api/smb/shares {host, user, pass}                       → finans/backup.js, smb-browse.js
-//   «Starter opp» bare ved ekte omstart: /api/health {restarting, updating, state} + X-Homelab-State                      → index.js, system-update.js
-//   2FA i appen: /api/auth/2fa/*                                                                                       → auth/two-factor.js (montert fra auth/login.js)
-//   Gjøremål-Glimt: flere punkter med rekkefølge, sted og person (placeName/after i POST og PATCH)                    → server/gjoremal/
-//   Nyheter Glimt-side: /api/news/glimt, /api/news/glimt/sources, /api/glimt/news-digest                               → news40.js
-//   Julemodus: /api/glimt/settings jul*, julActive; brief.jul                                                         → jul40.js (+ glimt/settings.js), mellomvaren under
-//   Hjemlys: /api/hjemlys/*                                                                                           → server/familie/ (mountFamilie)
-//   Fanelinje: GET /api/app/pages + alle nøklene i homeNav                                                            → under (+ mobile.js TAB_IDS)
+// Fanelinjen: alle sider i Mer og «Rediger fanelinjen» (GET /api/app/pages). Montert fra server/index.js før /api/app.
 import { Hono } from 'hono';
-import { authOrToken } from './mobile.js';
-import { bibleEnabled } from './bible37.js';
-import { glimtSettingsOf } from './glimt/settings.js';
-import { julBrief } from './jul40.js';
-import { db } from './db.js';
-import { sessionUser } from './auth/session.js';
+import { authOrToken } from '../mobile.js';
+import { bibleEnabled } from '../bible37.js';
 
-export { news40Api, newsDigestApi } from './news40.js';
-
-/* ---------------- Fanelinje: alle sider i Mer ---------------- */
 // Én kilde for Mer-menyen og «Rediger fanelinjen» (fasit HNAV_ALL). key = nøkkelen i designet, id = nøkkelen i homeNav/tabBar (mobile.js TAB_IDS).
 // kind 'sheet' = åpnes som ark (Now Brief, Nyhetsleser), ellers navigeres det til route.
 export const PAGES40 = [
@@ -52,18 +36,3 @@ export const pages40Api = new Hono();
 pages40Api.use('*', authOrToken);
 // GET /api/app/pages → {pages:[{key, id, name, icon, sf, material, route, kind:'page'|'sheet', module?}], maxTabs:5, more:'mer'}
 pages40Api.get('/', (c) => c.json({ pages: pagesFor40(c.get('user')), maxTabs: 5, more: { key: 'mer', id: 'mer', name: 'Mer', icon: '⋯', sf: 'ellipsis', material: 'more_horiz' } }));
-
-/* ---------------- Brief i julemodus ---------------- */
-// GET /api/brief (og /api/brief?kind=…) får jul:{phase, label, outfit, countdown, countdownText, luke:{n, text}|null, aaret?, snow} når julemodus er på.
-export async function briefJul40(c, next) {
-  await next();
-  if (c.req.method !== 'GET' || c.res.status !== 200 || !/^\/api\/brief\/?$/.test(c.req.path)) return;
-  try {
-    const u = c.get('user') ?? sessionUser(c);
-    if (!u) return;
-    const j = await c.res.clone().json();
-    const jul = julBrief(glimtSettingsOf(u), Date.now(), { aaret: { title: 'Året ditt', text: 'Glimt oppsummerer året ditt: økonomi, trening, serier og steder.' } });
-    if (jul) c.res = c.json({ ...j, jul }, 200, { 'Cache-Control': 'no-store' });
-  } catch { /* briefen står */ }
-}
-

@@ -258,7 +258,7 @@ const SUB_HOME_CARDS = ['ai', 'next7', 'check', 'list'];
 export const NAV_STYLES = ['text', 'icons', 'icons_active_label'];
 const BG_TYPES = ['weather', 'planets', 'oslo', 'custom', 'none', 'cur', 'gphoto']; // prompt 46 (DATA46): gphoto = delt Google Photos-album
 export const TAB_IDS = ['hjem', 'finans', 'mat', 'sporing', 'domener', 'sok', 'mer', 'vaer', 'nyheter', 'familie', 'avganger', 'aksjer', 'boliger', 'abonnementer', 'media', 'huske', 'chat',
-  // Prompt 40: alt fra Mer kan ligge i fanelinja (GET /api/app/pages, api40.js PAGES40) – nye id-er og designnøklene (HNAV_ALL).
+  // Prompt 40: alt fra Mer kan ligge i fanelinja (GET /api/app/pages, system/app-pages.js PAGES40) – nye id-er og designnøklene (HNAV_ALL).
   'kalender', 'bursdager', 'brief', 'nyhetsleser', 'bibel', 'nordlys', 'innstillinger', 'abo', 'kart', 'fsok', 'bursdag', 'rss', 'innst', 'gjoremal'];
 export const TAB_BAR_DEFAULT = { items: [{ id: 'hjem', label: 'Hjem', icon: 'house' }, { id: 'finans', label: 'Finans', icon: 'wallet' }, { id: 'mat', label: 'Mat', icon: 'fork.knife' }, { id: 'domener', label: 'Domener', icon: 'globe' }, { id: 'sok', label: 'Søk', icon: 'magnifyingglass' }, { id: 'mer', label: 'Mer', icon: 'ellipsis' }] };
 const ICON_THEMES = ['standard', 'varm', 'kjolig', 'mono', 'fargerik'];
