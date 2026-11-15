@@ -4,8 +4,6 @@
 import { docker45Api, dockerSetupMw45 } from './docker45.js';
 import { gsc45Api, gscInfoMw45 } from './gsc45.js';
 import { aiImport45Api } from './ai-import45.js';
-import { zone45Api } from './familie/zone-alerts.js';
-import { haHealthMw45 } from './familie/health-ha-devices.js';
 import { settings45Api } from './misc45.js';
 
 export function mountApi45(app) {
@@ -17,9 +15,6 @@ export function mountApi45(app) {
   app.route('/api/gsc', gsc45Api);
   // AI-import (Claude · ChatGPT · Gemini).
   app.route('/api/ai/import', aiImport45Api);
-  // Familie: sonevarsler + soneikon; HA-helse bare mobile_app.
-  app.route('/api/family', zone45Api);
-  app.use('/api/family/health/ha', haHealthMw45);
   // Innstillinger samlet. (Vær «Min posisjon» og Gjøremål-synkraden monteres i server/vaer/ og server/gjoremal/.)
   app.route('/api/settings', settings45Api);
 }

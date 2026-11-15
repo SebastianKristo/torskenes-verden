@@ -4,29 +4,10 @@
 //   Abonnementer som innebygd kalender                                                                                     → subs-cal42.js
 //   Sporing: AliExpress (mappen «AliExpress») + Cainiao, PostNord-varianter/feilsøkingslogg/reserve, /api/tracking/debug/:id   → server/sporing/ (mountSporing)
 //   Gjøremål-Glimt deler opp: liste-kontrakt, prompt, lengdevakt, lokal forhåndsdeling, Angre                                → server/gjoremal/
-//   Helse fra Home Assistant                                                                                                 → familie/health-ha.js
-//   Vel fremme: alias /api/velfremme/* → /api/hjemlys/*, admin kan avslutte andres økt (POST /api/hjemlys/:id/end)
+//   Helse fra Home Assistant                                                                                                 → server/familie/
+//   Vel fremme: alias /api/velfremme/* → /api/hjemlys/*, admin kan avslutte andres økt (POST /api/hjemlys/:id/end)          → server/familie/
 //   Fanelinje: homeButton i /api/me/layout                                                                                    → mobile.js
-import { Hono } from 'hono';
-import { db } from './db.js';
-import { isAdmin } from './auth/session.js';
-import { authOrToken as authOrToken0 } from './mobile.js';
-import { end40, sessionOut40 } from './familie/hjemlys.js';
-
-const authOrToken = (c, next) => authOrToken0(c, next);
 export { finans42Api } from './finans/finans42.js';
 export { abCalendarsMw42, abApi42, calendarsEvents42, abIcs42 } from './subs-cal42.js';
-export { health42Api, familyHealthMw42, startHealth42 } from './familie/health-ha.js';
 
-/** POST /api/hjemlys/:id/end: eieren som før (familie/hjemlys.js); en administrator kan også avslutte andres økt («Avslutt for dem»). */
-export const hjemlys42Api = new Hono();
-hjemlys42Api.post('/:id/end', authOrToken, async (c, next) => {
-  const s = db.prepare('SELECT * FROM hjemlys_sessions WHERE id=?').get(c.req.param('id'));
-  if (!s || s.user_id === c.get('user')) return next();
-  if (!isAdmin(c.get('user'))) return c.json({ error: 'Fant ikke økta' }, 404);
-  if (!['onTheWay', 'late'].includes(s.state)) return c.json({ session: await sessionOut40(s) });
-  const n = await end40(s);
-  try { db.prepare('INSERT INTO hjemlys_log(session_id, at, kind, text, who) VALUES(?,?,?,?,?)').run(s.id, Date.now(), 'end', 'Avsluttet av administrator', c.get('user')); } catch { /* */ }
-  return c.json({ session: await sessionOut40(n), endedBy: 'admin' });
-});
 

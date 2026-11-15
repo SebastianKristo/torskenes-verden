@@ -1,7 +1,7 @@
 // Prompt 51 (MEDFAM51): norske undertekster via Bazarr (valgfri container i docker-compose.yml, profil «bazarr»).
 // Adresse og nøkkel står bare i .env (BAZARR_URL, BAZARR_API_KEY) – nøkkelen sendes aldri til klienten og logges aldri.
 // Whisper-generering (lokalt på Mac minien) er bare beskrevet i docs/media-familie-51.md; ingen skytjenester brukes.
-import { MOCK, getJson, errText, serviceUrl } from './common.js';
+import { MOCK, getJson, errText, serviceUrl } from './helpers.js';
 
 const NO = new Set(['no', 'nb', 'nn', 'nor', 'nob', 'nno']);
 const isNo = (s) => NO.has(String(s?.code2 ?? '').toLowerCase()) || NO.has(String(s?.code3 ?? '').toLowerCase()) || /norw|norsk|bokmål|nynorsk/i.test(String(s?.name ?? ''));

@@ -17,8 +17,8 @@ import { isAdmin, userInfo, listUsers } from '../auth/session.js';
 import { authOrToken as authOrToken0 } from '../mobile.js';
 import { mediaAllowed43 } from './arr.js';
 import { pb44 } from './playback.js';
-import { absConf51, absOn51 } from '../medfam51/audio.js';
-import { getJson as mfGet, errText } from '../medfam51/common.js';
+import { absConf51, absOn51 } from './audiobooks.js';
+import { getJson as mfGet, errText } from './helpers.js';
 
 const MOCK = () => process.env.MOCK_DATA === '1';
 export const ACTIONS51 = ['play', 'pause', 'toggle', 'stop', 'next', 'previous', 'seek', 'volume'];

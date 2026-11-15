@@ -3,13 +3,16 @@
 // tildeles et familiemedlem; den som får oppgaven varsles, uten sjåfør varsles alle når det nærmer seg, og sjåføren får en
 // påminnelse før avreise. Ruter-forslaget kommer fra ruter41.js (Entur) mellom hjemmet i Familie › Steder og stedet på hendelsen.
 // Hendelsene vises også i Kalender (egen kilde «Familiekalender»). API-formene står i SERVER51-API.md (seksjon MEDFAM51).
+import { Hono } from 'hono';
 import { db, q, kv } from '../db.js';
 import { isAdmin } from '../auth/session.js';
+import { authOrToken as authOrToken0 } from '../mobile.js';
+import { registerJob } from '../jobs/index.js';
 import { notifyUser } from '../notify.js';
-import { family50 as F } from '../familie/positions.js';
+import { family50 as F } from './positions.js';
 import { tripBetween51 } from '../ruter41.js';
 import { addEventSource } from '../kalender/events.js';
-import { MIN, HOUR, DAY, clean, num, iso, hm, ymd, dayText, parseTime, osloAt } from './common.js';
+import { MIN, HOUR, DAY, clean, num, iso, hm, ymd, dayText, parseTime, osloAt, body, bad } from '../media/helpers.js';
 
 db.exec(`CREATE TABLE IF NOT EXISTS famcal51_event (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL, start INTEGER NOT NULL, end INTEGER NOT NULL, all_day INTEGER NOT NULL DEFAULT 0,
   place_name TEXT, lat REAL, lon REAL, note TEXT, color TEXT, created_by TEXT NOT NULL, created INTEGER NOT NULL, updated INTEGER NOT NULL);
@@ -270,3 +273,47 @@ addEventSource(async (u, from, to) => {
     }),
   };
 });
+
+/* ---------------- Ruter (/api/famcal51/*) ---------------- */
+// Felles for alle innloggede (familien = brukerne på serveren). Sesjon eller app-token.
+const authOrToken = (c, next) => authOrToken0(c, next); // sen binding
+const idOf = (c, k = 'id') => { const n = +c.req.param(k); return Number.isInteger(n) && n > 0 ? n : null; };
+const res = (c, r, ok = 200) => (r.error ? bad(c, r.error, r.status ?? 400, r.code ? { code: r.code } : {}) : c.json(r, ok));
+const DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+
+export const famcal51Api = new Hono();
+famcal51Api.use('*', authOrToken);
+famcal51Api.get('/events', (c) => {
+  const v = c.get('user');
+  const from = DATE.test(c.req.query('from') ?? '') ? c.req.query('from') : ymd(Date.now() - DAY);
+  const to = DATE.test(c.req.query('to') ?? '') ? c.req.query('to') : ymd(Date.parse(`${from}T12:00:00Z`) + 30 * DAY);
+  if (Date.parse(to) - Date.parse(from) > 120 * DAY || to < from) return bad(c, 'Perioden kan være maks 120 dager');
+  const events = listEvents51(v, from, to);
+  return c.json({ from, to, events, members: members51(v), home: homeOf51(v), needsDriver: events.reduce((a, e) => a + e.needsDriver, 0), kinds: Object.entries(KINDS51).map(([id, label]) => ({ id, label })) });
+});
+famcal51Api.post('/events', async (c) => res(c, await createEvent51(c.get('user'), await body(c)), 201));
+famcal51Api.get('/events/:id', (c) => { const e = getEvent51(idOf(c)); return e ? c.json({ event: eventOut51(e, c.get('user')) }) : bad(c, 'Fant ikke hendelsen', 404); });
+famcal51Api.patch('/events/:id', async (c) => res(c, patchEvent51(c.get('user'), idOf(c), await body(c))));
+famcal51Api.delete('/events/:id', (c) => res(c, deleteEvent51(c.get('user'), idOf(c))));
+famcal51Api.post('/events/:id/tasks', async (c) => res(c, await addTask51(c.get('user'), idOf(c), await body(c)), 201));
+famcal51Api.patch('/tasks/:id', async (c) => res(c, await patchTask51(c.get('user'), idOf(c), await body(c))));
+famcal51Api.post('/tasks/:id/claim', async (c) => res(c, await patchTask51(c.get('user'), idOf(c), { assignee: c.get('user') })));
+famcal51Api.post('/tasks/:id/release', async (c) => {
+  const t = getTask51(idOf(c));
+  if (!t) return bad(c, 'Fant ikke oppgaven', 404);
+  if (t.assignee && t.assignee !== c.get('user') && !isAdmin(c.get('user'))) return bad(c, 'Bare sjåføren selv kan si fra seg oppgaven', 403);
+  return res(c, await patchTask51(c.get('user'), t.id, { assignee: null }));
+});
+famcal51Api.post('/tasks/:id/done', async (c) => res(c, await patchTask51(c.get('user'), idOf(c), { status: 'done' })));
+famcal51Api.delete('/tasks/:id', (c) => res(c, deleteTask51(c.get('user'), idOf(c))));
+famcal51Api.get('/tasks/:id/ruter', async (c) => {
+  const t = getTask51(idOf(c));
+  if (!t) return bad(c, 'Fant ikke oppgaven', 404);
+  return c.json(await ruterFor51(t, c.get('user')));
+});
+famcal51Api.get('/drives', (c) => c.json(drives51(c.get('user'), { mine: c.req.query('mine') === '1', days: Math.max(1, Math.min(60, +(c.req.query('days') ?? 14) || 14)) })));
+famcal51Api.get('/settings', (c) => c.json({ inCalendar: kv.get(c.get('user'), 'famcal51_in_calendar', true) !== false }));
+famcal51Api.put('/settings', async (c) => { const b = await body(c); if (typeof b.inCalendar === 'boolean') kv.set(c.get('user'), 'famcal51_in_calendar', b.inCalendar); return c.json({ inCalendar: kv.get(c.get('user'), 'famcal51_in_calendar', true) !== false }); });
+
+registerJob('familie.kjoring', 5 * 60_000, () => sweepFamcal51(), { note: 'Familiekalender: påminnelser «hvem kjører?»' }); // felles planlegger: ikke i test/sandkasse

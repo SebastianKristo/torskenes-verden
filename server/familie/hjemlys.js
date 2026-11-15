@@ -22,10 +22,12 @@ import { Hono } from 'hono';
 import { randomUUID } from 'node:crypto';
 import { db, q, kv } from '../db.js';
 import { authOrToken } from '../mobile.js';
-import { userInfo, listUsers } from '../auth/session.js';
+import { userInfo, listUsers, isAdmin } from '../auth/session.js';
 import { notifyUser } from '../notify.js';
 import { broadcast } from '../realtime.js';
 import { osloDate } from '../dates/oslo.js';
+import { registerJob } from '../jobs/index.js';
+import { noticesOf, startTrip41 } from './hjemlys-notices.js'; // «Si fra» og tur til et valgfritt mål (brukes bare i rutene)
 
 db.exec(`
 CREATE TABLE IF NOT EXISTS hjemlys_sessions (
@@ -308,7 +310,11 @@ const body = async (c) => { const b = await c.req.json().catch(() => ({})); retu
 const fail = (c, e) => c.json({ error: e.message }, e.status ?? 400);
 const own = (c) => { const s = row(c.req.param('id')); return s && s.user_id === c.get('user') ? s : null; };
 
-hjemlys40Api.post('/start', async (c) => { try { return c.json({ session: await sessionOut40(await start40(c.get('user'), await body(c))) }); } catch (e) { return fail(c, e); } });
+// POST /api/hjemlys/start: med destination en tur til et valgfritt mål (hjemlys-notices.js), ellers hjem som før.
+hjemlys40Api.post('/start', async (c) => {
+  const b = await body(c);
+  try { return c.json({ session: await sessionOut40(b.destination ? await startTrip41(c.get('user'), b) : await start40(c.get('user'), b)) }); } catch (e) { return fail(c, e); }
+});
 hjemlys40Api.get('/', async (c) => {
   const u = c.get('user');
   const mine = activeOf(u) ?? q("SELECT * FROM hjemlys_sessions WHERE user_id=? AND state='home' AND home_at > ? ORDER BY home_at DESC LIMIT 1").get(u, Date.now() - 10 * 60_000);
@@ -320,7 +326,7 @@ hjemlys40Api.get('/', async (c) => {
       since: s ? new Date(s.state === 'home' ? s.home_at : s.state === 'late' ? s.late_at : s.started_at).toISOString() : null,
       ...(s ? { sessionId: s.id } : {}), ...(s?.state === 'late' && forMe ? { share: await shareOf(s), lateMinutes: Math.max(0, Math.round((Date.now() - s.eta) / 60_000)) } : {}) });
   }
-  return c.json({ mine: await sessionOut40(mine), household: hh });
+  return c.json({ mine: await sessionOut40(mine), household: hh, notices: noticesOf(u) }); // notices: «Si fra»-beskjedene (hjemlys-notices.js)
 });
 // PUT /api/hjemlys/phone {phone} → {phone} (null fjerner)
 hjemlys40Api.put('/phone', async (c) => {
@@ -353,8 +359,18 @@ hjemlys40Api.patch('/:id', async (c) => {
   if (!ACTIVE.includes(s.state)) return c.json({ error: 'Økta er avsluttet', session: await sessionOut40(s) }, 409);
   try { const r = await patch40(s, await body(c)); return c.json({ session: await sessionOut40(r.s), stored: r.stored }); } catch (e) { return fail(c, e); }
 });
+// POST /api/hjemlys/:id/end: eieren som før; en administrator kan også avslutte andres økt («Avslutt for dem»).
+async function endByAdmin(c) {
+  const s = row(c.req.param('id'));
+  if (!s || s.user_id === c.get('user') || !isAdmin(c.get('user'))) return null;
+  if (!['onTheWay', 'late'].includes(s.state)) return c.json({ session: await sessionOut40(s) });
+  const n = await end40(s);
+  try { db.prepare('INSERT INTO hjemlys_log(session_id, at, kind, text, who) VALUES(?,?,?,?,?)').run(s.id, Date.now(), 'end', 'Avsluttet av administrator', c.get('user')); } catch { /* */ }
+  return c.json({ session: await sessionOut40(n), endedBy: 'admin' });
+}
 for (const [path, fn] of [['ok', ok40], ['home', goHome], ['end', end40]]) {
   hjemlys40Api.post(`/:id/${path}`, async (c) => {
+    if (path === 'end') { const r = await endByAdmin(c); if (r) return r; }
     const s = own(c);
     if (!s) return c.json({ error: 'Fant ikke økta' }, 404);
     if (!ACTIVE.includes(s.state)) return c.json({ session: await sessionOut40(s) });
@@ -362,5 +378,4 @@ for (const [path, fn] of [['ok', ok40], ['home', goHome], ['end', end40]]) {
   });
 }
 
-let timer = null;
-export function startHjemlys40() { if (timer) return; timer = setInterval(() => { tick40().catch((e) => console.warn('[hjemlys]', e.message)); }, 60_000); timer.unref?.(); }
+registerJob('familie.vel-fremme', 60_000, () => tick40().catch((e) => console.warn('[hjemlys]', e.message)), { note: 'Vel fremme: sen/hjemme, varsler og Live Activity' }); // felles planlegger: ikke i test/sandkasse

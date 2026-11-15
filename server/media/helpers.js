@@ -1,4 +1,4 @@
-// Prompt 51 (MEDFAM51): felles hjelpere for Familie og Media (fase 4). Se server/medfam51/index.js for oversikten.
+// Prompt 51 (MEDFAM51): felles hjelpere for Media (/api/media51, se extras.js) og familiekalenderen (server/familie/famcal.js).
 import { dtf } from '../intl-format.js'; // gjenbrukte Intl.DateTimeFormat
 export const MOCK = () => process.env.MOCK_DATA === '1';
 export const MIN = 60_000, HOUR = 3_600_000, DAY = 86_400_000;

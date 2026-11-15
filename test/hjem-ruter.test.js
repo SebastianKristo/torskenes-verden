@@ -141,3 +141,10 @@ test('Familie, Sporing, Vær, Gjøremål og Mat: status og svarform er uendret',
   assert.deepEqual(Object.keys(snap), Object.keys(want));
   for (const k of Object.keys(want)) assert.deepEqual(snap[k], want[k], k);
 });
+
+test('bakgrunnsjobbene i Familie går via den felles planleggeren (ikke aktive i test)', async () => {
+  const { listJobs } = await import('../server/jobs/index.js');
+  const jobs = listJobs().filter((j) => j.name.startsWith('familie.'));
+  assert.deepEqual(jobs.map((j) => [j.name, j.everyMs]).sort(), [['familie.forlot', 30_000], ['familie.helse-ha', 900_000], ['familie.kjoring', 300_000], ['familie.sjekk-inn', 30_000], ['familie.vel-fremme', 60_000]]);
+  assert.ok(jobs.every((j) => !j.active));
+});

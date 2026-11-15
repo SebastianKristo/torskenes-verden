@@ -153,16 +153,11 @@ export async function notice41(u, b = {}, { origin = '' } = {}, now = Date.now()
   q('DELETE FROM hjemlys_links WHERE expires_at < ?').run(now);
   return { notice: out, ...(session ? { session: await sessionOut40(session) } : {}), ...(links.length ? { links } : {}), ...(out.live ? { live: out.live } : {}) };
 }
-function noticesOf(u, now = Date.now()) {
+export function noticesOf(u, now = Date.now()) {
   const rows = q('SELECT * FROM hjemlys_status WHERE created_at > ? ORDER BY created_at DESC LIMIT 200').all(now - NOTICE_MS);
   return { mine: rows.filter((r) => r.user_id === u).slice(0, 20).map((r) => noticeOut41(r, now)), received: rows.filter((r) => r.user_id !== u && parse(r.recipients, []).includes(u)).slice(0, 30).map((r) => noticeOut41(r, now)) };
 }
 /** GET /api/hjemlys får notices:{mine, received}. */
-export async function hjemlysGet41(c, next) {
-  await next();
-  if (c.req.method !== 'GET' || c.res.status !== 200 || !/^\/api\/hjemlys\/?$/.test(c.req.path)) return;
-  try { const j = await c.res.clone().json(); c.res = c.json({ ...j, notices: noticesOf(c.get('user')) }); } catch { /* svaret står */ }
-}
 
 const HTML_ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (ch) => HTML_ESC[ch]);
@@ -217,9 +212,4 @@ hjemlys41Api.post('/notice/:id/now', async (c) => {
   const b = await body(c);
   try { return c.json(await notice41(u, { ...b, kind: 'leaving_now', to: b.to ?? parse(r.recipients, []), place: b.place ?? r.place }, { origin: originOf(c) })); } catch (e) { return fail(c, e); }
 });
-// Tur med valgfritt mål (prompt 41). Uten destination: som før (hjemlys40).
-hjemlys41Api.post('/start', async (c, next) => {
-  const b = await body(c);
-  if (!b.destination) return next();
-  try { return c.json({ session: await sessionOut40(await startTrip41(c.get('user'), b)) }); } catch (e) { return fail(c, e); }
-});
+// Tur med valgfritt mål (POST /start {destination}) håndteres i hjemlys.js med startTrip41.

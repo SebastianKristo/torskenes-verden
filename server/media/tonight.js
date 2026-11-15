@@ -5,9 +5,9 @@
 import { db, q, kv } from '../db.js';
 import { userInfo } from '../auth/session.js';
 import { family50 as F } from '../familie/positions.js';
-import * as M from '../media/arr.js';
+import * as M from './arr.js';
 import { run as aiRun } from '../ai-run.js';
-import { HOUR, DAY, clean, minText } from './common.js';
+import { HOUR, DAY, clean, minText } from './helpers.js';
 
 const SEEN_PCT = 85;
 export const GENRES51 = { Action: 'Action', Adventure: 'Eventyr', Animation: 'Animasjon', Comedy: 'Komedie', Crime: 'Krim', Documentary: 'Dokumentar', Drama: 'Drama', Family: 'Familie',

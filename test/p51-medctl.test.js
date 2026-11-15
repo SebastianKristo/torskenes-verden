@@ -29,7 +29,7 @@ const { kv, OWNER } = await import('../server/db.js');
 const { setUserCfg } = await import('../server/settings.js');
 const PB = await import('../server/media/playback.js');
 const MC = await import('../server/media/control.js');
-const MF = await import('../server/medfam51/common.js');
+const MF = await import('../server/media/helpers.js');
 
 let ipN = 10;
 async function req(path, { method = 'GET', headers = {}, body } = {}) {

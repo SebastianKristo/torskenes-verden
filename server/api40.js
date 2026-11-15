@@ -7,7 +7,7 @@
 //   Gjøremål-Glimt: flere punkter med rekkefølge, sted og person (placeName/after i POST og PATCH)                    → server/gjoremal/
 //   Nyheter Glimt-side: /api/news/glimt, /api/news/glimt/sources, /api/glimt/news-digest                               → news40.js
 //   Julemodus: /api/glimt/settings jul*, julActive; brief.jul                                                         → jul40.js (+ glimt35.js), mellomvaren under
-//   Hjemlys: /api/hjemlys/*                                                                                           → familie/hjemlys.js
+//   Hjemlys: /api/hjemlys/*                                                                                           → server/familie/ (mountFamilie)
 //   Fanelinje: GET /api/app/pages + alle nøklene i homeNav                                                            → under (+ mobile.js TAB_IDS)
 import { Hono } from 'hono';
 import { authOrToken } from './mobile.js';
@@ -15,13 +15,11 @@ import { bibleEnabled } from './bible37.js';
 import { glimtSettingsOf } from './glimt35.js';
 import { julBrief } from './jul40.js';
 import { db } from './db.js';
-import { startHjemlys40 } from './familie/hjemlys.js';
 import { startHungSweeper } from './ai-run.js';
 import { sessionUser } from './auth/session.js';
 
 export { finans40Api } from './finans/p40.js';
 export { news40Api, newsDigestApi } from './news40.js';
-export { hjemlys40Api } from './familie/hjemlys.js';
 
 /* ---------------- Fanelinje: alle sider i Mer ---------------- */
 // Én kilde for Mer-menyen og «Rediger fanelinjen» (fasit HNAV_ALL). key = nøkkelen i designet, id = nøkkelen i homeNav/tabBar (mobile.js TAB_IDS).
@@ -72,4 +70,4 @@ export async function briefJul40(c, next) {
   } catch { /* briefen står */ }
 }
 
-export function startApi40() { startHjemlys40(); startHungSweeper(); }
+export function startApi40() { startHungSweeper(); }

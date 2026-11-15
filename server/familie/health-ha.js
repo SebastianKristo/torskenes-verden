@@ -13,6 +13,7 @@ import { userInfo, listUsers, isAdmin, sessionUser } from '../auth/session.js';
 import { cfg, runAsUser } from '../settings.js';
 import { bearerOk } from '../finans/routes.js';
 import { osloDate } from '../dates/oslo.js';
+import { registerJob } from '../jobs/index.js';
 
 db.exec(`CREATE TABLE IF NOT EXISTS health_daily (person_id TEXT NOT NULL, date TEXT NOT NULL, metric TEXT NOT NULL, value REAL, source TEXT NOT NULL, updated INTEGER NOT NULL,
   PRIMARY KEY (person_id, date, metric, source))`);
@@ -219,5 +220,4 @@ health42Api.post('/consent', async (c) => {
   if (!b.allow) { q("DELETE FROM health_daily WHERE person_id=? AND source LIKE 'ha:%'").run(c.get('user')); const s = kv.get(OWNER, 'health42_src', {}) ?? {}; delete s[c.get('user')]; kv.set(OWNER, 'health42_src', s); }
   return c.json({ consent: C[c.get('user')] });
 });
-let timer = null;
-export function startHealth42() { if (timer) return; timer = setInterval(() => { if (Object.keys(links()).length) syncHa42().catch(() => {}); }, 15 * 60_000); timer.unref?.(); }
+registerJob('familie.helse-ha', 15 * 60_000, () => { if (Object.keys(links()).length) return syncHa42().catch(() => {}); }, { note: 'Helse fra Home Assistant for koblede personer' }); // felles planlegger: ikke i test/sandkasse

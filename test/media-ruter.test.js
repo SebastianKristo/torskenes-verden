@@ -160,10 +160,10 @@ test('media-ruter: skriving og tilgangskrav (ugyldige kall endrer ingenting)', a
   assert.equal(typeof (await A('/api/media/unmonitored/delete', 'POST', {})).json.needsConfirm, 'boolean');
 });
 
-test('media-jobber: varsler og avspillingslogg går via den felles planleggeren (ikke aktive i test)', async () => {
+test('media-jobber: varsler, avspillingslogg og slettinger går via den felles planleggeren (ikke aktive i test)', async () => {
   const { listJobs } = await import('../server/jobs/index.js');
   const jobs = listJobs().filter((j) => j.name.startsWith('media.'));
-  assert.deepEqual(jobs.map((j) => [j.name, j.everyMs]).sort(), [['media.avspillinger', 60_000], ['media.varsler', 120_000]]);
+  assert.deepEqual(jobs.map((j) => [j.name, j.everyMs]).sort(), [['media.avspillinger', 60_000], ['media.slettinger', 300_000], ['media.varsler', 120_000]]);
   assert.ok(jobs.every((j) => !j.active));
 });
 

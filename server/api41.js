@@ -1,5 +1,5 @@
 // Prompt 41 (SERVER41): kobler sammen modulene for prompt 41 (montert i index.js).
-//   Hjemlys «Si fra» + tur til valgfritt mål: /api/hjemlys/notice|status|notices|recipients, start {destination}            → familie/hjemlys-notices.js (+ familie/hjemlys.js dest_*)
+//   Hjemlys «Si fra» + tur til valgfritt mål: /api/hjemlys/notice|status|notices|recipients, start {destination}            → server/familie/ (mountFamilie)
 //   Min reise: /api/ruter/my-routes|my-trip|school-zones|left-school|journey|settings                                     → ruter41.js
 //   PostNord uten nøkkel (recipientview), dynamisk polling, push ved endring, helsesjekk GET /api/tracking/postnord/health → server/sporing/ (mountSporing)
 //   Gjøremål-Glimt i bakgrunnen + «Laget med Glimt»: /api/tasks/glimt {async:true}, /glimt/jobs, /glimt/sources           → server/gjoremal/
@@ -16,7 +16,6 @@ import { glimtSettingsOf } from './glimt35.js';
 import { mai17Active, mai17Day41 } from './mai17-41.js';
 import { journeyOf41 } from './ruter41.js';
 
-export { hjemlys41Api, hjemlysGet41, hlPage41 } from './familie/hjemlys-notices.js';
 export { ruter41Api } from './ruter41.js';
 export { mai17Api } from './mai17-41.js';
 
