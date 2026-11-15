@@ -87,7 +87,7 @@ import { gphoto46Api, startGphoto46 } from './gphoto46.js'; // prompt 46 (DATA46
 import { mountVaer } from './vaer/index.js'; // Vær: /here, /week-summary, /place, /layout og ski i /full
 import { installCacheBust } from './cache-bust.js'; // prompt 32 (SERVER32)
 import searchHistoryApi from './search-history.js'; // prompt 32: søkehistorikk per bruker
-import romApi, { startSpaceScheduler, spaceApi } from './space32.js'; // prompt 32
+import { mountRom, startRom } from './rom/index.js'; // Rom: /api/space og /api/rom (APOD, Mars, satellitter)
 import { domainGlimtApi, gscApi, startDomainGlimtScheduler } from './domains-glimt.js'; // prompt 32
 import { companionsOf } from './kalender/calendars.js'; // companion-tokens (Kalender) i /api/me/devices
 import { osloDate } from './dates/oslo.js';
@@ -580,8 +580,7 @@ app.route('/api/background', backgroundApi); // Bakgrunner (prompt 19): Vær, Pl
 // Prompt 24: Bursdager (per bruker, Google Kalender og Home Assistant), widget-svaret, alle integrasjoner (bare admin),
 // ✦ AI-søk i innstillingene og domene-pillen på Boliger (bare admin, cache 5 min). Sesjon eller app-token.
 mountBirthdays(app); // server/kalender/: /api/birthdays (bilder først), /api/widgets/birthdays, /api/apps/kalender
-app.route('/api/space', spaceApi); // prompt 32: /tle?group=, /apod?days=7, /mars (før authed sine /space-ruter)
-app.route('/api/rom', romApi); // prompt 32: Rom – APOD (7 dager), Mars-rovere, satellitter (SGP4), NASA-nøkkel på serveren
+mountRom(app); // server/rom/: /api/space (før authed sine /space-ruter) og /api/rom
 app.route('/api/widgets', widgets43Api); // prompt 43: /media og /catalog
 mountTrialWidgets(app); // server/finans/: /api/widgets/trials (GET kompakt, POST /:id «Avsluttet»)
 app.route('/api/integrations', integrationsStatusApi44); // prompt 44: GET /status (samme kilde som Media), før /:id
@@ -655,7 +654,7 @@ app.route('/domains/api', domainsApi);
 // (ingen varsler, e-post, backup, oppdateringer eller selvreparasjon). Bare HTTP-serveren og migreringene kjører.
 const BG51 = process.env.NODE_ENV !== 'test' && process.env.OPS51_SANDBOX !== '1';
 migrateLocalHosts86().catch((e) => console.warn('[localfetch]', e.message)); // prompt 86: én gang – lokale verter i administratorenes abonnementer godkjennes
-if (BG51) { startTrackingWorker(); startRssWorker(); startBirthdayWorker(); startSystemBackupScheduler(); startUpdateScheduler(); startDomainGlimtScheduler(); startSpaceScheduler(); startApi40(); startMedia(); startLogs44(); startLive89(); }
+if (BG51) { startTrackingWorker(); startRssWorker(); startBirthdayWorker(); startSystemBackupScheduler(); startUpdateScheduler(); startDomainGlimtScheduler(); startRom(); startApi40(); startMedia(); startLogs44(); startLive89(); }
 if (BG51) { startGphoto46(); } // prompt 46 (DATA46)
 if (BG51) startJobs(); // felles planlegger (server/jobs/): backup, prøveperioder, skattemelding, brief, iCal, skolekalendere, Sjekk inn, «forlot»
 if (process.env.NODE_ENV !== 'test') startOps51(); // prompt 51 (OPS51): planlegger (backup, testet gjenoppretting, vedlikehold) og migrasjonslogg

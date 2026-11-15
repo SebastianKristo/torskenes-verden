@@ -1,5 +1,5 @@
 // Prompt 32 (SERVER32): Rom – dagens rombilde (NASA APOD), Mars-rovere og alle satellitter (claude-code-rom-ny.md).
-// Montert på /api/rom. Sesjon eller app-token (finance:read). NASA-nøkkelen er en server-hemmelighet (NASA_API_KEY /
+// Montert på /api/rom (og /api/space, se under) av rom/index.js. Sesjon eller app-token (finance:read). NASA-nøkkelen er en server-hemmelighet (NASA_API_KEY /
 // Integrasjoner → NASA, standard DEMO_KEY) og sendes aldri til klienten. MOCK_DATA=1: innebygde eksempeldata, ingen nett.
 // Posisjoner regnes med full SGP4 (satellite.js, som allerede er en avhengighet og også brukes av klienten via /vendor/satellite/).
 //
@@ -20,12 +20,13 @@ import { Hono } from 'hono';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import * as sat from 'satellite.js';
-import { kv, OWNER } from './db.js';
-import { config } from './config.js';
-import { cfg } from './settings.js';
-import { authOrToken } from './mobile.js';
-import { listUsers } from './auth/session.js';
-import { notifyUser } from './notify.js';
+import { kv, OWNER } from '../db.js';
+import { config } from '../config.js';
+import { cfg } from '../settings.js';
+import { authOrToken } from '../mobile.js';
+import { listUsers } from '../auth/session.js';
+import { notifyUser } from '../notify.js';
+import { registerJob } from '../jobs/index.js';
 
 const MOCK = process.env.MOCK_DATA === '1';
 const CACHE_DIR = join(config.dataDir, 'cache');
@@ -314,11 +315,10 @@ spaceApi.get('/mars', async (c) => {
   } catch (e) { return fail(c, e); }
 });
 
-let timer = null;
+// Nye Mars-bilder sjekkes hver 6. time via den felles planleggeren (ikke i test/sandkasse).
+registerJob('rom.mars', 6 * 3600_000, () => checkMars().catch((e) => console.warn('[rom] mars:', e.message)), { note: 'Rom: varsel om nye bilder fra Mars-roverne' });
+/** Første sjekk ett minutt etter oppstart (ellers først etter seks timer). Bare når bakgrunnsjobber er lov. */
 export function startSpaceScheduler() {
-  if (timer) return;
-  timer = setInterval(() => checkMars().catch((e) => console.warn('[rom] mars:', e.message)), 6 * 3600_000);
-  timer.unref?.();
   setTimeout(() => checkMars().catch(() => {}), 60_000).unref?.();
 }
 
