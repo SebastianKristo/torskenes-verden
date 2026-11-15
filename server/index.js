@@ -79,7 +79,7 @@ import { logs44Api, startLogs44 } from './logs44.js';
 import { impersonation44, admin44Api, layoutLockMw44, setMobileApi44 } from './admin44.js';
 import { kal44Api, kalEventsMw44, assistLocalMw44 } from './kal44.js';
 import { study44Api } from './study44.js';
-import { mountAuthSecurity, mountAppAuth, mountAuthRefresh, mountAuth } from './auth/index.js'; // innlogging og sikkerhet
+import { mountAuthSecurity, mountAppAuth, mountAuthInvites, mountAuthRefresh, mountAuth } from './auth/index.js'; // innlogging og sikkerhet
 import { playback44Api, startPlayback44 } from './playback44.js';
 import { mountApi45 } from './api45.js'; // prompt 45 (SERVER45)
 import { nrkApi } from './nrkdl.js'; // NRK-nedlaster: /api/media/nrk/* (nrk-dl bak norsk VPN)
@@ -199,7 +199,8 @@ mountAppAuth(app);
 mountServer47(app); // prompt 47 (SERVER47): GET /api/config/servers {publicUrl, localUrl etter innlogging} + /api/finans/kvitteringer-aliasene
 mountObs51(app); // prompt 51 (OBS51): /api/system/obs51/* (admin) og /api/me/ntfy51 (alle)
 mountQa51(app); // prompt 51 (QA51): /api/flags, /api/crash, /api/whatsnew, /api/admin/flags51, /api/admin/crashes51
-mountWebx51(app); // prompt 51 (WEBX51): /api/search51, /api/onboard51, /api/me/theme51, /api/me/share51, /api/offline51, /join/:token
+mountWebx51(app); // prompt 51 (WEBX51): /api/search51, /api/me/theme51, /api/me/share51, /api/offline51
+mountAuthInvites(app); // onboarding for nye familiemedlemmer: /api/onboard51/*, /join/:token (server/auth/invites.js)
 mountSrv52(app); // prompt 52 (SRV52): /api/glimt/quickparse52, /api/glimt/lex52, /api/brief52, /api/me/glimt-char52, admin; mellomvare foran POST /api/glimt/agent
 mountFermion53(app); // prompt 53 (FERMION53): /api/admin/fermion53/{health,config,test} (bare admin)
 mountDal53(app); // prompt 53 (DAL53): /api/admin/dal53/{health,preload}, /api/emo53/suggest, /api/voice53/*; Moderator foran /api/chat/files og /api/img
