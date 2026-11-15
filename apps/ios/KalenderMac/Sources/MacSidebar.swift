@@ -3,6 +3,8 @@ import SwiftUI
 /* ---------------- Prompt 34: Kalender for Mac – sidemenyen (aside i Kalender.dc.html variant web) ---------------- */
 // Minikalender med ukenummer, KALENDERE med hake og antall de neste 30 dagene, «Administrer kalendere ›», Glimt · dagen din
 // og hurtigtastene nederst.
+// Fase 4 (H16): sidekolonnen i NavigationSplitView (MacRoot) er en systemliste (List, .sidebar) med én seksjon per del.
+// Ingen List(selection:): sidemenyen velger ikke en side, den er minikalender og filtre (kalendere av/på).
 
 struct MacSidebar: View {
     @Environment(\.mk) private var t
@@ -10,21 +12,27 @@ struct MacSidebar: View {
     @Bindable var store: MacStore = MacStore.shared
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 18) {
+        List {
+            Section {
                 MacMiniMonth(month: win.miniMonth, selected: win.anchor, compact: false,
                              onPick: { (k: String) in win.goTo(KalD.date(k)) },
                              onWeek: { (k: String) in win.go(view: "uke", day: k) },
                              onMove: { (n: Int) in win.miniMonth = KalD.addMonths(win.miniMonth, n) })
-                calendars
-                MacDayCard(win: win)
+                    .sidebarRow()
+            }
+            Section {
+                calendars.sidebarRow()
+            }
+            Section {
+                MacDayCard(win: win).sidebarRow()
                 Text("Hurtigtaster: ← → bla · T i dag · D dag · 3 tre dager · W uke · M måned · Y år · L liste · N ny · / søk · ⌘K Glimt")
                     .font(MacFont.ui(11)).foregroundColor(t.mut2)
                     .fixedSize(horizontal: false, vertical: true)
+                    .sidebarRow()
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 14)
         }
+        .listStyle(.sidebar)
+        .scrollContentBackground(.hidden)
         .background(t.bg)
     }
 
@@ -206,5 +214,15 @@ struct MacNewCalendarSheet: View {
         .padding(22)
         .frame(width: 400)
         .background(t.bg)
+    }
+}
+
+private extension View {
+    /// Raden i sidemenyen: samme luft som før (14 pt til sidene, 18 pt mellom delene), uten skillelinjer og radbakgrunn.
+    func sidebarRow() -> some View {
+        self
+            .listRowInsets(EdgeInsets(top: 9, leading: 14, bottom: 9, trailing: 14))
+            .listRowSeparator(.hidden)
+            .listRowBackground(Color.clear)
     }
 }
