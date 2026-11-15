@@ -314,7 +314,7 @@ test('abonnementsjeger: prisøkninger, doble, ubrukte, avvis og oppsigelsestekst
 
 test('web: Planlegging-siden og skriptet finnes', async () => {
   const pg = await A('/finans/plan51');
-  assert.equal(pg.status, 200); assert.match(pg.text, /plan51\.js/); assert.ok(!/<script>(?!<\/script>)/.test(pg.text), 'ingen innebygde skript (CSP)');
-  const js = await req('/assets/finans/js/plan51.js');
+  assert.equal(pg.status, 200); assert.match(pg.text, /planlegging\.js/); assert.ok(!/<script>(?!<\/script>)/.test(pg.text), 'ingen innebygde skript (CSP)');
+  const js = await req('/assets/finans/js/planlegging.js');
   assert.equal(js.status, 200); assert.match(js.text, /fin51\/goals/);
 });

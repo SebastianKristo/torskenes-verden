@@ -1,5 +1,5 @@
 // Lasteskjermen for Økonomi (prompt 20). Vanlig skript i <head> (CSP tillater ikke inline-skript), så det kjører før
-// <body> tegnes: velger Papir eller mørk variant ut fra Homelab-temaet og viser skjermen bare på desktop
+// <body> tegnes: velger Papir lys eller mørk variant ut fra Homelab-temaet og viser skjermen bare på desktop
 // (mobilappen har egen oppstart). Skjermen fjernes når appen har tegnet noe i #app.
 (function () {
   var h = document.documentElement;
@@ -7,11 +7,14 @@
   // Hent oversikten (/finans/api/bootstrap) parallelt med at modulene lastes; core.js loadBoot() bruker svaret (prompt 21).
   try { window.__fhBoot = fetch('/finans/api/bootstrap', { credentials: 'same-origin' }); window.__fhBoot.catch(function () {}); } catch (e) { window.__fhBoot = null; }
   var mobile = q.indexOf('desktop') < 0 && (matchMedia('(max-width: 899px)').matches || (matchMedia('(pointer: coarse)').matches && matchMedia('(max-width: 1100px)').matches));
-  // Tema før første tegning (prompt 22): lokal cache fh_design, ellers «lys» (Lys hovedbok). index.html har lys fra start.
-  // Prompt 42: det gamle FinansHub v2-designet er slettet; «v2» i cachen blir Papir (lys).
+  // Tema før første tegning: Økonomi følger Homelab (Q15, B-F1). Samme regel som tema.js fhDesign(), skrevet ut her fordi
+  // dette er et vanlig skript: Glass (hl_theme «cur») → «glod», ellers Papir lys/mørk etter papir_web_mode. Er Homelab-modusen
+  // ukjent (aldri åpnet Homelab i denne nettleseren), brukes det gamle FinansHub-valget fh_design.
+  var hl = null, wm = null, old = null;
+  try { hl = localStorage.getItem('hl_theme'); wm = localStorage.getItem('papir_web_mode'); old = localStorage.getItem('fh_design'); } catch (e) { /* privat modus */ }
+  var dark = wm === 'dark' || (wm === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
+  var d = hl === 'cur' ? 'glod' : (wm === 'light' || wm === 'dark' || wm === 'system') ? (dark ? 'mork' : 'lys') : (old === 'mork' ? 'mork' : 'lys');
   if (!mobile) {
-    var d = 'lys';
-    try { var c = localStorage.getItem('fh_design'); if (c === 'lys' || c === 'mork' || c === 'glod') d = c; else if (c === 'v2') localStorage.setItem('fh_design', 'lys'); } catch (e) { /* privat modus */ }
     h.setAttribute('data-ui', 'desktop');
     h.setAttribute('data-theme', d);
     h.setAttribute('data-v3', '');
@@ -19,9 +22,7 @@
     if (m) m.setAttribute('content', { lys: '#f4f1ea', mork: '#121210', glod: '#16110e' }[d]);
   }
   if (mobile) return;
-  var t = 'cur';
-  try { t = localStorage.getItem('hl_theme') === '2c' ? '2c' : 'cur'; } catch (e) { /* privat modus */ }
-  h.setAttribute('data-fhl', t === '2c' ? 'paper' : 'dark');
+  h.setAttribute('data-fhl', d === 'lys' ? 'paper' : 'dark');
 
   var gone = false, obs = null;
   function hide() {

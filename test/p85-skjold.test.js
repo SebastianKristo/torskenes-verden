@@ -84,7 +84,7 @@ test('antall har en øvre grense, og historikken kan ikke hentes ubegrenset', as
 
 test('web: plasseringslinja i lista kan forkortes med «…», og skaplista bøyer entall riktig', async () => {
   const { readFileSync } = await import('node:fs');
-  const css = readFileSync(new URL('../public/css/skjold76.css', import.meta.url), 'utf8');
+  const css = readFileSync(new URL('../public/css/pages/skjold.css', import.meta.url), 'utf8');
   const loc = /\.sk76-loc\{([^}]*)\}/.exec(css)[1];
   assert.match(loc, /text-overflow:ellipsis/);
   assert.doesNotMatch(loc, /display:flex/, 'text-overflow virker ikke på teksten i en flex-boks');

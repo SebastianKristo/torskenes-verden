@@ -6,6 +6,7 @@ import { clearBtn } from '/assets/js/searchfield.js';
 import { glimt } from './glimt.js';
 import { is2c } from './hltheme.js';
 import { onLive } from './realtime.js'; // prompt 36: matplanen er felles, endringer kommer som meal:changed
+import { pageCss } from './lib/page-css.js';
 
 const DAYS = ['Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lørdag', 'Søndag'];
 const AB = ['Ma', 'Ti', 'On', 'To', 'Fr', 'Lø', 'Sø'];
@@ -22,10 +23,8 @@ const lines = (t) => String(t ?? '').split('\n').map((x) => x.trim()).filter(Boo
 const chev = (rot = false) => `<svg class="mp-chev${rot ? ' rot' : ''}" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>`;
 
 function loadCss() {
-  if (document.querySelector('link[data-mat-css]')) return;
-  const l = document.createElement('link');
-  l.rel = 'stylesheet'; l.href = '/assets/css/mat.css'; l.dataset.matCss = '';
-  document.head.appendChild(l);
+  if (document.querySelector('link[data-page-css="mat"]')) return;
+  pageCss('mat');
   if (!document.querySelector('link[data-mat-fonts]')) {
     const f = document.createElement('link');
     f.rel = 'stylesheet'; f.dataset.matFonts = '';

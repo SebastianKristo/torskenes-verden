@@ -1,3 +1,4 @@
+import { homelabStil, homelabMorkt, homelabModus, settHomelabTema } from './tema.js';
 // Papir-innlogging og onboarding på mobil (prompt 14, Mobil Papir App → «gate»).
 // Innlogging: fotoheader, deretter Brukernavn og Passord (prompt 41: uten Server-felt) som understrekede felter, og 2FA med sekssifret kode
 // og «Husk denne enheten i 30 dager». Samme API som /login (/api/auth/login og /api/auth/totp).
@@ -7,7 +8,8 @@ const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ESC[c]);
 const G = { step: 'login', ticket: null, user: '', err: '', busy: false, ob: 0, pick: null, photo: null, perm: { push: false, cam: false, hap: true, bio: false }, layout: null };
 let el = null;
 
-const dark = () => { let v = 'auto'; try { v = JSON.parse(localStorage.getItem('fh_mprefs') || '{}').paperMode || 'auto'; } catch {} return v === 'mork' || (v === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches); };
+// Samme regel som mobile-paper.js paperDark(): følger Homelab-temaet (tema.js), ellers paperMode.
+const dark = () => { if (homelabStil() === 'glass') return true; const h = homelabMorkt(); if (h != null) return h; let v = 'auto'; try { v = JSON.parse(localStorage.getItem('fh_mprefs') || '{}').paperMode || 'auto'; } catch {} return v === 'mork' || (v === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches); };
 const OV = 'linear-gradient(180deg,rgba(0,0,0,.25),rgba(0,0,0,0) 35%,rgba(0,0,0,.45))';
 const BG = 'linear-gradient(170deg,#4a5a6a,#2a3440 60%,#1d242c)';
 
@@ -127,6 +129,7 @@ async function loadThumbs() {
 async function finish() {
   const pick = G.pick ?? 'lys', photo = G.photo ?? 'oslo';
   const patch = { onboarded: true, mobileDesign: 'papir', photo, bgType: photo, paperMode: pick === 'mork' ? 'mork' : 'lys' };
+  settHomelabTema({ modus: patch.paperMode }); // Q15: designvalget er Homelab-modusen
   G.busy = true; mount();
   await fetch('/api/me/layout', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(patch) }).catch(() => {});
   // mobile.js tar valgene (design, bakgrunn, lås og haptikk) inn i sine lokale innstillinger og tegner på nytt.
@@ -138,10 +141,29 @@ async function finish() {
 export function showLogin() { if (el && G.step !== 'onb') return; G.step = 'login'; G.err = ''; G.busy = false; loadBgGuest(); mount(); }
 // Bakgrunnen i headeren: fra forrige økt, ellers gradienten (photo-window krever innlogging).
 function loadBgGuest() { try { G.bg = localStorage.getItem('fh_gate_bg') || null; } catch {} }
+/** Q35 (B-B11): åpnes appen med en dyp lenke (f.eks. /finans/#/kv) før oppsettet er fullført, vises siden med en gang og
+ *  onboardingen som et kort nederst, som kan fullføres nå eller senere («Senere» skjuler kortet til neste åpning). */
+export function showOnboardingCard(layout) {
+  if (el || document.querySelector('.pp-obk')) return;
+  try { if (sessionStorage.getItem('fh_obk_senere')) return; } catch { /* privat modus */ }
+  const name = (layout?.name || '').split(' ')[0];
+  const c = document.createElement('div');
+  c.className = 'pp-obk'; c.setAttribute('role', 'region'); c.setAttribute('aria-label', 'Oppsett av appen');
+  c.innerHTML = `<div class="pp-obk-t"><b>Velkommen${name ? `, ${esc(name)}` : ''}</b><span>Velg design, bakgrunn og varsler når det passer deg.</span></div>
+    <div class="pp-obk-k"><button type="button" class="pp-obk-later" data-obk="later">Senere</button><button type="button" class="pp-obk-go" data-obk="go">Fullfør oppsettet</button></div>`;
+  c.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-obk]');
+    if (!b) return;
+    c.remove();
+    if (b.dataset.obk === 'go') showOnboarding(layout);
+    else { try { sessionStorage.setItem('fh_obk_senere', '1'); } catch { /* privat modus */ } }
+  });
+  document.body.appendChild(c);
+}
 /** Onboarding i tre steg første gang etter innlogging. */
 export function showOnboarding(layout) {
   if (el) return;
-  G.step = 'onb'; G.ob = 0; G.layout = layout; G.pick = layout?.paperMode === 'mork' ? 'mork' : 'lys'; G.photo = layout?.photo && layout.photo !== 'custom' ? layout.photo : 'oslo';
+  G.step = 'onb'; G.ob = 0; G.layout = layout; G.pick = (homelabModus(layout) ?? layout?.paperMode) === 'mork' ? 'mork' : 'lys'; G.photo = layout?.photo && layout.photo !== 'custom' ? layout.photo : 'oslo';
   G.perm = { push: 'Notification' in window && Notification.permission === 'granted', cam: false, hap: true, bio: false };
   fetch('/api/me').then((r) => (r.ok ? r.json() : null)).then((me) => { if (me && G.step === 'onb') { G.layout = { ...(G.layout ?? {}), name: me.displayName || me.name || '' }; mount(); } }).catch(() => {});
   fetch(`/api/background?type=oslo&w=${Math.round(Math.min(1600, innerWidth * 2))}&dpr=1`).then((r) => (r.ok ? r.json().then((d) => ({ url: d?.image_url })) : fetch('/api/photo-window?kind=oslo').then((x) => x.json()))).then((r) => { if (r?.url) { G.bg = r.url; try { localStorage.setItem('fh_gate_bg', r.url); } catch {} mount(); } }).catch(() => {});

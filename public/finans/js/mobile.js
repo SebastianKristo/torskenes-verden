@@ -59,6 +59,7 @@ import * as P35 from './mobile-p35.js'; // prompt 35: Glimt-familien, brief med 
 import { takeApp, HK, p17Bind, p17Sheets, huskeView, tasksLoad, posWidget, bolWidgetLoad, appLoad, applyIcon, ptrBind, wsConnect, onRealtime } from './mobile-p17.js';
 import { trkDown, trkMove, trkUp } from './mobile-paper2.js';
 import { take16, p16Bind, p16Pointer, p16Move, p16Up, tabSheet, avgView, avgLoad, avgSheet, famView, famLoad, famSheet, famAfterDraw, bolView, bolLoad, AV, BO } from './mobile-p16.js';
+import { nårTemaEndres } from './tema.js';
 
 const u = S.ui;
 export const m = {
@@ -110,6 +111,9 @@ export const hide = (txt) => (pref('hideAmt') && !m.reveal ? '••••' : tx
 /* ---------- Startside og vei tilbake ---------- */
 // Startside lagres per bruker (LAY.start). Med Finans som startside går «hjem» til Finans, og Homelab ligger i profilmenyen.
 const START = { homelab: 'hl', 'fin-hjem': 'hjem', 'fin-liste': 'liste', 'fin-budsjett': 'budsjett' };
+// Adressen appen ble åpnet med: har den en rute (#/kv, #/tx …), er det en dyp lenke (Q35).
+let temaBundet = false;
+const DYP_LENKE = /^#\/[a-z]/i.test(location.hash);
 export const startScr = () => P24.profStart() ?? START[LAY().start] ?? (['hl', 'hjem', 'liste', 'budsjett'].includes(pref('start')) ? pref('start') : 'hl');
 export const startFin = () => startScr() !== 'hl';
 // Prompt 14: «Knapp i linjen» er fjernet. Pila øverst til venstre går alltid til startsiden.
@@ -792,11 +796,13 @@ export function bind() {
   import('./mobile-p50f.js').then((x) => { P50F = x; x.boot50(); }).catch((err) => console.warn('mobile-p50f', err)); // prompt 50 (FAMWEB50)
   import('./mobile-p46.js').then((x) => { P46 = x; x.boot46(); if (document.documentElement.dataset.ui === 'mobile') { draw(); load(); } }).catch((err) => console.warn('mobile-p46', err));
   import('./mobile-p52.js').then((x) => { P52 = x; x.boot52(); if (document.documentElement.dataset.ui === 'mobile') x.afterDraw52(); }).catch((err) => console.warn('mobile-p52', err));
+  if (!temaBundet) { temaBundet = true; nårTemaEndres(() => { if (document.documentElement.dataset.ui === 'mobile') draw(); }); } // Q15: følger Homelab-temaet
   addEventListener('fh-design', (e) => { const d = e.detail ?? {}; takeDesign(d); if (typeof d.lock === 'boolean') setPref('lock', d.lock); if (typeof d.hap === 'boolean') setPref('hap', d.hap); if (d.photo) photoLoad(d.photo).then(draw).catch(() => {}); draw(); });
   loadLayout().then((r) => {
     takeDesign(r); P37B.takeWopt(r); take15(r); take16(r); take20(r); P24.take24(r); P25.take25(r); P26.take26(r); P27.take27(r); P29.take29(r); P32.take32(r); takeApp(r); P39.take39(r);
     // Første gang etter innlogging (nye installasjoner): onboarding i tre steg.
-    if (r && r.onboarded === false) import('./mobile-gate.js').then((g) => g.showOnboarding(r)).catch(() => {});
+    // Q35: en dyp lenke (/finans/#/kv) åpnes direkte, og onboardingen vises da som et kort som kan fullføres senere.
+    if (r && r.onboarded === false) import('./mobile-gate.js').then((g) => (DYP_LENKE ? g.showOnboardingCard(r) : g.showOnboarding(r))).catch(() => {});
     if (document.documentElement.dataset.ui === 'mobile') draw();
   }).catch(() => {});
   // Skanneknappen: trykk = kamera (eller valg), hold inne ~480 ms = arket med Bilder/Filer.

@@ -1,5 +1,5 @@
 // Prompt 35 (WEB35): Glimt-figurene – nøyaktig port av fasiten design_handoff_homelab/prompts/prompt-35-pakke/glimt-figurer.js
-// (fig(id, størrelse, humør)) til ren HTML uten React. Keyframes (gfBob, gfSpin …) ligger i /assets/css/glimt-figs.css.
+// (fig(id, størrelse, humør)) til ren HTML uten React. Keyframes (gfBob, gfSpin …) ligger i /assets/css/pages/glimt-figurer.css.
 // Brukes av web (brief, Hjem-kort, Innstillinger → Glimt) og av PWA-en (/assets/js/glimt-figs.js).
 //   fig(id, S, mood)  → HTML-streng. id: glimt|halo|boble|antenne|bane|pastell|natt|sky|drape|ugle|stjerne|spire|gris|blekk (prompt 52)
 //                        mood: 'idle' | 'glad' | 'talk' | 'sov' (også 'sover' / 'sleep' / 'happy')

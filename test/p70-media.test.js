@@ -74,7 +74,7 @@ test('torrents har ratio, serier har nextAiring/added og filmer added (felt finn
 test('web: fire faner som egne adresser, gamle adresser virker, funksjonene er koblet til', () => {
   const m43 = readFileSync(new URL('../public/js/media43.js', import.meta.url), 'utf8');
   const m70 = readFileSync(new URL('../public/js/media70.js', import.meta.url), 'utf8');
-  const css = readFileSync(new URL('../public/css/media70.css', import.meta.url), 'utf8');
+  const css = readFileSync(new URL('../public/css/pages/media.css', import.meta.url), 'utf8').split('/* ═══ Media-siden i nytt design')[1]; // delen fra media70.css
   // Ruter
   assert.match(m43, /TAB_SLUG = \{ ov: '', kal: 'kalender', bib: 'bibliotek', ned: 'nedlastinger', nrk: 'nrk', musikk: 'musikk', av: 'avspilling' \}/); // + NRK og Musikk (p88)
   for (const old of ['kommer', 'sonarr', 'radarr', 'qbittorrent', 'prowlarr', 'avspilling']) assert.match(m43, new RegExp(`${old}: '(kal|bib|ned|av)'`), old);

@@ -10,7 +10,7 @@ import { m, draw, flash } from './mobile.js';
 import { BO } from './mobile-p16.js';
 import { sheetBtn, hapLight } from './mobile-p30.js';
 import { glimt } from './mobile-p31.js';
-import { rcCard52, slip52 } from './rccard52.js'; // prompt 52: samme kvitteringskort som Finans → transaksjon
+import { rcCard52, slip52 } from './kvitteringskort.js'; // prompt 52: samme kvitteringskort som Finans → transaksjon
 
 export const B30 = { ent: null, edit: {}, t: null, saving: false, hist: {}, sh: {}, sel: [], role: 'editor', email: '', busy: false };
 const kr = (v) => `${(v ?? 0) < 0 ? '−' : ''}${n0(v)} kr`;
@@ -24,7 +24,7 @@ const topCats = (d) => { const L = (d.categories ?? []).filter((c) => c.id != nu
 const thumb = (d, e) => (e.receiptId ? `<span class="b30-th" style="background-image:url('/finans/api/folders/${d.id}/receipts/${esc(e.receiptId)}/thumb')"></span>` : '<span class="b30-th none" aria-hidden="true">kr</span>');
 
 /* Prompt 52 (claude-code-kvittering-lokal-lik-overalt.md → Mobil): utgiftsarket viser samme kvitteringskort som
-   Finans → transaksjon (rccard52.js). Varelinjene hentes fra samme kvitteringstjeneste (/receipts/:id). */
+   Finans → transaksjon (kvitteringskort.js). Varelinjene hentes fra samme kvitteringstjeneste (/receipts/:id). */
 const RCL = {};
 function rcOf52(d, e) {
   const rid = e.receiptId, fileUrl = rid ? `/finans/api/folders/${d.id}/receipts/${encodeURIComponent(rid)}/file` : null;

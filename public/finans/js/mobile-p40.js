@@ -365,7 +365,7 @@ async function reread(id, rid) {
   TXE.rr = { id, busy: true }; draw();
   try {
     // Prompt 50: som jobb (202 + polling), så proxyen ikke gir 502 på lange lesinger. small = «Les mindre versjon».
-    const { reanalyzeJob50 } = await import('./reread50.js');
+    const { reanalyzeJob50 } = await import('./les-pa-nytt.js');
     const small = TXE.rrSmall === id; TXE.rrSmall = null;
     const tick = ({ secs }) => { const b = document.querySelector('#app .p40-rr b'); if (b && TXE.rr?.busy) b.textContent = `Glimt leser kvitteringen på nytt … ${secs} s`; };
     const r = await reanalyzeJob50(rid, { engine: 'ollama', small, onTick: tick, ...(rid ? {} : { path: `/transactions/${id}/reread` }) }); // prompt 41
@@ -378,7 +378,7 @@ async function reread(id, rid) {
     haptic('ok');
   } catch (e) {
     // Prompt 50: forklaring brukeren kan handle på + «Les mindre versjon» ved tidsavbrudd.
-    const { rereadError50 } = await import('./reread50.js');
+    const { rereadError50 } = await import('./les-pa-nytt.js');
     const E = e.status === 404 && !e.kode ? { text: 'Ny lesing er ikke tilgjengelig på denne serveren ennå.' } : rereadError50(e);
     TXE.rr = null; flash(E.text, 'err');
     if (E.small && rid) { TXE.rrSmall = id; flash(`${E.text} Trykk «Les på nytt» igjen for å lese en mindre versjon.`, 'err'); }

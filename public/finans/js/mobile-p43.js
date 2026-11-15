@@ -11,7 +11,7 @@ import { m, draw, flash } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
 import { HK } from './mobile-p17.js';
 import * as P37 from './mobile-p37.js';
-import { glimtOrb } from './mobile-orb43.js';
+import { glimtOrb } from './mobile-orb.js';
 import { vw, vh } from '/assets/js/lib/viewport.js'; // vindusstørrelsen uten tvungen layout
 
 let MED = null; // mobile-p43m.js

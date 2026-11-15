@@ -9,8 +9,8 @@ import { haptic, hapBack } from './mobile-haptics.js';
 import * as P34 from './mobile-p34.js'; // prompt 34: ✦ ANALYSERES AV AI i Kvitteringer
 import { logo } from './mobile-p20.js';
 import { canSrv } from './mobile-p17.js';
-import { form48, via48, uncCls48, uncTag48, is48, flush48, bind48, setRedraw48, _e48 } from './scan48.js'; // prompt 48: skjemaet for skannede kvitteringer
-import { srcTag51, raw51, bind51, learn51 } from './rcpt51.js'; // prompt 51: kilden til butikknavnet, «Rådata» og læring av butikknavn
+import { form48, via48, uncCls48, uncTag48, is48, flush48, bind48, setRedraw48, _e48 } from './kvittering-skjema.js'; // prompt 48: skjemaet for skannede kvitteringer
+import { srcTag51, raw51, bind51, learn51 } from './kvittering-kilde.js'; // prompt 51: kilden til butikknavnet, «Rådata» og læring av butikknavn
 bind48(); setRedraw48(() => draw());
 bind51((id) => (S.receipts ?? []).find((x) => x.id === id));
 

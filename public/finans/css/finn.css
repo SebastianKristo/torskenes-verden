@@ -3,10 +3,6 @@
 /* ---------- PC ---------- */
 /* Alle farger er temaets tokens (prompt 14): panelet setter tekstfargen selv og arver den aldri fra siden rundt,
    så tittel og overskrifter er lesbare i Lys hovedbok, Mørk hovedbok og Glød. */
-.fd-row{cursor:pointer;transition:border-color .15s}
-.fd-row:hover{border-color:var(--line3)}
-.fd-row.fd-on{border-color:var(--acc)}
-.fd-att{display:block;font-size:12px;color:var(--acc-l);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .fd-panel{padding:24px;border-radius:var(--r,24px);background:var(--pop);border:1px solid var(--line2);color:var(--text);display:flex;flex-direction:column;gap:20px}
 .fd-panel h2,.fd-panel h3,.fd-panel b{color:var(--text)}
 .fd-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
@@ -20,12 +16,10 @@
 .fd-track .on .dot{background:var(--text)}.fd-track .cur .dot{background:var(--acc);box-shadow:0 0 0 5px color-mix(in srgb,var(--acc) 25%,transparent)}
 .fd-track .on .ln{background:var(--text)}.fd-track .last .ln{background:transparent}
 .fd-track span.t{font-size:12px;color:var(--muted)}.fd-track .on span.t{color:var(--text)}.fd-track .cur span.t{font-weight:600}
-.fd-status{font-size:13px;color:var(--text2)}.fd-status b{color:var(--text)}
-.fd-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:12px}
 .fd-card{padding:18px;border-radius:18px;background:var(--deep);border:1px solid var(--line);color:var(--text);display:flex;flex-direction:column;gap:12px;min-width:0}
 .fd-card>.h{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
 .fd-card>.h b{font-size:15px;font-weight:600;color:var(--text)}
-.fd-ok{font-size:12px;color:var(--pos)}.fd-acc{font-size:12px;color:var(--acc-l)}
+.fd-ok{font-size:12px;color:var(--pos)}
 .fd-urlrow{display:flex;gap:8px}
 .fd-urlrow input{flex:1;min-width:0;height:40px;padding:0 12px;border-radius:10px;border:1px solid var(--line2);background:var(--bg);color:var(--text);font:inherit;font-size:13.5px}
 .fd-urlrow button{flex:none;height:40px;padding:0 14px;border-radius:10px;border:0;background:var(--acc);color:var(--acc-ink);cursor:pointer;white-space:nowrap;font:inherit;font-weight:600}
@@ -46,13 +40,6 @@
 .fd-file .ext{flex:none;width:36px;height:36px;border-radius:9px;background:var(--line);display:grid;place-items:center;font-size:10.5px;color:var(--acc-l);font-weight:600}
 .fd-file .n{flex:1;min-width:0}.fd-file .n span{display:block;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.fd-file .n small{font-size:12px;color:var(--muted)}
 .fd-file button{flex:none;width:28px;height:28px;border-radius:8px;border:1px solid var(--line2);background:transparent;color:var(--text2);cursor:pointer}
-.fd-mails{display:flex;flex-direction:column;max-height:420px;overflow-y:auto;overscroll-behavior:contain}
-.fd-mail{border-top:1px solid var(--line)}
-.fd-mail>button{display:flex;align-items:center;gap:10px;width:100%;padding:10px 0;border:0;background:transparent;color:var(--text);cursor:pointer;text-align:left;font:inherit}
-.fd-mail .dt{flex:none;width:46px;font-size:12px;color:var(--muted);font-family:var(--mono)}
-.fd-mail .s{flex:1;min-width:0}.fd-mail .s span{display:block;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.fd-mail .s small{font-size:12px;color:var(--muted)}
-.fd-mail .body{padding:0 0 12px 56px;font-size:13px;line-height:1.5;color:var(--text2);white-space:pre-line;overflow-wrap:anywhere}
-.fd-mail .body button{margin-top:8px;font-size:12px;color:var(--text2);background:none;border:1px solid var(--line2);border-radius:7px;padding:3px 8px;cursor:pointer}
 
 /* Finn-handler 2a: toppstripe, filtre og kort gruppert etter steg */
 .fh{--fh-act:var(--acc);gap:20px}
@@ -105,7 +92,6 @@ html[data-v3] .fh-t{font-family:var(--font-d);font-weight:var(--dw,500);font-siz
 .fh-seg input:checked+span{background:var(--text);color:var(--bg)}
 .fh-panel .fh-hl{min-width:0;display:flex;flex-direction:column;gap:6px}
 .fh-hm{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.fh-hv{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}.fh-hv b{font-size:22px;font-weight:600}.fh-hv b.pos{color:var(--pos)}.fh-hv span{font-size:13.5px;color:var(--text2)}
 .fh-ha{display:flex;gap:8px;align-items:center}
 .fh-steps{display:flex;gap:6px;flex-wrap:wrap;padding:12px;border-radius:14px;background:var(--deep);border:1px solid var(--line)}
 .fh-step{flex:1 1 110px;padding:9px 12px;border-radius:10px;font-size:13px;font-weight:600;text-align:center;border:0;background:var(--inner);color:var(--muted)}

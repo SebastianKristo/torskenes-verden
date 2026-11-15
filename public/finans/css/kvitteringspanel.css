@@ -1,0 +1,70 @@
+/* Prompt 52 (WEB52F) – FinansHub web.
+   1) Felles kvitteringspanel (js/kvitteringspanel.js): sticky med egen scroll ved siden av lista, skuff fra høyre på smale vinduer.
+   2) Butikklogo i Filter-trefflista og i Boliger-lista. */
+
+/* ---------- 1. Kvitteringspanelet ---------- */
+.rcp52{display:flex;flex-direction:column;gap:16px;box-sizing:border-box;min-width:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable;-webkit-overflow-scrolling:touch}
+/* Logo og × står fast øverst mens resten ruller. Negativ marg + padding = dekker kortets egen luft. */
+.rcp52-head{position:sticky;top:-22px;z-index:2;display:flex;align-items:flex-start;gap:10px;margin:-22px -22px 0;padding:22px 22px 10px;background:var(--card)}
+.rcp52-hgrow{flex:1}
+.rcp52-tit{display:flex;flex-direction:column;gap:2px;min-width:0}
+.rcp52-t{font-size:22px;font-weight:700;line-height:1.2;overflow-wrap:anywhere}
+.rcp52-meta{font-size:13.5px;color:var(--muted)}
+.rcp52-amt{font:600 32px/1.05 var(--mono);letter-spacing:-.03em;color:var(--text)}
+.rcp52-amt span{font-size:15px;color:var(--muted);font-weight:400}
+.rcp52-ai{display:flex;flex-direction:column;gap:6px;padding:14px;border-radius:14px;background:color-mix(in srgb,var(--acc) 12%,transparent);border:1px solid color-mix(in srgb,var(--acc) 30%,transparent);font-size:13px;line-height:1.5}
+.rcp52-ai > b{color:var(--acc-l,var(--acc));font-weight:700}
+.rcp52-lines{display:flex;flex-direction:column;gap:2px;margin-top:4px}
+.rcp52-lines > span{display:flex;justify-content:space-between;gap:10px}
+.rcp52-rc{display:flex;flex-direction:column;gap:10px}
+.rcp52-k{font:600 10.5px var(--mono);letter-spacing:.12em;color:var(--muted)}
+.rcp52-img{display:block;width:100%;padding:0;border:1px solid var(--line);border-radius:14px;background:var(--inner);overflow:hidden;cursor:zoom-in}
+.rcp52-img img{display:block;width:100%;height:auto}
+.rcp52-pdf{display:flex;flex-direction:column;gap:8px;align-items:flex-start}
+.rcp52-pdf iframe{width:100%;height:min(70vh,640px);border:1px solid var(--line);border-radius:14px;background:#fff}
+.rcp52-paper{display:flex;flex-direction:column;gap:5px;padding:22px 20px;border-radius:14px;background:#f6f2ea;color:#3a362e;font:400 12.5px/1.45 var(--mono);box-shadow:0 1px 0 #e2dccd,0 14px 30px -24px rgba(27,26,23,.6)}
+.rcp52-paper > b{text-align:center;font-weight:700;font-size:14px;letter-spacing:.04em}
+.rcp52-paper > span:not(.lr){text-align:center;color:#6b665c}
+.rcp52-paper hr{border:0;border-top:1px dashed #b9b4a8;margin:6px 0;width:100%}
+.rcp52-paper .lr{display:flex;justify-content:space-between;gap:10px}
+.rcp52-paper .lr.tot{font-weight:700;font-size:13.5px}
+.rcp52-note{font-size:12.5px;color:var(--muted)}
+.rcp52-acts{display:flex;gap:10px;flex-wrap:wrap}
+.rcp52-acts > *{flex:1 1 auto;justify-content:center}
+
+/* Ved siden av lista (Transaksjoner): fast i toppen, egen scroll. */
+.row-flex.tx52{display:grid;grid-template-columns:minmax(0,1fr) minmax(360px,420px);gap:24px;align-items:start}
+/* Lista ved siden av panelet: tabellen krymper i stedet for å klippe beløpskolonnen. */
+.row-flex.tx52 .tbl-wrap table{min-width:0!important;width:100%;table-layout:fixed}
+.row-flex.tx52 .tbl-wrap th:nth-child(1){width:56px}.row-flex.tx52 .tbl-wrap th:nth-child(3){width:150px}.row-flex.tx52 .tbl-wrap th:nth-child(4){width:96px}.row-flex.tx52 .tbl-wrap th:nth-child(5){width:104px;text-align:right}
+.row-flex.tx52 .tbl-wrap td:nth-child(5){text-align:right}
+.row-flex.tx52 .tbl-wrap td:nth-child(2) > div > div{min-width:0;overflow:hidden}
+.row-flex.tx52 .tbl-wrap td:nth-child(2) > div > div > *{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row-flex.tx52 .tbl-wrap td:nth-child(3) .tag{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.row-flex.tx52 .tbl-wrap td:nth-child(3) .tag i{flex:none}
+.rcp52.inline{position:sticky;top:20px;max-height:calc(100vh - 40px);max-height:calc(100dvh - 40px)}
+.rcp52-scrim{display:none}
+@media (max-width:1099px){
+  .row-flex.tx52{display:flex}
+  .rcp52.inline,.rcp52.drawer{position:fixed;inset:0 0 0 auto;z-index:60;width:min(480px,100vw);max-height:none;height:100%;height:100dvh;border-radius:0;border-width:0 0 0 1px;box-shadow:-24px 0 60px -30px rgba(0,0,0,.45);animation:rcp52in .22s cubic-bezier(.2,.8,.2,1) both}
+  .rcp52-scrim{display:block;position:fixed;inset:0;z-index:59;background:rgba(27,26,23,.35)}
+  html.rcp52-lock,html.rcp52-lock body{overflow:hidden}
+}
+/* Skuff fra høyre (Boliger, Filter): maks 500 px, egen scroll. Overlegget bak er kallerens (.b42-ov / .f42-ov). */
+.rcp52.drawer{position:fixed;inset:0 0 0 auto;z-index:61;width:min(500px,100vw);height:100%;height:100dvh;margin:0;padding:22px;border-radius:0;background:var(--card);color:var(--text);border-left:1px solid var(--line);box-shadow:-24px 0 60px -30px rgba(0,0,0,.45);animation:rcp52in .22s cubic-bezier(.2,.8,.2,1) both}
+html.rcp52-lock,html.rcp52-lock body{overflow:hidden}
+@keyframes rcp52in{from{transform:translateX(24px);opacity:0}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){.rcp52.inline,.rcp52.drawer{animation:none}}
+/* Boliger bruker egne fargevariabler (b42). */
+/* Overlegget .b42-ov er zoomet 1.25 (Boliger vises i 80 % skala), så panelet zoomes tilbake som .b42-panel. */
+.b42-ov .rcp52.drawer{position:absolute;top:0;right:0;bottom:0;height:auto;zoom:.8;width:100%;max-width:520px;background:var(--b-panel,var(--card));color:var(--b-ink,var(--text));border-left-color:var(--b-line,var(--line))}
+.b42-ov .rcp52-head{background:var(--b-panel,var(--card))}
+.b42-ov .rcp52-meta,.b42-ov .rcp52-k,.b42-ov .rcp52-amt span{color:var(--b-mute2,var(--muted))}
+.f42-ov .rcp52.drawer{position:absolute;top:0;right:0;bottom:0;height:auto}
+
+/* ---------- 2. Butikklogo i lister ---------- */
+.f42-tr .n52{display:flex;align-items:center;gap:12px;min-width:0}
+.f42-tr .n52 .n{min-width:0}
+.b42-what52{display:flex;align-items:center;gap:12px;min-width:0}
+.b42-what52 > .b42-col{min-width:0}
+.b42-what52 b,.b42-what52 small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+

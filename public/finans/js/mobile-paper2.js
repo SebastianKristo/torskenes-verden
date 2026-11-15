@@ -3,7 +3,7 @@
 // Data fra de samme API-ene som Klassisk (/finans/api/transactions, /finans/api/finn, /api/tracking).
 import * as P37B from './mobile-p37b.js'; // prompt 37: husstandens sporingsnøkler (maskert) og kvote
 import { S, api, esc, n0, n2, ini, today, hlApi } from './core.js';
-import { glimtOrb } from './mobile-orb43.js'; // prompt 43
+import { glimtOrb } from './mobile-orb.js'; // prompt 43
 import { m, draw, flash } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
 import { pkgLogo, pkgTitle } from './mobile-p21.js';

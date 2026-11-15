@@ -73,7 +73,7 @@ test('hvitlista er oppdatert (hvert unntak finnes fortsatt og har begrunnelse)',
 
 test('skimmere flytter et ferdig lag med transform', () => {
   const css = (rel) => ALL.find((x) => x.rel === rel).text;
-  for (const [rel, name, sel] of [['css/media43.css', 'm43sk', '.m43-skel::after'], ['css/media70.css', 'm70sk', '.m70-skel::after'], ['css/pages/domener.css', 'dm-shim', '.dm-sum-sk span::after'], ['css/overgang/kalender.css', 'k38shim', '.k38-map-wait::after'], ['css/ai-control.css', 'acStripe', '.ac-stripe::after'], ['css/chat70.css', 'ch70Sh', '.ch70-shim']]) {
+  for (const [rel, name, sel] of [['css/pages/media.css', 'm43sk', '.m43-skel::after'], ['css/pages/media.css', 'm70sk', '.m70-skel::after'], ['css/pages/domener.css', 'dm-shim', '.dm-sum-sk span::after'], ['css/overgang/kalender.css', 'k38shim', '.k38-map-wait::after'], ['css/pages/ai-kontroll.css', 'acStripe', '.ac-stripe::after'], ['css/pages/chat.css', 'ch70Sh', '.ch70-shim']]) {
     const t = css(rel);
     const k = keyframes(t).find((x) => x.name === name);
     assert.ok(k, `${rel}: ${name}`);
@@ -101,7 +101,7 @@ test('brytere glir med transform, ikke left', () => {
 });
 
 test('ark (Familie-kart og Kart på smal skjerm) glir med transform, ikke animert høyde', () => {
-  const fam = ALL.find((x) => x.rel === 'css/family50.css').text;
+  const fam = ALL.find((x) => x.rel === 'css/pages/familie.css').text;
   assert.match(fam, /\.f50-sheet:not\(\.tall\) \{[^}]*transition: transform/);
   assert.doesNotMatch(fam.replace(/\/\*[\s\S]*?\*\//g, ''), /\.f50-sheet \{[^}]*transition: height/);
   const famJs = ALL.find((x) => x.rel === 'js/family50.js').text;
@@ -130,7 +130,7 @@ test('mikrofon-bølgeformen, Hjem-flisene og fanebyttet bruker animasjonsbilder 
 
 test('Glimt-orbene roterer et ferdig lag (ingen animert conic-gradient-vinkel/@property)', () => {
   for (const f of ALL) assert.doesNotMatch(f.text, /@property\s+--/, `${f.rel}: @property`);
-  const ch = ALL.find((x) => x.rel === 'css/chat70.css').text;
+  const ch = ALL.find((x) => x.rel === 'css/pages/chat.css').text;
   assert.match(ch, /\.ch70-ring\{[^}]*conic-gradient[^}]*animation:ch70Sp/);
   assert.match(keyframes(ch).find((k) => k.name === 'ch70Sp').body, /rotate/);
 });

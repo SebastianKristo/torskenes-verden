@@ -97,7 +97,7 @@ test('skuffdetaljer og forhåndsoppsett', () => {
 });
 
 test('koblingen i appen: tegning, valg, skuffdetaljer, oppsett og CSS', () => {
-  const app = read('public/js/skjold76.js'), ed = read('public/js/skjold76-edit.js'), css = read('public/css/skjold76.css'), dr = read('public/js/skjold76-draw.js');
+  const app = read('public/js/skjold76.js'), ed = read('public/js/skjold76-edit.js'), css = read('public/css/pages/skjold.css'), dr = read('public/js/skjold76-draw.js');
   assert.match(dr, /import \{ normSel81, longSpan81 \} from '\.\/skjold81-span\.js'/);
   assert.match(app, /from '\.\/skjold81-span\.js'/);
   assert.match(app, /overlayGrid76\(cab, sel, \{ map \}\)/);

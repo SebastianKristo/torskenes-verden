@@ -210,7 +210,7 @@ button.m-av{border:0;color:inherit;font:inherit;font-weight:600;cursor:pointer}
 .and .seg{background:var(--m3-31281F,#31281F);border-radius:20px}
 .seg a{padding:9px;text-align:center;border-radius:10px;color:inherit;text-decoration:none;font-weight:500;font-size:14px}
 .seg a[aria-current]{background:rgba(255,255,255,.18)}.and .seg a[aria-current]{background:var(--m3-FFB68A,#FFB68A);color:var(--m3-532200,#532200);border-radius:16px}
-a.fab,a.scanbtn,a.r-scan{text-decoration:none}
+a.fab,a.r-scan{text-decoration:none}
 .m a.opt-row{color:inherit;text-decoration:none}
 
 /* ================= Mobil v3 (prompt 05) ================= */
@@ -230,9 +230,8 @@ a.fab,a.scanbtn,a.r-scan{text-decoration:none}
   background:rgba(255,255,255,.16);box-shadow:inset 0 1px 0 rgba(255,255,255,.4),inset 0 -1px 0 rgba(255,255,255,.08);opacity:var(--on);
   transition:left .45s cubic-bezier(.3,1.35,.5,1),opacity .2s}
 .ios .tabs.lg a{position:relative;z-index:1;background:none!important;transition:transform .25s cubic-bezier(.3,1.35,.5,1),color .2s;text-decoration:none}
-.ios .tabs.lg a:active,.ios .scanbtn.lg:active{transform:scale(1.12)}
+.ios .tabs.lg a:active{transform:scale(1.12)}
 .ios .tabs.lg a[aria-current=page]{color:var(--m-acc)}
-.ios .scanbtn.lg{transition:transform .25s cubic-bezier(.3,1.35,.5,1)}
 .ios .tabbar.min .tabs.lg{width:62px}
 .ios .tabbar.min .tabs.lg .mark{left:5px;width:calc(100% - 10px)}
 .ios .tabbar.min .tabs.lg a{display:none}
@@ -289,7 +288,6 @@ a.fab,a.scanbtn,a.r-scan{text-decoration:none}
 code.tok{font-family:var(--mono);font-size:13px;word-break:break-all;padding:10px;border-radius:10px;background:rgba(0,0,0,.3);text-align:left}
 .mini.danger{color:#FF8A80}
 a.mini{text-decoration:none}
-.pillback{align-self:flex-start;height:38px;padding:0 14px 0 10px;border-radius:19px;display:inline-flex;align-items:center;text-decoration:none}
 .m details summary{cursor:pointer;list-style:none}
 .m.blurred .m-scroll,.m.blurred .m-detail{filter:blur(22px)}
 
@@ -318,8 +316,6 @@ em.role.blk{background:rgba(255,138,128,.16);color:#FF8A80}em.role.chl{backgroun
 .steps em.done{background:#1F3A2F;color:#9FE3C6;opacity:1}
 
 /* Domener: rosa palett (iOS mørkt glass #FF9EBE, Android tonal #7B2949/#FFD9E2) */
-.dpick{height:42px;padding:0 16px;border-radius:21px;font-size:17px;font-weight:600;cursor:pointer;max-width:60vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.and .dpick{background:var(--m3-2A2024,#2A2024);border-radius:14px}
 .dom .chip[aria-pressed=true]{background:var(--m-acc)!important;border-color:var(--m-acc)!important;color:#3B0A1E}
 .and.dom .chip[aria-pressed=true]{background:var(--m3-7B2949,#7B2949)!important;border-color:var(--m3-7B2949,#7B2949)!important;color:var(--m3-FFD9E2,#FFD9E2)}
 .dhero{padding:20px;border-radius:28px;display:flex;flex-direction:column;gap:10px}
@@ -379,12 +375,12 @@ em.role.blk{background:rgba(255,138,128,.16);color:#FF8A80}em.role.chl{backgroun
 .ptitle{font-size:22px;font-weight:700;flex:1;min-width:0}
 .ios .ptitle{font-size:17px;font-weight:600;text-align:center}
 /* iOS: runde glassknapper (tilbake, +, Homelab) med spekulær kant og diagonal glans */
-.ios .gback,.ios .gbtn,.ios .hbtn,.ios .scanpill{position:relative;overflow:hidden;display:grid;place-items:center;color:#fff;text-decoration:none;cursor:pointer;
+.ios .gback,.ios .gbtn{position:relative;overflow:hidden;display:grid;place-items:center;color:#fff;text-decoration:none;cursor:pointer;
   background:rgba(255,255,255,.08);-webkit-backdrop-filter:blur(8px) saturate(190%) brightness(1.12);backdrop-filter:blur(8px) saturate(190%) brightness(1.12);
   box-shadow:inset 0 1px 0 rgba(255,255,255,.42),inset 0 -1px 1px rgba(255,255,255,.12),inset 1px 0 0 rgba(255,255,255,.14),inset -1px 0 0 rgba(255,255,255,.14),0 6px 18px rgba(0,0,0,.28);
   transition:transform .25s cubic-bezier(.3,1.5,.5,1)}
-.ios .gback::before,.ios .gbtn::before,.ios .hbtn::before,.ios .scanpill::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:linear-gradient(160deg,rgba(255,255,255,.22) 0%,rgba(255,255,255,.04) 30%,rgba(255,255,255,0) 60%,rgba(255,255,255,.07) 100%)}
-.ios .gback:active,.ios .gbtn:active,.ios .hbtn:active,.ios .scanpill:active{transform:scale(1.1)}
+.ios .gback::before,.ios .gbtn::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:linear-gradient(160deg,rgba(255,255,255,.22) 0%,rgba(255,255,255,.04) 30%,rgba(255,255,255,0) 60%,rgba(255,255,255,.07) 100%)}
+.ios .gback:active,.ios .gbtn:active{transform:scale(1.1)}
 .ios .gback,.ios .gbtn{width:44px;height:44px;border-radius:50%;flex:none}
 .ios .gback svg{margin-left:-2px;position:relative}
 .ios .gbtn.sm{width:36px;height:36px}
@@ -397,19 +393,13 @@ em.role.blk{background:rgba(255,138,128,.16);color:#FF8A80}em.role.chl{backgroun
 /* iOS-fanelinje i full bredde med husknapp og flytende Skann-pille */
 .ios .tabbar{left:16px;right:16px;gap:10px}
 .ios .tabbar .tabs.lg{width:100%;flex:1}
-.ios .tabbar.hashome .tabs.lg{width:calc(100% - 72px)}
-.ios .hbtn{width:62px;height:62px;border-radius:50%;flex:none;background:rgba(28,28,32,.22)}
-.ios .scanpill{position:absolute;right:0;bottom:76px;height:58px;padding:0 24px 0 18px;border-radius:29px;display:flex;align-items:center;gap:10px;font-size:17px;font-weight:700;background:rgba(255,122,61,.5)}
-.ios .scanpill>*{position:relative}
 .ios .tabbar.min .tabs.lg{width:62px;flex:none}
-.ios .tabbar.min .scanpill{bottom:0;right:0}
 .ios .m-scroll{padding-bottom:calc(env(safe-area-inset-bottom) + 190px)}
 .ios.hlp .m-scroll{padding-bottom:calc(env(safe-area-inset-bottom) + 120px)}
 
 /* Android: Homelab-knapp helt til venstre i bunnlinjen, skilt med en tynn strek; plass til FAB */
 .and .navbar a.hl{flex:none;width:58px}
 .and .navbar a.hl span{width:44px;background:var(--m3-31281F,#31281F)}
-.and .nsep{flex:none;width:1px;height:40px;margin:2px 4px 0;background:var(--m3-3A2F29,#3A2F29)}
 .and .m-scroll{padding-bottom:calc(env(safe-area-inset-bottom) + 180px)}
 .and.hlp .m-scroll{padding-bottom:calc(env(safe-area-inset-bottom) + 110px)}
 .and .fab{background:var(--m3-763300,#763300)!important;color:var(--m3-FFDBC8,#FFDBC8);height:72px;border-radius:24px;padding:0 26px 0 22px;font-size:17px}
@@ -431,8 +421,6 @@ em.role.blk{background:rgba(255,138,128,.16);color:#FF8A80}em.role.chl{backgroun
 .hcard.row{flex-direction:row;align-items:center;justify-content:space-between;gap:12px;padding:18px 20px}
 .hclock{font-size:52px;font-weight:300;letter-spacing:-.03em;line-height:1;font-variant-numeric:tabular-nums}
 .and .hclock{font-variation-settings:'wdth' 115}
-.hwx{display:flex;flex-direction:column;align-items:flex-end;text-align:right;gap:2px;min-width:0}
-.hwx b{font-size:26px;font-weight:600}.hwx span{font-size:14px}
 .hhead{display:flex;justify-content:space-between;align-items:baseline;gap:10px}.hhead b{font-size:16px;font-weight:700}
 .hsearch{border-radius:26px;overflow:hidden;margin:0}
 .ios .hsearch{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);box-shadow:inset 0 1px 0 rgba(255,255,255,.28)}
@@ -500,7 +488,6 @@ em.role.blk{background:rgba(255,138,128,.16);color:#FF8A80}em.role.chl{backgroun
 .ios .phero{background:rgba(255,122,61,.2);border:1px solid rgba(255,190,150,.32);box-shadow:inset 0 1px 0 rgba(255,255,255,.28)}
 .and .phero{background:var(--m3-FFB68A,#FFB68A);color:var(--m3-532200,#532200);border-radius:32px 32px 32px 10px}
 .phero>span{font-size:14px;opacity:.9}.phero b{font-size:40px;font-weight:800;letter-spacing:-.03em;line-height:1.05;white-space:nowrap;font-family:var(--mono)}
-.pspark{width:100%;height:60px;margin-top:4px}.pspark .ln{fill:none;stroke:currentColor;stroke-width:2}.pspark .ar{fill:currentColor;opacity:.12}
 .m .hchip{height:32px;padding:0 12px;border-radius:16px;font-size:13px;font-weight:600;cursor:pointer;background:rgba(255,255,255,.16)}
 .m .hchip[aria-pressed=true]{background:#fff;color:#3A1806}.and .hchip{background:rgba(83,34,0,.12)}.and .hchip[aria-pressed=true]{background:var(--m3-532200,#532200);color:var(--m3-FFDBC8,#FFDBC8)}
 .pkpis{display:grid;gap:8px}
@@ -568,7 +555,7 @@ em.role.blk{background:rgba(255,138,128,.16);color:#FF8A80}em.role.chl{backgroun
   .m.two .rail .r-home{margin-bottom:2px}
   .m.two.hlp .m-scroll{max-width:760px}
   .m.two .m-scroll{padding-bottom:30px}
-  .ios.two .scanpill,.ios.two .hbtn{display:none}
+  
 }
 html[data-ui=mobile] body:has(.m.and){background:var(--m3-19120E,#19120E)}
 .and.light .m-spin{border-color:rgba(0,0,0,.12);border-top-color:var(--m3-FF7A3D,#FF7A3D)}
@@ -578,7 +565,6 @@ html[data-ui=mobile] body:has(.m.and){background:var(--m3-19120E,#19120E)}
 /* iOS: fanelinja ligger rett over hjemindikatoren, som systemets TabView */
 .ios .tabbar{bottom:max(8px, calc(env(safe-area-inset-bottom) - 20px))}
 .ios .tabbar .tabs.lg{flex:1;width:auto;min-width:0;touch-action:pan-y;transition:width .45s cubic-bezier(.3,1.35,.5,1),transform .3s cubic-bezier(.3,1.35,.5,1)}
-.ios .tabbar.hashome .tabs.lg{width:auto}
 .ios .tabbar.min .tabs.lg{flex:none;width:62px}
 .ios .tabbar.drag .tabs.lg{transform:scale(1.02);overflow:visible}
 .ios .tabs.lg .mark{transform:scale(1);transition:left .5s cubic-bezier(.3,1.35,.5,1),width .5s cubic-bezier(.3,1.35,.5,1),transform .45s cubic-bezier(.3,1.35,.5,1),background .35s,box-shadow .35s,opacity .2s}
@@ -589,14 +575,6 @@ html[data-ui=mobile] body:has(.m.and){background:var(--m3-19120E,#19120E)}
 .ios .tabs.lg.drag a{transition:transform .2s cubic-bezier(.3,1.35,.5,1),color .2s}
 .ios .tabs.lg a.lens{transform:scale(1.14)}
 /* Skann (Finans) og tannhjul (Domener): rund glassknapp i samme rad, til høyre for kapselen */
-.ios .scanpill{display:none}
-.ios .scanbtn.lg{position:relative;flex:none;width:62px;height:62px;border-radius:50%;display:grid;place-items:center;overflow:hidden;color:#fff;text-decoration:none;cursor:pointer;border:0;
-  background:rgba(255,122,61,.5);-webkit-backdrop-filter:blur(8px) saturate(190%) brightness(1.12);backdrop-filter:blur(8px) saturate(190%) brightness(1.12);
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.5),inset 0 -1px 1px rgba(255,255,255,.14),inset 1px 0 0 rgba(255,255,255,.18),inset -1px 0 0 rgba(255,255,255,.18),0 10px 26px rgba(0,0,0,.34)}
-.ios .scanbtn.lg::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:linear-gradient(160deg,rgba(255,255,255,.3) 0%,rgba(255,255,255,.05) 34%,rgba(255,255,255,0) 60%,rgba(255,255,255,.08) 100%)}
-.ios .scanbtn.lg svg{position:relative}
-.ios .scanbtn.lg.gear{background:rgba(28,28,32,.22)}
-.ios .scanbtn.lg:active{transform:scale(1.1)}
 .ios .m-scroll{padding-bottom:calc(env(safe-area-inset-bottom) + 112px)}
 .and .m-scroll{padding-bottom:calc(env(safe-area-inset-bottom) + 180px)}
 .m.nobar .m-scroll{padding-bottom:calc(env(safe-area-inset-bottom) + 28px)}
@@ -634,7 +612,7 @@ html[data-ui=mobile] body:has(.m.and){background:var(--m3-19120E,#19120E)}
 .mat .mp-round:disabled{opacity:.5}
 .mp-row3{display:flex;gap:10px;overflow-x:auto;margin:0 -18px;padding:0 18px 2px;scrollbar-width:none}
 .mp-tile{flex:none;width:138px;height:150px;border-radius:24px;padding:16px;display:flex;flex-direction:column;justify-content:space-between;font-size:15px}
-.mp-tile.white{background:var(--mp-card)}.mp-tile.lime{background:var(--mp-lime)}.mp-tile.cream{background:var(--mp-cream)}
+.mp-tile.white{background:var(--mp-card)}.mp-tile.lime{background:var(--mp-lime)}
 .mp-tile .mp-tt{display:flex;justify-content:space-between;align-items:center}.mp-tile .mp-tt i{font-style:normal;font-size:14px}
 .mp-tile small{display:block;font-size:11.5px;color:var(--mp-mut)}.mp-tile.white small{color:var(--mp-dim)}
 .mp-tile b{display:block;font-size:16px;font-weight:600;line-height:1.2;margin-top:3px}
@@ -747,7 +725,6 @@ em.role.dns{min-width:46px;text-align:center;font-style:normal;font-size:11px;fo
 .pkg-none{padding:12px;border-radius:14px;background:var(--x-card2);font-size:14px;opacity:.8}
 .pkg-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:auto}
 .pkg-stats span{display:flex;flex-direction:column;gap:2px;padding:10px 12px;border-radius:14px;background:var(--x-card2);font-size:12px;color:var(--x-mut)}.pkg-stats b{font-size:22px;font-weight:700;color:var(--x-fg)}
-.pkg-next{font-size:13px;line-height:1.4;padding:10px 12px;border-radius:14px;background:var(--x-card2)}
 .pkg-foot{font-size:13px;font-weight:600;color:var(--x-acc2)}
 .trk-bars{display:flex;gap:3px;margin-top:6px}.trk-bars i{flex:1;height:4px;border-radius:2px;background:var(--x-bd)}.trk-bars i.on{background:var(--x-fg)}.trk-bars i.cur{background:#ff7a3d}
 
@@ -886,14 +863,8 @@ em.role.dns{min-width:46px;text-align:center;font-style:normal;font-size:11px;fo
 .sb-chk2{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:13.5px;padding:10px 12px;border-radius:16px;background:var(--x-card2)}
 .sb-acc{color:var(--sb-acc);font-weight:700}
 .sb-avs{display:flex}.sb-avs>*{margin-left:-8px;border:2px solid var(--x-card);border-radius:50%!important}
-.sb-sheet{gap:12px}.sb-st{font-size:16px}
-.sb-opts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
-.sb-opts>button,.sb-opts>label{display:flex;padding:0;cursor:pointer}
-.sb-opt{flex:1;display:flex;flex-direction:column;gap:3px;padding:12px 10px;border-radius:18px;background:var(--x-card2);border:1.5px solid transparent;text-align:left;font-size:12px;line-height:1.3}
-.sb-opt.on{border-color:var(--sb-acc)}.sb-opt b{font-size:14px}.sb-opt small{font-size:11.5px}
-.sb-oic{font-size:20px;color:var(--sb-acc)}
-.sb-form{display:flex;flex-direction:column;gap:8px}.sb-two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.sb-cand{display:flex;flex-direction:column}
+.sb-st{font-size:16px}
+.sb-two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .m .sb-add{flex:none;padding:7px 12px;border-radius:999px;background:var(--sb-acc);color:#1A0C04;font-weight:700;font-size:13px}
 .and .sb-add{color:var(--m3-532200,#532200)}
 .m .sb-add.have{background:transparent;color:var(--x-up)}
@@ -916,8 +887,6 @@ em.role.dns{min-width:46px;text-align:center;font-style:normal;font-size:11px;fo
 .m .sb-task.done .m-grow{text-decoration:line-through;opacity:.55}.sb-mark{color:var(--x-mut)}.m .sb-task.done .sb-mark{color:var(--x-up)}
 
 /* ---------- Sveip fra venstre kant for å gå tilbake ---------- */
-.m-scroll.swiping{transition:none;box-shadow:-12px 0 30px rgba(0,0,0,.35);will-change:transform}
-.m-scroll.swipeend{transition:transform .2s cubic-bezier(.2,.8,.2,1)}
 .two .ak-fixed{bottom:calc(env(safe-area-inset-bottom) + 16px)}
 /* Prompt 12: transportørlogo i merket (initialene ligger under som reserve), og levert = grønt hele veien. */
 .trk-badge{position:relative;overflow:hidden}
@@ -965,7 +934,7 @@ em.role.dns{min-width:46px;text-align:center;font-style:normal;font-size:11px;fo
   --mp-row:var(--m3-2A211B,#2A211B);--mp-sep:var(--m3-31281F,#31281F);--mp-ckb:var(--m3-52443C,#52443C);--mp-ckon:var(--m3-45462A,#45462A)}
 .m.matp.and .mat .mp-day[aria-selected=true],.m.matp.and .mat .mp-cta{color:var(--m3-532200,#532200)}
 .m.matp.and .mp-tile.lime,.m.matp.and .mp-step span{color:var(--m3-E6E6AE,#E6E6AE)}
-.m.matp.and .mp-tile.cream,.m.matp.and .mp-sel{color:var(--m3-FFDBC8,#FFDBC8)}
+.m.matp.and .mp-sel{color:var(--m3-FFDBC8,#FFDBC8)}
 .m.matp.and .mp-card,.m.matp.and .mp-tile.white{border-radius:28px}
 /* Full høyde: Matplan har ingen fanelinje, så innholdet får bare plass til hjem-indikatoren nederst. */
 .m.matp .m-scroll{padding-bottom:calc(env(safe-area-inset-bottom) + 32px);min-height:100dvh;box-sizing:border-box}
@@ -1674,14 +1643,6 @@ a.wx-r{color:inherit;text-decoration:none}
 .p16-res{display:flex;flex-direction:column;gap:6px;min-height:40px}
 .p16-ri{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:14px;background:var(--pp-card);color:var(--pp-ink);text-align:left;cursor:pointer}
 .p16-ri b{display:block;font-size:15px}.p16-ri .pp-mut{display:block}
-.p16-photos{padding:6px 8px;gap:2px}
-.p16-photos button,.p16-photos label{display:flex;align-items:center;gap:12px;min-height:54px;padding:6px 8px;border-radius:12px;color:var(--pp-ink);font:600 14.5px Manrope,sans-serif;text-align:left;cursor:pointer;background:transparent}
-.p16-photos .pp-th{width:40px;height:40px;border-radius:10px}
-.p16-photos small{display:block;font-weight:500;font-size:12px;color:var(--pp-mut)}.p16-photos small.bad{color:var(--pp-lab)}
-.p16-photos .pp-ck{font-weight:800;color:var(--pp-pos)}
-.p16-prof{align-items:center;text-align:center;gap:6px;padding:22px 16px}
-.p16-pav{position:relative;display:grid;place-items:center;cursor:pointer}
-.p16-pedit{margin-top:6px;font:700 12px Manrope,sans-serif;color:var(--pp-lab)}
 
 /* Avganger */
 .m.papir .pp-hero.own .pp-credit{display:none}
@@ -1699,7 +1660,6 @@ a.wx-r{color:inherit;text-decoration:none}
 .p16-dt{min-width:0;display:flex;flex-direction:column;gap:1px}
 .p16-dt b{font-size:15.5px;font-weight:600;overflow-wrap:anywhere}
 .p16-dt .pp-mut{font-size:12px}
-.p16-rt{color:var(--pp-pos)}
 .p16-sit{font:italic 12.5px Newsreader,serif;color:var(--pp-lab)}
 .p16-min{flex:none;display:flex;align-items:baseline;gap:3px;min-width:48px;justify-content:flex-end}
 .p16-min b{font-size:24px}.p16-min small{font-size:11px;color:var(--pp-mut)}
@@ -1929,7 +1889,6 @@ a.wx-r{color:inherit;text-decoration:none}
 .p17-cmp{position:fixed;inset:0;z-index:85;background:rgba(0,0,0,.45);display:flex;align-items:flex-end}
 .p17-cmpin{width:100%;max-height:92%;overflow-y:auto;scrollbar-width:none;border-radius:28px 28px 0 0;background:#17191e;color:#fff;padding:18px 16px calc(env(safe-area-inset-bottom) + 24px);box-sizing:border-box;display:flex;flex-direction:column;gap:14px}
 .p17-cmpin .vx-card{background:rgba(255,255,255,.08)}
-.p17-done{background:#fff!important;color:#17191e!important}
 .p17-agree{display:flex!important;flex-direction:row!important;align-items:center;gap:12px;padding:14px 16px}
 .p17-agree>span{flex:none;width:12px;height:12px;border-radius:50%}
 .p17-agree small{color:rgba(255,255,255,.7)}
@@ -2027,7 +1986,6 @@ a.wx-r{color:inherit;text-decoration:none}
 /* Klassisk Hjem: fotovinduet som bånd bak overskriften. */
 .hlhead.p19-band{position:relative;z-index:0;border-radius:22px;overflow:hidden;padding:16px 16px 18px!important;color:#fff;margin-bottom:12px}
 .hlhead.p19-band.hint-light{color:#1b1a17}
-.hlhead.p19-band .p19-cr{position:absolute;right:12px;bottom:6px;font-size:10px;opacity:.7;max-width:60%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:inherit}
 .hlhead.p19-band .dim{color:inherit;opacity:.88}
 .hlhead.p19-band:not(.hint-light) .hlgreet{text-shadow:0 2px 12px rgba(0,0,0,.35)}
 
@@ -2054,8 +2012,6 @@ a.wx-r{color:inherit;text-decoration:none}
 .pp-fmt{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
 .pp-fmt .pp-fmi{color:var(--fc,var(--pp-lab));background:color-mix(in srgb,var(--fc,var(--pp-lab)) 14%,var(--pp-card))}
 .m.papir:not(.light) .pp-fmt .pp-fmi{color:color-mix(in srgb,var(--fc,var(--pp-lab)) 70%,#fff);background:color-mix(in srgb,var(--fc,var(--pp-lab)) 24%,var(--pp-card))}
-.p20-fmbar{position:fixed;top:calc(env(safe-area-inset-top) + 10px);left:16px;right:16px;z-index:40;max-width:560px;margin:0 auto}
-.p20-fmbar .p20-fmb{display:flex;gap:8px}
 .pp-fmgrid.edit .pp-fmt{animation:pWigA .5s ease-in-out infinite;touch-action:none;cursor:grab}
 .pp-fmgrid.edit .pp-fmt:nth-child(2n){animation-name:pWigB;animation-delay:-.2s}
 .pp-fmgrid.edit .pp-fmt>*{pointer-events:none}
@@ -2077,11 +2033,6 @@ a.wx-r{color:inherit;text-decoration:none}
 /* Finans-flisene: ikonboks med 14 % av fargen i kortbakgrunnen (som designet, i begge temaer). */
 .pp-fmt .pp-fmi,.m.papir:not(.light) .pp-fmt .pp-fmi{color:var(--fc,var(--pp-lab));background:color-mix(in oklab,var(--fc,var(--pp-lab)) 14%,var(--pp-card))}
 /* Redigeringslinja over flisene: hvit Papir-pille med skygge. */
-.p21-fmbar{position:sticky;top:calc(env(safe-area-inset-top) + 8px);z-index:6;flex:none;display:flex;align-items:center;gap:8px;padding:8px 8px 8px 14px;border-radius:999px;background:var(--pp-card);color:var(--pp-ink);box-shadow:0 10px 30px -14px rgba(0,0,0,.35),0 1px 0 var(--pp-line)}
-.p21-fmbar>span{min-width:0;font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--pp-ink)}
-.p21-fmbar button{flex:none;height:34px;padding:0 14px;border-radius:17px;border:0;font:600 13px Manrope,sans-serif;cursor:pointer}
-.p21-fmr{background:var(--pp-bg)!important;color:var(--pp-ink)!important}
-.p21-fmd{padding:0 16px!important;background:var(--pp-ink)!important;color:var(--pp-bg)!important;font-weight:700!important}
 /* Dra: kortet følger fingeren, litt forstørret og gjennomsiktig, og vugger ikke. */
 .pp-ed.on{touch-action:none}
 .p21-drag{position:relative;z-index:30;opacity:.6;animation:none!important;transition:none!important;will-change:transform}
@@ -2144,7 +2095,6 @@ a.wx-r{color:inherit;text-decoration:none}
 .w22-cv{position:absolute;inset:0;width:100%;height:100%;display:block}
 .w22-pt{font-size:12.5px;font-weight:700;color:#ffb27a;min-height:15px;margin-top:-4px}
 .w22-bot{position:fixed;left:16px;right:16px;bottom:calc(env(safe-area-inset-bottom) + 18px);z-index:6;display:flex;align-items:center;gap:10px;pointer-events:none;max-width:720px;margin:0 auto}
-.w22-rb{pointer-events:auto;flex:none;width:52px;height:52px;border-radius:26px!important;border:1px solid rgba(255,255,255,.18)!important;background:rgba(10,20,35,.5)!important;-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);color:#fff!important;display:grid;place-items:center;padding:0!important}
 .w22-map{position:fixed;inset:0;z-index:40;background:#0d1520;display:flex;flex-direction:column}
 .w22-map iframe{flex:1;width:100%;border:0;display:block}
 .w22-mtop{position:absolute;left:0;right:0;top:0;padding:calc(env(safe-area-inset-top) + 12px) 16px 0;display:flex;justify-content:space-between;align-items:center;pointer-events:none}
@@ -2157,7 +2107,6 @@ a.wx-r{color:inherit;text-decoration:none}
 .w22-sh,.w22-ms{gap:14px;z-index:31}.w22-bg{z-index:30}
 .w22-ms{z-index:31}
 .w22-shh{display:flex;justify-content:space-between;align-items:center;gap:10px}.w22-shh b{font-weight:700;font-size:24px}
-.w22-done{height:38px;padding:0 16px!important;border-radius:19px!important;background:#fff!important;color:#17191e!important;font-weight:700!important;font-size:13.5px!important}
 .w22-q{margin:0;display:flex;align-items:center;gap:10px;height:46px;padding:0 14px;border-radius:14px;background:#262a31;flex:none}
 .w22-q input{flex:1;min-width:0;border:0;outline:none;background:transparent;color:#fff;font-weight:500;font-size:16px}
 .w22-m{font-size:13px;color:#9aa3ae}
@@ -2364,7 +2313,6 @@ html[data-ui=mobile]:has(#app > .m.papir),html[data-ui=mobile] body:has(#app > .
 .p23-rlogo{flex:none;width:44px;height:44px;border-radius:12px;background:#fff;border:1px solid var(--pp-line);display:grid;place-items:center;overflow:hidden;box-sizing:border-box}
 .p23-rlogo>*{transform:scale(.86)}
 .p23-rv{flex:none;font:600 16px 'IBM Plex Mono',monospace}
-.m .p23-undo{flex:none;width:30px;height:30px;border-radius:15px;background:transparent;color:var(--pp-mut);cursor:pointer;font-size:16px}
 .p23-red{display:flex;flex-direction:column;gap:8px;padding:0 0 14px}
 .p23-red2{display:grid;grid-template-columns:minmax(0,1fr) 120px;gap:8px}
 .p23-cats{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}
@@ -2795,8 +2743,6 @@ img.p23-ic,span.p24-img{background:none!important;-webkit-mask:none!important;ma
 .m .p25-ansb{flex:1;min-width:0;display:flex;flex-direction:column;gap:10px}
 .m .p25-go{align-self:flex-start;height:38px;padding:0 16px;border-radius:19px;border:0;background:var(--pp-ink);color:var(--pp-bg);font:700 13.5px Manrope,sans-serif;cursor:pointer}
 .m .p17-row,.m .p24-igg{transition:background-color .6s ease,box-shadow .6s ease}
-.m .p25-hi,.m.papir .list>.p25-hi,.m.papir .p17-list>.p17-row.p25-hi{background:color-mix(in oklab,var(--pp-lab,#b23a2a) 16%,var(--pp-card,#fff))!important;box-shadow:inset 3px 0 0 var(--pp-lab,#b23a2a)!important}
-.m .p24-igg.p25-hi{border-radius:16px}
 
 /* AI-søk i Finans som jobb: «✦ Ollama tenker … 34 s av 60 s», fremdriftslinje og Avbryt */
 .m .p25-job{display:flex;flex-direction:column;gap:10px}
@@ -2842,52 +2788,10 @@ img.p23-ic,span.p24-img{background:none!important;-webkit-mask:none!important;ma
 /* ================= Prompt 26 · Kalender (Kalender.dc.html, variant mobile og mode widget) ================= */
 .m:not(.papir) .k26,.m:not(.papir) .k26-hw,.m:not(.papir) .p26{--pp-ink:#ece7dc;--pp-bg:#14130f;--pp-card:#211f19;--pp-line:#34322a;--pp-lab:#e8705c;--pp-mut:#8a8578;--pp-pos:#7fcf9a}
 .m .k26{display:flex;flex-direction:column;gap:14px;min-width:0;color:var(--pp-ink);font-family:Manrope,system-ui,sans-serif}
-.m .k26-cards{display:flex;flex-direction:column;gap:14px;align-items:stretch;min-width:0}
-.m .k26-c{position:relative;display:flex;flex-direction:column;min-width:0;border-radius:24px;transition:transform .15s;-webkit-touch-callout:none}
-.m .k26-c.ro{outline:2px dashed var(--pp-line);outline-offset:5px;transform:scale(.985);-webkit-user-select:none;user-select:none}
-.m .k26-roc{position:absolute;top:-10px;right:-4px;z-index:5;display:flex;gap:4px}
-.m .k26-roc button{width:32px;height:32px;border-radius:16px;background:var(--pp-ink);color:var(--pp-bg);font-size:11px;box-shadow:0 4px 12px rgba(0,0,0,.3);cursor:pointer}
-.m .k26-roc button.hd{background:var(--pp-lab);color:#fff;font-size:16px;font-weight:700}
-.m .k26-pill{position:sticky;top:calc(env(safe-area-inset-top) + 8px);z-index:8;display:flex;align-items:center;gap:6px;padding:6px 6px 6px 16px;border-radius:999px;background:var(--pp-ink);color:var(--pp-bg);box-shadow:0 10px 24px -8px rgba(0,0,0,.4)}
-.m .k26-pill>span{font-size:13.5px;font-weight:600;min-width:0}
-.m .k26-pill button{flex:none;height:34px;padding:0 12px;border-radius:999px;color:var(--pp-bg);font:600 12.5px Manrope,sans-serif;cursor:pointer}
-.m .k26-pill button.done{padding:0 16px;background:var(--pp-bg);color:var(--pp-ink);font-weight:700;font-size:13px}
-.m .k26-hid{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:4px 2px}
-.m .k26-hid>span{font:600 10.5px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:var(--pp-mut)}
-.m .k26-hid button{height:32px;padding:0 12px;border-radius:16px;border:1.5px dashed var(--pp-line);background:var(--pp-card);color:var(--pp-ink);font:600 12.5px Manrope,sans-serif;cursor:pointer}
-.m .k26-col6{display:flex;flex-direction:column;gap:6px;min-width:0}
-.m .k26-col10{display:flex;flex-direction:column;gap:10px;min-width:0}
-.m .k26-col12{display:flex;flex-direction:column;gap:12px;min-width:0}
-.m .k26-lab{display:flex;justify-content:space-between;gap:8px;font:600 10.5px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:var(--pp-lab);padding:4px 4px 0}
-.m .k26-lab.ink{color:var(--pp-ink)}
-.m .k26-lab .mut,.m .k26 .mut,.m .k26-hw .mut{color:var(--pp-mut)}
-.m .k26-list{border-radius:20px;background:var(--pp-card);padding:2px 14px}
-.m .k26-none{padding:16px 0;font-size:14px;color:var(--pp-mut)}
-.m .k26-note{font-size:12px;color:var(--pp-mut);line-height:1.45;padding:0 4px}
+.m .k26 .mut,.m .k26-hw .mut{color:var(--pp-mut)}
 /* Nå-kort */
-.m .k26-now{display:flex;flex-direction:column;gap:12px;width:100%;box-sizing:border-box;text-align:left;font-family:inherit;border-radius:24px;padding:18px;background:var(--pp-ink);color:var(--pp-bg);box-shadow:0 10px 30px -14px rgba(0,0,0,.4);cursor:pointer}
-.m .k26-nk{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
-.m .k26-nk .k{font:600 10.5px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#ff9c8c}
-.m.papir.pd .k26-nk .k{color:#b23a2a}
-.m .k26-nk .w{font:600 11px 'IBM Plex Mono',monospace;opacity:.75;white-space:nowrap}
-.m .k26-nm{display:flex;align-items:center;gap:12px;min-width:0}
 .m .k26-ns{flex:none;width:6px;align-self:stretch;border-radius:3px}
-.m .k26-nm b{display:block;font:500 30px/1.1 Newsreader,Georgia,serif}
-.m .k26-nm span span{font-size:13.5px;opacity:.85}
-.m .k26-bar{height:4px;border-radius:2px;background:color-mix(in oklab,var(--pp-bg) 18%,transparent);overflow:hidden}
-.m .k26-bar i{display:block;height:100%;background:#ff9c8c}
-.m.papir.pd .k26-bar i{background:#b23a2a}
-.m .k26-nx{font-size:13px;opacity:.85;border-top:1px solid color-mix(in oklab,var(--pp-bg) 16%,transparent);padding-top:10px}
 /* Prøver og frister */
-.m .k26-ex{width:100%;display:flex;align-items:center;gap:12px;min-height:58px;padding:8px 0;border-top:1px solid var(--pp-line);color:var(--pp-ink);text-align:left;font-family:inherit;cursor:pointer;box-sizing:border-box}
-.m .k26-exd{flex:none;width:44px;display:flex;flex-direction:column;align-items:center;line-height:1}
-.m .k26-exd b{font:500 24px Newsreader,Georgia,serif}
-.m .k26-exd span{font:600 9.5px 'IBM Plex Mono',monospace;letter-spacing:.08em;color:var(--pp-mut);margin-top:3px}
-.m .k26-tt{min-width:0;display:flex;flex-direction:column}
-.m .k26-tt b{display:block;font-size:14.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.m .k26-tt span{font-size:12.5px;color:var(--pp-mut)}
-.m .k26-in{flex:none;padding:4px 9px;border-radius:999px;background:var(--pp-bg);color:var(--pp-ink);font:700 11.5px Manrope,sans-serif;white-space:nowrap}
-.m .k26-in.soon{background:var(--pp-lab);color:#fff}
 /* Kalendere-lenken (også nederst på Bursdager) */
 .m .k26-link{display:flex;align-items:center;gap:12px;width:100%;box-sizing:border-box;padding:14px 16px;border-radius:20px;background:var(--pp-card);color:var(--pp-ink);text-align:left;font-family:inherit;text-decoration:none;cursor:pointer}
 .m .k26-link b{display:block;font-size:15px;font-weight:700}
@@ -2895,118 +2799,11 @@ img.p23-ic,span.p24-img{background:none!important;-webkit-mask:none!important;ma
 .m .k26-lk{flex:none;font-size:13px;font-weight:600;color:var(--pp-mut)}
 .m .p24-bd>.k26-link{margin-top:2px}
 /* Velger, navigasjon og filter */
-.m .k26-seg{display:flex;gap:4px;padding:4px;border-radius:999px;background:var(--pp-card)}
-.m .k26-seg button{flex:1 1 0;min-width:0;height:38px;border-radius:999px;color:var(--pp-ink);font:700 13.5px Manrope,sans-serif;cursor:pointer}
-.m .k26-seg button[aria-selected=true]{background:var(--pp-ink);color:var(--pp-bg)}
-.m .k26-nav{display:flex;align-items:center;gap:8px}
-.m .k26-ar{flex:none;width:38px;height:38px;border-radius:19px;border:1px solid var(--pp-line)!important;background:var(--pp-card)!important;color:var(--pp-ink);font-size:17px;cursor:pointer}
-.m .k26-nt{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;line-height:1.15}
-.m .k26-nt b{font:500 21px Newsreader,Georgia,serif;white-space:nowrap}
-.m .k26-nt span{font-size:12px;color:var(--pp-mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
-.m .k26-td{flex:none;height:38px;padding:0 14px!important;border-radius:19px;background:var(--pp-card)!important;color:var(--pp-mut);font:700 13px Manrope,sans-serif;cursor:pointer}
-.m .k26-td.off{background:var(--pp-lab)!important;color:#fff}
-.m .k26-chips{display:flex;gap:6px;flex-wrap:wrap}
-.m .k26-chips.sc{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin:0 -16px;padding:0 16px}
-.m .k26-fc{flex:none;display:flex;align-items:center;gap:7px;height:32px;padding:0 12px!important;border-radius:16px;border:1px solid var(--pp-line)!important;background:var(--pp-card)!important;color:var(--pp-ink);font:600 12.5px Manrope,sans-serif;cursor:pointer}
-.m .k26-fc.off{background:transparent!important;opacity:.5}
-.m .k26-fc i{width:9px;height:9px;border-radius:5px}
 /* Detaljkort */
-.m .k26-det{padding:16px;border-radius:22px;background:var(--pp-card);border:1.5px solid;display:flex;flex-direction:column;gap:10px}
-.m .k26-dh{display:flex;align-items:flex-start;gap:12px}
-.m .k26-dk{font:600 10.5px 'IBM Plex Mono',monospace;letter-spacing:.12em}
-.m .k26-dh b{display:block;font:500 26px/1.1 Newsreader,Georgia,serif;margin-top:2px}
-.m .k26-dh .mut{display:block;font-size:13.5px;margin-top:4px}
-.m .k26-x{flex:none;width:34px;height:34px;border-radius:17px;border:1px solid var(--pp-line)!important;color:var(--pp-ink);font-size:16px;cursor:pointer}
-.m .k26-dr{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-top:1px solid var(--pp-line);font-size:14px}
-.m .k26-dr span{color:var(--pp-mut)}
-.m .k26-dr b{text-align:right}
-.m .k26-pl{font-size:12.5px;color:var(--pp-mut)}
-.m .k26-rem{height:32px;padding:0 12px!important;border-radius:16px;border:1px solid var(--pp-line)!important;color:var(--pp-ink);font:600 12.5px Manrope,sans-serif;cursor:pointer}
-.m .k26-rem.on{background:var(--pp-ink)!important;border-color:var(--pp-ink)!important;color:var(--pp-bg)}
-.m .k26-maze{align-self:flex-start;height:38px;padding:0 16px;border-radius:19px;border:1px solid var(--pp-line);display:inline-flex;align-items:center;color:var(--pp-ink);text-decoration:none;font:700 13px Manrope,sans-serif}
 /* Uke */
-.m .k26-wk{border-radius:22px;background:var(--pp-card);padding:12px 10px 14px 6px;display:flex;flex-direction:column;gap:6px;touch-action:pan-y}
-.m .k26-wg{display:grid;grid-template-columns:30px repeat(5,minmax(0,1fr));gap:4px}
-.m .k26-wd{display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--pp-ink);font-family:inherit;cursor:pointer}
-.m .k26-wd span{font:600 10px 'IBM Plex Mono',monospace;letter-spacing:.08em;color:var(--pp-mut)}
-.m .k26-wd b{width:30px;height:30px;border-radius:15px;display:grid;place-items:center;font:500 17px Newsreader,Georgia,serif}
-.m .k26-wd b.on,.m .k26-mc b.on{background:var(--pp-lab);color:#fff}
-.m .k26-hele{font:600 9px 'IBM Plex Mono',monospace;color:var(--pp-mut);text-align:right;padding-top:5px}
-.m .k26-wa{display:flex;flex-direction:column;gap:3px;min-width:0}
-.m .k26-wa button{border-radius:7px;padding:3px 5px!important;color:#fff;font:700 10.5px Manrope,sans-serif;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
-.m .k26-hrs{position:relative}
-.m .k26-hrs span{position:absolute;right:2px;transform:translateY(-50%);font:500 10px 'IBM Plex Mono',monospace;color:var(--pp-mut)}
-.m .k26-day{position:relative;border-radius:10px;min-width:0}
-.m .k26-day.on{background:color-mix(in oklab,var(--pp-lab) 6%,transparent)}
-.m .k26-hl{position:absolute;left:0;right:0;height:1px;background:var(--pp-line);opacity:.6}
-.m .k26-blk{position:absolute;left:2px;right:2px;box-sizing:border-box;border-left:3px solid;border-radius:7px;padding:3px 5px;color:var(--pp-ink);text-align:left;font-family:inherit;overflow:hidden;display:flex;flex-direction:column;gap:1px;cursor:pointer}
-.m .k26-blk.pr{color:#fff}
-.m .k26-blk b{font-size:11px;font-weight:800;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.m .k26-blk span{font-size:10px;font-weight:600;opacity:.8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.m .k26-nowl{position:absolute;left:-3px;right:0;height:2px;background:var(--pp-lab);z-index:2;pointer-events:none}
-.m .k26-nowl i{position:absolute;left:-3px;top:-3px;width:8px;height:8px;border-radius:4px;background:var(--pp-lab)}
 /* Måned */
-.m .k26-mo{border-radius:22px;background:var(--pp-card);padding:12px;display:flex;flex-direction:column;gap:6px;touch-action:pan-y}
-.m .k26-mg{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:2px}
-.m .k26-mh{text-align:center;font:600 10px 'IBM Plex Mono',monospace;letter-spacing:.08em;color:var(--pp-mut);padding:2px 0 6px}
-.m .k26-mc{display:flex;flex-direction:column;align-items:center;gap:4px;height:52px;padding-top:5px!important;border-radius:12px;color:var(--pp-ink);font-family:inherit;cursor:pointer;min-width:0}
-.m .k26-mc.out{opacity:.38}
-.m .k26-mc.sel{background:var(--pp-bg)!important;outline:1.5px solid var(--pp-ink);outline-offset:-2px}
-.m .k26-mc b{width:28px;height:28px;border-radius:14px;display:grid;place-items:center;font:500 16px Newsreader,Georgia,serif}
-.m .k26-mc b.we{color:var(--pp-mut)}
-.m .k26-mc>span{display:flex;gap:3px;height:6px}
-.m .k26-mc i{width:6px;height:6px;border-radius:3px}
 /* Liste (måned og agenda) */
-.m .k26-ag{display:flex;flex-direction:column;gap:12px}
-.m .k26-it{width:100%;display:flex;align-items:center;gap:12px;min-height:52px;padding:8px 0!important;border-top:1px solid var(--pp-line)!important;color:var(--pp-ink);text-align:left;font-family:inherit;cursor:pointer;box-sizing:border-box}
-.m .k26-tm{flex:none;width:72px;font:500 12px 'IBM Plex Mono',monospace;color:var(--pp-mut)}
-.m .k26-st{flex:none;width:4px;align-self:stretch;border-radius:2px}
-.m .k26-tag{flex:none;padding:3px 8px;border-radius:999px;color:#fff;font:700 10.5px Manrope,sans-serif}
 /* Widgets på telefonen (forhåndsvisning) */
-.m .k26-pl26{display:flex;flex-direction:column;gap:12px;padding:16px;border-radius:22px;background:linear-gradient(160deg,#6d7f8f,#2e3a46)}
-.m .k26-pn{font:700 12.5px Manrope,sans-serif;color:#fff}
-.m .k26-pw{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-start}
-.m .k26-wv{flex:none;display:flex;flex-direction:column;align-items:center;gap:6px;max-width:100%}
-.m .k26-wl{font-size:11px;font-weight:700;color:#fff;opacity:.85}
-.m .k26-w{max-width:100%;box-sizing:border-box;padding:14px;display:flex;flex-direction:column;box-shadow:0 8px 24px rgba(0,0,0,.25);overflow:hidden;--wa:#b23a2a}
-.m .k26-w.k26-ios{border-radius:24px;background:rgba(255,255,255,.95);color:#1b1a17;--wm:#7a7468;--wl:rgba(0,0,0,.08);font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',system-ui,sans-serif}
-.m .k26-w.k26-and{border-radius:28px;background:#f4ddd8;color:#3b0f0a;--wm:#7d4a43;--wl:rgba(59,15,10,.14);font-family:'Google Sans',system-ui,sans-serif}
-.m .k26-w.k26-sam{border-radius:20px;background:#fff;color:#111;--wm:#6b6b6b;--wl:rgba(0,0,0,.08);font-family:'SamsungOne','Samsung Sans',system-ui,sans-serif}
-.m.papir.pd .k26-w.k26-ios{background:rgba(28,28,30,.95);color:#f2f2f7;--wm:#98989f;--wl:rgba(255,255,255,.12);--wa:#ff6b5a}
-.m.papir.pd .k26-w.k26-and{background:#3b2a27;color:#ffdad4;--wm:#d8b5ae;--wl:rgba(255,218,212,.16);--wa:#ffb4a8}
-.m.papir.pd .k26-w.k26-sam{background:#1c1c1e;color:#f5f5f5;--wm:#a0a0a0;--wl:rgba(255,255,255,.12);--wa:#ff6b5a}
-.m .k26-w .ka{font-size:10px;font-weight:800;letter-spacing:.08em;color:var(--wa)}
-.m .k26-w .kw{font-size:11px;letter-spacing:0;margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.m .k26-w .kb{font-size:30px;font-weight:700;line-height:1;margin-top:6px;letter-spacing:-.02em}
-.m .k26-w .st{flex:none;width:4px;border-radius:2px}
-.m .k26-w .tt{min-width:0;display:flex;flex-direction:column;line-height:1.15}
-.m .k26-w .tt b{font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.m .k26-w .tt span{font-size:11.5px;color:var(--wm);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.m .k26-ws{margin-top:auto;display:flex;align-items:center;gap:7px;min-width:0}
-.m .k26-w.md{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.25fr);gap:14px}
-.m .k26-w.md .l{display:flex;flex-direction:column;min-width:0}
-.m .k26-w.md .kb{font-size:28px}
-.m .k26-w.md .t1{margin-top:auto;font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.m .k26-w.md .mu{font-size:11.5px;color:var(--wm);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.m .k26-w.md .kw{margin-top:4px}
-.m .k26-w.md .r{display:flex;flex-direction:column;gap:7px;min-width:0;border-left:1px solid var(--wl);padding-left:12px}
-.m .k26-w .dt{font-size:10.5px;font-weight:700;color:var(--wm);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.m .k26-wr{display:flex;align-items:center;gap:7px;min-width:0}
-.m .k26-wr .s{flex:none;width:34px;font-size:11px;font-weight:700;font-variant-numeric:tabular-nums}
-.m .k26-wr .tt b{font-size:12.5px}
-.m .k26-wr .tt span{font-size:10.5px}
-.m .k26-w.lg{padding:16px;gap:8px}
-.m .k26-wh{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
-.m .k26-wh b{font-size:16px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.m .k26-wh .ka{flex:none;font-size:11px;font-weight:700;letter-spacing:0}
-.m .k26-wr.big{gap:9px}
-.m .k26-wr.big .s{width:76px;color:var(--wm)}
-.m .k26-wr.big .tt{flex:1}
-.m .k26-wr.big .tt b{font-size:13.5px}
-.m .k26-wr.big .tt span{font-size:11px}
-.m .k26-w .hr{margin-top:auto;height:1px;flex:none;background:var(--wl)}
-.m .k26-wx{display:flex;align-items:center;gap:8px;min-width:0}
-.m .k26-wx b{flex:1;min-width:0;font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .m .k26-wp{flex:none;padding:3px 8px;border-radius:999px;background:rgba(0,0,0,.07);color:inherit;font-size:10.5px;font-weight:800;white-space:nowrap}
 .m .k26-wp.soon{background:#b23a2a;color:#fff}
 .m .k26-hw .k26-wp{background:var(--pp-bg);color:var(--pp-ink)}
@@ -3059,7 +2856,6 @@ img.p23-ic,span.p24-img{background:none!important;-webkit-mask:none!important;ma
 .m .p26-two button{height:44px;border-radius:22px;border:1px solid var(--pp-line)!important;color:var(--pp-ink);font:700 14px Manrope,sans-serif;cursor:pointer}
 .m .p26-two button.ink{border:0!important;background:var(--pp-ink);color:var(--pp-bg)}
 .m .p26-clr{height:36px;color:var(--pp-lab);font:700 13px Manrope,sans-serif;cursor:pointer}
-.m .p26-back{align-self:flex-start;height:34px;padding:0 4px;display:inline-flex;align-items:center;color:var(--pp-lab);font:700 13.5px Manrope,sans-serif;text-decoration:none}
 .m .p26-note{font-size:12px;color:var(--pp-mut);line-height:1.45;padding:4px 4px 0}
 .m .p26 .p24-bdcal{margin-top:8px}
 /* Sporing: transportør ved ny pakke og SPOR VIA */
@@ -3114,7 +2910,6 @@ img.p23-ic,span.p24-img{background:none!important;-webkit-mask:none!important;ma
 @media (pointer:coarse){.m .p27-sf .p27-x{width:40px;height:40px;margin:0 -8px 0 -10px}}
 
 /* --- ✦ AI i Google-feltet på Hjem --- */
-.m .pp-search .p27-gai{flex:none;height:34px;margin-right:-10px;padding:0 12px;border-radius:999px;border:0;background:var(--pp-bg);color:var(--pp-ink);font:700 12.5px Manrope,system-ui,sans-serif;white-space:nowrap;cursor:pointer}
 
 /* --- Finans-søk: forslag --- */
 .m .p27-sug{flex:none;margin-top:-4px;padding:6px;border-radius:22px;background:var(--pp-card);color:var(--pp-ink);box-shadow:0 16px 36px -18px rgba(0,0,0,.4);display:flex;flex-direction:column}
@@ -3153,9 +2948,6 @@ img.p23-ic,span.p24-img{background:none!important;-webkit-mask:none!important;ma
 .m .pp-mut.sm,.m .k27-mut.sm{font-size:12px}
 
 /* --- Ruter-kortet: Velg stopp --- */
-.m .p27-ruter .p27-rr{flex:none;display:flex;align-items:center;gap:8px}
-.m .p27-vs{height:30px;padding:0 12px;border-radius:999px;border:1px solid var(--pp-line);background:transparent;color:var(--pp-ink);font:600 12px Manrope,system-ui,sans-serif;cursor:pointer;white-space:nowrap}
-.m .p27-hn{font-size:12.5px;font-weight:700;color:var(--pp-mut);padding-top:4px}
 .m .p27-hds{max-height:86vh;overflow-y:auto}
 .m .p27-hdl>button{display:flex;align-items:center;gap:12px;width:100%;min-height:56px;padding:8px 14px;border:0;border-top:1px solid var(--pp-line);background:transparent;color:var(--pp-ink);text-align:left;font:inherit;cursor:pointer}
 .m .p27-hdl>button:first-child{border-top:0}.m .p27-hdl .m-grow{display:flex;flex-direction:column}.m .p27-hdl b{font-size:15px;font-weight:600}
@@ -3321,10 +3113,6 @@ img.p23-ic,span.p24-img{background:none!important;-webkit-mask:none!important;ma
 .m .k27-cals{display:flex;gap:6px;flex-wrap:wrap;border-top:1px solid var(--pp-line);padding-top:10px}
 .m .k27-cc{display:flex;align-items:center;gap:6px;height:32px;padding:0 10px;border-radius:999px;border:1px solid var(--pp-line);background:transparent;font-size:12.5px!important;font-weight:600!important;cursor:pointer}.m .k27-cc i{width:9px;height:9px;border-radius:5px}.m .k27-cc.off{opacity:.45}
 .m .k27-adm{height:36px;border-radius:18px;border:1px solid var(--pp-line);background:transparent;font-size:12.5px!important;font-weight:600!important;cursor:pointer}
-.m .k27-nx{flex:none;margin:0 12px 8px;display:flex;align-items:center;gap:10px;min-height:46px;padding:6px 14px;border:0;border-radius:16px;background:var(--pp-ink);color:var(--pp-bg)!important;text-align:left;cursor:pointer}
-.m .k27-nxs{flex:none;width:4px;align-self:stretch;border-radius:2px}.m .k27-nxk{flex:none;font:600 10.5px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#ff9c8c}
-.m .k27-nx .m-grow{min-width:0;display:flex;flex-direction:column}.m .k27-nx b{font-size:14.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.m .k27-nx .m-grow span{font-size:12px;opacity:.75;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.m .k27-nxw{flex:none;font:500 18px Newsreader,Georgia,serif}
 .m .k27-note{flex:none;margin:0 14px 6px;font-size:12px;color:var(--pp-mut)}.m .k27-note.err{color:var(--pp-lab)}
 .m .k27-body{flex:1;min-height:0;display:flex}
 .m .k27-side{flex:none;width:252px;padding:4px 14px 18px;display:flex;flex-direction:column;gap:16px;overflow-y:auto;scrollbar-width:none;border-right:1px solid var(--pp-line);box-sizing:border-box}
@@ -3407,9 +3195,6 @@ textarea.k27-in{height:auto;padding:12px 16px;resize:vertical}
    Prompt 28 (PWA)
    ===================================================================== */
 /* Vær: kart · steder i en frostet bunnlinje helt nederst (fasit Vaer.dc.html), innholdet får bunnpadding */
-.m .w22-bot.w28-bot,.m.vaer .w22-bot.w28-bot{position:fixed;left:0;right:0;bottom:0;max-width:none;margin:0;z-index:6;display:flex;align-items:center;gap:10px;pointer-events:auto;padding:6px 14px calc(8px + env(safe-area-inset-bottom,0px));background:rgba(10,20,35,.32);-webkit-backdrop-filter:blur(20px) saturate(1.3);backdrop-filter:blur(20px) saturate(1.3);border-top:1px solid rgba(255,255,255,.14);border-radius:0}
-.w28-bb{flex:none;width:48px;height:48px;border-radius:24px!important;border:0!important;background:transparent!important;color:#fff!important;cursor:pointer;display:grid;place-items:center;padding:0;box-shadow:none!important}
-.w28-bb:active{background:rgba(255,255,255,.12)!important}
 .m.vaer .vx-in{padding-bottom:calc(76px + env(safe-area-inset-bottom,0px))}
 .m.vaer :is(.pp-scan,.pp-fab,.m-fab){display:none!important}
 
@@ -3450,7 +3235,6 @@ textarea.k27-in{height:auto;padding:12px 16px;resize:vertical}
 .m .s28-grip{flex:none;align-self:center;width:36px;height:5px;border-radius:3px;background:var(--a-line)}
 .m .s28-hd{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 4px 4px}
 .m .s28-hd h2{flex:1;margin:0;font:500 26px/1.15 Newsreader,serif;letter-spacing:-.01em;color:var(--a-ink)}
-.m .s28-lnk{min-height:44px;padding:0 4px;border:0;background:transparent;color:var(--a-lab);font:600 16px Manrope,system-ui,sans-serif;cursor:pointer;display:flex;align-items:center;gap:2px}
 .m .s28-back{margin-right:-4px}
 .m .s28-sub{margin:2px 4px 16px;font-size:14px;line-height:1.45;color:var(--a-mut)}
 .m .s28-list{background:var(--a-card);border:1px solid var(--a-line);border-radius:20px;overflow:hidden;display:flex;flex-direction:column}
@@ -3550,7 +3334,7 @@ textarea.k27-in{height:auto;padding:12px 16px;resize:vertical}
 .m .ch28-kb .m-grow{display:flex;flex-direction:column;gap:2px;min-width:0}.m .ch28-kb b{font-size:15px;font-weight:700}.m .ch28-kb small{font-size:12.5px;color:var(--cm)}
 .m .ch28-kb>svg{color:var(--cm)}
 .m .ch28-fn{padding:0 4px;font-size:12px;line-height:1.45;color:color-mix(in srgb,var(--cm) 78%,var(--ci))}
-.m .ch27-t:active,.m .ch28-t:active,.m .ch28-kb:active{filter:brightness(.96)}
+.m .ch28-t:active,.m .ch28-kb:active{filter:brightness(.96)}
 
 /* Mer: hold inne → flytt/skjul (claude-code-mer-rekkefolge.md) */
 .m .p28-merw{display:flex;flex-direction:column;gap:10px}
@@ -3562,15 +3346,6 @@ textarea.k27-in{height:auto;padding:12px 16px;resize:vertical}
 .m .p28-mer .p28-mr .pp-mut{font-size:12.5px;color:var(--pp-mut2,var(--pp-mut))}
 .m .p28-mer .p28-mr>.pp-mut:last-child{font-size:15px}
 .m .p28-mer .p28-mr.lift{z-index:5;transition:box-shadow .18s ease;box-shadow:0 14px 30px -10px rgba(0,0,0,.35)}
-.m .p28-mtop{display:flex;align-items:center;gap:10px;padding:8px 8px 8px 16px;border-radius:18px;background:var(--pp-card);box-shadow:0 10px 30px -14px rgba(0,0,0,.3)}
-.m .p28-mtop .m-grow{display:flex;flex-direction:column;gap:2px;min-width:0}
-.m .p28-mlab{font:600 10.5px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:var(--pp-lab)}
-.m .p28-mtx{font-size:13px;font-weight:600;line-height:1.35;color:var(--pp-ink)}
-.m .p28-mdone{flex:none;min-height:36px;padding:0 16px;border-radius:18px;border:0!important;background:var(--pp-ink)!important;color:var(--pp-bg)!important;font:700 14px Manrope,system-ui,sans-serif;cursor:pointer}
-.m .p28-mh,.m .p28-ms{flex:none;width:26px;height:26px;border-radius:13px;border:0!important;padding:0;display:grid;place-items:center;cursor:pointer;background:var(--pp-lab)!important;color:var(--pp-onLab,#fff)!important;position:relative}
-.m .p28-ms{background:var(--pp-pos)!important;color:var(--pp-card)!important}
-.m .p28-mh::after,.m .p28-ms::after{content:'';position:absolute;inset:-9px}
-.m .p28-lock{flex:none;width:26px;height:26px;display:grid;place-items:center;color:var(--pp-mut2,var(--pp-mut))}
 .m .p28-grab{flex:none;width:44px;height:44px;margin:-8px -8px -8px 0;display:grid;place-items:center;color:var(--pp-mut2,var(--pp-mut));touch-action:none;cursor:grab}
 .m .p28-mhl{padding:8px 4px 0;font-size:11.5px;font-weight:800;letter-spacing:.12em;color:var(--pp-lab)}
 .m .p28-dim{flex:1;min-width:0;display:flex;align-items:center;gap:12px;opacity:.5}
@@ -3593,10 +3368,6 @@ html.p28-kb .m.papir{--pp-navb:calc(var(--p28-kb,0px) + 8px)}
 .m .p29-sw{display:flex;flex-direction:column;gap:6px;flex:none}
 .m .p29-sf{margin:0;display:flex;align-items:center;gap:8px;height:46px;padding:0 6px 0 8px;border-radius:999px;background:var(--pp-card);color:var(--pp-ink);box-shadow:0 10px 30px -14px rgba(0,0,0,.35);box-sizing:border-box}
 .m .p29-eng{flex:none;height:34px;padding:0 6px 0 8px;border:0;border-radius:17px;background:transparent;color:var(--pp-mut);cursor:pointer;display:flex;align-items:center;gap:3px}
-.m .p29-ei{flex:none;width:20px;height:20px;border-radius:10px;display:grid;place-items:center;font-size:11px;line-height:1}
-.m .p29-ei.big{width:22px;height:22px;border-radius:11px;font-size:13px}
-.m .p29-ei.ai{background:var(--pp-lab);color:#fff}
-.m .p29-ei.ddg{background:#de5833;color:#fff;font:800 11px Manrope,sans-serif}.m .p29-ei.ddg.big{font-size:13px}
 .m .p29-gl{flex:none}
 .m .p29-sf input{flex:1;min-width:0;height:40px;border:0;outline:none;background:transparent;color:var(--pp-ink);font:500 14.5px Manrope,system-ui,sans-serif;padding:0}
 .m .p29-sf input::placeholder{color:var(--pp-mut)}
@@ -3618,8 +3389,6 @@ html.p28-kb .m.papir{--pp-navb:calc(var(--p28-kb,0px) + 8px)}
 @media (prefers-reduced-motion:reduce){.m .p29-menu{animation:none}}
 
 /* Pille og banner for timer som legges til i bakgrunnen (over alt, også fullskjerm-Kalender). */
-.m .p29-pill{position:fixed;z-index:300;left:50%;top:calc(env(safe-area-inset-top) + 14px);transform:translateX(-50%);display:flex;align-items:center;gap:8px;height:36px;padding:0 14px;border-radius:18px;background:var(--pp-ink,#1b1a17);color:var(--pp-bg,#f3efe6);font:600 13px Manrope,system-ui,sans-serif;white-space:nowrap;box-shadow:0 10px 24px -10px rgba(0,0,0,.45)}
-.m .p29-spark{color:#f08a76;animation:p29sp 1.2s ease-in-out infinite}
 @keyframes p29sp{50%{opacity:.35}}
 .m .p29-ban{position:fixed;z-index:300;left:12px;right:12px;top:calc(env(safe-area-inset-top) + 14px);max-width:440px;margin:0 auto;display:flex;align-items:center;gap:10px;padding:10px 10px 10px 14px;border-radius:18px;background:var(--pp-ink,#1b1a17);color:var(--pp-bg,#f3efe6);box-shadow:0 14px 30px -10px rgba(0,0,0,.5);animation:p29in .18s ease-out}
 .m .p29-ban .m-grow{min-width:0;display:flex;flex-direction:column;gap:1px}.m .p29-ban b{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.m .p29-ban .m-grow span{font-size:12.5px;opacity:.8}
@@ -3807,7 +3576,6 @@ html.p30-kb .m .ch27 :is(.pp-nav,.tabbar,.navbar){display:none}
 .m .p30-cmpt{display:block;font:700 30px/1.1 -apple-system,BlinkMacSystemFont,'SF Pro Display','Helvetica Neue',system-ui,sans-serif;color:#fff}
 .m .p30-cmph small{font-size:14px;color:#9aa3ae}
 .m .p30-cmpfs .vx-card{background:#20232a}
-.m .w30-mapx{background:rgba(10,20,35,.7)!important;color:#fff!important;-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
 
 /* Boliger (claude-code-boliger-kvittering-deling-rediger.md) */
 .m button.p16-ent.b30-ent{width:100%;border:0;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer;-webkit-tap-highlight-color:transparent}
@@ -3835,7 +3603,6 @@ html.p30-kb .m .ch27 :is(.pp-nav,.tabbar,.navbar){display:none}
 .m .b30-hd .m-grow{min-width:0}
 .m .b30-mer{display:block;width:100%;box-sizing:border-box;margin-top:4px;padding:2px 0;border:0;border-bottom:1.5px dashed var(--pp-line);border-radius:0;background:transparent;color:var(--pp-ink);font:500 26px/1.15 Newsreader,serif;outline:none;min-width:0}
 .m .b30-body{display:flex;gap:12px;align-items:stretch}
-.m .b30-img{flex:none;width:96px;min-height:124px;border-radius:12px;background:var(--pp-card) center/cover no-repeat;border:1px solid var(--pp-line);display:grid;place-items:center;color:var(--pp-mut);font-size:12px;text-align:center;text-decoration:none}
 .m .b30-f{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px}
 .m .b30-amtl{display:flex;align-items:baseline;gap:6px;border-bottom:1.5px dashed var(--pp-line)}
 .m .b30-amtl input{flex:1;min-width:0;width:100%;padding:0;border:0;background:transparent;color:var(--pp-ink);font:500 34px/1.1 Newsreader,serif;outline:none}
@@ -3913,7 +3680,7 @@ html.p30-kb .m .ch27 :is(.pp-nav,.tabbar,.navbar){display:none}
 @keyframes p31pop{from{opacity:0;transform:translate(-50%,0) scale(.6)}to{opacity:1;transform:translate(-50%,0) scale(1)}}
 @media (prefers-reduced-motion:reduce){
   .g31 .g31-r{animation:none!important}.g31 .g31-st{animation:g31breath 3.2s ease-in-out infinite!important}.g31>i.g31-t1,.g31>i.g31-t2{animation:none;opacity:.8}.g31 .g31-gl{animation:none}
-  .p31-toast,.p31-bub,.p31-away{animation:none!important}.g31-dots i{animation:none!important;opacity:.6}
+  .p31-toast,.p31-bub{animation:none!important}.g31-dots i{animation:none!important;opacity:.6}
 }
 .g31-dots{display:inline-flex;gap:3px;margin-left:-4px}.g31-dots i{width:4px;height:4px;border-radius:2px;background:currentColor;animation:g31dot 1.2s ease-in-out infinite}.g31-dots i:nth-child(2){animation-delay:.15s}.g31-dots i:nth-child(3){animation-delay:.3s}
 /* ---------- Toast øverst og glassboble ---------- */
@@ -3939,9 +3706,7 @@ html.p30-kb .m .ch27 :is(.pp-nav,.tabbar,.navbar){display:none}
 .m .p31-bb{display:flex;gap:8px}.m .p31-bb button{flex:1;height:38px;border-radius:19px;border:0;background:rgba(27,26,23,.08);color:inherit;font:700 13px Manrope,sans-serif;cursor:pointer}.m .p31-bb button.ink{background:#1b1a17;color:#f3efe6}
 .m.papir.pd .p31-bb button{background:rgba(255,255,255,.12)}.m.papir.pd .p31-bb button.ink{background:#f3efe6;color:#1b1a17}
 /* ---------- «Glimt svarte mens du var borte» ---------- */
-.m .p31-away{position:fixed;z-index:322;left:12px;right:12px;top:calc(env(safe-area-inset-top,0px) + 10px);max-width:440px;margin:0 auto;display:flex;align-items:center;gap:12px;padding:12px 14px;border:0;border-radius:22px;background:rgba(27,26,23,.92);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);color:#f3efe6;text-align:left;font-family:Manrope,system-ui,sans-serif;box-shadow:0 18px 40px -16px rgba(0,0,0,.55);animation:p31in2 .3s cubic-bezier(.2,.8,.2,1);cursor:pointer}
 @keyframes p31in2{from{opacity:0;transform:translateY(-14px)}to{opacity:1;transform:none}}
-.m .p31-away .m-grow{min-width:0;display:flex;flex-direction:column;gap:2px}.m .p31-away b{font-size:13px;font-weight:700;opacity:.8}.m .p31-away .m-grow span{font-size:14.5px;line-height:1.35;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 /* ---------- Søkefelt: motor-ikon og svarboble ---------- */
 .m .p29-eng .g31{margin:0 1px}
 .m .p31-ddg,.m .p29-gl{flex:none;display:block}
@@ -4544,9 +4309,6 @@ html[data-ui=mobile] body:has(#app > .m.p34-brpg){background:var(--pp-bg)}
 @media (prefers-reduced-motion:reduce){ .m .gf,.m .gf *{animation:none!important} .m .p35-pop{animation:p35Fade .3s ease both} .m .p35-bars i{animation:none!important} }
 
 /* Briefen: høyttaler, ⚙ og Ferdig i toppen */
-.m .p35-hb{display:flex;gap:6px;align-items:center}
-.m .p35-ib{width:36px;height:36px;border-radius:18px;border:1px solid var(--pp-line);background:var(--pp-card);color:var(--pp-ink);cursor:pointer;display:grid;place-items:center;padding:0;flex:none}
-.m .p35-ib.on{background:var(--pp-ink);color:var(--pp-bg);border-color:var(--pp-ink)}
 .m .p35-spk{display:flex;align-items:center;gap:8px;align-self:flex-start;height:30px;padding:0 12px;border-radius:15px;border:0;background:#1b1a17;color:#f3efe6;font:700 12px Manrope,sans-serif;animation:p34In .2s ease both}
 .m.pd .p35-spk{background:#f3efe6;color:#1b1a17}
 .m .p35-spk.hint{cursor:pointer}
@@ -4977,7 +4739,6 @@ html.p36-booting body{overflow:hidden}
 .m .p37-geo button{flex:none;height:30px;padding:0 12px;border-radius:15px;border:0;background:#f3efe6;color:#1b1a17;font:700 12px Manrope,sans-serif}
 @keyframes p37drop{from{opacity:0;transform:translateY(-16px)}to{opacity:1;transform:none}}
 /* Brief: Gjøremål-kortet, Vær-kortet er trykkbart, etiketten øverst er fjernet */
-.m .p37-brh{justify-content:flex-end}
 .m .p37-wxb{cursor:pointer;transition:transform .15s}
 .m .p37-wxb:active{transform:scale(.985)}
 .m .p37-btr{display:flex;align-items:center;gap:12px;min-height:44px;border-top:1px solid var(--pp-line);min-width:0}
@@ -5301,9 +5062,6 @@ html.p38-camon body{overflow:hidden}
 /* Domener: Glimt-knappen og oppsummeringen */
 .m .p38-domg svg{display:block}
 .m .pp-scan.p38-domg{display:grid;place-items:center;font-size:0}
-.m .p38-dgc{display:flex;justify-content:center;padding:6px 0 2px}
-.m .p38-dgo{display:flex;align-items:center;gap:10px;height:46px;padding:0 22px;border-radius:999px;border:0;background:var(--pp-ink);color:var(--pp-bg);cursor:pointer;font:700 14.5px Manrope,sans-serif;box-shadow:0 10px 26px -12px rgba(27,26,23,.55);max-width:100%;white-space:nowrap}
-.m .p38-dgo span{font:600 10.5px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#e8a593}
 .m .p38-dg{display:flex;flex-direction:column;gap:14px;padding:18px 18px 20px;animation:p38Up .32s cubic-bezier(.2,.8,.2,1) both}
 .m .p38-dgh{display:flex;align-items:center;gap:10px}
 .m .p38-dgm{flex:none;line-height:0}
@@ -5483,7 +5241,6 @@ html.p39-sh .m .pp-sheet,html.p39-sh .m .p37-sheet,html.p39-sh .m .p28-sheet{pos
 .m .w32-x.p40-dk{background:rgba(10,20,35,.62)!important}
 .m .w32-x{position:relative}.m .w32-x::after{content:'';position:absolute;inset:-2px}
 .m .vx-shtop{grid-template-columns:42px 1fr 42px}
-.m .p40-wrow{display:flex;align-items:center;justify-content:space-between;gap:10px}
 /* Yr mot Storm: tittelen rett under statuslinja, ✕ på linje med tittelen, «Ferdig» som hvit pille i redigering */
 .m .p39-cmsc{padding-top:0!important}
 .m .p39-cmin{padding-top:calc(env(safe-area-inset-top) + 12px)!important}
@@ -5730,7 +5487,7 @@ html.h40-ov,html.h40-ov body{overflow:hidden}
 @keyframes p41xf{from{opacity:1}to{opacity:0}}
 .m .p41-cred a{color:inherit;text-decoration:underline;text-underline-offset:2px}
 /* Hjem-hero: ingen krediteringslinje (flyttet til Innstillinger → Tilpass → Bakgrunn) */
-.m .pp-hero .pp-credit,.m .p19-band .p19-cr{display:none!important}
+.m .pp-hero .pp-credit{display:none!important}
 
 /* Skanneknapp på Hjem */
 .m .p41-scanr{border-top:0;padding:10px 14px}
@@ -6026,11 +5783,9 @@ html.h40-ov,html.h40-ov body{overflow:hidden}
 .m .p42-nha{position:fixed;z-index:21;left:12px;bottom:var(--pp-navb);width:62px;height:62px;border-radius:50%;background:var(--pp-nav);color:var(--pp-navInk);display:grid;place-items:center;text-decoration:none;-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);box-shadow:0 16px 30px -12px rgba(0,0,0,.5);-webkit-tap-highlight-color:transparent}
 .m .p42-nha.on{background:var(--pp-navAct);color:var(--pp-navActInk)}
 .m .p42-nha:active,.m .p42-nhb:active,.m .p42-nhc:active,.m .p42-nhd:active{transform:scale(.94)}
-.m .pp-nav.p42-n1a{left:86px!important;margin:0!important;max-width:none}
 .m .pp-nav>a.p42-nhb{flex:none!important;width:52px!important;height:46px;padding:0!important;margin-right:4px;border-radius:23px 0 0 23px!important;border-right:1px solid rgba(255,255,255,.16);background:transparent;color:var(--pp-navInk);display:grid!important;place-items:center}
 .m.pl .pp-nav>a.p42-nhb{border-right-color:rgba(255,255,255,.16)}.m.pd .pp-nav>a.p42-nhb{border-right-color:rgba(0,0,0,.14)}
 .m .pp-nav>a.p42-nhb.on{background:var(--pp-navAct);color:var(--pp-navActInk)}
-.m .pp-nav.p42-n1c{overflow:visible}
 .m .pp-nav>a.p42-nhc{flex:none!important;width:60px!important;height:60px!important;margin-top:-28px;padding:0!important;box-sizing:border-box;border-radius:30px!important;border:5px solid var(--pp-bg);background:var(--pp-lab)!important;color:#fff!important;display:grid!important;place-items:center;box-shadow:0 8px 18px -8px rgba(0,0,0,.5)}
 .m .pp-nav>a.p42-nhc.on{border-color:var(--pp-navAct)}
 .m .pp-nav>.p42-nhd{flex:none;height:46px;padding:0 12px 0 8px;border-radius:23px;border:0;background:rgba(255,255,255,.1);color:var(--pp-navInk);display:flex;align-items:center;gap:6px;font:700 13px Manrope,sans-serif;white-space:nowrap;cursor:pointer}
@@ -6232,8 +5987,6 @@ html.h40-ov,html.h40-ov body{overflow:hidden}
 @media (prefers-reduced-motion:reduce){.m .p43m{animation:none}}
 .m .p43-top{flex:none;display:flex;flex-direction:column;gap:8px;padding:calc(env(safe-area-inset-top) + 14px) 16px 0}
 .m .p43-tr{display:flex;align-items:center;gap:8px;min-height:44px}
-.m .p43-back{height:44px;padding:0 8px 0 0;border:0;background:transparent;color:var(--pp-lab);font:700 16px Manrope,sans-serif;cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:4px}
-.m .p43-back span{font-size:22px;line-height:1}
 .m .p43-ib{flex:none;width:44px;height:44px;border-radius:22px;border:1px solid var(--pp-line);background:var(--pp-card);color:var(--pp-ink);display:flex;align-items:center;justify-content:center;cursor:pointer;font-weight:800}
 .m .p43-ib.lab{color:var(--pp-lab)}.m .p43-ib.on{background:var(--pp-ink);border-color:var(--pp-ink)}
 .m .p43-h1{font:500 34px/1 Newsreader,serif}
@@ -6281,7 +6034,6 @@ html.h40-ov,html.h40-ov body{overflow:hidden}
 .m .p43-kd{display:flex;flex-direction:column;gap:10px;min-width:0}
 .m .p43-kdh{display:flex;justify-content:space-between;align-items:baseline;padding-bottom:6px;border-bottom:1.5px solid var(--pp-ink)}.m .p43-kdh b{font-size:14px}.m .p43-kdh span{font:600 10.5px 'IBM Plex Mono',monospace;color:var(--pp-mut)}
 .m .p43-kdh.now{border-color:var(--pp-lab)}.m .p43-kdh.now b{color:var(--pp-lab)}.m .p43-kdh.none{border-color:var(--pp-line)}.m .p43-kdh.none b{color:var(--pp-mut)}
-.m .p43-kit{display:flex;flex-direction:column;gap:5px;border:0;background:transparent;padding:0;text-align:left;color:var(--pp-ink);cursor:pointer;font-family:inherit;min-width:0}
 .m .p43-strip{padding:14px 16px;border-radius:18px;background:var(--pp-ink);color:var(--pp-bg);display:flex;align-items:center;gap:14px 20px;flex-wrap:wrap}
 .m .p43-stl{flex:none;border:0;background:transparent;color:inherit;padding:0;font:500 20px Newsreader,serif;cursor:pointer}
 .m .p43-sti{flex:1 1 180px;min-width:0;display:flex;align-items:center;gap:10px}.m .p43-sti .m-grow{min-width:0;display:flex;flex-direction:column;gap:5px;font-size:13px;font-weight:700}
@@ -6289,7 +6041,6 @@ html.h40-ov,html.h40-ov body{overflow:hidden}
 .m .p43-lib{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px 10px}
 .m .p43-li{display:flex;flex-direction:column;gap:5px;min-width:0;border:0;background:transparent;padding:0;text-align:left;color:var(--pp-ink);cursor:pointer;font-family:inherit}
 .m .p43-li .mut{font-size:12.5px}.m .p43-li.sel .p43-pst{box-shadow:0 0 0 3px var(--pp-lab)}
-.m .p43-bk{align-self:flex-start;height:40px;padding:0;border:0;background:transparent;color:var(--pp-lab);font:700 15px Manrope,sans-serif;cursor:pointer;margin-bottom:-8px}
 .m .p43-dh{display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap}
 .m .p43-dh>.p43-pst{width:104px}.m.p43-big .p43-dh>.p43-pst{width:120px}
 .m .p43-dh .m-grow{flex:1 1 200px;min-width:0;display:flex;flex-direction:column;gap:6px}.m .p43-dh .mut{font-size:15px}
@@ -7048,7 +6799,6 @@ html.h40-ov,html.h40-ov body{overflow:hidden}
 .m .p45-swck{flex:none;width:26px;height:26px;border-radius:13px;background:var(--pp-ink);color:var(--pp-bg);display:grid;place-items:center;font:800 13px Manrope,sans-serif}
 
 /* Ruter: antall anbefalte reiser */
-.m .p45-rmw{position:relative;flex:none}
 .m .p45-rmb{width:36px;height:36px;border-radius:18px;border:1px solid var(--pp-line);background:var(--pp-card);color:var(--pp-ink);font:800 16px/1 Manrope,sans-serif;cursor:pointer}
 .m .p45-rmenu{position:absolute;right:0;top:42px;z-index:30;width:236px;padding:12px;border-radius:18px;background:var(--pp-card);box-shadow:0 18px 40px -16px rgba(0,0,0,.45);display:flex;flex-direction:column;gap:8px;border:1px solid var(--pp-line)}
 .m .p45-rmenu .p45-seg{width:100%}.m .p45-rmenu .p45-seg button{flex:1}
@@ -7451,3 +7201,91 @@ html.h40-ov,html.h40-ov body{overflow:hidden}
 /* Prompt 85: mørkt papir har lys aksent (--pp-lab #f08a76). Hvit tekst på den ga 2,4:1 i «N kvitteringer til gjennomgang» og Glimt-pillen;
    --pp-onLab er hvit i lyst og mørk i mørkt papir (samme som Kontoer-kortet bruker). */
 .m.papir .pp-cta,.m.papir .pp-cta a,.m.papir .pp-cta button,.m.papir .p43-gpill{color:var(--pp-onLab,#fff)!important}
+
+/* Q35 (B-B11): onboardingen som kort over fanelinja når appen åpnes med en dyp lenke (mobile-gate.js showOnboardingCard).
+   Fargene fra mobilpaletten (--pp-*, mobile-theme.js), som følger Homelab-modusen. */
+.pp-obk{position:fixed;z-index:30;left:16px;right:16px;bottom:calc(env(safe-area-inset-bottom) + 92px);max-width:528px;margin:0 auto;display:flex;flex-direction:column;gap:12px;padding:16px;border-radius:20px;background:var(--pp-card);color:var(--pp-ink);border:1px solid var(--pp-line);box-shadow:var(--ds-shadow-high,0 12px 32px rgba(0,0,0,.2));font-family:Manrope,system-ui,sans-serif}
+.pp-obk-t{display:flex;flex-direction:column;gap:4px}
+.pp-obk-t b{font-size:16px;font-weight:700}
+.pp-obk-t span{font-size:14px;line-height:1.4;color:var(--pp-mut)}
+.pp-obk-k{display:flex;gap:8px;justify-content:flex-end}
+.pp-obk button{min-height:44px;padding:0 18px;border-radius:999px;font:700 14px Manrope,system-ui,sans-serif;cursor:pointer}
+.pp-obk-later{background:transparent;color:var(--pp-ink);border:1px solid var(--pp-line)}
+.pp-obk-go{background:var(--pp-ink);color:var(--pp-bg);border:0}
+
+/* E-B5: den flytende Skann-/+-knappen lå over beløpskolonnen i lister (Siste transaksjoner). På smal skjerm står den nå i
+   samme rad som fanelinja, som gjør plass til den. Lista har allerede luft under fanelinja, så ingenting dekkes. */
+@media (max-width: 599px) {
+  .m.papir .pp-nav:has(+ .pp-fab){right:80px;max-width:none}
+  .m.papir .pp-nav:has(+ .pp-fab) + .pp-fab{right:12px;bottom:calc(var(--pp-navb) + 1px)}
+  /* Smalere fanelinje: mindre luft og ikonet i den valgte fanen skjules, så fem navn (også «Oversikt») får plass uten «…». */
+  .m.papir .pp-nav:has(+ .pp-fab) a{padding-left:3px;padding-right:3px}
+  .m.papir .pp-nav:has(+ .pp-fab) a[aria-current]{padding-left:12px;padding-right:12px}
+  .m.papir .pp-nav:has(+ .pp-fab) a[aria-current] i{display:none}
+}
+
+/* ===== PWA: saldokortet, månedslinja, Mer-bryterne og «Nytt i x.y.z» (prompt 52, WEB52F). Lå før i fin52.css ===== */
+/* ---------- 3. PWA: saldokortet i fire utseender (claude-code-saldokort-utseende.md) ---------- */
+.m .p52-sal{-webkit-touch-callout:none;user-select:none;-webkit-user-select:none;touch-action:manipulation}
+.m .p52-sal.glass{border-radius:28px!important;color:#fff;background:rgba(27,26,23,.5);-webkit-backdrop-filter:blur(22px) saturate(1.6);backdrop-filter:blur(22px) saturate(1.6);box-shadow:inset 0 1px 0 rgba(255,255,255,.4),inset 0 0 0 1px rgba(255,255,255,.18),0 24px 40px -22px rgba(0,0,0,.55)}
+.m .p52-sal.glass .p43-salh .pp-lab{color:#ffd2c8}
+.m .p52-sal.glass .p43-salgo{background:rgba(255,255,255,.2);color:#fff}
+.m .p52-sal.glass .p43-salv span{color:rgba(255,255,255,.7)}
+.m .p52-sal.glass .p43-salm{background:rgba(0,0,0,.22);border-radius:20px}
+.m .p52-sal.glass .p43-ring>span{background:#3f3b36;color:#fff}
+.m .p52-sal.glass .p43-salt{color:rgba(255,255,255,.75)}
+.m .p52-sal.kvitt{position:relative;gap:0;padding:0!important;border-radius:18px!important;box-shadow:0 2px 0 var(--pp-line),0 18px 30px -22px rgba(27,26,23,.5)}
+.m .p52-sal .p52-salt{display:flex;flex-direction:column;gap:14px;width:100%;box-sizing:border-box}
+.m .p52-sal.kvitt .p52-salt{padding:20px 20px 18px}
+.m .p52-sal.kvitt .p43-salgo{width:auto;height:auto;background:transparent}
+.m .p52-perf{position:relative;display:block;height:0;border-top:2px dashed var(--pp-line);margin:0 18px;align-self:stretch}
+.m .p52-perf::before,.m .p52-perf::after{content:"";position:absolute;top:-11px;width:20px;height:20px;border-radius:10px;background:var(--pp-bg)}
+.m .p52-perf::before{left:-30px}.m .p52-perf::after{right:-30px}
+.m .p52-sal.kvitt .p43-salm{padding:16px 20px 18px;background:transparent;border-radius:0}
+.m .p52-sal.kvitt .p43-ring>span{background:var(--pp-card)}
+.m .p52-sal.farge{gap:0;padding:0!important;border-radius:32px!important;background:var(--pp-lab);color:var(--pp-on,#fff);overflow:hidden;box-shadow:0 22px 40px -22px color-mix(in srgb,var(--pp-lab) 70%,transparent)}
+.m .p52-sal.farge .p52-salt{background:var(--pp-card);color:var(--pp-ink);border-radius:32px 32px 28px 28px;padding:22px 22px 20px}
+.m .p52-sal.farge .p43-salm{padding:14px 22px 16px;background:transparent;color:var(--pp-on,#fff)}
+.m .p52-sal.farge .p43-ring>span{background:var(--pp-lab);color:var(--pp-on,#fff)}
+.m .p52-sal.farge .p43-salt{color:inherit;opacity:.85}
+/* Arket «Utseende på saldokortet» */
+.p52-scrim{position:fixed;inset:0;z-index:9000;background:rgba(27,26,23,.35);animation:p52fade .2s ease both}
+.p52-sheet{position:fixed;left:0;right:0;bottom:0;z-index:9001;box-sizing:border-box;max-height:85vh;overflow-y:auto;overscroll-behavior:contain;padding:10px 18px calc(22px + env(safe-area-inset-bottom));border-radius:26px 26px 0 0;background:var(--pp-bg,#f3efe6);color:var(--pp-ink,#1b1a17);display:flex;flex-direction:column;gap:14px;font-family:Manrope,system-ui,sans-serif;box-shadow:0 -20px 50px -20px rgba(0,0,0,.4);animation:p52up .28s cubic-bezier(.2,.8,.2,1) both}
+@media (min-width:700px){.p52-sheet{left:50%;right:auto;width:520px;transform:translateX(-50%);bottom:24px;border-radius:26px;animation:p52fade .2s ease both}}
+.p52-grab{align-self:center;width:38px;height:5px;border-radius:3px;background:var(--pp-line,#d8d1c2)}
+.p52-sh{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.p52-sh b{font:500 24px Newsreader,serif}
+.p52-done{border:0;background:transparent;color:var(--pp-lab,#b23a2a);font:700 15px Manrope,sans-serif;cursor:pointer;padding:6px;min-height:44px}
+.p52-opts{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.p52-opt{border:2px solid transparent;border-radius:20px;background:var(--pp-card,#fff);color:var(--pp-ink,#1b1a17);padding:10px;display:flex;flex-direction:column;gap:8px;cursor:pointer;font-family:inherit;text-align:left}
+.p52-opt[aria-checked=true]{border-color:var(--pp-lab,#b23a2a)}
+.p52-opt .pv{height:64px;border-radius:12px}
+.p52-opt .r{display:flex;justify-content:space-between;align-items:center}
+.p52-opt .r b{font-size:13.5px;font-weight:700}.p52-opt .r span{font-size:13px;color:var(--pp-lab,#b23a2a);font-weight:800}
+.p52-opt small{font-size:11.5px;color:var(--pp-mut,#6b665c);line-height:1.3}
+.p52-opt:focus-visible,.p52-done:focus-visible{outline:2px solid var(--pp-lab,#b23a2a);outline-offset:2px}
+@keyframes p52up{from{transform:translateY(40px);opacity:0}to{transform:none;opacity:1}}
+@keyframes p52fade{from{opacity:0}to{opacity:1}}
+@media (prefers-reduced-motion:reduce){.p52-sheet,.p52-scrim{animation:none}}
+
+/* ---------- 4. PWA: Finans → Liste, avrundet månedslinje når den er festet ---------- */
+/* .m har overflow-x:hidden, som gjør den til en scroll-container som aldri scroller – da fester sticky seg aldri.
+   clip klipper uten å lage en scroll-container. */
+.m:has(.p43-mg){overflow-x:clip!important}
+.m .p43-mh{top:calc(env(safe-area-inset-top) + 10px);z-index:4;transition:border-radius .22s ease,padding .22s ease,margin .22s ease,box-shadow .22s ease,background-color .22s ease,border-color .22s ease}
+.m .p43-mh.p52-on{border-radius:16px;padding:10px 14px;margin:0 -6px;border-bottom-color:transparent;background:color-mix(in srgb,var(--pp-card) 88%,transparent);-webkit-backdrop-filter:blur(14px) saturate(1.4);backdrop-filter:blur(14px) saturate(1.4);box-shadow:0 10px 24px -14px rgba(27,26,23,.45),inset 0 0 0 1px color-mix(in srgb,var(--pp-line) 70%,transparent)}
+@media (prefers-reduced-motion:reduce){.m .p43-mh{transition:none}}
+
+/* ---------- 5. PWA: Mer – brytere i wiggle (Søkefelt · tittel · Verktøy) ---------- */
+.m .p52-pills{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 4px}
+.m .p52-pill{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 14px 0 11px;border-radius:18px;border:1.5px solid var(--pp-ink);background:var(--pp-card);box-shadow:0 8px 20px -12px rgba(0,0,0,.45);color:var(--pp-ink);font:700 13px Manrope,sans-serif;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.m .p52-pill.on{background:var(--pp-ink);color:var(--pp-bg)}
+.m .p52-pill span{font-weight:800}
+.m .p52-pill:focus-visible{outline:2px solid var(--pp-lab);outline-offset:2px}
+
+/* ---------- 6. PWA: System → «NYTT I x.y.z» som punkter (overskrift + kort tekst) ---------- */
+.m .n31-new .p52-np{display:flex;flex-direction:column}
+.m .n31-new .p52-np>div{display:flex;flex-direction:column;gap:3px;padding:12px 0;border-top:1px solid var(--pp-line)}
+.m .n31-new .p52-np>div:first-child{border-top:0;padding-top:4px}
+.m .n31-new .p52-np b{font:700 15px/1.35 Manrope,sans-serif;color:var(--pp-ink)}
+.m .n31-new .p52-np span{font:400 14px/1.55 Manrope,sans-serif;color:var(--pp-ink);opacity:.82;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}

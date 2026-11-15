@@ -15,10 +15,9 @@ import { M as M78, locate78, off78, cfgOf78, ledSetupHtml78 } from './skjold78-l
 import { secsLeft78 } from './skjold78-logic.js';
 import { pickTargetHtml82, pickTarget82, afterPickTake82 } from './skjold82-projects.js'; // prompt 82: «Til produkt» ved «Ta ut av lager»
 import { MAX_LIT79, normPick79, has79, toggle79, setQty79, snap79, pickBody79, locateBody79, colorsOf79, skippedOf79, hint79, steps79, report79 } from './skjold79-logic.js';
+import { pageCss } from './lib/page-css.js';
 
-if (typeof document !== 'undefined' && !document.querySelector('link[data-sk79-css]')) {
-  const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = '/assets/css/skjold79.css'; l.dataset.sk79Css = ''; document.head.appendChild(l);
-}
+pageCss('skjold');
 
 /** items: plukklista · lit: lyset vi tente (for fargene) · open: arket · diag: feilsøkingen. */
 export const P = { items: [], lit: null, open: false, diag: null, loaded: false, serverOff: false, at: 0 };

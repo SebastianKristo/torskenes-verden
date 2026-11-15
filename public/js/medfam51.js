@@ -4,39 +4,9 @@
 // API: /api/famcal51/* og /api/media51/* (SERVER51-API.md, seksjon MEDFAM51). Ingen nøkler eller tjenesteadresser kommer hit.
 import { api, esc } from './util.js';
 import { toast } from './toast.js';
+import { pageCss } from './lib/page-css.js';
 
-const CSS = `
-.mf51{max-width:1100px;margin:0 auto;padding:8px 0 40px;color:var(--text,#eef0f4);font:400 14px/1.45 Outfit,Geist,system-ui,sans-serif}
-.mf51 h1{margin:0;font:600 26px/1.2 Outfit,Geist,system-ui,sans-serif}.mf51 h2{margin:0 0 10px;font:600 17px/1.25 Outfit,Geist,system-ui,sans-serif}
-.mf51-sub{color:var(--muted,#8a93a6);margin:4px 0 18px}
-.pw + .mf51{padding-top:20px}.pw + .mf51 > h1{display:none}
-.mf51-grid{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:18px}
-.mf51-card{background:var(--card,rgba(18,25,38,.86));border:1px solid var(--line,#232938);border-radius:24px;padding:18px 20px;min-width:0}
-.mf51-row{display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-top:1px solid var(--line,#232938)}.mf51-row:first-of-type{border-top:0}
-.mf51-grow{flex:1;min-width:0}.mf51-t{font-weight:600}.mf51-m{color:var(--muted,#8a93a6);font-size:13px}
-.mf51-acts{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
-.mf51-b{border:1px solid var(--line,#232938);background:transparent;color:inherit;border-radius:999px;padding:6px 13px;font:600 13px Outfit,Geist,system-ui,sans-serif;cursor:pointer}
-.mf51-b.pri{background:var(--blue,#a8d4fb);border-color:transparent;color:#0b1220}html[data-hl="2c"] .mf51-b.pri{color:#fff}html[data-mode="dark"][data-hl="2c"] .mf51-b.pri{color:#16140f}.mf51-b.danger{color:var(--red,#f59a8f)}
-.mf51-b:focus-visible,.mf51 input:focus-visible,.mf51 select:focus-visible{outline:2px solid var(--blue,#a8d4fb);outline-offset:2px}
-.mf51 input,.mf51 select,.mf51 textarea{background:var(--field,#0b0e15);color:inherit;border:1px solid var(--line,#232938);border-radius:10px;padding:7px 10px;font:inherit;min-width:0}
-.mf51-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.mf51-form .full{grid-column:1/-1}.mf51-form label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--muted,#8a93a6)}
-.mf51-chk{display:flex;gap:14px;flex-wrap:wrap;align-items:center;font-size:13px}.mf51-chk label{flex-direction:row;align-items:center;gap:6px;color:inherit}
-.mf51-pill{display:inline-block;border-radius:999px;padding:2px 9px;font-size:12px;background:var(--row,#1d2738)}
-.mf51-pill.open{background:rgba(245,154,143,.18);color:var(--red,#f59a8f)}.mf51-pill.ok{background:rgba(143,224,176,.16);color:var(--green,#8fe0b0)}
-.mf51-day{margin:14px 0 4px;font:600 12px/1 Outfit,Geist,system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:var(--muted,#8a93a6)}
-.mf51-tabs{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 16px}.mf51-tabs button[aria-selected=true]{background:var(--blue,#a8d4fb);color:#0b1220;border-color:transparent}
-.mf51-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px}
-.mf51-item{display:flex;gap:12px;background:var(--row,#1d2738);border-radius:18px;padding:12px;min-width:0}
-.mf51-item img{width:64px;height:96px;object-fit:cover;border-radius:10px;flex:none;background:var(--field,#0b0e15)}
-.mf51-ph{width:64px;height:96px;border-radius:10px;flex:none;background:var(--field,#0b0e15);display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--muted,#8a93a6)}
-.mf51-bar{height:6px;border-radius:3px;background:var(--field,#0b0e15);overflow:hidden;margin-top:6px}.mf51-bar i{display:block;height:100%;background:var(--blue,#a8d4fb)}
-.mf51-bar.warn i{background:var(--red,#f59a8f)}
-.mf51-ruter{margin-top:6px;padding:8px 10px;border-radius:12px;background:var(--field,#0b0e15);font-size:13px}
-.mf51-empty{color:var(--muted,#8a93a6);padding:10px 0}
-.mf51-jump{display:inline-block;margin:0 0 12px;padding:7px 14px;border-radius:999px;background:var(--row,#1d2738);color:var(--text,#eef0f4);border:1px solid var(--line,#232938);font:600 13px Outfit,Geist,system-ui,sans-serif;text-decoration:none;position:relative;z-index:5}
-@media (max-width:820px){.mf51-grid{grid-template-columns:minmax(0,1fr)}.mf51-form{grid-template-columns:minmax(0,1fr)}.mf51 h1{font-size:22px}.mf51-card{padding:16px}}
-`;
-const css = () => { if (!document.getElementById('mf51-css')) { const s = document.createElement('style'); s.id = 'mf51-css'; s.textContent = CSS; document.head.appendChild(s); } };
+const css = () => pageCss('mediakveld-familiekalender'); // stilen ligger i public/css/pages/
 const J = (path, method = 'GET', json) => api(path, { method, ...(json !== undefined ? { json } : {}) });
 const say = (e) => toast(e?.message ?? String(e));
 const ini = (n) => (String(n ?? '').match(/\p{L}/gu) ?? ['•']).slice(0, 2).join('').toUpperCase();
@@ -258,6 +228,9 @@ function jump(view, href, label) {
   a.className = 'mf51-jump'; a.href = href; a.textContent = label;
   // Prompt 85: i «Vindu og papir» starter siden med fotovinduet (.pw) som ligger bak toppmenyen. Lenken sto foran det
   // og dekket logoen og menyen. Den settes rett etter fotovinduet når det finnes.
+  // Media er en fullskjermside som ligger fast over visningen: lenken legges inne i siden, under fanene og Glimt (E-B2).
+  const media = view.querySelector('#m43 > .m43-main');
+  if (media) { const row = document.createElement('div'); row.className = 'mf51-jumprow'; row.append(a); media.before(row); return; }
   const pw = view.querySelector(':scope > section.pw');
   if (pw) pw.after(a); else view.prepend(a);
 }

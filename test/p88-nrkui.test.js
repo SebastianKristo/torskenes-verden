@@ -152,7 +152,7 @@ test('følg-bilde: ukjent serie hentes én gang i bakgrunnen, så har neste kall
 /* ---------------- Web ---------------- */
 
 const web = readFileSync(new URL('../public/js/media-nrk.js', import.meta.url), 'utf8');
-const css = readFileSync(new URL('../public/css/media-nrk.css', import.meta.url), 'utf8');
+const css = readFileSync(new URL('../public/css/pages/media.css', import.meta.url), 'utf8');
 
 test('web: kort 1 «NRK» med søk, serieside og lenkefelt som sekundært valg (tekstene fra designet)', () => {
   for (const t of ['Søk i NRK TV og NRK Radio', 'Søk etter serier, filmer og podkaster.', 'Har du en lenke?', 'Legg i køen', 'Komprimer (H.265, ca. halv størrelse)',

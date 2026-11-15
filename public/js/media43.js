@@ -14,17 +14,13 @@ import { bg50, img50, prefetch50, setup50, onToast50, startTrack50, trackGrab50,
 import { init70, top70, ov70, kal70, bib70, ned70, act70, enter70, outside70, esc70, setBibSort70, resetSite70, state70 } from './media70.js';
 import { mountNrk } from './media-nrk.js'; // NRK-nedlaster (#/media/nrk)
 import { mountMusikk } from './media-musikk.js'; // Musikk/yubal (#/media/musikk)
+import { pageCss } from './lib/page-css.js';
 // Prompt 44 (claude-code-media-arr.md, -interaktivt-sok-504.md, -avspilling-plex-jellyfin.md, web):
 // søk i biblioteket, plakater i 2:3 (Kommer snart som liggende rader), Kommer snart Uke · Liste, banner med fanart i serie/film,
 // last ned på nytt / slett fil, felles servervalg («Hjemme/Hytta», ?server= på alle kall), frem/tilbake i nettleseren
 // (#/media/sonarr/s/<id>/sok …), fanen Avspilling, og interaktivt søk som jobb med status per indekser (cache 10 min).
 
-if (!document.querySelector('link[data-m43-css]')) {
-  const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = '/assets/css/media43.css'; l.dataset.m43Css = ''; document.head.appendChild(l);
-}
-if (!document.querySelector('link[data-m70-css]')) { // prompt 70: nytt design (lastes etter media43.css så det vinner)
-  const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = '/assets/css/media70.css'; l.dataset.m70Css = ''; document.head.appendChild(l);
-}
+pageCss('media');
 if (!document.querySelector('link[data-m70-fonts]')) {
   const f = document.createElement('link'); f.rel = 'stylesheet'; f.dataset.m70Fonts = '';
   f.href = 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap';

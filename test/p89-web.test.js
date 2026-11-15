@@ -74,7 +74,7 @@ test('Media-headeren: ingen varsler-pill, rekkefølge Tilbake · Media · faner 
   const order = ['m70-back', 'class="m70-h"', 'm70-tabs', 'm70-gl', '${srvHtml}', 'm70-x'].map((s) => top.indexOf(s));
   assert.ok(order.every((i) => i > 0), JSON.stringify(order));
   assert.deepEqual([...order].sort((x, y) => x - y), order);
-  const css = rd('public/css/media70.css');
+  const css = rd('public/css/pages/media.css');
   assert.ok(!/\.m70-al[wbmix]/.test(css), 'CSS for pillen er fjernet');
   assert.match(css, /\n\.m70-gl\{flex:1 1 auto;min-width:220px;max-width:520px;/);
   assert.match(css, /@media \(min-width:1181px\)\{\.m70-tl\{gap:12px\}\.m70-tab\{padding:10px 15px\}\}/);
@@ -93,7 +93,7 @@ test('innlogging: Oslo-scenen erstatter bildet, QR/passord urørt, bare transfor
   const sc = rd('public/js/login-scene89.js');
   for (const s of ['visibilitychange', 'IntersectionObserver', 'prefers-reduced-motion', "aria-hidden', 'true'", 'xMidYMax slice']) assert.ok(sc.includes(s), s);
   assert.ok(!/requestAnimationFrame|setInterval/.test(sc), 'ingen JS-løkke');
-  const css = rd('public/css/login.css'), part = css.slice(css.indexOf('/* Prompt 89'));
+  const css = rd('public/css/pages/login.css'), part = css.slice(css.indexOf('/* Prompt 89'));
   for (const k of part.matchAll(/@keyframes (sc89-[\w-]+)\{(.*)\}\n?/g)) {
     const props = [...k[2].matchAll(/([a-z-]+):/g)].map((x) => x[1]).filter((p) => !['from', 'to'].includes(p));
     for (const p of props) assert.ok(['transform', 'opacity'].includes(p), `${k[1]}: ${p}`);

@@ -7,9 +7,10 @@
 //    «qBittorrent svarer ikke», «Lagt til, men stoppet» [Start] osv. i stedet for et evig «Søker».
 import { esc } from './util.js';
 import { thumbHashToRGBA50, b64ToBytes50 } from './thumbhash50.js';
+import { pageCss } from './lib/page-css.js';
 
 if (typeof document !== 'undefined') {
-  if (!document.querySelector('link[data-m50-css]')) { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = '/assets/css/media50.css'; l.dataset.m50Css = ''; document.head.appendChild(l); }
+  pageCss('media');
   // Bilder som ikke lastes (f.eks. uten nett og uten cache) fjernes, så plassholderen står igjen.
   document.addEventListener('error', (e) => { const t = e.target; if (t?.classList?.contains('m50-im')) t.remove(); }, true);
 }

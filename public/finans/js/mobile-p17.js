@@ -73,13 +73,13 @@ export function applyIcon() {
   const svg = iconSvg(appIcon(), 'std'), url = svgUrl(svg);
   const set = (rel, href, type) => { let l = document.querySelector(`link[rel="${rel}"]`); if (!l) { l = document.createElement('link'); l.rel = rel; document.head.appendChild(l); } l.href = href; if (type) l.type = type; };
   set('icon', url, 'image/svg+xml');
-  // Prompt 39: standardikonet (Papir-monogram med H) bruker de ferdige filene fra /icons/ når de finnes.
+  // Prompt 39: standardikonet (Papir-monogram med H) bruker de ferdige filene fra /assets/icons/ (samme sti som app.html; /icons/ ga 404, E-B9).
   if (appIcon() === 'monogram' && appName().charAt(0).toUpperCase() === 'H') {
-    const t = new Image(); t.onload = () => set('apple-touch-icon', '/icons/app-icon-180.png'); t.src = '/icons/app-icon-180.png';
+    const t = new Image(); t.onload = () => set('apple-touch-icon', '/assets/icons/app-icon-180.png'); t.src = '/assets/icons/app-icon-180.png';
   }
   try {
     const img = new Image();
-    img.onload = () => { if (appIcon() === 'monogram' && document.querySelector('link[rel="apple-touch-icon"]')?.getAttribute('href') === '/icons/app-icon-180.png') return; const cv = document.createElement('canvas'); cv.width = cv.height = 180; cv.getContext('2d').drawImage(img, 0, 0, 180, 180); try { set('apple-touch-icon', cv.toDataURL('image/png')); } catch {} };
+    img.onload = () => { if (appIcon() === 'monogram' && document.querySelector('link[rel="apple-touch-icon"]')?.getAttribute('href') === '/assets/icons/app-icon-180.png') return; const cv = document.createElement('canvas'); cv.width = cv.height = 180; cv.getContext('2d').drawImage(img, 0, 0, 180, 180); try { set('apple-touch-icon', cv.toDataURL('image/png')); } catch {} };
     img.src = url;
   } catch {}
 }

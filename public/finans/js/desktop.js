@@ -8,20 +8,21 @@ import {
   smooth, spark, conic, icon, logo, aiLine, ICONS, loadLogoRegistry, sheetBtn,
 } from './core.js';
 import { reanalyzeBtn, bindReanalyze } from './reanalyze.js';
+import { fhDesign, settHomelabTema, nårTemaEndres } from './tema.js';
 import { clearBtn, bindSearchFields } from '/assets/js/searchfield.js';
 import { bindSuggest } from './fsuggest.js';
 import { linesOf, matchLines, markText, hlBanner, hlList, hlImage, hlFocus } from './rc-hl.js';
 import { MODULE_PAGES, MODULE_SUB, MODULE_FN, MODULE_LOADERS, bolSettings, loadBolSettings, bindModules, backupTab, firstRunCard, loadBackup, impPage, finnImportBox, loadImpTpl, aksSettings, loadStocksSettings } from './modules.js';
-import { addedLine, linesEditor, bindEditor, rereadBtn, glimtFrom, glimtCard, isStandardQ, saveLines, editorDirty } from './fin40.js'; // prompt 40
+import { addedLine, linesEditor, bindEditor, rereadBtn, glimtFrom, glimtCard, isStandardQ, saveLines, editorDirty } from './kvittering-detaljer.js'; // prompt 40
 // Prompt 42: Glimt-orben, ny logo og fargede menyikoner, Boliger 2a + 1b, Filter, Glimt-oppgaver og import til Boliger.
-import { orb, brandMark, navTile, thinkHtml, askStream } from './fin42.js';
-import { bolScope, bolSearch, afterB42 } from './bol42.js';
-import { filterPage, loadFilter, bindFilter, enterFilter } from './filter42.js';
-import { tasksCard, loadTasks, bindGj42, startTask, homeRulesBox, loadHomeRules } from './gj42.js';
-import { form48, via48, uncTag48, uncCls48, is48, flush48, bind48, setRedraw48, _e48 } from './scan48.js'; // prompt 48: skjemaet for skannede kvitteringer
-import { srcTag51, raw51, bind51, learn51 } from './rcpt51.js'; // prompt 51: kilden til butikknavnet, «Rådata» og læring av butikknavn
-import { logoBtn73 } from './logo73.js'; // prompt 73: trykk på logoen → «Endre logo»
-import { rcPanel52, rcpBefore52, rcpAfter52, rcpGone52 } from './rcpanel52.js'; // prompt 52 (WEB52F): felles kvitteringspanel
+import { orb, brandMark, navTile, thinkHtml, askStream } from './ui-felles.js';
+import { bolScope, bolSearch, afterB42 } from './boliger.js';
+import { filterPage, loadFilter, bindFilter, enterFilter } from './filter.js';
+import { tasksCard, loadTasks, bindGj42, startTask, homeRulesBox, loadHomeRules } from './glimt-oppgaver.js';
+import { form48, via48, uncTag48, uncCls48, is48, flush48, bind48, setRedraw48, _e48 } from './kvittering-skjema.js'; // prompt 48: skjemaet for skannede kvitteringer
+import { srcTag51, raw51, bind51, learn51 } from './kvittering-kilde.js'; // prompt 51: kilden til butikknavnet, «Rådata» og læring av butikknavn
+import { logoBtn73 } from './endre-logo.js'; // prompt 73: trykk på logoen → «Endre logo»
+import { rcPanel52, rcpBefore52, rcpAfter52, rcpGone52 } from './kvitteringspanel.js'; // prompt 52 (WEB52F): felles kvitteringspanel
 
 ICONS.ai = 'M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9zM19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z';
 ICONS.filter = 'M4 6h16M7 12h10M10 18h4';
@@ -150,35 +151,25 @@ const suggList = (r) => (Array.isArray(r) ? r : r?.items ?? []);
 
 /* ===================== Tema og kompakt sidemeny (prompt 13) ===================== */
 
-// Temaene fra «FinansHub v3 Temaer». Valget lagres per bruker i /api/me/layout (design, compactNav), med localStorage
-// som reserve når serveren ikke kjenner feltene ennå. Prompt 42: det gamle mørke/oransje FinansHub v2-designet er slettet;
-// står design på 'v2' (lokalt eller i profilen), flyttes brukeren til Papir (lys) ved neste innlasting.
+// Temaene fra «FinansHub v3 Temaer». Økonomi følger Homelab-temaet (Q15, B-F1, tema.js): Papir lys → «lys», Papir mørk → «mork»
+// og Glass → «glod». Velgeren under Innstillinger → Utseende endrer Homelab-valget, så mørk modus bare velges ett sted.
+// Det gamle FinansHub-valget (layout.design / fh_design) brukes bare når Homelab-modusen er ukjent, og flyttes til Homelab én gang.
 export const THEMES = {
-  lys: { name: 'Lys hovedbok · standard', desc: 'Papirtone, grønn aksent, serif-tall', bg: '#f4f1ea', side: '#ece7dc', surf: '#faf8f3', line: '#e2ddd2', ink: '#1c1b19', faint: '#8a8478', acc: '#1f4d3a', warn: '#c8553d', d: "'Instrument Serif',serif", dw: 400, rs: '6px', meta: '#f4f1ea' },
-  mork: { name: 'Mørk hovedbok', desc: 'Samme oppsett i mørkt, mintgrønn aksent', bg: '#121210', side: '#0d0d0c', surf: '#1a1a17', line: '#2a2925', ink: '#ece8df', faint: '#8a8478', acc: '#6fbf8e', warn: '#e07a5f', d: "'Instrument Serif',serif", dw: 400, rs: '6px', meta: '#121210' },
-  glod: { name: 'Glød', desc: 'Varm mørk, ravgul aksent, myke kort', bg: '#16110e', side: '#120e0b', surf: '#221a15', line: '#2c221c', ink: '#f3ebe3', faint: '#9c8f84', acc: '#ffb547', warn: '#ff7a59', d: "'Bricolage Grotesque',sans-serif", dw: 600, rs: '8px', meta: '#16110e' },
+  lys: { name: 'Papir · lys', desc: 'Papirtone, grønn aksent, serif-tall', bg: '#f4f1ea', side: '#ece7dc', surf: '#faf8f3', line: '#e2ddd2', ink: '#1c1b19', faint: '#8a8478', acc: '#1f4d3a', warn: '#c8553d', d: "'Instrument Serif',serif", dw: 400, rs: '6px', meta: '#f4f1ea' },
+  mork: { name: 'Papir · mørk', desc: 'Samme oppsett i mørkt, mintgrønn aksent', bg: '#121210', side: '#0d0d0c', surf: '#1a1a17', line: '#2a2925', ink: '#ece8df', faint: '#8a8478', acc: '#6fbf8e', warn: '#e07a5f', d: "'Instrument Serif',serif", dw: 400, rs: '6px', meta: '#121210' },
+  glod: { name: 'Glass', desc: 'Varm mørk, ravgul aksent, myke kort', bg: '#16110e', side: '#120e0b', surf: '#221a15', line: '#2c221c', ink: '#f3ebe3', faint: '#9c8f84', acc: '#ffb547', warn: '#ff7a59', d: "'Bricolage Grotesque',sans-serif", dw: 600, rs: '8px', meta: '#16110e' },
 };
 const lsGet = (k) => { try { return localStorage.getItem(k); } catch { return null; } };
 const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch {} };
-// Rekkefølge (prompt 22): brukerens lagrede valg fra serveren, så lokal cache fh_design, så «lys» (Lys hovedbok) som standard.
-export const design = () => [S.layout?.design, lsGet('fh_design')].find((v) => THEMES[v]) ?? 'lys';
-let v2Moved = false;
-function migrateV2() {
-  if (v2Moved) return;
-  const old = S.layout?.design === 'v2' || lsGet('fh_design') === 'v2';
-  if (!old) return;
-  v2Moved = true;
-  lsSet('fh_design', 'lys');
-  if (S.layout?.design === 'v2') { S.layout.design = 'lys'; fetch('/api/me/layout', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ design: 'lys' }) }).catch(() => {}); }
-}
+const legacyDesign = () => [S.layout?.design, lsGet('fh_design')].find((v) => THEMES[v]);
+export const design = () => fhDesign(S.layout, legacyDesign());
+let temaBundet = false;
 const compactNav = () => (typeof S.layout?.compactNav === 'boolean' ? S.layout.compactNav : lsGet('fh_compact') === '1');
 // Setter tema-attributtene på <html>. Mobil har egne design, så temaene gjelder bare desktop (CSS er avgrenset med data-ui).
 export function applyTheme() {
-  migrateV2();
+  if (!temaBundet) { temaBundet = true; nårTemaEndres(() => { if (document.documentElement.dataset.ui === 'desktop') { applyTheme(); render(); } }); }
   const h = document.documentElement, d = design();
   if (h.dataset.theme !== d) h.dataset.theme = d;
-  // Serverens valg caches lokalt, så neste lasting starter i riktig tema uten å blinke.
-  if (THEMES[S.layout?.design] && lsGet('fh_design') !== d) lsSet('fh_design', d);
   h.setAttribute('data-v3', '');
   h.toggleAttribute('data-compact', compactNav());
   const m = document.querySelector('meta[name=theme-color]');
@@ -186,7 +177,6 @@ export function applyTheme() {
 }
 async function saveLayout(patch) {
   S.layout = { ...(S.layout ?? {}), ...patch };
-  if ('design' in patch) { lsSet('fh_design', patch.design); try { sessionStorage.setItem('fh_jump', '1'); } catch {} }
   if ('compactNav' in patch) lsSet('fh_compact', patch.compactNav ? '1' : '0');
   applyTheme();
   render();
@@ -203,7 +193,7 @@ function lookTab() {
       <span class="th-meta"><span><b>${esc(t.name)}</b><small>${esc(t.desc)}</small></span>${cur === k ? '<span class="th-ok" aria-hidden="true">✓</span>' : ''}</span></button>`).join('')}</div>
     <div class="box" style="justify-content:space-between;gap:20px"><div><b style="font-weight:600;font-size:15px">Kompakt sidemeny</b><div class="note" style="font-size:13px;margin-top:2px">Vis bare ikoner i sidemenyen</div></div>
       <button class="toggle" role="switch" aria-checked="${comp}" data-act="compact-nav" aria-label="Kompakt sidemeny"></button></div>
-    <div class="note" style="font-size:13px">Velg hvordan FinansHub ser ut. Endringen gjelder med en gang og følger brukeren din på alle nettlesere. Mobilappen og PWA-en har egne design under Innstillinger → Utseende der.</div>`;
+    <div class="note" style="font-size:13px">Økonomi følger temaet i Homelab. Valget her endrer også Homelab, med en gang og på alle nettlesere. Mobilappene har egne valg under Innstillinger → Utseende der.</div>`;
 }
 
 function shell(content) {
@@ -402,7 +392,7 @@ function transactions() {
   if (selIx >= txShown) txShown = selIx + 1;
   const rows = list?.items.slice(0, txShown).map(txTableRow).join('');
   const sel = list?.items.find((t) => t.id === u.sel);
-  // Prompt 52 (WEB52F): felles kvitteringspanel (rcpanel52.js) – sticky med egen scroll, skuff under 1100 px.
+  // Prompt 52 (WEB52F): felles kvitteringspanel (kvitteringspanel.js) – sticky med egen scroll, skuff under 1100 px.
   const detail = sel ? `<div class="rcp52-scrim" data-act="close-sel" aria-hidden="true"></div>${rcPanel52({
     key: `tx:${sel.id}`, cls: 'card detail inline', close: 'data-act="close-sel"', logo: logoBtn73(sel, logo(sel, 46, 14), 'pen-on'), label: sel.description,
     titleHtml: `<input class="inp" data-tx-field="description" value="${esc(sel.description)}" aria-label="Beskrivelse" style="font-size:18px;font-weight:600;background:none;border-color:transparent;padding:0;height:auto">`,
@@ -1313,7 +1303,7 @@ export function bind() {
     if ((x = d('[data-rc-cat]'))) return patchRc(u.selRc, { categoryId: +x.dataset.rcCat });
     if ((x = d('[data-test-engine]'))) { const k = x.dataset.testEngine; u.msg.ai = 'Tester …'; render(); const r = await api('/ai/test', { method: 'POST', json: { provider: k } }).catch((e) => ({ ok: false, message: e.message })); u.msg.aiOk = r.ok; u.msg.ai = r.message; return render(); }
     if ((x = d('[data-settab]'))) { u.setTab = x.dataset.settab; u.msg = {}; if (u.setTab === 'ai') loadAi().then(render); return load(); }
-    if ((x = d('[data-theme-pick]'))) return saveLayout({ design: x.dataset.themePick });
+    if ((x = d('[data-theme-pick]'))) { settHomelabTema({ design: x.dataset.themePick }); if (S.layout) { S.layout.hlTheme = x.dataset.themePick === 'glod' ? 'cur' : '2c'; if (x.dataset.themePick !== 'glod') S.layout.web_theme = x.dataset.themePick === 'mork' ? 'dark' : 'light'; } try { sessionStorage.setItem('fh_jump', '1'); } catch {} applyTheme(); return render(); }
     if ((x = d('[data-provider]'))) return saveSet({ provider: x.dataset.provider });
     if ((x = d('[data-tog]'))) return saveSet({ [x.dataset.tog]: !S.boot.settings[x.dataset.tog] });
     if ((x = d('[data-txtype]'))) { u.add.kind = x.dataset.txtype; return render(); }

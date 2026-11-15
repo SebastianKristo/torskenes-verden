@@ -1,9 +1,10 @@
 // Subscription OS på PC (designet «Subscription OS», web): fanene Oversikt og Kalender, og «+ Legg til abonnement»
 // med Skriv inn selv · Fra kvittering · Fra transaksjoner. Tallene kommer fra GET /subscriptions (byMonth, health,
 // savings, upcoming, thisMonth). Kvitteringer lastes opp med data-mrc="sub" (modules.js), resten håndteres her.
+import { sykluser, syklus, syklusRang, erUkesyklus, kjentTrekk, osloMåned } from './sykluser.js';
 import { S, api, esc, n0, render, toast, logo, parseAmount, sheetBtn } from './core.js';
-import { subLogo } from './fin42.js';
-import { logView46, logClick46, logCss46, logReset46 } from './subs-log46.js'; // prompt 46: Historikk · Logg
+import { subLogo } from './ui-felles.js';
+import { logView46, logClick46, logCss46, logReset46 } from './abonnement-logg.js'; // prompt 46: Historikk · Logg
 import { toJpeg, readShot, errCardHtml, installVision, SLOW_MS } from './sub-shot.js';
 import { parseTrial, trialPreview, trialBadge, cancelUrlFor, REMIND_OPTIONS, longDay } from '/assets/js/trial-parse.js';
 import { aiStart, aiDone } from '/assets/js/ai-jobs.js';
@@ -139,8 +140,8 @@ const WD = ['søndag', 'mandag', 'tirsdag', 'onsdag', 'torsdag', 'fredag', 'lør
 export const CAT_COL = { Underholdning: ['#FF7A3D', '#C85A26'], Produktivitet: ['#7AA7FF', '#4F78D0'], 'Lagring og sky': ['#F2C14E', '#BD9330'], 'Helse og trening': ['#5FD3A8', '#3A9F7B'],
   Transport: ['#B79CFF', '#8A70D6'], 'Mobil og internett': ['#30B0C7', '#22808F'], 'Nyheter og lesing': ['#FF8A80', '#C8615A'], Annet: ['#A0A0AA', '#6E6E78'] };
 const col = (c, i = 0) => (CAT_COL[c] ?? CAT_COL.Annet)[i];
-const CYC = [['monthly', 'Månedlig'], ['yearly', 'Årlig'], ['biennial', 'Hvert 2. år']];
-const CYC_M = { monthly: 1, yearly: 12, biennial: 24 };
+// Syklusene (navn og rekkefølge) kommer fra serveren (sykluser.js, Q40): også ukentlig, hver 2. uke, kvartalsvis og halvårlig.
+const CYC = (d = S.subs) => sykluser(d).map((c) => [c.id, c.name]);
 const ST = { active: ['Aktiv', 'ok'], low_use: ['⚠ Lite brukt', 'low'], price_up: ['▲ Pris økt', 'up'], cancelled: ['Sagt opp', 'off'] };
 const ST_RANK = { price_up: 0, low_use: 1, active: 2, cancelled: 3 };
 // Egen logo (opplastet eller ✦ funnet med AI) vises før domenelogoen.
@@ -234,7 +235,7 @@ function candPanel() {
   if (!u.subCand) return '';
   const c = S.subCands;
   const body = !c ? skel(90) : c.length ? c.map((x, i) => `<div class="so-cand">${lg({ ...x, name: x.merchant }, 32)}<span class="grow"><b>${esc(x.merchant)}</b>
-      <small>Trekkes ${+x.lastDate.slice(8, 10)}. ${x.cycle === 'monthly' ? 'hver måned' : x.cycle === 'yearly' ? 'hvert år' : 'hvert 2. år'} · ${kr(x.amount)} · sett ${x.count} ganger</small></span>
+      <small>Trekkes ${+x.lastDate.slice(8, 10)}. ${x.cycle === 'monthly' ? 'hver måned' : x.cycle === 'yearly' ? 'hvert år' : x.cycle === 'biennial' ? 'hvert 2. år' : syklus(S.subs, x.cycle).name.toLowerCase()} · ${kr(x.amount)} · sett ${x.count} ganger</small></span>
       <button class="btn sm pri" data-scand="${i}">+ Legg til</button></div>`).join('')
     : '<div class="note">Fant ingen faste trekk som ikke allerede er registrert. Trekk må være sett minst 3 ganger med omtrent samme beløp.</div>';
   return `<section class="card so-cands"><div class="card-h"><h2>✦ Faste trekk i banken</h2><button class="x-btn sm" data-sact="cands-close" aria-label="Lukk">×</button></div>
@@ -307,7 +308,7 @@ function monthCard(d, byId) {
 
 function table(d) {
   const { k, dir } = u.subSort ?? { k: 'next', dir: 1 };
-  const key = { name: (s) => s.name.toLowerCase(), plan: (s) => (s.plan ?? '').toLowerCase(), cyc: (s) => CYC_M[s.cycle] ?? 1, next: (s) => s.nextDate ?? '9999', amt: (s) => s.price, st: (s) => ST_RANK[s.status] ?? 2 }[k];
+  const key = { name: (s) => s.name.toLowerCase(), plan: (s) => (s.plan ?? '').toLowerCase(), cyc: (s) => syklusRang(d, s.cycle), next: (s) => s.nextDate ?? '9999', amt: (s) => s.price, st: (s) => ST_RANK[s.status] ?? 2 }[k];
   const rows = [...d.items].sort((a, b) => (a.active === b.active ? 0 : a.active ? -1 : 1) || (key(a) > key(b) ? 1 : key(a) < key(b) ? -1 : 0) * dir);
   const th = [['name', 'Tjeneste'], ['plan', 'Plan'], ['cyc', 'Trekk'], ['next', 'Neste trekk'], ['amt', 'Beløp'], ['st', 'Status']]
     .map(([c, n]) => `<button data-ssort="${c}" class="${k === c ? 'on' : ''}">${n} ${k === c ? (dir > 0 ? '↑' : '↓') : '↕'}</button>`).join('');
@@ -315,7 +316,7 @@ function table(d) {
   const add = u.subAdd ? `<form class="so-tr so-new" data-sform="new">
       <input class="inp" name="name" placeholder="Tjeneste, f.eks. Disney+" value="${esc(f.name ?? '')}" required aria-label="Tjeneste">
       <input class="inp" name="plan" placeholder="Plan" value="${esc(f.plan ?? '')}" aria-label="Plan">
-      <span class="so-cyc" role="radiogroup" aria-label="Trekk">${CYC.map(([v, l]) => `<label><input type="radio" name="cycle" value="${v}"${(f.cycle ?? 'monthly') === v ? ' checked' : ''}><span>${l}</span></label>`).join('')}</span>
+      <span class="so-cyc" role="radiogroup" aria-label="Trekk">${CYC(d).map(([v, l]) => `<label><input type="radio" name="cycle" value="${v}"${(f.cycle ?? 'monthly') === v ? ' checked' : ''}><span>${l}</span></label>`).join('')}</span>
       <input class="inp" name="chargeDay" type="number" min="1" max="31" placeholder="Trekkdag" value="${esc(f.chargeDay ?? '')}" aria-label="Trekkdag (1–31)">
       <input class="inp" name="price" placeholder="Beløp kr" inputmode="decimal" value="${esc(f.price ?? '')}" required aria-label="Beløp per trekk">
       <span class="so-new-b"><button class="btn sm pri">Legg til</button><button type="button" class="btn sm ghost" data-sact="add-close">Avbryt</button></span></form>` : '';
@@ -323,7 +324,7 @@ function table(d) {
     const [stT, stC] = ST[s.status] ?? ST.active, flag = s.status === 'low_use' || s.status === 'price_up';
     const act = !s.active ? `<button class="so-act" data-msub-tog="${s.id}">Angre</button>` : flag ? `<button class="so-act on" data-ssub-cut="${s.id}">Si opp</button>` : `<button class="so-act" data-ssub-edit="${s.id}">Endre</button>`;
     const pop = u.subRow === s.id ? `<div class="so-pop">
-        <label>Trekk<select class="sel sm" data-msub-cyc="${s.id}">${CYC.map(([v, l]) => `<option value="${v}"${s.cycle === v ? ' selected' : ''}>${l}</option>`).join('')}</select></label>
+        <label>Trekk<select class="sel sm" data-msub-cyc="${s.id}">${CYC(d).map(([v, l]) => `<option value="${v}"${s.cycle === v ? ' selected' : ''}>${l}</option>`).join('')}</select></label>
         <label>Trekkdag<input class="inp sm" type="number" min="1" max="31" value="${s.chargeDay ?? ''}" data-ssub-day="${s.id}"></label>
         <label>Kategori<select class="sel sm" data-ssub-cat="${s.id}">${d.categories.map((c) => `<option${s.category === c ? ' selected' : ''}>${esc(c)}</option>`).join('')}</select></label>
         <button data-msub-low="${s.id}">${s.lowUse ? 'Fjern «Lite brukt»' : 'Marker som lite brukt'}</button>
@@ -420,7 +421,10 @@ function editSheet(d) {
   const pv = e.file ? e.preview : e.logo;
   const logoBox = `<span class="se-logo" style="${pv ? `background-image:url('${esc(pv)}')` : `background:${col(e.cat)}`}">${pv ? '' : esc((e.n || '?').split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase())}</span>`;
   const chips = (list, cur, attr) => list.map(([k, n]) => `<button type="button" class="se-chip" ${attr}="${k}" aria-pressed="${cur === k}">${n}</button>`).join('');
-  const dateTxt = `Neste trekk ${e.day}. ${MON_L[(+e.mon || 1) - 1]}, ${CYC_THEN[e.cyc] ?? CYC_THEN.monthly}`;
+  // Lagret og uendret: serverens tekst (nextCharge.label). Ellers det som er valgt.
+  const s0 = e.id ? d.items?.find((x) => x.id === e.id) : null;
+  const dateTxt = s0?.nextCharge?.label && s0.cycle === e.cyc && +(s0.billDay ?? 0) === +e.day && +(s0.billMonth ?? 0) === +e.mon ? s0.nextCharge.label
+    : `${erUkesyklus(e.cyc) ? 'Første trekk' : 'Neste trekk'} ${e.day}. ${MON_L[(+e.mon || 1) - 1]}, ${CYC_THEN[e.cyc] ?? `deretter ${syklus(d, e.cyc).name.toLowerCase()}`}`;
   return `<div class="se-back" data-sed="close"><form class="se" data-sform="ed" role="dialog" aria-modal="true" aria-label="${e.id ? `Rediger ${esc(e.n)}` : 'Nytt abonnement'}">
     <span class="se-grip" aria-hidden="true"></span>
     <div class="se-h"><b>${e.id ? `Rediger ${esc(e.n)}` : 'Nytt abonnement'}</b>${sheetBtn('Lukk', 'data-sed="close"', 'sec')}</div>
@@ -431,7 +435,7 @@ function editSheet(d) {
       ${e.aiPending ? '<small class="se-note">✦ Logoen hentes når abonnementet er lagret.</small>' : ''}</div></div>
     <div class="se-g2"><label>Navn<input class="inp" name="n" value="${esc(e.n)}" placeholder="F.eks. HBO Max" required></label><label>Pris (kr)<input class="inp mono" name="v" value="${esc(e.v)}" inputmode="decimal" placeholder="129" required></label></div>
     <div class="se-g2 eq"><label>Plan<input class="inp" name="plan" value="${esc(e.plan)}" placeholder="Standard"></label><label>Kategori<select class="sel" name="cat">${(d.categories ?? []).map((c) => `<option${e.cat === c ? ' selected' : ''}>${esc(c)}</option>`).join('')}</select></label></div>
-    <div class="se-f"><span class="se-l">Hvor ofte</span><div class="se-chips">${chips(CYC, e.cyc, 'data-sed-cyc')}</div></div>
+    <div class="se-f"><span class="se-l">Hvor ofte</span><div class="se-chips">${chips(CYC(d), e.cyc, 'data-sed-cyc')}</div></div>
     <div class="se-f"><span class="se-l">Faktureringsdato</span><div class="se-date"><select class="sel" name="day" aria-label="Dag">${Array.from({ length: 31 }, (_, i) => `<option value="${i + 1}"${+e.day === i + 1 ? ' selected' : ''}>${i + 1}.</option>`).join('')}</select>
       <select class="sel" name="mon" aria-label="Måned">${MON_L.map((m, i) => `<option value="${i + 1}"${+e.mon === i + 1 ? ' selected' : ''}>${m[0].toUpperCase()}${m.slice(1)}</option>`).join('')}</select></div><small class="se-note" data-sed-date>${esc(dateTxt)}</small></div>
     <div class="se-f"><span class="se-l">Status</span><div class="se-chips">${chips(ST_ED, e.st, 'data-sed-st')}</div></div>
@@ -447,10 +451,11 @@ function shareSection(e) {
   if (H.length < 2 && !e.mem?.length) return '';
   const chips = (list, cur, attr) => list.map(([k, n2]) => `<button type="button" class="se-chip" ${attr}="${k}" aria-pressed="${cur === k}">${n2}</button>`).join('');
   const sel = new Set([meId, ...(e.mem ?? [])].filter(Boolean)), n = sel.size, price = parseAmount(e.v) || 0;
-  const per = CYC_M[e.cyc] ? price / CYC_M[e.cyc] : price;
+  // Beløpet per trekk, med syklusen serveren bruker (ikke regnet om til måned).
+  const pl = syklus(S.subs, e.cyc).perLabel || '/mnd';
   const hint = n < 2 ? 'Bare du ser abonnementet. Del det for å fordele prisen.'
-    : e.split === 'payer' ? `Du betaler hele beløpet (${kr(Math.round(per))}/mnd). De andre ser abonnementet, trekkdato og varsler.`
-    : `Hver betaler ${kr(Math.round(per / n))}/mnd. Alle ser abonnementet, trekkdato og varsler. Bare din del teller i ditt budsjett.`;
+    : e.split === 'payer' ? `Du betaler hele beløpet (${kr(Math.round(price))}${pl}). De andre ser abonnementet, trekkdato og varsler.`
+    : `Hver betaler ${kr(Math.round(price / n))}${pl}. Alle ser abonnementet, trekkdato og varsler. Bare din del teller i ditt budsjett.`;
   return `<div class="se-f"><span class="se-l">Del med husstanden</span><div class="so37-mem">${H.map((p) => { const on = sel.has(p.id), self = p.id === meId; return `<button type="button" data-sed-mem="${esc(p.id)}" aria-pressed="${on}"${self || e.owner === false ? ' disabled' : ''}>${avatars([p], 24)}${esc(self ? `${p.name} (deg)` : p.name)}</button>`; }).join('')}</div>
     ${n > 1 && e.owner !== false ? `<div class="se-chips">${chips([['equal', 'Del likt'], ['payer', 'Jeg betaler']], e.split ?? 'equal', 'data-sed-split')}</div>` : ''}<small class="se-note">${esc(e.owner === false ? `${hint} Bare eieren kan endre deling og pris.` : hint)}</small>
     ${e.id && e.owner === false ? '<button type="button" class="btn sm ghost" data-sed="leave">Forlat abonnementet</button>' : ''}</div>`;
@@ -474,7 +479,8 @@ export function bindSubs(el) {
     const e2 = u.subEd, price = parseAmount(e2.v);
     if (!e2.n.trim() || !(price >= 0)) return toast('Fyll inn navn og pris');
     // Fase 3: syklus, trekkdag og -måned; serveren regner neste trekk (nextDate sendes ikke lenger, se docs/api.md).
-    const json = { name: e2.n.trim(), plan: e2.plan.trim(), price, cycle: e2.cyc, billDay: +e2.day, billMonth: +e2.mon, category: e2.cat, status: e2.st };
+    const json = { name: e2.n.trim(), plan: e2.plan.trim(), price, cycle: e2.cyc, billDay: +e2.day, billMonth: +e2.mon, category: e2.cat, status: e2.st,
+      ...(erUkesyklus(e2.cyc) ? { startDate: kjentTrekk(e2.day, e2.mon) } : {}) }; // ukesykluser: datoen er et kjent trekk
     if (!e2.logo && !e2.file && e2.id) json.logoUrl = null;
     const s = e2.id ? await api(`/subscriptions/${e2.id}`, { method: 'PATCH', json }) : await api('/subscriptions', { method: 'POST', json });
     if (e2.file) { const fd = new FormData(); fd.append('file', e2.file); await api(`/subscriptions/${s.id}/logo`, { method: 'POST', body: fd }).catch((err) => toast(err.message)); }
@@ -678,7 +684,8 @@ export function bindSubs(el) {
     const v = Object.fromEntries(new FormData(f));
     const price = parseAmount(v.price);
     if (!v.name.trim() || !(price > 0)) return toast('Skriv tjeneste og beløp');
-    const s = await api('/subscriptions', { method: 'POST', json: { name: v.name, plan: v.plan, price, cycle: v.cycle, chargeDay: +v.chargeDay || null } });
+    const uke = erUkesyklus(v.cycle) && +v.chargeDay ? { startDate: kjentTrekk(+v.chargeDay, osloMåned()) } : {};
+    const s = await api('/subscriptions', { method: 'POST', json: { name: v.name, plan: v.plan, price, cycle: v.cycle, chargeDay: +v.chargeDay || null, ...uke } });
     u.subAdd = false; u.subF = null; toast(`${s.name} er lagt til`); return reload();
   }));
 }

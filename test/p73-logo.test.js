@@ -194,13 +194,13 @@ test('opplasting: tekst og SVG avvises', async () => {
 /* ---------------- Klientene (kildesjekk) ---------------- */
 
 test('web: «Endre logo»-arket i papir-design, debounce 250 ms, overstyringen i core.logo og mobil-logoen', () => {
-  const s = src('public/finans/js/logo73.js');
+  const s = src('public/finans/js/endre-logo.js');
   for (const t of ['Endre logo', 'Søk etter butikk', 'Last opp bilde', 'Bruk initialer', 'Bruk denne logoen', 'Tilbakestill til automatisk', 'FINANS · BUTIKKLOGO', 'LOGODATABASEN']) assert.ok(s.includes(t), t);
   assert.match(s, /250/);
   assert.match(s, /\/logos\?q=/);
   assert.match(s, /\/merchants\/\$\{encodeURIComponent\([^)]*\)\}\/logo/);
   assert.match(s, /512/);
-  const css = src('public/finans/css/logo73.css');
+  const css = src('public/finans/css/endre-logo.css');
   for (const c of ['#f3efe6', '#d8d1c2', '#1b1a17', '#8f897c', '#b23a2a', 'Newsreader', 'Manrope', 'IBM Plex Mono']) assert.ok(css.includes(c), c);
   assert.ok(!/backdrop-filter:\s*blur\(\s*(?:[2-9]\d|1\d)px/.test(css), 'ikke mørkt glass');
   const core = src('public/finans/js/core.js');

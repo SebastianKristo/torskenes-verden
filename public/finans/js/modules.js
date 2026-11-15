@@ -1,13 +1,13 @@
-// Modulene i FinansHub-sidemenyen: Subscription OS, Boliger (bol42.js), Finn-handler og Import.
+// Modulene i FinansHub-sidemenyen: Subscription OS, Boliger (boliger.js), Finn-handler og Import.
 // Samme mønster som desktop.js: sidene tegnes fra S, hendelser fanges med delegering (data-m*-attributter).
 import { S, api, esc, n0, n2, sgn, dd, render, toast, loadBoot, accs, logo, aiLine, ICONS, smooth } from './core.js';
 import { finnPage as finnDesk, loadFinn as loadFinnDesk, bindFinn } from './finn-desktop.js'; // Finn-handler med detaljside
 import { subPage, loadSubs, bindSubs } from './subs-desktop.js'; // Subscription OS: Oversikt og Kalender
 import { glimt } from '/assets/js/glimt.js';
 import { aiStart, aiDone } from '/assets/js/ai-jobs.js';
-import { bolPage, loadB42, bindB42 } from './bol42.js'; // prompt 42: Boliger 2a + 1b
-import { stockLogo, instrSub } from './fin42.js';
-import { plan51Page, PLAN51_ICON } from './plan51.js'; // prompt 51 (FIN51): Planlegging – sparemål, kalender, skatt, priser, abonnementsjeger
+import { bolPage, loadB42, bindB42 } from './boliger.js'; // prompt 42: Boliger 2a + 1b
+import { stockLogo, instrSub } from './ui-felles.js';
+import { plan51Page, PLAN51_ICON } from './planlegging.js'; // prompt 51 (FIN51): Planlegging – sparemål, kalender, skatt, priser, abonnementsjeger
 
 Object.assign(ICONS, {
   sub: 'M17 2l4 4-4 4M3 11V9a3 3 0 0 1 3-3h15M7 22l-4-4 4-4M21 13v2a3 3 0 0 1-3 3H3',
@@ -28,7 +28,7 @@ const kr0 = (v) => `${n0(v)} kr`;
 
 /* ===================== Boliger ===================== */
 
-// Prompt 42: selve Boliger-siden ligger i bol42.js (2a «Alle boligene på ett ark» + 1b «Kontobok»). Den gamle siden
+// Prompt 42: selve Boliger-siden ligger i boliger.js (2a «Alle boligene på ett ark» + 1b «Kontobok»). Den gamle siden
 // (boligpiller, tallkort for én bolig, prosjekter med avdrag og faste regninger) er slettet.
 // Under står bare det Innstillinger → Boliger bruker.
 const TYPES = ['Enebolig', 'Leilighet', 'Hytte', 'Utleie', 'Annet'];
@@ -370,7 +370,7 @@ async function preview(commit = false) {
 async function uploadTo(kind, files) {
   const fd = new FormData();
   for (const f of files) fd.append('file', f);
-  const path = '/subscriptions/receipts'; // Boliger laster opp selv (bol42.js)
+  const path = '/subscriptions/receipts'; // Boliger laster opp selv (boliger.js)
   const n0 = files.length;
   // Prompt 31: Glimt-toasten (ai-jobs.js) mens kvitteringene leses. Trykk på den viser stegene.
   const job = aiStart({ title: n0 > 1 ? `Leser ${n0} kvitteringer` : 'Leser kvitteringen', toast: n0 > 1 ? `Leser ${n0} kvitteringer …` : 'Leser kvitteringen …', model: 'Glimt · lokal', input: files.map((f) => f.name).join(', '),

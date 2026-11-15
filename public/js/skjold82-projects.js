@@ -8,10 +8,9 @@ import { esc, haptic } from './util.js';
 import { toast } from './toast.js';
 import { S, sk, write, thumbHtml, paintMain, loadPart, go } from './skjold76.js';
 import { qtyFmt82, money82, clampQty82, target82, checkoutBody82, normProjects82, activeProjects82, summary82, lines82, hasActive82, usedIn82, csv82, csvName82, shortText82, MAX_NAME82 } from './skjold82-logic.js';
+import { pageCss } from './lib/page-css.js';
 
-if (typeof document !== 'undefined' && !document.querySelector('link[data-sk82-css]')) {
-  const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = '/assets/css/skjold82.css'; l.dataset.sk82Css = ''; document.head.appendChild(l);
-}
+pageCss('skjold');
 
 /** list: produktene · cur: produktet som vises · sheet: utsjekkingsarket · pick: valget i plukklista. */
 export const Q = { list: null, loading: false, cur: null, err: null, sheet: null, pick: { choice: '', name: '' }, newOpen: false };

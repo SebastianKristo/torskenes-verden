@@ -24,7 +24,7 @@ test('NÅ/NESTE-kortet øverst er borte på Mac, iPad og web', () => {
   assert.doesNotMatch(web, /nextBanner\(\)/);
   assert.match(web, /k39\.toolbar\(!!k38\.appMode\(\)\)\}<div class="k39-line">/);
   assert.doesNotMatch(code('public/js/kal39.js'), /export function nextBanner|k39-nx/);
-  assert.doesNotMatch(read('public/css/kal39.css'), /\.k39-nx/);
+  assert.doesNotMatch(read('public/css/pages/kalender.css'), /\.k39-nx/);
 });
 
 test('iOS-widgets: fasitens tekster, farger og lenker', () => {

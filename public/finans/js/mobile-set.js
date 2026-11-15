@@ -7,7 +7,8 @@ import { m, draw, flash, pref, setPref, theme, iosBg, isIOS, meName, avInner, av
 import { LAY, saveLayout } from './mobile-hl.js';
 import { SEEDS, MODES } from './mobile-theme.js';
 import { haptic, hpref, setHap, canVibrate, HAP_TYPES } from './mobile-haptics.js';
-import { paper, saveDesign, paperState, photoChoices } from './mobile-paper.js';
+import { paper, saveDesign, paperState, photoChoices, paperModeValgt } from './mobile-paper.js';
+import { settHomelabTema } from './tema.js';
 import { tabEditor, iconThemeRow, iconColor, iconInk } from './mobile-p16.js';
 import { navSettings } from './mobile-paper3.js';
 import { TR, trkLoad, trkPrefRows, setTrkPref } from './mobile-track.js';
@@ -85,7 +86,7 @@ export function settingsView(th, sub) {
 // Papir: tema, bakgrunn og nyhetsleser øverst (Mobil Papir App → Innstillinger), resten som før.
 const PHOTO_N = { cur: 'Ingen', oslo: 'Oslo', weather: 'Vær', planets: 'Planeter', custom: 'Eget bilde' };
 function paperTop() {
-  const md = pref('paperMode'), r = (k, n, s2) => `<button class="opt-row" data-sact="ppmode" data-v="${k}"><span class="m-grow"><b style="font-weight:600">${n}</b><br><span style="font-size:13px;opacity:.65">${s2}</span></span><span class="sval" style="${md === k ? 'color:var(--pp-pos);opacity:1;font-weight:600' : ''}">${md === k ? '✓ Valgt' : ''}</span></button>`;
+  const md = paperModeValgt(), r = (k, n, s2) => `<button class="opt-row" data-sact="ppmode" data-v="${k}"><span class="m-grow"><b style="font-weight:600">${n}</b><br><span style="font-size:13px;opacity:.65">${s2}</span></span><span class="sval" style="${md === k ? 'color:var(--pp-pos);opacity:1;font-weight:600' : ''}">${md === k ? '✓ Valgt' : ''}</span></button>`;
   return `${G('Tema', [r('lys', 'Papir · lys', 'Lyst papir og svart fanelinje'), r('mork', 'Papir · mørk', 'Kveldspapir og lys fanelinje'), r('auto', 'Papir · følg systemet', 'Lys om dagen, mørk når telefonen er mørk')])}
     ${G('Tilpass', [nav('profil', 'Profil', m.me?.username ? `@${m.me.username}` : '', 'users', '#5E8BFF'), nav('bakgrunn', 'Bakgrunn på Hjem', PHOTO_N[pref('photo')] ?? 'Ingen', 'look', '#FF9F0A'), nav('fanelinje', 'Fanelinje', 'Faner, navn og ikoner', 'list', '#5E5CE6'), link('<b style="font-weight:600">Nyhetsleser</b>', '#/nyheter', 'Kilder, kategorier og AI')])}
     <div class="sec">Ikonfarger</div>${iconThemeRow()}
@@ -108,7 +109,7 @@ function main() {
 const PAGE = {
   // Prompt 39 (claude-code-innst-tilpass-side.md): alt med utseende og farger samlet. Samme valg og lagringsnøkler som før.
   tilpass: () => {
-    const md = pref('paperMode'), r = (k, n, s2) => `<button class="opt-row p17-row" data-sact="ppmode" data-v="${k}"><span class="m-grow p17-rt"><b>${n}</b><small>${s2}</small></span><span class="sval" style="${md === k ? 'color:var(--pp-pos);opacity:1;font-weight:700' : ''}">${md === k ? '✓ Valgt' : ''}</span></button>`;
+    const md = paperModeValgt(), r = (k, n, s2) => `<button class="opt-row p17-row" data-sact="ppmode" data-v="${k}"><span class="m-grow p17-rt"><b>${n}</b><small>${s2}</small></span><span class="sval" style="${md === k ? 'color:var(--pp-pos);opacity:1;font-weight:700' : ''}">${md === k ? '✓ Valgt' : ''}</span></button>`;
     const st = { hl: 'homelab', hjem: 'fin-hjem', liste: 'fin-liste', budsjett: 'fin-budsjett' }[startScr()] ?? 'homelab';
     return `${grp('IDENTITET', [row('', 'Navn på appen', '', appName(), 'home', 'appnavn', 'data-p17="nm"'), row('', 'App-ikon', '', ICONS.find(([k]) => k === appIcon())?.[1] ?? '', 'img', 'appikon', 'data-p17="ic"')])}
       ${grp('FANELINJE', [...(globalThis.P42 ? [globalThis.P42.nhRow(row)] : []) /* prompt 42: Hjem-knapp */, ...(globalThis.P41 ? [globalThis.P41.scanRow(false)] : []), row('', 'Fanelinje-stil', P25.NAV_STYLES.find(([k]) => k === P25.navStyle())[2], P25.navStyleName(), 'list', 'navstil', 'data-p25="nscycle"'), row('#/set/fanelinje', 'Fanelinje i Hjem', 'Fjern, flytt, gi nytt navn og ikon · eller hold inne på fanelinjen', '', 'list', 'hjemnav')])}
@@ -317,7 +318,7 @@ export async function settingsBind(e, t) {
   if ((x = d('[data-schip]'))) {
     const id = x.dataset.schip, v = x.dataset.v;
     if (id === 'mdesign') { saveDesign({ mobileDesign: 'papir' }, false); } // prompt 42: Klassisk er slettet
-    else if (id === 'ppMode') { saveDesign({ paperMode: v }, false); }
+    else if (id === 'ppMode') { settHomelabTema({ modus: v }); saveDesign({ paperMode: v }, false); }
     else if (id === 'theme') { try { if (v === 'auto') localStorage.removeItem('fh_theme'); else localStorage.setItem('fh_theme', v); } catch {} }
     else if (id === 'startL') { saveLayout({ start: v }, false); setPref('start', { homelab: 'hl', 'fin-hjem': 'hjem', 'fin-liste': 'liste', 'fin-budsjett': 'budsjett' }[v]); }
     else if (id === 'backStyle') saveLayout({ [id]: v }, false);
@@ -340,7 +341,8 @@ export async function settingsBind(e, t) {
   }
   if (act === 'logout') { const { logout } = await import('./mobile-p21.js'); await logout(); return true; }
   if (act === 'design') { saveDesign({ mobileDesign: d('[data-sact]').dataset.v }); return true; }
-  if (act === 'ppmode') { saveDesign({ paperMode: d('[data-sact]').dataset.v }); return true; }
+  // Q15: temaet er Homelab-modusen (gjelder også Homelab). paperMode lagres fortsatt for appene.
+  if (act === 'ppmode') { const v = d('[data-sact]').dataset.v; settHomelabTema({ modus: v }); saveDesign({ paperMode: v }); return true; }
   if (act === 'ppphoto') { paperState.open = true; location.hash = '#/hl'; return true; }
   if (act === 'navmv') {
     const b = d('[data-sact]'), k = b.dataset.k, i = +b.dataset.i, j = +b.dataset.j, a = [...LAY()[k]];
