@@ -1,5 +1,6 @@
 /* Prompt 30: SMB-veiviseren (public/js/smb-wizard.js). Papir-stil (papir, blekk, spaltelinjer, rette hjørner), egen
    palett så den ser lik ut i web, FinansHub desktop og PWA. Fullskjerm på mobil, ark i midten på større skjermer. */
+/* TODO(token): 11 hex-farger står igjen. Regelen gjelder i flere moduser, og ingen --ds-token har samme farge i alle (eller fargen mangler i tokens.json). Mest brukt: #f3efe6 ×2, #1b1a17 ×2, #fbf9f4 ×1, #6b665c ×1, #6f6a5f ×1, #d8d1c2 ×1, #b23a2a ×1, #9a6a0c ×1, #ffffff ×1. #fff er ofte tekst på en fast farge eller et bilde. */
 .smbw{--w-pp:#f3efe6;--w-pp2:#fbf9f4;--w-ink:#1b1a17;--w-ink2:#6b665c;--w-ink3:#6f6a5f;--w-rule:#d8d1c2;--w-acc:#b23a2a;--w-pos:var(--ds-category-green);--w-warn:#9a6a0c;
   --w-serif:'Newsreader',Georgia,'Times New Roman',serif;--w-sans:'Manrope',system-ui,-apple-system,'Segoe UI',sans-serif;--w-mono:'IBM Plex Mono',ui-monospace,monospace;
   position:fixed;inset:0;z-index:2147483000;font-family:var(--w-sans);color:var(--w-ink);-webkit-text-size-adjust:100%}

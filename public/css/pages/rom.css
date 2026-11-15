@@ -1,4 +1,5 @@
 /* Rom (prompt 32, fasit Rom.dc.html variant a «Kontrollrom», 1a i fullskjerm). Papir i «Vindu og papir», mørkt i «Nåværende». */
+/* TODO(token): 39 hex-farger står igjen. Regelen gjelder i flere moduser, og ingen --ds-token har samme farge i alle (eller fargen mangler i tokens.json). Mest brukt: #e9eef7 ×11, #0b1220 ×8, #93a3bd ×8, #e8794a ×2, #121d33 ×2, #0f1a2e ×2, #ffffff ×2, #c8d3e6 ×1, #7f8fa8 ×1, #1b2740 ×1 (+1 til). #fff er ofte tekst på en fast farge eller et bilde. */
 /* Prompt 34: hele siden i samme blå (begge temaer), fasit Rom.dc.html variant a / claude-code-rom-nasa-bilder-bla.md */
 .rom{--r-bg:#0b1220;--r-ink:#e9eef7;--r-ink2:#c8d3e6;--r-mut:#93a3bd;--r-faint:#7f8fa8;--r-lab:#e8794a;--r-card:#121d33;--r-ph:#1b2740;--r-line:rgba(255,255,255,.07);
   position:fixed;inset:0;z-index:60;overflow-y:auto;background:var(--r-bg);color:var(--r-ink);font-family:Manrope,system-ui,sans-serif;-webkit-font-smoothing:antialiased;scrollbar-width:thin;color-scheme:dark}

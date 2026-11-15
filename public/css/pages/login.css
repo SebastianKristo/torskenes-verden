@@ -1,6 +1,7 @@
 /* Innlogging og førstegangsoppsett i Papir-stil (prompt 25). Fasit: «Homelab Papir Web.dc.html», tweak gate.
    Venstre: toppbilde med «Homelab» og stor Newsreader-tittel. Høyre: skjema på papir med rød etikett,
    hvite felt og svart pilleknapp. Under 840 px ligger delene under hverandre. */
+/* TODO(token): 26 hex-farger står igjen. Regelen gjelder i flere moduser, og ingen --ds-token har samme farge i alle (eller fargen mangler i tokens.json). Mest brukt: #ffffff ×10, #b23a2a ×3, #f3efe6 ×1, #1b1a17 ×1, #6f6a5f ×1, #d8d1c2 ×1, #5d7690 ×1, #b3ab9c ×1, #e8794a ×1, #7a5ad6 ×1 (+5 til). #fff er ofte tekst på en fast farge eller et bilde. */
 :root{--g-page:#f3efe6;--g-ink:#1b1a17;--g-ink2:#6f6a5f;--g-rule:#d8d1c2;--g-acc:#b23a2a;--g-field:#fff;
   --g-serif:Newsreader,Georgia,serif;--g-sans:Manrope,system-ui,sans-serif;--g-mono:'IBM Plex Mono',ui-monospace,monospace;color-scheme:light}
 *{box-sizing:border-box}

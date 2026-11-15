@@ -1,5 +1,6 @@
 /* Posisjonskortet på Oversikt (poscard.js) og sonevarsel-kortet på Familie (family-soner.js, .fam-card).
    Resten av den gamle Familie-siden (family.js) er erstattet av familie.css og er fjernet. */
+/* TODO(token): 68 hex-farger står igjen. Regelen gjelder i flere moduser, og ingen --ds-token har samme farge i alle (eller fargen mangler i tokens.json). Mest brukt: #ffffff ×10, #f3efe6 ×7, #ffd27a ×6, #eef0f4 ×5, #14161f ×5, #0b0e15 ×3, #8f6112 ×3, #1b1a17 ×3, #6b665c ×2, #8a8578 ×2 (+21 til). #fff er ofte tekst på en fast farge eller et bilde. */
 .fam{--f-ink:var(--text);--f-mute:var(--text-2);--f-faint:var(--muted);--f-line:var(--line);--f-acc:#f59a8f;--f-pos:#8fe0b0;--f-chip:rgba(255,255,255,.06);--f-sheet:#121722;--f-on:#eef0f4;--f-onink:#0b0e15;
   --f-card:rgba(255,255,255,.04);--f-bg:var(--bg,#0b0e15);color:var(--f-ink)}
 html[data-hl="2c"] .fam{--f-ink:var(--ds-text-primary);--f-mute:#6b665c;--f-faint:#6f6a5f;--f-line:#e3ddcf;--f-acc:var(--ds-accent);--f-pos:var(--ds-category-green);--f-chip:var(--ds-surface);--f-sheet:#fff;--f-on:var(--ds-text-primary);--f-onink:var(--ds-surface);

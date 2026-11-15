@@ -1,4 +1,5 @@
 /* Nyheter (arket over siden og innstillingene). */
+/* TODO(token): 8 hex-farger står igjen. Regelen gjelder i flere moduser, og ingen --ds-token har samme farge i alle (eller fargen mangler i tokens.json). Mest brukt: #ffffff ×6, #9a958a ×1, #a86a12 ×1. #fff er ofte tekst på en fast farge eller et bilde. */
 
 /* ═══ Nyheter: regler fra det gamle skallet (web46), før sidens egne som før ═══ */
 /* ---------- Nyheter (claude-code-nyheter-*.md): ⋯-meny, sammendrag per kategori, For deg, Innstillinger → Nyheter ---------- */

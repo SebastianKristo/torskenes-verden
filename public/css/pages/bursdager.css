@@ -1,5 +1,6 @@
 /* Bursdager (prompt 24, Bursdager.dc.html variant «web»). Fargene er designtokens, så siden følger stil og modus.
    I Papir mørk var etikettene aksentrødt #b23a2a på mørk bunn (3,1:1, B-F5) og undertekstene den lyse gråfargen. */
+/* TODO(token): 39 hex-farger står igjen. Regelen gjelder i flere moduser, og ingen --ds-token har samme farge i alle (eller fargen mangler i tokens.json). Mest brukt: #ffffff ×13, #b23a2a ×6, #1b1a17 ×5, #6f6a5f ×4, #3b0f0a ×2, #f59a8f ×2, #18bcf2 ×1, #1f1f1f ×1, #6d7f8f ×1, #2e3a46 ×1 (+3 til). #fff er ofte tekst på en fast farge eller et bilde. */
 .bd{--b-ink:var(--ds-text-primary);--b-mut:var(--ds-text-secondary);--b-line:var(--ds-line);--b-lab:var(--ds-accent);--b-labt:var(--ds-accent);--b-pos:var(--ds-success);
   --b-card:var(--ds-surface-raised);--b-bg:var(--ds-surface);--b-in:var(--ds-surface-sunken);
   color:var(--b-ink);max-width:1200px;position:relative;font-family:var(--ds-font-sans)}

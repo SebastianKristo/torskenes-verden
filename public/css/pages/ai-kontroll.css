@@ -3,6 +3,7 @@
    Én rad (.ac-r), ett kort (.ac-card), én seksjonsetikett (.ac-lab), banner (.ac-ban), KPI-stripe (.ac-kpis) og kontroller
    med samme høyde: knapp 30 · segment 30 · select 30 · bryter 36×22 · felt 34. Gamle klasser som modulene bruker
    (.ac-li, .ac-par, .ac-note …) er stylet som samme komponent. */
+/* TODO(token): 6 hex-farger står igjen. Regelen gjelder i flere moduser, og ingen --ds-token har samme farge i alle (eller fargen mangler i tokens.json). Mest brukt: #ffffff ×3, #4a463f ×2, #f3efe6 ×1. #fff er ofte tekst på en fast farge eller et bilde. */
 .ac{--r-pad:8px;background:var(--bg);color:var(--ink);font-family:Manrope,system-ui,sans-serif;position:relative;display:flex;flex-direction:column;box-sizing:border-box;min-width:0;-webkit-font-smoothing:antialiased;text-align:left;font-size:13.5px}
 .ac *,.ac *::before,.ac *::after{box-sizing:border-box}
 .ac button{font-family:inherit;cursor:pointer}

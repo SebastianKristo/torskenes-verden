@@ -1,6 +1,7 @@
 /* Kvitteringer: kvitteringskjeden i Innstillinger › AI › Kvitteringer (r48s-*), skjemaet for skannede kvitteringer (r48-*),
    kilden til butikknavnet (r51-src) og «Rådata» (r51-raw). Lastes ved behov av receipts-settings.js, kvittering-skjema.js og
    kvittering-kilde.js. Fargene følger vertens tekstfarge (currentColor), så de passer i Homelab web, Økonomi og PWA-en. */
+/* TODO(token): 18 hex-farger står igjen. Regelen gjelder i flere moduser, og ingen --ds-token har samme farge i alle (eller fargen mangler i tokens.json). Mest brukt: #ffffff ×5, #2f9e6b ×4, #c98a1b ×3, #d0533a ×2, #3a7bd5 ×2, #d26a2e ×1, #b07612 ×1. #fff er ofte tekst på en fast farge eller et bilde. */
 .r48s{--r48-line:color-mix(in srgb,currentColor 14%,transparent);--r48-soft:color-mix(in srgb,currentColor 5%,transparent);--r48-mut:color-mix(in srgb,currentColor 62%,transparent);
   --r48-ok:#2f9e6b;--r48-bad:#d0533a;--r48-warn:#c98a1b;--r48-acc:var(--acc,var(--pp-lab,#d26a2e));
   display:flex;flex-direction:column;gap:12px;margin:14px 0;font-size:14px;line-height:1.4;color:inherit;min-width:0}

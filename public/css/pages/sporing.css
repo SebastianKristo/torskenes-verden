@@ -1,4 +1,5 @@
 /* Sporing (Homelab-fanen). Følger design/Sporing.dc.html. */
+/* TODO(token): 58 hex-farger står igjen. Regelen gjelder i flere moduser, og ingen --ds-token har samme farge i alle (eller fargen mangler i tokens.json). Mest brukt: #ffffff ×10, #a8b0c0 ×6, #1b1a17 ×6, #ff7a3d ×5, #c4cad6 ×3, #7aa7ff ×3, #f3efe6 ×3, #34c759 ×2, #0c1119 ×2, #f3b54a ×2 (+11 til). #fff er ofte tekst på en fast farge eller et bilde. */
 .trk-top{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-bottom:20px}
 .trk-sumtxt{font-size:15px;color:#a8b0c0}
 .trk{display:flex;flex-direction:column;gap:20px;color:var(--text);min-width:0}

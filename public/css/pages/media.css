@@ -1,4 +1,5 @@
 /* Media: dashbordkortet, bildene og diagnostikken, NRK, Musikk, biblioteket og nedlastingene, og det nye designet. Rekkefølgen er den sidene lastet filene i før (det siste vinner). */
+/* TODO(token): 199 hex-farger står igjen. Regelen gjelder i flere moduser, og ingen --ds-token har samme farge i alle (eller fargen mangler i tokens.json). Mest brukt: #b23a2a ×14, #ffffff ×13, #f3efe6 ×11, #1b1a17 ×9, #ec7a64 ×4, #f3f0e9 ×4, #6fc28f ×3, #eef0f4 ×3, #b6bccb ×3, #2f6b4a ×3 (+110 til). #fff er ofte tekst på en fast farge eller et bilde. */
 
 /* ═══ Media: regler fra det gamle skallet (paper.css, web44/45), før sidens egne som før ═══ */
 /* Mediehistorikk: plakatkort på papir. */

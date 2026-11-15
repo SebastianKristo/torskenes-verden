@@ -1,5 +1,6 @@
 /* Prompt 43: Importer fra Claude (claude-import.js). Bruker AI-kontrollens fargevariabler (--bg, --card, --line, --ink, --mut, --acc),
    med Papir-fargene som reserve. Fasit: design/Claude Import.dc.html. */
+/* TODO(token): 15 hex-farger står igjen. Regelen gjelder i flere moduser, og ingen --ds-token har samme farge i alle (eller fargen mangler i tokens.json). Mest brukt: #b23a2a ×3, #ffffff ×3, #2f6b4a ×3, #1b1a17 ×1, #f3efe6 ×1, #fffdf8 ×1, #d8d1c2 ×1, #6b665c ×1, #a0671a ×1. #fff er ofte tekst på en fast farge eller et bilde. */
 .ci43{--k:var(--ink,#1b1a17);--b:var(--bg,#f3efe6);--cd:var(--card,#fffdf8);--ln:var(--line,#d8d1c2);--lb:var(--acc,#b23a2a);--mt:var(--mut,#6b665c);--sf:color-mix(in srgb,var(--ln) 60%,transparent);
   display:flex;flex-direction:column;gap:16px;width:100%;color:var(--k);font-family:Manrope,system-ui,sans-serif;box-sizing:border-box}
 .ci43 *{box-sizing:border-box}

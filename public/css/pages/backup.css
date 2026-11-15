@@ -1,5 +1,6 @@
 /* Prompt 29: Innstillinger → Backup (settings-backup.js) og segmentkontrollen «Med toppmeny · Fullskjerm»
    i Innstillinger → Kalendere. Fargene følger #settings-variablene fra Oppdatering (--upd-*). */
+/* TODO(token): 19 hex-farger står igjen. Regelen gjelder i flere moduser, og ingen --ds-token har samme farge i alle (eller fargen mangler i tokens.json). Mest brukt: #8a93a6 ×3, #b23a2a ×3, #eef0f4 ×2, #0c1119 ×2, #8fe0b0 ×1, #f59a8f ×1, #2c3548 ×1, #111723 ×1, #1f2736 ×1, #0a0e16 ×1 (+3 til). #fff er ofte tekst på en fast farge eller et bilde. */
 #settings{--bk-pos:var(--upd-pos,#8fe0b0);--bk-neg:var(--upd-acc,#f59a8f);--bk-seg:rgba(255,255,255,.07);--bk-on:#eef0f4;--bk-onfg:#0c1119}
 html[data-hl="2c"] #settings{--bk-seg:rgba(27,26,23,.07);--bk-on:var(--ink,var(--ds-text-primary));--bk-onfg:var(--pp,var(--ds-surface))}
 .kal-seg{flex:none;display:inline-flex;gap:2px;padding:3px;border-radius:999px;background:var(--bk-seg,rgba(127,127,127,.16));max-width:100%;overflow-x:auto;scrollbar-width:none}

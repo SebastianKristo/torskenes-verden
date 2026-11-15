@@ -1,5 +1,6 @@
 /* Prompt 50 (FAMWEB50): Familie i nytt design – web og PWA (public/js/family.js). Fasit: design/Familie App.dc.html.
    Fargene er papirfargene fra fasiten; mørk modus (web data-mode=dark / PWA papir mørk) bytter tokenene. */
+/* TODO(token): 83 hex-farger står igjen. Regelen gjelder i flere moduser, og ingen --ds-token har samme farge i alle (eller fargen mangler i tokens.json). Mest brukt: #ffffff ×21, #1b1a17 ×9, #b23a2a ×4, #f3efe6 ×3, #f1ece2 ×3, #e5483b ×2, #cfc7b7 ×2, #16140f ×2, #8f887b ×2, #e0705f ×2 (+32 til). #fff er ofte tekst på en fast farge eller et bilde. */
 
 /* ═══ Familie → Hjemlys, Vel fremme og posisjonsvarsler (hjemlys-fane.js, family-soner.js), fra det gamle skallet ═══ */
 /* ---------- Familie → Hjemlys ---------- */

@@ -1,4 +1,5 @@
 /* Prompt 35 (WEB35): keyframes for Glimt-figurene (fasit glimt-figurer.js / Glimt Figurer.dc.html). Brukes av /assets/js/glimt-figs.js. */
+/* TODO(token): 1 hex-farger står igjen. Regelen gjelder i flere moduser, og ingen --ds-token har samme farge i alle (eller fargen mangler i tokens.json). Mest brukt: #f2c14e ×1. #fff er ofte tekst på en fast farge eller et bilde. */
 @keyframes gfBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
 @keyframes gfSq{0%,100%{transform:scale(1,1)}50%{transform:scale(1.04,.96)}}
 @keyframes gfBlink{0%,93%,100%{transform:scaleY(1)}96%{transform:scaleY(.1)}}

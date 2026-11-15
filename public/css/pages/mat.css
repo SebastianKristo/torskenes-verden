@@ -1,5 +1,6 @@
 /* Mat (tidligere Matplan) – felles komponent. Design 2a: mørk varm grunn, limegrønt kort for i dag,
    Instrument Serif på retter og titler, Geist Mono på etiketter, oransje aksent. Alt er avgrenset under .mat. */
+/* TODO(token): 1 hex-farger står igjen. Regelen gjelder i flere moduser, og ingen --ds-token har samme farge i alle (eller fargen mangler i tokens.json). Mest brukt: #161513 ×1. #fff er ofte tekst på en fast farge eller et bilde. */
 
 /* ═══ Mat: regler fra det gamle skallet (app.css, paper.css), før sidens egne som før ═══ */
 /* Mat (tidligere Matplan): varm mørk grunn som i design 2a. */

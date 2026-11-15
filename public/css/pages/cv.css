@@ -1,3 +1,4 @@
+/* TODO(token): 22 hex-farger står igjen. Regelen gjelder i flere moduser, og ingen --ds-token har samme farge i alle (eller fargen mangler i tokens.json). Mest brukt: #16181d ×5, #d6d3cc ×4, #8a8d95 ×4, #5b5f69 ×3, #f4f3f0 ×2, #ffffff ×2, #3b6fa8 ×1, #e8e6e1 ×1. #fff er ofte tekst på en fast farge eller et bilde. */
 *{box-sizing:border-box;scrollbar-width:none;-ms-overflow-style:none}
 *::-webkit-scrollbar{display:none;width:0;height:0}
 body{margin:0;background:#f4f3f0;color:#16181d;font-family:'Outfit',system-ui,sans-serif}

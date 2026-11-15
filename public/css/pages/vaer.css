@@ -1,4 +1,5 @@
 /* Værsiden (prompt 22, fasit design/Vaer.dc.html). Bare her brukes systemfonten (SF Pro / Roboto). Glasskort på animert himmel. */
+/* TODO(token): 149 hex-farger står igjen. Regelen gjelder i flere moduser, og ingen --ds-token har samme farge i alle (eller fargen mangler i tokens.json). Mest brukt: #ffffff ×50, #9fe0ff ×8, #9aa0aa ×6, #20232a ×6, #2a2d34 ×5, #000000 ×4, #bfe6ff ×4, #17191e ×3, #5ec8f2 ×3, #9aa3ae ×3 (+48 til). #fff er ofte tekst på en fast farge eller et bilde. */
 .wxp{--wf:-apple-system,BlinkMacSystemFont,'SF Pro Display','SF Pro Text','Helvetica Neue',Roboto,system-ui,sans-serif;position:fixed;inset:0;z-index:60;overflow:hidden;color:#fff;font-family:var(--wf);background:#1b2a40;-webkit-font-smoothing:antialiased}
 .wxp *{box-sizing:border-box}
 .wxp button{font-family:inherit}

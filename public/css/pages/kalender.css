@@ -1,4 +1,5 @@
 /* Kalender. Lastes der kal39.css lå i app.html (etter web38.css). */
+/* TODO(token): 198 hex-farger står igjen. Regelen gjelder i flere moduser, og ingen --ds-token har samme farge i alle (eller fargen mangler i tokens.json). Mest brukt: #b23a2a ×25, #ffffff ×21, #1b1a17 ×12, #7a5ad6 ×11, #f3efe6 ×10, #ddd5c5 ×8, #6b665c ×7, #fffdf8 ×7, #161513 (system mørk) ×6, #211f1b (system mørk) ×6 (+50 til). #fff er ofte tekst på en fast farge eller et bilde. */
 
 /* ═══ Kalenderen, arkene og hurtiglegging ═══ */
 /* Kalender v2 (prompt 27, Kalender.dc.html variant «web»). Mørk i «Nåværende», papir i «Vindu og papir» (html[data-hl="2c"]).

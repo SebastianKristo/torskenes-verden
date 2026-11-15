@@ -1,4 +1,5 @@
 /* Huskeliste (prompt 17). Mørk i «Nåværende», papir i «Vindu og papir» (html[data-hl="2c"]). */
+/* TODO(token): 58 hex-farger står igjen. Regelen gjelder i flere moduser, og ingen --ds-token har samme farge i alle (eller fargen mangler i tokens.json). Mest brukt: #ffffff ×16, #f3efe6 ×6, #b23a2a ×5, #1b1a17 ×4, #e3ddcf ×3, #e8794a ×2, #000000 ×2, #0b0e15 ×2, #eef0f4 ×2, #d8d1c2 ×2 (+14 til). #fff er ofte tekst på en fast farge eller et bilde. */
 /* Fargene er designtokens (tokens.css), så Gjøremål følger stil og modus. */
 .tk{--t-ink:var(--ds-text-primary);--t-mut:var(--ds-text-secondary);--t-line:var(--ds-line);--t-lab:var(--ds-accent);--t-pos:var(--ds-success);--t-card:var(--ds-surface-raised);
   --t-chip:var(--ds-surface-sunken);--t-bg:var(--ds-surface);--t-sheet:var(--ds-surface);--t-in:var(--ds-surface-sunken);

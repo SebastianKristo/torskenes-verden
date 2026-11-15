@@ -1,4 +1,5 @@
 /* Chat (Glimt). */
+/* TODO(token): 54 hex-farger står igjen. Regelen gjelder i flere moduser, og ingen --ds-token har samme farge i alle (eller fargen mangler i tokens.json). Mest brukt: #b23a2a ×10, #ffffff ×6, #ececec ×3, #f3efe6 ×2, #1b1a17 ×2, #d8d1c2 ×2, #11141b ×2, #ece9e2 ×2, #3a3a3a ×2, #e9a13b ×2 (+21 til). #fff er ofte tekst på en fast farge eller et bilde. */
 
 /* ═══ Chatten ═══ */
 /* Chat (prompt 27, «Homelab Papir Web.dc.html» fane Chat). Tema Papir (appens farger, Newsreader) og Nøytral (mørk, systemfont).
