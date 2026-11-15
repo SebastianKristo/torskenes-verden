@@ -1,5 +1,5 @@
 // Prompt 57 (WEB57): VoxCPM2-stemmer (lokal på Mac mini-en) – velge, lytte, lage fra beskrivelse, klone og slette.
-//  - Innstillinger → Glimt (og ⚙ i briefen): seksjonen «Stemmer» (voicesHtml57) under STEMMEMOTOR i glimt35.js.
+//  - Innstillinger → Glimt (og ⚙ i briefen): seksjonen «Stemmer» (voicesHtml57) under STEMMEMOTOR i glimt/settings.js.
 //    Stemme for Glimt (tts.voice) og egen stemme for nyhetsleseren (tts.newsVoice, tom = samme som Glimt).
 //  - Stemmer per bruker: GET/POST /api/voices57, POST /api/voices57/:id/preview, DELETE /api/voices57/:id (SERVER57-API.md).
 //    Kloning: MediaRecorder 10–30 s med en foreslått norsk lesetekst, eller en lydfil (5–60 s). Samtykke må krysses av.
@@ -149,7 +149,7 @@ function inner() {
   return `${st}${groups}${msg}${btns}${designBox()}${cloneBox()}${newsSelect(s)}
     <p class="gs-note">VoxCPM2 (OpenBMB, Apache-2.0) kjører på Mac mini-en i huset. Lyden er KI-generert og merkes «KI-stemme» der den spilles av.</p>`;
 }
-/** Seksjonen «Stemmer» (glimt35.js setter den inn i innstillingene). */
+/** Seksjonen «Stemmer» (glimt/settings.js setter den inn i innstillingene). */
 export function voicesHtml57() { css(); return `<div class="v57" data-v57>${inner()}</div>`; }
 
 /* ---------------- Lytt (preview) ---------------- */

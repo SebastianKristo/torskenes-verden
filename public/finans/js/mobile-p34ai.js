@@ -2,7 +2,7 @@
 // fasit AI Kontroll.dc.html variant="mobile". Åpnes fra Innstillinger → APP → AI og modeller (#/aictl), fra Chat
 // (Modeller → #/aictl/mod, Samtaleinnstillinger → Full AI-kontroll › → #/aictl/rt) og fra Finans (#/aictl/fin = scope finans).
 // Faner: Oversikt · Modeller · Valg · Jobber · Forbruk · API og nøkler (finans: AI-valg · Tilkoblinger · Jobber · Forbruk).
-// API: /api/ai/* (SERVER34, se server/ai-api.js). Alle ser status; bare admin endrer modeller, nøkler, serverruting og budsjett.
+// API: /api/ai/* (SERVER34, se server/ai/control.js). Alle ser status; bare admin endrer modeller, nøkler, serverruting og budsjett.
 import { esc, hlApi } from './core.js';
 import { m, draw, flash } from './mobile.js';
 import { haptic } from './mobile-haptics.js';

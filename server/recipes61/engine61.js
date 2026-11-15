@@ -1,4 +1,4 @@
-// Prompt 61 (prompt 49 del 1, D1SRV) – krokene motoren (glimt45/engine.js) kaller. All logikk for oppskriftene ligger her:
+// Prompt 61 (prompt 49 del 1, D1SRV) – krokene motoren (glimt/engine.js) kaller. All logikk for oppskriftene ligger her:
 //   prepare61   før planleggeren: avslutter ventende kjøringer (vinduet 2 meldinger / 5 min), ser om meldingen er en retting/angring/
 //               omformulering av forrige svar, slår opp lignende oppskrifter (embedding + ordlikhet på malen, intent-filter når det er
 //               tydelig), lager few-shot-teksten (maks 3, ~600 tokens) og ev. hurtigveien (planleggeren hoppes over)
@@ -12,11 +12,11 @@ import { slotsOf61, templateOf61, templatePlan61, fillPlan61, sim61, varsIn61, w
 import { T61, rowsOf61, rowOf61, fastOf61, insertRecipe61, insertRun61, pendingRuns61, finishRun61, runByTrace61, runByConfirm61, runOf61, negativesOf61,
   recipeSuccess61, recipeFail61, toBlob61, fromBlob61, parse61, log61 } from './store.js';
 import { correctionKind61, rephrased61, learnCorrection61 } from './learn.js';
-import { embed47 } from '../glimt45/memory47.js';
-import { intentOfTool47 } from '../glimt45/plan47.js';
-import { intentOfCalls45 } from '../glimt45/plan.js';
-import { estTokens47 } from '../glimt45/params47.js';
-import { TOOL45 } from '../glimt45/tools.js';
+import { embed47 } from '../glimt/memory/recall.js';
+import { intentOfTool47 } from '../glimt/planner.js';
+import { intentOfCalls45 } from '../glimt/plan.js';
+import { estTokens47 } from '../glimt/model-params.js';
+import { TOOL45 } from '../glimt/tools.js';
 import { db } from '../db.js';
 
 const EMB_FEW = 0.8, LEX_FEW = 0.6, NEG_SIM = 0.85;
@@ -241,7 +241,7 @@ export function confirmed61(user, token, out) {
 const VOTES = 'recipes61_votes';
 /** → {ok, vote, recipe:row|null, run:{state}} | {error, status} */
 export async function vote61(user, traceId, vote) {
-  const { traceOf47 } = await import('../glimt45/trace47.js');
+  const { traceOf47 } = await import('../glimt/trace.js');
   const { kv } = await import('../db.js');
   const run = runByTrace61(user, traceId);
   if (!run && !traceOf47(traceId, user)) return { error: 'Fant ikke svaret (eller det er for gammelt)', status: 404 };

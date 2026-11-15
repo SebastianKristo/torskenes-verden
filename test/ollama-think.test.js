@@ -55,9 +55,9 @@ const realFetch = globalThis.fetch;
 globalThis.fetch = fakeFetch;
 test.after(() => { globalThis.fetch = realFetch; });
 
-const opts = await import('../server/ollama-opts.js');
+const opts = await import('../server/ai/ollama-options.js');
 const { default: app } = await import('../server/index.js');
-const chat = await import('../server/chat.js');
+const chat = await import('../server/ai/chat/routes.js');
 chat._setChatFetch(fakeFetch);
 const { describe } = await import('../server/kalender/glimt.js');
 const { setUserCfg } = await import('../server/settings.js');

@@ -7,7 +7,7 @@ import { db, q, kv, OWNER } from '../db.js';
 import { insertRequest64, requestsBetween64, runsBetween64, publicRun64 } from './store.js';
 import { quality64 } from './settings.js';
 import { push64, PUSH_URL64 } from './notify64.js';
-import { osloParts62, osloToUtc62 } from '../glimt45/dates.js';
+import { osloParts62, osloToUtc62 } from '../glimt/dates.js';
 import { osloDate } from '../dates/oslo.js';
 
 const DAY = 86400_000;

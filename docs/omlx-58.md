@@ -74,7 +74,7 @@ Nøkkelen lagres kryptert (`seal`), sendes aldri til nettleseren og maskeres i f
 IPv4, localhost, `.local`/`.lan`/`.home.arpa`/`.internal` og enkle vertsnavn. Miljøvariabler er reserve: `OMLX_URL`, `OMLX_API_KEY`,
 `OMLX_MODEL_TEXT`, `OMLX_MODEL_VISION`, `OMLX_FALLBACK=0` og `OMLX_TASKS=glimt,sok` (eller `all`).
 
-## 4. Slik oversetter gaten til oMLX (`server/omlx58/backend.js`)
+## 4. Slik oversetter gaten til oMLX (`server/ai/omlx/backend.js`)
 
 | Ollama | oMLX (`POST /v1/chat/completions`, SSE) |
 |---|---|
@@ -92,7 +92,7 @@ IPv4, localhost, `.local`/`.lan`/`.home.arpa`/`.internal` og enkle vertsnavn. Mi
 oMLX har egen kø-instans i gaten (adressen sin). Den blokkerer derfor ikke Ollama-køen, og Ollama-køen blokkerer ikke den. Modell-ID:
 oMLX oppgir mappenavnet. Ligger modellen i `mlx-community/…`, godtas ID-en både med og uten `mlx-community/` (sjekket mot `/v1/models`).
 
-Prefiks-cache: systemprompten og verktøylista står først og er stabile. Dato og fakta kommer sist (planleggeren i `glimt45/` gjør
+Prefiks-cache: systemprompten og verktøylista står først og er stabile. Dato og fakta kommer sist (planleggeren i `glimt/` gjør
 allerede dette). Da kan oMLX gjenbruke KV-blokkene mellom kall.
 
 ## 5. Sammenligne med eval

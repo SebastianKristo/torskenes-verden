@@ -58,7 +58,7 @@ export async function warmNow59(reason = 'manuelt', { force = false } = {}) {
   const t0 = Date.now();
   try {
     const ai = await import('../ai-run.js');
-    const { plannerSystem47 } = await import('../glimt45/plan47.js');
+    const { plannerSystem47 } = await import('../glimt/planner.js');
     // Samme statiske prefiks som planleggeren sender (systemprompten starter alltid med plannerSystem47()).
     await ai.run('glimt', { user: OWNER, system: `${plannerSystem47()}\n\n# Context\n`, prompt: 'Melding: hei', step: 'planner', numPredict: 1, localOnly: true, background: true,
       title: 'Glimt · varm modell', noRetry: true, retries: 0, timeoutMs: 60_000, deadlineAfterLoad: true });

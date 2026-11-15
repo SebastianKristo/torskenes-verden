@@ -35,7 +35,7 @@ const pu = await import('../server/auth/server-address.js');
 const st46 = await import('../server/study46.js');
 const news = await import('../server/news46.js');
 const aa = await import('../server/media/middleware.js');
-const mem = await import('../server/claude-memory46.js');
+const mem = await import('../server/ai/claude-memory.js');
 
 let ipN = 10;
 async function req(path, { method = 'GET', headers = {}, body } = {}) {

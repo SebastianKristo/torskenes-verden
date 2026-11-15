@@ -57,7 +57,7 @@ process.env.APP_PASSWORD_HASH = hashPassword('evalpassord47');
 const imp = (p) => import(pathToFileURL(join(REPO, p)).href);
 const { default: app } = await imp('server/index.js');
 const ai = await imp('server/ai-run.js');
-const E = await imp('server/glimt45/engine.js');
+const E = await imp('server/glimt/engine.js');
 const W = await imp('server/web-search.js');
 const { db, kv } = await imp('server/db.js');
 ai._setAiFetch((u, i) => globalThis.fetch(u, i));
@@ -87,7 +87,7 @@ let power62 = null;
 RUN62._setSchedData62({ power: async ({ zone, when }) => { if (!power62) throw Object.assign(new Error('Prisene er ikke publisert ennå'), { notYet: true }); return { zone, date: when === 'tomorrow' ? '2026-10-25' : TODAY, hours: power62.map((kr, hour) => ({ hour, ore: kr * 100 })), source: 'eval (falske data)', vat: true }; } });
 ai.invalidateInventory();
 if (cfg.omlx) {
-  const O = await imp('server/omlx58/config.js');
+  const O = await imp('server/ai/omlx/config.js');
   const r = O.saveConf58({ engines: Object.fromEntries(cfg.omlx.tasks.map((t) => [t, 'omlx'])), models: { text: cfg.omlx.models.glimt, vision: cfg.omlx.models.rc, ...cfg.omlx.models }, fallbackOllama: !!cfg.omlx.fallback });
   if (!r.ok) throw new Error(`oMLX-oppsett: ${r.error}`);
 }

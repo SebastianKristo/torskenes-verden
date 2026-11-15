@@ -25,23 +25,23 @@
 //            prompt 43: ollamaConcurrency:1–4, modelKeepAlive:{'qwen3:8b':'15m', …}, loadTimeout (kald modell, 90 s), firstTokenTimeout (30 s),
 //            idleTimeout (30 s tekst), idleTimeoutImage (60 s bilde)},
 // Prompt 44: alle AI-kall går gjennom server/ai-gate.js (to backends: Ollama direkte og Open WebUI; ai_backend velger).
-// Prompt 43: alle Ollama-kall går gjennom server/ollama-gate.js (kø, gruppering per modell, keep_alive per modell, strømming og
+// Prompt 43: alle Ollama-kall går gjennom server/ai-gate.js (kø, gruppering per modell, keep_alive per modell, strømming og
 // to tidsgrenser, nye forsøk). Her er det ingen egen kø lenger.
 //    budget:{monthlyKr:0 (= ingen grense), hardStop:true, warn80:true}, cloudOn:{'gemini-2.5-flash':true, …}, migratedAt}
 import { randomUUID } from 'node:crypto';
 import { db, kv, OWNER } from './db.js';
 import { settings as fhSettings, secret, me } from './finans/db.js';
 import { geminiFetch, hasGemini } from './finans/gemini-keys.js';
-import { shortBody, stripThink, SHORT_NUM_CTX, THINKING_RE } from './ollama-opts.js';
-import { STEP47, TASK_STEP47, stepOf47, estTokens47, CTX_MARGIN47 } from './glimt45/params47.js'; // prompt 47: parametre per steg
+import { shortBody, stripThink, SHORT_NUM_CTX, THINKING_RE } from './ai/ollama-options.js';
+import { STEP47, TASK_STEP47, stepOf47, estTokens47, CTX_MARGIN47 } from './glimt/model-params.js'; // prompt 47: parametre per steg
 import { configureGate, gateChat, gateEmbed, gateLoad, gateState, holdGate, setGatePaused, gatePaused, loadedModels, DEFAULT_MODEL_KEEP_ALIVE, GateError, maskSecrets, backendConfig, owuiConf, testOpenWebuiModels } from './ai-gate.js';
 import { broadcast } from './realtime.js';
 import { envHw } from './aihw38.js';
 import { jobTimes41, groupTimes41 } from './ai41.js'; // prompt 41: klokkeslett i Jobber
 // Prompt 58 (OMLX58): oMLX som motor per oppgave (registrerer backend «omlx» i gaten). Ollama er fortsatt standard.
-import { OMLX_BACKEND58 } from './omlx58/backend.js';
-import { engineFor58, omlxModelFor58, omlxConf58 } from './omlx58/config.js';
-import { omlxModels58, resolveModel58, markDown58 } from './omlx58/health.js';
+import { OMLX_BACKEND58 } from './ai/omlx/backend.js';
+import { engineFor58, omlxModelFor58, omlxConf58 } from './ai/omlx/config.js';
+import { omlxModels58, resolveModel58, markDown58 } from './ai/omlx/health.js';
 import { tokenSink59 } from './fast59/status.js'; // prompt 59: strømming av svarteksten (Glimt /stream)
 
 /* ---------------- Oppgaver ---------------- */
@@ -493,7 +493,7 @@ export const jobsClear = (user) => db.prepare("DELETE FROM ai_runs WHERE user_id
 
 /* ---------------- Kø (Ollama-gaten) ---------------- */
 
-// Prompt 43: køen ligger i server/ollama-gate.js. Pause (bakgrunnsjobber) og hold (selvtesten: ingen nye bakgrunnsjobber
+// Prompt 43: køen ligger i server/ai-gate.js. Pause (bakgrunnsjobber) og hold (selvtesten: ingen nye bakgrunnsjobber
 // imens) virker der; interaktive kall går foran, men går også gjennom køen (ingen slipper forbi).
 configureGate({ params: () => serverRouting().params });
 export const queueState = () => { const g = gateState(); return { active: g.running.length, waiting: g.waiting.reduce((a, x) => a + x.n, 0), paused: g.paused, hold: g.hold, gate: g }; };
@@ -579,7 +579,7 @@ async function callOllama(model, o, signal, r, ctx = {}) {
   if (sys) msgs.push({ role: 'system', content: sys });
   msgs.push({ role: 'user', content: String(o.prompt ?? ''), ...(o.images?.length ? { images: o.images.map(b64) } : {}) });
   const t = taskId(o.task);
-  // Prompt 47: parametre per steg fra én sentral config (glimt45/params47.js). num_ctx sendes ALLTID eksplisitt (aldri Ollamas
+  // Prompt 47: parametre per steg fra én sentral config (glimt/model-params.js). num_ctx sendes ALLTID eksplisitt (aldri Ollamas
   // standard), og korte kall har ikke lenger et 4096-tak: o.numCtx → stegets num_ctx → Chat: rutens numCtx, ellers 8192.
   const sp = stepParams(o, t);
   const options = { temperature: o.temperature ?? sp?.temperature ?? r.params.temperature, num_ctx: o.numCtx ?? sp?.numCtx ?? (t === 'chat' ? r.params.numCtx : STEP47.short.numCtx) };

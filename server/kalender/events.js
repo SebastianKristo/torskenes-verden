@@ -41,7 +41,7 @@ import { listFor as birthdaysOf, googleCalendarEvents, googleConnected, googleCa
 /** Prompt 36b: ekstra Google-kalendere som vises som egne kalendere ({id:'g-…', calId, name, color, visible, hidMenu, writable}). */
 export const googleExtraOf = (user) => { const v = googleConfOf(user).extraCalendars; return Array.isArray(v) ? v : []; };
 import { parseIcs, expandIcs as expandCal } from './ical.js';
-import { rememberShown, memorySuggestion } from '../glimt-memory.js'; // prompt 33: «Glimt husker»
+import { rememberShown, memorySuggestion } from '../glimt/memory/remember.js'; // prompt 33: «Glimt husker»
 import { trialCalendarItems } from '../finans/trials.js'; // prompt 31: gratis prøveperioder som heldagshendelser i Privat
 
 const MOCK = process.env.MOCK_DATA === '1';

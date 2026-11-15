@@ -248,7 +248,7 @@ function runSearch(q) {
 }
 
 /* ---------- Snarveier og «fullfør først» (prompt 32, claude-code-sok-fullfor-forst.md, fasit hsAsk) ---------- */
-// Samme liste som serveren (server/assist.js NAV). Med Glimt: «vis meg / åpne / gå til / ta meg til / hvor finner jeg / finn …»
+// Samme liste som serveren (server/glimt/assist.js NAV). Med Glimt: «vis meg / åpne / gå til / ta meg til / hvor finner jeg / finn …»
 // eller 1–2 ord. Med Google/DuckDuckGo bare med «åpne / gå til / ta meg til / vis meg» foran.
 const NAV = [
   [/oppdater|nordlys|ny versjon|versjon/, 'Nordlys OS · oppdatering', 'set:system'],

@@ -12,8 +12,8 @@ import { T61, STATUS61, rowOf61, rowsOf61, publicRecipe61, publicRun61, publicNe
 import { slotsOf61, templateOf61, fillPlan61, sim61, varsIn61, readable61, READ_TOOLS61, VARS61 } from './template.js';
 import { vote61 } from './engine61.js';
 import { learnedCount61 } from './learn.js';
-import { TOOL45 } from '../glimt45/tools.js';
-import { INTENTS47, INTENT_TOOLS47 } from '../glimt45/plan47.js';
+import { TOOL45 } from '../glimt/tools.js';
+import { INTENTS47, INTENT_TOOLS47 } from '../glimt/planner.js';
 
 export const recipesApi61 = new Hono();
 recipesApi61.use('*', authOrToken);
@@ -170,11 +170,11 @@ recipesApi61.post('/:id/test', async (c) => {
   if (text.length > 1000) return c.json({ error: 'Teksten er for lang (maks 1000 tegn)' }, 400);
   const t0 = Date.now();
   const out = await runAsUser(u, async () => {
-    const { recallFacts47 } = await import('../glimt45/memory47.js');
-    const { facts60 } = await import('../convo60/engine60.js');
-    const { convo60 } = await import('../convo60/settings.js');
+    const { recallFacts47 } = await import('../glimt/memory/recall.js');
+    const { facts60 } = await import('../glimt/convo/engine.js');
+    const { convo60 } = await import('../glimt/convo/settings.js');
     // Samme klokke som motoren (også testklokka), ikke den ekte – ellers ser «test» andre avtaler enn resten av Glimt.
-    const { clockNow45 } = await import('../glimt45/engine.js');
+    const { clockNow45 } = await import('../glimt/engine.js');
     const { today, nowMin } = clockNow45();
     let facts = await recallFacts47(u, text, { embed: false }).catch(() => []);
     facts = facts60(u, { set: convo60(u), execText: text, entities: [] }, facts);

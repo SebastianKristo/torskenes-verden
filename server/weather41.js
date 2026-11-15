@@ -12,7 +12,7 @@
 //   Vises når snødybde ≥ 15 cm i Nordmarka (59.99, 10.67) og «Skiføre» ikke er slått av (kv vaer_layout.ski === false). Brief og Vær får ski.
 import { kv } from './db.js';
 import { extractPlace, geocode } from './weather35.js';
-import { homePlace } from './chat-tools41.js';
+import { homePlace } from './ai/chat/tools.js';
 import { osloDate } from './dates/oslo.js';
 
 const MOCK = () => process.env.MOCK_DATA === '1';
@@ -35,7 +35,7 @@ export function isWeekWeather41(text) {
   const weatherish = WEATHER.test(t) || (/\b(beste|best|hvilken dag|når)\b/i.test(t) && /\b(sykle|sykkel|tur|gå tur|løpe|trene|trening|grille|bade|ute|ski)\b/i.test(t));
   if (!weatherish) return false;
   if (WEEK.test(t) || WD_RE.test(t)) return true;
-  // Lange spørsmål om et bestemt tidspunkt (i morgen, neste time …) besvares av faktaverktøyet (chat-tools41), ikke ukesdata.
+  // Lange spørsmål om et bestemt tidspunkt (i morgen, neste time …) besvares av faktaverktøyet (ai/chat/tools.js), ikke ukesdata.
   if (/(^|\s)(i dag|idag|i morgen|nå|neste time|i kveld|i natt|om \d+ timer?)(?![\p{L}])/iu.test(t)) return false;
   return w > 9;
 }

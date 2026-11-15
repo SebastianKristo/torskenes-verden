@@ -219,7 +219,7 @@ Køen, bankmatchen, `classify39`, `verify39`, sammendraget og «Til godkjenning�
 
 ---
 
-## 5. Datotolkeren `server/glimt45/dates.js`
+## 5. Datotolkeren `server/glimt/dates.js`
 
 Funksjoner kvitteringsvalideringen kan bruke:
 - `isIsoDate45(s)` (`:36`): streng `YYYY-MM-DD` og ekte kalenderdato. Erstatter regex-sjekken i `validate` (ai.js:64).

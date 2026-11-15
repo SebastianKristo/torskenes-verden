@@ -3,7 +3,7 @@
 import { settings, secret, db, me, addUserCol } from './db.js';
 import { geminiFetch, hasGemini, usableKeys } from './gemini-keys.js';
 import { cleanBbox } from './bbox.js';
-import { shortBody } from '../ollama-opts.js';
+import { shortBody } from '../ai/ollama-options.js';
 import { gateChat } from '../ai-gate.js'; // prompt 43: alle Ollama-kall via gaten
 import { modelFor, routing as aiRouting, budgetState } from '../ai-run.js';
 // Prompt 34: finans-oppgavene → oppgavene i AI-kontroll-rutingen.

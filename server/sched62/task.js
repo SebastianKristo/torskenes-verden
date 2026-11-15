@@ -1,11 +1,11 @@
 // Prompt 62 (prompt 49 del 2, D2SRV): tolkning av en planlagt oppgave. Planleggeren gir hva (en vanlig Glimt-forespørsel), når
-// (råtekst) og ev. betingelse (råtekst); KODEN tolker når (dates.js → recur62.js) og betingelsen (cond.js). Ingenting gjettes:
+// (råtekst) og ev. betingelse (råtekst); KODEN tolker når (dates.js → glimt/recurrence.js) og betingelsen (cond.js). Ingenting gjettes:
 // mangler noe, spør Glimt. Brukes av Glimt-verktøyene (tools.js) og API-et (api.js).
-import { parseRecurrence62, nextRun62, labelOf62, osloParts62, osloToUtc62, parseTime45, TZ62 } from '../glimt45/dates.js';
+import { parseRecurrence62, nextRun62, labelOf62, osloParts62, osloToUtc62, parseTime45, TZ62 } from '../glimt/dates.js';
 import { isPowerQuestion, zoneOf, ZONES } from '../power-price.js';
 import { parseCondition62, CONDITION_RE62 } from './cond.js';
 import { zone62 } from './settings.js';
-import { glimtSettingsOf } from '../glimt35.js';
+import { glimtSettingsOf } from '../glimt/settings.js';
 
 const cap = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
 const clean = (s, n = 200) => String(s ?? '').replace(/[\u0000-\u001f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, n);

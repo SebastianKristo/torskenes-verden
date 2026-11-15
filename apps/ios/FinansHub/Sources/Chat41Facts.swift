@@ -1,7 +1,7 @@
 import SwiftUI
 
 // Prompt 41: «Glimt henter fakta». /api/chat/send legger meta.facts i svaret (vær, tid, sol per deloppgave, se
-// server/chat-tools41.js). Her vises de som små kort under Glimt-svaret i Papir-stil:
+// server/ai/chat/tools.js). Her vises de som små kort under Glimt-svaret i Papir-stil:
 //   VÆR · NEW YORK · NESTE TIME
 //   vind 6 m/s, kast 9 m/s
 //   Open-Meteo

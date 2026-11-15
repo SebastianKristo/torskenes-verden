@@ -25,7 +25,7 @@ test.after(() => { globalThis.fetch = realFetch; });
 const { default: app } = await import('../server/index.js');
 const { db, kv } = await import('../server/db.js');
 const k39 = await import('../server/kalender/four-calendars.js');
-const fag = await import('../server/glimt39-fag.js');
+const fag = await import('../server/glimt/fag.js');
 const k33 = await import('../server/kalender/calendars.js');
 const tg = await import('../server/tasks-glimt37.js');
 const w39 = await import('../server/weather39.js');
@@ -273,7 +273,7 @@ test('briefGlimt i /api/glimt/settings (standard på) og i /api/brief (ingen fig
   assert.equal((await A('/api/glimt/settings')).body.briefGlimt, true);
   assert.equal((await A('/api/glimt/settings', 'PUT', { briefGlimt: 'ja' })).status, 400);
   assert.equal((await A('/api/glimt/settings', 'PUT', { briefGlimt: false })).body.briefGlimt, false);
-  const { buildBrief } = await import('../server/brief34.js');
+  const { buildBrief } = await import('../server/glimt/brief.js');
   const b = await buildBrief(sebId, { kind: 'morning' });
   assert.deepEqual([b.briefGlimt, b.showFigure, b.guide.length, b.figure.hidden], [false, false, 0, true]);
   assert.ok(b.summary);

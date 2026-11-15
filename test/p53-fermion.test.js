@@ -27,10 +27,10 @@ globalThis.fetch = async () => { throw new TypeError('fetch failed'); }; // inge
 test.after(() => { globalThis.fetch = realFetch; });
 
 const { default: app } = await import('../server/index.js');
-const h53 = await import('../server/fermion53/health.js');
-const asr = await import('../server/fermion53/asr.js');
-const neu = await import('../server/fermion53/neutrino.js');
-const cfg53 = await import('../server/fermion53/config.js');
+const h53 = await import('../server/ai/fermion/health.js');
+const asr = await import('../server/ai/fermion/asr.js');
+const neu = await import('../server/ai/fermion/neutrino.js');
+const cfg53 = await import('../server/ai/fermion/config.js');
 h53._setFermionFetch53(realFetch); // bare Mac mini-kallene (til vakten på 127.0.0.1) får ekte nett
 
 let ipN = 10;

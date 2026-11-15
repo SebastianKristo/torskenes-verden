@@ -31,7 +31,7 @@ import { testMap } from './tiles.js';
 import { testBackgrounds } from './background.js';
 import { iconSvg } from './icons.js';
 import { clearCache } from './cache.js';
-import { testOpenWebui } from './chat.js';
+import { testOpenWebui } from './ai/chat/routes.js';
 import { testNrk } from './media/nrk.js'; // NRK-nedlaster
 import { testYubal } from './media/yubal.js'; // Musikk (yubal)
 import { testApns89 } from './apns.js'; // prompt 89 (SRV89): Apple Push for Live Activities

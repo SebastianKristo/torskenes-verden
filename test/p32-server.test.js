@@ -19,7 +19,7 @@ process.env.APP_PASSWORD_HASH = hashPassword('testpassord1');
 
 const { default: app } = await import('../server/index.js');
 const cb = await import('../server/cache-bust.js');
-const assist = await import('../server/assist.js');
+const assist = await import('../server/glimt/assist.js');
 const calG = await import('../server/kalender/glimt.js');
 const domG = await import('../server/domains-glimt.js');
 const { db } = await import('../server/db.js');

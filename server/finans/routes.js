@@ -46,7 +46,7 @@ import { shareableUsers, logEntryChange, entryHistory } from './boliger-sharing.
 import { broadcast } from '../realtime.js';
 import { classify39, verify39, createAiCategory, categoryOut39, confirmOnBook39, nameSim, stepsOut39 } from './receipt-lines.js'; // prompt 39: kategori, sumkontroll, «✦ På nytt» med fremdrift
 import { jobStart as aiJobStart, jobUpdate as aiJobUpdate, jobEnd as aiJobEnd } from '../ai-run.js'; // prompt 34: AI-kontroll → Jobber
-import { upsertScanChat, scanChatFor } from '../chat-scans.js'; // prompt 34: Chat-mappen «Kvitteringer og skanninger»
+import { upsertScanChat, scanChatFor } from '../ai/chat/scans.js'; // prompt 34: Chat-mappen «Kvitteringer og skanninger»
 import { mailAddress42 } from './boliger-web.js'; // prompt 42
 import { mountReceipts47, preParsed47, textKind47, ocrTextOf47 } from './receipts-device.js'; // prompt 47 (SERVER47): OCR-tekst og ferdig tolket kvittering fra enheten
 import { mountReceipts48, preScanned48, setMerchant51 } from './receipts/routes.js';

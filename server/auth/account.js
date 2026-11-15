@@ -60,7 +60,7 @@ export function registerAccountRoutes(r) {
     const id = c.req.param('id');
     try { deleteUser(id, c.get('user')); } catch (e) { return fail(c, e); }
     removeAvatar(id); revokeUserTokens(id);
-    import('../voxcpm57/voices.js').then((m) => m.purgeUser57(id)).catch(() => {}); // prompt 57: brukerens stemmer og opptak
+    import('../ai/voxcpm/voices.js').then((m) => m.purgeUser57(id)).catch(() => {}); // prompt 57: brukerens stemmer og opptak
     return c.json({ ok: true });
   });
   r.post('/auth/totp/setup', (c) => { try { return c.json(startTotpSetup(c.get('user'))); } catch (e) { return fail(c, e); } });

@@ -75,7 +75,7 @@ test('jobbkø: Ollama brukes når sikker, ellers parseQuick; hendelse i Privat m
   assert.equal(j.state, 'done');
   assert.equal(j.engine, 'ollama');
   // Prompt 47: datoen kommer fra den felles datoparseren (teksten sier «fredag»), ikke fra modellens faste '2026-10-23'.
-  const D47 = await import('../server/glimt45/dates.js');
+  const D47 = await import('../server/glimt/dates.js');
   const fri = D47.whenOf45('fredag 14.30', D47.todayOslo45(), { timeWithoutDate: 'none' }).date;
   const MON3 = ['jan', 'feb', 'mar', 'apr', 'mai', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'des'];
   assert.deepEqual({ ...j.result, eventId: !!j.result.eventId }, { eventId: true, title: 'Nina frisør', date: fri, start: '14:30', end: '15:15', place: 'Bogstadveien 1', label: `fre ${+fri.slice(8)}. ${MON3[+fri.slice(5, 7) - 1]} · 14:30` });

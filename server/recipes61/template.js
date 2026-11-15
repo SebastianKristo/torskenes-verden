@@ -6,9 +6,9 @@
 //   sim61(a, b)                                → ordlikhet 0–1 mellom to maler (Dice over ord og ordpar)
 //   readable61(calls)                          → planen som lesbar norsk tekst
 // Gjenbruker den felles datoparseren (dates.js parsePeriod45/parseTime45), stedsoppdelingen fra vær (placesIn46) og ordgrensesøket (words47).
-import { parsePeriod45, todayOslo45 } from '../glimt45/dates.js';
-import { placesIn46 } from '../glimt45/weather46.js';
-import { hasWord47 } from '../glimt45/words47.js';
+import { parsePeriod45, todayOslo45 } from '../glimt/dates.js';
+import { placesIn46 } from '../glimt/weather.js';
+import { hasWord47 } from '../glimt/words.js';
 
 export const VARS61 = ['person', 'person.aliases', 'place', 'when'];
 const fold = (s) => String(s ?? '').normalize('NFC').toLowerCase();

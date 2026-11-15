@@ -37,7 +37,7 @@ globalThis.fetch = async (url, opts = {}) => {
 test.after(() => { globalThis.fetch = realFetch; });
 
 const { default: app } = await import('../server/index.js');
-const brief = await import('../server/brief34.js');
+const brief = await import('../server/glimt/brief.js');
 const ask = await import('../server/settings-ask30.js');
 
 async function login(username, password) {

@@ -22,7 +22,7 @@ import { FLAGS53, on53 } from './flags.js';
 import { suggestEmoji53 } from './text.js';
 import { eyeAnalyze53 } from './image.js';
 import { asrBackends53, transcribe53 } from './asr.js';
-import { nbFlag54 } from '../whisper54/health.js'; // prompt 54 (WHISPER54): NB-Whisper-flagget
+import { nbFlag54 } from '../ai/whisper/health.js'; // prompt 54 (WHISPER54): NB-Whisper-flagget
 import { startNews53 } from './news.js';
 import { chatUploadMw53, childImageMw53 } from './moderate.js';
 

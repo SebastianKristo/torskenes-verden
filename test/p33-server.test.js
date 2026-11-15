@@ -18,7 +18,7 @@ process.env.APP_PASSWORD_HASH = hashPassword('testpassord1');
 
 const { default: app } = await import('../server/index.js');
 const k33 = await import('../server/kalender/calendars.js');
-const assist = await import('../server/assist.js');
+const assist = await import('../server/glimt/assist.js');
 const { osloTodayISO } = await import('../public/js/quick-time.js');
 const { addDaysISO } = await import('../public/js/trial-parse.js');
 

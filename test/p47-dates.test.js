@@ -1,9 +1,9 @@
-// Prompt 47 (GLIMT47) Steg D: den felles datoparseren (server/glimt45/dates.js) og værets tidsvinduer. Fryst «nå»: lørdag
+// Prompt 47 (GLIMT47) Steg D: den felles datoparseren (server/glimt/dates.js) og værets tidsvinduer. Fryst «nå»: lørdag
 // 24. oktober 2026 kl. 10:00 Europe/Oslo. Ren funksjon, ingen server.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseNorwegianDateTime, parseWindow47, whenOf45, parseDate45, afterChristmas45 } from '../server/glimt45/dates.js';
-import { analyzeWeather46, isCompoundWeather46 } from '../server/glimt45/weather46.js';
+import { parseNorwegianDateTime, parseWindow47, whenOf45, parseDate45, afterChristmas45 } from '../server/glimt/dates.js';
+import { analyzeWeather46, isCompoundWeather46 } from '../server/glimt/weather.js';
 
 const NOW = { today: '2026-10-24', nowMin: 600 };
 const P = (t, now = NOW) => parseNorwegianDateTime(t, now);

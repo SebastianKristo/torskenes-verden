@@ -1,6 +1,6 @@
 // Prompt 38 (SERVER38): rekkefølge og av/på for kortene i Now Brief (Innstillinger → Glimt → Brief), og bryteren for
 // nordlysvarselet kl. 20. Lagres per bruker i kv (brief38_cards, brief38_aurora_notify). Brukes av GET/PUT /api/glimt/settings
-// (glimt35.js) og briefen (brief38.js). Ingen andre avhengigheter enn kv, så glimt35 kan importere den uten løkker.
+// (glimt/settings.js) og briefen (glimt/brief-cards.js). Ingen andre avhengigheter enn kv, så glimt35 kan importere den uten løkker.
 import { kv } from './db.js';
 
 /** Alle kortene i standard rekkefølge. De nye (prompt 38) ligger etter Abonnementer og før Nyheter. */

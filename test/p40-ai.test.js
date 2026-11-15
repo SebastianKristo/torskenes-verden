@@ -64,7 +64,7 @@ test.after(() => { globalThis.fetch = realFetch; });
 
 const { default: app } = await import('../server/index.js');
 const ai = await import('../server/ai-run.js');
-const gate = await import('../server/ollama-gate.js');
+const gate = await import('../server/ai-gate.js');
 gate._gateTest.backoffMs = [20, 80]; gate._gateTest.unloadGraceMs = 0; // prompt 43: kort backoff og ingen frist før utlasting i testene
 const { db, OWNER } = await import('../server/db.js');
 

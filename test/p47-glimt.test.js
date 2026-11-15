@@ -24,15 +24,15 @@ test.after(() => { globalThis.fetch = realFetch; });
 
 const { default: app } = await import('../server/index.js');
 const { db } = await import('../server/db.js');
-const E = await import('../server/glimt45/engine.js');
-const P = await import('../server/glimt45/plan.js');
-const P47 = await import('../server/glimt45/plan47.js');
-const M47 = await import('../server/glimt45/memory47.js');
-const W47 = await import('../server/glimt45/words47.js');
-const D47 = await import('../server/glimt45/document47.js');
-const A47 = await import('../server/glimt45/answer47.js');
-const MED = await import('../server/glimt45/media47.js');
-const S46 = await import('../server/glimt45/subs46.js');
+const E = await import('../server/glimt/engine.js');
+const P = await import('../server/glimt/plan.js');
+const P47 = await import('../server/glimt/planner.js');
+const M47 = await import('../server/glimt/memory/recall.js');
+const W47 = await import('../server/glimt/words.js');
+const D47 = await import('../server/glimt/document.js');
+const A47 = await import('../server/glimt/answer.js');
+const MED = await import('../server/glimt/episode-ask.js');
+const S46 = await import('../server/glimt/subscriptions.js');
 const ai = await import('../server/ai-run.js');
 const web = await import('../server/web-search.js');
 
@@ -112,7 +112,7 @@ test('Nina: minnet utvider søket begge veier, hele ord, tydelig «fant ingen»'
   assert.ok(r.body.actions[0].args.expanded.includes('Nina') && r.body.actions[0].args.expanded.includes('frisør'));
   assert.ok(r.body.traceId, 'traceId i svaret');
   // Andre veien: typeordet finner navnet.
-  const st = await (await import('../server/glimt45/tools47.js')).searchTerms47(ME, 'neste frisørtime', ['frisør']);
+  const st = await (await import('../server/glimt/tools-search.js')).searchTerms47(ME, 'neste frisørtime', ['frisør']);
   assert.ok(st.expanded.includes('Nina'));
   // «Oslo» treffer ikke «OsloMet» (ordgrenser), og tom retur sier hva det ble søkt etter.
   const o = await agent('Når er neste forelesning i Oslo?');
@@ -219,13 +219,13 @@ test('modellstyring: tolkningsruter under 7B gir advarsel; standardforslag er qw
   assert.equal(SUGGESTED_MODELS.kat, 'qwen3:8b');
   const { DEFAULT_MODEL_KEEP_ALIVE } = await import('../server/ai-gate.js');
   assert.equal(DEFAULT_MODEL_KEEP_ALIVE['llama3.2:3b'], undefined);
-  const { STEP47 } = await import('../server/glimt45/params47.js');
+  const { STEP47 } = await import('../server/glimt/model-params.js');
   assert.deepEqual([STEP47.planner.numCtx, STEP47.planner.numPredict, STEP47.planner.temperature, STEP47.planner.think], [8192, 512, 0, false]);
   assert.deepEqual([STEP47.plannerRetry.think, STEP47.document.numCtx, STEP47.document.numPredict, STEP47.answer.numPredict, STEP47.brief.numCtx], [true, 16384, 4096, 600, 16384]);
 });
 
 test('promptbudsjett: historikk og fakta trimmes, aldri systemprompten', async () => {
-  const { fitParts47 } = await import('../server/glimt45/params47.js');
+  const { fitParts47 } = await import('../server/glimt/model-params.js');
   const f = fitParts47({ fixed: 'S'.repeat(20000), parts: [{ key: 'history', text: 'H'.repeat(20000), fromStart: true }, { key: 'facts', text: 'F'.repeat(1000), minChars: 200 }], numCtx: 8192, numPredict: 512 });
   assert.ok(f.trimmed.includes('history'));
   assert.ok(f.parts.history.length < 20000 && f.parts.history.startsWith('…'));

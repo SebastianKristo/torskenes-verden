@@ -40,7 +40,7 @@ export const chatUploadMw53 = async (c, next) => {
   if (!r?.isNSFW) return;
   db.prepare('DELETE FROM hl_chat_files WHERE id=?').run(row.id);
   await unlink(row.path).catch(() => {});
-  try { const { deleteFile50 } = await import('../chat50.js'); await deleteFile50?.(row); } catch { /* miniatyren ryddes ved neste opprydding */ }
+  try { const { deleteFile50 } = await import('../ai/chat/attachments.js'); await deleteFile50?.(row); } catch { /* miniatyren ryddes ved neste opprydding */ }
   console.info(`[dal53] moderator: et bilde fra en barnekonto ble avvist (score ${r.score})`);
   c.res = c.json({ error: HIDDEN_TEXT53, moderated: true, code: 'moderated53' }, 422);
 };

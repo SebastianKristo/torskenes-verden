@@ -8,7 +8,7 @@
 // Eksempel: max(price_nok_kwh) > 2.0 · min(temp_c) < -5 and max(precip_mm) > 1
 // parseCondition62(text) gjør norsk tekst («strømprisen går over 2 kr», «temperaturen under -5 grader», «det blir regn») om til
 // {text, expr, source, day, label}. evalCondition62(expr, data) → {met, value, ...}. Ukjente navn/tegn → feil (aldri en gjetning).
-import { placesIn46 } from '../glimt45/weather46.js';
+import { placesIn46 } from '../glimt/weather.js';
 
 export const VARS62 = { price_nok_kwh: 'power', temp_c: 'weather', precip_mm: 'weather' };
 const FNS = new Set(['max', 'min', 'avg', 'first', 'last', 'count']);

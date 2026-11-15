@@ -6,7 +6,7 @@
 //   POST /api/brief-cards/reset      → standard utvalg og rekkefølge
 //
 // Kort brukeren ikke har tilgang til (Homelab, Domener, Aksjer, Regninger/Media for barn – srv52.js briefCardsFor52) er ikke med i lista.
-// Briefen bygges fra lista: GET /api/brief (brief34.js, oppsummering, guide-runde, widgets) tar bare med kort som er på, og
+// Briefen bygges fra lista: GET /api/brief (glimt/brief.js, oppsummering, guide-runde, widgets) tar bare med kort som er på, og
 // GET /api/brief52 gir bare kortene som er på, i lagret rekkefølge (+ order:[key] for hele briefen).
 // Lista speiles til brief38_cards (cards38.js), så nordlysvarselet og eldre klienter følger samme valg.
 import { Hono } from 'hono';

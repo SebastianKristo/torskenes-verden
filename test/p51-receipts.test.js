@@ -104,9 +104,9 @@ const tess = await import('../server/finans/receipts/engines/tesseract.js');
 const brreg = await import('../server/finans/receipts/brreg.js');
 const pre = await import('../server/finans/receipts/preprocess.js');
 const ocrRaw = await import('../server/finans/receipts/ocr-raw.js');
-const chat = await import('../server/chat.js');
-const chat50 = await import('../server/chat50.js');
-const c51 = await import('../server/chat51.js');
+const chat = await import('../server/ai/chat/routes.js');
+const chat50 = await import('../server/ai/chat/attachments.js');
+const c51 = await import('../server/ai/chat/images.js');
 chat._setChatFetch(fake);
 brreg._setBrregFetch51(fake);
 

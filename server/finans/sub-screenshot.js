@@ -12,7 +12,7 @@ import { _aiTest, logAi, aiTimeoutsOf } from './ai.js';
 import { hasGemini, geminiFetch } from './gemini-keys.js';
 import { audit } from './ai-audit.js';
 import { ocrTools } from '../ocr-fallback.js';
-import { shortBody, stripThink, noteCapabilities } from '../ollama-opts.js';
+import { shortBody, stripThink, noteCapabilities } from '../ai/ollama-options.js';
 import { gatePost } from '../ai-gate.js'; // prompt 43: alle Ollama-kall via gaten
 import { routing as aiRouting, jobStart, jobEnd, jobUpdate } from '../ai-run.js';
 const OWNER_ID = 'owner';
