@@ -18,8 +18,8 @@ html .gate-link{padding-block:5px;margin-block:-5px}
 /* Kalenderen: hvit tekst på rødt trenger mørkere rødt i mørk modus; rød tekst på mørkt trenger lysere */
 #kal.k39 .k39-md.today b,#kal.k39 .k39-ghc.today b,#kal.k39 .k43-new{background:var(--red-bg,var(--red))}
 #kal.k39 .k39-ghc.today .k39-ghw{color:var(--red-tx,var(--red))}
-html[data-kal-theme="mork"] #kal.k39{--red-bg:#b8452f;--red-tx:#dc6c58}
-@media (prefers-color-scheme:dark){html:not([data-kal-theme="lys"]) #kal.k39{--red-bg:#b8452f;--red-tx:#dc6c58}}
+html[data-mode="dark"] #kal.k39{--red-bg:#b8452f;--red-tx:#dc6c58}
+@media (prefers-color-scheme:dark){html:not([data-mode="light"]) #kal.k39{--red-bg:#b8452f;--red-tx:#dc6c58}}
 #kal.k39 .k39-md.out b{color:var(--mut2)}
 #kal.k39 .k39-bdg{color:var(--ink2)}
 /* «Kommer ut»: «overvåkes»-merket */
