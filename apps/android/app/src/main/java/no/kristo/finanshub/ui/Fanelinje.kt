@@ -250,12 +250,20 @@ internal fun HomeRaised42(vm: AppViewModel, home: Boolean, modifier: Modifier = 
     ) { GlyphIcon("⌂", p.onLab, 22.dp) }
 }
 
-/** Modulene i 1d (designets MODN): nøkkel, navn og ikon. «mer» = Alle. */
-private val MODS42 = listOf(
-    Triple("hjem", "Hjem", "⌂"), Triple("finans", "Finans", "kr"), Triple("mat", "Mat", "◐"), Triple("sporing", "Sporing", "▣"),
-    Triple("domener", "Domener", "◎"), Triple("familie", "Familie", "◉"), Triple("boliger", "Boliger", "⌂"), Triple("abonnementer", "Abonnement", "↻"),
-    Triple("kalender", "Kalender", "▦"), Triple("huske", "Gjøremål", "☑"), Triple("chat", "Chat", "✉"), Triple("mer", "Alle", "⋯"),
-)
+/**
+ * Modulene i 1d (designets MODN): nøkkel, navn og ikon. Fase 6: Oversikt først, så de faste fanene fra modullisten (toppmeny,
+ * Q6) og de andre sidene som hadde plass her før, til sammen 11, og «Alle» (Mer) sist. Navn og ikon kommer fra modullisten.
+ */
+private val MODS42: List<Triple<String, String, String>>
+    get() {
+        val faner = MAIN_TABS
+        val nokler = (Moduler.liste.toppmeny.mapNotNull { no.kristo.felles.moduler.Fanenokler.fra(it) } +
+            listOf("finans", "mat", "sporing", "domener", "familie", "boliger", "abonnementer", "kalender", "huske", "chat"))
+            .filter { k -> k != "hjem" && faner.any { it.id == k } }.distinct().take(10)
+        return listOf(Triple("hjem", Moduler.oversikt, "⌂")) +
+            nokler.mapNotNull { k -> faner.firstOrNull { it.id == k }?.let { Triple(it.id, it.label, it.icon) } } +
+            Triple("mer", "Alle", "⋯")
+    }
 
 /** Modulen du er i nå (for «kr Finans ▴»). */
 internal fun curModule42(vm: AppViewModel): String = when {

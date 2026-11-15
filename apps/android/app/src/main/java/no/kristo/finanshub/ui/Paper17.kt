@@ -714,6 +714,14 @@ internal fun glyphVector(g: String): ImageVector? = when (g) {
     "✝" -> Icons.Filled.MenuBook
     "≈" -> Icons.Filled.Waves
     "⚙" -> Icons.Filled.Settings
+    // Fase 6: tegnene i modullisten (shared/schemas/moduler.json) som appen ikke hadde fra før (Moduler.MODUL_TEGN).
+    "▶" -> Icons.Filled.PlayCircle
+    "☼" -> Icons.Filled.WbSunny
+    "¶" -> Icons.Filled.Newspaper
+    "✎" -> Icons.Filled.School
+    "⚒" -> Icons.Filled.Handyman
+    "⌁" -> Icons.Filled.Lan
+    "✶" -> Icons.Filled.NightsStay
     else -> null
 }
 

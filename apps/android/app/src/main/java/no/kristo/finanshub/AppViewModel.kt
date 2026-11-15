@@ -538,6 +538,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         boot = parseBoot(api.get("/bootstrap"))
         summary = runCatching { parseSummary(api.get("/summary")) }.getOrNull() ?: summary
         loadMe()
+        // Fase 6: modullisten (navn, ikoner og rekkefølge på fanene og i Mer). Feiler den, brukes den sist kjente.
+        loadModuler()
         // Navnet på appen, ikonet og varselvalgene (stille timer, lyd) hentes fra serveren.
         loadAppInfo()
         if (!notifyLoaded) loadNotify()
@@ -2660,6 +2662,23 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch { runCatching { api.hlPut("/me/layout", JSONObject().put("tabBar", JSONObject().put("items", JSONArray()))) } }
     }
 
+    /** Modullisten for brukeren (Moduler.kt). */
+    internal suspend fun hentModulliste(): String = api.hlGet("/moduler?plattform=android")
+
+    /**
+     * Fase 6: et lagret oppsett av fanelinja (fra appen, iOS eller web) med de gamle standardnavnene («Finans», «Now Brief»,
+     * «Avganger») eller de gamle nøklene («rss», «gjoremal») flyttes én gang per konto til nøklene og navnene i modullisten.
+     * Egne navn brukeren har gitt, beholdes. Uten eget oppsett skjer ingenting (standarden følger lista).
+     */
+    internal fun migrerFaner() {
+        val key = AppPrefs.TAB_BAR + "v6_" + (account?.id ?: "")
+        if (prefs.bool(key) || tabBar.isEmpty()) return
+        prefs.set(key, true)
+        val v = tabBar
+        prefs.set(AppPrefs.TAB_BAR + (account?.id ?: ""), JSONArray().apply { v.forEach { put(it.toJson()) } }.toString())
+        viewModelScope.launch { runCatching { api.hlPut("/me/layout", JSONObject().put("tabBar", JSONObject().put("items", JSONArray().apply { v.forEach { put(it.toJson()) } }))) } }
+    }
+
     /** Fargetema for ikonene i Innstillinger («standard» er dagens farger). */
     val iconTheme: String get() = option(AppPrefs.ICON_THEME, "standard")
     fun updateIconTheme(v: String) {
@@ -2669,7 +2688,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun applyLayout16(raw: String) {
         val l = runCatching { parseLayout16(raw) }.getOrNull() ?: return
-        if (l.tabBar.isNotEmpty()) tabBar = l.tabBar
+        if (l.tabBar.isNotEmpty()) { tabBar = l.tabBar; migrerFaner() }
         l.iconTheme?.let { prefs.set(AppPrefs.ICON_THEME, it); prefTick++ }
         applyNavStyle25(raw)
         applyNavHome42(raw) // prompt 42: Hjem-knappen i fanelinja (homeButton)
@@ -3894,6 +3913,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         migrateDesign42()
         Privacy.hidden = prefs.bool(AppPrefs.HIDE_AMOUNTS)
         layout = localLayout()
+        loadLocalModuler()
         loadLocalLayout15()
         loadLocalLayout16()
         refreshPending()

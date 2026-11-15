@@ -111,39 +111,57 @@ private fun MerRow24(vm: AppViewModel, i: Int, icon: String, title: String, sub:
 private class MerItem24(val icon: String, val title: String, val sub: String, val go: () -> Unit)
 
 /**
- * Mer (side «mer»): Sporing (eller Domener når Sporing er en fane), Bursdager, Huskeliste, Familie og kart, Media, Finans,
- * Nyhetsleser og Innstillinger. Faner som allerede står i fanelinja tas ut. I en profil (Finans + Boliger) står Hjem først.
- * Prompt 25: ikon til venstre på hver rad (som i Innstillinger).
+ * Mer (side «mer»): alle modulene som ikke står i fanelinja, i modullistens rekkefølge og med navnene derfra (Fase 6,
+ * Moduler.kt), så Faste betalinger, Kart, Logg inn på annen enhet og Innstillinger. Faner som allerede står i fanelinja tas ut.
+ * I en profil (Økonomi + Boliger) står Oversikt først. Nøklene er de samme som før, så lagret rekkefølge og skjulte rader
+ * gjelder fortsatt. Prompt 25: ikon til venstre på hver rad (som i Innstillinger).
  */
 @Composable
 internal fun PaperMore24(vm: AppViewModel, navBottom: Dp, barSpace: Dp) {
     val inBar = vm.tabBarItems().map { it.id }.toSet()
     val onWay = vm.packagesOnWay
     val sporingInBar = "sporing" in inBar || (vm.tabBar.isEmpty() && vm.tab4 == "sporing")
-    // Prompt 28: hold inne → redigeringsmodus (MerList28), rekkefølge og skjulte per konto; Subscription OS etter Finans.
+    val liste = Moduler.liste
+    // Prompt 28: hold inne → redigeringsmodus (MerList28), rekkefølge og skjulte per konto.
     var n = 0
     val rows = buildList {
         fun row(key: String, title: String, sub: String, go: () -> Unit) { add(MerItem28(key, title, sub, n++, go)) }
-        // Prompt 36: Now Brief øverst (kan flyttes og skjules som de andre). Sveipet bort på Hjem: «Skjult på Hjem · trykk for å åpne».
-        row("brief", "Now Brief", if (vm.briefHiddenNow36()) "Skjult på Hjem · trykk for å åpne" else "Glimt oppsummerer dagen") { vm.openBrief34() }
-        if (vm.b24ProfileOn) row("hjem", "Hjem", "Pakker, avganger og widgets") { vm.paperTab("hjem") }
-        if (sporingInBar) { if ("domener" !in inBar) row("domener", "Domener", "Trafikk, besøk og oppetid") { vm.domSection = "oversikt"; vm.openFromMer(Screen.Domains) } }
-        else row("sporing", "Sporing", if (onWay > 0) "$onWay pakker på vei" else "Pakker og sendinger") { vm.openFromMer(Screen.Tracking) }
-        row("bursdag", "Bursdager", "Hvem har bursdag snart") { vm.openBirthdays24() }
-        if ("chat" !in inBar) row("chat", "Chat", "Ollama lokalt, Gemini og Groq") { vm.openChat() }
-        row("kalender", "Kalender", "Timeplan, prøver og frister") { vm.openKal26() }
-        row("studie", "Studie", "Dokumenter, vitnemål og karakterer") { vm.openStudy44() } // prompt 44
-        // Prompt 37: Gjøremål (tidligere Huskeliste) og Bibel (bare for brukere med bibelvers-modulen).
-        row("huske", "Gjøremål", "To-do for hele familien") { vm.openTasks() }
-        if (vm.bibleAllowed37()) row("bibel", "Bibel", "Dagens vers, rekke og leseplan") { vm.p37.biblePage = true }
-        if ("familie" !in inBar) row("kart", "Familie og kart", "Posisjon, soner og helse") { vm.openFamily() }
-        // Prompt 46 (claude-code-kart-side.md): Mer → Kart (side-nøkkel tkart), fullskjerm som Media/Kalender.
-        row("tkart", "Kart", "Holdeplasser, sanntid og soner") { vm.openKart46() }
-        row("skjold", "Skjold Lab", "Deler, skuffer og skap") { vm.openSkjold76() } // prompt 76
-        if ("media" !in inBar) row("media", "Media", "Sonarr, Radarr, qBittorrent og Prowlarr") { vm.openMedia43() } // prompt 43
-        if ("finans" !in inBar) row("finans", "Finans", "Oversikt, liste, Finn og mer") { vm.paperTab("fin") }
-        row("abo", "Subscription OS", "Abonnementer og faste trekk") { vm.openSubFromMer38() }
-        if ("nyheter" !in inBar) row("rss", "Nyhetsleser", "RSS med AI-sammendrag") { vm.openNews() }
+        for (m in liste.moduler) when (m.id) {
+            // Prompt 36: Brief kan flyttes og skjules som de andre. Sveipet bort på Oversikt: «Skjult på Oversikt · trykk for å åpne».
+            "brief" -> row("brief", m.navn, if (vm.briefHiddenNow36()) "Skjult på ${Moduler.oversikt} · trykk for å åpne" else "Glimt oppsummerer dagen") { vm.openBrief34() }
+            "oversikt" -> if (vm.b24ProfileOn) row("hjem", m.navn, "Pakker, avganger og widgets") { vm.paperTab("hjem") }
+            "chat" -> if ("chat" !in inBar) row("chat", m.navn, "Ollama lokalt, Gemini og Groq") { vm.openChat() }
+            "mat" -> if ("mat" !in inBar) row("mat", m.navn, "Ukesmeny og handleliste") { vm.paperTab("mat") }
+            "gjoremal" -> row("huske", m.navn, "To-do for hele familien") { vm.openTasks() }
+            "familie" -> if ("familie" !in inBar) row("kart", m.navn, "Folk, kart, steder og helse") { vm.openFamily() }
+            "kalender" -> {
+                row("kalender", m.navn, "Timeplan, prøver og frister") { vm.openKal26() }
+                // Q5: Bursdager er et filter i Kalender, og administrasjonen av bursdagene er en egen visning der.
+                val bd = m.undersider.firstOrNull { it.id == "bursdager" }?.navn ?: "Bursdager"
+                row("bursdag", bd, "${m.navn} · hvem har bursdag snart") { vm.openBirthdays24() }
+            }
+            "vaer" -> if ("vaer" !in inBar) row("vaer", m.navn, "Varsel, nedbør og vind") { vm.openWeather() }
+            "reise" -> {
+                if ("avganger" !in inBar) row("avganger", m.navn, "Avganger og kart") { vm.openRuter() }
+                // Prompt 46 (claude-code-kart-side.md): kartet med holdeplasser (side-nøkkel tkart), fullskjerm som Media/Kalender.
+                val kart = m.undersider.firstOrNull { it.id == "kart" }?.navn ?: "Kart"
+                row("tkart", kart, "${m.navn} · holdeplasser, sanntid og soner") { vm.openKart46() }
+            }
+            "sporing" -> if (sporingInBar) Unit else row("sporing", m.navn, if (onWay > 0) "$onWay pakker på vei" else "Pakker og sendinger") { vm.openFromMer(Screen.Tracking) }
+            "domener" -> if (sporingInBar && "domener" !in inBar) row("domener", m.navn, "Trafikk, besøk og oppetid") { vm.domSection = "oversikt"; vm.openFromMer(Screen.Domains) }
+            "finans" -> {
+                if ("finans" !in inBar) row("finans", m.navn, "Oversikt, transaksjoner, budsjett og mer") { vm.paperTab("fin") }
+                // Q4: Faste betalinger (Abonnementer, Faste utgifter og Planlagte trekk) i Økonomi.
+                row("abo", "Faste betalinger", "Abonnementer, faste utgifter og planlagte trekk") { vm.openFaste("abonnementer") }
+            }
+            "media" -> if ("media" !in inBar) row("media", m.navn, "Sonarr, Radarr, qBittorrent og Prowlarr") { vm.openMedia43() } // prompt 43
+            // Q10: Nyheter er én modul (Nyhetsleser er en del av den). Nøkkelen «rss» beholdes for lagret rekkefølge.
+            "nyheter" -> if ("nyheter" !in inBar) row("rss", m.navn, "Nyhetslinje og RSS med AI-sammendrag") { vm.openNews() }
+            "studie" -> row("studie", m.navn, "Dokumenter, vitnemål og karakterer") { vm.openStudy44() } // prompt 44
+            // Prompt 37: Bibel bare for brukere med bibelvers-modulen (serveren sender den bare til dem).
+            "bibel" -> if (vm.bibleAllowed37()) row("bibel", m.navn, "Dagens vers, rekke og leseplan") { vm.p37.biblePage = true }
+            "skjold" -> row("skjold", m.navn, "Deler, skuffer og skap") { vm.openSkjold76() } // prompt 76
+        }
         // Prompt 46 (claude-code-qr-innlogging-finans-kalender.md): snarvei til skanneren (godkjenn innlogging på Mac, nettbrett, Kalender …).
         row("qrlogin", "Logg inn på annen enhet", "Skann QR-koden på den andre skjermen") { vm.openQr38() }
         row("innst", "Innstillinger", "Tema, bakgrunn og konto") { vm.openPaperPage("set") }
