@@ -77,8 +77,10 @@ final class Search29Model {
             if Task.isCancelled { return }
             let pv0: Quick29Preview? = await Quick29Model.shared.parse(t, store)
             if Task.isCancelled { return }
-            // Prompt 44: lokal tolking først (dato og tid), tittelen er resten av teksten (Time44Parse.swift).
-            let pv: Quick29Preview? = Time44.merge(pv0, t)
+            // Fase 4: dato og tid fra serverens felles datotolker, tittelen er resten av teksten (QuickDates.swift).
+            let dp: DatesParseDTO? = await QuickDates.parse(t, store)
+            if Task.isCancelled { return }
+            let pv: Quick29Preview? = QuickDates.merge(pv0, dp)
             self.appt = Search29Model.isAppt(pv) ? pv : nil
             // Prompt 52: med Glimt og minst 3 ord tolker AI beskjeden (450 ms pause totalt) og overstyrer reglene (Quick52.swift).
             guard self.engine == "ai", Quick52.words(t) >= 3 else { return }
@@ -133,7 +135,8 @@ final class Search29Model {
         var isTime: Bool = appt != nil && !question36
         if !isTime && !question36 && t.count > 4 {
             let pv: Quick29Preview? = await Quick29Model.shared.parse(t, store)
-            isTime = Search29Model.isAppt(Time44.merge(pv, t))
+            let dp: DatesParseDTO? = await QuickDates.parse(t, store)
+            isTime = Search29Model.isAppt(QuickDates.merge(pv, dp))
         }
         appt = nil
         if isTime {

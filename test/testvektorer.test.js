@@ -6,7 +6,8 @@
 // forsvinner todo-merket av seg selv (det settes bare når svaret avviker). Testen «oppsummering» skriver antall
 // bestått per implementasjon som diagnostikk.
 //
-// Swift og Kotlin skal kjøre de samme filene når XCTest og JUnit finnes (Fase 4 og 5, BESLUTNINGER.md Q25).
+// Swift kjører de samme filene i HomelabTests (apps/ios/HomelabTests, CI «Mobilapper»: serveradresse, idag og datoer mot
+// KalQuick). Kotlin kommer i Fase 5 (BESLUTNINGER.md Q25).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, mkdtempSync } from 'node:fs';

@@ -20,7 +20,8 @@
     "reset-2fa": "node scripts/reset-2fa.js",
     "rekey-secrets": "node scripts/rekey-secrets.js",
     "tokens": "node scripts/design-tokens.mjs",
-    "tokens:check": "node scripts/design-tokens.mjs --check"
+    "tokens:check": "node scripts/design-tokens.mjs --check",
+    "kontrakt:eksempler": "node scripts/kontrakt-eksempler.mjs"
   },
   "engines": {
     "node": ">=22"

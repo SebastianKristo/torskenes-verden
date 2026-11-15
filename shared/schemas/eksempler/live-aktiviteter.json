@@ -1,0 +1,89 @@
+{
+  "aktiviteter": [
+    {
+      "id": "nedlasting:qb:63f0094009c9150b521b9a41b978abebacf4cc57",
+      "type": "nedlasting",
+      "tittel": "Shrinking",
+      "undertittel": "S03E08 · Sonarr",
+      "verdi": "64 %",
+      "progress": 0.64,
+      "segmenter": null,
+      "meta": "12,8 MB/s · 21 min",
+      "start": "2026-11-15T16:00:27.000Z",
+      "slutt": "2026-11-15T17:20:37.192Z",
+      "status": "aktiv",
+      "handlinger": [
+        {
+          "id": "pause",
+          "tittel": "Pause"
+        }
+      ],
+      "url": "homelab://media/ned"
+    },
+    {
+      "id": "nedlasting:qb:4160d568f9ff2770d02d12ebef2a97e16461ead1",
+      "type": "nedlasting",
+      "tittel": "Wicked: For Good",
+      "undertittel": "Radarr",
+      "verdi": "22 %",
+      "progress": 0.22,
+      "segmenter": null,
+      "meta": "5,6 MB/s · 14 t 35 min",
+      "start": "2026-11-15T15:00:27.000Z",
+      "slutt": "2026-11-16T07:35:14.192Z",
+      "status": "aktiv",
+      "handlinger": [
+        {
+          "id": "pause",
+          "tittel": "Pause"
+        }
+      ],
+      "url": "homelab://media/ned"
+    },
+    {
+      "id": "nedlasting:qb:1742667849802a8e3ebee7758dd5cc9164133953",
+      "type": "nedlasting",
+      "tittel": "Only Murders in the Building",
+      "undertittel": "S05E09 · Sonarr",
+      "verdi": "3 %",
+      "progress": 0.03,
+      "segmenter": null,
+      "meta": "Står fast · 0 seedere",
+      "start": "2026-11-15T14:00:27.000Z",
+      "slutt": null,
+      "status": "aktiv",
+      "handlinger": [
+        {
+          "id": "pause",
+          "tittel": "Pause"
+        }
+      ],
+      "url": "homelab://media/ned"
+    },
+    {
+      "id": "spiller:demo-0",
+      "type": "spiller",
+      "tittel": "Slow Horses",
+      "undertittel": "S06E03 · Dead Drop · Petter · Chromecast",
+      "verdi": "21:50",
+      "progress": 0.42,
+      "segmenter": null,
+      "meta": "30 min igjen",
+      "start": "2026-11-15T16:38:36.792Z",
+      "slutt": "2026-11-15T17:30:36.792Z",
+      "status": "aktiv",
+      "handlinger": [
+        {
+          "id": "pause",
+          "tittel": "Pause"
+        },
+        {
+          "id": "stopp",
+          "tittel": "Stopp"
+        }
+      ],
+      "url": "homelab://media/avspilling"
+    }
+  ],
+  "oppdatert": "2026-11-15T17:00:27.192Z"
+}

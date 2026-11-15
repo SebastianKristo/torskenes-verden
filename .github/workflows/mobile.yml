@@ -2,7 +2,8 @@ name: Mobilapper
 on:
   push:
     branches: [main]
-    paths: ['apps/**', '.github/workflows/mobile.yml']
+    # Fase 4: også når fasitene endres (HomelabTests leser shared/testvektorer og shared/schemas/eksempler).
+    paths: ['apps/**', 'shared/testvektorer/**', 'shared/schemas/**', '.github/workflows/mobile.yml']
   workflow_dispatch:
 permissions:
   contents: read
@@ -85,6 +86,18 @@ jobs:
             CODE_SIGNING_ALLOWED=NO build > kal.log 2>&1 && s=0 || s=$?
           grep -E ": error: |: fatal error: " kal.log | sort -u | head -80 || true
           tail -25 kal.log
+          exit $s
+      - name: Enhetstester (HomelabTests, simulator)
+        # Fase 4 (Q25): fasitene i shared/testvektorer og eksemplene i shared/schemas/eksempler mot appenes lokale logikk og
+        # DTO-ene. Logiske tester uten vertsapp, så de trenger ingen signering. Nyeste tilgjengelige iPhone-simulator.
+        run: |
+          UDID=$(xcrun simctl list devices available -j | python3 -c 'import json,sys; d=json.load(sys.stdin)["devices"]; ids=[x["udid"] for k,v in sorted(d.items()) if "iOS" in k for x in v if x["name"].startswith("iPhone")]; print(ids[-1] if ids else "")')
+          echo "Simulator: $UDID"
+          test -n "$UDID" || { echo "Fant ingen iPhone-simulator"; exit 1; }
+          xcodebuild test -project FinansHub.xcodeproj -scheme HomelabTests \
+            -destination "platform=iOS Simulator,id=$UDID" CODE_SIGNING_ALLOWED=NO > test.log 2>&1 && s=0 || s=$?
+          grep -E ": error: |: fatal error: |Test Case .* failed|Executed [0-9]+ test|DateVectorTests:" test.log | sort -u | head -80 || true
+          tail -25 test.log
           exit $s
       - name: Bygg Kalender for Mac
         run: |

@@ -267,7 +267,7 @@ enum KalCals39 {
         i.notify = false
         i.localHolidays = true
         c.p39 = i
-        c.count = KalHoliday39.list(from: KalD.todayKey(), to: KalD.addKey(KalD.todayKey(), 29)).count
+        c.count = KalHoliday39.cachedCount(from: KalD.todayKey(), to: KalD.addKey(KalD.todayKey(), 29))
         return c
     }
 
@@ -379,69 +379,50 @@ enum KalCals39 {
     }
 }
 
-/* ---------- Helligdager (innebygd, Norge) ---------- */
+/* ---------- Helligdager fra serveren (Q18) ---------- */
+// Fase 4 (D1): helligdager og merkedager kommer fra GET /api/dates/holidays (server/dates/holidays.js), ikke fra en egen
+// påskeberegning i appen. Svaret bufres per år i App Group-en, så kalenderen og widgetene viser dem også uten nett.
 
 enum KalHoliday39 {
-    /// Påskedag (gregoriansk, anonym algoritme). → (måned, dag)
-    static func easter(_ y: Int) -> (Int, Int) {
-        let a: Int = y % 19
-        let b: Int = y / 100
-        let c: Int = y % 100
-        let d: Int = b / 4
-        let e: Int = b % 4
-        let f: Int = (b + 8) / 25
-        let g: Int = (b - f + 1) / 3
-        let h: Int = (19 * a + b - d - g + 15) % 30
-        let i: Int = c / 4
-        let k: Int = c % 4
-        let l: Int = (32 + 2 * e + 2 * i - h - k) % 7
-        let m: Int = (a + 11 * h + 22 * l) / 451
-        let month: Int = (h + l - 7 * m + 114) / 31
-        let day: Int = ((h + l - 7 * m + 114) % 31) + 1
-        return (month, day)
+    private static func cacheKey(_ y: Int) -> String { "kal.holidays." + String(y) }
+
+    /// Den bufrede kopien for et år (uten nett).
+    static func cached(_ y: Int) -> [DatesHolidaysDTO.Item] {
+        guard let d = KalGroup.defaults.data(forKey: cacheKey(y)), let v = try? JSONDecoder().decode(DatesHolidaysDTO.self, from: d) else { return [] }
+        return v.items
     }
 
-    private static func key(_ y: Int, _ m: Int, _ d: Int) -> String {
-        let mm: String = m < 10 ? "0" + String(m) : String(m)
-        let dd: String = d < 10 ? "0" + String(d) : String(d)
-        return String(y) + "-" + mm + "-" + dd
+    /// Antall helligdager og merkedager i perioden i den bufrede kopien (for telleren på kalenderen «Helligdager»).
+    static func cachedCount(from: String, to: String) -> Int {
+        guard from.count >= 4, to.count >= 4, let y0 = Int(from.prefix(4)), let y1 = Int(to.prefix(4)), y1 >= y0, y1 - y0 < 5 else { return 0 }
+        var n: Int = 0
+        for y in y0...y1 {
+            n += cached(y).filter { (h: DatesHolidaysDTO.Item) -> Bool in h.date >= from && h.date <= to }.count
+        }
+        return n
     }
 
-    /// Årets fridager (fri = true) og merkedager. → [(dato, navn, fri)]
-    static func year(_ y: Int) -> [(String, String, Bool)] {
-        let e: (Int, Int) = easter(y)
-        let ek: String = key(y, e.0, e.1)
-        func off(_ n: Int) -> String { KalD.addKey(ek, n) }
-        var out: [(String, String, Bool)] = [
-            (key(y, 1, 1), "1. nyttårsdag", true),
-            (off(-7), "Palmesøndag", false),
-            (off(-3), "Skjærtorsdag", true),
-            (off(-2), "Langfredag", true),
-            (ek, "1. påskedag", true),
-            (off(1), "2. påskedag", true),
-            (key(y, 5, 1), "Arbeidernes dag", true),
-            (key(y, 5, 17), "Grunnlovsdag", true),
-            (off(39), "Kristi himmelfartsdag", true),
-            (off(49), "1. pinsedag", true),
-            (off(50), "2. pinsedag", true),
-            (key(y, 12, 24), "Julaften", false),
-            (key(y, 12, 25), "1. juledag", true),
-            (key(y, 12, 26), "2. juledag", true),
-            (key(y, 12, 31), "Nyttårsaften", false),
-        ]
-        out.sort { (a: (String, String, Bool), b: (String, String, Bool)) -> Bool in a.0 < b.0 }
-        return out
+    /// Årets helligdager og merkedager: bufret kopi, ellers fra serveren. Tom uten svar og uten buffer.
+    static func year(_ y: Int) async -> [DatesHolidaysDTO.Item] {
+        let g: UserDefaults = KalGroup.defaults
+        let c: [DatesHolidaysDTO.Item] = cached(y)
+        if !c.isEmpty { return c }
+        guard let d = try? await KalNet.get("/api/dates/holidays?year=" + String(y), timeout: 10),
+              let v = try? JSONDecoder().decode(DatesHolidaysDTO.self, from: d) else { return [] }
+        if !v.items.isEmpty { g.set(d, forKey: cacheKey(y)) }
+        return v.items
     }
 
     /// Helligdagene i perioden (inklusive) som heldagshendelser i kalenderen «Helligdager».
-    static func list(from: String, to: String) -> [KalEvent] {
+    static func list(from: String, to: String) async -> [KalEvent] {
         guard from.count >= 4, to.count >= 4, let y0 = Int(from.prefix(4)), let y1 = Int(to.prefix(4)), y1 >= y0, y1 - y0 < 5 else { return [] }
         let cal: String = KalCals39.roleIds["h"] ?? "h"
         var out: [KalEvent] = []
         for y in y0...y1 {
-            for (d, n, fri) in year(y) where d >= from && d <= to {
-                var ev: KalEvent = KalEvent(id: "hd-" + d, title: n, cal: cal, day: d, s: nil, e: nil)
-                ev.kind = fri ? "fri" : "merkedag"
+            let items: [DatesHolidaysDTO.Item] = await year(y)
+            for h in items where h.date >= from && h.date <= to {
+                var ev: KalEvent = KalEvent(id: "hd-" + h.date, title: h.name, cal: cal, day: h.date, s: nil, e: nil)
+                ev.kind = h.fri ? "fri" : "merkedag"
                 ev.serverCal = "helligdager"
                 out.append(ev)
             }
@@ -449,12 +430,12 @@ enum KalHoliday39 {
         return out
     }
 
-    /// Legger inn helligdagene når de beregnes lokalt og serveren ikke har sendt noen.
-    static func merge(_ events: [KalEvent], from: String, to: String) -> [KalEvent] {
+    /// Legger inn helligdagene når kalenderen «Helligdager» er lokal og serveren ikke har sendt noen hendelser i den.
+    static func merge(_ events: [KalEvent], from: String, to: String) async -> [KalEvent] {
         guard KalCals39.localHolidays else { return events }
         let h: String = KalCals39.roleIds["h"] ?? "h"
         if events.contains(where: { (e: KalEvent) -> Bool in e.cal == h }) { return events }
-        let extra: [KalEvent] = KalHoliday39.list(from: from, to: to)
+        let extra: [KalEvent] = await KalHoliday39.list(from: from, to: to)
         var out: [KalEvent] = events + extra
         out.sort { (a: KalEvent, b: KalEvent) -> Bool in
             if a.day != b.day { return a.day < b.day }

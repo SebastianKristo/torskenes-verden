@@ -1,0 +1,640 @@
+{
+  "month": "2026-11",
+  "from": "2026-11-01",
+  "to": "2026-12-01",
+  "daysLeft": 16,
+  "inn": 41200,
+  "ut": 15573.6,
+  "prevInn": 41200,
+  "prevUt": 37068,
+  "budgetTotal": 24550,
+  "budgetUsed": 15573.6,
+  "left": 8976.4,
+  "savedYear": 67170.4,
+  "yearGoal": 120000,
+  "balance": 182770.4,
+  "balanceSeries": [
+    120600,
+    120600,
+    128871,
+    135342
+  ],
+  "series": [
+    {
+      "month": "2025-12",
+      "inn": 0,
+      "ut": 0
+    },
+    {
+      "month": "2026-01",
+      "inn": 0,
+      "ut": 0
+    },
+    {
+      "month": "2026-02",
+      "inn": 41200,
+      "ut": 32929
+    },
+    {
+      "month": "2026-03",
+      "inn": 41200,
+      "ut": 34729
+    }
+  ],
+  "lastIncome": {
+    "date": "2026-11-12",
+    "description": "Lønn"
+  },
+  "byCategory": [
+    {
+      "categoryId": 4,
+      "category": "Bolig",
+      "color": "#B79CFF",
+      "amount": 10784,
+      "budget": 11000
+    },
+    {
+      "categoryId": 1,
+      "category": "Mat og dagligvarer",
+      "color": "#FF9F5A",
+      "amount": 1387.2,
+      "budget": 6000
+    },
+    {
+      "categoryId": 3,
+      "category": "Transport og lading",
+      "color": "#7AA7FF",
+      "amount": 1130.4,
+      "budget": 1500
+    },
+    {
+      "categoryId": 8,
+      "category": "Skole",
+      "color": "#C9E265",
+      "amount": 649,
+      "budget": 1000
+    }
+  ],
+  "budgets": [
+    {
+      "categoryId": 1,
+      "category": "Mat og dagligvarer",
+      "color": "#FF9F5A",
+      "budget": 6000,
+      "used": 1387.2,
+      "count": 2,
+      "topMerchant": "Meny Bislett",
+      "prevUsed": 14505.7
+    },
+    {
+      "categoryId": 2,
+      "category": "Restaurant og kafé",
+      "color": "#F2C14E",
+      "budget": 1800,
+      "used": 525,
+      "count": 2,
+      "topMerchant": "Peppes Pizza",
+      "prevUsed": 6593.5
+    },
+    {
+      "categoryId": 3,
+      "category": "Transport og lading",
+      "color": "#7AA7FF",
+      "budget": 1500,
+      "used": 1130.4,
+      "count": 2,
+      "topMerchant": "Circle K Lading",
+      "prevUsed": 518
+    },
+    {
+      "categoryId": 4,
+      "category": "Bolig",
+      "color": "#B79CFF",
+      "budget": 11000,
+      "used": 10784,
+      "count": 2,
+      "topMerchant": "Husleie",
+      "prevUsed": 9500
+    }
+  ],
+  "innMonthly": [
+    41200,
+    41200,
+    41200,
+    41200
+  ],
+  "recent": [
+    {
+      "id": 2,
+      "date": "2026-11-15",
+      "amount": -612.4,
+      "amountOre": -61240,
+      "description": "Circle K Lading",
+      "merchant": "Circle K Lading",
+      "note": "",
+      "source": "csv",
+      "categoryId": 3,
+      "category": "Transport og lading",
+      "color": "#7AA7FF",
+      "kind": "expense",
+      "accountId": 2,
+      "account": "Kredittkort",
+      "receipt": "needs_review",
+      "receiptId": "demo-2",
+      "type": "expense",
+      "folderId": null,
+      "hasBankRow": true,
+      "aiShort": "Hurtiglading av elbil",
+      "aiLong": "Kjøp hos Circle K Lading på 612,40 kr. Kategorisert som transport og lading.",
+      "domain": "circlek.no",
+      "lines": [],
+      "folder": null,
+      "tags": [],
+      "added": {
+        "at": "2026-11-15T17:00:26.230Z",
+        "by": "owner",
+        "byName": "Sebastian",
+        "source": "import",
+        "via": null,
+        "sourceLabel": "bankimport fra Bank Norwegian",
+        "text": "Lagt til 15.11.2026 kl. 18.00 · bankimport fra Bank Norwegian",
+        "edited": null
+      }
+    },
+    {
+      "id": 1,
+      "date": "2026-11-15",
+      "amount": -349,
+      "amountOre": -34900,
+      "description": "Clas Ohlson",
+      "merchant": "Clas Ohlson",
+      "note": "",
+      "source": "csv",
+      "categoryId": 5,
+      "category": "Hjem",
+      "color": "#8FD3FF",
+      "kind": "expense",
+      "accountId": 2,
+      "account": "Kredittkort",
+      "receipt": "needs_review",
+      "receiptId": "demo-1",
+      "type": "expense",
+      "folderId": null,
+      "hasBankRow": true,
+      "aiShort": "Skjøteledning og to lyspærer til hjemmet",
+      "aiLong": "Kjøp hos Clas Ohlson: en skjøteledning og to E27-lyspærer. Kategorisert som hjem.",
+      "domain": "clasohlson.com",
+      "lines": [
+        {
+          "description": "Skjøteledning",
+          "amount": 199
+        },
+        {
+          "description": "Lyspære E27 ×2",
+          "amount": 150
+        }
+      ],
+      "folder": null,
+      "tags": [],
+      "added": {
+        "at": "2026-11-15T17:00:26.230Z",
+        "by": "owner",
+        "byName": "Sebastian",
+        "source": "import",
+        "via": null,
+        "sourceLabel": "bankimport fra Bank Norwegian",
+        "text": "Lagt til 15.11.2026 kl. 18.00 · bankimport fra Bank Norwegian",
+        "edited": null
+      }
+    },
+    {
+      "id": 3,
+      "date": "2026-11-14",
+      "amount": -1284,
+      "amountOre": -128400,
+      "description": "Fjordkraft strøm",
+      "merchant": "Fjordkraft strøm",
+      "note": "",
+      "source": "csv",
+      "categoryId": 4,
+      "category": "Bolig",
+      "color": "#B79CFF",
+      "kind": "expense",
+      "accountId": 1,
+      "account": "Brukskonto",
+      "receipt": null,
+      "receiptId": null,
+      "type": "expense",
+      "folderId": null,
+      "hasBankRow": true,
+      "aiShort": "Strømregning",
+      "aiLong": "Kjøp hos Fjordkraft strøm på 1 284,00 kr. Kategorisert som bolig.",
+      "domain": "fjordkraft.no",
+      "lines": [],
+      "folder": null,
+      "tags": [],
+      "added": {
+        "at": "2026-11-15T17:00:26.231Z",
+        "by": "owner",
+        "byName": "Sebastian",
+        "source": "import",
+        "via": null,
+        "sourceLabel": "bankimport fra DNB",
+        "text": "Lagt til 15.11.2026 kl. 18.00 · bankimport fra DNB",
+        "edited": null
+      }
+    },
+    {
+      "id": 4,
+      "date": "2026-11-13",
+      "amount": -89,
+      "amountOre": -8900,
+      "description": "Kaffebrenneriet",
+      "merchant": "Kaffebrenneriet",
+      "note": "",
+      "source": "csv",
+      "categoryId": 2,
+      "category": "Restaurant og kafé",
+      "color": "#F2C14E",
+      "kind": "expense",
+      "accountId": 2,
+      "account": "Kredittkort",
+      "receipt": null,
+      "receiptId": null,
+      "type": "expense",
+      "folderId": null,
+      "hasBankRow": true,
+      "aiShort": "Kaffe og bakst",
+      "aiLong": "Kjøp hos Kaffebrenneriet på 89,00 kr. Kategorisert som restaurant og kafé.",
+      "domain": "kaffebrenneriet.no",
+      "lines": [],
+      "folder": null,
+      "tags": [],
+      "added": {
+        "at": "2026-11-15T17:00:26.231Z",
+        "by": "owner",
+        "byName": "Sebastian",
+        "source": "import",
+        "via": null,
+        "sourceLabel": "bankimport fra Bank Norwegian",
+        "text": "Lagt til 15.11.2026 kl. 18.00 · bankimport fra Bank Norwegian",
+        "edited": null
+      }
+    }
+  ],
+  "review": [
+    {
+      "id": "demo-1",
+      "status": "needs_review",
+      "provider": "Ollama",
+      "rawProvider": "ollama",
+      "model": "qwen2.5vl:7b",
+      "seconds": 11.4,
+      "merchant": "Clas Ohlson",
+      "date": "2026-11-15",
+      "total": 349,
+      "categoryId": 5,
+      "category": "Hjem",
+      "accountId": 2,
+      "account": "Kredittkort",
+      "confidence": 0.97,
+      "flag": null,
+      "error": null,
+      "mime": null,
+      "file": null,
+      "thumb": null,
+      "extraction": {
+        "merchant": "Clas Ohlson",
+        "lines": [
+          {
+            "description": "Skjøteledning",
+            "amount": 199
+          },
+          {
+            "description": "Lyspære E27 ×2",
+            "amount": 150
+          }
+        ],
+        "vat": [
+          {
+            "rate": 25,
+            "amount": 69.8
+          }
+        ],
+        "confidence": {
+          "total": 0.97
+        }
+      },
+      "match": {
+        "id": 1,
+        "date": "2026-11-15",
+        "amount": -349,
+        "amountOre": -34900,
+        "description": "Clas Ohlson",
+        "merchant": "Clas Ohlson",
+        "note": "",
+        "source": "csv",
+        "categoryId": 5,
+        "category": "Hjem",
+        "color": "#8FD3FF",
+        "kind": "expense",
+        "accountId": 2,
+        "account": "Kredittkort",
+        "receipt": null,
+        "receiptId": null,
+        "type": "expense",
+        "folderId": null,
+        "hasBankRow": true,
+        "aiShort": "Til hjemmet",
+        "aiLong": "Kjøp hos Clas Ohlson på 349,00 kr. Kategorisert som hjem.",
+        "domain": "clasohlson.com",
+        "lines": [],
+        "folder": null,
+        "tags": [],
+        "added": {
+          "at": "2026-11-15T17:00:26.230Z",
+          "by": "owner",
+          "byName": "Sebastian",
+          "source": "import",
+          "via": null,
+          "sourceLabel": "bankimport fra Bank Norwegian",
+          "text": "Lagt til 15.11.2026 kl. 18.00 · bankimport fra Bank Norwegian",
+          "edited": null
+        }
+      },
+      "created": 1794762026240,
+      "name": null,
+      "lines": [
+        {
+          "text": "Skjøteledning",
+          "price": 199,
+          "bbox": null
+        },
+        {
+          "text": "Lyspære E27 ×2",
+          "price": 150,
+          "bbox": null
+        }
+      ],
+      "hasBoxes": false,
+      "categoryInfo": null,
+      "aiCategory": null,
+      "verify": {
+        "ok": false,
+        "status": "usikker",
+        "lines": 2,
+        "sum": null,
+        "total": null,
+        "diff": null,
+        "text": "Usikker · fant ikke totalen"
+      },
+      "payment": null,
+      "discounts": [],
+      "pant": 0,
+      "vat": [
+        {
+          "rate": 25,
+          "amount": 69.8
+        }
+      ],
+      "receiptNo": null,
+      "time": null,
+      "aiShort": "Skjøteledning og to lyspærer til hjemmet",
+      "aiLong": "Kjøp hos Clas Ohlson: en skjøteledning og to E27-lyspærer. Kategorisert som hjem.",
+      "canReanalyze": false,
+      "canOcr": false,
+      "canReread": false,
+      "rereadReason": "Fant ikke originalbildet. Last det opp på nytt for å lese det.",
+      "log": [],
+      "timeoutEngine": null,
+      "retryAt": null,
+      "added": {
+        "at": "2026-11-15T17:00:26.240Z",
+        "by": "owner",
+        "byName": "Sebastian",
+        "source": "scan",
+        "via": null,
+        "sourceLabel": "skannet kvittering",
+        "text": "Lagt til 15.11.2026 kl. 18.00 · skannet kvittering · Sebastian",
+        "edited": null
+      },
+      "domain": "clasohlson.com",
+      "target": null,
+      "source": "upload",
+      "ocr_raw": null,
+      "merchant_source": null,
+      "merchant_label": null,
+      "org_number": null,
+      "source_label": "Lokal AI",
+      "tolketAv": "glimt-ollama",
+      "tolketAvTekst": "Tolket av Glimt"
+    },
+    {
+      "id": "demo-2",
+      "status": "needs_review",
+      "provider": "Gemini",
+      "rawProvider": "gemini",
+      "model": "gemini-2.5-flash",
+      "seconds": 2.1,
+      "merchant": "Circle K Lading",
+      "date": "2026-11-15",
+      "total": 612.4,
+      "categoryId": 3,
+      "category": "Transport og lading",
+      "accountId": 2,
+      "account": "Kredittkort",
+      "confidence": 0.72,
+      "flag": "Sjekk beløp – usikker utlesing",
+      "error": null,
+      "mime": null,
+      "file": null,
+      "thumb": null,
+      "extraction": {
+        "merchant": "Circle K Lading",
+        "lines": [],
+        "vat": [],
+        "confidence": {
+          "total": 0.72
+        }
+      },
+      "match": {
+        "id": 2,
+        "date": "2026-11-15",
+        "amount": -612.4,
+        "amountOre": -61240,
+        "description": "Circle K Lading",
+        "merchant": "Circle K Lading",
+        "note": "",
+        "source": "csv",
+        "categoryId": 3,
+        "category": "Transport og lading",
+        "color": "#7AA7FF",
+        "kind": "expense",
+        "accountId": 2,
+        "account": "Kredittkort",
+        "receipt": null,
+        "receiptId": null,
+        "type": "expense",
+        "folderId": null,
+        "hasBankRow": true,
+        "aiShort": "Lading av elbil",
+        "aiLong": "Kjøp hos Circle K Lading på 612,40 kr. Kategorisert som transport og lading.",
+        "domain": "circlek.no",
+        "lines": [],
+        "folder": null,
+        "tags": [],
+        "added": {
+          "at": "2026-11-15T17:00:26.230Z",
+          "by": "owner",
+          "byName": "Sebastian",
+          "source": "import",
+          "via": null,
+          "sourceLabel": "bankimport fra Bank Norwegian",
+          "text": "Lagt til 15.11.2026 kl. 18.00 · bankimport fra Bank Norwegian",
+          "edited": null
+        }
+      },
+      "created": 1794762025241,
+      "name": null,
+      "lines": [],
+      "hasBoxes": false,
+      "categoryInfo": null,
+      "aiCategory": null,
+      "verify": {
+        "ok": false,
+        "status": "usikker",
+        "lines": 0,
+        "sum": null,
+        "total": null,
+        "diff": null,
+        "text": "Usikker · fant ikke totalen"
+      },
+      "payment": null,
+      "discounts": [],
+      "pant": 0,
+      "vat": [],
+      "receiptNo": null,
+      "time": null,
+      "aiShort": "Hurtiglading av elbil",
+      "aiLong": null,
+      "canReanalyze": false,
+      "canOcr": false,
+      "canReread": false,
+      "rereadReason": "Fant ikke originalbildet. Last det opp på nytt for å lese det.",
+      "log": [],
+      "timeoutEngine": null,
+      "retryAt": null,
+      "added": {
+        "at": "2026-11-15T17:00:25.241Z",
+        "by": "owner",
+        "byName": "Sebastian",
+        "source": "scan",
+        "via": null,
+        "sourceLabel": "skannet kvittering",
+        "text": "Lagt til 15.11.2026 kl. 18.00 · skannet kvittering · Sebastian",
+        "edited": null
+      },
+      "domain": "circlek.no",
+      "target": null,
+      "source": "upload",
+      "ocr_raw": null,
+      "merchant_source": null,
+      "merchant_label": null,
+      "org_number": null,
+      "source_label": "Gemini (eldre)",
+      "tolketAv": "glimt-ollama",
+      "tolketAvTekst": "Tolket av Glimt"
+    }
+  ],
+  "upcoming": [
+    {
+      "id": 4,
+      "name": "Mobilabonnement",
+      "amount": 399,
+      "monthly": 399,
+      "interval": "monthly",
+      "day": 20,
+      "month": null,
+      "active": true,
+      "detected": false,
+      "categoryId": 7,
+      "category": "Abonnementer",
+      "color": "#FF6B8B",
+      "accountId": 1,
+      "next": "2026-11-20"
+    },
+    {
+      "id": 5,
+      "name": "Innboforsikring",
+      "amount": 214,
+      "monthly": 214,
+      "interval": "monthly",
+      "day": 25,
+      "month": null,
+      "active": true,
+      "detected": false,
+      "categoryId": 4,
+      "category": "Bolig",
+      "color": "#B79CFF",
+      "accountId": 1,
+      "next": "2026-11-25"
+    },
+    {
+      "id": 6,
+      "name": "Netflix",
+      "amount": 279,
+      "monthly": 279,
+      "interval": "monthly",
+      "day": 28,
+      "month": null,
+      "active": true,
+      "detected": false,
+      "categoryId": 7,
+      "category": "Abonnementer",
+      "color": "#FF6B8B",
+      "accountId": 1,
+      "next": "2026-11-28"
+    },
+    {
+      "id": 1,
+      "name": "Husleie",
+      "amount": 9500,
+      "monthly": 9500,
+      "interval": "monthly",
+      "day": 1,
+      "month": null,
+      "active": true,
+      "detected": false,
+      "categoryId": 4,
+      "category": "Bolig",
+      "color": "#B79CFF",
+      "accountId": 1,
+      "next": "2026-12-01"
+    }
+  ],
+  "dailyOut": [
+    {
+      "date": "2026-11-01",
+      "amount": 9500
+    },
+    {
+      "date": "2026-11-02",
+      "amount": 874.9
+    },
+    {
+      "date": "2026-11-03",
+      "amount": 620
+    },
+    {
+      "date": "2026-11-05",
+      "amount": 436
+    }
+  ],
+  "spentMonth": 15573.6,
+  "day": 15,
+  "daysInMonth": 30,
+  "monthName": "november",
+  "spentLabel": "Brukt i november · dag 15 av 30",
+  "ring": 0.5,
+  "dayText": "15."
+}

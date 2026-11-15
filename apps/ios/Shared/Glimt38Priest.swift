@@ -97,7 +97,7 @@ struct Glimt38PriestFig: View {
             if still {
                 G38Priest(S: size, t: 0, still: true) { Glimt35Fig(id: id, size: size, mood: mood, still: true) }
             } else {
-                TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { (ctx: TimelineViewDefaultContext) in
+                MotionTimeline(interval: 1.0 / 30.0) { (ctx: TimelineViewDefaultContext) in
                     let t: Double = ctx.date.timeIntervalSinceReferenceDate
                     G38Priest(S: size, t: t) { Glimt35Fig(id: id, size: size, mood: mood, t: t) }
                 }

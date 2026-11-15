@@ -618,23 +618,4 @@ enum KalParse {
         out.sort { (a: KalWxDay, b: KalWxDay) -> Bool in a.day < b.day }
         return out
     }
-
-    /// Open-Meteo (reserve når serveren ikke har vær-endepunktet): daily.time / weather_code / temperature_2m_max / _min.
-    static func openMeteo(_ data: Data) -> [KalWxDay] {
-        guard let o = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
-              let d = o["daily"] as? [String: Any],
-              let times = d["time"] as? [Any] else { return [] }
-        let codes: [Any] = (d["weather_code"] as? [Any]) ?? (d["weathercode"] as? [Any]) ?? []
-        let hi: [Any] = (d["temperature_2m_max"] as? [Any]) ?? []
-        let lo: [Any] = (d["temperature_2m_min"] as? [Any]) ?? []
-        var out: [KalWxDay] = []
-        for i in 0..<times.count {
-            guard let t = times[i] as? String else { continue }
-            let c: Int = i < codes.count ? ((codes[i] as? NSNumber)?.intValue ?? 3) : 3
-            let h: Double = i < hi.count ? ((hi[i] as? NSNumber)?.doubleValue ?? 0) : 0
-            let l: Double = i < lo.count ? ((lo[i] as? NSNumber)?.doubleValue ?? 0) : 0
-            out.append(KalWxDay(day: t, kind: KalWx.kind(wmo: c), hi: Int(h.rounded()), lo: Int(l.rounded())))
-        }
-        return out
-    }
 }

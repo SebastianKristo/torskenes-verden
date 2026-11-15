@@ -1,0 +1,366 @@
+{
+  "items": [
+    {
+      "id": 2,
+      "name": "Spotify",
+      "plan": "Familie",
+      "price": 239,
+      "priceOre": 23900,
+      "cycle": "monthly",
+      "nextDate": "2026-11-20",
+      "usageNote": "Daglig",
+      "lowUse": false,
+      "active": true,
+      "domain": "spotify.com",
+      "aiShort": "Musikkabonnement, familieplan",
+      "txId": null,
+      "monthly": 239,
+      "yearly": 2868,
+      "perLabel": "/mnd",
+      "cycleName": "Månedlig",
+      "status": "active",
+      "chargeDay": 20,
+      "category": "Underholdning",
+      "prevPrice": null,
+      "priceChanged": null,
+      "billDay": 20,
+      "billMonth": 11,
+      "state": "active",
+      "logoUrl": null,
+      "nextCharge": {
+        "date": "2026-11-20",
+        "label": "Neste trekk 20. november, deretter hver måned"
+      },
+      "ownerId": "owner",
+      "mine": true,
+      "shared": false,
+      "split": "equal",
+      "payerId": "owner",
+      "members": [
+        {
+          "userId": "owner",
+          "id": "owner",
+          "name": "Sebastian",
+          "color": "#2a7a7a",
+          "role": "owner",
+          "avatarUrl": null
+        }
+      ],
+      "canEdit": true,
+      "myShare": 239,
+      "myShareMonthly": 239,
+      "shareLabel": null
+    },
+    {
+      "id": 3,
+      "name": "iCloud+",
+      "plan": "200 GB",
+      "price": 39,
+      "priceOre": 3900,
+      "cycle": "monthly",
+      "nextDate": "2026-11-27",
+      "usageNote": "86 % brukt",
+      "lowUse": false,
+      "active": true,
+      "domain": "apple.com",
+      "aiShort": "Lagringsplass i iCloud",
+      "txId": null,
+      "monthly": 39,
+      "yearly": 468,
+      "perLabel": "/mnd",
+      "cycleName": "Månedlig",
+      "status": "active",
+      "chargeDay": 27,
+      "category": "Lagring og sky",
+      "prevPrice": null,
+      "priceChanged": null,
+      "billDay": 27,
+      "billMonth": 11,
+      "state": "active",
+      "logoUrl": null,
+      "nextCharge": {
+        "date": "2026-11-27",
+        "label": "Neste trekk 27. november, deretter hver måned"
+      },
+      "ownerId": "owner",
+      "mine": true,
+      "shared": false,
+      "split": "equal",
+      "payerId": "owner",
+      "members": [
+        {
+          "userId": "owner",
+          "id": "owner",
+          "name": "Sebastian",
+          "color": "#2a7a7a",
+          "role": "owner",
+          "avatarUrl": null
+        }
+      ],
+      "canEdit": true,
+      "myShare": 39,
+      "myShareMonthly": 39,
+      "shareLabel": null
+    },
+    {
+      "id": 6,
+      "name": "Viaplay",
+      "plan": "Total",
+      "price": 449,
+      "priceOre": 44900,
+      "cycle": "monthly",
+      "nextDate": "2026-11-30",
+      "usageNote": "Sett 1 t siste 30 d",
+      "lowUse": true,
+      "active": true,
+      "domain": "viaplay.no",
+      "aiShort": "Strømmetjeneste, månedlig trekk",
+      "txId": null,
+      "monthly": 449,
+      "yearly": 5388,
+      "perLabel": "/mnd",
+      "cycleName": "Månedlig",
+      "status": "price_up",
+      "chargeDay": 30,
+      "category": "Underholdning",
+      "prevPrice": 399,
+      "priceChanged": "2026-10-30",
+      "billDay": 30,
+      "billMonth": 11,
+      "state": "active",
+      "logoUrl": null,
+      "nextCharge": {
+        "date": "2026-11-30",
+        "label": "Neste trekk 30. november, deretter hver måned"
+      },
+      "ownerId": "owner",
+      "mine": true,
+      "shared": false,
+      "split": "equal",
+      "payerId": "owner",
+      "members": [
+        {
+          "userId": "owner",
+          "id": "owner",
+          "name": "Sebastian",
+          "color": "#2a7a7a",
+          "role": "owner",
+          "avatarUrl": null
+        }
+      ],
+      "canEdit": true,
+      "myShare": 449,
+      "myShareMonthly": 449,
+      "shareLabel": null
+    },
+    {
+      "id": 1,
+      "name": "Netflix",
+      "plan": "Standard",
+      "price": 149,
+      "priceOre": 14900,
+      "cycle": "monthly",
+      "nextDate": "2026-12-02",
+      "usageNote": "Sett 2 t siste 30 d",
+      "lowUse": true,
+      "active": true,
+      "domain": "netflix.com",
+      "aiShort": "Strømmetjeneste, månedlig trekk",
+      "txId": null,
+      "monthly": 149,
+      "yearly": 1788,
+      "perLabel": "/mnd",
+      "cycleName": "Månedlig",
+      "status": "low_use",
+      "chargeDay": 2,
+      "category": "Underholdning",
+      "prevPrice": null,
+      "priceChanged": null,
+      "billDay": 2,
+      "billMonth": 12,
+      "state": "active",
+      "logoUrl": null,
+      "nextCharge": {
+        "date": "2026-12-02",
+        "label": "Neste trekk 2. desember, deretter hver måned"
+      },
+      "ownerId": "owner",
+      "mine": true,
+      "shared": false,
+      "split": "equal",
+      "payerId": "owner",
+      "members": [
+        {
+          "userId": "owner",
+          "id": "owner",
+          "name": "Sebastian",
+          "color": "#2a7a7a",
+          "role": "owner",
+          "avatarUrl": null
+        }
+      ],
+      "canEdit": true,
+      "myShare": 149,
+      "myShareMonthly": 149,
+      "shareLabel": null
+    }
+  ],
+  "monthly": 1693,
+  "yearly": 20316,
+  "lowUse": 827,
+  "trialsSummary": {
+    "count": 0,
+    "ifKept": 0,
+    "label": null
+  },
+  "categories": [
+    "Underholdning",
+    "Produktivitet",
+    "Lagring og sky",
+    "Helse og trening"
+  ],
+  "year": 2026,
+  "byMonth": [
+    {
+      "month": "2026-01",
+      "total": 2834,
+      "byCategory": {
+        "Underholdning": 837,
+        "Lagring og sky": 39,
+        "Produktivitet": 1440,
+        "Transport": 518
+      }
+    },
+    {
+      "month": "2026-02",
+      "total": 1634,
+      "byCategory": {
+        "Underholdning": 837,
+        "Lagring og sky": 39,
+        "Produktivitet": 240,
+        "Transport": 518
+      }
+    },
+    {
+      "month": "2026-03",
+      "total": 1634,
+      "byCategory": {
+        "Underholdning": 837,
+        "Lagring og sky": 39,
+        "Produktivitet": 240,
+        "Transport": 518
+      }
+    },
+    {
+      "month": "2026-04",
+      "total": 1742,
+      "byCategory": {
+        "Underholdning": 837,
+        "Lagring og sky": 39,
+        "Produktivitet": 348,
+        "Transport": 518
+      }
+    }
+  ],
+  "health": {
+    "score": 68,
+    "label": "Bra",
+    "notes": [
+      "2 abonnementer brukes lite",
+      "1 har økt prisen"
+    ],
+    "text": "2 abonnementer brukes lite, og 1 har økt prisen."
+  },
+  "savings": {
+    "monthly": 428,
+    "suggestions": [
+      {
+        "id": 5,
+        "kind": "cancel",
+        "name": "ChatGPT",
+        "domain": "openai.com",
+        "text": "Si opp ChatGPT. Ikke åpnet på 26 d.",
+        "amount": 229
+      },
+      {
+        "id": 1,
+        "kind": "cancel",
+        "name": "Netflix",
+        "domain": "netflix.com",
+        "text": "Si opp Netflix. Sett 2 t siste 30 d.",
+        "amount": 149
+      },
+      {
+        "id": 6,
+        "kind": "price",
+        "name": "Viaplay",
+        "domain": "viaplay.no",
+        "text": "Viaplay har økt prisen 13 %. Sjekk om en billigere plan holder.",
+        "amount": 50
+      }
+    ]
+  },
+  "prevMonthly": 1693,
+  "upcoming": [
+    {
+      "id": 2,
+      "name": "Spotify",
+      "date": "2026-11-20",
+      "amount": 239
+    }
+  ],
+  "month": "2026-11",
+  "thisMonth": [
+    {
+      "id": 1,
+      "date": "2026-11-02",
+      "amount": 149
+    },
+    {
+      "id": 5,
+      "date": "2026-11-04",
+      "amount": 229
+    },
+    {
+      "id": 8,
+      "date": "2026-11-08",
+      "amount": 518
+    },
+    {
+      "id": 4,
+      "date": "2026-11-10",
+      "amount": 11
+    }
+  ],
+  "monthTotal": 1634,
+  "prevMonthTotal": 1634,
+  "today": "2026-11-15",
+  "cycles": [
+    {
+      "id": "weekly",
+      "name": "Ukentlig",
+      "perLabel": "/uke"
+    },
+    {
+      "id": "biweekly",
+      "name": "Hver 2. uke",
+      "perLabel": "/2 uker"
+    },
+    {
+      "id": "monthly",
+      "name": "Månedlig",
+      "perLabel": "/mnd"
+    },
+    {
+      "id": "quarterly",
+      "name": "Kvartalsvis",
+      "perLabel": "/kvartal"
+    }
+  ],
+  "trials": [],
+  "trialsVisible": {
+    "visible": false,
+    "count": 0,
+    "editHint": "Vises når du har en aktiv prøveperiode"
+  }
+}

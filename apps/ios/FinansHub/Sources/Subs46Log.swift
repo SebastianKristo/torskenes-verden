@@ -50,9 +50,12 @@ final class Subs46Log {
             let o: [String: Any] = JS.obj(d)
             let rows: [[String: Any]] = JS.list(o, "events").isEmpty ? JS.list(o, "items") : JS.list(o, "events")
             events = rows.compactMap { Subs46Log.event($0) }
+            // Fase 4 (Q21): «X kr betalt siste 12 mnd» regnes på serveren (subs-log.js summary.text).
+            serverSummary = JS.str(JS.dict(o, "summary"), "text")
             server = true
         } catch {
             events = Subs46Log.fallback()
+            serverSummary = nil
             server = false
         }
     }
@@ -106,7 +109,11 @@ final class Subs46Log {
         list.filter { $0.type == "charge" || $0.type == "trial_converted" }.reduce(0) { $0 + Swift.max(abs($1.amount), $1.priceAfter) }
     }
 
+    /// Oppsummeringen fra serveren. nil uten svar (da vises den lokale reserven over abonnementene).
+    var serverSummary: String? = nil
+
     var summary: String {
+        if let t = serverSummary, !t.isEmpty { return t }
         let charges: Int = events.filter { $0.type == "charge" }.count
         let trials: Int = events.filter { $0.type == "trial_start" }.count
         let cut: String = Subs46Log.iso(Calendar.current.date(byAdding: .month, value: -12, to: Date()) ?? Date())

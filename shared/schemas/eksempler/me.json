@@ -1,0 +1,15 @@
+{
+  "id": "owner",
+  "username": "sebastian",
+  "role": "admin",
+  "name": "Sebastian",
+  "displayName": "Sebastian",
+  "totp": false,
+  "isMainAdmin": true,
+  "avatarUrl": null,
+  "serverName": "Homelab",
+  "language": "nb",
+  "media": true,
+  "glimt_char": "glimt",
+  "glimt_char_source": "standard"
+}

@@ -25,6 +25,11 @@ struct SubItem: Identifiable, Hashable {
     var billMonth: Int?
     var logoUrl: String?
     var nextCharge: String
+    /// Fase 4 (F-logikk L2): serverens tekst «Neste trekk 21. oktober, deretter hvert år» (nextCharge.label), syklusnavnet og
+    /// «/mnd»-etiketten. Appen regner ikke ut neste trekk selv.
+    var nextChargeLabel: String = ""
+    var cycleName: String = "Månedlig"
+    var perLabel: String = "/mnd"
     /// Prompt 37: delte abonnementer (Subs37.swift). Tomt for private.
     var members: [SubMember37] = []
     var split: String = "equal"
@@ -37,7 +42,8 @@ struct SubItem: Identifiable, Hashable {
         plan = JS.str(o, "plan") ?? ""
         price = JS.num(o, "price") ?? 0
         cycle = JS.str(o, "cycle") ?? "monthly"
-        monthly = JS.num(o, "monthly") ?? (cycle == "yearly" ? price / 12 : cycle == "biennial" ? price / 24 : price)
+        // Fase 4: omregningen per måned kommer fra serveren (cycles.js, Q40) – også for kvartal, halvår og uker.
+        monthly = JS.num(o, "monthly") ?? 0
         nextDate = JS.str(o, "nextDate") ?? ""
         chargeDay = JS.int(o, "chargeDay") ?? (nextDate.count >= 10 ? Int(nextDate.dropFirst(8).prefix(2)) : nil)
         category = JS.str(o, "category") ?? "Annet"
@@ -50,10 +56,14 @@ struct SubItem: Identifiable, Hashable {
         billDay = JS.int(o, "billDay") ?? chargeDay
         billMonth = JS.int(o, "billMonth") ?? (nd.count >= 7 ? Int(nd.dropFirst(5).prefix(2)) : nil)
         logoUrl = JS.str(o, "logoUrl")
-        nextCharge = JS.str(o, "nextCharge") ?? nd
+        // nextCharge er {date, label} fra serveren (eldre svar: tekst).
+        let nc: [String: Any]? = JS.dict(o, "nextCharge")
+        nextCharge = JS.str(nc, "date") ?? JS.str(o, "nextCharge") ?? nd
+        nextChargeLabel = JS.str(nc, "label") ?? ""
+        cycleName = JS.str(o, "cycleName") ?? "Månedlig"
+        perLabel = JS.str(o, "perLabel") ?? "/mnd"
         Subs37.fill(&self, o)
     }
-    var cycleName: String { cycle == "yearly" ? "Årlig" : cycle == "biennial" ? "Hvert 2. år" : "Månedlig" }
     var flagged: Bool { active && (status == "low_use" || status == "price_up") }
 }
 
@@ -156,26 +166,12 @@ extension Store {
     func addSubManual(name: String, plan: String, price: String, cycle: String, day: Int?) {
         run {
             var body: [String: Any] = ["name": name, "plan": plan, "price": price.replacingOccurrences(of: " ", with: "").replacingOccurrences(of: ",", with: "."), "cycle": cycle]
-            if let day, (1...31).contains(day) {
-                body["chargeDay"] = day
-                body["nextDate"] = Store.nextCharge(day)
-            }
+            // Fase 4: serveren regner neste trekk ut fra trekkdagen (routes.js nextDateFrom, F-logikk L2).
+            if let day, (1...31).contains(day) { body["chargeDay"] = day }
             try await self.api.call("POST", "/subscriptions", json: body)
             try await self.loadSubs()
             self.flash("\(name) lagt til")
         }
-    }
-
-    /// Neste dato med trekkdagen (denne måneden hvis den ikke er passert).
-    static func nextCharge(_ day: Int, from now: Date = Date()) -> String {
-        let cal = Calendar.current
-        for add in 0..<3 {
-            guard let m = cal.date(byAdding: .month, value: add, to: now), let r = cal.range(of: .day, in: .month, for: m) else { continue }
-            var c = cal.dateComponents([.year, .month], from: m)
-            c.day = Swift.min(day, r.count)
-            if let d = cal.date(from: c), cal.startOfDay(for: d) >= cal.startOfDay(for: now) { return isoDay(d) }
-        }
-        return isoDay(now)
     }
 
     /// «Fra transaksjoner»: faste trekk sett minst 3 ganger som ikke er registrert.
@@ -769,7 +765,7 @@ struct SubEditSheet: View {
                     field("Pris i kr", $price, .decimalPad)
                     field("Plan (valgfritt)", $plan, .default)
                 }
-                Picker("Kategori", selection: $category) { ForEach(SubEditSheet.cats + extraCat, id: \.self) { Text($0).tag($0) } }
+                Picker("Kategori", selection: $category) { ForEach(catList + extraCat, id: \.self) { Text($0).tag($0) } }
                     .pickerStyle(.menu).tint(Color.skinFg)
                     .padding(.horizontal, 10).frame(maxWidth: .infinity, minHeight: 46, alignment: .leading).glass(16)
                 Text("Hvor ofte").font(.footnote.weight(.semibold)).foregroundStyle(Color.skinFg.opacity(0.7))
@@ -828,7 +824,13 @@ struct SubEditSheet: View {
         }
     }
 
-    private var extraCat: [String] { SubEditSheet.cats.contains(category) ? [] : [category] }
+    /// Fase 4 (D4): kategoriene kommer fra serveren (subs.js SUB_CATEGORIES via /subscriptions `categories`); den gamle lista er
+    /// bare reserve før svaret er lastet.
+    private var catList: [String] {
+        let server: [String] = store.subsX?.categories ?? []
+        return server.isEmpty ? SubEditSheet.cats : server
+    }
+    private var extraCat: [String] { catList.contains(category) ? [] : [category] }
 
     private var amount: Double? { Double(price.replacingOccurrences(of: " ", with: "").replacingOccurrences(of: ",", with: ".")) }
 
@@ -865,22 +867,18 @@ struct SubEditSheet: View {
         TextField(ph, text: b).keyboardType(kb).padding(.horizontal, 14).frame(height: 46).glass(16)
     }
 
-    /// «Neste trekk 21. oktober, deretter hvert år».
+    /// «Neste trekk 21. oktober, deretter hvert år» fra serveren (nextCharge.label). Når syklus, dag eller måned er endret,
+    /// vises bare valget; serveren regner ut neste trekk når det lagres (Fase 4, F-logikk L2).
     private var nextText: String {
-        let cal = Calendar.current
-        let now = Date()
-        var c = cal.dateComponents([.year, .month], from: now)
-        if cycle != "monthly" { c.month = month }
-        c.day = day
-        var d = cal.date(from: c) ?? now
-        while cal.startOfDay(for: d) < cal.startOfDay(for: now) {
-            let comp: Calendar.Component = cycle == "monthly" ? .month : .year
-            d = cal.date(byAdding: comp, value: cycle == "biennial" ? 2 : 1, to: d) ?? now
-            if d == now { break }
+        if let s = item, s.cycle == cycle, (s.billDay ?? 0) == day, cycle == "monthly" || (s.billMonth ?? 0) == month, !s.nextChargeLabel.isEmpty {
+            return s.nextChargeLabel
         }
-        let m = SubEditSheet.months[cal.component(.month, from: d) - 1]
-        let then = cycle == "yearly" ? "deretter hvert år" : cycle == "biennial" ? "deretter hvert 2. år" : "deretter hver måned"
-        return "Neste trekk \(cal.component(.day, from: d)). \(m), \(then)"
+        let m: String = SubEditSheet.months[Swift.max(0, Swift.min(11, month - 1))]
+        switch cycle {
+        case "yearly": return "Trekkes \(day). \(m) hvert år"
+        case "biennial": return "Trekkes \(day). \(m) hvert 2. år"
+        default: return "Trekkes den \(day). hver måned"
+        }
     }
 
     private func fill() {

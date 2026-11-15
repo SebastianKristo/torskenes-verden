@@ -4,17 +4,15 @@ import SwiftUI
  Fasit: Mobil Papir App.dc.html → Innstillinger → Utseende → TEMA og fargesettet i _rv0() (s.mode==='Glass').
  – Valget lagres i paperMode = "glass" (lokalt, fh_paper_mode) og slår på Hjem som fliser (papir_home_tiles = 1).
    Serveren godtar bare auto/lys/mork for layout.paperMode, så Glass sendes ikke dit (og overskrives ikke av serveren).
- – Farger: bakgrunn #07070A, tekst hvit, dempet 66 %, linjer 16 %, kort 9 % hvitt, aksent #FF8A4C, positiv #5fd18b.
+ – Farger: DS-tokenene for stilen Glass (shared/design/tokens.json, color.glass.mork), fase 4.
  – Tre fargeskyer bak alt innhold (Glass50Clouds), glass på kort, fliser og fanelinje (Glass50Bg):
    iOS 26 = ekte .glassEffect(); eldre = .ultraThinMaterial + tynn lys kant. Xcode 16 ser aldri iOS 26-symbolet
    (#if compiler(>=6.2) + if #available(iOS 26.0, *)). */
 
 extension PaperPalette {
     /// Liquid Glass: mørkt glass med fargeskyer bak.
-    static let glass50 = PaperPalette(dark: true, ink: .white, bg: Color(hex: "#07070A"), card: Color.white.opacity(0.09), line: Color.white.opacity(0.16),
-                                      lab: Color(hex: "#FF8A4C"), mut: Color.white.opacity(0.66), pos: Color(hex: "#5fd18b"), nav: Color.white.opacity(0.10),
-                                      navInk: Color.white.opacity(0.7), navAct: .white, navActInk: Color(hex: "#07070A"),
-                                      onLab: Color(hex: "#07070A"), pop: Color(hex: "#1c1c22"), popSel: Color(hex: "#2c2c34"), glass: true)
+    /// Fase 4: fra DS-tokenene for stilen Glass (bare mørk modus, Q13).
+    static let glass50: PaperPalette = PaperPalette.tokens(.glass, dark: true)
 }
 
 enum Glass50 {

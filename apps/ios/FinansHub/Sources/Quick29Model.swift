@@ -148,8 +148,10 @@ final class Quick29Model {
             if Task.isCancelled { return }
             let pv: Quick29Preview? = await self.parse(t, store)
             if Task.isCancelled { return }
-            // Prompt 44: lokal tolking av dato/tid og tittel som rest (Time44Parse.swift).
-            self.preview = Time44.merge(pv, t)
+            // Fase 4: dato og tid fra serverens felles datotolker (QuickDates.swift, Q17).
+            let dp: DatesParseDTO? = await QuickDates.parse(t, store)
+            if Task.isCancelled { return }
+            self.preview = QuickDates.merge(pv, dp)
         }
     }
 
@@ -202,10 +204,15 @@ final class Quick29Model {
         AiJobs31.shared.begin(id: tmp, kind: "quick", title: "Legger til i kalenderen", input: t, steps: AiJobs31.quickSteps)
         Haptics.shared.tap()
         Task {
+            // Fase 4: serverens felles datotolker gir dato og tid (QuickDates.swift); sendes som hint som før.
+            var lp0: Quick29Preview? = nil
+            if local52 == nil {
+                let dp: DatesParseDTO? = await QuickDates.parse(t, store)
+                lp0 = QuickDates.preview(dp)
+            }
             do {
-                // Prompt 44: den lokale tolkningen (dato, tid og tittel) som fasit for serveren/Ollama (Time44Parse.swift).
                 var body: [String: Any] = ["text": t]
-                if let lp = Time44.preview(t) {
+                if let lp = lp0 {
                     body["local"] = ["title": lp.title, "date": lp.date, "start": lp.start, "end": lp.end]
                 }
                 // Prompt 52: AI-tolkningen (tittel, dato, tid og sted) fra /api/glimt/quickparse52 går foran (Quick52.swift).
@@ -227,7 +234,7 @@ final class Quick29Model {
                 self.pending.removeAll { $0 == tmp }
                 AiJobs31.shared.end(tmp)
                 if e.status == 404 || e.status == 405 {
-                    self.openForm(Time44.preview(t) ?? Quick29Preview(), text: t, error: "Serveren kan ikke legge til timer i bakgrunnen ennå. Sjekk og lagre.", store)
+                    self.openForm(lp0 ?? local52 ?? Quick29Preview(), text: t, error: "Serveren kan ikke legge til timer i bakgrunnen ennå. Sjekk og lagre.", store)
                 } else {
                     store.flash("Kunne ikke legge til timen: " + e.message)
                 }

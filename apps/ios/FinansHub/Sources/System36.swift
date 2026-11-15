@@ -170,7 +170,7 @@ struct System36SherlockLayer: View {
     var body: some View {
         ZStack(alignment: .topTrailing) {
             if let start = m.sherStart {
-                TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { (ctx: TimelineViewDefaultContext) in
+                MotionTimeline(interval: 1.0 / 30.0) { (ctx: TimelineViewDefaultContext) in
                     System36SherlockFly(e: ctx.date.timeIntervalSince(start), t: ctx.date.timeIntervalSinceReferenceDate, reduce: reduce)
                 }
                 .padding(.trailing, 62).padding(.top, 70)
@@ -284,7 +284,7 @@ struct Carp36Fig: View {
             if reduce {
                 G36Carpenter(S: S, t: 0, still: true) { Glimt35Fig(id: host, size: S, mood: .idle, still: true) }
             } else {
-                TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { (ctx: TimelineViewDefaultContext) in
+                MotionTimeline(interval: 1.0 / 30.0) { (ctx: TimelineViewDefaultContext) in
                     let t: Double = ctx.date.timeIntervalSinceReferenceDate
                     G36Carpenter(S: S, t: t) { Glimt35Fig(id: host, size: S, mood: .idle, t: t) }
                 }

@@ -15,6 +15,9 @@ struct Trial31Rem: Equatable {
     let at: Date
     let title: String
     let body: String
+    /// Fase 4: varselets id på enheten = serverens dedupeKey («trial-<id>-<key>»), så samme varsel aldri planlegges to ganger
+    /// (heller ikke når /api/notify/pending leverer det i bakgrunnen).
+    var key: String = ""
 }
 
 struct Trial31: Identifiable, Equatable {
@@ -27,11 +30,15 @@ struct Trial31: Identifiable, Equatable {
     var status: String = "active"
     var cancelUrl: String = ""
     var reminders: [Trial31Rem] = []
+    /// Fase 4: dager igjen og merket fra serveren (trialOut: daysLeft, badge), regnet i Oslo-tid.
+    var serverDaysLeft: Int? = nil
+    var serverBadge: String? = nil
 
-    var daysLeft: Int { Cal26.daysUntil(endsAt, from: Date()) }
+    var daysLeft: Int { serverDaysLeft ?? Cal26.daysUntil(endsAt, from: Date()) }
 
     /// «Prøve · 12 dager igjen»
     var badge: String {
+        if let b = serverBadge, !b.isEmpty { return b }
         let d: Int = daysLeft
         if d < 0 { return "Prøve · utløpt" }
         if d == 0 { return "Prøve · slutter i dag" }
@@ -54,24 +61,27 @@ struct Trial31: Identifiable, Equatable {
         if !offs.isEmpty { t.offsets = offs }
         t.status = JS.str(o, "status") ?? "active"
         t.cancelUrl = JS.str(o, "cancel_url") ?? JS.str(o, "cancelUrl") ?? Trial31Parse.cancelURL(svc)
+        t.serverDaysLeft = JS.int(o, "daysLeft")
+        t.serverBadge = JS.str(o, "badge")
         t.reminders = Trial31.reminders(o, t)
         return t
     }
 
-    /// Tidspunktene fra serveren (reminders / notifications / notify_at), ellers beregnet lokalt.
+    /// Varslene fra serveren (notifications[]: key, at, title, body, sent). Fase 4: ingen egen utregning – serveren eier planen
+    /// (trials.js notificationsOf), og appen planlegger bare de som ikke er sendt, med dedupeKey som id.
     static func reminders(_ o: [String: Any], _ t: Trial31) -> [Trial31Rem] {
-        let raw: [Any] = ((o["reminders"] ?? o["notifications"] ?? o["notify_at"] ?? o["notifyAt"]) as? [Any]) ?? []
+        let raw: [Any] = ((o["notifications"] ?? o["reminders"]) as? [Any]) ?? []
         var out: [Trial31Rem] = []
-        for x in raw {
-            if let s = x as? String, let d = Trial31Parse.iso(s) {
-                out.append(Trial31Rem(at: d, title: Trial31Parse.title(t, at: d), body: Trial31Parse.body(t)))
-            } else if let r = x as? [String: Any], let s = JS.str(r, "at") ?? JS.str(r, "when") ?? JS.str(r, "time"), let d = Trial31Parse.iso(s) {
-                let title: String = JS.str(r, "title") ?? Trial31Parse.title(t, at: d)
-                let body: String = JS.str(r, "body") ?? Trial31Parse.body(t)
-                out.append(Trial31Rem(at: d, title: title, body: body))
-            }
+        for (i, x) in raw.enumerated() {
+            guard let r = x as? [String: Any], let s = JS.str(r, "at"), let d = Trial31Parse.iso(s) else { continue }
+            if JS.bool(r, "sent") == true { continue }
+            let key: String = JS.str(r, "key") ?? String(i)
+            let dedupe: String = JS.str(r, "dedupeKey") ?? ("trial-" + t.id + "-" + key)
+            let title: String = JS.str(r, "title") ?? t.service
+            let body: String = JS.str(r, "body") ?? ""
+            out.append(Trial31Rem(at: d, title: title, body: body, key: dedupe))
         }
-        return out.isEmpty ? Trial31Parse.localReminders(t) : out
+        return out
     }
 }
 
@@ -204,22 +214,6 @@ enum Trial31Parse {
         String(Cal26.weekdays[Cal26.jsDay(d)].prefix(3)) + " " + Cal26.dShort(d)
     }
 
-    /// Kl. 09:00 på sluttdag − offset, og 18:00 på sluttdagen (siste varsel).
-    static func localReminders(_ t: Trial31) -> [Trial31Rem] {
-        let end: Date = Cal26.day(t.endsAt)
-        let cal: Calendar = Calendar.current
-        var out: [Trial31Rem] = []
-        for off in Set(t.offsets).sorted(by: >) {
-            let day: Date = Cal26.add(end, -off)
-            guard let at = cal.date(bySettingHour: 9, minute: 0, second: 0, of: day) else { continue }
-            out.append(Trial31Rem(at: at, title: title(t, at: at), body: body(t)))
-        }
-        if let last = cal.date(bySettingHour: 18, minute: 0, second: 0, of: end) {
-            out.append(Trial31Rem(at: last, title: t.service + "-prøven slutter i dag", body: body(t)))
-        }
-        return out
-    }
-
     /// «Viaplay-prøven slutter i morgen»
     static func title(_ t: Trial31, at: Date) -> String {
         let d: Int = Cal26.daysUntil(t.endsAt, from: at)
@@ -297,7 +291,7 @@ final class Trial31Model {
             if let url = URL(string: u) { UIApplication.shared.open(url) }
         case Notify31.actKeep:
             patch(id, ["status": "kept"], api)
-            UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: Trial31Model.ids(id))
+            Trial31Model.removeReminders(id)
         case Notify31.actSnooze:
             patch(id, ["snooze": "tomorrow"], api)
             Trial31Model.snoozeLocal(id: id, service: service, cancelUrl: cancelUrl)
@@ -316,20 +310,26 @@ final class Trial31Model {
 
     /* ---------- Lokale varsler ---------- */
 
-    nonisolated static func ids(_ trialId: String) -> [String] {
-        (0..<8).map { "trial31-" + trialId + "-" + String($0) }
+    /// Fjerner alle planlagte varsler for en prøve (serverens dedupeKey-er og de gamle «trial31-»-id-ene).
+    nonisolated static func removeReminders(_ trialId: String) {
+        let center: UNUserNotificationCenter = UNUserNotificationCenter.current()
+        let prefixes: [String] = ["trial-" + trialId + "-", "trial31-" + trialId + "-"]
+        center.getPendingNotificationRequests { (reqs: [UNNotificationRequest]) in
+            let ids: [String] = reqs.map { $0.identifier }.filter { (id: String) -> Bool in prefixes.contains { id.hasPrefix($0) } }
+            center.removePendingNotificationRequests(withIdentifiers: ids)
+        }
     }
 
     /// Fjerner gamle prøve-varsler og planlegger alle kommende for aktive prøver.
     nonisolated static func schedule(_ list: [Trial31]) {
         let center: UNUserNotificationCenter = UNUserNotificationCenter.current()
         center.getPendingNotificationRequests { (reqs: [UNNotificationRequest]) in
-            let old: [String] = reqs.map { $0.identifier }.filter { $0.hasPrefix("trial31-") }
+            let old: [String] = reqs.map { $0.identifier }.filter { $0.hasPrefix("trial31-") || ($0.hasPrefix("trial-") && !$0.hasSuffix("-snooze")) }
             center.removePendingNotificationRequests(withIdentifiers: old)
             let now: Date = Date()
             for t in list {
                 for (i, r) in t.reminders.prefix(8).enumerated() where r.at > now {
-                    add(t, r, id: "trial31-" + t.id + "-" + String(i), center)
+                    add(t, r, id: r.key.isEmpty ? "trial-" + t.id + "-" + String(i) : r.key, center)
                 }
             }
         }
@@ -360,7 +360,7 @@ final class Trial31Model {
         c.categoryIdentifier = Notify31.trialCategory
         c.userInfo = ["trialId": id, "service": service, "cancelUrl": cancelUrl]
         let comps: DateComponents = cal.dateComponents([.year, .month, .day, .hour, .minute], from: at)
-        let r = UNNotificationRequest(identifier: "trial31-" + id + "-snooze", content: c,
+        let r = UNNotificationRequest(identifier: "trial-" + id + "-snooze", content: c,
                                       trigger: UNCalendarNotificationTrigger(dateMatching: comps, repeats: false))
         UNUserNotificationCenter.current().add(r) { (_: Error?) in }
     }

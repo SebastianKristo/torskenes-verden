@@ -96,6 +96,10 @@ struct Bol24Home: Identifiable, Hashable {
     var entries: [Bol24Entry] = []
     var cats: [Bol24Cat] = []
     var detail: Bool = false
+    /// Fase 4 (Q21): «brukt» og «venter» per måned i år fra serveren (kpi.spentByMonth). Poster som venter eller er
+    /// AI-forslag telles ikke i «brukt».
+    var spentByMonth: [String: Double] = [:]
+    var pendingByMonth: [String: Double] = [:]
 
     init(_ o: [String: Any], index: Int) {
         id = JS.int(o, "id") ?? 0
@@ -118,6 +122,11 @@ struct Bol24Home: Identifiable, Hashable {
                 cs.append(Bol24Cat(id: JS.int(c, "id") ?? 0, name: JS.str(c, "label") ?? "Annet", color: JS.str(c, "color") ?? "#7a7468"))
             }
             cats = cs
+            for m in JS.list(JS.dict(o, "kpi"), "spentByMonth") {
+                guard let k = JS.str(m, "month") else { continue }
+                spentByMonth[k] = JS.num(m, "spent") ?? 0
+                pendingByMonth[k] = JS.num(m, "pending") ?? 0
+            }
         }
     }
 
@@ -133,8 +142,11 @@ struct Bol24Home: Identifiable, Hashable {
         return "color"
     }
 
+    /// Brukt i en måned: serverens tall (Q21). Serveren sender bare månedene i år, så forrige år (desember sett fra januar)
+    /// summeres fra postene som reserve, med samme regel (poster som venter telles ikke).
     func spent(_ month: String) -> Double {
-        entries.filter { $0.month == month && !$0.pending }.reduce(0) { $0 + $1.amount }
+        if let v = spentByMonth[month] { return v }
+        return entries.filter { $0.month == month && !$0.pending }.reduce(0) { $0 + $1.amount }
     }
 }
 
@@ -196,6 +208,8 @@ final class Bol24Model {
                 if let old = homes.first(where: { $0.id == h.id }), old.detail, !h.detail {
                     h.entries = old.entries
                     h.cats = old.cats
+                    h.spentByMonth = old.spentByMonth
+                    h.pendingByMonth = old.pendingByMonth
                     h.detail = true
                     if h.members.isEmpty { h.members = old.members }
                 }
@@ -228,6 +242,8 @@ final class Bol24Model {
         if !h.detail {
             h.entries = homes[i].entries
             h.cats = homes[i].cats
+            h.spentByMonth = homes[i].spentByMonth
+            h.pendingByMonth = homes[i].pendingByMonth
             h.detail = homes[i].detail
         }
         if h.background.isEmpty { h.background = homes[i].background }

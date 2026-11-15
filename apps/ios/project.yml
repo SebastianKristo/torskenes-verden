@@ -24,6 +24,8 @@ targets:
       - SharedKeychain
       # Fase 4: det felles nettverkslaget (APIClient, HomelabError, DTO-ene, ServerAddress) – med i alle mål.
       - SharedNet
+      # Fase 4: felles SwiftUI-hjelpere (MotionTimeline) for appene, widgetene og Mac – ikke klokka.
+      - SharedUI
       # Prompt 33: App Group-nøklene som Kalender-appen leser (companion-token).
       - SharedKal/Group
       # Prompt 84: «Kalender i appen» – hele Kalender-appen (samme kode) inni Homelab, bak flagget KAL_EMBED (under).
@@ -74,7 +76,8 @@ targets:
         # Prompt 52: visningsnavnet på hjemskjermen er «Homelab» (bundle-id no.kristo.finanshub er uendret).
         INFOPLIST_KEY_CFBundleDisplayName: Homelab
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
-        INFOPLIST_KEY_UIUserInterfaceStyle: Dark
+        # Fase 4 (Q16): ingen tvunget mørk systemstil. Systemflater (tastatur, ark, varsler) følger appens modus via
+        # .preferredColorScheme i roten (AppShell), så lyst Papir ikke får mørke systemflater.
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: UIInterfaceOrientationPortrait
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
         INFOPLIST_KEY_NSCameraUsageDescription: "Kameraet brukes til å ta bilde av kvitteringer, deler og sorteringsskap i Skjold Lab, og til å skanne QR-koder for å logge inn på en ny enhet."
@@ -171,6 +174,7 @@ targets:
       - Shared
       - SharedKeychain
       - SharedNet
+      - SharedUI
     entitlements:
       path: FinansHubWidgets/FinansHubWidgets.entitlements
       properties:
@@ -202,6 +206,7 @@ targets:
       - Kalender/Resources
       - SharedKeychain
       - SharedNet
+      - SharedUI
       # Delt med KalenderWidgets (og Group med Homelab-appen). Fonts: Newsreader, Manrope og IBM Plex Mono (kopi av Papir-fontene, OFL).
       - SharedKal/Group
       - SharedKal/Core
@@ -288,6 +293,28 @@ targets:
         TEST_TARGET_NAME: Kalender
         TARGETED_DEVICE_FAMILY: "1,2"
 
+  # Fase 4 (Q25): enhetstester uten vertsapp (logiske tester, kjører på simulator uten signering). Kjører de felles fasitene
+  # i shared/testvektorer (serveradresse, i dag, datoer) mot det som fortsatt er lokal logikk i appene, og dekoder eksemplene i
+  # shared/schemas/eksempler med DTO-ene. Kildene er de delte mappene (bare Foundation/SwiftUI) og den rene tolkeren KalQuick.swift
+  # (som Mac også kompilerer alene). Testene leser fasitfilene fra repoet (#filePath), så det finnes bare én kopi.
+  #   xcodebuild test -project FinansHub.xcodeproj -scheme HomelabTests -destination 'platform=iOS Simulator,id=<udid>'
+  HomelabTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - HomelabTests
+      - SharedNet
+      - SharedKeychain
+      - SharedUI
+      - SharedKal/Core
+      - SharedKal/Group
+      - path: Kalender/Sources/KalQuick.swift
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: no.kristo.homelab.tests
+        GENERATE_INFOPLIST_FILE: YES
+        TARGETED_DEVICE_FAMILY: "1,2"
+
   KalenderWidgets:
     type: app-extension
     platform: iOS
@@ -295,6 +322,7 @@ targets:
       - KalenderWidgets/Sources
       - SharedKeychain
       - SharedNet
+      - SharedUI
       - SharedKal/Group
       - SharedKal/Core
       - SharedKal/Fonts
@@ -343,6 +371,7 @@ targets:
       - KalenderMac/Resources
       - SharedKeychain
       - SharedNet
+      - SharedUI
       - SharedKal/Core
       - SharedKal/Group
       # Fontene kopieres til Contents/Resources og lastes via ATSApplicationFontsPath.
@@ -435,6 +464,7 @@ targets:
       - KalenderWidgets/Sources
       - SharedKeychain
       - SharedNet
+      - SharedUI
       - SharedKal/Group
       - SharedKal/Core
       # Fontene kopieres til Contents/Resources og lastes via ATSApplicationFontsPath.

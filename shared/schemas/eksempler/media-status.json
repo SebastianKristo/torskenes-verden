@@ -1,0 +1,97 @@
+{
+  "services": [
+    {
+      "id": "sonarr",
+      "service": "sonarr",
+      "name": "Sonarr",
+      "configured": true,
+      "mock": true,
+      "site": "hjemme",
+      "source": "server",
+      "configSource": "mock",
+      "ok": true,
+      "connected": true,
+      "state": "ok",
+      "version": "4.0.9.2244",
+      "ms": 19,
+      "lastOk": "2026-11-15T17:00:27.188Z",
+      "text": "v4.0.9.2244 · 19 ms",
+      "error": null
+    },
+    {
+      "id": "radarr",
+      "service": "radarr",
+      "name": "Radarr",
+      "configured": true,
+      "mock": true,
+      "site": "hjemme",
+      "source": "server",
+      "configSource": "mock",
+      "ok": true,
+      "connected": true,
+      "state": "ok",
+      "version": "5.14.0.9383",
+      "ms": 3,
+      "lastOk": "2026-11-15T17:00:27.188Z",
+      "text": "v5.14.0.9383 · 3 ms",
+      "error": null
+    },
+    {
+      "id": "qbittorrent",
+      "service": "qbittorrent",
+      "name": "qBittorrent",
+      "configured": true,
+      "mock": true,
+      "site": "hjemme",
+      "source": "server",
+      "configSource": "mock",
+      "ok": true,
+      "connected": true,
+      "state": "ok",
+      "version": "5.0.1",
+      "ms": 4,
+      "lastOk": "2026-11-15T17:00:27.189Z",
+      "text": "v5.0.1 · 4 ms",
+      "error": null
+    },
+    {
+      "id": "prowlarr",
+      "service": "prowlarr",
+      "name": "Prowlarr",
+      "configured": true,
+      "mock": true,
+      "site": "hjemme",
+      "source": "server",
+      "configSource": "mock",
+      "ok": true,
+      "connected": true,
+      "state": "ok",
+      "version": "1.24.3.4754",
+      "ms": 2,
+      "lastOk": "2026-11-15T17:00:27.189Z",
+      "text": "v1.24.3.4754 · 2 ms",
+      "error": null
+    }
+  ],
+  "mock": true,
+  "admin": true,
+  "canEdit": true,
+  "settings": {
+    "notifyDone": true,
+    "notifyFail": true,
+    "calendar": true,
+    "player": "jellyfin"
+  },
+  "play": {
+    "player": "jellyfin",
+    "label": "▶ Spill av i Jellyfin",
+    "url": "http://192.168.1.20:8096/web/#/search.html?query="
+  },
+  "setupRoute": "innstillinger/integrasjoner#media",
+  "hooks": {
+    "sonarr": "/api/media/hook/sonarr?token=GYeJtSBxhU6MkTc2Ruv5-p9F",
+    "radarr": "/api/media/hook/radarr?token=GYeJtSBxhU6MkTc2Ruv5-p9F",
+    "prowlarr": "/api/media/hook/prowlarr?token=GYeJtSBxhU6MkTc2Ruv5-p9F",
+    "qbit": "/api/media/hook/qbit?token=GYeJtSBxhU6MkTc2Ruv5-p9F"
+  }
+}

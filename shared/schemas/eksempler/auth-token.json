@@ -1,0 +1,18 @@
+{
+  "token": "fh_EKSEMPEL-ikke-et-ekte-token",
+  "scopes": [
+    "finance:read",
+    "finance:write",
+    "receipts:write",
+    "read:transactions"
+  ],
+  "user": {
+    "id": "owner",
+    "username": "sebastian",
+    "role": "admin",
+    "name": "Sebastian"
+  },
+  "expires": 1810314026770,
+  "expiresAt": "2027-05-14T17:00:26.770Z",
+  "sliding": true
+}

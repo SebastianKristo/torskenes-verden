@@ -1,0 +1,520 @@
+{
+  "kind": "evening",
+  "title": "Kveldsbrief",
+  "kicker": "GLIMT · KVELDSBRIEF",
+  "greeting": "God kveld, Sebastian.",
+  "weather": {
+    "place": "Oslo",
+    "here": false,
+    "now": {
+      "temp": 11,
+      "cond": "Delvis skyet",
+      "code": 2,
+      "icon": "partly",
+      "ic": "🌙",
+      "isDay": false
+    },
+    "hi": 13,
+    "lo": 5,
+    "cond": "Delvis skyet",
+    "umbrella": true,
+    "rain12h": [
+      {
+        "h": "18",
+        "t": "2026-11-15T18:00",
+        "mm": 0,
+        "prob": 25
+      },
+      {
+        "h": "19",
+        "t": "2026-11-15T19:00",
+        "mm": 0,
+        "prob": 25
+      },
+      {
+        "h": "20",
+        "t": "2026-11-15T20:00",
+        "mm": 0,
+        "prob": 25
+      },
+      {
+        "h": "21",
+        "t": "2026-11-15T21:00",
+        "mm": 0,
+        "prob": 25
+      }
+    ],
+    "rainFrom": "00:00",
+    "vsYesterday": {
+      "diff": 1,
+      "text": "1° varmere enn i går"
+    },
+    "sunset": "17:40",
+    "source": "mock",
+    "credit": "Eksempeldata",
+    "open": {
+      "route": "vaer",
+      "overlay": true
+    }
+  },
+  "events": [
+    {
+      "id": "ical-f3f40d9f5e-20261116T0815",
+      "title": "Matematikk R2",
+      "date": "2026-11-16",
+      "time": "08:15",
+      "start": "2026-11-16T07:15:00.000Z",
+      "end": "2026-11-16T08:45:00.000Z",
+      "allDay": false,
+      "color": "#2b5d8a",
+      "place": "A-112",
+      "day": "I morgen",
+      "deepLink": "kalender://dag/2026-11-16"
+    },
+    {
+      "id": "ical-7903caaf9a-20261116T1000",
+      "title": "Fysikk 2",
+      "date": "2026-11-16",
+      "time": "10:00",
+      "start": "2026-11-16T09:00:00.000Z",
+      "end": "2026-11-16T10:30:00.000Z",
+      "allDay": false,
+      "color": "#2e6f75",
+      "place": "B-204",
+      "day": "I morgen",
+      "deepLink": "kalender://dag/2026-11-16"
+    },
+    {
+      "id": "ical-3aca7cdb40-20261116T1215",
+      "title": "Norsk",
+      "date": "2026-11-16",
+      "time": "12:15",
+      "start": "2026-11-16T11:15:00.000Z",
+      "end": "2026-11-16T12:45:00.000Z",
+      "allDay": false,
+      "color": "#a8661a",
+      "place": "A-305",
+      "day": "I morgen",
+      "deepLink": "kalender://dag/2026-11-16"
+    }
+  ],
+  "next": {
+    "title": "Matematikk R2",
+    "inMin": 855,
+    "time": "08:15",
+    "label": "I MORGEN 08:15"
+  },
+  "tests": [],
+  "news": [
+    {
+      "id": 9,
+      "title": "Ny rekord for elbilsalg i september",
+      "url": "https://aftenposten.no/sak/1458-0",
+      "source": "Aftenposten",
+      "published": "2026-11-15T17:00:26.845Z",
+      "timeLabel": "18:00",
+      "image": "/api/img?u=https%3A%2F%2Fpicsum.photos%2Fseed%2Faftenposten0%2F640%2F360&s=d8d7648bf0559b53d3e5",
+      "imageUrl": "https://picsum.photos/seed/aftenposten0/640/360",
+      "lead": null,
+      "top": true
+    },
+    {
+      "id": 1,
+      "title": "Kraftig regn ventes på Østlandet i kveld",
+      "url": "https://e24.no/sak/470-0",
+      "source": "E24",
+      "published": "2026-11-15T16:58:26.845Z",
+      "timeLabel": "17:58",
+      "image": "/api/img?u=https%3A%2F%2Fpicsum.photos%2Fseed%2Fe240%2F640%2F360&s=c31531e1b1ad034eef00",
+      "imageUrl": "https://picsum.photos/seed/e240/640/360",
+      "lead": null,
+      "top": false
+    },
+    {
+      "id": 33,
+      "title": "Kraftig regn ventes på Østlandet i kveld",
+      "url": "https://vg.no/sak/488-0",
+      "source": "VG",
+      "published": "2026-11-15T16:58:26.845Z",
+      "timeLabel": "17:58",
+      "image": "/api/img?u=https%3A%2F%2Fpicsum.photos%2Fseed%2Fvg0%2F640%2F360&s=32dff240dcc519cb3ac6",
+      "imageUrl": "https://picsum.photos/seed/vg0/640/360",
+      "lead": null,
+      "top": false
+    },
+    {
+      "id": 17,
+      "title": "Kraftig regn ventes på Østlandet i kveld",
+      "url": "https://nrk.no/sak/598-0",
+      "source": "NRK",
+      "published": "2026-11-15T16:56:26.845Z",
+      "timeLabel": "17:56",
+      "image": "/api/img?u=https%3A%2F%2Fpicsum.photos%2Fseed%2Fnrk0%2F640%2F360&s=21008ffc085183dc46f9",
+      "imageUrl": "https://picsum.photos/seed/nrk0/640/360",
+      "lead": null,
+      "top": false
+    }
+  ],
+  "packages": {
+    "count": 6,
+    "first": {
+      "title": "Komplett · skjerm",
+      "statusText": "Klar for henting · Kiwi Pilestredet"
+    },
+    "label": "6 PÅ VEI",
+    "items": [
+      {
+        "id": 3,
+        "carrier": "PostNord",
+        "carrierId": "postnord",
+        "logo": "/finans/api/logos/file/postnord",
+        "shopLogo": "/finans/api/logos/file/komplett",
+        "color": "#00A0D6",
+        "fg": "#fff",
+        "ini": "PN",
+        "name": "Komplett · skjerm",
+        "status": "Klar for henting · Kiwi Pilestredet",
+        "due": "Klar nå",
+        "dueRed": true,
+        "deepLink": "finanshub://sporing/3"
+      },
+      {
+        "id": 4,
+        "carrier": "DHL",
+        "carrierId": "dhl",
+        "logo": "/finans/api/logos/file/dhl",
+        "shopLogo": "/finans/api/logos/file/zalando",
+        "color": "#FFCC00",
+        "fg": "#D40511",
+        "ini": "DHL",
+        "name": "Zalando · jakke",
+        "status": "I transport",
+        "due": "ons 18. nov",
+        "dueRed": false,
+        "deepLink": "finanshub://sporing/4"
+      },
+      {
+        "id": 1,
+        "carrier": "Posten",
+        "carrierId": "posten",
+        "logo": "/finans/api/logos/file/posten",
+        "shopLogo": "/finans/api/logos/file/finn",
+        "color": "#E32D22",
+        "fg": "#fff",
+        "ini": "P",
+        "name": "iPhone 14 Pro 256 GB",
+        "status": "I transport",
+        "due": "I morgen",
+        "dueRed": false,
+        "deepLink": "finanshub://sporing/1"
+      },
+      {
+        "id": 5,
+        "carrier": "Posten",
+        "carrierId": "posten",
+        "logo": "/finans/api/logos/file/posten",
+        "shopLogo": "/finans/api/logos/file/aliexpress",
+        "color": "#E32D22",
+        "fg": "#fff",
+        "ini": "P",
+        "name": "AliExpress · USB-C-kabler",
+        "status": "I transport",
+        "due": "lør 21. nov",
+        "dueRed": false,
+        "deepLink": "finanshub://sporing/5"
+      }
+    ]
+  },
+  "trials": [],
+  "dinner": null,
+  "todos": {
+    "count": 3,
+    "overdue": 1,
+    "items": [
+      {
+        "id": 2,
+        "title": "Bytt filter i ventilasjonen",
+        "due": "2026-11-14",
+        "time": null,
+        "done": false,
+        "overdue": true,
+        "list": "hjem",
+        "listName": "Hjem",
+        "urgent": false
+      },
+      {
+        "id": 1,
+        "title": "Kjøp melk og brød",
+        "due": "2026-11-15",
+        "time": null,
+        "done": false,
+        "overdue": false,
+        "list": "handel",
+        "listName": "Handel",
+        "urgent": false
+      },
+      {
+        "id": 5,
+        "title": "Send rapport til Kari",
+        "due": "2026-11-15",
+        "time": null,
+        "done": false,
+        "overdue": false,
+        "list": "jobb",
+        "listName": "Jobb",
+        "urgent": false
+      }
+    ],
+    "text": "Du har tre gjøremål i dag, ett er forfalt.",
+    "title": "3 gjøremål i dag",
+    "open": {
+      "route": "huske"
+    },
+    "deepLink": "finanshub://huske"
+  },
+  "bible": {
+    "period": "evening",
+    "ref": "Salme 86,6",
+    "short": "Sal 86,6",
+    "text": "Vend øret, Herre, til min bønn, og merk på mine inderlige bønners røst!",
+    "date": "2026-11-15",
+    "dateLabel": "15. nov.",
+    "kicker": "KVELDSVERS · GLIMT",
+    "translation": "1930",
+    "id": "k319",
+    "read": false,
+    "placement": "top",
+    "context": {
+      "before": [
+        {
+          "v": 4,
+          "text": "Gled din tjeners sjel! for til dig, Herre, løfter jeg min sjel."
+        },
+        {
+          "v": 5,
+          "text": "For du, Herre, er god og villig til å forlate og rik på miskunnhet mot alle dem som påkaller dig."
+        }
+      ],
+      "after": [
+        {
+          "v": 7,
+          "text": "På min nøds dag kaller jeg på dig, for du svarer mig."
+        },
+        {
+          "v": 8,
+          "text": "Ingen er som du blandt gudene, Herre, og intet er som dine gjerninger."
+        }
+      ]
+    },
+    "open": {
+      "route": "bibel"
+    },
+    "deepLink": "finanshub://bibel",
+    "speak": "Dagens vers er fra Salme 86 vers 6. Vend øret, Herre, til min bønn, og merk på mine inderlige bønners røst!"
+  },
+  "brief_cards": [
+    "vaer",
+    "kal",
+    "fokus",
+    "gjore"
+  ],
+  "showKicker": false,
+  "chips": [
+    "11° delvis skyet",
+    "Matematikk R2 08:15",
+    "7 nyheter"
+  ],
+  "summary": "God kveld, Sebastian. Delvis skyet og 11° i Oslo, regn fra midnatt. Neste er Matematikk R2 kl. 08:15 i morgen. Ta med paraply.",
+  "summarySource": "mal",
+  "model": null,
+  "figure": {
+    "state": "wave",
+    "mood": "rainy",
+    "guide": [
+      {
+        "k": "hello",
+        "target": null,
+        "text": "Hei! Jeg er Glimt. Vil du at jeg viser deg dagen din?",
+        "action": "Vis meg"
+      },
+      {
+        "k": "weather",
+        "target": "weather",
+        "text": "11° og delvis skyet i Oslo. Regn fra ca. 00:00. 1° varmere enn i går."
+      },
+      {
+        "k": "calendar",
+        "target": "calendar",
+        "text": "Neste avtale er Matematikk R2 kl. 08:15."
+      },
+      {
+        "k": "news",
+        "target": "news",
+        "text": "7 saker fra nyhetene, først: Ny rekord for elbilsalg i september"
+      }
+    ]
+  },
+  "host": "glimt",
+  "guide": [
+    {
+      "k": "hello",
+      "char": "glimt",
+      "name": "Glimt",
+      "target": null,
+      "text": "Hei! Jeg er Glimt. Vil du at jeg viser deg dagen din? Vennene mine hjelper til.",
+      "textEn": "Hi! I'm Glimt. Shall I show you your day? My friends will help.",
+      "action": "Vis meg",
+      "actionEn": "Show me"
+    },
+    {
+      "k": "weather",
+      "char": "drape",
+      "name": "Dråpe",
+      "target": "weather",
+      "text": "Hei, det er Dråpe! Delvis skyet, 11° nå og regn fra ca. midnatt. Jeg drypper litt, så ta med paraply!",
+      "textEn": "Hi, it's Drop! Partly cloudy, 11° right now, and rain from about 00:00. I'm dripping a bit, so bring an umbrella!",
+      "action": "Takk, Dråpe",
+      "actionEn": "Thanks, Drop"
+    },
+    {
+      "k": "calendar",
+      "char": "ugle",
+      "name": "Ugle",
+      "target": "calendar",
+      "text": "Uhu, Ugle her med kalenderen. Matematikk R2 i morgen kl. 08:15. Trykk på en avtale for å åpne Kalender.",
+      "textEn": "Hoo, Owl here with your calendar. Matematikk R2 tomorrow at 08:15. Tap an event to open Calendar.",
+      "action": "Neste",
+      "actionEn": "Next"
+    },
+    {
+      "k": "news",
+      "char": "glimt",
+      "name": "Glimt",
+      "target": "news",
+      "text": "Glimt igjen! Her er de viktigste nyhetene. Trykk for å lese hele.",
+      "textEn": "Glimt again! Here are the top stories. Tap to read more.",
+      "action": "Neste",
+      "actionEn": "Next"
+    }
+  ],
+  "enabled": true,
+  "readAloud": false,
+  "briefGlimt": true,
+  "showFigure": true,
+  "footer": "Laget av Glimt 18:00 · Vær: Eksempeldata · Nyheter: Aftenposten, E24, VG, NRK, Tek.no",
+  "generatedAt": "2026-11-15T17:00:26.862Z",
+  "nextAt": "2026-11-16T05:45:00.000Z",
+  "deepLink": "finanshub://brief",
+  "cards": [
+    {
+      "id": "weather",
+      "on": true,
+      "label": "Vær"
+    },
+    {
+      "id": "calendar",
+      "on": true,
+      "label": "Kalender"
+    },
+    {
+      "id": "todos",
+      "on": true,
+      "label": "Gjøremål"
+    },
+    {
+      "id": "dinner",
+      "on": true,
+      "label": "Middag"
+    }
+  ],
+  "family": {
+    "label": "DELER POSISJON MED DEG",
+    "text": "Ingen er hjemme ennå.",
+    "items": [
+      {
+        "userId": "mock-ingrid",
+        "name": "Ingrid",
+        "avatar": null,
+        "initial": "I",
+        "color": "#2f5d8a",
+        "state": "I bil",
+        "place": "Grønland",
+        "since": "2026-11-15T16:59:46.927Z",
+        "text": "I bil · Grønland",
+        "dot": "#2f7a4f",
+        "home": false
+      },
+      {
+        "userId": "mock-jonas",
+        "name": "Jonas",
+        "avatar": null,
+        "initial": "J",
+        "color": "#2f7a4f",
+        "state": "Sykler",
+        "place": "Ullevål",
+        "since": "2026-11-15T16:59:46.928Z",
+        "text": "Sykler · Ullevål",
+        "dot": "#2f7a4f",
+        "home": false
+      }
+    ]
+  },
+  "school": {
+    "label": "NESTE 7 DAGER",
+    "items": []
+  },
+  "birthdays": {
+    "label": "NESTE",
+    "items": [
+      {
+        "id": 2,
+        "name": "Rune",
+        "age": 64,
+        "date": "2026-11-17",
+        "dateLabel": "tir 17. nov",
+        "text": "Fyller 64 · tir 17. nov",
+        "daysLeft": 2,
+        "red": true,
+        "color": "#b23a2a",
+        "avatarUrl": null,
+        "gift": {
+          "name": "Rune",
+          "date": "2026-11-17"
+        }
+      }
+    ]
+  },
+  "aurora": {
+    "show": true,
+    "kp": 4,
+    "cloud": 15,
+    "best": "22–01",
+    "text": "Glimt anbefaler å se nordover mellom kl. 22 og 01. Lite skyer over Oslo. Finn et mørkt sted uten gatelys.",
+    "level": "GODE",
+    "label": "KP 4 · GODE SJANSER",
+    "source": "Eksempeldata (NOAA SWPC · MET)",
+    "updatedAt": "2026-11-15T17:00:26.926Z"
+  },
+  "ski": {
+    "text": "Nysnø i Nordmarka: 42 cm snø og -4°. Glimt anbefaler blå (V30) i festesonen.",
+    "chip": "Ski: blå",
+    "wax": "Blå (V30)",
+    "grip": "Feste: Blå (V30)",
+    "glide": "Glid: universal",
+    "title": "SKIFØRE · NORDMARKA",
+    "voice": "Det er fint skiføre i marka i dag.",
+    "places": [
+      {
+        "name": "Nordmarka",
+        "lat": 59.99,
+        "lon": 10.67,
+        "snowCm": 42,
+        "newCm": 6,
+        "tempC": -4,
+        "humidity": 82,
+        "url": "https://skisporet.no/"
+      }
+    ],
+    "source": "Open-Meteo"
+  }
+}

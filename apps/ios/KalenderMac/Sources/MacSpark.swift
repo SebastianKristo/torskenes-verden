@@ -51,7 +51,7 @@ struct MacSpark: View {
     @Environment(\.accessibilityReduceMotion) private var reduce
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: false)) { (ctx: TimelineViewDefaultContext) in
+        MotionTimeline(interval: 1.0 / 30.0) { (ctx: TimelineViewDefaultContext) in
             MacSparkFrame(size: size, fast: fast, reduce: reduce, t: ctx.date.timeIntervalSinceReferenceDate)
         }
         .frame(width: size, height: size)
@@ -119,7 +119,7 @@ struct MacOrb: View {
     @Environment(\.accessibilityReduceMotion) private var reduce
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: false)) { (ctx: TimelineViewDefaultContext) in
+        MotionTimeline(interval: 1.0 / 30.0) { (ctx: TimelineViewDefaultContext) in
             MacOrbFrame(size: size, thinking: thinking, reduce: reduce, t: ctx.date.timeIntervalSinceReferenceDate)
         }
         .frame(width: size, height: size)

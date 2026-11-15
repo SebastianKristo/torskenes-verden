@@ -1,0 +1,448 @@
+{
+  "kind": "nextDay",
+  "now": null,
+  "next": null,
+  "today": {
+    "date": "2026-11-15",
+    "label": "søndag 15. november",
+    "short": "søndag 15. nov",
+    "count": 0,
+    "events": []
+  },
+  "tests": [],
+  "nextSchoolDay": {
+    "date": "2026-11-16",
+    "label": "mandag 16. november",
+    "weekday": "mandag",
+    "daysAway": 1,
+    "first": {
+      "id": "ical-f3f40d9f5e-20261116T0815",
+      "title": "Matematikk R2",
+      "short": "Matte R2",
+      "subject": "Matematikk R2",
+      "room": "A-112",
+      "teacher": "Kari Hansen",
+      "start": "2026-11-16T07:15:00.000Z",
+      "end": "2026-11-16T08:45:00.000Z",
+      "allDay": false,
+      "date": "2026-11-16",
+      "time": "08:15–09:45",
+      "type": "time",
+      "color": "#2b5d8a"
+    },
+    "events": [
+      {
+        "id": "ical-f3f40d9f5e-20261116T0815",
+        "title": "Matematikk R2",
+        "short": "Matte R2",
+        "subject": "Matematikk R2",
+        "room": "A-112",
+        "teacher": "Kari Hansen",
+        "start": "2026-11-16T07:15:00.000Z",
+        "end": "2026-11-16T08:45:00.000Z",
+        "allDay": false,
+        "date": "2026-11-16",
+        "time": "08:15–09:45",
+        "type": "time",
+        "color": "#2b5d8a"
+      },
+      {
+        "id": "ical-7903caaf9a-20261116T1000",
+        "title": "Fysikk 2",
+        "short": "Fysikk 2",
+        "subject": "Fysikk 2",
+        "room": "B-204",
+        "teacher": "Ola Berg",
+        "start": "2026-11-16T09:00:00.000Z",
+        "end": "2026-11-16T10:30:00.000Z",
+        "allDay": false,
+        "date": "2026-11-16",
+        "time": "10:00–11:30",
+        "type": "time",
+        "color": "#2e6f75"
+      },
+      {
+        "id": "ical-3aca7cdb40-20261116T1215",
+        "title": "Norsk",
+        "short": "Norsk",
+        "subject": "Norsk",
+        "room": "A-305",
+        "teacher": "Ingrid Lie",
+        "start": "2026-11-16T11:15:00.000Z",
+        "end": "2026-11-16T12:45:00.000Z",
+        "allDay": false,
+        "date": "2026-11-16",
+        "time": "12:15–13:45",
+        "type": "time",
+        "color": "#a8661a"
+      },
+      {
+        "id": "ical-d2c81d580d-20261116T1400",
+        "title": "Spansk",
+        "short": "Spansk",
+        "subject": "Spansk",
+        "room": "C-210",
+        "teacher": "Lucía García",
+        "start": "2026-11-16T13:00:00.000Z",
+        "end": "2026-11-16T14:00:00.000Z",
+        "allDay": false,
+        "date": "2026-11-16",
+        "time": "14:00–15:00",
+        "type": "time",
+        "color": "#c0562a"
+      }
+    ],
+    "count": 4
+  },
+  "configured": true,
+  "refreshAt": [
+    "2026-11-15T23:00:00.000Z"
+  ],
+  "url": "finanshub://kalender",
+  "updatedAt": "2026-11-15T17:00:27.079Z",
+  "next3": [
+    {
+      "id": "ical-f3f40d9f5e-20261116T0815",
+      "title": "Matematikk R2",
+      "date": "2026-11-16",
+      "start": "2026-11-16T07:15:00.000Z",
+      "end": "2026-11-16T08:45:00.000Z",
+      "allDay": false,
+      "time": "08:15–09:45",
+      "s": "08:15",
+      "e": "09:45",
+      "room": "A-112",
+      "appCalendar": "skole",
+      "appColor": "#2f7a4f",
+      "color": "#2b5d8a",
+      "type": "time",
+      "label": "I morgen 08:15",
+      "deepLink": "kalender://hendelse?id=ical-f3f40d9f5e-20261116T0815&date=2026-11-16&t=Matematikk%20R2&s=08:15&e=09:45"
+    },
+    {
+      "id": "ical-7903caaf9a-20261116T1000",
+      "title": "Fysikk 2",
+      "date": "2026-11-16",
+      "start": "2026-11-16T09:00:00.000Z",
+      "end": "2026-11-16T10:30:00.000Z",
+      "allDay": false,
+      "time": "10:00–11:30",
+      "s": "10:00",
+      "e": "11:30",
+      "room": "B-204",
+      "appCalendar": "skole",
+      "appColor": "#2f7a4f",
+      "color": "#2e6f75",
+      "type": "time",
+      "label": "I morgen 10:00",
+      "deepLink": "kalender://hendelse?id=ical-7903caaf9a-20261116T1000&date=2026-11-16&t=Fysikk%202&s=10:00&e=11:30"
+    },
+    {
+      "id": "ical-3aca7cdb40-20261116T1215",
+      "title": "Norsk",
+      "date": "2026-11-16",
+      "start": "2026-11-16T11:15:00.000Z",
+      "end": "2026-11-16T12:45:00.000Z",
+      "allDay": false,
+      "time": "12:15–13:45",
+      "s": "12:15",
+      "e": "13:45",
+      "room": "A-305",
+      "appCalendar": "skole",
+      "appColor": "#2f7a4f",
+      "color": "#a8661a",
+      "type": "time",
+      "label": "I morgen 12:15",
+      "deepLink": "kalender://hendelse?id=ical-3aca7cdb40-20261116T1215&date=2026-11-16&t=Norsk&s=12:15&e=13:45"
+    }
+  ],
+  "month": {
+    "year": 2026,
+    "month": 11,
+    "label": "november 2026",
+    "today": "2026-11-15",
+    "deepLink": "kalender://dag/2026-11-15",
+    "weeks": [
+      {
+        "week": 44,
+        "days": [
+          {
+            "date": "2026-10-26",
+            "d": 26,
+            "inMonth": false,
+            "today": false,
+            "sunday": false,
+            "count": 4,
+            "dots": [
+              "#2f7a4f"
+            ],
+            "deepLink": "kalender://dag/2026-10-26"
+          },
+          {
+            "date": "2026-10-27",
+            "d": 27,
+            "inMonth": false,
+            "today": false,
+            "sunday": false,
+            "count": 3,
+            "dots": [
+              "#2f7a4f"
+            ],
+            "deepLink": "kalender://dag/2026-10-27"
+          },
+          {
+            "date": "2026-10-28",
+            "d": 28,
+            "inMonth": false,
+            "today": false,
+            "sunday": false,
+            "count": 5,
+            "dots": [
+              "#2f7a4f"
+            ],
+            "deepLink": "kalender://dag/2026-10-28"
+          },
+          {
+            "date": "2026-10-29",
+            "d": 29,
+            "inMonth": false,
+            "today": false,
+            "sunday": false,
+            "count": 4,
+            "dots": [
+              "#2f7a4f"
+            ],
+            "deepLink": "kalender://dag/2026-10-29"
+          }
+        ]
+      },
+      {
+        "week": 45,
+        "days": [
+          {
+            "date": "2026-11-02",
+            "d": 2,
+            "inMonth": true,
+            "today": false,
+            "sunday": false,
+            "count": 5,
+            "dots": [
+              "#8a3fa0",
+              "#2f7a4f"
+            ],
+            "deepLink": "kalender://dag/2026-11-02"
+          },
+          {
+            "date": "2026-11-03",
+            "d": 3,
+            "inMonth": true,
+            "today": false,
+            "sunday": false,
+            "count": 3,
+            "dots": [
+              "#2f7a4f"
+            ],
+            "deepLink": "kalender://dag/2026-11-03"
+          },
+          {
+            "date": "2026-11-04",
+            "d": 4,
+            "inMonth": true,
+            "today": false,
+            "sunday": false,
+            "count": 5,
+            "dots": [
+              "#2f7a4f"
+            ],
+            "deepLink": "kalender://dag/2026-11-04"
+          },
+          {
+            "date": "2026-11-05",
+            "d": 5,
+            "inMonth": true,
+            "today": false,
+            "sunday": false,
+            "count": 4,
+            "dots": [
+              "#2f7a4f"
+            ],
+            "deepLink": "kalender://dag/2026-11-05"
+          }
+        ]
+      },
+      {
+        "week": 46,
+        "days": [
+          {
+            "date": "2026-11-09",
+            "d": 9,
+            "inMonth": true,
+            "today": false,
+            "sunday": false,
+            "count": 4,
+            "dots": [
+              "#2f7a4f"
+            ],
+            "deepLink": "kalender://dag/2026-11-09"
+          },
+          {
+            "date": "2026-11-10",
+            "d": 10,
+            "inMonth": true,
+            "today": false,
+            "sunday": false,
+            "count": 3,
+            "dots": [
+              "#2f7a4f"
+            ],
+            "deepLink": "kalender://dag/2026-11-10"
+          },
+          {
+            "date": "2026-11-11",
+            "d": 11,
+            "inMonth": true,
+            "today": false,
+            "sunday": false,
+            "count": 4,
+            "dots": [
+              "#2f7a4f"
+            ],
+            "deepLink": "kalender://dag/2026-11-11"
+          },
+          {
+            "date": "2026-11-12",
+            "d": 12,
+            "inMonth": true,
+            "today": false,
+            "sunday": false,
+            "count": 4,
+            "dots": [
+              "#2f7a4f"
+            ],
+            "deepLink": "kalender://dag/2026-11-12"
+          }
+        ]
+      },
+      {
+        "week": 47,
+        "days": [
+          {
+            "date": "2026-11-16",
+            "d": 16,
+            "inMonth": true,
+            "today": false,
+            "sunday": false,
+            "count": 4,
+            "dots": [
+              "#2f7a4f"
+            ],
+            "deepLink": "kalender://dag/2026-11-16"
+          },
+          {
+            "date": "2026-11-17",
+            "d": 17,
+            "inMonth": true,
+            "today": false,
+            "sunday": false,
+            "count": 4,
+            "dots": [
+              "#8a3fa0",
+              "#2f7a4f"
+            ],
+            "deepLink": "kalender://dag/2026-11-17"
+          },
+          {
+            "date": "2026-11-18",
+            "d": 18,
+            "inMonth": true,
+            "today": false,
+            "sunday": false,
+            "count": 4,
+            "dots": [
+              "#2f7a4f"
+            ],
+            "deepLink": "kalender://dag/2026-11-18"
+          },
+          {
+            "date": "2026-11-19",
+            "d": 19,
+            "inMonth": true,
+            "today": false,
+            "sunday": false,
+            "count": 4,
+            "dots": [
+              "#2f7a4f"
+            ],
+            "deepLink": "kalender://dag/2026-11-19"
+          }
+        ]
+      }
+    ]
+  },
+  "weather": {
+    "place": "Oslo",
+    "today": {
+      "date": "2026-11-15",
+      "icon": "partly",
+      "ic": "⛅",
+      "code": 2,
+      "text": "Delvis skyet",
+      "hi": 13,
+      "lo": 5,
+      "precipProb": 25,
+      "precipMm": 0
+    },
+    "days": [
+      {
+        "date": "2026-11-15",
+        "icon": "partly",
+        "ic": "⛅",
+        "code": 2,
+        "text": "Delvis skyet",
+        "hi": 13,
+        "lo": 5,
+        "precipProb": 25,
+        "precipMm": 0
+      },
+      {
+        "date": "2026-11-16",
+        "icon": "rain",
+        "ic": "🌧️",
+        "code": 63,
+        "text": "Regn",
+        "hi": 11,
+        "lo": 3,
+        "precipProb": 86,
+        "precipMm": 0
+      },
+      {
+        "date": "2026-11-17",
+        "icon": "partly",
+        "ic": "⛅",
+        "code": 2,
+        "text": "Delvis skyet",
+        "hi": 10,
+        "lo": 2,
+        "precipProb": 5,
+        "precipMm": 0
+      },
+      {
+        "date": "2026-11-18",
+        "icon": "partly",
+        "ic": "⛅",
+        "code": 2,
+        "text": "Delvis skyet",
+        "hi": 9,
+        "lo": 1,
+        "precipProb": 5,
+        "precipMm": 0
+      }
+    ]
+  },
+  "deepLink": "kalender://",
+  "links": {
+    "today": "kalender://dag/2026-11-15",
+    "list": "kalender://liste",
+    "new": "kalender://ny"
+  }
+}

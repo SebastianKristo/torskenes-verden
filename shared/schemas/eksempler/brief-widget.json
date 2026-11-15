@@ -1,0 +1,34 @@
+{
+  "kind": "evening",
+  "size": "medium",
+  "title": "Kveldsbrief",
+  "kicker": "KVELDSBRIEF · GLIMT",
+  "summary": "God kveld, Sebastian. Delvis skyet og 11° i Oslo, regn fra midnatt. Neste er Matematikk R2 kl. 08:15 i morgen. Ta med paraply.",
+  "temp": 11,
+  "cond": "Delvis skyet",
+  "icon": "partly",
+  "ic": "🌙",
+  "hi": 13,
+  "lo": 5,
+  "next": {
+    "title": "Matematikk R2",
+    "time": "08:15",
+    "label": "I MORGEN 08:15"
+  },
+  "news": {
+    "title": "Ny rekord for elbilsalg i september",
+    "source": "Aftenposten"
+  },
+  "chips": [
+    "11° delvis skyet",
+    "Matematikk R2 08:15",
+    "7 nyheter"
+  ],
+  "figure": {
+    "state": "wave",
+    "mood": "rainy"
+  },
+  "deepLink": "finanshub://brief",
+  "generatedAt": "2026-11-15T17:00:26.963Z",
+  "refreshAt": "2026-11-16T05:45:00.000Z"
+}

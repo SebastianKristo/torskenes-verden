@@ -3,7 +3,7 @@ import UIKit
 
 /* ---------------- Prompt 39: «Glimt · ukas vær» nederst i Vær ---------------- */
 // Spesifikasjon: claude-code-vaer-glimt-ukas-vaer.md. Fasit: design/Vaer.dc.html → wkVals() + kortet over «Data: …».
-// Data: Open-Meteo daily (past_days=7, forecast_days=7): forrige uke = indeks 0–6, denne uka = 7–13. Cache per sted i 3 t.
+// Data: serverens dager (lastWeek.days + thisWeek.days, Open-Meteo bufret på serveren): forrige uke = indeks 0–6, denne uka = 7–13.
 // SERVER39: GET /api/weather/week-summary?place=&char= → {text, char, thisWeek, lastWeek, highlights[]} (Glimt-LLM i valgt stemme).
 // Tallene regnes alltid lokalt; serverens tekst brukes når den finnes for valgt personlighet, ellers den lokale teksten.
 
@@ -47,26 +47,27 @@ final class WxWeek39Model {
         }
         busy.insert(k)
         defer { busy.remove(k) }
-        let s: String = "https://api.open-meteo.com/v1/forecast?latitude=\(lat)&longitude=\(lon)"
-            + "&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,sunshine_duration,weather_code,wind_speed_10m_max"
-            + "&wind_speed_unit=ms&timezone=auto&past_days=7&forecast_days=7"
-        if let url = URL(string: s), let res = try? await HomelabHTTP.session.data(from: url) {
-            let o: [String: Any] = JS.obj(res.0)
-            if let daily = o["daily"] as? [String: Any] {
-                var w: WxWeek39Data = WxWeek39Data()
-                w.maxT = WxWeek39Model.nums(daily["temperature_2m_max"])
-                w.minT = WxWeek39Model.nums(daily["temperature_2m_min"])
-                w.mm = WxWeek39Model.nums(daily["precipitation_sum"])
-                w.sun = WxWeek39Model.nums(daily["sunshine_duration"])
-                w.wind = WxWeek39Model.nums(daily["wind_speed_10m_max"])
-                w.dates = (daily["time"] as? [Any])?.compactMap { $0 as? String } ?? []
-                if w.maxT.count >= 8 {
-                    data[k] = w
-                    fetched[k] = Date()
-                }
-            }
+        // Fase 4 (D10): dagene (forrige uke + denne) kommer fra serveren (/api/weather/week-summary, Open-Meteo bufret der i 3 t),
+        // ikke direkte fra Open-Meteo.
+        let p: String = person
+        guard let d = try? await store.api.callAt("/api", "GET", "/weather/week-summary?\(placeQuery)&char=\(p)", timeout: 20) else { return }
+        let o: [String: Any] = JS.obj(d)
+        let days: [[String: Any]] = JS.list(JS.dict(o, "lastWeek"), "days") + JS.list(JS.dict(o, "thisWeek"), "days")
+        var w: WxWeek39Data = WxWeek39Data()
+        for day in days {
+            w.maxT.append(JS.num(day, "max") ?? 0)
+            w.minT.append(JS.num(day, "min") ?? 0)
+            w.mm.append(JS.num(day, "mm") ?? 0)
+            // Serveren sender soltimer; modellen har sekunder som før.
+            w.sun.append((JS.num(day, "sunH") ?? 0) * 3600)
+            w.wind.append(JS.num(day, "wind") ?? 0)
+            w.dates.append(JS.str(day, "date") ?? "")
         }
-        await loadServer(k, placeQuery, store)
+        if w.maxT.count >= 8 {
+            data[k] = w
+            fetched[k] = Date()
+        }
+        if let t = JS.str(o, "text"), !t.isEmpty { serverText[k + "|" + (JS.str(o, "char") ?? p)] = t }
     }
 
     /// Glimt-teksten fra serveren for valgt personlighet (tåler 404).

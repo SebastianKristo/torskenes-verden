@@ -89,9 +89,15 @@ docs/                 dokumentasjon, bilder (images/) og ikoner (assets/)
 | Workflow | Når | Hva |
 |---|---|---|
 | [`docker.yml`](../.github/workflows/docker.yml) | Push til `main` | Bygger og publiserer `ghcr.io/sebastiankristo/torskenes-verden` |
-| [`mobile.yml`](../.github/workflows/mobile.yml) | Endringer i `apps/` | Android-APK, og iOS på macOS 15 og 26 (simulator og usignert `.ipa`) |
+| [`mobile.yml`](../.github/workflows/mobile.yml) | Endringer i `apps/`, `shared/testvektorer/` eller `shared/schemas/` | Android-APK, og iOS på macOS 15 og 26 (simulator, enhetstestene i `HomelabTests` og usignert `.ipa`) |
 
 APK-en og `.ipa`-filen lastes ned under **Actions → Mobilapper → Artifacts**.
+
+**iOS-enhetstester** (`apps/ios/HomelabTests`, Fase 4): kjører `shared/testvektorer/*.json` mot det som fortsatt er lokal logikk i
+appene (serveradresse, «i dag», Kalenders forhåndsvisning av datoer) og dekoder eksemplene i `shared/schemas/eksempler` med
+DTO-ene i `apps/ios/SharedNet/APIModels.swift`. Eksemplene lages på nytt med `npm run kontrakt:eksempler` når et skjema endres
+(`test/kontrakt-eksempler.test.js` sjekker at de følger skjemaene). Lokalt: `xcodegen` i `apps/ios/`, så
+`xcodebuild test -scheme HomelabTests -destination 'platform=iOS Simulator,name=iPhone 16'`.
 
 ## Skjermbilder til dokumentasjonen
 

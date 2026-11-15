@@ -52,7 +52,7 @@ struct KalSpark: View {
 
     var body: some View {
         // Prompt 71: skjermens egen takt (60/120 Hz) i stedet for 30 bilder/s.
-        TimelineView(.animation(minimumInterval: nil, paused: false)) { (ctx: TimelineViewDefaultContext) in
+        MotionTimeline(interval: nil) { (ctx: TimelineViewDefaultContext) in
             KalSparkFrame(size: size, fast: fast, reduce: reduce, t: ctx.date.timeIntervalSinceReferenceDate)
         }
         .frame(width: size, height: size)
@@ -120,7 +120,7 @@ struct KalOrb: View {
     @Environment(\.accessibilityReduceMotion) private var reduce
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: nil, paused: false)) { (ctx: TimelineViewDefaultContext) in
+        MotionTimeline(interval: nil) { (ctx: TimelineViewDefaultContext) in
             KalOrbFrame(size: size, thinking: thinking, reduce: reduce, t: ctx.date.timeIntervalSinceReferenceDate)
         }
         .frame(width: size, height: size)

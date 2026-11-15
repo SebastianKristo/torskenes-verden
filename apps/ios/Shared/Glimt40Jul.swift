@@ -410,7 +410,7 @@ struct Glimt40Snow: View {
         let n: Int = count
         let col: Color = color
         if !reduce && Glimt40Jul.snow && Glimt40JulLive.shared.phase() != nil {
-            TimelineView(.animation(minimumInterval: 1.0 / 20.0)) { (ctx: TimelineViewDefaultContext) in
+            MotionTimeline(interval: 1.0 / 20.0) { (ctx: TimelineViewDefaultContext) in
                 Canvas { (g: inout GraphicsContext, size: CGSize) in
                     let t: Double = ctx.date.timeIntervalSinceReferenceDate
                     var i: Int = 0

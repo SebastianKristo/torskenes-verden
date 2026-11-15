@@ -1,0 +1,16 @@
+{
+  "version": "4.73.1",
+  "minClient": "4.0.0",
+  "contract": 1,
+  "name": "Nordlys OS",
+  "codename": "Nordlys",
+  "shortName": "Nordlys 4.73",
+  "api": 44,
+  "dbSchema": 44,
+  "features": [
+    "logs",
+    "containers",
+    "study.documents",
+    "study.overview"
+  ]
+}

@@ -150,7 +150,7 @@ struct Mai17Home41: View {
             }
             .padding(.horizontal, 18).padding(.top, 36).padding(.bottom, 18)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { (ctx: TimelineViewDefaultContext) in
+            MotionTimeline(interval: 1.0 / 30.0) { (ctx: TimelineViewDefaultContext) in
                 Glimt35Fig(id: Glimt35Model.shared.cfg.host, size: 58, t: ctx.date.timeIntervalSinceReferenceDate)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
@@ -250,7 +250,7 @@ struct Mai17Confetti41: View {
     var body: some View {
         Group {
             if let s = start, !reduce {
-                TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { (ctx: TimelineViewDefaultContext) in
+                MotionTimeline(interval: 1.0 / 30.0) { (ctx: TimelineViewDefaultContext) in
                     let t: Double = ctx.date.timeIntervalSince(s)
                     Canvas { (gc: inout GraphicsContext, size: CGSize) in
                         let cols: [Color] = [Color(hex: "#BA0C2F"), Color.white, Color(hex: "#00205B")]

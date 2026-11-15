@@ -23,7 +23,7 @@ struct Brief36Ring: View {
                 if reduce {
                     ring(5, 1)
                 } else {
-                    TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { (ctx: TimelineViewDefaultContext) in
+                    MotionTimeline(interval: 1.0 / 30.0) { (ctx: TimelineViewDefaultContext) in
                         let p: Double = G36Anim.loop(ctx.date.timeIntervalSince(t0), 1.3)
                         let k: Double = G36Anim.kf(p, [(0, 0), (0.5, 1), (1, 0)])
                         ring(CGFloat(4 + 4 * k), 1 - 0.55 * k)

@@ -1,0 +1,30 @@
+{
+  "from": "2026-01-01",
+  "to": "2026-12-31",
+  "items": [
+    {
+      "date": "2026-01-01",
+      "name": "Første nyttårsdag",
+      "type": "helligdag",
+      "fri": true
+    },
+    {
+      "date": "2026-03-29",
+      "name": "Palmesøndag",
+      "type": "merkedag",
+      "fri": false
+    },
+    {
+      "date": "2026-04-02",
+      "name": "Skjærtorsdag",
+      "type": "helligdag",
+      "fri": true
+    },
+    {
+      "date": "2026-04-03",
+      "name": "Langfredag",
+      "type": "helligdag",
+      "fri": true
+    }
+  ]
+}

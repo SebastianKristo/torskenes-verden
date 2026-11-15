@@ -285,7 +285,7 @@ struct BgParticles: View {
             if reduceMotion || lowPower {
                 Color.clear
             } else {
-                TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { tl in
+                MotionTimeline(interval: 1.0 / 30.0) { tl in
                     Canvas { ctx, size in
                         draw(ctx, size, tl.date.timeIntervalSinceReferenceDate)
                     }

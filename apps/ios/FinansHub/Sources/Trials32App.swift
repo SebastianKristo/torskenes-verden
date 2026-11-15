@@ -18,7 +18,7 @@ extension Trial31Model {
     /// «Jeg har avsluttet» (cancelled) eller «Behold» (kept): lagres, påminnelsene fjernes og widgetene oppdateres.
     func setStatus32b(_ id: String, _ status: String, _ store: Store) {
         if id.isEmpty { return }
-        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: Trial31Model.ids(id))
+        Trial31Model.removeReminders(id)
         trials.removeAll { (t: Trial31) -> Bool in t.id == id }
         Trials32b.push(active.map { (t: Trial31) -> TrialW32b in t.widget32b })
         Task { @MainActor in

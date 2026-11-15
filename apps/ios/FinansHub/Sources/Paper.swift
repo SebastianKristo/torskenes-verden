@@ -4,8 +4,7 @@ import UIKit
 
 /* ---------------- Papir: felles mobildesign (Mobil Papir App / Mobil Nytt Design 2a) ---------------- */
 
-/// Fargene i Papir, lys og mørk. Mørk Papir er rettet for kontrast: mørk fanelinje (#2a2821) med lys aktiv fane,
-/// +-knapp #f08a76 med mørkt ikon og dempet tekst #a39d90 (minst 4,5:1 mot #14130f).
+/// Fargene i Papir og Glass, lys og mørk. Fase 4: verdiene kommer fra DS-tokenene (PaperTheme.swift), ikke fra hex i koden.
 struct PaperPalette {
     let dark: Bool
     let ink, bg, card, line, lab, mut, pos, nav, navInk, navAct, navActInk: Color
@@ -14,15 +13,9 @@ struct PaperPalette {
     /// Prompt 50: Liquid Glass (glass på kort, fliser og fanelinje, fargeskyer bak). Glass50.swift.
     var glass: Bool = false
 
-    static let light = PaperPalette(dark: false, ink: Color(hex: "#1b1a17"), bg: Color(hex: "#f3efe6"), card: .white, line: Color(hex: "#d8d1c2"),
-                                    // Prompt 51 (IOSPLAT51): mut #7a7468 → #6e685c (kontrast 4,0 → 4,8 mot bg, WCAG AA for vanlig tekst).
-                                    lab: Color(hex: "#b23a2a"), mut: Color(hex: "#6e685c"), pos: Color(hex: "#2f7a4f"), nav: Color(hex: "#1b1a17"),
-                                    navInk: Color(hex: "#b3ada1"), navAct: Color(hex: "#f3efe6"), navActInk: Color(hex: "#1b1a17"),
-                                    onLab: .white, pop: Color(hex: "#f3efe6"), popSel: Color(hex: "#e6e0d2"))
-    static let night = PaperPalette(dark: true, ink: Color(hex: "#ece7dc"), bg: Color(hex: "#14130f"), card: Color(hex: "#211f19"), line: Color(hex: "#3a372e"),
-                                    lab: Color(hex: "#f08a76"), mut: Color(hex: "#a39d90"), pos: Color(hex: "#8fd9a8"), nav: Color(hex: "#2a2821"),
-                                    navInk: Color(hex: "#a39d90"), navAct: Color(hex: "#ece7dc"), navActInk: Color(hex: "#14130f"),
-                                    onLab: Color(hex: "#1b1a17"), pop: Color(hex: "#2a2821"), popSel: Color(hex: "#3a372e"))
+    /// Fase 4: Papir lys og mørk fra DS-tokenene (shared/design/tokens.json → DesignTokens.xcassets), PaperTheme.swift.
+    static let light: PaperPalette = PaperPalette.tokens(.papir, dark: false)
+    static let night: PaperPalette = PaperPalette.tokens(.papir, dark: true)
 
     static func of(_ mode: String, system: ColorScheme) -> PaperPalette {
         // Prompt 51 (IOSFEAT51): automatisk tema – «auto51-d» (mørk nå) / «auto51-l» (lys nå), Theme51.swift.
@@ -36,23 +29,7 @@ struct PaperPalette {
     }
 }
 
-/// Fontene i Papir: Newsreader (serif), Manrope (tekst) og IBM Plex Mono (etiketter). Faller tilbake til systemfontene.
-enum PF {
-    static func serif(_ size: CGFloat, medium: Bool = false) -> Font { .custom(medium ? "Newsreader-Medium" : "Newsreader-Regular", size: size) }
-    static func italic(_ size: CGFloat) -> Font { .custom("Newsreader-Italic", size: size) }
-    static func ui(_ size: CGFloat, _ w: Font.Weight = .regular) -> Font {
-        let name: String
-        switch w {
-        case .medium: name = "Manrope-Medium"
-        case .semibold: name = "Manrope-SemiBold"
-        case .bold: name = "Manrope-Bold"
-        case .heavy, .black: name = "Manrope-ExtraBold"
-        default: name = "Manrope-Regular"
-        }
-        return .custom(name, size: size)
-    }
-    static func mono(_ size: CGFloat, bold: Bool = true) -> Font { .custom(bold ? "IBMPlexMono-SemiBold" : "IBMPlexMono-Medium", size: size) }
-}
+// PF (fontene) ligger i Typography.swift (Dynamic Type, fase 4).
 
 private struct PaperPaletteKey: EnvironmentKey { static let defaultValue = PaperPalette.light }
 extension EnvironmentValues {
@@ -148,9 +125,9 @@ struct ShareSheet: UIViewControllerRepresentable {
 
 /* ---------------- Skallet ---------------- */
 
-/// Papir-appen på iPhone: fotovindu øverst, innhold på papir og en fanelinje nederst. Fanelinja følger stedet:
-/// Hjem (Hjem bare på startsiden, Finans, Mat, Sporing, Mer), Finans (Oversikt, Liste, Finn, Mer) og Domener
-/// (Oversikt, Publikum, Ytelse, Infra). Innholdet stopper over linja, så ingenting synes bak den.
+/// Papir-appen: systemets fanelinje (TabView) eller sidekolonne (iPad) med en NavigationStack per fane (AppShell.swift).
+/// Siden øverst i stakken er `page`: papiret, innholdet, seksjonsfanene, skanneknappen og overleggene. Arkene og
+/// fullskjermsidene henger på skallet, som før.
 struct PaperShell: View {
     @Environment(Store.self) private var store
     @Environment(\.scenePhase) private var phase
@@ -160,115 +137,14 @@ struct PaperShell: View {
     @Binding var files: Bool
 
     var body: some View {
-        // Appen tvinger mørk modus i roten (klassisk design), så systemets valg leses fra skjermen.
+        // Systemets valg leses fra skjermen (roten setter appens modus med preferredColorScheme).
         let p = PaperPalette.of(store.paperMode, system: paperSystemScheme(phase))
-        GeometryReader { g in
-            // Prompt 45: én felles regel for brettoppsett (≥ 700 pt og ikke kompakt), Layout45.swift. Før: bredde ≥ 600 her.
-            let wide = Layout45.mode(width: g.size.width, hsc: hsc45) == .wide
-            let bottom = Swift.max(12, g.safeAreaInsets.bottom - 8)
-            // Prompt 28: med tastaturet oppe (safe area-bunnen er da tastaturet) står fanelinja 8 pt over tastaturet,
-            // og FAB-en følger med (claude-code-sok-tastatur.md).
-            let kb28: Bool = g.safeAreaInsets.bottom > 120
-            let shift: CGFloat = kb28 ? -8 : g.safeAreaInsets.bottom - bottom
-            // Prompt 24: Ruter-visningen er fullskjerm uten fanelinje og skann-knapp.
-            // Prompt 32: Innstillinger og undersidene har heller ingen fanelinje eller skann-knapp (Settings32.swift).
-            // Prompt 37: Gjøremål har heller ingen fanelinje (tilbake med ‹ Mer eller kantsveip), Tasks37Model.swift.
-            // Prompt 41: Bursdager har heller ingen fanelinje eller skanneknapp (Birthdays41.swift).
-            // Prompt 42: samme regel brukes av Hjem-knappen (NavHome42.swift), så den ligger i Store.nav42BarShown.
-            let showBar = store.nav42BarShown
-            // Prompt 45: på iPad har Gjøremål samme sidelinje som Hjem (claude-code-gjoremal-fold-navbar-glimt.md).
-            let rail45: Bool = wide && (showBar || store.inTasks37)
-            // Prompt 23: ingen skann-knapp på Aksjer.
-            // Prompt 45: i brettet modus ligger skann-knappen i sidelinja – ingen flytende knapp i tillegg.
-            let fab = !wide && showBar && store.fabMode == "float" && store.paperTab != "abo" && store.paperTab != "familie" && !store.nav23NoScan
-            ZStack(alignment: wide ? .topLeading : .bottom) {
-                p.bg.ignoresSafeArea()
-                // Prompt 50: Liquid Glass – tre fargeskyer bak alt innhold (Glass50.swift).
-                if p.glass { Glass50Clouds() }
-                VStack(spacing: 0) {
-                    // Ikke .clipped(): da kuttes fotovinduet ved safe area, og statuslinja får papirfarge i stedet for bildet.
-                    // Prompt 22: FinansHub-sidene bruker «Lys hovedbok» (lys-tokens) som standard (Theme22.swift).
-                    // Prompt 52 (IOS52B): sidene glir inn 18 pt fra høyre (260 ms), tilbake 12 pt fra venstre (220 ms), Pg52Anim.swift.
-                    content(store.finPalette22(p)).pg52Enter(Pg52.key(store)).environment(\.paper, store.finPalette22(p)).frame(maxWidth: .infinity, maxHeight: .infinity)
-                        // Sidene fra den klassiske appen skal ikke ligge under skinnen på bred skjerm.
-                        .padding(.leading, rail45 && (store.paperClassic != nil || store.paperFin != nil) ? 108 : 0)
-                        // Prompt 34: innholdet går helt ned bak fanelinjen og skann-knappen (claude-code-innhold-under-navbar.md).
-                        // Tidligere sto en Color.clear-rad her, så scroll-innholdet stoppet over linja og bakgrunnen ble en flat stripe.
-                        // safeAreaInset gir scroll-visningene luft nederst, men de tegner fortsatt under linja (Nav34.swift).
-                        .safeAreaInset(edge: .bottom, spacing: 0) { Nav34BarSpace(height: showBar && !wide ? 62 - shift + 10 : 0) }
-                }
-                if rail45 {
-                    PaperTabBar(scan: scan, rail: true)
-                        .padding(.leading, 12)
-                        .padding(.vertical, 12)
-                } else if showBar {
-                    // ZStack-en slutter ved safe area-bunnen, så linja flyttes ned dit den skal stå:
-                    // max(12, inset − 8) pt over skjermkanten.
-                    // Prompt 42: 1d – rutenettet med Hjem og modulene over fanelinja (NavHome42.swift).
-                    if NavHome42.shared.modPick && NavHome42.shared.value == "1d" {
-                        NavModGrid42().offset(y: shift)
-                    }
-                    PaperTabBar(scan: scan, rail: false)
-                        .offset(y: shift)
-                }
-                if let h = store.paperHint {
-                    Text(h).font(PF.ui(12.5, .semibold)).foregroundStyle(p.bg)
-                        .padding(.horizontal, 12).padding(.vertical, 8)
-                        .background(p.ink, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
-                        .padding(.trailing, 16).padding(.bottom, fab ? (wide ? 96 : 158) : 72)
-                        .offset(y: shift)
-                        .transition(.opacity)
-                }
+        GeometryReader { (g: GeometryProxy) in
+            // Prompt 45: én felles regel for brettoppsett (≥ 700 pt og ikke kompakt), Layout45.swift.
+            let wide: Bool = Layout45.mode(width: g.size.width, hsc: hsc45) == .wide
+            AppTabs(scan: { sidebarScan() }) {
+                page(p, wide: wide)
             }
-            .overlay(alignment: .bottom) {
-                // Prompt 37: Gjøremål uten fanelinje – «Ny oppgave …» og den runde ✦-knappen (Glimt) helt nede:
-                // max(18, safe area + 8) over skjermkanten, og rett over tastaturet når det er oppe. Skjules mens et ark er åpent.
-                if !wide && store.inTasks37 && TaskDock22.shared.cur != Tasks32b.archId && !Tasks37UI.shared.anySheet {
-                    HStack(alignment: .center, spacing: 10) {
-                        TaskDockField22(ownButton: false)
-                        Task37GlimtButton()
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, kb28 ? 8 : (g.safeAreaInsets.bottom < 10 ? 18 : 8))
-                    // Prompt 40: baren og ✦ løftes rett over tastaturet (8 pt luft) med samme måling som Chat (Kb32b),
-                    // og glir opp/ned sammen med tastaturet. Lista bak blir stående.
-                    .keyboardLift32b(gap: 8)
-                    .ignoresSafeArea(.keyboard)
-                    .animation(.timingCurve(0.2, 0.8, 0.2, 1, duration: 0.24), value: Kb32b.shared.frame)
-                    .transition(.opacity)
-                }
-                // Prompt 45: iPad – «Ny oppgave …» og ✦ (Glimt) nederst i oppgavekolonnen, til høyre for sidelinja og
-                // listekolonnen og til venstre for Glimt-/detaljkolonnen (Tasks43Wide.swift). Følger tastaturet.
-                if wide && store.inTasks37 && TaskDock22.shared.cur != Tasks32b.archId && !Tasks37UI.shared.anySheet {
-                    Tasks45WideDock(width: g.size.width, kb: kb28, safeBottom: g.safeAreaInsets.bottom)
-                }
-            }
-            .overlay(alignment: .bottomTrailing) {
-                if fab {
-                    // Prompt 43: i Domener ligger Glimt nå som en rad i domenekortet (Domains43.swift) – ingen rund knapp der.
-                    Group {
-                        if !store.paperInDomains { PaperFab(tap: fabTap, hold: fabHold) }
-                    }
-                        .padding(.trailing, wide ? 24 : 18)
-                        .padding(.bottom, wide ? Swift.max(0, 24 - bottom) : 62 + 14)
-                        .offset(y: shift)
-                }
-            }
-            .overlay(alignment: .topTrailing) {
-                // Prompt 29: samme bakgrunnsmeny fra pillen i toppen av Innstillinger.
-                if store.paperBgOpen && (store.paperTab == "hjem" || store.paperTab == "innst") && !store.newsOpen && store.dishSel == nil && store.paperClassic == nil {
-                    PaperBgMenu(top: g.safeAreaInsets.top + 62)
-                }
-            }
-            .overlay(alignment: .top) {
-                // Prompt 29: «✦ Legger til i kalenderen …» og banneret «✓ Nina frisør · …» over hele appen (Quick29Views.swift).
-                Quick29Overlay()
-            }
-            // Prompt 38/70: tidligere et usynlig lag over Hjem; nå bare pillen «Glimt svarte ↑» (Assist38.swift, Home70Assist.swift).
-            .overlay { Assist38Catcher() }
-            // Prompt 41: svar-pillen vokser til fullskjerm og blir Chat (Search41Pull.swift).
-            .overlay { Pull41Overlay() }
             .environment(\.paperWide, wide)
             .environment(\.layoutMode45, wide ? .wide : .compact)
             .onAppear { Layout45.shared.set(wide) }
@@ -366,6 +242,95 @@ struct PaperShell: View {
         }
     }
 
+    /// Skann fra sidekolonnen på iPad (iOS 17): kameraet med en gang, som skanneknappen.
+    private func sidebarScan() {
+        Haptics.shared.tap()
+        store.scanTarget = store.paperTab == "mat" ? "recipe" : "receipt"
+        scan.camera()
+    }
+
+    /// Den levende siden øverst i stakken.
+    private func page(_ p: PaperPalette, wide: Bool) -> some View {
+        GeometryReader { (g: GeometryProxy) in
+            pageBody(p, wide: wide, g: g)
+        }
+    }
+
+    @ViewBuilder private func pageBody(_ p: PaperPalette, wide: Bool, g: GeometryProxy) -> some View {
+        // Fanelinja vises ikke i Innstillinger, Gjøremål, Nyheter, Bursdager, fullskjerm og over detalj/redigering (som før).
+        let showBar: Bool = store.shellTabBarShown
+        // Q33: seksjonsfanene (Finans, Domener, Abonnement, Familie) ligger i en segmentvelger nederst på siden.
+        let section: Bool = showBar && ShellSectionBar.visible(store)
+        // Prompt 28: med tastaturet oppe er safe area-bunnen tastaturet.
+        let kb28: Bool = g.safeAreaInsets.bottom > 120
+        // Skanneknappen: alle sider med fanelinje, unntatt Aksjer, Familie og Domener (Glimt ligger i domenekortet, prompt 43).
+        let fab: Bool = showBar && store.paperTab != "familie" && !store.nav23NoScan && !store.paperInDomains
+        let fabBottom: CGFloat = 14 + (section ? ShellMetrics.sectionBarHeight : 0)
+        let fp: PaperPalette = store.finPalette22(p)
+        ZStack(alignment: .bottom) {
+            p.bg.ignoresSafeArea()
+            // Prompt 50: Liquid Glass – tre fargeskyer bak alt innhold (Glass50.swift).
+            if p.glass { Glass50Clouds() }
+            // Prompt 22: FinansHub-sidene bruker «Lys hovedbok» (lys-tokens) som standard (Theme22.swift).
+            content(fp).environment(\.paper, fp).frame(maxWidth: .infinity, maxHeight: .infinity)
+                .safeAreaInset(edge: .bottom, spacing: 0) {
+                    if section { ShellSectionBar() }
+                }
+            if let h = store.paperHint {
+                Text(h).font(PF.ui(12.5, .semibold)).foregroundStyle(p.bg)
+                    .padding(.horizontal, 12).padding(.vertical, 8)
+                    .background(p.ink, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+                    .padding(.trailing, 16).padding(.bottom, fab ? fabBottom + 72 : fabBottom)
+                    .transition(.opacity)
+            }
+        }
+        .overlay(alignment: .bottom) {
+            // Prompt 37: Gjøremål uten fanelinje – «Ny oppgave …» og den runde ✦-knappen (Glimt) helt nede, over tastaturet.
+            if !wide && store.inTasks37 && TaskDock22.shared.cur != Tasks32b.archId && !Tasks37UI.shared.anySheet {
+                HStack(alignment: .center, spacing: 10) {
+                    TaskDockField22(ownButton: false)
+                    Task37GlimtButton()
+                }
+                .padding(.horizontal, 16)
+                .padding(.bottom, kb28 ? 8 : (g.safeAreaInsets.bottom < 10 ? 18 : 8))
+                .keyboardLift32b(gap: 8)
+                .ignoresSafeArea(.keyboard)
+                .animation(.timingCurve(0.2, 0.8, 0.2, 1, duration: 0.24), value: Kb32b.shared.frame)
+                .transition(.opacity)
+            }
+            // Prompt 45: iPad – «Ny oppgave …» og ✦ nederst i oppgavekolonnen (Tasks43Wide.swift).
+            if wide && store.inTasks37 && TaskDock22.shared.cur != Tasks32b.archId && !Tasks37UI.shared.anySheet {
+                Tasks45WideDock(width: g.size.width, kb: kb28, safeBottom: g.safeAreaInsets.bottom)
+            }
+        }
+        .overlay(alignment: .bottomTrailing) {
+            if fab {
+                PaperFab(tap: fabTap, hold: fabHold)
+                    .padding(.trailing, wide ? 24 : 18)
+                    .padding(.bottom, fabBottom)
+            }
+        }
+        .overlay(alignment: .topTrailing) {
+            // Prompt 29: samme bakgrunnsmeny fra pillen i toppen av Innstillinger.
+            if store.paperBgOpen && (store.paperTab == "hjem" || store.paperTab == "innst") && !store.newsOpen && store.dishSel == nil && store.paperClassic == nil {
+                PaperBgMenu(top: g.safeAreaInsets.top + 62)
+            }
+        }
+        .overlay(alignment: .top) {
+            VStack(spacing: 8) {
+                // Q19: serveren og appen passer ikke sammen («Oppdater serveren» / «Oppdater appen»), på Oversikt.
+                if store.paperTab == "hjem" && store.paperClassic == nil { ShellCompatBanner() }
+                // Prompt 29: «✦ Legger til i kalenderen …» og banneret «✓ Nina frisør · …» over hele appen (Quick29Views.swift).
+                Quick29Overlay()
+            }
+        }
+        // Prompt 38/70: pillen «Glimt svarte ↑» (Assist38.swift, Home70Assist.swift).
+        .overlay { Assist38Catcher() }
+        // Prompt 41: svar-pillen vokser til fullskjerm og blir Chat (Search41Pull.swift).
+        .overlay { Pull41Overlay() }
+    }
+
     /// Den flytende knappen: «Ny sending» på Sporing, ellers skann-arket (Legg til domene i Domener).
     /// Den flytende knappen: trykk åpner kameraet med en gang, hold inne gir valgarket.
     private func fabTap() {
@@ -388,7 +353,15 @@ struct PaperShell: View {
     }
 
     @ViewBuilder private func content(_ p: PaperPalette) -> some View {
-        if store.newsOpen {
+        // Fase 4 (H1): kvitteringsoriginalen, redigering og detaljen var egne grener i rot-ZStacken. Nå er de sider i stakken
+        // (systemets sveip tilbake lukker dem, ShellRouter.back).
+        if store.original != nil {
+            classic(back: nil) { OriginalView() }
+        } else if store.editing != nil {
+            classic(back: nil) { TxEditView(scan: scan) }
+        } else if store.detail != nil {
+            classic(back: nil) { DetailView() }
+        } else if store.newsOpen {
             NewsReaderView(back: { Haptic34.back(); store.newsOpen = false }).environment(\.paper, p)
                 .environment(\.colorScheme, p.dark ? .dark : .light)
         } else if let id = store.dishSel {
@@ -458,179 +431,7 @@ extension Store {
     }
 }
 
-/// Fanelinja nederst (eller skinnen til venstre på bred skjerm): fanene fordeles jevnt (den aktive tar bare plassen
-/// den trenger). Hjem: Hjem (bare på startsiden), Finans, Mat, fjerde fane (Domener/Sporing), Søk og Mer. Finans:
-/// brukerens valg (opptil 4) og Mer. Domener: Oversikt, Publikum, Ytelse og Infra. Med «I linjen» står + sist;
-/// med den flytende skanneknappen står Søk rett før Mer.
-struct PaperTabBar: View {
-    @Environment(Store.self) private var store
-    @Environment(\.paper) private var p
-    let scan: ScanActions
-    var rail = false
-
-    private var floating: Bool { store.fabMode == "float" }
-
-    private var tabs: [(String, String, String)] {
-        // Prompt 32: Domener, Abonnement og Familie følger brukerens valg fra «Rediger fanelinjen» (Nav32.swift).
-        if store.paperInDomains { return Nav32b.shared.tabs("dom") }
-        // Subscription OS: Hjem, Innsikt og Historikk i linja (med den røde +-sirkelen).
-        if store.paperTab == "abo" { return Nav32b.shared.tabs("abo") }
-        // Prompt 21: Familie har Kart, Soner og Helse i linja (som Subscription OS).
-        // Prompt 42: Kart · Soner · Helse · Vel fremme, uten «⋯ Mer» (tilbake med «‹ Hjem» øverst eller Hjem-knappen).
-        if store.paperTab == "familie" { return Nav32b.shared.tabs("kart") }
-        var t: [(String, String, String)] = []
-        if store.paperInFinance {
-            for f in store.finNavItems { t.append((f.page, f.name, f.icon)) }
-            if floating && !t.contains(where: { $0.0 == "fsok" }) { t.append(("fsok", "Søk", "⌕")) }
-            t.append(("fmer", "Mer", "⋯"))
-            return t
-        }
-        let main: [(String, String, String)] = store.mainTabs(floating: floating, onHome: store.paperTab == "hjem" && store.paperClassic == nil)
-        // Prompt 42: med Hjem-knapp (1a/1b/1c) tas Hjem-fanen ut av lista (NavHome42.swift).
-        if !rail && NavHome42.shared.dropsHomeTab { return main.filter { $0.0 != "hjem" } }
-        return main
-    }
-
-    private var current: String {
-        if store.paperInDomains { return store.paperTab }
-        if store.paperTab == "abo" { return "abo:" + store.subTab }
-        if store.paperTab == "familie" { return "fam:" + FamilyModel.shared.tab }
-        if store.paperInFinance {
-            let c = store.paperFinCurrent
-            let ids = tabs.map(\.0)
-            return ids.contains(c) ? c : "fmer"
-        }
-        if store.paperTab == "innst" || store.paperTab == "profil" || store.paperTab.hasPrefix("innst-") || store.paperClassic != nil { return "mer" }
-        // Sider som ikke står i linja (f.eks. Sporing når fjerde fane er Domener) markerer Mer.
-        let ids = store.mainTabs(floating: floating, onHome: store.paperTab == "hjem").map(\.0)
-        return ids.contains(store.paperTab) ? store.paperTab : "mer"
-    }
-
-    /// Hovedlinja kan redigeres (hold inne); Finans-, Domener- og abonnementslinjene følger siden.
-    private var editable: Bool { !store.paperInFinance && !store.paperInDomains && store.paperTab != "abo" && store.paperTab != "familie" }
-
-    var body: some View {
-        let cur = current
-        if rail {
-            // Prompt 45: skann-knappen (skann-ikon) ligger alltid i sidelinja (ikke flytende), skjules på sider der den ikke
-            // hører hjemme og mens man redigerer – da står + / ↺ / ✓ der i stedet (Layout45.swift).
-            PaperRail(tabs: tabs, current: cur, showPlus: !Layout45.scanHidden(store), tapTab: { id, on in tapTab(id, on: on) }, plusTap: plusTap, plusHold: plusHold,
-                      style: store.navStyle25, showHome: !store.paperIsHome25, goHome: { store.paperGoHome25() },
-                      editPage: store.paperEditPage, scanLabel: plusLabel)
-        } else {
-            // Prompt 42: Hjem-knappen etter valget i Tilpass → Fanelinje → Hjem-knapp (NavHome42.swift).
-            let nh: String = NavHome42.shared.value
-            let list: [(String, String, String)] = tabs
-            let mid: Int = list.count / 2
-            HStack(spacing: 12) {
-                if nh == "1a" { NavHomeRound42() }
-                HStack(spacing: 2) {
-                    if nh == "1b" { NavHomeFirst42() }
-                    if nh == "1d" { NavModSlot42() }
-                    ForEach(Array(list.enumerated()), id: \.offset) { i, t in
-                        if nh == "1c" && i == mid { NavHomeMid42() }
-                        tab(t.0, t.1, t.2, on: cur == t.0)
-                    }
-                    if nh == "1c" && list.isEmpty { NavHomeMid42() }
-                    if (!floating && store.paperTab != "familie" && !store.nav23NoScan) || store.paperTab == "abo" {
-                        PaperPlusButton(label: plusLabel, tap: plusTap, hold: plusHold, glyph: store.paperInDomains ? "✦" : "+")
-                            .padding(.leading, 4)
-                    }
-                }
-                .padding(.horizontal, 8)
-                .frame(height: 62)
-                // Prompt 50: glass-fanelinje i Liquid Glass (Glass50.swift).
-                .glass50Bg(p, p.nav, Capsule())
-                .shadow(color: .black.opacity(0.35), radius: 15, y: 10)
-                .simultaneousGesture(LongPressGesture(minimumDuration: 0.55).onEnded { _ in
-                    // Prompt 26: Finans har egen editor (FinNav26.swift). Klikket når fingeren slippes slukes én gang.
-                    if store.paperInFinance && !store.paperInDomains && store.paperTab != "abo" {
-                        Nav26.shared.markHold()
-                        Haptics.shared.tick()
-                        FinNav26.shared.editing = true
-                        return
-                    }
-                    // Prompt 32: egne fanelinjer (Domener, Abonnement, Familie) får samme ark.
-                    if let sec = Nav32b.sec(store) {
-                        Nav26.shared.markHold()
-                        Haptics.shared.tick()
-                        Nav32b.shared.editing = sec
-                        return
-                    }
-                    guard editable else { return }
-                    Nav26.shared.markHold()
-                    Haptics.shared.tick()
-                    store.tabBarEditing = true
-                })
-            }
-            .padding(.horizontal, 12)
-        }
-    }
-
-    private var plusLabel: String {
-        if store.paperTab == "abo" { return "Legg til abonnement" }
-        if store.paperInDomains { return "Glimt · oppsummering av domenene" }
-        if store.paperInFinance { return "Legg til kvittering" }
-        return store.paperTab == "mat" ? "Skann oppskrift" : "Skann"
-    }
-
-    /// Trykk: kameraet åpnes med en gang (i Mat som oppskrift). Hold inne: arket med Kvittering, Oppskrift, Bilder og Fil.
-    private func plusTap() {
-        Haptics.shared.tap()
-        if store.paperTab == "abo" { store.subAdding = true; return }
-        // Prompt 45: i sidelinja erstatter knappen den flytende «Ny sending» på Sporing.
-        if rail && store.paperTab == "sporing" && store.paperClassic == nil { store.trackAddOpen = true; return }
-        if store.paperInDomains { Dom38Glimt.shared.tap(store); return }
-        store.scanTarget = store.paperTab == "mat" ? "recipe" : "receipt"
-        scan.camera()
-    }
-
-    private func plusHold() {
-        Haptics.shared.tick()
-        if store.paperTab == "abo" { store.subAdding = true; return }
-        if store.paperInDomains { Dom38Glimt.shared.tap(store); return }
-        store.paperScanOpen = true
-    }
-
-    private func tab(_ id: String, _ name: String, _ icon: String, on: Bool) -> some View {
-        // Prompt 25: stilen (Tekst / Bare ikoner / Ikoner + navn på valgt) tegnes i NavStyle25.swift.
-        let style: String = store.navStyle25
-        return Button { tapTab(id, on: on) } label: {
-            NavTabLabel25(name: name, icon: icon, on: on, style: style)
-        }
-        .buttonStyle(.plain)
-        .layoutPriority(on && style != "icons" ? 1 : 0)
-        .accessibilityLabel(name)
-        .accessibilityAddTraits(on ? .isSelected : [])
-    }
-
-    private func tapTab(_ id: String, on: Bool) {
-        // Prompt 26: trykket som kommer når fingeren slippes etter hold inne, navigerer ikke (bare én gang).
-        if Nav26.shared.consumeHold() { return }
-        if id.hasPrefix("abo:") {
-            Haptics.shared.select()
-            store.subTab = String(id.dropFirst(4))
-            return
-        }
-        if id.hasPrefix("fam:") {
-            Haptics.shared.select()
-            FamilyModel.shared.tab = String(id.dropFirst(4))
-            // Prompt 50: fanen åpnes på roten (undersidene lukkes), også ved nytt trykk på aktiv fane.
-            Fam50Nav.shared.reset()
-            return
-        }
-        if id == "mer" && store.paperTab == "familie" { store.paperMainTab("mer"); return }
-        // Prompt 23: «Mer» på en Finans-underside åpner Finans → Mer (ikke den globale Mer, og ikke tilbake).
-        if id == "fmer" && store.paperInFinance { store.nav26FinMore(); return }
-        // Prompt 26: aktiv fane → fanens rot, og et nytt trykk scroller til toppen (Nav26.swift).
-        if on { store.nav26TapActive(id); return }
-        if id == "domener" && !store.paperInDomains { store.paperOpenDomains(from: "hjem"); return }
-        // Prompt 34: Hjem-fanen fra en annen side er en tilbake-handling (lett impuls).
-        if id == "hjem" { Haptic34.back() }
-        if !store.paperInFinance && !store.paperInDomains { store.paperMainTab(id); return }
-        store.paperFinGo(id)
-    }
-}
+// Fase 4: den egne fanelinja (PaperTabBar) er erstattet av systemets TabView og seksjonsvelgeren i AppShell.swift.
 
 /// +-knappen: trykk = valg, hold inne = opplasting med en gang (haptisk tikk og et kort hint).
 struct PaperPlusButton: View {
@@ -931,7 +732,7 @@ struct PaperPage: View {
             VStack(spacing: 0) {
                 PaperHero(home: false)
                 FamilyView()
-                    .padding(.leading, 108 + 16)
+                    .padding(.leading, ShellMetrics.railInset + 16)
                     .padding(.trailing, 16)
                     .padding(.top, 14)
                     .padding(.bottom, 12)
@@ -970,7 +771,7 @@ struct PaperPage: View {
                         .frame(maxWidth: maxW)
                         .padding(.horizontal, 16)
                         .frame(maxWidth: .infinity)
-                        .padding(.leading, wide ? 108 : 0)
+                        .padding(.leading, wide ? ShellMetrics.railInset : 0)
                         // Prompt 32: Innstillinger har ingen fanelinje eller skann-knapp: 28 pt + safe area nederst.
                         // Prompt 37: Gjøremål – plass til feltet nederst (60 + bunnmarg + 16).
                         // Prompt 45: også på iPad ligger «Ny oppgave …» + ✦ nederst i oppgavekolonnen.

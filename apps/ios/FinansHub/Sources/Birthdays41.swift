@@ -173,7 +173,7 @@ struct Bday41Party: View {
             if reduce {
                 train(width: g.size.width, height: g.size.height, t: 0, x: g.size.width * 0.5 - 160, still: true)
             } else {
-                TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { (ctx: TimelineViewDefaultContext) in
+                MotionTimeline(interval: 1.0 / 30.0) { (ctx: TimelineViewDefaultContext) in
                     let t: Double = ctx.date.timeIntervalSince(start)
                     ZStack(alignment: .topLeading) {
                         Canvas { (gc: inout GraphicsContext, size: CGSize) in Bday41Party.drawConfetti(&gc, size, t) }

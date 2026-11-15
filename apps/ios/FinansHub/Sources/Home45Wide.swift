@@ -115,7 +115,7 @@ struct Home45Wide: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             }
         }
-        .padding(.leading, 108)
+        .padding(.leading, ShellMetrics.railInset)
         .padding(.trailing, 16)
         .padding(.top, 12)
         .padding(.bottom, 12)

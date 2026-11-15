@@ -79,12 +79,9 @@ enum SubCalc23 {
         return longDate(s)
     }
 
-    /// Trekk de neste 7 dagene (i morgen til og med om 7 dager), fra serverens «upcoming» eller abonnementenes neste dato.
+    /// Trekk de neste 7 dagene (i morgen til og med om 7 dager) fra serverens «upcoming» (Fase 4, D5: ingen egen utregning).
     static func next7(_ x: SubsX) -> [SubCharge] {
-        var src: [SubCharge] = x.upcoming
-        if src.isEmpty {
-            src = x.items.filter { $0.active && !$0.nextDate.isEmpty }.map { s in SubCharge(id: s.id, name: s.name, date: s.nextDate, amount: s.price) }
-        }
+        let src: [SubCharge] = x.upcoming
         let list: [SubCharge] = src.filter { c in
             guard let n = daysAway(c.date) else { return false }
             return n >= 1 && n <= 7

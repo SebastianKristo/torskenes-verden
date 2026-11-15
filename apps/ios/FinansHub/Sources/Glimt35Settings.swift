@@ -23,7 +23,7 @@ struct Glimt35Live: View {
             if reduce {
                 Glimt35Fig(id: id, size: size, mood: mood, still: true)
             } else {
-                TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { (ctx: TimelineViewDefaultContext) in
+                MotionTimeline(interval: 1.0 / 30.0) { (ctx: TimelineViewDefaultContext) in
                     Glimt35Fig(id: id, size: size, mood: mood, t: ctx.date.timeIntervalSinceReferenceDate)
                 }
             }

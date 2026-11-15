@@ -2,7 +2,7 @@ import SwiftUI
 
 /* ---------------- Prompt 52: Glimt forstår kalenderbeskjeder i naturlig språk ----------------
  Fasit: Homelab.dc.html → QCX + hsAiParse, prompts/prompt-52-pakke/claude-code-glimt-kalender-kontekst.md, SERVER52-API.md § 4.
- – Regelparseren først (POST /api/kalender/quick/parse + Time44, som før – rask og uten AI).
+ – Regelparseren først (POST /api/kalender/quick/parse + /api/dates/parse (QuickDates), som før – rask og uten AI).
  – Med Glimt som motor og minst 3 ord: etter 450 ms pause sendes teksten til POST /api/glimt/quickparse52 {text, now}.
    Serveren bruker regel + AI via ai-gate (konfigurert tolkemodell, think:false, num_ctx, JSON-skjema, kontekst: dato/ukedag/klokke,
    kontakter fra Bursdager/familie, tidligere steder, lærte ord), tidsavbrudd 5 s → regelresultatet.

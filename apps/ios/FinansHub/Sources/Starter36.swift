@@ -280,7 +280,7 @@ struct Starter36Ring: View {
 
 struct Starter36Orbit: View {
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { (ctx: TimelineViewDefaultContext) in
+        MotionTimeline(interval: 1.0 / 30.0) { (ctx: TimelineViewDefaultContext) in
             let a: Double = G36Anim.loop(ctx.date.timeIntervalSinceReferenceDate, 9) * 360
             ZStack {
                 ForEach(0..<3, id: \.self) { (i: Int) in

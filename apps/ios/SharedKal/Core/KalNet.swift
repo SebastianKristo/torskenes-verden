@@ -2,7 +2,7 @@ import Foundation
 
 /* ---------------- Prompt 33: Kalender – nettverk mot Homelab-serveren (appen + widgetene) ---------------- */
 // Samme server og konto som Homelab-appene: /api/kalender*, /api/assist, /api/kalender/calendars, /api/kalender/weather.
-// Endepunkt som mangler (404/405) gir fornuftige reserver: faste kalenderfarger lokalt og vær fra Open-Meteo.
+// Endepunkt som mangler (404/405) gir fornuftige reserver: faste kalenderfarger lokalt. Vær kommer bare fra serveren (Fase 4).
 
 /// Fase 4: samme feilprotokoll som APIClient (HomelabFailure i SharedNet/HomelabError.swift) og samme tolking av feilkroppen
 /// ({error, code, reason}). Kalender beholder egen sender fordi den prøver flere adresser og fornyer tokenet (KalAuthGate44).
@@ -134,21 +134,14 @@ enum KalNet {
     static func events(from: String, to: String, calIds: Set<String>) async throws -> [KalEvent] {
         let d: Data = try await get("/api/kalender?from=" + from + "&to=" + to, timeout: 25)
         // Prompt 39: innebygde norske helligdager når serveren ikke har kalenderen Helligdager.
-        return KalHoliday39.merge(KalParse.events(d, calIds: calIds), from: from, to: to)
+        return await KalHoliday39.merge(KalParse.events(d, calIds: calIds), from: from, to: to)
     }
 
-    /// Vær per dag: serveren først, så Open-Meteo for Oslo (16 dager).
+    /// Vær per dag fra serveren (/api/kalender/weather). Fase 4 (D10): ingen reserve direkte mot Open-Meteo med fast posisjon –
+    /// uten svar vises bufret vær (snapshot), som før når nettet var borte.
     static func weather(from: String, to: String) async -> [KalWxDay] {
-        if let d = try? await get("/api/kalender/weather?from=" + from + "&to=" + to) {
-            let w: [KalWxDay] = KalParse.weather(d)
-            if !w.isEmpty { return w }
-        }
-        let u: String = "https://api.open-meteo.com/v1/forecast?latitude=59.91&longitude=10.75&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=Europe%2FOslo&forecast_days=16"
-        guard let url = URL(string: u) else { return [] }
-        var r: URLRequest = URLRequest(url: url)
-        r.timeoutInterval = 10
-        guard let pair = try? await HomelabHTTP.session.data(for: r) else { return [] }
-        return KalParse.openMeteo(pair.0)
+        guard let d = try? await get("/api/kalender/weather?from=" + from + "&to=" + to) else { return [] }
+        return KalParse.weather(d)
     }
 
     /// Henter alt widgetene trenger og lagrer bufferen. Brukes av widget-utvidelsen når appen ikke har vært åpen.

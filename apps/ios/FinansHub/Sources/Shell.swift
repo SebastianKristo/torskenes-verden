@@ -69,7 +69,7 @@ struct RootView: View {
         store.scanTarget = "receipt"
     }
 
-    /// Toasten: over fanelinja i Papir, og «Ikke innlogget» vises aldri når brukeren er innlogget.
+    /// Toasten: over fanelinja, og «Ikke innlogget» vises aldri når brukeren er innlogget.
     private var toast: String? {
         guard let m = store.message else { return nil }
         if store.loggedIn && m.localizedCaseInsensitiveContains("ikke innlogget") { return nil }
@@ -84,8 +84,8 @@ struct RootView: View {
 
     var body: some View {
         let pal = PaperPalette.of(store.paperMode, system: paperSystemScheme(phase))
-        // Papir på alle skjermer (prompt 42: det klassiske Liquid Glass-designet er slettet).
-        let _ = PaperSkin.use(pal)
+        // Fase 4 (B1): paletten settes ikke lenger under body. Den ligger i miljøet (\.paper, \.dsStil) og i den observerbare
+        // PaperTheme, som oppdateres i onChange under (PaperTheme.swift).
         ZStack {
             Backdrop()
             if !store.loggedIn || store.addingAccount {
@@ -94,14 +94,9 @@ struct RootView: View {
                 PaperOnboardingView()
             } else if store.locked {
                 LockView()
-            } else if store.original != nil {
-                OriginalView()
-            } else if store.editing != nil {
-                TxEditView(scan: scan)
-            } else if store.detail != nil {
-                DetailView()
             } else {
-                // iPhone og iPad: Papir-skallet (på iPad med navigasjonsskinne til venstre).
+                // Fase 4 (H1): navigasjonsskallet – TabView/NavigationSplitView med en NavigationStack per fane (AppShell.swift).
+                // Original, redigering og detalj er sider i stakken (PaperShell.content), ikke egne grener her.
                 PaperShell(scan: scan, photos: $photoItems, files: $showFiles)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
@@ -115,13 +110,13 @@ struct RootView: View {
                 ZStack { Rectangle().fill(.ultraThinMaterial); Image(systemName: "lock.fill").font(.largeTitle).foregroundStyle(Color.skinFg.opacity(0.8)) }.ignoresSafeArea()
             }
         }
-        // Prompt 50: sveipet virker på alle sider med tilbakeknapp (nav50CanSwipe, Nav50Back.swift).
-        .edgeSwipeBack(enabled: store.loggedIn && !store.locked && !store.addingAccount && store.nav50CanSwipe) {
-            store.nav50SwipeBack()
-        }
-        // Papir følger valget lys/mørk (eller systemet).
+        // Fase 4: sveip tilbake er systemets (NavigationStack i AppShell.swift), ikke et eget kantsveip.
+        // Papir følger valget lys/mørk (eller systemet). Q16: systemflatene følger dette (ingen tvunget mørk stil i Info.plist).
         .preferredColorScheme(pal.dark ? .dark : .light)
         .tint(pal.lab)
+        .environment(\.paper, pal)
+        .environment(\.dsStil, pal.glass ? DS.Stil.glass : DS.Stil.papir)
+        .onChange(of: pal.themeKey, initial: true) { (_: String, _: String) in PaperTheme.shared.set(pal) }
         .task(id: store.loggedIn) {
             // Sporing: henter status hvert 5. minutt mens appen er åpen og gir lokale varsler (ekte push er ikke bygget).
             UNUserNotificationCenter.current().delegate = NotifyDelegate.shared

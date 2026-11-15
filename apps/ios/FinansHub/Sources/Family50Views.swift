@@ -96,7 +96,7 @@ struct Fam50Wide: View {
                     .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
                     .padding(.vertical, 12)
             }
-            .padding(.leading, 108 + 16)
+            .padding(.leading, ShellMetrics.railInset + 16)
             .padding(.trailing, 16)
         }
     }

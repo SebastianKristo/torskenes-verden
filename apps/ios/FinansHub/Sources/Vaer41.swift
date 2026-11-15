@@ -242,7 +242,7 @@ struct Vaer41SkiCard: View {
                     Text(s.wax.isEmpty ? s.grip : s.wax).font(.dyn51(size: 24, weight: .bold)).fixedSize(horizontal: false, vertical: true)
                 }
                 Spacer(minLength: 6)
-                TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { (ctx: TimelineViewDefaultContext) in
+                MotionTimeline(interval: 1.0 / 30.0) { (ctx: TimelineViewDefaultContext) in
                     Glimt35Fig(id: "spire", size: 54, t: ctx.date.timeIntervalSinceReferenceDate)
                 }
                 .frame(width: 60, height: 64)
