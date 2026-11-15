@@ -33,50 +33,50 @@ import java.net.URLEncoder
  *    Serveren avgjør hvem som kan styre hva; klokka viser bare knappene i «controls».
  */
 
-class WearApiError51(message: String, val status: Int = 0) : Exception(message)
+class WearApiFeil(message: String, val status: Int = 0) : Exception(message)
 
-data class WAcct51(val server: String, val token: String, val name: String)
-data class WPerson51(val id: String, val name: String)
-data class WDep51(val line: String, val to: String, val minutes: Int?, val realtime: Boolean)
-data class WStop51(val id: String, val name: String, val deps: List<WDep51>)
-data class WItem51(val id: String, val title: String, val done: Boolean)
-data class WPlay51(val id: String, val title: String, val sub: String, val paused: Boolean, val controls: List<String>, val note: String?)
-data class WQr51(val sessionId: String, val payload: String, val key: String, val expires: Long)
+data class WKonto(val server: String, val token: String, val name: String)
+data class WPerson(val id: String, val name: String)
+data class WAvgang(val line: String, val to: String, val minutes: Int?, val realtime: Boolean)
+data class WStopp(val id: String, val name: String, val deps: List<WAvgang>)
+data class WVare(val id: String, val title: String, val done: Boolean)
+data class WAvspilling(val id: String, val title: String, val sub: String, val paused: Boolean, val controls: List<String>, val note: String?)
+data class WQrOkt(val sessionId: String, val payload: String, val key: String, val expires: Long)
 
-const val DEFAULT_SERVER51 = ServerAdresse.STANDARD
-/** Prompt 89: den gamle, feilstavede standarden – lagret nøyaktig slik skrives den om til DEFAULT_SERVER51 (:felles, ServerAdresse). */
-internal fun migrate89(s: String?): String? = ServerAdresse.migrer(s)
+const val STANDARD_SERVER = ServerAdresse.STANDARD
+/** Prompt 89: den gamle, feilstavede standarden – lagret nøyaktig slik skrives den om til STANDARD_SERVER (:felles, ServerAdresse). */
+internal fun migrerGammelStandard(s: String?): String? = ServerAdresse.migrer(s)
 
-object WearStore51 {
+object WearStore {
     /** Kryptert; den gamle ukrypterte reservefila flyttes inn og slettes (SikkerLagring, :felles-android). */
     private fun prefs(ctx: Context): SharedPreferences = SikkerLagring.prefs(ctx, "wear51", gammelKlartekst = "wear51_plain")
 
     /** Prompt 89: gammel standardadresse → ny (egendefinerte røres ikke). */
-    private fun stored89(ctx: Context): String? {
+    private fun lagretServer(ctx: Context): String? {
         val p = prefs(ctx)
         val raw = p.getString("server", null) ?: return null
-        val m = migrate89(raw) ?: raw
+        val m = migrerGammelStandard(raw) ?: raw
         if (m != raw) p.edit().putString("server", m).apply()
         return m
     }
 
-    fun account(ctx: Context): WAcct51? {
+    fun account(ctx: Context): WKonto? {
         val p = prefs(ctx)
-        val s = stored89(ctx) ?: return null
+        val s = lagretServer(ctx) ?: return null
         val t = p.getString("token", null) ?: return null
-        return WAcct51(s, t, p.getString("name", null) ?: "")
+        return WKonto(s, t, p.getString("name", null) ?: "")
     }
 
-    fun save(ctx: Context, a: WAcct51) { prefs(ctx).edit().putString("server", a.server).putString("token", a.token).putString("name", a.name).apply() }
+    fun save(ctx: Context, a: WKonto) { prefs(ctx).edit().putString("server", a.server).putString("token", a.token).putString("name", a.name).apply() }
     fun logout(ctx: Context) { prefs(ctx).edit().remove("token").remove("name").apply() }
-    fun server(ctx: Context): String = stored89(ctx) ?: DEFAULT_SERVER51
-    fun setServer(ctx: Context, s: String) { prefs(ctx).edit().putString("server", normalize51(s)).apply() }
+    fun server(ctx: Context): String = lagretServer(ctx) ?: STANDARD_SERVER
+    fun setServer(ctx: Context, s: String) { prefs(ctx).edit().putString("server", normaliserServer(s)).apply() }
 }
 
 /** Samme regel som telefonappene (shared/testvektorer/serveradresse.json): uten skjema blir lokale verter http://. */
-fun normalize51(raw: String): String = ServerAdresse.normaliser(raw) ?: DEFAULT_SERVER51
+fun normaliserServer(raw: String): String = ServerAdresse.normaliser(raw) ?: STANDARD_SERVER
 
-class WearApi51(private val server: String, private val token: String?) {
+class WearApi(private val server: String, private val token: String?) {
 
     suspend fun call(method: String, path: String, body: JSONObject? = null, headers: Map<String, String> = emptyMap(), read: Int = 20_000): JSONObject =
         withContext(Dispatchers.IO) {
@@ -97,21 +97,21 @@ class WearApi51(private val server: String, private val token: String?) {
                 val code = c.responseCode
                 val txt = (if (code < 400) c.inputStream else c.errorStream)?.bufferedReader()?.use { it.readText() } ?: ""
                 val o = runCatching { if (txt.trimStart().startsWith("[")) JSONObject().put("items", JSONArray(txt)) else JSONObject(txt.ifBlank { "{}" }) }.getOrNull()
-                if (code >= 400) throw WearApiError51(o?.optString("error")?.takeIf { it.isNotBlank() } ?: "Feil $code", code)
-                o ?: throw WearApiError51("Uventet svar fra serveren", code)
+                if (code >= 400) throw WearApiFeil(o?.optString("error")?.takeIf { it.isNotBlank() } ?: "Feil $code", code)
+                o ?: throw WearApiFeil("Uventet svar fra serveren", code)
             } catch (e: UsikretHttp) {
-                throw WearApiError51(LokaltNett.MSG) // prompt 86: http:// bare på lokalt nett (LokaltNett.kt)
+                throw WearApiFeil(LokaltNett.MSG) // prompt 86: http:// bare på lokalt nett (LokaltNett.kt)
             } catch (e: IOException) {
-                throw WearApiError51("Ingen kontakt med serveren")
+                throw WearApiFeil("Ingen kontakt med serveren")
             } finally { c.disconnect() }
         }
 
     /* ---------- Innlogging med QR ---------- */
 
-    suspend fun qrStart(): WQr51 {
+    suspend fun qrStart(): WQrOkt {
         val dev = "Klokke · " + Build.MODEL.ifBlank { "Wear OS" }
         val o = call("POST", "/auth/qr/session", JSONObject().put("app", "finans").put("platform", "android").put("device", dev).put("deviceName", dev))
-        val sid = o.optString("sessionId").ifBlank { throw WearApiError51("Uventet svar fra serveren") }
+        val sid = o.optString("sessionId").ifBlank { throw WearApiFeil("Uventet svar fra serveren") }
         val code = o.optString("code")
         val key = o.optString("clientKey")
         val srv = o.optString("server").ifBlank { server }
@@ -119,23 +119,23 @@ class WearApi51(private val server: String, private val token: String?) {
             "papir://login?s=" + URLEncoder.encode(sid, "UTF-8") + "&c=" + URLEncoder.encode(code, "UTF-8") + "&srv=" + URLEncoder.encode(srv, "UTF-8")
         }
         val ttl = o.optLong("ttl", 120L).coerceIn(30L, 120L) * 1000
-        return WQr51(sid, payload, key, System.currentTimeMillis() + ttl)
+        return WQrOkt(sid, payload, key, System.currentTimeMillis() + ttl)
     }
 
     /** state + token (bare én gang, ved «done»). */
-    suspend fun qrPoll(q: WQr51): JSONObject = try {
+    suspend fun qrPoll(q: WQrOkt): JSONObject = try {
         call("GET", "/auth/qr/session/" + URLEncoder.encode(q.sessionId, "UTF-8"), headers = mapOf("X-QR-Key" to q.key), read = 10_000)
-    } catch (e: WearApiError51) {
+    } catch (e: WearApiFeil) {
         if (e.status == 404 || e.status == 410) JSONObject().put("state", "expired") else throw e
     }
 
     /* ---------- Sjekk inn ---------- */
 
-    suspend fun family(): List<WPerson51> {
+    suspend fun family(): List<WPerson> {
         val a = call("GET", "/family/checkin").optJSONArray("people") ?: JSONArray()
         return (0 until a.length()).mapNotNull { a.optJSONObject(it) }.filter { !it.optBoolean("self") }.mapNotNull { p ->
             val id = p.optString("userId").ifBlank { p.optString("id") }
-            if (id.isBlank()) null else WPerson51(id, p.optString("name").ifBlank { "?" })
+            if (id.isBlank()) null else WPerson(id, p.optString("name").ifBlank { "?" })
         }
     }
 
@@ -147,7 +147,7 @@ class WearApi51(private val server: String, private val token: String?) {
 
     /* ---------- Avganger ---------- */
 
-    suspend fun departures(): List<WStop51> {
+    suspend fun departures(): List<WStopp> {
         val sa = call("GET", "/me/stops").let { it.optJSONArray("stops") ?: it.optJSONArray("items") } ?: JSONArray()
         val stops = (0 until sa.length()).mapNotNull { sa.optJSONObject(it) }.take(3)
         return stops.mapNotNull { st ->
@@ -155,10 +155,10 @@ class WearApi51(private val server: String, private val token: String?) {
             val o = runCatching { call("GET", "/ruter/departures?stop=" + URLEncoder.encode(id, "UTF-8") + "&n=5") }.getOrNull() ?: return@mapNotNull null
             val da = o.optJSONArray("departures") ?: JSONArray()
             val deps = (0 until da.length()).mapNotNull { da.optJSONObject(it) }.filter { !it.optBoolean("cancelled") }.map { d ->
-                WDep51(d.optString("line").ifBlank { d.optString("publicCode").ifBlank { "?" } }, d.optString("to").ifBlank { d.optString("destination") },
+                WAvgang(d.optString("line").ifBlank { d.optString("publicCode").ifBlank { "?" } }, d.optString("to").ifBlank { d.optString("destination") },
                     if (d.has("minutes") && !d.isNull("minutes")) d.optInt("minutes") else null, d.optBoolean("realtime"))
             }
-            WStop51(id, st.optString("name").ifBlank { o.optJSONObject("stop")?.optString("name") ?: "Holdeplass" }, deps)
+            WStopp(id, st.optString("name").ifBlank { o.optJSONObject("stop")?.optString("name") ?: "Holdeplass" }, deps)
         }
     }
 
@@ -171,10 +171,10 @@ class WearApi51(private val server: String, private val token: String?) {
             ?.optString("id")?.takeIf { it.isNotBlank() }
     }
 
-    suspend fun items(list: String?): List<WItem51> {
+    suspend fun items(list: String?): List<WVare> {
         val o = call("GET", "/tasks" + (list?.let { "?list=" + URLEncoder.encode(it, "UTF-8") } ?: ""))
         val a = o.optJSONArray("items") ?: JSONArray()
-        return (0 until a.length()).mapNotNull { a.optJSONObject(it) }.map { WItem51(it.optString("id"), it.optString("title").ifBlank { it.optString("n") }, it.optBoolean("done")) }
+        return (0 until a.length()).mapNotNull { a.optJSONObject(it) }.map { WVare(it.optString("id"), it.optString("title").ifBlank { it.optString("n") }, it.optBoolean("done")) }
             .filter { it.id.isNotBlank() }.sortedBy { it.done }.take(30)
     }
 
@@ -188,23 +188,23 @@ class WearApi51(private val server: String, private val token: String?) {
 
     /* ---------- Media: spilles nå med fjernkontroll (MEDCTL51) ---------- */
 
-    private fun play51(s: JSONObject): WPlay51 {
+    private fun avspilling(s: JSONObject): WAvspilling {
         val c = s.optJSONArray("controls") ?: JSONArray()
         val ctl = if (s.optBoolean("canControl")) (0 until c.length()).map { c.optString(it) } else emptyList()
-        return WPlay51(s.optString("id"), s.optString("title").ifBlank { "Ukjent" },
+        return WAvspilling(s.optString("id"), s.optString("title").ifBlank { "Ukjent" },
             listOf(s.optString("user"), s.optString("device"), s.optString("remainingText")).filter { it.isNotBlank() }.joinToString(" · "),
             s.optString("state") == "paused", ctl, s.optString("controlText").takeIf { it.isNotBlank() && it != "null" })
     }
 
-    suspend fun nowPlaying(): List<WPlay51> {
+    suspend fun nowPlaying(): List<WAvspilling> {
         val a = call("GET", "/medctl51/now").optJSONArray("items") ?: JSONArray()
-        return (0 until a.length()).mapNotNull { a.optJSONObject(it) }.map { play51(it) }.filter { it.id.isNotBlank() }.take(6)
+        return (0 until a.length()).mapNotNull { a.optJSONObject(it) }.map { avspilling(it) }.filter { it.id.isNotBlank() }.take(6)
     }
 
     /** → oppdatert avspilling, eller null når den er stoppet. */
-    suspend fun control(id: String, action: String, body: JSONObject = JSONObject()): WPlay51? {
+    suspend fun control(id: String, action: String, body: JSONObject = JSONObject()): WAvspilling? {
         val o = call("POST", "/medctl51/sessions/" + URLEncoder.encode(id, "UTF-8") + "/" + action, body)
-        return o.optJSONObject("item")?.let { play51(it) }
+        return o.optJSONObject("item")?.let { avspilling(it) }
     }
 
     /* ---------- Glimt ---------- */

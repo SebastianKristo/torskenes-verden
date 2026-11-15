@@ -187,7 +187,7 @@ test('B: ingen HTTP-klient går utenom regelen (alle modulene)', () => {
 
 test('B: brukeren får teksten, og konfigurasjonen har ingen hardkodet adresse', () => {
   assert.match(code('Api.kt'), /catch \(e: UsikretHttp\) \{\s*throw ApiException\(LokaltNett\.MSG\)[\s\S]*?catch \(e: IOException\)/, 'Api: før den generelle nettverksfeilen');
-  assert.match(code('WearApi.kt', WEAR), /catch \(e: UsikretHttp\) \{\s*throw WearApiError51\(LokaltNett\.MSG\)[\s\S]*?catch \(e: IOException\)/);
+  assert.match(code('WearApi.kt', WEAR), /catch \(e: UsikretHttp\) \{\s*throw WearApiFeil\(LokaltNett\.MSG\)[\s\S]*?catch \(e: IOException\)/);
   assert.match(code('KalApi.kt', KAL), /catch \(e: IOException\) \{\s*throw KalApiException\(e\.message \?: "Nettverksfeil"\)/, 'Kalender viser meldingen fra unntaket');
   assert.match(code('P47.kt'), /fun cleartextBlocked47\(u: String\): Boolean = !LokaltNett\.ok\(u\)/, 'innstillingene bruker samme regel');
   for (const f of ['P47.kt', 'ui/Ui47.kt', 'Ntfy51.kt']) assert.ok(!/tillater bare http/.test(code(f)), `${f}: gammel tekst om én fast adresse`);

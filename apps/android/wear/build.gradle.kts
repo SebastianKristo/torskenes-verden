@@ -71,6 +71,8 @@ dependencies {
     implementation(libs.activity.compose)
     implementation(libs.core.ktx)
     implementation(libs.coroutines.android)
+    // Fase 5: LocalLifecycleOwner, så henting som gjentas stopper når skjermen slukkes (samme versjon som :app og :kalender).
+    implementation(libs.lifecycle.runtime.compose)
     // Prompt 51: godkjente Wear-avhengigheter (faste, stabile versjoner). androidx.wear:wear trengs ikke (ingen ambient-modus ennå).
     implementation(libs.wear.compose.material)
     implementation(libs.wear.compose.foundation)

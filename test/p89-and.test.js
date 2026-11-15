@@ -50,7 +50,7 @@ test('domenet: ingen gammel stavemåte noe sted i apps/android (bare den oppdelt
   assert.match(code(APP, 'Regel89.kt'), /fun isOld\(s: String\?\): Boolean = ServerAdresse\.erGammelStandard\(s\)/);
   assert.match(code(APP, 'Regel89.kt'), /fun migrate\(s: String\?\): String\? = ServerAdresse\.migrer\(s\)/);
   assert.match(code(KAL, 'Serveradresser.kt'), /fun isOld\(s: String\?\): Boolean = ServerAdresse\.erGammelStandard\(s\)/);
-  assert.match(code(WEAR, 'WearApi.kt'), /internal fun migrate89\(s: String\?\): String\? = ServerAdresse\.migrer\(s\)/);
+  assert.match(code(WEAR, 'WearApi.kt'), /internal fun migrerGammelStandard\(s: String\?\): String\? = ServerAdresse\.migrer\(s\)/);
 });
 
 test('domenet: standardverdiene er os.smarthjemeksperten.no, lokal uendret http://10.69.1.39:3000', () => {
@@ -61,7 +61,7 @@ test('domenet: standardverdiene er os.smarthjemeksperten.no, lokal uendret http:
   assert.match(code(APP, 'Regel89.kt'), /const val EXTERNAL = ServerAdresse\.STANDARD/);
   assert.match(code(KAL, 'Innlogging.kt'), /const val DEFAULT_BASE = "https:\/\/os\.smarthjemeksperten\.no"/);
   assert.match(code(KAL, 'Innlogging.kt'), /const val DEFAULT_LOCAL = "http:\/\/10\.69\.1\.39:3000"/);
-  assert.match(code(WEAR, 'WearApi.kt'), /const val DEFAULT_SERVER51 = ServerAdresse\.STANDARD/);
+  assert.match(code(WEAR, 'WearApi.kt'), /const val STANDARD_SERVER = ServerAdresse\.STANDARD/);
   // Klartekst er fortsatt bare for lokalt nett (prompt 86) – ingen ny vert i nettverkskonfigen.
   const nsc = rd(join(AND, 'app/src/main/res/xml/network_security_config.xml'));
   assert.ok(!/smarthjem/.test(nsc));
@@ -78,8 +78,8 @@ test('migrering: app (kontoer + forrige server), Kalender (oppstart) og Wear skr
   assert.match(k, /KalAuth\.save\(ctx, s\.copy\(server = Kal41\.DEFAULT_BASE\)\)/);
   assert.match(code(KAL, 'MainActivity.kt'), /Kal51\.init\(this\)\s*Kal89\.migrate\(this\)/);
   const w = code(WEAR, 'WearApi.kt');
-  assert.match(w, /fun server\(ctx: Context\): String = stored89\(ctx\) \?: DEFAULT_SERVER51/);
-  assert.match(block(w, 'fun account(ctx: Context)'), /stored89\(ctx\)/);
+  assert.match(w, /fun server\(ctx: Context\): String = lagretServer\(ctx\) \?: STANDARD_SERVER/);
+  assert.match(block(w, 'fun account(ctx: Context)'), /lagretServer\(ctx\)/);
 });
 
 /* ---------------- 2. Tannhjulet ---------------- */

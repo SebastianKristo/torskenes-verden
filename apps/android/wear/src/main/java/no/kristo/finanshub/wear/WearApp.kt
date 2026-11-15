@@ -62,6 +62,21 @@ import androidx.wear.compose.material.ToggleChipDefaults
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import androidx.compose.foundation.focusable
+import androidx.compose.foundation.gestures.scrollBy
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.rotary.onRotaryScrollEvent
+import androidx.wear.compose.material.Colors
+import no.kristo.finanshub.wear.ui.designsystem.DsPalette
+import no.kristo.finanshub.wear.ui.designsystem.DsText
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 
 /*
  * Prompt 51 (ANDPLAT51): Wear OS-appen «Homelab» (Gradle-modul :wear, frittstående – trenger ikke telefonen i nærheten, bare nett).
@@ -74,24 +89,47 @@ import kotlinx.coroutines.launch
 class WearMain51 : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent { MaterialTheme { WearApp51() } }
+        setContent { MaterialTheme(colors = wearFarger) { WearRot() } }
     }
 }
 
-private class WearState51(ctx: Context) {
-    var acct by mutableStateOf(WearStore51.account(ctx))
-    val stack = mutableStateListOf(if (WearStore51.account(ctx) == null) "login" else "home")
+/**
+ * Fargene fra designtokenene (shared/design/tokens.json → ui/designsystem/DesignTokens.kt), Papir mørk: klokka har alltid svart
+ * bakgrunn. Primærfargen (knapper som «Alt bra» og «Lagre») er Homelab-aksenten.
+ */
+private val wearFarger = Colors(
+    primary = DsPalette.PapirMork.accent,
+    primaryVariant = DsPalette.PapirMork.accent,
+    secondary = DsPalette.PapirMork.info,
+    secondaryVariant = DsPalette.PapirMork.info,
+    background = Color.Black,
+    surface = DsPalette.PapirMork.surfaceRaised,
+    error = DsPalette.PapirMork.danger,
+    onPrimary = DsPalette.PapirMork.onAccent,
+    onSecondary = DsPalette.PapirMork.onInfo,
+    onBackground = DsPalette.PapirMork.textPrimary,
+    onSurface = DsPalette.PapirMork.textPrimary,
+    onSurfaceVariant = DsPalette.PapirMork.textSecondary,
+    onError = DsPalette.PapirMork.onDanger,
+)
+
+/** Sant for siden som vises øverst (ikke den som ligger bak under sveip-tilbake). Bare den tar imot krona. */
+private val LocalForgrunn = staticCompositionLocalOf { true }
+
+private class WearState(ctx: Context) {
+    var acct by mutableStateOf(WearStore.account(ctx))
+    val stack = mutableStateListOf(if (WearStore.account(ctx) == null) "login" else "home")
     var toast by mutableStateOf<String?>(null)
-    fun api(): WearApi51? = acct?.let { WearApi51(it.server, it.token) }
+    fun api(): WearApi? = acct?.let { WearApi(it.server, it.token) }
     fun push(p: String) { stack.add(p) }
     fun pop() { if (stack.size > 1) stack.removeAt(stack.size - 1) }
     fun reset(p: String) { stack.clear(); stack.add(p) }
 }
 
 @Composable
-private fun WearApp51() {
+private fun WearRot() {
     val ctx = LocalContext.current
-    val st = remember { WearState51(ctx) }
+    val st = remember { WearState(ctx) }
     BackHandler(enabled = st.stack.size > 1) { st.pop() }
     val top = st.stack.last()
     val below = st.stack.getOrNull(st.stack.size - 2)
@@ -102,35 +140,71 @@ private fun WearApp51() {
         hasBackground = below != null,
     ) { isBackground ->
         val page = if (isBackground) below else top
-        if (page != null) Page51(st, page)
+        if (page != null) CompositionLocalProvider(LocalForgrunn provides !isBackground) { Side(st, page) }
     }
 }
 
 @Composable
-private fun Page51(st: WearState51, page: String) {
+private fun Side(st: WearState, page: String) {
     when (page) {
-        "login" -> Login51(st)
-        "pickup" -> Pickup51(st)
-        "deps" -> Deps51(st)
-        "list" -> Shop51(st)
-        "glimt" -> Glimt51(st)
-        "settings" -> Settings51(st)
-        "media" -> Media51(st)
-        else -> Home51(st)
+        "login" -> InnloggingSide(st)
+        "pickup" -> HentMegSide(st)
+        "deps" -> AvgangerSide(st)
+        "list" -> HandlelisteSide(st)
+        "glimt" -> GlimtSide(st)
+        "settings" -> InnstillingerSide(st)
+        "media" -> MediaSide(st)
+        else -> HjemSide(st)
     }
 }
 
-/** Felles ramme: tid øverst, rullbar liste med posisjonsindikator. */
+/**
+ * Felles ramme: tid øverst, rullbar liste med posisjonsindikator. Krona / den roterende rammen ruller lista: siden i forgrunnen
+ * ber om fokus, og rotasjonen gis videre til lista (onRotaryScrollEvent fra Compose UI, ingen ny avhengighet).
+ */
 @Composable
-private fun Frame51(content: ScalingLazyListScope.() -> Unit) {
+private fun Ramme(content: ScalingLazyListScope.() -> Unit) {
     val ls = rememberScalingLazyListState()
+    val fokus = remember { FocusRequester() }
+    val scope = rememberCoroutineScope()
+    val forgrunn = LocalForgrunn.current
     Scaffold(timeText = { TimeText() }, positionIndicator = { PositionIndicator(scalingLazyListState = ls) }) {
-        ScalingLazyColumn(Modifier.fillMaxSize(), state = ls, content = content)
+        ScalingLazyColumn(
+            Modifier.fillMaxSize()
+                .onRotaryScrollEvent { e -> scope.launch { ls.scrollBy(e.verticalScrollPixels) }; true }
+                .focusRequester(fokus)
+                .focusable(),
+            state = ls, content = content,
+        )
+    }
+    LaunchedEffect(forgrunn) { if (forgrunn) runCatching { fokus.requestFocus() } }
+}
+
+/**
+ * Kjører [steg] hvert [ms] mens appen er synlig (minst STARTED). Når skjermen slukkes eller appen legges bort, stopper
+ * hentingen; når den vises igjen, kjøres [steg] med en gang og så videre hvert [ms].
+ */
+@Composable
+private fun GjentaMensSynlig(ms: Long, steg: () -> Unit) {
+    val eier = LocalLifecycleOwner.current
+    val gjeldende by rememberUpdatedState(steg)
+    var synlig by remember { mutableStateOf(eier.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) }
+    DisposableEffect(eier) {
+        val obs = LifecycleEventObserver { _, _ -> synlig = eier.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED) }
+        eier.lifecycle.addObserver(obs)
+        onDispose { eier.lifecycle.removeObserver(obs) }
+    }
+    var startet by remember { mutableStateOf(false) }
+    LaunchedEffect(synlig) {
+        if (!synlig) return@LaunchedEffect
+        if (startet) gjeldende()
+        startet = true
+        while (true) { delay(ms); gjeldende() }
     }
 }
 
 @Composable
-private fun Btn51(label: String, sub: String? = null, primary: Boolean = false, onClick: () -> Unit) {
+private fun Knapp(label: String, sub: String? = null, primary: Boolean = false, onClick: () -> Unit) {
     Chip(
         onClick = onClick,
         label = { Text(label, maxLines = 2) },
@@ -141,19 +215,19 @@ private fun Btn51(label: String, sub: String? = null, primary: Boolean = false, 
 }
 
 @Composable
-private fun Info51(text: String) {
+private fun Info(text: String) {
     Text(text, textAlign = TextAlign.Center, style = MaterialTheme.typography.body2, modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp))
 }
 
-private fun err51(e: Exception): String = when {
-    e is WearApiError51 && e.status == 401 -> "Innloggingen er utløpt. Logg inn på nytt."
-    e is WearApiError51 && e.status == 404 -> "Serveren mangler denne funksjonen. Oppdater Homelab."
+private fun feilmelding(e: Exception): String = when {
+    e is WearApiFeil && e.status == 401 -> "Innloggingen er utløpt. Logg inn på nytt."
+    e is WearApiFeil && e.status == 404 -> "Serveren mangler denne funksjonen. Oppdater Homelab."
     else -> e.message ?: "Noe gikk galt"
 }
 
 /** Siste kjente posisjon (bare når brukeren har gitt tillatelse; sendes bare med selve innsjekken). */
 @SuppressLint("MissingPermission")
-private fun lastFix51(ctx: Context): Location? {
+private fun sistePosisjon(ctx: Context): Location? {
     if (ctx.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
         ctx.checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) return null
     val lm = ctx.getSystemService(Context.LOCATION_SERVICE) as? LocationManager ?: return null
@@ -164,7 +238,7 @@ private fun lastFix51(ctx: Context): Location? {
 
 /** Talegjenkjenning (systemets skjerm på klokka). onText får det som ble sagt. */
 @Composable
-private fun rememberSpeech51(onText: (String) -> Unit): (String) -> Unit {
+private fun rememberTale(onText: (String) -> Unit): (String) -> Unit {
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { r ->
         val said = r.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()?.trim()
         if (!said.isNullOrBlank()) onText(said)
@@ -184,7 +258,7 @@ private fun rememberSpeech51(onText: (String) -> Unit): (String) -> Unit {
 /* ---------------- Hjem ---------------- */
 
 @Composable
-private fun Home51(st: WearState51) {
+private fun HjemSide(st: WearState) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     var busy by remember { mutableStateOf(false) }
@@ -194,93 +268,93 @@ private fun Home51(st: WearState51) {
             runCatching { perm.launch(arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION)) }
         }
     }
-    Frame51 {
+    Ramme {
         item { ListHeader { Text(st.acct?.name?.takeIf { it.isNotBlank() }?.let { "Hei, $it" } ?: "Homelab") } }
-        st.toast?.let { t -> item { Info51(t) } }
+        st.toast?.let { t -> item { Info(t) } }
         item {
-            Btn51(if (busy) "Sender …" else "Sjekk inn: alt bra", "Til familien", primary = true) {
-                if (busy) return@Btn51
+            Knapp(if (busy) "Sender …" else "Sjekk inn: alt bra", "Til familien", primary = true) {
+                if (busy) return@Knapp
                 busy = true
                 scope.launch {
                     st.toast = try {
-                        val api = st.api() ?: throw WearApiError51("Ikke innlogget", 401)
+                        val api = st.api() ?: throw WearApiFeil("Ikke innlogget", 401)
                         val to = api.family().map { it.id }
                         if (to.isEmpty()) "Fant ingen i familien" else {
-                            val f = lastFix51(ctx)
+                            val f = sistePosisjon(ctx)
                             api.checkin(to, "ok", f?.latitude, f?.longitude, f?.accuracy?.toDouble())
                             "Sendt: alt bra ✓"
                         }
-                    } catch (e: CancellationException) { throw e } catch (e: Exception) { err51(e) }
+                    } catch (e: CancellationException) { throw e } catch (e: Exception) { feilmelding(e) }
                     busy = false
                 }
             }
         }
-        item { Btn51("Hent meg", "Ber familien hente deg") { st.push("pickup") } }
-        item { Btn51("Avganger", "Mine stopp") { st.push("deps") } }
-        item { Btn51("Handleliste", "Kryss av og legg til") { st.push("list") } }
-        item { Btn51("Glimt", "Spør med stemmen") { st.push("glimt") } }
-        item { Btn51("Media", "Spilles nå: pause, neste, stopp") { st.push("media") } }
-        item { Btn51("Innstillinger") { st.push("settings") } }
+        item { Knapp("Hent meg", "Ber familien hente deg") { st.push("pickup") } }
+        item { Knapp("Avganger", "Mine stopp") { st.push("deps") } }
+        item { Knapp("Handleliste", "Kryss av og legg til") { st.push("list") } }
+        item { Knapp("Glimt", "Spør med stemmen") { st.push("glimt") } }
+        item { Knapp("Media", "Spilles nå: pause, neste, stopp") { st.push("media") } }
+        item { Knapp("Innstillinger") { st.push("settings") } }
     }
 }
 
 /* ---------------- Hent meg (bekreft) ---------------- */
 
 @Composable
-private fun Pickup51(st: WearState51) {
+private fun HentMegSide(st: WearState) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     var msg by remember { mutableStateOf<String?>(null) }
     var busy by remember { mutableStateOf(false) }
-    Frame51 {
+    Ramme {
         item { ListHeader { Text("Hent meg") } }
-        item { Info51(msg ?: "Familien får et varsel med høy prioritet og posisjonen din nå.") }
+        item { Info(msg ?: "Familien får et varsel med høy prioritet og posisjonen din nå.") }
         if (msg == null) {
             item {
-                Btn51(if (busy) "Sender …" else "Send «Hent meg»", primary = true) {
-                    if (busy) return@Btn51
+                Knapp(if (busy) "Sender …" else "Send «Hent meg»", primary = true) {
+                    if (busy) return@Knapp
                     busy = true
                     scope.launch {
                         msg = try {
-                            val api = st.api() ?: throw WearApiError51("Ikke innlogget", 401)
+                            val api = st.api() ?: throw WearApiFeil("Ikke innlogget", 401)
                             val to = api.family().map { it.id }
                             if (to.isEmpty()) "Fant ingen i familien" else {
-                                val f = lastFix51(ctx)
+                                val f = sistePosisjon(ctx)
                                 api.checkin(to, "pickup", f?.latitude, f?.longitude, f?.accuracy?.toDouble())
                                 "Sendt ✓ Familien har fått beskjed."
                             }
-                        } catch (e: CancellationException) { throw e } catch (e: Exception) { err51(e) }
+                        } catch (e: CancellationException) { throw e } catch (e: Exception) { feilmelding(e) }
                         busy = false
                     }
                 }
             }
-            item { Btn51("Avbryt") { st.pop() } }
-        } else item { Btn51("Ferdig") { st.pop() } }
+            item { Knapp("Avbryt") { st.pop() } }
+        } else item { Knapp("Ferdig") { st.pop() } }
     }
 }
 
 /* ---------------- Avganger ---------------- */
 
 @Composable
-private fun Deps51(st: WearState51) {
-    var stops by remember { mutableStateOf<List<WStop51>?>(null) }
+private fun AvgangerSide(st: WearState) {
+    var stops by remember { mutableStateOf<List<WStopp>?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     var tick by remember { mutableStateOf(0) }
     LaunchedEffect(tick) {
         error = null
-        try { stops = st.api()?.departures() ?: emptyList() } catch (e: CancellationException) { throw e } catch (e: Exception) { error = err51(e) }
+        try { stops = st.api()?.departures() ?: emptyList() } catch (e: CancellationException) { throw e } catch (e: Exception) { error = feilmelding(e) }
     }
-    LaunchedEffect(Unit) { while (true) { delay(60_000); tick++ } }
-    Frame51 {
+    GjentaMensSynlig(60_000) { tick++ }
+    Ramme {
         item { ListHeader { Text("Avganger") } }
         val s = stops
         when {
-            error != null -> item { Info51(error ?: "") }
+            error != null -> item { Info(error ?: "") }
             s == null -> item { CircularProgressIndicator(Modifier.size(32.dp)) }
-            s.isEmpty() -> item { Info51("Ingen stopp i Mine stopp. Legg til i appen på telefonen.") }
+            s.isEmpty() -> item { Info("Ingen stopp i Mine stopp. Legg til i appen på telefonen.") }
             else -> s.forEach { stop ->
                 item { Text(stop.name, style = MaterialTheme.typography.caption1, modifier = Modifier.padding(top = 6.dp)) }
-                if (stop.deps.isEmpty()) item { Info51("Ingen avganger nå") }
+                if (stop.deps.isEmpty()) item { Info("Ingen avganger nå") }
                 stop.deps.take(4).forEach { d ->
                     item {
                         val min = when { d.minutes == null -> ""; d.minutes <= 0 -> "nå"; else -> "${d.minutes} min" }
@@ -290,67 +364,67 @@ private fun Deps51(st: WearState51) {
                 }
             }
         }
-        item { Btn51("Oppdater") { tick++ } }
+        item { Knapp("Oppdater") { tick++ } }
     }
 }
 
 /* ---------------- Media (MEDCTL51) ---------------- */
 
 @Composable
-private fun Media51(st: WearState51) {
+private fun MediaSide(st: WearState) {
     val scope = rememberCoroutineScope()
-    var items by remember { mutableStateOf<List<WPlay51>?>(null) }
+    var items by remember { mutableStateOf<List<WAvspilling>?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     var msg by remember { mutableStateOf<String?>(null) }
     var busy by remember { mutableStateOf(false) }
     var tick by remember { mutableStateOf(0) }
     LaunchedEffect(tick) {
         error = null
-        try { items = st.api()?.nowPlaying() ?: emptyList() } catch (e: CancellationException) { throw e } catch (e: Exception) { error = err51(e) }
+        try { items = st.api()?.nowPlaying() ?: emptyList() } catch (e: CancellationException) { throw e } catch (e: Exception) { error = feilmelding(e) }
     }
-    LaunchedEffect(Unit) { while (true) { delay(15_000); tick++ } }
-    fun cmd(p: WPlay51, action: String, body: org.json.JSONObject = org.json.JSONObject()) {
+    GjentaMensSynlig(15_000) { tick++ }
+    fun cmd(p: WAvspilling, action: String, body: org.json.JSONObject = org.json.JSONObject()) {
         if (busy) return
         busy = true
         scope.launch {
             msg = try {
-                val api = st.api() ?: throw WearApiError51("Ikke innlogget", 401)
+                val api = st.api() ?: throw WearApiFeil("Ikke innlogget", 401)
                 val n = api.control(p.id, action, body)
                 items = items?.mapNotNull { if (it.id == p.id) n else it }
                 when { n == null -> "Stoppet"; action == "toggle" -> if (n.paused) "Satt på pause" else "Spiller"; else -> "OK" }
-            } catch (e: CancellationException) { throw e } catch (e: Exception) { err51(e) }
+            } catch (e: CancellationException) { throw e } catch (e: Exception) { feilmelding(e) }
             busy = false
         }
     }
-    Frame51 {
+    Ramme {
         item { ListHeader { Text("Spilles nå") } }
-        msg?.let { t -> item { Info51(t) } }
+        msg?.let { t -> item { Info(t) } }
         val list = items
         when {
-            error != null -> item { Info51(error ?: "") }
+            error != null -> item { Info(error ?: "") }
             list == null -> item { CircularProgressIndicator(Modifier.size(32.dp)) }
-            list.isEmpty() -> item { Info51("Ingenting spilles nå.") }
+            list.isEmpty() -> item { Info("Ingenting spilles nå.") }
             else -> list.forEach { p ->
                 item { Text(p.title, style = MaterialTheme.typography.title3, maxLines = 2, modifier = Modifier.padding(top = 6.dp)) }
                 if (p.sub.isNotBlank()) item { Text(p.sub, style = MaterialTheme.typography.caption1, maxLines = 2) }
-                if (p.controls.isEmpty()) item { Info51(p.note ?: "Kan ikke styres herfra") }
-                if ("playpause" in p.controls) item { Btn51(if (p.paused) "Spill av" else "Pause", primary = true) { cmd(p, "toggle") } }
-                if ("next" in p.controls) item { Btn51("Neste") { cmd(p, "next") } }
-                if ("seek" in p.controls) item { Btn51("Spol 30 s tilbake") { cmd(p, "seek", org.json.JSONObject().put("offset", -30_000)) } }
-                if ("stop" in p.controls) item { Btn51("Stopp") { cmd(p, "stop") } }
+                if (p.controls.isEmpty()) item { Info(p.note ?: "Kan ikke styres herfra") }
+                if ("playpause" in p.controls) item { Knapp(if (p.paused) "Spill av" else "Pause", primary = true) { cmd(p, "toggle") } }
+                if ("next" in p.controls) item { Knapp("Neste") { cmd(p, "next") } }
+                if ("seek" in p.controls) item { Knapp("Spol 30 s tilbake") { cmd(p, "seek", org.json.JSONObject().put("offset", -30_000)) } }
+                if ("stop" in p.controls) item { Knapp("Stopp") { cmd(p, "stop") } }
             }
         }
-        item { Btn51("Oppdater") { tick++ } }
+        item { Knapp("Oppdater") { tick++ } }
     }
 }
 
 /* ---------------- Handleliste ---------------- */
 
 @Composable
-private fun Shop51(st: WearState51) {
+private fun HandlelisteSide(st: WearState) {
     val scope = rememberCoroutineScope()
     var list by remember { mutableStateOf<String?>(null) }
-    var items by remember { mutableStateOf<List<WItem51>?>(null) }
+    var items by remember { mutableStateOf<List<WVare>?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     var tick by remember { mutableStateOf(0) }
     LaunchedEffect(tick) {
@@ -359,9 +433,9 @@ private fun Shop51(st: WearState51) {
             if (list == null) list = api.shoppingList()
             items = api.items(list)
             error = null
-        } catch (e: CancellationException) { throw e } catch (e: Exception) { error = err51(e) }
+        } catch (e: CancellationException) { throw e } catch (e: Exception) { error = feilmelding(e) }
     }
-    val speak = rememberSpeech51 { said ->
+    val speak = rememberTale { said ->
         scope.launch {
             try {
                 val api = st.api() ?: return@launch
@@ -369,17 +443,17 @@ private fun Shop51(st: WearState51) {
                     api.add(list, t.replaceFirstChar { it.uppercase() })
                 }
                 tick++
-            } catch (e: CancellationException) { throw e } catch (e: Exception) { error = err51(e) }
+            } catch (e: CancellationException) { throw e } catch (e: Exception) { error = feilmelding(e) }
         }
     }
-    Frame51 {
+    Ramme {
         item { ListHeader { Text("Handleliste") } }
-        item { Btn51("Legg til med stemmen", "F.eks. «melk og egg»", primary = true) { speak("Hva skal på lista?") } }
-        error?.let { e -> item { Info51(e) } }
+        item { Knapp("Legg til med stemmen", "F.eks. «melk og egg»", primary = true) { speak("Hva skal på lista?") } }
+        error?.let { e -> item { Info(e) } }
         val l = items
         when {
             l == null && error == null -> item { CircularProgressIndicator(Modifier.size(32.dp)) }
-            l != null && l.isEmpty() -> item { Info51("Lista er tom") }
+            l != null && l.isEmpty() -> item { Info("Lista er tom") }
             l != null -> l.forEach { it0 ->
                 item {
                     ToggleChip(
@@ -387,7 +461,7 @@ private fun Shop51(st: WearState51) {
                         onCheckedChange = { v ->
                             items = items?.map { x -> if (x.id == it0.id) x.copy(done = v) else x }
                             scope.launch {
-                                try { st.api()?.setDone(it0.id, v) } catch (e: CancellationException) { throw e } catch (e: Exception) { error = err51(e); tick++ }
+                                try { st.api()?.setDone(it0.id, v) } catch (e: CancellationException) { throw e } catch (e: Exception) { error = feilmelding(e); tick++ }
                             }
                         },
                         label = { Text(it0.title, maxLines = 2) },
@@ -403,39 +477,39 @@ private fun Shop51(st: WearState51) {
 /* ---------------- Glimt ---------------- */
 
 @Composable
-private fun Glimt51(st: WearState51) {
+private fun GlimtSide(st: WearState) {
     val scope = rememberCoroutineScope()
     var asked by remember { mutableStateOf<String?>(null) }
     var answer by remember { mutableStateOf<String?>(null) }
     var busy by remember { mutableStateOf(false) }
-    val speak = rememberSpeech51 { said ->
+    val speak = rememberTale { said ->
         asked = said; answer = null; busy = true
         scope.launch {
-            answer = try { st.api()?.glimt(said) ?: "Ikke innlogget" } catch (e: CancellationException) { throw e } catch (e: Exception) { err51(e) }
+            answer = try { st.api()?.glimt(said) ?: "Ikke innlogget" } catch (e: CancellationException) { throw e } catch (e: Exception) { feilmelding(e) }
             busy = false
         }
     }
-    Frame51 {
+    Ramme {
         item { ListHeader { Text("Glimt") } }
-        item { Btn51(if (asked == null) "Snakk til Glimt" else "Spør igjen", primary = true) { if (!busy) speak("Spør Glimt") } }
+        item { Knapp(if (asked == null) "Snakk til Glimt" else "Spør igjen", primary = true) { if (!busy) speak("Spør Glimt") } }
         asked?.let { q -> item { Text("«$q»", style = MaterialTheme.typography.caption1, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()) } }
         if (busy) item { CircularProgressIndicator(Modifier.size(32.dp)) }
-        answer?.let { a -> item { Info51(a) } }
+        answer?.let { a -> item { Info(a) } }
     }
 }
 
 /* ---------------- Innstillinger ---------------- */
 
 @Composable
-private fun Settings51(st: WearState51) {
+private fun InnstillingerSide(st: WearState) {
     val ctx = LocalContext.current
-    Frame51 {
+    Ramme {
         item { ListHeader { Text("Innstillinger") } }
-        item { Info51("Server: " + (st.acct?.server ?: WearStore51.server(ctx)).substringAfter("://")) }
-        item { Info51("Innlogget som " + (st.acct?.name?.ifBlank { null } ?: "–")) }
+        item { Info("Server: " + (st.acct?.server ?: WearStore.server(ctx)).substringAfter("://")) }
+        item { Info("Innlogget som " + (st.acct?.name?.ifBlank { null } ?: "–")) }
         item {
-            Btn51("Logg ut") {
-                WearStore51.logout(ctx); st.acct = null; st.reset("login")
+            Knapp("Logg ut") {
+                WearStore.logout(ctx); st.acct = null; st.reset("login")
             }
         }
     }
@@ -444,19 +518,19 @@ private fun Settings51(st: WearState51) {
 /* ---------------- Innlogging med QR ---------------- */
 
 @Composable
-private fun Login51(st: WearState51) {
+private fun InnloggingSide(st: WearState) {
     val ctx = LocalContext.current
-    var server by remember { mutableStateOf(WearStore51.server(ctx)) }
+    var server by remember { mutableStateOf(WearStore.server(ctx)) }
     var editing by remember { mutableStateOf(false) }
-    var qr by remember { mutableStateOf<WQr51?>(null) }
+    var qr by remember { mutableStateOf<WQrOkt?>(null) }
     var status by remember { mutableStateOf("Henter kode …") }
     var round by remember { mutableStateOf(0) }
     LaunchedEffect(server, round, editing) {
         if (editing) return@LaunchedEffect
-        val api = WearApi51(server, null)
+        val api = WearApi(server, null)
         while (true) {
-            val q = try { api.qrStart() } catch (e: CancellationException) { throw e } catch (e: Exception) { qr = null; status = err51(e); return@LaunchedEffect }
-            qr = q; status = "Skann med FinansHub på telefonen: Mer → Logg inn på annen enhet"
+            val q = try { api.qrStart() } catch (e: CancellationException) { throw e } catch (e: Exception) { qr = null; status = feilmelding(e); return@LaunchedEffect }
+            qr = q; status = "Skann med Homelab-appen på telefonen: Mer → Logg inn på annen enhet"
             var done = false
             while (!done && System.currentTimeMillis() < q.expires + 30_000) {
                 delay(2_000)
@@ -465,8 +539,8 @@ private fun Login51(st: WearState51) {
                 if (tok != null) {
                     val u = o.optJSONObject("user")
                     val name = u?.optString("name")?.ifBlank { null } ?: u?.optString("displayName")?.ifBlank { null } ?: u?.optString("username").orEmpty()
-                    val a = WAcct51(server, tok, name)
-                    WearStore51.save(ctx, a)
+                    val a = WKonto(server, tok, name)
+                    WearStore.save(ctx, a)
                     st.acct = a
                     st.reset("home")
                     return@LaunchedEffect
@@ -485,32 +559,32 @@ private fun Login51(st: WearState51) {
                 Text("Serveradresse", style = MaterialTheme.typography.caption1)
                 var txt by remember { mutableStateOf(server.substringAfter("://")) }
                 BasicTextField(txt, { txt = it }, singleLine = true,
-                    textStyle = TextStyle(color = Color.White, fontSize = 14.sp, textAlign = TextAlign.Center),
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp).background(Color(0xFF2B2B2B)).padding(8.dp).semantics { contentDescription = "Serveradresse" })
-                Chip(onClick = { WearStore51.setServer(ctx, txt); server = WearStore51.server(ctx); editing = false; round++ },
+                    textStyle = TextStyle(color = DsPalette.PapirMork.textPrimary, fontSize = DsText.callout.fontSize, textAlign = TextAlign.Center),
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp).background(DsPalette.PapirMork.surfaceChip).padding(8.dp).semantics { contentDescription = "Serveradresse" })
+                Chip(onClick = { WearStore.setServer(ctx, txt); server = WearStore.server(ctx); editing = false; round++ },
                     label = { Text("Lagre") }, colors = ChipDefaults.primaryChipColors())
             }
         }
         return
     }
-    Frame51 {
+    Ramme {
         item { ListHeader { Text("Logg inn") } }
         item {
             val q = qr
             if (q == null) CircularProgressIndicator(Modifier.size(32.dp))
-            else QrBox51(q.payload)
+            else QrBoks(q.payload)
         }
-        item { Info51(status) }
-        item { Btn51("Ny kode") { round++ } }
-        item { Btn51("Server", server.substringAfter("://")) { editing = true } }
+        item { Info(status) }
+        item { Knapp("Ny kode") { round++ } }
+        item { Knapp("Server", server.substringAfter("://")) { editing = true } }
     }
 }
 
 @Composable
-private fun QrBox51(payload: String) {
-    val m = remember(payload) { runCatching { WearQr51.matrix(payload) }.getOrNull() }
-    if (m == null) { Info51("Kunne ikke lage QR-kode"); return }
-    Box(Modifier.size(150.dp).background(Color.White).padding(6.dp).semantics { contentDescription = "QR-kode for innlogging. Skann med FinansHub på telefonen." }) {
+private fun QrBoks(payload: String) {
+    val m = remember(payload) { runCatching { WearQr.matrix(payload) }.getOrNull() }
+    if (m == null) { Info("Kunne ikke lage QR-kode"); return }
+    Box(Modifier.size(150.dp).background(Color.White).padding(6.dp).semantics { contentDescription = "QR-kode for innlogging. Skann med Homelab-appen på telefonen." }) {
         Canvas(Modifier.fillMaxSize()) {
             val n = m.size
             val cell = size.minDimension / n
