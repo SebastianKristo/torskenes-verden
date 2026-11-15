@@ -7462,3 +7462,10 @@ html.h40-ov,html.h40-ov body{overflow:hidden}
 .pp-obk button{min-height:44px;padding:0 18px;border-radius:999px;font:700 14px Manrope,system-ui,sans-serif;cursor:pointer}
 .pp-obk-later{background:transparent;color:var(--pp-ink);border:1px solid var(--pp-line)}
 .pp-obk-go{background:var(--pp-ink);color:var(--pp-bg);border:0}
+
+/* E-B5: den flytende Skann-/+-knappen lå over beløpskolonnen i lister (Siste transaksjoner). På smal skjerm står den nå i
+   samme rad som fanelinja, som gjør plass til den. Lista har allerede luft under fanelinja, så ingenting dekkes. */
+@media (max-width: 599px) {
+  .m.papir .pp-nav:has(+ .pp-fab){right:84px;max-width:none}
+  .m.papir .pp-nav:has(+ .pp-fab) + .pp-fab{right:12px;bottom:calc(var(--pp-navb) + 1px)}
+}
