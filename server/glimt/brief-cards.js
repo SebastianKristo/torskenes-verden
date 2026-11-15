@@ -26,6 +26,7 @@ import { cached } from '../cache.js';
 import { cardsOf, cardOn, auroraNotifyOf } from '../cards38.js';
 import { osloDate } from '../dates/oslo.js';
 import { dtf } from '../intl-format.js'; // gjenbrukte Intl.DateTimeFormat
+import { registerJob } from '../jobs/index.js';
 
 const MOCK = process.env.MOCK_DATA === '1';
 const TZ = 'Europe/Oslo';
@@ -255,9 +256,5 @@ export async function withBriefCards(u, b) {
   } catch (e) { console.warn('[brief38]', e.message); return b; }
 }
 
-let timer = null;
-export function startBrief38() {
-  if (timer) return;
-  timer = setInterval(() => { auroraPushTick().catch((e) => console.warn('[nordlys]', e.message)); }, 60_000);
-  timer.unref?.();
-}
+// Nordlysvarselet kl. 20 via den felles planleggeren (server/jobs/): aldri i test eller i sandkassen.
+registerJob('brief.nordlys', 60_000, () => auroraPushTick(), { note: 'Nordlys i kveld (Kp ≥ 4 og lite skyer), kl. 20 Oslo' });

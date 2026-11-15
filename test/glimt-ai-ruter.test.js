@@ -177,3 +177,10 @@ test('glimt-ai-ruter: bare admin endrer AI-oppsettet og motorene på Mac mini-en
   assert.equal((await N('/api/assist', 'POST', { q: 'hei' })).status, 401);
   assert.equal((await N('/api/chat/send', 'POST', { text: 'hei' })).status, 401);
 });
+
+test('glimt-jobber: nordlysvarselet og minnevarselet går via den felles planleggeren (ikke aktive i test)', async () => {
+  const { listJobs } = await import('../server/jobs/index.js');
+  const jobs = listJobs().filter((j) => ['brief.', 'glimt.'].some((p) => j.name.startsWith(p)));
+  assert.deepEqual(jobs.map((j) => [j.name, j.everyMs]).sort(), [['brief.generate', 30_000], ['brief.nordlys', 60_000], ['glimt.minne-varsel', 300_000]]);
+  assert.ok(jobs.every((j) => !j.active));
+});

@@ -6,6 +6,7 @@
 //   3. markering av fakta som ikke er brukt på lenge (telles; slettes aldri).
 // Ingen push kl. 03: finnes det nye forslag/motstrid, sendes «Glimt har 3 forslag til minnet» om morgenen (kl. 07, morningPush63).
 import { db, q, kv } from '../../db.js';
+import { registerJob } from '../../jobs/index.js';
 import { mem63, staleDays63 } from './settings.js';
 import { propose63 } from './extract.js';
 import { insertPending63, pendingCounts63, conflictCounts63, staleOf63, MAX_PENDING63, iso63 } from './store.js';
@@ -114,16 +115,15 @@ export async function morningPushAll63(now = Date.now()) {
   return n;
 }
 
+// Morgenvarselet sendes via den felles planleggeren (server/jobs/): aldri i test eller i sandkassen (OPS51_SANDBOX=1).
+registerJob('glimt.minne-varsel', 5 * 60_000, () => morningPushAll63(), { note: 'Morgenvarselet om forslag og motstrid i minnet' });
+
 let timer = null;
-/** index.js: systemoppgaven for alle brukere (nå og hver time) og morgenvarselet (hvert 5. min). Ikke i NODE_ENV=test. */
+/** index.js: systemoppgaven «Nattlig oppsummering av minnet» for alle brukere (nå og hver time). Ikke i NODE_ENV=test. */
 export function startMem63() {
   if (timer || process.env.NODE_ENV === 'test') return false;
   setTimeout(() => ensureAllUsers63(), 25_000).unref?.();
-  let ticks = 0;
-  timer = setInterval(() => {
-    if (++ticks % 12 === 0) ensureAllUsers63();
-    morningPushAll63().catch(() => {});
-  }, 5 * 60_000);
+  timer = setInterval(() => ensureAllUsers63(), 60 * 60_000);
   timer.unref?.();
   return true;
 }
