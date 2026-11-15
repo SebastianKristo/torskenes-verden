@@ -18,22 +18,15 @@
 // Utlogging: POST /api/logout og POST /finans/api/auth/logout (Homelab-appen) tilbakekaller Kalender-tokenene (companion-tokens) til brukeren.
 // /.well-known (qr38.js): APPLE_TEAM_ID/APPLE_APP_ID og ANDROID_CERT_SHA256 fra miljøet, tomt/404 når de ikke er satt.
 import { createHash, randomBytes } from 'node:crypto';
-import { networkInterfaces } from 'node:os';
 import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { db as fhDb } from '../finans/db.js';
-import { kv, OWNER } from '../db.js';
-import { config } from '../config.js';
-import { sessionUser, userInfo, serverName, currentSessionId } from './session.js';
+import { sessionUser, userInfo, currentSessionId } from './session.js';
 import { tokenAccessOf, issueToken, tokensById, revokeTokenOf, TOKEN_SCOPES } from '../finans/routes.js';
 import { companionsOf, deviceName } from '../kalender33.js';
-import { buildInfo } from '../cache-bust.js';
 import { issueRefresh44 } from './refresh.js'; // prompt 44: refresh-token (90 d glidende, 60 s grace)
-import { lanUrls46, dropInternal46, publicUrl46, originOf46 } from './server-address.js'; // prompt 46: aldri container-IP (172.18.0.3) som serveradresse
-import { serverUrls47 } from '../server47.js';
-// prompt 47: standardadresser (os.smarthjemeksperten.no / 10.69.1.39:3000) og «Tilbakestill til standard»
-import { kvServer89 } from './default-domain.js'; // prompt 89: lagret gammel standard (…experten.no) → os.smarthjemeksperten.no
+import { originOf46, serverAddresses41, discovery41, meServer41, setMeServer41 } from './server-address.js'; // serverens adresser (aldri container-IP)
 
 fhDb.exec(`CREATE TABLE IF NOT EXISTS fh_app_codes (code_hash TEXT PRIMARY KEY, kind TEXT NOT NULL, user_id TEXT NOT NULL, client TEXT NOT NULL, redirect TEXT, challenge TEXT, scopes TEXT NOT NULL,
   expires_tok INTEGER, parent TEXT, created INTEGER NOT NULL, exp INTEGER NOT NULL, used INTEGER NOT NULL DEFAULT 0);`);
@@ -45,61 +38,6 @@ const b64u = (buf) => Buffer.from(buf).toString('base64url');
 const bad = (c, error, status = 400, extra = {}) => c.json({ error, ...extra }, status);
 const iso = (t) => (t ? new Date(t).toISOString() : null);
 
-/* ---------------- Adresser ---------------- */
-
-const URL_RE = /^https?:\/\/[^\s/?#]+(?::\d+)?(\/[^\s]*)?$/i;
-const cleanUrl = (v) => { const s = String(v ?? '').trim().replace(/\/+$/, ''); return URL_RE.test(s) ? s : null; };
-// Prompt 46: inne i Docker ga networkInterfaces() bare bridge-adressen (http://172.18.0.3:3000) – den ble «lokal adresse» i
-// /api/discovery og /api/me/server, og Kalender for Mac sjekket oppdateringer mot den. Se public-url46.js (LOCAL_URL/PUBLIC_URL).
-const lanUrls = () => lanUrls46();
-void networkInterfaces; void config;
-/** Serverens egne adresser (admin kan sette dem i kv(OWNER,'server41')). Interne adresser fjernes alltid. */
-export function serverAddresses41() {
-  const s = kvServer89(OWNER, 'server41');
-  const saved = dropInternal46(s.local);
-  const local = saved.length ? saved : lanUrls();
-  const ext = dropInternal46([s.external])[0] ?? null;
-  return { local, external: ext ?? publicUrl46() ?? cleanUrl(process.env.PUBLIC_URL) ?? null };
-}
-let version = null;
-export function discovery41() {
-  try { version ??= buildInfo().version ?? null; } catch { version = null; }
-  const a = serverAddresses41();
-  return { name: serverName(), version, local: a.local, external: a.external, app: 'homelab', api: 41 };
-}
-export function meServer41(u) {
-  const s = kvServer89(u, 'server41_me');
-  const d = serverAddresses41();
-  // Prompt 46: en lagret intern adresse (172.18.0.3 fra eldre versjoner) erstattes av den oppdagede/offentlige.
-  // Prompt 47: uten lagret eller oppdaget adresse gjelder standardverdiene (PUBLIC_URL/LOCAL_URL, ellers os.smarthjemeksperten.no / 10.69.1.39:3000).
-  // Lokal: lagret per bruker → admin-satt (Innstillinger → Server) → LOCAL_URL/standarden. Oppdagede grensesnitt-adresser bare som
-  // siste reserve, og aldri Docker-bridge (dropInternal46).
-  const def = serverUrls47();
-  const adminLocal = dropInternal46((kv.get(OWNER, 'server41', {}) ?? {}).local)[0] ?? null;
-  const local = dropInternal46([s.local])[0] ?? adminLocal ?? def.localUrl ?? d.local[0] ?? null, external = dropInternal46([s.external])[0] ?? d.external ?? def.publicUrl;
-  return { local, external, auto: s.auto !== false, discovered: d, defaults: { local: def.localUrl, external: def.publicUrl },
-    isDefault: local === def.localUrl && external === def.publicUrl, updatedAt: s.updatedAt ?? null, updatedBy: s.updatedBy ?? null };
-}
-export function setMeServer41(u, b = {}) {
-  const cur = kvServer89(u, 'server41_me');
-  const next = { ...cur };
-  // Prompt 47: {reset:true} = «Tilbakestill til standard» (begge feltene får standardverdiene; local/external i samme kall ignoreres).
-  if (b.reset === true) { const def = serverUrls47(); b = { ...b, local: def.localUrl, external: def.publicUrl }; }
-  for (const k of ['local', 'external']) if (k in b) {
-    if (b[k] === null || b[k] === '') next[k] = null;
-    else {
-      const v = cleanUrl(b[k]); if (!v) throw Object.assign(new Error(`${k === 'local' ? 'Lokal' : 'Ekstern'} adresse må starte med http:// eller https://`), { status: 400 });
-      if (!dropInternal46([v]).length) throw Object.assign(new Error('Adressen er Docker-intern (f.eks. 172.18.x.x) og kan ikke nås fra andre enheter. Bruk LAN-adressen eller domenet.'), { status: 400 }); // prompt 46
-      next[k] = v;
-    }
-  }
-  if ('auto' in b) { if (typeof b.auto !== 'boolean') throw Object.assign(new Error('auto må være true eller false'), { status: 400 }); next.auto = b.auto; }
-  // Prompt 47: synk mellom enheter – når og fra hvilken enhet adressene sist ble endret.
-  next.updatedAt = new Date().toISOString();
-  next.updatedBy = typeof b.device === 'string' ? b.device.replace(/[\u0000-\u001f]/g, '').trim().slice(0, 60) || null : null;
-  kv.set(u, 'server41_me', next);
-  return meServer41(u);
-}
 
 /* ---------------- Hvem spør (Homelab) ---------------- */
 

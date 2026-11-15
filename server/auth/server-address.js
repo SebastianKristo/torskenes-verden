@@ -12,7 +12,9 @@ import { existsSync, readFileSync } from 'node:fs';
 import { networkInterfaces } from 'node:os';
 import { kv, OWNER } from '../db.js';
 import { config } from '../config.js';
-import { kvServer89 } from './default-domain.js'; // prompt 89: gammel standarddomene migreres ved lesing
+import { buildInfo } from '../cache-bust.js';
+import { serverName } from './session.js';
+import { serverUrls47 } from '../server47.js'; // prompt 47: standardadresser og «Tilbakestill til standard»
 import { normalizeServerUrl } from '../net/server-url.js';
 
 // Samme normalisering som appene (shared/testvektorer/serveradresse.json): uten skjema → http for lokale verter, ellers https;
@@ -100,3 +102,82 @@ export function lanUrls46() {
 }
 /** Fjerner interne adresser fra en lagret adresseliste (eldre versjoner lagret 172.18.0.3). */
 export const dropInternal46 = (list) => (Array.isArray(list) ? list.map(cleanUrl46).filter((x) => x && !isInternalIp46(hostOfUrl(x))) : []);
+
+/* ---------------- Gammelt standarddomene ---------------- */
+
+// Prompt 89 (WEB89, claude-code-standard-serveradresser.md): standarddomenet er os.smarthjemeksperten.no (med k).
+// Eldre versjoner lagret den feilstavede «…experten.no» som standard. En lagret adresse som er NØYAKTIG den gamle standarden
+// (evt. med / til slutt eller store bokstaver) byttes til den nye – første gang den leses – og skrives tilbake. Andre adresser røres ikke.
+
+export const OLD_PUBLIC_URL89 = 'https://os.smarthjem' + 'experten.no';
+export const NEW_PUBLIC_URL89 = 'https://os.smarthjemeksperten.no';
+
+/** Den nye standarden hvis v er nøyaktig den gamle, ellers v uendret. */
+export function migrateUrl89(v) {
+  if (typeof v !== 'string') return v;
+  return v.trim().replace(/\/+$/, '').toLowerCase() === OLD_PUBLIC_URL89 ? NEW_PUBLIC_URL89 : v;
+}
+
+/** Leser kv(user,key) og migrerer feltet «external» (lagres tilbake ved endring). → objektet (aldri null). */
+export function kvServer89(user, key) {
+  const s = kv.get(user, key, {}) ?? {};
+  if (s && typeof s === 'object' && typeof s.external === 'string') {
+    const n = migrateUrl89(s.external);
+    if (n !== s.external) { const next = { ...s, external: n }; try { kv.set(user, key, next); } catch { /* lesing skal aldri feile */ } return next; }
+  }
+  return s;
+}
+
+/* ---------------- Serverens adresser for appene (/api/discovery, /api/me/server) ---------------- */
+
+const URL_RE = /^https?:\/\/[^\s/?#]+(?::\d+)?(\/[^\s]*)?$/i;
+const cleanUrl = (v) => { const s = String(v ?? '').trim().replace(/\/+$/, ''); return URL_RE.test(s) ? s : null; };
+// Prompt 46: inne i Docker ga networkInterfaces() bare bridge-adressen (http://172.18.0.3:3000) – den ble «lokal adresse» i
+// /api/discovery og /api/me/server, og Kalender for Mac sjekket oppdateringer mot den. Nå kommer lokale adresser fra lanUrls46.
+/** Serverens egne adresser (admin kan sette dem i kv(OWNER,'server41')). Interne adresser fjernes alltid. */
+export function serverAddresses41() {
+  const s = kvServer89(OWNER, 'server41');
+  const saved = dropInternal46(s.local);
+  const local = saved.length ? saved : lanUrls46();
+  const ext = dropInternal46([s.external])[0] ?? null;
+  return { local, external: ext ?? publicUrl46() ?? cleanUrl(process.env.PUBLIC_URL) ?? null };
+}
+let version = null;
+export function discovery41() {
+  try { version ??= buildInfo().version ?? null; } catch { version = null; }
+  const a = serverAddresses41();
+  return { name: serverName(), version, local: a.local, external: a.external, app: 'homelab', api: 41 };
+}
+export function meServer41(u) {
+  const s = kvServer89(u, 'server41_me');
+  const d = serverAddresses41();
+  // Prompt 46: en lagret intern adresse (172.18.0.3 fra eldre versjoner) erstattes av den oppdagede/offentlige.
+  // Prompt 47: uten lagret eller oppdaget adresse gjelder standardverdiene (PUBLIC_URL/LOCAL_URL, ellers os.smarthjemeksperten.no / 10.69.1.39:3000).
+  // Lokal: lagret per bruker → admin-satt (Innstillinger → Server) → LOCAL_URL/standarden. Oppdagede grensesnitt-adresser bare som
+  // siste reserve, og aldri Docker-bridge (dropInternal46).
+  const def = serverUrls47();
+  const adminLocal = dropInternal46((kv.get(OWNER, 'server41', {}) ?? {}).local)[0] ?? null;
+  const local = dropInternal46([s.local])[0] ?? adminLocal ?? def.localUrl ?? d.local[0] ?? null, external = dropInternal46([s.external])[0] ?? d.external ?? def.publicUrl;
+  return { local, external, auto: s.auto !== false, discovered: d, defaults: { local: def.localUrl, external: def.publicUrl },
+    isDefault: local === def.localUrl && external === def.publicUrl, updatedAt: s.updatedAt ?? null, updatedBy: s.updatedBy ?? null };
+}
+export function setMeServer41(u, b = {}) {
+  const cur = kvServer89(u, 'server41_me');
+  const next = { ...cur };
+  // Prompt 47: {reset:true} = «Tilbakestill til standard» (begge feltene får standardverdiene; local/external i samme kall ignoreres).
+  if (b.reset === true) { const def = serverUrls47(); b = { ...b, local: def.localUrl, external: def.publicUrl }; }
+  for (const k of ['local', 'external']) if (k in b) {
+    if (b[k] === null || b[k] === '') next[k] = null;
+    else {
+      const v = cleanUrl(b[k]); if (!v) throw Object.assign(new Error(`${k === 'local' ? 'Lokal' : 'Ekstern'} adresse må starte med http:// eller https://`), { status: 400 });
+      if (!dropInternal46([v]).length) throw Object.assign(new Error('Adressen er Docker-intern (f.eks. 172.18.x.x) og kan ikke nås fra andre enheter. Bruk LAN-adressen eller domenet.'), { status: 400 }); // prompt 46
+      next[k] = v;
+    }
+  }
+  if ('auto' in b) { if (typeof b.auto !== 'boolean') throw Object.assign(new Error('auto må være true eller false'), { status: 400 }); next.auto = b.auto; }
+  // Prompt 47: synk mellom enheter – når og fra hvilken enhet adressene sist ble endret.
+  next.updatedAt = new Date().toISOString();
+  next.updatedBy = typeof b.device === 'string' ? b.device.replace(/[\u0000-\u001f]/g, '').trim().slice(0, 60) || null : null;
+  kv.set(u, 'server41_me', next);
+  return meServer41(u);
+}

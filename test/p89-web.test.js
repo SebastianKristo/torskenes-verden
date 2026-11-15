@@ -40,8 +40,8 @@ test('domenet: ingen «…experten» igjen i server/, public/ eller test/ (bare 
 
 test('domenet: lagret adresse som er nøyaktig den gamle standarden migreres (per bruker og admin), andre røres ikke', async () => {
   const { kv, OWNER } = await import('../server/db.js');
-  const { migrateUrl89, OLD_PUBLIC_URL89, NEW_PUBLIC_URL89 } = await import('../server/auth/default-domain.js');
-  const { meServer41, serverAddresses41 } = await import('../server/auth/app-login.js');
+  const { migrateUrl89, OLD_PUBLIC_URL89, NEW_PUBLIC_URL89 } = await import('../server/auth/server-address.js');
+  const { meServer41, serverAddresses41 } = await import('../server/auth/server-address.js');
   const { publicUrl46 } = await import('../server/auth/server-address.js');
   const { serverUrls47 } = await import('../server/server47.js');
   assert.equal(OLD_PUBLIC_URL89, OLD_URL);

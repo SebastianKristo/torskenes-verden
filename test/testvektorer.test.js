@@ -37,7 +37,7 @@ const { default: finansApi } = await import('../server/finans/routes.js');
 const { chargesInYear } = await import('../server/finans/subs.js');
 const { nextCharge } = await import('../server/finans/cycles.js');
 const { parseTrialText, notificationsOf } = await import('../server/finans/trials.js');
-const { migrateUrl89 } = await import('../server/auth/default-domain.js');
+const { migrateUrl89 } = await import('../server/auth/server-address.js');
 const { cleanUrl46, isPrivateIp46 } = await import('../server/auth/server-address.js');
 const { isLocalHost51 } = await import('../server/qa51.js');
 const { normalizeServerUrl, isLocalHost } = await import('../server/net/server-url.js');
@@ -233,17 +233,17 @@ for (const v of PROVE.plan) {
 const vertAv = (v) => (v.normalisert ? new URL(v.normalisert).hostname.replace(/^\[|\]$/g, '') : null);
 const ADR_IMPL = [
   // Migreringen: nøyaktig den gamle standarden blir den nye, alt annet returneres urørt.
-  ['server domain89.js migrateUrl89', (v) => migrateUrl89(v.inn), (v) => (v.gammelStandard ? v.normalisert : v.inn), () => true],
+  ['server auth/server-address.js migrateUrl89', (v) => migrateUrl89(v.inn), (v) => (v.gammelStandard ? v.normalisert : v.inn), () => true],
   // Normalisering av en lagret/oppgitt adresse (PUBLIC_URL, Innstillinger → Server).
-  ['server public-url46.js cleanUrl46', (v) => cleanUrl46(v.inn), (v) => v.normalisert, (v) => !v.gammelStandard],
+  ['server auth/server-address.js cleanUrl46', (v) => cleanUrl46(v.inn), (v) => v.normalisert, (v) => !v.gammelStandard],
   // Lokal/ekstern for verten.
   ['server qa51.js isLocalHost51', (v) => isLocalHost51(vertAv(v)), (v) => v.lokal, (v) => !!v.normalisert],
   ['server net/server-url.js normalizeServerUrl', (v) => normalizeServerUrl(v.inn), (v) => v.normalisert, (v) => !v.gammelStandard],
   ['server net/server-url.js isLocalHost', (v) => isLocalHost(vertAv(v)), (v) => v.lokal, (v) => !!v.normalisert],
   // isPrivateIp46 får bare IP-adresser (etter DNS-oppslag i news46), så bare IP-vektorene gjelder.
-  ['server public-url46.js isPrivateIp46', (v) => isPrivateIp46(vertAv(v)), (v) => v.lokal, (v) => !!v.normalisert && /^[\d.]+$|:/.test(vertAv(v))],
+  ['server auth/server-address.js isPrivateIp46', (v) => isPrivateIp46(vertAv(v)), (v) => v.lokal, (v) => !!v.normalisert && /^[\d.]+$|:/.test(vertAv(v))],
   // «Pålitelig enhet» (klient-IP fra tilkoblingen): strengere regel, bare IP-adresser.
-  ['server auth.js isLan (pålitelig enhet)', (v) => isLan(vertAv(v)), (v) => v.paaliteligEnhet, (v) => typeof v.paaliteligEnhet === 'boolean'],
+  ['server auth/session.js isLan (pålitelig enhet)', (v) => isLan(vertAv(v)), (v) => v.paaliteligEnhet, (v) => typeof v.paaliteligEnhet === 'boolean'],
 ];
 for (const [impl, fn, fasit, gjelder] of ADR_IMPL) {
   for (const v of SERVERADRESSE.vektorer) if (gjelder(v)) vektortest('serveradresse', impl, v, `«${v.inn}»`, svar(() => fn(v)), fasit(v));
