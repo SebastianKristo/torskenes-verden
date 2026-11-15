@@ -12,11 +12,12 @@ const SY = read('public/js/settings-system.js');
 const SI = read('public/js/settings-integ.js');
 const CSS = read('public/css/pages/innstillinger.css');
 
-test('sidemenyen: gruppene og sidene fra samlet-md, i riktig rekkefølge', () => {
-  assert.deepEqual(N.MENU65.map(([g]) => g), ['Generelt', 'Husstand', 'Glimt og AI', 'Tilkoblinger', 'Moduler', 'Server']);
-  const ids = Object.fromEntries(N.MENU65);
-  assert.deepEqual(ids.Generelt, ['konto', 'look', 'varsel', 'app']);
-  assert.deepEqual(ids.Husstand, ['users']);
+test('sidemenyen: gruppene og sidene i samme rekkefølge som modullisten (Fase 6), sider alene uten overskrift', () => {
+  // Konto og sikkerhet · Utseende · Varsler · Husstand · Glimt og AI · Tilkoblinger · Moduler · Enheter og widgets · Server.
+  assert.deepEqual(N.MENU65.map(([g]) => g), ['', 'Glimt og AI', 'Tilkoblinger', 'Moduler', '', 'Server']);
+  const ids = Object.fromEntries(N.MENU65.filter(([g]) => g));
+  assert.deepEqual(N.MENU65[0][1], ['konto', 'look', 'varsel', 'users']);
+  assert.deepEqual(N.MENU65[4][1], ['app']);
   assert.deepEqual(ids['Glimt og AI'], ['glimt', 'ai']);
   assert.deepEqual(ids.Tilkoblinger, ['int', 'kal']);
   assert.deepEqual(ids.Moduler, ['dom', 'finans', 'media', 'nyheter', 'ruter', 'sporing', 'studie', 'vaer', 'skjold']); // Domener flyttet hit fra Generelt; prompt 70: Sporing mellom Ruter og Studie; prompt 77: Skjold Lab sist
@@ -31,7 +32,7 @@ test('sidemenyen: gruppene og sidene fra samlet-md, i riktig rekkefølge', () =>
   assert.doesNotMatch(ST, /\['familie', 'Familie'/);
   assert.doesNotMatch(ST, /^\s*TABS44\[0\],/m);
   assert.doesNotMatch(ST, /^\s*\.\.\.TABS51,/m);
-  assert.match(ST, /\['users', 'Brukere og familie', /);
+  assert.match(ST, /\['users', 'Husstand', /);
   assert.match(ST, /\['kal', 'Kalender og gjøremål', /);
   assert.match(ST, /menu65\(\)\.map\(\(\[sec, list\]\)/);
   assert.match(ST, /icBox\(k, 26, 14\)/); // 26 px flis, 14 px ikon
@@ -45,9 +46,10 @@ test('gamle lenker, push-lenker og aliaser peker til de nye sidene', () => {
   assert.equal(A['gjøremål'], 'kal'); assert.equal(A.gjoremal, 'kal'); assert.equal(A.huske, 'kal'); assert.equal(A.kalendere, 'kal');
   assert.equal(A['glimt-husker'], 'glimt'); assert.equal(A.minne, 'glimt'); // pushen «Glimt har 3 forslag til minnet»
   assert.equal(A.sikkerhetskopi, 'backup');
-  assert.equal(A.widgets, undefined, '«widgets» er App → Widgets (underside), ikke en side');
-  // Undersider som byttet side: Startside → Faner/Avstand = App, Nyhetsbar/Widgets/Snarveier = Utseende, HA-helse = Brukere og familie.
-  assert.deepEqual(N.SUB65, { tabs: 'app', head: 'app', speed: 'look', dash: 'look', mob: 'look', sc: 'look', hahealth: 'users' });
+  assert.equal(A.widgets, undefined, '«widgets» er Enheter og widgets → Widgets (underside), ikke en side');
+  // Fase 6: Faner/Avstand står under Utseende sammen med Nyhetslinje/Kort på Oversikt/Snarveier; HA-helse = Husstand.
+  assert.deepEqual(N.SUB65, { tabs: 'look', head: 'look', speed: 'look', dash: 'look', mob: 'look', sc: 'look', hahealth: 'users' });
+  assert.equal(A.enheter, 'app'); assert.equal(A.tilkoblinger, 'int');
   assert.match(ST, /Object\.assign\(ALIAS, ALIAS65\);/);
   assert.match(ST, /for \(const k of Object\.keys\(ALIAS51\)\) ALIAS\[k\] = 'konto';/);
   assert.match(ST, /Object\.assign\(SUB_TAB, SUB65\);/);
@@ -109,8 +111,8 @@ test('samlede sider: én side av flere visninger med hver sin monterte modul og 
 test('hver innstilling ett sted: de gamle plassene viser bare status + lenke', () => {
   // Konto ← Sikkerhet, Utseende/App ← Startside, Brukere og familie ← Familie + Brief og Glimt-figur, Kalender og gjøremål ← Gjøremål + HA to-do.
   assert.match(ST, /join65\(v, \[\{ v: sikkerhetView51\(H\), moved: 'Sikkerhet' \}\]\)/);
-  assert.match(ST, /movedGroup65\(forside, 'Startside'\), movedGroup65\(nyhet, 'Startside'\)/);
-  assert.match(ST, /movedGroup65\(topp, 'Startside'\)/);
+  assert.match(ST, /movedGroup65\(forside, 'Startside'\), movedGroup65\(topp, 'App'\), movedGroup65\(nyhet, 'Startside'\)/);
+  assert.match(ST, /movedGroup65\(topp, 'App'\)/);
   assert.match(ST, /\{ v: fam, moved: 'Familie' \}/);
   assert.match(ST, /act: 'data-p65-people'/);
   assert.match(ST, /join65\(k, \[\{ v: todo, moved: 'Gjøremål' \}\]\)/);
@@ -138,9 +140,10 @@ test('søket: indeksen og stiene peker til de nye sidene', () => {
   assert.doesNotMatch(local, /'top\//, 'ingen ruter til Startside');
   assert.doesNotMatch(local, /, 'huske',/, 'ingen ruter til Gjøremål');
   assert.doesNotMatch(local, /'Startside →/);
-  assert.match(local, /'look\/dash'/); assert.match(local, /'app\/tabs'/); assert.match(local, /'system\/upd'/);
-  assert.match(local, /'Kalender og gjøremål → Gjøremål', 'kal'/);
-  assert.match(local, /'AI → Tjenester → Gemini'/);
+  assert.match(local, /'look\/dash'/); assert.match(local, /'look\/tabs'/); assert.match(local, /'system\/upd'/);
+  assert.match(local, /'Tilkoblinger → Kalender og gjøremål → Gjøremål', 'kal'/);
+  assert.match(local, /'Glimt og AI → AI → Tjenester → Gemini'/);
+  assert.doesNotMatch(local, /'System → Mer → Kvalitet'|'Konto → Innlogging → 2FA'|'App → Topplinje/, 'O10: ingen stier som ikke finnes');
   assert.match(SS, /\.map\(\(x\) => \(\{ \.\.\.x, path: path65\(x\.path\) \}\)\)/);
   assert.match(SS, /\[\/\^Startside\/, 'Utseende'\]/);
   assert.match(SS, /'ai-key-gemini': \{[^}]*acTab: 'svc:gemini' \}/);

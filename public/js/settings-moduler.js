@@ -29,10 +29,10 @@ Object.assign(TAB_IC, { media: ['#2a8fbf', P45.media], ruter: ['#c0392b', P45.ru
 /** Fanene (settes inn i TABS i settings.js): [id, navn, undertekst, seksjon, ikon]. */
 export const TABS45 = [
   ['media', 'Media', 'Varsler, kalender, avspilling og tjenestene (Sonarr, Radarr, qBittorrent, Prowlarr, Plex, Jellyfin).', 'Moduler', P45.media],
-  ['ruter', 'Ruter', 'Anbefalte reiser og avganger.', 'Moduler', P45.ruter],
+  ['ruter', 'Reise', 'Strekninger, anbefalte reiser og avganger.', 'Moduler', P45.ruter], // Fase 6 (Q8): modulen heter Reise (id reise er et alias)
   ['vaer', 'Vær', 'Steder, Min posisjon og værkortet på Hjem.', 'Moduler', P45.vaer],
   ['studie', 'Studie', 'Timeplan, Canvas og dokumenter (vitnemål, karakterutskrifter).', 'Moduler', P45.studie],
-  ['finans', 'Finans', 'FinansHub: kategorier og regler, bank og import, aksjer.', 'Moduler', P45.finans],
+  ['finans', 'Økonomi', 'Kategorier og regler, bank og import, aksjer.', 'Moduler', P45.finans], // Q2: modulen heter Økonomi (id okonomi er et alias)
 ];
 export const ALIAS45 = { weather: 'vaer', 'vær': 'vaer', study: 'studie', okonomi: 'finans', finance: 'finans',  sonarr: 'media', radarr: 'media', plex: 'media', jellyfin: 'media', qbittorrent: 'media', prowlarr: 'media', reise: 'ruter', avganger: 'ruter', kollektiv: 'ruter' };
 

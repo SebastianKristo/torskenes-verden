@@ -200,7 +200,7 @@ export const SCHEMA = [
     ['web_ddg', 'DuckDuckGo som reserve (uten nøkkel)', '1', false, 'bool'],
   ]],
   // Prompt 27: personlige valg for Chat og for logo-oppslag (Innstillinger → AI og tolkning → CHAT / PERSONVERN OG LOGOER).
-  ['Chat', { id: 'chat', scope: 'personal', domain: 'openwebui.com', help: 'Dine valg for Chat. «Mine data» gir modellen et kort sammendrag fra Finans, Kalender og Huskeliste.' }, [
+  ['Chat', { id: 'chat', scope: 'personal', domain: 'openwebui.com', help: 'Dine valg for Chat. «Mine data» gir modellen et kort sammendrag fra Økonomi, Kalender og Gjøremål.' }, [
     ['chat_my_data', 'Chat kan lese mine data', '1', false, 'bool'], // prompt 41: på som standard (av med vilje beholdes)
     ['chat_ask_cloud', 'Spør før sky-modeller får data', '1', false, 'bool'],
     ['chat_default_model', 'Standardmodell', ''],

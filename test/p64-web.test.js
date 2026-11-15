@@ -99,7 +99,7 @@ test('plassering: egen fane Innstillinger → Kvalitet (selvstendig modul) og br
   assert.match(ST, /\.\.\.TABS62, [^\n]*\n {2}\.\.\.TABS64,/);
   assert.match(ST, /Object\.assign\(ALIAS, ALIAS64\);/);
   assert.match(ST, /kvalitet: \(\) => kvalitetView64\(H\)/);
-  assert.match(SS, /\['kvalitet', 'Kvalitet', 'Glimt → Kvalitet', 'kvalitet', '[^']*ukerapport[^']*'\]/);
+  assert.match(SS, /\['kvalitet', 'Kvalitet', 'Glimt og AI → Glimt → Kvalitet', 'kvalitet', '[^']*ukerapport[^']*'\]/); // Fase 6: full sti
   assert.match(A, /<div data-mem63set><\/div><div data-q64set><\/div>/);
   assert.match(A, /import\('\.\/glimt-kvalitet\.js'\)/);
   for (const s of ['data-q64-user="weekly"', 'data-q64-server="${k}"', "seg('runs'", "seg('maxMinutes'", "seg('interactiveWaitSec'", "seg('keepDays'", 'data-q64-go']) assert.ok(Q.includes(s), s);

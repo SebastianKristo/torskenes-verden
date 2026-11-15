@@ -23,23 +23,21 @@ const steps = (l) => `<ol class="wh-steps">${l.map((t) => `<li>${esc(t)}</li>`).
 // Prompt 33: «Slik legger du til widget» (iPhone, Samsung, Android) og «Kalender-appen» (forklaring + lenke til release).
 function widgetsView(h) {
   // Prompt 43: galleriet med alle widgets øverst (widgets.js), stegene per plattform under.
-  return { title: 'Widgets', sub: 'App · Alle widgets på iPhone, Android og Samsung', pre: widgetsGallery43(), groups: [
+  return { title: 'Widgets', sub: 'Enheter og widgets · Alle widgets på iPhone, Android og Samsung', pre: widgetsGallery43(), groups: [
     ...WIDGET_STEPS.map(([, n, l], i) => h.group(n, [steps(l)], i === WIDGET_STEPS.length - 1 ? WIDGET_NOTE : '')),
   ] };
 }
 function kalAppView(h) {
-  return { title: 'Kalender-appen', sub: 'App · Egen app for kalenderen', groups: [
+  return { title: 'Kalender-appen', sub: 'Enheter og widgets · Egen app for kalenderen', groups: [
     h.group('Om appen', [`<div class="sg-row wh-lead">${esc(KAL_APP.lead)}</div>`, steps(KAL_APP.points)]),
     h.group('Last ned', [`<a class="sg-row wh-link" href="${RELEASES}" target="_blank" rel="noopener"><span class="sg-txt"><b>Siste versjon på GitHub</b><span>Kalender-…-unsigned.ipa (iPhone) og Kalender-….apk (Android)</span></span><span class="sg-btn2">Åpne ↗</span></a>`], 'Samme konto og samme server som Homelab. Ingen data lagres bare på telefonen – appen har en kopi for visning uten nett og i widgetene.'),
   ] };
 }
 
-/** h = { group, row, note, sub } fra settings.js */
-export function appView(h) {
-  if (h.sub === 'widgets') return widgetsView(h);
-  if (h.sub === 'kalapp') return kalAppView(h);
+/** Navn og ikon på appen (Fase 6: står under Utseende). h = { group, row, note, sub } fra settings.js */
+export function appIdentityGroups(h) {
   const name = S.draft ?? appName(), can = admin();
-  return { groups: [
+  return [
     h.group('Navn på appen', [
       `<div class="sg-row ai-name"><input data-app-name value="${esc(name)}" maxlength="40" placeholder="Homelab" aria-label="Navn på appen" ${can ? '' : 'disabled'}>
         <button type="button" class="ai-save" data-app-act="save" ${can && !S.busy && name.trim() && name.trim() !== appName() ? '' : 'disabled'}>${S.busy ? 'Lagrer …' : 'Lagre'}</button></div>`,
@@ -48,9 +46,23 @@ export function appView(h) {
     h.group('App-ikon', [
       `<div class="ai-icons">${ICONS.map(([k, n]) => `<button type="button" class="ai-icon${appIcon() === k ? ' on' : ''}" data-app-icon="${k}" aria-pressed="${appIcon() === k}" ${can ? '' : 'disabled'}>${preview(k, name)}<span>${esc(n)}</span></button>`).join('')}</div>`,
     ], 'På iPhone finnes hvert ikon i standard, mørk og tonet variant, og på Android som tematisk (Material You) ikon. Velg ikonet i appens innstillinger på telefonen. Her settes ikonet for nettleseren og PWA-en.'),
-    h.group('Mobilapper', [
+  ];
+}
+
+/** Innstillinger → Enheter og widgets (Fase 6, O4): widgets på telefonen, Kalender-appen, logg inn på en annen enhet og API-tokens. */
+export function appView(h) {
+  if (h.sub === 'widgets') return widgetsView(h);
+  if (h.sub === 'kalapp') return kalAppView(h);
+  return { groups: [
+    // Fase 6 (O4): «Widgets» er telefonens widgets. Kortene på Oversikt tilpasses fra profilmenyen («Tilpass Oversikt»).
+    h.group('Widgets og apper', [
       h.row({ t: 'Widgets', k: 'widget hjem låseskjerm iphone samsung android prøveperioder kalender media avganger pakker glimt galleri', s: 'Media, Avganger, Kalender og 3 til', btn: 'Vis', go: 'app|widgets' }),
       h.row({ t: 'Kalender-appen', k: 'kalender app ipa apk last ned installer', s: 'Egen app med samme konto og data. Last ned IPA eller APK.', btn: 'Vis', go: 'app|kalapp' }),
+    ]),
+    h.group('Enheter', [
+      h.row({ t: 'Logg inn på en annen enhet', k: 'qr kode logg inn ny enhet mobil skann', s: 'Velg «Logg inn med QR-kode fra mobilen» på den nye enheten, og skann koden med en telefon som er logget inn.' }),
+      h.row({ t: 'Pålitelige enheter', k: 'enhet enheter pålitelig lokalt nett passord', s: 'Enheter som slipper passord på lokalt nett.', btn: 'Åpne', go: 'konto|devices' }),
+      `<a class="sg-row" href="/finans/#/inn"><span class="sg-txt"><b>API-tokens</b><span>For apper, skript og snarveier · Økonomi → Innstillinger → Mobil og tilgang</span></span><span class="sg-btn2">Åpne ›</span></a>`,
     ]),
   ] };
 }

@@ -9,12 +9,16 @@
 // Ingen innstilling finnes to steder: de gamle plassene viser bare en rad med status og lenke («… ›»).
 const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
+// Fase 6 (E-ia §4, Q12, O4): samme rekkefølge som innstillingene i modullisten (shared/schemas/moduler.json) og i appene:
+// Konto og sikkerhet · Utseende · Varsler · Husstand · Glimt og AI · Tilkoblinger · Moduler · Enheter og widgets · Server.
+// Sider som står alene, har ingen gruppeoverskrift (''). Modulsidene bruker web-nøklene dom/finans/ruter; modul-id-ene
+// (domener, okonomi, reise) er aliaser til dem (ALIAS i settings-view.js), så #/innstillinger/<modul-id> virker for alle moduler.
 export const MENU65 = [
-  ['Generelt', ['konto', 'look', 'varsel', 'app']],
-  ['Husstand', ['users']],
+  ['', ['konto', 'look', 'varsel', 'users']],
   ['Glimt og AI', ['glimt', 'ai']],
   ['Tilkoblinger', ['int', 'kal']],
   ['Moduler', ['dom', 'finans', 'media', 'nyheter', 'ruter', 'sporing', 'studie', 'vaer', 'skjold']], // prompt 70: Sporing mellom Ruter og Studie · prompt 77: Skjold Lab sist
+  ['', ['app']],
   ['Server', ['system', 'backup', 'logger']],
 ];
 /** Side som vises under en annen i menyen (menyen markerer forelderen, tilbakeknappen går dit). */
@@ -25,14 +29,15 @@ export const ALIAS65 = {
   familie: 'users', family: 'users', fam: 'users', helse: 'users', husstand: 'users', 'brukere-og-familie': 'users', barn: 'users',
   huske: 'kal', gjoremal: 'kal', 'gjøremål': 'kal', huskeliste: 'kal', tasks: 'kal', todo: 'kal', 'kalender-og-gjoremal': 'kal',
   sikkerhet: 'konto', security: 'konto', passkey: 'konto', passkeys: 'konto', revisjonslogg: 'konto', revisjon: 'konto', sperrer: 'konto',
-  enheter51: 'konto', nokler: 'konto', hemmeligheter: 'konto', '2fa': 'konto', totp: 'konto', innlogging: 'konto', login: 'konto',
+  enheter51: 'konto', nokler: 'konto', 'konto-og-sikkerhet': 'konto',
+  enheter: 'app', 'enheter-og-widgets': 'app', tokens: 'app', 'api-tokens': 'app', tilkoblinger: 'int', moduler: 'dom', glimtogai: 'glimt', 'glimt-og-ai': 'glimt', hemmeligheter: 'konto', '2fa': 'konto', totp: 'konto', innlogging: 'konto', login: 'konto',
   'glimt-husker': 'glimt', minne: 'glimt', personlighet: 'glimt', nettsok: 'glimt', 'glimt-og-chat': 'glimt',
   ai: 'ai', modeller: 'ai', tjenester: 'ai',
   sikkerhetskopi: 'backup', backups: 'backup', gjenoppretting: 'backup', database: 'backup',
   kalendere: 'kal', kalender: 'kal', calendars: 'kal',
 };
 /** Undersider som har byttet side (fanen bestemmes av undersiden, så «top/tabs» åpner App → Faner). */
-export const SUB65 = { tabs: 'app', head: 'app', speed: 'look', dash: 'look', mob: 'look', sc: 'look', hahealth: 'users' };
+export const SUB65 = { tabs: 'look', head: 'look', speed: 'look', dash: 'look', mob: 'look', sc: 'look', hahealth: 'users' }; // Fase 6: Faner og Avstand under Utseende
 
 /** System-fanene: [nøkkel, navn, 15 px strek-ikon]. Gamle nøkler (helse, oppdatering …) mappes i SYS_ALIAS65. */
 export const SYS_TABS65 = [

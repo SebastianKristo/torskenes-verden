@@ -233,7 +233,7 @@ test('POST /api/settings/ask: lokal modell først, så Gemini (logges i ai_audit
   r = await A('/api/settings/ask', 'POST', { q: 'hvor endrer jeg passordet' });
   assert.equal(r.body.mode, 'text');
   assert.equal(r.body.targetId, 'konto.passord');
-  assert.match(r.body.answer, /Konto → Innlogging/);
+  assert.match(r.body.answer, /Konto og sikkerhet → Passord/);
   // Kari får ikke admin-sider som svar.
   r = await K('/api/settings/ask', 'POST', { q: 'oppdatering ny versjon' });
   assert.notEqual(r.body.targetId, 'system.oppdatering');

@@ -135,19 +135,19 @@ test('stil: Innstillinger-CSS er lenket i app.html, farger for Papir, Papir mør
   assert.match(css, /@media \(max-width:600px\)/);
 });
 
-test('søket: gamle titler fra serverens indeks skrives om (Startside → Forside og nyhetsbar), også i AI-svaret', () => {
+test('søket: gamle titler fra serverens indeks skrives om (Startside → Forside og nyhetslinje), også i AI-svaret', () => {
   const SS = rd('public/js/settings-search.js');
   assert.match(SS, /\.map\(\(x\) => \(\{ \.\.\.x, title: title66\(x\) \}\)\)/);
   assert.match(SS, /answer: answer66\(r\.answer\)/);
   // Funksjonene uten resten av modulen (den trenger nettleseren).
   const code = SS.slice(SS.indexOf('const PATH65'), SS.indexOf('/** Sidenøkkel for ikonet')).replace(/export /g, '');
   const T = new Function(`${code}; return { title66, answer66, path65 };`)();
-  assert.equal(T.title66({ id: 'startside', title: 'Startside' }), 'Forside og nyhetsbar');
+  assert.equal(T.title66({ id: 'startside', title: 'Startside' }), 'Forside og nyhetslinje');
   assert.equal(T.title66({ id: 'kalendere', title: 'Kalendere' }), 'Kalender og gjøremål');
-  assert.equal(T.title66({ id: 'brukere', title: 'Brukere' }), 'Brukere og familie');
+  assert.equal(T.title66({ id: 'brukere', title: 'Brukere' }), 'Husstand');
   assert.equal(T.title66({ id: 'gjoremal', title: 'Gjøremål' }), 'Gjøremål og lister');
   assert.equal(T.title66({ id: 'ai.motor', title: 'AI-motor' }), 'Modell per oppgave');
-  assert.equal(T.title66({ id: 'x', title: 'Startside' }), 'Forside og nyhetsbar');
+  assert.equal(T.title66({ id: 'x', title: 'Startside' }), 'Forside og nyhetslinje');
   assert.equal(T.title66({ id: 'utseende.bakgrunn', title: 'Bakgrunn på forsiden' }), 'Bakgrunn på forsiden', 'nye titler røres ikke');
   assert.equal(T.answer66('Det finner du under Startside → Forside. Snarveier.'), 'Det finner du under Utseende → Forside. Snarveier.');
   assert.equal(T.answer66('Gjøremål og lister er fine.'), 'Gjøremål og lister er fine.', 'bare stier etter «under»');

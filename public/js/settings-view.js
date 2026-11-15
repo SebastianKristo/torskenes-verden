@@ -16,7 +16,7 @@ import { loginView, loadLogin, loginClick, loginSubmit, loginChange, loginData, 
 import { domainsPane, loadDomains, domainsClick, domainsChange, domainsSubmit, domainCount, domainsEsc } from './settings-domains.js';
 import { loadNotify, notifyView, notifyClick, notifyChange, notifyInput } from './settings-notify.js';
 import { loadFam42, fam42View, fam42Click, fam42Change } from './settings-helse.js'; // prompt 42: Familie → Helse (Familie)
-import { loadApp, appView, appClick, appInput, appKey } from './settings-app.js';
+import { loadApp, appView, appIdentityGroups, appClick, appInput, appKey } from './settings-app.js';
 import { loadInteg, integRows, integSub, integClick, integChange, integCount } from './settings-integ.js';
 import { mediaRows43, mediaNote43, isMedia43, cfgStatus43, cfgGuide43, mediaSub43, mediaClick43, mediaSubmit43 } from './settings-integ-media.js'; // prompt 43: MEDIA-gruppen
 import { myProfile, profilesLoaded, hasProfiles, loadProfiles } from './onboarding.js'; // prompt 37: profil i husstanden
@@ -98,11 +98,11 @@ const box = (t, inner, n = '') => `<section class="sg">${t ? `<h3 class="sg-t">$
 // Sikkerhet er ikke egne sider lenger (innholdet står på Utseende/App, Brukere og familie, Kalender og gjøremål og Konto, se ALIAS65).
 // Rekkefølgen og gruppene i sidemenyen står i MENU65 (settings-meny.js); Faste oppgaver og Kvalitet er undersider av Glimt (PARENT65).
 const TABS = [
-  ['konto', 'Konto', 'Profil, passord, 2FA, økter, enheter og passkeys.', 'Generelt', P.user],
-  ['look', 'Utseende', 'Tema, bakgrunn, widgets og rekkefølge på forsiden, nyhetsbar og søkebar.', 'Generelt', P.look],
+  ['konto', 'Konto og sikkerhet', 'Profil, passord, totrinnsbekreftelse (2FA), økter, enheter og passkeys.', 'Generelt', P.user],
+  ['look', 'Utseende', 'Tema, lys og mørk, bakgrunn, kort på Oversikt, fanelinjen, nyhetslinje og søkebar.', 'Generelt', P.look],
   ['dom', 'Domener', 'Domener, statistikkilder og verdenskart.', 'Moduler', P.map],
   ['varsel', 'Varsler', 'Push, e-post, ntfy, stille timer og grupper.', 'Generelt', P.bell],
-  ['app', 'App', 'Faner, navn på appen, app-ikon, widgets og Kalender-appen.', 'Generelt', P.app],
+  ['app', 'Enheter og widgets', 'Widgets på telefonen, API-tokens, logg inn på en annen enhet · faner, appnavn og app-ikon.', 'Generelt', P.app],
   ['glimt', 'Glimt', 'Figur, brief, stemme og venner · personlighet, nettsøk og Glimt husker.', 'Glimt og AI', P.star],
   ...TABS62, // prompt 62: Faste oppgaver (planlagte oppgaver fra Glimt)
   ...TABS64, // prompt 64: Kvalitet (ukerapport og nattlig eval)
@@ -113,7 +113,7 @@ const TABS = [
   ...TABS77, // prompt 77: Skjold Lab (Finn bilder på nett, Foreslå automatisk)
   ...TABS46, // prompt 46: Nyheter (flyttet fra nyhetsleseren)
   ['ai', 'AI', 'Modeller, jobber, forbruk og nøkler.', 'Glimt og AI', P.ai],
-  ['users', 'Brukere og familie', 'Roller, tilgang og invitasjoner · barn og helse · brief og Glimt-figur per bruker.', 'Husstand', P.users],
+  ['users', 'Husstand', 'Brukere, roller, tilgang og invitasjoner · barn og helse · brief og Glimt-figur per bruker.', 'Husstand', P.users],
   ['system', 'System', 'Helse, oppdateringer, ytelse og selvreparasjon.', 'Server', P.sys, true],
   ['backup', 'Backup', 'Kopier, gjenoppretting og database.', 'Server', P.backup, true],
   TABS44[1], // prompt 44: Logger
@@ -129,7 +129,7 @@ function menu65() {
 // Gamle navn på faner (lenker og knapper fra før omleggingen) peker til nye.
 // Prompt 63: «glimt-husker» / «minne» er lenken fra pushen «Glimt har 3 forslag til minnet» (glimt-minne.js blar ned til forslagene).
 // Prompt 65: Glimt husker står nå på Glimt-siden (AI-sidens Glimt-del bygd inn med only='glimt'), så lenken går dit.
-const ALIAS = { varsler: 'varsel', notify: 'varsel', ikon: 'app', appnavn: 'app', login: 'konto', layout: 'top', innlogging: 'konto', look: 'look', utseende: 'look', tema: 'look', startside: 'top', domener: 'dom', integrasjoner: 'int', brukere: 'users', kalender: 'kal', kalendere: 'kal', calendars: 'kal', chat: 'ai', personvern: 'ai', logo: 'ai', sys: 'system', oppdatering: 'system', update: 'system', sikkerhetskopi: 'backup', backups: 'backup', brief: 'glimt', stemme: 'glimt', figur: 'glimt', tts: 'glimt', opplesning: 'glimt', helse: 'familie', family: 'familie', fam: 'familie', logg: 'logger', logs: 'logger', docker: 'logger', gjoremal: 'huske', huskeliste: 'huske', tasks: 'huske', 'glimt-husker': 'glimt', minne: 'glimt', ...ALIAS45, ...ALIAS70, ...ALIAS77, ...ALIAS46, ...ALIAS51, ...ALIAS62 };
+const ALIAS = { varsler: 'varsel', notify: 'varsel', ikon: 'look', appnavn: 'look', login: 'konto', layout: 'top', innlogging: 'konto', look: 'look', utseende: 'look', tema: 'look', startside: 'top', domener: 'dom', integrasjoner: 'int', brukere: 'users', kalender: 'kal', kalendere: 'kal', calendars: 'kal', chat: 'ai', personvern: 'ai', logo: 'ai', sys: 'system', oppdatering: 'system', update: 'system', sikkerhetskopi: 'backup', backups: 'backup', brief: 'glimt', stemme: 'glimt', figur: 'glimt', tts: 'glimt', opplesning: 'glimt', helse: 'familie', family: 'familie', fam: 'familie', logg: 'logger', logs: 'logger', docker: 'logger', gjoremal: 'huske', huskeliste: 'huske', tasks: 'huske', 'glimt-husker': 'glimt', minne: 'glimt', ...ALIAS45, ...ALIAS70, ...ALIAS77, ...ALIAS46, ...ALIAS51, ...ALIAS62 };
 Object.assign(ALIAS, ALIAS64); // prompt 64: kvalitet, eval, ukerapport → Kvalitet
 // Prompt 65: Startside → Utseende, Familie → Brukere og familie, Gjøremål → Kalender og gjøremål, Sikkerhet/Innlogging → Konto,
 // Glimt husker (lenken fra pushen) → Glimt. Gjelder også ALIAS51 (passkey, sperrer …) som pekte på den gamle Sikkerhet-siden.
@@ -210,7 +210,7 @@ function usersView() {
     ...d.users.map((u) => row({ t: u.name || u.username, img: u.id === meId ? store.me.me?.avatarUrl ?? u.avatarUrl : u.avatarUrl, ini: initials(u.name || u.username), ic: u.id === meId ? '#3b6fd6' : '#2a3346',
       s: `@${u.username} · ${roleName(u.role)}${u.isMainAdmin || u.id === 'owner' ? ' · hovedadmin' : ''}${u.totp ? ' · 2FA på' : ''}`, k: 'bruker 2FA rolle', btn: 'Administrer', go: `users|user:${u.id}` })),
     admin ? row({ t: 'Ny bruker', s: 'Brukernavn, passord og rolle.', btn: 'Legg til', go: 'users|add' }) : null,
-  ], admin ? 'Admin kan legge til og fjerne brukere. Bruker ser dashbordet og styrer egen totrinnsbekreftelse.' : 'Brukere legges til av administrator. Du styrer egen totrinnsbekreftelse.'), ...usersGroups44(H, d.users, () => { if (!modal().hidden && tab === 'users' && !sub) render(); })] }; // prompt 44: eier og logg inn som
+  ], admin ? 'Admin kan legge til og fjerne brukere. Bruker ser Oversikt og styrer egen totrinnsbekreftelse.' : 'Brukere legges til av administrator. Du styrer egen totrinnsbekreftelse.'), ...usersGroups44(H, d.users, () => { if (!modal().hidden && tab === 'users' && !sub) render(); })] }; // prompt 44: eier og logg inn som
 }
 
 /* ---------- Utseende ---------- */
@@ -277,7 +277,7 @@ function lookView() {
   if (!sub) return { groups: [
     { ...group('Tema', [{ html: themeCards(), q: `tema ${THEMES.map((t) => t[1]).join(' ')} papir vindu` }], 'Byttet skjer med en gang og lagres på brukeren din. Alt virker likt i begge temaene.'), cls: 'sg-theme' },
     modeGroup44(H), // prompt 44: LYS OG MØRK
-    group('Bakgrunn', [row({ t: 'Bakgrunnsbilde', s: hlTheme() === '2c' ? 'Vises i fotovinduet øverst på Dashboard.' : 'Vises bare på Dashboard. De andre sidene har en rolig, mørk bakgrunn.', v: BGN[bgState().type] ?? 'Oslo', k: 'vær planeter jorda månen jupiter mars saturn oslo uskarphet mørklegging', go: 'look|bg' })]),
+    group('Bakgrunn', [row({ t: 'Bakgrunnsbilde', s: hlTheme() === '2c' ? 'Vises i fotovinduet øverst på Oversikt.' : 'Vises bare på Dashboard. De andre sidene har en rolig, mørk bakgrunn.', v: BGN[bgState().type] ?? 'Oslo', k: 'vær planeter jorda månen jupiter mars saturn oslo uskarphet mørklegging', go: 'look|bg' })]),
     group('Søkebar', [
       row({ t: 'Vis søkebar', s: 'Kan dras mellom avgangene og klokka.', tog: !s.hideSearch, act: 'data-toggle="search"' }),
       row({ t: 'Stil', v: SRN[s.searchStyle] ?? 'Lys', go: 'look|style' }),
@@ -346,7 +346,7 @@ function topView() {
         row({ t: 'Nullstill plassering', btn: 'Nullstill', act: 'data-hp-reset2' }),
       ]),
       group('Nyhetsbar', [
-        row({ t: 'Vis nyhetsbar', s: 'NRK og VG. Vises bare på Dashboard.', tog: !s.hideNews, act: 'data-toggle="news"' }),
+        row({ t: 'Vis nyhetslinje', s: 'NRK og VG. Vises bare på Oversikt.', tog: !s.hideNews, act: 'data-toggle="news"' }),
         row({ t: 'Hastighet', k: 'fart nyheter', v: `${u.newsSpeed ?? 5} · ${speedTxt(u.newsSpeed ?? 5)}`, go: 'top|speed' }),
         row({ t: 'Pause når musepekeren er over', tog: u.newsPause !== false, act: 'data-toggle="ui:newsPause"' }),
       ]),
@@ -431,8 +431,8 @@ const NOTES = {
   'Ruter (Entur)': 'Én strekning per linje: Fra (NSR-ID) &gt; Til (NSR-ID). Finn stopp-ID på stoppested.entur.org.',
   Cloudflare: 'Tokenet trenger Zone, DNS, Analytics, Registrar og Firewall Services: Read. Domener legges til under Domener → Administrer domener.',
   'Kalender / timeplan': 'iCal-adressen finner du i Canvas (Kalender → Kalenderfeed) eller Outlook (Publiser kalender).',
-  Plex: 'Plex må være tilgjengelig fra serveren som kjører dashbordet.',
-  Jellyfin: 'Jellyfin må være tilgjengelig fra serveren som kjører dashbordet.',
+  Plex: 'Plex må være tilgjengelig fra serveren som kjører Homelab.',
+  Jellyfin: 'Jellyfin må være tilgjengelig fra serveren som kjører Homelab.',
 };
 // Veiledning når serveren ikke sender egen (g.help): [tittel, tekst, kode?]
 const GUIDE = {
@@ -611,30 +611,28 @@ const H = { group, row, note };
 const glimtView = () => ({ html: glimtSettingsHtml({ figs: true }), search: [group('Glimt', [
   row({ t: 'Glimt-figur', s: 'Velg vert: Glimt, Halo, Boble, Antenne, Bane, Pastell, Natt, Sky, Dråpe, Ugle, Stjerne, Spire, Gris eller Blekksprut', go: 'glimt', btn: 'Åpne', k: 'glimt figur karakter maskot gris ugle sky blekksprut' }),
   row({ t: 'Glimt-brief', s: 'Morgen-, dags-, kvelds- og nattbrief med klokkeslett', go: 'glimt', btn: 'Åpne', k: 'brief morgenbrief kveldsbrief varsel guide venner' }),
-  row({ t: 'Innhold i briefen', s: 'Velg hvilke kort Now Brief viser og rekkefølgen (vær, kalender, regninger, reise …)', go: 'glimt', btn: 'Åpne', k: 'innhold i briefen kort now brief rekkefølge skjul vis regninger reise homelab domener pakker' }), // prompt 73
+  row({ t: 'Innhold i briefen', s: 'Velg hvilke kort Brief viser og rekkefølgen (vær, kalender, regninger, reise …)', go: 'glimt', btn: 'Åpne', k: 'innhold i briefen kort now brief rekkefølge skjul vis regninger reise homelab domener pakker' }), // prompt 73
   row({ t: 'Stemme og opplesning', s: 'Les opp, stemmemotor (OpenAI, ElevenLabs, Azure, VoxCPM2 lokalt), stemme, språk og tempo', go: 'glimt', btn: 'Åpne', k: 'stemme opplesning les opp tts tale engelsk tempo openai elevenlabs azure voxcpm' }),
   row({ t: 'Stemmer', s: 'Lag stemme fra beskrivelse, klon en stemme, egen stemme for nyhetsleseren (VoxCPM2 på Mac mini-en)', go: 'glimt', btn: 'Åpne', k: 'stemmer klone klon stemmekloning voxcpm nyhetsleser nyhetsoppleser egen stemme beskrivelse' }), // prompt 57
 ])] });
 /* ---------- Prompt 65: samlede sider (claude-code-innstillinger-samlet.md) ---------- */
 // Én side bygd av flere visninger; flyttet innhold får «FLYTTET FRA …». Undersidene tegnes som før.
 const join65 = (base, parts) => { const c = combine65([{ v: base }, ...parts], groupHtml); return { title: base.title, sub: base.sub, ...c }; };
-const TOP_APP65 = new Set(['tabs', 'head']), TOP_LOOK65 = new Set(['speed', 'dash', 'mob', 'sc']);
+// Fase 6: Topplinje (faner og avstand), navnet og ikonet på appen står under Utseende; Enheter og widgets har telefonens widgets.
+const TOP_LOOK65 = new Set(['tabs', 'head', 'speed', 'dash', 'mob', 'sc']);
 /** Startside sin rotliste: [Topplinje, Nyhetsbar, Forside] (sub må være null). */
 const topGroups65 = () => { const s0 = sub; sub = null; const g = topView().groups; sub = s0; return g; };
 function lookView65() {
   if (sub && TOP_LOOK65.has(sub)) return topView();
   if (sub) return lookView();
-  const lv = lookView(), [, nyhet, forside] = topGroups65();
+  const lv = lookView(), [topp, nyhet, forside] = topGroups65();
   if (!lv.groups) return lv;
   const i = lv.groups.findIndex((g) => g?.t === 'Bakgrunn') + 1 || lv.groups.length;
-  return { ...lv, groups: [...lv.groups.slice(0, i), movedGroup65(forside, 'Startside'), movedGroup65(nyhet, 'Startside'), ...lv.groups.slice(i)] };
+  return { ...lv, groups: [...lv.groups.slice(0, i), movedGroup65(forside, 'Startside'), movedGroup65(topp, 'App'), movedGroup65(nyhet, 'Startside'), ...lv.groups.slice(i), ...appIdentityGroups({ ...H, sub }).map((g) => movedGroup65(g, 'App'))] };
 }
 function appView65() {
-  if (sub && TOP_APP65.has(sub)) return topView();
-  const v = appView({ ...H, sub });
-  if (sub || !v.groups) return v;
-  const [topp] = topGroups65();
-  return { ...v, groups: [movedGroup65(topp, 'Startside'), ...v.groups] };
+  if (sub && TOP_LOOK65.has(sub)) return topView();
+  return appView({ ...H, sub });
 }
 function kontoView65() {
   const v = kontoView();
@@ -727,7 +725,7 @@ function sideHtml() {
         <span class="set-me-t"><b>${esc(name)}</b><span>${esc(roleName(me.role))} · Se konto ›</span></span></button>
       <div class="set-q${q ? ' has' : ''}${SQ.ai ? ' ai' : ''}" data-sf><span class="sf-ic">${svg(P.search, 18)}</span>${clearBtn()}<input name="setq" value="${esc(q)}" placeholder="${SQ.ai ? 'Spør, f.eks. «hvor bytter jeg bakgrunn?»' : 'Søk i innstillinger'}" autocomplete="off" spellcheck="false" aria-label="Søk i innstillinger" enterkeyhint="search" data-setq><button type="button" class="set-aibtn" data-set-ai aria-pressed="${SQ.ai}" aria-label="AI-søk" title="Spør med egne ord (⌘K / Ctrl+K)"><span class="sai-s" aria-hidden="true">✦</span><span>AI</span></button></div>
       ${qq ? `<div class="set-res">${sideResults(q, (k) => tabOf(ALIAS[k] ?? k)[1])}</div>` : ''}
-      <nav class="set-nav set-nav65${qq ? ' has-q' : ''}">${menu65().map(([sec, list]) => `<div class="set-sec"><div class="set-sec-t">${esc(sec)}</div>${list.map(([k, n]) => {
+      <nav class="set-nav set-nav65${qq ? ' has-q' : ''}">${menu65().map(([sec, list]) => `<div class="set-sec">${sec ? `<div class="set-sec-t">${esc(sec)}</div>` : ''}${list.map(([k, n]) => {
         const on = here === k && !qq, badge = k === 'int' && warn ? `<span class="set-badge" title="${warn} mangler oppsett">${warn}</span>` : '';
         return `<button type="button" class="set-tab" data-tab="${k}" aria-current="${on ? 'page' : 'false'}" title="${esc(n)}">${icBox(k, 26, 14)}<span>${esc(n)}</span>${badge}</button>`;
       }).join('')}</div>`).join('')}</nav>
@@ -903,7 +901,7 @@ function enter() {
   if (tab === 'konto' || tab === 'users' || q) loadLogin(reload);
   if (tab === 'dom' || q) loadDomains(reload);
   if (tab === 'varsel' || q) loadNotify(reload);
-  if (tab === 'app' || q) loadApp(reload);
+  if (tab === 'app' || tab === 'look' || q) loadApp(reload);
   if (tab === 'users' || q) loadFam42(reload); // prompt 65: Familie → Brukere og familie
   if (tab === 'ai' || q) loadAi(reload, tab === 'ai');
   if (tab === 'system' || q) loadSystem(reload);

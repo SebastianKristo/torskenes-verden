@@ -1,20 +1,24 @@
 // Innstillinger → Varsler (prompt 17): alt om varsler samlet. Hovedbryter, stille timer, tillatelse på enheten,
-// «Test varsel», varsellyd (fem innebygde, egen lyd eller stille) og volum, og gruppene Pakker, Finans og hjem,
-// Familie, Reise og vær og Haptikk. Lagres per bruker på serveren (/api/me/notify); pakkevarslene er de samme
+// «Test varsel», Levering (haptikk, fem innebygde lyder, egen lyd eller stille, og volum) og én gruppe per modul (Sporing, Økonomi,
+// Familie, Reise, Kalender, Media). Lagres per bruker på serveren (/api/me/notify); pakkevarslene er de samme
 // som Sporing brukte (/api/tracking/prefs).
 import { api, esc } from './util.js';
 import { pushSupported, pushState, enablePush, disablePush } from './webpush.js';
 import { updNotifyRow } from './settings-system.js'; // prompt 39
 import { ntfyGroup51 } from './drift.js'; // prompt 51 (OBS51): ntfy-emner per enhet
+import { modul } from './moduler.js'; // Fase 6: gruppene heter som modulene
 // Prompt 31: «AI-svar i bakgrunnen» (ai_bg_notify i /api/me/notify, på som standard, følger hovedbryteren) og
 // «Varsler på denne enheten» (Web Push: tillatelse + abonnement, se webpush.js).
 
 export const SOUNDS = [['klokke', 'Klokke'], ['pling', 'Pling'], ['papir', 'Papir'], ['dobbel', 'Dobbel'], ['dyp', 'Dyp'], ['egen', 'Egen lyd'], ['stille', 'Stille']];
-const GROUPS = [['pakker', 'Pakker', 'Ny pakke, klar for henting, ute for levering og levert'], ['finans', 'Finans og hjem', 'Kvitteringer til gjennomgang, faste trekk og boliger'],
-  ['familie', 'Familie', 'Når noen kommer til eller forlater en sone'], ['reise', 'Reise og vær', 'Avvik på avganger og farevarsler'], ['birthdays', 'Bursdager', 'Påminnelse kl. 09:00 før bursdager'], ['haptikk', 'Haptikk', 'Vibrasjon sammen med varslene (mobil)']];
+// Fase 6 (O9): én gruppe per modul (navnet fra modullisten), og haptikk og lyd under «Levering» (det er måten varselet kommer på,
+// ikke en gruppe). [nøkkel på serveren (/api/me/notify groups), modul-id, undertekst]. Mangler modulen for brukeren, vises ikke raden.
+const GROUPS = [['pakker', 'sporing', 'Ny pakke, klar for henting, ute for levering og levert'], ['finans', 'okonomi', 'Kvitteringer til gjennomgang, faste trekk og boliger'],
+  ['familie', 'familie', 'Når noen kommer til eller forlater en sone'], ['reise', 'reise', 'Avvik på avganger og farevarsler fra Vær'], ['birthdays', 'kalender', 'Bursdager: påminnelse kl. 09:00'],
+  ['media', 'media', 'Nye episoder og filmer, ferdige nedlastinger']];
 const PKG = [['found', 'Ny pakke funnet', 'Fra Finn eller e-post'], ['pickup', 'Klar for henting', 'Med hentested og frist'], ['out', 'Ute for levering', 'Når budet er på vei'],
   ['delayed', 'Forsinket', 'Når ETA passeres eller transportøren melder avvik'], ['delivered', 'Levert', '']];
-const DEF = { on: true, ai_bg_notify: true, quietFrom: '22:00', quietTo: '07:00', quietOn: true, sound: 'pling', volume: 70, groups: { pakker: true, finans: true, familie: true, reise: true, birthdays: true, haptikk: true }, customSound: null };
+const DEF = { on: true, ai_bg_notify: true, quietFrom: '22:00', quietTo: '07:00', quietOn: true, sound: 'pling', volume: 70, groups: { pakker: true, finans: true, familie: true, reise: true, birthdays: true, media: true, haptikk: true }, customSound: null };
 
 const S = { n: null, pkg: null, err: null, msg: '', busy: false, push: null, pushBusy: false, live: null };
 // Prompt 89 (SRV89): Live Activities (iPhone) / Live Updates (Android) – bryter per aktivitet (/api/live/innstillinger, per bruker).
@@ -111,13 +115,14 @@ export function notifyView(h) {
         : h.row({ t: 'Tillatelse på denne enheten', s: 'Nettleseren må tillate varsler fra Homelab', v: pt, vc: pc, btn: 'Notification' in window && Notification.permission === 'granted' ? false : 'Spør', act: 'data-nf-act="perm"' }),
       h.row({ t: 'Test varsel', s: 'Spiller lyden, vibrerer og viser et varsel', btn: 'Test', act: 'data-nf-act="test"' }),
     ], S.err ? esc(S.err) : S.msg ? esc(S.msg) : ''),
-    h.group('Varsellyd', [
+    h.group('Levering', [
+      h.row({ t: 'Haptikk', k: 'haptikk vibrasjon vibrer', s: 'Vibrer når et varsel kommer', tog: n.groups.haptikk !== false, act: 'data-nf-grp="haptikk"' }),
       `<div class="nf-sounds">${SOUNDS.map(([k, nm]) => `<button type="button" class="nf-sound${n.sound === k ? ' on' : ''}" data-nf-sound="${k}" aria-pressed="${n.sound === k}">${k === 'stille' ? '🔕' : k === 'egen' ? '♪' : '♫'} ${esc(nm)}</button>`).join('')}</div>`,
       `<label class="sg-row nf-vol"><span class="sg-txt"><b>Volum</b><span>${sound}</span></span><input type="range" min="0" max="100" step="5" value="${n.volume}" data-nf-vol aria-label="Volum"><span class="sg-v" data-nf-volv>${n.volume} %</span></label>`,
       `<label class="sg-row" style="cursor:pointer"><span class="sg-txt"><b>Egen lyd</b><span>${n.customSound ? `Lastet opp: ${esc(n.customSound.name ?? 'egen lyd')}` : 'MP3, WAV eller M4A under 1 MB'}</span></span><span class="sg-btn2">${n.customSound ? 'Bytt' : 'Last opp'}</span><input type="file" accept="audio/mpeg,audio/wav,audio/x-wav,audio/mp4,audio/x-m4a,.mp3,.wav,.m4a" data-nf-upload hidden></label>`,
       n.customSound ? h.row({ t: 'Fjern egen lyd', tc: '#f59a8f', btn: 'Fjern', act: 'data-nf-act="unsound"' }) : '',
     ]),
-    h.group('Grupper', GROUPS.map(([k, t, s]) => h.row({ t, s, tog: n.groups[k] !== false, act: `data-nf-grp="${k}"` })), 'Slår du av en gruppe, kommer ingen varsler fra den på noen av enhetene dine.'),
+    h.group('Moduler', GROUPS.filter(([, id]) => modul(id)).map(([k, id, s]) => h.row({ t: modul(id).navn, s, tog: n.groups[k] !== false, act: `data-nf-grp="${k}"` })), 'Slår du av en modul, kommer ingen varsler fra den på noen av enhetene dine.'),
   ];
   if (S.pkg && n.groups.pakker !== false) {
     groups.push(h.group('Pakker', PKG.map(([k, t, s]) => h.row({ t, s, tog: !!S.pkg[k], act: `data-nf-pkg="${k}"` })), 'Kilder (e-post, Finn og automatisk arkivering) velges på Sporing-siden.'));

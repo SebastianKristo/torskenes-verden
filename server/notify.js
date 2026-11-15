@@ -21,7 +21,7 @@ await mkdir(SOUNDS_DIR, { recursive: true });
 
 export const BUILTIN_SOUNDS = [['draape', 'Dråpe'], ['klokke', 'Klokke'], ['pling', 'Pling'], ['papir', 'Papir'], ['dobbel', 'Dobbel'], ['dyp', 'Dyp']];
 const SOUND_IDS = [...BUILTIN_SOUNDS.map(([id]) => id), 'egen', 'stille'];
-const GROUPS = ['pakker', 'finans', 'familie', 'reise', 'haptikk', 'birthdays'];
+const GROUPS = ['pakker', 'finans', 'familie', 'reise', 'haptikk', 'birthdays', 'media']; // Fase 6 (O9): Media som egen gruppe
 // Visningsnavn i Innstillinger → Varsler. Prompt 24: «Bursdager» (påminnelse kl. 09:00, N dager før).
 export const GROUP_LABELS = { pakker: 'Pakker', finans: 'Finans', familie: 'Familie', reise: 'Reise', haptikk: 'Haptikk', birthdays: 'Bursdager' };
 // Prompt 39: myk standardlyd «draape» (Dråpe) med volum 50 (den gamle «klokke» var høy og skarp på Android).
@@ -188,7 +188,7 @@ const presence = new Map(); // user → siste «synlig»-heartbeat (ms)
 export const isForeground = (user, now = Date.now()) => now - (presence.get(user) ?? 0) < PRESENCE_HOLD_MS;
 export function setPresence(user, visible, now = Date.now()) { if (visible) presence.set(user, now); else presence.delete(user); }
 
-const GROUP_OF = { pakker: 'pakker', tracking: 'pakker', finans: 'finans', abonnement: 'finans', familie: 'familie', reise: 'reise', birthdays: 'birthdays' };
+const GROUP_OF = { pakker: 'pakker', tracking: 'pakker', finans: 'finans', abonnement: 'finans', familie: 'familie', reise: 'reise', birthdays: 'birthdays', media: 'media' };
 const hmMin = (hm) => { const [h, m] = hm.split(':').map(Number); return h * 60 + m; };
 function inQuiet(n, now = Date.now()) {
   if (!n.quietOn) return false;
