@@ -486,3 +486,24 @@ html.boot52-nocache header.top .logo{color:transparent!important}
 .pw[data-wx52="kveld"] .pw-img{filter:sepia(.3) saturate(1.25) hue-rotate(-10deg) brightness(.82)}
 .pw[data-wx52="natt"] .pw-img{filter:saturate(.8) brightness(.72) hue-rotate(10deg)}
 @media (prefers-reduced-motion:reduce){.pw[data-wx52] .pw-img{transition:none}}
+
+/* ---------- Toppmenyen: én linje på desktop, resten under «Mer ▾» (nav-overflow.js, B-B1/B2) ----------
+   Før ble fanene i Papir skjult bak en usynlig rullefelt, og i Glass brakk menyen over to linjer. */
+@media (min-width:768px){
+  .top{flex-wrap:nowrap}
+  .top .pillnav{flex:0 1 auto;min-width:0;flex-wrap:nowrap;overflow:hidden}
+  .top .pillnav>a{flex:none;white-space:nowrap}
+}
+.pillnav>a.nav-ovf{display:none}
+.nav-more{order:9999;flex:none;padding:8px var(--hl-tab-pad,12px);border:0;border-radius:var(--ds-radius-full);background:transparent;color:var(--text);font:inherit;font-size:15px;font-weight:500;white-space:nowrap}
+.nav-more[hidden]{display:none}
+.nav-more.on,.nav-more[aria-expanded="true"]{background:#fff;color:var(--lock)}
+html[data-hl="2c"] .nav-more{padding:7px var(--hl-tab-pad,12px);font:600 13px var(--sans);color:var(--ink)}
+html[data-hl="2c"] .nav-more.on,html[data-hl="2c"] .nav-more[aria-expanded="true"]{background:var(--ink);color:var(--pp)}
+.nav-more-menu{position:fixed;z-index:var(--ds-z-nav);display:flex;flex-direction:column;min-width:200px;max-height:70vh;overflow:auto;padding:var(--ds-space-xs);border:1px solid var(--ds-line);border-radius:var(--ds-radius-lg);background:var(--ds-surface-raised);-webkit-backdrop-filter:blur(var(--ds-blur-raised));backdrop-filter:blur(var(--ds-blur-raised));box-shadow:var(--ds-shadow-mid);font-family:var(--ds-font-sans)}
+.nav-more-menu[hidden]{display:none}
+.nav-more-menu a{padding:var(--ds-space-sm) var(--ds-space-md);border-radius:var(--ds-radius-sm);color:var(--ds-text-primary);font-size:var(--ds-text-callout-size);line-height:var(--ds-text-callout-line);font-weight:var(--ds-weight-medium)}
+.nav-more-menu a:hover,.nav-more-menu a:focus-visible{background:var(--ds-surface-sunken);color:var(--ds-text-primary);opacity:1}
+.nav-more-menu a[aria-current="page"]{background:var(--ds-accent);color:var(--ds-on-accent)}
+/* Glass: menyen ligger over innholdet, så den er nesten tett (samme uttrykk som profilmenyen). */
+html[data-hl="cur"] .nav-more-menu{background:color-mix(in srgb,var(--ds-surface) 94%,transparent)}

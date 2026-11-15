@@ -28,6 +28,7 @@ import { initWeb45, after45 } from './web45.js'; // prompt 45
 import { initWeb46, after46, renderKart46 } from './web46.js'; // prompt 46: Kart, nyheter, bakgrunn m.m.
 import { renderFam51, renderMedia51, afterMedfam51 } from './medfam51.js'; // prompt 51 (MEDFAM51): Familiekalender og «I kveld»
 import { initWeb52, after52 } from './web52.js'; // prompt 52 (WEB52H): oppstart, sideanimasjon, Ruter-buffer m.m.
+import { initNavOverflow } from './nav-overflow.js'; // «Mer ▾» når fanene ikke får plass (B-B1/B2)
 // Prompt 76 (SKJWEB): Skjold Lab (#/skjold) – skallet tegnes her, selve modulen (skjold76.js) lastes ved behov.
 const renderSkjold76 = () => '<section class="sk76" id="sk76" aria-label="Skjold Lab" aria-busy="true"></section>';
 
@@ -264,6 +265,7 @@ async function main() {
   initWeb52();
   bindSearch();
   setupDnd(document.querySelector('header'));
+  if (!KAL_APP) initNavOverflow(); // etter setupDnd: «Mer ▾» er ikke en flyttbar fane
   study.bind(view); // Rom, Hjem, Mat, Sporing og Domener kobler seg til når modulen lastes (BIND)
   applyTop();
   applyHead();
