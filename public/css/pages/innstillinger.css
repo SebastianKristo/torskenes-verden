@@ -288,13 +288,13 @@ html[data-hl="2c"] .nf-sound,html[data-hl="2c"] .sg-pill{border-color:var(--rule
 
 html[data-hl="2c"] .nf-sound.on,html[data-hl="2c"] .sg-pill.on{background:var(--ink);color:var(--paper,#f3efe6);border-color:var(--ink)}
 
-html[data-hl="2c"] .nf-times input,html[data-hl="2c"] .ai-name input{background:#fff;border-color:var(--rule);color:var(--ink);color-scheme:light}
+html[data-hl="2c"] .nf-times input,html[data-hl="2c"] .ai-name input{background:var(--ds-surface-raised);border-color:var(--rule);color:var(--ink);color-scheme:light}
 
 html[data-hl="2c"] .ai-save{background:var(--ink);color:#f3efe6}
 
 html[data-hl="2c"] .ai-icon.on{border-color:var(--ink)}
 
-html[data-hl="2c"] .nf-vol input[type=range]{accent-color:#b23a2a}
+html[data-hl="2c"] .nf-vol input[type=range]{accent-color:var(--ds-accent)}
 
 /* Innstillinger → System → Oppdatering (settings-system.js) */
 #settings{--upd-pos:#8fe0b0;--upd-acc:#f59a8f;--upd-mute:#8a93a6;--upd-line:#1f2736;--upd-code:#0a0e16;--upd-sheet:#111723}
@@ -327,7 +327,7 @@ html[data-hl="2c"] .set-me:hover{background:transparent}
 html[data-hl="2c"] .set-me-av{width:42px;height:42px;background:var(--ink);color:var(--pp);font:700 14px var(--sans)}
 html[data-hl="2c"] .set-me-t b{font:500 20px var(--serif)}
 html[data-hl="2c"] .set-me-t span{font:400 12px var(--sans);color:var(--ink3)}
-html[data-hl="2c"] .set-q{height:38px;border:0;border-radius:999px;background:#fff;color:var(--ink3);margin:18px 0}
+html[data-hl="2c"] .set-q{height:38px;border:0;border-radius:999px;background:var(--ds-surface-raised);color:var(--ink3);margin:18px 0}
 html[data-hl="2c"] .set-q input{color:var(--ink);font:400 13px var(--sans)}
 html[data-hl="2c"] .set-q input::placeholder{color:var(--ink3)}
 html[data-hl="2c"] .set-sec{gap:0;margin-bottom:18px}
@@ -361,17 +361,17 @@ html[data-hl="2c"] .sg-sw{width:42px;height:24px;border-radius:99px;background:#
 html[data-hl="2c"] .sg-sw::after{width:18px;height:18px;box-shadow:none}
 html[data-hl="2c"] .sg-row[aria-checked=true] .sg-sw{background:var(--pos)}
 html[data-hl="2c"] .sg-av{background:var(--ink);color:var(--pp)}
-html[data-hl="2c"] .lg.sg-lg{background:#ebe5d8;color:var(--ink);box-shadow:inset 0 0 0 1px var(--rule)}
-html[data-hl="2c"] .lg.sg-lg.has{background:#fff}
+html[data-hl="2c"] .lg.sg-lg{background:var(--ds-surface-chip);color:var(--ink);box-shadow:inset 0 0 0 1px var(--rule)}
+html[data-hl="2c"] .lg.sg-lg.has{background:var(--ds-surface-raised)}
 html[data-hl="2c"] .sg-note{font:400 13px var(--sans);color:var(--ink2);padding:10px 0 0}
 html[data-hl="2c"] .sg-note b{color:var(--ink)}
 html[data-hl="2c"] .sg-empty{border-color:var(--rule);color:var(--ink2);border-radius:0}
 html[data-hl="2c"] .sg-field{border-top:0;border-bottom:1px solid var(--rule);padding:8px 0;color:var(--ink)}
 html[data-hl="2c"] .sg-field input:not([type=range]),html[data-hl="2c"] .sg-field select{color:var(--ink)}
-html[data-hl="2c"] .sg-field select option{background:#fff;color:var(--ink)}
+html[data-hl="2c"] .sg-field select option{background:var(--ds-surface-raised);color:var(--ink)}
 html[data-hl="2c"] .sg-field input::placeholder{color:var(--ink3)}
 html[data-hl="2c"] .sg-field:focus-within{background:rgba(27,26,23,.03)}
-html[data-hl="2c"] .sg-field textarea{background:#fff;border-color:var(--rule);color:var(--ink);border-radius:0}
+html[data-hl="2c"] .sg-field textarea{background:var(--ds-surface-raised);border-color:var(--rule);color:var(--ink);border-radius:0}
 html[data-hl="2c"] .sg-field.range input{accent-color:var(--ink)}
 html[data-hl="2c"] .sg-btn,html[data-hl="2c"] .sg-pill{border-color:var(--ink);color:var(--ink)}
 html[data-hl="2c"] .sg-btn:hover,html[data-hl="2c"] .sg-pill:hover{background:rgba(27,26,23,.05)}
@@ -384,10 +384,10 @@ html[data-hl="2c"] .sg-res>div>span{color:var(--ink2)}
 html[data-hl="2c"] .guide-step{border-top-color:var(--rule)}
 html[data-hl="2c"] .guide-step p,html[data-hl="2c"] .guide-text p{color:var(--ink2)}
 html[data-hl="2c"] .guide-no{background:var(--ink);color:var(--pp)}
-html[data-hl="2c"] .guide-code{background:#fff;border-color:var(--rule);color:var(--ink)}
+html[data-hl="2c"] .guide-code{background:var(--ds-surface-raised);border-color:var(--rule);color:var(--ink)}
 html[data-hl="2c"] .tab-name{color:var(--ink)}
 html[data-hl="2c"] .tab-name:hover{border-color:var(--rule)}
-html[data-hl="2c"] .tab-name:focus{border-color:var(--ink);background:#fff}
+html[data-hl="2c"] .tab-name:focus{border-color:var(--ink);background:var(--ds-surface-raised)}
 html[data-hl="2c"] .lay-btn{background:transparent;border:1px solid var(--rule);color:var(--ink)}
 html[data-hl="2c"] .sw{background:#cfc8b9}
 html[data-hl="2c"] .sw[aria-checked=true]{background:var(--pos)}
@@ -410,7 +410,7 @@ html[data-hl="2c"] .bg-opt span,html[data-hl="2c"] .srch-opt{color:var(--ink)}
 .hl-theme-prev.\32 c i:nth-child(3){display:none}
 html[data-hl="2c"] .sg-theme .sg-box{border:0}
 html[data-hl="2c"] .hl-themes{padding:14px 0 0}
-html[data-hl="2c"] .hl-theme-opt{border-color:var(--rule);color:var(--ink);border-radius:0;background:#fff}
+html[data-hl="2c"] .hl-theme-opt{border-color:var(--rule);color:var(--ink);border-radius:0;background:var(--ds-surface-raised)}
 html[data-hl="2c"] .hl-theme-opt>b{font:500 19px var(--serif)}
 html[data-hl="2c"] .hl-theme-opt>span:last-child{color:var(--ink2)}
 html[data-hl="2c"] .hl-theme-opt[aria-pressed=true]{border:2px solid var(--ink)}
@@ -595,9 +595,9 @@ html:not([data-hl="2c"]) .ny-inst.ok{color:#8fe0b0}
 
 /* ---------- Innstillinger: ✦ AI inni søkefeltet (claude-code-innst-web-ai-knapp.md) ---------- */
 #settings .set-q{box-sizing:border-box;flex:none;height:44px;min-height:44px;padding:0 6px 0 14px;gap:8px;border-radius:22px;border:1px solid var(--w30-line,#232b3a);box-shadow:none}
-html[data-hl="2c"] #settings .set-q{background:#fff;border-color:#e3ddcf;box-shadow:none}
+html[data-hl="2c"] #settings .set-q{background:var(--ds-surface-raised);border-color:#e3ddcf;box-shadow:none}
 #settings .set-q .set-aibtn{flex:none;box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;gap:4px;height:32px;margin:0;padding:0 12px;border-radius:16px;border:0;background:var(--w30-chip,#1d2433);color:var(--w30-ink,#eef0f4);font:700 12.5px/1 Manrope,Outfit,system-ui,sans-serif}
-html[data-hl="2c"] #settings .set-q .set-aibtn{background:#f1ece2;color:#1b1a17}
+html[data-hl="2c"] #settings .set-q .set-aibtn{background:var(--ds-surface);color:var(--ds-text-primary)}
 #settings .set-q .set-aibtn[aria-pressed=true],html[data-hl="2c"] #settings .set-q .set-aibtn[aria-pressed=true]{background:#b23a2a;color:var(--ds-on-category);border:0}
 #settings .set-q .set-aibtn .sai-s{font-size:11px;line-height:1;display:block}
 #settings .set-q .set-aibtn span{line-height:1}
@@ -855,8 +855,8 @@ html:not([data-hl="2c"]) .srv41-res.ok{color:#8fe0b0}
 html[data-hl="2c"] .f42-chips{padding:10px 0 14px;border-bottom:1px solid var(--rule,#e3ddcf)}
 .f42-chip{height:34px;padding:0 13px;border-radius:17px;border:1px solid #2a3346;background:transparent;color:inherit;cursor:pointer;font:700 12.5px Manrope,system-ui,sans-serif}
 .f42-chip.on{background:#eef0f4;border-color:#eef0f4;color:#0b0e15}
-html[data-hl="2c"] .f42-chip{border-color:#d8d1c2}
-html[data-hl="2c"] .f42-chip.on{background:#1b1a17;border-color:#1b1a17;color:#f3efe6}
+html[data-hl="2c"] .f42-chip{border-color:var(--ds-line)}
+html[data-hl="2c"] .f42-chip.on{background:var(--ds-text-primary);border-color:var(--ds-text-primary);color:#f3efe6}
 @media (max-width:767px){ .f42-chips{padding:4px 16px 14px} }
 
 /* ---------- Innstillinger → Integrasjoner → Media (settings-integ43.js) ---------- */

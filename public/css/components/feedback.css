@@ -14,7 +14,7 @@
 /* ================= Oppdateringsbanner ================= */
 .ub-slot:empty{display:none}
 .ub{display:flex;flex-direction:column;gap:12px;padding:14px 14px 14px 16px;border-radius:22px;background:var(--w30-card);color:var(--w30-ink);box-shadow:0 10px 30px -14px rgba(0,0,0,.35);border:1px solid var(--w30-line)}
-html[data-hl="2c"] .ub{background:#fff;border-color:transparent}
+html[data-hl="2c"] .ub{background:var(--ds-surface-raised);border-color:transparent}
 .p-paper>.ub-slot{margin:18px 0}
 .set-inner>.ub-slot{margin-bottom:-10px}
 .ub-h{display:flex;align-items:center;gap:12px}

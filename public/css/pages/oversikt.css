@@ -281,14 +281,14 @@ html[data-hl="2c"] .p-search{position:relative;z-index:3;margin-top:-28px;margin
 html[data-hl="2c"] .p-search:empty{height:28px;margin-top:0}
 html[data-hl="2c"] .p-search .search-wrap{padding:0;display:block}
 html[data-hl="2c"] .p-search .search-wrap>.gword{display:none}
-html[data-hl="2c"] .p-search .sbar{max-width:none;height:56px;padding:0 6px 0 22px;gap:14px;border:0;border-radius:999px;background:#fff;box-shadow:0 10px 30px -10px rgba(0,0,0,.25);backdrop-filter:none}
+html[data-hl="2c"] .p-search .sbar{max-width:none;height:56px;padding:0 6px 0 22px;gap:14px;border:0;border-radius:999px;background:var(--ds-surface-raised);box-shadow:0 10px 30px -10px rgba(0,0,0,.25);backdrop-filter:none}
 html[data-hl="2c"] .p-search .sbar input{color:var(--ink);font:400 15px var(--sans)}
 html[data-hl="2c"] .p-search .sbar input::placeholder{color:var(--ink3)}
 html[data-hl="2c"] .p-search .sbar button[type=submit]{height:44px;padding:0 22px;border-radius:999px;background:var(--ink);color:var(--pp);font:700 14px var(--sans)}
-html[data-hl="2c"] .p-search .sbar .sq-ai-tog{height:32px;padding:0 12px;border-radius:999px;background:#f3efe6;color:var(--ink2);font:600 12px var(--sans)}
+html[data-hl="2c"] .p-search .sbar .sq-ai-tog{height:32px;padding:0 12px;border-radius:999px;background:var(--ds-surface);color:var(--ink2);font:600 12px var(--sans)}
 html[data-hl="2c"] .p-search .sbar .sq-ai-tog[aria-pressed=true]{background:var(--ink);color:var(--pp)}
 html[data-hl="2c"] .p-search .sbar .sep{background:var(--rule)}
-html[data-hl="2c"] .sbar .sq-drop{background:#fff;color:var(--ink);border-color:var(--rule)}
+html[data-hl="2c"] .sbar .sq-drop{background:var(--ds-surface-raised);color:var(--ink);border-color:var(--rule)}
 
 /* Tre spalter skilt med linjer. */
 html[data-hl="2c"] .p-cols{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));margin-top:24px}
