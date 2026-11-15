@@ -51,7 +51,6 @@ html[data-hl="2c"] .bar{height:6px;border-radius:0;background:var(--rule2)}
 html[data-hl="2c"] .bar>i{background:var(--ink);border-radius:0}
 html[data-hl="2c"] .btn{background:transparent;border:1px solid var(--ink);color:var(--ink);font:600 12px var(--sans)}
 html[data-hl="2c"] .btn-lg{background:#fff;border-color:var(--rule);color:var(--ink)}
-html[data-hl="2c"] .btn-primary{background:var(--ink);color:var(--pp)}
 html[data-hl="2c"] .chip{background:transparent;border:1px solid var(--ink);color:var(--ink)}
 html[data-hl="2c"] .chip[aria-pressed=true]{background:var(--ink);color:var(--pp)}
 html[data-hl="2c"] .field,html[data-hl="2c"] input.field,html[data-hl="2c"] select.field{background:#fff;border-color:var(--rule);color:var(--ink)}
@@ -68,13 +67,11 @@ html[data-hl="2c"] .tile{background:transparent}
 html[data-hl="2c"] .tile span{color:var(--ink2)}
 html[data-hl="2c"] .poster b,html[data-hl="2c"] .poster span{color:var(--ink)}
 html[data-hl="2c"] .media-now,html[data-hl="2c"] .media-list>*{background:transparent}
-html[data-hl="2c"] .hscroll{margin:0;padding:0}
 html[data-hl="2c"] .lesson{background:transparent;border:0;border-bottom:1px solid var(--rule);border-radius:0;backdrop-filter:none;padding:10px 0}
 html[data-hl="2c"] .bottomnav{background:rgba(243,239,230,.94);border-color:var(--rule);box-shadow:0 10px 30px -12px rgba(0,0,0,.3)}
 html[data-hl="2c"] .bottomnav a{color:var(--ink);font:600 14px var(--sans)}
 html[data-hl="2c"] .bottomnav a[aria-current=page]{background:var(--ink);color:var(--pp)}
 html[data-hl="2c"] .popup>*{background:var(--pp);color:var(--ink);border-color:var(--rule)}
-html[data-hl="2c"] .modal-box{background:var(--pp);border-color:var(--rule);border-radius:20px;color:var(--ink)}
 
 @media (max-width:767px){html[data-hl="2c"] .grid{margin-top:16px}}
 

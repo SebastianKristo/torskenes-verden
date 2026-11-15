@@ -25,21 +25,6 @@
 @media (prefers-reduced-motion:reduce){.go36-ham,.go36-chip,.go36-cp,.go36-scan{animation:none}}
 /* TIDLIGERE VERSJONER */
 .ny-hist{display:flex;flex-direction:column;gap:8px;margin-top:22px}
-.ny-hist .ny-cap{font:500 11px 'IBM Plex Mono',ui-monospace,monospace;letter-spacing:.1em;opacity:.65}
-.ny-hl{display:flex;flex-direction:column}
-.ny-hr{border-top:1px solid var(--w30-line,#d8d1c2)}
-.ny-hr:last-child{border-bottom:1px solid var(--w30-line,#d8d1c2)}
-.ny-hb{display:flex;align-items:center;gap:12px;width:100%;min-height:52px;padding:8px 2px;border:0;background:transparent;color:inherit;cursor:pointer;text-align:left;font:inherit}
-.ny-hv{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
-.ny-hv b{font:600 14px 'IBM Plex Mono',ui-monospace,monospace}
-.ny-hv span{font-size:12.5px;opacity:.65}
-.ny-hi{font-size:12px;color:#2f7d4f;font-weight:600;white-space:nowrap}
-.ny-hf{font-size:12px;color:#fff;background:#b23a2a;border-radius:999px;padding:2px 8px;font-weight:700}
-.ny-chev{font-size:20px;opacity:.5;transition:transform .2s ease;line-height:1}
-.ny-hr.on .ny-chev{transform:rotate(90deg)}
-.ny-hn{padding:0 2px 12px}
-.ny-hn ul{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:4px;font-size:14px;line-height:1.45}
-.ny-more{align-self:flex-start;height:36px;padding:0 16px;border-radius:18px;border:1px solid var(--w30-line,#d8d1c2);background:transparent;color:inherit;cursor:pointer;font:700 13px Manrope,system-ui,sans-serif}
 
 /* ================= Glimt i prestedrakt (bibelvers i briefen) ================= */
 @keyframes go38Bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}

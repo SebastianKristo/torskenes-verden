@@ -21,7 +21,6 @@
 .fx .fbtn{height:36px;padding:0 14px;border-radius:9px;border:1px solid var(--f-in);background:transparent;color:var(--f-t);font-weight:600;font-size:13px;white-space:nowrap}
 .fx .fbtn.pri{border:0;background:var(--f-acc);color:var(--f-acc-t)}
 .fx .fbtn.wht{border:0;background:var(--f-t);color:var(--f-bg)}
-.fx .fbtn.lnk{color:var(--f-acc-l)}
 .fx .fbtn:disabled{opacity:.5;cursor:wait}
 .fx .fin{height:36px;padding:0 10px;border-radius:9px;border:1px solid var(--f-in);background:var(--f-bg);color:var(--f-t);min-width:0;font-size:13px;outline:none}
 .fx textarea.fin{height:auto;padding:10px;font-family:inherit;resize:vertical}

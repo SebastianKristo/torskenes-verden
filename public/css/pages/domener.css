@@ -1,16 +1,8 @@
 /* Domener: kort, DNS, sertifikater, Google Søk og Glimt-oppsummeringen. */
 
 /* Domener */
-.dom-kv{padding:22px;border-radius:18px;background:var(--f-card);border:1px solid var(--f-line);display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:16px}
-.dom-kv div>div{font-size:12px;color:var(--f-2)}
-.dom-kv b{font-weight:500;font-family:var(--f-mono);font-size:14px;overflow-wrap:anywhere}
-.dns-row{display:grid;grid-template-columns:70px minmax(0,1fr) minmax(0,1.6fr) 90px;gap:12px;padding:11px 18px;border-bottom:1px solid var(--f-line);font-family:var(--f-mono);font-size:13px}
-.dns-row>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.dns-row.head{font-family:inherit;font-size:12px;color:var(--f-3);padding:10px 18px}
-.dns-row .t{color:var(--f-acc-l)}
 .fx .note{padding:16px 18px;border-radius:14px;background:var(--f-sub);font-size:13px;color:var(--f-2);display:flex;flex-direction:column;gap:6px}
 .fx .note b{color:var(--f-t);font-weight:600}
-@media (max-width:767px){.dns-row{grid-template-columns:56px minmax(0,1fr) 70px}.dns-row>:nth-child(3){display:none}}
 
 /* ---------- Domener v2 (Homelab Domener.dc.html) ---------- */
 .dm{display:flex;flex-direction:column;gap:22px;margin-top:18px}
@@ -29,13 +21,6 @@
 .dm-per{display:flex;align-items:center;gap:6px;padding:4px;border:1px solid #232938;border-radius:12px;background:rgba(10,12,18,.7)}
 .dm-per button{height:30px;padding:0 12px;border-radius:8px;border:0;background:transparent;color:#8a93a6;font-family:var(--mono);font-size:12px}
 .dm-per button[aria-pressed=true]{background:#1d2738;color:var(--text)}
-.dm-add{border:1px solid #3a4560;background:rgba(18,25,38,.92)}
-.dm-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:10px}
-.dm-form label{display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:#8a93a6}
-.dm-form input,.dm-form select{height:44px;padding:0 14px;border-radius:12px;border:1px solid #232938;background:#0b0e15;color:var(--text);min-width:0;font-size:14px}
-.dm-form .help{grid-column:1/-1;font-size:13px;color:#8a93a6;line-height:1.5}
-.dm-form .acts{grid-column:1/-1;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-.dm-form .err-t{font-size:13px;color:var(--red)}
 .dm-btn{height:40px;padding:0 18px;border-radius:999px;border:1px solid #3a4560;background:transparent;color:var(--text);font-size:14px;align-self:flex-start}
 .dm-btn.pri{border:0;background:#a8d4fb;color:#07080b;font-weight:600}
 .dm-btn.danger{border-color:#4a2f35;color:var(--red);height:36px;font-size:13px;margin-top:12px}
@@ -136,7 +121,6 @@ html[data-hl="2c"] .dm-dns .t{color:#b23a2a}
 html[data-hl="2c"] .dm-sec{font:500 24px var(--serif);border-top:2px solid var(--ink);padding-top:10px}
 html[data-hl="2c"] .dm-btn{border-color:var(--ink);color:var(--ink)}
 html[data-hl="2c"] .dm-btn.pri{background:var(--ink);color:var(--pp)}
-html[data-hl="2c"] .dm-form input,html[data-hl="2c"] .dm-form select,html[data-hl="2c"] body.not-dash .dm-form input,html[data-hl="2c"] body.not-dash .dm-form select{background:#fff;border-color:var(--rule);color:var(--ink)}
 html[data-hl="2c"] .dm-warn{color:#9a5a10}
 html[data-hl="2c"] .wm-tip{background:var(--ink);color:var(--pp);border-color:var(--ink)}
 

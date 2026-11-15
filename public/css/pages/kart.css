@@ -10,11 +10,8 @@ html:not([data-hl="2c"]) .k46{height:max(520px,calc(100vh - 120px))}
 
 .k46-map{position:absolute;inset:0;z-index:0;background:var(--k-map)}
 
-.k46-map .leaflet-tile-pane{filter:grayscale(1) contrast(.92) brightness(1.04)}
 
-.k46[data-tiles="graa"] .k46-map .leaflet-tile-pane{filter:none}
 
-html:not([data-hl="2c"]) .k46-map .leaflet-tile-pane,html[data-mode="dark"] .k46-map .leaflet-tile-pane{filter:grayscale(1) invert(1) brightness(.82) contrast(.9)}
 
 .k46-map::after{content:"";position:absolute;inset:0;background:rgba(243,239,230,.18);pointer-events:none;z-index:250}
 
@@ -22,11 +19,8 @@ html:not([data-hl="2c"]) .k46-map::after,html[data-mode="dark"] .k46-map::after{
 
 .k46-map .leaflet-container,.k46 .leaflet-container{background:var(--k-map);font-family:inherit}
 
-.k46 .leaflet-control-attribution{background:rgba(255,255,255,.7);color:#6b665c;font-size:10.5px;border-radius:8px 0 0 0}
 
-html:not([data-hl="2c"]) .k46 .leaflet-control-attribution,html[data-mode="dark"] .k46 .leaflet-control-attribution{background:rgba(22,20,15,.7);color:#a39d90}
 
-.k46 .leaflet-control-attribution a{color:inherit}
 
 .k46-err{position:absolute;inset:0;display:grid;place-items:center;color:var(--k-mut);font-size:14px}
 

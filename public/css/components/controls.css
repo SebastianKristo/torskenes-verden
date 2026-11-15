@@ -4,7 +4,6 @@
 
 .btn-lg{padding:12px 20px;border-radius:999px;border:1px solid var(--line);background:var(--pill);color:var(--text);font-size:14px;display:inline-flex;align-items:center;gap:6px}
 
-.btn-primary{background:var(--blue);color:var(--lock);font-weight:600;border-color:transparent}
 
 .field{background:var(--field);border:1px solid var(--line);border-radius:10px;padding:8px;color:var(--text);outline:none;min-width:0}
 

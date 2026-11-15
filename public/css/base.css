@@ -27,7 +27,6 @@ button{cursor:pointer}
 /* Homelab-tema «Vindu og papir» (2c + 3a). Alt er scopet til html[data-hl="2c"], så «Nåværende» er uendret.
    Et bredt fotovindu øverst (Dashboard og Rom), resten på lyst papir i avisspalter: ingen kort, bare spaltelinjer. */
 
-.lock-pw,.p-flab{display:none}
 
 html[data-hl="2c"]{
   --pp:#f3efe6; --ink:#1b1a17; --ink2:#6b665c; --ink3:#6f6a5f; --rule:#d8d1c2; --rule2:#e3ddcf; --acc:#b23a2a; --pos:#2f7a4f;

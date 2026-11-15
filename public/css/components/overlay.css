@@ -3,10 +3,9 @@
 /* Innstillinger */
 .modal{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:30;display:grid;place-items:center;padding:24px}
 
-.modal-box{width:100%;max-width:640px;max-height:calc(100vh - 48px);overflow:auto;background:#0e111a;border:1px solid var(--line);border-radius:32px;padding:28px;display:flex;flex-direction:column;gap:18px}
 
 @media (max-width:767px){.modal{padding:12px}
-  .modal-box{padding:20px;border-radius:28px}}
+}
 
 /* Popup («hvor som helst») */
 .popup{position:fixed;inset:0;z-index:40;background:rgba(0,0,0,.5);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);display:grid;place-items:center;padding:24px}
