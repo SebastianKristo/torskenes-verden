@@ -48,7 +48,7 @@ struct Skj78RowButton: View {
             Button {
                 Task { @MainActor in await l.locate(part, store) }
             } label: {
-                Text("💡").font(.system(size: 18)).frame(width: 44, height: 44).contentShape(Rectangle())
+                Text("💡").font(.dyn51(size: 18)).frame(width: 44, height: 44).contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .disabled(l.busy)
@@ -101,7 +101,7 @@ struct Skj78LitBar: View {
 
     private var bar: some View {
         HStack(spacing: 10) {
-            Text("💡").font(.system(size: 16))
+            Text("💡").font(.dyn51(size: 16))
             VStack(alignment: .leading, spacing: 1) {
                 Text("Lyser i skapet · " + where_).font(PF.ui(13.5, .semibold)).foregroundStyle(p.bg).lineLimit(1)
                 Text("\(l.secondsLeft) s igjen").font(PF.mono(10.5)).foregroundStyle(p.bg.opacity(0.75))
@@ -459,14 +459,14 @@ struct Skj78RowLine: View {
                 Text("LED \(r.start)–\(r.start + Swift.max(0, r.count - 1))").font(PF.mono(10.5)).foregroundStyle(p.mut)
                 Spacer(minLength: 4)
                 Button { r.reverse.toggle() } label: {
-                    Image(systemName: r.reverse ? "arrow.left" : "arrow.right").font(.system(size: 13, weight: .bold)).foregroundStyle(p.ink)
+                    Image(systemName: r.reverse ? "arrow.left" : "arrow.right").font(.dyn51(size: 13, weight: .bold)).foregroundStyle(p.ink)
                         .frame(width: 36, height: 32).overlay(Capsule().stroke(p.line, lineWidth: 1))
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(r.reverse ? "Baklengs" : "Samme retning")
                 Button("Test") { test(r.row) }.font(PF.ui(13, .bold)).foregroundStyle(p.lab)
                 Button { more.toggle() } label: {
-                    Image(systemName: more ? "chevron.up" : "chevron.down").font(.system(size: 12, weight: .bold)).foregroundStyle(p.mut)
+                    Image(systemName: more ? "chevron.up" : "chevron.down").font(.dyn51(size: 12, weight: .bold)).foregroundStyle(p.mut)
                         .frame(width: 30, height: 32)
                 }
                 .buttonStyle(.plain)

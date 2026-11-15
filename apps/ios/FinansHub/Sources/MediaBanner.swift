@@ -141,7 +141,7 @@ struct Media44BannerHead: View {
             // Høyre kolonne på stor skjerm: ✕ lukker.
             if column {
                 Button { m.selected = nil } label: {
-                    Image(systemName: "xmark").font(.system(size: 12, weight: .bold)).foregroundStyle(Color.white)
+                    Image(systemName: "xmark").font(.dyn51(size: 12, weight: .bold)).foregroundStyle(Color.white)
                         .frame(width: 32, height: 32).background(Color.white.opacity(0.16), in: Circle())
                         .frame(width: 40, height: 44).contentShape(Rectangle())
                 }
@@ -153,7 +153,7 @@ struct Media44BannerHead: View {
 
     private func arrow(_ icon: String, _ dir: Int, _ label: String) -> some View {
         Button { step(dir) } label: {
-            Image(systemName: icon).font(.system(size: 12, weight: .bold)).foregroundStyle(Color.white)
+            Image(systemName: icon).font(.dyn51(size: 12, weight: .bold)).foregroundStyle(Color.white)
                 .frame(width: 32, height: 32)
                 .background(Color.white.opacity(0.16), in: Circle())
                 .frame(width: 40, height: 44).contentShape(Rectangle())
@@ -444,7 +444,7 @@ struct Media44RoundIcon: View {
 
     var body: some View {
         Button(action: act) {
-            Image(systemName: icon).font(.system(size: 12, weight: .bold)).foregroundStyle(color)
+            Image(systemName: icon).font(.dyn51(size: 12, weight: .bold)).foregroundStyle(color)
                 .frame(width: 32, height: 32)
                 .overlay(Circle().stroke(p.line, lineWidth: 1))
                 .frame(width: 40, height: 44).contentShape(Rectangle())

@@ -302,6 +302,7 @@ struct Zone45Banner: View {
             .frame(maxWidth: 480)
             .transition(.move(edge: .top).combined(with: .opacity))
             .onTapGesture { withAnimation(.easeOut(duration: 0.2)) { z.banner = false } }
+            .accessibilityAddTraits(.isButton)
         }
     }
 }

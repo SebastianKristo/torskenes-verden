@@ -146,7 +146,7 @@ struct NewsReaderView: View {
         let on: Bool = News73Model.shared.showTab
         return Button { Haptics.shared.tap(); News73Model.shared.showTab = true; Task { await News73Model.shared.load(store) } } label: {
             HStack(spacing: 6) {
-                Image(systemName: "bookmark.fill").font(.system(size: 12, weight: .semibold))
+                Image(systemName: "bookmark.fill").font(.dyn51(size: 12, weight: .semibold))
                 Text("Lagret").font(PF.ui(14, .semibold))
             }
             .foregroundStyle(on ? p.ink : p.mut)
@@ -169,6 +169,7 @@ struct NewsReaderView: View {
             .padding(.bottom, 14)
             .contentShape(Rectangle())
             .onTapGesture { Haptic30.light(); News40Model.shared.show(store) }
+            .accessibilityAddTraits(.isButton)
         }
     }
 
@@ -199,7 +200,7 @@ struct NewsReaderView: View {
                     Text("\(x.feed) · \(x.timeText)\(x.ai ? " · ✦ AI" : "")").font(PF.ui(12)).foregroundStyle(p.mut)
                 }
                 Spacer(minLength: 0)
-                Text("›").foregroundStyle(p.mut)
+                Image(systemName: "chevron.right").accessibilityHidden(true).font(PF.ui(13, .semibold)).foregroundStyle(p.mut)
             }
             .padding(.vertical, 11)
             .overlay(alignment: .bottom) { Rectangle().fill(p.line).frame(height: 1) }

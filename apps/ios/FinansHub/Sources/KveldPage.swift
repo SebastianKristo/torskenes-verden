@@ -59,7 +59,7 @@ struct Kveld51MediaButton: View {
                 Kveld51.shared.show()
             }
         } label: {
-            Image(systemName: "tv").font(.system(size: 15, weight: .semibold)).foregroundStyle(p.ink).round50()
+            Image(systemName: "tv").font(.dyn51(size: 15, weight: .semibold)).foregroundStyle(p.ink).round50()
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Hva skal vi se i kveld?")
@@ -104,7 +104,7 @@ struct Kveld51Tonight: View {
                         let on: Bool = m.who.contains(x.userId)
                         Button { Haptics.shared.select(); m.toggleWho(x.userId, store) } label: {
                             HStack(spacing: 5) {
-                                Image(systemName: on ? "checkmark.circle.fill" : "circle").font(.system(size: 13, weight: .semibold))
+                                Image(systemName: on ? "checkmark.circle.fill" : "circle").font(.dyn51(size: 13, weight: .semibold))
                                 Text(x.me ? "Meg" : x.name).font(PF.ui(13, .bold))
                             }
                             .foregroundStyle(on ? p.bg : p.ink)

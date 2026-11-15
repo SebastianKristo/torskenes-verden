@@ -87,8 +87,8 @@ struct WxWide25: View {
         VStack(spacing: 12) {
             WxInlineMap25(lat: w.lat ?? store.weatherPlaceObj?.lat ?? 59.91, lon: w.lon ?? store.weatherPlaceObj?.lon ?? 10.75, full: fullMap)
             WxCompareCard22(w: w) { compare() }
-            WxWindCard22(w: w).onTapGesture { open("wind") }
-            WxMoonCard22(w: w).onTapGesture { open("moon") }
+            Button { open("wind") } label: { WxWindCard22(w: w) }.buttonStyle(.plain)
+            Button { open("moon") } label: { WxMoonCard22(w: w) }.buttonStyle(.plain)
             WxTileGrid22(w: w, open: { k in open(k) }, columns: 3)
         }
     }

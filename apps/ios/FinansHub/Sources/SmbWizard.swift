@@ -213,7 +213,7 @@ struct Smb30Crumbs: View {
     }
 
     @ViewBuilder private func crumb(_ i: Int, _ name: String) -> some View {
-        if i > 0 { Text("›").font(PF.ui(14)).foregroundStyle(p.mut) }
+        if i > 0 { Image(systemName: "chevron.right").accessibilityHidden(true).font(PF.ui(11, .semibold)).foregroundStyle(p.mut) }
         let last: Bool = i == items.count - 1
         Button {
             let to: [String] = Array(m.path.prefix(i))

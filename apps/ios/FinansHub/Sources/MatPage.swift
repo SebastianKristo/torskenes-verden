@@ -185,6 +185,7 @@ struct MatView: View {
         .background(pal.lime, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
         .contentShape(Rectangle())
         .onTapGesture { if let dish { store.dishSel = dish.id.value } }
+        .accessibilityAddTraits(.isButton)
     }
 
     /// Prompt 43: «⋯» med dagens valg (Foreslå en annen rett, fast dag, kokk).
@@ -354,7 +355,7 @@ struct MatView: View {
                         Text(dishMeta(d)).font(pal.ui(11.5)).foregroundStyle(pal.muted).lineLimit(1)
                     }
                     Spacer(minLength: 0)
-                    Text("›").foregroundStyle(pal.muted)
+                    Image(systemName: "chevron.right").accessibilityHidden(true).font(PF.ui(13, .semibold)).foregroundStyle(pal.muted)
                 }
                 .padding(7)
                 .background(pal.card, in: RoundedRectangle(cornerRadius: 14, style: .continuous))

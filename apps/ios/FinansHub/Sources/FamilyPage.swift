@@ -324,7 +324,7 @@ struct Fam50Folk: View {
             }
             Spacer()
             Button { Haptics.shared.tap(); plusMenu = true } label: {
-                Text("+").font(PF.ui(22, .medium)).foregroundStyle(t.onPill).frame(width: 40, height: 40).background(Circle().fill(t.pill))
+                Image(systemName: "plus").font(PF.ui(17, .semibold)).foregroundStyle(t.onPill).frame(width: 40, height: 40).background(Circle().fill(t.pill))
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Nytt sted eller deling")

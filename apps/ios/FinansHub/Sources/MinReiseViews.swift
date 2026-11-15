@@ -38,7 +38,7 @@ struct MinReise41Strip: View {
         Flow(spacing: 6) {
             ForEach(Array(legs.enumerated()), id: \.offset) { i, l in
                 HStack(spacing: 6) {
-                    if i > 0 { Text("›").font(PF.ui(13, .semibold)).foregroundStyle(p.mut) }
+                    if i > 0 { Image(systemName: "chevron.right").accessibilityHidden(true).font(PF.ui(10, .semibold)).foregroundStyle(p.mut) }
                     Text(l.chip).font(PF.ui(13.5, .bold)).foregroundStyle(MinReise41Look.chipInk(l, p))
                         .padding(.horizontal, 10).frame(height: 30)
                         .background(MinReise41Look.chipBg(l, p), in: RoundedRectangle(cornerRadius: 9, style: .continuous))

@@ -197,7 +197,7 @@ struct Fam50HealthCard: View {
                 }
                 .frame(width: 104, alignment: .leading)
                 Fam50Bars(values: bars, color: Color(hex: h.mini.hex), height: 46, gap: 5, radius: 4)
-                Text("›").font(PF.ui(18)).foregroundStyle(t.faint)
+                Image(systemName: "chevron.right").accessibilityHidden(true).font(PF.ui(13.5, .semibold)).foregroundStyle(t.faint)
             }
             if h.shared { mini(t) } else { off(t) }
         }

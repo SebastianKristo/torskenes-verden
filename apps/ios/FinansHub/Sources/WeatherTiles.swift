@@ -11,14 +11,14 @@ struct WxTileGrid22: View {
     var body: some View {
         let cols: [GridItem] = Array(repeating: GridItem(.flexible(), spacing: 12), count: Swift.max(1, columns))
         LazyVGrid(columns: cols, spacing: 12) {
-            WxSunTile22(w: w).onTapGesture { open("sun") }
-            WxUvTile22(w: w).onTapGesture { open("uv") }
-            WxFeelTile22(w: w).onTapGesture { open("feel") }
-            WxYesterdayTile22(w: w).onTapGesture { open("yd") }
-            WxRainTile22(w: w).onTapGesture { open("rain") }
-            WxVisTile22(w: w).onTapGesture { open("vis") }
-            WxHumTile22(w: w).onTapGesture { open("hum") }
-            WxPressureTile22(w: w).onTapGesture { open("pres") }
+            Button { open("sun") } label: { WxSunTile22(w: w) }.buttonStyle(.plain)
+            Button { open("uv") } label: { WxUvTile22(w: w) }.buttonStyle(.plain)
+            Button { open("feel") } label: { WxFeelTile22(w: w) }.buttonStyle(.plain)
+            Button { open("yd") } label: { WxYesterdayTile22(w: w) }.buttonStyle(.plain)
+            Button { open("rain") } label: { WxRainTile22(w: w) }.buttonStyle(.plain)
+            Button { open("vis") } label: { WxVisTile22(w: w) }.buttonStyle(.plain)
+            Button { open("hum") } label: { WxHumTile22(w: w) }.buttonStyle(.plain)
+            Button { open("pres") } label: { WxPressureTile22(w: w) }.buttonStyle(.plain)
         }
     }
 }

@@ -565,6 +565,7 @@ struct PaperTasksCard: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(p.card, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         .onTapGesture { store.paperGo("huske") }
+        .accessibilityAddTraits(.isButton)
         .task { if !m.loaded { await m.load(store) } }
     }
 }

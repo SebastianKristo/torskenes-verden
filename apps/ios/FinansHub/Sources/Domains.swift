@@ -417,7 +417,7 @@ struct Domains43GlimtRow: View {
                             .minimumScaleFactor(0.85)
                     }
                     Spacer(minLength: 6)
-                    Text("›").font(PF.ui(18, .bold)).foregroundStyle(DS.fixed(.surface, stil: .papir, dark: false).opacity(0.8))
+                    Image(systemName: "chevron.right").accessibilityHidden(true).font(PF.ui(13.5, .bold)).foregroundStyle(DS.fixed(.surface, stil: .papir, dark: false).opacity(0.8))
                 }
                 .padding(.horizontal, 12).padding(.vertical, 10)
                 .frame(maxWidth: .infinity, minHeight: 54, alignment: .leading)

@@ -193,7 +193,7 @@ struct TaskHASection22: View {
                 Text(l.name).font(PF.ui(14.5, .semibold)).foregroundStyle(p.ink)
                 Spacer(minLength: 6)
                 Text(e ?? "Ikke koblet").font(PF.mono(12.5)).foregroundStyle(e == nil ? p.mut : p.ink).lineLimit(1)
-                Text("›").foregroundStyle(p.mut)
+                Image(systemName: "chevron.right").accessibilityHidden(true).font(PF.ui(13, .semibold)).foregroundStyle(p.mut)
             }
             .frame(minHeight: 52)
             .contentShape(Rectangle())

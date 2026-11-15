@@ -87,7 +87,7 @@ struct Media43Qbit: View {
             summary
             Button { Haptics.shared.tap(); m.magnetPrefill = ""; m.magnetOpen = true } label: {
                 HStack(spacing: 8) {
-                    Image(systemName: "link").font(.system(size: 13, weight: .bold))
+                    Image(systemName: "link").font(.dyn51(size: 13, weight: .bold))
                     Text("Legg til magnet-lenke").font(PF.ui(14, .bold))
                 }
                 .foregroundStyle(p.ink).frame(maxWidth: .infinity, minHeight: 46)
@@ -191,7 +191,7 @@ struct Media43Qbit: View {
 
     private func round(_ icon: String, _ label: String, _ act: @escaping () -> Void) -> some View {
         Button(action: act) {
-            Image(systemName: icon).font(.system(size: 14, weight: .semibold)).foregroundStyle(p.ink)
+            Image(systemName: icon).font(.dyn51(size: 14, weight: .semibold)).foregroundStyle(p.ink)
                 .frame(width: 44, height: 44).background(p.bg, in: Circle())
         }
         .buttonStyle(.plain)
@@ -275,7 +275,7 @@ struct Media43TorrentSheet: View {
     private func row(_ title: String, _ icon: String, _ act: @escaping () -> Void) -> some View {
         Button(action: act) {
             HStack(spacing: 12) {
-                Image(systemName: icon).font(.system(size: 14, weight: .semibold)).foregroundStyle(p.ink).frame(width: 24)
+                Image(systemName: icon).font(.dyn51(size: 14, weight: .semibold)).foregroundStyle(p.ink).frame(width: 24)
                 Text(title).font(PF.ui(14.5, .semibold)).foregroundStyle(p.ink)
                 Spacer()
             }
@@ -503,7 +503,7 @@ struct Media43SearchSheet: View {
                 Text(r.indexer).font(PF.ui(12)).foregroundStyle(p.mut).lineLimit(1)
                 Spacer(minLength: 4)
                 Button { download(r) } label: {
-                    Image(systemName: done ? "checkmark" : "arrow.down").font(.system(size: 14, weight: .bold))
+                    Image(systemName: done ? "checkmark" : "arrow.down").font(.dyn51(size: 14, weight: .bold))
                         .foregroundStyle(done ? Color.white : p.bg)
                         .frame(width: 44, height: 44)
                         .background(done ? DS.fixed(.success, stil: .papir, dark: false) : p.ink, in: Circle())
@@ -578,7 +578,7 @@ struct Media43AddSheet: View {
             VStack(alignment: .leading, spacing: 12) {
                 Media43SheetHead(title: kind == "series" ? "Legg til serie" : "Legg til film", sub: kind == "series" ? "Søk i Sonarr" : "Søk i Radarr")
                 HStack(spacing: 6) {
-                    Image(systemName: "magnifyingglass").font(.system(size: 13)).foregroundStyle(p.mut)
+                    Image(systemName: "magnifyingglass").font(.dyn51(size: 13)).foregroundStyle(p.mut)
                     TextField(kind == "series" ? "Severance, The Bear …" : "Dune, Oppenheimer …", text: $q).font(PF.ui(15)).foregroundStyle(p.ink)
                         .submitLabel(.search).onSubmit { search() }
                     if searching { ProgressView() }
@@ -879,7 +879,7 @@ struct Media43IndexerAddSheet: View {
         }
         return VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 6) {
-                Image(systemName: "magnifyingglass").font(.system(size: 13)).foregroundStyle(p.mut)
+                Image(systemName: "magnifyingglass").font(.dyn51(size: 13)).foregroundStyle(p.mut)
                 TextField("Søk i \(schema.count) indeksere", text: $q).font(PF.ui(15)).foregroundStyle(p.ink)
             }
             .padding(.horizontal, 14).frame(height: 46).background(p.card, in: Capsule())

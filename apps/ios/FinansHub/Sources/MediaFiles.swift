@@ -81,7 +81,7 @@ struct Media45Menu: View {
             }
         } label: {
             // Prompt 50: tannhjul i rund 40 pt-knapp med kant, som i Nyheter (Top50.swift).
-            Image(systemName: "gearshape").font(.system(size: 16, weight: .semibold)).foregroundStyle(p.ink)
+            Image(systemName: "gearshape").font(.dyn51(size: 16, weight: .semibold)).foregroundStyle(p.ink)
                 .round50()
         }
         .accessibilityLabel("Innstillinger for Media")
@@ -316,7 +316,7 @@ struct Media45FileRow: View {
     var body: some View {
         Button(action: tap) {
             HStack(spacing: 12) {
-                Image(systemName: on ? "checkmark.square.fill" : "square").font(.system(size: 20, weight: .semibold))
+                Image(systemName: on ? "checkmark.square.fill" : "square").font(.dyn51(size: 20, weight: .semibold))
                     .foregroundStyle(on ? p.lab : p.mut)
                 VStack(alignment: .leading, spacing: 1) {
                     Text(f.code.isEmpty ? f.title : f.code).font(PF.ui(14, .semibold)).foregroundStyle(p.ink).lineLimit(1)

@@ -342,7 +342,7 @@ struct Fam22MapCard: View {
 
     private func zoomButton(_ s: String, _ size: CGFloat, _ label: String, _ act: @escaping () -> Void) -> some View {
         Button(action: act) {
-            Text(s).font(.system(size: size)).foregroundStyle(Fam22Tok.black)
+            Text(s).font(.dyn51(size: size)).foregroundStyle(Fam22Tok.black)
                 .frame(width: 40, height: 40)
                 .background(RoundedRectangle(cornerRadius: 12).fill(Color.white.opacity(0.95)))
                 .shadow(color: Color.black.opacity(0.18), radius: 6, x: 0, y: 4)

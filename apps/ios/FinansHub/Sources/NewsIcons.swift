@@ -217,7 +217,7 @@ struct NewsIconSection23: View {
                 }
                 Spacer(minLength: 6)
                 Text(src).font(PF.ui(12, .bold)).foregroundStyle(src == "✦ AI" ? p.lab : p.mut)
-                Text("›").foregroundStyle(p.mut)
+                Image(systemName: "chevron.right").accessibilityHidden(true).font(PF.ui(13, .semibold)).foregroundStyle(p.mut)
             }
             .padding(.horizontal, 14).frame(minHeight: 52)
             .contentShape(Rectangle())
@@ -290,7 +290,7 @@ struct NewsIconPicker23: View {
             HStack {
                 Spacer()
                 Button { dismiss() } label: {
-                    Text("×").font(.dyn51(size: 17)).foregroundStyle(p.ink).frame(width: 38, height: 38)
+                    Image(systemName: "xmark").font(.dyn51(size: 14, weight: .semibold)).foregroundStyle(p.ink).frame(width: 38, height: 38)
                         .background(p.card, in: Circle()).overlay(Circle().stroke(p.line, lineWidth: 1))
                 }
                 .buttonStyle(.plain)

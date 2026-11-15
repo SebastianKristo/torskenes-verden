@@ -271,7 +271,7 @@ struct Fam22ZoneCard: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             if mine {
                 Button { toggleEdit() } label: {
-                    Text("✎").font(.system(size: 14)).foregroundStyle(t.ink)
+                    Image(systemName: "pencil").font(.dyn51(size: 14, weight: .semibold)).foregroundStyle(t.ink)
                         .frame(width: 34, height: 34)
                         .background(Circle().fill(editing ? t.bg : Color.clear))
                         .overlay(Circle().strokeBorder(t.line, lineWidth: 1))
@@ -280,7 +280,7 @@ struct Fam22ZoneCard: View {
                 .buttonStyle(.plain)
                 .accessibilityLabel("Rediger sone")
                 Button { remove() } label: {
-                    Text("−").font(.system(size: 20)).foregroundStyle(t.lab)
+                    Image(systemName: "minus").font(.dyn51(size: 16, weight: .semibold)).foregroundStyle(t.lab)
                         .frame(width: 34, height: 34)
                         .contentShape(Circle())
                 }

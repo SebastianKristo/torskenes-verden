@@ -324,7 +324,7 @@ struct WxCompareCard22: View {
                 HStack {
                     Text("Time for time og hele uka").font(.dyn51(size: 14, weight: .semibold))
                     Spacer()
-                    Text("›").opacity(0.7)
+                    Image(systemName: "chevron.right").accessibilityHidden(true).font(.dyn51(size: 12, weight: .semibold)).opacity(0.7)
                 }
                 .frame(minHeight: 44)
                 .contentShape(Rectangle())

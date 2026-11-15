@@ -35,7 +35,7 @@ struct Skj77SuggestCard: View {
 
     private var close: some View {
         Button { ai.clearSuggestion() } label: {
-            Image(systemName: "xmark").font(.system(size: 12, weight: .bold)).foregroundStyle(p.mut).frame(width: 30, height: 30)
+            Image(systemName: "xmark").font(.dyn51(size: 12, weight: .bold)).foregroundStyle(p.mut).frame(width: 30, height: 30)
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Lukk forslaget")
@@ -83,7 +83,7 @@ struct Skj77SuggestCard: View {
                 Text(k).font(PF.mono(11)).foregroundStyle(p.mut).frame(width: 78, alignment: .leading).lineLimit(1)
                 Text(v).font(PF.ui(15, .semibold)).foregroundStyle(p.ink).lineLimit(2)
                 Spacer(minLength: 4)
-                Image(systemName: on ? "checkmark.circle.fill" : "checkmark.circle").font(.system(size: 20)).foregroundStyle(on ? p.lab : p.mut)
+                Image(systemName: on ? "checkmark.circle.fill" : "checkmark.circle").font(.dyn51(size: 20)).foregroundStyle(on ? p.lab : p.mut)
             }
             .contentShape(Rectangle())
         }
@@ -152,7 +152,7 @@ struct Skj77ImageFinder: View {
             }
             Spacer()
             Button { dismiss() } label: {
-                Image(systemName: "xmark").font(.system(size: 14, weight: .bold)).foregroundStyle(p.ink).frame(width: 36, height: 36)
+                Image(systemName: "xmark").font(.dyn51(size: 14, weight: .bold)).foregroundStyle(p.ink).frame(width: 36, height: 36)
                     .overlay(Circle().stroke(p.line, lineWidth: 1))
             }
             .buttonStyle(.plain)
@@ -168,7 +168,7 @@ struct Skj77ImageFinder: View {
                 .background(p.card, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                 .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(p.line, lineWidth: 1))
             Button { search() } label: {
-                Image(systemName: "magnifyingglass").font(.system(size: 15, weight: .bold)).foregroundStyle(p.bg)
+                Image(systemName: "magnifyingglass").font(.dyn51(size: 15, weight: .bold)).foregroundStyle(p.bg)
                     .frame(width: 44, height: 44).background(p.ink, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
             }
             .buttonStyle(.plain)
@@ -260,7 +260,7 @@ struct Skj77Remote: View {
             if let img {
                 if fit { Image(uiImage: img).resizable().scaledToFit() } else { Image(uiImage: img).resizable().scaledToFill() }
             } else {
-                Image(systemName: "photo").font(.system(size: 22)).foregroundStyle(p.mut)
+                Image(systemName: "photo").font(.dyn51(size: 22)).foregroundStyle(p.mut)
             }
         }
         .clipped()
@@ -362,7 +362,7 @@ struct Skj77TidyRow: View {
     var body: some View {
         Button { if item.changed { toggle() } } label: {
             HStack(alignment: .top, spacing: 12) {
-                Image(systemName: on && item.changed ? "checkmark.square.fill" : "square").font(.system(size: 20))
+                Image(systemName: on && item.changed ? "checkmark.square.fill" : "square").font(.dyn51(size: 20))
                     .foregroundStyle(item.changed ? (on ? p.lab : p.ink) : p.mut.opacity(0.4))
                 VStack(alignment: .leading, spacing: 3) {
                     Text(item.oldName.isEmpty ? "Uten navn" : item.oldName).font(PF.ui(13)).strikethrough(nameChanged).foregroundStyle(p.mut).lineLimit(1)

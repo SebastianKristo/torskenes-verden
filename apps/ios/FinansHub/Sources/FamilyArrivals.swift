@@ -22,7 +22,7 @@ struct VelFremmeStatus42: View {
                     Hjemlys40Dot(size: 10, state: state)
                     Text(t).font(PF.ui(13, .semibold)).foregroundStyle(p.ink).lineLimit(1).minimumScaleFactor(0.8)
                     Spacer(minLength: 4)
-                    Text("›").font(PF.ui(14, .bold)).foregroundStyle(p.mut)
+                    Image(systemName: "chevron.right").accessibilityHidden(true).font(PF.ui(11, .bold)).foregroundStyle(p.mut)
                 }
                 .padding(.horizontal, 14).frame(height: 40)
                 .background(p.card, in: Capsule())

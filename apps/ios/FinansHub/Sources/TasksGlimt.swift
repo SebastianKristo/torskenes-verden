@@ -1010,7 +1010,7 @@ struct Tasks41PendingRows: View {
                     }
                     Spacer(minLength: 4)
                     if j.state == "fail" {
-                        Button { g.dismissJob(j.id) } label: { Text("✕").font(PF.ui(13, .bold)).foregroundStyle(p.mut) }.buttonStyle(.plain)
+                        Button { g.dismissJob(j.id) } label: { Image(systemName: "xmark").font(PF.ui(12, .bold)).foregroundStyle(p.mut).frame(width: 44, height: 44).contentShape(Rectangle()) }.buttonStyle(.plain).accessibilityLabel("Fjern")
                     }
                 }
                 .padding(12)
@@ -1031,7 +1031,7 @@ struct Tasks41PendingRows: View {
                         TaskDock22.shared.cur = Tasks41Glimt.madeId
                     } label: { Text(b.count > 1 ? "Endre" : "Se").font(PF.ui(13.5, .bold)).foregroundStyle(p.lab) }
                     .buttonStyle(.plain)
-                    Button { g.dismissBanner() } label: { Text("✕").font(PF.ui(13, .bold)).foregroundStyle(p.mut) }.buttonStyle(.plain)
+                    Button { g.dismissBanner() } label: { Image(systemName: "xmark").font(PF.ui(12, .bold)).foregroundStyle(p.mut).frame(width: 44, height: 44).contentShape(Rectangle()) }.buttonStyle(.plain).accessibilityLabel("Lukk")
                 }
                 .padding(12)
                 .background(p.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))

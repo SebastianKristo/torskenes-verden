@@ -264,7 +264,7 @@ struct News73BookmarkButton: View {
         let on: Bool = News73Model.shared.isSaved(item.url)
         Button { News73Model.shared.toggle(item, store) } label: {
             Image(systemName: on ? "bookmark.fill" : "bookmark")
-                .font(.system(size: 16, weight: .semibold))
+                .font(.dyn51(size: 16, weight: .semibold))
                 .foregroundStyle(on ? p.bg : p.ink)
                 .frame(width: 44, height: 44)
                 .background(on ? p.ink : p.card, in: Circle())
@@ -364,7 +364,7 @@ struct News73SavedList: View {
 
     private var search: some View {
         HStack(spacing: 10) {
-            Image(systemName: "magnifyingglass").font(.system(size: 15, weight: .semibold)).foregroundStyle(p.mut)
+            Image(systemName: "magnifyingglass").font(.dyn51(size: 15, weight: .semibold)).foregroundStyle(p.mut)
             TextField("Søk i lagrede artikler", text: $q).font(PF.ui(15)).foregroundStyle(p.ink).submitLabel(.search)
                 .textInputAutocapitalization(.never).autocorrectionDisabled()
             if !q.isEmpty {
@@ -486,7 +486,7 @@ struct News73Reader: View {
             Spacer()
             if let u = URL(string: it.url) {
                 ShareLink(item: u, subject: Text(it.title)) {
-                    Image(systemName: "square.and.arrow.up").font(.system(size: 16, weight: .semibold)).foregroundStyle(p.ink)
+                    Image(systemName: "square.and.arrow.up").font(.dyn51(size: 16, weight: .semibold)).foregroundStyle(p.ink)
                         .frame(width: 44, height: 44).background(p.card, in: Circle()).overlay(Circle().stroke(p.line, lineWidth: 1))
                 }
                 .buttonStyle(.plain)

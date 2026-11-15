@@ -85,7 +85,7 @@ struct Nrk88Top: View {
 
     private var searchField: some View {
         HStack(spacing: 8) {
-            Image(systemName: "magnifyingglass").font(.system(size: 15, weight: .semibold)).foregroundStyle(p.mut)
+            Image(systemName: "magnifyingglass").font(.dyn51(size: 15, weight: .semibold)).foregroundStyle(p.mut)
                 .accessibilityHidden(true)
             TextField("Søk i NRK TV og NRK Radio", text: Binding<String>(get: { s.q }, set: { (v: String) in s.typed(v, store) }))
                 .font(PF.ui(14.5)).foregroundStyle(p.ink)
@@ -96,7 +96,7 @@ struct Nrk88Top: View {
                 .accessibilityLabel("Søk i NRK")
             if !s.q.isEmpty {
                 Button { s.clear() } label: {
-                    Image(systemName: "xmark.circle.fill").font(.system(size: 17)).foregroundStyle(p.mut)
+                    Image(systemName: "xmark.circle.fill").font(.dyn51(size: 17)).foregroundStyle(p.mut)
                         .frame(width: 44, height: 44).contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
@@ -186,7 +186,7 @@ struct Nrk88Top: View {
             s.linkOpen.toggle()
         } label: {
             HStack(spacing: 6) {
-                Image(systemName: open ? "chevron.down" : "chevron.right").font(.system(size: 12, weight: .bold)).foregroundStyle(p.mut)
+                Image(systemName: open ? "chevron.down" : "chevron.right").font(.dyn51(size: 12, weight: .bold)).foregroundStyle(p.mut)
                     .accessibilityHidden(true)
                 Text("Har du en lenke?").font(PF.ui(14, .bold)).foregroundStyle(p.ink)
                 Spacer(minLength: 0)
@@ -213,7 +213,7 @@ struct Nrk88Box: View {
             RoundedRectangle(cornerRadius: 6, style: .continuous).fill(fill)
             RoundedRectangle(cornerRadius: 6, style: .continuous).stroke(edge, lineWidth: 1.5)
             if on || done {
-                Image(systemName: "checkmark").font(.system(size: 11, weight: .bold)).foregroundStyle(on ? p.bg : p.pos)
+                Image(systemName: "checkmark").font(.dyn51(size: 11, weight: .bold)).foregroundStyle(on ? p.bg : p.pos)
             }
         }
         .frame(width: 22, height: 22)
@@ -273,7 +273,7 @@ struct Nrk88HitRow: View {
             }
             Spacer(minLength: 0)
             if h.art == "serie" && note == nil {
-                Image(systemName: "chevron.right").font(.system(size: 13, weight: .semibold)).foregroundStyle(p.mut)
+                Image(systemName: "chevron.right").font(.dyn51(size: 13, weight: .semibold)).foregroundStyle(p.mut)
                     .frame(minHeight: 72).accessibilityHidden(true)
             }
         }

@@ -304,6 +304,7 @@ struct PaperDepartures: View {
                 depRow(d)
                     .contentShape(Rectangle())
                     .onTapGesture { toggleDep(d) }
+                    .accessibilityAddTraits(.isButton)
                 if openDep == d.openKey {
                     RuterStopList21(dep: d, color: lineColor(d), stopName: s.name)
                         .transition(.opacity.combined(with: .move(edge: .top)))

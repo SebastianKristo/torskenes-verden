@@ -231,7 +231,7 @@ struct News46SummaryCard: View {
                             Text("•").foregroundStyle(p.lab)
                             Text(pair.element.0).font(PF.ui(14.5)).foregroundStyle(p.ink).multilineTextAlignment(.leading).fixedSize(horizontal: false, vertical: true)
                             Spacer(minLength: 0)
-                            if target(pair.element.1) != nil { Text("›").foregroundStyle(p.mut) }
+                            if target(pair.element.1) != nil { Image(systemName: "chevron.right").accessibilityHidden(true).font(PF.ui(13, .semibold)).foregroundStyle(p.mut) }
                         }
                         .contentShape(Rectangle())
                     }

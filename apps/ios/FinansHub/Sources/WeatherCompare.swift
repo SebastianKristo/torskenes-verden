@@ -376,7 +376,7 @@ struct WxCmp39Slot<C: View>: View {
         .overlay(alignment: .topLeading) {
             if editing {
                 Button { L.hide(k, store) } label: {
-                    Text("−").font(.dyn51(size: 17, weight: .bold)).foregroundStyle(.white)
+                    Image(systemName: "minus").font(.dyn51(size: 13, weight: .bold)).foregroundStyle(.white)
                         .frame(width: 26, height: 26)
                         .background(Color(hex: "#0f1b2b"), in: Circle())
                         .shadow(color: .black.opacity(0.35), radius: 4, y: 2)
@@ -432,7 +432,7 @@ struct WxCmp39AddBox: View {
             ForEach(L.hiddenList, id: \.self) { (k: String) in
                 Button { L.show(k, store) } label: {
                     HStack(spacing: 10) {
-                        Text("+").font(.dyn51(size: 17, weight: .heavy)).foregroundStyle(Color(hex: "#0f1b2b"))
+                        Image(systemName: "plus").accessibilityHidden(true).font(.dyn51(size: 13, weight: .heavy)).foregroundStyle(Color(hex: "#0f1b2b"))
                             .frame(width: 26, height: 26).background(Color(hex: "#6fdc8c"), in: Circle())
                         Text(WxCmp39.name(k)).font(.dyn51(size: 15, weight: .semibold))
                         Spacer(minLength: 0)
@@ -647,7 +647,7 @@ struct WxCmp39Row: View {
                     Text(yr).font(.dyn51(size: 15, weight: .semibold)).monospacedDigit().frame(width: 50, alignment: .trailing).lineLimit(1).minimumScaleFactor(0.7)
                     WxCmp39Bar(df: df, unit: tab == "t" ? "°" : " mm").frame(maxWidth: .infinity)
                     Text(st).font(.dyn51(size: 15, weight: .semibold)).monospacedDigit().frame(width: 50, alignment: .leading).lineLimit(1).minimumScaleFactor(0.7)
-                    Text("›").font(.dyn51(size: 14)).opacity(0.6).rotationEffect(.degrees(open ? 90 : 0)).frame(width: 12)
+                    Image(systemName: "chevron.right").accessibilityHidden(true).font(.dyn51(size: 11, weight: .semibold)).opacity(0.6).rotationEffect(.degrees(open ? 90 : 0)).frame(width: 12)
                 }
                 .frame(minHeight: 56)
                 .padding(.top, 6)

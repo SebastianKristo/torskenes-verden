@@ -290,7 +290,7 @@ struct Media44SiteChoice: View {
                     Text(statusLine).font(PF.ui(12)).foregroundStyle(p.mut)
                 }
                 Spacer(minLength: 6)
-                if on { Image(systemName: "checkmark").font(.system(size: 14, weight: .bold)).foregroundStyle(p.lab) }
+                if on { Image(systemName: "checkmark").font(.dyn51(size: 14, weight: .bold)).foregroundStyle(p.lab) }
             }
             .padding(.horizontal, 14).frame(minHeight: 60)
             .contentShape(Rectangle())

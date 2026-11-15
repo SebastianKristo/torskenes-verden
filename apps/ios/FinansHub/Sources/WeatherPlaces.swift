@@ -121,7 +121,7 @@ struct WxPlacesSheet22: View {
 
     private var searchField: some View {
         // Prompt 27: ✕ til venstre (SearchField27). Tømming lukker treffene.
-        SearchField27(text: $q, placeholder: "Søk etter by eller sted", font: .system(size: 16, weight: .medium), ink: Color.white,
+        SearchField27(text: $q, placeholder: "Søk etter by eller sted", font: .dyn51(size: 16, weight: .medium), ink: Color.white,
                       placeholderColor: Color(hex: "#9aa3ae"), focus: $qFocus52, onClear: { hits = []; searched = false; busy = false; failed = false }, lead: {
             Glyph22Icon(name: "search", size: 17, color: Color(hex: "#9aa3ae"), stroke: 2.2)
         })

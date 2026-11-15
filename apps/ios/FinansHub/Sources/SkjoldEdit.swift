@@ -101,7 +101,7 @@ struct Skj76Edit: View {
 
     private func remove(_ act: @escaping () -> Void) -> some View {
         Button(action: act) {
-            Image(systemName: "xmark").font(.system(size: 10, weight: .bold)).foregroundStyle(.white)
+            Image(systemName: "xmark").font(.dyn51(size: 10, weight: .bold)).foregroundStyle(.white)
                 .frame(width: 22, height: 22).background(Color.black.opacity(0.6), in: Circle())
         }
         .buttonStyle(.plain).padding(4)
@@ -339,7 +339,7 @@ struct Skj76FormFields: View {
                 ForEach(Skjold77.defaultCategories, id: \.self) { (c: String) in Button(c) { f.category = c } }
             }
         } label: {
-            Image(systemName: "list.bullet").font(.system(size: 15, weight: .semibold)).foregroundStyle(p.ink)
+            Image(systemName: "list.bullet").font(.dyn51(size: 15, weight: .semibold)).foregroundStyle(p.ink)
                 .frame(width: 44, height: 44).overlay(RoundedRectangle(cornerRadius: 12).stroke(p.line, lineWidth: 1))
         }
         .accessibilityLabel("Velg kategori")

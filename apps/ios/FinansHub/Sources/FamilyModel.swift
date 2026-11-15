@@ -877,7 +877,7 @@ struct FamilySettingsView: View {
                 ForEach(Array(HealthSync.kinds.enumerated()), id: \.element.0) { i, k in
                     if i > 0 { Rectangle().fill(p.line).frame(height: 1) }
                     HStack {
-                        Image(systemName: k.2).font(.system(size: 14, weight: .semibold)).foregroundStyle(.white)
+                        Image(systemName: k.2).font(.dyn51(size: 14, weight: .semibold)).foregroundStyle(.white)
                             .frame(width: 30, height: 30)
                             .background(PaperIconTheme.color(store.iconTheme, i), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
                         Text(k.1).font(PF.ui(15, .semibold)).foregroundStyle(p.ink)

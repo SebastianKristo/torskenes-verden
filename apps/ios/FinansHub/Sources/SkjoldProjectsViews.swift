@@ -55,12 +55,12 @@ struct Skj82UsedIn: View {
             m.sheet = .project(u.projectId)
         } label: {
             HStack(spacing: 8) {
-                Image(systemName: "shippingbox").font(.system(size: 13)).foregroundStyle(p.lab)
+                Image(systemName: "shippingbox").font(.dyn51(size: 13)).foregroundStyle(p.lab)
                 Text(u.name).font(PF.ui(14.5, .semibold)).foregroundStyle(p.ink).lineLimit(1)
                 if u.status == "ferdig" { Skj76Badge(text: "Ferdig") }
                 Spacer(minLength: 6)
                 Text(Skjold76.num(u.qty) + " " + unit).font(PF.mono(13)).foregroundStyle(p.ink)
-                Image(systemName: "chevron.right").font(.system(size: 11, weight: .bold)).foregroundStyle(p.mut)
+                Image(systemName: "chevron.right").font(.dyn51(size: 11, weight: .bold)).foregroundStyle(p.mut)
             }
             .frame(minHeight: 36)
             .contentShape(Rectangle())
@@ -142,7 +142,7 @@ struct Skj82Checkout: View {
             Haptics.shared.tick()
             qty = Skjold82.clamp(qty + d, stock: x.qty)
         } label: {
-            Image(systemName: icon).font(.system(size: 18, weight: .bold)).foregroundStyle(p.ink)
+            Image(systemName: icon).font(.dyn51(size: 18, weight: .bold)).foregroundStyle(p.ink)
                 .frame(width: 48, height: 48).overlay(Circle().stroke(p.line, lineWidth: 1)).contentShape(Circle())
         }
         .buttonStyle(.plain)
@@ -233,7 +233,7 @@ struct Skj82PickTarget: View {
                 } label: {
                     HStack(spacing: 4) {
                         Text(label).font(PF.ui(14, .semibold)).foregroundStyle(p.ink).lineLimit(1)
-                        Image(systemName: "chevron.up.chevron.down").font(.system(size: 10, weight: .bold)).foregroundStyle(p.mut)
+                        Image(systemName: "chevron.up.chevron.down").font(.dyn51(size: 10, weight: .bold)).foregroundStyle(p.mut)
                     }
                 }
                 Spacer(minLength: 0)
@@ -274,13 +274,13 @@ struct Skj82Entry: View {
                 m.sheet = .projects
             } label: {
                 HStack(spacing: 10) {
-                    Image(systemName: "shippingbox").font(.system(size: 16, weight: .semibold)).foregroundStyle(p.lab)
+                    Image(systemName: "shippingbox").font(.dyn51(size: 16, weight: .semibold)).foregroundStyle(p.lab)
                     VStack(alignment: .leading, spacing: 1) {
                         Text("Produkter").font(PF.ui(15, .semibold)).foregroundStyle(p.ink)
                         Text(sub).font(PF.ui(12.5)).foregroundStyle(p.mut).lineLimit(1)
                     }
                     Spacer(minLength: 6)
-                    Image(systemName: "chevron.right").font(.system(size: 12, weight: .bold)).foregroundStyle(p.mut)
+                    Image(systemName: "chevron.right").font(.dyn51(size: 12, weight: .bold)).foregroundStyle(p.mut)
                 }
                 .padding(.horizontal, 14).padding(.vertical, 10)
                 .contentShape(Rectangle())
@@ -338,7 +338,7 @@ struct Skj82ProjectsSheet: View {
                 .padding(.horizontal, 12).frame(height: 44)
                 .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(p.line, lineWidth: 1))
             Button { add() } label: {
-                Image(systemName: "plus").font(.system(size: 16, weight: .bold)).foregroundStyle(p.onLab)
+                Image(systemName: "plus").font(.dyn51(size: 16, weight: .bold)).foregroundStyle(p.onLab)
                     .frame(width: 44, height: 44).background(p.lab, in: Circle())
             }
             .buttonStyle(.plain)
@@ -386,7 +386,7 @@ struct Skj82ProjectsSheet: View {
                 }
                 Spacer(minLength: 6)
                 Text(Skjold82.costText(x.cost)).font(PF.mono(13)).foregroundStyle(p.ink).lineLimit(1)
-                Image(systemName: "chevron.right").font(.system(size: 11, weight: .bold)).foregroundStyle(p.mut)
+                Image(systemName: "chevron.right").font(.dyn51(size: 11, weight: .bold)).foregroundStyle(p.mut)
             }
             .padding(.horizontal, 14).padding(.vertical, 12)
             .contentShape(Rectangle())
@@ -622,7 +622,7 @@ struct Skj82LineRow: View {
             Haptics.shared.tick()
             n = Swift.max(1, Swift.min(top, n + d))
         } label: {
-            Image(systemName: icon).font(.system(size: 13, weight: .bold)).foregroundStyle(p.ink)
+            Image(systemName: icon).font(.dyn51(size: 13, weight: .bold)).foregroundStyle(p.ink)
                 .frame(width: 32, height: 32).overlay(Circle().stroke(p.line, lineWidth: 1))
                 .contentShape(Circle())
         }

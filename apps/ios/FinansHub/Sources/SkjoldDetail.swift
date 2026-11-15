@@ -20,7 +20,7 @@ struct Skj76SheetTop: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             Button { m.sheet = nil } label: {
-                Image(systemName: "xmark").font(.system(size: 14, weight: .bold)).foregroundStyle(p.ink).frame(width: 36, height: 36)
+                Image(systemName: "xmark").font(.dyn51(size: 14, weight: .bold)).foregroundStyle(p.ink).frame(width: 36, height: 36)
                     .overlay(Circle().stroke(p.line, lineWidth: 1))
             }
             .buttonStyle(.plain)
@@ -41,7 +41,7 @@ struct Skj76Button: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: 6) {
-                if !icon.isEmpty { Image(systemName: icon).font(.system(size: 13, weight: .semibold)) }
+                if !icon.isEmpty { Image(systemName: icon).font(.dyn51(size: 13, weight: .semibold)) }
                 Text(title).font(PF.ui(14, .bold)).lineLimit(1)
             }
             .foregroundStyle(filled ? p.bg : (danger ? p.lab : p.ink))
@@ -204,7 +204,7 @@ struct Skj76Qty: View {
 
     private func step(_ icon: String, _ d: Double) -> some View {
         Button { m.qty(part, delta: d, store) } label: {
-            Image(systemName: icon).font(.system(size: 18, weight: .bold)).foregroundStyle(p.ink)
+            Image(systemName: icon).font(.dyn51(size: 18, weight: .bold)).foregroundStyle(p.ink)
                 .frame(width: 48, height: 48).overlay(Circle().stroke(p.line, lineWidth: 1)).contentShape(Circle())
         }
         .buttonStyle(.plain)

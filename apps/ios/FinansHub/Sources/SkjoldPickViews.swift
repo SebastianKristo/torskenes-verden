@@ -22,7 +22,7 @@ struct Skj79AddButton: View {
             k.toggle(part, store)
         } label: {
             Image(systemName: on ? "checkmark" : "plus")
-                .font(.system(size: 14, weight: .bold))
+                .font(.dyn51(size: 14, weight: .bold))
                 .foregroundStyle(on ? p.onLab : p.ink)
                 .frame(width: 30, height: 30)
                 .background(on ? p.lab : Color.clear, in: Circle())
@@ -80,7 +80,7 @@ struct Skj79Bar: View {
             HStack(spacing: 8) {
                 Button { open() } label: {
                     HStack(spacing: 6) {
-                        Image(systemName: "list.bullet.rectangle").font(.system(size: 15, weight: .semibold))
+                        Image(systemName: "list.bullet.rectangle").font(.dyn51(size: 15, weight: .semibold))
                         Text("Plukkliste (\(k.count))").font(PF.ui(14, .bold)).lineLimit(1)
                     }
                     .foregroundStyle(p.bg)
@@ -101,7 +101,7 @@ struct Skj79Bar: View {
                     .disabled(l.busy)
                 }
                 Button { open() } label: {
-                    Image(systemName: "chevron.up").font(.system(size: 14, weight: .bold)).foregroundStyle(p.bg)
+                    Image(systemName: "chevron.up").font(.dyn51(size: 14, weight: .bold)).foregroundStyle(p.bg)
                         .frame(width: 34, height: 34).contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
@@ -241,6 +241,7 @@ struct Skj79Line: View {
         }
         .contentShape(Rectangle())
         .onTapGesture { m.sheet = .part(item.partId) }
+        .accessibilityAddTraits(.isButton)
     }
 
     private var stockText: String {
@@ -264,7 +265,7 @@ struct Skj79Line: View {
 
     private func step(_ icon: String, _ d: Int) -> some View {
         Button { k.setTake(item.partId, item.take + d, store) } label: {
-            Image(systemName: icon).font(.system(size: 13, weight: .bold)).foregroundStyle(p.ink)
+            Image(systemName: icon).font(.dyn51(size: 13, weight: .bold)).foregroundStyle(p.ink)
                 .frame(width: 32, height: 32).overlay(Circle().stroke(p.line, lineWidth: 1))
                 .contentShape(Circle())
         }

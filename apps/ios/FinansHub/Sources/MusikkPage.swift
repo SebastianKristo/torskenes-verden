@@ -355,7 +355,7 @@ struct Mu88SubRow: View {
                         Text(m.subLine(s)).font(PF.ui(12.5)).foregroundStyle(p.mut).fixedSize(horizontal: false, vertical: true)
                     }
                     Spacer(minLength: 4)
-                    Image(systemName: open ? "chevron.down" : "chevron.right").font(.system(size: 13, weight: .semibold)).foregroundStyle(p.mut)
+                    Image(systemName: open ? "chevron.down" : "chevron.right").font(.dyn51(size: 13, weight: .semibold)).foregroundStyle(p.mut)
                         .accessibilityHidden(true)
                 }
                 .frame(minHeight: 56)

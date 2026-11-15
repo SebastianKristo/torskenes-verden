@@ -151,7 +151,7 @@ struct Kart46ZoomButtons: View {
 
     private func btn(_ icon: String, _ label: String, _ act: @escaping () -> Void) -> some View {
         Button { Haptics.shared.tap(); act() } label: {
-            Image(systemName: icon).font(.system(size: 15, weight: .bold)).foregroundStyle(p.ink)
+            Image(systemName: icon).font(.dyn51(size: 15, weight: .bold)).foregroundStyle(p.ink)
                 .frame(width: 44, height: 44)
                 .background(p.card, in: Circle())
                 .shadow(color: Color.black.opacity(0.16), radius: 5, y: 2)
@@ -198,7 +198,7 @@ struct Kart46Search: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 8) {
-                Image(systemName: "magnifyingglass").font(.system(size: 14, weight: .semibold)).foregroundStyle(p.mut)
+                Image(systemName: "magnifyingglass").font(.dyn51(size: 14, weight: .semibold)).foregroundStyle(p.mut)
                 TextField("Søk etter holdeplass", text: Binding<String>(get: { m.query }, set: { (v: String) in m.query = v; m.search(store) }))
                     .font(PF.ui(15)).foregroundStyle(p.ink).submitLabel(.search)
                     .textInputAutocapitalization(.never).autocorrectionDisabled()
@@ -360,7 +360,7 @@ struct Kart46PeopleList: View {
                     Text(sub(pe)).font(PF.ui(12)).foregroundStyle(p.mut)
                 }
                 Spacer(minLength: 4)
-                Text("›").font(PF.ui(17)).foregroundStyle(p.mut)
+                Image(systemName: "chevron.right").accessibilityHidden(true).font(PF.ui(13, .semibold)).foregroundStyle(p.mut)
             }
             .padding(.horizontal, 14).frame(minHeight: 58)
             .contentShape(Rectangle())
@@ -392,7 +392,7 @@ struct Kart46StopCard: View {
                 }
                 Spacer()
                 Button { Haptic34.back(); m.stop = nil } label: {
-                    Image(systemName: "xmark").font(.system(size: 13, weight: .bold)).foregroundStyle(p.ink)
+                    Image(systemName: "xmark").font(.dyn51(size: 13, weight: .bold)).foregroundStyle(p.ink)
                         .frame(width: 34, height: 34).background(p.card, in: Circle()).frame(width: 44, height: 44)
                 }
                 .buttonStyle(.plain)

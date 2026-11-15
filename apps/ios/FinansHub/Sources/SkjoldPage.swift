@@ -106,7 +106,7 @@ struct Skj76AddButton: View {
             Haptics.shared.tap()
             m.sheet = .edit("")
         } label: {
-            Image(systemName: "plus").font(.system(size: 22, weight: .bold)).foregroundStyle(p.onLab)
+            Image(systemName: "plus").font(.dyn51(size: 22, weight: .bold)).foregroundStyle(p.onLab)
                 .frame(width: 58, height: 58).background(p.lab, in: Circle())
                 .shadow(color: Color.black.opacity(0.18), radius: 8, y: 3)
         }
@@ -217,7 +217,7 @@ struct Skj76Search: View {
             ForEach(m.suggestions, id: \.self) { (s: Skj76Suggest) in
                 Button { choose(s) } label: {
                     HStack(spacing: 8) {
-                        Image(systemName: s.partId.isEmpty ? "arrow.up.left" : "shippingbox").font(.system(size: 11)).foregroundStyle(p.mut)
+                        Image(systemName: s.partId.isEmpty ? "arrow.up.left" : "shippingbox").font(.dyn51(size: 11)).foregroundStyle(p.mut)
                         Text(s.text).font(PF.ui(14.5)).foregroundStyle(p.ink).lineLimit(1)
                         Spacer(minLength: 6)
                         if !s.sub.isEmpty { Text(s.sub).font(PF.mono(10)).foregroundStyle(p.lab).lineLimit(1) }
@@ -320,7 +320,7 @@ struct Skj76CabinetCard: View {
                 HStack(spacing: 6) {
                     Image(systemName: "cabinet").foregroundStyle(p.lab)
                     Text(c.name).font(PF.serif(20, medium: true)).foregroundStyle(p.ink).lineLimit(1)
-                    if m.cabinets.count > 1 { Image(systemName: "chevron.down").font(.system(size: 11, weight: .bold)).foregroundStyle(p.mut) }
+                    if m.cabinets.count > 1 { Image(systemName: "chevron.down").font(.dyn51(size: 11, weight: .bold)).foregroundStyle(p.mut) }
                 }
             }
             Spacer()

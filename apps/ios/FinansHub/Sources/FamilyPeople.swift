@@ -66,7 +66,7 @@ struct Fam22PersonCard: View {
             PhotosPicker(selection: $pick, matching: .images) {
                 Fam22Avatar(mem: mem, size: 48, font: 16)
                     .overlay(alignment: .bottomTrailing) {
-                        Text("✎").font(.system(size: 11)).foregroundStyle(t.bg)
+                        Image(systemName: "pencil").accessibilityHidden(true).font(.dyn51(size: 10, weight: .bold)).foregroundStyle(t.bg)
                             .frame(width: 20, height: 20)
                             .background(Circle().fill(t.ink))
                             .overlay(Circle().strokeBorder(t.card, lineWidth: 2))
@@ -84,7 +84,7 @@ struct Fam22PersonCard: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             Button(action: close) {
-                Text("×").font(PF.ui(16)).foregroundStyle(t.ink)
+                Image(systemName: "xmark").font(PF.ui(13, .semibold)).foregroundStyle(t.ink)
                     .frame(width: 36, height: 36)
                     .overlay(Circle().strokeBorder(t.line, lineWidth: 1))
                     .contentShape(Circle())

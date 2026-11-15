@@ -555,7 +555,7 @@ struct FamilyEmptyShare21: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 10) {
-                Image(systemName: "location.slash").font(.system(size: 18, weight: .semibold)).foregroundStyle(p.mut)
+                Image(systemName: "location.slash").font(.dyn51(size: 18, weight: .semibold)).foregroundStyle(p.mut)
                 Text("Ingen deler posisjon med deg ennå").font(PF.ui(15, .semibold)).foregroundStyle(p.ink)
             }
             Text("Deling er av som standard. Når noen i familien slår på deling i appen, vises de her og på kartet.")

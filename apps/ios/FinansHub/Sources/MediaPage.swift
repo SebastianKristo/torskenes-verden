@@ -439,12 +439,12 @@ struct Media43Library: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 8) {
                 HStack(spacing: 6) {
-                    Image(systemName: "magnifyingglass").font(.system(size: 13)).foregroundStyle(p.mut)
+                    Image(systemName: "magnifyingglass").font(.dyn51(size: 13)).foregroundStyle(p.mut)
                     TextField(Media44Lib.placeholder(kind, all.count), text: $q).font(PF.ui(14.5)).foregroundStyle(p.ink)
                         .autocorrectionDisabled()
                     if !q.isEmpty {
                         Button { q = "" } label: {
-                            Image(systemName: "xmark.circle.fill").font(.system(size: 15)).foregroundStyle(p.mut).frame(width: 30, height: 30)
+                            Image(systemName: "xmark.circle.fill").font(.dyn51(size: 15)).foregroundStyle(p.mut).frame(width: 30, height: 30)
                         }
                         .buttonStyle(.plain)
                         .accessibilityLabel("Tøm søket")
@@ -629,7 +629,7 @@ struct Media43Detail: View {
         HStack(spacing: 4) {
             Text(k).font(PF.ui(12)).foregroundStyle(p.mut)
             Text(v).font(PF.ui(12.5, .bold)).foregroundStyle(p.ink)
-            Image(systemName: "chevron.down").font(.system(size: 9, weight: .bold)).foregroundStyle(p.mut)
+            Image(systemName: "chevron.down").font(.dyn51(size: 9, weight: .bold)).foregroundStyle(p.mut)
         }
         .padding(.horizontal, 12).frame(height: 36)
         .background(p.card, in: Capsule())
@@ -713,7 +713,7 @@ struct Media43Detail: View {
                 VStack(alignment: .leading, spacing: 0) {
                     HStack(spacing: 10) {
                         Button { m.setSeasonMonitored(s, !allMon, store) } label: {
-                            Image(systemName: allMon ? "bookmark.fill" : "bookmark").font(.system(size: 15)).foregroundStyle(allMon ? p.ink : p.mut)
+                            Image(systemName: allMon ? "bookmark.fill" : "bookmark").font(.dyn51(size: 15)).foregroundStyle(allMon ? p.ink : p.mut)
                                 .frame(width: 44, height: 44)
                         }
                         .buttonStyle(.plain)
@@ -723,7 +723,7 @@ struct Media43Detail: View {
                                 Text(s == 0 ? "Spesialer" : "Sesong \(s)").font(PF.serif(19, medium: true)).foregroundStyle(p.ink)
                                 Text("\(eps.filter(\.hasFile).count)/\(eps.count)").font(PF.ui(12)).foregroundStyle(p.mut)
                                 Spacer()
-                                Image(systemName: open ? "chevron.up" : "chevron.down").font(.system(size: 12, weight: .bold)).foregroundStyle(p.mut)
+                                Image(systemName: open ? "chevron.up" : "chevron.down").font(.dyn51(size: 12, weight: .bold)).foregroundStyle(p.mut)
                             }
                             .frame(minHeight: 44).contentShape(Rectangle())
                         }
@@ -755,7 +755,7 @@ struct Media43Detail: View {
             Rectangle().fill(p.line).frame(height: 1)
             HStack(spacing: 8) {
                 Button { m.setEpisodeMonitored(e, !e.monitored, store) } label: {
-                    Image(systemName: e.monitored ? "bookmark.fill" : "bookmark").font(.system(size: 13)).foregroundStyle(e.monitored ? p.ink : p.mut)
+                    Image(systemName: e.monitored ? "bookmark.fill" : "bookmark").font(.dyn51(size: 13)).foregroundStyle(e.monitored ? p.ink : p.mut)
                         .frame(width: 36, height: 44)
                 }
                 .buttonStyle(.plain)

@@ -142,7 +142,7 @@ struct MediaCtl51Button: View {
 
     var body: some View {
         Button(action: action) {
-            Image(systemName: icon).font(.system(size: 15, weight: .semibold)).foregroundStyle(p.ink)
+            Image(systemName: icon).font(.dyn51(size: 15, weight: .semibold)).foregroundStyle(p.ink)
                 .frame(minWidth: 44, minHeight: 44)
                 .background(p.line.opacity(0.35), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         }

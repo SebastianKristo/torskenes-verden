@@ -359,7 +359,7 @@ struct Fam50PlaceEdit: View {
             radiusMenu(a, t)
             if canEdit {
                 Button { removeArea(a) } label: {
-                    Text("✕").font(PF.ui(13, .bold)).foregroundStyle(areas.count > 1 ? t.faint : t.faint.opacity(0.4)).frame(width: 36, height: 36)
+                    Image(systemName: "xmark").font(PF.ui(12, .bold)).foregroundStyle(areas.count > 1 ? t.faint : t.faint.opacity(0.4)).frame(width: 36, height: 36)
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Fjern " + a.name)

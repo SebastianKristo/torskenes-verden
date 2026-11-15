@@ -206,7 +206,7 @@ struct Tasks32bArchiveView: View {
             }
             .buttonStyle(.plain)
             Button { a.remove(t, store) } label: {
-                Text("×").font(PF.ui(20, .bold)).foregroundStyle(p.mut).frame(width: 30, height: 36)
+                Image(systemName: "xmark").font(PF.ui(15, .bold)).foregroundStyle(p.mut).frame(width: 30, height: 36)
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Slett for godt")
