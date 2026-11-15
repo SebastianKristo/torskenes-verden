@@ -5,7 +5,6 @@
 //   n_ai_in + Glimt-ikon på varsel, draape-lyden, avatar-sanntid                                                      → notify.js, mobile.js
 //   briefGlimt i /api/glimt/settings og /api/brief                                                                    → glimt35.js, brief34.js
 //   Gjøremål: ingen pakkeliste for bursdager, /api/tasks/glimt/tips                                                    → tasks-glimt37.js
-//   /api/weather/week-summary                                                                                         → vaer/week-summary.js
+//   /api/weather/week-summary                                                                                         → server/vaer/ (mountVaer)
 //   /api/domains/gsc/sites, /api/domains/import, /api/domains/:d/gsc/verify, kilde 'gsc'                               → domains-glimt.js, domains.js
 export { rec39Api } from './ai39.js';
-export { week39Api } from './vaer/week-summary.js';

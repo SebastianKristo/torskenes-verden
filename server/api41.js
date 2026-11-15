@@ -5,7 +5,7 @@
 //   Gjøremål-Glimt i bakgrunnen + «Laget med Glimt»: /api/tasks/glimt {async:true}, /glimt/jobs, /glimt/sources           → tasks-glimt41.js (+ tasks.js)
 //     alias POST /api/huske/glimt-jobs; /api/assist gjenkjenner huskebeskjeder                                           → under, assist.js
 //   Chat: «Mine data» på som standard, «✦ Auto»                                                                        → settings.js, chat41.js (+ chat.js)
-//   Vær-uke via Glimt (Ollama + 7 dager), skiføre i brief/Vær                                                          → vaer/week-glimt.js (+ assist.js, chat.js), under
+//   Vær-uke via Glimt (Ollama + 7 dager), skiføre i brief/Vær, Rediger Vær                                               → server/vaer/ (+ assist.js, chat.js), brief under
 //   AI-jobber: createdAt/startedAt/endedAt + timeLabel                                                                 → ai41.js (+ ai-run.js)
 //   Finans: Les på nytt for alle statuser, receipt_reads, /receipts/:id/reread, /receipts/:id/review                    → finans/routes.js
 //   17. mai: /api/glimt/settings mai17/mai17Active, /api/glimt/mai17, brief.mai17                                       → mai17-41.js (+ glimt35.js)
@@ -34,27 +34,9 @@ huske41Api.post('/glimt-jobs', authOrToken, async (c) => {
   catch (e) { return c.json({ error: e.message }, e.status ?? 400); }
 });
 
-/* ---------------- Vær: rediger kort (vaer_layout) ---------------- */
-// GET/PUT /api/weather/layout {order:[kort], hidden:[kort], ski:true|false, glimt:'top'|'bottom'} – per bruker, mobil og brett.
-export const VAER_CARDS41 = ['na', 'ski', 'timer', 'dager10', 'yrstorm', 'vind', 'mane', 'detaljer', 'glimtuka'];
-const layoutOut = (u) => { const l = kv.get(u, 'vaer_layout', {}) ?? {}; return { order: Array.isArray(l.order) ? l.order : VAER_CARDS41, hidden: Array.isArray(l.hidden) ? l.hidden : [], ski: l.ski !== false, glimt: l.glimt === 'top' ? 'top' : 'bottom', cards: VAER_CARDS41 }; };
-export const weather41Api = new Hono();
-weather41Api.get('/layout', authOrToken, (c) => c.json(layoutOut(c.get('user'))));
-weather41Api.put('/layout', authOrToken, async (c) => {
-  const u = c.get('user'), b = await c.req.json().catch(() => null);
-  if (!b || typeof b !== 'object') return c.json({ error: 'Forventet {order, hidden, ski, glimt}' }, 400);
-  const cur = kv.get(u, 'vaer_layout', {}) ?? {};
-  const list = (v) => (Array.isArray(v) ? [...new Set(v.map(String))].filter((x) => VAER_CARDS41.includes(x)) : null);
-  if ('order' in b && !list(b.order)) return c.json({ error: 'order må være en liste med kort' }, 400);
-  if ('ski' in b && typeof b.ski !== 'boolean') return c.json({ error: 'ski må være true eller false' }, 400);
-  if ('glimt' in b && !['top', 'bottom'].includes(b.glimt)) return c.json({ error: 'glimt må være top eller bottom' }, 400);
-  kv.set(u, 'vaer_layout', { ...cur, ...('order' in b ? { order: list(b.order) } : {}), ...('hidden' in b ? { hidden: list(b.hidden) ?? [] } : {}), ...('ski' in b ? { ski: b.ski } : {}), ...('glimt' in b ? { glimt: b.glimt } : {}), ...(b.reset ? { order: VAER_CARDS41, hidden: [], glimt: 'bottom' } : {}) });
-  return c.json(layoutOut(u));
-});
-
-/* ---------------- Brief og Vær: skiføre, 17. mai og Min reise ---------------- */
+/* ---------------- Brief: skiføre, 17. mai og Min reise ---------------- */
 // GET /api/brief får ski:{text, chip:'Ski: blå', …, places[]} når relevant, mai17:{title, text, items, active} på 17. mai og minReise når «forlot skolen» er aktiv.
-// GET /api/weather/full får ski når relevant.
+// (Skiføre i GET /api/weather/full ligger i server/vaer/layout.js.)
 async function augment(c, path, fn) {
   if (c.req.method !== 'GET' || c.res.status !== 200 || !path.test(c.req.path)) return;
   try {
@@ -77,8 +59,4 @@ export async function brief41(c, next) {
     if (j.showOnHome) out.minReise = { leftSchoolAt: j.leftSchoolAt, title: j.title, homeCard: j.homeCard };
     return out;
   });
-}
-export async function weatherFull41(c, next) {
-  await next();
-  await augment(c, /^\/api\/weather\/full\/?$/, async (u) => { const ski = await ski41(u); return ski ? { ski } : {}; });
 }

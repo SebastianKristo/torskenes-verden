@@ -64,10 +64,10 @@ import api36 from './api36.js'; // prompt 36 (SERVER36)
 import { profilesApi, bibleApi } from './api37.js'; // prompt 37 (SERVER37)
 import { bearerFallthrough46 } from './api-auth46.js'; // prompt 46 (SERVER46)
 import { brief38Api, startApi38 } from './api38.js'; // prompt 38 (SERVER38)
-import { rec39Api, week39Api } from './api39.js'; // prompt 39 (SERVER39)
+import { rec39Api } from './api39.js'; // prompt 39 (SERVER39)
 import { finans40Api, news40Api, newsDigestApi, hjemlys40Api, pages40Api, briefJul40, tasksAfter40, tasksCreate40, startApi40 } from './api40.js'; // prompt 40 (SERVER40)
 import { mountServer47 } from './server47.js'; // prompt 47 (SERVER47)
-import { hjemlys41Api, hjemlysGet41, hlPage41, ruter41Api, mai17Api, huske41Api, weather41Api, brief41, weatherFull41 } from './api41.js'; // prompt 41 (SERVER41)
+import { hjemlys41Api, hjemlysGet41, hlPage41, ruter41Api, mai17Api, huske41Api, brief41 } from './api41.js'; // prompt 41 (SERVER41)
 import { finans42Api, abCalendarsMw42, abApi42, calendarsEvents42, abIcs42, health42Api, familyHealthMw42, startHealth42, hjemlys42Api, tasks42Api } from './api42.js'; // prompt 42 (SERVER42)
 import fin51Api from './finans/fin51.js'; // prompt 51 (FIN51): sparemål, faste utgifter-kalender, skattehjelp, prishistorikk, abonnementsjeger
 import { startTax51 } from './finans/fin51-tax.js'; // prompt 51 (FIN51): påminnelse før skattemeldingen
@@ -105,7 +105,7 @@ import { startAccounts46 } from './sporing/accounts.js'; // prompt 46 (DATA46): 
 import { gphoto46Api, startGphoto46 } from './gphoto46.js'; // prompt 46 (DATA46): Google Photos-album som bakgrunn
 import { kart46Api } from './kart46.js'; // prompt 46 (DATA46): Kart-API
 import { settingsApi as glimtSettingsApi, ttsApi, imgApi } from './glimt35.js'; // prompt 35: /api/glimt/settings, /api/tts, /api/img
-import weather35Api from './vaer/place.js'; // prompt 35: /api/weather/place?q=
+import { mountVaer } from './vaer/index.js'; // Vær: /here, /week-summary, /place, /layout og ski i /full
 import briefApi from './brief34.js'; // prompt 34: Glimt-brief /api/brief (+ /widget, /settings) og daglig generering // prompt 34: AI-kontroll /api/ai/* (status, modeller, ruting, jobber, forbruk, nøkler, selvtest)
 import { startTrialScheduler } from './trials-notify.js'; // prompt 31: varsler for gratis prøveperioder
 import { installCacheBust } from './cache-bust.js'; // prompt 32 (SERVER32)
@@ -743,8 +743,7 @@ app.route('/api/glimt/mai17', mai17Api); // prompt 41: 17. mai (program, design-
 app.route('/api/glimt/settings', glimtSettingsApi); // prompt 35
 app.route('/api/tts', ttsApi); // prompt 35
 app.route('/api/img', imgApi); // prompt 35
-app.route('/api/weather/week-summary', week39Api); // prompt 39: Glimt · ukas vær
-app.route('/api/weather/place', weather35Api); // prompt 35
+mountVaer(app); // server/vaer/: /api/weather/here, /week-summary, /place, ski i /full og /layout (før mobileApi sine værruter)
 app.route('/api/glimt/agent', agentApi45); // prompt 45: Glimt-motoren (én inngang for alle Glimt-felt)
 app.route('/api/glimt/entities', entitiesApi60); // prompt 60: entitetsregisteret (per bruker)
 app.route('/api/glimt/recipes', recipesApi61); // prompt 61: oppskrifter som lærer av bruk (per bruker)
@@ -772,8 +771,6 @@ app.route('/api/domains', gscDomains43Api); // prompt 43: /:domain/gsc/refresh (
 app.route('/api/domains', domainGlimtApi); // prompt 32: /:domain/summary (Glimt) og /:domain/gsc (Google Search Console), bare admin
 app.route('/api/gsc', gsc43Api); // prompt 43: /test (diagnose per eiendom)
 app.route('/api/gsc', gscApi); // prompt 32: Google Search Console-kobling per bruker (webmasters.readonly)
-app.use('/api/weather/full', weatherFull41); // prompt 41: ski
-app.route('/api/weather', weather41Api); // prompt 41: GET/PUT /layout (Rediger Vær)
 app.route('/api', api36); // prompt 36: /dashboard/layout og /weather/places/summary (før mobileApi)
 app.route('/api/bible', bibleApi); // prompt 37: dagens bibelvers (bare med modulen)
 app.route('/api', profilesApi); // prompt 37: profiler og onboarding
