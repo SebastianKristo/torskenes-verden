@@ -20,19 +20,25 @@ CREATE INDEX IF NOT EXISTS fh_tx_history40_tx ON fh_tx_history40(tx_id, at);`);
 export const VIA = ['glimt', 'shortcut', 'api', 'manual', 'scan', 'bank_import', 'email'];
 const pad = (n) => String(n).padStart(2, '0');
 /** «16.10.2026 kl. 17.46» i Europe/Oslo. */
+const STAMP_FMT = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Oslo', hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
 export function osloStamp(ms) {
-  const p = Object.fromEntries(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Oslo', hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
-    .formatToParts(new Date(ms)).map((x) => [x.type, x.value]));
+  const p = Object.fromEntries(STAMP_FMT.formatToParts(new Date(ms)).map((x) => [x.type, x.value]));
   return `${p.day}.${p.month}.${p.year} kl. ${pad(+p.hour)}.${p.minute}`;
 }
-const firstName = (id) => { if (!id) return null; const u = userInfo(id); const n = u?.displayName || u?.name || u?.username || null; return n ? String(n).split(/\s+/)[0] : null; };
+const firstNameOf = (id) => { if (!id) return null; const u = userInfo(id); const n = u?.displayName || u?.name || u?.username || null; return n ? String(n).split(/\s+/)[0] : null; };
+// names: valgfritt minne (Map id → fornavn) som en liste deler, så brukeren slås opp én gang per liste og ikke per rad.
+const firstName = (id, names) => {
+  if (!names || !id) return firstNameOf(id);
+  if (!names.has(id)) names.set(id, firstNameOf(id));
+  return names.get(id);
+};
 const bankOf = (row) => { try { const b = row.raw_bank_row ? JSON.parse(row.raw_bank_row) : null; return b?.bank || null; } catch { return null; } };
 const tokenName = (via) => { const m = String(via ?? '').match(/^api:(.+)$/); return m ? m[1] : null; };
 
 /**
  * «Lagt til»-info for en rad. kind 'tx' (fh_transactions, ev. med receipt_* fra TX_SELECT) eller 'receipt' (fh_receipts).
  */
-export function addedOf40(row, kind = 'tx') {
+export function addedOf40(row, kind = 'tx', names = new Map()) {
   if (!row) return null;
   const at = Number(row.created) || null;
   const by = row.created_by || (kind === 'receipt' ? row.uploaded_by : null) || row.user_id || null;
@@ -52,10 +58,11 @@ export function addedOf40(row, kind = 'tx') {
   if (via === 'glimt') label = 'lagt til av Glimt fra chat';
   else if (via === 'shortcut') label = 'via iOS Snarvei';
   else if (via === 'api') { const n = tokenName(row.created_via); label = n ? `via API-nøkkel «${n}»` : 'via API-nøkkel'; }
-  const byName = firstName(by);
+  const byName = firstName(by, names);
   const text = at ? `Lagt til ${osloStamp(at)} · ${label}${showBy && byName ? ` · ${byName}` : ''}` : null;
   const upd = Number(row.updated_at) || null;
-  const edited = upd ? { at: new Date(upd).toISOString(), by: row.updated_by ?? null, byName: firstName(row.updated_by), text: `Sist endret ${osloStamp(upd)}${firstName(row.updated_by) ? ` av ${firstName(row.updated_by)}` : ''}` } : null;
+  const editor = upd ? firstName(row.updated_by, names) : null;
+  const edited = upd ? { at: new Date(upd).toISOString(), by: row.updated_by ?? null, byName: editor, text: `Sist endret ${osloStamp(upd)}${editor ? ` av ${editor}` : ''}` } : null;
   return { at: at ? new Date(at).toISOString() : null, by, byName, source, via: via ?? null, sourceLabel: label, text, edited };
 }
 

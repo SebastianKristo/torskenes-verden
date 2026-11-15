@@ -18,7 +18,8 @@ import { Hono } from 'hono';
 import { streamSSE } from 'hono/streaming';
 import { db, q, settings, ensureLedger } from './db.js';
 import { runAsUser } from '../settings.js';
-import { tokenAccessOf, txOut42, TX_SELECT42 } from './routes.js';
+import { tokenAccessOf, txOutList42, TX_SELECT42 } from './routes.js';
+import { decodeTxCursor, isAfterTxCursor, pageOf } from './tx-cursor.js';
 import { financeAsk40 } from './p40.js';
 import { subscriptionSources } from './subs-ask32.js';
 import { ask42, searchLog42, merchantKey42, filterFromText42, weekRange42, fold42 } from './search42.js';
@@ -167,7 +168,7 @@ export function filterOf42(c, u) {
 }
 export const isFiltered42 = (c) => FILTER_KEYS.some((k) => c.req.query(k) !== undefined || (c.req.queries(k) ?? []).length) || /^\d{4}-\d{2}$/.test(c.req.query('from') ?? '') || /^\d{4}-\d{2}$/.test(c.req.query('to') ?? '');
 /** Transaksjonene som passer filteret. */
-export function filteredTx42(u, f, { limit = 2000 } = {}) {
+export function filteredTx42(u, f, { limit = 2000, cursor = null } = {}) {
   const w = ['t.user_id=?'], a = [u];
   if (f.from) { w.push('t.date>=?'); a.push(f.from); }
   if (f.to) { w.push('t.date<?'); a.push(f.to); }
@@ -179,7 +180,8 @@ export function filteredTx42(u, f, { limit = 2000 } = {}) {
   if (f.q) { w.push('(t.description LIKE ? OR t.merchant LIKE ? OR t.note LIKE ?)'); a.push(`%${f.q}%`, `%${f.q}%`, `%${f.q}%`); }
   let rows = q(`${TX_SELECT42} WHERE ${w.join(' AND ')} ORDER BY t.date DESC, t.id DESC LIMIT 20000`).all(...a);
   if (f.merchants.length) { const set = new Set(f.merchants); rows = rows.filter((t) => set.has(merchantKey42(t.merchant || t.description).id) || f.merchants.some((m) => fold42(`${t.merchant ?? ''} ${t.description}`).includes(m.replace(/-/g, ' ')))); }
-  return { rows: rows.slice(0, limit), total: rows.length, net: rows.reduce((s, t) => s + t.amount, 0) / 100, sum: rows.reduce((s, t) => s + Math.abs(t.amount), 0) / 100 };
+  const page = pageOf((cursor ? rows.filter((t) => isAfterTxCursor(t, cursor)) : rows).slice(0, limit + 1), limit);
+  return { rows: page.rows, nextCursor: page.nextCursor, total: rows.length, net: rows.reduce((s, t) => s + t.amount, 0) / 100, sum: rows.reduce((s, t) => s + Math.abs(t.amount), 0) / 100 };
 }
 const MONTHS = ['januar', 'februar', 'mars', 'april', 'mai', 'juni', 'juli', 'august', 'september', 'oktober', 'november', 'desember'];
 function chipsOf(f, homes) {
@@ -199,10 +201,13 @@ function chipsOf(f, homes) {
 finans42Api.get('/transactions', R, async (c, next) => {
   if (!isFiltered42(c)) return next();
   const u = c.get('user'), f = filterOf42(c, u);
-  const r = filteredTx42(u, f, { limit: Math.min(2000, +c.req.query('limit') || 500) });
-  const items = r.rows.map((t) => { const o = txOut42(t); return { ...o, receiptLabel: o.receiptId ? 'Kvittering ›' : 'Ingen kvittering' }; });
+  const cursor = decodeTxCursor(c.req.query('cursor'));
+  if (c.req.query('cursor') && !cursor) return bad(c, 'Ugyldig cursor');
+  const r = filteredTx42(u, f, { limit: Math.min(2000, +c.req.query('limit') || 500), cursor });
+  const out = txOutList42();
+  const items = r.rows.map((t) => { const o = out(t); return { ...o, receiptLabel: o.receiptId ? 'Kvittering ›' : 'Ingen kvittering' }; });
   const homes = homesOf42(u).map((h) => ({ id: h.id, name: h.name }));
-  return c.json({ items, count: r.total, net: r.net, sum: r.sum, filter: { ...f, categories: f.categories.map((x) => x.id) }, chips: chipsOf(f, homes), text: `${r.total} treff` });
+  return c.json({ items, count: r.total, net: r.net, sum: r.sum, nextCursor: r.nextCursor, filter: { ...f, categories: f.categories.map((x) => x.id) }, chips: chipsOf(f, homes), text: `${r.total} treff` });
 });
 const logoOfName = (name) => {
   const mk = merchantKey42(name);

@@ -1,5 +1,6 @@
 // FinansHub-API: /finans/api/*. Tilgang med innlogget sesjon (nettleser) eller API-token med finans-scope (mobil/snarvei).
 import { addedOf40, tagsOf40, applyRereadTx40 } from './added40.js'; // prompt 40
+import { decodeTxCursor, TX_AFTER_SQL, txAfterParams, pageOf } from './tx-cursor.js';
 import { Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import { createHmac, randomBytes, randomUUID } from 'node:crypto';
@@ -123,13 +124,14 @@ export const uid = (c) => c.get('user');
 const catById = (u = me()) => new Map(q('SELECT * FROM fh_categories WHERE user_id=?').all(u).map((x) => [x.id, x]));
 const accById = (u = me()) => new Map(q('SELECT * FROM fh_accounts WHERE user_id=?').all(u).map((x) => [x.id, x]));
 
-function txOut(t, cats = catById(), accs = accById()) {
+// names: Map id → fornavn som deles av alle radene i en liste («Lagt til … · Sebastian» slås opp én gang per bruker).
+function txOut(t, cats = catById(), accs = accById(), names = new Map()) {
   const cat = cats.get(t.category_id), acc = accs.get(t.account_id);
   return { id: t.id, date: t.date, amount: t.amount / 100, description: t.description, merchant: t.merchant, note: t.note, source: t.source,
     categoryId: t.category_id, category: cat?.name ?? 'Ukategorisert', color: cat?.color ?? '#A0A0AA', kind: cat?.kind ?? 'expense',
     accountId: t.account_id, account: acc?.name ?? '–', receipt: t.receipt_status ?? null, receiptId: t.receipt_id ?? null,
     type: t.amount > 0 ? 'income' : 'expense', folderId: t.folder_id ?? null, hasBankRow: !!t.raw_bank_row, ...aiOf(t, cat?.name),
-    tags: tagsOf40(t), added: addedOf40(t, 'tx') }; // prompt 40: «Lagt til …» og tagger
+    tags: tagsOf40(t), added: addedOf40(t, 'tx', names) }; // prompt 40: «Lagt til …» og tagger
 }
 // ✦-felt: AI-tekst hvis den finnes, ellers heuristikk. Varelinjer fra koblet kvittering.
 function aiOf(t, category) {
@@ -657,7 +659,8 @@ api.get('/summary', need('read:summary', 'read:budget'), (c) => {
   const yStart = `${month.slice(0, 4)}-01-01`;
   const ySum = sums(yStart, to);
   const recurring = q('SELECT * FROM fh_recurring WHERE active=1 AND user_id=?').all(u).map((r) => recurringOut(r, cats)).sort((a, b) => a.next.localeCompare(b.next));
-  const recent = q(`${TX_SELECT} WHERE t.user_id=? ORDER BY t.date DESC, t.id DESC LIMIT 8`).all(u).map((t) => txOut(t, cats, accs));
+  const names = new Map();
+  const recent = q(`${TX_SELECT} WHERE t.user_id=? ORDER BY t.date DESC, t.id DESC LIMIT 8`).all(u).map((t) => txOut(t, cats, accs, names));
   const review = q(`SELECT * FROM fh_receipts WHERE status IN ('pending','processing','needs_review') AND ${RC_VISIBLE} ORDER BY created DESC`).all(c.get('user')).map((r) => receiptOut(r, cats, accs));
   return c.json({
     month, from, to, daysLeft,
@@ -695,13 +698,19 @@ function txQuery(c) {
   return { where: w.length ? 'WHERE ' + w.join(' AND ') : '', params: p };
 }
 
+// ?limit (standard 500, maks 2000) og ?cursor (nextCursor fra forrige side). count og net gjelder hele filteret, ikke siden.
 api.get('/transactions', need('read:transactions'), (c) => {
   const { where, params } = txQuery(c);
   const limit = Math.min(2000, +c.req.query('limit') || 500);
-  const rows = q(`${TX_SELECT} ${where} ORDER BY t.date DESC, t.id DESC LIMIT ${limit}`).all(...params);
+  const cur = decodeTxCursor(c.req.query('cursor'));
+  if (c.req.query('cursor') && !cur) return bad(c, 'Ugyldig cursor');
+  const fetched = cur
+    ? q(`${TX_SELECT} ${where} AND ${TX_AFTER_SQL} ORDER BY t.date DESC, t.id DESC LIMIT ${limit + 1}`).all(...params, ...txAfterParams(cur))
+    : q(`${TX_SELECT} ${where} ORDER BY t.date DESC, t.id DESC LIMIT ${limit + 1}`).all(...params);
+  const { rows, nextCursor } = pageOf(fetched, limit);
   const total = q(`SELECT COUNT(*) n, COALESCE(SUM(amount),0) s FROM fh_transactions t ${where}`).get(...params);
-  const cats = catById(), accs = accById();
-  return c.json({ items: rows.map((t) => txOut(t, cats, accs)), count: total.n, net: total.s / 100 });
+  const cats = catById(), accs = accById(), names = new Map();
+  return c.json({ items: rows.map((t) => txOut(t, cats, accs, names)), count: total.n, net: total.s / 100, nextCursor });
 });
 
 // Beløp: med type ('expense' | 'income') er beløpet positivt og fortegnet kommer fra typen; uten type brukes fortegnet som det er.
@@ -2822,4 +2831,6 @@ api.delete('/all', sessionOnly, async (c) => {
 export default api;
 // Prompt 42 (SERVER42): transaksjonsformen og spørringen brukes av filteret i finans42.js.
 export const txOut42 = (t) => txOut(t);
+/** Felles oppslag (kategorier, kontoer, navn) for en hel liste: (t) => txOut(t). */
+export const txOutList42 = () => { const cats = catById(), accs = accById(), names = new Map(); return (t) => txOut(t, cats, accs, names); };
 export const TX_SELECT42 = TX_SELECT;
