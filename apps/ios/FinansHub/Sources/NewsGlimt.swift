@@ -293,17 +293,12 @@ struct News40Body: View {
     }
 
     private var meta: String {
-        let f: DateFormatter = DateFormatter()
-        f.locale = Locale(identifier: "nb_NO")
-        f.dateFormat = "EEEE d. MMMM"
         let srcs: Int = Set(usedRefs.map(\.source)).count
-        return [f.string(from: g.updatedAt ?? Date()), "\(usedRefs.count) saker", "\(srcs) kilder", m.length == "lang" ? "langt" : "kort"].joined(separator: " · ")
+        return [JS.fmt(g.updatedAt ?? Date(), "EEEE d. MMMM"), "\(usedRefs.count) saker", "\(srcs) kilder", m.length == "lang" ? "langt" : "kort"].joined(separator: " · ")
     }
 
     private var foot: String {
-        let f: DateFormatter = DateFormatter()
-        f.dateFormat = "HH:mm"
-        return "Laget av Glimt kl. " + f.string(from: g.updatedAt ?? Date()) + " fra kildene du har valgt. Trykk på en kilde for å lese saken."
+        return "Laget av Glimt kl. " + JS.fmt(g.updatedAt ?? Date(), "HH:mm") + " fra kildene du har valgt. Trykk på en kilde for å lese saken."
     }
 }
 
@@ -344,7 +339,10 @@ struct News40SectionView: View {
                         .aspectRatio(index == 0 ? 16.0 / 9.0 : 3.0 / 2.0, contentMode: .fit)
                         .frame(maxWidth: .infinity)
                         .overlay {
-                            AsyncImage(url: u) { (img: Image) in img.resizable().scaledToFill() } placeholder: { p.card }
+                            ZStack {
+                                p.card
+                                Media50Remote(url: u.absoluteString, want: 640)
+                            }
                         }
                         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                     Text("Bilde fra saken" + source(n)).font(PF.ui(11.5)).foregroundStyle(p.mut)
@@ -386,7 +384,7 @@ struct News40RefRow: View {
                 ZStack {
                     RoundedRectangle(cornerRadius: 8, style: .continuous).fill(p.card)
                     if let s = image, let u = URL(string: s) {
-                        AsyncImage(url: u) { (img: Image) in img.resizable().scaledToFill() } placeholder: { Color.clear }
+                        Media50Remote(url: u.absoluteString, want: 320)
                     }
                 }
                 .frame(width: 48, height: 36)

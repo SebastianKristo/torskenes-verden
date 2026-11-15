@@ -115,8 +115,7 @@ struct NewsReaderView: View {
 
     private func updated(_ d: NewsData) -> String {
         guard let at = d.digestAt ?? d.items.compactMap(\.published).max() else { return "" }
-        let f = DateFormatter(); f.dateFormat = "HH:mm"
-        return " · oppdatert \(f.string(from: at))"
+        return " · oppdatert " + JS.fmt(at, "HH:mm")
     }
 
     private func tabs(_ d: NewsData) -> some View {

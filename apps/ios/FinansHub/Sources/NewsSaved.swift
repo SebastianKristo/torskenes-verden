@@ -247,11 +247,16 @@ final class News73Model {
 enum News73Fmt {
     static func day(_ d: Date?) -> String { JS.fmt(d, "d. MMM") }
     static func n(_ v: Int) -> String {
-        let f = NumberFormatter()
+        number.string(from: NSNumber(value: v)) ?? "\(v)"
+    }
+
+    /// Fase 4 (ytelse): lages én gang.
+    private static let number: NumberFormatter = {
+        let f: NumberFormatter = NumberFormatter()
         f.locale = Locale(identifier: "nb_NO")
         f.numberStyle = .decimal
-        return f.string(from: NSNumber(value: v)) ?? "\(v)"
-    }
+        return f
+    }()
 }
 
 /// Bokmerket øverst i artikkelvisningen (1c): rund knapp, fylt når saken er lagret.

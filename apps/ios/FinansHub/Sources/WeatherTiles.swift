@@ -283,10 +283,15 @@ struct WxPressureGauge22: View {
 
     /// 1037 → «1 037» (nb-NO).
     static func thousands(_ v: Double) -> String {
+        thousandsFormat.string(from: NSNumber(value: v.rounded())) ?? String(Int(v.rounded()))
+    }
+
+    /// Fase 4 (ytelse): lages én gang.
+    private static let thousandsFormat: NumberFormatter = {
         let f: NumberFormatter = NumberFormatter()
         f.locale = Locale(identifier: "nb_NO")
         f.numberStyle = .decimal
         f.maximumFractionDigits = 0
-        return f.string(from: NSNumber(value: v.rounded())) ?? String(Int(v.rounded()))
-    }
+        return f
+    }()
 }

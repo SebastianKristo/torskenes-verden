@@ -891,7 +891,7 @@ final class Tasks41Glimt {
         var l: String = list ?? m.lists.first?.id ?? "hjem"
         if l == "alle" || l == Tasks32b.archId || l == Tasks41Glimt.madeId { l = m.lists.first?.id ?? "hjem" }
         for it in items {
-            var body: [String: Any] = ["title": it.title, "list": l, "origin": ["text": text, "at": ISO8601DateFormatter().string(from: Date()), "engine": "lokal"]]
+            var body: [String: Any] = ["title": it.title, "list": l, "origin": ["text": text, "at": JS.isoPlain.string(from: Date()), "engine": "lokal"]]
             if !it.place.isEmpty { body["place"] = it.place }
             if !it.note.isEmpty { body["note"] = it.note }
             _ = try? await store.api.callAt("/api", "POST", "/tasks", json: body)
@@ -1394,7 +1394,7 @@ extension Tasks41Glimt {
         if !local[0].note.isEmpty { first["note"] = local[0].note }
         if !local[0].place.isEmpty { first["place"] = local[0].place }
         _ = try? await store.api.callAt("/api", "PATCH", "/tasks/\(id)", json: first)
-        let origin: [String: Any] = ["text": text, "at": ISO8601DateFormatter().string(from: Date()), "engine": "lokal"]
+        let origin: [String: Any] = ["text": text, "at": JS.isoPlain.string(from: Date()), "engine": "lokal"]
         for it in local.dropFirst() {
             var body: [String: Any] = ["title": it.title, "list": one.list, "origin": origin]
             if !it.place.isEmpty { body["place"] = it.place }

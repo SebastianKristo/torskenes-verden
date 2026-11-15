@@ -81,10 +81,7 @@ enum WxFmt22 {
     /// «Søndag 18. oktober» (med år når year = true).
     static func longDate(_ day: String, year: Bool = false) -> String {
         guard let d = parseDay(day) else { return day }
-        let f: DateFormatter = DateFormatter()
-        f.locale = Locale(identifier: "nb_NO")
-        f.dateFormat = year ? "EEEE d. MMMM yyyy" : "EEEE d. MMMM"
-        let s: String = f.string(from: d)
+        let s: String = JS.fmt(d, year ? "EEEE d. MMMM yyyy" : "EEEE d. MMMM")
         return s.prefix(1).uppercased() + String(s.dropFirst())
     }
 
@@ -274,10 +271,15 @@ struct WxCompare22 {
     static func localKey(_ s: String) -> String {
         if !(s.hasSuffix("Z") || s.contains("+")) { return s }
         guard let d = JS.date(s) else { return s }
+        return osloKey.string(from: d)
+    }
+
+    /// Fase 4 (ytelse): lages én gang.
+    private static let osloKey: DateFormatter = {
         let f: DateFormatter = DateFormatter()
         f.locale = Locale(identifier: "en_US_POSIX")
         f.timeZone = TimeZone(identifier: "Europe/Oslo")
         f.dateFormat = "yyyy-MM-dd'T'HH:mm"
-        return f.string(from: d)
-    }
+        return f
+    }()
 }

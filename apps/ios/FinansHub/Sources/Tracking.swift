@@ -47,18 +47,41 @@ enum JS {
         }
         guard let s = v as? String, !s.isEmpty else { return nil }
         if let x = Double(s) { return date(NSNumber(value: x)) }
-        let f = ISO8601DateFormatter()
-        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        if let d = f.date(from: s) { return d }
-        f.formatOptions = [.withInternetDateTime]
-        if let d = f.date(from: s) { return d }
+        if let d = isoFrac.date(from: s) { return d }
+        if let d = isoPlain.date(from: s) { return d }
         if s.count >= 10 { return parseDay(s) }
         return nil
     }
     static func fmt(_ d: Date?, _ pattern: String) -> String {
         guard let d else { return "" }
-        let f = DateFormatter(); f.locale = Locale(identifier: "nb_NO"); f.dateFormat = pattern
-        return f.string(from: d)
+        return formatter(pattern).string(from: d)
+    }
+
+    // Fase 4 (ytelse): formaterne lages én gang i stedet for ved hvert kall (JS.fmt og JS.date brukes i `body` og for hvert
+    // JSON-felt). Formaterne er trådsikre å lese fra; bufferen per mønster er beskyttet av en lås.
+    static let isoFrac: ISO8601DateFormatter = {
+        let f: ISO8601DateFormatter = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return f
+    }()
+    static let isoPlain: ISO8601DateFormatter = {
+        let f: ISO8601DateFormatter = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime]
+        return f
+    }()
+    private static let fmtLock: NSLock = NSLock()
+    nonisolated(unsafe) private static var fmtCache: [String: DateFormatter] = [:]
+
+    /// En norsk DateFormatter for mønsteret (bufret).
+    static func formatter(_ pattern: String) -> DateFormatter {
+        fmtLock.lock()
+        defer { fmtLock.unlock() }
+        if let f = fmtCache[pattern] { return f }
+        let f: DateFormatter = DateFormatter()
+        f.locale = Locale(identifier: "nb_NO")
+        f.dateFormat = pattern
+        fmtCache[pattern] = f
+        return f
     }
 }
 

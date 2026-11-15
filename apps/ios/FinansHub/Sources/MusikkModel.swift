@@ -622,15 +622,11 @@ final class Musikk88 {
     /// «i dag kl. 03:00», «i morgen kl. 03:00» eller «fre. 14. nov. kl. 03:00».
     nonisolated static func when(_ d: Date, now: Date = Date()) -> String {
         let cal: Calendar = Calendar.current
-        let f: DateFormatter = DateFormatter()
-        f.locale = Locale(identifier: "nb_NO")
-        f.dateFormat = "HH:mm"
-        let kl: String = "kl. " + f.string(from: d)
+        let kl: String = "kl. " + JS.fmt(d, "HH:mm")
         let days: Int = cal.dateComponents([.day], from: cal.startOfDay(for: now), to: cal.startOfDay(for: d)).day ?? 0
         if days == 0 { return "i dag " + kl }
         if days == 1 { return "i morgen " + kl }
-        f.dateFormat = "EEE d. MMM"
-        return f.string(from: d) + " " + kl
+        return JS.fmt(d, "EEE d. MMM") + " " + kl
     }
 
     nonisolated static func mmss(_ s: Int) -> String {

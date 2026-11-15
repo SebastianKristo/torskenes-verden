@@ -321,7 +321,7 @@ final class MinReise41 {
 
     /// Kalles av geofencen: serveren lager «forlot skolen»-hendelsen og svarer med reisen.
     func leftSchool(_ at: Date, _ store: Store) async {
-        let iso: String = ISO8601DateFormatter().string(from: at)
+        let iso: String = JS.isoPlain.string(from: at)
         _ = try? await store.api.callAt("/api", "POST", "/ruter/left-school", json: ["at": iso], timeout: 15)
         leftAt = at
         await trip(store)

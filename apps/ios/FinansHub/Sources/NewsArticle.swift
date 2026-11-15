@@ -42,14 +42,9 @@ struct NewsThumb27: View {
         ZStack {
             NewsLook27.color(source)
             Text(NewsLook27.initials(source)).font(PF.ui(initialsSize, .heavy)).foregroundStyle(Color.white)
-            if let u = URL(string: image), image.hasPrefix("http") {
-                AsyncImage(url: u) { phase in
-                    if let img = phase.image {
-                        img.resizable().scaledToFill()
-                    } else {
-                        Color.clear
-                    }
-                }
+            if URL(string: image) != nil, image.hasPrefix("http") {
+                // Fase 4: felles bildebuffer (minne + disk, ett kall per bilde) i stedet for AsyncImage uten buffer.
+                Media50Remote(url: image, want: 320)
             }
         }
         .frame(width: width, height: height)
@@ -169,12 +164,11 @@ struct NewsArticleView27: View {
     private var meta: String {
         var parts: [String] = []
         if let d = art?.published ?? cur.published {
-            let f: DateFormatter = DateFormatter()
-            f.locale = Locale(identifier: "nb_NO")
-            if Calendar.current.isDateInToday(d) { f.dateFormat = "'I dag' HH:mm" }
-            else if Calendar.current.isDateInYesterday(d) { f.dateFormat = "'I går' HH:mm" }
-            else { f.dateFormat = "d. MMM HH:mm" }
-            parts.append(f.string(from: d))
+            let pattern: String
+            if Calendar.current.isDateInToday(d) { pattern = "'I dag' HH:mm" }
+            else if Calendar.current.isDateInYesterday(d) { pattern = "'I går' HH:mm" }
+            else { pattern = "d. MMM HH:mm" }
+            parts.append(JS.fmt(d, pattern))
         }
         if let m = art?.readMin, m > 0 { parts.append("ca. \(m) min å lese") }
         return parts.joined(separator: " · ")

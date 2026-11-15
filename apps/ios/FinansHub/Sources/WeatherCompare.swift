@@ -65,13 +65,9 @@ enum WxCmp39 {
 
     /// «I dag», «Ons», «Tor» …
     static func label(_ iso: String, first: Bool) -> String {
-        let f: DateFormatter = DateFormatter()
-        f.locale = Locale(identifier: "nb_NO")
-        f.dateFormat = "yyyy-MM-dd"
-        guard let d = f.date(from: String(iso.prefix(10))) else { return first ? "I dag" : String(iso.suffix(2)) }
+        guard let d = JS.formatter("yyyy-MM-dd").date(from: String(iso.prefix(10))) else { return first ? "I dag" : String(iso.suffix(2)) }
         if Calendar.current.isDateInToday(d) { return "I dag" }
-        f.dateFormat = "EEE"
-        let s: String = f.string(from: d).replacingOccurrences(of: ".", with: "")
+        let s: String = JS.fmt(d, "EEE").replacingOccurrences(of: ".", with: "")
         return s.prefix(1).uppercased() + s.dropFirst()
     }
 

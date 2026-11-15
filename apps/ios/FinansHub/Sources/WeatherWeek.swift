@@ -122,12 +122,8 @@ struct WxWeek39Summary {
         func dn(_ i: Int) -> String {
             if i == 7 { return "i dag" }
             if i == 8 { return "i morgen" }
-            let f: DateFormatter = DateFormatter()
-            f.locale = Locale(identifier: "nb_NO")
-            f.dateFormat = "yyyy-MM-dd"
-            guard i < W.dates.count, let d = f.date(from: W.dates[i]) else { return "dag \(i - 6)" }
-            f.dateFormat = "EEEE"
-            return f.string(from: d)
+            guard i < W.dates.count, let d = JS.formatter("yyyy-MM-dd").date(from: W.dates[i]) else { return "dag \(i - 6)" }
+            return JS.fmt(d, "EEEE")
         }
         var umb: String = "ingen dager"
         if !wet.isEmpty {

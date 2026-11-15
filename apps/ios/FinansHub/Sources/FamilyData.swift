@@ -803,7 +803,7 @@ final class Fam50Model {
             b["place"] = pl
             if place.source == "calendar" { b["eventTitle"] = place.title }
         }
-        if let remindAt { b["remindAt"] = ISO8601DateFormatter().string(from: remindAt) }
+        if let remindAt { b["remindAt"] = JS.isoPlain.string(from: remindAt) }
         if let requestId { b["requestId"] = requestId }
         posBody(&b)
         guard let o = await send(store, "POST", "/family/checkin", b) else { return false }

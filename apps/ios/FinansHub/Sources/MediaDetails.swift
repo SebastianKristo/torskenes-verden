@@ -139,8 +139,7 @@ final class Media46 {
 
     /// Teksten «Vis detaljer» kopierer.
     var report: String {
-        let f: DateFormatter = DateFormatter()
-        f.dateFormat = "HH:mm:ss"
+        let f: DateFormatter = JS.formatter("HH:mm:ss")
         return calls.prefix(20).map { (c: Media46Call) -> String in
             f.string(from: c.at) + " " + c.method + " " + c.path + " → " + String(c.status) + " · token " + (c.auth ? "ja" : "nei") + " · " + c.route + " · " + String(c.ms) + " ms" + (c.note.isEmpty ? "" : " · " + c.note)
         }.joined(separator: "\n")
@@ -217,9 +216,7 @@ struct Media46CallRow: View {
     }
 
     private var meta: String {
-        let f: DateFormatter = DateFormatter()
-        f.dateFormat = "HH:mm:ss"
-        var s: String = f.string(from: c.at) + " · token " + (c.auth ? "med" : "mangler") + " · " + c.route + " · " + String(c.ms) + " ms"
+        var s: String = JS.fmt(c.at, "HH:mm:ss") + " · token " + (c.auth ? "med" : "mangler") + " · " + c.route + " · " + String(c.ms) + " ms"
         if !c.note.isEmpty { s += " · " + c.note }
         return s
     }

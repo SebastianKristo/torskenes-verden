@@ -73,11 +73,8 @@ struct Hjemlys40Session: Hashable {
             return Date(timeIntervalSince1970: d > 100_000_000_000 ? d / 1000 : d)
         }
         guard let s = v as? String, !s.isEmpty else { return nil }
-        let f: ISO8601DateFormatter = ISO8601DateFormatter()
-        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        if let d = f.date(from: s) { return d }
-        f.formatOptions = [.withInternetDateTime]
-        return f.date(from: s)
+        if let d = JS.isoFrac.date(from: s) { return d }
+        return JS.isoPlain.date(from: s)
     }
 
     /// Fremdrift fra start til forventet tid når serveren ikke har sendt den.
@@ -241,8 +238,7 @@ final class Hjemlys40Model {
         busy = true
         err = ""
         Haptic30.double()
-        let f: ISO8601DateFormatter = ISO8601DateFormatter()
-        var body: [String: Any] = ["eta": f.string(from: eta), "mode": mode, "waitMin": waitMin]
+        var body: [String: Any] = ["eta": JS.isoPlain.string(from: eta), "mode": mode, "waitMin": waitMin]
         if !leg.isEmpty { body["leg"] = leg }
         if let c = Hjemlys40Route.shared.here { body["pos"] = ["lat": c.latitude, "lon": c.longitude] }
         for (k, v) in extra { body[k] = v }

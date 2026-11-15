@@ -352,7 +352,7 @@ final class Hjemlys41 {
             if !nid.isEmpty {
                 _ = try? await store.api.callAt("/api", "PATCH", "/hjemlys/notice/" + Hjemlys40Model.enc(nid), json: ["plus": 15], timeout: 12)
             } else {
-                _ = await Hjemlys41.post(store, ["kind": "leaving_soon", "leave_at": ISO8601DateFormatter().string(from: e), "to": ids], legacyKind: "leaving_soon", leaveAt: e)
+                _ = await Hjemlys41.post(store, ["kind": "leaving_soon", "leave_at": JS.isoPlain.string(from: e), "to": ids], legacyKind: "leaving_soon", leaveAt: e)
             }
             #if canImport(ActivityKit)
             if !laId.isEmpty { await Hjemlys40Activity.update(laId) { (st: inout Hjemlys40Attributes.ContentState) in st.eta = e.timeIntervalSince1970 } }
@@ -401,7 +401,7 @@ final class Hjemlys41 {
         }
         var legacy: [String: Any] = ["kind": legacyKind, "recipients": (body["to"] as? [String]) ?? []]
         if let p = body["place"] { legacy["place"] = p }
-        if let e = leaveAt { legacy["leave_at"] = ISO8601DateFormatter().string(from: e) }
+        if let e = leaveAt { legacy["leave_at"] = JS.isoPlain.string(from: e) }
         guard let d = try? await store.api.callAt("/api", "POST", "/hjemlys/status", json: legacy, timeout: 15) else { return nil }
         return JS.obj(d)
     }
