@@ -12,9 +12,6 @@ data class Srv41(val local: String, val external: String, val auto: Boolean)
 
 /* ======================= Server: lokal og ekstern adresse ======================= */
 
-// Prompt 47: standard ekstern adresse (claude-code-standard-serveradresser.md).
-const val DEFAULT_SERVER41 = DEFAULT_EXTERNAL47
-
 fun AppViewModel.loadServer41() {
     val s = p41
     launch41 {
@@ -77,6 +74,8 @@ fun AppViewModel.saveServer41(local: String, external: String, auto: Boolean) {
 }
 
 const val DEFAULT_EXTERNAL47 = "https://os.smarthjemeksperten.no" // prompt 89: riktig stavemåte (Regel89.EXTERNAL)
+// Standard ekstern adresse. Må stå etter DEFAULT_EXTERNAL47: en const val kan ikke vise til en senere const i samme fil.
+const val DEFAULT_SERVER41 = DEFAULT_EXTERNAL47
 
 const val DEFAULT_LOCAL47 = "http://10.69.1.39:3000"
 
