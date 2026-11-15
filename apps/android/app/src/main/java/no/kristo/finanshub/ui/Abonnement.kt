@@ -921,6 +921,8 @@ private fun SubShare37(vm: AppViewModel, s: SubItem, t: SubTok) {
     }
 }
 
+/** «1 234 kr» uten desimaler (minus som −). */
+private fun krShot(v: Double): String = (if (v < 0) "−" else "") + String.format(Locale("nb", "NO"), "%,.0f", kotlin.math.abs(v)).replace(',', ' ').replace(' ', ' ') + " kr"
 private val MON27 = listOf("jan", "feb", "mar", "apr", "mai", "jun", "jul", "aug", "sep", "okt", "nov", "des")
 
 /** «✦ Ollama leser skjermbildet»: miniatyr, rader med ✓ / «Sjekk», «+ Legg til …» og «Rediger først». */
