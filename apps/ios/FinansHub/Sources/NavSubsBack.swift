@@ -21,7 +21,7 @@ extension Store {
     var abo38From: String? {
         guard let f = UserDefaults.standard.string(forKey: Store.abo38Key), !f.isEmpty, f != "abo" else { return nil }
         // Var Abonnement en fane i Finans-linja og man kom fra Finans, gjelder den vanlige Finans-logikken.
-        if finNav.contains("abonnementer") && Store.paperFinTabs.contains(f) { return nil }
+        if finNav.contains("faste") && Store.paperFinTabs.contains(f) { return nil }
         return f
     }
 
@@ -30,9 +30,10 @@ extension Store {
         guard let f = abo38From else { return nil }
         switch f {
         case "mer", "fmer": return "Mer"
-        case "hjem": return "Hjem"
-        case "finans": return "Oversikt"
-        case "fliste": return "Liste"
+        case "hjem": return "Oversikt"
+        // «‹ Økonomi» (Økonomis Oversikt), så den ikke forveksles med «‹ Oversikt» (startsiden, NavHomeButton.swift).
+        case "finans": return "Økonomi"
+        case "fliste": return "Transaksjoner"
         case "innst": return "Innstillinger"
         case "kalender": return "Kalender"
         case "huske": return "Gjøremål"

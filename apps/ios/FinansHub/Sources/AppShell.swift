@@ -291,6 +291,11 @@ struct ShellSectionBar: View {
     @Environment(Store.self) private var store
     @Environment(\.paper) private var p
 
+    /// Abonnementer-fanene (Oversikt · Innsikt · Historikk) bare i filteret Abonnementer i Faste betalinger; ellers Økonomi-fanene.
+    @MainActor static func aboTabs(_ store: Store) -> Bool {
+        store.paperTab == "abo" && FasteBetalingerModell.shared.filter == "abonnementer"
+    }
+
     static func visible(_ store: Store) -> Bool {
         store.paperInDomains || store.paperTab == "abo" || store.paperTab == "familie" || store.paperInFinance
     }
@@ -299,13 +304,14 @@ struct ShellSectionBar: View {
         var raw: [(String, String, String)] = []
         if store.paperInDomains {
             raw = Nav32b.shared.tabs("dom")
-        } else if store.paperTab == "abo" {
+        } else if ShellSectionBar.aboTabs(store) {
             raw = Nav32b.shared.tabs("abo")
         } else if store.paperTab == "familie" {
             raw = Nav32b.shared.tabs("kart")
         } else {
+            // Fase 6 (Q3): Økonomis faner (standard Oversikt, Transaksjoner, Budsjett, Faste betalinger) og Mer. Glimt ligger i Mer
+            // når den ikke er valgt som fane (OkonomiMer.swift), som på web.
             for f in store.finNavItems { raw.append((f.page, f.name, f.icon)) }
-            if !raw.contains(where: { (t: (String, String, String)) -> Bool in t.0 == "fsok" }) { raw.append(("fsok", "Søk", "magnifyingglass")) }
             raw.append(("fmer", "Mer", "ellipsis"))
         }
         return raw.map { (t: (String, String, String)) -> ShellTab in ShellTab(id: t.0, title: t.1, symbol: t.2) }
@@ -313,7 +319,7 @@ struct ShellSectionBar: View {
 
     private var current: String {
         if store.paperInDomains { return store.paperTab }
-        if store.paperTab == "abo" { return "abo:" + store.subTab }
+        if ShellSectionBar.aboTabs(store) { return "abo:" + store.subTab }
         if store.paperTab == "familie" { return "fam:" + FamilyModel.shared.tab }
         let c: String = store.paperFinCurrent
         return items.contains(where: { (t: ShellTab) -> Bool in t.id == c }) ? c : "fmer"
@@ -341,7 +347,7 @@ struct ShellSectionBar: View {
 
     private func edit() {
         Haptics.shared.tick()
-        if store.paperInFinance && !store.paperInDomains && store.paperTab != "abo" {
+        if store.paperInFinance && !store.paperInDomains && !ShellSectionBar.aboTabs(store) {
             FinNav26.shared.editing = true
             return
         }

@@ -412,10 +412,10 @@ extension Store {
     /// «‹ Mer» / «‹ Hjem» over sidene fra den klassiske appen.
     var paperBackLabel: String {
         switch paperTab {
-        case "finans", "fliste", "finn", "fmer": "Finans"
+        case "finans", "fliste", "finn", "fmer": "Økonomi"
         case "mat": "Mat"
         case "sporing": "Sporing"
-        case "hjem": "Hjem"
+        case "hjem": "Oversikt"
         default: "Mer"
         }
     }
@@ -423,7 +423,7 @@ extension Store {
     /// Klassiske Finans-sider åpnet fra Papir: tilbake til fanen de kom fra.
     var paperFinBackLabel: String {
         switch paperTab {
-        case "fliste": "Liste"
+        case "fliste": "Transaksjoner"
         case "finn": "Finn"
         case "fmer": "Mer"
         default: "Oversikt"
@@ -833,7 +833,8 @@ struct PaperPage: View {
         case "fmer": PaperFinMore45()
         case "fsok": PaperFinSearch()
         case "ftx": PaperTxDetailView()
-        case "abo": PaperSubs()
+        // Fase 6 (Q4): Faste betalinger med filtrene Abonnementer (PaperSubs), Faste utgifter og Planlagte trekk.
+        case "abo": FasteBetalingerSide()
         case "mat": MatView(pal: MatPal.paper(p))
         case "sporing": PaperTracking()
         // Prompt 44: Mer med levende kort, Store · Lave og wiggle uten «Rediger» (MorePage.swift).
@@ -868,7 +869,7 @@ struct PaperPage: View {
         case "finans", "fmer": await store.loadPaperFinance(force: true); await store.loadPaperFinance15()
         case "fliste": try? await store.loadTx()
         case "finn": try? await store.loadFinn()
-        case "abo": try? await store.loadSubs()
+        case "abo": try? await store.loadSubs(); await FasteBetalingerModell.shared.last(store)
         case "mat": try? await store.loadWeek(); await store.loadMatExtras()
         case "sporing": await store.refreshTracking22()
         case "domener", "dpub", "dytl", "dinf": store.reloadDomain(); if store.domAllMode { await store.loadDomAll() }
@@ -967,7 +968,7 @@ struct PaperHero: View {
         HStack(spacing: 8) {
             if home {
                 Text(AppMeta.shared.name).font(PF.serif(22, medium: true)).foregroundStyle(store.heroInk).lineLimit(1).minimumScaleFactor(0.7).shadow(color: .black.opacity(store.heroInk == .white ? 0.4 : 0), radius: 6)
-            } else if store.prof24IsRoot || (wide && store.prof24UpLabel == "Hjem") || store.nav42HideUp(wide: wide) || store.settings50HideUp(wide: wide) {
+            } else if store.prof24IsRoot || (wide && store.prof24UpLabel == "Oversikt") || store.nav42HideUp(wide: wide) || store.settings50HideUp(wide: wide) {
                 // Prompt 24: rotsidene i Finans + Boliger har ingen tilbakeknapp; profilbildet står fortsatt til høyre.
                 // Prompt 25: på bred skjerm går den røde Hjem-knappen i sidelinja hjem, så «‹ Hjem» skjules.
                 Color.clear.frame(width: 1, height: 34)
@@ -1065,7 +1066,7 @@ struct PaperHero: View {
             return "\(monthName()) · \(days) dager igjen"
         case "fliste": return "\(monthName()) · alle kontoer"
         case "finn": return "Kjøp og salg"
-        case "fmer": return "Alt fra FinansHub på nettsiden"
+        case "fmer": return "Alt fra Økonomi på nettsiden"
         case "kvitt":
             let n = store.reviewCount ?? 0
             return n > 0 ? "\(n) til gjennomgang" : "Kø og bokført"
@@ -1090,14 +1091,14 @@ struct PaperHero: View {
         case "hjem":
             let first = store.displayName.split(separator: " ").first.map(String.init) ?? ""
             return first.isEmpty ? greetingWord() : "\(greetingWord()),\n\(first)"
-        case "finans": return "Finans"
-        case "fliste": return "Liste"
+        case "finans": return "Økonomi"
+        case "fliste": return "Transaksjoner"
         case "finn": return "Finn"
         case "fmer": return "Mer"
         case "kvitt": return "Kvitteringer"
-        case "fsok": return "Søk"
+        case "fsok": return "Glimt"
         case "ftx": return "Detaljer"
-        case "abo": return "Subscription OS"
+        case "abo": return "Faste betalinger"
         case "domener": return "Domener"
         case "dpub": return "Publikum"
         case "dytl": return "Ytelse"

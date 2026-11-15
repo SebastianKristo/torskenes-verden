@@ -24,7 +24,7 @@ extension Store {
         // Rekkefølgen på Sporing-kortene og onboarding (nye brukere får onboarded: false).
         let order = JS.strings(o, "trkOrder").filter { Store.trkKeys.contains($0) }
         if !order.isEmpty { trkOrder = Store.fullTrkOrder(order) }
-        if JS.bool(o, "onboarded") == false, !UserDefaults.standard.bool(forKey: "fh_onboarded"), onboarding == nil { onboarding = 0 }
+        if JS.bool(o, "onboarded") == false, !UserDefaults.standard.bool(forKey: "fh_onboarded"), onboarding == nil, !deepLinkRecent { onboarding = 0 }
         applyPaper15(o)
         applyPaper16(o)
         applyPaper19(o)
@@ -189,7 +189,7 @@ extension Store {
         if paperInDomains { prof24GoRoot(); return }
         if paperTab == "ftx" { paperGo("fliste"); return }
         if paperTab == "abo", let f = abo38From { paperGo(f); return }
-        if paperTab == "abo" && !finNav.contains("abonnementer") { paperGo("fmer"); return }
+        if paperTab == "abo" && !finNav.contains("faste") { paperGo("fmer"); return }
         if paperTab == "innst" { paperGo("mer"); return }
         if let t = nav26BackTarget() { paperGo(t); return }
         if paperTab.hasPrefix("innst-") || paperTab == "profil" { paperGo("innst"); return }
@@ -246,7 +246,7 @@ extension Store {
         if paperInDomains { prof24GoRoot(); return }
         if paperTab == "ftx" { paperGo("fliste"); return }
         if paperTab == "abo", let f = abo38From { paperGo(f); return }
-        if paperTab == "abo" && !finNav.contains("abonnementer") { paperGo("fmer"); return }
+        if paperTab == "abo" && !finNav.contains("faste") { paperGo("fmer"); return }
         if paperTab == "boliger" && folder != nil { folder = nil; return }
         if let t = nav26BackTarget() { paperGo(t); return }
         if paperTab.hasPrefix("innst-") || paperTab == "profil" { paperGo("innst"); return }
@@ -273,7 +273,7 @@ extension Store {
 
     var paperCanSwipeBack: Bool {
         newsOpen || dishSel != nil || paperInner || paperFin != nil || paperTrackFull || paperClassic != nil || paperInDomains
-            || paperTab == "ftx" || paperEditPage != nil || (paperTab == "abo" && (!finNav.contains("abonnementer") || abo38From != nil))
+            || paperTab == "ftx" || paperEditPage != nil || (paperTab == "abo" && (!finNav.contains("faste") || abo38From != nil))
             || paperTab.hasPrefix("innst-") || paperTab == "profil" || paperTab == "huske" || paperTab == "kalender" || (paperTab == "boliger" && folder != nil)
             || nav23SubOfFinMore
             // Prompt 30: Chat (fullskjerm) og Bursdager fra Mer kan også sveipes tilbake.
@@ -433,7 +433,7 @@ extension Store {
             news = n46
         } catch let e as APIError {
             if news == nil { news = NewsData() }
-            message = e.status == 404 ? "Nyhetsleseren finnes ikke på serveren ennå. Oppdater homelab." : e.message
+            message = e.status == 404 ? "Nyheter finnes ikke på serveren ennå. Oppdater serveren." : e.message
         } catch {
             if news == nil { news = NewsData() }
         }

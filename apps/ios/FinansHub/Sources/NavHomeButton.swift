@@ -69,7 +69,7 @@ extension Store {
     func nav42HideUp(wide: Bool) -> Bool {
         guard !wide, NavHome42.shared.value != "std", nav42BarShown else { return false }
         if paperInner || paperFin != nil || paperClassic != nil || paperTrackFull { return false }
-        return prof24UpLabel == "Hjem"
+        return prof24UpLabel == "Oversikt"
     }
 
     /// Modulen du står i (1d): finans, mat, sporing, domener, familie, boliger, abo, kalender, huske, chat, hjem eller mer.

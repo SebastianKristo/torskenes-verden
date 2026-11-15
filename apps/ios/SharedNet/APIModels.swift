@@ -499,3 +499,80 @@ struct WidgetsCalendarDTO: Codable, Sendable {
     let updatedAt: String
     let deepLink: String?
 }
+
+/// GET /finans/api/faste-betalinger (Fase 6, Q4): Faste betalinger i Økonomi med filtrene Abonnementer, Faste utgifter og
+/// Planlagte trekk. Serveren regner nextDate (Oslo), daysLeft, monthly, label og trekkdagene; appen viser dem. Beløp i kroner.
+struct FasteBetalingerDTO: Codable, Sendable {
+    struct Filter: Codable, Sendable, Identifiable, Hashable {
+        /// abonnementer | faste | planlagte
+        let id: String
+        let name: String
+        let count: Int
+        let active: Int?
+        let monthly: Double?
+        let yearly: Double?
+        let duplicates: Int?
+        let total: Double?
+        let days: Int?
+    }
+
+    struct Betaling: Codable, Sendable, Identifiable, Hashable {
+        let key: String
+        /// abonnement | fast
+        let kind: String
+        let id: Int
+        let name: String
+        let plan: String?
+        let amount: Double
+        let monthly: Double
+        let yearly: Double
+        let cycle: String
+        let cycleName: String
+        let perLabel: String
+        let nextDate: String?
+        let nextLabel: String?
+        let daysLeft: Int?
+        let label: String
+        let active: Bool
+        let category: String?
+        let source: String
+        let href: String
+        /// En fast utgift for samme tjeneste som et abonnement: nøkkelen til abonnementet (telles ikke i summene).
+        let duplicateOf: String?
+    }
+
+    struct ChargeDay: Codable, Sendable, Hashable {
+        let day: Int
+        let count: Int
+        let names: [String]
+    }
+
+    struct Planlagt: Codable, Sendable, Hashable {
+        let date: String
+        let label: String
+        /// abonnement | fast | funnet
+        let kind: String
+        let id: Int?
+        let name: String
+        let amount: Double
+        let account: String?
+        let source: String?
+    }
+
+    struct Planlagte: Codable, Sendable {
+        let days: Int
+        let from: String
+        let to: String
+        let total: Double
+        let items: [Planlagt]
+    }
+
+    let today: String
+    let month: String
+    let filters: [Filter]
+    let items: [Betaling]
+    let monthly: Double
+    let yearly: Double
+    let chargeDays: [ChargeDay]
+    let planned: Planlagte
+}

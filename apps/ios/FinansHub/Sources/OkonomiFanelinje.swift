@@ -23,7 +23,7 @@ final class FinNav26 {
         didSet { FinNav26.saveLocal(labels) }
     }
 
-    nonisolated static let standard: [String] = ["oversikt", "liste", "finn", "sok"]
+    nonisolated static let standard: [String] = Store.finNavStandard
 
     /// Ikonene som kan velges: tegnene fra Finans og noen SF Symbols.
     nonisolated static let icons: [String] = ["◎", "≡", "⇄", "⌕", "◔", "⎙", "↗", "↻", "▤", "⌂", "★", "♡",
@@ -34,7 +34,10 @@ final class FinNav26 {
     private static func loadLocal() -> [String: FinNavLabel26] {
         guard let d = UserDefaults.standard.data(forKey: localKey) else { return [:] }
         let v: [String: FinNavLabel26]? = try? JSONDecoder().decode([String: FinNavLabel26].self, from: d)
-        return v ?? [:]
+        // Fase 6: egne navn lagret under de eldre nøklene (liste, abonnementer) følger fanen.
+        var out: [String: FinNavLabel26] = [:]
+        for (k, l) in v ?? [:] { out[Store.finNavKey(k)] = l }
+        return out
     }
 
     private static func saveLocal(_ v: [String: FinNavLabel26]) {
@@ -60,11 +63,12 @@ final class FinNav26 {
         var lb: [String: FinNavLabel26] = [:]
         var hasObjects: Bool = false
         for x in raw {
-            if let s = x as? String {
+            if let str = x as? String {
+                let s: String = Store.finNavKey(str)
                 if valid.contains(s) && !keys.contains(s) { keys.append(s) }
             } else if let d = x as? [String: Any] {
                 hasObjects = true
-                let k: String = JS.str(d, "key") ?? JS.str(d, "id") ?? ""
+                let k: String = Store.finNavKey(JS.str(d, "key") ?? JS.str(d, "id") ?? "")
                 guard valid.contains(k), !keys.contains(k) else { continue }
                 keys.append(k)
                 let l: String = JS.str(d, "label") ?? ""
@@ -99,7 +103,8 @@ final class FinNav26 {
                 _ = try? await store.api.callAt("/api", "PUT", "/me/layout", json: ["finNav": keys])
             }
             if keys.count <= 4 {
-                _ = try? await store.api.callAt("/api", "PUT", "/me/layout", json: ["finTabs": keys])
+                // finTabs er for eldre servere, som bare kjenner de eldre nøklene.
+                _ = try? await store.api.callAt("/api", "PUT", "/me/layout", json: ["finTabs": keys.map(Store.finNavOldKey)])
             }
         }
     }
@@ -148,7 +153,7 @@ struct FinNavEditor26: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("FINANS · FANELINJE").font(PF.mono(10.5)).tracking(1.2).foregroundStyle(p.lab)
+                    Text("ØKONOMI · FANELINJE").font(PF.mono(10.5)).tracking(1.2).foregroundStyle(p.lab)
                     Text("\(rows.count) av 5 faner · Mer ligger alltid sist").font(PF.ui(13)).foregroundStyle(p.mut)
                     PLabel(text: "I fanelinja")
                     current

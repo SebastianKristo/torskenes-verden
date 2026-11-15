@@ -50,28 +50,30 @@ enum Fin45 {
         out.append(More28Row(id: "saldo", name: "Saldo", sub: store.boot == nil ? "Kontoer" : kr(total) + " · \(accounts.count) kontoer", icon: "creditcard") { store.paperFinGo("kontoer") })
         out.append(More28Row(id: "budsjett", name: "Budsjett", sub: budgetSub(s), icon: "chart.pie") { store.paperFinGo("budsjett") })
         out.append(More28Row(id: "kvitt", name: "Kvitteringer", sub: review > 0 ? "\(review) til gjennomgang" : "Ingen i kø", icon: "doc.text.viewfinder") { store.paperFinGo("kvitt") })
-        out.append(More28Row(id: "faste", name: "Faste trekk", sub: fixedSub(store), icon: "repeat") { store.paperOpen(.fast) })
+        out.append(More28Row(id: "faste", name: "Faste utgifter", sub: fixedSub(store), icon: "repeat") { store.paperOpen(.fast) })
         out.append(More28Row(id: "aksjer", name: "Aksjer", sub: store.stocksX?.valueText ?? "Trading 212", icon: "chart.line.uptrend.xyaxis") { store.paperFinGo("aksjer") })
         if !store.finNav.contains("finn") {
             out.append(More28Row(id: "finn", name: "Finn", sub: "Kjøp og salg", icon: "arrow.left.arrow.right") { store.paperGo("finn") })
         }
         out.append(More28Row(id: "boliger", name: "Boliger", sub: "Utgifter og regninger", icon: "house") { store.paperFinGo("boliger") })
-        out.append(More28Row(id: "abo", name: "Abonnement", sub: store.subsX.map { kr($0.monthly) + "/mnd" } ?? "Subscription OS", icon: "arrow.triangle.2.circlepath") { store.paperGo("abo") })
-        if !store.finNav.contains("liste") {
+        if !store.finNav.contains("faste") {
+            out.append(More28Row(id: "abo", name: "Faste betalinger", sub: store.subsX.map { kr($0.monthly) + "/mnd" } ?? "Abonnementer, faste utgifter og planlagte trekk", icon: "arrow.triangle.2.circlepath") { store.paperGo("abo") })
+        }
+        if !store.finNav.contains("transaksjoner") {
             out.append(More28Row(id: "fliste", name: "Transaksjoner", sub: "Alle transaksjoner", icon: "list.bullet") { store.paperGo("fliste") })
         }
         out.append(More28Row(id: "kontoer", name: "Kontoer", sub: store.boot == nil ? "Banker og kort" : "\(accounts.count) kontoer", icon: "building.columns") { store.paperFinGo("kontoer") })
-        out.append(More28Row(id: "import", name: "Import", sub: "Bank, Excel og Finn", icon: "square.and.arrow.down") { store.paperOpen(.imports) })
         out.append(More28Row(id: "rapp", name: "Rapporter", sub: "Måned og år", icon: "chart.bar") { store.paperOpen(.reports) })
         // Prompt 51 (IOSFEAT51): Planlegging – sparemål, faste trekk fremover, skatt, priser og abonnementsjeger (Plan51*.swift).
-        out.append(More28Row(id: "plan51", name: "Planlegging", sub: "Sparemål, saldoprognose, skatt og priser", icon: "calendar.badge.clock") { Plan51.shared.show() })
+        out.append(More28Row(id: "plan51", name: "Sparing og planer", sub: "Sparemål, saldoprognose, skatt og priser", icon: "calendar.badge.clock") { Plan51.shared.show() })
         if !store.finNav.contains("sok") {
-            out.append(More28Row(id: "fsok", name: "Søk", sub: "Transaksjoner og kvitteringer · ✦ AI", icon: "magnifyingglass") { store.paperGo("fsok") })
+            out.append(More28Row(id: "fsok", name: "Glimt", sub: "Spør om transaksjoner og kvitteringer", icon: "sparkle.magnifyingglass") { store.paperGo("fsok") })
         }
         if !store.mainTabItems.contains(where: { $0.id == "hjem" }) {
-            out.append(More28Row(id: "hjem", name: "Hjem", sub: "Pakker, avganger og widgets", icon: "house.fill") { store.paperGo("hjem") })
+            out.append(More28Row(id: "hjem", name: ModulListe.shared.navn("oversikt", "Oversikt"), sub: "Pakker, avganger og widgets", icon: "house.fill") { store.paperGo("hjem") })
         }
-        out.append(More28Row(id: "innst", name: "Innstillinger", sub: "Fanelinje, kontoer og tema", icon: "gearshape") { store.paperGo("innst") })
+        // O3: Import ligger under Innstillinger (som på web), med kategorier, regler og fanelinja.
+        out.append(More28Row(id: "innst", name: "Innstillinger", sub: "Import, fanelinje, kategorier og regler", icon: "gearshape") { store.paperGo("innst-finans67") })
         return out
     }
 

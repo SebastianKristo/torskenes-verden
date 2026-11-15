@@ -53,7 +53,7 @@ extension Store {
             // Prompt 70: halv/full per widget på Hjem (pages.hjem.sz, HomeWidgetSize.swift).
             Home70Size.shared.take(pages)
         }
-        let tabs = JS.strings(o, "finTabs").filter { Store.finNavAll.map(\.id).contains($0) }
+        let tabs = Store.finNavKeys(JS.strings(o, "finTabs")).filter { Store.finNavAll.map(\.id).contains($0) }
         if !tabs.isEmpty && tabs != finNav { finNav = Array(tabs.prefix(5)) }
         if let v = JS.str(o, "fourthTab"), ["auto", "domener", "sporing"].contains(v), v != fourthTab { fourthTab = v }
         if let v = JS.str(o, "fab"), ["float", "inline"].contains(v), v != fabMode { fabMode = v }
@@ -144,20 +144,50 @@ extension Store {
 
     /* ---------- Finans-fanelinjen ---------- */
 
+    /// Fase 6 (Q3, Q4): Økonomi-fanene heter Oversikt, Transaksjoner, Budsjett og Faste betalinger (som på web), og søket
+    /// heter Glimt. «liste» og «abonnementer» er eldre nøkler for de samme fanene (serveren godtar begge, server/mobile.js).
     nonisolated static let finNavAll: [FinNavItem] = [
         FinNavItem(id: "oversikt", name: "Oversikt", icon: "◎", page: "finans"),
-        FinNavItem(id: "liste", name: "Liste", icon: "≡", page: "fliste"),
-        FinNavItem(id: "finn", name: "Finn", icon: "⇄", page: "finn"),
-        FinNavItem(id: "sok", name: "Søk", icon: "⌕", page: "fsok"),
+        FinNavItem(id: "transaksjoner", name: "Transaksjoner", icon: "≡", page: "fliste"),
         FinNavItem(id: "budsjett", name: "Budsjett", icon: "◔", page: "budsjett"),
+        FinNavItem(id: "faste", name: "Faste betalinger", icon: "↻", page: "abo"),
+        FinNavItem(id: "finn", name: "Finn", icon: "⇄", page: "finn"),
+        FinNavItem(id: "sok", name: "Glimt", icon: "⌕", page: "fsok"),
         FinNavItem(id: "kvitteringer", name: "Kvitteringer", icon: "⎙", page: "kvitt"),
         FinNavItem(id: "aksjer", name: "Aksjer", icon: "↗", page: "aksjer"),
-        FinNavItem(id: "abonnementer", name: "Abonnementer", icon: "↻", page: "abo"),
         FinNavItem(id: "kontoer", name: "Kontoer", icon: "▤", page: "kontoer"),
         FinNavItem(id: "boliger", name: "Boliger", icon: "⌂", page: "boliger"),
         // Prompt 27: Chat kan også velges i Finans-fanelinjen.
         FinNavItem(id: "chat", name: "Chat", icon: "✦", page: "chat"),
     ]
+
+    /// Standard i Økonomi: Oversikt, Transaksjoner, Budsjett og Faste betalinger (Mer kommer alltid sist).
+    nonisolated static let finNavStandard: [String] = ["oversikt", "transaksjoner", "budsjett", "faste"]
+
+    /// Den nye nøkkelen for en eldre («liste» → «transaksjoner», «abonnementer» → «faste»).
+    nonisolated static func finNavKey(_ k: String) -> String {
+        switch k {
+        case "liste": return "transaksjoner"
+        case "abonnementer": return "faste"
+        default: return k
+        }
+    }
+
+    /// Den eldre nøkkelen, til finTabs (reserven for eldre servere, som bare kjenner de gamle).
+    nonisolated static func finNavOldKey(_ k: String) -> String {
+        switch k {
+        case "transaksjoner": return "liste"
+        case "faste": return "abonnementer"
+        default: return k
+        }
+    }
+
+    /// Nøklene med de nye navnene, uten dubletter.
+    nonisolated static func finNavKeys(_ v: [String]) -> [String] {
+        var out: [String] = []
+        for k in v.map(Store.finNavKey) where !out.contains(k) { out.append(k) }
+        return out
+    }
 
     var finNavItems: [FinNavItem] {
         let list = finNav.compactMap { id in Store.finNavAll.first { $0.id == id } }
@@ -507,20 +537,20 @@ extension Store {
     var paperUpLabel: String {
         switch paperTab {
         case "innst": return "Mer"
-        case "ftx": return "Liste"
-        // Prompt 38: «‹ Mer», «‹ Hjem», «‹ Oversikt» etter hvor Abonnement ble åpnet fra (NavSubsBack.swift).
-        case "abo": return abo38Label ?? (finNav.contains("abonnementer") ? "Hjem" : "Mer")
-        case "aksjer": return finNav.contains("aksjer") ? "Hjem" : "Mer"
-        case "kvitt": return finNav.contains("kvitteringer") ? "Hjem" : "Mer"
-        case "boliger": return folder != nil ? "Boliger" : (finNav.contains("boliger") ? "Hjem" : "Mer")
+        case "ftx": return "Transaksjoner"
+        // Prompt 38: «‹ Mer», «‹ Oversikt» etter hvor Faste betalinger ble åpnet fra (NavSubsBack.swift). Q1: Hjem heter Oversikt.
+        case "abo": return abo38Label ?? (finNav.contains("faste") ? "Oversikt" : "Mer")
+        case "aksjer": return finNav.contains("aksjer") ? "Oversikt" : "Mer"
+        case "kvitt": return finNav.contains("kvitteringer") ? "Oversikt" : "Mer"
+        case "boliger": return folder != nil ? "Boliger" : (finNav.contains("boliger") ? "Oversikt" : "Mer")
         case "profil": return "Alle innstillinger"
         // Prompt 40: «‹ Hjem» fra Gjøremål uansett hvor den ble åpnet fra.
-        case "huske": return "Hjem"
+        case "huske": return "Oversikt"
         case "bursdag", "kalender", "bibel": return "Mer"
         default:
             // Prompt 26: «‹ Integrasjoner» fra en integrasjonsside, «‹ Bursdager» fra Kalendere åpnet der.
             if let l = nav26UpLabel { return l }
-            return paperTab.hasPrefix("innst-") ? "Alle innstillinger" : "Hjem"
+            return paperTab.hasPrefix("innst-") ? "Alle innstillinger" : "Oversikt"
         }
     }
 }

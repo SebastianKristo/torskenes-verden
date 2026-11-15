@@ -31,11 +31,11 @@ final class Prof24 {
     private var bootAt: Date = Date()
 
     static let builtIn: [Prof24Def] = [
-        Prof24Def(key: "standard", name: "Standard", sub: "Hjem, Finans, Mat og Mer · vanlige Finans-faner",
-                  startRoute: "hjem", homeNav: PaperTabItem.defaultIds, finNav: ["oversikt", "liste", "finn", "sok"]),
-        Prof24Def(key: "finans_boliger", name: "Finans + Boliger", sub: "Åpner i Boliger · Boliger, Søk, Liste, Oversikt, Kvitteringer · Hjem under Mer",
-                  startRoute: "finans/boliger", homeNav: ["finans"], finNav: ["boliger", "sok", "liste", "oversikt", "kvitteringer"]),
-        Prof24Def(key: "boliger", name: "Boliger-profil", sub: "Bare Finans og Domener, med Boliger først",
+        Prof24Def(key: "standard", name: "Standard", sub: "Oversikt, Økonomi, Mat og Mer · Økonomi med Oversikt, Transaksjoner, Budsjett og Faste betalinger",
+                  startRoute: "hjem", homeNav: PaperTabItem.defaultIds, finNav: Store.finNavStandard),
+        Prof24Def(key: "finans_boliger", name: "Økonomi + Boliger", sub: "Åpner i Boliger · Boliger, Glimt, Transaksjoner, Oversikt, Kvitteringer · Oversikt under Mer",
+                  startRoute: "finans/boliger", homeNav: ["finans"], finNav: ["boliger", "sok", "transaksjoner", "oversikt", "kvitteringer"]),
+        Prof24Def(key: "boliger", name: "Boliger-profil", sub: "Bare Økonomi og Domener, med Boliger først",
                   startRoute: "hjem", homeNav: ["finans", "domener"], finNav: ["boliger", "kvitteringer", "oversikt", "sok"]),
     ]
 
@@ -52,7 +52,7 @@ final class Prof24 {
                 if let r = JS.str(s, "startRoute") { x.startRoute = r }
                 let h: [String] = JS.strings(s, "homeNav")
                 if !h.isEmpty { x.homeNav = h }
-                let f: [String] = JS.strings(s, "finNav")
+                let f: [String] = Store.finNavKeys(JS.strings(s, "finNav"))
                 if !f.isEmpty { x.finNav = f }
             }
             out.append(x)
@@ -130,7 +130,7 @@ extension Store {
 
     /// «‹ Boliger» i stedet for «‹ Hjem» når Boliger er rot (også på Domener).
     var prof24UpLabel: String {
-        if prof24FinBol && (paperInDomains || paperUpLabel == "Hjem") { return "Boliger" }
+        if prof24FinBol && (paperInDomains || paperUpLabel == "Oversikt") { return "Boliger" }
         return paperUpLabel
     }
 

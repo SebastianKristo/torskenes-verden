@@ -26,7 +26,7 @@ extension Store {
         if prof24IsRoot { return false }
         let wide: Bool = Layout45.shared.wide
         // Samme regel som pila i toppbildet (PaperHero.topRow): ingen pil, ingen sveip.
-        if wide && prof24UpLabel == "Hjem" { return false }
+        if wide && prof24UpLabel == "Oversikt" { return false }
         if nav42HideUp(wide: wide) { return false }
         return true
     }

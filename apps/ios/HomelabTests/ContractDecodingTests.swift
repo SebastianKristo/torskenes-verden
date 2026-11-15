@@ -57,6 +57,10 @@ final class ContractDecodingTests: XCTestCase {
         for item in subs.items where item.active {
             XCTAssertNotNil(item.perLabel, item.name)
         }
+        // Fase 6 (Q4): Faste betalinger med filtrene og serverens label, nextDate, daysLeft og monthly.
+        let fb: FasteBetalingerDTO = try decode(FasteBetalingerDTO.self, "finans-faste-betalinger.json")
+        XCTAssertEqual(fb.filters.map { (f: FasteBetalingerDTO.Filter) -> String in f.id }, ["abonnementer", "faste", "planlagte"])
+        for b in fb.items { XCTAssertFalse(b.label.isEmpty, b.name) }
     }
 
     func testOppgaverMediaOgLive() throws {
