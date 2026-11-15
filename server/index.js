@@ -17,7 +17,6 @@ import { cfg, publicConfig, updateConfig, runRequest, userCfgSet, runAsUser } fr
 import { db as fhDb } from './finans/db.js';
 import homeApi from './home.js';
 import { mountMat } from './mat/index.js'; // Mat: /api/matplan, /mat/api og /mat/calendar.ics
-import domainsApi, { domainSummary } from './domains.js';
 import { startTrackingWorker, hasTrackingTest, testTracking } from './sporing/shipments.js';
 import { mountSporing } from './sporing/index.js'; // Sporing: /api/tracking (kontoer, feilsøking, nøkler, pakker)
 import uiApi from './ui.js';
@@ -59,7 +58,7 @@ import { mountServer47 } from './server47.js'; // prompt 47 (SERVER47)
 import { mai17Api, brief41 } from './api41.js'; // prompt 41 (SERVER41)
 import { mountFamilie, startFamilie, hlPage41 } from './familie/index.js'; // Familie: /api/family, /api/kart, /api/famcal51, /api/hjemlys (+ /api/velfremme)
 import { mountFinans, mountFinansAliases, mountTrialWidgets, mountSubsCalendar, registerLegacyReceipts, legacyReceiptOwner } from './finans/index.js'; // Økonomi: /finans/api, Boliger-aliasene, prøveperiode-widgets og kalenderen «Abonnementer»
-import { widgets43Api, gscDomains43Api, gsc43Api, gscViewMw43, gscOverviewMw43 } from './api43.js'; // prompt 43 (SERVER43)
+import { widgets43Api } from './api43.js'; // prompt 43 (SERVER43)
 import { mountMedia, startMedia } from './media/index.js'; // Media: alle /api/media-, /api/playback- og /api/medctl51-ruter
 import { mediaCalendarsMw43 } from './media/arr.js'; // kalenderkilden «Media»
 // Prompt 44 (SERVER44): Logger (Docker), Media (servere, søk som jobb, felles status), Avspilling, Studie-dokumenter, Kalender-deltakere,
@@ -88,7 +87,7 @@ import { installCacheBust } from './cache-bust.js'; // prompt 32 (SERVER32)
 import searchHistoryApi from './search-history.js'; // prompt 32: søkehistorikk per bruker
 import { mountReise } from './reise/index.js'; // Reise: /api/ruter (Min reise, skolesoner, «forlot skolen»)
 import { mountRom, startRom } from './rom/index.js'; // Rom: /api/space og /api/rom (APOD, Mars, satellitter)
-import { domainGlimtApi, gscApi, startDomainGlimtScheduler } from './domains-glimt.js'; // prompt 32
+import { mountDomener } from './domener/index.js'; // Domener: statistikk, Glimt-oppsummering og Google Search Console
 import { companionsOf } from './kalender/calendars.js'; // companion-tokens (Kalender) i /api/me/devices
 import { osloDate } from './dates/oslo.js';
 if (process.env.MOCK_DATA === '1' && !fhDb.prepare('SELECT 1 FROM fh_transactions LIMIT 1').get()) (await import('./finans/demo.js')).loadDemo();
@@ -607,20 +606,7 @@ startQuality64();
 // /api/glimt og /api/assist (etter de andre /api/glimt/*-rutene over, så de spesifikke rutene svarer først)
 mountGlimt(app);
 mountChat(app); // server/ai/: Claude-importen (/api/chat/import) og Chat (/api/chat), sesjon eller app-token
-const domainPill = async (c) => {
-  if (!isAdmin(c.get('user'))) return c.json({ error: 'Bare administratorer har tilgang', restricted: true }, 403);
-  try { return c.json(await domainSummary()); } catch (e) { return c.json({ error: e.message }, 502); }
-};
-app.get('/api/domains/summary', authOrToken, domainPill);
-// Prompt 30: Test token i Innstillinger → Domener (samme tilgang som /domains/api: bare admin).
-app.post('/api/domains/token/verify', async (c) => { const u = new URL(c.req.url); u.pathname = '/domains/api/token/verify'; return app.fetch(new Request(u, { method: 'POST', headers: c.req.raw.headers, body: await c.req.arrayBuffer() }), c.env); });
-app.get('/api/domener/sammendrag', authOrToken, domainPill);
-app.use('/api/domains/overview', gscOverviewMw43); // prompt 43: Google Søk uten tall → årsak
-app.use('/api/domains/:domain/gsc', gscViewMw43);
-app.route('/api/domains', gscDomains43Api); // prompt 43: /:domain/gsc/refresh (Hent nå) og /:domain/gsc/test
-app.route('/api/domains', domainGlimtApi); // prompt 32: /:domain/summary (Glimt) og /:domain/gsc (Google Search Console), bare admin
-app.route('/api/gsc', gsc43Api); // prompt 43: /test (diagnose per eiendom)
-app.route('/api/gsc', gscApi); // prompt 32: Google Search Console-kobling per bruker (webmasters.readonly)
+mountDomener(app); // server/domener/: domene-pillen, /api/domains (Glimt, Search Console), /api/gsc og /domains/api (bare admin)
 app.route('/api', api36); // prompt 36: /dashboard/layout og /weather/places/summary (før mobileApi)
 mountBibel(app); // server/bibel/: /api/bible – dagens bibelvers (bare med modulen)
 app.route('/api', profilesApi); // prompt 37: profiler og onboarding
@@ -633,12 +619,11 @@ setMobileApi44(mobileApi);
 app.route('/api', mobileApi);
 app.route('/api', authed);
 app.route('/home/api', homeApi);
-app.route('/domains/api', domainsApi);
 // Prompt 51 (OPS51): OPS51_SANDBOX=1 = testet gjenoppretting / staging-kopi mot en kopi av databasen: ingen bakgrunnsjobber
 // (ingen varsler, e-post, backup, oppdateringer eller selvreparasjon). Bare HTTP-serveren og migreringene kjører.
 const BG51 = process.env.NODE_ENV !== 'test' && process.env.OPS51_SANDBOX !== '1';
 migrateLocalHosts86().catch((e) => console.warn('[localfetch]', e.message)); // prompt 86: én gang – lokale verter i administratorenes abonnementer godkjennes
-if (BG51) { startTrackingWorker(); startNyheter(); startBirthdayWorker(); startSystemBackupScheduler(); startUpdateScheduler(); startDomainGlimtScheduler(); startRom(); startApi40(); startMedia(); startLogs44(); startLive89(); }
+if (BG51) { startTrackingWorker(); startNyheter(); startBirthdayWorker(); startSystemBackupScheduler(); startUpdateScheduler(); startRom(); startApi40(); startMedia(); startLogs44(); startLive89(); }
 if (BG51) { startGphoto46(); } // prompt 46 (DATA46)
 if (BG51) startJobs(); // felles planlegger (server/jobs/): backup, prøveperioder, skattemelding, brief, iCal, skolekalendere, Sjekk inn, «forlot»
 if (process.env.NODE_ENV !== 'test') startOps51(); // prompt 51 (OPS51): planlegger (backup, testet gjenoppretting, vedlikehold) og migrasjonslogg

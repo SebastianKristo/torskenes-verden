@@ -28,17 +28,18 @@
 //   Cron 06:00: henter de siste 3 dagene på nytt (GSC reviderer) til gsc_daily / gsc_query / gsc_page. Første gang: 16 måneder.
 import { Hono } from 'hono';
 import { createCipheriv, createDecipheriv, createHash, createSign, randomBytes, hkdfSync } from 'node:crypto';
-import { db, q, kv } from './db.js';
-import { cfg } from './settings.js';
-import { config } from './config.js';
-import { sessionSecret86 } from './auth/server-secret.js'; // prompt 86
-import { sessionUser, userInfo, isAdmin, listUsers } from './auth/session.js';
-import { bearerOk } from './finans/routes.js';
-import { settings as fhSettings } from './finans/db.js';
-import { notifyUser } from './notify.js';
+import { db, q, kv } from '../db.js';
+import { cfg } from '../settings.js';
+import { config } from '../config.js';
+import { sessionSecret86 } from '../auth/server-secret.js'; // prompt 86
+import { sessionUser, userInfo, isAdmin, listUsers } from '../auth/session.js';
+import { bearerOk } from '../finans/routes.js';
+import { settings as fhSettings } from '../finans/db.js';
+import { notifyUser } from '../notify.js';
+import { registerJob } from '../jobs/index.js';
 import { summaryFacts, domainNames, domainsOverview, PER_RANGE, addDomain39, cloudflareZones39, cloudflareTxt39 } from './domains.js';
-import { run as aiRun } from './ai-run.js';
-import { once } from './ai-gate.js'; // prompt 43: single-flight for oppsummeringen
+import { run as aiRun } from '../ai-run.js';
+import { once } from '../ai-gate.js'; // prompt 43: single-flight for oppsummeringen
 
 const MOCK = process.env.MOCK_DATA === '1';
 const TZ = 'Europe/Oslo';
@@ -686,19 +687,16 @@ domainGlimtApi.get('/:domain/gsc', adminGuard, async (c) => {
 });
 
 /* ---------------- Planlegger: 06:00 GSC, 07:00 oppsummering ---------------- */
-let timer = null;
-export function startDomainGlimtScheduler() {
-  if (timer) return;
-  const done = new Set();
-  timer = setInterval(() => {
-    const hm = osloHm(), day = osloDate();
-    // Prompt 43: hentejobben tar igjen en glemt morgen (serveren startet etter 06:30) – én gang per dag, husket i kv.
-    if (hm >= '06:00' && !done.has(`gsc:${day}`) && kv.get(OWNER_GSC43, 'gsc43_daily', null) !== day) { done.add(`gsc:${day}`); kv.set(OWNER_GSC43, 'gsc43_daily', day); dailyGsc().catch((e) => console.warn('[gsc]', e.message)); }
-    if (hm >= '07:00' && hm < '07:30' && !done.has(`sum:${day}`)) { done.add(`sum:${day}`); dailySummaries().catch((e) => console.warn('[domener]', e.message)); }
-  }, 60_000);
-  timer.unref?.();
+// Hvert minutt via den felles planleggeren (ikke i test/sandkasse): Search Console kl. 06 og oppsummeringene kl. 07 (Oslo).
+const done = new Set();
+function dailyTick() {
+  const hm = osloHm(), day = osloDate();
+  // Prompt 43: hentejobben tar igjen en glemt morgen (serveren startet etter 06:30) – én gang per dag, husket i kv.
+  if (hm >= '06:00' && !done.has(`gsc:${day}`) && kv.get(OWNER_GSC43, 'gsc43_daily', null) !== day) { done.add(`gsc:${day}`); kv.set(OWNER_GSC43, 'gsc43_daily', day); dailyGsc().catch((e) => console.warn('[gsc]', e.message)); }
+  if (hm >= '07:00' && hm < '07:30' && !done.has(`sum:${day}`)) { done.add(`sum:${day}`); dailySummaries().catch((e) => console.warn('[domener]', e.message)); }
 }
+registerJob('domener.daglig', 60_000, dailyTick, { note: 'Domener: Search Console kl. 06 og Glimt-oppsummeringene kl. 07' });
 
-/* ---------------- Prompt 43: diagnose og «Hent nå» (gsc43.js) ---------------- */
+/* ---------------- Prompt 43: diagnose og «Hent nå» (gsc-diagnose.js) ---------------- */
 const OWNER_GSC43 = '__gsc43';
 export const _gsc43 = { conf, setConf, wm, accessToken, loadSites, connected, googleClient, mockGsc, fetchG, GSC_SCOPE, LAG, osloDate, addDays, sealFor, unsealFor, SA_MARK, accessCache, syncGsc: (...a) => syncGsc(...a) };

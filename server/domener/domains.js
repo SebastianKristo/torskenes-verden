@@ -5,14 +5,14 @@ import { createCipheriv, createDecipheriv, randomBytes, scryptSync } from 'node:
 import { readFile } from 'node:fs/promises';
 import { connect } from 'node:tls';
 import { promises as dnsp } from 'node:dns';
-import { db, q } from './db.js';
-import { sessionSecret86 } from './auth/server-secret.js'; // prompt 86
-import { cfg } from './settings.js';
-import { cached, peek } from './cache.js';
-import * as auth from './auth/session.js';
-import * as fh from './finans/routes.js';
-import { guard, MOCK, readJson, str } from './homeos-common.js';
-import { osloDate } from './dates/oslo.js';
+import { db, q } from '../db.js';
+import { sessionSecret86 } from '../auth/server-secret.js'; // prompt 86
+import { cfg } from '../settings.js';
+import { cached, peek } from '../cache.js';
+import * as auth from '../auth/session.js';
+import * as fh from '../finans/routes.js';
+import { guard, MOCK, readJson, str } from '../homeos-common.js';
+import { osloDate } from '../dates/oslo.js';
 
 const CF = 'https://api.cloudflare.com/client/v4';
 const SOURCES = ['cloudflare', 'tunnel', 'plausible', 'umami', 'uptime', 'gsc']; // prompt 39: gsc = Google Search Console (ingen token, bruker Google-tilkoblingen)
@@ -479,7 +479,7 @@ api.get('/vendor/nordic.json', loggedIn, async (c) => c.body(await nordic(), 200
 api.get('/vendor/:file', loggedIn, async (c) => {
   const p = VENDOR[c.req.param('file')];
   if (!p) return c.notFound();
-  const body = await readFile(new URL(`../node_modules/${p}`, import.meta.url));
+  const body = await readFile(new URL(`../../node_modules/${p}`, import.meta.url));
   return c.body(body, 200, { 'Content-Type': p.endsWith('.json') ? 'application/json' : 'text/javascript', 'Cache-Control': 'private, max-age=604800' });
 });
 
@@ -490,7 +490,7 @@ let nordicJson = null;
 async function nordic() {
   if (nordicJson) return nordicJson;
   const { feature } = await import('topojson-client');
-  const topo = JSON.parse(await readFile(new URL('../node_modules/world-atlas/countries-50m.json', import.meta.url), 'utf8'));
+  const topo = JSON.parse(await readFile(new URL('../../node_modules/world-atlas/countries-50m.json', import.meta.url), 'utf8'));
   const inBox = ([lon, lat]) => lon >= BOX.lonMin && lon <= BOX.lonMax && lat >= BOX.latMin && lat <= BOX.latMax;
   const countries = [];
   for (const f of feature(topo, topo.objects.countries).features) {
@@ -682,7 +682,7 @@ const mergePct = (list, weights) => {
 };
 /**
  * KPI-er, grafer, land, sider, oppetid og per-domene-tall i ett svar. Server-cache 5 min (analysen per domene har sin egen
- * 5-minutterscache). domain = navn eller '*' (alle). → se GET /api/domains/overview i domains-glimt.js.
+ * 5-minutterscache). domain = navn eller '*' (alle). → se GET /api/domains/overview i glimt.js.
  */
 export async function domainsOverview(per = '24t', domain = '*') {
   const range = PER_RANGE[per] ?? '24h';
@@ -754,7 +754,7 @@ export function domainSummary() {
 }
 
 /**
- * Prompt 32: tallene siste 24 t per domene til Glimt-oppsummeringen (domains-glimt.js). sel = domenenavn eller '*' (alle).
+ * Prompt 32: tallene siste 24 t per domene til Glimt-oppsummeringen (glimt.js). sel = domenenavn eller '*' (alle).
  * → [{name, req, vis, ch (endring % forespørsler mot døgnet før), thr, cache (%), ms (median), certD, expD, up, error?}]
  */
 export async function summaryFacts(sel) {

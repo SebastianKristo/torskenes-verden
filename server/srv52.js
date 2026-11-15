@@ -453,7 +453,7 @@ async function homelabOf52(u) {
   return { ok: services.filter((s) => s.state === 'running').length, down: services.filter((s) => s.state !== 'running').length, total: services.length, services: services.slice(0, 24) };
 }
 async function domainsOf52() {
-  const D = await import('./domains.js');
+  const D = await import('./domener/domains.js');
   const o = D.domainOverview();
   const items = o.items.slice(0, 8).map((x) => ({ name: x.name, up: x.up, ms: x.ms, ssl_days: o.expiringSoon.find((e) => e.name === x.name)?.days ?? null }));
   return { total: o.total, up: o.up, down: o.down, warn: o.expiringSoon.length + o.down, items, expiring: o.expiringSoon };

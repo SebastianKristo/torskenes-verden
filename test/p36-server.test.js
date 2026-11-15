@@ -248,7 +248,7 @@ test('GET /api/domains/overview: alt i ett svar (KPI-er, grafer, land, sider, op
 });
 
 test('Glimt-oppsummeringen blokkerer aldri: dagens fra cache, ellers regler/siste med pending', async () => {
-  const dg = await import('../server/domains-glimt.js');
+  const dg = await import('../server/domener/glimt.js');
   let release;
   dg._setSummaryLlm(() => new Promise((r) => { release = () => r('{"head":"AI-hode","pts":[{"t":"punkt","tone":"pos"}]}'); }));
   const t0 = Date.now();

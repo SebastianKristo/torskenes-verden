@@ -1,11 +1,11 @@
 // Prompt 43 (SERVER43): «Google Search Console er lagt til, men Domener viser ingen statistikk» (claude-code-gsc-ingen-statistikk.md).
 //
-// Årsakene i koden før prompt 43 (rettet her og i domains-glimt.js):
+// Årsakene i koden før prompt 43 (rettet her og i glimt.js):
 //   1. Tomt svar uten forklaring: /api/domains/overview og /:domain/gsc ga bare {connected, loading|needsSite}, og feilen fra Google
 //      (403 scope, utløpt refresh-token) ble lagt i conf.error uten å nå siden. → empty:true + reason + message (diagnosen under).
 //   2. Ingen ny henting: data hentes bare ved tilkobling og av nattjobben 06:00–06:30 (startet serveren senere, ble dagen hoppet over),
 //      og et domene som ble lagt inn etter tilkoblingen fikk aldri valgt eiendom (needsSite) før noen åpnet eiendomslista.
-//      → nattjobben tar igjen dagen (domains-glimt.js), eiendommen velges automatisk ved diagnosen, «Hent nå» (POST …/gsc/refresh).
+//      → nattjobben tar igjen dagen (glimt.js), eiendommen velges automatisk ved diagnosen, «Hent nå» (POST …/gsc/refresh).
 //   3. Datoene: endDate = i dag − 2 ga tomme siste dager; nå i dag − 3 (LAG), dataState:'all', type:'web' og searchconsole.googleapis.com.
 //
 //   GET  /api/domains/:domain/gsc (mellomvare) → som før + ved tomt: {empty:true, reason, message, site, permissionLevel, fetchedAt, dataTo}
@@ -16,11 +16,11 @@
 //        lastFetch, dataTo, rows28, impressions28, clicks28, reason, message, steps:[{t, ok, ms, detail}], error?}
 //   GET|POST /api/gsc/test?siteUrl=|domain=   → samme for en eiendom (Innstillinger → Domener → Google Search Console → Test)
 import { Hono } from 'hono';
-import { db, q } from './db.js';
-import { sessionUser, userInfo, isAdmin } from './auth/session.js';
-import { bearerOk } from './finans/routes.js';
+import { db, q } from '../db.js';
+import { sessionUser, userInfo, isAdmin } from '../auth/session.js';
+import { bearerOk } from '../finans/routes.js';
 import { domainNames } from './domains.js';
-import { _gsc43 as G, syncGsc, gscView } from './domains-glimt.js';
+import { _gsc43 as G, syncGsc, gscView } from './glimt.js';
 
 const OK_LEVELS = new Set(['siteOwner', 'siteFullUser', 'siteRestrictedUser']);
 const PERM = { siteOwner: 'eier', siteFullUser: 'full', siteRestrictedUser: 'begrenset', siteUnverifiedUser: 'ikke bekreftet' };

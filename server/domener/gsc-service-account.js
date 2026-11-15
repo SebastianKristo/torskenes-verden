@@ -1,6 +1,6 @@
 // Prompt 45 (SERVER45): «Google Search Console gir heller ikke fra seg noe statistikk» (claude-code-search-console-statistikk.md).
 //
-// Rotårsaker funnet i koden (rettet i domains-glimt.js / gsc43.js, se googleReason45):
+// Rotårsaker funnet i koden (rettet i glimt.js / gsc-diagnose.js, se googleReason45):
 //   1. Alle 401/403 fra Google ble til «Google avviste tilgangen. Koble til på nytt.», og gsc43 tolket ethvert «403» som manglende scope.
 //      Den vanligste ekte årsaken – Search Console API ikke slått på i Google Cloud-prosjektet (SERVICE_DISABLED) – ble derfor aldri vist,
 //      og «koble til på nytt» hjalp aldri. Nå: reason api_disabled + activationUrl, noaccess, scope, token, quota, property_format.
@@ -15,10 +15,10 @@
 //   GET    /api/gsc (mellomvare) → + {auth:'oauth'|'service-account'|null, serviceAccount:{email, projectId}|null, lagDays:3, dataState:'all', reason?}
 //   POST   /api/gsc/site {domain, siteUrl} – siteUrl normaliseres før den gamle ruten tar over.
 import { Hono } from 'hono';
-import { userInfo, isAdmin, sessionUser } from './auth/session.js';
-import { bearerOk } from './finans/routes.js';
-import { kv } from './db.js';
-import { _gsc43 as G, gscApi } from './domains-glimt.js';
+import { userInfo, isAdmin, sessionUser } from '../auth/session.js';
+import { bearerOk } from '../finans/routes.js';
+import { kv } from '../db.js';
+import { _gsc43 as G, gscApi } from './glimt.js';
 import { domainNames } from './domains.js';
 
 /** «eksempel.no» → «sc-domain:eksempel.no», «https://eksempel.no» → «https://eksempel.no/». Ugyldig → null. */
