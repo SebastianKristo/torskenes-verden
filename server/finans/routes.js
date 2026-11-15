@@ -140,7 +140,7 @@ const accById = (u = me()) => new Map(q('SELECT * FROM fh_accounts WHERE user_id
 
 function txOut(t, cats = catById(), accs = accById()) {
   const cat = cats.get(t.category_id), acc = accs.get(t.account_id);
-  return { id: t.id, date: t.date, amount: t.amount / 100, description: t.description, merchant: t.merchant, note: t.note, source: t.source,
+  return { id: t.id, date: t.date, amount: t.amount / 100, amountOre: t.amount, description: t.description, merchant: t.merchant, note: t.note, source: t.source,
     categoryId: t.category_id, category: cat?.name ?? 'Ukategorisert', color: cat?.color ?? '#A0A0AA', kind: cat?.kind ?? 'expense',
     accountId: t.account_id, account: acc?.name ?? '–', receipt: t.receipt_status ?? null, receiptId: t.receipt_id ?? null,
     type: t.amount > 0 ? 'income' : 'expense', folderId: t.folder_id ?? null, hasBankRow: !!t.raw_bank_row, ...aiOf(t, cat?.name),
@@ -1813,7 +1813,7 @@ const CYCLES = { monthly: 1, yearly: 12, biennial: 24 };
 const cycleIn = (v) => ({ monthly: 'monthly', mnd: 'monthly', yearly: 'yearly', 'år': 'yearly', biennial: 'biennial', '2år': 'biennial' }[v] ?? null);
 const monthlyOre = (s) => s.price / (CYCLES[s.cycle] ?? 1);
 function subOut(s) {
-  return { id: s.id, name: s.name, plan: s.plan, price: s.price / 100, cycle: s.cycle, nextDate: s.next_date, usageNote: s.usage_note, lowUse: !!s.low_use,
+  return { id: s.id, name: s.name, plan: s.plan, price: s.price / 100, priceOre: s.price, cycle: s.cycle, nextDate: s.next_date, usageNote: s.usage_note, lowUse: !!s.low_use,
     active: !!s.active, domain: s.domain || domainFor(s.name), aiShort: s.ai_short || heuristic({ merchant: s.name, category: 'Abonnementer' }).short, txId: s.tx_id,
     monthly: Math.round(monthlyOre(s)) / 100, yearly: Math.round(monthlyOre(s) * 12) / 100, perLabel: { monthly: '/mnd', yearly: '/år', biennial: '/2 år' }[s.cycle] ?? '/mnd',
     cycleName: { monthly: 'Månedlig', yearly: 'Årlig', biennial: 'Hvert 2. år' }[s.cycle] ?? 'Månedlig',
