@@ -18,13 +18,37 @@
 // Prompt 52 (WEB52H): v39 – oppstart med faneoppsett fra cache (boot52.js), sideanimasjon, Ruter-buffer, «Nytt i versjon» som papirkort.
 // Prompt 85: v40 – /api/state og /api/ui er med i lese-API-ene over. Uten dem stoppet oppstarten uten nett på «Kunne ikke starte:
 // Failed to fetch», så verken skallet eller de lagrede gjøremålene kom fram når appen ble åpnet eller lastet på nytt frakoblet.
-const CACHE = 'os-v40';
+// Fase 3: v41 – skallet forhåndscaches ved installasjon (appskallet / og de statiske modulene og stilarkene det laster, med ?v=<build>),
+// så første besøk uten nett viser appen. Versjonerte filer faller tilbake til samme fil uten ?v når nettet mangler.
+// Strategiene er de samme som i finans/sw.js; se docs/utvikling.md («Service workere»).
+const CACHE = 'os-v41';
 const API51 = 'api51-les';
 const API51_RE = /^\/api\/(state|ui|tasks(\/lists)?|famcal51\/events|me|me\/layout|me\/theme51|me\/share51|family\/checkin|search51\/types)$/;
 const BILDER = 'mb50-bilder';
 const BILDER_MAX = 800;
 const SHELL = ['/assets/icons/icon-192.png'];
-self.addEventListener('install', (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).catch(() => {})); self.skipWaiting(); });
+self.addEventListener('install', (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(precacheShell).catch(() => {})); self.skipWaiting(); });
+
+/** Fase 3: henter appskallet (/) og følger de statiske importene i modulene det laster (ikke import(): rutene lastes ved behov). */
+async function precacheShell() {
+  const c = await caches.open(CACHE);
+  const res = await fetch('/', { cache: 'no-store', credentials: 'same-origin' });
+  if (!res.ok || res.redirected || !(res.headers.get('content-type') || '').includes('text/html')) return; // ikke innlogget: ingenting å cache
+  await c.put(new Request('/'), res.clone());
+  const html = await res.text();
+  const seen = new Set(), queue = [];
+  const add = (u) => { const url = new URL(u, self.location.origin); if (url.origin !== self.location.origin || !url.pathname.startsWith('/assets/') || !url.searchParams.has('v') || seen.has(url.href)) return; seen.add(url.href); queue.push(url.href); };
+  for (const m of html.matchAll(/\b(?:src|href)=["']([^"']+\.(?:js|css)\?v=[^"']+)["']/g)) add(m[1]);
+  while (queue.length && seen.size <= 250) {
+    const u = queue.shift();
+    const r = await fetch(u).catch(() => null);
+    if (!r || !r.ok) continue;
+    await c.put(u, r.clone());
+    if (!/\.js\?/.test(u)) continue;
+    const src = await r.text();
+    for (const m of src.matchAll(/(?:\bfrom\s*|(?:^|[;\n])\s*import\s*)["']([^"'\n]+\.js\?v=[^"'\n]+)["']/g)) add(new URL(m[1], u).href);
+  }
+}
 self.addEventListener('activate', (e) => e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== CACHE && k.startsWith('os-')).map((k) => caches.delete(k)))).then(() => self.clients.claim())));
 self.addEventListener('message', (e) => { if (e.data === 'skipWaiting' || e.data?.type === 'SKIP_WAITING') self.skipWaiting(); });
 const put = (req, res) => { if (res && res.ok && res.type === 'basic' && !res.redirected) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {}); } return res; };
@@ -37,12 +61,13 @@ self.addEventListener('fetch', (e) => {
   if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/finans/') || url.pathname === '/version.json' || url.pathname === '/sw.js') return;
   if (req.mode === 'navigate') {
     // HTML: nettverket først, uten HTTP-cache. Uten nett: siste kopi.
-    e.respondWith(fetch(req, { cache: 'no-store' }).then((res) => put(new Request(url.pathname), res)).catch(() => caches.match(url.pathname).then((r) => r || Response.error())));
+    e.respondWith(fetch(req, { cache: 'no-store' }).then((res) => put(new Request(url.pathname), res)).catch(() => caches.match(url.pathname).then((r) => r || (/^\/(login|logout|cv|join)/.test(url.pathname) ? null : caches.match('/'))).then((r) => r || Response.error())));
     return;
   }
   if (!url.pathname.startsWith('/assets/')) return;
   if (url.searchParams.has('v')) {
-    e.respondWith(caches.match(req).then((hit) => hit || fetch(req).then((res) => put(req, res))));
+    // Uten nett: en eldre kopi av samme fil (annen ?v) er bedre enn ingenting.
+    e.respondWith(caches.match(req).then((hit) => hit || fetch(req).then((res) => put(req, res)).catch((err) => caches.match(req, { ignoreSearch: true }).then((r) => { if (r) return r; throw err; }))));
     return;
   }
   e.respondWith(fetch(req, { cache: 'no-cache' }).then((res) => put(req, res)).catch(() => caches.match(req).then((r) => r || Response.error())));
