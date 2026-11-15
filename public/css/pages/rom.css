@@ -6,6 +6,7 @@
 .rom a{color:inherit}
 .rom-bar{position:sticky;top:0;z-index:5;display:flex;justify-content:space-between;align-items:center;gap:12px;max-width:1600px;margin:0 auto;padding:14px 40px 22px;background:linear-gradient(#0b1220 55%,rgba(11,18,32,0))}
 .rom-bar>b{font:500 30px/1.1 Newsreader,Georgia,serif}
+/* !important: skallets generelle regler (app.css, paper.css, web*.css) har høyere spesifisitet for kort og knapper; fjernes når siden bruker felles komponenter. */
 .rom-x{flex:none;width:42px;height:42px;border-radius:21px;background:#e9eef7;color:#0b1220!important;display:grid;place-items:center;text-decoration:none}
 .rom-x:hover{opacity:.85}
 .rom-x:focus-visible,.rom button:focus-visible,.rom a:focus-visible{outline:2px solid var(--r-lab);outline-offset:2px}

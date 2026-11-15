@@ -127,6 +127,7 @@ html:not([data-hl="2c"]) .bd-sw.on{background:#2f7a4f}
 .bd-wr .bd-grow b{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .bd-wr .bd-grow span{font-size:11px;color:#6f6a5f;white-space:nowrap}
 .bd-wr .bd-ww{flex:none;font:500 14px Newsreader,Georgia,serif;color:#1b1a17}
+/* !important: skallets generelle regler (app.css, paper.css, web*.css) har høyere spesifisitet for kort og knapper; fjernes når siden bruker felles komponenter. */
 .bd-ww.soon{color:#b23a2a!important}
 .bd-wa{width:200px;border-radius:28px;background:#f4ddd8;color:#3b0f0a;padding:14px;gap:8px}
 .bd-wah{display:flex;justify-content:space-between;align-items:center}

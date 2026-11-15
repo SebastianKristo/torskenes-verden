@@ -21,6 +21,7 @@ html:not([data-hl="2c"]) .tk-add button{color:#1a0d0b}
 .tk-group{display:flex;flex-direction:column;gap:6px}
 .tk-gt{font:600 10.5px/1 'IBM Plex Mono',var(--mono,monospace);letter-spacing:.12em;padding:0 4px;color:var(--t-mut)}
 .tk-gt.late{color:var(--t-lab)}.tk-gt.pos{color:var(--t-pos)}
+/* !important: skallets generelle regler (app.css, paper.css, web*.css) har høyere spesifisitet for kort og knapper; fjernes når siden bruker felles komponenter. */
 .tk-card{padding:2px 14px!important;gap:0!important}
 html[data-hl="2c"] .tk-card{background:#fff;border-radius:20px;border:0}
 .tk-row{display:flex;align-items:center;gap:12px;min-height:54px}
@@ -45,6 +46,7 @@ html[data-hl="2c"] .tk-card{background:#fff;border-radius:20px;border:0}
 .tkha-head .tk-gt{padding:0}
 .tkha-st{font-size:12px;color:var(--t-mut)}
 .tkha-st.err{color:var(--t-lab);font-weight:600}
+/* !important: skallets generelle regler (app.css, paper.css, web*.css) har høyere spesifisitet for kort og knapper; fjernes når siden bruker felles komponenter. */
 .tkha-card{display:block!important}
 .tkha-tgl,.tkha-row,.tkha-sync{width:100%;display:flex;align-items:center;gap:12px;border:0;background:transparent;color:var(--t-ink);cursor:pointer;text-align:left;font:inherit;padding:0}
 .tkha-tgl{min-height:56px}
@@ -79,10 +81,12 @@ html[data-hl="2c"] .tk-card{background:#fff;border-radius:20px;border:0}
 .tk-restore{flex:none;height:30px;padding:0 10px;border-radius:15px;border:1px solid var(--t-line);background:transparent;color:var(--t-ink);cursor:pointer;font:700 12px inherit;white-space:nowrap}
 .tk-restore:hover{border-color:var(--t-ink)}
 .tk-arc{display:grid;place-items:center;padding:0}
+/* !important: skallets generelle regler (app.css, paper.css, web*.css) har høyere spesifisitet for kort og knapper; fjernes når siden bruker felles komponenter. */
 html[data-hl="2c"] body .tk .card.tk-card{background:#fff;border:0;border-radius:20px;padding:2px 14px!important}
 /* Prompt 37: Gjøremål (fasit Huskeliste.dc.html) – avatarer på delte lister, infokort, Glimt-kortet, Glimt-tips, detaljark og listeark. */
 .tk{--t-sheet:#161b26;--t-in:rgba(255,255,255,.06)}
 html[data-hl="2c"] .tk{--t-sheet:#f3efe6;--t-in:#f3efe6}
+/* !important: skallets generelle regler (app.css, paper.css, web*.css) har høyere spesifisitet for kort og knapper; fjernes når siden bruker felles komponenter. */
 .tk-new{border:1.5px dashed var(--t-line)!important;background:transparent!important;color:var(--t-ink)}
 .tk-avs{display:inline-flex;align-items:center}
 .tk-avs i{width:var(--s);height:var(--s);border-radius:50%;margin-left:calc(var(--s) * -.32);box-shadow:0 0 0 1.5px var(--t-card);color:#fff;font:800 calc(var(--s) * .52)/var(--s) Manrope,system-ui,sans-serif;font-style:normal;text-align:center;display:inline-block}

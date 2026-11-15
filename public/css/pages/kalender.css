@@ -20,6 +20,7 @@ html[data-hl="2c"] body[data-route="kalender"] .pw-low .pw-bottom{display:none}
    skygge, sidemarg eller max-width. Høyde = vinduet minus toppmenyen (--k2-top måles i kalender.js), minst 620 px.
    En tynn linje skiller toppmenyen fra kalenderen. Ingen side-scroll; bare rutenettet scroller. */
 /* Prompt 39: selve flaten (.k39) og alle visningene ligger i kal39.css (kopi av Kalender.app for Mac). */
+/* !important: skallets generelle regler (app.css, paper.css, web*.css) har høyere spesifisitet for kort og knapper; fjernes når siden bruker felles komponenter. */
 body[data-route="kalender"] .shell{padding-bottom:0!important;gap:14px}
 html[data-hl="2c"] body[data-route="kalender"] .shell{max-width:none}
 html:not([data-hl="2c"]) body[data-route="kalender"] .shell{gap:12px}
@@ -38,6 +39,7 @@ body.kal-fs .bottomnav{display:none}
 .k2-det-h .k2-grow{display:flex;flex-direction:column;gap:4px}
 .k2-det-h b{font:500 26px/1.1 Newsreader,Georgia,serif;text-wrap:pretty}
 .k2-det-h .k2-grow>span:last-child{font-size:14px;color:var(--k-mut)}
+/* !important: skallets generelle regler (app.css, paper.css, web*.css) har høyere spesifisitet for kort og knapper; fjernes når siden bruker felles komponenter. */
 .k2-fh{font:500 24px Newsreader,Georgia,serif!important;align-self:center}
 .k2-x{flex:none;width:40px;height:40px;border-radius:20px;border:0;background:var(--k-card);color:var(--k-ink);cursor:pointer;font-size:14px}
 .k2-rows{border-radius:16px;background:var(--k-card);padding:0 14px}
@@ -127,6 +129,7 @@ html:not([data-hl="2c"]) .kq-layer{--k-ink:#f3efe6;--k-bg:#141a26}
 .kal-wp.soon{background:#b23a2a;color:#fff}
 
 /* Hjem-widget KALENDER */
+/* !important: skallets generelle regler (app.css, paper.css, web*.css) har høyere spesifisitet for kort og knapper; fjernes når siden bruker felles komponenter. */
 .kal-hw-card{padding:0!important;overflow:hidden}
 .kal.kal-hw{display:flex;flex-direction:column;gap:10px;padding:14px 16px;border-radius:20px;background:var(--k-card);color:var(--k-ink);text-decoration:none;max-width:none}
 .card .kal.kal-hw{background:transparent;padding:var(--pad-card,22px)}
@@ -482,6 +485,7 @@ html:not([data-hl="2c"]) .k3-fa-err{color:#f59a8f}
 /* ---------- Ark (MacCard: 22 px radius, bakgrunn bg, linje, demping uten blur) ---------- */
 .k39 .k2-sheet-bg{background:var(--dim)}
 .k39 .k2-sheet{background:var(--bg);border:1px solid var(--line);border-radius:22px;padding:22px;box-shadow:0 14px 60px rgba(0,0,0,.25);font-family:var(--ui)}
+/* !important: skallets generelle regler (app.css, paper.css, web*.css) har høyere spesifisitet for kort og knapper; fjernes når siden bruker felles komponenter. */
 .k39 .k2-det-h b,.k39 .k2-fh{font-family:var(--serif)!important;font-weight:500}
 .k39 .k2-rows{background:var(--card)}
 .k39 .k2-rows>div+div{border-top-color:var(--line2)}

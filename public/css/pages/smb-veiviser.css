@@ -60,6 +60,7 @@ html.smbw-open,html.smbw-open body{overflow:hidden}
 .smbw-warn b{color:var(--w-warn)}
 .smbw-who{display:flex;align-items:center;gap:14px;padding:12px 0;border-top:1px solid var(--w-ink);border-bottom:1px solid var(--w-rule)}
 .smbw-ico{flex:none;width:44px;height:44px;display:grid;place-items:center;border:1px solid var(--w-ink);font-size:20px}
+/* !important: skallets generelle regler (app.css, paper.css, web*.css) har høyere spesifisitet for kort og knapper; fjernes når siden bruker felles komponenter. */
 .smbw-mono{font-family:var(--w-mono);font-weight:500 !important;font-size:14.5px !important}
 .smbw-crumbs{display:flex;flex-wrap:wrap;align-items:center;gap:2px 6px;color:var(--w-ink3);font-size:14px}
 .smbw-crumb{min-height:36px;padding:0 4px;border:0;background:none;color:var(--w-ink2);font:600 14.5px var(--w-sans);cursor:pointer;text-decoration:underline;text-decoration-color:var(--w-rule);text-underline-offset:4px}
@@ -89,6 +90,7 @@ html.smbw-open,html.smbw-open body{overflow:hidden}
 
 /* Prompt 36: mappeleser med «Velg» per rad, «Bruk denne mappen» øverst, låste mapper og «Tom mappe». */
 .smbw-crumb.host{font-family:ui-monospace,'IBM Plex Mono',monospace;opacity:.7;padding:0 2px}
+/* !important: skallets generelle regler (app.css, paper.css, web*.css) har høyere spesifisitet for kort og knapper; fjernes når siden bruker felles komponenter. */
 .smbw-usehere{display:flex;flex-direction:column;align-items:center;gap:2px;height:auto!important;min-height:54px;padding:8px 16px!important;margin:6px 0 4px}
 .smbw-usehere small{font-size:11.5px;font-weight:500;opacity:.8;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .smbw-drow{display:flex;align-items:center;gap:8px}
@@ -105,6 +107,7 @@ html.smbw-open,html.smbw-open body{overflow:hidden}
 .smbw-btn{border-radius:999px}
 .smbw-mini{border-radius:999px}
 .smbw-pw .smbw-mini{border-radius:0 12px 12px 0;border-left:1px solid var(--w-rule)}
+/* !important: skallets generelle regler (app.css, paper.css, web*.css) har høyere spesifisitet for kort og knapper; fjernes når siden bruker felles komponenter. */
 .smbw-pw input{border-radius:12px 0 0 12px!important}
 .smbw-f input{border-radius:12px;border-bottom-color:var(--w-rule)}
 .smbw-f input:focus{box-shadow:0 0 0 2px var(--w-ink);border-color:var(--w-ink)}
@@ -119,6 +122,7 @@ html.smbw-open,html.smbw-open body{overflow:hidden}
 .smbw-crumbtxt{font-weight:600}
 .smbw-det{font-size:12.5px;color:var(--w-ink2)}
 .smbw-det summary{cursor:pointer;width:max-content}
+/* !important: skallets generelle regler (app.css, paper.css, web*.css) har høyere spesifisitet for kort og knapper; fjernes når siden bruker felles komponenter. */
 .smbw-det .smbw-mono{display:block;margin-top:4px;font-size:12.5px!important;overflow-wrap:anywhere}
 .smbw-fr{display:flex;align-items:center;gap:14px}
 .smbw-cb{border-radius:7px}

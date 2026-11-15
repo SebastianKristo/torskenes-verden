@@ -28,6 +28,7 @@ html[data-hl="cur"] .mat,html[data-mode="dark"][data-hl="2c"] .mat{
 .mat button{cursor:pointer}
 .mat button:disabled{opacity:.7;cursor:wait}
 .mat :focus-visible{outline:2px solid var(--mp-acc-l);outline-offset:2px}
+/* !important: [hidden] skal alltid skjule, også elementer som har display fra en annen regel. */
 .mat [hidden]{display:none!important}
 .mat .mp-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .mat .mp-row{display:flex;align-items:center;gap:8px;min-width:0}
@@ -49,6 +50,7 @@ html[data-hl="cur"] .mat,html[data-mode="dark"][data-hl="2c"] .mat{
 .mat .mp-btn{height:42px;padding:0 16px;border-radius:12px;border:1px solid var(--mp-line2);background:var(--mp-card);color:var(--mp-t);font-size:15.5px;font-weight:500;white-space:nowrap;display:inline-flex;align-items:center;justify-content:center;gap:10px;flex:none}
 .mat .mp-btn:hover{border-color:var(--mp-hov)}
 .mat .mp-actions .mp-btn{height:50px;padding:0 20px;border-radius:14px;font-size:16.5px}
+/* !important: skallets generelle regler (app.css, paper.css, web*.css) har høyere spesifisitet for kort og knapper; fjernes når siden bruker felles komponenter. */
 .mat .mp-acc{border:0!important;background:var(--mp-acc)!important;color:var(--mp-acc-ink)!important;font-weight:600!important}
 .mat .mp-light{border:0;background:var(--mp-t);color:var(--mp-bg);font-weight:600}
 .mat .mp-plain{border:0;background:transparent}
@@ -56,6 +58,7 @@ html[data-hl="cur"] .mat,html[data-mode="dark"][data-hl="2c"] .mat{
 .mat .mp-dim{color:var(--mp-mute)}
 .mat .mp-link{border:0;background:transparent;color:var(--mp-acc-l);padding:0 10px}
 .mat .mp-ghostline{background:transparent;border-color:var(--mp-line3);width:100%}
+/* !important: skallets generelle regler (app.css, paper.css, web*.css) har høyere spesifisitet for kort og knapper; fjernes når siden bruker felles komponenter. */
 .mat .mp-toggle{padding-left:14px!important;gap:12px}
 /* Prompt 34: samme bryter som resten av appen (44 × 26, knott 20 px absolutt plassert, ingen padding som skyver knotten). */
 .mat .mp-sw{flex:none;position:relative;width:44px;height:26px;padding:0;border-radius:13px;background:var(--mp-sw-off);transition:background .2s;box-sizing:border-box}
@@ -211,6 +214,7 @@ html[data-hl="cur"] .mat,html[data-mode="dark"][data-hl="2c"] .mat{
 .mat .mp-scan.drop{outline-color:var(--mp-acc)}
 .mat .mp-st{font-size:17px;font-weight:600}
 .mat .mp-scanbtns{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+/* !important: skallets generelle regler (app.css, paper.css, web*.css) har høyere spesifisitet for kort og knapper; fjernes når siden bruker felles komponenter. */
 .mat .mp-big{height:52px!important;border-radius:14px;font-size:15.5px}
 .mat .mp-scan .mp-in{height:44px;background:var(--mp-bg)}
 .mat .mp-imp{display:flex;flex-direction:column;gap:12px;padding:14px;border-radius:14px;background:var(--mp-bg);border:1px solid var(--mp-acc-bd)}

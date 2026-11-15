@@ -605,6 +605,7 @@ body[data-route="media"]{overflow:hidden}
 }
 
 .m43-sh>*{flex-shrink:0}
+/* !important: skjuler skallet (toppmeny, ticker, bunnmeny) på fullskjermsiden uansett hvilken regel som viser det. */
 body[data-route="media"] header.top,body[data-route="media"] .ticker,body[data-route="media"] .bottomnav{display:none!important}
 
 /* ═══ Media-siden i nytt design (media70.js) ═══ */
@@ -637,6 +638,7 @@ body[data-route="media"] header.top,body[data-route="media"] .ticker,body[data-r
 .m70 .m70-col{display:flex;flex-direction:column}
 .m70 .m70-row.xwrap{flex-wrap:wrap}.m70 .m70-row.base{align-items:baseline}.m70 .m70-row.jend{justify-content:flex-end}
 .m70 .g2{gap:2px}.m70 .g6{gap:6px}.m70 .g8{gap:8px}.m70 .g12{gap:12px}.m70 .g16{gap:16px}.m70 .g20{gap:20px}.m70 .g32{gap:32px}.m70 .g36{gap:12px 36px}
+/* !important: skallets generelle regler (app.css, paper.css, web*.css) har høyere spesifisitet for kort og knapper; fjernes når siden bruker felles komponenter. */
 .m70 .mt10{margin-top:10px}.m70 .mt16{margin-top:16px}.m70 .mt20{margin-top:20px}.m70 .mb6{margin-bottom:6px!important}.m70 .mb16{margin-bottom:16px!important}.m70 .mlauto{margin-left:auto}
 .m70 .grow{flex:1;min-width:0}
 .m70 a{color:inherit}
@@ -688,6 +690,7 @@ body[data-route="media"] header.top,body[data-route="media"] .ticker,body[data-r
 .m70 .m43-main{padding:0 32px 72px}
 .m70 .m43-glp{padding:0 32px 16px}
 .m70 .m43-glp>*{max-width:1360px;margin:0 auto}
+/* !important: skallets generelle regler (app.css, paper.css, web*.css) har høyere spesifisitet for kort og knapper; fjernes når siden bruker felles komponenter. */
 .m70-w{max-width:1360px;margin:0 auto;gap:24px!important}
 .m70-cols{display:flex;flex-wrap:wrap;gap:24px;align-items:flex-start}
 .m70-cols.g32{gap:32px}
@@ -759,6 +762,7 @@ body[data-route="media"] header.top,body[data-route="media"] .ticker,body[data-r
 .m70-np{display:flex;flex-wrap:wrap;gap:28px;padding:28px;border-radius:24px;background:var(--p-ink);color:var(--p-inkf)}
 .m70.dk .m70-np{border:1px solid var(--p-ln)}
 .m70-np.empty{flex-direction:column;gap:12px;min-height:160px;justify-content:center}
+/* !important: skallets generelle regler (app.css, paper.css, web*.css) har høyere spesifisitet for kort og knapper; fjernes når siden bruker felles komponenter. */
 .m70-np.empty .m70-skel{background:var(--p-inkb);min-height:120px!important}.m70-np.empty .m70-skel::after{display:none}
 .m70-npa{width:148px;height:220px;flex:none;border-radius:12px}
 .m70-npa .m70-pa{padding:14px}
@@ -841,6 +845,7 @@ button.m70-rt:hover{text-decoration:underline;text-underline-offset:3px}
 .m70-sort select{min-height:40px;padding:0 10px;border-radius:10px;border:1px solid var(--p-ln);background:var(--p-card);font:400 14px Inter,system-ui,sans-serif;color:var(--p-k)}
 .m70-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:28px 20px;margin-top:4px}
 .m70-lc{display:flex;flex-direction:column;gap:2px;text-decoration:none;color:var(--p-k);border:0;background:transparent;padding:0;text-align:left;cursor:pointer;font:inherit;min-width:0}
+/* !important: skallets generelle regler (app.css, paper.css, web*.css) har høyere spesifisitet for kort og knapper; fjernes når siden bruker felles komponenter. */
 .m70-lp{aspect-ratio:2/3;border-radius:14px;padding:14px;margin-bottom:8px;display:flex!important;flex-direction:column;justify-content:space-between;transition:transform .2s ease}
 .m70-lc:hover .m70-lp{transform:translateY(-2px)}
 @media (prefers-reduced-motion:reduce){.m70-lc:hover .m70-lp{transform:none}}
@@ -917,6 +922,7 @@ button.m70-rt:hover{text-decoration:underline;text-underline-offset:3px}
   .m70 .m44-sb{min-height:40px;padding:0 12px;font-size:14px}
   .m70 .m43-main{padding:4px 16px 40px}
   .m70 .m43-glp{padding:0 16px 10px}
+  /* !important: skallets generelle regler (app.css, paper.css, web*.css) har høyere spesifisitet for kort og knapper; fjernes når siden bruker felles komponenter. */
   .m70-w{gap:20px!important}
   .m70-h1{font-size:40px}
   .m70-card{padding:18px;border-radius:20px}

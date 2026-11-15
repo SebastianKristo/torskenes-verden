@@ -103,6 +103,7 @@
 .sk77-ti{display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:12px;align-items:start;padding:12px 0;border-top:1px solid var(--s-line2)}
 .sk77-ti.same{opacity:.7}
 .sk77-ti.done{opacity:.75}
+/* !important: skallets generelle regler (app.css, paper.css, web*.css) har høyere spesifisitet for kort og knapper; fjernes når siden bruker felles komponenter. */
 .sk77-cb{margin-top:2px !important}
 .sk77-cb0{display:inline-flex;justify-content:center;width:22px;color:var(--s-mut);font-weight:700}
 .sk77-ti.done .sk77-cb0{color:var(--s-ok)}
@@ -520,6 +521,7 @@ html[data-mode="dark"] .sk76,html:not([data-hl="2c"]) .sk76{--s-frame:#0d0e10;--
 :where(.sk76) input[type=color]{width:100%;height:44px;padding:4px;border-radius:12px;border:1px solid var(--s-line);background:var(--s-fld)}
 :where(.sk76) :where(input,select,textarea):focus{outline:2px solid var(--s-ink);outline-offset:-1px}
 .sk76-qrow{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+/* !important: skallets generelle regler (app.css, paper.css, web*.css) har høyere spesifisitet for kort og knapper; fjernes når siden bruker felles komponenter. */
 .sk76-locf{padding:12px 14px!important;border-radius:16px!important;background:var(--s-line2)!important}
 .sk76-locpick{display:flex;flex-wrap:wrap;align-items:center;gap:10px;color:var(--s-ink);font-size:15px}
 .sk76-inl{display:flex;align-items:center;gap:6px;font:700 12px var(--s-sans);color:var(--s-mut)}
