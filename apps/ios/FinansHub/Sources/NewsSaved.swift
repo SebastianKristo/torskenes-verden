@@ -37,7 +37,7 @@ struct News73Item: Identifiable, Hashable {
     var host: String { (URL(string: url)?.host ?? "").replacingOccurrences(of: "www.", with: "") }
     var dotColor: Color {
         if status == "ok" { return Color(hex: "#3d7a4f") }
-        if status == "pending" { return Color(hex: "#8f897c") }
+        if status == "pending" { return DS.color(.textTertiary, stil: .papir) }
         return Color(hex: "#a86a12")
     }
 }

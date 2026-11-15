@@ -300,7 +300,7 @@ struct Media43Page: View {
                     VStack(alignment: .leading, spacing: 2) {
                         if !r.title.isEmpty { Text(r.title).font(PF.ui(14, .semibold)).foregroundStyle(p.ink).lineLimit(2) }
                         if !r.sub.isEmpty { Text(r.sub).font(PF.mono(10.5, bold: false)).foregroundStyle(p.mut).lineLimit(2) }
-                        if !r.size.isEmpty { Text(r.size).font(PF.ui(12, .semibold)).foregroundStyle(Color(hex: "#2f6b4a")) }
+                        if !r.size.isEmpty { Text(r.size).font(PF.ui(12, .semibold)).foregroundStyle(DS.color(.success, stil: .papir)) }
                     }
                     Spacer(minLength: 4)
                     ForEach(r.actions) { (a: Media43Action) in
@@ -381,13 +381,13 @@ struct Media43Upcoming: View {
                 HStack(spacing: 10) {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("LASTES NED · \(act.count)").font(PF.mono(10)).tracking(1.2).foregroundStyle(Color(hex: "#e8a593"))
-                        Text(Media43.speed(m.dlSpeed)).font(PF.serif(20, medium: true)).foregroundStyle(Color(hex: "#f3efe6"))
+                        Text(Media43.speed(m.dlSpeed)).font(PF.serif(20, medium: true)).foregroundStyle(DS.fixed(.surface, stil: .papir, dark: false))
                     }
                     Spacer()
-                    Text("Lastes ned ›").font(PF.ui(13, .bold)).foregroundStyle(Color(hex: "#f3efe6"))
+                    Text("Lastes ned ›").font(PF.ui(13, .bold)).foregroundStyle(DS.fixed(.surface, stil: .papir, dark: false))
                 }
                 .padding(14)
-                .background(Color(hex: "#1b1a17"), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                .background(DS.fixed(.textPrimary, stil: .papir, dark: false), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
             }
             .buttonStyle(.plain)
         }
@@ -489,7 +489,7 @@ struct Media43Library: View {
                             .overlay(alignment: .topTrailing) {
                                 if t.missing > 0 && kind == "series" {
                                     Text("\(t.missing)").font(PF.ui(10.5, .bold)).foregroundStyle(.white)
-                                        .padding(.horizontal, 6).frame(height: 18).background(Color(hex: "#a0671a"), in: Capsule()).padding(5)
+                                        .padding(.horizontal, 6).frame(height: 18).background(DS.fixed(.warning, stil: .papir, dark: false), in: Capsule()).padding(5)
                                 }
                             }
                             .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(m.selected?.id == t.id ? p.lab : Color.clear, lineWidth: 2))

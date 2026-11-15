@@ -38,7 +38,7 @@ struct Logs44CtChip: View {
             HStack(spacing: 6) {
                 if !color.isEmpty { Circle().fill(Logs44CtChip.dot(color)).frame(width: 8, height: 8) }
                 Text(name).font(PF.ui(13, .semibold)).lineLimit(1)
-                if errors > 0 { Text("\(errors)").font(PF.ui(11, .bold)).foregroundStyle(Color(hex: "#b23a2a")) }
+                if errors > 0 { Text("\(errors)").font(PF.ui(11, .bold)).foregroundStyle(DS.color(.danger, stil: .papir)) }
             }
             .foregroundStyle(on ? p.bg : p.ink)
             .padding(.horizontal, 12).frame(height: 34)
@@ -51,9 +51,9 @@ struct Logs44CtChip: View {
 
     static func dot(_ c: String) -> Color {
         switch c {
-        case "red": return Color(hex: "#b23a2a")
+        case "red": return DS.color(.danger, stil: .papir)
         case "yellow": return Color(hex: "#c48a1a")
-        default: return Color(hex: "#2f6b4a")
+        default: return DS.color(.success, stil: .papir)
         }
     }
 }
@@ -223,7 +223,7 @@ struct Logs44LineView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             HStack(spacing: 6) {
-                Text(l.t).foregroundStyle(Color(hex: "#8f897c"))
+                Text(l.t).foregroundStyle(DS.color(.textTertiary, stil: .papir))
                 Text(l.level.uppercased()).foregroundStyle(Logs44LineView.color(l.level))
                 Text(l.ct).foregroundStyle(Color(hex: "#9fb7d6")).lineLimit(1)
             }
@@ -232,7 +232,7 @@ struct Logs44LineView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(.horizontal, 12).padding(.vertical, 6)
-        .background(l.level == "error" ? Color(hex: "#b23a2a").opacity(0.22) : Color.clear)
+        .background(l.level == "error" ? DS.fixed(.danger, stil: .papir, dark: false).opacity(0.22) : Color.clear)
         .contentShape(Rectangle())
     }
 
@@ -240,7 +240,7 @@ struct Logs44LineView: View {
         switch lv {
         case "error": return Color(hex: "#ff8a76")
         case "warn": return Color(hex: "#e8b25a")
-        case "debug": return Color(hex: "#8f897c")
+        case "debug": return DS.color(.textTertiary, stil: .papir)
         default: return Color(hex: "#8fd9a8")
         }
     }
@@ -270,7 +270,7 @@ struct Logs44GroupRow: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
-            Text("×\(g.count)").font(PF.mono(13)).foregroundStyle(Color(hex: "#b23a2a"))
+            Text("×\(g.count)").font(PF.mono(13)).foregroundStyle(DS.color(.danger, stil: .papir))
             VStack(alignment: .leading, spacing: 2) {
                 Text(g.message).font(PF.mono(11, bold: false)).foregroundStyle(p.ink).lineLimit(3)
                 Text([g.ct, g.last.isEmpty ? "" : "sist " + g.last].filter { !$0.isEmpty }.joined(separator: " · ")).font(PF.ui(11.5)).foregroundStyle(p.mut)

@@ -69,13 +69,13 @@ struct Bible37Flame: View {
 
     var body: some View {
         Image(systemName: "flame.fill").font(.dyn51(size: 26, weight: .semibold))
-            .foregroundStyle(on ? Color.white : Color(hex: "#f3efe6").opacity(0.55))
+            .foregroundStyle(on ? Color.white : DS.fixed(.surface, stil: .papir, dark: false).opacity(0.55))
             .rotationEffect(.degrees(on && wob && !reduce ? 6 : 0))
             .frame(width: 56, height: 56)
             .background(
                 RoundedRectangle(cornerRadius: 18, style: .continuous)
                     .fill(on ? AnyShapeStyle(LinearGradient(colors: [Color(hex: "#ffb067"), Color(hex: "#e8573a")], startPoint: .top, endPoint: .bottom))
-                             : AnyShapeStyle(Color(hex: "#f3efe6").opacity(0.12)))
+                             : AnyShapeStyle(DS.fixed(.surface, stil: .papir, dark: false).opacity(0.12)))
             )
             .shadow(color: on ? Color(hex: "#e8573a").opacity(0.6) : .clear, radius: 12, y: 8)
             .onAppear {
@@ -97,7 +97,7 @@ struct Bible37Dot: View {
                 if read { Image(systemName: "checkmark").font(.dyn51(size: 12, weight: .heavy)).foregroundStyle(Color(hex: "#2b2350")) }
             }
             .overlay(Circle().stroke(today ? Color(hex: "#ffd9c2") : Color.clear, lineWidth: 2).padding(-3))
-            Text(letter).font(PF.mono(10.5)).foregroundStyle(Color(hex: "#f3efe6").opacity(0.6))
+            Text(letter).font(PF.mono(10.5)).foregroundStyle(DS.fixed(.surface, stil: .papir, dark: false).opacity(0.6))
         }
     }
 }
@@ -152,12 +152,12 @@ struct Bible37TodayCard: View {
         if m.readToday {
             Text("✓ Lest i dag").font(PF.ui(14, .bold)).foregroundStyle(Color.white)
                 .frame(maxWidth: .infinity).frame(height: 44)
-                .background(Color(hex: "#2f7a4f"), in: Capsule())
+                .background(DS.fixed(.success, stil: .papir, dark: false), in: Capsule())
         } else {
             Button { m.markRead(store) } label: {
-                Text("Jeg har lest").font(PF.ui(14, .bold)).foregroundStyle(t.morning ? Color(hex: "#f3efe6") : Color(hex: "#1b1a17"))
+                Text("Jeg har lest").font(PF.ui(14, .bold)).foregroundStyle(t.morning ? DS.fixed(.surface, stil: .papir, dark: false) : DS.fixed(.textPrimary, stil: .papir, dark: false))
                     .frame(maxWidth: .infinity).frame(height: 44)
-                    .background(t.morning ? Color(hex: "#3b2a1a") : Color(hex: "#f3efe6"), in: Capsule())
+                    .background(t.morning ? Color(hex: "#3b2a1a") : DS.fixed(.surface, stil: .papir, dark: false), in: Capsule())
             }
             .buttonStyle(.plain)
         }

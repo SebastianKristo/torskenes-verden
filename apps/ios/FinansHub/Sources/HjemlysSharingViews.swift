@@ -122,7 +122,7 @@ struct Hjemlys41Start: View {
         switch k {
         case "inn": return p.pos
         case "snart": return Color(hex: "#9a5a10")
-        default: return Color(hex: "#2b5d8a")
+        default: return DS.color(.info, stil: .papir)
         }
     }
 }

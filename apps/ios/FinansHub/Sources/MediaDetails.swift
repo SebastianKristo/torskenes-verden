@@ -211,9 +211,9 @@ struct Media46CallRow: View {
     }
 
     private var color: Color {
-        if c.status >= 200 && c.status < 300 { return Color(hex: "#2f6b4a") }
-        if c.status == 404 { return Color(hex: "#a0671a") }
-        return Color(hex: "#b23a2a")
+        if c.status >= 200 && c.status < 300 { return DS.color(.success, stil: .papir) }
+        if c.status == 404 { return DS.color(.warning, stil: .papir) }
+        return DS.color(.danger, stil: .papir)
     }
 
     private var meta: String {

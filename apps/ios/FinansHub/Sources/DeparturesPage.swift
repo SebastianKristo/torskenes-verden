@@ -211,7 +211,7 @@ struct RuterView24: View {
         let g: Double = lin(Double((v >> 8) & 0xFF) / 255)
         let b: Double = lin(Double(v & 0xFF) / 255)
         let lum: Double = 0.2126 * r + 0.7152 * g + 0.0722 * b
-        return lum > 0.4 ? Color(hex: "#1b1a17") : Color.white
+        return lum > 0.4 ? DS.fixed(.textPrimary, stil: .papir, dark: false) : Color.white
     }
 
     /// sRGB → lineær kanal (WCAG).
@@ -276,7 +276,7 @@ struct RuterHero24: View {
         Button(action: act) {
             Text(t).font(PF.ui(13, .semibold)).foregroundStyle(.white).lineLimit(1)
                 .padding(.leading, leading).padding(.trailing, 14).frame(height: 36)
-                .background(Color(hex: "#1b1a17").opacity(0.55), in: Capsule())
+                .background(DS.fixed(.textPrimary, stil: .papir, dark: false).opacity(0.55), in: Capsule())
         }
         .buttonStyle(.plain)
     }

@@ -63,7 +63,7 @@ struct MinReise41AlertBox: View {
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
             Text("!").font(PF.ui(14, .heavy)).foregroundStyle(Color.white)
-                .frame(width: 26, height: 26).background(Color(hex: "#b23a2a"), in: Circle())
+                .frame(width: 26, height: 26).background(DS.fixed(.accent, stil: .papir, dark: false), in: Circle())
             VStack(alignment: .leading, spacing: 3) {
                 Text(a.text.isEmpty ? "Trikken er forsinket" : a.text).font(PF.ui(15, .bold)).foregroundStyle(p.ink)
                     .fixedSize(horizontal: false, vertical: true)
@@ -73,7 +73,7 @@ struct MinReise41AlertBox: View {
         }
         .padding(12)
         .background(p.bg, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Color(hex: "#b23a2a"), lineWidth: 1.5))
+        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(DS.color(.accent, stil: .papir), lineWidth: 1.5))
     }
 
     private var detail: String {
@@ -219,7 +219,7 @@ struct MinReise41Row: View {
         let bad: Bool = b.contains("+") || b.lowercased().contains("forsink") || b.lowercased().contains("gått")
         return Text(b).font(PF.ui(11, .bold)).foregroundStyle(bad ? Color.white : Color(hex: "#1f5a37")).lineLimit(1)
             .padding(.horizontal, 8).frame(height: 22)
-            .background(bad ? Color(hex: "#b23a2a") : Color(hex: "#d7ecdc"), in: Capsule())
+            .background(bad ? DS.fixed(.danger, stil: .papir, dark: false) : Color(hex: "#d7ecdc"), in: Capsule())
     }
 }
 
@@ -233,7 +233,7 @@ struct MinReise41Timeline: View {
             ForEach(Array(legs.enumerated()), id: \.offset) { i, l in
                 HStack(alignment: .top, spacing: 10) {
                     VStack(alignment: .trailing, spacing: 0) {
-                        Text(l.depText).font(PF.mono(12.5)).foregroundStyle(l.delayMin >= 3 ? Color(hex: "#b23a2a") : p.ink)
+                        Text(l.depText).font(PF.mono(12.5)).foregroundStyle(l.delayMin >= 3 ? DS.color(.danger, stil: .papir) : p.ink)
                         if l.delayMin >= 3, let a = l.aimed {
                             Text(Hjemlys40Look.clock(a)).font(PF.mono(10.5)).strikethrough().foregroundStyle(p.mut)
                         }
@@ -254,7 +254,7 @@ struct MinReise41Timeline: View {
                     }
                     VStack(alignment: .leading, spacing: 2) {
                         Text(l.from.isEmpty ? (i == 0 ? "Start" : "Bytte") : l.from).font(PF.ui(13.5, .semibold)).foregroundStyle(p.ink)
-                        Text(detail(l)).font(PF.ui(12)).foregroundStyle(l.delayMin >= 3 ? Color(hex: "#b23a2a") : p.mut)
+                        Text(detail(l)).font(PF.ui(12)).foregroundStyle(l.delayMin >= 3 ? DS.color(.danger, stil: .papir) : p.mut)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                     .padding(.bottom, 10)
@@ -417,8 +417,8 @@ struct MinReise41ZoneSheet: View {
             MapReader { (proxy: MapProxy) in
                 Map(position: $cam) {
                     if let c = point {
-                        MapCircle(center: c, radius: radius).foregroundStyle(Color(hex: "#b23a2a").opacity(0.18)).stroke(Color(hex: "#b23a2a"), lineWidth: 2)
-                        Marker(name.isEmpty ? "Skole" : name, coordinate: c).tint(Color(hex: "#b23a2a"))
+                        MapCircle(center: c, radius: radius).foregroundStyle(DS.color(.accent, stil: .papir).opacity(0.18)).stroke(DS.color(.accent, stil: .papir), lineWidth: 2)
+                        Marker(name.isEmpty ? "Skole" : name, coordinate: c).tint(DS.color(.accent, stil: .papir))
                     }
                     UserAnnotation()
                 }
@@ -535,7 +535,7 @@ struct MinReise41Toast: View {
             .buttonStyle(.plain)
         }
         .padding(.leading, 16).padding(.trailing, 6).padding(.vertical, 6)
-        .background(Color(hex: "#1b1a17").opacity(0.92), in: Capsule())
+        .background(DS.fixed(.textPrimary, stil: .papir, dark: false).opacity(0.92), in: Capsule())
         .shadow(color: Color.black.opacity(0.3), radius: 12, y: 8)
     }
 }

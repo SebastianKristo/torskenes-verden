@@ -887,7 +887,7 @@ final class Media43 {
         // Prompt 45: Lastes ned blå, Venter gul, Ferdig grønn, Mangler rød, Uovervåket grå (MediaFiles.swift).
         if let c = Media45.status(s) { return c }
         switch s {
-        case "downloaded", "hasfile", "ok": return Color(hex: "#2f6b4a")
+        case "downloaded", "hasfile", "ok": return DS.color(.success, stil: .papir)
         case "downloading": return p.lab
         case "stalled", "missing": return Color(hex: p.dark ? "#c48a1a" : "#a0671a")
         default: return p.mut

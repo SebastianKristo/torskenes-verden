@@ -129,14 +129,14 @@ struct Media43Qbit: View {
         let active: Int = m.torrents.filter(\.active).count
         let queued: Int = m.torrents.filter { $0.state.lowercased().contains("queued") }.count
         let anyRunning: Bool = m.torrents.contains { !$0.paused && !$0.done }
-        let cream: Color = Color(hex: "#f3efe6")
+        let cream: Color = DS.fixed(.surface, stil: .papir, dark: false)
         return VStack(alignment: .leading, spacing: 10) {
             Text("QBITTORRENT · LASTES NED").font(PF.mono(10)).tracking(1.2).foregroundStyle(Color(hex: "#e8a593"))
             Text("↓ " + Media43.speed(m.dlSpeed)).font(PF.serif(32, medium: true)).foregroundStyle(cream)
             Text("\(active) aktive · ↑ \(Media43.speed(m.upSpeed))" + (queued > 0 ? " · \(queued) i køen" : "")).font(PF.ui(12.5)).foregroundStyle(cream.opacity(0.75))
             HStack(spacing: 8) {
                 Button { m.all(anyRunning, store) } label: {
-                    Text(anyRunning ? "Pause alt" : "Fortsett alt").font(PF.ui(13.5, .bold)).foregroundStyle(Color(hex: "#1b1a17"))
+                    Text(anyRunning ? "Pause alt" : "Fortsett alt").font(PF.ui(13.5, .bold)).foregroundStyle(DS.fixed(.textPrimary, stil: .papir, dark: false))
                         .frame(maxWidth: .infinity, minHeight: 44).background(cream, in: Capsule())
                 }
                 .buttonStyle(.plain)
@@ -145,7 +145,7 @@ struct Media43Qbit: View {
                         Text("Alt-hastighet").font(PF.ui(13, .bold))
                         if m.altSpeed && m.altLimit > 0 { Text("grense " + Media43.speed(m.altLimit)).font(PF.ui(10.5)) }
                     }
-                    .foregroundStyle(m.altSpeed ? Color(hex: "#1b1a17") : cream)
+                    .foregroundStyle(m.altSpeed ? DS.fixed(.textPrimary, stil: .papir, dark: false) : cream)
                     .frame(maxWidth: .infinity, minHeight: 44)
                     .background(m.altSpeed ? Color(hex: "#e8a593") : Color.white.opacity(0.1), in: Capsule())
                 }
@@ -154,11 +154,11 @@ struct Media43Qbit: View {
             }
         }
         .padding(16)
-        .background(Color(hex: "#1b1a17"), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .background(DS.fixed(.textPrimary, stil: .papir, dark: false), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
     }
 
     private func card(_ t: Media43Torrent) -> some View {
-        let c: Color = t.stalled ? Color(hex: p.dark ? "#c48a1a" : "#a0671a") : (t.done ? Color(hex: "#2f6b4a") : p.lab)
+        let c: Color = t.stalled ? Color(hex: p.dark ? "#c48a1a" : "#a0671a") : (t.done ? DS.color(.success, stil: .papir) : p.lab)
         let state: String = t.stalled ? "Står fast" : t.done ? "Ferdig" : t.paused ? "Pauset" : (t.progress == 0 && t.size == 0 ? "Henter metadata …" : "↓ " + Media43.speed(t.dl))
         return VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .top, spacing: 10) {
@@ -345,7 +345,7 @@ struct Media43MagnetSheet: View {
                 }
                 if ps.ok && !dup {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(ps.name).font(PF.ui(14, .bold)).foregroundStyle(Color(hex: "#2f6b4a")).lineLimit(2)
+                        Text(ps.name).font(PF.ui(14, .bold)).foregroundStyle(DS.color(.success, stil: .papir)).lineLimit(2)
                         if !ps.hash.isEmpty { Text(String(ps.hash.prefix(12)) + "… · \(ps.trackers) trackere").font(PF.mono(11, bold: false)).foregroundStyle(p.mut) }
                     }
                 } else if dup {
@@ -484,7 +484,7 @@ struct Media43SearchSheet: View {
         if s <= 0 { return p.lab }
         guard top > 0 else { return p.ink }
         let f: Double = Double(s) / Double(top)
-        if f >= 0.5 { return Color(hex: "#2f6b4a") }
+        if f >= 0.5 { return DS.color(.success, stil: .papir) }
         if f < 0.1 { return p.lab }
         return p.ink
     }
@@ -492,7 +492,7 @@ struct Media43SearchSheet: View {
     private func row(_ r: Media43Release, _ top: Int) -> some View {
         let done: Bool = sent.contains(r.guid)
         return VStack(alignment: .leading, spacing: 5) {
-            if r.best { Text("Best treff for profilen").font(PF.ui(11, .bold)).foregroundStyle(Color(hex: "#2f6b4a")) }
+            if r.best { Text("Best treff for profilen").font(PF.ui(11, .bold)).foregroundStyle(DS.color(.success, stil: .papir)) }
             Text(shortTitle(r.title)).font(PF.mono(11.5, bold: false)).foregroundStyle(p.ink).lineLimit(2)
             HStack(spacing: 8) {
                 if !r.quality.isEmpty {
@@ -506,7 +506,7 @@ struct Media43SearchSheet: View {
                     Image(systemName: done ? "checkmark" : "arrow.down").font(.system(size: 14, weight: .bold))
                         .foregroundStyle(done ? Color.white : p.bg)
                         .frame(width: 44, height: 44)
-                        .background(done ? Color(hex: "#2f6b4a") : p.ink, in: Circle())
+                        .background(done ? DS.fixed(.success, stil: .papir, dark: false) : p.ink, in: Circle())
                 }
                 .buttonStyle(.plain)
                 .disabled(done || r.partial)
@@ -811,7 +811,7 @@ struct Media43Prowlarr: View {
     private func row(_ ix: Media43Indexer) -> some View {
         let testing: Bool = m.testing.contains(ix.id)
         return HStack(spacing: 10) {
-            Circle().fill(ix.ok ? Color(hex: "#2f6b4a") : p.lab).frame(width: 9, height: 9)
+            Circle().fill(ix.ok ? DS.fixed(.success, stil: .papir, dark: false) : p.lab).frame(width: 9, height: 9)
             VStack(alignment: .leading, spacing: 2) {
                 Text(ix.name).font(PF.ui(14, .bold)).foregroundStyle(p.ink).lineLimit(1)
                 if !ix.error.isEmpty {
@@ -932,8 +932,8 @@ struct Media43IndexerAddSheet: View {
         if s.protocolName.lowercased() == "usenet" { return Color(hex: "#6b4a8f") }
         switch s.privacy.lowercased() {
         case "private": return p.lab
-        case "semiprivate", "semi-private": return Color(hex: "#a0671a")
-        default: return Color(hex: "#2f6b4a")
+        case "semiprivate", "semi-private": return DS.color(.warning, stil: .papir)
+        default: return DS.color(.success, stil: .papir)
         }
     }
 
@@ -1084,7 +1084,7 @@ struct Media43SettingsContent: View {
                     if m.services.isEmpty { Text("Ingen status fra serveren ennå.").font(PF.ui(13)).foregroundStyle(p.mut).padding(14) }
                     ForEach(m.services) { (s: Media43Service) in
                         HStack(spacing: 10) {
-                            Circle().fill(!s.configured ? p.mut : s.ok ? Color(hex: "#2f6b4a") : p.lab).frame(width: 9, height: 9)
+                            Circle().fill(!s.configured ? p.mut : s.ok ? DS.fixed(.success, stil: .papir, dark: false) : p.lab).frame(width: 9, height: 9)
                             Text(s.name).font(PF.ui(14.5, .semibold)).foregroundStyle(p.ink)
                             Spacer()
                             Text(!s.configured ? "Ikke satt opp" : s.ok ? ("v" + s.version + (s.ms > 0 ? " · \(s.ms) ms" : "")) : "Svarer ikke")

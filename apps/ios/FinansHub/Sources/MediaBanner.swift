@@ -96,7 +96,7 @@ struct Media44BannerBack: View {
     var body: some View {
         let src: String = t.fanart.isEmpty ? t.poster : t.fanart
         ZStack {
-            Color(hex: "#1b1a17")
+            DS.fixed(.textPrimary, stil: .papir, dark: false)
             // Prompt 50: fanart/plakat via disk- og minnecachen (MediaImages.swift) – plakaten fra listen vises med en gang.
             if !src.isEmpty {
                 // Prompt 71: blur-radiusen animeres aldri (bytte av tittel med ‹ › kunne tone radiusen 18 ↔ 3 per bilde).

@@ -14,7 +14,7 @@ enum NewsLook27 {
         if s.hasPrefix("nrk") { return Color(hex: "#c4161c") }
         if s.hasPrefix("vg") { return Color(hex: "#d0021b") }
         if s.hasPrefix("e24") { return Color(hex: "#1f3c5a") }
-        if s.hasPrefix("aftenposten") { return Color(hex: "#1b1a17") }
+        if s.hasPrefix("aftenposten") { return DS.fixed(.textPrimary, stil: .papir, dark: false) }
         if s.hasPrefix("dagbladet") { return Color(hex: "#b5121b") }
         if s.hasPrefix("tek") { return Color(hex: "#2e6f75") }
         let palette: [String] = ["#2b5d8a", "#2e6f75", "#a8661a", "#5c5850", "#6b3fa0", "#2f7a4f"]

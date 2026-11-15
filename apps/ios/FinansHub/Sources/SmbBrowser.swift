@@ -97,7 +97,7 @@ struct Smb36Current: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            Image(systemName: "folder.fill").font(.dyn51(size: 18)).foregroundStyle(Color(hex: "#2b5d8a"))
+            Image(systemName: "folder.fill").font(.dyn51(size: 18)).foregroundStyle(DS.color(.info, stil: .papir))
             VStack(alignment: .leading, spacing: 2) {
                 Text("DU STÅR I").font(PF.mono(10)).tracking(1.1).foregroundStyle(p.mut)
                 Text(m.label).font(PF.mono(12.5, bold: false)).foregroundStyle(p.ink).lineLimit(2).minimumScaleFactor(0.8)
@@ -129,7 +129,7 @@ struct Smb36DirRow: View {
             Button { open() } label: {
                 HStack(spacing: 12) {
                     Image(systemName: dir.locked ? "lock.fill" : "folder").font(.dyn51(size: 17))
-                        .foregroundStyle(dir.locked ? p.mut : Color(hex: "#2b5d8a"))
+                        .foregroundStyle(dir.locked ? p.mut : DS.color(.info, stil: .papir))
                         .frame(width: 26)
                     VStack(alignment: .leading, spacing: 2) {
                         Text(dir.display).font(PF.ui(16, .semibold)).foregroundStyle(dir.hidden ? p.mut : p.ink)

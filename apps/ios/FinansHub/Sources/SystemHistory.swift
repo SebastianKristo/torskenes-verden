@@ -230,7 +230,7 @@ struct System36SherBubble: View {
     let text: String
 
     var body: some View {
-        Text(text).font(PF.ui(12.5, .bold)).foregroundStyle(Color(hex: "#1b1a17")).lineLimit(1)
+        Text(text).font(PF.ui(12.5, .bold)).foregroundStyle(DS.fixed(.textPrimary, stil: .papir, dark: false)).lineLimit(1)
             .padding(.horizontal, 12).padding(.vertical, 8)
             .background(Color.white, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
             .shadow(color: Color.black.opacity(0.35), radius: 12, y: 10)
@@ -349,7 +349,7 @@ struct System36HistoryRow: View {
                 HStack(spacing: 10) {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Nordlys " + item.version).font(PF.mono(14)).foregroundStyle(p.ink)
-                        Text(sub).font(PF.ui(12.5)).foregroundStyle(item.failed ? Color(hex: "#b23a2a") : p.mut).lineLimit(1)
+                        Text(sub).font(PF.ui(12.5)).foregroundStyle(item.failed ? DS.color(.danger, stil: .papir) : p.mut).lineLimit(1)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     Image(systemName: "chevron.right").font(.dyn51(size: 12, weight: .semibold)).foregroundStyle(p.mut)

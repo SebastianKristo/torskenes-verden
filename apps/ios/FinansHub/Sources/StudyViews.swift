@@ -232,7 +232,7 @@ struct Study44DocHead: View {
             Text(d.title).font(PF.serif(24, medium: true)).foregroundStyle(p.ink).fixedSize(horizontal: false, vertical: true)
             Text([d.institution, d.program, d.date].filter { !$0.isEmpty }.joined(separator: " · ")).font(PF.ui(12.5)).foregroundStyle(p.mut)
             if !d.summary.isEmpty { Text(d.summary).font(PF.serif(16)).foregroundStyle(p.ink).fixedSize(horizontal: false, vertical: true) }
-            if !d.compare.isEmpty { Text(d.compare).font(PF.ui(13, .semibold)).foregroundStyle(Color(hex: "#2f6b4a")) }
+            if !d.compare.isEmpty { Text(d.compare).font(PF.ui(13, .semibold)).foregroundStyle(DS.color(.success, stil: .papir)) }
             HStack(spacing: 12) {
                 if !d.snitt.isEmpty { Text("Snitt " + d.snitt).font(PF.ui(13.5, .bold)).foregroundStyle(p.ink) }
                 if !d.spText.isEmpty { Text(d.spText).font(PF.ui(13.5, .bold)).foregroundStyle(p.ink) }

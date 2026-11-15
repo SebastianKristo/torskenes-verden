@@ -170,7 +170,7 @@ struct Kart46Panel: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(m.sourceText).font(PF.mono(10.5)).tracking(1.2).foregroundStyle(m.demo ? Color(hex: "#a0671a") : Color(hex: "#2f6b4a"))
+            Text(m.sourceText).font(PF.mono(10.5)).tracking(1.2).foregroundStyle(m.demo ? DS.color(.warning, stil: .papir) : DS.color(.success, stil: .papir))
             Kart46Search()
             if let s = m.stop {
                 Kart46StopCard(s: s)
@@ -426,7 +426,7 @@ struct Kart46CallRow: View {
             Spacer(minLength: 4)
             VStack(alignment: .trailing, spacing: 1) {
                 Text(c.minutes <= 0 ? "Nå" : "\(c.minutes) min").font(PF.ui(14, .bold)).foregroundStyle(p.ink)
-                if c.delay > 0 { Text("+\(c.delay) min").font(PF.ui(11.5, .bold)).foregroundStyle(Color(hex: "#b23a2a")) }
+                if c.delay > 0 { Text("+\(c.delay) min").font(PF.ui(11.5, .bold)).foregroundStyle(DS.color(.danger, stil: .papir)) }
             }
         }
         .padding(.horizontal, 12).frame(minHeight: 50)

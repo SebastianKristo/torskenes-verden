@@ -231,7 +231,7 @@ struct Swipe37Reveal: View {
         }
         .padding(.horizontal, 18)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-        .background(full ? Color(hex: "#2f7a4f") : Color(hex: "#1b1a17"), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .background(full ? DS.fixed(.success, stil: .papir, dark: false) : DS.fixed(.textPrimary, stil: .papir, dark: false), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
         .animation(.easeOut(duration: 0.15), value: full)
     }
 }
@@ -307,14 +307,14 @@ struct Bible37Sheet: View {
             Text("Åpne Bibel-siden ›").font(PF.ui(18, .bold)).foregroundStyle(Color.white)
                 .lineLimit(1).minimumScaleFactor(0.8)
                 .frame(maxWidth: .infinity).frame(height: 56)
-                .background(Color(hex: "#1b1a17"), in: Capsule())
+                .background(DS.fixed(.textPrimary, stil: .papir, dark: false), in: Capsule())
                 .contentShape(Capsule())
         }
         .buttonStyle(.plain)
         .padding(.horizontal, 24).padding(.top, 12).padding(.bottom, 12)
         .background {
             p.bg
-                .shadow(color: Color(hex: "#1b1a17").opacity(0.18), radius: 8, y: -6)
+                .shadow(color: DS.fixed(.textPrimary, stil: .papir, dark: false).opacity(0.18), radius: 8, y: -6)
                 .ignoresSafeArea(edges: .bottom)
         }
     }

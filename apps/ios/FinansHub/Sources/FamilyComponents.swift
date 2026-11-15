@@ -4,7 +4,7 @@ import CoreLocation
 
 /* ---------------- Prompt 22: Familie nøyaktig etter Familie.dc.html (felles deler) ---------------- */
 
-/// Tokenene for Familie (Papir lys / mørk), nøyaktig som i claude-code-familie-design.md.
+/// Fargene i Familie-skjermene, hentet fra appens palett (claude-code-familie-design.md).
 struct Fam22Tok {
     let bg: Color
     let card: Color
@@ -14,18 +14,16 @@ struct Fam22Tok {
     let lab: Color
     let pos: Color
 
-    static let light: Fam22Tok = Fam22Tok(bg: Color(hex: "#f3efe6"), card: Color.white, ink: Color(hex: "#1b1a17"), mut: Color(hex: "#7a7468"),
-                                          line: Color(hex: "#d8d1c2"), lab: Color(hex: "#b23a2a"), pos: Color(hex: "#2f7a4f"))
-    static let dark: Fam22Tok = Fam22Tok(bg: Color(hex: "#14130f"), card: Color(hex: "#211f19"), ink: Color(hex: "#f3efe6"), mut: Color(hex: "#8a8578"),
-                                         line: Color(hex: "#34312a"), lab: Color(hex: "#f08a76"), pos: Color(hex: "#8fd3a5"))
+    /// Fase 4: fra appens palett (DS-tokenene for Papir lys/mørk og Glass) i stedet for egne hex-verdier.
+    static func of(_ p: PaperPalette) -> Fam22Tok {
+        Fam22Tok(bg: p.bg, card: p.card, ink: p.ink, mut: p.mut, line: p.line, lab: p.lab, pos: p.pos)
+    }
 
-    static func of(_ p: PaperPalette) -> Fam22Tok { p.dark ? Fam22Tok.dark : Fam22Tok.light }
-
-    /// Faste farger fra designet (uavhengig av tema).
-    static let fresh: Color = Color(hex: "#2f7a4f")
+    /// Statusfarger: fersk følger success-tokenet; gul og grå er egne farger fra designet (ingen token ennå).
+    static let fresh: Color = DS.color(.success, stil: .papir)
     static let stale: Color = Color(hex: "#d9a400")
     static let off: Color = Color(hex: "#9a9488")
-    static let black: Color = Color(hex: "#1b1a17")
+    static let black: Color = DS.fixed(.textPrimary, stil: .papir, dark: false)
 }
 
 /// Etikett i versaler: Plex Mono 600, 10,5 pt, sperring 0,12 em, `lab`.

@@ -70,7 +70,7 @@ test('NRK-fanen finnes i Media, mellom Prowlarr og Avspilling, og fanelinja rull
   assert.match(views, /proxy\.scrollTo\(now, anchor: \.center\)/);
   // Dra for å oppdatere henter NRK-dataene når NRK-fanen vises.
   assert.match(views, /if m\.tab == "nrk" \{ await Nrk87\.shared\.load\(store, full: true\) \} else \{ await m\.loadAll\(store\) \}/);
-  assert.match(code('MediaFiles.swift'), /case "nrk": return Color\(hex: "#2b5d8a"\)/);
+  assert.match(code('MediaFiles.swift'), /case "nrk": return DS\.color\(\.info, stil: \.papir\)/);
 });
 
 test('filene er hele (kommentarer, strenger og klammer går opp)', () => {

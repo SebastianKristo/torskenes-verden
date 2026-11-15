@@ -218,7 +218,7 @@ struct WxWeek39Card: View {
                 ZStack {
                     Circle().fill(AngularGradient(colors: [Color(hex: "#b23a2a"), Color(hex: "#e8794a"), Color(hex: "#f2c14e"), Color(hex: "#3fbf9a"),
                                                            Color(hex: "#4f8fd6"), Color(hex: "#7a5ad6"), Color(hex: "#b23a2a")], center: .center))
-                    Circle().fill(Color(hex: "#fffdf8")).frame(width: 10, height: 10)
+                    Circle().fill(DS.fixed(.surfaceRaised, stil: .papir, dark: false)).frame(width: 10, height: 10)
                 }
                 .frame(width: 16, height: 16)
                 Text("GLIMT · UKAS VÆR").font(.dyn51(size: 12, weight: .heavy)).tracking(1).opacity(0.8).lineLimit(1)

@@ -85,7 +85,7 @@ struct Tasks44PlaceCard: View {
 
     private var field: some View {
         HStack(spacing: 10) {
-            Image(systemName: "mappin.and.ellipse").font(.dyn51(size: 16, weight: .semibold)).foregroundStyle(Color(hex: "#b23a2a"))
+            Image(systemName: "mappin.and.ellipse").font(.dyn51(size: 16, weight: .semibold)).foregroundStyle(DS.color(.accent, stil: .papir))
             TextField("Legg til sted eller adresse", text: $q)
                 .font(PF.ui(15)).foregroundStyle(p.ink)
                 .focused($focus)
@@ -169,7 +169,7 @@ struct Tasks44PlaceMap: View {
         let c: CLLocationCoordinate2D = CLLocationCoordinate2D(latitude: lat, longitude: lon)
         VStack(spacing: 8) {
             Map(initialPosition: .region(MKCoordinateRegion(center: c, latitudinalMeters: 900, longitudinalMeters: 900))) {
-                Marker(name.isEmpty ? "Sted" : name, coordinate: c).tint(Color(hex: "#b23a2a"))
+                Marker(name.isEmpty ? "Sted" : name, coordinate: c).tint(DS.color(.accent, stil: .papir))
             }
             .id("\(lat),\(lon)")
             .frame(height: 210)

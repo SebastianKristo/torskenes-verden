@@ -198,7 +198,7 @@ struct Tasks44InfoTop: View {
     var body: some View {
         HStack(spacing: 10) {
             Button(action: onBack) {
-                Text("‹ Tilbake").font(PF.ui(16, .bold)).foregroundStyle(Color(hex: "#b23a2a"))
+                Text("‹ Tilbake").font(PF.ui(16, .bold)).foregroundStyle(DS.color(.accent, stil: .papir))
                     .frame(minHeight: 44).contentShape(Rectangle())
             }
             .buttonStyle(.plain)
@@ -213,7 +213,7 @@ struct Tasks44InfoTop: View {
 
     private var star: some View {
         Image(systemName: flag ? "star.fill" : "star").font(.dyn51(size: 16, weight: .semibold))
-            .foregroundStyle(flag ? Color(hex: "#e0a81a") : Color(hex: "#b23a2a"))
+            .foregroundStyle(flag ? Color(hex: "#e0a81a") : DS.color(.accent, stil: .papir))
     }
 
     private var menu: some View {
@@ -351,12 +351,12 @@ struct Tasks44WhenShell<C: View>: View {
     var body: some View {
         Button(action: open) {
             VStack(alignment: .leading, spacing: 6) {
-                Text(label).font(PF.mono(10)).tracking(1.2).foregroundStyle(red ? Color(hex: "#b23a2a") : p.mut)
+                Text(label).font(PF.mono(10)).tracking(1.2).foregroundStyle(red ? DS.color(.danger, stil: .papir) : p.mut)
                 content()
             }
             .padding(14).frame(maxWidth: .infinity, minHeight: 96, alignment: .topLeading)
             .background(p.card, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(red ? Color(hex: "#b23a2a") : Color.clear, lineWidth: 1.5))
+            .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(red ? DS.color(.danger, stil: .papir) : Color.clear, lineWidth: 1.5))
             .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         }
         .buttonStyle(.plain)
@@ -383,8 +383,8 @@ struct Tasks44DlCard: View {
         let late: Bool = t.dl44.map { Tasks44Fmt.overdue($0) && !t.done } ?? false
         Tasks44WhenShell(label: "FRIST", red: late, filled: t.dl44 != nil, open: open, clear: clear) {
             if let d = t.dl44 {
-                Text(Tasks44Fmt.long(d)).font(PF.serif(18, medium: true)).foregroundStyle(late ? Color(hex: "#b23a2a") : p.ink).lineLimit(2)
-                if late { Text("forfalt").font(PF.ui(12, .bold)).foregroundStyle(Color(hex: "#b23a2a")) }
+                Text(Tasks44Fmt.long(d)).font(PF.serif(18, medium: true)).foregroundStyle(late ? DS.color(.danger, stil: .papir) : p.ink).lineLimit(2)
+                if late { Text("forfalt").font(PF.ui(12, .bold)).foregroundStyle(DS.color(.danger, stil: .papir)) }
             } else {
                 Text("Legg til").font(PF.ui(15, .semibold)).foregroundStyle(p.mut)
             }
@@ -464,7 +464,7 @@ struct Tasks44DateSheet: View {
         } else {
             DatePicker("", selection: $d, displayedComponents: .date)
                 .datePickerStyle(.graphical).labelsHidden()
-                .tint(Color(hex: "#b23a2a"))
+                .tint(DS.color(.accent, stil: .papir))
         }
     }
 }

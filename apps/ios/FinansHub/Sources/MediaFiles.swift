@@ -25,9 +25,9 @@ enum Media45 {
         case "plex": return Color(hex: "#e5a00d")
         case "jellyfin": return Color(hex: "#aa5cc3")
         case "avspilling": return Color(hex: "#e5a00d")
-        case "kommer": return Color(hex: "#b23a2a")
+        case "kommer": return DS.color(.accent, stil: .papir)
         // Prompt 87: NRK-fanen (blå som «laster ned» i designet).
-        case "nrk": return Color(hex: "#2b5d8a")
+        case "nrk": return DS.color(.info, stil: .papir)
         // Prompt 88: Musikk (yubal).
         case "musikk": return Color(hex: "#7a4fa0")
         default: return Color(hex: "#6b665c")
@@ -37,7 +37,7 @@ enum Media45 {
     /// Tekst på farget fane: mørk på gul/lys blå, hvit ellers.
     static func onColor(_ service: String) -> Color {
         switch service {
-        case "sonarr", "radarr", "plex", "avspilling": return Color(hex: "#1b1a17")
+        case "sonarr", "radarr", "plex", "avspilling": return DS.fixed(.textPrimary, stil: .papir, dark: false)
         default: return Color.white
         }
     }
@@ -47,9 +47,9 @@ enum Media45 {
         switch s {
         case "downloading": return Color(hex: "#3d7dd6")
         case "queued", "waiting", "paused", "pending", "delay": return Color(hex: "#c48a1a")
-        case "downloaded", "hasfile", "ok", "completed": return Color(hex: "#2f7a4f")
-        case "missing", "failed", "warning": return Color(hex: "#b23a2a")
-        case "unmonitored": return Color(hex: "#8f897c")
+        case "downloaded", "hasfile", "ok", "completed": return DS.color(.success, stil: .papir)
+        case "missing", "failed", "warning": return DS.color(.danger, stil: .papir)
+        case "unmonitored": return DS.color(.textTertiary, stil: .papir)
         default: return nil
         }
     }
@@ -244,7 +244,7 @@ struct Media45UndoBar: View {
                 .buttonStyle(.plain)
             }
             .padding(.leading, 16).padding(.trailing, 6).padding(.vertical, 6)
-            .background(Color(hex: "#1b1a17").opacity(0.94), in: Capsule())
+            .background(DS.fixed(.textPrimary, stil: .papir, dark: false).opacity(0.94), in: Capsule())
             .padding(.horizontal, 16).padding(.bottom, 24)
             .transition(.opacity.combined(with: .move(edge: .bottom)))
         }
@@ -472,7 +472,7 @@ struct Playback45Summary: View {
             Haptics.shared.select()
             s.range = k
         } label: {
-            Text(n).font(PF.ui(13, .bold)).foregroundStyle(on ? Color(hex: "#1b1a17") : p.ink)
+            Text(n).font(PF.ui(13, .bold)).foregroundStyle(on ? DS.fixed(.textPrimary, stil: .papir, dark: false) : p.ink)
                 .frame(maxWidth: .infinity).frame(height: 32)
                 .background(on ? Media45.color("plex") : Color.clear, in: Capsule())
                 .contentShape(Capsule())

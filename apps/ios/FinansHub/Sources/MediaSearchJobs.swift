@@ -251,7 +251,7 @@ struct Media44IndexerLine: View {
 
     private var color: Color {
         switch ix.state {
-        case "done": return Color(hex: "#2f6b4a")
+        case "done": return DS.color(.success, stil: .papir)
         case "failed": return p.lab
         default: return p.mut
         }

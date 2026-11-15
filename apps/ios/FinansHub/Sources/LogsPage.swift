@@ -337,7 +337,7 @@ struct Logs44Top: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             Button { Haptic34.back(); m.open = false; m.stopLive() } label: {
-                Text("‹ Tilbake").font(PF.ui(16, .bold)).foregroundStyle(Color(hex: "#b23a2a")).frame(minHeight: 44).contentShape(Rectangle())
+                Text("‹ Tilbake").font(PF.ui(16, .bold)).foregroundStyle(DS.color(.accent, stil: .papir)).frame(minHeight: 44).contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             Text("SERVER").font(PF.mono(10.5)).tracking(1.3).foregroundStyle(p.lab)
@@ -359,7 +359,7 @@ struct Logs44Setup: View {
                 .font(PF.ui(13.5)).foregroundStyle(p.mut).fixedSize(horizontal: false, vertical: true)
             Text("DOCKER_HOST=tcp://docker-socket-proxy:2375").font(PF.mono(11, bold: false)).foregroundStyle(p.ink)
                 .padding(10).frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color(hex: "#1b1a17").opacity(p.dark ? 0.6 : 0.06), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .background(DS.fixed(.textPrimary, stil: .papir, dark: false).opacity(p.dark ? 0.6 : 0.06), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
         }
         .padding(16)
         .background(p.card, in: RoundedRectangle(cornerRadius: 18, style: .continuous))

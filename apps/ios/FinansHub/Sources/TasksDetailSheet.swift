@@ -93,7 +93,7 @@ struct Task37DetailSheet: View {
                 .lineLimit(2...8)
             if let u = Task37Link.first(t.note) {
                 Link(destination: u) {
-                    Text(u.host ?? u.absoluteString).font(PF.ui(13, .semibold)).foregroundStyle(Color(hex: "#2b5d8a")).lineLimit(1)
+                    Text(u.host ?? u.absoluteString).font(PF.ui(13, .semibold)).foregroundStyle(DS.color(.info, stil: .papir)).lineLimit(1)
                 }
             }
         }
@@ -117,7 +117,7 @@ struct Task37DetailSheet: View {
 
     private var dateCard: some View {
         VStack(spacing: 0) {
-            Task37ToggleRow(icon: "calendar", tint: Color(hex: "#b23a2a"), title: "Dato", sub: dueOn ? JS.fmt(due, "EEEE d. MMMM") : nil, on: dueOn) {
+            Task37ToggleRow(icon: "calendar", tint: DS.color(.accent, stil: .papir), title: "Dato", sub: dueOn ? JS.fmt(due, "EEEE d. MMMM") : nil, on: dueOn) {
                 withAnimation(.easeOut(duration: 0.2)) { dueOn.toggle() }
                 if !dueOn { timeOn = false }
                 commit()
@@ -129,7 +129,7 @@ struct Task37DetailSheet: View {
                     .onChange(of: due) { (_: Date, _: Date) in commit() }
             }
             Task37Divider()
-            Task37ToggleRow(icon: "clock", tint: Color(hex: "#2b5d8a"), title: "Tid", sub: timeOn ? Task37Time.text(time) : nil, on: timeOn) {
+            Task37ToggleRow(icon: "clock", tint: DS.color(.info, stil: .papir), title: "Tid", sub: timeOn ? Task37Time.text(time) : nil, on: timeOn) {
                 withAnimation(.easeOut(duration: 0.2)) {
                     timeOn.toggle()
                     if timeOn { dueOn = true }
@@ -165,13 +165,13 @@ struct Task37DetailSheet: View {
                 }
             }
             Task37Divider()
-            Task37MenuRow(icon: "bell", tint: Color(hex: "#a8661a"), title: "Tidlig påminnelse", value: Tasks37.earlyName(t.early)) {
+            Task37MenuRow(icon: "bell", tint: DS.color(.warning, stil: .papir), title: "Tidlig påminnelse", value: Tasks37.earlyName(t.early)) {
                 ForEach(Tasks37.earlies, id: \.0) { (r: (String, String)) in
                     Button(r.1) { t.early = r.0; commit() }
                 }
             }
             Task37Divider()
-            Task37MenuRow(icon: "mappin.and.ellipse", tint: Color(hex: "#2f6b45"), title: "Påminn på sted", value: Tasks37.placeName(t.place)) {
+            Task37MenuRow(icon: "mappin.and.ellipse", tint: DS.color(.success, stil: .papir), title: "Påminn på sted", value: Tasks37.placeName(t.place)) {
                 ForEach(Tasks37.places, id: \.0) { (r: (String, String)) in
                     Button(r.1) { t.place = r.0; commit() }
                 }
@@ -183,7 +183,7 @@ struct Task37DetailSheet: View {
 
     private var orgCard: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Task37RowHead(icon: "list.bullet", tint: Color(hex: "#1b1a17"), title: "Liste")
+            Task37RowHead(icon: "list.bullet", tint: DS.fixed(.textPrimary, stil: .papir, dark: false), title: "Liste")
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 6) {
                     ForEach(m.lists) { (l: TaskList17) in
@@ -193,7 +193,7 @@ struct Task37DetailSheet: View {
                 .padding(.bottom, 10)
             }
             Task37Divider()
-            Task37RowHead(icon: "person", tint: Color(hex: "#2b5d8a"), title: "Ansvarlig")
+            Task37RowHead(icon: "person", tint: DS.color(.info, stil: .papir), title: "Ansvarlig")
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 6) {
                     Task37Chip(text: "Ingen", dot: nil, on: (t.assignee ?? "").isEmpty) { t.assignee = nil; commit() }
@@ -204,7 +204,7 @@ struct Task37DetailSheet: View {
                 .padding(.bottom, 10)
             }
             Task37Divider()
-            Task37RowHead(icon: "exclamationmark", tint: Color(hex: "#b23a2a"), title: "Prioritet")
+            Task37RowHead(icon: "exclamationmark", tint: DS.color(.accent, stil: .papir), title: "Prioritet")
             HStack(spacing: 6) {
                 ForEach(Tasks37.prios, id: \.0) { (r: (Int, String)) in
                     Task37Chip(text: r.0 > 0 ? Tasks37.bangs(r.0) + " " + r.1 : r.1, dot: nil, on: t.prio == r.0) { t.prio = r.0; commit() }
@@ -263,7 +263,7 @@ struct Task37DetailSheet: View {
         let done: Int = t.subs.filter { $0.done }.count
         return VStack(alignment: .leading, spacing: 0) {
             HStack {
-                Task37RowHead(icon: "checklist", tint: Color(hex: "#2f6b45"), title: "Deloppgaver")
+                Task37RowHead(icon: "checklist", tint: DS.color(.success, stil: .papir), title: "Deloppgaver")
                 Spacer(minLength: 4)
                 if !t.subs.isEmpty { Text("\(done) / \(t.subs.count)").font(PF.ui(12.5, .semibold)).foregroundStyle(p.mut) }
             }

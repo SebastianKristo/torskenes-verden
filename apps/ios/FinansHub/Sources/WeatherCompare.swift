@@ -547,7 +547,7 @@ struct WxCmp39Glimt: View {
             ZStack {
                 Circle().fill(AngularGradient(colors: [Color(hex: "#b23a2a"), Color(hex: "#e8794a"), Color(hex: "#f2c14e"), Color(hex: "#3fbf9a"),
                                                        Color(hex: "#4f8fd6"), Color(hex: "#7a5ad6"), Color(hex: "#b23a2a")], center: .center))
-                Circle().fill(Color(hex: "#fffdf8")).frame(width: 15, height: 15)
+                Circle().fill(DS.fixed(.surfaceRaised, stil: .papir, dark: false)).frame(width: 15, height: 15)
                 Text("✦").font(.dyn51(size: 10)).foregroundStyle(Color(hex: "#e0553d"))
             }
             .frame(width: 22, height: 22)

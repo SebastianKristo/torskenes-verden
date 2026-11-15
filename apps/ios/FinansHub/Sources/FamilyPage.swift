@@ -516,8 +516,8 @@ struct Fam50Map: View {
         Map(position: pos, interactionModes: [.pan, .zoom]) {
             if let id = accFor, let x = people.first(where: { $0.id == id }), let c = x.coord {
                 MapCircle(center: c, radius: Swift.max(15, Swift.min(20_000, (x.acc ?? 30).isFinite ? (x.acc ?? 30) : 30)))
-                    .foregroundStyle(Color(hex: "#2b5d8a").opacity(0.16))
-                    .stroke(Color(hex: "#2b5d8a").opacity(0.5), style: StrokeStyle(lineWidth: 1.5))
+                    .foregroundStyle(DS.color(.info, stil: .papir).opacity(0.16))
+                    .stroke(DS.color(.info, stil: .papir).opacity(0.5), style: StrokeStyle(lineWidth: 1.5))
             }
             ForEach(people.filter { $0.coord != nil }) { (x: Fam50Person) in
                 Annotation("", coordinate: x.coord ?? CLLocationCoordinate2D(), anchor: .center) {

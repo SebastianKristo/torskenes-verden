@@ -259,7 +259,7 @@ struct Fam50CheckinForm: View {
                     .overlay(alignment: .bottomTrailing) {
                         if on {
                             Text("✓").font(PF.ui(11, .heavy)).foregroundStyle(Color.white).frame(width: 20, height: 20)
-                                .background(Circle().fill(Color(hex: "#2f7d4f"))).overlay(Circle().stroke(t.card, lineWidth: 2))
+                                .background(Circle().fill(DS.fixed(.success, stil: .papir, dark: false))).overlay(Circle().stroke(t.card, lineWidth: 2))
                                 .offset(x: 2, y: 2)
                         }
                     }
@@ -385,7 +385,7 @@ struct Fam50SentCard: View {
         let msg: String = "«" + c.text + "»" + (c.placeLabel.isEmpty ? "" : " · " + c.placeLabel)
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 10) {
-                Text("✓").font(PF.ui(14, .heavy)).foregroundStyle(Color.white).frame(width: 28, height: 28).background(Circle().fill(Color(hex: "#2f7d4f")))
+                Text("✓").font(PF.ui(14, .heavy)).foregroundStyle(Color.white).frame(width: 28, height: 28).background(Circle().fill(DS.fixed(.success, stil: .papir, dark: false)))
                 Text(c.title.isEmpty ? "Sjekket inn " + c.time : c.title).font(PF.ui(16, .bold)).foregroundStyle(Color.white).lineLimit(1)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 Text(c.seenText).font(PF.ui(12.5)).foregroundStyle(Color.white.opacity(0.7)).lineLimit(1)
@@ -396,7 +396,7 @@ struct Fam50SentCard: View {
             }
             HStack(spacing: 8) {
                 Button { Task { await Fam50Model.shared.pickup(store, c) } } label: {
-                    Text("Hent meg").font(PF.ui(13.5, .bold)).foregroundStyle(Color(hex: "#1b1a17")).frame(maxWidth: .infinity).frame(height: 44)
+                    Text("Hent meg").font(PF.ui(13.5, .bold)).foregroundStyle(DS.fixed(.textPrimary, stil: .papir, dark: false)).frame(maxWidth: .infinity).frame(height: 44)
                         .background(Capsule().fill(Color.white))
                 }
                 .buttonStyle(.plain)
@@ -411,7 +411,7 @@ struct Fam50SentCard: View {
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: 24, style: .continuous).fill(Color(hex: "#1b1a17")))
+        .background(RoundedRectangle(cornerRadius: 24, style: .continuous).fill(DS.fixed(.textPrimary, stil: .papir, dark: false)))
     }
 }
 

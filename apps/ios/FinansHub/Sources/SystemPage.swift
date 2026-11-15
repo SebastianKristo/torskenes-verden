@@ -437,7 +437,7 @@ struct System31VersionCard: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 Text(installed ? "Installert" : "Du har " + u.current).font(PF.ui(12.5, .bold))
-                    .foregroundStyle(installed ? Color(hex: "#2f7d4f") : p.mut).lineLimit(1).fixedSize()
+                    .foregroundStyle(installed ? DS.color(.success, stil: .papir) : p.mut).lineLimit(1).fixedSize()
             }
             .padding(.horizontal, 16).padding(.vertical, 14)
             Rectangle().fill(p.line).frame(height: 1)
@@ -451,7 +451,7 @@ struct System31VersionCard: View {
                 }
                 }
             }
-            .tint(Color(hex: "#2f7d4f"))
+            .tint(DS.color(.success, stil: .papir))
             .padding(.horizontal, 16).padding(.vertical, 12)
             .hl34("pw", radius: 14)
         }
@@ -537,7 +537,7 @@ struct System31BigButton: View {
                 Text(title).font(PF.ui(16, .heavy)).foregroundStyle(Color.white)
                     .frame(maxWidth: 520, minHeight: 54)
                     .background(color, in: Capsule())
-                    .shadow(color: Color(hex: "#2b5d8a").opacity(0.45), radius: 15, y: 12)
+                    .shadow(color: DS.color(.info, stil: .papir).opacity(0.45), radius: 15, y: 12)
                     .opacity(u.phase == .run || u.busy ? 0.75 : 1)
                     .contentShape(Capsule())
             }
@@ -582,9 +582,9 @@ struct System31BigButton: View {
 
     private var color: Color {
         switch u.phase {
-        case .done: return Color(hex: "#2f7d4f")
+        case .done: return DS.color(.success, stil: .papir)
         case .idle: return Color(hex: "#b0a998")
-        default: return Color(hex: "#2b5d8a")
+        default: return DS.color(.info, stil: .papir)
         }
     }
 

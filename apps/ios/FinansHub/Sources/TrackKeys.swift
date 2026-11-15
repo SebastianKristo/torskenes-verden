@@ -28,9 +28,9 @@ struct TrackKey37: Identifiable, Hashable {
     /// Grønn (ok), oransje (kvote) eller rød (feil).
     var dot: Color {
         switch status.lowercased() {
-        case "ok", "": return set ? Color(hex: "#2f7a4f") : Color(hex: "#8f897c")
-        case "quota", "kvote": return Color(hex: "#a8661a")
-        default: return Color(hex: "#b23a2a")
+        case "ok", "": return set ? DS.color(.success, stil: .papir) : DS.color(.textTertiary, stil: .papir)
+        case "quota", "kvote": return DS.color(.warning, stil: .papir)
+        default: return DS.color(.danger, stil: .papir)
         }
     }
 }

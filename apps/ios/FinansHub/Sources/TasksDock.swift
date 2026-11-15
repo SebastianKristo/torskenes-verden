@@ -282,7 +282,7 @@ struct TaskSwitch22: View {
     let on: Bool
     var body: some View {
         ZStack(alignment: on ? .trailing : .leading) {
-            Capsule().fill(on ? Color(hex: "#2f7a4f") : p.line)
+            Capsule().fill(on ? DS.fixed(.success, stil: .papir, dark: false) : p.line)
             Circle().fill(Color.white).frame(width: 22, height: 22).shadow(color: Color.black.opacity(0.3), radius: 1.5, y: 1).padding(3)
         }
         .frame(width: 46, height: 28)

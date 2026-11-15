@@ -225,15 +225,15 @@ struct Media44SiteRow: View {
     }
 
     private var note: some View {
-        Text(s.fallbackNote + " · bruker Hjemme").font(PF.ui(11.5, .bold)).foregroundStyle(Color(hex: "#a0671a"))
+        Text(s.fallbackNote + " · bruker Hjemme").font(PF.ui(11.5, .bold)).foregroundStyle(DS.color(.warning, stil: .papir))
             .padding(.horizontal, 10).frame(height: 24)
-            .background(Color(hex: "#a0671a").opacity(0.12), in: Capsule())
+            .background(DS.fixed(.warning, stil: .papir, dark: false).opacity(0.12), in: Capsule())
     }
 
     static func dot(_ s: Media44Site, _ svc: String) -> Color {
         if s.configured[svc] == false { return Color(hex: "#a39d90") }
-        if let ok = s.ok[svc] { return ok ? Color(hex: "#2f6b4a") : Color(hex: "#b23a2a") }
-        return Color(hex: "#2f6b4a")
+        if let ok = s.ok[svc] { return ok ? DS.color(.success, stil: .papir) : DS.color(.danger, stil: .papir) }
+        return DS.color(.success, stil: .papir)
     }
 }
 

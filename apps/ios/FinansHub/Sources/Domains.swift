@@ -413,19 +413,19 @@ struct Domains43GlimtRow: View {
                     Orb43(size: 30, busy: g.loading)
                     VStack(alignment: .leading, spacing: 2) {
                         Text("GLIMT · " + per.0).font(PF.mono(9.5)).tracking(1.3).foregroundStyle(Color(hex: "#e8a593")).lineLimit(1)
-                        Text("Oppsummering av " + per.1).font(PF.ui(14.5, .bold)).foregroundStyle(Color(hex: "#f3efe6")).lineLimit(1)
+                        Text("Oppsummering av " + per.1).font(PF.ui(14.5, .bold)).foregroundStyle(DS.fixed(.surface, stil: .papir, dark: false)).lineLimit(1)
                             .minimumScaleFactor(0.85)
                     }
                     Spacer(minLength: 6)
-                    Text("›").font(PF.ui(18, .bold)).foregroundStyle(Color(hex: "#f3efe6").opacity(0.8))
+                    Text("›").font(PF.ui(18, .bold)).foregroundStyle(DS.fixed(.surface, stil: .papir, dark: false).opacity(0.8))
                 }
                 .padding(.horizontal, 12).padding(.vertical, 10)
                 .frame(maxWidth: .infinity, minHeight: 54, alignment: .leading)
-                .background(Color(hex: "#1b1a17"), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .background(DS.fixed(.textPrimary, stil: .papir, dark: false), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                 .overlay(alignment: .topTrailing) {
                     if fresh {
                         Circle().fill(Color(hex: "#e8794a")).frame(width: 8, height: 8)
-                            .overlay(Circle().stroke(Color(hex: "#1b1a17"), lineWidth: 2))
+                            .overlay(Circle().stroke(DS.fixed(.textPrimary, stil: .papir, dark: false), lineWidth: 2))
                             .padding(.top, 7).padding(.trailing, 9)
                     }
                 }

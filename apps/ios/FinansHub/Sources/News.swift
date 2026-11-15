@@ -370,7 +370,7 @@ struct NewsSourcesSheet: View {
 struct PaperSwitch: View {
     let on: Bool
     var body: some View {
-        Capsule().fill(on ? Color(hex: "#2f7a4f") : Color(hex: "#9a958a"))
+        Capsule().fill(on ? DS.fixed(.success, stil: .papir, dark: false) : Color(hex: "#9a958a"))
             .frame(width: 46, height: 28)
             .overlay(alignment: on ? .trailing : .leading) { Circle().fill(.white).frame(width: 22, height: 22).padding(3) }
             .animation(.easeOut(duration: 0.15), value: on)

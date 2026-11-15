@@ -234,9 +234,9 @@ final class Study44 {
 
     nonisolated static func toneColor(_ t: String) -> Color {
         switch t {
-        case "good": return Color(hex: "#2f6b4a")
-        case "warn": return Color(hex: "#a0671a")
-        case "bad": return Color(hex: "#b23a2a")
+        case "good": return DS.color(.success, stil: .papir)
+        case "warn": return DS.color(.warning, stil: .papir)
+        case "bad": return DS.color(.danger, stil: .papir)
         default: return Color(hex: "#6b665c")
         }
     }

@@ -915,19 +915,25 @@ struct Fam50Tok {
     let chip: Color
     let dark: Bool
 
+    /// Fase 4: statusfargene (ok, flatene for ok/feil, svake linjer og dempet tekst) kommer fra DS-tokenene.
     static func of(_ p: PaperPalette) -> Fam50Tok {
+        let st: DS.Stil = p.glass ? DS.Stil.glass : DS.Stil.papir
         if p.dark {
+            let ok: Color = DS.fixed(.success, stil: st, dark: true)
+            let bad: Color = DS.fixed(.danger, stil: st, dark: true)
             return Fam50Tok(bg: p.bg, card: p.card, ink: p.ink, soft: p.ink.opacity(0.78), mut: p.mut, faint: p.mut.opacity(0.8), line: p.line.opacity(0.7),
-                            dash: p.line, lab: p.lab, ok: Color(hex: "#8fd3a5"), okBg: Color(hex: "#8fd3a5").opacity(0.16),
-                            badBg: Color(hex: "#f08a76").opacity(0.18), chip: p.bg, dark: true)
+                            dash: p.line, lab: p.lab, ok: ok, okBg: ok.opacity(0.16),
+                            badBg: bad.opacity(0.18), chip: p.bg, dark: true)
         }
-        return Fam50Tok(bg: p.bg, card: p.card, ink: p.ink, soft: Color(hex: "#4a463f"), mut: Color(hex: "#6b665c"), faint: Color(hex: "#8a857a"),
-                        line: Color(hex: "#ece6da"), dash: Color(hex: "#c9c1b0"), lab: p.lab, ok: Color(hex: "#2f7d4f"), okBg: Color(hex: "#e3efe6"),
-                        badBg: Color(hex: "#f6e0dc"), chip: p.bg, dark: false)
+        return Fam50Tok(bg: p.bg, card: p.card, ink: p.ink, soft: Color(hex: "#4a463f"), mut: p.mut,
+                        faint: DS.fixed(.textTertiary, stil: st, dark: false),
+                        line: DS.fixed(.lineSubtle, stil: st, dark: false), dash: Color(hex: "#c9c1b0"), lab: p.lab,
+                        ok: DS.fixed(.success, stil: st, dark: false), okBg: DS.fixed(.successSoft, stil: st, dark: false),
+                        badBg: DS.fixed(.dangerSoft, stil: st, dark: false), chip: p.bg, dark: false)
     }
 
     /// Mørk pille (hovedknapper, aktiv brikke) og teksten på den.
-    var pill: Color { dark ? ink : Color(hex: "#1b1a17") }
+    var pill: Color { dark ? ink : DS.fixed(.textPrimary, stil: .papir, dark: false) }
     var onPill: Color { dark ? bg : Color.white }
 }
 

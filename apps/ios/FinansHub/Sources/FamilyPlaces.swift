@@ -615,7 +615,7 @@ struct Fam50AreaMap: View {
             }
             ForEach(areas) { (a: Fam50Area) in
                 Annotation("", coordinate: a.coord, anchor: .center) {
-                    Text(a.name).font(PF.ui(11.5, .bold)).foregroundStyle(Color(hex: "#1b1a17")).padding(.horizontal, 8).frame(height: 24)
+                    Text(a.name).font(PF.ui(11.5, .bold)).foregroundStyle(DS.fixed(.textPrimary, stil: .papir, dark: false)).padding(.horizontal, 8).frame(height: 24)
                         .background(Capsule().fill(Color.white)).shadow(color: Color.black.opacity(0.2), radius: 3, y: 2)
                         .allowsHitTesting(false)
                 }

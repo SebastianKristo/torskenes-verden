@@ -86,7 +86,7 @@ enum Hjemlys40Night {
 
     static let bg: Color = Color(hex: "#0d0f14")
     static let card: Color = Color(hex: "#1a1d24")
-    static let ink: Color = Color(hex: "#f3efe6")
+    static let ink: Color = DS.fixed(.surface, stil: .papir, dark: false)
     static let mut: Color = Color(hex: "#9aa0ab")
 }
 
@@ -437,13 +437,13 @@ struct Hjemlys40Map: View {
     var body: some View {
         Map(initialPosition: MapCameraPosition.automatic) {
             if route.count > 1 {
-                MapPolyline(coordinates: route).stroke(Color(hex: "#b23a2a"), lineWidth: 4)
+                MapPolyline(coordinates: route).stroke(DS.color(.accent, stil: .papir), lineWidth: 4)
             }
             if let h = home {
-                Marker("Hjem", systemImage: "house.fill", coordinate: h).tint(Color(hex: "#b23a2a"))
+                Marker("Hjem", systemImage: "house.fill", coordinate: h).tint(DS.color(.accent, stil: .papir))
             }
             if let me = here {
-                Marker("Her", systemImage: "location.fill", coordinate: me).tint(Color(hex: "#2b5d8a"))
+                Marker("Her", systemImage: "location.fill", coordinate: me).tint(DS.color(.info, stil: .papir))
             }
         }
         .mapStyle(.standard(pointsOfInterest: .excludingAll))
@@ -500,8 +500,8 @@ struct Hjemlys40DayActive: View {
     private var color: Color {
         switch s.state {
         case "late": return Hjemlys40Look.red
-        case "home": return Color(hex: "#a8661a")
-        default: return Color(hex: "#2f7a4f")
+        case "home": return DS.color(.warning, stil: .papir)
+        default: return DS.color(.success, stil: .papir)
         }
     }
 

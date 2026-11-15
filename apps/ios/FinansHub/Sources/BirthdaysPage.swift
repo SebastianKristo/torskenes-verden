@@ -229,7 +229,7 @@ struct BirthdayHero24: View {
             .background {
                 // Prompt 41: konfetti og jenka-tog bak teksten, i det røde kortet (BirthdaysParty.swift).
                 ZStack {
-                    Color(hex: "#b23a2a")
+                    DS.fixed(.accent, stil: .papir, dark: false)
                     if party {
                         LinearGradient(colors: [Color.clear, Color.black.opacity(0.14)], startPoint: UnitPoint(x: 0.5, y: 0.55), endPoint: .bottom)
                         Bday41Party()
