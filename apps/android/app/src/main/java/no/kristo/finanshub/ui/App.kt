@@ -77,7 +77,7 @@ fun FinansApp(vm: AppViewModel, width: WindowWidthSizeClass, unlock: () -> Unit,
     if (!vm.loggedIn || vm.addingAccount) { PaperLogin(vm); return }
     if (vm.locked) { LockScreen(vm, unlock); return }
     // Første gang etter innlogging på en ny installasjon: velg design, bakgrunn og tilganger.
-    if (vm.onboardNeeded) { PaperOnboarding(vm); return }
+    if (vm.onboardNeeded && !vm.onboardDeferred) { PaperOnboarding(vm); return } // Q35: ikke over en dyp lenke
     val ctx = LocalContext.current
     val snack = remember { SnackbarHostState() }
     LaunchedEffect(vm.message) { vm.message?.let { snack.showSnackbar(it); vm.message = null } }

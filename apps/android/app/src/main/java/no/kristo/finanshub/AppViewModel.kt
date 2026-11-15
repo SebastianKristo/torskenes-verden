@@ -722,7 +722,18 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (joinLink51(uri)) return
         // Prompt 41: homelab://app-auth / https://<vert>/app-auth (Kalender ber Homelab om å godkjenne innloggingen).
         if (appAuthLink41(uri)) return
+        // Fase 6: homelab://<side> fra iOS og web åpnes som finanshub://<side> (innlogging er håndtert over).
+        if (uri.scheme == "homelab") { no.kristo.felles.moduler.Dyplenker.fraHomelab(uri.toString())?.let { deepLink(Uri.parse(it), outside86) }; return }
         if (uri.scheme != "finanshub" || !loggedIn) return
+        // Fase 6: modul-id-ene og de gamle rutene i modullisten («oversikt», «gjoremal», «reise/kart», «huskeliste» …) går til appens
+        // sider. Vertene appen kjente fra før, er uendret (felles Dyplenker, testet mot shared/schemas/moduler.json).
+        val mal = no.kristo.felles.moduler.Dyplenker.mal(Moduler.liste, uri.host ?: "", uri.path ?: "")
+        if (mal.vert != (uri.host ?: "").lowercase() || mal.sti != (uri.path ?: "").trim('/')) {
+            deepLink(Uri.parse("finanshub://" + mal.vert + (if (mal.sti.isEmpty()) "" else "/" + mal.sti) + (uri.encodedQuery?.let { "?$it" } ?: "")), outside86)
+            return
+        }
+        // Q35: en dyp lenke åpnes direkte. Onboardingen venter til neste gang appen åpnes.
+        onboardDeferred = true
         // Prompt 86: en lenke utenfra som utfører en handling, spør først («Vil du … ?» · Avbryt / Utfør).
         if (outside86) Link86.ask(uri)?.let { link86 = uri to it; return }
         menuOpen = false
@@ -754,6 +765,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             "hjemlys" -> hjemlysLink40(uri)
             "finn" -> go(Screen.Finn)
             "boliger" -> open(Screen.Folders)
+            // Fase 6 (Q4): Faste betalinger (finanshub://faste[/abonnementer|faste|planlagte]).
+            "faste" -> openFaste(uri.path?.trim('/').orEmpty().ifEmpty { "abonnementer" })
+            "studie" -> { go(Screen.Homelab); openStudy44() }
             "search" -> go(Screen.Search)
             // Prompt 31: varslene fra Glimt (svar i søkefeltet / Chat), System-siden og prøveperioder.
             "glimt" -> { openedFromNotify31(); go(Screen.Homelab) }
@@ -2078,6 +2092,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var domSection by mutableStateOf("oversikt")
     /** Første gang etter innlogging på en ny installasjon: design, bakgrunn og tilganger (3 steg). */
     var onboardNeeded by mutableStateOf(false)
+    /** Q35: en dyp lenke er åpnet i denne økten, så onboardingen legger seg ikke over siden. Den vises neste gang appen åpnes. */
+    var onboardDeferred by mutableStateOf(false)
     /** Rekkefølgen på kortene i Sporing (lagres per bruker som trkOrder), og redigeringsmodus (langt trykk). */
     var trkOrder by mutableStateOf(TRK_CARDS.map { it.first })
     var trkEdit by mutableStateOf(false)

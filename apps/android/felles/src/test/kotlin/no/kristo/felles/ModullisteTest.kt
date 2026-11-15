@@ -1,5 +1,6 @@
 package no.kristo.felles
 
+import no.kristo.felles.moduler.Dyplenker
 import no.kristo.felles.moduler.Fanenokler
 import no.kristo.felles.moduler.Modulliste
 import no.kristo.felles.moduler.Tilkoblinger
@@ -123,5 +124,49 @@ class ModullisteTest {
         assertEquals("Generelt", t.gruppe("finnes-ikke"))
         assertEquals("Media", t.gruppe("sonarr", "Annet"))
         assertEquals("Økonomi", t.gruppe("sonarr", "Økonomi"))
+    }
+
+    /** Dyplenker: nye modul-id-er og gamle ruter går til appens sider; vertene appen kjenner fra før, er uendret. */
+    @Test fun dyplenker() {
+        val l = kilde.forPlattform("android")
+        fun m(v: String, s: String = ""): String = Dyplenker.mal(l, v, s).let { if (it.sti.isEmpty()) it.vert else it.vert + "/" + it.sti }
+        assertEquals("homelab", m("oversikt"))
+        assertEquals("homelab", m("dash"))
+        assertEquals("huske", m("gjoremal"))
+        assertEquals("huske", m("huskeliste"))
+        assertEquals("huske/new", m("gjoremal", "/new"))
+        assertEquals("avganger", m("reise"))
+        assertEquals("kart", m("reise", "kart"))
+        assertEquals("kart/sone-1", m("kart", "/sone-1"))
+        assertEquals("familiekalender", m("kalender", "familie"))
+        assertEquals("bursdager", m("kalender", "bursdager"))
+        assertEquals("kalender/2026-11-20", m("kalender", "2026-11-20"))
+        assertEquals("familie/steder", m("familie", "steder"))
+        assertEquals("finance", m("okonomi"))
+        assertEquals("finance", m("finans"))
+        assertEquals("media/snart", m("media", "kommer"))
+        assertEquals("media/qbit", m("media", "qbit"))
+        assertEquals("kveld/lyd", m("mediakveld", "lyd"))
+        assertEquals("nyheter", m("nyhetsleser"))
+        assertEquals("tracking", m("sporing"))
+        assertEquals("domains", m("domener"))
+        assertEquals("faste/abonnementer", m("abonnementer"))
+        assertEquals("faste/planlagte", m("faste-betalinger", "planlagte"))
+        assertEquals("list", m("transaksjoner"))
+        // Vertene appen kjente fra før, er uendret (widgets, varsler og snarveier).
+        for (v in listOf("homelab", "tracking", "budget", "finance", "home", "list", "review", "subs", "stocks", "domains", "mat", "news",
+            "rss", "huske", "tasks", "bursdager", "kalender", "avganger", "familie", "kart", "skjold", "hjemlys", "finn", "boliger",
+            "search", "glimt", "chat", "nordlys", "system", "brief", "media", "widgets", "bibel", "ai", "scan", "settings", "plan", "kveld", "sok")) {
+            assertEquals("$v skal være uendret", v, Dyplenker.mal(l, v, "").vert)
+        }
+        assertEquals("avganger", Dyplenker.mal(l, "ruter", "").vert)
+        // Stabilt: målet gir seg selv igjen.
+        for (v in listOf("oversikt", "gjoremal", "reise", "okonomi", "sporing", "domener", "abonnementer")) {
+            val a = Dyplenker.mal(l, v, "")
+            assertEquals(a, Dyplenker.mal(l, a.vert, a.sti))
+        }
+        assertEquals("finanshub://gjoremal/new", Dyplenker.fraHomelab("homelab://gjoremal/new"))
+        assertNull(Dyplenker.fraHomelab("homelab://login?c=1"))
+        assertNull(Dyplenker.fraHomelab("finanshub://huske"))
     }
 }
