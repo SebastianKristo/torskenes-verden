@@ -1587,17 +1587,41 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** Eksporterer alle transaksjoner som CSV (semikolon, UTF-8 med BOM) og åpner delingsarket. */
+    /**
+     * B3 (Fase 5): CSV-en lages av serveren (GET /finans/api/transactions.csv, samme kolonner som web), og hentes og skrives
+     * utenfor Main. Før ble opptil 100 000 transaksjoner hentet som JSON, tolket og satt sammen på Main (mulig ANR).
+     * Eldre server uten endepunktet (404): samme fil bygges lokalt som før, men på en bakgrunnstråd.
+     */
     fun exportCsv() = launch {
         busy = true
         try {
-            val all = parseTxList(api.get("/transactions?limit=100000"))
-            val esc = { s: String -> if (s.contains(';') || s.contains('"') || s.contains('\n')) "\"" + s.replace("\"", "\"\"") + "\"" else s }
-            val csv = buildString {
-                append('﻿').append("Dato;Beskrivelse;Beløp;Kategori;Konto;Notat\r\n")
-                all.forEach { t -> append(listOf(t.date, esc(t.description), t.amount.toString().replace('.', ','), esc(t.category), esc(t.account), esc(t.note)).joinToString(";")).append("\r\n") }
+            val data: ByteArray = try {
+                api.bytes(Api.FINANS + "/transactions.csv")
+            } catch (e: ApiException) {
+                if (e.status != 404) throw e
+                val body = api.get("/transactions?limit=100000")
+                withContext(Dispatchers.Default) { localCsv(parseTxList(body)) }
             }
-            shareFile("finanshub-transaksjoner.csv", "text/csv", csv.toByteArray())
+            shareFileIo("finanshub-transaksjoner.csv", "text/csv", data)
         } finally { busy = false }
+    }
+
+    /** Reserve for eldre servere: samme format som før (BOM, semikolon, CRLF). Kjøres på Dispatchers.Default. */
+    private fun localCsv(all: List<Tx>): ByteArray {
+        val esc = { s: String -> if (s.contains(';') || s.contains('"') || s.contains('\n')) "\"" + s.replace("\"", "\"\"") + "\"" else s }
+        return buildString {
+            append('﻿').append("Dato;Beskrivelse;Beløp;Kategori;Konto;Notat\r\n")
+            all.forEach { t -> append(listOf(t.date, esc(t.description), t.amount.toString().replace('.', ','), esc(t.category), esc(t.account), esc(t.note)).joinToString(";")).append("\r\n") }
+        }.toByteArray()
+    }
+
+    /** Som [shareFile], men fila skrives på en IO-tråd (store filer). */
+    private suspend fun shareFileIo(name: String, mime: String, data: ByteArray) {
+        val ctx = getApplication<Application>()
+        val f = withContext(Dispatchers.IO) { File(File(ctx.cacheDir, "scans").apply { mkdirs() }, name).apply { writeBytes(data) } }
+        val uri = FileProvider.getUriForFile(ctx, "${ctx.packageName}.files", f)
+        val send = Intent(Intent.ACTION_SEND).setType(mime).putExtra(Intent.EXTRA_STREAM, uri).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        ctx.startActivity(Intent.createChooser(send, "Del").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
     }
 
     /* ---------- Prompt 13: mobildesign Papir, fotovindu, nyhetsleser, media og Mat ---------- */

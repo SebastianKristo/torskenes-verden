@@ -55,3 +55,27 @@ test('B4: kryptert lagring åpnes bare via SikkerLagring, som gjenoppretter i st
   assert.match(raw(join(WEAR, 'WearApi51.kt')), /SikkerLagring\.prefs\(ctx, "wear51", gammelKlartekst = "wear51_plain"\)/);
   assert.ok(existsSync(join(AND, 'felles-android/src/main/AndroidManifest.xml')));
 });
+
+test('S2: brukerinstallerte CA-er bare for lokale navn; B1: App Links også for os.smarthjemeksperten.no', () => {
+  for (const m of ['app', 'kalender', 'wear']) {
+    const xml = raw(join(AND, m, 'src/main/res/xml/network_security_config.xml')).replace(/<!--[\s\S]*?-->/g, '');
+    const start = xml.indexOf('<base-config');
+    const slutt = xml.indexOf('</base-config>') > 0 ? xml.indexOf('</base-config>') : xml.indexOf('/>', start);
+    assert.ok(!/src="user"/.test(xml.slice(start, slutt)), `${m}: ikke for all trafikk`);
+    for (const d of [...xml.matchAll(/<domain[^>]*>([^<]*)<\/domain>/g)].map((x) => x[1].trim())) assert.ok(['local', 'lan', 'home.arpa', 'internal'].includes(d), `${m}: ${d}`);
+  }
+  const man = raw(join(AND, 'app/src/main/AndroidManifest.xml'));
+  for (const p of ['/l/', '/join/', '/app-auth']) {
+    for (const h of ['home.kristo.no', 'os.smarthjemeksperten.no']) assert.ok(man.includes(`android:host="${h}" android:pathPrefix="${p}"`), `${h}${p}`);
+  }
+});
+
+test('B3: CSV-eksporten hentes fra serveren og bygges aldri på Main', () => {
+  const vm = strip(raw(join(APP, 'AppViewModel.kt')));
+  const f = vm.slice(vm.indexOf('fun exportCsv()'), vm.indexOf('private fun localCsv('));
+  assert.match(f, /api\.bytes\(Api\.FINANS \+ "\/transactions\.csv"\)/);
+  assert.match(f, /if \(e\.status != 404\) throw e/, 'bare eldre servere bruker reserven');
+  assert.match(f, /withContext\(Dispatchers\.Default\) \{ localCsv\(parseTxList\(body\)\) \}/);
+  assert.match(f, /shareFileIo\(/);
+  assert.match(vm, /private suspend fun shareFileIo\([^)]*\) \{[\s\S]*?withContext\(Dispatchers\.IO\) \{ File\(/);
+});

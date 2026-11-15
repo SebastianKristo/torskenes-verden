@@ -96,9 +96,14 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
+                <!-- B1 (Fase 5): både den gamle verten og standardserveren os.smarthjemeksperten.no. QR- og invitasjonslenkene bygges med
+                     vertsnavnet til serveren (server/auth/qr-login.js), så begge må åpne appen. Krever /.well-known/assetlinks.json på
+                     hver vert (ANDROID_CERT_SHA256 på serveren); uten den åpnes lenken i nettleseren som før. -->
                 <data android:scheme="https" android:host="home.kristo.no" android:pathPrefix="/l/" />
+                <data android:scheme="https" android:host="os.smarthjemeksperten.no" android:pathPrefix="/l/" />
                 <!-- Prompt 51 (ANDFEAT51): https://<vert>/join/<id>.<kode> (invitasjon). -->
                 <data android:scheme="https" android:host="home.kristo.no" android:pathPrefix="/join/" />
+                <data android:scheme="https" android:host="os.smarthjemeksperten.no" android:pathPrefix="/join/" />
             </intent-filter>
             <!-- Prompt 41: Kalender ber Homelab godkjenne innloggingen (PKCE). Egen URL-skjema virker uten signering/App Links;
                  https://home.kristo.no/app-auth brukes når assetlinks.json (ANDROID_CERT_SHA256) er satt på serveren. -->
@@ -113,6 +118,7 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="https" android:host="home.kristo.no" android:pathPrefix="/app-auth" />
+                <data android:scheme="https" android:host="os.smarthjemeksperten.no" android:pathPrefix="/app-auth" />
             </intent-filter>
             <!-- Prompt 43: magnet:-lenker åpner Media → qBittorrent → «Legg til magnet-lenke» ferdig utfylt. -->
             <intent-filter>

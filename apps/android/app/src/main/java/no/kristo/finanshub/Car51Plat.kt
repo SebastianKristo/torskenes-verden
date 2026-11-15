@@ -39,6 +39,8 @@ import java.net.URLEncoder
 
 class Car51Service : CarAppService() {
     override fun createHostValidator(): HostValidator {
+        // B6 (Fase 5, sjekket): FLAG_DEBUGGABLE settes av byggtypen (debug), ikke av signeringen. APK-ene i en GitHub Release
+        // bygges med assembleRelease og har den strenge listen; bare debug-APK-en fra CI-jobben «Mobilapper» godtar alle verter.
         val debug = (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
         return if (debug) HostValidator.ALLOW_ALL_HOSTS_VALIDATOR
         else HostValidator.Builder(applicationContext).addAllowedHosts(androidx.car.app.R.array.hosts_allowlist_sample).build()

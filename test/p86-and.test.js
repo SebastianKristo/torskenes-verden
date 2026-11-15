@@ -195,7 +195,12 @@ test('B: brukeren får teksten, og konfigurasjonen har ingen hardkodet adresse',
   for (const m of ['app', 'kalender', 'wear']) {
     const xml = raw(join(AND, m, 'src/main/res/xml/network_security_config.xml')).replace(/<!--[\s\S]*?-->/g, '');
     assert.match(xml, /<base-config cleartextTrafficPermitted="true"/, `${m}: klartekst tillates (håndheves i koden)`);
-    assert.ok(!/<domain[\s>]/.test(xml) && !/\d+\.\d+\.\d+\.\d+/.test(xml), `${m}: ingen hardkodet adresse`);
+    assert.ok(!/\d+\.\d+\.\d+\.\d+/.test(xml), `${m}: ingen hardkodet adresse`);
+    // S2 (Fase 5): domain-config finnes bare for de lokale navnene (der brukerinstallerte CA-er godtas), aldri for en vert.
+    const domener = [...xml.matchAll(/<domain[^>]*>([^<]*)<\/domain>/g)].map((x) => x[1].trim());
+    for (const d of domener) assert.ok(['local', 'lan', 'home.arpa', 'internal'].includes(d), `${m}: domain-config for ${d}`);
+    const base = xml.slice(xml.indexOf('<base-config'), xml.indexOf('</base-config>') + 1);
+    assert.ok(!/src="user"/.test(base), `${m}: brukerinstallerte CA-er gjelder ikke all trafikk`);
     assert.match(raw(join(AND, m, 'src/main/AndroidManifest.xml')), /android:networkSecurityConfig="@xml\/network_security_config"/, `${m}: manifestet peker på fila`);
     assert.ok(!/usesCleartextTraffic/.test(raw(join(AND, m, 'src/main/AndroidManifest.xml'))), m);
   }

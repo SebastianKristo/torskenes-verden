@@ -1,15 +1,28 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Prompt 86 (AND86): klartekst-HTTP er tillatt her, men håndheves i koden (LokaltNett.kt): http:// godtas bare til lokalt nett
-  (loopback, private IPv4-områder, link-local, 100.64/10, IPv6 ULA, navn uten punktum og .local/.lan/.home.arpa/.internal).
-  Android kan ikke uttrykke IP-områder i denne fila, og en fast adresse virket bare for én husstand. Alt annet må gå over https.
-  Brukerinstallerte CA-er tillates fortsatt, slik at et selvsignert sertifikat for homelab kan installeres på telefonen.
+  Klartekst-HTTP er tillatt her, men håndheves i koden (:felles, LokaltNett.kt og Klartekstvakt.kt): http:// godtas bare til lokalt
+  nett (loopback, private IPv4-områder, link-local, 100.64/10, IPv6 ULA, navn uten punktum og .local/.lan/.home.arpa/.internal),
+  og et lokalt navn må peke til en lokal adresse. Android kan ikke uttrykke IP-områder i denne fila. Alt annet må gå over https.
+
+  S2 (Fase 5): brukerinstallerte CA-er godtas bare for lokale navn (.local, .lan, .home.arpa, .internal), slik at et selvsignert
+  sertifikat for homelab hjemme fortsatt virker. For alle andre verter (også os.smarthjemeksperten.no og home.kristo.no, som har
+  offentlige sertifikater) gjelder bare systemets CA-er, så en CA installert av MDM eller en angriper ikke kan lese trafikken.
+  https mot en lokal IP-adresse med selvsignert sertifikat virker ikke lenger; bruk http:// på lokalt nett eller et .lan-navn.
 -->
 <network-security-config>
     <base-config cleartextTrafficPermitted="true">
         <trust-anchors>
             <certificates src="system" />
-            <certificates src="user" />
         </trust-anchors>
     </base-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">local</domain>
+        <domain includeSubdomains="true">lan</domain>
+        <domain includeSubdomains="true">home.arpa</domain>
+        <domain includeSubdomains="true">internal</domain>
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="user" />
+        </trust-anchors>
+    </domain-config>
 </network-security-config>
