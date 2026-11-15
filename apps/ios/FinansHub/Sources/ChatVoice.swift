@@ -37,9 +37,9 @@ final class ChatVoice27 {
 
     private func start(onText: @escaping (String) -> Void, onError: @escaping (String) -> Void) async {
         let auth: SFSpeechRecognizerAuthorizationStatus = await ChatVoice27.speechAuth()
-        guard auth == .authorized else { onError("Gi FinansHub tilgang til talegjenkjenning i Innstillinger"); return }
+        guard auth == .authorized else { onError("Gi Homelab tilgang til talegjenkjenning i Innstillinger"); return }
         let mic: Bool = await AVAudioApplication.requestRecordPermission()
-        guard mic else { onError("Gi FinansHub tilgang til mikrofonen i Innstillinger"); return }
+        guard mic else { onError("Gi Homelab tilgang til mikrofonen i Innstillinger"); return }
         guard let rec = SFSpeechRecognizer(locale: Locale(identifier: "nb-NO")), rec.isAvailable else {
             onError("Talegjenkjenning på norsk er ikke tilgjengelig nå")
             return

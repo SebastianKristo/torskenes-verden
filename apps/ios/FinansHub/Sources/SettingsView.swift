@@ -4,17 +4,17 @@ import UniformTypeIdentifiers
 
 private let groups: [(String, [(String, String, String)])] = [
     ("Konto", [("accounts", "Kontoer og brukere", "person.2"), ("security", "Sikkerhet", "lock"), ("tokens", "API-tokens", "key")]),
-    ("Finans", [("ai", "AI og tolkning", "sparkles"), ("cats", "Kategorier og budsjett", "tag"), ("rules", "Regler", "list.bullet.rectangle"),
+    ("Økonomi", [("ai", "AI og tolkning", "sparkles"), ("cats", "Kategorier og budsjett", "tag"), ("rules", "Regler", "list.bullet.rectangle"),
                 ("bank", "Bankimport", "building.columns"), ("stocks", "Aksjer · Trading 212", "chart.line.uptrend.xyaxis"), ("backup", "Backup og data", "externaldrive")]),
     ("App", [("look", "Utseende", "paintpalette"), ("scan", "Skanning og AI", "doc.viewfinder"), ("notify", "Varsler", "bell"), ("haptics", "Haptikk", "hand.tap"), ("widgets", "Widgets", "square.grid.2x2")]),
     // Prompt 67: Glimt-sidene som på web (GlimtSettingsPages.swift, GlimtLearning.swift).
     ("Glimt og AI", [("g67husker", "Glimt husker", "brain"), ("g67ent", "Entitetsregister", "person.text.rectangle"), ("g67laerer", "Glimt lærer", "graduationcap"),
                      ("g67faste", "Faste oppgaver", "clock.arrow.circlepath"), ("g67kvalitet", "Kvalitet", "checkmark.seal")]),
-    ("System", [("server", "Server og synk", "server.rack"), ("data", "Data og lagring", "internaldrive"), ("about", "Om FinansHub", "info.circle")]),
+    ("System", [("server", "Server og synk", "server.rack"), ("data", "Data og lagring", "internaldrive"), ("about", "Om Homelab", "info.circle")]),
 ]
 
 private let allScopes = [("receipts:write", "Last opp kvitteringer"), ("read:transactions", "Les transaksjoner"), ("read:summary", "Les sammendrag"),
-                         ("read:budget", "Les budsjett"), ("write:transactions", "Endre transaksjoner"), ("finance:read", "Les alt i FinansHub")]
+                         ("read:budget", "Les budsjett"), ("write:transactions", "Endre transaksjoner"), ("finance:read", "Les alt i Homelab")]
 
 /// Fase 4: bufret i stedet for en ny DateFormatter per rad.
 private let stampFormatter: DateFormatter = {
@@ -424,7 +424,7 @@ private struct LookPage: View {
                         Choice(label: o.1, on: store.startPage == o.0) { store.startPage = o.0 }
                     }
                 }
-                Note(text: store.financeStart ? "Appen åpner i Finans. Hjem-knappen går til Finans, og Homelab og de andre modulene ligger bak profilbildet." : "Appen åpner på Homelab.")
+                Note(text: store.financeStart ? "Appen åpner i Økonomi. Oversikt-knappen går til Økonomi, og de andre modulene ligger bak profilbildet." : "Appen åpner på Homelab.")
                 // Tilbake til startsiden går alltid med pila øverst til venstre («Knapp i linjen» er fjernet).
             }
             Card { Switch(label: "Skjul beløp til jeg trykker", sub: "Beløp vises som prikker til du trykker på saldoen eller øyet", on: $s.hideAmounts) }
@@ -615,7 +615,7 @@ private struct DataPage: View {
                     Button { Task { csv = await store.exportCsv() } } label: { HStack { Text("Eksporter som CSV"); Spacer(); Image(systemName: "tablecells") }.padding(16).contentShape(Rectangle()) }.buttonStyle(.plain)
                 }
             }
-            Note(text: "Full backup og Excel-database lages i FinansHub på PC under Innstillinger → Backup og data.")
+            Note(text: "Full backup og Excel-database lages i Økonomi på web under Innstillinger → Backup og data.")
         }
     }
 }
@@ -626,7 +626,7 @@ private struct AboutPage: View {
         let v = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "–"
         VStack(spacing: 12) {
             Card {
-                Row(label: "Appversjon", value: "FinansHub \(v)")
+                Row(label: "Appversjon", value: "Homelab \(v)")
                 Sep()
                 Row(label: "Serverversjon", value: store.me?.version ?? "–")
                 Sep()
@@ -698,7 +698,7 @@ private struct CategoriesPage: View {
                 }
             }
             if cats.isEmpty { Note(text: "Ingen kategorier ennå.") }
-            Note(text: "Nye kategorier, farger og budsjettbeløp endres i FinansHub på PC under Innstillinger → Kategorier.")
+            Note(text: "Nye kategorier, farger og budsjettbeløp endres i Økonomi på web under Innstillinger → Kategorier.")
         }
     }
 }
@@ -717,7 +717,7 @@ private struct RulesPage: View {
                     }
                 }
             }
-            Note(text: "Regler lages og endres i FinansHub på PC under Innstillinger → Regler, eller når du endrer kategori på en transaksjon.")
+            Note(text: "Regler lages og endres i Økonomi på web under Innstillinger → Regler, eller når du endrer kategori på en transaksjon.")
         }
     }
 }
@@ -738,7 +738,7 @@ private struct StocksPrefsPage: View {
                 Sep()
                 link("Synk nå") { store.syncStocks() }
             }
-            Note(text: "API-nøkkel og secret fra Trading 212 (bare lesetilgang) legges inn i FinansHub på PC og lagres bare på serveren.")
+            Note(text: "API-nøkkel og secret fra Trading 212 (bare lesetilgang) legges inn i Økonomi på web og lagres bare på serveren.")
         }
     }
 }
@@ -756,9 +756,9 @@ private struct BackupPage: View {
                     Button { Task { csv = await store.exportCsv() } } label: { HStack { Text("Eksporter transaksjoner som CSV"); Spacer(); Image(systemName: "tablecells") }.padding(16).contentShape(Rectangle()) }.buttonStyle(.plain)
                 }
                 Sep()
-                link("Backup i FinansHub på PC") { if let u = URL(string: store.base + "/finans/?desktop=1") { openURL(u) } }
+                link("Backup i Økonomi på web") { if let u = URL(string: store.base + "/finans/?desktop=1") { openURL(u) } }
             }
-            Note(text: "Full backup, gjenoppretting og Excel-database lages i FinansHub på PC under Innstillinger → Backup og data.")
+            Note(text: "Full backup, gjenoppretting og Excel-database lages i Økonomi på web under Innstillinger → Backup og data.")
         }
     }
 }

@@ -263,7 +263,7 @@ final class W51Store {
         var list: [String] = []
         if let r = await W51Phone.shared.ask(["kind": "server51"]) {
             if (r["ok"] as? Bool) != true {
-                fail((r["error"] as? String) ?? "Logg inn i FinansHub på iPhone først.")
+                fail((r["error"] as? String) ?? "Logg inn i Homelab på iPhone først.")
                 return
             }
             for k in ["server", "external", "local"] {
@@ -271,7 +271,7 @@ final class W51Store {
             }
         }
         if list.isEmpty {
-            fail("Fant ikke iPhone. Åpne FinansHub på iPhone (samme Apple-konto, Bluetooth på) og prøv igjen.")
+            fail("Fant ikke iPhone. Åpne Homelab på iPhone (samme Apple-konto, Bluetooth på) og prøv igjen.")
             return
         }
         info = "Lager innloggingskode …"
@@ -284,11 +284,11 @@ final class W51Store {
         // Samme server videre (økten finnes bare der).
         let base: String = c.base
         guard let r = await W51Phone.shared.ask(["kind": "pair51", "code": sid + "." + code]), (r["ok"] as? Bool) == true else {
-            fail("iPhone svarte ikke. Åpne FinansHub på iPhone og prøv igjen.")
+            fail("iPhone svarte ikke. Åpne Homelab på iPhone og prøv igjen.")
             return
         }
         phase = "waiting"
-        info = (r["state"] as? String) == "open-phone" ? "Åpne FinansHub på iPhone og godkjenn med Face ID." : "Godkjenn på iPhone med Face ID."
+        info = (r["state"] as? String) == "open-phone" ? "Åpne Homelab på iPhone og godkjenn med Face ID." : "Godkjenn på iPhone med Face ID."
         await poll(sid: sid, key: key, base: base, all: list)
     }
 

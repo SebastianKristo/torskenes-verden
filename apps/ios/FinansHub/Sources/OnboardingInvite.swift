@@ -173,7 +173,7 @@ final class Onboard51 {
         defer { busy = false }
         let share: [String: Any] = ["location": shareLocation, "health": shareHealth && shareLocation, "calendar": shareCalendar]
         var b: [String: Any] = ["id": l.id, "code": l.code, "username": u, "password": password, "share": share,
-                                "client": "app", "platform": "ios", "device": "FinansHub · " + UIDevice.current.name]
+                                "client": "app", "platform": "ios", "device": "Homelab · " + UIDevice.current.name]
         let n: String = name.trimmingCharacters(in: .whitespacesAndNewlines)
         if !n.isEmpty { b["name"] = n }
         do {
@@ -274,7 +274,7 @@ struct Onboard51Scan: View {
                 Spacer()
                 Text("Skann invitasjonen").font(PF.serif(26, medium: true)).foregroundStyle(Color.white)
                 Qr38Frame(busy: m.busy)
-                Text(m.denied ? "Kameraet er avslått. Slå det på i Innstillinger → FinansHub, eller lim inn lenken." : "Hold mobilen over QR-koden fra den som inviterte deg")
+                Text(m.denied ? "Kameraet er avslått. Slå det på i Innstillinger → Homelab, eller lim inn lenken." : "Hold mobilen over QR-koden fra den som inviterte deg")
                     .font(PF.ui(13.5, .semibold)).foregroundStyle(Color.white)
                     .multilineTextAlignment(.center).padding(.horizontal, 30)
                     .fixedSize(horizontal: false, vertical: true)
@@ -375,7 +375,7 @@ struct Onboard51Form: View {
             }
             .disabled(!m.shareLocation)
             Toggle(isOn: Binding<Bool>(get: { m.shareCalendar }, set: { m.shareCalendar = $0 })) {
-                label("Kalender", "Familiekalenderen og «hvem kjører?»")
+                label("Kalender", "Familie i Kalender og «hvem kjører?»")
             }
         }
         .tint(p.pos)
@@ -520,14 +520,14 @@ struct Invite51Sheet: View {
         }
         .disabled(!m.location)
         Toggle(isOn: Binding<Bool>(get: { m.calendar }, set: { m.calendar = $0 })) {
-            Text("Familiekalenderen").font(PF.ui(14, .semibold)).foregroundStyle(p.ink)
+            Text("Familie i Kalender").font(PF.ui(14, .semibold)).foregroundStyle(p.ink)
         }
         Kveld51Menu(label: "Gyldig i \(m.hours) timer", options: [("24", "24 timer"), ("48", "48 timer"), ("72", "3 døgn"), ("168", "1 uke")]) { (v: String) in
             m.hours = Int(v) ?? 48
         }
         if !m.error.isEmpty { F51Note(text: m.error, red: true) }
         F51Btn(title: "Lag invitasjon", kind: .ink, icon: "qrcode", busy: m.busy) { Task { await m.create(store) } }
-        F51Note(text: "Den nye personen skanner QR-koden med FinansHub («Har du fått en invitasjon?») eller åpner lenken. Koden kan brukes én gang og er aldri et token.")
+        F51Note(text: "Den nye personen skanner QR-koden med Homelab («Har du fått en invitasjon?») eller åpner lenken. Koden kan brukes én gang og er aldri et token.")
     }
 
     @ViewBuilder private var result: some View {

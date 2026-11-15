@@ -187,7 +187,7 @@ struct API {
         let data: Data
         do { data = try await api.call("POST", "/login", json: body) } catch let e as APIError where !e.needsTotp && (e.status == 404 || (e.status == 401 && e.message.contains("Ikke innlogget"))) {
             do { data = try await api.call("POST", "/auth/token", json: body) } catch let e2 as APIError where e2.status == 404 {
-                throw APIError(message: "Fant ikke FinansHub på \(base) (404). Sjekk adressen, eller oppdater homelab-serveren.", status: 404)
+                throw APIError(message: "Fant ikke Homelab-serveren på \(base) (404). Sjekk adressen, eller oppdater serveren.", status: 404)
             }
         }
         guard let obj = try JSONSerialization.jsonObject(with: data) as? [String: Any], let t = obj["token"] as? String else {
@@ -196,7 +196,7 @@ struct API {
         let u = obj["user"] as? [String: Any]
         let uname = (u?["username"] as? String) ?? user
         let name = (u?["name"] as? String) ?? (obj["user"] as? String) ?? uname
-        return LoginResult(token: t, username: uname, name: name.isEmpty ? "FinansHub" : name, role: (u?["role"] as? String) ?? "admin")
+        return LoginResult(token: t, username: uname, name: name.isEmpty ? "Homelab" : name, role: (u?["role"] as? String) ?? "admin")
     }
 
     /// Fase 4: regelen ligger i SharedNet/ServerAddress.swift (fasit shared/testvektorer/serveradresse.json, Q39).

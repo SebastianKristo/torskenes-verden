@@ -593,7 +593,7 @@ struct PaperHomeBoligCard: View {
                         if let u = f.upcoming?.first { stat("Neste", "\(u.title ?? "") · \(kr(u.amount ?? 0))") }
                     }
                 } else {
-                    Text("Ingen boliger ennå. Legg til en bolig i Finans → Boliger.").font(PF.ui(13.5)).foregroundStyle(p.mut).fixedSize(horizontal: false, vertical: true)
+                    Text("Ingen boliger ennå. Legg til en bolig i Økonomi → Boliger.").font(PF.ui(13.5)).foregroundStyle(p.mut).fixedSize(horizontal: false, vertical: true)
                 }
             }
             .padding(.horizontal, 16).padding(.vertical, 14)

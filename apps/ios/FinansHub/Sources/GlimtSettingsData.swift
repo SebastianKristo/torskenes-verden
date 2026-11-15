@@ -28,7 +28,7 @@ enum G67Nav {
         case "glimt:laerer": return ("Glimt lærer", "Oppskrifter fra vellykkede kjøringer og rettelser")
         case "glimt:faste": return ("Faste oppgaver", "Planlagte oppgaver og varsler du har bedt Glimt om")
         case "glimt:kvalitet": return ("Kvalitet", "Ukerapport og nattlige eval-kjøringer")
-        case "finans67": return ("Finans", "AI, kategorier, regler, bank, aksjer og abonnementer")
+        case "finans67": return ("Økonomi", "AI, kategorier, regler, import, aksjer og faste betalinger")
         default: return nil
         }
     }

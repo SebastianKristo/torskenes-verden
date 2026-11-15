@@ -428,7 +428,7 @@ struct News40ContentSheet: View {
                     }
                 }
                 if m.sources.isEmpty {
-                    Text("Alle kildene i Nyhetsleseren brukes.").font(PF.ui(13)).foregroundStyle(p.mut)
+                    Text("Alle kildene i Nyheter brukes.").font(PF.ui(13)).foregroundStyle(p.mut)
                 }
                 Text("LENGDE").font(PF.mono(10.5)).tracking(1.2).foregroundStyle(p.mut)
                 Picker("Lengde", selection: Binding<String>(get: { m.length }, set: { (v: String) in m.setLength(v, store) })) {

@@ -254,7 +254,7 @@ struct Smb30Save: View {
             Smb30TestBox()
             Smb30Label(text: "Bruk nettverksdisken til")
             Smb30List {
-                Smb30Check(title: "FinansHub-backup", sub: "Hele databasen, kvitteringer og innstillinger", on: m.useFinans) { m.useFinans.toggle() }
+                Smb30Check(title: "Økonomi-backup", sub: "Hele databasen, kvitteringer og innstillinger", on: m.useFinans) { m.useFinans.toggle() }
                 Smb30Check(title: "Systembackup", sub: "Kopi av hver backup fra Innstillinger → Backup", on: m.useSystem) { m.useSystem.toggle() }
             }
             if m.useSystem && !m.encrypted { Smb30Warn() }

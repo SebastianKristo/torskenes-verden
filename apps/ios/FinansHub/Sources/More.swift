@@ -159,7 +159,7 @@ struct MoreView: View {
         ScrollView {
             VStack(spacing: 12) {
                 HStack { Text("Mer").font(.system(size: 34, weight: .bold)); Spacer(); Avatar() }.padding(.top, 6)
-                SubLine(text: "Alt fra FinansHub på nettsiden")
+                SubLine(text: "Alt fra Økonomi på nettsiden")
                 LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
                     ForEach(tiles) { t in
                         Button { if let m = t.module { store.openSub(m) } else { store.go(t.tab ?? .search) } } label: { tile(t) }

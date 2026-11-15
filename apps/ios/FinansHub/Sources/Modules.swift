@@ -42,7 +42,7 @@ struct FoldersView: View {
                     Text("Boliger, hytter og felles utgifter. Brukere ser bare mapper de er medlem av.").font(.footnote).foregroundStyle(Color.skinFg.opacity(0.6)).frame(maxWidth: .infinity, alignment: .leading)
                     if let e = store.moduleError { Empty(text: e) }
                     if let list = store.folders {
-                        if list.isEmpty { Empty(text: "Ingen boliger ennå. Opprett en i FinansHub på PC.") }
+                        if list.isEmpty { Empty(text: "Ingen boliger ennå. Opprett en i Økonomi på web.") }
                         ForEach(list) { f in
                             Button { store.openFolder(f.id) } label: {
                                 HStack(spacing: 14) {

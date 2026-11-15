@@ -275,7 +275,7 @@ struct BudgetView: View {
                     }
                     .padding(.vertical, 14).glass(24)
                 }
-                if rows.isEmpty { Empty(text: "Ingen budsjett satt. Sett opp i FinansHub på nettet.") }
+                if rows.isEmpty { Empty(text: "Ingen budsjett satt. Sett opp i Økonomi på web.") }
                 ForEach(rows) { b in
                     let over = b.used > b.budget
                     VStack(alignment: .leading, spacing: 10) {

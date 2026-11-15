@@ -169,7 +169,7 @@ private struct NotLinked: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             Image(systemName: "person.crop.circle.badge.exclamationmark").font(.system(size: 22)).foregroundStyle(accentLight)
-            Text(WidgetShared.linked ? "Åpne FinansHub-appen" : "Widgeten når ikke appen").font(.system(size: 13, weight: .semibold)).foregroundStyle(.white)
+            Text(WidgetShared.linked ? "Åpne Homelab-appen" : "Widgeten når ikke appen").font(.system(size: 13, weight: .semibold)).foregroundStyle(.white)
             Text(WidgetShared.linked ? "Logg inn eller åpne appen én gang, så henter widgeten data." : "App Group mangler i signeringen. Se Innstillinger → Widgets i appen.").font(.system(size: 11)).foregroundStyle(.white.opacity(0.6))
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -392,7 +392,7 @@ private struct BudgetView: View {
 struct FinanceWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: "fh.finance", provider: WProvider()) { e in FinanceView(entry: e) }
-            .configurationDisplayName("Finans")
+            .configurationDisplayName("Økonomi")
             .description("Saldo, siste transaksjoner og kvitteringer til gjennomgang.")
             .supportedFamilies([.systemMedium, .systemLarge])
     }
@@ -407,7 +407,7 @@ private struct FinanceView: View {
         WFrame(entry: entry, page: "home") {
             VStack(alignment: .leading, spacing: family == .systemLarge ? 12 : 6) {
                 HStack(alignment: .firstTextBaseline) {
-                    Text("Finans").font(.system(size: 15, weight: .bold))
+                    Text("Økonomi").font(.system(size: 15, weight: .bold))
                     Spacer()
                     Text(shortDate(ISO8601DateFormatter().string(from: entry.date))).font(.system(size: 12)).foregroundStyle(.white.opacity(0.7))
                 }

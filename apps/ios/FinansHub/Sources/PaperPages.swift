@@ -196,7 +196,7 @@ struct PaperHome: View {
         let left = store.summary?.left
         let up = store.domainToday
         return HStack(spacing: 8) {
-            mini("Finans", left.map { n0($0) } ?? "–", review > 0 ? "\(review) kvitteringer" : "igjen i mnd", review > 0 ? p.lab : p.mut, 20) { store.paperGo("finans") }
+            mini("Økonomi", left.map { n0($0) } ?? "–", review > 0 ? "\(review) kvitteringer" : "igjen i mnd", review > 0 ? p.lab : p.mut, 20) { store.paperGo("finans") }
             mini("Mat", store.todayMeal ?? "Ingen rett", "", p.mut, 16) { store.paperGo("mat") }
             mini("Domener", up.map { n0($0.visitors) } ?? "–", up == nil ? "" : "besøk i dag", p.pos, 20) { store.paperOpenDomains(from: "hjem") }
         }
@@ -452,7 +452,7 @@ struct PaperFinance: View {
 
     private var pages: some View {
         VStack(alignment: .leading, spacing: 0) {
-            PSection(title: "Alt i Finans")
+            PSection(title: "Alt i Økonomi")
             PaperLinkList(rows: [
                 PaperLinkRow(name: "Transaksjoner", sub: "Søk, filtrer og rediger") { store.paperGo("fliste") },
                 PaperLinkRow(name: "Budsjett", sub: "Kategorier og forbruk") { store.paperOpenFin(.budget) },

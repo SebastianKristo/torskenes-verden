@@ -37,7 +37,7 @@ struct PaperBoliger: View {
             PCard {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("Ingen boliger ennå").font(PF.serif(20, medium: true)).foregroundStyle(p.ink)
-                    Text("Lag en bolig i FinansHub på nett under Innstillinger → Boliger. Da kan du laste opp kvitteringer rett hit.")
+                    Text("Lag en bolig i Økonomi på web under Innstillinger → Boliger. Da kan du laste opp kvitteringer rett hit.")
                         .font(PF.ui(13)).foregroundStyle(p.mut).fixedSize(horizontal: false, vertical: true)
                 }
             }

@@ -118,7 +118,7 @@ enum WidgetShared {
 /// «Skann → Kamera» fra widgeten: åpner appen rett i kameraet.
 struct ScanCameraIntent: AppIntent {
     static var title: LocalizedStringResource = "Skann kvittering med kamera"
-    static var description = IntentDescription("Åpner FinansHub i kameraet for å ta bilde av en kvittering.")
+    static var description = IntentDescription("Åpner Homelab i kameraet for å ta bilde av en kvittering.")
     static var openAppWhenRun: Bool = true
 
     func perform() async throws -> some IntentResult {
@@ -131,7 +131,7 @@ struct ScanCameraIntent: AppIntent {
 /// «Skann → Filer» fra widgeten: åpner appen i filvelgeren.
 struct ScanFilesIntent: AppIntent {
     static var title: LocalizedStringResource = "Last opp kvittering fra Filer"
-    static var description = IntentDescription("Åpner FinansHub i filvelgeren for PDF og bilder.")
+    static var description = IntentDescription("Åpner Homelab i filvelgeren for PDF og bilder.")
     static var openAppWhenRun: Bool = true
 
     func perform() async throws -> some IntentResult {

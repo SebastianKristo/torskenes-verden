@@ -185,7 +185,7 @@ struct Fin40AnswerCard: View {
             }
             if a.open == "abo" || a.source.lowercased().contains("subscription") {
                 Button { Haptic30.light(); store.paperGo("abo") } label: {
-                    Text(a.openLabel.isEmpty ? "Åpne Subscription OS ›" : a.openLabel + " ›").font(PF.ui(14, .bold)).foregroundStyle(p.lab)
+                    Text(a.openLabel.isEmpty ? "Åpne Abonnementer ›" : a.openLabel + " ›").font(PF.ui(14, .bold)).foregroundStyle(p.lab)
                         .frame(maxWidth: .infinity).frame(height: 44)
                         .overlay(Capsule().stroke(p.line, lineWidth: 1))
                 }

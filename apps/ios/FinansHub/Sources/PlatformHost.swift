@@ -169,7 +169,7 @@ final class Watch51Link: NSObject, WCSessionDelegate {
     }
 
     @MainActor private func handle(_ kind: String, code: String) -> [String: Any] {
-        guard let store, let a = store.account else { return ["ok": false, "error": "Logg inn i FinansHub på iPhone først."] }
+        guard let store, let a = store.account else { return ["ok": false, "error": "Logg inn i Homelab på iPhone først."] }
         switch kind {
         case "server51":
             // Bare adressene og navnet – aldri tokenet.
@@ -192,7 +192,7 @@ final class Watch51Link: NSObject, WCSessionDelegate {
     static func remind() {
         let c: UNMutableNotificationContent = UNMutableNotificationContent()
         c.title = "Apple Watch vil logge inn"
-        c.body = "Åpne FinansHub og godkjenn med Face ID."
+        c.body = "Åpne Homelab og godkjenn med Face ID."
         c.sound = .default
         let r: UNNotificationRequest = UNNotificationRequest(identifier: "watch51.pair", content: c, trigger: nil)
         UNUserNotificationCenter.current().add(r) { (_: Error?) in }

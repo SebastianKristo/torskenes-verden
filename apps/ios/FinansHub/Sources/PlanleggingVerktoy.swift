@@ -220,7 +220,7 @@ struct Plan51Pris: View {
             }
             tools
             if d.items.isEmpty {
-                PCard { F51Note(text: m.q.isEmpty ? "Ingen varelinjer ennå. Skann kvitteringer med varelinjer, så følger FinansHub prisene for deg." : "Ingen varer passer søket.") }
+                PCard { F51Note(text: m.q.isEmpty ? "Ingen varelinjer ennå. Skann kvitteringer med varelinjer, så følger Økonomi prisene for deg." : "Ingen varer passer søket.") }
             }
             F51Grid {
                 ForEach(d.items) { (i: PriceItem51) in Plan51PriceRow(i: i) }

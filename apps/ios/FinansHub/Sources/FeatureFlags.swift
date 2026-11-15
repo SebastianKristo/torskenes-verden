@@ -49,7 +49,7 @@ final class Flags51 {
     }
 
     nonisolated static var headers: [String: String] {
-        ["X-Device-Id": Device51.installId, "X-Client-Platform": "ios", "X-Device-Name": "FinansHub · " + Device51.machine]
+        ["X-Device-Id": Device51.installId, "X-Client-Platform": "ios", "X-Device-Name": "Homelab · " + Device51.machine]
     }
 
     private static func cached(_ id: String) -> [String: Bool] {

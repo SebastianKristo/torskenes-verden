@@ -231,9 +231,9 @@ struct MacBdButtons41: View {
         Task { @MainActor in
             do {
                 _ = try await KalNet.send("POST", "/api/tasks/glimt", json: ["q": q, "async": true, "source": "kalender-mac"], timeout: 15)
-                MacStore.shared.showToast("Lagt til i Huskeliste · gave til " + who, undo: "")
+                MacStore.shared.showToast("Lagt til i Gjøremål · gave til " + who, undo: "")
             } catch let e as KalNetError {
-                MacStore.shared.showToast(e.status == 404 ? "Huskeliste med Glimt finnes ikke på serveren ennå" : "Fikk ikke lagt til: " + e.message, undo: "")
+                MacStore.shared.showToast(e.status == 404 ? "Gjøremål med Glimt finnes ikke på serveren ennå" : "Fikk ikke lagt til: " + e.message, undo: "")
             } catch {
                 MacStore.shared.showToast("Fikk ikke lagt til gaveidéen", undo: "")
             }

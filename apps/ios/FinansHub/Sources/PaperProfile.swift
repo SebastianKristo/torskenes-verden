@@ -132,7 +132,7 @@ struct PaperProfile: View {
                 .frame(maxWidth: .infinity)
             }
             PaperLinkList(rows: [
-                PaperLinkRow(name: "Brukernavn", sub: "Vises som @\(store.account?.username ?? "") i Finans", value: "", icon: "at") {},
+                PaperLinkRow(name: "Brukernavn", sub: "Vises som @\(store.account?.username ?? "") i Økonomi", value: "", icon: "at") {},
                 PaperLinkRow(name: "Rolle", sub: role, value: "", icon: "person.badge.shield.checkmark") {},
                 PaperLinkRow(name: "Server", sub: store.account?.server ?? "", value: "", icon: "server.rack") {},
                 PaperLinkRow(name: "Kontoer og brukere", sub: "Legg til eller bytt konto", icon: "person.2") { store.paperGo("innst-konto") },

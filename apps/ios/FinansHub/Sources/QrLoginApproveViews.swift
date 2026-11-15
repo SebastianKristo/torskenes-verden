@@ -121,7 +121,7 @@ struct Qr38CameraLayer: View {
     }
 
     private var caption: String {
-        if denied { return "Kameraet er avslått. Slå det på i Innstillinger → FinansHub, eller lim inn koden." }
+        if denied { return "Kameraet er avslått. Slå det på i Innstillinger → Homelab, eller lim inn koden." }
         if m.phase == "busy" { return "Henter enheten …" }
         return "Hold mobilen over QR-koden på den nye enheten"
     }

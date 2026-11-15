@@ -240,7 +240,7 @@ final class Chat50 {
         a.readWith50 = JS.str(JS.dict(meta, "readWith"), "label") ?? metaReadWith
         let act: [String: Any]? = JS.dict(JS.dict(meta, "receipt"), "action")
         a.fin50 = JS.str(act, "url") ?? ""
-        a.fin50Label = JS.str(act, "label") ?? "Legg i Finans ›"
+        a.fin50Label = JS.str(act, "label") ?? "Legg i Økonomi ›"
         metaReadWith = ""
     }
 
@@ -295,13 +295,13 @@ final class Chat50 {
                 _ = try await store.api.callAt("/api", "POST", path, json: [:], timeout: 30)
                 self.fin[m.id] = "ok"
                 Haptics.shared.success()
-                ChatStore27.shared.flash("Lagt i Finans – kvitteringen er i køen")
+                ChatStore27.shared.flash("Lagt i Økonomi – kvitteringen er i køen")
             } catch let e as APIError {
                 self.fin[m.id] = nil
                 ChatStore27.shared.flash(e.code == "bilde_mangler" || e.status == 404 ? "Originalbildet finnes ikke lenger. Last opp kvitteringen på nytt." : e.message)
             } catch {
                 self.fin[m.id] = nil
-                ChatStore27.shared.flash("Fikk ikke lagt kvitteringen i Finans")
+                ChatStore27.shared.flash("Fikk ikke lagt kvitteringen i Økonomi")
             }
         }
     }
@@ -481,7 +481,7 @@ struct Chat50AnswerExtras: View {
             if !m.fin50.isEmpty {
                 let st: String = Chat50.shared.fin[m.id] ?? ""
                 Button { Chat50.shared.addToFinans(m, store) } label: {
-                    Text(st == "ok" ? "Lagt i Finans ✓" : st == "busy" ? "Legger i Finans …" : m.fin50Label)
+                    Text(st == "ok" ? "Lagt i Økonomi ✓" : st == "busy" ? "Legger i Økonomi …" : m.fin50Label)
                         .font(c.ui(13.5, .bold)).foregroundStyle(c.ink)
                         .padding(.horizontal, 14).frame(height: 36)
                         .overlay(Capsule().stroke(c.ink, lineWidth: 1))

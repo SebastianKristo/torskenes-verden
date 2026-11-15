@@ -786,7 +786,7 @@ final class ChatStore27 {
 
     private func run(_ store: Store, editFrom: Int?) {
         var tools: [String] = []
-        if dataOn && myDataAllowed { tools += ["Finans", "Kalender", "Huskeliste"] }
+        if dataOn && myDataAllowed { tools += ["Økonomi", "Kalender", "Gjøremål"] }
         if webOn { tools.append("Nettsøk") }
         tools += attach.map { $0.name }
         streamTool = tools
@@ -958,7 +958,7 @@ final class ChatStore27 {
         if withoutData {
             b["myData"] = false
             b["withoutMyData"] = true
-            streamTool = streamTool.filter { !["Finans", "Kalender", "Huskeliste"].contains($0) }
+            streamTool = streamTool.filter { !["Økonomi", "Kalender", "Gjøremål"].contains($0) }
         }
         if guardRemember {
             settings.skipCloudAsk = true

@@ -62,7 +62,7 @@ struct AppUpd32Row: View {
                 HStack(spacing: 10) {
                     Set30Icon(symbol: "iphone.and.arrow.forward", tint: Set30Colors.system)
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("FinansHub-appen \(m.current)").font(PF.ui(15, .semibold)).foregroundStyle(p.ink)
+                        Text("Homelab-appen \(m.current)").font(PF.ui(15, .semibold)).foregroundStyle(p.ink)
                         Text(sub).font(PF.ui(12.5)).foregroundStyle(p.mut)
                     }
                     Spacer(minLength: 6)

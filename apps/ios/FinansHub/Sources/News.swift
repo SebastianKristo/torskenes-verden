@@ -107,10 +107,10 @@ struct NewsReaderView: View {
     private func headLabel(_ d: NewsData) -> String {
         if News73Model.shared.showTab {
             let n: Int = News73Model.shared.items.count
-            return "Nyhetsleser · \(n) lagret"
+            return "Nyheter · \(n) lagret"
         }
         let k: Int = d.feeds.count
-        return "Nyhetsleser · \(k) kilder" + updated(d)
+        return "Nyheter · \(k) kilder" + updated(d)
     }
 
     private func updated(_ d: NewsData) -> String {
@@ -250,7 +250,7 @@ struct NewsSourcesSheet: View {
         return VStack(alignment: .leading, spacing: 14) {
                 if !embedded { HStack {
                     VStack(alignment: .leading, spacing: 1) {
-                        PLabel(text: "Nyhetsleser")
+                        PLabel(text: "Nyheter")
                         Text("Kilder og AI").font(PF.serif(26, medium: true)).foregroundStyle(p.ink)
                     }
                     Spacer()

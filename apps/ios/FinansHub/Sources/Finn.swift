@@ -177,7 +177,7 @@ struct FinnView: View {
                     .padding(4).glass(16)
                     let grid = vis.filter { d in seg == "Kjøpt" ? !d.sold : seg == "Solgt" ? d.sold : seg == "Fullført" ? d.finished : true }
                     if grid.isEmpty {
-                        Empty(text: f.items.isEmpty ? "Ingen Finn-handler ennå. De kommer inn fra Finn-e-postene, eller legg dem inn i FinansHub på PC." : "Ingen handler passer.")
+                        Empty(text: f.items.isEmpty ? "Ingen Finn-handler ennå. De kommer inn fra Finn-e-postene, eller legg dem inn i Økonomi på web." : "Ingen handler passer.")
                     }
                     LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
                         ForEach(grid) { d in GridCard(d: d) }

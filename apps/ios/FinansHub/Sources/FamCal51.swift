@@ -263,7 +263,7 @@ struct FamCal51Page: View {
     @MainActor private var m: FamCal51 { FamCal51.shared }
 
     var body: some View {
-        F51Scaffold(kicker: "Familie · kalender", title: "Familiekalender", sub: sub, toast: m.toast,
+        F51Scaffold(kicker: "Kalender · filter", title: "Familie", sub: sub, toast: m.toast,
                     close: { m.open = false }, refresh: { await m.load(store) }) {
             if !m.loaded {
                 F51Loading()
@@ -592,7 +592,7 @@ struct FamCal51Strip: View {
             HStack(spacing: 10) {
                 Image(systemName: "car.fill").font(.system(size: 15, weight: .semibold)).foregroundStyle(p.lab).accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 1) {
-                    Text("Familiekalender · hvem kjører?").font(PF.ui(14, .bold)).foregroundStyle(p.ink)
+                    Text("Familie i Kalender · hvem kjører?").font(PF.ui(14, .bold)).foregroundStyle(p.ink)
                     Text(m.drivesText.isEmpty ? "Henting og bringing for hele familien" : m.drivesText).font(PF.ui(12.5)).foregroundStyle(p.mut)
                 }
                 Spacer(minLength: 6)

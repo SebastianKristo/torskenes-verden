@@ -165,7 +165,7 @@ struct LogoSheet73: View {
     private var header: some View {
         HStack(alignment: .bottom, spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
-                Text("FINANS · BUTIKKLOGO").font(PF.mono(10.5)).tracking(1.2).foregroundStyle(acc)
+                Text("ØKONOMI · BUTIKKLOGO").font(PF.mono(10.5)).tracking(1.2).foregroundStyle(acc)
                 Text("Endre logo").font(PF.serif(28, medium: true)).foregroundStyle(ink)
             }
             Spacer(minLength: 8)

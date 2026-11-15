@@ -54,7 +54,7 @@ struct Plat51NotLinked: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             Image(systemName: "person.crop.circle.badge.exclamationmark").font(.system(size: 20)).foregroundStyle(Plat51W.accentLight)
-            Text("Åpne FinansHub-appen").font(.system(size: 13, weight: .semibold)).foregroundStyle(Color.white)
+            Text("Åpne Homelab-appen").font(.system(size: 13, weight: .semibold)).foregroundStyle(Color.white)
             Text("Logg inn én gang, så henter widgeten data.").font(.system(size: 11)).foregroundStyle(Color.white.opacity(0.6))
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -558,7 +558,7 @@ struct Plat51DepView: View {
             if stops.isEmpty {
                 Text("Avganger").font(.system(size: 13, weight: .semibold))
                 Spacer(minLength: 0)
-                Text("Legg til stopp under Avganger i appen.").font(.footnote).foregroundStyle(Color.white.opacity(0.6))
+                Text("Legg til stopp under Reise → Avganger i appen.").font(.footnote).foregroundStyle(Color.white.opacity(0.6))
                 Spacer(minLength: 0)
             } else {
                 ForEach(stops.prefix(family == .systemLarge ? 2 : 1), id: \.self) { (stop: Ruter27Stop) in

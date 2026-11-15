@@ -35,8 +35,8 @@ struct W51LoginView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 10) {
-                Text("FinansHub").font(.headline)
-                Text(store.info.isEmpty ? "Logg inn med FinansHub på iPhone. Du godkjenner med Face ID der." : store.info)
+                Text("Homelab").font(.headline)
+                Text(store.info.isEmpty ? "Logg inn med Homelab på iPhone. Du godkjenner med Face ID der." : store.info)
                     .font(.footnote).foregroundStyle(store.phase == "error" ? Color.red : Color.secondary)
                 if store.phase == "match" && !store.match.isEmpty {
                     W51MatchView(match: store.match)
@@ -99,7 +99,7 @@ struct W51HomeView: View {
                 if !store.name.isEmpty { Text("Logget inn som " + store.name) }
             }
         }
-        .navigationTitle("FinansHub")
+        .navigationTitle("Homelab")
     }
 }
 

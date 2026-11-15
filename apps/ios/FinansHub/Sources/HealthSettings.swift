@@ -144,7 +144,7 @@ struct HealthDivider20: View {
 
 /// Åpner appens side i iOS-innstillingene (Helse-appen kan ikke dyplenkes).
 enum HealthLinks20 {
-    static let howTo: String = "Helse → Profil → Apper → FinansHub"
+    static let howTo: String = "Helse → Profil → Apper → Homelab"
 
     @MainActor static func openSettings() {
         if let u = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(u) }
@@ -306,7 +306,7 @@ struct HealthNoData20: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Ingen data").font(PF.serif(19, medium: true)).foregroundStyle(p.ink)
-            Text("Appen har spurt om tilgang til Apple Health, men fant ingen helsedata å vise. Sjekk at FinansHub har lesetilgang: \(HealthLinks20.howTo), og slå på typene du vil dele.")
+            Text("Appen har spurt om tilgang til Apple Health, men fant ingen helsedata å vise. Sjekk at Homelab har lesetilgang: \(HealthLinks20.howTo), og slå på typene du vil dele.")
                 .font(PF.ui(12.5)).foregroundStyle(p.mut).fixedSize(horizontal: false, vertical: true)
             PLineButton(title: "Åpne iOS-innstillinger", height: 38, full: true) { HealthLinks20.openSettings() }
         }

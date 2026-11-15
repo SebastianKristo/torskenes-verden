@@ -34,9 +34,9 @@ enum Chat31 {
         let i: String = a.intent
         if i.hasPrefix("weather") { return "Vær" }
         if i.hasPrefix("calendar") || i.hasPrefix("appointment") { return "Kalender" }
-        if i.hasPrefix("departures") { return "Avganger" }
+        if i.hasPrefix("departures") { return "Reise" }
         if i.hasPrefix("packages") { return "Pakker" }
-        if i.hasPrefix("finance") { return "Finans" }
+        if i.hasPrefix("finance") { return "Økonomi" }
         if i.hasPrefix("tasks") { return "Gjøremål" }
         if i.hasPrefix("trial") { return "Abonnementer" }
         return ""
@@ -465,7 +465,7 @@ struct Chat31Finance: View {
     var body: some View {
         let rows: [[String: Any]] = JS.list(o, "items").isEmpty ? JS.list(o, "top") : JS.list(o, "items")
         let total: String = Chat31Finance.money(o, ["total", "sum"])
-        Chat31Box(title: JS.str(o, "title") ?? JS.str(o, "label") ?? "Finans", c: c) {
+        Chat31Box(title: JS.str(o, "title") ?? JS.str(o, "label") ?? "Økonomi", c: c) {
             Text(total).font(c.head(34)).foregroundStyle(c.ink)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 16).padding(.top, 10).padding(.bottom, 4)

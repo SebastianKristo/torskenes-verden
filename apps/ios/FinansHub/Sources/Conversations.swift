@@ -328,8 +328,8 @@ struct Glimt67Answer {
     var confirmText: String = ""
     var actions: [[String: Any]] = []
 
-    static let src: [String: String] = ["calendar": "Kalender", "tasks": "Huskeliste", "finance": "Finans", "weather": "Vær",
-                                        "ruter": "Avganger", "family": "Familie", "media": "Media", "study": "Studie"]
+    static let src: [String: String] = ["calendar": "Kalender", "tasks": "Gjøremål", "finance": "Økonomi", "weather": "Vær",
+                                        "ruter": "Reise", "family": "Familie", "media": "Media", "study": "Studie"]
 
     @MainActor
     static func from(_ o: [String: Any]) -> Glimt67Answer {

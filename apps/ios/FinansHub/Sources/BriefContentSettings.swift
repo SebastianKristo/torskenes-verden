@@ -34,7 +34,7 @@ final class Brief73Model {
         ("vaer", "Vær", "Nå, i dag og varsel", true),
         ("kal", "Kalender", "Første avtale og resten av dagen", true),
         ("fokus", "Dagens fokus", "Det viktigste i dag, valgt av Glimt", true),
-        ("gjore", "Huskeliste · 3 viktigste", "Fra Gjøremål", true),
+        ("gjore", "Gjøremål · 3 viktigste", "Fra Gjøremål", true),
         ("reise", "Min reise", "Ruter: neste avgang og når du må gå", true),
         ("regn", "Regninger denne uka", "Fra Finans", true),
         ("kveld", "Nytt i kveld", "Nye episoder og filmer fra Media", true),
@@ -198,7 +198,7 @@ struct Brief73Settings: View {
                 Text(m.countText).font(PF.mono(11)).foregroundStyle(Brief34C.rgb(0x8a8478))
             }
             .padding(.top, 4)
-            Text("Velg hvilke kort som er med og rekkefølgen de vises i. Gjelder Now Brief på mobil, web og widgets.")
+            Text("Velg hvilke kort som er med og rekkefølgen de vises i. Gjelder Brief på mobil, web og widgets.")
                 .font(PF.ui(12.5)).foregroundStyle(Brief34C.mut).fixedSize(horizontal: false, vertical: true)
                 .padding(.top, -6)
             VStack(spacing: 0) {

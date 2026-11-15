@@ -501,7 +501,7 @@ struct Brief35NewsCard: View {
                 .buttonStyle(.plain)
             }
             if list.isEmpty {
-                Text("Ingen nyheter fra Nyhetsleser ennå.").font(PF.ui(13)).foregroundStyle(Brief34C.mut).padding(.vertical, 6)
+                Text("Ingen saker fra Nyheter ennå.").font(PF.ui(13)).foregroundStyle(Brief34C.mut).padding(.vertical, 6)
             }
             if let top = list.first {
                 Button { store.openLink(top.url) } label: { Brief35TopStory(n: top) }

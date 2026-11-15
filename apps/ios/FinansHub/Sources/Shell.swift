@@ -307,7 +307,7 @@ struct ProfileMenu: View {
                 row("Homelab", "Dashbord, søk og snarveier", "square.grid.3x3.fill", store.module == .homelab) { store.open(.homelab) }.glass(24)
                 SectionLabel(text: "Andre OS")
                 VStack(spacing: 0) {
-                    row("Finans", "Hjem, liste, budsjett og mer", "banknote", store.module == nil || store.module?.isFinance == true) { store.go(Tab.home) }
+                    row("Økonomi", "Oversikt, transaksjoner, budsjett og mer", "banknote", store.module == nil || store.module?.isFinance == true) { store.go(Tab.home) }
                     Divider().overlay(Color.skinFg.opacity(0.12))
                     row("Mat", "Ukemeny, oppskrifter og handleliste", "fork.knife", store.module == .mat) { store.open(.mat) }
                     Divider().overlay(Color.skinFg.opacity(0.12))
@@ -315,7 +315,7 @@ struct ProfileMenu: View {
                     Divider().overlay(Color.skinFg.opacity(0.12))
                     row("Sporing", "Pakker på vei, henting og varsler", "shippingbox", store.module == .tracking) { store.open(.tracking) }
                     Divider().overlay(Color.skinFg.opacity(0.12))
-                    row("Nyhetsleser", "Siste nytt fra RSS, med ✦ AI-sammendrag", "newspaper", store.newsOpen) { store.menuOpen = false; store.openNews() }
+                    row("Nyheter", "Kildene dine i RSS, med ✦ AI-sammendrag", "newspaper", store.newsOpen) { store.menuOpen = false; store.openNews() }
                 }
                 .glass(24)
                 if store.accounts.count > 1 {
@@ -363,7 +363,7 @@ struct LockView: View {
     var body: some View {
         VStack(spacing: 18) {
             Image(systemName: "lock.fill").font(.system(size: 30)).foregroundStyle(Color.ink).frame(width: 72, height: 72).background(Color.accent, in: RoundedRectangle(cornerRadius: 24))
-            Text("FinansHub er låst").font(.title.weight(.bold))
+            Text("Homelab er låst").font(.title.weight(.bold))
             Text(store.displayName).foregroundStyle(Color.skinFg.opacity(0.7))
             Button { store.unlock() } label: { Label("Lås opp", systemImage: "faceid").fontWeight(.bold).foregroundStyle(Color.ink).frame(maxWidth: 320, minHeight: 54) }
                 .buttonStyle(.plain).glass(27, tint: .accent)

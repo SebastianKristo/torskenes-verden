@@ -95,7 +95,7 @@ struct AiCtl34Header: View {
                 }
                 .buttonStyle(.plain)
             }
-            Text(m.fin ? "AI i Finans" : "AI").font(PF.serif(34, medium: true)).foregroundStyle(p.ink)
+            Text(m.fin ? "AI i Økonomi" : "AI").font(PF.serif(34, medium: true)).foregroundStyle(p.ink)
             Text(statusLine).font(PF.ui(13)).foregroundStyle(p.mut).lineLimit(2)
         }
         .padding(.horizontal, 18).padding(.top, 8).padding(.bottom, 12)

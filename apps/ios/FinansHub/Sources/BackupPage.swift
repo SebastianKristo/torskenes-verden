@@ -149,7 +149,7 @@ struct Backup29What: View {
 
     private var scopeSub: String {
         if m.scope == "all" { return "Alle moduler, filer og innstillinger" }
-        if m.scope == "finans" { return "Kun Finans-data og kvitteringer" }
+        if m.scope == "finans" { return "Kun Økonomi-data og kvitteringer" }
         return "Velg moduler under"
     }
 

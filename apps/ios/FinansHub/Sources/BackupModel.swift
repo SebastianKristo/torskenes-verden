@@ -57,7 +57,7 @@ final class Backup29Model {
 
     /// (id, navn, undertekst) – modulene serveren kjenner.
     nonisolated static let modules: [(String, String, String)] = [
-        ("finans", "Finans", "Transaksjoner, kvitteringer, budsjett, abonnementer"),
+        ("finans", "Økonomi", "Transaksjoner, kvitteringer, budsjett, faste betalinger"),
         ("kalender", "Kalender", "Egne hendelser og påminnelser"),
         ("familie", "Familie", "Posisjoner, soner og helse"),
         ("mat", "Mat", "Oppskrifter og ukeplan"),

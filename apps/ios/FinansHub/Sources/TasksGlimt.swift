@@ -840,7 +840,7 @@ final class Tasks41Glimt {
         // Fra Hjem-søket: Glimt-toasten avsluttes med «✓ Glimt lagde 3 punkter i Huskeliste».
         if let tid = homeToasts[id] {
             homeToasts[id] = nil
-            let msg: String = "✓ " + (n == 1 ? "Glimt lagde 1 punkt i Huskeliste" : "Glimt lagde \(n) punkter i Huskeliste")
+            let msg: String = "✓ " + (n == 1 ? "Glimt lagde 1 punkt i Gjøremål" : "Glimt lagde \(n) punkter i Gjøremål")
             if AiJobs31.shared.jobs.contains(where: { $0.id == tid }) {
                 AiJobs31.shared.end(tid, done: msg)
             } else if UIApplication.shared.applicationState == .active {
@@ -1172,7 +1172,7 @@ struct Tasks41OriginCard: View {
 /* ---------- Fra søkefeltet på Hjem ---------- */
 
 extension Tasks41Glimt {
-    nonisolated static let homeSteps: [String] = ["Leser beskjeden", "Deler opp i punkter", "Finner rekkefølge og steder", "Lagrer i Huskeliste"]
+    nonisolated static let homeSteps: [String] = ["Leser beskjeden", "Deler opp i punkter", "Finner rekkefølge og steder", "Lagrer i Gjøremål"]
 
     /// Huskebeskjed i søkefeltet: «husk / påminn meg / legg til i huskeliste / ny oppgave …», eller ≥ 6 ord med «må/skal/huske»
     /// og «vi/jeg/meg/oss». Ikke spørsmål (timer går fortsatt til Kalender).
@@ -1199,7 +1199,7 @@ extension Tasks41Glimt {
         let listName: String = lists.lists.first?.name ?? "Hjem"
         let id: String = start(t, store, origin: "home_search", list: nil)
         let aj: AiJobs31 = AiJobs31.shared
-        aj.begin(id: "huske-" + id, kind: "huske", title: "Legger til i Huskeliste", input: t, steps: Tasks41Glimt.homeSteps)
+        aj.begin(id: "huske-" + id, kind: "huske", title: "Legger til i Gjøremål", input: t, steps: Tasks41Glimt.homeSteps)
         if let i = aj.jobs.firstIndex(where: { $0.id == "huske-" + id }) {
             aj.jobs[i].model = "Glimt"
             aj.jobs[i].fields = [AiField31(key: "Beskjed", value: t), AiField31(key: "Liste", value: listName), AiField31(key: "Original", value: "lagres i «Laget med Glimt»")]
@@ -1231,7 +1231,7 @@ struct HomeSearch41Huske: View {
                     Text("Glimt deler opp i punkter").font(PF.ui(12)).foregroundStyle(p.bg.opacity(0.8)).lineLimit(1)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                Text("Legg i Huskeliste").font(PF.ui(12.5, .bold)).foregroundStyle(p.ink).lineLimit(1).fixedSize()
+                Text("Legg i Gjøremål").font(PF.ui(12.5, .bold)).foregroundStyle(p.ink).lineLimit(1).fixedSize()
                     .padding(.horizontal, 12).frame(height: 32)
                     .background(p.bg, in: Capsule())
             }
@@ -1241,7 +1241,7 @@ struct HomeSearch41Huske: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("Legg i Huskeliste: " + text)
+        .accessibilityLabel("Legg i Gjøremål: " + text)
     }
 }
 

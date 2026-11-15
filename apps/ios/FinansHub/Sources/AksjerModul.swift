@@ -214,7 +214,7 @@ struct StocksMobileView: View {
                     if !x.configured && !x.mock && x.positions.isEmpty {
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Ikke koblet til Trading 212").fontWeight(.semibold)
-                            Text("Legg inn API-nøkkel og secret i FinansHub på web under Innstillinger → Aksjer · Trading 212. Gi bare lesetilgang.").font(.footnote).foregroundStyle(Color.skinFg.opacity(0.7))
+                            Text("Legg inn API-nøkkel og secret i Økonomi på web under Innstillinger → Aksjer · Trading 212. Gi bare lesetilgang.").font(.footnote).foregroundStyle(Color.skinFg.opacity(0.7))
                         }
                         .padding(16).frame(maxWidth: .infinity, alignment: .leading).glass(24)
                     }

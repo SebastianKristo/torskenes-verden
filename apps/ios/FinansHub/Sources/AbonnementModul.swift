@@ -270,7 +270,7 @@ struct SubsMobileView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 12) {
-                ModuleHeader(title: "Subscription OS", trailing: {
+                ModuleHeader(title: "Abonnementer", trailing: {
                     Button { Haptics.shared.tap(); adding = true } label: {
                         Image(systemName: "plus").font(.dyn51(size: 17, weight: .semibold)).foregroundStyle(Color.skinFg).frame(width: 44, height: 44).contentShape(Circle())
                     }
@@ -637,7 +637,7 @@ struct SubAddSheet: View {
             Divider().overlay(Color.skinFg.opacity(0.12))
             option("doc.viewfinder", "Fra kvittering", "✦ Glimt leser bilde eller PDF og fyller inn") { mode = "receipt" }
             Divider().overlay(Color.skinFg.opacity(0.12))
-            option("arrow.triangle.2.circlepath", "Fra transaksjoner", "✦ Faste trekk sett minst 3 ganger, ikke registrert") { mode = "tx"; store.loadSubCandidates() }
+            option("arrow.triangle.2.circlepath", "Fra transaksjoner", "✦ Trekk sett minst 3 ganger, ikke registrert") { mode = "tx"; store.loadSubCandidates() }
         }
         .glass(24)
     }
