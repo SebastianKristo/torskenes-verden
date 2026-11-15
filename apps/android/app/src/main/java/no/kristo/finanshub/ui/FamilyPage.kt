@@ -31,6 +31,8 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
@@ -334,8 +336,15 @@ internal fun Family50Screen(vm: AppViewModel, startSharing: () -> Unit) {
     val p = HomelabTheme.colors
     val s = vm.fam50
     val tab = fam50Tab(vm.famTab)
+    // Hvert 30. sekund mens appen vises (B2: ikke i bakgrunnen). Tilbake i forgrunnen hentes det på nytt innen 5 s.
+    val life = LocalLifecycleOwner.current.lifecycle
     LaunchedEffect(vm.account?.id, tab) {
-        while (true) { vm.loadFam50(tab); delay(30_000) }
+        var sist = 0L
+        while (true) {
+            val naa = System.currentTimeMillis()
+            if (life.currentState.isAtLeast(Lifecycle.State.STARTED) && naa - sist >= 30_000) { sist = naa; vm.loadFam50(tab) }
+            delay(5_000)
+        }
     }
     BackHandler { back50(vm) }
     val wide = LocalWide45.current

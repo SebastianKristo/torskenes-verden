@@ -56,11 +56,14 @@ internal fun HereCard45(vm: AppViewModel, w: WeatherFull?) {
         vm.loadHere45(l.latitude, l.longitude, w?.lat, w?.lon, force)
     }
     // Mens Vær er åpent: sjekk på nytt hvert 10. minutt (loadHere45 henter maks hvert 10. min), og raskt etter «Tillat».
+    val life = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
     LaunchedEffect(w?.placeId) {
         refresh(false)
         var n = 0
         while (true) {
             kotlinx.coroutines.delay(if (!granted) 1_500L else 600_000L)
+            // B2: ikke hent i bakgrunnen (komposisjonen lever videre etter onStop).
+            if (!life.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED)) continue
             val was = granted
             refresh(!was && FamilyService.hasLocation(ctx))
             if (++n > 400) break
