@@ -82,7 +82,15 @@ export async function loadB42() {
   u.seenNotice ??= new Set();
   for (const d of det) for (const n of d?.notices ?? []) { const k = `${n.entryId}:${n.at}`; if (!u.seenNotice.has(k)) { u.seenNotice.add(k); toast(n.text); } }
 }
-const reloadHome = async (id) => { if (!id) return loadB42(); const r = await api(`/folders/${id}`); B.det[id] = r; return r; };
+const reloadHome = async (id) => { B.kpi = {}; if (!id) return loadB42(); const r = await api(`/folders/${id}`); B.det[id] = r; return r; };
+// Nøkkeltallene i Kategorier kommer fra serveren (GET /homes/:id/categories → kpi: spent, prevSpent, largest, used, count, noReceipt).
+// Til svaret er der, vises det som kan leses av utgiftene som allerede er hentet.
+function serverKpi(h, cm, yy, ym) {
+  const qs = cm === 'mnd' ? `month=${ym}` : `year=${yy}`, key = `${h.id}|${qs}`;
+  B.kpi ??= {};
+  if (!(key in B.kpi)) { B.kpi[key] = null; api(`/homes/${h.id}/categories?${qs}`).then((r) => { B.kpi[key] = r?.kpi ?? false; if (r?.kpi) render(); }).catch(() => { B.kpi[key] = false; }); }
+  return B.kpi[key] || null;
+}
 
 /* ===================== Ruting ===================== */
 
@@ -271,9 +279,11 @@ function katTab(h) {
   };
   const usedN = ent.map((x) => x[0]);
   const cards = [...ent.map(([n, v]) => card(n, v, true)), ...ALLC.filter((n) => !usedN.includes(n)).map((n) => card(n, 0, false))].join('');
-  const totP = sum(prevE), dT = tot0 - totP, noRc = src.filter((e) => !e.rc).length;
-  const kp = [[cm === 'mnd' ? `Brukt i ${MN[mm - 1]}` : `Brukt i ${yy}`, kr(ent.length ? tot0 : 0), totP ? `${dT >= 0 ? '▲' : '▼'} ${kr(Math.abs(dT))} mot ${cm === 'mnd' ? MN[(mm + 10) % 12] : yy - 1}` : 'Ingen tall for forrige periode', !totP ? '' : dT > 0 ? 'red' : 'green'],
-    ['Største kategori', ent[0]?.[0] ?? '–', ent[0] ? `${kr(ent[0][1])} · ${Math.round((ent[0][1] / tot0) * 100)} %` : '', ''], ['Kategorier brukt', String(ent.length), `${src.length} kjøp totalt`, ''], ['Uten kvittering', String(noRc), noRc ? 'Legg ved i Utgifter' : 'Alt har kvittering', noRc ? 'amber' : 'green']];
+  const K = serverKpi(h, cm, yy, s.ym);
+  const spent = K ? K.spent : ent.length ? tot0 : 0, totP = K ? K.prevSpent : sum(prevE), dT = spent - totP, noRc = K ? K.noReceipt : src.filter((e) => !e.rc).length;
+  const big = K ? (K.largest ? [K.largest.name, K.largest.sum, K.largest.pct] : null) : ent[0] ? [ent[0][0], ent[0][1], Math.round((ent[0][1] / tot0) * 100)] : null;
+  const kp = [[cm === 'mnd' ? `Brukt i ${MN[mm - 1]}` : `Brukt i ${yy}`, kr(spent), totP ? `${dT >= 0 ? '▲' : '▼'} ${kr(Math.abs(dT))} mot ${cm === 'mnd' ? MN[(mm + 10) % 12] : yy - 1}` : 'Ingen tall for forrige periode', !totP ? '' : dT > 0 ? 'red' : 'green'],
+    ['Største kategori', big?.[0] ?? '–', big ? `${kr(big[1])} · ${big[2]} %` : '', ''], ['Kategorier brukt', String(K ? K.used : ent.length), `${K ? K.count : src.length} kjøp totalt`, ''], ['Uten kvittering', String(noRc), noRc ? 'Legg ved i Utgifter' : 'Alt har kvittering', noRc ? 'amber' : 'green']];
   const pm = new Date(yy, mm - 2, 1), nm = new Date(yy, mm, 1), nd = s.ym >= CYM();
   return `<div class="b42-col g18"><div class="b42-mnav">${btn(`‹ ${cap(MN[pm.getMonth()])}`, 'data-b42="m-prev"')}<b class="b42-serif32">${cap(MN[mm - 1])} ${yy}</b>${btn(`${cap(MN[nm.getMonth()])} ›`, `data-b42="m-next"${nd ? ' disabled' : ''}`)}</div>
     <div class="b42-between"><b class="b42-serif28">Kategorier ${cm === 'mnd' ? `i ${MN[mm - 1]} ${yy}` : `i ${yy}`}</b><div class="b42-seg">${[['mnd', 'Måned'], ['ar', 'Hele året']].map(([k, n]) => `<button type="button" class="${cm === k ? 'on' : ''}" data-b42-catmode="${k}">${n}</button>`).join('')}</div></div>
