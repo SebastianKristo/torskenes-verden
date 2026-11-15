@@ -44,7 +44,7 @@ test('Familie/Media: snarveien settes etter fotovinduet, ikke oppå toppmenyen',
 });
 
 test('Sporing: fremdriften vises i mørk modus, og klokkeslettet kuttes ikke', () => {
-  const paper = read('css/overgang/sporing.css');
+  const paper = read('css/pages/sporing.css');
   assert.ok(paper.includes(`${DARK} .trk-step.dn i,${DARK} .trk-step.ln em{background:var(--ink)}`));
   assert.ok(paper.includes(`${DARK} .trk-step.cur i{background:var(--acc)}`));
   assert.ok(paper.includes(`${DARK} .trk-step.fin i,${DARK} .trk-step.fin.ln em{background:var(--pos)}`));

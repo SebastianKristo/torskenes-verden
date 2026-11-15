@@ -27,3 +27,8 @@ html[data-hl="2c"]{--sb-bg:#1b1a17;--sb-fg:#f3efe6;--sb-bg2:rgba(27,26,23,.08);-
 .sbtn:hover{filter:brightness(.94)}
 .sbtn:active{transform:scale(.97)}
 .sbtn:focus-visible{outline:2px solid currentColor;outline-offset:2px}
+
+/* Brikker (.chips/.chip): Innstillinger → Bakgrunn, Bolig og Oversikt. */
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{padding:8px 14px;border-radius:999px;border:1px solid var(--line);background:var(--row);color:var(--text);font-size:13px}
+.chip[aria-pressed=true]{background:#fff;color:var(--lock)}

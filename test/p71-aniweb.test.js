@@ -73,7 +73,7 @@ test('hvitlista er oppdatert (hvert unntak finnes fortsatt og har begrunnelse)',
 
 test('skimmere flytter et ferdig lag med transform', () => {
   const css = (rel) => ALL.find((x) => x.rel === rel).text;
-  for (const [rel, name, sel] of [['css/pages/media.css', 'm43sk', '.m43-skel::after'], ['css/pages/media.css', 'm70sk', '.m70-skel::after'], ['css/pages/domener.css', 'dm-shim', '.dm-sum-sk span::after'], ['css/overgang/kalender.css', 'k38shim', '.k38-map-wait::after'], ['css/pages/ai-kontroll.css', 'acStripe', '.ac-stripe::after'], ['css/pages/chat.css', 'ch70Sh', '.ch70-shim']]) {
+  for (const [rel, name, sel] of [['css/pages/media.css', 'm43sk', '.m43-skel::after'], ['css/pages/media.css', 'm70sk', '.m70-skel::after'], ['css/pages/domener.css', 'dm-shim', '.dm-sum-sk span::after'], ['css/pages/kalender.css', 'k38shim', '.k38-map-wait::after'], ['css/pages/ai-kontroll.css', 'acStripe', '.ac-stripe::after'], ['css/pages/chat.css', 'ch70Sh', '.ch70-shim']]) {
     const t = css(rel);
     const k = keyframes(t).find((x) => x.name === name);
     assert.ok(k, `${rel}: ${name}`);
@@ -88,7 +88,7 @@ test('pulser og ringer er ferdige lag (::after) som skaleres/tones – ikke anim
   assert.match(t('css/pages/oversikt.css'), /\.gb-ring::after\{[^}]*animation:gbRing/);
   assert.match(t('css/pages/innstillinger.css'), /#settings \.hl-ring::after\{[^}]*animation:hlRing/);
   assert.match(t('js/memory63.js'), /\.m63-flash::after\{[^}]*animation:m63f/);
-  assert.match(t('css/overgang/familie.css'), /\.hl40-glow::after\{[^}]*mix-blend-mode:color-dodge[^}]*animation:hl40g/);
+  assert.match(t('css/pages/posisjoner.css'), /\.hl40-glow::after\{[^}]*mix-blend-mode:color-dodge[^}]*animation:hl40g/);
 });
 
 test('brytere glir med transform, ikke left', () => {

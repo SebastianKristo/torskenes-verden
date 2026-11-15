@@ -1,5 +1,144 @@
 /* Prompt 50 (FAMWEB50): Familie i nytt design – web og PWA (public/js/family50.js). Fasit: design/Familie App.dc.html.
    Fargene er papirfargene fra fasiten; mørk modus (web data-mode=dark / PWA papir mørk) bytter tokenene. */
+
+/* ═══ Familie → Hjemlys, Vel fremme og posisjonsvarsler (hjemlys41.js, family45.js), fra det gamle skallet ═══ */
+/* ---------- Familie → Hjemlys ---------- */
+.hl41{display:flex;flex-direction:column;gap:14px;max-width:760px;color:var(--f-ink)}
+.hl41-top{display:flex;align-items:center;gap:12px}
+.hl41-tx{display:flex;flex-direction:column;gap:2px;min-width:0}
+.hl41-tx b{font:500 22px/1.1 Newsreader,Georgia,serif}
+.hl41-tx span{font-size:13px;color:var(--f-mute)}
+.hl41-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.hl41-ch{display:flex;flex-direction:column;align-items:flex-start;gap:6px;min-height:110px;padding:16px;border-radius:22px;border:0;background:var(--f-card);color:var(--f-ink);cursor:pointer;text-align:left;font:inherit;box-sizing:border-box}
+.hl41-ch b{font-size:16px}.hl41-ch span{font-size:12.5px;color:var(--f-mute)}
+.hl41-ch.dark{background:#1b1a17;color:#f3efe6}.hl41-ch.dark span{color:rgba(243,239,230,.7)}
+html:not([data-hl="2c"]) .hl41-ch.dark{background:#eef0f4;color:#0b0e15}html:not([data-hl="2c"]) .hl41-ch.dark span{color:#4a5160}
+.hl41-ic{width:30px;height:30px;border-radius:15px;display:grid;place-items:center;background:var(--f-chip);font-weight:800}
+.hl41-k{font:600 10.5px 'IBM Plex Mono',ui-monospace,monospace;letter-spacing:.12em;color:var(--f-acc)}
+.hl41-sec{display:flex;flex-direction:column;gap:8px}
+.hl41-act .hl40-start{display:none}
+.hl41-act .hl40>.hl40-k{display:none}
+.hl41-act:not(:has(.hl40-me,.hl40-o,.hl40-late,.hl40-sug))>*{display:none}
+.hl41-act:not(:has(.hl40-me,.hl40-o,.hl40-late,.hl40-sug))::after{content:'Ingen har Hjemlys på akkurat nå.';font-size:13px;color:var(--f-mute)}
+.hl41-mut{font-size:12.5px;color:var(--f-mute)}
+.hl41-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.hl41-head b{font:500 22px Newsreader,Georgia,serif}
+.hl41-back{height:34px;padding:0 12px;border-radius:17px;border:1px solid var(--f-line);background:transparent;color:var(--f-ink);cursor:pointer;font:600 13px Manrope,system-ui,sans-serif}
+.hl41-q input{width:100%;box-sizing:border-box;height:44px;padding:0 16px;border-radius:22px;border:1px solid var(--f-line);background:var(--f-card);color:var(--f-ink);font:500 15px Manrope,system-ui,sans-serif}
+.hl41-seg{display:flex;flex-wrap:wrap;gap:4px;padding:4px;border-radius:12px;background:color-mix(in srgb,var(--f-ink) 8%,transparent);width:max-content;max-width:100%;box-sizing:border-box}
+.hl41-seg button{height:32px;padding:0 12px;border:0;border-radius:9px;background:transparent;color:var(--f-ink);cursor:pointer;font:600 13px Manrope,system-ui,sans-serif}
+.hl41-seg button[aria-pressed=true]{background:var(--f-card);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.hl41-list{display:flex;flex-direction:column;border-radius:18px;background:var(--f-card);padding:4px 0}
+.hl41-pr{display:flex;align-items:center;gap:12px;min-height:52px;padding:0 14px;border:0;background:transparent;color:inherit;cursor:pointer;text-align:left;font:inherit}
+.hl41-pr+.hl41-pr{border-top:1px solid var(--f-line)}
+.hl41-pr .hl41-tx b{font:600 15px Manrope,system-ui,sans-serif}
+.hl41-pr .hl41-tx{flex:1}
+.hl41-cb{flex:none;width:24px;height:24px;border-radius:12px;border:2px solid var(--f-line);display:grid;place-items:center;font-size:13px;font-weight:800;box-sizing:border-box}
+.hl41-cb.on{background:var(--f-on);border-color:var(--f-on);color:var(--f-onink)}
+.hl41-av{flex:none;border-radius:50%;display:grid;place-items:center;color:#fff;font:700 12px Manrope,system-ui,sans-serif;overflow:hidden}
+.hl41-av img{width:100%;height:100%;object-fit:cover}
+.hl41-foot{position:sticky;bottom:0;display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:12px 14px;border-radius:18px;background:var(--f-card);box-shadow:0 -10px 30px -20px rgba(0,0,0,.3)}
+.hl41-avs{display:flex}.hl41-avs .hl41-av{margin-right:-6px;box-shadow:0 0 0 2px var(--f-card)}
+.hl41-sp{flex:1}
+.hl41-tg{position:relative;flex:none;width:40px;height:24px;border-radius:12px;border:0;background:var(--f-line);cursor:pointer;padding:0}
+.hl41-tg i{position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:10px;background:#fff;transition:transform .18s}
+.hl41-tg.on{background:#3fbf7a}.hl41-tg.on i{transform:translateX(16px)}
+.hl41-b{height:42px;padding:0 18px;border-radius:21px;border:1px solid var(--f-line);background:transparent;color:var(--f-ink);cursor:pointer;font:700 14px Manrope,system-ui,sans-serif;display:inline-flex;align-items:center;gap:8px}
+.hl41-b.ink{border:0;background:var(--f-on);color:var(--f-onink)}
+.hl41-b:disabled{opacity:.5;cursor:default}
+.hl41-b.glow .hl40-glow{width:14px;height:14px}
+.hl41-btns{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+.hl41-f{display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--f-mute)}
+.hl41-f i{font-style:normal;opacity:.7}
+.hl41-f input{height:44px;padding:0 14px;border-radius:14px;border:1px solid var(--f-line);background:var(--f-card);color:var(--f-ink);font:500 15px Manrope,system-ui,sans-serif;min-width:0}
+.hl41-routes{display:flex;flex-direction:column;gap:6px}
+.hl41-rt{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:10px 40px 10px 14px;border-radius:14px;border:1px solid var(--f-line);background:var(--f-card);color:var(--f-ink);cursor:pointer;text-align:left;font:inherit}
+.hl41-rt[aria-pressed=true]{border-color:var(--f-ink)}
+.hl41-rt span{font-size:12.5px;color:var(--f-mute)}.hl41-rt i{position:absolute;right:14px;top:50%;transform:translateY(-50%);font-style:normal;font-weight:800}
+.hl41-sws{display:flex;flex-direction:column;border-radius:16px;background:var(--f-card)}
+.hl41-sw{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:46px;padding:0 14px;border:0;background:transparent;color:var(--f-ink);cursor:pointer;font:500 14px Manrope,system-ui,sans-serif}
+.hl41-sw+.hl41-sw{border-top:1px solid var(--f-line)}
+.hl41-err{font-size:13px;color:var(--f-acc)}
+.hl41-sent{display:flex;flex-direction:column;gap:8px;padding:16px;border-radius:20px;background:var(--f-card);border-left:4px solid #f2a93b}
+.hl41-sent b{font:italic 400 18px/1.35 Newsreader,Georgia,serif}
+@media (max-width:520px){ .hl41-grid{grid-template-columns:1fr 1fr} .hl41-ch{min-height:96px;padding:14px} }
+.hl41-pad{padding:12px 14px}
+
+
+/* ---------- Vel fremme ---------- */
+.hl41.hl42{max-width:none}
+.hl42-top{padding:2px 4px}
+.hl42-top .hl40-glow{width:26px;height:26px}
+.hl42-title{font:500 28px/1 Newsreader,Georgia,serif}
+.hl42-cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(320px,400px);gap:24px;align-items:start}
+.hl42-main,.hl42-aside{display:flex;flex-direction:column;gap:12px;min-width:0}
+.hl42-main{max-width:none}
+.hl42-q{font-size:14px;color:var(--f-mute);padding:0 4px}
+.hl42-ch{min-height:104px;border-radius:20px}
+.hl42-ic{font-size:18px;line-height:1;font-weight:800}
+.hl42-aside .hl41-k{padding:2px 4px 0;color:var(--f-mute)}
+.hl42-act{display:flex;flex-direction:column;border-radius:18px;background:var(--f-card);overflow:hidden}
+.hl42-row+.hl42-row{border-top:1px solid var(--f-line)}
+.hl42-rb{display:flex;align-items:center;gap:12px;width:100%;padding:12px 14px;border:0;background:transparent;color:inherit;cursor:pointer;text-align:left;font:inherit}
+.hl42-rb:hover{background:color-mix(in srgb,var(--f-ink) 4%,transparent)}
+.hl42-rb .hl41-tx{flex:1}
+.hl42-rb .hl41-tx b{font:700 14px Manrope,system-ui,sans-serif}
+.hl42-rb .hl41-tx span{font-size:12px}
+.hl42-dot{flex:none;width:10px;height:10px;border-radius:5px}
+.hl42-panel{display:flex;flex-direction:column;gap:10px;padding:0 14px 14px 60px}
+.hl42-facts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.hl42-facts div{display:flex;flex-direction:column;gap:2px;padding:8px 10px;border-radius:12px;background:var(--f-chip);min-width:0}
+.hl42-facts span{font-size:11.5px;color:var(--f-mute)}
+.hl42-facts b{font-size:13px;overflow-wrap:anywhere}
+.hl42-btns{display:flex;flex-wrap:wrap;gap:8px}
+.hl42-btns .hl41-b{height:38px;padding:0 14px;font-size:13px;text-decoration:none}
+.hl41-b.danger{color:#e5483b;border-color:color-mix(in srgb,#e5483b 45%,transparent)}
+.hl42-none{padding:14px;font-size:13px;color:var(--f-mute)}
+.hl42-glimt{display:flex;flex-direction:column;gap:10px;padding:14px;border-radius:20px;background:var(--f-card);box-shadow:0 10px 30px -16px rgba(0,0,0,.35)}
+.hl42-gh{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--f-mute)}
+.hl42-gh b{color:var(--f-ink)}
+.hl42-gi{width:20px;height:20px;border-radius:10px;background:#b23a2a;color:#fff;display:grid;place-items:center;font-size:11px}
+.hl42-gt{font-size:15px;line-height:1.35;text-wrap:pretty}
+.hl42-gb{display:flex;gap:8px}
+.hl42-gb .hl41-b{flex:1;justify-content:center}
+.hl42-foot{padding:0 4px;line-height:1.45}
+@media (max-width:900px){
+  .hl42-cols{grid-template-columns:1fr}
+  .hl42-panel{padding-left:14px}
+}
+
+/* ---------- Familie → Soner: Posisjonsvarsler + varselbanner (family45.js) ---------- */
+.za45{display:flex;flex-direction:column;padding:4px 16px 8px!important;margin-bottom:12px}
+.za45-h{display:flex;align-items:center;gap:12px;min-height:60px}
+.za45-t{flex:1;min-width:0;display:flex;flex-direction:column}
+.za45-t b{font-size:15px}.za45-t span{font-size:12.5px;opacity:.7}
+.za45-sw{flex:none;position:relative;width:52px;height:32px;border-radius:16px;border:0;background:#c9c2b4;cursor:pointer;transition:background .2s;padding:0}
+.za45-sw i{position:absolute;top:3px;left:3px;width:26px;height:26px;border-radius:13px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:transform .2s}
+.za45-sw.on{background:#2f7a4f}.za45-sw.on i{transform:translateX(20px)}
+.za45-sw:disabled{cursor:default}
+.za45-ppl{display:flex;flex-direction:column;border-top:1px solid rgba(127,127,127,.22)}
+.za45-ppl.off{opacity:.45}
+.za45-p{display:flex;align-items:center;gap:12px;min-height:54px}
+.za45-p+.za45-p{border-top:1px solid rgba(127,127,127,.18)}
+.za45-av{flex:none;width:34px;height:34px;border-radius:17px;background-size:cover;background-position:center;color:#fff;display:grid;place-items:center;font:700 12px Manrope,system-ui,sans-serif}
+.za45-p b{flex:1;font-size:15px}
+.za45-ex{align-self:flex-start;margin-top:4px;height:36px;padding:0 4px;border:0;background:transparent;color:#b23a2a;cursor:pointer;font:700 13px Manrope,system-ui,sans-serif}
+.za45-bn{position:fixed;top:12px;left:50%;z-index:600;width:min(420px,calc(100vw - 32px));display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:22px;background:rgba(245,245,247,.94);color:#1b1a17;
+  box-shadow:0 14px 40px -14px rgba(0,0,0,.45);-webkit-backdrop-filter:blur(24px);backdrop-filter:blur(24px);font-family:-apple-system,system-ui,sans-serif;transform:translate(-50%,-140%);opacity:0;transition:transform .32s cubic-bezier(.2,.9,.25,1.1),opacity .2s;cursor:pointer}
+.za45-bn.on{transform:translate(-50%,0);opacity:1}
+html[data-mode="dark"] .za45-bn{background:rgba(40,38,34,.94);color:#f3efe6}
+.za45-bic{position:relative;flex:none;width:38px;height:38px}
+.za45-bic img,.za45-bi{display:grid;place-items:center;width:38px;height:38px;border-radius:11px}
+.za45-badge{position:absolute;right:-4px;bottom:-4px;width:16px;height:16px;border-radius:5px;background:#b23a2a url("/assets/icons/icon.svg") center/12px no-repeat;box-shadow:0 0 0 2px rgba(245,245,247,.95)}
+.za45-bt{flex:1;min-width:0;display:flex;flex-direction:column}
+.za45-bt b{font-size:14px;font-weight:600}.za45-bt span{font-size:13.5px;opacity:.8}
+.za45-bn-n{align-self:flex-start;font-size:12px;opacity:.6}
+@media (prefers-reduced-motion:reduce){.za45-bn{transition:opacity .2s}}
+/* Papir mørk (før i papir-mork.css; står her fordi sidefila lastes etter den). */
+:where(html[data-mode="dark"][data-hl="2c"]) .hl41-ch.dark{background:#f3efe6;color:#16140f}
+:where(html[data-mode="dark"][data-hl="2c"]) .hl41-ch.dark span{color:rgba(22,20,15,.7)}
+:where(html[data-mode="dark"][data-hl="2c"]) .hl41-tg i{background:var(--ds-surface-raised)}
+
 .f50 {
   --f-bg: #f3efe6; --f-card: #fff; --f-ink: #1b1a17; --f-ink2: #4a463f; --f-mut: #6b665c; --f-mut2: #8a857a; --f-line: #ece6da; --f-bd: #d8d1c2; --f-dash: #c9c1b0;
   --f-red: #b23a2a; --f-redbg: #f6e0dc; --f-green: #2d774b; --f-greenbg: #e3efe6; --f-map: #e8e4da; --f-pri: #1b1a17; --f-onpri: #fff;

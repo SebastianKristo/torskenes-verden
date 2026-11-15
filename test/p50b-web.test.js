@@ -28,7 +28,7 @@ test('mikrofonknappen i søket følger md-en (utseende) og beholder tale til tek
 });
 
 test('dra-pillene i Vær virker med finger', () => {
-  const css = read('public/css/overgang/vaer.css');
+  const css = read('public/css/pages/vaer.css');
   const g = css.match(/\.g52\{([^}]*)\}/)?.[1] ?? '';
   for (const s of ['touch-action:none', 'user-select:none', '-webkit-user-select:none', '-webkit-touch-callout:none']) assert.ok(g.includes(s), `.g52 mangler ${s}`);
   assert.doesNotMatch(g, /pan-y/);

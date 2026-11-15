@@ -1,5 +1,13 @@
 /* Mat (tidligere Matplan) – felles komponent. Design 2a: mørk varm grunn, limegrønt kort for i dag,
    Instrument Serif på retter og titler, Geist Mono på etiketter, oransje aksent. Alt er avgrenset under .mat. */
+
+/* ═══ Mat: regler fra det gamle skallet (app.css, paper.css), før sidens egne som før ═══ */
+/* Mat (tidligere Matplan): varm mørk grunn som i design 2a. */
+html:not([data-hl="2c"]) body.not-dash[data-route="matplan"],html:not([data-hl="2c"]) body.not-dash[data-route="matplan"] .bg{background:#161513}
+
+/* ---------- Mat på papir (prompt 32): Matplan-modulen beholder sine egne farger (mørk varm grunn, radius 28) som et kort under fotovinduet. ---------- */
+html[data-hl="2c"] body[data-route="matplan"]{background:var(--pp)}
+
 .mat{
   /* Fargene kommer fra designtokens (tokens.css), så Mat følger stil (Papir, Glass) og modus (lys, mørk) som resten av Homelab.
      Det som ikke finnes som token, er blandet av tokens. */

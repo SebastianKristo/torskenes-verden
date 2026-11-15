@@ -175,3 +175,34 @@ html[data-hl="2c"] .p-sec .bdw{padding:2px 0}
 .bd-cl-r{flex:none;font-size:13px;font-weight:600;color:var(--b-mut)}
 .bd.bd-calset{max-width:none;display:flex;flex-direction:column;gap:10px}
 .bd.bd-calset .bd-cals{border:1px solid var(--b-line)}
+
+/* ═══ Bursdager: regler fra det gamle skallet (web*.css), lastes etter sidens egne regler som før ═══ */
+/* ---------- Bursdager: jenka-tog i toppkortet, bilder ---------- */
+.bd41-one{grid-template-columns:minmax(0,1fr)!important;max-width:760px}
+.bd-hero.bd41-on{position:relative;overflow:hidden;padding-bottom:78px!important;isolation:isolate}
+.bd-hero.bd41-on>*:not(.bd41-party){position:relative;z-index:2}
+.bd41-party{position:absolute;inset:0;z-index:1;pointer-events:none;overflow:hidden}
+.bd41-shade{position:absolute;left:0;right:0;bottom:0;height:90px;background:linear-gradient(180deg,rgba(0,0,0,0),rgba(0,0,0,.14))}
+.bd41-conf i{position:absolute;top:-14px;display:block;animation:bd41f linear infinite}
+@keyframes bd41f{0%{transform:translateY(0) rotate(0)}100%{transform:translateY(320px) rotate(420deg)}}
+.bd41-train{position:absolute;left:0;right:0;bottom:10px;height:70px}
+.bd41-row{position:absolute;bottom:0;left:0;display:flex;align-items:flex-end;gap:6px;flex-direction:row-reverse;animation:bd41go 11s linear infinite;will-change:transform}
+@keyframes bd41go{0%{transform:translateX(-110%)}100%{transform:translateX(calc(100cqw + 10%))}}
+.bd41-train{container-type:inline-size}
+.bd41-car{position:relative;display:inline-block;line-height:0;animation:bd41hop .42s ease-in-out infinite alternate;animation-delay:var(--d)}
+@keyframes bd41hop{0%{transform:translateY(0) rotate(-6deg)}100%{transform:translateY(-8px) rotate(6deg)}}
+.bd41-trw{position:absolute;right:-24px;top:22px;line-height:0;animation:bd41tr .5s ease-in-out infinite alternate;transform-origin:0 50%}
+@keyframes bd41tr{0%{transform:rotate(-8deg)}100%{transform:rotate(6deg)}}
+.bd41-note{position:absolute;right:-6px;top:-6px;font:700 15px/1 system-ui,sans-serif;opacity:0;animation:bd41n 1.6s ease-out infinite}
+@keyframes bd41n{0%{opacity:0;transform:translate(0,0)}20%{opacity:1}100%{opacity:0;transform:translate(14px,-34px)}}
+.bd41-party.still .bd41-row{animation:none;left:50%;transform:translateX(-50%)}
+.bd41-party.still .bd41-car{animation:bd41hop .42s ease-in-out 2 alternate}
+@media (prefers-reduced-motion:reduce){ .bd41-row{animation:none!important;left:50%;transform:translateX(-50%)} .bd41-car,.bd41-trw,.bd41-note{animation:none!important} .bd41-conf{display:none} }
+.bd41-plus{position:relative;overflow:visible!important}
+.bd41-plus::after{content:'+';position:absolute;right:-3px;bottom:-3px;width:16px;height:16px;border-radius:8px;background:var(--b-ink,#1b1a17);color:var(--b-bg,#f3efe6);display:grid;place-items:center;font:800 12px/1 Manrope,system-ui,sans-serif;box-shadow:0 0 0 2px var(--b-card,#fff)}
+.bd41-ph{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0 0 8px}
+.bd41-up{display:inline-flex;align-items:center;gap:6px;cursor:pointer}
+.bd41-up.busy{opacity:.6;cursor:default}
+.bd41-thumbs{display:flex;gap:6px;flex-wrap:wrap;width:100%}
+.bd41-thumbs>span{position:relative;width:48px;height:48px;border-radius:12px;background:#ccc center/cover no-repeat}
+.bd41-thumbs button{position:absolute;right:-6px;top:-6px;width:20px;height:20px;border-radius:10px;border:0;background:#1b1a17;color:#fff;cursor:pointer;font-size:12px;line-height:1}

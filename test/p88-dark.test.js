@@ -17,7 +17,9 @@ const rule = (css, sel, last = css === PM) => {
 test('papir-mork.css lastes sist i app.html', () => {
   const html = rd('public/app.html');
   const i = html.indexOf('/assets/css/papir-mork.css');
-  assert.ok(i > html.indexOf('/assets/css/pages/innstillinger.css') && i > html.lastIndexOf('<link rel="stylesheet" href="/assets/css/overgang/'));
+  const last = [...html.matchAll(/<link rel="stylesheet" href="([^"]+)"/g)].map((m) => m[1]).filter((h) => h.startsWith('/assets/css/')).pop();
+  assert.ok(i > html.indexOf('/assets/css/pages/innstillinger.css'));
+  assert.equal(last, '/assets/css/papir-mork.css');
 });
 
 test('temavariabler for mørk modus', () => {
