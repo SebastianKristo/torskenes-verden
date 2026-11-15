@@ -9,6 +9,7 @@ import { FM, famLoad } from './mobile-p16.js';
 import { FT, HK, tasksLoad, huskeView } from './mobile-p17.js';
 import { setTiles } from './mobile-p20.js';
 import { paper, paperDark } from './mobile-paper.js';
+import { loadLeaflet } from './leaflet.js';
 
 /* ---------- Sone-ikoner og farger (fasit: Familie.dc.html) ---------- */
 
@@ -125,17 +126,7 @@ async function setPhoto(uid, file) {
 
 /* ---------- Kartet (Leaflet med Kartverket-fliser via /tiles) ---------- */
 
-let LF = null, mapEl = null, map = null, layer = null, fitted = false;
-function loadLeaflet() {
-  if (window.L?.map) return Promise.resolve(window.L);
-  if (LF) return LF;
-  LF = new Promise((res, rej) => {
-    const css = document.createElement('link'); css.rel = 'stylesheet'; css.href = '/api/family/vendor/leaflet.css'; document.head.appendChild(css);
-    const add = (src, next) => { const s = document.createElement('script'); s.src = src; s.async = true; s.onload = () => res(window.L); s.onerror = next; document.head.appendChild(s); };
-    add('/api/family/vendor/leaflet.js', () => { css.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'; add('https://unpkg.com/leaflet@1.9.4/dist/leaflet.js', () => { LF = null; rej(new Error('Kartet kunne ikke lastes')); }); });
-  });
-  return LF;
-}
+let mapEl = null, map = null, layer = null, fitted = false;
 const sharers = () => mem().filter((p) => p.last?.lat != null && (p.sharing === 'on' || (isMe(p) && FM.d?.me?.sharing === 'on')));
 const kmh = (p) => { const s = p.last?.speed; return s != null && p.precision !== 'approx' && s > 0.5 ? Math.round(s * 3.6) : 0; };
 function fit() {
