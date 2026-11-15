@@ -10,6 +10,7 @@ import { join, resolve } from 'node:path';
 import { config } from './config.js';
 import { db, kv, OWNER, withKvMemo } from './db.js';
 import { ensureIndexes } from './db-indexes.js';
+import { compressJson } from './http/compress.js';
 import { createSession, destroySession, sessionUser, rememberDevice, pauseDevice, forgetDevice, currentDeviceId, currentSessionId, trustIp, isLan, requireAuth, requireAdmin, clientIp, verifyLogin, createTicket, redeemTicket, userInfo, listUsers, listUsersFor, createUser, deleteUser, updateUser, setPassword, checkPassword, isAdmin, needsSetup, setupServer, serverName, setServerName, startTotpSetup, confirmTotpSetup, disableTotp, totpReadable, loginBlocked, loginFailed, loginSucceeded } from './auth.js';
 import * as integrations from './integrations.js';
 import { cfg, publicConfig, updateConfig, runRequest, userCfgSet, runAsUser } from './settings.js';
@@ -129,6 +130,7 @@ const app = new Hono();
 app.use('*', (c, next) => runRequest(c, next));
 // kv leses én gang per (bruker, nøkkel) i hver API-forespørsel (server/db.js, withKvMemo); skriving tømmer minnet.
 for (const p of ['/api/*', '/finans/api/*']) app.use(p, (c, next) => withKvMemo(next));
+for (const p of ['/api/*', '/finans/api/*']) app.use(p, compressJson); // brotli/gzip for JSON (server/http/compress.js), ikke SSE eller binært
 traceObs51(app); // prompt 51 (OBS51): spor for trege forespørsler (DB, AI, eksterne kall) – før alle ruter
 // Prompt 36: «Starter opp»-siden. Registrert før secureHeaders: siden er én fil med innebygd skript/stil, så den får sin
 // egen strenge CSP (ingen eksterne skript, bare fonten fra Google Fonts, fetch bare til samme opphav).
