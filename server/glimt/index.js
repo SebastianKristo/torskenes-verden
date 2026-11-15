@@ -24,7 +24,6 @@ import { entitiesApi60 } from './convo/api.js';
 import { memoryApi63 } from './memory/hygiene-api.js';
 import assistApi from './assist.js';
 import { glimtApi } from '../ai/control.js';
-import { brief38Api } from './brief-cards.js';
 import { settingsApi, ttsApi, imgApi } from './settings.js';
 import briefApi from './brief.js';
 import { assistLocalMw44 } from '../kalender/invites.js';
@@ -33,8 +32,7 @@ import { assistLocalMw44 } from '../kalender/invites.js';
 export function mountGlimt(app) {
   app.route('/api/glimt/memory', memoryApi63); // /pending, /conflicts, /stale, /hygiene (før «Glimt husker»-rutene)
   app.route('/api/glimt/memory', remember); // GET/POST/DELETE, POST /:id/apply (per bruker)
-  app.route('/api/brief', brief38Api); // nye kort (pakker, familie, skole og jobb, bursdager, nordlys) + POST /gift
-  app.route('/api/brief', briefApi); // Glimt-brief
+  app.route('/api/brief', briefApi); // Glimt-brief med kortene (pakker, familie, skole og jobb, bursdager, nordlys) + POST /gift
   app.route('/api/glimt/settings', settingsApi);
   app.route('/api/tts', ttsApi);
   app.route('/api/img', imgApi);

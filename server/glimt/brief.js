@@ -53,6 +53,7 @@ import { bibleForBrief } from '../bible37.js'; // prompt 37: dagens bibelvers (b
 import { profileName } from '../profiles37.js'; // prompt 37: profilnavnet i hilsenen
 import { applyBriefCards73, guideFilter73 } from '../brief73.js'; // prompt 73: bare kortene som er på (Innhold i briefen)
 import { dtf } from '../intl-format.js'; // gjenbrukte Intl.DateTimeFormat
+import { withBriefCards, addGiftTask } from './brief-cards.js'; // prompt 38: de nye kortene og «Gave til …»
 
 const MOCK = process.env.MOCK_DATA === '1';
 import { registerJob } from '../jobs/index.js';
@@ -359,7 +360,17 @@ api.get('/', async (c) => {
   const b = await buildBrief(u, { kind });
   // Prompt 43: fresh=1 starter ikke en ny oppsummering mens en kjører (den som kjører, gir den nye teksten).
   if (b.summarySource === 'mal' || c.req.query('fresh') === '1') { if (c.req.query('fresh') === '1' && !inFlight(briefKey(u, b.kind))) kv.del(u, cacheKey(b.kind, osloParts().date)); kickLlm(u, b.kind); }
-  return c.json(b, 200, { 'Cache-Control': 'no-store' });
+  // Prompt 38: kortene (pakker, familie, skole og jobb, bursdager, nordlys) flettes inn her (før: en egen mellomvare foran ruten).
+  return c.json(await withBriefCards(u, b), 200, { 'Cache-Control': 'no-store' });
+});
+// Prompt 38: «+ Gave til … i Gjøremål» → 201 {ok, created:true, item} | 200 {ok, created:false, item} (finnes fra før)
+api.post('/gift', async (c) => {
+  const b = await c.req.json().catch(() => ({})) ?? {};
+  try {
+    const r = addGiftTask(c.get('user'), b.name, b.date);
+    const tags = (() => { try { return JSON.parse(r.row.tags); } catch { return []; } })();
+    return c.json({ ok: true, created: r.created, item: { id: r.row.id, title: r.row.title, due: r.row.due, list: r.row.list, tags } }, r.created ? 201 : 200);
+  } catch (e) { return c.json({ error: e.message }, e.status ?? 400); }
 });
 api.get('/widget', async (c) => {
   noteHere46(c);

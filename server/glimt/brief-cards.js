@@ -1,5 +1,5 @@
 // Prompt 38 (SERVER38): nye kort i Now Brief – Pakker, Familie, Skole og jobb, Bursdager og Nordlys i natt – og
-// «+ Gave til … i Gjøremål». Montert foran /api/brief (glimt/brief.js): GET /api/brief får feltene under flettet inn.
+// «+ Gave til … i Gjøremål». Rutene ligger i glimt/brief.js: GET /api/brief får feltene under flettet inn (withBriefCards).
 //
 // GET /api/brief (i tillegg til feltene fra prompt 34–37):
 //   cards:[{id, on, label}]  rekkefølgen fra Innstillinger → Glimt → Brief (av = feltet under er null)
@@ -13,10 +13,8 @@
 // POST /api/brief/gift {name, date:'YYYY-MM-DD'} → 201 {ok, created:true, item} | 200 {ok, created:false, item} (finnes fra før)
 //   Legger «Kjøp gave til X» i «Mine» med forfall to dager før (i dag om det er nærmere), tag #gave.
 // Push kl. 20 (Oslo) når Kp ≥ 4 og skydekket < 40 % (auroraNotify i /api/glimt/settings, kortet «aurora» på).
-import { Hono } from 'hono';
 import { db, kv } from '../db.js';
 import { config } from '../config.js';
-import { authOrToken } from '../mobile.js';
 import { packagesFor } from '../tracking.js';
 import { positions } from '../family.js';
 import { listFor as birthdaysOf } from '../kalender/birthdays.js';
@@ -246,29 +244,16 @@ export async function auroraPushTick(t = Date.now(), { force = false } = {}) {
   return n;
 }
 
-/* ---------------- Ruter (montert foran brief34 på /api/brief) ---------------- */
+/* ---------------- Kortene i GET /api/brief ---------------- */
 
-export const brief38Api = new Hono();
-brief38Api.use('/', async (c, next) => {
-  await next();
-  if (c.req.method !== 'GET' || c.res.status !== 200 || !/json/.test(c.res.headers.get('content-type') ?? '')) return;
-  const u = c.get('user');
-  if (!u) return;
+/** Grunnbriefen (brief.js) med kortene flettet inn. Pakkekortet utvider grunnbriefens pakker. Feiler kortene, vises briefen uten dem. */
+export async function withBriefCards(u, b) {
   try {
-    const b = await c.res.clone().json();
     const extra = await brief38Cards(u, b.kind);
     const packages = extra.packages ? { ...(b.packages ?? {}), ...extra.packages } : extra.packages;
-    c.res = c.json({ ...b, ...extra, packages }, 200, { 'Cache-Control': 'no-store' });
-  } catch (e) { console.warn('[brief38]', e.message); }
-});
-brief38Api.post('/gift', authOrToken, async (c) => {
-  const b = await c.req.json().catch(() => ({})) ?? {};
-  try {
-    const r = addGiftTask(c.get('user'), b.name, b.date);
-    const tags = (() => { try { return JSON.parse(r.row.tags); } catch { return []; } })();
-    return c.json({ ok: true, created: r.created, item: { id: r.row.id, title: r.row.title, due: r.row.due, list: r.row.list, tags } }, r.created ? 201 : 200);
-  } catch (e) { return c.json({ error: e.message }, e.status ?? 400); }
-});
+    return { ...b, ...extra, packages };
+  } catch (e) { console.warn('[brief38]', e.message); return b; }
+}
 
 let timer = null;
 export function startBrief38() {
