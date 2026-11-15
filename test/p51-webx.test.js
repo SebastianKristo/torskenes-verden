@@ -148,7 +148,7 @@ test('onboarding: app får token med vanlige scopes; tilbaketrukket invitasjon v
 test('onboarding: /join/<id>.<kode> gir veiviseren', async () => {
   const r = await req('/join/inv51_abcdefgh.ABCD-EFGH');
   assert.equal(r.status, 200);
-  assert.match(r.text, /join51/);
+  assert.match(r.text, /join\.js/);
 });
 
 /* ---------------- Tema ---------------- */

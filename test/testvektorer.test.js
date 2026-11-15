@@ -237,7 +237,7 @@ const ADR_IMPL = [
   // Normalisering av en lagret/oppgitt adresse (PUBLIC_URL, Innstillinger → Server).
   ['server auth/server-address.js cleanUrl46', (v) => cleanUrl46(v.inn), (v) => v.normalisert, (v) => !v.gammelStandard],
   // Lokal/ekstern for verten.
-  ['server qa51.js isLocalHost51', (v) => isLocalHost51(vertAv(v)), (v) => v.lokal, (v) => !!v.normalisert],
+  ['server qa.js isLocalHost51', (v) => isLocalHost51(vertAv(v)), (v) => v.lokal, (v) => !!v.normalisert],
   ['server net/server-url.js normalizeServerUrl', (v) => normalizeServerUrl(v.inn), (v) => v.normalisert, (v) => !v.gammelStandard],
   ['server net/server-url.js isLocalHost', (v) => isLocalHost(vertAv(v)), (v) => v.lokal, (v) => !!v.normalisert],
   // isPrivateIp46 får bare IP-adresser (etter DNS-oppslag i news46), så bare IP-vektorene gjelder.

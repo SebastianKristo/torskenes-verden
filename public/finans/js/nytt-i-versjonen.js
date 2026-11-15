@@ -101,7 +101,7 @@ export function showWhatsNew52(w, { manual = false } = {}) {
   ok.focus({ preventScroll: true, focusVisible: false }); // ringen kommer først når man bruker tastaturet
 }
 
-/** Kalles ved oppstart av FinansHub. Gjør ingenting hvis Homelab-kortet (qa51.js) allerede er lastet på siden. */
+/** Kalles ved oppstart av FinansHub. Gjør ingenting hvis Homelab-kortet (qa.js) allerede er lastet på siden. */
 export async function checkWhatsNew52() {
   if (window.__hlQa51 || window.__fhWn52) return;
   window.__fhWn52 = true;

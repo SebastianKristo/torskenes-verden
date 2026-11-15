@@ -1,6 +1,6 @@
 // Prompt 36 (web): små ting i skallet.
 // - Temperaturen i toppbildet: trykk åpner Vær-siden, hold inne ≥ 550 ms åpner yr.no (ny fane). Cmd/ctrl-klikk = yr i ny fane.
-// - Oppstartsside (Nordlys Starter) når web mister kontakt med serveren (se starting36.js).
+// - Oppstartsside (Nordlys Starter) når web mister kontakt med serveren (se starting.js).
 import { haptic } from './util.js';
 
 const HOLD = 550;
@@ -40,7 +40,7 @@ function prefetchDomains() {
 export function initWeb36() {
   bindWxTap();
   prefetchDomains();
-  import('./starting36.js').then((m) => m.watchServer()).catch(() => {});
+  import('./starting.js').then((m) => m.watchServer()).catch(() => {});
   // Prompt 44: oppstartssiden vises bare når updateren selv sier «restarting» (ikke ved én feilet statusforespørsel,
   // ikke ut fra fremdriftssteget). Fremdriften 0–99 % vises bare i kortet «Oppdaterer Nordlys OS».
   import('./sysupdate.js').then((su) => {

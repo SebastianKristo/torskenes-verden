@@ -4,7 +4,7 @@
 //   POST   /api/onboard51/invites (admin) · GET /api/onboard51/invites (admin) · DELETE /api/onboard51/invites/:id (admin)
 //   POST   /api/onboard51/preview {id, code | link}  (uinnlogget)
 //   POST   /api/onboard51/accept {id, code | link, username, password, name?, share?, client?, device?, platform?} (uinnlogget)
-//   GET    /join/:id.:code                     → veiviseren (public/join51.html)
+//   GET    /join/:id.:code                     → veiviseren (public/join.html)
 //
 // Sikkerhet: invitasjonen er en engangskode, aldri et token. QR/lenke har bare id + kode + offentlig server-URL, koden lagres bare
 // som hash, varer maks 7 døgn, kan brukes én gang og trekkes tilbake. Nye kontoer fra en invitasjon er alltid vanlige brukere, og
@@ -168,5 +168,5 @@ invitesApi.post('/onboard51/accept', async (c) => {
 /** Monteres rett etter mountWebx51 i index.js (samme plass i rekkefølgen som før). */
 export function mountInvites(app) {
   app.route('/api', invitesApi);
-  app.get('/join/:token', async (c) => c.html(await readFile(join(resolve('public'), 'join51.html'), 'utf8'), 200, { 'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer' }));
+  app.get('/join/:token', async (c) => c.html(await readFile(join(resolve('public'), 'join.html'), 'utf8'), 200, { 'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer' }));
 }

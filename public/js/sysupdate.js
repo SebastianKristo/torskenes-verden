@@ -3,7 +3,7 @@
 // - 404 (eldre server uten API-et) → «ikke tilgjengelig». available:false → updater-containeren kjører ikke.
 // - Under en jobb hentes status hvert 2. s. Når serveren er nede (restart), pinges /healthz hvert 3. s; når den
 //   svarer og jobben er ferdig (eller ny versjon er installert), lastes siden på nytt.
-import { reloadOnce } from './upd44.js';
+import { reloadOnce } from './upd-reload.js';
 
 const BASE = '/api/system/update';
 export const UPD_CMD = 'bash -c "$(curl -fsSL https://raw.githubusercontent.com/SebastianKristo/torskenes-verden/main/deploy/proxmox/update.sh)"';
@@ -95,7 +95,7 @@ export async function startUpdate(password = U.pw, opt = {}) {
     U.sheet = false; U.pw = ''; U.backup = r?.backup ?? null;
     U.d = { ...(U.d ?? {}), status: { ...(U.d?.status ?? {}), id: r?.id, state: 'downloading', step: 'downloading', error: null, startedAt: new Date().toISOString(), finishedAt: null } };
     U.starting = false; emit();
-    // Prompt 40: oppstartssiden vises bare etter en ekte oppdatering (starting36.js leser flagget).
+    // Prompt 40: oppstartssiden vises bare etter en ekte oppdatering (starting.js leser flagget).
     try { sessionStorage.setItem('hl_updating', JSON.stringify({ at: Date.now(), version: U.d?.latest?.version ?? null })); } catch { /* privat modus */ }
     watch();
     return true;
@@ -156,7 +156,7 @@ export async function watch() {
       const d = await req('');
       U.d = d; U.st = 'ok';
       if (U.logOpen && d.log) U.log = Array.isArray(d.log) ? d.log.join('\n') : d.log;
-      // Prompt 44: én innlasting (upd44.js), koordinert med oppstartsskjermen og andre faner.
+      // Prompt 44: én innlasting (upd-reload.js), koordinert med oppstartsskjermen og andre faner.
       if (finished()) { U.waiting = false; U.reloading = true; emit(); watching = false; const to = U.d?.installed?.version ?? U.d?.latest?.version ?? null; setTimeout(() => reloadOnce(to), 800); return; }
       U.waiting = false; fails = 0; failSince = 0;
       if (!RUNNING.includes(state())) { watching = false; emit(); return; }

@@ -6,7 +6,7 @@
 // 3) Godkjent: POST /api/auth/qr/finish {sid} → økt-cookie, eller {needs2fa:true} + pre-auth → 6 sifferbokser → POST /api/auth/2fa {code}
 //    (TOTP eller reservekode; 5 feil = 15 min sperre på serveren).
 // Svarer serveren 404 (eldre versjon), vises bare passord-innloggingen.
-import { qrPath } from './qr38.js';
+import { qrPath } from './qr.js';
 
 const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const initials = (n) => (String(n ?? '').match(/\p{L}/gu) ?? ['?']).slice(0, 2).join('').toUpperCase();

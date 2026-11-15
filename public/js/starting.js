@@ -10,10 +10,10 @@
 //   - Vises bare når serveren/updateren sier restarting (eller 503 «starting»), eller etter 3 feilede helsesjekker på rad
 //     over minst 6 s. Én feil gjør ingenting. Under nedlasting/installasjon blir man på siden (bare kortet viser fremdrift).
 //   - Når den først vises, går den aldri tilbake. Den forlates bare når /api/ready (ellers /api/health) svarer ok to ganger
-//     på rad og versjonen er den nye. Da én location.replace(?v=<to>) via upd44.js (koordinert mellom faner).
+//     på rad og versjonen er den nye. Da én location.replace(?v=<to>) via upd-reload.js (koordinert mellom faner).
 import { fig, hostFor } from './glimt-figs.js';
 import { gs } from './glimt-settings.js';
-import { reloadOnce, sameVer, afterReload } from './upd44.js';
+import { reloadOnce, sameVer, afterReload } from './upd-reload.js';
 
 const STEPS = [['db', 'Starter databasen'], ['migrate', 'Kjører migrasjoner'], ['api', 'Starter web og API'], ['ai', 'Vekker Glimt og AI-modellene'], ['integrations', 'Kobler til integrasjoner']];
 const LINES = ['Serveren starter på nytt etter oppdateringen. Glimt sover litt …', 'Glimt våkner og sjekker at alt er på plass.', 'Nesten klar. Glimt varmer opp modellene.', 'Alt kjører! Laster inn Homelab …'];

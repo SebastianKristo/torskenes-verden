@@ -13,7 +13,7 @@ import java.net.URLEncoder
  * {sid, key, app:'finans'} → {token, user}: serveren utsteder en EGEN enhetsøkt (ikke en kopi av skannerens token).
  * Koden gjelder 2 min og fornyes automatisk. Skanneren er en innlogget Finans-mobil (P38: «Logg inn på annen enhet»).
  *
- * QR-tegningen er en port av public/js/qr38.js (byte-modus, feilretting M, versjon 1–10) – ingen nye avhengigheter.
+ * QR-tegningen er en port av public/js/qr.js (byte-modus, feilretting M, versjon 1–10) – ingen nye avhengigheter.
  */
 
 /* ======================= QR-koder uten avhengigheter ======================= */

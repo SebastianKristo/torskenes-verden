@@ -86,11 +86,11 @@ test('Media-headeren: ingen varsler-pill, rekkefølge Tilbake · Media · faner 
 
 test('innlogging: Oslo-scenen erstatter bildet, QR/passord urørt, bare transform/opacity i løkkene, stille ved redusert bevegelse', () => {
   const login = rd('public/js/login.js');
-  assert.match(login, /import \{ scene89 \} from '\.\/login-scene89\.js'/);
+  assert.match(login, /import \{ scene89 \} from '\.\/login-scene\.js'/);
   assert.match(login, /scene89\(\$\('g-hero'\), st\.bg === 'oslo'\) \? 'none' : bgCss\(st\.bg, true\)/);
   const html = rd('public/login.html');
   assert.ok(html.includes('id="g-qr"') && html.includes('id="f-pw"'));
-  const sc = rd('public/js/login-scene89.js');
+  const sc = rd('public/js/login-scene.js');
   for (const s of ['visibilitychange', 'IntersectionObserver', 'prefers-reduced-motion', "aria-hidden', 'true'", 'xMidYMax slice']) assert.ok(sc.includes(s), s);
   assert.ok(!/requestAnimationFrame|setInterval/.test(sc), 'ingen JS-løkke');
   const css = rd('public/css/pages/login.css'), part = css.slice(css.indexOf('/* Prompt 89'));

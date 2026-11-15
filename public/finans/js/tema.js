@@ -1,7 +1,7 @@
 // Økonomi følger Homelab-temaet (Q15, B-F1): stil (Papir «2c» / Glass «cur») og modus (lys/mørk) leses fra de samme
 // valgene som Homelab bruker, så mørk modus bare velges ett sted.
 //   Papir lys → «lys», Papir mørk → «mork», Glass → «glod» (desktop). Mobil har bare Papir: Glass gir Papir mørk.
-// Kildene, i rekkefølge: html[data-theme51-eff] (webx51.js, /api/me/theme51), brukerens oppsett (/api/me/layout: hlTheme,
+// Kildene, i rekkefølge: html[data-theme51-eff] (sok-tema-offline.js, /api/me/theme51), brukerens oppsett (/api/me/layout: hlTheme,
 // web_theme), så Homelabs lokale kopi (hl_theme, papir_web_mode). loader.js gjør det samme før første tegning (vanlig skript).
 // Det gamle FinansHub-valget (layout.design / fh_design, paperMode på mobil) brukes bare når Homelab-modusen er ukjent.
 const ls = (k) => { try { return localStorage.getItem(k); } catch { return null; } };
@@ -50,7 +50,7 @@ export function settHomelabTema({ design, modus }) {
   const wm = WEB[modus];
   if (!wm) return;
   lsSet('papir_web_mode', wm);
-  // webx51.js lagrer modusen i /api/me/theme51 (og web_theme) når den hører «papir-web-mode», og setter data-theme51*.
+  // sok-tema-offline.js lagrer modusen i /api/me/theme51 (og web_theme) når den hører «papir-web-mode», og setter data-theme51*.
   h.dataset.theme51 = wm;
   h.dataset.theme51Eff = wm === 'system' ? (mq?.matches ? 'dark' : 'light') : wm;
   window.dispatchEvent(new CustomEvent('papir-web-mode', { detail: { mode: wm, eff: h.dataset.theme51Eff } }));

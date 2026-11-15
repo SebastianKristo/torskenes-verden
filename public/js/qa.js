@@ -2,7 +2,7 @@
 //  - Feature flags: GET /api/flags ved oppstart → window.hlFlags51 + hendelsen «hl:flags51». hlFlag51('nøkkel') i andre moduler.
 //  - «Nytt i denne versjonen»: kort første gang etter en oppdatering (GET /api/whatsnew → show), «Ok» markerer som sett.
 //  - Admin: Innstillinger → System → Mer → Kvalitet med Feature flags og Krasjrapporter (eget panel, prompt 65).
-// Krasjfangeren (error/unhandledrejection) er crash51.js, som lastes tidligere som vanlig skript.
+// Krasjfangeren (error/unhandledrejection) er crash.js, som lastes tidligere som vanlig skript.
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 async function api(path, opt = {}) {
   const r = await fetch(path, { credentials: 'same-origin', ...opt, headers: { ...(opt.body ? { 'content-type': 'application/json' } : {}), ...(opt.headers ?? {}) } });

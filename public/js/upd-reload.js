@@ -1,5 +1,5 @@
 // Prompt 44 (claude-code-oppdatering-hopper-mellom-skjermer.md): én innlasting når ny versjon svarer.
-// Brukes av oppstartsskjermen (starting36.js) og oppdateringsløkka (sysupdate.js), så siden aldri lastes inn to ganger.
+// Brukes av oppstartsskjermen (starting.js) og oppdateringsløkka (sysupdate.js), så siden aldri lastes inn to ganger.
 // - reloadOnce(to): location.replace med ?v=<to>, bare én gang per versjon (sessionStorage «hl_upd44_reload»).
 // - Flere faner: BroadcastChannel('nordlys-update'). Fanen som melder seg først laster først; de andre venter litt.
 // - Etter innlastingen: toast «Oppdatert til 4.38 · Se hva som er nytt» og ?v= fjernes fra adressen.

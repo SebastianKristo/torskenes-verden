@@ -3,7 +3,7 @@
 // vasker bort hemmeligheter, lagrer lokalt og videresender til GlitchTip i huset når den finnes).
 // Vern: maks 10 rapporter per sidevisning, samme feil bare én gang, ingen spørring/fragment-parametre i URL-en, ingen
 // tekst fra skjemafelt. Brødsmuler (siste 20 ruter/klikk, bare element-type og data-attributt) sendes bare når
-// flagget crash_breadcrumbs51 er på (window.hlFlags51 settes av qa51.js).
+// flagget crash_breadcrumbs51 er på (window.hlFlags51 settes av qa.js).
 (function () {
   if (window.__hlCrash51) return;
   var sent = 0, seen = {}, crumbs = [], MAX = 10;

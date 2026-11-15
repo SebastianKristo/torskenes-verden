@@ -29,7 +29,7 @@ test('Papir lys, Papir mørk og Glass gir lys, mork og glod', () => {
   assert.equal(T.fhDesign({ hlTheme: '2c', web_theme: 'system' }), 'mork');
 });
 
-test('theme51 (webx51.js) går foran oppsettet, og lokal Homelab-kopi brukes uten oppsett', () => {
+test('theme51 (sok-tema-offline.js) går foran oppsettet, og lokal Homelab-kopi brukes uten oppsett', () => {
   reset();
   attrs.theme51 = 'dark'; attrs.theme51Eff = 'dark';
   assert.equal(T.fhDesign({ hlTheme: '2c', web_theme: 'light' }), 'mork');

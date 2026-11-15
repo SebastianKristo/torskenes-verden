@@ -95,9 +95,9 @@ test('Service worker: oppstart uten nett har /api/state og /api/ui, skrivinger o
   assert.match(sw, /res\.status === 401 \|\| res\.status === 403\) \{ caches\.delete\(API51\)/);
   assert.match(sw, /const CACHE = 'os-v(\d+)';/);
   assert.ok(Number(sw.match(/const CACHE = 'os-v(\d+)';/)[1]) >= 40);
-  // starting36.js sender {type:'SKIP_WAITING'}; service workeren forsto bare strengen 'skipWaiting'.
+  // starting.js sender {type:'SKIP_WAITING'}; service workeren forsto bare strengen 'skipWaiting'.
   assert.match(sw, /e\.data === 'skipWaiting' \|\| e\.data\?\.type === 'SKIP_WAITING'/);
-  assert.match(read('js/starting36.js'), /postMessage\?\.\(\{ type: 'SKIP_WAITING' \}\)/);
+  assert.match(read('js/starting.js'), /postMessage\?\.\(\{ type: 'SKIP_WAITING' \}\)/);
 });
 
 test('Ikoner: /api/icons/sets hentes én gang, ikke én gang per ikon', () => {
@@ -114,7 +114,7 @@ test('Domener og Varsler på mobil: pilleboksen og «Fra og til» brytes pent', 
 });
 
 test('«Nytt i versjon»: kortet følger mørk modus', () => {
-  const js = read('js/qa51.js');
+  const js = read('js/qa.js');
   assert.ok(js.includes(`${DARK} .wn52{background:#211e18;color:#f3efe6;border-color:#3a352c}`));
   assert.ok(js.includes(`${DARK} .wn52-ok{background:#f3efe6;color:#16140f}`));
 });

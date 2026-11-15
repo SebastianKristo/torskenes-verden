@@ -1,6 +1,6 @@
 package no.kristo.finanshub.wear
 
-// Prompt 51 (ANDPLAT51): QR-tegning for innloggingen på klokka – samme algoritme som Qr46 i :app (port av public/js/qr38.js:
+// Prompt 51 (ANDPLAT51): QR-tegning for innloggingen på klokka – samme algoritme som Qr46 i :app (port av public/js/qr.js:
 // byte-modus, feilretting M, versjon 1–10). Kopiert hit fordi :wear ikke avhenger av :app (ingen nye avhengigheter).
 
 object WearQr51 {

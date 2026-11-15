@@ -76,7 +76,7 @@ test('System: faner (Oversikt · Oppdateringer · Ytelse · Selvreparasjon · Me
   assert.match(bar, /data-sys65="upd" aria-selected="true"/);
   assert.equal((bar.match(/<svg width="15" height="15"/g) ?? []).length, 5, '15 px strek-ikon på hver fane');
   // Kvalitet/Brief og figur/Lokale modeller hekter seg ikke lenger på System-siden.
-  assert.doesNotMatch(read('public/js/qa51.js'), /set-body\[data-key\^="system/);
+  assert.doesNotMatch(read('public/js/qa.js'), /set-body\[data-key\^="system/);
   assert.doesNotMatch(read('public/js/brief-figur-per-bruker.js'), /set-body\[data-key\^="system/);
   assert.doesNotMatch(read('public/js/lokale-modeller.js'), /set-body\[data-key\^="system/);
   assert.match(read('public/js/brief-figur-per-bruker.js'), /window\.hlPeople55 = openPeople55;/);
