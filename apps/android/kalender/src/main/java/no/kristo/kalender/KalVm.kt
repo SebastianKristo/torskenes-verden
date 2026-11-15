@@ -927,8 +927,6 @@ class KalVm(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun openAddCal() { Hap.tick(); ac = if (ac != null) null else KAdd35(c = SWC35[(cals.size * 3) % SWC35.size]) }
-
     fun acTab(t: String) {
         Hap.tick()
         val x = ac ?: return

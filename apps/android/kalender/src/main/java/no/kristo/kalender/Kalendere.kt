@@ -331,7 +331,6 @@ data class KGMap39(
 
 object Kal39 {
     val ROLES = listOf("p", "b", "s", "h")
-    val NAMES = mapOf("p" to "Personlig", "b" to "Bursdager", "s" to "Skole", "h" to "Helligdager")
     val COLORS = mapOf("p" to 0xFFB23A2AL, "b" to 0xFF8A3FA0L, "s" to 0xFF2F7A4FL, "h" to 0xFFA39D90L)
     /** De ti fargene i Rediger (1b). */
     val PALETTE: List<Long> = listOf(0xFFB23A2A, 0xFFE8794A, 0xFFA8661A, 0xFF2F7A4F, 0xFF3D7F8A, 0xFF2B5D8A, 0xFF5B4FC4, 0xFF8A3FA0, 0xFFC2477A, 0xFF6B665C)

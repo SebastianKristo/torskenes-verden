@@ -59,7 +59,6 @@ import java.time.LocalTime
  * Åpnes fra Mer → Kalender, Hjem-kortet og widgetene (finanshub://kalender).
  */
 
-private val K27_NOW_KICK = Color(0xFFFF9C8C)
 private val K27_NOW_LINE = Color(0xFFE0342A)
 private const val K27_SEARCH = "M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-3.6-3.6"
 private const val K27_CAL = "M4 6h16v14H4zM4 10h16M8 3.5v4M16 3.5v4"
@@ -246,24 +245,6 @@ private fun K27Mini(vm: AppViewModel, cur: LocalDate, today: LocalDate) {
 }
 
 /* ---------------- NESTE / NÅ ---------------- */
-
-@Composable
-private fun K27NextStrip(vm: AppViewModel, nx: KalNext27) {
-    val p = PaperPal.current
-    Row(
-        Modifier.padding(start = 12.dp, end = 12.dp, bottom = 8.dp).fillMaxWidth().heightIn(min = 46.dp).height(IntrinsicSize.Min).clip(RoundedCornerShape(16.dp)).background(p.ink)
-            .press24 { nx.ev?.let { vm.kal26.sel = it; vm.kal26.mini = false } }.padding(horizontal = 14.dp, vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        Box(Modifier.width(4.dp).fillMaxHeight().clip(RoundedCornerShape(2.dp)).background(Color(nx.color)))
-        if (nx.k.isNotEmpty()) K27Mono(nx.k, K27_NOW_KICK)
-        Column(Modifier.weight(1f)) {
-            Text(nx.title, color = p.bg, fontWeight = FontWeight.Bold, fontSize = 14.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(nx.sub, color = p.bg.copy(alpha = .75f), fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        }
-        if (nx.whenText.isNotEmpty()) Text(nx.whenText, color = p.bg, fontFamily = PaperFonts.serif, fontWeight = FontWeight.Medium, fontSize = 18.sp, maxLines = 1)
-    }
-}
 
 /* ---------------- Dag · 3 dager · Uke ---------------- */
 

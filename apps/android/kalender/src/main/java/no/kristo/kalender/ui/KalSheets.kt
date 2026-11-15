@@ -81,7 +81,7 @@ import no.kristo.kalender.dl
 import no.kristo.kalender.hm
 import no.kristo.kalender.wkd
 
-/* Prompt 33: arkene (hendelse, ny hendelse), sidemenyen Kalendere og innloggingen. */
+/* Prompt 33: arkene (hendelse, ny hendelse) og dialogen for ny kalender. Innloggingen ligger i Innloggingsskjerm.kt. */
 
 /** Felles arkramme: card-bakgrunn, radius 28 28 0 0, skygge, håndtak og plass til gestlinjen. */
 @Composable
@@ -302,62 +302,5 @@ fun NewCalendarDialog(vm: KalVm) {
                 InkPill("Legg til", { if (name.isNotBlank()) vm.createCalendar(name, col) }, enabled = name.isNotBlank())
             }
         }
-    }
-}
-
-/* ---------------- Innlogging ---------------- */
-
-@Composable
-fun LoginScreen(vm: KalVm) {
-    val k = LocalK.current
-    Column(
-        Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.systemBars).imePadding().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp, vertical = 20.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
-    ) {
-        Spacer(Modifier.height(24.dp))
-        // Ikonet: rød topp med ukedag, dato i Newsreader.
-        val T = no.kristo.kalender.today()
-        Column(Modifier.size(72.dp).shadow(6.dp, RoundedCornerShape(18.dp)).clip(RoundedCornerShape(18.dp)).background(k.card), horizontalAlignment = Alignment.CenterHorizontally) {
-            Box(Modifier.fillMaxWidth().height(20.dp).background(Red), contentAlignment = Alignment.Center) { Tx(no.kristo.kalender.WS[T.dayOfWeek.value % 7].uppercase(), mono(9.sp, Color.White, .1f)) }
-            Tx("${T.dayOfMonth}", news(34.sp, k.ink, 48.sp))
-        }
-        Tx("Kalender", news(34.sp, k.ink))
-        Tx("Samme konto og samme kalendere som Homelab. Logg inn med Homelab-appen, eller med serveradresse, brukernavn og passord.", man(14.sp, FontWeight.Medium, k.mut, 20.sp), maxLines = 5)
-        Box(
-            Modifier.fillMaxWidth().height(50.dp).clip(RoundedCornerShape(25.dp)).background(if (vm.homelab) k.ink else k.mut2)
-                .tap("Logg inn med Homelab-appen") { vm.loginHomelab() }, contentAlignment = Alignment.Center,
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (vm.hlBusy) Spark(20.dp, true)
-                Tx(if (vm.hlBusy) "Spør Homelab-appen …" else "Logg inn med Homelab-appen", man(15.sp, FontWeight.Bold, k.bg))
-            }
-        }
-        if (!vm.homelab) Tx("Homelab-appen er ikke installert på denne telefonen.", man(12.5.sp, FontWeight.Medium, k.mut2), maxLines = 2)
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.weight(1f).height(1.dp).background(k.line))
-            Tx("  eller  ", man(12.sp, FontWeight.Medium, k.mut2))
-            Box(Modifier.weight(1f).height(1.dp).background(k.line))
-        }
-        LoginField(vm.lServer, { vm.lServer = it }, "Serveradresse (f.eks. 192.168.1.10:4100)", KeyboardType.Uri)
-        LoginField(vm.lUser, { vm.lUser = it }, "Brukernavn", KeyboardType.Text)
-        LoginField(vm.lPass, { vm.lPass = it }, "Passord", KeyboardType.Password, password = true)
-        if (vm.lTotp) LoginField(vm.lCode, { vm.lCode = it.filter(Char::isDigit).take(6) }, "6-sifret kode (2FA)", KeyboardType.NumberPassword)
-        vm.lErr?.let { Tx(it, man(13.sp, FontWeight.SemiBold, k.acc), maxLines = 4) }
-        Box(
-            Modifier.fillMaxWidth().height(50.dp).clip(RoundedCornerShape(25.dp)).border(1.dp, k.line, RoundedCornerShape(25.dp)).tap("Logg inn") { vm.login() },
-            contentAlignment = Alignment.Center,
-        ) { Tx(if (vm.lBusy) "Logger inn …" else "Logg inn", man(15.sp, FontWeight.Bold, k.ink)) }
-    }
-}
-
-@Composable
-private fun LoginField(v: String, on: (String) -> Unit, hint: String, type: KeyboardType, password: Boolean = false) {
-    val k = LocalK.current
-    Box(Modifier.fillMaxWidth().height(50.dp).clip(RoundedCornerShape(14.dp)).background(k.card).border(1.dp, k.line, RoundedCornerShape(14.dp)).padding(horizontal = 14.dp),
-        contentAlignment = Alignment.CenterStart) {
-        if (v.isEmpty()) Tx(hint, man(15.sp, FontWeight.Medium, k.mut2))
-        BasicTextField(v, on, Modifier.fillMaxWidth().widthIn(min = 40.dp).semantics { contentDescription = hint }, textStyle = man(15.sp, FontWeight.Medium, k.ink), singleLine = true,
-            cursorBrush = SolidColor(Red), keyboardOptions = KeyboardOptions(keyboardType = type, imeAction = ImeAction.Next, autoCorrectEnabled = false),
-            visualTransformation = if (password) PasswordVisualTransformation() else androidx.compose.ui.text.input.VisualTransformation.None)
     }
 }

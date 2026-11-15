@@ -37,11 +37,7 @@ data class KAb42(
 }
 
 object Ab42 {
-    const val HEX = 0xFF3D7F8A
     val CAL_IDS = setOf("ab", "abonnementer", "subscriptions", "abo", "finans-ab")
-
-    fun isAbCal(c: KCal): Boolean = c.id.lowercase() in CAL_IDS || (c.serverId?.lowercase() ?: "") in CAL_IDS ||
-        (c.p39?.source ?: c.src ?: "").lowercase().let { it == "finans" || it == "subscriptions" } || c.n.equals("Abonnementer", true) && c.src == "builtin"
 
     private fun JSONObject.s(vararg k: String): String = k.firstNotNullOfOrNull { optStrOrNull(it) } ?: ""
 

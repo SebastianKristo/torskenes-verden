@@ -49,7 +49,6 @@ import no.kristo.finanshub.*
 
 private const val K29_CLOCK = "M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 7.5V12l3 2"
 private const val K29_PASTE = "M9 4h6v3H9zM7 5H5v16h14V5h-2"
-private val K29_STAR = Color(0xFFF08A76)
 
 /* ---------------- Nå / Neste ---------------- */
 
@@ -117,18 +116,6 @@ internal fun Quick29Overlay(vm: AppViewModel) {
             last?.let { Quick29Toast(vm, it) }
         }
         if (t != null) LaunchedEffect(q.toastSeq) { kotlinx.coroutines.delay(6000); q.toast = null }
-    }
-}
-
-@Composable
-private fun Quick29Pill(n: Int) {
-    val p = PaperPal.current
-    Row(
-        Modifier.height(36.dp).shadow(14.dp, CircleShape).clip(CircleShape).background(p.ink).padding(horizontal = 14.dp),
-        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Text("✦", color = K29_STAR, fontSize = 13.sp)
-        Text(if (n > 1) "Legger til $n timer …" else "Legger til i kalenderen …", color = p.bg, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, maxLines = 1)
     }
 }
 

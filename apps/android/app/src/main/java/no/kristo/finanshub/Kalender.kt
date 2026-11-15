@@ -76,7 +76,6 @@ const val KAL_SKOLE = 0xFFA8661A
 
 /** Kortene på siden (rekkefølgen i kalOrder): Nå-kort, Prøver og frister, Kalendere-lenken, selve kalenderen og Widgets. */
 val KAL_CARDS = listOf("now", "exams", "cals", "cal", "widgets")
-val KAL_CARD_NAMES = mapOf("now" to "Nå-kort", "exams" to "Prøver og frister", "cals" to "Kalendere", "cal" to "Kalender", "widgets" to "Widgets")
 /** Lagres som designets nøkler A–E (Kalender.dc.html), likt med iOS. Navnene godtas også når de leses. */
 private val KAL_CARD_ALIAS = mapOf("A" to "now", "B" to "exams", "C" to "cals", "D" to "cal", "E" to "widgets")
 private val KAL_CARD_LETTER = KAL_CARD_ALIAS.entries.associate { (k, v) -> v to k }
@@ -135,9 +134,6 @@ fun kalColor(e: Kal26Ev, own: Map<String, Long> = emptyMap()): Long = when (e.ty
 
 /** Kortnavnet i ukevisningen og widgetene («Matte R2»). */
 fun kalShort(e: Kal26Ev): String = if (e.type == "time") e.short.ifBlank { e.subject ?: e.title } else e.title
-
-/** «A-112 · Kari Hansen» */
-fun kalRoomTeacher(e: Kal26Ev): String = listOfNotNull(e.room?.takeIf { it.isNotBlank() }, (if (e.type == "time") e.teacher else e.note)?.takeIf { it.isNotBlank() }).joinToString(" · ")
 
 /* ---------- Tolking ---------- */
 
@@ -250,37 +246,6 @@ fun kalLong(d: LocalDate): String = "${BD_WD[d.dayOfWeek.value - 1]} ${d.dayOfMo
 fun kalIsoWeek(d: LocalDate): Int = d.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR)
 
 private fun lessonsOn(evs: List<Kal26Ev>, d: LocalDate) = kalDay(evs, d).filter { it.sMin != null && it.eMin != null && (it.type == "time" || it.type == "prove") }
-
-/** Nå-kortet: NÅ, NESTE TIME, NESTE SKOLEDAG eller FRI, og neste prøve. */
-class KalNow(val k: String, val whenText: String, val title: String, val sub: String, val color: Long, val pct: Float?, val next: String, val ev: Kal26Ev?)
-
-fun kalNow(evs: List<Kal26Ev>, now: LocalDateTime, own: Map<String, Long> = emptyMap()): KalNow {
-    val today = now.toLocalDate()
-    val nm = now.hour * 60 + now.minute
-    val tl = lessonsOn(evs, today)
-    val cur = tl.firstOrNull { nm >= it.sMin!! && nm < it.eMin!! }
-    val nx = tl.firstOrNull { it.sMin!! > nm }
-    var r = when {
-        cur != null -> KalNow("NÅ", "${cur.sText}–${cur.eText}", cur.title,
-            (listOfNotNull(cur.room?.takeIf { it.isNotBlank() }, cur.teacher?.takeIf { it.isNotBlank() }) + "${cur.eMin!! - nm} min igjen").joinToString(" · "),
-            kalColor(cur, own), (nm - cur.sMin!!).toFloat() / (cur.eMin!! - cur.sMin!!).coerceAtLeast(1),
-            nx?.let { "Deretter: ${it.title} ${it.sText}" + (it.room?.let { r -> " · $r" } ?: "") } ?: "Siste time i dag", cur)
-        nx != null -> KalNow("NESTE TIME", "om " + kalDur(nx.sMin!! - nm), nx.title, "${nx.sText}–${nx.eText}" + (nx.room?.let { " · $it" } ?: ""), kalColor(nx, own), null, "", nx)
-        else -> {
-            var f: Kal26Ev? = null
-            var d = today
-            for (i in 1..14) { d = today.plusDays(i.toLong()); f = lessonsOn(evs, d).firstOrNull(); if (f != null) break }
-            if (f != null) KalNow("NESTE SKOLEDAG", kalLong(d), f.title, "${f.sText}–${f.eText}" + (f.room?.let { " · $it" } ?: "") + " · første time", kalColor(f, own), null, "", f)
-            else KalNow("FRI", "", "Ingen timer", "", 0xFF7A7468, null, "", null)
-        }
-    }
-    kalExams(evs, today).firstOrNull()?.let { ne ->
-        val dd = kalDaysTo(ne.date, today)
-        val t = ne.title + " " + when (dd) { 0 -> "i dag"; 1 -> "i morgen"; else -> "om $dd dager" }
-        r = KalNow(r.k, r.whenText, r.title, r.sub, r.color, r.pct, if (r.next.isNotEmpty()) r.next + " · " + t else t, r.ev)
-    }
-    return r
-}
 
 /** Én rad i widgetene: tid, kortnavn, rom, farge og om timen er passert (dempes til 45 %). */
 data class KalWRow(val id: String, val s: String, val tm: String, val title: String, val short: String, val sub: String, val room: String, val color: Long, val dim: Boolean)
@@ -500,51 +465,11 @@ private fun AppViewModel.pushKalWidgets26(raw: String, a: LocalDate, b: LocalDat
 
 /* ---------- Valg på siden ---------- */
 
-fun AppViewModel.setKalView26(v: String) {
-    val s = kal26
-    s.view = v; s.off = 0; s.sel = null; s.day = null
-    Haptics.select()
-    saveKalLayout26("kalView")
-}
-
 fun AppViewModel.toggleKalFilter26(k: String) {
     val s = kal26
     s.hiddenFilters = if (k in s.hiddenFilters) s.hiddenFilters - k else s.hiddenFilters + k
     Haptics.select()
     saveKalLayout26("kalFilters")
-}
-
-fun AppViewModel.moveKalCard26(k: String, dir: Int) {
-    val s = kal26
-    val o = s.order.toMutableList()
-    val vis = o.filter { it !in s.hiddenCards }
-    val other = vis.getOrNull(vis.indexOf(k) + dir) ?: return
-    val i = o.indexOf(k); val j = o.indexOf(other)
-    o[i] = other; o[j] = k
-    s.order = o
-    Haptics.select()
-    saveKalLayout26("kalOrder")
-}
-
-fun AppViewModel.hideKalCard26(k: String) {
-    val s = kal26
-    // Minst ett kort må være synlig.
-    if (KAL_CARDS.count { it !in s.hiddenCards } <= 1) return
-    s.hiddenCards = s.hiddenCards + k
-    Haptics.tap()
-    saveKalLayout26("kalHidden")
-}
-
-fun AppViewModel.showKalCard26(k: String) {
-    kal26.hiddenCards = kal26.hiddenCards - k
-    Haptics.select()
-    saveKalLayout26("kalHidden")
-}
-
-fun AppViewModel.resetKalCards26() {
-    kal26.order = KAL_CARDS; kal26.hiddenCards = emptySet()
-    Haptics.success()
-    saveKalLayout26("kalOrder", "kalHidden")
 }
 
 /** Standard påminnelse: dagen før for prøver og frister, ingen for timer og andre hendelser. */
@@ -688,40 +613,6 @@ fun kalWindow27(view: String, cur: LocalDate): Pair<LocalDate, LocalDate> = when
     }
     "liste" -> cur.minusDays(1) to cur.plusDays(46)
     else -> kalGridStart27(view, cur).let { it.minusDays(1) to it.plusDays(kalGridDays27(view) + 1L) }
-}
-
-/** NESTE / NÅ: neste hendelse med klokkeslett (time eller annen) de neste tre ukene. */
-class KalNext27(val k: String, val title: String, val sub: String, val whenText: String, val color: Long, val ev: Kal26Ev?)
-
-private fun kalDur27(x: Int): String = when {
-    x < 60 -> "$x min"
-    x < 1440 -> "${x / 60} t" + (if (x % 60 != 0) " ${x % 60} min" else "")
-    else -> "${Math.round(x / 1440.0)} d"
-}
-
-fun kalNext27(s: Kal26State, evs: List<Kal26Ev>, now: LocalDateTime): KalNext27 {
-    val today = now.toLocalDate()
-    val nm = now.hour * 60 + now.minute
-    for (i in 0 until 21) {
-        val d = today.plusDays(i.toLong())
-        val l = kalDay27(evs, d, s.hiddenFilters).filter { it.sMin != null && it.eMin != null && it.type != "innl" }
-        for (e in l) {
-            val a = e.sMin!! + i * 1440
-            val b = e.eMin!! + i * 1440
-            if (b > nm) {
-                val curr = a <= nm
-                val day = when (i) { 0 -> "I dag"; 1 -> "I morgen"; else -> kalCap(kalLong(d)) }
-                val sub = "$day · ${e.sText}–${e.eText}" + (e.room?.takeIf { it.isNotBlank() }?.let { " · $it" } ?: "")
-                val w = when {
-                    curr -> kalDur27(b - nm) + " igjen"
-                    a - nm < 1440 -> "om " + kalDur27(a - nm)
-                    else -> kalCap(BD_WD[d.dayOfWeek.value - 1]).take(3)
-                }
-                return KalNext27(if (curr) "NÅ" else "NESTE", e.title, sub, w, kalColor27(e, s), e)
-            }
-        }
-    }
-    return KalNext27("", "Ingen kommende hendelser", "De neste tre ukene", "", 0xFF7A7468, null)
 }
 
 /* ---------- Valg ---------- */
