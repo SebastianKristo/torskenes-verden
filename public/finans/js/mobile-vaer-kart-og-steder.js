@@ -6,8 +6,8 @@
 import { esc, hlApi } from './core.js';
 import { m, draw, flash } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
-import { YR_LOGO, STORM_LOGO, brandImg } from './mobile-p17.js';
-import { dragStart, dragging } from './mobile-p21.js';
+import { YR_LOGO, STORM_LOGO, brandImg } from './mobile-app-og-sanntid.js';
+import { dragStart, dragging } from './mobile-konto-og-deling.js';
 
 export const WX2 = { map: false, layer: 'rain', pl: false, q: '', res: null, busy: false, err: '', ms: null, msD: 0, sw: null, open: null, lp: false };
 const SYS = "-apple-system,BlinkMacSystemFont,'SF Pro Display','SF Pro Text','Helvetica Neue',Roboto,system-ui,sans-serif";

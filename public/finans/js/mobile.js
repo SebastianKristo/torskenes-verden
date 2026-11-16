@@ -7,7 +7,7 @@ import {
   loadBoot, loadSummary, loadTx, loadReceipts, cats, accs, uploadReceipt, icon, aiLine, conic, navName } from './core.js';
 import { logo, posLoad, regLoad, take20, p20Down, p20Move, p20Up, p20Click, p20Screen } from './mobile-posisjon-og-logoer.js';
 import * as UPQ from './mobile-upq.js';
-import { accountInit, logout, p21Bind, p21Sheets, dragMove, dragEnd } from './mobile-p21.js';
+import { accountInit, logout, p21Bind, p21Sheets, dragMove, dragEnd } from './mobile-konto-og-deling.js';
 import { MODS, modView, modLoad, domNav, modBind, modAfterDraw } from './mobile-mods.js';
 import { settingsView, settingsLoad, settingsBind } from './mobile-set.js';
 import { updSheet } from './mobile-upd.js';
@@ -26,16 +26,16 @@ import { take15, edDown, edMove, edUp, edClick, edReset, paperSearch, fsBind, pa
 import { wxView, wxLoad, wxBind, wxBindScroll, WX, wxAfterDraw, wxPlaces } from './mobile-wx.js';
 import { wx22Down, wx22Move, wx22Up } from './mobile-vaer-kart-og-steder.js';
 import * as P22 from './mobile-p22.js';
-import * as P23 from './mobile-p23.js';
+import * as P23 from './mobile-sveip-og-kvitteringer.js';
 import * as P24 from './mobile-profiler-og-bursdager.js';
 import * as P25 from './mobile-fanelinje-stil.js';
-import * as P26 from './mobile-p26.js';
+import * as P26 from './mobile-integrasjoner.js';
 import * as KAL from './mobile-kal.js';
 import * as P27 from './mobile-sokefelt-og-nyheter.js';
 import * as P33 from './mobile-glimt-husker.js'; // prompt 33: Innstillinger → AI → GLIMT HUSKER
 import * as P28 from './mobile-mer.js';
 import * as P29 from './mobile-sok-og-backup.js';
-import * as P30 from './mobile-p30.js';
+import * as P30 from './mobile-system-og-ark.js';
 import * as P30B from './mobile-boliger-deling.js';
 import * as P31 from './mobile-glimt.js';
 import * as P32 from './mobile-sidefaner-og-sw.js'; // prompt 32: fanelinje på Domener/Abonnement/Familie, GLIMT I SØKEFELTET, Prøveperioder, SW-oppdatering
@@ -52,12 +52,12 @@ let P42 = null; // prompt 42: mobile-oversikt-knapp.js (dynamisk import i bind()
 let P43 = null; // prompt 43: mobile-widgets-og-media.js (+ mobile-media.js for Media), dynamisk import i bind()
 let P44 = null; // prompt 44: mobile-mer-og-gjoremal.js (+ p44l Logger, p44s Studie, p44a Avspilling), dynamisk import i bind()
 let P50F = null; // prompt 50 (FAMWEB50): mobile-familie.js – Familie i nytt design (/assets/js/family.js), dynamisk import i bind()
-let P46 = null; // prompt 46: mobile-p46.js (+ mobile-kart.js Kart), dynamisk import i bind()
+let P46 = null; // prompt 46: mobile-nyheter-innstillinger.js (+ mobile-kart.js Kart), dynamisk import i bind()
 let P52 = null; // prompt 52 (WEB52F): mobile-saldokort.js – saldokortets utseende (hold inne) og avrundet månedslinje i Liste
 let P45 = null; // prompt 45: mobile-glimt-agent.js (+ p45f Familie, p45h Gjøremål/Helse/Logger/Import, p45m Media), dynamisk import i bind()
 import * as P36 from './mobile-brief-og-oppstart.js'; // prompt 36: sveip bort brief, Sherlock/snekker-Glimt, oppstartsside, profilbilde, ikoner, temperatur trykk/hold
 import * as P35 from './mobile-glimt-figurer.js'; // prompt 35: Glimt-familien, brief med venner og opplesning, Innstillinger → Glimt (#/glimt), vær for sted
-import { takeApp, HK, p17Bind, p17Sheets, huskeView, tasksLoad, posWidget, bolWidgetLoad, appLoad, applyIcon, ptrBind, wsConnect, onRealtime } from './mobile-p17.js';
+import { takeApp, HK, p17Bind, p17Sheets, huskeView, tasksLoad, posWidget, bolWidgetLoad, appLoad, applyIcon, ptrBind, wsConnect, onRealtime } from './mobile-app-og-sanntid.js';
 import { trkDown, trkMove, trkUp } from './mobile-papir-sider.js';
 import { take16, p16Bind, p16Pointer, p16Move, p16Up, tabSheet, avgView, avgLoad, avgSheet, famView, famLoad, famSheet, famAfterDraw, bolView, bolLoad, AV, BO } from './mobile-fanelinje.js';
 import { nårTemaEndres } from './tema.js';
@@ -735,7 +735,7 @@ function tabUp(e) {
 }
 
 /* ---------- Sveip fra venstre kant for å gå tilbake (iOS-stil) ---------- */
-// Prompt 23: forrige side ligger ferdig tegnet bak (mobile-p23.js) med parallakse og slør. Virker der det finnes en
+// Prompt 23: forrige side ligger ferdig tegnet bak (mobile-sveip-og-kvitteringer.js) med parallakse og slør. Virker der det finnes en
 // tilbakepil, men ikke på rotsidene (hovedfanene).
 const BACK_SEL = '.pp-hero .pp-back, .m-scroll .gback, .m-scroll .back, .m-scroll .gtop, .m-scroll .atop, .m-scroll [data-mact="txback"], .m-scroll [data-mact="pdback"], .m-scroll [data-swipeback]';
 function backTarget() {
@@ -749,7 +749,7 @@ function cancelOthers(e) {
   const c = { type: 'pointercancel', pointerId: e.pointerId, clientX: e.clientX, clientY: e.clientY, target: e.target, button: 0, preventDefault() {}, stopPropagation() {} };
   for (const f of [dragEnd, (x) => wx22Up(x, wxPlaces()), P22.up, paperUp, edUp, p16Up, trkUp, p20Up]) { try { f(c); } catch { /* hver modul rydder selv */ } }
 }
-// Prompt 30: på berøringsskjerm tar kantsveipet i capture-fasen over (mobile-p30.js swInit); pekerveien gjelder mus/penn.
+// Prompt 30: på berøringsskjerm tar kantsveipet i capture-fasen over (mobile-system-og-ark.js swInit); pekerveien gjelder mus/penn.
 const swDown = (e) => (e.pointerType === 'touch' && P30.touchSwipe() ? false : P23.swDown(e, backTarget()));
 const swMove = (e) => P23.swMove(e, cancelOthers);
 const swEnd = (e) => P23.swEnd(e);
@@ -813,7 +813,7 @@ export function bind() {
   import('./mobile-glimt-agent.js').then((x) => { P45 = x; x.boot45(); if (document.documentElement.dataset.ui === 'mobile') { draw(); load(); } }).catch((err) => console.warn('mobile-glimt-agent', err));
   // Prompt 46: Kart, Ruter-innstillinger i wiggle, Nyheter i Innstillinger, profilring, liquid glass i Vær (lat, som 40–45).
   import('./mobile-familie.js').then((x) => { P50F = x; x.boot50(); }).catch((err) => console.warn('mobile-familie', err)); // prompt 50 (FAMWEB50)
-  import('./mobile-p46.js').then((x) => { P46 = x; x.boot46(); if (document.documentElement.dataset.ui === 'mobile') { draw(); load(); } }).catch((err) => console.warn('mobile-p46', err));
+  import('./mobile-nyheter-innstillinger.js').then((x) => { P46 = x; x.boot46(); if (document.documentElement.dataset.ui === 'mobile') { draw(); load(); } }).catch((err) => console.warn('mobile-nyheter-innstillinger', err));
   import('./mobile-saldokort.js').then((x) => { P52 = x; x.boot52(); if (document.documentElement.dataset.ui === 'mobile') x.afterDraw52(); }).catch((err) => console.warn('mobile-saldokort', err));
   if (!temaBundet) { temaBundet = true; nårTemaEndres(() => { if (document.documentElement.dataset.ui === 'mobile') draw(); }); } // Q15: følger Homelab-temaet
   addEventListener('fh-design', (e) => { const d = e.detail ?? {}; takeDesign(d); if (typeof d.lock === 'boolean') setPref('lock', d.lock); if (typeof d.hap === 'boolean') setPref('hap', d.hap); if (d.photo) photoLoad(d.photo).then(draw).catch(() => {}); draw(); });
@@ -886,7 +886,7 @@ export function bind() {
     if (paper() && edClick(e, t)) return; // tilpass siden: ▲ ▼ −, Ferdig, og klikket etter et langt trykk
     if (await P29.bind29(e, t)) return; // Prompt 29: søkemotor, rask time, Backup
     if (await P22.bind(e, t)) return;
-    if (await p21Bind(e, t, { HK, reload: () => import('./mobile-p17.js').then((x) => x.tasksLoad(true)) })) return;
+    if (await p21Bind(e, t, { HK, reload: () => import('./mobile-app-og-sanntid.js').then((x) => x.tasksLoad(true)) })) return;
     if (await p17Bind(e, t)) return;
     if (await p16Bind(e, t)) return;
     if (await wxBind(e, t)) return;

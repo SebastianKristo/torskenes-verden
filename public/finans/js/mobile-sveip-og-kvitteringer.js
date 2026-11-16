@@ -8,7 +8,7 @@ import { m, draw, flash, loadJobs, ACTIVE_JOBS, retryUpload } from './mobile.js'
 import { haptic, hapBack } from './mobile-haptics.js';
 import * as P34 from './mobile-glimt-brief.js'; // prompt 34: ✦ ANALYSERES AV AI i Kvitteringer
 import { logo } from './mobile-posisjon-og-logoer.js';
-import { canSrv } from './mobile-p17.js';
+import { canSrv } from './mobile-app-og-sanntid.js';
 import { form48, via48, uncCls48, uncTag48, is48, flush48, bind48, setRedraw48, _e48 } from './kvittering-skjema.js'; // prompt 48: skjemaet for skannede kvitteringer
 import { appendChunks } from '/assets/js/lib/chunks.js';
 import { srcTag51, raw51, bind51, learn51 } from './kvittering-kilde.js'; // prompt 51: kilden til butikknavnet, «Rådata» og læring av butikknavn
@@ -516,7 +516,7 @@ async function toBind(x) {
 export const IG = { cfg: null, err: '', test: '', busy: false, ed: false, f: {} };
 export async function integLoad() {
   const jobs = [hlApi('/config').then((c) => { IG.cfg = (c ?? []).find((g) => g.id === 'ha' || g.name === 'Home Assistant') ?? null; IG.err = ''; }).catch((e) => { IG.err = e.status === 403 ? 'Bare administrator kan endre tilkoblingen.' : e.message; })];
-  const P22 = await import('./mobile-p22.js'), P17 = await import('./mobile-p17.js');
+  const P22 = await import('./mobile-p22.js'), P17 = await import('./mobile-app-og-sanntid.js');
   jobs.push(P17.tasksLoad?.(true)?.catch?.(() => {}), P22.haLoad?.(true)?.catch?.(() => {}));
   await Promise.all(jobs);
 }

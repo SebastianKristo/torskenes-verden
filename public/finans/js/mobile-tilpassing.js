@@ -11,10 +11,10 @@ import { haptic } from './mobile-haptics.js';
 import { TR, trkLoad, carOf, normNo, detectLocal } from './mobile-track.js';
 import { hlData } from './mobile-hl.js';
 import { FCOL, FO, fmSort, fmBar, ppTi, FM_MINUS, FM_PLUS, FM_LOCK } from './mobile-posisjon-og-logoer.js';
-import { dragStart, dragging, dragEnd } from './mobile-p21.js';
+import { dragStart, dragging, dragEnd } from './mobile-konto-og-deling.js';
 import * as P24 from './mobile-profiler-og-bursdager.js';
 import * as P25 from './mobile-fanelinje-stil.js';
-import * as P26 from './mobile-p26.js';
+import * as P26 from './mobile-integrasjoner.js';
 import * as P27 from './mobile-sokefelt-og-nyheter.js';
 
 /* ---------- Valg (lokal kopi + /api/me/layout) ---------- */

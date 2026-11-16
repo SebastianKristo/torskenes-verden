@@ -20,7 +20,7 @@ import * as PAPER from './mobile-paper.js';
 import { edBlocks, edOn } from './mobile-tilpassing.js';
 import { hlData } from './mobile-hl.js';
 import * as P31 from './mobile-glimt.js';
-import { grp } from './mobile-p17.js';
+import { grp } from './mobile-app-og-sanntid.js';
 import * as B from './mobile-min-reise.js';
 import { DEF47, defaults47, probe47, canTry47 } from '/assets/js/serveradresser.js'; // prompt 47: standard serveradresser
 import { vw } from '/assets/js/lib/viewport.js'; // vindusstørrelsen uten tvungen layout
@@ -173,7 +173,7 @@ export function huskeRow(q) {
 }
 export const HJ41 = { jobs: [], done: null, doneT: null, srcs: null, srcT: 0, srcMiss: false, poll: null };
 const STEPS_H = ['Leser beskjeden', 'Deler opp i punkter', 'Finner rekkefølge og steder', 'Lagrer i Gjøremål'];
-async function reloadTasks() { try { const P17 = await import('./mobile-p17.js'); P17.HK.t = 0; await P17.tasksLoad(true); } catch {} }
+async function reloadTasks() { try { const P17 = await import('./mobile-app-og-sanntid.js'); P17.HK.t = 0; await P17.tasksLoad(true); } catch {} }
 /**
  * POST /api/tasks/glimt {q, async:true, list?, origin} → 202 {jobId, placeholder}. Returnerer false når serveren ikke har
  * bakgrunnsjobben (da tar den vanlige tolkingen over).
@@ -493,7 +493,7 @@ export async function bind41(e, t) {
     case 'scanhome': e.preventDefault(); lsSet('papir_scan_home', !scanHome()); haptic('tab'); draw(); return true;
     case 'ftab': e.preventDefault(); lsSet('papir_fold_tab', k); haptic('tab'); draw(); document.querySelector('#app .m-scroll')?.scrollTo?.({ top: 0 }); return true;
     case 'fwx': return false; // vanlig lenke til Vær
-    case 'hsee': e.preventDefault(); { const id = HJ41.done?.srcId; HJ41.done = null; const P17 = await import('./mobile-p17.js'); P17.HK.cur = 'glimt'; void id; if (location.hash !== '#/huske') location.hash = '#/huske'; draw(); } return true;
+    case 'hsee': e.preventDefault(); { const id = HJ41.done?.srcId; HJ41.done = null; const P17 = await import('./mobile-app-og-sanntid.js'); P17.HK.cur = 'glimt'; void id; if (location.hash !== '#/huske') location.hash = '#/huske'; draw(); } return true;
     case 'hdx': e.preventDefault(); HJ41.done = null; draw(); return true;
     case 'hundo': { // prompt 42: én Angre som tilbakestiller alt – én oppgave med originalteksten
       e.preventDefault(); const D = HJ41.done; if (!D) return true; HJ41.done = null; draw();

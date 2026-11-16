@@ -5,8 +5,8 @@ import { esc, hlApi, logo as coreLogo, logoOv73 } from './core.js'; // logoOv73:
 import { m, draw } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
 import { FM, famLoad } from './mobile-fanelinje.js';
-import { FT } from './mobile-p17.js';
-import { dragStart } from './mobile-p21.js';
+import { FT } from './mobile-app-og-sanntid.js';
+import { dragStart } from './mobile-konto-og-deling.js';
 
 const ls = {
   get: (k) => { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch { return null; } },

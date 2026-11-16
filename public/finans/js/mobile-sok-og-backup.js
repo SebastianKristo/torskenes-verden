@@ -7,7 +7,7 @@
 import { esc, hlApi } from './core.js';
 import { m, draw, flash } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
-import { grp } from './mobile-p17.js';
+import { grp } from './mobile-app-og-sanntid.js';
 import * as CHAT from './mobile-chat.js';
 import * as KAL from './mobile-kal.js';
 import { parseQuick, quickLabel } from '/assets/js/quick-time.js';

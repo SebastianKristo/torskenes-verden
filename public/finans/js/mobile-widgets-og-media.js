@@ -4,12 +4,12 @@
 //   · Chat → AI-kontroll → Importer: minne og samtaler fra Claude (POST /api/chat/import/claude …)
 //   · Stor skjerm (iPad/Fold, ≥ 600 og bredde ≥ 0,9 × høyde): klasse p43-big på roten (sentrerte ark, kolonner)
 // Saldokortet (mobile-paper.js), månedstopp og Glimt-pillen (mobile-papir-sider.js/mobile-tilpassing.js), Domener-raden (mobile-okt-og-qr.js),
-// send-knappen (mobile-chat.js), svarboblen (mobile-glimt.js/mobile-bakgrunn-og-hoytider.js) og Integrasjoner MEDIA (mobile-p26.js) ligger der koden fra før bor.
+// send-knappen (mobile-chat.js), svarboblen (mobile-glimt.js/mobile-bakgrunn-og-hoytider.js) og Integrasjoner MEDIA (mobile-integrasjoner.js) ligger der koden fra før bor.
 // Lastes med dynamisk import fra mobile.js (statiske importer herfra er trygge fordi resten allerede er evaluert).
 import { esc, hlApi } from './core.js';
 import { m, draw, flash } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
-import { HK } from './mobile-p17.js';
+import { HK } from './mobile-app-og-sanntid.js';
 import * as P37 from './mobile-p37.js';
 import { glimtOrb } from './mobile-orb.js';
 import { vw, vh } from '/assets/js/lib/viewport.js'; // vindusstørrelsen uten tvungen layout

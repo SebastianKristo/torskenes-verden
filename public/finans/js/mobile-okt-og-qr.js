@@ -13,7 +13,7 @@ import { G as G31 } from './mobile-glimt.js';
 import * as P35 from './mobile-glimt-figurer.js';
 import { TR } from './mobile-track.js';
 import { BD } from './mobile-profiler-og-bursdager.js';
-import { logout } from './mobile-p21.js';
+import { logout } from './mobile-konto-og-deling.js';
 import { glimtOrb } from './mobile-orb.js'; // prompt 43
 
 const svg = (d, s = 16, w = 2.2) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`;

@@ -221,7 +221,7 @@ export async function bind42(e, t) {
     case 'bvmore': e.preventDefault(); BB.ctxAll = true; haptic('tap'); draw(); return true;
     case 'hs': {
       e.preventDefault(); haptic('tap');
-      if (x.dataset.k === 'share') { location.hash = '#/fam'; const P17 = await import('./mobile-p17.js'); P17.FT.tab = 'helse'; draw(); return true; }
+      if (x.dataset.k === 'share') { location.hash = '#/fam'; const P17 = await import('./mobile-app-og-sanntid.js'); P17.FT.tab = 'helse'; draw(); return true; }
       flash(HS_HINT[x.dataset.k] ?? ''); return true;
     }
     default: return false;

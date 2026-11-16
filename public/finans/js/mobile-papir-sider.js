@@ -6,11 +6,11 @@ import { S, api, esc, n0, n2, ini, today, hlApi } from './core.js';
 import { glimtOrb } from './mobile-orb.js'; // prompt 43
 import { m, draw, flash } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
-import { pkgLogo, pkgTitle } from './mobile-p21.js';
+import { pkgLogo, pkgTitle } from './mobile-konto-og-deling.js';
 import { TR, trkLoad, trkPrefs, setTrkPref, badge, carOf, stepOf, isDone, isReady, STXT, normNo, detectLocal } from './mobile-track.js';
 import { edBlocks, finnWay } from './mobile-tilpassing.js';
 import { ppTi } from './mobile-posisjon-og-logoer.js';
-import * as P26 from './mobile-p26.js';
+import * as P26 from './mobile-integrasjoner.js';
 import { appendChunks } from '/assets/js/lib/chunks.js';
 
 const lab = (t, r = '') => `<div class="pp-sec"><span>${esc(t)}</span>${r ? `<span>${r}</span>` : ''}</div>`;

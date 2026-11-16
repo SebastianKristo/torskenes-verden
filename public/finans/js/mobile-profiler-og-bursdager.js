@@ -3,18 +3,18 @@
 // «Rediger bolig» med hold inne), søk og ✦ AI-søk i Innstillinger, alle integrasjoner via /api/integrations og
 // ikoner i Nyhetsleser som <img>. Endepunktene kommer fra serveren i samme prompt; mangler de (404), faller vi tilbake.
 import * as P36 from './mobile-brief-og-oppstart.js'; // prompt 36: Hovedkalender og Vis også i Kalender (Google)
-import * as P30 from './mobile-p30.js';
+import * as P30 from './mobile-system-og-ark.js';
 import { api, esc, n0, ini, hlApi } from './core.js';
 import { m, draw, flash, domOk } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
 import { AV, avgLoad, BO, bolLoad, heroBg, setTabBar } from './mobile-fanelinje.js';
-import { DEP, depKey, depStatus, stopList, modeName, delayOf } from './mobile-p21.js';
+import { DEP, depKey, depStatus, stopList, modeName, delayOf } from './mobile-konto-og-deling.js';
 import { setFinTabs } from './mobile-tilpassing.js';
 import { hlDom } from './mobile-hl.js';
 import { paperDark } from './mobile-paper.js';
 import { famSource } from './mobile-p22.js';
 import * as P25 from './mobile-fanelinje-stil.js';
-import * as P26 from './mobile-p26.js';
+import * as P26 from './mobile-integrasjoner.js';
 
 const LS = 'fh_p24';
 const L = (() => { try { return JSON.parse(localStorage.getItem(LS) || '{}') || {}; } catch { return {}; } })();

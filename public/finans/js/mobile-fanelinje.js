@@ -2,7 +2,7 @@
 // i Innstillinger, Avganger (egen side i nyhetsleser-stil med flere stopp fra Entur og sanntid), Familie og kart
 // (OpenStreetMap via Leaflet, soner, personvern) og Boliger i full mobilversjon. Valgene lagres per bruker i /api/me/layout.
 import * as P30B from './mobile-boliger-deling.js';
-import { FT, famTabs, personCard, healthView } from './mobile-p17.js';
+import { FT, famTabs, personCard, healthView } from './mobile-app-og-sanntid.js';
 const famTop = () => (paper() ? '' : famTabs()); // Papir: fanene ligger i fanelinja nederst
 import { api, esc, n0, ini, hlApi, dd, today, cap } from './core.js';
 import { m, draw, flash, domOk } from './mobile.js';
@@ -11,7 +11,7 @@ import { fourth, fabStyle } from './mobile-tilpassing.js';
 import { hlData, ruterUrl } from './mobile-hl.js';
 import { paper, paperDark } from './mobile-paper.js';
 import { setTiles } from './mobile-posisjon-og-logoer.js';
-import { DEP, depKey, depStatus, stopList } from './mobile-p21.js';
+import { DEP, depKey, depStatus, stopList } from './mobile-konto-og-deling.js';
 import * as P24 from './mobile-profiler-og-bursdager.js';
 import * as P22 from './mobile-p22.js';
 import * as P25 from './mobile-fanelinje-stil.js';

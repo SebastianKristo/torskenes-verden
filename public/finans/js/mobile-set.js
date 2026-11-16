@@ -12,13 +12,13 @@ import { settHomelabTema } from './tema.js';
 import { tabEditor, iconThemeRow, iconColor, iconInk } from './mobile-fanelinje.js';
 import { navSettings } from './mobile-tilpassing.js';
 import { TR, trkLoad, trkPrefRows, setTrkPref } from './mobile-track.js';
-import * as P23 from './mobile-p23.js';
+import * as P23 from './mobile-sveip-og-kvitteringer.js';
 import * as P24 from './mobile-profiler-og-bursdager.js';
-import * as P26 from './mobile-p26.js';
-import { row, grp, appName, appIcon, ICONS } from './mobile-p17.js';
+import * as P26 from './mobile-integrasjoner.js';
+import { row, grp, appName, appIcon, ICONS } from './mobile-app-og-sanntid.js';
 import * as P25 from './mobile-fanelinje-stil.js'; // prompt 39: Fanelinje-stil i Tilpass
 import { haSection } from './mobile-p22.js';
-import { p17SetMain, p17Modules, p17AiExtra, p17Varsler, aiLoad, notifyLoad, NT, canSrv, ADMIN_NOTE } from './mobile-p17.js';
+import { p17SetMain, p17Modules, p17AiExtra, p17Varsler, aiLoad, notifyLoad, NT, canSrv, ADMIN_NOTE } from './mobile-app-og-sanntid.js';
 import * as P27 from './mobile-sokefelt-og-nyheter.js';
 import * as P33 from './mobile-glimt-husker.js'; // prompt 33: GLIMT HUSKER
 import * as P32 from './mobile-sidefaner-og-sw.js'; // prompt 32: GLIMT I SØKEFELTET, fanelinje på andre sider
@@ -339,7 +339,7 @@ export async function settingsBind(e, t) {
     seq.forEach((k, i) => setTimeout(() => haptic(k, { force: true }), i * 450));
     flash(seq.length ? `Tester: ${HAP_TYPES.filter(([k]) => hpref(k)).map(([, n]) => n.toLowerCase()).join(', ')}` : 'Alle typer er slått av'); return true;
   }
-  if (act === 'logout') { const { logout } = await import('./mobile-p21.js'); await logout(); return true; }
+  if (act === 'logout') { const { logout } = await import('./mobile-konto-og-deling.js'); await logout(); return true; }
   if (act === 'design') { saveDesign({ mobileDesign: d('[data-sact]').dataset.v }); return true; }
   // Q15: temaet er Homelab-modusen (gjelder også Homelab). paperMode lagres fortsatt for appene.
   if (act === 'ppmode') { const v = d('[data-sact]').dataset.v; settHomelabTema({ modus: v }); saveDesign({ paperMode: v }); return true; }

@@ -3,13 +3,13 @@
 // Posisjon og Bolig på Hjem, Familie med fanene Kart, Soner og Helse, Yr mot Storm, dra for å oppdatere og sanntid
 // via én felles WebSocket (/api/ws). Alt tåler en eldre server: data som mangler vises som en forklaring, ikke en feil.
 import * as P29 from './mobile-sok-og-backup.js';
-import * as P30 from './mobile-p30.js';
+import * as P30 from './mobile-system-og-ark.js';
 import * as P31 from './mobile-glimt.js';
 import { S, api, esc, n0, ini, hlApi, icon } from './core.js';
 import { m, draw, flash, meName, avInner, avatarUrl, route, isIOS, domOk } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
 import { iconColor, iconInk, FM, famLoad, BO, bolLoad, bolUpload } from './mobile-fanelinje.js';
-import { listShareLine } from './mobile-p21.js';
+import { listShareLine } from './mobile-konto-og-deling.js';
 import { currentUser } from './mobile-upq.js';
 import * as P25 from './mobile-fanelinje-stil.js';
 let P24N = null; import('./mobile-profiler-og-bursdager.js').then((x) => { P24N = x; }).catch(() => {}); // prompt 39: Appprofil-raden (lat, endrer ikke importrekkefølgen)
