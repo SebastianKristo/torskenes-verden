@@ -482,3 +482,5 @@ textarea.f50-in { padding: 10px 12px; resize: vertical; }
 }
 
 .f50.web > .f50-one, .f50.web > .f50-two-col { flex: 1 0 auto; }
+/* M9: lenken i kildehenvisningen arver tekstfargen (Leaflets blå var 3,3:1 i Glass). */
+.f50 .leaflet-control-attribution a { color: inherit; text-decoration: underline; }

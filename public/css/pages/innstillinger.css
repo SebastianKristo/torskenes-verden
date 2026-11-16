@@ -361,6 +361,8 @@ html[data-hl="2c"] .sg-sw{width:42px;height:24px;border-radius:99px;background:#
 html[data-hl="2c"] .sg-sw::after{width:18px;height:18px;box-shadow:none}
 html[data-hl="2c"] .sg-row[aria-checked=true] .sg-sw{background:var(--pos)}
 html[data-hl="2c"] .sg-av{background:var(--ink);color:var(--pp)}
+/* M9: initialer på brukerens egen farge (style="background:…") har alltid lys tekst, også i Papir mørk (var 2,3:1 med --pp). */
+html .sg-av.sg-av-ini{color:var(--ds-on-category)}
 html[data-hl="2c"] .lg.sg-lg{background:var(--ds-surface-chip);color:var(--ink);box-shadow:inset 0 0 0 1px var(--rule)}
 html[data-hl="2c"] .lg.sg-lg.has{background:var(--ds-surface-raised)}
 html[data-hl="2c"] .sg-note{font:400 13px var(--sans);color:var(--ink2);padding:10px 0 0}
@@ -1054,7 +1056,7 @@ html[data-mode="dark"] .s45-seg button[aria-checked=true]{background:#f3efe6}
 .s45-zext{flex:1;min-width:0;display:flex;flex-direction:column}
 .s45-zext b{font-size:14px;font-weight:600}
 .s45-zext span{font-size:13.5px;color:#3d3a33}
-.s45-zexn{align-self:flex-start;font-size:12px;color:#6b665c}
+.s45-zexn{align-self:flex-start;font-size:12px;color:#5c5850} /* illustrasjon av et iOS-varsel (alltid lyst); M9: mørkere enn #6b665c, som var 4,46:1 */
 
 /* ---------- Logger: Docker settes opp automatisk (logger.js, prompt 45) ---------- */
 .lg45-setup{align-items:flex-start;text-align:left}

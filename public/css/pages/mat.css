@@ -15,7 +15,7 @@ html[data-hl="2c"] body[data-route="matplan"]{background:var(--pp)}
   --mp-bg:var(--ds-surface);--mp-card:var(--ds-surface-raised);--mp-in:color-mix(in srgb,var(--ds-surface) 60%,var(--ds-surface-raised));--mp-pop:var(--ds-surface-raised);
   --mp-line:var(--ds-line);--mp-line2:var(--ds-line);--mp-line3:var(--ds-line);--mp-hov:color-mix(in srgb,var(--ds-line) 70%,var(--ds-text-tertiary));
   --mp-t:var(--ds-text-primary);--mp-2:color-mix(in srgb,var(--ds-text-primary) 60%,var(--ds-text-secondary));--mp-mute:var(--ds-text-secondary);--mp-faint:var(--ds-text-secondary);--mp-dim:var(--ds-text-tertiary);
-  --mp-acc:var(--ds-accent);--mp-acc-ink:var(--ds-on-accent);--mp-acc-l:var(--ds-accent);--mp-acc-ll:color-mix(in srgb,var(--ds-accent) 85%,var(--ds-text-primary));
+  --mp-acc:var(--ds-accent);--mp-acc-ink:var(--ds-on-accent);--mp-acc-l:var(--ds-accent);--mp-acc-ll:color-mix(in srgb,var(--ds-accent) 60%,var(--ds-text-primary));
   --mp-acc-bg:color-mix(in srgb,var(--ds-accent) 10%,var(--ds-surface-raised));--mp-acc-bd:color-mix(in srgb,var(--ds-accent) 30%,var(--ds-surface-raised));--mp-chip:color-mix(in srgb,var(--ds-accent) 15%,var(--ds-surface-raised));
   --mp-chip2:var(--ds-surface-sunken);--mp-ok:var(--ds-success);--mp-ok-bg:color-mix(in srgb,var(--ds-success) 12%,var(--ds-surface-raised));--mp-err:var(--ds-danger);
   /* I dag: mørkt blekkort i lys modus. */
@@ -26,9 +26,10 @@ html[data-hl="2c"] body[data-route="matplan"]{background:var(--pp)}
   background:var(--mp-bg);color:var(--mp-t);border-radius:28px;padding:clamp(20px,3vw,36px);
   display:flex;flex-direction:column;gap:30px;color-scheme:var(--ds-color-scheme);min-width:0;box-sizing:border-box;text-align:left
 }
-/* Mørk modus og Glass: dagens kort er et aksentfarget mørkt kort, ikke et lyst kort på mørk side (B-F4). */
+/* Mørk modus og Glass: dagens kort er et aksentfarget mørkt kort, ikke et lyst kort på mørk side (B-F4). Den svake teksten på kortet
+   er blandet litt mot hovedteksten, så den holder 4,5:1 mot aksentflaten (M9, B-F11). «Fast» (--mp-acc-ll) likeså. */
 html[data-hl="cur"] .mat,html[data-mode="dark"][data-hl="2c"] .mat{
-  --mp-today:color-mix(in srgb,var(--ds-accent) 22%,var(--ds-surface-raised));--mp-today-ink:var(--ds-text-primary);--mp-today-mut:var(--ds-text-secondary);
+  --mp-today:color-mix(in srgb,var(--ds-accent) 22%,var(--ds-surface-raised));--mp-today-ink:var(--ds-text-primary);--mp-today-mut:color-mix(in srgb,var(--ds-text-primary) 40%,var(--ds-text-secondary));
   --mp-shadow:0 20px 50px rgba(0,0,0,.5)
 }
 .mat *,.mat *::before,.mat *::after{box-sizing:border-box}
@@ -180,7 +181,7 @@ html[data-hl="cur"] .mat,html[data-mode="dark"][data-hl="2c"] .mat{
 .mat .mp-dinfo{min-width:0;display:flex;flex-direction:column;gap:3px}
 .mat .mp-dtitle{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .mat .mp-dtitle b{font-size:18px;font-weight:600;overflow-wrap:anywhere}
-.mat .mp-hf{padding:2px 8px;border-radius:6px;background:var(--mp-ok-bg);color:var(--mp-ok);font-size:12.5px;font-weight:500}
+.mat .mp-hf{padding:2px 8px;border-radius:6px;background:var(--mp-ok-bg);color:color-mix(in srgb,var(--mp-ok) 80%,var(--mp-t));font-size:12.5px;font-weight:500}
 .mat .mp-dside{flex:none;display:flex;align-items:center;gap:6px;color:var(--mp-dim)}
 .mat .mp-dside .mp-chev{margin-left:6px}
 .mat .mp-chip{padding:3px 8px;border-radius:7px;background:var(--mp-chip);color:var(--mp-acc-l);font-size:13.5px;font-weight:600}

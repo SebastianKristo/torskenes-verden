@@ -110,10 +110,22 @@ test('helligdager og merkedager: innebygd Norge (bevegelige beregnet), heldag i 
     ['2026-12-26', 'Andre juledag', true, 'helligdag', true], ['2026-12-31', 'Nyttårsaften', true, 'merkedag', false]]);
 });
 
-test('opprydding 12 → 4: egne duplikater og gamle id-er flyttes (ingenting slettes), kan angres og kjøres på nytt', async () => {
+test('opprydding 12 → 4: først et forslag (Q34), ved ja flyttes egne duplikater og gamle id-er (ingenting slettes), kan angres og kjøres på nytt', async () => {
   kv.set(ingridId, 'kal33_cals', { builtin: {}, custom: [{ id: 'c-0123456789', name: 'Studie 40', color: '#123456' }, { id: 'c-abcdefabcd', name: 'Korps', color: '#654321' }, { id: 'c-1111111111', name: 'Personlig', color: '#111111' }], prefs: { defaultCalendar: 'helse' } });
-  kv.set(ingridId, 'kal33_evcal', { 'loc-a': 'jobb', 'loc-b': 'c-0123456789', 'loc-c': 'c-abcdefabcd', 'loc-d': 'helse', 'loc-e': 'c-1111111111' });
-  const r = await I('/api/kalender/calendars');
+  const EV = { 'loc-a': 'jobb', 'loc-b': 'c-0123456789', 'loc-c': 'c-abcdefabcd', 'loc-d': 'helse', 'loc-e': 'c-1111111111' };
+  kv.set(ingridId, 'kal33_evcal', EV);
+  // Q34 (E-B12): ingen automatisk rydding. Første lesing gir et forslag, og ingenting er endret.
+  const f = await I('/api/kalender/calendars');
+  assert.equal(f.status, 200, f.text);
+  assert.deepEqual([f.body.migration.done, f.body.migration.proposed, f.body.migration.from, f.body.migration.to, f.body.migration.moved], [false, true, 9, 5, 4]);
+  assert.deepEqual(f.body.migration.merged.map((x) => [x.name, x.into]), [['Studie 40', 'skole'], ['Personlig', 'personlig']]);
+  assert.deepEqual(kv.get(ingridId, 'kal33_evcal', {}), EV, 'hendelsene er der de var');
+  assert.equal(kv.get(ingridId, 'kal33_cals', {}).prefs.defaultCalendar, 'helse');
+  assert.deepEqual(f.body.calendars.slice(0, 6).map((c) => c.id), ['personlig', 'jobb', 'studie', 'familie', 'helse', 'bursdager'], 'de gamle kalenderne står til brukeren sier ja');
+  assert.equal((await I('/api/kalender/calendars')).body.migration.proposed, true, 'forslaget står til det er besvart');
+  assert.equal((await I('/api/kalender/calendars/migration/undo', 'POST')).status, 409, 'ingenting å angre før ja');
+  // Ja: POST /migration kjører oppryddingen.
+  const r = await I('/api/kalender/calendars/migration', 'POST');
   assert.equal(r.status, 200, r.text);
   assert.deepEqual(r.body.calendars.filter((c) => !c.virtual).map((c) => c.id), ['personlig', 'bursdager', 'skole', 'helligdager', 'c-abcdefabcd']);
   const m = r.body.migration;

@@ -18,7 +18,7 @@ import { pickBtn79, pickShellHtml79, click79, key79, route79, loadPick79 } from 
 import { anchor81, longAt81, normSel81, spanFieldsHtml81 } from './skjold-skuffer.js'; // prompt 81: store/brede skuffer
 import { route82, isView82, start82, html82, headBtn82, partBtn82, usedInHtml82, click82, submit82 } from './skjold-produkter.js'; // prompt 82: produkter – sjekk ut/inn
 import { historyText82 } from './skjold-produkter-regler.js';
-import { pageCss } from './lib/page-css.js';
+import { pageCss, pageCssReady } from './lib/page-css.js';
 
 pageCss('skjold');
 
@@ -597,11 +597,15 @@ export function renderShell76() { return '<section class="sk76" id="sk76" aria-l
 export async function mount(view) {
   const el = view.querySelector('#sk76');
   if (!el) return;
+  // M5: innholdet tegnes først når stilarket er lastet. Før det tegnet det seg uten stil og hoppet på plass (CLS 0,49/0,57).
+  await pageCssReady('skjold');
+  if (!el.isConnected) return;
   bind();
   el.innerHTML = shellHtml();
   el.removeAttribute('aria-busy');
   el.classList.toggle('mob', isMobile());
   S.route = parseHash();
+  if (!S.items.length) S.loading = true; // M5: «Henter deler …» (med plassen holdt) til lista kommer, ikke «Ingen deler ennå» først
   paint();
   await loadCabs();
   loadPick79(); // prompt 79

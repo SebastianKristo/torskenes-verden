@@ -465,3 +465,5 @@ html[data-hl="2c"] .nav-more.on,html[data-hl="2c"] .nav-more[aria-expanded="true
 .nav-more-menu a[aria-current="page"]{background:var(--ds-accent);color:var(--ds-on-accent)}
 /* Glass: menyen ligger over innholdet, så den er nesten tett (samme uttrykk som profilmenyen). */
 html[data-hl="cur"] .nav-more-menu{background:color-mix(in srgb,var(--ds-surface) 94%,transparent)}
+/* M5: Skjold Lab sitt tomme skall har samme bredde og plass som siden før side-CSS-en er lastet (skjold.css har resten). */
+#sk76[aria-busy="true"]{display:block;width:100%;max-width:1280px;margin:0 auto;min-height:50vh;box-sizing:border-box}

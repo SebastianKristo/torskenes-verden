@@ -144,7 +144,7 @@ test('søket: indeksen og stiene peker til de nye sidene', () => {
   assert.match(local, /'Tilkoblinger → Kalender og gjøremål → Gjøremål', 'kal'/);
   assert.match(local, /'Glimt og AI → AI → Tjenester → Gemini'/);
   assert.doesNotMatch(local, /'System → Mer → Kvalitet'|'Konto → Innlogging → 2FA'|'App → Topplinje/, 'O10: ingen stier som ikke finnes');
-  assert.match(SS, /\.map\(\(x\) => \(\{ \.\.\.x, path: path65\(x\.path\) \}\)\)/);
+  assert.match(SS, /\.map\(\(x\) => \(\{ \.\.\.x, path: stiFra\(routeOf\(x\)\.tab, path65\(x\.path\)\) \}\)\)/, 'O10: første ledd fra modullisten');
   assert.match(SS, /\[\/\^Startside\/, 'Utseende'\]/);
   assert.match(SS, /'ai-key-gemini': \{[^}]*acTab: 'svc:gemini' \}/);
   assert.match(SS, /'ai-rules65': \{ sel: '\[data-hl="ai-rules65"\]', acTab: 'task' \}/);

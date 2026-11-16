@@ -71,15 +71,16 @@ function svc(id) {
 }
 const isSecret = (f) => f.type === 'secret' || f.type === 'password' || f.secret;
 const filled = (f) => (isSecret(f) ? !!(f.saved || f.set) : String(f.value ?? '').trim() !== '');
-/** «Tilkoblet» (grønn) eller «Mangler <felt>» (rød). Valgfrie felt teller ikke. */
+/** «Tilkoblet» (grønn) eller «Mangler <felt>» (oransje, samme som «Mangler oppsett»). Fargene er tokens, så de holder kontrasten i alle
+ *  temaer (M9: den faste røde var 2,8:1 i Papir mørk og 3,0:1 i Glass). Valgfrie felt teller ikke. */
 function status(s) {
   const t = test[s.id];
-  if (t?.st === 'run') return ['Tester …', '#8a8478'];
+  if (t?.st === 'run') return ['Tester …', 'var(--ds-text-secondary)'];
   const miss = s.fields.filter((f) => !f.optional && !/valgfri/i.test(f.label) && !filled(f));
-  if (miss.length) return [`Mangler ${miss[0].label.toLowerCase()}`, '#b23a2a'];
-  if (t && !t.ok) return ['Feil ved test', '#b23a2a'];
-  if (s.status === 'error') return ['Feil', '#b23a2a'];
-  return ['Tilkoblet', '#2f6b4a'];
+  if (miss.length) return [`Mangler ${miss[0].label.toLowerCase()}`, 'var(--ds-warning)'];
+  if (t && !t.ok) return ['Feil ved test', 'var(--ds-danger)'];
+  if (s.status === 'error') return ['Feil', 'var(--ds-danger)'];
+  return ['Tilkoblet', 'var(--ds-success)'];
 }
 
 /* ---- Serveren har Media-tjenestene som grupper i /api/config (SERVER43: category 'Media'). Da brukes de, med
@@ -92,11 +93,11 @@ const cfgFilled = (f) => (cfgSecret(f) ? !!f.set : String(f.value ?? '').trim() 
 const cfgNeeded = (f) => !/valgfri|dager|profil|rotmappe|lagringsmappe|bruker(navn)? \(|flaresolverr/i.test(f.label ?? '') && (/url|adresse/i.test(`${f.key} ${f.label}`) || cfgSecret(f) || /brukernavn$/i.test(f.label ?? ''));
 /** Status for en Media-gruppe fra /api/config: «Tilkoblet» eller «Mangler <felt>». t = testresultat fra settings.js. */
 export function cfgStatus43(g, t) {
-  if (t?.st === 'run') return ['Tester …', '#8a8478'];
+  if (t?.st === 'run') return ['Tester …', 'var(--ds-text-secondary)'];
   const miss = (g.fields ?? []).filter((f) => cfgNeeded(f) && !cfgFilled(f));
-  if (miss.length) return [`Mangler ${String(miss[0].label).toLowerCase().replace(/^url$/, 'adresse')}`, '#b23a2a'];
-  if (t?.st === 'err') return ['Feil ved test', '#b23a2a'];
-  return ['Tilkoblet', '#2f6b4a'];
+  if (miss.length) return [`Mangler ${String(miss[0].label).toLowerCase().replace(/^url$/, 'adresse')}`, 'var(--ds-warning)'];
+  if (t?.st === 'err') return ['Feil ved test', 'var(--ds-danger)'];
+  return ['Tilkoblet', 'var(--ds-success)'];
 }
 /** Rader for gruppen «Media»: grupper fra /api/config først, så tjenester serveren ikke har der. */
 export function mediaRows43(cfgGroups, row, tests = {}, admin = true) {

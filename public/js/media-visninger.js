@@ -176,16 +176,17 @@ const TABS70 = [['ov', 'Nå'], ['kal', 'Kommer'], ['bib', 'Bibliotek'], ['ned', 
 const PH = { ov: 'Spør Glimt: «legg til Severance i 4K»', kal: 'Spør Glimt: «hva kommer på fredag?»', bib: 'Spør Glimt: «legg til Severance i 4K»', ned: 'Spør Glimt: «slett ferdige over 30 dager»', av: 'Spør Glimt: «hvem ser på noe nå?»', nrk: 'Spør Glimt om filmer og serier', musikk: 'Spør Glimt om filmer og serier' };
 // Prompt 89 (claude-code-media-fjern-varsler.md): varsler-pillen (grønn/rød prikk + antall) er fjernet fra Media-headeren –
 // Glimt-søket får plassen. Varsler vises fortsatt i hoveddashboardet.
+// O11: én lukkeknapp. «‹ Tilbake» og ✕ gjorde det samme (data-m43="close": tilbake i historikken, ellers Oversikt). Media dekker
+// hele skjermen med egne faner, som Innstillinger, og lukkes som dem: én knapp øverst til høyre (✕, Esc). Se STATUS O11.
 export function top70(srvHtml, orb) {
   const M = C.M, cur = M.tab === 'av' ? 'ov' : M.tab === 'musikk' ? 'nrk' : M.tab;
   const tabs = TABS70.map(([k, n]) => `<button type="button" class="m70-tab${cur === k ? ' on' : ''}" data-m43-tab="${k}" aria-current="${cur === k ? 'page' : 'false'}">${n}</button>`).join('');
   return `<header class="m70-top"><div class="m70-tl">
-    <button type="button" class="m70-back" data-m43="close" title="Lukk Media (Esc)">‹ Tilbake</button>
     <b class="m70-h">Media</b>
     <nav class="m70-tabs" aria-label="Media">${tabs}</nav>
     <form class="m70-gl" data-m43-glf role="search"><span class="m70-glo">${orb}</span><input name="gq" value="${esc(M.gq)}" placeholder="${esc(PH[M.tab] ?? PH.ov)}" aria-label="Spør Glimt" autocomplete="off"><span class="m70-kbd" aria-hidden="true">⌘K</span></form>
     ${srvHtml}
-    <button type="button" class="m70-x" data-m43="close" aria-label="Lukk Media" title="Lukk"><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+    <button type="button" class="m70-x" data-m43="close" aria-label="Lukk Media" title="Lukk Media (Esc)"><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
   </div></header>`;
 }
 

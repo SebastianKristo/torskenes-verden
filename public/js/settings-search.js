@@ -6,6 +6,7 @@
 //   Feiler kallet, svarer en enkel nøkkelordmatch lokalt.
 import { glimt } from './glimt.js';
 import { api, esc } from './util.js';
+import { liste } from './moduler.js'; // O10: navnene på innstillingssidene kommer fra modullisten
 
 /** Fargede ikoner per side (samme farger som mobilens Innstillinger-liste). [nøkkel i settings.js, farge, sti] */
 export const TAB_IC = {
@@ -82,7 +83,7 @@ const LOCAL = [
   ['backup', 'Automatisk backup', 'Server → Backup → Automatisk', 'backup', 'backup sikkerhetskopi automatisk gjenopprett nas smb', 'bk-auto'],
   ['backup-db65', 'Database (integritet og vedlikehold)', 'Server → Backup → Database', 'backup', 'database integritet vacuum vedlikehold wal restic 3-2-1 gjenopprettingstest'], // prompt 65: fra System
   // Prompt 35: GLIMT → Glimt (figur, brief, stemme og venner).
-  ['glimt', 'Glimt', 'Glimt', 'glimt', 'glimt brief morgenbrief kveldsbrief dagsbrief nattbrief venner guide', 'glimt'],
+  ['glimt', 'Glimt', 'Glimt og AI → Glimt', 'glimt', 'glimt brief morgenbrief kveldsbrief dagsbrief nattbrief venner guide', 'glimt'],
   ['glimt-figur', 'Glimt-figur', 'Glimt og AI → Glimt → Glimt-figur', 'glimt', 'figur figurer karakter maskot gris ugle sky dråpe stjerne spire halo boble blekksprut', 'glimt-fig'],
   ['glimt-stemme', 'Stemme og opplesning', 'Glimt og AI → Glimt → Stemmemotor', 'glimt', 'stemme stemmer opplesning les opp tts tale openai elevenlabs azure engelsk tempo', 'glimt-voice'],
   // Prompt 65: Glimt-delen av AI-siden (fra AI → Glimt og chat) og Chat-brytere/AI-logg (AI → Oppgaver → Regler).
@@ -113,6 +114,27 @@ export const ANCHORS = {
   'glimt-pers65': { sel: '[data-hl="glimt-pers65"]' }, 'glimt-hs65': { sel: '[data-hl="glimt-hs65"]' }, 'glimt-web65': { sel: '[data-hl="glimt-web65"]' },
   people55: { sel: '[data-p65-people]' },
 };
+/**
+ * O10: første ledd i stien er navnet på innstillingssiden i modullisten (`innstillinger` i shared/schemas/moduler.json), slått opp
+ * fra web-fanen treffet åpner. Fanenøklene på web er aliasene der; det som mangler (modulsidene, Enheter, undersidene av Glimt),
+ * står i WEB_TOPP. Stier som ikke peker inn i en innstillingsside (Profilmenyen → Språk), røres ikke.
+ */
+const WEB_TOPP = { app: 'enheter', glimt: 'glimt', konto: 'konto', 'faste-oppgaver': 'glimt', kvalitet: 'glimt', dom: 'moduler', finans: 'moduler', media: 'moduler', nyheter: 'moduler', ruter: 'moduler', sporing: 'moduler', studie: 'moduler', vaer: 'moduler', skjold: 'moduler' };
+export function toppNavn(tab) {
+  const ins = liste().innstillinger ?? [];
+  const id = WEB_TOPP[tab] ?? ins.find((x) => x.id === tab || (x.aliaser ?? []).includes(tab))?.id;
+  return ins.find((x) => x.id === id)?.navn ?? null;
+}
+/** Stien med første ledd fra modullisten: riktig sidenavn står, et annet sidenavn byttes ut, og en underside («System», «AI»,
+ *  «Integrasjoner») får sidenavnet foran (System → Mer → … blir Server → System → Mer → …). */
+export function stiFra(tab, path) {
+  const p = String(path ?? ''), topp = toppNavn(tab);
+  if (!p || !topp || /^Profilmenyen\b/.test(p)) return p;
+  const [first, ...rest] = p.split(' → ');
+  if (first === topp) return p;
+  const sider = new Set((liste().innstillinger ?? []).map((x) => x.navn));
+  return (sider.has(first) ? [topp, ...rest] : [topp, first, ...rest]).join(' → ');
+}
 /** Prompt 65: stier fra serverens indeks (GET /api/settings/index) som peker til sider som er slått sammen eller flyttet. */
 const PATH65 = [[/^Helse \(Familie\)/, 'Husstand → Helse'], [/^Varsler → Familie → /, 'Varsler → '], [/^Startside → Faner/, 'Utseende → Topplinje → Faner'], [/^Startside → Topplinje/, 'Utseende → Topplinje'], [/^Startside/, 'Utseende'], [/^Familie/, 'Husstand'], [/^Brukere(?! og familie)/, 'Husstand'],
   [/^Gjøremål/, 'Tilkoblinger → Kalender og gjøremål → Gjøremål'], [/^Kalendere/, 'Tilkoblinger → Kalender og gjøremål'], [/^Sikkerhet/, 'Konto og sikkerhet'], [/^AI → API og nøkler/, 'Glimt og AI → AI → Tjenester'], [/^AI → Valg/, 'Glimt og AI → AI → Oppgaver'],
@@ -149,14 +171,16 @@ export function loadIndex(redraw) {
       // Mål-id fra den innebygde indeksen når serveren ikke har dem, og mål som serveren mangler helt.
       const loc = new Map(LOCAL.map((x) => [x.id, x])), has = new Set(list.map((x) => x.anchor).filter(Boolean));
       X.index = [...list.map((x) => (x.anchor || !loc.get(x.id)?.anchor ? x : { ...x, anchor: loc.get(x.id).anchor })), ...LOCAL.filter((x) => (x.anchor ? !has.has(x.anchor) : NEW65.has(x.id)) && !list.some((y) => y.id === x.id))]
-        .map((x) => ({ ...x, path: path65(x.path) })) // prompt 65: nye sidenavn i stiene
+        .map((x) => ({ ...x, path: stiFra(routeOf(x).tab, path65(x.path)) })) // prompt 65 og O10: sidenavnene fra modullisten
         .map((x) => ({ ...x, title: title66(x) })); // prompt 66: og nye titler i treffene («Startside» → …)
-    } else X.index = LOCAL;
-  }).catch(() => { X.index = LOCAL; }).finally(() => { X.loading = null; redraw?.(); });
+    } else X.index = lokal();
+  }).catch(() => { X.index = lokal(); }).finally(() => { X.loading = null; redraw?.(); });
 }
-const index = () => X.index ?? LOCAL;
+/** Den innebygde indeksen med stiene fra modullisten (O10). */
+const lokal = () => LOCAL.map((x) => ({ ...x, path: stiFra(routeOf(x).tab, x.path) }));
+const index = () => X.index ?? lokal();
 /** Prompt 65: oppføringer serverens indeks ikke har ennå (nye plasser etter samlingen); tas med selv uten mål-id. */
-const NEW65 = new Set(['ntfy', 'sonevarsler', 'ai-dal53', 'familie', 'brief-figur', 'passkeys', 'staging65', 'helse65', 'ytelse65', 'heal65', 'flags65', 'backup-db65', 'skjold77', 'chat-regler', 'sporing70']);
+const NEW65 = new Set(['ntfy', 'sonevarsler', 'ai-dal53', 'familie', 'brief-figur', 'passkeys', 'staging65', 'helse65', 'ytelse65', 'heal65', 'flags65', 'backup-db65', 'skjold77', 'chat-regler', 'sporing70', 'kvalitet', 'faste-oppgaver']); // O10: Kvalitet og Faste oppgaver mangler i serverens indeks
 
 /** «#/innstillinger/look/bg», «/innstillinger/utseende» eller «look|bg» → { tab, sub }. */
 export function routeOf(item) {

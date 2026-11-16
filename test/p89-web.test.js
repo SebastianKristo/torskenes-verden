@@ -67,11 +67,12 @@ test('domenet: lagret adresse som er nøyaktig den gamle standarden migreres (pe
 
 /* ---------------- Media: varsler-pillen er borte ---------------- */
 
-test('Media-headeren: ingen varsler-pill, rekkefølge Tilbake · Media · faner · Glimt · Hjemme · ✕', () => {
+test('Media-headeren: ingen varsler-pill, rekkefølge Media · faner · Glimt · Hjemme · ✕ (O11: én lukkeknapp)', () => {
   const js = rd('public/js/media-visninger.js');
   for (const s of ['m70-alw', 'm70-alb', 'm70-alm', 'Ingen varsler', "'varsel', 'varsler'", 'alerts70', 'S.alerts', "data-m70=\"alerts\""]) assert.ok(!js.includes(s), s);
   const top = js.slice(js.indexOf('export function top70'), js.indexOf('/* ---------------- Oversikt'));
-  const order = ['m70-back', 'class="m70-h"', 'm70-tabs', 'm70-gl', '${srvHtml}', 'm70-x'].map((s) => top.indexOf(s));
+  assert.ok(!top.includes('m70-back') && !top.includes('‹ Tilbake'), 'O11: bare ✕ lukker Media');
+  const order = ['class="m70-h"', 'm70-tabs', 'm70-gl', '${srvHtml}', 'm70-x'].map((s) => top.indexOf(s));
   assert.ok(order.every((i) => i > 0), JSON.stringify(order));
   assert.deepEqual([...order].sort((x, y) => x - y), order);
   const css = rd('public/css/pages/media.css');
