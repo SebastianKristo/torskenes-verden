@@ -36,6 +36,10 @@ targets:
       # (ModulListe.swift). Samme fil som serveren leser, så det finnes ingen egen kopi i appen.
       - path: ../../shared/schemas/moduler.json
         buildPhase: resources
+      # Fase 6: gruppene for Innstillinger → Tilkoblinger (rekkefølge, og reserve når serveren ikke sender category),
+      # Tilkoblingsgrupper.swift. Samme fil som serveren leser.
+      - path: ../../shared/schemas/tilkoblinger.json
+        buildPhase: resources
     dependencies:
       # Widgetene (WidgetKit) bygges som utvidelse og legges i FinansHub.app/PlugIns.
       - target: FinansHubWidgets

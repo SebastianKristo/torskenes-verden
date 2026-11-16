@@ -14,7 +14,7 @@ const raw = (f) => readFileSync(join(SRC, f), 'utf8');
 const code = (f) => raw(f).split('\n').filter((l) => !l.trim().startsWith('//') && !l.trim().startsWith('///')).join('\n');
 const NEW = ['NrkSearchModel.swift', 'NrkSeriesPage.swift', 'MusikkModel.swift', 'MusikkPage.swift'];
 
-/** Liten Swift-lekser (som i p87-ios): nestede blokk-kommentarer, strenger med interpolasjon, så klammebalanse. */
+/** Liten Swift-lekser (som i ios-media-nrk): nestede blokk-kommentarer, strenger med interpolasjon, så klammebalanse. */
 function lex(src) {
   let out = ''; let i = 0; const n = src.length;
   function str() {

@@ -2,12 +2,12 @@ import SwiftUI
 
 /* ---------------- Prompt 26: Innstillinger → Integrasjoner som på web ----------------
    Fasit: Mobil Papir App.dc.html → Innstillinger → Integrasjoner (IDEF/INTL/INTD).
-   Listen er gruppert (Smarthjem · Transport og pakker · Økonomi · AI · Informasjon · Annet). Hver rad har farget merke,
+   Listen er gruppert etter serverens `category` (gruppene i shared/schemas/tilkoblinger.json, Tilkoblingsgrupper.swift). Hver rad har farget merke,
    navn, kort beskrivelse og status (grønn «Tilkoblet», rød «Mangler …»). Hver integrasjon har egen side
    (paperTab «innst-int:<id>») med toppkort, OPPSETT (felt som redigeres rett under raden), SLIK GJØR DU,
    Test tilkobling og Fjern alle verdier. Kalendere, Trading 212, Bankimport og AI åpner sine egne sider.
    Metadata (category, badge, color, description, statusText, guide) kommer fra GET /api/integrations.
-   Eldre server uten metadata: kategori, merke og farge fra tabellen under. */
+   Eldre server uten metadata: merke og farge fra tabellen under, gruppen fra den innebygde tilkoblinger.json. */
 
 /// Ett steg i «SLIK GJØR DU».
 struct Int26Step: Hashable {
@@ -56,9 +56,6 @@ struct Int26Meta {
     let color: String
     let desc: String
 
-    // Prompt 43: MEDIA-gruppen (IntegrationsMedia.swift) rett etter Smarthjem.
-    static let categories: [String] = ["Smarthjem", "Media", "Transport og pakker", "Økonomi", "AI", "Informasjon", "Annet"]
-
     static func fallback(_ id: String) -> Int26Meta {
         if let m = Int43Media.meta(id) { return m }
         switch id {
@@ -91,10 +88,9 @@ struct Int26Meta {
 extension Int24Item {
     var meta26: Int26Meta { Int26Meta.fallback(id) }
 
+    /// Fase 6: gruppen fra serveren (`category`), ellers fra den innebygde tilkoblinger.json. Ingen egen liste i appen.
     var category26: String {
-        let c: String = category.trimmingCharacters(in: .whitespaces)
-        if let hit = Int26Meta.categories.first(where: { $0.lowercased() == c.lowercased() }) { return hit }
-        return meta26.category
+        Tilkoblingsgrupper.vist(category: category, id: id)
     }
 
     var badge26: String {
@@ -245,10 +241,14 @@ struct Int26List: View {
         }
     }
 
+    /// Gruppene i rekkefølgen fra tilkoblinger.json (grupper serveren sender som fila ikke kjenner, kommer sist).
     private var groups: [(String, [Int24Item])] {
+        let shown: [Int24Item] = m.items.filter { (it: Int24Item) -> Bool in !it.hidden }
+        var used: [String] = []
+        for it in shown where !used.contains(it.category26) { used.append(it.category26) }
         var out: [(String, [Int24Item])] = []
-        for c in Int26Meta.categories {
-            let rows: [Int24Item] = m.items.filter { !$0.hidden && $0.category26 == c }
+        for c in Tilkoblingsgrupper.ordnet(used) {
+            let rows: [Int24Item] = shown.filter { (it: Int24Item) -> Bool in it.category26 == c }
             if !rows.isEmpty { out.append((c, rows)) }
         }
         return out

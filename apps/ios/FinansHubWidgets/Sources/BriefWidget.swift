@@ -148,11 +148,12 @@ enum Brief34Fetch {
         let linked: Bool = !(WidgetShared.token ?? "").isEmpty
         let kind: String = Brief34.kindFor()
         // Hele briefen (med nedbør og avtaler til Stor), ellers den kompakte widget-formen.
-        if let d = await Trials32b.request("/api/brief?kind=" + kind), let b = Brief34.parse(d) {
+        // «Skjul beløp»: bare widget-formen skjuler beløpene i tekstene (?hideAmounts=1), så da hoppes hele briefen over.
+        if !WidgetShared.skjulBelop, let d = await Trials32b.request("/api/brief?kind=" + kind), let b = Brief34.parse(d) {
             Brief34.store(d)
             return Brief34Entry(date: Date(), brief: b, linked: linked)
         }
-        if let d = await Trials32b.request("/api/brief/widget?size=medium"), let b = Brief34.parse(d) {
+        if let d = await Trials32b.request(WidgetShared.medBelopsvalg("/api/brief/widget?size=medium")), let b = Brief34.parse(d) {
             return Brief34Entry(date: Date(), brief: b, linked: linked)
         }
         let b: Brief34 = Brief34.cached ?? Brief34()

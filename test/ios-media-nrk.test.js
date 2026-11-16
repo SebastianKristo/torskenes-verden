@@ -60,7 +60,7 @@ function lex(src) {
 
 test('NRK-fanen finnes i Media, mellom Prowlarr og Avspilling, og fanelinja ruller valgt fane inn i midten', () => {
   const model = code('MediaModel.swift');
-  // Prompt 88: «Musikk» (yubal) står mellom NRK og Avspilling (test/p88-ios.test.js).
+  // Prompt 88: «Musikk» (yubal) står mellom NRK og Avspilling (test/ios-media-nrk-sok-og-musikk.test.js).
   assert.match(model, /\("prowlarr", "Prowlarr"\), \("nrk", "NRK"\), \("musikk", "Musikk"\), \("avspilling", "Avspilling"\)\]/);
   const views = code('MediaPage.swift');
   assert.match(views, /case "nrk": Nrk87View\(wide: wide\)/);

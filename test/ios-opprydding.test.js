@@ -121,6 +121,64 @@ test('Struktur: Domener er ute av Store (@Observable-modell med @Environment, St
   assert.match(code(raw('FinansHub/Sources/PaperDomains.swift')), /@Environment\(DomenerModell\.self\) private var dom/);
 });
 
+test('Struktur: Finn og Matplan er ute av Store etter samme mønster (modell, videresending, homelabMiljo)', () => {
+  const s = code(raw('FinansHub/Sources/Store.swift'));
+  const miljo = code(raw('FinansHub/Sources/HomelabMiljo.swift'));
+  const domener = [
+    ['FinnModell', 'finnModell', [['finn', 'finn'], ['finnSel', 'sel'], ['finnDetail', 'detail'], ['finnBusy', 'busy']],
+      ['func loadFinn\\(\\) async throws \\{ try await finnModell\\.load\\(self\\) \\}', 'func openFinn\\(_ id: Int\\) \\{ finnModell\\.open\\(id, self\\) \\}']],
+    ['MatplanModell', 'matplan', [['week', 'week'], ['matDay', 'day'], ['matFull', 'full']],
+      ['func loadWeek\\(\\) async throws \\{ try await matplan\\.load\\(self\\) \\}', 'func addToShop\\(_ items: \\[String\\]\\) \\{ matplan\\.addToShop\\(items, self\\) \\}']],
+  ];
+  for (const [type, prop, vars, funcs] of domener) {
+    const m = code(raw(`FinansHub/Sources/${type}.swift`));
+    assert.match(m, new RegExp(`@MainActor\\s+@Observable\\s+final class ${type} \\{`), type);
+    assert.match(s, new RegExp(`let ${prop}: ${type} = ${type}\\(\\)`), type);
+    for (const [navn, til] of vars) {
+      assert.match(s, new RegExp(`var ${navn}: [^{\\n]+\\{ get \\{ ${prop}\\.${til} \\} set \\{ ${prop}\\.${til} = newValue \\} \\}`), navn);
+    }
+    for (const f of funcs) assert.match(s, new RegExp(f), f);
+    assert.match(miljo, new RegExp(`\\.environment\\(store\\.${prop}\\)`), prop);
+  }
+  // Ingen egen lagring igjen i Store for disse feltene.
+  assert.doesNotMatch(s, /^\s+var (finn|finnSel|finnDetail|finnBusy|week|matDay|matFull)(: [^{\n]+)?( = [^{\n]+)?$/m);
+});
+
+test('Q19: Finn har ikke lenger «404 → Oppdater homelab»-reserver (serveren har endepunktene)', () => {
+  const m = code(raw('FinansHub/Sources/FinnModell.swift'));
+  assert.doesNotMatch(m, /status == 404/);
+  assert.doesNotMatch(m, /Oppdater homelab/);
+  assert.doesNotMatch(code(raw('FinansHub/Sources/Store.swift')), /Serveren (støtter ikke opplasting til Finn|kan ikke hente annonser)/);
+  const srv = readFileSync(join(IOS, '..', '..', 'server', 'finans', 'finn-routes.js'), 'utf8');
+  for (const r of ["api.get('/finn/:id'", "api.post('/finn/:id/ad'", "api.post('/finn/:id/files'", "api.post('/finn/:id/emails'", "api.delete('/finn/:id/files/:fid'", "api.delete('/finn/:id/emails/:eid'"]) {
+    assert.ok(srv.includes(r), r);
+  }
+});
+
+test('Q19: flere «404 → gammel vei / lokalt»-reserver er borte der serveren har endepunktet', () => {
+  const src = (f) => code(raw(`FinansHub/Sources/${f}`));
+  const root = join(IOS, '..', '..');
+  const srv = (f) => readFileSync(join(root, f), 'utf8');
+  // Gjøremål: Glimt deler opp beskjeden på serveren; telefonen gjør det bare uten nett.
+  const tg = src('TasksGlimt.swift');
+  assert.doesNotMatch(tg, /e\.status == 404 \|\| e\.status == 405 \|\| e\.status == 0/);
+  assert.match(tg, /if e\.status == 0 \{\s*await self\.localSplit/);
+  assert.match(srv('server/gjoremal/glimt-jobs.js'), /api\.post\('\/glimt'/);
+  // AI-søk: jobbmodus uten omvei om det synkrone kallet ved 404.
+  const ai = src('AiSearchJob.swift');
+  assert.match(ai, /let first: Data = try await api\.callAt\("\/finans\/api", "POST", "\/search\/ai\?async=1"/);
+  assert.match(srv('server/finans/routes.js'), /api\.post\('\/search\/ai'/);
+  // Kvittering: /receipts/scan finnes, ingen omvei om den gamle opplastingen ved 404.
+  const kf = src('KvitteringFlyt.swift');
+  assert.doesNotMatch(kf, /Eldre server uten \/receipts\/scan/);
+  assert.doesNotMatch(kf, /e\.status == 404 \|\| e\.status == 405/);
+  assert.match(srv('server/finans/receipts/routes.js'), /api\.post\('\/receipts\/scan'/);
+  // Sporing: /api/tracking/refresh finnes, ingen omvei om /tracking/check.
+  const tc = src('TrackCarriers.swift');
+  assert.doesNotMatch(tc, /"\/tracking\/check"/);
+  assert.match(srv('server/sporing/shipments.js'), /api\.post\('\/refresh'/);
+});
+
 test('Serveren: logo 204 = «ingen logo» (spørres ikke igjen), og discovery med local: [] sletter ikke lagret lokal adresse', () => {
   const s = code(raw('FinansHub/Sources/Store.swift'));
   const logo = s.slice(s.indexOf('func logo(_ domain: String?)'), s.indexOf('private func sendImage('));

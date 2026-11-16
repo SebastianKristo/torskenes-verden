@@ -773,7 +773,8 @@ final class Tasks41Glimt {
                     self.finish(local, n, store)
                 }
             } catch let e as APIError {
-                if e.status == 404 || e.status == 405 || e.status == 0 {
+                // Q19: serveren har POST /api/tasks/glimt; bare uten nett (status 0) deles beskjeden opp på telefonen.
+                if e.status == 0 {
                     await self.localSplit(local, t, list, store)
                 } else {
                     self.fail(local)

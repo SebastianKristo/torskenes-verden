@@ -187,14 +187,16 @@ extension Store {
     }
 }
 
-/* ---------- Fanene i systemets fanelinje (AppShell) ---------- */
+/* ---------- Fanene i fanelinja (AppShell): samme kilde for systemets linje og Papir-pillen ---------- */
 
-/// En fane i TabView / sidekolonnen.
+/// En fane i TabView / sidekolonnen / Papir-pillen (PapirFanelinje.swift).
 struct ShellTab: Identifiable, Hashable {
     let id: String
     let title: String
     /// SF Symbol.
     let symbol: String
+    /// Merket på fanen (0 = ingen). Samme tall i begge fanelinjene (ShellTabs.badge).
+    var badge: Int = 0
 }
 
 enum ShellTabs {
@@ -215,7 +217,7 @@ enum ShellTabs {
             // Q1: startsiden heter Oversikt.
             if id == "hjem" && label == "Hjem" { label = "Oversikt" }
             if id == moreId || out.contains(where: { (t: ShellTab) -> Bool in t.id == id }) { continue }
-            out.append(ShellTab(id: id, title: label, symbol: symbol(id, it.icon)))
+            out.append(ShellTab(id: id, title: label, symbol: symbol(id, it.icon), badge: badge(id, store)))
         }
         // Oversikt er alltid med (fanelinja skifter ikke innhold per seksjon, og Hjem-knappen fra prompt 42 finnes ikke i systemets linje).
         if !out.contains(where: { (t: ShellTab) -> Bool in t.id == "hjem" }) {
@@ -225,12 +227,35 @@ enum ShellTabs {
         return out
     }
 
-    /// iPhone: de fire første og Mer. Resten ligger under Mer (som før).
+    /// iPhone: de fire første og Mer. Resten ligger under Mer (som før), og merkene deres summeres på Mer.
     static func compact(_ all: [ShellTab]) -> [ShellTab] {
         let main: [ShellTab] = all.filter { (t: ShellTab) -> Bool in t.id != moreId }
-        var out: [ShellTab] = Array(main.prefix(compactMax - 1))
-        if let more = all.first(where: { (t: ShellTab) -> Bool in t.id == moreId }) { out.append(more) }
+        let shown: Int = compactMax - 1
+        var out: [ShellTab] = Array(main.prefix(shown))
+        if var more = all.first(where: { (t: ShellTab) -> Bool in t.id == moreId }) {
+            var hidden: Int = 0
+            for t in main.dropFirst(shown) { hidden += t.badge }
+            more.badge += hidden
+            out.append(more)
+        }
         return out
+    }
+
+    /// Merket på en fane, fra det serveren har sendt. Økonomi: kvitteringer til gjennomgang (samme tall som Økonomi → Mer).
+    @MainActor static func badge(_ id: String, _ store: Store) -> Int {
+        switch id {
+        case "finans":
+            let n: Int = store.reviewCount ?? store.summary?.review.count ?? store.boot?.reviewCount ?? 0
+            return Swift.max(0, n)
+        default:
+            return 0
+        }
+    }
+
+    /// VoiceOver-teksten for merket.
+    static func badgeTekst(_ id: String, _ n: Int) -> String {
+        if id == "finans" { return "\(n) til gjennomgang" }
+        return "\(n) nye"
     }
 
     /// SF Symbol for fanen: brukerens valg når det er et symbolnavn, ellers fanens standardikon.

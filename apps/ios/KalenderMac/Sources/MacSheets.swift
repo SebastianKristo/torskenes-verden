@@ -34,7 +34,7 @@ struct MacDetailSheet: View {
                 HStack(alignment: .top, spacing: 12) {
                     RoundedRectangle(cornerRadius: 3).fill(t.calColor(c)).frame(width: 6, height: 54)
                     VStack(alignment: .leading, spacing: 4) {
-                        MacLabel(text: (c?.name ?? "Kalender").uppercased(), color: t.calText(c))
+                        MacLabel(text: MacDetailSchool.calLabel(c?.name ?? "Kalender", e).uppercased(), color: t.calText(c))
                         if !KalBd41.isBirthday(e, calName: c?.name ?? "") && !KalAb42.isSub(e) {
                             Text(e.title).font(MacFont.serif(28)).foregroundColor(t.ink).fixedSize(horizontal: false, vertical: true)
                         }
@@ -66,6 +66,8 @@ struct MacDetailSheet: View {
                 if !e.src.isEmpty {
                     Text("Lagt til av Glimt «" + e.src + "»").font(MacFont.ui(12.5)).foregroundColor(t.mut)
                 }
+                // Q26: «Finn rommet i MazeMap ↗» og «Kopier til Personlig», som på iPhone (MacDetailExtras.swift).
+                MacDetailExtras(e: e, win: win)
                 actions
                 if KalBd41.isBirthday(e, calName: c?.name ?? "") && KalBd41.fromGoogle(e) {
                     Text("«Slett» fjerner bare bursdagen fra Kalender. Den ligger fortsatt i Google Kontakter.")
@@ -86,6 +88,8 @@ struct MacDetailSheet: View {
         VStack(spacing: 0) {
             MacInfoRow(label: "Når", value: whenText(), top: false)
             if !e.loc.isEmpty { MacInfoRow(label: "Sted", value: e.loc, top: true) }
+            // Q26: lærer, fag og gjentakelse fra serveren, som på iPhone (MacDetailExtras.swift).
+            MacSchoolRows(e: e)
             if let w = store.weather(e.day) {
                 let wt: String = (KalWx.text[w.kind] ?? "Skyet") + ", " + String(w.lo) + "–" + String(w.hi) + "°"
                 MacInfoRow(label: "Vær", value: wt, top: true)

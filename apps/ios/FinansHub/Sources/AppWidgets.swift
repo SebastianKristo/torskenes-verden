@@ -19,7 +19,10 @@ extension Store {
         KalCompanion33.sync(self)
         // Prompt 85: offline-køen følger kontoen, ikke enheten (Offline51.bind i PlatformShared.swift).
         Offline51.bind(a.username.trimmingCharacters(in: .whitespaces).lowercased() + "|" + API.normalize(a.server).lowercased())
-        let changed = WidgetShared.token != a.token || WidgetShared.bases.first != (base.isEmpty ? a.server : base)
+        // «Skjul beløp»: widgetene følger appens personvernvalg (WidgetShared.medBelopsvalg / skjulBelop).
+        let skjul: Bool = hideAmounts
+        let changed = WidgetShared.token != a.token || WidgetShared.bases.first != (base.isEmpty ? a.server : base) || WidgetShared.hideAmounts != skjul
+        WidgetShared.hideAmounts = skjul
         WidgetShared.save(server: base.isEmpty ? a.server : base, external: a.external, local: a.local, token: a.token)
         if changed || force { WidgetCenter.shared.reloadAllTimelines() }
     }

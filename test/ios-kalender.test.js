@@ -46,6 +46,28 @@ test('Q26: «Kopier til Personlig» kaller POST /api/kalender/events/:id/copy, o
   assert.match(code('SharedKal/Core/KalSchoolCore.swift'), /if let m = e\.mazemap \{ return URL\(string: m\) \}/);
 });
 
+test('Q26 (Mac): detaljarket i Kalender for Mac har lærer, fag, gjentakelse, typen, MazeMap og «Kopier til Personlig» som iPhone', () => {
+  const sheet = code('KalenderMac/Sources/MacSheets.swift');
+  assert.match(sheet, /MacSchoolRows\(e: e\)/);
+  assert.match(sheet, /MacDetailExtras\(e: e, win: win\)/);
+  assert.match(sheet, /MacDetailSchool\.calLabel\(/);
+  const x = code('KalenderMac/Sources/MacDetailExtras.swift');
+  assert.match(x, /MacInfoRow\(label: "Lærer", value: te, top: true\)/);
+  assert.match(x, /MacInfoRow\(label: "Fag", value: subject, top: true\)/);
+  assert.match(x, /MacInfoRow\(label: "Gjentas", value: rep, top: true\)/);
+  // Samme delte regler (KalSchool) og samme endepunkt som iPhone.
+  assert.match(x, /KalSchool\.typeName\(e\)/);
+  assert.match(x, /KalSchool\.repeatName\(e\.repeatRule\)/);
+  assert.match(x, /KalSchool\.mapURL\(e\)/);
+  assert.match(x, /KalNet\.send\("POST", "\/api\/kalender\/events\/" \+ KalNet\.enc\(id\) \+ "\/copy"/);
+  assert.match(x, /MacPill\(title: "Kopier til Personlig"/);
+  assert.match(x, /!e\.editable && !e\.pending/);
+  // KalSchoolCore er med i Mac-målet (SharedKal/Core).
+  const yml = raw('project.yml');
+  const mac = yml.slice(yml.indexOf('\n  KalenderMac:\n'), yml.indexOf('\n  KalenderMac:\n') + 900);
+  assert.match(mac, /- SharedKal\/Core\n/);
+});
+
 test('Q26: «Lær Glimt hva dette er…» finnes i den delte Kalenderen (Glimt husker, per bruker på serveren)', () => {
   const l = code('Kalender/Sources/KalLearn.swift');
   assert.match(l, /KalNet\.send\("POST", "\/api\/glimt\/memory", json: body/);
@@ -152,11 +174,14 @@ test('Q26: Oversikt har kortene A–E fra den gamle kalendersiden, som kan flytt
   for (const f of ['func move(', 'func hide(', 'func show(', 'func reset(']) assert.ok(o.includes(f), f);
   assert.match(o, /if visible\.count <= 1 \{ return \}/, 'minst ett kort synlig');
   for (const c of ['KalNowCard(now: now)', 'KalTestsCard()', 'KalCalsCard()', 'KalViewsCard()', 'KalWidgetsCard()']) assert.ok(o.includes(c), c);
-  // Prøver og frister med nedtelling (serverens daysLeft når den finnes) og rødt den siste uka.
+  // Prøver og frister: nedtellingen er serverens daysLeft (Oslo-tid); appen regner ikke selv, og uten feltet vises ingen.
   const sc = code('SharedKal/Core/KalSchoolCore.swift');
-  assert.match(sc, /if let d = e\.daysLeft \{ return d \}/);
+  assert.match(sc, /static func daysLeft\(_ e: KalEvent\) -> Int\? \{\s*e\.daysLeft\s*\}/);
+  assert.doesNotMatch(sc, /KalD\.daysBetween\(today, e\.day\)/);
   assert.match(sc, /static func urgent\(_ n: Int\) -> Bool \{ n <= 7 \}/);
-  assert.match(o, /KalSchool\.inText\(n\)/);
+  assert.match(o, /let n: Int\? = KalSchool\.daysLeft\(e\)/);
+  assert.match(o, /KalSchool\.inText\(x\)/);
+  assert.match(o, /if !when\.isEmpty \{/);
   // Innganger: sidemenyen (iPhone), sidepanelet (iPad) og kalender://oversikt.
   assert.match(code('Kalender/Sources/KalDrawer.swift'), /s\.overviewOpen = true/);
   assert.match(code('Kalender/Sources/KalPad.swift'), /s\.overviewOpen = true/);

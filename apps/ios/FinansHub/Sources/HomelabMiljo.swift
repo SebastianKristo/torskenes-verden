@@ -10,5 +10,7 @@ extension View {
         self
             .environment(store)
             .environment(store.domener)
+            .environment(store.finnModell)
+            .environment(store.matplan)
     }
 }

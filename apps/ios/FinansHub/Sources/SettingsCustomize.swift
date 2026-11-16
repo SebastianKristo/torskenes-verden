@@ -28,8 +28,9 @@ struct Tilpass39Page: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             Set39Group(title: "Identitet", offset: 1, rows: identityRows)
-            // Prompt 41: «Skanneknapp på Hjem» øverst i FANELINJE.
+            // FANELINJE: først hvilken fanelinje (systemets eller Papir, FanelinjeValg.swift), så skanneknappen (prompt 41).
             PLabel(text: "Fanelinje").padding(.top, 12).padding(.leading, 4)
+            FanelinjeValgRad().padding(.bottom, 6)
             Scan41Row().padding(.bottom, 6)
             Set39Group(title: "", offset: 2, rows: tabRows)
             // Tema, bakgrunn, ikonfarger og resten av fanelinje-valgene, flyttet uendret fra «Utseende».
@@ -55,7 +56,7 @@ struct Tilpass39Page: View {
 
     private var tabRows: [PaperLinkRow] {
         [
-            PaperLinkRow(name: "Fanelinje-stil", sub: NavStyle25.sub(store.navStyle25), value: NavStyle25.name(store.navStyle25) + " ›", icon: "rectangle.split.3x1") { store.cycleNavStyle25() },
+            PaperLinkRow(name: "Fanelinje-stil", sub: NavStyle25.sub(store.navStyle25) + " · Papir (klassisk)", value: NavStyle25.name(store.navStyle25) + " ›", icon: "rectangle.split.3x1") { store.cycleNavStyle25() },
             PaperLinkRow(name: "Fanelinje på Oversikt", sub: "Fjern, flytt, gi nytt navn og ikon · eller hold inne på fanelinjen", icon: "dock.rectangle") { store.tabBarEditing = true },
             // Prompt 42: Hjem-knapp (Standard / 1a–1d) med forhåndsvisning (NavHomeButton.swift).
             PaperLinkRow(name: "Hjem-knapp", sub: NavHome42.name(NavHome42.shared.value) + " · velg og se forhåndsvisning", value: "Velg ›", icon: "house") { NavHome42.shared.picking = true },
