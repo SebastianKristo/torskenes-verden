@@ -45,6 +45,8 @@ Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. 
   - Innloggingen tåler en ødelagt krypteringsnøkkel uten å krasje, og tokenet lagres aldri ukryptert (Android).
   - App Links for innlogging og QR virker med standardadressen `os.smarthjemeksperten.no` (Android).
   - Innlogginger fra appene, Kalender, QR og invitasjoner utløper etter 180 dager uten bruk. Bruker du appen, flyttes fristen fram, så du merker ingenting.
+  - Sporing av PostNord-pakker uten egen nøkkel later ikke lenger som den er en nettleser på postnord.no. Avviser PostNord oppslaget, står det «PostNord svarer ikke akkurat nå» en stund. Med egen PostNord-nøkkel (Tilkoblinger) brukes det offisielle API-et.
+  - Sanntid fra Android-appen sender innloggingen i en header, ikke i adressen, så den havner ikke i logger.
 - **Mac:** Kalender for Mac krever nå macOS 14. Sidemenyen er systemets, kan gjøres bredere og skjules, og tannhjulet «Server» finnes også på Mac.
 - **Feilrettinger:**
   - Datoer du skriver («i morgen kl. 10», «neste fredag») tolkes likt på web og i appene, fordi serveren tolker dem. Helligdagene kommer også fra serveren.
