@@ -121,6 +121,38 @@ test('Struktur: Domener er ute av Store (@Observable-modell med @Environment, St
   assert.match(code(raw('FinansHub/Sources/PaperDomains.swift')), /@Environment\(DomenerModell\.self\) private var dom/);
 });
 
+test('Struktur: Finn er ute av Store etter samme mønster (modell, videresending, homelabMiljo)', () => {
+  const s = code(raw('FinansHub/Sources/Store.swift'));
+  const miljo = code(raw('FinansHub/Sources/HomelabMiljo.swift'));
+  const domener = [
+    ['FinnModell', 'finnModell', [['finn', 'finn'], ['finnSel', 'sel'], ['finnDetail', 'detail'], ['finnBusy', 'busy']],
+      ['func loadFinn\\(\\) async throws \\{ try await finnModell\\.load\\(self\\) \\}', 'func openFinn\\(_ id: Int\\) \\{ finnModell\\.open\\(id, self\\) \\}']],
+  ];
+  for (const [type, prop, vars, funcs] of domener) {
+    const m = code(raw(`FinansHub/Sources/${type}.swift`));
+    assert.match(m, new RegExp(`@MainActor\\s+@Observable\\s+final class ${type} \\{`), type);
+    assert.match(s, new RegExp(`let ${prop}: ${type} = ${type}\\(\\)`), type);
+    for (const [navn, til] of vars) {
+      assert.match(s, new RegExp(`var ${navn}: [^{\\n]+\\{ get \\{ ${prop}\\.${til} \\} set \\{ ${prop}\\.${til} = newValue \\} \\}`), navn);
+    }
+    for (const f of funcs) assert.match(s, new RegExp(f), f);
+    assert.match(miljo, new RegExp(`\\.environment\\(store\\.${prop}\\)`), prop);
+  }
+  // Ingen egen lagring igjen i Store for disse feltene.
+  assert.doesNotMatch(s, /^\s+var (finn|finnSel|finnDetail|finnBusy)(: [^{\n]+)?( = [^{\n]+)?$/m);
+});
+
+test('Q19: Finn har ikke lenger «404 → Oppdater homelab»-reserver (serveren har endepunktene)', () => {
+  const m = code(raw('FinansHub/Sources/FinnModell.swift'));
+  assert.doesNotMatch(m, /status == 404/);
+  assert.doesNotMatch(m, /Oppdater homelab/);
+  assert.doesNotMatch(code(raw('FinansHub/Sources/Store.swift')), /Serveren (støtter ikke opplasting til Finn|kan ikke hente annonser)/);
+  const srv = readFileSync(join(IOS, '..', '..', 'server', 'finans', 'finn-routes.js'), 'utf8');
+  for (const r of ["api.get('/finn/:id'", "api.post('/finn/:id/ad'", "api.post('/finn/:id/files'", "api.post('/finn/:id/emails'", "api.delete('/finn/:id/files/:fid'", "api.delete('/finn/:id/emails/:eid'"]) {
+    assert.ok(srv.includes(r), r);
+  }
+});
+
 test('Serveren: logo 204 = «ingen logo» (spørres ikke igjen), og discovery med local: [] sletter ikke lagret lokal adresse', () => {
   const s = code(raw('FinansHub/Sources/Store.swift'));
   const logo = s.slice(s.indexOf('func logo(_ domain: String?)'), s.indexOf('private func sendImage('));

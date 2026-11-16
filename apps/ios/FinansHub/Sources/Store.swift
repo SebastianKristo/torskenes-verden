@@ -102,6 +102,8 @@ final class Store {
 
     /// Domener (DomenerModell.swift).
     let domener: DomenerModell = DomenerModell()
+    /// Finn (FinnModell.swift).
+    let finnModell: FinnModell = FinnModell()
     var domains: [DomainRef]? { get { domener.domains } set { domener.domains = newValue } }
     var domain: String? { get { domener.domain } set { domener.domain = newValue } }
     var analytics: Analytics? { get { domener.analytics } set { domener.analytics = newValue } }
@@ -206,12 +208,12 @@ final class Store {
     var subs: SubList?
     var folders: [Folder]?
     var folder: Folder?
-    var finn: FinnList?
-    /// Finn: åpen handel (id), detaljen og opplasting/henting som pågår.
-    var finnSel: Int?
-    var finnDetail: FinnDetail?
+    /// Finn (FinnModell.swift): handlene, åpen handel (id), detaljen og opplasting/henting som pågår.
+    var finn: FinnList? { get { finnModell.finn } set { finnModell.finn = newValue } }
+    var finnSel: Int? { get { finnModell.sel } set { finnModell.sel = newValue } }
+    var finnDetail: FinnDetail? { get { finnModell.detail } set { finnModell.detail = newValue } }
     /// receipts | photos | emails | ad mens det lastes opp eller hentes.
-    var finnBusy: String?
+    var finnBusy: String? { get { finnModell.busy } set { finnModell.busy = newValue } }
     /// Boliger: kategoriene og «Legg i bolig» (målet for skann mens man står i en bolig; nil = boligen som er åpen).
     var boligCats: [BoligCategory] = []
     var uploadFolder: Int?
@@ -667,7 +669,8 @@ final class Store {
         saveAccounts()
     }
 
-    private func expired() {
+    /// Innloggingen er utløpt (401 som ikke er TOKEN_EXPIRED). Brukes også av domenemodellene.
+    func expired() {
         let name = account?.label ?? ""
         if let a = account { remove(a.id) }
         message = "Innloggingen for \(name) er utløpt. Logg inn igjen."
@@ -1503,92 +1506,14 @@ final class Store {
         }
     }
 
-    /* ---------- Finn ---------- */
+    /* ---------- Finn (FinnModell.swift) ---------- */
 
-    func loadFinn() async throws {
-        finn = try await api.get("/finn")
-        if finnSel != nil { await loadFinnDetail() }
-    }
-
-    /// Åpner handelen: listedataene vises med en gang, detaljen (annonse, kvitteringer, e-poster, bilder) hentes etterpå.
-    func openFinn(_ id: Int) {
-        finnSel = id
-        if let d = finn?.items.first(where: { $0.id == id }) { finnDetail = FinnDetail(deal: d) } else { finnDetail = nil }
-        Task { await loadFinnDetail() }
-    }
-
-    /// GET /finn/:id. 404 (eldre server) beholder listedataene.
-    func loadFinnDetail() async {
-        guard let id = finnSel else { return }
-        do {
-            let d = try await api.get("/finn/\(id)", as: FinnDetail.self)
-            if finnSel == id { finnDetail = d }
-        } catch let e as APIError where e.status == 404 {
-        } catch let e as APIError where e.status == 401 && loggedIn && !e.needsTotp && !e.isTokenExpired {
-            expired()
-        } catch {}
-    }
-
-    /// Svaret fra opplasting, sletting og henting er hele handelen.
-    private func setFinnDetail(_ d: Data, _ id: Int) async {
-        if let full = try? JSONDecoder().decode(FinnDetail.self, from: d), full.deal.id == id {
-            if finnSel == id { finnDetail = full }
-        } else { await loadFinnDetail() }
-    }
-
-    /// kind: receipts | photos | emails. Kvitteringer og bilder går til POST /finn/:id/files med kind (receipt | photo),
-    /// e-poster (.eml) til POST /finn/:id/emails. Filene ligger i feltet «file».
-    func finnUpload(_ kind: String, _ files: [(name: String, mime: String, data: Data)]) {
-        guard let id = finnSel, !files.isEmpty else { return }
-        run {
-            self.finnBusy = kind
-            defer { self.finnBusy = nil }
-            var parts = files.map { API.Part(name: "file", filename: $0.name, mime: $0.mime, data: $0.data) }
-            let d: Data
-            do {
-                if kind == "emails" {
-                    d = try await self.api.upload("/finn/\(id)/emails", parts: parts)
-                } else {
-                    parts.append(.text("kind", kind == "photos" ? "photo" : "receipt"))
-                    d = try await self.api.upload("/finn/\(id)/files", parts: parts)
-                }
-            } catch let e as APIError where e.status == 404 {
-                self.message = "Serveren støtter ikke opplasting til Finn-handler ennå. Oppdater homelab."
-                return
-            }
-            await self.setFinnDetail(d, id)
-            if let f = try? await self.api.get("/finn", as: FinnList.self) { self.finn = f }
-            self.flash(kind == "photos" ? (files.count == 1 ? "1 bilde lagt til" : "\(files.count) bilder lagt til") : kind == "emails" ? "E-posten er lagt ved" : "Kvitteringen er lagt ved")
-        }
-    }
-
-    /// Kvitteringer og bilder er filer i handelen; e-postene har egen rute.
-    func finnRemove(_ kind: String, _ fileId: String) {
-        guard let id = finnSel else { return }
-        run {
-            let d = try await self.api.call("DELETE", "/finn/\(id)/\(kind == "emails" ? "emails" : "files")/\(fileId)")
-            await self.setFinnDetail(d, id)
-        }
-    }
-
-    /// ✦ Hent annonsen (tittel, pris, sted, beskrivelse og bilder). url trengs bare når handelen mangler lenke og Finn-kode.
-    func finnFetchAd(_ url: String? = nil) {
-        guard let id = finnSel, finnBusy == nil else { return }
-        run {
-            self.finnBusy = "ad"
-            defer { self.finnBusy = nil }
-            var body: [String: Any] = [:]
-            if let url, !url.trimmingCharacters(in: .whitespaces).isEmpty { body["url"] = url.trimmingCharacters(in: .whitespaces) }
-            let d: Data
-            do { d = try await self.api.call("POST", "/finn/\(id)/ad", json: body) } catch let e as APIError where e.status == 404 {
-                self.message = "Serveren kan ikke hente annonser ennå. Oppdater homelab."
-                return
-            }
-            await self.setFinnDetail(d, id)
-            let msg = ((try? JSONSerialization.jsonObject(with: d)) as? [String: Any])?["message"] as? String
-            self.flash(msg ?? "✦ Annonsen er lagret")
-        }
-    }
+    func loadFinn() async throws { try await finnModell.load(self) }
+    func openFinn(_ id: Int) { finnModell.open(id, self) }
+    func loadFinnDetail() async { await finnModell.loadDetail(self) }
+    func finnUpload(_ kind: String, _ files: [(name: String, mime: String, data: Data)]) { finnModell.upload(kind, files, self) }
+    func finnRemove(_ kind: String, _ fileId: String) { finnModell.remove(kind, fileId, self) }
+    func finnFetchAd(_ url: String? = nil) { finnModell.fetchAd(url, self) }
 
     /* ---------- Domener (DomenerModell.swift) ---------- */
 
