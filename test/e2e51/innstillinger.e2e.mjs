@@ -65,3 +65,25 @@ test('Haptikk er en egen bryter under varselgruppene (O9)', async (t) => {
   assert.ok(s.order.indexOf('Moduler') < s.order.indexOf('Levering'), `Levering kommer etter varselgruppene (${s.order.join(', ')})`);
   assert.deepEqual(errors, []);
 });
+
+test('søket viser stier fra modullisten (O10)', async (t) => {
+  if (!E) return t.skip('ingen nettleser');
+  const { page, errors } = await open(t);
+  await page.goto(`${BASE}/#/innstillinger/konto`);
+  await heading(page);
+  for (const q of ['krasjrapporter', 'kvalitet', 'backup', 'glimt', 'domene', 'passord', 'widget']) {
+    await page.fill('[data-setq]', q);
+    await page.waitForSelector('.set-res', { timeout: 5_000 });
+    await page.waitForTimeout(150);
+    const paths = await page.$$eval('.set-res .set-hit-t > span, .set-body .sg-row .sg-txt > span', (xs) => xs.map((x) => x.textContent.trim()).filter((x) => x.includes(' → ') || /^[A-ZÆØÅ][\wæøå ]+$/.test(x)));
+    const stier = await page.$$eval('.set-res .set-hit-t > span', (xs) => xs.map((x) => x.textContent.trim()));
+    assert.ok(stier.length > 0, `treff for «${q}»`);
+    for (const p of stier) if (p !== 'Profilmenyen → Språk') assert.ok(TOPP.has(p.split(' → ')[0]), `«${p}» begynner med et navn fra modullisten`);
+    assert.ok(!paths.some((p) => /System → Mer → Kvalitet/.test(p)), 'den gamle stien «System → Mer → Kvalitet» er borte');
+  }
+  await page.fill('[data-setq]', 'krasjrapporter');
+  await page.waitForTimeout(300);
+  const rad = await page.$$eval('.set-body .sg-row .sg-txt', (xs) => xs.map((x) => x.textContent));
+  assert.ok(rad.some((x) => x.includes('Feature flags og krasjrapporter') && x.includes('Server → System → Mer')), 'raden viser hvor den faktisk ligger');
+  assert.deepEqual(errors, []);
+});

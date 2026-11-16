@@ -10,6 +10,7 @@
 // Data: GET /api/system/update (sysupdate.js), GET /api/system/version (name, tagline, sizeBytes, notes) og
 // GET/PUT /api/system/update/settings (require_password, auto_update, notify_updates).
 import { esc } from './util.js';
+import { stiFra } from './settings-search.js'; // O10: stien fra modullisten (Server → System → Mer)
 import { store } from './store.js';
 import { U, UPD_CMD, onUpdate, loadUpdate, checkUpdate, openSheet, startUpdate, toggleLog, copyCmd, running, state, verTxt, ms, shortSha, stuck46, control46 } from './sysupdate.js';
 import { progress, ackDone, doneRecent } from './upd-banner.js';
@@ -228,7 +229,7 @@ export function systemView(h) {
       h.row({ t: 'Oppdateringer', s: 'Automatiske oppdateringer, staging, tilbakerulling og versjoner', go: 'system|upd', btn: 'Åpne', k: 'oppdatering automatisk staging røyktest tilbakerulling versjoner tidligere' }),
       h.row({ t: 'Trege forespørsler', s: 'Ytelse per rute (p50 og p95)', go: 'system|perf', btn: 'Åpne', k: 'ytelse trege forespørsler rute p50 p95 api health' }),
       h.row({ t: 'Selvreparasjon', s: 'Start containere på nytt automatisk, maks omstarter per time', go: 'system|heal', btn: 'Åpne', k: 'selvreparasjon omstart container unhealthy' }),
-      h.row({ t: 'Feature flags og krasjrapporter', s: 'System → Mer → Kvalitet', go: 'system|mer', btn: 'Åpne', k: 'feature flags flagg krasjrapporter krasj glitchtip nytt i denne versjonen kvalitet' }),
+      h.row({ t: 'Feature flags og krasjrapporter', s: stiFra('system', 'System → Mer'), go: 'system|mer', btn: 'Åpne', k: 'feature flags flagg krasjrapporter krasj glitchtip nytt i denne versjonen kvalitet' }),
     ])] };
 }
 

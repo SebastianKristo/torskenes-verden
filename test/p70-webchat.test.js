@@ -149,7 +149,7 @@ test('sporing-innstillinger: søk i Innstillinger finner sidene', () => {
     assert.ok(SP.includes(w), `rad-søk: ${w}`);
     assert.ok(new RegExp(`'sporing70'[^\\n]*${w}`).test(SS), `indeks: ${w}`);
   }
-  assert.match(SS, /'chat-regler', 'sporing70'\]/);
+  assert.match(SS, /'chat-regler', 'sporing70'[,\]]/);
 });
 
 test('sporing-innstillinger: Sporing-siden har bare én rad til Innstillinger', () => {
