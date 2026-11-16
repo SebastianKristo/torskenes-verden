@@ -61,6 +61,23 @@ test('C-S4: ingen fast lokal standardadresse i appene – den kommer fra servere
   assert.match(code(raw('FinansHub/Sources/LoginServerGear.swift')), /field\("Lokal adresse", Server47\.localPlaceholder, \$local, locResult\)/);
 });
 
+test('Q19 Media: én sti per kall – ingen gamle /media/sonarr|radarr|qbit|prowlarr-stier som reserve ved 404', () => {
+  const src = join('FinansHub', 'Sources');
+  const filer = ['MediaModel.swift', 'MediaSheets.swift', 'MediaBanner.swift', 'MediaTracking.swift', 'MediaSearchJobs.swift'];
+  for (const f of filer) {
+    const s = code(raw(join(src, f)));
+    assert.doesNotMatch(s, /"\/media\/(sonarr|radarr|qbit|qbittorrent|prowlarr)\//, `${f}: gamle stier`);
+    assert.doesNotMatch(s, /"\/media\/calendar\?/, `${f}: /media/calendar som reserve for /media/upcoming`);
+    assert.doesNotMatch(s, /\/resume"\]/, `${f}: /resume som reserve for /start`);
+    // Ingen stilister med flere stier («404 = neste»).
+    assert.doesNotMatch(s, /fetch\(store, \["[^"\]]*", "/, `${f}: flere stier`);
+  }
+  // Serverens svar for kvalitetsprofiler og rotmapper er {sonarr:[…], radarr:[…]}.
+  const m = code(raw(join(src, 'MediaModel.swift')));
+  assert.match(m, /Media43\.rows\(d, \["profiles", "sonarr"\]\)/);
+  assert.match(m, /Media43\.rows\(d, \["profiles", "radarr"\]\)/);
+});
+
 test('C-B5: én ruting for innst-sidene (InnstSide), brukt av både telefon og iPad', () => {
   const paper = code(raw('FinansHub/Sources/Paper.swift'));
   const wide = code(raw('FinansHub/Sources/SettingsWide.swift'));

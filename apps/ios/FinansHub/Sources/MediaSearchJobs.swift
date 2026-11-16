@@ -145,7 +145,7 @@ final class Media44Job {
         default: q = "episodeId=\(t.episodeId)"
         }
         let svc: String = t.kind == "movie" ? "radarr" : "sonarr"
-        let paths: [String] = ["/media/\(svc)/release?" + q, "/media/release?service=\(svc)&" + q]
+        let paths: [String] = ["/media/release?service=\(svc)&" + q]
         for attempt in 0..<2 {
             do {
                 let d: Data = try await m.fetch(store, paths, timeout: 180)
