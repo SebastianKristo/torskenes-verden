@@ -104,6 +104,8 @@ final class Store {
     let domener: DomenerModell = DomenerModell()
     /// Finn (FinnModell.swift).
     let finnModell: FinnModell = FinnModell()
+    /// Matplan (MatplanModell.swift).
+    let matplan: MatplanModell = MatplanModell()
     var domains: [DomainRef]? { get { domener.domains } set { domener.domains = newValue } }
     var domain: String? { get { domener.domain } set { domener.domain = newValue } }
     var analytics: Analytics? { get { domener.analytics } set { domener.analytics = newValue } }
@@ -157,9 +159,9 @@ final class Store {
     var uploading = 0
     var menuOpen = false
     var settingsPage: String?
-    /// Matplan: valgt dag (indeks 0–6), nil = i dag. «Se hele uka» viser hele uka og alle retter.
-    var matDay: Int?
-    var matFull = false
+    /// Matplan (MatplanModell.swift): valgt dag (indeks 0–6), nil = i dag. «Se hele uka» viser hele uka og alle retter.
+    var matDay: Int? { get { matplan.day } set { matplan.day = newValue } }
+    var matFull: Bool { get { matplan.full } set { matplan.full = newValue } }
 
     /* ---------- Homelab ---------- */
 
@@ -204,7 +206,7 @@ final class Store {
     var importText = ""
     var importResult: ImportResult?
 
-    var week: Week?
+    var week: Week? { get { matplan.week } set { matplan.week = newValue } }
     var subs: SubList?
     var folders: [Folder]?
     var folder: Folder?
@@ -1426,37 +1428,16 @@ final class Store {
         return UIImage(data: d)
     }
 
-    /* ---------- Matplan ---------- */
+    /* ---------- Matplan (MatplanModell.swift) ---------- */
 
-    func loadWeek() async throws { week = try await api.mat("/week", as: Week.self) }
-    func planWeek() {
-        run {
-            self.busy = true
-            defer { self.busy = false }
-            try await self.api.matCall("POST", "/plan", json: ["scope": "week"])
-            try await self.loadWeek()
-            self.flash("Ny ukeplan klar ✦")
-        }
-    }
-    func planDay(_ date: String) { run { try await self.api.matCall("POST", "/plan", json: ["scope": "day", "date": date]); try await self.loadWeek() } }
-    func setCook(_ date: String, _ cook: String) { run { try await self.api.matCall("PATCH", "/day/\(date)", json: ["cook": cook]); try await self.loadWeek() } }
-    func toggleFixed(_ d: MealDay) { run { try await self.api.matCall("PATCH", "/day/\(d.date)", json: ["fixed": !(d.fixed ?? false)]); try await self.loadWeek() } }
-    func toggleShop(_ id: String) { run { try await self.api.matCall("POST", "/shopping/\(id)/toggle"); try await self.loadWeek() } }
+    func loadWeek() async throws { try await matplan.load(self) }
+    func planWeek() { matplan.planWeek(self) }
+    func planDay(_ date: String) { matplan.planDay(date, self) }
+    func setCook(_ date: String, _ cook: String) { matplan.setCook(date, cook, self) }
+    func toggleFixed(_ d: MealDay) { matplan.toggleFixed(d, self) }
+    func toggleShop(_ id: String) { matplan.toggleShop(id, self) }
     /// Legger ingrediensene som mangler i handlelisten (ukas retter ligger der fra før).
-    func addToShop(_ items: [String]) {
-        let have = Set((week?.shopping ?? []).map { $0.text.lowercased() })
-        let add = items.filter { !have.contains($0.lowercased()) }
-        guard !add.isEmpty else { flash("Alt ligger allerede i handlelisten"); return }
-        run {
-            for t in add {
-                var j: [String: Any] = ["text": t]
-                if let st = self.week?.start { j["start"] = st }
-                try await self.api.matCall("POST", "/shopping", json: j)
-            }
-            try await self.loadWeek()
-            self.flash("\(add.count) lagt i handlelisten")
-        }
-    }
+    func addToShop(_ items: [String]) { matplan.addToShop(items, self) }
 
     /* ---------- Subscription OS ---------- */
 
