@@ -44,3 +44,24 @@ test('fanetittelen følger Innstillinger og settes tilbake når de lukkes (E-B10
   await page.waitForFunction(() => document.title === 'Konto og sikkerhet · Innstillinger · Homelab', null, { timeout: 5_000 });
   assert.deepEqual(errors, []);
 });
+
+test('Haptikk er en egen bryter under varselgruppene (O9)', async (t) => {
+  if (!E) return t.skip('ingen nettleser');
+  const { page, errors } = await open(t);
+  await page.goto(`${BASE}/#/innstillinger/varsel`);
+  await page.waitForSelector('[data-nf-grp="haptikk"]', { timeout: 15_000 });
+  const s = await page.evaluate(() => {
+    const secs = [...document.querySelectorAll('.set-body section.sg')];
+    const title = (el) => el.closest('section.sg')?.querySelector('.sg-t')?.firstChild?.textContent.trim() ?? '';
+    return {
+      order: secs.map((x) => x.querySelector('.sg-t')?.firstChild?.textContent.trim() ?? ''),
+      haptikk: title(document.querySelector('[data-nf-grp="haptikk"]')),
+      grupper: [...document.querySelectorAll('[data-nf-grp]:not([data-nf-grp="haptikk"])')].map(title),
+    };
+  });
+  assert.ok(s.grupper.length > 0, 'varselgruppene per modul vises');
+  assert.ok(s.grupper.every((g) => g === 'Moduler'), 'gruppene står samlet under «Moduler»');
+  assert.equal(s.haptikk, 'Levering', 'Haptikk står under «Levering», ikke blant gruppene');
+  assert.ok(s.order.indexOf('Moduler') < s.order.indexOf('Levering'), `Levering kommer etter varselgruppene (${s.order.join(', ')})`);
+  assert.deepEqual(errors, []);
+});

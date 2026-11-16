@@ -1,6 +1,6 @@
 // Innstillinger → Varsler (prompt 17): alt om varsler samlet. Hovedbryter, stille timer, tillatelse på enheten,
-// «Test varsel», Levering (haptikk, fem innebygde lyder, egen lyd eller stille, og volum) og én gruppe per modul (Sporing, Økonomi,
-// Familie, Reise, Kalender, Media). Lagres per bruker på serveren (/api/me/notify); pakkevarslene er de samme
+// «Test varsel», én gruppe per modul (Sporing, Økonomi, Familie, Reise, Kalender, Media) og under dem Levering (haptikk, fem
+// innebygde lyder, egen lyd eller stille, og volum). Lagres per bruker på serveren (/api/me/notify); pakkevarslene er de samme
 // som Sporing brukte (/api/tracking/prefs).
 import { api, esc } from './util.js';
 import { pushSupported, pushState, enablePush, disablePush } from './webpush.js';
@@ -80,7 +80,7 @@ async function testNotify() {
   const n = S.n;
   if (!n.on) { S.msg = 'Varsler er slått av. Slå dem på for å teste.'; return rerender(); }
   await playSound();
-  if (n.groups.haptikk) navigator.vibrate?.([30, 60, 30]);
+  if (n.groups.haptikk !== false) navigator.vibrate?.([30, 60, 30]); // samme standard som bryteren (på når den ikke er lagret)
   if ('Notification' in window) {
     if (Notification.permission === 'default') await Notification.requestPermission().catch(() => {});
     if (Notification.permission === 'granted') {
@@ -115,6 +115,8 @@ export function notifyView(h) {
         : h.row({ t: 'Tillatelse på denne enheten', s: 'Nettleseren må tillate varsler fra Homelab', v: pt, vc: pc, btn: 'Notification' in window && Notification.permission === 'granted' ? false : 'Spør', act: 'data-nf-act="perm"' }),
       h.row({ t: 'Test varsel', s: 'Spiller lyden, vibrerer og viser et varsel', btn: 'Test', act: 'data-nf-act="test"' }),
     ], S.err ? esc(S.err) : S.msg ? esc(S.msg) : ''),
+    h.group('Moduler', GROUPS.filter(([, id]) => modul(id)).map(([k, id, s]) => h.row({ t: modul(id).navn, s, tog: n.groups[k] !== false, act: `data-nf-grp="${k}"` })), 'Slår du av en modul, kommer ingen varsler fra den på noen av enhetene dine.'),
+    // O9: Levering (haptikk og lyd) står under varselgruppene. Haptikk er en egen bryter for alle varsler, ikke en gruppe.
     h.group('Levering', [
       h.row({ t: 'Haptikk', k: 'haptikk vibrasjon vibrer', s: 'Vibrer når et varsel kommer', tog: n.groups.haptikk !== false, act: 'data-nf-grp="haptikk"' }),
       `<div class="nf-sounds">${SOUNDS.map(([k, nm]) => `<button type="button" class="nf-sound${n.sound === k ? ' on' : ''}" data-nf-sound="${k}" aria-pressed="${n.sound === k}">${k === 'stille' ? '🔕' : k === 'egen' ? '♪' : '♫'} ${esc(nm)}</button>`).join('')}</div>`,
@@ -122,7 +124,6 @@ export function notifyView(h) {
       `<label class="sg-row" style="cursor:pointer"><span class="sg-txt"><b>Egen lyd</b><span>${n.customSound ? `Lastet opp: ${esc(n.customSound.name ?? 'egen lyd')}` : 'MP3, WAV eller M4A under 1 MB'}</span></span><span class="sg-btn2">${n.customSound ? 'Bytt' : 'Last opp'}</span><input type="file" accept="audio/mpeg,audio/wav,audio/x-wav,audio/mp4,audio/x-m4a,.mp3,.wav,.m4a" data-nf-upload hidden></label>`,
       n.customSound ? h.row({ t: 'Fjern egen lyd', tc: '#f59a8f', btn: 'Fjern', act: 'data-nf-act="unsound"' }) : '',
     ]),
-    h.group('Moduler', GROUPS.filter(([, id]) => modul(id)).map(([k, id, s]) => h.row({ t: modul(id).navn, s, tog: n.groups[k] !== false, act: `data-nf-grp="${k}"` })), 'Slår du av en modul, kommer ingen varsler fra den på noen av enhetene dine.'),
   ];
   if (S.pkg && n.groups.pakker !== false) {
     groups.push(h.group('Pakker', PKG.map(([k, t, s]) => h.row({ t, s, tog: !!S.pkg[k], act: `data-nf-pkg="${k}"` })), 'Kilder (e-post, Finn og automatisk arkivering) velges på Sporing-siden.'));
