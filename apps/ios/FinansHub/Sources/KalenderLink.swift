@@ -3,34 +3,30 @@ import UIKit
 
 /* ---------------- Prompt 33: Homelab → Kalender-appen ---------------- */
 // Fasit: design/Mobil Papir App.dc.html → goKal(o) / kalLink. Alt kalender-relatert i Homelab (widget på Hjem, kalenderfanen,
-// Glimt «Åpne kalender», varsler) åpner Kalender-appen på riktig sted med kalender://…. Er Kalender ikke installert
-// (canOpenURL er false – krever LSApplicationQueriesSchemes [kalender]) brukes Homelabs egen kalenderside som før.
+// Glimt «Åpne kalender», varsler) åpner Kalender på riktig sted med kalender://….
+// Q26: Homelabs gamle kalenderside er fjernet. «Kalender i appen» på (standard): den innebygde Kalenderen. Av: Kalender-appen
+// når den er installert (canOpenURL – krever LSApplicationQueriesSchemes [kalender]), ellers også den innebygde.
 // KalCompanion33: et eget app-token for Kalender (POST /api/tokens/companion {app:'kalender'}, reserve POST /finans/api/tokens)
 // skrives til App Group-en (KalGroup.saveHomelab), så Kalender logger inn uten passord.
 
 @MainActor
 enum KalLink33 {
-    /// Satt rundt flyter som må vise Homelabs egen kalenderside (skjemaet for en feilet rask time).
-    static var stayInHomelab: Bool = false
-
     static var installed: Bool {
         guard let u = URL(string: "kalender://") else { return false }
         return UIApplication.shared.canOpenURL(u)
     }
 
-    /// true = Kalender-appen åpnes.
+    /// true = Kalender åpnes (den innebygde eller Kalender-appen). false bare når lenken ikke kan tolkes.
     @discardableResult
     static func open(_ link: String) -> Bool {
-        if stayInHomelab { return false }
+        guard let e = URL(string: link) else { return false }
+        Haptics.shared.select()
         // Prompt 84: «Kalender i appen» (Innstillinger, standard på) – den innebygde Kalender-appen i fullskjerm (KalenderInApp.swift).
-        if Kal84.on, let e = URL(string: link) {
-            Haptics.shared.select()
+        if Kal84.on || !installed {
             Kal84Host.shared.show(e)
             return true
         }
-        guard let u = URL(string: link), installed else { return false }
-        Haptics.shared.select()
-        UIApplication.shared.open(u)
+        UIApplication.shared.open(e)
         return true
     }
 
@@ -53,16 +49,15 @@ enum KalLink33 {
         return open(s + "&from=homelab")
     }
 
-    /// finanshub://kalender[/<id>][?date=…] fra widgetene → tilsvarende kalender://. ?quick= blir i Homelab (skjemaet).
+    /// finanshub://kalender[/<id>][?date=…] fra widgetene → tilsvarende kalender://. ?quick= håndteres av hurtigregistreringen
+    /// (skjemaet for en rask time som feilet, Quick29Model.openLink).
     static func forward(_ url: URL) -> Bool {
-        // Prompt 84: med «Kalender i appen» på går lenkene til den innebygde Kalenderen.
-        if !installed && !Kal84.on { return false }
         let items: [URLQueryItem] = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
         if items.contains(where: { (i: URLQueryItem) -> Bool in i.name == "quick" }) { return false }
         let parts: [String] = url.pathComponents.filter { (p: String) -> Bool in p != "/" }
         if let raw = parts.first, !raw.isEmpty {
             let id: String = raw.removingPercentEncoding ?? raw
-            if let e = Cal26Model.shared.events.first(where: { (x: CalEvent26) -> Bool in x.id == id }) { return event(e) }
+            if let e = KalenderData.shared.events.first(where: { (x: CalEvent26) -> Bool in x.id == id }) { return event(e) }
             return open("kalender://hendelse?id=" + enc(id) + "&from=homelab")
         }
         if let d = items.first(where: { (i: URLQueryItem) -> Bool in i.name == "date" })?.value, d.count >= 10 { return day(d) }
@@ -78,7 +73,8 @@ enum KalCompanion33 {
     /// Kalles fra syncWidgets(): lager et nytt Kalender-token når kontoen er ny eller tokenet mangler.
     static func sync(_ store: Store, force: Bool = false) {
         // Prompt 84: uten App Group (sideloading) ligger kal.hl.* i Homelabs egne innstillinger – nok for den innebygde Kalenderen.
-        guard KalGroup.linked || Kal84.on, let a = store.account, !busy else { return }
+        // Q26: den innebygde Kalenderen brukes alltid når Kalender-appen ikke er installert.
+        guard KalGroup.linked || Kal84.on || !KalLink33.installed, let a = store.account, !busy else { return }
         let fp: String = KalGroup.fingerprint(a.token)
         if !force && KalGroup.homelabToken != nil && KalGroup.homelabFor == fp { return }
         // Ikke prøv igjen hvert sekund når serveren sier nei.

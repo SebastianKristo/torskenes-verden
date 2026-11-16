@@ -1,30 +1,32 @@
 import SwiftUI
 import UIKit
 
-/* ---------------- Prompt 26: KALENDER på Hjem og widget-forhåndsvisningene ---------------- */
-// Hjem-kortet (h10) følger `mode="widget"` i design/Kalender.dc.html: NÅ / NESTE TIME / ukedag, fag i Newsreader med
+/* ---------------- KALENDER på Oversikt og widget-forhåndsvisningene ---------------- */
+// Oversikt-kortet (h10) følger `mode="widget"` i design/Kalender.dc.html: NÅ / NESTE TIME / ukedag, fag i Newsreader med
 // fargestripe, rom og lærer, klokkeslett med «om 1 t 5 min» eller «34 min igjen», de tre neste timene som brikker
-// og NESTE PRØVE med nedtelling. Trykk åpner Kalender.
+// og NESTE PRØVE med nedtelling. Trykk åpner Kalender (den innebygde, eller Kalender-appen – KalenderLink.swift).
+// Q26: flyttet hit fra den gamle kalenderen (HomelabKalenderHjemkort.swift). Dataene er KalenderData (KalenderData.swift).
+// Widget-forhåndsvisningene (iPhone, Android, Samsung) vises i Kalender → Oversikt → Widgets (KalEmbed84.widgetPreview).
 
-struct Cal26HomeCard: View {
+struct KalenderHjemkort: View {
     @Environment(Store.self) private var store
-    @MainActor private var m: Cal26Model { Cal26Model.shared }
+    @MainActor private var m: KalenderData { KalenderData.shared }
 
     var body: some View {
         TimelineView(.everyMinute) { ctx in
-            Cal26HomeCardBody(now: ctx.date)
+            KalenderHjemkortInnhold(now: ctx.date)
         }
         .task(id: store.account?.id ?? "") { await m.load(store) }
     }
 }
 
-struct Cal26HomeCardBody: View {
+struct KalenderHjemkortInnhold: View {
     @Environment(Store.self) private var store
     @Environment(\.paper) private var p
-    @MainActor private var m: Cal26Model { Cal26Model.shared }
+    @MainActor private var m: KalenderData { KalenderData.shared }
     let now: Date
 
-    /// Prompt 33: timen/hendelsen på kortet → kalender://hendelse?…, ellers kalender://dag/<i dag>. Uten Kalender-appen: Homelabs side.
+    /// Prompt 33: timen/hendelsen på kortet → kalender://hendelse?…, ellers kalender://dag/<i dag> (innebygd eller Kalender-appen).
     private func cal33Open(_ w: CalWidgetState26) {
         if !w.eventId.isEmpty, let e = m.events.first(where: { (x: CalEvent26) -> Bool in x.id == w.eventId }), KalLink33.event(e) { return }
         if KalLink33.day(Cal26.key(now)) { return }
@@ -99,9 +101,23 @@ struct Cal26HomeCardBody: View {
     }
 }
 
-/* ---------- E: Widgets på telefonen ---------- */
+/* ---------- Widgets på telefonen (kortet Widgets i Kalender → Oversikt) ---------- */
 
-struct Cal26PlatformSpec {
+/// Forhåndsvisningene med dataene fra Homelab-kontoen (oppdateres hvert minutt).
+struct KalenderWidgetVisning: View {
+    @MainActor private var m: KalenderData { KalenderData.shared }
+
+    var body: some View {
+        TimelineView(.everyMinute) { ctx in
+            KalenderWidgetForhandsvisning(now: ctx.date)
+        }
+        .task {
+            if let st = Kal84Host.shared.store { await m.load(st) }
+        }
+    }
+}
+
+struct KalenderWidgetPlattform {
     let name: String
     let pal: Cal26WPal
     let small: CGSize
@@ -109,19 +125,19 @@ struct Cal26PlatformSpec {
     let large: CGSize
     let labels: [String]
 
-    static let all: [Cal26PlatformSpec] = [
-        Cal26PlatformSpec(name: "iPhone · WidgetKit", pal: Cal26WPal.iosLight, small: CGSize(width: 158, height: 158),
+    static let all: [KalenderWidgetPlattform] = [
+        KalenderWidgetPlattform(name: "iPhone · WidgetKit", pal: Cal26WPal.iosLight, small: CGSize(width: 158, height: 158),
                           medium: CGSize(width: 338, height: 158), large: CGSize(width: 338, height: 354), labels: ["Liten", "Medium", "Stor"]),
-        Cal26PlatformSpec(name: "Android · Material You", pal: Cal26WPal.android, small: CGSize(width: 170, height: 170),
+        KalenderWidgetPlattform(name: "Android · Material You", pal: Cal26WPal.android, small: CGSize(width: 170, height: 170),
                           medium: CGSize(width: 350, height: 170), large: CGSize(width: 350, height: 350), labels: ["2 × 2", "4 × 2", "4 × 4"]),
-        Cal26PlatformSpec(name: "Samsung One UI", pal: Cal26WPal.samsung, small: CGSize(width: 134, height: 155),
+        KalenderWidgetPlattform(name: "Samsung One UI", pal: Cal26WPal.samsung, small: CGSize(width: 134, height: 155),
                           medium: CGSize(width: 296, height: 155), large: CGSize(width: 296, height: 330), labels: ["2 × 2", "4 × 2", "4 × 4"]),
     ]
 }
 
-struct Cal26WidgetsCard: View {
+struct KalenderWidgetForhandsvisning: View {
     @Environment(\.paper) private var p
-    @MainActor private var m: Cal26Model { Cal26Model.shared }
+    @MainActor private var m: KalenderData { KalenderData.shared }
     let now: Date
 
     var body: some View {
@@ -129,8 +145,8 @@ struct Cal26WidgetsCard: View {
         VStack(alignment: .leading, spacing: 10) {
             Text("WIDGETS PÅ TELEFONEN").font(PF.mono(10.5)).tracking(1.2).foregroundStyle(p.lab)
                 .padding(.horizontal, 4).padding(.top, 6)
-            ForEach(Array(Cal26PlatformSpec.all.enumerated()), id: \.offset) { _, spec in
-                Cal26PlatformPlate(spec: spec, w: w)
+            ForEach(Array(KalenderWidgetPlattform.all.enumerated()), id: \.offset) { _, spec in
+                KalenderWidgetPlate(spec: spec, w: w)
             }
             Text("Liten viser neste time, medium også de tre neste, og stor hele dagen og de neste prøvene. Trykk åpner Kalender.")
                 .font(PF.ui(12)).foregroundStyle(p.mut).lineSpacing(2).padding(.horizontal, 4)
@@ -139,8 +155,8 @@ struct Cal26WidgetsCard: View {
     }
 }
 
-struct Cal26PlatformPlate: View {
-    let spec: Cal26PlatformSpec
+struct KalenderWidgetPlate: View {
+    let spec: KalenderWidgetPlattform
     let w: CalWidgetState26
 
     var body: some View {

@@ -34,6 +34,10 @@ struct KalMigration39: Hashable {
     var done: Bool = false
     var from: Int = 0
     var to: Int = 0
+    /// Q34 (E-B12): serveren rydder ikke av seg selv. proposed = et forslag (moved hendelser ville flyttes) som kjøres først
+    /// når brukeren sier ja (POST /api/kalender/calendars/migration). Se KalMergeOffer under.
+    var proposed: Bool = false
+    var moved: Int = 0
     /// ISO-tid. Tom = kan ikke angres lenger.
     var undoUntil: String = ""
 
@@ -151,6 +155,8 @@ enum KalCals39 {
         out.from = KalParse.int(m, "from") ?? 0
         out.to = KalParse.int(m, "to") ?? 0
         out.undoUntil = KalParse.str(m, "undoUntil")
+        out.proposed = KalParse.bool(m, "proposed") ?? false
+        out.moved = KalParse.int(m, "moved") ?? 0
         migration = out
     }
 
@@ -462,7 +468,47 @@ struct KalIcsPreview39: Hashable {
     var error: String = ""
 }
 
+/// Q34 (E-B12): «Slå sammen kalenderne: 6 → 4?» med ja/nei, som web (public/js/kalender-oppsett.js). Ingenting endres før
+/// brukeren trykker «Slå sammen»; «Ikke nå» skjuler forslaget på denne enheten til serveren foreslår noe annet.
+enum KalMergeOffer {
+    static func key(_ m: KalMigration39) -> String {
+        "forslag:" + String(m.from) + "-" + String(m.to) + "-" + String(m.moved)
+    }
+
+    /// Forslaget som skal vises, eller nil (ingen forslag, eller avvist på denne enheten).
+    static func pending(_ m: KalMigration39, seenKey: String) -> KalMigration39? {
+        guard m.proposed, !m.done else { return nil }
+        if UserDefaults.standard.string(forKey: seenKey) == key(m) { return nil }
+        return m
+    }
+
+    static func dismiss(_ m: KalMigration39, seenKey: String) {
+        UserDefaults.standard.set(key(m), forKey: seenKey)
+    }
+
+    static func title(_ m: KalMigration39) -> String {
+        "Slå sammen kalenderne: " + String(m.from) + " → " + String(m.to) + "?"
+    }
+
+    static func detail(_ m: KalMigration39) -> String {
+        let n: String = m.moved > 0 ? String(m.moved) + " hendelser flyttes. " : ""
+        return n + "Ingenting slettes, og du kan angre i 30 dager."
+    }
+}
+
 enum KalCalAPI39 {
+    /// Q34: ja til forslaget – POST /api/kalender/calendars/migration. → feilmelding (tom = ok).
+    static func acceptMigration() async -> String {
+        do {
+            _ = try await KalNet.send("POST", "/api/kalender/calendars/migration", json: [:], timeout: 30)
+            return ""
+        } catch let e as KalNetError {
+            return e.status == 404 ? "Serveren kan ikke slå sammen kalenderne ennå." : e.message
+        } catch {
+            return error.localizedDescription
+        }
+    }
+
     /// POST /api/kalender/calendars/migration/undo
     static func undoMigration() async -> String {
         do {

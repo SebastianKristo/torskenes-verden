@@ -350,7 +350,7 @@ test('Innstillinger → «Kalender i appen» (kal84_embed, standard på) med for
   assert.match(s, /static var on: Bool \{ \(UserDefaults\.standard\.object\(forKey: key\) as\? Bool\) \?\? true \}/);
   assert.match(s, /static let key: String = "kal84_embed"/);
   assert.match(s, /Text\("Kalender i appen"\)/);
-  assert.match(s, /"Bruk hele Kalender-appen inni Homelab\. Nyttig når du sideloader og bare har plass til én app\."/);
+  assert.match(s, /"Bruk hele Kalender-appen inni Homelab\. Nyttig når du sideloader og bare har plass til én app\. Av: Kalender-appen åpnes når den er installert\."/);
   assert.match(read('FinansHub/Sources/PaperAppSettings.swift'), /group\(g\.title, g\.offset, g\.rows\)\n\s+\}\n\s+\/\/ Prompt 84[^\n]*\n\s+Kal84Settings\(\)/);
   assert.match(read('FinansHub/Sources/SettingsWide.swift'), /if query\.isEmpty \{ Kal84Settings\(\) \}/);
   assert.match(read('FinansHub/Sources/SettingsSearch.swift'), /add\("kal84", "Kalender i appen"/);
@@ -359,15 +359,17 @@ test('Innstillinger → «Kalender i appen» (kal84_embed, standard på) med for
 test('lenkene går via bryteren: KalLink33 åpner den innebygde Kalenderen før Kalender-appen', () => {
   const l = read('FinansHub/Sources/KalenderLink.swift');
   const open = l.slice(l.indexOf('static func open('), l.indexOf('static func enc('));
-  assert.ok(open.indexOf('if Kal84.on') > 0 && open.indexOf('if Kal84.on') < open.indexOf('installed else'), 'bryteren først');
+  // Q26: bryteren først; av = Kalender-appen når den er installert, ellers også den innebygde (Homelabs gamle side er fjernet).
+  assert.ok(open.indexOf('if Kal84.on || !installed') > 0 && open.indexOf('if Kal84.on || !installed') < open.indexOf('UIApplication.shared.open(e)'), 'bryteren først');
   assert.match(open, /Kal84Host\.shared\.show\(e\)\n\s+return true/);
-  assert.match(l, /if !installed && !Kal84\.on \{ return false \}/);
-  assert.match(l, /guard KalGroup\.linked \|\| Kal84\.on, let a = store\.account/);
+  assert.doesNotMatch(l, /stayInHomelab/);
+  assert.match(l, /guard KalGroup\.linked \|\| Kal84\.on \|\| !KalLink33\.installed, let a = store\.account/);
   // Hjem-kortet/-flisen, kalenderfanen og Mer, Chat-kort, briefen og widget-lenkene går via KalLink33 eller paperGo("kalender").
-  assert.match(read('FinansHub/Sources/PaperStore.swift'), /if t == "kalender" && \(paperTab != "kalender" \|\| Kal84\.on\) && KalLink33\.today\(\) \{ return \}/);
+  // Q26: Homelab har ikke lenger en egen kalenderside, så kalenderfanen åpner alltid Kalender.
+  assert.match(read('FinansHub/Sources/PaperStore.swift'), /if t == "kalender" && KalLink33\.today\(\) \{ return \}/);
   assert.match(read('FinansHub/Sources/MoreRows.swift'), /More28Row\(id: "kalender", name: ml\.navn\("kalender", "Kalender"\)[^\n]*store\.paperGo\("kalender"\)/);
   assert.match(read('FinansHub/Sources/HomeGrid.swift'), /KalLink33\.event\(e\) \{ return \}\n\s+store\.paperGo\("kalender"\)/);
-  assert.match(read('FinansHub/Sources/HomelabKalenderHjemkort.swift'), /KalLink33\.day\(/);
+  assert.match(read('FinansHub/Sources/KalenderHjemkort.swift'), /KalLink33\.day\(/);
   assert.match(read('FinansHub/Sources/AppWidgets.swift'), /KalLink33\.forward\(url\)/);
   assert.match(read('FinansHub/Sources/BackgroundNotifications.swift'), /case "kalender":\n\s+store\.paperGo\("kalender"\)/);
   // Ingen andre steder i Homelab åpner kalender:// direkte.

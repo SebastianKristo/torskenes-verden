@@ -361,7 +361,7 @@ final class Backup29Model {
 
     static func downloadURL(_ e: Backup29Entry, _ store: Store) -> URL? {
         let base: String = store.api.base.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
-        return URL(string: base + "/api/backup/" + Cal27Model.enc(e.id) + "/download")
+        return URL(string: base + "/api/backup/" + API.pathPart(e.id) + "/download")
     }
 
     /* ---------- Tekst ---------- */

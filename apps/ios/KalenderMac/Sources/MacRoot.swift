@@ -108,6 +108,8 @@ struct MacRoot: View {
         VStack(spacing: 0) {
             if store.useWeb38 && web.phase == .failed { MacWeb38Banner(model: web) }
             MacOffline43()
+            // Q34: «Slå sammen kalenderne: 6 → 4?» med ja/nei, som web (MacMerge.swift).
+            MacMergeBanner()
             MacToolbar(win: win)
             // Prompt 70: NÅ/NESTE-kortet under verktøylinjen er fjernet (rutenettet bruker plassen). Neste hendelse vises i widgets,
             // varsler og Glimt · Dagen din; den røde nå-linjen i uke/dag er uendret.

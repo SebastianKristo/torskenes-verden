@@ -399,7 +399,7 @@ struct Cal70CardView: View {
                 if let n = Cal70Data.parse(JS.dict(JS.obj(d), "card70")) { c = n }
                 note = "Flyttet til " + c.calName
                 open = false
-                await Cal26Model.shared.load(store, force: true)
+                await KalenderData.shared.load(store, force: true)
             } catch {
                 err = error.localizedDescription
             }
@@ -414,7 +414,7 @@ struct Cal70CardView: View {
         do {
             _ = try await store.api.callAt("/api", c.undoMethod, c.undoPath, json: [:], timeout: 20)
             undone = true
-            await Cal26Model.shared.load(store, force: true)
+            await KalenderData.shared.load(store, force: true)
         } catch {
             err = error.localizedDescription
         }

@@ -22,7 +22,7 @@ extension Trial31Model {
         trials.removeAll { (t: Trial31) -> Bool in t.id == id }
         Trials32b.push(active.map { (t: Trial31) -> TrialW32b in t.widget32b })
         Task { @MainActor in
-            _ = try? await store.api.callAt("/finans/api", "PATCH", "/subscriptions/trials/" + Cal27Model.enc(id), json: ["status": status], timeout: 15)
+            _ = try? await store.api.callAt("/finans/api", "PATCH", "/subscriptions/trials/" + API.pathPart(id), json: ["status": status], timeout: 15)
             await self.load(store.api)
             if status == "kept" { try? await store.loadSubs() }
         }

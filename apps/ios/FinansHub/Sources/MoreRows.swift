@@ -79,7 +79,7 @@ enum More44Rows {
 
     /// Henter det som mangler for de levende kortene (én gang, i bakgrunnen).
     static func warm(_ store: Store) async {
-        if !Cal26Model.shared.loaded { await Cal26Model.shared.load(store) }
+        if !KalenderData.shared.loaded { await KalenderData.shared.load(store) }
         if !TasksModel.shared.loaded { await TasksModel.shared.load(store) }
         if !BirthdayModel24.shared.loaded { await BirthdayModel24.shared.load(store) }
         if FamilyModel.shared.members.isEmpty { await FamilyModel.shared.load(store) }
@@ -147,7 +147,7 @@ enum More44Rows {
 
     static func calendar() -> More44Live {
         let now: Date = Date()
-        let next: CalEvent26? = Cal26Model.shared.events
+        let next: CalEvent26? = KalenderData.shared.events
             .filter { $0.end > now && !$0.allDay }
             .sorted { $0.start < $1.start }
             .first

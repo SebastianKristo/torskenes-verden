@@ -180,12 +180,12 @@ final class Quick29Model {
         }
     }
 
-    /// «Fyll ut selv»: lukker arket og åpner det vanlige skjemaet.
+    /// «Fyll ut selv»: lukker arket og åpner Ny hendelse i Kalender (kalender://ny).
     func manual() {
         sheetOpen = false
         Task {
             try? await Task.sleep(nanoseconds: 450_000_000)
-            Cal27Model.shared.newEvent()
+            KalLink33.open("kalender://ny?from=homelab")
         }
     }
 
@@ -291,7 +291,7 @@ final class Quick29Model {
         handled.insert(j.id)
         showBanner(j)
         Haptics.shared.success()
-        Task { await Cal26Model.shared.load(store, force: true) }
+        Task { await KalenderData.shared.load(store, force: true) }
     }
 
     private func fail(_ j: Quick29Job, _ store: Store) {
@@ -313,30 +313,27 @@ final class Quick29Model {
         }
     }
 
-    /// Skjemaet i Kalender, utfylt med det som ble funnet.
+    /// Skjemaet i Kalender, utfylt med det som ble funnet (Q26: Ny hendelse i den delte Kalenderen, kalender://ny?title=…).
+    /// Ingenting lagres før brukeren trykker Legg til.
     func openForm(_ f: Quick29Preview, text: String, error: String, _ store: Store) {
-        var form = Cal27Form()
-        let day: Date = f.date.count >= 10 ? Cal26.day(String(f.date.prefix(10))) : Cal27Model.shared.curD
-        let s: Int = Quick29Model.minutes(f.start) ?? 9 * 60
-        let e: Int = Quick29Model.minutes(f.end) ?? Swift.min(s + 60, 23 * 60 + 55)
-        let start0: Date = Cal26.startOfDay(day)
-        form.title = f.title
-        form.date = day
-        form.start = start0.addingTimeInterval(TimeInterval(s * 60))
-        form.end = start0.addingTimeInterval(TimeInterval(Swift.max(e, s + 15) * 60))
-        form.location = f.place
-        form.calendar = "privat"
-        form.reminder = "1h"
-        form.note = text
-        form.error = error
-        // Prompt 33: skjemaet finnes bare i Homelab, så kalendersiden her brukes selv om Kalender-appen er installert.
-        KalLink33.stayInHomelab = true
-        if store.paperTab != "kalender" { store.paperGo("kalender") }
-        KalLink33.stayInHomelab = false
-        Task {
-            try? await Task.sleep(nanoseconds: 350_000_000)
-            Cal27Model.shared.form = form
-        }
+        KalLink33.open(Quick29Model.formLink(f, text: text, error: error))
+    }
+
+    /// kalender://ny?title=…&date=…&s=…&e=…&loc=…&note=…&err=… (KalLinks.swift → KalStore.openPrefilled).
+    nonisolated static func formLink(_ f: Quick29Preview, text: String, error: String) -> String {
+        var c: URLComponents = URLComponents()
+        c.scheme = "kalender"
+        c.host = "ny"
+        var q: [URLQueryItem] = [URLQueryItem(name: "title", value: f.title.isEmpty ? text : f.title)]
+        if f.date.count >= 10 { q.append(URLQueryItem(name: "date", value: String(f.date.prefix(10)))) }
+        if !f.start.isEmpty { q.append(URLQueryItem(name: "s", value: f.start)) }
+        if !f.end.isEmpty { q.append(URLQueryItem(name: "e", value: f.end)) }
+        if !f.place.isEmpty { q.append(URLQueryItem(name: "loc", value: f.place)) }
+        if !text.isEmpty { q.append(URLQueryItem(name: "note", value: text)) }
+        if !error.isEmpty { q.append(URLQueryItem(name: "err", value: error)) }
+        q.append(URLQueryItem(name: "from", value: "homelab"))
+        c.queryItems = q
+        return c.url?.absoluteString ?? "kalender://ny?from=homelab"
     }
 
     nonisolated static func minutes(_ hm: String) -> Int? {
@@ -351,9 +348,7 @@ final class Quick29Model {
     func openLink(_ url: URL, _ store: Store) -> Bool {
         let items: [URLQueryItem] = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
         if let d = items.first(where: { $0.name == "date" })?.value, d.count >= 10 {
-            if KalLink33.day(d) { return true }
-            if store.paperTab != "kalender" { store.paperGo("kalender") }
-            Cal27Model.shared.goDay(String(d.prefix(10)))
+            KalLink33.day(d)
             return true
         }
         if let id = items.first(where: { $0.name == "quick" })?.value, !id.isEmpty {
@@ -374,9 +369,7 @@ final class Quick29Model {
             let why: String = j.error.isEmpty ? "Fant ikke dato." : j.error
             openForm(j.found, text: j.text, error: why + " Velg dato og lagre.", store)
         } else if j.state == "done" && j.date.count >= 10 {
-            if KalLink33.day(j.date) { return }
-            if store.paperTab != "kalender" { store.paperGo("kalender") }
-            Cal27Model.shared.goDay(String(j.date.prefix(10)))
+            KalLink33.day(j.date)
         }
     }
 
@@ -388,8 +381,8 @@ final class Quick29Model {
         bannerTask?.cancel()
         Task {
             do {
-                _ = try await store.api.callAt("/api", "POST", "/kalender/quick/" + Cal27Model.enc(j.id) + "/undo", json: [:], timeout: 15)
-                await Cal26Model.shared.load(store, force: true)
+                _ = try await store.api.callAt("/api", "POST", "/kalender/quick/" + API.pathPart(j.id) + "/undo", json: [:], timeout: 15)
+                await KalenderData.shared.load(store, force: true)
                 store.flash("Timen er fjernet")
             } catch let e as APIError {
                 store.flash("Kunne ikke angre: " + e.message)
@@ -404,8 +397,7 @@ final class Quick29Model {
         banner = nil
         bannerTask?.cancel()
         if j.date.count >= 10 && KalLink33.day(j.date) { return }
-        if store.paperTab != "kalender" { store.paperGo("kalender") }
-        if j.date.count >= 10 { Cal27Model.shared.goDay(String(j.date.prefix(10))) }
+        store.paperGo("kalender")
     }
 
     func closeBanner() {

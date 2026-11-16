@@ -2,7 +2,7 @@
 // Kildetester uten Xcode: CI-jobben «Mobilapper» bygger appen og kjører HomelabTests (ModulerTests.swift).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -153,10 +153,8 @@ test('kalendervisningene har navn og rekkefølge fra modullisten', () => {
   const mac = code(IOS, 'KalenderMac', 'Sources', 'MacRoot.swift');
   const mv = [...mac.slice(mac.indexOf('static let views')).matchAll(/MacViewTab\(id: "([^"]+)", name: "([^"]+)"/g)].slice(0, vis.length);
   assert.deepEqual(mv.map((x) => [x[1], x[2]]), vis.map((u) => [u.id, u.navn]));
-  // Kalenderen i Homelab-appen (uten År): samme rekkefølge og navn.
-  const h = code(SRC, 'HomelabKalenderModell.swift');
-  const hv = [...h.slice(h.indexOf('static let views')).matchAll(/\("([^"]+)", "([^"]+)", "[^"]+"\)/g)].map((x) => x[2]).slice(0, 5);
-  assert.deepEqual(hv, vis.filter((u) => u.id !== 'ar').map((u) => u.navn));
+  // Q26: Homelab-appen har ikke lenger en egen kalender – den bruker Kalender-koden over (KAL_EMBED), med de samme visningene.
+  assert.ok(!existsSync(join(SRC, 'HomelabKalenderModell.swift')));
 });
 
 test('Media-widgeten: «Pause alt» og «Fortsett» kaller stien serveren har, uten en 404-rundtur først (A §6 B5)', () => {

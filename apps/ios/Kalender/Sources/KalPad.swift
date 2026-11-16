@@ -157,6 +157,7 @@ struct KalPad42Sidebar: View {
                     KalPad42Mini()
                     calendars
                     dayCard
+                    overviewRow
                     settingsRow
                     Text("Hurtigtaster: ← → bla · T i dag · D dag · 3 tre dager · W uke · M måned · Y år · L liste · ⌘N ny · ⌘F søk · ⌘K Glimt")
                         .font(KalFont.ui(11)).foregroundStyle(t.mut2)
@@ -234,6 +235,30 @@ struct KalPad42Sidebar: View {
         .buttonStyle(.plain)
         .hoverEffect(.highlight)
         .accessibilityLabel("Glimt, dagen din. " + s.daySummary)
+    }
+
+    /// Q26: Oversikt (Nå-kort, Prøver og frister …, KalOverview.swift).
+    private var overviewRow: some View {
+        Button(action: {
+            KalHaptic.tap()
+            KalPad42Model.shared.overlayOpen = false
+            s.overviewOpen = true
+        }) {
+            HStack(spacing: 10) {
+                Image(systemName: "rectangle.stack").font(KalFont.ui(15, .semibold)).foregroundStyle(t.ink)
+                    .frame(width: 30, height: 30)
+                    .background(RoundedRectangle(cornerRadius: 9).fill(t.chip))
+                    .accessibilityHidden(true)
+                Text("Oversikt").font(KalFont.ui(14, .bold)).foregroundStyle(t.ink)
+                Spacer()
+                Image(systemName: "chevron.right").font(KalFont.ui(12, .semibold)).accessibilityHidden(true).foregroundStyle(t.mut)
+            }
+            .frame(minHeight: 44)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .hoverEffect(.highlight)
+        .accessibilityLabel("Oversikt")
     }
 
     private var settingsRow: some View {

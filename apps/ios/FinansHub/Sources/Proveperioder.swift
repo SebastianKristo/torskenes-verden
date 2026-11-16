@@ -303,7 +303,7 @@ final class Trial31Model {
     private func patch(_ id: String, _ body: [String: Any], _ api: API) {
         if id.isEmpty { return }
         Task {
-            _ = try? await api.callAt("/finans/api", "PATCH", "/subscriptions/trials/" + Cal27Model.enc(id), json: body, timeout: 15)
+            _ = try? await api.callAt("/finans/api", "PATCH", "/subscriptions/trials/" + API.pathPart(id), json: body, timeout: 15)
             await self.load(api)
         }
     }

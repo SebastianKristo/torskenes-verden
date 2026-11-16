@@ -28,6 +28,8 @@ final class KalEmbed84 {
     var login: (@MainActor () -> Void)? = nil
     /// Lokale påminnelser planlegges bare når den frittstående Kalender-appen ikke er installert (ellers dobbelt opp).
     var notify: Bool = false
+    /// Q26: Homelabs widget-forhåndsvisninger (iPhone, Android, Samsung) i Oversikt → Widgets. nil i Kalender-appen.
+    var widgetPreview: (@MainActor () -> AnyView)? = nil
 
     /// Tema på Kalender-fullskjermen. «System» følger telefonen (skjermens stil), ikke Homelabs eget tema.
     func apply(_ style: UIUserInterfaceStyle) {

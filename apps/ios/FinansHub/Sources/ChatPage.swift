@@ -8,6 +8,35 @@ import UniformTypeIdentifiers
 // fast sidepanel på 288 pt. Toppen: ‹ ☰, modellvelger (LOKAL grønn / SKY rød), ⚙ og ny chat.
 // Skrivefeltet: vedlegg (+), Nettsøk og Mine data som brikker, mikrofon med lydbølge, Send / Stopp.
 
+/* ---------- Fullskjerm og tilbake (Q26: flyttet hit fra den gamle kalenderen, som ikke lenger er en side i Homelab) ---------- */
+
+extension Store {
+    /// Prompt 27: Chat vises i fullskjerm uten toppbilde og uten appens fanelinje. Kalender er den delte Kalenderen
+    /// (KalenderInApp.swift), som har egen fullskjerm.
+    var full27: Bool {
+        paperTab == "chat" && paperClassic == nil && paperFin == nil && !newsOpen && dishSel == nil
+    }
+}
+
+/// Hvor Chat ble åpnet fra, så ‹ går tilbake dit (Hjem, Mer, Finans …).
+@MainActor
+enum Nav27 {
+    static var from: [String: String] = [:]
+
+    /// Kalles fra Store.paperGo før fanen byttes.
+    static func note(from: String, to: String) {
+        if to == "chat" && from != to { self.from[to] = from }
+    }
+
+    static func back(_ store: Store) {
+        Haptic34.back()
+        let page: String = store.paperTab
+        let t: String = from[page] ?? "hjem"
+        from[page] = nil
+        if t == "budsjett" || t == "kontoer" { store.paperFinGo(t) } else { store.paperGo(t) }
+    }
+}
+
 struct Chat27Page: View {
     @Environment(Store.self) private var store
     @Environment(\.paper) private var p

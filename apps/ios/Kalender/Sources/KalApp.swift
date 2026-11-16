@@ -199,6 +199,7 @@ struct KalRoot: View {
         .animation(sheetAnim, value: s.newForm != nil)
         .animation(sheetAnim, value: s.drawerOpen)
         .animation(reduce ? Animation.easeOut(duration: 0.2) : Animation.timingCurve(0.2, 0.8, 0.2, 1, duration: 0.28), value: s.settingsOpen)
+        .animation(reduce ? Animation.easeOut(duration: 0.2) : Animation.timingCurve(0.2, 0.8, 0.2, 1, duration: 0.28), value: s.overviewOpen)
         .animation(.easeOut(duration: 0.2), value: s.searchOpen)
         .animation(reduce ? Animation.easeOut(duration: 0.2) : Animation.timingCurve(0.2, 0.8, 0.2, 1, duration: 0.28), value: s.cals39Open)
         .animation(reduce ? Animation.easeOut(duration: 0.2) : Animation.timingCurve(0.2, 0.8, 0.2, 1, duration: 0.28), value: s.cal39Edit)
@@ -275,6 +276,14 @@ struct KalRoot: View {
                 .simultaneousGesture(swipe)
                 .simultaneousGesture(pinch)
                 .overlay { keyboardCatcher }
+                // Q34: «Slå sammen kalenderne: 6 → 4?» øverst over kalenderen (KalMerge.swift).
+                if s.mergeProposal != nil {
+                    KalMergeBanner()
+                        .padding(.horizontal, 14)
+                        .padding(.top, 8)
+                        .frame(maxHeight: .infinity, alignment: .top)
+                        .transition(.opacity)
+                }
                 if let toast = s.toast {
                     KalToastView(toast: toast)
                         .padding(.horizontal, 14)
@@ -388,6 +397,15 @@ struct KalRoot: View {
                 .transition(drawerIn)
                 .zIndex(52)
         }
+        // Q26: «Lær Glimt hva dette er…» (KalLearn.swift).
+        if KalLearnModel.shared.form != nil {
+            KalDim { KalLearnModel.shared.close() }
+                .zIndex(55)
+            KalLearnSheet()
+                .ignoresSafeArea([.container, .keyboard], edges: .bottom)
+                .transition(sheetIn)
+                .zIndex(56)
+        }
         // Prompt 46: arket kom ikke fram – feilmelding med «Prøv igjen» i stedet for grå skjerm.
         if KalNew46Guard.shared.failed != nil {
             KalNewFail46()
@@ -402,6 +420,13 @@ struct KalRoot: View {
                 .zIndex(67)
             KalConflict44View()
                 .zIndex(68)
+        }
+        // Q26: Oversikt glir inn fra høyre som Innstillinger (KalOverview.swift).
+        if s.overviewOpen {
+            KalOverviewView()
+                .modifier(KalPadSide42(pad: pad))
+                .transition(reduce ? AnyTransition.opacity : AnyTransition.move(edge: .trailing))
+                .zIndex(59)
         }
         // Prompt 35: Innstillinger glir inn fra høyre over hele skjermen (0,28 s).
         if s.settingsOpen {

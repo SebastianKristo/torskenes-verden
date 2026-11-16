@@ -527,12 +527,12 @@ final class AiCtl34 {
         pullTasks[id]?.cancel()
         pullTasks[id] = nil
         pulls.removeAll { $0.id == id }
-        Task { await self.send("DELETE", "/models/pulls/" + Cal27Model.enc(id), [:], store) }
+        Task { await self.send("DELETE", "/models/pulls/" + API.pathPart(id), [:], store) }
     }
 
     func toggleLoad(_ m: AiModel34, _ store: Store) {
         Haptic34.light()
-        let path: String = "/models/" + Cal27Model.enc(m.id) + (m.loaded ? "/unload" : "/load")
+        let path: String = "/models/" + API.pathPart(m.id) + (m.loaded ? "/unload" : "/load")
         Task {
             if await self.send("POST", path, [:], store) != nil {
                 self.flash(m.loaded ? m.id + " lastet ut av VRAM" : m.id + " lastet inn")
@@ -555,7 +555,7 @@ final class AiCtl34 {
     func delete(_ m: AiModel34, _ store: Store) {
         Haptic34.light()
         Task {
-            if await self.send("DELETE", "/models/" + Cal27Model.enc(m.id), [:], store) != nil {
+            if await self.send("DELETE", "/models/" + API.pathPart(m.id), [:], store) != nil {
                 self.installed.removeAll { $0.id == m.id }
                 self.flash(m.id + " slettet")
                 await self.loadModels(store)
@@ -745,7 +745,7 @@ final class AiCtl34 {
         Haptic34.light()
         let act: String = j.st == "fail" ? "/retry" : "/cancel"
         Task {
-            await self.send("POST", "/jobs/" + Cal27Model.enc(j.id) + act, [:], store)
+            await self.send("POST", "/jobs/" + API.pathPart(j.id) + act, [:], store)
             await self.loadJobs(store)
         }
     }
@@ -879,7 +879,7 @@ final class AiCtl34 {
     func revoke(_ t: AiToken34, _ store: Store) {
         Haptic34.light()
         tokensList.removeAll { $0.id == t.id }
-        Task { await self.send("DELETE", "/tokens/" + Cal27Model.enc(t.id), [:], store) }
+        Task { await self.send("DELETE", "/tokens/" + API.pathPart(t.id), [:], store) }
     }
 
     /* ---------- Selvtest ---------- */

@@ -237,8 +237,8 @@ struct WxBottomButtons30: View {
     /// Før la vi safe area to ganger (GeometryReader-ens bunn-inset + 6 pt), så de havnet ca. 40 pt for høyt.
     /// Nå: bunnen av skjermen + max(10, safe-area-inset − 22) ≈ 12 pt over bunnen med hjemstrek, 10 pt uten (som fasiten).
     var body: some View {
-        // Hjemstreken leses fra vinduet (samme som Cal32b), så foreldrenes safe area ikke kan legge den til én gang til.
-        let sb: CGFloat = Cal32b.bottomInset
+        // Hjemstreken leses fra vinduet, så foreldrenes safe area ikke kan legge den til én gang til.
+        let sb: CGFloat = SafeAreaBottom.inset
         VStack(spacing: 0) {
             Spacer(minLength: 0)
             HStack(spacing: 10) {
@@ -273,5 +273,14 @@ struct WxGlassButton30: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(label)
+    }
+}
+
+/// Hjemindikatoren (safe area nederst) i nøkkelvinduet. Q26: lå før i den gamle kalenderen (Cal32b.bottomInset).
+enum SafeAreaBottom {
+    @MainActor static var inset: CGFloat {
+        let scene: UIWindowScene? = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first
+        let w: UIWindow? = scene?.windows.first(where: { $0.isKeyWindow }) ?? scene?.windows.first
+        return w?.safeAreaInsets.bottom ?? 0
     }
 }

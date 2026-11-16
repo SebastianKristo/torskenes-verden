@@ -8,7 +8,9 @@ import SwiftUI
 // kalender://hendelse/<id>
 // kalender://liste                 Agenda
 // kalender://mnd · kalender://ar   Måned / År
+// kalender://oversikt              Q26: Oversikt (Nå-kort, Prøver og frister, Kalendere, Kalender, Widgets)
 // kalender://ny?text=…             Glimt-feltet ferdig utfylt
+// kalender://ny?title=…&date=…&s=…&e=…&loc=…&note=…&err=…   Q26: Ny hendelse utfylt (rask time som ikke kunne tolkes)
 // kalender://glimt?q=…             Glimt-panelet med spørsmålet
 // kalender://login                 Homelab-appen har skrevet innloggingen til App Group
 // kalender://auth?code=…&state=…   Prompt 41: svaret fra Homelab etter «Logg inn med Homelab-appen»
@@ -70,7 +72,14 @@ enum KalLinks {
         case "ar", "year":
             s.view = "ar"
         case "ny", "new":
-            if let t = q("text") { KalComposerModel.shared.text = t } else { s.openNew() }
+            // Q26: utfylt skjema fra Homelab (rask time som ikke kunne tolkes): title, date, s, e, loc, note og err.
+            if let t = q("title") {
+                s.openPrefilled(title: t, date: q("date"), start: minutes(q("s")), end: minutes(q("e")), loc: q("loc") ?? "",
+                                note: q("note") ?? "", error: q("err") ?? "")
+            } else if let t = q("text") { KalComposerModel.shared.text = t } else { s.openNew() }
+        // Q26: Oversikt (Nå-kort, Prøver og frister …).
+        case "oversikt", "prover":
+            s.overviewOpen = true
         // Prompt 51: varselet «Ny enhet vil logge inn» → Innstillinger (SIKKERHET).
         case "innstillinger", "sikkerhet":
             if s.loggedIn { s.settingsOpen = true }

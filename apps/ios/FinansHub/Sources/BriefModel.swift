@@ -92,7 +92,7 @@ final class Brief34Model {
             b.place = w.place ?? "Oslo"
             b.icon = Brief34.icon(b.cond, code: nil)
         }
-        b.events = Brief34Model.nextEvents(Cal26Model.shared.events)
+        b.events = Brief34Model.nextEvents(KalenderData.shared.events)
         b.news = store.homeNews.prefix(3).map { (n: NewsItem) -> Brief34News in
             Brief34News(source: n.feed, title: n.title, url: n.url, time: JS.fmt(n.published, "HH:mm"))
         }

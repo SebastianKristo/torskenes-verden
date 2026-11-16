@@ -37,6 +37,7 @@ struct KalDrawer: View {
                         Text(s.lastError).font(KalFont.ui(12.5)).foregroundStyle(t.acc).fixedSize(horizontal: false, vertical: true)
                     }
                     Spacer(minLength: 16)
+                    overviewRow
                     settingsRow
                     Color.clear.frame(height: 22)
                 }
@@ -127,6 +128,33 @@ struct KalDrawer: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Legg til kalender")
+    }
+
+    /// Q26: Oversikt med kortene fra Homelabs gamle kalender (Nå-kort, Prøver og frister …).
+    private var overviewRow: some View {
+        Button(action: {
+            KalHaptic.tap()
+            s.drawerOpen = false
+            s.overviewOpen = true
+        }) {
+            HStack(spacing: 12) {
+                Image(systemName: "rectangle.stack").font(KalFont.ui(16, .semibold)).foregroundStyle(t.ink)
+                    .frame(width: 34, height: 34)
+                    .background(RoundedRectangle(cornerRadius: 10).fill(t.chip))
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("Oversikt").font(KalFont.ui(14.5, .bold)).foregroundStyle(t.ink)
+                    Text("Nå-kort, prøver og frister").font(KalFont.ui(12)).foregroundStyle(t.mut)
+                }
+                Spacer()
+                Image(systemName: "chevron.right").font(KalFont.ui(13, .semibold)).accessibilityHidden(true).foregroundStyle(t.mut)
+            }
+            .padding(.top, 14).padding(.bottom, 6)
+            .overlay(alignment: .top) { Rectangle().fill(t.line2).frame(height: 1) }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Oversikt")
     }
 
     private var settingsRow: some View {

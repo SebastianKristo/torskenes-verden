@@ -18,6 +18,12 @@ struct API {
     /// avviser (unsupportedURL) → vanlig feilmelding «Ugyldig serveradresse».
     static let badURL85: URL = URL(string: "ugyldig://adresse") ?? URL(fileURLWithPath: "/ugyldig-adresse")
 
+    /// Én del av en sti (id-er i /chat/chats/<id>, /kalender/events/<id> …), prosentkodet – også / ? og #.
+    /// Q26: lå før som Cal27Model.enc i den gamle kalenderen, men brukes av mange moduler.
+    static func pathPart(_ s: String) -> String {
+        s.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed.subtracting(CharacterSet(charactersIn: "/?#"))) ?? s
+    }
+
     /// Konteksten for APIClient: adresse, token og (prompt 51, SEC51) den faste enhetsnøkkelen, så serveren kjenner igjen en
     /// godkjent enhet (DeviceKeys.swift).
     var context: APIContext { APIContext(base: base, token: token, headers: ["X-Device-Key": Device51.key]) }

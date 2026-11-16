@@ -7,7 +7,7 @@ import os
 //
 // Den ekte årsaken til krasjen på Hjem: PaperEditableCard brukte `.draggable(key) { content() }`. Forhåndsvisningen
 // (drag preview) bygges av UIKit i en egen vertskontroller UTEN miljøet fra appen, så kortene i forhåndsvisningen
-// (HomeSearch29, RuterHomeCard27, Cal26HomeCard …) fant ikke `@Environment(Store.self)` – SwiftUI stopper da prosessen med
+// (HomeSearch29, RuterHomeCard27, KalenderHjemkort …) fant ikke `@Environment(Store.self)` – SwiftUI stopper da prosessen med
 // «No Observable object of type Store found» i det øyeblikket man begynner å dra. Kortet ble i tillegg bygd to ganger
 // (med `.task` og nettverkskall) og en `dropDestination` per kort skrev layout til disk og server for hvert slipp.
 //
