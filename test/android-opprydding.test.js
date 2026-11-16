@@ -279,3 +279,9 @@ test('F 12: «Skjul beløp» i appen gjelder widgetdataene (hideAmounts fra serv
   const sb = join(ROOT, 'server/skjul-belop.js');
   if (existsSync(sb)) assert.match(raw(sb), /c\.req\.query\('hideAmounts'\) === '1'/);
 });
+
+test('F 12: brief-widgeten ber om skjulte beløp når «Skjul beløp» er på', () => {
+  const s = readFileSync(new URL('../apps/android/app/src/main/java/no/kristo/finanshub/widget/BriefWidgets.kt', import.meta.url), 'utf8');
+  assert.match(s, /WidgetPersonvern\.sti\(ctx, "\/brief\?kind=\$kind"\)/);
+  assert.match(s, /WidgetPersonvern\.sti\(ctx, "\/widgets\/brief\?kind=\$kind"\)/);
+});
