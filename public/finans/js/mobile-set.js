@@ -48,7 +48,7 @@ export async function settingsLoad(sub) {
 
 /* ---------- Byggeklosser ---------- */
 
-const ios = () => theme() === 'ios';
+const ios = () => false;
 const G = (title, rows, note = '') => `${title ? `<div class="sec">${title}</div>` : ''}<div class="list ${ios() ? 'glass2' : ''}">${rows.filter(Boolean).join('')}</div>${note ? `<div class="snote">${note}</div>` : ''}`;
 // Ikonfargene følger fargetemaet under Innstillinger → Ikonfarger (Standard = dagens farger).
 const nav = (k, label, sub, ic, color) => { const c = iconColor(k, color); return `<a class="opt-row" href="#/set/${k}"><span class="set-ic fill" style="background:${c}">${icon(ic, 17, iconInk(c))}</span><span class="m-grow">${label}</span>${sub ? `<span class="sval">${esc(sub)}</span>` : ''}<span style="opacity:.5">›</span></a>`; };
@@ -78,7 +78,7 @@ export function settingsView(th, sub) {
   const [s0, s1 = ''] = String(sub ?? '').split('/'), page = PAGES[s0] ? s0 : '';
   // Papir: toppbildet har tittelen og «‹ Innstillinger», så undersidene starter rett på innholdet.
   const head = paper() ? '' : page
-    ? `<div class="m-row">${th === 'ios' ? `<a class="gback" href="#/set" aria-label="Tilbake til Innstillinger">${icon('chev', 20, 'currentColor', 2.6)}</a>` : '<a class="back" href="#/set" aria-label="Tilbake til Innstillinger">←</a>'}</div><div class="title" style="font-size:${th === 'ios' ? 30 : 32}px">${PAGES[page]}</div>`
+    ? `<div class="m-row"><a class="back" href="#/set" aria-label="Tilbake til Innstillinger">←</a></div><div class="title" style="font-size:32px">${PAGES[page]}</div>`
     : `<div class="title" style="padding:6px 4px 0">Innstillinger</div>`;
   // Nyheter, Widgets m.fl. tegnes av moduler som lastes etter oppstart (mobile.js bind: P45/P46). Startes appen rett på
   // adressen, vises en spinner til modulen er lastet og tegner siden på nytt.

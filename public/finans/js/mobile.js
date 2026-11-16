@@ -74,7 +74,7 @@ export const two = () => matchMedia('(min-width: 600px)').matches;
 export const iosBg = () => { if (paper()) return false; try { return localStorage.getItem('fh_ios_bg') !== '0'; } catch { return true; } };
 const ACTIVE = ['pending', 'processing'];
 export const ACTIVE_JOBS = ACTIVE;
-export const amtC = (v, th) => (v > 0 ? '#9FE3C6' : th === 'and' ? c3('#F0DFD7') : 'inherit');
+export const amtC = (v, th) => (v > 0 ? '#9FE3C6' : c3('#F0DFD7'));
 
 /* ---------- Skjermer og faner ---------- */
 
@@ -134,26 +134,26 @@ export function backTop(scr = m.screen) {
 }
 const homeLbl = () => 'Økonomi';
 function topRow(th) {
-  return `<div class="toprow"><a class="${th === 'ios' ? 'gtop' : 'atop'}" href="#/${startScr()}" aria-label="Tilbake til ${homeLbl()}">${th === 'ios' ? icon('chev', 18, 'currentColor', 2.6) : '←'}<span>${homeLbl()}</span></a><span class="m-grow"></span>${avatar('topav')}</div>`;
+  return `<div class="toprow"><a class="atop" href="#/${startScr()}" aria-label="Tilbake til ${homeLbl()}">←<span>${homeLbl()}</span></a><span class="m-grow"></span>${avatar('topav')}</div>`;
 }
 
 /* ---------- Byggeklosser ---------- */
 
-export const txItem = (t, th, on) => `<button class="item${on ? ' on' : ''}" data-tx="${t.id}">${logo(t, 40, th === 'ios' ? 20 : 12)}
+export const txItem = (t, th, on) => `<button class="item${on ? ' on' : ''}" data-tx="${t.id}">${logo(t, 40, 12)}
   <span class="m-grow"><span class="m-ell" style="font-weight:500">${esc(t.description)}</span>${aiLine(t.aiShort, 'm-ell ai')}<span class="m-ell s">${dd(t.date)} · ${esc(t.category)}</span></span>
   <span class="m-mono" style="font-weight:600;color:${amtC(t.amount, th)}">${sgn(t.amount)}</span></button>`;
 
 function groups(items, th) {
   const by = new Map();
   for (const t of items) (by.get(t.date) ?? by.set(t.date, []).get(t.date)).push(t);
-  return [...by].map(([d, list]) => `<div class="sec">${cap(dWeek(d))}</div><div class="list ${th === 'ios' ? 'glass2' : ''}">${list.map((t) => txItem(t, th, m.sel === t.id)).join('')}</div>`).join('');
+  return [...by].map(([d, list]) => `<div class="sec">${cap(dWeek(d))}</div><div class="list">${list.map((t) => txItem(t, th, m.sel === t.id)).join('')}</div>`).join('');
 }
 
 function hero(th) {
   const s = S.summary;
-  if (!s) return `<div class="hero ${th === 'ios' ? 'glass' : ''}"><div class="m-spin"></div></div>`;
+  if (!s) return `<div class="hero"><div class="m-spin"></div></div>`;
   const pct = s.budgetTotal ? Math.min(100, (s.budgetUsed / s.budgetTotal) * 100) : 0;
-  return `<div class="hero ${th === 'ios' ? 'glass' : ''}"><div class="lbl">Igjen å bruke${th === 'ios' ? ` i ${monthName(s.month)}` : ''}</div>
+  return `<div class="hero"><div class="lbl">Igjen å bruke</div>
     <div class="amt" data-mact="reveal">${hide(neg(s.left).replace(/,\d\d$/, ''))}<small> kr</small></div>
     <div class="m-bar"><i style="width:${pct}%;background:#FF8A4C"></i></div>
     <div class="foot"><span>Brukt ${hide(n0(s.budgetUsed))} kr</span><span>${hide(n0(Math.max(0, s.left) / Math.max(1, s.daysLeft)))} kr/dag</span></div></div>`;
@@ -162,7 +162,7 @@ function hero(th) {
 const reviewCta = (th) => {
   const q = (S.summary?.review ?? []).filter((r) => r.status === 'needs_review');
   if (!q.length) return '';
-  return `<a class="cta ${th === 'ios' ? 'glass' : ''}" href="#/kv"><span class="n">${q.length}</span><span class="m-grow"><b style="display:block;font-weight:600">${th === 'ios' ? 'Kvitteringer til gjennomgang' : 'Til gjennomgang'}</b><span class="m-ell" style="font-size:13px;opacity:.75">${esc(q.map((r) => r.merchant ?? 'Ny').join(' · '))}</span></span><span style="font-size:20px;opacity:.6">›</span></a>`;
+  return `<a class="cta" href="#/kv"><span class="n">${q.length}</span><span class="m-grow"><b style="display:block;font-weight:600">Til gjennomgang</b><span class="m-ell" style="font-size:13px;opacity:.75">${esc(q.map((r) => r.merchant ?? 'Ny').join(' · '))}</span></span><span style="font-size:20px;opacity:.6">›</span></a>`;
 };
 
 function jobsPill(th) {
@@ -170,7 +170,7 @@ function jobsPill(th) {
   const run = j.filter((x) => ACTIVE.includes(x.status)).length, ready = j.filter((x) => x.status === 'needs_review').length;
   if (!run && !ready) return '';
   const pct = Math.round(j.reduce((a, x) => a + (ACTIVE.includes(x.status) ? x.progress ?? 0 : 100), 0) / j.length);
-  return `<a class="pill ${th === 'ios' ? 'glass2' : ''}" href="#/opp"><span class="ring" style="background:${conic([{ value: pct, color: '#FF8A4C' }], 100, 0, th === 'ios' ? 'rgba(255,255,255,.15)' : c3('#31281F'))}"></span><span class="m-grow">${run ? `Glimt leser lokalt · ${j.length - run} av ${j.length} ferdig` : `${ready} kvitteringer klare til bekreftelse`}</span><span style="opacity:.6">›</span></a>`;
+  return `<a class="pill" href="#/opp"><span class="ring" style="background:${conic([{ value: pct, color: '#FF8A4C' }], 100, 0, c3('#31281F'))}"></span><span class="m-grow">${run ? `Glimt leser lokalt · ${j.length - run} av ${j.length} ferdig` : `${ready} kvitteringer klare til bekreftelse`}</span><span style="opacity:.6">›</span></a>`;
 }
 
 function andCards(s) {
@@ -192,9 +192,7 @@ export const avatar = (cls = '') => `<button class="m-av${avatarUrl() ? ' img' :
 /** iOS: rund glassknapp med bare ‹. Android: tonal knapp med ←. */
 export function backBtn(th, href, label = 'Tilbake', act = '') {
   const a = act ? `data-mact="${act}"` : '';
-  return th === 'ios'
-    ? `<a class="gback" href="${href}" ${a} aria-label="${esc(label)}">${icon('chev', 20, 'currentColor', 2.6)}</a>`
-    : `<a class="back" href="${href}" ${a} aria-label="${esc(label)}">←</a>`;
+  return `<a class="back" href="${href}" ${a} aria-label="${esc(label)}">←</a>`;
 }
 
 function home(th) {
@@ -202,18 +200,18 @@ function home(th) {
   return `<div class="m-row" style="justify-content:space-between;align-items:flex-end;padding:6px 4px 0"><div><div class="hello">${greet()}, ${esc(meName())}</div><div class="title">${cap(monthName(S.summary?.month ?? today().slice(0, 7)))}</div></div>${avatar()}</div>
     ${hero(th)}
     ${jobsPill(th)}
-    ${th === 'and' && s ? andCards(s) : ''}
+    ${s ? andCards(s) : ''}
     ${reviewCta(th)}
     <div class="sec">Siste</div>
-    <div class="list ${th === 'ios' ? 'glass2' : ''}">${(s?.recent ?? []).slice(0, 6).map((t) => txItem(t, th, m.sel === t.id)).join('') || '<div class="m-empty">Ingen transaksjoner ennå.</div>'}</div>`;
+    <div class="list">${(s?.recent ?? []).slice(0, 6).map((t) => txItem(t, th, m.sel === t.id)).join('') || '<div class="m-empty">Ingen transaksjoner ennå.</div>'}</div>`;
 }
 
 function list(th) {
   const items = S.tx?.items ?? null;
   const chips = [['', 'Alle'], ['ut', 'Utgifter'], ['inn', 'Inntekter']].map(([k, n]) => `<button class="chip" data-filter="${k}" aria-pressed="${m.filter === k}">${n}</button>`).join('');
-  const add = th === 'ios' ? `<button class="gbtn" data-mact="newtx" aria-label="Ny transaksjon">${icon('plus', 22, 'currentColor', 2.4)}</button>` : '<button class="tonal" data-mact="newtx">+ Ny</button>';
+  const add = '<button class="tonal" data-mact="newtx">+ Ny</button>';
   return `<div class="m-row" style="justify-content:space-between;padding:6px 4px 0"><div class="title">Transaksjoner</div><span class="m-row" style="gap:8px">${add}${avatar()}</span></div>
-    <form class="search ${th === 'ios' ? 'glass2' : ''}" data-msearch role="search"><span style="opacity:.7">${icon('search', 18)}</span><input class="m-input" id="m-txq" name="q" value="${esc(u.q)}" placeholder="Søk i transaksjoner" aria-label="Søk" enterkeyhint="search" type="search"></form>
+    <form class="search" data-msearch role="search"><span style="opacity:.7">${icon('search', 18)}</span><input class="m-input" id="m-txq" name="q" value="${esc(u.q)}" placeholder="Søk i transaksjoner" aria-label="Søk" enterkeyhint="search" type="search"></form>
     <div style="display:flex;gap:8px;overflow-x:auto">${chips}</div>
     ${items === null ? '<div class="m-spin"></div>' : groups(items, th) || '<div class="m-empty">Ingen treff.</div>'}`;
 }
@@ -222,10 +220,10 @@ function budCard(b, th, s) {
   const o = b.used > b.budget, on = m.budSel === b.categoryId, left = b.budget - b.used, days = Math.max(1, s.daysLeft);
   const trend = b.prevUsed ? Math.round(((b.used - b.prevUsed) / b.prevUsed) * 100) : null;
   const chips = [b.count != null ? `${b.count} kjøp` : '', b.topMerchant ? `Mest: ${esc(b.topMerchant)}` : '', trend !== null ? `${trend > 0 ? '↑' : '↓'} ${Math.abs(trend)} % mot forrige mnd` : ''].filter(Boolean);
-  const hi = th === 'and' ? c3('#FFB68A') : '#FFB08A';
-  return `<button class="${th === 'ios' ? 'glass2' : 'item'} bud${on ? ' on' : ''}" data-bud="${b.categoryId}">
-    <span class="m-row" style="justify-content:space-between;width:100%"><b style="font-weight:600">${esc(b.category)}</b><span class="m-mono" style="font-size:14px;color:${o ? hi : th === 'and' ? c3('#D7C2B8') : 'rgba(255,255,255,.7)'}">${n0(b.used)} / ${n0(b.budget)}</span></span>
-    <span class="m-bar" style="width:100%;height:8px;background:${th === 'ios' ? 'rgba(255,255,255,.14)' : c3('#31281F')}"><i style="width:${Math.min(100, (b.used / b.budget) * 100)}%;background:${o ? '#FF7A3D' : b.color}"></i></span>
+  const hi = c3('#FFB68A');
+  return `<button class="item bud${on ? ' on' : ''}" data-bud="${b.categoryId}">
+    <span class="m-row" style="justify-content:space-between;width:100%"><b style="font-weight:600">${esc(b.category)}</b><span class="m-mono" style="font-size:14px;color:${o ? hi : c3('#D7C2B8')}">${n0(b.used)} / ${n0(b.budget)}</span></span>
+    <span class="m-bar" style="width:100%;height:8px;background:${c3('#31281F')}"><i style="width:${Math.min(100, (b.used / b.budget) * 100)}%;background:${o ? '#FF7A3D' : b.color}"></i></span>
     <span class="m-row" style="justify-content:space-between;width:100%;font-size:13px"><span style="color:${o ? hi : 'inherit'};opacity:${o ? 1 : 0.8}">${o ? `Over med ${n0(-left)} kr` : `${n0(left)} kr igjen · ${n0(left / days)} kr/dag`}</span><span style="opacity:.65">${Math.round((b.used / b.budget) * 100)} % brukt</span></span>
     ${chips.length ? `<span class="bchips">${chips.map((c) => `<em>${c}</em>`).join('')}</span>` : ''}</button>`;
 }
@@ -235,16 +233,16 @@ function budget(th) {
   if (!s) return '<div class="m-spin"></div>';
   const rows = s.budgets.filter((b) => b.budget).sort((a, b) => b.used / b.budget - a.used / a.budget);
   return `<div class="m-row" style="justify-content:space-between;padding:6px 4px 0"><div class="title">Budsjett</div>${avatar()}</div>
-    <div class="bsum ${th === 'ios' ? 'glass' : ''}"><div><span>Budsjett</span><b>${n0(s.budgetTotal)}</b></div><div><span>Brukt</span><b>${n0(s.budgetUsed)}</b></div><div><span>Dager igjen</span><b>${s.daysLeft}</b></div></div>
+    <div class="bsum"><div><span>Budsjett</span><b>${n0(s.budgetTotal)}</b></div><div><span>Brukt</span><b>${n0(s.budgetUsed)}</b></div><div><span>Dager igjen</span><b>${s.daysLeft}</b></div></div>
     ${rows.map((b) => budCard(b, th, s)).join('') || '<div class="m-empty">Ingen budsjett satt. Sett opp på desktop under Budsjett.</div>'}`;
 }
 
 /* ---------- Les på nytt (prompt 12; prompt 52: alltid lokalt, aldri Gemini) ---------- */
 // Serveren sier fra med canReanalyze; eldre servere: vis knappen ved feil eller lav sikkerhet.
 const canRe = (R, high) => (R.canReanalyze ?? (!!R.error || R.status === 'error' || !high)) && !['booked', 'pending', 'processing'].includes(R.status);
-const reBtn = (th, R, sub = R.reason) => `<button class="rean ${th === 'ios' ? 'glass2' : ''}" data-reanalyze="${esc(R.id)}"><span>✦</span><span class="m-grow">Les på nytt${sub ? `<small>${esc(sub)}</small>` : ''}</span><span style="opacity:.6">›</span></button>`;
+const reBtn = (th, R, sub = R.reason) => `<button class="rean" data-reanalyze="${esc(R.id)}"><span>✦</span><span class="m-grow">Les på nytt${sub ? `<small>${esc(sub)}</small>` : ''}</span><span style="opacity:.6">›</span></button>`;
 // «Les med lokal OCR» (Tesseract på serveren, uten AI). Vises på kvitteringer serveren sier kan leses (canOcr).
-const ocrBtn = (th, R, sub = 'Uten AI · leses på serveren med Tesseract') => (R.canOcr ? `<button class="rean ${th === 'ios' ? 'glass2' : ''}" data-reanalyze="${esc(R.id)}" data-engine="tesseract"><span>⌗</span><span class="m-grow">Les med lokal OCR${sub ? `<small>${esc(sub)}</small>` : ''}</span><span style="opacity:.6">›</span></button>` : '');
+const ocrBtn = (th, R, sub = 'Uten AI · leses på serveren med Tesseract') => (R.canOcr ? `<button class="rean" data-reanalyze="${esc(R.id)}" data-engine="tesseract"><span>⌗</span><span class="m-grow">Les med lokal OCR${sub ? `<small>${esc(sub)}</small>` : ''}</span><span style="opacity:.6">›</span></button>` : '');
 // Dialogen (side om side, «Behold») ligger i reanalyze.js, som også brukes på desktop.
 async function reanalyze(id, engine = 'gemini') {
   try {
@@ -260,8 +258,8 @@ export function upqList(th, compact = false) {
   const q = m.offline;
   if (!q.length) return '';
   const why = (x) => (x.legacy ? 'Lagt i køen før kontoene ble skilt · lastes bare opp når du trykker' : x.error ? `Feilet: ${x.error}` : x.reason === 'wifi' ? 'Venter på Wi-Fi' : 'Venter på nett');
-  if (compact) return `<a class="upq-banner ${th === 'ios' ? 'glass2' : ''}" href="#/opp"><span class="upq-dot"></span><span class="m-grow"><b>${q.length} kvittering${q.length > 1 ? 'er' : ''} venter på opplasting</b><span>${navigator.onLine ? 'Trykk for å se køen' : 'Lastes opp når du er på nett igjen'}</span></span><span style="opacity:.6">›</span></a>`;
-  return `<div class="sec">Venter på opplasting · ${q.length}</div><div class="list upq ${th === 'ios' ? 'glass2' : ''}">${q.map((x) => `<div class="item upq-it"><span class="m-ini upq-ic">↑</span><span class="m-grow" style="min-width:0"><span class="m-ell" style="font-weight:500">${esc(x.name)}</span><span class="m-ell s">${esc(why(x))} · ${kb(x.size)}${x.tries ? ` · ${x.tries} forsøk` : ''}</span></span><button class="upq-b" data-mact="upq-retry" data-id="${esc(x.id)}">Prøv igjen</button><button class="upq-b x" data-mact="upq-del" data-id="${esc(x.id)}" aria-label="Fjern fra køen">Fjern</button></div>`).join('')}</div>
+  if (compact) return `<a class="upq-banner" href="#/opp"><span class="upq-dot"></span><span class="m-grow"><b>${q.length} kvittering${q.length > 1 ? 'er' : ''} venter på opplasting</b><span>${navigator.onLine ? 'Trykk for å se køen' : 'Lastes opp når du er på nett igjen'}</span></span><span style="opacity:.6">›</span></a>`;
+  return `<div class="sec">Venter på opplasting · ${q.length}</div><div class="list upq">${q.map((x) => `<div class="item upq-it"><span class="m-ini upq-ic">↑</span><span class="m-grow" style="min-width:0"><span class="m-ell" style="font-weight:500">${esc(x.name)}</span><span class="m-ell s">${esc(why(x))} · ${kb(x.size)}${x.tries ? ` · ${x.tries} forsøk` : ''}</span></span><button class="upq-b" data-mact="upq-retry" data-id="${esc(x.id)}">Prøv igjen</button><button class="upq-b x" data-mact="upq-del" data-id="${esc(x.id)}" aria-label="Fjern fra køen">Fjern</button></div>`).join('')}</div>
     ${q.length > 1 ? `<button class="sec-b upq-all" data-mact="upq-all">Last opp alle nå</button>` : ''}`;
 }
 export async function refreshQueue() { try { m.offline = await UPQ.queued(); } catch { /* beholder forrige liste */ } }
@@ -271,13 +269,13 @@ async function sendOne(f) { const r = await uploadReceipt(f, null, { original: p
 
 function uploadScreen(th) {
   const j = m.jobs;
-  const st = (x) => (x.status === 'needs_review' ? ['Klar · trykk for å bekrefte', '#9FE3C6', 100] : x.status === 'booked' ? ['Bokført', '#9FE3C6', 100] : x.status === 'error' ? ['Feil – åpne for å fylle ut', '#FF8A6B', 100] : x.status === 'processing' ? [`Gemini leser … ${x.progress ?? 50} %`, th === 'and' ? c3('#FFB68A') : '#FF8A4C', x.progress ?? 50] : ['I kø', 'currentColor', 0]);
+  const st = (x) => (x.status === 'needs_review' ? ['Klar · trykk for å bekrefte', '#9FE3C6', 100] : x.status === 'booked' ? ['Bokført', '#9FE3C6', 100] : x.status === 'error' ? ['Feil – åpne for å fylle ut', '#FF8A6B', 100] : x.status === 'processing' ? [`Gemini leser … ${x.progress ?? 50} %`, c3('#FFB68A'), x.progress ?? 50] : ['I kø', 'currentColor', 0]);
   return `<div class="m-row">${backBtn(th, '#/kv', 'Tilbake til Kvitteringer')}<b class="ptitle">Last opp</b></div>
-    <label class="drop ${th === 'ios' ? 'glass' : ''}"><span class="n">${icon('up', 22)}</span><b>Velg kvitteringer</b><span>Bilder eller PDF – flere om gangen. Glimt leser dem lokalt i bakgrunnen. Du kan bruke appen mens du venter.</span><input class="m-file" type="file" accept="image/*,application/pdf" multiple data-mupload></label>
-    <button class="cta ${th === 'ios' ? 'glass2' : ''}" data-mact="cam"><span class="n">${icon('cam', 20)}</span><span class="m-grow"><b style="display:block;font-weight:600">Ta bilde</b><span style="font-size:13px;opacity:.75">Bakkamera</span></span></button>
+    <label class="drop"><span class="n">${icon('up', 22)}</span><b>Velg kvitteringer</b><span>Bilder eller PDF – flere om gangen. Glimt leser dem lokalt i bakgrunnen. Du kan bruke appen mens du venter.</span><input class="m-file" type="file" accept="image/*,application/pdf" multiple data-mupload></label>
+    <button class="cta" data-mact="cam"><span class="n">${icon('cam', 20)}</span><span class="m-grow"><b style="display:block;font-weight:600">Ta bilde</b><span style="font-size:13px;opacity:.75">Bakkamera</span></span></button>
     ${upqList(th)}
     ${m.uploading ? `<div class="m-empty">Laster opp ${m.uploading} fil${m.uploading > 1 ? 'er' : ''} …</div>` : ''}
-    ${j.length ? `<div class="sec">Kø</div><div class="list ${th === 'ios' ? 'glass2' : ''}">${j.map((x) => { const [txt, c, p] = st(x); return `<button class="item job" data-job="${esc(x.id)}"><span class="m-grow"><span class="m-ell" style="font-weight:500">${esc(x.merchant || x.name || 'Kvittering')}</span><span class="m-ell s" style="color:${c === '#9FE3C6' ? 'var(--pp-pos)' : c}">${txt}</span><span class="m-bar" style="height:4px;margin-top:6px;background:${th === 'ios' ? 'rgba(255,255,255,.12)' : c3('#31281F')}"><i style="width:${p}%;background:${c}"></i></span></span><span class="m-mono">${x.total != null ? n2(x.total) : ''}</span></button>`; }).join('')}</div>` : ''}
+    ${j.length ? `<div class="sec">Kø</div><div class="list">${j.map((x) => { const [txt, c, p] = st(x); return `<button class="item job" data-job="${esc(x.id)}"><span class="m-grow"><span class="m-ell" style="font-weight:500">${esc(x.merchant || x.name || 'Kvittering')}</span><span class="m-ell s" style="color:${c === '#9FE3C6' ? 'var(--pp-pos)' : c}">${txt}</span><span class="m-bar" style="height:4px;margin-top:6px;background:${c3('#31281F')}"><i style="width:${p}%;background:${c}"></i></span></span><span class="m-mono">${x.total != null ? n2(x.total) : ''}</span></button>`; }).join('')}</div>` : ''}
     ${j.filter((x) => x.canReanalyze ?? x.status === 'error').map((x) => reBtn(th, x, `${x.merchant || x.name || 'Kvittering'}${x.status === 'error' ? ' · mislyktes' : ' · usikker'}`)).join('')}`;
 }
 
@@ -286,8 +284,8 @@ function uploadScreen(th) {
 function scanQueue(th) {
   const q = (S.receipts ?? []).filter((r) => ['pending', 'processing', 'needs_review'].includes(r.status));
   return `<div class="m-row">${backBtn(th, '#/kv', 'Tilbake til Kvitteringer')}<b class="ptitle">Skann</b></div>
-    <button class="cta ${th === 'ios' ? 'glass' : ''}" data-scan><span class="n">${icon('scan', 20)}</span><span class="m-grow"><b style="display:block;font-weight:600">Ta bilde av kvittering</b><span style="font-size:13px;opacity:.75">Hold inne for Bilder eller Filer</span></span></button>
-    ${q.length ? `<div class="sec">Til gjennomgang</div><div class="list ${th === 'ios' ? 'glass2' : ''}">${q.map((r) => `<button class="item${m.rc === r.id ? ' on' : ''}" data-rc="${r.id}">${r.thumb ? `<span class="m-ini" style="border-radius:10px;background:#ECE8E0 center/cover;background-image:url('${r.thumb}')"></span>` : logo({ ...r, description: r.merchant ?? 'Kvittering' }, 40, 10)}<span class="m-grow"><span class="m-ell" style="font-weight:500">${esc(r.merchant ?? 'Ny kvittering')}</span><span class="m-ell s">${r.status === 'needs_review' ? `${dd(r.date)} · ${esc(r.source_label ?? r.provider ?? 'manuell')}` : 'Glimt leser lokalt …'}</span></span><span class="m-mono">${r.total != null ? n2(r.total) : ''}</span></button>`).join('')}</div>` : '<div class="m-empty">Ingen kvitteringer i køen.</div>'}`;
+    <button class="cta" data-scan><span class="n">${icon('scan', 20)}</span><span class="m-grow"><b style="display:block;font-weight:600">Ta bilde av kvittering</b><span style="font-size:13px;opacity:.75">Hold inne for Bilder eller Filer</span></span></button>
+    ${q.length ? `<div class="sec">Til gjennomgang</div><div class="list">${q.map((r) => `<button class="item${m.rc === r.id ? ' on' : ''}" data-rc="${r.id}">${r.thumb ? `<span class="m-ini" style="border-radius:10px;background:#ECE8E0 center/cover;background-image:url('${r.thumb}')"></span>` : logo({ ...r, description: r.merchant ?? 'Kvittering' }, 40, 10)}<span class="m-grow"><span class="m-ell" style="font-weight:500">${esc(r.merchant ?? 'Ny kvittering')}</span><span class="m-ell s">${r.status === 'needs_review' ? `${dd(r.date)} · ${esc(r.source_label ?? r.provider ?? 'manuell')}` : 'Glimt leser lokalt …'}</span></span><span class="m-mono">${r.total != null ? n2(r.total) : ''}</span></button>`).join('')}</div>` : '<div class="m-empty">Ingen kvitteringer i køen.</div>'}`;
 }
 
 function confirmRc(th) {
@@ -302,11 +300,9 @@ function confirmRc(th) {
     : `<div class="m-receipt"><b style="text-align:center;font-size:14px">${esc((R.merchant ?? '').toUpperCase())}</b>${(ex.lines ?? []).map((l) => `<span class="ln"><span>${esc(l.description)}</span><span>${n2(l.amount)}</span></span>`).join('')}<span class="dash"></span><b class="ln"><span>TOTAL</span><span>${R.total != null ? n2(R.total) : '–'}</span></b></div>`;
   const catChips = cats('expense').map((c) => `<button class="chip" data-mcat="${c.id}" aria-pressed="${R.categoryId === c.id}">${esc(c.name)}</button>`).join('');
   const idx = q.findIndex((r) => r.id === R.id);
-  const fields = th === 'ios'
-    ? `<div class="list glass2"><label class="field"><span>Butikk</span><input data-mf="merchant" value="${esc(R.merchant ?? '')}"></label><label class="field"><span>Dato</span><input type="date" data-mf="date" value="${R.date ?? ''}"></label><label class="field"><span>Total</span><input class="m-mono m-tx-lab" data-mf="total" inputmode="decimal" value="${R.total != null ? n2(R.total).replace(/\s/g, '') : ''}"></label><label class="field"><span>Konto</span><select data-mf="accountId">${accs().map((a) => `<option value="${a.id}"${a.id === R.accountId ? ' selected' : ''}>${esc(a.name)}</option>`).join('')}</select></label></div>`
-    : `<div class="fields"><label class="field">Butikk<input data-mf="merchant" value="${esc(R.merchant ?? '')}"></label><div class="two"><label class="field">Dato<input type="date" data-mf="date" value="${R.date ?? ''}"></label><label class="field">Total<input class="m-mono" data-mf="total" inputmode="decimal" value="${R.total != null ? n2(R.total).replace(/\s/g, '') : ''}"></label></div><label class="field">Konto<select data-mf="accountId">${accs().map((a) => `<option value="${a.id}"${a.id === R.accountId ? ' selected' : ''}>${esc(a.name)}</option>`).join('')}</select></label></div>`;
+  const fields = `<div class="fields"><label class="field">Butikk<input data-mf="merchant" value="${esc(R.merchant ?? '')}"></label><div class="two"><label class="field">Dato<input type="date" data-mf="date" value="${R.date ?? ''}"></label><label class="field">Total<input class="m-mono" data-mf="total" inputmode="decimal" value="${R.total != null ? n2(R.total).replace(/\s/g, '') : ''}"></label></div><label class="field">Konto<select data-mf="accountId">${accs().map((a) => `<option value="${a.id}"${a.id === R.accountId ? ' selected' : ''}>${esc(a.name)}</option>`).join('')}</select></label></div>`;
   return `${rcBar(th, 'Bekreft kvittering', idx > -1 ? `${idx + 1} av ${q.length}` : '')}
-    ${th === 'ios' ? '<div class="title" style="font-size:28px">Bekreft kvittering</div>' : ''}
+    
     ${paper}
     <div class="conf"><span>${R.provider && R.provider !== 'Manuell' ? `Lest av ${esc(R.source_label ?? R.provider)}${R.seconds ? ` · ${n2(R.seconds).replace(/0$/, '')} s` : ''}` : 'Manuell utfylling'}</span><span class="${high ? 'm-tx-pos' : 'm-tx-lab'}" style="font-weight:600">● ${R.error ? 'Fyll ut' : high ? 'Høy sikkerhet' : 'Sjekk beløp'}</span></div>
     ${R.error ? `<div class="m-tx-lab" style="font-size:13px;padding:0 6px">${esc(R.error)}</div>` : ''}
@@ -319,9 +315,7 @@ function confirmRc(th) {
 
 function rcBar(th, title, right = '') {
   if (two()) return right ? `<div class="m-row" style="justify-content:flex-end;opacity:.7;font-size:14px">${right}</div>` : '';
-  return th === 'ios'
-    ? `<div class="m-row" style="justify-content:space-between">${backBtn(th, '#/kv', 'Tilbake', 'back')}<span style="opacity:.7;font-size:14px">${right}</span></div>`
-    : `<div class="m-row">${backBtn(th, '#/kv', 'Tilbake', 'back')}<b class="ptitle">${esc(title)}</b><span style="font-size:14px;color:${c3('#D7C2B8')}">${right}</span></div>`;
+  return `<div class="m-row">${backBtn(th, '#/kv', 'Tilbake', 'back')}<b class="ptitle">${esc(title)}</b><span style="font-size:14px;color:${c3('#D7C2B8')}">${right}</span></div>`;
 }
 
 /* ---------- Detaljpanel (to paneler) ---------- */
@@ -339,10 +333,10 @@ function detail(th) {
     if (!b) return '<div class="m-empty">Velg en kategori.</div>';
     const o = b.used > b.budget, items = (S.tx?.items ?? []).filter((t) => t.categoryId === b.categoryId && t.date >= S.summary.from && t.date < S.summary.to);
     return `<div class="title" style="font-size:28px">${esc(b.category)}</div>
-      <div class="${th === 'ios' ? 'glass hero' : 'hero alt'}"><div class="lbl">Brukt av ${n0(b.budget)} kr</div><div class="amt">${n0(b.used)}<small> kr</small></div>
+      <div class="hero alt"><div class="lbl">Brukt av ${n0(b.budget)} kr</div><div class="amt">${n0(b.used)}<small> kr</small></div>
         <div class="m-bar" style="background:rgba(255,255,255,.12)"><i style="width:${Math.min(100, (b.used / b.budget) * 100)}%;background:${o ? '#FF7A3D' : b.color}"></i></div>
         <div style="font-size:14px;opacity:.85">${o ? `Over budsjett med ${n0(b.used - b.budget)} kr.` : `${n0(b.budget - b.used)} kr igjen denne måneden.`}</div></div>
-      ${items.length ? `<div class="sec">Transaksjoner</div><div class="list ${th === 'ios' ? 'glass2' : ''}">${items.map((t) => txItem(t, th)).join('')}</div>` : ''}`;
+      ${items.length ? `<div class="sec">Transaksjoner</div><div class="list">${items.map((t) => txItem(t, th)).join('')}</div>` : ''}`;
   }
   if (m.screen === 'opp') return confirmRc(th);
   return txDetail(th, selTx());
@@ -355,27 +349,27 @@ function menuSheet(th) {
   const scr = m.screen, who = m.me?.username ? `@${esc(m.me.username)}${m.me.role ? ' · ' + esc(m.me.role) : ''}` : esc(m.me?.serverName ?? 'Homelab');
   const row = (href, ic, n, s, on, act = 'menu') => `<a class="opt-row${on ? ' on' : ''}" href="${href}" data-mact="${act}"><span class="set-ic">${icon(ic, 18)}</span><span class="m-grow"><b style="font-weight:500">${n}</b>${s ? `<br><span style="font-size:13px;opacity:.65">${s}</span>` : ''}</span>${on ? '<span style="color:var(--m-acc)">✓</span>' : '<span style="opacity:.6">›</span>'}</a>`;
   const others = MODS.filter(([k]) => k === 'mat' || (k === 'dom' && domOk()));
-  return `<div class="sheet-bg" data-mact="menu"></div><div class="sheet${two() ? ' left' : ''} ${th === 'ios' ? 'glass' : ''}" role="dialog" aria-label="Meny">
+  return `<div class="sheet-bg" data-mact="menu"></div><div class="sheet${two() ? ' left' : ''}" role="dialog" aria-label="Meny">
     <div class="m-row" style="gap:12px"><span class="m-av${avatarUrl() ? ' img' : ''}">${avInner()}</span><div class="m-grow"><b>${esc(meName())}</b><div style="font-size:13px;opacity:.65">${who}</div></div><button class="mini" data-mact="menu" aria-label="Lukk">${icon('close', 18)}</button></div>
     ${(() => {
       // Startsiden står øverst; resten ligger under «Andre OS».
       const hl = row('#/hl', 'hlhome', 'Homelab', 'Oversikt, søk og snarveier', scr === 'hl'), fin = row(`#/${startFin() ? startScr() : 'hjem'}`, 'wallet', 'Økonomi', 'Oversikt, transaksjoner, budsjett og mer', FIN.includes(scr));
       const rest = others.map(([k, n, s2, ic]) => row('#/' + k, ic, n, s2, scr === k)).join('');
-      return `<div class="list ${th === 'ios' ? 'glass2' : ''}">${startFin() ? fin : hl}</div><div class="sec">Andre OS</div><div class="list ${th === 'ios' ? 'glass2' : ''}">${startFin() ? hl : fin}${rest}</div>`;
+      return `<div class="list">${startFin() ? fin : hl}</div><div class="sec">Andre OS</div><div class="list">${startFin() ? hl : fin}${rest}</div>`;
     })()}
-    <div class="list ${th === 'ios' ? 'glass2' : ''}">${row('#/hl', 'edit', 'Rediger forsiden', '', false, 'edithome')}${row('#/nyheter', 'hist', 'Nyheter', 'Det siste fra kildene dine', scr === 'nyheter')}${row('#/set', 'gear', 'Innstillinger', '', scr === 'set')}<button class="opt-row" data-mact="logout"><span class="set-ic" style="color:#FF8A6B">${icon('key', 18)}</span><span class="m-grow" style="color:#FF8A6B">Lås</span></button></div></div>`;
+    <div class="list">${row('#/hl', 'edit', 'Rediger forsiden', '', false, 'edithome')}${row('#/nyheter', 'hist', 'Nyheter', 'Det siste fra kildene dine', scr === 'nyheter')}${row('#/set', 'gear', 'Innstillinger', '', scr === 'set')}<button class="opt-row" data-mact="logout"><span class="set-ic" style="color:#FF8A6B">${icon('key', 18)}</span><span class="m-grow" style="color:#FF8A6B">Lås</span></button></div></div>`;
 }
 
 /* Arket som åpnes når skanneknappen holdes inne (eller trykkes, hvis det er valgt i Innstillinger). */
 function scanSheet(th) {
   if (!m.sheet) return '';
-  return `<div class="sheet-bg" data-mact="sheet"></div><div class="actsheet ${th === 'ios' ? 'glass' : ''}" role="dialog" aria-label="Legg til kvittering">
-    <div class="list ${th === 'ios' ? 'glass2' : ''}">
+  return `<div class="sheet-bg" data-mact="sheet"></div><div class="actsheet" role="dialog" aria-label="Legg til kvittering">
+    <div class="list">
       <button class="opt-row" data-mact="cam"><span class="set-ic">${icon('cam', 18)}</span><span class="m-grow">Ta bilde</span></button>
       <label class="opt-row"><span class="set-ic">${icon('img', 18)}</span><span class="m-grow">Velg fra Bilder</span><input class="m-file" type="file" accept="image/*" multiple data-mupload></label>
       <label class="opt-row"><span class="set-ic">${icon('file', 18)}</span><span class="m-grow">Velg fil<br><span style="font-size:12px;opacity:.6">PDF, JPG, HEIC</span></span><input class="m-file" type="file" accept="application/pdf,image/jpeg,image/png,image/heic,image/heif,.heic,.heif" multiple data-mupload></label>
     </div>
-    <button class="opt-row cancel ${th === 'ios' ? 'glass2' : ''}" data-mact="sheet">Avbryt</button></div>`;
+    <button class="opt-row cancel" data-mact="sheet">Avbryt</button></div>`;
 }
 
 /* ---------- Navigasjon ---------- */
@@ -408,7 +402,7 @@ export function draw() {
   const vk = [scr, m.sub, m.detail ? m.sel : '', m.edit ? 'e' : '', m.rc ?? '', m.pdet ?? '', BO.tab, m.vk ?? ''].join('|');
   const vkChanged = P23.leave(vk);
   const fad = pp && scr === 'finn' && /^ad\/\d+/.test(m.sub ?? '');
-  m.light = pp ? applyPaper(paperDark()) : applyM3(th === 'and', pref('m3Seed'), pref('m3Mode'), () => draw(), pref('pageColors') !== 'per');
+  m.light = pp ? applyPaper(paperDark()) : applyM3(true, pref('m3Seed'), pref('m3Mode'), () => draw(), pref('pageColors') !== 'per');
   const fin = FIN.includes(scr), twoPane = wide && TWO.includes(scr);
   const confirmView = scr === 'skann' && m.rc && !wide;
   const scrs = { hjem: home, liste: list, budsjett: budget, opp: uploadScreen };
@@ -437,12 +431,12 @@ export function draw() {
   const nav = scr === 'nyheter' || scr === 'vaer' || fad || rv || fsx || (pp && nonav) ? '' : scr === 'huske' ? (P45?.huskeRail?.(() => P25.nav25(paperNav(scr), scr)) ?? '') + P37.huskeBottom() /* prompt 45: navbar på brett */ : (P42 ? P42.nav42(P25.nav25(paperNav(scr), scr), scr) : P25.nav25(paperNav(scr), scr)); // prompt 42: Hjem-knapp (Standard/1a–1d)
   // Bevar fokus og markør i et felt når skjermen tegnes på nytt (f.eks. søk mens forslag kommer inn).
   const ae = document.activeElement, keep = ae?.id && root().contains(ae) ? { id: ae.id, s: ae.selectionStart, e: ae.selectionEnd } : null;
-  root().innerHTML = `<div class="m ${th}${fad ? ' p23-fad' : ''}${rv ? ' p24-rvm' : ''}${fsx ? ' p27-fs' : ''}${pp ? ` papir ${m.light ? 'pl' : 'pd'}${hero ? ' ph' : ''}${fabStyle() === 'float' ? ' flyt' : ''}` : ''}${scr === 'nyheter' ? ' news' : ''}${scr === 'vaer' ? ' vaer' : ''}${scr === 'mer' ? ' p28-mer' : ''}${scr === 'bibel' ? ' p39-bib' : ''}${scr === 'nordlys' ? ' n31-pg' : ''}${scr === 'aictl' ? ' p34-aipg' : ''}${scr === 'brief' ? ' p34-brpg' : ''}${scr === 'glimt' ? ' p35-glpg' : ''}${pp && scr === 'set' ? ' p32-nonav' : ''}${wide ? ' two' : ''}${twoPane ? '' : ' full'}${dom ? ' dom' : ''}${scr === 'mat' ? ` matp ${matDark() ? 'mdark' : 'mlight'}` : ''}${th === 'and' && pref('pageColors') !== 'per' ? ' same' : ''}${scr === 'hl' ? ' hlp' : ''}${fold41 ? ' p41-fold' : ''}${scr === 'bd' ? ' p41-bdpg' : ''}${bt ? ' backtop' : ''}${n.none && !pp ? ' nobar' : ''}${m.light ? ' light' : ''}${th === 'ios' && !iosBg() ? ' nobg' : ''}${m.blur ? ' blurred' : ''}">${th === 'ios' && iosBg() ? '<div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>' : ''}
+  root().innerHTML = `<div class="m ${th}${fad ? ' p23-fad' : ''}${rv ? ' p24-rvm' : ''}${fsx ? ' p27-fs' : ''}${pp ? ` papir ${m.light ? 'pl' : 'pd'}${hero ? ' ph' : ''}${fabStyle() === 'float' ? ' flyt' : ''}` : ''}${scr === 'nyheter' ? ' news' : ''}${scr === 'vaer' ? ' vaer' : ''}${scr === 'mer' ? ' p28-mer' : ''}${scr === 'bibel' ? ' p39-bib' : ''}${scr === 'nordlys' ? ' n31-pg' : ''}${scr === 'aictl' ? ' p34-aipg' : ''}${scr === 'brief' ? ' p34-brpg' : ''}${scr === 'glimt' ? ' p35-glpg' : ''}${pp && scr === 'set' ? ' p32-nonav' : ''}${wide ? ' two' : ''}${twoPane ? '' : ' full'}${dom ? ' dom' : ''}${scr === 'mat' ? ` matp ${matDark() ? 'mdark' : 'mlight'}` : ''}${pref('pageColors') !== 'per' ? ' same' : ''}${scr === 'hl' ? ' hlp' : ''}${fold41 ? ' p41-fold' : ''}${scr === 'bd' ? ' p41-bdpg' : ''}${bt ? ' backtop' : ''}${n.none && !pp ? ' nobar' : ''}${m.light ? ' light' : ''}${m.blur ? ' blurred' : ''}">
     ${hero ? paperHero(scr) : ''}<div class="m-scroll">${bt ? topRow(th) : ''}${pp && (scr === 'fast' || scr === 'sub') && !m.detail && !m.edit ? fbChips(scr) : ''}${main}</div><div class="m-detail">${twoPane ? detail(th) : ''}</div>${nav}
     ${menuSheet(th)}${scanSheet(th)}${pp ? paperScanSheet() + paperFinnSheet() + paperTrkSheet() + newShipSheet() + tabSheet() + P26.sheets26() + P27.sheets27() : ''}${avgSheet()}${pp ? "" : famSheet()}${p17Sheets()}${updSheet()}${p21Sheets(HK)}${P22.p22Sheets()}${pp ? P24.sheets24() : ''}${origOverlay(th)}${pp ? P29.searchLayer() : ''}${P29.sheets29()}${P29.quickLayer()}${pp ? P32.sheets32() : ''}${P31.aiLayer()}${P36.layer36()}${P37.layer37()}${P37B.layer37b(P37B.H2.pk ?? 0)}${P38.layer38()}${P39.layer39()}${P40 ? P40.layer40() : ''}${P41 ? P41.layer41() : ''}${P42 ? P42.layer42() : ''}${P43 ? P43.layer43() + (P43.media()?.layer43m() ?? '') : ''}${P44 ? P44.layer44() : ''}${P45 ? P45.layer45() : ''}${P46 ? P46.layer46() : ''}${P31.bannerHtml()}${P30.sysBottom()}${P30.sheets30()}<div class="p30-edge" aria-hidden="true"></div>${m.toast ? P31.hintToast(m.toast) ?? `<div class="m-toast" role="status">${esc(m.toast)}</div>` : ''}
     <input class="m-file" id="m-capture" type="file" accept="image/*" capture="environment" data-mupload data-confirm></div>`;
   if (keep) { const el = document.getElementById(keep.id); if (el) { el.focus({ preventScroll: true }); try { el.setSelectionRange(keep.s, keep.e); } catch {} } }
-  document.querySelector('meta[name=theme-color]')?.setAttribute('content', pp ? (m.light ? '#f3efe6' : '#14130f') : th === 'ios' ? '#07070A' : getComputedStyle(root().firstElementChild).backgroundColor || '#19120E');
+  document.querySelector('meta[name=theme-color]')?.setAttribute('content', pp ? (m.light ? '#f3efe6' : '#14130f') : getComputedStyle(root().firstElementChild).backgroundColor || '#19120E');
   hlAfterDraw(); pageAfterDraw(); if (scr === 'dom') modAfterDraw(th); if (scr === 'fam') { if (pp) P22.famAfterDraw22(); else famAfterDraw(); } wxAfterDraw(); P22.afterDraw(scr, pp);
   if (fad) P23.finnAdAfterDraw();
   listAfterDraw(); P23.kvAfterDraw(); // Finans → Liste og Kvitteringer: resten av radene i porsjoner
