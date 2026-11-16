@@ -49,6 +49,8 @@ data class Kal26Ev(
     /** Prompt 27: kalenderen fra serveren (timeplan | prover | skole | privat | familie | bursdager), om den kan endres (Google Privat/Familie),
      *  gjentakelse (none | daily | weekly | monthly) og varselet lagret i Google. */
     val calendar: String = "", val editable: Boolean = false, val repeat: String? = null, val remind: String? = null, val googleId: String? = null,
+    /** Dager til prøven eller fristen fra serveren (daysLeft i /api/kalender, Oslo-datoen). null for andre hendelser. Lagres ikke i toJson. */
+    val daysLeft: Int? = null,
 ) {
     val sMin: Int? get() = start?.let { it.hour * 60 + it.minute }
     val eMin: Int? get() = end?.let { it.hour * 60 + it.minute }
@@ -196,7 +198,7 @@ fun parseKal26(o: JSONObject, subjects: Map<String, Long> = emptyMap()): Kal26Ev
         o.optStr("id") ?: "${st.first}|${start ?: "all"}|$title", title, o.optStr("short") ?: "", subject, o.optStr("room") ?: o.optStr("location"),
         o.optStr("teacher"), o.optStr("note") ?: o.optStr("description"), st.first, endDate, start, end, allDay, type, color, source, o.optStr("url"), o.optStr("mazemap"),
         calendar = cal, editable = o.optBoolean("editable", false), repeat = rep, remind = o.optStr("reminder")?.takeIf { v -> KAL_REMS.any { it.first == v } },
-        googleId = o.optStr("googleId"),
+        googleId = o.optStr("googleId"), daysLeft = o.optIntOrNull("daysLeft"),
     )
 }
 
@@ -278,7 +280,8 @@ fun kalWidget(evs: List<Kal26Ev>, now: LocalDateTime, own: Map<String, Long> = e
     fun row(e: Kal26Ev) = KalWRow(e.id, e.sText, "${e.sText}–${e.eText}", e.title, kalShort(e),
         listOfNotNull(e.room?.takeIf { it.isNotBlank() }, e.teacher?.takeIf { it.isNotBlank() }).joinToString(" · "), e.room.orEmpty(), kalColor(e, own), isT && e.eMin!! <= nm)
     val n3 = wl.drop(ix + 1).take(3).map(::row).ifEmpty { wl.take(3).map(::row) }
-    val ex = kalExams(evs, today).take(2).map { x -> val dd = kalDaysTo(x.date, today); KalWEx(x.id, x.title, kalIn(dd), dd <= 7) }
+    // Nedtellingen er serverens (daysLeft); kalDaysTo bare for hendelser uten den (den kompakte /widgets/calendar).
+    val ex = kalExams(evs, today).take(2).map { x -> val dd = x.daysLeft ?: kalDaysTo(x.date, today); KalWEx(x.id, x.title, kalIn(dd), dd <= 7) }
     return KalW(
         k = when { nx == null -> "FRI"; cur != null -> "NÅ"; isT -> "NESTE TIME"; else -> dS.uppercase() },
         big = when { nx == null -> "–"; cur != null -> cur.eText; else -> nx.sText },

@@ -27,6 +27,8 @@ data class KEv(
     val ab: KAb42? = null,
     /** Prompt 44: Media-status, deltakere, gjentakelse og etag (OktOgHendelser.kt). null for de fleste. */
     val x44: KX44? = null,
+    /** Dager til prøven eller fristen fra serveren (daysLeft i /api/kalender, Oslo-datoen). Bare i ferske svar; lagres ikke i cachen. */
+    val daysLeft: Int? = null,
 ) {
     val all: Boolean get() = s == null
     val key: String get() = d.toString()
@@ -246,7 +248,7 @@ fun parseServerEvent(o: JSONObject, cals: Map<String, KCal>): KEv? {
         editable = editable && ab == null && x44?.media != true, color = hexIn(o.str("calendarColor", "color")), note = note44,
         subjectHex = hexIn(o.optStrOrNull("subjectColor")), address = o.optStrOrNull("address"),
         lat = geo?.first ?: o.optJSONObject("geo")?.let { g -> g.opt("lat") as? Double }, lon = geo?.second ?: o.optJSONObject("geo")?.let { g -> g.opt("lon") as? Double },
-        ab = ab, x44 = x44,
+        ab = ab, x44 = x44, daysLeft = o.optIntOrNull("daysLeft"),
     )
 }
 

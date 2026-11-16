@@ -243,3 +243,19 @@ test('P85 L: forrige brukers Familie-områder fjernes ved bytte av bruker eller 
   const scope = vm.slice(vm.indexOf('private fun scopeToAccount()'));
   assert.match(scope, /FamilyPrefs\.useAccount\(ctx, id\) \}\s*\n\s*runCatching \{ Geofence50\.useAccount\(ctx, id\) \}/);
 });
+
+test('Logikk på serveren: nedtellingen til prøver og frister er serverens daysLeft (Homelab-appen og Kalender-appen)', () => {
+  const kal = strip(raw(join(APP, 'Kalender.kt')));
+  assert.match(kal, /val daysLeft: Int\? = null,\s*\) \{/);
+  assert.match(kal, /daysLeft = o\.optIntOrNull\("daysLeft"\)/);
+  assert.match(kal, /val dd = x\.daysLeft \?: kalDaysTo\(x\.date, today\)/, 'widgetene og Hjem-kortet');
+  // Ikke i cachen: en lagret nedtelling ville vært feil neste dag.
+  const toJson = kal.slice(kal.indexOf('fun toJson(): JSONObject'), kal.indexOf('fun parseKal26('));
+  assert.doesNotMatch(toJson, /daysLeft/);
+  assert.match(strip(raw(join(APP, 'domene/Kalender.kt'))), /val days: Long = \(e\.daysLeft \?: kalDaysTo\(e\.date, today\)\)\.toLong\(\)/, 'Glimt-svaret om neste prøve');
+  const km = strip(raw(join(KAL, 'KalModel.kt')));
+  assert.match(km, /ab = ab, x44 = x44, daysLeft = o\.optIntOrNull\("daysLeft"\),/);
+  assert.doesNotMatch(km.slice(km.indexOf('fun toJson(): JSONObject'), km.indexOf('companion object')), /daysLeft/);
+  assert.match(strip(raw(join(KAL, 'FagOgSted.kt'))), /val days = m\.daysLeft \?: daysBetween\(T, m\.d\)/);
+  assert.match(strip(raw(join(KAL, 'KalAsk.kt'))), /val days = m\.daysLeft \?: daysBetween\(T, m\.d\)/);
+});

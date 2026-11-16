@@ -208,7 +208,8 @@ object School37 {
         val noun = if (examQ && exams.isNotEmpty()) "eksamen" else "prøve"
         if (l.isNotEmpty()) {
             val m = l[0]
-            val days = daysBetween(T, m.d)
+            // Serverens nedtelling (daysLeft); regnes bare her når hendelsen kommer fra cachen uten nett.
+            val days = m.daysLeft ?: daysBetween(T, m.d)
             val sb = StringBuilder("Neste " + noun + (if (school) " på skolen" else "") + " er " + what(m.t) + " " + rel(m.d))
             if (!m.all) sb.append(" kl. ").append(hm(m.s ?: 0))
             m.loc?.let { sb.append(", ").append(it) }

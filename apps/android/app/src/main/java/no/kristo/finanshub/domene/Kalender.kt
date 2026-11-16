@@ -161,7 +161,7 @@ fun kalLocalAnswer32b(q: String, evs: List<Kal26Ev>, today: LocalDate, hidden: S
     if (Regex("prøve|eksamen|frist|innlevering").containsMatchIn(n) && Regex("neste|når|hvilke|alle|kommende").containsMatchIn(n)) {
         val l = evs.filter { it.isExam && !it.date.isBefore(today) && it.cat !in hidden }.sortedWith(compareBy<Kal26Ev> { it.date }.thenBy { it.sMin ?: -1 })
         val e = l.firstOrNull() ?: return "Du har ingen kommende prøver eller frister i kalenderen." to emptyList()
-        val days = ChronoUnit.DAYS.between(today, e.date)
+        val days: Long = (e.daysLeft ?: kalDaysTo(e.date, today)).toLong() // serverens nedtelling (daysLeft)
         val rest = l.size - 1
         return "Neste er **${e.title}** ${kalLong(e.date)}${e.start?.let { " kl. " + kalHm(it) } ?: ""} (${if (days == 0L) "i dag" else if (days == 1L) "i morgen" else "om $days dager"})." +
             (if (rest > 0) " Etter den kommer $rest til." else "") to l.take(6)
