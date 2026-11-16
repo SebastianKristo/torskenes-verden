@@ -50,6 +50,8 @@ MOCK_DATA=1 npm run dev     # http://localhost:3000, eksempeldata, starter på n
 npm test                    # node --test "test/**/*.test.js"
 ```
 
+`npm test` laster `test/lib/no-net.mjs` (ingen nett) og `test/lib/midlertidig.mjs`. Den siste gir hver testprosess en egen mappe i TMPDIR og sletter den når prosessen avslutter, så kjøringen ikke etterlater noe i `/tmp`. Bruk `lagMidlertidig(prefiks)` derfra i nye tester. `HL_TEST_BEHOLD_TMP=1` lar mappene bli liggende for feilsøking.
+
 `MOCK_DATA=1` gir eksempeldata for alle integrasjoner, laster demo-økonomi i en tom database, og legger inn tre eksempeldomener. Alt fungerer uten nett.
 
 ## Mappestruktur
