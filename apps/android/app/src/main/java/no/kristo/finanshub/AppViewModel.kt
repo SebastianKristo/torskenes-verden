@@ -30,10 +30,14 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelStore
 import no.kristo.finanshub.repository.DomenerRepository
 import no.kristo.finanshub.repository.NyheterRepository
+import no.kristo.finanshub.repository.NySending
+import no.kristo.finanshub.repository.SporingRepository
 import no.kristo.finanshub.skjerm.DomenerTilstand
 import no.kristo.finanshub.skjerm.DomenerViewModel
 import no.kristo.finanshub.skjerm.NyheterTilstand
 import no.kristo.finanshub.skjerm.NyheterViewModel
+import no.kristo.finanshub.skjerm.SporingTilstand
+import no.kristo.finanshub.skjerm.SporingViewModel
 import androidx.savedstate.SavedStateRegistry
 import android.os.Bundle
 import androidx.lifecycle.viewModelScope
@@ -120,6 +124,16 @@ class AppViewModel(app: Application, private val lagret: SavedStateHandle) : And
     /** Speil av NyheterViewModel.tilstand, som for Domener: skjermer som leser vm.news osv. tegnes på nytt. */
     private var nyheterSpeil by mutableStateOf<NyheterTilstand?>(null)
     private fun nyheterNa(): NyheterTilstand = nyheterSpeil.let { nyheter.tilstand.value }
+
+    /** Sporing (skjerm/SporingViewModel.kt), mot /api/tracking via SporingRepository. */
+    val sporing: SporingViewModel = ViewModelProvider(
+        skjermer,
+        SporingViewModel.fabrikk(SporingRepository { api }, { visFeil(it) }),
+    )[SporingViewModel::class.java]
+
+    /** Speil av SporingViewModel.tilstand, som for Domener: skjermer som leser vm.tracking osv. tegnes på nytt. */
+    private var sporingSpeil by mutableStateOf<SporingTilstand?>(null)
+    private fun sporingNa(): SporingTilstand = sporingSpeil.let { sporing.tilstand.value }
 
     /* ---------- Kontoer ---------- */
 
@@ -253,7 +267,10 @@ class AppViewModel(app: Application, private val lagret: SavedStateHandle) : And
 
     /* ---------- Sporing, vær, aksjer og abonnement (prompt 11) ---------- */
 
-    var tracking by mutableStateOf<TrackingData?>(null)
+    /** Sendingene: tilstanden ligger i SporingViewModel (skjerm/SporingViewModel.kt). */
+    var tracking: TrackingData?
+        get() = sporingNa().data
+        set(v) { sporing.settData(v) }
     /** De 2 viktigste pakkene på Homelab-hjem. */
     var homePackages by mutableStateOf<List<Shipment>?>(null)
     /** Åpen sending (kortet er utvidet med tidslinjen). */
@@ -517,7 +534,7 @@ class AppViewModel(app: Application, private val lagret: SavedStateHandle) : And
         logos.clear()
         // Prompt 21 (brukerskille): alt som tilhører brukeren tømmes ved kontobytte og utlogging.
         tasks = null; taskNext = emptyList(); tasksOpen = false; family = null; famTrack = emptyList(); famSel = null; familyOpen = false
-        famPositions = null; tracking = null; homePackages = null; myStops = emptyList(); stopDeps = emptyMap(); stopSel = null; ruterOpen = false
+        famPositions = null; sporing.nullstill(); homePackages = null; myStops = emptyList(); stopDeps = emptyMap(); stopSel = null; ruterOpen = false
         photoThumbs = emptyMap(); photoFailed = emptySet(); bgInfo = null; depOpen = null; shareListId = null; taskUsers = emptyList()
         kal26.open = false; kal26.events = null; kal26.loadedFor = null; kal26.layoutFor = null
         chat27.open = false; chat27.loadedFor = null
@@ -1565,17 +1582,17 @@ class AppViewModel(app: Application, private val lagret: SavedStateHandle) : And
 
     /* ---------- Sporing ---------- */
 
+    /* Dataene og kallene ligger i SporingViewModel; her står videresendingene, lokale varsler og valgt sending/filter. */
+
     suspend fun loadTracking() {
-        val t = parseTracking(api.hlGet("/tracking"))
-        tracking = t
+        val t: TrackingData = sporing.last()
         notifyTracking(t)
     }
 
     /** Henter status i bakgrunnen (forsiden, og hvert 5. minutt mens appen er åpen). Feil vises ikke. */
     suspend fun pollTracking() {
         if (!loggedIn || locked) return
-        val t = runCatching { parseTracking(api.hlGet("/tracking", timeout = 15_000)) }.getOrNull() ?: return
-        tracking = t
+        val t: TrackingData = sporing.hentStille() ?: return
         homePackages = t.top(2)
         notifyTracking(t)
     }
@@ -1592,32 +1609,17 @@ class AppViewModel(app: Application, private val lagret: SavedStateHandle) : And
     fun addTracking(no: String, name: String, carrier: String?, out: Boolean) = launch {
         val n = no.trim()
         if (n.isEmpty()) { flash("Skriv inn et sporingsnummer"); return@launch }
-        val body = JSONObject().put("trackingNo", n).put("direction", if (out) "out" else "in")
-        if (name.isNotBlank()) body.put("name", name.trim())
-        if (carrier != null && carrier != "other") body.put("carrier", carrier)
-        val o = JSONObject(api.request("POST", "/tracking", body, prefix = Api.HOMELAB, timeout = 30_000))
-        o.optJSONObject("item")?.let { trkSel = parseShipment(it).id }
+        val ny: NySending = sporing.leggTil(n, name.trim().takeIf { it.isNotEmpty() }, carrier?.takeIf { it != "other" }, out)
+        ny.id?.let { trkSel = it }
         loadTracking()
         trkFilter = if (out) "out" else "active"
-        flash(o.optStr("message") ?: "Sendingen spores")
+        flash(ny.melding ?: "Sendingen spores")
     }
 
-    fun setTrackingPref(k: String, on: Boolean) {
-        tracking = tracking?.let { it.copy(prefs = it.prefs + (k to on)) }
-        launch { api.hlPut("/tracking/prefs", JSONObject().put(k, on)) }
-    }
+    fun setTrackingPref(k: String, on: Boolean) { sporing.settVarsel(k, on) }
 
-    /** k: finn | email */
-    fun setTrackingSource(k: String, on: Boolean) {
-        tracking = tracking?.let {
-            when (k) {
-                "finn" -> it.copy(finn = it.finn.copy(on = on))
-                "autoArchive" -> it.copy(autoArchive = it.autoArchive.copy(on = on))
-                else -> it.copy(email = it.email.copy(on = on))
-            }
-        }
-        launch { api.hlPut("/tracking/sources", JSONObject().put(k, on)) }
-    }
+    /** k: finn | email | autoArchive */
+    fun setTrackingSource(k: String, on: Boolean) { sporing.settKilde(k, on) }
 
     /** Lokale varsler for nye hendelser (serverens varselliste, ellers statusendringer til «Klar for henting» og «Levert»).
      *  Første gang huskes bare det som finnes, så det ikke kommer en bølge av gamle varsler. */
@@ -3527,7 +3529,7 @@ class AppViewModel(app: Application, private val lagret: SavedStateHandle) : And
     fun trkBulk(action: String) = launch {
         val ids = trkPicked.toList()
         if (ids.isEmpty()) return@launch
-        api.hlPost("/tracking/bulk", JSONObject().put("ids", JSONArray(ids)).put("action", action))
+        sporing.masse(ids, action)
         trkPickDone()
         loadTracking()
         flash(when (action) {
@@ -3575,7 +3577,7 @@ class AppViewModel(app: Application, private val lagret: SavedStateHandle) : And
         viewModelScope.launch {
             try {
                 // Sporing: be serveren sjekke status hos fraktselskapene først (prompt 22). Eldre server (404): bare last på nytt.
-                if (screen == Screen.Tracking) runCatching { api.request("POST", "/tracking/refresh", JSONObject(), prefix = Api.HOMELAB, timeout = 30_000) }
+                if (screen == Screen.Tracking) runCatching { sporing.sjekkHosFrakt() }
                 runCatching { loadFor(screen) }
                 if (screen == Screen.Homelab) { runCatching { loadHome() }; loadHomeExtras() }
                 if (tasksOpen) loadTasksNow()
@@ -3620,11 +3622,8 @@ class AppViewModel(app: Application, private val lagret: SavedStateHandle) : And
     fun stopRealtime() = realtime.stop()
 
     // Sporing → Arkiv: arkiverte sendinger hentes for seg (GET /api/tracking?archived=1).
-    var trkArchived by mutableStateOf<List<Shipment>?>(null)
-        private set
-    fun loadArchived() = viewModelScope.launch {
-        trkArchived = runCatching { parseTracking(api.hlGet("/tracking?archived=1", timeout = 15_000)).items.filter { it.archived } }.getOrNull() ?: trkArchived
-    }
+    val trkArchived: List<Shipment>? get() = sporingNa().arkiv
+    fun loadArchived() = sporing.lastArkiv()
 
     /** «Spill av lyd» på en annens telefon: serveren sender meldingen videre via sanntid når appen er åpen der. */
     fun famPing(userId: String, name: String) = launch {
@@ -3988,6 +3987,7 @@ class AppViewModel(app: Application, private val lagret: SavedStateHandle) : And
         // Skjermenes ViewModel-er: speilet holder Compose-lesere av de gamle feltene oppdatert.
         viewModelScope.launch { domener.tilstand.collect { domenerSpeil = it } }
         viewModelScope.launch { nyheter.tilstand.collect { nyheterSpeil = it } }
+        viewModelScope.launch { sporing.tilstand.collect { sporingSpeil = it } }
         // P85 F: siden og søket fra før prosessdød (lastes av refresh), og lagringen til neste gang.
         runCatching { gjenopprettNavigasjon() }
         lagret.setSavedStateProvider(NAV_LAGRET, object : SavedStateRegistry.SavedStateProvider {

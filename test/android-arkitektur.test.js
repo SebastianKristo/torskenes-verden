@@ -163,3 +163,26 @@ test('Struktur: Nyheter har egen ViewModel med StateFlow og repository; AppViewM
   // Om siden er åpen, er navigasjon og blir i AppViewModel (tilbakestabelen prøvekjører den i et snapshot).
   assert.match(vm, /var newsOpen by mutableStateOf\(false\)/);
 });
+
+test('Struktur: Sporing har egen ViewModel med StateFlow og repository; AppViewModel sender bare videre', () => {
+  const svm = strip(raw(join(APP, 'skjerm/SporingViewModel.kt')));
+  assert.match(svm, /class SporingViewModel\([\s\S]*?\) : ViewModel\(\)/);
+  assert.match(svm, /val tilstand: StateFlow<SporingTilstand> = _tilstand\.asStateFlow\(\)/);
+  assert.doesNotMatch(svm, /JSONObject\(|JSONArray\(|hlGet\(|hlPost\(|parseTracking\(/, 'ingen nett eller JSON i ViewModel-en');
+  // Varselvalg og kilder vises med en gang og lagres så på serveren (som før).
+  assert.match(svm, /fun settVarsel\(navn: String, verdi: Boolean\): Job \{\s*_tilstand\.update[\s\S]{0,200}return start \{ repo\.settVarsel\(navn, verdi\) \}/);
+  const repo = strip(raw(join(APP, 'repository/SporingRepository.kt')));
+  assert.match(repo, /withContext\(Dispatchers\.Default\) \{ parseTracking\(raw\) \}/, 'JSON tolkes utenfor Main');
+  for (const sti of ['"/tracking"', '"/tracking?archived=1"', '"/tracking/prefs"', '"/tracking/sources"', '"/tracking/bulk"', '"/tracking/refresh"']) assert.ok(repo.includes(sti), sti);
+  const vm = strip(raw(join(APP, 'AppViewModel.kt')));
+  assert.doesNotMatch(vm, /var tracking by mutableStateOf|var trkArchived by mutableStateOf/);
+  assert.doesNotMatch(vm, /"\/tracking/, 'Sporing-kallene går via SporingRepository');
+  assert.match(vm, /var tracking: TrackingData\?\s*get\(\) = sporingNa\(\)\.data\s*set\(v\) \{ sporing\.settData\(v\) \}/);
+  assert.match(vm, /suspend fun loadTracking\(\) \{\s*val t: TrackingData = sporing\.last\(\)\s*notifyTracking\(t\)/, 'lokale varsler som før');
+  assert.match(vm, /val t: TrackingData = sporing\.hentStille\(\) \?: return\s*homePackages = t\.top\(2\)/);
+  assert.match(vm, /sporing\.tilstand\.collect \{ sporingSpeil = it \}/);
+  assert.match(vm, /famPositions = null; sporing\.nullstill\(\); homePackages = null/, 'utlogging tømmer Sporing (også arkivet)');
+  // Valgt sending og filter er navigasjon og blir i AppViewModel.
+  assert.match(vm, /var trkSel by mutableStateOf<String\?>\(null\)/);
+  assert.match(vm, /var trkFilter by mutableStateOf\("active"\)/);
+});
