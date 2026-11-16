@@ -401,7 +401,9 @@ test('rapporten har ikke kvitteringstekst (hviteliste per kjøring, og --dry-kj�
   assert.ok(md.includes('| V · LFM3-VL-2B (ingen OCR) |'));
   for (const fx of readdirSync(join(import.meta.dirname, '..', 'eval', 'fixtures', 'receipts72')).filter((f) => f.endsWith('.json'))) {
     const fj = JSON.parse(readFileSync(join(import.meta.dirname, '..', 'eval', 'fixtures', 'receipts72', fx), 'utf8'));
-    const needles = [fj.butikk, fj.avdeling, fj.adresse, fj.dato, fx.replace('.json', ''), String(fj.total).replace('.', ','), fj.total.toFixed(2), ...fj.linjer.map((l) => l.navn)];
+    // Beløpet sjekkes med to desimaler (komma og punktum). Et helt tall alene («146») kan finnes tilfeldig i rapporten
+    // (tider i ms, antall), så det ga en ustabil test uten å si noe om lekkasje.
+    const needles = [fj.butikk, fj.avdeling, fj.adresse, fj.dato, fx.replace('.json', ''), fj.total.toFixed(2).replace('.', ','), fj.total.toFixed(2), ...fj.linjer.map((l) => l.navn)];
     for (const n of needles) { assert.ok(!md.includes(n), `rapporten har «${n}»`); assert.ok(!js.includes(n), `JSON-fila har «${n}»`); }
   }
 });

@@ -720,7 +720,7 @@ api.post('/search/ask', authOrToken, async (c) => {
   const schema = { type: 'OBJECT', properties: { answer: { type: 'STRING' }, followUps: { type: 'ARRAY', items: { type: 'STRING' } }, searchQuery: { type: 'STRING' } }, required: ['answer'] };
   const prompt = 'Svar kort og presist på norsk bokmål (maks 5 setninger) på spørsmålet under. Er du usikker, si det. Ikke finn på tall, priser eller åpningstider du ikke vet.\n'
     + 'Foreslå opptil 3 oppfølgingsspørsmål og et godt Google-søk for å lese mer. Returner JSON.\n'
-    + `Dato i dag: ${new Date().toLocaleDateString('nb-NO')}.\nSpørsmål: «${q}»`;
+    + `Dato i dag: ${new Date().toLocaleDateString('nb-NO', { timeZone: 'Europe/Oslo' })}.\nSpørsmål: «${q}»`;
   try {
     const { provider, data } = MOCK
       ? { provider: 'Eksempel', data: { answer: `Dette er et eksempelsvar på «${q}». Med ekte AI-motor svarer Ollama eller Gemini her.`, followUps: [`${q} i Oslo`, `${q} pris`], searchQuery: q } }
