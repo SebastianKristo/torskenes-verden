@@ -164,7 +164,7 @@ fun tidy67(t: String): String {
     return t.substring(0, i) + t.substring(i + 2)
 }
 
-private val SRC67 = mapOf("calendar" to "Kalender", "tasks" to "Huskeliste", "finance" to "Finans", "weather" to "Vær", "ruter" to "Avganger",
+private val SRC67 = mapOf("calendar" to "Kalender", "tasks" to "Gjøremål", "finance" to "Økonomi", "weather" to "Vær", "ruter" to "Reise",
     "family" to "Familie", "media" to "Media", "study" to "Studie")
 private val WD67 = listOf("MAN", "TIR", "ONS", "TOR", "FRE", "LØR", "SØN")
 private val WDL67 = listOf("Mandag", "Tirsdag", "Onsdag", "Torsdag", "Fredag", "Lørdag", "Søndag")

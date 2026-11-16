@@ -172,7 +172,14 @@ fun AppViewModel.b24TestIntegration(i: Integ24) {
 
 /** Kategoriene i listen, i rekkefølge (som på web). */
 // Prompt 43: MEDIA-gruppen (Sonarr, Radarr, qBittorrent, Prowlarr, Jellyfin, Plex) etter Smarthjem.
-val INTEG26_CATS = listOf("Smarthjem", "Media", "Transport og pakker", "Økonomi", "AI", "Informasjon", "Annet")
+/**
+ * Gruppene i Tilkoblinger → Integrasjoner, i fast rekkefølge (Fase 6, E-ia O8). De kommer fra shared/schemas/tilkoblinger.json
+ * (bygd inn i :felles), og serveren sender samme gruppenavn som category, så gruppene er like på web, iOS og Android.
+ */
+val TILKOBLINGER: no.kristo.felles.moduler.Tilkoblinger =
+    no.kristo.felles.moduler.Tilkoblinger.innebygd() ?: no.kristo.felles.moduler.Tilkoblinger(listOf(no.kristo.felles.moduler.Tilkoblinger.GENERELT), emptyMap())
+
+val INTEG26_CATS: List<String> = TILKOBLINGER.grupper
 
 data class IntegMeta26(val category: String, val badge: String, val color: Long, val description: String, val guide: List<Pair<String, String>> = emptyList())
 
@@ -279,11 +286,9 @@ private fun color26(s: String?): Long? = s?.trim()?.removePrefix("#")?.let { h -
 /** Metadata for en integrasjon: serverens verdier, ellers reservene over. */
 fun integMeta26(i: Integ24): IntegMeta26 {
     val d = INTEG26_META[i.id] ?: INTEG26_META[if (i.id == "qbit") "qbittorrent" else ""] // prompt 43: qbit = qbittorrent
-    // Prompt 43: Media-tjenestene står alltid i MEDIA (serveren sender fortsatt «Annet» som kategori, men group «Media»).
-    val cat = (if (i.group == "Media" || i.id in setOf("sonarr", "radarr", "qbittorrent", "qbit", "prowlarr", "jellyfin", "plex")) "Media" else null)
-        ?: i.category?.takeIf { it in INTEG26_CATS } ?: d?.category ?: when (i.group) {
-        "Hjem" -> "Smarthjem"; "Media", "MEDIA" -> "Media"; "Sporing", "Reise" -> "Transport og pakker"; "Finans" -> "Økonomi"; "AI" -> "AI"; "Generelt", "Nettverk", "Skole" -> "Informasjon"; else -> "Annet"
-    }
+    // Fase 6: gruppen er serverens category når den er en av gruppene i tilkoblinger.json, ellers gruppen for id-en derfra
+    // (eldre servere sendte egne grupper). qbit er qbittorrent (prompt 43).
+    val cat = TILKOBLINGER.gruppe(if (i.id == "qbit") "qbittorrent" else i.id, i.category ?: i.group)
     return IntegMeta26(
         cat, i.badge ?: d?.badge ?: i.name.take(2).uppercase(), color26(i.color) ?: d?.color ?: 0xFF5B6478,
         i.description ?: d?.description ?: i.fields.joinToString(", ") { it.label }.take(60),

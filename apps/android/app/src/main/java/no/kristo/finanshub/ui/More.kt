@@ -136,7 +136,7 @@ internal fun MoreScreen(vm: AppViewModel) {
     )
     Page {
         item { ModuleHeader(vm, "Mer") }
-        item { SubText("Alt fra FinansHub på nettsiden") }
+        item { SubText("Alt fra Økonomi på nettsiden") }
         tiles.chunked(2).forEach { row ->
             item(key = row.first().screen.name) {
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {

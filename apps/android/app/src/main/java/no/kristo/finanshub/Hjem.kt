@@ -339,7 +339,7 @@ fun parseLayout15(s: String): Layout15 {
             pages[k] = PageLay(v.optJSONArray("order").strings(), (v.optJSONArray("hidden") ?: v.optJSONArray("hid")).strings(), parseSz70(v.optJSONObject("sz")))
         }
     }
-    return Layout15(pages, o.optJSONArray("finTabs").strings().filter { k -> FIN_TABS.any { it.first == k } }.distinct().take(5),
+    return Layout15(pages, normFinTabs(o.optJSONArray("finTabs").strings()),
         o.optStr("fourthTab")?.takeIf { it in setOf("auto", "domener", "sporing") }, o.optStr("fab")?.takeIf { it == "float" || it == "inline" })
 }
 

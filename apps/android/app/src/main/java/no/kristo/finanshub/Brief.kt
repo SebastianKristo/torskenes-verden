@@ -620,7 +620,7 @@ object B73 {
     /** [key, tittel, kilde, på] – samme som server/glimt/brief-content.js CATALOG73 (reserve uten server). */
     val CATALOG = listOf(
         Item73("vaer", "Vær", "Nå, i dag og varsel", true), Item73("kal", "Kalender", "Første avtale og resten av dagen", true),
-        Item73("fokus", "Dagens fokus", "Det viktigste i dag, valgt av Glimt", true), Item73("gjore", "Huskeliste · 3 viktigste", "Fra Gjøremål", true),
+        Item73("fokus", "Dagens fokus", "Det viktigste i dag, valgt av Glimt", true), Item73("gjore", "Gjøremål · 3 viktigste", "Fra Gjøremål", true),
         Item73("reise", "Min reise", "Ruter: neste avgang og når du må gå", true), Item73("regn", "Regninger denne uka", "Fra Finans", true),
         Item73("kveld", "Nytt i kveld", "Nye episoder og filmer fra Media", true), Item73("nyheter", "Nyheter", "Sammendrag fra Nyheter", true),
         Item73("pakker", "Pakker", "Sporing på vei", false), Item73("homelab", "Homelab-status", "Varsler fra serveren", false),

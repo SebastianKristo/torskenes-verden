@@ -107,6 +107,8 @@ object Skjold76 {
     var low by mutableStateOf(false)
     var filterCab by mutableStateOf<String?>(null)
     var cats by mutableStateOf<List<SkjCat76>>(emptyList())
+    /** Standardlisten over kategorier fra serveren (GET /categories → standard, server/skjold/kategorier.js). Ingen egen liste i appen. */
+    var standardCats by mutableStateOf<List<String>>(emptyList())
     var cabinets by mutableStateOf<List<SkjCab76>>(emptyList())
     var cabId by mutableStateOf<String?>(null)
     var maps by mutableStateOf<Map<String, SkjMap76>>(emptyMap())
@@ -291,6 +293,20 @@ internal fun parseCats76(raw: String): List<SkjCat76> {
     return objs34(arr).mapNotNull { c -> c.s43("name", "category")?.let { SkjCat76(it, c.i76("count", "n") ?: 0) } }
 }
 
+/** Fase 6: standardkategoriene i GET /categories (feltet standard). Tom liste fra eldre servere. */
+internal fun parseStandardCats(raw: String): List<String> {
+    val t = raw.trimStart()
+    if (!t.startsWith("{")) return emptyList()
+    val a = JSONObject(t).optJSONArray("standard") ?: return emptyList()
+    return (0 until a.length()).mapNotNull { i -> a.optString(i).takeIf { it.isNotBlank() } }
+}
+
+/** Kategoriene å velge mellom i skjemaet: brukerens egne først, så standardkategoriene som ikke finnes fra før. */
+internal fun catChoices(own: List<String>, standard: List<String>): List<String> {
+    val seen = own.map { it.lowercase() }.toMutableSet()
+    return own + standard.filter { seen.add(it.lowercase()) }
+}
+
 /** Liste fra et svar som er en matrise eller {items|<key>: […]}. */
 internal fun arr76(raw: String, key: String = "items"): JSONArray {
     val t = raw.trimStart()
@@ -441,7 +457,7 @@ fun AppViewModel.loadSkjold76() = launch46 {
         s.cabinets = objs34(arr).mapNotNull { parseCab76(it) }
         if (s.cabId == null || s.cabinets.none { it.id == s.cabId }) s.cabId = s.cabinets.firstOrNull()?.id
         s.cabId?.let { loadMap76(it) }
-        runCatching { s.cats = parseCats76(get76("/categories")) }
+        runCatching { val raw = get76("/categories"); s.cats = parseCats76(raw); s.standardCats = parseStandardCats(raw) }
         loadAiSettings77() // prompt 77
         loadAllLeds78() // prompt 78: LED-oppsett per skap + innstillingene
         searchSkjold76(now = true)

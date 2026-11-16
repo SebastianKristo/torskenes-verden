@@ -630,7 +630,7 @@ private fun AppViewModel.putSch67(body: JSONObject, ok: String) {
 val ENT67_TYPES = listOf("person", "place", "store", "subscription", "event")
 val ENT67_LABELS = mapOf("person" to "Personer", "place" to "Steder", "store" to "Butikker", "subscription" to "Abonnementer", "event" to "Faste hendelser")
 val ENT67_ONE = mapOf("person" to "Person", "place" to "Sted", "store" to "Butikk", "subscription" to "Abonnement", "event" to "Fast hendelse")
-private val ENT67_WHERE = mapOf("family" to "Familie → Steder", "subscriptions" to "Subscription OS", "weather" to "Vær", "profile" to "Profil")
+private val ENT67_WHERE = mapOf("family" to "Familie → Steder", "subscriptions" to "Faste betalinger", "weather" to "Vær", "profile" to "Profil")
 
 data class G67Ent(
     val id: String, val type: String, val name: String, val value: String?, val aliases: List<String>, val builtin: List<String>,

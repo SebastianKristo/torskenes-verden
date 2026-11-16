@@ -957,7 +957,7 @@ private fun parseAsk40(q: String, o: JSONObject): Ask40? {
             c.s37("cycle"), c.s37("next") ?: c.s37("next_date") ?: c.s37("nextDate") ?: c.s37("date"), c.s37("note") ?: c.s37("sub"))
     }
     val act = o.optJSONObject("action")?.let { (it.s37("label") ?: "Åpne ›") to (it.s37("target") ?: "subs") }
-        ?: o.s37("open")?.let { (if (it.contains("sub")) "Åpne Subscription OS ›" else "Åpne ›") to it }
+        ?: o.s37("open")?.let { (if (it.contains("sub")) "Åpne Abonnementer ›" else "Åpne ›") to it }
     return Ask40(q, text, o.s37("source"), kpis.take(3), items.sortedBy { it.next ?: "9999" }, act)
 }
 
@@ -967,7 +967,7 @@ private suspend fun AppViewModel.localAsk40(q: String): Ask40? {
     if (subsX == null) runCatching { loadSubs40() }
     val x = subsX ?: return null
     val act = x.items.filter { it.active }
-    if (act.isEmpty()) return Ask40(q, "Du har ingen aktive abonnementer.", "Subscription OS", emptyList(), emptyList(), "Åpne Subscription OS ›" to "subs")
+    if (act.isEmpty()) return Ask40(q, "Du har ingen aktive abonnementer.", "Abonnementer", emptyList(), emptyList(), "Åpne Abonnementer ›" to "subs")
     val today = LocalDate.now(OSLO40)
     val sorted = act.sortedBy { it.nextCharge ?: it.nextDate.ifBlank { "9999" } }
     val next = sorted.firstOrNull()
@@ -978,7 +978,7 @@ private suspend fun AppViewModel.localAsk40(q: String): Ask40? {
     val kpis = listOf(AskKpi40("PER MÅNED", nok40(monthly), null), AskKpi40("PER ÅR", nok40(monthly * 12), null),
         AskKpi40("NESTE TREKK", nextD?.let { "${it.dayOfMonth}. ${MON40[it.monthValue - 1]}" } ?: "–", next?.let { "${it.name} · ${nok40(it.price)}" }))
     val items = sorted.map { s -> AskItem40("sub", s.id.toString(), s.name, s.domain, s.logoUrl, s.price, s.cycle, (s.nextCharge ?: s.nextDate).takeIf { it.isNotBlank() }?.take(10), s.plan.takeIf { it.isNotBlank() }) }
-    return Ask40(q, text, "Subscription OS", kpis, items, "Åpne Subscription OS ›" to "subs")
+    return Ask40(q, text, "Abonnementer", kpis, items, "Åpne Abonnementer ›" to "subs")
 }
 
 internal val MON40 = listOf("jan", "feb", "mar", "apr", "mai", "jun", "jul", "aug", "sep", "okt", "nov", "des")
@@ -1504,7 +1504,7 @@ fun AppViewModel.saveFinNav26(items: List<FinItem26>, defLabel: (String) -> Stri
     }
 }
 
-/** «Tilbakestill til standard»: Oversikt, Liste, Finn og Søk, uten egne navn. */
+/** «Tilbakestill til standard»: Oversikt, Transaksjoner, Budsjett og Faste betalinger, uten egne navn. */
 fun AppViewModel.resetFinNav26() {
     updatePaperFinTabs(FIN_TABS_DEFAULT)
     saveFinLabels26(emptyMap())

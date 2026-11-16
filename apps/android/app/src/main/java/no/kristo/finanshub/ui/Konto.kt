@@ -595,7 +595,7 @@ private fun TfCodes40(vm: AppViewModel, ctx: Context, final: Boolean) {
         PButton("Lagre / Del", Modifier.weight(1f), kind = "line", height = 44.dp) {
             runCatching {
                 ctx.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain")
-                    .putExtra(Intent.EXTRA_SUBJECT, "Reservekoder · Nordlys OS").putExtra(Intent.EXTRA_TEXT, codes.joinToString("\n")), "Lagre reservekodene").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                    .putExtra(Intent.EXTRA_SUBJECT, "Reservekoder · Homelab").putExtra(Intent.EXTRA_TEXT, codes.joinToString("\n")), "Lagre reservekodene").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
             }
         }
     }

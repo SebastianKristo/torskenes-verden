@@ -89,7 +89,7 @@ enum class WKind(val route: String) {
     /** Navnet under Samsung-widgeten (søkefeltet har ikke navn, som hos Samsung). */
     val label: String? get() = when (this) {
         UI_WEATHER -> "Vær"; UI_CLOCK -> "Klokke"; UI_PACKAGES -> "Pakker"; UI_SCAN -> "Skann"; UI_BUDGET -> "Budsjett"
-        UI_STOCKS -> "Aksjer"; UI_MAT -> "Middag"; UI_FINANCE -> "FinansHub"; UI_DOMAINS -> "Domener"; UI_FINN -> "Finn"
+        UI_STOCKS -> "Aksjer"; UI_MAT -> "Middag"; UI_FINANCE -> "Økonomi"; UI_DOMAINS -> "Domener"; UI_FINN -> "Finn"
         else -> null
     }
 }
@@ -313,7 +313,7 @@ private fun Material(kind: WKind, d: WidgetData, f: Fmt) {
     val size = LocalSize.current
     val wide = size.width >= 220.dp
     val tall = size.height >= 220.dp
-    if (!d.loggedIn) { MEmpty(kind.route, "FinansHub", "Logg inn i appen for å se data her."); return }
+    if (!d.loggedIn) { MEmpty(kind.route, "Homelab", "Logg inn i appen for å se data her."); return }
     when (kind) {
         WKind.WEATHER -> {
             val w = d.weather ?: return MEmpty(kind.route, "Vær", d.error ?: "Henter været …")
@@ -383,11 +383,11 @@ private fun Material(kind: WKind, d: WidgetData, f: Fmt) {
             }
         }
         WKind.FINANCE -> {
-            val fi = d.finance ?: return MEmpty(kind.route, "Finans", d.error ?: "Henter saldo …")
+            val fi = d.finance ?: return MEmpty(kind.route, "Økonomi", d.error ?: "Henter saldo …")
             val ctx = LocalContext.current
             MCard(kind.route, padding = 20.dp) {
                 Row(GlanceModifier.fillMaxWidth()) {
-                    T("Finans", 16.sp, c.onSurface, FontWeight.Bold, modifier = GlanceModifier.defaultWeight())
+                    T("Økonomi", 16.sp, c.onSurface, FontWeight.Bold, modifier = GlanceModifier.defaultWeight())
                     T(LocalDate.now().format(DateTimeFormatter.ofPattern("d. MMM", nb)), 12.5.sp, c.onSurfaceVariant)
                 }
                 VSpace(10.dp)
@@ -426,7 +426,7 @@ private fun Material(kind: WKind, d: WidgetData, f: Fmt) {
             }
         }
         WKind.STOCKS -> {
-            val s = d.stocks ?: return MEmpty(kind.route, "Trading 212", d.error ?: "Koble til Trading 212 i FinansHub.")
+            val s = d.stocks ?: return MEmpty(kind.route, "Trading 212", d.error ?: "Koble til Trading 212 i Økonomi.")
             val ctx = LocalContext.current
             val up = s.changePct >= 0
             val bg = dn(0xFFC9E4D8, 0xFF1F3A2F); val fg = dn(0xFF07301F, 0xFFC9E4D8)
@@ -520,7 +520,7 @@ private fun Material(kind: WKind, d: WidgetData, f: Fmt) {
                 }
             }
         }
-        else -> MEmpty(kind.route, "FinansHub", "")
+        else -> MEmpty(kind.route, "Homelab", "")
     }
 }
 
@@ -571,14 +571,14 @@ private fun OneUi(kind: WKind, d: WidgetData, style: WidgetStyle, f: Fmt) {
     val u = Ui(style)
     val ctx = LocalContext.current
     val size = LocalSize.current
-    if (!d.loggedIn && kind != WKind.UI_CLOCK && kind != WKind.UI_SEARCH) { UEmpty(kind.route, u, "FinansHub", "Logg inn i appen for å se data her."); return }
+    if (!d.loggedIn && kind != WKind.UI_CLOCK && kind != WKind.UI_SEARCH) { UEmpty(kind.route, u, "Homelab", "Logg inn i appen for å se data her."); return }
     when (kind) {
         WKind.UI_SEARCH -> {
             Row(GlanceModifier.fillMaxSize().appWidgetBackground().cornerRadius(40.dp).background(u.bg).padding(horizontal = 18.dp).clickable(link(ctx, "search")),
                 verticalAlignment = Alignment.CenterVertically) {
                 T("⌕", 17.sp, u.sub)
                 HSpace(12.dp)
-                T("Søk i Homelab og FinansHub", 15.sp, u.sub, modifier = GlanceModifier.defaultWeight())
+                T("Søk i Homelab og Økonomi", 15.sp, u.sub, modifier = GlanceModifier.defaultWeight())
                 Box(GlanceModifier.size(40.dp).cornerRadius(20.dp).background(u.accent).clickable(link(ctx, "search?ai=1")), contentAlignment = Alignment.Center) {
                     T("✦", 14.sp, u.onAccent, FontWeight.Bold)
                 }
@@ -659,7 +659,7 @@ private fun OneUi(kind: WKind, d: WidgetData, style: WidgetStyle, f: Fmt) {
             }
         }
         WKind.UI_STOCKS -> {
-            val s = d.stocks ?: return UEmpty(kind.route, u, "Trading 212", d.error ?: "Koble til Trading 212 i FinansHub.")
+            val s = d.stocks ?: return UEmpty(kind.route, u, "Trading 212", d.error ?: "Koble til Trading 212 i Økonomi.")
             UCard(kind.route, u.bg, padding = 16.dp) {
                 T("Trading 212", 13.sp, u.sub)
                 Fill()
@@ -677,10 +677,10 @@ private fun OneUi(kind: WKind, d: WidgetData, style: WidgetStyle, f: Fmt) {
             }
         }
         WKind.UI_FINANCE -> {
-            val fi = d.finance ?: return UEmpty(kind.route, u, "FinansHub", d.error ?: "Henter saldo …")
+            val fi = d.finance ?: return UEmpty(kind.route, u, "Økonomi", d.error ?: "Henter saldo …")
             UCard(kind.route, u.bg, padding = 20.dp) {
                 Row(GlanceModifier.fillMaxWidth()) {
-                    T("FinansHub", 16.sp, u.text, FontWeight.Bold, modifier = GlanceModifier.defaultWeight())
+                    T("Økonomi", 16.sp, u.text, FontWeight.Bold, modifier = GlanceModifier.defaultWeight())
                     if (d.updatedAt > 0) T("Oppdatert ${java.time.Instant.ofEpochMilli(d.updatedAt).atZone(java.time.ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("HH:mm"))}", 13.sp, u.sub)
                 }
                 VSpace(10.dp)
@@ -749,6 +749,6 @@ private fun OneUi(kind: WKind, d: WidgetData, style: WidgetStyle, f: Fmt) {
                 }
             }
         }
-        else -> UEmpty(kind.route, u, "FinansHub", "")
+        else -> UEmpty(kind.route, u, "Homelab", "")
     }
 }

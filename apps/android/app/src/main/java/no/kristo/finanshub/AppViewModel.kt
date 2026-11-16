@@ -32,6 +32,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.sync.withLock
 import no.kristo.finanshub.ui.Privacy
+import no.kristo.finanshub.ui.loadFaste
+import no.kristo.finanshub.ui.openFaste
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.ByteArrayOutputStream
@@ -41,14 +43,14 @@ import java.time.LocalDate
 import java.util.UUID
 
 /**
- * Skjermer. Homelab er forsiden; Finans (Oversikt, Liste, Budsjett, Søk, Mer) og sidene under Mer er «Andre OS»
- * sammen med Mat og Domener.
+ * Skjermer. Homelab (Oversikt, Q1) er forsiden; Økonomi (Oversikt, Transaksjoner, Budsjett, Faste betalinger, Mer) og sidene
+ * under Mer, sammen med Mat og Domener. Navnene er de samme som i Økonomi på web (Fase 6, Q2–Q4, Q7).
  */
 enum class Screen(val label: String) {
-    Homelab("Homelab"),
-    Home("Oversikt"), List("Liste"), Budget("Budsjett"), Search("Søk"), More("Mer"),
+    Homelab("Oversikt"),
+    Home("Oversikt"), List("Transaksjoner"), Budget("Budsjett"), Search("Glimt"), More("Mer"),
     Scan("Kvitteringer"), Fast("Faste utgifter"), Accounts("Kontoer"), Stocks("Aksjer"), Reports("Rapporter"), Import("Import"),
-    Sub("Subscription OS"), Folders("Boliger"), Finn("Finn-handler"),
+    Sub("Abonnementer"), Folders("Boliger"), Finn("Finn-handler"),
     Mat("Mat"), Domains("Domener"), Settings("Innstillinger"), Tracking("Sporing");
 
     /** Fanelinja for Finans vises (Mer er markert på undersidene). */
@@ -536,6 +538,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         boot = parseBoot(api.get("/bootstrap"))
         summary = runCatching { parseSummary(api.get("/summary")) }.getOrNull() ?: summary
         loadMe()
+        // Fase 6: modullisten (navn, ikoner og rekkefølge på fanene og i Mer). Feiler den, brukes den sist kjente.
+        loadModuler()
         // Navnet på appen, ikonet og varselvalgene (stille timer, lyd) hentes fra serveren.
         loadAppInfo()
         if (!notifyLoaded) loadNotify()
@@ -718,7 +722,18 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (joinLink51(uri)) return
         // Prompt 41: homelab://app-auth / https://<vert>/app-auth (Kalender ber Homelab om å godkjenne innloggingen).
         if (appAuthLink41(uri)) return
+        // Fase 6: homelab://<side> fra iOS og web åpnes som finanshub://<side> (innlogging er håndtert over).
+        if (uri.scheme == "homelab") { no.kristo.felles.moduler.Dyplenker.fraHomelab(uri.toString())?.let { deepLink(Uri.parse(it), outside86) }; return }
         if (uri.scheme != "finanshub" || !loggedIn) return
+        // Fase 6: modul-id-ene og de gamle rutene i modullisten («oversikt», «gjoremal», «reise/kart», «huskeliste» …) går til appens
+        // sider. Vertene appen kjente fra før, er uendret (felles Dyplenker, testet mot shared/schemas/moduler.json).
+        val mal = no.kristo.felles.moduler.Dyplenker.mal(Moduler.liste, uri.host ?: "", uri.path ?: "")
+        if (mal.vert != (uri.host ?: "").lowercase() || mal.sti != (uri.path ?: "").trim('/')) {
+            deepLink(Uri.parse("finanshub://" + mal.vert + (if (mal.sti.isEmpty()) "" else "/" + mal.sti) + (uri.encodedQuery?.let { "?$it" } ?: "")), outside86)
+            return
+        }
+        // Q35: en dyp lenke åpnes direkte. Onboardingen venter til neste gang appen åpnes.
+        onboardDeferred = true
         // Prompt 86: en lenke utenfra som utfører en handling, spør først («Vil du … ?» · Avbryt / Utfør).
         if (outside86) Link86.ask(uri)?.let { link86 = uri to it; return }
         menuOpen = false
@@ -750,6 +765,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             "hjemlys" -> hjemlysLink40(uri)
             "finn" -> go(Screen.Finn)
             "boliger" -> open(Screen.Folders)
+            // Fase 6 (Q4): Faste betalinger (finanshub://faste[/abonnementer|faste|planlagte]).
+            "faste" -> openFaste(uri.path?.trim('/').orEmpty().ifEmpty { "abonnementer" })
+            "studie" -> { go(Screen.Homelab); openStudy44() }
             "search" -> go(Screen.Search)
             // Prompt 31: varslene fra Glimt (svar i søkefeltet / Chat), System-siden og prøveperioder.
             "glimt" -> { openedFromNotify31(); go(Screen.Homelab) }
@@ -1458,7 +1476,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         tokenError = null
         try { tokens = parseTokens(api.get("/tokens")) } catch (e: ApiException) {
             tokens = emptyList()
-            tokenError = if (e.status == 401 || e.status == 403) "Tokens kan bare administreres fra FinansHub i nettleseren for denne kontoen." else e.message
+            tokenError = if (e.status == 401 || e.status == 403) "Tokens kan bare administreres fra Homelab i nettleseren for denne kontoen." else e.message
         }
     }
 
@@ -1891,7 +1909,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             applyNewsExtras46(raw) // prompt 46: egne kategorier, interesser, favicon, sammendrag per kategori
             newsError = null
         } catch (e: ApiException) {
-            newsError = if (e.status == 404) "Nyhetsleseren finnes ikke på serveren ennå. Oppdater homelab." else e.message
+            newsError = if (e.status == 404) "Nyheter finnes ikke på serveren ennå. Oppdater Homelab." else e.message
         } finally { newsBusy = false }
     }
 
@@ -2074,6 +2092,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var domSection by mutableStateOf("oversikt")
     /** Første gang etter innlogging på en ny installasjon: design, bakgrunn og tilganger (3 steg). */
     var onboardNeeded by mutableStateOf(false)
+    /** Q35: en dyp lenke er åpnet i denne økten, så onboardingen legger seg ikke over siden. Den vises neste gang appen åpnes. */
+    var onboardDeferred by mutableStateOf(false)
     /** Rekkefølgen på kortene i Sporing (lagres per bruker som trkOrder), og redigeringsmodus (langt trykk). */
     var trkOrder by mutableStateOf(TRK_CARDS.map { it.first })
     var trkEdit by mutableStateOf(false)
@@ -2102,7 +2122,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             "budsjett" -> go(Screen.Budget)
             "kvitt" -> go(Screen.Scan)
             "aksjer" -> go(Screen.Stocks)
-            "abo" -> go(Screen.Sub)
+            // Q4: fanen er Faste betalinger (filtrene Abonnementer, Faste utgifter og Planlagte trekk, ui/FasteBetalinger.kt).
+            "abo" -> { if (!screen.isFinance) go(Screen.Home); paperPage = "faste"; paperFin = true; loadFaste(); Haptics.select(); return }
             "kontoer" -> go(Screen.Accounts)
             "boliger" -> go(Screen.Folders)
             "sok" -> { if (!screen.isFinance) go(Screen.Home); paperPage = "fsok" }
@@ -2430,7 +2451,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val v = l.distinct().filter { k -> FIN_TABS.any { it.first == k } }.take(5).ifEmpty { listOf("oversikt") }
         paperFinTabs = v
         prefs.set(AppPrefs.FIN_TABS + (account?.id ?: ""), v.joinToString(","))
-        viewModelScope.launch { runCatching { api.hlPut("/me/layout", JSONObject().put("finTabs", JSONArray(v))) } }
+        // Serveren kaller to av fanene abonnementer og kvitteringer (server/mobile.js FIN_TABS), og godtar opptil 4.
+        val server = v.map { when (it) { "abo" -> "abonnementer"; "kvitt" -> "kvitteringer"; else -> it } }.take(4)
+        viewModelScope.launch { runCatching { api.hlPut("/me/layout", JSONObject().put("finTabs", JSONArray(server))) } }
     }
 
     /** Fjerde fane i hovedlinja: «auto» (Domener, eller Sporing når pakker er på vei), «domener» eller «sporing». */
@@ -2467,7 +2490,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 pageLayouts = o.keys().asSequence().associateWith { k -> o.getJSONObject(k).let { v -> PageLay(v.optJSONArray("order").strings(), v.optJSONArray("hidden").strings(), parseSz70(v.optJSONObject("sz"))) } }
             }
         }
-        prefs.str(AppPrefs.FIN_TABS + id, "").takeIf { it.isNotBlank() }?.let { paperFinTabs = it.split(',').filter { k -> FIN_TABS.any { t -> t.first == k } }.ifEmpty { FIN_TABS_DEFAULT } }
+        prefs.str(AppPrefs.FIN_TABS + id, "").takeIf { it.isNotBlank() }?.let { paperFinTabs = normFinTabs(it.split(',')).ifEmpty { FIN_TABS_DEFAULT } }
     }
 
     /* Antall kvitteringer til gjennomgang (banneret i Finans → Oversikt). */
@@ -2655,6 +2678,23 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch { runCatching { api.hlPut("/me/layout", JSONObject().put("tabBar", JSONObject().put("items", JSONArray()))) } }
     }
 
+    /** Modullisten for brukeren (Moduler.kt). */
+    internal suspend fun hentModulliste(): String = api.hlGet("/moduler?plattform=android")
+
+    /**
+     * Fase 6: et lagret oppsett av fanelinja (fra appen, iOS eller web) med de gamle standardnavnene («Finans», «Now Brief»,
+     * «Avganger») eller de gamle nøklene («rss», «gjoremal») flyttes én gang per konto til nøklene og navnene i modullisten.
+     * Egne navn brukeren har gitt, beholdes. Uten eget oppsett skjer ingenting (standarden følger lista).
+     */
+    internal fun migrerFaner() {
+        val key = AppPrefs.TAB_BAR + "v6_" + (account?.id ?: "")
+        if (prefs.bool(key) || tabBar.isEmpty()) return
+        prefs.set(key, true)
+        val v = tabBar
+        prefs.set(AppPrefs.TAB_BAR + (account?.id ?: ""), JSONArray().apply { v.forEach { put(it.toJson()) } }.toString())
+        viewModelScope.launch { runCatching { api.hlPut("/me/layout", JSONObject().put("tabBar", JSONObject().put("items", JSONArray().apply { v.forEach { put(it.toJson()) } }))) } }
+    }
+
     /** Fargetema for ikonene i Innstillinger («standard» er dagens farger). */
     val iconTheme: String get() = option(AppPrefs.ICON_THEME, "standard")
     fun updateIconTheme(v: String) {
@@ -2664,7 +2704,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun applyLayout16(raw: String) {
         val l = runCatching { parseLayout16(raw) }.getOrNull() ?: return
-        if (l.tabBar.isNotEmpty()) tabBar = l.tabBar
+        if (l.tabBar.isNotEmpty()) { tabBar = l.tabBar; migrerFaner() }
         l.iconTheme?.let { prefs.set(AppPrefs.ICON_THEME, it); prefTick++ }
         applyNavStyle25(raw)
         applyNavHome42(raw) // prompt 42: Hjem-knappen i fanelinja (homeButton)
@@ -2962,7 +3002,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             "nyheter" -> openNews()
             "aksjer" -> { paperPage = null; openFromMer(Screen.Stocks) }
             "boliger" -> { paperPage = null; openFromMer(Screen.Folders) }
-            "abonnementer" -> { paperPage = null; openFromMer(Screen.Sub) }
+            // Q4: Faste betalinger (Abonnementer er et filter der, og den fulle abonnementssiden åpnes derfra).
+            "abonnementer" -> openFaste("abonnementer")
             "media" -> openPaperPage("media")
             "chat" -> openChat()
             // Prompt 40: sidene fra Mer. Now Brief og Nyhetsleser er ark/overlegg og åpnes som ark; resten navigeres til.
@@ -3888,6 +3929,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         migrateDesign42()
         Privacy.hidden = prefs.bool(AppPrefs.HIDE_AMOUNTS)
         layout = localLayout()
+        loadLocalModuler()
         loadLocalLayout15()
         loadLocalLayout16()
         refreshPending()

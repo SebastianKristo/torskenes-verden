@@ -28,7 +28,7 @@ class HealthRationaleActivity : ComponentActivity() {
                 Spacer(Modifier.height(40.dp))
                 Text("Helse i Homelab", color = DsPalette.PapirLys.textPrimary, fontSize = HomelabType.title2.fontSize, fontWeight = FontWeight.Medium)
                 Text(
-                    "FinansHub leser bare de typene du slår på under Innstillinger → App → Helse og posisjon: skritt, puls og hvilepuls, " +
+                    "Homelab leser bare de typene du slår på under Innstillinger → App → Helse og posisjon: skritt, puls og hvilepuls, " +
                         "søvn, og aktivitet og trening (aktive kalorier og treningsøkter), for i dag og de siste 7 dagene. Et sammendrag sendes " +
                         "til din egen homelab-server hvert 15. minutt, og vises bare for familien på serveren. Ingenting sendes til andre. " +
                         "Slår du av «Del helsedata», stopper synken og serveren sletter helsedataene dine.",

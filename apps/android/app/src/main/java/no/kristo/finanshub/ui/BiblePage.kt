@@ -448,7 +448,7 @@ internal fun BibleSettings37(vm: AppViewModel) {
     val st = s.bibleSet
     Text("BIBELVERS", color = DsPalette.PapirMork.textSecondary, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.caption.fontSize, letterSpacing = 1.3.sp, modifier = Modifier.padding(top = 4.dp, start = 4.dp))
     PCard {
-        PToggle("Dagens bibelvers", "I Now Brief, på Hjem og i widgets", st.enabled || vm.bibleAllowed37()) { on -> vm.putBibleSet37 { it.copy(enabled = on) }; if (on) vm.loadBible37(force = true) }
+        PToggle("Dagens bibelvers", "I Brief, på Oversikt og i widgets", st.enabled || vm.bibleAllowed37()) { on -> vm.putBibleSet37 { it.copy(enabled = on) }; if (on) vm.loadBible37(force = true) }
         PToggle("I morgenbriefen", "05–11", st.morning, top = true) { on -> vm.putBibleSet37 { it.copy(morning = on) } }
         PToggle("I kveldsbriefen", "17–05", st.evening, top = true) { on -> vm.putBibleSet37 { it.copy(evening = on) } }
         PToggle("Varsel", "Kl. 07:00 «Dagens vers er klart»", st.notify, top = true) { on -> vm.putBibleSet37 { it.copy(notify = on) } }

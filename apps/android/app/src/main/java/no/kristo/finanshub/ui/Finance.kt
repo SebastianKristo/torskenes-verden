@@ -195,7 +195,7 @@ internal fun BudgetScreen(vm: AppViewModel) {
                 }
             }
         }
-        if (list.isEmpty()) item { Empty("Ingen budsjett satt. Sett opp i FinansHub på nettet.") }
+        if (list.isEmpty()) item { Empty("Ingen budsjett satt. Sett opp i Økonomi på nettet.") }
         items(list, key = { it.categoryId }) { b ->
             val over = b.used > b.budget
             val days = maxOf(1, vm.summary?.daysLeft ?: 1)

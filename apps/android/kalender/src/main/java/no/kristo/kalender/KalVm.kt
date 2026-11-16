@@ -1075,6 +1075,15 @@ class KalVm(app: Application) : AndroidViewModel(app) {
     }
 
     companion object {
-        val VIEWS = listOf("ar" to "År", "mnd" to "Mnd", "uke" to "Uke", "3d" to "3 d", "dag" to "Dag", "liste" to "Liste")
+        /** Visningene appen kan vise, med reservenavn (brukes bare hvis modullisten mangler i bygget). */
+        private val KJENTE: List<Pair<String, String>> = listOf("ar" to "År", "mnd" to "Mnd", "uke" to "Uke", "3d" to "3 d", "dag" to "Dag", "liste" to "Liste")
+
+        /**
+         * Fase 6: visningene i Kalender får rekkefølge og korte navn fra modullisten (kalender → undersider med type «visning» i
+         * shared/schemas/moduler.json, bygd inn i :felles), så de er like i Homelab, Kalender-appen, iOS og web.
+         */
+        val VIEWS: List<Pair<String, String>> =
+            no.kristo.felles.moduler.Modulliste.innebygd()?.modul("kalender")?.undersider("visning")
+                ?.filter { u -> KJENTE.any { it.first == u.id } }?.map { it.id to it.kort }?.takeIf { it.isNotEmpty() } ?: KJENTE
     }
 }

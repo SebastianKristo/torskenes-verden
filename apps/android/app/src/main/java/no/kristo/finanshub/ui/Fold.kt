@@ -360,7 +360,7 @@ internal fun RailHome45(vm: AppViewModel, visible: Boolean, onLeave: (() -> Unit
                 horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp, Alignment.CenterVertically),
             ) {
                 WxIcon(HOUSE45, p.onLab, 20.dp, stroke = 2.2f)
-                Text("Hjem", color = p.onLab, style = TAB_TEXT24.copy(fontSize = 11.5.sp, lineHeight = 13.sp), maxLines = 1)
+                Text(Moduler.oversikt, color = p.onLab, style = TAB_TEXT24.copy(fontSize = 11.5.sp, lineHeight = 13.sp), maxLines = 1)
             }
         }
     }

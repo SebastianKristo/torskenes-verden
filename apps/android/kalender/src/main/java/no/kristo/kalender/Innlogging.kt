@@ -647,9 +647,9 @@ class K41State(private val vm: KalVm) {
         vm.viewModelScope41 {
             try {
                 s.api.post("/api/tasks/glimt", JSONObject().put("q", q).put("async", true).put("source", "kalender"))
-                vm.showToast("Lagt til i Huskeliste · gave til $name")
+                vm.showToast("Lagt til i Gjøremål · gave til $name")
             } catch (e: KalApiException) {
-                vm.showToast(if (e.status == 404) "Huskeliste med Glimt finnes ikke på serveren ennå" else "Fikk ikke lagt til: ${e.message}")
+                vm.showToast(if (e.status == 404) "Gjøremål med Glimt finnes ikke på serveren ennå" else "Fikk ikke lagt til: ${e.message}")
             }
         }
     }

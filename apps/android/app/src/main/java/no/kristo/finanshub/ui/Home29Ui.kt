@@ -187,7 +187,7 @@ private fun Search29Extras45(vm: AppViewModel, text: String, above: Boolean, go:
         } else if (text.isNotBlank() && q.engine == "ai" && isHuske41(text)) {
             // Prompt 41: samme mørke forslag-rad som «Legg i kalender».
             Row(
-                Modifier.fillMaxWidth().heightIn(min = 44.dp).clip(RoundedCornerShape(16.dp)).background(p.ink).clickable(role = Role.Button, onClickLabel = "Legg i Huskeliste") { go() }
+                Modifier.fillMaxWidth().heightIn(min = 44.dp).clip(RoundedCornerShape(16.dp)).background(p.ink).clickable(role = Role.Button, onClickLabel = "Legg i Gjøremåliste") { go() }
                     .padding(start = 14.dp, top = 6.dp, end = 8.dp, bottom = 6.dp),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
@@ -197,7 +197,7 @@ private fun Search29Extras45(vm: AppViewModel, text: String, above: Boolean, go:
                     Text("Glimt deler opp i punkter", color = p.bg.copy(alpha = .8f), fontSize = 12.sp, maxLines = 1)
                 }
                 Box(Modifier.height(32.dp).clip(CircleShape).background(p.bg).padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
-                    Text("Legg i Huskeliste", color = p.ink, fontWeight = FontWeight.Bold, fontSize = 12.5.sp, maxLines = 1)
+                    Text("Legg i Gjøremål", color = p.ink, fontWeight = FontWeight.Bold, fontSize = 12.5.sp, maxLines = 1)
                 }
             }
         } else if (text.isNotBlank() && q.engine != "ai" && vm.suggestions.isNotEmpty()) PCard {

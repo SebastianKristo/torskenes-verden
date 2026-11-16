@@ -74,7 +74,7 @@ internal fun NewsReader(vm: AppViewModel) {
                 ) { Text("‹ Tilbake", color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.subheadline.fontSize) }
                 Column(Modifier.weight(1f)) {
                     val upd = d?.feeds?.size ?: 0
-                    PLabel(if (News73.showTab) "Nyhetsleser · ${News73.items.size} lagret" else "Nyhetsleser · $upd kilder", p.lab)
+                    PLabel(if (News73.showTab) "Nyheter · ${News73.items.size} lagret" else "Nyheter · $upd kilder", p.lab)
                     PSerif(if (News73.showTab) "Lagret" else "Siste nytt", 30.sp, p.ink, maxLines = 1)
                 }
                 // Prompt 46: «…» med «Nyhetsinnstillinger» (dyp lenke til Innstillinger → Nyheter) i stedet for ⚙.

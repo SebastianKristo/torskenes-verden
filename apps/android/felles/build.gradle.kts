@@ -24,6 +24,18 @@ dependencies {
     testImplementation(libs.junit)
 }
 
+// Fase 6: modullisten (shared/schemas/moduler.json) bygges inn i :felles som reserve når serveren ikke svarer og ingen liste
+// er bufret. Den kopieres ved hver bygging, så det finnes ingen egen håndskrevet liste i appene (Modulliste.innebygd()).
+// Grupperingen av integrasjonene (tilkoblinger.json) følger med av samme grunn (Tilkoblinger.innebygd()).
+tasks.processResources {
+    from(rootProject.file("../../shared/schemas/moduler.json")) {
+        into("no/kristo/felles/moduler")
+    }
+    from(rootProject.file("../../shared/schemas/tilkoblinger.json")) {
+        into("no/kristo/felles/moduler")
+    }
+}
+
 tasks.test {
     // Testene leser fasitene fra repoet (shared/testvektorer, shared/schemas/eksempler).
     systemProperty("homelab.repo", rootProject.projectDir.parentFile.parentFile.absolutePath)

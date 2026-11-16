@@ -150,7 +150,7 @@ internal fun TasksScreen37(vm: AppViewModel) {
     // 1c: lister i egen kolonne (210 på Fold, 250 på bredere skjerm), «+ Ny liste» sist; oppgavene til høyre.
     if (split43) Column(Modifier.width(listW43).fillMaxHeight().background(p.surfaceRaised).statusBarsPadding().verticalScroll(rememberScrollState())
         .padding(start = 12.dp, end = 12.dp, top = 12.dp, bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text("‹ Hjem", color = p.textPrimary, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.heightIn(min = 44.dp).clip(CircleShape).clickable { vm.closeTasksHome40() }.wrapContentHeight())
+        Text("‹ ${Moduler.oversikt}", color = p.textPrimary, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize, modifier = Modifier.heightIn(min = 44.dp).clip(CircleShape).clickable { vm.closeTasksHome40() }.wrapContentHeight())
         PSerif("To-do for hele familien", 13.sp, p.textTertiary, italic = true, weight = FontWeight.Normal, maxLines = 2)
         PSerif("Gjøremål", 28.sp, maxLines = 1)
         PLabel("Lister", modifier = Modifier.padding(top = 6.dp))

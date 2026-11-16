@@ -53,7 +53,9 @@ test('filene finnes, og Skjold Lab er koblet inn i Mer, sidene, tilbake, dyplenk
   assert.ok(existsSync(join(SRC, 'ui/SkjoldPage.kt')));
   assert.match(code('ui/Paper.kt'), /if \(Skjold76\.open\) PgIn52 \{ SkjoldPage76\(vm\) \}/);
   assert.match(code('ui/Effekter.kt'), /no\.kristo\.finanshub\.Skjold76\.open,\s*\)\.count \{ it \}/);
-  assert.match(code('ui/Mer.kt'), /row\("skjold", "Skjold Lab", "Deler, skuffer og skap"\) \{ vm\.openSkjold76\(\) \}/);
+  // Fase 6: navnet kommer fra modullisten (shared/schemas/moduler.json), der Skjold Lab har id «skjold».
+  assert.match(code('ui/Mer.kt'), /"skjold" -> row\("skjold", m\.navn, "Deler, skuffer og skap"\) \{ vm\.openSkjold76\(\) \}/);
+  assert.equal(JSON.parse(readFileSync(join(ROOT, 'shared/schemas/moduler.json'), 'utf8')).moduler.find((m) => m.id === 'skjold')?.navn, 'Skjold Lab');
   assert.match(code('ui/MerListe.kt'), /"skjold" to "M4 3h16v18H4z/, 'ikon: skuffeskap');
   assert.match(code('AppViewModel.kt'), /"skjold", "deler" -> skjoldLink76\(uri\)/);
   const nav = code('Glimt.kt');

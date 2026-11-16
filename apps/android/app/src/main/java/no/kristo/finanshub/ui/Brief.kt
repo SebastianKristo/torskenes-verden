@@ -984,7 +984,7 @@ private fun BriefNews35(vm: AppViewModel, b: Brief34, on: Boolean) {
             Text("✦ Glimt-sammendrag ›", color = RED35, fontWeight = FontWeight.Bold, fontSize = 13.sp,
                 modifier = Modifier.clip(RoundedCornerShape(14.dp)).clickable(role = Role.Button) { vm.stopSay35(); vm.p34.briefOpen = false; vm.openNewsGlimt40() }.padding(8.dp, 4.dp))
         }
-        if (b.news.isEmpty()) Text("Ingen saker ennå. Legg til kilder i Nyhetsleser.", color = p.mut, fontSize = 13.5.sp)
+        if (b.news.isEmpty()) Text("Ingen saker ennå. Legg til kilder i Nyheter.", color = p.mut, fontSize = 13.5.sp)
         val top = b.news.firstOrNull()
         if (top != null) Column(Modifier.fillMaxWidth().clickable(role = Role.Button, enabled = top.url != null) { top.url?.let { vm.stopSay35(); openLink(ctx, it) } },
             verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -1315,7 +1315,7 @@ internal fun Brief73Settings(vm: AppViewModel) {
             Text("INNHOLD I BRIEFEN", color = Color(0xFFA39D90), fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = 10.5.sp, letterSpacing = 1.3.sp, modifier = Modifier.weight(1f))
             Text(B73.countText, color = Color(0xFF8A8478), fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = 11.sp)
         }
-        Text("Velg hvilke kort som er med og rekkefølgen de vises i. Gjelder Now Brief på mobil, web og widgets.", color = p.mut, fontSize = 12.5.sp, lineHeight = 17.sp,
+        Text("Velg hvilke kort som er med og rekkefølgen de vises i. Gjelder Brief på mobil, web og widgets.", color = p.mut, fontSize = 12.5.sp, lineHeight = 17.sp,
             modifier = Modifier.padding(horizontal = 4.dp))
         PCard {
             items.forEachIndexed { i, it ->

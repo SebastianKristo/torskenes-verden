@@ -54,7 +54,7 @@ import no.kristo.finanshub.trialDays32b
 
 internal val TILE_KEYS52 = listOf("h52av", "h52fi", "h52ma", "h52fa", "h52do")
 
-private val TILE_LABELS52 = mapOf("h52av" to "Avgang", "h52fi" to "Finans", "h52ma" to "Middag", "h52fa" to "Familie", "h52do" to "Domener")
+private val TILE_LABELS52 = mapOf("h52av" to "Avgang", "h52fi" to "Økonomi", "h52ma" to "Middag", "h52fa" to "Familie", "h52do" to "Domener")
 
 /** Halve fliser på telefon (fasit: h7, h9, h10, h11 og h13–h17 får grid-column auto). */
 internal val HALF52 = setOf("h7", "h9", "h10", "h11") + TILE_KEYS52

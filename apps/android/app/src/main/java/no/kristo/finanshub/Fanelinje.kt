@@ -78,6 +78,10 @@ private val ICON_NAMES25: Map<String, String> = mapOf(
     "star" to "★", "heart" to "♥", "favorite" to "♥", "envelope" to "✉", "mail" to "✉", "flag" to "⚑", "diamond" to "◆",
     "checklist" to "✓", "checkmark" to "✓", "bolt" to "⚡", "leaf" to "☘", "bag" to "◘", "cart" to "◘", "calendar" to "▦",
     "sparkles" to "✦", "sparkle" to "✦", "auto_awesome" to "✦", "chat" to "✦", "bubble.left" to "✦",
+    // Fase 6: ikonene i modullisten (shared/schemas/moduler.json, sf og material).
+    "play.rectangle" to "▶", "play_circle" to "▶", "sun.horizon" to "✧", "wb_twilight" to "✧", "graduationcap" to "✎", "school" to "✎",
+    "wrench.and.screwdriver" to "⚒", "handyman" to "⚒", "network" to "⌁", "lan" to "⌁", "moon.stars" to "✶",
+    "directions_transit" to "⇄", "calendar_month" to "▦", "groups" to "◉", "book.closed" to "✝", "menu_book" to "✝", "dashboard" to "⌂",
 )
 
 /** Ikonet fanen skal tegnes med: tegnet appen kjenner, oversatt navn, eller fanens standardikon. Aldri et avkuttet navn. */
@@ -102,6 +106,8 @@ fun tabIconName25(glyph: String): String = when (glyph) {
     "⋯" -> "ellipsis"; "★" -> "star"; "♥" -> "heart"; "✉" -> "envelope"; "⚑" -> "flag"; "◆" -> "diamond"; "✓" -> "checklist"
     "⚡" -> "bolt"; "☘" -> "leaf"; "◘" -> "bag"; "▦" -> "calendar"; "✦" -> "sparkles"
     "☑" -> "checklist"; "✿" -> "gift"; "✧" -> "sun.horizon"; "≣" -> "dot.radiowaves.up.forward"; "✝" -> "book"; "≈" -> "wave.3.right"; "⚙" -> "gearshape" // prompt 40
+    // Fase 6: tegnene fra modullisten får SF Symbol-navnet derfra (serveren godtar bare navn, ikke tegn).
+    "▶" -> "play.rectangle"; "☼" -> "sun.max"; "¶" -> "newspaper"; "✎" -> "graduationcap"; "⚒" -> "wrench.and.screwdriver"; "⌁" -> "network"; "✶" -> "moon.stars"
     else -> glyph
 }
 
@@ -149,7 +155,7 @@ class P32bState {
 /** Sidene med egen fanelinje: overskrift og alle faner (nøkkel, navn, ikon). */
 val SEC32B: Map<String, Pair<String, List<Triple<String, String, String>>>> = mapOf(
     "dom" to ("Domener" to listOf(Triple("oversikt", "Oversikt", "◎"), Triple("publikum", "Publikum", "◍"), Triple("ytelse", "Ytelse", "⚡"), Triple("infra", "Infra", "▤"))),
-    "abo" to ("Abonnement" to listOf(Triple("home", "Hjem", "⌂"), Triple("ins", "Innsikt", "◔"), Triple("hist", "Historikk", "↻"))),
+    "abo" to ("Abonnementer" to listOf(Triple("home", "Hjem", "⌂"), Triple("ins", "Innsikt", "◔"), Triple("hist", "Historikk", "↻"))),
     // Prompt 42: Vel fremme (tidligere Hjemlys) er en fane i Familie.
     // Prompt 50: Familie i nytt design – Folk · Steder · Helse · Sjekk inn (ui/Family50.kt).
     "kart" to ("Familie" to listOf(Triple("folk", "Folk", "◎"), Triple("steder", "Steder", "◌"), Triple("helse", "Helse", "♡"), Triple("sjekk", "Sjekk inn", "●"))),
@@ -401,33 +407,11 @@ data class TabItem(val id: String, val label: String, val icon: String) {
     fun toJson(): JSONObject = JSONObject().put("id", id).put("label", label).put("icon", tabIconName25(icon))
 }
 
-/** Fanene hovedlinja kan ha (ID-ene serveren godtar i layout.tabBar), med standardnavn og -ikon. «Mer» står alltid sist. */
-val MAIN_TABS: List<TabItem> = listOf(
-    TabItem("finans", "Finans", "kr"),
-    TabItem("mat", "Mat", "◐"),
-    TabItem("domener", "Domener", "◎"),
-    TabItem("sporing", "Sporing", "▣"),
-    TabItem("familie", "Familie", "◉"),
-    TabItem("avganger", "Avganger", "⇄"),
-    TabItem("vaer", "Vær", "☀"),
-    TabItem("nyheter", "Nyheter", "▤"),
-    TabItem("aksjer", "Aksjer", "↗"),
-    TabItem("boliger", "Boliger", "⌂"),
-    TabItem("abonnementer", "Abonnementer", "↻"),
-    TabItem("media", "Media", "♪"),
-    TabItem("chat", "Chat", "✦"),
-    // Prompt 40 (claude-code-fanelinje-alle-sider.md): alt fra Mer kan legges i fanelinja (samme nøkler som HNAV_ALL i fasiten).
-    TabItem("huske", "Gjøremål", "☑"),
-    TabItem("kalender", "Kalender", "▦"),
-    TabItem("bursdag", "Bursdager", "✿"),
-    TabItem("brief", "Now Brief", "✧"),
-    TabItem("rss", "Nyhetsleser", "≣"),
-    TabItem("bibel", "Bibel", "✝"),
-    TabItem("nordlys", "Nordlys", "≈"),
-    TabItem("innst", "Innstillinger", "⚙"),
-    TabItem("sok", "Søk", "⌕"),
-    TabItem("mer", "Mer", "⋯"),
-)
+/**
+ * Fanene hovedlinja kan ha (ID-ene serveren godtar i layout.tabBar), med standardnavn og -ikon. Fase 6: navn, ikon og rekkefølge
+ * kommer fra modullisten (Moduler.kt, GET /api/moduler); nøklene er de samme som før. «Mer» står alltid sist.
+ */
+val MAIN_TABS: List<TabItem> get() = Moduler.faner()
 
 /** Standard når brukeren ikke har endret linja: fjerde fane er Domener, eller Sporing når pakker er på vei. */
 val MAIN_TABS_DEFAULT = listOf("finans", "mat", "domener", "sok", "mer")
@@ -457,11 +441,14 @@ fun parseLayout16(s: String): Layout16 {
     val list = mutableListOf<TabItem>()
     if (items != null) for (i in 0 until items.length()) {
         val t = items.optJSONObject(i) ?: continue
-        val id = t.optStr("id") ?: continue
+        // Fase 6: nøkler fra iOS, web og eldre apper («rss», «gjoremal», «bursdager») er alias for appens nøkler.
+        val id = t.optStr("id")?.let { no.kristo.felles.moduler.Fanenokler.norm(it) } ?: continue
         val def = MAIN_TABS.firstOrNull { it.id == id } ?: continue
+        // Et gammelt standardnavn («Finans», «Now Brief», «Avganger») er ikke et eget navn, og gir navnet fra modullisten.
+        val label = t.optStr("label")?.takeIf { it.isNotBlank() && it !in (Moduler.GAMLE_NAVN[id] ?: emptySet()) } ?: def.label
         // Prompt 25: ikonet kan være et navn fra iOS/web («creditcard», «fork.knife»). Før ble det kuttet til 3 tegn («cre»)
         // og tegnet som tekst. Nå oversettes det til appens ikon, eller fanens standardikon.
-        list += TabItem(id, (t.optStr("label") ?: def.label).take(18), tabGlyph25(id, t.optStr("icon")))
+        list += TabItem(id, label.take(18), tabGlyph25(id, t.optStr("icon")))
     }
     return Layout16(list.distinctBy { it.id }.take(6), o.optStr("iconTheme")?.takeIf { k -> ICON_THEMES.any { it.first == k } })
 }

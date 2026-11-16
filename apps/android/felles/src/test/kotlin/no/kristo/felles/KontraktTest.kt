@@ -1,6 +1,7 @@
 package no.kristo.felles
 
 import no.kristo.felles.kontrakt.Bruker
+import no.kristo.felles.kontrakt.FasteBetalinger
 import no.kristo.felles.kontrakt.Innlogging
 import no.kristo.felles.kontrakt.Serverversjon
 import no.kristo.felles.nett.Feilsvar
@@ -110,5 +111,24 @@ class KontraktTest {
         assertTrue(v.forGammelApp("0.9"))
         assertEquals(0, Serverversjon.sammenlign("4.0", "4.0.0"))
         assertTrue(Serverversjon.sammenlign("4.10.0", "4.9.9") > 0)
+    }
+
+    /** Faste betalinger (Q4): filtrene, betalingene og de planlagte trekkene slik serveren sender dem. */
+    @Test fun fasteBetalinger() {
+        val f = FasteBetalinger.fra(Repo.fil("shared/schemas/eksempler/finans-faste-betalinger.json").readText())
+        assertNotNull(f)
+        assertEquals(FasteBetalinger.FILTRE, f!!.filtre.map { it.id })
+        assertEquals("Abonnementer", f.filter("abonnementer")?.navn)
+        assertEquals("Faste utgifter", f.filter("faste")?.navn)
+        assertEquals("Planlagte trekk", f.filter("planlagte")?.navn)
+        val spotify = f.betalinger.first { it.navn == "Spotify" }
+        assertEquals("abonnementer", spotify.filter)
+        assertEquals("Månedlig · neste trekk 20. nov.", spotify.label)
+        assertEquals("2026-11-20", spotify.nesteDato)
+        assertEquals(5, spotify.dagerIgjen)
+        assertEquals(239.0, spotify.maned, 0.001)
+        assertTrue(f.planlagte.isNotEmpty())
+        assertEquals(f.filter("planlagte")?.sum ?: 0.0, f.planlagtSum, 0.001)
+        assertEquals(null, FasteBetalinger.fra("<html>"))
     }
 }

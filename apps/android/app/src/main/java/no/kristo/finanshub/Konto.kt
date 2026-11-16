@@ -381,7 +381,7 @@ fun AppViewModel.setupTf40(password: String? = null) {
             val o = JSONObject(api40 { hlPost("/auth/2fa/setup", body) })
             val secret = o.s37("secret") ?: throw IllegalStateException("Serveren sendte ingen nøkkel")
             val acct = o.s37("account") ?: account?.username ?: "bruker"
-            val issuer = o.s37("issuer") ?: "Nordlys OS"
+            val issuer = o.s37("issuer") ?: "Homelab"
             val uri = o.s37("otpauth") ?: o.s37("otpauth_uri") ?: o.s37("uri")
                 ?: "otpauth://totp/${java.net.URLEncoder.encode("$issuer:$acct", "UTF-8").replace("+", "%20")}?secret=$secret&issuer=${java.net.URLEncoder.encode(issuer, "UTF-8").replace("+", "%20")}&digits=6&period=30"
             s.tfSetup = TfSetup40(secret, uri, o.s37("qrPng")?.takeIf { it.startsWith("data:image") }, issuer, acct)

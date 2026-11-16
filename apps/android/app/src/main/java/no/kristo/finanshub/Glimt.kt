@@ -514,7 +514,7 @@ fun AppViewModel.confirmChat67(i: Int, yes: Boolean) {
 /** Verktøynavnet ut fra kortet. */
 internal fun cardTool31(card: JSONObject): String? = when (card.s31("k")) {
     "weather", "wx" -> "Vær"; "calendar", "cal" -> "Kalender"; "departures", "dep" -> "Avganger"; "packages", "pk" -> "Pakker"
-    "finance", "fin" -> "Finans"; "tasks" -> "Gjøremål"; "trial", "trials" -> "Abonnementer"; else -> null
+    "finance", "fin" -> "Økonomi"; "tasks" -> "Gjøremål"; "trial", "trials" -> "Abonnementer"; else -> null
 }
 
 /** Svaret er klart: varsel hvis appen er i bakgrunnen, og banneret når brukeren kommer tilbake. */
@@ -636,7 +636,7 @@ private val NAV32B: List<Triple<Regex, String, String>> = listOf(
     Triple(Regex("pakke|sporing|sending"), "sporing", "Sporing"),
     Triple(Regex("budsjett"), "budsjett", "Budsjett"),
     Triple(Regex("kvittering"), "kvitt", "Kvitteringer"),
-    Triple(Regex("finans|økonomi|saldo|konto"), "finans", "Finans"),
+    Triple(Regex("finans|økonomi|saldo|konto"), "finans", "Økonomi"),
     Triple(Regex("abonnement|prøveperiode"), "abo", "Abonnement"),
     Triple(Regex("domene"), "domener", "Domener"),
     Triple(Regex("skjold|sorteringsskap|skuffeskap"), "skjold", "Skjold Lab"), // prompt 76

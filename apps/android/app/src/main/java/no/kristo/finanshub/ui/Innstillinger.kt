@@ -449,7 +449,7 @@ internal fun SecurityPage(vm: AppViewModel, onPrivacyChanged: () -> Unit) = Page
 
 private val allScopes = listOf(
     "receipts:write" to "Last opp kvitteringer", "read:transactions" to "Les transaksjoner", "read:summary" to "Les sammendrag",
-    "read:budget" to "Les budsjett", "write:transactions" to "Endre transaksjoner", "finance:read" to "Les alt i FinansHub",
+    "read:budget" to "Les budsjett", "write:transactions" to "Endre transaksjoner", "finance:read" to "Les alt i Økonomi",
 )
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -573,7 +573,7 @@ internal fun DataPage(vm: AppViewModel) = Pages {
         Row(Modifier.fillMaxWidth().clickable { vm.refresh() }.padding(16.dp, 14.dp)) { Text("Synk nå", Modifier.weight(1f)); Text(time(vm.lastSync), color = C.text2, fontSize = 13.sp) }
         Row(Modifier.fillMaxWidth().clickable { vm.exportCsv() }.padding(16.dp, 14.dp)) { Text("Eksporter som CSV", Modifier.weight(1f)); Icon(Icons.Filled.IosShare, null, tint = C.text2) }
     }
-    Note("Full backup og Excel-database lages i FinansHub på PC under Innstillinger → Backup og data.")
+    Note("Full backup og Excel-database lages i Økonomi på PC under Innstillinger → Backup og data.")
 }
 
 @Composable
@@ -641,13 +641,13 @@ internal fun CategoriesPage(vm: AppViewModel) = Pages {
             }
         }
     }
-    Note("Nye kategorier, farger og budsjett settes i FinansHub på PC.")
+    Note("Nye kategorier, farger og budsjett settes i Økonomi på PC.")
 }
 
 @Composable
 internal fun RulesPage(vm: AppViewModel) = Pages {
     val rules = vm.boot?.rules.orEmpty()
-    if (rules.isEmpty()) Note("Ingen regler ennå. Regler lages når du retter en kategori, eller i FinansHub på PC.") else Group {
+    if (rules.isEmpty()) Note("Ingen regler ennå. Regler lages når du retter en kategori, eller i Økonomi på PC.") else Group {
         rules.forEach { r -> Info(r.pattern, r.category ?: "–") }
     }
     Note("* kan brukes som jokertegn og treffer starten på et hvilket som helst ord.")
@@ -678,8 +678,8 @@ internal fun BackupPage(vm: AppViewModel) = Pages {
             Text(if (canSmb) "Full backup, Excel og SMB-share" else "Eksporter og gjenopprett dine data", Modifier.weight(1f)); Icon(Icons.Filled.OpenInBrowser, null, tint = C.text2)
         }
     }
-    Note(if (canSmb) "Full backup (.json), Excel-databasen og backup til SMB-share settes opp i FinansHub på PC under Innstillinger → Backup og data."
-        else "Du kan eksportere og gjenopprette dine egne data i FinansHub på PC under Innstillinger → Backup og data. Backup av hele databasen og SMB-share: $SERVER_LOCKED")
+    Note(if (canSmb) "Full backup (.json), Excel-databasen og backup til SMB-share settes opp i Økonomi på PC under Innstillinger → Backup og data."
+        else "Du kan eksportere og gjenopprette dine egne data i Økonomi på PC under Innstillinger → Backup og data. Backup av hele databasen og SMB-share: $SERVER_LOCKED")
 }
 
 private val ON_TIMEOUT = listOf("next" to "Prøv neste motor", "ocr" to "Bruk lokal OCR", "queue" to "Legg i kø og prøv senere")
@@ -755,44 +755,44 @@ private fun setIndex24(vm: AppViewModel): List<SetItem24> = buildList {
     add(SetItem24("g67rec", "Glimt lærer", "Glimt og AI → Glimt", "Oppskrifter fra vellykkede kjøringer og rettelser", "g67rec", "glimt lærer oppskrifter skills hurtigvei rettelser tommel"))
     add(SetItem24("g67sch", "Faste oppgaver", "Glimt og AI → Glimt", "Planlagte oppgaver og varsler · Lag fra tekst · Kjør nå", "g67sch", "faste oppgaver planlagte påminnelse strømpris brief lag fra tekst"))
     add(SetItem24("g67q", "Kvalitet", "Glimt og AI → Glimt", if (vm.userIsAdmin) "Ukerapport og nattlige eval-kjøringer" else "Ukerapporten din", "g67q", "kvalitet ukerapport eval regresjon nattlig eval kjøringer per case tidsgrense lagre rapporter"))
-    add(SetItem24("app67", "App", "Generelt", "Appprofil, widgets, skanning, server, data og oppdatering", "app67", "app widgets oppdater appen"))
-    add(SetItem24("fin67", "Finans", "Moduler", "Kategorier, regler, bankimport, aksjer, fanelinje og abonnementer", "fin67", "finans økonomi"))
-    add(SetItem24("profil", "Appprofil", "Generelt → App", "Standard, Finans + Boliger eller Boliger-profil", "profil", "profil boliger oppsett"))
+    add(SetItem24("app67", "Enheter og widgets", "Innstillinger", "Widgets, logg inn på en annen enhet, API-tokens, appprofil, skanning, server og oppdatering", "enheter", "app enheter widgets tokens oppdater appen"))
+    add(SetItem24("fin67", "Økonomi", "Moduler", "Kategorier, regler, bankimport, aksjer, fanelinje og abonnementer", "fin67", "finans økonomi"))
+    add(SetItem24("profil", "Appprofil", "Enheter og widgets", "Standard, Økonomi + Boliger eller Boliger-profil", "profil", "profil boliger oppsett"))
     vm.b24.profiles.forEach { add(SetItem24("profile:${it.key}", it.name, "App → Appprofil", it.sub, null, "profil oppsett")) }
-    add(SetItem24("accounts", "Konto", "Generelt", "Profil, kontoer, økter og logg ut", "accounts", "bruker brukere kontoer"))
-    add(SetItem24("security", "Sikkerhet", "Generelt", "Totrinnsbekreftelse, passord, fingeravtrykk og aktive økter", "security", "2fa passord face logg"))
+    add(SetItem24("accounts", "Konto og sikkerhet", "Innstillinger", "Profil, kontoer, økter og logg ut", "konto", "konto bruker brukere kontoer"))
+    add(SetItem24("security", "Sikkerhet", "Konto og sikkerhet", "Totrinnsbekreftelse, passord, fingeravtrykk og aktive økter", "security", "2fa passord face logg"))
     if (vm.userIsAdmin) add(SetItem24("sysbackup", "Backup", "Server", "Backup av hele systemet: automatisk, hva som tas med, sky og gjenoppretting", "sysbackup", "backup sikkerhetskopi gjenopprett restore"))
-    add(SetItem24("tokens", "API-tokens", "Generelt", "Snarveier og integrasjoner", "tokens", "token nøkkel"))
+    add(SetItem24("tokens", "API-tokens", "Enheter og widgets", "Snarveier og integrasjoner", "tokens", "token nøkkel"))
     // Prompt 44: Logger (Docker), Gjøremål-synk, Logg inn som / Overfør eier, Tidligere versjoner.
     if (vm.userIsAdmin) add(SetItem24("logger44", "Logger", "Server", "Docker-logger, feil og feilsøking", null, "logg logger docker feil feilsøking container"))
     add(SetItem24("huske", "Gjøremål", "Tilkoblinger → Kalender og gjøremål", "Synk med Home Assistant", "kal", "gjøremål synk home assistant todo"))
     add(SetItem24("nyheter", "Nyheter", "Moduler", "Kilder, kategorier, For deg og Glimt-sammendrag", "nyheter", "nyheter rss kilder kategori for deg sammendrag favicon")) // prompt 46
     // Prompt 68: brukerne og Logg inn som ligger under Husstand → Brukere og familie (ui/Users68Ui.kt).
-    if (vm.userIsAdmin) add(SetItem24("as44", "Logg inn som", "Husstand → Brukere og familie", "Rediger oppsettet til et familiemedlem · overfør eierskap", USERS68, "logg inn som impersonering eier overfør familie oppsett brukere"))
-    if (vm.userIsAdmin) add(SetItem24("char52", "Glimt-figur per bruker", "Husstand → Brukere og familie", "Standardfiguren hver bruker starter med", USERS68, "brief figur glimt-figur standard per bruker blekksprut"))
+    if (vm.userIsAdmin) add(SetItem24("as44", "Logg inn som", "Husstand", "Rediger oppsettet til et familiemedlem · overfør eierskap", USERS68, "logg inn som impersonering eier overfør familie oppsett brukere"))
+    if (vm.userIsAdmin) add(SetItem24("char52", "Glimt-figur per bruker", "Husstand", "Standardfiguren hver bruker starter med", USERS68, "brief figur glimt-figur standard per bruker blekksprut"))
     if (vm.userIsAdmin) add(SetItem24("rollback44", "Tidligere versjoner", "System", "Rull tilbake til en tidligere versjon", null, "rull tilbake rollback versjon nedgrader"))
     add(SetItem24("ai", "AI", "Glimt og AI", "AI og modeller · kvitteringer · chat · tale · tidsgrenser", "ai", "gemini groq ollama roboflow ocr tolkning modeller"))
-    add(SetItem24("cats", "Kategorier og budsjett", "Moduler → Finans", "Farger og typer", "cats", "budsjett kategori"))
-    add(SetItem24("rules", "Regler", "Moduler → Finans", "Automatisk kategorisering", "rules", "regel"))
-    add(SetItem24("import", "Bankimport", "Moduler → Finans", "DNB · CSV · ✦ AI", null, "bank csv excel"))
-    add(SetItem24("stocks", "Aksjer · Trading 212", "Moduler → Finans", "Nøkkel, miljø og synk", "stocks", "aksje trading"))
-    add(SetItem24("fin", "Fanelinje og Mer i Finans", "Moduler → Finans", "Fanene i Finans", "fin", "fane faner"))
-    add(SetItem24("sub", "Subscription OS", "Moduler → Finans", "Abonnementer og AI-sparing", null, "abonnement"))
+    add(SetItem24("cats", "Kategorier og budsjett", "Moduler → Økonomi", "Farger og typer", "cats", "budsjett kategori"))
+    add(SetItem24("rules", "Regler", "Moduler → Økonomi", "Automatisk kategorisering", "rules", "regel"))
+    add(SetItem24("import", "Bankimport", "Moduler → Økonomi", "DNB · CSV · ✦ AI", null, "bank csv excel"))
+    add(SetItem24("stocks", "Aksjer · Trading 212", "Moduler → Økonomi", "Nøkkel, miljø og synk", "stocks", "aksje trading"))
+    add(SetItem24("fin", "Fanelinje og Mer i Økonomi", "Moduler → Økonomi", "Fanene i Økonomi", "fin", "fane faner"))
+    add(SetItem24("sub", "Abonnementer", "Moduler → Økonomi", "Faste betalinger og AI-sparing", null, "abonnement subscription faste betalinger"))
     add(SetItem24("appname", "Navn på appen", vm.appName, vm.appName, null, "navn"))
     add(SetItem24("appicon", "App-ikon", vm.appName, "Bytt ikon på appen", null, "ikon logo"))
     add(SetItem24("navstyle", "Fanelinje-stil", vm.appName, "Tekst, bare ikoner eller ikoner + navn på valgt", null, "fane faner ikon ikoner stil navbar"))
     add(SetItem24("tabedit", "Fanelinje i Hjem", vm.appName, "Fjern, flytt, gi nytt navn og ikon", null, "fane faner"))
-    add(SetItem24("modules", "Moduler", "Moduler", "Familie, Gjøremål, Avganger, Vær", "modules", "widget modul"))
-    add(SetItem24("news", "Nyhetsleser", "Moduler → Moduler", "Kilder og AI", null, "nyheter rss"))
-    add(SetItem24("look", "Utseende", "Generelt", "Navn, ikon, tema, farger, bakgrunn og fanelinje", "tilpass", "tema mørk lys farge farger ikon navn fanelinje bakgrunn tilpass utseende"))
-    add(SetItem24("notify", "Varsler", "Generelt", "Lyd, stille timer, vibrasjon og test", "notify", "varsel lyd vibr push"))
+    add(SetItem24("modules", "Familie, Gjøremål, Reise og Vær", "Moduler", "Innstillingene for modulene på telefonen", "modules", "widget modul familie gjøremål reise avganger vær"))
+    add(SetItem24("news", "Nyheter", "Moduler", "Kilder og AI", null, "nyheter nyhetsleser rss"))
+    add(SetItem24("look", "Utseende", "Innstillinger", "Navn, ikon, tema, farger, bakgrunn og fanelinje", "tilpass", "tema mørk lys farge farger ikon navn fanelinje bakgrunn tilpass utseende"))
+    add(SetItem24("notify", "Varsler", "Innstillinger", "Lyd, stille timer, vibrasjon og test", "notify", "varsel lyd vibr push"))
     add(SetItem24("kal", "Kalender og gjøremål", "Tilkoblinger", "Google Kalender, Home Assistant, Skole-iCal og Canvas", "kal", "kalender google ha skole canvas ical timeplan bursdag"))
     add(SetItem24("integ", "Integrasjoner", "Tilkoblinger", if (vm.userIsAdmin) "Dine og serverens: Plex, Bring, IMAP, Home Assistant og flere" else "Dine egne: kalender, Plex, Trading 212, Bring, IMAP og flere", "integ", "integrasjon"))
     add(SetItem24(USERS68, "Brukere og familie", "Husstand", users68Sub(vm.userIsAdmin), USERS68, "brukere bruker familie husstand barn roller logg inn som helse posisjon"))
-    add(SetItem24("healthpos", "Helse og posisjon", "Husstand → Brukere og familie", "Health Connect, skritt, puls, søvn og posisjonsdeling", USERS68, "helse posisjon skritt kart"))
-    add(SetItem24("scan", "Skanning", "Generelt → App", "Kamera, beskjæring og opplasting", "scan", "kamera skann"))
-    add(SetItem24("server", "Server og synk", "Generelt → App", "Lokal og ekstern adresse", "server", "server adresse"))
-    add(SetItem24("backup", "Backup og data", "Generelt → App", "Nedlasting og lagring", "backup", "backup eksport"))
+    add(SetItem24("healthpos", "Helse og posisjon", "Husstand", "Health Connect, skritt, puls, søvn og posisjonsdeling", USERS68, "helse posisjon skritt kart"))
+    add(SetItem24("scan", "Skanning", "Enheter og widgets", "Kamera, beskjæring og opplasting", "scan", "kamera skann"))
+    add(SetItem24("server", "Server og synk", "Enheter og widgets", "Lokal og ekstern adresse", "server", "server adresse"))
+    add(SetItem24("backup", "Backup og data", "Enheter og widgets", "Nedlasting og lagring", "backup", "backup eksport"))
     // Prompt 32: «oppdatering», «versjon» og «update» treffer Nordlys OS (Oppdatering-raden er fjernet).
     add(SetItem24("nordlys", "Nordlys OS", "Server → System", "Oppdatering, versjon og hva er nytt", null, "oppdatering oppdater versjon update system programvare"))
     // Prompt 34: mål-id-er for konkrete kontroller (Oppdater nå, Tema, Haptikk …): treffet går til siden og markerer kontrollen.
@@ -885,12 +885,12 @@ private fun open24(vm: AppViewModel, it: SetItem24) {
         // Prompt 39: PROFIL er borte fra hovedsiden (to plasser færre), og navn/ikon/fanelinje ligger i Tilpass.
         // Prompt 67: Bankimport og Subscription OS står på siden Moduler → Finans.
         it.id == "import" -> { vm.settingsPage = "fin67"; vm.highlight25(rowKey25("Bankimport"), 0) }
-        it.id == "sub" -> { vm.settingsPage = "fin67"; vm.highlight25(rowKey25("Subscription OS"), 0) }
+        it.id == "sub" -> { vm.settingsPage = "fin67"; vm.highlight25(rowKey25("Abonnementer"), 0) }
         it.id == "appname" || it.id == "appicon" || it.id == "navstyle" || it.id == "tabedit" -> {
             vm.settingsPage = "tilpass"
             vm.highlight25(rowKey25(when (it.id) { "appname" -> "Navn på appen"; "appicon" -> "App-ikon"; "navstyle" -> "Fanelinje-stil"; else -> "Fanelinje i Hjem" }), 1)
         }
-        it.id == "news" -> { vm.settingsPage = "modules"; vm.highlight25(rowKey25("Nyhetsleser"), 0) }
+        it.id == "news" -> { vm.settingsPage = "modules"; vm.highlight25(rowKey25("Nyheter"), 0) }
         it.page != null -> { vm.settingsPage = it.page; vm.highlight25("page:${it.page}", 0) }
     }
 }
@@ -1432,9 +1432,10 @@ internal fun SettingsSplit50(vm: AppViewModel, navBottom: Dp, right: @Composable
             // Søk og ✦ AI som på telefon; med tekst i feltet viser listen bare treffene.
             if (!settingsSearch24(vm)) {
                 val act = navKey50(vm, vm.settingsPage)
-                groups50(vm).forEach { g ->
-                    item(key = "g50-" + g.title) { GroupHead50(g.title) }
-                    g.rows.forEach { r -> item(key = "r50-" + g.title + r.title) { NavRow50(vm, r, r.key != null && r.key == act) } }
+                // Nøklene har gruppens nummer, siden to grupper uten overskrift kan stå i lista (Fase 6).
+                groups50(vm).forEachIndexed { gi, g ->
+                    item(key = "g50-$gi") { GroupHead50(g.title.trim()) }
+                    g.rows.forEach { r -> item(key = "r50-$gi-" + r.title) { NavRow50(vm, r, r.key != null && r.key == act) } }
                 }
             }
         }

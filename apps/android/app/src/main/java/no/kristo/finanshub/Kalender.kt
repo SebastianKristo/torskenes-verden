@@ -556,13 +556,30 @@ data class Kal27Form(
 val KAL27_REPEATS = listOf("none" to "Ingen", "daily" to "Hver dag", "weekly" to "Hver uke", "monthly" to "Hver måned")
 
 /** Fanene nederst: nøkkel, navn og strekikon (24 × 24) fra designet. */
-val KAL27_VIEWS = listOf(
+/** Visningene Homelabs egen kalender kan vise: nøkkel, reservenavn og ikon. Kalender-appen har i tillegg År. */
+private val KAL27_KJENTE: List<Triple<String, String, String>> = listOf(
     Triple("dag", "Dag", "M5 4h14v16H5zM5 9h14"),
     Triple("3dager", "3 dager", "M3 5h18v15H3zM9 5v15M15 5v15"),
     Triple("uke", "Uke", "M3 5h18v15H3zM3 10h18M7.5 5v15M12 5v15M16.5 5v15"),
     Triple("maaned", "Måned", "M3 5h18v15H3zM3 10h18M3 15h18M9 5v15M15 5v15"),
     Triple("liste", "Liste", "M4 6h16M4 12h16M4 18h10"),
 )
+
+/** Modullistens id for visningen → nøkkelen her (3d → 3dager, mnd → maaned). */
+private val KAL27_FRA_LISTE: Map<String, String> = mapOf("dag" to "dag", "3d" to "3dager", "uke" to "uke", "mnd" to "maaned", "liste" to "liste")
+
+/**
+ * Fase 6: rekkefølgen og navnene kommer fra modullisten (kalender → undersider «visning»: År, Måned, Uke, 3 dager, Dag, Liste), som i
+ * Kalender-appen, iOS og web. Nøklene er de samme som før, så lagret visning virker.
+ */
+val KAL27_VIEWS: List<Triple<String, String, String>>
+    get() {
+        val fraListe = Moduler.modul("kalender")?.undersider("visning").orEmpty().mapNotNull { u ->
+            val k = KAL27_FRA_LISTE[u.id] ?: return@mapNotNull null
+            KAL27_KJENTE.firstOrNull { it.first == k }?.let { Triple(k, u.navn, it.third) }
+        }
+        return if (fraListe.size == KAL27_KJENTE.size) fraListe else KAL27_KJENTE
+    }
 
 private val KAL27_SRC = mapOf(
     "timeplan" to "skolens iCal", "prover" to "skolens iCal", "skole" to "skolens iCal",
