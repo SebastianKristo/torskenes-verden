@@ -75,7 +75,7 @@ final class TrackKeys37Model {
 
     func save(_ id: String, _ key: String, _ store: Store) {
         let body: [String: Any] = ["key": key]
-        let e: String = Cal27Model.enc(id)
+        let e: String = API.pathPart(id)
         Task { @MainActor in
             do {
                 _ = try await store.api.callAt("/api", "PUT", "/tracking/keys/" + e, json: body, timeout: 15)

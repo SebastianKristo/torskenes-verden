@@ -229,7 +229,7 @@ extension Quick29Model {
         pending.removeAll { $0 == id }
         if id.hasPrefix("tmp-") { return }
         let a: API = store.api
-        Task { _ = try? await a.callAt("/api", "POST", "/kalender/quick/" + Cal27Model.enc(id) + "/cancel", json: [:], timeout: 10) }
+        Task { _ = try? await a.callAt("/api", "POST", "/kalender/quick/" + API.pathPart(id) + "/cancel", json: [:], timeout: 10) }
     }
 }
 

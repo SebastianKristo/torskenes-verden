@@ -162,7 +162,7 @@ final class Search32b {
         a.homeAnswer = ans
         try? await Task.sleep(nanoseconds: 700_000_000)
         a.closeHome()
-        if !job.isEmpty, let d = try? await store.api.callAt("/api", "POST", "/assist/" + Cal27Model.enc(job) + "/handoff", json: [:], timeout: 10) {
+        if !job.isEmpty, let d = try? await store.api.callAt("/api", "POST", "/assist/" + API.pathPart(job) + "/handoff", json: [:], timeout: 10) {
             let o: [String: Any] = JS.obj(d)
             if let chat = JS.str(o, "chatId"), !chat.isEmpty {
                 Notify31.open(go: "chat", chatId: chat, store)

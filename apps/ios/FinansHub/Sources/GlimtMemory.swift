@@ -102,7 +102,7 @@ final class Memory33Model {
     /// Hendelsen som vises blir konteksten for «det var frisør» i Glimt. Svaret trengs ikke.
     func shown(_ e: CalEvent26, _ store: Store) {
         guard e.editable else { return }
-        Task { _ = try? await store.api.callAt("/api", "GET", "/kalender/events/" + Cal27Model.enc(e.id), timeout: 8) }
+        Task { _ = try? await store.api.callAt("/api", "GET", "/kalender/events/" + API.pathPart(e.id), timeout: 8) }
     }
 
     /// Åpner arket for en hendelse (etter at detaljarket er lukket).

@@ -176,7 +176,7 @@ struct Sub37TrialRow: View {
     }
 
     private func patch(_ body: [String: Any]) {
-        let id: String = Cal27Model.enc(tr.id)
+        let id: String = API.pathPart(tr.id)
         let api: API = store.api
         Task {
             _ = try? await api.callAt("/finans/api", "PATCH", "/subscriptions/trials/" + id, json: body, timeout: 15)

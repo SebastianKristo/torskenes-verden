@@ -259,7 +259,7 @@ final class Assist31 {
         var rounds: Int = 0
         while rounds < 120 {
             if cancelled.contains(id) { cancelled.remove(id); return nil }
-            if let d = try? await store.api.callAt("/api", "GET", "/assist/" + Cal27Model.enc(id), timeout: 15) {
+            if let d = try? await store.api.callAt("/api", "GET", "/assist/" + API.pathPart(id), timeout: 15) {
                 let o: [String: Any] = JS.obj(d)
                 let state: String = JS.str(o, "state") ?? JS.str(o, "status") ?? ""
                 if state == "failed" || state == "cancelled" {
@@ -305,7 +305,7 @@ final class Assist31 {
         if let w = waiters.removeValue(forKey: id) { w.resume() }
         if homeBusy { closeHome() }
         let a: API = store.api
-        Task { _ = try? await a.callAt("/api", "POST", "/assist/" + Cal27Model.enc(id) + "/cancel", json: [:], timeout: 10) }
+        Task { _ = try? await a.callAt("/api", "POST", "/assist/" + API.pathPart(id) + "/cancel", json: [:], timeout: 10) }
     }
 
     /* ---------- Varsel når appen er i bakgrunnen ---------- */

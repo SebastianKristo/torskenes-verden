@@ -456,7 +456,7 @@ final class ChatStore27 {
     }
 
     func loadChat(_ id: String, _ store: Store) async {
-        guard let d = try? await store.api.callAt("/api", "GET", "/chat/chats/" + Cal27Model.enc(id), timeout: 20) else { return }
+        guard let d = try? await store.api.callAt("/api", "GET", "/chat/chats/" + API.pathPart(id), timeout: 20) else { return }
         var o: [String: Any] = JS.obj(d)
         if let inner = JS.dict(o, "chat") { o = inner }
         guard curId == id else { return }
@@ -529,7 +529,7 @@ final class ChatStore27 {
         guard let i = folders.firstIndex(where: { $0.id == f.id }) else { return }
         folders[i].open.toggle()
         let v: Bool = folders[i].open
-        Task { _ = try? await store.api.callAt("/api", "PATCH", "/chat/folders/" + Cal27Model.enc(f.id), json: ["open": v]) }
+        Task { _ = try? await store.api.callAt("/api", "PATCH", "/chat/folders/" + API.pathPart(f.id), json: ["open": v]) }
     }
 
     /* ---------- ⋯ på en samtale ---------- */
@@ -543,7 +543,7 @@ final class ChatStore27 {
     }
 
     private func patchChat(_ id: String, _ body: [String: Any], _ store: Store) async {
-        _ = try? await store.api.callAt("/api", "PATCH", "/chat/chats/" + Cal27Model.enc(id), json: body)
+        _ = try? await store.api.callAt("/api", "PATCH", "/chat/chats/" + API.pathPart(id), json: body)
         await loadChats(store)
     }
 
@@ -597,7 +597,7 @@ final class ChatStore27 {
         delArm = false
         if curId == c.id { newChat() }
         Task {
-            _ = try? await store.api.callAt("/api", "DELETE", "/chat/chats/" + Cal27Model.enc(c.id))
+            _ = try? await store.api.callAt("/api", "DELETE", "/chat/chats/" + API.pathPart(c.id))
             await self.loadChats(store)
         }
     }
@@ -607,7 +607,7 @@ final class ChatStore27 {
         guard let c = menuChat else { return }
         sheet = nil
         Task {
-            guard let d = try? await store.api.callAt("/api", "GET", "/chat/chats/" + Cal27Model.enc(c.id) + "/export", timeout: 20) else { self.flash("Fikk ikke eksportert"); return }
+            guard let d = try? await store.api.callAt("/api", "GET", "/chat/chats/" + API.pathPart(c.id) + "/export", timeout: 20) else { self.flash("Fikk ikke eksportert"); return }
             let safe: String = String(c.title.filter { $0.isLetter || $0.isNumber || $0 == " " || $0 == "-" }.prefix(40)).trimmingCharacters(in: .whitespaces)
             let url: URL = FileManager.default.temporaryDirectory.appendingPathComponent((safe.isEmpty ? "samtale" : safe) + ".md")
             do {
@@ -624,7 +624,7 @@ final class ChatStore27 {
         guard let c = menuChat else { return }
         sheet = nil
         Task {
-            guard let d = try? await store.api.callAt("/api", "POST", "/chat/chats/" + Cal27Model.enc(c.id) + "/share", json: [:]),
+            guard let d = try? await store.api.callAt("/api", "POST", "/chat/chats/" + API.pathPart(c.id) + "/share", json: [:]),
                   let s = JS.str(JS.obj(d), "url"), let u = URL(string: s) else { self.flash("Fikk ikke laget lenke"); return }
             UIPasteboard.general.string = s
             try? await Task.sleep(nanoseconds: 400_000_000)
@@ -653,7 +653,7 @@ final class ChatStore27 {
             paramsTask = Task {
                 try? await Task.sleep(nanoseconds: 500_000_000)
                 if Task.isCancelled { return }
-                _ = try? await store.api.callAt("/api", "PATCH", "/chat/chats/" + Cal27Model.enc(id), json: body)
+                _ = try? await store.api.callAt("/api", "PATCH", "/chat/chats/" + API.pathPart(id), json: body)
             }
         } else {
             change(&defaults)
@@ -968,7 +968,7 @@ final class ChatStore27 {
             b["settings"] = s
             if let id = curId {
                 let body: [String: Any] = ["settings": settings.json]
-                Task { _ = try? await store.api.callAt("/api", "PATCH", "/chat/chats/" + Cal27Model.enc(id), json: body) }
+                Task { _ = try? await store.api.callAt("/api", "PATCH", "/chat/chats/" + API.pathPart(id), json: body) }
             }
         }
         stream(b, store)
@@ -1129,7 +1129,7 @@ final class ChatStore27 {
         modelDelArm = nil
         Task {
             do {
-                _ = try await store.api.callAt("/api", "DELETE", "/chat/models/" + Cal27Model.enc(m.id))
+                _ = try await store.api.callAt("/api", "DELETE", "/chat/models/" + API.pathPart(m.id))
                 await self.loadModels(store)
                 self.flash(m.id + " er slettet")
             } catch let e as APIError {

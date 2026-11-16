@@ -179,10 +179,10 @@ final class Receipts34AiModel {
         let job: String = r.jobId
         Task {
             do {
-                try await store.api.call("POST", "/receipts/" + Cal27Model.enc(r.id) + "/cancel-ai")
+                try await store.api.call("POST", "/receipts/" + API.pathPart(r.id) + "/cancel-ai")
                 store.flash("Avbrutt · kvitteringen ligger i Til gjennomgang")
             } catch {
-                if !job.isEmpty { _ = try? await store.api.callAt("/api", "POST", "/ai/jobs/" + Cal27Model.enc(job) + "/cancel", json: [:], timeout: 10) }
+                if !job.isEmpty { _ = try? await store.api.callAt("/api", "POST", "/ai/jobs/" + API.pathPart(job) + "/cancel", json: [:], timeout: 10) }
             }
         }
     }

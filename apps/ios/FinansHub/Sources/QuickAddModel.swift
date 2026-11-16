@@ -388,7 +388,7 @@ final class Quick29Model {
         bannerTask?.cancel()
         Task {
             do {
-                _ = try await store.api.callAt("/api", "POST", "/kalender/quick/" + Cal27Model.enc(j.id) + "/undo", json: [:], timeout: 15)
+                _ = try await store.api.callAt("/api", "POST", "/kalender/quick/" + API.pathPart(j.id) + "/undo", json: [:], timeout: 15)
                 await Cal26Model.shared.load(store, force: true)
                 store.flash("Timen er fjernet")
             } catch let e as APIError {
