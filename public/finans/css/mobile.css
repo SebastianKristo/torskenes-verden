@@ -850,7 +850,7 @@ em.role.dns{min-width:46px;text-align:center;font-style:normal;font-size:11px;fo
 .pp-center{display:flex;justify-content:center;padding:10px 14px 12px}
 .pp-btn{height:48px;border-radius:14px;border:1px solid var(--pp-line)!important;background:transparent;color:var(--pp-ink);display:grid;place-items:center;font:600 14px Manrope,sans-serif;text-decoration:none;cursor:pointer;padding:0 18px;box-sizing:border-box}
 .pp-btn.ink{background:var(--pp-ink);color:var(--pp-bg);border-color:var(--pp-ink)!important;font-weight:700}
-.pp-btn.lab{background:var(--pp-lab);color:#fff;border:0;font-weight:700}
+.pp-btn.lab{background:var(--pp-lab);color:#fff;border:0!important;font-weight:700}
 .pp-btn.ghost{border:0!important;color:var(--pp-mut)!important}
 .pp-btn.sm{height:36px;border-radius:999px;font-size:12px}
 .pp-btn:disabled{opacity:.55}
@@ -1059,7 +1059,7 @@ a.wx-r{color:inherit;text-decoration:none}
 
 /* Finn: rutenett med to kort i bredden */
 .pp-bar.thin{height:6px;border-radius:3px}
-.pp-btn.dash{border:1.5px dashed var(--pp-line);font-weight:700;height:46px;flex:none}
+.pp-btn.dash{border:1.5px dashed var(--pp-line)!important;font-weight:700;height:46px;flex:none}
 .pp-seg{height:38px;border-radius:10px;border:1px solid var(--pp-line)!important;background:transparent;color:var(--pp-ink);font:700 13px Manrope,sans-serif;cursor:pointer}
 .pp-seg[aria-pressed=true]{background:var(--pp-ink)!important;color:var(--pp-bg)!important;border-color:var(--pp-ink)!important}
 .pp-fgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;flex:none}
@@ -2061,7 +2061,7 @@ a.wx-r{color:inherit;text-decoration:none}
 .h22-dock input{flex:1;min-width:0;height:100%;border:0;background:transparent;color:var(--pp-ink);font:500 16px Manrope,sans-serif;outline:none;padding:0}
 .h22-dock input::placeholder{color:var(--pp-mut)}
 .m.papir:not(.flyt) .h22-dock{right:16px;max-width:none}
-.m.papir.h22 .m-scroll,.m.papir.flyt.h22 .m-scroll,.m.papir:has(.h22-dock) .m-scroll{padding-bottom:calc(env(safe-area-inset-bottom) + 200px)}
+.m.papir.h22 .m-scroll,.m.papir.flyt.h22 .m-scroll,.m.papir:has(.h22-dock) .m-scroll{padding-bottom:calc(env(safe-area-inset-bottom) + 200px)!important}
 /* Uten feltet øverst starter listevelgeren under toppbildet. */
 .m.papir.ph .p17-hk:not(:has(.p17-hadd)){padding-top:37px}
 @media (min-width:600px){ .h22-dock{left:108px;right:96px;bottom:24px;max-width:none} .m.papir:not(.flyt) .h22-dock{right:24px} }
@@ -4387,7 +4387,7 @@ html.p36-booting body{overflow:hidden}
 
 /* ===================== Prompt 37 (PWA37): Gjøremål, bibelvers, onboarding, Pakker, prøveperioder ===================== */
 /* Gjøremål uten fanelinje: «Ny oppgave …» og ✦-knappen nederst, over tastaturet når det er oppe. */
-.m.papir.h37 .m-scroll{padding-bottom:calc(60px + max(18px, env(safe-area-inset-bottom) + 8px) + 32px)}
+.m.papir.h37 .m-scroll{padding-bottom:calc(60px + max(18px, env(safe-area-inset-bottom) + 8px) + 32px)!important}
 .m .p37-dock{position:fixed;z-index:21;left:16px;right:88px;bottom:calc(max(18px, env(safe-area-inset-bottom) + 8px) + var(--p30-kb, 0px));height:60px;margin:0 auto;display:flex;align-items:center;padding:0 20px;box-sizing:border-box;border-radius:22px;background:var(--pp-card);box-shadow:0 14px 30px -10px rgba(0,0,0,.4),0 2px 6px rgba(0,0,0,.12);max-width:calc(560px - 72px)}
 .m .p37-dock input{flex:1;min-width:0;height:100%;border:0;background:transparent;color:var(--pp-ink);font:500 16px Manrope,sans-serif;outline:none;padding:0}
 .m .p37-dock input::placeholder{color:var(--pp-mut)}
@@ -4915,7 +4915,7 @@ html.p39-sh .m .pp-sheet,html.p39-sh .m .p37-sheet,html.p39-sh .m .p28-sheet{pos
 .m.papir.ph.p39-bib .m-scroll{margin-top:0}
 .m.papir.p39-bib .p37-bp{padding-top:16px;gap:14px}
 .m.papir.p39-bib .p37-bp>*{margin-top:0;margin-bottom:0;position:relative;z-index:auto}
-.m.papir.p39-bib .m-scroll{padding-bottom:calc(env(safe-area-inset-bottom,0px) + 28px)}
+.m.papir.p39-bib .m-scroll{padding-bottom:calc(env(safe-area-inset-bottom,0px) + 28px)!important}
 .m.papir.p39-bib .p37-stk{border-radius:24px}
 /* Innstillinger: «Glimt i briefen» av → Venner av Glimt gråes ut */
 .m .p35-row.p39-dim{opacity:.45}
@@ -5475,7 +5475,7 @@ html.h40-ov,html.h40-ov body{overflow:hidden}
 .m .ch27 em.p41-auto,.ch27 em.p41-auto{background:#7a5ad6;color:#fff}
 
 /* Bursdager: uten fanelinje, jenka-tog i toppkortet, bilder */
-.m.papir.p41-bdpg .m-scroll{padding-bottom:calc(env(safe-area-inset-bottom) + 28px)}
+.m.papir.p41-bdpg .m-scroll{padding-bottom:calc(env(safe-area-inset-bottom) + 28px)!important}
 .m .p24-bdhero.p41-party{position:relative;overflow:hidden;padding-bottom:78px}
 .m .p24-bdhero.p41-party>:not(.p41-party){position:relative;z-index:1}
 .m .p41-party{position:absolute;inset:0;z-index:0;pointer-events:none;display:block}
