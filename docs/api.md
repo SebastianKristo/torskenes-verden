@@ -68,6 +68,7 @@ curl -s https://os.dittdomene.no/finans/api/search/ai -H "Authorization: Bearer 
 | GET | `/api/ruter` · `/weather` · `/school` · `/trading` · `/energy` · `/health` · `/upcoming` · `/news` | Widgetdata, cachet på serveren |
 | GET | `/api/weather/places?q=` | Stedsoppslag (geokoding): `[{name, sub, lat, lon, country, source, region}]`, maks 10, bosteder først (Open-Meteo og OpenStreetMap på serveren, bufret 24 t). Uten `q`: brukerens lagrede steder. Sesjon eller app-token. Appene slår opp steder her, ikke direkte hos Open-Meteo (L12) |
 | GET | `/api/weather/place?q=[&day=today\|tomorrow]` | Været for et hvilket som helst sted: `{place:{name, country, label, lat, lon, tz, norway}, now, today, tomorrow, days, text, plain, source}`. `404 {error:"Fant ikke stedet …", suggest?}` når stedet ikke finnes, `400` uten `q`. Sesjon eller app-token |
+| GET | `/api/weather/ski` | Skiføret i Nordmarka: `{place:{name, lat, lon, url}, snowCm, newCm, tempC, humidity, thaw, has, source}` (`newCm` = snøfall siste 3 dager, `thaw` = plussgrader siste dager, `has` = minst 15 cm snø). Serveren henter fra Open-Meteo (fast posisjon, bufret 15 min), uansett «Skiføre»-valget. `502` når Open-Meteo ikke svarer. Sesjon eller app-token. Appene henter skiføret her, ikke direkte (L12) |
 | GET | `/api/space/tle` · `/space/apod` · `/space/gallery/:key` | Rom-fanen |
 | CRUD | `/api/grades`, `/api/tests` | Studie |
 | GET / PUT / DELETE | `/api/cv` | CV-en. Lesing er offentlig, endring krever admin. |

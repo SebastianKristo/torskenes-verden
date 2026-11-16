@@ -2,11 +2,14 @@
 //   GET/PUT /api/weather/layout {order:[kort], hidden:[kort], ski:true|false, glimt:'top'|'bottom'} – per bruker, mobil og brett.
 //   GET /api/weather/full får ski:{text, chip, wax, …, places[]} når det er skiføre og «Skiføre» ikke er slått av (ski41 i week-glimt.js).
 //     Selve værsvaret lages i mobile.js; skiMw legger feltet på etter next(), og står før den handleren i server/index.js.
+//   GET /api/weather/ski → {place:{name, lat, lon, url}, snowCm, newCm, tempC, humidity, thaw, has, source} – rådata for skiføret i
+//     Nordmarka til appene (L12: Android hentet før direkte fra Open-Meteo). Fast offentlig adresse, ingen parametre fra klienten.
+//     Gis uansett «Skiføre»-valget (appene har sitt eget av/på). 502 når Open-Meteo ikke svarer.
 import { Hono } from 'hono';
 import { kv } from '../db.js';
 import { authOrToken as authOrToken0 } from '../mobile.js';
 import { sessionUser } from '../auth/session.js';
-import { ski41 } from './week-glimt.js';
+import { ski41, skiData, NORDMARKA } from './week-glimt.js';
 
 const authOrToken = (c, next) => authOrToken0(c, next); // sen binding
 
@@ -25,6 +28,14 @@ layoutApi.put('/layout', authOrToken, async (c) => {
   if ('glimt' in b && !['top', 'bottom'].includes(b.glimt)) return c.json({ error: 'glimt må være top eller bottom' }, 400);
   kv.set(u, 'vaer_layout', { ...cur, ...('order' in b ? { order: list(b.order) } : {}), ...('hidden' in b ? { hidden: list(b.hidden) ?? [] } : {}), ...('ski' in b ? { ski: b.ski } : {}), ...('glimt' in b ? { glimt: b.glimt } : {}), ...(b.reset ? { order: VAER_CARDS, hidden: [], glimt: 'bottom' } : {}) });
   return c.json(layoutOut(u));
+});
+
+/* ---------------- Skiføret (rådata) til appene ---------------- */
+layoutApi.get('/ski', authOrToken, async (c) => {
+  let s;
+  try { s = await skiData(); } catch { return c.json({ error: 'Skiføret er ikke tilgjengelig nå. Prøv igjen senere.', code: 'UPSTREAM_ERROR' }, 502); }
+  return c.json({ place: { name: NORDMARKA.name, lat: NORDMARKA.lat, lon: NORDMARKA.lon, url: NORDMARKA.url }, snowCm: s.snowCm, newCm: s.newCm, tempC: s.tempC,
+    humidity: s.humidity, thaw: s.thawC > 0.5, has: s.snowCm >= 15, source: 'Open-Meteo' }, 200, { 'Cache-Control': 'no-store' });
 });
 
 /* ---------------- Skiføre i /api/weather/full ---------------- */
