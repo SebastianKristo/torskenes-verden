@@ -191,7 +191,7 @@ Status: **Rettet** (i fase N), **Delvis**, **Gjenstår** eller **Ingen feil** (v
 | C-B2 | Tvunget mørk systemstil | Rettet i Fase 4 (Q16) | `project.yml:84`, `PaperTheme.swift:102` | – |
 | C-B3 | `KalNet` sender tom kropp stille ved kodefeil | Rettet (rest-ios) | `SharedKal/Core/KalNet.swift` (`isValidJSONObject` + `throw`); `test/ios-opprydding.test.js` | – |
 | C-B4 | Ubegrenset bildecache for skyer | Ingen feil | `WeatherEffects.swift:191`: nøkkelen er værtypen (noen få), så den vokser ikke | – |
-| C-B5 | `innst-…`-rutingen duplisert (iPhone og iPad) | Gjenstår (lav) | `Paper.swift:856–861` og `SettingsWide.swift:331–335` | Forslag: én funksjon `innstSide(id)` som begge bruker |
+| C-B5 | `innst-…`-rutingen duplisert (iPhone og iPad) | Rettet (rest-ios) | `FinansHub/Sources/InnstSide.swift`, brukt av `Paper.swift` og `SettingsWide.swift`; `test/ios-opprydding.test.js` | Én visning `InnstSide(id:)` i stedet for en fri funksjon, så den arver `@MainActor` fra `View` |
 | D-B4 | `EncryptedSharedPreferences` uten `try/catch` | Rettet i Fase 5 (`3cf75f1`) | `felles-android/…/SikkerLagring.kt` | – |
 | D-B5 (P85 B) | Hardkodet lokal adresse, klartekst bare til én IP | Delvis | Klartekst er nå tillatt til alle lokale adresser (`LokaltNett.kt`) | Standardadressen er fortsatt hardkodet (se C-S4) |
 | D-B6 | `ALLOW_ALL_HOSTS_VALIDATOR` i debug | Ingen feil | `Car51Plat.kt:42–45`: `FLAG_DEBUGGABLE` settes av byggtypen | – |
