@@ -1,11 +1,14 @@
 // Prompt 51 (QA51): mock-server for ende-til-ende-testene. Starter Hono-appen med MOCK_DATA=1 og NODE_ENV=test
 // (ingen bakgrunnsjobber), egen tom DATA_DIR og fast port (E2E_PORT, standard 4605). Alle utgående kall stoppes,
 // så testene aldri når internett. Brukes av lib.mjs; kan også startes for hånd: node test/e2e51/server.mjs
-import { mkdtempSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { writeFileSync } from 'node:fs';
 
-process.env.DATA_DIR ||= mkdtempSync(join(tmpdir(), 'hl-e2e51-'));
+// lib.mjs gir DATA_DIR og sletter den selv. Startes serveren for hånd, lager den sin egen, som slettes når den stoppes.
+if (!process.env.DATA_DIR) {
+  const { lagMidlertidig } = await import('../lib/midlertidig.mjs');
+  process.env.DATA_DIR = lagMidlertidig('hl-e2e51-');
+  for (const sig of ['SIGINT', 'SIGTERM']) process.once(sig, () => process.exit(0)); // «exit» rydder mappa
+}
 process.env.SESSION_SECRET ||= 'e2e51-secret-e2e51-secret-e2e51-secret';
 process.env.USER_NAME ||= 'Sebastian';
 process.env.NODE_ENV = 'test';
