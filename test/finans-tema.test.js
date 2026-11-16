@@ -89,3 +89,12 @@ test('Abonnementer i appen gjør ikke ukentlig om til månedlig', () => {
   assert.doesNotMatch(src, /\* 52\) \/ 12/);
   assert.doesNotMatch(src, /cycle: wk \? 'monthly'/);
 });
+
+// Fase 7 (E-B7): «Lagre» i e-postimporten (Innstillinger → Import) hadde mørk tekst på mørkegrønn knapp i Papir lys (1,99:1), fordi
+// --on-acc ikke finnes og reserven var mørk. Teksten på aksentfargen er --acc-ink, som hører til --acc i hvert tema.
+test('e-postimporten på desktop: knappeteksten bruker --acc-ink, ikke en mørk reserve', () => {
+  const src = readFileSync(new URL('../public/finans/js/desktop.js', import.meta.url), 'utf8');
+  const pane = src.match(/data-mailpane style="([^"]*)"/)[1];
+  assert.match(pane, /--mp-acc:var\(--acc\);--mp-acc-ink:var\(--acc-ink\)/);
+  assert.doesNotMatch(pane, /--on-acc|#1A0C04/i);
+});
