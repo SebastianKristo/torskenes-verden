@@ -20,7 +20,7 @@ import UIKit
  – Alle Media-kall går gjennom Media46.call: logger URL, metode, status, om Authorization-header var med, rute (Lokal/Ekstern) og tid.
  – 401 bekreftes mot GET /api/me (samme token, cache 60 s). Svarer /me 200, er innloggingen gyldig og 401 betyr «ruten finnes ikke»
    → behandles som 404 (neste sti prøves). Bare når /me også svarer 401 er man utlogget (code HOMELAB_AUTH).
- – Kanoniske stier først (de serveren faktisk har), eldre etterpå.
+ – Kanoniske stier først (de serveren faktisk har), eldre etterpå. Q19: de eldre stiene er fjernet; hvert kall har én sti.
  – Plakater (/api/media/cover?…) lastes med token via egen laster; en bildefeil endrer aldri Media-status.
  – Trykk på feilmeldingen → «Vis detaljer» med de siste kallene.
  Serverdelen (SERVER46): ukjente /api-stier bør svare 404 også for Bearer, og 401 bør ha code:"HOMELAB_AUTH". */

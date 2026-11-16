@@ -744,7 +744,7 @@ struct Chat50Host: ViewModifier {
     func body(content: Content) -> some View {
         content
             .fullScreenCover(item: Binding<Chat50LB?>(get: { Chat50.shared.lightbox }, set: { Chat50.shared.lightbox = $0 })) { (lb: Chat50LB) in
-                Chat50Lightbox(lb: lb).environment(store)
+                Chat50Lightbox(lb: lb).homelabMiljo(store)
             }
     }
 }

@@ -54,7 +54,7 @@ struct Kart46Page: View {
         .sheet(isPresented: .constant(true)) {
             ScrollView { Kart46Panel().padding(.horizontal, 16).padding(.top, 14).padding(.bottom, 24) }
                 .environment(\.paper, p)
-                .environment(store)
+                .homelabMiljo(store)
                 .presentationDetents([.fraction(0.22), .medium, .large], selection: $detent)
                 .presentationDragIndicator(.visible)
                 .presentationBackgroundInteraction(.enabled(upThrough: .medium))
@@ -170,7 +170,7 @@ struct Kart46Panel: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(m.sourceText).font(PF.mono(10.5)).tracking(1.2).foregroundStyle(m.demo ? DS.color(.warning, stil: .papir) : DS.color(.success, stil: .papir))
+            Text(m.sourceText).font(PF.mono(10.5)).tracking(1.2).foregroundStyle(m.demo || m.offline ? DS.color(.warning, stil: .papir) : DS.color(.success, stil: .papir))
             Kart46Search()
             if let s = m.stop {
                 Kart46StopCard(s: s)
@@ -439,7 +439,7 @@ extension View {
         fullScreenCover(isPresented: Binding<Bool>(get: { Kart46.shared.open }, set: { (v: Bool) in if !v { Kart46.shared.close() } })) {
             // Prompt 50: kantsveip lukker også Kart. UIKit-kantgesten tar bare berøringer som starter i kantsonen (ca. 20 pt),
             // så kartet kan fortsatt dras overalt ellers. «‹ Mer» lukker som før.
-            Kart46Page().environment(\.paper, p).environment(store)
+            Kart46Page().environment(\.paper, p).homelabMiljo(store)
                 .edgeSwipeClose30 { Kart46.shared.close() }
         }
     }

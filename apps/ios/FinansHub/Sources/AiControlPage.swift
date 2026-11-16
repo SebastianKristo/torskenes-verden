@@ -22,7 +22,7 @@ struct AiCtl34Host: ViewModifier {
             .fullScreenCover(isPresented: Binding<Bool>(get: { m.open }, set: { (v: Bool) in if !v { m.close() } })) {
                 AiCtl34Page()
                     .environment(\.paper, p)
-                    .environment(store)
+                    .homelabMiljo(store)
                     .edgeSwipeClose30 { m.close() }
             }
     }

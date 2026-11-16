@@ -279,7 +279,7 @@ struct Logs44Host: ViewModifier {
             .fullScreenCover(isPresented: Binding<Bool>(get: { m.open }, set: { (v: Bool) in m.open = v; if !v { m.stopLive() } })) {
                 Logs44Page()
                     .environment(\.paper, p)
-                    .environment(store)
+                    .homelabMiljo(store)
                     .edgeSwipeClose30 { m.open = false; m.stopLive() }
             }
     }

@@ -3,7 +3,7 @@ import UIKit
 
 /* ---------------- Prompt 89 (IOS89): riktig domene + tannhjul for serveradresse på innloggingen ----------------
  Spesifikasjon: claude-code-innlogging-server-tannhjul.md (pakke 59 / prompt 56).
- – Standard ekstern adresse er https://os.smarthjemeksperten.no (lokal uendret: http://10.69.1.39:3000).
+ – Standard ekstern adresse er https://os.smarthjemeksperten.no. Ingen fast lokal standard (C-S4): den kommer fra serveren eller QR.
  – Migrering ved oppstart (Store.loadAccounts → Server89.migrate): er en lagret adresse nøyaktig den gamle feilstavede
    standarden, skrives den om til den nye. Egendefinerte adresser røres ikke.
  – Tannhjul (gearshape, 44×44) øverst til høyre på innloggingen åpner arket «Server»: Ekstern adresse, Lokal adresse,
@@ -214,7 +214,7 @@ struct Login89Sheet: View {
                 Text("Adressene til Homelab-serveren. De samme verdiene finnes i Innstillinger → Konto og sikkerhet etter innlogging.")
                     .font(PF.ui(13)).foregroundStyle(p.mut).fixedSize(horizontal: false, vertical: true)
                 field("Ekstern adresse", Server47.defaultExternal, $external, extResult)
-                field("Lokal adresse", Server47.defaultLocal, $local, locResult)
+                field("Lokal adresse", Server47.localPlaceholder, $local, locResult)
                 if !error.isEmpty {
                     Text(error).font(PF.ui(13, .semibold)).foregroundStyle(p.lab).fixedSize(horizontal: false, vertical: true)
                 }
@@ -274,7 +274,7 @@ struct Login89Sheet: View {
     private var resetButton: some View {
         Button {
             external = Server47.defaultExternal
-            local = Server47.defaultLocal
+            local = Server47.resetLocal(local)
             extResult = nil
             locResult = nil
             error = ""

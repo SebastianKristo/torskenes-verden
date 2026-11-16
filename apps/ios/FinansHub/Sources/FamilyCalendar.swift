@@ -289,7 +289,7 @@ struct FamCal51Page: View {
         .sheet(isPresented: Binding<Bool>(get: { m.adding }, set: { m.adding = $0 })) {
             FamCal51New()
                 .environment(\.paper, p)
-                .environment(store)
+                .homelabMiljo(store)
                 .presentationDetents([.large])
         }
     }

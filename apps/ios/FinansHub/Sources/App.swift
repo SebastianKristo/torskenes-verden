@@ -27,7 +27,7 @@ struct FinansHubApp: App {
     var body: some Scene {
         WindowGroup {
             RootView()
-                // Prompt 38: fullskjermen «Logg inn på ny enhet» (må ligge innenfor .environment(store)).
+                // Prompt 38: fullskjermen «Logg inn på ny enhet» (må ligge innenfor .homelabMiljo(store)).
                 .qr38Host()
                 // Prompt 41: «Logge inn i Kalender?» (homelab://app-auth og universal link /app-auth), AppAuth.swift.
                 .appAuth41Host()
@@ -37,7 +37,7 @@ struct FinansHubApp: App {
                 .plat51Host()
                 // Prompt 89 (IOS89): Live Activities fra /api/live (polling mens appen er aktiv, push-tokens), LiveActivitiesHost.swift.
                 .live89Host()
-                .environment(store)
+                .homelabMiljo(store)
                 // Prompt 84: den innebygde Kalender-appen (KalenderInApp.swift) får Homelab-kontoen.
                 .kal84Host(store)
                 // Prompt 38: homelab://login?c=… (QR-innlogging på ny enhet, QrLoginApprove.swift) før de vanlige dyplenkene.

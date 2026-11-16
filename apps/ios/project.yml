@@ -163,10 +163,9 @@ targets:
         # Prompt 41: tilgangsgruppen for det delte enhets-tokenet (KalShared41, SharedKal/Group). Tom prefiks uten Team ID → ignoreres.
         KalKeychainGroup41: $(AppIdentifierPrefix)no.kristo.shared
         # Prompt 41: standardadressen appen leveres med (innlogging uten serverfelt, ServerLogin.swift).
-        # Prompt 47: ny standard ekstern og lokal adresse (ServerDefaults.swift). Klartekst-HTTP til den lokale adressen dekkes av
-        # NSAllowsLocalNetworking over (ATS er ikke slått av globalt).
+        # Prompt 47: standard ekstern adresse (ServerDefaults.swift). Ingen fast lokal adresse (C-S4): den kommer fra serveren
+        # eller QR. Klartekst-HTTP til lokale adresser dekkes av NSAllowsLocalNetworking over (ATS er ikke slått av globalt).
         HomelabServer: https://os.smarthjemeksperten.no
-        HomelabLocal47: http://10.69.1.39:3000
 
   FinansHubWidgets:
     type: app-extension
@@ -272,10 +271,9 @@ targets:
         # Gratuler via WhatsApp.
         LSApplicationQueriesSchemes: [finanshub, homelab, whatsapp]
         # Prompt 41: standardadressen (ingen serverfelt ved innlogging) og den delte Nøkkelring-gruppen for «Fortsett som».
-        # Prompt 47: standard ekstern og lokal adresse (claude-code-standard-serveradresser.md). Klartekst-HTTP bare til lokalt
-        # nett via NSAllowsLocalNetworking over (ATS er ikke slått av globalt).
+        # Prompt 47: standard ekstern adresse (claude-code-standard-serveradresser.md). Ingen fast lokal adresse (C-S4).
+        # Klartekst-HTTP bare til lokalt nett via NSAllowsLocalNetworking over (ATS er ikke slått av globalt).
         KalDefaultServer41: "https://os.smarthjemeksperten.no"
-        KalDefaultLocal47: "http://10.69.1.39:3000"
         KalKeychainGroup41: "$(AppIdentifierPrefix)no.kristo.shared"
         # Prompt 44: forhåndslasting av kalenderen i bakgrunnen (BGAppRefreshTask, KalBackgroundRefresh.swift).
         BGTaskSchedulerPermittedIdentifiers: [no.kristo.kalender.refresh44]
@@ -462,10 +460,9 @@ targets:
             CFBundleURLSchemes: [kalender]
         # Prompt 41: tom uten team → ingen App Group (widgetene viser «Krever signering med Team ID»).
         KalTeam41: "$(DEVELOPMENT_TEAM)"
-        # Prompt 47: standard ekstern og lokal adresse (claude-code-standard-serveradresser.md). Klartekst-HTTP bare til lokalt
-        # nett via NSAllowsLocalNetworking over (ATS er ikke slått av globalt).
+        # Prompt 47: standard ekstern adresse (claude-code-standard-serveradresser.md). Ingen fast lokal adresse (C-S4).
+        # Klartekst-HTTP bare til lokalt nett via NSAllowsLocalNetworking over (ATS er ikke slått av globalt).
         KalDefaultServer41: "https://os.smarthjemeksperten.no"
-        KalDefaultLocal47: "http://10.69.1.39:3000"
         KalKeychainGroup41: "$(AppIdentifierPrefix)no.kristo.shared"
 
   # Prompt 41: Kalender-widgets på Mac (skrivebord og Varslingssenter, macOS 14+). Samme kode som iOS (KalenderWidgets/Sources,
@@ -539,6 +536,10 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: no.kristo.finanshub.watchkitapp
+        # Struktur: iOS (Swift 6): klokka er det minste målet (Watch/Sources, SharedNet, SharedKeychain) og får full
+        # samtidighetssjekk først. I Swift 5-modus gir den bare advarsler, så bygget stopper ikke; advarslene i CI-loggen er
+        # listen over det som må rettes før målet kan gå over til SWIFT_VERSION 6.
+        SWIFT_STRICT_CONCURRENCY: complete
         PRODUCT_NAME: FinansHubWatch
         TARGETED_DEVICE_FAMILY: "4"
         WATCHOS_DEPLOYMENT_TARGET: "10.0"
@@ -556,6 +557,5 @@ targets:
         WKRunsIndependentlyOfCompanionApp: true
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true
-        # Samme standardadresser som FinansHub (ServerDefaults.swift) – brukes bare når iPhone ikke svarer.
+        # Samme standardadresse som FinansHub (ServerDefaults.swift) – brukes bare når iPhone ikke svarer. Ingen fast lokal (C-S4).
         HomelabServer: https://os.smarthjemeksperten.no
-        HomelabLocal47: http://10.69.1.39:3000

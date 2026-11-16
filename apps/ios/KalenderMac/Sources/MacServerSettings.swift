@@ -11,7 +11,7 @@ struct MacSrv47Section: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             MacSrv47Row(title: "Ekstern adresse", placeholder: KalSrv47.standardExternal, text: $m.external, ms: m.extMs) { m.test(external: true) }
-            MacSrv47Row(title: "Lokal adresse", placeholder: KalSrv47.standardLocal, text: $m.local, ms: m.locMs) { m.test(external: false) }
+            MacSrv47Row(title: "Lokal adresse", placeholder: KalSrv47.localPlaceholder, text: $m.local, ms: m.locMs) { m.test(external: false) }
             Text("Hjemme (lokal adresse svarer innen 1,5 s) brukes lokal, ellers ekstern. Endringer synkes til dine andre enheter.")
                 .font(MacFont.ui(11.5)).foregroundColor(t.mut2).fixedSize(horizontal: false, vertical: true)
             if !m.message.isEmpty {

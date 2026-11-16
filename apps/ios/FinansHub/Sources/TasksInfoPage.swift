@@ -172,7 +172,7 @@ struct Tasks44InfoPage: View {
             if let n = Tasks44UI.shared.current(taskId) { t = n }
         }
         .environment(\.paper, p)
-        .environment(store)
+        .homelabMiljo(store)
         .presentationDetents([.large])
         .presentationDragIndicator(.visible)
         .sheetEdge30(p.bg)

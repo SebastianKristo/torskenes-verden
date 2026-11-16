@@ -328,12 +328,7 @@ struct Settings50Page: View {
         VStack(alignment: .leading, spacing: 12) {
             switch store.paperTab {
             case "profil": PaperProfile()
-            case "innst-ut", "innst-tilpass": Tilpass39Page()
-            case "innst-appprofil": AppProfile39Page()
-            case "innst-fam": FamilySettingsView()
-            case "innst-helse": HealthPosSettings20()
-            case "innst-hahelse": HaHealthPage42()
-            case let t where t.hasPrefix("innst-"): PaperSettingsSub(key: String(t.dropFirst(6)))
+            case let t where t.hasPrefix("innst-"): InnstSide(id: t)
             default: EmptyView()
             }
         }

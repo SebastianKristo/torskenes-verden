@@ -193,9 +193,6 @@ final class FinnAd23Model {
             do {
                 _ = try await store.api.call("POST", "/finn/\(id)/ad/refresh", json: [:])
                 store.flash("✦ Annonsen er hentet på nytt")
-            } catch let e as APIError where e.status == 404 {
-                _ = try? await store.api.call("POST", "/finn/\(id)/ad", json: [:])
-                store.flash("✦ Annonsen hentes")
             } catch {
                 store.flash("Kunne ikke hente annonsen")
             }

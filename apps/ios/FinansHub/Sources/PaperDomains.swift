@@ -45,6 +45,8 @@ private func bytesText(_ b: Double) -> String {
 /// Domener i Papir. Bare toppkortet overlapper bildeheaderen; resten er egne kort i full bredde.
 struct PaperDomains: View {
     @Environment(Store.self) private var store
+    /// Struktur: iOS – Domener leses fra domenemodellen (DomenerModell.swift), resten fra Store.
+    @Environment(DomenerModell.self) private var dom
     @Environment(\.paper) private var p
 
     var body: some View {
@@ -53,23 +55,23 @@ struct PaperDomains: View {
             // Prompt 38: Glimt-oppsummeringen fra den runde ✦-knappen (NavSubsBack.swift). Blokkerer aldri tallene under.
             Dom38GlimtCard()
             if let e = store.moduleError { PCard { Text(e).font(PF.ui(13.5)).foregroundStyle(p.lab) } }
-            if store.domains?.isEmpty == true {
+            if dom.domains?.isEmpty == true {
                 PCard {
                     VStack(alignment: .leading, spacing: 10) {
                         Text("Ingen domener ennå.").font(PF.ui(14)).foregroundStyle(p.mut)
-                        PInkButton(title: "+ Legg til domene", height: 44, full: true) { store.domainManager = true }
+                        PInkButton(title: "+ Legg til domene", height: 44, full: true) { dom.manager = true }
                     }
                 }
-            } else if store.domAllMode {
+            } else if dom.allMode {
                 PaperDomAllList()
-            } else if let a = store.analytics {
+            } else if let a = dom.analytics {
                 if a.mock == true { Text("Eksempeldata – legg inn Cloudflare-token i Homelab for ekte tall.").font(PF.ui(12)).foregroundStyle(p.mut).frame(maxWidth: .infinity, alignment: .leading) }
                 section(a)
             } else if store.moduleError == nil {
                 ProgressView().padding(40)
             }
         }
-        .sheet(isPresented: Binding(get: { store.domainManager }, set: { store.domainManager = $0 })) {
+        .sheet(isPresented: Binding(get: { dom.manager }, set: { (v: Bool) in dom.manager = v })) {
             DomainManager().presentationDetents([.large]).skinSheetBackground()
         }
     }

@@ -852,14 +852,8 @@ struct PaperPage: View {
         case "familie": FamilyView()
         case "avg": PaperDepartures()
         case "profil": PaperProfile()
-        // Prompt 39: «Utseende» er en del av «Tilpass»; gamle lenker til innst-ut havner der (SettingsCustomize.swift).
-        case "innst-ut", "innst-tilpass": Tilpass39Page()
-        case "innst-appprofil": AppProfile39Page()
-        case "innst-fam": FamilySettingsView()
-        case "innst-helse": HealthPosSettings20()
-        // Prompt 42: Innstillinger → Helse (Familie) → Home Assistant · Mobilapp (HealthHomeAssistant.swift).
-        case "innst-hahelse": HaHealthPage42()
-        case let t where t.hasPrefix("innst-"): PaperSettingsSub(key: String(t.dropFirst(6)))
+        // C-B5: innstillingssidene rutes ett sted (InnstSide.swift), samme for telefon og iPad/Fold.
+        case let t where t.hasPrefix("innst-"): InnstSide(id: t)
         default: PaperHome()
         }
     }

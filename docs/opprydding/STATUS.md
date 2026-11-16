@@ -45,7 +45,7 @@ Dette dokumentet går gjennom alle funnene i [AUDIT.md](AUDIT.md) og detaljrappo
 | `server/index.js` | 1 017 linjer | 1 017 | **668** | – |
 | `db.prepare(` i serveren | 513 | 513 | **387** | Resten bruker `q(sql)` med cache (`3f27b6f`) |
 | «I dag» i UTC (`toISOString().slice(0, 10)`) | 63 | 71 | **53** | Alle 53 er datoaritmetikk på rene datoer (se H5) |
-| Swift-filer med nummer | 493 av 568 | 493 av 568 | **5 av 532** | `Cal70Card`, `FamCal51`, `Playback44`, `Calendar26WidgetViews`, `Calendar26Shared` |
+| Swift-filer med nummer | 493 av 568 | 493 av 568 | **0 av 533** | rest-ios: `GlimtCalendarCard`, `FamilyCalendar`, `MediaPlayback`, `CalendarWidgetViews`, `CalendarShared` (filene; typenavnene som `Cal70CardView` står foreløpig). `test/ios-opprydding.test.js` |
 | Kotlin-filer med nummer | 298 av 344 | 298 av 344 | **70 av 367** | Bl.a. `Paper14–19.kt`, `Models11–17.kt`, `…51Plat.kt`, `Brief34Widgets.kt` |
 | Filer med nummer utenfor `test/` (server, public, apps) | 892 | 1 202 (alle typer) | **111** | – |
 | Testfiler med nummer | – | – | **195 av 275** | `test/p22.test.js` … ikke omdøpt |
@@ -54,7 +54,7 @@ Dette dokumentet går gjennom alle funnene i [AUDIT.md](AUDIT.md) og detaljrappo
 | iOS: `id: \.offset` / `DateFormatter()` / `nonisolated(unsafe)` | 165 / ~50 / 17 | 165 / 95 / 17 | **162 / 71 / 18** | Lite endret |
 | iOS: `.system(size:)` | 645 | 645 | **482** | Dynamic Type via `relativeTo:` (4 → 13) |
 | iOS: `NavigationStack` / `NavigationSplitView` / `ContentUnavailableView` | – | 3 / 0 / 0 | **12 / 13 / 6** | – |
-| iOS: `Store.swift` | 1 686 linjer | 1 686 | **1 720** | Ikke delt opp |
+| iOS: `Store.swift` | 1 686 linjer | 1 686 | **1 681** | rest-ios: første domene (Domener) ute som `DomenerModell`; resten gjenstår |
 | Android: `Color(0x…)` (uten generert) | 1 164 (534 unike) | 1 282 (558) | **973 (484)** | – |
 | Android: `fontSize` | 3 713 | 3 716 | **1 638** | – |
 | Android: `MaterialTheme.colorScheme` / `.typography` | 2 / 11 | 2 / 17 | **4 / 19** | Tema og typeskjema fra tokens via `HomelabTheme` |
@@ -187,11 +187,11 @@ Status: **Rettet** (i fase N), **Delvis**, **Gjenstår** eller **Ingen feil** (v
 | B-F11 | Mat «Fast» 3,65:1 | Rettet | `01fce01` (Papir lys), `2dd9868`: «Fast» og «Fast»-merket 4,84:1 (Glass), 5,10:1 (Papir mørk), 5,95:1 (Papir lys) | – |
 | C-S2 | Token i `/api/ws?token=` (iOS/Mac) | Rettet i Fase 4; Android i Fase 7 | `PaperAppSettings.swift:520`, `MacSystem.swift:28`; Android `Realtime.kt` (header); `test/android-fundament.test.js` | – |
 | C-S3 | Nøkkelring uten `ThisDeviceOnly` | Rettet i Fase 0b/4 | `Nokkelring.swift:19` | – |
-| C-S4 | Standard lokal adresse `http://10.69.1.39:3000` | Gjenstår (info) | `apps/ios/project.yml:169,278`; Android `Regel89.kt:13`, `Serveradresse.kt:80`, `kalender/Innlogging.kt:58` (D-B5, P85 B) | Gjelder bare denne husstanden. Forslag: ingen standard, bare oppdagelse (`/api/discovery`, QR) |
+| C-S4 | Standard lokal adresse `http://10.69.1.39:3000` | Delvis: iOS rettet (rest-ios) | iOS: ingen fast lokal adresse i `project.yml` eller koden (`Server47.defaultLocal`, `KalAuth41.defaultLocal47` er tomme uten Info.plist-verdi); adressen læres fra serveren (`/api/config/servers`, `/api/me/server`, `/api/discovery`) eller QR, og «Tilbakestill» beholder lagret lokal adresse; `test/ios-opprydding.test.js`. Android `Regel89.kt:13`, `Serveradresse.kt:80`, `kalender/Innlogging.kt:58` (D-B5, P85 B) | Serveren faller fortsatt tilbake til `10.69.1.39:3000` når `LOCAL_URL` mangler (`server/system/server-urls.js:20`, `server/auth/server-address.js:155`) og sender den til appene. Android gjenstår |
 | C-B2 | Tvunget mørk systemstil | Rettet i Fase 4 (Q16) | `project.yml:84`, `PaperTheme.swift:102` | – |
-| C-B3 | `KalNet` sender tom kropp stille ved kodefeil | Gjenstår (lav) | `SharedKal/Core/KalNet.swift:84` (`try?`) | Forslag: `throw` i stedet for `try?` |
+| C-B3 | `KalNet` sender tom kropp stille ved kodefeil | Rettet (rest-ios) | `SharedKal/Core/KalNet.swift` (`isValidJSONObject` + `throw`); `test/ios-opprydding.test.js` | – |
 | C-B4 | Ubegrenset bildecache for skyer | Ingen feil | `WeatherEffects.swift:191`: nøkkelen er værtypen (noen få), så den vokser ikke | – |
-| C-B5 | `innst-…`-rutingen duplisert (iPhone og iPad) | Gjenstår (lav) | `Paper.swift:856–861` og `SettingsWide.swift:331–335` | Forslag: én funksjon `innstSide(id)` som begge bruker |
+| C-B5 | `innst-…`-rutingen duplisert (iPhone og iPad) | Rettet (rest-ios) | `FinansHub/Sources/InnstSide.swift`, brukt av `Paper.swift` og `SettingsWide.swift`; `test/ios-opprydding.test.js` | Én visning `InnstSide(id:)` i stedet for en fri funksjon, så den arver `@MainActor` fra `View` |
 | D-B4 | `EncryptedSharedPreferences` uten `try/catch` | Rettet i Fase 5 (`3cf75f1`) | `felles-android/…/SikkerLagring.kt` | – |
 | D-B5 (P85 B) | Hardkodet lokal adresse, klartekst bare til én IP | Delvis | Klartekst er nå tillatt til alle lokale adresser (`LokaltNett.kt`) | Standardadressen er fortsatt hardkodet (se C-S4) |
 | D-B6 | `ALLOW_ALL_HOSTS_VALIDATOR` i debug | Ingen feil | `Car51Plat.kt:42–45`: `FLAG_DEBUGGABLE` settes av byggtypen | – |
@@ -241,7 +241,7 @@ Status: **Rettet** (i fase N), **Delvis**, **Gjenstår** eller **Ingen feil** (v
 | Q31 | Widgeter fra én definisjon per widget | Gjenstår | 83 `<receiver>` i `app/AndroidManifest.xml` | Generering fra én definisjon er ikke gjort |
 | Q1–Q18, Q20–Q25, Q27–Q29, Q32, Q33, Q35–Q41 | Beslutningene | Gjennomført | Fase 1–6 (se commitene), testvektorene og `test/moduler*.test.js` | Q1/O1: de siste restene i Økonomi på mobil-web er rettet (se O1, O6) |
 | Struktur: filnavn | Filer med promptnummer | Delvis | §2.1: server 1, web-CSS 0, iOS 5, web-JS 34 → 2, Android 70, test 195 av 275. Rest-Økonomi (patch 02–06): de 32 `mobile-p16…p46.js`/`mobile-paper2/3.js` har fått navn etter funksjon (f.eks. `mobile-gjoremal.js`, `mobile-glimt.js`, `mobile-tilpassing.js`), én patch per familie; `test/finans-mobil-filer.test.js` sjekker importer og SHELL | Filene er omdøpt, ikke slått sammen: hver dekker flere funksjoner og importerer hverandre i ring (TDZ), så sammenslåing/oppdeling krever en egen runde med nettlesertester. Igjen: Android (`Paper14–19`, `Models11–17`, `…51Plat` m.fl.) og testene. Forslag: egen runde per plattform, som i Fase 3–5 |
-| Struktur: iOS | `Store` på 1 686 linjer, Swift 5.10, `.searchable` 0 | Gjenstår | `Store.swift` 1 720 linjer; `project.yml:10` Swift 5.10; 258 `static let shared` | Fase 4 la grunnmuren (APIClient, `NavigationStack`/`SplitView`, Dynamic Type). Oppdeling per domene og Swift 6 gjenstår |
+| Struktur: iOS | `Store` på 1 686 linjer, Swift 5.10, `.searchable` 0 | Delvis (rest-ios) | Mønsteret for oppdelingen: `DomenerModell.swift` (`@MainActor @Observable`), eid av Store med videresendende egenskaper, injisert med `.homelabMiljo(store)` (`HomelabMiljo.swift`) alle 43 steder Store settes i miljøet, lest med `@Environment(DomenerModell.self)` i `PaperDomains`; `test/ios-opprydding.test.js`. Swift 6: `SWIFT_STRICT_CONCURRENCY: complete` på klokka (`HomelabWatch`), bare advarsler i Swift 5-modus | Igjen: de andre domenene i Store (Finans, Mat, Boliger, Finn, Sporing, Papir-tilstand, innlogging) etter samme mønster, ett per steg. Swift 6-modus mangler: 258 `static let shared` på ikke-`Sendable` typer, 18 `nonisolated(unsafe)`, 54 filer med `static var` (globalt muterbart), `[String: Any]`-JSON over aktørgrenser, og advarslene CI-loggen viser for klokka. Slå på `SWIFT_VERSION: 6` mål for mål når CI er uten advarsler |
 | Struktur: Android | `AppViewModel` på 3 855 linjer, egen navigasjon, gamle versjoner | Gjenstår | `AppViewModel.kt` 3 949 linjer; 0 `NavigationSuiteScaffold`, 0 `SavedStateHandle`; AGP 8.7.3, Kotlin 2.1.0 | Fase 5 la grunnmuren (`:felles`, tema fra tokens, tilbakestabel). Navigation Compose, ViewModel per skjerm og oppgradering gjenstår |
 
 ## 5. Sikkerhetsreglene i CLAUDE.md, sjekket mot koden

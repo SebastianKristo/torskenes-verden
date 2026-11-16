@@ -11,7 +11,8 @@ import MapKit
    GET  /api/kart/vehicles?zones=… → {vehicles:[{id,line,mode,bearing,lat,lon,destination}], pollMs}
    GET  /api/kart/search?q= → {results:[{id,name,label,lat,lon,modes}]}
    PUT  /api/kart/prefs {z,c,show,md,vz} · POST /api/kart/live {zoneId, on}
- Eldre server (404): demodata lokalt og «DEMO-DATA» øverst. Personer kommer bare fra serveren (samme delingsregler som Familie). */
+ Q19: ingen lokale demodata. Svarer ikke serveren, står «INGEN KONTAKT MED SERVEREN» øverst og kartet viser det som er lastet;
+ en for gammel server får «Oppdater serveren» fra /api/version. Personer kommer bare fra serveren (samme delingsregler som Familie). */
 
 struct Kart46Zone: Identifiable, Hashable {
     var id: String
@@ -75,6 +76,8 @@ final class Kart46 {
 
     var open: Bool = false
     var demo: Bool = false
+    /// Q19: siste henting av /api/kart feilet (ingen kontakt eller for gammel server).
+    var offline: Bool = false
     var zones: [Kart46Zone] = []
     var people: [Kart46Person] = []
     var stops: [Kart46Stop] = []
@@ -103,7 +106,7 @@ final class Kart46 {
     @ObservationIgnored private var saveTask: Task<Void, Never>? = nil
     @ObservationIgnored private var searchTask: Task<Void, Never>? = nil
 
-    var sourceText: String { demo ? "DEMO-DATA" : "SANNTID · ENTUR" }
+    var sourceText: String { demo ? "DEMO-DATA" : (offline ? "INGEN KONTAKT MED SERVEREN" : "SANNTID · ENTUR") }
     var liveIds: [String] { zones.filter { $0.live }.map { $0.id } }
 
     nonisolated static func color(_ mode: String) -> Color { Color(hex: modes.first { $0.0 == mode }?.2 ?? "#c8372d") }
@@ -137,12 +140,12 @@ final class Kart46 {
             let d: Data = try await store.api.callAt("/api", "GET", "/kart", timeout: 15)
             let o: [String: Any] = JS.obj(d)
             demo = (JS.str(o, "source") ?? "entur") == "demo"
+            offline = false
             if let p = JS.dict(o, "prefs") { applyPrefs(p) }
             zones = JS.list(o, "zones").compactMap { Kart46.zone($0) }
             people = JS.list(o, "people").compactMap { Kart46.person($0) }
         } catch {
-            demo = true
-            if zones.isEmpty { zones = Kart46.demoZones }
+            offline = true
         }
         startPolling(store)
     }
@@ -203,10 +206,7 @@ final class Kart46 {
             if Task.isCancelled { return }
             let b: String = String(format: "%.5f,%.5f,%.5f,%.5f", r.center.latitude - r.span.latitudeDelta / 2, r.center.longitude - r.span.longitudeDelta / 2,
                                    r.center.latitude + r.span.latitudeDelta / 2, r.center.longitude + r.span.longitudeDelta / 2)
-            guard let d = try? await store.api.callAt("/api", "GET", "/kart/stops?bbox=" + b, timeout: 12) else {
-                if demo { stops = Kart46.demoStops }
-                return
-            }
+            guard let d = try? await store.api.callAt("/api", "GET", "/kart/stops?bbox=" + b, timeout: 12) else { return }
             let o: [String: Any] = JS.obj(d)
             if JS.bool(o, "tooBig") == true { zoomHint = JS.str(o, "message") ?? "Zoom inn for å se holdeplasser"; return }
             if (JS.str(o, "source") ?? "") == "demo" { demo = true }
@@ -321,7 +321,7 @@ final class Kart46 {
             if Task.isCancelled { return }
             let e: String = t.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? t
             guard let d = try? await store.api.callAt("/api", "GET", "/kart/search?q=" + e, timeout: 10) else {
-                results = Kart46.demoStops.filter { $0.name.lowercased().contains(t.lowercased()) }
+                results = []
                 return
             }
             results = JS.list(JS.obj(d), "results").compactMap { Kart46.stopOf($0) }
@@ -343,18 +343,4 @@ final class Kart46 {
             _ = try? await store.api.callAt("/api", "PUT", "/kart/prefs", json: body, timeout: 10)
         }
     }
-
-    /* ---------- Demodata (server uten /api/kart) ---------- */
-
-    nonisolated static let demoZones: [Kart46Zone] = [
-        Kart46Zone(id: "d1", name: "Hjem", lat: 59.9283, lon: 10.7360, radius: 180, color: "#2b5d8a", live: false),
-        Kart46Zone(id: "d2", name: "Skole", lat: 59.9190, lon: 10.7290, radius: 220, color: "#2f7a4f", live: false),
-    ]
-    nonisolated static let demoStops: [Kart46Stop] = [
-        Kart46Stop(id: "NSR:StopPlace:58366", name: "Jernbanetorget", lat: 59.9115, lon: 10.7505, modes: ["metro", "tram", "bus"]),
-        Kart46Stop(id: "NSR:StopPlace:58404", name: "Nationaltheatret", lat: 59.9146, lon: 10.7340, modes: ["metro", "rail", "tram"]),
-        Kart46Stop(id: "NSR:StopPlace:6505", name: "Bislett", lat: 59.9255, lon: 10.7320, modes: ["tram"]),
-        Kart46Stop(id: "NSR:StopPlace:6549", name: "Majorstuen", lat: 59.9298, lon: 10.7151, modes: ["metro", "tram", "bus"]),
-        Kart46Stop(id: "NSR:StopPlace:6488", name: "Holbergs plass", lat: 59.9195, lon: 10.7365, modes: ["tram", "bus"]),
-    ]
 }

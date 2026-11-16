@@ -65,6 +65,16 @@ enum KalNet {
         let bases: [String] = KalNet44.order(overrideBases ?? s.0)
         let token: String? = overrideToken ?? s.1
         if bases.isEmpty { throw KalNetError(status: 0, message: "Ikke logget inn") }
+        // C-B3: kroppen lages én gang og før noe sendes. En kodefeil (ugyldig JSON) gir en feil i stedet for en tom kropp.
+        var body: Data? = nil
+        if let json {
+            if !JSONSerialization.isValidJSONObject(json) { throw KalNetError(status: 0, message: "Ugyldig forespørsel") }
+            do {
+                body = try JSONSerialization.data(withJSONObject: json)
+            } catch {
+                throw KalNetError(status: 0, message: "Ugyldig forespørsel")
+            }
+        }
         var lastError: KalNetError = KalNetError(status: 0, message: "Fikk ikke kontakt med serveren")
         let good: String = KalNet44.goodBase
         for (i, base) in bases.enumerated() {
@@ -79,9 +89,9 @@ enum KalNet {
             if let token, !token.isEmpty { r.setValue("Bearer " + token, forHTTPHeaderField: "Authorization") }
             // Prompt 51: enhetsnøkkel på innlogging/token-kall og enhets-id på flagg/krasj (bare i appen, aldri i widgetene).
             for (k, v) in KalSec51.headers(path) { r.setValue(v, forHTTPHeaderField: k) }
-            if let json {
+            if let body {
                 r.setValue("application/json", forHTTPHeaderField: "Content-Type")
-                r.httpBody = try? JSONSerialization.data(withJSONObject: json)
+                r.httpBody = body
             }
             let pair: (Data, URLResponse)
             do {

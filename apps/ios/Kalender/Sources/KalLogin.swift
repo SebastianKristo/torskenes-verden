@@ -798,7 +798,7 @@ struct KalServer41Sheet: View {
 
 /* ---------------- Prompt 89 (IOS89): Kalender – tannhjul for serveradresse på innloggingen ----------------
  Tannhjulet (gearshape, 44×44) øverst til høyre på innloggingen åpner arket «Server»: Ekstern adresse (URL-tastatur,
- forhåndsutfylt https://os.smarthjemeksperten.no), Lokal adresse (http://10.69.1.39:3000), «Test tilkobling» (GET /api/health,
+ forhåndsutfylt https://os.smarthjemeksperten.no), Lokal adresse (fra serveren, ingen fast standard), «Test tilkobling» (GET /api/health,
  «Tilkoblet» grønn / feilmelding rød), «Tilbakestill til standard», Lagre / Avbryt. Samme lagring som Innstillinger → Server
  (KalSrv89.save → KalSrv47). Under innloggingsknappene: «Server: os.smarthjemeksperten.no» i liten grå tekst. */
 
@@ -867,7 +867,7 @@ struct KalLogin89Sheet: View {
                 Text("Adressene til Homelab-serveren. De samme verdiene finnes i Innstillinger → Server etter innlogging.")
                     .font(KalFont.ui(13)).foregroundStyle(t.mut).fixedSize(horizontal: false, vertical: true)
                 field("Ekstern adresse", KalSrv47.standardExternal, $external, extText, extOk)
-                field("Lokal adresse", KalSrv47.standardLocal, $local, locText, locOk)
+                field("Lokal adresse", KalSrv47.localPlaceholder, $local, locText, locOk)
                 if !error.isEmpty {
                     Text(error).font(KalFont.ui(13, .semibold)).foregroundStyle(t.red).fixedSize(horizontal: false, vertical: true)
                 }
@@ -923,7 +923,7 @@ struct KalLogin89Sheet: View {
     private func reset() {
         KalHaptic.tap()
         external = KalSrv47.standardExternal
-        local = KalSrv47.standardLocal
+        local = KalSrv47.resetLocal(local)
         extText = ""
         locText = ""
         error = ""

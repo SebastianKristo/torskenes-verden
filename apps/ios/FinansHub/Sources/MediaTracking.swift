@@ -161,7 +161,7 @@ final class Media50Track {
         Task { @MainActor in
             defer { self.busyStart.remove(key) }
             do {
-                _ = try await Media43.shared.fetch(store, ["/media/torrents/\(hash)/start", "/media/torrents/\(hash)/resume"], method: "POST", json: [:])
+                _ = try await Media43.shared.fetch(store, ["/media/torrents/\(hash)/start"], method: "POST", json: [:])
                 Haptics.shared.success()
                 if var t = self.byKey[key] {
                     t.state = "starting"; t.tone = "dl"; t.text = "Startet · venter på fart …"; t.actions = []; t.final = false
@@ -433,7 +433,7 @@ struct Media50DiagCard: View {
         Haptics.shared.tap()
         Task { @MainActor in
             do {
-                _ = try await Media43.shared.fetch(store, ["/media/torrents/\(t.hash)/start", "/media/torrents/\(t.hash)/resume"], method: "POST", json: [:])
+                _ = try await Media43.shared.fetch(store, ["/media/torrents/\(t.hash)/start"], method: "POST", json: [:])
                 Media43.shared.flash("Startet " + t.name)
                 run()
             } catch { self.error = Media43.shared.errorText(error) }

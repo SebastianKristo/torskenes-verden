@@ -2,7 +2,7 @@ import SwiftUI
 import UIKit
 
 /* ---------------- Prompt 51 (IOSFEAT51): felles byggeklosser for de nye sidene ----------------
- Planlegging (Plan51*.swift), Familiekalender (FamCal51.swift), «I kveld» (Kveld51*.swift), felles søk (GlobalSearch.swift),
+ Planlegging (Plan51*.swift), Familiekalender (FamilyCalendar.swift), «I kveld» (Kveld51*.swift), felles søk (GlobalSearch.swift),
  tema (ThemeSync.swift) og onboarding (OnboardingInvite.swift). Papir-stil: Top50Bar, kort med 20 pt radius, pilleknapper.
  Bredde: kortene ligger i et adaptivt rutenett (minst 340 pt), så iPad og Fold får to eller tre kolonner og telefonen én.
  Fullskjermene legges på PaperShell via feat51Host (Paper.swift). */
@@ -388,13 +388,13 @@ struct Feat51Host: ViewModifier {
             .fullScreenCover(isPresented: Binding<Bool>(get: { Plan51.shared.open }, set: { (v: Bool) in if !v { Plan51.shared.open = false } })) {
                 Plan51Page()
                     .environment(\.paper, p)
-                    .environment(store)
+                    .homelabMiljo(store)
                     .edgeSwipeClose30 { Plan51.shared.open = false }
             }
             .fullScreenCover(isPresented: Binding<Bool>(get: { FamCal51.shared.open }, set: { (v: Bool) in if !v { FamCal51.shared.open = false } })) {
                 FamCal51Page()
                     .environment(\.paper, p)
-                    .environment(store)
+                    .homelabMiljo(store)
                     .edgeSwipeClose30 { FamCal51.shared.open = false }
             }
             .modifier(Feat51Host2(p: p))
@@ -411,7 +411,7 @@ struct Feat51Host2: ViewModifier {
             .fullScreenCover(isPresented: Binding<Bool>(get: { Kveld51.shared.open }, set: { (v: Bool) in if !v { Kveld51.shared.open = false } })) {
                 Kveld51Page()
                     .environment(\.paper, p)
-                    .environment(store)
+                    .homelabMiljo(store)
                     .edgeSwipeClose30 { Kveld51.shared.open = false }
             }
             .modifier(Feat51Host3(p: p))
@@ -427,19 +427,19 @@ struct Feat51Host3: ViewModifier {
             .fullScreenCover(isPresented: Binding<Bool>(get: { Search51.shared.open }, set: { (v: Bool) in if !v { Search51.shared.close() } })) {
                 Search51Page()
                     .environment(\.paper, p)
-                    .environment(store)
+                    .homelabMiljo(store)
                     .edgeSwipeClose30 { Search51.shared.close() }
             }
             .sheet(isPresented: Binding<Bool>(get: { Theme51.shared.sheet }, set: { Theme51.shared.sheet = $0 })) {
                 Theme51Sheet()
                     .environment(\.paper, p)
-                    .environment(store)
+                    .homelabMiljo(store)
                     .presentationDetents([.medium, .large])
             }
             .sheet(isPresented: Binding<Bool>(get: { Invite51.shared.open }, set: { Invite51.shared.open = $0 })) {
                 Invite51Sheet()
                     .environment(\.paper, p)
-                    .environment(store)
+                    .homelabMiljo(store)
                     .presentationDetents([.large])
             }
             // ⌘K på iPad med tastatur: felles søk.

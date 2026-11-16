@@ -315,11 +315,11 @@ final class Media44Files {
         let m: Media43 = Media43.shared
         Task { @MainActor in
             do {
-                let d: Data = try await m.fetch(store, ["/media/episodes/\(e.id)/file", "/media/sonarr/episodefile/\(e.fileId)"], method: "DELETE")
+                let d: Data = try await m.fetch(store, ["/media/episodes/\(e.id)/file"], method: "DELETE")
                 let o: [String: Any] = JS.obj(d)
                 if let i = m.episodes.firstIndex(where: { $0.id == e.id }) { m.episodes[i].hasFile = false; m.episodes[i].monitored = false }
                 if JS.dict(o, "undo") == nil {
-                    _ = try? await m.fetch(store, ["/media/episode/monitor", "/media/sonarr/episode/monitor"], method: "PUT", json: ["episodeIds": [e.id], "monitored": false])
+                    _ = try? await m.fetch(store, ["/media/episode/monitor"], method: "PUT", json: ["episodeIds": [e.id], "monitored": false])
                 }
                 let msg: String = JS.str(o, "message") ?? String(format: "Slettet E%02d · overvåking er av", e.number)
                 self.showUndo(msg) { self.restore(e, JS.dict(o, "undo"), store) }
@@ -332,9 +332,9 @@ final class Media44Files {
         let m: Media43 = Media43.shared
         Task { @MainActor in
             do {
-                let d: Data = try await m.fetch(store, ["/media/movies/\(t.id)/file", "/media/radarr/moviefile/\(t.fileId)"], method: "DELETE")
+                let d: Data = try await m.fetch(store, ["/media/movies/\(t.id)/file"], method: "DELETE")
                 let o: [String: Any] = JS.obj(d)
-                if JS.dict(o, "undo") == nil { _ = try? await m.fetch(store, ["/media/movies/\(t.id)", "/media/radarr/movie/\(t.id)"], method: "PUT", json: ["monitored": false]) }
+                if JS.dict(o, "undo") == nil { _ = try? await m.fetch(store, ["/media/movies/\(t.id)"], method: "PUT", json: ["monitored": false]) }
                 await m.loadMovies(store)
                 if let n = m.movies.first(where: { $0.id == t.id }), m.selected?.id == t.id { m.selected = n }
                 self.showUndo(JS.str(o, "message") ?? "Slettet filen · overvåking er av") { self.restoreMovie(t, JS.dict(o, "undo"), store) }
@@ -347,7 +347,7 @@ final class Media44Files {
         if let i = m.episodes.firstIndex(where: { $0.id == e.id }) { m.episodes[i].monitored = true }
         Task { @MainActor in
             if await self.runUndo(undo, store) { return }
-            _ = try? await m.fetch(store, ["/media/episode/monitor", "/media/sonarr/episode/monitor"], method: "PUT", json: ["episodeIds": [e.id], "monitored": true])
+            _ = try? await m.fetch(store, ["/media/episode/monitor"], method: "PUT", json: ["episodeIds": [e.id], "monitored": true])
         }
     }
 
@@ -355,7 +355,7 @@ final class Media44Files {
         let m: Media43 = Media43.shared
         Task { @MainActor in
             if !(await self.runUndo(undo, store)) {
-                _ = try? await m.fetch(store, ["/media/movies/\(t.id)", "/media/radarr/movie/\(t.id)"], method: "PUT", json: ["monitored": true])
+                _ = try? await m.fetch(store, ["/media/movies/\(t.id)"], method: "PUT", json: ["monitored": true])
             }
             await m.loadMovies(store)
         }

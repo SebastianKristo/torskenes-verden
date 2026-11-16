@@ -4,7 +4,8 @@ import UIKit
 /* ---------------- Prompt 43: Media – Sonarr, Radarr, qBittorrent og Prowlarr (modell) ----------------
  Fasit: prompts/prompt-43-pakke/claude-code-media-arr.md og design/Media.dc.html (variant «mobile», 2a).
  Appen snakker bare med Homelab-serveren (`/api/media/...`, proxy). API-nøkler og passord ligger på serveren og sendes aldri hit.
- JSON leses romslig (JS-hjelperne), og eldre/andre stier prøves i rekkefølge, så appen tåler 404 fra en eldre server. */
+ JSON leses romslig (JS-hjelperne). Q19: hvert kall har én sti (den serveren har). En eldre server uten Media gir 404, og appen
+ viser «Oppdater serveren» via /api/version (Store.checkServerCompat) – den prøver ikke gamle stier som reserve. */
 
 struct Media43Item: Identifiable, Hashable {
     var id: String
@@ -238,7 +239,7 @@ final class Media43 {
     @ObservationIgnored private var pollTask: Task<Void, Never>? = nil
     @ObservationIgnored private var toastTask: Task<Void, Never>? = nil
 
-    /// Prompt 44: «Avspilling» (Plex/Jellyfin, Playback44.swift) etter Prowlarr. Prompt 87: «NRK» (NrkPage.swift) mellom Prowlarr og Avspilling.
+    /// Prompt 44: «Avspilling» (Plex/Jellyfin, MediaPlayback.swift) etter Prowlarr. Prompt 87: «NRK» (NrkPage.swift) mellom Prowlarr og Avspilling.
     /// Prompt 88: «Musikk» (yubal, MusikkPage.swift) etter NRK.
     static let tabs: [(String, String)] = [("kommer", "Kommer snart"), ("sonarr", "Sonarr"), ("radarr", "Radarr"), ("qbit", "qBittorrent"), ("prowlarr", "Prowlarr"), ("nrk", "NRK"), ("musikk", "Musikk"), ("avspilling", "Avspilling")]
 
@@ -305,7 +306,7 @@ final class Media43 {
 
     /* ---------- Nettverk ---------- */
 
-    /// Prøver stiene i rekkefølge; 404 = neste. Kaster siste feil.
+    /// Prøver stiene i rekkefølge; 404 = neste. Kaster siste feil. Q19: alle kall sender nå én sti.
     func fetch(_ store: Store, _ paths: [String], method: String = "GET", json: [String: Any]? = nil, timeout: TimeInterval = 20) async throws -> Data {
         var last: Error = APIError(message: "Serveren har ikke Media ennå.", status: 404)
         for p0 in paths {
@@ -408,7 +409,7 @@ final class Media43 {
 
     func loadUpcoming(_ store: Store) async {
         do {
-            let d: Data = try await fetch(store, ["/media/upcoming?days=7", "/media/calendar?days=7"])
+            let d: Data = try await fetch(store, ["/media/upcoming?days=7"])
             upcoming = Media43.rows(d, ["upcoming", "calendar"]).enumerated().map { Media43.item($0.element, $0.offset) }
                 .sorted { ($0.date ?? .distantFuture) < ($1.date ?? .distantFuture) }
         } catch {
@@ -498,36 +499,36 @@ final class Media43 {
 
     func loadSeries(_ store: Store) async {
         do {
-            let d: Data = try await fetch(store, ["/media/series", "/media/sonarr/series"])
+            let d: Data = try await fetch(store, ["/media/series"])
             series = Media43.rows(d, ["series"]).map { Media43.title($0, kind: "series") }.sorted { $0.title < $1.title }
         } catch { self.error = errorText(error) }
     }
 
     func loadMovies(_ store: Store) async {
         do {
-            let d: Data = try await fetch(store, ["/media/movies", "/media/radarr/movie", "/media/radarr/movies"])
+            let d: Data = try await fetch(store, ["/media/movies"])
             movies = Media43.rows(d, ["movies"]).map { Media43.title($0, kind: "movie") }.sorted { $0.title < $1.title }
         } catch { self.error = errorText(error) }
     }
 
     func loadOptions(_ store: Store) async {
-        if profilesTv.isEmpty, let d = try? await fetch(store, ["/media/qualityprofiles?service=sonarr", "/media/sonarr/qualityprofiles"]) {
-            profilesTv = Media43.rows(d, ["profiles"]).map { Media43Option(id: JS.int($0, "id") ?? 0, name: JS.str($0, "name") ?? "") }
+        if profilesTv.isEmpty, let d = try? await fetch(store, ["/media/qualityprofiles?service=sonarr"]) {
+            profilesTv = Media43.rows(d, ["profiles", "sonarr"]).map { Media43Option(id: JS.int($0, "id") ?? 0, name: JS.str($0, "name") ?? "") }
         }
-        if profilesMovie.isEmpty, let d = try? await fetch(store, ["/media/qualityprofiles?service=radarr", "/media/radarr/qualityprofiles"]) {
-            profilesMovie = Media43.rows(d, ["profiles"]).map { Media43Option(id: JS.int($0, "id") ?? 0, name: JS.str($0, "name") ?? "") }
+        if profilesMovie.isEmpty, let d = try? await fetch(store, ["/media/qualityprofiles?service=radarr"]) {
+            profilesMovie = Media43.rows(d, ["profiles", "radarr"]).map { Media43Option(id: JS.int($0, "id") ?? 0, name: JS.str($0, "name") ?? "") }
         }
-        if rootsTv.isEmpty, let d = try? await fetch(store, ["/media/rootfolders?service=sonarr", "/media/sonarr/rootfolders", "/media/rootfolders"]) {
-            rootsTv = Media43.rows(d, ["folders", "rootfolders"]).map { Media43Option(id: JS.int($0, "id") ?? 0, name: JS.str($0, "path") ?? JS.str($0, "name") ?? "", free: JS.num($0, "freeSpace") ?? JS.num($0, "free") ?? 0) }
+        if rootsTv.isEmpty, let d = try? await fetch(store, ["/media/rootfolders?service=sonarr"]) {
+            rootsTv = Media43.rows(d, ["folders", "rootfolders", "sonarr"]).map { Media43Option(id: JS.int($0, "id") ?? 0, name: JS.str($0, "path") ?? JS.str($0, "name") ?? "", free: JS.num($0, "freeSpace") ?? JS.num($0, "free") ?? 0) }
         }
-        if rootsMovie.isEmpty, let d = try? await fetch(store, ["/media/rootfolders?service=radarr", "/media/radarr/rootfolders"]) {
-            rootsMovie = Media43.rows(d, ["folders", "rootfolders"]).map { Media43Option(id: JS.int($0, "id") ?? 0, name: JS.str($0, "path") ?? JS.str($0, "name") ?? "", free: JS.num($0, "freeSpace") ?? JS.num($0, "free") ?? 0) }
+        if rootsMovie.isEmpty, let d = try? await fetch(store, ["/media/rootfolders?service=radarr"]) {
+            rootsMovie = Media43.rows(d, ["folders", "rootfolders", "radarr"]).map { Media43Option(id: JS.int($0, "id") ?? 0, name: JS.str($0, "path") ?? JS.str($0, "name") ?? "", free: JS.num($0, "freeSpace") ?? JS.num($0, "free") ?? 0) }
         }
     }
 
     func loadTorrents(_ store: Store) async {
         do {
-            let d: Data = try await fetch(store, ["/media/torrents", "/media/qbit/torrents", "/media/qbittorrent/torrents"])
+            let d: Data = try await fetch(store, ["/media/torrents"])
             torrents = Media43.rows(d, ["torrents"]).map { (r: [String: Any]) -> Media43Torrent in
                 var t: Media43Torrent = Media43Torrent(hash: JS.str(r, "hash") ?? UUID().uuidString)
                 t.name = JS.str(r, "name") ?? ""
@@ -558,7 +559,7 @@ final class Media43 {
 
     func loadIndexers(_ store: Store) async {
         do {
-            let d: Data = try await fetch(store, ["/media/indexers", "/media/prowlarr/indexers"])
+            let d: Data = try await fetch(store, ["/media/indexers"])
             indexers = Media43.rows(d, ["indexers"]).map { (r: [String: Any]) -> Media43Indexer in
                 Media43Indexer(id: JS.int(r, "id") ?? 0, name: JS.str(r, "name") ?? "", ok: JS.bool(r, "ok") ?? (JS.str(r, "error") == nil),
                                ms: JS.int(r, "ms") ?? JS.int(r, "averageResponseTime") ?? 0, queries: JS.int(r, "queries") ?? JS.int(r, "numberOfQueries") ?? 0,
@@ -595,7 +596,7 @@ final class Media43 {
         episodes = []
         guard t.kind == "series", t.id > 0 else { return }
         Task { @MainActor in
-            guard let d = try? await self.fetch(store, ["/media/series/\(t.id)", "/media/sonarr/series/\(t.id)"]) else { return }
+            guard let d = try? await self.fetch(store, ["/media/series/\(t.id)"]) else { return }
             let o: [String: Any] = JS.obj(d)
             let full: [String: Any] = JS.dict(o, "series") ?? o
             if full["title"] != nil {
@@ -628,11 +629,10 @@ final class Media43 {
     /// Lagrer endring på serie/film (profil, overvåking, type, minimumAvailability) med PUT.
     func update(_ t: Media43Title, _ changes: [String: Any], _ store: Store) {
         Haptics.shared.select()
-        let svc: String = t.kind == "series" ? "sonarr/series" : "radarr/movie"
         let alt: String = t.kind == "series" ? "series" : "movies"
         Task { @MainActor in
             do {
-                _ = try await self.fetch(store, ["/media/\(alt)/\(t.id)", "/media/\(svc)/\(t.id)"], method: "PUT", json: changes)
+                _ = try await self.fetch(store, ["/media/\(alt)/\(t.id)"], method: "PUT", json: changes)
                 self.flash("Lagret")
                 if t.kind == "series" { await self.loadSeries(store) } else { await self.loadMovies(store) }
                 if let n = (t.kind == "series" ? self.series : self.movies).first(where: { $0.id == t.id }), self.selected?.id == t.id { self.selected = n }
@@ -647,7 +647,7 @@ final class Media43 {
         b["name"] = name
         Task { @MainActor in
             do {
-                let d: Data = try await self.fetch(store, ["/media/command?service=\(service)", "/media/\(service)/command"], method: "POST", json: b)
+                let d: Data = try await self.fetch(store, ["/media/command?service=\(service)"], method: "POST", json: b)
                 // Prompt 50: sann status etter søk (track) i stedet for et evig «Søker» (MediaTracking.swift).
                 if !Media50Track.shared.start(d, body: b, store) { self.flash(toast) }
             } catch { self.flash(self.errorText(error)) }
@@ -658,7 +658,7 @@ final class Media43 {
         Haptics.shared.select()
         if let i = episodes.firstIndex(where: { $0.id == e.id }) { episodes[i].monitored = on }
         Task { @MainActor in
-            _ = try? await self.fetch(store, ["/media/episode/monitor", "/media/sonarr/episode/monitor"], method: "PUT",
+            _ = try? await self.fetch(store, ["/media/episode/monitor"], method: "PUT",
                                       json: ["episodeIds": [e.id], "monitored": on])
         }
     }
@@ -668,18 +668,17 @@ final class Media43 {
         let ids: [Int] = episodes.filter { $0.season == season }.map(\.id)
         for i in episodes.indices where episodes[i].season == season { episodes[i].monitored = on }
         Task { @MainActor in
-            _ = try? await self.fetch(store, ["/media/episode/monitor", "/media/sonarr/episode/monitor"], method: "PUT",
+            _ = try? await self.fetch(store, ["/media/episode/monitor"], method: "PUT",
                                       json: ["episodeIds": ids, "monitored": on])
         }
     }
 
     func delete(_ t: Media43Title, files: Bool, _ store: Store) {
         Haptics.shared.warning()
-        let svc: String = t.kind == "series" ? "sonarr/series" : "radarr/movie"
         let alt: String = t.kind == "series" ? "series" : "movies"
         Task { @MainActor in
             do {
-                _ = try await self.fetch(store, ["/media/\(alt)/\(t.id)?files=\(files)&deleteFiles=\(files)", "/media/\(svc)/\(t.id)?deleteFiles=\(files)"], method: "DELETE")
+                _ = try await self.fetch(store, ["/media/\(alt)/\(t.id)?files=\(files)&deleteFiles=\(files)"], method: "DELETE")
                 self.selected = nil
                 self.flash("Slettet " + t.title)
                 if t.kind == "series" { await self.loadSeries(store) } else { await self.loadMovies(store) }
@@ -694,7 +693,7 @@ final class Media43 {
         let enc: String = t.hash
         Task { @MainActor in
             do {
-                _ = try await self.fetch(store, ["/media/torrents/\(enc)/\(action)", "/media/qbit/torrents/\(enc)/\(action)"], method: "POST", json: extra)
+                _ = try await self.fetch(store, ["/media/torrents/\(enc)/\(action)"], method: "POST", json: extra)
                 await self.loadTorrents(store)
             } catch { self.flash(self.errorText(error)) }
         }
@@ -704,7 +703,7 @@ final class Media43 {
         Haptics.shared.warning()
         Task { @MainActor in
             do {
-                _ = try await self.fetch(store, ["/media/torrents/\(t.hash)?files=\(files)", "/media/qbit/torrents/\(t.hash)?files=\(files)"], method: "DELETE")
+                _ = try await self.fetch(store, ["/media/torrents/\(t.hash)?files=\(files)"], method: "DELETE")
                 self.torrents.removeAll { $0.hash == t.hash }
                 self.flash(files ? "Slettet med filene" : "Slettet, filene er beholdt")
                 await self.loadTorrents(store)
@@ -717,7 +716,7 @@ final class Media43 {
         let a: String = pause ? "pauseAll" : "resumeAll"
         Task { @MainActor in
             do {
-                _ = try await self.fetch(store, ["/media/torrents/\(a)", "/media/qbit/torrents/\(a)"], method: "POST", json: [:])
+                _ = try await self.fetch(store, ["/media/torrents/\(a)"], method: "POST", json: [:])
                 self.flash(pause ? "Alt er pauset" : "Alt fortsetter")
                 await self.loadTorrents(store)
             } catch { self.flash(self.errorText(error)) }
@@ -728,12 +727,12 @@ final class Media43 {
         Haptics.shared.select()
         altSpeed.toggle()
         Task { @MainActor in
-            _ = try? await self.fetch(store, ["/media/altSpeed", "/media/qbit/altSpeed"], method: "POST", json: ["on": self.altSpeed])
+            _ = try? await self.fetch(store, ["/media/altSpeed"], method: "POST", json: ["on": self.altSpeed])
         }
     }
 
     func files(_ t: Media43Torrent, _ store: Store) async -> [Media43File] {
-        guard let d = try? await fetch(store, ["/media/torrents/\(t.hash)/files", "/media/qbit/torrents/\(t.hash)/files"]) else { return [] }
+        guard let d = try? await fetch(store, ["/media/torrents/\(t.hash)/files"]) else { return [] }
         return Media43.rows(d, ["files"]).enumerated().map { (pair: (offset: Int, element: [String: Any])) -> Media43File in
             let i: Int = pair.offset
             let r: [String: Any] = pair.element
@@ -745,7 +744,7 @@ final class Media43 {
     func setFile(_ t: Media43Torrent, _ f: Media43File, on: Bool, _ store: Store) {
         Haptics.shared.select()
         Task { @MainActor in
-            _ = try? await self.fetch(store, ["/media/torrents/\(t.hash)/files", "/media/qbit/torrents/\(t.hash)/files"], method: "POST",
+            _ = try? await self.fetch(store, ["/media/torrents/\(t.hash)/files"], method: "POST",
                                       json: ["files": [["id": f.id, "priority": on ? 1 : 0]], "id": f.id, "priority": on ? 1 : 0])
         }
     }
@@ -758,7 +757,7 @@ final class Media43 {
         Task { @MainActor in
             defer { self.testing.remove(ix.id) }
             do {
-                let d: Data = try await self.fetch(store, ["/media/indexers/\(ix.id)/test", "/media/prowlarr/indexers/\(ix.id)/test"], method: "POST", json: [:], timeout: 40)
+                let d: Data = try await self.fetch(store, ["/media/indexers/\(ix.id)/test"], method: "POST", json: [:], timeout: 40)
                 let o: [String: Any] = JS.obj(d)
                 let ok: Bool = JS.bool(o, "ok") ?? true
                 let ms: Int = JS.int(o, "ms") ?? 0

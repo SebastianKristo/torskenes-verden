@@ -200,7 +200,7 @@ final class GlimtAgent45 {
         ans.text = GlimtAgent45.answerText(o)
         ans.intent = JS.str(o, "intent") ?? ""
         ans.source = "glimt"
-        Cal70Model.shared.take(o, ans.text) // prompt 70: kort A (lagt i kalenderen) og spørsmål med knapper i kortet (Cal70Card.swift)
+        Cal70Model.shared.take(o, ans.text) // prompt 70: kort A (lagt i kalenderen) og spørsmål med knapper i kortet (GlimtCalendarCard.swift)
         Assist31.shared.showLocal36(text, ans)
         // Prompt 67: valgknapper (choices) i stedet for ask.options, og tommel opp/ned når traceId finnes.
         let ch: Choices67? = Choices67.parse(JS.dict(o, "choices"))

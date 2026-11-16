@@ -47,7 +47,7 @@ struct Skj76Edit: View {
         .sheet(isPresented: $finder) {
             Skj77ImageFinder(query: f.name, partId: id) { (c: Skj77Candidate) in found(c) }
                 .environment(\.paper, p)
-                .environment(store)
+                .homelabMiljo(store)
         }
     }
 

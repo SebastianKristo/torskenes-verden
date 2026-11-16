@@ -59,7 +59,7 @@ struct Widgets43Host: ViewModifier {
             .fullScreenCover(isPresented: Binding<Bool>(get: { w.open }, set: { w.open = $0 })) {
                 Widgets43Page()
                     .environment(\.paper, p)
-                    .environment(store)
+                    .homelabMiljo(store)
                     .edgeSwipeClose30 { w.open = false }
             }
     }

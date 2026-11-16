@@ -31,7 +31,7 @@ enum More44Rows {
             // Prompt 51 (IOSFEAT51): «Hva skal vi se i kveld?», Fortsett, Undertekster og Lagring (Kveld51*.swift).
             out.append(More28Row(id: "ikveld51", name: "Hva skal vi se i kveld?", sub: "Forslag fra eget bibliotek · lydbøker og podkaster", icon: "tv") { Kveld51.shared.show() })
         }
-        // Prompt 51 (IOSFEAT51): «hvem kjører?» for familien (FamCal51.swift), filteret Familie i Kalender (Q5), og felles søk.
+        // Prompt 51 (IOSFEAT51): «hvem kjører?» for familien (FamilyCalendar.swift), filteret Familie i Kalender (Q5), og felles søk.
         out.append(More28Row(id: "famcal51", name: "Hvem kjører?", sub: FamCal51.shared.drivesText.isEmpty ? "Familie i Kalender · henting og bringing" : FamCal51.shared.drivesText, icon: "car") { FamCal51.shared.show() })
         out.append(More28Row(id: "sok51", name: "Søk i alt", sub: "Alle moduler med handlinger", icon: "magnifyingglass") { Search51.shared.show() })
         if !inBar.contains("hjem") {

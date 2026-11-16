@@ -16,7 +16,7 @@ struct KalSrv47Sheet: View {
                 KalSrv47Field(title: "Ekstern adresse", placeholder: KalSrv47.standardExternal, text: $m.external, ms: m.extMs) {
                     m.test(external: true)
                 }
-                KalSrv47Field(title: "Lokal adresse", placeholder: KalSrv47.standardLocal, text: $m.local, ms: m.locMs) {
+                KalSrv47Field(title: "Lokal adresse", placeholder: KalSrv47.localPlaceholder, text: $m.local, ms: m.locMs) {
                     m.test(external: false)
                 }
                 Text("Hjemme (lokal adresse svarer innen 1,5 s) brukes lokal, ellers ekstern. Endringer synkes til dine andre enheter.")
