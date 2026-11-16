@@ -18,8 +18,13 @@
 
 | Rolle | Kan |
 |---|---|
-| **admin** | Alt: legge til og fjerne brukere, sette roller, endre tilkoblinger og CV, hele Økonomi, Smarthjem, Matplan og Domener, og Server (system, backup og logger) |
-| **bruker** | Modulene brukeren har tilgang til (de andre vises ikke i menyene, og `GET /api/moduler` sender dem ikke), egen 2FA, eget passord, og i Økonomi bare Delte mapper der brukeren er medlem |
+| **admin** | I tillegg til sine egne data: legge til og fjerne brukere, sette roller og tilgang, endre tilkoblinger og CV, Smarthjem og Domener, og Server (system, backup, logger og AI-nøkler) |
+| **bruker** | Sine egne data i modulene brukeren har tilgang til (de andre vises ikke i menyene, og `GET /api/moduler` sender dem ikke), egen 2FA og eget passord |
+
+**Alt er per bruker**, også for administratorer: en admin ser ikke andres regnskap, kalender eller gjøremål. Unntakene er
+Boliger, som deles med dem du inviterer, og Matplan, som er felles for husstanden. Ellers deles noe bare når brukeren selv slår
+det på (posisjon i Familie, en gjøremålsliste). Profilen (Standard, Finans + Boliger, Boliger-profil) avgjør hvilke moduler en
+bruker har.
 
 - **Administrasjon:** brukere legges til av admin under **Innstillinger → Husstand** (brukernavn, passord og rolle).
 - **Første oppstart:** eier-kontoen lages fra `USER_NAME` og `APP_PASSWORD_HASH`.
