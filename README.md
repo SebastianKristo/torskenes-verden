@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/assets/banner.svg" alt="Homelab OS – Dashboard, FinansHub og mobilapper" width="100%">
+  <img src="docs/assets/banner.svg" alt="Homelab – Oversikt, Økonomi og mobilapper" width="100%">
 </p>
 
 <p align="center">
@@ -29,18 +29,18 @@
 </p>
 
 <p align="center">
-  <img src="docs/images/hero.webp" alt="Homelab-dashboardet i Papir-design og tre telefoner: Hjem, Kalender og Finans" width="100%">
+  <img src="docs/images/hero.webp" alt="Oversikt i Papir-design og tre telefoner: Oversikt, Kalender og Økonomi" width="100%">
 </p>
 
 ---
 
 ## 🏠 Hva er dette?
 
-Homelab OS er én Node-tjeneste (Hono og SQLite) som du kjører i Docker på en Proxmox-LXC, en NAS eller en hvilken som helst Linux-maskin. Den gir deg:
+Homelab er én Node-tjeneste (Hono og SQLite) som du kjører i Docker på en Proxmox-LXC, en NAS eller en hvilken som helst Linux-maskin. Den gir deg:
 
-- **Homelab-dashboardet** i nettleseren: avganger, vær, skoletimeplan, pakker, familie, gjøremål og mye mer.
+- **Oversikt** i nettleseren: avganger, vær, skoletimeplan, pakker, familie, gjøremål og mye mer, med modulene samlet i én meny.
 - **Glimt**, assistenten i søkefeltet og i Chat. Den svarer ut fra dine egne data og kjører på en lokal modell.
-- **FinansHub** på `/finans/`: regnskap, kvitteringer, budsjett, abonnementer, aksjer, Finn-handler og boliger.
+- **Økonomi** på `/finans/`: regnskap, kvitteringer, budsjett, Faste betalinger, aksjer, Finn-handler og boliger.
 - **Media** og **Skjold Lab**: Sonarr, Radarr, Prowlarr og qBittorrent på én side, og en sorteringsdatabase for deler der en LED lyser over riktig skuff.
 - **Mobilapper** for iOS (SwiftUI) og Android (Jetpack Compose), med Apple Watch og Wear OS, og en PWA for alle andre. På hjemskjermen heter appen «Homelab».
 
@@ -52,28 +52,28 @@ Hver bruker har sine egne data. Bare Boliger og Matplan er delt: Boliger med dem
 <tr>
 <td width="50%" valign="top">
 
-### <img src="docs/assets/icons/dashboard.svg" width="26" align="top"> Hjem og dashboard
-Avganger fra Entur i sanntid, vær fra MET/Yr, nyheter fra NRK, VG og E24, strøm fra Home Assistant og «Kommer ut» fra Sonarr og Radarr. Hjem er fliser som kan flyttes og skjules, og på mobil velger du halv eller full bredde. Felles søk åpnes med ⌘K, Ctrl+K eller «/». Velg mellom temaet «Nåværende» og **Papir** («Vindu og papir»), med bakgrunn fra været, NASA-planeter eller Oslo-foto.
+### <img src="docs/assets/icons/dashboard.svg" width="26" align="top"> Oversikt
+Avganger fra Entur i sanntid, vær fra MET/Yr, nyheter fra NRK, VG og E24, strøm fra Home Assistant og «Kommer» fra Sonarr og Radarr. Oversikt er kort som kan flyttes og skjules, og på mobil velger du halv eller full bredde. Felles søk åpnes med ⌘K, Ctrl+K eller «/». Stilene er **Papir** og **Glass**, i lys og mørk modus, med bakgrunn fra været, NASA-planeter eller Oslo-foto. Toppmenyen har de faste fanene og «Alle sider ▾», og menyene er like på web, iPhone og Android.
 
 </td>
 <td width="50%" valign="top">
 
-### <img src="docs/assets/icons/finans.svg" width="26" align="top"> FinansHub
-Kontoer, transaksjoner, budsjett, faste utgifter og rapporter. Kvitteringer leses bare lokalt: teksten hentes med OCR på telefonen, Apple Vision på en Mac eller Tesseract på serveren, og tolkes av en lokal modell. Sky-tjenester brukes ikke til kvitteringer. Kvitteringen matches mot banken og venter på at du trykker **Bokfør**. Temaene er Lys hovedbok (standard), Mørk hovedbok, Glød og v2.
+### <img src="docs/assets/icons/finans.svg" width="26" align="top"> Økonomi
+Kontoer, transaksjoner, budsjett, Faste betalinger (abonnementer, faste utgifter og planlagte trekk) og rapporter. Kvitteringer leses bare lokalt: teksten hentes med OCR på telefonen, Apple Vision på en Mac eller Tesseract på serveren, og tolkes av en lokal modell. Sky-tjenester brukes ikke til kvitteringer. Kvitteringen matches mot banken og venter på at du trykker **Bokfør**. Økonomi følger temaet du har valgt i Homelab.
 
 </td>
 </tr>
 <tr>
 <td valign="top">
 
-### ✦ Glimt og Now Brief
-Skriv eller snakk i søkefeltet på Hjem eller i Chat: «legg inn tannlege fredag kl 10», «hvor mye brukte jeg på strøm i september?», «hvor er M3-skruene?». Glimt forstår oppfølgere som «flytt den til 11», ber om bekreftelse før noe slettes, og setter opp faste oppgaver i vanlig språk. Minnet «Glimt husker» kan du se og slette fra, og nye forslag lagres først når du sier ja. **Now Brief** samler dagen i kort du selv velger og sorterer.
+### ✦ Glimt og Brief
+Skriv eller snakk i søkefeltet på Oversikt eller i Chat: «legg inn tannlege fredag kl 10», «hvor mye brukte jeg på strøm i september?», «hvor er M3-skruene?». Glimt forstår oppfølgere som «flytt den til 11», ber om bekreftelse før noe slettes, og setter opp faste oppgaver i vanlig språk. Minnet «Glimt husker» kan du se og slette fra, og nye forslag lagres først når du sier ja. **Brief** samler dagen i kort du selv velger og sorterer.
 
 </td>
 <td valign="top">
 
 ### 🎬 Media
-Sonarr, Radarr, Prowlarr og qBittorrent på én side, med Oversikt, Kalender, Bibliotek og Nedlastinger. Legg til serier og filmer, bruk interaktivt søk i indekserne, og følg nedlastingene med pause og kø. Avspillinger i Plex og Jellyfin styres fra web, apper, klokke og Android Auto: spill av, pause, spoling, neste og volum. Admin setter opp tjenestene, og nøklene blir på serveren. Fanen **NRK** er en NRK-nedlaster: søk i NRK TV og NRK Radio, velg episoder på seriesiden (eller lim inn en lenke), følg serier, komprimer til H.265 og bla i biblioteket med sesonger og episoder. Se [NRK-nedlaster](docs/nrk-nedlaster.md). Fanen **Musikk** laster ned album og spillelister fra YouTube Music til musikkbiblioteket med yubal, og følger spillelister. Se [Musikk (yubal)](docs/musikk-yubal.md).
+Sonarr, Radarr, Prowlarr og qBittorrent på én side, med fanene Nå, Kommer, Bibliotek, Nedlastinger og Kilder. Legg til serier og filmer, bruk interaktivt søk i indekserne, og følg nedlastingene med pause og kø. Avspillinger i Plex og Jellyfin styres fra web, apper, klokke og Android Auto: spill av, pause, spoling, neste og volum. Admin setter opp tjenestene, og nøklene blir på serveren. Under Kilder er **NRK** en NRK-nedlaster: søk i NRK TV og NRK Radio, velg episoder på seriesiden (eller lim inn en lenke), følg serier, komprimer til H.265 og bla i biblioteket med sesonger og episoder. Se [NRK-nedlaster](docs/nrk-nedlaster.md). **Musikk** laster ned album og spillelister fra YouTube Music til musikkbiblioteket med yubal, og følger spillelister. Se [Musikk (yubal)](docs/musikk-yubal.md).
 
 </td>
 </tr>
@@ -95,27 +95,27 @@ Mikrofonen i Glimt-søket og Chat sender opptaket til serveren, som gjør det om
 <td valign="top">
 
 ### <img src="docs/assets/icons/studie.svg" width="26" align="top"> Kalender
-Skoletimeplanen fra skolens iCal og Canvas, sammen med Bursdager og Google Kalender. Kortet «Nå» viser timen, rommet og læreren, og «Prøver og frister» har nedtelling. Visningene er Uke, Måned og Agenda, og det finnes widgets på iPhone, Android og Samsung. Kalender er også en egen app for iPhone, Android og Mac, og på iPhone er den bygget inn i Homelab-appen.
+Skoletimeplanen fra skolens iCal og Canvas, sammen med Bursdager og Google Kalender. Kortet «Nå» viser timen, rommet og læreren, og «Prøver og frister» har nedtelling. Visningene er År, Måned, Uke, 3 dager, Dag og Liste, med filtrene Familie, Bursdager og Skole, og det finnes widgets på iPhone, Android og Samsung. Kalender er også en egen app for iPhone, Android og Mac, og på iPhone er den bygget inn i Homelab-appen.
 
 </td>
 <td valign="top">
 
 ### 🎂 Bursdager
-Neste bursdag, alder og dager igjen, med påminnelse kl. 09:00. Synkes med Google Kalender (også bursdager fra kontakter) og Home Assistant. Det finnes widgets på Hjem, iOS og Android.
+Et filter og en egen visning i Kalender: neste bursdag, alder og dager igjen, med påminnelse kl. 09:00. Synkes med Google Kalender (også bursdager fra kontakter) og Home Assistant. Det finnes kort på Oversikt og widgets på iOS og Android.
 
 </td>
 </tr>
 <tr>
 <td valign="top">
 
-### 📍 Familie og kart
-Posisjon i sanntid med spor, fart og batteri. Soner med ikon og farge gir varsel når noen kommer eller går, og helsedata kan hentes fra Apple Health eller Health Connect. **Deling er av som standard.** Du ser bare dem som deler med deg.
+### 📍 Familie
+Posisjon i sanntid på fanen Kart med spor, fart og batteri. Soner med ikon og farge gir varsel når noen kommer eller går, og helsedata kan hentes fra Apple Health eller Health Connect. **Deling er av som standard.** Du ser bare dem som deler med deg.
 
 </td>
 <td valign="top">
 
-### 📦 Sporing
-Pakker fra Posten/Bring, PostNord, DHL, UPS, Helthjem, Budbee, Instabox og flere. Sporingsnumre hentes automatisk fra e-post og Finn. Status kommer fra Mybring, PostNord og ParcelsApp, og du kan selv velge tjeneste med «Spor via».
+### 📦 Sporing og Reise
+Pakker fra Posten/Bring, PostNord, DHL, UPS, Helthjem, Budbee, Instabox og flere. Sporingsnumre hentes automatisk fra e-post og Finn. Status kommer fra Mybring, PostNord og ParcelsApp, og du kan selv velge tjeneste med «Spor via». **Reise** har avgangene fra Entur og et eget kart.
 
 </td>
 </tr>
@@ -143,7 +143,7 @@ Et dashboard per bolig med budsjett, prosjekter, avdrag, regninger og utgifter t
 <td valign="top">
 
 ### <img src="docs/assets/icons/ai.svg" width="26" align="top"> ✦ AI og tidsgrenser
-Lokalt først: Ollama på en maskin i huset, med oMLX som valgfritt alternativ. På AI-siden velger du modell per oppgave, tester tjenestene og ser jobber og forbruk. Gemini og Groq er valgfrie sky-motorer, men aldri for kvitteringer, og med «Finansdata forlater aldri huset» sendes ingen finansdata ut. Alle kall går gjennom én kø med tidsgrenser. Lange AI-søk kjøres som jobb med fremdrift og Avbryt, og svarene strømmer.
+Lokalt først: Ollama på en maskin i huset, med oMLX som valgfritt alternativ. Under Innstillinger → Glimt og AI velger du modell per oppgave, tester tjenestene og ser jobber og forbruk. Gemini og Groq er valgfrie sky-motorer, men aldri for kvitteringer, og med «Finansdata forlater aldri huset» sendes ingen finansdata ut. Alle kall går gjennom én kø med tidsgrenser. Lange AI-søk kjøres som jobb med fremdrift og Avbryt, og svarene strømmer.
 
 </td>
 </tr>
@@ -151,7 +151,7 @@ Lokalt først: Ollama på en maskin i huset, med oMLX som valgfritt alternativ. 
 <td valign="top">
 
 ### <img src="docs/assets/icons/sikkerhet.svg" width="26" align="top"> Brukere, profiler og 2FA
-Rollene er admin og bruker, og alle har **sine egne data**, også andre admins. Innlogging skjer med brukernavn og TOTP-2FA. Profilene er Standard, Finans + Boliger og Boliger-profil. App-tokens har egne tilganger og utløp.
+Rollene er admin og bruker, og alle har **sine egne data**, også andre admins. Innlogging skjer med brukernavn og totrinnsbekreftelse (2FA), under Innstillinger → Konto og sikkerhet. Profilene er Standard, Finans + Boliger og Boliger-profil. App-tokens har egne tilganger, og innlogginger fra appene utløper etter 180 dager uten bruk.
 
 </td>
 <td valign="top">
@@ -165,7 +165,7 @@ Papir-design, likt på iOS og Android. På hjemskjermen heter appen «Homelab».
 <td valign="top">
 
 ### <img src="docs/assets/icons/mat.svg" width="26" align="top"> Mat · <img src="docs/assets/icons/domene.svg" width="26" align="top"> Domener · <img src="docs/assets/icons/aksjer.svg" width="26" align="top"> Aksjer
-Ukeplan med AI-forslag, faste retter og handleliste. Matplanen er felles for husstanden. Domenestatistikk fra Cloudflare med verdenskart og oppetid. Portefølje og utbytte fra Trading 212. Abonnementer samles i Subscription OS.
+Ukeplan med AI-forslag, faste retter og handleliste. Matplanen er felles for husstanden. Domenestatistikk fra Cloudflare med verdenskart og oppetid. Portefølje og utbytte fra Trading 212. Abonnementer, faste utgifter og planlagte trekk samles i Faste betalinger i Økonomi.
 
 </td>
 <td valign="top">
@@ -179,19 +179,19 @@ Full backup som JSON, Excel eller CSV. Automatisk og kryptert backup (AES-256-GC
 
 ## 📸 Skjermbilder
 
-> Alle skjermbildene er tatt med `MOCK_DATA=1`, så alle tall, navn og pakker er eksempeldata. Bildene er ikke oppdatert siden oktober 2026, og Glimt, Media og Skjold Lab har ikke skjermbilder her ennå.
+> Alle skjermbildene er tatt med `MOCK_DATA=1`, så alle tall, navn og pakker er eksempeldata. Bildene er fra oktober 2026, før de nye navnene i 5.0 (de viser for eksempel «Hjem» og «FinansHub» der det nå står Oversikt og Økonomi). Glimt, Media og Skjold Lab har ikke skjermbilder her ennå.
 
 <details open>
 <summary><b>Desktop (1440 × 900)</b></summary>
 <br>
 
-| Homelab-dashboardet (Papir) | FinansHub (Lys hovedbok) |
+| Oversikt (Papir) | Økonomi (lys) |
 |---|---|
-| <img src="docs/images/homelab-dashboard.webp" alt="Homelab-dashboardet i Papir-design"> | <img src="docs/images/finanshub-oversikt.webp" alt="FinansHub-oversikten i Lys hovedbok"> |
-| **Kalender** | **Familie og kart** |
+| <img src="docs/images/homelab-dashboard.webp" alt="Oversikt i Papir-design"> | <img src="docs/images/finanshub-oversikt.webp" alt="Økonomi, Oversikt i lys modus"> |
+| **Kalender** | **Familie** |
 | <img src="docs/images/homelab-kalender.webp" alt="Kalender med skoletimeplan, prøver og frister"> | <img src="docs/images/homelab-familie.webp" alt="Familie med kart, soner og personkort"> |
-| **Innstillinger → Integrasjoner** | **Innlogging** |
-| <img src="docs/images/homelab-integrasjoner.webp" alt="Innstillinger → Integrasjoner"> | <img src="docs/images/innloggingsside.webp" alt="Innloggingssiden i Papir-design"> |
+| **Innstillinger → Tilkoblinger** | **Innlogging** |
+| <img src="docs/images/homelab-integrasjoner.webp" alt="Innstillinger → Tilkoblinger"> | <img src="docs/images/innloggingsside.webp" alt="Innloggingssiden i Papir-design"> |
 | **Sporing** | **Bursdager** |
 | <img src="docs/images/homelab-sporing.webp" alt="Sporing av pakker"> | <img src="docs/images/homelab-bursdager.webp" alt="Bursdager med widgets"> |
 | **Kvitteringer** | **Boliger** |
@@ -203,11 +203,11 @@ Full backup som JSON, Excel eller CSV. Automatisk og kryptert backup (AES-256-GC
 <summary><b>Mobil (PWA i Papir-design, 390 × 844)</b></summary>
 <br>
 
-| Hjem | Finans | Kalender | Bursdager |
+| Oversikt | Økonomi | Kalender | Bursdager |
 |:-:|:-:|:-:|:-:|
-| <img src="docs/images/mobil-hjem.webp" width="200" alt="Hjem"> | <img src="docs/images/mobil-finans.webp" width="200" alt="Finans"> | <img src="docs/images/mobil-kalender.webp" width="200" alt="Kalender"> | <img src="docs/images/mobil-bursdager.webp" width="200" alt="Bursdager"> |
-| **Sporing** | **Vær** | **Familie** | **Integrasjoner** |
-| <img src="docs/images/mobil-sporing.webp" width="200" alt="Sporing"> | <img src="docs/images/mobil-vaer.webp" width="200" alt="Vær"> | <img src="docs/images/mobil-familie.webp" width="200" alt="Familie"> | <img src="docs/images/mobil-integrasjoner.webp" width="200" alt="Innstillinger → Integrasjoner"> |
+| <img src="docs/images/mobil-hjem.webp" width="200" alt="Oversikt"> | <img src="docs/images/mobil-finans.webp" width="200" alt="Økonomi"> | <img src="docs/images/mobil-kalender.webp" width="200" alt="Kalender"> | <img src="docs/images/mobil-bursdager.webp" width="200" alt="Bursdager"> |
+| **Sporing** | **Vær** | **Familie** | **Tilkoblinger** |
+| <img src="docs/images/mobil-sporing.webp" width="200" alt="Sporing"> | <img src="docs/images/mobil-vaer.webp" width="200" alt="Vær"> | <img src="docs/images/mobil-familie.webp" width="200" alt="Familie"> | <img src="docs/images/mobil-integrasjoner.webp" width="200" alt="Innstillinger → Tilkoblinger"> |
 
 **Galaxy Fold og iPad:** fanelinjen blir en sidelinje til venstre.
 
@@ -228,7 +228,7 @@ cp .env.example .env
 sed -i "s/^SESSION_SECRET=.*/SESSION_SECRET=$(openssl rand -hex 32)/" .env
 ```
 
-`.env.example` inneholder eksempelverdier for integrasjonene. De kan stå som de er, eller tømmes. Alt kan endres senere i Innstillinger → Integrasjoner.
+`.env.example` inneholder eksempelverdier for integrasjonene. De kan stå som de er, eller tømmes. Alt kan endres senere i Innstillinger → Tilkoblinger.
 
 **2. Velg hvordan serveren skal nås.** Endre `.env`, enten med en editor eller med kommandoene under:
 
@@ -258,11 +258,11 @@ Sjekk at den svarer: `curl http://localhost:3000/healthz` skal gi `ok`.
 > Brukernavnet blir `USER_NAME` med små bokstaver.
 
 **5. Etter innlogging:**
-- **Innstillinger → Integrasjoner:** Home Assistant, Entur, sporing, Media og andre tjenester. Se [Integrasjoner](https://github.com/SebastianKristo/torskenes-verden/wiki/Integrasjoner).
-- **Innstillinger → AI → Tjenester:** adressen til Ollama og de andre AI-tjenestene. Se [AI og tidsgrenser](https://github.com/SebastianKristo/torskenes-verden/wiki/AI-og-tidsgrenser).
-- **Innstillinger → Kalender og gjøremål:** skole-iCal, Canvas og Google Kalender.
-- **Innstillinger → Konto / Brukere:** slå på 2FA og legg til familien.
-- **`/finans/`:** første gang velger du Start tom, Hent fra SMB-share, Last opp backupfil eller Eksempeldata.
+- **Innstillinger → Tilkoblinger:** Home Assistant, Entur, sporing, Media og andre tjenester. Se [Integrasjoner](https://github.com/SebastianKristo/torskenes-verden/wiki/Integrasjoner).
+- **Innstillinger → Glimt og AI → AI → Tjenester:** adressen til Ollama og de andre AI-tjenestene. Se [AI og tidsgrenser](https://github.com/SebastianKristo/torskenes-verden/wiki/AI-og-tidsgrenser).
+- **Innstillinger → Tilkoblinger → Kalender og gjøremål:** skole-iCal, Canvas og Google Kalender.
+- **Innstillinger → Konto og sikkerhet** og **Husstand:** slå på 2FA og legg til familien.
+- **Økonomi (`/finans/`):** første gang velger du Start tom, Hent fra SMB-share, Last opp backupfil eller Eksempeldata.
 
 **6. Logg inn i appene.** Skriv inn serveradressen, for eksempel `https://os.example.no` eller `http://192.168.1.60:3000`, og deretter brukernavn, passord og eventuell 2FA-kode. Appen bytter innloggingen mot et eget app-token (`fh_pat_…`), og passordet lagres ikke.
 
@@ -279,12 +279,12 @@ MOCK_DATA=1 npm run dev        # http://localhost:3000, eksempeldata
 
 | Plattform | Fil | Slik installerer du |
 |---|---|---|
-| <img src="docs/assets/icons/mobil.svg" width="20"> **Android** | `FinansHub-<versjon>.apk` | Last ned fra [Releases](https://github.com/SebastianKristo/torskenes-verden/releases), tillat «Installer ukjente apper» for nettleseren eller filbehandleren, og åpne filen. Nye versjoner installeres over den gamle. |
+| <img src="docs/assets/icons/mobil.svg" width="20"> **Android** | `FinansHub-<versjon>.apk` | Last ned fra [Releases](https://github.com/SebastianKristo/torskenes-verden/releases), tillat «Installer ukjente apper» for nettleseren eller filbehandleren, og åpne filen. Nye versjoner installeres over den gamle. **Fra 4.x til 5.0:** avinstaller Homelab, Kalender og Wear-appen én gang først, fordi appene har ny signatur (se [android-signering](docs/android-signering.md)). |
 | <img src="docs/assets/icons/mobil.svg" width="20"> **iPhone / iPad** | `FinansHub-<versjon>-unsigned.ipa` | Åpne filen i [AltStore](https://altstore.io), [SideStore](https://sidestore.io) eller [Sideloadly](https://sideloadly.io) med din Apple-ID. Med gratis Apple-ID må signaturen fornyes hver 7. dag. AltStore og SideStore gjør det automatisk. |
 | 📅 **Kalender-appen** | `Kalender-<versjon>.apk`, `Kalender-<versjon>-unsigned.ipa`, `Kalender-<versjon>.dmg` | Egen app for Android, iPhone og Mac. Installeres som appene over. På iPhone trenger du den ikke, se «Kalender i appen» under. |
 | ⌚ **Wear OS** | `HomelabWear-<versjon>.apk` | Egen APK for klokka: Sjekk inn, Hent meg, avganger, handleliste, Glimt med tale og mediekontroll. |
 | ⌚ **Apple Watch** | – | Klokkeappen ligger ikke i IPA-en. Den bygges og kjøres fra Xcode, se [apps/README.md](apps/README.md). |
-| 🌐 **PWA** | – | Åpne `https://<din adresse>/finans/` i Safari eller Chrome og velg «Legg til på Hjem-skjerm». |
+| 🌐 **PWA** | – | Åpne `https://<din adresse>/` (Homelab) eller `/finans/` (Økonomi) i Safari eller Chrome og velg «Legg til på Hjem-skjerm». |
 
 Siste versjon ligger alltid under [Releases](https://github.com/SebastianKristo/torskenes-verden/releases). Filene heter fortsatt `FinansHub-…`, men på hjemskjermen heter appen **Homelab**.
 
@@ -292,14 +292,14 @@ Siste versjon ligger alltid under [Releases](https://github.com/SebastianKristo/
 > **Kalender i appen (iPhone):** Homelab-appen har hele Kalender-appen inni seg. Det er nyttig når du sideloader med SideStore og gratis Apple-ID, som bare har plass til tre apper. Bryteren ligger under Innstillinger → «Kalender i appen» og er på fra start. Siri-snarveier og oppdatering i bakgrunnen finnes bare i den frittstående Kalender-appen.
 
 > [!WARNING]
-> **Apple Health og sideloading:** sideloading-verktøy med gratis Apple-ID kan fjerne HealthKit fra signaturen. Feiler installasjonen, velg «Remove entitlements» i Sideloadly. Appen virker da som vanlig, men den får ikke spørre om tilgang til Apple Health. Under Innstillinger → App ser du hvorfor. Android bruker Health Connect og har ikke denne begrensningen.
+> **Apple Health og sideloading:** sideloading-verktøy med gratis Apple-ID kan fjerne HealthKit fra signaturen. Feiler installasjonen, velg «Remove entitlements» i Sideloadly. Appen virker da som vanlig, men den får ikke spørre om tilgang til Apple Health. Under Innstillinger → Enheter og widgets ser du hvorfor. Android bruker Health Connect og har ikke denne begrensningen.
 
 Mer om widgets, Fold, klokkene, app-ikon og Health Connect står i [Mobilapper](https://github.com/SebastianKristo/torskenes-verden/wiki/Mobilapper) og i [apps/README.md](apps/README.md).
 
 ## 🔄 Oppdatering og backup
 
 > [!IMPORTANT]
-> **Ta backup før oppdatering.** Databasen migreres automatisk ved oppstart, og noen versjoner (for eksempel 4.18) bygger den om. Gå til **FinansHub → Innstillinger → Backup og data → Ta backup nå** eller **Full backup (.json)**, eller kopier `data/`.
+> **Ta backup før oppdatering.** Databasen migreres automatisk ved oppstart, og noen versjoner (for eksempel 4.18) bygger den om. Gå til **Innstillinger → Server → Backup**, **Økonomi → Innstillinger → Backup og data → Ta backup nå** eller **Full backup (.json)**, eller kopier `data/`.
 
 | Oppsett | Backup først | Oppdater |
 |---|---|---|
@@ -324,14 +324,14 @@ Gjenoppretting, SMB-backup og migreringer står i [Oppdatering og backup](https:
 | <img src="docs/assets/icons/sikkerhet.svg" width="22"> | [Brukere og personvern](https://github.com/SebastianKristo/torskenes-verden/wiki/Brukere-og-personvern) | Roller, egne data per bruker, hva som deles |
 | <img src="docs/assets/icons/mobil.svg" width="22"> | [Mobilapper](https://github.com/SebastianKristo/torskenes-verden/wiki/Mobilapper) | APK/IPA, app-token, widgets, Fold, Kalender i appen, Apple Watch, Wear OS, Apple Health, Health Connect |
 | <img src="docs/assets/icons/api.svg" width="22"> | [Integrasjoner](https://github.com/SebastianKristo/torskenes-verden/wiki/Integrasjoner) | Steg for steg for hver tjeneste, også Media og WLED til Skjold Lab |
-| <img src="docs/assets/icons/finans.svg" width="22"> | [FinansHub](https://github.com/SebastianKristo/torskenes-verden/wiki/FinansHub) | Kontoer, import, kvitteringer, budsjett, Boliger, AI-søk |
+| <img src="docs/assets/icons/finans.svg" width="22"> | [Økonomi (FinansHub)](https://github.com/SebastianKristo/torskenes-verden/wiki/FinansHub) | Kontoer, import, kvitteringer, budsjett, Boliger, AI-søk |
 | <img src="docs/assets/icons/studie.svg" width="22"> | [Kalender og Bursdager](https://github.com/SebastianKristo/torskenes-verden/wiki/Kalender-og-Bursdager) | Skole-iCal, Canvas, Google, widgets |
 | <img src="docs/assets/icons/nettverk.svg" width="22"> | [Sporing](https://github.com/SebastianKristo/torskenes-verden/wiki/Sporing) · [Familie og kart](https://github.com/SebastianKristo/torskenes-verden/wiki/Familie-og-kart) | Pakker, soner, posisjon og helse |
 | <img src="docs/assets/icons/ai.svg" width="22"> | [AI og tidsgrenser](https://github.com/SebastianKristo/torskenes-verden/wiki/AI-og-tidsgrenser) | Lokale modeller, Glimt, kvitteringer, tale til tekst, tidsgrenser og jobber |
 | <img src="docs/assets/icons/api.svg" width="22"> | [API](https://github.com/SebastianKristo/torskenes-verden/wiki/API) | curl-eksempler med app-token, sanntid |
 | <img src="docs/assets/icons/rom.svg" width="22"> | [Feilsøking](https://github.com/SebastianKristo/torskenes-verden/wiki/Feilsøking) | Vanlige feil og løsninger |
 
-**Referanse i repoet:** [installasjon](docs/installasjon.md) · [konfigurasjon (alle miljøvariabler)](docs/konfigurasjon.md) · [homelab](docs/homelab.md) · [finanshub](docs/finanshub.md) · [sikkerhet](docs/sikkerhet.md) · [backup](docs/backup.md) · [api](docs/api.md) · [utvikling](docs/utvikling.md) · [apps](apps/README.md) · [beslutninger](DECISIONS.md) · [endringslogg](CHANGELOG.md)
+**Referanse i repoet:** [installasjon](docs/installasjon.md) · [konfigurasjon (alle miljøvariabler)](docs/konfigurasjon.md) · [homelab](docs/homelab.md) · [økonomi](docs/finanshub.md) · [sikkerhet](docs/sikkerhet.md) · [backup](docs/backup.md) · [designsystem](docs/designsystem.md) · [ordliste](docs/ordliste.md) · [api](docs/api.md) · [utvikling](docs/utvikling.md) · [apps](apps/README.md) · [beslutninger](DECISIONS.md) · [endringslogg](CHANGELOG.md)
 
 **Skjold Lab og lokale tjenester:** [3D-modellen](tools/skjoldlab3d/README.md) · [LED over skuffen](tools/skjoldlab-led/README.md) · [mediekontroll](docs/mediekontroll-51.md) · [tale til tekst](docs/nb-whisper-54.md) · [egne stemmer](docs/voxcpm-57.md) · [oMLX](docs/omlx-58.md) · [Mac-OCR](tools/vision-ocr/README.md)
 
@@ -340,7 +340,7 @@ Gjenoppretting, SMB-backup og migreringer står i [Oppdatering og backup](https:
 ```mermaid
 flowchart LR
   subgraph Klienter
-    B[Nettleser<br/>Homelab + FinansHub]
+    B[Nettleser<br/>Homelab + Økonomi]
     P[PWA /finans/]
     I[iOS-app og Apple Watch<br/>SwiftUI]
     A[Android-app og Wear OS<br/>Compose]
@@ -372,24 +372,25 @@ flowchart LR
 ```
 
 - **Server:** Node 22, [Hono](https://hono.dev), better-sqlite3 og ws. Ingen byggesteg.
-- **Nettleser:** vanilla ES-moduler. Temaene er Nåværende og Papir på Homelab, og fire temaer i FinansHub.
-- **Mobil:** SwiftUI (iOS 17+, Liquid Glass på iOS 26) og Kotlin med Jetpack Compose (Material 3, Glance-widgets). Egne mål for Apple Watch, Wear OS, Android Auto og Kalender for Mac.
+- **Nettleser:** vanilla ES-moduler uten byggesteg, og rutene lastes ved behov. Stilene Papir og Glass i lys og mørk modus bygger på felles designtokens ([designsystem](docs/designsystem.md)), som også iOS og Android bruker.
+- **Mobil:** SwiftUI (iOS 17+, Liquid Glass på iOS 26, Kalender for Mac på macOS 14+) og Kotlin med Jetpack Compose (Material 3, Glance-widgets). Egne mål for Apple Watch, Wear OS, Android Auto og Kalender for Mac.
 - **Lokal AI:** Ollama, og valgfritt oMLX, Mac-OCR (Apple Vision), NB-Whisper og VoxCPM på en Mac i huset. Serveren er den eneste som snakker med dem.
 - **Drift:** Docker med PUID/PGID, Cloudflare Tunnel, Proxmox-skript, Unraid-mal og image på GHCR.
 
 ## 🗂️ Struktur
 
 ```
-server/            Hono-app: innlogging, homelab-API, integrasjoner, Glimt, Kalender, Media, Skjold Lab, Sporing, Familie
-server/finans/     FinansHub: database, API, AI, import, søk, aksjer, Boliger, backup
-public/            Homelab-grensesnittet (app.html, js/, css/) og CV
-public/finans/     FinansHub: desktop og mobil-PWA
-apps/android/      Native Android-app (Kotlin, Compose), Kalender-appen og Wear OS
-apps/ios/          Native iOS-app (SwiftUI, XcodeGen), Kalender for iPhone og Mac, Apple Watch
+server/            Hono-app med én mappe per domene (auth, kalender, media, glimt, ai, skjold, sporing, familie, system …)
+server/finans/     Økonomi: database, API, AI, import, søk, aksjer, Boliger, backup
+public/            Homelab-grensesnittet (app.html, js/, css/{tokens,base,layout,components,pages}) og CV
+public/finans/     Økonomi: desktop og mobil-PWA
+apps/android/      Native Android-app (Kotlin, Compose), Kalender-appen, Wear OS og de delte modulene felles og felles-android
+apps/ios/          Native iOS-app (SwiftUI, XcodeGen), Kalender for iPhone og Mac, Apple Watch, HomelabTests
+shared/            API-kontrakten og modullisten (schemas), designtokens (design) og felles testvektorer
 tools/             Tjenestene på Mac-en (OCR, NB-Whisper, VoxCPM, oMLX) og Skjold Lab (3D-modell, LED)
 deploy/            Proxmox-skript (install.sh, update.sh), Unraid-mal, Proton Mail Bridge
-docs/              Dokumentasjon, skjermbilder, ikoner og wiki (docs/wiki)
-test/              node --test
+docs/              Dokumentasjon, skjermbilder, ikoner og dokumentasjonssiden (docs/site)
+test/              node --test, ende-til-ende, tilgjengelighet og skjermbilder
 ```
 
 ## 🛡️ Kort om sikkerhet
