@@ -1,7 +1,7 @@
 // Prompt 41 (PWA41) del 2: Min reise (Ruter + Hjem), Vel fremme i Familie («Si fra» og tur), Bursdager (jenka-tog og bilder).
 //   · claude-code-ruter-forhandsruter-sebastian.md: MIN REISE · SEBASTIAN over transportfilteret, forsinket trikk fra Frydenlund,
 //     SKOLESONER (chips + «+ Sone»), «PÅ HJEM NÅR DU FORLATER SKOLEN» (Over · I stedet · Av), og kortet på Hjem som bare vises
-//     når «forlot skolen» er aktiv – sveipes bort som briefen (mobile-p39.js swAdd), med Angre i 4,5 s.
+//     når «forlot skolen» er aktiv – sveipes bort som briefen (mobile-sveip-bort.js swAdd), med Angre i 4,5 s.
 //   · claude-code-hjemlys.md: Familie → Vel fremme (Start med fire valg + aktive i familien · Hvem får beskjed? · Klar · Sendt/Aktiv).
 //     Bare beskjeden og stedet du velger sendes. Du selv er aldri i mottakerlista.
 //   · claude-code-bursdag-jenka-glimt.md + -bilder.md: konfetti og jenka-tog i det røde toppkortet, last opp / bytt / fjern bilde.
@@ -10,8 +10,8 @@
 import { esc, hlApi } from './core.js';
 import { m, draw, flash } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
-import { BD, bdLoad } from './mobile-p24.js';
-import { swAdd } from './mobile-p39.js';
+import { BD, bdLoad } from './mobile-profiler-og-bursdager.js';
+import { swAdd } from './mobile-sveip-bort.js';
 import * as HM from './mobile-vel-fremme.js';
 import { AV } from './mobile-fanelinje.js'; // prompt 46: Ruter-redigering (wiggle)
 

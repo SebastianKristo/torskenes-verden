@@ -16,10 +16,10 @@ import { hlData } from './mobile-hl.js';
 import * as KAL from './mobile-kal.js';
 import * as P34 from './mobile-glimt-brief.js';
 import * as P31 from './mobile-glimt.js';
-import { isAdmin } from './mobile-p29.js';
+import { isAdmin } from './mobile-sok-og-backup.js';
 import * as P37 from './mobile-p37.js'; // prompt 37: Gjøremål-kortet i briefen
 import * as P38 from './mobile-okt-og-qr.js';
-import * as P39 from './mobile-p39.js'; // prompt 39: Forslag fra Glimt
+import * as P39 from './mobile-sveip-bort.js'; // prompt 39: Forslag fra Glimt
 import * as P37B from './mobile-p37b.js'; // prompt 37: bibelvers i briefen
 
 const pad = (n) => String(n).padStart(2, '0');

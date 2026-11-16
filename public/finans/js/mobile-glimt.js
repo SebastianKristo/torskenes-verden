@@ -586,7 +586,7 @@ export async function submit31(e, t) {
   if (!r) { haptic('err'); flash('Fant ikke tjeneste eller dato'); return true; }
   T.service = r.service; T.end = r.ends_at; T.price = r.price || T.price; haptic('ok'); draw(); return true;
 }
-/** cb: { quickCancel(job) } fra mobile-p29.js (rask time). */
+/** cb: { quickCancel(job) } fra mobile-sok-og-backup.js (rask time). */
 let CB = {};
 export function hooks31(cb) { CB = { ...CB, ...cb }; }
 export async function bind31(e, t) {

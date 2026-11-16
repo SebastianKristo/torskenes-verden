@@ -2,7 +2,7 @@
 // gruppering som designet, navn og ikon på appen, varsler med lyd og test, Huskeliste med widget på Hjem, kortene
 // Posisjon og Bolig på Hjem, Familie med fanene Kart, Soner og Helse, Yr mot Storm, dra for å oppdatere og sanntid
 // via én felles WebSocket (/api/ws). Alt tåler en eldre server: data som mangler vises som en forklaring, ikke en feil.
-import * as P29 from './mobile-p29.js';
+import * as P29 from './mobile-sok-og-backup.js';
 import * as P30 from './mobile-p30.js';
 import * as P31 from './mobile-glimt.js';
 import { S, api, esc, n0, ini, hlApi, icon } from './core.js';
@@ -12,7 +12,7 @@ import { iconColor, iconInk, FM, famLoad, BO, bolLoad, bolUpload } from './mobil
 import { listShareLine } from './mobile-p21.js';
 import { currentUser } from './mobile-upq.js';
 import * as P25 from './mobile-fanelinje-stil.js';
-let P24N = null; import('./mobile-p24.js').then((x) => { P24N = x; }).catch(() => {}); // prompt 39: Appprofil-raden (lat, endrer ikke importrekkefølgen)
+let P24N = null; import('./mobile-profiler-og-bursdager.js').then((x) => { P24N = x; }).catch(() => {}); // prompt 39: Appprofil-raden (lat, endrer ikke importrekkefølgen)
 import { updAdmin, updSummary } from './mobile-upd.js';
 
 const LS = 'fh_p17';
@@ -567,14 +567,14 @@ export function onRealtime(d) {
   if (globalThis.P40?.onRt40?.(d)) return; // Prompt 40: hjemlys, glimt:settings (julemodus), news/tasks
   if (d.type === 'calendar-quick') { P29.onQuickRealtime(d); return; } // Prompt 29: rask time ferdig/feilet (31: steg og felt)
   if (d.type === 'assist') { P31.onAssistRealtime(d); return; }
-  if (/^(receipt-job|reanalyze|job)/.test(String(d.type))) { import('./mobile-p39.js').then((x) => x.onRt39(d)).catch(() => {}); } // Prompt 39: fremdrift for «✦ På nytt»
+  if (/^(receipt-job|reanalyze|job)/.test(String(d.type))) { import('./mobile-sveip-bort.js').then((x) => x.onRt39(d)).catch(() => {}); } // Prompt 39: fremdrift for «✦ På nytt»
   if (d.type === 'meal:changed' || d.type === 'meal') { import('./mobile-brief-og-oppstart.js').then((x) => x.onMeal(d)).catch(() => {}); return; } // Prompt 36: matplanen er felles, oppdater uten refresh // Prompt 31: Glimt-jobber (svarboble, Chat)
   if (d.type === 'family') import('./mobile-familie.js').then((x) => x.live50(d)).catch(() => {}); // prompt 50 (FAMWEB50): Familie i nytt design, Ruter-skolen fra Steder
   clearTimeout(rtT);
   rtT = setTimeout(async () => {
     if (d.type === 'tasks') { HK.t = 0; await tasksLoad(true); if (m.screen === 'huske' || m.screen === 'hl') draw(); }
     else if (d.type === 'family' && d.kind === 'ping') { playSound(); navigator.vibrate?.([200, 100, 200]); flash(`${d.fromName ?? 'Noen'} vil finne telefonen din`); }
-    else if (d.type === 'family') { if (d.kind === 'event' && !document.hidden) { const Z = d.data ?? d; const zn = Z.zone?.name ?? Z.zoneName ?? (typeof Z.zone === 'string' ? Z.zone : null) ?? d.title; if (zn && (Z.event || Z.zoneId || d.title)) globalThis.P45?.showZoneBanner?.({ title: d.title ?? zn, body: d.body ?? Z.text ?? `${Z.person ?? ''} ${Z.event === 'leave' ? 'forlot' : 'kom til'} ${zn}`.trim(), color: Z.color ?? Z.zone?.color, iconUrl: Z.iconUrl ?? Z.icon }); } /* prompt 45: sonevarsel i appen */ await famLoad(); if (m.screen === 'hl') await import('./mobile-p20.js').then((x) => x.posLoad(true)).catch(() => {}); if (m.screen === 'fam' || m.screen === 'hl') draw(); }
+    else if (d.type === 'family') { if (d.kind === 'event' && !document.hidden) { const Z = d.data ?? d; const zn = Z.zone?.name ?? Z.zoneName ?? (typeof Z.zone === 'string' ? Z.zone : null) ?? d.title; if (zn && (Z.event || Z.zoneId || d.title)) globalThis.P45?.showZoneBanner?.({ title: d.title ?? zn, body: d.body ?? Z.text ?? `${Z.person ?? ''} ${Z.event === 'leave' ? 'forlot' : 'kom til'} ${zn}`.trim(), color: Z.color ?? Z.zone?.color, iconUrl: Z.iconUrl ?? Z.icon }); } /* prompt 45: sonevarsel i appen */ await famLoad(); if (m.screen === 'hl') await import('./mobile-posisjon-og-logoer.js').then((x) => x.posLoad(true)).catch(() => {}); if (m.screen === 'fam' || m.screen === 'hl') draw(); }
     else if (d.type === 'tracking' && (m.screen === 'spor' || m.screen === 'hl')) { const { trkLoad } = await import('./mobile-track.js'); await trkLoad().catch(() => {}); draw(); }
   }, 250);
 }

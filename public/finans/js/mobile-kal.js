@@ -9,10 +9,10 @@
 import { esc, hlApi } from './core.js';
 import { m, draw, flash } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
-import { BD, bdLoad } from './mobile-p24.js';
+import { BD, bdLoad } from './mobile-profiler-og-bursdager.js';
 import { quickParse, quickCached } from '/assets/js/lib/dates.js'; // Fase 3: dato og tid fra serveren (POST /api/kalender/quick/parse)
 import { LEARN_TYPES, typeName, loadMemory, memoryNow, addMemory, applyMemory, nameOfEvent, dinOf } from '/assets/js/glimt-memory.js'; // prompt 33
-import * as P29 from './mobile-p29.js';
+import * as P29 from './mobile-sok-og-backup.js';
 import { glimt } from './mobile-glimt.js'; // prompt 32: Glimt-merket i søket og «Beskriv med Glimt»
 import { vw } from '/assets/js/lib/viewport.js'; // vindusstørrelsen uten tvungen layout
 

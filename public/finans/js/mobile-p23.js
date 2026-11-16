@@ -1,13 +1,13 @@
 // Prompt 23 (mobil-PWA): sveip tilbake med forrige side montert bak, scrollposisjon per rute, Kvitteringer i Papir,
 // Finn-annonsen i appen, AI-tidsgrenser, Integrasjoner (Home Assistant) og ikoner på fanene i Nyhetsleser.
 // Fasit: design/Mobil Papir App.dc.html, Nyhetsleser.dc.html og prompts/prompt-23-pakke/*.
-import * as P39 from './mobile-p39.js'; // prompt 39: «✦ På nytt» med fremdrift
-import * as P24 from './mobile-p24.js';
+import * as P39 from './mobile-sveip-bort.js'; // prompt 39: «✦ På nytt» med fremdrift
+import * as P24 from './mobile-profiler-og-bursdager.js';
 import { S, api, hlApi, esc, n0, n2, dd, today, parseAmount, loadReceipts, loadBoot } from './core.js';
 import { m, draw, flash, loadJobs, ACTIVE_JOBS, retryUpload } from './mobile.js';
 import { haptic, hapBack } from './mobile-haptics.js';
 import * as P34 from './mobile-glimt-brief.js'; // prompt 34: ✦ ANALYSERES AV AI i Kvitteringer
-import { logo } from './mobile-p20.js';
+import { logo } from './mobile-posisjon-og-logoer.js';
 import { canSrv } from './mobile-p17.js';
 import { form48, via48, uncCls48, uncTag48, is48, flush48, bind48, setRedraw48, _e48 } from './kvittering-skjema.js'; // prompt 48: skjemaet for skannede kvitteringer
 import { appendChunks } from '/assets/js/lib/chunks.js';

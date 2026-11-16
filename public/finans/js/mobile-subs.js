@@ -8,7 +8,7 @@ import { api, hlApi, esc, n0, dd, today, icon, ICONS, logo, parseAmount, navName
 import { m, draw, flash, avatar, backBtn, theme } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
 import { paper } from './mobile-paper.js';
-import * as P27 from './mobile-p27.js';
+import * as P27 from './mobile-sokefelt-og-nyheter.js';
 import { toJpeg, readShot, errCardHtml, installVision, SLOW_MS } from './sub-shot.js';
 import * as P31 from './mobile-glimt.js';
 import * as P37B from './mobile-p37b.js'; // prompt 37: gratis prøveperioder, delte abonnementer, wiggle med skjul

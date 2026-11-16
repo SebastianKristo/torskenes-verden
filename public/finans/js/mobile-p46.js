@@ -4,7 +4,7 @@
 //      Kategori per kilde som nedtrekksmeny, favicon, «Sammendrag per kategori» og egne kategorier / «For deg» når serveren har det.
 //   3. Glimt-sammendrag øverst i hver kategori (GET /api/rss/digest?cat=, tåler 404 → bare «Siste» har sammendrag som før).
 //   4. Vær: modusvelgeren (Temperatur / Nedbør / Vind) med Liquid Glass-dråpe som glir og kan dras (fasit Vaer.dc.html `seg`).
-//   5. Ruter: posisjonsvarsel «Slå på ›» på Min reise-kortet (innstillingene på kortet i wiggle ligger i mobile-p41b.js).
+//   5. Ruter: posisjonsvarsel «Slå på ›» på Min reise-kortet (innstillingene på kortet i wiggle ligger i mobile-min-reise.js).
 // Resten av prompt 46 i PWA-en ligger i de eksisterende filene (Vær Min posisjon i mobile-wx.js, Gjøremål i mobile-mer-og-gjoremal.js,
 // Bibel på brett i mobile-p37b.js, prøveperioder i mobile-sidefaner-og-sw.js/-p37b.js/-subs.js, profilring i mobile.css).
 import { esc, hlApi } from './core.js';

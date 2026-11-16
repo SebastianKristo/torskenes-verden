@@ -9,7 +9,7 @@ import { haptic } from './mobile-haptics.js';
 import { FS, fsBind } from './mobile-tilpassing.js';
 import { lineBg, lineFg } from './mobile-paper.js';
 import { AV } from './mobile-fanelinje.js';
-import { IG, integLoad24 } from './mobile-p24.js';
+import { IG, integLoad24 } from './mobile-profiler-og-bursdager.js';
 import * as P25 from './mobile-fanelinje-stil.js';
 import * as CHAT from './mobile-chat.js';
 import * as KAL from './mobile-kal.js';

@@ -5,7 +5,7 @@
 import {
   S, api, esc, n0, n2, sgn, neg, dd, dWeek, today, monthName, cap, ini, greet, parseAmount,
   loadBoot, loadSummary, loadTx, loadReceipts, cats, accs, uploadReceipt, icon, aiLine, conic, navName } from './core.js';
-import { logo, posLoad, regLoad, take20, p20Down, p20Move, p20Up, p20Click, p20Screen } from './mobile-p20.js';
+import { logo, posLoad, regLoad, take20, p20Down, p20Move, p20Up, p20Click, p20Screen } from './mobile-posisjon-og-logoer.js';
 import * as UPQ from './mobile-upq.js';
 import { accountInit, logout, p21Bind, p21Sheets, dragMove, dragEnd } from './mobile-p21.js';
 import { MODS, modView, modLoad, domNav, modBind, modAfterDraw } from './mobile-mods.js';
@@ -27,14 +27,14 @@ import { wxView, wxLoad, wxBind, wxBindScroll, WX, wxAfterDraw, wxPlaces } from 
 import { wx22Down, wx22Move, wx22Up } from './mobile-vaer-kart-og-steder.js';
 import * as P22 from './mobile-p22.js';
 import * as P23 from './mobile-p23.js';
-import * as P24 from './mobile-p24.js';
+import * as P24 from './mobile-profiler-og-bursdager.js';
 import * as P25 from './mobile-fanelinje-stil.js';
 import * as P26 from './mobile-p26.js';
 import * as KAL from './mobile-kal.js';
-import * as P27 from './mobile-p27.js';
+import * as P27 from './mobile-sokefelt-og-nyheter.js';
 import * as P33 from './mobile-glimt-husker.js'; // prompt 33: Innstillinger → AI → GLIMT HUSKER
 import * as P28 from './mobile-mer.js';
-import * as P29 from './mobile-p29.js';
+import * as P29 from './mobile-sok-og-backup.js';
 import * as P30 from './mobile-p30.js';
 import * as P30B from './mobile-boliger-deling.js';
 import * as P31 from './mobile-glimt.js';
@@ -45,11 +45,11 @@ import * as P34AI from './mobile-ai-kontroll.js'; // prompt 34: AI-kontroll (#/a
 import * as P37 from './mobile-p37.js'; // prompt 37: Gjøremål (uten fanelinje, detaljark, delte lister, Glimt i ✦-knappen)
 import * as P37B from './mobile-p37b.js'; // prompt 37: bibelvers, onboarding med profil, «hvor er X», Pakker-widget, prøveperioder
 import * as P38 from './mobile-okt-og-qr.js'; // prompt 38: AI-svar lukk, nye brief-kort, prestedrakt, ØKT, QR-innlogging, Glimt i Domener
-import * as P39 from './mobile-p39.js'; // prompt 39: sveip bort myk, Bibel uten fanelinje, wiggle-ark, Tilpass/Appprofil, Yr mot Storm 2a, ukas vær, kvittering på nytt
+import * as P39 from './mobile-sveip-bort.js'; // prompt 39: sveip bort myk, Bibel uten fanelinje, wiggle-ark, Tilpass/Appprofil, Yr mot Storm 2a, ukas vær, kvittering på nytt
 let P40 = null; // prompt 40: mobile-jul-og-totrinn.js (dynamisk import i bind())
-let P41 = null; // prompt 41: mobile-p41.js (dynamisk import i bind(); TDZ i sykliske importer)
+let P41 = null; // prompt 41: mobile-bakgrunn-og-hoytider.js (dynamisk import i bind(); TDZ i sykliske importer)
 let P42 = null; // prompt 42: mobile-oversikt-knapp.js (dynamisk import i bind())
-let P43 = null; // prompt 43: mobile-p43.js (+ mobile-media.js for Media), dynamisk import i bind()
+let P43 = null; // prompt 43: mobile-widgets-og-media.js (+ mobile-media.js for Media), dynamisk import i bind()
 let P44 = null; // prompt 44: mobile-mer-og-gjoremal.js (+ p44l Logger, p44s Studie, p44a Avspilling), dynamisk import i bind()
 let P50F = null; // prompt 50 (FAMWEB50): mobile-familie.js – Familie i nytt design (/assets/js/family.js), dynamisk import i bind()
 let P46 = null; // prompt 46: mobile-p46.js (+ mobile-kart.js Kart), dynamisk import i bind()
@@ -802,11 +802,11 @@ export function bind() {
   // Prompt 40: lastes lat (dynamisk import), så modulrekkefølgen ikke endres (TDZ i sykliske importer).
   import('./mobile-jul-og-totrinn.js').then((x) => { P40 = x; x.boot40(); if (document.documentElement.dataset.ui === 'mobile') draw(); }).catch((err) => console.warn('mobile-jul-og-totrinn', err));
   // Prompt 41: også lat (dynamisk import). globalThis.P41 brukes av de andre modulene.
-  import('./mobile-p41.js').then((x) => { P41 = x; x.boot41(); if (document.documentElement.dataset.ui === 'mobile') draw(); }).catch((err) => console.warn('mobile-p41', err));
+  import('./mobile-bakgrunn-og-hoytider.js').then((x) => { P41 = x; x.boot41(); if (document.documentElement.dataset.ui === 'mobile') draw(); }).catch((err) => console.warn('mobile-bakgrunn-og-hoytider', err));
   // Prompt 42: Hjem-knapp i fanelinja, Vel fremme, ikonsøk, PostNord-logo, Gjøremål-Glimt del opp (lat, som 40 og 41).
   import('./mobile-oversikt-knapp.js').then((x) => { P42 = x; x.boot42(); if (document.documentElement.dataset.ui === 'mobile') draw(); }).catch((err) => console.warn('mobile-oversikt-knapp', err));
   // Prompt 43: Media, Hjem-widget Media, Widgets-siden, rekkefølge på lister, Claude-import, stor skjerm (lat, som 40–42).
-  import('./mobile-p43.js').then((x) => { P43 = x; x.boot43(); if (document.documentElement.dataset.ui === 'mobile') draw(); }).catch((err) => console.warn('mobile-p43', err));
+  import('./mobile-widgets-og-media.js').then((x) => { P43 = x; x.boot43(); if (document.documentElement.dataset.ui === 'mobile') draw(); }).catch((err) => console.warn('mobile-widgets-og-media', err));
   // Prompt 44: Mer ny, Gjøremål-infoside og deloppgaver, Logg inn som, Overfør eier, Tidligere versjoner, Logger, Studie, Glimt-tid (lat, som 40–43).
   import('./mobile-mer-og-gjoremal.js').then((x) => { P44 = x; x.boot44(); if (document.documentElement.dataset.ui === 'mobile') { draw(); load(); } }).catch((err) => console.warn('mobile-mer-og-gjoremal', err));
   // Prompt 45: Glimt-agenten, brettoppsett (skann, Hjem-knapp og wiggle i navbaren), Mer, Ruter, Vær, Familie, Gjøremål, Media m.m. (lat, som 40–44).

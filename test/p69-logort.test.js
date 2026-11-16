@@ -110,7 +110,7 @@ test('logo_wikidata er på som standard og vises sammen med logo_gemini', async 
   assert.equal(p.logo_gemini, false);
   assert.equal((await S('/finans/api/ai-privacy', 'PATCH', { logo_wikidata: false })).body.logo_wikidata, false);
   assert.equal((await S('/finans/api/ai-privacy', 'PATCH', { logo_wikidata: true })).body.logo_wikidata, true);
-  const ui = readFileSync(new URL('../public/finans/js/mobile-p27.js', import.meta.url), 'utf8');
+  const ui = readFileSync(new URL('../public/finans/js/mobile-sokefelt-og-nyheter.js', import.meta.url), 'utf8');
   assert.ok(ui.includes("'logo_wikidata'") && ui.indexOf('logo_wikidata') < ui.indexOf("tgRow('privacy', 'logo_gemini'"));
   assert.ok(readFileSync(new URL('../public/js/ai-glimt.js', import.meta.url), 'utf8').includes('data-g65-ptog="logo_wikidata"'));
 });

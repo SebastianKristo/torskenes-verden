@@ -2,7 +2,7 @@
 // Subscription OS i Mer, ingen skanneknapp på Mer, og 8 px luft mellom tastaturet og fanelinja (claude-code-sok-tastatur.md).
 // Resten av prompt 28 ligger der koden fra før bor: væranimasjon (/assets/js/weather-fx.js + mobile-vaer-kart-og-steder.js), stedssøk og
 // bunnlinje (mobile-vaer-kart-og-steder.js), «Legg til abonnement»-arket og skjermbilde-fiksen (mobile-subs.js + sub-shot.js), wiggle-modus
-// (mobile-tilpassing.js edBlocks + mobile-p20.js), Ruter-kortet (mobile-p27.js), Chat (mobile-chat.js), konto-farger (mobile-set.js).
+// (mobile-tilpassing.js edBlocks + mobile-posisjon-og-logoer.js), Ruter-kortet (mobile-sokefelt-og-nyheter.js), Chat (mobile-chat.js), konto-farger (mobile-set.js).
 // Lagring: GET/PUT /api/prefs/mer {o:[nøkler], h:[skjulte]} per konto (SERVER28). Mangler endepunktet, brukes localStorage.
 import { esc, hlApi } from './core.js';
 import { m, draw } from './mobile.js';

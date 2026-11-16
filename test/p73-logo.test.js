@@ -205,7 +205,7 @@ test('web: «Endre logo»-arket i papir-design, debounce 250 ms, overstyringen i
   assert.ok(!/backdrop-filter:\s*blur\(\s*(?:[2-9]\d|1\d)px/.test(css), 'ikke mørkt glass');
   const core = src('public/finans/js/core.js');
   assert.match(core, /logoOv73/);
-  assert.match(src('public/finans/js/mobile-p20.js'), /logoOv73/);
+  assert.match(src('public/finans/js/mobile-posisjon-og-logoer.js'), /logoOv73/);
   assert.match(src('public/finans/js/desktop.js'), /logoBtn73/);
   assert.match(src('public/finans/js/mobile-tx.js'), /logoBtn73/);
 });

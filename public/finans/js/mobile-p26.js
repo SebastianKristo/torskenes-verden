@@ -5,7 +5,7 @@
 import { esc, hlApi } from './core.js';
 import { m, draw, flash } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
-import { IG, integLoad24, BD, bdLoad, calCard, markCustom } from './mobile-p24.js';
+import { IG, integLoad24, BD, bdLoad, calCard, markCustom } from './mobile-profiler-og-bursdager.js';
 import { haSection } from './mobile-p22.js';
 import { carOf, normNo, detectLocal } from './mobile-track.js';
 import { FT, FT_DEF, finKeys, setFinTabs, ftKey } from './mobile-tilpassing.js';

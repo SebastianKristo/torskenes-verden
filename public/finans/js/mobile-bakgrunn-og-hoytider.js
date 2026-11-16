@@ -10,7 +10,7 @@
 //   · Vær: rediger kort (wiggle + ark) og Glimt skiføre (claude-code-vaer-rediger-ski-julfigur.md)
 //   · Værspørsmål om uka går til modellen (wxComplex, claude-code-glimt-vaer-uke-ai.md)
 //   · AI-jobber: «… siden» oppdateres hvert minutt (claude-code-ai-jobber-klokkeslett.md)
-// Min reise, Vel fremme i Familie og Bursdager ligger i mobile-p41b.js.
+// Min reise, Vel fremme i Familie og Bursdager ligger i mobile-min-reise.js.
 // Lastes med dynamisk import fra mobile.js (statiske importer herfra er trygge fordi resten allerede er evaluert).
 // Alle API-er (kontrakt 41, SERVER41) tåler 404: da brukes lokal reserve eller kortet skjules.
 import { esc, hlApi } from './core.js';
@@ -21,7 +21,7 @@ import { edBlocks, edOn } from './mobile-tilpassing.js';
 import { hlData } from './mobile-hl.js';
 import * as P31 from './mobile-glimt.js';
 import { grp } from './mobile-p17.js';
-import * as B from './mobile-p41b.js';
+import * as B from './mobile-min-reise.js';
 import { DEF47, defaults47, probe47, canTry47 } from '/assets/js/serveradresser.js'; // prompt 47: standard serveradresser
 import { vw } from '/assets/js/lib/viewport.js'; // vindusstørrelsen uten tvungen layout
 

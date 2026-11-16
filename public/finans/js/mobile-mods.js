@@ -1,7 +1,7 @@
 // Moduler i mobilappen («Andre OS»): Matplan, Domener, Subscription OS, Delte mapper og Finn-handler.
 // Hver modul fyller hele skjermen og henter fra sitt eget API. Feiler API-et, vises en lenke til desktop-siden.
 import { api, esc, n0, n2, dd, dWeek, today, icon, aiLine, matApi, domApi, parseAmount, navName } from './core.js';
-import { logo } from './mobile-p20.js'; // logoregisteret (prompt 20), ellers core.logo
+import { logo } from './mobile-posisjon-og-logoer.js'; // logoregisteret (prompt 20), ellers core.logo
 import { m, draw, flash, avatar, backBtn, pref } from './mobile.js';
 import { subsLoad, subsView, subsBind } from './mobile-subs.js';
 import * as P38 from './mobile-okt-og-qr.js'; // prompt 38: Glimt-oppsummering og alt lastet ved åpning

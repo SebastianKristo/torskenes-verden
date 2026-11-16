@@ -42,12 +42,12 @@ export function briefCard(inner, editing = false) {
   if (!inner) return '';
   if (briefHidden() && !editing) return '';
   if (editing) return inner;
-  // Prompt 39 (claude-code-sveip-bort-smooth.md): ingen hint-animasjon. Etikettene byttes med opacity (mobile-p39.js driver sveipet).
+  // Prompt 39 (claude-code-sveip-bort-smooth.md): ingen hint-animasjon. Etikettene byttes med opacity (mobile-sveip-bort.js driver sveipet).
   return `<div class="p36-bs" data-p36bs>
     <div class="p36-bsr" data-sw-rev aria-hidden="true"><span class="p36-bsi" data-sw-ic>${svg(CK, 15, 2.8)}</span><span class="p36-bst"><span class="p39-swl"><b data-sw-idle>Sveip for å skjule</b><b data-sw-armed>Slipp for å skjule</b><b data-sw-done>Brief skjult</b></span><span>Kommer tilbake med ${esc(nextBrief())}</span></span></div>
     <div class="p36-bsc" data-p36bsc>${inner}</div></div>`;
 }
-/** Prompt 39: sveipet er fullført og kortet har kollapset (mobile-p39.js). Skjult til neste brief + toast med Angre. */
+/** Prompt 39: sveipet er fullført og kortet har kollapset (mobile-sveip-bort.js). Skjult til neste brief + toast med Angre. */
 export function briefCommit() {
   lsSet(HIDE, bsKey()); BS.ph = ''; BS.toast = true; draw();
   clearTimeout(BS.toT); BS.toT = setTimeout(() => { BS.toast = false; draw(); }, 4500);
@@ -679,7 +679,7 @@ export function boot36() {
   document.addEventListener('click', (e) => {
     if (TP.until > Date.now() && e.target.closest?.('[data-p36temp]')) { e.preventDefault(); e.stopPropagation(); }
   }, true);
-  document.addEventListener('pointerdown', (e) => { tempDown(e); cropDown(e); }, true); // prompt 39: sveip bort brief ligger i mobile-p39.js
+  document.addEventListener('pointerdown', (e) => { tempDown(e); cropDown(e); }, true); // prompt 39: sveip bort brief ligger i mobile-sveip-bort.js
   document.addEventListener('pointermove', (e) => { tempMove(e); cropMove(e); }, { capture: true, passive: false });
   const up = (e) => { if (e.type === 'pointercancel') tempCancel(); else tempUp(e); cropDrag = null; };
   document.addEventListener('pointerup', up, true); document.addEventListener('pointercancel', up, true);

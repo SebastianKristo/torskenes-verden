@@ -37,6 +37,6 @@ export function afterDraw50() {
 /** WebSocket (mobile-p17.js): type 'family' – steder, innsjekker, posisjoner. Ruter › Min reise henter skolen på nytt ved endrede steder. */
 export function live50(d) {
   if (d?.type !== 'family') return;
-  if (d.kind === 'places') import('./mobile-p41b.js').then((x) => { if (x.RT) { x.RT.zonesT = 0; x.RT.s50 = null; } if (m.screen === 'avg') draw(); }).catch(() => {});
+  if (d.kind === 'places') import('./mobile-min-reise.js').then((x) => { if (x.RT) { x.RT.zonesT = 0; x.RT.s50 = null; } if (m.screen === 'avg') draw(); }).catch(() => {});
   if (F && m.screen === 'fam') F.live50(d);
 }

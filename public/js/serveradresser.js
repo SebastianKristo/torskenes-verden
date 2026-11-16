@@ -1,5 +1,5 @@
 // Prompt 47 (claude-code-standard-serveradresser.md): standard serveradresser og «Svarer · 34 ms»-test for Innstillinger → Server.
-// Brukes av web (settings-server.js) og PWA (finans/js/mobile-p41.js). Ingen imports, så begge kan laste den.
+// Brukes av web (settings-server.js) og PWA (finans/js/mobile-bakgrunn-og-hoytider.js). Ingen imports, så begge kan laste den.
 //
 // Standardverdier: ekstern https://os.smarthjemeksperten.no, lokal http://10.69.1.39:3000. Serveren kan overstyre dem via env
 // (PUBLIC_URL / LOCAL_URL) i GET /api/config/servers ({publicUrl, localUrl?}; localUrl bare etter innlogging). Mangler ruten (404) eller

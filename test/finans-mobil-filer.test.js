@@ -12,8 +12,8 @@ const JS = join(ROOT, 'public/finans/js');
 const filer = readdirSync(JS).filter((f) => f.endsWith('.js'));
 
 // Filene som ennå ikke har fått nytt navn. Lista skal bare krympe; tom når alle familiene er gjennomgått.
-const GJENSTÅR = ['mobile-p17.js', 'mobile-p20.js', 'mobile-p21.js', 'mobile-p22.js', 'mobile-p23.js', 'mobile-p24.js', 'mobile-p26.js', 'mobile-p27.js',
-  'mobile-p29.js', 'mobile-p30.js', 'mobile-p37.js', 'mobile-p37b.js', 'mobile-p39.js', 'mobile-p41.js', 'mobile-p41b.js', 'mobile-p43.js', 'mobile-p46.js'];
+const GJENSTÅR = ['mobile-p17.js', 'mobile-p21.js', 'mobile-p22.js', 'mobile-p23.js', 'mobile-p26.js',
+  'mobile-p30.js', 'mobile-p37.js', 'mobile-p37b.js', 'mobile-p46.js'];
 
 test('Økonomi mobil-web: ingen JS-filer med promptnummer i navnet', () => {
   const nummer = filer.filter((f) => /^mobile-(p\d+[a-z]?|paper\d+)\.js$/.test(f) || /\d{2}[a-z]?\.js$/.test(f));

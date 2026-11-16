@@ -700,7 +700,7 @@ let booted = false;
 export function boot40() {
   if (booted) return; booted = true;
   globalThis.P40 = { isMulti, gMulti, gLocal, afterLbl, julCard, dress, julOn, tfaGroup, addedLine, txTools, stdQ, searchAsk, glimtCard, hjemlysFam, hjemlysHome, onRt40, ngOpen, bibleOn: () => !!MOD.p37b?.bibleOn?.() };
-  Promise.all([import('./mobile-p39.js'), import('./mobile-tilpassing.js'), import('./mobile-p37b.js')]).then(([a, b, c]) => { MOD.p39 = a; MOD.p3 = b; MOD.p37b = c; }).catch(() => {});
+  Promise.all([import('./mobile-sveip-bort.js'), import('./mobile-tilpassing.js'), import('./mobile-p37b.js')]).then(([a, b, c]) => { MOD.p39 = a; MOD.p3 = b; MOD.p37b = c; }).catch(() => {});
   document.addEventListener('input', onInput, true);
   document.addEventListener('submit', onSubmit, true);
   addEventListener('glimt-jul', () => { if (document.documentElement.dataset.ui === 'mobile') draw(); });

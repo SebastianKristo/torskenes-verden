@@ -12,7 +12,7 @@
 import { esc, hlApi } from './core.js';
 import { m, draw } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
-import { setTiles } from './mobile-p20.js';
+import { setTiles } from './mobile-posisjon-og-logoer.js';
 import { paperDark } from './mobile-paper.js';
 import { vw } from '/assets/js/lib/viewport.js'; // vindusstørrelsen uten tvungen layout
 

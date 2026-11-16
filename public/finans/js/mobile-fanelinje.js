@@ -10,9 +10,9 @@ import { haptic } from './mobile-haptics.js';
 import { fourth, fabStyle } from './mobile-tilpassing.js';
 import { hlData, ruterUrl } from './mobile-hl.js';
 import { paper, paperDark } from './mobile-paper.js';
-import { setTiles } from './mobile-p20.js';
+import { setTiles } from './mobile-posisjon-og-logoer.js';
 import { DEP, depKey, depStatus, stopList } from './mobile-p21.js';
-import * as P24 from './mobile-p24.js';
+import * as P24 from './mobile-profiler-og-bursdager.js';
 import * as P22 from './mobile-p22.js';
 import * as P25 from './mobile-fanelinje-stil.js';
 import { loadLeaflet } from './leaflet.js';
@@ -393,7 +393,7 @@ async function famGeo(on) {
 
 export const BO = { list: null, err: '', d: {}, tab: 'over', add: false, ny: false, f: { description: '', amount: '', date: '', categoryId: '' }, nf: { name: '', type: 'Hytte', address: '' }, q: '', busy: false, up: 0 };
 // Prompt 47 (claude-code-boliger-mobil-uten-epost-tilgang.md): fanen «Tilgang» er fjernet på mobil. Tilgang-siden (BO.tab = 'tilg')
-// åpnes fra raden «Delt med N» i «Rediger bolig» (mobile-p24.js) og har «‹ Oversikt» øverst. Web (boliger.js) er uendret.
+// åpnes fra raden «Delt med N» i «Rediger bolig» (mobile-profiler-og-bursdager.js) og har «‹ Oversikt» øverst. Web (boliger.js) er uendret.
 const BTABS = [['over', 'Oversikt'], ['utg', 'Utgifter'], ['proj', 'Prosjekter'], ['reg', 'Regninger'], ['kv', 'Kvitteringer']];
 const TYPE_IC = { Enebolig: '⌂', Leilighet: '▦', Rekkehus: '▥', Hytte: '△', Fritidsbolig: '△', Utleie: '⚿', Annet: '◇' };
 const kr = (v) => `${(v ?? 0) < 0 ? '−' : ''}${n0(v)} kr`;

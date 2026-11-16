@@ -98,7 +98,7 @@ export async function patchTask(id, patch, redraw = true) {
   try { return await hlApi(`/tasks/${encodeURIComponent(id)}`, { method: 'PATCH', json: toServer(patch) }); }
   catch (e) { flash(e.message, 'err'); return null; }
 }
-export async function addTask(t) { // prompt 42: brukes også av Angre i mobile-p41.js
+export async function addTask(t) { // prompt 42: brukes også av Angre i mobile-bakgrunn-og-hoytider.js
   const body = toServer({ title: t.title, list: t.list, due: t.due ?? null, who: t.who ?? null, notes: t.notes ?? '', ...Object.fromEntries(EXTRA.filter((k) => t[k] !== undefined).map((k) => [k, t[k]])), by: meId() || undefined });
   if (HK.local) { const it = { id: `l${Date.now()}${Math.random().toString(36).slice(2, 5)}`, ...body, done: false, createdAt: Date.now() }; HK.d.items = [it, ...HK.d.items]; extraSave(it.id, t); saveLocal37(); return it; }
   const r = await hlApi('/tasks', { method: 'POST', json: body });
