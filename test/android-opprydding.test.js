@@ -177,6 +177,18 @@ test('Q19: kvitteringsskanningen, kopi av kalenderhendelser og «Kjøp gave» ha
   assert.match(raw(join(ROOT, 'server/glimt/brief.js')), /api\.post\('\/gift'/);
 });
 
+test('Q19: oppstartssiden og funksjonsflaggene tolker ikke 404 som «alt i orden»', () => {
+  // /api/health finnes alltid; 404 betyr ikke lenger at serveren kjører (pollingen fortsetter).
+  const opp = strip(raw(join(APP, 'Oppstart.kt')));
+  const poll = opp.slice(opp.indexOf('fun AppViewModel.pollHealth36()'));
+  assert.doesNotMatch(poll.slice(0, 900), /404/);
+  assert.match(raw(join(ROOT, 'server/index.js')), /app\.get\('\/api\/health'/);
+  // /api/flags: en feil (også 404) beholder flaggene som er lagret, i stedet for å tømme dem.
+  const kr = strip(raw(join(APP, 'Krasjrapporter.kt')));
+  assert.match(kr, /val o = try \{ JSONObject\(api\.hlGet\("\/flags", timeout = 8_000\)\) \} catch \(e: CancellationException\) \{ throw e \} catch \(_: Exception\) \{ return \}/);
+  assert.match(raw(join(ROOT, 'server/system/flags-crashes.js')), /qa51Api\.get\('\/flags'/);
+});
+
 test('P85 L: forrige brukers Familie-områder fjernes ved bytte av bruker eller utlogging', () => {
   const fam = strip(raw(join(APP, 'FamilyModel.kt')));
   const use = fam.slice(fam.indexOf('fun useAccount(ctx: Context, id: String?)'), fam.indexOf('internal fun region('));
