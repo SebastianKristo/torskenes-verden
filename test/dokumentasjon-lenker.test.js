@@ -35,6 +35,8 @@ function lenker(tekst) {
   // Kodeblokker (```) teller ikke; de viser ofte eksempler.
   const uten = tekst.replace(/```[\s\S]*?```/g, '');
   for (const m of uten.matchAll(/\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g)) ut.push({ sti: m[1], md: true });
+  // HTML i Markdown (bilder og lenker i README): relativt til fila, som Markdown-lenkene.
+  for (const m of uten.matchAll(/<(?:img|a)\b[^>]*?\s(?:src|href)="([^"]+)"/g)) ut.push({ sti: m[1], md: true });
   for (const m of uten.matchAll(/`([^`\n]+)`/g)) {
     const s = m[1].trim();
     if (TOPP.some((t) => s.startsWith(t + '/'))) ut.push({ sti: s, md: false });
