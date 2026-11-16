@@ -29,7 +29,7 @@ import iconsApi from './icons.js';
 import tilesApi, { hasMapTest, testMap } from './tiles.js';
 import { mountGjoremal } from './gjoremal/index.js'; // Gjøremål: /api/tasks og /api/huske
 import notifyApi, { appMeta } from './notify.js';
-import { attachRealtime } from './realtime.js';
+import { attachRealtime, closeRealtime } from './realtime.js';
 import { revokeUserTokens } from './finans/routes.js';
 import { startBirthdayWorker } from './kalender/birthdays.js';
 import { mountBirthdays, mountKalenderFront, mountKalender } from './kalender/index.js'; // Kalender og Bursdager (server/kalender/)
@@ -644,6 +644,7 @@ if (process.env.NODE_ENV !== 'test') {
       process.exit(0);
     };
     setTimeout(done, 5000).unref();
+    closeRealtime(); // åpne /api/ws-forbindelser holdt ellers server.close() til tidsgrensen (AUDIT A §6 B7)
     server.close(done);
     server.closeIdleConnections?.();
   };
