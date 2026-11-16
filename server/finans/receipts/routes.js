@@ -31,6 +31,7 @@ import { macHealth48 } from './engines/mac-vision.js';
 import { r48Settings, macOcrKey48 } from './settings.js';
 import { recordCorrection48, listCorrections48, exportCorrections48 } from './corrections.js';
 import { todayOslo45 } from '../../glimt/dates.js';
+import { idempotent } from '../idempotency.js';
 import { MERCHANT_LABELS51, brregStatus51, brregLookup51, updateBrreg51, learnMerchant51, mod11Ok } from './brreg.js'; // prompt 51: Enhetsregisteret (lokal kopi)
 
 const DIR = resolve(config.dataDir, 'receipts');
@@ -136,7 +137,7 @@ function linkHome52(h, receiptId, { merchant, date, total }) {
 export function mountReceipts48(api, { W, R, adminOnly, sessionOnly, enqueue, out }) {
   const fileLimit = bodyLimit({ maxSize: Number(process.env.MAX_UPLOAD_MB ?? 40) * 1024 * 1024 + 4096, onError: (c) => bad(c, `Filen er for stor (maks ${process.env.MAX_UPLOAD_MB ?? 40} MB)`, 413) });
 
-  api.post('/receipts/scan', fileLimit, W, async (c) => {
+  api.post('/receipts/scan', fileLimit, W, idempotent, async (c) => { // P85 G: Idempotency-Key gir samme svar ved ny opplasting
     if (!/multipart\/form-data/i.test(c.req.header('content-type') ?? '')) return bad(c, 'Forventet multipart/form-data med feltet «image»');
     const form = await c.req.parseBody().catch(() => null);
     if (!form) return bad(c, 'Kunne ikke lese skjemaet');

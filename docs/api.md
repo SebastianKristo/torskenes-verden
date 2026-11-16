@@ -128,7 +128,7 @@ Kalender og e-post, Media, Økonomi, Reise og pakker, AI, Varsler, Nettverk, Gen
 | Innlogging | `POST /login`, `POST /auth/token` (alias), `POST /auth/logout` (`/logout` er alias for eldre Kalender-apper), `GET /me` |
 | Oversikt | `GET /bootstrap`, `GET /summary`, `GET /reports` |
 | Transaksjoner | `GET/POST /transactions` (`?limit&cursor` → `nextCursor`), `PATCH/DELETE /transactions/:id`, `GET /transactions.csv` |
-| Kvitteringer | `GET/POST /receipts` (flere filer), `GET /receipts/jobs`, `GET/PATCH/DELETE /receipts/:id`, `…/file`, `…/thumb`, `POST …/book`, `…/reject`, `…/reprocess` |
+| Kvitteringer | `GET/POST /receipts` (flere filer), `GET /receipts/jobs`, `GET/PATCH/DELETE /receipts/:id`, `…/file`, `…/thumb`, `POST …/book`, `…/reject`, `…/reprocess`. Opplastingene (`POST /receipts`, `/receipts/scan`, `/receipts/ocr-text`, `/receipts/parsed`, `/subscriptions/receipts`, `/transactions/:id/receipt`, `/folders/:id/receipts`) godtar `Idempotency-Key` (8–128 tegn, f.eks. en UUID): samme nøkkel fra samme bruker innen 24 t gir det første svaret med `Idempotent-Replayed: true` og ingen ny kvittering; `409 IDEMPOTENCY_IN_PROGRESS` mens den første pågår |
 | Budsjett og faste | `PUT /budgets`, `GET /faste-betalinger`, `GET/POST /recurring`, `PATCH/DELETE /recurring/:id`, `POST /recurring/detect` |
 | Kontoer og mål | `POST /accounts`, `PATCH/DELETE /accounts/:id`, `POST /goals`, `PATCH/DELETE /goals/:id` |
 | Kategorier og regler | `POST /categories`, `PATCH/DELETE /categories/:id`, `/categories/migration` («Flytt til nye kategorier», admin: forhåndsvisning, utfør, angre), `POST /rules`, `PATCH/DELETE /rules/:id`, `POST /rules/apply` |

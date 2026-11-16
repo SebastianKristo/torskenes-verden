@@ -23,6 +23,7 @@ import { config } from '../config.js';
 import { scanLog } from './scan.js';
 import { validate } from './ai.js';
 import { osloDate } from '../dates/oslo.js';
+import { idempotent } from './idempotency.js'; // P85 G: Idempotency-Key gir samme svar ved ny opplasting
 
 const DIR = resolve(config.dataDir, 'receipts');
 // Additiv migrasjon: OCR-teksten fra enheten når originalbildet også er lastet opp (file = bildet, teksten her).
@@ -182,7 +183,7 @@ export const textKind47 = (r) => ({ kind: OCR_SOURCES47.includes(r.source) ? 'oc
 export function mountReceipts47(api, { W, enqueue, out }) {
   const fileLimit = bodyLimit({ maxSize: Number(process.env.MAX_UPLOAD_MB ?? 40) * 1024 * 1024 + 4096, onError: (c) => bad(c, `Filen er for stor (maks ${process.env.MAX_UPLOAD_MB ?? 40} MB)`, 413) });
 
-  api.post('/receipts/ocr-text', fileLimit, W, async (c) => {
+  api.post('/receipts/ocr-text', fileLimit, W, idempotent, async (c) => {
     const ct = c.req.header('content-type') ?? '';
     let b = null, img = null, thumb = null;
     if (/multipart\/form-data/i.test(ct)) {
@@ -216,7 +217,7 @@ export function mountReceipts47(api, { W, enqueue, out }) {
     return c.json({ ...out(id), source }, 201);
   });
 
-  api.post('/receipts/parsed', fileLimit, W, async (c) => {
+  api.post('/receipts/parsed', fileLimit, W, idempotent, async (c) => {
     const ct = c.req.header('content-type') ?? '';
     let b = null, file = null, thumb = null;
     if (/multipart\/form-data/i.test(ct)) {

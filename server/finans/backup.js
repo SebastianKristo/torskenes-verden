@@ -26,7 +26,7 @@ const today = () => osloDate(); // «i dag» i Oslo (dates/oslo.js)
 
 /* ---------------- Tabeller ---------------- */
 
-const SKIP = new Set(['fh_tokens', 'fh_embed', 'fh_backups']);
+const SKIP = new Set(['fh_tokens', 'fh_embed', 'fh_backups', 'fh_idempotency']); // fh_idempotency: kortlivede svar på gjentatte opplastinger
 export const fhTables = () => q("SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'fh\\_%' ESCAPE '\\' AND name NOT LIKE 'fh\\_fts%' ESCAPE '\\'").pluck().all().filter((t) => !SKIP.has(t));
 const columns = (t, schema = 'main') => db.prepare(`PRAGMA ${schema}.table_info(${t})`).all().map((c) => c.name);
 const ORE = { fh_accounts: ['opening_balance'], fh_transactions: ['amount'], fh_receipts: ['total'], fh_budgets: ['amount'], fh_recurring: ['amount'], fh_goals: ['saved', 'target'],

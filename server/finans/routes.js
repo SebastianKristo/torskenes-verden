@@ -59,6 +59,7 @@ import { mountLogos52 } from '../logos/local.js'; // prompt 52
 import { warnCloudReceipt52, RECEIPT_SOURCE_LABEL52, RECEIPT_ENGINE_NOTE52 } from './receipts/cloud-guard.js'; // prompt 52: kvitteringer bare lokalt
 import { bolApi, catTree, catOptions, entryCat, linkLegacy, assignCategory, catById as bolCat, catPair, colorOf, noticesFor, layoutFor, upcomingOf, backgroundOf, validBackground } from './boliger.js';
 import { osloDate, osloToUtc, clampDate, addDays } from '../dates/oslo.js';
+import { idempotent } from './idempotency.js'; // P85 G: Idempotency-Key på opplastinger av kvitteringer
 import { CYCLES, CYCLE_DAYS, CYCLE_NAME, PER_LABEL, THEN_TEXT, cycleIn, perMonth, nextCharge, nextChargePreview, seriesOf, seriesFrom, recurringNextDate } from './cycles.js';
 
 const DIR = resolve(config.dataDir, 'receipts');
@@ -992,14 +993,14 @@ export async function ingestReceipt({ buffer, mime, name, meta, target = null, s
   return id;
 }
 
-api.post('/receipts', need('receipts:write'), upload, (c) => receiptUpload(c));
+api.post('/receipts', need('receipts:write'), upload, idempotent, (c) => receiptUpload(c)); // P85 G: Idempotency-Key (idempotency.js)
 // Prompt 47: POST /receipts/ocr-text og /receipts/parsed (receipts-device.js) – samme kø, samme datamodell og samme Til godkjenning.
 mountReceipts47(api, { W: need('receipts:write'), enqueue: (id) => { queue.push({ id }); runQueue(); }, out: (id) => { const r = origSelect.get(id); return { ...receiptOut(r), jobs: [jobOut(r)] }; } });
 // Prompt 48: POST /receipts/scan, GET /receipts/health, /receipts/schemas/:kind og rettelser (server/finans/receipts/) – samme kø og datamodell.
 mountReceipts48(api, { W: need('receipts:write', 'finance:write'), R: need('finance:read', 'receipts:write'), adminOnly, sessionOnly, enqueue: (id) => { queue.push({ id }); runQueue(); }, out: (id) => { const r = origSelect.get(id); return { ...receiptOut(r), jobs: [jobOut(r)] }; } });
 mountLogos52(api, { R }); // prompt 52 (SRV52): butikklogoer for lister, bare lokal cache (/logos52/batch, /logos52/match)
 // Legg ved kvittering på en eksisterende transaksjon. AI-en leser den, og den bekreftes i gjennomgangskøen som vanlig.
-api.post('/transactions/:id/receipt', need('receipts:write'), upload, (c) => {
+api.post('/transactions/:id/receipt', need('receipts:write'), upload, idempotent, (c) => {
   const id = +c.req.param('id');
   if (!own('fh_transactions', id)) return c.notFound();
   return receiptUpload(c, `tx:${id}`);
@@ -1950,7 +1951,7 @@ api.post('/subscriptions', W, async (c) => {
       validDomain(b.domain) || domainFor(b.name), nd.day, cycle === 'monthly' || CYCLE_DAYS[cycle] ? null : month ?? (nd.next ? +nd.next.slice(5, 7) : null), catIn(b.category), logoUrlIn(b.logoUrl), Date.now(), c.get('user'));
   return c.json(subOut(s));
 });
-api.post('/subscriptions/receipts', need('receipts:write'), upload, (c) => receiptUpload(c, 'sub'));
+api.post('/subscriptions/receipts', need('receipts:write'), upload, idempotent, (c) => receiptUpload(c, 'sub'));
 api.patch('/subscriptions/:id', W, async (c) => {
   const cur = editableSub(+c.req.param('id'), c.get('user')); // prompt 37: eier eller betaler av et delt abonnement
   if (!cur) return c.notFound();
@@ -2442,7 +2443,7 @@ api.patch('/folders/:id/entries/:eid', async (c) => {
   }
   return fullOut(c, f);
 });
-api.post('/folders/:id/receipts', need('receipts:write'), upload, (c) => {
+api.post('/folders/:id/receipts', need('receipts:write'), upload, idempotent, (c) => {
   const { f, err } = folderFor(c, 'edit'); if (err) return err;
   return receiptUpload(c, `folder:${f.id}:${c.get('user')}`);
 });
