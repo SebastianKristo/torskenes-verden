@@ -95,6 +95,6 @@ bruker under Innstillinger → Varsler.
 
 ## Test
 
-`test/p89-live.test.js`: tilgang per bruker, admin-backup, handlinger (torrent, NRK, spiller, avtale), rate limit, tokens,
+`test/live-aktiviteter.test.js`: tilgang per bruker, admin-backup, handlinger (torrent, NRK, spiller, avtale), rate limit, tokens,
 JWT-formatet og signaturen mot en lokal HTTP/2-mock, struping, `end`, sletting av utløpte tokens, og at nøkkelen og JWT-en
 aldri står i svar eller logg.

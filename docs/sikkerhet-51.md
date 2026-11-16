@@ -48,5 +48,5 @@ openssl rand -hex 32
 docker compose up -d os
 
 # Tester
-node --test test/p51-sec.test.js
+node --test test/sikkerhet-sperrer-og-passordregel.test.js
 ```

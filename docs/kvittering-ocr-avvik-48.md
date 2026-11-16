@@ -280,4 +280,4 @@ Anbefaling:
 7. **Android sender ikke bildet sammen med OCR-teksten**, og OCR-teksten har ingen kø. Den eksisterende WorkManager-køen (`upload/PendingUploads.kt`) kan bære multipart med `image` + `device_ocr` uten endringer i selve køen.
 8. **Feltnavn og skala:** målformatet bruker `items`, `unit_price`, `discounts.description`, `category_suggestion`, `subtotal` og bbox 0–1. Serveren bruker `lines`, `unitPrice`, `discounts.text`, `suggested_category` og bbox i prosent. `extraction`-JSON-en og `line_boxes` leses av appene, så en avbildning ved inngang/utgang er tryggere enn å endre navn i databasen.
 9. **Rutesti:** finans-API-et ligger under `/finans/api`. `POST /api/receipts/scan` i spesifikasjonen bør trolig være `/finans/api/receipts/scan`, med `need('receipts:write')` og samme kø. `GET /finans/api/health/ai` finnes og kan utvides til eller pekes fra `/receipts/health`.
-10. Eksisterende tester for prompt 47: `test/p47-server.test.js`. Utvides eller speiles for 48.
+10. Eksisterende tester for prompt 47: `test/serveradresser-og-enhets-ocr.test.js`. Utvides eller speiles for 48.
