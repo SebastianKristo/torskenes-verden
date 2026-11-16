@@ -8,7 +8,7 @@
 // Ruter under /api/media (svarformene står i rapporten for prompt 43 og i kommentarene ved hver rute).
 import { normTitle43, parseEpisodeAsk43 } from '../glimt/episode-ask.js'; // prompt 47
 import { Hono } from 'hono';
-import { randomBytes, createHash } from 'node:crypto';
+import { randomBytes, createHash, timingSafeEqual } from 'node:crypto';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { kv, OWNER } from '../db.js';
 import { userCfg, userCfgSet } from '../settings.js';
@@ -1087,6 +1087,8 @@ const DEF_PREFS = { notifyDone: true, notifyFail: true, calendar: true, player: 
 export const prefsOf = (u) => ({ ...DEF_PREFS, ...(kv.get(u, 'media43_prefs', {}) ?? {}) });
 const hookToken = () => { let t = kv.get(OWNER, 'media43_hook', null); if (!t) { t = randomBytes(18).toString('base64url'); kv.set(OWNER, 'media43_hook', t); } return t; };
 /** Webhook-sti med token (vises bare for admin, bl.a. i oppsettstegene under Integrasjoner). */
+// Webhook-tokenet sammenlignes i konstant tid (hasher begge, så lengden ikke lekker heller).
+const sameToken = (got, want) => typeof got === 'string' && got !== '' && timingSafeEqual(createHash('sha256').update(got).digest(), createHash('sha256').update(want).digest());
 export const mediaHookPath43 = (svc) => `/api/media/hook/${svc}?token=${hookToken()}`;
 const hookUrls = () => { const t = hookToken(); return Object.fromEntries(['sonarr', 'radarr', 'prowlarr', 'qbit'].map((s) => [s, `/api/media/hook/${s}?token=${t}`])); };
 
@@ -1243,7 +1245,7 @@ media43Api.post('/hook/:svc', async (c) => {
   if (!['sonarr', 'radarr', 'prowlarr', 'qbit'].includes(svc)) return c.json({ error: 'Ukjent tjeneste' }, 404);
   // Uten token bare direkte fra LAN (ingen proxy-hoder, ellers kunne hvem som helst bak proxyen sendt varsler).
   const direct = !c.req.header('x-forwarded-for') && !c.req.header('cf-connecting-ip') && isLan(String(c.env?.incoming?.socket?.remoteAddress ?? '').replace(/^::ffff:/, ''));
-  if (c.req.query('token') !== hookToken() && !direct) return c.json({ error: 'Mangler token' }, 401);
+  if (!direct && !sameToken(c.req.query('token'), hookToken())) return c.json({ error: 'Mangler token' }, 401);
   let b = {};
   const ct = c.req.header('content-type') ?? '';
   try { b = ct.includes('json') ? await c.req.json() : Object.fromEntries(new URLSearchParams(await c.req.text())); } catch { b = {}; }
