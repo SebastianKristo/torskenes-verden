@@ -24,6 +24,7 @@ import { initPageAddons, afterPageAddons, renderKart } from './page-addons.js'; 
 import { renderFam51, renderMedia51, afterMedfam51 } from './mediakveld-familiekalender.js'; // prompt 51 (MEDFAM51): Familiekalender og «I kveld»
 import { initWeb52, after52 } from './startup.js'; // oppstart, sideanimasjon, Ruter-buffer m.m.
 import { initNavOverflow } from './nav-overflow.js'; // «Alle sider ▾» i toppmenyen (Q6, B-B1/B2)
+import { bindAvkortet } from './ui/avkortet.js'; // hele teksten som tooltip når den er kuttet med «…» (Sporing og Media, E-B13)
 import { loadModuler, aliasTil, viewOf, navKeyOf, tittel, subtabs } from './moduler.js'; // Fase 6: modullisten (GET /api/moduler)
 // Prompt 76 (SKJWEB): Skjold Lab (#/skjold) – skallet tegnes her, selve modulen (skjold.js) lastes ved behov.
 const renderSkjold76 = () => '<section class="sk76" id="sk76" aria-label="Skjold Lab" aria-busy="true"></section>';
@@ -244,6 +245,7 @@ function bindShell() {
   window.addEventListener('glimt-jul', () => { if (route !== 'chat') { route = null; renderRoute(); } });
   document.addEventListener('hl:app', () => { setTitle(); applyHlTheme(); }); // nytt appnavn eller ikon
   document.addEventListener('hl:title', setTitle); // Innstillinger ble lukket (E-B10)
+  bindAvkortet();
   window.addEventListener('resize', () => { if (isMobile() !== wasMobile) { wasMobile = isMobile(); renderRoute(); weatherPill(); } });
 }
 
