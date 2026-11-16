@@ -52,7 +52,7 @@ For å teste lokalt:
 
 ```bash
 npm test                           # alle testene
-node --test test/p51-fin.test.js   # bare Planlegging
+node --test test/finans-sparemal.test.js   # bare Planlegging
 ```
 
 API-et er beskrevet i seksjon FIN51 i SERVER51-API.md: `/finans/api/fin51/*`. Det godtar både innlogget økt og FinansHub-token. Appklientene kommer i neste runde.

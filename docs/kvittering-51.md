@@ -50,5 +50,5 @@
 ```sh
 npm run eval -- --case 17,18,19                 # chat: kvitteringsbilde → tabell, foto → visjonsmodell, qwen3:8b + bilde → ingen 400
 make eval-receipts ARGS="--only ekte"           # dine egne kvitteringer
-node --test test/p51-receipts.test.js           # servertestene
+node --test test/kvittering-retting.test.js           # servertestene
 ```
