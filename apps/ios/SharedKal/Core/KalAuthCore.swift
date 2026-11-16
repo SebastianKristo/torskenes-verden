@@ -39,7 +39,6 @@ struct KalPending41: Codable {
 enum KalAuth41 {
     /// Prompt 47: standardadressene (claude-code-standard-serveradresser.md). Info.plist kan overstyre.
     static let standardExternal47: String = "https://os.smarthjemeksperten.no"
-    static let standardLocal47: String = "http://10.69.1.39:3000"
 
     /// Standardadressen appen leveres med (Info.plist KalDefaultServer41 kan overstyre).
     static var defaultBase: String {
@@ -48,11 +47,12 @@ enum KalAuth41 {
         return standardExternal47
     }
 
-    /// Prompt 47: standard lokal adresse (Info.plist KalDefaultLocal47 kan overstyre).
+    /// Lokal standardadresse. C-S4: ingen fast verdi i appen – tom uten Info.plist KalDefaultLocal47. Den lokale adressen
+    /// kommer fra serveren (/api/me/server, /api/discovery) eller QR, og det som er lagret beholdes.
     static var defaultLocal47: String {
         let v: String = (Bundle.main.object(forInfoDictionaryKey: "KalDefaultLocal47") as? String) ?? ""
         if v.hasPrefix("http://") || v.hasPrefix("https://") { return trim(v) }
-        return standardLocal47
+        return ""
     }
 
     static let client: String = "kalender"
@@ -178,6 +178,7 @@ enum KalAuth41 {
         if !last.isEmpty { raw.append(last) }
         raw.append(defaultBase)
         // Prompt 47: standard lokal adresse til slutt (5G: ekstern først, så den svarer raskt; hjemme velger choose() lokal).
+        // Tom uten Info.plist-verdi (C-S4) og filtreres bort under.
         raw.append(defaultLocal47)
         var out: [String] = []
         for r in raw {
@@ -293,10 +294,10 @@ enum KalAuth41 {
 /* ---------- Lokal og ekstern adresse (Innstillinger → Server, lesbar i Kalender) ---------- */
 
 enum KalServer41 {
-    /// Prompt 47: uten lagrede adresser (ny installasjon, eldre server) gjelder standardverdiene.
+    /// Prompt 47: uten lagrede adresser (ny installasjon, eldre server) gjelder standardverdien – C-S4: bare når den er satt.
     static var local: [String] {
         let v: [String] = KalGroup.defaults.stringArray(forKey: "kal41.local") ?? []
-        return v.isEmpty ? [KalAuth41.defaultLocal47] : v
+        return v.isEmpty ? [KalAuth41.defaultLocal47].filter { (s: String) -> Bool in !s.isEmpty } : v
     }
     static var external: String {
         let v: String = KalGroup.defaults.string(forKey: "kal41.external") ?? ""
@@ -372,7 +373,7 @@ enum KalServer41 {
         return ordered()
     }
 
-    /// «Lokal: 10.69.1.39:3000 · ekstern: os.smarthjemeksperten.no · hentes fra Homelab»
+    /// «Lokal: 192.168.1.10:3000 · ekstern: os.smarthjemeksperten.no · hentes fra Homelab»
     static func summary() -> String {
         func host(_ s: String) -> String {
             var x: String = s

@@ -561,7 +561,7 @@ private struct ServerPage: View {
         VStack(spacing: 12) {
             SectionLabel(text: "Adresser")
             VStack(alignment: .leading, spacing: 10) {
-                TextField("Lokal adresse, f.eks. " + Server47.defaultLocal, text: $local).keyboardType(.URL).textInputAutocapitalization(.never).autocorrectionDisabled()
+                TextField("Lokal adresse, f.eks. " + Server47.localPlaceholder, text: $local).keyboardType(.URL).textInputAutocapitalization(.never).autocorrectionDisabled()
                     .padding(.horizontal, 14).frame(height: 46).glass(16)
                 TextField("Ekstern adresse, f.eks. " + Server47.short(Server47.defaultExternal), text: $external).keyboardType(.URL).textInputAutocapitalization(.never).autocorrectionDisabled()
                     .padding(.horizontal, 14).frame(height: 46).glass(16)
@@ -573,7 +573,7 @@ private struct ServerPage: View {
                 }
                 // Prompt 47: «Tilbakestill til standard» (ServerDefaults.swift).
                 Button {
-                    local = Server47.defaultLocal
+                    local = Server47.resetLocal(local)
                     external = Server47.defaultExternal
                     Server47Model.shared.reset(store)
                 } label: { Text("Tilbakestill til standard").frame(maxWidth: .infinity, minHeight: 44) }

@@ -29,6 +29,38 @@ test('filnavn: ingen Swift-filer med prompt- eller versjonsnummer i navnet', () 
     'Shared/CalendarShared.swift', 'Shared/CalendarWidgetViews.swift']) assert.ok(existsSync(join(IOS, f)), f);
 });
 
+test('C-S4: ingen fast lokal standardadresse i appene – den kommer fra serveren eller QR, og det lagrede beholdes', () => {
+  const alle = swiftFiles().map((f) => [relative(IOS, f), readFileSync(f, 'utf8')]);
+  // Heller ikke i kommentarer: adressen gjelder bare én husstand.
+  assert.deepEqual(alle.filter(([, s]) => /10\.69\.1\.39/.test(s)).map(([f]) => f), []);
+  const yml = raw('project.yml');
+  assert.doesNotMatch(yml, /10\.69\.1\.39/);
+  assert.doesNotMatch(yml, /HomelabLocal47|KalDefaultLocal47/);
+  // Homelab: ingen standard, eksempel i tomme felt, og «Tilbakestill» beholder lagret lokal adresse når serveren ikke har oppgitt noen.
+  const d = code(raw('FinansHub/Sources/ServerDefaults.swift'));
+  assert.match(d, /static let localExample: String = "http:\/\/192\.168\.1\.10:3000"/);
+  assert.match(d, /static func resetLocal\(_ current: String\) -> String \{ defaultLocal\.isEmpty \? current : defaultLocal \}/);
+  assert.match(d, /store\.updateAddresses\(local: Server47\.resetLocal\(store\.account\?\.local \?\? ""\), external: Server47\.defaultExternal\)/);
+  for (const f of ['FinansHub/Sources/LoginServerGear.swift', 'FinansHub/Sources/SettingsView.swift']) {
+    const s = code(raw(f));
+    assert.match(s, /local = Server47\.resetLocal\(local\)/, f);
+    assert.doesNotMatch(s, /local = Server47\.defaultLocal/, f);
+  }
+  // Kalender (iOS og Mac): samme regel.
+  const a = code(raw('SharedKal/Core/KalAuthCore.swift'));
+  assert.doesNotMatch(a, /standardLocal47/);
+  assert.match(a, /return v\.isEmpty \? \[KalAuth41\.defaultLocal47\]\.filter \{ \(s: String\) -> Bool in !s\.isEmpty \} : v/);
+  const k = code(raw('SharedKal/Core/KalServerCore.swift'));
+  assert.match(k, /static func resetLocal\(_ current: String\) -> String \{ standardLocal\.isEmpty \? current : standardLocal \}/);
+  assert.match(k, /storeLocally\(external: standardExternal, local: keep\)/);
+  for (const f of ['Kalender/Sources/KalLogin.swift', 'KalenderMac/Sources/MacLogin.swift']) {
+    const s = code(raw(f));
+    assert.match(s, /local = KalSrv47\.resetLocal\(local\)/, f);
+    assert.match(s, /field\("Lokal adresse", KalSrv47\.localPlaceholder, \$local, locText, locOk\)/, f);
+  }
+  assert.match(code(raw('FinansHub/Sources/LoginServerGear.swift')), /field\("Lokal adresse", Server47\.localPlaceholder, \$local, locResult\)/);
+});
+
 test('C-B5: én ruting for innst-sidene (InnstSide), brukt av både telefon og iPad', () => {
   const paper = code(raw('FinansHub/Sources/Paper.swift'));
   const wide = code(raw('FinansHub/Sources/SettingsWide.swift'));

@@ -533,7 +533,7 @@ struct MacLogin89Sheet: View {
             Text("Adressene til Homelab-serveren. De samme verdiene finnes i Innstillinger → Kontoer → Server.")
                 .font(MacFont.ui(12.5)).foregroundColor(t.mut).fixedSize(horizontal: false, vertical: true)
             field("Ekstern adresse", KalSrv47.standardExternal, $external, extText, extOk)
-            field("Lokal adresse", KalSrv47.standardLocal, $local, locText, locOk)
+            field("Lokal adresse", KalSrv47.localPlaceholder, $local, locText, locOk)
             if !error.isEmpty {
                 Text(error).font(MacFont.ui(12.5, .semibold)).foregroundColor(t.red).fixedSize(horizontal: false, vertical: true)
             }
@@ -568,7 +568,7 @@ struct MacLogin89Sheet: View {
 
     private func reset() {
         external = KalSrv47.standardExternal
-        local = KalSrv47.standardLocal
+        local = KalSrv47.resetLocal(local)
         extText = ""
         locText = ""
         error = ""

@@ -2,8 +2,9 @@ import SwiftUI
 
 // ---------------- Prompt 47: standard serveradresser + Innstillinger → Konto → Server ----------------
 // Spesifikasjon: prompts/prompt-47-pakke/claude-code-standard-serveradresser.md.
-// – Standard: ekstern https://os.smarthjemeksperten.no, lokal http://10.69.1.39:3000 (Info.plist «HomelabServer» og
-//   «HomelabLocal47» kan overstyre). Serveren kan overstyre med PUBLIC_URL / LOCAL_URL; appen leser dem fra GET /api/config/servers
+// – Standard: ekstern https://os.smarthjemeksperten.no (Info.plist «HomelabServer» kan overstyre). C-S4: ingen fast lokal
+//   standardadresse – den lokale adressen kommer fra serveren (/api/config/servers, /api/me/server, /api/discovery) eller QR,
+//   og det brukeren har lagret beholdes. Info.plist «HomelabLocal47» kan settes ved bygging, men står ikke i project.yml. Serveren kan overstyre med PUBLIC_URL / LOCAL_URL; appen leser dem fra GET /api/config/servers
 //   etter innlogging (publicUrl, localUrl). Tåler 404 (eldre server): da fylles standardverdiene inn når kontoen er på en av dem.
 // – Innstillinger → Server: Ekstern og Lokal adresse med status under hvert felt («Svarer · 34 ms» / «Svarer ikke») og «Test»,
 //   og «Tilbakestill til standard». Endringer lagres på serveren (PUT /api/me/server) og synkes til andre enheter på kontoen.
@@ -15,11 +16,20 @@ enum Server47 {
     /// Ekstern standardadresse.
     static var defaultExternal: String { Server41.defaultServer }
 
-    /// Lokal standardadresse.
+    /// Lokal standardadresse. C-S4: tom uten Info.plist «HomelabLocal47» – appen lærer den lokale adressen av serveren.
     static var defaultLocal: String {
         if let s = Bundle.main.object(forInfoDictionaryKey: "HomelabLocal47") as? String, !s.isEmpty { return s }
-        return "http://10.69.1.39:3000"
+        return ""
     }
+
+    /// Eksempel i tomme felt. Appen prøver aldri denne adressen.
+    static let localExample: String = "http://192.168.1.10:3000"
+
+    /// Plassholderen i feltet «Lokal adresse».
+    static var localPlaceholder: String { defaultLocal.isEmpty ? localExample : defaultLocal }
+
+    /// «Tilbakestill til standard» for lokal adresse: standarden når den finnes, ellers beholdes det som er lagret.
+    static func resetLocal(_ current: String) -> String { defaultLocal.isEmpty ? current : defaultLocal }
 
     static func same(_ a: String, _ b: String) -> Bool {
         let x: String = API.normalize(a).lowercased()
@@ -106,9 +116,9 @@ final class Server47Model {
         }
     }
 
-    /// «Tilbakestill til standard»: begge feltene får standardverdiene (lagres og synkes).
+    /// «Tilbakestill til standard»: ekstern adresse får standardverdien, lokal beholdes uten standard (C-S4). Lagres og synkes.
     func reset(_ store: Store) {
-        store.updateAddresses(local: Server47.defaultLocal, external: Server47.defaultExternal)
+        store.updateAddresses(local: Server47.resetLocal(store.account?.local ?? ""), external: Server47.defaultExternal)
         Server41.shared.push(store)
         status = [:]
         tested = [:]
@@ -163,7 +173,7 @@ struct Server47Group: View {
     }
 
     private var isDefault: Bool {
-        Server47.same(external, Server47.defaultExternal) && Server47.same(local, Server47.defaultLocal)
+        Server47.same(external, Server47.defaultExternal) && (Server47.defaultLocal.isEmpty || Server47.same(local, Server47.defaultLocal))
     }
 
     private var resetButton: some View {

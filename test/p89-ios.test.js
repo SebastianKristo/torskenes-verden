@@ -86,11 +86,12 @@ test('domenet: ingen gammel stavemåte igjen i iOS-appene; ny standard i konstan
   assert.deepEqual(bad, []);
   assert.match(raw('FinansHub/Sources/ServerLogin.swift'), /return "https:\/\/os\.smarthjemeksperten\.no"/);
   assert.match(raw('SharedKal/Core/KalAuthCore.swift'), /static let standardExternal47: String = "https:\/\/os\.smarthjemeksperten\.no"/);
-  assert.match(raw('SharedKal/Core/KalAuthCore.swift'), /static let standardLocal47: String = "http:\/\/10\.69\.1\.39:3000"/);
+  // C-S4: ingen fast lokal standardadresse (se ios-opprydding.test.js).
+  assert.doesNotMatch(raw('SharedKal/Core/KalAuthCore.swift'), /standardLocal47/);
   const yml = raw('project.yml');
   assert.equal((yml.match(/HomelabServer: https:\/\/os\.smarthjemeksperten\.no/g) || []).length, 2);
   assert.equal((yml.match(/KalDefaultServer41: "https:\/\/os\.smarthjemeksperten\.no"/g) || []).length, 2);
-  assert.match(yml, /HomelabLocal47: http:\/\/10\.69\.1\.39:3000/);
+  assert.doesNotMatch(yml, /HomelabLocal47|KalDefaultLocal47|10\.69\.1\.39/);
   // ATS: bare lokalt nett (ikke slått av globalt).
   assert.doesNotMatch(yml, /NSAllowsArbitraryLoads/);
   // Fase 4: Mac-skjermen med serverfelt (og hjelpeteksten med begge adressene) var død og er fjernet; standarden står i
@@ -144,14 +145,14 @@ test('Homelab: tannhjul (gearshape, 44×44) øverst til høyre → arket «Serve
   assert.match(l, /\.accessibilityLabel\("Server"\)/);
   assert.match(l, /Text\("Server"\)\.font\(PF\.serif\(26, medium: true\)\)/);
   assert.match(l, /field\("Ekstern adresse", Server47\.defaultExternal, \$external, extResult\)/);
-  assert.match(l, /field\("Lokal adresse", Server47\.defaultLocal, \$local, locResult\)/);
+  assert.match(l, /field\("Lokal adresse", Server47\.localPlaceholder, \$local, locResult\)/);
   assert.match(l, /\.keyboardType\(\.URL\)/);
   assert.match(l, /"Test tilkobling"/);
   assert.match(l, /URL\(string: s \+ "\/api\/health"\)/);
   assert.match(l, /"Tilkoblet · \\\(ms\) ms"/);
   assert.match(l, /Circle\(\)\.fill\(r\.ok \? p\.pos : p\.lab\)/);
   assert.match(l, /Text\("Tilbakestill til standard"\)/);
-  assert.match(l, /external = Server47\.defaultExternal\n\s+local = Server47\.defaultLocal/);
+  assert.match(l, /external = Server47\.defaultExternal\n\s+local = Server47\.resetLocal\(local\)/);
   assert.match(l, /PLineButton\(title: "Avbryt"/);
   assert.match(l, /PInkButton\(title: "Lagre"/);
   // Validering: http(s)://, mellomrom og avsluttende / fjernes.
@@ -190,7 +191,7 @@ test('Kalender (iOS): tannhjul og arket «Server» med samme lagring som Innstil
   assert.match(v, /Image\(systemName: "gearshape"\)/);
   assert.match(v, /\.frame\(width: 44, height: 44\)/);
   assert.match(v, /field\("Ekstern adresse", KalSrv47\.standardExternal, \$external, extText, extOk\)/);
-  assert.match(v, /field\("Lokal adresse", KalSrv47\.standardLocal, \$local, locText, locOk\)/);
+  assert.match(v, /field\("Lokal adresse", KalSrv47\.localPlaceholder, \$local, locText, locOk\)/);
   assert.match(v, /\.keyboardType\(\.URL\)/);
   assert.match(v, /"Test tilkobling"/);
   assert.match(v, /Text\("Tilbakestill til standard"\)/);

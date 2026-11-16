@@ -107,7 +107,7 @@ enum KalSrv46 {
 }
 
 /* ---------------- Prompt 47: Innstillinger → Server (ekstern og lokal adresse med standardverdier) ---------------- */
-// Spesifikasjon: claude-code-standard-serveradresser.md. Standard: ekstern https://os.smarthjemeksperten.no, lokal http://10.69.1.39:3000
+// Spesifikasjon: claude-code-standard-serveradresser.md. Standard: ekstern https://os.smarthjemeksperten.no; ingen fast lokal (C-S4)
 // (KalAuth41.defaultBase / defaultLocal47, Info.plist kan overstyre; serveren kan overstyre via PUBLIC_URL/LOCAL_URL → /api/me/server
 // «defaults»). Lagres per enhet (App Group: kal41.external / kal41.local, samme som KalServer41 leser) og synkes til kontoen med
 // PUT /api/me/server {external, local, device} – svarer serveren 404/405 (eldre versjon), gjelder adressene bare på denne enheten.
@@ -120,10 +120,20 @@ enum KalSrv47 {
         return v.isEmpty ? KalAuth41.defaultBase : v
     }
 
+    /// Serverens lokale standard (fra /api/me/server «defaults»). C-S4: tom når serveren ikke har oppgitt noen.
     static var standardLocal: String {
         let v: String = KalGroup.defaults.string(forKey: "kal47.defLoc") ?? ""
         return v.isEmpty ? KalAuth41.defaultLocal47 : v
     }
+
+    /// Eksempel i tomme felt. Appen prøver aldri denne adressen.
+    static let localExample: String = "http://192.168.1.10:3000"
+
+    /// Plassholderen i feltet «Lokal adresse».
+    static var localPlaceholder: String { standardLocal.isEmpty ? localExample : standardLocal }
+
+    /// «Tilbakestill til standard» for lokal adresse: standarden når den finnes, ellers beholdes det som er lagret.
+    static func resetLocal(_ current: String) -> String { standardLocal.isEmpty ? current : standardLocal }
 
     /// Kalles av KalServer41.refresh() med svaret fra GET /api/me/server.
     static func noteServer(_ o: [String: Any]) {
@@ -189,7 +199,9 @@ enum KalSrv47 {
 
     /// «Tilbakestill til standard»: begge feltene får standardverdiene (også på kontoen, {reset:true}).
     static func reset(device: String) async -> String {
-        storeLocally(external: standardExternal, local: standardLocal)
+        // C-S4: uten lokal standard beholdes den lagrede lokale adressen.
+        let keep: String = resetLocal(KalServer41.local.first ?? "")
+        storeLocally(external: standardExternal, local: keep)
         localOnly = false
         do {
             let d: Data = try await KalNet.send("PUT", "/api/me/server", json: ["reset": true, "device": device], timeout: 10)
@@ -197,7 +209,7 @@ enum KalSrv47 {
                 noteServer(o)
                 let e: String = (o["external"] as? String) ?? ""
                 let l: String = (o["local"] as? String) ?? ""
-                if e.hasPrefix("http") { storeLocally(external: KalAuth41.trim(e), local: l.hasPrefix("http") ? KalAuth41.trim(l) : standardLocal) }
+                if e.hasPrefix("http") { storeLocally(external: KalAuth41.trim(e), local: l.hasPrefix("http") ? KalAuth41.trim(l) : keep) }
             }
             return "Tilbakestilt til standard"
         } catch {
@@ -268,7 +280,7 @@ final class KalSrv47Model {
 
     func reset(device: String) {
         external = KalSrv47.standardExternal
-        local = KalSrv47.standardLocal
+        local = KalSrv47.resetLocal(local)
         busy = true
         Task { @MainActor in
             self.message = await KalSrv47.reset(device: device)
@@ -290,7 +302,7 @@ final class KalSrv47Model {
 
 /* ---------------- Prompt 89 (IOS89): riktig domene, migrering og «Server»-arket før innlogging (Kalender iOS og Mac) ----------------
  Spesifikasjon: claude-code-innlogging-server-tannhjul.md. Standard ekstern adresse: https://os.smarthjemeksperten.no
- (KalAuth41.standardExternal47), lokal uendret http://10.69.1.39:3000.
+ (KalAuth41.standardExternal47). Ingen fast lokal standard (C-S4).
  – migrate(): lagrede adresser som er nøyaktig den gamle feilstavede standarden skrives om ved oppstart (KalStore.init /
    MacStore.init). Egendefinerte adresser røres ikke.
  – Arket «Server» på innloggingen bruker samme lagring som Innstillinger → Server (KalGroup: kal41.external / kal41.local,

@@ -32,7 +32,7 @@ final class Server41 {
     /// Standardadressen som leveres med appen.
     nonisolated static var defaultServer: String {
         if let s = Bundle.main.object(forInfoDictionaryKey: "HomelabServer") as? String, !s.isEmpty { return s }
-        // Prompt 47: ny standard (ServerDefaults.swift). Lokal standard: Server47.defaultLocal.
+        // Prompt 47: ny standard (ServerDefaults.swift). Lokal adresse: ingen fast standard (C-S4), se Server47.defaultLocal.
         return "https://os.smarthjemeksperten.no"
     }
 
@@ -55,7 +55,7 @@ final class Server41 {
         }
         add(Keychain.get("server") ?? "")
         for b in KalGroup.homelabBases { add(b) }
-        // Prompt 47: standardadressene – lokal først (svarer innen 1,5 s hjemme), så ekstern.
+        // Prompt 47: standardadressene – lokal først (svarer innen 1,5 s hjemme), så ekstern. Lokal er tom uten Info.plist-verdi (C-S4).
         add(Server47.defaultLocal)
         add(Server41.defaultServer)
         return out
@@ -223,7 +223,7 @@ struct Server41Sheet: View {
                 .buttonStyle(.plain)
             }
             Text(sub).font(PF.ui(13)).foregroundStyle(p.mut).fixedSize(horizontal: false, vertical: true)
-            TextField(kind == "local" ? Server47.defaultLocal : Server47.defaultExternal, text: $text)
+            TextField(kind == "local" ? Server47.localPlaceholder : Server47.defaultExternal, text: $text)
                 .keyboardType(.URL).textContentType(.URL).textInputAutocapitalization(.never).autocorrectionDisabled()
                 .font(PF.mono(15, bold: false)).foregroundStyle(p.ink)
                 .padding(.horizontal, 14).frame(height: 48)
