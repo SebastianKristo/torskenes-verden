@@ -12,7 +12,10 @@ import UIKit
    skjermbildet fra ShellHistory (som før), så sveipet viser riktig side bak.
  – Fanelinja skifter ikke innhold per seksjon: Finans, Domener, Abonnement og Familie har sine faner i en segmentert velger
    nederst på siden (ShellSectionBar).
- – Nye skjermer (bølge 2) kan bruke systemets navigasjonslinje med .shellSystemNavigationBar() og .navigationTitle(…). */
+ – Nye skjermer (bølge 2) kan bruke systemets navigasjonslinje med .shellSystemNavigationBar() og .navigationTitle(…).
+ – Innstillinger → Utseende → Fanelinje (FanelinjeValg.swift): «Papir (klassisk)» skjuler systemets fanelinje i kompakt bredde
+   og viser den flytende Papir-pillen (PapirFanelinje.swift) over den samme TabView-en. Fanene, valget, stakkene og merkene
+   er de samme; bare linja nederst byttes, straks og uten at stakkene nullstilles. */
 
 /// Plassen sidene tidligere holdt av til den egne skinnen på iPad (108 pt). Sidekolonnen i NavigationSplitView tar nå sin egen plass.
 enum ShellMetrics {
@@ -138,6 +141,8 @@ struct AppTabs<Page: View>: View {
     @Environment(\.horizontalSizeClass) private var hsc
     let scan: () -> Void
     @ViewBuilder let page: () -> Page
+    /// Høyden på Papir-pillen (målt), så sidene får like mye luft nederst.
+    @State private var pillHoyde: CGFloat = 62
 
     var body: some View {
         let regular: Bool = hsc == .regular
@@ -145,6 +150,9 @@ struct AppTabs<Page: View>: View {
         let tabs: [ShellTab] = regular ? all : ShellTabs.compact(all)
         let cur: String = ShellTabs.current(store, ids: tabs.map { (t: ShellTab) -> String in t.id })
         let sel: Binding<String> = Binding<String>(get: { cur }, set: { (v: String) in ShellTabs.select(v, store, current: cur) })
+        // Innstillinger → Utseende → Fanelinje: Papir-pillen i stedet for systemets linje (bare kompakt bredde).
+        let klassisk: Bool = FanelinjeValg.shared.klassisk(regular: regular)
+        let pill: Bool = klassisk && store.shellTabBarShown
         Group {
             if #available(iOS 18.0, *) {
                 ShellTabView18(tabs: tabs, selection: sel, current: cur, page: page)
@@ -166,6 +174,20 @@ struct AppTabs<Page: View>: View {
             ShellRouter.shared.sync(from: store.shellPageKey, to: store.shellPageKey, root: store.shellIsRoot, tab: cur)
         }
         .background(ShellTouchCapture(key: store.shellPageKey).frame(width: 0, height: 0))
+        .overlay(alignment: .bottom) {
+            if pill {
+                PapirFanelinje(tabs: tabs, current: cur) { (id: String) in ShellTabs.select(id, store, current: cur) }
+                    .background(GeometryReader { (g: GeometryProxy) in
+                        Color.clear.preference(key: PapirFanelinjeHoydeKey.self, value: g.size.height)
+                    })
+                    .transition(.opacity)
+            }
+        }
+        .onPreferenceChange(PapirFanelinjeHoydeKey.self) { (h: CGFloat) in
+            if h > 0 && abs(h - pillHoyde) > 0.5 { pillHoyde = h }
+        }
+        .environment(\.shellKlassiskFanelinje, klassisk)
+        .environment(\.shellKlassiskHoyde, pill ? pillHoyde : 0)
     }
 }
 
@@ -181,6 +203,7 @@ struct ShellTabView17<Page: View>: View {
             ForEach(tabs) { (t: ShellTab) in
                 ShellStack(tabId: t.id, current: current, page: page)
                     .tabItem { Label(t.title, systemImage: t.symbol) }
+                    .badge(t.badge)
                     .tag(t.id)
             }
         }
@@ -201,6 +224,7 @@ struct ShellTabView18<Page: View>: View {
                 SwiftUI.Tab(t.title, systemImage: t.symbol, value: t.id) {
                     ShellStack(tabId: t.id, current: current, page: page)
                 }
+                .badge(t.badge)
             }
         }
         .tabViewStyle(.sidebarAdaptable)
@@ -221,7 +245,7 @@ struct ShellSplitView<Page: View>: View {
         NavigationSplitView {
             List(selection: sidebarSel) {
                 ForEach(tabs) { (t: ShellTab) in
-                    Label(t.title, systemImage: t.symbol).tag(t.id)
+                    Label(t.title, systemImage: t.symbol).badge(t.badge).tag(t.id)
                 }
                 Section {
                     Button(action: scan) { Label("Skann", systemImage: "viewfinder") }
@@ -262,6 +286,9 @@ struct ShellStack<Page: View>: View {
 struct ShellPageView<Page: View>: View {
     @Environment(Store.self) private var store
     @Environment(\.paper) private var p
+    /// Papir-pillen erstatter systemets fanelinje (FanelinjeValg), og høyden den tar nederst.
+    @Environment(\.shellKlassiskFanelinje) private var klassisk
+    @Environment(\.shellKlassiskHoyde) private var klassiskHoyde
     let live: Bool
     let key: String
     let page: () -> Page
@@ -277,9 +304,13 @@ struct ShellPageView<Page: View>: View {
                 p.bg.ignoresSafeArea()
             }
         }
+        // Luft under innholdet for Papir-pillen; innholdet scroller fortsatt under den (som før, prompt 34).
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            Color.clear.frame(height: klassiskHoyde).allowsHitTesting(false)
+        }
         .onPreferenceChange(ShellNavBarKey.self) { (v: Bool) in if v != systemBar { systemBar = v } }
         .toolbar(systemBar && live ? .visible : .hidden, for: .navigationBar)
-        .toolbar(store.shellTabBarShown ? .visible : .hidden, for: .tabBar)
+        .toolbar(store.shellTabBarShown && !klassisk ? .visible : .hidden, for: .tabBar)
     }
 }
 
