@@ -1323,11 +1323,18 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     // Butikklogoer: hentes én gang og huskes. En logo som ikke kom (uten nett, eller serveren hadde ikke rukket å hente den)
     // prøves igjen etter to minutter i stedet for å vises som bokstav resten av økten.
     private val logoMiss = mutableMapOf<String, Long>()
+    /** Domener serveren har sagt at mangler logo (204). */
+    private val logoNone = mutableMapOf<String, Long>()
     suspend fun logo(domain: String?): Bitmap? {
         if (domain.isNullOrBlank()) return null
         logos[domain]?.let { return it }
         logoMiss[domain]?.let { if (System.currentTimeMillis() - it < 120_000) return null }
-        val b = image("/finans/api/logo/" + URLEncoder.encode(domain.trim().lowercase(), "UTF-8"))
+        logoNone[domain]?.let { if (System.currentTimeMillis() - it < 6 * 3600_000L) return null }
+        val raw = try { api.bytes("/finans/api/logo/" + URLEncoder.encode(domain.trim().lowercase(), "UTF-8")) }
+            catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) { null }
+        // 204 uten kropp: serveren har ingen logo for domenet. Bokstavmerket vises, og vi spør ikke igjen på seks timer.
+        if (raw != null && raw.isEmpty()) { logoNone[domain] = System.currentTimeMillis(); return null }
+        val b = raw?.let { r -> runCatching { withContext(Dispatchers.Default) { BitmapFactory.decodeByteArray(r, 0, r.size) } }.getOrNull() }
         if (b != null) { logos[domain] = b; logoMiss.remove(domain) } else logoMiss[domain] = System.currentTimeMillis()
         return b
     }

@@ -96,6 +96,22 @@ test('P85 E: trykkflatene i skallet (fanelinja, Papir, navigasjon, globale lag) 
   assert.match(paper, /onClickLabel = "Åpne transaksjonen"/);
 });
 
+test('P85 G: kvitteringer lastes opp med Idempotency-Key fra bildet, også fra køen; logo 204 betyr «ingen logo»', () => {
+  const api = strip(raw(join(APP, 'Api.kt')));
+  assert.match(api, /idempotencyKey: String\? = null\): String/);
+  assert.match(api, /idempotencyKey\?\.let \{ conn\.setRequestProperty\("Idempotency-Key", it\) \}/);
+  const ks = strip(raw(join(APP, 'KvitteringSkanning.kt')));
+  assert.match(ks, /fun receiptIdemKey\(parts: List<Api\.Part>\): String\?/);
+  assert.match(ks, /MessageDigest\.getInstance\("SHA-256"\)\.digest\(img\.data\)/);
+  assert.match(ks, /upload\(SCAN_PATH48, parts, read = SCAN_READ48, idempotencyKey = receiptIdemKey\(parts\)\)/);
+  assert.match(strip(raw(join(APP, 'upload/PendingUploads.kt'))), /idempotencyKey = if \(scan48\) receiptIdemKey\(ps\) else null/);
+  // Nøkkelen: «kv-» + 32 hex-tegn = 35 tegn, innenfor 8–128.
+  assert.equal(('kv-' + 'a'.repeat(32)).length, 35);
+  const vm = strip(raw(join(APP, 'AppViewModel.kt')));
+  assert.match(vm, /if \(raw != null && raw\.isEmpty\(\)\) \{ logoNone\[domain\] = System\.currentTimeMillis\(\); return null \}/);
+  assert.match(strip(raw(join(APP, 'widget/ProveperiodeWidgets.kt'))), /if \(b\.isEmpty\(\)\)/);
+});
+
 test('P85 H: widgetene tegnes og hentes med korutine (og goAsync i mottakere), aldri Thread { runBlocking }', () => {
   for (const p of ktFiles(join(AND, 'app/src/main'))) {
     const s = strip(raw(p));

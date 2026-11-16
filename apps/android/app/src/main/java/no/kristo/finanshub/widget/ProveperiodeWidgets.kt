@@ -182,6 +182,7 @@ object Trials32bStore {
             if (f.exists() && System.currentTimeMillis() - f.lastModified() < 30L * 24 * 3600_000) return@forEach
             runCatching {
                 val b = api.bytes("/finans/api/logo/" + URLEncoder.encode(t.domain, "UTF-8"))
+                if (b.isEmpty()) { f.writeBytes(ByteArray(0)); return@runCatching } // 204: ingen logo, spør igjen om 30 dager
                 val bmp = BitmapFactory.decodeByteArray(b, 0, b.size) ?: return@runCatching
                 // Liten nok for widgeten (Glance sender bildene i RemoteViews).
                 val sc = Bitmap.createScaledBitmap(bmp, 64, 64, true)

@@ -134,7 +134,7 @@ class Api(private val baseUrl: String, private val token: String?) {
     }
 
     /** Multipart-opplasting: filer (f.eks. original + nedskalert JPEG + miniatyr) og tekstfelt (Part uten filnavn). */
-    suspend fun upload(path: String, parts: List<Part>, prefix: String = FINANS, read: Int = 60_000): String = withContext(Dispatchers.IO) {
+    suspend fun upload(path: String, parts: List<Part>, prefix: String = FINANS, read: Int = 60_000, idempotencyKey: String? = null): String = withContext(Dispatchers.IO) {
         val boundary = "----FinansHub" + UUID.randomUUID().toString().replace("-", "")
         val conn = url(path, prefix).openSikker()
         var sent48 = false
@@ -145,6 +145,8 @@ class Api(private val baseUrl: String, private val token: String?) {
             conn.readTimeout = read
             conn.setRequestProperty("Content-Type", "multipart/form-data; boundary=$boundary")
             token?.let { conn.setRequestProperty("Authorization", "Bearer $it") }
+            // P85 G: samme nøkkel ved ny opplasting av samme bilde, så serveren ikke lager en kopi (8–128 tegn).
+            idempotencyKey?.let { conn.setRequestProperty("Idempotency-Key", it) }
             val out = ByteArrayOutputStream()
             for (p in parts) {
                 out.write("--$boundary\r\n".toByteArray())
