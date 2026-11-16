@@ -36,6 +36,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.selection.toggleable
 import no.kristo.finanshub.*
 import no.kristo.finanshub.ui.designsystem.HomelabType
 import no.kristo.finanshub.ui.designsystem.DsPalette
@@ -194,11 +195,11 @@ internal fun NewsSettingsContent46(vm: AppViewModel, p: PaperPal) {
                 decorationBox = { inner -> Box(contentAlignment = Alignment.CenterStart) { if (nf.isEmpty()) Text("https://www.nrk.no/toppsaker.rss", color = p.mut, fontSize = HomelabType.callout.fontSize); inner() } },
             )
             Box(
-                Modifier.fillMaxWidth().height(46.dp).clip(RoundedCornerShape(14.dp)).background(p.lab).clickable { if (nf.isNotBlank()) { vm.addFeed(nf); nf = "" } },
+                Modifier.fillMaxWidth().height(46.dp).clip(RoundedCornerShape(14.dp)).background(p.lab).clickable(role = Role.Button, onClickLabel = "Legg til kilden") { if (nf.isNotBlank()) { vm.addFeed(nf); nf = "" } },
                 contentAlignment = Alignment.Center,
             ) { if (vm.newsBusy) CircularProgressIndicator(color = p.onLab, modifier = Modifier.size(20.dp), strokeWidth = 2.dp) else Text("+ Legg til adresse", color = p.onLab, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize) }
             Text(if (d?.aiCategorize != false) "✦ AI finner navnet på kilden og foreslår kategori. Ikonet hentes fra nettstedet." else "Kategorien settes til Auto.", color = p.mut, fontSize = HomelabType.footnote.fontSize)
-            Box(Modifier.fillMaxWidth().height(44.dp).clip(RoundedCornerShape(14.dp)).border(1.dp, p.line, RoundedCornerShape(14.dp)).clickable { vm.refreshNews() }, contentAlignment = Alignment.Center) {
+            Box(Modifier.fillMaxWidth().height(44.dp).clip(RoundedCornerShape(14.dp)).border(1.dp, p.line, RoundedCornerShape(14.dp)).clickable(role = Role.Button) { vm.refreshNews() }, contentAlignment = Alignment.Center) {
                 Text("Hent nye saker nå", color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize)
             }
     }
@@ -211,7 +212,7 @@ internal fun NewsSettingsContent46(vm: AppViewModel, p: PaperPal) {
 @Composable
 internal fun NewsToggle(title: String, sub: String, on: Boolean, p: PaperPal, top: Boolean, onChange: (Boolean) -> Unit) {
     if (top) Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
-    Row(Modifier.fillMaxWidth().clickable { onChange(!on) }.padding(14.dp, 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+    Row(Modifier.fillMaxWidth().toggleable(value = on, role = Role.Switch) { onChange(it) }.padding(14.dp, 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         Column(Modifier.weight(1f)) {
             Text(title, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize)
             Text(sub, color = p.mut, fontSize = HomelabType.footnote.fontSize, lineHeight = 17.sp)

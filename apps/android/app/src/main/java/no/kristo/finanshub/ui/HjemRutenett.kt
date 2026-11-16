@@ -202,7 +202,7 @@ internal sealed class Row70(val id: String, val keys: List<String>) {
     class Av(val k: String, val nx: List<String>) : Row70("a-$k-" + nx.joinToString("-"), listOf(k) + nx)
 }
 
-/** Radene fra synlige kort i rekkefølge (ren funksjon; test/p70-andhome.test.js speiler reglene). */
+/** Radene fra synlige kort i rekkefølge (ren funksjon; test/android-hjem-fliser.test.js speiler reglene). */
 internal fun rows70(vis: List<String>, sz: Map<String, String>): List<Row70> {
     val out = ArrayList<Row70>()
     var i = 0

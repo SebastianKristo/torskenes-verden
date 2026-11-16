@@ -67,7 +67,7 @@ internal fun Zones41(vm: AppViewModel) {
             val armed = del == z.id
             Text(if (armed) "Slett ${z.name}?" else z.label, color = if (armed) p.lab else p.ink, fontWeight = FontWeight.SemiBold, fontSize = 12.5.sp,
                 modifier = Modifier.clip(CircleShape).border(1.dp, if (armed) p.lab else p.line, CircleShape)
-                    .clickable { if (armed) { vm.deleteZone41(z); del = null } else if ((s.zones?.size ?: 0) > 1) del = z.id else vm.message = "Den siste skolesonen kan ikke slettes" }.padding(12.dp, 7.dp))
+                    .clickable(role = Role.Button, onClickLabel = if (armed) "Slett sonen" else "Slett") { if (armed) { vm.deleteZone41(z); del = null } else if ((s.zones?.size ?: 0) > 1) del = z.id else vm.message = "Den siste skolesonen kan ikke slettes" }.padding(12.dp, 7.dp))
         }
         Text("+ Sone", color = p.bg, fontWeight = FontWeight.Bold, fontSize = 12.5.sp,
             modifier = Modifier.clip(CircleShape).background(p.ink).clickable(role = Role.Button) {
@@ -259,7 +259,7 @@ internal fun IconPicker42(
                 hits.isEmpty() -> "Ingen ikoner heter «${q.trim()}»"
                 else -> "${hits.size} treff"
             }, color = p.mut, fontSize = 12.sp, modifier = Modifier.weight(1f))
-            if (q.isBlank() && icons.size > 18) Box(Modifier.height(32.dp).clip(CircleShape).border(1.dp, p.line, CircleShape).clickable { all = !all }.padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
+            if (q.isBlank() && icons.size > 18) Box(Modifier.height(32.dp).clip(CircleShape).border(1.dp, p.line, CircleShape).clickable(role = Role.Button) { all = !all }.padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
                 Text(if (all) "Vis færre" else "Vis alle (${icons.size})", color = p.ink, fontWeight = FontWeight.Bold, fontSize = 12.5.sp)
             }
         }

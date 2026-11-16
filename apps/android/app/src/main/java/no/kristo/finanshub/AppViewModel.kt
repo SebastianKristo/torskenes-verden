@@ -29,8 +29,18 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelStore
 import no.kristo.finanshub.repository.DomenerRepository
+import no.kristo.finanshub.repository.MatRepository
+import no.kristo.finanshub.repository.NyheterRepository
+import no.kristo.finanshub.repository.NySending
+import no.kristo.finanshub.repository.SporingRepository
 import no.kristo.finanshub.skjerm.DomenerTilstand
 import no.kristo.finanshub.skjerm.DomenerViewModel
+import no.kristo.finanshub.skjerm.MatTilstand
+import no.kristo.finanshub.skjerm.MatViewModel
+import no.kristo.finanshub.skjerm.NyheterTilstand
+import no.kristo.finanshub.skjerm.NyheterViewModel
+import no.kristo.finanshub.skjerm.SporingTilstand
+import no.kristo.finanshub.skjerm.SporingViewModel
 import androidx.savedstate.SavedStateRegistry
 import android.os.Bundle
 import androidx.lifecycle.viewModelScope
@@ -107,6 +117,39 @@ class AppViewModel(app: Application, private val lagret: SavedStateHandle) : And
      */
     private var domenerSpeil by mutableStateOf<DomenerTilstand?>(null)
     private fun domenerNa(): DomenerTilstand = domenerSpeil.let { domener.tilstand.value }
+
+    /** Nyheter-siden (skjerm/NyheterViewModel.kt), mot /api/rss via NyheterRepository. */
+    val nyheter: NyheterViewModel = ViewModelProvider(
+        skjermer,
+        NyheterViewModel.fabrikk(lagret, NyheterRepository { api }, { flash(it) }, { visFeil(it) }),
+    )[NyheterViewModel::class.java]
+
+    /** Speil av NyheterViewModel.tilstand, som for Domener: skjermer som leser vm.news osv. tegnes på nytt. */
+    private var nyheterSpeil by mutableStateOf<NyheterTilstand?>(null)
+    private fun nyheterNa(): NyheterTilstand = nyheterSpeil.let { nyheter.tilstand.value }
+
+    /** Sporing (skjerm/SporingViewModel.kt), mot /api/tracking via SporingRepository. */
+    val sporing: SporingViewModel = ViewModelProvider(
+        skjermer,
+        SporingViewModel.fabrikk(SporingRepository { api }, { visFeil(it) }),
+    )[SporingViewModel::class.java]
+
+    /** Speil av SporingViewModel.tilstand, som for Domener: skjermer som leser vm.tracking osv. tegnes på nytt. */
+    private var sporingSpeil by mutableStateOf<SporingTilstand?>(null)
+    private fun sporingNa(): SporingTilstand = sporingSpeil.let { sporing.tilstand.value }
+
+    /** Repository mot /mat/api (også «Middag i dag» på Hjem). */
+    private val matRepo = MatRepository { api }
+
+    /** Mat-siden (skjerm/MatViewModel.kt). «Endret av …» under uka lages fra rå-svaret (domene/Mat.kt). */
+    val mat: MatViewModel = ViewModelProvider(
+        skjermer,
+        MatViewModel.fabrikk(matRepo, { flash(it) }, { visFeil(it) }, { raw -> p36.mealNote = runCatching { mealNote36(raw) }.getOrNull() }),
+    )[MatViewModel::class.java]
+
+    /** Speil av MatViewModel.tilstand, som for Domener: skjermer som leser vm.week osv. tegnes på nytt. */
+    private var matSpeil by mutableStateOf<MatTilstand?>(null)
+    private fun matNa(): MatTilstand = matSpeil.let { mat.tilstand.value }
 
     /* ---------- Kontoer ---------- */
 
@@ -204,7 +247,8 @@ class AppViewModel(app: Application, private val lagret: SavedStateHandle) : And
 
     /* ---------- Moduler ---------- */
 
-    var week by mutableStateOf<Week?>(null)
+    /** Uka i Mat: tilstanden ligger i MatViewModel (skjerm/MatViewModel.kt). */
+    val week: Week? get() = matNa().uke
     var subs by mutableStateOf<SubList?>(null)
     var folders by mutableStateOf<List<Folder>?>(null)
     var folder by mutableStateOf<FolderDetail?>(null)
@@ -240,7 +284,10 @@ class AppViewModel(app: Application, private val lagret: SavedStateHandle) : And
 
     /* ---------- Sporing, vær, aksjer og abonnement (prompt 11) ---------- */
 
-    var tracking by mutableStateOf<TrackingData?>(null)
+    /** Sendingene: tilstanden ligger i SporingViewModel (skjerm/SporingViewModel.kt). */
+    var tracking: TrackingData?
+        get() = sporingNa().data
+        set(v) { sporing.settData(v) }
     /** De 2 viktigste pakkene på Homelab-hjem. */
     var homePackages by mutableStateOf<List<Shipment>?>(null)
     /** Åpen sending (kortet er utvidet med tidslinjen). */
@@ -265,7 +312,12 @@ class AppViewModel(app: Application, private val lagret: SavedStateHandle) : And
     fun optionInt(k: String, def: Int): Int = if (prefTick >= 0) prefs.int(k, def) else def
     fun setPref(k: String, v: Any) {
         prefs.set(k, v); prefTick++
-        if (k == AppPrefs.HIDE_AMOUNTS) Privacy.hidden = v == true
+        if (k == AppPrefs.HIDE_AMOUNTS) {
+            Privacy.hidden = v == true
+            // F 12: widgetdataene hentes på nytt med eller uten ?hideAmounts=1, så widgetene følger valget med en gang.
+            runCatching { no.kristo.finanshub.widget.WidgetSync.refresh(appCtx) }
+            runCatching { no.kristo.finanshub.widget.Trials32bWidgets.refreshNow(appCtx) }
+        }
         if (k == AppPrefs.START) saveLayout(layout.copy(start = startKey(v.toString())))
     }
 
@@ -494,17 +546,17 @@ class AppViewModel(app: Application, private val lagret: SavedStateHandle) : And
 
     private fun clearData() {
         boot = null; summary = null; me = null; txs = null; receipts = null; jobs = emptyList(); selectedTx = null; selectedReceipt = null
-        week = null; subs = null; folders = null; folder = null; finn = null; tokens = null; domener.nullstill()
+        mat.nullstill(); subs = null; folders = null; folder = null; finn = null; tokens = null; domener.nullstill()
         mobileHome = null; homeError = null; history = emptyList(); suggestions = emptyList(); todayMeal = null; domainToday = null; avatar = null
         ai = null; aiHistory = emptyList(); editing = null; original = null; detail = null; detailTx = null
         recurring = null; stocks = null; report = null; importResult = null; importUris = emptyList(); importText = ""
         editHome = false; domainManager = false; matDay = null; matFull = false; aiNote = null; suggestGroups = emptyList()
-        news = null; homeNews = emptyList(); newsOpen = false; photo = null; media = null; matFolders = emptyList(); recipeJobs = emptyList()
-        recipePreview = null; dishOpen = null; paperPage = null
+        nyheter.nullstill(); homeNews = emptyList(); newsOpen = false; photo = null; media = null
+        dishOpen = null; paperPage = null
         logos.clear()
         // Prompt 21 (brukerskille): alt som tilhører brukeren tømmes ved kontobytte og utlogging.
         tasks = null; taskNext = emptyList(); tasksOpen = false; family = null; famTrack = emptyList(); famSel = null; familyOpen = false
-        famPositions = null; tracking = null; homePackages = null; myStops = emptyList(); stopDeps = emptyMap(); stopSel = null; ruterOpen = false
+        famPositions = null; sporing.nullstill(); homePackages = null; myStops = emptyList(); stopDeps = emptyMap(); stopSel = null; ruterOpen = false
         photoThumbs = emptyMap(); photoFailed = emptySet(); bgInfo = null; depOpen = null; shareListId = null; taskUsers = emptyList()
         kal26.open = false; kal26.events = null; kal26.loadedFor = null; kal26.layoutFor = null
         chat27.open = false; chat27.loadedFor = null
@@ -954,10 +1006,8 @@ class AppViewModel(app: Application, private val lagret: SavedStateHandle) : And
             }
         }
         history = runCatching { parseStrings(api.hlGet("/search/history")) }.getOrDefault(history)
-        todayMeal = runCatching {
-            val w = parseWeek(api.matGet("/week"))
-            w.days.firstOrNull { it.date == LocalDate.now().toString() }?.name
-        }.getOrNull()
+        // Q20: «i dag» er serverens Oslo-dato (today i /week), ikke telefonens klokke.
+        todayMeal = runCatching { matRepo.uke().uke.days.firstOrNull { it.today }?.name }.getOrNull()
         domainToday = runCatching {
             val d = domenerRepo.domener().firstOrNull() ?: return@runCatching null
             val a = domenerRepo.analyse(d.name, "today")
@@ -1467,31 +1517,22 @@ class AppViewModel(app: Application, private val lagret: SavedStateHandle) : And
 
     /* ---------- Mat ---------- */
 
-    suspend fun loadWeek() {
-        val raw = api.matGet("/week")
-        week = parseWeek(raw)
-        p36.mealNote = runCatching { mealNote36(raw) }.getOrNull()
-        // Mapper og skannekø finnes bare på nyere servere; feil her stopper ikke uka. /week har også «folders».
-        val inWeek = runCatching { org.json.JSONObject(raw).optJSONArray("folders")?.let { parseMatFolders(it.toString()) } }.getOrNull()
-        matFolders = inWeek?.takeIf { it.isNotEmpty() } ?: runCatching { parseMatFolders(api.matGet("/folders")) }.getOrDefault(matFolders)
-        recipeJobs = runCatching { parseRecipeJobs(api.matGet("/recipes/jobs")) }.getOrDefault(recipeJobs)
-    }
+    /* Tilstanden og kallene ligger i MatViewModel; her står videresendingene og det som trenger «opptatt» eller meldingen. */
+
+    suspend fun loadWeek() = mat.last()
 
     fun planWeek() = launch {
         busy = true
-        try { api.matPost("/plan", JSONObject().put("scope", "week")); loadWeek(); message = "Ny ukeplan klar ✦" } finally { busy = false }
+        try { mat.planleggUka(); message = "Ny ukeplan klar ✦" } finally { busy = false }
     }
-    fun planDay(date: String) = launch { api.matPost("/plan", JSONObject().put("scope", "day").put("date", date)); loadWeek() }
-    fun setCook(date: String, cook: String) = launch { api.matPatch("/day/$date", JSONObject().put("cook", cook)); loadWeek() }
-    fun toggleFixed(d: Day) = launch { api.matPatch("/day/${d.date}", JSONObject().put("fixed", !d.fixed)); loadWeek() }
-    fun toggleShop(id: String) = launch { api.matPost("/shopping/$id/toggle"); loadWeek() }
+    fun planDay(date: String) = mat.planleggDag(date)
+    fun setCook(date: String, cook: String) = mat.settKokk(date, cook)
+    fun toggleFixed(d: Day) = mat.vekslFast(d)
+    fun toggleShop(id: String) = mat.vekslHandel(id)
     /** Legger ingrediensene som mangler i handlelisten. */
     fun addToShop(items: List<String>) = launch {
-        val have = week?.shopping?.map { it.text.lowercase() }?.toSet() ?: emptySet()
-        val add = items.filter { it.lowercase() !in have }
-        for (i in add) api.matPost("/shopping", JSONObject().put("text", i).apply { week?.start?.takeIf(String::isNotBlank)?.let { put("start", it) } })
-        loadWeek()
-        message = if (add.isEmpty()) "Alt står allerede i handlelisten" else "${add.size} lagt i handlelisten"
+        val n: Int = mat.leggIHandlelisten(items)
+        message = if (n == 0) "Alt står allerede i handlelisten" else "$n lagt i handlelisten"
     }
 
     /* ---------- Subscription OS ---------- */
@@ -1552,17 +1593,17 @@ class AppViewModel(app: Application, private val lagret: SavedStateHandle) : And
 
     /* ---------- Sporing ---------- */
 
+    /* Dataene og kallene ligger i SporingViewModel; her står videresendingene, lokale varsler og valgt sending/filter. */
+
     suspend fun loadTracking() {
-        val t = parseTracking(api.hlGet("/tracking"))
-        tracking = t
+        val t: TrackingData = sporing.last()
         notifyTracking(t)
     }
 
     /** Henter status i bakgrunnen (forsiden, og hvert 5. minutt mens appen er åpen). Feil vises ikke. */
     suspend fun pollTracking() {
         if (!loggedIn || locked) return
-        val t = runCatching { parseTracking(api.hlGet("/tracking", timeout = 15_000)) }.getOrNull() ?: return
-        tracking = t
+        val t: TrackingData = sporing.hentStille() ?: return
         homePackages = t.top(2)
         notifyTracking(t)
     }
@@ -1579,32 +1620,17 @@ class AppViewModel(app: Application, private val lagret: SavedStateHandle) : And
     fun addTracking(no: String, name: String, carrier: String?, out: Boolean) = launch {
         val n = no.trim()
         if (n.isEmpty()) { flash("Skriv inn et sporingsnummer"); return@launch }
-        val body = JSONObject().put("trackingNo", n).put("direction", if (out) "out" else "in")
-        if (name.isNotBlank()) body.put("name", name.trim())
-        if (carrier != null && carrier != "other") body.put("carrier", carrier)
-        val o = JSONObject(api.request("POST", "/tracking", body, prefix = Api.HOMELAB, timeout = 30_000))
-        o.optJSONObject("item")?.let { trkSel = parseShipment(it).id }
+        val ny: NySending = sporing.leggTil(n, name.trim().takeIf { it.isNotEmpty() }, carrier?.takeIf { it != "other" }, out)
+        ny.id?.let { trkSel = it }
         loadTracking()
         trkFilter = if (out) "out" else "active"
-        flash(o.optStr("message") ?: "Sendingen spores")
+        flash(ny.melding ?: "Sendingen spores")
     }
 
-    fun setTrackingPref(k: String, on: Boolean) {
-        tracking = tracking?.let { it.copy(prefs = it.prefs + (k to on)) }
-        launch { api.hlPut("/tracking/prefs", JSONObject().put(k, on)) }
-    }
+    fun setTrackingPref(k: String, on: Boolean) { sporing.settVarsel(k, on) }
 
-    /** k: finn | email */
-    fun setTrackingSource(k: String, on: Boolean) {
-        tracking = tracking?.let {
-            when (k) {
-                "finn" -> it.copy(finn = it.finn.copy(on = on))
-                "autoArchive" -> it.copy(autoArchive = it.autoArchive.copy(on = on))
-                else -> it.copy(email = it.email.copy(on = on))
-            }
-        }
-        launch { api.hlPut("/tracking/sources", JSONObject().put(k, on)) }
-    }
+    /** k: finn | email | autoArchive */
+    fun setTrackingSource(k: String, on: Boolean) { sporing.settKilde(k, on) }
 
     /** Lokale varsler for nye hendelser (serverens varselliste, ellers statusendringer til «Klar for henting» og «Levert»).
      *  Første gang huskes bare det som finnes, så det ikke kommer en bølge av gamle varsler. */
@@ -1948,55 +1974,33 @@ class AppViewModel(app: Application, private val lagret: SavedStateHandle) : And
     }
 
     /* ---------- Nyhetsleser (/api/rss) ---------- */
+    /* Tilstanden og nettkallene ligger i NyheterViewModel (skjerm/NyheterViewModel.kt). Videresendingene under er for kode som
+       ikke er flyttet. Om siden er åpen (newsOpen, newsSettings) er navigasjon og blir her. */
 
-    var news by mutableStateOf<NewsData?>(null)
+    var news: NewsData?
+        get() = nyheterNa().data
+        set(v) { nyheter.settData(v) }
     /** De 5 sakene på forsiden (fra /api/mobile/home). */
     var homeNews by mutableStateOf<List<NewsItem>>(emptyList())
     var newsOpen by mutableStateOf(false)
     var newsSettings by mutableStateOf(false)
-    var newsCat by mutableStateOf("siste")
-    var newsBusy by mutableStateOf(false)
-    var newsError by mutableStateOf<String?>(null)
+    val newsCat: String get() = nyheterNa().kategori
+    val newsBusy: Boolean get() = nyheterNa().laster
+    val newsError: String? get() = nyheterNa().feil
 
     // Prompt 46 (claude-code-nyheter-innstillinger-flytt.md): «Kilder og AI» ligger i Innstillinger → Nyheter, ikke på Nyheter-siden.
     fun openNews(settings: Boolean = false) { if (settings) { menuOpen = false; openNewsSettings46(); return }; newsOpen = true; newsSettings = false; menuOpen = false; loadNews() }
 
     fun loadNews(cat: String = newsCat) = launch {
-        newsCat = cat
-        newsBusy = true
-        try {
-            val raw = api.hlGet("/rss?cat=" + URLEncoder.encode(cat, "UTF-8") + "&limit=40", timeout = 8000)
-            news = parseNews(raw)
-            applyNewsExtras46(raw) // prompt 46: egne kategorier, interesser, favicon, sammendrag per kategori
-            newsError = null
-        } catch (e: ApiException) {
-            newsError = if (e.status == 404) "Nyheter finnes ikke på serveren ennå. Oppdater Homelab." else e.message
-        } finally { newsBusy = false }
+        val raw: String = nyheter.last(cat) ?: return@launch
+        applyNewsExtras46(raw) // prompt 46: egne kategorier, interesser, favicon, sammendrag per kategori
     }
 
-    fun addFeed(url: String) = launch {
-        val u = url.trim().let { if (it.startsWith("http")) it else "https://$it" }
-        if (u.length < 10) return@launch
-        newsBusy = true
-        try { api.hlPost("/rss/feeds", JSONObject().put("url", u)); flash("Kilden er lagt til"); news = parseNews(api.hlGet("/rss?cat=$newsCat&limit=40")) } finally { newsBusy = false }
-    }
-    fun setFeedCategory(id: String, cat: String) = launch {
-        api.request("PATCH", "/rss/feeds/" + URLEncoder.encode(id, "UTF-8"), JSONObject().put("category", cat), prefix = Api.HOMELAB)
-        news = parseNews(api.hlGet("/rss?cat=$newsCat&limit=40"))
-    }
-    fun removeFeed(id: String) = launch {
-        api.hlDelete("/rss/feeds/" + URLEncoder.encode(id, "UTF-8"))
-        news = parseNews(api.hlGet("/rss?cat=$newsCat&limit=40"))
-    }
-    fun setNewsSetting(key: String, on: Boolean) = launch {
-        news = news?.let { if (key == "aiSummary") it.copy(aiSummary = on) else it.copy(aiCategorize = on) }
-        api.hlPut("/rss/settings", JSONObject().put(key, on))
-        news = parseNews(api.hlGet("/rss?cat=$newsCat&limit=40"))
-    }
-    fun refreshNews() = launch {
-        newsBusy = true
-        try { api.request("POST", "/rss/refresh", JSONObject(), prefix = Api.HOMELAB, read = 60_000); news = parseNews(api.hlGet("/rss?cat=$newsCat&limit=40")) } finally { newsBusy = false }
-    }
+    fun addFeed(url: String) = nyheter.leggTilKilde(url)
+    fun setFeedCategory(id: String, cat: String) = nyheter.settKildekategori(id, cat)
+    fun removeFeed(id: String) = nyheter.fjernKilde(id)
+    fun setNewsSetting(key: String, on: Boolean) = nyheter.settInnstilling(key, on)
+    fun refreshNews() = nyheter.hentKildene()
 
     /* ---------- Media (Plex og Jellyfin) ---------- */
 
@@ -2015,102 +2019,52 @@ class AppViewModel(app: Application, private val lagret: SavedStateHandle) : And
 
     /* ---------- Mat: mapper, skann oppskrift, import fra nettside, lenker og filer ---------- */
 
-    var matFolders by mutableStateOf<List<MatFolder>>(emptyList())
+    val matFolders: List<MatFolder> get() = matNa().mapper
     /** Valgt mappe i rettlisten (null = Alle). */
     var matFolderSel by mutableStateOf<String?>(null)
-    var recipeJobs by mutableStateOf<List<RecipeJob>>(emptyList())
-    var recipePreview by mutableStateOf<RecipePreview?>(null)
-    var recipeBusy by mutableStateOf(false)
+    val recipeJobs: List<RecipeJob> get() = matNa().jobber
+    var recipePreview: RecipePreview?
+        get() = matNa().forhandsvisning
+        set(v) { mat.settForhandsvisning(v) }
+    val recipeBusy: Boolean get() = matNa().oppskriftOpptatt
     /** Åpen rett (detaljark med oppskrift, mappe, lenker og filer). */
     var dishOpen by mutableStateOf<String?>(null)
     /** Skann fra «+»: «receipt» (kvittering) eller «recipe» (oppskrift på Mat-siden). */
     var scanTarget by mutableStateOf("receipt")
-    private var recipePoll: kotlinx.coroutines.Job? = null
 
     /** Kamera/filer fra skannearket: kvittering eller oppskrift etter hvor brukeren er. */
     fun scanUris(uris: List<Uri>) { if (scanTarget == "recipe") scanRecipes(uris) else uploadUris(uris) }
 
-    fun importRecipe(url: String) = launch {
-        val u = url.trim().let { if (it.startsWith("http")) it else "https://$it" }
-        recipeBusy = true
-        try { recipePreview = parseRecipePreview(api.request("POST", "/recipes/import", JSONObject().put("url", u), prefix = Api.MAT, read = 90_000)) }
-        finally { recipeBusy = false }
-    }
+    fun importRecipe(url: String) = mat.importerOppskrift(url)
 
-    fun saveRecipe(folderId: String?) = launch {
-        val p = recipePreview ?: return@launch
-        recipeBusy = true
-        try {
-            api.matPost("/recipes/import/save", JSONObject().put("preview", JSONObject(p.raw)).put("folderId", folderId ?: JSONObject.NULL))
-            recipePreview = null
-            loadWeek()
-            flash("${p.name.ifBlank { "Retten" }} er lagret")
-        } finally { recipeBusy = false }
-    }
+    fun saveRecipe(folderId: String?) = mat.lagreOppskrift(folderId)
 
     /** Skann oppskrift: bilder skaleres ned lokalt (HEIC blir JPEG), PDF sendes som den er. */
     fun scanRecipes(uris: List<Uri>) = launch {
         if (uris.isEmpty()) return@launch
         val ctx = getApplication<Application>()
+        val deler = mutableListOf<Api.Part>()
         for (u in uris) {
             val mime = ctx.contentResolver.getType(u) ?: "image/jpeg"
             val data = withContext(Dispatchers.IO) { ctx.contentResolver.openInputStream(u)?.use { it.readBytes() } } ?: continue
             val pdf = mime.contains("pdf")
             val bytes = if (pdf) data else withContext(Dispatchers.Default) { scaled(data, 2400, 85) } ?: data
-            api.upload("/recipes/scan", listOf(Api.Part("file", if (pdf) "oppskrift.pdf" else "oppskrift.jpg", if (pdf) "application/pdf" else "image/jpeg", bytes)), prefix = Api.MAT)
+            deler += Api.Part("file", if (pdf) "oppskrift.pdf" else "oppskrift.jpg", if (pdf) "application/pdf" else "image/jpeg", bytes)
         }
-        flash(if (uris.size == 1) "✦ Oppskriften leses i bakgrunnen" else "✦ ${uris.size} oppskrifter leses i bakgrunnen")
-        recipeJobs = runCatching { parseRecipeJobs(api.matGet("/recipes/jobs")) }.getOrDefault(recipeJobs)
-        pollRecipes()
+        if (deler.isNotEmpty()) mat.skannOppskrifter(deler)
     }
 
-    private fun pollRecipes() {
-        if (recipePoll?.isActive == true) return
-        recipePoll = viewModelScope.launch {
-            repeat(60) {
-                delay(3000)
-                val j = runCatching { parseRecipeJobs(api.matGet("/recipes/jobs")) }.getOrNull() ?: return@launch
-                val before = recipeJobs.count { it.active }
-                recipeJobs = j
-                if (j.count { it.active } < before) runCatching { loadWeek() }
-                if (j.none { it.active }) return@launch
-            }
-        }
-    }
+    fun retryRecipeJob(id: String) = mat.provJobbIgjen(id)
+    fun removeRecipeJob(id: String) = mat.fjernJobb(id)
 
-    fun retryRecipeJob(id: String) = launch {
-        api.matPost("/recipes/jobs/" + URLEncoder.encode(id, "UTF-8") + "/retry")
-        recipeJobs = parseRecipeJobs(api.matGet("/recipes/jobs"))
-        pollRecipes()
-    }
-    fun removeRecipeJob(id: String) = launch {
-        api.request("DELETE", "/recipes/jobs/" + URLEncoder.encode(id, "UTF-8"), prefix = Api.MAT)
-        recipeJobs = parseRecipeJobs(api.matGet("/recipes/jobs"))
-    }
-
-    fun addMatFolder(name: String) = launch {
-        val n = name.trim().takeIf { it.isNotEmpty() } ?: return@launch
-        api.matPost("/folders", JSONObject().put("name", n.take(40)))
-        matFolders = parseMatFolders(api.matGet("/folders"))
-    }
-    fun renameMatFolder(id: String, name: String) = launch {
-        api.matPatch("/folders/" + URLEncoder.encode(id, "UTF-8"), JSONObject().put("name", name.trim().take(40)))
-        matFolders = parseMatFolders(api.matGet("/folders"))
-    }
+    fun addMatFolder(name: String) = mat.nyMappe(name)
+    fun renameMatFolder(id: String, name: String) = mat.endreMappe(id, name)
     fun deleteMatFolder(id: String) = launch {
-        api.request("DELETE", "/folders/" + URLEncoder.encode(id, "UTF-8"), prefix = Api.MAT)
+        mat.slettMappe(id)
         if (matFolderSel == id) matFolderSel = null
-        loadWeek()
     }
-    fun setDishFolder(dishId: String, folderId: String?) = launch {
-        api.matPatch("/dishes/" + URLEncoder.encode(dishId, "UTF-8"), JSONObject().put("folderId", folderId ?: JSONObject.NULL))
-        loadWeek()
-    }
-    fun addDishLink(dishId: String, title: String, url: String) = launch {
-        val u = url.trim().let { if (it.startsWith("http")) it else "https://$it" }
-        api.matPost("/dishes/" + URLEncoder.encode(dishId, "UTF-8") + "/links", JSONObject().put("title", title.trim().ifBlank { u }).put("url", u))
-        loadWeek()
-    }
+    fun setDishFolder(dishId: String, folderId: String?) = mat.settRettensMappe(dishId, folderId)
+    fun addDishLink(dishId: String, title: String, url: String) = mat.leggTilLenke(dishId, title, url)
     fun uploadDishFile(dishId: String, uri: Uri) = launch {
         val ctx = getApplication<Application>()
         val mime = ctx.contentResolver.getType(uri) ?: "application/octet-stream"
@@ -2118,21 +2072,16 @@ class AppViewModel(app: Application, private val lagret: SavedStateHandle) : And
         val data = withContext(Dispatchers.IO) { ctx.contentResolver.openInputStream(uri)?.use { it.readBytes() } } ?: return@launch
         busy = true
         try {
-            api.upload("/dishes/" + URLEncoder.encode(dishId, "UTF-8") + "/links",
-                listOf(Api.Part("file", name, mime, data), Api.Part.text("title", name.substringBeforeLast('.'))), prefix = Api.MAT)
-            loadWeek()
+            mat.lastOppFil(dishId, listOf(Api.Part("file", name, mime, data), Api.Part.text("title", name.substringBeforeLast('.'))))
             flash("$name er lagt til")
         } finally { busy = false }
     }
-    fun removeDishLink(dishId: String, linkId: String) = launch {
-        api.request("DELETE", "/dishes/" + URLEncoder.encode(dishId, "UTF-8") + "/links/" + URLEncoder.encode(linkId, "UTF-8"), prefix = Api.MAT)
-        loadWeek()
-    }
+    fun removeDishLink(dishId: String, linkId: String) = mat.fjernLenke(dishId, linkId)
 
     /** Åpner en lagret fil (krever token): lastes ned og vises i en app som kan åpne filtypen. */
     fun openDishFile(l: DishLink) = launch {
         val path = l.fileUrl ?: return@launch
-        val data = api.bytes(if (path.startsWith("/")) path else "/mat/api/" + path)
+        val data = mat.fil(path)
         val ctx = getApplication<Application>()
         val ext = l.title.substringAfterLast('.', "").ifBlank { when (l.kind) { "pdf" -> "pdf"; "sheet" -> "xlsx"; "doc" -> "docx"; "image" -> "jpg"; else -> "bin" } }
         val f = File(File(ctx.cacheDir, "scans").apply { mkdirs() }, "mat-${l.id}.$ext").apply { writeBytes(data) }
@@ -3536,7 +3485,7 @@ class AppViewModel(app: Application, private val lagret: SavedStateHandle) : And
     fun trkBulk(action: String) = launch {
         val ids = trkPicked.toList()
         if (ids.isEmpty()) return@launch
-        api.hlPost("/tracking/bulk", JSONObject().put("ids", JSONArray(ids)).put("action", action))
+        sporing.masse(ids, action)
         trkPickDone()
         loadTracking()
         flash(when (action) {
@@ -3584,7 +3533,7 @@ class AppViewModel(app: Application, private val lagret: SavedStateHandle) : And
         viewModelScope.launch {
             try {
                 // Sporing: be serveren sjekke status hos fraktselskapene først (prompt 22). Eldre server (404): bare last på nytt.
-                if (screen == Screen.Tracking) runCatching { api.request("POST", "/tracking/refresh", JSONObject(), prefix = Api.HOMELAB, timeout = 30_000) }
+                if (screen == Screen.Tracking) runCatching { sporing.sjekkHosFrakt() }
                 runCatching { loadFor(screen) }
                 if (screen == Screen.Homelab) { runCatching { loadHome() }; loadHomeExtras() }
                 if (tasksOpen) loadTasksNow()
@@ -3629,11 +3578,8 @@ class AppViewModel(app: Application, private val lagret: SavedStateHandle) : And
     fun stopRealtime() = realtime.stop()
 
     // Sporing → Arkiv: arkiverte sendinger hentes for seg (GET /api/tracking?archived=1).
-    var trkArchived by mutableStateOf<List<Shipment>?>(null)
-        private set
-    fun loadArchived() = viewModelScope.launch {
-        trkArchived = runCatching { parseTracking(api.hlGet("/tracking?archived=1", timeout = 15_000)).items.filter { it.archived } }.getOrNull() ?: trkArchived
-    }
+    val trkArchived: List<Shipment>? get() = sporingNa().arkiv
+    fun loadArchived() = sporing.lastArkiv()
 
     /** «Spill av lyd» på en annens telefon: serveren sender meldingen videre via sanntid når appen er åpen der. */
     fun famPing(userId: String, name: String) = launch {
@@ -3996,6 +3942,9 @@ class AppViewModel(app: Application, private val lagret: SavedStateHandle) : And
         runCatching { start51() }
         // Skjermenes ViewModel-er: speilet holder Compose-lesere av de gamle feltene oppdatert.
         viewModelScope.launch { domener.tilstand.collect { domenerSpeil = it } }
+        viewModelScope.launch { nyheter.tilstand.collect { nyheterSpeil = it } }
+        viewModelScope.launch { sporing.tilstand.collect { sporingSpeil = it } }
+        viewModelScope.launch { mat.tilstand.collect { matSpeil = it } }
         // P85 F: siden og søket fra før prosessdød (lastes av refresh), og lagringen til neste gang.
         runCatching { gjenopprettNavigasjon() }
         lagret.setSavedStateProvider(NAV_LAGRET, object : SavedStateRegistry.SavedStateProvider {

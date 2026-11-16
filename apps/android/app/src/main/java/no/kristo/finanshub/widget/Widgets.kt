@@ -277,7 +277,7 @@ private fun isNight(ctx: Context) = (ctx.resources.configuration.uiMode and Conf
 @Composable
 private fun WidgetBody(kind: WKind, d: WidgetData, style: WidgetStyle, label: Boolean = true) {
     val ctx = LocalContext.current
-    val f = Fmt(AppPrefs(ctx).bool(AppPrefs.HIDE_AMOUNTS))
+    val f = Fmt(AppPrefs(ctx).bool(AppPrefs.HIDE_AMOUNTS) || d.hideAmounts) // valget i appen, eller serveren sier fra (F 12)
     if (!kind.oneUi) { Material(kind, d, f); return }
     // Samsung-widgets: navnet står under widgeten (13 sp, sentrert, hvitt), som på One UI. Kan slås av i «Rediger widget».
     val name = kind.label

@@ -122,7 +122,7 @@ internal fun NewsGlimt40Page(vm: AppViewModel) {
                     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(p.card)) {
                         g.refs.forEachIndexed { i, r ->
                             if (i > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
-                            Row(Modifier.fillMaxWidth().clickable { openRef40(vm, ctx, r) }.padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Row(Modifier.fillMaxWidth().clickable(role = Role.Button, onClickLabel = "Åpne saken") { openRef40(vm, ctx, r) }.padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                                 Text("[${r.n}]", color = p.lab, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
                                 NewsImage27(vm, r.image, r.source, Modifier.size(44.dp), 8.dp, 13)
                                 Column(Modifier.weight(1f)) {
@@ -262,7 +262,7 @@ internal fun NewsCategories46(vm: AppViewModel, p: PaperPal) {
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done), keyboardActions = KeyboardActions(onDone = { if (word.isNotBlank()) { vm.setInterests46(n.interests + word); word = "" } }),
                     modifier = Modifier.fillMaxWidth())
             }
-            Text("Legg til", color = p.lab, fontWeight = FontWeight.Bold, fontSize = 13.sp, modifier = Modifier.clickable { if (word.isNotBlank()) { vm.setInterests46(n.interests + word); word = "" } }.padding(12.dp))
+            Text("Legg til", color = p.lab, fontWeight = FontWeight.Bold, fontSize = 13.sp, modifier = Modifier.clickable(role = Role.Button, onClickLabel = "Legg til interessen") { if (word.isNotBlank()) { vm.setInterests46(n.interests + word); word = "" } }.padding(12.dp))
         }
         if (n.custom.isNotEmpty()) Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
         n.custom.forEach { c ->
@@ -286,7 +286,7 @@ internal fun NewsCategories46(vm: AppViewModel, p: PaperPal) {
                 PButton("Avbryt", Modifier.weight(1f), kind = "line", height = 40.dp) { n.newCatOpen = false; n.catErr = null }
                 PButton("Lagre", Modifier.weight(1f), height = 40.dp) { vm.addNewsCat46(name, kw) }
             }
-        } else Text("+ Ny kategori", color = p.lab, fontWeight = FontWeight.Bold, fontSize = 13.5.sp, modifier = Modifier.clickable { Haptics.select(); n.newCatOpen = true }.padding(vertical = 4.dp))
+        } else Text("+ Ny kategori", color = p.lab, fontWeight = FontWeight.Bold, fontSize = 13.5.sp, modifier = Modifier.clickable(role = Role.Button) { Haptics.select(); n.newCatOpen = true }.padding(vertical = 4.dp))
     }
 }
 

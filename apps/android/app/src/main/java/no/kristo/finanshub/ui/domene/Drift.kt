@@ -251,7 +251,7 @@ internal fun UpdPwSheet30(vm: AppViewModel) {
             PButton(if (u.pwBusy) "Starter …" else if (rollback) "Gjenopprett" else "Oppdater nå", Modifier.fillMaxWidth(), height = 48.dp) { if (!u.pwBusy) vm.runUpd30(pw) }
             Text(
                 "Oppdater i nettleseren ›", color = p.mut, fontFamily = PaperFonts.sans, fontWeight = FontWeight.SemiBold, fontSize = 13.sp,
-                modifier = Modifier.align(Alignment.CenterHorizontally).clickable { openCustomTab24(ctx, upd28WebUrl(vm)) }.padding(8.dp),
+                modifier = Modifier.align(Alignment.CenterHorizontally).clickable(role = Role.Button) { openCustomTab24(ctx, upd28WebUrl(vm)) }.padding(8.dp),
             )
         }
     }
@@ -350,7 +350,7 @@ internal fun Rollback44(vm: AppViewModel) {
             }
         }
         if (!all && list.orEmpty().size > 4) Text("Vis alle ${list.orEmpty().size}", color = p.lab, fontWeight = FontWeight.Bold, fontSize = 13.sp,
-            modifier = Modifier.heightIn(min = 44.dp).clickable { all = true }.wrapContentHeight())
+            modifier = Modifier.heightIn(min = 44.dp).clickable(role = Role.Button) { all = true }.wrapContentHeight())
         Text("Tilbakerulling bruker updater-containeren, med backup før og automatisk tilbake ved feil innen 90 s. «Krev passord» gjelder også her.",
             color = p.mut, fontSize = 12.sp, lineHeight = 17.sp)
     }
@@ -417,7 +417,7 @@ internal fun LoggerScreen44(vm: AppViewModel) {
     Column(Modifier.fillMaxSize().background(p.bg).statusBarsPadding()) {
         Row(Modifier.fillMaxWidth().padding(start = 8.dp, end = 12.dp, top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
             Text("‹ Tilbake", color = p.ink, fontWeight = FontWeight.Bold, fontSize = 14.sp, modifier = Modifier.heightIn(min = 44.dp).clip(CircleShape)
-                .clickable { t.logsOpen = false }.padding(horizontal = 10.dp).wrapContentHeight())
+                .clickable(role = Role.Button) { t.logsOpen = false }.padding(horizontal = 10.dp).wrapContentHeight())
         }
         PSerif("Logger", 34.sp, modifier = Modifier.padding(start = 18.dp, bottom = 2.dp))
         Text("Docker-logger, feil og feilsøking", color = p.mut, fontSize = 13.sp, modifier = Modifier.padding(start = 18.dp, bottom = 8.dp))
@@ -478,7 +478,7 @@ internal fun LoggerScreen44(vm: AppViewModel) {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     PLabel("Feil gruppert · 24 t", modifier = Modifier.padding(top = 6.dp))
                     gs.forEach { g ->
-                        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(p.card).clickable { vm.explain44(Log44(g.last ?: "", "error", g.ct, g.msg)) }.padding(12.dp),
+                        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(p.card).clickable(role = Role.Button, onClickLabel = "Forklar feilen") { vm.explain44(Log44(g.last ?: "", "error", g.ct, g.msg)) }.padding(12.dp),
                             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             Text("×${g.count}", color = RED44u, fontFamily = PaperFonts.mono, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                             Column(Modifier.weight(1f)) {

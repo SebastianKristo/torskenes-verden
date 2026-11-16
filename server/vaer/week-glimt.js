@@ -18,7 +18,7 @@ import { osloDate } from '../dates/oslo.js';
 const MOCK = () => process.env.MOCK_DATA === '1';
 let F = null, llm = null;
 /** Bare for tester: fetch for Open-Meteo (null = standard). Med injisert fetch hentes ekte data også med MOCK_DATA=1. */
-export const _setWeather41Fetch = (fn) => { F = fn ?? null; };
+export const _setWeather41Fetch = (fn) => { F = fn ?? null; skiCache = null; };
 /** Bare for tester: ({prompt, system}) → tekst | kast. null = Ollama via ai-run (sok, lokalt). */
 export const _setWeek41Llm = (fn) => { llm = fn ?? null; };
 export const WEEK_LLM_MS = 20_000;
@@ -148,14 +148,25 @@ export function wax41({ tempC, newCm = 0, refrozen = false }) {
   return { grip: 'Rød (V55) eller universalklister', short: 'rød' };
 }
 export const glide41 = (t) => (t <= -8 ? 'kald' : t <= -2 ? 'universal' : 'varm');
-/** Skiføre-data (Open-Meteo for Nordmarka). Mock: snø fra november til mars. */
-async function skiData(now = Date.now()) {
+/** Siste ekte svar fra Open-Meteo (én fast posisjon), så appene kan spørre ofte uten å spørre Open-Meteo hver gang. */
+let skiCache = null;
+const SKI_CACHE_MS = 15 * 60_000;
+/**
+ * Skiføre-data (Open-Meteo for Nordmarka). Mock: snø fra november til mars.
+ * maxC = dagens maks; thawC = høyeste maks de siste dagene (tining, brukt av appene til skareføre).
+ */
+export async function skiData(now = Date.now()) {
   const m = +new Date(now).toLocaleDateString('sv-SE', { timeZone: 'Europe/Oslo' }).slice(5, 7);
-  if (MOCK() && !F) return [11, 12, 1, 2, 3].includes(m) ? { snowCm: 42, newCm: 6, tempC: -4, humidity: 82, maxC: -2 } : { snowCm: 0, newCm: 0, tempC: 6, humidity: 80, maxC: 9 };
+  if (MOCK() && !F) return [11, 12, 1, 2, 3].includes(m) ? { snowCm: 42, newCm: 6, tempC: -4, humidity: 82, maxC: -2, thawC: -2 } : { snowCm: 0, newCm: 0, tempC: 6, humidity: 80, maxC: 9, thawC: 9 };
+  if (!F && skiCache && Date.now() - skiCache.at < SKI_CACHE_MS) return skiCache.data;
   const d = await getJson(`https://api.open-meteo.com/v1/forecast?latitude=${NORDMARKA.lat}&longitude=${NORDMARKA.lon}&timezone=Europe%2FOslo&past_days=3&forecast_days=1&current=temperature_2m,relative_humidity_2m,snow_depth&daily=snowfall_sum,temperature_2m_max`);
   const cur = d.current ?? {};
   const fall = (d.daily?.snowfall_sum ?? []).slice(0, 3).reduce((a, x) => a + (x ?? 0), 0);
-  return { snowCm: Math.round((cur.snow_depth ?? 0) * 100), newCm: Math.round(fall), tempC: Math.round(cur.temperature_2m ?? 0), humidity: Math.round(cur.relative_humidity_2m ?? 0), maxC: Math.round(d.daily?.temperature_2m_max?.at(-1) ?? 0) };
+  const maxes = (d.daily?.temperature_2m_max ?? []).filter((x) => typeof x === 'number');
+  const data = { snowCm: Math.round((cur.snow_depth ?? 0) * 100), newCm: Math.round(fall), tempC: Math.round(cur.temperature_2m ?? 0), humidity: Math.round(cur.relative_humidity_2m ?? 0), maxC: Math.round(d.daily?.temperature_2m_max?.at(-1) ?? 0),
+    thawC: maxes.length ? Math.max(...maxes) : 0 };
+  if (!F) skiCache = { at: Date.now(), data };
+  return data;
 }
 export const skiOff41 = (u) => (kv.get(u, 'vaer_layout', {}) ?? {}).ski === false;
 /** Skiføre når det er relevant (snø ≥ 15 cm og ikke slått av). → objekt eller null */

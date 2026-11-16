@@ -122,10 +122,8 @@ fun AppViewModel.pollHealth36() {
     s.startJob?.cancel()
     s.startJob = launchJob36 {
         while (s.startOn) {
-            val r = try { parseHealth36(api36 { request("GET", "/health", null, prefix = Api.HOMELAB, timeout = 3000, read = 4000) }) } catch (e: ApiException) {
-                // Eldre server uten /api/health: svarer den med 404, kjører den.
-                if (e.status == 404) true to START_STEPS36.map { (id, l) -> HealthStep36(id, l, "ok", null) } else null
-            } catch (e: CancellationException) { throw e } catch (_: Exception) { null }
+            // Q19: serveren har alltid /api/health; ingen «404 = kjører» for eldre servere.
+            val r = try { parseHealth36(api36 { request("GET", "/health", null, prefix = Api.HOMELAB, timeout = 3000, read = 4000) }) } catch (e: CancellationException) { throw e } catch (_: Exception) { null }
             if (r != null) {
                 s.startSteps = r.second
                 if (r.first) {

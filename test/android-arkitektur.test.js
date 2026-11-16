@@ -140,3 +140,77 @@ test('E-B12/Q34 Homelab-appen: kalenderen viser forslaget med «Slå sammen» og
   assert.match(ui, /K29NowCard\(vm, kalNow29\(s, evs, now\)\)\s*KalMigBanner\(vm\)/);
   assert.match(ui, /contentDescription = if \(m\.proposed\) "Ikke nå" else "Lukk"/);
 });
+
+test('Struktur: Nyheter har egen ViewModel med StateFlow og repository; AppViewModel sender bare videre', () => {
+  const nvm = strip(raw(join(APP, 'skjerm/NyheterViewModel.kt')));
+  assert.match(nvm, /class NyheterViewModel\([\s\S]*?\) : ViewModel\(\)/);
+  assert.match(nvm, /val tilstand: StateFlow<NyheterTilstand> = _tilstand\.asStateFlow\(\)/);
+  assert.match(nvm, /lagret\[KATEGORI\] = kategori/, 'valgt kategori overlever prosessdød');
+  assert.doesNotMatch(nvm, /JSONObject\(|JSONArray\(|hlGet\(|hlPost\(|parseNews\(/, 'ingen nett eller JSON i ViewModel-en');
+  // 404 fra en eldre server gir en forklaring på siden (ingen lokal reserve).
+  assert.match(nvm, /if \(e\.status == 404\) "Nyheter finnes ikke på serveren ennå\. Oppdater Homelab\."/);
+  const repo = strip(raw(join(APP, 'repository/NyheterRepository.kt')));
+  assert.match(repo, /withContext\(Dispatchers\.Default\) \{ parseNews\(raw\) \}/, 'JSON tolkes utenfor Main');
+  for (const sti of ['"/rss?cat="', '"/rss/feeds"', '"/rss/feeds/"', '"/rss/settings"', '"/rss/refresh"']) assert.ok(repo.includes(sti), sti);
+  const vm = strip(raw(join(APP, 'AppViewModel.kt')));
+  for (const f of ['news', 'newsCat', 'newsBusy', 'newsError']) assert.doesNotMatch(vm, new RegExp(`var ${f} by mutableStateOf`), f);
+  assert.doesNotMatch(vm, /\/rss\?cat=|\/rss\/feeds|\/rss\/settings|\/rss\/refresh/, 'Nyheter-kallene går via NyheterRepository');
+  assert.match(vm, /var news: NewsData\?\s*get\(\) = nyheterNa\(\)\.data\s*set\(v\) \{ nyheter\.settData\(v\) \}/);
+  assert.match(vm, /fun loadNews\(cat: String = newsCat\) = launch \{\s*val raw: String = nyheter\.last\(cat\) \?: return@launch\s*applyNewsExtras46\(raw\)/);
+  assert.match(vm, /fun refreshNews\(\) = nyheter\.hentKildene\(\)/);
+  assert.match(vm, /nyheter\.tilstand\.collect \{ nyheterSpeil = it \}/);
+  assert.match(vm, /nyheter\.nullstill\(\); homeNews = emptyList\(\)/, 'utlogging tømmer Nyheter');
+  // Om siden er åpen, er navigasjon og blir i AppViewModel (tilbakestabelen prøvekjører den i et snapshot).
+  assert.match(vm, /var newsOpen by mutableStateOf\(false\)/);
+});
+
+test('Struktur: Sporing har egen ViewModel med StateFlow og repository; AppViewModel sender bare videre', () => {
+  const svm = strip(raw(join(APP, 'skjerm/SporingViewModel.kt')));
+  assert.match(svm, /class SporingViewModel\([\s\S]*?\) : ViewModel\(\)/);
+  assert.match(svm, /val tilstand: StateFlow<SporingTilstand> = _tilstand\.asStateFlow\(\)/);
+  assert.doesNotMatch(svm, /JSONObject\(|JSONArray\(|hlGet\(|hlPost\(|parseTracking\(/, 'ingen nett eller JSON i ViewModel-en');
+  // Varselvalg og kilder vises med en gang og lagres så på serveren (som før).
+  assert.match(svm, /fun settVarsel\(navn: String, verdi: Boolean\): Job \{\s*_tilstand\.update[\s\S]{0,200}return start \{ repo\.settVarsel\(navn, verdi\) \}/);
+  const repo = strip(raw(join(APP, 'repository/SporingRepository.kt')));
+  assert.match(repo, /withContext\(Dispatchers\.Default\) \{ parseTracking\(raw\) \}/, 'JSON tolkes utenfor Main');
+  for (const sti of ['"/tracking"', '"/tracking?archived=1"', '"/tracking/prefs"', '"/tracking/sources"', '"/tracking/bulk"', '"/tracking/refresh"']) assert.ok(repo.includes(sti), sti);
+  const vm = strip(raw(join(APP, 'AppViewModel.kt')));
+  assert.doesNotMatch(vm, /var tracking by mutableStateOf|var trkArchived by mutableStateOf/);
+  assert.doesNotMatch(vm, /"\/tracking/, 'Sporing-kallene går via SporingRepository');
+  assert.match(vm, /var tracking: TrackingData\?\s*get\(\) = sporingNa\(\)\.data\s*set\(v\) \{ sporing\.settData\(v\) \}/);
+  assert.match(vm, /suspend fun loadTracking\(\) \{\s*val t: TrackingData = sporing\.last\(\)\s*notifyTracking\(t\)/, 'lokale varsler som før');
+  assert.match(vm, /val t: TrackingData = sporing\.hentStille\(\) \?: return\s*homePackages = t\.top\(2\)/);
+  assert.match(vm, /sporing\.tilstand\.collect \{ sporingSpeil = it \}/);
+  assert.match(vm, /famPositions = null; sporing\.nullstill\(\); homePackages = null/, 'utlogging tømmer Sporing (også arkivet)');
+  // Valgt sending og filter er navigasjon og blir i AppViewModel.
+  assert.match(vm, /var trkSel by mutableStateOf<String\?>\(null\)/);
+  assert.match(vm, /var trkFilter by mutableStateOf\("active"\)/);
+});
+
+test('Struktur: Mat har egen ViewModel med StateFlow og repository; AppViewModel sender bare videre', () => {
+  const mvm = strip(raw(join(APP, 'skjerm/MatViewModel.kt')));
+  assert.match(mvm, /class MatViewModel\([\s\S]*?\) : ViewModel\(\)/);
+  assert.match(mvm, /val tilstand: StateFlow<MatTilstand> = _tilstand\.asStateFlow\(\)/);
+  assert.doesNotMatch(mvm, /JSONObject\(|JSONArray\(|matGet\(|matPost\(|parseWeek\(/, 'ingen nett eller JSON i ViewModel-en');
+  assert.match(mvm, /fun nullstill\(\) \{\s*jobbPoll\?\.cancel\(\)/, 'skannekøen følges ikke etter utlogging');
+  const repo = strip(raw(join(APP, 'repository/MatRepository.kt')));
+  assert.match(repo, /return withContext\(Dispatchers\.Default\) \{[\s\S]{0,200}MatUke\(parseWeek\(raw\), mapper, raw\)/, 'JSON tolkes utenfor Main');
+  for (const sti of ['"/week"', '"/recipes/jobs"', '"/folders"', '"/plan"', '"/shopping"', '"/recipes/import"', '"/recipes/import/save"', '"/recipes/scan"']) assert.ok(repo.includes(sti), sti);
+  // Q19: mappene kommer alltid med i /week; ingen ekstra kall til /folders som reserve for eldre servere.
+  const uke = repo.slice(repo.indexOf('suspend fun uke()'), repo.indexOf('suspend fun jobber()'));
+  assert.doesNotMatch(uke, /"\/folders"/);
+  const vm = strip(raw(join(APP, 'AppViewModel.kt')));
+  for (const f of ['week', 'matFolders', 'recipeJobs', 'recipePreview', 'recipeBusy']) assert.doesNotMatch(vm, new RegExp(`var ${f} by mutableStateOf`), f);
+  assert.doesNotMatch(vm, /\bapi\.mat(Get|Post|Patch)\(|prefix = Api\.MAT/, 'Mat-kallene går via MatRepository');
+  assert.match(vm, /val week: Week\? get\(\) = matNa\(\)\.uke/);
+  assert.match(vm, /suspend fun loadWeek\(\) = mat\.last\(\)/);
+  assert.match(vm, /mat\.tilstand\.collect \{ matSpeil = it \}/);
+  assert.match(vm, /mat\.nullstill\(\); subs = null/, 'utlogging tømmer Mat');
+  // «Opptatt» og meldingen for ny ukeplan vises som før (i AppViewModel).
+  assert.match(vm, /try \{ mat\.planleggUka\(\); message = "Ny ukeplan klar ✦" \} finally \{ busy = false \}/);
+  // Q20: «Middag i dag» på Hjem bruker serverens Oslo-dato (today i /week), ikke telefonens klokke.
+  assert.match(vm, /todayMeal = runCatching \{ matRepo\.uke\(\)\.uke\.days\.firstOrNull \{ it\.today \}\?\.name \}\.getOrNull\(\)/);
+  // Valgt dag, mappe og åpen rett er navigasjon og blir i AppViewModel.
+  assert.match(vm, /var matDay by mutableStateOf<Int\?>\(null\)/);
+  assert.match(vm, /var dishOpen by mutableStateOf<String\?>\(null\)/);
+});

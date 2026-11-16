@@ -26,8 +26,7 @@ import javax.net.ssl.SSLException
  *  - Innlogging: serveradresse + brukernavn + passord (+ 2FA-kode) → app-token via POST /finans/api/login (som Homelab-appen,
  *    Api.login i :app), reserve /finans/api/auth/token på eldre servere.
  *  - «Logg inn med Homelab-appen»: ContentProvider i Homelab (no.kristo.finanshub.kalender, signature-tillatelse) gir
- *    server-adresse og et eget token for Kalender (POST /api/tokens/companion {app:'kalender', device}; Homelab faller selv
- *    tilbake til /finans/api/tokens på eldre servere). Finnes ikke Homelab, eller svarer den ikke: innloggingsskjermen.
+ *    server-adresse og et eget token for Kalender (POST /api/tokens/companion {app:'kalender', device}). Finnes ikke Homelab, eller svarer den ikke: innloggingsskjermen.
  *  - Bare plattformens HttpURLConnection og org.json (ingen nye avhengigheter).
  */
 

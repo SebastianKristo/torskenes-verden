@@ -12,7 +12,7 @@ import java.net.URL
  * Android kan ikke uttrykke private IP-områder i network_security_config, så konfigurasjonen tillater klartekst, og regelen
  * håndheves her – før noe kobles til. Alle HTTP-kall i :app, :kalender og :wear går gjennom [openSikker] (HttpURLConnection),
  * LokaltNett.ok (OkHttp, WebView, kartfliser) eller har en fast https-adresse. Én kopi for alle tre appene (tidligere
- * Lokal86.kt i hver modul). Fasit: shared/testvektorer/serveradresse.json og test/p86-and.test.js, kjørt av ServerAdresseTest.
+ * Lokal86.kt i hver modul). Fasit: shared/testvektorer/serveradresse.json og test/android-sikkerhet-klartekst.test.js, kjørt av ServerAdresseTest.
  *
  * Lokalt nett = loopback, privat IPv4 (10/8, 172.16/12, 192.168/16), link-local (169.254/16, fe80::/10), CGNAT 100.64/10
  * (Tailscale), IPv6 ULA (fc00::/7), eller et navn uten punktum eller som slutter på .local/.lan/.home.arpa/.internal.

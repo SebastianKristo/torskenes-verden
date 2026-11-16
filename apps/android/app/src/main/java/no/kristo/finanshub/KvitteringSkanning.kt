@@ -28,7 +28,8 @@ import java.util.Locale
  *      veien («Android + Glimt», «Mac», «Glimt (Tesseract)», «Gemini») fra serveren. Rettelser sendes til
  *      POST /receipts/:id/corrections (felles format) og lagres med PATCH /receipts/:id (+ /book).
  *   Uten forbindelse: delene legges i den eksisterende WorkManager-køen (upload/PendingUploads.kt) med stien /receipts/scan og
- *   sendes når serveren svarer (Glimt validerer da på nytt). Eldre server (404/405): vanlig opplasting som før.
+ *   sendes når serveren svarer (Glimt validerer da på nytt). Q19: ingen reserve mot /receipts for eldre servere (for gammel
+ *   server får «Oppdater serveren» via /api/version); «Last opp bildet i stedet» etter en feil finnes fortsatt.
  * Alle kall går til den innloggede Homelab-serveren (Api). Ingen tredjeparts-tjenester.
  */
 
@@ -81,10 +82,6 @@ sealed interface ReceiptScanState48 {
 internal fun amount48(s: String): Double? = s.replace("kr", "", true).replace(" ", "").replace(" ", "").replace("−", "-").replace(',', '.').trim().toDoubleOrNull()
 internal fun amountText48(v: Double?): String = if (v == null) "" else String.format(Locale("nb", "NO"), "%.2f", v)
 internal fun dateOk48(s: String) = Regex("^\\d{4}-\\d{2}-\\d{2}$").matches(s.trim()) && runCatching { java.time.LocalDate.parse(s.trim()) }.isSuccess
-
-/** Eldre server uten /receipts/scan: bildet som «file» til /receipts (uten device_ocr og client). */
-internal fun legacyParts48(parts: List<Api.Part>): List<Api.Part> =
-    parts.filter { it.name == "image" || it.name == "scan" || it.name == "thumb" }.map { if (it.name == "image") it.copy(name = "file") else it }
 
 internal fun parseScan48(s: String, sentOcr: Boolean): ScanResult48 {
     val o = JSONObject(s)
@@ -274,11 +271,6 @@ class ReceiptScanViewModel48(private val vm: AppViewModel) {
             finish(ReceiptScanState48.Draft(r, formOf48(r.receipt)))
         } catch (e: CancellationException) { throw e } catch (e: ApiException) {
             when {
-                e.status == 404 || e.status == 405 -> {
-                    // Eldre server uten /receipts/scan: vanlig opplasting (serveren leser bildet som før).
-                    _state.value = ReceiptScanState48.Idle; _visible.value = false
-                    vm.uploadPlain48(u)
-                }
                 e.code == Api.SENT48 -> finish(ReceiptScanState48.Done("Glimt leser fortsatt", "Kvitteringen er mottatt. Den dukker opp under Til gjennomgang når den er lest."))
                 e.status == 0 || e.status >= 500 -> {
                     repo.queue(parts, prep.name, e.message)

@@ -104,7 +104,7 @@ object Skjold78 {
     }
 }
 
-/* ======================= Rene regler (speilet i test/p78-and.test.js) ======================= */
+/* ======================= Rene regler (speilet i test/android-skjold-led.test.js) ======================= */
 
 internal const val LED_COLOR78 = "#2F6BFF"
 internal const val LED_PITCH60_78 = 16.667

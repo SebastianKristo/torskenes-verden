@@ -120,9 +120,9 @@ internal fun GlimtJobs41(vm: AppViewModel) {
         Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(p.card).padding(14.dp, 10.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(d, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 13.5.sp, modifier = Modifier.weight(1f))
             // Prompt 42: «Angre» slår delingen sammen igjen, «Endre» åpner «Laget med Glimt».
-            if (s.glimtUndo42 != null || s.glimtUndoIds42.isNotEmpty()) Text("Angre", color = p.lab, fontWeight = FontWeight.Bold, fontSize = 13.sp, modifier = Modifier.clickable { vm.undoGlimt42() }.padding(6.dp))
-            Text(if (s.glimtUndo42 != null || s.glimtUndoIds42.isNotEmpty()) "Endre" else "Se", color = p.lab, fontWeight = FontWeight.Bold, fontSize = 13.sp, modifier = Modifier.clickable { vm.loadSources41(); s.srcOpen = true }.padding(6.dp))
-            Text("✕", color = p.mut, modifier = Modifier.semantics { contentDescription = "Lukk" }.clickable { s.glimtDone = null }.padding(6.dp))
+            if (s.glimtUndo42 != null || s.glimtUndoIds42.isNotEmpty()) Text("Angre", color = p.lab, fontWeight = FontWeight.Bold, fontSize = 13.sp, modifier = Modifier.clickable(role = Role.Button) { vm.undoGlimt42() }.padding(6.dp))
+            Text(if (s.glimtUndo42 != null || s.glimtUndoIds42.isNotEmpty()) "Endre" else "Se", color = p.lab, fontWeight = FontWeight.Bold, fontSize = 13.sp, modifier = Modifier.clickable(role = Role.Button, onClickLabel = "Se kildene") { vm.loadSources41(); s.srcOpen = true }.padding(6.dp))
+            Text("✕", color = p.mut, modifier = Modifier.semantics { contentDescription = "Lukk" }.clickable(role = Role.Button) { s.glimtDone = null }.padding(6.dp))
         }
     }
 }

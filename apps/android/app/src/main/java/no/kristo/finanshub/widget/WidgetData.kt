@@ -43,6 +43,8 @@ data class WidgetData(
     val nextCharge: WCharge?, val stocks: WStocks?, val domains: WDomains?, val matplan: WMat?, val finn: WFinn?, val boliger: WBolig?,
     /** Feilmelding fra siste henting (vises bare når det ikke finnes data fra før). */
     val error: String? = null, val loggedIn: Boolean = true,
+    /** «Skjul beløp» (F 12): serveren sier at beløpene skal vises som prikker (brukerens valg eller ?hideAmounts=1). */
+    val hideAmounts: Boolean = false,
 ) {
     companion object {
         val EMPTY = WidgetData(0, null, null, null, null, null, null, null, null, null, null)
@@ -52,6 +54,7 @@ data class WidgetData(
             fun obj(k: String): JSONObject? = o.optJSONObject(k)
             return WidgetData(
                 updatedAt = fetchedAt,
+                hideAmounts = o.optBoolean("hideAmounts", false),
                 weather = obj("weather")?.let { w ->
                     WWeather(w.optDoubleOrNull("temp"), w.optStr("symbol") ?: "", w.optStr("desc") ?: w.optStr("text") ?: "", w.optDoubleOrNull("hi") ?: w.optDoubleOrNull("max"),
                         w.optDoubleOrNull("lo") ?: w.optDoubleOrNull("min"), w.optDoubleOrNull("feels"), w.optStr("place") ?: "",
@@ -100,6 +103,17 @@ data class WidgetData(
             )
         }
     }
+}
+
+/**
+ * «Skjul beløp» (F 12 / L10) for widgetdataene: med valget på i appen ber widgetene serveren om ?hideAmounts=1, så tekstene serveren
+ * lager selv («Deretter 149 kr/mnd») kommer med «•••». Tallfeltene skjuler widgetene selv (Fmt i Widgets.kt).
+ */
+object WidgetPersonvern {
+    fun skjul(ctx: Context): Boolean = AppPrefs(ctx).bool(AppPrefs.HIDE_AMOUNTS)
+
+    /** Stien med ?hideAmounts=1 (eller &hideAmounts=1) når valget er på. */
+    fun sti(ctx: Context, path: String): String = if (!skjul(ctx)) path else path + (if ('?' in path) "&" else "?") + "hideAmounts=1"
 }
 
 /** Utseendet på Samsung-widgetene (Innstillinger → Utseende → Widgets). */

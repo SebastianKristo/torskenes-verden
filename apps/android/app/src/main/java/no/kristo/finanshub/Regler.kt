@@ -3,7 +3,7 @@ package no.kristo.finanshub
 import no.kristo.felles.nett.ServerAdresse
 
 /*
- * Prompt 89 (AND89): rene regler uten Android-avhengigheter (kompilert og kjørt med kotlinc, speilet i test/p89-and.test.js).
+ * Prompt 89 (AND89): rene regler uten Android-avhengigheter (kompilert og kjørt med kotlinc, speilet i test/android-standarddomene-og-live.test.js).
  *  - Serveradresse: riktig domene os.smarthjemeksperten.no, migrering av den gamle feilstavede standarden, validering i tannhjul-arket.
  *  - Live Updates (claude-code-live-activities.md + Live Activities.dc.html): farger, symboler, segmenter for pakke, brikketekst,
  *    pollingintervall, utløp og dyplenker for de fem typene fra GET /api/live/aktiviteter.

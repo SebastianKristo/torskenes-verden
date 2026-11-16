@@ -17,7 +17,6 @@ import no.kristo.finanshub.ApiException
 import no.kristo.finanshub.SCAN_PATH48
 import no.kristo.finanshub.receiptIdemKey
 import no.kristo.finanshub.SCAN_READ48
-import no.kristo.finanshub.legacyParts48
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -90,8 +89,6 @@ object PendingUploads {
                 val ps = parts(ctx, u)
                 try { api.upload(u.path, ps, read = if (scan48) SCAN_READ48 else 60_000, idempotencyKey = if (scan48) receiptIdemKey(ps) else null) } catch (e: ApiException) {
                     when {
-                        // Prompt 48: eldre server uten /receipts/scan → vanlig opplasting (bildet som «file»).
-                        scan48 && (e.status == 404 || e.status == 405) -> api.upload("/receipts", legacyParts48(parts(ctx, u)))
                         // Kroppen kom fram, men kjeden på serveren brukte lenger tid enn vi ventet: kvitteringen er lagret der.
                         scan48 && e.code == Api.SENT48 -> Unit
                         else -> throw e

@@ -49,7 +49,7 @@ class ServerAdresseTest {
         }
     }
 
-    /** Samme fasit som test/p86-and.test.js (godtas / avvises av klartekstregelen). */
+    /** Samme fasit som test/android-sikkerhet-klartekst.test.js (godtas / avvises av klartekstregelen). */
     @Test fun klartekstregelen() {
         val godtas = listOf(
             "http://10.0.0.5", "http://192.168.1.2", "http://192.168.1.2:3000/finans", "http://172.16.0.1", "http://172.31.255.255", "http://100.64.1.1",

@@ -13,7 +13,6 @@ import android.os.Build
 import android.os.Bundle
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
-import org.json.JSONArray
 import org.json.JSONObject
 import java.time.LocalDate
 
@@ -22,8 +21,9 @@ import java.time.LocalDate
  *  - Alt som har med kalender å gjøre åpner Kalender-appen på riktig sted (kalender://…, ?src=homelab gir «◀ Homelab» der).
  *    Er Kalender ikke installert, brukes Homelabs egen kalenderside som før.
  *  - «Logg inn med Homelab-appen»: KalenderLoginProvider33 (signature-tillatelse no.kristo.finanshub.permission.KALENDER_LOGIN)
- *    gir Kalender server-adresse og et eget token: POST /api/tokens/companion {app:'kalender', device} (SERVER33), eldre server:
- *    POST /finans/api/tokens {name:'Kalender (Android · …)'}. Tokenet vises i Innstillinger → Enheter / API-tokens og kan trekkes tilbake.
+ *    gir Kalender server-adresse og et eget token: POST /api/tokens/companion {app:'kalender', device} (SERVER33). Tokenet vises i
+ *    Innstillinger → Enheter / API-tokens og kan trekkes tilbake. Q19: ingen reserve med et vanlig app-token (POST /finans/api/tokens)
+ *    for eldre servere; et slikt token fikk alle Homelab-appens tilganger.
  *  - Widgets33.fix: Samsung-variantene av prøveperiode-widgetene er på fra installasjonen og slås av på andre telefoner
  *    (før var de av til appen hadde kjørt én gang på en Samsung, og One UI Home oppdaterer ikke galleriet før den startes på nytt).
  */
@@ -163,7 +163,7 @@ class KalenderLoginProvider33 : ContentProvider() {
         return null
     }
 
-    /** Prompt 41: device-token → POST /api/auth/device-exchange {device_token, app:"kalender", device} → {token, refresh?}. Eldre server: companion-tokenet. */
+    /** Prompt 41: device-token → POST /api/auth/device-exchange {device_token, app:"kalender", device} → {token, refresh?}. */
     private suspend fun deviceExchange41(acc: UserAccount): Pair<String, String?>? {
         val device = "Kalender (Android · ${Build.MANUFACTURER} ${Build.MODEL})".take(60)
         for (base in listOf(acc.server, acc.local, acc.external).filter { it.isNotBlank() }.distinct()) {
@@ -172,8 +172,6 @@ class KalenderLoginProvider33 : ContentProvider() {
                 if (dt.isBlank()) continue
                 val o = JSONObject(Api(base, null).request("POST", "/auth/device-exchange", JSONObject().put("device_token", dt).put("app", "kalender").put("device", device), prefix = Api.HOMELAB))
                 o.optString("token").takeIf { it.isNotBlank() }?.let { return it to o.optString("refresh").takeIf { r -> r.isNotBlank() } }
-            } catch (e: ApiException) {
-                if (e.status == 404 || e.status == 405) return companionToken(acc, device)?.let { it to null }
             } catch (_: Exception) { }
         }
         return null
@@ -186,16 +184,6 @@ class KalenderLoginProvider33 : ContentProvider() {
             try {
                 val o = JSONObject(api.request("POST", "/tokens/companion", JSONObject().put("app", "kalender").put("device", device), prefix = Api.HOMELAB))
                 o.optString("token").takeIf { it.isNotBlank() }?.let { return it }
-            } catch (e: ApiException) {
-                // Eldre server uten /api/tokens/companion: et vanlig app-token med samme tilganger som Homelab-appen har.
-                if (e.status == 404 || e.status == 405 || e.status == 403) {
-                    runCatching {
-                        val scopes = JSONArray(listOf("finance:read", "finance:write", "receipts:write", "read:transactions", "read:summary", "read:budget", "write:transactions"))
-                        val o = JSONObject(api.post("/tokens", JSONObject().put("name", device).put("scopes", scopes).put("expiresDays", JSONObject.NULL)))
-                        o.optString("token").takeIf { it.isNotBlank() }
-                    }.getOrNull()?.let { return it }
-                    if (e.status != 403) return null
-                }
             } catch (_: Exception) { }
         }
         return null

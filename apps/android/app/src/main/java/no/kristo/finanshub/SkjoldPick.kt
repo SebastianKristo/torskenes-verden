@@ -74,7 +74,7 @@ object Skjold79 {
     }
 }
 
-/* ======================= Rene regler (speilet i test/p79-and.test.js) ======================= */
+/* ======================= Rene regler (speilet i test/android-skjold-plukkliste.test.js) ======================= */
 
 /** Maks skuffer som tennes samtidig (serveren: 20). */
 internal const val MAX_LIT79 = 20

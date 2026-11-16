@@ -113,7 +113,7 @@ class KalAsk(private val all: List<KEv>, private val cals: Map<String, KCal>, pr
             val m = if (terms.isNotEmpty()) pool.firstOrNull { e -> !e.all && School37.all(hay(e), terms) } ?: pool.firstOrNull { e -> School37.all(hay(e), terms) }
             else pool.firstOrNull { !it.all }
             if (m != null) {
-                val days = daysBetween(T, m.d)
+                val days = m.daysLeft ?: daysBetween(T, m.d) // serverens nedtelling for prøver og frister
                 val txt = (if (terms.isNotEmpty()) "Neste " + terms.joinToString(" ") + " er " + m.t + " " else "Neste er " + m.t + " ") + rel(m.d) +
                     (if (m.all) "" else " kl. " + hm(m.s ?: 0)) + (m.loc?.let { ", $it" } ?: "") + "." + (if (days > 1) " Det er om $days dager." else "") +
                     (if (m.rem != null) " Du får varsel " + remL(m.rem) + "." else "")

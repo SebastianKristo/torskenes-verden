@@ -18,6 +18,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.selection.selectable
 import no.kristo.finanshub.*
 
 /*
@@ -129,7 +130,7 @@ private fun HaDeviceRow42(vm: AppViewModel, d: HaDevice42, top: Boolean) {
                     (listOf(HaPerson42("", "Ingen")) + people).forEach { pp ->
                         val on = (pid ?: "") == pp.id
                         Box(Modifier.height(34.dp).clip(CircleShape).background(if (on) p.ink else p.bg).border(1.dp, if (on) p.ink else p.line, CircleShape)
-                            .clickable { pid = pp.id.ifBlank { null } }.padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
+                            .selectable(selected = on, role = Role.RadioButton) { pid = pp.id.ifBlank { null } }.padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
                             Text(if (pp.id.isBlank()) pp.name else firstName37(pp.name), color = if (on) p.bg else p.ink, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
                         }
                     }

@@ -143,8 +143,9 @@ object Brief34Store {
 /** Henter briefen til widgetene (kompakt endepunkt, ellers hele briefen). */
 internal suspend fun fetchBrief34(ctx: Context, api: Api, acct: String?) {
     val kind = no.kristo.finanshub.briefKind35(no.kristo.finanshub.Glimt35Prefs.load(ctx))
-    val raw = runCatching { api.hlGet("/widgets/brief?kind=$kind", timeout = 8_000) }.getOrNull()
-        ?: runCatching { api.hlGet("/brief?kind=$kind", timeout = 8_000) }.getOrNull() ?: return
+    // F 12: med «Skjul beløp» på ber widgeten serveren skjule beløpene i tekstene (?hideAmounts=1).
+    val raw = runCatching { api.hlGet(WidgetPersonvern.sti(ctx, "/widgets/brief?kind=$kind"), timeout = 8_000) }.getOrNull()
+        ?: runCatching { api.hlGet(WidgetPersonvern.sti(ctx, "/brief?kind=$kind"), timeout = 8_000) }.getOrNull() ?: return
     val b = runCatching { parseBrief34(raw, kind) }.getOrNull() ?: return
     Brief34Store.save(ctx, b, acct)
     Brief34Store.maybeNotify(ctx, b)

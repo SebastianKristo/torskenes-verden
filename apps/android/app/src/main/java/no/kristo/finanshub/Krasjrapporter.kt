@@ -161,11 +161,9 @@ object Flags51 {
 
     fun lastFetch(ctx: Context, accountId: String?): Long = ctx.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getLong("t_" + (accountId ?: "-"), 0L)
 
-    /** GET /api/flags. 404 (eldre server) = ingen flagg. Kaster ikke. */
+    /** GET /api/flags. Feil (også 404) beholder flaggene som er lagret (Q19: ingen egen regel for eldre servere). Kaster ikke. */
     suspend fun refresh(ctx: Context, api: Api, accountId: String?) {
-        val o = try { JSONObject(api.hlGet("/flags", timeout = 8_000)) } catch (e: CancellationException) { throw e } catch (e: ApiException) {
-            if (e.status == 404) JSONObject().put("flags", JSONObject()) else return
-        } catch (_: Exception) { return }
+        val o = try { JSONObject(api.hlGet("/flags", timeout = 8_000)) } catch (e: CancellationException) { throw e } catch (_: Exception) { return }
         val f = o.optJSONObject("flags") ?: JSONObject()
         ctx.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
             .putString("f_" + (accountId ?: "-"), f.toString()).putLong("t_" + (accountId ?: "-"), System.currentTimeMillis()).apply()

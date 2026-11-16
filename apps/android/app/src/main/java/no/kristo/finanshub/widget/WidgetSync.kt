@@ -60,7 +60,7 @@ class WidgetWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
         var err: String? = null
         for (base in listOf(acc.server, acc.local, acc.external).filter { it.isNotBlank() }.distinct()) {
             try {
-                val json = Api(base, acc.token).hlGet("/mobile/widgets", timeout = 8_000)
+                val json = Api(base, acc.token).hlGet(WidgetPersonvern.sti(ctx, "/mobile/widgets"), timeout = 8_000)
                 WidgetStore.save(ctx, json, System.currentTimeMillis(), acc.id)
                 WidgetSync.redraw(ctx)
                 // Huskeliste-widgeten har egne data (/api/tasks/next).

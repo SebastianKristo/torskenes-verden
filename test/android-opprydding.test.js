@@ -4,7 +4,7 @@
 // Ingen Android SDK her: CI-jobben «Mobilapper» er fasit for at koden kompilerer.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, readdirSync } from 'node:fs';
+import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { join, dirname, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -96,6 +96,36 @@ test('P85 E: trykkflatene i skallet (fanelinja, Papir, navigasjon, globale lag) 
   assert.match(paper, /onClickLabel = "Åpne transaksjonen"/);
 });
 
+test('P85 E: trykkflatene i modulsidene (ui/domene) har rolle for TalkBack, og valg sier om de er valgt', () => {
+  const dir = join(APP, 'ui/domene');
+  for (const f of readdirSync(dir).filter((n) => n.endsWith('.kt'))) {
+    const s = strip(raw(join(dir, f)));
+    assert.doesNotMatch(s, /\.clickable\s*(\(\s*\))?\s*\{/, `${f}: clickable uten rolle`);
+    if (/\.selectable\(/.test(s)) assert.match(s, /import androidx\.compose\.foundation\.selection\.selectable/, f);
+  }
+  const ok = strip(raw(join(dir, 'Okonomi.kt')));
+  assert.match(ok, /\.selectable\(selected = on, role = Role\.Tab\) \{ pick\(k\) \}/, 'segmentvalget er faner');
+  assert.match(ok, /\.selectable\(selected = s\.filter == k, role = Role\.RadioButton\)/, 'filteret i loggen');
+  assert.match(strip(raw(join(dir, 'Helse.kt'))), /\.selectable\(selected = on, role = Role\.RadioButton\) \{ pid = /);
+  assert.match(strip(raw(join(dir, 'Avganger.kt'))), /onClickLabel = if \(open\) "Skjul stoppene" else "Vis stoppene"/);
+});
+
+test('P85 E: Nyheter, Mat, Domener, Vær, Avganger og kalendervisningen har rolle på trykkflatene', () => {
+  const files = ['News.kt', 'NewsArticle.kt', 'NewsSaved.kt', 'Mat.kt', 'Domains.kt', 'WeatherPage.kt', 'WeatherSheets.kt', 'DeparturesPage.kt', 'KalenderSkjerm.kt'];
+  for (const f of files) {
+    const s = strip(raw(join(APP, 'ui', f)));
+    assert.doesNotMatch(s, /\.clickable\s*(\(\s*\))?\s*\{/, `${f}: clickable uten rolle`);
+    assert.match(s, /import androidx\.compose\.ui\.semantics\.Role\n/, f);
+    if (/\.selectable\(/.test(s)) assert.match(s, /import androidx\.compose\.foundation\.selection\.selectable/, f);
+  }
+  // Brytere i Nyheter-innstillingene er brytere for TalkBack (på/av), ikke bare en trykkbar rad.
+  assert.match(strip(raw(join(APP, 'ui/News.kt'))), /\.toggleable\(value = on, role = Role\.Switch\) \{ onChange\(it\) \}/);
+  // Fanene i Domener og periodevalget sier hvilken som er valgt; «⟳» har et navn.
+  const dom = strip(raw(join(APP, 'ui/Domains.kt')));
+  assert.match(dom, /\.selectable\(selected = on, role = Role\.Tab\) \{ vm\.domener\.settFane\(fane\) \}/);
+  assert.match(dom, /Modifier\.semantics \{ contentDescription = "Oppdater" \}\.clip\(CircleShape\)\.clickable\(role = Role\.Button\) \{ vm\.reloadDomain\(\) \}/);
+});
+
 test('P85 G: kvitteringer lastes opp med Idempotency-Key fra bildet, også fra køen; logo 204 betyr «ingen logo»', () => {
   const api = strip(raw(join(APP, 'Api.kt')));
   assert.match(api, /idempotencyKey: String\? = null\): String/);
@@ -131,10 +161,12 @@ test('P85 H: widgetene tegnes og hentes med korutine (og goAsync i mottakere), a
   assert.match(strip(raw(join(APP, 'Bakgrunnsvarsler.kt'))), /WidgetJobs\.launchAsync\(this\)/);
 });
 
-test('L12: stedsoppslag og vær for et sted går via serveren, aldri direkte til Open-Meteos stedssøk', () => {
+test('L12: stedsoppslag, vær for et sted og skiføret går via serveren, aldri direkte til Open-Meteo', () => {
   for (const p of [...ktFiles(join(AND, 'app/src/main')), ...ktFiles(join(AND, 'kalender/src/main'))]) {
     assert.doesNotMatch(strip(raw(p)), /geocoding-api\.open-meteo\.com/, relative(AND, p));
+    assert.doesNotMatch(strip(raw(p)), /api\.open-meteo\.com/, relative(AND, p));
   }
+  assert.match(strip(raw(join(APP, 'domene/Vaer.kt'))), /api41 \{ hlGet\("\/weather\/ski", timeout = 10_000\) \}/, 'skiføret i Nordmarka (GET /api/weather/ski)');
   const g = strip(raw(join(APP, 'Glimt.kt')));
   assert.doesNotMatch(g, /openMeteo35/);
   assert.match(g, /hlGet\("\/weather\/place\?q="/);
@@ -153,6 +185,53 @@ test('Q19: 404-reservene for Kalender-vær, stedssøket, Gjøremål-kortene og L
   assert.doesNotMatch(led, /settingsLocal|prefs78/);
 });
 
+test('Q19: kvitteringsskanningen, kopi av kalenderhendelser og «Kjøp gave» har ingen lokal reserve for eldre servere', () => {
+  // Kvitteringer: /receipts/scan finnes (server/finans/receipts/routes.js); ingen omvei til /receipts med andre felt.
+  const scan = strip(raw(join(APP, 'KvitteringSkanning.kt')));
+  assert.doesNotMatch(scan, /legacyParts48|e\.status == 404 \|\| e\.status == 405 -> \{/);
+  assert.match(scan, /fun uploadPlain\(\)[\s\S]{0,120}vm\.uploadPlain48\(u\)/, '«Last opp bildet i stedet» etter en feil er beholdt');
+  const ko = strip(raw(join(APP, 'upload/PendingUploads.kt')));
+  assert.doesNotMatch(ko, /legacyParts48|api\.upload\("\/receipts",/);
+  assert.match(ko, /scan48 && e\.code == Api\.SENT48 -> Unit/);
+  assert.match(raw(join(ROOT, 'server/finans/receipts/routes.js')), /api\.post\('\/receipts\/scan'/);
+  // Kalender: POST /kalender/events/:id/copy finnes; ingen lokal kopi når serveren svarer 404.
+  const kal = strip(raw(join(APP, 'Kalender.kt')));
+  const copy = kal.slice(kal.indexOf('fun AppViewModel.copyKal27('), kal.indexOf('fun AppViewModel.setKalRemind27('));
+  assert.match(copy, /if \(e\.editable\) \{ dupKal27\(e\); return \}/, 'egne hendelser dupliseres som før');
+  assert.doesNotMatch(copy, /404/);
+  assert.match(raw(join(ROOT, 'server/kalender/events.js')), /api\.post\('\/events\/:id\/copy'/);
+  // Brief: «Kjøp gave» lager gjøremålet på serveren (POST /api/brief/gift), ikke med en frist regnet på telefonen.
+  const brief = strip(raw(join(APP, 'Brief.kt')));
+  assert.doesNotMatch(brief, /addTask\("Kjøp gave til/);
+  assert.match(brief, /hlPost\("\/brief\/gift"/);
+  assert.match(raw(join(ROOT, 'server/glimt/brief.js')), /api\.post\('\/gift'/);
+});
+
+test('Q19: oppstartssiden og funksjonsflaggene tolker ikke 404 som «alt i orden»', () => {
+  // /api/health finnes alltid; 404 betyr ikke lenger at serveren kjører (pollingen fortsetter).
+  const opp = strip(raw(join(APP, 'Oppstart.kt')));
+  const poll = opp.slice(opp.indexOf('fun AppViewModel.pollHealth36()'));
+  assert.doesNotMatch(poll.slice(0, 900), /404/);
+  assert.match(raw(join(ROOT, 'server/index.js')), /app\.get\('\/api\/health'/);
+  // /api/flags: en feil (også 404) beholder flaggene som er lagret, i stedet for å tømme dem.
+  const kr = strip(raw(join(APP, 'Krasjrapporter.kt')));
+  assert.match(kr, /val o = try \{ JSONObject\(api\.hlGet\("\/flags", timeout = 8_000\)\) \} catch \(e: CancellationException\) \{ throw e \} catch \(_: Exception\) \{ return \}/);
+  assert.match(raw(join(ROOT, 'server/system/flags-crashes.js')), /qa51Api\.get\('\/flags'/);
+});
+
+test('Q19: «Logg inn med Homelab-appen» lager aldri et vanlig app-token med alle tilganger for Kalender', () => {
+  const k = strip(raw(join(APP, 'KalenderApp.kt')));
+  // Før: 404/405/403 på /tokens/companion ga POST /finans/api/tokens med Homelab-appens tilganger (finance:write m.fl.).
+  assert.doesNotMatch(k, /api\.post\("\/tokens"|finance:write|expiresDays/);
+  assert.match(k, /request\("POST", "\/tokens\/companion"/);
+  // Enhets-tokenet byttes mot et Kalender-token; ingen omvei når serveren svarer 404.
+  const ex = k.slice(k.indexOf('private suspend fun deviceExchange41('), k.indexOf('private suspend fun companionToken('));
+  assert.match(ex, /"\/auth\/device-exchange"/);
+  assert.doesNotMatch(ex, /companionToken\(|404/);
+  assert.match(raw(join(ROOT, 'server/auth/app-login.js')), /app\.post\('\/api\/auth\/device-exchange'/);
+  assert.match(raw(join(ROOT, 'server/kalender/index.js')), /app\.route\('\/api\/tokens\/companion', companionApi\)/);
+});
+
 test('P85 L: forrige brukers Familie-områder fjernes ved bytte av bruker eller utlogging', () => {
   const fam = strip(raw(join(APP, 'FamilyModel.kt')));
   const use = fam.slice(fam.indexOf('fun useAccount(ctx: Context, id: String?)'), fam.indexOf('internal fun region('));
@@ -163,4 +242,46 @@ test('P85 L: forrige brukers Familie-områder fjernes ved bytte av bruker eller 
   const vm = strip(raw(join(APP, 'AppViewModel.kt')));
   const scope = vm.slice(vm.indexOf('private fun scopeToAccount()'));
   assert.match(scope, /FamilyPrefs\.useAccount\(ctx, id\) \}\s*\n\s*runCatching \{ Geofence50\.useAccount\(ctx, id\) \}/);
+});
+
+test('Logikk på serveren: nedtellingen til prøver og frister er serverens daysLeft (Homelab-appen og Kalender-appen)', () => {
+  const kal = strip(raw(join(APP, 'Kalender.kt')));
+  assert.match(kal, /val daysLeft: Int\? = null,\s*\) \{/);
+  assert.match(kal, /daysLeft = o\.optIntOrNull\("daysLeft"\)/);
+  assert.match(kal, /val dd = x\.daysLeft \?: kalDaysTo\(x\.date, today\)/, 'widgetene og Hjem-kortet');
+  // Ikke i cachen: en lagret nedtelling ville vært feil neste dag.
+  const toJson = kal.slice(kal.indexOf('fun toJson(): JSONObject'), kal.indexOf('fun parseKal26('));
+  assert.doesNotMatch(toJson, /daysLeft/);
+  assert.match(strip(raw(join(APP, 'domene/Kalender.kt'))), /val days: Long = \(e\.daysLeft \?: kalDaysTo\(e\.date, today\)\)\.toLong\(\)/, 'Glimt-svaret om neste prøve');
+  const km = strip(raw(join(KAL, 'KalModel.kt')));
+  assert.match(km, /ab = ab, x44 = x44, daysLeft = o\.optIntOrNull\("daysLeft"\),/);
+  assert.doesNotMatch(km.slice(km.indexOf('fun toJson(): JSONObject'), km.indexOf('companion object')), /daysLeft/);
+  assert.match(strip(raw(join(KAL, 'FagOgSted.kt'))), /val days = m\.daysLeft \?: daysBetween\(T, m\.d\)/);
+  assert.match(strip(raw(join(KAL, 'KalAsk.kt'))), /val days = m\.daysLeft \?: daysBetween\(T, m\.d\)/);
+});
+
+test('F 12: «Skjul beløp» i appen gjelder widgetdataene (hideAmounts fra serveren og ?hideAmounts=1)', () => {
+  const wd = strip(raw(join(APP, 'widget/WidgetData.kt')));
+  assert.match(wd, /fun skjul\(ctx: Context\): Boolean = AppPrefs\(ctx\)\.bool\(AppPrefs\.HIDE_AMOUNTS\)/);
+  assert.match(wd, /fun sti\(ctx: Context, path: String\): String = if \(!skjul\(ctx\)\) path else path \+ \(if \('\?' in path\) "&" else "\?"\) \+ "hideAmounts=1"/);
+  assert.match(wd, /hideAmounts = o\.optBoolean\("hideAmounts", false\)/);
+  // /api/mobile/widgets og /api/widgets/trials hentes med valget.
+  assert.match(strip(raw(join(APP, 'widget/WidgetSync.kt'))), /hlGet\(WidgetPersonvern\.sti\(ctx, "\/mobile\/widgets"\), timeout = 8_000\)/);
+  const tr = strip(raw(join(APP, 'widget/ProveperiodeWidgets.kt')));
+  assert.match(tr, /hlGet\(WidgetPersonvern\.sti\(ctx, "\/widgets\/trials"\), timeout = 8_000\)/);
+  assert.match(tr, /if \(skjul && t\.price\.isNotBlank\(\)\) t\.copy\(price = "•••"\) else t/, 'prisen skjules også for lister fra appen');
+  // Tallfeltene: valget i appen eller serverens hideAmounts.
+  assert.match(strip(raw(join(APP, 'widget/Widgets.kt'))), /val f = Fmt\(AppPrefs\(ctx\)\.bool\(AppPrefs\.HIDE_AMOUNTS\) \|\| d\.hideAmounts\)/);
+  // Endres valget, hentes widgetdataene på nytt.
+  const vm = strip(raw(join(APP, 'AppViewModel.kt')));
+  assert.match(vm, /if \(k == AppPrefs\.HIDE_AMOUNTS\) \{\s*Privacy\.hidden = v == true\s*runCatching \{ no\.kristo\.finanshub\.widget\.WidgetSync\.refresh\(appCtx\) \}/);
+  // Serveren: rutene godtar ?hideAmounts=1 (server/skjul-belop.js på runde3-web).
+  const sb = join(ROOT, 'server/skjul-belop.js');
+  if (existsSync(sb)) assert.match(raw(sb), /c\.req\.query\('hideAmounts'\) === '1'/);
+});
+
+test('F 12: brief-widgeten ber om skjulte beløp når «Skjul beløp» er på', () => {
+  const s = readFileSync(new URL('../apps/android/app/src/main/java/no/kristo/finanshub/widget/BriefWidgets.kt', import.meta.url), 'utf8');
+  assert.match(s, /WidgetPersonvern\.sti\(ctx, "\/brief\?kind=\$kind"\)/);
+  assert.match(s, /WidgetPersonvern\.sti\(ctx, "\/widgets\/brief\?kind=\$kind"\)/);
 });
