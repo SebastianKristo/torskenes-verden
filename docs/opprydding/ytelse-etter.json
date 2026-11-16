@@ -1,0 +1,455 @@
+{
+ "at": "2026-11-16T01:33:44.184Z",
+ "method": "test/ui51/perf.mjs (mock-server, kald last, desktop 1440×900 1× CPU, mobil 390×844 DPR 3 4× CPU)",
+ "results": [
+  {
+   "profile": "desktop",
+   "route": "dash",
+   "fcp": 440,
+   "lcp": 1968,
+   "lcpEl": "DIV.pw-img on",
+   "cls": 0.11,
+   "longTasks": {
+    "n": 3,
+    "sum": 249,
+    "max": 135
+   },
+   "css": {
+    "n": 29,
+    "enc": 214392,
+    "dec": 798795
+   },
+   "js": {
+    "n": 110,
+    "enc": 700616,
+    "dec": 1599848
+   },
+   "requests": 243,
+   "api": 75,
+   "layoutMs": 194,
+   "layoutCount": 32,
+   "recalcMs": 97,
+   "recalcCount": 69,
+   "scriptMs": 83,
+   "heapMB": 4,
+   "dom": 1088,
+   "forced": {
+    "n": 52,
+    "ms": 106.2,
+    "top": [
+     "1× 52.3 ms L assets/js/scrollmem.js:37 hold",
+     "19× 32.5 ms R assets/js/startup.js:50 pageEnter",
+     "1× 9.0 ms L assets/js/nav-overflow.js:106 initNavOverflow",
+     "3× 8.6 ms L assets/js/nav-overflow.js:26 layout",
+     "1× 1.2 ms R assets/js/nav-overflow.js:106 initNavOverflow",
+     "3× 0.9 ms R assets/js/nav-overflow.js:26 layout"
+    ]
+   },
+   "errors": []
+  },
+  {
+   "profile": "desktop",
+   "route": "media",
+   "fcp": 232,
+   "lcp": 1004,
+   "lcpEl": "P.m70-npt",
+   "cls": 0.054,
+   "longTasks": {
+    "n": 0,
+    "sum": 0,
+    "max": 0
+   },
+   "css": {
+    "n": 30,
+    "enc": 217082,
+    "dec": 803459
+   },
+   "js": {
+    "n": 100,
+    "enc": 640879,
+    "dec": 1479430
+   },
+   "requests": 205,
+   "api": 72,
+   "layoutMs": 101,
+   "layoutCount": 21,
+   "recalcMs": 50,
+   "recalcCount": 42,
+   "scriptMs": 73,
+   "heapMB": 3,
+   "dom": 427,
+   "forced": {
+    "n": 30,
+    "ms": 71.8,
+    "top": [
+     "5× 34.4 ms L assets/js/media-side.js:526 paintMain",
+     "7× 7.3 ms R assets/js/media-side.js:526 paintMain",
+     "1× 6.2 ms L assets/js/media-side.js:544 ",
+     "1× 5.7 ms R assets/js/startup.js:50 pageEnter",
+     "1× 5.0 ms L assets/js/media-side.js:916 ",
+     "1× 4.4 ms L assets/js/nav-overflow.js:26 layout"
+    ]
+   },
+   "errors": []
+  },
+  {
+   "profile": "desktop",
+   "route": "finans",
+   "fcp": 204,
+   "lcp": 516,
+   "lcpEl": "H1.",
+   "cls": 0,
+   "longTasks": {
+    "n": 0,
+    "sum": 0,
+    "max": 0
+   },
+   "css": {
+    "n": 9,
+    "enc": 55777,
+    "dec": 192583
+   },
+   "js": {
+    "n": 43,
+    "enc": 357802,
+    "dec": 896627
+   },
+   "requests": 69,
+   "api": 10,
+   "layoutMs": 72,
+   "layoutCount": 9,
+   "recalcMs": 22,
+   "recalcCount": 35,
+   "scriptMs": 39,
+   "heapMB": 2,
+   "dom": 551,
+   "forced": {
+    "n": 9,
+    "ms": 22.7,
+    "top": [
+     "1× 16.2 ms L assets/finans/js/desktop.js:1018 contentTop87",
+     "1× 3.2 ms R assets/finans/js/desktop.js:1018 contentTop87",
+     "3× 1.6 ms R assets/finans/js/desktop.js:1025 draw",
+     "1× 1.1 ms R assets/finans/js/desktop.js:1119 route",
+     "2× 0.4 ms L assets/finans/js/desktop.js:1025 draw",
+     "1× 0.2 ms L assets/finans/js/desktop.js:1119 route"
+    ]
+   },
+   "errors": []
+  },
+  {
+   "profile": "desktop",
+   "route": "skjold",
+   "fcp": 336,
+   "lcp": 1408,
+   "lcpEl": "DIV.pw-img on",
+   "cls": 0.491,
+   "longTasks": {
+    "n": 0,
+    "sum": 0,
+    "max": 0
+   },
+   "css": {
+    "n": 30,
+    "enc": 226484,
+    "dec": 850657
+   },
+   "js": {
+    "n": 112,
+    "enc": 732285,
+    "dec": 1710331
+   },
+   "requests": 204,
+   "api": 58,
+   "layoutMs": 72,
+   "layoutCount": 12,
+   "recalcMs": 30,
+   "recalcCount": 28,
+   "scriptMs": 69,
+   "heapMB": 4,
+   "dom": 789,
+   "forced": {
+    "n": 11,
+    "ms": 11.5,
+    "top": [
+     "2× 4.2 ms R assets/js/startup.js:50 pageEnter",
+     "1× 2.7 ms L assets/js/scrollmem.js:37 hold",
+     "1× 1.9 ms L assets/js/nav-overflow.js:106 initNavOverflow",
+     "1× 1.4 ms R assets/js/nav-overflow.js:106 initNavOverflow",
+     "1× 0.5 ms L assets/js/nav-overflow.js:26 layout",
+     "2× 0.3 ms R assets/js/nav-overflow.js:26 layout"
+    ]
+   },
+   "errors": []
+  },
+  {
+   "profile": "desktop",
+   "route": "kalender",
+   "fcp": 384,
+   "lcp": 1496,
+   "lcpEl": "DIV.pw-img on",
+   "cls": 0.054,
+   "longTasks": {
+    "n": 2,
+    "sum": 124,
+    "max": 64
+   },
+   "css": {
+    "n": 28,
+    "enc": 193121,
+    "dec": 700617
+   },
+   "js": {
+    "n": 106,
+    "enc": 689278,
+    "dec": 1581484
+   },
+   "requests": 194,
+   "api": 56,
+   "layoutMs": 62,
+   "layoutCount": 10,
+   "recalcMs": 32,
+   "recalcCount": 29,
+   "scriptMs": 77,
+   "heapMB": 3,
+   "dom": 732,
+   "forced": {
+    "n": 14,
+    "ms": 58.8,
+    "top": [
+     "1× 32.5 ms L assets/js/kalender-oppsett.js:375 startScroll",
+     "1× 8.5 ms R assets/js/kalender-oppsett.js:375 startScroll",
+     "1× 4.5 ms L assets/js/kalender.js:844 paint",
+     "2× 4.3 ms R assets/js/startup.js:50 pageEnter",
+     "1× 2.6 ms R assets/js/kalender.js:844 paint",
+     "1× 2.1 ms L assets/js/nav-overflow.js:106 initNavOverflow"
+    ]
+   },
+   "errors": []
+  },
+  {
+   "profile": "mobil",
+   "route": "dash",
+   "fcp": 564,
+   "lcp": 2620,
+   "lcpEl": "DIV.pw-img on",
+   "cls": 0.098,
+   "longTasks": {
+    "n": 4,
+    "sum": 497,
+    "max": 260
+   },
+   "css": {
+    "n": 29,
+    "enc": 214392,
+    "dec": 798795
+   },
+   "js": {
+    "n": 110,
+    "enc": 700616,
+    "dec": 1599848
+   },
+   "requests": 225,
+   "api": 74,
+   "layoutMs": 279,
+   "layoutCount": 20,
+   "recalcMs": 133,
+   "recalcCount": 44,
+   "scriptMs": 235,
+   "heapMB": 4,
+   "dom": 953,
+   "forced": {
+    "n": 11,
+    "ms": 152.2,
+    "top": [
+     "1× 102.6 ms L assets/js/scrollmem.js:37 hold",
+     "2× 30.3 ms R assets/js/startup.js:50 pageEnter",
+     "1× 8.8 ms L assets/js/nav-overflow.js:106 initNavOverflow",
+     "1× 3.6 ms R assets/js/profile-menu.js:70 ",
+     "1× 2.4 ms R assets/js/nav-overflow.js:106 initNavOverflow",
+     "1× 1.6 ms R assets/js/bgsvc.js:185 fetchBg"
+    ]
+   },
+   "errors": []
+  },
+  {
+   "profile": "mobil",
+   "route": "media",
+   "fcp": 464,
+   "lcp": 2556,
+   "lcpEl": "P.m70-npt",
+   "cls": 0.003,
+   "longTasks": {
+    "n": 6,
+    "sum": 542,
+    "max": 176
+   },
+   "css": {
+    "n": 30,
+    "enc": 217082,
+    "dec": 803459
+   },
+   "js": {
+    "n": 100,
+    "enc": 640879,
+    "dec": 1479430
+   },
+   "requests": 205,
+   "api": 72,
+   "layoutMs": 180,
+   "layoutCount": 20,
+   "recalcMs": 230,
+   "recalcCount": 38,
+   "scriptMs": 350,
+   "heapMB": 3,
+   "dom": 421,
+   "forced": {
+    "n": 27,
+    "ms": 167,
+    "top": [
+     "6× 40.4 ms R assets/js/media-side.js:526 paintMain",
+     "6× 31.2 ms L assets/js/media-side.js:526 paintMain",
+     "1× 21.4 ms L assets/js/media-side.js:916 ",
+     "2× 19.2 ms R assets/js/media-side.js:916 ",
+     "1× 11.6 ms R assets/js/bgsvc.js:185 fetchBg",
+     "2× 10.2 ms R assets/js/profile-menu.js:70 "
+    ]
+   },
+   "errors": []
+  },
+  {
+   "profile": "mobil",
+   "route": "finans",
+   "fcp": 244,
+   "lcp": 2256,
+   "lcpEl": "SPAN.bgx-img",
+   "cls": 0,
+   "longTasks": {
+    "n": 2,
+    "sum": 254,
+    "max": 176
+   },
+   "css": {
+    "n": 10,
+    "enc": 198159,
+    "dec": 944245
+   },
+   "js": {
+    "n": 94,
+    "enc": 1097257,
+    "dec": 2855061
+   },
+   "requests": 179,
+   "api": 58,
+   "layoutMs": 172,
+   "layoutCount": 20,
+   "recalcMs": 143,
+   "recalcCount": 24,
+   "scriptMs": 239,
+   "heapMB": 6,
+   "dom": 242,
+   "forced": {
+    "n": 5,
+    "ms": 18.2,
+    "top": [
+     "1× 9.1 ms L assets/finans/js/mobile-p40.js:155 kbTrack",
+     "1× 5.0 ms R assets/finans/js/mobile-p40.js:155 kbTrack",
+     "1× 2.5 ms R assets/finans/js/mobile-p30.js:237 kbInit",
+     "1× 1.1 ms L assets/finans/js/mobile-p17.js:82 img.onload",
+     "1× 0.4 ms L assets/finans/js/mobile-p30.js:237 kbInit"
+    ]
+   },
+   "errors": []
+  },
+  {
+   "profile": "mobil",
+   "route": "skjold",
+   "fcp": 396,
+   "lcp": 1644,
+   "lcpEl": "DIV.pw-img on",
+   "cls": 0.571,
+   "longTasks": {
+    "n": 3,
+    "sum": 279,
+    "max": 146
+   },
+   "css": {
+    "n": 30,
+    "enc": 226484,
+    "dec": 850657
+   },
+   "js": {
+    "n": 112,
+    "enc": 732285,
+    "dec": 1710331
+   },
+   "requests": 204,
+   "api": 58,
+   "layoutMs": 169,
+   "layoutCount": 13,
+   "recalcMs": 127,
+   "recalcCount": 27,
+   "scriptMs": 199,
+   "heapMB": 3,
+   "dom": 783,
+   "forced": {
+    "n": 11,
+    "ms": 50.5,
+    "top": [
+     "2× 17.2 ms R assets/js/startup.js:50 pageEnter",
+     "1× 12.9 ms L assets/js/scrollmem.js:37 hold",
+     "1× 7.7 ms R assets/js/bgsvc.js:185 fetchBg",
+     "1× 5.4 ms L assets/js/nav-overflow.js:106 initNavOverflow",
+     "2× 4.4 ms R assets/js/profile-menu.js:70 ",
+     "1× 2.5 ms R assets/js/nav-overflow.js:106 initNavOverflow"
+    ]
+   },
+   "errors": []
+  },
+  {
+   "profile": "mobil",
+   "route": "kalender",
+   "fcp": 368,
+   "lcp": 1688,
+   "lcpEl": "DIV.pw-img on",
+   "cls": 0.085,
+   "longTasks": {
+    "n": 5,
+    "sum": 388,
+    "max": 135
+   },
+   "css": {
+    "n": 28,
+    "enc": 193121,
+    "dec": 700617
+   },
+   "js": {
+    "n": 106,
+    "enc": 689278,
+    "dec": 1581484
+   },
+   "requests": 194,
+   "api": 56,
+   "layoutMs": 132,
+   "layoutCount": 10,
+   "recalcMs": 118,
+   "recalcCount": 26,
+   "scriptMs": 174,
+   "heapMB": 4,
+   "dom": 726,
+   "forced": {
+    "n": 15,
+    "ms": 156,
+    "top": [
+     "1× 51.6 ms L assets/js/kalender-oppsett.js:375 startScroll",
+     "1× 23.7 ms R assets/js/kalender-oppsett.js:375 startScroll",
+     "2× 20.3 ms R assets/js/startup.js:50 pageEnter",
+     "1× 17.7 ms R assets/js/kalender.js:844 paint",
+     "1× 17.7 ms L assets/js/kalender.js:844 paint",
+     "1× 7.3 ms R assets/js/bgsvc.js:185 fetchBg"
+    ]
+   },
+   "errors": []
+  }
+ ]
+}
