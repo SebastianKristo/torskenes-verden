@@ -509,17 +509,34 @@ export function bind39(h) {
   });
 }
 
-/* ---------------- «Vi ryddet kalenderne: 12 → 4. Angre» ---------------- */
+/* ---------------- «Slå sammen kalenderne: 6 → 4?» og «Vi ryddet kalenderne: 6 → 4. Angre» ---------------- */
+// Q34 (E-B12): serveren rydder ikke av seg selv. Er det noe å flytte, sender den et forslag (migration.proposed), og oppryddingen
+// kjøres først når brukeren trykker «Slå sammen» (POST …/migration). Etterpå kan den angres i 30 dager. ✕ skjuler meldingen på
+// denne enheten.
 
+const migKey = (m) => (m?.proposed ? `forslag:${m.from}-${m.to}-${m.moved}` : String(m?.undoUntil ?? ''));
 export function migrationNote() {
   const m = S.migration;
-  if (!m?.done || !m.undoUntil || Date.now() > Date.parse(m.undoUntil) || ls.get('kal39_mig') === String(m.undoUntil)) return '';
+  if (m?.proposed) {
+    if (ls.get('kal39_mig') === migKey(m)) return '';
+    const hva = `${m.moved ? `${m.moved} hendelser flyttes. ` : ''}Ingenting slettes, og du kan angre i 30 dager.`;
+    return `<div class="k39-toast" role="status"><span title="${esc(hva)}">Slå sammen kalenderne: ${m.from} → ${m.to}?</span><button type="button" data-k39-merge>Slå sammen</button><button type="button" class="x" data-k39-migok aria-label="Ikke nå">✕</button></div>`;
+  }
+  if (!m?.done || m.noop || !m.undoUntil || Date.now() > Date.parse(m.undoUntil) || ls.get('kal39_mig') === migKey(m)) return '';
   return `<div class="k39-toast" role="status"><span>Vi ryddet kalenderne: ${m.from ?? 12} → ${m.to ?? 4}.</span><button type="button" data-k39-undo>Angre</button><button type="button" class="x" data-k39-migok aria-label="Lukk">✕</button></div>`;
 }
 export async function migrationClick(e) {
-  const b = e.target.closest('[data-k39-undo],[data-k39-migok]');
+  const b = e.target.closest('[data-k39-undo],[data-k39-migok],[data-k39-merge]');
   if (!b) return false;
-  ls.set('kal39_mig', String(S.migration?.undoUntil ?? ''));
+  if ('k39Merge' in b.dataset) {
+    // Ja til forslaget: kjør oppryddingen. Svaret har migration.done, så «Vi ryddet … Angre» vises etterpå.
+    b.disabled = true;
+    const r = await fetch('/api/kalender/calendars/migration', { method: 'POST', credentials: 'same-origin' }).catch(() => null);
+    if (r?.ok) { await loadCals(); C.reload(); }
+    C.paint();
+    return true;
+  }
+  ls.set('kal39_mig', migKey(S.migration));
   if ('k39Undo' in b.dataset) {
     await fetch('/api/kalender/calendars/migration/undo', { method: 'POST', credentials: 'same-origin' }).catch(() => {});
     S.migration = null; await loadCals(); C.reload();

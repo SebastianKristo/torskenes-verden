@@ -6,12 +6,12 @@
 //    badge:'GOOGLE'|'URL'|'INNEBYGD'|'EGEN'|'HA', count, visible, notify, notifyLabel, showInBrief, kind:<gammel source>,
 //    subjectColors?:[{key, color}] (Skole), url?, interval?:'15m'|'1h'|'6h'|'1d', lastFetched?, status?:'ok'|'Feil · sjekk URL'|'Ikke satt'|'Ikke koblet',
 //    country?:'NO', removable, …gamle felt (textColor, lightColor, builtin, writable, hidMenu)}
-//   + migration:{done, from, to, moved, merged:[{id, name, into}], at, undoUntil, undone}
-//   Opprydding (én gang per bruker, første gang kalenderne leses): Jobb/Familie/Helse (+ egne «Personlig»/«Privat»/«Jobb …») → Personlig,
+//   + migration:{done, from, to, moved, merged:[{id, name, into}], at, undoUntil, undone, noop?} eller {done:false, proposed:true, from, to, moved, merged}
+//   Opprydding (Q34: et forslag første gang kalenderne leses, {proposed, from, to, moved, merged}; kjøres først ved ja): Jobb/Familie/Helse (+ egne «Personlig»/«Privat»/«Jobb …») → Personlig,
 //   Studie/«Studie 40»/Timeplan/Prøver/skolens iCal → Skole, Google-«Sebastian…» → kilde for Personlig, bursdag-duplikater → Bursdager.
 //   Hendelsene flyttes (kal33_evcal), ingenting slettes. Logges i kv 'kal39_log' og konsollen.
 // POST  /api/kalender/calendars/migration/undo → {ok, migration, calendars}  (innen undoUntil, 30 dager; tilbake til de seks fra før)
-// POST  /api/kalender/calendars/migration      → {ok, migration, calendars}  (kjør oppryddingen på nytt etter angre)
+// POST  /api/kalender/calendars/migration      → {ok, migration, calendars}  (ja til forslaget, eller kjør oppryddingen på nytt etter angre)
 // PATCH /api/kalender/calendars/:id {name?, color?, visible?, notify?, showInBrief?, url?, interval?, country?} → {calendar}
 //   url (bare Skole): webcal:// eller https://…ics, hentes med en gang (400 ved feil) og blir kilden til Skole.
 // POST  /api/kalender/calendars/skole/refresh → {calendar}  («↻ Oppdater nå»)
@@ -75,10 +75,8 @@ export function targetOf(name, url = '', kind = 'own') {
   return null;
 }
 const LEGACY_COUNT = 6;
-/** Kjører oppryddingen én gang for u. → migrasjonen */
-export function ensureMigrated(u) {
-  const s = st(u);
-  if (s.migration?.done || s.migration?.undone) return s.migration;
+/** Hva oppryddingen ville gjort for u nå (endrer ingenting). */
+function planOf(u) {
   const merged = {}, mergedList = [];
   const cs = kv.get(u, 'kal33_cals', null);
   const custom = Array.isArray(cs?.custom) ? cs.custom : [];
@@ -86,21 +84,38 @@ export function ensureMigrated(u) {
   for (const c of extCalendarsOf(u)) { if (c.source !== 'ical') continue; const t = targetOf(c.name, c.url); if (t) { merged[c.id] = t; mergedList.push({ id: c.id, name: c.name, into: t }); } }
   for (const x of googleExtraOf(u)) { const t = targetOf(x.name, '', 'google'); if (t) { merged[x.id] = t; mergedList.push({ id: x.id, name: x.name, into: t }); } }
   const from = LEGACY_COUNT + custom.length + extCalendarsOf(u).length + googleExtraOf(u).length;
-  // Hendelsene flyttes: gamle id-er og sammenslåtte kalendere → målet. Det gamle valget huskes for angre.
-  const map = evMap(u), changed = {};
-  let moved = 0;
-  for (const [k, v] of Object.entries(map)) {
-    const to = LEGACY_ALIAS[v] ?? merged[v];
-    if (to && to !== v) { changed[k] = v; map[k] = to; moved++; }
-  }
-  if (moved) kv.set(u, 'kal33_evcal', map);
-  const prevDefault = cs?.prefs?.defaultCalendar ?? null;
-  if (prevDefault && (LEGACY_ALIAS[prevDefault] || merged[prevDefault])) kv.set(u, 'kal33_cals', { ...cs, prefs: { ...cs.prefs, defaultCalendar: LEGACY_ALIAS[prevDefault] ?? merged[prevDefault] } });
-  const at = Date.now();
   const to = FOUR.length + (custom.length + extCalendarsOf(u).length + googleExtraOf(u).length - mergedList.length);
-  const migration = { done: true, from, to, moved, merged: mergedList, at: new Date(at).toISOString(), undoUntil: new Date(at + UNDO_MS).toISOString(), undone: false };
+  // Hendelsene som ville flyttes: gamle id-er og sammenslåtte kalendere → målet.
+  const map = evMap(u), changed = {};
+  for (const [k, v] of Object.entries(map)) { const t = LEGACY_ALIAS[v] ?? merged[v]; if (t && t !== v) changed[k] = v; }
+  const prevDefault = cs?.prefs?.defaultCalendar ?? null;
+  const newDefault = prevDefault ? LEGACY_ALIAS[prevDefault] ?? merged[prevDefault] ?? null : null;
+  return { cs, merged, mergedList, from, to, map, changed, moved: Object.keys(changed).length, prevDefault, newDefault };
+}
+/** Kjører oppryddingen (brukeren har sagt ja, eller det er ingenting å flytte). Hendelsene flyttes, ingenting slettes. → migrasjonen */
+function applyMigration(u, p, { noop = false } = {}) {
+  const { cs, merged, mergedList, from, to, map, changed, moved, prevDefault, newDefault } = p;
+  for (const [k, v] of Object.entries(changed)) map[k] = LEGACY_ALIAS[v] ?? merged[v];
+  if (moved) kv.set(u, 'kal33_evcal', map);
+  if (newDefault) kv.set(u, 'kal33_cals', { ...cs, prefs: { ...cs.prefs, defaultCalendar: newDefault } });
+  const at = Date.now();
+  const migration = { done: true, from, to, moved, merged: mergedList, at: new Date(at).toISOString(), undoUntil: new Date(at + UNDO_MS).toISOString(), undone: false, ...(noop ? { noop: true } : {}) };
   save(u, { mode: 'four', merged, migration, undo: { changed, prevDefault } });
-  logMig(u, `ryddet kalenderne ${from} → ${to}: ${moved} hendelser flyttet${mergedList.length ? `, slått sammen: ${mergedList.map((m) => `${m.name} → ${m.into}`).join(', ')}` : ''}`);
+  if (!noop) logMig(u, `ryddet kalenderne ${from} → ${to}: ${moved} hendelser flyttet${mergedList.length ? `, slått sammen: ${mergedList.map((m) => `${m.name} → ${m.into}`).join(', ')}` : ''}`);
+  return migration;
+}
+/**
+ * Første gang kalenderne leses (Q34, E-B12): er det noe å flytte, blir oppryddingen bare et forslag ({proposed:true, from, to, moved,
+ * merged}), og de gamle kalenderne står som før til brukeren sier ja (POST /migration). Er det ingenting å flytte (ny bruker), brukes
+ * de fire kalenderne med en gang, uten melding (noop). → migrasjonen
+ */
+export function ensureMigrated(u) {
+  const s = st(u);
+  if (s.migration?.done || s.migration?.undone) return s.migration;
+  const p = planOf(u);
+  if (!p.moved && !p.mergedList.length && !p.newDefault) return applyMigration(u, p, { noop: true });
+  const migration = { done: false, proposed: true, from: p.from, to: p.to, moved: p.moved, merged: p.mergedList };
+  if (JSON.stringify(s.migration) !== JSON.stringify(migration) || s.mode !== 'legacy') save(u, { mode: 'legacy', merged: {}, migration });
   return migration;
 }
 export function undoMigration(u) {
@@ -119,9 +134,9 @@ export function undoMigration(u) {
   logMig(u, `angret oppryddingen: ${restored} hendelser tilbake`);
   return { ok: true, migration, restored };
 }
+/** «Slå sammen» på forslaget, eller kjør oppryddingen på nytt etter angre. */
 export function redoMigration(u) {
-  save(u, { migration: null, mode: 'four' });
-  return ensureMigrated(u);
+  return applyMigration(u, planOf(u));
 }
 
 /* ---------------- Helligdager og merkedager (innebygd, ingen nett) ---------------- */
