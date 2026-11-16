@@ -78,5 +78,5 @@ Slår du det på (`NTFY_UPSTREAM_BASE_URL: https://ntfy.sh` under `ntfy` i `dock
 ```
 docker compose --profile ntfy up -d          # start ntfy
 docker logs homelab-ntfy                     # ntfy-loggen
-node --test test/p51-obs.test.js             # testene for drift
+node --test test/drift-helse.test.js             # testene for drift
 ```
