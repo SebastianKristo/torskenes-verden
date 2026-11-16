@@ -1,5 +1,6 @@
 package no.kristo.finanshub.ui
 
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -126,9 +127,9 @@ internal fun Memory33Settings(vm: AppViewModel) {
     val p = PaperPal.current
     val s = vm.mem33
     LaunchedEffect(vm.account?.id) { vm.loadMem33(force = true) }
-    var match by remember { mutableStateOf("") }
+    var match by rememberSaveable { mutableStateOf("") }
     var type by remember { mutableStateOf("frisør") }
-    var title by remember { mutableStateOf("") }
+    var title by rememberSaveable { mutableStateOf("") }
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         PLabel("Glimt husker", modifier = Modifier.padding(start = 4.dp, top = 10.dp))
         PCard {

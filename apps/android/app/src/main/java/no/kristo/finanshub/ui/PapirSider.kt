@@ -1,5 +1,6 @@
 package no.kristo.finanshub.ui
 
+import androidx.compose.runtime.saveable.rememberSaveable
 import android.graphics.Bitmap
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -170,7 +171,7 @@ private fun kr(v: Double) = "${n0(v)} kr"
 @Composable
 internal fun PaperList(vm: AppViewModel, navBottom: Dp) {
     val p = PaperPal.current
-    var q by remember { mutableStateOf("") }
+    var q by rememberSaveable { mutableStateOf("") }
     var cat by remember { mutableStateOf("Alle") }
     val all = vm.txs ?: emptyList()
     val cats = remember(all) { all.groupBy { it.category }.entries.sortedByDescending { it.value.size }.map { it.key }.filter { it.isNotBlank() }.take(6) }
@@ -353,10 +354,10 @@ private fun FinnCard(vm: AppViewModel, d: FinnDeal, modifier: Modifier, open: ()
 private fun FinnAddForm(vm: AppViewModel) {
     val p = PaperPal.current
     var role by remember { mutableStateOf("bought") }
-    var link by remember { mutableStateOf("") }
-    var title by remember { mutableStateOf("") }
-    var price by remember { mutableStateOf("") }
-    var who by remember { mutableStateOf("") }
+    var link by rememberSaveable { mutableStateOf("") }
+    var title by rememberSaveable { mutableStateOf("") }
+    var price by rememberSaveable { mutableStateOf("") }
+    var who by rememberSaveable { mutableStateOf("") }
     PCard {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -497,7 +498,7 @@ internal fun PaperTracking(vm: AppViewModel, navBottom: Dp) {
 @Composable
 private fun TrkAdd(vm: AppViewModel, t: TrackingData?) {
     val p = PaperPal.current
-    var no by remember { mutableStateOf("") }
+    var no by rememberSaveable { mutableStateOf("") }
     var pick by remember { mutableStateOf<String?>(null) }
     val guess = if (no.length >= 6) Carrier.detect(no) else null
     val car = guess?.let { g -> Carrier.KNOWN.firstOrNull { it.id == g } }

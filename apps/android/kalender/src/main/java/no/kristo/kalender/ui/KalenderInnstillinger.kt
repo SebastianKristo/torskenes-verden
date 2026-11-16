@@ -268,12 +268,13 @@ class K39State(private val vm: KalVm) {
         }
     }
 
-    /** «Vi ryddet kalenderne: 12 → 4» (én gang). */
+    /** «Vi ryddet kalenderne: 12 → 4» (én gang), eller forslaget «Slå sammen kalenderne: 6 → 4?» (Q34) til brukeren svarer. */
     val migText: String get() {
         if (migSeen) return ""
         val m = Kal39.migration
         val p = ctx.getSharedPreferences("kalender_prefs", android.content.Context.MODE_PRIVATE)
         val seen = p.getString("mig39", "") ?: ""
+        if (m.proposed) return if (m.from <= m.to || seen == m.proposalKey) "" else "Slå sammen kalenderne: ${m.from} → ${m.to}?"
         if (m.done && m.from > m.to) return if (seen == "s:" + m.undoUntil) "" else "Vi ryddet kalenderne: ${m.from} → ${m.to}."
         if (!Kal39.serverKnows && Kal39.mergedFrom > 0 && seen.isEmpty()) return "Vi ryddet kalenderne: ${Kal39.mergedFrom} → 4. Hendelsene ligger i Personlig og Skole."
         return ""
@@ -290,10 +291,34 @@ class K39State(private val vm: KalVm) {
         vm.showToast("Vi ryddet kalenderne: ${m.from} → ${m.to}", if (m.canUndo) ({ undoMig() }) else null)
     }
 
+    /** Forslaget venter på svar (Q34): «Slå sammen» og «Ikke nå» vises. */
+    val migProposed: Boolean get() = Kal39.migration.proposed && migText.isNotEmpty()
+
+    /** Detaljen under forslaget: hva som skjer, og at det kan angres. */
+    val migDetail: String get() {
+        val m = Kal39.migration
+        return (if (m.moved > 0) "${m.moved} hendelser flyttes. " else "") + "Ingenting slettes, og du kan angre i 30 dager."
+    }
+
+    /** «Ikke nå» / ✕. Forslaget huskes per innhold, så et nytt forslag (andre tall) vises igjen. */
     fun dismissMig() {
         val m = Kal39.migration
-        ctx.getSharedPreferences("kalender_prefs", android.content.Context.MODE_PRIVATE).edit().putString("mig39", if (m.done) "s:" + m.undoUntil else "local").apply()
+        val v = when { m.proposed -> m.proposalKey; m.done -> "s:" + m.undoUntil; else -> "local" }
+        ctx.getSharedPreferences("kalender_prefs", android.content.Context.MODE_PRIVATE).edit().putString("mig39", v).apply()
         migSeen = true
+    }
+
+    /** «Slå sammen»: ja til forslaget. Serveren rydder nå; etter synken kommer «Vi ryddet kalenderne … Angre» (announce). */
+    fun mergeMig() {
+        val s = vm.session ?: return
+        if (busy) return
+        busy = true
+        Hap.tick()
+        vm.viewModelScope.launch {
+            val e = Kal39Repo.applyMigration(s)
+            busy = false
+            if (e == null) { migSeen = true; vm.refresh() } else vm.showToast(e)
+        }
     }
 
     fun undoMig() {
@@ -347,6 +372,32 @@ fun BoxScope.Kal39Layer(vm: KalVm) {
 
 /* ---------------- 1a: Kalendere ---------------- */
 
+/**
+ * Q34 (E-B12): forslaget fra serveren øverst i kalenderen, «Slå sammen kalenderne: 6 → 4?» med «Slå sammen» og «Ikke nå».
+ * Ingenting endres før brukeren sier ja. Samme forslag står også på Kalendere-siden.
+ */
+@Composable
+fun MigForslag(vm: KalVm) {
+    val st = vm.k39
+    // Kal39.migration leses fra samme svar som kalenderne; lesingen av vm.cals gjør at forslaget tegnes når svaret er kommet.
+    if (vm.cals.isEmpty() || !st.migProposed) return
+    val k = LocalK.current
+    Row(
+        Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 6.dp).clip(RoundedCornerShape(16.dp)).background(k.card)
+            .padding(start = 14.dp, end = 4.dp, top = 6.dp, bottom = 6.dp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Column(Modifier.weight(1f)) {
+            Tx(st.migText, man(KType.subheadline, FontWeight.SemiBold, k.ink), maxLines = 2)
+            Tx(st.migDetail, man(KType.footnote, FontWeight.Normal, k.mut), maxLines = 2)
+        }
+        Box(Modifier.heightIn(min = 48.dp).tap("Slå sammen kalenderne") { st.mergeMig() }.padding(horizontal = 8.dp), contentAlignment = Alignment.Center) {
+            Tx("Slå sammen", man(KType.subheadline, FontWeight.Bold, Red))
+        }
+        Box(Modifier.size(48.dp).tap("Ikke nå") { st.dismissMig() }, contentAlignment = Alignment.Center) { Svg(Ic.CLOSE, 14.dp, k.mut, 2.4f) }
+    }
+}
+
 @Composable
 fun Cals39Page(vm: KalVm) {
     val k = LocalK.current
@@ -361,9 +412,10 @@ fun Cals39Page(vm: KalVm) {
             Tx("Kalendere", news(KType.title2, k.ink))
             val mt = st.migText
             if (mt.isNotEmpty()) Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(k.card).padding(horizontal = 14.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Tx(mt, man(KType.subheadline, FontWeight.Medium, k.ink), Modifier.weight(1f), maxLines = 3)
-                if (Kal39.migration.canUndo) Tx("Angre", man(KType.subheadline, FontWeight.Bold, Red), Modifier.tap("Angre") { st.undoMig() }.padding(8.dp))
-                Box(Modifier.size(48.dp).tap("Lukk") { st.dismissMig() }, contentAlignment = Alignment.Center) { Svg(Ic.CLOSE, 14.dp, k.mut, 2.4f) }
+                Tx(if (st.migProposed) mt + " " + st.migDetail else mt, man(KType.subheadline, FontWeight.Medium, k.ink), Modifier.weight(1f), maxLines = 3)
+                if (st.migProposed) Tx("Slå sammen", man(KType.subheadline, FontWeight.Bold, Red), Modifier.tap("Slå sammen kalenderne") { st.mergeMig() }.padding(8.dp))
+                else if (Kal39.migration.canUndo) Tx("Angre", man(KType.subheadline, FontWeight.Bold, Red), Modifier.tap("Angre") { st.undoMig() }.padding(8.dp))
+                Box(Modifier.size(48.dp).tap(if (st.migProposed) "Ikke nå" else "Lukk") { st.dismissMig() }, contentAlignment = Alignment.Center) { Svg(Ic.CLOSE, 14.dp, k.mut, 2.4f) }
             }
             Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(k.card).padding(horizontal = 14.dp, vertical = 2.dp)) {
                 vm.cals.forEachIndexed { i, c -> CalRow39(vm, c, i == 0) }

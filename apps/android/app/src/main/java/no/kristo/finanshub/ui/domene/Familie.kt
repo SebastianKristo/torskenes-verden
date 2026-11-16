@@ -2,6 +2,7 @@
 
 package no.kristo.finanshub.ui
 
+import androidx.compose.runtime.saveable.rememberSaveable
 import android.annotation.SuppressLint
 import android.content.Context
 import android.location.LocationManager
@@ -76,7 +77,7 @@ internal fun Zones41(vm: AppViewModel) {
             }.padding(12.dp, 7.dp))
     }
     if (s.zoneAdd) {
-        var name by remember { mutableStateOf("") }
+        var name by rememberSaveable { mutableStateOf("") }
         var r by remember { mutableFloatStateOf(150f) }
         val fix = remember { lastFix41(ctx) }
         Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(p.bg).padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -235,7 +236,7 @@ internal fun IconPicker42(
     draw: @Composable (String, Color) -> Unit, onPick: (String) -> Unit,
 ) {
     val p = PaperPal.current
-    var q by remember { mutableStateOf("") }
+    var q by rememberSaveable { mutableStateOf("") }
     var all by remember { mutableStateOf(false) }
     var ext by remember { mutableStateOf<List<Pair<String, String>>>(emptyList()) }
     var extBusy by remember { mutableStateOf(false) }

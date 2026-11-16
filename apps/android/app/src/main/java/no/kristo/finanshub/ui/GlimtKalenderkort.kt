@@ -1,5 +1,6 @@
 package no.kristo.finanshub.ui
 
+import androidx.compose.runtime.saveable.rememberSaveable
 import no.kristo.finanshub.ui.designsystem.HomelabType
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
@@ -74,7 +75,7 @@ internal fun Cal70Card(vm: AppViewModel, json: JSONObject, inBubble: Boolean) {
     var open by remember(key) { mutableStateOf(false) }
     var busy by remember(key) { mutableStateOf(false) }
     var undone by remember(key) { mutableStateOf(false) }
-    var note by remember(key) { mutableStateOf("") }
+    var note by rememberSaveable(key) { mutableStateOf("") }
     var err by remember(key) { mutableStateOf("") }
     val until = remember(key) { System.currentTimeMillis() + first.ttlMs }
     var left by remember(key) { mutableLongStateOf(first.ttlMs / 1000) }

@@ -1,6 +1,15 @@
 # Versjonskatalog for :app, :kalender, :wear og de delte modulene :felles og :felles-android.
 # Én versjon per bibliotek. Endres en versjon her, gjelder den alle modulene som bruker biblioteket.
 # Fase 5: versjonene er de samme som før katalogen (ingen oppgraderinger i samme steg).
+#
+# Oppgraderingsplan (rest etter 5.0, vurdert 16.11.2026 uten Android SDK i miljøet):
+# - AGP 8.7.3 er siste patch i 8.7, så det finnes ingen trygg patch-oppgradering. Kotlin 2.1.0 → 2.1.2x er en egen
+#   «tooling release» med ny Compose-kompilator, og Kotlin dokumenterer AGP-støtte bare til 8.7.2 for 2.1-serien.
+#   Det er derfor ikke oppgradert her.
+# - Neste steg, i én egen gren med CI («Mobilapper») som fasit: AGP, Kotlin (med kotlin.compose-pluginen i samme versjon)
+#   og Gradle-wrapperen sammen etter kompatibilitetstabellene i AGP- og Kotlin-dokumentasjonen, så compileSdk/targetSdk 36
+#   (krever nyere AGP enn 8.7) og til slutt Compose BOM. Én oppgradering per commit, så CI kan peke ut den som feiler.
+# - R8 (isMinifyEnabled) forblir av med vilje til CI har en emulator som kan kjøre appen etter minifisering.
 
 [versions]
 agp = "8.7.3"

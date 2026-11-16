@@ -117,6 +117,8 @@ internal fun KalenderScreen27(vm: AppViewModel) {
             if (s.mini) K27Mini(vm, cur, today)
             // Prompt 29: lyst Nå/Neste-kort (RaskTimeArk.kt) i stedet for den svarte stripa.
             K29NowCard(vm, kalNow29(s, evs, now))
+            // Q34 (E-B12): forslaget om å slå sammen kalenderne, med ja/nei.
+            KalMigBanner(vm)
             s.error?.let { e -> Text(e, color = p.accent, fontSize = HomelabType.footnote.fontSize, modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp)) }
             if (s.unavailable) Text("Serveren har ikke Kalender ennå. Oppdater Homelab-serveren for å se timeplanen.", color = p.textSecondary, fontSize = HomelabType.footnote.fontSize,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp))
@@ -146,6 +148,30 @@ internal fun KalenderScreen27(vm: AppViewModel) {
             Box(Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 60.dp).shadow(12.dp, CircleShape).clip(CircleShape).background(p.textPrimary).padding(16.dp, 10.dp)) {
                 Text(m, color = p.surface, fontSize = HomelabType.subheadline.fontSize, fontWeight = FontWeight.SemiBold, maxLines = 2)
             }
+        }
+    }
+}
+
+/** Q34 (E-B12): «Slå sammen kalenderne: 6 → 4?» med «Slå sammen» og «Ikke nå»; etterpå «Vi ryddet … Angre» i 30 dager. */
+@Composable
+private fun KalMigBanner(vm: AppViewModel) {
+    val m = vm.kal26.mig ?: return
+    val t = vm.kalMigText() ?: return
+    val p = HomelabTheme.colors
+    Row(
+        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp).clip(RoundedCornerShape(16.dp)).background(p.surfaceRaised)
+            .padding(start = 14.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(t, color = p.textPrimary, fontSize = HomelabType.subheadline.fontSize, fontWeight = FontWeight.SemiBold, maxLines = 2)
+            if (m.proposed) Text(kalMigDetail(m), color = p.textSecondary, fontSize = HomelabType.footnote.fontSize, maxLines = 2)
+        }
+        androidx.compose.material3.TextButton(onClick = { if (m.proposed) vm.mergeKalMig() else vm.undoKalMig() }) {
+            Text(if (m.proposed) "Slå sammen" else "Angre", color = p.accent, fontWeight = FontWeight.Bold, fontSize = HomelabType.subheadline.fontSize)
+        }
+        androidx.compose.material3.IconButton(onClick = { vm.dismissKalMig() }) {
+            Icon(Icons.Filled.Close, contentDescription = if (m.proposed) "Ikke nå" else "Lukk", tint = p.textSecondary)
         }
     }
 }

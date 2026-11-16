@@ -1,5 +1,6 @@
 package no.kristo.finanshub.ui
 
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
 import android.graphics.Bitmap
@@ -943,9 +944,9 @@ private fun EntrySheet24(vm: AppViewModel, d: HomeDetail24, e: HomeEntry24) {
 private fun NewHomeSheet24(vm: AppViewModel) {
     val p = HomelabTheme.colors
     val s = vm.b24
-    var n by remember { mutableStateOf("") }
-    var a by remember { mutableStateOf("") }
-    var b by remember { mutableStateOf("") }
+    var n by rememberSaveable { mutableStateOf("") }
+    var a by rememberSaveable { mutableStateOf("") }
+    var b by rememberSaveable { mutableStateOf("") }
     ModalBottomSheet(onDismissRequest = { s.newHome = false }, containerColor = p.surface, contentColor = p.textPrimary, shape = SHEET24, dragHandle = { Handle24() }) {
         Column(Modifier.fillMaxWidth().imePadding().padding(18.dp, 0.dp, 18.dp, 30.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             PSerif("Ny bolig", HomelabType.title3.fontSize, maxLines = 1)
@@ -963,8 +964,8 @@ private fun NewHomeSheet24(vm: AppViewModel) {
 private fun NewEntrySheet24(vm: AppViewModel, d: HomeDetail24) {
     val p = HomelabTheme.colors
     val s = vm.b24
-    var m by remember { mutableStateOf("") }
-    var a by remember { mutableStateOf("") }
+    var m by rememberSaveable { mutableStateOf("") }
+    var a by rememberSaveable { mutableStateOf("") }
     var c by remember { mutableStateOf("Annet") }
     var picked by remember { mutableStateOf(false) }
     val cats = (d.cats.ifEmpty { CATS24.map { it.first } } + "Annet").distinct()
@@ -1012,7 +1013,7 @@ internal fun ShareHome30(vm: AppViewModel, d: HomeDetail24, invite: (String, Str
     val s = vm.p30
     val id = d.home.id
     LaunchedEffect(id) { vm.loadShareable30(id) }
-    var email by remember(id) { mutableStateOf("") }
+    var email by rememberSaveable(id) { mutableStateOf("") }
     val users = s.shareUsers.takeIf { s.shareFor == id }
     // Eldre server uten /users/shareable: bare e-post/navn som før.
     val old = s.shareErr == "old"

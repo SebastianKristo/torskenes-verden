@@ -311,7 +311,14 @@ data class KInfo39(
     }
 }
 
-data class KMig39(val done: Boolean = false, val from: Int = 0, val to: Int = 0, val undoUntil: String = "") {
+/**
+ * Oppryddingen av kalenderne (Q34, E-B12). [proposed] = serveren foreslår å slå sammen [from] → [to] ([moved] hendelser flyttes) og
+ * har ikke endret noe; den kjøres først når brukeren sier ja (POST /api/kalender/calendars/migration). [done] = kjørt, kan angres til [undoUntil].
+ */
+data class KMig39(val done: Boolean = false, val from: Int = 0, val to: Int = 0, val undoUntil: String = "", val proposed: Boolean = false, val moved: Int = 0) {
+    /** Nøkkelen «Ikke nå» lagres under, så samme forslag ikke vises igjen på denne enheten (som kal39_mig på web). */
+    val proposalKey: String get() = "forslag:$from-$to-$moved"
+
     val canUndo: Boolean get() = done && undoUntil.isNotEmpty() &&
         (runCatching { OffsetDateTime.parse(undoUntil).toInstant().toEpochMilli() > System.currentTimeMillis() }.getOrDefault(false))
 }
@@ -387,7 +394,8 @@ object Kal39 {
         sawServerFields = false
         serverKnows = saw || root?.has("migration") == true
         val m = root?.optJSONObject("migration") ?: return
-        migration = KMig39(m.optBoolean("done", false), m.optInt("from", 0), m.optInt("to", 0), m.optStrOrNull("undoUntil").orEmpty())
+        migration = KMig39(m.optBoolean("done", false), m.optInt("from", 0), m.optInt("to", 0), m.optStrOrNull("undoUntil").orEmpty(),
+            proposed = !m.optBoolean("done", false) && m.optBoolean("proposed", false), moved = m.optInt("moved", 0))
     }
 
     /** Hele lista → de fire (+ egne), uten duplikater, med Helligdager når serveren ikke har den. */
@@ -539,6 +547,11 @@ object Kal39Repo {
     suspend fun save(s: KalSession, id: String, body: JSONObject): String? = try {
         s.api.patch("/api/kalender/calendars/" + enc(id), body); null
     } catch (e: KalApiException) { e.message ?: "Kunne ikke lagre" }
+
+    /** Ja til forslaget «Slå sammen kalenderne» (Q34): serveren kjører oppryddingen nå. → feilmelding (null = ok). */
+    suspend fun applyMigration(s: KalSession): String? = try {
+        s.api.post("/api/kalender/calendars/migration"); null
+    } catch (e: KalApiException) { e.message ?: "Kunne ikke slå sammen kalenderne" }
 
     suspend fun undoMigration(s: KalSession): String? = try {
         s.api.post("/api/kalender/calendars/migration/undo"); null

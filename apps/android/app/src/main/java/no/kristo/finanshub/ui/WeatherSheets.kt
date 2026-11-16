@@ -1,5 +1,6 @@
 package no.kristo.finanshub.ui
 
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.focus.focusRequester
 import android.annotation.SuppressLint
@@ -465,7 +466,7 @@ private fun Legend(t: String, c: Color, logo: String? = null) {
 
 @Composable
 internal fun PlacesSheet(vm: AppViewModel) {
-    var q by remember { mutableStateOf("") }
+    var q by rememberSaveable { mutableStateOf("") }
     val close = { vm.wxPlacesSheet = false; vm.searchWxPlaces("") }
     // Prompt 52 (AND52B): rett inn i et søk etter by – markøren står i søkefeltet og tastaturet kommer opp.
     val focus52 = remember { androidx.compose.ui.focus.FocusRequester() }

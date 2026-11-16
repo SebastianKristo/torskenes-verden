@@ -1,5 +1,6 @@
 package no.kristo.finanshub.ui
 
+import androidx.compose.runtime.saveable.rememberSaveable
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -183,7 +184,7 @@ internal fun FlowRow51(content: @Composable () -> Unit) {
 
 @Composable
 private fun Deposit51(vm: AppViewModel, id: String, done: () -> Unit) {
-    var amt by remember { mutableStateOf("") }
+    var amt by rememberSaveable { mutableStateOf("") }
     Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         PField("Beløp (minus for uttak)", amt, { amt = it }, Modifier.weight(1f), "500", KeyboardOptions(keyboardType = KeyboardType.Text, imeAction = ImeAction.Done))
         Btn51("Sett inn", "ink", busy = F51.acting == "dep") {

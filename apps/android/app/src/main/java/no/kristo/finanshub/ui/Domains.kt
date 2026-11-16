@@ -1,5 +1,6 @@
 package no.kristo.finanshub.ui
 
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -14,6 +15,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -38,25 +40,27 @@ import no.kristo.finanshub.ui.designsystem.HomelabTheme
 @Composable
 internal fun DomainsScreen(vm: AppViewModel, twoPane: Boolean, section: String? = null) {
     val farger = HomelabTheme.colors
-    val a = vm.analytics
+    // Struktur: Android – siden tegnes fra DomenerViewModel (én StateFlow), ikke fra feltene i AppViewModel.
+    val t by vm.domener.tilstand.collectAsStateWithLifecycle()
+    val a = t.analyse
     Page {
         // Papir har egen fanelinje (Oversikt, Publikum, Ytelse og Infra) og et hvitt toppkort med domenevelger og periode.
         item { PaperDomTop(vm) }
         // Prompt 38: Glimt-knappen (✦ nede til høyre) åpner oppsummeringen øverst på Oversikt.
-        if (section == "oversikt" && vm.p38.domSumOpen && !vm.domAll) item { DomGlimt38(vm) }
+        if (section == "oversikt" && vm.p38.domSumOpen && !t.alle) item { DomGlimt38(vm) }
         else if (section == null || section == "oversikt") item { DomainHeader(vm) }
         if (twoPane && section == null) item {
             Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(farger.surfaceRaised).padding(4.dp)) {
-                DomTab.entries.forEach { t ->
-                    val on = vm.domTab == t
-                    Box(Modifier.weight(1f).clip(RoundedCornerShape(24.dp)).background(if (on) farger.surfaceChip else Color.Transparent).clickable { vm.domTab = t }.padding(12.dp), contentAlignment = Alignment.Center) {
-                        Text(t.label, color = if (on) farger.textPrimary else farger.textSecondary, fontWeight = FontWeight.SemiBold)
+                DomTab.entries.forEach { fane ->
+                    val on = t.fane == fane
+                    Box(Modifier.weight(1f).clip(RoundedCornerShape(24.dp)).background(if (on) farger.surfaceChip else Color.Transparent).clickable { vm.domener.settFane(fane) }.padding(12.dp), contentAlignment = Alignment.Center) {
+                        Text(fane.label, color = if (on) farger.textPrimary else farger.textSecondary, fontWeight = FontWeight.SemiBold)
                     }
                 }
             }
         }
         vm.moduleError?.let { e -> item { Empty(e) } }
-        if (vm.domains?.isEmpty() == true) item {
+        if (t.domener?.isEmpty() == true) item {
             Column(Modifier.fillMaxWidth().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 Text("Ingen domener ennå.", color = farger.textSecondary)
                 Button(onClick = { vm.domainManager = true }, shape = RoundedCornerShape(24.dp), colors = ButtonDefaults.buttonColors(containerColor = farger.surfaceChip, contentColor = farger.textPrimary)) {
@@ -64,8 +68,8 @@ internal fun DomainsScreen(vm: AppViewModel, twoPane: Boolean, section: String? 
                 }
             }
         }
-        if (vm.domAll) { allDomains(vm); return@Page }
-        if (a == null && vm.moduleError == null && vm.domains?.isEmpty() != true) item { Box(Modifier.fillMaxWidth().padding(40.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = farger.textPrimary) } }
+        if (t.alle) { allDomains(vm); return@Page }
+        if (a == null && vm.moduleError == null && t.domener?.isEmpty() != true) item { Box(Modifier.fillMaxWidth().padding(40.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = farger.textPrimary) } }
         if (a != null) {
             if (a.mock) item { Text("Eksempeldata – legg inn Cloudflare-token i Homelab for ekte tall.", color = farger.textSecondary, fontSize = HomelabType.footnote.fontSize, modifier = Modifier.padding(start = 8.dp)) }
             when (section) {
@@ -73,7 +77,7 @@ internal fun DomainsScreen(vm: AppViewModel, twoPane: Boolean, section: String? 
                 "publikum" -> visits(vm, a)
                 "ytelse" -> { perf(a, withUptime = false); item { Title("Sikkerhet") }; security(a) }
                 "infra" -> infra(vm, a)
-                else -> when (vm.domTab) {
+                else -> when (t.fane) {
                     DomTab.Traffic -> traffic(vm, a)
                     DomTab.Visits -> visits(vm, a)
                     DomTab.Perf -> perf(a)
@@ -445,7 +449,7 @@ private fun VisitsMap(vm: AppViewModel, a: Analytics) {
 @Composable
 internal fun DomainManagerSheet(vm: AppViewModel) {
     val farger = HomelabTheme.colors
-    var name by remember { mutableStateOf("") }
+    var name by rememberSaveable { mutableStateOf("") }
     var source by remember { mutableStateOf("cloudflare") }
     ModalBottomSheet(onDismissRequest = { vm.domainManager = false }, containerColor = farger.surfaceRaised) {
         Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(20.dp, 0.dp, 20.dp, 32.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {

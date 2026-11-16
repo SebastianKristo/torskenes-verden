@@ -1,5 +1,6 @@
 package no.kristo.finanshub.ui
 
+import androidx.compose.runtime.saveable.rememberSaveable
 import android.graphics.Bitmap
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -203,7 +204,7 @@ private fun NameDialog(title: String, initial: String, ok: String, dismiss: () -
 /** «Importer fra nettside»: lim inn en adresse; serveren leser oppskriften (JSON-LD, microdata eller AI). */
 @Composable
 private fun ImportField(vm: AppViewModel, p: MatPalette, done: () -> Unit) {
-    var url by remember { mutableStateOf("") }
+    var url by rememberSaveable { mutableStateOf("") }
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(p.card).padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         MLabel("Importer fra nettside", p.label)
         BasicTextField(
@@ -296,8 +297,8 @@ private fun DishSheet(vm: AppViewModel, p: MatPalette) {
     val day = vm.matDay?.let { w?.days?.getOrNull(it) }
     val file = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> if (uri != null && dish != null) vm.uploadDishFile(dish.id, uri) }
     var addLink by remember { mutableStateOf(false) }
-    var lt by remember { mutableStateOf("") }
-    var lu by remember { mutableStateOf("") }
+    var lt by rememberSaveable { mutableStateOf("") }
+    var lu by rememberSaveable { mutableStateOf("") }
     var pick by remember { mutableStateOf(false) }
     ModalBottomSheet(onDismissRequest = { vm.dishOpen = null }, containerColor = p.bg, contentColor = p.text) {
         Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(18.dp, 0.dp, 18.dp, 32.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -410,7 +411,7 @@ private fun MatPaperSec(vm: AppViewModel, w: Week, k: String, p: MatPalette, lin
         "m3" -> Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             FolderChips(vm, p)
             // Prompt 27: søk i retter og ingredienser med ✕ til venstre (fasit Matplan.dc.html).
-            var dq by remember { mutableStateOf("") }
+            var dq by rememberSaveable { mutableStateOf("") }
             DishSearch27(dq, { dq = it }, p)
             val sel = vm.matFolderSel
             val dishes = w.dishes.filter { (sel == null || it.folderId == sel) && dishHit27(it, dq) }

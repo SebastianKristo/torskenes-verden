@@ -1,5 +1,6 @@
 package no.kristo.finanshub.ui
 
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -181,7 +182,7 @@ internal fun Audio51Page(vm: AppViewModel) {
 @Composable
 private fun AbsUser51(vm: AppViewModel, text: String?) {
     val farger = HomelabTheme.colors
-    var u by remember { mutableStateOf("") }
+    var u by rememberSaveable { mutableStateOf("") }
     Card51 {
         PSerif("Koble til Audiobookshelf", 20.sp)
         Text(text ?: "Skriv brukernavnet ditt i Audiobookshelf, så vises lydbøkene og podkastene dine her.", color = farger.textTertiary, fontSize = HomelabType.subheadline.fontSize)

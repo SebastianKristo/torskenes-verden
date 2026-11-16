@@ -340,6 +340,81 @@ class Kal26State {
     internal var range: Pair<LocalDate, LocalDate>? = null
     internal var loadedFor: String? = null
     internal var layoutFor: String? = null
+    /** Q34 (E-B12): oppryddingen av kalenderne fra GET /api/kalender/calendars (forslag eller kjørt), og hva brukeren har lukket. */
+    var mig by mutableStateOf<KalMigrering?>(null)
+    var migSeen by mutableStateOf<String?>(null)
+}
+
+/* ---------- Q34 (E-B12): «Slå sammen kalenderne: 6 → 4?» ---------- */
+
+/**
+ * migration fra GET /api/kalender/calendars. [proposed] = serveren foreslår oppryddingen og har ikke endret noe (den kjøres først
+ * ved ja, POST /api/kalender/calendars/migration). [done] = kjørt, kan angres til [undoUntil] (30 dager).
+ */
+data class KalMigrering(val proposed: Boolean, val done: Boolean, val from: Int, val to: Int, val moved: Int, val undoUntil: String?, val noop: Boolean) {
+    /** «Ikke nå»/✕ huskes per forslag og per opprydding (som kal39_mig på web). */
+    val key: String get() = if (proposed) "forslag:$from-$to-$moved" else "ryddet:" + (undoUntil ?: "")
+}
+
+internal fun parseKalMigrering(raw: String): KalMigrering? {
+    val m = JSONObject(raw).optJSONObject("migration") ?: return null
+    val done = m.optBoolean("done", false)
+    val until = if (m.isNull("undoUntil")) null else m.optString("undoUntil").takeIf { it.isNotBlank() }
+    return KalMigrering(!done && m.optBoolean("proposed", false), done, m.optInt("from", 0), m.optInt("to", 0), m.optInt("moved", 0), until, m.optBoolean("noop", false))
+}
+
+private fun AppViewModel.kalMigPref(): String = "kal_mig_" + (account?.id ?: "")
+
+/** Teksten i kalenderen, eller null når det ikke er noe å vise (ingen forslag, lukket, eller angrefristen er ute). */
+fun AppViewModel.kalMigText(): String? {
+    val s = kal26
+    val m = s.mig ?: return null
+    if ((s.migSeen ?: prefs.str(kalMigPref(), "")) == m.key) return null
+    if (m.proposed) return if (m.from > m.to) "Slå sammen kalenderne: ${m.from} → ${m.to}?" else null
+    val open = m.undoUntil?.let { u -> runCatching { java.time.Instant.parse(u).toEpochMilli() > System.currentTimeMillis() }.getOrDefault(false) } ?: false
+    return if (m.done && !m.noop && open) "Vi ryddet kalenderne: ${m.from} → ${m.to}." else null
+}
+
+/** Hva som skjer ved ja. */
+fun kalMigDetail(m: KalMigrering): String = (if (m.moved > 0) "${m.moved} hendelser flyttes. " else "") + "Ingenting slettes, og du kan angre i 30 dager."
+
+/** Henter forslaget (stille: eldre server eller feil = ingen melding). */
+fun AppViewModel.loadKalMig() {
+    launch26a {
+        val raw = runCatching { api26a { hlGet("/kalender/calendars", timeout = 12_000) } }.getOrNull() ?: return@launch26a
+        kal26.mig = withContext(Dispatchers.Default) { runCatching { parseKalMigrering(raw) }.getOrNull() }
+    }
+}
+
+/** «Slå sammen»: ja til forslaget. Serveren rydder nå, og kalenderen hentes på nytt. */
+fun AppViewModel.mergeKalMig() {
+    launch26a {
+        try {
+            val raw = api26a { hlPost("/kalender/calendars/migration") }
+            kal26.mig = withContext(Dispatchers.Default) { runCatching { parseKalMigrering(raw) }.getOrNull() }
+            Haptics.success()
+            loadKal26(quiet = true)
+        } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { message = uiErr73(e, "Fikk ikke slått sammen kalenderne") }
+    }
+}
+
+/** «Angre» innen 30 dager: de gamle kalenderne tilbake. */
+fun AppViewModel.undoKalMig() {
+    launch26a {
+        try {
+            api26a { hlPost("/kalender/calendars/migration/undo") }
+            dismissKalMig()
+            message = "Kalenderne er satt tilbake som før"
+            loadKal26(quiet = true)
+        } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { message = uiErr73(e, "Fikk ikke angret") }
+    }
+}
+
+/** «Ikke nå» / ✕: samme forslag vises ikke igjen på denne enheten. */
+fun AppViewModel.dismissKalMig() {
+    val m = kal26.mig ?: return
+    prefs.set(kalMigPref(), m.key)
+    kal26.migSeen = m.key
 }
 
 /* ---------- Oppsett per bruker ---------- */
@@ -410,6 +485,7 @@ fun AppViewModel.openKal26(selId: String? = null, native: Boolean = true) {
     s.pendingId = selId
     loadKalLayout26()
     loadKal26()
+    loadKalMig()
 }
 
 fun AppViewModel.closeKal26() {

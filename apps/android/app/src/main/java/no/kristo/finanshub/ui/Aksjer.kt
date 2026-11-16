@@ -765,7 +765,7 @@ private fun dayName(d: String): String {
 
 @Composable
 private fun StockTxList(vm: AppViewModel, x: StocksX) {
-    var q by remember { mutableStateOf("") }
+    var q by rememberSaveable { mutableStateOf("") }
     var tseg by remember { mutableStateOf("Alle") }
     val names = x.positions.associate { it.ticker to it.name }
     val idx = x.positions.mapIndexed { i, p -> p.ticker to i }.toMap()

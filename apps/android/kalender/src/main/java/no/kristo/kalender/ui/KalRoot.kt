@@ -1,7 +1,9 @@
 package no.kristo.kalender.ui
 
 import android.app.Activity
-import androidx.activity.compose.BackHandler
+import androidx.activity.compose.PredictiveBackHandler
+import no.kristo.felles.navigasjon.Tilbakestabel
+import no.kristo.felles.navigasjon.Tilbakesteg
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.animateFloatAsState
@@ -128,30 +130,41 @@ fun KalRoot(vm: KalVm, onBackToHomelab: () -> Unit) {
     }
 }
 
+/**
+ * Lagene tilbake lukker i Kalender-appen, øverst først (samme rekkefølge som den gamle when-kjeden). Ingen åpne lag = rotsiden,
+ * og systemet tar tilbake (Homelab eller hjemskjermen).
+ */
+internal fun kalTilbakestabel(vm: KalVm): Tilbakestabel = Tilbakestabel(listOf(
+    Tilbakesteg("ny-kalender", { vm.newCal }) { vm.newCal = false },
+    Tilbakesteg("innstillinger", { vm.setOn }) { vm.closeSettings() },
+    Tilbakesteg("sidemeny-legg-til", { vm.cs && vm.ac != null }) { vm.ac = null },
+    Tilbakesteg("ny-hendelse", { vm.nf != null }) { vm.closeNew() },
+    Tilbakesteg("hendelse", { vm.det != null }) { vm.closeDet() },
+    Tilbakesteg("glimt", { vm.glOpen }) { vm.closeGlimt() },
+    Tilbakesteg("sidemeny", { vm.cs }) { vm.cs = false },
+    Tilbakesteg("sok", { vm.so }) { vm.closeSearch() },
+))
+
 @Composable
 private fun KalApp(vm: KalVm, onBackToHomelab: () -> Unit) {
     val k = LocalK.current
     val reduce = reduceMotion()
     val focus = LocalFocusManager.current
     LaunchedEffect(vm.data) { vm.resolvePending() }
-    // Tilbake lukker det øverste: ark → sidemeny → søk.
-    BackHandler(vm.glOpen || vm.det != null || vm.nf != null || vm.cs || vm.so || vm.newCal || vm.setOn) {
-        when {
-            vm.newCal -> vm.newCal = false
-            vm.setOn -> vm.closeSettings()
-            vm.cs && vm.ac != null -> vm.ac = null
-            vm.nf != null -> vm.closeNew()
-            vm.det != null -> vm.closeDet()
-            vm.glOpen -> vm.closeGlimt()
-            vm.cs -> vm.cs = false
-            vm.so -> vm.closeSearch()
-        }
+    // Tilbake lukker det øverste: ark → sidemeny → søk. Samme tilbakestabel som Homelab-appen (:felles), og systemets
+    // prediktive tilbake (Android 14+) følger gesten; slippes den før terskelen, skjer ingenting.
+    val stabel = remember(vm) { kalTilbakestabel(vm) }
+    PredictiveBackHandler(stabel.aktivt() != null) { progress ->
+        progress.collect { }
+        stabel.tilbake()
     }
     var composerH by remember { mutableIntStateOf(0) }
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
             Spacer(Modifier.windowInsetsTopHeight(WindowInsets.statusBars))
             TopBar(vm, onBackToHomelab)
+            // Q34 (E-B12): «Slå sammen kalenderne: 6 → 4?» med ja/nei, til brukeren har svart.
+            MigForslag(vm)
             // Visningen: sveip venstre/høyre bytter periode, sveip inn fra venstre kant (28 dp) åpner Kalendere.
             // Prompt 35: zoom-animasjonen og pinch ligger rundt visningen (ZoomBox35); berøring lukker tastaturet.
             ZoomBox35(vm, reduce, onTouch = { focus.clearFocus() }, modifier = Modifier.weight(1f).fillMaxWidth()) {

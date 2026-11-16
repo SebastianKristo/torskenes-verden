@@ -1,5 +1,6 @@
 package no.kristo.finanshub.ui
 
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -187,12 +188,12 @@ private fun NewEvent51(vm: AppViewModel, members: List<JSONObject>) {
     val p = HomelabTheme.colors
     var open by remember { mutableStateOf(F51.ui.remove("fam.new") != null) } // «Ny hendelse i familiekalenderen» fra søket
     if (!open) { PButton("+ Ny hendelse", Modifier.fillMaxWidth(), kind = "line", height = 52.dp) { open = true }; return }
-    var title by remember { mutableStateOf("") }
+    var title by rememberSaveable { mutableStateOf("") }
     var date by remember { mutableStateOf(LocalDate.now().toString()) }
     var start by remember { mutableStateOf("17:00") }
     var end by remember { mutableStateOf("18:00") }
-    var place by remember { mutableStateOf("") }
-    var forU by remember { mutableStateOf("") }
+    var place by rememberSaveable { mutableStateOf("") }
+    var forU by rememberSaveable { mutableStateOf("") }
     var bring by remember { mutableStateOf(false) }
     var fetch by remember { mutableStateOf(false) }
     Card51 {
