@@ -11,6 +11,7 @@ import { ImapFlow } from 'imapflow';
 import { simpleParser } from 'mailparser';
 import { db, q, kv, OWNER, settings, saveSettings, secret, me } from './db.js';
 import { runAsUser } from '../settings.js';
+import { registerJob } from '../jobs/index.js';
 // ISO2: e-postimporten er per bruker. Hver bruker har sin egen IMAP (userCfg hos ISO-INT, lest via settings()/secret()),
 // egen status, egne duplikatsjekker (fh_mail_imports.user_id) og egne kvitteringer. Bakgrunnsjobben kjører hver bruker for seg.
 
@@ -352,11 +353,11 @@ export const recentImports = (u = me()) => q('SELECT message_id AS messageId, re
 // Brukere som kan ha e-postimport: eieren og alle innloggingsbrukere.
 const mailUsers = () => { try { return [...new Set([OWNER, ...q('SELECT id FROM users').pluck().all()])]; } catch { return [OWNER]; } };
 
-// Bakgrunnsjobb: sjekker hvert minutt om det er tid for en ny runde (IMAP_POLL_MINUTES).
-let timer = null;
+// Bakgrunnsjobb: sjekker hvert minutt om det er tid for en ny runde (IMAP_POLL_MINUTES). Går via den felles planleggeren, så den
+// ikke henter e-post i test eller i sandkassen (Fase 7, AUDIT A §6 B2).
 export function startMailWorker(deps) {
-  if (timer || MOCK) return;
-  timer = setInterval(() => {
+  registerJob('finans.epost', 60_000, () => {
+    if (MOCK) return;
     for (const u of mailUsers()) {
       runAsUser(u, () => {
         const c = mailConfig();
@@ -365,8 +366,7 @@ export function startMailWorker(deps) {
         if (Date.now() - last >= Math.max(1, c.poll) * 60_000) runMail(deps).catch(() => {});
       });
     }
-  }, 60_000);
-  timer.unref?.();
+  }, { note: 'Kvitteringer fra e-post (IMAP) etter intervallet i Innstillinger' });
 }
 // Prompt 42 (SERVER42): Sporing leser e-postmappen «AliExpress» med samme tilkobling (sporing/aliexpress-debug.js).
 export { cfgWith as mailCfg42, connect as mailConnect42 };

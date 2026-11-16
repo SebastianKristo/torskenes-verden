@@ -13,6 +13,7 @@ import * as auth from '../auth/session.js';
 import * as fh from '../finans/routes.js';
 import { guard, MOCK, readJson, str } from '../homeos-common.js';
 import { osloDate } from '../dates/oslo.js';
+import { registerJob } from '../jobs/index.js';
 
 const CF = 'https://api.cloudflare.com/client/v4';
 const SOURCES = ['cloudflare', 'tunnel', 'plausible', 'umami', 'uptime', 'gsc']; // prompt 39: gsc = Google Search Console (ingen token, bruker Google-tilkoblingen)
@@ -107,11 +108,10 @@ async function probe(name) {
   lastProbe.set(name, { ok: !!ok, at: Date.now(), ms: Date.now() - t0 });
 }
 const lastProbe = new Map();
-if (!MOCK) {
-  const run = () => listRows().forEach((r) => probe(r.name));
-  setTimeout(run, 20_000).unref();
-  setInterval(run, 5 * 60_000).unref();
-}
+// Oppetid: HEAD mot hvert domene hvert 5. minutt (første gang 20 s etter oppstart). Via den felles planleggeren, så det ikke
+// sendes kall utenfor huset i test eller i sandkassen (Fase 7, AUDIT A §6 B2).
+registerJob('domener.oppetid', 5 * 60_000, () => { if (!MOCK) listRows().forEach((r) => probe(r.name)); },
+  { firstRunAfterMs: 20_000, note: 'Oppetid for domenene (HEAD hvert 5. minutt)' });
 function uptime(name) {
   const rows = new Map(q('SELECT day, ok, total FROM hl_uptime WHERE domain=? AND day>=?').all(name, osloDate(Date.now() - 90 * 864e5)).map((x) => [x.day, x]));
   const days = Array.from({ length: 90 }, (_, i) => { const d = osloDate(Date.now() - (89 - i) * 864e5); const x = rows.get(d); return x?.total ? Math.round(x.ok / x.total * 1000) / 1000 : null; });
