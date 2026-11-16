@@ -206,7 +206,7 @@ struct Onboard51Host: ViewModifier {
             .fullScreenCover(isPresented: Binding<Bool>(get: { Onboard51.shared.open }, set: { (v: Bool) in if !v { Onboard51.shared.open = false } })) {
                 Onboard51Page()
                     .environment(\.paper, p)
-                    .environment(store)
+                    .homelabMiljo(store)
             }
     }
 }

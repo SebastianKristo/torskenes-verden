@@ -9,7 +9,7 @@ import ActivityKit
 #endif
 
 /* ---------------- Prompt 51 (IOSPLAT51): plattform i appen ----------------
- plat51Host() legges på roten i App.swift (innenfor .environment(store)):
+ plat51Host() legges på roten i App.swift (innenfor .homelabMiljo(store)):
  – Offline-køen (Offline51, Shared/PlatformShared.swift): sendes når nettet kommer tilbake (NWPathMonitor), når appen blir aktiv
    og etter innlogging. Varsler om konflikter og forkastede skrivinger vises som flash. API.send legger skrivinger som tåler
    å vente i køen når nettet mangler (API.swift → Plat51Queue.offer).

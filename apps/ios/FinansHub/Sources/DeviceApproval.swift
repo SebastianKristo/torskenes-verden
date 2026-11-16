@@ -445,6 +445,6 @@ struct FH51Host: ViewModifier {
 }
 
 extension View {
-    /// Prompt 51: legges på roten i App.swift (innenfor .environment(store)).
+    /// Prompt 51: legges på roten i App.swift (innenfor .homelabMiljo(store)).
     func fh51Host() -> some View { modifier(FH51Host()) }
 }

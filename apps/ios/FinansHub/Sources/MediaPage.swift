@@ -18,7 +18,7 @@ struct Media43Host: ViewModifier {
             .fullScreenCover(isPresented: Binding<Bool>(get: { m.open }, set: { (v: Bool) in if !v { m.open = false } })) {
                 Media43Page()
                     .environment(\.paper, p)
-                    .environment(store)
+                    .homelabMiljo(store)
                     .edgeSwipeClose30 { m.open = false }
             }
     }
@@ -166,7 +166,7 @@ struct Media43Page: View {
             .sheet(item: Binding<Media43Title?>(get: { wide ? nil : m.selected }, set: { (v: Media43Title?) in if v == nil { m.selected = nil } })) { (t: Media43Title) in
                 ScrollView { Media43Detail(t: t, column: false).padding(16) }
                     .background(p.bg)
-                    .environment(\.paper, p).environment(store)
+                    .environment(\.paper, p).homelabMiljo(store)
                     .presentationDetents([.large])
                     .presentationDragIndicator(.visible)
             }

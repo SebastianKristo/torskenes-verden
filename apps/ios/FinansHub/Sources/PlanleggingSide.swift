@@ -20,13 +20,13 @@ struct Plan51Page: View {
         .sheet(isPresented: Binding<Bool>(get: { m.editing != nil }, set: { (v: Bool) in if !v { m.editing = nil } })) {
             Plan51GoalForm(goal: m.goals?.items.first(where: { $0.id == m.editing }), accounts: m.goals?.accounts ?? [])
                 .environment(\.paper, p)
-                .environment(store)
+                .homelabMiljo(store)
                 .presentationDetents([.large])
         }
         .sheet(item: Binding<Goal51?>(get: { m.depositFor }, set: { m.depositFor = $0 })) { (g: Goal51) in
             Plan51Deposit(goal: g)
                 .environment(\.paper, p)
-                .environment(store)
+                .homelabMiljo(store)
                 .presentationDetents([.height(300)])
         }
         .sheet(item: Binding<F51File?>(get: { m.export }, set: { m.export = $0 })) { (f: F51File) in

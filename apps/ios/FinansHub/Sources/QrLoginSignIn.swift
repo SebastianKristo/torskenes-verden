@@ -270,7 +270,7 @@ extension View {
     /// Legges på innloggingsskjermen: QR-visningen i fullskjerm.
     func qr46Host(_ p: PaperPalette, _ store: Store) -> some View {
         fullScreenCover(isPresented: Binding<Bool>(get: { Qr46Show.shared.open }, set: { (v: Bool) in if !v { Qr46Show.shared.close() } })) {
-            Qr46ShowView().environment(\.paper, p).environment(store)
+            Qr46ShowView().environment(\.paper, p).homelabMiljo(store)
         }
     }
 }

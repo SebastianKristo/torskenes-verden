@@ -254,7 +254,7 @@ struct Study44Host: ViewModifier {
             .fullScreenCover(isPresented: Binding<Bool>(get: { m.open }, set: { m.open = $0 })) {
                 Study44Page()
                     .environment(\.paper, p)
-                    .environment(store)
+                    .homelabMiljo(store)
                     .edgeSwipeClose30 { m.open = false }
             }
     }

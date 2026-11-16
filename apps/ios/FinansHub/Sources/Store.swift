@@ -96,6 +96,23 @@ struct DomainToday { let name: String; let visitors: Double }
 @MainActor
 @Observable
 final class Store {
+    /* ---------- Domenemodellene (Struktur: iOS) ----------
+     Domenene flyttes ut av Store én om gangen. Store eier modellene og videresender egenskapene, så skjermene virker som før.
+     Modellene injiseres sammen med Store (homelabMiljo) og kan leses med @Environment i nye visninger. */
+
+    /// Domener (DomenerModell.swift).
+    let domener: DomenerModell = DomenerModell()
+    var domains: [DomainRef]? { get { domener.domains } set { domener.domains = newValue } }
+    var domain: String? { get { domener.domain } set { domener.domain = newValue } }
+    var analytics: Analytics? { get { domener.analytics } set { domener.analytics = newValue } }
+    var domTab: DomTab { get { domener.tab } set { domener.tab = newValue } }
+    var domRange: String { get { domener.range } set { domener.range = newValue } }
+    /// Domener i Papir: «Alle domener» (kort per domene) og tallene for hvert domene.
+    var domAllMode: Bool { get { domener.allMode } set { domener.allMode = newValue } }
+    var domAll: [String: Analytics] { get { domener.all } set { domener.all = newValue } }
+    /// «Administrer domener» (arket bak tannhjulet i Domener).
+    var domainManager: Bool { get { domener.manager } set { domener.manager = newValue } }
+
     /* ---------- Kontoer (nøkkelringen) ---------- */
 
     private(set) var accounts: [LoginAccount] = Store.loadAccounts()
@@ -138,8 +155,6 @@ final class Store {
     var uploading = 0
     var menuOpen = false
     var settingsPage: String?
-    /// «Administrer domener» (arket bak tannhjulet i Domener).
-    var domainManager = false
     /// Matplan: valgt dag (indeks 0–6), nil = i dag. «Se hele uka» viser hele uka og alle retter.
     var matDay: Int?
     var matFull = false
@@ -203,11 +218,6 @@ final class Store {
     var tokens: [TokenInfo]?
     var tokenError: String?
     var newToken: String?
-    var domains: [DomainRef]?
-    var domain: String?
-    var analytics: Analytics?
-    var domTab: DomTab = .traffic
-    var domRange = "24h"
     var moduleError: String?
 
     /* ---------- Sporing, vær, aksjer og abonnement (prompt 11) ---------- */
@@ -327,9 +337,6 @@ final class Store {
     var reviewCount: Int?
     /// De 15 siste transaksjonene (Finans → Oversikt).
     var recent15: [Tx]?
-    /// Domener i Papir: «Alle domener» (kort per domene) og tallene for hvert domene.
-    var domAllMode = false
-    var domAll: [String: Analytics] = [:]
     /// «Ny sending»-arket (den flytende knappen på Sporing).
     var trackAddOpen = false
 
@@ -1577,61 +1584,15 @@ final class Store {
         }
     }
 
-    /* ---------- Domener ---------- */
+    /* ---------- Domener (DomenerModell.swift) ---------- */
 
-    func loadDomains() async throws {
-        let list: [DomainRef] = try await decodeList(api.raw("/domains/api", "/domains"))
-        domains = list
-        if domain == nil || !list.contains(where: { $0.name == domain }) { domain = list.first?.name }
-        try await loadAnalytics()
-    }
-
-    private func loadAnalytics() async throws {
-        guard let d = domain else { analytics = nil; return }
-        let enc = d.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? d
-        analytics = try await api.module("/domains/api", "/\(enc)/analytics?range=\(domRange)", as: Analytics.self)
-    }
-
-    func pickDomain(_ name: String) { domain = name; analytics = nil; run { try await self.loadAnalytics() } }
-
-    /// Samme liste som i Homelab. API-token for Plausible/Umami legges inn på web.
-    func addDomain(_ name: String, source: String) {
-        let n = name.trimmingCharacters(in: .whitespaces).lowercased().replacingOccurrences(of: "https://", with: "").replacingOccurrences(of: "http://", with: "")
-        guard !n.isEmpty else { flash("Skriv domenet"); return }
-        run {
-            self.busy = true
-            defer { self.busy = false }
-            try await self.api.callAt("/domains/api", "POST", "/domains", json: ["name": n, "source": source])
-            self.domain = n
-            try await self.loadDomains()
-            self.flash("\(n) er lagt til")
-        }
-    }
-
-    func removeDomain(_ d: DomainRef) {
-        guard let id = d.id?.value else { return }
-        run {
-            try await self.api.callAt("/domains/api", "DELETE", "/domains/\(id)")
-            if self.domain == d.name { self.domain = nil }
-            try await self.loadDomains()
-            self.flash("\(d.name) er fjernet")
-        }
-    }
-
-    /// Landene til verdenskartet (world-atlas 110m), fra serveren eller jsDelivr som reserve. Hentes én gang.
-    @ObservationIgnored private var mapCache: [MapCountry]?
-    func worldMap() async -> [MapCountry] {
-        if let m = mapCache { return m }
-        var data = try? await api.raw("/domains/api", "/vendor/countries-110m.json")
-        if data.flatMap({ MapCountry.parse($0) })?.isEmpty != false, let u = URL(string: "https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/countries-110m.json") {
-            data = try? await HomelabHTTP.session.data(from: u).0
-        }
-        let list = data.flatMap { MapCountry.parse($0) } ?? []
-        if !list.isEmpty { mapCache = list }
-        return list
-    }
-    func setRange(_ r: String) { domRange = r; run { try await self.loadAnalytics() } }
-    func reloadDomain() { run { try await self.loadDomains(); self.flash("Oppdatert fra Cloudflare") } }
+    func loadDomains() async throws { try await domener.load(self) }
+    func pickDomain(_ name: String) { domener.pick(name, self) }
+    func addDomain(_ name: String, source: String) { domener.add(name, source: source, self) }
+    func removeDomain(_ d: DomainRef) { domener.remove(d, self) }
+    func worldMap() async -> [MapCountry] { await domener.worldMap(self) }
+    func setRange(_ r: String) { domener.setRange(r, self) }
+    func reloadDomain() { domener.reload(self) }
 
     /* ---------- API-tokens ---------- */
 

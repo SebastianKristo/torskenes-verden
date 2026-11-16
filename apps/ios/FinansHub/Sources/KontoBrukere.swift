@@ -310,7 +310,7 @@ struct Konto44SheetMod: ViewModifier {
     func body(content: Content) -> some View {
         content
             .environment(\.paper, p)
-            .environment(store)
+            .homelabMiljo(store)
             .presentationDetents([.medium, .large])
             .presentationDragIndicator(.visible)
             .sheetEdge30(p.bg)

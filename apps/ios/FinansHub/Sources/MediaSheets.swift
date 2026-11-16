@@ -42,7 +42,7 @@ extension View {
     func sheet43(_ p: PaperPalette, _ store: Store) -> some View {
         self
             .environment(\.paper, p)
-            .environment(store)
+            .homelabMiljo(store)
             .presentationDetents([.medium, .large])
             .presentationDragIndicator(.visible)
             .presentationBackground(p.bg)

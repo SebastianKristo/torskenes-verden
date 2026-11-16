@@ -226,7 +226,7 @@ struct Bol52ReceiptPanel: View {
         }
         .task(id: String(entry.id) + "|" + entry.receiptId + "|" + String(entry.pending)) { await load() }
         .fullScreenCover(item: $full) { (f: Bol52Full) in
-            Bol52Original(path: f.path, close: { full = nil }).environment(store)
+            Bol52Original(path: f.path, close: { full = nil }).homelabMiljo(store)
         }
     }
 

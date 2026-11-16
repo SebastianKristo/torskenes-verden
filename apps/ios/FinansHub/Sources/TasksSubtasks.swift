@@ -97,7 +97,7 @@ struct Tasks44Host: ViewModifier {
             .fullScreenCover(item: Binding<TaskItem17?>(get: { ui.info }, set: { ui.info = $0 })) { (t: TaskItem17) in
                 Tasks44InfoPage(taskId: t.id)
                     .environment(\.paper, p)
-                    .environment(store)
+                    .homelabMiljo(store)
                     .edgeSwipeClose30 { ui.info = nil }
             }
             .alert(askTitle, isPresented: askBinding) {

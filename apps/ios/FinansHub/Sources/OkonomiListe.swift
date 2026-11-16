@@ -132,7 +132,7 @@ struct Fin43Saldo: View {
         .sheet(isPresented: Binding<Bool>(get: { s.sheet }, set: { s.sheet = $0 })) {
             Sal52Sheet()
                 .environment(\.paper, p)
-                .environment(store)
+                .homelabMiljo(store)
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }

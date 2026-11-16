@@ -100,6 +100,27 @@ test('Q19 2FA, Finn og Avspilling: ingen reserve til eldre stier ved 404', () =>
   assert.equal(swiftFiles().filter((p) => /struct Playback44Stats\b/.test(readFileSync(p, 'utf8'))).length, 0, 'den gamle visningen er død og slettet');
 });
 
+test('Struktur: Domener er ute av Store (@Observable-modell med @Environment, Store videresender)', () => {
+  const m = code(raw('FinansHub/Sources/DomenerModell.swift'));
+  assert.match(m, /@MainActor\s+@Observable\s+final class DomenerModell \{/);
+  for (const v of ['var domains: \\[DomainRef\\]\\?', 'var domain: String\\?', 'var analytics: Analytics\\?', 'var tab: DomTab', 'var range: String', 'var allMode: Bool', 'var all: \\[String: Analytics\\]', 'var manager: Bool']) {
+    assert.match(m, new RegExp(v), v);
+  }
+  assert.match(m, /func load\(_ store: Store\) async throws/);
+  const s = code(raw('FinansHub/Sources/Store.swift'));
+  assert.match(s, /let domener: DomenerModell = DomenerModell\(\)/);
+  // Skjermene bruker fortsatt store.domains osv.: videresendende egenskaper, ingen egen lagring i Store.
+  for (const [navn, til] of [['domains', 'domains'], ['domain', 'domain'], ['analytics', 'analytics'], ['domTab', 'tab'], ['domRange', 'range'], ['domAllMode', 'allMode'], ['domAll', 'all'], ['domainManager', 'manager']]) {
+    assert.match(s, new RegExp(`var ${navn}: [^{\\n]+\\{ get \\{ domener\\.${til} \\} set \\{ domener\\.${til} = newValue \\} \\}`), navn);
+  }
+  assert.match(s, /func loadDomains\(\) async throws \{ try await domener\.load\(self\) \}/);
+  // Injisert sammen med Store overalt (ark og egne vinduer setter miljøet på nytt).
+  const fh = swiftFiles(join(IOS, 'FinansHub')).map((f) => [relative(IOS, f), code(readFileSync(f, 'utf8'))]);
+  assert.deepEqual(fh.filter(([f, c]) => !f.endsWith('HomelabMiljo.swift') && /\.environment\(store\)/.test(c)).map(([f]) => f), [], 'bruk .homelabMiljo(store)');
+  assert.match(code(raw('FinansHub/Sources/HomelabMiljo.swift')), /\.environment\(store\)\s*\.environment\(store\.domener\)/);
+  assert.match(code(raw('FinansHub/Sources/PaperDomains.swift')), /@Environment\(DomenerModell\.self\) private var dom/);
+});
+
 test('C-B5: én ruting for innst-sidene (InnstSide), brukt av både telefon og iPad', () => {
   const paper = code(raw('FinansHub/Sources/Paper.swift'));
   const wide = code(raw('FinansHub/Sources/SettingsWide.swift'));

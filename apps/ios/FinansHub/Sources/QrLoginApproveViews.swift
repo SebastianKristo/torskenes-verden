@@ -27,7 +27,7 @@ struct Qr38Host: ViewModifier {
     func body(content: Content) -> some View {
         content
             .fullScreenCover(isPresented: Binding<Bool>(get: { m.open }, set: { (v: Bool) in if !v { m.close() } })) {
-                Qr38Screen().environment(store)
+                Qr38Screen().homelabMiljo(store)
             }
             .onChange(of: store.loggedIn) { (_: Bool, v: Bool) in
                 if v { m.takePending(store) }

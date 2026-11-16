@@ -16,7 +16,7 @@ struct Skjold76Host: ViewModifier {
             .fullScreenCover(isPresented: Binding<Bool>(get: { m.open }, set: { (v: Bool) in if !v { m.open = false } })) {
                 Skjold76Page()
                     .environment(\.paper, p)
-                    .environment(store)
+                    .homelabMiljo(store)
                     .edgeSwipeClose30 { m.open = false }
             }
     }
@@ -57,7 +57,7 @@ struct Skjold76Page: View {
         .sheet(item: Binding<Skj76Sheet?>(get: { m.sheet }, set: { m.sheet = $0 })) { (s: Skj76Sheet) in
             Skj76SheetView(s: s)
                 .environment(\.paper, p)
-                .environment(store)
+                .homelabMiljo(store)
                 .presentationDetents([.large])
         }
         .task {

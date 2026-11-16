@@ -48,7 +48,7 @@ struct NewsReaderView: View {
         .fullScreenCover(item: Binding<News73Item?>(get: { News73Model.shared.open }, set: { (v: News73Item?) in News73Model.shared.open = v })) { it in
             News73Reader(it: it, close: { News73Model.shared.open = nil })
                 .environment(\.paper, p)
-                .environment(store)
+                .homelabMiljo(store)
                 .overlay(alignment: .bottom) { News73Toast() }
                 .edgeSwipeClose30 { Haptic34.back(); News73Model.shared.open = nil }
         }
@@ -62,7 +62,7 @@ struct NewsReaderView: View {
             // Prompt 46: lett haptikk ved trykk på tilbake (felles Haptic34.back, følger Haptikk-bryteren).
             NewsArticleView27(start: x, catName: { c in (store.news ?? NewsData()).name(of: c) }, close: { Haptic34.back(); article27 = nil })
                 .environment(\.paper, p)
-                .environment(store)
+                .homelabMiljo(store)
                 // Prompt 30: kantsveip lukker artikkelen.
                 .edgeSwipeClose30 { Haptic34.back(); article27 = nil } // prompt 46: haptikk når sveipet fullføres
         }
@@ -70,7 +70,7 @@ struct NewsReaderView: View {
         .fullScreenCover(isPresented: Binding<Bool>(get: { News40Model.shared.open }, set: { (v: Bool) in News40Model.shared.open = v })) {
             News40Page()
                 .environment(\.paper, p)
-                .environment(store)
+                .homelabMiljo(store)
                 .edgeSwipeClose30 { News40Model.shared.open = false }
         }
         .task { if store.news == nil { await store.loadNews() } }

@@ -119,7 +119,7 @@ struct Versions44Section: View {
         .sheet(item: Binding<Version44?>(get: { m.sheet }, set: { m.sheet = $0 })) { (v: Version44) in
             Versions44Sheet(v: v)
                 .environment(\.paper, p)
-                .environment(store)
+                .homelabMiljo(store)
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
                 .sheetEdge30(p.bg)

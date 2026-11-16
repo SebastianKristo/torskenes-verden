@@ -788,13 +788,13 @@ struct Hjemlys40Host: ViewModifier {
     func body(content: Content) -> some View {
         content
             .sheet(isPresented: Binding<Bool>(get: { m.startOpen }, set: { (v: Bool) in m.startOpen = v })) {
-                Hjemlys40StartPage().environment(\.paper, p).environment(store).presentationDetents([.large])
+                Hjemlys40StartPage().environment(\.paper, p).homelabMiljo(store).presentationDetents([.large])
             }
             .fullScreenCover(item: Binding<Hjemlys40Member?>(get: { m.alertMember }, set: { (v: Hjemlys40Member?) in m.alertMember = v })) { (h: Hjemlys40Member) in
-                Hjemlys40Alert(h: h).environment(\.paper, p).environment(store)
+                Hjemlys40Alert(h: h).environment(\.paper, p).homelabMiljo(store)
             }
             .sheet(isPresented: Binding<Bool>(get: { g.chatOpen }, set: { (v: Bool) in g.chatOpen = v })) {
-                Hjemlys40ChatSheet().environment(\.paper, p).environment(store).presentationDetents([.large])
+                Hjemlys40ChatSheet().environment(\.paper, p).homelabMiljo(store).presentationDetents([.large])
             }
             .task { Hjemlys40Glimt.consumeAccept(store) }
     }

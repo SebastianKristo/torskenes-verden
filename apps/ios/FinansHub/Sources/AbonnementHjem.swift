@@ -548,7 +548,7 @@ struct SubHome23: View {
                 .rotationEffect(.degrees((wig ? 0.6 : -0.6) * sign))
                 .contentShape(Rectangle())
                 .draggable(k) {
-                    card(k).frame(width: width).scaleEffect(1.03).opacity(0.85).environment(\.paper, p).environment(store)
+                    card(k).frame(width: width).scaleEffect(1.03).opacity(0.85).environment(\.paper, p).homelabMiljo(store)
                 }
                 .dropDestination(for: String.self) { items, _ in
                     drop(items.first, on: k)
