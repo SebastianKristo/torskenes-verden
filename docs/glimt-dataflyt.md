@@ -7,15 +7,15 @@ Kartlagt i koden før endringene. Kjeden: tekst → Ollama → intensjon → ver
 | Inngang | Rute | Forståelse | Utførelse |
 |---|---|---|---|
 | Hjem-søk, Chat | `POST /api/assist` (`server/glimt/assist.js`) | `detectIntent()` – en lang `if`-kjede med regex (`NAV`, `RE.*`, `parseQuick`, `isHuskeMessage41` …) **før** noen modell | Én funksjon per intensjon (`toolCalendarDay`, `toolFinance`, `toolAppointment` …). Bare `intent:'llm'` kom til modellen, og da som vanlig prat |
-| Kalender-appen | `POST /api/assist {source:'calendar'}` → `calendarAnswer()` (`server/kalender33.js`) | Egen regex-kjede (`/ledig|…/`, `/oppsummer|hva skjer|…/`, `/neste|når er/`) | `createFromText()` = `parseQuick` + `extrasOf`, **ingen modell** |
-| Rask time | `POST /api/kalender/quick` (`server/calendar-quick.js`) | Ollama med egen prompt (JSON) → `fromOllama()` → reserve `parseQuick` | Bakgrunnskø, svar via sanntid |
-| «Beskriv med Glimt» | `POST /api/kalender/describe` (`server/calendar-glimt.js`) | Lokal tolker først, Ollama som reserve, egen prompt | Fyller skjema |
-| Kalender-søk | `POST /api/kalender/glimt/search` (`server/kalender41.js`) | Egen prompt `{"answer","ids"}` | – |
+| Kalender-appen | `POST /api/assist {source:'calendar'}` → `calendarAnswer()` (`server/kalender/calendars.js`) | Egen regex-kjede (`/ledig|…/`, `/oppsummer|hva skjer|…/`, `/neste|når er/`) | `createFromText()` = `parseQuick` + `extrasOf`, **ingen modell** |
+| Rask time | `POST /api/kalender/quick` (`server/kalender/quick.js`) | Ollama med egen prompt (JSON) → `fromOllama()` → reserve `parseQuick` | Bakgrunnskø, svar via sanntid |
+| «Beskriv med Glimt» | `POST /api/kalender/describe` (`server/kalender/glimt.js`) | Lokal tolker først, Ollama som reserve, egen prompt | Fyller skjema |
+| Kalender-søk | `POST /api/kalender/glimt/search` (`server/kalender/glimt-search.js`) | Egen prompt `{"answer","ids"}` | – |
 | Gjøremål | `POST /api/tasks/glimt` (`tasks-glimt37/40/41/42.js`) | Fire lag: lokal tolker (37), «forstår setninger» (40), bakgrunnsjobb (41), JSON-kontrakt (42) – hver med egen prompt | `insertTask` |
 | Finans | `POST /finans/api/search/ask` (`finans/search-db.js`) | `parseQuery42` (regex) → SQL/FTS → LLM bare for teksten | – |
 | `POST /api/glimt` | `server/ai/control.js` | Egen prompt («maks to korte setninger») | – |
-| Alle | `server/kalender-deltakere.js` `assistLocalMw44` | Legger `parseQuick(text)` på **alle** `/api/assist`-svar med dato/tid, også spørsmål | – |
-| Modellkall | `server/ai-run.js` `run()` → `server/ai-gate.js` | `format:'json'`/skjema, ingen `tools` | – |
+| Alle | `server/kalender/invites.js` `assistLocalMw44` | Legger `parseQuick(text)` på **alle** `/api/assist`-svar med dato/tid, også spørsmål | – |
+| Modellkall | `server/ai/run.js` `run()` → `server/ai/gate.js` | `format:'json'`/skjema, ingen `tools` | – |
 
 Altså: minst **8 ulike prompts og 6 ulike parsere/handlingssystemer** for samme slags forespørsel, avhengig av hvor brukeren skrev den.
 

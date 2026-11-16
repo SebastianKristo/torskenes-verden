@@ -80,7 +80,7 @@ pct snapshot <ctid> for-oppdatering
 ## Systembackup (Innstillinger → Backup)
 
 Hele serveren (eller utvalgte moduler) som ett arkiv, kjørt etter tidsplan eller med **Ta backup nå**. Bare administratorer
-ser og endrer dette. API: `/api/backup` (se `server/system-backup.js`).
+ser og endrer dette. API: `/api/backup` (se `server/system/backup.js`).
 
 - **Innhold:** `db/homelab.db` (konsistent øyeblikksbilde med `db.backup()`; ved modul-utvalg bare modulenes tabeller og
   innstillinger), filmappene til modulene under `files/` og `manifest.json` (versjon, moduler, tabeller, sha256 per fil).
@@ -160,7 +160,7 @@ og de telles ikke med i «Behold».
 Ingen kan gjenopprette uten å være innlogget som administrator: opplastingen krever en økt i nettleseren (ikke app-token), og
 gjenopprettingen krever passordet på nytt.
 
-**Hva serveren sjekker ved opplasting** (`POST /api/backup/upload`, `server/system-backup.js`):
+**Hva serveren sjekker ved opplasting** (`POST /api/backup/upload`, `server/system/backup.js`):
 
 - Fila strømmes til en midlertidig fil i `BACKUP_DIR`, aldri i minnet, i biter på 64 MB (Cloudflare-tunnelen slipper ikke
   gjennom store forespørsler). Grense: `BACKUP_UPLOAD_MAX` (standard `20G`; tall i byte, eller med `K`/`M`/`G`/`T`) og ledig
