@@ -127,22 +127,21 @@ test('PostNord uten nøkkel: tom shipments = venter på første skanning (ikke f
   } finally { f.restore(); }
 });
 
-test('PostNord: 403 med ha-headere → nettleser-headere én gang, profilen som virket huskes; begge avvist → backoff maks 1 t', async () => {
+test('PostNord: 403 → ingen nytt forsøk med falske nettleser-headere (CLAUDE.md), bare backoff maks 1 t', async () => {
   C._clearPostnordWebCache();
   const f = withFetch((url, init) => (url.includes('recipientview') ? (init.headers.Origin ? json(fx('postnord-out-for-delivery-113.json')) : new Response('Forbidden', { status: 403 })) : null));
   try {
-    const r = await C.postnordWeb('00370000000000000101');
-    assert.equal(r.status, 'out_for_delivery');
-    assert.equal(f.calls.length, 2);
-    assert.equal(C.pnProfile46Of(), 'browser');
-  } finally { f.restore(); }
-  C._clearPostnordWebCache();
-  const g = withFetch((url) => (url.includes('recipientview') ? new Response('Forbidden', { status: 403 }) : null));
-  try {
-    await assert.rejects(C.postnordWeb('00370000000000000102'), /svarer ikke/);
+    await assert.rejects(C.postnordWeb('00370000000000000101'), /svarer ikke/);
+    assert.equal(f.calls.length, 1, 'ett kall, ingen nettleser-reserve');
+    for (const c of f.calls) {
+      assert.equal(c.init.headers.Origin, undefined);
+      assert.equal(c.init.headers.Referer, undefined);
+      assert.equal(c.init.headers['User-Agent'], undefined);
+    }
+    assert.equal(C.pnProfile46Of(), 'ha');
     const until = Date.parse((await A('/api/tracking/postnord/health')).body.blockedUntil);
     assert.ok(until - Date.now() <= 3600_000 + 1000, 'maks 1 t');
-  } finally { g.restore(); C._clearPostnordWebCache(); }
+  } finally { f.restore(); C._clearPostnordWebCache(); }
 });
 
 test('PostNord med avvist nøkkel (401 på findByIdentifier) → offentlig recipientview i stedet for feil', async () => {

@@ -265,16 +265,17 @@ export function pnLog42(no, entry) {
   if (pnDebug.size > 300) pnDebug.delete(pnDebug.keys().next().value);
 }
 export const pnDebugOf42 = (no) => pnDebug.get(normNo(no)) ?? [];
-export const PN_HEADERS42 = { 'x-bap-key': POSTNORD_BAP_KEY, Accept: 'application/json', 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15',
-  Origin: 'https://www.postnord.no', Referer: 'https://www.postnord.no/' };
 // Prompt 46 (DATA46) – ROTÅRSAK (PostNord), fra koden (ikke verifisert mot ekte svar herfra – utgående nett er stengt i byggemiljøet):
 //  1) Med en lagret (gammel/ugyldig) postnordKey gikk alt til findByIdentifier.json → 401/403 → feilen ble kastet, og recipientview ble aldri prøvd.
 //  2) Prompt 42 sendte seg ut som Safari (User-Agent + Origin/Referer postnord.no) fra Node. Bot-vern hos PostNord kan svare 403/«Access denied»
 //     på en «nettleser» uten nettleserens TLS-fingeravtrykk, og én 403 satte en FELLES backoff for alle PostNord-oppslag (30 min → … 6 t).
-// ha-postnord (MIT), som er bekreftet mot ekte svar, sender bare X-Bap-Key. Nå: samme headere som ha-postnord først; avvises de, prøves
-// nettleser-headerne én gang før backoff, og profilen som virket huskes. Backoff er maks 1 t. Avvist nøkkel → recipientview (fetchStatus).
+// ha-postnord (MIT), som er bekreftet mot ekte svar, sender bare X-Bap-Key. Vi sender de samme headerne og ingenting annet.
+// Fase 7: reserven med falske nettleser-headere (Safari-UA, Origin, Referer) er fjernet. Den brøt regelen i CLAUDE.md om å ikke
+// omgå 403/bot-blokkering med falske nettleser-headere. Avvises kallet, gir det backoff (maks 1 t), og avvist nøkkel → recipientview.
 export const PN_HEADERS_HA46 = { 'x-bap-key': POSTNORD_BAP_KEY, Accept: 'application/json' };
-const PN_PROFILES46 = { ha: PN_HEADERS_HA46, browser: PN_HEADERS42 };
+/** Headerne til PostNord-kallene (beholdt navn for feilsøkingssiden). Bare ærlige headere. */
+export const PN_HEADERS42 = PN_HEADERS_HA46;
+const PN_PROFILES46 = { ha: PN_HEADERS_HA46 };
 let pnProfile46 = 'ha';
 export const pnProfile46Of = () => pnProfile46;
 const PN_BLOCK_MAX46 = 3600_000;
@@ -296,8 +297,8 @@ export async function postnordWeb(no) {
   for (const v of pnVariants42(no)) {
     const url = pnUrl(v);
     let res, body = '';
-    // Prompt 46: headerprofilen som virket sist først (standard ha-postnord), den andre bare ved 401/403.
-    for (const prof of [pnProfile46, pnProfile46 === 'ha' ? 'browser' : 'ha']) {
+    // Én headerprofil (ha-postnord). Ingen nytt forsøk med andre headere ved 401/403.
+    for (const prof of ['ha']) {
       pnHealth.calls++;
       const headers = PN_PROFILES46[prof], t0 = Date.now();
       try {
@@ -314,7 +315,7 @@ export async function postnordWeb(no) {
     if ([401, 403, 429].includes(res.status)) {
       pnBlock.ms = Math.min(PN_BLOCK_MAX46, pnBlock.ms ? pnBlock.ms * 2 : PN_WEB_MS); pnBlock.until = Date.now() + pnBlock.ms;
       pnHealth.ok = false; pnHealth.lastError = `HTTP ${res.status}`; pnHealth.lastErrorAt = Date.now();
-      console.warn(`[sporing] PostNord (offentlig) svarte ${res.status} med begge headerprofiler – venter ${Math.round(pnBlock.ms / 60_000)} min`);
+      console.warn(`[sporing] PostNord (offentlig) svarte ${res.status} – venter ${Math.round(pnBlock.ms / 60_000)} min`);
       throw new CarrierError('PostNord svarer ikke akkurat nå', res.status);
     }
     if (res.status === 404) { notFound = true; continue; }
