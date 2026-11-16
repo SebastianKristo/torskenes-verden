@@ -1,4 +1,4 @@
-// Prompt 37 (SERVER37): dagens bibelvers (claude-code-bibelvers.md). Personlig modul: standard på bare for brukeren «sebastian».
+// Prompt 37 (SERVER37): dagens bibelvers (claude-code-bibelvers.md). Personlig modul: standard på bare for eieren (hovedadmin).
 // Tekst: Bibelen 1930-oversettelsen (Det Norske Bibelselskap, fri bruk) i server/data/bible1930-morgen.json og -kveld.json
 // (≥ 365 + 365 vers, laget med scripts/build-bible37.mjs). Ett vers per dag og periode, deterministisk: (dag i året − 1) % antall.
 //
@@ -23,7 +23,7 @@
 // Brief: bibleForBrief(user, kind) → {…verset, placement:'top'|'bottom'} eller null (modulen av, eller dagsbrief uten lest vers).
 import { Hono } from 'hono';
 import { readFileSync } from 'node:fs';
-import { db, q } from '../db.js';
+import { db, q, OWNER } from '../db.js';
 import { userInfo, listUsers, isAdmin } from '../auth/session.js';
 import { authOrToken } from '../mobile.js';
 import { dtf } from '../intl-format.js'; // gjenbrukte Intl.DateTimeFormat
@@ -56,19 +56,20 @@ const MON = ['jan.', 'feb.', 'mars', 'april', 'mai', 'juni', 'juli', 'aug.', 'se
 
 /* ---------------- Modulen per bruker ---------------- */
 
-/** Standard: tillatt og på for brukernavnet «sebastian», av for alle andre. Lagres første gang den leses. */
+/** Standard: tillatt og på for eieren (hovedadmin), av for alle andre (admin slår på per bruker). Lagres første gang den leses,
+ *  så et valg som er lagret, endres aldri her. */
 export function featureOf(uid) {
   let r = q('SELECT * FROM user_features WHERE user_id=? AND feature=?').get(uid, F);
   if (!r) {
-    const on = String(userInfo(uid)?.username ?? '').toLowerCase() === 'sebastian' ? 1 : 0;
+    const on = uid === OWNER || userInfo(uid)?.isMainAdmin ? 1 : 0;
     q('INSERT OR IGNORE INTO user_features(user_id, feature, allowed, enabled, updated) VALUES(?,?,?,?,?)').run(uid, F, on, on, Date.now());
     r = q('SELECT * FROM user_features WHERE user_id=? AND feature=?').get(uid, F);
   }
   return { allowed: !!r.allowed, enabled: !!(r.allowed && r.enabled), morning: !!r.morning, evening: !!r.evening, notify: !!r.notify, translation: r.translation || '1930' };
 }
 export const bibleEnabled = (uid) => { try { return featureOf(uid).enabled; } catch { return false; } };
-// Migrering (logges): brukeren «sebastian» får modulen ved oppstart.
-for (const u of q("SELECT id FROM users WHERE lower(username)='sebastian'").all()) featureOf(u.id);
+// Eieren får modulen ved oppstart (bare hvis den ikke har et lagret valg fra før).
+for (const u of q('SELECT id FROM users WHERE id=? OR is_main_admin=1').all(OWNER)) featureOf(u.id);
 
 /* ---------------- Versene ---------------- */
 
