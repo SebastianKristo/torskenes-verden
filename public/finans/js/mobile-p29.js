@@ -13,7 +13,7 @@ import * as KAL from './mobile-kal.js';
 import { parseQuick, quickLabel } from '/assets/js/quick-time.js';
 import { quickParse, quickCached } from '/assets/js/lib/dates.js'; // Fase 3: dato og tid fra serveren (POST /api/kalender/quick/parse)
 import * as P31 from './mobile-p31.js';
-import * as P32 from './mobile-p32.js';
+import * as P32 from './mobile-sidefaner-og-sw.js';
 import * as P36 from './mobile-p36.js'; // prompt 36: spørsmål med dato er ikke avtaler, én Glimt-visning, backup-kvittering
 
 const svg = (d, s = 16, w = 2) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`;

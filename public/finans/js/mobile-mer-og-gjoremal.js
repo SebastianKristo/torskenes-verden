@@ -13,10 +13,10 @@ import { esc, hlApi } from './core.js';
 import { m, draw, flash } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
 import { HK, tasksLoad, grp, row } from './mobile-p17.js';
-import * as P28 from './mobile-p28.js';
+import * as P28 from './mobile-mer.js';
 import * as P37 from './mobile-p37.js';
 import * as P22 from './mobile-p22.js';
-import { MER_IC } from './mobile-p25.js';
+import { MER_IC } from './mobile-fanelinje-stil.js';
 import * as P30 from './mobile-p30.js';
 import { U, watch } from '/assets/js/sysupdate.js';
 

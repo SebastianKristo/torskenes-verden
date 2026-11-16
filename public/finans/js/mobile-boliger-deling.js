@@ -7,7 +7,7 @@
 // GET /folders/:id/entries/:eid/history, DELETE /folders/:id/entries/:eid.
 import { api, esc, n0, dd, parseAmount } from './core.js';
 import { m, draw, flash } from './mobile.js';
-import { BO } from './mobile-p16.js';
+import { BO } from './mobile-fanelinje.js';
 import { sheetBtn, hapLight } from './mobile-p30.js';
 import { glimt } from './mobile-p31.js';
 import { rcCard52, slip52 } from './kvitteringskort.js'; // prompt 52: samme kvitteringskort som Finans → transaksjon

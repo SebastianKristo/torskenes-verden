@@ -17,7 +17,7 @@ import { esc, hlApi } from './core.js';
 import { m, draw, flash, pref } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
 import * as PAPER from './mobile-paper.js';
-import { edBlocks, edOn } from './mobile-paper3.js';
+import { edBlocks, edOn } from './mobile-tilpassing.js';
 import { hlData } from './mobile-hl.js';
 import * as P31 from './mobile-p31.js';
 import { grp } from './mobile-p17.js';

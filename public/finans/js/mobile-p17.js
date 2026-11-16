@@ -8,10 +8,10 @@ import * as P31 from './mobile-p31.js';
 import { S, api, esc, n0, ini, hlApi, icon } from './core.js';
 import { m, draw, flash, meName, avInner, avatarUrl, route, isIOS, domOk } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
-import { iconColor, iconInk, FM, famLoad, BO, bolLoad, bolUpload } from './mobile-p16.js';
+import { iconColor, iconInk, FM, famLoad, BO, bolLoad, bolUpload } from './mobile-fanelinje.js';
 import { listShareLine } from './mobile-p21.js';
 import { currentUser } from './mobile-upq.js';
-import * as P25 from './mobile-p25.js';
+import * as P25 from './mobile-fanelinje-stil.js';
 let P24N = null; import('./mobile-p24.js').then((x) => { P24N = x; }).catch(() => {}); // prompt 39: Appprofil-raden (lat, endrer ikke importrekkefølgen)
 import { updAdmin, updSummary } from './mobile-upd.js';
 

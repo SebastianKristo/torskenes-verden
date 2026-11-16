@@ -4,7 +4,7 @@
 import { esc, hlApi, logo as coreLogo, logoOv73 } from './core.js'; // logoOv73: prompt 73, brukerens egne logovalg
 import { m, draw } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
-import { FM, famLoad } from './mobile-p16.js';
+import { FM, famLoad } from './mobile-fanelinje.js';
 import { FT } from './mobile-p17.js';
 import { dragStart } from './mobile-p21.js';
 

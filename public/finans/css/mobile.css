@@ -3468,7 +3468,7 @@ html.p28-kb .m.papir{--pp-navb:calc(var(--p28-kb,0px) + 8px)}
 
 /* ===== Prompt 30 (PWA) ===== */
 /* Wiggle-verktøylinja ligger øverst i scroll-innholdet (8 px), og innholdet får 64 px luft (claude-code-wiggle-verktoylinje.md).
-   mobile-p28.js flytter .p28-pills til første barn av .m-scroll og animerer padding-top 0 → 64 px (280 ms). */
+   mobile-mer.js flytter .p28-pills til første barn av .m-scroll og animerer padding-top 0 → 64 px (280 ms). */
 .m .m-scroll:has(>.p28-pills){padding-top:64px}
 .m.two .m-scroll:has(>.p28-pills){padding-top:calc(env(safe-area-inset-top) + 64px)}
 .m .m-scroll>.p28-pills{position:absolute;top:8px;left:16px;right:16px;height:auto;max-width:none;margin:0;z-index:30}
@@ -5777,7 +5777,7 @@ html.h40-ov,html.h40-ov body{overflow:hidden}
 .m .p41-mait .pp-gl{font-size:28px!important}
 .m .p41-ski{padding:16px}
 
-/* ===================== Prompt 42 (mobile-p42.js m.fl.) ===================== */
+/* ===================== Prompt 42 (mobile-oversikt-knapp.js m.fl.) ===================== */
 /* Fanelinja: Hjem-knapp 1a–1d (claude-code-navbar-hjem-knapp.md). Bare under 600 px – bred visning bruker sidemenyen. */
 .m.p42-nh .pp-back.to-home{display:none}
 .m .p42-nha{position:fixed;z-index:21;left:12px;bottom:var(--pp-navb);width:62px;height:62px;border-radius:50%;background:var(--pp-nav);color:var(--pp-navInk);display:grid;place-items:center;text-decoration:none;-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);box-shadow:0 16px 30px -12px rgba(0,0,0,.5);-webkit-tap-highlight-color:transparent}
@@ -5915,7 +5915,7 @@ html.h40-ov,html.h40-ov body{overflow:hidden}
 .m .p43-salm b{font:500 26px/1.05 Newsreader,serif}
 
 /* Finans → Liste: månedstopp med rød etikett, «Netto …» og 2 pt strek */
-/* Beholderen for månedene i Liste (porsjoner, mobile-paper2.js) skal ikke påvirke oppsettet. */
+/* Beholderen for månedene i Liste (porsjoner, mobile-papir-sider.js) skal ikke påvirke oppsettet. */
 .m .pp-mgs{display:contents}
 .m .p43-mg{display:flex;flex-direction:column}
 .m .p43-mg+.p43-mg{margin-top:14px}

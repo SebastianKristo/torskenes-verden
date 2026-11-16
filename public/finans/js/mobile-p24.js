@@ -7,13 +7,13 @@ import * as P30 from './mobile-p30.js';
 import { api, esc, n0, ini, hlApi } from './core.js';
 import { m, draw, flash, domOk } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
-import { AV, avgLoad, BO, bolLoad, heroBg, setTabBar } from './mobile-p16.js';
+import { AV, avgLoad, BO, bolLoad, heroBg, setTabBar } from './mobile-fanelinje.js';
 import { DEP, depKey, depStatus, stopList, modeName, delayOf } from './mobile-p21.js';
-import { setFinTabs } from './mobile-paper3.js';
+import { setFinTabs } from './mobile-tilpassing.js';
 import { hlDom } from './mobile-hl.js';
 import { paperDark } from './mobile-paper.js';
 import { famSource } from './mobile-p22.js';
-import * as P25 from './mobile-p25.js';
+import * as P25 from './mobile-fanelinje-stil.js';
 import * as P26 from './mobile-p26.js';
 
 const LS = 'fh_p24';

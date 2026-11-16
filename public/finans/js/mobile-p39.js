@@ -11,7 +11,7 @@ import { m, draw, flash } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
 // Resten hentes lat (dynamisk import), så denne modulen ikke endrer rekkefølgen modulene evalueres i (TDZ i sykliske importer).
 let P35 = null, P36 = null, P37B = null, P17 = null, PAP3 = null, WX22 = null;
-Promise.all([import('./mobile-p35.js'), import('./mobile-p36.js'), import('./mobile-p37b.js'), import('./mobile-p17.js'), import('./mobile-paper3.js'), import('./mobile-vaer-kart-og-steder.js')])
+Promise.all([import('./mobile-p35.js'), import('./mobile-p36.js'), import('./mobile-p37b.js'), import('./mobile-p17.js'), import('./mobile-tilpassing.js'), import('./mobile-vaer-kart-og-steder.js')])
   .then(([a, b, c, d, e, f]) => { P35 = a; P36 = b; P37B = c; P17 = d; PAP3 = e; WX22 = f; }).catch(() => {});
 const CMPo = () => P17?.CMP ?? { open: false, d: {} };
 const edOn = (pg) => PAP3?.edOn?.(pg) ?? false;

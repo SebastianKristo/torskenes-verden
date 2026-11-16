@@ -3,7 +3,7 @@
 //   · Gjøremål: hold inne på en pille → «Rekkefølge på lister» (dra ≡ eller ▲▼, Tilbakestill), «+ Ny liste» alltid sist
 //   · Chat → AI-kontroll → Importer: minne og samtaler fra Claude (POST /api/chat/import/claude …)
 //   · Stor skjerm (iPad/Fold, ≥ 600 og bredde ≥ 0,9 × høyde): klasse p43-big på roten (sentrerte ark, kolonner)
-// Saldokortet (mobile-paper.js), månedstopp og Glimt-pillen (mobile-paper2.js/-paper3.js), Domener-raden (mobile-p38.js),
+// Saldokortet (mobile-paper.js), månedstopp og Glimt-pillen (mobile-papir-sider.js/mobile-tilpassing.js), Domener-raden (mobile-p38.js),
 // send-knappen (mobile-chat.js), svarboblen (mobile-p31.js/-p41.js) og Integrasjoner MEDIA (mobile-p26.js) ligger der koden fra før bor.
 // Lastes med dynamisk import fra mobile.js (statiske importer herfra er trygge fordi resten allerede er evaluert).
 import { esc, hlApi } from './core.js';
@@ -262,7 +262,7 @@ export async function bind43(e, t) {
   const a = x.dataset.p43;
   switch (a) {
     case 'mw': if (MED) { e.preventDefault(); haptic('tap'); MED.openFrom(x.dataset.k); } return true;
-    case 'lglimt': { e.preventDefault(); haptic('tap'); const v = document.getElementById('m-txq')?.value ?? ''; const P3 = await import('./mobile-paper3.js'); await P3.fsGlimt(v); return true; }
+    case 'lglimt': { e.preventDefault(); haptic('tap'); const v = document.getElementById('m-txq')?.value ?? ''; const P3 = await import('./mobile-tilpassing.js'); await P3.fsGlimt(v); return true; }
     case 'wf': e.preventDefault(); WG.f = x.dataset.k; haptic('tab'); draw(); return true;
     case 'whow': e.preventDefault(); WG.how = { n: `${x.dataset.g} · ${{ s: 'liten', m: 'medium', l: 'stor', lk: 'låseskjerm' }[x.dataset.sz]}`, sz: x.dataset.sz }; haptic('tap'); draw(); return true;
     case 'whx': e.preventDefault(); WG.how = null; draw(); return true;

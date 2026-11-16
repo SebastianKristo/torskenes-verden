@@ -5,7 +5,7 @@ import { logo } from './mobile-p20.js'; // logoregisteret (prompt 20), ellers co
 import { m, draw, flash, avatar, backBtn, theme, amtC, openSheet, openCam, upqList } from './mobile.js';
 import { c3 } from './mobile-theme.js';
 import { LAY } from './mobile-hl.js';
-import * as P25 from './mobile-p25.js';
+import * as P25 from './mobile-fanelinje-stil.js';
 import { AK, aksView, aksLoad, aksBind } from './mobile-aks.js';
 
 export const PAGES = ['mer', 'kv', 'fast', 'konto', 'aks', 'rap', 'imp', 'sok'];

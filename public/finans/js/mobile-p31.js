@@ -12,7 +12,7 @@
 import { esc, hlApi, api } from './core.js';
 import { m, draw, flash } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
-import { hsTimeout, NAV_T } from './mobile-p32.js'; // prompt 32: GLIMT I SØKEFELTET
+import { hsTimeout, NAV_T } from './mobile-sidefaner-og-sw.js'; // prompt 32: GLIMT I SØKEFELTET
 import * as P34 from './mobile-p34.js';
 import * as P35 from './mobile-p35.js';
 import * as P36 from './mobile-p36.js';

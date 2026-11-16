@@ -5,7 +5,7 @@
 import { esc, n0, hlApi } from './core.js';
 import { m, draw, flash } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
-import { FM, famLoad } from './mobile-p16.js';
+import { FM, famLoad } from './mobile-fanelinje.js';
 import { FT, HK, tasksLoad, huskeView } from './mobile-p17.js';
 import { setTiles } from './mobile-p20.js';
 import { paper, paperDark } from './mobile-paper.js';

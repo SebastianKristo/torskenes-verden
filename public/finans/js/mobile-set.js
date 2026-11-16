@@ -9,19 +9,19 @@ import { SEEDS, MODES } from './mobile-theme.js';
 import { haptic, hpref, setHap, canVibrate, HAP_TYPES } from './mobile-haptics.js';
 import { paper, saveDesign, paperState, photoChoices, paperModeValgt } from './mobile-paper.js';
 import { settHomelabTema } from './tema.js';
-import { tabEditor, iconThemeRow, iconColor, iconInk } from './mobile-p16.js';
-import { navSettings } from './mobile-paper3.js';
+import { tabEditor, iconThemeRow, iconColor, iconInk } from './mobile-fanelinje.js';
+import { navSettings } from './mobile-tilpassing.js';
 import { TR, trkLoad, trkPrefRows, setTrkPref } from './mobile-track.js';
 import * as P23 from './mobile-p23.js';
 import * as P24 from './mobile-p24.js';
 import * as P26 from './mobile-p26.js';
 import { row, grp, appName, appIcon, ICONS } from './mobile-p17.js';
-import * as P25 from './mobile-p25.js'; // prompt 39: Fanelinje-stil i Tilpass
+import * as P25 from './mobile-fanelinje-stil.js'; // prompt 39: Fanelinje-stil i Tilpass
 import { haSection } from './mobile-p22.js';
 import { p17SetMain, p17Modules, p17AiExtra, p17Varsler, aiLoad, notifyLoad, NT, canSrv, ADMIN_NOTE } from './mobile-p17.js';
 import * as P27 from './mobile-p27.js';
 import * as P33 from './mobile-glimt-husker.js'; // prompt 33: GLIMT HUSKER
-import * as P32 from './mobile-p32.js'; // prompt 32: GLIMT I SØKEFELTET, fanelinje på andre sider
+import * as P32 from './mobile-sidefaner-og-sw.js'; // prompt 32: GLIMT I SØKEFELTET, fanelinje på andre sider
 import * as P38 from './mobile-p38.js'; // prompt 38: ØKT i Konto og Logg inn på ny enhet
 import { updLoad, updPage, updSummary, updAdmin, updBind } from './mobile-upd.js';
 

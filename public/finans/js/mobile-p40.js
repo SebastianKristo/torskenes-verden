@@ -336,7 +336,7 @@ export function addedLine(x, kind = 'tx') {
   return `<span class="p40-added">Lagt til${at ? ` ${esc(fmtAt(at))}` : ''}${src ? ` · ${esc(src)}` : ''}${by ? ` · ${esc(by)}` : ''}</span>${edited ? `<span class="p40-added">Sist endret ${esc(fmtAt(upAt))}${upBy ? ` av ${esc(upBy)}` : ''}</span>` : ''}`;
 }
 const TXE = { id: null, f: null, orig: null, busy: false, rr: null };
-/** Verktøyene under transaksjonen (mobile-paper3.js paperTx). */
+/** Verktøyene under transaksjonen (mobile-tilpassing.js paperTx). */
 export function txTools(id, t) {
   const r = t?.receipt, rr = TXE.rr?.id === id ? TXE.rr : null, P39 = MOD.p39;
   const rid = r?.id ?? t?.receiptId;
@@ -700,7 +700,7 @@ let booted = false;
 export function boot40() {
   if (booted) return; booted = true;
   globalThis.P40 = { isMulti, gMulti, gLocal, afterLbl, julCard, dress, julOn, tfaGroup, addedLine, txTools, stdQ, searchAsk, glimtCard, hjemlysFam, hjemlysHome, onRt40, ngOpen, bibleOn: () => !!MOD.p37b?.bibleOn?.() };
-  Promise.all([import('./mobile-p39.js'), import('./mobile-paper3.js'), import('./mobile-p37b.js')]).then(([a, b, c]) => { MOD.p39 = a; MOD.p3 = b; MOD.p37b = c; }).catch(() => {});
+  Promise.all([import('./mobile-p39.js'), import('./mobile-tilpassing.js'), import('./mobile-p37b.js')]).then(([a, b, c]) => { MOD.p39 = a; MOD.p3 = b; MOD.p37b = c; }).catch(() => {});
   document.addEventListener('input', onInput, true);
   document.addEventListener('submit', onSubmit, true);
   addEventListener('glimt-jul', () => { if (document.documentElement.dataset.ui === 'mobile') draw(); });

@@ -6,11 +6,11 @@
 import { S, api, hlApi, esc, n0, ini, loadTx } from './core.js';
 import { m, draw, flash } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
-import { FS, fsBind } from './mobile-paper3.js';
+import { FS, fsBind } from './mobile-tilpassing.js';
 import { lineBg, lineFg } from './mobile-paper.js';
-import { AV } from './mobile-p16.js';
+import { AV } from './mobile-fanelinje.js';
 import { IG, integLoad24 } from './mobile-p24.js';
-import * as P25 from './mobile-p25.js';
+import * as P25 from './mobile-fanelinje-stil.js';
 import * as CHAT from './mobile-chat.js';
 import * as KAL from './mobile-kal.js';
 import { SB, subsLoad, openEditor } from './mobile-subs.js';

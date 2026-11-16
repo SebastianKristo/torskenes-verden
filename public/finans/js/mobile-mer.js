@@ -2,12 +2,12 @@
 // Subscription OS i Mer, ingen skanneknapp på Mer, og 8 px luft mellom tastaturet og fanelinja (claude-code-sok-tastatur.md).
 // Resten av prompt 28 ligger der koden fra før bor: væranimasjon (/assets/js/weather-fx.js + mobile-vaer-kart-og-steder.js), stedssøk og
 // bunnlinje (mobile-vaer-kart-og-steder.js), «Legg til abonnement»-arket og skjermbilde-fiksen (mobile-subs.js + sub-shot.js), wiggle-modus
-// (mobile-paper3.js edBlocks + mobile-p20.js), Ruter-kortet (mobile-p27.js), Chat (mobile-chat.js), konto-farger (mobile-set.js).
+// (mobile-tilpassing.js edBlocks + mobile-p20.js), Ruter-kortet (mobile-p27.js), Chat (mobile-chat.js), konto-farger (mobile-set.js).
 // Lagring: GET/PUT /api/prefs/mer {o:[nøkler], h:[skjulte]} per konto (SERVER28). Mangler endepunktet, brukes localStorage.
 import { esc, hlApi } from './core.js';
 import { m, draw } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
-import { ICP, MER_IC } from './mobile-p25.js';
+import { ICP, MER_IC } from './mobile-fanelinje-stil.js';
 
 /* =====================================================================
    1. Mer: rekkefølge og skjulte moduler
@@ -185,7 +185,7 @@ let booted = false;
 export function boot28() { if (booted) return; booted = true; kbBoot(); addEventListener('resize', pillsPlace); }
 export function leave28(next) { if (next !== 'mer') { MER.edit = false; MER.add = false; MER.drag = null; } }
 export const merEditing = () => MER.edit;
-// Prompt 44 (Mer ny, mobile-p44.js): samme lagring (papir_mer / /api/prefs/mer), skjulte speiles i papir_mer_hid.
+// Prompt 44 (Mer ny, mobile-mer-og-gjoremal.js): samme lagring (papir_mer / /api/prefs/mer), skjulte speiles i papir_mer_hid.
 export function merSplit(rows) { merLoad(); return apply(rows); }
 function hidSave() { try { localStorage.setItem('papir_mer_hid', JSON.stringify(MER.p?.h ?? [])); } catch {} merSave(); }
 export function merHide(k) { if (k === 'set') return; const P = MER.p ?? lsGet() ?? { o: [], h: [] }; MER.p = { o: P.o ?? [], h: [...new Set([...(P.h ?? []), k])] }; hidSave(); }

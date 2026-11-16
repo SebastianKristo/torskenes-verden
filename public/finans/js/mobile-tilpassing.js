@@ -13,7 +13,7 @@ import { hlData } from './mobile-hl.js';
 import { FCOL, FO, fmSort, fmBar, ppTi, FM_MINUS, FM_PLUS, FM_LOCK } from './mobile-p20.js';
 import { dragStart, dragging, dragEnd } from './mobile-p21.js';
 import * as P24 from './mobile-p24.js';
-import * as P25 from './mobile-p25.js';
+import * as P25 from './mobile-fanelinje-stil.js';
 import * as P26 from './mobile-p26.js';
 import * as P27 from './mobile-p27.js';
 

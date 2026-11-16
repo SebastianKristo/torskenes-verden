@@ -12,7 +12,7 @@ import { esc, hlApi } from './core.js';
 import { m, draw, flash, startScr, two, FIN } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
 import { BB } from './mobile-p37b.js';
-import { FM, famLoad } from './mobile-p16.js';
+import { FM, famLoad } from './mobile-fanelinje.js';
 import * as HM from './mobile-vel-fremme.js';
 
 const lsGet = (k, d = null) => { try { const v = localStorage.getItem(k); return v == null ? d : v; } catch { return d; } };

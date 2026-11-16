@@ -8,8 +8,8 @@ import { haptic } from './mobile-haptics.js';
 import { IG, integLoad24, BD, bdLoad, calCard, markCustom } from './mobile-p24.js';
 import { haSection } from './mobile-p22.js';
 import { carOf, normNo, detectLocal } from './mobile-track.js';
-import { FT, FT_DEF, finKeys, setFinTabs, ftKey } from './mobile-paper3.js';
-import * as P25 from './mobile-p25.js';
+import { FT, FT_DEF, finKeys, setFinTabs, ftKey } from './mobile-tilpassing.js';
+import * as P25 from './mobile-fanelinje-stil.js';
 import { ctxOf } from './mobile-paper.js';
 import * as KAL from './mobile-kal.js';
 

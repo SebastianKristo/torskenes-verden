@@ -320,7 +320,7 @@ export function ring(el, tip, sel = null) {
   RING.t = setTimeout(ringOff, 6000);
   return true;
 }
-/** Finner målet (mål-id eller selektor) på siden og markerer det. Brukes av goSet i mobile-p25.js. */
+/** Finner målet (mål-id eller selektor) på siden og markerer det. Brukes av goSet i mobile-fanelinje-stil.js. */
 export function ringSel(sel) {
   tagAnchors();
   const id = /^\[data-hl="([^"]+)"\]$/.exec(sel)?.[1];

@@ -335,7 +335,7 @@ export async function whereAnswer(q) {
   } catch {}
   const mm = WHERE.exec(String(q)); if (!mm) return null;
   let who = norm(mm[1] || mm[2] || mm[3] || mm[4] || '');
-  const P16 = await import('./mobile-p16.js');
+  const P16 = await import('./mobile-fanelinje.js');
   if (!P16.FM.d) await P16.famLoad().catch(() => {});
   const mem = P16.FM.d?.members ?? [], me = mem.find((p) => p.self) ?? mem.find((p) => String(p.userId) === String(m.me?.id));
   if (!mem.length) return { text: 'Familie og kart er ikke satt opp ennå.', src: 'Familie' };
@@ -538,7 +538,7 @@ export async function bind37b(e, t) {
     case 'obskip': OB.on = false; lsSet('p37_onb_done', true); draw(); return true;
     case 'obdone': OB.on = false; OB.checked = false; obCheck().catch(() => {}); if (location.hash !== '#/hl') location.hash = '#/hl'; else draw(); return true;
     case 'obopen': OB.checked = false; await obCheck(true); if (!OB.on) flash('Serveren har ikke profiler ennå'); return true;
-    case 'famopen': { const P31 = await import('./mobile-p31.js'), P16 = await import('./mobile-p16.js'); P31.G.ans = null; if (x.dataset.k) P16.FM.sel = x.dataset.k; haptic('tap'); location.hash = '#/fam'; return true; }
+    case 'famopen': { const P31 = await import('./mobile-p31.js'), P16 = await import('./mobile-fanelinje.js'); P31.G.ans = null; if (x.dataset.k) P16.FM.sel = x.dataset.k; haptic('tap'); location.hash = '#/fam'; return true; }
     case 'h2x': H2.open = false; draw(); return true;
     case 'h2auto': h2save({ auto: !h2opt().auto }); haptic('tab'); draw(); return true;
     case 'h2n': h2save({ n: +x.dataset.v }); haptic('tab'); draw(); return true;

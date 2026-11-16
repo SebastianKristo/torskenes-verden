@@ -8,7 +8,7 @@ import { m, draw, flash } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
 import { pkgLogo, pkgTitle } from './mobile-p21.js';
 import { TR, trkLoad, trkPrefs, setTrkPref, badge, carOf, stepOf, isDone, isReady, STXT, normNo, detectLocal } from './mobile-track.js';
-import { edBlocks, finnWay } from './mobile-paper3.js';
+import { edBlocks, finnWay } from './mobile-tilpassing.js';
 import { ppTi } from './mobile-p20.js';
 import * as P26 from './mobile-p26.js';
 import { appendChunks } from '/assets/js/lib/chunks.js';

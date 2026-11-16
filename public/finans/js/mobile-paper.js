@@ -10,20 +10,20 @@ import { TR, active, badge, carName } from './mobile-track.js';
 import { pkgLogo, pkgTitle, pkgMore } from './mobile-p21.js';
 import { haptic } from './mobile-haptics.js';
 import { matToday, matTitle } from './mobile-mat.js';
-import { edOn, edBlocks, finKeys, finScreens, fabStyle, fourth, onWay, rcBanner, FX, openNewShip } from './mobile-paper3.js';
-import { mainTabs, heroBg, bolTitle } from './mobile-p16.js';
+import { edOn, edBlocks, finKeys, finScreens, fabStyle, fourth, onWay, rcBanner, FX, openNewShip } from './mobile-tilpassing.js';
+import { mainTabs, heroBg, bolTitle } from './mobile-fanelinje.js';
 import { SB } from './mobile-subs.js';
 import { aksTitle } from './mobile-aks.js';
 import * as P23 from './mobile-p23.js';
 import * as P29 from './mobile-p29.js';
 import * as P30 from './mobile-p30.js';
 import * as P24 from './mobile-p24.js';
-import * as P25 from './mobile-p25.js';
+import * as P25 from './mobile-fanelinje-stil.js';
 import * as P26 from './mobile-p26.js';
 import * as KAL from './mobile-kal.js';
 import * as P27 from './mobile-p27.js';
-import * as P28 from './mobile-p28.js';
-import * as P32 from './mobile-p32.js';
+import * as P28 from './mobile-mer.js';
+import * as P32 from './mobile-sidefaner-og-sw.js';
 import { setTitle } from './mobile-set.js';
 import { appName, huskeWidget, bolWidget, scanCtx, homeUpload, FT } from './mobile-p17.js';
 import { posCard, ppTi } from './mobile-p20.js';
@@ -497,7 +497,7 @@ export function paperMer() {
     ; // prompt 40 (claude-code-fanelinje-alle-sider.md): faner i fanelinja vises fortsatt i Mer
   // Prompt 25: ikon til venstre (40-boks med strekikon i fargene fra ikonpaletten).
   // Prompt 28: hold inne for å flytte og skjule (lagres per konto), Subscription OS etter Finans.
-  return globalThis.P44?.merNew ? globalThis.P44.merNew(rows) : P28.merView(rows); // prompt 44: Mer ny (mobile-p44.js)
+  return globalThis.P44?.merNew ? globalThis.P44.merNew(rows) : P28.merView(rows); // prompt 44: Mer ny (mobile-mer-og-gjoremal.js)
 }
 
 /* ---------- Media (Plex og Jellyfin) ---------- */

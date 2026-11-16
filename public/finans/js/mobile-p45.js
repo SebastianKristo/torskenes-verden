@@ -4,7 +4,7 @@
 //   2. Brett (Fold utbrettet, iPad – én felles LayoutMode): skann-knappen med skann-ikon i navbaren, jevnere animasjon på den
 //      røde Hjem-knappen, wiggle-knappene (+ · ↺ · ✓) nederst i navbaren, søkefeltet i Glimt-panelet over tastaturet,
 //      navbar på Gjøremål, Familie i to kolonner (mobile-p22.js).
-//   3. Finans → Mer med samme design som Mer (mobile-p44.js merNew mode 'fin'), Mer: tittel og de fire store boksene.
+//   3. Finans → Mer med samme design som Mer (mobile-mer-og-gjoremal.js merNew mode 'fin'), Mer: tittel og de fire store boksene.
 //   4. Ruter: antall anbefalte reiser (1 · 2 · 3), Vær: «Min posisjon», Sonevarsler (Familie → Soner, Innstillinger → Varsler),
 //      Innstillinger samlet (Media, Ruter, Gjøremål …), Helse fra Home Assistant (mobilapp), Glimt-personlighet i AI-kontroll.
 // Fasit: design/*.dc.html. Lastes med dynamisk import fra mobile.js (statiske importer herfra er trygge).
@@ -14,7 +14,7 @@ import { haptic } from './mobile-haptics.js';
 import { HK, tasksLoad } from './mobile-p17.js';
 import * as P31 from './mobile-p31.js';
 import * as P37 from './mobile-p37.js';
-import * as PA3 from './mobile-paper3.js';
+import * as PA3 from './mobile-tilpassing.js';
 import { vw } from '/assets/js/lib/viewport.js'; // vindusstørrelsen uten tvungen layout
 
 const ls = {

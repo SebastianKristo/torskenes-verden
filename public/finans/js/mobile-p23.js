@@ -444,7 +444,7 @@ export function finnAdAfterDraw() {
 }
 async function adBind(e, t, x) {
   const k = x.dataset.p23, id = x.dataset.id;
-  if (k === 'adedit') { const { PF } = await import('./mobile-paper2.js'); PF.ed = +id; location.hash = '#/finn'; return true; }
+  if (k === 'adedit') { const { PF } = await import('./mobile-papir-sider.js'); PF.ed = +id; location.hash = '#/finn'; return true; }
   if (k === 'adref') {
     flash('Henter annonsen …');
     try { await api(`/finn/${id}/ad/refresh`, { method: 'POST' }); }

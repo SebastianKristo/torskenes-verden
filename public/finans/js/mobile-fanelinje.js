@@ -7,14 +7,14 @@ const famTop = () => (paper() ? '' : famTabs()); // Papir: fanene ligger i fanel
 import { api, esc, n0, ini, hlApi, dd, today, cap } from './core.js';
 import { m, draw, flash, domOk } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
-import { fourth, fabStyle } from './mobile-paper3.js';
+import { fourth, fabStyle } from './mobile-tilpassing.js';
 import { hlData, ruterUrl } from './mobile-hl.js';
 import { paper, paperDark } from './mobile-paper.js';
 import { setTiles } from './mobile-p20.js';
 import { DEP, depKey, depStatus, stopList } from './mobile-p21.js';
 import * as P24 from './mobile-p24.js';
 import * as P22 from './mobile-p22.js';
-import * as P25 from './mobile-p25.js';
+import * as P25 from './mobile-fanelinje-stil.js';
 import { loadLeaflet } from './leaflet.js';
 
 /* ---------- Valg (lokal kopi + /api/me/layout) ---------- */

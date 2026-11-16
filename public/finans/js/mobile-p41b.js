@@ -13,7 +13,7 @@ import { haptic } from './mobile-haptics.js';
 import { BD, bdLoad } from './mobile-p24.js';
 import { swAdd } from './mobile-p39.js';
 import * as HM from './mobile-vel-fremme.js';
-import { AV } from './mobile-p16.js'; // prompt 46: Ruter-redigering (wiggle)
+import { AV } from './mobile-fanelinje.js'; // prompt 46: Ruter-redigering (wiggle)
 
 const pad = (n) => String(n).padStart(2, '0');
 const hm = (t) => { const d = new Date(t); return Number.isNaN(+d) ? '' : `${pad(d.getHours())}:${pad(d.getMinutes())}`; };

@@ -8,7 +8,7 @@
 import { esc, hlApi, api } from './core.js';
 import { m, draw, flash } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
-import * as P25 from './mobile-p25.js';
+import * as P25 from './mobile-fanelinje-stil.js';
 import { isSwUpdate } from '../../js/vercheck.js'; // prompt 83: bare oppdatering av samme service worker laster på nytt
 
 const lsGet = (k, d = null) => { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch { return d; } };

@@ -5,7 +5,7 @@
 import { esc, matApi, today } from './core.js';
 import { m, draw, flash, meName } from './mobile.js';
 import { paper } from './mobile-paper.js';
-import { edBlocks } from './mobile-paper3.js';
+import { edBlocks } from './mobile-tilpassing.js';
 import { matShared } from './mobile-p36.js'; // prompt 36: matplanen er felles for husstanden
 
 const M = { w: null, err: '', sel: null, busy: false, folders: null, fLocal: false, folder: '', jobs: [], step: {}, imp: { url: '', busy: false, prev: null, err: '', folderId: '' }, newF: null, link: null, all: false, checked: {} };
