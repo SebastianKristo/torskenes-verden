@@ -522,27 +522,6 @@ struct Playback44HistoryRow: View {
     }
 }
 
-struct Playback44Stats: View {
-    @Environment(Store.self) private var store
-    @Environment(\.paper) private var p
-    @MainActor private var m: Playback44 { Playback44.shared }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 6) {
-                ForEach([("7d", "7 dager"), ("30d", "30 dager"), ("12m", "12 mnd")], id: \.0) { (r: (String, String)) in
-                    Media43Chip(text: r.1, on: m.range == r.0) { m.range = r.0; Task { await m.load(store) } }
-                }
-            }
-            Playback44Kpis(items: m.stats)
-            Playback44Chart(days: m.perDay)
-            Playback44List(title: "MEST SETTE SERIER", items: m.topShows)
-            Playback44List(title: "MEST AKTIVE BRUKERE", items: m.topUsers)
-            Playback44List(title: "PLATTFORMER", items: m.platforms)
-        }
-    }
-}
-
 struct Playback44Chart: View {
     @Environment(\.paper) private var p
     let days: [(String, Double)]

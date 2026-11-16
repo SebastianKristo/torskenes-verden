@@ -17,7 +17,7 @@ import CoreImage.CIFilterBuiltins
    API (SERVER40, kontrakten): GET /api/auth/2fa/status → {enabled, method, backupLeft, enabledAt};
    POST /api/auth/2fa/setup {password?} → {secret, otpauth, qrSvg|qrPng, issuer, account}; POST /api/auth/2fa/enable {code} →
    {ok, backupCodes}; POST /api/auth/2fa/disable {password|code}; POST /api/auth/2fa/backup/regenerate → {backupCodes}.
-   Eldre server: /api/auth/totp/setup ({otpauthUrl, secret}), /api/auth/totp/verify ({recoveryCodes}), /api/auth/totp/disable.
+   Q19: appen bruker bare /api/auth/2fa/…; de eldre /api/auth/totp/…-navnene er ikke lenger reserve (svarfeltene leses fortsatt romslig).
    QR-koden lages lokalt (CoreImage) fra otpauth-adressen. */
 
 @MainActor
@@ -152,7 +152,7 @@ final class Tfa40Model {
         var body: [String: Any] = [:]
         if !password.isEmpty { body["password"] = password }
         do {
-            let d: Data = try await post(store, "/auth/2fa/setup", "/auth/totp/setup", body)
+            let d: Data = try await post(store, "/auth/2fa/setup", body)
             let o: [String: Any] = JS.obj(d)
             secret = JS.str(o, "secret") ?? ""
             otpauth = JS.str(o, "otpauth") ?? JS.str(o, "otpauthUrl") ?? JS.str(o, "otpauth_uri") ?? JS.str(o, "uri") ?? ""
@@ -227,7 +227,7 @@ final class Tfa40Model {
         Task {
             defer { self.busy = false }
             do {
-                let d: Data = try await self.post(store, "/auth/2fa/enable", "/auth/totp/verify", ["code": c])
+                let d: Data = try await self.post(store, "/auth/2fa/enable", ["code": c])
                 let o: [String: Any] = JS.obj(d)
                 self.codes = Tfa40Model.codesFrom(o)
                 self.enabled = true
@@ -308,7 +308,7 @@ final class Tfa40Model {
         Task {
             defer { self.busy = false }
             do {
-                _ = try await self.post(store, "/auth/2fa/disable", "/auth/totp/disable", body)
+                _ = try await self.post(store, "/auth/2fa/disable", body)
                 self.enabled = false
                 self.backupLeft = 0
                 self.askDisable = false
@@ -339,13 +339,9 @@ final class Tfa40Model {
         }
     }
 
-    /// POST til det nye endepunktet, med eldre navn som reserve når serveren svarer 404.
-    private func post(_ store: Store, _ path: String, _ legacy: String, _ body: [String: Any]) async throws -> Data {
-        do {
-            return try await store.api.callAt("/api", "POST", path, json: body, timeout: 20)
-        } catch let e as APIError where e.status == 404 {
-            return try await store.api.callAt("/api", "POST", legacy, json: body, timeout: 20)
-        }
+    /// POST til /api/auth/2fa/…. Q19: ingen reserve til de eldre /auth/totp/…-navnene; en for gammel server får «Oppdater serveren».
+    private func post(_ store: Store, _ path: String, _ body: [String: Any]) async throws -> Data {
+        try await store.api.callAt("/api", "POST", path, json: body, timeout: 20)
     }
 
     /// QR-kode for en annen enhet (lages lokalt).

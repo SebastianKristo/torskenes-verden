@@ -7,8 +7,8 @@ import UIKit
    qBittorrent #3d7dd6, Prowlarr #e66001, Plex #e5a00d, Jellyfin #aa5cc3. Statuspiller: Lastes ned blå, Venter gul, Ferdig grønn,
    Mangler rød, Uovervåket grå. Papir-bakgrunnen beholdes, farge brukes som aksent.
  – claude-code-avspilling-statistikk-mobil.md: Media → Avspilling → Statistikk i én kolonne med periode 7 d · 30 d · År · Alt,
-   totalt, mest sette serier/filmer, per bruker, per enhet og historikk (GET /api/playback/summary, SERVER45). 404 → den gamle
-   statistikken (GET /api/playback/stats).
+   totalt, mest sette serier/filmer, per bruker, per enhet og historikk (GET /api/playback/summary, SERVER45). Q19: 404 → «Oppdater
+   serveren», ingen reserve til den gamle statistikken.
  – claude-code-media-slett-uovervakede-episoder.md: ⋯ → «Slett uovervåkede» (serie/sesong) og «Rydd uovervåkede» (alle) →
    bekreftelsesark «Slette 12 episodefiler (8,4 GB) som ikke er overvåket?» med avkryssing per fil → «Slett filer» med Angre
    (GET /api/media/unmonitored, POST …/delete {confirm:true}, DELETE …/pending/:id). Bare admin.
@@ -427,14 +427,19 @@ final class Play45 {
     }
 }
 
-/// Statistikk-fanen: ny mobilside når serveren har /playback/summary, ellers den gamle.
+/// Statistikk-fanen (GET /playback/summary). Q19: ingen reserve til den gamle /playback/stats-visningen; en server uten
+/// sammendraget får en melding om å oppdatere.
 struct Playback45Stats: View {
     @Environment(Store.self) private var store
     @MainActor private var s: Play45 { Play45.shared }
 
     var body: some View {
         Group {
-            if s.available { Playback45Summary() } else { Playback44Stats() }
+            if s.available {
+                Playback45Summary()
+            } else {
+                Playback44Note(text: "Serveren har ikke statistikk for avspilling ennå. Oppdater serveren.", red: false)
+            }
         }
         .task(id: s.range) { await s.load(store) }
     }

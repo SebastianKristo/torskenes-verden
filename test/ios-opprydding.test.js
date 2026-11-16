@@ -78,6 +78,28 @@ test('Q19 Media: én sti per kall – ingen gamle /media/sonarr|radarr|qbit|prow
   assert.match(m, /Media43\.rows\(d, \["profiles", "radarr"\]\)/);
 });
 
+test('Q19 Kart: ingen lokale demodata når serveren ikke svarer – «Ingen kontakt» i stedet', () => {
+  const m = code(raw('FinansHub/Sources/KartModel.swift'));
+  assert.doesNotMatch(m, /demoZones|demoStops/);
+  assert.match(m, /var offline: Bool = false/);
+  assert.match(m, /var sourceText: String \{ demo \? "DEMO-DATA" : \(offline \? "INGEN KONTAKT MED SERVEREN" : "SANNTID · ENTUR"\) \}/);
+  const p = code(raw('FinansHub/Sources/KartPage.swift'));
+  assert.match(p, /foregroundStyle\(m\.demo \|\| m\.offline \? DS\.color\(\.warning, stil: \.papir\)/);
+});
+
+test('Q19 2FA, Finn og Avspilling: ingen reserve til eldre stier ved 404', () => {
+  const t = code(raw('FinansHub/Sources/TwoFactorSetup.swift'));
+  assert.doesNotMatch(t, /\/auth\/totp\//, '2FA bruker bare /auth/2fa/…');
+  assert.match(t, /private func post\(_ store: Store, _ path: String, _ body: \[String: Any\]\) async throws -> Data/);
+  const f = code(raw('FinansHub/Sources/FinnAnnonse.swift'));
+  const refresh = f.slice(f.indexOf('func refresh('), f.indexOf('func image('));
+  assert.doesNotMatch(refresh, /status == 404/, '«Hent på nytt» prøver ikke POST /finn/:id/ad etter 404');
+  const mf = code(raw('FinansHub/Sources/MediaFiles.swift'));
+  assert.doesNotMatch(mf, /Playback44Stats/);
+  assert.match(mf, /Playback44Note\(text: "Serveren har ikke statistikk for avspilling ennå\. Oppdater serveren\.", red: false\)/);
+  assert.equal(swiftFiles().filter((p) => /struct Playback44Stats\b/.test(readFileSync(p, 'utf8'))).length, 0, 'den gamle visningen er død og slettet');
+});
+
 test('C-B5: én ruting for innst-sidene (InnstSide), brukt av både telefon og iPad', () => {
   const paper = code(raw('FinansHub/Sources/Paper.swift'));
   const wide = code(raw('FinansHub/Sources/SettingsWide.swift'));

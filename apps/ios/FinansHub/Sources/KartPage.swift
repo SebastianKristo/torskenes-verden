@@ -170,7 +170,7 @@ struct Kart46Panel: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(m.sourceText).font(PF.mono(10.5)).tracking(1.2).foregroundStyle(m.demo ? DS.color(.warning, stil: .papir) : DS.color(.success, stil: .papir))
+            Text(m.sourceText).font(PF.mono(10.5)).tracking(1.2).foregroundStyle(m.demo || m.offline ? DS.color(.warning, stil: .papir) : DS.color(.success, stil: .papir))
             Kart46Search()
             if let s = m.stop {
                 Kart46StopCard(s: s)
