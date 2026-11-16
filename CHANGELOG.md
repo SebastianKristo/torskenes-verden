@@ -2,6 +2,34 @@
 
 Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. Versjonene med APK og IPA ligger under [Releases](https://github.com/SebastianKristo/torskenes-verden/releases).
 
+## [5.0.1] – 16.11.2026 · Kalenderforslag, gamle kvitteringer og ryddigere apper
+- **Kalender:** kalenderne slås ikke lenger sammen av seg selv. Har du gamle kalendere, får du spørsmålet «Slå sammen kalenderne: N → 4?», og ingenting endres før du svarer ja. «Angre» virker fortsatt i 30 dager (web, iPhone, iPad, Mac og Android).
+- **Kalender i Homelab-appen (iPhone):** den gamle kalenderen inne i appen er erstattet av den innebygde Kalenderen. Alt den kunne er med, og Kalender-appen har fått det samme:
+  - lærer, fag og merknad på skoletimer
+  - «Kopier til Personlig»
+  - «Beskriv med Glimt» i Ny hendelse
+  - Oversikt med kortet «Prøver og frister» med nedtelling, og kort du kan flytte og skjule
+- **Gamle kvitteringer (admin):** den gamle kvitteringslista kan flyttes til Økonomi under Økonomi → Innstillinger → Backup og data. Du ser først hvor mange som flyttes. Serveren tar kopi av databasen før flyttingen, og du kan angre. Ingenting flyttes uten at admin ber om det.
+- **Bakgrunner:** Oslo-bildene i toppen hentes fra Homelab-serveren i stedet for direkte fra Wikimedia, så de virker uten nett og laster raskere.
+- **Serveradresse:** appene og web har ikke lenger en fast lokal standardadresse. Den lokale adressen kommer fra `LOCAL_URL` i oppsettet, fra det du har lagret, eller fra det serveren finner selv. Fra internett oppgir serveren ikke lenger den lokale adressen. Det du har lagret, beholdes.
+- **Kvitteringer:** en opplasting som prøves på nytt (dårlig nett, køen uten nett), blir ikke lagret to ganger.
+- **Innstillinger (web):** fanetittelen viser siden du er på. Varsler har Haptikk som egen bryter under «Levering». Søket i Innstillinger viser riktige stier.
+- **Media (web):** én lukkeknapp (✕ eller Esc) i stedet for både «‹ Tilbake» og ✕. Avkortede titler i Media og Sporing viser hele teksten når du holder over dem.
+- **Skjold Lab (web):** siden hopper ikke lenger mens den lastes.
+- **Kontrast:** bedre lesbarhet i Integrasjoner, Mat, Husstand, Varsler, Mer og på Aksjer («Salg»).
+- **Økonomi på mobil:** startsiden heter Oversikt og listen Gjøremål, som i resten av Homelab.
+- **Android:**
+  - Valgt side, søk og tekst du har skrevet i skjemaer, er der fortsatt når systemet har lukket appen i bakgrunnen. Passord og koder lagres med vilje ikke.
+  - Widgetene oppdateres mer pålitelig i bakgrunnen.
+  - Familie-områdene til forrige bruker fjernes når en annen bruker logger inn.
+  - Stedssøket går via Homelab-serveren i stedet for direkte til Open-Meteo.
+  - Knappene i navigasjonen er tydeligere for TalkBack.
+- **Rettet:**
+  - Media på iPhone viste tomme lister for kvalitetsprofiler og rotmapper.
+  - Bibelvers er på som standard for eieren av serveren.
+  - Logoer som mangler, gir ikke lenger feil, og appen spør ikke etter dem igjen og igjen.
+  - Kalender på iPhone og Mac sletter ikke lenger den lagrede lokale adressen når serveren ikke oppgir noen.
+
 ## [5.0.0] – 16.11.2026 · Opprydding og kvalitetsløft
 - **Viktig før du oppdaterer (Android):** Homelab, Kalender og Wear-appen på klokka har fått en ny signatur. **Avinstaller alle tre appene én gang** før du installerer den nye versjonen, ellers nekter Android å installere den. Bytt alle tre samtidig, så virker «Logg inn med Homelab-appen» i Kalender. Dataene dine ligger på serveren og er der fortsatt; du må logge inn igjen og sette opp widgets og lokale valg på nytt. Se [docs/android-signering.md](docs/android-signering.md).
 - **Nye navn, samme på alle plattformer:** startsiden heter **Oversikt**, og smarthjemsiden **Smarthjem**. Appen heter **Homelab** overalt, og økonomidelen **Økonomi** (ikke lenger FinansHub). Ellers: **Faste betalinger** (Subscription OS er nå filteret Abonnementer), **Reise** (med Avganger og Kart), **Nyheter** (Nyhetsleser er en del av Nyheter), **Brief** (ikke Now Brief), **Gjøremål** (ikke Huskeliste) og **Konto og sikkerhet**. Navn du har gitt lister og faner selv, endres ikke.
