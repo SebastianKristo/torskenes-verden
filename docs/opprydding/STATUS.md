@@ -189,7 +189,7 @@ Status: **Rettet** (i fase N), **Delvis**, **Gjenstår** eller **Ingen feil** (v
 | C-S3 | Nøkkelring uten `ThisDeviceOnly` | Rettet i Fase 0b/4 | `Nokkelring.swift:19` | – |
 | C-S4 | Standard lokal adresse `http://10.69.1.39:3000` | Gjenstår (info) | `apps/ios/project.yml:169,278`; Android `Regel89.kt:13`, `Serveradresse.kt:80`, `kalender/Innlogging.kt:58` (D-B5, P85 B) | Gjelder bare denne husstanden. Forslag: ingen standard, bare oppdagelse (`/api/discovery`, QR) |
 | C-B2 | Tvunget mørk systemstil | Rettet i Fase 4 (Q16) | `project.yml:84`, `PaperTheme.swift:102` | – |
-| C-B3 | `KalNet` sender tom kropp stille ved kodefeil | Gjenstår (lav) | `SharedKal/Core/KalNet.swift:84` (`try?`) | Forslag: `throw` i stedet for `try?` |
+| C-B3 | `KalNet` sender tom kropp stille ved kodefeil | Rettet (rest-ios) | `SharedKal/Core/KalNet.swift` (`isValidJSONObject` + `throw`); `test/ios-opprydding.test.js` | – |
 | C-B4 | Ubegrenset bildecache for skyer | Ingen feil | `WeatherEffects.swift:191`: nøkkelen er værtypen (noen få), så den vokser ikke | – |
 | C-B5 | `innst-…`-rutingen duplisert (iPhone og iPad) | Gjenstår (lav) | `Paper.swift:856–861` og `SettingsWide.swift:331–335` | Forslag: én funksjon `innstSide(id)` som begge bruker |
 | D-B4 | `EncryptedSharedPreferences` uten `try/catch` | Rettet i Fase 5 (`3cf75f1`) | `felles-android/…/SikkerLagring.kt` | – |
