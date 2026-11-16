@@ -853,7 +853,8 @@ fun AppViewModel.copyKal27(e: Kal26Ev) {
             flash("Kopiert til Privat")
             reloadKal27()
         } catch (x: ApiException) {
-            if (x.status == 404 || x.status == 405) dupKal27(e) else flash("Fikk ikke kopiert: " + kalErr27(x))
+            // Q19: serveren har POST /kalender/events/:id/copy; ingen lokal kopi som reserve for eldre servere.
+            flash("Fikk ikke kopiert: " + kalErr27(x))
         }
     }
 }

@@ -155,6 +155,28 @@ test('Q19: 404-reservene for Kalender-vær, stedssøket, Gjøremål-kortene og L
   assert.doesNotMatch(led, /settingsLocal|prefs78/);
 });
 
+test('Q19: kvitteringsskanningen, kopi av kalenderhendelser og «Kjøp gave» har ingen lokal reserve for eldre servere', () => {
+  // Kvitteringer: /receipts/scan finnes (server/finans/receipts/routes.js); ingen omvei til /receipts med andre felt.
+  const scan = strip(raw(join(APP, 'KvitteringSkanning.kt')));
+  assert.doesNotMatch(scan, /legacyParts48|e\.status == 404 \|\| e\.status == 405 -> \{/);
+  assert.match(scan, /fun uploadPlain\(\)[\s\S]{0,120}vm\.uploadPlain48\(u\)/, '«Last opp bildet i stedet» etter en feil er beholdt');
+  const ko = strip(raw(join(APP, 'upload/PendingUploads.kt')));
+  assert.doesNotMatch(ko, /legacyParts48|api\.upload\("\/receipts",/);
+  assert.match(ko, /scan48 && e\.code == Api\.SENT48 -> Unit/);
+  assert.match(raw(join(ROOT, 'server/finans/receipts/routes.js')), /api\.post\('\/receipts\/scan'/);
+  // Kalender: POST /kalender/events/:id/copy finnes; ingen lokal kopi når serveren svarer 404.
+  const kal = strip(raw(join(APP, 'Kalender.kt')));
+  const copy = kal.slice(kal.indexOf('fun AppViewModel.copyKal27('), kal.indexOf('fun AppViewModel.setKalRemind27('));
+  assert.match(copy, /if \(e\.editable\) \{ dupKal27\(e\); return \}/, 'egne hendelser dupliseres som før');
+  assert.doesNotMatch(copy, /404/);
+  assert.match(raw(join(ROOT, 'server/kalender/events.js')), /api\.post\('\/events\/:id\/copy'/);
+  // Brief: «Kjøp gave» lager gjøremålet på serveren (POST /api/brief/gift), ikke med en frist regnet på telefonen.
+  const brief = strip(raw(join(APP, 'Brief.kt')));
+  assert.doesNotMatch(brief, /addTask\("Kjøp gave til/);
+  assert.match(brief, /hlPost\("\/brief\/gift"/);
+  assert.match(raw(join(ROOT, 'server/glimt/brief.js')), /api\.post\('\/gift'/);
+});
+
 test('P85 L: forrige brukers Familie-områder fjernes ved bytte av bruker eller utlogging', () => {
   const fam = strip(raw(join(APP, 'FamilyModel.kt')));
   const use = fam.slice(fam.indexOf('fun useAccount(ctx: Context, id: String?)'), fam.indexOf('internal fun region('));

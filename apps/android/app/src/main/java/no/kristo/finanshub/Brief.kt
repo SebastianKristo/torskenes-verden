@@ -549,11 +549,8 @@ fun AppViewModel.addGift38(b: BxBd38) {
         try {
             api38 { hlPost("/brief/gift", JSONObject().put("name", b.name).put("date", b.date ?: JSONObject.NULL)) }
         } catch (e: CancellationException) { throw e } catch (e: Exception) {
-            if (e is ApiException && (e.status == 404 || e.status == 405)) {
-                val d = b.date?.let { runCatching { LocalDate.parse(it.take(10)) }.getOrNull() } ?: LocalDate.now().plusDays(((b.daysLeft ?: 2)).toLong())
-                val due = d.minusDays(2).let { if (it.isBefore(LocalDate.now())) LocalDate.now() else it }
-                addTask("Kjøp gave til ${b.name} #gave", null, due.toString(), null)
-            } else { s.gifts.remove(b.name); message = "Fikk ikke lagt til gaven" }
+            // Q19: serveren har POST /api/brief/gift (gjøremålet og fristen lages der); ingen lokal reserve for eldre servere.
+            s.gifts.remove(b.name); message = "Fikk ikke lagt til gaven"
         }
     }
 }
