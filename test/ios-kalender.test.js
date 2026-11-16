@@ -46,6 +46,28 @@ test('Q26: «Kopier til Personlig» kaller POST /api/kalender/events/:id/copy, o
   assert.match(code('SharedKal/Core/KalSchoolCore.swift'), /if let m = e\.mazemap \{ return URL\(string: m\) \}/);
 });
 
+test('Q26 (Mac): detaljarket i Kalender for Mac har lærer, fag, gjentakelse, typen, MazeMap og «Kopier til Personlig» som iPhone', () => {
+  const sheet = code('KalenderMac/Sources/MacSheets.swift');
+  assert.match(sheet, /MacSchoolRows\(e: e\)/);
+  assert.match(sheet, /MacDetailExtras\(e: e, win: win\)/);
+  assert.match(sheet, /MacDetailSchool\.calLabel\(/);
+  const x = code('KalenderMac/Sources/MacDetailExtras.swift');
+  assert.match(x, /MacInfoRow\(label: "Lærer", value: te, top: true\)/);
+  assert.match(x, /MacInfoRow\(label: "Fag", value: subject, top: true\)/);
+  assert.match(x, /MacInfoRow\(label: "Gjentas", value: rep, top: true\)/);
+  // Samme delte regler (KalSchool) og samme endepunkt som iPhone.
+  assert.match(x, /KalSchool\.typeName\(e\)/);
+  assert.match(x, /KalSchool\.repeatName\(e\.repeatRule\)/);
+  assert.match(x, /KalSchool\.mapURL\(e\)/);
+  assert.match(x, /KalNet\.send\("POST", "\/api\/kalender\/events\/" \+ KalNet\.enc\(id\) \+ "\/copy"/);
+  assert.match(x, /MacPill\(title: "Kopier til Personlig"/);
+  assert.match(x, /!e\.editable && !e\.pending/);
+  // KalSchoolCore er med i Mac-målet (SharedKal/Core).
+  const yml = raw('project.yml');
+  const mac = yml.slice(yml.indexOf('\n  KalenderMac:\n'), yml.indexOf('\n  KalenderMac:\n') + 900);
+  assert.match(mac, /- SharedKal\/Core\n/);
+});
+
 test('Q26: «Lær Glimt hva dette er…» finnes i den delte Kalenderen (Glimt husker, per bruker på serveren)', () => {
   const l = code('Kalender/Sources/KalLearn.swift');
   assert.match(l, /KalNet\.send\("POST", "\/api\/glimt\/memory", json: body/);
