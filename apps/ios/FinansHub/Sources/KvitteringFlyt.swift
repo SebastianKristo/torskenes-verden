@@ -129,10 +129,6 @@ final class Receipt48Flow {
             let res: Rc48ScanResponse = try JSONDecoder().decode(Rc48ScanResponse.self, from: d)
             status = nil
             await present(Rc48Result(image: image, response: res, draft: nil, categories: categories), store)
-        } catch let e as APIError where e.status == 404 || e.status == 405 {
-            // Eldre server uten /receipts/scan: bildet tolkes av Glimt som før.
-            status = nil
-            store.upload([.image(image)], onDevice47: false)
         } catch let e as APIError where e.status == 0 && e.code == "timeout" {
             // Kjeden fullføres på serveren selv om appen gir opp å vente – ikke legg den i køen (da blir den dobbel).
             status = nil

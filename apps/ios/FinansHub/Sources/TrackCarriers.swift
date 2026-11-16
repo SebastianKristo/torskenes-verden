@@ -225,7 +225,8 @@ struct Track26Flow: Layout {
 // kaller POST /api/tracking/refresh.
 
 extension Store {
-    /// Pull-to-refresh og «Sjekk nå»: be serveren hente status hos fraktselskapene nå. Eldre server (404): /tracking/check.
+    /// Pull-to-refresh og «Sjekk nå»: be serveren hente status hos fraktselskapene nå (POST /api/tracking/refresh).
+    /// Q19: ingen omvei om /tracking/check ved 404 lenger; serveren har ruten, og /api/version sier fra om en for gammel server.
     func refreshTracking22() async {
         trkChecking = true
         defer { trkChecking = false }
@@ -238,8 +239,6 @@ extension Store {
                 notifyTracking(t)
                 return
             }
-        } catch let e as APIError where e.status == 404 || e.status == 405 {
-            _ = try? await api.callAt("/api", "POST", "/tracking/check", timeout: 60)
         } catch {
             flash("Kunne ikke oppdatere sporingen: \(error.localizedDescription)")
         }

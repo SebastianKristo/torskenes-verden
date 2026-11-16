@@ -155,6 +155,30 @@ test('Q19: Finn har ikke lenger «404 → Oppdater homelab»-reserver (serveren 
   }
 });
 
+test('Q19: flere «404 → gammel vei / lokalt»-reserver er borte der serveren har endepunktet', () => {
+  const src = (f) => code(raw(`FinansHub/Sources/${f}`));
+  const root = join(IOS, '..', '..');
+  const srv = (f) => readFileSync(join(root, f), 'utf8');
+  // Gjøremål: Glimt deler opp beskjeden på serveren; telefonen gjør det bare uten nett.
+  const tg = src('TasksGlimt.swift');
+  assert.doesNotMatch(tg, /e\.status == 404 \|\| e\.status == 405 \|\| e\.status == 0/);
+  assert.match(tg, /if e\.status == 0 \{\s*await self\.localSplit/);
+  assert.match(srv('server/gjoremal/glimt-jobs.js'), /api\.post\('\/glimt'/);
+  // AI-søk: jobbmodus uten omvei om det synkrone kallet ved 404.
+  const ai = src('AiSearchJob.swift');
+  assert.match(ai, /let first: Data = try await api\.callAt\("\/finans\/api", "POST", "\/search\/ai\?async=1"/);
+  assert.match(srv('server/finans/routes.js'), /api\.post\('\/search\/ai'/);
+  // Kvittering: /receipts/scan finnes, ingen omvei om den gamle opplastingen ved 404.
+  const kf = src('KvitteringFlyt.swift');
+  assert.doesNotMatch(kf, /Eldre server uten \/receipts\/scan/);
+  assert.doesNotMatch(kf, /e\.status == 404 \|\| e\.status == 405/);
+  assert.match(srv('server/finans/receipts/routes.js'), /api\.post\('\/receipts\/scan'/);
+  // Sporing: /api/tracking/refresh finnes, ingen omvei om /tracking/check.
+  const tc = src('TrackCarriers.swift');
+  assert.doesNotMatch(tc, /"\/tracking\/check"/);
+  assert.match(srv('server/sporing/shipments.js'), /api\.post\('\/refresh'/);
+});
+
 test('Serveren: logo 204 = «ingen logo» (spørres ikke igjen), og discovery med local: [] sletter ikke lagret lokal adresse', () => {
   const s = code(raw('FinansHub/Sources/Store.swift'));
   const logo = s.slice(s.indexOf('func logo(_ domain: String?)'), s.indexOf('private func sendImage('));

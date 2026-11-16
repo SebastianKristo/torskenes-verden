@@ -35,12 +35,8 @@ extension Store {
     func aiSearch25(_ body: [String: Any]) async throws -> Data {
         await loadAiLimits25()
         let limit: TimeInterval = aiClientTimeout25
-        let first: Data
-        do {
-            first = try await api.callAt("/finans/api", "POST", "/search/ai?async=1", json: body, timeout: limit)
-        } catch let e as APIError where e.status == 404 {
-            return try await api.callAt("/finans/api", "POST", "/search/ai", json: body, timeout: limit)
-        }
+        // Q19: serveren har jobbmodus (?async=1); ingen omvei om det gamle synkrone kallet ved 404.
+        let first: Data = try await api.callAt("/finans/api", "POST", "/search/ai?async=1", json: body, timeout: limit)
         let o: [String: Any] = JS.obj(first)
         guard let id = AiJob25.jobId(o) else { return first }
         aiJobId25 = id
