@@ -77,7 +77,7 @@ Ledd 2–6 kunne altså ikke feilsøkes fra appen. Den ekte feilen hjemme er san
 
 ## Test
 
-`test/p50-media.test.js` (falske Sonarr/Radarr/qBittorrent bak `_setMediaFetch43`):
+`test/media-qbittorrent.test.js` (falske Sonarr/Radarr/qBittorrent bak `_setMediaFetch43`):
 
 - Ny episode av 9-1-1 → grab i køen → torrent stoppet i qBittorrent 5.x → Homelab starter den → «Laster ned 12 % · 4,2 MB/s · 8 min».
 - qBittorrent stoppet (ECONNREFUSED) → «qBittorrent svarer ikke», ikke evig «Søker».

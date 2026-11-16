@@ -23,7 +23,7 @@
 - Audiobookshelf: `ABS_URL` og `ABS_TOKEN` (admin-token) i `.env`, som for «Fortsett» (se docs/media-familie-51.md).
 
 ## Kommandoer
-- Tester: `node --test test/p51-medctl.test.js`
+- Tester: `node --test test/media-kontroll.test.js`
 - API: `GET /api/medctl51/now`, `POST /api/medctl51/sessions/<id>/<play|pause|toggle|stop|next|previous|seek|volume>`
   (seek: `{"offset": -30000}` eller `{"position": 60000}`, volum: `{"volume": 40}`).
 - Koblinger (bare admin): `GET /api/medctl51/links`, `PUT /api/medctl51/links/<brukerId> {"plex": "Ingrid", "jellyfin": "ingrid", "abs": ""}`.
