@@ -67,7 +67,8 @@ extension Store {
 
     /// «‹ Hjem» øverst skjules på modulens toppsider når en Hjem-knapp (1a–1d) er valgt og fanelinja vises.
     func nav42HideUp(wide: Bool) -> Bool {
-        guard !wide, NavHome42.shared.value != "std", nav42BarShown else { return false }
+        // Knappene finnes bare i Papir-pillen (FanelinjeValg); med systemets fanelinje står «‹ Oversikt» som før.
+        guard !wide, NavHome42.shared.value != "std", nav42BarShown, FanelinjeValg.shared.stil == .papir else { return false }
         if paperInner || paperFin != nil || paperClassic != nil || paperTrackFull { return false }
         return prof24UpLabel == "Oversikt"
     }

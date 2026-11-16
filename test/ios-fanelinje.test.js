@@ -90,3 +90,35 @@ test('Papir-pillen: tokens, Dynamic Type, VoiceOver og 44 pt trykkflater', () =>
   assert.match(s, /\.glass50Bg\(p, p\.nav, Capsule\(\)\)/);
   assert.match(s, /store\.navStyle25/);
 });
+
+test('Papir-pillen: Hjem-knappen fra den gamle linja (1a–1d) er tilbake og følger valget i Tilpass', () => {
+  const pill = code('PapirFanelinje.swift');
+  const nh = code('PapirHjemknapp.swift');
+  // Valget leses fra NavHome42 (samme valg og lagring som før, layout.homeButton).
+  assert.match(pill, /let nh: String = NavHome42\.shared\.value/);
+  assert.match(pill, /if nh == "1a" \{ PapirHjemRund\(\) \}/);
+  assert.match(pill, /if nh == "1b" \{ PapirHjemForst\(\) \}/);
+  assert.match(pill, /if nh == "1d" \{ PapirModulvelger\(\) \}/);
+  assert.match(pill, /if nh == "1c" && i == mid \{ PapirHjemMidt\(\) \}/);
+  // 1a–1c: Oversikt-fanen vises ikke i pillen, men står i skallet (samme fanekilde og stakk).
+  assert.match(pill, /hjemknapp == "1a" \|\| hjemknapp == "1b" \|\| hjemknapp == "1c"/);
+  assert.match(code('AppShell.swift'), /PapirModulRutenett\(over: pillHoyde\)/);
+  // Knappene navigerer med den gamle logikken (NavHomeButton.swift).
+  for (const v of ['PapirHjemRund', 'PapirHjemForst', 'PapirHjemMidt']) {
+    const i = nh.indexOf(`struct ${v}: View`);
+    assert.ok(i > 0, v);
+    const blokk = nh.slice(i, nh.indexOf('\nstruct ', i + 10));
+    assert.match(blokk, /store\.nav42GoHome\(\)/, v);
+    assert.match(blokk, /\.accessibilityLabel\("Oversikt"\)/, v);
+    assert.match(blokk, /\.isSelected/, v);
+  }
+  assert.match(nh, /store\.nav42Open\(k\)/);
+  assert.match(nh, /accessibilityLabel\("Modulvelger, " \+ cur\.0\)/);
+  // Tokens, Dynamic Type og 44 pt.
+  assert.doesNotMatch(nh, /\.system\(size:/);
+  assert.doesNotMatch(nh, /#[0-9a-fA-F]{6}\b|Color\(hex|Color\.white/);
+  assert.match(nh, /Font\.ds\(/);
+  for (const m of nh.matchAll(/minWidth: (\d+), minHeight: (\d+)/g)) assert.ok(+m[1] >= 44 && +m[2] >= 44, m[0]);
+  // Med systemets fanelinje finnes ingen Hjem-knapp, så «‹ Oversikt» øverst skjules ikke.
+  assert.match(code('NavHomeButton.swift'), /nav42BarShown, FanelinjeValg\.shared\.stil == \.papir else \{ return false \}/);
+});

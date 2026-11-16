@@ -175,6 +175,12 @@ struct AppTabs<Page: View>: View {
         }
         .background(ShellTouchCapture(key: store.shellPageKey).frame(width: 0, height: 0))
         .overlay(alignment: .bottom) {
+            // Hjem-knapp 1d: rutenettet med Oversikt og modulene rett over pillen (PapirHjemknapp.swift).
+            if pill && NavHome42.shared.value == "1d" && NavHome42.shared.modPick {
+                PapirModulRutenett(over: pillHoyde)
+            }
+        }
+        .overlay(alignment: .bottom) {
             if pill {
                 PapirFanelinje(tabs: tabs, current: cur) { (id: String) in ShellTabs.select(id, store, current: cur) }
                     .background(GeometryReader { (g: GeometryProxy) in

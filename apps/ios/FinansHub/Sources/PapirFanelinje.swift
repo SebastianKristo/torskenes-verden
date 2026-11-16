@@ -8,6 +8,7 @@ import SwiftUI
  Forskjellen fra før: fanene er de samme som i systemets fanelinje (ShellTabs.all/compact, Mer sist), og et trykk går
  gjennom ShellTabs.select, så stakken per fane, dyplenkene og tilbake-oppførselen er felles. Linja skifter ikke innhold per
  seksjon (Q33): Økonomi, Domener, Faste betalinger og Familie har seksjonsvelgeren (ShellSectionBar) over pillen.
+ Hjem-knappen (1a–1d) fra den gamle linja ligger i PapirHjemknapp.swift og følger valget i Tilpass → Fanelinje → Hjem-knapp.
  Tokens: fargene fra PaperPalette (DS-tokens), fonten Font.ds (Dynamic Type), avstand og skygge fra DS. */
 
 /// Høyden pillen tar, målt i skallet (AppTabs), så sidene får like mye luft nederst (ShellPageView).
@@ -28,22 +29,40 @@ struct PapirFanelinje: View {
         // Med de største tekststørrelsene får hver fane bare ikonet (navnet vises i forstørret visning ved langt trykk).
         let style: String = dts.isAccessibilitySize ? "icons" : store.navStyle25
         let skygge: DS.Skygge = DS.Skygge.high
-        HStack(spacing: 2) {
-            ForEach(tabs) { (t: ShellTab) in
-                fane(t, on: t.id == current, style: style)
+        // Hjem-knappen (Tilpass → Fanelinje → Hjem-knapp, PapirHjemknapp.swift). Med 1a–1c tar knappen Oversikt-fanens plass.
+        let nh: String = NavHome42.shared.value
+        let list: [ShellTab] = PapirFanelinje.vist(tabs, hjemknapp: nh)
+        let mid: Int = list.count / 2
+        HStack(spacing: DS.Space.md) {
+            if nh == "1a" { PapirHjemRund() }
+            HStack(spacing: 2) {
+                if nh == "1b" { PapirHjemForst() }
+                if nh == "1d" { PapirModulvelger() }
+                ForEach(Array(list.enumerated()), id: \.element.id) { i, t in
+                    if nh == "1c" && i == mid { PapirHjemMidt() }
+                    fane(t, on: t.id == current, style: style)
+                }
             }
+            .padding(.horizontal, DS.Space.sm)
+            .padding(.vertical, DS.Space.sm)
+            .glass50Bg(p, p.nav, Capsule())
+            .shadow(color: Color.black.opacity(skygge.alpha), radius: skygge.blur / 2, y: skygge.y)
+            .simultaneousGesture(LongPressGesture(minimumDuration: 0.55).onEnded { (_: Bool) in rediger() })
+            .accessibilityElement(children: .contain)
+            .accessibilityLabel("Fanelinje")
+            .accessibilityAction(named: Text("Rediger fanelinjen")) { rediger() }
         }
-        .padding(.horizontal, DS.Space.sm)
-        .padding(.vertical, DS.Space.sm)
-        .glass50Bg(p, p.nav, Capsule())
-        .shadow(color: Color.black.opacity(skygge.alpha), radius: skygge.blur / 2, y: skygge.y)
-        .simultaneousGesture(LongPressGesture(minimumDuration: 0.55).onEnded { (_: Bool) in rediger() })
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel("Fanelinje")
-        .accessibilityAction(named: Text("Rediger fanelinjen")) { rediger() }
         .padding(.horizontal, DS.Space.md)
         .padding(.top, DS.Space.xs)
         .padding(.bottom, DS.Space.xs)
+    }
+
+    /// Fanene pillen viser: med Hjem-knapp 1a–1c uten Oversikt (knappen tar plassen). Skallet beholder fanen, så valget,
+    /// stakken og dyplenkene er de samme som i systemets fanelinje.
+    static func vist(_ tabs: [ShellTab], hjemknapp: String) -> [ShellTab] {
+        let dropp: Bool = hjemknapp == "1a" || hjemknapp == "1b" || hjemknapp == "1c"
+        if !dropp { return tabs }
+        return tabs.filter { (t: ShellTab) -> Bool in t.id != "hjem" }
     }
 
     private func fane(_ t: ShellTab, on: Bool, style: String) -> some View {
