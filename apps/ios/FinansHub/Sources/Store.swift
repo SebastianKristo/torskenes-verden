@@ -422,6 +422,8 @@ final class Store {
     @ObservationIgnored private var backgroundAt: Date?
 
     @ObservationIgnored private var logos: [String: UIImage] = [:]
+    /// Domener serveren har sagt mangler logo (204 uten kropp). Spørres ikke igjen før hurtigbufferen tømmes.
+    @ObservationIgnored private var noLogo: Set<String> = []
     @ObservationIgnored private var polling = false
     @ObservationIgnored private let monitor = NWPathMonitor()
     private(set) var onWifi = true
@@ -1358,13 +1360,17 @@ final class Store {
     func logo(_ domain: String?) async -> UIImage? {
         guard let domain, !domain.isEmpty else { return nil }
         if let l = logos[domain] { return l }
+        if noLogo.contains(domain) { return nil }
         // Prompt 20: ferdig nedlastet logo fra logobiblioteket (disk-cache) før favicon via serveren.
         if let reg = await LogoRegistry20.shared.image(domain: domain, api: api) {
             logos[domain] = reg
             return reg
         }
         let enc = domain.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? domain
-        let img = await image("/finans/api/logo/\(enc)")
+        // /finans/api/logo/:domain svarer 204 uten kropp når logoen mangler: «ingen logo» (forbokstaven vises).
+        guard let d = try? await api.bytes("/finans/api/logo/\(enc)") else { return nil }
+        if d.isEmpty { noLogo.insert(domain); return nil }
+        let img: UIImage? = UIImage(data: d)
         if let img { logos[domain] = img }
         return img
     }
@@ -1620,7 +1626,7 @@ final class Store {
 
     /* ---------- Data og lagring ---------- */
 
-    func clearCache() { logos = [:]; LogoRegistry20.shared.clear(); URLCache.shared.removeAllCachedResponses(); flash("Hurtigbuffer tømt") }
+    func clearCache() { logos = [:]; noLogo = []; LogoRegistry20.shared.clear(); URLCache.shared.removeAllCachedResponses(); flash("Hurtigbuffer tømt") }
 
     /// Alle transaksjoner som CSV (semikolon, UTF-8 med BOM) i en midlertidig fil for delingsarket.
     func exportCsv() async -> URL? {

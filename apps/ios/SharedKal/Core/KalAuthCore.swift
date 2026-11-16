@@ -348,7 +348,8 @@ enum KalServer41 {
         }
         if KalSrv46.isContainerIP(KalSrv46.host(ext)) { ext = "" }
         let d: UserDefaults = KalGroup.defaults
-        d.set(cleanLoc, forKey: "kal41.local")
+        // C-S4: fra internett svarer /api/discovery med local: [] – da beholdes den lokale adressen som er lagret.
+        if !cleanLoc.isEmpty { d.set(cleanLoc, forKey: "kal41.local") }
         d.set(KalAuth41.trim(ext), forKey: "kal41.external")
         d.set(au, forKey: "kal41.auto")
         return true

@@ -121,6 +121,17 @@ test('Struktur: Domener er ute av Store (@Observable-modell med @Environment, St
   assert.match(code(raw('FinansHub/Sources/PaperDomains.swift')), /@Environment\(DomenerModell\.self\) private var dom/);
 });
 
+test('Serveren: logo 204 = «ingen logo» (spørres ikke igjen), og discovery med local: [] sletter ikke lagret lokal adresse', () => {
+  const s = code(raw('FinansHub/Sources/Store.swift'));
+  const logo = s.slice(s.indexOf('func logo(_ domain: String?)'), s.indexOf('private func sendImage('));
+  assert.match(logo, /if noLogo\.contains\(domain\) \{ return nil \}/);
+  assert.match(logo, /if d\.isEmpty \{ noLogo\.insert\(domain\); return nil \}/);
+  assert.match(s, /func clearCache\(\) \{ logos = \[:\]; noLogo = \[\];/);
+  const k = code(raw('SharedKal/Core/KalAuthCore.swift'));
+  assert.match(k, /if !cleanLoc\.isEmpty \{ d\.set\(cleanLoc, forKey: "kal41\.local"\) \}/);
+  assert.doesNotMatch(k, /^\s+d\.set\(cleanLoc, forKey: "kal41\.local"\)$/m);
+});
+
 test('Struktur: Swift 6 – full samtidighetssjekk på klokka først (advarsler i Swift 5-modus), resten på 5.10', () => {
   const yml = raw('project.yml');
   const watch = yml.slice(yml.indexOf('  HomelabWatch:'));
