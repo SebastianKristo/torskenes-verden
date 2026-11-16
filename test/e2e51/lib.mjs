@@ -3,10 +3,10 @@
 // fra PLAYWRIGHT_MODULE. Finnes den ikke, hoppes testene over med en forklaring (de kjøres ikke i `npm test`).
 import { spawn } from 'node:child_process';
 import { createRequire } from 'node:module';
-import { existsSync, mkdtempSync, readFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { lagMidlertidig } from '../lib/midlertidig.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 export const ROOT = resolve(HERE, '..', '..');
@@ -26,7 +26,7 @@ export async function loadPlaywright() {
 
 /** Starter mock-serveren som egen prosess og venter til den svarer. → {proc, dataDir, stop()} */
 export async function startServer({ env = {} } = {}) {
-  const dataDir = mkdtempSync(join(tmpdir(), 'hl-e2e51-'));
+  const dataDir = lagMidlertidig('hl-e2e51-'); // slettes når testprosessen avslutter, etter at serveren er stoppet
   const ready = join(dataDir, 'ready');
   const proc = spawn(process.execPath, [join(HERE, 'server.mjs')], { cwd: ROOT, env: { ...process.env, DATA_DIR: dataDir, E2E_PORT: String(PORT), E2E_READY_FILE: ready, ...env }, stdio: ['ignore', 'pipe', 'pipe'] });
   let log = '';

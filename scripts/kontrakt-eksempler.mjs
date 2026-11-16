@@ -15,7 +15,7 @@ globalThis.Date = class FixedDate extends RealDate {
   constructor(...a) { if (a.length === 0) super(FIXED_NOW); else super(...a); }
   static now() { return FIXED_NOW; }
 };
-import { mkdtempSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -25,6 +25,7 @@ const SCHEMAS = join(ROOT, 'shared', 'schemas');
 const OUT = join(SCHEMAS, 'eksempler');
 
 process.env.DATA_DIR = mkdtempSync(join(tmpdir(), 'hl-kontrakt-eksempler-'));
+process.on('exit', () => { try { rmSync(process.env.DATA_DIR, { recursive: true, force: true }); } catch { /* best effort */ } });
 process.env.SESSION_SECRET = 'eksempel-secret-eksempel-secret-eksempel';
 process.env.USER_NAME = 'Sebastian';
 process.env.NODE_ENV = 'test';
