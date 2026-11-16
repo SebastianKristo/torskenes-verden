@@ -41,6 +41,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.semantics.Role
 import no.kristo.finanshub.*
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
@@ -285,7 +286,7 @@ private fun DepRow24(d: Dep, from: String?, open: Boolean, top: Boolean, onToggl
             if (d.stops.isEmpty()) Text("Stoppene på turen kommer når serveren har dem.", color = p.textTertiary, fontSize = HomelabType.footnote.fontSize, modifier = Modifier.padding(vertical = 4.dp))
             else Stops24(d.stops, lineColor)
             Text("Åpne i Ruter ›", color = p.accent, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.footnote.fontSize, textDecoration = TextDecoration.Underline,
-                modifier = Modifier.padding(top = 8.dp).clip(RoundedCornerShape(6.dp)).clickable { openLink(ctx, d.ruterUrl ?: ruterPlanner24(from, d.to)) }.padding(vertical = 4.dp))
+                modifier = Modifier.padding(top = 8.dp).clip(RoundedCornerShape(6.dp)).clickable(role = Role.Button, onClickLabel = "Åpne turen i Ruter") { openLink(ctx, d.ruterUrl ?: ruterPlanner24(from, d.to)) }.padding(vertical = 4.dp))
         } }
     }
 }
@@ -307,7 +308,7 @@ private fun Stops24(stops: List<DepStop>, lineColor: Color) {
         else listOf(0 to stops[0], 1 to stops[1], null, n - 2 to stops[n - 2], n - 1 to stops[n - 1])
     shown.forEach { e ->
         if (e == null) {
-            Row(Modifier.fillMaxWidth().heightIn(min = 30.dp).clickable { all = true }, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(Modifier.fillMaxWidth().heightIn(min = 30.dp).clickable(role = Role.Button, onClickLabel = "Vis alle stoppene") { all = true }, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Box(Modifier.width(10.dp).height(30.dp), contentAlignment = Alignment.Center) { Box(Modifier.width(2.dp).fillMaxHeight().background(lineColor)) }
                 Text("· · · ${n - 4} stopp", color = p.textTertiary, fontSize = HomelabType.subheadline.fontSize, fontWeight = FontWeight.SemiBold)
             }

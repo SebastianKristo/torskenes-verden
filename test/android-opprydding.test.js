@@ -110,6 +110,22 @@ test('P85 E: trykkflatene i modulsidene (ui/domene) har rolle for TalkBack, og v
   assert.match(strip(raw(join(dir, 'Avganger.kt'))), /onClickLabel = if \(open\) "Skjul stoppene" else "Vis stoppene"/);
 });
 
+test('P85 E: Nyheter, Mat, Domener, Vær, Avganger og kalendervisningen har rolle på trykkflatene', () => {
+  const files = ['News.kt', 'NewsArticle.kt', 'NewsSaved.kt', 'Mat.kt', 'Domains.kt', 'WeatherPage.kt', 'WeatherSheets.kt', 'DeparturesPage.kt', 'KalenderSkjerm.kt'];
+  for (const f of files) {
+    const s = strip(raw(join(APP, 'ui', f)));
+    assert.doesNotMatch(s, /\.clickable\s*(\(\s*\))?\s*\{/, `${f}: clickable uten rolle`);
+    assert.match(s, /import androidx\.compose\.ui\.semantics\.Role\n/, f);
+    if (/\.selectable\(/.test(s)) assert.match(s, /import androidx\.compose\.foundation\.selection\.selectable/, f);
+  }
+  // Brytere i Nyheter-innstillingene er brytere for TalkBack (på/av), ikke bare en trykkbar rad.
+  assert.match(strip(raw(join(APP, 'ui/News.kt'))), /\.toggleable\(value = on, role = Role\.Switch\) \{ onChange\(it\) \}/);
+  // Fanene i Domener og periodevalget sier hvilken som er valgt; «⟳» har et navn.
+  const dom = strip(raw(join(APP, 'ui/Domains.kt')));
+  assert.match(dom, /\.selectable\(selected = on, role = Role\.Tab\) \{ vm\.domener\.settFane\(fane\) \}/);
+  assert.match(dom, /Modifier\.semantics \{ contentDescription = "Oppdater" \}\.clip\(CircleShape\)\.clickable\(role = Role\.Button\) \{ vm\.reloadDomain\(\) \}/);
+});
+
 test('P85 G: kvitteringer lastes opp med Idempotency-Key fra bildet, også fra køen; logo 204 betyr «ingen logo»', () => {
   const api = strip(raw(join(APP, 'Api.kt')));
   assert.match(api, /idempotencyKey: String\? = null\): String/);

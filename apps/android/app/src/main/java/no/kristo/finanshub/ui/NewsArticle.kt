@@ -27,6 +27,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.semantics.Role
 import no.kristo.finanshub.*
 import java.time.LocalDate
 import java.time.OffsetDateTime
@@ -129,7 +130,7 @@ internal fun NewsArticle27(vm: AppViewModel, p: PaperPal, cats: List<NewsCategor
                     }
                     if (!s.articleBusy && sum != null) Text(a?.aiNote ?: "✦ Laget av AI fra saken. Kan inneholde feil.", color = p.mut, fontSize = HomelabType.footnote.fontSize)
                 }
-                Box(Modifier.fillMaxWidth().height(50.dp).clip(RoundedCornerShape(25.dp)).background(p.ink).clickable { openLink(ctx, a?.url ?: x.url) }, contentAlignment = Alignment.Center) {
+                Box(Modifier.fillMaxWidth().height(50.dp).clip(RoundedCornerShape(25.dp)).background(p.ink).clickable(role = Role.Button) { openLink(ctx, a?.url ?: x.url) }, contentAlignment = Alignment.Center) {
                     Text("Les hele saken hos $src ↗", color = p.bg, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
                 val rel = a?.related ?: vm.news?.items?.filter { it.url != x.url && it.category == x.category }?.take(4) ?: emptyList()
@@ -138,7 +139,7 @@ internal fun NewsArticle27(vm: AppViewModel, p: PaperPal, cats: List<NewsCategor
                         PLabel("Mer om $cat", p.lab, modifier = Modifier.padding(top = 12.dp, bottom = 6.dp))
                         Box(Modifier.fillMaxWidth().height(2.dp).background(p.ink))
                         rel.forEach { r ->
-                            Row(Modifier.fillMaxWidth().clickable { vm.openArticle27(r) }.padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                            Row(Modifier.fillMaxWidth().clickable(role = Role.Button, onClickLabel = "Les saken") { vm.openArticle27(r) }.padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                                     Text(r.title, color = p.ink, fontSize = HomelabType.callout.fontSize, lineHeight = 20.sp, maxLines = 3, overflow = TextOverflow.Ellipsis)
                                     Text(listOf(r.feed, newsTime(r.published)).filter(String::isNotBlank).joinToString(" · "), color = p.mut, fontSize = HomelabType.footnote.fontSize)

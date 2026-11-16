@@ -308,7 +308,7 @@ private fun WeatherBody(vm: AppViewModel, wide: Boolean) {
                     item {
                         val ctx = LocalContext.current
                         Text("Data: MET Norge${if (w.mock) " (eksempeldata)" else ""} · Se også yr.no ↗", fontSize = HomelabType.footnote.fontSize, textDecoration = TextDecoration.Underline,
-                            textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().alpha(.85f).clickable { openLink(ctx, w.yrUrl ?: "https://www.yr.no/") }.padding(top = 4.dp))
+                            textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().alpha(.85f).clickable(role = Role.Button, onClickLabel = "Åpne Yr") { openLink(ctx, w.yrUrl ?: "https://www.yr.no/") }.padding(top = 4.dp))
                     }
                 }
             }
@@ -841,7 +841,7 @@ private fun WideWeather25(
             }
             val ctx = LocalContext.current
             Text("Data: MET Norge${if (w.mock) " (eksempeldata)" else ""} · Se også yr.no ↗", fontSize = HomelabType.footnote.fontSize, textDecoration = TextDecoration.Underline,
-                textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().alpha(.85f).clickable { openLink(ctx, w.yrUrl ?: "https://www.yr.no/") }.padding(top = 4.dp))
+                textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().alpha(.85f).clickable(role = Role.Button, onClickLabel = "Åpne Yr") { openLink(ctx, w.yrUrl ?: "https://www.yr.no/") }.padding(top = 4.dp))
         }
     }
 }

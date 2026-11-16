@@ -29,6 +29,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.semantics.Role
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import no.kristo.finanshub.*
 import no.kristo.finanshub.ui.designsystem.HomelabType
 import no.kristo.finanshub.ui.designsystem.HomelabTheme
@@ -53,7 +57,7 @@ internal fun DomainsScreen(vm: AppViewModel, twoPane: Boolean, section: String? 
             Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(farger.surfaceRaised).padding(4.dp)) {
                 DomTab.entries.forEach { fane ->
                     val on = t.fane == fane
-                    Box(Modifier.weight(1f).clip(RoundedCornerShape(24.dp)).background(if (on) farger.surfaceChip else Color.Transparent).clickable { vm.domener.settFane(fane) }.padding(12.dp), contentAlignment = Alignment.Center) {
+                    Box(Modifier.weight(1f).clip(RoundedCornerShape(24.dp)).background(if (on) farger.surfaceChip else Color.Transparent).selectable(selected = on, role = Role.Tab) { vm.domener.settFane(fane) }.padding(12.dp), contentAlignment = Alignment.Center) {
                         Text(fane.label, color = if (on) farger.textPrimary else farger.textSecondary, fontWeight = FontWeight.SemiBold)
                     }
                 }
@@ -511,8 +515,8 @@ internal fun PaperDomTop(vm: AppViewModel) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 PLabel("Domene · ${list.size}", modifier = Modifier.weight(1f))
-                Text("⟳", color = p.textPrimary, fontSize = HomelabType.body.fontSize, modifier = Modifier.clip(CircleShape).clickable { vm.reloadDomain() }.padding(8.dp, 2.dp))
-                Text("+ Legg til", color = p.accent, fontSize = HomelabType.footnote.fontSize, fontWeight = FontWeight.SemiBold, modifier = Modifier.clip(CircleShape).clickable { vm.domainManager = true }.padding(8.dp, 4.dp))
+                Text("⟳", color = p.textPrimary, fontSize = HomelabType.body.fontSize, modifier = Modifier.semantics { contentDescription = "Oppdater" }.clip(CircleShape).clickable(role = Role.Button) { vm.reloadDomain() }.padding(8.dp, 2.dp))
+                Text("+ Legg til", color = p.accent, fontSize = HomelabType.footnote.fontSize, fontWeight = FontWeight.SemiBold, modifier = Modifier.clip(CircleShape).clickable(role = Role.Button, onClickLabel = "Legg til domene") { vm.domainManager = true }.padding(8.dp, 4.dp))
             }
             androidx.compose.foundation.lazy.LazyRow(
                 state = state, flingBehavior = androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior(state),
@@ -529,7 +533,7 @@ internal fun PaperDomTop(vm: AppViewModel) {
             Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).border(1.dp, p.line, RoundedCornerShape(12.dp)).padding(3.dp)) {
                 listOf("1h" to "1t", "24h" to "24t", "7d" to "7d", "30d" to "30d").forEach { (k, n) ->
                     val on = vm.domRange == k
-                    Box(Modifier.weight(1f).height(34.dp).clip(RoundedCornerShape(9.dp)).background(if (on) p.textPrimary else Color.Transparent).clickable { Haptics.select(); vm.setRangePaper(k) },
+                    Box(Modifier.weight(1f).height(34.dp).clip(RoundedCornerShape(9.dp)).background(if (on) p.textPrimary else Color.Transparent).selectable(selected = on, role = Role.Tab) { Haptics.select(); vm.setRangePaper(k) },
                         contentAlignment = Alignment.Center) { Text(n, color = if (on) p.surface else p.textPrimary, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.subheadline.fontSize) }
                 }
             }

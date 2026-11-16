@@ -61,6 +61,8 @@ import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.zIndex
+import androidx.compose.ui.semantics.Role
+import androidx.compose.foundation.selection.selectable
 import no.kristo.finanshub.*
 import java.time.Duration
 import java.time.LocalDateTime
@@ -356,7 +358,7 @@ internal fun MetricSheet(w: WeatherFull, key: String, di: Int, setDay: (Int) -> 
             Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(sheetCard).padding(horizontal = 6.dp, vertical = 2.dp)) {
                 rows.forEachIndexed { i, r ->
                     if (i > 0) Box(Modifier.fillMaxWidth().padding(horizontal = 8.dp).height(1.dp).background(sheetLine))
-                    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(if (i == sel) sky.copy(alpha = .16f) else Color.Transparent).clickable { setDay(i) }.padding(8.dp, 12.dp),
+                    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(if (i == sel) sky.copy(alpha = .16f) else Color.Transparent).selectable(selected = i == sel, role = Role.Tab) { setDay(i) }.padding(8.dp, 12.dp),
                         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         Text(r[0], fontSize = HomelabType.callout.fontSize, fontWeight = FontWeight.Bold, modifier = Modifier.width(52.dp))
                         Text(r[1], fontSize = HomelabType.callout.fontSize, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -500,7 +502,7 @@ internal fun PlacesSheet(vm: AppViewModel) {
             res.take(10).forEachIndexed { i, r ->
                 val have = list.firstOrNull { it.name == r.name && abs(it.lat - r.lat) < .05 }
                 if (i > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(Color.White.copy(alpha = .1f)))
-                Row(Modifier.fillMaxWidth().clickable {
+                Row(Modifier.fillMaxWidth().clickable(role = Role.Button, onClickLabel = if (have != null) "Vis været" else "Legg til stedet") {
                     if (have != null) vm.loadWeatherAt(have) else vm.addWxPlace(r)
                     q = ""; close()
                 }.padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -587,7 +589,7 @@ private fun PlaceRow(
                 ) { ch, amount -> ch.consume(); dx = (dx + amount).coerceIn(0f, if (canDelete) width.toFloat() else 0f) }
             },
     ) {
-        if (shown > 0f) Box(Modifier.matchParentSize().background(Color(0xFFE5484D)).clickable { onDelete() }.padding(start = 22.dp), contentAlignment = Alignment.CenterStart) {
+        if (shown > 0f) Box(Modifier.matchParentSize().background(Color(0xFFE5484D)).clickable(role = Role.Button, onClickLabel = "Slett stedet") { onDelete() }.padding(start = 22.dp), contentAlignment = Alignment.CenterStart) {
             Text("Slett", fontSize = HomelabType.callout.fontSize, fontWeight = FontWeight.Bold)
         }
         Row(
@@ -652,7 +654,7 @@ internal fun WxMapInline25(w: WeatherFull?, modifier: Modifier, onFull: () -> Un
         )
         Box(
             Modifier.align(Alignment.TopEnd).padding(10.dp).height(34.dp).clip(CircleShape).background(Color(0xBF0A1423))
-                .border(1.dp, Color.White.copy(alpha = .14f), CircleShape).clickable { Haptics.select(); onFull() }.padding(horizontal = 12.dp),
+                .border(1.dp, Color.White.copy(alpha = .14f), CircleShape).clickable(role = Role.Button) { Haptics.select(); onFull() }.padding(horizontal = 12.dp),
             contentAlignment = Alignment.Center,
         ) { Text("⤢ Fullskjerm", fontSize = HomelabType.subheadline.fontSize, fontWeight = FontWeight.SemiBold, color = Color.White, maxLines = 1) }
         LiquidTextSeg52(MAP_LAYERS, layer, { layer = it }, Modifier.align(Alignment.BottomCenter).padding(bottom = 10.dp), cellH = 32.dp, fontSize = HomelabType.footnote.fontSize, padH = 12.dp) // prompt 52

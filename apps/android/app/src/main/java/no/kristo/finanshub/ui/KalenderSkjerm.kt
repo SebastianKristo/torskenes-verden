@@ -61,6 +61,7 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Icon
 import androidx.compose.material3.minimumInteractiveComponentSize
+import androidx.compose.ui.semantics.Role
 import no.kristo.felles.tid.OsloDato
 
 /*
@@ -412,7 +413,7 @@ private fun K27Grid(vm: AppViewModel, evs: List<Kal26Ev>, now: LocalDateTime, cu
                                 Modifier.offset(x = W * (x.c.toFloat() / x.n) + 1.dp, y = HH * (x.a / 60f)).width(W / x.n - 3.dp).height(maxOf(18.dp, ht - 2.dp))
                                     .clip(RoundedCornerShape(6.dp)).background(if (solid) cc else lerp(p.surfaceRaised, cc, .22f))
                                     .then(if (sel) Modifier.border(2.dp, p.textPrimary, RoundedCornerShape(6.dp)) else Modifier)
-                                    .clickable { s.sel = e; s.mini = false },
+                                    .clickable(role = Role.Button, onClickLabel = "Åpne hendelsen") { s.sel = e; s.mini = false },
                             ) {
                                 Box(Modifier.width(3.dp).fillMaxHeight().background(cc))
                                 Column(Modifier.padding(start = 4.dp, top = 3.dp, end = 4.dp), verticalArrangement = Arrangement.spacedBy(1.dp)) {
@@ -455,7 +456,7 @@ private fun K27Month(vm: AppViewModel, evs: List<Kal26Ev>, today: LocalDate, cur
             val wk = stM.plusDays((w * 7).toLong())
             Box(
                 Modifier.width(24.dp).fillMaxHeight().drawBehind { drawLine(p.line, Offset(0f, size.height), Offset(size.width, size.height), 1.dp.toPx()) }
-                    .clickable { s.cur = wk; vm.setKalView27("uke") }.k27Label("Uke ${kalIsoWeek(wk)}").padding(top = 8.dp),
+                    .clickable(role = Role.Button, onClickLabel = "Vis uka") { s.cur = wk; vm.setKalView27("uke") }.k27Label("Uke ${kalIsoWeek(wk)}").padding(top = 8.dp),
                 contentAlignment = Alignment.TopCenter,
             ) { Text("${kalIsoWeek(wk)}", color = p.textSecondary, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.caption.fontSize) }
             for (i in 0 until 7) {
@@ -469,7 +470,7 @@ private fun K27Month(vm: AppViewModel, evs: List<Kal26Ev>, today: LocalDate, cur
                     Modifier.weight(1f).fillMaxHeight().alpha(if (d.monthValue == m0.monthValue) 1f else .4f)
                         .background(if (isT) p.accent.copy(alpha = .06f) else Color.Transparent)
                         .drawBehind { drawLine(p.line, Offset(0f, size.height), Offset(size.width, size.height), 1.dp.toPx()) }
-                        .clickable { s.cur = d; Haptics.select(); vm.setKalView27("dag") }.padding(horizontal = 2.dp, vertical = 4.dp),
+                        .clickable(role = Role.Button, onClickLabel = "Vis dagen") { s.cur = d; Haptics.select(); vm.setKalView27("dag") }.padding(horizontal = 2.dp, vertical = 4.dp),
                     verticalArrangement = Arrangement.spacedBy(2.dp),
                 ) {
                     Box(Modifier.align(Alignment.CenterHorizontally).size(24.dp).clip(CircleShape).background(if (isT) p.accent else Color.Transparent), contentAlignment = Alignment.Center) {

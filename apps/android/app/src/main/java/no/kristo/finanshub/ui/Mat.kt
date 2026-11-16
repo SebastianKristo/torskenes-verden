@@ -242,11 +242,11 @@ private fun RecipeJobs(vm: AppViewModel, p: MatPalette) {
                     j.error?.let { Text(it, color = farger.danger, fontSize = HomelabType.footnote.fontSize, maxLines = 2) }
                 }
                 when {
-                    j.status == "error" -> Text("Prøv igjen", color = p.accent, fontSize = HomelabType.subheadline.fontSize, fontWeight = FontWeight.SemiBold, modifier = Modifier.clickable { vm.retryRecipeJob(j.id) })
-                    j.status == "done" && j.dishId != null -> Text("Åpne ›", color = p.accent, fontSize = HomelabType.subheadline.fontSize, fontWeight = FontWeight.SemiBold, modifier = Modifier.clickable { vm.matDay = null; vm.dishOpen = j.dishId })
+                    j.status == "error" -> Text("Prøv igjen", color = p.accent, fontSize = HomelabType.subheadline.fontSize, fontWeight = FontWeight.SemiBold, modifier = Modifier.clickable(role = Role.Button) { vm.retryRecipeJob(j.id) })
+                    j.status == "done" && j.dishId != null -> Text("Åpne ›", color = p.accent, fontSize = HomelabType.subheadline.fontSize, fontWeight = FontWeight.SemiBold, modifier = Modifier.clickable(role = Role.Button, onClickLabel = "Åpne retten") { vm.matDay = null; vm.dishOpen = j.dishId })
                     else -> {}
                 }
-                if (!j.active) Text("×", color = p.muted, fontSize = HomelabType.body.fontSize, modifier = Modifier.semantics { contentDescription = "Fjern" }.clickable { vm.removeRecipeJob(j.id) }.padding(4.dp))
+                if (!j.active) Text("×", color = p.muted, fontSize = HomelabType.body.fontSize, modifier = Modifier.semantics { contentDescription = "Fjern" }.clickable(role = Role.Button) { vm.removeRecipeJob(j.id) }.padding(4.dp))
             }
         }
     }
@@ -306,7 +306,7 @@ private fun DishSheet(vm: AppViewModel, p: MatPalette) {
             MSerif(dish?.name ?: day?.name ?: "Ingen rett ennå", 30, p.text, maxLines = 3)
             dish?.image?.let { RemoteImage(vm, it, Modifier.fillMaxWidth().height(180.dp).clip(RoundedCornerShape(16.dp))) }
             Text(listOfNotNull(dish?.time, dish?.servings?.let { "$it porsjoner" }, if (dish?.src == "hellofresh") "HelloFresh" else null).joinToString(" · "), color = p.muted, fontSize = HomelabType.subheadline.fontSize)
-            dish?.sourceUrl?.let { u -> Text("Original oppskrift ↗", color = p.accent, fontWeight = FontWeight.SemiBold, modifier = Modifier.clickable { openLink(ctx, u) }) }
+            dish?.sourceUrl?.let { u -> Text("Original oppskrift ↗", color = p.accent, fontWeight = FontWeight.SemiBold, modifier = Modifier.clickable(role = Role.Button) { openLink(ctx, u) }) }
             if (day != null) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                     Box {
@@ -344,7 +344,7 @@ private fun DishSheet(vm: AppViewModel, p: MatPalette) {
                 dish.links.forEach { l ->
                     Row(
                         Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(p.card)
-                            .clickable { if (l.fileUrl != null) vm.openDishFile(l) else l.url?.let { openLink(ctx, it) } }.padding(12.dp, 10.dp),
+                            .clickable(role = Role.Button, onClickLabel = "Åpne") { if (l.fileUrl != null) vm.openDishFile(l) else l.url?.let { openLink(ctx, it) } }.padding(12.dp, 10.dp),
                         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
                         Box(Modifier.size(34.dp).clip(RoundedCornerShape(9.dp)).background(p.row), contentAlignment = Alignment.Center) {
@@ -354,7 +354,7 @@ private fun DishSheet(vm: AppViewModel, p: MatPalette) {
                             Text(l.title, color = p.text, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.callout.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             Text(l.kindLabel, color = p.muted, fontSize = HomelabType.footnote.fontSize)
                         }
-                        Text("×", color = p.muted, fontSize = HomelabType.body.fontSize, modifier = Modifier.semantics { contentDescription = "Fjern" }.clickable { vm.removeDishLink(dish.id, l.id) }.padding(4.dp))
+                        Text("×", color = p.muted, fontSize = HomelabType.body.fontSize, modifier = Modifier.semantics { contentDescription = "Fjern" }.clickable(role = Role.Button) { vm.removeDishLink(dish.id, l.id) }.padding(4.dp))
                     }
                 }
                 if (addLink) {
@@ -394,7 +394,7 @@ private fun MatPaperSec(vm: AppViewModel, w: Week, k: String, p: MatPalette, lin
             w.days.forEachIndexed { i, d ->
                 val dish = w.dishes.firstOrNull { it.id == d.dishId } ?: w.dishes.firstOrNull { it.name == d.name }
                 Row(
-                    Modifier.fillMaxWidth().clickable { vm.matDay = i; vm.dishOpen = dish?.id ?: "" }.padding(2.dp, 8.dp),
+                    Modifier.fillMaxWidth().clickable(role = Role.Button, onClickLabel = "Åpne dagen") { vm.matDay = i; vm.dishOpen = dish?.id ?: "" }.padding(2.dp, 8.dp),
                     verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     MLabel(shortDay[dayIdx(d.date)], if (i == ti) p.accent else p.muted, Modifier.width(36.dp))
@@ -419,7 +419,7 @@ private fun MatPaperSec(vm: AppViewModel, w: Week, k: String, p: MatPalette, lin
             if (dishes.isEmpty()) Text("Ingen retter i denne mappen ennå. Skann en oppskrift eller importer en lenke.", color = p.muted, fontSize = HomelabType.callout.fontSize, modifier = Modifier.padding(4.dp))
             dishes.forEach { dish ->
                 Row(
-                    Modifier.fillMaxWidth().clickable { vm.matDay = null; vm.dishOpen = dish.id }.padding(2.dp, 9.dp),
+                    Modifier.fillMaxWidth().clickable(role = Role.Button, onClickLabel = "Åpne retten") { vm.matDay = null; vm.dishOpen = dish.id }.padding(2.dp, 9.dp),
                     verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     Column(Modifier.weight(1f)) {

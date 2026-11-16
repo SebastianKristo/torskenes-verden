@@ -39,6 +39,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.semantics.Role
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -261,7 +262,7 @@ internal fun News73Banner(vm: AppViewModel, sv: Saved73, p: PaperPal, words: Int
             Text(title, color = p.ink, fontSize = HomelabType.callout.fontSize, fontWeight = FontWeight.Bold, lineHeight = 19.sp)
             Text(sub, color = p.mut, fontSize = HomelabType.callout.fontSize, lineHeight = 19.sp)
             if (!ok && !pending) {
-                Box(Modifier.padding(top = 6.dp).height(32.dp).clip(CircleShape).border(1.dp, p.line, CircleShape).clickable { News73.retry(vm, sv.id) }.padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
+                Box(Modifier.padding(top = 6.dp).height(32.dp).clip(CircleShape).border(1.dp, p.line, CircleShape).clickable(role = Role.Button) { News73.retry(vm, sv.id) }.padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
                     Text("Prøv å laste ned på nytt", color = p.ink, fontSize = HomelabType.subheadline.fontSize, fontWeight = FontWeight.SemiBold)
                 }
             }
@@ -388,10 +389,10 @@ internal fun News73Reader(vm: AppViewModel, p: PaperPal) {
                 News73Banner(vm, cur, p, d?.item?.words)
                 if (busy && d == null) Text("Åpner den lagrede kopien …", color = p.mut, fontSize = HomelabType.callout.fontSize)
                 d?.blocks?.forEach { b -> Block73View(b, p) }
-                Box(Modifier.fillMaxWidth().height(50.dp).clip(RoundedCornerShape(25.dp)).background(p.ink).clickable { openLink(ctx, cur.url) }, contentAlignment = Alignment.Center) {
+                Box(Modifier.fillMaxWidth().height(50.dp).clip(RoundedCornerShape(25.dp)).background(p.ink).clickable(role = Role.Button) { openLink(ctx, cur.url) }, contentAlignment = Alignment.Center) {
                     Text("Åpne original ↗", color = p.bg, fontWeight = FontWeight.Bold, fontSize = HomelabType.callout.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
-                Box(Modifier.align(Alignment.CenterHorizontally).height(40.dp).clip(CircleShape).border(1.dp, p.line, CircleShape).clickable { News73.remove(vm, cur.id) }.padding(horizontal = 16.dp),
+                Box(Modifier.align(Alignment.CenterHorizontally).height(40.dp).clip(CircleShape).border(1.dp, p.line, CircleShape).clickable(role = Role.Button) { News73.remove(vm, cur.id) }.padding(horizontal = 16.dp),
                     contentAlignment = Alignment.Center) { Text("Fjern fra lagret", color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = HomelabType.subheadline.fontSize) }
             }
         }
