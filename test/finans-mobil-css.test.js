@@ -43,5 +43,5 @@ test('kategorifargene fra serveren blir papirfarger i JS, ikke med !important mo
 
 test('antall !important i mobile.css går bare ned', () => {
   const n = (utenKommentarer.match(/!important/g) || []).length;
-  assert.ok(n <= 800, `${n} !important (maks 800; 861 før oppryddingen)`);
+  assert.ok(n <= 577, `${n} !important (maks 577; 861 før oppryddingen)`);
 });
