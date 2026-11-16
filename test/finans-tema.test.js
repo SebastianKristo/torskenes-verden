@@ -98,3 +98,25 @@ test('e-postimporten på desktop: knappeteksten bruker --acc-ink, ikke en mørk 
   assert.match(pane, /--mp-acc:var\(--acc\);--mp-acc-ink:var\(--acc-ink\)/);
   assert.doesNotMatch(pane, /--on-acc|#1A0C04/i);
 });
+
+// E-B8: «Salg»-merket på Aksjer (desktop) var grønt på grønt, 3,50:1 i Papir lys. Merkene har nå egne klasser
+// (ingen inline-farger), og teksten blandes mot --text slik at den holder 4,5:1 i Papir lys og Papir mørk.
+test('Aksjer: kjøp/salg-merkene bruker klasser og holder 4,5:1 i Papir lys og mørk', () => {
+  const js = readFileSync(new URL('../public/finans/js/modules.js', import.meta.url), 'utf8');
+  assert.match(js, /class="mtag \$\{o\.side === 'Kjøp' \? 'ordre-kjop' : 'ordre-salg'\}"/);
+  assert.doesNotMatch(js, /class="mtag" style="background:\$\{o\.side/);
+  const css = readFileSync(new URL('../public/finans/css/finans.css', import.meta.url), 'utf8');
+  const rule = css.match(/\.mtag\.ordre-salg\{background:var\(--([\w-]+)\);color:color-mix\(in srgb,var\(--pos\) (\d+)%,var\(--text\)\)\}/);
+  assert.ok(rule, 'regelen for .mtag.ordre-salg');
+  const [, bgVar, pct] = rule;
+  const vars = (block) => Object.fromEntries([...block.matchAll(/--([\w-]+):(#[0-9a-f]{6})/gi)].map((x) => [x[1], x[2]]));
+  const lys = vars(css.split('}')[0]), mork = vars(css.slice(css.indexOf('html[data-ui=desktop][data-theme=mork]{')).split('}')[0]);
+  const hx = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+  const mix = (a, b, p) => hx(a).map((v, i) => v * p + hx(b)[i] * (1 - p));
+  const lum = (rgb) => { const c = rgb.map((v) => v / 255).map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4)); return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]; };
+  const ratio = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+  for (const [navn, v] of [['Papir lys', lys], ['Papir mørk', mork]]) {
+    const r = ratio(mix(v.pos, v.text, pct / 100), hx(v[bgVar]));
+    assert.ok(r >= 4.5, `${navn}: ${r.toFixed(2)}:1`);
+  }
+});

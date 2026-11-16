@@ -5,9 +5,9 @@
 import {
   S, api, esc, n0, n2, sgn, neg, dd, dWeek, today, monthName, cap, ini, greet, parseAmount,
   loadBoot, loadSummary, loadTx, loadReceipts, cats, accs, uploadReceipt, icon, aiLine, conic, navName } from './core.js';
-import { logo, posLoad, regLoad, take20, p20Down, p20Move, p20Up, p20Click, p20Screen } from './mobile-p20.js';
+import { logo, posLoad, regLoad, take20, p20Down, p20Move, p20Up, p20Click, p20Screen } from './mobile-posisjon-og-logoer.js';
 import * as UPQ from './mobile-upq.js';
-import { accountInit, logout, p21Bind, p21Sheets, dragMove, dragEnd } from './mobile-p21.js';
+import { accountInit, logout, p21Bind, p21Sheets, dragMove, dragEnd } from './mobile-konto-og-deling.js';
 import { MODS, modView, modLoad, domNav, modBind, modAfterDraw } from './mobile-mods.js';
 import { settingsView, settingsLoad, settingsBind } from './mobile-set.js';
 import { updSheet } from './mobile-upd.js';
@@ -21,45 +21,45 @@ import { TR, trkView, trkLoad, trkBind, trkWatch } from './mobile-track.js';
 import { haptic } from './mobile-haptics.js';
 import { subsBind, soDown, soMove, soUp } from './mobile-subs.js';
 import { fbChips, paper, paperDark, paperHero, paperNav, paperScanSheet, paperHome, paperFin, paperMer, mediaView, mediaLoad, newsView, newsLoad, paperBind, photoLoad, takeDesign, paperState, paperDown, paperUp, paperMove } from './mobile-paper.js';
-import { paperList, listAfterDraw, paperFinn, paperFinnSheet, paperFinnLoad, paperFinnBind, paperTrk, paperTrkSheet, paperTrkBind } from './mobile-paper2.js';
-import { take15, edDown, edMove, edUp, edClick, edReset, paperSearch, fsBind, paperTx, txLoad, txBind15, TX, finMerGrid, fmerLoad, rcCount, recentLoad, newShipSheet, nsBind, navSetBind, fabStyle } from './mobile-paper3.js';
+import { paperList, listAfterDraw, paperFinn, paperFinnSheet, paperFinnLoad, paperFinnBind, paperTrk, paperTrkSheet, paperTrkBind } from './mobile-papir-sider.js';
+import { take15, edDown, edMove, edUp, edClick, edReset, paperSearch, fsBind, paperTx, txLoad, txBind15, TX, finMerGrid, fmerLoad, rcCount, recentLoad, newShipSheet, nsBind, navSetBind, fabStyle } from './mobile-tilpassing.js';
 import { wxView, wxLoad, wxBind, wxBindScroll, WX, wxAfterDraw, wxPlaces } from './mobile-wx.js';
 import { wx22Down, wx22Move, wx22Up } from './mobile-vaer-kart-og-steder.js';
-import * as P22 from './mobile-p22.js';
-import * as P23 from './mobile-p23.js';
-import * as P24 from './mobile-p24.js';
-import * as P25 from './mobile-p25.js';
-import * as P26 from './mobile-p26.js';
+import * as P22 from './mobile-familie-soner.js';
+import * as P23 from './mobile-sveip-og-kvitteringer.js';
+import * as P24 from './mobile-profiler-og-bursdager.js';
+import * as P25 from './mobile-fanelinje-stil.js';
+import * as P26 from './mobile-integrasjoner.js';
 import * as KAL from './mobile-kal.js';
-import * as P27 from './mobile-p27.js';
+import * as P27 from './mobile-sokefelt-og-nyheter.js';
 import * as P33 from './mobile-glimt-husker.js'; // prompt 33: Innstillinger → AI → GLIMT HUSKER
-import * as P28 from './mobile-p28.js';
-import * as P29 from './mobile-p29.js';
-import * as P30 from './mobile-p30.js';
+import * as P28 from './mobile-mer.js';
+import * as P29 from './mobile-sok-og-backup.js';
+import * as P30 from './mobile-system-og-ark.js';
 import * as P30B from './mobile-boliger-deling.js';
-import * as P31 from './mobile-p31.js';
-import * as P32 from './mobile-p32.js'; // prompt 32: fanelinje på Domener/Abonnement/Familie, GLIMT I SØKEFELTET, Prøveperioder, SW-oppdatering
+import * as P31 from './mobile-glimt.js';
+import * as P32 from './mobile-sidefaner-og-sw.js'; // prompt 32: fanelinje på Domener/Abonnement/Familie, GLIMT I SØKEFELTET, Prøveperioder, SW-oppdatering
 import * as CHAT from './mobile-chat.js';
-import * as P34 from './mobile-p34.js'; // prompt 34: haptikk tilbake, kvitteringer under AI-analyse, Glimt-brief, markering i Innstillinger
+import * as P34 from './mobile-glimt-brief.js'; // prompt 34: haptikk tilbake, kvitteringer under AI-analyse, Glimt-brief, markering i Innstillinger
 import * as P34AI from './mobile-ai-kontroll.js'; // prompt 34: AI-kontroll (#/aictl)
-import * as P37 from './mobile-p37.js'; // prompt 37: Gjøremål (uten fanelinje, detaljark, delte lister, Glimt i ✦-knappen)
-import * as P37B from './mobile-p37b.js'; // prompt 37: bibelvers, onboarding med profil, «hvor er X», Pakker-widget, prøveperioder
-import * as P38 from './mobile-p38.js'; // prompt 38: AI-svar lukk, nye brief-kort, prestedrakt, ØKT, QR-innlogging, Glimt i Domener
-import * as P39 from './mobile-p39.js'; // prompt 39: sveip bort myk, Bibel uten fanelinje, wiggle-ark, Tilpass/Appprofil, Yr mot Storm 2a, ukas vær, kvittering på nytt
-let P40 = null; // prompt 40: mobile-p40.js (dynamisk import i bind())
-let P41 = null; // prompt 41: mobile-p41.js (dynamisk import i bind(); TDZ i sykliske importer)
-let P42 = null; // prompt 42: mobile-p42.js (dynamisk import i bind())
-let P43 = null; // prompt 43: mobile-p43.js (+ mobile-media.js for Media), dynamisk import i bind()
-let P44 = null; // prompt 44: mobile-p44.js (+ p44l Logger, p44s Studie, p44a Avspilling), dynamisk import i bind()
+import * as P37 from './mobile-gjoremal.js'; // prompt 37: Gjøremål (uten fanelinje, detaljark, delte lister, Glimt i ✦-knappen)
+import * as P37B from './mobile-bibel-og-onboarding.js'; // prompt 37: bibelvers, onboarding med profil, «hvor er X», Pakker-widget, prøveperioder
+import * as P38 from './mobile-okt-og-qr.js'; // prompt 38: AI-svar lukk, nye brief-kort, prestedrakt, ØKT, QR-innlogging, Glimt i Domener
+import * as P39 from './mobile-sveip-bort.js'; // prompt 39: sveip bort myk, Bibel uten fanelinje, wiggle-ark, Tilpass/Appprofil, Yr mot Storm 2a, ukas vær, kvittering på nytt
+let P40 = null; // prompt 40: mobile-jul-og-totrinn.js (dynamisk import i bind())
+let P41 = null; // prompt 41: mobile-bakgrunn-og-hoytider.js (dynamisk import i bind(); TDZ i sykliske importer)
+let P42 = null; // prompt 42: mobile-oversikt-knapp.js (dynamisk import i bind())
+let P43 = null; // prompt 43: mobile-widgets-og-media.js (+ mobile-media.js for Media), dynamisk import i bind()
+let P44 = null; // prompt 44: mobile-mer-og-gjoremal.js (+ p44l Logger, p44s Studie, p44a Avspilling), dynamisk import i bind()
 let P50F = null; // prompt 50 (FAMWEB50): mobile-familie.js – Familie i nytt design (/assets/js/family.js), dynamisk import i bind()
-let P46 = null; // prompt 46: mobile-p46.js (+ mobile-kart.js Kart), dynamisk import i bind()
+let P46 = null; // prompt 46: mobile-nyheter-innstillinger.js (+ mobile-kart.js Kart), dynamisk import i bind()
 let P52 = null; // prompt 52 (WEB52F): mobile-saldokort.js – saldokortets utseende (hold inne) og avrundet månedslinje i Liste
-let P45 = null; // prompt 45: mobile-p45.js (+ p45f Familie, p45h Gjøremål/Helse/Logger/Import, p45m Media), dynamisk import i bind()
-import * as P36 from './mobile-p36.js'; // prompt 36: sveip bort brief, Sherlock/snekker-Glimt, oppstartsside, profilbilde, ikoner, temperatur trykk/hold
-import * as P35 from './mobile-p35.js'; // prompt 35: Glimt-familien, brief med venner og opplesning, Innstillinger → Glimt (#/glimt), vær for sted
-import { takeApp, HK, p17Bind, p17Sheets, huskeView, tasksLoad, posWidget, bolWidgetLoad, appLoad, applyIcon, ptrBind, wsConnect, onRealtime } from './mobile-p17.js';
-import { trkDown, trkMove, trkUp } from './mobile-paper2.js';
-import { take16, p16Bind, p16Pointer, p16Move, p16Up, tabSheet, avgView, avgLoad, avgSheet, famView, famLoad, famSheet, famAfterDraw, bolView, bolLoad, AV, BO } from './mobile-p16.js';
+let P45 = null; // prompt 45: mobile-glimt-agent.js (+ p45f Familie, p45h Gjøremål/Helse/Logger/Import, p45m Media), dynamisk import i bind()
+import * as P36 from './mobile-brief-og-oppstart.js'; // prompt 36: sveip bort brief, Sherlock/snekker-Glimt, oppstartsside, profilbilde, ikoner, temperatur trykk/hold
+import * as P35 from './mobile-glimt-figurer.js'; // prompt 35: Glimt-familien, brief med venner og opplesning, Innstillinger → Glimt (#/glimt), vær for sted
+import { takeApp, HK, p17Bind, p17Sheets, huskeView, tasksLoad, posWidget, bolWidgetLoad, appLoad, applyIcon, ptrBind, wsConnect, onRealtime } from './mobile-app-og-sanntid.js';
+import { trkDown, trkMove, trkUp } from './mobile-papir-sider.js';
+import { take16, p16Bind, p16Pointer, p16Move, p16Up, tabSheet, avgView, avgLoad, avgSheet, famView, famLoad, famSheet, famAfterDraw, bolView, bolLoad, AV, BO } from './mobile-fanelinje.js';
 import { nårTemaEndres } from './tema.js';
 
 const u = S.ui;
@@ -277,7 +277,7 @@ function uploadScreen(th) {
     <button class="cta ${th === 'ios' ? 'glass2' : ''}" data-mact="cam"><span class="n">${icon('cam', 20)}</span><span class="m-grow"><b style="display:block;font-weight:600">Ta bilde</b><span style="font-size:13px;opacity:.75">Bakkamera</span></span></button>
     ${upqList(th)}
     ${m.uploading ? `<div class="m-empty">Laster opp ${m.uploading} fil${m.uploading > 1 ? 'er' : ''} …</div>` : ''}
-    ${j.length ? `<div class="sec">Kø</div><div class="list ${th === 'ios' ? 'glass2' : ''}">${j.map((x) => { const [txt, c, p] = st(x); return `<button class="item job" data-job="${esc(x.id)}"><span class="m-grow"><span class="m-ell" style="font-weight:500">${esc(x.merchant || x.name || 'Kvittering')}</span><span class="m-ell s" style="color:${c}">${txt}</span><span class="m-bar" style="height:4px;margin-top:6px;background:${th === 'ios' ? 'rgba(255,255,255,.12)' : c3('#31281F')}"><i style="width:${p}%;background:${c}"></i></span></span><span class="m-mono">${x.total != null ? n2(x.total) : ''}</span></button>`; }).join('')}</div>` : ''}
+    ${j.length ? `<div class="sec">Kø</div><div class="list ${th === 'ios' ? 'glass2' : ''}">${j.map((x) => { const [txt, c, p] = st(x); return `<button class="item job" data-job="${esc(x.id)}"><span class="m-grow"><span class="m-ell" style="font-weight:500">${esc(x.merchant || x.name || 'Kvittering')}</span><span class="m-ell s" style="color:${c === '#9FE3C6' ? 'var(--pp-pos)' : c}">${txt}</span><span class="m-bar" style="height:4px;margin-top:6px;background:${th === 'ios' ? 'rgba(255,255,255,.12)' : c3('#31281F')}"><i style="width:${p}%;background:${c}"></i></span></span><span class="m-mono">${x.total != null ? n2(x.total) : ''}</span></button>`; }).join('')}</div>` : ''}
     ${j.filter((x) => x.canReanalyze ?? x.status === 'error').map((x) => reBtn(th, x, `${x.merchant || x.name || 'Kvittering'}${x.status === 'error' ? ' · mislyktes' : ' · usikker'}`)).join('')}`;
 }
 
@@ -303,17 +303,17 @@ function confirmRc(th) {
   const catChips = cats('expense').map((c) => `<button class="chip" data-mcat="${c.id}" aria-pressed="${R.categoryId === c.id}">${esc(c.name)}</button>`).join('');
   const idx = q.findIndex((r) => r.id === R.id);
   const fields = th === 'ios'
-    ? `<div class="list glass2"><label class="field"><span>Butikk</span><input data-mf="merchant" value="${esc(R.merchant ?? '')}"></label><label class="field"><span>Dato</span><input type="date" data-mf="date" value="${R.date ?? ''}"></label><label class="field"><span>Total</span><input class="m-mono" data-mf="total" inputmode="decimal" value="${R.total != null ? n2(R.total).replace(/\s/g, '') : ''}" style="color:#FFB08A"></label><label class="field"><span>Konto</span><select data-mf="accountId">${accs().map((a) => `<option value="${a.id}"${a.id === R.accountId ? ' selected' : ''}>${esc(a.name)}</option>`).join('')}</select></label></div>`
+    ? `<div class="list glass2"><label class="field"><span>Butikk</span><input data-mf="merchant" value="${esc(R.merchant ?? '')}"></label><label class="field"><span>Dato</span><input type="date" data-mf="date" value="${R.date ?? ''}"></label><label class="field"><span>Total</span><input class="m-mono m-tx-lab" data-mf="total" inputmode="decimal" value="${R.total != null ? n2(R.total).replace(/\s/g, '') : ''}"></label><label class="field"><span>Konto</span><select data-mf="accountId">${accs().map((a) => `<option value="${a.id}"${a.id === R.accountId ? ' selected' : ''}>${esc(a.name)}</option>`).join('')}</select></label></div>`
     : `<div class="fields"><label class="field">Butikk<input data-mf="merchant" value="${esc(R.merchant ?? '')}"></label><div class="two"><label class="field">Dato<input type="date" data-mf="date" value="${R.date ?? ''}"></label><label class="field">Total<input class="m-mono" data-mf="total" inputmode="decimal" value="${R.total != null ? n2(R.total).replace(/\s/g, '') : ''}"></label></div><label class="field">Konto<select data-mf="accountId">${accs().map((a) => `<option value="${a.id}"${a.id === R.accountId ? ' selected' : ''}>${esc(a.name)}</option>`).join('')}</select></label></div>`;
   return `${rcBar(th, 'Bekreft kvittering', idx > -1 ? `${idx + 1} av ${q.length}` : '')}
     ${th === 'ios' ? '<div class="title" style="font-size:28px">Bekreft kvittering</div>' : ''}
     ${paper}
-    <div class="conf"><span>${R.provider && R.provider !== 'Manuell' ? `Lest av ${esc(R.source_label ?? R.provider)}${R.seconds ? ` · ${n2(R.seconds).replace(/0$/, '')} s` : ''}` : 'Manuell utfylling'}</span><span style="color:${high ? '#9FE3C6' : '#FFB08A'};font-weight:600">● ${R.error ? 'Fyll ut' : high ? 'Høy sikkerhet' : 'Sjekk beløp'}</span></div>
-    ${R.error ? `<div style="font-size:13px;color:#FFB08A;padding:0 6px">${esc(R.error)}</div>` : ''}
+    <div class="conf"><span>${R.provider && R.provider !== 'Manuell' ? `Lest av ${esc(R.source_label ?? R.provider)}${R.seconds ? ` · ${n2(R.seconds).replace(/0$/, '')} s` : ''}` : 'Manuell utfylling'}</span><span class="${high ? 'm-tx-pos' : 'm-tx-lab'}" style="font-weight:600">● ${R.error ? 'Fyll ut' : high ? 'Høy sikkerhet' : 'Sjekk beløp'}</span></div>
+    ${R.error ? `<div class="m-tx-lab" style="font-size:13px;padding:0 6px">${esc(R.error)}</div>` : ''}
     ${canRe(R, high) ? reBtn(th, R) : ''}${!['booked', 'pending', 'processing'].includes(R.status) ? ocrBtn(th, R) : ''}
     ${fields}
     <div style="display:flex;flex-wrap:wrap;gap:8px">${catChips}</div>
-    <div class="m-match ${R.match ? '' : 'none'}"><b style="font-weight:600;${R.match ? 'color:#9FE3C6' : ''}">${R.match ? 'Matchet mot kortkjøp' : 'Ingen bankmatch'}</b><br><span style="opacity:.8">${R.match ? `${dd(R.match.date)} · ${sgn(R.match.amount)} kr · ${esc(R.match.account)}` : 'Bokføres som ny transaksjon'}</span></div>
+    <div class="m-match ${R.match ? '' : 'none'}"><b class="${R.match ? 'm-tx-pos' : ''}" style="font-weight:600">${R.match ? 'Matchet mot kortkjøp' : 'Ingen bankmatch'}</b><br><span style="opacity:.8">${R.match ? `${dd(R.match.date)} · ${sgn(R.match.amount)} kr · ${esc(R.match.account)}` : 'Bokføres som ny transaksjon'}</span></div>
     <div class="btn2"><button class="sec-b" data-mact="reject">Avvis</button><button class="pri-b" data-mact="book">Bokfør</button></div>`;
 }
 
@@ -359,7 +359,7 @@ function menuSheet(th) {
     <div class="m-row" style="gap:12px"><span class="m-av${avatarUrl() ? ' img' : ''}">${avInner()}</span><div class="m-grow"><b>${esc(meName())}</b><div style="font-size:13px;opacity:.65">${who}</div></div><button class="mini" data-mact="menu" aria-label="Lukk">${icon('close', 18)}</button></div>
     ${(() => {
       // Startsiden står øverst; resten ligger under «Andre OS».
-      const hl = row('#/hl', 'hlhome', 'Homelab', 'Oversikt, søk og snarveier', scr === 'hl'), fin = row(`#/${startFin() ? startScr() : 'hjem'}`, 'wallet', 'Økonomi', 'Hjem, liste, budsjett og mer', FIN.includes(scr));
+      const hl = row('#/hl', 'hlhome', 'Homelab', 'Oversikt, søk og snarveier', scr === 'hl'), fin = row(`#/${startFin() ? startScr() : 'hjem'}`, 'wallet', 'Økonomi', 'Oversikt, transaksjoner, budsjett og mer', FIN.includes(scr));
       const rest = others.map(([k, n, s2, ic]) => row('#/' + k, ic, n, s2, scr === k)).join('');
       return `<div class="list ${th === 'ios' ? 'glass2' : ''}">${startFin() ? fin : hl}</div><div class="sec">Andre OS</div><div class="list ${th === 'ios' ? 'glass2' : ''}">${startFin() ? hl : fin}${rest}</div>`;
     })()}
@@ -496,7 +496,7 @@ async function load() {
     if (P45) { const j45 = P45.load45(scr, m.sub); if (j45) jobs.push(j45); } // prompt 45
     if (P46) { const j46 = P46.load46(scr, m.sub); if (j46) jobs.push(j46); } // prompt 46
     // Prompt 46: kjeden under hang tidligere på «if (P45)» som else-gren, så Nyheter, Vær, Ruter, Familie, Gjøremål osv.
-    // ikke ble lastet på nytt ved navigering når mobile-p45.js var lastet (bare ved første oppstart). Nå egen kjede.
+    // ikke ble lastet på nytt ved navigering når mobile-glimt-agent.js var lastet (bare ved første oppstart). Nå egen kjede.
     if (scr === 'nyheter') jobs.push(newsLoad());
     else if (scr === 'vaer') jobs.push(wxLoad());
     else if (scr === 'avg') jobs.push(avgLoad());
@@ -735,7 +735,7 @@ function tabUp(e) {
 }
 
 /* ---------- Sveip fra venstre kant for å gå tilbake (iOS-stil) ---------- */
-// Prompt 23: forrige side ligger ferdig tegnet bak (mobile-p23.js) med parallakse og slør. Virker der det finnes en
+// Prompt 23: forrige side ligger ferdig tegnet bak (mobile-sveip-og-kvitteringer.js) med parallakse og slør. Virker der det finnes en
 // tilbakepil, men ikke på rotsidene (hovedfanene).
 const BACK_SEL = '.pp-hero .pp-back, .m-scroll .gback, .m-scroll .back, .m-scroll .gtop, .m-scroll .atop, .m-scroll [data-mact="txback"], .m-scroll [data-mact="pdback"], .m-scroll [data-swipeback]';
 function backTarget() {
@@ -749,7 +749,7 @@ function cancelOthers(e) {
   const c = { type: 'pointercancel', pointerId: e.pointerId, clientX: e.clientX, clientY: e.clientY, target: e.target, button: 0, preventDefault() {}, stopPropagation() {} };
   for (const f of [dragEnd, (x) => wx22Up(x, wxPlaces()), P22.up, paperUp, edUp, p16Up, trkUp, p20Up]) { try { f(c); } catch { /* hver modul rydder selv */ } }
 }
-// Prompt 30: på berøringsskjerm tar kantsveipet i capture-fasen over (mobile-p30.js swInit); pekerveien gjelder mus/penn.
+// Prompt 30: på berøringsskjerm tar kantsveipet i capture-fasen over (mobile-system-og-ark.js swInit); pekerveien gjelder mus/penn.
 const swDown = (e) => (e.pointerType === 'touch' && P30.touchSwipe() ? false : P23.swDown(e, backTarget()));
 const swMove = (e) => P23.swMove(e, cancelOthers);
 const swEnd = (e) => P23.swEnd(e);
@@ -800,20 +800,20 @@ export function bind() {
   applyIcon(); appLoad().then(() => draw()).catch(() => {}); ptrBind(); wsConnect(onRealtime);
   wxBindScroll(); P23.icBoot(); P25.boot(); P26.boot26(); P27.boot27(); P28.boot28(); P30.boot30({ target: backTarget, cancel: cancelOthers }); P31.boot31(); P32.boot32(); P34.boot34(); P35.boot35(); P36.boot36(); P37.boot37(); P37B.boot37b(); P38.boot38(); P39.boot39();
   // Prompt 40: lastes lat (dynamisk import), så modulrekkefølgen ikke endres (TDZ i sykliske importer).
-  import('./mobile-p40.js').then((x) => { P40 = x; x.boot40(); if (document.documentElement.dataset.ui === 'mobile') draw(); }).catch((err) => console.warn('mobile-p40', err));
+  import('./mobile-jul-og-totrinn.js').then((x) => { P40 = x; x.boot40(); if (document.documentElement.dataset.ui === 'mobile') draw(); }).catch((err) => console.warn('mobile-jul-og-totrinn', err));
   // Prompt 41: også lat (dynamisk import). globalThis.P41 brukes av de andre modulene.
-  import('./mobile-p41.js').then((x) => { P41 = x; x.boot41(); if (document.documentElement.dataset.ui === 'mobile') draw(); }).catch((err) => console.warn('mobile-p41', err));
+  import('./mobile-bakgrunn-og-hoytider.js').then((x) => { P41 = x; x.boot41(); if (document.documentElement.dataset.ui === 'mobile') draw(); }).catch((err) => console.warn('mobile-bakgrunn-og-hoytider', err));
   // Prompt 42: Hjem-knapp i fanelinja, Vel fremme, ikonsøk, PostNord-logo, Gjøremål-Glimt del opp (lat, som 40 og 41).
-  import('./mobile-p42.js').then((x) => { P42 = x; x.boot42(); if (document.documentElement.dataset.ui === 'mobile') draw(); }).catch((err) => console.warn('mobile-p42', err));
+  import('./mobile-oversikt-knapp.js').then((x) => { P42 = x; x.boot42(); if (document.documentElement.dataset.ui === 'mobile') draw(); }).catch((err) => console.warn('mobile-oversikt-knapp', err));
   // Prompt 43: Media, Hjem-widget Media, Widgets-siden, rekkefølge på lister, Claude-import, stor skjerm (lat, som 40–42).
-  import('./mobile-p43.js').then((x) => { P43 = x; x.boot43(); if (document.documentElement.dataset.ui === 'mobile') draw(); }).catch((err) => console.warn('mobile-p43', err));
+  import('./mobile-widgets-og-media.js').then((x) => { P43 = x; x.boot43(); if (document.documentElement.dataset.ui === 'mobile') draw(); }).catch((err) => console.warn('mobile-widgets-og-media', err));
   // Prompt 44: Mer ny, Gjøremål-infoside og deloppgaver, Logg inn som, Overfør eier, Tidligere versjoner, Logger, Studie, Glimt-tid (lat, som 40–43).
-  import('./mobile-p44.js').then((x) => { P44 = x; x.boot44(); if (document.documentElement.dataset.ui === 'mobile') { draw(); load(); } }).catch((err) => console.warn('mobile-p44', err));
+  import('./mobile-mer-og-gjoremal.js').then((x) => { P44 = x; x.boot44(); if (document.documentElement.dataset.ui === 'mobile') { draw(); load(); } }).catch((err) => console.warn('mobile-mer-og-gjoremal', err));
   // Prompt 45: Glimt-agenten, brettoppsett (skann, Hjem-knapp og wiggle i navbaren), Mer, Ruter, Vær, Familie, Gjøremål, Media m.m. (lat, som 40–44).
-  import('./mobile-p45.js').then((x) => { P45 = x; x.boot45(); if (document.documentElement.dataset.ui === 'mobile') { draw(); load(); } }).catch((err) => console.warn('mobile-p45', err));
+  import('./mobile-glimt-agent.js').then((x) => { P45 = x; x.boot45(); if (document.documentElement.dataset.ui === 'mobile') { draw(); load(); } }).catch((err) => console.warn('mobile-glimt-agent', err));
   // Prompt 46: Kart, Ruter-innstillinger i wiggle, Nyheter i Innstillinger, profilring, liquid glass i Vær (lat, som 40–45).
   import('./mobile-familie.js').then((x) => { P50F = x; x.boot50(); }).catch((err) => console.warn('mobile-familie', err)); // prompt 50 (FAMWEB50)
-  import('./mobile-p46.js').then((x) => { P46 = x; x.boot46(); if (document.documentElement.dataset.ui === 'mobile') { draw(); load(); } }).catch((err) => console.warn('mobile-p46', err));
+  import('./mobile-nyheter-innstillinger.js').then((x) => { P46 = x; x.boot46(); if (document.documentElement.dataset.ui === 'mobile') { draw(); load(); } }).catch((err) => console.warn('mobile-nyheter-innstillinger', err));
   import('./mobile-saldokort.js').then((x) => { P52 = x; x.boot52(); if (document.documentElement.dataset.ui === 'mobile') x.afterDraw52(); }).catch((err) => console.warn('mobile-saldokort', err));
   if (!temaBundet) { temaBundet = true; nårTemaEndres(() => { if (document.documentElement.dataset.ui === 'mobile') draw(); }); } // Q15: følger Homelab-temaet
   addEventListener('fh-design', (e) => { const d = e.detail ?? {}; takeDesign(d); if (typeof d.lock === 'boolean') setPref('lock', d.lock); if (typeof d.hap === 'boolean') setPref('hap', d.hap); if (d.photo) photoLoad(d.photo).then(draw).catch(() => {}); draw(); });
@@ -886,7 +886,7 @@ export function bind() {
     if (paper() && edClick(e, t)) return; // tilpass siden: ▲ ▼ −, Ferdig, og klikket etter et langt trykk
     if (await P29.bind29(e, t)) return; // Prompt 29: søkemotor, rask time, Backup
     if (await P22.bind(e, t)) return;
-    if (await p21Bind(e, t, { HK, reload: () => import('./mobile-p17.js').then((x) => x.tasksLoad(true)) })) return;
+    if (await p21Bind(e, t, { HK, reload: () => import('./mobile-app-og-sanntid.js').then((x) => x.tasksLoad(true)) })) return;
     if (await p17Bind(e, t)) return;
     if (await p16Bind(e, t)) return;
     if (await wxBind(e, t)) return;

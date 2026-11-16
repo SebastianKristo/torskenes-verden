@@ -1,5 +1,5 @@
 // Prompt 52 (WEB52F, claude-code-kvittering-lokal-lik-overalt.md → Mobil): én kvitteringsvisning i PWA-en.
-// Finans → transaksjon (paperTx i mobile-paper3.js) og Boliger → utgift (entSheet i mobile-boliger-deling.js) bruker samme kort:
+// Finans → transaksjon (paperTx i mobile-tilpassing.js) og Boliger → utgift (entSheet i mobile-boliger-deling.js) bruker samme kort:
 // logo/forbokstav, butikk, «kategori · dato · bolig», stort beløp og ✦ Glimt-tekst, deretter «ORIGINAL KVITTERING» med
 // papir-gjengivelsen (varelinjer + total) som åpner originalen. Ingen egen leser i Boliger.
 import { esc, ini } from './core.js';

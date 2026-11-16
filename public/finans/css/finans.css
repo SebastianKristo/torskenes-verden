@@ -383,6 +383,9 @@ input[type=date]{color-scheme:dark}
 .scope{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:10px;background:var(--card);border:1px solid var(--line);cursor:pointer}
 .scope input{margin-top:3px;accent-color:var(--acc)}
 .mtag{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:6px;background:var(--inner);color:var(--text2);font-size:11.5px;white-space:nowrap;flex:none}
+/* E-B8: kjøp/salg-merkene på Aksjer. «Salg» var --pos på --pos-line (3,50:1 i Papir lys); teksten blandes mot --text. */
+.mtag.ordre-kjop{background:color-mix(in srgb,var(--blue) 15%,transparent);color:var(--blue)}
+.mtag.ordre-salg{background:var(--pos-soft);color:color-mix(in srgb,var(--pos) 75%,var(--text))}
 .link-btn{background:none;border:0;padding:0;color:var(--acc-l);font-size:12.5px}
 h3{margin:0;font-size:16px;font-weight:600}
 .mod-kpi{padding:16px 18px;display:flex;flex-direction:column;gap:4px;min-width:0}

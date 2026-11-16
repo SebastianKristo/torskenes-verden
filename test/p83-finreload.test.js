@@ -1,6 +1,6 @@
 // Prompt 83 (FINRELOAD83): Økonomi på web blinket og lastet seg inn på nytt ~1–2 s etter innlasting. Rotårsak: siden ble
 // først styrt av Homelabs service worker (/sw.js, scope /), og når /finans/sw.js ble installert og tok over (clients.claim),
-// tolket vercheck.js (desktop) og mobile-p32.js (mobil/PWA) controllerchange som «ny versjon» og kalte location.reload().
+// tolket vercheck.js (desktop) og mobile-sidefaner-og-sw.js (mobil/PWA) controllerchange som «ny versjon» og kalte location.reload().
 // Nå laster bare en oppdatering av den samme service workeren (samme skript-sti) siden på nytt – én gang.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -52,8 +52,8 @@ test('vercheck: overtakelse fra /sw.js laster ikke siden på nytt, ny versjon av
   assert.equal(await simulate(`${O}/finans/sw.js`, [`${O}/finans/sw.js`, `${O}/finans/sw.js`]), 1, 'aldri to ganger på rad (løkkevern)');
 });
 
-test('mobile-p32.js bruker samme regel (ingen reload ved overtakelse fra en annen service worker)', () => {
-  const src = readFileSync(join(ROOT, 'public/finans/js/mobile-p32.js'), 'utf8');
+test('mobile-sidefaner-og-sw.js bruker samme regel (ingen reload ved overtakelse fra en annen service worker)', () => {
+  const src = readFileSync(join(ROOT, 'public/finans/js/mobile-sidefaner-og-sw.js'), 'utf8');
   assert.match(src, /import \{ isSwUpdate \} from '\.\.\/\.\.\/js\/vercheck\.js'/);
   const body = src.slice(src.indexOf('function swBoot'), src.indexOf('location.reload()', src.indexOf('function swBoot')));
   assert.match(body, /if \(!isSwUpdate\(prev, ctl\)\) return;/);

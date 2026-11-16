@@ -7,33 +7,33 @@ import { S, esc, n0, neg0, hlApi, ini, today, greet } from './core.js';
 import { m, draw, flash, pref, setPref, meName, avInner, avatarUrl, openSheet, upload, ACTIVE_JOBS, startScr, domOk } from './mobile.js';
 import { hlData, hlDom, ruterUrl, yrUrl } from './mobile-hl.js';
 import { TR, active, badge, carName } from './mobile-track.js';
-import { pkgLogo, pkgTitle, pkgMore } from './mobile-p21.js';
+import { pkgLogo, pkgTitle, pkgMore } from './mobile-konto-og-deling.js';
 import { haptic } from './mobile-haptics.js';
 import { matToday, matTitle } from './mobile-mat.js';
-import { edOn, edBlocks, finKeys, finScreens, fabStyle, fourth, onWay, rcBanner, FX, openNewShip } from './mobile-paper3.js';
-import { mainTabs, heroBg, bolTitle } from './mobile-p16.js';
+import { edOn, edBlocks, finKeys, finScreens, fabStyle, fourth, onWay, rcBanner, FX, openNewShip } from './mobile-tilpassing.js';
+import { mainTabs, heroBg, bolTitle } from './mobile-fanelinje.js';
 import { SB } from './mobile-subs.js';
 import { aksTitle } from './mobile-aks.js';
-import * as P23 from './mobile-p23.js';
-import * as P29 from './mobile-p29.js';
-import * as P30 from './mobile-p30.js';
-import * as P24 from './mobile-p24.js';
-import * as P25 from './mobile-p25.js';
-import * as P26 from './mobile-p26.js';
+import * as P23 from './mobile-sveip-og-kvitteringer.js';
+import * as P29 from './mobile-sok-og-backup.js';
+import * as P30 from './mobile-system-og-ark.js';
+import * as P24 from './mobile-profiler-og-bursdager.js';
+import * as P25 from './mobile-fanelinje-stil.js';
+import * as P26 from './mobile-integrasjoner.js';
 import * as KAL from './mobile-kal.js';
-import * as P27 from './mobile-p27.js';
-import * as P28 from './mobile-p28.js';
-import * as P32 from './mobile-p32.js';
+import * as P27 from './mobile-sokefelt-og-nyheter.js';
+import * as P28 from './mobile-mer.js';
+import * as P32 from './mobile-sidefaner-og-sw.js';
 import { setTitle } from './mobile-set.js';
-import { appName, huskeWidget, bolWidget, scanCtx, homeUpload, FT } from './mobile-p17.js';
-import { posCard, ppTi } from './mobile-p20.js';
+import { appName, huskeWidget, bolWidget, scanCtx, homeUpload, FT } from './mobile-app-og-sanntid.js';
+import { posCard, ppTi } from './mobile-posisjon-og-logoer.js';
 import { bgFetch, bgLayers, bgControls, saveBg, takeBg, bgSet } from './mobile-bg.js';
 import { homelabStil, homelabMorkt, homelabModus } from './tema.js';
-import * as P34 from './mobile-p34.js'; // prompt 34: Glimt-brief på Hjem (h12)
-import * as P35 from './mobile-p35.js'; // prompt 35: Hjem-kortet med vertsfiguren
-import * as P37 from './mobile-p37.js'; // prompt 37: Gjøremål-widgeten
-import * as P37B from './mobile-p37b.js'; // prompt 37: bibelvers på Hjem, Pakker «bare når det er pakker»
-import * as P36 from './mobile-p36.js'; // prompt 36: sveip bort brief-kortet, Now Brief i Mer, temperatur trykk/hold
+import * as P34 from './mobile-glimt-brief.js'; // prompt 34: Glimt-brief på Hjem (h12)
+import * as P35 from './mobile-glimt-figurer.js'; // prompt 35: Hjem-kortet med vertsfiguren
+import * as P37 from './mobile-gjoremal.js'; // prompt 37: Gjøremål-widgeten
+import * as P37B from './mobile-bibel-og-onboarding.js'; // prompt 37: bibelvers på Hjem, Pakker «bare når det er pakker»
+import * as P36 from './mobile-brief-og-oppstart.js'; // prompt 36: sveip bort brief-kortet, Now Brief i Mer, temperatur trykk/hold
 
 /* ---------- Valg (per bruker i /api/me/layout, med lokal kopi) ---------- */
 
@@ -164,7 +164,7 @@ const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 export const FIN_MAIN = ['hjem', 'liste', 'finn', 'fmer'];
 export const FIN_SUB = ['budsjett', 'kv', 'fast', 'konto', 'aks', 'sub', 'dir', 'imp', 'rap', 'sok', 'skann', 'opp'];
 export const ctxOf = (scr) => (scr === 'dom' ? 'dom' : FIN_MAIN.includes(scr) || FIN_SUB.includes(scr) ? 'fin' : 'main');
-const ABO_BACK = { mer: 'Mer', hl: 'Hjem', hjem: 'Oversikt', fmer: 'Mer', liste: 'Liste', finn: 'Finn', sok: 'Søk', set: 'Innstillinger', brief: 'Brief', huske: 'Gjøremål', kal: 'Kalender' };
+const ABO_BACK = { mer: 'Mer', hl: 'Homelab', hjem: 'Oversikt', fmer: 'Mer', liste: 'Liste', finn: 'Finn', sok: 'Søk', set: 'Innstillinger', brief: 'Brief', huske: 'Gjøremål', kal: 'Kalender' };
 const NAMES = { hl: 'Homelab', mer: 'Mer', fmer: 'Mer', hjem: 'Oversikt', liste: 'Transaksjoner', finn: 'Finn', mat: 'Mat', spor: 'Sporing', set: 'Innstillinger', sok: 'Søk', dom: 'Domener' };
 // Hvor pila øverst til venstre går: Finans-fanene og de andre hovedfanene går hjem, undersider til forelderen.
 // Prompt 24: i profilene Finans + Boliger og Boliger-profil er Boliger roten. Finans-fanene og Finans → Mer har ingen
@@ -185,19 +185,19 @@ function parentOf0(scr) {
   if (scr === 'set' && m.sub) return ['set', 'Alle innstillinger'];
   if (scr === 'mat' && m.sub) return ['mat', 'Mat'];
   // Domener: pila (og sveip tilbake) går alltid hjem, også når Domener ble åpnet fra Mer.
-  if (scr === 'dom') return m.sub === 'admin' ? ['dom', 'Domener'] : ['hl', 'Hjem'];
+  if (scr === 'dom') return m.sub === 'admin' ? ['dom', 'Domener'] : ['hl', 'Homelab'];
   if (scr === 'skann' && m.rc) return ['back', 'Kvitteringer'];
   if (scr === 'aks' && m.sub) return ['aks', 'Aksjer'];
   if (scr === 'dir' && m.sub) return ['dir', 'Boliger'];
-  if (['avg', 'fam', 'vaer', 'huske'].includes(scr)) return ['hl', 'Hjem'];
+  if (['avg', 'fam', 'vaer', 'huske'].includes(scr)) return ['hl', 'Homelab'];
   if (scr === 'imp') return ['set', 'Innstillinger']; // O3: Import bor i Innstillinger
   if (finScreens().includes(scr) || scr === 'fmer' || scr === 'hjem') return ['hl', 'Homelab'];
   // Prompt 38: Abonnement går tilbake dit det ble åpnet fra (Mer, Hjem, Oversikt, Finans → Mer, Innstillinger, brief).
   if (scr === 'sub' && m.aboFrom && m.aboFrom !== 'sub' && ABO_BACK[m.aboFrom]) return [m.aboFrom, ABO_BACK[m.aboFrom]];
   if (FIN_SUB.includes(scr)) return ['fmer', 'Mer'];
   if (['media', 'nyheter'].includes(scr)) return ['mer', 'Mer'];
-  if (scr === 'set') return [m.setFrom && m.setFrom !== 'set' ? m.setFrom : 'hl', NAMES[m.setFrom] ?? 'Hjem'];
-  return ['hl', 'Hjem'];
+  if (scr === 'set') return [m.setFrom && m.setFrom !== 'set' ? m.setFrom : 'hl', NAMES[m.setFrom] ?? 'Homelab'];
+  return ['hl', 'Homelab'];
 }
 
 /** Fase 6 (Q4): filtrene øverst på Faste betalinger (Abonnementer = sub, Faste utgifter = fast, Planlagte trekk = egen side med saldoprognose). */
@@ -491,13 +491,13 @@ export function paperMer() {
   // fanelinja tas ut. I profilene Finans + Boliger og Boliger-profil står Hjem øverst.
   const n = onWay(), inBar = new Set(mainTabs('mer').map(([k]) => k)); // inBar: bare for valget Sporing/Domener under
   const mod = inBar.has('spor') ? (domOk() ? ['dom', 'Domener', 'Trafikk, besøk og oppetid'] : null) : ['spor', 'Sporing', n ? `${n} pakke${n === 1 ? '' : 'r'} på vei` : 'Pakker og sendinger'];
-  const rows = [...(P24.profRoot() ? [['hl', 'Hjem', 'Pakker, avganger og widgets']] : []), ['brief', 'Brief', P36.briefMerSub()], ...(P37B.bibleOn() ? [['bibel', 'Bibel', 'Dagens vers, rekke og leseplan']] : []), // prompt 37: bare med bibelvers-modulen // prompt 36: Now Brief øverst i Mer
+  const rows = [...(P24.profRoot() ? [['hl', 'Oversikt', 'Pakker, avganger og widgets']] : []), ['brief', 'Brief', P36.briefMerSub()], ...(P37B.bibleOn() ? [['bibel', 'Bibel', 'Dagens vers, rekke og leseplan']] : []), // prompt 37: bare med bibelvers-modulen // prompt 36: Now Brief øverst i Mer
      ...(mod ? [mod] : []), ['kal', 'Kalender', 'Timeplan, prøver og frister'], ['bd', 'Bursdager', 'Hvem har bursdag snart'], ['huske', 'Gjøremål', 'To-do for hele familien'], ['fam', 'Familie og kart', 'Posisjon, soner og helse'], ['tkart', 'Kart', 'Holdeplasser, sanntid og soner'] /* prompt 46 */,
     ['chat', 'Chat', 'Ollama, Gemini og Groq · historikk'], ['media', 'Media', 'Sonarr, Radarr og nedlastinger'], ['hjem', 'Økonomi', 'Oversikt, transaksjoner, Finn og mer'], ['sub', 'Faste betalinger', 'Abonnementer, faste utgifter og planlagte trekk'], ['nyheter', 'Nyheter', 'RSS med AI-sammendrag'], ['studie', 'Studie', 'Vitnemål, karakterer og snitt med Glimt'], ['avspilling', 'Avspilling', 'Plex og Jellyfin · spilles nå og historikk'] /* prompt 44 */, ['set', 'Innstillinger', 'Tema, bakgrunn og konto']]
     ; // prompt 40 (claude-code-fanelinje-alle-sider.md): faner i fanelinja vises fortsatt i Mer
   // Prompt 25: ikon til venstre (40-boks med strekikon i fargene fra ikonpaletten).
   // Prompt 28: hold inne for å flytte og skjule (lagres per konto), Subscription OS etter Finans.
-  return globalThis.P44?.merNew ? globalThis.P44.merNew(rows) : P28.merView(rows); // prompt 44: Mer ny (mobile-p44.js)
+  return globalThis.P44?.merNew ? globalThis.P44.merNew(rows) : P28.merView(rows); // prompt 44: Mer ny (mobile-mer-og-gjoremal.js)
 }
 
 /* ---------- Media (Plex og Jellyfin) ---------- */

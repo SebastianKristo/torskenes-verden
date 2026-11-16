@@ -1,10 +1,10 @@
 // Moduler i mobilappen («Andre OS»): Matplan, Domener, Subscription OS, Delte mapper og Finn-handler.
 // Hver modul fyller hele skjermen og henter fra sitt eget API. Feiler API-et, vises en lenke til desktop-siden.
 import { api, esc, n0, n2, dd, dWeek, today, icon, aiLine, matApi, domApi, parseAmount, navName } from './core.js';
-import { logo } from './mobile-p20.js'; // logoregisteret (prompt 20), ellers core.logo
+import { logo } from './mobile-posisjon-og-logoer.js'; // logoregisteret (prompt 20), ellers core.logo
 import { m, draw, flash, avatar, backBtn, pref } from './mobile.js';
 import { subsLoad, subsView, subsBind } from './mobile-subs.js';
-import * as P38 from './mobile-p38.js'; // prompt 38: Glimt-oppsummering og alt lastet ved åpning
+import * as P38 from './mobile-okt-og-qr.js'; // prompt 38: Glimt-oppsummering og alt lastet ved åpning
 
 export const MODS = [
   ['mat', 'Mat', 'Ukemeny, kokk og handleliste', 'mat'],
@@ -147,7 +147,7 @@ function finn(th) {
   return `${head(th, navName('finn', 'Finn-handler'))}
     ${kpis(th, [['Kjøpt i år', `${n0(f.bought ?? 0)} kr`], ['Solgt i år', `${n0(f.sold ?? 0)} kr`], ['Pågående', String(f.ongoing ?? 0)]])}
     ${listBox(th, (f.items ?? []).map((x) => `<div class="item" style="align-items:flex-start">${logo({ domain: 'finn.no', description: 'Finn' }, 40, isIos(th) ? 20 : 12)}<span class="m-grow"><span class="m-row" style="gap:8px"><em class="role ${x.role === 'sold' ? 'sold' : 'bought'}">${x.role === 'sold' ? 'Solgt' : 'Kjøpt'}</em><span class="m-ell" style="font-weight:500">${esc(x.item)}</span></span><span class="m-ell s">${esc(x.counterpart ?? '')}${x.date ? ` · ${dd(x.date)}` : ''}</span>
-      <span class="steps">${(x.steps ?? []).map((s) => `<em class="${s.done ? 'done' : ''}">${esc(s.t ?? s.name ?? s.label ?? s)}</em>`).join('')}</span></span><span class="m-mono" style="font-weight:600;color:${x.role === 'sold' ? '#9FE3C6' : 'inherit'}">${x.role === 'sold' ? '+' : '−'}${n0(x.amount)}</span></div>`).join('') || '<div class="m-empty">Ingen Finn-handler ennå. Lim inn Finn-e-poster i Økonomi på PC.</div>')}`;
+      <span class="steps">${(x.steps ?? []).map((s) => `<em class="${s.done ? 'done' : ''}">${esc(s.t ?? s.name ?? s.label ?? s)}</em>`).join('')}</span></span><span class="m-mono" style="font-weight:600;color:${x.role === 'sold' ? 'var(--pp-pos)' : 'inherit'}">${x.role === 'sold' ? '+' : '−'}${n0(x.amount)}</span></div>`).join('') || '<div class="m-empty">Ingen Finn-handler ennå. Lim inn Finn-e-poster i Økonomi på PC.</div>')}`;
 }
 
 /* ---------- Domener (Cloudflare): faner Trafikk · Besøk · Ytelse · Sikkerhet ---------- */

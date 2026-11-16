@@ -5,8 +5,8 @@
 import { esc, matApi, today } from './core.js';
 import { m, draw, flash, meName } from './mobile.js';
 import { paper } from './mobile-paper.js';
-import { edBlocks } from './mobile-paper3.js';
-import { matShared } from './mobile-p36.js'; // prompt 36: matplanen er felles for husstanden
+import { edBlocks } from './mobile-tilpassing.js';
+import { matShared } from './mobile-brief-og-oppstart.js'; // prompt 36: matplanen er felles for husstanden
 
 const M = { w: null, err: '', sel: null, busy: false, folders: null, fLocal: false, folder: '', jobs: [], step: {}, imp: { url: '', busy: false, prev: null, err: '', folderId: '' }, newF: null, link: null, all: false, checked: {} };
 const AB = ['MAN', 'TIR', 'ONS', 'TOR', 'FRE', 'LØR', 'SØN'];
@@ -101,7 +101,7 @@ function todayCard() {
       <div class="mp2-tname">${esc(td.name || 'Ingen rett i dag')}</div>
       <div class="mp2-tcook">${esc(cook)}</div>
       ${steps.length ? `<button class="mp2-step" data-mp="step" data-id="${esc(td.dishId)}"><span class="mp2-sl">STEG ${k + 1} AV ${steps.length} · trykk for neste</span><span class="mp2-st">${esc(steps[k])}</span>
-        <span class="mp2-dots">${steps.map((_, i) => `<i style="background:${i <= k ? '#141A06' : 'rgba(20,26,6,.18)'}"></i>`).join('')}</span></button>` : ''}
+        <span class="mp2-dots">${steps.map((_, i) => `<i${i <= k ? ' class="on"' : ''}></i>`).join('')}</span></button>` : ''}
     </div>`;
 }
 

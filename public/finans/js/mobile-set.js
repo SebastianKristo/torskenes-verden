@@ -1,7 +1,7 @@
 // Innstillinger i mobilappen: hovedside med gruppene Konto, App og System, og én underside per gruppe.
 // Valg som bare gjelder denne enheten lagres i localStorage (fh_mprefs); AI og varsler for kvitteringer/budsjett på serveren.
-import * as P36 from './mobile-p36.js'; // prompt 36: Konto med profilbilde
-import * as P29 from './mobile-p29.js';
+import * as P36 from './mobile-brief-og-oppstart.js'; // prompt 36: Konto med profilbilde
+import * as P29 from './mobile-sok-og-backup.js';
 import { S, api, esc, n0, ini, icon, loadBoot, loadSummary, hlApi } from './core.js';
 import { m, draw, flash, pref, setPref, theme, iosBg, isIOS, meName, avInner, avatarUrl, loadMe, startScr, domOk, HLTABS, FINTABS, FIXED_HL, FIXED_FIN, tabName } from './mobile.js';
 import { LAY, saveLayout } from './mobile-hl.js';
@@ -9,20 +9,20 @@ import { SEEDS, MODES } from './mobile-theme.js';
 import { haptic, hpref, setHap, canVibrate, HAP_TYPES } from './mobile-haptics.js';
 import { paper, saveDesign, paperState, photoChoices, paperModeValgt } from './mobile-paper.js';
 import { settHomelabTema } from './tema.js';
-import { tabEditor, iconThemeRow, iconColor, iconInk } from './mobile-p16.js';
-import { navSettings } from './mobile-paper3.js';
+import { tabEditor, iconThemeRow, iconColor, iconInk } from './mobile-fanelinje.js';
+import { navSettings } from './mobile-tilpassing.js';
 import { TR, trkLoad, trkPrefRows, setTrkPref } from './mobile-track.js';
-import * as P23 from './mobile-p23.js';
-import * as P24 from './mobile-p24.js';
-import * as P26 from './mobile-p26.js';
-import { row, grp, appName, appIcon, ICONS } from './mobile-p17.js';
-import * as P25 from './mobile-p25.js'; // prompt 39: Fanelinje-stil i Tilpass
-import { haSection } from './mobile-p22.js';
-import { p17SetMain, p17Modules, p17AiExtra, p17Varsler, aiLoad, notifyLoad, NT, canSrv, ADMIN_NOTE } from './mobile-p17.js';
-import * as P27 from './mobile-p27.js';
+import * as P23 from './mobile-sveip-og-kvitteringer.js';
+import * as P24 from './mobile-profiler-og-bursdager.js';
+import * as P26 from './mobile-integrasjoner.js';
+import { row, grp, appName, appIcon, ICONS } from './mobile-app-og-sanntid.js';
+import * as P25 from './mobile-fanelinje-stil.js'; // prompt 39: Fanelinje-stil i Tilpass
+import { haSection } from './mobile-familie-soner.js';
+import { p17SetMain, p17Modules, p17AiExtra, p17Varsler, aiLoad, notifyLoad, NT, canSrv, ADMIN_NOTE } from './mobile-app-og-sanntid.js';
+import * as P27 from './mobile-sokefelt-og-nyheter.js';
 import * as P33 from './mobile-glimt-husker.js'; // prompt 33: GLIMT HUSKER
-import * as P32 from './mobile-p32.js'; // prompt 32: GLIMT I SØKEFELTET, fanelinje på andre sider
-import * as P38 from './mobile-p38.js'; // prompt 38: ØKT i Konto og Logg inn på ny enhet
+import * as P32 from './mobile-sidefaner-og-sw.js'; // prompt 32: GLIMT I SØKEFELTET, fanelinje på andre sider
+import * as P38 from './mobile-okt-og-qr.js'; // prompt 38: ØKT i Konto og Logg inn på ny enhet
 import { updLoad, updPage, updSummary, updAdmin, updBind } from './mobile-upd.js';
 
 const T = { f: {}, ai: null, bk: null, srch: null, tokens: null, devices: null, newTok: '', nt: { name: '', scopes: ['receipts:write'], exp: '90' }, ping: '', lastSync: null, usage: null };
@@ -88,7 +88,7 @@ const PHOTO_N = { cur: 'Ingen', oslo: 'Oslo', weather: 'Vær', planets: 'Planete
 function paperTop() {
   const md = paperModeValgt(), r = (k, n, s2) => `<button class="opt-row" data-sact="ppmode" data-v="${k}"><span class="m-grow"><b style="font-weight:600">${n}</b><br><span style="font-size:13px;opacity:.65">${s2}</span></span><span class="sval" style="${md === k ? 'color:var(--pp-pos);opacity:1;font-weight:600' : ''}">${md === k ? '✓ Valgt' : ''}</span></button>`;
   return `${G('Tema', [r('lys', 'Papir · lys', 'Lyst papir og svart fanelinje'), r('mork', 'Papir · mørk', 'Kveldspapir og lys fanelinje'), r('auto', 'Papir · følg systemet', 'Lys om dagen, mørk når telefonen er mørk')])}
-    ${G('Tilpass', [nav('profil', 'Profil', m.me?.username ? `@${m.me.username}` : '', 'users', '#5E8BFF'), nav('bakgrunn', 'Bakgrunn på Hjem', PHOTO_N[pref('photo')] ?? 'Ingen', 'look', '#FF9F0A'), nav('fanelinje', 'Fanelinje', 'Faner, navn og ikoner', 'list', '#5E5CE6'), link('<b style="font-weight:600">Nyheter</b>', '#/nyheter', 'Kilder, kategorier og AI')])}
+    ${G('Tilpass', [nav('profil', 'Profil', m.me?.username ? `@${m.me.username}` : '', 'users', '#5E8BFF'), nav('bakgrunn', 'Bakgrunn på Oversikt', PHOTO_N[pref('photo')] ?? 'Ingen', 'look', '#FF9F0A'), nav('fanelinje', 'Fanelinje', 'Faner, navn og ikoner', 'list', '#5E5CE6'), link('<b style="font-weight:600">Nyheter</b>', '#/nyheter', 'Kilder, kategorier og AI')])}
     <div class="sec">Ikonfarger</div>${iconThemeRow()}
 `;
 }
@@ -112,10 +112,10 @@ const PAGE = {
     const md = paperModeValgt(), r = (k, n, s2) => `<button class="opt-row p17-row" data-sact="ppmode" data-v="${k}"><span class="m-grow p17-rt"><b>${n}</b><small>${s2}</small></span><span class="sval" style="${md === k ? 'color:var(--pp-pos);opacity:1;font-weight:700' : ''}">${md === k ? '✓ Valgt' : ''}</span></button>`;
     const st = { hl: 'homelab', hjem: 'fin-hjem', liste: 'fin-liste', budsjett: 'fin-budsjett' }[startScr()] ?? 'homelab';
     return `${grp('IDENTITET', [row('', 'Navn på appen', '', appName(), 'home', 'appnavn', 'data-p17="nm"'), row('', 'App-ikon', '', ICONS.find(([k]) => k === appIcon())?.[1] ?? '', 'img', 'appikon', 'data-p17="ic"')])}
-      ${grp('FANELINJE', [...(globalThis.P42 ? [globalThis.P42.nhRow(row)] : []) /* prompt 42: Hjem-knapp */, ...(globalThis.P41 ? [globalThis.P41.scanRow(false)] : []), row('', 'Fanelinje-stil', P25.NAV_STYLES.find(([k]) => k === P25.navStyle())[2], P25.navStyleName(), 'list', 'navstil', 'data-p25="nscycle"'), row('#/set/fanelinje', 'Fanelinje i Hjem', 'Fjern, flytt, gi nytt navn og ikon · eller hold inne på fanelinjen', '', 'list', 'hjemnav')])}
+      ${grp('FANELINJE', [...(globalThis.P42 ? [globalThis.P42.nhRow(row)] : []) /* prompt 42: Oversikt-knapp */, ...(globalThis.P41 ? [globalThis.P41.scanRow(false)] : []), row('', 'Fanelinje-stil', P25.NAV_STYLES.find(([k]) => k === P25.navStyle())[2], P25.navStyleName(), 'list', 'navstil', 'data-p25="nscycle"'), row('#/set/fanelinje', 'Fanelinje på Oversikt', 'Fjern, flytt, gi nytt navn og ikon · eller hold inne på fanelinjen', '', 'list', 'hjemnav')])}
       <span class="pp-lab p17-gl" data-hl="theme">TEMA</span><div class="list p17-list">${[r('lys', 'Papir · lys', 'Lyst papir og svart fanelinje'), r('mork', 'Papir · mørk', 'Kveldspapir og lys fanelinje'), r('auto', 'Papir · følg systemet', 'Lys om dagen, mørk når telefonen er mørk')].join('')}</div>
       <span class="pp-lab p17-gl">IKONFARGER</span>${iconThemeRow()}
-      ${grp('BAKGRUNN', [row('#/set/bakgrunn', 'Bakgrunn på Hjem', 'Toppbilde, vær, planeter eller eget bilde', PHOTO_N[pref('photo')] ?? 'Ingen', 'look', 'bakgrunn')])}
+      ${grp('BAKGRUNN', [row('#/set/bakgrunn', 'Bakgrunn på Oversikt', 'Toppbilde, vær, planeter eller eget bilde', PHOTO_N[pref('photo')] ?? 'Ingen', 'look', 'bakgrunn')])}
       ${globalThis.P41?.holidayGroup?.() ?? '' /* prompt 41: HØYTIDER · 17. mai */}
       ${G('Forside', [chips('startL', 'Startside', [['homelab', 'Homelab'], ['fin-hjem', 'Økonomi · Oversikt'], ['fin-liste', 'Økonomi · Transaksjoner'], ['fin-budsjett', 'Økonomi · Budsjett']], st)], st === 'homelab' ? 'Appen åpner på Homelab.' : 'Appen åpner i Økonomi, og hjem-knappen går til Økonomi.')}
       <span class="pp-lab p17-gl">FANELINJE · FLERE VALG</span>${P32.secNavSettings()}`;
@@ -140,7 +140,7 @@ const PAGE = {
   },
   huske: () => globalThis.P44?.huskeSet?.() ?? '<div class="m-spin"></div>', // prompt 44: Innstillinger → Gjøremål
   logger: () => globalThis.P44?.loggerSet?.() ?? '<div class="m-spin"></div>', // prompt 44: Homelab → Logger
-  bakgrunn: () => `${photoChoices()}<div class="snote">Bakgrunnen vises øverst på Hjem. «Vær» følger været der du er (MET), «Planeter» viser Jorda, Månen, Jupiter, Mars og Saturn fra NASA (ny hver dag), og «Oslo» er ekte Oslo-bilder fra lufta (Wikimedia Commons) som skifter gjennom døgnet. Bildene lastes ned og skaleres av serveren din, og appen lagrer dem for bruk uten nett. «Kun på Wi-Fi» finnes i de native appene.</div>`,
+  bakgrunn: () => `${photoChoices()}<div class="snote">Bakgrunnen vises øverst på Oversikt. «Vær» følger været der du er (MET), «Planeter» viser Jorda, Månen, Jupiter, Mars og Saturn fra NASA (ny hver dag), og «Oslo» er ekte Oslo-bilder fra lufta (Wikimedia Commons) som skifter gjennom døgnet. Bildene lastes ned og skaleres av serveren din, og appen lagrer dem for bruk uten nett. «Kun på Wi-Fi» finnes i de native appene.</div>`,
   fanelinje: () => `<div class="sec">Hovedlinja</div>${tabEditor()}<div class="pp-col pp-navset" style="gap:8px">${navSettings()}</div>`,
   konto: () => `${P36.kontoTop() /* prompt 36: profilbildet øverst, miniatyr i raden, Last opp nytt · Ta bilde · Fjern */}
     ${G('På denne enheten', [profile(), val('Status', '✓ Aktiv', '#7BE3A0')],
@@ -157,7 +157,7 @@ const PAGE = {
         chips('lockAfter', 'Lås etter', [['0', 'Umiddelbart'], ['1', '1 min'], ['5', '5 min'], ['15', '15 min']], pref('lockAfter')),
         tog('appHide', 'Skjul beløp i appveksleren', 'Uskarpt bilde når du bytter app', pref('appHide'))])}
       ${globalThis.P40?.tfaGroup ? globalThis.P40.tfaGroup(G) : G('Tofaktor', [val(`2FA for ${m.me?.username ? '@' + esc(m.me.username) : 'kontoen'}`, tfa === undefined ? '–' : tfa ? '● På · TOTP' : '○ Av', tfa ? '#7BE3A0' : tfa === false ? '#F2B56B' : ''), link(tfa ? 'Administrer 2FA' : 'Sett opp 2FA', '/', 'Homelab → Innstillinger → Konto og sikkerhet')],
-        'Bruk en autentiseringsapp som 1Password, Google Authenticator eller Aegis.') /* prompt 40: oppsett i appen (mobile-p40.js) */}
+        'Bruk en autentiseringsapp som 1Password, Google Authenticator eller Aegis.') /* prompt 40: oppsett i appen (mobile-jul-og-totrinn.js) */}
       ${G('Pålitelige enheter', d?.devices?.length ? d.devices.map((x) => val(`${esc(x.name)}${x.current ? ' · denne' : ''}`, when(x.lastSeen), x.current ? '#7BE3A0' : '')) : [val('Ingen pålitelige enheter', '')],
         d ? (d.lan ? 'Du er på lokalt nett nå.' : 'Du er ikke på lokalt nett nå. Fra internett kreves alltid passord.') : '')}`;
   },
@@ -339,7 +339,7 @@ export async function settingsBind(e, t) {
     seq.forEach((k, i) => setTimeout(() => haptic(k, { force: true }), i * 450));
     flash(seq.length ? `Tester: ${HAP_TYPES.filter(([k]) => hpref(k)).map(([, n]) => n.toLowerCase()).join(', ')}` : 'Alle typer er slått av'); return true;
   }
-  if (act === 'logout') { const { logout } = await import('./mobile-p21.js'); await logout(); return true; }
+  if (act === 'logout') { const { logout } = await import('./mobile-konto-og-deling.js'); await logout(); return true; }
   if (act === 'design') { saveDesign({ mobileDesign: d('[data-sact]').dataset.v }); return true; }
   // Q15: temaet er Homelab-modusen (gjelder også Homelab). paperMode lagres fortsatt for appene.
   if (act === 'ppmode') { const v = d('[data-sact]').dataset.v; settHomelabTema({ modus: v }); saveDesign({ paperMode: v }); return true; }

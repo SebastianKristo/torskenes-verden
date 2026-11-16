@@ -1,7 +1,7 @@
 // Sporing i mobilappen (prompt 11): egen fane i Homelab og «Pakker»-kortet i karusellen på Homelab-hjem.
 // Data fra /api/tracking (SPORING-arbeidet). Mangler endepunktet (eldre server), vises en forklaring i stedet for feil.
 // «Push» betyr her lokale varsler (Notification) mens appen er åpen i bakgrunnen; ekte server-push finnes ikke ennå.
-import { pkgLogo, pkgTitle } from './mobile-p21.js';
+import { pkgLogo, pkgTitle } from './mobile-konto-og-deling.js';
 import { esc, icon, ICONS, hlApi } from './core.js';
 import { m, draw, flash, avatar, theme } from './mobile.js';
 import { haptic, hpref, setHap } from './mobile-haptics.js';

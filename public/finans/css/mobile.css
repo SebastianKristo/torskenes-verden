@@ -1,4 +1,5 @@
-/* FinansHub mobil. To temaer: .ios (iOS 26 Liquid Glass) og .and (Android Material 3 Expressive).
+/* FinansHub mobil. Tema .and (Android Material 3 Expressive) med Papir over (.m.papir, alltid på). Reglene for .ios (iOS 26 Liquid Glass)
+   er fjernet: klassen settes ikke lenger, fordi theme() i mobile.js alltid gir «and» når Papir er på (Klassisk-designet er slettet).
    ≥ 600 px bredde (åpen brettbar / nettbrett): navigasjonsrail + to paneler (liste/detalj). */
 html[data-ui=mobile] body{background:#000;overscroll-behavior-y:none}
 .m{position:relative;min-height:100dvh;overflow-x:hidden;-webkit-tap-highlight-color:transparent}
@@ -26,50 +27,6 @@ html[data-ui=mobile] body{background:#000;overscroll-behavior-y:none}
 .m-toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 110px);transform:translateX(-50%);z-index:80;padding:12px 18px;border-radius:14px;font-weight:600}
 
 /* ================= iOS 26 Liquid Glass ================= */
-.ios{background:#07070A;color:#fff;font-family:-apple-system,'SF Pro Text',system-ui,Geist,sans-serif}
-.ios .blob{position:fixed;border-radius:50%;pointer-events:none;z-index:0}
-.ios .b1{width:300px;height:300px;left:-80px;top:80px;background:#FF7A3D;filter:blur(90px);opacity:.55}
-.ios .b2{width:260px;height:260px;right:-90px;top:360px;background:#4D6BFF;filter:blur(90px);opacity:.45}
-.ios .b3{width:220px;height:220px;left:40px;bottom:-40px;background:#C24E17;filter:blur(80px);opacity:.4}
-.ios .glass{background:rgba(255,255,255,.09);-webkit-backdrop-filter:blur(30px) saturate(180%);backdrop-filter:blur(30px) saturate(180%);border:1px solid rgba(255,255,255,.2);box-shadow:inset 0 1px 0 rgba(255,255,255,.32),0 10px 30px rgba(0,0,0,.25)}
-.ios .glass2{background:rgba(255,255,255,.08);-webkit-backdrop-filter:blur(30px) saturate(180%);backdrop-filter:blur(30px) saturate(180%);border:1px solid rgba(255,255,255,.16);box-shadow:inset 0 1px 0 rgba(255,255,255,.25)}
-.ios .hello{font-size:15px;color:rgba(255,255,255,.7)}
-.ios .title{font-size:34px;font-weight:700;letter-spacing:-.02em}
-.ios .hero{border-radius:30px;padding:22px;display:flex;flex-direction:column;gap:12px}
-.ios .hero .lbl{font-size:14px;color:rgba(255,255,255,.75)}
-.ios .hero .amt{font-family:var(--mono);font-size:42px;font-weight:600;letter-spacing:-.04em}
-.ios .hero .amt small{font-size:18px;color:rgba(255,255,255,.65)}
-.ios .m-bar{background:rgba(255,255,255,.14)}
-.ios .hero .foot{display:flex;justify-content:space-between;font-size:13px;color:rgba(255,255,255,.7)}
-.ios .cta{display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:24px;text-align:left;width:100%}
-.ios .cta .n{width:36px;height:36px;border-radius:50%;background:#FF7A3D;color:#1A0C04;display:grid;place-items:center;font-weight:700;flex:none}
-.ios .sec{font-size:13px;font-weight:600;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.06em;padding:6px 6px 0}
-.ios .list{border-radius:24px;overflow:hidden}
-.ios .item{display:flex;align-items:center;gap:12px;padding:12px 16px;width:100%;text-align:left}
-.ios .item+.item{border-top:.5px solid rgba(255,255,255,.12)}
-.ios .item .s{font-size:13px;color:rgba(255,255,255,.6)}
-.ios .search{display:flex;align-items:center;gap:10px;height:44px;padding:0 14px;border-radius:22px;width:auto;border:1px solid rgba(255,255,255,.16)}
-.ios .chip{height:36px;padding:0 14px;border-radius:18px;border:1px solid rgba(255,255,255,.2)!important;background:rgba(255,255,255,.1)!important;font-size:14px;-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px)}
-.ios .chip[aria-pressed=true]{background:#FF7A3D!important;color:#1A0C04;border-color:#FF7A3D!important}
-.ios .field{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 16px}
-.ios .field+.field{border-top:.5px solid rgba(255,255,255,.12)}
-.ios .field span{color:rgba(255,255,255,.65);flex:none}
-.ios .field input,.ios .field select{text-align:right;font-weight:500;background:none;border:0;outline:none;color:#fff;min-width:0;font-size:16px;width:60%}
-.ios .field select{appearance:none;direction:rtl}
-.ios .m-match{padding:12px 16px;border-radius:20px;background:rgba(95,211,168,.14);border:1px solid rgba(95,211,168,.3);font-size:14px}
-.ios .m-match.none{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.16)}
-.ios .btn2{display:flex;gap:10px}
-.ios .btn2 button{flex:1;height:52px;border-radius:26px;font-weight:600}
-.ios .btn2 .sec-b{border:1px solid rgba(255,255,255,.2)!important;background:rgba(255,255,255,.1)!important;-webkit-backdrop-filter:blur(30px);backdrop-filter:blur(30px)}
-.ios .btn2 .pri-b{flex:2;background:#FF7A3D!important;color:#1A0C04;font-weight:700;box-shadow:inset 0 1px 0 rgba(255,255,255,.4)}
-.ios .conf{display:flex;justify-content:space-between;font-size:13px;color:rgba(255,255,255,.7);padding:0 6px}
-.ios .tabbar{position:fixed;left:16px;right:16px;bottom:calc(env(safe-area-inset-bottom) + 14px);display:flex;gap:10px;align-items:center;z-index:20;max-width:528px;margin:0 auto}
-.ios .tabs{flex:1;display:flex;height:64px;padding:5px;border-radius:32px;background:rgba(40,40,46,.45);-webkit-backdrop-filter:blur(30px) saturate(200%);backdrop-filter:blur(30px) saturate(200%);border:1px solid rgba(255,255,255,.2);box-shadow:inset 0 1px 0 rgba(255,255,255,.3),0 10px 30px rgba(0,0,0,.35)}
-.ios .tabs a{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;border-radius:27px;color:rgba(255,255,255,.85);font-size:10.5px;font-weight:600}
-.ios .tabs a[aria-current=page]{background:rgba(255,255,255,.16);color:#FFB08A}
-.ios .back{color:#FFB08A;font-size:17px}
-.ios .m-toast{background:rgba(255,255,255,.9);color:#000;-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px)}
-.ios .rail{display:none}
 
 /* ================= Android Material 3 Expressive ================= */
 .and{background:var(--m3-19120E,#19120E);color:var(--m3-F0DFD7,#F0DFD7);font-family:'Roboto Flex',Roboto,system-ui,sans-serif}
@@ -120,11 +77,9 @@ html[data-ui=mobile] body{background:#000;overscroll-behavior-y:none}
 .and .m-toast{background:var(--m3-F0DFD7,#F0DFD7);color:var(--m3-19120E,#19120E)}
 .and .rail{display:none}
 .and .m-av{background:var(--m3-5D4033,#5D4033);color:var(--m3-FFDBC8,#FFDBC8)}
-.ios .m-av{background:rgba(255,255,255,.1);-webkit-backdrop-filter:blur(28px) saturate(180%);backdrop-filter:blur(28px) saturate(180%);border:1px solid rgba(255,255,255,.2);box-shadow:inset 0 1px 0 rgba(255,255,255,.3)}
 
 /* Felles skjemaer i «Meg» */
 .m .opt-row{display:flex;align-items:center;gap:12px;padding:14px 16px;width:100%;text-align:left}
-.ios .opt-row+.opt-row{border-top:.5px solid rgba(255,255,255,.12)}
 .and .opt-row{background:var(--m3-261E19,#261E19);border-radius:6px}
 .and .list .opt-row:first-child{border-radius:24px 24px 6px 6px}.and .list .opt-row:last-child{border-radius:6px 6px 24px 24px}
 .m .sw{width:51px;height:31px;border-radius:16px;background:rgba(120,120,128,.32);position:relative;flex:none;transition:background .2s}
@@ -144,17 +99,13 @@ html[data-ui=mobile] body{background:#000;overscroll-behavior-y:none}
   .m.two .tabbar,.m.two .navbar,.m.two .fab{display:none}
   .m.two .rail{display:flex;flex-direction:column;align-items:center;gap:14px;padding:calc(env(safe-area-inset-top) + 20px) 0 20px;position:relative;z-index:2}
   .and.two .rail{background:var(--m3-261E19,#261E19)}
-  .ios.two .rail{background:rgba(40,40,46,.35);-webkit-backdrop-filter:blur(30px) saturate(200%);backdrop-filter:blur(30px) saturate(200%);border-right:1px solid rgba(255,255,255,.12)}
   .m.two .rail .r-scan{width:56px;height:56px;border-radius:16px;display:grid;place-items:center;margin-bottom:10px}
   .and.two .rail .r-scan{background:var(--m3-FFB68A,#FFB68A);color:var(--m3-532200,#532200)}
-  .ios.two .rail .r-scan{border-radius:50%;background:rgba(255,122,61,.55);border:1px solid rgba(255,200,170,.45)}
   .m.two .rail a{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:12px;font-weight:600;opacity:.85}
   .m.two .rail a span{width:56px;height:32px;border-radius:16px;display:grid;place-items:center}
   .and.two .rail a[aria-current=page] span{background:var(--m3-5D4033,#5D4033)}
-  .ios.two .rail a[aria-current=page] span{background:rgba(255,255,255,.16)}
   .m.two .rail a[aria-current=page]{opacity:1}
   .and.two .m-detail{background:var(--m3-1E1712,#1E1712);border-radius:28px 0 0 28px}
-  .ios.two .m-detail{border-left:1px solid rgba(255,255,255,.1)}
   .m.two .one-only{display:none}
 }
 
@@ -164,7 +115,6 @@ html[data-ui=mobile] body{background:#000;overscroll-behavior-y:none}
 .m-logo.err{background:rgba(255,255,255,.12)}.m-logo.err i{display:block}
 .m .ai{display:block;font-size:12px;color:#FFB08A;line-height:1.35}
 .and .ai{color:var(--m3-FFB68A,#FFB68A)}
-.ios.nobg{background:#07070A}
 .pill{display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:22px;font-size:14px;color:inherit;text-decoration:none}
 .and .pill{background:var(--m3-31281F,#31281F);border-radius:28px 28px 28px 10px}
 .pill .ring{width:26px;height:26px;border-radius:50%;flex:none;-webkit-mask:radial-gradient(circle,transparent 8px,#000 9px);mask:radial-gradient(circle,transparent 8px,#000 9px)}
@@ -183,8 +133,7 @@ html[data-ui=mobile] body{background:#000;overscroll-behavior-y:none}
 .and .bchips em{background:var(--m3-3D332C,#3D332C);color:var(--m3-F0DFD7,#F0DFD7)}
 .bsum{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:14px;border-radius:22px}
 .and .bsum{background:var(--m3-261E19,#261E19);border-radius:28px}
-.bsum span{display:block;font-size:12px;opacity:.7}.bsum b{font-family:var(--mono);font-size:18px;font-weight:600}
-.ios .search{height:46px;border-radius:23px}.and .search{height:56px}
+.bsum span{display:block;font-size:12px;opacity:.7}.bsum b{font-family:var(--mono);font-size:18px;font-weight:600}.and .search{height:56px}
 .drop{display:flex;flex-direction:column;align-items:center;gap:8px;padding:28px 20px;border-radius:24px;text-align:center;cursor:pointer;border:1.5px dashed rgba(255,255,255,.25)}
 .and .drop{background:var(--m3-261E19,#261E19);border-color:var(--m3-5D4033,#5D4033);border-radius:28px}
 .drop span:not(.n){font-size:13px;opacity:.7;max-width:280px}
@@ -205,7 +154,6 @@ button.m-av{border:0;color:inherit;font:inherit;font-weight:600;cursor:pointer}
 .sheet-bg{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:40}
 .sheet{position:fixed;left:8px;right:8px;top:calc(8px + env(safe-area-inset-top));z-index:41;max-width:420px;margin-left:auto;padding:16px;border-radius:28px;display:flex;flex-direction:column;gap:12px;max-height:calc(100dvh - 32px);overflow:auto}
 .and .sheet{background:var(--m3-261E19,#261E19);color:var(--m3-F0DFD7,#F0DFD7)}
-.ios .sheet{background:rgba(30,30,36,.72)}
 .seg{display:grid;grid-template-columns:1fr 1fr;padding:4px;border-radius:14px;background:rgba(255,255,255,.08)}
 .and .seg{background:var(--m3-31281F,#31281F);border-radius:20px}
 .seg a{padding:9px;text-align:center;border-radius:10px;color:inherit;text-decoration:none;font-weight:500;font-size:14px}
@@ -213,32 +161,10 @@ button.m-av{border:0;color:inherit;font:inherit;font-weight:600;cursor:pointer}
 a.fab,a.r-scan{text-decoration:none}
 .m a.opt-row{color:inherit;text-decoration:none}
 
-/* ================= Mobil v3 (prompt 05) ================= */
-.ios{--m-acc:#FFB08A}.and{--m-acc:var(--m3-FFB68A,#FFB68A)}
-.ios.dom{--m-acc:#FF9EBE}.and.dom{--m-acc:var(--m3-FFB1C8,#FFB1C8);background:var(--m3-1A1114,#1A1114);color:var(--m3-F2DEE2,#F2DEE2)}
+/* ================= Mobil v3 (prompt 05) ================= */.and{--m-acc:var(--m3-FFB68A,#FFB68A)}.and.dom{--m-acc:var(--m3-FFB1C8,#FFB1C8);background:var(--m3-1A1114,#1A1114);color:var(--m3-F2DEE2,#F2DEE2)}
 .m [data-scan]{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;touch-action:manipulation;cursor:pointer}
 
 /* iOS 26 Liquid Glass-fanelinje: flytende kapsel, glassmarkør med fjæring, krymper ved scroll ned */
-.ios .tabbar{justify-content:space-between}
-.ios .tabs.lg{position:relative;flex:none;width:100%;height:62px;padding:5px;border-radius:31px;background:rgba(28,28,32,.22);
-  -webkit-backdrop-filter:blur(8px) saturate(190%) brightness(1.12);backdrop-filter:blur(8px) saturate(190%) brightness(1.12);border:0;
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.55),inset 1px 0 0 rgba(255,255,255,.2),inset -1px 0 0 rgba(255,255,255,.2),inset 0 -1px 0 rgba(255,255,255,.08),0 12px 32px rgba(0,0,0,.38);
-  overflow:hidden;transition:width .45s cubic-bezier(.3,1.35,.5,1)}
-.ios .tabbar:has(.scanbtn) .tabs.lg{width:calc(100% - 74px)}
-.ios .tabs.lg::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:linear-gradient(135deg,rgba(255,255,255,.24),rgba(255,255,255,0) 38%,rgba(255,255,255,0) 62%,rgba(255,255,255,.1))}
-.ios .tabs.lg .mark{position:absolute;top:5px;bottom:5px;left:calc(5px + var(--i) * ((100% - 10px) / var(--n)));width:calc((100% - 10px) / var(--n));border-radius:26px;
-  background:rgba(255,255,255,.16);box-shadow:inset 0 1px 0 rgba(255,255,255,.4),inset 0 -1px 0 rgba(255,255,255,.08);opacity:var(--on);
-  transition:left .45s cubic-bezier(.3,1.35,.5,1),opacity .2s}
-.ios .tabs.lg a{position:relative;z-index:1;background:none!important;transition:transform .25s cubic-bezier(.3,1.35,.5,1),color .2s;text-decoration:none}
-.ios .tabs.lg a:active{transform:scale(1.12)}
-.ios .tabs.lg a[aria-current=page]{color:var(--m-acc)}
-.ios .tabbar.min .tabs.lg{width:62px}
-.ios .tabbar.min .tabs.lg .mark{left:5px;width:calc(100% - 10px)}
-.ios .tabbar.min .tabs.lg a{display:none}
-.ios .tabbar.min .tabs.lg a[aria-current],.ios .tabbar.min .tabs.lg:not(:has(a[aria-current])) a:first-of-type{display:flex}
-.ios .tabbar.min .tabs.lg a span{display:none}
-.ios .edge{position:fixed;left:0;right:0;bottom:0;height:120px;z-index:19;pointer-events:none;background:linear-gradient(to top,rgba(7,7,10,.82),rgba(7,7,10,0));
-  -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);-webkit-mask:linear-gradient(to top,#000 40%,transparent);mask:linear-gradient(to top,#000 40%,transparent)}
 .and .edge{display:none}
 
 /* Android: Extended FAB (knapp) og rosa domenefaner */
@@ -258,7 +184,6 @@ a.fab,a.r-scan{text-decoration:none}
   .m.two .rail .r-av{width:48px;height:48px;margin-top:0}
   .and.dom.two .rail{background:var(--m3-2A2024,#2A2024)}
   .and.dom.two .rail a[aria-current=page] span{background:var(--m3-7B2949,#7B2949);color:var(--m3-FFD9E2,#FFD9E2)}
-  .ios.two .edge{display:none}
 }
 
 /* Meny bak profilbildet, handlingsark for skann */
@@ -272,7 +197,6 @@ a.fab,a.r-scan{text-decoration:none}
 .actsheet{position:fixed;left:8px;right:8px;bottom:calc(8px + env(safe-area-inset-bottom));z-index:41;max-width:480px;margin:0 auto;display:flex;flex-direction:column;gap:8px;padding:8px;border-radius:30px;animation:up .28s cubic-bezier(.3,1.2,.5,1)}
 @keyframes up{from{transform:translateY(30px);opacity:0}}
 .and .actsheet{background:var(--m3-261E19,#261E19);border-radius:28px 28px 16px 16px}
-.ios .actsheet{background:rgba(30,30,36,.6)}
 .actsheet .opt-row{font-size:17px;cursor:pointer}
 .actsheet .cancel{justify-content:center;font-weight:600;border-radius:22px;color:var(--m-acc)}
 .and .actsheet .cancel{background:var(--m3-31281F,#31281F);border-radius:20px}
@@ -373,29 +297,13 @@ em.role.blk{background:rgba(255,138,128,.16);color:#FF8A80}em.role.chl{backgroun
 /* ================= Mobil v4 (prompt 06) ================= */
 .m-av.img{overflow:hidden;padding:0}.m-av.img img{width:100%;height:100%;object-fit:cover;display:block}
 .ptitle{font-size:22px;font-weight:700;flex:1;min-width:0}
-.ios .ptitle{font-size:17px;font-weight:600;text-align:center}
 /* iOS: runde glassknapper (tilbake, +, Homelab) med spekulær kant og diagonal glans */
-.ios .gback,.ios .gbtn{position:relative;overflow:hidden;display:grid;place-items:center;color:#fff;text-decoration:none;cursor:pointer;
-  background:rgba(255,255,255,.08);-webkit-backdrop-filter:blur(8px) saturate(190%) brightness(1.12);backdrop-filter:blur(8px) saturate(190%) brightness(1.12);
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.42),inset 0 -1px 1px rgba(255,255,255,.12),inset 1px 0 0 rgba(255,255,255,.14),inset -1px 0 0 rgba(255,255,255,.14),0 6px 18px rgba(0,0,0,.28);
-  transition:transform .25s cubic-bezier(.3,1.5,.5,1)}
-.ios .gback::before,.ios .gbtn::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:linear-gradient(160deg,rgba(255,255,255,.22) 0%,rgba(255,255,255,.04) 30%,rgba(255,255,255,0) 60%,rgba(255,255,255,.07) 100%)}
-.ios .gback:active,.ios .gbtn:active{transform:scale(1.1)}
-.ios .gback,.ios .gbtn{width:44px;height:44px;border-radius:50%;flex:none}
-.ios .gback svg{margin-left:-2px;position:relative}
-.ios .gbtn.sm{width:36px;height:36px}
 .and .gbtn{width:40px;height:40px;border-radius:20px;background:var(--m3-31281F,#31281F);display:grid;place-items:center;color:var(--m3-F0DFD7,#F0DFD7)}
 .tonal{height:40px;padding:0 16px;border-radius:20px;font-weight:600;font-size:14px;cursor:pointer;flex:none;white-space:nowrap}
 .and .tonal{background:var(--m3-5D4033,#5D4033);color:var(--m3-FFDBC8,#FFDBC8)}
-.ios .tonal{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2)!important;-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px)}
 .and .back{color:var(--m3-F0DFD7,#F0DFD7);text-decoration:none;flex:none}
 
 /* iOS-fanelinje i full bredde med husknapp og flytende Skann-pille */
-.ios .tabbar{left:16px;right:16px;gap:10px}
-.ios .tabbar .tabs.lg{width:100%;flex:1}
-.ios .tabbar.min .tabs.lg{width:62px;flex:none}
-.ios .m-scroll{padding-bottom:calc(env(safe-area-inset-bottom) + 190px)}
-.ios.hlp .m-scroll{padding-bottom:calc(env(safe-area-inset-bottom) + 120px)}
 
 /* Android: Homelab-knapp helt til venstre i bunnlinjen, skilt med en tynn strek; plass til FAB */
 .and .navbar a.hl{flex:none;width:58px}
@@ -404,7 +312,7 @@ em.role.blk{background:rgba(255,138,128,.16);color:#FF8A80}em.role.chl{backgroun
 .and.hlp .m-scroll{padding-bottom:calc(env(safe-area-inset-bottom) + 110px)}
 .and .fab{background:var(--m3-763300,#763300)!important;color:var(--m3-FFDBC8,#FFDBC8);height:72px;border-radius:24px;padding:0 26px 0 22px;font-size:17px}
 .m .r-home{width:56px;height:56px;border-radius:16px;display:grid;place-items:center;color:inherit;text-decoration:none}
-.and .r-home{background:var(--m3-31281F,#31281F)}.ios .r-home{background:rgba(255,255,255,.1)}
+.and .r-home{background:var(--m3-31281F,#31281F)}
 
 /* ---------- Homelab-siden ---------- */
 .m .dim{color:rgba(255,255,255,.62);font-size:13px}.and .dim{color:var(--m3-D7C2B8,#D7C2B8)}
@@ -413,17 +321,14 @@ em.role.blk{background:rgba(255,138,128,.16);color:#FF8A80}em.role.chl{backgroun
 .hlhead .dim{font-size:14px}
 .hlgreet{font-size:34px!important}.and .hlgreet{font-size:32px!important}
 .m-av.hlav{width:44px;height:44px;font-size:17px;font-weight:700}
-.ios .m-av.hlav{background:#a8d4fb;color:#07080b;border-color:rgba(255,255,255,.25)}
 .and .m-av.hlav{width:48px;height:48px;background:var(--m3-FFB68A,#FFB68A);color:var(--m3-532200,#532200)}
 .hcard{border-radius:24px;padding:16px 18px;display:flex;flex-direction:column;gap:10px}
-.ios .hcard{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);box-shadow:inset 0 1px 0 rgba(255,255,255,.2)}
 .and .hcard{background:var(--m3-261E19,#261E19);border-radius:28px 28px 28px 10px}
 .hcard.row{flex-direction:row;align-items:center;justify-content:space-between;gap:12px;padding:18px 20px}
 .hclock{font-size:52px;font-weight:300;letter-spacing:-.03em;line-height:1;font-variant-numeric:tabular-nums}
 .and .hclock{font-variation-settings:'wdth' 115}
 .hhead{display:flex;justify-content:space-between;align-items:baseline;gap:10px}.hhead b{font-size:16px;font-weight:700}
 .hsearch{border-radius:26px;overflow:hidden;margin:0}
-.ios .hsearch{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);box-shadow:inset 0 1px 0 rgba(255,255,255,.28)}
 .and .hsearch{background:var(--m3-31281F,#31281F);border-radius:28px}
 .hsearch-in{display:flex;align-items:center;gap:12px;height:54px;padding:0 18px}
 .and .hsearch-in{height:56px}
@@ -438,13 +343,11 @@ em.role.blk{background:rgba(255,138,128,.16);color:#FF8A80}em.role.chl{backgroun
 .hdrop-i button{width:32px;height:32px;font-size:18px;opacity:.6;cursor:pointer;flex:none}
 .hlinks{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px 8px;padding:0 4px}
 .hlinks a{display:flex;flex-direction:column;align-items:center;gap:6px;color:inherit;text-decoration:none;min-width:0;font-size:12px;max-width:100%}
-.hlic{width:56px;height:56px;border-radius:18px;display:grid;place-items:center;overflow:hidden;position:relative}
-.ios .hlic{background:rgba(255,255,255,.12)}.and .hlic{background:var(--m3-31281F,#31281F)}
+.hlic{width:56px;height:56px;border-radius:18px;display:grid;place-items:center;overflow:hidden;position:relative}.and .hlic{background:var(--m3-31281F,#31281F)}
 .hlic img{width:30px;height:30px;border-radius:7px}.hlic b{font-size:20px;color:var(--m-acc)}.hlic b.fb{display:none}
 .hlic img+b.fb{position:absolute}.hlic.err b.fb{display:block}
 .hos{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
 .hos a{border-radius:24px;padding:16px;display:flex;flex-direction:column;gap:4px;color:inherit;text-decoration:none;min-width:0}
-.ios .hos a{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);box-shadow:inset 0 1px 0 rgba(255,255,255,.2)}
 .and .hos a{background:var(--m3-261E19,#261E19)}.and .hos a:nth-child(2){border-radius:24px 24px 10px 24px}.and .hos a:nth-child(3){border-radius:24px 24px 24px 10px}
 .hos b{font-size:22px;font-weight:700}
 .hos .hos-fin{grid-column:1/-1;flex-direction:row;align-items:center;gap:14px;padding:18px 20px}
@@ -468,12 +371,10 @@ em.role.blk{background:rgba(255,138,128,.16);color:#FF8A80}em.role.chl{backgroun
 .wg-rm{position:absolute;top:-10px;left:-8px;font-size:20px;font-weight:700;line-height:1}
 .wg-mv{position:absolute;top:-10px;right:-6px;z-index:4;display:flex;gap:4px}.wg-mv button{font-size:10px}
 .donebtn{height:36px;padding:0 14px;border-radius:18px;font-size:14px;font-weight:600;cursor:pointer}
-.ios .donebtn{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2)!important}
 .and .donebtn{height:40px;padding:0 16px;border-radius:20px;background:var(--m3-5D4033,#5D4033);color:var(--m3-FFDBC8,#FFDBC8)}
 .hgal{display:flex;flex-direction:column;gap:10px}
 .hgrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
-.hgw{border-radius:24px;padding:14px;display:flex;flex-direction:column;gap:8px;min-width:0}
-.ios .hgw{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14)}.and .hgw{background:var(--m3-261E19,#261E19)}
+.hgw{border-radius:24px;padding:14px;display:flex;flex-direction:column;gap:8px;min-width:0}.and .hgw{background:var(--m3-261E19,#261E19)}
 .hgw b{font-size:15px;font-weight:600}.hgw .dim{font-size:12.5px;line-height:1.35}
 .hgic{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:rgba(255,255,255,.12)}.and .hgic{background:var(--m3-31281F,#31281F)}
 .hgw button{height:34px;border-radius:17px;font-size:13.5px;font-weight:600;cursor:pointer}
@@ -485,17 +386,14 @@ em.role.blk{background:rgba(255,138,128,.16);color:#FF8A80}em.role.chl{backgroun
 /* ---------- Felles sidemal (Mer og undersider) ---------- */
 .psub{font-size:14px;opacity:.65;margin-top:2px}
 .phero{border-radius:30px;padding:20px;display:flex;flex-direction:column;gap:6px;overflow:hidden}
-.ios .phero{background:rgba(255,122,61,.2);border:1px solid rgba(255,190,150,.32);box-shadow:inset 0 1px 0 rgba(255,255,255,.28)}
 .and .phero{background:var(--m3-FFB68A,#FFB68A);color:var(--m3-532200,#532200);border-radius:32px 32px 32px 10px}
 .phero>span{font-size:14px;opacity:.9}.phero b{font-size:40px;font-weight:800;letter-spacing:-.03em;line-height:1.05;white-space:nowrap;font-family:var(--mono)}
 .m .hchip{height:32px;padding:0 12px;border-radius:16px;font-size:13px;font-weight:600;cursor:pointer;background:rgba(255,255,255,.16)}
 .m .hchip[aria-pressed=true]{background:#fff;color:#3A1806}.and .hchip{background:rgba(83,34,0,.12)}.and .hchip[aria-pressed=true]{background:var(--m3-532200,#532200);color:var(--m3-FFDBC8,#FFDBC8)}
 .pkpis{display:grid;gap:8px}
 .kpi small{font-size:12px;opacity:.6}
-.ios .kpi{border:1px solid rgba(255,255,255,.14)}
 .ptiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-.ptile{border-radius:24px;padding:16px;display:flex;flex-direction:column;gap:4px;color:inherit;text-decoration:none;min-width:0}
-.ios .ptile{border:1px solid rgba(255,255,255,.14)}.and .ptile{background:var(--m3-261E19,#261E19)}.and .ptile:nth-child(odd){border-radius:24px 24px 10px 24px}.and .ptile:nth-child(even){border-radius:24px 24px 24px 10px}
+.ptile{border-radius:24px;padding:16px;display:flex;flex-direction:column;gap:4px;color:inherit;text-decoration:none;min-width:0}.and .ptile{background:var(--m3-261E19,#261E19)}.and .ptile:nth-child(odd){border-radius:24px 24px 10px 24px}.and .ptile:nth-child(even){border-radius:24px 24px 24px 10px}
 .ptile b{font-size:15.5px;font-weight:600;margin-top:6px}.ptile span.m-ell{font-size:13px;opacity:.65}
 .pti{width:42px;height:42px;border-radius:13px;display:grid;place-items:center;position:relative;color:var(--m-acc);background:rgba(255,122,61,.16)}
 .and .pti{background:var(--m3-3D332C,#3D332C)}
@@ -503,8 +401,7 @@ em.role.blk{background:rgba(255,138,128,.16);color:#FF8A80}em.role.chl{backgroun
 .phd{display:flex;justify-content:space-between;align-items:center}
 .pha{font-size:13.5px;font-weight:600;color:var(--m-acc);cursor:pointer;text-transform:none;letter-spacing:0}
 .prow{align-items:center}
-.pini{width:40px!important;height:40px!important;border-radius:12px!important;background:rgba(255,255,255,.12);font-size:15px}
-.ios .pini{border-radius:20px!important}.and .pini{background:var(--m3-3A2F29,#3A2F29);color:var(--m3-FFDBC8,#FFDBC8)}
+.pini{width:40px;height:40px;border-radius:12px;background:rgba(255,255,255,.12);font-size:15px}.and .pini{background:var(--m3-3A2F29,#3A2F29);color:var(--m3-FFDBC8,#FFDBC8)}
 .pv{display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex:none;max-width:48%;text-align:right}
 .pv b{font-weight:600;white-space:nowrap}.pv small{font-size:12px;opacity:.65}
 .m .pact{font-size:12.5px;font-weight:600;padding:5px 11px;border-radius:9px;cursor:pointer;background:#FF7A3D;color:#1A0C04}
@@ -528,7 +425,6 @@ em.role.blk{background:rgba(255,138,128,.16);color:#FF8A80}em.role.chl{backgroun
 .seg2{display:flex}
 .and .hero.alt{background:var(--m3-31281F,#31281F);color:var(--m3-F0DFD7,#F0DFD7);border-radius:28px}
 .orig{position:fixed;inset:0;z-index:90;display:flex;flex-direction:column;gap:12px;padding:calc(env(safe-area-inset-top) + 12px) 16px calc(env(safe-area-inset-bottom) + 16px)}
-.orig.ios{background:rgba(7,7,10,.92);-webkit-backdrop-filter:blur(30px);backdrop-filter:blur(30px);color:#fff}
 .orig.and{background:var(--m3-19120E,#19120E);color:var(--m3-F0DFD7,#F0DFD7)}
 .orig-top{display:flex;align-items:center;gap:10px}
 .orig.and .back{font-size:26px}
@@ -547,7 +443,6 @@ em.role.blk{background:rgba(255,138,128,.16);color:#FF8A80}em.role.chl{backgroun
 .orig.and .rawjson{background:var(--m3-0C0806,#0C0806)}
 .orig-act{flex:none}
 .orig .opt-row{display:flex;align-items:center;gap:12px;padding:12px 16px}
-.orig.ios .opt-row+.opt-row{border-top:.5px solid rgba(255,255,255,.12)}
 .orig.and .list{display:flex;flex-direction:column;gap:3px}
 
 /* Brettbar: rail med Homelab øverst, skann og profil nederst; alle sider uten listepanel fyller skjermen */
@@ -563,31 +458,14 @@ html[data-ui=mobile] body:has(.m.and){background:var(--m3-19120E,#19120E)}
 
 /* ================= Prompt 09 ================= */
 /* iOS: fanelinja ligger rett over hjemindikatoren, som systemets TabView */
-.ios .tabbar{bottom:max(8px, calc(env(safe-area-inset-bottom) - 20px))}
-.ios .tabbar .tabs.lg{flex:1;width:auto;min-width:0;touch-action:pan-y;transition:width .45s cubic-bezier(.3,1.35,.5,1),transform .3s cubic-bezier(.3,1.35,.5,1)}
-.ios .tabbar.min .tabs.lg{flex:none;width:62px}
-.ios .tabbar.drag .tabs.lg{transform:scale(1.02);overflow:visible}
-.ios .tabs.lg .mark{transform:scale(1);transition:left .5s cubic-bezier(.3,1.35,.5,1),width .5s cubic-bezier(.3,1.35,.5,1),transform .45s cubic-bezier(.3,1.35,.5,1),background .35s,box-shadow .35s,opacity .2s}
 /* Linsen løftes mens den dras: bare blur/saturate/brightness (ingen SVG-forskyvning på WebKit) */
-.ios .tabs.lg.drag .mark{transition:transform .3s cubic-bezier(.3,1.35,.5,1),background .25s,box-shadow .25s;transform:scale(var(--sx,1.18),var(--sy,1.22));
-  background:rgba(255,255,255,.1);-webkit-backdrop-filter:blur(2px) saturate(220%) brightness(1.25);backdrop-filter:blur(2px) saturate(220%) brightness(1.25);
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.6),inset 0 -1px 1px rgba(255,255,255,.25),inset 1px 0 0 rgba(255,255,255,.3),inset -1px 0 0 rgba(255,255,255,.3),0 10px 30px rgba(0,0,0,.35),0 0 0 .5px rgba(255,255,255,.35)}
-.ios .tabs.lg.drag a{transition:transform .2s cubic-bezier(.3,1.35,.5,1),color .2s}
-.ios .tabs.lg a.lens{transform:scale(1.14)}
 /* Skann (Finans) og tannhjul (Domener): rund glassknapp i samme rad, til høyre for kapselen */
-.ios .m-scroll{padding-bottom:calc(env(safe-area-inset-bottom) + 112px)}
 .and .m-scroll{padding-bottom:calc(env(safe-area-inset-bottom) + 180px)}
 .m.nobar .m-scroll{padding-bottom:calc(env(safe-area-inset-bottom) + 28px)}
 .m.nobar .edge{display:none}
 
 /* Pil tilbake øverst, med profilbildet på samme rad helt til høyre */
 .toprow{display:flex;align-items:center;gap:10px;min-height:44px;margin-bottom:-4px}
-.ios .gtop{position:relative;overflow:hidden;height:44px;padding:0 16px 0 10px;border-radius:22px;display:inline-flex;align-items:center;gap:4px;color:#fff;font-size:16px;font-weight:600;text-decoration:none;
-  background:rgba(255,255,255,.08);-webkit-backdrop-filter:blur(8px) saturate(190%) brightness(1.12);backdrop-filter:blur(8px) saturate(190%) brightness(1.12);
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.42),inset 0 -1px 1px rgba(255,255,255,.12),inset 1px 0 0 rgba(255,255,255,.14),inset -1px 0 0 rgba(255,255,255,.14),0 6px 18px rgba(0,0,0,.28);transition:transform .25s cubic-bezier(.3,1.5,.5,1)}
-.ios .gtop::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:linear-gradient(160deg,rgba(255,255,255,.22) 0%,rgba(255,255,255,.04) 30%,rgba(255,255,255,0) 60%,rgba(255,255,255,.07) 100%)}
-.ios .gtop>*{position:relative}.ios .gtop svg{transform:rotate(0deg)}
-.ios .gtop:active{transform:scale(1.06)}
 .and .atop{height:40px;padding:0 18px 0 12px;border-radius:20px;display:inline-flex;align-items:center;gap:8px;background:var(--m3-31281F,#31281F);color:var(--m3-F0DFD7,#F0DFD7);font-weight:600;font-size:14.5px;text-decoration:none}
 .and.dom .atop{background:var(--m3-3A2F33,#3A2F33);color:var(--m3-F2DEE2,#F2DEE2)}
 .m.backtop .m-scroll button.m-av[data-mact=menu]:not(.topav){display:none}
@@ -671,11 +549,8 @@ em.role.dns{min-width:46px;text-align:center;font-style:normal;font-size:11px;fo
 .navrow .mini{flex:none}
 .snote.snotice{padding:10px 14px;border-radius:14px;background:rgba(242,181,107,.14);color:#F2B56B;font-size:13.5px;line-height:1.4}
 .and .snote.snotice{background:var(--m3-45462A,#45462A);color:var(--m3-E6E6AE,#E6E6AE)}
-.ios .tabs.lg,.ios .tabs.lg a{-webkit-user-drag:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
 
 /* ---------- Prompt 11: felles temafarger for Sporing, Aksjer og Subscription ---------- */
-.ios{--x-card:rgba(255,255,255,.08);--x-card2:rgba(255,255,255,.06);--x-fg:#fff;--x-mut:rgba(255,255,255,.6);--x-bd:rgba(255,255,255,.14);--x-pill:#fff;--x-onpill:#000;--x-up:#7BE3A0;--x-dn:#FF8A80;--x-upbg:rgba(123,227,160,.16);--x-dnbg:rgba(255,138,128,.16);--x-blbg:rgba(143,179,255,.18);--x-blc:#A9C3FF;--x-acc:#FF7A3D;--x-acc2:#FFB08A;--x-seg:rgba(255,255,255,.1);
-  --x-t0:rgba(123,227,160,.22);--x-t1:rgba(190,170,255,.24);--x-t2:rgba(255,190,120,.22);--x-t3:rgba(120,190,240,.22);--x-t4:rgba(255,150,130,.22);--x-t5:rgba(255,255,255,.12)}
 .and{--x-card:var(--m3-261E19,#261E19);--x-card2:var(--m3-1F1712,#1F1712);--x-fg:var(--m3-F0DFD7,#F0DFD7);--x-mut:var(--m3-D7C2B8,#D7C2B8);--x-bd:var(--m3-3A2F29,#3A2F29);--x-pill:var(--m3-FFB68A,#FFB68A);--x-onpill:var(--m3-532200,#532200);--x-up:var(--m3-9FE3C6,#9FE3C6);--x-dn:var(--m3-FF8A80,#FF8A80);--x-upbg:var(--m3-1F3A2F,#1F3A2F);--x-dnbg:rgba(255,138,128,.16);--x-blbg:rgba(143,179,255,.16);--x-blc:var(--m3-A9C3FF,#A9C3FF);--x-acc:var(--m3-FFB68A,#FFB68A);--x-acc2:var(--m3-FFB68A,#FFB68A);--x-seg:var(--m3-31281F,#31281F);
   --x-t0:var(--m3-1F3A2F,#1F3A2F);--x-t1:var(--m3-3A2F33,#3A2F33);--x-t2:var(--m3-763300,#763300);--x-t3:var(--m3-31281F,#31281F);--x-t4:var(--m3-5D4033,#5D4033);--x-t5:var(--m3-3D332C,#3D332C)}
 
@@ -843,7 +718,6 @@ em.role.dns{min-width:46px;text-align:center;font-style:normal;font-size:11px;fo
 .m .sb-plus.on{background:var(--x-seg);color:var(--x-fg)}
 .sb-card{border-radius:24px;padding:14px 16px;display:flex;flex-direction:column;gap:10px;background:var(--x-card);border:1px solid var(--x-bd)}
 .and .sb-card{border-color:transparent;border-radius:28px 28px 28px 10px}
-.ios .sb-card.glass2{background:rgba(255,255,255,.08)}
 .sb-dim{color:var(--x-mut);font-size:13px}
 .sb-row{display:flex;align-items:center;gap:12px;padding:6px 0}
 .sb-row+.sb-row{border-top:1px solid var(--x-bd);padding-top:10px}
@@ -919,15 +793,7 @@ em.role.dns{min-width:46px;text-align:center;font-style:normal;font-size:11px;fo
 .dspark{height:46px}
 /* Prompt 12 · Matplan følger appens tema: glass på iPhone (med fargebakgrunnen), Material You på Android og Fold.
    Fargene settes som --mp-*-variabler, så resten av Matplan-stilene er de samme. */
-.m.matp.ios{--mp-bg:#07070A;--mp-fg:#fff;--mp-mut:rgba(255,255,255,.62);--mp-dim:rgba(255,255,255,.5);--mp-card:rgba(255,255,255,.08);--mp-red:#FF8A4C;
-  --mp-lime:rgba(196,230,120,.16);--mp-cream:rgba(255,206,140,.13);--mp-cream2:rgba(255,170,110,.2);--mp-line:rgba(255,255,255,.18);--mp-ink:#fff;--mp-brown:rgba(255,255,255,.62);
-  --mp-tagc:#FFB08A;--mp-mint:#9FE3C6;--mp-peach:#FFB08A;--mp-row:rgba(255,255,255,.06);--mp-sep:rgba(255,255,255,.1);--mp-ckb:rgba(255,255,255,.35);--mp-ckon:#C2E27A}
-.m.matp.ios.nobg{--mp-bg:#07070A}
-.m.matp.ios .blob{display:block}
-.m.matp.ios .mp-card,.m.matp.ios .mp-tile,.m.matp.ios .mp-sel,.m.matp.ios .mp-round{border:1px solid rgba(255,255,255,.14);box-shadow:inset 0 1px 0 rgba(255,255,255,.2);-webkit-backdrop-filter:blur(30px) saturate(180%);backdrop-filter:blur(30px) saturate(180%)}
-.m.matp.ios .mat .mp-soft{background:rgba(255,255,255,.12)}
-.m.matp.ios .gtop{background:rgba(255,255,255,.1);-webkit-backdrop-filter:blur(20px) saturate(180%);backdrop-filter:blur(20px) saturate(180%);color:#fff}
-.m.matp.ios .m-spin,.m.matp.and .m-spin{border-color:rgba(255,255,255,.15);border-top-color:var(--mp-red)}
+.m.matp.and .m-spin{border-color:rgba(255,255,255,.15);border-top-color:var(--mp-red)}
 .m.matp.and{--mp-bg:var(--m3-19120E,#19120E);--mp-fg:var(--m3-F0DFD7,#F0DFD7);--mp-mut:var(--m3-D7C2B8,#D7C2B8);--mp-dim:var(--m3-A08D83,#A08D83);--mp-card:var(--m3-261E19,#261E19);
   --mp-red:var(--m3-FFB68A,#FFB68A);--mp-lime:var(--m3-45462A,#45462A);--mp-cream:var(--m3-5D4033,#5D4033);--mp-cream2:var(--m3-3D332C,#3D332C);--mp-line:var(--m3-52443C,#52443C);
   --mp-ink:var(--m3-FFB68A,#FFB68A);--mp-brown:var(--m3-D7C2B8,#D7C2B8);--mp-tagc:var(--m3-FFB68A,#FFB68A);--mp-mint:var(--m3-9FE3C6,#9FE3C6);--mp-peach:var(--m3-FFB08A,#FFB08A);
@@ -940,7 +806,6 @@ em.role.dns{min-width:46px;text-align:center;font-style:normal;font-size:11px;fo
 .m.matp .m-scroll{padding-bottom:calc(env(safe-area-inset-bottom) + 32px);min-height:100dvh;box-sizing:border-box}
 /* Prompt 12: «✦ Analyser på nytt med Gemini» på bekreftelsessiden og i køen. */
 .m .rean{display:flex;align-items:center;gap:12px;width:100%;padding:13px 16px;border-radius:18px;text-align:left;font-size:15px;font-weight:600;color:#FFB08A;cursor:pointer}
-.ios .rean{background:rgba(255,138,76,.12);border:1px solid rgba(255,176,138,.25)}
 .and .rean{background:var(--m3-5D4033,#5D4033);color:var(--m3-FFDBC8,#FFDBC8);border-radius:20px}
 .m .rean small{display:block;font-size:12.5px;font-weight:400;opacity:.75;margin-top:2px}
 .hcar-item{--hcar-h:240px}
@@ -998,7 +863,7 @@ em.role.dns{min-width:46px;text-align:center;font-style:normal;font-size:11px;fo
 .pp-lab{font:600 10.5px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:var(--pp-lab)}
 .pp-lab.mut{color:var(--pp-mut);font-size:9.5px}
 .pp-mut{font-size:12.5px;color:var(--pp-mut)}
-.pp-pos{color:var(--pp-pos)!important}.pp-lab-c,.pp-lab.c{color:var(--pp-lab)}
+.pp-pos{color:var(--pp-pos)}.pp-lab-c,.pp-lab.c{color:var(--pp-lab)}
 .pp-serif{font-family:Newsreader,Georgia,serif;font-weight:500}
 .pp-mono{font:500 11.5px 'IBM Plex Mono',monospace;color:var(--pp-mut);display:block}
 .pp-row{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
@@ -1065,7 +930,7 @@ em.role.dns{min-width:46px;text-align:center;font-style:normal;font-size:11px;fo
 /* Nyhetsleser */
 .m.news .m-scroll{padding:calc(env(safe-area-inset-top) + 12px) 18px calc(env(safe-area-inset-bottom) + 28px);margin-top:0}
 .m.news:not(.papir){--pp-bg:#f3efe6;--pp-ink:#1b1a17;--pp-card:#fff;--pp-line:#d8d1c2;--pp-lab:#b23a2a;--pp-mut:#8f897c;--pp-pos:#2f7a4f;background:var(--pp-bg)!important;color:var(--pp-ink)!important;font-family:Manrope,system-ui,sans-serif}
-.m.news.ios:not(.papir),.m.news.and:not(.light):not(.papir){--pp-bg:#14130f;--pp-ink:#ece7dc;--pp-card:#211f19;--pp-line:#34322a;--pp-lab:#e8705c;--pp-mut:#8a8578;--pp-pos:#7fcf9a}
+.m.news.and:not(.light):not(.papir){--pp-bg:#14130f;--pp-ink:#ece7dc;--pp-card:#211f19;--pp-line:#34322a;--pp-lab:#e8705c;--pp-mut:#8a8578;--pp-pos:#7fcf9a}
 .m.news .blob{display:none}
 .pp-reader{display:flex;flex-direction:column;gap:12px}
 .pp-rhead{display:flex;align-items:center;gap:10px}
@@ -1109,7 +974,6 @@ em.role.dns{min-width:46px;text-align:center;font-style:normal;font-size:11px;fo
 .m.papir .mp2-lab{font-family:'IBM Plex Mono',monospace;font-weight:600;color:var(--pp-lab)}
 .mp2-h1{margin:2px 0 0;font:400 56px/.95 'Instrument Serif',Georgia,serif;letter-spacing:0}
 .mat2 .mp2-pill{height:40px;padding:0 16px;border-radius:20px;background:var(--mp-fg);color:var(--mp-bg);font-weight:600;font-size:14px;white-space:nowrap}
-.m.matp.ios .mat2 .mp2-pill{background:#F2EEE4;color:#15140F}
 .mat2 .mp2-pill:disabled{opacity:.5}
 .mp2-today{border-radius:24px;background:#D4F25A;color:#141A06;padding:18px;display:flex;flex-direction:column;gap:6px;font-family:'Bricolage Grotesque',system-ui,sans-serif;cursor:pointer}
 .mp2-tt{display:flex;justify-content:space-between;font-size:12.5px;font-weight:800}
@@ -1301,7 +1165,6 @@ a.wx-r{color:inherit;text-decoration:none}
 
 /* Abonnement: ark for å redigere og legge til (begge design) */
 .sb-edit{position:fixed;left:0;right:0;bottom:0;z-index:61;max-width:560px;margin:0 auto;max-height:90dvh;overflow-y:auto;border-radius:28px 28px 0 0;padding:12px 18px calc(env(safe-area-inset-bottom) + 22px);display:flex;flex-direction:column;gap:12px;box-sizing:border-box;background:var(--x-card2,#1F1712);color:var(--x-fg,#fff);animation:up .28s cubic-bezier(.3,1.2,.5,1)}
-.ios .sb-edit{background:rgba(28,28,34,.92);-webkit-backdrop-filter:blur(30px);backdrop-filter:blur(30px)}
 .m.papir .sb-edit{background:var(--pp-bg);color:var(--pp-ink)}
 .sheet-bg:has(+ .sb-edit){z-index:60}
 .sb-grab{align-self:center;width:40px;height:5px;border-radius:3px;background:var(--x-bd,#3A2F29)}
@@ -1407,7 +1270,7 @@ a.wx-r{color:inherit;text-decoration:none}
 
 /* Finans → Oversikt: banneret «N kvitteringer til gjennomgang» */
 .pp-cta a{color:#fff;text-decoration:none;min-width:0}
-.pp-cta button{color:#fff!important;font:inherit;font-weight:700;flex:none;padding:0 0 0 12px!important}
+.pp-cta button{color:#fff;font:inherit;font-weight:700;flex:none;padding:0 0 0 12px}
 
 /* Finans → Mer: rutenett med live-tall */
 .pp-fmgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;flex:none}
@@ -1452,7 +1315,7 @@ a.wx-r{color:inherit;text-decoration:none}
 .pp-wayb{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px}
 .pp-wayb b{font-size:13.5px;font-weight:600}
 .pp-fbars.static{position:static;display:flex;gap:3px}
-.pp-link{color:var(--pp-mut)!important;font:600 12.5px Manrope,sans-serif;background:none;padding:0!important;cursor:pointer}
+.pp-link{color:var(--pp-mut)!important;font:600 12.5px Manrope,sans-serif;background:none;padding:0;cursor:pointer}
 
 /* Sporing: «Ny sending» */
 .pp-nsno{height:50px;font:600 16px 'IBM Plex Mono',monospace}
@@ -1494,7 +1357,7 @@ a.wx-r{color:inherit;text-decoration:none}
 
 /* Subscription OS i Papir: papirfarger, AI-kortet i mørk gradient */
 .m.papir .sb{--x-card:var(--pp-card);--x-card2:var(--pp-surf2);--x-fg:var(--pp-ink);--x-mut:var(--pp-mut);--x-bd:var(--pp-line);--x-pill:var(--pp-ink);--x-onpill:var(--pp-bg);--x-up:var(--pp-pos);--x-dn:var(--pp-lab);--x-acc:var(--pp-lab);--x-acc2:var(--pp-lab);--x-seg:var(--pp-line);--sb-acc:var(--pp-lab);color:var(--pp-ink)}
-.m.papir .sb-card{border-radius:22px!important;border-color:transparent;box-shadow:0 1px 0 var(--pp-line)}
+.m.papir .sb-card{border-radius:22px;border-color:transparent;box-shadow:0 1px 0 var(--pp-line)}
 .m.papir .sb-hero{background:radial-gradient(120% 100% at 100% 0%,#6A3218 0%,#2A160C 50%,#17161B 85%)!important;color:#fff!important;border-radius:28px!important}
 .m.papir .sb-hero .sb-pill{background:#fff;color:#1b1a17}
 .m.papir.ph .sb>.m-row:first-child{display:none}
@@ -1808,7 +1671,7 @@ a.wx-r{color:inherit;text-decoration:none}
 .p17-row .sval{max-width:42%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .p17-chev{opacity:.45;font-size:18px;flex:none}
 .p17-ver{display:block;text-align:center;font-size:12px;color:var(--pp-mut);padding:6px 0 2px}
-.p17-time{width:96px!important;flex:none;height:36px!important;padding:0 8px!important}
+.p17-time{width:96px;flex:none;height:36px;padding:0 8px}
 .p17-eng{margin-top:6px}
 .p17-two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .p17-nmin{height:48px;font:500 20px Newsreader,serif!important}
@@ -1846,7 +1709,7 @@ a.wx-r{color:inherit;text-decoration:none}
 .p17-tk.done b{text-decoration:line-through;opacity:.5}
 .p17-chk{flex:none;width:26px;height:26px;border-radius:50%!important;border:2px solid var(--c,var(--pp-ink))!important;background:var(--cb,transparent)!important;color:#fff;font:800 13px Manrope,sans-serif;cursor:pointer;display:grid;place-items:center;padding:0}
 .p17-chk.sm{width:24px;height:24px;margin:-2px} /* A11Y51: minst 24 × 24 px */
-.m.papir .p17-list>.p17-row{border-radius:0!important;margin:0!important;box-shadow:none!important}
+.m.papir .p17-list>.p17-row{border-radius:0;margin:0;box-shadow:none}
 .p17-x{flex:none;width:32px;height:32px;border-radius:16px;border:0;background:transparent;color:var(--pp-mut);font-size:20px;cursor:pointer}
 .p17-hw .p17-hwr{display:flex;align-items:center;gap:10px;min-height:30px;font-size:14px}
 .p17-hw,.p17-pw,.p17-bw{color:var(--pp-ink)}
@@ -1991,7 +1854,7 @@ a.wx-r{color:inherit;text-decoration:none}
 
 /* ---------- Prompt 20 ---------- */
 /* Fanelinja: ikonet i en fast 18 × 18-boks, sentrert mot teksten (1,5 px ned). */
-.pp-nav a i,.pp-nav button i{flex:none;width:18px;height:18px;line-height:1!important;display:inline-flex;align-items:center;justify-content:center;transform:translateY(1.5px);text-align:center}
+.pp-nav a i,.pp-nav button i{flex:none;width:18px;height:18px;line-height:1;display:inline-flex;align-items:center;justify-content:center;transform:translateY(1.5px);text-align:center}
 .pp-nav a:not([aria-current=page]) i{display:none}
 @media (min-width:600px){ .m.papir .pp-nav a i{display:inline-flex!important;transform:none} }
 /* Posisjon · Familie på Hjem: 2 kolonner, avatar i personens farge, statusprikk. */
@@ -2025,9 +1888,9 @@ a.wx-r{color:inherit;text-decoration:none}
 
 /* ---------- Prompt 21 ---------- */
 /* Kvitteringer m.fl.: ingen strek under seksjonsetiketten; listen er ett kort med skillelinjer bare mellom radene. */
-.m.papir .sec{border-bottom:0!important;padding-bottom:4px}
-.m.papir .list{gap:0!important;background:var(--pp-card);border-radius:20px!important;overflow:hidden}
-.m.papir .list>.item,.m.papir .list>.opt-row,.m.papir .list>a,.m.papir .list>button{border-radius:0!important;background:transparent!important;box-shadow:none!important}
+.m.papir .sec{border-bottom:0;padding-bottom:4px}
+.m.papir .list{gap:0;background:var(--pp-card);border-radius:20px!important;overflow:hidden}
+.m.papir .list>.item,.m.papir .list>.opt-row,.m.papir .list>a,.m.papir .list>button{border-radius:0;background:transparent!important;box-shadow:none}
 .m.papir .list>*+*{border-top:1px solid var(--pp-line)!important}
 .m.papir .list>.item.on{background:color-mix(in oklab,var(--pp-lab) 8%,var(--pp-card))!important}
 /* Finans-flisene: ikonboks med 14 % av fargen i kortbakgrunnen (som designet, i begge temaer). */
@@ -2428,7 +2291,7 @@ html[data-ui=mobile]:has(#app > .m.papir),html[data-ui=mobile] body:has(#app > .
 .m .ak23-seg button{flex:none;height:40px;padding:0 18px;border-radius:20px;border:1px solid var(--pp-line);background:var(--pp-card);color:var(--pp-ink);font:500 14px Manrope;white-space:nowrap;cursor:pointer}
 .m .ak23-seg button[aria-pressed=true]{background:var(--pp-ink);border-color:var(--pp-ink);color:var(--pp-bg)}
 .ak23-h{display:flex;justify-content:space-between;align-items:baseline}.ak23-h b,.ak23-t{font-size:18px;font-weight:600}.ak23-h>span{font-size:13px}
-.ak23-tx{color:var(--pp-ink);font-size:13.5px;font-weight:600;text-decoration:none}
+.ak23-tx{color:var(--pp-ink);font-size:13.5px;font-weight:600;text-decoration:none;padding:3px 0} /* E-B8: 24 px berøringsflate uten å flytte linja */
 .ak23-tops{flex:none;display:flex;gap:12px;overflow-x:auto;scrollbar-width:none;margin:0 -16px;padding:0 16px 4px}
 .ak23-top{flex:none;width:200px;padding:16px;border-radius:24px;display:flex;flex-direction:column;gap:10px;position:relative;overflow:hidden;box-sizing:border-box}
 .ak23-deco{position:absolute;right:-26px;top:-26px;width:90px;height:90px;border-radius:45px;background:rgba(127,127,127,.1)}
@@ -2453,7 +2316,7 @@ html[data-ui=mobile]:has(#app > .m.papir),html[data-ui=mobile] body:has(#app > .
 .m .p23-cat{padding:0 12px}
 
 /* =====================================================================
-   Prompt 24 (mobile-p24.js): fanelinje-ikoner, Mer, Ruter, Bursdager, Boliger, Innstillinger-søk, Integrasjoner, Familie
+   Prompt 24 (mobile-profiler-og-bursdager.js): fanelinje-ikoner, Mer, Ruter, Bursdager, Boliger, Innstillinger-søk, Integrasjoner, Familie
    ===================================================================== */
 
 /* Fanelinje: ikon i 18 × 18-boks, glyf 16 (Newsreader), sentrert og 1,5 ned; 7 mellom ikon og tekst. Valgt pille 0 16, ellers 0 6. */
@@ -2685,7 +2548,7 @@ button.p24-gp{padding:0 12px;font-size:12.5px}
 .m .f22-ok{flex:none;color:var(--pp-pos);font-weight:800}
 
 /* Nyhetsleser: ikonene er <img>, ikke maske */
-img.p23-ic,span.p24-img{background:none!important;-webkit-mask:none!important;mask:none!important;display:inline-block;flex:none;vertical-align:-3px;object-fit:contain}
+img.p23-ic,span.p24-img{background:none;-webkit-mask:none!important;mask:none!important;display:inline-block;flex:none;vertical-align:-3px;object-fit:contain}
 .m .pp-sheet.p24-be>*{flex-shrink:0}
 .m.papir .pp-hero .pp-bottom>.m-grow{min-width:0}
 .m.papir .pp-hero .pp-kick{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -2716,7 +2579,7 @@ img.p23-ic,span.p24-img{background:none!important;-webkit-mask:none!important;ma
 @keyframes p25pop{from{transform:scale(.6);opacity:0}to{transform:none;opacity:1}}
 
 /* «Rediger fanelinjen» → STIL · FORHÅNDSVISNING og de tre stil-kortene */
-.m .p25-sl{color:var(--pp-mut)!important}
+.m .p25-sl{color:var(--pp-mut)}
 .p25-pvbg{border-radius:22px;padding:14px 10px;background:linear-gradient(160deg,#5d7690,#2e3a46)}
 .p25-pvbar{box-sizing:border-box;background:var(--pp-nav);display:flex;align-items:center;overflow:hidden}
 .p25-pvbar.big{height:62px;border-radius:999px;gap:2px;padding:0 8px;-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);box-shadow:0 14px 30px -12px rgba(0,0,0,.5)}
@@ -2833,7 +2696,7 @@ img.p23-ic,span.p24-img{background:none!important;-webkit-mask:none!important;ma
 .m .p26-gl{padding:8px 4px 0}
 .m .p26-card{border-radius:18px;background:var(--pp-card);overflow:hidden;flex:none}
 .m .p26>.p26-card+.p26-card{margin-top:8px}
-.m .p26-r{display:flex;align-items:center;gap:12px;width:100%;min-height:56px;padding:10px 14px!important;border-top:1px solid var(--pp-line)!important;color:var(--pp-ink);text-align:left;font-family:inherit;text-decoration:none;cursor:pointer;box-sizing:border-box}
+.m .p26-r{display:flex;align-items:center;gap:12px;width:100%;min-height:56px;padding:10px 14px;border-top:1px solid var(--pp-line)!important;color:var(--pp-ink);text-align:left;font-family:inherit;text-decoration:none;cursor:pointer;box-sizing:border-box}
 .m .p26-card>.p26-r:first-child,.m .p26-card>:first-child{border-top:0!important}
 .m .p26-r[disabled]{opacity:.45;cursor:default}
 .m .p26-r.st{cursor:default;align-items:flex-start}
@@ -3468,7 +3331,7 @@ html.p28-kb .m.papir{--pp-navb:calc(var(--p28-kb,0px) + 8px)}
 
 /* ===== Prompt 30 (PWA) ===== */
 /* Wiggle-verktøylinja ligger øverst i scroll-innholdet (8 px), og innholdet får 64 px luft (claude-code-wiggle-verktoylinje.md).
-   mobile-p28.js flytter .p28-pills til første barn av .m-scroll og animerer padding-top 0 → 64 px (280 ms). */
+   mobile-mer.js flytter .p28-pills til første barn av .m-scroll og animerer padding-top 0 → 64 px (280 ms). */
 .m .m-scroll:has(>.p28-pills){padding-top:64px}
 .m.two .m-scroll:has(>.p28-pills){padding-top:calc(env(safe-area-inset-top) + 64px)}
 .m .m-scroll>.p28-pills{position:absolute;top:8px;left:16px;right:16px;height:auto;max-width:none;margin:0;z-index:30}
@@ -4280,8 +4143,8 @@ html[data-ui=mobile] body:has(#app > .m.p34-brpg){background:var(--pp-bg)}
 .m.papir.pd .mp2-tcook{color:var(--pp-mut)}
 .m.papir.mat2 .mp2-step,.m.papir .mat2 .mp2-step{background:color-mix(in srgb,var(--pp-bg) 10%,transparent);color:var(--pp-bg)}
 .m.papir .mp2-step .mp2-sl{font:600 10.5px 'IBM Plex Mono',monospace;letter-spacing:.08em;opacity:.75}
-.m.papir .mp2-dots i{background:color-mix(in srgb,var(--pp-bg) 22%,transparent)!important}
-.m.papir .mp2-dots i[style*="#141A06"]{background:var(--pp-bg)!important}
+.m.papir .mp2-dots i{background:color-mix(in srgb,var(--pp-bg) 22%,transparent)}
+.m.papir .mp2-dots i.on{background:var(--pp-bg)} /* steget som er nådd (klassen settes i mobile-mat.js) */
 
 /* =====================================================================
    Prompt 35 (PWA): Glimt-familien, brief med venner og opplesning, Innstillinger → Glimt, Vær-knappene, Mat
@@ -4550,9 +4413,9 @@ html.p36-booting body{overflow:hidden}
 
 /* Ikon på hver rad i Innstillinger */
 .m .p36-ic{flex:none;width:30px;height:30px;border-radius:10px;display:grid;place-items:center;color:var(--c);background:color-mix(in srgb,var(--c) 12%,transparent);margin-right:2px}
-.m.pd .p36-ic,.m.ios .p36-ic{background:color-mix(in srgb,var(--c) 18%,transparent);color:color-mix(in srgb,var(--c) 55%,#fff)}
+.m.pd .p36-ic{background:color-mix(in srgb,var(--c) 18%,transparent);color:color-mix(in srgb,var(--c) 55%,#fff)}
 .m .opt-row.p36-hasic{gap:12px}
-.m .opt-row.p36-danger .m-grow,.m .opt-row.p36-danger .m-grow b,.m .opt-row.p36-danger .p17-rt b{color:#b23a2a!important}
+.m .opt-row.p36-danger .m-grow,.m .opt-row.p36-danger .m-grow b,.m .opt-row.p36-danger .p17-rt b{color:#b23a2a}
 
 /* Temperaturen: trykk → Vær, hold inne → Yr */
 .m [data-p36temp]{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;transition:transform .18s ease;transform-origin:100% 100%}
@@ -5107,7 +4970,7 @@ html.p39-sh .m .pp-sheet,html.p39-sh .m .p37-sheet,html.p39-sh .m .p28-sheet{pos
 /* Bibel: ingen fanelinje/Skann, innholdet starter 16 px under toppbildet, 14 px mellom kortene */
 .m.papir.ph.p39-bib .m-scroll{margin-top:0}
 .m.papir.p39-bib .p37-bp{padding-top:16px;gap:14px}
-.m.papir.p39-bib .p37-bp>*{margin-top:0!important;margin-bottom:0!important;position:relative;z-index:auto}
+.m.papir.p39-bib .p37-bp>*{margin-top:0;margin-bottom:0;position:relative;z-index:auto}
 .m.papir.p39-bib .m-scroll{padding-bottom:calc(env(safe-area-inset-bottom,0px) + 28px)!important}
 .m.papir.p39-bib .p37-stk{border-radius:24px}
 /* Innstillinger: «Glimt i briefen» av → Venner av Glimt gråes ut */
@@ -5250,8 +5113,8 @@ html.p39-sh .m .pp-sheet,html.p39-sh .m .p37-sheet,html.p39-sh .m .p28-sheet{pos
 .m .w22-shh .w32-x.p40-dk{background:rgba(10,20,35,.62)!important;color:#fff!important}
 /* Bibel: rekke-kortet går 36 px opp i hero, over bildet, alle hjørner runde; kreditt og tittel flyttes opp */
 .m.papir.ph.p39-bib .m-scroll{margin-top:-36px!important;position:relative;z-index:3}
-.m.papir.p39-bib .p37-bp{padding-top:0!important}
-.m.papir.p39-bib .p37-bp>:first-child{position:relative;z-index:3;border-radius:24px!important;box-shadow:0 14px 30px -12px rgba(0,0,0,.35)}
+.m.papir.p39-bib .p37-bp{padding-top:0}
+.m.papir.p39-bib .p37-bp>:first-child{position:relative;z-index:3;border-radius:24px;box-shadow:0 14px 30px -12px rgba(0,0,0,.35)}
 .m.papir.ph.p39-bib .pp-hero{overflow:visible}
 .m.papir.ph.p39-bib .pp-hero .pp-bottom{transform:translateY(-14px)}
 .m.papir.ph.p39-bib .pp-credit{left:auto!important;right:22px;bottom:46px!important;max-width:calc(100% - 44px)!important;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -5584,7 +5447,7 @@ html.h40-ov,html.h40-ov body{overflow:hidden}
 .m .p41-gsb button.ink{background:var(--pp-ink);color:var(--pp-bg);border-color:var(--pp-ink)}
 
 /* Konto → SERVER */
-.m .p41-mono{font-family:'IBM Plex Mono',monospace;font-size:12px!important;max-width:46%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.m .p41-mono{font-family:'IBM Plex Mono',monospace;font-size:12px;max-width:46%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .m .p41-srvsh{display:flex;flex-direction:column;gap:12px}
 .m .p41-srvt{font-size:13px;color:var(--pp-lab)}.m .p41-srvt.ok{color:var(--pp-pos)}
 
@@ -5777,7 +5640,7 @@ html.h40-ov,html.h40-ov body{overflow:hidden}
 .m .p41-mait .pp-gl{font-size:28px!important}
 .m .p41-ski{padding:16px}
 
-/* ===================== Prompt 42 (mobile-p42.js m.fl.) ===================== */
+/* ===================== Prompt 42 (mobile-oversikt-knapp.js m.fl.) ===================== */
 /* Fanelinja: Hjem-knapp 1a–1d (claude-code-navbar-hjem-knapp.md). Bare under 600 px – bred visning bruker sidemenyen. */
 .m.p42-nh .pp-back.to-home{display:none}
 .m .p42-nha{position:fixed;z-index:21;left:12px;bottom:var(--pp-navb);width:62px;height:62px;border-radius:50%;background:var(--pp-nav);color:var(--pp-navInk);display:grid;place-items:center;text-decoration:none;-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);box-shadow:0 16px 30px -12px rgba(0,0,0,.5);-webkit-tap-highlight-color:transparent}
@@ -5900,7 +5763,7 @@ html.h40-ov,html.h40-ov body{overflow:hidden}
 .m .p43-dgdot{position:absolute;top:8px;right:10px;width:8px;height:8px;border-radius:4px;background:#e8794a;box-shadow:0 0 0 2px #1b1a17}
 
 /* Finans → Oversikt: saldokortet (4b i Papir) */
-.m .p43-sal{display:flex!important;flex-direction:column;gap:16px;padding:20px!important;border-radius:26px!important;background:var(--pp-card);color:var(--pp-ink);text-decoration:none;box-shadow:0 18px 36px -20px rgba(27,26,23,.45),inset 0 0 0 1px color-mix(in srgb,var(--pp-line) 70%,transparent);cursor:pointer;-webkit-tap-highlight-color:transparent}
+.m .p43-sal{display:flex;flex-direction:column;gap:16px;padding:20px;border-radius:26px;background:var(--pp-card);color:var(--pp-ink);text-decoration:none;box-shadow:0 18px 36px -20px rgba(27,26,23,.45),inset 0 0 0 1px color-mix(in srgb,var(--pp-line) 70%,transparent);cursor:pointer;-webkit-tap-highlight-color:transparent}
 .m .p43-sal:active{transform:scale(.99)}
 .m .p43-salh{display:flex;justify-content:space-between;align-items:center;width:100%}
 .m .p43-salh .pp-lab{font:600 10.5px 'IBM Plex Mono',monospace;letter-spacing:.14em;color:var(--pp-lab)}
@@ -5915,7 +5778,7 @@ html.h40-ov,html.h40-ov body{overflow:hidden}
 .m .p43-salm b{font:500 26px/1.05 Newsreader,serif}
 
 /* Finans → Liste: månedstopp med rød etikett, «Netto …» og 2 pt strek */
-/* Beholderen for månedene i Liste (porsjoner, mobile-paper2.js) skal ikke påvirke oppsettet. */
+/* Beholderen for månedene i Liste (porsjoner, mobile-papir-sider.js) skal ikke påvirke oppsettet. */
 .m .pp-mgs{display:contents}
 .m .p43-mg{display:flex;flex-direction:column}
 .m .p43-mg+.p43-mg{margin-top:14px}
@@ -6222,7 +6085,7 @@ html.h40-ov,html.h40-ov body{overflow:hidden}
 .m .p44-mono{font:600 12px 'IBM Plex Mono',ui-monospace,monospace}
 .m .p44-mut{color:var(--pp-mut);font-size:13px;line-height:1.45}
 .m .p44-mut.s{font-size:12px;padding:0 14px 12px}
-.m .p44-red{color:#b23a2a!important;opacity:1!important;font-weight:700}
+.m .p44-red{color:#b23a2a!important;opacity:1;font-weight:700}
 .m.papir.pd .p44-red{color:#f08a76!important}
 .m .p44-chev{flex:none;color:var(--pp-mut);opacity:.7}
 /* Mer ny */
@@ -6682,7 +6545,7 @@ html.h40-ov,html.h40-ov body{overflow:hidden}
 .m .p44-hset{padding-top:18px}
 .m .p44l-ol{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:3px;font-size:13px}
 .m.papir.ph .m-scroll>.p44a:first-child,.m.papir.ph .m-scroll>.p44s:first-child{margin-top:26px}
-.m .n31-card.p44-verl{display:flex!important;flex-direction:column!important;gap:0!important;padding:0!important}
+.m .n31-card.p44-verl{display:flex;flex-direction:column;gap:0;padding:0}
 .m .n31-card.p44-verl>.p44-vr{width:100%;box-sizing:border-box}
 .m .p44-ver>*{flex:none}
 /* Logget inn som X: pillen ligger øverst, toppfeltene flyttes ned under den */
@@ -6691,7 +6554,7 @@ html.h40-ov,html.h40-ov body{overflow:hidden}
 .m.p44-as .p43-top,.m.p44-as .n31-top,.m.p44-as .p44-vtop{padding-top:calc(env(safe-area-inset-top,0px) + 52px)}
 .m .p44s-btn.red{color:#b23a2a!important}.m.papir.pd .p44s-btn.red{color:#f08a76!important}
 
-/* ===================== Prompt 45 (mobile-p45.js, mobile-helse.js m.fl.) ===================== */
+/* ===================== Prompt 45 (mobile-glimt-agent.js, mobile-helse.js m.fl.) ===================== */
 .m .p45-sw{flex:none;position:relative;width:48px;height:29px;border-radius:15px;background:var(--pp-line);transition:background .2s}
 .m .p45-sw i{position:absolute;top:2.5px;left:2.5px;width:24px;height:24px;border-radius:12px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:transform .2s}
 .m .p45-sw.on{background:#2f7a4f}.m .p45-sw.on i{transform:translateX(19px)}
@@ -6989,9 +6852,9 @@ html.h40-ov,html.h40-ov body{overflow:hidden}
 
 /* Bibel på brett (claude-code-bibel-side-ipad-fold.md): to kolonner fra 680 px, maks 1100 px. */
 .m .p46-bc{display:contents}
-.m.papir.p39-bib .p46-bp>.p46-bc{border-radius:0!important;box-shadow:none!important;z-index:auto}
-.m.papir.p39-bib .p46-bp>.p46-bc:first-child>:first-child{position:relative;z-index:3;border-radius:24px!important;box-shadow:0 14px 30px -12px rgba(0,0,0,.35)}
-.m.papir.p39-bib .p46-bp>.p46-bc>*{margin-top:0!important;margin-bottom:0!important}
+.m.papir.p39-bib .p46-bp>.p46-bc{border-radius:0!important;box-shadow:none;z-index:auto}
+.m.papir.p39-bib .p46-bp>.p46-bc:first-child>:first-child{position:relative;z-index:3;border-radius:24px;box-shadow:0 14px 30px -12px rgba(0,0,0,.35)}
+.m.papir.p39-bib .p46-bp>.p46-bc>*{margin-top:0;margin-bottom:0}
 @media (min-width:680px){
   .m.papir.p39-bib .m-scroll>.p46-bp{max-width:1100px}
   .m .p46-bp{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:18px;row-gap:14px;align-items:start}
@@ -7044,7 +6907,7 @@ html.h40-ov,html.h40-ov body{overflow:hidden}
 .m .p46-dg.sk i{display:block;height:13px;border-radius:7px;background:color-mix(in srgb,var(--pp-ink,#1b1a17) 10%,transparent);animation:p46sk 1.2s ease-in-out infinite alternate}
 .m .p46-dg.sk i.s{width:60%}
 @keyframes p46sk{to{opacity:.45}}
-.m .p46-fav{background:#fff!important;border:1px solid var(--pp-line,#e6dfd1);box-sizing:border-box;padding:6px;overflow:hidden;color:#1b1a17}
+.m .p46-fav{background:#fff;border:1px solid var(--pp-line,#e6dfd1);box-sizing:border-box;padding:6px;overflow:hidden;color:#1b1a17}
 .m .p46-fav img{width:100%;height:100%;object-fit:contain;display:block}
 .m .p46-csel{position:relative;display:inline-flex;align-items:center;gap:4px;cursor:pointer}
 .m .p46-csel select{appearance:none;-webkit-appearance:none;border:0;background:transparent;color:inherit;font:inherit;padding:0;margin:0;max-width:120px;cursor:pointer;outline:none}
@@ -7197,7 +7060,11 @@ html.h40-ov,html.h40-ov body{overflow:hidden}
 .m .p48-r48 .r48s-card{background:var(--pp-card);border-color:var(--pp-line)}
 .m .p48-r48 .r48s-btn.pri{background:var(--pp-lab)}
 /* Prompt 85: fargene #9FE3C6 (inn/positivt) og #FFB08A (minus/advarsel) er satt inline i mange maler fra det mørke designet.
-   På lyst papir ga de 1,5–1,8:1 («0 kr» i Rapporter, negativ saldo i Kontoer, «Klar · trykk for å bekrefte» i Kø). */
+   På lyst papir ga de 1,5–1,8:1 («0 kr» i Rapporter, negativ saldo i Kontoer, «Klar · trykk for å bekrefte» i Kø).
+   Malene i Økonomi bruker nå var(--pp-pos)/var(--pp-lab) eller klassene .m-tx-pos/.m-tx-lab. Regelen under (!important mot inline
+   stil) står likevel, fordi kategorifargene fra serveren (Inntekt #9FE3C6, Vedlikehold #FFB08A) også kommer inline. */
+.m.papir .m-tx-pos{color:var(--pp-pos)}
+.m.papir .m-tx-lab{color:var(--pp-lab)}
 .m.papir [style*="color:#9FE3C6"]:not([style*="background"]){color:var(--pp-pos)!important}
 .m.papir [style*="color:#FFB08A"]:not([style*="background"]){color:var(--pp-lab)!important}
 /* Prompt 85: mørkt papir har lys aksent (--pp-lab #f08a76). Hvit tekst på den ga 2,4:1 i «N kvitteringer til gjennomgang» og Glimt-pillen;
@@ -7273,7 +7140,7 @@ html.h40-ov,html.h40-ov body{overflow:hidden}
 /* ---------- 4. PWA: Finans → Liste, avrundet månedslinje når den er festet ---------- */
 /* .m har overflow-x:hidden, som gjør den til en scroll-container som aldri scroller – da fester sticky seg aldri.
    clip klipper uten å lage en scroll-container. */
-.m:has(.p43-mg){overflow-x:clip!important}
+.m:has(.p43-mg){overflow-x:clip}
 .m .p43-mh{top:calc(env(safe-area-inset-top) + 10px);z-index:4;transition:border-radius .22s ease,padding .22s ease,margin .22s ease,box-shadow .22s ease,background-color .22s ease,border-color .22s ease}
 .m .p43-mh.p52-on{border-radius:16px;padding:10px 14px;margin:0 -6px;border-bottom-color:transparent;background:color-mix(in srgb,var(--pp-card) 88%,transparent);-webkit-backdrop-filter:blur(14px) saturate(1.4);backdrop-filter:blur(14px) saturate(1.4);box-shadow:0 10px 24px -14px rgba(27,26,23,.45),inset 0 0 0 1px color-mix(in srgb,var(--pp-line) 70%,transparent)}
 @media (prefers-reduced-motion:reduce){.m .p43-mh{transition:none}}

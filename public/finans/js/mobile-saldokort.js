@@ -1,7 +1,7 @@
 // Prompt 52 (WEB52F) – FinansHub PWA:
 //  1. Saldokortet: hold inne 0,5 s → arket «Utseende på saldokortet» (Standard · Glass · Kvittering · Fargebunn), fasit
 //     Homelab.dc.html (finSal/salSheet). Valget lagres i papir_salsty og synkes som layout-feltet salSty. Kort trykk åpner
-//     Kontoer som før; et langt trykk åpner ikke Kontoer og starter ikke wiggle (mobile-paper3.js hopper over data-p52sal).
+//     Kontoer som før; et langt trykk åpner ikke Kontoer og starter ikke wiggle (mobile-tilpassing.js hopper over data-p52sal).
 //  2. Finans → Liste: månedslinja blir en avrundet, flytende pille når den er festet øverst (fasit stickInit/data-fstick).
 // Stilene ligger i css/kvitteringspanel.css.
 import { hlApi } from './core.js';

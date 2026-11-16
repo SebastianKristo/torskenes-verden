@@ -1,6 +1,6 @@
 // Prompt 50 (FAMWEB50): Familie i nytt design i PWA-en (Mobil Papir App → Familie, fasit Familie App.dc.html).
 // Selve siden er felles med web: /assets/js/family.js (Folk · Steder · Helse · Sjekk inn, Kart, Personside, Sted med flere
-// områder, Helse for personen og Sjekk inn med 6b). Her: kroker fra mobile.js og sanntid fra WebSocket-en i mobile-p17.js.
+// områder, Helse for personen og Sjekk inn med 6b). Her: kroker fra mobile.js og sanntid fra WebSocket-en i mobile-app-og-sanntid.js.
 //   #/fam            Folk (startside)            #/fam/kart          Kart med ark
 //   #/fam/person/<id>[/kart|/helse/<id>]          Personside (tilbake går dit du kom fra)
 //   #/fam/steder     Steder · /steder/<id> · /steder/ny/<type>  (4b: flere områder)
@@ -34,9 +34,9 @@ export function afterDraw50() {
     settings: () => { location.hash = '#/set'; },
   });
 }
-/** WebSocket (mobile-p17.js): type 'family' – steder, innsjekker, posisjoner. Ruter › Min reise henter skolen på nytt ved endrede steder. */
+/** WebSocket (mobile-app-og-sanntid.js): type 'family' – steder, innsjekker, posisjoner. Ruter › Min reise henter skolen på nytt ved endrede steder. */
 export function live50(d) {
   if (d?.type !== 'family') return;
-  if (d.kind === 'places') import('./mobile-p41b.js').then((x) => { if (x.RT) { x.RT.zonesT = 0; x.RT.s50 = null; } if (m.screen === 'avg') draw(); }).catch(() => {});
+  if (d.kind === 'places') import('./mobile-min-reise.js').then((x) => { if (x.RT) { x.RT.zonesT = 0; x.RT.s50 = null; } if (m.screen === 'avg') draw(); }).catch(() => {});
   if (F && m.screen === 'fam') F.live50(d);
 }

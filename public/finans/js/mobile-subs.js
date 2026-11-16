@@ -8,18 +8,18 @@ import { api, hlApi, esc, n0, dd, today, icon, ICONS, logo, parseAmount, navName
 import { m, draw, flash, avatar, backBtn, theme } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
 import { paper } from './mobile-paper.js';
-import * as P27 from './mobile-p27.js';
+import * as P27 from './mobile-sokefelt-og-nyheter.js';
 import { toJpeg, readShot, errCardHtml, installVision, SLOW_MS } from './sub-shot.js';
-import * as P31 from './mobile-p31.js';
-import * as P37B from './mobile-p37b.js'; // prompt 37: gratis prøveperioder, delte abonnementer, wiggle med skjul
+import * as P31 from './mobile-glimt.js';
+import * as P37B from './mobile-bibel-og-onboarding.js'; // prompt 37: gratis prøveperioder, delte abonnementer, wiggle med skjul
 
-// Prompt 31: Gratis prøveperiode (arket og lagring ligger i mobile-p31.js). Etter Lagre lukkes arket.
+// Prompt 31: Gratis prøveperiode (arket og lagring ligger i mobile-glimt.js). Etter Lagre lukkes arket.
 P31.hooks31({ trialSaved: () => { SB.sheet = false; SB.mode = null; }, subsReload: () => subsLoad() });
 
 Object.assign(ICONS, { sins: 'M4 20V10M10 20V4M16 20v-7M22 20H2', shist: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 7v5l3 2', shome: 'M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z' });
 
 export const SB = { d: null, err: '', tab: 'home', sheet: false, mode: null, f: { name: '', price: '', day: '', cycle: 'monthly' }, cand: null, candErr: '', busy: false, mon: null, done: null };
-const TABS = [['home', 'Hjem', 'shome'], ['ins', 'Innsikt', 'sins'], ['hist', 'Historikk', 'shist']];
+const TABS = [['home', 'Oversikt', 'shome'], ['ins', 'Innsikt', 'sins'], ['hist', 'Historikk', 'shist']];
 const TITLE = { home: 'Abonnementer', ins: 'Innsikt', hist: 'Historikk' }; // Fase 6: en del av Faste betalinger
 const CAT_C = { Underholdning: '#FF7A3D', Produktivitet: '#7AA7FF', 'Lagring og sky': '#F2C14E', 'Helse og trening': '#5FD3A8', Transport: '#B79CFF', Annet: '#A0A0AA' };
 const CAT_RE = [['Underholdning', /netflix|spotify|hbo|max\b|viaplay|disney|youtube|storytel|tv ?2|apple tv|tidal|audible|nrk|discovery|amazon prime|xbox|playstation|nintendo/i],

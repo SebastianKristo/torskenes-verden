@@ -7,8 +7,8 @@
 import { esc, hlApi } from './core.js';
 import { m, draw } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
-import { IG, integLoad24 } from './mobile-p24.js';
-import * as P31 from './mobile-p31.js';
+import { IG, integLoad24 } from './mobile-profiler-og-bursdager.js';
+import * as P31 from './mobile-glimt.js';
 import { vw } from '/assets/js/lib/viewport.js'; // vindusstørrelsen uten tvungen layout
 
 /* ---------- Faste lister (reserve når serveren ikke svarer) ---------- */
@@ -553,7 +553,7 @@ export function openChat(prompt = '') {
 /** Prompt 41: åpner Chat med spørsmålet og svaret fra søkepillen (ikke spør på nytt når svaret er ferdig). */
 export function openChatWith(q, answer, src = 'glimt', srcLabel = '') {
   // Prompt 43 (claude-code-sok-ai-svarboble.md): samme svar som i boblen, med kilden («Kilde: MET Norway»). Ingen ny forespørsel.
-  const lab = String(srcLabel ?? '').replace(/^✦\s*/, '').trim(), st = lab && !/^(glimt|system-ai)$/i.test(lab) ? `Kilde: ${lab}` : 'Fra søket på Hjem';
+  const lab = String(srcLabel ?? '').replace(/^✦\s*/, '').trim(), st = lab && !/^(glimt|system-ai)$/i.test(lab) ? `Kilde: ${lab}` : 'Fra søket på Oversikt';
   if (m.screen !== 'chat') C.from = m.screen;
   C.inp = ''; C.att = []; C.sh = null; C.drawer = false; C.data = true;
   if (location.hash !== '#/chat') location.hash = '#/chat';

@@ -6,10 +6,10 @@
 import { esc, hlApi } from './core.js';
 import { m, draw, flash } from './mobile.js';
 import { hlData } from './mobile-hl.js';
-import { CMP, cmpLoad } from './mobile-p17.js';
-import * as P39 from './mobile-p39.js'; // prompt 39: Yr mot Storm 2a med wiggle og Glimt · ukas vær
+import { CMP, cmpLoad } from './mobile-app-og-sanntid.js';
+import * as P39 from './mobile-sveip-bort.js'; // prompt 39: Yr mot Storm 2a med wiggle og Glimt · ukas vær
 import { WX2, normCmp, pentAt, cmpCard, bottomBtns, mapView, placesSheet, metricSheet, fxKind, fxAfterDraw, wx22Bind } from './mobile-vaer-kart-og-steder.js';
-import * as P25 from './mobile-p25.js';
+import * as P25 from './mobile-fanelinje-stil.js';
 import { haptic } from './mobile-haptics.js';
 
 const PLACES = [['oslo', 'Oslo'], ['bergen', 'Bergen'], ['trondheim', 'Trondheim'], ['tromso', 'Tromsø']];

@@ -34,6 +34,7 @@ Når du finner et begrep som mangler eller brukes ulikt, legg det til her i samm
 | **Alle sider** (tittelen i Mer på mobil) | Snarveier (som tittel), Alle sider først etter snarveiene | Modulene først, eksterne snarveier nederst (O12) |
 | **Snarveier** (eksterne lenker, nederst i Mer) | – | |
 | **‹ Oversikt** (tilbake til startsiden), **‹ Økonomi** (tilbake til Økonomis Oversikt), **‹ Homelab** (fra Økonomi til Homelab-skallet) | ‹ Hjem, ‹ Finans | Q1, Q2, Q3 |
+| **Oversikt-knapp** (valgfri knapp i fanelinja på mobil-web, Tilpass → Fanelinje) | Hjem-knapp | O1 |
 | **Tilpass Oversikt** (profilmenyen: kortene på Oversikt) | Rediger widgets | O4 |
 | **Utseende og faner** (profilmenyen: åpner Utseende) | Tilpass forside og meny | |
 | **Kort** (på Oversikt), **Widgets** (på telefonen) | Widgets (om kort på Oversikt) | |

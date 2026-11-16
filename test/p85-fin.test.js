@@ -66,7 +66,7 @@ test('«Nytt i versjon»: lang tekst vises én gang (serverens more er hele teks
 });
 
 test('Tidligere versjoner: «10.11.2026» er 10. november, ikke 11. oktober', () => {
-  const p44 = src('public/finans/js/mobile-p44.js');
+  const p44 = src('public/finans/js/mobile-mer-og-gjoremal.js');
   const line = pick(p44, 'const vDate = (v) =>', "replace('.', ''); };");
   const isoD = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   const mk = (today) => Function('isoD', 'dayIso', 'hm', `${line} return vDate;`)(isoD, () => today, (d) => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`);
@@ -78,7 +78,7 @@ test('Tidligere versjoner: «10.11.2026» er 10. november, ikke 11. oktober', ()
 });
 
 test('Studie og Kontoer: bare én henting om gangen mens skjermen tegnes flere ganger', async () => {
-  for (const [file, name] of [['public/finans/js/mobile-studie.js', 'studieLoad'], ['public/finans/js/mobile-p44.js', 'usersLoad']]) {
+  for (const [file, name] of [['public/finans/js/mobile-studie.js', 'studieLoad'], ['public/finans/js/mobile-mer-og-gjoremal.js', 'usersLoad']]) {
     const code = src(file), busy = name === 'studieLoad' ? 'studieBusy' : 'usersBusy';
     const wrap = pick(code, `let ${busy} = null;`, `return (${busy} = p);\n}`).replace('export ', '');
     let calls = 0, release;
@@ -124,7 +124,7 @@ test('Negative beløp beholder minustegnet (Total saldo, Spart, «igjen å bruke
   assert.equal(krS(0), '0 kr');
   assert.match(pages, /l: 'Total saldo', v: krS\(tot\)/);
   assert.match(pages, /l: 'Spart', v: krS\(inn - ut\)/);
-  assert.match(src('public/finans/js/mobile-p45.js'), /\$\{bal < 0 \? '−' : ''\}\$\{n0\(bal\)\} kr disponibelt/);
+  assert.match(src('public/finans/js/mobile-glimt-agent.js'), /\$\{bal < 0 \? '−' : ''\}\$\{n0\(bal\)\} kr disponibelt/);
   assert.match(src('public/finans/js/mobile-paper.js'), /\['FINANS', s \? neg0\(s\.left\)/);
   assert.match(src('public/finans/js/mobile-hl.js'), /\$\{neg0\(s\.left\)\} kr/);
 });
