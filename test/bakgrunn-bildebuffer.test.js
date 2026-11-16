@@ -33,7 +33,7 @@ function clientFiles(path, name) {
 }
 
 test('nettleseren henter ikke bakgrunnsbilder fra Wikimedia, og alle Oslo-filene finnes i serverens katalog', () => {
-  for (const [path, name] of [['../public/js/bgsvc.js', 'OSLO41'], ['../public/finans/js/mobile-p41.js', 'OSLO']]) {
+  for (const [path, name] of [['../public/js/bgsvc.js', 'OSLO41'], ['../public/finans/js/mobile-bakgrunn-og-hoytider.js', 'OSLO']]) {
     const { src, files } = clientFiles(path, name);
     assert.ok(files.length >= 12, `${path}: ${files.length}`);
     assert.doesNotMatch(src, /Special:FilePath/, `${path} henter fra Commons`);
