@@ -842,10 +842,8 @@ body[data-route="media"] header.top,body[data-route="media"] .ticker,body[data-r
 .m70-top{padding:28px 32px 24px}
 .m70-tl{max-width:1400px;margin:0 auto;display:flex;flex-wrap:nowrap;align-items:center;gap:16px;min-width:0}
 /* Prompt 89: varsler-pillen er borte. Rekkefølge: Tilbake · Media · faner · Glimt (vokser) · Hjemme ▾ · ✕. */
-.m70-tl>.m70-back,.m70-tl>.m70-h,.m70-tl>.m44-srv{flex:none;white-space:nowrap}
+.m70-tl>.m70-h,.m70-tl>.m44-srv{flex:none;white-space:nowrap}
 .m70-tl>.m70-x{margin-left:auto}
-.m70-back{display:flex;align-items:center;gap:6px;height:40px;padding:0 16px 0 12px;border-radius:999px;border:1px solid var(--p-ln);background:transparent;font:600 14px Inter,system-ui,sans-serif;color:var(--p-k);cursor:pointer}
-.m70-back:hover{background:var(--p-card)}
 .m70-h{font:400 34px/1 Newsreader,Georgia,serif;letter-spacing:-.01em}
 .m70-tabs{display:flex;flex:0 1 auto;min-width:0;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;gap:2px;padding:4px;background:var(--p-seg);border-radius:999px}
 .m70-tabs::-webkit-scrollbar{display:none}
@@ -1104,10 +1102,9 @@ button.m70-rt:hover{text-decoration:underline;text-underline-offset:3px}
 @media (max-width:900px){
   .m70-top{padding:14px 16px 12px}
   /* Tittel og knapper krymper aldri (auto-spor). Varsler-pillen er fjernet (prompt 89). */
-  .m70-tl{display:grid;grid-template-columns:auto auto minmax(0,1fr) auto;gap:10px}
-  .m70-back{grid-area:1/1;height:40px}
-  .m70-h{grid-area:1/2;font-size:30px;white-space:nowrap}
-  .m70-tl>.m70-x{grid-area:1/4;margin-left:0}
+  .m70-tl{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px}
+  .m70-h{grid-area:1/1;font-size:30px;white-space:nowrap}
+  .m70-tl>.m70-x{grid-area:1/3;margin-left:0}
   .m70-tl>.m44-srv{order:5;grid-column:1/-1;justify-self:start;max-width:100%}
   .m70-gl{order:6;grid-column:1/-1;min-width:0;max-width:none;min-height:46px}
   .m70-kbd{display:none}
