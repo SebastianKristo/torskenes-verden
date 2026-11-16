@@ -25,18 +25,18 @@ struct KalLearnForm: Equatable {
 final class KalLearnModel {
     static let shared: KalLearnModel = KalLearnModel()
 
-    static let types: [(String, String)] = [("frisør", "Frisør"), ("lege", "Lege"), ("tannlege", "Tannlege"), ("fysio", "Fysio"),
+    nonisolated static let types: [(String, String)] = [("frisør", "Frisør"), ("lege", "Lege"), ("tannlege", "Tannlege"), ("fysio", "Fysio"),
                                             ("optiker", "Optiker"), ("psykolog", "Psykolog"), ("annet", "Annet")]
 
     var form: KalLearnForm? = nil
 
-    static func typeName(_ t: String) -> String {
+    nonisolated static func typeName(_ t: String) -> String {
         for x in types where x.0 == t { return x.1 }
         return "Annet"
     }
 
     /// «frisøren din» (Ok, Glimt husker at X er frisøren din).
-    static func din(_ t: String) -> String {
+    nonisolated static func din(_ t: String) -> String {
         let m: [String: String] = ["frisør": "frisøren din", "lege": "legen din", "tannlege": "tannlegen din", "fysio": "fysioterapeuten din",
                                    "optiker": "optikeren din", "psykolog": "psykologen din"]
         return m[t] ?? "lagret"
@@ -148,7 +148,7 @@ final class KalLearnModel {
     }
 
     /// Avsenderen i notatet («Mvh PÅHÅRET Studio Hoff» → «Påhåret Studio Hoff»), ellers tittelen uten «Frisør · ».
-    static func nameOf(title: String, note: String) -> String {
+    nonisolated static func nameOf(title: String, note: String) -> String {
         let keys: [String] = ["med vennlig hilsen", "vennlig hilsen", "hilsen", "mvh"]
         let low: String = note.lowercased()
         for k in keys {
@@ -169,7 +169,7 @@ final class KalLearnModel {
     }
 
     /// «PÅHÅRET Studio Hoff» → «Påhåret Studio Hoff».
-    static func nice(_ s: String) -> String {
+    nonisolated static func nice(_ s: String) -> String {
         let keep: Set<String> = ["AS", "ASA", "DA", "ANS"]
         let words: [String] = s.split(separator: " ").map { (w: Substring) -> String in
             let x: String = String(w)

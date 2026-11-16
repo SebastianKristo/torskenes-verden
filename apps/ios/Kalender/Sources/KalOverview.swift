@@ -11,9 +11,9 @@ import SwiftUI
 final class KalOverviewModel {
     static let shared: KalOverviewModel = KalOverviewModel()
 
-    static let cardKeys: [String] = ["A", "B", "C", "D", "E"]
-    static let cardNames: [String: String] = ["A": "Nå-kort", "B": "Prøver og frister", "C": "Kalendere", "D": "Kalender", "E": "Widgets"]
-    private static let localKey: String = "kal.cards"
+    nonisolated static let cardKeys: [String] = ["A", "B", "C", "D", "E"]
+    nonisolated static let cardNames: [String: String] = ["A": "Nå-kort", "B": "Prøver og frister", "C": "Kalendere", "D": "Kalender", "E": "Widgets"]
+    nonisolated private static let localKey: String = "kal.cards"
 
     var order: [String] = KalOverviewModel.cardKeys
     var hidden: Set<String> = []
@@ -26,7 +26,7 @@ final class KalOverviewModel {
 
     var visible: [String] { order.filter { (k: String) -> Bool in !hidden.contains(k) } }
 
-    static func fullOrder(_ o: [String]) -> [String] {
+    nonisolated static func fullOrder(_ o: [String]) -> [String] {
         var out: [String] = []
         for k in o where cardKeys.contains(k) && !out.contains(k) { out.append(k) }
         for k in cardKeys where !out.contains(k) { out.append(k) }

@@ -306,10 +306,13 @@ struct KalNewSheet: View {
         VStack(alignment: .leading, spacing: 12) {
             KalNewTop44(editing: editing, ok: ok, cancel: { cancel() }, save: { save() })
             // Q26: «✦ Beskriv med Glimt» fyller ut feltene (POST /api/kalender/describe), og feilmeldingen fra en rask time.
-            if !f.error.isEmpty {
-                Text(f.error).font(KalFont.ui(13, .semibold)).foregroundStyle(t.acc).fixedSize(horizontal: false, vertical: true)
+            // Gruppert, så skjemaet holder seg under ti barn (typesjekkeren i Xcode 16).
+            Group {
+                if !f.error.isEmpty {
+                    Text(f.error).font(KalFont.ui(13, .semibold)).foregroundStyle(t.acc).fixedSize(horizontal: false, vertical: true)
+                }
+                if !editing { KalDescribeBox(f: $f) }
             }
-            if !editing { KalDescribeBox(f: $f) }
             titleField
             KalAddrField44(f: $f)
             KalNewWhen44(f: $f)
