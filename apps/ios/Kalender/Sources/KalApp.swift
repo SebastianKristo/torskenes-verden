@@ -276,6 +276,14 @@ struct KalRoot: View {
                 .simultaneousGesture(swipe)
                 .simultaneousGesture(pinch)
                 .overlay { keyboardCatcher }
+                // Q34: «Slå sammen kalenderne: 6 → 4?» øverst over kalenderen (KalMerge.swift).
+                if s.mergeProposal != nil {
+                    KalMergeBanner()
+                        .padding(.horizontal, 14)
+                        .padding(.top, 8)
+                        .frame(maxHeight: .infinity, alignment: .top)
+                        .transition(.opacity)
+                }
                 if let toast = s.toast {
                     KalToastView(toast: toast)
                         .padding(.horizontal, 14)

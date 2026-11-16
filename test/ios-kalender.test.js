@@ -78,6 +78,33 @@ test('Q26: Ny hendelse har Gjenta, Merknad og «✦ Beskriv med Glimt» (POST /a
   assert.match(x, /presentNew46\(f\)/);
 });
 
+test('Q34 (E-B12): appene viser «Slå sammen kalenderne: N → 4?» med ja/nei når serveren sender migration.proposed (iPhone, iPad, Mac)', () => {
+  const core = code('SharedKal/Core/KalCalendarsCore.swift');
+  assert.match(core, /out\.proposed = KalParse\.bool\(m, "proposed"\) \?\? false/);
+  assert.match(core, /out\.moved = KalParse\.int\(m, "moved"\) \?\? 0/);
+  assert.match(core, /"Slå sammen kalenderne: " \+ String\(m\.from\) \+ " → " \+ String\(m\.to\) \+ "\?"/);
+  assert.match(core, /guard m\.proposed, !m\.done else \{ return nil \}/);
+  // Ja = POST …/migration (samme som web). Ingenting kjøres uten ja.
+  assert.match(core, /KalNet\.send\("POST", "\/api\/kalender\/calendars\/migration", json: \[:\]/);
+  const web = readFileSync(join(import.meta.dirname, '..', 'public', 'js', 'kalender-oppsett.js'), 'utf8');
+  assert.match(web, /fetch\('\/api\/kalender\/calendars\/migration', \{ method: 'POST'/);
+  // iPhone/iPad (og Homelab, KAL_EMBED): over kalenderen og i Kalendere.
+  const st = code('Kalender/Sources/KalStore.swift');
+  assert.match(st, /mergeProposal = KalMergeOffer\.pending\(KalCals39\.migration, seenKey: KalStore\.mergeSeenKey\)/);
+  const k = code('Kalender/Sources/KalMerge.swift');
+  assert.match(k, /KalPill\(title: s\.merging \? "Slår sammen …" : "Slå sammen"/);
+  assert.match(k, /KalPill\(title: "Ikke nå"/);
+  assert.match(k, /KalCalAPI39\.acceptMigration\(\)/);
+  assert.match(code('Kalender/Sources/KalApp.swift'), /KalMergeBanner\(\)/);
+  assert.match(code('Kalender/Sources/KalCalendars.swift'), /KalMergeBanner\(floating: false\)/);
+  // Mac.
+  assert.match(code('KalenderMac/Sources/MacStore.swift'), /mergeProposal = KalMergeOffer\.pending\(KalCals39\.migration, seenKey: MacStore\.mergeSeenKey\)/);
+  const mac = code('KalenderMac/Sources/MacMerge.swift');
+  assert.match(mac, /KalCalAPI39\.acceptMigration\(\)/);
+  assert.match(mac, /MacPill\(title: "Ikke nå"/);
+  assert.match(code('KalenderMac/Sources/MacRoot.swift'), /MacMergeBanner\(\)/);
+});
+
 test('Q26: Oversikt har kortene A–E fra den gamle kalendersiden, som kan flyttes og skjules (kalOrder/kalHidden i /api/me/layout)', () => {
   const o = code('Kalender/Sources/KalOverview.swift');
   assert.match(o, /static let cardKeys: \[String\] = \["A", "B", "C", "D", "E"\]/);

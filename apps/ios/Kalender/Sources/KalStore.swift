@@ -122,6 +122,9 @@ final class KalStore {
     var settingsOpen: Bool = false
     /// Q26: Oversikt (Nå-kort, Prøver og frister, Kalendere, Kalender, Widgets – KalOverview.swift).
     var overviewOpen: Bool = false
+    /// Q34 (E-B12): «Slå sammen kalenderne: 6 → 4?» fra serveren (migration.proposed), og om ja-et er sendt (KalMerge.swift).
+    var mergeProposal: KalMigration39? = nil
+    var merging: Bool = false
     /// Prompt 39: Innstillinger → Kalendere (1a), Rediger (1b, kalender-id), Legg til (1c) og Google-velgeren (1d).
     var cals39Open: Bool = false
     var cal39Edit: String? = nil
@@ -318,6 +321,7 @@ final class KalStore {
             cals = res.cals
             applyServerPrefs(res.prefs)
             announceMigration39()
+            mergeProposal = KalMergeOffer.pending(KalCals39.migration, seenKey: KalStore.mergeSeenKey)
         } else {
             serverCals = false
             mergeLocalCals()

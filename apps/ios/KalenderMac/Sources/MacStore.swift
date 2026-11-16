@@ -46,6 +46,9 @@ final class MacStore {
     private(set) var byDay: [String: [KalEvent]] = [:]
     private(set) var all: [KalEvent] = []
     var toast: MacToast? = nil
+    /// Q34 (E-B12): «Slå sammen kalenderne: 6 → 4?» fra serveren (migration.proposed), og om ja-et er sendt (MacMerge.swift).
+    var mergeProposal: KalMigration39? = nil
+    var merging: Bool = false
     /// Endres ved midnatt og hvert minutt, så «i dag» og nå-linja oppdateres.
     var tick: Int = 0
 
@@ -242,6 +245,7 @@ final class MacStore {
             cals = res.cals
             applyServerPrefs(res.prefs)
             announceMigration39()
+            mergeProposal = KalMergeOffer.pending(KalCals39.migration, seenKey: MacStore.mergeSeenKey)
         } else {
             serverCals = false
             mergeLocalCals()

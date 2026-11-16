@@ -22,6 +22,8 @@ struct KalCals39View: View {
                     KalPill(title: "Ferdig") { s.closeCals39() }
                 }
                 Text("Kalendere").font(KalFont.serif(34)).foregroundStyle(t.ink)
+                // Q34: forslaget om å slå sammen kalenderne (ja/nei) står også her.
+                KalMergeBanner(floating: false)
                 migrationBanner
                 VStack(spacing: 0) {
                     ForEach(s.cals39) { (c: KalCal) in
