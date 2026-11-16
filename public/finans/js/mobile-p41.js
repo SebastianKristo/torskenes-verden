@@ -44,8 +44,9 @@ const OSLO = {
   kveld: ['Bjørvika_-_Oslo,_Norway_2020-12-23.jpg', 'Oslo_sunset_-_33885192918.jpg', 'Oslo_view.jpg'],
   natt: ['Oslo_at_night.jpg', 'Oslo_night_skyline_2011.jpg', 'Oslo_-_Bjørvika_-_2026.jpg'],
 };
-const FP = (f, w) => `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(f)}?width=${w}`;
-const fileOf = (u) => { const x = /Special:FilePath\/([^?]+)/.exec(String(u ?? '')); return x ? decodeURIComponent(x[1]) : null; };
+// B-B10: fra serverens bildebuffer (GET /api/background/file/:navn), aldri direkte fra Commons.
+const FP = (f, w) => `/api/background/file/${encodeURIComponent(f)}?w=${w}`;
+const fileOf = (u) => { const x = /\/api\/background\/file\/([^?]+)/.exec(String(u ?? '')); return x ? decodeURIComponent(x[1]) : null; };
 /** Soloppgang/-nedgang fra værdataene når de finnes (Open-Meteo/MET), ellers faste klokkeslett. */
 function sunOf() {
   const w = hlData()?.weather ?? {}, d = w.today ?? w.days?.[0] ?? w;

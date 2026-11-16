@@ -45,7 +45,7 @@ test('katalogen har filene fra spesifikasjonen, og Saturn er med', () => {
   assert.equal(CAT.CATALOG.planet[0], 'PIA21641-Jupiter-SouthernStorms-JunoCam-20170525.jpg');
   assert.ok(CAT.CATALOG.planet.includes('Saturn_during_Equinox.jpg'));
   assert.deepEqual(CAT.PLANETS, ['earth', 'moon', 'jupiter', 'mars', 'saturn']);
-  assert.deepEqual(Object.keys(CAT.CATALOG).sort(), ['oslo', 'planet', 'ruter', 'vaer_klart', 'vaer_regn', 'vaer_sky']);
+  assert.deepEqual(Object.keys(CAT.CATALOG).sort(), ['oslo', 'oslo_dognet', 'planet', 'ruter', 'vaer_klart', 'vaer_regn', 'vaer_sky']); // oslo_dognet: B-B10
   assert.equal(CAT.slug('SL18_tram_performing_test_run_at_Bjørvika.jpg'), 'sl18_tram_performing_test_run_at_bjorvika');
   assert.equal(CAT.filePathUrl('Oslo_S_aerial.jpg'), 'https://commons.wikimedia.org/wiki/Special:FilePath/Oslo_S_aerial.jpg?width=2000');
   assert.deepEqual(CAT.creditFromInfo({ query: { pages: { 7: { imageinfo: [{ extmetadata: { Artist: { value: '<span>Kari &amp; Ola</span>' }, LicenseShortName: { value: 'CC BY-SA 4.0' }, LicenseUrl: { value: 'https://creativecommons.org/licenses/by-sa/4.0' } } }] } } } }),

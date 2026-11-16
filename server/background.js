@@ -508,24 +508,50 @@ api.get('/credits', (c) => c.json({ items: [...WM.values()].map((e) => ({ keys: 
 api.get('/img/:id', async (c) => {
   const id = c.req.param('id');
   const w = Math.min(2560, Math.max(320, +c.req.query('w') || 1440));
+  if (/^wm-[a-f0-9]{16}$/.test(id) && WM.has(id)) return serveWiki(c, id, w);
   let path = null;
-  if (/^wm-[a-f0-9]{16}$/.test(id) && WM.has(id)) {
-    const b = bundledFor(WM.get(id).file, w);
-    if (b) {
-      const etag = `"${id}-b${b.size}"`;
-      if (c.req.header('if-none-match') === etag) return c.body(null, 304, { ETag: etag });
-      try { return c.body(await readFile(b.path), 200, { 'Content-Type': 'image/webp', 'Cache-Control': 'private, max-age=604800', ETag: etag, 'X-Content-Type-Options': 'nosniff' }); } catch { /* prøv cachen */ }
-    }
-    const m = metaGet(id); if (m?.file) path = join(CACHE, m.file);
-  } else if (/^o-[a-f0-9]{16}$/.test(id)) { const f = (await osloUploads()).find((x) => x.id === id); if (f) path = join(OSLO, f.file); }
+  if (/^o-[a-f0-9]{16}$/.test(id)) { const f = (await osloUploads()).find((x) => x.id === id); if (f) path = join(OSLO, f.file); }
   else if (/^[a-f0-9]{16}$/.test(id)) { const m = metaGet(id); if (m?.file) path = join(CACHE, m.file); }
+  return serveFile(c, path, id, w);
+});
+
+// B-B10: Wikimedia-fotoene med filnavnet, så nettleseren aldri henter fra commons.wikimedia.org selv (Oslo etter tid på døgnet,
+// CATALOG.oslo_dognet). Bare filene i katalogen. Ferdig nedlastet kopi først, så cachen. Mangler begge, svarer serveren 404 med
+// en gang (klienten går videre til neste bilde, til slutt serverens egne Oslo-bilder) og laster fila ned i bakgrunnen, så den er
+// i cachen neste gang. Uten nett prøves samme fil tidligst etter 15 min (wikiDownload).
+api.get('/file/:name', async (c) => {
+  const id = wmId(c.req.param('name'));
+  if (!WM.has(id)) return c.json({ error: 'Fant ikke bildet' }, 404);
+  const w = Math.min(2560, Math.max(320, +c.req.query('w') || 1440));
+  const file = WM.get(id).file;
+  if (!(await wikiReady(file))) {
+    wikiDownload(file).catch(() => {});
+    return c.json({ error: 'Bildet er ikke lastet ned ennå. Prøv igjen om litt.', code: 'NOT_CACHED' }, 404, { 'Retry-After': '30', 'Cache-Control': 'no-store' });
+  }
+  return serveWiki(c, id, w);
+});
+/** Bare for tester: venter til en pågående nedlasting av fila er ferdig. */
+export const _wikiSettled = (file) => wmInflight.get(file) ?? Promise.resolve(null);
+
+/** Et Wikimedia-foto: ferdig nedlastet kopi (webp) eller fra cachen, skalert til w. */
+async function serveWiki(c, id, w) {
+  const b = bundledFor(WM.get(id).file, w);
+  if (b) {
+    const etag = `"${id}-b${b.size}"`;
+    if (c.req.header('if-none-match') === etag) return c.body(null, 304, { ETag: etag });
+    try { return c.body(await readFile(b.path), 200, { 'Content-Type': 'image/webp', 'Cache-Control': 'private, max-age=604800', ETag: etag, 'X-Content-Type-Options': 'nosniff' }); } catch { /* prøv cachen */ }
+  }
+  const m = metaGet(id);
+  return serveFile(c, m?.file ? join(CACHE, m.file) : null, id, w);
+}
+async function serveFile(c, path, id, w) {
   if (!path) return c.json({ error: 'Fant ikke bildet' }, 404);
   try {
     const r = await sized(path, id, w);
     if (c.req.header('if-none-match') === r.etag) return c.body(null, 304, { ETag: r.etag });
     return c.body(r.body, 200, { 'Content-Type': r.type, 'Cache-Control': 'private, max-age=604800', ETag: r.etag, 'X-Content-Type-Options': 'nosniff' });
   } catch { return c.json({ error: 'Fant ikke bildet' }, 404); }
-});
+}
 
 // Egne Oslo-bilder: alle innloggede ser listen, bare admin laster opp og sletter.
 api.get('/oslo', async (c) => c.json({ items: (await osloUploads()).map((o) => ({ id: o.id, url: imgUrl(o.id, 720), size: o.size, created: o.created })) }));

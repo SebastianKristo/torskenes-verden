@@ -13,6 +13,14 @@ export const CATALOG = {
   vaer_sky: ['Cloudy_Sky_Background.jpg', 'Clouds_over_the_Atlantic_Ocean.jpg'],
   vaer_regn: ['Clouds_over_the_Atlantic_Ocean.jpg', 'Cloudy_Sky_Background.jpg'],
   ruter: ['SL18_tram_performing_test_run_at_Bjørvika.jpg', 'Oslo_tram_line_18_on_Grensen.JPG', 'Oslo_tram_line_19_and_18_at_St_Halvards_plass.jpg'],
+  // B-B10: Oslo etter tid på døgnet (morgen, dag, kveld, natt) på web (public/js/bgsvc.js OSLO41 og public/finans/js/mobile-p41.js).
+  // Nettleseren henter dem fra serveren (GET /api/background/file/:navn), aldri fra Commons selv.
+  oslo_dognet: [
+    'Oslo_sett_fra_Nesoddtangen,_2020.jpg', 'Oslo_from_east_IMG_7642_aerial.JPG', 'Oslo_S_aerial.jpg',
+    'Oslo_Skyline,_drone.jpg', 'Rodeløkka_(7._september_2018).jpg', 'Holmenkollen_aerial.jpg', '2010-10-25_Oslo.jpg', 'Operahuset.jpg',
+    'Bjørvika_-_Oslo,_Norway_2020-12-23.jpg', 'Oslo_sunset_-_33885192918.jpg', 'Oslo_view.jpg',
+    'Oslo_at_night.jpg', 'Oslo_night_skyline_2011.jpg', 'Oslo_-_Bjørvika_-_2026.jpg',
+  ],
 };
 
 // Planetene i dagens rekkefølge: floor(Date.now()/864e5) % 5 → Jorda, Månen, Jupiter, Mars, Saturn.
