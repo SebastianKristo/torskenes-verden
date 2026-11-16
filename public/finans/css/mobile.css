@@ -91,24 +91,6 @@ html[data-ui=mobile] body{background:#000;overscroll-behavior-y:none}
 .and .sw[aria-checked=true]::after{background:var(--m3-532200,#532200);width:24px;height:24px;top:2px;transform:translateX(18px)}
 .m .sw[aria-checked=true]::after{transform:translateX(20px)}
 
-/* ================= Brettbar / nettbrett ≥ 600 px: rail + to paneler ================= */
-@media (min-width:600px){
-  .m.two{display:grid;grid-template-columns:96px minmax(0,1fr) minmax(0,1fr);height:100dvh;overflow:hidden}
-  .m.two .m-scroll{max-width:none;margin:0;padding:calc(env(safe-area-inset-top) + 20px) 20px 30px;height:100dvh;overflow-y:auto}
-  .m.two .m-detail{display:flex;flex-direction:column;gap:14px;padding:calc(env(safe-area-inset-top) + 20px) 24px 30px;height:100dvh;overflow-y:auto;position:relative;z-index:1}
-  .m.two .tabbar,.m.two .navbar,.m.two .fab{display:none}
-  .m.two .rail{display:flex;flex-direction:column;align-items:center;gap:14px;padding:calc(env(safe-area-inset-top) + 20px) 0 20px;position:relative;z-index:2}
-  .and.two .rail{background:var(--m3-261E19,#261E19)}
-  .m.two .rail .r-scan{width:56px;height:56px;border-radius:16px;display:grid;place-items:center;margin-bottom:10px}
-  .and.two .rail .r-scan{background:var(--m3-FFB68A,#FFB68A);color:var(--m3-532200,#532200)}
-  .m.two .rail a{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:12px;font-weight:600;opacity:.85}
-  .m.two .rail a span{width:56px;height:32px;border-radius:16px;display:grid;place-items:center}
-  .and.two .rail a[aria-current=page] span{background:var(--m3-5D4033,#5D4033)}
-  .m.two .rail a[aria-current=page]{opacity:1}
-  .and.two .m-detail{background:var(--m3-1E1712,#1E1712);border-radius:28px 0 0 28px}
-  .m.two .one-only{display:none}
-}
-
 /* ---------- Mobil v2 ---------- */
 .m-logo{display:grid;place-items:center;background:#fff;overflow:hidden;position:relative}
 .m-logo img{object-fit:contain}.m-logo i{display:none;font-style:normal;font-weight:700}
@@ -173,18 +155,6 @@ a.fab,a.r-scan{text-decoration:none}
 .and.dom .navbar a{color:var(--m3-D5C2C6,#D5C2C6)}
 .and.dom .navbar a[aria-current=page]{color:var(--m3-FFD9E2,#FFD9E2)}
 .and.dom .navbar a[aria-current=page] span{background:var(--m3-7B2949,#7B2949)}
-
-/* Brettbar: rail med skann øverst og profilbildet nederst; moduler fyller hele skjermen */
-.r-av{margin-top:auto}
-@media (min-width:600px){
-  .m.two.full{grid-template-columns:96px minmax(0,1fr)}
-  .m.two.full .m-detail{display:none}
-  .m.two.full .m-scroll{max-width:860px;width:100%;margin:0 auto}
-  .m.two .rail{height:100dvh}
-  .m.two .rail .r-av{width:48px;height:48px;margin-top:0}
-  .and.dom.two .rail{background:var(--m3-2A2024,#2A2024)}
-  .and.dom.two .rail a[aria-current=page] span{background:var(--m3-7B2949,#7B2949);color:var(--m3-FFD9E2,#FFD9E2)}
-}
 
 /* Meny bak profilbildet, handlingsark for skann */
 .sheet.left{left:8px;right:auto;margin-left:0;width:min(380px,calc(100vw - 16px));animation:slideL .28s cubic-bezier(.3,1.2,.5,1)}
@@ -445,13 +415,7 @@ em.role.blk{background:rgba(255,138,128,.16);color:#FF8A80}em.role.chl{backgroun
 .orig .opt-row{display:flex;align-items:center;gap:12px;padding:12px 16px}
 .orig.and .list{display:flex;flex-direction:column;gap:3px}
 
-/* Brettbar: rail med Homelab øverst, skann og profil nederst; alle sider uten listepanel fyller skjermen */
-@media (min-width:600px){
-  .m.two .rail .r-home{margin-bottom:2px}
-  .m.two.hlp .m-scroll{max-width:760px}
-  .m.two .m-scroll{padding-bottom:30px}
-  
-}
+/* Bakgrunnen bak appen (synlig ved overscroll) */
 html[data-ui=mobile] body:has(.m.and){background:var(--m3-19120E,#19120E)}
 .and.light .m-spin{border-color:rgba(0,0,0,.12);border-top-color:var(--m3-FF7A3D,#FF7A3D)}
 .m .prow.tap{cursor:pointer}
@@ -461,15 +425,11 @@ html[data-ui=mobile] body:has(.m.and){background:var(--m3-19120E,#19120E)}
 /* Linsen løftes mens den dras: bare blur/saturate/brightness (ingen SVG-forskyvning på WebKit) */
 /* Skann (Finans) og tannhjul (Domener): rund glassknapp i samme rad, til høyre for kapselen */
 .and .m-scroll{padding-bottom:calc(env(safe-area-inset-bottom) + 180px)}
-.m.nobar .m-scroll{padding-bottom:calc(env(safe-area-inset-bottom) + 28px)}
-.m.nobar .edge{display:none}
 
 /* Pil tilbake øverst, med profilbildet på samme rad helt til høyre */
 .toprow{display:flex;align-items:center;gap:10px;min-height:44px;margin-bottom:-4px}
 .and .atop{height:40px;padding:0 18px 0 12px;border-radius:20px;display:inline-flex;align-items:center;gap:8px;background:var(--m3-31281F,#31281F);color:var(--m3-F0DFD7,#F0DFD7);font-weight:600;font-size:14.5px;text-decoration:none}
 .and.dom .atop{background:var(--m3-3A2F33,#3A2F33);color:var(--m3-F2DEE2,#F2DEE2)}
-.m.backtop .m-scroll button.m-av[data-mact=menu]:not(.topav){display:none}
-@media (min-width:600px){ .m.two .toprow .topav{display:none} }
 
 /* Matplan: egen lys «matapp»-flate (og mørk modus) */
 .m.matp{--mp-bg:#F1F2EC;--mp-fg:#1E241C;--mp-mut:#5B6158;--mp-dim:#7A8077;--mp-card:#fff;--mp-red:#F2552C;--mp-lime:#E4F0A9;--mp-cream:#FBEACB;--mp-line:#D9DCD2;
@@ -528,7 +488,6 @@ html[data-ui=mobile] body:has(.m.and){background:var(--m3-19120E,#19120E)}
 .m.matp .atop{background:var(--mp-card);color:var(--mp-fg)}
 .m.matp .m-av{background:var(--mp-card);color:var(--mp-fg)}
 .m.matp .m-spin{border-color:rgba(0,0,0,.1);border-top-color:var(--mp-red)}
-@media (min-width:600px){ .m.two.matp .m-scroll{max-width:620px} .m.two.matp .rail{background:transparent} }
 /* Domener: verdenskart (rosa skala) og DNS */
 .dmapbox{gap:8px}
 .dmap{position:relative;width:100%;aspect-ratio:1.9/1;min-height:150px}
@@ -929,8 +888,6 @@ em.role.dns{min-width:46px;text-align:center;font-style:normal;font-size:11px;fo
 
 /* Nyhetsleser */
 .m.news .m-scroll{padding:calc(env(safe-area-inset-top) + 12px) 18px calc(env(safe-area-inset-bottom) + 28px);margin-top:0}
-.m.news:not(.papir){--pp-bg:#f3efe6;--pp-ink:#1b1a17;--pp-card:#fff;--pp-line:#d8d1c2;--pp-lab:#b23a2a;--pp-mut:#8f897c;--pp-pos:#2f7a4f;background:var(--pp-bg)!important;color:var(--pp-ink)!important;font-family:Manrope,system-ui,sans-serif}
-.m.news.and:not(.light):not(.papir){--pp-bg:#14130f;--pp-ink:#ece7dc;--pp-card:#211f19;--pp-line:#34322a;--pp-lab:#e8705c;--pp-mut:#8a8578;--pp-pos:#7fcf9a}
 .m.news .blob{display:none}
 .pp-reader{display:flex;flex-direction:column;gap:12px}
 .pp-rhead{display:flex;align-items:center;gap:10px}
@@ -1769,9 +1726,6 @@ a.wx-r{color:inherit;text-decoration:none}
 .p17-ptri{display:inline-block;font-size:15px}
 .p17-ptri.spin{animation:p17spin .8s linear infinite}
 @keyframes p17spin{to{transform:rotate(360deg)}}
-/* Klassisk: Huskeliste og de nye kortene får papirfarger lokalt. */
-.m:not(.papir) .p17-hk{--pp-bg:transparent;--pp-card:rgba(255,255,255,.07);--pp-ink:currentColor;--pp-mut:rgba(255,255,255,.6);--pp-line:rgba(255,255,255,.14);--pp-lab:#ff8a80;--pp-pos:#7BE3A0}
-.m.light:not(.papir) .p17-hk{--pp-card:#fff;--pp-mut:rgba(0,0,0,.55);--pp-line:rgba(0,0,0,.1);--pp-lab:#b23a2a;--pp-pos:#2f7a4f}
 @media (min-width:600px){.p17-ppl{grid-template-columns:repeat(3,minmax(0,1fr))}.p17-sens{grid-template-columns:repeat(3,minmax(0,1fr))}}
 .m.papir .p17-ftabs{background:var(--pp-card);border-radius:999px;padding:4px;box-shadow:0 10px 30px -14px rgba(0,0,0,.35);border:0}
 .m.papir .p17-ftabs button{border-radius:999px!important}
@@ -2649,7 +2603,6 @@ img.p23-ic,span.p24-img{background:none;-webkit-mask:none!important;mask:none!im
 .m .p17-adm{font-weight:500}
 
 /* ================= Prompt 26 · Kalender (Kalender.dc.html, variant mobile og mode widget) ================= */
-.m:not(.papir) .k26,.m:not(.papir) .k26-hw,.m:not(.papir) .p26{--pp-ink:#ece7dc;--pp-bg:#14130f;--pp-card:#211f19;--pp-line:#34322a;--pp-lab:#e8705c;--pp-mut:#8a8578;--pp-pos:#7fcf9a}
 .m .k26{display:flex;flex-direction:column;gap:14px;min-width:0;color:var(--pp-ink);font-family:Manrope,system-ui,sans-serif}
 .m .k26 .mut,.m .k26-hw .mut{color:var(--pp-mut)}
 /* Nå-kort */
@@ -2759,8 +2712,6 @@ img.p23-ic,span.p24-img{background:none;-webkit-mask:none!important;mask:none!im
 /* =====================================================================
    Prompt 27: ✕ i søkefelt, søkeforslag, Chat, Kalender v2, Nyheter, Ruter-kortet, abonnement fra skjermbilde
    ===================================================================== */
-.m:not(.papir) .k27,.m:not(.papir) .ch27.papir,.m:not(.papir) .p27-art,.m:not(.papir) .p27-sug{--pp-ink:#ece7dc;--pp-bg:#14130f;--pp-card:#211f19;--pp-line:#34322a;--pp-lab:#e8705c;--pp-mut:#8a8578;--pp-pos:#7fcf9a}
-.m.light:not(.papir) .k27,.m.light:not(.papir) .ch27.papir,.m.light:not(.papir) .p27-art,.m.light:not(.papir) .p27-sug{--pp-ink:#1b1a17;--pp-bg:#f3efe6;--pp-card:#fff;--pp-line:#d8d1c2;--pp-lab:#b23a2a;--pp-mut:#8f897c}
 .m.p27-fs .m-scroll{min-height:100vh;min-height:100dvh}
 
 /* --- Felles søkefelt: ✕ til venstre (26 px sirkel, 36 px trykkflate) --- */
@@ -2837,7 +2788,7 @@ img.p23-ic,span.p24-img{background:none;-webkit-mask:none!important;mask:none!im
 /* --- Chat (fullskjerm; Fold/bred = fast sidepanel) --- */
 .m .ch27{position:fixed;inset:0;z-index:58;display:flex;overflow:hidden;background:var(--cb);color:var(--ci);font-family:Manrope,system-ui,sans-serif;--hf:Newsreader,Georgia,serif}
 .m .ch27.papir{--cb:var(--pp-bg);--cc:var(--pp-card);--ci:var(--pp-ink);--cm:var(--pp-mut);--cl:var(--pp-line);--ca:var(--pp-lab);--cs:#ebe6da;--cub:var(--pp-ink);--cuI:var(--pp-bg)}
-.m.papir.pd .ch27.papir,.m:not(.papir):not(.light) .ch27.papir{--cs:#1b1a15}
+.m.papir.pd .ch27.papir{--cs:#1b1a15}
 .m .ch27.noytral{--cb:#212121;--cc:#2f2f2f;--ci:#ececec;--cm:#a3a3a3;--cl:#3a3a3a;--ca:#ececec;--cs:#171717;--cub:#303030;--cuI:#ececec;--hf:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;font-family:var(--hf)}
 .m .ch27 button{font:inherit;color:inherit;-webkit-tap-highlight-color:transparent}
 .m .ch27 .ch27-h{font-family:var(--hf);font-size:25px;font-weight:500}
@@ -3084,7 +3035,6 @@ textarea.k27-in{height:auto;padding:12px 16px;resize:vertical}
 .upd-mul{margin:0;padding-left:18px;font-size:13.5px;line-height:1.45;opacity:.8}
 .m.papir .upd-mcode,.m.papir .upd-mlog{border-radius:0;background:var(--pp-card,#fff);border:1px solid var(--pp-line)}
 .upd-msheet .sinp{height:48px}
-.m:not(.papir) .upd-msheet{--pp-ink:#ece7dc;--pp-bg:#14130f;--pp-card:#211f19;--pp-line:#34322a;--pp-lab:#e8705c;--pp-mut:#8a8578;--pp-pos:#7fcf9a}
 
 /* «Legg til abonnement»-arket (fasit Abonnement Legg til ark.dc.html): én grep-strek, liste i ett kort, farger fra temaet */
 .m .s28-sh{--a-bg:var(--pp-bg,#f3efe6);--a-card:var(--pp-card,#fff);--a-ink:var(--pp-ink,#1b1a17);--a-mut:var(--pp-mut2,#6b665c);--a-lab:var(--pp-lab,#b23a2a);--a-onlab:var(--pp-onLab,#fff);--a-line:var(--pp-line,#e4ddcf);--a-tint:color-mix(in srgb,var(--a-lab) 13%,var(--a-card));--a-seg:var(--pp-surf2,#e9e3d6)}
@@ -3333,9 +3283,7 @@ html.p28-kb .m.papir{--pp-navb:calc(var(--p28-kb,0px) + 8px)}
 /* Wiggle-verktøylinja ligger øverst i scroll-innholdet (8 px), og innholdet får 64 px luft (claude-code-wiggle-verktoylinje.md).
    mobile-mer.js flytter .p28-pills til første barn av .m-scroll og animerer padding-top 0 → 64 px (280 ms). */
 .m .m-scroll:has(>.p28-pills){padding-top:64px}
-.m.two .m-scroll:has(>.p28-pills){padding-top:calc(env(safe-area-inset-top) + 64px)}
 .m .m-scroll>.p28-pills{position:absolute;top:8px;left:16px;right:16px;height:auto;max-width:none;margin:0;z-index:30}
-.m.two .m-scroll>.p28-pills{top:calc(env(safe-area-inset-top) + 8px)}
 .m:has(.p28-pills) .pp-av{visibility:visible}
 .m .p28-pill.plus b{font:800 14px Manrope,system-ui,sans-serif}
 .m .p28-pill.plus.on{background:var(--pp-ink,#1b1a17)!important;color:var(--pp-bg,#f3efe6)!important;border-color:var(--pp-ink,#1b1a17)!important}
@@ -3615,7 +3563,6 @@ html.p30-kb .m .ch27 :is(.pp-nav,.tabbar,.navbar){display:none}
 /* ---------- System-siden «Nordlys OS» ---------- */
 .m.n31-pg{background:var(--pp-bg,#f3efe6)}
 .m.n31-pg .m-scroll{padding-top:0;padding-bottom:calc(env(safe-area-inset-bottom,0px) + 24px)}
-.m:not(.papir).n31-pg{--pp-bg:var(--m-bg,#14130f);--pp-card:rgba(255,255,255,.06);--pp-ink:inherit;--pp-mut:rgba(255,255,255,.62);--pp-line:rgba(255,255,255,.12);--pp-lab:#ff8a6b}
 .m .n31{display:flex;flex-direction:column;gap:14px;width:100%;min-width:0;box-sizing:border-box;padding-bottom:120px;color:var(--pp-ink)}
 .m .n31-top{min-height:128px;box-sizing:border-box;padding:calc(env(safe-area-inset-top,0px) + 8px) 0 6px;display:flex;flex-direction:column;justify-content:flex-end;gap:2px}
 .m .n31-back{align-self:flex-start;display:inline-flex;align-items:center;gap:2px;height:36px;padding:0 12px 0 6px;margin:0 0 auto -6px;border-radius:18px;color:var(--pp-ink);text-decoration:none;font:700 15px Manrope,sans-serif}
@@ -3706,8 +3653,6 @@ html.p30-kb .m .ch27 :is(.pp-nav,.tabbar,.navbar){display:none}
 .m .m-scroll:has(>.p28-pills){padding-top:0}
 .m .m-scroll>.p28-pills{position:sticky!important;top:0;left:auto!important;right:auto!important;width:auto!important;height:62px!important;box-sizing:border-box;margin:0 -16px 2px!important;padding:8px 16px 0!important;max-width:none;align-items:flex-start;background:transparent}
 .m .m-scroll>.p28-pills.p32-stuck{background:var(--pp-bg);box-shadow:0 calc(-1 * env(safe-area-inset-top)) 0 var(--pp-bg),0 8px 14px -12px rgba(0,0,0,.25)}
-.m.two .m-scroll>.p28-pills{top:0;padding-top:calc(env(safe-area-inset-top) + 8px)!important;height:calc(env(safe-area-inset-top) + 62px)!important}
-.m.two .m-scroll:has(>.p28-pills){padding-top:0}
 .m .m-scroll>.p28-pills .p28-pill{height:40px}
 
 /* GLIMT I SØKEFELTET */
@@ -4870,7 +4815,6 @@ html.p36-booting body{overflow:hidden}
 /* Konto → Økt og ark */
 .m .p38-shb{position:fixed;inset:0;z-index:950;background:rgba(27,26,23,.4);animation:p35Fade .2s ease both}
 .m .p38-sh{position:fixed;left:0;right:0;bottom:0;z-index:951;max-width:560px;margin:0 auto;max-height:92dvh;overflow-y:auto;box-sizing:border-box;background:var(--pp-card,#fffdf8);color:var(--pp-ink,#1b1a17);border-radius:28px 28px 0 0;padding:10px 18px calc(26px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:12px;box-shadow:0 -14px 40px rgba(0,0,0,.2);animation:p38Up .3s cubic-bezier(.2,.8,.2,1) both}
-.m:not(.papir) .p38-sh{background:#1c1b18;color:#f3efe6;--pp-line:rgba(255,255,255,.14);--pp-mut:rgba(255,255,255,.6);--pp-bg:#14130f;--pp-lab:#ff8a80}
 @keyframes p38Up{from{transform:translateY(40px);opacity:0}to{transform:none;opacity:1}}
 .m .p38-grab{align-self:center;width:36px;height:5px;border-radius:3px;background:var(--pp-line)}
 .m .p38-shf{display:flex;flex-direction:column;gap:12px}

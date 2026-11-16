@@ -17,6 +17,13 @@ test('mobile.css har ingen regler for det slettede iOS-temaet (.ios)', () => {
   assert.doesNotMatch(utenKommentarer, /\.ios(?![\w-])/);
 });
 
+test('mobile.css har ingen regler for rotklasser .m aldri får (Papir er alltid på: .two, .nobar, .backtop, :not(.papir))', () => {
+  // Roten får alltid «m and papir» (mobile.js draw). To paneler (.two), «uten fanelinje» (.nobar) og «tilbake øverst» (.backtop)
+  // fantes bare i det slettede Klassisk-designet.
+  assert.doesNotMatch(utenKommentarer, /\.(?:m|and)(?:\.[\w-]+)*(?:\.two|\.nobar|\.backtop|\.nobg)(?![\w-])/);
+  assert.doesNotMatch(utenKommentarer, /\.m(?:\.[\w-]+)*:not\(\.papir\)/);
+});
+
 test('stegprikkene i Mat og fargene i Kvitteringer/Finn er klasser, ikke inline stil som CSS må overstyre', () => {
   assert.match(js('mobile-mat.js'), /<i\$\{i <= k \? ' class="on"' : ''\}><\/i>/);
   assert.doesNotMatch(utenKommentarer, /mp2-dots i\[style/);
@@ -25,5 +32,5 @@ test('stegprikkene i Mat og fargene i Kvitteringer/Finn er klasser, ikke inline 
 
 test('antall !important i mobile.css går bare ned', () => {
   const n = (utenKommentarer.match(/!important/g) || []).length;
-  assert.ok(n <= 806, `${n} !important (maks 806; 861 før oppryddingen)`);
+  assert.ok(n <= 802, `${n} !important (maks 802; 861 før oppryddingen)`);
 });
