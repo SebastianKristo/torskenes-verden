@@ -140,3 +140,26 @@ test('E-B12/Q34 Homelab-appen: kalenderen viser forslaget med «Slå sammen» og
   assert.match(ui, /K29NowCard\(vm, kalNow29\(s, evs, now\)\)\s*KalMigBanner\(vm\)/);
   assert.match(ui, /contentDescription = if \(m\.proposed\) "Ikke nå" else "Lukk"/);
 });
+
+test('Struktur: Nyheter har egen ViewModel med StateFlow og repository; AppViewModel sender bare videre', () => {
+  const nvm = strip(raw(join(APP, 'skjerm/NyheterViewModel.kt')));
+  assert.match(nvm, /class NyheterViewModel\([\s\S]*?\) : ViewModel\(\)/);
+  assert.match(nvm, /val tilstand: StateFlow<NyheterTilstand> = _tilstand\.asStateFlow\(\)/);
+  assert.match(nvm, /lagret\[KATEGORI\] = kategori/, 'valgt kategori overlever prosessdød');
+  assert.doesNotMatch(nvm, /JSONObject\(|JSONArray\(|hlGet\(|hlPost\(|parseNews\(/, 'ingen nett eller JSON i ViewModel-en');
+  // 404 fra en eldre server gir en forklaring på siden (ingen lokal reserve).
+  assert.match(nvm, /if \(e\.status == 404\) "Nyheter finnes ikke på serveren ennå\. Oppdater Homelab\."/);
+  const repo = strip(raw(join(APP, 'repository/NyheterRepository.kt')));
+  assert.match(repo, /withContext\(Dispatchers\.Default\) \{ parseNews\(raw\) \}/, 'JSON tolkes utenfor Main');
+  for (const sti of ['"/rss?cat="', '"/rss/feeds"', '"/rss/feeds/"', '"/rss/settings"', '"/rss/refresh"']) assert.ok(repo.includes(sti), sti);
+  const vm = strip(raw(join(APP, 'AppViewModel.kt')));
+  for (const f of ['news', 'newsCat', 'newsBusy', 'newsError']) assert.doesNotMatch(vm, new RegExp(`var ${f} by mutableStateOf`), f);
+  assert.doesNotMatch(vm, /\/rss\?cat=|\/rss\/feeds|\/rss\/settings|\/rss\/refresh/, 'Nyheter-kallene går via NyheterRepository');
+  assert.match(vm, /var news: NewsData\?\s*get\(\) = nyheterNa\(\)\.data\s*set\(v\) \{ nyheter\.settData\(v\) \}/);
+  assert.match(vm, /fun loadNews\(cat: String = newsCat\) = launch \{\s*val raw: String = nyheter\.last\(cat\) \?: return@launch\s*applyNewsExtras46\(raw\)/);
+  assert.match(vm, /fun refreshNews\(\) = nyheter\.hentKildene\(\)/);
+  assert.match(vm, /nyheter\.tilstand\.collect \{ nyheterSpeil = it \}/);
+  assert.match(vm, /nyheter\.nullstill\(\); homeNews = emptyList\(\)/, 'utlogging tømmer Nyheter');
+  // Om siden er åpen, er navigasjon og blir i AppViewModel (tilbakestabelen prøvekjører den i et snapshot).
+  assert.match(vm, /var newsOpen by mutableStateOf\(false\)/);
+});

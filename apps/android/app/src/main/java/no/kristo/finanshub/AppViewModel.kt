@@ -29,8 +29,11 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelStore
 import no.kristo.finanshub.repository.DomenerRepository
+import no.kristo.finanshub.repository.NyheterRepository
 import no.kristo.finanshub.skjerm.DomenerTilstand
 import no.kristo.finanshub.skjerm.DomenerViewModel
+import no.kristo.finanshub.skjerm.NyheterTilstand
+import no.kristo.finanshub.skjerm.NyheterViewModel
 import androidx.savedstate.SavedStateRegistry
 import android.os.Bundle
 import androidx.lifecycle.viewModelScope
@@ -107,6 +110,16 @@ class AppViewModel(app: Application, private val lagret: SavedStateHandle) : And
      */
     private var domenerSpeil by mutableStateOf<DomenerTilstand?>(null)
     private fun domenerNa(): DomenerTilstand = domenerSpeil.let { domener.tilstand.value }
+
+    /** Nyheter-siden (skjerm/NyheterViewModel.kt), mot /api/rss via NyheterRepository. */
+    val nyheter: NyheterViewModel = ViewModelProvider(
+        skjermer,
+        NyheterViewModel.fabrikk(lagret, NyheterRepository { api }, { flash(it) }, { visFeil(it) }),
+    )[NyheterViewModel::class.java]
+
+    /** Speil av NyheterViewModel.tilstand, som for Domener: skjermer som leser vm.news osv. tegnes på nytt. */
+    private var nyheterSpeil by mutableStateOf<NyheterTilstand?>(null)
+    private fun nyheterNa(): NyheterTilstand = nyheterSpeil.let { nyheter.tilstand.value }
 
     /* ---------- Kontoer ---------- */
 
@@ -499,7 +512,7 @@ class AppViewModel(app: Application, private val lagret: SavedStateHandle) : And
         ai = null; aiHistory = emptyList(); editing = null; original = null; detail = null; detailTx = null
         recurring = null; stocks = null; report = null; importResult = null; importUris = emptyList(); importText = ""
         editHome = false; domainManager = false; matDay = null; matFull = false; aiNote = null; suggestGroups = emptyList()
-        news = null; homeNews = emptyList(); newsOpen = false; photo = null; media = null; matFolders = emptyList(); recipeJobs = emptyList()
+        nyheter.nullstill(); homeNews = emptyList(); newsOpen = false; photo = null; media = null; matFolders = emptyList(); recipeJobs = emptyList()
         recipePreview = null; dishOpen = null; paperPage = null
         logos.clear()
         // Prompt 21 (brukerskille): alt som tilhører brukeren tømmes ved kontobytte og utlogging.
@@ -1948,55 +1961,33 @@ class AppViewModel(app: Application, private val lagret: SavedStateHandle) : And
     }
 
     /* ---------- Nyhetsleser (/api/rss) ---------- */
+    /* Tilstanden og nettkallene ligger i NyheterViewModel (skjerm/NyheterViewModel.kt). Videresendingene under er for kode som
+       ikke er flyttet. Om siden er åpen (newsOpen, newsSettings) er navigasjon og blir her. */
 
-    var news by mutableStateOf<NewsData?>(null)
+    var news: NewsData?
+        get() = nyheterNa().data
+        set(v) { nyheter.settData(v) }
     /** De 5 sakene på forsiden (fra /api/mobile/home). */
     var homeNews by mutableStateOf<List<NewsItem>>(emptyList())
     var newsOpen by mutableStateOf(false)
     var newsSettings by mutableStateOf(false)
-    var newsCat by mutableStateOf("siste")
-    var newsBusy by mutableStateOf(false)
-    var newsError by mutableStateOf<String?>(null)
+    val newsCat: String get() = nyheterNa().kategori
+    val newsBusy: Boolean get() = nyheterNa().laster
+    val newsError: String? get() = nyheterNa().feil
 
     // Prompt 46 (claude-code-nyheter-innstillinger-flytt.md): «Kilder og AI» ligger i Innstillinger → Nyheter, ikke på Nyheter-siden.
     fun openNews(settings: Boolean = false) { if (settings) { menuOpen = false; openNewsSettings46(); return }; newsOpen = true; newsSettings = false; menuOpen = false; loadNews() }
 
     fun loadNews(cat: String = newsCat) = launch {
-        newsCat = cat
-        newsBusy = true
-        try {
-            val raw = api.hlGet("/rss?cat=" + URLEncoder.encode(cat, "UTF-8") + "&limit=40", timeout = 8000)
-            news = parseNews(raw)
-            applyNewsExtras46(raw) // prompt 46: egne kategorier, interesser, favicon, sammendrag per kategori
-            newsError = null
-        } catch (e: ApiException) {
-            newsError = if (e.status == 404) "Nyheter finnes ikke på serveren ennå. Oppdater Homelab." else e.message
-        } finally { newsBusy = false }
+        val raw: String = nyheter.last(cat) ?: return@launch
+        applyNewsExtras46(raw) // prompt 46: egne kategorier, interesser, favicon, sammendrag per kategori
     }
 
-    fun addFeed(url: String) = launch {
-        val u = url.trim().let { if (it.startsWith("http")) it else "https://$it" }
-        if (u.length < 10) return@launch
-        newsBusy = true
-        try { api.hlPost("/rss/feeds", JSONObject().put("url", u)); flash("Kilden er lagt til"); news = parseNews(api.hlGet("/rss?cat=$newsCat&limit=40")) } finally { newsBusy = false }
-    }
-    fun setFeedCategory(id: String, cat: String) = launch {
-        api.request("PATCH", "/rss/feeds/" + URLEncoder.encode(id, "UTF-8"), JSONObject().put("category", cat), prefix = Api.HOMELAB)
-        news = parseNews(api.hlGet("/rss?cat=$newsCat&limit=40"))
-    }
-    fun removeFeed(id: String) = launch {
-        api.hlDelete("/rss/feeds/" + URLEncoder.encode(id, "UTF-8"))
-        news = parseNews(api.hlGet("/rss?cat=$newsCat&limit=40"))
-    }
-    fun setNewsSetting(key: String, on: Boolean) = launch {
-        news = news?.let { if (key == "aiSummary") it.copy(aiSummary = on) else it.copy(aiCategorize = on) }
-        api.hlPut("/rss/settings", JSONObject().put(key, on))
-        news = parseNews(api.hlGet("/rss?cat=$newsCat&limit=40"))
-    }
-    fun refreshNews() = launch {
-        newsBusy = true
-        try { api.request("POST", "/rss/refresh", JSONObject(), prefix = Api.HOMELAB, read = 60_000); news = parseNews(api.hlGet("/rss?cat=$newsCat&limit=40")) } finally { newsBusy = false }
-    }
+    fun addFeed(url: String) = nyheter.leggTilKilde(url)
+    fun setFeedCategory(id: String, cat: String) = nyheter.settKildekategori(id, cat)
+    fun removeFeed(id: String) = nyheter.fjernKilde(id)
+    fun setNewsSetting(key: String, on: Boolean) = nyheter.settInnstilling(key, on)
+    fun refreshNews() = nyheter.hentKildene()
 
     /* ---------- Media (Plex og Jellyfin) ---------- */
 
@@ -3996,6 +3987,7 @@ class AppViewModel(app: Application, private val lagret: SavedStateHandle) : And
         runCatching { start51() }
         // Skjermenes ViewModel-er: speilet holder Compose-lesere av de gamle feltene oppdatert.
         viewModelScope.launch { domener.tilstand.collect { domenerSpeil = it } }
+        viewModelScope.launch { nyheter.tilstand.collect { nyheterSpeil = it } }
         // P85 F: siden og søket fra før prosessdød (lastes av refresh), og lagringen til neste gang.
         runCatching { gjenopprettNavigasjon() }
         lagret.setSavedStateProvider(NAV_LAGRET, object : SavedStateRegistry.SavedStateProvider {
