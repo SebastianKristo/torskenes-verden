@@ -147,7 +147,7 @@ object Skjold76 {
     }
 }
 
-/* ======================= Rene regler (speilet i test/p76-and.test.js) ======================= */
+/* ======================= Rene regler (speilet i test/android-skjold-lab.test.js) ======================= */
 
 internal const val API76 = "/skjold"
 internal const val FILES76 = "/api/skjold/files/"

@@ -98,7 +98,7 @@ test('den ekte NrkRegel87.kt kjørt mot fasiten (kotlinc fra Gradle)', (t) => {
   const pick = (re) => jars.filter((f) => re.test(f)).map((f) => join(lib, f));
   const stdlib = pick(/^kotlin-stdlib-\d.*\.jar$/)[0];
   const cp = [...pick(/^kotlin-compiler-embeddable-/), stdlib, ...pick(/^kotlin-daemon-embeddable-/), ...pick(/^kotlin-reflect-/), ...pick(/^kotlinx-coroutines-core-jvm-/), ...pick(/^annotations-\d/), ...pick(/^trove4j-/)].join(':');
-  const dir = mkdtempSync(join(tmpdir(), 'p87-and-'));
+  const dir = mkdtempSync(join(tmpdir(), 'android-nrk-'));
   try {
     const q = (s) => (s === null ? 'null' : JSON.stringify(s).replace(/\$/g, '\\$'));
     const par = (a) => 'listOf(' + a.map(([x, y]) => `${q(x)} to ${q(y)}`).join(', ') + ')';
@@ -171,7 +171,7 @@ fun main() {
 
 test('fanen «NRK» ligger mellom Prowlarr og Avspilling, og viser NRK-skjermen', () => {
   const m = code('ui/MediaPage.kt');
-  // Prompt 88: Musikk står mellom NRK og Avspilling (test/p88-and.test.js).
+  // Prompt 88: Musikk står mellom NRK og Avspilling (test/android-media-nrk-sok-og-musikk.test.js).
   assert.match(m, /"prowlarr" to "Prowlarr", "nrk" to "NRK", (?:"musikk" to "Musikk", )?"spill" to "Avspilling"\)/);
   assert.match(m, /"nrk" -> Nrk87\(vm, pad\)/);
   assert.match(code('domene/Media.kt'), /"nrk" -> loadNrk87\(\)/, 'fanen laster status, kø og bibliotek');

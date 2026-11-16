@@ -93,7 +93,7 @@ object Skjold77 {
     }
 }
 
-/* ======================= Rene regler (speilet i test/p77-and.test.js) ======================= */
+/* ======================= Rene regler (speilet i test/android-skjold-forslag.test.js) ======================= */
 
 /** «Glimt tenker …» mens forslaget lages (bilde: opptil 60 s, tekst: 30 s). */
 internal const val THINK77 = "Glimt tenker …"

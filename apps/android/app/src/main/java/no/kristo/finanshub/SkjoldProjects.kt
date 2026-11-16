@@ -71,7 +71,7 @@ object Skjold82 {
     fun closeModal() { sheet = null; renameAsk = false; deleteAsk = false; returning = null }
 }
 
-/* ======================= Rene regler (speilet i test/p82-and.test.js) ======================= */
+/* ======================= Rene regler (speilet i test/android-skjold-sjekk-ut.test.js) ======================= */
 
 internal const val MAX_NAME82 = 80
 

@@ -4,7 +4,7 @@
 //    «Velg alle tilgjengelige (N)», «Følg serien», «Last ned N episoder». Lenkefeltet er sekundært («Har du en lenke?»).
 //  - Musikk: Last ned musikk (forhåndsvisning) → Køen → Spillelister du følger (sangene), alt via /api/media/yubal/*.
 // Kildesjekker + fasit for de rene reglene (NrkRegel88.kt). Den ekte Kotlin-fila kompileres og kjøres mot fasiten når Gradles
-// Kotlin-kompilator finnes på maskinen (ellers hoppes den testen over), som i test/p87-and.test.js.
+// Kotlin-kompilator finnes på maskinen (ellers hoppes den testen over), som i test/android-media-nrk.test.js.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, existsSync, readdirSync, mkdtempSync, writeFileSync, rmSync, realpathSync } from 'node:fs';
@@ -53,7 +53,7 @@ test('den ekte NrkRegel88.kt kjørt mot fasiten (kotlinc fra Gradle)', (t) => {
   const pick = (re) => jars.filter((f) => re.test(f)).map((f) => join(lib, f));
   const stdlib = pick(/^kotlin-stdlib-\d.*\.jar$/)[0];
   const cp = [...pick(/^kotlin-compiler-embeddable-/), stdlib, ...pick(/^kotlin-daemon-embeddable-/), ...pick(/^kotlin-reflect-/), ...pick(/^kotlinx-coroutines-core-jvm-/), ...pick(/^annotations-\d/), ...pick(/^trove4j-/)].join(':');
-  const dir = mkdtempSync(join(tmpdir(), 'p88-and-'));
+  const dir = mkdtempSync(join(tmpdir(), 'android-nrk-sok-'));
   try {
     const q = (s) => (s === null ? 'null' : JSON.stringify(s).replace(/\$/g, '\\$'));
     const par = (a) => 'listOf(' + a.map(([x, y]) => `${q(x)} to ${q(y)}`).join(', ') + ')';

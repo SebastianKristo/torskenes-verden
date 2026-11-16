@@ -4,7 +4,7 @@ package no.kristo.finanshub
 
 /*
  * Prompt 87 (NRKAND): rene regler for NRK-fanen i Media (claude-code-media-nrk-nedlaster.md, fasit Media NRK.dc.html).
- * Ingen Android-typer her – fila kompileres og kjøres mot fasit i test/p87-and.test.js.
+ * Ingen Android-typer her – fila kompileres og kjøres mot fasit i test/android-media-nrk.test.js.
  */
 
 /** Lenker NRK-nedlasteren tar imot: nrk.no og nrksuper.no med underdomener. Samme regel som serveren (som er fasit). */
@@ -148,7 +148,7 @@ fun tabScroll87(widths: List<Int>, idx: Int, pad: Int, gap: Int, viewport: Int, 
 /*
  * Prompt 88 (AND88): rene regler for søk og serieside i NRK-fanen og for Musikk-fanen (yubal) i Media.
  * Fasit: public/js/media-nrk.js og public/js/media-musikk.js (web), server/nrkdl.js og server/yubal.js.
- * Ingen Android-typer her – fila kompileres og kjøres mot fasit i test/p88-and.test.js.
+ * Ingen Android-typer her – fila kompileres og kjøres mot fasit i test/android-media-nrk-sok-og-musikk.test.js.
  */
 
 private val SERIE_RE88 = Regex("^https://tv\\.nrk\\.no/serie/([a-z0-9][a-z0-9_-]{0,100})(?:[/?#].*)?$", RegexOption.IGNORE_CASE)

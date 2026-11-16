@@ -36,7 +36,7 @@ object Skjold81 {
     fun reset() { newAsk = false; etasjer = 4; busy = false }
 }
 
-/* ======================= Rene regler (speilet i test/p81-and.test.js) ======================= */
+/* ======================= Rene regler (speilet i test/android-skjold-store-skuffer.test.js) ======================= */
 
 /** «4-1» → (4, 1); alt annet → null. */
 internal fun parseShort81(s: String?): Pair<Int, Int>? {

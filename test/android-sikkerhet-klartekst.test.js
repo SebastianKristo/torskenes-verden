@@ -220,7 +220,7 @@ test('B: den ekte LokaltNett.kt (:felles) kjørt mot fasiten (kotlinc fra Gradle
   const pick = (re) => jars.filter((f) => re.test(f)).map((f) => join(lib, f));
   const stdlib = pick(/^kotlin-stdlib-\d.*\.jar$/)[0];
   const cp = [...pick(/^kotlin-compiler-embeddable-/), stdlib, ...pick(/^kotlin-daemon-embeddable-/), ...pick(/^kotlin-reflect-/), ...pick(/^kotlinx-coroutines-core-jvm-/), ...pick(/^annotations-\d/), ...pick(/^trove4j-/)].join(':');
-  const dir = mkdtempSync(join(tmpdir(), 'p86-and-'));
+  const dir = mkdtempSync(join(tmpdir(), 'android-sikkerhet-'));
   try {
     const kt = (a) => 'listOf(' + a.map((u) => JSON.stringify(u).replace(/\$/g, '\\$')).join(', ') + ')';
     writeFileSync(join(dir, 'Fasit.kt'), `import no.kristo.felles.nett.*
