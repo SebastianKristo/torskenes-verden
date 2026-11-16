@@ -9,7 +9,7 @@ const BG_FIXTURE = readFileSync(new URL('../visual51/bakgrunn.jpg', import.meta.
 
 /** Hovedsidene (grunnlinjen for Fase 3). auth:false = uten innlogging. wait = selektor som må finnes før sjekken.
  *  mask = selektorer som dekkes over i skjermbildet (QR). hide = selektorer som skjules (tilfeldige animasjoner i lerret).
- *  open = handling etter lasting (f.eks. åpne et ark). themes = bare disse temaene. */
+ *  open = handling etter lasting (f.eks. åpne et ark). themes = bare disse temaene. nologo = logoene svarer 404 (plassholderne vises). */
 const HL = (name, hash, extra = {}) => ({ name, path: `/#/${hash}`, wait: '#view', ...extra });
 const SET = (name, tab) => ({ name: `innst-${name}`, path: `/#/innstillinger/${tab}`, wait: 'body' });
 const FIN = (name, hash) => ({ name: `finans-${name}`, path: `/finans/#/${hash}`, wait: 'body' });
@@ -42,6 +42,8 @@ export const PAGES51 = [
   HL('rom', 'rom'),
   HL('bursdager', 'kalender/bursdager'),
   HL('smarthjem', 'hjem'),
+  // Mer på mobil (bunnmenyen): alle sidene og Snarveier (E-B6). Logoene hentes ikke, så forbokstavene (plassholderne) måles.
+  { ...HL('mer', 'mer'), nologo: true },
   SET('utseende', 'look'),
   SET('integrasjoner', 'int'),
   SET('konto', 'konto'),
@@ -134,6 +136,7 @@ export async function context51(env, { viewport, theme, auth = true, freeze = fa
 
 /** Åpner siden og venter til den er ferdig tegnet. */
 export async function open51(ctx, page51) {
+  if (page51.nologo) await ctx.route((u) => u.pathname.startsWith('/finans/api/logo/'), (r) => r.fulfill({ status: 404, body: '' }));
   const page = await ctx.newPage();
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
