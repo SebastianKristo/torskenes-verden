@@ -166,15 +166,15 @@ Status: **Rettet** (i fase N), **Delvis**, **Gjenstår** eller **Ingen feil** (v
 | A-B6 | `POST /api/grades` regnet `sort` over alle brukere | Rettet i Fase 7 | `server/index.js`, `server/studie/documents.js`; `test/isolation.test.js` | – |
 | A-B7 | Nedstengingen ventet 5 s på WebSocket-forbindelser | Rettet i Fase 7 | `closeRealtime()` i `server/realtime.js`; `test/realtime-stopp.test.js` | – |
 | A-B8 | `/summary` og `/overview` dobbelt vedlikehold | Rettet i Fase 2 (`fb913b7`) | Én handler; `/overview` legger bare til egne felt (`server/finans/overview.js`) | – |
-| A-B9 | `starting.js` spør `/api/ready`, som ikke finnes | Gjenstår (lav) | `public/js/starting.js:43` | Faller tilbake til `/api/health`, så det er bare én 404 per omstart. Forslag: `GET /api/ready` → `{ok, version}` i `server/system/`, eller fjern kallet |
-| A §5 | `/api/discovery` viser lokal adresse uten innlogging | Gjenstår (lav) | `server/auth/app-login.js:117` | Brukes av appene ved oppsett. Forslag: lokal adresse bare til klienter på lokalt nett |
+| A-B9 | `starting.js` spør `/api/ready`, som ikke fantes | Rettet (rest-server) | `GET /api/ready` → `{ok, ready, version}` i `server/index.js` (503 mens serveren starter); skjema `shared/schemas/api/ready.schema.json`; `test/oppstart-og-oppdagelse.test.js` | – |
+| A §5 | `/api/discovery` viste lokal adresse uten innlogging | Rettet (rest-server) | `server/auth/app-login.js`: `local` bare når klienten er på lokalt nett (`trustIp` + `isLan`: tilkoblingen eller `CF-Connecting-IP` bak cloudflared, aldri `X-Forwarded-For`), ellers `[]`; skjema `api/discovery.schema.json`; `test/oppstart-og-oppdagelse.test.js` | Appene som settes opp fra internett, får bare `external` |
 | A §5 | Media-webhook: token sammenlignet med `!==` | Rettet i Fase 7 | `server/media/arr.js` (`timingSafeEqual`); `test/media-ruter.test.js` | Kall uten token godtas fortsatt direkte fra LAN (bevisst) |
-| A §5 | Brukernavnet «sebastian» hardkodet for bibelvers | Gjenstår (lav) | `server/bibel/bible.js:63,71` | Forslag: på som standard for eieren (`OWNER`/admin), ikke for et brukernavn |
+| A §5 | Brukernavnet «sebastian» hardkodet for bibelvers | Rettet (rest-server) | `server/bibel/bible.js`: på som standard for eieren (hovedadmin), av for andre; lagrede valg endres ikke; `test/bibel-standard.test.js` | – |
 | B-B6 | `scrollmem` dro scrollen tilbake | Rettet i Fase 3 (`121014c`) | `public/js/scrollmem.js:17–33` (ResizeObserver, brukerinput avbryter) | – |
 | B-B7 | Polling på alle ruter | Rettet i Fase 3 (`b7501e0`) | Periodisk henting bare der det vises | API-kall ved første lasting er nesten uendret (Oversikt 76 → 75, Kalender 59 → 56). Forslag: én samlet startforespørsel for skallet |
 | B-B8 | Død `family.css`/`family.js` | Rettet i Fase 3 (`1e58f67`) | `family.css` er borte; `family.js` er nå Familie-modulen (`family-web.js` importerer den) | – |
 | B-B9 | Leaflet-reserve fra unpkg blokkert av CSP | Rettet i Fase 3 (`4faa033`) | `public/finans/js/leaflet.js` (bare fra serveren) | – |
-| B-B10 | 20 Wikimedia-kall uten nett ved oppstart | Gjenstår (lav) | `public/js/bgsvc.js:121–150` henter bakgrunnene direkte fra commons.wikimedia.org | Forslag: bruk serverens bildebuffer (`server/background.js` laster dem allerede ned) |
+| B-B10 | 20 Wikimedia-kall uten nett ved oppstart | Rettet (rest-server) | `public/js/bgsvc.js` og `public/finans/js/mobile-p41.js` henter Oslo-bildene fra `GET /api/background/file/:navn` (`server/background.js`, katalogen `oslo_dognet`); `test/bakgrunn-bildebuffer.test.js` | Fotoene ligger ikke ferdig nedlastet i imaget ennå: kjør Actions «backgrounds» med `oslo_dognet`. Til da laster serveren dem ned ved første bruk |
 | B-B11 | Onboardingen i mobil-Økonomi blokkerte dype lenker | Rettet i Fase 3 (`4cf5996`, Q35) | – | – |
 | B-F2 | Familie, Kalender, Media lyst papir i Glass | Rettet i Fase 3 (`21df0a7`, Q14) | Skjermbilder `familie-*-glass`, `kalender-*-glass` | – |
 | B-F3 | Dashbordkortene fikk Papir-farge i Glass | Rettet i Fase 3 | Skjermbilde `oversikt-1440-glass` | – |
@@ -198,7 +198,7 @@ Status: **Rettet** (i fase N), **Delvis**, **Gjenstår** eller **Ingen feil** (v
 | P85 C | Tilstandsendrende dyplenker uten bekreftelse | Rettet før Fase 0 | `LinkRegel86.kt` | – |
 | P85 E | Trykkflater, ikoner uten beskrivelse | Delvis | `08e8c8c`, `c29a40f`, `df8cf60` (48 dp, ikoner) | Ikke hele appen; må ses på enhet |
 | P85 F | Ingen `SavedStateHandle` (prosessdød) | Gjenstår | 0 treff | Del av ViewModel per skjerm (AUDIT §7 nr. 12) |
-| P85 G | Mulig duplikat ved ny opplasting av kvittering | Gjenstår (lav) | Ingen idempotensnøkkel på serveren | Forslag: `Idempotency-Key` på `POST /finans/api/receipts` |
+| P85 G | Mulig duplikat ved ny opplasting av kvittering | Rettet (rest-server) | `Idempotency-Key` på alle opplastingsrutene for kvitteringer (`server/finans/idempotency.js`); `test/okonomi-kvittering-idempotens.test.js` | iOS sender nøkkelen fra offline-køen; Android må sende en UUID per bilde |
 | P85 H | Widgeter oppdaterer i `Thread { runBlocking }` uten `goAsync()` | Gjenstår (lav) | `widget/Brief34Widgets.kt:97`, `BirthdaysWidgets.kt:107`, `TasksWidget.kt:99`, `ProveperiodeWidgets.kt:119` | Virker i praksis; neste synk retter opp. Forslag: `goAsync()` + korutine, eller WorkManager |
 | P85 I | «Alt bra» fra varsel uten nett går tapt | Gjenstår (lav) | – | Trenger kø eller feilvarsel (ny funksjon) |
 | P85 J | Hjemlys startes ikke etter omstart av telefonen | Gjenstår (lav) | `BOOT_COMPLETED` bare for ntfy | Krever «alltid»-posisjon; eget valg |
@@ -208,7 +208,7 @@ Status: **Rettet** (i fase N), **Delvis**, **Gjenstår** eller **Ingen feil** (v
 | E-B6 | Ikonplassholdere i Snarveier 2,35:1 | Ikke målt | Mobil «Mer» er ikke med i a11y-sidene | Legg til `mer` i `PAGES51` |
 | E-B7 | Glass: «Snarveier», «Du har siste versjon», Import «Lagre» 1,99:1 | Rettet i Fase 3 og 7 | a11y `oversikt` Glass 0 kontrastbrudd; «Lagre» rettet i Fase 7 (`--acc-ink`, `test/finans-tema.test.js`) | «Du har siste versjon» (System) er ikke med i a11y-sidene |
 | E-B8 | Ticker-farger på Aksjer | Delvis (`65360a3`) | a11y `finans-aksjer` Papir lys: 1 brudd (3,50:1) | – |
-| E-B9 | 404 for logoer uten nett, feil sti til app-ikonet | Delvis | App-ikonet rettet (`23f78d1`) | `/finans/api/logo/:domain` svarer fortsatt 404 (bufret en dag). Forslag: 204 eller en reserve-SVG |
+| E-B9 | 404 for logoer uten nett, feil sti til app-ikonet | Rettet (rest-server) | App-ikonet (`23f78d1`); `/finans/api/logo/:domain` svarer 204 uten innhold når logoen ikke finnes; `test/logos.test.js` | Klientene viser bokstavmerket som før |
 | E-B10 | Fanetittelen fulgte ikke Innstillinger | Ikke målt | Titlene kommer fra modullisten (`app.js:166–170`, `f9dc0e1`) | Sjekk med e2e: åpne Innstillinger og les `document.title` |
 | E-B11 | «Henter været …» i mocken | Ikke målt | – | Bør sjekkes mot ekte server (som i AUDIT) |
 | E-B12 (Q34) | Toasten «Vi ryddet kalenderne» uten handling | Delvis | Ryddingen har «Angre» (`kalender-oppsett.js:512–518`, `four-calendars.js:103`) | Q34 sier forslag *før* rydding («Slå sammen 6 → 4?»). Ryddingen skjer fortsatt automatisk. Forslag: vis forslaget, kjør `migrate` først ved ja |
@@ -234,10 +234,10 @@ Status: **Rettet** (i fase N), **Delvis**, **Gjenstår** eller **Ingen feil** (v
 | F 10 / L8 | Serveradresse fem regler | Rettet i Fase 1–5 | `shared/testvektorer/serveradresse.json`; `server/auth/server-address.js`; Android `:felles` | – |
 | F 11 | Bursdager i enhetens tidssone | Rettet i Fase 2 (Q20) | Oslo-dato fra serveren | – |
 | F 12 / L10 | Beløpsformat 96 funksjoner | Gjenstår (lav) | Presentasjon, lokalt | Personvernmodus i widgeter ikke verifisert |
-| L12 | Vær hentet direkte fra Open-Meteo på iOS | Delvis | iOS henter ikke lenger direkte | Android `Glimt.kt:886` slår opp sted direkte hos Open-Meteo. Forslag: via serveren |
+| L12 | Vær hentet direkte fra Open-Meteo på iOS | Delvis | iOS henter ikke lenger direkte. Serveren har stedsoppslaget (`GET /api/weather/places?q=`) og været for et sted (`GET /api/weather/place?q=`), nå i `docs/api.md` | Android `Glimt.kt` (`geocode36`, `openMeteo35`) slår fortsatt opp direkte hos Open-Meteo; Android bytter til serverrutene |
 | Q19 | 404-reserver for eldre servere | Delvis | `/api/version` med `minClient` (`45ee66d`), iOS `APIClient.compatibility` | Mange reserver står igjen (f.eks. `MediaModel.swift:530–748`, ca. 48 «404 → lokalt»-steder i appene). Forslag: fjern dem modul for modul |
 | Q26 | Den gamle kalenderen i iOS-appen | Gjenstår (etter Q26) | `HomelabKalender*.swift` bak `kal84_embed` | Fjernes først når alt finnes i den innebygde Kalenderen |
-| Q30 | Gamle `receipts`-data | Gjenstår | `server/finans/legacy-receipts.js:2` («dataene flyttes ikke ennå») | Krever migrering med godkjenning |
+| Q30 | Gamle `receipts`-data | Rettet (rest-server), venter på admin | `server/finans/receipt-migration.js`: forhåndsvisning, bekreftelse, kopi av databasen, angring. Knapp i Økonomi → Innstillinger → Backup og data («Flytt gamle kvitteringer»); `test/kvittering-flytting.test.js` | Flyttingen kjøres aldri av seg selv. `/api/receipts` virker som før (lista beholdes) |
 | Q31 | Widgeter fra én definisjon per widget | Gjenstår | 83 `<receiver>` i `app/AndroidManifest.xml` | Generering fra én definisjon er ikke gjort |
 | Q1–Q18, Q20–Q25, Q27–Q29, Q32, Q33, Q35–Q41 | Beslutningene | Gjennomført | Fase 1–6 (se commitene), testvektorene og `test/moduler*.test.js` | Q1/O1 og Q4: siste rester av gamle navn i Økonomi på mobil-web (se O1, O6) |
 | Struktur: filnavn | Filer med promptnummer | Delvis | §2.1: server 1, web-CSS 0, iOS 5, web-JS 34, Android 70, test 195 av 275 | Økonomi på mobil-web (`mobile-p16…p46.js`, 32 filer), Android (`Paper14–19`, `Models11–17`, `…51Plat` m.fl.) og testene. Forslag: egen runde per plattform, som i Fase 3–5 |
