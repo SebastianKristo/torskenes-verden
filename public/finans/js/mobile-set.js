@@ -12,7 +12,7 @@ import { settHomelabTema } from './tema.js';
 import { tabEditor, iconThemeRow, iconColor, iconInk } from './mobile-fanelinje.js';
 import { navSettings } from './mobile-tilpassing.js';
 import { TR, trkLoad, trkPrefRows, setTrkPref } from './mobile-track.js';
-import * as P23 from './mobile-sveip-og-kvitteringer.js';
+import * as P23 from './mobile-sveip.js';
 import * as P24 from './mobile-profiler-og-bursdager.js';
 import * as P26 from './mobile-integrasjoner.js';
 import { row, grp, appName, appIcon, ICONS } from './mobile-app-og-sanntid.js';

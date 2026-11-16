@@ -1,5 +1,5 @@
 // Prompt 48 (WEB48, Del 5): skjemaet for kvitteringer som er lest av den nye kjeden (POST /finans/api/receipts/scan,
-// source «scan48»). Brukes av FinansHub på desktop (desktop.js confirmPanel) og PWA-en (mobile-sveip-og-kvitteringer.js, Kvitteringer).
+// source «scan48»). Brukes av FinansHub på desktop (desktop.js confirmPanel) og PWA-en (mobile-kvitteringer.js, Kvitteringer).
 //   - merkelapp for veien kvitteringen tok («iPhone», «Mac», «Glimt (Tesseract)», «Gemini» …) fra extraction.receipt48.label
 //   - usikre felt (uncertain_fields / failed_fields) markeres med «Usikker» på feltet
 //   - redigerbare detaljer: klokkeslett, org.nr., betaling, varelinjer og rabatter, med sumkontroll mens du skriver

@@ -14,7 +14,7 @@ import { edOn, edBlocks, finKeys, finScreens, fabStyle, fourth, onWay, rcBanner,
 import { mainTabs, heroBg, bolTitle } from './mobile-fanelinje.js';
 import { SB } from './mobile-subs.js';
 import { aksTitle } from './mobile-aks.js';
-import * as P23 from './mobile-sveip-og-kvitteringer.js';
+import * as P23 from './mobile-sveip.js';
 import * as P29 from './mobile-sok-og-backup.js';
 import * as P30 from './mobile-system-og-ark.js';
 import * as P24 from './mobile-profiler-og-bursdager.js';

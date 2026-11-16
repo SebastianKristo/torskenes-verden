@@ -26,7 +26,8 @@ import { take15, edDown, edMove, edUp, edClick, edReset, paperSearch, fsBind, pa
 import { wxView, wxLoad, wxBind, wxBindScroll, WX, wxAfterDraw, wxPlaces } from './mobile-wx.js';
 import { wx22Down, wx22Move, wx22Up } from './mobile-vaer-kart-og-steder.js';
 import * as P22 from './mobile-familie-soner.js';
-import * as P23 from './mobile-sveip-og-kvitteringer.js';
+import * as P23 from './mobile-sveip.js';
+import * as KVT from './mobile-kvitteringer.js'; // Kvitteringer i Papir (skilt ut fra mobile-sveip.js)
 import * as P24 from './mobile-profiler-og-bursdager.js';
 import * as P25 from './mobile-fanelinje-stil.js';
 import * as P26 from './mobile-integrasjoner.js';
@@ -410,7 +411,7 @@ export function draw() {
   const fold41 = pp && scr === 'hl' && !!P41?.foldOn?.(); // prompt 41: Fold 1c (stort Glimt-kort + faner)
   const ppMain = !pp ? null : scr === 'hl' ? (fold41 ? P41.foldHome() : paperHome()) : m.detail && !m.edit && m.sel != null && ['liste', 'sok', 'hjem'].includes(scr) ? paperTx(m.sel)
     : scr === 'hjem' && plain ? paperFin() : scr === 'mer' ? paperMer()
-    : scr === 'bd' ? P24.bdView() : scr === 'kal' ? KAL.kalView() : scr === 'fmer' ? finMerGrid() : scr === 'kv' && plain ? P23.kvView() : fad ? P23.finnAdView() : scr === 'sok' && plain ? paperSearch() : scr === 'liste' && plain ? paperList() : scr === 'finn' && !m.sub ? paperFinn() : scr === 'spor' ? paperTrk() : scr === 'dir' ? bolView() : scr === 'avg' ? P24.ruterView() : scr === 'fam' ? P22.famView22() : null;
+    : scr === 'bd' ? P24.bdView() : scr === 'kal' ? KAL.kalView() : scr === 'fmer' ? finMerGrid() : scr === 'kv' && plain ? KVT.kvView() : fad ? P23.finnAdView() : scr === 'sok' && plain ? paperSearch() : scr === 'liste' && plain ? paperList() : scr === 'finn' && !m.sub ? paperFinn() : scr === 'spor' ? paperTrk() : scr === 'dir' ? bolView() : scr === 'avg' ? P24.ruterView() : scr === 'fam' ? P22.famView22() : null;
   const v45 = P50F?.view50?.(scr) ?? P46?.view46?.(scr, m.sub, pp) ?? P45?.view45?.(scr, m.sub, pp) ?? null; // prompt 46: Kart, Innstillinger → Nyheter // prompt 45: Finans → Mer (Mer ny) m.fl.
   const main = v45 != null ? v45 : scr === 'studie' ? (P44 ? P44.studieView() : '<div class="m-spin"></div>') /* prompt 44 */ : scr === 'avspilling' ? (P44 ? P44.avsView(false) : '<div class="m-spin"></div>') : scr === 'aictl' ? P34AI.aiView() : scr === 'brief' ? P35.briefView() : scr === 'glimt' ? P35.glimtView() : scr === 'nordlys' ? P30.sysView() : scr === 'chat' ? CHAT.chatView() : scr === 'vaer' ? wxView() : scr === 'nyheter' ? newsView() : scr === 'bibel' ? P37B.bibleView() : scr === 'huske' ? (pp ? P37.huskeView37() : '<div class="m-row" style="padding:6px 4px 0"><div class="title">Gjøremål</div></div>' + huskeView()) : !pp && scr === 'avg' ? avgView() : !pp && scr === 'fam' ? famView()
     : scr === 'kal' && !pp ? KAL.kalView() : scr === 'media' ? (P43?.media?.() ? P43.media().mediaView43() : (pp ? '' : '<div class="m-row" style="padding:6px 4px 0"><div class="title">Media</div></div>') + mediaView()) // prompt 43: Sonarr, Radarr, qBittorrent og Prowlarr
@@ -439,7 +440,7 @@ export function draw() {
   document.querySelector('meta[name=theme-color]')?.setAttribute('content', pp ? (m.light ? '#f3efe6' : '#14130f') : getComputedStyle(root().firstElementChild).backgroundColor || '#19120E');
   hlAfterDraw(); pageAfterDraw(); if (scr === 'dom') modAfterDraw(th); if (scr === 'fam') { if (pp) P22.famAfterDraw22(); else famAfterDraw(); } wxAfterDraw(); P22.afterDraw(scr, pp);
   if (fad) P23.finnAdAfterDraw();
-  listAfterDraw(); P23.kvAfterDraw(); // Finans → Liste og Kvitteringer: resten av radene i porsjoner
+  listAfterDraw(); KVT.kvAfterDraw(); // Finans → Liste og Kvitteringer: resten av radene i porsjoner
   P23.arrive(vk, vkChanged);
   P25.afterDraw();
   P27.afterDraw27(); P28.afterDraw28(); P32.afterDraw32(); P30.afterDraw30(); P30B.hlAfter(); P34.afterDraw34(); P36.afterDraw36(); P37.afterDraw37(); P37B.afterDraw37b(); P39.afterDraw39(); P40?.afterDraw40(); P41?.afterDraw41(); P42?.afterDraw42(); P43?.afterDraw43(); P44?.afterDraw44(); P45?.afterDraw45(); P46?.afterDraw46(); P50F?.afterDraw50(); P52?.afterDraw52();
@@ -611,7 +612,7 @@ export async function upload(files, { confirm = false, stay = false } = {}) {
     m.uploading--; await loadJobs(); draw();
   }
   // Prompt 48: lest av kjeden på serveren → skjemaet åpnes på raden i Kvitteringer (Papir).
-  if (first?.scan48 && first.id && P23.KV) { P23.KV.open = first.id; await loadReceipts().catch(() => {}); }
+  if (first?.scan48 && first.id && KVT.KV) { KVT.KV.open = first.id; await loadReceipts().catch(() => {}); }
   // Ett kamerabilde: gå rett til «Bekreft kvittering» (viser «Leser …» til AI-en er ferdig).
   if (confirm && first?.id) { m.rc = first.id; await loadReceipts().catch(() => {}); if (location.hash !== '#/skann') location.hash = '#/skann'; else draw(); }
   else if (two()) await loadReceipts().catch(() => {});
@@ -729,7 +730,7 @@ function tabUp(e) {
 }
 
 /* ---------- Sveip fra venstre kant for å gå tilbake (iOS-stil) ---------- */
-// Prompt 23: forrige side ligger ferdig tegnet bak (mobile-sveip-og-kvitteringer.js) med parallakse og slør. Virker der det finnes en
+// Prompt 23: forrige side ligger ferdig tegnet bak (mobile-sveip.js) med parallakse og slør. Virker der det finnes en
 // tilbakepil, men ikke på rotsidene (hovedfanene).
 const BACK_SEL = '.pp-hero .pp-back, .m-scroll .gback, .m-scroll .back, .m-scroll .gtop, .m-scroll .atop, .m-scroll [data-mact="txback"], .m-scroll [data-mact="pdback"], .m-scroll [data-swipeback]';
 function backTarget() {

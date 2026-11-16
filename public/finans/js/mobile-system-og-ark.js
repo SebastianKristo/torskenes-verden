@@ -10,7 +10,7 @@ import { esc, hlApi } from './core.js';
 import { m, draw, flash, isIOS } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
 import { updAdmin } from './mobile-upd.js';
-import * as P23 from './mobile-sveip-og-kvitteringer.js';
+import * as P23 from './mobile-sveip.js';
 import { U, loadUpdate, startUpdate, checkUpdate, running, state, watch, onUpdate } from '/assets/js/sysupdate.js';
 import { glimt } from './mobile-glimt.js';
 import * as P36 from './mobile-brief-og-oppstart.js'; // prompt 36: Sherlock-/snekker-Glimt, oppstartsside, tidligere versjoner
@@ -259,7 +259,7 @@ function kbInit() {
 // Lytter på document i capture-fasen, så karuseller, sveip-rader og kart ikke kan stjele gesten. Starter bare innenfor
 // 28 px fra venstre kant, ikke på rotsider, ikke i redigeringsmodus og ikke mens et ark er åpent. Retningen låses etter
 // 8 px (horisontal når |dx| > 1,2·|dy| og dx > 0); da preventDefault + stopPropagation, og forhåndsvisningen i
-// mobile-sveip-og-kvitteringer.js tar over (siden følger fingeren, slipp etter min(110 px, 28 %) går tilbake).
+// mobile-sveip.js tar over (siden følger fingeren, slipp etter min(110 px, 28 %) går tilbake).
 const EDGE = 28, SWP = { t: null, cb: null };
 export const touchSwipe = () => SWP.cb != null && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
 const blocked = () => document.querySelector('#app .p28-pills, #app [role="dialog"], #app .sheet-bg, #app .s28-sh, #app .p28-sheet') != null;
